@@ -1,7 +1,20 @@
-add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/stdosl.h
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/stdosl.h ${CMAKE_CURRENT_BINARY_DIR}
-    MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/stdosl.h
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_custom_command (OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/stdosl.h"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/stdosl.h" "${CMAKE_CURRENT_BINARY_DIR}"
+    MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/stdosl.h"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+
+add_custom_command (OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/oslutil.h"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/oslutil.h" "${CMAKE_CURRENT_BINARY_DIR}"
+        MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/oslutil.h"
+        WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+
+
+if (${CMAKE_GENERATOR} MATCHES "(Visual Studio.*)")
+    # Work around visual studio outputting oslc.exe in a subfolder
+    add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/../oslc/oslc"
+        COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/../oslc/${CMAKE_BUILD_TYPE}/oslc.exe" "${CMAKE_CURRENT_BINARY_DIR}/../oslc/"
+        DEPENDS oslc)
+endif ()
 
 macro (osl_compile oslsrc objlist headers)
     # message (STATUS "OSL_COMPILE src=${oslsrc}")
@@ -20,9 +33,9 @@ macro (osl_compile oslsrc objlist headers)
         message (STATUS "cmd: ${CMAKE_CURRENT_BINARY_DIR}/../oslc/oslc ${oslsrc}")
     endif ()
     add_custom_command (OUTPUT ${osofile}
-        COMMAND ${CMAKE_CURRENT_BINARY_DIR}/../oslc/oslc ${oslsrc}
+        COMMAND "${CMAKE_CURRENT_BINARY_DIR}/../oslc/oslc" -q ${oslsrc}
         MAIN_DEPENDENCY ${oslsrc}
-        DEPENDS ${${headers}} ${oslsrc} ${CMAKE_CURRENT_BINARY_DIR}/stdosl.h ${CMAKE_CURRENT_BINARY_DIR}/../oslc/oslc
+        DEPENDS ${${headers}} ${oslsrc} "${CMAKE_CURRENT_BINARY_DIR}/stdosl.h" "${CMAKE_CURRENT_BINARY_DIR}/../oslc/oslc"
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 endmacro ()
 

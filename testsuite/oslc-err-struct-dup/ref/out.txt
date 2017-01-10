@@ -1,0 +1,4 @@
+test.osl:6: error: Field "c" already exists in struct "testStruct"
+test.osl:7: error: Field "i" already exists in struct "testStruct"
+test.osl:8: error: Field "f" already exists in struct "testStruct"
+FAILED test.osl

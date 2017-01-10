@@ -1,3 +1,3 @@
-#!/usr/bin/python 
+#!/usr/bin/env python
 
-command += testshade("-fparam radius 1000 rdcloud")
+command += testshade("-param radius 1000.0 -param filename data/cloud.geo rdcloud")

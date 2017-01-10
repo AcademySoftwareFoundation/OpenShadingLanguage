@@ -1,0 +1,1 @@
+Compiled ramp.osl -> ramp.oso

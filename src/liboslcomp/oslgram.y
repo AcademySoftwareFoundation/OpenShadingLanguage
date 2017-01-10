@@ -44,11 +44,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslcomp_pvt.h"
 
 #undef yylex
-#define yyFlexLexer oslFlexLexer
-#include "FlexLexer.h"
+#define yylex osllex
+extern int osllex();
 
 void yyerror (const char *err);
-#define yylex oslcompiler->lexer()->yylex
 
 using namespace OSL;
 using namespace OSL::pvt;
@@ -97,24 +96,25 @@ static std::stack<TypeSpec> typespec_stack; // just for function_declaration
 // Define the nonterminals 
 %type <n> shader_file 
 %type <n> global_declarations_opt global_declarations global_declaration
-%type <n> shader_declaration 
-%type <n> shader_formal_params_opt shader_formal_params shader_formal_param
+%type <n> shader_or_function_declaration
+%type <n> formal_params_opt formal_params formal_param
 %type <n> metadata_block_opt metadata metadatum
-%type <n> function_declaration function_formal_params_opt
+%type <n> function_declaration
 %type <n> function_body_or_just_decl
-%type <n> function_formal_params function_formal_param
-%type <n> struct_declaration field_declarations field_declaration
+%type <n> struct_declaration
+%type <i> field_declarations field_declaration
 %type <n> typed_field_list typed_field
 %type <n> variable_declaration def_expressions def_expression
 %type <n> initializer_opt initializer initializer_list_opt initializer_list 
 %type <n> compound_initializer init_expression_list init_expression
-%type <i> shadertype outputspec arrayspec simple_typename
-%type <n> typespec 
+%type <i> outputspec arrayspec simple_typename
+%type <i> typespec typespec_or_shadertype
 %type <n> statement_list statement scoped_statements local_declaration
 %type <n> conditional_statement loop_statement loopmod_statement
 %type <n> return_statement
 %type <n> for_init_statement
-%type <n> expression_list expression_opt expression
+%type <n> expression compound_expression
+%type <n> expression_list expression_opt compound_expression_opt
 %type <n> id_or_field variable_lvalue variable_ref 
 %type <i> unary_op incdec_op incdec_op_opt
 %type <n> type_constructor function_call function_args_opt function_args
@@ -136,7 +136,7 @@ static std::stack<TypeSpec> typespec_stack; // just for function_declaration
 %left <i> SHL_OP SHR_OP
 %left <i> '+' '-'
 %left <i> '*' '/' '%'
-%right <i> UMINUS_PREC '!' '~'
+%right <i> UMINUS_PREC NOT_OP '~'
 %right <i> INCREMENT DECREMENT
 %left <i> '(' ')'
 %left <i> '[' ']'
@@ -163,72 +163,98 @@ global_declarations
         ;
 
 global_declaration
-        : function_declaration          { $$ = 0; }
-        | struct_declaration            { $$ = 0; }
-        | shader_declaration
+        : shader_or_function_declaration    { $$ = 0; }
+        | struct_declaration                { $$ = 0; }
         ;
 
-shader_declaration
-        : shadertype IDENTIFIER metadata_block_opt '(' shader_formal_params_opt ')' '{' statement_list '}'
+shader_or_function_declaration
+        : typespec_or_shadertype IDENTIFIER
                 {
-                    $$ = new ASTshader_declaration (oslcompiler, $1,
-                                                    ustring($2), $5, $8, $3);
-                    $$->sourceline (@2.first_line);
-                    if (oslcompiler->shader_is_defined()) {
-                        yyerror ("Only one shader is allowed per file.");
-                        delete $$;
-                        $$ = NULL;
+                    if ($1 == ShadTypeUnknown) {
+                        // It's a function declaration, not a shader
+                        oslcompiler->symtab().push ();  // new scope
+                        typespec_stack.push (oslcompiler->current_typespec());
+                    }
+                }
+          metadata_block_opt '(' 
+                {
+                    if ($1 != ShadTypeUnknown)
+                        oslcompiler->declaring_shader_formals (true);
+                }
+          formal_params_opt ')'
+                {
+                    oslcompiler->declaring_shader_formals (false);
+                }
+          metadata_block_opt function_body_or_just_decl
+                {
+                    if ($1 == ShadTypeUnknown) {
+                        // Function declaration
+                        oslcompiler->symtab().pop ();  // restore scope
+                        ASTfunction_declaration *f;
+                        f = new ASTfunction_declaration (oslcompiler,
+                                                         typespec_stack.top(),
+                                                         ustring($2), $7 /*formals*/,
+                                                         $11 /*statements*/);
+                        f->add_meta (concat($4, $10));
+                        $$ = f;
+                        $$->sourceline (@2.first_line);
+                        typespec_stack.pop ();
                     } else {
-                        oslcompiler->shader ($$);
+                        // Shader declaration
+                        $$ = new ASTshader_declaration (oslcompiler, $1,
+                                                        ustring($2), $7 /*formals*/,
+                                                        $11 /*statements*/,
+                                                        concat($4,$10) /*meta*/);
+                        $$->sourceline (@2.first_line);
+                        if (oslcompiler->shader_is_defined()) {
+                            yyerror ("Only one shader is allowed per file.");
+                            delete $$;
+                            $$ = NULL;
+                        } else {
+                            oslcompiler->shader ($$);
+                        }
                     }
                 }
         ;
 
-shader_formal_params_opt
-        : shader_formal_params
+formal_params_opt
+        : formal_params
         | /* empty */                   { $$ = 0; }
         ;
 
-shader_formal_params
-        : shader_formal_param
-        | shader_formal_params ',' shader_formal_param
-                {
-                    $$ = concat ($1, $3);
-                }
+formal_params
+        : formal_param
+        | formal_params ',' formal_param        { $$ = concat ($1, $3); }
+        | formal_params ','                     { $$ = $1; }
         ;
 
-shader_formal_param
+formal_param
         : outputspec typespec IDENTIFIER initializer_opt metadata_block_opt
                 {
                     ASTvariable_declaration *var;
                     TypeSpec t = oslcompiler->current_typespec();
                     var = new ASTvariable_declaration (oslcompiler,
-                                                  t, ustring ($3), $4, true,
-                                                  false, $1 /*output*/);
+                                            t, ustring($3), $4 /*init*/,
+                                            oslcompiler->declaring_shader_formals() /*isparam*/,
+                                            false /*ismeta*/, $1 /*isoutput*/);
                     var->add_meta ($5);
                     $$ = var;
-                    // Initializer is not really optional on a shader param,
-                    // but try to give helpful error message
-                    if ($4 == NULL) {
-                        oslcompiler->error (oslcompiler->filename(),
-                                            @3.first_line,
-                                            "shader parameter '%s' MUST have a default initializer", $3);
-                    }
                 }
-        | outputspec typespec IDENTIFIER arrayspec initializer_list metadata_block_opt
+        | outputspec typespec IDENTIFIER arrayspec initializer_list_opt metadata_block_opt
                 {
                     // Grab the current declaration type, modify it to be array
                     TypeSpec t = oslcompiler->current_typespec();
                     t.make_array ($4);
                     ASTvariable_declaration *var;
                     var = new ASTvariable_declaration (oslcompiler, t, 
-                                                   ustring($3), $5, true,
-                                                   false, $1 /*output*/,
-                                                   true /* initializer list */);
+                                            ustring($3), $5 /*init*/,
+                                            oslcompiler->declaring_shader_formals() /*isparam*/,
+                                            false /*ismeta*/, $1 /*isoutput*/,
+                                            true /* initializer list */);
                     var->add_meta ($6);
                     $$ = var;
                 }
-        | outputspec typespec IDENTIFIER initializer_list metadata_block_opt
+        | outputspec typespec IDENTIFIER initializer_list_opt metadata_block_opt
                 {
                     // Grab the current declaration type, modify it to be array
                     TypeSpec t = oslcompiler->current_typespec();
@@ -238,9 +264,10 @@ shader_formal_param
                                             "Can't use '= {...}' initializer except with arrays or struct (%s)", $3);
                     ASTvariable_declaration *var;
                     var = new ASTvariable_declaration (oslcompiler, t,
-                                                   ustring($3), $4, true,
-                                                   false, $1 /*output*/,
-                                                   true /* initializer list */);
+                                            ustring($3), $4 /*init*/,
+                                            oslcompiler->declaring_shader_formals() /*isparam*/,
+                                            false /*ismeta*/, $1 /*isoutput*/,
+                                            true /* initializer list */);
                     var->add_meta ($5);
                     $$ = var;
                 }
@@ -254,6 +281,10 @@ metadata_block_opt
 metadata
         : metadatum
         | metadata ',' metadatum        { $$ = concat ($1, $3); }
+        | metadata ','                  
+                { 
+                    $$ = $1; 
+                }
         ;
 
 metadatum
@@ -294,7 +325,7 @@ function_declaration
                     oslcompiler->symtab().push ();  // new scope
                     typespec_stack.push (oslcompiler->current_typespec());
                 }
-          '(' function_formal_params_opt ')' metadata_block_opt function_body_or_just_decl 
+          '(' formal_params_opt ')' metadata_block_opt function_body_or_just_decl
                 {
                     oslcompiler->symtab().pop ();  // restore scope
                     ASTfunction_declaration *f;
@@ -304,43 +335,6 @@ function_declaration
                     f->add_meta ($7);
                     $$ = f;
                     typespec_stack.pop ();
-                    // FIXME -- funcs don't have metadata. Should they?
-                }
-        ;
-
-function_formal_params_opt
-        : function_formal_params
-        | /* empty */                   { $$ = 0; }
-        ;
-
-function_formal_params
-        : function_formal_param
-        | function_formal_params ',' function_formal_param
-                {
-                    $$ = concat ($1, $3);
-                }
-        ;
-
-function_formal_param
-        : outputspec typespec IDENTIFIER
-                {
-                    ASTvariable_declaration *var;
-                    var = new ASTvariable_declaration (oslcompiler,
-                                              oslcompiler->current_typespec(),
-                                              ustring ($3), NULL,
-                                              false, false, $1);
-                    $$ = var;
-                }
-        | outputspec typespec IDENTIFIER arrayspec
-                {
-                    // Grab the current declaration type, modify it to be array
-                    TypeSpec t = oslcompiler->current_typespec();
-                    t.make_array ($4);
-                    ASTvariable_declaration *var;
-                    var = new ASTvariable_declaration (oslcompiler, t, 
-                                                       ustring($3), NULL,
-                                                       false, false, $1);
-                    $$ = var;
                 }
         ;
 
@@ -372,7 +366,7 @@ struct_declaration
 
 field_declarations
         : field_declaration
-        | field_declarations field_declaration  { $$ = concat ($1, $2); }
+        | field_declarations field_declaration 
         ;
 
 field_declaration
@@ -387,20 +381,36 @@ typed_field_list
 typed_field
         : IDENTIFIER
                 {
+                    ustring name ($1);
                     TypeSpec t = oslcompiler->current_typespec();
-                    oslcompiler->symtab().add_struct_field (t, ustring($1));
+                    StructSpec *s = oslcompiler->symtab().current_struct();
+                    if (s->lookup_field (name) >= 0)
+                        oslcompiler->error (oslcompiler->filename(),
+                                            oslcompiler->lineno(),
+                                            "Field \"%s\" already exists in struct \"%s\"",
+                                            name.c_str(), s->name().c_str());
+                    else
+                        oslcompiler->symtab().add_struct_field (t, name);
                     $$ = 0;
                 }
         | IDENTIFIER arrayspec
                 {
                     // Grab the current declaration type, modify it to be array
+                    ustring name ($1);
                     TypeSpec t = oslcompiler->current_typespec();
                     t.make_array ($2);
                     if (t.arraylength() < 1)
                         oslcompiler->error (oslcompiler->filename(),
                                             oslcompiler->lineno(),
-                                            "Invalid array length for %s", $1);
-                    oslcompiler->symtab().add_struct_field (t, ustring($1));
+                                            "Invalid array length for %s", name.c_str());
+                    StructSpec *s = oslcompiler->symtab().current_struct();
+                    if (s->lookup_field (name) >= 0)
+                        oslcompiler->error (oslcompiler->filename(),
+                                            oslcompiler->lineno(),
+                                            "Field \"%s\" already exists in struct \"%s\"",
+                                            name.c_str(), s->name().c_str());
+                    else
+                        oslcompiler->symtab().add_struct_field (t, name);
                     $$ = 0;
                 }
         ;
@@ -431,7 +441,7 @@ def_expression
                     // Grab the current declaration type, modify it to be array
                     TypeSpec t = oslcompiler->current_typespec();
                     t.make_array ($2);
-                    if (t.arraylength() < 1)
+                    if ($2 < 1)
                         oslcompiler->error (oslcompiler->filename(),
                                             oslcompiler->lineno(),
                                             "Invalid array length for %s", $1);
@@ -490,27 +500,6 @@ init_expression
         | compound_initializer
         ;
 
-shadertype
-        : IDENTIFIER
-                {
-                    if (! strcmp ($1, "shader"))
-                        $$ = ShadTypeGeneric;
-                    else if (! strcmp ($1, "surface"))
-                        $$ = ShadTypeSurface;
-                    else if (! strcmp ($1, "displacement"))
-                        $$ = ShadTypeDisplacement;
-                    else if (! strcmp ($1, "volume"))
-                        $$ = ShadTypeVolume;
-                    // else if (! strcmp ($1, "light"))
-                    //    $$ = ShadTypeLight;
-                    else {
-                        oslcompiler->error (oslcompiler->filename(),
-                                            oslcompiler->lineno(),
-                                            "Unknown shader type: %s", $1);
-                        $$ = ShadTypeUnknown;
-                    }
-                }
-        ;
 
 /* outputspec operates by merely setting the current_output to whether
  * or not we're declaring an output parameter.
@@ -572,6 +561,44 @@ typespec
                 }
         ;
 
+/* either a typespec or a shader type is allowable here */
+typespec_or_shadertype
+        : simple_typename
+                {
+                    oslcompiler->current_typespec (TypeSpec (osllextype ($1)));
+                    $$ = 0;
+                }
+        | CLOSURE simple_typename
+                {
+                    oslcompiler->current_typespec (TypeSpec (osllextype ($2), true));
+                    $$ = 0;
+                }
+        | IDENTIFIER /* struct name or shader type name */
+                {
+                    ustring name ($1);
+                    if (name == "shader")
+                        $$ = ShadTypeGeneric;
+                    else if (name == "surface")
+                        $$ = ShadTypeSurface;
+                    else if (name == "displacement")
+                        $$ = ShadTypeDisplacement;
+                    else if (name == "volume")
+                        $$ = ShadTypeVolume;
+                    else {
+                        Symbol *s = oslcompiler->symtab().find (name);
+                        if (s && s->is_structure())
+                            oslcompiler->current_typespec (TypeSpec ("", s->typespec().structure()));
+                        else {
+                            oslcompiler->current_typespec (TypeSpec (TypeDesc::UNKNOWN));
+                            oslcompiler->error (oslcompiler->filename(),
+                                                oslcompiler->lineno(),
+                                                "Unknown struct name: %s", $1);
+                        }
+                        $$ = ShadTypeUnknown;
+                    }
+                }
+        ;
+
 statement_list
         : statement statement_list      { $$ = concat ($1, $2); }
         | /* empty */                   { $$ = 0; }
@@ -584,7 +611,7 @@ statement
         | loopmod_statement
         | return_statement
         | local_declaration
-        | expression ';'
+        | compound_expression ';'
         | ';'                           { $$ = 0; }
         ;
 
@@ -601,12 +628,12 @@ scoped_statements
         ;
 
 conditional_statement
-        : IF_TOKEN '(' expression ')' statement
+        : IF_TOKEN '(' compound_expression ')' statement
                 {
                     $$ = new ASTconditional_statement (oslcompiler, $3, $5);
                     $$->sourceline (@1.first_line);
                 }
-        | IF_TOKEN '(' expression ')' statement ELSE statement
+        | IF_TOKEN '(' compound_expression ')' statement ELSE statement
                 {
                     $$ = new ASTconditional_statement (oslcompiler, $3, $5, $7);
                     $$->sourceline (@1.first_line);
@@ -614,14 +641,14 @@ conditional_statement
         ;
 
 loop_statement
-        : WHILE '(' expression ')' statement
+        : WHILE '(' compound_expression ')' statement
                 {
                     $$ = new ASTloop_statement (oslcompiler,
                                                 ASTloop_statement::LoopWhile,
                                                 NULL, $3, NULL, $5);
                     $$->sourceline (@1.first_line);
                 }
-        | DO statement WHILE '(' expression ')' ';'
+        | DO statement WHILE '(' compound_expression ')' ';'
                 {
                     $$ = new ASTloop_statement (oslcompiler,
                                                 ASTloop_statement::LoopDo,
@@ -632,7 +659,7 @@ loop_statement
                 {
                     oslcompiler->symtab().push (); // new declaration scope
                 }
-          for_init_statement expression_opt ';' expression_opt ')' statement
+          for_init_statement compound_expression_opt ';' compound_expression_opt ')' statement
                 {
                     $$ = new ASTloop_statement (oslcompiler,
                                                 ASTloop_statement::LoopFor,
@@ -675,6 +702,18 @@ expression_opt
         | /* empty */                   { $$ = 0; }
         ;
 
+compound_expression_opt
+        : compound_expression
+        | /* empty */                   { $$ = 0; }
+        ;
+
+compound_expression
+        : expression
+        | expression ',' compound_expression
+                {
+                    $$ = new ASTcomma_operator (oslcompiler, concat ($1, $3));
+                }
+
 expression
         : INT_LITERAL           { $$ = new ASTliteral (oslcompiler, $1); }
         | FLOAT_LITERAL         { $$ = new ASTliteral (oslcompiler, $1); }
@@ -699,7 +738,7 @@ expression
                         $$ = new ASTunary_expression (oslcompiler, $1, $2);
                     }
                 }
-        | '(' expression ')'                    { $$ = $2; }
+        | '(' compound_expression ')'           { $$ = $2; }
         | function_call
         | assign_expression
         | ternary_expression
@@ -841,6 +880,7 @@ unary_op
         : '-'                           { $$ = ASTNode::Sub; }
         | '+'                           { $$ = ASTNode::Add; }
         | '!'                           { $$ = ASTNode::Not; }
+        | NOT_OP                        { $$ = ASTNode::Not; }
         | '~'                           { $$ = ASTNode::Compl; }
         ;
 
@@ -876,7 +916,7 @@ function_args_opt
 
 function_args
         : expression
-        | function_args ',' expression          { $$ = concat ($1, $3); }
+        | function_args ',' expression     { $$ = concat ($1, $3); }
         ;
 
 assign_expression
@@ -963,6 +1003,6 @@ OSL::pvt::osllextype (int lex)
     case STRINGTYPE : return TypeDesc::TypeString;
     case VECTORTYPE : return TypeDesc::TypeVector;
     case VOIDTYPE   : return TypeDesc::NONE;
-    default: return PT_UNKNOWN;
+    default: return TypeDesc::UNKNOWN;
     }
 }

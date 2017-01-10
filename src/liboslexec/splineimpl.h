@@ -26,8 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef SPLINEIMPL_H
-#define SPLINEIMPL_H
+#pragma once
 
 // avoid naming conflict with MSVC macro
 #ifdef BTYPE
@@ -95,15 +94,6 @@ inline float Clamp(float x, float minv, float maxv) {
 
 
 
-// Eliminate the derivatives of a number
-template<class T> inline T removeDerivatives (const T x)         { return x;       }
-template<class T> inline T removeDerivatives (const Dual2<T> &x) { return x.val(); }
-
-// Simple templated "copy" function
-template <class T> inline void assignment(T &a, T &b)        { a = b;       }
-template <class T> inline void assignment(T &a, Dual2<T> &b) { a = b.val(); }
-
-
 
 struct SplineBasis {
    ustring  basis_name;
@@ -118,13 +108,15 @@ void spline_evaluate(const SplineBasis *spline,
                      RTYPE &result, 
                      XTYPE &xval, 
                      const KTYPE *knots,
-                     int knot_count)
+                     int knot_count, int knot_arraylen)
 {
     XTYPE x = Clamp(xval, XTYPE(0.0), XTYPE(1.0));
     int nsegs = ((knot_count - 4) / spline->basis_step) + 1;
     x = x*(float)nsegs;
     float seg_x = removeDerivatives(x);
     int segnum = (int)seg_x;
+    if (segnum < 0)
+        segnum = 0;
     if (segnum > (nsegs-1))
        segnum = nsegs-1;
 
@@ -138,14 +130,13 @@ void spline_evaluate(const SplineBasis *spline,
     // x is the position along segment 'segnum'
     x = x - float(segnum);
     int s = segnum*spline->basis_step;
-    int len = knot_count;
 
     // create a functor so we can cleanly(!) extract
     // the knot elements
     extractValueFromArray<CTYPE, KTYPE, knot_derivs> myExtract;
     CTYPE P[4];
     for (int k = 0; k < 4; k++) {
-        P[k] = myExtract(knots, len, s + k);
+        P[k] = myExtract(knots, knot_arraylen, s + k);
     }
 
     CTYPE tk[4];
@@ -172,18 +163,20 @@ void spline_evaluate(const SplineBasis *spline,
 template <class RTYPE, class XTYPE>
 struct SplineFunctor {
     SplineFunctor (const SplineBasis *spline, const float *knots,
-                   int knot_count)
-        : spline(spline), knots(knots), knot_count(knot_count) { }
+                   int knot_count, int knot_arraylen)
+        : spline(spline), knots(knots), knot_count(knot_count),
+          knot_arraylen(knot_arraylen) { }
 
     RTYPE operator() (XTYPE x) {
         RTYPE v;
-        spline_evaluate<RTYPE,XTYPE,float,float,false> (spline, v, x, knots, knot_count);
+        spline_evaluate<RTYPE,XTYPE,float,float,false> (spline, v, x, knots,
+                                                 knot_count, knot_arraylen);
         return v;
     }
 private:
     const SplineBasis *spline;
     const float *knots;
-    int knot_count;
+    int knot_count, knot_arraylen;
 };
 
 
@@ -192,7 +185,8 @@ private:
 // spline_evaluate(x) == y.
 template <class YTYPE>
 void spline_inverse (const SplineBasis *spline,
-                     YTYPE &x, YTYPE y, const float *knots, int knot_count)
+                     YTYPE &x, YTYPE y, const float *knots, int knot_count,
+                     int knot_arraylen)
 {
     // account for out-of-range inputs, just clamp to the values we have
     bool increasing = knots[1] < knots[knot_count-2];
@@ -217,7 +211,7 @@ void spline_inverse (const SplineBasis *spline,
     }
 
 
-    SplineFunctor<YTYPE,YTYPE> S (spline, knots, knot_count);
+    SplineFunctor<YTYPE,YTYPE> S (spline, knots, knot_count, knot_arraylen);
     // Because of the nature of spline interpolation, monotonic knots
     // can still lead to a non-monotonic curve.  To deal with this,
     // search separately on each spline segment and hope for the best.
@@ -241,4 +235,3 @@ void spline_inverse (const SplineBasis *spline,
 }; // namespace pvt
 OSL_NAMESPACE_EXIT
 
-#endif // SPLINEIMPL_H

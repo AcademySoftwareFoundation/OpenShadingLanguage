@@ -1,0 +1,5 @@
+shader arrayparam(
+	color in_value[] = { color(1) },
+	output color out_value = in_value[0] )
+{
+}

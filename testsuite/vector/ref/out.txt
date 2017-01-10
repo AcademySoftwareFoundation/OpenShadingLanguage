@@ -19,5 +19,5 @@ Test vector functions
   normalize (1 1 0) = 0.707107 0.707107 0
   normalize (0 8 0.5) = 0 0.998053 0.0623783
   normalize (0 0 0) = 0 0 0
-  rotate(1 0 0, PI/2, (0,0,0), (0,0,1)) = -4.37114e-08 1 0
+  rotate(1 0 0, PI/2, (0,0,0), (0,0,1)) = 0 1 0
 

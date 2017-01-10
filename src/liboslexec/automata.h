@@ -26,8 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef AUTOMATA_H
-#define AUTOMATA_H
+#pragma once
 
 #include <set>
 #include <map>
@@ -37,7 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
 
-#include "oslconfig.h"
+#include "OSL/oslconfig.h"
 
 
 OSL_NAMESPACE_ENTER
@@ -337,5 +336,3 @@ class StateSetRecord {
 void ndfautoToDfauto(const NdfAutomata &ndfautomata, DfAutomata &dfautomata);
 
 OSL_NAMESPACE_EXIT
-
-#endif // AUTOMATA_H

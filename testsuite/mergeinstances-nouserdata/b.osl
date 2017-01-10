@@ -1,0 +1,5 @@
+shader b (color C1 = 0, color C2 = 0, output color Cout = 0)
+{
+    Cout = C1 + C2;
+    printf ("b: %g\n", Cout);
+}

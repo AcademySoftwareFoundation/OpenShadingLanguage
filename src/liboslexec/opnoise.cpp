@@ -29,9 +29,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <limits>
 
 #include "oslexec_pvt.h"
-#include "noiseimpl.h"
-#include "dual_vec.h"
-#include "Imathx.h"
+#include <OSL/oslnoise.h>
+#include <OSL/dual_vec.h>
+#include <OSL/Imathx.h>
 
 #include <OpenImageIO/fmath.h>
 
@@ -39,10 +39,6 @@ using namespace OSL;
 
 OSL_NAMESPACE_ENTER
 namespace pvt {
-
-// This symbol is strictly to force linkage of this file when building
-// static library.
-int opnoise_cpp_dummy = 1;
 
 
 
@@ -95,11 +91,6 @@ void test_perlin(int d) {
  */
 
 #if 1
-// Handy re-casting macros
-#define VEC(v) (*(Vec3 *)v)
-#define DFLOAT(x) (*(Dual2<Float> *)x)
-#define DVEC(x) (*(Dual2<Vec3> *)x)
-#define USTR(cstr) (*((ustring *)&cstr))
 
 
 #define NOISE_IMPL(opname,implname)                                     \
@@ -615,6 +606,64 @@ PNOISE_IMPL_DERIV_OPT (gaborpnoise, GaborPNoise)
 
 
 
+struct NullNoise {
+    NullNoise () { }
+    inline void operator() (float &result, float x) const { result = 0.0f; }
+    inline void operator() (float &result, float x, float y) const { result = 0.0f; }
+    inline void operator() (float &result, const Vec3 &p) const { result = 0.0f; }
+    inline void operator() (float &result, const Vec3 &p, float t) const { result = 0.0f; }
+    inline void operator() (Vec3 &result, float x) const { result = v(); }
+    inline void operator() (Vec3 &result, float x, float y) const { result = v(); }
+    inline void operator() (Vec3 &result, const Vec3 &p) const { result = v(); }
+    inline void operator() (Vec3 &result, const Vec3 &p, float t) const { result = v(); }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x,
+                            int seed=0) const { result.set (0.0f, 0.0f, 0.0f); }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x,
+                            const Dual2<float> &y, int seed=0) const { result.set (0.0f, 0.0f, 0.0f); }
+    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
+                            int seed=0) const { result.set (0.0f, 0.0f, 0.0f); }
+    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
+                            const Dual2<float> &t, int seed=0) const { result.set (0.0f, 0.0f, 0.0f); }
+    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const { result.set (v(), v(), v()); }
+    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {  result.set (v(), v(), v()); }
+    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {  result.set (v(), v(), v()); }
+    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const { result.set (v(), v(), v()); }
+    inline Vec3 v () const { return Vec3(0.0f, 0.0f, 0.0f); };
+};
+
+struct UNullNoise {
+    UNullNoise () { }
+    inline void operator() (float &result, float x) const { result = 0.5f; }
+    inline void operator() (float &result, float x, float y) const { result = 0.5f; }
+    inline void operator() (float &result, const Vec3 &p) const { result = 0.5f; }
+    inline void operator() (float &result, const Vec3 &p, float t) const { result = 0.5f; }
+    inline void operator() (Vec3 &result, float x) const { result = v(); }
+    inline void operator() (Vec3 &result, float x, float y) const { result = v(); }
+    inline void operator() (Vec3 &result, const Vec3 &p) const { result = v(); }
+    inline void operator() (Vec3 &result, const Vec3 &p, float t) const { result = v(); }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x,
+                            int seed=0) const { result.set (0.5f, 0.5f, 0.5f); }
+    inline void operator() (Dual2<float> &result, const Dual2<float> &x,
+                            const Dual2<float> &y, int seed=0) const { result.set (0.5f, 0.5f, 0.5f); }
+    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
+                            int seed=0) const { result.set (0.5f, 0.5f, 0.5f); }
+    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
+                            const Dual2<float> &t, int seed=0) const { result.set (0.5f, 0.5f, 0.5f); }
+    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const { result.set (v(), v(), v()); }
+    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {  result.set (v(), v(), v()); }
+    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {  result.set (v(), v(), v()); }
+    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const { result.set (v(), v(), v()); }
+    inline Vec3 v () const { return Vec3(0.5f, 0.5f, 0.5f); };
+};
+
+NOISE_IMPL (nullnoise, NullNoise)
+NOISE_IMPL_DERIV (nullnoise, NullNoise)
+NOISE_IMPL (unullnoise, UNullNoise)
+NOISE_IMPL_DERIV (unullnoise, UNullNoise)
+
+
+
+
 struct GenericNoise {
     GenericNoise () { }
 
@@ -644,8 +693,12 @@ struct GenericNoise {
         } else if (name == Strings::gabor) {
             GaborNoise gnoise;
             gnoise (name, result, s, sg, opt);
+        } else if (name == Strings::null) {
+            NullNoise noise; noise(result, s);
+        } else if (name == Strings::unull) {
+            UNullNoise noise; noise(result, s);
         } else {
-            ((ShadingContext *)sg->context)->shadingsys().error ("Unknown noise type \"%s\"", name.c_str());
+            ((ShadingContext *)sg->context)->error ("Unknown noise type \"%s\"", name.c_str());
         }
     }
 
@@ -672,8 +725,12 @@ struct GenericNoise {
         } else if (name == Strings::gabor) {
             GaborNoise gnoise;
             gnoise (name, result, s, t, sg, opt);
+        } else if (name == Strings::null) {
+            NullNoise noise; noise(result, s, t);
+        } else if (name == Strings::unull) {
+            UNullNoise noise; noise(result, s, t);
         } else {
-            ((ShadingContext *)sg->context)->shadingsys().error ("Unknown noise type \"%s\"", name.c_str());
+            ((ShadingContext *)sg->context)->error ("Unknown noise type \"%s\"", name.c_str());
         }
     }
 };
@@ -707,7 +764,7 @@ struct GenericPNoise {
             GaborPNoise gnoise;
             gnoise (name, result, s, sp, sg, opt);
         } else {
-            ((ShadingContext *)sg->context)->shadingsys().error ("Unknown noise type \"%s\"", name.c_str());
+            ((ShadingContext *)sg->context)->error ("Unknown noise type \"%s\"", name.c_str());
         }
     }
 
@@ -730,13 +787,74 @@ struct GenericPNoise {
             GaborPNoise gnoise;
             gnoise (name, result, s, t, sp, tp, sg, opt);
         } else {
-            ((ShadingContext *)sg->context)->shadingsys().error ("Unknown noise type \"%s\"", name.c_str());
+            ((ShadingContext *)sg->context)->error ("Unknown noise type \"%s\"", name.c_str());
         }
     }
 };
 
 
 PNOISE_IMPL_DERIV_OPT (genericpnoise, GenericPNoise)
+
+
+// Utility: retrieve a pointer to the ShadingContext's noise params
+// struct, also re-initialize its contents.
+OSL_SHADEOP void *
+osl_get_noise_options (void *sg_)
+{
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
+    RendererServices::NoiseOpt *opt = sg->context->noise_options_ptr ();
+    new (opt) RendererServices::NoiseOpt;
+    return opt;
+}
+
+
+
+OSL_SHADEOP void
+osl_noiseparams_set_anisotropic (void *opt, int a)
+{
+    ((RendererServices::NoiseOpt *)opt)->anisotropic = a;
+}
+
+
+
+OSL_SHADEOP void
+osl_noiseparams_set_do_filter (void *opt, int a)
+{
+    ((RendererServices::NoiseOpt *)opt)->do_filter = a;
+}
+
+
+
+OSL_SHADEOP void
+osl_noiseparams_set_direction (void *opt, void *dir)
+{
+    ((RendererServices::NoiseOpt *)opt)->direction = VEC(dir);
+}
+
+
+
+OSL_SHADEOP void
+osl_noiseparams_set_bandwidth (void *opt, float b)
+{
+    ((RendererServices::NoiseOpt *)opt)->bandwidth = b;
+}
+
+
+
+OSL_SHADEOP void
+osl_noiseparams_set_impulses (void *opt, float i)
+{
+    ((RendererServices::NoiseOpt *)opt)->impulses = i;
+}
+
+
+
+OSL_SHADEOP void
+osl_count_noise (void *sg_)
+{
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
+    sg->context->shadingsys().count_noise ();
+}
 
 
 } // namespace pvt

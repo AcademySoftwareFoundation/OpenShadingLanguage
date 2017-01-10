@@ -43,11 +43,11 @@ degrees: a = degrees(u); a = 0, Dx(a) = 57.3, Dy(a) = 0
 
 radians: a = radians(u); a = 0, Dx(a) = 0.01745, Dy(a) = 0
 
-log: a = log(u); a = -3.403e+38, Dx(a) = 0, Dy(a) = 0
+log: a = log(u); a = -87.34, Dx(a) = 0, Dy(a) = 0
 
-log2: a = log2(u); a = -3.403e+38, Dx(a) = 0, Dy(a) = 0
+log2: a = log2(u); a = -126, Dx(a) = 0, Dy(a) = 0
 
-log10: a = log10(u); a = -3.403e+38, Dx(a) = 0, Dy(a) = 0
+log10: a = log10(u); a = -37.93, Dx(a) = 0, Dy(a) = 0
 
 exp: a = exp(u); a = 1, Dx(a) = 1, Dy(a) = 0
 
@@ -65,9 +65,9 @@ inversesqrt: a = inversesqrt(u); a = 0, Dx(a) = 0, Dy(a) = 0
 
 pow: a = pow(u, 3); a = 0, Dx(a) = 0, Dy(a) = 0
 
-pow: a = pow(u, v) at (0,0); a = 1, Dx(a) = 0, Dy(a) = 0
+pow: a = pow(u, v) at (0,0); a = 0, Dx(a) = 0, Dy(a) = 0
 
-log: a = log(u,10); a = -1.478e+38, Dx(a) = 0, Dy(a) = 0
+log: a = log(u,10); a = -37.93, Dx(a) = 0, Dy(a) = 0
 
 log: a = log(u,v) at (0,0); a = 1, Dx(a) = 0, Dy(a) = 0
 
@@ -176,7 +176,7 @@ pow: a = pow(u, v) at (1,0); a = 1, Dx(a) = 0, Dy(a) = 0
 
 log: a = log(u,10); a = 0, Dx(a) = 0.4343, Dy(a) = 0
 
-log: a = log(u,v) at (1,0); a = 0, Dx(a) = 0, Dy(a) = 0
+log: a = log(u,v) at (1,0); a = 0, Dx(a) = -0.01145, Dy(a) = 0
 
 clamp: a = clamp(sin(u),u,v) is clamp(0.8415,1,0); a = 1, Dx(a) = 1, Dy(a) = 0
 
@@ -257,11 +257,11 @@ degrees: a = degrees(u); a = 0, Dx(a) = 57.3, Dy(a) = 0
 
 radians: a = radians(u); a = 0, Dx(a) = 0.01745, Dy(a) = 0
 
-log: a = log(u); a = -3.403e+38, Dx(a) = 0, Dy(a) = 0
+log: a = log(u); a = -87.34, Dx(a) = 0, Dy(a) = 0
 
-log2: a = log2(u); a = -3.403e+38, Dx(a) = 0, Dy(a) = 0
+log2: a = log2(u); a = -126, Dx(a) = 0, Dy(a) = 0
 
-log10: a = log10(u); a = -3.403e+38, Dx(a) = 0, Dy(a) = 0
+log10: a = log10(u); a = -37.93, Dx(a) = 0, Dy(a) = 0
 
 exp: a = exp(u); a = 1, Dx(a) = 1, Dy(a) = 0
 
@@ -279,9 +279,9 @@ inversesqrt: a = inversesqrt(u); a = 0, Dx(a) = 0, Dy(a) = 0
 
 pow: a = pow(u, 3); a = 0, Dx(a) = 0, Dy(a) = 0
 
-pow: a = pow(u, v) at (0,1); a = 0, Dx(a) = 0, Dy(a) = 0
+pow: a = pow(u, v) at (0,1); a = 0, Dx(a) = 1, Dy(a) = 0
 
-log: a = log(u,10); a = -1.478e+38, Dx(a) = 0, Dy(a) = 0
+log: a = log(u,10); a = -37.93, Dx(a) = 0, Dy(a) = 0
 
 log: a = log(u,v) at (0,1); a = 0, Dx(a) = 0, Dy(a) = 0
 

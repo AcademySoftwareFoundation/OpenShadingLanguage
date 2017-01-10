@@ -29,43 +29,98 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pragma once
 
 #include <map>
-
-#include "oslexec.h"
+#include <boost/unordered_map.hpp>
+#include <OpenImageIO/ustring.h>
+#include "OSL/oslexec.h"
 
 OSL_NAMESPACE_ENTER
 
-class SimpleRenderer : public RendererServices {
+class SimpleRenderer : public RendererServices
+{
 public:
+    // Just use 4x4 matrix for transformations
+    typedef Matrix44 Transformation;
+
     SimpleRenderer ();
     ~SimpleRenderer () { }
 
-    // required methods:
-    virtual bool get_matrix (Matrix44 &result, TransformationPtr xform,
+    virtual int supports (string_view feature) const;
+    virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
+                             TransformationPtr xform,
                              float time);
-    virtual bool get_matrix (Matrix44 &result, ustring from, float time);
-    virtual bool get_matrix (Matrix44 &result, TransformationPtr xform);
-    virtual bool get_matrix (Matrix44 &result, ustring from);
-    virtual bool get_inverse_matrix (Matrix44 &result, ustring to, float time);
+    virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
+                             ustring from, float time);
+    virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
+                             TransformationPtr xform);
+    virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
+                             ustring from);
+    virtual bool get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
+                                     ustring to, float time);
 
-    virtual bool get_array_attribute (void *renderstate, bool derivatives, 
+    void name_transform (const char *name, const Transformation &xform);
+
+    virtual bool get_array_attribute (ShaderGlobals *sg, bool derivatives, 
                                       ustring object, TypeDesc type, ustring name,
                                       int index, void *val );
-    virtual bool get_attribute (void *renderstate, bool derivatives, ustring object,
+    virtual bool get_attribute (ShaderGlobals *sg, bool derivatives, ustring object,
                                 TypeDesc type, ustring name, void *val);
     virtual bool get_userdata (bool derivatives, ustring name, TypeDesc type, 
-                               void *renderstate, void *val);
-    virtual bool has_userdata (ustring name, TypeDesc type, void *renderstate);
+                               ShaderGlobals *sg, void *val);
 
-    // implementation specific method to setup internals:
-    void name_transform (const char *name, const Matrix44& xform);
-    void camera_params (const Matrix44& world_to_camera, float hfov, int xres, int yres);
+    // Super simple camera and display parameters.  Many options not
+    // available, no motion blur, etc.
+    void camera_params (const Matrix44 &world_to_camera, ustring projection,
+                        float hfov, float hither, float yon,
+                        int xres, int yres);
                         
 private:
-    typedef std::map <ustring, Matrix44> TransformMap;
-    TransformMap m_named_xforms;
+    // Camera parameters
     Matrix44 m_world_to_camera;
-    float m_fov;
+    ustring m_projection;
+    float m_fov, m_pixelaspect, m_hither, m_yon;
+    float m_shutter[2];
+    float m_screen_window[4];
     int m_xres, m_yres;
+
+    // Named transforms
+    typedef std::map <ustring, shared_ptr<Transformation> > TransformMap;
+    TransformMap m_named_xforms;
+
+    // Attribute and userdata retrieval -- for fast dispatch, use a hash
+    // table to map attribute names to functions that retrieve them. We
+    // imagine this to be fairly quick, but for a performance-critical
+    // renderer, we would encourage benchmarking various methods and
+    // alternate data structures.
+    typedef bool (SimpleRenderer::*AttrGetter)(ShaderGlobals *sg, bool derivs,
+                                               ustring object, TypeDesc type,
+                                               ustring name, void *val);
+    typedef boost::unordered_map<ustring, AttrGetter, ustringHash> AttrGetterMap;
+    AttrGetterMap m_attr_getters;
+
+    // Attribute getters
+    bool get_camera_resolution (ShaderGlobals *sg, bool derivs, ustring object,
+                         TypeDesc type, ustring name, void *val);
+    bool get_camera_projection (ShaderGlobals *sg, bool derivs, ustring object,
+                         TypeDesc type, ustring name, void *val);
+    bool get_camera_fov (ShaderGlobals *sg, bool derivs, ustring object,
+                         TypeDesc type, ustring name, void *val);
+    bool get_camera_pixelaspect (ShaderGlobals *sg, bool derivs, ustring object,
+                         TypeDesc type, ustring name, void *val);
+    bool get_camera_clip (ShaderGlobals *sg, bool derivs, ustring object,
+                         TypeDesc type, ustring name, void *val);
+    bool get_camera_clip_near (ShaderGlobals *sg, bool derivs, ustring object,
+                         TypeDesc type, ustring name, void *val);
+    bool get_camera_clip_far (ShaderGlobals *sg, bool derivs, ustring object,
+                         TypeDesc type, ustring name, void *val);
+    bool get_camera_shutter (ShaderGlobals *sg, bool derivs, ustring object,
+                         TypeDesc type, ustring name, void *val);
+    bool get_camera_shutter_open (ShaderGlobals *sg, bool derivs, ustring object,
+                         TypeDesc type, ustring name, void *val);
+    bool get_camera_shutter_close (ShaderGlobals *sg, bool derivs, ustring object,
+                         TypeDesc type, ustring name, void *val);
+    bool get_camera_screen_window (ShaderGlobals *sg, bool derivs, ustring object,
+                         TypeDesc type, ustring name, void *val);
+
 };
 
 OSL_NAMESPACE_EXIT

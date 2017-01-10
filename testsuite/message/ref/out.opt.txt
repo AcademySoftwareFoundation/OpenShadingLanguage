@@ -5,15 +5,17 @@ Connect alayer.c_out to blayer.c_in
 Connect alayer.dummy to blayer.dummy
 a: f_out = 0.5, c_out = 0.25 1 1
 a: set message 'foo' to 0.125 0.5 0.5
-a: set message 'cc' to (0.5, 0.5, 0.5) * diffuse ((0, 0, 1))
+a: set message 'cc' to (0.5, 0.5, 0.5) * diffuse ((0, 0, 1), "label", "")
 a: set message 'array' to { 42 43 44 45 }
-dummy = 0.5, force connection with optimization
+dummy = 1, force connection with optimization
 b: f_in = 0.5, c_in = 0.25 1 1
 b: retrieved message 'foo', result = 1, foo = 0.125 0.5 0.5
 b: retrieved bogus message 'bar', result = 0, bar = 0
 ERROR: type mismatch for message "foo" (created as color here: a.osl:10) cannot fetch as float from b.osl:23
 b: retrieved message 'foo' with wrong type, result = 0, foo = 0
-b: retrieved message 'cc' into Ci: (0.5, 0.5, 0.5) * diffuse ((0, 0, 1))
+b: retrieved message 'cc' into Ci: (0.5, 0.5, 0.5) * diffuse ((0, 0, 1), "label", "")
 b: retrieved message 'array' to { 42 43 44 45 }
 ERROR: message "set_twice" already exists (created here: b.osl:44) cannot set again from b.osl:45
+ERROR: type mismatch for message "set_closure_get_int" (created as closure color here: b.osl:47) cannot fetch as int from b.osl:48
+ERROR: type mismatch for message "get_int_set_closure" (created as int here: b.osl:51) cannot fetch as closure color from b.osl:52
 

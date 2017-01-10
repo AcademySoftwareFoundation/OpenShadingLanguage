@@ -1,0 +1,6 @@
+Compiled attribs.osl -> attribs.oso
+Compiled test.osl -> test.oso
+Connect A.value to root.swidth
+Connect A.value to root.twidth
+
+Output Cout to out.tif

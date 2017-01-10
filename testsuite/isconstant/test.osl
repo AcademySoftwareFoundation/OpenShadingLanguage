@@ -1,0 +1,8 @@
+
+
+shader test (float A = 1)
+{
+    printf ("Is param A const? %d\n", isconstant(A));
+    printf ("Is 2*A const? %d\n", isconstant(2*A));
+    printf ("Is noise(P) const? %d\n", isconstant(noise(P)));
+}

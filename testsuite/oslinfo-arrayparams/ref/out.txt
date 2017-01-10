@@ -1,0 +1,10 @@
+Compiled arrayparams.osl -> arrayparams.oso
+surface "arrayparams"
+    "farrayparam" "float[1]"
+		Default value: [ 1 ]
+    "farrayparamunsized" "float[]"
+		Default value: [ 7 8 9 ]
+    "varrayparam" "vector[3]"
+		Default value: [ 1 2 3 4 5 6 7 8 9 ]
+    "varrayparamunsized" "vector[]"
+		Default value: [ 1 1 1 2 2 2 3 3 3 3 2 1 ]

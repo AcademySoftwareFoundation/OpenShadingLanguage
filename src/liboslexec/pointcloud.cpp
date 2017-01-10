@@ -43,9 +43,9 @@ namespace { // anon
 
 class PointCloud {
 public:
-    PointCloud (ustring filename, Partio::ParticlesDataMutable *partio_cloud);
+    PointCloud (ustring filename, Partio::ParticlesDataMutable *partio_cloud, bool write);
     ~PointCloud ();
-    static PointCloud *get (ustring filename, bool read=true);
+    static PointCloud *get (ustring filename, bool write = false);
 
     typedef boost::unordered_map<ustring, shared_ptr<Partio::ParticleAttribute>, ustringHash> AttributeMap;
     // N.B./FIXME(C++11): shared_ptr is probably overkill, but
@@ -53,8 +53,15 @@ public:
     // standard containers.  When C++11 is uniquitous, unique_ptr is the
     // one that should really be used.
 
+    const Partio::ParticlesData* read_access() const { DASSERT(!m_write); return m_partio_cloud; }
+    Partio::ParticlesDataMutable* write_access() const { DASSERT(m_write); return m_partio_cloud; }
+
     ustring m_filename;
+private:
+    // hide just this field, because we want to control how it is accessed
     Partio::ParticlesDataMutable *m_partio_cloud;
+public:
+
     AttributeMap m_attributes;
     bool m_write;
     Partio::ParticleAttribute m_position_attribute;
@@ -80,7 +87,7 @@ struct SortedPointCompare {
 
 
 PointCloud *
-PointCloud::get (ustring filename, bool read)
+PointCloud::get (ustring filename, bool write)
 {
     if (! filename)
         return NULL;
@@ -90,36 +97,38 @@ PointCloud::get (ustring filename, bool read)
         return found->second.get();
     // Not found. Create a new one.
     Partio::ParticlesDataMutable *partio_cloud = NULL;
-    if (read) {
+    if (!write) {
         partio_cloud = Partio::read(filename.c_str());
         if (! partio_cloud)
             return NULL;
     } else {
         partio_cloud = Partio::create();
     }
-    PointCloud *pc = new PointCloud (filename, partio_cloud);
+    PointCloud *pc = new PointCloud (filename, partio_cloud, write);
     pointclouds[filename].reset (pc);
     return pc;
 }
 
 
 PointCloud::PointCloud (ustring filename,
-                        Partio::ParticlesDataMutable *partio_cloud)
-    : m_filename(filename), m_partio_cloud(partio_cloud), m_write(false)
+                        Partio::ParticlesDataMutable *partio_cloud, bool write)
+    : m_filename(filename), m_partio_cloud(partio_cloud), m_write(write)
 {
     if (! m_partio_cloud)
         return;   // empty cloud
 
-    // partio requires this for accelerated lookups
-    m_partio_cloud->sort();
+    if (!m_write) {
+        // partio requires this for accelerated lookups
+        m_partio_cloud->sort();
 
-    // Create & stash a ParticleAttribute record for each attribute.
-    // These will be automatically freed by ~PointCloud when the map
-    // destructs.
-    for (int i = 0, e = m_partio_cloud->numAttributes();  i < e;  ++i) {
-        Partio::ParticleAttribute *a = new Partio::ParticleAttribute();
-        m_partio_cloud->attributeInfo (i, *a);
-        m_attributes[ustring(a->name)].reset (a);
+        // Create & stash a ParticleAttribute record for each attribute.
+        // These will be automatically freed by ~PointCloud when the map
+        // destructs.
+        for (int i = 0, e = m_partio_cloud->numAttributes();  i < e;  ++i) {
+            Partio::ParticleAttribute *a = new Partio::ParticleAttribute();
+            m_partio_cloud->attributeInfo (i, *a);
+            m_attributes[ustring(a->name)].reset (a);
+        }
     }
 }
 
@@ -193,15 +202,19 @@ RendererServices::pointcloud_search (ShaderGlobals *sg,
         return 0;
     PointCloud *pc = PointCloud::get(filename);
     if (pc == NULL) { // The file failed to load
-        sg->context->shadingsys().error ("pointcloud_search: could not open \"%s\"", filename.c_str());
+        sg->context->error ("pointcloud_search: could not open \"%s\"", filename.c_str());
         return 0;
     }
-    spin_lock lock (pc->m_mutex);
-    Partio::ParticlesDataMutable *cloud = pc->m_partio_cloud;
+
+    const Partio::ParticlesData *cloud = pc->read_access();
     if (cloud == NULL) { // The file failed to load
-        sg->context->shadingsys().error ("pointcloud_search: could not open \"%s\"", filename.c_str());
+        sg->context->error ("pointcloud_search: could not open \"%s\"", filename.c_str());
         return 0;
     }
+
+    // Early exit if the pointcloud contains no particles.
+    if (cloud->numParticles() == 0)
+       return 0;
 
     // If we need derivs of the distances, we'll need access to the 
     // found point's positions.
@@ -249,7 +262,8 @@ RendererServices::pointcloud_search (ShaderGlobals *sg,
             // We are going to need the positions if we need to compute
             // distance derivs
             OSL::Vec3 *positions = (OSL::Vec3 *) sg->context->alloc_scratch (sizeof(OSL::Vec3) * count, sizeof(float));
-            cloud->data (*pos_attr, count, indices, true, (void *)positions);
+            // FIXME(Partio): this function really should be marked as const because it is just a wrapper of a private const method
+            const_cast<Partio::ParticlesData*>(cloud)->data (*pos_attr, count, indices, true, (void *)positions);
             const OSL::Vec3 &dCdx = (&center)[1];
             const OSL::Vec3 &dCdy = (&center)[2];
             float *d_distance_dx = out_distances + derivs_offset;
@@ -286,20 +300,20 @@ RendererServices::pointcloud_get (ShaderGlobals *sg,
 
     PointCloud *pc = PointCloud::get(filename);
     if (pc == NULL) { // The file failed to load
-        sg->context->shadingsys().error ("pointcloud_get: could not open \"%s\"", filename.c_str());
+        sg->context->error ("pointcloud_get: could not open \"%s\"", filename.c_str());
         return 0;
     }
-    spin_lock lock (pc->m_mutex);
-    Partio::ParticlesDataMutable *cloud = pc->m_partio_cloud;
+
+    const Partio::ParticlesData *cloud = pc->read_access();
     if (cloud == NULL) { // The file failed to load
-        sg->context->shadingsys().error ("pointcloud_get: could not open \"%s\"", filename.c_str());
+        sg->context->error ("pointcloud_get: could not open \"%s\"", filename.c_str());
         return 0;
     }
 
     // lookup the ParticleAttribute pointer needed for a query
     Partio::ParticleAttribute *attr = pc->m_attributes[attr_name].get();
     if (! attr) {
-        sg->context->shadingsys().error ("Accessing unexisting attribute %s in pointcloud \"%s\"", attr_name.c_str(), filename.c_str());
+        sg->context->error ("Accessing unexisting attribute %s in pointcloud \"%s\"", attr_name.c_str(), filename.c_str());
         return 0;
     }
 
@@ -323,7 +337,7 @@ RendererServices::pointcloud_get (ShaderGlobals *sg,
 
     // Finally check for some equivalent types like float3 and vector
     if (!compatiblePartioType(attr, attr_partio_type)) {
-        sg->context->shadingsys().error ("Type of attribute \"%s\" : %s[%d] not compatible with OSL's %s in \"%s\" pointcloud",
+        sg->context->error ("Type of attribute \"%s\" : %s[%d] not compatible with OSL's %s in \"%s\" pointcloud",
                     attr_name.c_str(), partioTypeString(attr), attr->count,
                     element_type.c_str(), filename.c_str());
         return 0;
@@ -336,7 +350,7 @@ RendererServices::pointcloud_get (ShaderGlobals *sg,
     // then copy them back to the caller's indices.
 
     // Actual data query
-    cloud->data (*attr, count, (Partio::ParticleIndex *)indices,
+    const_cast<Partio::ParticlesData *>(cloud)->data (*attr, count, (Partio::ParticleIndex *)indices,
                  true, out_data);
     return 1;
 #else
@@ -356,9 +370,9 @@ RendererServices::pointcloud_write (ShaderGlobals *sg,
 #if USE_PARTIO
     if (! filename)
         return false;
-    PointCloud *pc = PointCloud::get(filename, false /* don't read from disk */);
+    PointCloud *pc = PointCloud::get(filename, true /* create file to write */);
     spin_lock lock (pc->m_mutex);
-    Partio::ParticlesDataMutable *cloud = pc->m_partio_cloud;
+    Partio::ParticlesDataMutable *cloud = pc->write_access();
     if (cloud == NULL) // The file failed to load
         return false;
 
@@ -422,14 +436,15 @@ RendererServices::pointcloud_write (ShaderGlobals *sg,
 
 
 
-inline ustring USTR(const char *cstr) { return (*((const ustring *)&cstr)); }
-inline TypeDesc TYPEDESC(long long x) { return (*(const TypeDesc *)&x); }
-
 OSL_SHADEOP int
 osl_pointcloud_search (ShaderGlobals *sg, const char *filename, void *center, float radius,
                        int max_points, int sort, void *out_indices, void *out_distances, int derivs_offset,
                        int nattrs, ...)
 {
+    ShadingSystemImpl &shadingsys (sg->context->shadingsys());
+    if (shadingsys.no_pointcloud()) // Debug mode to skip pointcloud expense
+        return 0;
+
     // RS::pointcloud_search takes size_t index array (because of the
     // presumed use of Partio underneath), but OSL only has int, so we
     // have to allocate and copy out.  But, on architectures where int
@@ -442,18 +457,18 @@ osl_pointcloud_search (ShaderGlobals *sg, const char *filename, void *center, fl
     else
         indices = (size_t *)alloca (sizeof(size_t) * max_points);
 
-    int count = sg->context->renderer()->pointcloud_search (sg, USTR(filename),
-                               *((Vec3 *)center), radius, max_points, sort,
-                               indices, (float *)out_distances, derivs_offset);
+    int count = sg->renderer->pointcloud_search (sg, USTR(filename),
+                                                 *((Vec3 *)center), radius, max_points, sort,
+                                                 indices, (float *)out_distances, derivs_offset);
     va_list args;
     va_start (args, nattrs);
-    for (int i = 0; i < nattrs; i++)
-    {  
-        ustring  attr_name = USTR (va_arg (args, const char *));
-        TypeDesc attr_type = TYPEDESC (va_arg (args, long long));
+    for (int i = 0; i < nattrs; i++) {
+        ustring  attr_name = ustring::from_unique ((const char *)va_arg (args, const char *));
+        long long lltype = va_arg (args, long long);
+        TypeDesc attr_type = TYPEDESC (lltype);
         void     *out_data = va_arg (args, void*);
-        sg->context->renderer()->pointcloud_get (sg, USTR(filename), indices,
-                                        count, attr_name, attr_type, out_data);
+        sg->renderer->pointcloud_get (sg, USTR(filename), indices,
+                                      count, attr_name, attr_type, out_data);
     }
     va_end (args);
 
@@ -462,7 +477,7 @@ osl_pointcloud_search (ShaderGlobals *sg, const char *filename, void *center, fl
         for(int i = 0; i < count; ++i)
             ((int *)out_indices)[i] = indices[i];
 
-    sg->context->shadingsys().pointcloud_stats (1, 0, count);
+    shadingsys.pointcloud_stats (1, 0, count);
 
     return count;
 }
@@ -473,16 +488,18 @@ OSL_SHADEOP int
 osl_pointcloud_get (ShaderGlobals *sg, const char *filename, void *in_indices, int count,
                     const char *attr_name, long long attr_type, void *out_data)
 {
-    size_t *indices = (size_t *)alloca (sizeof(size_t) * count);
+    ShadingSystemImpl &shadingsys (sg->context->shadingsys());
+    if (shadingsys.no_pointcloud()) // Debug mode to skip pointcloud expense
+        return 0;
 
-    for(int i = 0; i < count; ++i)
+    size_t *indices = (size_t *)alloca (sizeof(size_t) * count);
+    for (int i = 0; i < count; ++i)
         indices[i] = ((int *)in_indices)[i];
 
-    sg->context->shadingsys().pointcloud_stats (0, 1, 0);
+    shadingsys.pointcloud_stats (0, 1, 0);
 
-    return sg->context->renderer()->pointcloud_get (sg, USTR(filename), (size_t *)indices, count, USTR(attr_name),
-                                                    TYPEDESC(attr_type), out_data);
-
+    return sg->renderer->pointcloud_get (sg, USTR(filename), (size_t *)indices, count, USTR(attr_name),
+                                         TYPEDESC(attr_type), out_data);
 }
 
 
@@ -504,10 +521,13 @@ osl_pointcloud_write (ShaderGlobals *sg, const char *filename, const Vec3 *pos,
                       int nattribs, const ustring *names,
                       const TypeDesc *types, const void **values)
 {
-    RendererServices *renderer (sg->context->renderer());
-    sg->context->shadingsys().pointcloud_stats (0, 0, 0, 1);
-    return renderer->pointcloud_write (sg, USTR(filename), *pos,
-                                       nattribs, names, types, values);
+    ShadingSystemImpl &shadingsys (sg->context->shadingsys());
+    if (shadingsys.no_pointcloud()) // Debug mode to skip pointcloud expense
+        return 0;
+
+    shadingsys.pointcloud_stats (0, 0, 0, 1);
+    return sg->renderer->pointcloud_write (sg, USTR(filename), *pos,
+                                           nattribs, names, types, values);
 }
 
 

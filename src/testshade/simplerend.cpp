@@ -27,15 +27,119 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 
-#include "oslexec.h"
+#include "OSL/oslexec.h"
+#include "OSL/genclosure.h"
 #include "simplerend.h"
 using namespace OSL;
+
+
+// anonymous namespace
+namespace {
+
+// unique identifier for each closure supported by testshade
+enum ClosureIDs {
+    EMISSION_ID = 1,
+    BACKGROUND_ID,
+    DIFFUSE_ID,
+    OREN_NAYAR_ID,
+    TRANSLUCENT_ID,
+    PHONG_ID,
+    WARD_ID,
+    MICROFACET_ID,
+    REFLECTION_ID,
+    FRESNEL_REFLECTION_ID,
+    REFRACTION_ID,
+    TRANSPARENT_ID,
+    DEBUG_ID,
+    HOLDOUT_ID,
+};
+
+// these structures hold the parameters of each closure type
+// they will be contained inside ClosureComponent
+struct EmptyParams      { };
+struct DiffuseParams    { Vec3 N; ustring label; };
+struct OrenNayarParams  { Vec3 N; float sigma; };
+struct PhongParams      { Vec3 N; float exponent; ustring label; };
+struct WardParams       { Vec3 N, T; float ax, ay; };
+struct ReflectionParams { Vec3 N; float eta; };
+struct RefractionParams { Vec3 N; float eta; };
+struct MicrofacetParams { ustring dist; Vec3 N, U; float xalpha, yalpha, eta; int refract; };
+struct DebugParams      { ustring tag; };
+
+} // anonymous namespace
+
 
 OSL_NAMESPACE_ENTER
 
 static ustring u_camera("camera"), u_screen("screen");
 static ustring u_NDC("NDC"), u_raster("raster");
 static ustring u_perspective("perspective");
+static ustring u_s("s"), u_t("t");
+static TypeDesc TypeFloatArray2 (TypeDesc::FLOAT, 2);
+static TypeDesc TypeFloatArray4 (TypeDesc::FLOAT, 4);
+static TypeDesc TypeIntArray2 (TypeDesc::INT, 2);
+
+
+void register_closures(OSL::ShadingSystem* shadingsys) {
+    // Describe the memory layout of each closure type to the OSL runtime
+    enum { MaxParams = 32 };
+    struct BuiltinClosures {
+        const char* name;
+        int id;
+        ClosureParam params[MaxParams]; // upper bound
+    };
+    BuiltinClosures builtins[] = {
+        { "emission"   , EMISSION_ID,           { CLOSURE_FINISH_PARAM(EmptyParams) } },
+        { "background" , BACKGROUND_ID,         { CLOSURE_FINISH_PARAM(EmptyParams) } },
+        { "diffuse"    , DIFFUSE_ID,            { CLOSURE_VECTOR_PARAM(DiffuseParams, N),
+                                                  CLOSURE_STRING_KEYPARAM(DiffuseParams, label, "label"), // example of custom key param
+                                                  CLOSURE_FINISH_PARAM(DiffuseParams) } },
+        { "oren_nayar" , OREN_NAYAR_ID,         { CLOSURE_VECTOR_PARAM(OrenNayarParams, N),
+                                                  CLOSURE_FLOAT_PARAM (OrenNayarParams, sigma),
+                                                  CLOSURE_FINISH_PARAM(OrenNayarParams) } },
+        { "translucent", TRANSLUCENT_ID,        { CLOSURE_VECTOR_PARAM(DiffuseParams, N),
+                                                  CLOSURE_FINISH_PARAM(DiffuseParams) } },
+        { "phong"      , PHONG_ID,              { CLOSURE_VECTOR_PARAM(PhongParams, N),
+                                                  CLOSURE_FLOAT_PARAM (PhongParams, exponent),
+                                                  CLOSURE_STRING_KEYPARAM(PhongParams, label, "label"), // example of custom key param
+                                                  CLOSURE_FINISH_PARAM(PhongParams) } },
+        { "ward"       , WARD_ID,               { CLOSURE_VECTOR_PARAM(WardParams, N),
+                                                  CLOSURE_VECTOR_PARAM(WardParams, T),
+                                                  CLOSURE_FLOAT_PARAM (WardParams, ax),
+                                                  CLOSURE_FLOAT_PARAM (WardParams, ay),
+                                                  CLOSURE_FINISH_PARAM(WardParams) } },
+        { "microfacet", MICROFACET_ID,          { CLOSURE_STRING_PARAM(MicrofacetParams, dist),
+                                                  CLOSURE_VECTOR_PARAM(MicrofacetParams, N),
+                                                  CLOSURE_VECTOR_PARAM(MicrofacetParams, U),
+                                                  CLOSURE_FLOAT_PARAM (MicrofacetParams, xalpha),
+                                                  CLOSURE_FLOAT_PARAM (MicrofacetParams, yalpha),
+                                                  CLOSURE_FLOAT_PARAM (MicrofacetParams, eta),
+                                                  CLOSURE_INT_PARAM   (MicrofacetParams, refract),
+                                                  CLOSURE_FINISH_PARAM(MicrofacetParams) } },
+        { "reflection" , REFLECTION_ID,         { CLOSURE_VECTOR_PARAM(ReflectionParams, N),
+                                                  CLOSURE_FINISH_PARAM(ReflectionParams) } },
+        { "reflection" , FRESNEL_REFLECTION_ID, { CLOSURE_VECTOR_PARAM(ReflectionParams, N),
+                                                  CLOSURE_FLOAT_PARAM (ReflectionParams, eta),
+                                                  CLOSURE_FINISH_PARAM(ReflectionParams) } },
+        { "refraction" , REFRACTION_ID,         { CLOSURE_VECTOR_PARAM(RefractionParams, N),
+                                                  CLOSURE_FLOAT_PARAM (RefractionParams, eta),
+                                                  CLOSURE_FINISH_PARAM(RefractionParams) } },
+        { "transparent", TRANSPARENT_ID,        { CLOSURE_FINISH_PARAM(EmptyParams) } },
+        { "debug"      , DEBUG_ID,              { CLOSURE_STRING_PARAM(DebugParams, tag),
+                                                  CLOSURE_FINISH_PARAM(DebugParams) } },
+        { "holdout"    , HOLDOUT_ID,            { CLOSURE_FINISH_PARAM(EmptyParams) } },
+        // mark end of the array
+        { NULL, 0, {} }
+    };
+
+    for (int i = 0; builtins[i].name; i++) {
+        shadingsys->register_closure(
+            builtins[i].name,
+            builtins[i].id,
+            builtins[i].params,
+            NULL, NULL);
+    }
+}
 
 
 
@@ -44,6 +148,27 @@ SimpleRenderer::SimpleRenderer ()
     Matrix44 M;  M.makeIdentity();
     camera_params (M, u_perspective, 90.0f,
                    0.1f, 1000.0f, 256, 256);
+
+    // Set up getters
+    m_attr_getters[ustring("camera:resolution")] = &SimpleRenderer::get_camera_resolution;
+    m_attr_getters[ustring("camera:projection")] = &SimpleRenderer::get_camera_projection;
+    m_attr_getters[ustring("camera:pixelaspect")] = &SimpleRenderer::get_camera_pixelaspect;
+    m_attr_getters[ustring("camera:screen_window")] = &SimpleRenderer::get_camera_screen_window;
+    m_attr_getters[ustring("camera:fov")] = &SimpleRenderer::get_camera_fov;
+    m_attr_getters[ustring("camera:clip")] = &SimpleRenderer::get_camera_clip;
+    m_attr_getters[ustring("camera:clip_near")] = &SimpleRenderer::get_camera_clip_near;
+    m_attr_getters[ustring("camera:clip_far")] = &SimpleRenderer::get_camera_clip_far;
+    m_attr_getters[ustring("camera:shutter")] = &SimpleRenderer::get_camera_shutter;
+    m_attr_getters[ustring("camera:shutter_open")] = &SimpleRenderer::get_camera_shutter_open;
+    m_attr_getters[ustring("camera:shutter_close")] = &SimpleRenderer::get_camera_shutter_close;
+}
+
+
+
+int
+SimpleRenderer::supports (string_view feature) const
+{
+    return false;
 }
 
 
@@ -57,8 +182,15 @@ SimpleRenderer::camera_params (const Matrix44 &world_to_camera,
     m_world_to_camera = world_to_camera;
     m_projection = projection;
     m_fov = hfov;
+    m_pixelaspect = 1.0f; // hard-coded
     m_hither = hither;
     m_yon = yon;
+    m_shutter[0] = 0.0f; m_shutter[1] = 1.0f;  // hard-coded
+    float frame_aspect = float(xres)/float(yres) * m_pixelaspect;
+    m_screen_window[0] = -frame_aspect;
+    m_screen_window[1] = -1.0f;
+    m_screen_window[2] =  frame_aspect;
+    m_screen_window[3] =  1.0f;
     m_xres = xres;
     m_yres = yres;
 }
@@ -66,19 +198,21 @@ SimpleRenderer::camera_params (const Matrix44 &world_to_camera,
 
 
 bool
-SimpleRenderer::get_matrix (Matrix44 &result, TransformationPtr xform,
+SimpleRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
+                            TransformationPtr xform,
                             float time)
 {
     // SimpleRenderer doesn't understand motion blur and transformations
     // are just simple 4x4 matrices.
-    result = *(OSL::Matrix44 *)xform;
+    result = *reinterpret_cast<const Matrix44*>(xform);
     return true;
 }
 
 
 
 bool
-SimpleRenderer::get_matrix (Matrix44 &result, ustring from, float time)
+SimpleRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
+                            ustring from, float time)
 {
     TransformMap::const_iterator found = m_named_xforms.find (from);
     if (found != m_named_xforms.end()) {
@@ -92,7 +226,8 @@ SimpleRenderer::get_matrix (Matrix44 &result, ustring from, float time)
 
 
 bool
-SimpleRenderer::get_matrix (Matrix44 &result, TransformationPtr xform)
+SimpleRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
+                            TransformationPtr xform)
 {
     // SimpleRenderer doesn't understand motion blur and transformations
     // are just simple 4x4 matrices.
@@ -103,7 +238,8 @@ SimpleRenderer::get_matrix (Matrix44 &result, TransformationPtr xform)
 
 
 bool
-SimpleRenderer::get_matrix (Matrix44 &result, ustring from)
+SimpleRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
+                            ustring from)
 {
     // SimpleRenderer doesn't understand motion blur, so we never fail
     // on account of time-varying transformations.
@@ -119,13 +255,13 @@ SimpleRenderer::get_matrix (Matrix44 &result, ustring from)
 
 
 bool
-SimpleRenderer::get_inverse_matrix (Matrix44 &result, ustring to, float time)
+SimpleRenderer::get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
+                                    ustring to, float time)
 {
     if (to == u_camera || to == u_screen || to == u_NDC || to == u_raster) {
         Matrix44 M = m_world_to_camera;
         if (to == u_screen || to == u_NDC || to == u_raster) {
             float depthrange = (double)m_yon-(double)m_hither;
-            static ustring u_perspective("perspective");
             if (m_projection == u_perspective) {
                 float tanhalffov = tanf (0.5f * m_fov * M_PI/180.0);
                 Matrix44 camera_to_screen (1/tanhalffov, 0, 0, 0,
@@ -180,18 +316,19 @@ SimpleRenderer::name_transform (const char *name, const OSL::Matrix44 &xform)
     m_named_xforms[ustring(name)] = M;
 }
 
+
+
 bool
-SimpleRenderer::get_array_attribute (void *renderstate, bool derivatives, ustring object,
+SimpleRenderer::get_array_attribute (ShaderGlobals *sg, bool derivatives, ustring object,
                                      TypeDesc type, ustring name,
                                      int index, void *val)
 {
-    return false;
-}
+    AttrGetterMap::const_iterator g = m_attr_getters.find (name);
+    if (g != m_attr_getters.end()) {
+        AttrGetter getter = g->second;
+        return (this->*(getter)) (sg, derivatives, object, type, name, val);
+    }
 
-bool
-SimpleRenderer::get_attribute (void *renderstate, bool derivatives, ustring object,
-                               TypeDesc type, ustring name, void *val)
-{
     // In order to test getattribute(), respond positively to
     // "options"/"blahblah"
     if (object == "options" && name == "blahblah" &&
@@ -199,19 +336,216 @@ SimpleRenderer::get_attribute (void *renderstate, bool derivatives, ustring obje
         *(float *)val = 3.14159;
         return true;
     }
+
+    // If no named attribute was found, allow userdata to bind to the
+    // attribute request.
+    if (object.empty() && index == -1)
+        return get_userdata (derivatives, name, type, sg, val);
+
     return false;
 }
 
+
+
 bool
-SimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type, void *renderstate, void *val)
+SimpleRenderer::get_attribute (ShaderGlobals *sg, bool derivatives, ustring object,
+                               TypeDesc type, ustring name, void *val)
 {
+    return get_array_attribute (sg, derivatives, object,
+                                type, name, -1, val);
+}
+
+
+
+bool
+SimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type,
+                              ShaderGlobals *sg, void *val)
+{
+    // Just to illustrate how this works, respect s and t userdata, filled
+    // in with the uv coordinates.  In a real renderer, it would probably
+    // look up something specific to the primitive, rather than have hard-
+    // coded names.
+
+    if (name == u_s && type == TypeDesc::TypeFloat) {
+        ((float *)val)[0] = sg->u;
+        if (derivatives) {
+            ((float *)val)[1] = sg->dudx;
+            ((float *)val)[2] = sg->dudy;
+        }
+        return true;
+    }
+    if (name == u_t && type == TypeDesc::TypeFloat) {
+        ((float *)val)[0] = sg->v;
+        if (derivatives) {
+            ((float *)val)[1] = sg->dvdx;
+            ((float *)val)[2] = sg->dvdy;
+        }
+        return true;
+    }
+
     return false;
 }
 
+
 bool
-SimpleRenderer::has_userdata (ustring name, TypeDesc type, void *renderstate)
+SimpleRenderer::get_camera_resolution (ShaderGlobals *sg, bool derivs, ustring object,
+                                    TypeDesc type, ustring name, void *val)
 {
+    if (type == TypeIntArray2) {
+        ((int *)val)[0] = m_xres;
+        ((int *)val)[1] = m_yres;
+        return true;
+    }
     return false;
 }
+
+
+bool
+SimpleRenderer::get_camera_projection (ShaderGlobals *sg, bool derivs, ustring object,
+                                    TypeDesc type, ustring name, void *val)
+{
+    if (type == TypeDesc::TypeString) {
+        ((ustring *)val)[0] = m_projection;
+        return true;
+    }
+    return false;
+}
+
+
+bool
+SimpleRenderer::get_camera_fov (ShaderGlobals *sg, bool derivs, ustring object,
+                                    TypeDesc type, ustring name, void *val)
+{
+    // N.B. in a real rederer, this may be time-dependent
+    if (type == TypeDesc::TypeFloat) {
+        ((float *)val)[0] = m_fov;
+        if (derivs)
+            memset ((char *)val+type.size(), 0, 2*type.size());
+        return true;
+    }
+    return false;
+}
+
+
+bool
+SimpleRenderer::get_camera_pixelaspect (ShaderGlobals *sg, bool derivs, ustring object,
+                                    TypeDesc type, ustring name, void *val)
+{
+    if (type == TypeDesc::TypeFloat) {
+        ((float *)val)[0] = m_pixelaspect;
+        if (derivs)
+            memset ((char *)val+type.size(), 0, 2*type.size());
+        return true;
+    }
+    return false;
+}
+
+
+bool
+SimpleRenderer::get_camera_clip (ShaderGlobals *sg, bool derivs, ustring object,
+                                    TypeDesc type, ustring name, void *val)
+{
+    if (type == TypeFloatArray2) {
+        ((float *)val)[0] = m_hither;
+        ((float *)val)[1] = m_yon;
+        if (derivs)
+            memset ((char *)val+type.size(), 0, 2*type.size());
+        return true;
+    }
+    return false;
+}
+
+
+bool
+SimpleRenderer::get_camera_clip_near (ShaderGlobals *sg, bool derivs, ustring object,
+                                    TypeDesc type, ustring name, void *val)
+{
+    if (type == TypeDesc::TypeFloat) {
+        ((float *)val)[0] = m_hither;
+        if (derivs)
+            memset ((char *)val+type.size(), 0, 2*type.size());
+        return true;
+    }
+    return false;
+}
+
+
+bool
+SimpleRenderer::get_camera_clip_far (ShaderGlobals *sg, bool derivs, ustring object,
+                                    TypeDesc type, ustring name, void *val)
+{
+    if (type == TypeDesc::TypeFloat) {
+        ((float *)val)[0] = m_yon;
+        if (derivs)
+            memset ((char *)val+type.size(), 0, 2*type.size());
+        return true;
+    }
+    return false;
+}
+
+
+
+bool
+SimpleRenderer::get_camera_shutter (ShaderGlobals *sg, bool derivs, ustring object,
+                                    TypeDesc type, ustring name, void *val)
+{
+    if (type == TypeFloatArray2) {
+        ((float *)val)[0] = m_shutter[0];
+        ((float *)val)[1] = m_shutter[1];
+        if (derivs)
+            memset ((char *)val+type.size(), 0, 2*type.size());
+        return true;
+    }
+    return false;
+}
+
+
+bool
+SimpleRenderer::get_camera_shutter_open (ShaderGlobals *sg, bool derivs, ustring object,
+                                    TypeDesc type, ustring name, void *val)
+{
+    if (type == TypeDesc::TypeFloat) {
+        ((float *)val)[0] = m_shutter[0];
+        if (derivs)
+            memset ((char *)val+type.size(), 0, 2*type.size());
+        return true;
+    }
+    return false;
+}
+
+
+bool
+SimpleRenderer::get_camera_shutter_close (ShaderGlobals *sg, bool derivs, ustring object,
+                                    TypeDesc type, ustring name, void *val)
+{
+    if (type == TypeDesc::TypeFloat) {
+        ((float *)val)[0] = m_shutter[1];
+        if (derivs)
+            memset ((char *)val+type.size(), 0, 2*type.size());
+        return true;
+    }
+    return false;
+}
+
+
+bool
+SimpleRenderer::get_camera_screen_window (ShaderGlobals *sg, bool derivs, ustring object,
+                                    TypeDesc type, ustring name, void *val)
+{
+    // N.B. in a real rederer, this may be time-dependent
+    if (type == TypeFloatArray4) {
+        ((float *)val)[0] = m_screen_window[0];
+        ((float *)val)[1] = m_screen_window[1];
+        ((float *)val)[2] = m_screen_window[2];
+        ((float *)val)[3] = m_screen_window[3];
+        if (derivs)
+            memset ((char *)val+type.size(), 0, 2*type.size());
+        return true;
+    }
+    return false;
+}
+
+
+
 
 OSL_NAMESPACE_EXIT

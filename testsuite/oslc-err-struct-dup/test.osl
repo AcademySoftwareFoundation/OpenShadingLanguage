@@ -1,0 +1,18 @@
+struct testStruct{
+   color c;
+   int i;
+   float f;
+
+   color c;
+   int i;
+   float f;
+};
+
+
+shader
+test (
+    testStruct input = {0, 0, 0, 1, 1, 1},
+    output testStruct out = input
+)
+{
+}

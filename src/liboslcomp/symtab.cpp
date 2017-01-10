@@ -31,8 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslcomp_pvt.h"
 
-#include "OpenImageIO/strutil.h"
-#include "OpenImageIO/dassert.h"
+#include <OpenImageIO/strutil.h>
+#include <OpenImageIO/dassert.h>
 namespace Strutil = OIIO::Strutil;
 
 #include <boost/foreach.hpp>
@@ -49,17 +49,17 @@ TypeSpec::string () const
     std::string str;
     if (is_closure() || is_closure_array()) {
         str += "closure color";
-        if (arraylength() > 0)
-            str += Strutil::format ("[%d]", arraylength());
-        else if (arraylength() < 0)
+        if (is_unsized_array())
             str += "[]";
+        else if (arraylength() > 0)
+            str += Strutil::format ("[%d]", arraylength());
     }
     else if (structure() > 0) {
         str += Strutil::format ("struct %d", structure());
-        if (arraylength() > 0)
-            str += Strutil::format ("[%d]", arraylength());
-        else if (arraylength() < 0)
+        if (is_unsized_array())
             str += "[]";
+        else if (arraylength() > 0)
+            str += Strutil::format ("[%d]", arraylength());
     } else {
         str += simpletype().c_str();
     }
@@ -107,6 +107,17 @@ StructSpec::mangled () const
 
 
 
+int
+StructSpec::lookup_field (ustring name) const
+{
+    for (int i = 0, e = numfields();  i < e;  ++i)
+        if (field(i).name == name)
+            return i;
+    return -1;
+}
+
+
+
 const char *
 Symbol::valuesourcename (ValueSource v)
 {
@@ -145,7 +156,7 @@ Symbol::print_vals (std::ostream &out, int maxvals) const
             out << (j ? " " : "") << ((int *)data())[j];
     } else if (t.basetype == TypeDesc::STRING) {
         for (int j = 0;  j < n;  ++j)
-            out << (j ? " " : "") << "\"" 
+            out << (j ? " " : "") << "\""
                 << Strutil::escape_chars(((ustring *)data())[j].string())
                 << "\"";
     }
@@ -162,8 +173,8 @@ Symbol::print (std::ostream &out, int maxvals) const
     out << Symbol::symtype_shortname(symtype())
         << " " << typespec().string() << " " << name();
     if (everused())
-        out << " (used " << firstuse() << ' ' << lastuse() 
-            << " read " << firstread() << ' ' << lastread() 
+        out << " (used " << firstuse() << ' ' << lastuse()
+            << " read " << firstread() << ' ' << lastread()
             << " write " << firstwrite() << ' ' << lastwrite();
     else
         out << " (unused";
@@ -177,6 +188,8 @@ Symbol::print (std::ostream &out, int maxvals) const
             out << " down-connected";
         if (!connected() && !connected_down())
             out << " unconnected";
+        if (renderer_output())
+            out << " renderer-output";
         if (symtype() == SymTypeParam && ! lockgeom())
             out << " lockgeom=0";
     }
@@ -236,7 +249,7 @@ SymbolTable::find_exact (ustring mangled_name) const
 
 
 
-Symbol * 
+Symbol *
 SymbolTable::clash (ustring name) const
 {
     Symbol *s = find (name);
@@ -329,12 +342,12 @@ SymbolTable::print ()
                 continue;
             std::cout << "    " << structid << ": struct " << s->mangled();
             if (s->scope())
-                std::cout << " (" << s->name() 
+                std::cout << " (" << s->name()
                           << " in scope " << s->scope() << ")";
             std::cout << " :\n";
-            for (size_t i = 0;  i < s->numfields();  ++i) {
+            for (size_t i = 0;  i < (size_t)s->numfields();  ++i) {
                 const StructSpec::FieldSpec & f (s->field(i));
-                std::cout << "\t" << f.name << " : " 
+                std::cout << "\t" << f.name << " : "
                           << f.type.string() << "\n";
             }
             ++structid;
@@ -354,7 +367,7 @@ SymbolTable::print ()
             std::cout << s->typespec().string();
         }
         if (s->scope())
-            std::cout << " (" << s->name() << " in scope " 
+            std::cout << " (" << s->name() << " in scope "
                       << s->scope() << ")";
         if (s->is_function()) {
             const FunctionSymbol *f = (const FunctionSymbol *) s;

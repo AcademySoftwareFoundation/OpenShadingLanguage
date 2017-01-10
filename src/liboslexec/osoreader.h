@@ -26,16 +26,14 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef OSL_OSOREADER_H
-#define OSL_OSOREADER_H
+#pragma once
 
 #include "osl_pvt.h"
 
-#include "OpenImageIO/thread.h"
+#include <OpenImageIO/thread.h>
+#include <OpenImageIO/string_view.h>
 
 
-
-class osoFlexLexer;
 extern int osoparse ();
 
 
@@ -89,9 +87,22 @@ public:
     ///
     virtual void symdefault (const char *def) { }
 
+    /// Called when we're done with all information related to a parameter
+    /// symbol.
+    virtual void parameter_done () { }
+
+    /// Return true for parsers whose only purpose is to read the header up
+    /// to params, to stop parsing as soon as we start encountering temps in
+    /// the symbol table.
+    virtual bool stop_parsing_at_temp_symbols () { return false; }
+
     /// Add a hint.
     ///
-    virtual void hint (const char *hintstring) { }
+    virtual void hint (string_view hintstring) { }
+
+    /// Return true if this parser cares about the code, false if parsing
+    /// of oso may terminate once the symbol table has been parsed.
+    virtual bool parse_code_section () { return true; }
 
     /// New code section marker designating subsequent instructions.
     ///
@@ -125,22 +136,17 @@ public:
     /// be called by the lexer.
     int lineno () const { return m_lineno; }
 
-    /// Pointer to the one and only lexer in effect.  This is 'public',
-    /// but NOBODY should modify this except for this class and the
-    /// lexer internals.
-    static osoFlexLexer *osolexer;
+    /// Return a reference to the error handler
+    ErrorHandler& errhandler () { return m_err; }
 
     static OSOReader *osoreader;
 
 private:
     ErrorHandler &m_err;
     int m_lineno;
-    static OIIO::mutex m_osoread_mutex;
 };
 
 
 
 }; // namespace pvt
 OSL_NAMESPACE_EXIT
-
-#endif /* OSL_OSOREADER_H */

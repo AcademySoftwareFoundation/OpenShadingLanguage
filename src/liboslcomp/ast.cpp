@@ -30,13 +30,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <sstream>
 
-#include <boost/filesystem.hpp>
-
 #include "osl_pvt.h"
 #include "oslcomp_pvt.h"
 
-#include "OpenImageIO/dassert.h"
-#include "OpenImageIO/strutil.h"
+#include <OpenImageIO/dassert.h>
+#include <OpenImageIO/filesystem.h>
+#include <OpenImageIO/strutil.h>
 namespace Strutil = OIIO::Strutil;
 
 OSL_NAMESPACE_ENTER
@@ -137,10 +136,10 @@ ASTNode::warning (const char *format, ...)
 
 
 void
-ASTNode::print (std::ostream &out, int indentlevel) const 
+ASTNode::print (std::ostream &out, int indentlevel) const
 {
     indent (out, indentlevel);
-    out << "(" << nodetypename() << " : " 
+    out << "(" << nodetypename() << " : "
         << "    (type: " << typespec().string() << ") "
         << (opname() ? opname() : "") << "\n";
     printchildren (out, indentlevel);
@@ -151,7 +150,7 @@ ASTNode::print (std::ostream &out, int indentlevel) const
 
 
 void
-ASTNode::printchildren (std::ostream &out, int indentlevel) const 
+ASTNode::printchildren (std::ostream &out, int indentlevel) const
 {
     for (size_t i = 0;  i < m_children.size();  ++i) {
         if (! child(i))
@@ -179,6 +178,27 @@ ASTNode::type_c_str (const TypeSpec &type) const
 
 
 
+ASTshader_declaration::ASTshader_declaration (OSLCompilerImpl *comp,
+                                int stype, ustring name, ASTNode *form,
+                                ASTNode *stmts, ASTNode *meta)
+    : ASTNode (shader_declaration_node, comp, stype, meta, form, stmts),
+      m_shadername(name)
+{
+    // Double check some requirements of shader parameters
+    for (ASTNode *arg = form;  arg;  arg = arg->nextptr()) {
+        ASSERT (arg->nodetype() == variable_declaration_node);
+        ASTvariable_declaration *v = (ASTvariable_declaration *)arg;
+        if (! v->init())
+            v->error ("shader parameter '%s' MUST have a default initializer",
+                      v->name().c_str());
+        if (v->is_output() && v->typespec().is_unsized_array())
+            v->error ("shader output parameter '%s' can't be unsized array",
+                      v->name().c_str());
+    }
+}
+
+
+
 const char *
 ASTshader_declaration::childname (size_t i) const
 {
@@ -192,7 +212,7 @@ void
 ASTshader_declaration::print (std::ostream &out, int indentlevel) const
 {
     indent (out, indentlevel);
-    out << "(" << nodetypename() << " " << shadertypename() 
+    out << "(" << nodetypename() << " " << shadertypename()
               << " \"" << m_shadername << "\"\n";
     printchildren (out, indentlevel);
     indent (out, indentlevel);
@@ -201,7 +221,7 @@ ASTshader_declaration::print (std::ostream &out, int indentlevel) const
 
 
 
-const char *
+string_view
 ASTshader_declaration::shadertypename () const
 {
     return OSL::pvt::shadertypename ((ShaderType)m_op);
@@ -235,13 +255,18 @@ ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
     m_sym = new FunctionSymbol (name, type, this);
     func()->nextpoly ((FunctionSymbol *)f);
     std::string argcodes = oslcompiler->code_from_type (m_typespec);
-    for (ref arg = formals();  arg;  arg = arg->next()) {
+    for (ASTNode *arg = form;  arg;  arg = arg->nextptr()) {
         const TypeSpec &t (arg->typespec());
         if (t == TypeSpec() /* UNKNOWN */) {
             m_typespec = TypeDesc::UNKNOWN;
             return;
         }
         argcodes += oslcompiler->code_from_type (t);
+        ASSERT (arg->nodetype() == variable_declaration_node);
+        ASTvariable_declaration *v = (ASTvariable_declaration *)arg;
+        if (v->init())
+            v->error ("function parameter '%s' may not have a default initializer.",
+                      v->name().c_str());
     }
     func()->argcodes (ustring (argcodes));
     oslcompiler->symtab().insert (m_sym);
@@ -261,10 +286,18 @@ ASTfunction_declaration::add_meta (ASTNode *meta)
         Symbol *metasym = metavar->sym();
         if (metasym->name() == "builtin") {
             m_is_builtin = true;
-            if (func()->typespec().is_closure()) // It is a builtin closure
+            if (func()->typespec().is_closure())  { // It is a builtin closure
                 // Force keyword arguments at the end
                 func()->argcodes(ustring(std::string(func()->argcodes().c_str()) + "."));
-
+            }
+            // For built-in functions, if any of the params are output,
+            // also automatically mark it as readwrite_special_case.
+            for (ASTNode *f = formals().get(); f; f = f->nextptr()) {
+                ASSERT (f->nodetype() == variable_declaration_node);
+                ASTvariable_declaration *v = (ASTvariable_declaration *)f;
+                if (v->is_output())
+                    func()->readwrite_special_case (true);
+            }
         }
         else if (metasym->name() == "derivs")
             func()->takes_derivs (true);
@@ -294,7 +327,7 @@ ASTfunction_declaration::print (std::ostream &out, int indentlevel) const
     indent (out, indentlevel);
     out << nodetypename() << " " << m_sym->mangled();
     if (m_sym->scope())
-        out << " (" << m_sym->name() 
+        out << " (" << m_sym->name()
                   << " in scope " << m_sym->scope() << ")";
     out << "\n";
     printchildren (out, indentlevel);
@@ -308,7 +341,7 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
                                                   bool isparam, bool ismeta,
                                                   bool isoutput, bool initlist)
     : ASTNode (variable_declaration_node, comp, 0, init, NULL /* meta */),
-      m_name(name), m_sym(NULL), 
+      m_name(name), m_sym(NULL),
       m_isparam(isparam), m_isoutput(isoutput), m_ismetadata(ismeta),
       m_initlist(initlist)
 {
@@ -317,9 +350,9 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
     if (f  &&  ! m_ismetadata) {
         std::string e = Strutil::format ("\"%s\" already declared in this scope", name.c_str());
         if (f->node()) {
-            boost::filesystem::path p(f->node()->sourcefile().string());
+            std::string filename = OIIO::Filesystem::filename(f->node()->sourcefile().string());
             e += Strutil::format ("\n\t\tprevious declaration was at %s:%d",
-                                  p.filename().c_str(), f->node()->sourceline());
+                                  filename, f->node()->sourceline());
         }
         if (f->scope() == 0 && f->symtype() == SymTypeFunction && isparam) {
             // special case: only a warning for param to mask global function
@@ -334,6 +367,10 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
     }
     SymType symtype = isparam ? (isoutput ? SymTypeOutputParam : SymTypeParam)
                               : SymTypeLocal;
+    // Sneaky debugging aid: a local that starts with "__debug_tmp__"
+    // gets declared as a temp. Don't do this on purpose!!!
+    if (symtype == SymTypeLocal && Strutil::starts_with (name, "__debug_tmp__"))
+        symtype = SymTypeTemp;
     m_sym = new Symbol (name, type, symtype, this);
     if (! m_ismetadata)
         oslcompiler->symtab().insert (m_sym);
@@ -342,8 +379,9 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
     if (type.is_structure() || type.is_structure_array()) {
         ASSERT (! m_ismetadata);
         // Add the fields as individual declarations
-        m_compiler->add_struct_fields (type.structspec(), m_sym->name(),
-                                       symtype, type.arraylength(), this);
+        m_compiler->add_struct_fields (type.structspec(), m_sym->name(), symtype,
+                                       type.is_unsized_array() ? -1 : type.arraylength(),
+                                       this, init);
     }
 }
 
@@ -370,12 +408,12 @@ void
 ASTvariable_declaration::print (std::ostream &out, int indentlevel) const
 {
     indent (out, indentlevel);
-    out << "(" << nodetypename() << " " 
-              << m_sym->typespec().string() << " " 
+    out << "(" << nodetypename() << " "
+              << m_sym->typespec().string() << " "
               << m_sym->mangled();
 #if 0
     if (m_sym->scope())
-        out << " (" << m_sym->name() 
+        out << " (" << m_sym->name()
                   << " in scope " << m_sym->scope() << ")";
 #endif
     out << "\n";
@@ -410,7 +448,7 @@ ASTvariable_ref::print (std::ostream &out, int indentlevel) const
 {
     indent (out, indentlevel);
     out << "(" << nodetypename() << " (type: "
-        << (m_sym ? m_sym->typespec().string() : "unknown") << ") " 
+        << (m_sym ? m_sym->typespec().string() : "unknown") << ") "
         << (m_sym ? m_sym->mangled() : m_name.string()) << ")\n";
     DASSERT (nchildren() == 0);
 }
@@ -442,7 +480,8 @@ ASTindex::ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index)
             expr->nodetype() == structselect_node);
     if (expr->typespec().is_array())       // array dereference
         m_typespec = expr->typespec().elementtype();
-    else if (expr->typespec().is_triple()) // component access
+    else if (!expr->typespec().is_closure() &&
+             expr->typespec().is_triple()) // component access
         m_typespec = TypeDesc::FLOAT;
     else {
         error ("indexing into non-array or non-component type");
@@ -896,6 +935,7 @@ ASTfunction_call::ASTfunction_call (OSLCompilerImpl *comp, ustring name,
     }
     if (m_sym->symtype() != SymTypeFunction) {
         error ("'%s' is not a function", name.c_str());
+        m_sym = NULL;
         return;
     }
 }
@@ -919,11 +959,11 @@ ASTfunction_call::opname () const
 
 
 void
-ASTfunction_call::print (std::ostream &out, int indentlevel) const 
+ASTfunction_call::print (std::ostream &out, int indentlevel) const
 {
     ASTNode::print (out, indentlevel);
 #if 0
-    if (is_user_function()) { 
+    if (is_user_function()) {
         out << "\n";
         user_function()->print (out, indentlevel+1);
         out << "\n";

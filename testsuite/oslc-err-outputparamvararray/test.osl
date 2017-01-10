@@ -1,0 +1,4 @@
+shader
+test (output color c[] = {color(1,1,1)})
+{
+}

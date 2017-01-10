@@ -26,22 +26,19 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef OSLCOMP_PVT_H
-#define OSLCOMP_PVT_H
+#pragma once
 
 #include <vector>
 #include <stack>
 #include <set>
 #include <map>
 
-#include "oslconfig.h"
-#include "oslcomp.h"
+#include "OSL/oslcomp.h"
 #include "ast.h"
 #include "symtab.h"
-#include "genclosure.h"
+#include "OSL/genclosure.h"
 
 
-class oslFlexLexer;
 extern int oslparse ();
 
 
@@ -61,16 +58,23 @@ typedef std::map<const Symbol *, SymPtrSet> SymDependencyMap;
 
 
 
-class OSLCompilerImpl : public OSL::OSLCompiler {
+class OSLCompilerImpl {
 public:
-    OSLCompilerImpl ();
-    virtual ~OSLCompilerImpl ();
+    OSLCompilerImpl (ErrorHandler *errhandler);
+    ~OSLCompilerImpl ();
 
     /// Fully compile a shader located in 'filename', with the command-line
     /// options ("-I" and the like) in the options vector.
-    virtual bool compile (const std::string &filename,
-                          const std::vector<std::string> &options,
-                          const std::string &stdoslpath = "");
+    bool compile (string_view filename,
+                  const std::vector<std::string> &options,
+                  string_view stdoslpath);
+
+    bool compile_buffer (string_view sourcecode,
+                         std::string &osobuffer,
+                         const std::vector<std::string> &options,
+                         string_view stdoslpath);
+
+    bool osl_parse_buffer (const std::string &preprocessed_buffer);
 
     /// The name of the file we're currently parsing
     ///
@@ -92,24 +96,41 @@ public:
     ///
     int incr_lineno () { return ++m_lineno; }
 
-    /// Return a pointer to the current lexer.
-    ///
-    oslFlexLexer *lexer() const { return m_lexer; }
+    ErrorHandler &errhandler () const { return *m_errhandler; }
 
     /// Error reporting
     ///
-    void error (ustring filename, int line, const char *format, ...);
+    void error (ustring filename, int line, const char *format, ...) const;
 
     /// Warning reporting
     ///
-    void warning (ustring filename, int line, const char *format, ...);
+    void warning (ustring filename, int line, const char *format, ...) const;
 
     /// Have we hit an error?
     ///
     bool error_encountered () const { return m_err; }
 
+    /// Look at the compile options, setting defines, includepaths, and
+    /// a variety of other private options.
+    void read_compile_options (const std::vector<std::string> &options,
+                               std::vector<std::string> &defines,
+                               std::vector<std::string> &includepaths);
+
+    bool preprocess_file (const std::string &filename,
+                          const std::string &stdoslpath,
+                          const std::vector<std::string> &defines,
+                          const std::vector<std::string> &includepaths,
+                          std::string &result);
+
+    bool preprocess_buffer (const std::string &buffer,
+                            const std::string &filename,
+                            const std::string &stdoslpath,
+                            const std::vector<std::string> &defines,
+                            const std::vector<std::string> &includepaths,
+                            std::string &result);
+
     /// Has a shader already been defined?
-    bool shader_is_defined () const { return m_shader; }
+    bool shader_is_defined () const { return (bool)m_shader; }
 
     /// Define the shader we're compiling with the given AST root.
     ///
@@ -128,6 +149,9 @@ public:
     void current_typespec (TypeSpec t) { m_current_typespec = t; }
     bool current_output () const { return m_current_output; }
     void current_output (bool b) { m_current_output = b; }
+
+    void declaring_shader_formals (bool val) { m_declaring_shader_formals = val; }
+    bool declaring_shader_formals () const { return m_declaring_shader_formals; }
 
     /// Given a pointer to a type code string that we use for argument
     /// checking ("p", "v", etc.) return the TypeSpec of the first type
@@ -220,9 +244,10 @@ public:
     // Make and add individual symbols for each field of a structure,
     // using the given basename.
     void add_struct_fields (StructSpec *structspec, ustring basename,
-                            SymType symtype, int arraylen, ASTNode *node=NULL);
+                            SymType symtype, int arraylen,
+                            ASTNode *node=NULL, ASTNode *init=NULL);
 
-    std::string output_filename () const { return m_output_filename; }
+    string_view output_filename () const { return m_output_filename; }
 
     /// Push the designated function on the stack, to keep track of
     /// nesting and so recursed methods can query which is the current
@@ -281,32 +306,31 @@ public:
 
     static void track_variable_lifetimes (const OpcodeVec &ircode,
                                           const SymbolPtrVec &opargs,
-                                          const SymbolPtrVec &allsyms);
+                                          const SymbolPtrVec &allsyms,
+                                          std::vector<int> *bblock_ids=NULL);
     static void coalesce_temporaries (SymbolPtrVec &symtab);
-    static void insert_useparam (OpcodeVec &code, size_t opnum,
-                                 SymbolPtrVec &opargs, SymbolPtrVec &allsyms, 
-                                 SymbolPtrVec &params);
 
     const std::string main_filename () const { return m_main_filename; }
     const std::string cwd () const { return m_cwd; }
+
+    bool debug () const { return m_debug; }
 
 private:
     void initialize_globals ();
     void initialize_builtin_funcs ();
     std::string default_output_filename ();
-    void write_oso_file (const std::string &outfilename);
+    void write_oso_file (const std::string &outfilename, string_view options);
     void write_oso_const_value (const ConstantSymbol *sym) const;
     void write_oso_symbol (const Symbol *sym);
     void write_oso_metadata (const ASTNode *metanode) const;
-    void oso (const char *fmt, ...) const;
+    // void oso (const char *fmt, ...) const;
+    TINYFORMAT_WRAP_FORMAT (void, oso, const, , (*m_osofile), )
 
     void track_variable_lifetimes () {
         track_variable_lifetimes (m_ircode, m_opargs, symtab().allsyms());
     }
 
     void track_variable_dependencies ();
-    void add_useparam ();
-    void insert_useparam (size_t opnum, SymbolPtrVec &params);
     void coalesce_temporaries () {
         coalesce_temporaries (m_symtab.allsyms());
     }
@@ -352,27 +376,28 @@ private:
     }
     std::string retrieve_source (ustring filename, int line);
 
-    oslFlexLexer *m_lexer;    ///< Lexical scanner
     ustring m_filename;       ///< Current file we're parsing
     int m_lineno;             ///< Current line we're parsing
     std::string m_output_filename; ///< Output filename
     std::string m_main_filename; ///< Main input filename
     std::string m_cwd;        ///< Current working directory
     ASTNode::ref m_shader;    ///< The shader's syntax tree
-    bool m_err;               ///< Has an error occurred?
+    ErrorHandler *m_errhandler; ///< Error handler
+    mutable bool m_err;       ///< Has an error occurred?
     SymbolTable m_symtab;     ///< Symbol table
     TypeSpec m_current_typespec;  ///< Currently-declared type
     bool m_current_output;        ///< Currently-declared output status
     bool m_verbose;           ///< Verbose mode
     bool m_quiet;             ///< Quiet mode
     bool m_debug;             ///< Debug mode
+    bool m_preprocess_only;   ///< Preprocess only?
     int m_optimizelevel;      ///< Optimization level
     OpcodeVec m_ircode;       ///< Generated IR code
     SymbolPtrVec m_opargs;    ///< Arguments for all instructions
     int m_next_temp;          ///< Next temporary symbol index
     int m_next_const;         ///< Next const symbol index
     std::vector<ConstantSymbol *> m_const_syms;  ///< All consts we've made
-    FILE *m_osofile;          ///< Open .oso file for output
+    std::ostream *m_osofile;  ///< Open .oso stream for output
     FILE *m_sourcefile;       ///< Open file handle for retrieve_source
     ustring m_last_sourcefile;///< Last filename for retrieve_source
     int m_last_sourceline;    ///< Last line read for retrieve_source
@@ -383,6 +408,7 @@ private:
     SymDependencyMap m_symdeps; ///< Symbol-to-symbol dependencies
     Symbol *m_derivsym;       ///< Pseudo-symbol to track deriv dependencies
     int m_main_method_start;  ///< Instruction where 'main' starts
+    bool m_declaring_shader_formals; ///< Are we declaring shader formals?
 };
 
 
@@ -392,6 +418,3 @@ extern OSLCompilerImpl *oslcompiler;
 }; // namespace pvt
 
 OSL_NAMESPACE_EXIT
-
-
-#endif /* OSLCOMP_PVT_H */

@@ -1,4 +1,35 @@
-shader upstream (output float out = 0)
+#include "mystruct.h"
+
+void status (float variable, string name)
 {
-    out = 1;
+    printf ("%s connected: %d  (value=%g)\n",
+            name, isconnected(variable), variable);
+}
+
+
+void status (MyStruct variable, string name)
+{
+    printf ("%s connected: %d  (value=%g)\n",
+            name, isconnected(variable), variable);
+    status (variable.x, concat(name, ".x"));
+}
+
+
+shader upstream (output float out = 0,
+                 output float notout = 0,
+                 output MyStruct struct1 = {0,0},
+                 output MyStruct struct2 = {0,0})
+{
+    out = noise(P);
+    notout = 10;
+    struct1.x = 3;
+    struct1.y = 4;
+    struct2.x = 5;
+    struct2.y = 6;
+
+    printf ("Upstream:\n");
+    status (out, "out");
+    status (notout, "notout");
+    status (struct1, "struct1");
+    status (struct2, "struct2");
 }

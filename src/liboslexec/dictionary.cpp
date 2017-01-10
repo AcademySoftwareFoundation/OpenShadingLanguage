@@ -77,7 +77,8 @@ namespace pugi = OIIO::pugi;
 //
 class Dictionary {
 public:
-    Dictionary (ShadingSystemImpl &ss) : m_shadingsys(ss) {
+    Dictionary (ShadingContext *ctx) : m_context(ctx)
+    {
         // Create placeholder element 0 == 'not found'
         m_nodes.push_back (Node(0, pugi::xml_node()));
     }
@@ -141,7 +142,7 @@ private:
     typedef boost::unordered_map <Query, QueryResult, QueryHash> QueryMap;
     typedef boost::unordered_map<ustring, int, ustringHash> DocMap;
 
-    ShadingSystemImpl &m_shadingsys;  // back-pointer to shading sys
+    ShadingContext *m_context;  // back-pointer to shading context
 
     // List of XML documents we've read in.
     std::vector<pugi::xml_document *> m_documents;
@@ -187,9 +188,9 @@ Dictionary::get_document_index (ustring dictionaryname)
                                              dictionaryname.length());
         }
         if (! parse_result) {
-            m_shadingsys.error ("XML parsed with errors: %s, at offset %d",
-                                parse_result.description(),
-                                parse_result.offset);
+            m_context->error ("XML parsed with errors: %s, at offset %d",
+                              parse_result.description(),
+                              parse_result.offset);
             m_document_map[dictionaryname] = -1;
             return -1;
         }
@@ -226,8 +227,8 @@ Dictionary::dict_find (ustring dictionaryname, ustring query)
         matches = doc->select_nodes (query.c_str());
     }
     catch (const pugi::xpath_exception& e) {
-        m_shadingsys.error ("Invalid dict_find query '%s': %s",
-                            query.c_str(), e.what());
+        m_context->error ("Invalid dict_find query '%s': %s",
+                          query.c_str(), e.what());
         return 0;
     }
 
@@ -273,8 +274,8 @@ Dictionary::dict_find (int nodeID, ustring query)
         matches = node.node.select_nodes (query.c_str());
     }
     catch (const pugi::xpath_exception& e) {
-        m_shadingsys.error ("Invalid dict_find query '%s': %s",
-                            query.c_str(), e.what());
+        m_context->error ("Invalid dict_find query '%s': %s",
+                          query.c_str(), e.what());
         return 0;
     }
 
@@ -408,7 +409,7 @@ int
 ShadingContext::dict_find (ustring dictionaryname, ustring query)
 {
     if (! m_dictionary) {
-        m_dictionary = new Dictionary (shadingsys());
+        m_dictionary = new Dictionary (this);
     }
     return m_dictionary->dict_find (dictionaryname, query);
 }
@@ -419,7 +420,7 @@ int
 ShadingContext::dict_find (int nodeID, ustring query)
 {
     if (! m_dictionary) {
-        m_dictionary = new Dictionary (shadingsys());
+        m_dictionary = new Dictionary (this);
     }
     return m_dictionary->dict_find (nodeID, query);
 }
@@ -451,6 +452,39 @@ void
 ShadingContext::free_dict_resources ()
 {
     delete m_dictionary;
+}
+
+
+
+OSL_SHADEOP int osl_dict_find_iis (void *sg_, int nodeID, void *query)
+{
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
+    return sg->context->dict_find (nodeID, USTR(query));
+}
+
+
+
+OSL_SHADEOP int osl_dict_find_iss (void *sg_, void *dictionary, void *query)
+{
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
+    return sg->context->dict_find (USTR(dictionary), USTR(query));
+}
+
+
+
+OSL_SHADEOP int osl_dict_next (void *sg_, int nodeID)
+{
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
+    return sg->context->dict_next (nodeID);
+}
+
+
+
+OSL_SHADEOP int osl_dict_value (void *sg_, int nodeID, void *attribname,
+                               long long type, void *data)
+{
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
+    return sg->context->dict_value (nodeID, USTR(attribname), TYPEDESC(type), data);
 }
 
 

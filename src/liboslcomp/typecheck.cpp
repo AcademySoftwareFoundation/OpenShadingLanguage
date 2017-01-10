@@ -31,8 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslcomp_pvt.h"
 
-#include "OpenImageIO/dassert.h"
-#include "OpenImageIO/strutil.h"
+#include <OpenImageIO/dassert.h>
+#include <OpenImageIO/strutil.h>
 namespace Strutil = OIIO::Strutil;
 
 #include <boost/foreach.hpp>
@@ -117,10 +117,23 @@ ASTvariable_declaration::typecheck (TypeSpec expected)
 
     if (m_typespec.is_structure()) {
         // struct initialization handled separately
-        return typecheck_struct_initializers (init);
+        return typecheck_struct_initializers (init, m_typespec, m_name.c_str());
     }
 
     typecheck_initlist (init, m_typespec, m_name.c_str());
+
+    // Warning to catch confusing comma operator in variable initializers.
+    // One place this comes up is when somebody forgets the proper syntax
+    // for constructors, for example
+    //     color x = (a, b, c);   // Sets x to (c,c,c)!
+    // when they really meant
+    //     color x = color(a, b, c);
+    if (init->nodetype() == comma_operator_node && !typespec().is_closure() &&
+        (typespec().is_triple() || typespec().is_matrix())) {
+        warning ("Comma operator is very confusing here. "
+                 "Did you mean to use a constructor: %s = %s(...)?",
+                 m_name.c_str(), typespec().c_str());
+    }
 
     return m_typespec;
 }
@@ -134,7 +147,7 @@ ASTvariable_declaration::typecheck_initlist (ref init, TypeSpec type,
     // Loop over a list of initializers (it's just 1 if not an array)...
     for (int i = 0;  init;  init = init->next(), ++i) {
         // Check for too many initializers for an array
-        if (type.is_array() && i > type.arraylength()) {
+        if (type.is_array() && !type.is_unsized_array() && i >= type.arraylength()) {
             error ("Too many initializers for a '%s'", type_c_str(type));
             break;
         }
@@ -159,24 +172,25 @@ ASTvariable_declaration::typecheck_initlist (ref init, TypeSpec type,
 
 
 TypeSpec
-ASTvariable_declaration::typecheck_struct_initializers (ref init)
+ASTvariable_declaration::typecheck_struct_initializers (ref init, TypeSpec type,
+                                                        const char *name)
 {
-    ASSERT (m_typespec.is_structure());
+    ASSERT (type.is_structure());
 
-    if (! init->next() && init->typespec() == m_typespec) {
+    if (! init->next() && init->typespec() == type) {
         // Special case: just one initializer, it's a whole struct of
         // the right type.
-        return m_typespec;
+        return type;
     }
 
     // General case -- per-field initializers
 
-    const StructSpec *structspec (m_typespec.structspec());
+    const StructSpec *structspec (type.structspec());
     int numfields = (int)structspec->numfields();
     for (int i = 0;  init;  init = init->next(), ++i) {
         if (i >= numfields) {
             error ("Too many initializers for '%s %s'",
-                   type_c_str(m_typespec), m_name.c_str());
+                   type_c_str(type), name);
             break;
         }
         const StructSpec::FieldSpec &field (structspec->field(i));
@@ -184,11 +198,17 @@ ASTvariable_declaration::typecheck_struct_initializers (ref init)
         if (init->nodetype() == compound_initializer_node) {
             // Initializer is itself a compound, it ought to be initializing
             // a field that is an array.
+            ASTcompound_initializer *cinit = (ASTcompound_initializer *)init.get();
             if (field.type.is_array ()) {
-                ustring fieldname = ustring::format ("%s.%s", m_sym->name().c_str(),
+                ustring fieldname = ustring::format ("%s.%s", name,
                                                      field.name.c_str());
-                typecheck_initlist (((ASTcompound_initializer *)init.get())->initlist(),
+                typecheck_initlist (cinit->initlist(),
                                     field.type, fieldname.c_str());
+            } else if (field.type.is_structure()) {
+                ustring fieldname = ustring::format ("%s.%s", name,
+                                                     field.name.c_str());
+                typecheck_struct_initializers (cinit->initlist(), field.type,
+                                               fieldname.c_str());
             } else {
                 error ("Can't use '{...}' for a struct field that is not an array");
             }
@@ -207,13 +227,13 @@ ASTvariable_declaration::typecheck_struct_initializers (ref init)
         if (! assignable(field.type, init->typespec()))
             error ("Can't assign '%s' to '%s %s.%s'",
                    type_c_str(init->typespec()),
-                   type_c_str(field.type), m_name.c_str(), field.name.c_str());
+                   type_c_str(field.type), name, field.name.c_str());
     }
-    return m_typespec;
+    return type;
 }
 
 
- 
+
 TypeSpec
 ASTvariable_ref::typecheck (TypeSpec expected)
 {
@@ -222,7 +242,7 @@ ASTvariable_ref::typecheck (TypeSpec expected)
 }
 
 
- 
+
 TypeSpec
 ASTpreincdec::typecheck (TypeSpec expected)
 {
@@ -233,7 +253,7 @@ ASTpreincdec::typecheck (TypeSpec expected)
 }
 
 
- 
+
 TypeSpec
 ASTpostincdec::typecheck (TypeSpec expected)
 {
@@ -246,7 +266,7 @@ ASTpostincdec::typecheck (TypeSpec expected)
 }
 
 
- 
+
 TypeSpec
 ASTindex::typecheck (TypeSpec expected)
 {
@@ -297,7 +317,7 @@ ASTindex::typecheck (TypeSpec expected)
     // Make sure the indices (children 1+) are integers
     for (size_t c = 1;  c < nchildren();  ++c)
         if (! child(c)->typespec().is_int())
-            error ("%s index must be an integer, not a %s", 
+            error ("%s index must be an integer, not a %s",
                    indextype, type_c_str(index()->typespec()));
 
     // If the thing we're indexing is an lvalue, so is the indexed element
@@ -432,6 +452,19 @@ ASTassign_expression::typecheck (TypeSpec expected)
         return TypeSpec();
     }
 
+    // Warning to catch confusing comma operator in assignment.
+    // One place this comes up is when somebody forgets the proper syntax
+    // for constructors, for example
+    //     color x = (a, b, c);   // Sets x to (c,c,c)!
+    // when they really meant
+    //     color x = color(a, b, c);
+    if (expr()->nodetype() == comma_operator_node && !vt.is_closure() &&
+        (vt.is_triple() || vt.is_matrix())) {
+        warning ("Comma operator is very confusing here. "
+                 "Did you mean to use a constructor: = %s(...)?",
+                 vt.c_str());
+    }
+
     return m_typespec = vt;
 }
 
@@ -462,7 +495,7 @@ ASTreturn_statement::typecheck (TypeSpec expected)
         }
         myfunc->encountered_return ();
     } else {
-        // We're not part of any user function, so this 'return' must 
+        // We're not part of any user function, so this 'return' must
         // be from the main shader body.  That's fine (it's equivalent
         // to calling exit()), but it can't return a value.
         if (expr())
@@ -476,17 +509,16 @@ ASTreturn_statement::typecheck (TypeSpec expected)
 TypeSpec
 ASTunary_expression::typecheck (TypeSpec expected)
 {
-    // FIXME - closures
     typecheck_children (expected);
     TypeSpec t = expr()->typespec();
-    if (t.is_structure()) {
+    if (t.is_structure() || t.is_array()) {
         error ("Can't do '%s' to a %s.", opname(), type_c_str(t));
         return TypeSpec ();
     }
     switch (m_op) {
     case Sub :
     case Add :
-        if (t.is_string()) {
+        if (! (t.is_closure() || t.is_numeric())) {
             error ("Can't do '%s' to a %s.", opname(), type_c_str(t));
             return TypeSpec ();
         }
@@ -608,10 +640,10 @@ ASTbinary_expression::typecheck (TypeSpec expected)
 
     case Equal :
     case NotEqual :
-        // Any equivalent types can be compared with == and !=, also a 
+        // Any equivalent types can be compared with == and !=, also a
         // float or int can be compared to any other numeric type.
         // Result is always an int.
-        if (equivalent (l, r) || 
+        if (equivalent (l, r) ||
               (l.is_numeric() && r.is_int_or_float()) ||
               (l.is_int_or_float() && r.is_numeric()))
             return m_typespec = TypeDesc::TypeInt;
@@ -691,6 +723,16 @@ ASTternary_expression::typecheck (TypeSpec expected)
 
 
 TypeSpec
+ASTcomma_operator::typecheck (TypeSpec expected)
+{
+    return m_typespec = typecheck_list (expr(), expected);
+    // N.B. typecheck_list already returns the type of the LAST node in
+    // the list, just like the comma operator is supposed to do.
+}
+
+
+
+TypeSpec
 ASTtypecast_expression::typecheck (TypeSpec expected)
 {
     // FIXME - closures
@@ -748,7 +790,7 @@ ASTtype_constructor::typecheck (TypeSpec expected)
     }
 
     // If we made it this far, no match could be found.
-    std::string err = Strutil::format ("Cannot construct %s (", 
+    std::string err = Strutil::format ("Cannot construct %s (",
                                        type_c_str(typespec()));
     for (ref a = args();  a;  a = a->next()) {
         err += a->typespec().string();
@@ -800,7 +842,7 @@ ASTNode::check_arglist (const char *funcname, ASTNode::ref arg,
         int advance;
         TypeSpec formaltype = m_compiler->type_from_code (formals, &advance);
         formals += advance;
-        // std::cerr << "\targ is " << argtype.string() 
+        // std::cerr << "\targ is " << argtype.string()
         //           << ", formal is " << formaltype.string() << "\n";
         if (argtype == formaltype)
             continue;   // ok, move on to next arg
@@ -808,14 +850,14 @@ ASTNode::check_arglist (const char *funcname, ASTNode::ref arg,
             continue;
         // Allow a fixed-length array match to a formal array with
         // unspecified length, if the element types are the same.
-        if (formaltype.arraylength() < 0 && argtype.arraylength() &&
+        if (formaltype.is_unsized_array() && argtype.is_sized_array() &&
               formaltype.elementtype() == argtype.elementtype())
             continue;
 
         // anything that gets this far we don't consider a match
         return false;
     }
-    if (*formals && *formals != '*' && *formals != '.') 
+    if (*formals && *formals != '*' && *formals != '.')
         return false;  // Non-*, non-... formals expected, no more actuals
 
     return true;  // Is this safe?
@@ -961,7 +1003,7 @@ ASTfunction_call::typecheck_printf_args (const char *format, ASTNode *arg)
 void
 ASTfunction_call::typecheck_builtin_specialcase ()
 {
-    const char *tex_out_args[] = {"alpha", NULL};
+    const char *tex_out_args[] = {"alpha", "errormessage", NULL};
     const char *pointcloud_out_args[] = {"*", NULL};
 
     if (m_name == "transform") {
@@ -984,7 +1026,8 @@ ASTfunction_call::typecheck_builtin_specialcase ()
             argwriteonly (1);
             argwriteonly (2);
         } else if (m_name == "getattribute" || m_name == "getmessage" ||
-                   m_name == "gettextureinfo" || m_name == "dict_value") {
+                   m_name == "gettextureinfo" || m_name == "getmatrix" ||
+                   m_name == "dict_value") {
             // these all write to their last argument
             argwriteonly ((int)listlength(args()));
         } else if (m_name == "pointcloud_get") {
@@ -1158,8 +1201,12 @@ ASTfunction_call::typecheck (TypeSpec expected)
         actualargs += arg->typespec().string();
     }
 
-    error ("No matching function call to '%s (%s)'\n    Candidates are:\n%s", 
-           m_name.c_str(), actualargs.c_str(), choices.c_str());
+    if (choices.size())
+        error ("No matching function call to '%s (%s)'\n    Candidates are:\n%s",
+               m_name.c_str(), actualargs.c_str(), choices.c_str());
+    else
+        error ("No matching function call to '%s (%s)'",
+               m_name.c_str(), actualargs.c_str());
     return TypeSpec();
 }
 
@@ -1207,7 +1254,6 @@ static const char * builtin_func_args [] = {
 
     "area", "fp", "!deriv", NULL,
     "arraylength", "i?[]", NULL,
-    "backfacing", "i", NULL,
     "bump", "xf", "xsf", "xv", "!deriv", NULL,
     "calculatenormal", "vp", "!deriv", NULL,
     "cellnoise", NOISE_ARGS, NULL,
@@ -1219,7 +1265,7 @@ static const char * builtin_func_args [] = {
     "Dy", "ff", "vp", "vv", "vn", "cc", "!deriv", NULL,
     "Dz", "ff", "vp", "vv", "vn", "cc", "!deriv", NULL,
     "displace", "xf", "xsf", "xv", "!deriv", NULL,
-    "environment", "fsv.", "fsvvv.","csv.", "csvvv.", 
+    "environment", "fsv.", "fsvvv.","csv.", "csvvv.",
                "vsv.", "vsvvv.", "!tex", "!rw", "!deriv", NULL,
     "error", "xs*", "!printf", NULL,
     "exit", "x", NULL,
@@ -1229,8 +1275,8 @@ static const char * builtin_func_args [] = {
     "getattribute", "is?", "is?[]", "iss?", "iss?[]",  "isi?", "isi?[]", "issi?", "issi?[]", "!rw", NULL,  // FIXME -- further checking?
     "getmessage", "is?", "is?[]", "iss?", "iss?[]", "!rw", NULL,
     "gettextureinfo", "iss?", "iss?[]", "!rw", NULL,  // FIXME -- further checking?
-    "hash", NOISE_ARGS, NULL,
     "isconnected", "i?", NULL,
+    "isconstant", "i?", NULL,
     "noise", GNOISE_ARGS, NOISE_ARGS, "!deriv", NULL,
     "pnoise", PGNOISE_ARGS, PNOISE_ARGS, "!deriv", NULL,
     "pointcloud_search", "ispfi.", "ispfii.", "!rw", NULL,
@@ -1239,7 +1285,6 @@ static const char * builtin_func_args [] = {
     "printf", "xs*", "!printf", NULL,
     "psnoise", PNOISE_ARGS, NULL,
     "random", "f", "c", "p", "v", "n", NULL,
-//    "raylevel", "i", NULL,
     "regex_match", "iss", "isi[]s", NULL,
     "regex_search", "iss", "isi[]s", NULL,
     "setmessage", "xs?", "xs?[]", NULL,
@@ -1249,9 +1294,9 @@ static const char * builtin_func_args [] = {
     "splineinverse", "fsff[]", "fsfif[]", NULL,
     "split", "iss[]si", "iss[]s", "iss[]", "!rw", NULL,
     "surfacearea", "f", NULL,
-    "texture", "fsff.", "fsffffff.","csff.", "csffffff.", 
+    "texture", "fsff.", "fsffffff.","csff.", "csffffff.",
                "vsff.", "vsffffff.", "!tex", "!rw", "!deriv", NULL,
-    "texture3d", "fsp.", "fspvvv.","csp.", "cspvvv.", 
+    "texture3d", "fsp.", "fspvvv.","csp.", "cspvvv.",
                "vsp.", "vspvvv.", "!tex", "!rw", "!deriv", NULL,
     "trace", "ipv.", "!deriv", NULL,
     "warning", "xs*", "!printf", NULL,   // FIXME -- further checking
@@ -1381,7 +1426,7 @@ OSLCompilerImpl::typelist_from_code (const char *code) const
             ret += "...";
         } else if (*code == '?') {
             ret += "<any>";
-        } else {            
+        } else {
             TypeSpec t = type_from_code (code, &advance);
             ret += type_c_str(t);
         }
@@ -1434,11 +1479,10 @@ OSLCompilerImpl::code_from_type (TypeSpec type) const
     }
 
     if (type.is_array()) {
-        int len = type.arraylength ();
-        if (len > 0)
-            out += Strutil::format ("[%d]", len);
-        else
+        if (type.is_unsized_array())
             out += "[]";
+        else
+            out += Strutil::format ("[%d]", type.arraylength());
     }
 
     return out;

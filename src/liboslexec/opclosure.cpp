@@ -30,15 +30,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 
 #include "oslexec_pvt.h"
-#include "genclosure.h"
+#include "OSL/genclosure.h"
 
 
 OSL_NAMESPACE_ENTER
 namespace pvt {
-
-// This symbol is strictly to force linkage of this file when building
-// static library.
-int opclosure_cpp_dummy = 1;
 
 
 
@@ -77,34 +73,20 @@ osl_mul_closure_float (ShaderGlobals *sg, ClosureColor *a, float w)
 
 
 OSL_SHADEOP ClosureComponent *
-osl_allocate_closure_component (ShaderGlobals *sg, int id, int size, int nattrs)
+osl_allocate_closure_component (ShaderGlobals *sg, int id, int size)
 {
-    return sg->context->closure_component_allot(id, size, nattrs);
+    return sg->context->closure_component_allot(id, size, Color3(1.0f));
 }
 
 
 
 OSL_SHADEOP ClosureColor *
-osl_allocate_weighted_closure_component (ShaderGlobals *sg, int id, int size,
-                                         int nattrs, const Color3 *w)
+osl_allocate_weighted_closure_component (ShaderGlobals *sg, int id, int size, const Color3 *w)
 {
     if (w->x == 0.0f && w->y == 0.0f && w->z == 0.0f)
         return NULL;
-    return sg->context->closure_component_allot(id, size, nattrs, *w);
+    return sg->context->closure_component_allot(id, size, *w);
 }
-
-
-
-OSL_SHADEOP ClosureColor *
-osl_allocate_weighted_closure_component_float (ShaderGlobals *sg, int id, int size,
-                                               int nattrs, float w)
-{
-    if (w == 0.0f)
-        return NULL;
-    return sg->context->closure_component_allot(id, size, nattrs, Color3(w,w,w));
-}
-
-
 
 OSL_SHADEOP const char *
 osl_closure_to_string (ShaderGlobals *sg, ClosureColor *c)

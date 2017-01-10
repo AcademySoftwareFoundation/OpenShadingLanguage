@@ -36,11 +36,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/algorithm/string.hpp>
 
-#include "OpenImageIO/strutil.h"
-#include "OpenImageIO/dassert.h"
-#include "OpenImageIO/timer.h"
-#include "OpenImageIO/thread.h"
-#include "OpenImageIO/filesystem.h"
+#include <OpenImageIO/strutil.h>
+#include <OpenImageIO/dassert.h>
+#include <OpenImageIO/timer.h>
+#include <OpenImageIO/thread.h>
+#include <OpenImageIO/filesystem.h>
+#include <OpenImageIO/hash.h>
 
 
 
@@ -68,7 +69,8 @@ public:
     virtual void symdefault (int def);
     virtual void symdefault (float def);
     virtual void symdefault (const char *def);
-    virtual void hint (const char *hintstring);
+    virtual void parameter_done();
+    virtual void hint (string_view hintstring);
     virtual void codemarker (const char *name);
     virtual void codeend ();
     virtual void instruction (int label, const char *opcode);
@@ -77,6 +79,10 @@ public:
     virtual void instruction_end ();
 
     ShaderMaster::ref master () const { return m_master; }
+
+    void add_param_default (float def, size_t offset, const Symbol& sym);
+    void add_param_default (int def, size_t offset, const Symbol& sym);
+    void add_param_default (const char *def, size_t offset, const Symbol& sym);
 
 private:
     ShadingSystemImpl &m_shadingsys;  ///< Reference to the shading system
@@ -91,6 +97,8 @@ private:
     int m_oso_major, m_oso_minor;     ///< oso file format version
     int m_sym_default_index;          ///< Next sym default value to fill in
     bool m_errors;                    ///< Did we hit any errors?
+    typedef boost::unordered_map<ustring,int,ustringHash> UstringIntMap;
+    UstringIntMap m_symmap;           ///< map sym name to index
 };
 
 
@@ -140,39 +148,31 @@ OSOReaderToMaster::shader (const char *shadertype, const char *name)
 
 
 
-// Helper function to expand vec by 'size' elements, initializing them to 0.
-template<class T>
-inline void
-expand (std::vector<T> &vec, size_t size)
-{
-    vec.resize (vec.size() + size, T(0));
-}
-
-
-
 void
-OSOReaderToMaster::symbol (SymType symtype, TypeSpec typespec, const char *name)
+OSOReaderToMaster::symbol (SymType symtype, TypeSpec typespec, const char *name_)
 {
-    Symbol sym (ustring(name), typespec, symtype);
+    ustring name(name_);
+    Symbol sym (name, typespec, symtype);
     TypeDesc t = typespec.simpletype();
+    int nvals = t.aggregate * (t.is_unsized_array() ? 1 : t.numelements());
     if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {
         // Skip structs for now, they're just placeholders
         if (typespec.is_structure()) {
         }
         else if (typespec.simpletype().basetype == TypeDesc::FLOAT) {
             sym.dataoffset ((int) m_master->m_fdefaults.size());
-            expand (m_master->m_fdefaults, t.aggregate * t.numelements());
+            expand (m_master->m_fdefaults, nvals);
         } else if (typespec.simpletype().basetype == TypeDesc::INT) {
             sym.dataoffset ((int) m_master->m_idefaults.size());
-            expand (m_master->m_idefaults, t.aggregate * t.numelements());
+            expand (m_master->m_idefaults, nvals);
         } else if (typespec.simpletype().basetype == TypeDesc::STRING) {
             sym.dataoffset ((int) m_master->m_sdefaults.size());
-            expand (m_master->m_sdefaults, t.aggregate * t.numelements());
-        } else if (typespec.is_closure()) {
+            expand (m_master->m_sdefaults, nvals);
+        } else if (typespec.is_closure_based()) {
             // Closures are pointers, so we allocate a string default taking
             // adventage of their default being NULL as well.
             sym.dataoffset ((int) m_master->m_sdefaults.size());
-            expand (m_master->m_sdefaults, t.aggregate * t.numelements());
+            expand (m_master->m_sdefaults, nvals);
         } else {
             ASSERT (0 && "unexpected type");
         }
@@ -180,13 +180,13 @@ OSOReaderToMaster::symbol (SymType symtype, TypeSpec typespec, const char *name)
     if (sym.symtype() == SymTypeConst) {
         if (typespec.simpletype().basetype == TypeDesc::FLOAT) {
             sym.dataoffset ((int) m_master->m_fconsts.size());
-            expand (m_master->m_fconsts, t.aggregate * t.numelements());
+            expand (m_master->m_fconsts, nvals);
         } else if (typespec.simpletype().basetype == TypeDesc::INT) {
             sym.dataoffset ((int) m_master->m_iconsts.size());
-            expand (m_master->m_iconsts, t.aggregate * t.numelements());
+            expand (m_master->m_iconsts, nvals);
         } else if (typespec.simpletype().basetype == TypeDesc::STRING) {
             sym.dataoffset ((int) m_master->m_sconsts.size());
-            expand (m_master->m_sconsts, t.aggregate * t.numelements());
+            expand (m_master->m_sconsts, nvals);
         } else {
             ASSERT (0 && "unexpected type");
         }
@@ -200,8 +200,42 @@ OSOReaderToMaster::symbol (SymType symtype, TypeSpec typespec, const char *name)
 #endif
     sym.lockgeom (m_shadingsys.lockgeom_default());
     m_master->m_symbols.push_back (sym);
+    m_symmap[name] = int(m_master->m_symbols.size()) - 1;
     // Start the index at which we add specified defaults
     m_sym_default_index = 0;
+}
+
+
+
+void
+OSOReaderToMaster::add_param_default (float def, size_t offset, const Symbol& sym)
+{
+  if (sym.typespec().is_unsized_array() && offset >= m_master->m_fdefaults.size())
+      m_master->m_fdefaults.push_back(def);
+  else
+      m_master->m_fdefaults[offset] = def;
+}
+
+
+
+void
+OSOReaderToMaster::add_param_default (int def, size_t offset, const Symbol& sym)
+{
+  if (sym.typespec().is_unsized_array() && offset >= m_master->m_idefaults.size())
+      m_master->m_idefaults.push_back(def);
+  else
+      m_master->m_idefaults[offset] = def;
+}
+
+
+
+void
+OSOReaderToMaster::add_param_default (const char *def, size_t offset, const Symbol& sym)
+{
+  if (sym.typespec().is_unsized_array() && offset >= m_master->m_sdefaults.size())
+      m_master->m_sdefaults.push_back(ustring(def));
+  else
+      m_master->m_sdefaults[offset] = ustring(def);
 }
 
 
@@ -213,11 +247,12 @@ OSOReaderToMaster::symdefault (int def)
     Symbol &sym (m_master->m_symbols.back());
     size_t offset = sym.dataoffset() + m_sym_default_index;
     ++m_sym_default_index;
+
     if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {
         if (sym.typespec().simpletype().basetype == TypeDesc::FLOAT)
-            m_master->m_fdefaults[offset] = (float)def;
+            add_param_default ((float)def, offset, sym);
         else if (sym.typespec().simpletype().basetype == TypeDesc::INT)
-            m_master->m_idefaults[offset] = def;
+            add_param_default (def, offset, sym);
         else {
             ASSERT (0 && "unexpected type");
         }
@@ -243,7 +278,7 @@ OSOReaderToMaster::symdefault (float def)
     ++m_sym_default_index;
     if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {
         if (sym.typespec().simpletype().basetype == TypeDesc::FLOAT)
-            m_master->m_fdefaults[offset] = def;
+            add_param_default (def, offset, sym);
         else {
             ASSERT (0 && "unexpected type");
         }
@@ -268,7 +303,7 @@ OSOReaderToMaster::symdefault (const char *def)
     ++m_sym_default_index;
     if (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) {
         if (sym.typespec().simpletype().basetype == TypeDesc::STRING)
-            m_master->m_sdefaults[offset] = ustring(def);
+            add_param_default (def, offset, sym);
         else {
             ASSERTMSG (0, "unexpected type: %s (%s)",
                        sym.typespec().c_str(), sym.name().c_str());
@@ -281,6 +316,19 @@ OSOReaderToMaster::symdefault (const char *def)
                        sym.typespec().c_str(), sym.name().c_str());
         }
     }
+}
+
+
+
+void
+OSOReaderToMaster::parameter_done ()
+{
+  ASSERT (m_master->m_symbols.size() && "parameter_done but no sym");
+  Symbol &sym (m_master->m_symbols.back());
+
+  // set length of unsized array parameters
+  if (sym.symtype() == SymTypeParam && sym.typespec().is_unsized_array())
+      sym.initializers (m_sym_default_index / sym.typespec().aggregate());
 }
 
 
@@ -328,9 +376,9 @@ readuntil (std::string &source, const std::string &stop, bool do_trim=false)
 
 
 void
-OSOReaderToMaster::hint (const char *hintstring)
+OSOReaderToMaster::hint (string_view hintstring)
 {
-    std::string h (hintstring);
+    std::string h (hintstring);   // FIXME -- use string_view ops here
     if (extract_prefix (h, "%filename{\"")) {
         m_sourcefile = readuntil (h, "\"");
         return;
@@ -387,6 +435,10 @@ OSOReaderToMaster::hint (const char *hintstring)
             m_master->m_ops.back().argread(i, *str == 'r' || *str =='W');
         }
         ASSERT(m_nargs == i);
+        // Fix old bug where oslc forgot to mark getmatrix last arg as write
+        static ustring getmatrix("getmatrix");
+        if (m_master->m_ops.back().opname() == getmatrix)
+            m_master->m_ops.back().argwrite(m_nargs-1, true);
     }
     if (extract_prefix(h, "%argderivs{")) {
         while (1) {
@@ -482,15 +534,12 @@ void
 OSOReaderToMaster::instruction_arg (const char *name)
 {
     ustring argname (name);
-    for (size_t i = 0;  i < m_master->m_symbols.size();  ++i) {
-        if (m_master->m_symbols[i].name() == argname) {
-            m_master->m_args.push_back (i);
-            ++m_nargs;
-            return;
-        }
+    UstringIntMap::const_iterator found = m_symmap.find (argname);
+    if (found != m_symmap.end()) {
+        m_master->m_args.push_back (found->second);
+        ++m_nargs;
+        return;
     }
-    // ERROR! -- FIXME
-//    m_master->m_args.push_back (0);  // FIXME
     m_shadingsys.error ("Parsing shader %s: unknown arg %s",
                         m_master->shadername().c_str(), name);
     m_errors = true;
@@ -517,9 +566,9 @@ OSOReaderToMaster::instruction_end ()
 
 
 ShaderMaster::ref
-ShadingSystemImpl::loadshader (const char *cname)
+ShadingSystemImpl::loadshader (string_view cname)
 {
-    if (! cname || ! cname[0]) {
+    if (! cname.size()) {
         error ("Attempt to load shader with empty name \"\".");
         return NULL;
     }
@@ -528,8 +577,8 @@ ShadingSystemImpl::loadshader (const char *cname)
     lock_guard guard (m_mutex);  // Thread safety
     ShaderNameMap::const_iterator found = m_shader_masters.find (name);
     if (found != m_shader_masters.end()) {
-        if (debug())
-            info ("Found %s in shader_masters", name.c_str());
+        // if (debug())
+        //     info ("Found %s in shader_masters", name.c_str());
         // Already loaded this shader, return its reference
         return (*found).second;
     }
@@ -546,16 +595,22 @@ ShadingSystemImpl::loadshader (const char *cname)
     bool ok = oso.parse_file (filename);
     ShaderMaster::ref r = ok ? oso.master() : NULL;
     m_shader_masters[name] = r;
+    double loadtime = timer();
+    {
+        spin_lock lock (m_stat_mutex);
+        m_stat_master_load_time += loadtime;
+    }
     if (ok) {
         ++m_stat_shaders_loaded;
-        info ("Loaded \"%s\" (took %s)", filename.c_str(), Strutil::timeintervalformat(timer(), 2).c_str());
+        info ("Loaded \"%s\" (took %s)", filename.c_str(),
+              Strutil::timeintervalformat(loadtime, 2).c_str());
         ASSERT (r);
         r->resolve_syms ();
-        if (m_debug) {
-            std::string s = r->print ();
-            if (s.length())
-                info ("%s", s.c_str());
-        }
+        // if (debug()) {
+        //     std::string s = r->print ();
+        //     if (s.length())
+        //         info ("%s", s.c_str());
+        // }
     } else {
         error ("Unable to read \"%s\"", filename.c_str());
     }
@@ -566,14 +621,14 @@ ShadingSystemImpl::loadshader (const char *cname)
 
 
 bool
-ShadingSystemImpl::LoadMemoryCompiledShader (const char *shadername,
-                                             const char *buffer)
+ShadingSystemImpl::LoadMemoryCompiledShader (string_view shadername,
+                                             string_view buffer)
 {
-    if (! shadername || ! shadername[0]) {
+    if (! shadername.size()) {
         error ("Attempt to load shader with empty name \"\".");
         return false;
     }
-    if (! buffer || ! buffer[0]) {
+    if (! buffer.size()) {
         error ("Attempt to load shader \"%s\" with empty OSO data.", shadername);
         return false;
     }
@@ -593,16 +648,22 @@ ShadingSystemImpl::LoadMemoryCompiledShader (const char *shadername,
     bool ok = reader.parse_memory (buffer);
     ShaderMaster::ref r = ok ? reader.master() : NULL;
     m_shader_masters[name] = r;
+    double loadtime = timer();
+    {
+        spin_lock lock (m_stat_mutex);
+        m_stat_master_load_time += loadtime;
+    }
     if (ok) {
         ++m_stat_shaders_loaded;
-        info ("Loaded \"%s\" (took %s)", shadername, Strutil::timeintervalformat(timer(), 2).c_str());
+        info ("Loaded \"%s\" (took %s)", shadername,
+              Strutil::timeintervalformat(loadtime, 2).c_str());
         ASSERT (r);
         r->resolve_syms ();
-        if (m_debug) {
-            std::string s = r->print ();
-            if (s.length())
-                info ("%s", s.c_str());
-        }
+        // if (debug()) {
+        //     std::string s = r->print ();
+        //     if (s.length())
+        //         info ("%s", s.c_str());
+        // }
     } else {
         error ("Unable to parse preloaded shader \"%s\"", shadername);
     }

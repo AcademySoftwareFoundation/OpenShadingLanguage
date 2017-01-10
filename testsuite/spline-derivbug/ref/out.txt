@@ -1,0 +1,9 @@
+Compiled test.osl -> test.oso
+
+Output Cout to color.tif
+Output Cout_dx to dx.tif
+Output Cout_dy to dy.tif
+spline in=0.492, result = 0.0262 0.52 0.47    dx = -0.0116 -0.0394 0.0594   dy = 0 0 0
+spline in=0.508, result = 0.0163 0.48 0.53    dx = -0.00841 -0.0394 0.0594   dy = 0 0 0
+spline in=0.492, result = 0.0262 0.52 0.47    dx = -0.0116 -0.0394 0.0594   dy = 0 0 0
+spline in=0.508, result = 0.0163 0.48 0.53    dx = -0.00841 -0.0394 0.0594   dy = 0 0 0

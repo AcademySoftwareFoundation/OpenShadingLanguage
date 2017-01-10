@@ -26,15 +26,11 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef OSL_PVT_H
-#define OSL_PVT_H
+#pragma once
 
-#include "oslconfig.h"
+#include "OSL/oslconfig.h"
 
-#include "OpenImageIO/dassert.h"
-
-#include <boost/tr1/memory.hpp>
-using std::tr1::shared_ptr;
+#include <OpenImageIO/dassert.h>
 
 
 OSL_NAMESPACE_ENTER
@@ -47,7 +43,7 @@ class StructSpec;
 /// Kinds of shaders
 ///
 enum ShaderType {
-    ShadTypeUnknown, ShadTypeGeneric, ShadTypeSurface, 
+    ShadTypeUnknown=0, ShadTypeGeneric, ShadTypeSurface,
     ShadTypeDisplacement, ShadTypeVolume, ShadTypeLight,
     ShadTypeLast
 };
@@ -55,11 +51,11 @@ enum ShaderType {
 
 /// Convert a ShaderType to a human-readable name ("surface", etc.)
 ///
-const char *shadertypename (ShaderType s);
+string_view shadertypename (ShaderType s);
 
 /// Convert a ShaderType to a human-readable name ("surface", etc.)
 ///
-ShaderType shadertype_from_name (const char *name);
+ShaderType shadertype_from_name (string_view name);
 
 
 
@@ -77,23 +73,7 @@ const char *shaderusename (ShaderUse s);
 
 /// Convert a ShaderUse to a human-readable name ("surface", etc.)
 ///
-ShaderUse shaderuse_from_name (const char *name);
-
-
-
-/// Data type for flags that indicate on a point-by-point basis whether
-/// we want computations to be performed.
-typedef unsigned char Runflag;
-
-/// Pre-defined values for Runflag's.
-///
-enum RunflagVal { RunflagOff = 0, RunflagOn = 1 };
-
-/// Data type for indices that indicate on which shading points we want
-/// computations to be performed.
-typedef int RunIndex;
-
-
+ShaderUse shaderuse_from_name (string_view name);
 
 
 
@@ -193,6 +173,10 @@ public:
     ///
     bool is_structure_array () const { return m_structure > 0 && is_array(); }
 
+    /// Is this typespec an array of structures?
+    ///
+    bool is_structure_based () const { return m_structure > 0; }
+
     /// Return the structure ID of this typespec, or 0 if it's not a
     /// struct.
     int structure () const { return m_structure; }
@@ -223,9 +207,26 @@ public:
     ///
     bool is_array () const { return m_simple.arraylen != 0; }
 
+    /// Is this a variable length array, without a definite size?
+    bool is_unsized_array () const { return m_simple.arraylen < 0; }
+
+    /// Does this TypeSpec describe an array, whose length is specified?
+    bool is_sized_array () const { return m_simple.arraylen > 0; }
+
     /// Returns the length of the array, or 0 if not an array.
+    int arraylength () const {
+        DASSERT_MSG (m_simple.arraylen >= 0, "Called arraylength() on "
+                     "TypeSpec of array with unspecified length (%d)", m_simple.arraylen);
+        return m_simple.arraylen;
+    }
+
+    /// Number of elements
     ///
-    int arraylength () const { return m_simple.arraylen; }
+    int numelements() const {
+        DASSERT_MSG (m_simple.arraylen >= 0, "Called numelements() on "
+                     "TypeSpec of array with unspecified length (%d)", m_simple.arraylen);
+        return std::max (1, m_simple.arraylen);
+    }
 
     /// Alter this typespec to make it into an array of the given length
     /// (including 0 -> make it not be an array).  The basic type (not
@@ -303,6 +304,12 @@ public:
     ///
     bool is_int_based () const {
         return m_simple.basetype == TypeDesc::INT;
+    }
+
+    /// Is it somehow based on floats?
+    ///
+    bool is_float_based () const {
+        return m_simple.basetype == TypeDesc::FLOAT && !m_closure;
     }
 
     /// Is it a void?
@@ -440,11 +447,14 @@ public:
 
     /// Number of fields in the struct.
     ///
-    size_t numfields () const { return m_fields.size(); }
+    int numfields () const { return (int)m_fields.size(); }
 
     /// Return a reference to an individual FieldSpec for one field
     /// of the struct, indexed numerically (starting with 0).
-    const FieldSpec & field (size_t i) const { return m_fields[i]; }
+    const FieldSpec & field (int i) const { return m_fields[i]; }
+
+    /// Look up the named field, return its index, or -1 if not found.
+    int lookup_field (ustring name) const;
 
 private:
     ustring m_name;                    ///< Structure name (unmangled)
@@ -460,13 +470,15 @@ class Symbol {
 public:
     Symbol (ustring name, const TypeSpec &datatype, SymType symtype,
             ASTNode *declaration_node=NULL) 
-        : m_data(NULL), m_size((int)datatype.simpletype().size()),
-          m_name(name), m_typespec(datatype), m_symtype(symtype),
+        : m_data(NULL), m_name(name), m_typespec(datatype),
+          m_size(datatype.is_unsized_array() ? 0 : (int)datatype.simpletype().size()),
+          m_symtype(symtype),
           m_has_derivs(false), m_const_initializer(false),
           m_connected_down(false),
-          m_initialized(false), m_lockgeom(false),
-          m_valuesource(DefaultVal), m_free_data(false), m_fieldid(-1),
-          m_scope(0), m_dataoffset(-1),
+          m_initialized(false), m_lockgeom(false), m_renderer_output(false),
+          m_valuesource(DefaultVal), m_free_data(false),
+          m_fieldid(-1), m_layer(-1),
+          m_scope(0), m_dataoffset(-1), m_initializers(0),
           m_node(declaration_node), m_alias(NULL),
           m_initbegin(0), m_initend(0),
           m_firstread(std::numeric_limits<int>::max()), m_lastread(-1),
@@ -489,7 +501,7 @@ public:
 
     /// The symbol's (unmangled) name, guaranteed unique only within the
     /// symbol's declaration scope.
-    const ustring &name () const { return m_name; }
+    ustring name () const { return m_name; }
 
     /// The symbol's name, mangled to incorporate the scope so it will be
     /// a globally unique name.
@@ -565,6 +577,9 @@ public:
     void dataoffset (int d) { m_dataoffset = d; }
     int dataoffset () const { return m_dataoffset; }
 
+    void initializers (int d) { m_initializers = d; }
+    int initializers () const { return m_initializers; }
+
     bool has_derivs () const { return m_has_derivs; }
     void has_derivs (bool new_derivs) {
         m_has_derivs = new_derivs;
@@ -591,6 +606,9 @@ public:
 
     int fieldid () const { return m_fieldid; }
     void fieldid (int id) { m_fieldid = id; }
+
+    int layer () const { return m_layer; }
+    void layer (int id) { m_layer = id; }
 
     int initbegin () const { return m_initbegin; }
     void initbegin (int i) { m_initbegin = i; }
@@ -625,6 +643,18 @@ public:
         m_lastwrite  = std::max (m_lastwrite, lw);
     }
 
+    // Mark the symbol as always being read (and, if write==true, also
+    // that it's always written). This is for when we don't know when
+    // it's read or written, but want to be sure it doesn't look unused.
+    void mark_always_used (bool write=false) {
+        m_firstread = 0;
+        m_lastread  = std::numeric_limits<int>::max();
+        if (write) {
+            m_firstwrite = 0;
+            m_lastwrite  = std::numeric_limits<int>::max();
+        }
+    }
+
     int firstread () const  { return m_firstread; }
     int lastread () const   { return m_lastread; }
     int firstwrite () const { return m_firstwrite; }
@@ -634,6 +664,14 @@ public:
     bool everread () const  { return lastread() >= 0; }
     bool everwritten () const { return lastwrite() >= 0; }
     bool everused () const  { return everread() || everwritten(); }
+    // everused_in_group is an even more stringent test -- not only must
+    // the symbol not be used within the shader but it also must not be
+    // used elsewhere in the group, by being connected to something downstream
+    // or used as a renderer output.
+    bool everused_in_group () const {
+        return everused() || connected_down() || renderer_output();
+    }
+
     void set_read (int first, int last) {
         m_firstread = first;  m_lastread = last;
     }
@@ -647,7 +685,35 @@ public:
     bool lockgeom () const { return m_lockgeom; }
     void lockgeom (bool lock) { m_lockgeom = lock; }
 
+    int  arraylen () const { return m_typespec.arraylength(); }
+    void arraylen (int len) {
+        m_typespec.make_array(len);
+        m_size = m_typespec.simpletype().size();
+    }
+
+    bool renderer_output () const { return m_renderer_output; }
+    void renderer_output (bool v) { m_renderer_output = v; }
+
     bool is_constant () const { return symtype() == SymTypeConst; }
+    bool is_temp () const { return symtype() == SymTypeTemp; }
+
+    // Retrieve the const float value (will ASSERT if not a const float!)
+    float get_float (int index = 0) {
+        ASSERT (data() && typespec().is_float_based());
+        return ((const float *)data())[index];
+    }
+
+    // Retrieve the const int value (will ASSERT if not a const int!)
+    int get_int (int index = 0) {
+        ASSERT (data() && typespec().is_int_based());
+        return ((const int *)data())[index];
+    }
+
+    // Retrieve the const string value (will ASSERT if not a const string!)
+    ustring get_string () {
+        ASSERT (data() && typespec().is_string());
+        return ((const ustring *)data())[0];
+    }
 
     /// Stream output
     std::ostream& print (std::ostream& out, int maxvals=100000000) const;
@@ -655,20 +721,23 @@ public:
 
 protected:
     void *m_data;               ///< Pointer to the data
-    int m_size;                 ///< Size of data (in bytes)
     ustring m_name;             ///< Symbol name (unmangled)
     TypeSpec m_typespec;        ///< Data type of the symbol
+    int m_size;                 ///< Size of data (in bytes)
     char m_symtype;             ///< Kind of symbol (param, local, etc.)
     unsigned m_has_derivs:1;    ///< Step to derivs (0 == has no derivs)
     unsigned m_const_initializer:1; ///< initializer is a constant expression
     unsigned m_connected_down:1;///< Connected to a later/downtream layer
     unsigned m_initialized:1;   ///< If a param, has it been initialized?
     unsigned m_lockgeom:1;      ///< Is the param not overridden by geom?
+    unsigned m_renderer_output:1; ///< Is this sym a renderer output?
     char m_valuesource;         ///< Where did the value come from?
     bool m_free_data;           ///< Free m_data upon destruction?
     short m_fieldid;            ///< Struct field of this var (or -1)
+    short m_layer;              ///< Layer (within the group) this belongs to
     int m_scope;                ///< Scope where this symbol was declared
     int m_dataoffset;           ///< Offset of the data (-1 for unknown)
+    int m_initializers;         ///< Number of default initializers
     ASTNode *m_node;            ///< Ptr to the declaration of this symbol
     Symbol *m_alias;            ///< Another symbol that this is an alias for
     int m_initbegin, m_initend; ///< Range of init ops (for params)
@@ -830,6 +899,9 @@ public:
     ///
     unsigned int argtakesderivs_all () const { return m_argtakesderivs; }
 
+    /// Replace the m_argtakesderivs entirely. Use with caution!
+    void argtakesderivs_all (unsigned int newval) { m_argtakesderivs = newval; }
+
     /// Are two opcodes identical enough to merge their instances?  Note
     /// that this isn't a true 'equal', we don't compare fields that
     /// won't matter for that purpose.
@@ -864,5 +936,3 @@ typedef std::vector<Opcode> OpcodeVec;
 
 }; // namespace OSL::pvt
 OSL_NAMESPACE_EXIT
-
-#endif /* OSL_PVT_H */

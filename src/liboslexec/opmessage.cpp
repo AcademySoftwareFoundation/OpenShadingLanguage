@@ -27,6 +27,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "oslexec_pvt.h"
+#include "OSL/shaderglobals.h"
 
 
 /////////////////////////////////////////////////////////////////////////
@@ -48,13 +49,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 OSL_NAMESPACE_ENTER
 namespace pvt {
 
-// This symbol is strictly to force linkage of this file when building
-// static library.
-int opmessage_cpp_dummy = 1;
-
-
-
-#define USTR(cstr) (*((ustring *)&cstr))
 
 OSL_SHADEOP void
 osl_setmessage (ShaderGlobals *sg, const char *name_, long long type_, void *val, int layeridx, const char* sourcefile_, int sourceline)
@@ -62,7 +56,7 @@ osl_setmessage (ShaderGlobals *sg, const char *name_, long long type_, void *val
     const ustring &name (USTR(name_));
     const ustring &sourcefile (USTR(sourcefile_));
     // recreate TypeDesc -- we just crammed it into an int!
-    TypeDesc type (*(TypeDesc *)&type_);
+    TypeDesc type = TYPEDESC(type_);
     bool is_closure = (type.basetype == TypeDesc::UNKNOWN); // secret code for closure
     if (is_closure)
         type.basetype = TypeDesc::PTR;  // for closures, we store a pointer
@@ -73,7 +67,7 @@ osl_setmessage (ShaderGlobals *sg, const char *name_, long long type_, void *val
         if (m->name == name) {
             // message already exists?
             if (m->has_data())
-                sg->context->shadingsys().error(
+                sg->context->error(
                    "message \"%s\" already exists (created here: %s:%d)"
                    " cannot set again from %s:%d",
                    name.c_str(),
@@ -82,7 +76,7 @@ osl_setmessage (ShaderGlobals *sg, const char *name_, long long type_, void *val
                    sourcefile.c_str(),
                    sourceline);
             else // NOTE: this cannot be triggered when strict_messages=false because we won't record "failed" getmessage calls
-               sg->context->shadingsys().error(
+               sg->context->error(
                    "message \"%s\" was queried before being set (queried here: %s:%d)"
                    " setting it now (%s:%d) would lead to inconsistent results",
                    name.c_str(),
@@ -109,7 +103,7 @@ osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
     const ustring &sourcefile (USTR(sourcefile_));
 
     // recreate TypeDesc -- we just crammed it into an int!
-    TypeDesc type (*(TypeDesc *)&type_);
+    TypeDesc type = TYPEDESC(type_);
     bool is_closure = (type.basetype == TypeDesc::UNKNOWN); // secret code for closure
     if (is_closure)
         type.basetype = TypeDesc::PTR;  // for closures, we store a pointer
@@ -117,8 +111,7 @@ osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
     static ustring ktrace ("trace");
     if (source == ktrace) {
         // Source types where we need to ask the renderer
-        RendererServices *renderer = sg->context->renderer();
-        return renderer->getmessage (sg, source, name, type, val, derivs);
+        return sg->renderer->getmessage (sg, source, name, type, val, derivs);
     }
 
     MessageList &messages (sg->context->messages());
@@ -127,7 +120,7 @@ osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
         if (m->name == name) {
             if (m->type != type) {
                 // found message, but types don't match
-                sg->context->shadingsys().error(
+                sg->context->error(
                     "type mismatch for message \"%s\" (%s as %s here: %s:%d)"
                     " cannot fetch as %s from %s:%d",
                     name.c_str(),
@@ -146,7 +139,7 @@ osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
             }
             if (m->layeridx > layeridx) {
                 // found message, but was set by a layer deeper than the one querying the message
-                sg->context->shadingsys().error(
+                sg->context->error(
                     "message \"%s\" was set by layer #%d (%s:%d)"
                     " but is being queried by layer #%d (%s:%d)"
                     " - messages may only be transfered from nodes "

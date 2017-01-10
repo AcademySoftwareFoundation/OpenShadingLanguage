@@ -26,14 +26,12 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef OSL_AST_H
-#define OSL_AST_H
+#pragma once
 
 #include <boost/intrusive_ptr.hpp>
-#include "OpenImageIO/refcnt.h"
+#include <OpenImageIO/refcnt.h>
 
-#include "oslconfig.h"
-#include "oslcomp.h"
+#include "OSL/oslcomp.h"
 #include "symtab.h"
 
 
@@ -69,16 +67,17 @@ public:
         conditional_statement_node,
         loop_statement_node, loopmod_statement_node, return_statement_node,
         binary_expression_node, unary_expression_node,
-        assign_expression_node, ternary_expression_node, 
+        assign_expression_node, ternary_expression_node,
+        comma_operator_node,
         typecast_expression_node, type_constructor_node,
         function_call_node,
         literal_node,
         _last_node
     };
 
-    enum Operator { Nothing=0, Decr, Incr, 
+    enum Operator { Nothing=0, Decr, Incr,
                     Assign, Mul, Div, Add, Sub, Mod,
-                    Equal, NotEqual, Greater, Less, GreaterEqual, LessEqual, 
+                    Equal, NotEqual, Greater, Less, GreaterEqual, LessEqual,
                     BitAnd, BitOr, Xor, Compl,
                     And, Or, Not, ShiftLeft, ShiftRight };
 
@@ -124,7 +123,7 @@ public:
     /// type" may be passed down, conveying any requirements or
     /// coercion.  The default (base class) implementation just type
     /// checks all the child nodes and makes this node's type be the
-    /// expected if it is unknown, but doens't change it if it's not
+    /// expected if it is unknown, but doesn't change it if it's not
     /// unknown.
     virtual TypeSpec typecheck (TypeSpec expected = TypeSpec());
 
@@ -157,7 +156,7 @@ public:
     }
 
     /// Append a new node (specified by a reference-counted pointer)
-    /// onto the end of the sequence that *this belongs to.  Return an
+    /// onto the end of the sequence that *this belongs to.  Return a
     /// reference-counted pointer to *this.
     ref append (ref &x) { append (x.get()); return this; }
 
@@ -181,6 +180,7 @@ public:
 
     void sourceline (int line) { m_sourceline = line; }
 
+    // FIXME - some day, replace this with TinyFormat-based version.
     void error (const char *format, ...);
     void warning (const char *format, ...);
 
@@ -207,8 +207,8 @@ protected:
             n->print (out, indentlevel);
     }
 
-    /// A is the head of a list of nodes, traverse the list and call
-    /// the print() method for each node in the list.
+    /// A is the head of a list of nodes, traverse the list and compute
+    /// the length of the list.
     static size_t listlength (const ref &A) {
         size_t len = 0;
         for (const ASTNode *n = A.get();  n;  n = n->nextptr())
@@ -245,7 +245,7 @@ protected:
             return ref();
         }
     }
-        
+
     /// Return the number of child nodes.
     ///
     size_t nchildren () const { return m_children.size(); }
@@ -277,9 +277,9 @@ protected:
     bool check_arglist (const char *funcname, ref arg,
                         const char *formals, bool coerce=false);
 
-    /// Follow a list of nodes, generating code for each in turn.
-    ///
-    static void codegen_list (ref node);
+    /// Follow a list of nodes, generating code for each in turn, and return
+    /// the Symbol* for the last thing generated.
+    static Symbol * codegen_list (ref node, Symbol *dest = NULL);
 
     /// Generate code for all the children of this node.
     ///
@@ -287,7 +287,7 @@ protected:
 
     /// Emit a single IR opcode -- append one op to the list of
     /// intermediate code, returning the label (address) of the new op.
-    int emitcode (const char *opname, Symbol *arg0=NULL, 
+    int emitcode (const char *opname, Symbol *arg0=NULL,
                   Symbol *arg1=NULL, Symbol *arg2=NULL, Symbol *arg3=NULL);
 
     /// Emit a single IR opcode -- append one op to the list of
@@ -303,6 +303,23 @@ protected:
     /// accounting for exotic types like structs, etc.
     /// N.B.: just conveniently wraps the compiler's identical method.
     const char *type_c_str (const TypeSpec &type) const;
+
+    /// Assign the struct variable named by srcsym to the struct
+    /// variable named by dstsym by assigning each field individually.
+    /// In the case of dstsym naming an array of structs, arrayindex
+    /// should be a symbol holding the index of the individual array
+    /// element that should be copied into.  If 'copywholearrays' is
+    /// true, we are (perhaps recursively) copying entire arrays, of
+    /// or within the struct, and intindex is the element number if we
+    /// know it -- these two items let us take some interesting shortcuts
+    /// with whole arrays (copyarray versus assigning elements). Pass
+    /// paraminit=true if we're doing the assignment as init ops of a
+    /// shader param.
+    void codegen_assign_struct (StructSpec *structspec,
+                                ustring dstsym, ustring srcsym,
+                                Symbol *arrayindex,
+                                bool copywholearrays, int intindex,
+                                bool paraminit);
 
 protected:
     NodeType m_nodetype;          ///< Type of node this is
@@ -324,10 +341,7 @@ class ASTshader_declaration : public ASTNode
 {
 public:
     ASTshader_declaration (OSLCompilerImpl *comp, int stype, ustring name,
-                           ASTNode *form, ASTNode *stmts, ASTNode *meta) 
-        : ASTNode (shader_declaration_node, comp, stype, meta, form, stmts),
-          m_shadername(name)
-    { }
+                           ASTNode *form, ASTNode *stmts, ASTNode *meta);
     const char *nodetypename () const { return "shader_declaration"; }
     const char *childname (size_t i) const;
     void print (std::ostream &out, int indentlevel=0) const;
@@ -338,7 +352,7 @@ public:
     ref formals () const { return child (1); }
     ref statements () const { return child (2); }
     ustring shadername () const { return m_shadername; }
-    const char *shadertypename () const;
+    string_view shadertypename () const;
 
 private:
     ustring m_shadername;
@@ -403,13 +417,20 @@ public:
     bool is_output () const { return m_isoutput; }
 
     /// For shader params, generate the string that gives the
-    /// intialization of literal values and place it in 'out'.
+    /// initialization of literal values and place it in 'out'.
     /// Return whether the full initialization is comprised only of
     /// literals (and no init ops are needed).
-    bool param_default_literals (const Symbol *sym, std::string &out);
+    bool param_default_literals (const Symbol *sym, ASTNode *init,
+                 std::string &out, string_view separator=" ") const;
+
+    void codegen_initializer (ref init, Symbol *sym);
 
     // Special code generation for structure initializers
-    Symbol *codegen_struct_initializers (ref init);
+    Symbol *codegen_struct_initializers (ref init, Symbol *sym);
+
+    void register_struct_init (ustring name, ASTNode *init) {
+        m_struct_field_inits.push_back (NamedInit (name, init));
+    }
 
 private:
     // Helper: type check an initializer list -- either a single item to
@@ -417,18 +438,19 @@ private:
     void typecheck_initlist (ref init, TypeSpec type, const char *name);
 
     // Special type checking for structure initializers
-    TypeSpec typecheck_struct_initializers (ref init);
+    TypeSpec typecheck_struct_initializers (ref init, TypeSpec type,
+                                            const char *name);
 
     // Helper: generate code for an initializer list -- either a single
     // item to a scalar, or a list to an array.
     void codegen_initlist (ref init, TypeSpec type, Symbol *sym);
 
     // Helper for param_default_literals: generate the string that gives
-    // the intialization of the literal value (and/or the default, if
+    // the initialization of the literal value (and/or the default, if
     // init==NULL) and append it to 'out'.  Return whether the full
     // initialization is comprised only of literals (no init ops needed).
     bool param_one_default_literal (const Symbol *sym, ASTNode *init,
-                                    std::string &out);
+                      std::string &out, const std::string &separator=" ") const;
 
     ustring m_name;     ///< Name of the symbol (unmangled)
     Symbol *m_sym;      ///< Ptr to the symbol this declares
@@ -436,6 +458,10 @@ private:
     bool m_isoutput;    ///< Is this an output parameter?
     bool m_ismetadata;  ///< Is this declaration a piece of metadata?
     bool m_initlist;    ///< Was initialized with a list (versus just an expr)
+    // For structures, map the field names (even recursively!) to the
+    // specific initializers.
+    typedef std::pair<ustring,ASTNode *> NamedInit;
+    std::vector<NamedInit> m_struct_field_inits;
 };
 
 
@@ -566,7 +592,7 @@ class ASTconditional_statement : public ASTNode
 public:
     ASTconditional_statement (OSLCompilerImpl *comp, ASTNode *cond,
                               ASTNode *truestmt, ASTNode *falsestmt=NULL)
-        : ASTNode (conditional_statement_node, comp, 0, 
+        : ASTNode (conditional_statement_node, comp, 0,
                    cond, truestmt, falsestmt)
     { }
 
@@ -672,20 +698,6 @@ public:
 
     ref var () const { return child (0); }
     ref expr () const { return child (1); }
-private:
-    /// Assign the struct variable named by srcsym to the struct
-    /// variable named by dstsym by assigning each field individually.
-    /// In the case of dstsym naming an array of structs, arrayindex
-    /// should be a symbol holding the index of the individual array
-    /// element that should be copied into.  If 'copywholearrays' is
-    /// true, we are (perhaps recursively) copying entire arrays, of
-    /// or within the struct, and intindex is the element number if we
-    /// know it -- these two items let us take some interesting shortcuts
-    /// with whole arrays (copyarray versus assigning elements).
-    void codegen_assign_struct (StructSpec *structspec,
-                                ustring dstsym, ustring srcsym,
-                                Symbol *arrayindex,
-                                bool copywholearrays, int intindex);
 };
 
 
@@ -751,6 +763,24 @@ public:
     ref trueexpr () const { return child (1); }
     ref falseexpr () const { return child (2); }
 };
+
+
+
+class ASTcomma_operator : public ASTNode
+{
+public:
+    ASTcomma_operator (OSLCompilerImpl *comp, ASTNode *exprlist)
+        : ASTNode (comma_operator_node, comp, Nothing, exprlist)
+    { }
+
+    const char *nodetypename () const { return "comma_operator"; }
+    const char *childname (size_t i) const { return "expression_list"; }
+    TypeSpec typecheck (TypeSpec expected);
+    Symbol *codegen (Symbol *dest = NULL);
+
+    ref expr () const { return child (0); }
+};
+
 
 
 
@@ -833,7 +863,7 @@ private:
                                  bool equivreturn);
 
     /// Handle all the special cases for built-ins.  This includes
-    /// irregular patterns of which args are read vs written, special 
+    /// irregular patterns of which args are read vs written, special
     /// checks for printf- and texture-like, etc.
     void typecheck_builtin_specialcase ();
 
@@ -950,5 +980,3 @@ private:
 }; // namespace pvt
 
 OSL_NAMESPACE_EXIT
-
-#endif /* OSL_AST_H */

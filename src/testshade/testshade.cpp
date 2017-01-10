@@ -33,18 +33,25 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <cmath>
 
+#include <boost/thread.hpp>
+
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/imagebufalgo.h>
+#include <OpenImageIO/imagebufalgo_util.h>
 #include <OpenImageIO/argparse.h>
 #include <OpenImageIO/strutil.h>
+#include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/timer.h>
 
-#include "oslexec.h"
+#include "OSL/oslexec.h"
+#include "OSL/oslcomp.h"
+#include "OSL/oslquery.h"
 #include "simplerend.h"
 using namespace OSL;
-
-
+using OIIO::TypeDesc;
+using OIIO::ParamValue;
+using OIIO::ParamValueList;
 
 static ShadingSystem *shadingsys = NULL;
 static std::vector<std::string> shadernames;
@@ -53,62 +60,145 @@ static std::vector<std::string> outputvars;
 static std::vector<ustring> outputvarnames;
 static std::vector<OIIO::ImageBuf*> outputimgs;
 static std::string dataformatname = "";
+static std::string shaderpath;
+static std::vector<std::string> entrylayers;
+static std::vector<std::string> entryoutputs;
+static std::vector<int> entrylayer_index;
+static std::vector<const ShaderSymbol *> entrylayer_symbols;
 static bool debug = false;
 static bool debug2 = false;
 static bool verbose = false;
-static bool stats = false;
+static bool runstats = false;
+static int profile = 0;
 static bool O0 = false, O1 = false, O2 = false;
 static bool pixelcenters = false;
 static bool debugnan = false;
 static bool debug_uninit = false;
+static bool use_group_outputs = false;
+static bool do_oslquery = false;
+static bool inbuffer = false;
+static bool use_shade_image = false;
+static bool userdata_isconnected = false;
 static int xres = 1, yres = 1;
+static int num_threads = 0;
+static std::string groupname;
+static std::string groupspec;
 static std::string layername;
 static std::vector<std::string> connections;
-static std::vector<std::string> iparams, fparams, vparams, sparams;
-static float fparamdata[1000];   // bet that's big enough
-static int fparamindex = 0;
-static int iparamdata[1000];
-static int iparamindex = 0;
-static ustring sparamdata[1000];
-static int sparamindex = 0;
+static ParamValueList params;
+static ParamValueList reparams;
+static std::string reparam_layer;
 static ErrorHandler errhandler;
 static int iters = 1;
 static std::string raytype = "camera";
+static int raytype_bit = 0;
+static bool raytype_opt = false;
 static std::string extraoptions;
 static SimpleRenderer rend;  // RendererServices
 static OSL::Matrix44 Mshad;  // "shader" space to "common" space matrix
 static OSL::Matrix44 Mobj;   // "object" space to "common" space matrix
+static ShaderGroupRef shadergroup;
+static std::string archivegroup;
+static int exprcount = 0;
+static bool shadingsys_options_set = false;
+static float sscale = 1, tscale = 1;
+static float soffset = 0, toffset = 0;
+
 
 
 static void
 inject_params ()
 {
-    for (size_t p = 0;  p < fparams.size();  p += 2) {
-        fparamdata[fparamindex] = atof (fparams[p+1].c_str());
-        shadingsys->Parameter (fparams[p].c_str(), TypeDesc::TypeFloat,
-                               &fparamdata[fparamindex]);
-        fparamindex += 1;
+    for (size_t p = 0;  p < params.size();  ++p) {
+        const ParamValue &pv (params[p]);
+        shadingsys->Parameter (pv.name(), pv.type(), pv.data(),
+                               pv.interp() == ParamValue::INTERP_CONSTANT);
     }
-    for (size_t p = 0;  p < iparams.size();  p += 2) {
-        iparamdata[iparamindex] = atoi (iparams[p+1].c_str());
-        shadingsys->Parameter (iparams[p].c_str(), TypeDesc::TypeInt,
-                               &iparamdata[iparamindex]);
-        iparamindex += 1;
+}
+
+
+
+static void
+set_shadingsys_options ()
+{
+    if (shadingsys_options_set)
+        return;
+    shadingsys->attribute ("debug", debug2 ? 2 : (debug ? 1 : 0));
+    shadingsys->attribute ("compile_report", debug|debug2);
+    int opt = 2;  // default
+    if (O0) opt = 0;
+    if (O1) opt = 1;
+    if (O2) opt = 2;
+    if (const char *opt_env = getenv ("TESTSHADE_OPT"))  // overrides opt
+        opt = atoi(opt_env);
+    shadingsys->attribute ("optimize", opt);
+    shadingsys->attribute ("lockgeom", 1);
+    shadingsys->attribute ("debug_nan", debugnan);
+    shadingsys->attribute ("debug_uninit", debug_uninit);
+    shadingsys->attribute ("userdata_isconnected", userdata_isconnected);
+    if (! shaderpath.empty())
+        shadingsys->attribute ("searchpath:shader", shaderpath);
+    shadingsys_options_set = true;
+}
+
+
+
+/// Read the entire contents of the named file and place it in str,
+/// returning true on success, false on failure.
+inline bool
+read_text_file (string_view filename, std::string &str)
+{
+    std::ifstream in (filename.c_str(), std::ios::in | std::ios::binary);
+    if (in) {
+        std::ostringstream contents;
+        contents << in.rdbuf();
+        in.close ();
+        str = contents.str();
+        return true;
     }
-    for (size_t p = 0;  p < vparams.size();  p += 4) {
-        fparamdata[fparamindex+0] = atof (vparams[p+1].c_str());
-        fparamdata[fparamindex+1] = atof (vparams[p+2].c_str());
-        fparamdata[fparamindex+2] = atof (vparams[p+3].c_str());
-        shadingsys->Parameter (vparams[p].c_str(), TypeDesc::TypeVector,
-                               &fparamdata[fparamindex]);
-        fparamindex += 3;
+    return false;
+}
+
+
+
+static void
+compile_buffer (const std::string &sourcecode,
+                const std::string &shadername)
+{
+    // std::cout << "source was\n---\n" << sourcecode << "---\n\n";
+    std::string osobuffer;
+    OSLCompiler compiler;
+    std::vector<std::string> options;
+
+    if (! compiler.compile_buffer (sourcecode, osobuffer, options)) {
+        std::cerr << "Could not compile \"" << shadername << "\"\n";
+        exit (EXIT_FAILURE);
     }
-    for (size_t p = 0;  p < sparams.size();  p += 2) {
-        sparamdata[sparamindex] = ustring (sparams[p+1]);
-        shadingsys->Parameter (sparams[p].c_str(), TypeDesc::TypeString,
-                               &sparamdata[sparamindex]);
-        sparamindex += 1;
+    // std::cout << "Compiled to oso:\n---\n" << osobuffer << "---\n\n";
+
+    if (! shadingsys->LoadMemoryCompiledShader (shadername, osobuffer)) {
+        std::cerr << "Could not load compiled buffer from \""
+                  << shadername << "\"\n";
+        exit (EXIT_FAILURE);
     }
+}
+
+
+
+static void
+shader_from_buffers (std::string shadername)
+{
+    std::string oslfilename = shadername;
+    if (! OIIO::Strutil::ends_with (oslfilename, ".osl"))
+        oslfilename += ".osl";
+    std::string sourcecode;
+    if (! read_text_file (oslfilename, sourcecode)) {
+        std::cerr << "Could not open \"" << oslfilename << "\"\n";
+        exit (EXIT_FAILURE);
+    }
+
+    compile_buffer (sourcecode, shadername);
+    // std::cout << "Read and compiled " << shadername << "\n";
 }
 
 
@@ -116,30 +206,223 @@ inject_params ()
 static int
 add_shader (int argc, const char *argv[])
 {
-    shadingsys->attribute ("debug", debug2 ? 2 : (debug ? 1 : 0));
-    const char *opt_env = getenv ("TESTSHADE_OPT");  // overrides opt
-    if (opt_env)
-        shadingsys->attribute ("optimize", atoi(opt_env));
-    else if (O0 || O1 || O2)
-        shadingsys->attribute ("optimize", O2 ? 2 : (O1 ? 1 : 0));
-    shadingsys->attribute ("lockgeom", 1);
-    shadingsys->attribute ("debug_nan", debugnan);
-    shadingsys->attribute ("debug_uninit", debug_uninit);
+    ASSERT (argc == 1);
+    string_view shadername (argv[0]);
+
+    set_shadingsys_options ();
+
+    if (inbuffer)  // Request to exercise the buffer-based API calls
+        shader_from_buffers (shadername);
 
     for (int i = 0;  i < argc;  i++) {
         inject_params ();
-
-        shadernames.push_back (argv[i]);
-        shadingsys->Shader ("surface", argv[i],
-                            layername.length() ? layername.c_str() : NULL);
-
+        shadernames.push_back (shadername);
+        shadingsys->Shader ("surface", shadername, layername);
         layername.clear ();
-        iparams.clear ();
-        fparams.clear ();
-        vparams.clear ();
-        sparams.clear ();
+        params.clear ();
     }
     return 0;
+}
+
+
+
+// The --expr ARG command line option will take ARG that is a snipped of
+// OSL source code, embed it in some boilerplate shader wrapper, compile
+// it from memory, and run that in the same way that would have been done
+// if it were a compiled shader on disk. The boilerplate assumes that there
+// are two output parameters for the shader: color result, and float alpha.
+//
+// Example use:
+//   testshade -v -g 64 64 -o result out.exr -expr 'result=color(u,v,0);'
+//
+static void
+specify_expr (int argc, const char *argv[])
+{
+    ASSERT (argc == 2);
+    std::string shadername = OIIO::Strutil::format("expr_%d", exprcount++);
+    std::string sourcecode =
+        "shader " + shadername + " (\n"
+        "    float s = u [[ int lockgeom=0 ]],\n"
+        "    float t = v [[ int lockgeom=0 ]],\n"
+        "    output color result = 0,\n"
+        "    output float alpha = 1,\n"
+        "  )\n"
+        "{\n"
+        "    " + std::string(argv[1]) + "\n"
+        "    ;\n"
+        "}\n";
+    if (verbose)
+        std::cout << "Expression-based shader text is:\n---\n"
+                  << sourcecode << "---\n";
+
+    set_shadingsys_options ();
+
+    compile_buffer (sourcecode, shadername);
+
+    inject_params ();
+    shadernames.push_back (shadername);
+    shadingsys->Shader ("surface", shadername, layername);
+    layername.clear ();
+    params.clear ();
+}
+
+
+
+static void
+action_param (int argc, const char *argv[])
+{
+    std::string command = argv[0];
+    bool use_reparam = false;
+    if (OIIO::Strutil::istarts_with(command, "--reparam") ||
+        OIIO::Strutil::istarts_with(command, "-reparam"))
+        use_reparam = true;
+    ParamValueList &params (use_reparam ? reparams : (::params));
+
+    string_view paramname (argv[1]);
+    string_view stringval (argv[2]);
+    TypeDesc type = TypeDesc::UNKNOWN;
+    bool unlockgeom = false;
+    float f[16];
+
+    size_t pos;
+    while ((pos = command.find_first_of(":")) != std::string::npos) {
+        command = command.substr (pos+1, std::string::npos);
+        std::vector<std::string> splits;
+        OIIO::Strutil::split (command, splits, ":", 1);
+        if (splits.size() < 1) {}
+        else if (OIIO::Strutil::istarts_with(splits[0],"type="))
+            type.fromstring (splits[0].c_str()+5);
+        else if (OIIO::Strutil::istarts_with(splits[0],"lockgeom="))
+            unlockgeom = (strtol (splits[0].c_str()+9, NULL, 10) == 0);
+    }
+
+    // If it is or might be a matrix, look for 16 comma-separated floats
+    if ((type == TypeDesc::UNKNOWN || type == TypeDesc::TypeMatrix)
+        && sscanf (stringval.c_str(),
+                   "%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f",
+                   &f[0], &f[1], &f[2], &f[3],
+                   &f[4], &f[5], &f[6], &f[7], &f[8], &f[9], &f[10], &f[11],
+                   &f[12], &f[13], &f[14], &f[15]) == 16) {
+        params.push_back (ParamValue());
+        params.back().init (paramname, TypeDesc::TypeMatrix, 1, f);
+        if (unlockgeom)
+            params.back().interp (ParamValue::INTERP_VERTEX);
+        return;
+    }
+    // If it is or might be a vector type, look for 3 comma-separated floats
+    if ((type == TypeDesc::UNKNOWN || equivalent(type,TypeDesc::TypeVector))
+        && sscanf (stringval.c_str(), "%g, %g, %g", &f[0], &f[1], &f[2]) == 3) {
+        if (type == TypeDesc::UNKNOWN)
+            type = TypeDesc::TypeVector;
+        params.push_back (ParamValue());
+        params.back().init (paramname, type, 1, f);
+        if (unlockgeom)
+            params.back().interp (ParamValue::INTERP_VERTEX);
+        return;
+    }
+    // If it is or might be an int, look for an int that takes up the whole
+    // string.
+    if ((type == TypeDesc::UNKNOWN || type == TypeDesc::TypeInt)) {
+        char *endptr = NULL;
+        int ival = strtol(stringval.c_str(),&endptr,10);
+        if (endptr && *endptr == 0) {
+            params.push_back (ParamValue());
+            params.back().init (paramname, TypeDesc::TypeInt, 1, &ival);
+            if (unlockgeom)
+                params.back().interp (ParamValue::INTERP_VERTEX);
+            return;
+        }
+    }
+    // If it is or might be an float, look for a float that takes up the
+    // whole string.
+    if ((type == TypeDesc::UNKNOWN || type == TypeDesc::TypeFloat)) {
+        char *endptr = NULL;
+        float fval = (float) strtod(stringval.c_str(),&endptr);
+        if (endptr && *endptr == 0) {
+            params.push_back (ParamValue());
+            params.back().init (paramname, TypeDesc::TypeFloat, 1, &fval);
+            if (unlockgeom)
+                params.back().interp (ParamValue::INTERP_VERTEX);
+            return;
+        }
+    }
+
+    // Catch-all for float types and arrays
+    if (type.basetype == TypeDesc::FLOAT) {
+        int n = type.aggregate * type.numelements();
+        std::vector<float> vals (n);
+        for (int i = 0;  i < n;  ++i) {
+            OIIO::Strutil::parse_float (stringval, vals[i]);
+            OIIO::Strutil::parse_char (stringval, ',');
+        }
+        params.push_back (ParamValue());
+        params.back().init (paramname, type, 1, &vals[0]);
+        if (unlockgeom)
+            params.back().interp (ParamValue::INTERP_VERTEX);
+        return;
+    }
+
+    // Catch-all for int types and arrays
+    if (type.basetype == TypeDesc::INT) {
+        int n = type.aggregate * type.numelements();
+        std::vector<int> vals (n);
+        for (int i = 0;  i < n;  ++i) {
+            OIIO::Strutil::parse_int (stringval, vals[i]);
+            OIIO::Strutil::parse_char (stringval, ',');
+        }
+        params.push_back (ParamValue());
+        params.back().init (paramname, type, 1, &vals[0]);
+        if (unlockgeom)
+            params.back().interp (ParamValue::INTERP_VERTEX);
+        return;
+    }
+
+    // All remaining cases -- it's a string
+    const char *s = stringval.c_str();
+    params.push_back (ParamValue());
+    params.back().init (paramname, TypeDesc::TypeString, 1, &s);
+    if (unlockgeom)
+        params.back().interp (ParamValue::INTERP_VERTEX);
+}
+
+
+
+// reparam -- just set reparam_layer and then let action_param do all the
+// hard work.
+static void
+action_reparam (int argc, const char *argv[])
+{
+    reparam_layer = argv[1];
+    const char *newargv[] = { argv[0], argv[2], argv[3] };
+    action_param (3, newargv);
+}
+
+
+
+static void
+action_groupspec (int argc, const char *argv[])
+{
+    shadingsys->ShaderGroupEnd ();
+    std::string groupspec (argv[1]);
+    if (OIIO::Filesystem::exists (groupspec)) {
+        // If it names a file, use the contents of the file as the group
+        // specification.
+        OIIO::Filesystem::read_text_file (groupspec, groupspec);
+        set_shadingsys_options ();
+    }
+    if (verbose)
+        std::cout << "Processing group specification:\n---\n"
+                  << groupspec << "\n---\n";
+    shadergroup = shadingsys->ShaderGroupBegin (groupname, "surface", groupspec);
+}
+
+
+
+static void
+set_profile (int argc, const char *argv[])
+{
+    profile = 1;
+    shadingsys->attribute ("profile", profile);
 }
 
 
@@ -153,56 +436,70 @@ getargs (int argc, const char *argv[])
                 "%*", add_shader, "",
                 "--help", &help, "Print help message",
                 "-v", &verbose, "Verbose messages",
+                "-t %d", &num_threads, "Render using N threads (default: auto-detect)",
                 "--debug", &debug, "Lots of debugging info",
                 "--debug2", &debug2, "Even more debugging info",
-                "--stats", &stats, "Print run statistics",
+                "--runstats", &runstats, "Print run statistics",
+                "--stats", &runstats, "",  // DEPRECATED 1.7
+                "--profile %@", &set_profile, NULL, "Print profile information",
+                "--path %s", &shaderpath, "Specify oso search path",
                 "-g %d %d", &xres, &yres, "Make an X x Y grid of shading points",
+                "-res %d %d", &xres, &yres, "", // synonym for -g
+                "--options %s", &extraoptions, "Set extra OSL options",
                 "-o %L %L", &outputvars, &outputfiles,
                         "Output (variable, filename)",
                 "-od %s", &dataformatname, "Set the output data format to one of: "
                         "uint8, half, float",
+                "--groupname %s", &groupname, "Set shader group name",
                 "--layer %s", &layername, "Set next layer name",
-                "--fparam %L %L",
-                        &fparams, &fparams,
-                        "Add a float param (args: name value)",
-                "--iparam %L %L",
-                        &iparams, &iparams,
-                        "Add an integer param (args: name value)",
-                "--vparam %L %L %L %L",
-                        &vparams, &vparams, &vparams, &vparams,
-                        "Add a vector or color param (args: name x y z)",
-                "--sparam %L %L",
-                        &sparams, &sparams,
-                        "Add a string param (args: name value)",
+                "--param %@ %s %s", &action_param, NULL, NULL,
+                        "Add a parameter (args: name value) (options: type=%s, lockgeom=%d)",
                 "--connect %L %L %L %L",
                     &connections, &connections, &connections, &connections,
                     "Connect fromlayer fromoutput tolayer toinput",
+                "--reparam %@ %s %s %s", &action_reparam, NULL, NULL, NULL,
+                        "Change a parameter (args: layername paramname value) (options: type=%s)",
+                "--group %@ %s", &action_groupspec, &groupspec,
+                        "Specify a full group command",
+                "--archivegroup %s", &archivegroup,
+                        "Archive the group to a given filename",
                 "--raytype %s", &raytype, "Set the raytype",
+                "--raytype_opt", &raytype_opt, "Specify ray type mask for optimization",
                 "--iters %d", &iters, "Number of iterations",
                 "-O0", &O0, "Do no runtime shader optimization",
                 "-O1", &O1, "Do a little runtime shader optimization",
                 "-O2", &O2, "Do lots of runtime shader optimization",
+                "--entry %L", &entrylayers, "Add layer to the list of entry points",
+                "--entryoutput %L", &entryoutputs, "Add output symbol to the list of entry points",
                 "--center", &pixelcenters, "Shade at output pixel 'centers' rather than corners",
                 "--debugnan", &debugnan, "Turn on 'debug_nan' mode",
                 "--debuguninit", &debug_uninit, "Turn on 'debug_uninit' mode",
-                "--options %s", &extraoptions, "Set extra OSL options",
-//                "-v", &verbose, "Verbose output",
+                "--groupoutputs", &use_group_outputs, "Specify group outputs, not global outputs",
+                "--oslquery", &do_oslquery, "Test OSLQuery at runtime",
+                "--inbuffer", &inbuffer, "Compile osl source from and to buffer",
+                "--shadeimage", &use_shade_image, "Use shade_image utility",
+                "--noshadeimage %!", &use_shade_image, "Don't use shade_image utility",
+                "--expr %@ %s", &specify_expr, NULL, "Specify an OSL expression to evaluate",
+                "--offsetst %f %f", &soffset, &toffset, "Offset s & t texture coordinates (default: 0 0)",
+                "--scalest %f %f", &sscale, &tscale, "Scale s & t texture lookups (default: 1, 1)",
+                "--userdata_isconnected", &userdata_isconnected, "Consider lockgeom=0 to be isconnected()",
+                "-v", &verbose, "Verbose output",
                 NULL);
-    if (ap.parse(argc, argv) < 0 || shadernames.empty()) {
+    if (ap.parse(argc, argv) < 0 || (shadernames.empty() && groupspec.empty())) {
         std::cerr << ap.geterror() << std::endl;
         ap.usage ();
         exit (EXIT_FAILURE);
     }
     if (help) {
-        std::cout <<
-            "testshade -- Test Open Shading Language\n"
-            "(c) Copyright 2009-2010 Sony Pictures Imageworks Inc. All Rights Reserved.\n";
+        std::cout << "testshade -- Test Open Shading Language\n"
+                     OSL_COPYRIGHT_STRING "\n";
         ap.usage ();
         exit (EXIT_SUCCESS);
     }
 
     if (debug || verbose)
         errhandler.verbosity (ErrorHandler::VERBOSE);
+    raytype_bit = shadingsys->raytype_bit (ustring (raytype));
 }
 
 
@@ -252,6 +549,10 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
     // Just zero the whole thing out to start
     memset(&sg, 0, sizeof(ShaderGlobals));
 
+    // In our SimpleRenderer, the "renderstate" itself just a pointer to
+    // the ShaderGlobals.
+    sg.renderstate = &sg;
+
     // Set "shader" space to be Mshad.  In a real renderer, this may be
     // different for each shader group.
     sg.shader2common = OSL::TransformationPtr (&Mshad);
@@ -261,7 +562,7 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
     sg.object2common = OSL::TransformationPtr (&Mobj);
 
     // Just make it look like all shades are the result of 'raytype' rays.
-    sg.raytype = shadingsys->raytype_bit (ustring(raytype));
+    sg.raytype = raytype_bit;
 
     // Set up u,v to vary across the "patch", and also their derivatives.
     // Note that since u & x, and v & y are aligned, we only need to set
@@ -270,17 +571,17 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
     if (pixelcenters) {
         // Our patch is like an "image" with shading samples at the
         // centers of each pixel.
-        sg.u = (float)(x+0.5f) / xres;
-        sg.v = (float)(y+0.5f) / yres;
-        sg.dudx = 1.0f / xres;
-        sg.dvdy = 1.0f / yres;
+        sg.u = sscale * (float)(x+0.5f) / xres + soffset;
+        sg.v = tscale * (float)(y+0.5f) / yres + toffset;
+        sg.dudx = sscale / xres;
+        sg.dvdy = tscale / yres;
     } else {
         // Our patch is like a Reyes grid of points, with the border
         // samples being exactly on u,v == 0 or 1.
-        sg.u = (xres == 1) ? 0.5f : (float) x / (xres - 1);
-        sg.v = (yres == 1) ? 0.5f : (float) y / (yres - 1);
-        sg.dudx = 1.0f / std::max (1, xres-1);
-        sg.dvdy = 1.0f / std::max (1, yres-1);
+        sg.u = sscale * ((xres == 1) ? 0.5f : (float) x / (xres - 1)) + soffset;
+        sg.v = tscale * ((yres == 1) ? 0.5f : (float) y / (yres - 1)) + toffset;
+        sg.dudx = sscale / std::max (1, xres-1);
+        sg.dvdy = tscale / std::max (1, yres-1);
     }
 
     // Assume that position P is simply (u,v,1), that makes the patch lie
@@ -306,28 +607,72 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
 
 static void
 setup_output_images (ShadingSystem *shadingsys,
-                     ShadingAttribStateRef &shaderstate)
+                     ShaderGroupRef &shadergroup)
 {
     // Tell the shading system which outputs we want
     if (outputvars.size()) {
         std::vector<const char *> aovnames (outputvars.size());
-        for (size_t i = 0; i < outputvars.size(); ++i)
-            aovnames[i] = outputvars[i].c_str();
-        shadingsys->attribute ("renderer_outputs",
+        for (size_t i = 0; i < outputvars.size(); ++i) {
+            ustring varname (outputvars[i]);
+            aovnames[i] = varname.c_str();
+            size_t dot = varname.find('.');
+            if (dot != ustring::npos) {
+                // If the name contains a dot, it's intended to be layer.symbol
+                varname = ustring (varname, dot+1);
+            }
+        }
+        shadingsys->attribute (use_group_outputs ? shadergroup.get() : NULL,
+                               "renderer_outputs",
                                TypeDesc(TypeDesc::STRING,(int)aovnames.size()),
                                &aovnames[0]);
+        if (use_group_outputs)
+            std::cout << "Marking group outputs, not global renderer outputs.\n";
+    }
+
+    if (entrylayers.size()) {
+        std::vector<const char *> layers;
+        std::cout << "Entry layers:";
+        for (size_t i = 0; i < entrylayers.size(); ++i) {
+            ustring layername (entrylayers[i]);  // convert to ustring
+            int layid = shadingsys->find_layer (*shadergroup, layername);
+            layers.push_back (layername.c_str());
+            entrylayer_index.push_back (layid);
+            std::cout << ' ' << entrylayers[i] << "(" << layid << ")";
+        }
+        std::cout << "\n";
+        shadingsys->attribute (shadergroup.get(), "entry_layers",
+                               TypeDesc(TypeDesc::STRING,(int)entrylayers.size()),
+                               &layers[0]);
     }
 
     if (extraoptions.size())
         shadingsys->attribute ("options", extraoptions);
 
     ShadingContext *ctx = shadingsys->get_context ();
-    // Because we can only call get_symbol on something that has been
-    // set up to shade (or executed), we call execute() but tell it not
-    // to actually run the shader.
+    // Because we can only call find_symbol or get_symbol on something that
+    // has been set up to shade (or executed), we call execute() but tell it
+    // not to actually run the shader.
     ShaderGlobals sg;
     setup_shaderglobals (sg, shadingsys, 0, 0);
-    shadingsys->execute (*ctx, *shaderstate, sg, false);
+
+    if (raytype_opt)
+        shadingsys->optimize_group (shadergroup.get(), raytype_bit, ~raytype_bit);
+    shadingsys->execute (ctx, *shadergroup, sg, false);
+
+    if (entryoutputs.size()) {
+        std::cout << "Entry outputs:";
+        for (size_t i = 0; i < entryoutputs.size(); ++i) {
+            ustring name (entryoutputs[i]);  // convert to ustring
+            const ShaderSymbol *sym = shadingsys->find_symbol (*shadergroup, name);
+            if (!sym) {
+                std::cout << "\nEntry output " << entryoutputs[i] << " not found. Abording.\n";
+                exit (EXIT_FAILURE);
+            }
+            entrylayer_symbols.push_back (sym);
+            std::cout << ' ' << entryoutputs[i];
+        }
+        std::cout << "\n";
+    }
 
     // For each output file specified on the command line...
     for (size_t i = 0;  i < outputfiles.size();  ++i) {
@@ -369,9 +714,15 @@ setup_output_images (ShadingSystem *shadingsys,
 
         // Make an ImageBuf of the right type and size to hold this
         // symbol's output, and initially clear it to all black pixels.
-        OIIO::ImageSpec spec (xres, yres, nchans, outtypebase);
+        OIIO::ImageSpec spec (xres, yres, nchans, TypeDesc::FLOAT);
         outputimgs[i] = new OIIO::ImageBuf(outputfiles[i], spec);
+        outputimgs[i]->set_write_format (outtypebase);
         OIIO::ImageBufAlgo::zero (*outputimgs[i]);
+    }
+
+    if (outputimgs.empty()) {
+        OIIO::ImageSpec spec (xres, yres, 3, TypeDesc::FLOAT);
+        outputimgs.push_back(new OIIO::ImageBuf(spec));
     }
 
     shadingsys->release_context (ctx);  // don't need this anymore for now
@@ -423,7 +774,173 @@ save_outputs (ShadingSystem *shadingsys, ShadingContext *ctx, int x, int y)
 
 
 
-extern "C" int
+static void
+test_group_attributes (ShaderGroup *group)
+{
+    int nt = 0;
+    if (shadingsys->getattribute (group, "num_textures_needed", nt)) {
+        std::cout << "Need " << nt << " textures:\n";
+        ustring *tex = NULL;
+        shadingsys->getattribute (group, "textures_needed",
+                                  TypeDesc::PTR, &tex);
+        for (int i = 0; i < nt; ++i)
+            std::cout << "    " << tex[i] << "\n";
+        int unk = 0;
+        shadingsys->getattribute (group, "unknown_textures_needed", unk);
+        if (unk)
+            std::cout << "    and unknown textures\n";
+    }
+    int nclosures = 0;
+    if (shadingsys->getattribute (group, "num_closures_needed", nclosures)) {
+        std::cout << "Need " << nclosures << " closures:\n";
+        ustring *closures = NULL;
+        shadingsys->getattribute (group, "closures_needed",
+                                  TypeDesc::PTR, &closures);
+        for (int i = 0; i < nclosures; ++i)
+            std::cout << "    " << closures[i] << "\n";
+        int unk = 0;
+        shadingsys->getattribute (group, "unknown_closures_needed", unk);
+        if (unk)
+            std::cout << "    and unknown closures\n";
+    }
+    int nglobals = 0;
+    if (shadingsys->getattribute (group, "num_globals_needed", nglobals)) {
+        std::cout << "Need " << nglobals << " globals:\n";
+        ustring *globals = NULL;
+        shadingsys->getattribute (group, "globals_needed",
+                                  TypeDesc::PTR, &globals);
+        for (int i = 0; i < nglobals; ++i)
+            std::cout << "    " << globals[i] << "\n";
+    }
+    int nuser = 0;
+    if (shadingsys->getattribute (group, "num_userdata", nuser) && nuser) {
+        std::cout << "Need " << nuser << " user data items:\n";
+        ustring *userdata_names = NULL;
+        TypeDesc *userdata_types = NULL;
+        int *userdata_offsets = NULL;
+        bool *userdata_derivs = NULL;
+        shadingsys->getattribute (group, "userdata_names",
+                                  TypeDesc::PTR, &userdata_names);
+        shadingsys->getattribute (group, "userdata_types",
+                                  TypeDesc::PTR, &userdata_types);
+        shadingsys->getattribute (group, "userdata_offsets",
+                                  TypeDesc::PTR, &userdata_offsets);
+        shadingsys->getattribute (group, "userdata_derivs",
+                                  TypeDesc::PTR, &userdata_derivs);
+        DASSERT (userdata_names && userdata_types && userdata_offsets);
+        for (int i = 0; i < nuser; ++i)
+            std::cout << "    " << userdata_names[i] << ' '
+                      << userdata_types[i] << "  offset="
+                      << userdata_offsets[i] << " deriv="
+                      << userdata_derivs[i] << "\n";
+    }
+    int nattr = 0;
+    if (shadingsys->getattribute (group, "num_attributes_needed", nattr) && nattr) {
+        std::cout << "Need " << nattr << " attributes:\n";
+        ustring *names = NULL;
+        ustring *scopes = NULL;
+        shadingsys->getattribute (group, "attributes_needed",
+                                  TypeDesc::PTR, &names);
+        shadingsys->getattribute (group, "attribute_scopes",
+                                  TypeDesc::PTR, &scopes);
+        DASSERT (names && scopes);
+        for (int i = 0; i < nattr; ++i)
+            std::cout << "    " << names[i] << ' '
+                      << scopes[i] << "\n";
+
+        int unk = 0;
+        shadingsys->getattribute (group, "unknown_attributes_needed", unk);
+        if (unk)
+            std::cout << "    and unknown attributes\n";
+    }
+    int raytype_queries = 0;
+    shadingsys->getattribute (group, "raytype_queries", raytype_queries);
+    std::cout << "raytype() query mask: " << raytype_queries << "\n";
+}
+
+
+
+void
+shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
+{
+    // Optional: high-performance apps may request this thread-specific
+    // pointer in order to save a bit of time on each shade.  Just like
+    // the name implies, a multithreaded renderer would need to do this
+    // separately for each thread, and be careful to always use the same
+    // thread_info each time for that thread.
+    //
+    // There's nothing wrong with a simpler app just passing NULL for
+    // the thread_info; in such a case, the ShadingSystem will do the
+    // necessary calls to find the thread-specific pointer itself, but
+    // this will degrade performance just a bit.
+    OSL::PerThreadInfo *thread_info = shadingsys->create_thread_info();
+
+    // Request a shading context so that we can execute the shader.
+    // We could get_context/release_constext for each shading point,
+    // but to save overhead, it's more efficient to reuse a context
+    // within a thread.
+    ShadingContext *ctx = shadingsys->get_context (thread_info);
+
+    // Set up shader globals and a little test grid of points to shade.
+    ShaderGlobals shaderglobals;
+
+    // Loop over all pixels in the image (in x and y)...
+    for (int y = roi.ybegin;  y < roi.yend;  ++y) {
+        for (int x = roi.xbegin;  x < roi.xend;  ++x) {
+            // In a real renderer, this is where you would figure
+            // out what object point is visible in this pixel (or
+            // this sample, for antialiasing).  Once determined,
+            // you'd set up a ShaderGlobals that contained the vital
+            // information about that point, such as its location,
+            // the normal there, the u and v coordinates on the
+            // surface, the transformation of that object, and so
+            // on.  
+            //
+            // This test app is not a real renderer, so we just
+            // set it up rigged to look like we're rendering a single
+            // quadrilateral that exactly fills the viewport, and that
+            // setup is done in the following function call:
+            setup_shaderglobals (shaderglobals, shadingsys, x, y);
+
+            // Actually run the shader for this point
+            if (entrylayer_index.empty()) {
+                // Sole entry point for whole group, default behavior
+                shadingsys->execute (ctx, *shadergroup, shaderglobals);
+            } else {
+                // Explicit list of entries to call in order
+                shadingsys->execute_init (*ctx, *shadergroup, shaderglobals);
+                if (entrylayer_symbols.size()) {
+                    for (size_t i = 0, e = entrylayer_symbols.size(); i < e; ++i)
+                        shadingsys->execute_layer (*ctx, shaderglobals, entrylayer_symbols[i]);
+                } else {
+                    for (size_t i = 0, e = entrylayer_index.size(); i < e; ++i)
+                        shadingsys->execute_layer (*ctx, shaderglobals, entrylayer_index[i]);
+                }
+                shadingsys->execute_cleanup (*ctx);
+            }
+
+            // Save all the designated outputs.  But only do so if we
+            // are on the last iteration requested, so that if we are
+            // doing a bunch of iterations for time trials, we only
+            // including the output pixel copying once in the timing.
+            if (save)
+                save_outputs (shadingsys, ctx, x, y);
+        }
+    }
+
+    // We're done shading with this context.
+    shadingsys->release_context (ctx);
+
+    // Now that we're done rendering, release the thread-specific
+    // pointer we saved.  A simple app could skip this; but if the app
+    // asks for it (as we have in this example), then it should also
+    // destroy it when done with it.
+    shadingsys->destroy_thread_info(thread_info);
+}
+
+
+
+extern "C" OSL_DLL_EXPORT int
 test_shade (int argc, const char *argv[])
 {
     OIIO::Timer timer;
@@ -432,7 +949,13 @@ test_shade (int argc, const char *argv[])
     // object that services callbacks from the shading system, NULL for
     // the TextureSystem (that just makes 'create' make its own TS), and
     // an error handler.
-    shadingsys = ShadingSystem::create (&rend, NULL, &errhandler);
+    shadingsys = new ShadingSystem (&rend, NULL, &errhandler);
+
+    // Register the layout of all closures known to this renderer
+    // Any closure used by the shader which is not registered, or
+    // registered with a different number of arguments will lead
+    // to a runtime error.
+    register_closures(shadingsys);
 
     // Remember that each shader parameter may optionally have a
     // metadata hint [[int lockgeom=...]], where 0 indicates that the
@@ -460,7 +983,7 @@ test_shade (int argc, const char *argv[])
     // 
     // A shader group declaration typically looks like this:
     //
-    //   ss->ShaderGroupBegin ();
+    //   ShaderGroupRef shadergroup = ss->ShaderGroupBegin ();
     //   ss->Parameter ("paramname", TypeDesc paramtype, void *value);
     //      ... and so on for all the other parameters of...
     //   ss->Shader ("shadertype", "shadername", "layername");
@@ -470,8 +993,6 @@ test_shade (int argc, const char *argv[])
     //   ss->ConnectShaders ("layer1", "param1", "layer2", "param2");
     //   ... and other connections ...
     //   ss->ShaderGroupEnd ();
-    //   // and now grab an opaque reference to that shader group:
-    //   ShadingAttribStateRef shaderstate = s->state ();
     // 
     // It looks so simple, and it really is, except that the way this
     // testshade program works is that all the Parameter() and Shader()
@@ -479,11 +1000,19 @@ test_shade (int argc, const char *argv[])
     // line arguments, whereas the connections accumulate and have
     // to be processed at the end.  Bear with us.
     
-    // Start the shader group.
-    shadingsys->ShaderGroupBegin ();
+    // Start the shader group and grab a reference to it.
+    shadergroup = shadingsys->ShaderGroupBegin (groupname);
+
     // Get the command line arguments.  That will set up all the shader
     // instances and their parameters for the group.
     getargs (argc, argv);
+
+    if (! shadergroup) {
+        std::cerr << "ERROR: Invalid shader group. Exiting testshade.\n";
+        return EXIT_FAILURE;
+    }
+
+    shadingsys->attribute (shadergroup.get(), "groupname", groupname);
 
     // Now set up the connections
     for (size_t i = 0;  i < connections.size();  i += 4) {
@@ -502,8 +1031,39 @@ test_shade (int argc, const char *argv[])
     // End the group
     shadingsys->ShaderGroupEnd ();
 
-    // Now we should have a valid shading state, to get a reference to it.
-    ShadingAttribStateRef shaderstate = shadingsys->state ();
+    if (verbose || do_oslquery) {
+        std::string pickle;
+        shadingsys->getattribute (shadergroup.get(), "pickle", pickle);
+        std::cout << "Shader group:\n---\n" << pickle << "\n---\n";
+        std::cout << "\n";
+        ustring groupname;
+        shadingsys->getattribute (shadergroup.get(), "groupname", groupname);
+        std::cout << "Shader group \"" << groupname << "\" layers are:\n";
+        int num_layers = 0;
+        shadingsys->getattribute (shadergroup.get(), "num_layers", num_layers);
+        if (num_layers > 0) {
+            std::vector<const char *> layers (size_t(num_layers), NULL);
+            shadingsys->getattribute (shadergroup.get(), "layer_names",
+                                      TypeDesc(TypeDesc::STRING, num_layers),
+                                      &layers[0]);
+            for (int i = 0; i < num_layers; ++i) {
+                std::cout << "    " << (layers[i] ? layers[i] : "<unnamed>") << "\n";
+                if (do_oslquery) {
+                    OSLQuery q;
+                    q.init (shadergroup.get(), i);
+                    for (size_t p = 0;  p < q.nparams(); ++p) {
+                        const OSLQuery::Parameter *param = q.getparam(p);
+                        std::cout << "\t" << (param->isoutput ? "output "  : "")
+                                  << param->type << ' ' << param->name << "\n";
+                    }
+                }
+            }
+        }
+        std::cout << "\n";
+    }
+    if (archivegroup.size())
+        shadingsys->archive_shadergroup (shadergroup.get(), archivegroup);
+
     if (outputfiles.size() != 0)
         std::cout << "\n";
 
@@ -515,79 +1075,48 @@ test_shade (int argc, const char *argv[])
     setup_transformations (rend, Mshad, Mobj);
 
     // Set up the image outputs requested on the command line
-    setup_output_images (shadingsys, shaderstate);
+    setup_output_images (shadingsys, shadergroup);
 
-    // Set up shader globals and a little test grid of points to shade.
-    ShaderGlobals shaderglobals;
+    if (debug)
+        test_group_attributes (shadergroup.get());
+
+    if (num_threads < 1)
+        num_threads = boost::thread::hardware_concurrency();
 
     double setuptime = timer.lap ();
-
-    std::vector<float> pixel;
-
-    // Optional: high-performance apps may request this thread-specific
-    // pointer in order to save a bit of time on each shade.  Just like
-    // the name implies, a multithreaded renderer would need to do this
-    // separately for each thread, and be careful to always use the same
-    // thread_info each time for that thread.
-    //
-    // There's nothing wrong with a simpler app just passing NULL for
-    // the thread_info; in such a case, the ShadingSystem will do the
-    // necessary calls to find the thread-specific pointer itself, but
-    // this will degrade performance just a bit.
-    OSL::PerThreadInfo *thread_info = shadingsys->create_thread_info();
-
-    // Request a shading context so that we can execute the shader.
-    // We could get_context/release_constext for each shading point,
-    // but to save overhead, it's more efficient to reuse a context
-    // within a thread.
-    ShadingContext *ctx = shadingsys->get_context (thread_info);
 
     // Allow a settable number of iterations to "render" the whole image,
     // which is useful for time trials of things that would be too quick
     // to accurately time for a single iteration
     for (int iter = 0;  iter < iters;  ++iter) {
+        OIIO::ROI roi (0, xres, 0, yres);
 
-        // Loop over all pixels in the image (in x and y)...
-        for (int y = 0, n = 0;  y < yres;  ++y) {
-            for (int x = 0;  x < xres;  ++x, ++n) {
+        if (use_shade_image)
+            OSL::shade_image (*shadingsys, *shadergroup, NULL,
+                              *outputimgs[0], outputvarnames,
+                              pixelcenters ? ShadePixelCenters : ShadePixelGrid,
+                              roi, num_threads);
+        else {
+            bool save = (iter == (iters-1));   // save on last iteration
+#if 0
+            shade_region (shadergroup.get(), roi, save);
+#else
+            OIIO::ImageBufAlgo::parallel_image (
+                    boost::bind (shade_region, shadergroup.get(), _1, save),
+                    roi, num_threads);
+#endif
+        }
 
-                // In a real renderer, this is where you would figure
-                // out what object point is visible in this pixel (or
-                // this sample, for antialiasing).  Once determined,
-                // you'd set up a ShaderGlobals that contained the vital
-                // information about that point, such as its location,
-                // the normal there, the u and v coordinates on the
-                // surface, the transformation of that object, and so
-                // on.  
-                //
-                // This test app is not a real renderer, so we just
-                // set it up rigged to look like we're rendering a single
-                // quadrilateral that exactly fills the viewport, and that
-                // setup is done in the following function call:
-                setup_shaderglobals (shaderglobals, shadingsys, x, y);
-
-                // Actually run the shader for this point
-                shadingsys->execute (*ctx, *shaderstate, shaderglobals);
-
-                // Save all the designated outputs.  But only do so if we
-                // are on the last iteration requested, so that if we are
-                // doing a bunch of iterations for time trials, we only
-                // including the output pixel copying once in the timing.
-                if (iter == (iters - 1)) {
-                    save_outputs (shadingsys, ctx, x, y);
-                }
+        // If any reparam was requested, do it now
+        if (reparams.size() && reparam_layer.size()) {
+            for (size_t p = 0;  p < reparams.size();  ++p) {
+                const ParamValue &pv (reparams[p]);
+                shadingsys->ReParameter (*shadergroup, reparam_layer.c_str(),
+                                         pv.name().c_str(), pv.type(),
+                                         pv.data());
             }
         }
     }
-
-    // We're done shading with this context.
-    shadingsys->release_context (ctx);
-
-    // Now that we're done rendering, release the thread=specific
-    // pointer we saved.  A simple app could skip this; but if the app
-    // asks for it (as we have in this example), then it should also
-    // destroy it when done with it.
-    shadingsys->destroy_thread_info(thread_info);
 
     if (outputfiles.size() == 0)
         std::cout << "\n";
@@ -595,24 +1124,29 @@ test_shade (int argc, const char *argv[])
     // Write the output images to disk
     for (size_t i = 0;  i < outputimgs.size();  ++i) {
         if (outputimgs[i]) {
-            outputimgs[i]->save();
+            outputimgs[i]->write (outputimgs[i]->name());
             delete outputimgs[i];
             outputimgs[i] = NULL;
         }
     }
 
     // Print some debugging info
-    if (debug || stats) {
-        double runtime = timer();
+    if (debug || runstats || profile) {
+        double runtime = timer.lap();
         std::cout << "\n";
         std::cout << "Setup: " << OIIO::Strutil::timeintervalformat (setuptime,2) << "\n";
         std::cout << "Run  : " << OIIO::Strutil::timeintervalformat (runtime,2) << "\n";
         std::cout << "\n";
         std::cout << shadingsys->getstats (5) << "\n";
+        OIIO::TextureSystem *texturesys = shadingsys->texturesys();
+        if (texturesys)
+            std::cout << texturesys->getstats (5) << "\n";
+        std::cout << ustring::getstats() << "\n";
     }
 
     // We're done with the shading system now, destroy it
-    ShadingSystem::destroy (shadingsys);
+    shadergroup.reset ();  // Must release this before destroying shadingsys
+    delete shadingsys;
 
     return EXIT_SUCCESS;
 }

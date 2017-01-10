@@ -1,0 +1,6 @@
+Compiled a.osl -> a.oso
+Compiled b.osl -> b.oso
+Connect alayer.f_out to blayer.f_in
+Connect alayer.c_out to blayer.c_in
+
+Output alayer.c_out to out.tif

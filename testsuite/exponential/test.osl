@@ -56,6 +56,9 @@ test ()
         a = 1e20;
         printf ("  pow (%g, %g) = %g     [should be clamped, not inf!]\n",
                 a, b, pow(a,b));
+        a = 2.5;
+        b = 1.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
     }
 
     { 
@@ -86,6 +89,27 @@ test ()
         printf ("  log (%g, %g) = %g\n", a, b, log(a,b));
         a = 2.0;
         b = 1.5;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        a = -2.0;
+        b = 1.5;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        b = 0.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        b = 3.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        // catch some weird corner cases
+        a = 0.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        b = -3.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        b = 0.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+    }
+
+    {
+        // test triple vs triple
+        vector a = 2.0;
+        vector b = 1.5;
         printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
         a = -2.0;
         b = 1.5;

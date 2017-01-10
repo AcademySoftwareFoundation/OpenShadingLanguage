@@ -26,14 +26,13 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef CONSTANTPOOL_H
-#define CONSTANTPOOL_H
+#pragma once
 
 #include <vector>
 #include <list>
 #include <boost/foreach.hpp>
 
-#include "OpenImageIO/thread.h"
+#include <OpenImageIO/thread.h>
 
 using namespace OSL;
 using namespace OSL::pvt;
@@ -98,5 +97,3 @@ private:
 
 }; // namespace OSL::pvt
 OSL_NAMESPACE_EXIT
-
-#endif /* CONSTANTPOOL_H */

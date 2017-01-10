@@ -35,8 +35,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/scoped_ptr.hpp>
 
-#include "oslcomp.h"
-#include "oslexec.h"
+#include <OpenImageIO/filesystem.h>
+#include <OpenImageIO/sysutil.h>
+#include <OpenImageIO/thread.h>
+
+#include "OSL/oslcomp.h"
+#include "OSL/oslexec.h"
 using namespace OSL;
 
 
@@ -64,10 +68,85 @@ usage ()
 
 
 
+// Guess the path for stdosl.h. Try ../shaders, if this is oslc, that's
+// where you'd expect it to be.
+static std::string
+stdoslpath ()
+{
+    std::string program = OIIO::Sysutil::this_program_path ();
+    if (program.size()) {
+        std::string path (program);  // our program
+        path = OIIO::Filesystem::parent_path(path);  // the bin dir of our program
+        path = OIIO::Filesystem::parent_path(path);  // now the parent dir
+        std::string savepath = path;
+        // We search two spots: ../../lib/osl/include, and ../shaders
+        path = savepath + "/lib/osl/include";
+        if (OIIO::Filesystem::exists (path)) {
+            path = path + "/stdosl.h";
+            if (OIIO::Filesystem::exists (path))
+                return path;
+        }
+        path = savepath + "/shaders";
+        if (OIIO::Filesystem::exists (path)) {
+            path = path + "/stdosl.h";
+            if (OIIO::Filesystem::exists (path))
+                return path;
+        }
+    }
+    return std::string();
+}
+
+
+
+namespace { // anonymous
+
+// Subclass ErrorHandler because we want our messages to appear somewhat
+// differant than the default ErrorHandler base class, in order to match
+// typical compiler command line messages.
+class OSLC_ErrorHandler : public ErrorHandler {
+public:
+    virtual void operator () (int errcode, const std::string &msg) {
+        static OIIO::mutex err_mutex;
+        OIIO::lock_guard guard (err_mutex);
+        switch (errcode & 0xffff0000) {
+        case EH_INFO :
+            if (verbosity() >= VERBOSE)
+                std::cout << msg << std::endl;
+            break;
+        case EH_WARNING :
+            if (verbosity() >= NORMAL)
+                std::cerr << msg << std::endl;
+            break;
+        case EH_ERROR :
+            std::cerr << msg << std::endl;
+            break;
+        case EH_SEVERE :
+            std::cerr << msg << std::endl;
+            break;
+        case EH_DEBUG :
+#ifdef NDEBUG
+            break;
+#endif
+        default :
+            if (verbosity() > QUIET)
+                std::cout << msg;
+            break;
+        }
+    }
+};
+
+static OSLC_ErrorHandler default_oslc_error_handler;
+} // anonymous namespace
+
+
+
+
 int
 main (int argc, const char *argv[])
 {
-    std::vector <std::string> args;
+    OIIO::Filesystem::convert_native_arguments (argc, (const char **)argv);
+
+    std::vector<std::string> args;
     bool quiet = false;
     if (argc <= 1) {
         usage ();
@@ -99,12 +178,12 @@ main (int argc, const char *argv[])
             args.push_back (argv[a]);
         }
         else {
-            boost::scoped_ptr<OSLCompiler> compiler (OSLCompiler::create ());
-            bool ok = compiler->compile (argv[a], args);
+            OSLCompiler compiler (&default_oslc_error_handler);
+            bool ok = compiler.compile (argv[a], args, stdoslpath());
             if (ok) {
                 if (!quiet)
                     std::cout << "Compiled " << argv[a] << " -> " 
-                              << compiler->output_filename() << "\n";
+                              << compiler.output_filename() << "\n";
             } else {
                 std::cout << "FAILED " << argv[a] << "\n";
                 return EXIT_FAILURE;

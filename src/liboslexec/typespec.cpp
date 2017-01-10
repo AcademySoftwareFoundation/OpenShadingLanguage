@@ -30,9 +30,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <cstdio>
 
-#include "OpenImageIO/strutil.h"
-#include "OpenImageIO/dassert.h"
-#include "OpenImageIO/thread.h"
+#include <OpenImageIO/strutil.h>
+#include <OpenImageIO/dassert.h>
+#include <OpenImageIO/thread.h>
 
 #include "oslexec_pvt.h"
 
@@ -101,7 +101,7 @@ equivalent (const StructSpec *a, const StructSpec *b)
     ASSERT (a && b);
     if (a->numfields() != b->numfields())
         return false;
-    for (size_t i = 0;  i < a->numfields();  ++i)
+    for (size_t i = 0;  i < (size_t)a->numfields();  ++i)
         if (! equivalent (a->field(i).type, b->field(i).type))
             return false;
     return true;
@@ -112,10 +112,18 @@ equivalent (const StructSpec *a, const StructSpec *b)
 bool
 equivalent (const TypeSpec &a, const TypeSpec &b)
 {
-    return (a == b) || 
-        (a.is_vectriple_based() && b.is_vectriple_based() &&
+    // The two complex types are equivalent if...
+    return
+        // they are actually identical (duh)
+        (a == b) ||
+        // or if the underlying simple types are equivalent
+        (((a.is_vectriple_based() && b.is_vectriple_based()) || equivalent(a.m_simple, b.m_simple))  &&
+         //     ... and either both or neither are closures
          a.is_closure() == b.is_closure() &&
-         a.arraylength() == b.arraylength()) ||
+         //     ... and, if arrays, they are the same length, or both unsized,
+         //         or one is unsized and the other isn't
+         (a.m_simple.arraylen == b.m_simple.arraylen || a.is_unsized_array() != b.is_unsized_array())) ||
+        // or if they are structs, and the structs are equivalent
         (a.is_structure() && b.is_structure() &&
          equivalent(a.structspec(), b.structspec()));
 }

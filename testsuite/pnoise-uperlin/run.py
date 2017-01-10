@@ -1,5 +1,5 @@
-#!/usr/bin/python 
+#!/usr/bin/env python
 
 command = oslc("../common/shaders/testpnoise.osl")
-command += testshade("-g 512 512 -od uint8 -o Cout out.tif -sparam noisename uperlin -fparam offset 0 -fparam scale 1 testpnoise")
+command += testshade("-g 512 512 -od uint8 -o Cout out.tif -param noisename uperlin -param offset 0.0 -param scale 1.0 testpnoise")
 outputs = [ "out.txt", "out.tif" ]

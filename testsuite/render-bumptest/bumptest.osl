@@ -5,6 +5,6 @@ surface bumptest ()
         float h = 5 * noise(0.25 * P);
         vector Nb = calculatenormal(P + N * h);
         color Cb = (color) normalize(Nb) / 2 + color(0.5, 0.5, 0.5);
-        Ci = M_PI * Cb * emission();
+        Ci = Cb * emission();
     }
 }

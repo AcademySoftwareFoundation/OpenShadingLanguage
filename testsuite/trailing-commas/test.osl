@@ -1,0 +1,25 @@
+void
+test_func
+    (
+        int arg,
+    )
+    [[
+        string help = "this is function metadata with trailing comma",
+    ]]
+{
+    return;
+}
+    
+
+shader test 
+    [[
+    string help = "This is shader metadata",
+    ]]
+(
+    int myparam = 0 [[ int foo = 1,
+                       string mymetadata = "blah{}blah",
+                       int bar = 5, ]],
+    )
+{
+    printf ("myparam = %d\n", myparam);
+}

@@ -1,0 +1,17 @@
+Compiled metadata.osl -> metadata.oso
+surface "metadata"
+		metadata: string description = "everything is awesome"
+    "myparam1" "int"
+		Default value: 1
+		metadata: int i = 0
+		metadata: float f = 1
+		metadata: string s = "foo"
+    "myparam2" "int"
+		Default value: 2
+		metadata: string[2] s = "foo" "bar"
+    "myparam3" "int"
+		Default value: 3
+		metadata: float[2] minmax = 42 44
+    "myparam4" "int"
+		Default value: 4
+		metadata: color c = 1 2 3

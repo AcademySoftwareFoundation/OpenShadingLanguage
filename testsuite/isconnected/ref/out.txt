@@ -1,6 +1,40 @@
 Compiled test.osl -> test.oso
 Compiled upstream.osl -> upstream.oso
 Connect upstream.out to downstream.a
-a is connected
-b is not connected
+Connect upstream.struct1 to downstream.mystruct1
+Upstream:
+out connected: 2  (value=0.5)
+notout connected: 0  (value=10)
+struct1 connected: 2  (value=10)
+struct1.x connected: 2  (value=3)
+struct2 connected: 0  (value=3)
+struct2.x connected: 0  (value=5)
+a=0.5
+Downstream:
+a connected: 1  (value=0.5)
+b connected: 0  (value=0)
+c connected: 0  (value=0)
+mystruct1 connected: 1  (value=0)
+mystruct1.x connected: 1  (value=3)
+mystruct2 connected: 0  (value=3)
+mystruct2.x connected: 0  (value=0)
+
+Connect upstream.out to downstream.a
+Connect upstream.struct1 to downstream.mystruct1
+Upstream:
+out connected: 2  (value=0.5)
+notout connected: 0  (value=10)
+struct1 connected: 2  (value=10)
+struct1.x connected: 2  (value=3)
+struct2 connected: 0  (value=3)
+struct2.x connected: 0  (value=5)
+a=0.5
+Downstream:
+a connected: 1  (value=0.5)
+b connected: 0  (value=0)
+c connected: 1  (value=0)
+mystruct1 connected: 1  (value=0)
+mystruct1.x connected: 1  (value=3)
+mystruct2 connected: 0  (value=3)
+mystruct2.x connected: 0  (value=0)
 

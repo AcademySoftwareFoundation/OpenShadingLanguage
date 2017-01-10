@@ -1,0 +1,20 @@
+// This test makes three output params:
+//
+// * a will be assigned a constant, and therefore possibly have that
+//     assignment elided
+// * b keeps its default value
+// * c is assigned something that can't be optimized away
+//
+// And our test will dump all three outputs, to make sure that there
+// aren't any problems retrieving all values, especially a and b, which
+// may not live on the "heap" at all.
+//
+
+surface
+test (output float a = 0.5,
+      output float b = 0.5,
+      output float c = 0.5)
+{
+    a = 0.33;  // 
+    c = u;
+}

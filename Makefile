@@ -9,10 +9,10 @@
 #########################################################################
 
 
-.PHONY: all debug profile clean realclean nuke doxygen
+.PHONY: all debug profile clean realclean nuke
 
 working_dir	:= ${shell pwd}
-INSTALLDIR=${working_dir}
+INSTALLDIR	=${working_dir}
 
 # Figure out which architecture we're on
 include ${working_dir}/src/make/detectplatform.mk
@@ -27,21 +27,43 @@ ifdef PROFILE
 endif
 
 MY_MAKE_FLAGS ?=
-MY_CMAKE_FLAGS ?= -g3
+MY_NINJA_FLAGS ?=
+MY_CMAKE_FLAGS ?= 
+#-g3 
+#-DSELF_CONTAINED_INSTALL_TREE:BOOL=TRUE
+BUILDSENTINEL ?= Makefile
+NINJA ?= ninja
+CMAKE ?= cmake
 
 # Site-specific build instructions
 ifndef OSL_SITE
     OSL_SITE := ${shell uname -n}
 endif
-$(info OSL_SITE = ${OSL_SITE})
 ifneq (${shell echo ${OSL_SITE} | grep imageworks},)
 include ${working_dir}/site/spi/Makefile-bits
 endif
+ifneq (${shell echo ${OSL_SITE} | grep pixar},)
+include ${working_dir}/site/pixar/Makefile-bits
+endif
 
+# Set up variables holding the names of platform-dependent directories --
+# set these after evaluating site-specific instructions
+top_build_dir := build
+build_dir     := ${top_build_dir}/${platform}${variant}
+top_dist_dir  := dist
+dist_dir      := ${top_dist_dir}/${platform}${variant}
+
+VERBOSE ?= ${SHOWCOMMANDS}
 ifneq (${VERBOSE},)
 MY_MAKE_FLAGS += VERBOSE=${VERBOSE}
-MY_CMAKE_FLAGS += -DVERBOSE:BOOL=1
-TEST_FLAGS += -V
+MY_CMAKE_FLAGS += -DVERBOSE:BOOL=${VERBOSE}
+ifneq (${VERBOSE},0)
+	MY_NINJA_FLAGS += -v
+	TEST_FLAGS += -V
+endif
+$(info OSL_SITE = ${OSL_SITE})
+$(info dist_dir = ${dist_dir})
+$(info INSTALLDIR = ${INSTALLDIR})
 endif
 
 ifneq (${LLVM_DIRECTORY},)
@@ -72,8 +94,12 @@ ifneq (${HIDE_SYMBOLS},)
 MY_CMAKE_FLAGS += -DHIDE_SYMBOLS:BOOL=${HIDE_SYMBOLS}
 endif
 
-ifneq (${USE_BOOST_WAVE},)
-MY_CMAKE_FLAGS += -DUSE_BOOST_WAVE:BOOL=${USE_BOOST_WAVE}
+ifneq (${USE_FAST_MATH},)
+MY_CMAKE_FLAGS += -DUSE_FAST_MATH:BOOL=${USE_FAST_MATH}
+endif
+
+ifneq (${OPENEXR_HOME},)
+MY_CMAKE_FLAGS += -DOPENEXR_HOME:STRING=${OPENEXR_HOME}
 endif
 
 ifneq (${ILMBASE_HOME},)
@@ -81,11 +107,15 @@ MY_CMAKE_FLAGS += -DILMBASE_HOME:STRING=${ILMBASE_HOME}
 endif
 
 ifneq (${USE_PARTIO},)
-MY_CMAKE_FLAGS += -DUSE_PARTIO:BOOL=${USE_BOOST_WAVE}
+MY_CMAKE_FLAGS += -DUSE_PARTIO:BOOL=${USE_PARTIO}
 endif
 
 ifneq (${PARTIO_HOME},)
 MY_CMAKE_FLAGS += -DPARTIO_HOME:BOOL=${PARTIO_HOME} -DUSE_PARTIO:BOOL=1
+endif
+
+ifneq (${BOOST_HOME},)
+MY_CMAKE_FLAGS += -DBOOST_ROOT:STRING=${BOOST_HOME}
 endif
 
 ifneq (${STOP_ON_WARNING},)
@@ -94,6 +124,14 @@ endif
 
 ifneq (${BUILDSTATIC},)
 MY_CMAKE_FLAGS += -DBUILDSTATIC:BOOL=${BUILDSTATIC}
+endif
+
+ifneq (${LINKSTATIC},)
+MY_CMAKE_FLAGS += -DLINKSTATIC:BOOL=${LINKSTATIC}
+endif
+
+ifneq (${OSL_BUILD_TESTS},)
+MY_CMAKE_FLAGS += -DOSL_BUILD_TESTS:BOOL=${OSL_BUILD_TESTS}
 endif
 
 ifneq (${USE_EXTERNAL_PUGIXML},)
@@ -109,30 +147,51 @@ MY_CMAKE_FLAGS += -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo
 endif
 
 ifneq (${MYCC},)
-MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER:STRING=${MYCC}
+MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER:STRING="${MYCC}"
 endif
 ifneq (${MYCXX},)
-MY_CMAKE_FLAGS += -DCMAKE_CXX_COMPILER:STRING=${MYCXX}
+MY_CMAKE_FLAGS += -DCMAKE_CXX_COMPILER:STRING="${MYCXX}"
+endif
+
+ifneq (${USE_CPP11},)
+MY_CMAKE_FLAGS += -DUSE_CPP11:BOOL=${USE_CPP11}
+endif
+
+ifneq (${USE_CPP14},)
+MY_CMAKE_FLAGS += -DUSE_CPP14:BOOL=${USE_CPP14}
+endif
+
+ifneq (${USE_LIBCPLUSPLUS},)
+MY_CMAKE_FLAGS += -DUSE_LIBCPLUSPLUS:BOOL=${USE_LIBCPLUSPLUS}
+endif
+
+ifneq (${EXTRA_CPP_ARGS},)
+MY_CMAKE_FLAGS += -DEXTRA_CPP_ARGS:STRING="${EXTRA_CPP_ARGS}"
+endif
+
+ifneq (${USE_SIMD},)
+MY_CMAKE_FLAGS += -DUSE_SIMD:STRING="${USE_SIMD}"
 endif
 
 ifneq (${TEST},)
 TEST_FLAGS += -R ${TEST}
 endif
 
+ifneq (${USE_CCACHE},)
+MY_CMAKE_FLAGS += -DUSE_CCACHE:BOOL=${USE_CCACHE}
+endif
+
+ifeq (${USE_NINJA},1)
+MY_CMAKE_FLAGS += -G Ninja
+BUILDSENTINEL := build.ninja
+endif
+
+ifneq (${CODECOV},)
+MY_CMAKE_FLAGS += -DCMAKE_BUILD_TYPE:STRING=Debug -DCODECOV:BOOL=${CODECOV}
+endif
+
 #$(info MY_CMAKE_FLAGS = ${MY_CMAKE_FLAGS})
 #$(info MY_MAKE_FLAGS = ${MY_MAKE_FLAGS})
-
-
-# Set up variables holding the names of platform-dependent directories --
-# set these after evaluating site-specific instructions
-top_build_dir := build
-build_dir     := ${top_build_dir}/${platform}${variant}
-top_dist_dir  := dist
-dist_dir      := ${top_dist_dir}/${platform}${variant}
-
-$(info dist_dir = ${dist_dir})
-$(info INSTALLDIR = ${INSTALLDIR})
-
 
 #########################################################################
 
@@ -157,62 +216,93 @@ profile:
 # ${build_dir}/Makefile doesn't already exist, in which case we rely on the
 # cmake generated makefiles to regenerate themselves when necessary.
 cmakesetup:
-	@ (if [ ! -e ${build_dir}/Makefile ] ; then \
-		cmake -E make_directory ${build_dir} ; \
+	@ (if [ ! -e ${build_dir}/${BUILDSENTINEL} ] ; then \
+		${CMAKE} -E make_directory ${build_dir} ; \
 		cd ${build_dir} ; \
-		cmake -DCMAKE_INSTALL_PREFIX=${INSTALLDIR}/${dist_dir} \
+		${CMAKE} -DCMAKE_INSTALL_PREFIX=${INSTALLDIR}/${dist_dir} \
 			${MY_CMAKE_FLAGS} -DBOOST_ROOT=${BOOST_HOME} \
-			../../src ; \
+			../.. ; \
 	 fi)
+
+ifeq (${USE_NINJA},1)
 
 # 'make cmake' does a basic build (after first setting it up)
 cmake: cmakesetup
-	( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} )
+	@ ( cd ${build_dir} ; ${NINJA} ${MY_NINJA_FLAGS} )
 
-# 'make cmakeinstall' builds everthing and installs it in 'dist'
+# 'make cmakeinstall' builds everthing and installs it in 'dist'.
+# Suppress pointless output from docs installation.
 cmakeinstall: cmake
-	( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} install )
+	@ ( cd ${build_dir} ; ${NINJA} ${MY_NINJA_FLAGS} install | grep -v '^-- \(Installing\|Up-to-date\|Set runtime path\)' )
+
+# 'make package' builds everything and then makes an installable package
+# (platform dependent -- may be .tar.gz, .sh, .dmg, .rpm, .deb. .exe)
+package: cmakeinstall
+	@ ( cd ${build_dir} ; ${NINJA} ${MY_NINJA_FLAGS} package )
+
+# 'make package_source' makes an installable source package
+# (platform dependent -- may be .tar.gz, .sh, .dmg, .rpm, .deb. .exe)
+package_source: cmakeinstall
+	@ ( cd ${build_dir} ; ${NINJA} ${MY_NINJA_FLAGS} package_source )
+
+else
+
+# 'make cmake' does a basic build (after first setting it up)
+cmake: cmakesetup
+	@ ( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} )
+
+# 'make cmakeinstall' builds everthing and installs it in 'dist'.
+# Suppress pointless output from docs installation.
+cmakeinstall: cmake
+	@ ( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} install | grep -v '^-- \(Installing\|Up-to-date\|Set runtime path\)' )
+
+# 'make package' builds everything and then makes an installable package
+# (platform dependent -- may be .tar.gz, .sh, .dmg, .rpm, .deb. .exe)
+package: cmakeinstall
+	@ ( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} package )
+
+# 'make package_source' makes an installable source package
+# (platform dependent -- may be .tar.gz, .sh, .dmg, .rpm, .deb. .exe)
+package_source: cmakeinstall
+	@ ( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} package_source )
+
+endif
 
 # 'make dist' is just a synonym for 'make cmakeinstall'
 dist : cmakeinstall
 
+TEST_FLAGS += --force-new-ctest-process --output-on-failure
+
 # 'make test' does a full build and then runs all tests
 test: cmake
-	cmake -E cmake_echo_color --switch=$(COLOR) --cyan "Running tests ${TEST_FLAGS}..."
-	( cd ${build_dir} ; ctest --force-new-ctest-process ${TEST_FLAGS} -E broken )
+	@ ${CMAKE} -E cmake_echo_color --switch=$(COLOR) --cyan "Running tests ${TEST_FLAGS}..."
+	@ # if [ "${CODECOV}" == "1" ] ; then lcov -b ${build_dir} -d ${build_dir} -z ; rm -rf ${build_dir}/cov ; fi
+	@ ( cd ${build_dir} ; PYTHONPATH=${PWD}/${build_dir}/src/python ctest -E broken ${TEST_FLAGS} )
+	@ ( if [ "${CODECOV}" == "1" ] ; then \
+	      cd ${build_dir} ; \
+	      lcov -b . -d . -c -o cov.info ; \
+	      lcov --remove cov.info "/usr*" -o cov.info ; \
+	      genhtml -o ./cov -t "OSL test coverage" --num-spaces 4 cov.info ; \
+	  fi )
 
 # 'make testall' does a full build and then runs all tests (even the ones
 # that are expected to fail on some platforms)
 testall: cmake
-	cmake -E cmake_echo_color --switch=$(COLOR) --cyan "Running all tests ${TEST_FLAGS}..."
-	( cd ${build_dir} ; ctest --force-new-ctest-process ${TEST_FLAGS} )
+	${CMAKE} -E cmake_echo_color --switch=$(COLOR) --cyan "Running all tests ${TEST_FLAGS}..."
+	( cd ${build_dir} ; PYTHONPATH=${PWD}/${build_dir}/src/python ctest ${TEST_FLAGS} )
 
-# 'make package' builds everything and then makes an installable package 
-# (platform dependent -- may be .tar.gz, .sh, .dmg, .rpm, .deb. .exe)
-package: cmakeinstall
-	( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} package )
-
-# 'make package_source' makes an installable source package 
-# (platform dependent -- may be .tar.gz, .sh, .dmg, .rpm, .deb. .exe)
-package_source: cmakeinstall
-	( cd ${build_dir} ; ${MAKE} ${MY_MAKE_FLAGS} package_source )
-
-#clean: testclean
 # 'make clean' clears out the build directory for this platform
 clean:
-	cmake -E remove_directory ${build_dir}
+	${CMAKE} -E remove_directory ${build_dir}
 
 # 'make realclean' clears out both build and dist directories for this platform
 realclean: clean
-	cmake -E remove_directory ${dist_dir}
+	${CMAKE} -E remove_directory ${dist_dir}
 
 # 'make nuke' blows away the build and dist areas for all platforms
 nuke:
-	cmake -E remove_directory ${top_build_dir}
-	cmake -E remove_directory ${top_dist_dir}
-
-doxygen:
-	doxygen src/doc/Doxyfile
+	${CMAKE} -E remove_directory ${top_build_dir}
+	${CMAKE} -E remove_directory ${top_dist_dir}
 
 #########################################################################
 
@@ -232,23 +322,44 @@ help:
 	@echo "  make nuke         Remove ALL of build and dist (not just ${platform})"
 	@echo "  make test         Run tests"
 	@echo "  make testall      Run all tests, even broken ones"
-	@echo "  make doxygen      Build the Doxygen docs in ${top_build_dir}/doxygen"
 	@echo ""
 	@echo "Helpful modifiers:"
-	@echo "  make VERBOSE=1 ...          Show all compilation commands"
-	@echo "  make MYCC=xx MYCXX=yy ...   Use custom compilers"
-	@echo "  make OSL_SITE=xx            Use custom site build mods"
-	@echo "  make LLVM_VERSION=2.9 ...   Specify which LLVM version to use"
-	@echo "  make LLVM_DIRECTORY=xx ...  Specify where LLVM lives"
-	@echo "  make LLVM_NAMESPACE=xx ...  Specify custom LLVM namespace"
-	@echo "  make LLVM_STATIC=1          Use static LLVM libraries"
-	@echo "  make USE_LLVM_BITCODE=0     Don't generate embedded LLVM bitcode"
-	@echo "  make NAMESPACE=name         Wrap OSL APIs in another namespace"
-	@echo "  make HIDE_SYMBOLS=1         Hide symbols not in the public API"
-	@echo "  make USE_BOOST_WAVE=1       Use Boost 'wave' insted of cpp"
-	@echo "  make ILMBASE_HOME=path ...  Custom Ilmbase installation"
-	@echo "  make PARTIO_HOME=...        Use Partio from the given location"
-	@echo "  make STOP_ON_WARNING=0      Do not stop building if compiler warns"
-	@echo "  make BUILDSTATIC=1 ...      Build static library instead of shared"
-	@echo "  make USE_EXTERNAL_PUGIXML=1 Use the system PugiXML, not the one in OIIO"
+	@echo "  C++ compiler and build process:"
+	@echo "      VERBOSE=1                Show all compilation commands"
+	@echo "      STOP_ON_WARNING=0        Do not stop building if compiler warns"
+	@echo "      OSL_SITE=xx              Use custom site build mods"
+	@echo "      MYCC=xx MYCXX=yy         Use custom compilers"
+	@echo "      USE_CPP11=0              Compile in C++11 mode (=0 means use CPP03!)"
+	@echo "      USE_CPP14=1              Compile in C++14 mode"
+	@echo "      USE_LIBCPLUSPLUS=1       Use clang libc++"
+	@echo "      EXTRA_CPP_ARGS=          Additional args to the C++ command"
+	@echo "      USE_NINJA=1              Set up Ninja build (instead of make)"
+	@echo "      USE_CCACHE=0             Disable ccache (even if available)"
+	@echo "      CODECOV=1                Enable code coverage tests"
+	@echo "  Linking and libraries:"
+	@echo "      HIDE_SYMBOLS=1           Hide symbols not in the public API"
+	@echo "      BUILDSTATIC=1            Build static library instead of shared"
+	@echo "      LINKSTATIC=1             Link with static external libs when possible"
+	@echo "  Finding and Using Dependencies:"
+	@echo "      BOOST_HOME=path          Custom Boost installation"
+	@echo "      OPENEXR_HOME=path        Custom OpenEXR installation"
+	@echo "      ILMBASE_HOME=path        Custom Ilmbase installation"
+	@echo "      PARTIO_HOME=             Use Partio from the given location"
+	@echo "      USE_EXTERNAL_PUGIXML=1   Use the system PugiXML, not the one in OIIO"
+	@echo "  LLVM-related options:"
+	@echo "      LLVM_VERSION=3.4         Specify which LLVM version to use"
+	@echo "      LLVM_DIRECTORY=xx        Specify where LLVM lives"
+	@echo "      LLVM_NAMESPACE=xx        Specify custom LLVM namespace"
+	@echo "      LLVM_STATIC=1            Use static LLVM libraries"
+	@echo "      USE_LLVM_BITCODE=0       Don't generate embedded LLVM bitcode"
+	@echo "  OSL build-time options:"
+	@echo "      NAMESPACE=name           Wrap OSL APIs in another namespace"
+	@echo "      USE_FAST_MATH=1          Use faster, but less accurate math (set to 0 for libm defaults)"
+	@echo "      OSL_BUILD_TESTS=0        Skip building the unit tests, testshade, testrender"
+	@echo "      USE_SIMD=arch            Build with SIMD support (choices: 0, sse2, sse3,"
+	@echo "                                  ssse3, sse4.1, sse4.2, f16c,"
+	@echo "                                  comma-separated ok)"
+	@echo "  make test, extra options:"
+	@echo "      TEST=regex               Run only tests matching the regex"
 	@echo ""
+

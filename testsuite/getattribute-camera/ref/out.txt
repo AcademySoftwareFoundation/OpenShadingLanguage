@@ -1,0 +1,9 @@
+Compiled test.osl -> test.oso
+Camera parameters
+Resolution: 1 x 1
+Projection: perspective
+fov: 90
+Pixel aspect: 1
+Clipping:   hither = 0.1, yon = 1000 (also 0.1 1000)
+Shutter:    open = 0, close = 1 (also 0 1)
+Screen window: -1 -1 1 1

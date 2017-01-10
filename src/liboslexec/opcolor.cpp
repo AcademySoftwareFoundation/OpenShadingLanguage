@@ -40,18 +40,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 
 #include "oslexec_pvt.h"
-#include "dual.h"
+#include "OSL/dual.h"
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && _MSC_VER < 1800
 using OIIO::expm1;
+using OIIO::cbrtf;
 #endif
 
 OSL_NAMESPACE_ENTER
 namespace pvt {
-
-// This symbol is strictly to force linkage of this file when building
-// static library.
-int opcolor_cpp_dummy = 1;
 
 
 namespace {
@@ -363,10 +360,23 @@ static colorSystem colorSystems[] = {
 // (about 5 KB of data).
 #define BB_DRAPER 800.0f /* really 798K, below this visible BB is negligible */
 #define BB_MAX_TABLE_RANGE 12000.0f /* max temp for which we use the table */
-#define BB_TABLE_XPOWER 1.5f
-#define BB_TABLE_YPOWER 5.0f
+#define BB_TABLE_XPOWER 1.5f       // NOTE: not used, hardcoded into expressions below
+#define BB_TABLE_YPOWER 5.0f       // NOTE: decode is hardcoded
 #define BB_TABLE_SPACING 2.0f
 
+inline float BB_TABLE_MAP(float i) {
+    // return powf (i, BB_TABLE_XPOWER) * BB_TABLE_SPACING + BB_DRAPER;
+    float is = sqrtf(i);
+    float ip = is * is * is; // ^3/2
+    return ip * BB_TABLE_SPACING + BB_DRAPER;
+}
+
+inline float BB_TABLE_UNMAP(float T) {
+    // return powf ((T - BB_DRAPER) / BB_TABLE_SPACING, 1.0f/BB_TABLE_XPOWER);
+    float t  = (T - BB_DRAPER) / BB_TABLE_SPACING;
+    float ic = cbrtf(t);
+    return ic * ic; // ^2/3
+}
 
 
 bool
@@ -402,11 +412,18 @@ ShadingSystemImpl::set_colorspace (ustring colorspace)
             m_RGB2XYZ = m_XYZ2RGB.inverse();
             m_luminance_scale = Color3 (m_RGB2XYZ[0][1], m_RGB2XYZ[1][1], m_RGB2XYZ[2][1]);
 
+            // Mathematical imprecision can lead to the luminance scale not
+            // quite summing to 1.0.  If it's very close, adjust to make it
+            // exact.
+            float lum2 = (1.0f - m_luminance_scale[0] - m_luminance_scale[1]);
+            if (fabsf(lum2 - m_luminance_scale[2]) < 0.001f)
+                m_luminance_scale[2] = lum2;
+
             // Precompute a table of blackbody values
             m_blackbody_table.clear ();
             float lastT = 0;
             for (int i = 0;  lastT <= BB_MAX_TABLE_RANGE;  ++i) {
-                float T = powf (float(i), BB_TABLE_XPOWER) * BB_TABLE_SPACING + BB_DRAPER;
+                float T = BB_TABLE_MAP(float(i));
                 lastT = T;
                 bb_spectrum spec (T);
                 Color3 rgb = XYZ_to_RGB (spectrum_to_XYZ (spec));
@@ -458,11 +475,14 @@ ShadingSystemImpl::blackbody_rgb (float T)
     if (T < BB_DRAPER)
         return Color3(1.0e-6f,0.0f,0.0f);  // very very dim red
     if (T < BB_MAX_TABLE_RANGE) {
-        float t = powf ((T - BB_DRAPER) / BB_TABLE_SPACING, 1.0f/BB_TABLE_XPOWER);
+        float t = BB_TABLE_UNMAP(T);
         int ti = (int)t;
         t -= ti;
         Color3 rgb = lerp (m_blackbody_table[ti], m_blackbody_table[ti+1], t);
-        return colpow(rgb, BB_TABLE_YPOWER);
+        //return colpow(rgb, BB_TABLE_YPOWER);
+        Color3 rgb2 = rgb * rgb;
+        Color3 rgb4 = rgb2 * rgb2;
+        return rgb4 * rgb; // ^5
     }
     // Otherwise, compute for real
     bb_spectrum spec (T);
@@ -510,6 +530,15 @@ OSL_SHADEOP void osl_luminance_dfdv (void *sg, void *out, void *c)
     ((float *)out)[2] = ctx->shadingsys().luminance (((const Color3 *)c)[2]);
 }
 
+
+
+OSL_SHADEOP void
+osl_prepend_color_from (void *sg, void *c_, const char *from)
+{
+    ShadingContext *ctx (((ShaderGlobals *)sg)->context);
+    Color3 &c (*(Color3*)c_);
+    c = ctx->shadingsys().to_rgb (USTR(from), c[0], c[1], c[2]);
+}
 
 
 } // namespace pvt

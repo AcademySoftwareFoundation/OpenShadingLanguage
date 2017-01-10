@@ -26,10 +26,10 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "accum.h"
+#include "OSL/accum.h"
+#include "OSL/oslclosure.h"
 #include "lpeparse.h"
-#include "oslclosure.h"
-#include "OpenImageIO/dassert.h"
+#include <OpenImageIO/dassert.h>
 
 
 OSL_NAMESPACE_ENTER
@@ -82,7 +82,7 @@ AccumRule *
 AccumAutomata::addRule(const char *pattern, int outidx, bool toalpha)
 {
     // First parse the lpexp and see if it fails
-    Parser parser;
+    Parser parser(&m_user_events, &m_user_scatterings);
     LPexp *e = parser.parse(pattern);
     if (parser.error()) {
         std::cerr << "[pathexp] Parse error" << parser.getErrorMsg() << " at char " << parser.getErrorPos() << std::endl;

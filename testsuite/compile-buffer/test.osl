@@ -1,0 +1,8 @@
+
+shader
+test (output color Cout = 0
+     )
+{
+    Cout = distance (P, point(0)); // makes sure stdosl.h is found
+    printf ("Hello, world!\n");
+}

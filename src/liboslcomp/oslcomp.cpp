@@ -32,39 +32,70 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <fstream>
 #include <cstdio>
 #include <streambuf>
-#ifdef __GNUC__
-# include <ext/stdio_filebuf.h>
-#endif
 #include <cstdio>
 #include <cerrno>
 
 #include "oslcomp_pvt.h"
 
-#include "OpenImageIO/strutil.h"
-#include "OpenImageIO/sysutil.h"
-#include "OpenImageIO/strutil.h"
-#include "OpenImageIO/dassert.h"
-#include "OpenImageIO/filesystem.h"
+#include <OpenImageIO/strutil.h>
+#include <OpenImageIO/sysutil.h>
+#include <OpenImageIO/strutil.h>
+#include <OpenImageIO/dassert.h>
+#include <OpenImageIO/filesystem.h>
+#include <OpenImageIO/thread.h>
 
-#include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 
-#define yyFlexLexer oslFlexLexer
-#include "FlexLexer.h"
-
-#ifdef USE_BOOST_WAVE
 #include <boost/wave.hpp>
 #include <boost/wave/cpplexer/cpp_lex_token.hpp>
 #include <boost/wave/cpplexer/cpp_lex_iterator.hpp>
+#if OIIO_VERSION < 10604
+#include <boost/filesystem.hpp>
 #endif
+
 
 OSL_NAMESPACE_ENTER
 
 
-OSLCompiler *
-OSLCompiler::create ()
+OSLCompiler::OSLCompiler (ErrorHandler *errhandler)
 {
-    return new pvt::OSLCompilerImpl;
+    m_impl = new pvt::OSLCompilerImpl (errhandler);
+}
+
+
+
+OSLCompiler::~OSLCompiler ()
+{
+    delete m_impl;
+}
+
+
+
+bool
+OSLCompiler::compile (string_view filename,
+                      const std::vector<std::string> &options,
+                      string_view stdoslpath)
+{
+    return m_impl->compile (filename, options, stdoslpath);
+}
+
+
+
+bool
+OSLCompiler::compile_buffer (string_view sourcecode,
+                             std::string &osobuffer,
+                             const std::vector<std::string> &options,
+                             string_view stdoslpath)
+{
+    return m_impl->compile_buffer (sourcecode, osobuffer, options, stdoslpath);
+}
+
+
+
+string_view
+OSLCompiler::output_filename () const
+{
+    return m_impl->output_filename();
 }
 
 
@@ -74,15 +105,23 @@ namespace pvt {   // OSL::pvt
 
 OSLCompilerImpl *oslcompiler = NULL;
 
+static ustring op_for("for");
+static ustring op_while("while");
+static ustring op_dowhile("dowhile");
 
-OSLCompilerImpl::OSLCompilerImpl ()
-    : m_lexer(NULL), m_err(false), m_symtab(*this),
+
+
+OSLCompilerImpl::OSLCompilerImpl (ErrorHandler *errhandler)
+    : m_errhandler(errhandler ? errhandler : &ErrorHandler::default_handler()),
+      m_err(false), m_symtab(*this),
       m_current_typespec(TypeDesc::UNKNOWN), m_current_output(false),
-      m_verbose(false), m_quiet(false), m_debug(false), m_optimizelevel(1),
+      m_verbose(false), m_quiet(false), m_debug(false),
+      m_preprocess_only(false), m_optimizelevel(1),
       m_next_temp(0), m_next_const(0),
       m_osofile(NULL), m_sourcefile(NULL), m_last_sourceline(0),
       m_total_nesting(0), m_loop_nesting(0), m_derivsym(NULL),
-      m_main_method_start(-1)
+      m_main_method_start(-1),
+      m_declaring_shader_formals(false)
 {
     initialize_globals ();
     initialize_builtin_funcs ();
@@ -102,16 +141,16 @@ OSLCompilerImpl::~OSLCompilerImpl ()
 
 
 void
-OSLCompilerImpl::error (ustring filename, int line, const char *format, ...)
+OSLCompilerImpl::error (ustring filename, int line, const char *format, ...) const
 {
     va_list ap;
     va_start (ap, format);
     std::string errmsg = format ? OIIO::Strutil::vformat (format, ap) : "syntax error";
     if (filename.c_str())
-        fprintf (stderr, "%s:%d: error: %s\n", 
-                 filename.c_str(), line, errmsg.c_str());
+        m_errhandler->error ("%s:%d: error: %s",
+                             filename.c_str(), line, errmsg.c_str());
     else
-        fprintf (stderr, "error: %s\n", errmsg.c_str());
+        m_errhandler->error ("error: %s", errmsg.c_str());
 
     va_end (ap);
     m_err = true;
@@ -120,56 +159,77 @@ OSLCompilerImpl::error (ustring filename, int line, const char *format, ...)
 
 
 void
-OSLCompilerImpl::warning (ustring filename, int line, const char *format, ...)
+OSLCompilerImpl::warning (ustring filename, int line, const char *format, ...) const
 {
     va_list ap;
     va_start (ap, format);
     std::string errmsg = format ? OIIO::Strutil::vformat (format, ap) : "";
-    fprintf (stderr, "%s:%d: warning: %s\n", 
-             filename.c_str(), line, errmsg.c_str());
+    if (filename.c_str())
+        m_errhandler->error ("%s:%d: warning: %s",
+                             filename.c_str(), line, errmsg.c_str());
+    else
+        m_errhandler->error ("warning: %s", errmsg.c_str());
     va_end (ap);
 }
 
 
-#ifdef USE_BOOST_WAVE
 
-static bool
-preprocess (const std::string &filename,
-            const std::string &stdinclude,
-            const std::vector<std::string> &defines,
-            const std::vector<std::string> &includepaths,
-            std::string &result)
+bool
+OSLCompilerImpl::preprocess_file (const std::string &filename,
+                                  const std::string &stdoslpath,
+                                  const std::vector<std::string> &defines,
+                                  const std::vector<std::string> &includepaths,
+                                  std::string &result)
+{
+    // Read file contents into a string
+    std::ifstream instream;
+    OIIO::Filesystem::open(instream, filename);
+    if (! instream.is_open()) {
+        error (ustring(filename), 0, "Could not open \"%s\"\n", filename.c_str());
+        return false;
+    }
+
+    instream.unsetf (std::ios::skipws);
+    std::string instring (std::istreambuf_iterator<char>(instream.rdbuf()),
+                          std::istreambuf_iterator<char>());
+    instream.close ();
+
+    return preprocess_buffer (instring, filename, stdoslpath, defines,
+                              includepaths, result);
+}
+
+
+
+bool
+OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
+                                    const std::string &filename,
+                                    const std::string &stdoslpath,
+                                    const std::vector<std::string> &defines,
+                                    const std::vector<std::string> &includepaths,
+                                    std::string &result)
 {
     std::ostringstream ss;
     boost::wave::util::file_position_type current_position;
 
+    std::string instring;
+    if (!stdoslpath.empty())
+        instring = OIIO::Strutil::format("#include \"%s\"\n", stdoslpath.c_str());
+    else
+        instring = "\n";
+    instring += buffer;
+
     try {
-        // Read file contents into a string
-        std::ifstream instream (filename.c_str());
-        if (! instream.is_open()) {
-            std::cerr << "Could not open '" << filename << "'\n";
-            return false;
-        }
-
-        instream.unsetf (std::ios::skipws);
-        std::string instring;
-
-        if (!stdinclude.empty())
-            instring = OIIO::Strutil::format("#include \"%s\"\n", stdinclude.c_str());
-        else
-            instring = "\n";
-
-        instring += std::string (std::istreambuf_iterator<char>(instream.rdbuf()),
-                                 std::istreambuf_iterator<char>());
-
-        instream.close ();
-
         typedef boost::wave::cpplexer::lex_token<> token_type;
         typedef boost::wave::cpplexer::lex_iterator<token_type> lex_iterator_type;
         typedef boost::wave::context<std::string::iterator, lex_iterator_type> context_type;
 
         // Setup wave context
         context_type ctx (instring.begin(), instring.end(), filename.c_str());
+
+        // Turn on support of variadic macros, e.g. #define FOO(...) __VA_ARGS__
+        boost::wave::language_support lang = boost::wave::language_support (
+                ctx.get_language() | boost::wave::support_option_variadics);
+        ctx.set_language (lang);
 
         for (size_t i = 0; i < defines.size(); ++i) {
             if (defines[i][1] == 'D')
@@ -210,21 +270,20 @@ preprocess (const std::string &filename,
             ss << "\n";
         }
         else {
-            std::cerr << e.file_name()
-                << "(" << e.line_no() << "): " << e.description() << "\n";
+            error (ustring(e.file_name()), e.line_no(), "%s\n", e.description());
             return false;
         }
     } catch (std::exception const& e) {
         // STL exception
-        std::cerr << current_position.get_file()
-            << "(" << current_position.get_line() << "): "
-            << "exception caught: " << e.what() << "\n";
+        error (ustring(current_position.get_file().c_str()),
+               current_position.get_line(),
+               "preprocessor exception caught: %s\n", e.what());
         return false;
     } catch (...) {
         // Other exception
-        std::cerr << current_position.get_file()
-            << "(" << current_position.get_line() << "): "
-            << "unexpected exception caught." << "\n";
+        error (ustring(current_position.get_file().c_str()),
+               current_position.get_line(),
+               "unexpected exception caught\n");
         return false;
     }
 
@@ -233,125 +292,15 @@ preprocess (const std::string &filename,
     return true;
 }
 
-#else
 
-static bool
-preprocess (const std::string &filename,
-            const std::string &stdinclude,
-            const std::string &options,
-            std::string &result)
+
+void
+OSLCompilerImpl::read_compile_options (const std::vector<std::string> &options,
+                                       std::vector<std::string> &defines,
+                                       std::vector<std::string> &includepaths)
 {
-#ifdef _MSC_VER
-#define popen _popen
-#define pclose _pclose
-#endif
-
-    std::string cppcommand = "/usr/bin/cpp";
-#ifdef __APPLE__
-    // Default /usr/bin/cpp on pre-Lion Apple is very bare bones,
-    // doesn't seem to support all the preprocessor directives (like #
-    // and ##), but the explicit gcc 4.2 one does.
-    if (OIIO::Filesystem::exists ("/usr/bin/cpp-4.2"))
-        cppcommand = "/usr/bin/cpp-4.2";
-#endif
-
-    cppcommand += std::string (" -xc -nostdinc ");
-    cppcommand += options;
-
-    if (! stdinclude.empty())
-        cppcommand += std::string("-include \"") + stdinclude + "\" ";
-
-    cppcommand += "\"";
-    cppcommand += filename;
-    cppcommand += "\" ";
-
-    // std::cout << "cpp command:\n>" << cppcommand << "<\n";
-    FILE *cpppipe = popen (cppcommand.c_str(), "r");
-
-#ifdef __GNUC__
-    __gnu_cxx::stdio_filebuf<char> fb (cpppipe, std::ios::in);
-#else
-    std::filebuf fb (cpppipe);
-#endif
-
-    if (! cpppipe || ! fb.is_open()) {
-        // File didn't open
-        std::cerr << "Could not run '" << cppcommand.c_str() << "'\n";
-        return false;
-    } else {
-        std::istream in (&fb);
-
-        std::ostringstream ss;
-        ss << in.rdbuf();
-        result = ss.str();
-
-        fb.close ();
-    }
-
-    // Test for error in exit status
-    return (pclose(cpppipe) == 0);
-}
-
-#endif
-
-
-bool
-OSLCompilerImpl::compile (const std::string &filename,
-                          const std::vector<std::string> &options,
-                          const std::string &stdoslpath)
-{
-    if (! OIIO::Filesystem::exists (filename)) {
-        error (ustring(), 0, "Input file \"%s\" not found", filename.c_str());
-        return false;
-    }
-
-    std::string stdinclude;
-
-#ifdef USE_BOOST_WAVE
-    std::vector<std::string> defines;
-    std::vector<std::string> includepaths;
-#else
-    std::string cppoptions;
-#endif
-
-    m_cwd = boost::filesystem::initial_path().string();
-    m_main_filename = filename;
-
-    // Determine where the installed shader include directory is, and
-    // look for ../shaders/stdosl.h and force it to include.
-    if (stdoslpath.empty()) {
-        std::string program = OIIO::Sysutil::this_program_path ();
-        if (program.size()) {
-            boost::filesystem::path path (program);  // our program
-            path = path.parent_path ();  // now the bin dir of our program
-            path = path.parent_path ();  // now the parent dir
-            path = path / "shaders";
-            bool found = false;
-            if (OIIO::Filesystem::exists (path.string())) {
-#ifdef USE_BOOST_WAVE
-                includepaths.push_back(path.string());
-#else
-                // pass along to cpp
-                cppoptions += "\"-I";
-                cppoptions += path.string();
-                cppoptions += "\" ";
-#endif
-                path = path / "stdosl.h";
-                if (OIIO::Filesystem::exists (path.string())) {
-                    stdinclude = path.string();
-                    found = true;
-                }
-            }
-            if (! found)
-                warning (ustring(filename), 0, "Unable to find \"%s\"",
-                         path.string().c_str());
-        }
-    }
-    else
-        stdinclude = stdoslpath;
-
     m_output_filename.clear ();
-    bool preprocess_only = false;
+    m_preprocess_only = false;
     for (size_t i = 0;  i < options.size();  ++i) {
         if (options[i] == "-v") {
             // verbose mode
@@ -363,7 +312,7 @@ OSLCompilerImpl::compile (const std::string &filename,
             // debug mode
             m_debug = true;
         } else if (options[i] == "-E") {
-            preprocess_only = true;
+            m_preprocess_only = true;
         } else if (options[i] == "-o" && i < options.size()-1) {
             ++i;
             m_output_filename = options[i];
@@ -373,43 +322,68 @@ OSLCompilerImpl::compile (const std::string &filename,
             m_optimizelevel = 1;
         } else if (options[i] == "-O2") {
             m_optimizelevel = 2;
-#ifdef USE_BOOST_WAVE
         } else if (options[i].c_str()[0] == '-' && options[i].size() > 2) {
             // options meant for the preprocessor
             if (options[i].c_str()[1] == 'D' || options[i].c_str()[1] == 'U')
-                defines.push_back(options[i].substr(2));
+                defines.push_back(options[i]);
             else if (options[i].c_str()[1] == 'I')
                 includepaths.push_back(options[i].substr(2));
-#else
-        } else {
-            // something meant for the cpp command
-            cppoptions += "\"";
-            cppoptions += options[i];
-            cppoptions += "\" ";
-#endif
         }
     }
+}
+
+
+
+bool
+OSLCompilerImpl::compile (string_view filename,
+                          const std::vector<std::string> &options,
+                          string_view stdoslpath)
+{
+    if (! OIIO::Filesystem::exists (filename)) {
+        error (ustring(), 0, "Input file \"%s\" not found", filename.c_str());
+        return false;
+    }
+
+    std::vector<std::string> defines;
+    std::vector<std::string> includepaths;
+#if OIIO_VERSION >= 10604
+    m_cwd = OIIO::Filesystem::current_path();
+#else
+    m_cwd = boost::filesystem::current_path().string();
+#endif
+    m_main_filename = filename;
+
+    // Determine where the installed shader include directory is, and
+    // look for ../shaders/stdosl.h and force it to include.
+    if (stdoslpath.empty()) {
+        // look in $OSLHOME/shaders
+        const char *OSLHOME = getenv ("OSLHOME");
+        if (OSLHOME && OSLHOME[0]) {
+            std::string path = std::string(OSLHOME) + "/shaders";
+            if (OIIO::Filesystem::exists (path)) {
+                path = path + "/stdosl.h";
+                if (OIIO::Filesystem::exists (path))
+                    stdoslpath = ustring(path);
+            }
+        }
+    }
+    if (stdoslpath.empty() || ! OIIO::Filesystem::exists(stdoslpath))
+        warning (ustring(filename), 0, "Unable to find \"stdosl.h\"");
+    else {
+        // Add the directory of stdosl.h to the include paths
+        includepaths.push_back (OIIO::Filesystem::parent_path (stdoslpath));
+    }
+
+    read_compile_options (options, defines, includepaths);
 
     std::string preprocess_result;
-
-#ifdef USE_BOOST_WAVE
-    if (! preprocess(filename, stdinclude, defines, includepaths, preprocess_result)) {
-#else
-    if (! preprocess(filename, stdinclude, cppoptions, preprocess_result)) {
-#endif
+    if (! preprocess_file (filename, stdoslpath,
+                           defines, includepaths, preprocess_result)) {
         return false;
-    } else if (preprocess_only) {
+    } else if (m_preprocess_only) {
         std::cout << preprocess_result;
     } else {
-        std::istringstream in (preprocess_result);
-        oslcompiler = this;
-
-        // Create a lexer, parse the file, delete the lexer
-        m_lexer = new oslFlexLexer (&in);
-        oslparse ();
-        bool parseerr = error_encountered();
-        delete m_lexer;
-
+        bool parseerr = osl_parse_buffer (preprocess_result);
         if (! parseerr) {
             if (shader())
                 shader()->typecheck ();
@@ -426,7 +400,6 @@ OSLCompilerImpl::compile (const std::string &filename,
 
         if (! error_encountered()) {
             shader()->codegen ();
-//            add_useparam ();
             track_variable_dependencies ();
             track_variable_lifetimes ();
             check_for_illegal_writes ();
@@ -437,7 +410,106 @@ OSLCompilerImpl::compile (const std::string &filename,
         if (! error_encountered()) {
             if (m_output_filename.size() == 0)
                 m_output_filename = default_output_filename ();
-            write_oso_file (m_output_filename);
+
+            std::ofstream oso_output;
+            OIIO::Filesystem::open (oso_output, m_output_filename);
+            if (! oso_output.good()) {
+                error (ustring(), 0, "Could not open \"%s\"",
+                       m_output_filename.c_str());
+                return false;
+            }
+            ASSERT (m_osofile == NULL);
+            m_osofile = &oso_output;
+
+            write_oso_file (m_output_filename, OIIO::Strutil::join(options," "));
+            ASSERT (m_osofile == NULL);
+        }
+
+        oslcompiler = NULL;
+    }
+
+    return ! error_encountered();
+}
+
+
+
+bool
+OSLCompilerImpl::compile_buffer (string_view sourcecode,
+                                 std::string &osobuffer,
+                                 const std::vector<std::string> &options,
+                                 string_view stdoslpath)
+{
+    string_view filename ("<buffer>");
+
+#if OIIO_VERSION >= 10604
+    m_cwd = OIIO::Filesystem::current_path();
+#else
+    m_cwd = boost::filesystem::current_path().string();
+#endif
+    m_main_filename = filename;
+
+    // Determine where the installed shader include directory is, and
+    // look for ../shaders/stdosl.h and force it to include.
+    if (stdoslpath.empty()) {
+        // look in $OSLHOME/shaders
+        const char *OSLHOME = getenv ("OSLHOME");
+        if (OSLHOME && OSLHOME[0]) {
+            std::string path = std::string(OSLHOME) + "/shaders";
+            if (OIIO::Filesystem::exists (path)) {
+                path = path + "/stdosl.h";
+                if (OIIO::Filesystem::exists (path))
+                    stdoslpath = ustring(path);
+            }
+        }
+    }
+    if (stdoslpath.empty() || ! OIIO::Filesystem::exists(stdoslpath))
+        warning (ustring(filename), 0, "Unable to find \"stdosl.h\"");
+
+    std::vector<std::string> defines;
+    std::vector<std::string> includepaths;
+    read_compile_options (options, defines, includepaths);
+
+    std::string preprocess_result;
+    if (! preprocess_buffer (sourcecode, filename, stdoslpath,
+                             defines, includepaths, preprocess_result)) {
+        return false;
+    } else if (m_preprocess_only) {
+        std::cout << preprocess_result;
+    } else {
+        bool parseerr = osl_parse_buffer (preprocess_result);
+        if (! parseerr) {
+            if (shader())
+                shader()->typecheck ();
+            else
+                error (ustring(), 0, "No shader function defined");
+        }
+
+        // Print the parse tree if there were no errors
+        if (m_debug) {
+            symtab().print ();
+            if (shader())
+                shader()->print (std::cout);
+        }
+
+        if (! error_encountered()) {
+            shader()->codegen ();
+            track_variable_dependencies ();
+            track_variable_lifetimes ();
+            check_for_illegal_writes ();
+//            if (m_optimizelevel >= 1)
+//                coalesce_temporaries ();
+        }
+ 
+        if (! error_encountered()) {
+            m_output_filename = "<buffer>";
+
+            std::ostringstream oso_output;
+            ASSERT (m_osofile == NULL);
+            m_osofile = &oso_output;
+
+            write_oso_file (m_output_filename, OIIO::Strutil::join(options," "));
+            osobuffer = oso_output.str();
+            ASSERT (m_osofile == NULL);
         }
 
         oslcompiler = NULL;
@@ -510,23 +582,16 @@ OSLCompilerImpl::write_oso_metadata (const ASTNode *metanode) const
     Symbol *metasym = metavar->sym();
     ASSERT (metasym);
     TypeSpec ts = metasym->typespec();
-    oso ("%%meta{%s,%s,", ts.string().c_str(), metasym->name().c_str());
-    const ASTNode *init = metavar->init().get();
-    ASSERT (init);
-    if (ts.is_string() && init->nodetype() == ASTNode::literal_node)
-        oso ("\"%s\"", ((const ASTliteral *)init)->strval());
-    else if (ts.is_int() && init->nodetype() == ASTNode::literal_node)
-        oso ("%d", ((const ASTliteral *)init)->intval());
-    else if (ts.is_float() && init->nodetype() == ASTNode::literal_node)
-        oso ("%.8g", ((const ASTliteral *)init)->floatval());
-    // FIXME -- what about type constructors?
-    else {
-        std::cout << "Error, don't know how to print metadata " 
-                  << ts.string() << " with node type " 
-                  << init->nodetypename() << "\n";
-        ASSERT (0);  // FIXME
+    std::string pdl;
+    bool ok = metavar->param_default_literals (metasym, metavar->init().get(), pdl, ",");
+    if (ok) {
+        oso ("%%meta{%s,%s,%s} ", ts.string().c_str(), metasym->name(), pdl);
+    } else {
+        error (metanode->sourcefile(), metanode->sourceline(),
+               "Don't know how to print metadata %s (%s) with node type %s",
+               metasym->name().c_str(), ts.string().c_str(),
+               metavar->init()->nodetypename());
     }
-    oso ("} ");
 }
 
 
@@ -540,7 +605,7 @@ OSLCompilerImpl::write_oso_const_value (const ConstantSymbol *sym) const
     int nelements = std::max (1, type.arraylen);
     if (elemtype == TypeDesc::STRING)
         for (int i = 0;  i < nelements;  ++i)
-            oso ("\"%s\"%s", sym->strval(i).c_str(), nelements>1 ? " " : "");
+            oso ("\"%s\"%s", sym->strval(i), nelements>1 ? " " : "");
     else if (elemtype == TypeDesc::INT)
         for (int i = 0;  i < nelements;  ++i)
             oso ("%d%s", sym->intval(i), nelements>1 ? " " : "");
@@ -578,7 +643,7 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym)
         oso ("\t");
     } else if (v && isparam) {
         std::string out;
-        v->param_default_literals (sym, out);
+        v->param_default_literals (sym, v->init().get(), out);
         oso ("\t%s\t", out.c_str());
     }
 
@@ -599,17 +664,14 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym)
     }
 
     // %read and %write give the range of ops over which a symbol is used.
-    if (hints++ == 0)
-        oso ("\t");
-    oso (" %%read{%d,%d} %%write{%d,%d}", sym->firstread(), sym->lastread(),
+    oso ("%c%%read{%d,%d} %%write{%d,%d}", hints++ ? ' ' : '\t',
+         sym->firstread(), sym->lastread(),
          sym->firstwrite(), sym->lastwrite());
 
     // %struct, %structfields, and %structfieldtypes document the
     // definition of a structure and which other symbols comprise the
     // individual fields.
     if (sym->typespec().is_structure()) {
-        if (hints++ == 0)
-            oso ("\t");
         const StructSpec *structspec (sym->typespec().structspec());
         std::string fieldlist, signature;
         for (int i = 0;  i < (int)structspec->numfields();  ++i) {
@@ -618,27 +680,29 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym)
             fieldlist += structspec->field(i).name.string();
             signature += code_from_type (structspec->field(i).type);
         }
-        oso (" %%struct{\"%s\"} %%structfields{%s} %%structfieldtypes{\"%s\"} %%structnfields{%d}",
+        oso ("%c%%struct{\"%s\"} %%structfields{%s} %%structfieldtypes{\"%s\"} %%structnfields{%d}",
+             hints++ ? ' ' : '\t',
              structspec->mangled().c_str(), fieldlist.c_str(),
              signature.c_str(), structspec->numfields());
     }
     // %mystruct and %mystructfield document the symbols holding structure
     // fields, linking them back to the structures they are part of.
     if (sym->fieldid() >= 0) {
-        if (hints++ == 0)
-            oso ("\t");
         ASTvariable_declaration *vd = (ASTvariable_declaration *) sym->node();
         if (vd)
-            oso (" %%mystruct{%s} %%mystructfield{%d}",
+            oso ("%c%%mystruct{%s} %%mystructfield{%d}", hints++ ? ' ' : '\t',
                  vd->sym()->mangled().c_str(), sym->fieldid());
     }
 
     // %derivs hint marks symbols that need to carry derivatives
-    if (sym->has_derivs()) {
-        if (hints++ == 0)
-            oso ("\t");
-        oso (" %%derivs");
-    }
+    if (sym->has_derivs())
+        oso ("%c%%derivs", hints++ ? ' ' : '\t');
+
+    // %initexpr hint marks parameters whose default is the result of code
+    // that must be executed (an expression, like =noise(P) or =u), rather
+    // than a true default value that is statically known (like =3.14).
+    if (isparam && sym->has_init_ops())
+        oso ("%c%%initexpr", hints++ ? ' ' : '\t');
 
 #if 0 // this is recomputed by the runtime optimizer, no need to bloat the .oso with these
 
@@ -679,25 +743,26 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym)
 
 
 void
-OSLCompilerImpl::write_oso_file (const std::string &outfilename)
+OSLCompilerImpl::write_oso_file (const std::string &outfilename,
+                                 string_view options)
 {
-    ASSERT (m_osofile == NULL);
-    m_osofile = fopen (outfilename.c_str(), "w");
-    if (! m_osofile) {
-        error (ustring(), 0, "Could not open \"%s\"", outfilename.c_str());
-        return;
-    }
-
-    // FIXME -- remove the hard-coded version!
+    ASSERT (m_osofile != NULL && m_osofile->good());
     oso ("OpenShadingLanguage %d.%02d\n",
          OSO_FILE_VERSION_MAJOR, OSO_FILE_VERSION_MINOR);
     oso ("# Compiled by oslc %s\n", OSL_LIBRARY_VERSION_STRING);
+    oso ("# options: %s\n", options);
 
     ASTshader_declaration *shaderdecl = shader_decl();
     oso ("%s %s", shaderdecl->shadertypename(), 
          shaderdecl->shadername().c_str());
 
-    // FIXME -- output global hints and metadata
+    // output global hints and metadata
+    int hints = 0;
+    for (ASTNode::ref m = shaderdecl->metadata();  m;  m = m->next()) {
+        if (hints++ == 0)
+            oso ("\t");
+        write_oso_metadata (m.get());
+    }
 
     oso ("\n");
 
@@ -810,22 +875,7 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename)
         oso ("code %s\n", main_method_name().c_str());
 
     oso ("\tend\n");
-
-    fclose (m_osofile);
     m_osofile = NULL;
-}
-
-
-
-void
-OSLCompilerImpl::oso (const char *fmt, ...) const
-{
-    // FIXME -- might be nice to let this save to a memory buffer, not
-    // just a file.
-    va_list arg_ptr;
-    va_start (arg_ptr, fmt);
-    vfprintf (m_osofile, fmt, arg_ptr);
-    va_end (arg_ptr);
 }
 
 
@@ -839,7 +889,7 @@ OSLCompilerImpl::retrieve_source (ustring filename, int line)
         if (m_sourcefile)
             fclose (m_sourcefile);
         m_last_sourcefile = filename;
-        m_sourcefile = fopen (filename.c_str(), "r");
+        m_sourcefile = OIIO::Filesystem::fopen (filename, "r");
         if (! m_sourcefile) {
             m_last_sourcefile = ustring();
             return "<not found>";
@@ -967,9 +1017,8 @@ OSLCompilerImpl::check_write_legality (const Opcode &op, int opnum,
     if (sym->symtype() == SymTypeParam && 
         (opnum < sym->initbegin() || opnum >= sym->initend())) {
         error (op.sourcefile(), op.sourceline(),
-               "Cannot write to input parameter '%s'",
-               sym->name().c_str());
-        error (op.sourcefile(), op.sourceline(), "  (op %d)", opnum);
+               "Cannot write to input parameter '%s' (op %d)",
+               sym->name().c_str(), opnum);
     }
 
     // FIXME -- check for writing to globals.  But it's tricky, depends on
@@ -1001,87 +1050,83 @@ OSLCompilerImpl::check_for_illegal_writes ()
 void
 OSLCompilerImpl::track_variable_lifetimes (const OpcodeVec &code,
                                            const SymbolPtrVec &opargs,
-                                           const SymbolPtrVec &allsyms)
+                                           const SymbolPtrVec &allsyms,
+                                           std::vector<int> *bblockids)
 {
     // Clear the lifetimes for all symbols
     BOOST_FOREACH (Symbol *s, allsyms)
         s->clear_rw ();
 
-    static ustring op_for("for");
-    static ustring op_while("while");
-    static ustring op_dowhile("dowhile");
+    // Keep track of the nested loops we're inside. We track them by pairs
+    // of begin/end instruction numbers for that loop body, including
+    // conditional evaluation (skip the initialization). Note that the end
+    // is inclusive. We use this vector of ranges as a stack.
+    typedef std::pair<int,int> intpair;
+    std::vector<intpair> loop_bounds;
 
     // For each op, mark its arguments as being used at that op
     int opnum = 0;
     BOOST_FOREACH (const Opcode &op, code) {
+        if (op.opname() == op_for || op.opname() == op_while ||
+                op.opname() == op_dowhile) {
+            // If this is a loop op, we need to mark its control variable
+            // (the only arg) as used for the duration of the loop!
+            ASSERT (op.nargs() == 1);  // loops should have just one arg
+            SymbolPtr s = opargs[op.firstarg()];
+            int loopcond = op.jump (0); // after initialization, before test
+            int loopend = op.farthest_jump() - 1;   // inclusive end
+            s->mark_rw (opnum+1, true, true);
+            s->mark_rw (loopend, true, true);
+            // Also push the loop bounds for this loop
+            loop_bounds.push_back (std::make_pair(loopcond, loopend));
+        }
+
         // Some work to do for each argument to the op...
         for (int a = 0;  a < op.nargs();  ++a) {
             SymbolPtr s = opargs[op.firstarg()+a];
-            ASSERT (s->dealias() == s);
-            // s = s->dealias();   // Make sure it's de-aliased
+            ASSERT (s->dealias() == s);  // Make sure it's de-aliased
 
             // Mark that it's read and/or written for this op
-            s->mark_rw (opnum, op.argread(a), op.argwrite(a));
-        }
+            bool readhere = op.argread(a);
+            bool writtenhere = op.argwrite(a);
+            s->mark_rw (opnum, readhere, writtenhere);
 
-        // If this is a loop op, we need to mark its control variable
-        // (the only arg) as used for the duration of the loop!
-        if (op.opname() == op_for ||
-            op.opname() == op_while ||
-            op.opname() == op_dowhile) {
-            ASSERT (op.nargs() == 1);  // loops should have just one arg
-            SymbolPtr s = opargs[op.firstarg()];
-            s->mark_rw (opnum+1, true, true);
-            s->mark_rw (op.farthest_jump()-1, true, true);
-        }
-
-        ++opnum;
-    }
-
-
-    // Special cases: handle variables whose lifetimes cross the boundaries
-    // of a loop.
-    opnum = 0;
-    BOOST_FOREACH (const Opcode &op, code) {
-        if (op.opname() == op_for ||
-            op.opname() == op_while ||
-            op.opname() == op_dowhile) {
-            int loopcond = op.jump (0);  // after initialization, before test
-            int loopend = op.farthest_jump() - 1;
-            BOOST_FOREACH (Symbol *s, allsyms) {
-                // Temporaries referenced both inside AND outside a loop
-                // need their lifetimes extended to cover the entire
-                // loop so they aren't coalesced incorrectly.  The
-                // specific danger is for a function that contains a
-                // loop, and the function is passed an argument that is
-                // a temporary calculation.
-                if (s->symtype() == SymTypeTemp &&
-                    ((s->firstuse() < loopcond && s->lastuse() >= loopcond) ||
-                     (s->firstuse() < loopend && s->lastuse() >= loopend))) {
-                    s->mark_rw (opnum, true, true);
-                    s->mark_rw (loopend, true, true);
+            // Adjust lifetimes of symbols whose values need to be preserved
+            // between loop iterations.
+            BOOST_FOREACH (intpair oprange, loop_bounds) {
+                int loopcond = oprange.first;
+                int loopend = oprange.second;
+                DASSERT (s->firstuse() <= loopend);
+                // Special case: a temp or local, even if written inside a
+                // loop, if it's entire lifetime is within one basic block
+                // and it's strictly written before being read, then its
+                // lifetime is truly local and doesn't need to be expanded
+                // for the duration of the loop.
+                if (bblockids &&
+                    (s->symtype()==SymTypeLocal || s->symtype()==SymTypeTemp) &&
+                    (*bblockids)[s->firstuse()] == (*bblockids)[s->lastuse()] &&
+                    s->lastwrite() < s->firstread()) {
+                    continue;
                 }
-
-                // Locals that are written within the loop should have
-                // their usage conservatively expanded to the whole
-                // loop.  This is not a worry for temps, because they
-                // CAN'T be read in the next iteration unless they were
-                // set before the loop, handled above.  Ideally, we
-                // could be less conservative if we knew that the
-                // variable in question was declared/scoped internal to
-                // the loop, in which case it can't carry values to the
-                // next iteration (FIXME).
-                if (s->symtype() == SymTypeLocal &&
-                      s->firstuse() < loopend && s->lastwrite() >= loopcond) {
-                    bool read = (s->lastread() >= loopcond);
-                    s->mark_rw (opnum, read, true);
-                    s->mark_rw (loopend, read, true);
+                // Syms written before or inside the loop, and referenced
+                // inside or after the loop, need to preserve their value
+                // for the duration of the loop. We know it's referenced
+                // inside the loop because we're here examining it!
+                if (s->firstwrite() <= loopend) {
+                    s->mark_rw (loopcond, readhere, writtenhere);
+                    s->mark_rw (loopend, readhere, writtenhere);
                 }
             }
         }
-        ++opnum;
+
+        ++opnum;  // Advance to the next op index
+
+        // Pop any loop bounds for loops we've just exited
+        while (!loop_bounds.empty() && loop_bounds.back().second < opnum)
+            loop_bounds.pop_back ();
     }
 }
+
 
 
 // This has O(n^2) memory usage, so only for debugging
@@ -1325,106 +1370,6 @@ OSLCompilerImpl::syms_used_in_op_range (OpcodeVec::const_iterator opbegin,
                 if (std::find (wsyms->begin(), wsyms->end(), s) == wsyms->end())
                     wsyms->push_back (s);
         }
-    }
-}
-
-
-
-/// Add a 'useparam' before any op that reads parameters.  This is what
-/// tells the runtime that it needs to run the layer it came from, if
-/// not already done.
-void
-OSLCompilerImpl::add_useparam ()
-{
-    // Mark all symbols as un-initialized
-    BOOST_FOREACH (Symbol *s, symtab())
-        s->initialized (false);
-    // Figure out which statements are inside conditional states
-    std::vector<bool> in_conditional (m_ircode.size(), false);
-    for (size_t opnum = 0;  opnum < m_ircode.size();  ++opnum) {
-        // Find the farthest this instruction jumps to (-1 for instructions
-        // that don't jump)
-        int jumpend = m_ircode[opnum].farthest_jump();
-        // Mark all instructions from here to there as inside conditionals
-        for (int i = (int)opnum+1;  i < jumpend;  ++i)
-            in_conditional[i] = true;
-    }
-
-    // Take care of the output params right off the bat -- as soon as the
-    // shader starts running 'main'.
-    SymbolPtrVec outputparams;
-    BOOST_FOREACH (Symbol *s, symtab()) {
-        if (s->symtype() == SymTypeOutputParam) {
-            outputparams.push_back (s);
-            s->initialized (true);
-        }
-    }
-    if (outputparams.size()) {
-        int mainstart = m_main_method_start >= 0 ? m_main_method_start : next_op_label();
-        insert_useparam (mainstart, outputparams);
-        in_conditional.insert (in_conditional.begin()+mainstart, false);
-    }
-    
-    // Loop over all ops...
-    for (size_t opnum = 0;  opnum < m_ircode.size();  ++opnum) {
-        Opcode &op (m_ircode[opnum]);  // handy ref to the op
-        SymbolPtrVec params;           // list of params referenced by this op
-        // For each argument...
-        for (int a = 0;  a < op.nargs();  ++a) {
-            SymbolPtr s = m_opargs[op.firstarg()+a];
-            DASSERT (s->dealias() == s);
-            // If this arg is a param and is read, remember it
-            if (s->symtype() != SymTypeParam && s->symtype() != SymTypeOutputParam)
-                continue;  // skip non-params
-            // skip if we've already 'usedparam'ed it unconditionally
-            if (s->initialized() && op.method() == main_method_name())
-                continue;
-            if (op.opname() == "useparam")
-                continue;  // skip useparam ops themselves, if we hit one
-            if (op.argread(a) || (op.argwrite(a) && op.method() != s->mangled())) {
-                //std::cerr << "used " << s->mangled() << " @ " << opnum << "\n";
-                // Don't add it more than once
-                if (std::find (params.begin(), params.end(), s) == params.end()) {
-                    params.push_back (s);
-                    // mark as already initialized unconditionally, if we do
-                    if (! in_conditional[opnum] && op.method() == main_method_name())
-                        s->initialized (true);
-                }
-            }
-        }
-
-        // If the arg we are examining read any params, insert a "useparam"
-        // op whose arguments are the list of params we are about to use.
-        if (params.size()) {
-            insert_useparam (opnum, params);
-            in_conditional.insert (in_conditional.begin()+opnum, false);
-            // Skip the op we just added
-            ++opnum;
-        }
-    }
-}
-
-
-
-/// Insert a 'useparam' instruction in front of instruction 'opnum', to
-/// reference the symbols in 'params'.
-void
-OSLCompilerImpl::insert_useparam (size_t opnum, SymbolPtrVec &params)
-{
-    insert_code (opnum, "useparam", params.size(), &(params[0]), NULL);
-    // All ops are "read"
-    m_ircode[opnum].argwrite (0, false);
-    m_ircode[opnum].argread (0, true);
-    if (opnum < m_ircode.size()-1) {
-        // We have no parse node, but we set the new instruction's
-        // "source" to the one of the statement right after.
-        m_ircode[opnum].source (m_ircode[opnum+1].sourcefile(),
-                                m_ircode[opnum+1].sourceline());
-        // Set the method id to the same as the statement right after
-        m_ircode[opnum].method (m_ircode[opnum+1].method());
-    } else {
-        // If there IS no "next" instruction, just call it main
-        m_ircode[opnum].method (main_method_name());
     }
 }
 

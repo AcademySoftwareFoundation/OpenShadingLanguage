@@ -26,16 +26,15 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef OSL_SYMTAB_H
-#define OSL_SYMTAB_H
+#pragma once
 
 #include <vector>
 #include <stack>
 
 #include <boost/unordered_map.hpp>
 
-#include "OpenImageIO/typedesc.h"
-#include "OpenImageIO/ustring.h"
+#include <OpenImageIO/typedesc.h>
+#include <OpenImageIO/ustring.h>
 
 #include "osl_pvt.h"
 
@@ -199,7 +198,7 @@ private:
 /// are unique), there's a hash_map of symbols.  There's also a stack
 /// of such maps representing the current scope hierarchy, so a symbol
 /// search proceeds from innermost scope (top of stack) to outermost
-/// (bottom of stack).  
+/// (bottom of stack).
 ///
 class SymbolTable {
 public:
@@ -231,7 +230,7 @@ public:
     /// return it, otherwise return NULL.
     Symbol * clash (ustring name) const;
 
-    /// Insert the symbol into the current inner scope.  
+    /// Insert the symbol into the current inner scope.
     ///
     void insert (Symbol *sym);
 
@@ -291,5 +290,3 @@ private:
 }; // namespace pvt
 
 OSL_NAMESPACE_EXIT
-
-#endif /* OSL_SYMTAB_H */

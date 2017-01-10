@@ -23,13 +23,15 @@ void matrix_fromto (string from, string to)
 shader
 test (matrix matrixparam0 = 0,
       matrix matrixparam1 = 1,
-      matrix matrixparam1m = matrix(1))
+      matrix matrixparam1m = matrix(1),
+      matrix matrixparam1world = matrix("world",1))
 {
     // Test parameter initialization
     printf ("Parameter initialization:\n");
     printf ("  matrixparam0  = %g\n", matrixparam0);
     printf ("  matrixparam1  = %g\n", matrixparam1);
     printf ("  matrixparam1m = %g\n", matrixparam1m);
+    printf ("  matrixparam1world = %g\n", matrixparam1world);
     printf ("\n");
 
     // Test matrix constructors
@@ -66,6 +68,14 @@ test (matrix matrixparam0 = 0,
                 a, pretty(matrix("shader",a)));
         printf ("  matrix (\"shader\", %.5g, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) \n\t= %.5g\n",
                 a, pretty(matrix ("shader", a, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)));
+    }
+
+    // World and comomon space construction
+    {
+        matrix Mw = matrix ("world", 1);
+        matrix Mc = matrix ("common", 1);
+        printf ("  matrix (\"world\", 1) = %g\n", Mw);
+        printf ("  matrix (\"common\", 1) = %g\n", Mc);
     }
 
     // Test "from-to" matrix construction and getmatrix calls

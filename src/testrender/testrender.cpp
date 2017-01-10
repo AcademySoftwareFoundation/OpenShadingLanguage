@@ -37,6 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/argparse.h>
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/timer.h>
+#include <OpenImageIO/thread.h>
 
 #ifdef USE_EXTERNAL_PUGIXML
 # include <pugixml.hpp>
@@ -47,7 +48,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/thread.hpp>
 #include <boost/ref.hpp>
 
-#include "oslexec.h"
+#include "OSL/oslexec.h"
 #include "simplerend.h"
 #include "raytracer.h"
 #include "background.h"
@@ -62,12 +63,14 @@ using namespace OSL;
 namespace { // anonymous namespace
 
 ShadingSystem *shadingsys = NULL;
-bool debug = false;
+bool debug1 = false;
 bool debug2 = false;
 bool verbose = false;
-bool stats = false;
+bool runstats = false;
+int profile = 0;
 bool O0 = false, O1 = false, O2 = false;
 bool debugnan = false;
+static std::string extraoptions;
 int xres = 640, yres = 480, aa = 1, max_bounces = 1000000, rr_depth = 5;
 int num_threads = 0;
 ErrorHandler errhandler;
@@ -77,8 +80,19 @@ Scene scene;
 int backgroundShaderID = -1;
 int backgroundResolution = 0;
 Background background;
-std::vector<ShadingAttribStateRef> shaders;
+std::vector<ShaderGroupRef> shaders;
 std::string scenefile, imagefile;
+static std::string shaderpath;
+
+
+static void
+set_profile (int argc, const char *argv[])
+{
+    profile = 1;
+    shadingsys->attribute ("profile", profile);
+}
+
+
 
 int get_filenames(int argc, const char *argv[])
 {
@@ -94,14 +108,16 @@ int get_filenames(int argc, const char *argv[])
 void getargs(int argc, const char *argv[])
 {
     bool help = false;
-    ArgParse ap;
+    OIIO::ArgParse ap;
     ap.options ("Usage:  testrender [options] scene.xml output.exr",
                 "%*", get_filenames, "",
                 "--help", &help, "Print help message",
                 "-v", &verbose, "Verbose messages",
-                "--debug", &debug, "Lots of debugging info",
+                "--debug", &debug1, "Lots of debugging info",
                 "--debug2", &debug2, "Even more debugging info",
-                "--stats", &stats, "Print run statistics",
+                "--runstats", &runstats, "Print run statistics",
+                "--stats", &runstats, "", // DEPRECATED 1.7
+                "--profile %@", &set_profile, NULL, "Print profile information",
                 "-r %d %d", &xres, &yres, "Render a WxH image",
                 "-aa %d", &aa, "Trace NxN rays per pixel",
                 "-t %d", &num_threads, "Render using N threads (default: auto-detect)",
@@ -109,6 +125,8 @@ void getargs(int argc, const char *argv[])
                 "-O1", &O1, "Do a little runtime shader optimization",
                 "-O2", &O2, "Do lots of runtime shader optimization",
                 "--debugnan", &debugnan, "Turn on 'debugnan' mode",
+                "--path %s", &shaderpath, "Specify oso search path",
+                "--options %s", &extraoptions, "Set extra OSL options",
                 NULL);
     if (ap.parse(argc, argv) < 0) {
         std::cerr << ap.geterror() << std::endl;
@@ -118,7 +136,7 @@ void getargs(int argc, const char *argv[])
     if (help) {
         std::cout <<
             "testrender -- Test Renderer for Open Shading Language\n"
-            "(c) Copyright 2009-2010 Sony Pictures Imageworks Inc. All Rights Reserved.\n";
+             OSL_COPYRIGHT_STRING "\n";
         ap.usage ();
         exit (EXIT_SUCCESS);
     }
@@ -132,7 +150,7 @@ void getargs(int argc, const char *argv[])
         ap.usage();
         exit (EXIT_FAILURE);
     }
-    if (debug || verbose)
+    if (debug1 || verbose)
         errhandler.verbosity (ErrorHandler::VERBOSE);
 }
 
@@ -298,7 +316,17 @@ void parse_scene() {
                 backgroundResolution = strtoint(res_attr.value());
             backgroundShaderID = int(shaders.size()) - 1;
         } else if (strcmp(node.name(), "ShaderGroup") == 0) {
-            shadingsys->ShaderGroupBegin();
+            ShaderGroupRef group;
+            pugi::xml_attribute name_attr = node.attribute("name");
+            std::string name = name_attr? name_attr.value() : "";
+            pugi::xml_attribute type_attr = node.attribute("type");
+            std::string shadertype = type_attr ? type_attr.value() : "surface";
+            pugi::xml_attribute commands_attr = node.attribute("commands");
+            std::string commands = commands_attr ? commands_attr.value() : node.text().get();
+            if (commands.size())
+                group = shadingsys->ShaderGroupBegin (name, shadertype, commands);
+            else
+                group = shadingsys->ShaderGroupBegin (name);
             ParamStorage<1024> store; // scratch space to hold parameters until they are read by Shader()
             for (pugi::xml_node gnode = node.first_child(); gnode; gnode = gnode.next_sibling()) {
                 if (strcmp(gnode.name(), "Parameter") == 0) {
@@ -339,7 +367,7 @@ void parse_scene() {
                 }
             }
             shadingsys->ShaderGroupEnd();
-            shaders.push_back(shadingsys->state());
+            shaders.push_back (group);
         } else {
             // unknown element?
         }
@@ -370,6 +398,10 @@ void globals_from_hit(ShaderGlobals& sg, const Ray& r, const Dual2<float>& t, in
         sg.Ng = -sg.Ng;
     }
     sg.flipHandedness = flip;
+
+    // In our SimpleRenderer, the "renderstate" itself just a pointer to
+    // the ShaderGlobals.
+    sg.renderstate = &sg;
 }
 
 Vec3 eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx) {
@@ -378,22 +410,16 @@ Vec3 eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx) {
     sg.I = dir.val();
     sg.dIdx = dir.dx();
     sg.dIdy = dir.dy();
-    shadingsys->execute(*ctx, *shaders[backgroundShaderID], sg);
+    shadingsys->execute(ctx, *shaders[backgroundShaderID], sg);
     return process_background_closure(sg.Ci);
 }
 
-float mis_weight(float invpdf, float otherpdf) {
-    // power heuristic is: a^2 / (a^2+b^2)
-    // simplifying: 1 / (1 + (b/a)^2)
-    return 1 / (1 + otherpdf * otherpdf * invpdf * invpdf);
-}
-
-Color3 subpixel_radiance(float x, float y, Rng& rand, ShadingContext* ctx) {
+Color3 subpixel_radiance(float x, float y, Sampler& sampler, ShadingContext* ctx) {
     Ray r = camera.get(x, y);
     Color3 path_weight(1, 1, 1);
     Color3 path_radiance(0, 0, 0);
     int prev_id = -1;
-    float bsdf_invpdf = 0;
+    float bsdf_pdf = std::numeric_limits<float>::infinity(); // camera ray has only one possible direction
     bool flip = false;
     for (int b = 0; b <= max_bounces; b++) {
         // trace the ray against the scene
@@ -404,7 +430,7 @@ Color3 subpixel_radiance(float x, float y, Rng& rand, ShadingContext* ctx) {
                 if (backgroundResolution > 0) {
                     float bg_pdf = 0;
                     Vec3 bg = background.eval(r.d.val(), bg_pdf);
-                    path_radiance += path_weight * bg * mis_weight(bsdf_invpdf, bg_pdf);
+                    path_radiance += path_weight * bg * MIS::power_heuristic<MIS::WEIGHT_WEIGHT>(bsdf_pdf, bg_pdf);
                 } else {
                     // we aren't importance sampling the background - so just run it directly
                     path_radiance += path_weight * eval_background(r.d, ctx);
@@ -420,7 +446,7 @@ Color3 subpixel_radiance(float x, float y, Rng& rand, ShadingContext* ctx) {
         if (shaderID < 0 || !shaders[shaderID]) break; // no shader attached? done
 
         // execute shader and process the resulting list of closures
-        shadingsys->execute (*ctx, *shaders[shaderID], sg);
+        shadingsys->execute (ctx, *shaders[shaderID], sg);
         ShadingResult result;
         bool last_bounce = b == max_bounces;
         process_closure(result, sg.Ci, last_bounce);
@@ -430,7 +456,7 @@ Color3 subpixel_radiance(float x, float y, Rng& rand, ShadingContext* ctx) {
         if (scene.islight(id)) {
             // figure out the probability of reaching this point
             float light_pdf = scene.shapepdf(id, r.o.val(), sg.P);
-            k = mis_weight(bsdf_invpdf, light_pdf);
+            k = MIS::power_heuristic<MIS::WEIGHT_EVAL>(bsdf_pdf, light_pdf);
         }
         path_radiance += path_weight * k * result.Le;
 
@@ -441,57 +467,60 @@ Color3 subpixel_radiance(float x, float y, Rng& rand, ShadingContext* ctx) {
         result.bsdf.prepare(sg, path_weight, b >= rr_depth);
 
         // get two random numbers
-        float xi = rand;
-        float yi = rand;
+        Vec3 s = sampler.get();
+        float xi = s.x;
+        float yi = s.y;
+        float zi = s.z;
 
         // trace one ray to the background
         if (backgroundResolution > 0) {
             Dual2<Vec3> bg_dir;
-            float bg_invpdf = 0, bsdf_pdf = 0;
-            Vec3 bg = background.sample(xi, yi, bg_dir, bg_invpdf);
-            Color3 bsdf_eval = result.bsdf.eval(sg, bg_dir.val(), bsdf_pdf);
-            bsdf_eval *= path_weight * bg * bg_invpdf * mis_weight(bg_invpdf, bsdf_pdf);
-            if ((bsdf_eval.x + bsdf_eval.y + bsdf_eval.z) > 0) {
+            float bg_pdf = 0, bsdf_pdf = 0;
+            Vec3 bg = background.sample(xi, yi, bg_dir, bg_pdf);
+            Color3 bsdf_weight = result.bsdf.eval(sg, bg_dir.val(), bsdf_pdf);
+            Color3 contrib = path_weight * bsdf_weight * bg * MIS::power_heuristic<MIS::WEIGHT_WEIGHT>(bg_pdf, bsdf_pdf);
+            if ((contrib.x + contrib.y + contrib.z) > 0) {
                 int shadow_id = id;
                 Ray shadow_ray = Ray(sg.P, bg_dir);
                 Dual2<float> shadow_dist;
                 if (!scene.intersect(shadow_ray, shadow_dist, shadow_id)) // ray reached the background?
-                    path_radiance += bsdf_eval;
+                    path_radiance += contrib;
             }
         }
 
         // trace one ray to each light
-        for (int lid = 0; !result.bsdf.singular() && lid < scene.num_prims(); lid++) {
+        for (int lid = 0; lid < scene.num_prims(); lid++) {
             if (lid == id) continue; // skip self
             if (!scene.islight(lid)) continue; // doesn't want to be sampled as a light
             int shaderID = scene.shaderid(lid);
             if (shaderID < 0 || !shaders[shaderID]) continue; // no shader attached to this light
             // sample a random direction towards the object
-            float invpdf;
-            Vec3 ldir = scene.sample(lid, sg.P, xi, yi, invpdf);
+            float light_pdf;
+            Vec3 ldir = scene.sample(lid, sg.P, xi, yi, light_pdf);
             float bsdf_pdf = 0;
-            Color3 bsdf_eval = path_weight * result.bsdf.eval(sg, ldir, bsdf_pdf);
-            if ((bsdf_eval.x + bsdf_eval.y + bsdf_eval.z) == 0) continue;
-            Ray shadow_ray = Ray(sg.P, ldir);
-            // trace a shadow ray and see if we actually hit the target
-            // in this tiny renderer, tracing a ray is probably cheaper than evaluating the light shader
-            int shadow_id = id; // ignore self hit
-            Dual2<float> shadow_dist;
-            if (scene.intersect(shadow_ray, shadow_dist, shadow_id) && shadow_id == lid) {
-                // setup a shader global for the point on the light
-                ShaderGlobals light_sg;
-                globals_from_hit(light_sg, shadow_ray, shadow_dist, lid, false);
-                // execute the light shader (for emissive closures only)
-                shadingsys->execute (*ctx, *shaders[shaderID], light_sg);
-                ShadingResult light_result;
-                process_closure(light_result, light_sg.Ci, true);
-                // run the result through the bsdfs attached to the current point
-                path_radiance += bsdf_eval * light_result.Le * invpdf * mis_weight(invpdf, bsdf_pdf);
+            Color3 contrib = path_weight * result.bsdf.eval(sg, ldir, bsdf_pdf) * MIS::power_heuristic<MIS::EVAL_WEIGHT>(light_pdf, bsdf_pdf);
+            if ((contrib.x + contrib.y + contrib.z) > 0) {
+                Ray shadow_ray = Ray(sg.P, ldir);
+                // trace a shadow ray and see if we actually hit the target
+                // in this tiny renderer, tracing a ray is probably cheaper than evaluating the light shader
+                int shadow_id = id; // ignore self hit
+                Dual2<float> shadow_dist;
+                if (scene.intersect(shadow_ray, shadow_dist, shadow_id) && shadow_id == lid) {
+                    // setup a shader global for the point on the light
+                    ShaderGlobals light_sg;
+                    globals_from_hit(light_sg, shadow_ray, shadow_dist, lid, false);
+                    // execute the light shader (for emissive closures only)
+                    shadingsys->execute (ctx, *shaders[shaderID], light_sg);
+                    ShadingResult light_result;
+                    process_closure(light_result, light_sg.Ci, true);
+                    // accumulate contribution
+                    path_radiance += contrib * light_result.Le;
+                }
             }
         }
 
         // trace indirect ray and continue
-        path_weight *= result.bsdf.sample(sg, xi, yi, r.d, bsdf_invpdf);
+        path_weight *= result.bsdf.sample(sg, xi, yi, zi, r.d, bsdf_pdf);
         if (!(path_weight.x > 0) && !(path_weight.y > 0) && !(path_weight.z > 0))
             break; // filter out all 0's or NaNs
         prev_id = id;
@@ -501,22 +530,21 @@ Color3 subpixel_radiance(float x, float y, Rng& rand, ShadingContext* ctx) {
     return path_radiance;
 }
 
-Color3 antialias_pixel(int x, int y, Rng& rand, ShadingContext* ctx) {
+Color3 antialias_pixel(int x, int y, ShadingContext* ctx) {
     Color3 result(0, 0, 0);
-    float invaa = 1.0f / aa;
-    for (int ay = 0; ay < aa; ay++) {
-        for (int ax = 0; ax < aa; ax++) {
+    for (int ay = 0, si = 0; ay < aa; ay++) {
+        for (int ax = 0; ax < aa; ax++, si++) {
+        	Sampler sampler(x, y, si, aa);
             // jitter pixel coordinate [0,1)^2
-            float jx = (ax + rand) * invaa;
-            float jy = (ay + rand) * invaa;
+        	Vec3 j = sampler.get();
             // warp distribution to approximate a tent filter [-1,+1)^2
-            jx *= 2; jx = jx < 1 ? sqrtf(jx) - 1 : 1 - sqrtf(2 - jx);
-            jy *= 2; jy = jy < 1 ? sqrtf(jy) - 1 : 1 - sqrtf(2 - jy);
+            j.x *= 2; j.x = j.x < 1 ? sqrtf(j.x) - 1 : 1 - sqrtf(2 - j.x);
+            j.y *= 2; j.y = j.y < 1 ? sqrtf(j.y) - 1 : 1 - sqrtf(2 - j.y);
             // trace eye ray (apply jitter from center of the pixel)
-            result += subpixel_radiance(x + 0.5f + jx, y + 0.5f + jy, rand, ctx);
+            result += subpixel_radiance(x + 0.5f + j.x, y + 0.5f + j.y, sampler, ctx);
         }
     }
-    return result * (invaa * invaa);
+    return result / float(aa * aa);
 }
 
 void scanline_worker(Counter& counter, std::vector<Color3>& pixels) {
@@ -540,10 +568,8 @@ void scanline_worker(Counter& counter, std::vector<Color3>& pixels) {
 
     int y;
     while (counter.getnext(y)) {
-        for (int x = 0, i = xres * y;  x < xres;  ++x, ++i) {
-            Rng rand(i);
-            pixels[i] = antialias_pixel(x, y, rand, ctx);
-        }
+        for (int x = 0, i = xres * y;  x < xres;  ++x, ++i)
+            pixels[i] = antialias_pixel(x, y, ctx);
     }
     // We're done shading with this context.
     shadingsys->release_context (ctx);
@@ -565,7 +591,7 @@ int main (int argc, const char *argv[]) {
     // object that services callbacks from the shading system, NULL for
     // the TextureSystem (which will create a default OIIO one), and
     // an error handler.
-    shadingsys = ShadingSystem::create (&rend, NULL, &errhandler);
+    shadingsys = new ShadingSystem (&rend, NULL, &errhandler);
 
     // Register the layout of all closures known to this renderer
     // Any closure used by the shader which is not registered, or
@@ -590,13 +616,17 @@ int main (int argc, const char *argv[]) {
     getargs (argc, argv);
 
     // Setup common attributes
-    shadingsys->attribute ("debug", debug2 ? 2 : (debug ? 1 : 0));
-    const char *opt_env = getenv ("TESTSHADE_OPT");  // overrides opt
-    if (opt_env)
-        shadingsys->attribute ("optimize", atoi(opt_env));
-    else if (O0 || O1 || O2)
-        shadingsys->attribute ("optimize", O2 ? 2 : (O1 ? 1 : 0));
+    shadingsys->attribute ("debug", debug2 ? 2 : (debug1 ? 1 : 0));
+    shadingsys->attribute ("compile_report", debug1|debug2);
+    int opt = O2 ? 2 : (O1 ? 1 : 0);
+    if (const char *opt_env = getenv ("TESTSHADE_OPT"))  // overrides opt
+        opt = atoi(opt_env);
+    shadingsys->attribute ("optimize", opt);
     shadingsys->attribute ("debugnan", debugnan);
+    if (! shaderpath.empty())
+        shadingsys->attribute ("searchpath:shader", shaderpath);
+    if (extraoptions.size())
+        shadingsys->attribute ("options", extraoptions);
 
     // Loads a scene, creating camera, geometry and assigning shaders
     parse_scene();
@@ -646,17 +676,22 @@ int main (int argc, const char *argv[]) {
     delete out;
 
     // Print some debugging info
-    if (debug || stats) {
-        double runtime = timer();
+    if (debug1 || runstats || profile) {
+        double runtime = timer.lap();
         std::cout << "\n";
         std::cout << "Setup: " << OIIO::Strutil::timeintervalformat (setuptime,2) << "\n";
         std::cout << "Run  : " << OIIO::Strutil::timeintervalformat (runtime,2) << "\n";
         std::cout << "\n";
         std::cout << shadingsys->getstats (5) << "\n";
+        OIIO::TextureSystem *texturesys = shadingsys->texturesys();
+        if (texturesys)
+            std::cout << texturesys->getstats (5) << "\n";
+        std::cout << ustring::getstats() << "\n";
     }
 
     // We're done with the shading system now, destroy it
-    ShadingSystem::destroy (shadingsys);
+    shaders.clear ();  // Must release the group refs first
+    delete shadingsys;
 
     return EXIT_SUCCESS;
 }

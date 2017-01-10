@@ -1,0 +1,7 @@
+shader upstream (output float fout[4] = { 0, 0, 0, 0 })
+{
+    fout[0] = 2.1;
+    fout[1] = 2.2;
+    fout[2] = 2.3;
+    fout[3] = 2.4;
+}

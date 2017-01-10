@@ -1,0 +1,11 @@
+Compiled test.osl -> test.oso
+Compiled upstream.osl -> upstream.oso
+Connect u.fout to t.a
+a array length 4
+  [0] = 2.1
+  [1] = 2.2
+  [2] = 2.3
+  [3] = 2.4
+b array length 1
+  [0] = 0
+

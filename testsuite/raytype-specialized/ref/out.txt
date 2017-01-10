@@ -1,0 +1,5 @@
+Compiled test.osl -> test.oso
+camera? 0
+glossy? 1
+diffuse? 0
+

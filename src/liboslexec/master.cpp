@@ -34,9 +34,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/foreach.hpp>
 
-#include "OpenImageIO/strutil.h"
-#include "OpenImageIO/dassert.h"
-#include "OpenImageIO/thread.h"
+#include <OpenImageIO/strutil.h>
+#include <OpenImageIO/dassert.h>
+#include <OpenImageIO/thread.h>
 
 #include "oslexec_pvt.h"
 #include "../liboslcomp/oslcomp_pvt.h"
@@ -140,6 +140,8 @@ ShaderMaster::resolve_syms ()
             // structs are just placeholders, their fields are separate
             // symbols that hold the real data.
             s.size (0);
+        } else if (s.typespec().is_unsized_array()) {
+            s.size (0);
         } else {
             s.size (s.typespec().simpletype().size());
             // FIXME -- some day we may want special padding here, like
@@ -180,6 +182,20 @@ ShaderMaster::resolve_syms ()
         oparg_ptrs.push_back (symbol (a));
     OSLCompilerImpl::track_variable_lifetimes (m_ops, oparg_ptrs, allsymptrs);
 
+    // Figure out which ray types are queried
+    m_raytype_queries = 0;
+    BOOST_FOREACH (const Opcode& op, m_ops) {
+        if (op.opname() == Strings::raytype) {
+            int bit = -1;   // could be any
+            const Symbol *Name (symbol(m_args[op.firstarg()+1]));
+            if (Name->is_constant())
+                if (int b = shadingsys().raytype_bit (*(ustring *)Name->data()))
+                    bit = b;
+            m_raytype_queries |= bit;
+        }
+    }
+    // std::cout << shadername() << " has raytypes bits " << m_raytype_queries << "\n";
+
     // Adjust statistics
     size_t opmem = vectorbytes (m_ops);
     size_t argmem = vectorbytes (m_args);
@@ -210,7 +226,7 @@ ShaderMaster::print ()
 {
     std::stringstream out;
     out << "Shader " << m_shadername << " type=" 
-              << shadertypename(m_shadertype) << "\n";
+              << shadertypename() << "\n";
     out << "  path = " << m_osofilename << "\n";
     out << "  symbols:\n";
     for (size_t i = 0;  i < m_symbols.size();  ++i) {

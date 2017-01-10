@@ -15,24 +15,24 @@
 
 
 IF (NOT FLEX_EXECUTABLE)
-  if (VERBOSE)
+  if (NOT Flex_FIND_QUIETLY)
     MESSAGE (STATUS "Looking for flex")
   endif ()
   FIND_PROGRAM (FLEX_EXECUTABLE flex)
   IF (FLEX_EXECUTABLE)
-    if (VERBOSE)
+    if (NOT Flex_FIND_QUIETLY)
       MESSAGE (STATUS "Looking for flex -- ${FLEX_EXECUTABLE}")
     endif ()
   ENDIF (FLEX_EXECUTABLE)
 ENDIF (NOT FLEX_EXECUTABLE) 
 
 IF (NOT BISON_EXECUTABLE)
-  if (VERBOSE)
+  if (NOT Bison_FIND_QUIETLY)
     MESSAGE (STATUS "Looking for bison")
   endif ()
   FIND_PROGRAM (BISON_EXECUTABLE bison)
   IF (BISON_EXECUTABLE)
-    if (VERBOSE)
+    if (NOT Bison_FIND_QUIETLY)
       MESSAGE (STATUS "Looking for bison -- ${BISON_EXECUTABLE}")
     endif ()
   ENDIF (BISON_EXECUTABLE)
@@ -72,12 +72,12 @@ IF ( FLEX_EXECUTABLE AND BISON_EXECUTABLE )
         INCLUDE_DIRECTORIES ( ${CMAKE_CURRENT_BINARY_DIR} )
         INCLUDE_DIRECTORIES ( ${CMAKE_CURRENT_SOURCE_DIR} )
         ADD_CUSTOM_COMMAND ( OUTPUT ${bisonoutputcxx} 
-          COMMAND ${BISON_EXECUTABLE} -dv -p ${prefix} -o ${bisonoutputcxx} ${CMAKE_CURRENT_SOURCE_DIR}/${bisonsrc}
+          COMMAND ${BISON_EXECUTABLE} -dv -p ${prefix} -o ${bisonoutputcxx} "${CMAKE_CURRENT_SOURCE_DIR}/${bisonsrc}"
           MAIN_DEPENDENCY ${bisonsrc}
           DEPENDS ${${compiler_headers}}
           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
         ADD_CUSTOM_COMMAND ( OUTPUT ${flexoutputcxx} 
-          COMMAND ${FLEX_EXECUTABLE} -+ -o ${flexoutputcxx} ${CMAKE_CURRENT_SOURCE_DIR}/${flexsrc} 
+          COMMAND ${FLEX_EXECUTABLE} -o ${flexoutputcxx} "${CMAKE_CURRENT_SOURCE_DIR}/${flexsrc}"
           MAIN_DEPENDENCY ${flexsrc}
           DEPENDS ${${compiler_headers}}
           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )

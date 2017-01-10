@@ -1,0 +1,9 @@
+void mybug (float cos) {
+    cos(1);  // inner scope cos is not a function
+}
+
+
+shader test ()
+{
+}
+

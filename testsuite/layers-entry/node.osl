@@ -1,0 +1,13 @@
+shader node (
+    string name = "<unknown>",
+    float in = 0.5 [[ int lockgeom=0 ]],
+    int id = 0 [[ int lockgeom=0 ]],
+    int set_Ci = 0,
+    output float out = 0)
+{
+    printf ("Running layer %s:\n", name);
+    out = in + id;
+    if (set_Ci)
+        Ci = diffuse(N);
+    printf ("  layer %s, in = %g, out = %g\n", name, in, out);
+}

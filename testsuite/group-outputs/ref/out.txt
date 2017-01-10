@@ -1,0 +1,6 @@
+Compiled test.osl -> test.oso
+
+Marking group outputs, not global renderer outputs.
+Output a to a.exr
+Output b to b.exr
+Output c to c.exr

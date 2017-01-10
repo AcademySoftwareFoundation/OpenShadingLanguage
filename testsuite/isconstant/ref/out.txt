@@ -1,0 +1,5 @@
+Compiled test.osl -> test.oso
+Is param A const? 1
+Is 2*A const? 1
+Is noise(P) const? 0
+

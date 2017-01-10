@@ -1,0 +1,16 @@
+
+
+shader
+test ()
+{
+    string shadername = "unknown";
+    string layername  = "unknown";
+    string groupname  = "unknown";
+    getattribute ("shader:shadername", shadername);
+    getattribute ("shader:layername", layername);
+    getattribute ("shader:groupname", groupname);
+
+    printf ("shader name: %s\n", shadername);
+    printf ("layer name:  %s\n", layername);
+    printf ("group name:  %s\n", groupname);
+}

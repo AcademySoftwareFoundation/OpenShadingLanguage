@@ -26,8 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef LEPARSE_H
-#define LEPARSE_H
+#pragma once
 
 #include "lpexp.h"
 
@@ -62,7 +61,8 @@ class Parser
 {
     public:
 
-        Parser();
+        Parser(const std::vector<ustring> *user_events = NULL,
+               const std::vector<ustring> *user_scatterings = NULL);
 
         /// Parse a string and return the resulting light path expression tree or NULL if failed
         LPexp *parse(const char *text);
@@ -147,5 +147,3 @@ class Parser
 
 
 OSL_NAMESPACE_EXIT
-
-#endif // LEPARSE_H

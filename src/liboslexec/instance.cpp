@@ -33,8 +33,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/foreach.hpp>
 
-#include "OpenImageIO/dassert.h"
-#include "OpenImageIO/strutil.h"
+#include <OpenImageIO/dassert.h>
+#include <OpenImageIO/strutil.h>
 
 #include "oslexec_pvt.h"
 
@@ -48,21 +48,24 @@ using OIIO::spin_lock;
 using OIIO::ParamValue;
 using OIIO::ParamValueList;
 
+static int next_id = 0; // We can statically init an int, not an atomic
+
 
 
 ShaderInstance::ShaderInstance (ShaderMaster::ref master,
-                                const char *layername) 
+                                string_view layername)
     : m_master(master),
       //DON'T COPY  m_instsymbols(m_master->m_symbols),
       //DON'T COPY  m_instops(m_master->m_ops), m_instargs(m_master->m_args),
       m_layername(layername),
-      m_writes_globals(false), m_run_lazily(false),
+      m_writes_globals(false),
       m_outgoing_connections(false),
+      m_renderer_outputs(false), m_merged_unused(false),
+      m_last_layer(false), m_entry_layer(false),
       m_firstparam(m_master->m_firstparam), m_lastparam(m_master->m_lastparam),
       m_maincodebegin(m_master->m_maincodebegin),
       m_maincodeend(m_master->m_maincodeend)
 {
-    static int next_id = 0; // We can statically init an int, not an atomic
     m_id = ++(*(atomic_int *)&next_id);
     shadingsys().m_stat_instances += 1;
 
@@ -150,13 +153,27 @@ void *
 ShaderInstance::param_storage (int index)
 {
     const Symbol *sym = m_instsymbols.size() ? symbol(index) : mastersymbol(index);
+
+    // Get the data offset. If there are instance overrides for symbols,
+    // check whether we are overriding the array size, otherwise just read
+    // the offset from the symbol.  Overrides for arraylength -- which occur
+    // when an indefinite-sized array parameter gets a value (with a concrete
+    // length) -- are special, because in that case the new storage is
+    // allocated at the end of the previous parameter list, and thus is not
+    // where the master may have thought it was.
+    int offset;
+    if (m_instoverrides.size() && m_instoverrides[index].arraylen())
+        offset = m_instoverrides[index].dataoffset();
+    else
+        offset = sym->dataoffset();
+
     TypeDesc t = sym->typespec().simpletype();
     if (t.basetype == TypeDesc::INT) {
-        return &m_iparams[sym->dataoffset()];
+        return &m_iparams[offset];
     } else if (t.basetype == TypeDesc::FLOAT) {
-        return &m_fparams[sym->dataoffset()];
+        return &m_fparams[offset];
     } else if (t.basetype == TypeDesc::STRING) {
-        return &m_sparams[sym->dataoffset()];
+        return &m_sparams[offset];
     } else {
         return NULL;
     }
@@ -167,17 +184,22 @@ ShaderInstance::param_storage (int index)
 const void *
 ShaderInstance::param_storage (int index) const
 {
-    const Symbol *sym = m_instsymbols.size() ? symbol(index) : mastersymbol(index);
-    TypeDesc t = sym->typespec().simpletype();
-    if (t.basetype == TypeDesc::INT) {
-        return &m_iparams[sym->dataoffset()];
-    } else if (t.basetype == TypeDesc::FLOAT) {
-        return &m_fparams[sym->dataoffset()];
-    } else if (t.basetype == TypeDesc::STRING) {
-        return &m_sparams[sym->dataoffset()];
-    } else {
-        return NULL;
-    }
+    // Rather than repeating code here, just use const_cast and call the
+    // non-const version of this method.
+    return (const_cast<ShaderInstance*>(this))->param_storage(index);
+}
+
+
+
+// Can a parameter with type 'a' be bound to a value of type b.
+// This is true when they are identical types, but also when 'a' is an
+// array of unspecified length, while b is an array of the same type, with
+// definite length.
+inline bool compatible (const TypeDesc& a, const TypeDesc& b)
+{
+    return a.basetype == b.basetype && a.aggregate == b.aggregate &&
+           a.vecsemantics == b.vecsemantics &&
+           (a.arraylen == b.arraylen || (a.arraylen == -1 && b.arraylen > 0));
 }
 
 
@@ -192,58 +214,121 @@ ShaderInstance::parameters (const ParamValueList &params)
 
     m_instoverrides.resize (std::max (0, lastparam()));
 
+    // Set the initial lockgeom and dataoffset on the instoverrides, based
+    // on the master.
+    for (int i = 0, e = (int)m_instoverrides.size(); i < e; ++i) {
+        Symbol *sym = master()->symbol(i);
+        m_instoverrides[i].lockgeom (sym->lockgeom());
+        m_instoverrides[i].dataoffset (sym->dataoffset());
+    }
+
+    BOOST_FOREACH (const ParamValue &p, params) {
+        if (p.name().size() == 0)
+            continue;   // skip empty names
+        int i = findparam (p.name());
+        if (i >= 0) {
+            // if (shadingsys().debug())
+            //     shadingsys().info (" PARAMETER %s %s", p.name(), p.type());
+            const Symbol *sm = master()->symbol(i);    // This sym in the master
+            SymOverrideInfo *so = &m_instoverrides[i]; // Slot for sym's override info
+            TypeSpec sm_typespec = sm->typespec(); // Type of the master's param
+            if (sm_typespec.is_closure_based()) {
+                // Can't assign a closure instance value.
+                shadingsys().warning ("skipping assignment of closure: %s", sm->name());
+                continue;
+            }
+            if (sm_typespec.is_structure())
+                continue;    // structs are just placeholders; skip
+
+            // Check type of parameter and matching symbol. Note that the
+            // compatible accounts for indefinite-length arrays.
+            TypeDesc paramtype = sm_typespec.simpletype();
+            TypeDesc valuetype = p.type();
+            if (!compatible(paramtype, valuetype)) {
+                shadingsys().warning ("attempting to set parameter with wrong type: %s (expected '%s', received '%s')",
+                                      sm->name(), paramtype, valuetype);
+                continue;
+            }
+
+            // Mark that the override as an instance value
+            so->valuesource (Symbol::InstanceVal);
+
+            // Lock the param against geometric primitive overrides if the
+            // master thinks it was so locked, AND the Parameter() call
+            // didn't specify lockgeom=false (which would be indicated by
+            // the parameter's interpolation being non-CONSTANT).
+            bool lockgeom = (sm->lockgeom() &&
+                             p.interp() == ParamValue::INTERP_CONSTANT);
+            so->lockgeom (lockgeom);
+
+            DASSERT (so->dataoffset() == sm->dataoffset());
+            so->dataoffset (sm->dataoffset());
+
+            if (paramtype.arraylen < 0) {
+                // An array of definite size was supplied to a parameter
+                // that was an array of indefinite size. Magic! The trick
+                // here is that we need to allocate paramter space at the
+                // END of the ordinary param storage, since when we assigned
+                // data offsets to each parameter, we didn't know the length
+                // needed to allocate this param in its proper spot.
+                ASSERT (valuetype.arraylen > 0);
+                // Store the actual length in the shader instance parameter
+                // override info.
+                so->arraylen (valuetype.arraylen);
+                // Allocate space for the new param size at the end of its
+                // usual parameter area, and set the new dataoffset to that
+                // position.
+                int nelements = valuetype.arraylen * valuetype.aggregate;
+                if (paramtype.basetype == TypeDesc::FLOAT) {
+                    so->dataoffset((int) m_fparams.size());
+                    expand (m_fparams, nelements);
+                } else if (paramtype.basetype == TypeDesc::INT) {
+                    so->dataoffset((int) m_iparams.size());
+                    expand (m_iparams, nelements);
+                } else if (paramtype.basetype == TypeDesc::STRING) {
+                    so->dataoffset((int) m_sparams.size());
+                    expand (m_sparams, nelements);
+                } else {
+                    ASSERT (0 && "unexpected type");
+                }
+                // FIXME: There's a tricky case that we overlook here, where
+                // an indefinite-length-array parameter is given DIFFERENT
+                // definite length in subsequent rerenders. Don't do that.
+            }
+            else {
+                // If the instance value is the same as the master's default,
+                // just skip the parameter, let it "keep" the default.
+                // Note that this can't/shouldn't happen for the indefinite-
+                // sized array case, which is why we have it in the 'else'
+                // clause of that test.
+                void *defaultdata = m_master->param_default_storage(i);
+                if (lockgeom &&
+                      memcmp (defaultdata, p.data(), valuetype.size()) == 0) {
+                    // Must reset valuesource to default, in case the parameter
+                    // was set already, and now is being changed back to default.
+                    so->valuesource (Symbol::DefaultVal);
+                }
+            }
+
+            // Copy the supplied data into place.
+            memcpy (param_storage(i), p.data(), valuetype.size());
+        }
+        else {
+            shadingsys().warning ("attempting to set nonexistent parameter: %s", p.name());
+        }
+    }
+
     {
         // Adjust the stats
         ShadingSystemImpl &ss (shadingsys());
-        spin_lock lock (ss.m_stat_mutex);
         size_t symmem = vectorbytes(m_instoverrides);
         size_t parammem = (vectorbytes(m_iparams) + vectorbytes(m_fparams) +
                            vectorbytes(m_sparams));
+        spin_lock lock (ss.m_stat_mutex);
         ss.m_stat_mem_inst_syms += symmem;
         ss.m_stat_mem_inst_paramvals += parammem;
         ss.m_stat_mem_inst += (symmem+parammem);
         ss.m_stat_memory += (symmem+parammem);
-    }
-
-    BOOST_FOREACH (const ParamValue &p, params) {
-        if (shadingsys().debug())
-            shadingsys().info (" PARAMETER %s %s",
-                               p.name().c_str(), p.type().c_str());
-        int i = findparam (p.name());
-        if (i >= 0) {
-            const Symbol *sm = master()->symbol(i);
-            SymOverrideInfo *so = &m_instoverrides[i];
-            TypeSpec t = sm->typespec();
-            // don't allow assignment of closures
-            if (t.is_closure()) {
-                shadingsys().warning ("skipping assignment of closure: %s", sm->name().c_str());
-                continue;
-            }
-            if (t.is_structure())
-                continue;
-            // check type of parameter and matching symbol
-            if (t.simpletype() != p.type()) {
-                shadingsys().warning ("attempting to set parameter with wrong type: %s (exepected '%s', received '%s')", sm->name().c_str(), t.c_str(), p.type().c_str());
-                continue;
-            }
-
-            // If the instance value is the same as the master's default,
-            // just skip the parameter, let it "keep" the default.
-            void *defaultdata = m_master->param_default_storage(i);
-            if (memcmp (defaultdata, p.data(), t.simpletype().size()) == 0)
-                continue;
-
-            so->valuesource (Symbol::InstanceVal);
-            void *data = param_storage(i);
-            memcpy (data, p.data(), t.simpletype().size());
-            if (shadingsys().debug())
-                shadingsys().info ("    sym %s offset %llu address %p",
-                        sm->name().c_str(),
-                        (unsigned long long)sm->dataoffset(), data);
-        }
-        else {
-            shadingsys().warning ("attempting to set nonexistent parameter: %s", p.name().c_str());
-        }
     }
 }
 
@@ -276,6 +361,34 @@ void
 ShaderInstance::add_connection (int srclayer, const ConnectedParam &srccon,
                                 const ConnectedParam &dstcon)
 {
+    // specialize symbol in case of dstcon is an unsized array
+    if (dstcon.type.is_unsized_array()) {
+        SymOverrideInfo *so = &m_instoverrides[dstcon.param];
+        so->arraylen(srccon.type.arraylength());
+
+        const TypeDesc& type = srccon.type.simpletype();
+        // Skip structs for now, they're just placeholders
+        /*if      (t.is_structure()) {
+        }
+        else*/ if (type.basetype == TypeDesc::FLOAT) {
+            so->dataoffset((int) m_fparams.size());
+            expand (m_fparams,type.size());
+        } else if (type.basetype == TypeDesc::INT) {
+            so->dataoffset((int) m_iparams.size());
+            expand (m_iparams, type.size());
+        } else if (type.basetype == TypeDesc::STRING) {
+            so->dataoffset((int) m_sparams.size());
+            expand (m_sparams, type.size());
+        }/* else if (t.is_closure()) {
+            // Closures are pointers, so we allocate a string default taking
+            // adventage of their default being NULL as well.
+            so->dataoffset((int) m_sparams.size());
+            expand (m_sparams, type.size());
+        }*/ else {
+            ASSERT (0 && "unexpected type");
+        }
+    }
+
     off_t oldmem = vectorbytes(m_connections);
     m_connections.push_back (Connection (srclayer, srccon, dstcon));
 
@@ -292,7 +405,37 @@ ShaderInstance::add_connection (int srclayer, const ConnectedParam &srccon,
 
 
 void
-ShaderInstance::copy_code_from_master ()
+ShaderInstance::evaluate_writes_globals_and_userdata_params ()
+{
+    writes_globals (false);
+    userdata_params (false);
+    BOOST_FOREACH (Symbol &s, symbols()) {
+        if (s.symtype() == SymTypeGlobal && s.everwritten())
+            writes_globals (true);
+        if ((s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam)
+            && ! s.lockgeom() && ! s.connected())
+            userdata_params (true);
+        if (s.symtype() == SymTypeTemp) // Once we hit a temp, we'll never
+            break;                      // see another global or param.
+    }
+
+    // In case this method is called before the Symbol vector is copied
+    // (i.e. before copy_code_from_master is called), try to set
+    // userdata_params as accurately as we can based on what we know from
+    // the symbol overrides. This is very important to get instance merging
+    // working correctly.
+    int p = 0;
+    BOOST_FOREACH (SymOverrideInfo &s, m_instoverrides) {
+        if (! s.lockgeom())
+            userdata_params (true);
+        ++p;
+    }
+}
+
+
+
+void
+ShaderInstance::copy_code_from_master (ShaderGroup &group)
 {
     ASSERT (m_instops.empty() && m_instargs.empty());
     // reserve with enough room for a few insertions
@@ -307,18 +450,33 @@ ShaderInstance::copy_code_from_master ()
     m_instsymbols = m_master->m_symbols;
 
     // Copy the instance override data
+    // Also set the renderer_output flags where needed.
     ASSERT (m_instoverrides.size() == (size_t)std::max(0,lastparam()));
     ASSERT (m_instsymbols.size() >= (size_t)std::max(0,lastparam()));
     if (m_instoverrides.size()) {
         for (size_t i = 0, e = lastparam();  i < e;  ++i) {
-            if (m_instoverrides[i].valuesource() != Symbol::DefaultVal) {
-                Symbol *si = &m_instsymbols[i];
-                si->data (param_storage(i));
+            Symbol *si = &m_instsymbols[i];
+            if (m_instoverrides[i].valuesource() == Symbol::DefaultVal) {
+                // Fix the length of any default-value variable length array
+                // parameters.
+                if (si->typespec().is_unsized_array())
+                    si->arraylen (si->initializers());
+            } else {
+                if (m_instoverrides[i].arraylen())
+                    si->arraylen (m_instoverrides[i].arraylen());
                 si->valuesource (m_instoverrides[i].valuesource());
                 si->connected_down (m_instoverrides[i].connected_down());
+                si->lockgeom (m_instoverrides[i].lockgeom());
+                si->dataoffset (m_instoverrides[i].dataoffset());
+                si->data (param_storage(i));
+            }
+            if (shadingsys().is_renderer_output (layername(), si->name(), &group)) {
+                si->renderer_output (true);
+                renderer_outputs (true);
             }
         }
     }
+    evaluate_writes_globals_and_userdata_params ();
     off_t symmem = vectorbytes(m_instsymbols) - vectorbytes(m_instoverrides);
     SymOverrideInfoVec().swap (m_instoverrides);  // free it
 
@@ -329,70 +487,6 @@ ShaderInstance::copy_code_from_master ()
         shadingsys().m_stat_mem_inst += symmem;
         shadingsys().m_stat_memory += symmem;
     }
-}
-
-
-
-std::string
-ShaderInstance::print ()
-{
-    std::stringstream out;
-    out << "Shader " << shadername() << "\n";
-    out << "  symbols:\n";
-    for (size_t i = 0;  i < m_instsymbols.size();  ++i) {
-        const Symbol &s (*symbol(i));
-        s.print (out, 256);
-    }
-#if 0
-    out << "  int consts:\n    ";
-    for (size_t i = 0;  i < m_iconsts.size();  ++i)
-        out << m_iconsts[i] << ' ';
-    out << "\n";
-    out << "  float consts:\n    ";
-    for (size_t i = 0;  i < m_fconsts.size();  ++i)
-        out << m_fconsts[i] << ' ';
-    out << "\n";
-    out << "  string consts:\n    ";
-    for (size_t i = 0;  i < m_sconsts.size();  ++i)
-        out << "\"" << Strutil::escape_chars(m_sconsts[i]) << "\" ";
-    out << "\n";
-#endif
-    out << "  code:\n";
-    for (size_t i = 0;  i < m_instops.size();  ++i) {
-        const Opcode &op (m_instops[i]);
-        if (i == (size_t)maincodebegin())
-            out << "(main)\n";
-        out << "    " << i << ": " << op.opname();
-        bool allconst = true;
-        for (int a = 0;  a < op.nargs();  ++a) {
-            const Symbol *s (argsymbol(op.firstarg()+a));
-            out << " " << s->name();
-            if (s->symtype() == SymTypeConst) {
-                out << " (";
-                s->print_vals(out,16);
-                out << ")";
-            }
-            if (op.argread(a))
-                allconst &= s->is_constant();
-        }
-        for (size_t j = 0;  j < Opcode::max_jumps;  ++j)
-            if (op.jump(j) >= 0)
-                out << " " << op.jump(j);
-//        out << "    rw " << Strutil::format("%x",op.argread_bits())
-//            << ' ' << op.argwrite_bits();
-        if (op.argtakesderivs_all())
-            out << " %derivs(" << op.argtakesderivs_all() << ") ";
-        if (allconst)
-            out << "  CONST";
-        std::string filename = op.sourcefile().string();
-        size_t slash = filename.find_last_of ("/");
-        if (slash != std::string::npos)
-            filename.erase (0, slash+1);
-        if (filename.length())
-            out << "  (" << filename << ":" << op.sourceline() << ")";
-        out << "\n";
-    }
-    return out.str ();
 }
 
 
@@ -482,8 +576,14 @@ ShaderInstance::mergeable (const ShaderInstance &b, const ShaderGroup &g) const
 
             if (! (equivalent(m_instoverrides[i], b.m_instoverrides[i]))) {
                 const Symbol *sym = mastersymbol(i);  // remember, it's pre-opt
-                if (! sym->everused())
+                const Symbol *bsym = b.mastersymbol(i);
+                if (! sym->everused_in_group() && ! bsym->everused_in_group())
                     continue;
+                return false;
+            }
+            // But still, if they differ in their lockgeom'edness, we can't
+            // merge the instances.
+            if (m_instoverrides[i].lockgeom() != b.m_instoverrides[i].lockgeom()) {
                 return false;
             }
         }
@@ -492,10 +592,10 @@ ShaderInstance::mergeable (const ShaderInstance &b, const ShaderGroup &g) const
     // Make sure that the two nodes have the same parameter values.  If
     // the group has already been optimized, it's got an
     // instance-specific symbol table to check; but if it hasn't been
-    // optimized, we check the symbol table int he master.
+    // optimized, we check the symbol table in the master.
     for (int i = firstparam();  i < lastparam();  ++i) {
         const Symbol *sym = optimized ? symbol(i) : mastersymbol(i);
-        if (! sym->everused())
+        if (! sym->everused_in_group())
             continue;
         if (sym->typespec().is_closure())
             continue;   // Closures can't have instance override values
@@ -506,7 +606,7 @@ ShaderInstance::mergeable (const ShaderInstance &b, const ShaderGroup &g) const
         }
     }
 
-    if (m_run_lazily != b.m_run_lazily) {
+    if (run_lazily() != b.run_lazily()) {
         return false;
     }
 
@@ -515,6 +615,13 @@ ShaderInstance::mergeable (const ShaderInstance &b, const ShaderGroup &g) const
         return false;
     }
     if (m_connections != b.m_connections) {
+        return false;
+    }
+
+    // Make sure system didn't ask for instances that query userdata to be
+    // immune from instance merging.
+    if (! shadingsys().m_opt_merge_instances_with_userdata
+        && (userdata_params() || b.userdata_params())) {
         return false;
     }
 
@@ -556,19 +663,33 @@ ShaderInstance::mergeable (const ShaderInstance &b, const ShaderGroup &g) const
 }
 
 
+}; // namespace pvt
 
-ShaderGroup::ShaderGroup ()
-  : m_llvm_compiled_version(NULL), m_llvm_groupdata_size(0), m_optimized(0), m_does_nothing(false)
+
+
+ShaderGroup::ShaderGroup (string_view name)
+  : m_optimized(0), m_does_nothing(false),
+    m_llvm_groupdata_size(0), m_num_entry_layers(0),
+    m_llvm_compiled_version(NULL),
+    m_name(name), m_exec_repeat(1), m_raytype_queries(-1)
 {
     m_executions = 0;
+    m_stat_total_shading_time_ticks = 0;
+    m_id = ++(*(atomic_int *)&next_id);
 }
 
 
 
-ShaderGroup::ShaderGroup (const ShaderGroup &g)
-  : m_layers(g.m_layers), m_llvm_compiled_version(NULL), m_llvm_groupdata_size(0), m_optimized(0), m_does_nothing(false)
+ShaderGroup::ShaderGroup (const ShaderGroup &g, string_view name)
+  : m_optimized(0), m_does_nothing(false),
+    m_llvm_groupdata_size(0), m_num_entry_layers(g.m_num_entry_layers),
+    m_llvm_compiled_version(NULL),
+    m_layers(g.m_layers),
+    m_name(name), m_exec_repeat(1), m_raytype_queries(-1)
 {
     m_executions = 0;
+    m_stat_total_shading_time_ticks = 0;
+    m_id = ++(*(atomic_int *)&next_id);
 }
 
 
@@ -590,5 +711,131 @@ ShaderGroup::~ShaderGroup ()
 }
 
 
-}; // namespace pvt
+
+int
+ShaderGroup::find_layer (ustring layername) const
+{
+    int i;
+    for (i = nlayers()-1; i >= 0 && layer(i)->layername() != layername; --i)
+        ;
+    return i;  // will be -1 if we never found a match
+}
+
+
+
+const Symbol *
+ShaderGroup::find_symbol (ustring layername, ustring symbolname) const
+{
+    for (int layer = nlayers()-1;  layer >= 0;  --layer) {
+        const ShaderInstance *inst (m_layers[layer].get());
+        if (layername.size() && layername != inst->layername())
+            continue;  // They asked for a specific layer and this isn't it
+        int symidx = inst->findsymbol (symbolname);
+        if (symidx >= 0)
+            return inst->symbol (symidx);
+    }
+    return NULL;
+}
+
+
+
+void
+ShaderGroup::clear_entry_layers ()
+{
+    for (int i = 0;  i < nlayers();  ++i)
+        m_layers[i]->entry_layer (false);
+    m_num_entry_layers = 0;
+}
+
+
+
+void
+ShaderGroup::mark_entry_layer (int layer)
+{
+    if (layer >= 0 && layer < nlayers() && ! m_layers[layer]->entry_layer()) {
+        m_layers[layer]->entry_layer(true);
+        ++m_num_entry_layers;
+    }
+}
+
+
+
+std::string
+ShaderGroup::serialize () const
+{
+    std::ostringstream out;
+    out.precision (9);
+    lock_guard lock (m_mutex);
+    for (int i = 0, nl = nlayers(); i < nl; ++i) {
+        const ShaderInstance *inst = m_layers[i].get();
+
+        bool dstsyms_exist = inst->symbols().size();
+        for (int p = 0;  p < inst->lastparam(); ++p) {
+            const Symbol *s = dstsyms_exist ? inst->symbol(p) : inst->mastersymbol(p);
+            ASSERT (s);
+            if (s->symtype() != SymTypeParam && s->symtype() != SymTypeOutputParam)
+                continue;
+            Symbol::ValueSource vs = dstsyms_exist ? s->valuesource()
+                                                   : inst->instoverride(p)->valuesource();
+            if (vs == Symbol::InstanceVal) {
+                TypeDesc type = s->typespec().simpletype();
+                int offset = s->dataoffset();
+                if (type.is_unsized_array() && ! dstsyms_exist) {
+                    // If we're being asked to serialize a group that isn't
+                    // yet optimized, any "unsized" arrays will have their
+                    // concrete length and offset in the SymOverrideInfo,
+                    // not in the Symbol belonging to the instance.
+                    type.arraylen = inst->instoverride(p)->arraylen();
+                    offset = inst->instoverride(p)->dataoffset();
+                }
+                out << "param " << type << ' ' << s->name();
+                int nvals = type.numelements() * type.aggregate;
+                if (type.basetype == TypeDesc::INT) {
+                    const int *vals = &inst->m_iparams[offset];
+                    for (int i = 0; i < nvals; ++i)
+                        out << ' ' << vals[i];
+                } else if (type.basetype == TypeDesc::FLOAT) {
+                    const float *vals = &inst->m_fparams[offset];
+                    for (int i = 0; i < nvals; ++i)
+                        out << ' ' << vals[i];
+                } else if (type.basetype == TypeDesc::STRING) {
+                    const ustring *vals = &inst->m_sparams[offset];
+                    for (int i = 0; i < nvals; ++i)
+                        out << ' ' << '\"' << Strutil::escape_chars(vals[i]) << '\"';
+                } else {
+                    ASSERT_MSG (0, "unknown type for serialization: %s (%s)",
+                                   type.c_str(), s->typespec().c_str());
+                }
+                bool lockgeom = dstsyms_exist ? s->lockgeom()
+                                              : inst->instoverride(p)->lockgeom();
+                if (! lockgeom)
+                    out << Strutil::format (" [[int lockgeom=%d]]", lockgeom);
+                out << " ;\n";
+            }
+        }
+        out << "shader " << inst->shadername() << ' ' << inst->layername() << " ;\n";
+        for (int c = 0, nc = inst->nconnections(); c < nc; ++c) {
+            const Connection &con (inst->connection(c));
+            ASSERT (con.srclayer >= 0);
+            const ShaderInstance *srclayer = m_layers[con.srclayer].get();
+            ASSERT (srclayer);
+            ustring srclayername = srclayer->layername();
+            ASSERT (con.src.param >= 0 && con.dst.param >= 0);
+            bool srcsyms_exist = srclayer->symbols().size();
+            ustring srcparam = srcsyms_exist ? srclayer->symbol(con.src.param)->name()
+                                             : srclayer->mastersymbol(con.src.param)->name();
+            ustring dstparam = dstsyms_exist ? inst->symbol(con.dst.param)->name()
+                                             : inst->mastersymbol(con.dst.param)->name();
+            // FIXME: Assertions to be sure we don't yet support individual
+            // channel or array element connections. Fix eventually.
+            ASSERT (con.src.arrayindex == -1 && con.src.channel == -1);
+            ASSERT (con.dst.arrayindex == -1 && con.dst.channel == -1);
+            out << "connect " <<  srclayername << '.' << srcparam << ' '
+                << inst->layername() << '.' << dstparam << " ;\n";
+        }
+    }
+    return out.str();
+}
+
+
 OSL_NAMESPACE_EXIT

@@ -1,0 +1,38 @@
+
+
+shader
+test ()
+{
+    int resolution[2] = { -1, -1 };
+    string projection = "";
+    float hither = -1, yon = -1;
+    float clip[2] = { -1, -1 };
+    float pixelaspect = -1;
+    float fov = -1;
+    float shutter_open = -1, shutter_close = -1;
+    float shutter[2] = { -1, -1 };
+    float screen_window[4] = { -1, -1, -1, -1 };
+
+    printf ("Camera parameters\n");
+    getattribute ("camera:resolution", resolution);
+    getattribute ("camera:projection", projection);
+    getattribute ("camera:fov", fov);
+    getattribute ("camera:pixelaspect", pixelaspect);
+    getattribute ("camera:clip_near", hither);
+    getattribute ("camera:clip_far", yon);
+    getattribute ("camera:clip", clip);
+    getattribute ("camera:shutter_open", shutter_open);
+    getattribute ("camera:shutter_close", shutter_close);
+    getattribute ("camera:shutter", shutter);
+    getattribute ("camera:screen_window", screen_window);
+
+    printf ("Resolution: %d x %d\n", resolution[0], resolution[1]);
+    printf ("Projection: %s\n", projection);
+    printf ("fov: %g\n", fov);
+    printf ("Pixel aspect: %g\n", pixelaspect);
+    printf ("Clipping:   hither = %g, yon = %g (also %g %g)\n",
+            hither, yon, clip[0], clip[1]);
+    printf ("Shutter:    open = %g, close = %g (also %g %g)\n",
+            shutter_open, shutter_close, shutter[0], shutter[1]);
+    printf ("Screen window: %g", screen_window);
+}

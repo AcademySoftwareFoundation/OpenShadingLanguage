@@ -30,9 +30,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <cstdio>
 
-#include "OpenImageIO/strutil.h"
-#include "OpenImageIO/dassert.h"
-#include "OpenImageIO/thread.h"
+#include <OpenImageIO/strutil.h>
+#include <OpenImageIO/dassert.h>
+#include <OpenImageIO/thread.h>
 
 #include "oslexec_pvt.h"
 #include "osoreader.h"
@@ -44,7 +44,7 @@ OSL_NAMESPACE_ENTER
 namespace pvt {   // OSL::pvt
 
 
-const char *
+string_view
 shadertypename (ShaderType s)
 {
     switch (s) {
@@ -61,17 +61,17 @@ shadertypename (ShaderType s)
 
 
 ShaderType
-shadertype_from_name (const char *name)
+shadertype_from_name (string_view name)
 {
-    if (! strcmp (name, "shader") || ! strcmp (name, "generic"))
+    if (name == "shader" || name == "generic")
         return ShadTypeGeneric;
-    if (! strcmp (name, "surface"))
+    if (name == "surface")
         return ShadTypeSurface;
-    if (! strcmp (name, "displacement"))
+    if (name == "displacement")
         return ShadTypeDisplacement;
-    if (! strcmp (name, "volume"))
+    if (name == "volume")
         return ShadTypeVolume;
-    if (! strcmp (name, "light"))
+    if (name == "light")
         return ShadTypeLight;
     return ShadTypeUnknown;
 }
@@ -91,11 +91,11 @@ shaderusename (ShaderUse s)
 
 
 ShaderUse
-shaderuse_from_name (const char *name)
+shaderuse_from_name (string_view name)
 {
-    if (! strcmp (name, "surface"))
+    if (name == "surface")
         return ShadUseSurface;
-    if (! strcmp (name, "displacement"))
+    if (name == "displacement")
         return ShadUseDisplacement;
     return ShadUseLast;
 }

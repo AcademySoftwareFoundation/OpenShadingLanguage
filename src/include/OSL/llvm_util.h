@@ -50,8 +50,6 @@ namespace llvm {
   class PointerType;
   class Type;
   class Value;
-  template<bool preserveNames, typename T, typename Inserter> class IRBuilder;
-  template<bool preserveNames> class IRBuilderDefaultInserter;
   namespace legacy {
     class FunctionPassManager;
     class PassManager;
@@ -65,7 +63,6 @@ OSL_NAMESPACE_ENTER
 namespace pvt {   // OSL::pvt
 
 
-class OSL_Dummy_JITMemoryManager;
 
 
 
@@ -79,8 +76,6 @@ public:
     ~LLVM_Util ();
 
     struct PerThreadInfo;
-    typedef llvm::IRBuilder<true,llvm::ConstantFolder,
-                            llvm::IRBuilderDefaultInserter<true> > IRBuilder;
 
     /// Set debug level
     void debug (int d) { m_debug = d; }
@@ -144,14 +139,6 @@ public:
 
     /// End the current builder
     void end_builder ();
-
-    /// Return the current IR builder, create a new one (for the current
-    /// function) if necessary.
-    IRBuilder &builder () {
-        if (! m_builder)
-            new_builder ();
-        return *m_builder;
-    }
 
     /// Create a new JITing ExecutionEngine and make it the current one.
     /// Return a pointer to the new engine.  If err is not NULL, put any
@@ -501,20 +488,18 @@ public:
     static size_t total_jit_memory_held ();
 
 private:
-    /// Return a pointer to the JIT memory manager.
-    llvm::JITMemoryManager *jitmm () const {
-        return (llvm::JITMemoryManager *)m_llvm_jitmm;
-    }
+    class MemoryManager;
+    class IRBuilder;
 
     void SetupLLVM ();
-
+    IRBuilder& builder();
 
     int m_debug;
     PerThreadInfo *m_thread;
     llvm::LLVMContext *m_llvm_context;
     llvm::Module *m_llvm_module;
     IRBuilder *m_builder;
-    OSL_Dummy_JITMemoryManager *m_llvm_jitmm;
+    MemoryManager *m_llvm_jitmm;
     llvm::Function *m_current_function;
     llvm::legacy::PassManager *m_llvm_module_passes;
     llvm::legacy::FunctionPassManager *m_llvm_func_passes;

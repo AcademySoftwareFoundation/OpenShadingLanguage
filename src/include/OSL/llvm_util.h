@@ -305,10 +305,7 @@ public:
 
     /// Return an llvm::Value holding the given string constant.
     llvm::Value *constant (OIIO::ustring s);
-    llvm::Value *constant (const char *s) {
-        return constant(OIIO::ustring(s));
-    }
-    llvm::Value *constant (const std::string &s) {
+    llvm::Value *constant (OIIO::string_view s) {
         return constant(OIIO::ustring(s));
     }
 

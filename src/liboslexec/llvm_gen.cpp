@@ -99,18 +99,18 @@ LLVMGEN (llvm_gen_generic);
 
 
 void
-BackendLLVM::llvm_gen_debug_printf (const std::string &message)
+BackendLLVM::llvm_gen_debug_printf (string_view message)
 {
-    ustring s = ustring::format ("(%s %s) %s", inst()->shadername().c_str(),
-                                 inst()->layername().c_str(), message.c_str());
+    ustring s = ustring::format ("(%s %s) %s", inst()->shadername(),
+                                 inst()->layername(), message);
     ll.call_function ("osl_printf", sg_void_ptr(), ll.constant("%s\n"),
                       ll.constant(s));
 }
 
-    
+
 
 void
-BackendLLVM::llvm_gen_warning (const std::string &message)
+BackendLLVM::llvm_gen_warning (string_view message)
 {
     ll.call_function ("osl_warning", sg_void_ptr(), ll.constant("%s\n"),
                       ll.constant(message));
@@ -119,7 +119,7 @@ BackendLLVM::llvm_gen_warning (const std::string &message)
 
 
 void
-BackendLLVM::llvm_gen_error (const std::string &message)
+BackendLLVM::llvm_gen_error (string_view message)
 {
     ll.call_function ("osl_error", sg_void_ptr(), ll.constant("%s\n"),
                       ll.constant(message));

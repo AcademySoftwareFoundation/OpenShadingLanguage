@@ -153,7 +153,7 @@ TARGET_LINK_LIBRARIES ( oslexec
                         ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
                         ${LLVM_LIBRARY} ${LLVM_MCJIT_LIBRARY}
                         ${LLVM_LIBRARIES} ${LLVM_LDFLAGS}
-                        ${EXTRA_OSLEXEC_LIBRARIES})
+                        ${LLVM_SYSTEM_LIBRARIES})
 ADD_DEPENDENCIES (oslexec "${CMAKE_CURRENT_SOURCE_DIR}/liboslexec.map")
 
 INSTALL ( TARGETS oslexec RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib )
@@ -161,10 +161,10 @@ INSTALL ( TARGETS oslexec RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIV
 # Unit tests
 if (OSL_BUILD_TESTS)
     add_executable (accum_test accum_test.cpp)
-    target_link_libraries ( accum_test oslexec oslcomp ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} ${EXTRA_OSLEXEC_LIBRARIES} )
+    target_link_libraries ( accum_test oslexec oslcomp ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
     add_test (unit_accum "${CMAKE_BINARY_DIR}/src/liboslexec/accum_test")
 
     add_executable (llvmutil_test llvmutil_test.cpp)
-    target_link_libraries ( llvmutil_test oslexec oslcomp ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} ${EXTRA_OSLEXEC_LIBRARIES} )
+    target_link_libraries ( llvmutil_test oslexec oslcomp ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
     add_test (unit_llvmutil "${CMAKE_BINARY_DIR}/src/liboslexec/llvmutil_test")
 endif ()

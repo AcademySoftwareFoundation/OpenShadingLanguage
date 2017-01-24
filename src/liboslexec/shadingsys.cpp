@@ -1574,7 +1574,8 @@ ShadingSystemImpl::getstats (int level) const
         return "";
     std::ostringstream out;
     out << "OSL ShadingSystem statistics (" << (void*)this;
-    out << ") ver " << OSL_LIBRARY_VERSION_STRING << "\n";
+    out << ") ver " << OSL_LIBRARY_VERSION_STRING
+        << ", LLVM " << OSL_LLVM_FULL_VERSION << "\n";
     if (m_stat_shaders_requested == 0) {
         out << "  No shaders requested\n";
         return out.str();

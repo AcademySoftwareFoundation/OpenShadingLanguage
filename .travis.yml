@@ -59,7 +59,6 @@ install:
     - export CCACHE_CPP2=1
     - if [ $TRAVIS_OS_NAME == osx ] ; then
           src/build-scripts/install_homebrew_deps.bash ;
-          export LLVM_DIRECTORY=/usr/local/Cellar/llvm34/3.4.2/lib/llvm-3.4 ;
       elif [ $TRAVIS_OS_NAME == linux ] ; then
           CXX="ccache $CXX" CCACHE_CPP2=1 src/build-scripts/build_openexr.bash ;
           export ILMBASE_HOME=$PWD/openexr-install ;

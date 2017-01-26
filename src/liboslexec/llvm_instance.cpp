@@ -109,8 +109,8 @@ Schematically, we want to create code that resembles the following:
 
 */
 
-extern int osl_llvm_compiled_ops_size;
-extern char osl_llvm_compiled_ops_block[];
+extern size_t osl_llvm_compiled_ops_size;
+extern unsigned char osl_llvm_compiled_ops_block[];
 
 using namespace OSL::pvt;
 
@@ -994,7 +994,7 @@ BackendLLVM::run ()
     std::string err;
 
     {
-#ifdef OSL_LLVM_NO_BITCODE
+#ifdef _WIN32
     // I don't know which exact part has thread safety issues, but it
     // crashes on windows when we don't lock.
     // FIXME -- try subsequent LLVM releases on Windows to see if this
@@ -1006,7 +1006,7 @@ BackendLLVM::run ()
 #ifdef OSL_LLVM_NO_BITCODE
     ll.module (ll.new_module ("llvm_ops"));
 #else
-    ll.module (ll.module_from_bitcode (osl_llvm_compiled_ops_block,
+    ll.module (ll.module_from_bitcode ((char *)osl_llvm_compiled_ops_block,
                                        osl_llvm_compiled_ops_size,
                                        "llvm_ops", &err));
     if (err.length())

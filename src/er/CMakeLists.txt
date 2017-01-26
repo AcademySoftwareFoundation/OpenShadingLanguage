@@ -1,0 +1,22 @@
+
+# ER executable
+
+INCLUDE_DIRECTORIES (${ELARA_SRC_DIR}/liber/include)
+
+FILE (GLOB h_src ${ELARA_SRC_DIR}/er/*.h)
+FILE (GLOB cpp_src ${ELARA_SRC_DIR}/er/*.cpp)
+
+ADD_EXECUTABLE (er ${h_src} ${cpp_src})
+TARGET_LINK_LIBRARIES (er liber)
+
+if (MSVC)
+	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+	# Enable PDB generation for Release build
+	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
+	set (CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /DEBUG")
+	# Enable SEH to support minidump
+	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /EHa")
+endif ()
+
+INSTALL (TARGETS er RUNTIME DESTINATION bin)

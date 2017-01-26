@@ -110,6 +110,24 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
 
     # Command to turn the .cpp file into LLVM assembly language .s, into
     # LLVM bitcode .bc, then back into a C++ file with the bc embedded!
+if (WIN32)
+    ADD_CUSTOM_COMMAND ( OUTPUT ${llvm_bc_cpp}
+      COMMAND ${LLVM_BC_GENERATOR}
+          ${LLVM_COMPILE_FLAGS}
+          "-I${CMAKE_CURRENT_SOURCE_DIR}"
+          "-I${CMAKE_SOURCE_DIR}/src/include"
+          "-I${CMAKE_BINARY_DIR}/include/OSL"
+          "-I${OPENIMAGEIO_INCLUDES}"
+          "-I${ILMBASE_INCLUDE_DIR}"
+          "-I${Boost_INCLUDE_DIRS}"
+          -DOSL_COMPILING_TO_BITCODE=1
+		  --target=x86_64-w64-mingw64
+		  -funsafe-math-optimizations
+          -O3 -fno-math-errno -S -emit-llvm -o ${llvm_asm} ${llvm_src}
+      COMMAND "${LLVM_DIRECTORY}/bin/llvm-as" -f -o ${llvm_bc} ${llvm_asm}
+      COMMAND "git-bash" ${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc-win.bash ${llvm_bc} ${llvm_bc_cpp}
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
+else ()
     ADD_CUSTOM_COMMAND ( OUTPUT ${llvm_bc_cpp}
       COMMAND ${LLVM_BC_GENERATOR}
           ${LLVM_COMPILE_FLAGS}
@@ -127,6 +145,7 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
       MAIN_DEPENDENCY ${llvm_src}
       DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash"
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
+endif ()
 ENDMACRO ( )
 
 if (USE_LLVM_BITCODE)
@@ -143,6 +162,14 @@ if (BUILDSTATIC)
     ADD_LIBRARY ( oslexec STATIC ${liboslexec_srcs} )
 else ()
     ADD_LIBRARY ( oslexec SHARED ${liboslexec_srcs} )
+endif ()
+
+if (MSVC)
+	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+	# Enable PDB generation for Release build
+	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
+	set (CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /DEBUG")
 endif ()
 
 TARGET_LINK_LIBRARIES ( oslexec

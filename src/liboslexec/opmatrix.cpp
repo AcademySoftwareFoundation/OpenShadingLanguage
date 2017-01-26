@@ -227,13 +227,13 @@ inline void osl_transformv_dvmdv(void *result, const Matrix44 &M, void* v_)
 inline void osl_transformn_vmv(void *result, const Matrix44 &M, void* v_)
 {
    const Vec3 &v = VEC(v_);
-   M.inverse().transpose().multDirMatrix (v, VEC(result));
+   M.inverse().transposed().multDirMatrix (v, VEC(result));
 }
 
 inline void osl_transformn_dvmdv(void *result, const Matrix44 &M, void* v_)
 {
    const Dual2<Vec3> &v = DVEC(v_);
-   multDirMatrix (M.inverse().transpose(), v, DVEC(result));
+   multDirMatrix (M.inverse().transposed(), v, DVEC(result));
 }
 
 

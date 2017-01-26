@@ -1,0 +1,17 @@
+shader
+test (string texturename = "file.<UDIM>.tx",
+      output color Cout = 0)
+{
+    int channels = 0;
+    gettextureinfo (texturename, "channels", channels);
+    if (channels == 1) {
+        Cout = (float) texture (texturename, u, v,
+                                "missingcolor", color(0.25,0,0));
+    } else if (channels == 3) {
+        Cout = (color) texture (texturename, u, v,
+                                "missingcolor", color(0.25,0,0));
+    } else {
+        // Nothing in the UDIM set is found at all
+        Cout = color(1,0,0);
+    }
+}

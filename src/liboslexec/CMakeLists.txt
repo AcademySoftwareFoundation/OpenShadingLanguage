@@ -1,13 +1,13 @@
 SET ( liboslexec_srcs
           shadingsys.cpp closure.cpp
           dictionary.cpp
-          context.cpp instance.cpp 
-          loadshader.cpp master.cpp 
+          context.cpp instance.cpp
+          loadshader.cpp master.cpp
           opcolor.cpp opmatrix.cpp opmessage.cpp
-          opnoise.cpp simplexnoise.cpp gabornoise.cpp
+          opnoise.cpp
           opspline.cpp opstring.cpp optexture.cpp
-          oslexec.cpp 
-          pointcloud.cpp rendservices.cpp 
+          oslexec.cpp
+          pointcloud.cpp rendservices.cpp
           constfold.cpp runtimeoptimize.cpp typespec.cpp
           lpexp.cpp lpeparse.cpp automata.cpp accum.cpp
           opclosure.cpp
@@ -26,6 +26,12 @@ if (NOT BUILDSTATIC)
         ../liboslcomp/typecheck.cpp
         )
 endif ()
+
+# oslnoise symbols used in oslexec
+LIST(APPEND liboslexec_srcs
+   ../liboslnoise/gabornoise.cpp
+   ../liboslnoise/simplexnoise.cpp
+   )
 
 # oslquery symbols used in oslexec
 if (NOT BUILDSTATIC)
@@ -69,7 +75,7 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
     foreach (def ${CURRENT_DEFINITIONS})
         set (LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS} "-D${def}")
     endforeach()
-    set (LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS} ${OSL_SIMD_FLAGS})
+    set (LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS} ${OSL_SIMD_FLAGS} ${OSL_CSTD_FLAGS})
 
     # Figure out what program we will use to make the bitcode.
     if (NOT LLVM_BC_GENERATOR)
@@ -114,6 +120,7 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
           "-I${ILMBASE_INCLUDE_DIR}"
           "-I${Boost_INCLUDE_DIRS}"
           -DOSL_COMPILING_TO_BITCODE=1
+          -Wno-deprecated-register
           -O3 -fno-math-errno -S -emit-llvm -o ${llvm_asm} ${llvm_src}
       COMMAND "${LLVM_DIRECTORY}/bin/llvm-as" -f -o ${llvm_bc} ${llvm_asm}
       COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash" ${llvm_bc} ${llvm_bc_cpp}

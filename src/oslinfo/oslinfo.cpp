@@ -241,7 +241,7 @@ input_file (int argc, const char *argv[])
 int
 main (int argc, char *argv[])
 {
-	OIIO::Filesystem::convert_native_arguments (argc, (const char **)argv);
+    OIIO::Filesystem::convert_native_arguments (argc, (const char **)argv);
 
     OIIO::ArgParse ap (argc, (const char **)argv);
     ap.options ("oslinfo -- list parameters of a compiled OSL shader\n"

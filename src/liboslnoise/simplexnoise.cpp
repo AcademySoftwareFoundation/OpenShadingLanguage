@@ -72,8 +72,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 #include <iostream>
 
-#include "noiseimpl.h"
-
+#include <OSL/oslnoise.h>
 #include <OpenImageIO/fmath.h>
 
 OSL_NAMESPACE_ENTER

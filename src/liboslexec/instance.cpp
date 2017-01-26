@@ -214,9 +214,13 @@ ShaderInstance::parameters (const ParamValueList &params)
 
     m_instoverrides.resize (std::max (0, lastparam()));
 
-    // Set the initial lockgeom on the instoverrides, based on the master.
-    for (int i = 0, e = (int)m_instoverrides.size(); i < e; ++i)
-        m_instoverrides[i].lockgeom (master()->symbol(i)->lockgeom());
+    // Set the initial lockgeom and dataoffset on the instoverrides, based
+    // on the master.
+    for (int i = 0, e = (int)m_instoverrides.size(); i < e; ++i) {
+        Symbol *sym = master()->symbol(i);
+        m_instoverrides[i].lockgeom (sym->lockgeom());
+        m_instoverrides[i].dataoffset (sym->dataoffset());
+    }
 
     BOOST_FOREACH (const ParamValue &p, params) {
         if (p.name().size() == 0)
@@ -256,6 +260,9 @@ ShaderInstance::parameters (const ParamValueList &params)
             bool lockgeom = (sm->lockgeom() &&
                              p.interp() == ParamValue::INTERP_CONSTANT);
             so->lockgeom (lockgeom);
+
+            DASSERT (so->dataoffset() == sm->dataoffset());
+            so->dataoffset (sm->dataoffset());
 
             if (paramtype.arraylen < 0) {
                 // An array of definite size was supplied to a parameter
@@ -460,6 +467,7 @@ ShaderInstance::copy_code_from_master (ShaderGroup &group)
                 si->valuesource (m_instoverrides[i].valuesource());
                 si->connected_down (m_instoverrides[i].connected_down());
                 si->lockgeom (m_instoverrides[i].lockgeom());
+                si->dataoffset (m_instoverrides[i].dataoffset());
                 si->data (param_storage(i));
             }
             if (shadingsys().is_renderer_output (layername(), si->name(), &group)) {
@@ -663,7 +671,7 @@ ShaderGroup::ShaderGroup (string_view name)
   : m_optimized(0), m_does_nothing(false),
     m_llvm_groupdata_size(0), m_num_entry_layers(0),
     m_llvm_compiled_version(NULL),
-    m_name(name)
+    m_name(name), m_exec_repeat(1), m_raytype_queries(-1)
 {
     m_executions = 0;
     m_stat_total_shading_time_ticks = 0;
@@ -677,7 +685,7 @@ ShaderGroup::ShaderGroup (const ShaderGroup &g, string_view name)
     m_llvm_groupdata_size(0), m_num_entry_layers(g.m_num_entry_layers),
     m_llvm_compiled_version(NULL),
     m_layers(g.m_layers),
-    m_name(name)
+    m_name(name), m_exec_repeat(1), m_raytype_queries(-1)
 {
     m_executions = 0;
     m_stat_total_shading_time_ticks = 0;

@@ -92,6 +92,7 @@ static ErrorHandler errhandler;
 static int iters = 1;
 static std::string raytype = "camera";
 static int raytype_bit = 0;
+static bool raytype_opt = false;
 static std::string extraoptions;
 static SimpleRenderer rend;  // RendererServices
 static OSL::Matrix44 Mshad;  // "shader" space to "common" space matrix
@@ -444,6 +445,7 @@ getargs (int argc, const char *argv[])
                 "--path %s", &shaderpath, "Specify oso search path",
                 "-g %d %d", &xres, &yres, "Make an X x Y grid of shading points",
                 "-res %d %d", &xres, &yres, "", // synonym for -g
+                "--options %s", &extraoptions, "Set extra OSL options",
                 "-o %L %L", &outputvars, &outputfiles,
                         "Output (variable, filename)",
                 "-od %s", &dataformatname, "Set the output data format to one of: "
@@ -462,6 +464,7 @@ getargs (int argc, const char *argv[])
                 "--archivegroup %s", &archivegroup,
                         "Archive the group to a given filename",
                 "--raytype %s", &raytype, "Set the raytype",
+                "--raytype_opt", &raytype_opt, "Specify ray type mask for optimization",
                 "--iters %d", &iters, "Number of iterations",
                 "-O0", &O0, "Do no runtime shader optimization",
                 "-O1", &O1, "Do a little runtime shader optimization",
@@ -471,7 +474,6 @@ getargs (int argc, const char *argv[])
                 "--center", &pixelcenters, "Shade at output pixel 'centers' rather than corners",
                 "--debugnan", &debugnan, "Turn on 'debug_nan' mode",
                 "--debuguninit", &debug_uninit, "Turn on 'debug_uninit' mode",
-                "--options %s", &extraoptions, "Set extra OSL options",
                 "--groupoutputs", &use_group_outputs, "Specify group outputs, not global outputs",
                 "--oslquery", &do_oslquery, "Test OSLQuery at runtime",
                 "--inbuffer", &inbuffer, "Compile osl source from and to buffer",
@@ -652,6 +654,9 @@ setup_output_images (ShadingSystem *shadingsys,
     // not to actually run the shader.
     ShaderGlobals sg;
     setup_shaderglobals (sg, shadingsys, 0, 0);
+
+    if (raytype_opt)
+        shadingsys->optimize_group (shadergroup.get(), raytype_bit, ~raytype_bit);
     shadingsys->execute (ctx, *shadergroup, sg, false);
 
     if (entryoutputs.size()) {
@@ -848,7 +853,9 @@ test_group_attributes (ShaderGroup *group)
         if (unk)
             std::cout << "    and unknown attributes\n";
     }
-
+    int raytype_queries = 0;
+    shadingsys->getattribute (group, "raytype_queries", raytype_queries);
+    std::cout << "raytype() query mask: " << raytype_queries << "\n";
 }
 
 
@@ -994,7 +1001,7 @@ test_shade (int argc, const char *argv[])
     // to be processed at the end.  Bear with us.
     
     // Start the shader group and grab a reference to it.
-    shadergroup = shadingsys->ShaderGroupBegin ();
+    shadergroup = shadingsys->ShaderGroupBegin (groupname);
 
     // Get the command line arguments.  That will set up all the shader
     // instances and their parameters for the group.
@@ -1004,6 +1011,8 @@ test_shade (int argc, const char *argv[])
         std::cerr << "ERROR: Invalid shader group. Exiting testshade.\n";
         return EXIT_FAILURE;
     }
+
+    shadingsys->attribute (shadergroup.get(), "groupname", groupname);
 
     // Now set up the connections
     for (size_t i = 0;  i < connections.size();  i += 4) {

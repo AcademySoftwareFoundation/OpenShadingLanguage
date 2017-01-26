@@ -37,6 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/sysutil.h>
+#include <OpenImageIO/thread.h>
 
 #include "OSL/oslcomp.h"
 #include "OSL/oslexec.h"
@@ -143,7 +144,7 @@ static OSLC_ErrorHandler default_oslc_error_handler;
 int
 main (int argc, const char *argv[])
 {
-	OIIO::Filesystem::convert_native_arguments (argc, (const char **)argv);
+    OIIO::Filesystem::convert_native_arguments (argc, (const char **)argv);
 
     std::vector<std::string> args;
     bool quiet = false;

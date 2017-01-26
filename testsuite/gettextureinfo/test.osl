@@ -25,11 +25,11 @@ test (string filename = "../common/textures/grid.tx",
 
     int datawin[4], displaywin[4];
     r = gettextureinfo (filename, "datawindow", datawin);
-    printf ("%s datawindow: %d %d %d %d\n", filename,
-            datawin[0], datawin[1], datawin[2], datawin[3]);
+    printf ("%s datawindow: %d %d %d %d (%d)\n", filename,
+            datawin[0], datawin[1], datawin[2], datawin[3], r);
     r = gettextureinfo (filename, "displaywindow", displaywin);
-    printf ("%s displaywindow: %d %d %d %d\n", filename,
-            displaywin[0], displaywin[1], displaywin[2], displaywin[3]);
+    printf ("%s displaywindow: %d %d %d %d (%d)\n", filename,
+            displaywin[0], displaywin[1], displaywin[2], displaywin[3], r);
 
     // Test arbitrary metadata
     string datetime;

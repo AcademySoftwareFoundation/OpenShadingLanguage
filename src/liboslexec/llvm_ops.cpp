@@ -91,7 +91,15 @@ examples), as you are just coding in C++, but there are some rules:
 */
 
 
+// Some gcc versions on some platforms seem to have max_align_t missing from
+// their <cstddef>. Putting this here appears to make it build cleanly on
+// those platforms while not hurting anything elsewhere.
+namespace {
+typedef long double max_align_t;
+}
+
 #include <iostream>
+#include <cstddef>
 
 #include "OSL/oslconfig.h"
 #include "OSL/shaderglobals.h"
@@ -138,7 +146,6 @@ void * __dso_handle = 0; // necessary to avoid linkage issues in bitcode
 #define DVEC(x) (*(Dual2<Vec3> *)x)
 #define COL(x) (*(Color3 *)x)
 #define DCOL(x) (*(Dual2<Color3> *)x)
-#define TYPEDESC(x) (*(TypeDesc *)&x)
 
 
 #ifndef OSL_SHADEOP
@@ -643,14 +650,14 @@ OSL_SHADEOP void osl_transformn_vmv(void *result, void* M_, void* v_)
 {
    const Vec3 &v = VEC(v_);
    const Matrix44 &M = MAT(M_);
-   M.inverse().transpose().multDirMatrix (v, VEC(result));
+   M.inverse().transposed().multDirMatrix (v, VEC(result));
 }
 
 OSL_SHADEOP void osl_transformn_dvmdv(void *result, void* M_, void* v_)
 {
    const Dual2<Vec3> &v = DVEC(v_);
    const Matrix44    &M = MAT(M_);
-   multDirMatrix (M.inverse().transpose(), v, DVEC(result));
+   multDirMatrix (M.inverse().transposed(), v, DVEC(result));
 }
 
 
@@ -823,5 +830,3 @@ OSL_SHADEOP int osl_raytype_bit (void *sg_, int bit)
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     return (sg->raytype & bit) != 0;
 }
-
-

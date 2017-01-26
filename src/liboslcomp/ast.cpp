@@ -480,7 +480,8 @@ ASTindex::ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index)
             expr->nodetype() == structselect_node);
     if (expr->typespec().is_array())       // array dereference
         m_typespec = expr->typespec().elementtype();
-    else if (expr->typespec().is_triple()) // component access
+    else if (!expr->typespec().is_closure() &&
+             expr->typespec().is_triple()) // component access
         m_typespec = TypeDesc::FLOAT;
     else {
         error ("indexing into non-array or non-component type");
@@ -934,6 +935,7 @@ ASTfunction_call::ASTfunction_call (OSLCompilerImpl *comp, ustring name,
     }
     if (m_sym->symtype() != SymTypeFunction) {
         error ("'%s' is not a function", name.c_str());
+        m_sym = NULL;
         return;
     }
 }

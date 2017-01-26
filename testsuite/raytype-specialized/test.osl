@@ -1,0 +1,6 @@
+shader test ()
+{
+    printf ("camera? %d\n", raytype("camera"));
+    printf ("glossy? %d\n", raytype("glossy"));
+    printf ("diffuse? %d\n", raytype("diffuse"));
+}

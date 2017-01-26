@@ -30,13 +30,76 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <limits>
 
-#include "OSL/dual.h"
-#include "OSL/dual_vec.h"
-#include "oslexec_pvt.h"
+#include <OSL/dual.h>
+#include <OSL/dual_vec.h>
 #include <OpenImageIO/hash.h>
 #include <OpenImageIO/simd.h>
 
 OSL_NAMESPACE_ENTER
+
+
+namespace oslnoise {
+
+/////////////////////////////////////////////////////////////////////////
+//
+// Simple public API for computing the same noise functions that you get
+// from OSL shaders.
+//
+// These match the properties of OSL noises that have the same names,
+// please see the OSL specification for more detailed descriptions, we
+// won't recapitulate it here.
+//
+// For the sake of compactness, we express the noise functions as
+// templates for a either one or two domain parameters, which may be:
+//     (float)                 // 1-D domain noise, 1-argument variety
+//     (float, float)          // 2-D domain noise, 2-argument variety
+//     (const Vec3 &)          // 3-D domain noise, 1-argument variety
+//     (const Vec3 &, float)   // 4-D domain noise, 2-argument variety
+// And the range type may be
+//     float noisename ()      // float-valued noise
+//     Vec3  vnoisename()      // vector-valued noise
+// Note that in OSL we can overload function calls by return type, but we
+// can't in C++, so we prepend a "v" in front of the names of functions
+// that return vector-valued noise.
+//
+/////////////////////////////////////////////////////////////////////////
+
+// Signed Perlin-like noise on 1-4 dimensional domain, range [-1,1].
+template <typename S >             float snoise (S x);
+template <typename S, typename T>  float snoise (S x, T y);
+template <typename S >             Vec3  vsnoise (S x);
+template <typename S, typename T>  Vec3  vsnoise (S x, T y);
+
+// Unsigned Perlin-like noise on 1-4 dimensional domain, range [0,1].
+template <typename S >             float noise (S x);
+template <typename S, typename T>  float noise (S x, T y);
+template <typename S >             Vec3  vnoise (S x);
+template <typename S, typename T>  Vec3  vnoise (S x, T y);
+
+// Cell noise on 1-4 dimensional domain, range [0,1].
+template <typename S >             float cellnoise (S x);
+template <typename S, typename T>  float cellnoise (S x, T y);
+template <typename S >             Vec3  vcellnoise (S x);
+template <typename S, typename T>  Vec3  vcellnoise (S x, T y);
+
+// FIXME -- eventually consider adding to the public API:
+//  * periodic varieties
+//  * varieties with derivatives
+//  * varieties that take/return simd::float3 rather than Imath::Vec3f.
+//  * exposing the simplex & gabor varieties
+
+
+}   // namespace oslnoise
+
+
+
+///////////////////////////////////////////////////////////////////////
+// Implementation follows...
+//
+// Users don't need to worry about this part
+///////////////////////////////////////////////////////////////////////
+
+struct NoiseParams;
 
 namespace pvt {
 using namespace OIIO::simd;
@@ -2526,5 +2589,50 @@ Dual2<Vec3> pgabor3 (const Dual2<float> &x, float xperiod,
 
 
 }; // namespace pvt
+
+namespace oslnoise {
+
+#define DECLNOISE(name,impl)                    \
+    template <class S>                          \
+    inline float name (S x) {                   \
+        pvt::impl noise;                        \
+        float r;                                \
+        noise (r, x);                           \
+        return r;                               \
+    }                                           \
+                                                \
+    template <class S, class T>                 \
+    inline float name (S x, T y) {              \
+        pvt::impl noise;                        \
+        float r;                                \
+        noise (r, x, y);                        \
+        return r;                               \
+    }                                           \
+                                                \
+    template <class S>                          \
+    inline Vec3 v ## name (S x) {               \
+        pvt::impl noise;                        \
+        Vec3 r;                                 \
+        noise (r, x);                           \
+        return r;                               \
+    }                                           \
+                                                \
+    template <class S, class T>                 \
+    inline Vec3 v ## name (S x, T y) {          \
+        pvt::impl noise;                        \
+        Vec3 r;                                 \
+        noise (r, x, y);                        \
+        return r;                               \
+    }
+
+
+DECLNOISE (snoise, SNoise)
+DECLNOISE (noise, Noise)
+DECLNOISE (cellnoise, CellNoise)
+
+#undef DECLNOISE
+
+}   // namespace oslnoise
+
 
 OSL_NAMESPACE_EXIT

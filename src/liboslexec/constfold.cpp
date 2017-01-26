@@ -37,8 +37,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslexec_pvt.h"
 #include "runtimeoptimize.h"
-#include "OSL/dual.h"
-#include "noiseimpl.h"
+#include <OSL/dual.h>
+#include <OSL/oslnoise.h>
 using namespace OSL;
 using namespace OSL::pvt;
 
@@ -584,7 +584,7 @@ DECLFOLDER(constfold_or)
         static const int int_zero = 0, int_one = 1;
         int cind = rop.add_constant (TypeDesc::TypeInt,
                                      val ? &int_one : &int_zero);
-        rop.turn_into_assign (op, cind, "const | const");
+        rop.turn_into_assign (op, cind, "const || const");
         return 1;
     }
     return 0;
@@ -604,7 +604,74 @@ DECLFOLDER(constfold_and)
         static const int int_zero = 0, int_one = 1;
         int cind = rop.add_constant (TypeDesc::TypeInt,
                                      val ? &int_one : &int_zero);
+        rop.turn_into_assign (op, cind, "const && const");
+        return 1;
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_bitand)
+{
+    Opcode &op (rop.op(opnum));
+    Symbol &A (*rop.opargsym(op, 1));
+    Symbol &B (*rop.opargsym(op, 2));
+    if (A.is_constant() && B.is_constant()) {
+        // Turn the 'bitand R A B' into 'assign R X'.
+        DASSERT (A.typespec().is_int() && B.typespec().is_int());
+        int cind = rop.add_constant (A.get_int() & B.get_int());
         rop.turn_into_assign (op, cind, "const & const");
+        return 1;
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_bitor)
+{
+    Opcode &op (rop.op(opnum));
+    Symbol &A (*rop.opargsym(op, 1));
+    Symbol &B (*rop.opargsym(op, 2));
+    if (A.is_constant() && B.is_constant()) {
+        // Turn the 'bitor R A B' into 'assign R X'.
+        DASSERT (A.typespec().is_int() && B.typespec().is_int());
+        int cind = rop.add_constant (A.get_int() | B.get_int());
+        rop.turn_into_assign (op, cind, "const | const");
+        return 1;
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_xor)
+{
+    Opcode &op (rop.op(opnum));
+    Symbol &A (*rop.opargsym(op, 1));
+    Symbol &B (*rop.opargsym(op, 2));
+    if (A.is_constant() && B.is_constant()) {
+        // Turn the 'xor R A B' into 'assign R X'.
+        DASSERT (A.typespec().is_int() && B.typespec().is_int());
+        int cind = rop.add_constant (A.get_int() ^ B.get_int());
+        rop.turn_into_assign (op, cind, "const ^ const");
+        return 1;
+    }
+    return 0;
+}
+
+
+
+DECLFOLDER(constfold_compl)
+{
+    Opcode &op (rop.op(opnum));
+    Symbol &A (*rop.opargsym(op, 1));
+    if (A.is_constant()) {
+        // Turn the 'compl R A' into 'assign R X'.
+        DASSERT (A.typespec().is_int());
+        int cind = rop.add_constant (~(A.get_int()));
+        rop.turn_into_assign (op, cind, "~const");
         return 1;
     }
     return 0;
@@ -1715,19 +1782,21 @@ DECLFOLDER(constfold_pow)
         rop.turn_into_assign_zero (op, "pow(0,x) => 0");
         return 1;
     }
-    if (X.is_constant() && Y.is_constant() && Y.typespec().is_float() &&
-            (X.typespec().is_float() || X.typespec().is_triple())) {
+    if (X.is_constant() && Y.is_constant()) {
         // if x and y are both constant, pre-compute x^y
         const float *x = (const float *) X.data();
-        float y = *(const float *) Y.data();
-        int ncomps = X.typespec().is_triple() ? 3 : 1;
+        const float *y = (const float *) Y.data();
+        int nxcomps = X.typespec().is_triple() ? 3 : 1;
+        int nycomps = Y.typespec().is_triple() ? 3 : 1;
         float result[3];
-        for (int i = 0;  i < ncomps;  ++i)
+        for (int i = 0;  i < nxcomps;  ++i) {
+            int j = std::min (i, nycomps-1);
 #if OSL_FAST_MATH
-            result[i] = OIIO::fast_safe_pow (x[i], y);
+            result[i] = OIIO::fast_safe_pow (x[i], y[j]);
 #else
-            result[i] = OIIO::safe_pow (x[i], y);
+            result[i] = OIIO::safe_pow (x[i], y[j]);
 #endif
+        }
         int cind = rop.add_constant (X.typespec(), &result);
         rop.turn_into_assign (op, cind, "const fold pow");
         return 1;
@@ -1820,10 +1889,17 @@ DECLFOLDER(constfold_triple)
     DASSERT (op.nargs() == 4 || op.nargs() == 5);
     bool using_space = (op.nargs() == 5);
     Symbol &R (*rop.inst()->argsymbol(op.firstarg()+0));
-//    Symbol &Space (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1+using_space));
     Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2+using_space));
     Symbol &C (*rop.inst()->argsymbol(op.firstarg()+3+using_space));
+    if (using_space) {
+        // If we're using a space name and it's equivalent to "common",
+        // just pretend it doesn't exist.
+        Symbol &Space (*rop.inst()->argsymbol(op.firstarg()+1));
+        if (Space.is_constant() && (Space.get_string() == Strings::common ||
+                                    Space.get_string() == rop.shadingsys().commonspace_synonym()))
+            using_space = false;
+    }
     if (A.is_constant() && A.typespec().is_float() &&
             B.is_constant() && C.is_constant() && !using_space) {
         DASSERT (A.typespec().is_float() &&
@@ -1843,31 +1919,36 @@ DECLFOLDER(constfold_triple)
 
 DECLFOLDER(constfold_matrix)
 {
-    // Try to turn R=matrix(from,to) into R=const if it's an identity
-    // transform or if the result is a non-time-varying matrix.
     Opcode &op (rop.inst()->ops()[opnum]);
     int nargs = op.nargs();
-    bool using_space = (nargs == 3 || nargs == 18);
-    // bool using_two_spaces = (nargs == 3 && rop.opargsym(op,2)->typespec().is_string());
-    int nfloats = nargs - 1 - (int)using_space;
-    ASSERT (nargs == 2 || nargs == 3 || nargs == 17 || nargs == 18);
-    if (op.nargs() == 3) {
+    int using_space = rop.opargsym(op,1)->typespec().is_string() ? 1 : 0;
+    if (using_space && nargs > 2 && rop.opargsym(op,2)->typespec().is_string())
+        using_space = 2;
+    int nfloats = nargs - 1 - using_space;
+    ASSERT (nfloats == 1 || nfloats == 16 || (nfloats == 0 && using_space == 2));
+    if (nargs == 3 && using_space == 2) {
+        // Try to simplify R=matrix(from,to) in cases of an identify
+        // transform: if From and To are the same variable (even if not a
+        // constant), or if their values are the same, or if one is "common"
+        // and the other is the designated common space synonym.
         Symbol &From (*rop.inst()->argsymbol(op.firstarg()+1));
         Symbol &To (*rop.inst()->argsymbol(op.firstarg()+2));
-        if (! (From.is_constant() && From.typespec().is_string() &&
-               To.is_constant() && To.typespec().is_string()))
-            return 0;
-        // OK, From and To are constant strings.
-        ustring from = *(ustring *)From.data();
-        ustring to = *(ustring *)To.data();
+        ustring from = From.is_constant() ? *(ustring *)From.data() : ustring("$unknown1$");
+        ustring to   = To.is_constant()   ? *(ustring *)To.data()   : ustring("$unknown2$");
         ustring commonsyn = rop.inst()->shadingsys().commonspace_synonym();
-        if (from == to || (from == Strings::common && to == commonsyn) ||
-            (from == commonsyn && to == Strings::common)) {
+        if (&From == &To || from == to ||
+            ((from == Strings::common && to == commonsyn) ||
+             (from == commonsyn && to == Strings::common))) {
             static Matrix44 ident (1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
-            int cind = rop.add_constant (TypeDesc::TypeMatrix, &ident);
-            rop.turn_into_assign (op, cind, "matrix(spaceA,spaceA) => identity matrix");
+            rop.turn_into_assign (op, rop.add_constant (ident),
+                                  "matrix(spaceA,spaceA) => identity matrix");
             return 1;
         }
+        // Try to simplify R=matrix(from,to) in cases of an constant (but
+        // different) names -- do the matrix retrieval now, if not time-
+        // varying matrices.
+        if (! (From.is_constant() && To.is_constant()))
+            return 0;
         // Shader and object spaces will vary from execution to execution,
         // so we can't optimize those away.
         if (from == Strings::shader || from == Strings::object ||
@@ -1896,7 +1977,23 @@ DECLFOLDER(constfold_matrix)
             return 1;
         }
     }
-    if (nfloats == 16 && ! using_space) {
+    if (using_space == 1 && nfloats == 1) {
+        // Turn matrix("common",1) info identity matrix.
+        Symbol &From (*rop.inst()->argsymbol(op.firstarg()+1));
+        Symbol &Val (*rop.inst()->argsymbol(op.firstarg()+2));
+        if (From.is_constant() && Val.is_constant() && *(float *)Val.data() == 1.0f) {
+            ustring from = *(ustring *)From.data();
+            if (from == Strings::common ||
+                from == rop.inst()->shadingsys().commonspace_synonym()) {
+                static Matrix44 ident (1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
+                rop.turn_into_assign (op, rop.add_constant (ident),
+                                      "matrix(\"common\",1) => identity matrix");
+            }
+        }
+    }
+    if (nfloats == 16 && using_space == 0) {
+        // Try to turn matrix(...16 float consts...) into just a const
+        // matrix assign.
         bool all_const = true;
         float M[16];
         for (int i = 0; i < 16; ++i) {
@@ -1911,6 +2008,16 @@ DECLFOLDER(constfold_matrix)
         if (all_const) {
             rop.turn_into_assign (op, rop.add_constant (TypeDesc::TypeMatrix, M),
                                   "const fold matrix");
+            return 1;
+        }
+    }
+    if (nfloats == 1 && using_space == 0) {
+        // Try to turn matrix(const float) into just a const matrix assign.
+        Symbol &Val (*rop.inst()->argsymbol(op.firstarg()+1));
+        if (Val.is_constant()) {
+            float val = *(float *)Val.data();
+            Matrix44 M (val,0,0,0, 0,val,0,0, 0,0,val,0, 0,0,0,val);
+            rop.turn_into_assign (op, rop.add_constant (M), "const fold matrix");
             return 1;
         }
     }
@@ -2091,35 +2198,56 @@ DECLFOLDER(constfold_getattribute)
     Symbol& Destination = *rop.opargsym (op, dest_slot);
 
     if (! Attribute.is_constant() ||
-        ! ObjectName.is_constant() ||
+        (object_lookup && ! ObjectName.is_constant()) ||
         (array_lookup && ! Index.is_constant()))
         return 0;   // Non-constant things prevent a fold
     if (Destination.typespec().is_array())
         return 0;   // Punt on arrays for now
 
-    // If the object name is not supplied, it implies that we are
-    // supposed to search the shaded object first, then if that fails,
-    // the scene-wide namespace.  We can't do that yet, have to wait
-    // until shade time.
-    ustring obj_name;
-    if (object_lookup)
-        obj_name = *(const ustring *)ObjectName.data();
-    if (! obj_name)
-        return 0;
-
+    ustring attr_name = *(const ustring *)Attribute.data();
     const size_t maxbufsize = 1024;
     char buf[maxbufsize];
     TypeDesc attr_type = Destination.typespec().simpletype();
     if (attr_type.size() > maxbufsize)
         return 0;  // Don't constant fold humongous things
-    ustring attr_name = *(const ustring *)Attribute.data();
-    bool found = array_lookup
-        ? rop.renderer()->get_array_attribute (NULL, false,
-                                               obj_name, attr_type, attr_name,
-                                               *(const int *)Index.data(), buf)
-        : rop.renderer()->get_attribute (NULL, false,
-                                         obj_name, attr_type, attr_name,
-                                         buf);
+
+    bool found = false;
+
+    // Check global things first
+    if (attr_name == "shader:shadername" && attr_type == TypeDesc::TypeString) {
+        ustring *up = (ustring *)(char *)buf;
+        *up = ustring(rop.inst()->shadername());
+        found = true;
+    } else if (attr_name == "shader:layername" && attr_type == TypeDesc::TypeString) {
+        ustring *up = (ustring *)(char *)buf;
+        *up = rop.inst()->layername();
+        found = true;
+    } else if (attr_name == "shader:groupname" && attr_type == TypeDesc::TypeString) {
+        ustring *up = (ustring *)(char *)buf;
+        *up = rop.group().name();
+        found = true;
+    }
+
+    if (!found) {
+        // If the object name is not supplied, it implies that we are
+        // supposed to search the shaded object first, then if that fails,
+        // the scene-wide namespace.  We can't do that yet, have to wait
+        // until shade time.
+        ustring obj_name;
+        if (object_lookup)
+            obj_name = *(const ustring *)ObjectName.data();
+        if (! obj_name)
+            return 0;
+
+        found = array_lookup
+            ? rop.renderer()->get_array_attribute (NULL, false,
+                                                   obj_name, attr_type, attr_name,
+                                                   *(const int *)Index.data(), buf)
+            : rop.renderer()->get_attribute (NULL, false,
+                                             obj_name, attr_type, attr_name,
+                                             buf);
+    }
+
     if (found) {
         // Now we turn the existing getattribute op into this for success:
         //       assign result 1
@@ -2787,6 +2915,28 @@ DECLFOLDER(constfold_isconstant)
         return 1;
     }
     return 0;
+}
+
+
+
+DECLFOLDER(constfold_raytype)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Name = *rop.opargsym (op, 1);
+    DASSERT (Name.typespec().is_string());
+    if (! Name.is_constant())
+        return 0;   // Can't optimize non-constant raytype name
+
+    int bit = rop.shadingsys().raytype_bit (*(ustring *)Name.data());
+    if (bit & rop.raytypes_on()) {
+        rop.turn_into_assign_one (op, "raytype => 1");
+        return 1;
+    }
+    if (bit & rop.raytypes_off()) {
+        rop.turn_into_assign_zero (op, "raytype => 0");
+        return 1;
+    }
+    return 0;  // indeterminite until execution time
 }
 
 

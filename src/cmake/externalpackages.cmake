@@ -52,23 +52,18 @@ endif ()
 ###########################################################################
 # IlmBase setup
 
-if (NOT OPENEXR_FOUND)
-    find_package (OpenEXR REQUIRED)
-endif ()
-
+find_package (OpenEXR REQUIRED)
 #OpenEXR 2.2 still has problems with importing ImathInt64.h unqualified
 #thus need for ilmbase/OpenEXR
 include_directories ("${OPENEXR_INCLUDE_DIR}"
                      "${ILMBASE_INCLUDE_DIR}"
                      "${ILMBASE_INCLUDE_DIR}/OpenEXR")
-
 if (${OPENEXR_VERSION} VERSION_LESS 2.0.0)
     # OpenEXR 1.x had weird #include dirctives, this is also necessary:
     include_directories ("${OPENEXR_INCLUDE_DIR}/OpenEXR")
 else ()
     add_definitions (-DUSE_OPENEXR_VERSION2=1)
 endif ()
-
 if (NOT OpenEXR_FIND_QUIETLY)
     message (STATUS "ILMBASE_INCLUDE_DIR = ${ILMBASE_INCLUDE_DIR}")
     message (STATUS "ILMBASE_LIBRARIES = ${ILMBASE_LIBRARIES}")
@@ -132,29 +127,13 @@ link_directories ("${Boost_LIBRARY_DIRS}")
 
 find_package (ZLIB)
 if (USE_PARTIO)
-    find_library (PARTIO_LIBRARIES
-                  NAMES partio
-                  PATHS "${PARTIO_HOME}/lib")
-    find_path (PARTIO_INCLUDE_DIR
-               NAMES Partio.h
-               PATHS "${PARTIO_HOME}/include")
-    if (PARTIO_INCLUDE_DIR AND PARTIO_LIBRARIES)
-        set (PARTIO_FOUND TRUE)
+    find_package (Partio)
+    if (PARTIO_FOUND)
         add_definitions ("-DUSE_PARTIO=1")
         include_directories ("${PARTIO_INCLUDE_DIR}")
-        if (NOT Partio_FIND_QUIETLY)
-            message (STATUS "Partio include = ${PARTIO_INCLUDE_DIR}")
-            message (STATUS "Partio library = ${PARTIO_LIBRARIES}")
-        endif ()
     else ()
         add_definitions ("-DUSE_PARTIO=0")
-        set (PARTIO_FOUND FALSE)
-        set (PARTIO_LIBRARIES "")
-        message (STATUS "Partio not found")
     endif ()
-else ()
-    set (PARTIO_FOUND FALSE)
-    set (PARTIO_LIBRARIES "")
 endif (USE_PARTIO)
 
 # end GL Extension Wrangler library setup

@@ -42,6 +42,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %option noyywrap
 %option nounput noinput
 
+/* never-interactive fixes a Windows compatibility problem where the
+ * lexer emits isatty calls that don't exist.
+ */
+%option never-interactive
+
  /* Option 'prefix' creates a C++ lexer with the given prefix, so that
   * we can link with other flex-generated lexers in the same application
   * without name conflicts.
@@ -105,12 +110,11 @@ using namespace OSL::pvt;
 
 #ifdef _WIN32
 #define YY_NO_UNISTD_H
+#endif
 
 #ifdef _MSC_VER
 #include <io.h>
 #define isatty _isatty
-#endif
-
 #endif
 
 %}
@@ -250,7 +254,7 @@ OSOReader::parse_file (const std::string &filename)
     // can actually be reading a .oso file at a time.
     OIIO::lock_guard guard (osoread_mutex);
 
-    osoin = OIIO::Filesystem::fopen (filename.c_str(), "r");
+    osoin = OIIO::Filesystem::fopen (filename, "r");
     if (! osoin) {
         m_err.error ("File %s not found", filename.c_str());
         return false;

@@ -150,7 +150,7 @@ initialize_llvm_helper_function_map ()
     if (llvm_helper_function_map_initialized)
         return;  // already done
     spin_lock lock (llvm_helper_function_map_mutex);
-    if (llvm_helper_function_map_initialized())
+    if (llvm_helper_function_map_initialized)
         return;
 #define DECL(name,signature) \
     llvm_helper_function_map[#name] = HelperFuncRecord(signature,name); \
@@ -629,6 +629,18 @@ BackendLLVM::llvm_generate_debug_uninit (const Opcode &op)
 
 
 
+void
+BackendLLVM::llvm_generate_debug_op_printf (const Opcode &op)
+{
+    std::ostringstream msg;
+    msg << op.sourcefile() << ':' << op.sourceline() << ' ' << op.opname();
+    for (int i = 0;  i < op.nargs();  ++i)
+        msg << ' ' << opargsym (op, i)->mangled();
+    llvm_gen_debug_printf (msg.str());
+}
+
+
+
 bool
 BackendLLVM::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
 {
@@ -641,6 +653,8 @@ BackendLLVM::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
         if (opd && opd->llvmgen) {
             if (shadingsys().debug_uninit() /* debug uninitialized vals */)
                 llvm_generate_debug_uninit (op);
+            if (shadingsys().llvm_debug_ops())
+                llvm_generate_debug_op_printf (op);
             bool ok = (*opd->llvmgen) (*this, opnum);
             if (! ok)
                 return false;

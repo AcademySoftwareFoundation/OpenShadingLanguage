@@ -1003,7 +1003,7 @@ ASTfunction_call::typecheck_printf_args (const char *format, ASTNode *arg)
 void
 ASTfunction_call::typecheck_builtin_specialcase ()
 {
-    const char *tex_out_args[] = {"alpha", NULL};
+    const char *tex_out_args[] = {"alpha", "errormessage", NULL};
     const char *pointcloud_out_args[] = {"*", NULL};
 
     if (m_name == "transform") {
@@ -1201,8 +1201,12 @@ ASTfunction_call::typecheck (TypeSpec expected)
         actualargs += arg->typespec().string();
     }
 
-    error ("No matching function call to '%s (%s)'\n    Candidates are:\n%s", 
-           m_name.c_str(), actualargs.c_str(), choices.c_str());
+    if (choices.size())
+        error ("No matching function call to '%s (%s)'\n    Candidates are:\n%s",
+               m_name.c_str(), actualargs.c_str(), choices.c_str());
+    else
+        error ("No matching function call to '%s (%s)'",
+               m_name.c_str(), actualargs.c_str());
     return TypeSpec();
 }
 

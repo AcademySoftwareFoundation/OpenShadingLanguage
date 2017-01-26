@@ -3,7 +3,7 @@ project (OSL)
 # Release version of the library
 set (OSL_LIBRARY_VERSION_MAJOR 1)
 set (OSL_LIBRARY_VERSION_MINOR 8)
-set (OSL_LIBRARY_VERSION_PATCH 0)
+set (OSL_LIBRARY_VERSION_PATCH 3)
 set (OSL_LIBRARY_VERSION_RELEASE_TYPE "dev")   # "dev", "betaX", "RCY", ""
 
 # Version of the OSO file format and instruction set
@@ -152,6 +152,10 @@ if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG)
         APPLECLANG_VERSION_STRING VERSION_GREATER 6.1)
         add_definitions ("-Wno-unused-local-typedefs")
     endif ()
+    if (CLANG_VERSION_STRING VERSION_EQUAL 3.9 OR CLANG_VERSION_STRING VERSION_GREATER 3.9)
+        # Don't warn about using unknown preprocessor symbols in #if'set
+        add_definitions ("-Wno-expansion-to-defined")
+    endif ()
 endif ()
 
 # gcc specific options
@@ -228,6 +232,7 @@ else ()
     set (USE_LLVM_BITCODE ON CACHE BOOL "Generated embedded LLVM bitcode")
 endif ()
 set (USE_PARTIO ON CACHE BOOL "Use Partio if found")
+set (PARTIO_HOME "" CACHE STRING "Search path for Partio components")
 set (USE_FAST_MATH ON CACHE BOOL "Use fast math approximations (if no, then use system math library)")
 set (USE_CPP11 ON CACHE BOOL "Compile in C++11 mode")
 set (USE_CPP14 OFF CACHE BOOL "Compile in C++14 mode")
@@ -260,6 +265,11 @@ else ()
 	add_definitions ("-DOSL_FAST_MATH=0")
 endif ()
 
+set (USE_OIIO_STATIC ON CACHE BOOL "If OIIO is built static")
+if (USE_OIIO_STATIC)
+    add_definitions ("-DOIIO_STATIC_BUILD=1")
+endif ()
+
 if (OSL_NO_DEFAULT_TEXTURESYSTEM)
     add_definitions ("-DOSL_NO_DEFAULT_TEXTURESYSTEM=1")
 endif ()
@@ -273,9 +283,11 @@ if (USE_CPP11 OR USE_CPP14)
     if (USE_CPP14)
         message (STATUS "Building for C++14")
         add_definitions ("-std=c++14")
+        set (OSL_CSTD_FLAGS ${OSL_CSTD_FLAGS} "-std=c++14")
     elseif (USE_CPP11)
         message (STATUS "Building for C++11")
         add_definitions ("-std=c++11")
+        set (OSL_CSTD_FLAGS ${OSL_CSTD_FLAGS} "-std=c++11")
     endif ()
     if (CMAKE_COMPILER_IS_CLANG)
         # C++ >= 11 doesn't like 'register' keyword, which is in Qt headers
@@ -308,6 +320,7 @@ if (NOT USE_SIMD STREQUAL "")
     message (STATUS "Compiling with SIMD level ${USE_SIMD}")
     if (USE_SIMD STREQUAL "0")
         add_definitions ("-DOIIO_NO_SSE=1")
+        set (OSL_SIMD_FLAGS ${OSL_SIMD_FLAGS} "-DOIIO_NO_SSE=1")
     else ()
         string (REPLACE "," ";" SIMD_FEATURE_LIST ${USE_SIMD})
         foreach (feature ${SIMD_FEATURE_LIST})
@@ -440,6 +453,7 @@ include (CTest)
 add_subdirectory (src/liboslcomp)
 add_subdirectory (src/liboslquery)
 add_subdirectory (src/liboslexec)
+add_subdirectory (src/liboslnoise)
 
 add_subdirectory (src/oslc)
 add_subdirectory (src/shaders)
@@ -480,6 +494,7 @@ macro ( TESTSUITE )
         set (_ats_LABEL "broken")
     endif ()
     # Add the tests if all is well.
+    set (ALL_TEST_LIST "")
     foreach (_testname ${_ats_DEFAULT_ARGS})
         set (_testsrcdir "${CMAKE_SOURCE_DIR}/testsuite/${_testname}")
         set (_testdir "${CMAKE_BINARY_DIR}/testsuite/${_testname}")
@@ -493,16 +508,13 @@ macro ( TESTSUITE )
                                       --solution-path "${CMAKE_BINARY_DIR}" )
         endif ()
 
-        if (VERBOSE)
-            message (STATUS "TEST ${_testname}: ${CMAKE_BINARY_DIR}/testsuite/runtest.py ${_testdir} ${_extra_test_args}")
-        endif ()
-
         file (MAKE_DIRECTORY "${_testdir}")
 
         # Run the test unoptimized, unless it's a "render_*" or "oslinfo_*"
         # test, which we don't bother testing unoptimized.
         if (NOT _testname MATCHES "^render" AND
             NOT _testname MATCHES "^oslinfo" AND
+            NOT _testname MATCHES "^getattribute-shader" AND
             NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
           set (_env TESTSHADE_OPT=0 OPENIMAGEIOHOME=${OPENIMAGEIOHOME})
           add_test ( NAME ${_testname}
@@ -511,9 +523,13 @@ macro ( TESTSUITE )
         # Run the same test again with aggressive -O2 runtime
         # optimization, triggered by setting TESTSHADE_OPT env variable
         set (_env TESTSHADE_OPT=2 OPENIMAGEIOHOME=${OPENIMAGEIOHOME})
+        set (ALL_TEST_LIST "${ALL_TEST_LIST} ${_testname}")
         add_test ( NAME ${_testname}.opt
                    COMMAND env ${_env} ${_runtest} )
     endforeach ()
+    if (VERBOSE)
+        message (STATUS "Added tests: ${ALL_TEST_LIST}")
+    endif ()
 endmacro ()
 
 if (OSL_BUILD_TESTS)
@@ -531,13 +547,16 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             draw_string
             error-dupes exit exponential
             function-earlyreturn function-simple function-outputelem
-            geomath getattribute-camera getsymbol-nonheap gettextureinfo
+            geomath getattribute-camera getattribute-shader
+            getsymbol-nonheap gettextureinfo
             group-outputs groupstring
-            hyperb ieee_fp if incdec initops intbits isconnected isconstant
+            hex hyperb
+            ieee_fp if incdec initops intbits isconnected isconstant
             layers layers-Ciassign layers-entry layers-lazy
             layers-nonlazycopy layers-repeatedoutputs
             linearstep
-            logic loop matrix message mergeinstances-nouserdata
+            logic loop matrix message
+            mergeinstances-nouserdata mergeinstances-vararray
             metadata-braces miscmath missing-shader
             noise noise-cell
             noise-gabor noise-gabor2d-filter noise-gabor3d-filter
@@ -546,7 +565,8 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             oslc-comma oslc-D
             oslc-err-arrayindex oslc-err-closuremul
             oslc-err-format oslc-err-intoverflow
-            oslc-err-noreturn oslc-err-outputparamvararray oslc-err-paramdefault
+            oslc-err-noreturn oslc-err-notfunc
+            oslc-err-outputparamvararray oslc-err-paramdefault
             oslc-err-struct-array-init oslc-err-struct-dup
             oslc-warn-commainit
             oslc-variadic-macro
@@ -554,21 +574,23 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             oslinfo-metadata oslinfo-noparams
             osl-imageio
             printf-whole-array
-            raytype reparam
+            raytype raytype-specialized reparam
             render-background render-bumptest
             render-cornell render-furnace-diffuse
             render-microfacet render-oren-nayar render-veachmis render-ward
-            shortcircuit spline splineinverse string 
+            shortcircuit spline splineinverse spline-derivbug
+            string
             struct struct-array struct-array-mixture
             struct-err struct-init-copy struct-layers
             struct-return struct-with-array
             struct-nested struct-nested-assign struct-nested-deep
             ternary
             testshade-expr
-            texture-alpha texture-blur texture-derivs
-            texture-firstchannel texture-interp 
+            texture-alpha texture-blur texture-connected-options
+            texture-derivs texture-errormsg
+            texture-firstchannel texture-interp
             texture-missingcolor texture-simple
-            texture-smallderivs texture-swirl
+            texture-smallderivs texture-swirl texture-udim
             texture-width texture-withderivs texture-wrap
             trailing-commas transform transformc trig typecast
             unknown-instruction

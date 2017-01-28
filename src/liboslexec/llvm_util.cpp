@@ -636,11 +636,10 @@ LLVM_Util::setup_optimization_passes (int optlevel)
 #if OSL_LLVM_VERSION >= 37
 
     m_llvm_func_passes = new llvm::legacy::FunctionPassManager(module());
-    //m_llvm_func_passes->add(new llvm::DataLayout(m_llvm_exec->getDataLayout()));
+    llvm::legacy::FunctionPassManager &fpm = (*m_llvm_func_passes);
 
     m_llvm_module_passes = new llvm::legacy::PassManager;
-    llvm::legacy::PassManager &mpm (*m_llvm_module_passes);
-    //mpm.add (new llvm::DataLayout(m_llvm_exec->getDataLayout()));
+    llvm::legacy::PassManager &mpm = (*m_llvm_module_passes);
 
 #elif OSL_LLVM_VERSION >= 36
 
@@ -675,7 +674,6 @@ LLVM_Util::setup_optimization_passes (int optlevel)
 #endif
 
     if (optlevel >= 1 && optlevel <= 3) {
-#if OSL_LLVM_VERSION <= 34
         // For LLVM 3.0 and higher, llvm_optimize 1-3 means to use the
         // same set of optimizations as clang -O1, -O2, -O3
         llvm::PassManagerBuilder builder;
@@ -684,10 +682,6 @@ LLVM_Util::setup_optimization_passes (int optlevel)
         // builder.DisableUnrollLoops = true;
         builder.populateFunctionPassManager (fpm);
         builder.populateModulePassManager (mpm);
-#else
-        // FIXME -- should we have the equivalent for LLVM >= 35?
-#endif
-
     } else {
         // Unknown choices for llvm_optimize: use the same basic
         // set of passes that we always have.

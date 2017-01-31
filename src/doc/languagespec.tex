@@ -2987,6 +2987,29 @@ infinite (Inf or --Inf) value, 0 otherwise.  The {\cf isfinite()}
 function returns 1 if $x$ is an ordinary number (neither infinite nor
 NaN), 0 otherwise.  \apiend
 
+\apiitem{\emph{type} {\ce select} (\emph{type} x, \emph{type} y, \emph{type} cond) \\
+\emph{type} {\ce select} (\emph{type} x, \emph{type} y, float cond) \\
+\emph{type} {\ce select} (\emph{type} x, \emph{type} y, int cond)}
+\indexapi{mix()}
+\NEW  % 1.8
+The {\cf select} function returns {\cf x} if {\cf cond} is zero, or {\cf y}
+if {\cf cond} is nonzero. This is roughly equivalent to {\cf (cond ? y : x)},
+except that if {\cf cond} is a component-based type (such as {\cf color}),
+the selection happens on a component-by-component basis. It is presumed
+that the underlying implementation is not a true conditional and will not
+incur any branching penalty.
+\apiend
+
+\apiitem{int {\ce isnan} (float x) \\
+int {\ce isinf} (float x) \\
+int {\ce isfinite} (float x)}
+\indexapi{isnan()} \indexapi{isinf()} \indexapi{isfinite()}
+The {\cf isnan()} function returns 1 if $x$ is a not-a-number (NaN)
+value, 0 otherwise.  The {\cf isinf()} function returns 1 if $x$ is an
+infinite (Inf or --Inf) value, 0 otherwise.  The {\cf isfinite()}
+function returns 1 if $x$ is an ordinary number (neither infinite nor
+NaN), 0 otherwise.  \apiend
+
 \apiitem{float {\ce erf} (float x) \\
 float {\ce erfc} (float x)}
 \indexapi{erf()} \indexapi{erfc()}

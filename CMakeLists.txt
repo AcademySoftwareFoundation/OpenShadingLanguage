@@ -578,7 +578,7 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             render-background render-bumptest
             render-cornell render-furnace-diffuse
             render-microfacet render-oren-nayar render-veachmis render-ward
-            shortcircuit spline splineinverse spline-derivbug
+            select shortcircuit spline splineinverse spline-derivbug
             string
             struct struct-array struct-array-mixture
             struct-err struct-init-copy struct-layers

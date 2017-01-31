@@ -776,6 +776,32 @@ OSOProcessorBase::is_one (const Symbol &A)
 
 
 
+bool
+OSOProcessorBase::is_nonzero (const Symbol &A)
+{
+    if (! A.is_constant())
+        return false;
+    const TypeSpec &Atype (A.typespec());
+    int ncomponents = Atype.numelements() * Atype.aggregate();
+    if (Atype.is_float_based()) {
+        const float *val = (const float *)A.data();
+        for (int i = 0; i < ncomponents; ++i)
+            if (val[0] == 0.0f)
+                return false;
+        return true;
+    }
+    if (Atype.is_int_based()) {
+        const int *val = (const int *)A.data();
+        for (int i = 0; i < ncomponents; ++i)
+            if (val[0] == 0)
+                return false;
+        return true;
+    }
+    return false;
+}
+
+
+
 std::string
 OSOProcessorBase::const_value_as_string (const Symbol &A)
 {

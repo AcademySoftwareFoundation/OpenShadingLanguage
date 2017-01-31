@@ -1,0 +1,46 @@
+#define test_select(type,a,b,cond) \
+    { \
+        type r = select (a, b, cond); \
+        printf ("  select (%g, %g, %0.1f) = %g [%g, %g]\n", \
+                a, b, cond, r, Dx(r), Dy(r)); \
+    }
+
+#define test_select_int(type,a,b,cond) \
+    { \
+        type r = select (a, b, cond); \
+        printf ("  select (%g, %g, %d) = %g [%g, %g]\n", \
+                a, b, cond, r, Dx(r), Dy(r)); \
+    }
+
+
+
+shader
+test ()
+{
+    printf ("u = %g, v = %g\n", u, v);
+    {
+        float a = 0.1, b = 2;
+        int c = (u>0.5);
+        float cf = step(0.5,u);
+        test_select_int (float, a, b, 0);      // const 0 int
+        test_select_int (float, a, b, 1);      // const 1 int
+        test_select (float, a, b, 0.0);        // const 0 float
+        test_select (float, a, b, 1.0);        // const 1 float
+        test_select_int (float, a, b, c);      // varying value int
+        test_select (float, a, b, cf);         // varying value float
+    }
+
+    {
+        color a = color(0.1,0.2,0.3), b = color(2.1,2.2,2.3);
+        int c = (u>0.5);
+        float cf = step(0.5,u);
+        color cc = color(step(0.5,u), step(0.5,v), 0);
+        test_select_int (color, a, b, 0);      // const 0 int
+        test_select_int (color, a, b, 1);      // const 1 int
+        test_select (color, a, b, 0.0);        // const 0 float
+        test_select (color, a, b, 1.0);        // const 1 float
+        test_select_int (color, a, b, c);      // varying value int
+        test_select (color, a, b, cf);         // varying value float
+        test_select (color, a, b, cc);         // varying value per-component
+    }
+}

@@ -1859,6 +1859,9 @@ public:
     /// Is the symbol a constant whose value is 1?
     static bool is_one (const Symbol &A);
 
+    /// Is the symbol a constant whose value is nonzero in all components?
+    static bool is_nonzero (const Symbol &A);
+
     /// For debugging, express A's constant value as a string.
     static std::string const_value_as_string (const Symbol &A);
 

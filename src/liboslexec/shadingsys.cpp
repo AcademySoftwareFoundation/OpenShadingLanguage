@@ -900,6 +900,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (regex_search, regex,              regex_search,  false,     0);
     OP (return,      return,              none,          false,     0);
     OP (round,       generic,             none,          true,      0);
+    OP (select,      select,              select,        true,      0);
     OP (setmessage,  setmessage,          setmessage,    false,     0);
     OP (shl,         bitwise_binary_op,   none,          true,      0);
     OP (shr,         bitwise_binary_op,   none,          true,      0);

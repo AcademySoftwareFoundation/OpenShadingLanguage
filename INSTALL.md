@@ -1,42 +1,62 @@
 Building OSL
 ============
 
-OSL currently compiles and runs cleanly on Linux and Mac OS X.  We have
-not yet compiled it for Windows, but we believe we it should be very
-portable (we have done almost nothing platform-specific).
+OSL currently compiles and runs cleanly on Linux, Mac OS X, and Windows.
 
-OSL makes very heavy use of the OpenImageIO project
-(http://openimageio.org), both for its texture mapping functionality as
-well as numerous utility classes.  If you are integrating OSL into an
-existing renderer, you may use your own favorite texturing system rather
-than OpenImageIO with a little minor surgery.  There are only a few
-places where OIIO (OpenImageIO) texturing calls are made, and they could
-easily be bypassed.  But it is probably not possible to remove OIIO
-completely as a dependency, since we so heavily rely on a number of
-other utility classes that it provides (for which there was no point
-reinventing redundantly for OSL).
+Dependencies
+------------
+
+OSL requires the following dependencies:
+
+* [OpenImageIO](http://openimageio.org) 1.7 or newer
+
+    OSL uses OIIO both for its texture mapping functionality as well as
+    numerous utility classes.  If you are integrating OSL into an existing
+    renderer, you may use your own favorite texturing system rather than
+    OpenImageIO with a little minor surgery.  There are only a few places
+    where OIIO texturing calls are made, and they could easily be bypassed.
+    But it is probably not possible to remove OIIO completely as a
+    dependency, since we so heavily rely on a number of other utility classes
+    that it provides (for which there was no point reinventing redundantly
+    for OSL).
+
+    After building OpenImageIO, if you don't have it installed in a
+    "standard" place (like /usr/include), you should set the environment
+    variable $OPENIMAGEIOHOME to point to the compiled distribution, as
+    well as for $OPENIMAGEIOHOME/lib to be in your LD_LIBRARY_PATH (or
+    DYLD_LIBRARY_PATH on OS X) and then OSL's build scripts will be able
+    to find it.
+* [LLVM](http://www.llvm.org) 3.4, 3.5, 3.9, or 4.0
+
+   It's possible that other intermediate versions will work, but we are not
+   testing them. Please note that for version 3.5 or later, you'll need to
+   be building OSL with C++11 (LLVM 3.4 is the last to support C++03).
+   Currently, the newer versions (3.9 & 4.0) take longer to JIT, but the
+   JITed code runs faster, so you may wish to consider this tradeoff (faster
+   JIT may be important for interactive applications). We anticipate that
+   future OSL releases will improve JIT performance and then drop support
+   for the older LLVM versions.
+* [Boost](www.boost.org) 1.55 or newer.
+* [Imath/OpenEXR](http://openexr.com/downloads.html)
+* [Flex](https://github.com/westes/flex)
+* [GNU Bison](https://www.gnu.org/software/bison/)
+
+
+Build process
+-------------
 
 Here are the steps to check out, build, and test the OSL distribution:
 
-0. Install and build dependencies.  You will need Boost (www.boost.org),
-   Imath (http://openexr.com/downloads.html), and OpenImageIO
-   (http://openimageio.org).
-
-   After building OpenImageIO, if you don't have it installed in a
-   "standard" place (like /usr/include), you should set the environment
-   variable $OPENIMAGEIOHOME to point to the compiled distribution, as
-   well as for $OPENIMAGEIOHOME/lib to be in your LD_LIBRARY_PATH (or
-   DYLD_LIBRARY_PATH on OS X) and then OSL's build scripts will be able
-   to find it.
+0. Install and build dependencies.
 
 1. Check out a copy of the source code from the Git repository:
 
-       git clone https://github.com/imageworks/OpenShadingLanguage.git osl
+        git clone https://github.com/imageworks/OpenShadingLanguage.git osl
 
 2. Change to the distribution directory and 'make'
 
-       cd osl
-       make
+        cd osl
+        make
 
    Note: OSL uses 'CMake' for its cross-platform build system.  But for
    simplicity, we have made a "make wrapper" around it, so that by just
@@ -62,8 +82,4 @@ Here are the steps to check out, build, and test the OSL distribution:
 5. After building (and setting your library path), you can run the
    test suite with:
 
-       make test
-
-   (Note: currently all tests pass on OS X but a few tests fail on Linux
-   strictly for floating point precision reasons, not because anything
-   is really broken.  We're working on a fix for this.)
+        make test

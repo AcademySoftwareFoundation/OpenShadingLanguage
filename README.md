@@ -266,13 +266,16 @@ Films using OSL (grouped by year of release date):
   Angry Birds Movie, Alice Through the Looking Glass,
   Captain America: Civil War,
   Finding Dory, Piper,
+  Independence Day: Resurgence,
   Ghostbusters,
   Star Trek Beyond,
   Suicide Squad,
+  Kingsglaive: Final Fantasy XV,
   Storks,
   Miss Peregrine's Home for Peculiar Children, Assassin's Creed
-* **(2017)**
+* **(2017) / upcoming**
   Lego Batman,
+  The Great Wall
   ...
 
 

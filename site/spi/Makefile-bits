@@ -30,8 +30,14 @@ ifeq ($(SP_OS), rhel7)
         MY_CMAKE_FLAGS += \
            -DCMAKE_C_COMPILER=/shots/spi/home/lib/arnold/spinux1/llvm_3.5/bin/clang \
            -DCMAKE_CXX_COMPILER=/shots/spi/home/lib/arnold/spinux1/llvm_3.5/bin/clang++
-    else ifeq (${COMPILER},clang38)
-        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=clang-3.8 -DCMAKE_CXX_COMPILER=clang++-3.8
+    else ifeq (${COMPILER}, clang39)
+        MY_CMAKE_FLAGS += \
+           -DCMAKE_C_COMPILER=/shots/spi/home/lib/arnold/rhel7/llvm_3.9/bin/clang \
+           -DCMAKE_CXX_COMPILER=/shots/spi/home/lib/arnold/rhel7/llvm_3.9/bin/clang++
+    else ifeq (${COMPILER}, clang40)
+        MY_CMAKE_FLAGS += \
+           -DCMAKE_C_COMPILER=/shots/spi/home/lib/arnold/rhel7/llvm_4.0/bin/clang \
+           -DCMAKE_CXX_COMPILER=/shots/spi/home/lib/arnold/rhel7/llvm_4.0/bin/clang++
     else ifeq (${COMPILER},clang)
         MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
     else ifeq (${COMPILER}, gcc490)

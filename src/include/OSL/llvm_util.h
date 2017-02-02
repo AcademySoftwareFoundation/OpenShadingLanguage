@@ -170,7 +170,7 @@ public:
     void setup_optimization_passes (int optlevel);
 
     /// Run the optimization passes.
-    void do_optimize ();
+    void do_optimize (std::string *err = nullptr);
 
     /// Retrieve a callable pointer to the JITed version of a function.
     /// This will JIT the function if it hasn't already done so. Be sure

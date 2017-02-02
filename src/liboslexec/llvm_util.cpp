@@ -109,6 +109,11 @@ namespace pvt {
     typedef llvm::SectionMemoryManager LLVMMemoryManager;
 #endif
 
+#if OSL_LLVM_VERSION < 40
+    typedef std::error_code LLVMErr;
+#else
+    typedef llvm::Error LLVMErr;
+#endif
 
 
 
@@ -444,6 +449,29 @@ LLVM_Util::new_module (const char *id)
 }
 
 
+    
+#if OSL_LLVM_VERSION < 40
+static bool error_string (const std::error_code &err, std::string *str) {
+    if (err) {
+        if (str) *str = err.message();
+        return true;
+    }
+    return false;
+}
+#else
+static bool error_string (llvm::Error err, std::string *str) {
+    if (err) {
+        if (str) {
+            llvm::handleAllErrors(std::move(err),
+                      [str](llvm::ErrorInfoBase &E) { *str += E.message(); });
+        }
+        return true;
+    }
+    return false;
+}
+#endif
+
+
 
 llvm::Module *
 LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
@@ -452,64 +480,77 @@ LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
     if (err)
         err->clear();
 
-#if OSL_LLVM_VERSION >= 36
-    llvm::MemoryBufferRef buf =
-        llvm::MemoryBufferRef(llvm::StringRef(bitcode, size), name);
-#else /* LLVM 3.5 or earlier */
-    llvm::MemoryBuffer* buf =
-        llvm::MemoryBuffer::getMemBuffer (llvm::StringRef(bitcode, size), name);
-#endif
-
     // Keep uninitialized so compiler will error if not set through macros below
     llvm::Module *m;
 
-#if USE_MCJIT
-    // FIXME!! Using MCJIT should not require unconditionally parsing
+#if OSL_LLVM_VERSION <= 34
+
+    llvm::MemoryBuffer* buf =
+        llvm::MemoryBuffer::getMemBuffer (llvm::StringRef(bitcode, size), name);
+
+    m = llvm::getLazyBitcodeModule (buf, context(), err);
+
+#else // > 34
+
+# if OSL_LLVM_VERSION <= 36
+    typedef llvm::ErrorOr<llvm::Module*> ErrorOrModule;
+# elif OSL_LLVM_VERSION < 40
+    typedef llvm::ErrorOr<std::unique_ptr<llvm::Module> > ErrorOrModule;
+# else
+    typedef llvm::Expected<std::unique_ptr<llvm::Module> > ErrorOrModule;
+# endif
+
+# if OSL_LLVM_VERSION >= 40 || defined(OSL_FORCE_BITCODE_PARSE)
+
+    llvm::MemoryBufferRef buf =
+        llvm::MemoryBufferRef(llvm::StringRef(bitcode, size), name);
+
+#  ifdef OSL_FORCE_BITCODE_PARSE
+    //
+    // None of the below seems to be an issue for 3.9 and above.
+    // In other JIT code I've seen a related issue, though only on OS X.
+    // So if it is still is broken somewhere between 3.6 and 3.8: instead of
+    // defining OSL_FORCE_BITCODE_PARSE (which is slower), you may want to
+    // try prepending a "_" in two methods above:
+    //   LLVM_Util::MemoryManager::getPointerToNamedFunction
+    //   LLVM_Util::MemoryManager::getSymbolAddress.
+    //
+    // Using MCJIT should not require unconditionally parsing
     // the bitcode. But for now, when using getLazyBitcodeModule to
     // lazily deserialize the bitcode, MCJIT is unable to find the
     // called functions due to disagreement about whether a leading "_"
     // is part of the symbol name.
-#if OSL_LLVM_VERSION <= 36
-    typedef llvm::ErrorOr<llvm::Module*> ErrorOrModule;
-#elif OSL_LLVM_VERSION < 40
-    typedef llvm::ErrorOr<std::unique_ptr<llvm::Module> > ErrorOrModule;
-#else
-    typedef llvm::Expected<std::unique_ptr<llvm::Module> > ErrorOrModule;
-#endif
 
     ErrorOrModule ModuleOrErr = llvm::parseBitcodeFile (buf, context());
+#  else
+    ErrorOrModule ModuleOrErr = llvm::getLazyBitcodeModule(buf, context());
+#  endif
+
+# else
+
+    std::unique_ptr<llvm::MemoryBuffer> buf =
+        llvm::MemoryBuffer::getMemBuffer (llvm::StringRef(bitcode, size),
+                                          name, false);
+
+    ErrorOrModule ModuleOrErr = llvm::getLazyBitcodeModule(std::move(buf),
+                                                           context());
+#endif
 
     if (err) {
 #if OSL_LLVM_VERSION < 40
-        if (std::error_code EC = ModuleOrErr.getError())
-          *err = EC.message();
+        error_string(ModuleOrErr.getError(), err);
 #else
-        if (llvm::Error Err = ModuleOrErr.takeError()) {
-            llvm::handleAllErrors(std::move(Err),
-                      [&](llvm::ErrorInfoBase &EIB) { *err += EIB.message(); });
-        }
+        error_string(ModuleOrErr.takeError(), err);
 #endif
     }
 
-    // Load the LLVM bitcode and parse it into a Module
 #if OSL_LLVM_VERSION <= 36
     m = ModuleOrErr.get();
 #else
     m = ModuleOrErr ? ModuleOrErr->release() : nullptr;
 #endif
 
-#else /*USE_OLD_JIT*/
-
-    // Create a lazily deserialized IR module
-    // This can only be done for old JIT
-# if OSL_LLVM_VERSION >= 35
-    m = llvm::getLazyBitcodeModule (buf, context()).get();
-# else
-    m = llvm::getLazyBitcodeModule (buf, context(), err);
-# endif
-    // don't delete buf, the module has taken ownership of it
-
-#endif
+#endif // <= 34
 
 #if 0
     // Debugging: print all functions in the module
@@ -722,10 +763,18 @@ LLVM_Util::setup_optimization_passes (int optlevel)
 
 
 void
-LLVM_Util::do_optimize ()
+LLVM_Util::do_optimize (std::string *out_err)
 {
+    ASSERT(m_llvm_module != nullptr && "No module to optimize!");
+
+#if OSL_LLVM_VERSION >= 35 && !defined(OSL_FORCE_BITCODE_PARSE)
+    LLVMErr err = m_llvm_module->materializeAll();
+    if (error_string(std::move(err), out_err))
+        return;
+#endif
+
     m_llvm_func_passes->doInitialization();
-    m_llvm_module_passes->run (*module());
+    m_llvm_module_passes->run (*m_llvm_module);
     m_llvm_func_passes->doFinalization();
 }
 

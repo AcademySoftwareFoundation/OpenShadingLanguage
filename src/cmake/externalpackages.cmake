@@ -160,6 +160,9 @@ endif()
 
 # try to find llvm-config, with a specific version if specified
 if (LLVM_DIRECTORY)
+    # Force path expansion for LLVM_DIRECTORY (i.e. ~/path/to/llvm)
+    get_filename_component(LLVM_DIRECTORY ${LLVM_DIRECTORY} REALPATH)
+
     set (LLVM_CONFIG_PATH_HINTS "${LLVM_DIRECTORY}/bin")
 endif ()
 list (APPEND LLVM_CONFIG_PATH_HINTS
@@ -210,16 +213,42 @@ find_library ( LLVM_MCJIT_LIBRARY
                NAMES LLVMMCJIT
                PATHS ${LLVM_LIB_DIR})
 
-# if (NOT LLVM_LIBRARY)
-#     execute_process (COMMAND ${LLVM_CONFIG} --libfiles engine
-#                      OUTPUT_VARIABLE LLVM_LIBRARIES
-#                      OUTPUT_STRIP_TRAILING_WHITESPACE)
-# endif ()
+if (NOT LLVM_LIBRARY)
+    # Don't really know the cutoff when passes works as an argument
+    if (LLVM_VERSION VERSION_LESS 3.5.0)
+        execute_process (COMMAND ${LLVM_CONFIG} --libfiles engine ipo bitwriter bitreader
+                     OUTPUT_VARIABLE LLVM_LIBRARIES
+                     OUTPUT_STRIP_TRAILING_WHITESPACE)
+    else ()
+        execute_process (COMMAND ${LLVM_CONFIG} --libfiles engine passes
+                         OUTPUT_VARIABLE LLVM_LIBRARIES
+                         OUTPUT_STRIP_TRAILING_WHITESPACE)
+    endif ()
+endif ()
 
 # shared llvm library may not be available, this is not an error if we use LLVM_STATIC.
 if ((LLVM_LIBRARY OR LLVM_LIBRARIES OR LLVM_STATIC) AND LLVM_INCLUDES AND LLVM_DIRECTORY AND LLVM_LIB_DIR)
   # ensure include directory is added (in case of non-standard locations
   include_directories (BEFORE "${LLVM_INCLUDES}")
+
+  # See if building against an LLVM tree then, and if so add the path to the
+  # generated headers
+  execute_process (COMMAND ${LLVM_CONFIG} --src-root
+                     OUTPUT_VARIABLE llvm_src_root
+                     OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if (LLVM_INCLUDES STREQUAL ${llvm_src_root}/include)
+    if (NOT LLVM_FIND_QUIETLY)
+      message (STATUS "Detected LLVM build tree, adding additional include paths")
+    endif ()
+    if (NOT LLVM_BC_GENERATOR)
+        FIND_PROGRAM(LLVM_BC_GENERATOR NAMES "clang++" PATHS "${LLVM_DIRECTORY}/bin" NO_DEFAULT_PATH NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_ENVIRONMENT_PATH NO_CMAKE_PATH)
+        if (LLVM_BC_GENERATOR AND NOT LLVM_FIND_QUIETLY)
+          message (STATUS "Using LLVM bitcode generator: ${LLVM_BC_GENERATOR}")
+        endif ()
+    endif ()
+    include_directories (BEFORE "${LLVM_DIRECTORY}/include")
+  endif ()
+
   if (NOT OSL_LLVM_VERSION)
       # Extract and concatenate major & minor, remove wayward patches,
       # dots, and "svn" or other suffixes.
@@ -235,10 +264,16 @@ if ((LLVM_LIBRARY OR LLVM_LIBRARIES OR LLVM_STATIC) AND LLVM_INCLUDES AND LLVM_D
     execute_process (COMMAND ${LLVM_CONFIG} --libfiles
                      OUTPUT_VARIABLE LLVM_LIBRARIES
                      OUTPUT_STRIP_TRAILING_WHITESPACE)
-    string (REPLACE " " ";" LLVM_LIBRARIES "${LLVM_LIBRARIES}")
-    set (LLVM_LIBRARY "")
-  else ()
+  elseif (NOT LLVM_LIBRARIES)
     set (LLVM_LIBRARIES "${LLVM_LIBRARY}")
+  endif ()
+
+  if (LLVM_LIBRARIES)
+    string (REPLACE " " ";" LLVM_LIBRARIES "${LLVM_LIBRARIES}")
+    # LLVM_LIBRARIES Should be enough
+    if (NOT LLVM_LIBRARY)
+        set (LLVM_LIBRARY "")
+    endif ()
   endif ()
 endif ()
 
@@ -252,7 +287,7 @@ if (NOT LLVM_FIND_QUIETLY)
     message (STATUS "LLVM sys libs  = ${LLVM_SYSTEM_LIBRARIES}")
 endif ()
 
-if (NOT LLVM_LIBRARIES)
+if (NOT LLVM_LIBRARIES AND NOT LLVM_LIBRARY)
     message (FATAL_ERROR "LLVM not found.")
 endif()
 

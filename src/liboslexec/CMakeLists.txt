@@ -80,16 +80,19 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
     # Figure out what program we will use to make the bitcode.
     if (NOT LLVM_BC_GENERATOR)
         FIND_PROGRAM(LLVM_BC_GENERATOR NAMES "clang++" PATHS "${LLVM_DIRECTORY}/bin" NO_DEFAULT_PATH NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_ENVIRONMENT_PATH NO_CMAKE_PATH)
-    endif ()
-    # If that didn't work, look anywhere
-    if (NOT LLVM_BC_GENERATOR)
-        # Wasn't in their build, look anywhere
-        FIND_PROGRAM(LLVM_BC_GENERATOR NAMES clang++ llvm-g++)
+        # If that didn't work, look anywhere
+        if (NOT LLVM_BC_GENERATOR)
+            # Wasn't in their build, look anywhere
+            FIND_PROGRAM(LLVM_BC_GENERATOR NAMES clang++ llvm-g++)
+        endif ()
+        if (NOT LLVM_BC_GENERATOR)
+            message (FATAL_ERROR "You must have a valid llvm bitcode generator (clang++) somewhere.")
+        endif ()
+        set (llvm_bc_generator_custom FALSE)
+    else ()
+        set( llvm_bc_generator_custom TRUE)
     endif ()
 
-    if (NOT LLVM_BC_GENERATOR)
-        message (FATAL_ERROR "You must have a valid llvm bitcode generator (clang++) somewhere.")
-    endif ()
     if (VERBOSE)
         message (STATUS "Using ${LLVM_BC_GENERATOR} to generate bitcode.")
     endif()
@@ -98,7 +101,7 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
     # LLVM/libc++ installed -- for some reason, LLVM 3.4 wasn't finding it,
     # so in that specific case, append another -I to point it in the right
     # direction.
-    if (APPLE AND ${LLVM_BC_GENERATOR} MATCHES ".*clang.*")
+    if (APPLE AND NOT llvm_bc_generator_custom AND ${LLVM_BC_GENERATOR} MATCHES ".*clang.*")
         EXEC_PROGRAM ( "${LLVM_BC_GENERATOR}" ARGS --version OUTPUT_VARIABLE MY_CLANG_VERSION )
         string (REGEX REPLACE "clang version ([0-9][.][0-9]+).*" "\\1" MY_CLANG_VERSION "${MY_CLANG_VERSION}")
         if ((${MY_CLANG_VERSION} VERSION_GREATER "3.3")

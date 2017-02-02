@@ -35,51 +35,55 @@ cache:
       - $HOME/.ccache
 
 before_install:
-    - if [ "$WHICHGCC" == "" ]; then export WHICHGCC="4.8" ; fi
-    - if [ $TRAVIS_OS_NAME == osx ] ; then
-          export PLATFORM=macosx ;
-          sysctl machdep.cpu.features ;
-      elif [ $TRAVIS_OS_NAME == linux ] ; then
-          export PLATFORM=linux64 ;
-          cat /proc/cpuinfo ;
-      fi
-    - export OIIOPLATFORM=$PLATFORM
-    - if [ "$DEBUG" == 1 ] ; then export PLATFORM=${PLATFORM}.debug ; fi
-    - echo "Build platform name is $PLATFORM"
+- |
+  if [ "$WHICHGCC" == "" ]; then export WHICHGCC="4.8" ; fi
+  if [ $TRAVIS_OS_NAME == osx ] ; then
+    export PLATFORM=macosx ;
+    sysctl machdep.cpu.features ;
+  elif [ $TRAVIS_OS_NAME == linux ] ; then
+    # FIXME: Workaround for OIIO needing -ldl
+    export PLATFORM=linux64 ;
+    cat /proc/cpuinfo ;
+  fi
+  export OIIOPLATFORM=$PLATFORM
+  if [ "$DEBUG" == 1 ] ; then export PLATFORM=${PLATFORM}.debug ; fi
+  echo "Build platform name is $PLATFORM"
 
 install:
-    - if [ "$CXX" == "g++" ]; then export CXX="g++-${WHICHGCC}" ; fi
-    - export USE_CCACHE=1
-    - export CCACHE_CPP2=1
-    - if [ $TRAVIS_OS_NAME == osx ] ; then
-          src/build-scripts/install_homebrew_deps.bash ;
-      elif [ $TRAVIS_OS_NAME == linux ] ; then
-          CXX="ccache $CXX" CCACHE_CPP2=1 src/build-scripts/build_openexr.bash ;
-          export ILMBASE_HOME=$PWD/openexr-install ;
-          export OPENEXR_HOME=$PWD/openexr-install ;
-      fi
-    - export OIIOMAKEFLAGS="$OIIOMAKEFLAGS -j2 DEBUG= "
-    - src/build-scripts/build_openimageio.bash
-    - export OPENIMAGEIOHOME=$PWD/OpenImageIO/dist/$OIIOPLATFORM
-    - export DYLD_LIBRARY_PATH=$OPENIMAGEIOHOME/lib:$DYLD_LIBRARY_PATH
-    - export LD_LIBRARY_PATH=$OPENIMAGEIOHOME/lib:$LD_LIBRARY_PATH
-    - export PATH=$OPENIMAGEIOHOME/bin:$PATH
-    - if [ $TRAVIS_OS_NAME == linux ] ; then
-          export BUILD_FLAGS="$BUILD_FLAGS LLVM_STATIC=1" ;
-          export TEST_FLAGS="-E broken\|render-cornell\|render-oren-nayar\|render-veachmis\|render-ward" ;
-      fi
+- |
+  if [ "$CXX" == "g++" ]; then export CXX="g++-${WHICHGCC}" ; fi
+  export USE_CCACHE=1
+  export CCACHE_CPP2=1
+  if [ $TRAVIS_OS_NAME == osx ] ; then
+      src/build-scripts/install_homebrew_deps.bash ;
+  elif [ $TRAVIS_OS_NAME == linux ] ; then
+      CXX="ccache $CXX" CCACHE_CPP2=1 src/build-scripts/build_openexr.bash ;
+      export ILMBASE_HOME=$PWD/openexr-install ;
+      export OPENEXR_HOME=$PWD/openexr-install ;
+  fi
+  export OIIOMAKEFLAGS="$OIIOMAKEFLAGS -j2 DEBUG= "
+  src/build-scripts/build_openimageio.bash
+  export OPENIMAGEIOHOME=$PWD/OpenImageIO/dist/$OIIOPLATFORM
+  export DYLD_LIBRARY_PATH=$OPENIMAGEIOHOME/lib:$DYLD_LIBRARY_PATH
+  export LD_LIBRARY_PATH=$OPENIMAGEIOHOME/lib:$LD_LIBRARY_PATH
+  export PATH=$OPENIMAGEIOHOME/bin:$PATH
+  if [ $TRAVIS_OS_NAME == linux ] ; then
+      export BUILD_FLAGS="$BUILD_FLAGS LLVM_STATIC=1" ;
+      export TEST_FLAGS="-E broken\|render-cornell\|render-oren-nayar\|render-veachmis\|render-ward" ;
+  fi
     # ^^^ Linux only, can't make these test work. Exclude for now and return later. ;
 
 # before_script:
 
 script:
-    - make VERBOSE=1 $BUILD_FLAGS cmakesetup
-    - make -j2 $BUILD_FLAGS
-    - export OSLHOME=$PWD/dist/$PLATFORM
-    - export DYLD_LIBRARY_PATH=$OSLHOME/lib:$DYLD_LIBRARY_PATH 
-    - export LD_LIBRARY_PATH=$OSLHOME/lib:$LD_LIBRARY_PATH
-    - export PYTHONPATH=$OSLHOME/python:$OPENIMAGEIOHOME/python:$PYTHONPATH
-    - make $BUILD_FLAGS test
+- |
+  make VERBOSE=1 $BUILD_FLAGS cmakesetup
+  make -j2 $BUILD_FLAGS
+  export OSLHOME=$PWD/dist/$PLATFORM
+  export DYLD_LIBRARY_PATH=$OSLHOME/lib:$DYLD_LIBRARY_PATH 
+  export LD_LIBRARY_PATH=$OSLHOME/lib:$LD_LIBRARY_PATH
+  export PYTHONPATH=$OSLHOME/python:$OPENIMAGEIOHOME/python:$PYTHONPATH
+  make $BUILD_FLAGS test
 
 
 after_success:

@@ -487,6 +487,7 @@ public:
 private:
     class MemoryManager;
     class IRBuilder;
+    class PassManager;
 
     void SetupLLVM ();
     IRBuilder& builder();
@@ -498,8 +499,7 @@ private:
     IRBuilder *m_builder;
     MemoryManager *m_llvm_jitmm;
     llvm::Function *m_current_function;
-    llvm::legacy::PassManager *m_llvm_module_passes;
-    llvm::legacy::FunctionPassManager *m_llvm_func_passes;
+    PassManager *m_llvm_passes;
     llvm::ExecutionEngine *m_llvm_exec;
     std::vector<llvm::BasicBlock *> m_return_block;     // stack for func call
     std::vector<llvm::BasicBlock *> m_loop_after_block; // stack for break

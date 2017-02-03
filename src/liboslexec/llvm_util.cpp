@@ -318,12 +318,82 @@ public:
 
 
 
+class LLVM_Util::PassManager : public llvm::legacy::PassManager {
+    llvm::legacy::PassManager m_pass_manager;
+    llvm::legacy::FunctionPassManager *m_fpass_manager;
+    bool m_run_func_pass;
+
+    static void initPassManager(llvm::legacy::PassManagerBase &manager,
+                                llvm::Module *module) {
+        // LLVM keeps changing names and call sequence. This part is easier to
+        // understand if we explicitly break it into individual LLVM versions.
+      #if OSL_LLVM_VERSION >= 37
+            // nothing
+      #elif OSL_LLVM_VERSION >= 36
+            manager.add (new llvm::DataLayoutPass());
+      #elif OSL_LLVM_VERSION == 35
+            manager.add (new llvm::DataLayoutPass(module));
+      #elif OSL_LLVM_VERSION == 34
+            manager.add (new llvm::DataLayout(module));
+      #endif
+    }
+
+public:
+    PassManager(llvm::Module *module) :
+        m_fpass_manager(nullptr), m_run_func_pass(false) {
+        initPassManager(m_pass_manager, module);
+    }
+    ~PassManager() { delete m_fpass_manager; }
+
+    // Create a function pass manager
+    llvm::legacy::FunctionPassManager*
+    createFunctionPass(llvm::Module *module, int optlevel) {
+        ASSERT (m_fpass_manager==nullptr && "Function pass manager already set");
+        m_fpass_manager = new llvm::legacy::FunctionPassManager(module);
+        initPassManager(*m_fpass_manager, module);
+        m_run_func_pass = true;
+        return m_fpass_manager;
+    }
+
+    // Use LLVM's default passes. Must not call createFunctionPass before!
+    void defaultPasses(llvm::Module *module, int optlevel) {
+        createFunctionPass(module, optlevel);
+        // function passes will automatically be run
+        m_run_func_pass = false;
+
+        llvm::PassManagerBuilder builder;
+        builder.OptLevel = optlevel;
+        builder.Inliner = llvm::createFunctionInliningPass();
+        // builder.DisableUnrollLoops = true;
+        builder.populateFunctionPassManager (*m_fpass_manager);
+        builder.populateModulePassManager (m_pass_manager);
+    }
+    
+    // Run the passes over the module
+    void run (llvm::Module &module) {
+        // Using defaultPasses wil run these automatically, otherwise must do
+        // it by hand
+        if (m_fpass_manager && m_run_func_pass) {
+            m_fpass_manager->doInitialization();
+            for (llvm::Function &func : module) {
+                if (!func.isDeclaration())
+                    m_fpass_manager->run(func);
+            }
+            m_fpass_manager->doFinalization();
+        }
+        m_pass_manager.run (module);
+    }
+
+    llvm::legacy::PassManager& modulePass() { return m_pass_manager; }
+};
+
+
 LLVM_Util::LLVM_Util (int debuglevel)
     : m_debug(debuglevel), m_thread(NULL),
       m_llvm_context(NULL), m_llvm_module(NULL),
       m_builder(NULL), m_llvm_jitmm(NULL),
       m_current_function(NULL),
-      m_llvm_module_passes(NULL), m_llvm_func_passes(NULL),
+      m_llvm_passes(NULL),
       m_llvm_exec(NULL)
 {
     SetupLLVM ();
@@ -387,8 +457,7 @@ LLVM_Util::LLVM_Util (int debuglevel)
 LLVM_Util::~LLVM_Util ()
 {
     execengine (NULL);
-    delete m_llvm_module_passes;
-    delete m_llvm_func_passes;
+    delete m_llvm_passes;
     delete m_builder;
     module (NULL);
     // DO NOT delete m_llvm_jitmm;  // just the dummy wrapper around the real MM
@@ -666,66 +735,22 @@ LLVM_Util::InstallLazyFunctionCreator (void* (*P)(const std::string &))
 void
 LLVM_Util::setup_optimization_passes (int optlevel)
 {
-    ASSERT (m_llvm_module_passes == NULL && m_llvm_func_passes == NULL);
+    ASSERT (m_llvm_passes == NULL);
 
     // Construct the per-function passes and module-wide (interprocedural
     // optimization) passes.
     //
-    // LLVM keeps changing names and call sequence. This part is easier to
-    // understand if we explicitly break it into individual LLVM versions.
-#if OSL_LLVM_VERSION >= 37
 
-    m_llvm_func_passes = new llvm::legacy::FunctionPassManager(module());
-    llvm::legacy::FunctionPassManager &fpm = (*m_llvm_func_passes);
+    // Is there aany reason to call this before an llvm::Module exists ?
+    llvm::Module *mod = module();
+    m_llvm_passes = new PassManager(mod);
 
-    m_llvm_module_passes = new llvm::legacy::PassManager;
-    llvm::legacy::PassManager &mpm = (*m_llvm_module_passes);
-
-#elif OSL_LLVM_VERSION >= 36
-
-    m_llvm_func_passes = new llvm::legacy::FunctionPassManager(module());
-    llvm::legacy::FunctionPassManager &fpm (*m_llvm_func_passes);
-    fpm.add (new llvm::DataLayoutPass());
-
-    m_llvm_module_passes = new llvm::legacy::PassManager;
-    llvm::legacy::PassManager &mpm (*m_llvm_module_passes);
-    mpm.add (new llvm::DataLayoutPass());
-
-#elif OSL_LLVM_VERSION == 35
-
-    m_llvm_func_passes = new llvm::legacy::FunctionPassManager(module());
-    llvm::legacy::FunctionPassManager &fpm (*m_llvm_func_passes);
-    fpm.add (new llvm::DataLayoutPass(module()));
-
-    m_llvm_module_passes = new llvm::legacy::PassManager;
-    llvm::legacy::PassManager &mpm (*m_llvm_module_passes);
-    mpm.add (new llvm::DataLayoutPass(module()));
-
-#elif OSL_LLVM_VERSION == 34
-
-    m_llvm_func_passes = new llvm::legacy::FunctionPassManager(module());
-    llvm::legacy::FunctionPassManager &fpm (*m_llvm_func_passes);
-    fpm.add (new llvm::DataLayout(module()));
-
-    m_llvm_module_passes = new llvm::legacy::PassManager;
-    llvm::legacy::PassManager &mpm (*m_llvm_module_passes);
-    mpm.add (new llvm::DataLayout(module()));
-
-#endif
-
-    if (optlevel >= 1 && optlevel <= 3) {
-        // For LLVM 3.0 and higher, llvm_optimize 1-3 means to use the
-        // same set of optimizations as clang -O1, -O2, -O3
-        llvm::PassManagerBuilder builder;
-        builder.OptLevel = optlevel;
-        builder.Inliner = llvm::createFunctionInliningPass();
-        // builder.DisableUnrollLoops = true;
-        builder.populateFunctionPassManager (fpm);
-        builder.populateModulePassManager (mpm);
-    } else {
+    // Should everything other than 0 branch to else ?
+    if (optlevel <= 0 || optlevel >= 4) {
         // Unknown choices for llvm_optimize: use the same basic
         // set of passes that we always have.
 
+        llvm::legacy::PassManager &mpm = m_llvm_passes->modulePass();
         // Always add verifier?
         mpm.add (llvm::createVerifierPass());
         // Simplify the call graph if possible (deleting unreachable blocks, etc.)
@@ -756,6 +781,10 @@ LLVM_Util::setup_optimization_passes (int optlevel)
         mpm.add (llvm::createCFGSimplificationPass());
         // Try to make stuff into registers one last time.
         mpm.add (llvm::createPromoteMemoryToRegisterPass());
+    } else {
+        // For LLVM 3.0 and higher, llvm_optimize 1-3 means to use the
+        // same set of optimizations as clang -O1, -O2, -O3
+        m_llvm_passes->defaultPasses(mod, optlevel);
     }
 }
 
@@ -772,9 +801,7 @@ LLVM_Util::do_optimize (std::string *out_err)
         return;
 #endif
 
-    m_llvm_func_passes->doInitialization();
-    m_llvm_module_passes->run (*m_llvm_module);
-    m_llvm_func_passes->doFinalization();
+    m_llvm_passes->run (*m_llvm_module);
 }
 
 

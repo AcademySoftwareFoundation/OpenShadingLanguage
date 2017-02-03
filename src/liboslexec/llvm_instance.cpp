@@ -985,9 +985,21 @@ BackendLLVM::initialize_llvm_group ()
 
 
 
+static void empty_group_func (void*, void*)
+{
+}
+
+
+
 void
 BackendLLVM::run ()
 {
+    if (group().does_nothing()) {
+        group().llvm_compiled_init ((RunLLVMGroupFunc)empty_group_func);
+        group().llvm_compiled_version ((RunLLVMGroupFunc)empty_group_func);
+        return;
+    }
+
     // At this point, we already hold the lock for this group, by virtue
     // of ShadingSystemImpl::optimize_group.
     OIIO::Timer timer;

@@ -38,6 +38,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #  include <boost/unordered_set.hpp>
 #endif
 
+#if OSL_USE_ORC_JIT && (OSL_LLVM_VERSION < 36)
+# ifdef _WIN32
+#  pragma message "ORC Jit cannot be used for this version of LLVM. Disabling."
+# else
+#  warning "ORC Jit cannot be used for this version of LLVM. Disabling."
+# endif
+# undef OSL_USE_ORC_JIT
+# define OSL_USE_ORC_JIT 0
+#endif
+
 #ifdef LLVM_NAMESPACE
 namespace llvm = LLVM_NAMESPACE;
 #endif
@@ -81,6 +91,13 @@ namespace pvt {   // OSL::pvt
 /// generic that it would be useful for any LLVM-JITing app, and is not
 /// tied to OSL internals at all.
 class OSLEXECPUBLIC LLVM_Util {
+#if OSL_USE_ORC_JIT
+    class OrcJIT;
+    typedef OrcJIT *JitEngine;
+#else
+    typedef llvm::ExecutionEngine *JitEngine;
+#endif
+
 public:
 
     LLVM_Util (int debuglevel=0);
@@ -107,7 +124,7 @@ public:
     void module (llvm::Module *m) { m_llvm_module = m; }
 
     /// Create a new empty module.
-    llvm::Module *new_module (const char *id = "default");
+    llvm::Module *new_module (const char *id = "default", std::string *err = NULL);
 
     /// Create a new module, populated with functions from the buffer
     /// bitcode[0..size-1].  The name identifies the buffer.  If err is not
@@ -154,11 +171,11 @@ public:
     /// Create a new JITing ExecutionEngine and make it the current one.
     /// Return a pointer to the new engine.  If err is not NULL, put any
     /// errors there.
-    llvm::ExecutionEngine *make_jit_execengine (std::string *err=NULL);
+    JitEngine make_jit_execengine (std::string *err=NULL);
 
     /// Return a pointer to the current ExecutionEngine.  Create a JITing
     /// ExecutionEngine if one isn't already set up.
-    llvm::ExecutionEngine *execengine () {
+    JitEngine execengine () {
         if (! m_llvm_exec)
             make_jit_execengine();
         return m_llvm_exec;
@@ -166,7 +183,7 @@ public:
 
     /// Replace the ExecutionEngine (pass NULL to simply delete the
     /// current one).
-    void execengine (llvm::ExecutionEngine *exec);
+    void execengine (JitEngine exec);
 
     /// Change symbols in the module that are marked as having external
     /// linkage to an alternate linkage that allows them to be discarded if
@@ -511,7 +528,8 @@ private:
     MemoryManager *m_llvm_jitmm;
     llvm::Function *m_current_function;
     PassManager *m_llvm_passes;
-    llvm::ExecutionEngine *m_llvm_exec;
+    JitEngine m_llvm_exec;
+
     std::vector<llvm::BasicBlock *> m_return_block;     // stack for func call
     std::vector<llvm::BasicBlock *> m_loop_after_block; // stack for break
     std::vector<llvm::BasicBlock *> m_loop_step_block;  // stack for continue

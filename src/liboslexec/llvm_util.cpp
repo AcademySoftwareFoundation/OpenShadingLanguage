@@ -43,8 +43,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 // Use MCJIT for LLVM 3.6 and beyind, old JIT for earlier
-#define USE_MCJIT   (OSL_LLVM_VERSION >= 36)
-#define USE_OLD_JIT (OSL_LLVM_VERSION <  36)
+#if !OSL_USE_ORC_JIT
+#  define USE_OLD_JIT (OSL_LLVM_VERSION <  36)
+#  define USE_MCJIT   (OSL_LLVM_VERSION >= 36)
+#  define OSL_USE_ORC_JIT 0
+#endif
 
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DerivedTypes.h>
@@ -73,10 +76,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm/Support/ManagedStatic.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/ExecutionEngine/GenericValue.h>
-#if USE_MCJIT
+#if OSL_USE_ORC_JIT
+#  include <llvm/Support/DynamicLibrary.h>
+#  include <llvm/ExecutionEngine/Orc/CompileUtils.h>
+#  include <llvm/ExecutionEngine/Orc/IRCompileLayer.h>
+#  include <llvm/ExecutionEngine/Orc/LazyEmittingLayer.h>
+#  include <llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h>
+#elif USE_MCJIT
 #  include <llvm/ExecutionEngine/MCJIT.h>
-#endif
-#if USE_OLD_JIT
+#elif USE_OLD_JIT
 #  include <llvm/ExecutionEngine/JIT.h>
 #  include <llvm/ExecutionEngine/JITMemoryManager.h>
 #endif
@@ -176,6 +184,30 @@ LLVM_Util::total_jit_memory_held ()
 #endif
     return jitmem;
 }
+
+
+#if OSL_LLVM_VERSION >= 35
+#if OSL_LLVM_VERSION < 40
+inline bool error_string (const std::error_code &err, std::string *str) {
+    if (err) {
+        if (str) *str = err.message();
+        return true;
+    }
+    return false;
+}
+#else
+inline bool error_string (llvm::Error err, std::string *str) {
+    if (err) {
+        if (str) {
+            llvm::handleAllErrors(std::move(err),
+                      [str](llvm::ErrorInfoBase &E) { *str += E.message(); });
+        }
+        return true;
+    }
+    return false;
+}
+#endif
+#endif
 
 
 
@@ -317,6 +349,205 @@ class LLVM_Util::IRBuilder : public llvm::IRBuilder<llvm::ConstantFolder,
                             llvm::IRBuilderDefaultInserter> Base;
 public:
     IRBuilder(llvm::BasicBlock *TheBB) : Base(TheBB) {}
+};
+#endif
+
+#if OSL_USE_ORC_JIT
+
+class Target {
+    const llvm::Target *m_target;
+    const llvm::Triple m_triple;
+
+    static Target* on_err (std::string *out_err, const std::string *info = NULL) {
+        if (out_err) {
+            *out_err = "Target could not be created";
+            if (info) {
+                out_err->append(": ");
+                out_err->append(*info);
+            }
+        }
+        return NULL;
+    }
+
+    static Target*
+    create (std::string *out_err) {
+        // Use C++ static initializer to make sure this is run once.
+        llvm::sys::DynamicLibrary::LoadLibraryPermanently(NULL);
+
+        std::string err;
+        const llvm::Triple trp (llvm::sys::getProcessTriple());
+        const llvm::Target *trg = llvm::TargetRegistry::lookupTarget
+                                                     (trp.getTriple(), err);
+        return trg ? new Target(trg, trp) : (Target*)on_err (out_err);
+    }
+
+    Target (const llvm::Target *target, const llvm::Triple &triple) :
+        m_target(target), m_triple(triple) {}
+
+public:
+    llvm::TargetMachine *createMachine(std::string *out_err, unsigned opt_level = llvm::CodeGenOpt::Level::Default) {
+        const std::string cpu;
+        const std::string features;
+        const llvm::TargetOptions options = llvm::TargetOptions();
+        const llvm::CodeModel::Model code_model = llvm::CodeModel::JITDefault;
+        llvm::TargetMachine *machine =
+            m_target->createTargetMachine(m_triple.str(), cpu, features,
+                                   options, llvm::Optional<llvm::Reloc::Model>(),
+                                   code_model);
+        return machine ? machine : (llvm::TargetMachine*)on_err (out_err);
+    }
+
+    // Use a single instance that all JIT's will reference
+    // Pointer to handle possible runtime failure (PPC I'm looking at you).
+    static Target *instance (std::string *err = NULL) {
+        static std::unique_ptr<Target> s_target(create(err));
+        return s_target.get();
+    }
+
+    const llvm::Triple &triple() { return m_triple; }
+};
+
+
+class LLVM_Util::OrcJIT {
+
+#if OSL_LLVM_VERSION < 40
+    typedef llvm::orc::TargetAddress JITTargetAddress;
+    typedef llvm::orc::JITSymbol JITSymbol;
+    typedef llvm::RuntimeDyld::SymbolInfo JITEvaluatedSymbol;
+    typedef llvm::RuntimeDyld::SymbolResolver JITSymbolResolver;
+#else
+    typedef llvm::JITTargetAddress JITTargetAddress;
+    typedef llvm::JITSymbol JITSymbol;
+    typedef llvm::JITSymbol JITEvaluatedSymbol;
+    typedef llvm::JITSymbolResolver JITSymbolResolver;
+#endif
+
+    // Simple JITSymbolResolver that looks back into its parent
+    //
+    // The difference between findSymbol and findSymbolInLogicalDylib is that
+    // findSymbol should ignore hidden/weak and findSymbolInLogicalDylib should not
+    // Ignore this fact for now, possibly ever.
+    struct SimpleResolver : public JITSymbolResolver {
+        OrcJIT &m_parent;
+    public:
+        SimpleResolver(OrcJIT &p) : m_parent(p) {}
+
+        JITEvaluatedSymbol findSymbol (const std::string &name) {
+            return m_parent.find_symbol_link_layer(name);
+        }
+        JITEvaluatedSymbol findSymbolInLogicalDylib (const std::string &name) {
+            return m_parent.find_symbol_link_layer(name);
+        }
+
+        // Work around:
+        // ORC expecting a pointer to this object (we pass it a reference)
+        //
+        SimpleResolver& operator * () { return *this; }
+    };
+
+    typedef void* (*LazyLookup)(const std::string &);
+    static void* default_lookup (const std::string&) { return NULL; }
+
+    static void* cast_ptr (uintptr_t ptr) { return reinterpret_cast<void*>(ptr); }
+    static uintptr_t cast_ptr (void *ptr) { return reinterpret_cast<uintptr_t>(ptr); }
+
+public:
+    // This doesn't implement on-request or lazy compilation.
+    // It uses Orc's eager compilation layer directly - IRCompileLayer.
+    // It also uses the basis object layer - ObjectLinkingLayer - directly.
+    // Orc's SimpleCompiler is used compile the module; it runs LLVM's
+    // codegen and MC on the module, producing an object file in memory. No
+    // IR-level optimizations are run by the JIT.
+    typedef llvm::orc::SimpleCompiler SimpleCompiler;
+    typedef llvm::orc::ObjectLinkingLayer<> ObjectLayer;
+    typedef llvm::orc::IRCompileLayer<ObjectLayer> CompileLayer;
+
+    // More layers to come....
+    typedef CompileLayer FinalCompileLayer;
+    typedef FinalCompileLayer::ModuleSetHandleT ModuleHandle;
+
+    FinalCompileLayer &compiler() { return m_compile_layer; }
+
+    OrcJIT(llvm::TargetMachine *machine, LLVMMemoryManager* mem_manager) :
+        m_machine(machine), m_mem_manager(mem_manager), m_lookup_sym(default_lookup),
+        m_data_layout(machine->createDataLayout()),
+        m_compile_layer(m_object_layer, SimpleCompiler(*machine)),
+        m_symbol_resolver(*this) {}
+
+    static OrcJIT*
+    create(LLVMMemoryManager *mem_manager, llvm::Module *module, std::string *out_err,
+           unsigned opt_level = llvm::CodeGenOpt::Level::Default) {
+        if (Target *target = Target::instance(out_err)) {
+            if (llvm::TargetMachine *M = target->createMachine(out_err, opt_level))
+                return new OrcJIT(M, mem_manager);
+        }
+        return NULL;
+    }
+
+    JITEvaluatedSymbol find_symbol_link_layer (const std::string &name) {
+        // FIXME: Should probably generate the lookup table to match rather than
+        // strip the _ prefix
+        const std::string strip = name.substr(1);
+        uint64_t ptr = cast_ptr(m_lookup_sym(strip));
+        if (!ptr) {
+            ptr = llvm::RTDyldMemoryManager::getSymbolAddressInProcess(name);
+            if (!ptr)
+                return NULL;
+        }
+        return JITEvaluatedSymbol(ptr, llvm::JITSymbolFlags::Exported);
+    }
+
+
+    // Add a module to the JIT.
+    ModuleHandle addModule(llvm::Module *module) {
+        llvm::SmallVector<llvm::Module*, 1> mod_set(1, module);
+        auto H = compiler().addModuleSet(mod_set, m_mem_manager, // std::unique_ptr<MemoryManager>(new MemoryManager(m_mem_manager))
+                                         m_symbol_resolver);
+        m_modules.push_back(H);
+        return H;
+    }
+
+    // Remove a module from the JIT.
+    void removeModule(ModuleHandle H) {
+        m_modules.erase(std::find(m_modules.begin(), m_modules.end(), H));
+        compiler().removeModuleSet(H);
+    }
+
+    // Get the runtime address of the compiled symbol whose name is given.
+    JITSymbol findSymbol(const std::string name) {
+        std::string mangled;
+        {
+            llvm::raw_string_ostream strm(mangled);
+            llvm::Mangler::getNameWithPrefix(strm, name, m_data_layout);
+        }
+
+        for (auto H : llvm::make_range(m_modules.rbegin(), m_modules.rend())) {
+            if (auto sym = m_compile_layer.findSymbolIn(H, mangled, true)) {
+                return sym;
+            }
+        }
+        return NULL;
+    }
+
+    // API matching avoids some ifdefs below
+    void InstallLazyFunctionCreator (LazyLookup func) {
+        m_lookup_sym = func;
+    }
+    void *getPointerToFunction (const llvm::Function *func) {
+        return cast_ptr(findSymbol(func->getName()).getAddress());
+    }
+    const llvm::DataLayout &dataLayout () const { return m_data_layout; }
+
+private:
+    std::unique_ptr<llvm::TargetMachine> m_machine;
+    LLVMMemoryManager *m_mem_manager;
+    LazyLookup m_lookup_sym;
+
+    llvm::DataLayout m_data_layout;
+    ObjectLayer m_object_layer;
+    CompileLayer m_compile_layer;
+    std::vector<ModuleHandle> m_modules;
+    SimpleResolver m_symbol_resolver;
 };
 #endif
 
@@ -485,12 +716,14 @@ LLVM_Util::SetupLLVM ()
 // new versions (>=3.5)don't need this anymore
 
 
-#if USE_MCJIT
+#if OSL_USE_ORC_JIT || USE_MCJIT
     LLVMInitializeNativeTarget();
     LLVMInitializeNativeDisassembler();
     LLVMInitializeNativeAsmPrinter();
     LLVMInitializeNativeAsmParser();
+# if USE_MCJIT
     LLVMLinkInMCJIT();
+# endif
 #else
     llvm::InitializeNativeTarget();
 #endif
@@ -518,36 +751,16 @@ LLVM_Util::SetupLLVM ()
 
 
 llvm::Module *
-LLVM_Util::new_module (const char *id)
+LLVM_Util::new_module (const char *id, std::string *err)
 {
+#if !OSL_USE_ORC_JIT
     return new llvm::Module(id, context());
-}
-
-
-
-#if OSL_LLVM_VERSION >= 35
-#if OSL_LLVM_VERSION < 40
-inline bool error_string (const std::error_code &err, std::string *str) {
-    if (err) {
-        if (str) *str = err.message();
-        return true;
-    }
-    return false;
-}
 #else
-inline bool error_string (llvm::Error err, std::string *str) {
-    if (err) {
-        if (str) {
-            llvm::handleAllErrors(std::move(err),
-                      [str](llvm::ErrorInfoBase &E) { *str += E.message(); });
-        }
-        return true;
-    }
-    return false;
+    std::unique_ptr<llvm::Module> module(new llvm::Module(id, context()));
+    module->setDataLayout(execengine()->dataLayout());
+    return module.release();
+#endif
 }
-#endif
-#endif
-
 
 
 llvm::Module *
@@ -665,12 +878,21 @@ LLVM_Util::end_builder ()
 
 
 
-llvm::ExecutionEngine *
+LLVM_Util::JitEngine
 LLVM_Util::make_jit_execengine (std::string *err)
 {
     execengine (NULL);   // delete and clear any existing engine
     if (err)
         err->clear ();
+
+#if OSL_USE_ORC_JIT
+
+    m_llvm_exec = OrcJIT::create(reinterpret_cast<LLVMMemoryManager*>(m_llvm_jitmm),
+                                 m_llvm_module, err);
+    return m_llvm_exec;
+
+#else /* !OSL_USE_ORC_JIT : [USE_OLD_JIT or USE_MCJIT] */
+
 # if OSL_LLVM_VERSION >= 36
     llvm::EngineBuilder engine_builder ((std::unique_ptr<llvm::Module>(module())));
 # else /* < 36: */
@@ -680,15 +902,15 @@ LLVM_Util::make_jit_execengine (std::string *err)
     engine_builder.setEngineKind (llvm::EngineKind::JIT);
     engine_builder.setErrorStr (err);
 
-#if USE_OLD_JIT
+# if USE_OLD_JIT
     engine_builder.setJITMemoryManager (m_llvm_jitmm);
     // N.B. createJIT will take ownership of the the JITMemoryManager!
     engine_builder.setUseMCJIT (0);
-#else
+# else
     // We are actually holding a LLVMMemoryManager
     engine_builder.setMCJITMemoryManager (std::unique_ptr<llvm::RTDyldMemoryManager>
         (new MemoryManager(reinterpret_cast<LLVMMemoryManager*>(m_llvm_jitmm))));
-#endif /* USE_OLD_JIT */
+# endif /* USE_OLD_JIT */
 
     engine_builder.setOptLevel (llvm::CodeGenOpt::Default);
 
@@ -702,12 +924,14 @@ LLVM_Util::make_jit_execengine (std::string *err)
     // destroying the Module & ExecutionEngine.
     m_llvm_exec->DisableLazyCompilation ();
     return m_llvm_exec;
+
+#endif /* OSL_USE_ORC_JIT */
 }
 
 
 
 void
-LLVM_Util::execengine (llvm::ExecutionEngine *exec)
+LLVM_Util::execengine (JitEngine exec)
 {
     delete m_llvm_exec;
     m_llvm_exec = exec;
@@ -719,9 +943,12 @@ void *
 LLVM_Util::getPointerToFunction (llvm::Function *func)
 {
     DASSERT (func && "passed NULL to getPointerToFunction");
-    llvm::ExecutionEngine *exec = execengine();
-    if (USE_MCJIT)
-        exec->finalizeObject ();
+    JitEngine exec = execengine();
+
+#if USE_MCJIT
+    exec->finalizeObject ();
+#endif
+
     void *f = exec->getPointerToFunction (func);
     ASSERT (f && "could not getPointerToFunction");
     return f;
@@ -732,7 +959,7 @@ LLVM_Util::getPointerToFunction (llvm::Function *func)
 void
 LLVM_Util::InstallLazyFunctionCreator (void* (*P)(const std::string &))
 {
-    llvm::ExecutionEngine *exec = execengine();
+    JitEngine exec = execengine();
     exec->InstallLazyFunctionCreator (P);
 }
 
@@ -808,6 +1035,10 @@ LLVM_Util::do_optimize (std::string *out_err)
 #endif
 
     m_llvm_passes->run (*m_llvm_module);
+
+# if OSL_USE_ORC_JIT
+    execengine()->addModule(m_llvm_module);
+#endif
 }
 
 

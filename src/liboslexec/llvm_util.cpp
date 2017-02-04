@@ -107,13 +107,13 @@ namespace pvt {
     typedef llvm::JITMemoryManager LLVMMemoryManager;
 #else
     typedef llvm::SectionMemoryManager LLVMMemoryManager;
-#endif
-
 #if OSL_LLVM_VERSION < 40
     typedef std::error_code LLVMErr;
 #else
     typedef llvm::Error LLVMErr;
 #endif
+#endif
+
 
 
 
@@ -449,9 +449,10 @@ LLVM_Util::new_module (const char *id)
 }
 
 
-    
+
+#if OSL_LLVM_VERSION >= 35
 #if OSL_LLVM_VERSION < 40
-static bool error_string (const std::error_code &err, std::string *str) {
+inline bool error_string (const std::error_code &err, std::string *str) {
     if (err) {
         if (str) *str = err.message();
         return true;
@@ -459,7 +460,7 @@ static bool error_string (const std::error_code &err, std::string *str) {
     return false;
 }
 #else
-static bool error_string (llvm::Error err, std::string *str) {
+inline bool error_string (llvm::Error err, std::string *str) {
     if (err) {
         if (str) {
             llvm::handleAllErrors(std::move(err),
@@ -469,6 +470,7 @@ static bool error_string (llvm::Error err, std::string *str) {
     }
     return false;
 }
+#endif
 #endif
 
 
@@ -765,7 +767,7 @@ LLVM_Util::setup_optimization_passes (int optlevel)
 void
 LLVM_Util::do_optimize (std::string *out_err)
 {
-    ASSERT(m_llvm_module != nullptr && "No module to optimize!");
+    ASSERT(m_llvm_module && "No module to optimize!");
 
 #if OSL_LLVM_VERSION >= 35 && !defined(OSL_FORCE_BITCODE_PARSE)
     LLVMErr err = m_llvm_module->materializeAll();

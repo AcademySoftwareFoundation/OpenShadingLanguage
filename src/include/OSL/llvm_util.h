@@ -38,6 +38,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #  include <boost/unordered_set.hpp>
 #endif
 
+#if OSL_LLVM_VERSION >= 37
+#  define OSL_USE_ORC_JIT 1
+#endif
 #if OSL_USE_ORC_JIT && (OSL_LLVM_VERSION < 36)
 # ifdef _WIN32
 #  pragma message "ORC Jit cannot be used for this version of LLVM. Disabling."

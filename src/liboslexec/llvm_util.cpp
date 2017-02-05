@@ -517,6 +517,14 @@ public:
         return NULL;
     }
 
+    void addSingleModule (llvm::Module *module) {
+        // Currently we know there is only a single module, and adding it more
+        // than once makes little sense.
+        if (!m_modules.empty ())
+            return;
+        addModule (module);
+    }
+
     // API matching avoids some ifdefs below
     void InstallLazyFunctionCreator (LazyLookup func) {
         m_lookup_sym = func;
@@ -933,7 +941,9 @@ LLVM_Util::getPointerToFunction (llvm::Function *func)
     DASSERT (func && "passed NULL to getPointerToFunction");
     JitEngine exec = execengine();
 
-#if USE_MCJIT
+#if OSL_USE_ORC_JIT
+    exec->addSingleModule (m_llvm_module);
+#elif USE_MCJIT
     exec->finalizeObject ();
 #endif
 
@@ -1023,10 +1033,6 @@ LLVM_Util::do_optimize (std::string *out_err)
 #endif
 
     m_llvm_passes->run (*m_llvm_module);
-
-# if OSL_USE_ORC_JIT
-    execengine()->addModule(m_llvm_module);
-#endif
 }
 
 

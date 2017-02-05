@@ -203,13 +203,18 @@ find_library ( LLVM_MCJIT_LIBRARY
 if (NOT LLVM_LIBRARY)
     # Don't really know the cutoff when passes works as an argument
     if (LLVM_VERSION VERSION_LESS 3.5.0)
-        execute_process (COMMAND ${LLVM_CONFIG} --libfiles engine ipo bitwriter bitreader
+        execute_process (COMMAND ${LLVM_CONFIG} --libfiles engine ipo bitwriter bitreader linker
                      OUTPUT_VARIABLE LLVM_LIBRARIES
                      OUTPUT_STRIP_TRAILING_WHITESPACE)
+        execute_process (COMMAND ${LLVM_CONFIG} --libfiles irreader
+                     OUTPUT_VARIABLE LLVM_READER_LIBRARIES
+                     OUTPUT_STRIP_TRAILING_WHITESPACE)
+        string (REPLACE " " ";" LLVM_READER_LIBRARIES "${LLVM_READER_LIBRARIES}")
     else ()
         execute_process (COMMAND ${LLVM_CONFIG} --libfiles engine passes
                          OUTPUT_VARIABLE LLVM_LIBRARIES
                          OUTPUT_STRIP_TRAILING_WHITESPACE)
+        set (LLVM_READER_LIBRARIES "" )
     endif ()
 endif ()
 

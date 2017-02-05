@@ -100,6 +100,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #  include <llvm/Transforms/Scalar/GVN.h>
 #endif
 
+#ifndef OSL_LLVM_NO_BITCODE
+#  include "llvm_ops_bc.h"
+#endif
+
 OSL_NAMESPACE_ENTER
 
 namespace pvt {
@@ -547,11 +551,13 @@ inline bool error_string (llvm::Error err, std::string *str) {
 
 
 llvm::Module *
-LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
+LLVM_Util::module_from_bitcode (const unsigned char *ubytes, size_t size,
                                 const std::string &name, std::string *err)
 {
     if (err)
         err->clear();
+
+    const char *bitcode = reinterpret_cast<const char*>(ubytes);
 
 #if OSL_LLVM_VERSION <= 35 /* Old JIT vvvvvvvvvvvvvvvvvvvvvvvvvvvv */
     llvm::MemoryBuffer* buf =
@@ -1285,8 +1291,46 @@ llvm::Value *
 LLVM_Util::call_function (const char *name, llvm::Value **args, int nargs)
 {
     llvm::Function *func = module()->getFunction (name);
-    if (! func)
-        std::cerr << "Couldn't find function " << name << "\n";
+    if (! func) {
+#ifdef OSL_SPLIT_BITCODES
+        if (const bytecode_func *bf = bytecode_for_function (name)) {
+            std::string err;
+            std::unique_ptr<llvm::Module> mod(
+                                module_from_bitcode (bf->first, bf->second,
+                                                     name, &err));
+            if (! mod) {
+                std::cerr << "Couldn't load bitcode for '" << name << "'\n";
+                return NULL;
+            }
+            func = mod->getFunction (name);
+            if (! func) {
+                std::cerr << "Function '" << name << "' not in module '"
+                          << mod->getName().str () << "'\n" << "  : " << err << '\n';
+                return NULL;
+            }
+
+            LLVMErr ec = func->materialize();
+            if (error_string (std::move(ec), &err)) {
+                std::cerr << "Error materializing function '"
+                          << name << "'\n" << "  : " << err << '\n';
+                return NULL;
+            }
+
+            // Merge the module into the active base module.
+            // -mod- cannot be used after this call.
+            if (llvm::Linker::linkModules (*m_llvm_module, std::move(mod))) {
+                std::cerr << "Couldn't link modules\n";
+                return NULL;
+            }
+
+            // Grab the function from the merged module
+            func = m_llvm_module->getFunction (name);
+            if (func)
+                return call_function (func, args, nargs);
+        }
+#endif /* OSL_SPLIT_BITCODES */
+        std::cerr << "Couldn't find function '" << name << "'\n";
+    }
     return call_function (func, args, nargs);
 }
 

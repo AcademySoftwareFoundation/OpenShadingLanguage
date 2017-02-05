@@ -38,6 +38,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec_pvt.h"
 #include "../liboslcomp/oslcomp_pvt.h"
 #include "backendllvm.h"
+#ifndef OSL_LLVM_NO_BITCODE
+#  include "llvm_ops_bc.h"
+#endif
 
 // Create extrenal declarations for all built-in funcs we may call from LLVM
 #define DECL(name,signature) extern "C" void name();
@@ -108,8 +111,6 @@ Schematically, we want to create code that resembles the following:
 
 */
 
-extern int osl_llvm_compiled_ops_size;
-extern char osl_llvm_compiled_ops_block[];
 
 using namespace OSL::pvt;
 
@@ -157,6 +158,9 @@ initialize_llvm_helper_function_map ()
 #include "builtindecl.h"
 #undef DECL
 
+#ifdef OSL_SPLIT_BITCODES
+    init_function_bytecodes();
+#endif
     llvm_helper_function_map_initialized = 1;
 }
 

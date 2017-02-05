@@ -433,10 +433,12 @@ class LLVM_Util::OrcJIT {
         SimpleResolver(OrcJIT &p) : m_parent(p) {}
 
         JITEvaluatedSymbol findSymbol (const std::string &name) {
-            return m_parent.find_symbol_link_layer(name);
+            uint64_t ptr = cast_ptr(m_parent.m_lookup_sym(name.substr(1)));
+            return ptr ? JITEvaluatedSymbol(ptr, llvm::JITSymbolFlags::Exported) : NULL;
         }
         JITEvaluatedSymbol findSymbolInLogicalDylib (const std::string &name) {
-            return m_parent.find_symbol_link_layer(name);
+            uint64_t ptr = llvm::RTDyldMemoryManager::getSymbolAddressInProcess(name);
+            return ptr ? JITEvaluatedSymbol(ptr, llvm::JITSymbolFlags::Exported) : NULL;
         }
 
         // Work around:
@@ -483,20 +485,6 @@ public:
         }
         return NULL;
     }
-
-    JITEvaluatedSymbol find_symbol_link_layer (const std::string &name) {
-        // FIXME: Should probably generate the lookup table to match rather than
-        // strip the _ prefix
-        const std::string strip = name.substr(1);
-        uint64_t ptr = cast_ptr(m_lookup_sym(strip));
-        if (!ptr) {
-            ptr = llvm::RTDyldMemoryManager::getSymbolAddressInProcess(name);
-            if (!ptr)
-                return NULL;
-        }
-        return JITEvaluatedSymbol(ptr, llvm::JITSymbolFlags::Exported);
-    }
-
 
     // Add a module to the JIT.
     ModuleHandle addModule(llvm::Module *module) {

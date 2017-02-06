@@ -982,8 +982,12 @@ LLVM_Util::setup_optimization_passes (int optlevel)
         // set of passes that we always have.
 
         llvm::legacy::PassManager &mpm = m_llvm_passes->modulePass();
+
+#if OSL_LLVM_VERSION <= 34 // Prior behavior, not longer required
         // Always add verifier?
         mpm.add (llvm::createVerifierPass());
+#endif
+
         // Simplify the call graph if possible (deleting unreachable blocks, etc.)
         mpm.add (llvm::createCFGSimplificationPass());
         // Change memory references to registers
@@ -1012,6 +1016,11 @@ LLVM_Util::setup_optimization_passes (int optlevel)
         mpm.add (llvm::createCFGSimplificationPass());
         // Try to make stuff into registers one last time.
         mpm.add (llvm::createPromoteMemoryToRegisterPass());
+
+#if OSL_LLVM_VERSION > 34
+        // Verify the resulting module ...
+        // mpm.add (llvm::createVerifierPass());
+#endif
     } else {
         // For LLVM 3.0 and higher, llvm_optimize 1-3 means to use the
         // same set of optimizations as clang -O1, -O2, -O3

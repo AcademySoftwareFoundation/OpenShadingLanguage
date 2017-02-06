@@ -1294,6 +1294,7 @@ LLVM_Util::call_function (const char *name, llvm::Value **args, int nargs)
     if (! func) {
 #ifdef OSL_SPLIT_BITCODES
         if (const bytecode_func *bf = bytecode_for_function (name)) {
+
             std::string err;
             std::unique_ptr<llvm::Module> mod(
                                 module_from_bitcode (bf->first, bf->second,
@@ -1305,12 +1306,23 @@ LLVM_Util::call_function (const char *name, llvm::Value **args, int nargs)
             func = mod->getFunction (name);
             if (! func) {
                 std::cerr << "Function '" << name << "' not in module '"
-                          << mod->getName().str () << "'\n" << "  : " << err << '\n';
+# if OSL_LLVM_VERSION >= 36
+                          << mod->getName().str ()
+# else
+                          << mod->getModuleIdentifier ()
+# endif
+                          << "'\n" << "  : " << err << '\n';
+
                 return NULL;
             }
 
+# if OSL_LLVM_VERSION >= 35
             LLVMErr ec = func->materialize();
-            if (error_string (std::move(ec), &err)) {
+            if (error_string (std::move(ec), &err))
+# else
+            if (func->Materialize(&err))
+# endif
+            {
                 std::cerr << "Error materializing function '"
                           << name << "'\n" << "  : " << err << '\n';
                 return NULL;
@@ -1318,7 +1330,13 @@ LLVM_Util::call_function (const char *name, llvm::Value **args, int nargs)
 
             // Merge the module into the active base module.
             // -mod- cannot be used after this call.
-            if (llvm::Linker::linkModules (*m_llvm_module, std::move(mod))) {
+# if OSL_LLVM_VERSION >= 38
+            if (llvm::Linker::linkModules (*m_llvm_module, std::move(mod)))
+# else
+            if (llvm::Linker::LinkModules (m_llvm_module, mod.get(),
+                                           llvm::Linker::DestroySource, &err))
+# endif
+            {
                 std::cerr << "Couldn't link modules\n";
                 return NULL;
             }

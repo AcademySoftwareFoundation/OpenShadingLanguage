@@ -367,8 +367,17 @@ s_dumpir_file("ir", cl::desc("Dump individual IR files"),
 
 
 static bool verify_module(Module &module) {
-    if (verifyModule(module, &errs())) {
+#if OSL_LLVM_VERSION <= 34
+    std::string err;
+    if (verifyModule(module, ReturnStatusAction, &err))
+#else
+    if (verifyModule(module, &errs()))
+#endif
+    {
         errs() << "assembly parsed, but does not verify as correct!\n";
+#if OSL_LLVM_VERSION < 34
+        errs() << err;
+#endif
         return false;
     }
     return true;
@@ -413,8 +422,14 @@ static bool dump_module(Module &module,
 {
     // Mark the module as fully materialized.
     std::string err;
+
+#if OSL_LLVM_VERSION >= 35
     LLVMErr ec = module.materializeAll();
-    if (error_string(std::move(ec), &err)) {
+    if (error_string(std::move(ec), &err))
+#else
+    if (module.MaterializeAll(&err))
+#endif
+    {
         errs() << "error materializing module: " << err << "\n";
         return false;
     }
@@ -439,12 +454,23 @@ static bool dump_module(Module &module,
             llvm::errs() << "Could not create '" << ir_path << "': " << err << '\n';
             return false;
         }
+#if OSL_LLVM_VERSION >= 37
         passes.add(createPrintModulePass(*ir_out, "", save_uselist));
+#elif OSL_LLVM_VERSION >= 35
+        passes.add(createPrintModulePass(*ir_out));
+#else
+        passes.add(createPrintModulePass(ir_out.get()));
+#endif
     }
 
     buf.resize(0);
     llvm::raw_svector_ostream out(buf);
+
+#if OSL_LLVM_VERSION >= 36
     passes.add(createBitcodeWriterPass(out, save_uselist));
+#else
+    passes.add(createBitcodeWriterPass(out));
+#endif
     passes.run(module);
     return true;
 }
@@ -472,8 +498,13 @@ static bool dump_module(Module &module, const std::string &name,
     // Load everything from backing store that has been requested
     for (GlobalValue *gv : *globalv) {
         std::string err;
+#if OSL_LLVM_VERSION >= 35
         LLVMErr ec = gv->materialize();
-        if (error_string(std::move(ec), &err)) {
+        if (error_string(std::move(ec), &err))
+#else
+        if (gv->Materialize(&err))
+#endif
+        {
             errs() << "error materializing function '" << name << "': " << err << "\n";
             return false;
         }
@@ -509,12 +540,20 @@ static void file_path(std::string &dir, size_t dir_len, llvm::StringRef name,
 
 int main(int argc, const char **argv)
 {
+#if OSL_LLVM_VERSION <= 34
+    sys::PrintStackTraceOnErrorSignal();
+#else
     sys::PrintStackTraceOnErrorSignal(argv[0]);
+#endif
+
     PrettyStackTraceProgram pstack(argc, argv);
     LLVMContext context;
+
     llvm_shutdown_obj clean; // Call llvm_shutdown() on exit.
 
+#if OSL_LLVM_VERSION >= 35
     cl::HideUnrelatedOptions(s_category);
+#endif
     cl::ParseCommandLineOptions(argc, argv, "extract bitcode to c++\n");
 
     SMDiagnostic sm_err;

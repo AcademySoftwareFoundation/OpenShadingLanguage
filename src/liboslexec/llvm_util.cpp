@@ -474,7 +474,7 @@ public:
         m_machine(machine), m_mem_manager(mem_manager), m_lookup_sym(default_lookup),
         m_data_layout(machine->createDataLayout()),
         m_compile_layer(m_object_layer, SimpleCompiler(*machine)),
-        m_symbol_resolver(*this) {
+        m_symbol_resolver(*this), m_linker(*module) {
             module->setDataLayout (m_data_layout);
         }
 
@@ -493,13 +493,13 @@ public:
         llvm::SmallVector<llvm::Module*, 1> mod_set(1, module);
         auto H = compiler().addModuleSet(mod_set, m_mem_manager, // std::unique_ptr<MemoryManager>(new MemoryManager(m_mem_manager))
                                          m_symbol_resolver);
-        m_modules.push_back(H);
+        m_module_h.push_back(H);
         return H;
     }
 
     // Remove a module from the JIT.
     void removeModule(ModuleHandle H) {
-        m_modules.erase(std::find(m_modules.begin(), m_modules.end(), H));
+        m_module_h.erase(std::find(m_module_h.begin(), m_module_h.end(), H));
         compiler().removeModuleSet(H);
     }
 
@@ -511,10 +511,9 @@ public:
             llvm::Mangler::getNameWithPrefix(strm, name, m_data_layout);
         }
 
-        for (auto H : llvm::make_range(m_modules.rbegin(), m_modules.rend())) {
-            if (auto sym = m_compile_layer.findSymbolIn(H, mangled, true)) {
+        for (auto H : llvm::make_range(m_module_h.rbegin(), m_module_h.rend())) {
+            if (auto sym = m_compile_layer.findSymbolIn(H, mangled, true))
                 return sym;
-            }
         }
         return NULL;
     }
@@ -522,9 +521,13 @@ public:
     void addSingleModule (llvm::Module *module) {
         // Currently we know there is only a single module, and adding it more
         // than once makes little sense.
-        if (!m_modules.empty ())
+        if (!m_module_h.empty ())
             return;
         addModule (module);
+    }
+
+    void linkModule (std::unique_ptr<llvm::Module> module) {
+        m_linker.linkInModule(std::move(module));
     }
 
     // API matching avoids some ifdefs below
@@ -544,8 +547,9 @@ private:
     llvm::DataLayout m_data_layout;
     ObjectLayer m_object_layer;
     CompileLayer m_compile_layer;
-    std::vector<ModuleHandle> m_modules;
+    std::vector<ModuleHandle> m_module_h;
     SimpleResolver m_symbol_resolver;
+    llvm::Linker m_linker;
 };
 #endif
 
@@ -1524,6 +1528,7 @@ LLVM_Util::call_function (const char *name, llvm::Value **args, int nargs)
                 std::cerr << "Couldn't load bitcode for '" << name << "'\n";
                 return NULL;
             }
+#if !OSL_USE_ORC_JIT
             func = mod->getFunction (name);
             if (! func) {
                 std::cerr << "Function '" << name << "' not in module '"
@@ -1548,7 +1553,6 @@ LLVM_Util::call_function (const char *name, llvm::Value **args, int nargs)
                           << name << "'\n" << "  : " << err << '\n';
                 return NULL;
             }
-
             // Merge the module into the active base module.
             // -mod- cannot be used after this call.
 # if OSL_LLVM_VERSION >= 38
@@ -1562,6 +1566,9 @@ LLVM_Util::call_function (const char *name, llvm::Value **args, int nargs)
                 return NULL;
             }
 
+#else /* OSL_USE_ORC_JIT */
+            execengine()->linkModule(std::move(mod));
+#endif
             // Grab the function from the merged module
             func = m_llvm_module->getFunction (name);
             if (func)

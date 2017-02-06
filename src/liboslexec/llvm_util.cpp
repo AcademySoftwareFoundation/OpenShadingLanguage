@@ -988,6 +988,10 @@ LLVM_Util::setup_optimization_passes (int optlevel)
         mpm.add (llvm::createVerifierPass());
 #endif
 
+        // Strip and merge functions.
+        mpm.add (llvm::createStripDeadPrototypesPass());
+        mpm.add (llvm::createMergeFunctionsPass());
+
         // Simplify the call graph if possible (deleting unreachable blocks, etc.)
         mpm.add (llvm::createCFGSimplificationPass());
         // Change memory references to registers

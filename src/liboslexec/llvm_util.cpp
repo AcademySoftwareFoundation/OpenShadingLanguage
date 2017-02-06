@@ -470,18 +470,20 @@ public:
 
     FinalCompileLayer &compiler() { return m_compile_layer; }
 
-    OrcJIT(llvm::TargetMachine *machine, LLVMMemoryManager* mem_manager) :
+    OrcJIT(llvm::TargetMachine *machine, llvm::Module *module, LLVMMemoryManager* mem_manager) :
         m_machine(machine), m_mem_manager(mem_manager), m_lookup_sym(default_lookup),
         m_data_layout(machine->createDataLayout()),
         m_compile_layer(m_object_layer, SimpleCompiler(*machine)),
-        m_symbol_resolver(*this) {}
+        m_symbol_resolver(*this) {
+            module->setDataLayout (m_data_layout);
+        }
 
     static OrcJIT*
     create(LLVMMemoryManager *mem_manager, llvm::Module *module, std::string *out_err,
            unsigned opt_level = llvm::CodeGenOpt::Level::Default) {
         if (Target *target = Target::instance(out_err)) {
             if (llvm::TargetMachine *M = target->createMachine(out_err, opt_level))
-                return new OrcJIT(M, mem_manager);
+                return new OrcJIT(M, module, mem_manager);
         }
         return NULL;
     }
@@ -749,13 +751,7 @@ LLVM_Util::SetupLLVM ()
 llvm::Module *
 LLVM_Util::new_module (const char *id, std::string *err)
 {
-#if !OSL_USE_ORC_JIT
     return new llvm::Module(id, context());
-#else
-    std::unique_ptr<llvm::Module> module(new llvm::Module(id, context()));
-    module->setDataLayout(execengine()->dataLayout());
-    return module.release();
-#endif
 }
 
 

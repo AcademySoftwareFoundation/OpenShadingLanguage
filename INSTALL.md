@@ -8,7 +8,7 @@ Dependencies
 
 OSL requires the following dependencies:
 
-* [OpenImageIO](http://openimageio.org) 1.7 or newer
+* [OpenImageIO](http://openimageio.org) 1.6 or newer
 
     OSL uses OIIO both for its texture mapping functionality as well as
     numerous utility classes.  If you are integrating OSL into an existing

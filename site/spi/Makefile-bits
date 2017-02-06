@@ -10,7 +10,7 @@ ifeq ($(SP_OS), rhel7)
     platform=rhel7
     USE_CPP11 ?= 1
     USE_SIMD = sse4.1
-    COMPILER ?= clang35
+    COMPILER ?= clang40
     CMAKE ?= cmake
     USE_NINJA := 1
     NINJA := /net/soft_scratch/apps/arnold/tools/spinux1/bin/ninja

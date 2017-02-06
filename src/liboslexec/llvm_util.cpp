@@ -527,14 +527,20 @@ LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
     ErrorOrModule ModuleOrErr = llvm::getLazyBitcodeModule(buf, context());
 #  endif
 
-# else
+# else /* !OSL_FORCE_BITCODE_PARSE */
 
-    llvm::MemoryBuffer* buf =
-        llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(bitcode, size),
-                                         name, false);
+    std::unique_ptr<llvm::MemoryBuffer> buf (
+        llvm::MemoryBuffer::getMemBuffer (llvm::StringRef(bitcode, size),
+                                          name, false));
+#  if OSL_LLVM_VERSION >= 36
+    ErrorOrModule ModuleOrErr = llvm::getLazyBitcodeModule(std::move(buf),
+                                                           context());
+#  else /* OSL_LLVM_VERSION == 35 */
+    ErrorOrModule ModuleOrErr = llvm::getLazyBitcodeModule(buf.get(),
+                                                           context());
+#  endif /* OSL_LLVM_VERSION >= 36 */
 
-    ErrorOrModule ModuleOrErr = llvm::getLazyBitcodeModule(buf, context());
-#endif
+# endif
 
     if (err) {
 #if OSL_LLVM_VERSION < 40
@@ -546,6 +552,10 @@ LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
 
 #if OSL_LLVM_VERSION <= 36
     m = ModuleOrErr.get();
+# if OSL_LLVM_VERSION == 35
+    // If module exists ownership of buf has been transfered.
+    if (m) buf.release();
+# endif
 #else
     m = ModuleOrErr ? ModuleOrErr->release() : nullptr;
 #endif

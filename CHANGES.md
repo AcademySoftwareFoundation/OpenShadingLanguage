@@ -1,3 +1,37 @@
+Release 1.9 -- ?? 2017 (compared to 1.8)
+--------------------------------------------------
+
+Dependency and standards changes:
+* **C++11 required**: OSL 1.9 requires a minimum standard of C++11. It
+  should also build against C++14 (and we intend to make it C++-17-safe,
+  as soon as it is ratified.
+* **LLVM 3.9 / 4.0**: Support for LLVM 3.4 has already been removed, and
+  support for LLVM 3.5 will be removed as soon as we address some
+  performance issues with the JIT in 3.9+.
+* **OpenImageIO 1.7+**: This release of OSL should build properly against
+  OIIO 1.7 or newer. You may find that 1.6 is still ok, but we are not doing
+  any work to ensure that.
+
+Language features:
+
+Standard library additions/changes:
+
+API changes, new options, new ShadingSystem features (for renderer writers):
+* ShadingSystem API changes:
+* ShadingSystem attribute additions/changes:
+* Shader group attribute additions/changes:
+* RendererServices:
+
+Performance improvements:
+
+Bug fixes and other improvements:
+
+Build & test system improvements and developer goodies:
+
+Documentation:
+
+
+
 Release 1.8 [1.8.3] -- 20 Feb 2017 (compared to 1.7)
 --------------------------------------------------
 

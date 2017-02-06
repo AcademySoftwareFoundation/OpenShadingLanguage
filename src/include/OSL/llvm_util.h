@@ -32,6 +32,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslversion.h"
 
 #include <vector>
+#if OSL_CPLUSPLUS_VERSION >= 11
+#  include <unordered_set>
+#else
+#  include <boost/unordered_set.hpp>
+#endif
 
 #ifdef LLVM_NAMESPACE
 namespace llvm = LLVM_NAMESPACE;
@@ -63,6 +68,11 @@ OSL_NAMESPACE_ENTER
 namespace pvt {   // OSL::pvt
 
 
+#if OSL_CPLUSPLUS_VERSION >= 11
+    typedef std::unordered_set<std::string> string_set;
+#else
+    typedef boost::unordered_set<std::string> string_set;
+#endif
 
 
 
@@ -72,6 +82,7 @@ namespace pvt {   // OSL::pvt
 /// tied to OSL internals at all.
 class OSLEXECPUBLIC LLVM_Util {
 public:
+
     LLVM_Util (int debuglevel=0);
     ~LLVM_Util ();
 
@@ -163,8 +174,8 @@ public:
     /// with prefix, and that DON'T match anything in the two exceptions
     /// lists.
     void internalize_module_functions (const std::string &prefix,
-                                       const std::vector<std::string> &exceptions,
-                                       const std::vector<std::string> &moreexceptions);
+                                       const string_set &exceptions,
+                                       const string_set &moreexceptions);
 
     /// Setup LLVM optimization passes.
     void setup_optimization_passes (int optlevel);

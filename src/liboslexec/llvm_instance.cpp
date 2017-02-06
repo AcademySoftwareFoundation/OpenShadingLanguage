@@ -139,7 +139,7 @@ typedef std::unordered_map<std::string,HelperFuncRecord> HelperFuncMap;
 HelperFuncMap llvm_helper_function_map;
 atomic_int llvm_helper_function_map_initialized (0);
 spin_mutex llvm_helper_function_map_mutex;
-std::vector<std::string> external_function_names;
+string_set external_function_names;
 
 
 
@@ -153,7 +153,7 @@ initialize_llvm_helper_function_map ()
         return;
 #define DECL(name,signature) \
     llvm_helper_function_map[#name] = HelperFuncRecord(signature,name); \
-    external_function_names.push_back (#name);
+    external_function_names.insert (#name);
 #include "builtindecl.h"
 #undef DECL
 
@@ -1092,13 +1092,13 @@ BackendLLVM::run ()
     // entry points, as well as for all the external functions that are
     // just declarations (not definitions) in the module (which we have
     // conveniently stashed in external_function_names).
-    std::vector<std::string> entry_function_names;
-    entry_function_names.push_back (ll.func_name(init_func));
+    string_set entry_function_names;
+    entry_function_names.insert (ll.func_name(init_func));
     for (int layer = 0; layer < nlayers; ++layer) {
         // set_inst (layer);
         llvm::Function* f = funcs[layer];
         if (f && group().is_entry_layer(layer))
-            entry_function_names.push_back (ll.func_name(f));
+            entry_function_names.insert (ll.func_name(f));
     }
     ll.internalize_module_functions ("osl_", external_function_names, entry_function_names);
 

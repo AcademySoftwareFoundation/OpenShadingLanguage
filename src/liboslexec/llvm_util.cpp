@@ -107,14 +107,13 @@ namespace pvt {
     typedef llvm::JITMemoryManager LLVMMemoryManager;
 #else
     typedef llvm::SectionMemoryManager LLVMMemoryManager;
+#endif
+
 #if OSL_LLVM_VERSION < 40
     typedef std::error_code LLVMErr;
 #else
     typedef llvm::Error LLVMErr;
 #endif
-#endif
-
-
 
 
 namespace {
@@ -530,12 +529,11 @@ LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
 
 # else
 
-    std::unique_ptr<llvm::MemoryBuffer> buf =
-        llvm::MemoryBuffer::getMemBuffer (llvm::StringRef(bitcode, size),
-                                          name, false);
+    llvm::MemoryBuffer* buf =
+        llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(bitcode, size),
+                                         name, false);
 
-    ErrorOrModule ModuleOrErr = llvm::getLazyBitcodeModule(std::move(buf),
-                                                           context());
+    ErrorOrModule ModuleOrErr = llvm::getLazyBitcodeModule(buf, context());
 #endif
 
     if (err) {

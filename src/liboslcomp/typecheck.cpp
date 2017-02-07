@@ -35,8 +35,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/strutil.h>
 namespace Strutil = OIIO::Strutil;
 
-#include <boost/foreach.hpp>
-
 
 OSL_NAMESPACE_ENTER
 
@@ -57,7 +55,7 @@ ASTNode::typecheck (TypeSpec expected)
 void
 ASTNode::typecheck_children (TypeSpec expected)
 {
-    BOOST_FOREACH (ref &c, m_children) {
+    for (auto&& c : m_children) {
         typecheck_list (c, expected);
     }
 }

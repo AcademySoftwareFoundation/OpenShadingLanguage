@@ -815,7 +815,7 @@ BackendLLVM::build_llvm_instance (bool groupentry)
     // Setup the symbols
     m_named_values.clear ();
     m_layers_already_run.clear ();
-    BOOST_FOREACH (Symbol &s, inst()->symbols()) {
+    for (auto&& s : inst()->symbols()) {
         // Skip constants -- we always inline scalar constants, and for
         // array constants we will just use the pointers to the copy of
         // the constant that belongs to the instance.

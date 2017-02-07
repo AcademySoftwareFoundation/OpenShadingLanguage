@@ -44,8 +44,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/thread.h>
 
-#include <boost/foreach.hpp>
-
 #include <boost/wave.hpp>
 #include <boost/wave/cpplexer/cpp_lex_token.hpp>
 #include <boost/wave/cpplexer/cpp_lex_iterator.hpp>
@@ -713,7 +711,7 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym)
         // FIXME
         const SymPtrSet &deps (m_symdeps[sym]);
         std::vector<const Symbol *> inputdeps;
-        BOOST_FOREACH (const Symbol *d, deps)
+        for (auto&& d : deps)
             if (d->symtype() == SymTypeParam ||
                   d->symtype() == SymTypeOutputParam ||
                   d->symtype() == SymTypeGlobal ||
@@ -767,12 +765,12 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename,
     oso ("\n");
 
     // Output params, so they are first
-    BOOST_FOREACH (const Symbol *s, symtab()) {
+    for (auto&& s : symtab()) {
         if (s->symtype() == SymTypeParam || s->symtype() == SymTypeOutputParam)
             write_oso_symbol (s);
     }
     // Output globals, locals, temps, const
-    BOOST_FOREACH (const Symbol *s, symtab()) {
+    for (auto&& s : symtab()) {
         if (s->symtype() == SymTypeLocal || s->symtype() == SymTypeTemp ||
             s->symtype() == SymTypeGlobal || s->symtype() == SymTypeConst) {
             // Don't bother writing symbols that are never used
@@ -1032,7 +1030,7 @@ OSLCompilerImpl::check_for_illegal_writes ()
 {
     // For each op, make sure any arguments it writes are legal to do so
     int opnum = 0;
-    BOOST_FOREACH (Opcode &op, m_ircode) {
+    for (auto&& op : m_ircode) {
         for (int a = 0;  a < op.nargs();  ++a) {
             SymbolPtr s = m_opargs[op.firstarg()+a];
             if (op.argwrite(a))
@@ -1054,7 +1052,7 @@ OSLCompilerImpl::track_variable_lifetimes (const OpcodeVec &code,
                                            std::vector<int> *bblockids)
 {
     // Clear the lifetimes for all symbols
-    BOOST_FOREACH (Symbol *s, allsyms)
+    for (auto&& s : allsyms)
         s->clear_rw ();
 
     // Keep track of the nested loops we're inside. We track them by pairs
@@ -1066,7 +1064,7 @@ OSLCompilerImpl::track_variable_lifetimes (const OpcodeVec &code,
 
     // For each op, mark its arguments as being used at that op
     int opnum = 0;
-    BOOST_FOREACH (const Opcode &op, code) {
+    for (auto&& op : code) {
         if (op.opname() == op_for || op.opname() == op_while ||
                 op.opname() == op_dowhile) {
             // If this is a loop op, we need to mark its control variable
@@ -1093,7 +1091,7 @@ OSLCompilerImpl::track_variable_lifetimes (const OpcodeVec &code,
 
             // Adjust lifetimes of symbols whose values need to be preserved
             // between loop iterations.
-            BOOST_FOREACH (intpair oprange, loop_bounds) {
+            for (auto oprange : loop_bounds) {
                 int loopcond = oprange.first;
                 int loopend = oprange.second;
                 DASSERT (s->firstuse() <= loopend);
@@ -1141,7 +1139,7 @@ add_dependency (SymDependencyMap &dmap, const Symbol *A, const Symbol *B)
 #ifdef DEBUG_SYMBOL_DEPENDENCIES
     // Perform unification -- all of B's dependencies are now
     // dependencies of A.
-    BOOST_FOREACH (const Symbol *r, dmap[B])
+    for (auto&& r : dmap[B])
         dmap[A].insert (r);
 #endif
 }
@@ -1150,7 +1148,7 @@ add_dependency (SymDependencyMap &dmap, const Symbol *A, const Symbol *B)
 static void
 mark_symbol_derivatives (SymDependencyMap &dmap, SymPtrSet &visited, const Symbol *sym)
 {
-    BOOST_FOREACH (const Symbol *r, dmap[sym]) {
+    for (auto&& r : dmap[sym]) {
 		if (visited.find(r) == visited.end()) {
 			visited.insert(r);
 
@@ -1219,9 +1217,9 @@ OSLCompilerImpl::track_variable_dependencies ()
 
         bool deriv = op->argtakesderivs_all();
         // For each sym written by the op...
-        BOOST_FOREACH (const Symbol *wsym, written) {
+        for (auto&& wsym : written) {
             // For each sym read by the op...
-            BOOST_FOREACH (const Symbol *rsym, read) {
+            for (auto&& rsym : read) {
                 if (rsym->symtype() != SymTypeConst)
                     add_dependency (m_symdeps, wsym, rsym);
             }
@@ -1245,9 +1243,9 @@ OSLCompilerImpl::track_variable_dependencies ()
 
     std::cerr << "track_variable_dependencies\n";
     std::cerr << "\nDependencies:\n";
-    BOOST_FOREACH (SymDependencyMap::value_type &m, m_symdeps) {
+    for (auto&& m, m_symdeps) {
         std::cerr << m.first->mangled() << " depends on ";
-        BOOST_FOREACH (const Symbol *d, m.second)
+        for (auto&& d : m.second)
             std::cerr << d->mangled() << ' ';
         std::cerr << "\n";
     }
@@ -1255,14 +1253,14 @@ OSLCompilerImpl::track_variable_dependencies ()
 
     // Invert the dependency
     SymDependencyMap influences;
-    BOOST_FOREACH (SymDependencyMap::value_type &m, m_symdeps)
-        BOOST_FOREACH (const Symbol *d, m.second)
+    for (auto&& m, m_symdeps)
+        for (auto&& d : m.second)
             influences[d].insert (m.first);
 
     std::cerr << "\nReverse dependencies:\n";
-    BOOST_FOREACH (SymDependencyMap::value_type &m, influences) {
+    for (auto&& m, influences) {
         std::cerr << m.first->mangled() << " contributes to ";
-        BOOST_FOREACH (const Symbol *d, m.second)
+        for (auto&& d : m.second)
             std::cerr << d->mangled() << ' ';
         std::cerr << "\n";
     }

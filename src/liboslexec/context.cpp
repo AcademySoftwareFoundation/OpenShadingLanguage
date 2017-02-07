@@ -30,7 +30,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <cstdio>
 
-#include <boost/foreach.hpp>
 #include <boost/regex.hpp>
 
 #include <OpenImageIO/dassert.h>

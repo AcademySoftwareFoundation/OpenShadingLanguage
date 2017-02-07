@@ -935,10 +935,10 @@ typedef std::vector<Connection> ConnectionVec;
 ///        FOREACH_PARAM (Symbol &s, inst) { ... stuff with s... }
 ///
 #define FOREACH_PARAM(symboldecl,inst) \
-    BOOST_FOREACH (symboldecl, param_range(inst))
+    for (symboldecl : param_range(inst))
 
 #define FOREACH_SYM(symboldecl,inst) \
-    BOOST_FOREACH (symboldecl, sym_range(inst))
+    for (symboldecl : sym_range(inst))
 
 
 
@@ -1094,37 +1094,49 @@ public:
     int firstparam () const { return m_firstparam; }
     int lastparam () const { return m_lastparam; }
 
-    /// Return a begin/end Symbol* pair for the set of param symbols
-    /// that is suitable to pass as a range for BOOST_FOREACH.
-    friend std::pair<Symbol *,Symbol *> param_range (ShaderInstance *i) {
+    // Range type suitable for use with "range for"
+    template<typename T>   // T should be Symbol or const Symbol
+    struct SymRange {
+        SymRange () : m_begin(nullptr), m_end(nullptr) {}
+        SymRange (T *a, T *b) : m_begin(a), m_end(b) {}
+        T *begin () const { return m_begin; }
+        T *end () const { return m_end; }
+    private:
+        T* m_begin;
+        T* m_end;
+    };
+
+    /// Return a SymRange for the set of param symbols that is suitable to
+    /// pass as a "range for".
+    friend SymRange<Symbol> param_range (ShaderInstance *i) {
         if (i->m_instsymbols.size() == 0 || i->firstparam() == i->lastparam())
-            return std::pair<Symbol*,Symbol*> ((Symbol*)NULL, (Symbol*)NULL);
+            return SymRange<Symbol> ();
         else
-            return std::pair<Symbol*,Symbol*> (&i->m_instsymbols[0] + i->firstparam(),
-                                               &i->m_instsymbols[0] + i->lastparam());
+            return SymRange<Symbol> (&i->m_instsymbols[0] + i->firstparam(),
+                                     &i->m_instsymbols[0] + i->lastparam());
     }
 
-    friend std::pair<const Symbol *,const Symbol *> param_range (const ShaderInstance *i) {
+    friend SymRange<const Symbol> param_range (const ShaderInstance *i) {
         if (i->m_instsymbols.size() == 0 || i->firstparam() == i->lastparam())
-            return std::pair<const Symbol*,const Symbol*> ((const Symbol*)NULL, (const Symbol*)NULL);
+            return SymRange<const Symbol> ();
         else
-            return std::pair<const Symbol*,const Symbol*> (&i->m_instsymbols[0] + i->firstparam(),
-                                                           &i->m_instsymbols[0] + i->lastparam());
+            return SymRange<const Symbol> (&i->m_instsymbols[0] + i->firstparam(),
+                                           &i->m_instsymbols[0] + i->lastparam());
     }
 
-    friend std::pair<Symbol *,Symbol *> sym_range (ShaderInstance *i) {
+    friend SymRange<Symbol> sym_range (ShaderInstance *i) {
         if (i->m_instsymbols.size() == 0)
-            return std::pair<Symbol*,Symbol*> ((Symbol*)NULL, (Symbol*)NULL);
+            return SymRange<Symbol> ();
         else
-            return std::pair<Symbol*,Symbol*> (&i->m_instsymbols[0],
-                                               &i->m_instsymbols[0] + i->m_instsymbols.size());
+            return SymRange<Symbol> (&i->m_instsymbols[0],
+                                     &i->m_instsymbols[0] + i->m_instsymbols.size());
     }
-    friend std::pair<const Symbol *,const Symbol *> sym_range (const ShaderInstance *i) {
+    friend SymRange<const Symbol> sym_range (const ShaderInstance *i) {
         if (i->m_instsymbols.size() == 0)
-            return std::pair<const Symbol*,const Symbol*> ((const Symbol*)NULL, (const Symbol*)NULL);
+            return SymRange<const Symbol> ();
         else
-            return std::pair<const Symbol*,const Symbol*> (&i->m_instsymbols[0],
-                                               &i->m_instsymbols[0] + i->m_instsymbols.size());
+            return SymRange<const Symbol> (&i->m_instsymbols[0],
+                                           &i->m_instsymbols[0] + i->m_instsymbols.size());
     }
 
     int Psym () const { return m_Psym; }

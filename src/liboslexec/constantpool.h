@@ -30,7 +30,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <vector>
 #include <list>
-#include <boost/foreach.hpp>
 
 #include <OpenImageIO/thread.h>
 
@@ -66,7 +65,7 @@ public:
     T * alloc (size_t n) {
         OIIO::lock_guard lock (m_mutex);
         // Check each block in the block list to see if it has enough space
-        BOOST_FOREACH (block_t &block, m_block_list) {
+        for (auto&& block : m_block_list) {
             size_t s = block.size();
             if ((s+n) <= block.capacity()) {
                 // Enough space in this block.  Use it.

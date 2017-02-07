@@ -337,7 +337,7 @@ SymbolTable::print ()
     if (TypeSpec::struct_list().size()) {
         std::cout << "Structure table:\n";
         int structid = 1;
-        BOOST_FOREACH (shared_ptr<StructSpec> &s, TypeSpec::struct_list()) {
+        BOOST_FOREACH (std::shared_ptr<StructSpec> &s, TypeSpec::struct_list()) {
             if (! s)
                 continue;
             std::cout << "    " << structid << ": struct " << s->mangled();

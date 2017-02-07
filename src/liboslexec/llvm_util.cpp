@@ -27,6 +27,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 
+#include <memory>
 #include <OpenImageIO/thread.h>
 #include <boost/thread/tss.hpp>   /* for thread_specific_ptr */
 
@@ -122,7 +123,7 @@ namespace {
 static OIIO::spin_mutex llvm_global_mutex;
 static bool setup_done = false;
 static boost::thread_specific_ptr<LLVM_Util::PerThreadInfo> perthread_infos;
-static std::vector<shared_ptr<LLVMMemoryManager> > jitmm_hold;
+static std::vector<std::shared_ptr<LLVMMemoryManager> > jitmm_hold;
 };
 
 
@@ -341,7 +342,7 @@ LLVM_Util::LLVM_Util (int debuglevel)
             m_thread->llvm_jitmm = new LLVMMemoryManager;
 #endif
             ASSERT (m_thread->llvm_jitmm);
-            jitmm_hold.push_back (shared_ptr<LLVMMemoryManager>(m_thread->llvm_jitmm));
+            jitmm_hold.push_back (std::shared_ptr<LLVMMemoryManager>(m_thread->llvm_jitmm));
         }
 #if USE_OLD_JIT
         m_llvm_jitmm = new MemoryManager(m_thread->llvm_jitmm);

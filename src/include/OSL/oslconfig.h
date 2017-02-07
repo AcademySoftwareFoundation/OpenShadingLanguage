@@ -68,9 +68,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/ustring.h>
 #include <OpenImageIO/platform.h>
 
-// Sort out smart pointers
-# include <memory>
-
 // Extensions to Imath
 #include "matrix22.h"
 
@@ -117,9 +114,6 @@ using OIIO::ustring;
 using OIIO::ustringHash;
 using OIIO::string_view;
 
-// Sort out smart pointers
-using std::shared_ptr;
-using std::weak_ptr;
 
 #ifndef __has_attribute
 #  define __has_attribute(x) 0

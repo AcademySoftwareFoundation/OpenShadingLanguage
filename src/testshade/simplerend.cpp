@@ -312,7 +312,7 @@ SimpleRenderer::get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
 void
 SimpleRenderer::name_transform (const char *name, const OSL::Matrix44 &xform)
 {
-    shared_ptr<Transformation> M (new OSL::Matrix44 (xform));
+    std::shared_ptr<Transformation> M (new OSL::Matrix44 (xform));
     m_named_xforms[ustring(name)] = M;
 }
 

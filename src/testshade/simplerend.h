@@ -29,6 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pragma once
 
 #include <map>
+#include <memory>
 #include <boost/unordered_map.hpp>
 #include <OpenImageIO/ustring.h>
 #include "OSL/oslexec.h"
@@ -86,7 +87,7 @@ private:
     int m_xres, m_yres;
 
     // Named transforms
-    typedef std::map <ustring, shared_ptr<Transformation> > TransformMap;
+    typedef std::map <ustring, std::shared_ptr<Transformation> > TransformMap;
     TransformMap m_named_xforms;
 
     // Attribute and userdata retrieval -- for fast dispatch, use a hash

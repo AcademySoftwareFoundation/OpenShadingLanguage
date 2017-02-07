@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
+#include <memory>
 
 #include "OSL/oslconfig.h"
 #include "OSL/shaderglobals.h"
@@ -41,7 +42,7 @@ OSL_NAMESPACE_ENTER
 
 class RendererServices;
 class ShaderGroup;
-typedef shared_ptr<ShaderGroup> ShaderGroupRef;
+typedef std::shared_ptr<ShaderGroup> ShaderGroupRef;
 struct ClosureParam;
 struct PerThreadInfo;
 class ShadingContext;

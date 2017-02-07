@@ -28,9 +28,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-#include "OSL/oslconfig.h"
-
+#include <memory>
 #include <OpenImageIO/dassert.h>
+
+#include "OSL/oslconfig.h"
 
 
 OSL_NAMESPACE_ENTER
@@ -201,7 +202,7 @@ public:
 
     /// Return a reference to the structure list.
     ///
-    static std::vector<shared_ptr<StructSpec> > & struct_list ();
+    static std::vector<std::shared_ptr<StructSpec> > & struct_list ();
 
     /// Is this an array (either a simple array, or an array of structs)?
     ///

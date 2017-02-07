@@ -32,6 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <stack>
 #include <map>
+#include <memory>
 #include <list>
 #include <set>
 
@@ -120,7 +121,7 @@ namespace pvt {
 // forward definitions
 class ShadingSystemImpl;
 class ShaderInstance;
-typedef shared_ptr<ShaderInstance> ShaderInstanceRef;
+typedef std::shared_ptr<ShaderInstance> ShaderInstanceRef;
 class Dictionary;
 class RuntimeOptimizer;
 class BackendLLVM;
@@ -857,7 +858,7 @@ private:
 
     mutable spin_mutex m_stat_mutex;     ///< Mutex for non-atomic stats
     ClosureRegistry m_closure_registry;
-    std::vector<weak_ptr<ShaderGroup> > m_all_shader_groups;
+    std::vector<std::weak_ptr<ShaderGroup> > m_all_shader_groups;
     mutable spin_mutex m_all_shader_groups_mutex;
     atomic_int m_groups_to_compile_count;
     atomic_int m_threads_currently_compiling;

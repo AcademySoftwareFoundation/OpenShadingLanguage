@@ -30,6 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <vector>
 #include <stack>
+#include <memory>
 
 #include <boost/unordered_map.hpp>
 
@@ -51,7 +52,7 @@ class ASTNode;  // forward declaration
 
 /// Handy typedef for a vector of pointers to StructSpec's.
 ///
-typedef std::vector<shared_ptr<StructSpec> > StructList;
+typedef std::vector<std::shared_ptr<StructSpec> > StructList;
 
 
 

@@ -591,7 +591,7 @@ ShadingSystemImpl::loadshader (string_view cname)
     }
     OIIO::Timer timer;
     bool ok = oso.parse_file (filename);
-    ShaderMaster::ref r = ok ? oso.master() : NULL;
+    ShaderMaster::ref r = ok ? oso.master() : nullptr;
     m_shader_masters[name] = r;
     double loadtime = timer();
     {
@@ -644,7 +644,7 @@ ShadingSystemImpl::LoadMemoryCompiledShader (string_view shadername,
     OSOReaderToMaster reader (*this);
     OIIO::Timer timer;
     bool ok = reader.parse_memory (buffer);
-    ShaderMaster::ref r = ok ? reader.master() : NULL;
+    ShaderMaster::ref r = ok ? reader.master() : nullptr;
     m_shader_masters[name] = r;
     double loadtime = timer();
     {

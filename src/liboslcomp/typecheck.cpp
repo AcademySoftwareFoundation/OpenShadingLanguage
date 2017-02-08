@@ -816,7 +816,7 @@ ASTNode::check_arglist (const char *funcname, ASTNode::ref arg,
             return true;
         if (*formals == '.') {  // Special case for token/value pairs
             // FIXME -- require that the tokens be string literals
-            if (arg->typespec().is_string() && arg->next() != NULL) {
+            if (arg->typespec().is_string() && arg->next()) {
                 arg = arg->next();
                 continue;
             }

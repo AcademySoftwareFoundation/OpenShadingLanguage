@@ -38,7 +38,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <unordered_map>
 
 #include <boost/regex_fwd.hpp>
-#include <boost/intrusive_ptr.hpp>
 #include <boost/thread/tss.hpp>   /* for thread_specific_ptr */
 
 #include <OpenImageIO/ustring.h>
@@ -338,7 +337,7 @@ inline void stlfree (T &v)
 /// individual instances of the shader.
 class ShaderMaster : public RefCnt {
 public:
-    typedef boost::intrusive_ptr<ShaderMaster> ref;
+    typedef OIIO::intrusive_ptr<ShaderMaster> ref;
     ShaderMaster (ShadingSystemImpl &shadingsys) : m_shadingsys(shadingsys) { }
     ~ShaderMaster ();
 

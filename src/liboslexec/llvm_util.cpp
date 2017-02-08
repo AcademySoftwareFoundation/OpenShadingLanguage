@@ -483,31 +483,38 @@ LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
     if (err)
         err->clear();
 
-    // Keep uninitialized so compiler will error if not set through macros below
-    llvm::Module *m;
-
-#if OSL_LLVM_VERSION <= 34
-
+#if OSL_LLVM_VERSION <= 35 /* Old JIT vvvvvvvvvvvvvvvvvvvvvvvvvvvv */
     llvm::MemoryBuffer* buf =
         llvm::MemoryBuffer::getMemBuffer (llvm::StringRef(bitcode, size), name);
 
-    m = llvm::getLazyBitcodeModule (buf, context(), err);
-
-#else // > 34
-
-# if OSL_LLVM_VERSION <= 36
-    typedef llvm::ErrorOr<llvm::Module*> ErrorOrModule;
-# elif OSL_LLVM_VERSION < 40
-    typedef llvm::ErrorOr<std::unique_ptr<llvm::Module> > ErrorOrModule;
+    // Create a lazily deserialized IR module
+    // This can only be done for old JIT
+# if OSL_LLVM_VERSION >= 35
+    llvm::Module *m = llvm::getLazyBitcodeModule (buf, context()).get();
 # else
+    llvm::Module *m = llvm::getLazyBitcodeModule (buf, context(), err);
+# endif
+    // don't delete buf, the module has taken ownership of it
+
+#if 0
+    // Debugging: print all functions in the module
+    for (llvm::Module::iterator i = m->begin(); i != m->end(); ++i)
+        std::cout << "  found " << i->getName().data() << "\n";
+#endif
+    return m;
+#endif /* End of LLVM <= 3.5 Old JIT section ^^^^^^^^^^^^^^^^^^^^^ */
+
+
+#if OSL_LLVM_VERSION >= 36  /* MCJIT vvvvvvvvvvvvvvvvvvvvvvvvvvvvv */
+# if OSL_LLVM_VERSION >= 40
     typedef llvm::Expected<std::unique_ptr<llvm::Module> > ErrorOrModule;
+# else
+    typedef llvm::ErrorOr<std::unique_ptr<llvm::Module> > ErrorOrModule;
 # endif
 
 # if OSL_LLVM_VERSION >= 40 || defined(OSL_FORCE_BITCODE_PARSE)
-
     llvm::MemoryBufferRef buf =
         llvm::MemoryBufferRef(llvm::StringRef(bitcode, size), name);
-
 #  ifdef OSL_FORCE_BITCODE_PARSE
     //
     // None of the below seems to be an issue for 3.9 and above.
@@ -523,54 +530,33 @@ LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
     // lazily deserialize the bitcode, MCJIT is unable to find the
     // called functions due to disagreement about whether a leading "_"
     // is part of the symbol name.
-
     ErrorOrModule ModuleOrErr = llvm::parseBitcodeFile (buf, context());
 #  else
     ErrorOrModule ModuleOrErr = llvm::getLazyBitcodeModule(buf, context());
 #  endif
 
 # else /* !OSL_FORCE_BITCODE_PARSE */
-
     std::unique_ptr<llvm::MemoryBuffer> buf (
-        llvm::MemoryBuffer::getMemBuffer (llvm::StringRef(bitcode, size),
-                                          name, false));
-#  if OSL_LLVM_VERSION >= 36
-    ErrorOrModule ModuleOrErr = llvm::getLazyBitcodeModule(std::move(buf),
-                                                           context());
-#  else /* OSL_LLVM_VERSION == 35 */
-    ErrorOrModule ModuleOrErr = llvm::getLazyBitcodeModule(buf.get(),
-                                                           context());
-#  endif /* OSL_LLVM_VERSION >= 36 */
-
+        llvm::MemoryBuffer::getMemBuffer (llvm::StringRef(bitcode, size), name, false));
+    ErrorOrModule ModuleOrErr = llvm::getLazyBitcodeModule(std::move(buf), context());
 # endif
 
     if (err) {
-#if OSL_LLVM_VERSION < 40
-        error_string(ModuleOrErr.getError(), err);
-#else
+# if OSL_LLVM_VERSION >= 40
         error_string(ModuleOrErr.takeError(), err);
-#endif
-    }
-
-#if OSL_LLVM_VERSION <= 36
-    m = ModuleOrErr.get();
-# if OSL_LLVM_VERSION == 35
-    // If module exists ownership of buf has been transfered.
-    if (m) buf.release();
+# else
+        error_string(ModuleOrErr.getError(), err);
 # endif
-#else
-    m = ModuleOrErr ? ModuleOrErr->release() : nullptr;
-#endif
-
-#endif // <= 34
-
-#if 0
+    }
+    llvm::Module *m = ModuleOrErr ? ModuleOrErr->release() : nullptr;
+# if 0
     // Debugging: print all functions in the module
     for (llvm::Module::iterator i = m->begin(); i != m->end(); ++i)
         std::cout << "  found " << i->getName().data() << "\n";
-#endif
-
+# endif
     return m;
+
+#endif /* MCJIT ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ */
 }
 
 
@@ -779,7 +765,7 @@ LLVM_Util::do_optimize (std::string *out_err)
 {
     ASSERT(m_llvm_module && "No module to optimize!");
 
-#if OSL_LLVM_VERSION >= 35 && !defined(OSL_FORCE_BITCODE_PARSE)
+#if OSL_LLVM_VERSION > 35 && !defined(OSL_FORCE_BITCODE_PARSE)
     LLVMErr err = m_llvm_module->materializeAll();
     if (error_string(std::move(err), out_err))
         return;

@@ -32,12 +32,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <map>
 #include <set>
 
-#include <boost/version.hpp>
-#if BOOST_VERSION >= 104900
-# include <boost/container/flat_map.hpp>
-# include <boost/container/flat_set.hpp>
-# define USE_FLAT_MAP 1
-#endif
+#include <boost/container/flat_map.hpp>
+#include <boost/container/flat_set.hpp>
+#define USE_FLAT_MAP 1
 
 #include "oslexec_pvt.h"
 using namespace OSL;

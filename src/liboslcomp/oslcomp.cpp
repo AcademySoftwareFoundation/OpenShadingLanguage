@@ -47,9 +47,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <boost/wave.hpp>
 #include <boost/wave/cpplexer/cpp_lex_token.hpp>
 #include <boost/wave/cpplexer/cpp_lex_iterator.hpp>
-#if OIIO_VERSION < 10604
-#include <boost/filesystem.hpp>
-#endif
 
 
 OSL_NAMESPACE_ENTER
@@ -344,11 +341,7 @@ OSLCompilerImpl::compile (string_view filename,
 
     std::vector<std::string> defines;
     std::vector<std::string> includepaths;
-#if OIIO_VERSION >= 10604
     m_cwd = OIIO::Filesystem::current_path();
-#else
-    m_cwd = boost::filesystem::current_path().string();
-#endif
     m_main_filename = filename;
 
     // Determine where the installed shader include directory is, and
@@ -439,11 +432,7 @@ OSLCompilerImpl::compile_buffer (string_view sourcecode,
 {
     string_view filename ("<buffer>");
 
-#if OIIO_VERSION >= 10604
     m_cwd = OIIO::Filesystem::current_path();
-#else
-    m_cwd = boost::filesystem::current_path().string();
-#endif
     m_main_filename = filename;
 
     // Determine where the installed shader include directory is, and

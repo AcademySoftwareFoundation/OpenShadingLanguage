@@ -116,7 +116,7 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
           "-I${CMAKE_CURRENT_SOURCE_DIR}"
           "-I${CMAKE_SOURCE_DIR}/src/include"
           "-I${CMAKE_BINARY_DIR}/include/OSL"
-          "-I${OPENIMAGEIO_INCLUDES}"
+          "-I${OPENIMAGEIO_INCLUDE_DIR}"
           "-I${ILMBASE_INCLUDE_DIR}"
           "-I${Boost_INCLUDE_DIRS}"
           -DOSL_COMPILING_TO_BITCODE=1
@@ -147,7 +147,7 @@ endif ()
 
 TARGET_LINK_LIBRARIES ( oslexec
                         ${VISIBILITY_COMMAND} ${VISIBILITY_MAP_COMMAND}
-                        ${OPENIMAGEIO_LIBRARY} ${ILMBASE_LIBRARIES}
+                        ${OPENIMAGEIO_LIBRARIES} ${ILMBASE_LIBRARIES}
                         ${PUGIXML_LIBRARIES}
                         ${PARTIO_LIBRARIES} ${ZLIB_LIBRARIES}
                         ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}

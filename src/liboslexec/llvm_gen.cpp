@@ -2277,13 +2277,11 @@ LLVMGEN (llvm_gen_texture)
     std::vector<llvm::Value *> args;
     args.push_back (rop.sg_void_ptr());
     RendererServices::TextureHandle *texture_handle = NULL;
-#if OIIO_VERSION >= 10602
     if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
         texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data());
         if (! rop.renderer()->good (texture_handle))
             texture_handle = NULL;
     }
-#endif
     args.push_back (rop.llvm_load_value (Filename));
     args.push_back (rop.ll.constant_ptr (texture_handle));
     args.push_back (opt);
@@ -2345,13 +2343,11 @@ LLVMGEN (llvm_gen_texture3d)
     std::vector<llvm::Value *> args;
     args.push_back (rop.sg_void_ptr());
     RendererServices::TextureHandle *texture_handle = NULL;
-#if OIIO_VERSION >= 10602
     if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
         texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data());
         if (! rop.renderer()->good (texture_handle))
             texture_handle = NULL;
     }
-#endif
     args.push_back (rop.llvm_load_value (Filename));
     args.push_back (rop.ll.constant_ptr (texture_handle));
     args.push_back (opt);
@@ -2421,13 +2417,11 @@ LLVMGEN (llvm_gen_environment)
     std::vector<llvm::Value *> args;
     args.push_back (rop.sg_void_ptr());
     RendererServices::TextureHandle *texture_handle = NULL;
-#if OIIO_VERSION >= 10602
     if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
         texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data());
         if (! rop.renderer()->good (texture_handle))
             texture_handle = NULL;
     }
-#endif
     args.push_back (rop.llvm_load_value (Filename));
     args.push_back (rop.ll.constant_ptr (texture_handle));
     args.push_back (opt);
@@ -2869,13 +2863,11 @@ LLVMGEN (llvm_gen_gettextureinfo)
 
     args.push_back (rop.sg_void_ptr());
     RendererServices::TextureHandle *texture_handle = NULL;
-#if OIIO_VERSION >= 10602
     if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
         texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data());
         if (! rop.renderer()->good (texture_handle))
             texture_handle = NULL;
     }
-#endif
     args.push_back (rop.llvm_load_value (Filename));
     args.push_back (rop.ll.constant_ptr (texture_handle));
     args.push_back (rop.llvm_load_value (Dataname));

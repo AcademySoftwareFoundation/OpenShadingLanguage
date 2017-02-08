@@ -152,21 +152,12 @@ inline float bits_to_01 (unsigned int bits) {
 }
 
 
-#if OIIO_VERSION < 10602
-// Circular bit rotate by k bits, for 4 values at once.
-OIIO_FORCEINLINE int4
-rotl32 (const int4& x, const unsigned int k) {
-    return (x<<k) | srl(x,32-k);
-}
-#else
-  using OIIO::simd::rotl32;
-#endif
-
 
 // Perform a bjmix (see OpenImageIO/hash.h) on 4 sets of values at once.
 OIIO_FORCEINLINE void
 bjmix (int4 &a, int4 &b, int4 &c)
 {
+    using OIIO::simd::rotl32;
     a -= c;  a ^= rotl32(c, 4);  c += b;
     b -= a;  b ^= rotl32(a, 6);  a += c;
     c -= b;  c ^= rotl32(b, 8);  b += a;
@@ -179,6 +170,7 @@ bjmix (int4 &a, int4 &b, int4 &c)
 OIIO_FORCEINLINE int4
 bjfinal (const int4& a_, const int4& b_, const int4& c_)
 {
+    using OIIO::simd::rotl32;
 	int4 a(a_), b(b_), c(c_);
     c ^= b; c -= rotl32(b,14);
     a ^= c; a -= rotl32(c,11);

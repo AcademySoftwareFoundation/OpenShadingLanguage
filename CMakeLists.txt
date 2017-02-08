@@ -123,7 +123,7 @@ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
             # Linux/FreeBSD/Hurd: also hide all the symbols of dependent
             # libraries to prevent clashes if an app using this library is
             # linked against other verions of our dependencies.
-            set (VISIBILITY_MAP_COMMAND "-Wl,--version-script=${PROJECT_SOURCE_DIR}/src/libOpenImageIO/libOpenImageIO.map")
+            set (VISIBILITY_MAP_COMMAND "-Wl,--version-script=${PROJECT_SOURCE_DIR}/src/liboslexec/liboslexec.map")
         endif ()
     endif ()
     if (LLVM_STATIC AND ${CMAKE_SYSTEM_NAME} STREQUAL "Linux" AND NOT DEBUGMODE)
@@ -354,12 +354,11 @@ set (CMAKE_MODULE_PATH
 include (util_macros)
 include (platform)
 include (externalpackages)
-include (oiio)
 include (flexbison)
 include_directories (
     "${CMAKE_SOURCE_DIR}/src/include"
     "${CMAKE_BINARY_DIR}/include/OSL"
-    "${OPENIMAGEIO_INCLUDES}"
+    "${OPENIMAGEIO_INCLUDE_DIR}"
   )
 
 

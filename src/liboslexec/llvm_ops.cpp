@@ -109,9 +109,7 @@ using namespace OSL;
 
 #include <OpenEXR/ImathFun.h>
 #include <OpenImageIO/fmath.h>
-#if OIIO_VERSION >= 10505
-#  include <OpenImageIO/simd.h>
-#endif
+#include <OpenImageIO/simd.h>
 
 #if defined(_MSC_VER) && _MSC_VER < 1700
 using OIIO::isinf;

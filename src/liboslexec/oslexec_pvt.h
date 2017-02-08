@@ -35,9 +35,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <memory>
 #include <list>
 #include <set>
+#include <unordered_map>
 
 #include <boost/regex_fwd.hpp>
-#include <boost/unordered_map.hpp>
 #include <boost/intrusive_ptr.hpp>
 #include <boost/thread/tss.hpp>   /* for thread_specific_ptr */
 
@@ -639,7 +639,7 @@ public:
 
     void optimize_all_groups (int nthreads=0, int mythread=0, int totalthreads=1);
 
-    typedef boost::unordered_map<ustring,OpDescriptor,ustringHash> OpDescriptorMap;
+    typedef std::unordered_map<ustring,OpDescriptor,ustringHash> OpDescriptorMap;
 
     /// Look up OpDescriptor for the named op, return NULL for unknown op.
     ///
@@ -1718,7 +1718,7 @@ private:
     mutable TextureSystem::Perthread *m_texture_thread_info; ///< Ptr to texture thread info
     ShaderGroup *m_group;               ///< Ptr to shader group
     std::vector<char> m_heap;           ///< Heap memory
-    typedef boost::unordered_map<ustring, boost::regex*, ustringHash> RegexMap;
+    typedef std::unordered_map<ustring, boost::regex*, ustringHash> RegexMap;
     RegexMap m_regex_map;               ///< Compiled regex's
     MessageList m_messages;             ///< Message blackboard
     int m_max_warnings;                 ///< To avoid processing too many warnings

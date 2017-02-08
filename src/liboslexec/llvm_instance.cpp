@@ -27,8 +27,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <cmath>
-
-#include <boost/unordered_map.hpp>
+#include <unordered_map>
 
 #include <OpenImageIO/timer.h>
 #include <OpenImageIO/sysutil.h>
@@ -136,7 +135,7 @@ struct HelperFuncRecord {
         : argtypes(argtypes), function(function) {}
 };
 
-typedef boost::unordered_map<std::string,HelperFuncRecord> HelperFuncMap;
+typedef std::unordered_map<std::string,HelperFuncRecord> HelperFuncMap;
 HelperFuncMap llvm_helper_function_map;
 atomic_int llvm_helper_function_map_initialized (0);
 spin_mutex llvm_helper_function_map_mutex;

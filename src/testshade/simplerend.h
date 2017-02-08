@@ -30,7 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <map>
 #include <memory>
-#include <boost/unordered_map.hpp>
+#include <unordered_map>
 #include <OpenImageIO/ustring.h>
 #include "OSL/oslexec.h"
 
@@ -98,7 +98,7 @@ private:
     typedef bool (SimpleRenderer::*AttrGetter)(ShaderGlobals *sg, bool derivs,
                                                ustring object, TypeDesc type,
                                                ustring name, void *val);
-    typedef boost::unordered_map<ustring, AttrGetter, ustringHash> AttrGetterMap;
+    typedef std::unordered_map<ustring, AttrGetter, ustringHash> AttrGetterMap;
     AttrGetterMap m_attr_getters;
 
     // Attribute getters

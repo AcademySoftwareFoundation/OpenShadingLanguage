@@ -97,7 +97,7 @@ private:
     int m_oso_major, m_oso_minor;     ///< oso file format version
     int m_sym_default_index;          ///< Next sym default value to fill in
     bool m_errors;                    ///< Did we hit any errors?
-    typedef boost::unordered_map<ustring,int,ustringHash> UstringIntMap;
+    typedef std::unordered_map<ustring,int,ustringHash> UstringIntMap;
     UstringIntMap m_symmap;           ///< map sym name to index
 };
 

@@ -418,7 +418,7 @@ private:
     ShaderGlobals m_shaderglobals;        ///< Dummy ShaderGlobals
 
     // Keep track of some things for the whole shader group:
-    typedef boost::unordered_map<ustring,ustring,ustringHash> ustringmap_t;
+    typedef std::unordered_map<ustring,ustring,ustringHash> ustringmap_t;
     std::vector<ustringmap_t> m_params_holding_globals;
                    ///< Which params of each layer really just hold globals
 

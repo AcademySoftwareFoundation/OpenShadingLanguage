@@ -11,6 +11,7 @@ Dependency and standards changes:
 * **OpenImageIO 1.7+**: This release of OSL should build properly against
   OIIO 1.7 or newer. You may find that 1.6 is still ok, but we are not doing
   any work to ensure that.
+* CMake >= 3.2.2
 
 Language features:
 

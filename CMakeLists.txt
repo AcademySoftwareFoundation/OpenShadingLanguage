@@ -1,27 +1,33 @@
-project (OSL)
+cmake_minimum_required (VERSION 3.2.2)
+cmake_policy (SET CMP0048 NEW)  # Allow VERSION specifier in project()
+project (OSL
+         VERSION 1.9.0
+         LANGUAGES CXX C)
+set (PROJECT_VERSION_RELEASE_TYPE "dev")   # "dev", "betaX", "RCY", ""
+set (${PROJECT_NAME}_VERSION_RELEASE_TYPE ${PROJECT_VERSION_RELEASE_TYPE})
+set (PROJECT_COPYRIGHTYEARS "2008-2017")
+set (PROJECT_AUTHORS "Sony Pictures Imageworks, et al")
+set (PROJECT_URL "")
 
-# Release version of the library
-set (OSL_LIBRARY_VERSION_MAJOR 1)
-set (OSL_LIBRARY_VERSION_MINOR 9)
-set (OSL_LIBRARY_VERSION_PATCH 0)
-set (OSL_LIBRARY_VERSION_RELEASE_TYPE "dev")   # "dev", "betaX", "RCY", ""
+set (PROJECT_VERSION_MAJORMINOR
+     "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}")
+message (STATUS "Building ${PROJECT_NAME} ${PROJECT_VERSION}")
+message (STATUS "CMake version is ${CMAKE_VERSION}")
+cmake_policy (SET CMP0017 NEW)  # Prefer files from the CMake module directory when including from there.
+cmake_policy (SET CMP0025 NEW)  # Detect AppleClang for new CMake
+cmake_policy (SET CMP0046 OLD)  # Don't error on non-existent dependency in add_dependencies.
+cmake_policy (SET CMP0042 OLD)  # Don't enable MACOSX_RPATH by default
+set (CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)
+
+# Deprecated names
+set (OSL_LIBRARY_VERSION_PATCH ${PROJECT_VERSION_PATCH})
+set (OSL_LIBRARY_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+set (OSL_LIBRARY_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+set (OSL_LIBRARY_VERSION_RELEASE_TYPE ${PROJECT_VERSION_RELEASE_TYPE})
 
 # Version of the OSO file format and instruction set
 set (OSO_FILE_VERSION_MAJOR 1)
 set (OSO_FILE_VERSION_MINOR 0)
-
-cmake_minimum_required (VERSION 2.6)
-if (NOT CMAKE_VERSION VERSION_LESS 2.8.4)
-    cmake_policy (SET CMP0017 NEW)
-endif ()
-if (NOT CMAKE_VERSION VERSION_LESS 3.0)
-    cmake_policy (SET CMP0025 NEW)  # Detect AppleClang for new CMake
-endif ()
-if (NOT CMAKE_VERSION VERSION_LESS 3.2.2)
-    cmake_policy (SET CMP0042 OLD)
-    cmake_policy (SET CMP0046 OLD)
-endif ()
-set (CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)
 
 if (VERBOSE)
     message (STATUS "Project source dir = ${PROJECT_SOURCE_DIR}")
@@ -234,8 +240,7 @@ endif ()
 set (USE_PARTIO ON CACHE BOOL "Use Partio if found")
 set (PARTIO_HOME "" CACHE STRING "Search path for Partio components")
 set (USE_FAST_MATH ON CACHE BOOL "Use fast math approximations (if no, then use system math library)")
-set (USE_CPP11 ON CACHE BOOL "Compile in C++11 mode")
-set (USE_CPP14 OFF CACHE BOOL "Compile in C++14 mode")
+set (USE_CPP 11 CACHE STRING "C++ standard to prefer (11, 14, etc.)")
 set (USE_LIBCPLUSPLUS OFF CACHE BOOL "Compile with clang libc++")
 set (EXTRA_CPP_ARGS "" CACHE STRING "Extra C++ command line definitions")
 set (USE_SIMD "" CACHE STRING "Use SIMD directives (0, sse2, sse3, sse4.1, sse4.2)")
@@ -279,12 +284,12 @@ if (EXTRA_CPP_ARGS)
     add_definitions ("${EXTRA_CPP_ARGS}")
 endif()
 
-if (USE_CPP11 OR USE_CPP14)
-    if (USE_CPP14)
+if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG OR CMAKE_COMPILER_IS_INTEL)
+    if (USE_CPP VERSION_GREATER 11)
         message (STATUS "Building for C++14")
         add_definitions ("-std=c++14")
         set (OSL_CSTD_FLAGS ${OSL_CSTD_FLAGS} "-std=c++14")
-    elseif (USE_CPP11)
+    else ()
         message (STATUS "Building for C++11")
         add_definitions ("-std=c++11")
         set (OSL_CSTD_FLAGS ${OSL_CSTD_FLAGS} "-std=c++11")
@@ -293,8 +298,6 @@ if (USE_CPP11 OR USE_CPP14)
         # C++ >= 11 doesn't like 'register' keyword, which is in Qt headers
         add_definitions ("-Wno-deprecated-register")
     endif ()
-else ()
-    message (STATUS "Building for C++98!")
 endif ()
 
 if (USE_LIBCPLUSPLUS AND CMAKE_COMPILER_IS_CLANG)

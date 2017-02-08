@@ -33,9 +33,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <ctype.h>
 #include <unordered_map>
 
-#include <boost/algorithm/string.hpp>
-
 #include <OpenImageIO/dassert.h>
+#include <OpenImageIO/strutil.h>
 
 #ifdef USE_EXTERNAL_PUGIXML
 # include <pugixml.hpp>
@@ -179,7 +178,7 @@ Dictionary::get_document_index (ustring dictionaryname)
         pugi::xml_document *doc = new pugi::xml_document;
         m_documents.push_back (doc);
         pugi::xml_parse_result parse_result;
-        if (boost::ends_with (dictionaryname.string(), ".xml")) {
+        if (Strutil::ends_with (dictionaryname.string(), ".xml")) {
             // xml file -- read it
             parse_result = doc->load_file (dictionaryname.c_str());
         } else {

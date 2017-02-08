@@ -34,8 +34,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec_pvt.h"
 #include "osoreader.h"
 
-#include <boost/algorithm/string.hpp>
-
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/dassert.h>
 #include <OpenImageIO/timer.h>
@@ -369,7 +367,7 @@ readuntil (std::string &source, const std::string &stop, bool do_trim=false)
     std::string r (source, 0, e);
     source.erase (0, e == source.npos ? e : e+1);
     if (do_trim)
-        boost::trim (r);
+        r = Strutil::strip (r); // trim whitespace
     return r;
 }
 

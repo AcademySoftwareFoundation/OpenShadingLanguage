@@ -38,8 +38,6 @@ using namespace OSL::pvt;
 #include <OpenImageIO/dassert.h>
 #include <OpenImageIO/filesystem.h>
 
-#include <boost/algorithm/string.hpp>
-
 
 OSL_NAMESPACE_ENTER
 

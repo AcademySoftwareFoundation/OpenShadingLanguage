@@ -31,8 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdio>
 #include <fstream>
 #include <cstdlib>
-
-#include <boost/bind.hpp>
+#include <functional>
 
 #include <OpenImageIO/dassert.h>
 #include <OpenImageIO/thread.h>
@@ -72,10 +71,10 @@ shade_image (ShadingSystem &shadingsys, ShaderGroup &group,
     if (nthreads != 1 && roi.npixels() >= 64*64) {
         // Parallelize
         OIIO::ImageBufAlgo::parallel_image (
-            boost::bind (shade_image, boost::ref(shadingsys),
-                         boost::ref(group), defaultsg,
-                         boost::ref(buf), outputs, shadelocations,
-                         _1 /*roi*/, 1 /*nthreads*/),
+            std::bind (shade_image, std::ref(shadingsys),
+                         std::ref(group), defaultsg,
+                         std::ref(buf), outputs, shadelocations,
+                         std::placeholders::_1 /*roi*/, 1 /*nthreads*/),
             roi, nthreads);
         return true;
     }

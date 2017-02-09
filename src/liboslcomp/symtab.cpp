@@ -35,8 +35,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/dassert.h>
 namespace Strutil = OIIO::Strutil;
 
-#include <boost/foreach.hpp>
-
 
 OSL_NAMESPACE_ENTER
 
@@ -337,7 +335,7 @@ SymbolTable::print ()
     if (TypeSpec::struct_list().size()) {
         std::cout << "Structure table:\n";
         int structid = 1;
-        BOOST_FOREACH (std::shared_ptr<StructSpec> &s, TypeSpec::struct_list()) {
+        for (auto&& s : TypeSpec::struct_list()) {
             if (! s)
                 continue;
             std::cout << "    " << structid << ": struct " << s->mangled();
@@ -356,7 +354,7 @@ SymbolTable::print ()
     }
 
     std::cout << "Symbol table:\n";
-    BOOST_FOREACH (const Symbol *s, m_allsyms) {
+    for (auto&& s : m_allsyms) {
         if (s->is_structure())
             continue;
         std::cout << "\t" << s->mangled() << " : ";

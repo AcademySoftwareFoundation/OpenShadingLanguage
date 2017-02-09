@@ -31,8 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <stack>
 #include <memory>
-
-#include <boost/unordered_map.hpp>
+#include <unordered_map>
 
 #include <OpenImageIO/typedesc.h>
 #include <OpenImageIO/ustring.h>
@@ -203,7 +202,7 @@ private:
 ///
 class SymbolTable {
 public:
-    typedef boost::unordered_map<ustring, Symbol *,ustringHash> ScopeTable;
+    typedef std::unordered_map<ustring, Symbol *,ustringHash> ScopeTable;
     typedef std::vector<ScopeTable> ScopeTableStack;
     typedef SymbolPtrVec::iterator iterator;
     typedef SymbolPtrVec::const_iterator const_iterator;

@@ -44,7 +44,7 @@ namespace pvt {
 
 #if 0 // only when testing the statistics of perlin noise to normalize the range
 
-#include <boost/random.hpp>
+#include <random>
 
 void test_perlin(int d) {
     HashScalar h;
@@ -53,17 +53,17 @@ void test_perlin(int d) {
     float noise_avg = 0;
     float noise_avg2 = 0;
     float noise_stddev;
-    boost::mt19937 rndgen;
-    boost::uniform_01<boost::mt19937, float> rnd(rndgen);
+    std::mt19937 rndgen;
+    std::uniform_real_distribution<float> rnd (0.0f, 1.0f);
     printf("Running perlin-%d noise test ...\n", d);
     const int n = 100000000;
     const float r = 1024;
     for (int i = 0; i < n; i++) {
         float noise;
-        float nx = rnd(); nx = (2 * nx - 1) * r;
-        float ny = rnd(); ny = (2 * ny - 1) * r;
-        float nz = rnd(); nz = (2 * nz - 1) * r;
-        float nw = rnd(); nw = (2 * nw - 1) * r;
+        float nx = rnd(rndgen); nx = (2 * nx - 1) * r;
+        float ny = rnd(rndgen); ny = (2 * ny - 1) * r;
+        float nz = rnd(rndgen); nz = (2 * nz - 1) * r;
+        float nw = rnd(rndgen); nw = (2 * nw - 1) * r;
         switch (d) {
             case 1: perlin(noise, h, nx); break;
             case 2: perlin(noise, h, nx, ny); break;

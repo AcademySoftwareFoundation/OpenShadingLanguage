@@ -34,8 +34,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec_pvt.h"
 #include "osoreader.h"
 
-#include <boost/algorithm/string.hpp>
-
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/dassert.h>
 #include <OpenImageIO/timer.h>
@@ -97,7 +95,7 @@ private:
     int m_oso_major, m_oso_minor;     ///< oso file format version
     int m_sym_default_index;          ///< Next sym default value to fill in
     bool m_errors;                    ///< Did we hit any errors?
-    typedef boost::unordered_map<ustring,int,ustringHash> UstringIntMap;
+    typedef std::unordered_map<ustring,int,ustringHash> UstringIntMap;
     UstringIntMap m_symmap;           ///< map sym name to index
 };
 
@@ -369,7 +367,7 @@ readuntil (std::string &source, const std::string &stop, bool do_trim=false)
     std::string r (source, 0, e);
     source.erase (0, e == source.npos ? e : e+1);
     if (do_trim)
-        boost::trim (r);
+        r = Strutil::strip (r); // trim whitespace
     return r;
 }
 

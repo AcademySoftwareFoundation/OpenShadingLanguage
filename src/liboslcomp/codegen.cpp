@@ -30,8 +30,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <iostream>
 
-#include <boost/foreach.hpp>
-
 #include "oslcomp_pvt.h"
 
 #include <OpenImageIO/dassert.h>
@@ -110,7 +108,7 @@ OSLCompilerImpl::insert_code (int opnum, const char *opname,
             }
         }
         // Adjust param init ranges
-        BOOST_FOREACH (Symbol *s, symtab()) {
+        for (auto&& s : symtab()) {
             if (s->symtype() == SymTypeParam ||
                   s->symtype() == SymTypeOutputParam) {
                 if (s->initbegin() > opnum)
@@ -197,7 +195,7 @@ OSLCompilerImpl::add_struct_fields (StructSpec *structspec,
 Symbol *
 OSLCompilerImpl::make_constant (ustring val)
 {
-    BOOST_FOREACH (ConstantSymbol *sym, m_const_syms) {
+    for (auto&& sym : m_const_syms) {
         if (sym->typespec().is_string() && sym->strval() == val)
             return sym;
     }
@@ -215,7 +213,7 @@ Symbol *
 OSLCompilerImpl::make_constant (TypeDesc type, const void *val)
 {
     size_t typesize = type.size();
-    BOOST_FOREACH (ConstantSymbol *sym, m_const_syms) {
+    for (auto&& sym : m_const_syms) {
         if (sym->typespec().simpletype() == type &&
               ! memcmp(val, sym->data(), typesize))
             return sym;
@@ -234,7 +232,7 @@ OSLCompilerImpl::make_constant (TypeDesc type, const void *val)
 Symbol *
 OSLCompilerImpl::make_constant (int val)
 {
-    BOOST_FOREACH (ConstantSymbol *sym, m_const_syms) {
+    for (auto&& sym : m_const_syms) {
         if (sym->typespec().is_int() && sym->intval() == val)
             return sym;
     }
@@ -251,7 +249,7 @@ OSLCompilerImpl::make_constant (int val)
 Symbol *
 OSLCompilerImpl::make_constant (float val)
 {
-    BOOST_FOREACH (ConstantSymbol *sym, m_const_syms) {
+    for (auto&& sym : m_const_syms) {
         if (sym->typespec().is_float() && sym->floatval() == val)
             return sym;
     }
@@ -269,7 +267,7 @@ Symbol *
 OSLCompilerImpl::make_constant (TypeDesc type, float x, float y, float z)
 {
     Vec3 val (x, y, z);
-    BOOST_FOREACH (ConstantSymbol *sym, m_const_syms) {
+    for (auto&& sym : m_const_syms) {
         if (sym->typespec().simpletype() == type && sym->vecval() == val)
             return sym;
     }
@@ -354,7 +352,7 @@ ASTNode::codegen (Symbol *dest)
 void
 ASTNode::codegen_children ()
 {
-    BOOST_FOREACH (ref &c, m_children) {
+    for (auto&& c : m_children) {
         codegen_list (c);
     }
 }
@@ -777,7 +775,7 @@ ASTvariable_declaration::param_default_literals (const Symbol *sym,
         // the node that defined its parameter (i.e., *this). Look in that
         // list for the initializer for this specific field.
         init = NULL;
-        BOOST_FOREACH (const NamedInit &n, m_struct_field_inits) {
+        for (auto&& n : m_struct_field_inits) {
             if (n.first == sym->name()) {
                 init = n.second;
                 break;

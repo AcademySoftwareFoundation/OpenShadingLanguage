@@ -32,8 +32,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <limits>
 #include <sstream>
 
-#include <boost/foreach.hpp>
-
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/dassert.h>
 #include <OpenImageIO/thread.h>
@@ -129,7 +127,7 @@ ShaderMaster::resolve_syms ()
     m_firstparam = -1;
     m_lastparam = -1;
     int i = 0;
-    BOOST_FOREACH (Symbol &s, m_symbols) {
+    for (auto&& s : m_symbols) {
         allsymptrs.push_back (&s);
         // Fix up the size of the symbol's data (for one point, not 
         // counting derivatives).
@@ -178,13 +176,13 @@ ShaderMaster::resolve_syms ()
     // Re-track variable lifetimes
     SymbolPtrVec oparg_ptrs;
     oparg_ptrs.reserve (m_args.size());
-    BOOST_FOREACH (int a, m_args)
+    for (auto&& a : m_args)
         oparg_ptrs.push_back (symbol (a));
     OSLCompilerImpl::track_variable_lifetimes (m_ops, oparg_ptrs, allsymptrs);
 
     // Figure out which ray types are queried
     m_raytype_queries = 0;
-    BOOST_FOREACH (const Opcode& op, m_ops) {
+    for (auto&& op : m_ops) {
         if (op.opname() == Strings::raytype) {
             int bit = -1;   // could be any
             const Symbol *Name (symbol(m_args[op.firstarg()+1]));

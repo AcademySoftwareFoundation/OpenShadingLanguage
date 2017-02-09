@@ -32,12 +32,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <map>
 #include <set>
 
-#include <boost/version.hpp>
-#if BOOST_VERSION >= 104900
-# include <boost/container/flat_map.hpp>
-# include <boost/container/flat_set.hpp>
-# define USE_FLAT_MAP 1
-#endif
+#include <boost/container/flat_map.hpp>
+#include <boost/container/flat_set.hpp>
+#define USE_FLAT_MAP 1
 
 #include "oslexec_pvt.h"
 using namespace OSL;
@@ -421,7 +418,7 @@ private:
     ShaderGlobals m_shaderglobals;        ///< Dummy ShaderGlobals
 
     // Keep track of some things for the whole shader group:
-    typedef boost::unordered_map<ustring,ustring,ustringHash> ustringmap_t;
+    typedef std::unordered_map<ustring,ustring,ustringHash> ustringmap_t;
     std::vector<ustringmap_t> m_params_holding_globals;
                    ///< Which params of each layer really just hold globals
 

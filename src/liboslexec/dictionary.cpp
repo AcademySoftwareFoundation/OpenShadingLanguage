@@ -31,11 +31,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdio>
 #include <cstdlib>
 #include <ctype.h>
-
-#include <boost/unordered_map.hpp>
-#include <boost/algorithm/string.hpp>
+#include <unordered_map>
 
 #include <OpenImageIO/dassert.h>
+#include <OpenImageIO/strutil.h>
 
 #ifdef USE_EXTERNAL_PUGIXML
 # include <pugixml.hpp>
@@ -139,8 +138,8 @@ private:
             : document(d), node(n), next(0) { }
     };
 
-    typedef boost::unordered_map <Query, QueryResult, QueryHash> QueryMap;
-    typedef boost::unordered_map<ustring, int, ustringHash> DocMap;
+    typedef std::unordered_map <Query, QueryResult, QueryHash> QueryMap;
+    typedef std::unordered_map<ustring, int, ustringHash> DocMap;
 
     ShadingContext *m_context;  // back-pointer to shading context
 
@@ -179,7 +178,7 @@ Dictionary::get_document_index (ustring dictionaryname)
         pugi::xml_document *doc = new pugi::xml_document;
         m_documents.push_back (doc);
         pugi::xml_parse_result parse_result;
-        if (boost::ends_with (dictionaryname.string(), ".xml")) {
+        if (Strutil::ends_with (dictionaryname.string(), ".xml")) {
             // xml file -- read it
             parse_result = doc->load_file (dictionaryname.c_str());
         } else {

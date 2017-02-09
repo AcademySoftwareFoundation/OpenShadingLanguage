@@ -12,6 +12,7 @@ Dependency and standards changes:
   OIIO 1.7 or newer. You may find that 1.6 is still ok, but we are not doing
   any work to ensure that.
 * CMake >= 3.2.2
+* Boost >= 1.55
 
 Language features:
 

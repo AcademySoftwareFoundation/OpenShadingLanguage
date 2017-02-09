@@ -46,7 +46,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #include <boost/thread.hpp>
-#include <boost/ref.hpp>
 
 #include "OSL/oslexec.h"
 #include "simplerend.h"
@@ -662,7 +661,7 @@ int main (int argc, const char *argv[]) {
     // launch a scanline worker for each thread
     boost::thread_group workers;
     for (int i = 0; i < num_threads; i++)
-        workers.add_thread(new boost::thread(scanline_worker, boost::ref(scanline_counter), boost::ref(pixels)));
+        workers.add_thread(new boost::thread(scanline_worker, std::ref(scanline_counter), std::ref(pixels)));
     workers.join_all();
 
     // Write image to disk

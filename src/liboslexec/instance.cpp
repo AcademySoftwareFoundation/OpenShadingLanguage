@@ -31,8 +31,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdio>
 #include <algorithm>
 
-#include <boost/foreach.hpp>
-
 #include <OpenImageIO/dassert.h>
 #include <OpenImageIO/strutil.h>
 
@@ -222,7 +220,7 @@ ShaderInstance::parameters (const ParamValueList &params)
         m_instoverrides[i].dataoffset (sym->dataoffset());
     }
 
-    BOOST_FOREACH (const ParamValue &p, params) {
+    for (auto&& p : params) {
         if (p.name().size() == 0)
             continue;   // skip empty names
         int i = findparam (p.name());
@@ -409,7 +407,7 @@ ShaderInstance::evaluate_writes_globals_and_userdata_params ()
 {
     writes_globals (false);
     userdata_params (false);
-    BOOST_FOREACH (Symbol &s, symbols()) {
+    for (auto&& s : symbols()) {
         if (s.symtype() == SymTypeGlobal && s.everwritten())
             writes_globals (true);
         if ((s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam)
@@ -425,7 +423,7 @@ ShaderInstance::evaluate_writes_globals_and_userdata_params ()
     // the symbol overrides. This is very important to get instance merging
     // working correctly.
     int p = 0;
-    BOOST_FOREACH (SymOverrideInfo &s, m_instoverrides) {
+    for (auto&& s : m_instoverrides) {
         if (! s.lockgeom())
             userdata_params (true);
         ++p;

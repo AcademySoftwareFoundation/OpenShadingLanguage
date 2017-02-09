@@ -32,8 +32,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <fstream>
 #include <cstdlib>
 
-#include <boost/algorithm/string.hpp>
-#include <boost/foreach.hpp>
 #include <boost/thread.hpp>
 
 #include "oslexec_pvt.h"
@@ -1490,7 +1488,7 @@ ShadingSystemImpl::error (const std::string &msg) const
 {
     lock_guard guard (m_errmutex);
     int n = 0;
-    BOOST_FOREACH (std::string &s, m_errseen) {
+    for (auto&& s : m_errseen) {
         if (s == msg)
             return;
         ++n;
@@ -1508,7 +1506,7 @@ ShadingSystemImpl::warning (const std::string &msg) const
 {
     lock_guard guard (m_errmutex);
     int n = 0;
-    BOOST_FOREACH (std::string &s, m_warnseen) {
+    for (auto&& s : m_warnseen) {
         if (s == msg)
             return;
         ++n;
@@ -2645,25 +2643,25 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group,
 
     // Copy some info recorted by the RuntimeOptimizer into the group
     group.m_unknown_textures_needed = rop.m_unknown_textures_needed;
-    BOOST_FOREACH (ustring f, rop.m_textures_needed)
+    for (auto&& f : rop.m_textures_needed)
         group.m_textures_needed.push_back (f);
     group.m_unknown_closures_needed = rop.m_unknown_closures_needed;
-    BOOST_FOREACH (ustring f, rop.m_closures_needed)
+    for (auto&& f : rop.m_closures_needed)
         group.m_closures_needed.push_back (f);
-    BOOST_FOREACH (ustring f, rop.m_globals_needed)
+    for (auto&& f : rop.m_globals_needed)
         group.m_globals_needed.push_back (f);
     size_t num_userdata = rop.m_userdata_needed.size();
     group.m_userdata_names.reserve (num_userdata);
     group.m_userdata_types.reserve (num_userdata);
     group.m_userdata_offsets.resize (num_userdata, 0);
     group.m_userdata_derivs.reserve (num_userdata);
-    BOOST_FOREACH (const UserDataNeeded& n, rop.m_userdata_needed) {
+    for (auto&& n : rop.m_userdata_needed) {
         group.m_userdata_names.push_back (n.name);
         group.m_userdata_types.push_back (n.type);
         group.m_userdata_derivs.push_back (n.derivs);
     }
     group.m_unknown_attributes_needed = rop.m_unknown_attributes_needed;
-    BOOST_FOREACH (const AttributeNeeded &f, rop.m_attributes_needed) {
+    for (auto&& f : rop.m_attributes_needed) {
         group.m_attributes_needed.push_back (f.name);
         group.m_attribute_scopes.push_back (f.scope);
     }

@@ -33,8 +33,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <vector>
 
-#include <boost/scoped_ptr.hpp>
-
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/thread.h>

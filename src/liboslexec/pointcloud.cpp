@@ -269,14 +269,20 @@ RendererServices::pointcloud_search (ShaderGlobals *sg,
             float *d_distance_dx = out_distances + derivs_offset;
             float *d_distance_dy = out_distances + derivs_offset * 2;
             for (int i = 0; i < count; ++i) {
-                d_distance_dx[i] = 1.0f / out_distances[i] *
-                                        ((center.x - positions[i].x) * dCdx.x +
-                                         (center.y - positions[i].y) * dCdx.y +
-                                         (center.z - positions[i].z) * dCdx.z);
-                d_distance_dy[i] = 1.0f / out_distances[i] *
-                                        ((center.x - positions[i].x) * dCdy.x +
-                                         (center.y - positions[i].y) * dCdy.y +
-                                         (center.z - positions[i].z) * dCdy.z);
+                if (out_distances[i] > 0) {
+                    d_distance_dx[i] = 1.0f / out_distances[i] *
+                                            ((center.x - positions[i].x) * dCdx.x +
+                                             (center.y - positions[i].y) * dCdx.y +
+                                             (center.z - positions[i].z) * dCdx.z);
+                    d_distance_dy[i] = 1.0f / out_distances[i] *
+                                            ((center.x - positions[i].x) * dCdy.x +
+                                             (center.y - positions[i].y) * dCdy.y +
+                                             (center.z - positions[i].z) * dCdy.z);
+                } else {
+                    // distance is 0, derivs would be infinite which could cause trouble downstream
+                    d_distance_dx[i] = 0;
+                    d_distance_dy[i] = 0;
+                }
             }
         }
     }

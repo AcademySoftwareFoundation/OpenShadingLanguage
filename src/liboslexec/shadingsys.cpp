@@ -31,8 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdio>
 #include <fstream>
 #include <cstdlib>
-
-#include <boost/thread.hpp>
+#include <mutex>
 
 #include "oslexec_pvt.h"
 #include "OSL/genclosure.h"
@@ -2705,15 +2704,15 @@ ShadingSystemImpl::optimize_all_groups (int nthreads, int mythread, int totalthr
     // Spawn a bunch of threads to do this in parallel -- just call this
     // routine again (with threads=1) for each thread.
     if (nthreads < 1)  // threads <= 0 means use all hardware available
-        nthreads = std::min ((int)boost::thread::hardware_concurrency(),
+        nthreads = std::min ((int)std::thread::hardware_concurrency(),
                              (int)m_groups_to_compile_count);
     if (nthreads > 1) {
         if (m_threads_currently_compiling)
             return;   // never mind, somebody else spawned the JIT threads
-        boost::thread_group threads;
+        OIIO::thread_group threads;
         m_threads_currently_compiling += nthreads;
         for (int t = 0;  t < nthreads;  ++t)
-            threads.add_thread (new boost::thread (optimize_all_groups_wrapper, this, t, nthreads));
+            threads.add_thread (new std::thread (optimize_all_groups_wrapper, this, t, nthreads));
         threads.join_all ();
         m_threads_currently_compiling -= nthreads;
         return;
@@ -2912,7 +2911,7 @@ ShadingSystemImpl::archive_shadergroup (ShaderGroup *group, string_view filename
 
     std::string filename_list = "shadergroup";
     {
-        boost::lock_guard<ShaderGroup> lock (*group);
+        std::lock_guard<ShaderGroup> lock (*group);
         std::set<std::string> entries;   // to avoid duplicates
         for (int i = 0, nl = group->nlayers(); i < nl; ++i) {
             std::string osofile = (*group)[i]->master()->osofilename();

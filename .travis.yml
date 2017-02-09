@@ -65,7 +65,7 @@ install:
           mv clang+llvm* llvm-install ;
           export LLVM_DIRECTORY=$PWD/llvm-install ;
       fi
-    - export OIIOMAKEFLAGS="$OIIOMAKEFLAGS -j2 DEBUG= "
+    - export OIIOMAKEFLAGS="$OIIOMAKEFLAGS -j2 DEBUG= USE_PYTHON=0 OIIO_BUILD_TESTS=0"
     - src/build-scripts/build_openimageio.bash
     - export OPENIMAGEIOHOME=$PWD/OpenImageIO/dist/$OIIOPLATFORM
     - export DYLD_LIBRARY_PATH=$OPENIMAGEIOHOME/lib:$DYLD_LIBRARY_PATH

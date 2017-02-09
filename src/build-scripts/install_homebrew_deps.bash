@@ -22,9 +22,9 @@ brew list --versions
 brew install ccache
 brew install flex bison
 brew install ilmbase openexr
-brew install boost-python
+#brew install boost-python
 brew install opencolorio partio
-brew install freetype libraw libpng webp
+#brew install freetype libpng
 brew install llvm
 #brew install homebrew/science/hdf5 --with-threadsafe
 #brew install field3d webp ffmpeg openjpeg opencv

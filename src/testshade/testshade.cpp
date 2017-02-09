@@ -33,14 +33,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <cmath>
 
-#include <boost/thread.hpp>
-
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/imagebufalgo.h>
 #include <OpenImageIO/imagebufalgo_util.h>
 #include <OpenImageIO/argparse.h>
 #include <OpenImageIO/strutil.h>
+#include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/timer.h>
 
@@ -1081,7 +1080,7 @@ test_shade (int argc, const char *argv[])
         test_group_attributes (shadergroup.get());
 
     if (num_threads < 1)
-        num_threads = boost::thread::hardware_concurrency();
+        num_threads = OIIO::Sysutil::hardware_concurrency();
 
     double setuptime = timer.lap ();
 
@@ -1102,7 +1101,7 @@ test_shade (int argc, const char *argv[])
             shade_region (shadergroup.get(), roi, save);
 #else
             OIIO::ImageBufAlgo::parallel_image (
-                    boost::bind (shade_region, shadergroup.get(), _1, save),
+                    std::bind (shade_region, shadergroup.get(), std::placeholders::_1, save),
                     roi, num_threads);
 #endif
         }

@@ -45,8 +45,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # include <OpenImageIO/pugixml.hpp>
 #endif
 
-#include <boost/thread.hpp>
-
 #include "OSL/oslexec.h"
 #include "simplerend.h"
 #include "raytracer.h"
@@ -633,7 +631,7 @@ int main (int argc, const char *argv[]) {
     // validate options
     if (aa < 1) aa = 1;
     if (num_threads < 1)
-        num_threads = boost::thread::hardware_concurrency();
+        num_threads = std::thread::hardware_concurrency();
 
     // prepare background importance table (if requested)
     if (backgroundResolution > 0 && backgroundShaderID >= 0) {
@@ -659,9 +657,9 @@ int main (int argc, const char *argv[]) {
     // Create shared counter to iterate over one scanline at a time
     Counter scanline_counter(errhandler, yres, "Rendering");
     // launch a scanline worker for each thread
-    boost::thread_group workers;
+    OIIO::thread_group workers;
     for (int i = 0; i < num_threads; i++)
-        workers.add_thread(new boost::thread(scanline_worker, std::ref(scanline_counter), std::ref(pixels)));
+        workers.add_thread(new std::thread (scanline_worker, std::ref(scanline_counter), std::ref(pixels)));
     workers.join_all();
 
     // Write image to disk

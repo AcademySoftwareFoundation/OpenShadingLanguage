@@ -132,13 +132,7 @@ RendererServices::get_texture_handle (ustring filename)
 bool
 RendererServices::good (TextureHandle *texture_handle)
 {
-#if OIIO_VERSION >= 10602
     return texturesys()->good (texture_handle);
-#else
-    // The good() query is not available for OIIO < 1.6.2, so just assume
-    // it's ok and hope for the best.
-    return true;
-#endif
 }
 
 
@@ -371,12 +365,10 @@ RendererServices::get_texture_info (ShaderGlobals *sg, ustring filename,
                                     TypeDesc datatype, void *data)
 {
     bool status;
-#if OIIO_VERSION >= 10602
     if (texture_handle)
         status = texturesys()->get_texture_info (texture_handle, NULL, subimage,
                                                  dataname, datatype, data);
     else
-#endif
         status = texturesys()->get_texture_info (filename, subimage,
                                                  dataname, datatype, data);
     if (!status) {

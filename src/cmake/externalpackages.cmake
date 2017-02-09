@@ -20,28 +20,6 @@ if (NOT VERBOSE)
 endif ()
 
 
-setup_path (THIRD_PARTY_TOOLS_HOME
-            "unknown"
-            "Location of third party libraries in the external project")
-
-# Add all third party tool directories to the include and library paths so
-# that they'll be correctly found by the various FIND_PACKAGE() invocations.
-if (THIRD_PARTY_TOOLS_HOME AND EXISTS "${THIRD_PARTY_TOOLS_HOME}")
-    set (CMAKE_INCLUDE_PATH "${THIRD_PARTY_TOOLS_HOME}/include" "${CMAKE_INCLUDE_PATH}")
-    # Detect third party tools which have been successfully built using the
-    # lock files which are placed there by the external project Makefile.
-    file (GLOB _external_dir_lockfiles "${THIRD_PARTY_TOOLS_HOME}/*.d")
-    foreach (_dir_lockfile ${_external_dir_lockfiles})
-        # Grab the tool directory_name.d
-        get_filename_component (_ext_dirname ${_dir_lockfile} NAME)
-        # Strip off the .d extension
-        string (REGEX REPLACE "\\.d$" "" _ext_dirname ${_ext_dirname})
-        set (CMAKE_INCLUDE_PATH "${THIRD_PARTY_TOOLS_HOME}/include/${_ext_dirname}" ${CMAKE_INCLUDE_PATH})
-        set (CMAKE_LIBRARY_PATH "${THIRD_PARTY_TOOLS_HOME}/lib/${_ext_dirname}" ${CMAKE_LIBRARY_PATH})
-    endforeach ()
-endif ()
-
-
 setup_string (SPECIAL_COMPILE_FLAGS ""
                "Custom compilation flags")
 if (SPECIAL_COMPILE_FLAGS)
@@ -122,6 +100,17 @@ link_directories ("${Boost_LIBRARY_DIRS}")
 
 
 ###########################################################################
+# OpenImageIO
+
+find_package (OpenImageIO 1.7 REQUIRED)
+include_directories ("${OPENIMAGEIO_INCLUDE_DIR}")
+message (STATUS "Using OpenImageIO ${OPENIMAGEIO_VERSION}")
+
+# end OpenImageIO setup
+###########################################################################
+
+
+###########################################################################
 # Partio
 
 find_package (ZLIB)
@@ -135,7 +124,7 @@ if (USE_PARTIO)
     endif ()
 endif (USE_PARTIO)
 
-# end GL Extension Wrangler library setup
+# end Partio setup
 ###########################################################################
 
 

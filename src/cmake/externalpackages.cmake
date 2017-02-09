@@ -72,7 +72,7 @@ if (BOOST_CUSTOM)
     # N.B. For a custom version, the caller had better set up the variables
     # Boost_VERSION, Boost_INCLUDE_DIRS, Boost_LIBRARY_DIRS, Boost_LIBRARIES.
 else ()
-    set (Boost_COMPONENTS regex system thread wave)
+    set (Boost_COMPONENTS filesystem regex system thread wave)
     find_package (Boost 1.55 REQUIRED
                   COMPONENTS ${Boost_COMPONENTS}
                  )

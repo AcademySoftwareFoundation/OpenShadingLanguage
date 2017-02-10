@@ -5,6 +5,7 @@
 #   OPENIMAGEIO_FOUND          True, if found
 #   OPENIMAGEIO_INCLUDE_DIR    directory where headers are found
 #   OPENIMAGEIO_LIBRARIES      libraries for OIIO
+#   OPENIMAGEIO_LIBRARY_DIRS   library dirs for OIIO
 #   OPENIMAGEIO_VERSION        Version ("major.minor.patch")
 #   OPENIMAGEIO_VERSION_MAJOR  Version major number
 #   OPENIMAGEIO_VERSION_MINOR  Version minor number
@@ -52,27 +53,28 @@ if (EXISTS "${OIIO_VERSION_HEADER}")
     set (OPENIMAGEIO_VERSION "${OPENIMAGEIO_VERSION_MAJOR}.${OPENIMAGEIO_VERSION_MINOR}.${OPENIMAGEIO_VERSION_PATCH}")
 endif ()
 
+set ( OPENIMAGEIO_LIBRARIES ${OPENIMAGEIO_LIBRARY})
+get_filename_component (OPENIMAGEIO_LIBRARY_DIRS "${OPENIMAGEIO_LIBRARY}" DIRECTORY CACHE)
+
 if (NOT OpenImageIO_FIND_QUIETLY)
-    message ( STATUS "OpenImageIO includes  = ${OPENIMAGEIO_INCLUDE_DIR}" )
-    message ( STATUS "OpenImageIO libraries = ${OPENIMAGEIO_LIBRARIES}" )
-    message ( STATUS "OpenImageIO bin       = ${OPENIMAGEIO_BIN}" )
-endif ()
-if ( OPENIMAGEIO_INCLUDE_DIR AND OPENIMAGEIO_LIBRARY )
-    set ( OPENIMAGEIO_FOUND TRUE )
-    set ( OPENIMAGEIO_LIBRARIES ${OPENIMAGEIO_LIBRARY})
-else ()
-    message ( FATAL_ERROR "OpenImageIO not found" )
+    message ( STATUS "OpenImageIO includes     = ${OPENIMAGEIO_INCLUDE_DIR}" )
+    message ( STATUS "OpenImageIO libraries    = ${OPENIMAGEIO_LIBRARIES}" )
+    message ( STATUS "OpenImageIO library_dirs = ${OPENIMAGEIO_LIBRARY_DIRS}" )
+    message ( STATUS "OpenImageIO bin          = ${OPENIMAGEIO_BIN}" )
 endif ()
 
 include (FindPackageHandleStandardArgs)
 find_package_handle_standard_args (OpenImageIO
-    REQUIRED_VARS OPENIMAGEIO_INCLUDE_DIR OPENIMAGEIO_LIBRARIES OPENIMAGEIO_VERSION
+    FOUND_VAR     OPENIMAGEIO_FOUND
+    REQUIRED_VARS OPENIMAGEIO_INCLUDE_DIR OPENIMAGEIO_LIBRARIES
+                  OPENIMAGEIO_LIBRARY_DIRS OPENIMAGEIO_VERSION
     VERSION_VAR   OPENIMAGEIO_VERSION
     )
 
 mark_as_advanced (
     OPENIMAGEIO_INCLUDE_DIR
     OPENIMAGEIO_LIBRARIES
+    OPENIMAGEIO_LIBRARY_DIRS
     OPENIMAGEIO_VERSION
     OPENIMAGEIO_VERSION_MAJOR
     OPENIMAGEIO_VERSION_MINOR

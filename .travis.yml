@@ -28,8 +28,8 @@ addons:
       - g++-6
       - libboost1.55-all-dev
       - libtiff4-dev
-      - llvm-3.4-dev
-      - clang-3.4
+      #- llvm-3.9-dev
+      #- clang-3.9
 
 cache:
     ccache: true
@@ -44,7 +44,7 @@ before_install:
           sysctl machdep.cpu.features ;
       elif [ $TRAVIS_OS_NAME == linux ] ; then
           export PLATFORM=linux64 ;
-          cat /proc/cpuinfo ;
+          cat /proc/cpuinfo | head -26 ;
       fi
     - export OIIOPLATFORM=$PLATFORM
     - if [ "$DEBUG" == 1 ] ; then export PLATFORM=${PLATFORM}.debug ; fi
@@ -60,6 +60,12 @@ install:
           CXX="ccache $CXX" CCACHE_CPP2=1 src/build-scripts/build_openexr.bash ;
           export ILMBASE_HOME=$PWD/openexr-install ;
           export OPENEXR_HOME=$PWD/openexr-install ;
+          if [ "$LLVM_VERSION" == "" ]; then export LLVM_VERSION="3.9.0" ; fi ;
+          wget http://releases.llvm.org/${LLVM_VERSION}/clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-14.04.tar.xz ;
+          tar xf clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-14.04.tar.xz ;
+          rm -f clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-14.04.tar.xz ;
+          mv clang+llvm* llvm-install ;
+          export LLVM_DIRECTORY=$PWD/llvm-install ;
       fi
     - export OIIOMAKEFLAGS="$OIIOMAKEFLAGS -j2 DEBUG= "
     - src/build-scripts/build_openimageio.bash
@@ -120,6 +126,10 @@ matrix:
       - os: osx
         compiler: clang
         env: OIIOBRANCH=release USE_CPP11=1
+    # Make sure the older LLVM still works
+      - os: linux
+        compiler: gcc
+        env: LLVM_VERSION=3.5.2
     # Linux only: test gcc 6 (catch new warnings hot off the presses) and
     # also use a higher SIMD level, avx and f16c, to make sure all is well.
     # TravisCI's OSX images don't yet support avx/f16c, so we only do this

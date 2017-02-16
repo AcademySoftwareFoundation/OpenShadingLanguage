@@ -53,6 +53,38 @@ endif ()
 
 
 ###########################################################################
+# OpenImageIO
+
+find_package (OpenImageIO 1.7 REQUIRED)
+include_directories ("${OPENIMAGEIO_INCLUDE_DIR}")
+link_directories ("${OPENIMAGEIO_LIBRARY_DIRS}")
+message (STATUS "Using OpenImageIO ${OPENIMAGEIO_VERSION}")
+
+# end OpenImageIO setup
+###########################################################################
+
+
+###########################################################################
+# LLVM library setup
+
+find_package (LLVM 3.4 REQUIRED)
+
+if (LLVM_FOUND)
+  # ensure include directory is added (in case of non-standard locations
+  include_directories (BEFORE SYSTEM "${LLVM_INCLUDES}")
+  link_directories ("${LLVM_LIB_DIR}")
+  # Extract and concatenate major & minor, remove wayward patches,
+  # dots, and "svn" or other suffixes.
+  string (REGEX REPLACE "([0-9]+)\\.([0-9]+).*" "\\1\\2" OSL_LLVM_VERSION ${LLVM_VERSION})
+  add_definitions (-DOSL_LLVM_VERSION=${OSL_LLVM_VERSION})
+  add_definitions (-DOSL_LLVM_FULL_VERSION="${LLVM_VERSION}")
+endif ()
+
+# end LLVM library setup
+###########################################################################
+
+
+###########################################################################
 # Boost setup
 
 if (NOT Boost_FIND_QUIETLY)
@@ -72,9 +104,30 @@ if (BOOST_CUSTOM)
     # N.B. For a custom version, the caller had better set up the variables
     # Boost_VERSION, Boost_INCLUDE_DIRS, Boost_LIBRARY_DIRS, Boost_LIBRARIES.
 else ()
-    set (Boost_COMPONENTS filesystem system thread wave)
+    set (Boost_COMPONENTS system thread)
     if (NOT USE_STD_REGEX)
         list (APPEND Boost_COMPONENTS regex)
+    endif ()
+    if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG OR
+            ${LLVM_VERSION} VERSION_LESS 3.6)
+        set (_CLANG_PREPROCESSOR_CAN_WORK ON)
+    endif ()
+    if (GCC_VERSION)
+        if (${GCC_VERSION} VERSION_LESS 4.9)
+            set (_CLANG_PREPROCESSOR_CAN_WORK ON)
+        endif ()
+    endif ()
+    if (USE_BOOST_WAVE OR (NOT CLANG_LIBRARIES)
+        OR (NOT _CLANG_PREPROCESSOR_CAN_WORK))
+        # N.B. Using clang for preprocessing seems to work when using clang,
+        # or gcc 4.8.x, or LLVM <= 3.5. When those conditions aren't met,
+        # fall back on Boost Wave. We'll lift this restriction as soon as we
+        # fix whatever is broken.
+        list (APPEND Boost_COMPONENTS filesystem wave)
+        add_definitions (-DUSE_BOOST_WAVE=1)
+        message (STATUS "Using Boost Wave for preprocessing")
+    else ()
+        message (STATUS "Using clang internals for preprocessing")
     endif ()
     find_package (Boost 1.55 REQUIRED
                   COMPONENTS ${Boost_COMPONENTS})
@@ -98,17 +151,6 @@ include_directories (SYSTEM "${Boost_INCLUDE_DIRS}")
 link_directories ("${Boost_LIBRARY_DIRS}")
 
 # end Boost setup
-###########################################################################
-
-
-###########################################################################
-# OpenImageIO
-
-find_package (OpenImageIO 1.7 REQUIRED)
-include_directories ("${OPENIMAGEIO_INCLUDE_DIR}")
-message (STATUS "Using OpenImageIO ${OPENIMAGEIO_VERSION}")
-
-# end OpenImageIO setup
 ###########################################################################
 
 
@@ -141,24 +183,4 @@ if (USE_EXTERNAL_PUGIXML)
     include_directories (BEFORE "${PUGIXML_INCLUDE_DIR}")
 endif()
 # end Pugixml setup
-###########################################################################
-
-
-###########################################################################
-# LLVM library setup
-
-find_package (LLVM 3.4 REQUIRED)
-
-if (LLVM_FOUND)
-  # ensure include directory is added (in case of non-standard locations
-  include_directories (BEFORE "${LLVM_INCLUDES}")
-  link_directories ("${LLVM_LIB_DIR}")
-  # Extract and concatenate major & minor, remove wayward patches,
-  # dots, and "svn" or other suffixes.
-  string (REGEX REPLACE "([0-9]+)\\.([0-9]+).*" "\\1\\2" OSL_LLVM_VERSION ${LLVM_VERSION})
-  add_definitions (-DOSL_LLVM_VERSION=${OSL_LLVM_VERSION})
-  add_definitions (-DOSL_LLVM_FULL_VERSION="${LLVM_VERSION}")
-endif ()
-
-# end LLVM library setup
 ###########################################################################

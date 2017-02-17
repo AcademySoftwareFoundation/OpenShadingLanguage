@@ -28,12 +28,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
+#include <OSL/wide.h>
 
 OSL_NAMESPACE_ENTER
 
 struct ClosureColor;
 class ShadingContext;
 class RendererServices;
+class ShaderSymbol;
 
 
 
@@ -143,6 +145,245 @@ struct ShaderGlobals {
     /// If nonzero, we are shading the back side of a surface.
     int backfacing;
 };
+
+struct UniformShaderGlobals {
+
+    /// There are three opaque pointers that may be set by the renderer here
+    /// in the ShaderGlobals before shading execution begins, and then
+    /// retrieved again from the within the implementation of various
+    /// RendererServices methods. Exactly what they mean and how they are
+    /// used is renderer-dependent, but roughly speaking it's probably a
+    /// pointer to some internal renderer state (needed for, say, figuring
+    /// out how to retrieve userdata), state about the ray tree (needed to
+    /// resume for a trace() call), and information about the object being
+    /// shaded.
+    void* renderstate;
+    void* tracedata;
+    void* objdata;
+
+    /// Back-pointer to the ShadingContext (set and used by OSL itself --
+    /// renderers shouldn't mess with this at all).
+    ShadingContext* context;
+
+    /// Pointer to the RendererServices object. This is how OSL finds its
+    /// way back to the renderer for callbacks.
+    RendererServices* renderer;
+
+    /// The output closure will be placed here. The rendererer should
+    /// initialize this to NULL before shading execution, and this is where
+    /// it can retrieve the output closure from after shader execution has
+    /// completed.
+    /// DESIGN DECISION:  NOT CURRENTLY SUPPORTING CLOSURES IN BATCH MODE
+    ClosureColor *Ci;
+
+    /// Bit field of ray type flags.
+    int raytype;
+};
+
+template<int WidthT> 
+struct VaryingShaderGlobals {
+
+	template<typename T>
+	using  Wide = OSL::Wide<T, WidthT>;
+	
+    /// Surface position (and its x & y differentials).
+	Wide<Vec3> P, dPdx, dPdy;
+    /// P's z differential, used for volume shading only.
+	Wide<Vec3> dPdz;
+
+    /// Incident ray, and its x and y derivatives.
+	Wide<Vec3> I, dIdx, dIdy;
+
+    /// Shading normal, already front-facing.
+	Wide<Vec3> N;
+
+    /// True geometric normal.
+	Wide<Vec3> Ng;
+
+    /// 2D surface parameter u, and its differentials.
+	Wide<float> u, dudx, dudy;
+    /// 2D surface parameter v, and its differentials.
+	Wide<float> v, dvdx, dvdy;
+
+    /// Surface tangents: derivative of P with respect to surface u and v.
+    Wide<Vec3> dPdu, dPdv;
+
+    /// Time for this shading sample.
+    Wide<float> time;
+    /// Time interval for the frame (or shading sample).
+    Wide<float> dtime;
+    ///  Velocity vector: derivative of position P with respect to time.
+    Wide<Vec3> dPdtime;
+
+    /// For lights or light attenuation shaders: the point being illuminated
+    /// (Ps), and its differentials.
+    Wide<Vec3> Ps, dPsdx, dPsdy;
+
+    /// Opaque pointers set by the renderer before shader execution, to
+    /// allow later retrieval of the object->common and shader->common
+    /// transformation matrices, by the RendererServices
+    /// get_matrix/get_inverse_matrix methods. This doesn't need to point
+    /// to the 4x4 matrix itself; rather, it's just a pointer to whatever
+    /// structure the RenderServices::get_matrix() needs to (if and when
+    /// requested) generate the 4x4 matrix for the right time value.
+    Wide<TransformationPtr> object2common;
+    Wide<TransformationPtr> shader2common;
+
+    /// Surface area of the emissive object (used by light shaders for
+    /// energy normalization).
+    Wide<float> surfacearea;
+
+    /// If nonzero, will flip the result of calculatenormal().
+    Wide<int> flipHandedness;
+
+    /// If nonzero, we are shading the back side of a surface.
+    Wide<int> backfacing;
+};
+
+template<int WidthT> 
+struct VaryingShaderProxy {
+private:
+	VaryingShaderGlobals<WidthT> & m_vsg;
+	int m_index;
+	
+public:
+	
+	VaryingShaderProxy(VaryingShaderGlobals<WidthT> & vsg, int index)
+	: m_vsg(vsg)
+	, m_index(index)
+	{}
+
+	template<typename T>
+	using  Proxy = WideProxy<T, WidthT>;
+		
+    /// Surface position (and its x & y differentials).
+	Proxy<Vec3> P() const { return Proxy<Vec3>(m_vsg.P, m_index); }
+	Proxy<Vec3> dPdx() const { return Proxy<Vec3>(m_vsg.dPdx, m_index); }
+	Proxy<Vec3> dPdy() const { return Proxy<Vec3>(m_vsg.dPdy, m_index); }
+	
+    /// P's z differential, used for volume shading only.
+	Proxy<Vec3> dPdz() const { return Proxy<Vec3>(m_vsg.dPdz, m_index); }
+
+    /// Incident ray, and its x and y derivatives.
+	Proxy<Vec3> I() const { return Proxy<Vec3>(m_vsg.I, m_index); }
+	Proxy<Vec3> dIdx() const { return Proxy<Vec3>(m_vsg.dIdx, m_index); }
+	Proxy<Vec3> dIdy() const { return Proxy<Vec3>(m_vsg.dIdy, m_index); }
+
+    /// Shading normal, already front-facing.
+	Proxy<Vec3> N() const { return Proxy<Vec3>(m_vsg.N, m_index); }
+
+    /// True geometric normal.
+	Proxy<Vec3> Ng() const { return Proxy<Vec3>(m_vsg.Ng, m_index); }
+
+    /// 2D surface parameter u, and its differentials.
+	Proxy<float> u() const { return Proxy<float>(m_vsg.u, m_index); }
+	Proxy<float> dudx() const { return Proxy<float>(m_vsg.dudx, m_index); }
+	Proxy<float> dudy() const { return Proxy<float>(m_vsg.dudy, m_index); }
+	
+    /// 2D surface parameter v, and its differentials.
+	Proxy<float> v() const { return Proxy<float>(m_vsg.v, m_index); }
+	Proxy<float> dvdx() const { return Proxy<float>(m_vsg.dvdx, m_index); }
+	Proxy<float> dvdy() const { return Proxy<float>(m_vsg.dvdy, m_index); }
+
+    /// Surface tangents: derivative of P with respect to surface u and v.
+	Proxy<Vec3> dPdu() const { return Proxy<Vec3>(m_vsg.dPdu, m_index); }
+	Proxy<Vec3> dPdv() const { return Proxy<Vec3>(m_vsg.dPdv, m_index); }
+
+    /// Time for this shading sample.
+	Proxy<float> time() const { return Proxy<float>(m_vsg.time, m_index); }
+    /// Time interval for the frame (or shading sample).
+	Proxy<float> dtime() const { return Proxy<float>(m_vsg.dtime, m_index); }
+    ///  Velocity vector: derivative of position P with respect to time.
+	Proxy<Vec3> dPdtime() const { return Proxy<Vec3>(m_vsg.dPdtime, m_index); }
+
+    /// For lights or light attenuation shaders: the point being illuminated
+    /// (Ps), and its differentials.
+	Proxy<Vec3> Ps() const { return Proxy<Vec3>(m_vsg.Ps, m_index); }
+	Proxy<Vec3> dPsdx() const { return Proxy<Vec3>(m_vsg.dPsdx, m_index); }
+	Proxy<Vec3> dPsdy() const { return Proxy<Vec3>(m_vsg.dPsdy, m_index); }
+
+    /// Opaque pointers set by the renderer before shader execution, to
+    /// allow later retrieval of the object->common and shader->common
+    /// transformation matrices, by the RendererServices
+    /// get_matrix/get_inverse_matrix methods. This doesn't need to point
+    /// to the 4x4 matrix itself; rather, it's just a pointer to whatever
+    /// structure the RenderServices::get_matrix() needs to (if and when
+    /// requested) generate the 4x4 matrix for the right time value.
+	Proxy<TransformationPtr> object2common() const { return Proxy<TransformationPtr>(m_vsg.object2common, m_index); }
+	Proxy<TransformationPtr> shader2common() const { return Proxy<TransformationPtr>(m_vsg.shader2common, m_index); }
+
+    /// Surface area of the emissive object (used by light shaders for
+    /// energy normalization).
+	Proxy<float> surfacearea() const { return Proxy<float>(m_vsg.surfacearea, m_index); }
+
+    /// If nonzero, will flip the result of calculatenormal().
+	Proxy<int> flipHandedness() const { return Proxy<int>(m_vsg.flipHandedness, m_index); }
+
+    /// If nonzero, we are shading the back side of a surface.
+	Proxy<int> backfacing() const { return Proxy<int>(m_vsg.backfacing, m_index); }
+};
+
+struct ShaderGlobalsBatch
+{
+	ShaderGlobalsBatch()
+	{
+		clear();
+	}
+	ShaderGlobalsBatch(const ShaderGlobalsBatch &) = delete;
+	
+	static constexpr int maxSize = SimdLaneCount;
+	
+	UniformShaderGlobals & uniform() { return m_uniform; }
+	
+	
+	typedef VaryingShaderProxy<maxSize> VaryingProxyType;
+	// proxy to the "next" varying dataset  
+	VaryingProxyType varying() { return VaryingProxyType(m_varying, m_size); }
+	// TODO: consider removing/demoting the ASSERT with a debug only option
+	VaryingProxyType varying(int batchIndex) { ASSERT(batchIndex < m_size); return VaryingProxyType(m_varying, batchIndex); }
+	
+	typedef VaryingShaderGlobals<maxSize> VaryingData;
+	VaryingData & varyingData() { return m_varying; } 
+	const VaryingData & varyingData() const { return m_varying; } 
+	
+	int size() const
+	{
+		return m_size;
+	}
+	
+	bool isFull() const
+	{
+		return (m_size == maxSize);
+	}
+
+	bool isEmpty() const
+	{
+		return (m_size == 0);
+	}
+	
+	void clear() {
+		m_size=0;
+	}
+	
+	void commitVarying() {
+		assert(m_size < maxSize);
+		++m_size;
+	}	
+
+	template<typename T>
+	using  OutputData = Wide<T, maxSize>;
+	
+	template<typename DataT>
+	using OutputAccessor = WideAccessor<DataT, maxSize>;
+	
+	
+private:
+	
+	UniformShaderGlobals m_uniform;
+	VaryingData m_varying __attribute__((aligned(16)));
+	int m_size;
+};
+	
 
 
 OSL_NAMESPACE_EXIT

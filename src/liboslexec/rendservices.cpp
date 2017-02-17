@@ -119,6 +119,160 @@ RendererServices::get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
 }
 
 
+#if OSL_USE_WIDE_LLVM_BACKEND
+
+inline Matrix44 affineInvert(const Matrix44 &m)
+{
+    //assert(__builtin_expect(m.x[0][3] == 0.0f && m.x[1][3] == 0.0f && m.x[2][3] == 0.0f && m.x[3][3] == 1.0f, 1))
+	Matrix44 s (m.x[1][1] * m.x[2][2] - m.x[2][1] * m.x[1][2],
+				m.x[2][1] * m.x[0][2] - m.x[0][1] * m.x[2][2],
+				m.x[0][1] * m.x[1][2] - m.x[1][1] * m.x[0][2],
+				0.0f,
+
+				m.x[2][0] * m.x[1][2] - m.x[1][0] * m.x[2][2],
+				m.x[0][0] * m.x[2][2] - m.x[2][0] * m.x[0][2],
+				m.x[1][0] * m.x[0][2] - m.x[0][0] * m.x[1][2],
+				0.0f,
+
+				m.x[1][0] * m.x[2][1] - m.x[2][0] * m.x[1][1],
+				m.x[2][0] * m.x[0][1] - m.x[0][0] * m.x[2][1],
+				m.x[0][0] * m.x[1][1] - m.x[1][0] * m.x[0][1],
+				0.0f,
+
+				0.0f,
+				0.0f,
+				0.0f,
+				1.0f);
+
+	float r = m.x[0][0] * s[0][0] + m.x[0][1] * s[1][0] + m.x[0][2] * s[2][0];
+	float abs_r = IMATH_INTERNAL_NAMESPACE::abs (r);
+
+
+	int may_have_divided_by_zero = 0;
+	if (__builtin_expect(abs_r < 1.0f, 0))
+	{
+		float mr = abs_r / Imath::limits<float>::smallest();
+		OSL_INTEL_PRAGMA("unroll")
+		for (int i = 0; i < 3; ++i)
+		{
+			OSL_INTEL_PRAGMA("unroll")
+			for (int j = 0; j < 3; ++j)
+			{
+				if (mr <= IMATH_INTERNAL_NAMESPACE::abs (s[i][j]))
+				{
+					may_have_divided_by_zero = 1;
+				}
+			}
+		}
+	}
+	
+	OSL_INTEL_PRAGMA("unroll")
+	for (int i = 0; i < 3; ++i)
+	{
+		OSL_INTEL_PRAGMA("unroll")
+		for (int j = 0; j < 3; ++j)
+		{
+			s[i][j] /= r;
+		}
+	}
+
+	s[3][0] = -m.x[3][0] * s[0][0] - m.x[3][1] * s[1][0] - m.x[3][2] * s[2][0];
+	s[3][1] = -m.x[3][0] * s[0][1] - m.x[3][1] * s[1][1] - m.x[3][2] * s[2][1];
+	s[3][2] = -m.x[3][0] * s[0][2] - m.x[3][1] * s[1][2] - m.x[3][2] * s[2][2];
+	
+	if (__builtin_expect(may_have_divided_by_zero == 1, 0))
+	{
+		s = Matrix44();
+	}
+	return s;
+}
+ 
+bool
+RendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
+                                      const Wide<TransformationPtr> & xform, const Wide<float> &time)
+{
+	int wok = true;
+	
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+		Wide<Matrix44> wmatrix;
+		/*bool ok =*/ get_matrix (sgb, wmatrix, xform, time);
+		
+	    int allAreAffine = 1;
+		OSL_INTEL_PRAGMA("simd assert")
+		for(int lane=0; lane < SimdLaneCount; ++lane) {
+			Matrix44 m = wmatrix.get(lane);        
+		    if (m.x[0][3] != 0.0f || m.x[1][3] != 0.0f || m.x[2][3] != 0.0f || m.x[3][3] != 1.0f) {
+		    	allAreAffine = 0;
+		    }
+		}
+		
+#if 1
+		if (allAreAffine) {
+			OSL_INTEL_PRAGMA("simd assert vectorlength(SimdLaneCount)")
+			for(int lane=0; lane < SimdLaneCount; ++lane) {    
+				Matrix44 m = wmatrix.get(lane);        
+				//bool ok = get_matrix (sgb, r, xform.get(lane), time.get(lane));
+				//r.invert();
+				Matrix44 r = affineInvert(m);
+				result.set(lane, r);        
+			}
+		} else
+#endif
+		{
+			// Scalar code for non affine matrix (well at least 1 lane isn't)
+			for(int lane=0; lane < SimdLaneCount; ++lane) {    
+				Matrix44 r = wmatrix.get(lane);
+				r.invert();
+				result.set(lane, r);
+			}			
+		}
+		
+		//{
+		//	Matrix44 r = result.get(0);
+	    //	std::cout << "get_inverse_matrix " << std::endl << r << std::endl;
+		//}
+
+	}
+    return wok;	
+}
+
+
+bool
+RendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
+                                      TransformationPtr xform)
+{
+    bool ok = get_matrix (sgb, result, xform);
+    if (ok)
+        result.invert ();
+    return ok;
+}
+
+
+
+bool
+RendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
+                                      ustring to, float time)
+{
+    bool ok = get_matrix (sgb, result, to, time);
+    if (ok)
+        result.invert ();
+    return ok;
+}
+
+
+
+bool
+RendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
+                                      ustring to)
+{
+    bool ok = get_matrix (sgb, result, to);
+    if (ok)
+        result.invert ();
+    return ok;
+}
+
+#endif
 
 
 RendererServices::TextureHandle *

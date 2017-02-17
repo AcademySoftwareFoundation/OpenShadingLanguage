@@ -33,6 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "OSL/oslconfig.h"
 #include "OSL/llvm_util.h"
+#include "OSL/wide.h"
 
 #if OSL_LLVM_VERSION < 34
 #error "LLVM minimum version required for OSL is 3.4"
@@ -380,6 +381,27 @@ LLVM_Util::LLVM_Util (int debuglevel)
     std::vector<llvm::Type*> matrixfields(16, m_llvm_type_float);
     m_llvm_type_matrix = type_struct (matrixfields, "Matrix4");
     m_llvm_type_matrix_ptr = (llvm::PointerType *) llvm::PointerType::get (m_llvm_type_matrix, 0);
+
+    // Setup up wide aliases
+    m_vector_width = SimdLaneCount;
+    // TODO:  why are there casts to the base class llvm::Type *?  
+    m_llvm_type_wide_float = llvm::VectorType::get(m_llvm_type_float, m_vector_width);
+    m_llvm_type_wide_int = llvm::VectorType::get(m_llvm_type_int, m_vector_width);
+    m_llvm_type_wide_bool = llvm::VectorType::get(m_llvm_type_bool, m_vector_width);
+    m_llvm_type_wide_char = llvm::VectorType::get(m_llvm_type_char, m_vector_width);
+    //m_llvm_type_wide_void = llvm::VectorType::get(m_llvm_type_void, m_vector_width);
+    m_llvm_type_wide_void = llvm::VectorType::get(m_llvm_type_void, m_vector_width);
+    
+    m_llvm_type_wide_char_ptr = llvm::PointerType::get(m_llvm_type_wide_char, 0);    
+    m_llvm_type_wide_void_ptr = llvm::VectorType::get(llvm::PointerType::get(m_llvm_type_wide_void, 0), m_vector_width);
+    	
+    // A triple is a struct composed of 3 floats
+    std::vector<llvm::Type*> triple_wide_fields(3, m_llvm_type_wide_float);
+    m_llvm_type_wide_triple = type_struct (triple_wide_fields, "WideVec3");
+    
+    // A matrix is a struct composed 16 floats
+    std::vector<llvm::Type*> matrix_wide_fields(16, m_llvm_type_wide_float);
+    m_llvm_type_wide_matrix = type_struct (matrix_wide_fields, "WideMatrix4");
 }
 
 
@@ -1083,6 +1105,13 @@ LLVM_Util::llvm_typenameof (llvm::Value *val) const
     return llvm_typename (llvm_typeof (val));
 }
 
+llvm::Value *
+LLVM_Util::wide_constant (llvm::Value * constant_val)
+{
+	llvm::Constant *cv = llvm::dyn_cast<llvm::Constant>(constant_val);
+	ASSERT(cv  != nullptr);
+	return llvm::ConstantVector::getSplat(m_vector_width, cv); 
+}
 
 
 llvm::Value *
@@ -1091,7 +1120,11 @@ LLVM_Util::constant (float f)
     return llvm::ConstantFP::get (context(), llvm::APFloat(f));
 }
 
-
+llvm::Value *
+LLVM_Util::wide_constant (float f)
+{
+	return llvm::ConstantVector::getSplat(m_vector_width, llvm::ConstantFP::get (context(), llvm::APFloat(f))); 
+}
 
 llvm::Value *
 LLVM_Util::constant (int i)
@@ -1099,7 +1132,11 @@ LLVM_Util::constant (int i)
     return llvm::ConstantInt::get (context(), llvm::APInt(32,i));
 }
 
-
+llvm::Value *
+LLVM_Util::wide_constant (int i)
+{
+	return llvm::ConstantVector::getSplat(m_vector_width, llvm::ConstantInt::get (context(), llvm::APInt(32,i))); 
+}
 
 llvm::Value *
 LLVM_Util::constant (size_t i)
@@ -1108,7 +1145,12 @@ LLVM_Util::constant (size_t i)
     return llvm::ConstantInt::get (context(), llvm::APInt(bits,i));
 }
 
-
+llvm::Value *
+LLVM_Util::wide_constant (size_t i)
+{
+    int bits = sizeof(size_t)*8;
+	return llvm::ConstantVector::getSplat(m_vector_width, llvm::ConstantInt::get (context(), llvm::APInt(bits,i))); 
+}
 
 llvm::Value *
 LLVM_Util::constant_bool (bool i)
@@ -1116,7 +1158,11 @@ LLVM_Util::constant_bool (bool i)
     return llvm::ConstantInt::get (context(), llvm::APInt(1,i));
 }
 
-
+llvm::Value *
+LLVM_Util::wide_constant_bool (bool i)
+{
+	return llvm::ConstantVector::getSplat(m_vector_width, llvm::ConstantInt::get (context(), llvm::APInt(1,i))); 
+}
 
 llvm::Value *
 LLVM_Util::constant_ptr (void *p, llvm::PointerType *type)
@@ -1140,6 +1186,34 @@ LLVM_Util::constant (ustring s)
 }
 
 
+llvm::Value *
+LLVM_Util::wide_constant (ustring s)
+{
+    // Create a const size_t with the ustring contents
+    size_t bits = sizeof(size_t)*8;
+    llvm::Value *str = llvm::ConstantInt::get (context(),
+                               llvm::APInt(bits,size_t(s.c_str()), true));
+    // Then cast the int to a char*.
+    //return builder().CreateIntToPtr (str, type_string(), "ustring constant");
+    
+//    Value* emptyVec = UndefValue::get(type_wide_void_ptr());
+    
+    llvm::Value * constant_value = builder().CreateIntToPtr (str, type_string(), "ustring constant");
+//    llvm::InsertElementInstr::Create(emptyVec, constant_value, llvm::ConstantInt::get (context(), llvm::APInt(32,i)));
+    
+    return builder().CreateVectorSplat(m_vector_width, constant_value);
+//    
+//    
+//    return llvm::ConstantVector::getSplat(m_vector_width, llvm::ConstantInt::get (context(), llvm::APInt(32,i)));
+}
+
+
+llvm::Value *
+LLVM_Util::widen_value (llvm::Value *val)
+{
+    return builder().CreateVectorSplat(m_vector_width, val);
+}
+ 
 
 llvm::Value *
 LLVM_Util::constant (const TypeDesc &type)
@@ -1181,6 +1255,12 @@ LLVM_Util::ptr_cast (llvm::Value* val, const TypeDesc &type)
 }
 
 
+llvm::Value *
+LLVM_Util::wide_ptr_cast (llvm::Value* val, const TypeDesc &type)
+{
+    return ptr_cast (val, llvm::PointerType::get (llvm_vector_type(type), 0));
+}
+ 
 
 llvm::Value *
 LLVM_Util::void_ptr (llvm::Value* val)
@@ -1222,6 +1302,36 @@ LLVM_Util::llvm_type (const TypeDesc &typedesc)
     return lt;
 }
 
+llvm::Type *
+LLVM_Util::llvm_vector_type (const TypeDesc &typedesc)
+{
+    TypeDesc t = typedesc.elementtype();
+    llvm::Type *lt = NULL;
+    if (t == TypeDesc::FLOAT)
+        lt = type_wide_float();
+    else if (t == TypeDesc::INT)
+        lt = type_wide_int();
+    else if (t == TypeDesc::STRING)
+        lt = type_wide_string();
+    else if (t.aggregate == TypeDesc::VEC3)
+        lt = type_wide_triple();
+    else if (t.aggregate == TypeDesc::MATRIX44)
+        lt = type_wide_matrix();
+    else if (t == TypeDesc::NONE)
+        lt = type_wide_void();
+    else if (t == TypeDesc::UINT8)
+        lt = type_wide_char();
+    else if (t == TypeDesc::PTR)
+        lt = type_wide_void_ptr();
+    else {
+        std::cerr << "Bad llvm_vector_type(" << typedesc << ")\n";
+        ASSERT (0 && "not handling this type yet");
+    }
+    if (typedesc.arraylen)
+        lt = llvm::ArrayType::get (lt, typedesc.arraylen);
+    DASSERT (lt);
+    return lt;
+}
 
 
 llvm::Value *
@@ -1252,6 +1362,12 @@ LLVM_Util::op_alloca (const TypeDesc &type, int n, const std::string &name)
     return op_alloca (llvm_type(type.elementtype()), n*type.numelements(), name);
 }
 
+
+llvm::Value *
+LLVM_Util::wide_op_alloca (const TypeDesc &type, int n, const std::string &name)
+{
+    return op_alloca (llvm_vector_type(type.elementtype()), n*type.numelements(), name);
+}
 
 
 llvm::Value *
@@ -1455,10 +1571,23 @@ LLVM_Util::op_add (llvm::Value *a, llvm::Value *b)
         return builder().CreateFAdd (a, b);
     if (a->getType() == type_int() && b->getType() == type_int())
         return builder().CreateAdd (a, b);
+        
+    // TODO: consider removing wide version, as it doesn't appear strictly necessary    
+    if (a->getType() == type_wide_float() && b->getType() == type_wide_float())
+        return builder().CreateFAdd (a, b);
+    if (a->getType() == type_wide_int() && b->getType() == type_wide_int())
+        return builder().CreateAdd (a, b);
     ASSERT (0 && "Op has bad value type combination");
 }
 
 
+llvm::Value *
+LLVM_Util::wide_op_add (llvm::Value *a, llvm::Value *b)
+{
+    ASSERT (0 && "Op has bad value type combination");
+	return NULL;
+}
+ 
 
 llvm::Value *
 LLVM_Util::op_sub (llvm::Value *a, llvm::Value *b)
@@ -1467,9 +1596,26 @@ LLVM_Util::op_sub (llvm::Value *a, llvm::Value *b)
         return builder().CreateFSub (a, b);
     if (a->getType() == type_int() && b->getType() == type_int())
         return builder().CreateSub (a, b);
+        
+	// TODO: consider removing wide version, as it doesn't appear strictly necessary    
+	if (a->getType() == type_wide_float() && b->getType() == type_wide_float())
+		return builder().CreateFSub (a, b);
+	if (a->getType() == type_wide_int() && b->getType() == type_wide_int())
+		return builder().CreateSub (a, b);
     ASSERT (0 && "Op has bad value type combination");
 }
 
+
+llvm::Value *
+LLVM_Util::wide_op_sub (llvm::Value *a, llvm::Value *b)
+{
+    if (a->getType() == type_wide_float() && b->getType() == type_wide_float())
+        return builder().CreateFSub (a, b);
+    if (a->getType() == type_wide_int() && b->getType() == type_wide_int())
+        return builder().CreateSub (a, b);
+    ASSERT (0 && "Op has bad value type combination");
+	return NULL;
+}
 
 
 llvm::Value *
@@ -1483,6 +1629,18 @@ LLVM_Util::op_neg (llvm::Value *a)
 }
 
 
+llvm::Value *
+LLVM_Util::wide_op_neg (llvm::Value *a)
+{
+    if (a->getType() == type_wide_float())
+        return builder().CreateFNeg (a);
+    if (a->getType() == type_wide_int())
+        return builder().CreateNeg (a);
+    ASSERT (0 && "Op has bad value type combination");
+	return NULL;
+
+}
+
 
 llvm::Value *
 LLVM_Util::op_mul (llvm::Value *a, llvm::Value *b)
@@ -1491,10 +1649,28 @@ LLVM_Util::op_mul (llvm::Value *a, llvm::Value *b)
         return builder().CreateFMul (a, b);
     if (a->getType() == type_int() && b->getType() == type_int())
         return builder().CreateMul (a, b);
+    
+	
+	// TODO: consider removing wide version, as it doesn't appear strictly necessary
+	if (a->getType() == type_wide_float() && b->getType() == type_wide_float())
+		return builder().CreateFMul (a, b);
+	if (a->getType() == type_wide_int() && b->getType() == type_wide_int())
+		return builder().CreateMul (a, b);
+        
     ASSERT (0 && "Op has bad value type combination");
 }
 
+llvm::Value *
+LLVM_Util::wide_op_mul (llvm::Value *a, llvm::Value *b)
+{
+    if (a->getType() == type_wide_float() && b->getType() == type_wide_float())
+        return builder().CreateFMul (a, b);
+    if (a->getType() == type_wide_int() && b->getType() == type_wide_int())
+        return builder().CreateMul (a, b);
+    ASSERT (0 && "Op has bad value type combination");
+	return NULL;
 
+}
 
 llvm::Value *
 LLVM_Util::op_div (llvm::Value *a, llvm::Value *b)
@@ -1503,10 +1679,27 @@ LLVM_Util::op_div (llvm::Value *a, llvm::Value *b)
         return builder().CreateFDiv (a, b);
     if (a->getType() == type_int() && b->getType() == type_int())
         return builder().CreateSDiv (a, b);
+        
+	// TODO: consider removing wide version, as it doesn't appear strictly necessary
+	if (a->getType() == type_wide_float() && b->getType() == type_wide_float())
+		return builder().CreateFDiv (a, b);
+	if (a->getType() == type_wide_int() && b->getType() == type_wide_int())
+		return builder().CreateSDiv (a, b);
     ASSERT (0 && "Op has bad value type combination");
 }
 
 
+llvm::Value *
+LLVM_Util::wide_op_div (llvm::Value *a, llvm::Value *b)
+{
+    if (a->getType() == type_wide_float() && b->getType() == type_wide_float())
+        return builder().CreateFDiv (a, b);
+    if (a->getType() == type_wide_int() && b->getType() == type_wide_int())
+        return builder().CreateSDiv (a, b);
+    ASSERT (0 && "Op has bad value type combination");
+	return NULL;
+}
+ 
 
 llvm::Value *
 LLVM_Util::op_mod (llvm::Value *a, llvm::Value *b)
@@ -1518,7 +1711,16 @@ LLVM_Util::op_mod (llvm::Value *a, llvm::Value *b)
     ASSERT (0 && "Op has bad value type combination");
 }
 
-
+llvm::Value *
+LLVM_Util::wide_op_mod (llvm::Value *a, llvm::Value *b)
+{
+    if (a->getType() == type_wide_float() && b->getType() == type_wide_float())
+        return builder().CreateFRem (a, b);
+    if (a->getType() == type_wide_int() && b->getType() == type_wide_int())
+        return builder().CreateSRem (a, b);
+    ASSERT (0 && "Op has bad value type combination");
+	return NULL;
+}
 
 llvm::Value *
 LLVM_Util::op_float_to_int (llvm::Value* a)
@@ -1531,6 +1733,17 @@ LLVM_Util::op_float_to_int (llvm::Value* a)
 }
 
 
+llvm::Value *
+LLVM_Util::wide_op_float_to_int (llvm::Value* a)
+{
+    if (a->getType() == type_wide_float())
+        return builder().CreateFPToSI(a, type_int());
+    if (a->getType() == type_wide_int())
+        return a;
+    ASSERT (0 && "Op has bad value type combination");
+	return NULL;
+}
+
 
 llvm::Value *
 LLVM_Util::op_float_to_double (llvm::Value* a)
@@ -1539,6 +1752,13 @@ LLVM_Util::op_float_to_double (llvm::Value* a)
     return builder().CreateFPExt(a, llvm::Type::getDoubleTy(context()));
 }
 
+
+llvm::Value *
+LLVM_Util::wide_op_float_to_double (llvm::Value* a)
+{
+    ASSERT (a->getType() == type_wide_float());
+    return builder().CreateFPExt(a, llvm::Type::getDoubleTy(context()));
+}
 
 
 llvm::Value *
@@ -1552,6 +1772,17 @@ LLVM_Util::op_int_to_float (llvm::Value* a)
 }
 
 
+llvm::Value *
+LLVM_Util::wide_op_int_to_float (llvm::Value* a)
+{
+    if (a->getType() == type_wide_int())
+        return builder().CreateSIToFP(a, type_float());
+    if (a->getType() == type_wide_float())
+        return a;
+    ASSERT (0 && "Op has bad value type combination");
+	return NULL;
+}
+
 
 llvm::Value *
 LLVM_Util::op_bool_to_int (llvm::Value* a)
@@ -1563,6 +1794,17 @@ LLVM_Util::op_bool_to_int (llvm::Value* a)
     ASSERT (0 && "Op has bad value type combination");
 }
 
+
+llvm::Value *
+LLVM_Util::wide_op_bool_to_int (llvm::Value* a)
+{
+    if (a->getType() == type_wide_bool())
+        return builder().CreateZExt (a, type_int());
+    if (a->getType() == type_wide_int())
+        return a;
+    ASSERT (0 && "Op has bad value type combination");
+	return NULL;
+}
 
 
 llvm::Value *
@@ -1602,6 +1844,14 @@ LLVM_Util::op_shr (llvm::Value *a, llvm::Value *b)
 }
 
 
+llvm::Value *
+LLVM_Util::wide_op_shr (llvm::Value *a, llvm::Value *b)
+{
+    if (a->getType() == type_wide_int() && b->getType() == type_wide_int())
+        return builder().CreateAShr (a, b);  // signed int -> arithmetic shift
+    ASSERT (0 && "Op has bad value type combination");
+	return NULL;
+}
 
 llvm::Value *
 LLVM_Util::op_not (llvm::Value *a)

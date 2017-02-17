@@ -103,7 +103,9 @@ static bool shadingsys_options_set = false;
 static float sscale = 1, tscale = 1;
 static float soffset = 0, toffset = 0;
 
-
+#ifndef OSL_USE_WIDE_LLVM_BACKEND
+	#error OSL_USE_WIDE_LLVM_BACKEND must be defined [0|1]
+#endif
 
 static void
 inject_params ()
@@ -122,6 +124,7 @@ set_shadingsys_options ()
 {
     if (shadingsys_options_set)
         return;
+//    shadingsys->attribute ("llvm_debug", 2);
     shadingsys->attribute ("debug", debug2 ? 2 : (debug ? 1 : 0));
     shadingsys->attribute ("compile_report", debug|debug2);
     int opt = 2;  // default
@@ -137,6 +140,12 @@ set_shadingsys_options ()
     shadingsys->attribute ("userdata_isconnected", userdata_isconnected);
     if (! shaderpath.empty())
         shadingsys->attribute ("searchpath:shader", shaderpath);
+    
+#if OSL_USE_WIDE_LLVM_BACKEND
+    // For batched operations turn off coalesce temps
+    shadingsys->attribute ("opt_coalesce_temps", 0);
+#endif
+    
     shadingsys_options_set = true;
 }
 
@@ -603,6 +612,107 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
 }
 
 
+// Set up the ShaderGlobals fields for pixel (x,y).
+static void
+setup_uniform_shaderglobals (ShaderGlobalsBatch &sgb, ShadingSystem *shadingsys)
+{
+	auto &usg = sgb.uniform();
+	
+    // Just zero the whole thing out to start
+    memset(&usg, 0, sizeof(UniformShaderGlobals));
+
+    // In our SimpleRenderer, the "renderstate" itself just a pointer to
+    // the ShaderGlobals.
+    usg.renderstate = &sgb;
+
+    // Just make it look like all shades are the result of 'raytype' rays.
+    usg.raytype = raytype_bit;
+    
+    
+    // For this problem we will treat several varying members of 
+    // the ShaderGlobalsBatch as uniform values.  We can assign to the 
+    // proxy returned by helper method .uniform() to populate all varying
+    // entries with a uniform value;
+    auto vsp = sgb.varying();
+    
+    // Set "shader" space to be Mshad.  In a real renderer, this may be
+    // different for each shader group.
+    vsp.shader2common().uniform() = OSL::TransformationPtr (&Mshad);
+
+    // Set "object" space to be Mobj.  In a real renderer, this may be
+    // different for each object.
+	vsp.object2common().uniform() = OSL::TransformationPtr (&Mobj);
+
+    // Set up u,v to vary across the "patch", and also their derivatives.
+    // Note that since u & x, and v & y are aligned, we only need to set
+    // values for dudx and dvdy, we can use the memset above to have set
+    // dvdx and dudy to 0.
+    if (pixelcenters) {
+        // Our patch is like an "image" with shading samples at the
+        // centers of each pixel.
+    	vsp.dudx().uniform() = sscale / xres;
+    	vsp.dvdy().uniform() = tscale / yres;
+    } else {
+        // Our patch is like a Reyes grid of points, with the border
+        // samples being exactly on u,v == 0 or 1.
+    	vsp.dudx().uniform() = sscale / std::max (1, xres-1);
+    	vsp.dvdy().uniform() = tscale / std::max (1, yres-1);
+    }
+
+    // Assume that position P is simply (u,v,1), that makes the patch lie
+    // on [0,1] at z=1.
+    // Derivatives with respect to x,y
+    Vec3 dPdx = Vec3 (vsp.dudx(), vsp.dudy(), 0.0f);
+    //vsp.dPdx().uniform() = Vec3 (vsp.dudx(), vsp.dudy(), 0.0f);
+    vsp.dPdx().uniform() = dPdx; 
+    vsp.dPdy().uniform() = Vec3 (vsp.dvdx(), vsp.dvdy(), 0.0f);
+    vsp.dPdz().uniform() = Vec3 (0.0f, 0.0f, 0.0f);  // just use 0 for volume tangent
+    // Tangents of P with respect to surface u,v
+    vsp.dPdu().uniform() = Vec3 (1.0f, 0.0f, 0.0f);
+    vsp.dPdv().uniform() = Vec3 (0.0f, 1.0f, 0.0f);
+    // That also implies that our normal points to (0,0,1)
+    vsp.N().uniform()    = Vec3 (0, 0, 1);
+    vsp.Ng().uniform()   = Vec3 (0, 0, 1);
+
+    // Set the surface area of the patch to 1 (which it is).  This is
+    // only used for light shaders that call the surfacearea() function.
+    vsp.surfacearea().uniform() = 1;    
+}
+
+static inline void
+setup_varying_shaderglobals (ShaderGlobalsBatch & sgb, ShadingSystem *shadingsys,
+                     int x, int y)
+{
+	auto vsp = sgb.varying();
+	
+    // Set up u,v to vary across the "patch", and also their derivatives.
+    // Note that since u & x, and v & y are aligned, we only need to set
+    // values for dudx and dvdy, we can use the memset above to have set
+    // dvdx and dudy to 0.
+	float u;
+	float v;
+    if (pixelcenters) {
+        // Our patch is like an "image" with shading samples at the
+        // centers of each pixel.
+    	u = sscale * (float)(x+0.5f) / xres + soffset;
+    	v = tscale * (float)(y+0.5f) / yres + toffset;
+    } else {
+        // Our patch is like a Reyes grid of points, with the border
+        // samples being exactly on u,v == 0 or 1.
+    	u = sscale * ((xres == 1) ? 0.5f : (float) x / (xres - 1)) + soffset;
+    	v = tscale * ((yres == 1) ? 0.5f : (float) y / (yres - 1)) + toffset;
+    }
+ 
+    vsp.u() = u;
+    vsp.v() = v;
+    // Assume that position P is simply (u,v,1), that makes the patch lie
+    // on [0,1] at z=1.
+    vsp.P() = Vec3 (u, v, 1.0f);
+    
+    sgb.commitVarying();
+    
+}
+ 
 
 static void
 setup_output_images (ShadingSystem *shadingsys,
@@ -651,12 +761,24 @@ setup_output_images (ShadingSystem *shadingsys,
     // Because we can only call find_symbol or get_symbol on something that
     // has been set up to shade (or executed), we call execute() but tell it
     // not to actually run the shader.
+#if OSL_USE_WIDE_LLVM_BACKEND
+    ShaderGlobalsBatch sgBatch;
+    setup_uniform_shaderglobals (sgBatch, shadingsys);
+	setup_varying_shaderglobals (sgBatch, shadingsys, 0, 0);
+            
+#else
     ShaderGlobals sg;
     setup_shaderglobals (sg, shadingsys, 0, 0);
-
+#endif
     if (raytype_opt)
         shadingsys->optimize_group (shadergroup.get(), raytype_bit, ~raytype_bit);
+
+    
+#if OSL_USE_WIDE_LLVM_BACKEND
+    shadingsys->execute_batch (ctx, *shadergroup, sgBatch, false);
+#else
     shadingsys->execute (ctx, *shadergroup, sg, false);
+#endif
 
     if (entryoutputs.size()) {
         std::cout << "Entry outputs:";
@@ -757,6 +879,7 @@ save_outputs (ShadingSystem *shadingsys, ShadingContext *ctx, int x, int y)
         if (t.basetype == TypeDesc::FLOAT) {
             // If the variable we are outputting is float-based, set it
             // directly in the output buffer.
+			//printf("xy=(%d,%d) = (%f,%f,%f)\n", x, y, ((const float *)data)[0], ((const float *)data)[1], ((const float *)data)[2]);
             outputimgs[i]->setpixel (x, y, (const float *)data);
         } else if (t.basetype == TypeDesc::INT) {
             // We are outputting an integer variable, so we need to
@@ -771,6 +894,57 @@ save_outputs (ShadingSystem *shadingsys, ShadingContext *ctx, int x, int y)
     }
 }
 
+// For pixel (x,y) that was just shaded by the given shading context,
+// save each of the requested outputs to the corresponding output
+// ImageBuf.
+//
+// In a real renderer, this is illustrative of how you would pull shader
+// outputs into "AOV's" (arbitrary output variables, or additional
+// renderer outputs).  You would, of course, also grab the closure Ci
+// and integrate the lights using that BSDF to determine the radiance
+// in the direction of the camera for that pixel.
+static void
+batched_save_outputs (ShadingSystem *shadingsys, ShadingContext *ctx, ShaderGroup *shadergroup, int x, int y, int batchIndex)
+{
+    // For each output requested on the command line...
+    for (size_t i = 0;  i < outputfiles.size();  ++i) {
+        // Skip if we couldn't open the image or didn't match a known output
+        if (! outputimgs[i])
+            continue;
+
+		const ShaderSymbol* out_symbol = shadingsys->find_symbol (*shadergroup, outputvarnames[i]);
+        if (!out_symbol)
+            continue;  // Skip if symbol isn't found
+        
+        TypeDesc t = shadingsys->symbol_typedesc(out_symbol);
+
+        // Ask for a batch accessor to the symbol's data, as computed by this
+        // shader.
+        
+        
+        if (t.basetype == TypeDesc::FLOAT) {
+        	if (t.aggregate == TypeDesc::VEC3) {        	
+				// If the variable we are outputting is float-based, set it
+				// directly in the output buffer.
+				auto batchResults = shadingsys->symbol_batch_accessor<Vec3>(*ctx, out_symbol);
+				Vec3 data = batchResults[batchIndex];
+				//printf("xy=(%d,%d) = (%f,%f,%f)\n", x, y, data[0], data[1], data[2]);
+				outputimgs[i]->setpixel (x, y, reinterpret_cast<const float *>(&data));
+        	}
+        } else if (t.basetype == TypeDesc::INT) {
+            auto batchResults = shadingsys->symbol_batch_accessor<int>(*ctx, out_symbol);
+        	int data = batchResults[batchIndex];
+            // We are outputting an integer variable, so we need to
+            // convert it to floating point.
+            int nchans = outputimgs[i]->nchannels();
+            float *pixel = (float *) alloca (nchans * sizeof(float));
+            OIIO::convert_types (TypeDesc::BASETYPE(t.basetype), &data,
+                                 TypeDesc::FLOAT, pixel, nchans);
+            outputimgs[i]->setpixel (x, y, &pixel[0]);
+        }
+        // N.B. Drop any outputs that aren't float- or int-based
+    }
+}
 
 
 static void
@@ -862,6 +1036,7 @@ test_group_attributes (ShaderGroup *group)
 void
 shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
 {
+	std::cout << "shade_region(roi.x[" << roi.xbegin << "," << roi.xend << ") roi.y[" << roi.ybegin << "," << roi.yend << ")" << std::endl;
     // Optional: high-performance apps may request this thread-specific
     // pointer in order to save a bit of time on each shade.  Just like
     // the name implies, a multithreaded renderer would need to do this
@@ -937,6 +1112,121 @@ shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
     shadingsys->destroy_thread_info(thread_info);
 }
 
+
+void
+batched_shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
+{
+    // Optional: high-performance apps may request this thread-specific
+    // pointer in order to save a bit of time on each shade.  Just like
+    // the name implies, a multithreaded renderer would need to do this
+    // separately for each thread, and be careful to always use the same
+    // thread_info each time for that thread.
+    //
+    // There's nothing wrong with a simpler app just passing NULL for
+    // the thread_info; in such a case, the ShadingSystem will do the
+    // necessary calls to find the thread-specific pointer itself, but
+    // this will degrade performance just a bit.
+    OSL::PerThreadInfo *thread_info = shadingsys->create_thread_info();
+
+    // Request a shading context so that we can execute the shader.
+    // We could get_context/release_constext for each shading point,
+    // but to save overhead, it's more efficient to reuse a context
+    // within a thread.
+    ShadingContext *ctx = shadingsys->get_context (thread_info);
+
+    // Set up shader globals and a little test grid of points to shade.
+    ShaderGlobalsBatch sgBatch;
+    setup_uniform_shaderglobals (sgBatch, shadingsys);
+    
+//    std::cout << "shading roi y(" << roi.ybegin << ", " << roi.yend << ")";
+//    std::cout << " x(" << roi.xbegin << ", " << roi.xend << ")" << std::endl;
+    
+    // Seperate loop indices to pull results out of batch
+    // These result indices follow along after a batch is 
+    // executed.
+    int ry = roi.ybegin;
+    int rx = roi.xbegin;
+    
+    // Loop over all pixels in the image (in x and y)...
+    for (int y = roi.ybegin;  y < roi.yend;  ++y) {
+    	bool isFinalY = (y == (roi.yend-1));
+        for (int x = roi.xbegin;  x < roi.xend;  ++x) {
+        	bool isFinalX = (x == (roi.xend-1));
+            // In a real renderer, this is where you would figure
+            // out what object point is visible in this pixel (or
+            // this sample, for antialiasing).  Once determined,
+            // you'd set up a ShaderGlobalsBatch that contained the vital
+            // information about that point, such as its location,
+            // the normal there, the u and v coordinates on the
+            // surface, the transformation of that object, and so
+            // on.  
+            //
+            // This test app is not a real renderer, so we just
+            // set it up rigged to look like we're rendering a single
+            // quadrilateral that exactly fills the viewport, and that
+            // setup is done in the following function call:
+        	setup_varying_shaderglobals (sgBatch, shadingsys, x, y);
+
+            //std::cout << "shading x=" << x << " y=" << y << std::endl;
+            if(sgBatch.isFull() || (isFinalX && isFinalY))
+            {
+	            //std::cout << "shading batch with size=" << sgBatch.size() << std::endl;
+				
+				// Actually run the shader for this point
+				if (entrylayer_index.empty()) {
+					// Sole entry point for whole group, default behavior
+					shadingsys->execute_batch (ctx, *shadergroup, sgBatch);
+				} else {
+					ASSERT(false && "untested");
+					// Explicit list of entries to call in order
+					shadingsys->execute_batch_init (*ctx, *shadergroup, sgBatch);
+					if (entrylayer_symbols.size()) {
+						for (size_t i = 0, e = entrylayer_symbols.size(); i < e; ++i)
+							shadingsys->execute_batch_layer (*ctx, sgBatch, entrylayer_symbols[i]);
+					} else {
+						for (size_t i = 0, e = entrylayer_index.size(); i < e; ++i)
+							shadingsys->execute_batch_layer (*ctx, sgBatch, entrylayer_index[i]);
+					}
+					shadingsys->execute_cleanup (*ctx);
+				}
+				
+				
+				if (save)
+				{
+					int bs = sgBatch.size();
+					for(int bi=0; bi < bs; ++bi)
+					{
+						// Save all the designated outputs.  But only do so if we
+						// are on the last iteration requested, so that if we are
+						// doing a bunch of iterations for time trials, we only
+						// including the output pixel copying once in the timing.
+						
+						batched_save_outputs (shadingsys, ctx, shadergroup, rx, ry, bi);
+						if(++rx >= roi.xend) {
+							rx = roi.xbegin;
+							++ry;
+						}
+					}
+				}
+				sgBatch.clear();
+            }
+        }
+    }
+
+    if(sgBatch.isEmpty() == false)
+    {
+    	std::cerr << "Unsubmitted batch, probably forgot to handle the final batch which may not be full" << std::endl;
+    }
+    
+    // We're done shading with this context.
+    shadingsys->release_context (ctx);
+ 
+    // Now that we're done rendering, release the thread-specific
+    // pointer we saved.  A simple app could skip this; but if the app
+    // asks for it (as we have in this example), then it should also
+    // destroy it when done with it.
+    shadingsys->destroy_thread_info(thread_info);
+}
 
 
 extern "C" OSL_DLL_EXPORT int
@@ -1097,12 +1387,16 @@ test_shade (int argc, const char *argv[])
                               roi, num_threads);
         else {
             bool save = (iter == (iters-1));   // save on last iteration
-#if 0
-            shade_region (shadergroup.get(), roi, save);
+#if OSL_USE_WIDE_LLVM_BACKEND
+            batched_shade_region (shadergroup.get(), roi, save);
 #else
+	#if 1
+            shade_region (shadergroup.get(), roi, save);
+	#else
             OIIO::ImageBufAlgo::parallel_image (
                     std::bind (shade_region, shadergroup.get(), std::placeholders::_1, save),
                     roi, num_threads);
+	#endif
 #endif
         }
 

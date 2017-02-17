@@ -123,7 +123,11 @@ class ShaderInstance;
 typedef std::shared_ptr<ShaderInstance> ShaderInstanceRef;
 class Dictionary;
 class RuntimeOptimizer;
-class BackendLLVM;
+#if OSL_USE_WIDE_LLVM_BACKEND    
+class BackendLLVMWide;
+#else
+ class BackendLLVM;
+#endif
 struct ConnectedParam;
 
 void print_closure (std::ostream &out, const ClosureColor *closure, ShadingSystemImpl *ss);
@@ -136,7 +140,11 @@ typedef void (*RunLLVMGroupFunc)(void* /* shader globals */, void*);
 typedef int (*OpFolder) (RuntimeOptimizer &rop, int opnum);
 
 /// Signature of an LLVM-IR-generating method
-typedef bool (*OpLLVMGen) (BackendLLVM &rop, int opnum);
+#if OSL_USE_WIDE_LLVM_BACKEND    
+typedef bool (*OpLLVMGen) (BackendLLVMWide &rop, int opnum);
+#else
+ typedef bool (*OpLLVMGen) (BackendLLVM &rop, int opnum);
+#endif
 
 struct OpDescriptor {
     ustring name;           // name of op
@@ -215,9 +223,34 @@ struct AttributeNeeded {
 // Handy re-casting macros
 #define USTR(cstr) (*((ustring *)&cstr))
 #define MAT(m) (*(Matrix44 *)m)
+#define WMAT(m) (*(Wide<Matrix44> *)m)
+#define W4MAT(m) (*(Wide<Matrix44, 4> *)m)
+#define W8MAT(m) (*(Wide<Matrix44, 8> *)m)
+#define W16MAT(m) (*(Wide<Matrix44, 16> *)m)
+
 #define VEC(v) (*(Vec3 *)v)
+#define WVEC(v) (*(Wide<Vec3> *)v)
+#define W4VEC(v) (*(Wide<Vec3, 4> *)v)
+#define W8VEC(v) (*(Wide<Vec3, 8> *)v)
+#define W16VEC(v) (*(Wide<Vec3, 16> *)v)
+
+#define WFLOAT(x) (*(Wide<Float> *)x)
+#define W4FLOAT(x) (*(Wide<Float, 4> *)x)
+#define W8FLOAT(x) (*(Wide<Float, 8> *)x)
+#define W16FLOAT(x) (*(Wide<Float, 16> *)x)
+
 #define DFLOAT(x) (*(Dual2<Float> *)x)
+#define WDFLOAT(x) (*(Wide<Dual2<Float>> *)x)
+#define W4DFLOAT(x) (*(Wide<Dual2<Float>, 4> *)x)
+#define W8DFLOAT(x) (*(Wide<Dual2<Float>, 8> *)x)
+#define W16DFLOAT(x) (*(Wide<Dual2<Float>, 16> *)x)
+
 #define DVEC(x) (*(Dual2<Vec3> *)x)
+#define WDVEC(x) (*(Wide<Dual2<Vec3>> *)x)
+#define W4DVEC(x) (*(Wide<Dual2<Vec3>, 4> *)x)
+#define W8DVEC(x) (*(Wide<Dual2<Vec3>, 8> *)x)
+#define W16DVEC(x) (*(Wide<Dual2<Vec3>, 16> *)x)
+
 #define COL(x) (*(Color3 *)x)
 #define DCOL(x) (*(Dual2<Color3> *)x)
 #define TYPEDESC(x) OIIO::bit_cast<long long,TypeDesc>(x)
@@ -535,7 +568,11 @@ public:
 
     bool execute (ShadingContext *ctx, ShaderGroup &group,
                   ShaderGlobals &ssg, bool run=true);
-
+    
+	bool execute_batch (ShadingContext *ctx, ShaderGroup &group,
+				  ShaderGlobalsBatch &sgb, bool run=true);
+    
+    
     const void* get_symbol (ShadingContext &ctx, ustring layername,
                             ustring symbolname, TypeDesc &type);
 
@@ -868,7 +905,11 @@ private:
     friend class ShaderMaster;
     friend class ShaderInstance;
     friend class RuntimeOptimizer;
-    friend class BackendLLVM;
+#if OSL_USE_WIDE_LLVM_BACKEND    
+    friend class BackendLLVMWide;
+#else
+	 friend class BackendLLVM;
+#endif
 };
 
 
@@ -1516,7 +1557,11 @@ private:
     atomic_ll m_stat_total_shading_time_ticks; ///< Total shading time (ticks)
 
     friend class OSL::pvt::ShadingSystemImpl;
-    friend class OSL::pvt::BackendLLVM;
+#if OSL_USE_WIDE_LLVM_BACKEND
+    friend class OSL::pvt::BackendLLVMWide;
+#else
+	 friend class OSL::pvt::BackendLLVM;
+#endif
     friend class ShadingContext;
 };
 
@@ -1553,6 +1598,25 @@ public:
     /// layer, and cleanup. (See similarly named method of ShadingSystem.)
     bool execute (ShaderGroup &group, ShaderGlobals &globals, bool run=true);
 
+        
+    /// Execute the shader group, including init, run of single entry point
+    /// layer, and cleanup. (See similarly named method of ShadingSystem.)
+    //bool execute_batch_index (ShaderGroup &group, ShaderGlobals &globals, int batchIndex, bool run=true);
+    
+    /// Bind a shader group and globals to this context and prepare to
+    /// execute. (See similarly named method of ShadingSystem.)
+    bool execute_batch_init (ShaderGroup &group, ShaderGlobalsBatch &sgb, bool run=true);
+
+    /// Execute the layer whose index is specified. (See similarly named
+    /// method of ShadingSystem.)
+    bool execute_batch_layer (ShaderGlobalsBatch &sgb, int layer);
+    
+    /// Execute the shader group, including init, run of single entry point
+    /// layer, and cleanup. (See similarly named method of ShadingSystem.)
+    bool execute_batch (ShaderGroup &group, ShaderGlobalsBatch &sgb, bool run=true);
+    
+    
+    
     ClosureComponent * closure_component_allot(int id, size_t prim_size, const Color3 &w) {
         // Allocate the component and the mul back to back
         size_t needed = sizeof(ClosureComponent) + (prim_size >= 4 ? prim_size - 4 : 0);
@@ -1717,6 +1781,7 @@ private:
     mutable TextureSystem::Perthread *m_texture_thread_info; ///< Ptr to texture thread info
     ShaderGroup *m_group;               ///< Ptr to shader group
     std::vector<char> m_heap;           ///< Heap memory
+    std::vector<char> m_wide_heap;      ///< Wide Heap memory
     typedef std::unordered_map<ustring, boost::regex*, ustringHash> RegexMap;
     RegexMap m_regex_map;               ///< Compiled regex's
     MessageList m_messages;             ///< Message blackboard

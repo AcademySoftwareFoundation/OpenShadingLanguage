@@ -105,6 +105,7 @@ typedef long double max_align_t;
 #include "OSL/shaderglobals.h"
 #include "OSL/dual.h"
 #include "OSL/dual_vec.h"
+#include "OSL/wide.h"
 using namespace OSL;
 
 #include <OpenEXR/ImathFun.h>
@@ -150,6 +151,50 @@ void * __dso_handle = 0; // necessary to avoid linkage issues in bitcode
 #define OSL_SHADEOP extern "C" OSL_LLVM_EXPORT
 #endif
 
+typedef float wide_float __attribute__((vector_size(SimdLaneCount*sizeof(float))));
+typedef int wide_int __attribute__((vector_size(SimdLaneCount*sizeof(int))));
+
+#define MAKE_WIDE_UNARY_PERCOMPONENT_OP(name,floatfunc,dualfunc)    \
+OSL_SHADEOP wide_float                                              \
+osl_wide_##name##_ff (wide_float a)                                 \
+{                                                                   \
+	return floatfunc(a);                                            \
+}                                                                   \
+	
+#if 0
+																	\
+OSL_SHADEOP void                                                    \
+osl_wide_##name##_dfdf (void *r, void *a)                           \
+{                                                                   \
+    DFLOAT(r) = dualfunc (DFLOAT(a));                               \
+}                                                                   \
+                                                                    \
+OSL_SHADEOP void                                                    \
+osl_wide_##name##_vv (void *r_, void *a_)                           \
+{                                                                   \
+    Vec3 &r (VEC(r_));                                              \
+    Vec3 &a (VEC(a_));                                              \
+    r[0] = floatfunc (a[0]);                                        \
+    r[1] = floatfunc (a[1]);                                        \
+    r[2] = floatfunc (a[2]);                                        \
+}                                                                   \
+                                                                    \
+OSL_SHADEOP void                                                    \
+osl_wide_##name##_dvdv (void *r_, void *a_)                         \
+{                                                                   \
+    Dual2<Vec3> &r (DVEC(r_));                                      \
+    Dual2<Vec3> &a (DVEC(a_));                                      \
+    /* Swizzle the Dual2<Vec3>'s into 3 Dual2<float>'s */           \
+    Dual2<float> ax, ay, az;                                        \
+    ax = dualfunc (Dual2<float> (a.val().x, a.dx().x, a.dy().x));   \
+    ay = dualfunc (Dual2<float> (a.val().y, a.dx().y, a.dy().y));   \
+    az = dualfunc (Dual2<float> (a.val().z, a.dx().z, a.dy().z));   \
+    /* Now swizzle back */                                          \
+    r.set (Vec3( ax.val(), ay.val(), az.val()),                     \
+           Vec3( ax.dx(),  ay.dx(),  az.dx() ),                     \
+           Vec3( ax.dy(),  ay.dy(),  az.dy() ));                    \
+}
+#endif
 
 
 #define MAKE_UNARY_PERCOMPONENT_OP(name,floatfunc,dualfunc)         \
@@ -523,6 +568,35 @@ inline Dual2<float> fabsf (const Dual2<float> &x) {
 
 MAKE_UNARY_PERCOMPONENT_OP (abs, fabsf, fabsf);
 MAKE_UNARY_PERCOMPONENT_OP (fabs, fabsf, fabsf);
+
+//MAKE_WIDE_UNARY_PERCOMPONENT_OP (abs, fabs, abs);
+OSL_SHADEOP wide_float osl_abs_wfwf(wide_float a) {
+	//const wide_float wide_zero = { 0.0f, 0.0f, 0.0f, 0.0f };
+	//const wide_int wide_true = { 1, 1, 1, 1 };
+    //if ((a >= zero) == wide_true) 
+	//auto mask = (a >= wide_zero);
+	//return a*mask + (-a)*(!mask);
+	//return (a>=wide_zero) ? a: -a;
+	//const wide_float wide_one = { 1.0f, 1.0f, 1.0f, 1.0f };
+	//return wide_one;
+	
+	//printf("(%f,%f,%f,%f)\n",a[0],a[1],a[2],a[3]);
+	
+	wide_float r;
+	r[0] = (a[0] >= 0.0f) ? a[0] : -a[0]; 
+	r[1] = (a[1] >= 0.0f) ? a[1] : -a[1]; 
+	r[2] = (a[2] >= 0.0f) ? a[2] : -a[2]; 
+	r[3] = (a[3] >= 0.0f) ? a[3] : -a[3];
+#if SimdLaneCount == 8
+	r[4] = (a[4] >= 0.0f) ? a[4] : -a[4]; 
+	r[5] = (a[5] >= 0.0f) ? a[5] : -a[5]; 
+	r[6] = (a[6] >= 0.0f) ? a[6] : -a[6]; 
+	r[7] = (a[7] >= 0.0f) ? a[7] : -a[7];
+#endif
+	
+	//printf("(%f,%f,%f,%f)\n",r[0],r[1],r[2],r[3]);
+	return r;
+}
 
 OSL_SHADEOP int osl_safe_mod_iii (int a, int b) {
     return (b != 0) ? (a % b) : 0;

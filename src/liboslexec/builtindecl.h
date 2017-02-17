@@ -38,7 +38,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #error Do not include this file unless DECL is defined
 #endif
 
+#define NOISE_WIMPL(name)                           \
+    DECL (osl_ ## name ## _w4fw4v,  "wfwv")			\
+    DECL (osl_ ## name ## _w8fw8v,  "wfwv")			\
+    DECL (osl_ ## name ## _w16fw16v,  "wfwv")   
 
+#define GENERIC_NOISE_DERIV_WIMPL(name)             \
+    DECL (osl_ ## name ## _w4dfw4dv,   "xsXXXX")    \
+    DECL (osl_ ## name ## _w8dfw8dv,   "xsXXXX")    \
+    DECL (osl_ ## name ## _w16dfw16dv,   "xsXXXX")    
 
 #define NOISE_IMPL(name)                           \
     DECL (osl_ ## name ## _ff,  "ff")              \
@@ -151,6 +159,15 @@ DECL (osl_incr_layers_executed, "xX")
 NOISE_IMPL(cellnoise)
 //NOISE_DERIV_IMPL(cellnoise)
 NOISE_IMPL(noise)
+#if OSL_USE_WIDE_LLVM_BACKEND
+	DECL (osl_printf_b, "xXs*")
+	NOISE_WIMPL(cellnoise)
+	NOISE_WIMPL(noise)
+	NOISE_WIMPL(snoise)
+	NOISE_WIMPL(simplexnoise)
+	NOISE_WIMPL(usimplexnoise)
+	GENERIC_NOISE_DERIV_WIMPL(gabornoise)
+#endif
 NOISE_DERIV_IMPL(noise)
 NOISE_IMPL(snoise)
 NOISE_DERIV_IMPL(snoise)
@@ -207,6 +224,9 @@ DECL (osl_get_matrix, "iXXs")
 DECL (osl_get_inverse_matrix, "iXXs")
 DECL (osl_transform_triple, "iXXiXiXXi")
 DECL (osl_transform_triple_nonlinear, "iXXiXiXXi")
+#if OSL_USE_WIDE_LLVM_BACKEND
+DECL (osl_wide_transform_triple, "iXXiXiXXi")
+#endif
 
 DECL (osl_dict_find_iis, "iXiX")
 DECL (osl_dict_find_iss, "iXXX")
@@ -222,6 +242,9 @@ DECL (osl_get_texture_options, "XX");
 DECL (osl_get_noise_options, "XX");
 DECL (osl_get_trace_options, "XX");
 
+#if OSL_USE_WIDE_LLVM_BACKEND
+DECL (osl_wide_get_noise_options, "XX");
+#endif
 
 // The following are defined inside llvm_ops.cpp. Only include these
 // declarations in the OSL_LLVM_NO_BITCODE case.
@@ -396,6 +419,7 @@ DECL (osl_raytype_bit, "iXi")
 
 // Clean up local definitions
 #undef NOISE_IMPL
+#undef NOISE_WIMPL
 #undef NOISE_DERIV_IMPL
 #undef GENERIC_NOISE_DERIV_IMPL
 #undef PNOISE_IMPL

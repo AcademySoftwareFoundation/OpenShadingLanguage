@@ -164,6 +164,7 @@ if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG)
     endif ()
 endif ()
 
+
 # gcc specific options
 if (CMAKE_COMPILER_IS_GNUCC AND NOT (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG))
     if (NOT ${GCC_VERSION} VERSION_LESS 4.8)
@@ -171,13 +172,25 @@ if (CMAKE_COMPILER_IS_GNUCC AND NOT (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_I
         # suppress a warning that Boost::Python hits in g++ 4.8
         add_definitions ("-Wno-error=unused-local-typedefs")
         add_definitions ("-Wno-unused-local-typedefs")
+        add_definitions ("-Wno-sign-compare")
     endif ()
     if (NOT ${GCC_VERSION} VERSION_LESS 4.5)
         add_definitions ("-Wno-unused-result")
     endif ()
 endif ()
 
+if (CMAKE_COMPILER_IS_INTEL)
+	add_definitions ("-wd3058")
+	add_definitions ("-wd597")
+	add_definitions ("-wd1011")
+	add_definitions ("-wd873")
+	add_definitions ("-qopenmp-simd")
+	#add_definitions ("-xAVX2")
+	#add_definitions ("-no-vec")
+	#add_definitions ("-no-simd")
+	#add_definitions ("-wd161")
 
+endif ()
 ## enable RTTI
 ##   NOTE: LLVM builds without RTTI by default so beware
 ##   if you find the need to turn this on, to use OSL in a
@@ -196,7 +209,8 @@ if (NOT ENABLERTTI)
     # For gcc < 4.3, Boost needs some extra help detecting that we've
     # disabled RTTI.
     if ((CMAKE_COMPILER_IS_GNUCC AND GCC_VERSION VERSION_LESS 4.3)
-        OR CMAKE_COMPILER_IS_CLANG)
+        OR CMAKE_COMPILER_IS_CLANG
+        OR CMAKE_COMPILER_IS_INTEL)
         add_definitions ("-DBOOST_NO_RTTI")
         add_definitions ("-DBOOST_NO_TYPEID")
     endif ()

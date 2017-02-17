@@ -32,6 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
+#include <OSL/wide.h>
 #include <OpenImageIO/hash.h>
 #include <OpenImageIO/simd.h>
 
@@ -126,7 +127,16 @@ namespace {
 
 // return the greatest integer <= x
 inline int quick_floor (float x) {
-    return (int) x - ((x < 0) ? 1 : 0);
+	//	return (int) x - ((x < 0) ? 1 : 0);
+	
+	// std::floor is another option, however that appears to be
+	// a function call right now, and this sequence appears cheaper
+	//return static_cast<int>(x - ((x < 0.0f) ? 1.0f : 0.0f));
+	
+	// This factoring should allow the expensive float to integer
+	// conversion to happen at the same time the comparison is
+	// in an out of order CPU
+	return (static_cast<int>(x)) - ((x < 0.0f) ? 1 : 0);
 }
 
 // return the greatest integer <= x, for 4 values at once
@@ -149,7 +159,9 @@ OIIO_FORCEINLINE int4 quick_floor (const float4& x) {
 inline float bits_to_01 (unsigned int bits) {
     // divide by 2^32-1
     return bits * (1.0f / std::numeric_limits<unsigned int>::max());
-}
+    // TODO:  I am not sure the above is numerically correct
+    //return static_cast<float>(bits)/std::numeric_limits<unsigned int>::max();
+    }
 
 
 
@@ -276,6 +288,24 @@ struct CellNoise {
         hash1<3> (result, iv);
     }
 
+    
+	template<int WidthT>
+	inline void operator() (Wide<float, WidthT> &wresult, const Wide<Vec3, WidthT> &wp) const {
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			//OSL_INTEL_PRAGMA("ivdep")
+			//OSL_INTEL_PRAGMA("vector always assert")
+			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
+			//OSL_INTEL_PRAGMA("novector")
+			for(int i=0; i< WidthT; ++i) {
+				const Vec3 p = wp.get(i);
+				float result;
+				this->operator() (result, p);		        
+				wresult.set(i, result); 
+			}
+		}
+	}    
+    
     inline void operator() (float &result, const Vec3 &p, float t) const {
         unsigned int iv[4];
         iv[0] = quick_floor (p.x);
@@ -1119,6 +1149,29 @@ inline void perlin (float &result, const H &hash,
 }
 
 
+template <typename H>
+inline void perlin_scalar(float &result, const H &hash,
+                    const float &x, const float &y, const float &z)
+{	
+   // ORIGINAL -- non-SIMD
+    int X; float fx = floorfrac(x, &X);
+    int Y; float fy = floorfrac(y, &Y);
+    int Z; float fz = floorfrac(z, &Z);
+    float u = fade(fx);
+    float v = fade(fy);
+    float w = fade(fz);
+    result = OIIO::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz     ),
+                            grad (hash (X+1, Y  , Z  ), fx-1.0f, fy     , fz     ),
+                            grad (hash (X  , Y+1, Z  ), fx     , fy-1.0f, fz     ),
+                            grad (hash (X+1, Y+1, Z  ), fx-1.0f, fy-1.0f, fz     ),
+                            grad (hash (X  , Y  , Z+1), fx     , fy     , fz-1.0f),
+                            grad (hash (X+1, Y  , Z+1), fx-1.0f, fy     , fz-1.0f),
+                            grad (hash (X  , Y+1, Z+1), fx     , fy-1.0f, fz-1.0f),
+                            grad (hash (X+1, Y+1, Z+1), fx-1.0f, fy-1.0f, fz-1.0f),
+                            u, v, w);
+    result = scale3 (result);
+}
+ 
 
 template <typename H>
 inline void perlin (float &result, const H &hash,
@@ -1881,49 +1934,68 @@ struct Noise {
     inline void operator() (float &result, float x) const {
         HashScalar h;
         perlin(result, h, x);
-        result = 0.5f * (result + 1);
+        result = 0.5f * (result + 1.0f);
     }
 
     inline void operator() (float &result, float x, float y) const {
         HashScalar h;
         perlin(result, h, x, y);
-        result = 0.5f * (result + 1);
+        result = 0.5f * (result + 1.0f);
     }
 
     inline void operator() (float &result, const Vec3 &p) const {
         HashScalar h;
         perlin(result, h, p.x, p.y, p.z);
-        result = 0.5f * (result + 1);
+        result = 0.5f * (result + 1.0f);
     }
 
+	template<int WidthT>
+	inline void operator() (Wide<float, WidthT> &result, const Wide<Vec3, WidthT> &wp) const {
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			//OSL_INTEL_PRAGMA("ivdep")
+			//OSL_INTEL_PRAGMA("vector always assert")
+			OSL_INTEL_PRAGMA("simd assert")
+			//OSL_INTEL_PRAGMA("novector") 
+			for(int i=0; i< WidthT; ++i) {
+				Vec3 p = wp.get(i);
+				float perlinResult;
+				HashScalar h;
+				perlin_scalar(perlinResult, h, p.x, p.y, p.z);
+				float scaledResult = 0.5f * (perlinResult + 1.0f);								
+				result.set(i, scaledResult); 
+			}
+		}
+	}
+    
     inline void operator() (float &result, const Vec3 &p, float t) const {
         HashScalar h;
         perlin(result, h, p.x, p.y, p.z, t);
-        result = 0.5f * (result + 1);
+        result = 0.5f * (result + 1.0f);
     }
 
     inline void operator() (Vec3 &result, float x) const {
         HashVector h;
         perlin(result, h, x);
-        result = 0.5f * (result + Vec3(1, 1, 1));
+        result = 0.5f * (result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
     inline void operator() (Vec3 &result, float x, float y) const {
         HashVector h;
         perlin(result, h, x, y);
-        result = 0.5f * (result + Vec3(1, 1, 1));
+        result = 0.5f * (result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
     inline void operator() (Vec3 &result, const Vec3 &p) const {
         HashVector h;
         perlin(result, h, p.x, p.y, p.z);
-        result = 0.5f * (result + Vec3(1, 1, 1));
+        result = 0.5f * (result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
     inline void operator() (Vec3 &result, const Vec3 &p, float t) const {
         HashVector h;
         perlin(result, h, p.x, p.y, p.z, t);
-        result = 0.5f * (result + Vec3(1, 1, 1));
+        result = 0.5f * (result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
     // dual versions
@@ -2006,6 +2078,24 @@ struct SNoise {
         HashScalar h;
         perlin(result, h, p.x, p.y, p.z);
     }
+    
+    template<int WidthT>
+	inline void operator() (Wide<float, WidthT> &result, const Wide<Vec3, WidthT> &wp) const {
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			//OSL_INTEL_PRAGMA("ivdep")
+			//OSL_INTEL_PRAGMA("vector always assert")
+			OSL_INTEL_PRAGMA("simd assert")
+			//OSL_INTEL_PRAGMA("novector")
+			for(int i=0; i< WidthT; ++i) {
+				Vec3 p = wp.get(i);
+				float perlinResult;
+				HashScalar h;
+				perlin_scalar(perlinResult, h, p.x, p.y, p.z);
+				result.set(i, perlinResult); 
+			}
+		}
+	}
 
     inline void operator() (float &result, const Vec3 &p, float t) const {
         HashScalar h;
@@ -2312,6 +2402,223 @@ struct PeriodicSNoise {
 
 
 
+
+// Gradient directions for 3D.
+// These vectors are based on the midpoints of the 12 edges of a cube.
+// A larger array of random unit length vectors would also do the job,
+// but these 12 (including 4 repeats to make the array length a power
+// of two) work better. They are not random, they are carefully chosen
+// to represent a small, isotropic set of directions.
+// Store in SOA data layout using our Wide helper
+static const Wide<Vec3,16> fast_grad3lut_wide(
+	Vec3(  1.0f,  0.0f,  1.0f ), Vec3(  0.0f,  1.0f,  1.0f ), // 12 cube edges
+	Vec3( -1.0f,  0.0f,  1.0f ), Vec3( 0.0f, -1.0f,  1.0f ),
+	Vec3(  1.0f,  0.0f, -1.0f ), Vec3( 0.0f,  1.0f, -1.0f ),
+	Vec3( -1.0f,  0.0f, -1.0f ), Vec3(  0.0f, -1.0f, -1.0f ),
+	Vec3(  1.0f, -1.0f,  0.0f ), Vec3( 1.0f,  1.0f,  0.0f ),
+	Vec3( -1.0f,  1.0f,  0.0f ), Vec3( -1.0f, -1.0f,  0.0f ),
+	Vec3(  1.0f,  0.0f,  1.0f ), Vec3( -1.0f,  0.0f,  1.0f ), // 4 repeats to make 16
+	Vec3(  0.0f,  1.0f, -1.0f ), Vec3( 0.0f, -1.0f, -1.0f ));
+
+
+//#define OSL_VERIFY_SIMPLEX3 1	
+#ifdef OSL_VERIFY_SIMPLEX3
+		static void osl_verify_fail(int lineNumber, const char *expression)
+		{
+			std::cout << "Line " << __LINE__ << " failed OSL_VERIFY(" << expression << ")" << std::endl; 
+			exit(1);
+		}
+	#define OSL_VERIFY(EXPR) if((EXPR)== false) osl_verify_fail(__LINE__, #EXPR); 
+#endif
+
+struct fast {
+	
+	static inline uint32_t
+	scramble (uint32_t v0, uint32_t v1=0, uint32_t v2=0)
+	{
+	    return OIIO::bjhash::bjfinal (v0, v1, v2^0xdeadbeef);
+	}    	
+	
+	
+	template<int seedT>
+	static inline const Vec3 
+	grad3 (int i, int j, int k)
+	{
+	    int h = scramble (i, j, scramble (k, seedT));
+	    
+	    //return fast_grad3lut[h & 15];
+	    return fast_grad3lut_wide.get(h & 15);
+	}
+
+
+	// 3D simplex noise with derivatives.
+	// If the last tthree arguments are not null, the analytic derivative
+	// (the 3D gradient of the scalar noise field) is also calculated.
+	template<int seedT>
+	static inline float
+	simplexnoise3 (float x, float y, float z)
+	{
+	    // Skewing factors for 3D simplex grid:
+	    const float F3 = 0.333333333;   // = 1/3
+	    const float G3 = 0.166666667;   // = 1/6
+
+	    // Skew the input space to determine which simplex cell we're in
+	    float s = (x+y+z)*F3; // Very nice and simple skew factor for 3D
+	    float xs = x+s;
+	    float ys = y+s;
+	    float zs = z+s;
+
+	    int i = quick_floor(xs);
+	    int j = quick_floor(ys);
+	    int k = quick_floor(zs);
+
+	    float t = (float)(i+j+k)*G3; 
+	    float X0 = i-t; // Unskew the cell origin back to (x,y,z) space
+	    float Y0 = j-t;
+	    float Z0 = k-t;
+	    
+	    float x0 = x-X0; // The x,y,z distances from the cell origin
+	    float y0 = y-Y0;
+	    float z0 = z-Z0;
+
+	    // For the 3D case, the simplex shape is a slightly irregular tetrahedron.
+	    // Determine which simplex we are in.
+	    int i1, j1, k1; // Offsets for second corner of simplex in (i,j,k) coords
+	    int i2, j2, k2; // Offsets for third corner of simplex in (i,j,k) coords
+
+	    {
+	    	// NOTE:  The GLSL version of the flags produced different results
+	    	// These flags are derived directly from the conditional logic 
+	    	// which is repeated in the verification code block following
+	        int bg0 = (x0 >= y0);
+	        int bg1 = (y0 >= z0);
+	        int bg2 = (x0 >= z0);
+			int nbg0 = !bg0;
+			int nbg1 = !bg1;
+			int nbg2 = !bg2;
+	        i1 = bg0 & (bg1 | bg2);
+	        j1 = nbg0 & bg1;
+	        k1 =  nbg1 & ((bg0 & nbg2) | nbg0) ;
+	        i2 = bg0 | (bg1 & bg2);
+	        j2 = bg1 | nbg0;
+	        k2 = (bg0 & nbg1) | (nbg0 &(nbg1 | nbg2));
+	    }
+#ifdef OSL_VERIFY_SIMPLEX3  // Keep around to validate the bit logic above
+	    {
+	    	   if (x0>=y0) {
+	    		        if (y0>=z0) {
+	    		            OSL_VERIFY(i1==1); 
+	    		            OSL_VERIFY(j1==0);
+	    		            OSL_VERIFY(k1==0);
+	    		            OSL_VERIFY(i2==1);
+	    		            OSL_VERIFY(j2==1);
+	    		            OSL_VERIFY(k2==0);  /* X Y Z order */
+	    		        } else if (x0>=z0) {
+	    		        	OSL_VERIFY(i1==1); 
+	    		        	OSL_VERIFY(j1==0); 
+	    		        	OSL_VERIFY(k1==0); 
+	    		        	OSL_VERIFY(i2==1);
+	    		        	OSL_VERIFY(j2==0);
+	    		        	OSL_VERIFY(k2==1);  /* X Z Y order */
+	    		        } else {
+	    		        	OSL_VERIFY(i1==0);
+	    		        	OSL_VERIFY(j1==0);
+	    		        	OSL_VERIFY(k1==1);
+	    		        	OSL_VERIFY(i2==1);
+	    		        	OSL_VERIFY(j2==0);
+	    		        	OSL_VERIFY(k2==1);  /* Z X Y order */
+	    		        }
+	    		    } else { // x0<y0
+	    		        if (y0<z0) {
+	    		        	OSL_VERIFY(i1==0); 
+	    		            OSL_VERIFY(j1==0); 
+	    		            OSL_VERIFY(k1==1); 
+	    		            OSL_VERIFY(i2==0); 
+	    		            OSL_VERIFY(j2==1); 
+	    		            OSL_VERIFY(k2==1);  /* Z Y X order */
+	    		        } else if (x0<z0) {
+	    		        	OSL_VERIFY(i1==0); 
+	    		        	OSL_VERIFY(j1==1); 
+	    		        	OSL_VERIFY(k1==0); 
+	    		        	OSL_VERIFY(i2==0); 
+	    		        	OSL_VERIFY(j2==1); 
+	    		        	OSL_VERIFY(k2==1);  /* Y Z X order */
+	    		        } else {
+	    		        	OSL_VERIFY(i1==0); 
+	    		        	OSL_VERIFY(j1==1); 
+	    		        	OSL_VERIFY(k1==0); 
+	    		        	OSL_VERIFY(i2==1); 
+	    		        	OSL_VERIFY(j2==1);
+	    		            OSL_VERIFY(k2==0);  /* Y X Z order */
+	    		        }
+	    		    }	    	
+	    }
+	#endif
+
+	    // A step of (1,0,0) in (i,j,k) means a step of (1-c,-c,-c) in (x,y,z),
+	    // a step of (0,1,0) in (i,j,k) means a step of (-c,1-c,-c) in (x,y,z), and
+	    // a step of (0,0,1) in (i,j,k) means a step of (-c,-c,1-c) in (x,y,z),
+	    // where c = 1/6.
+	    float x1 = x0 - i1 + G3; // Offsets for second corner in (x,y,z) coords
+	    float y1 = y0 - j1 + G3;
+	    float z1 = z0 - k1 + G3;
+	    float x2 = x0 - i2 + 2.0f * G3; // Offsets for third corner in (x,y,z) coords
+	    float y2 = y0 - j2 + 2.0f * G3;
+	    float z2 = z0 - k2 + 2.0f * G3;
+	    float x3 = x0 - 1.0f + 3.0f * G3; // Offsets for last corner in (x,y,z) coords
+	    float y3 = y0 - 1.0f + 3.0f * G3;
+	    float z3 = z0 - 1.0f + 3.0f * G3;
+
+	    
+	    // As we do not expect any coherency between data lanes
+	    // Hoisted work out of conditionals to encourage masking blending
+    	// versus a check for coherency
+	    // In other words we will do all the work, all the time versus
+	    // trying to manage it on a per lane basis.
+	    // NOTE: this may be slower if used for serial vs. simd
+	    Vec3 g0 = grad3<seedT>(i, j, k);
+	    Vec3 g1 = grad3<seedT>(i+i1, j+j1, k+k1);
+	    Vec3 g2 = grad3<seedT>(i+i2, j+j2, k+k2);
+	    Vec3 g3 = grad3<seedT>(i+1, j+1, k+1);
+	    
+	    // Calculate the contribution from the four corners
+	    float t0 = 0.5f - x0*x0 - y0*y0 - z0*z0;
+        float t20 = t0 * t0;
+        float t40 = t20 * t20;
+        // NOTE: avoid array access of points, always use
+        // the real data members to avoid aliasing issues
+        //n0 = t40 * (g0[0] * x0 + g0[1] * y0 + g0[2] * z0);
+        float tn0 = t40 * (g0.x * x0 + g0.y * y0 + g0.z * z0);
+	    float n0 = (t0 >= 0.0f) ? tn0 : 0.0f;
+
+	    float t1 = 0.5f - x1*x1 - y1*y1 - z1*z1;
+    	float t21 = t1 * t1;
+    	float t41 = t21 * t21;
+        float tn1 = t41 * (g1.x * x1 + g1.y * y1 + g1.z * z1);
+	    float n1 = (t1 >= 0.0f) ? tn1 : 0.0f;
+
+	    float t2 = 0.5f - x2*x2 - y2*y2 - z2*z2;
+    	float t22 = t2 * t2;
+    	float t42 = t22 * t22;
+        float tn2 = t42 * (g2.x * x2 + g2.y * y2 + g2.z * z2);
+	    float n2 = (t2 >= 0.0f) ? tn2 : 0.0f;
+
+	    float t3 = 0.5f - x3*x3 - y3*y3 - z3*z3;
+    	float t23 = t3 * t3;
+    	float t43 = t23 * t23;
+        float tn3 = t43 * (g3.x * x3 + g3.y * y3 + g3.z * z3);
+	    float n3 = (t3 >= 0.0f) ? tn3 : 0.0f;
+	    
+	    // Sum up and scale the result.  The scale is empirical, to make it
+	    // cover [-1,1], and to make it approximately match the range of our
+	    // Perlin noise implementation.
+	    constexpr float scale = 68.0f;
+	    float noise = scale * (n0 + n1 + n2 + n3);
+	
+	    return noise;		
+	}	
+};
+
 struct SimplexNoise {
     SimplexNoise () { }
 
@@ -2326,7 +2633,29 @@ struct SimplexNoise {
     inline void operator() (float &result, const Vec3 &p) const {
         result = simplexnoise3 (p.x, p.y, p.z);
     }
-
+    
+    template<int WidthT>
+    inline void operator() (Wide<float, WidthT> &wresult, const Wide<Vec3, WidthT> &wp) const {
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+#ifndef OSL_VERIFY_SIMPLEX3  			
+			OSL_INTEL_PRAGMA("ivdep")
+			//OSL_INTEL_PRAGMA("vector always assert")
+			//OSL_INTEL_PRAGMA("vector aligned")
+			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
+			//OSL_INTEL_PRAGMA("novector")
+#endif
+			for(int i=0; i< WidthT; ++i) {
+				Vec3 p = wp.get(i);
+				
+				//float result = simplexnoise3 (p.x, p.y, p.z);
+				float result = fast::simplexnoise3<0/* seed */>(p.x, p.y, p.z);		        
+		        wresult.set(i, result); 
+			}
+		}
+    }
+    
+    
     inline void operator() (float &result, const Vec3 &p, float t) const {
         result = simplexnoise4 (p.x, p.y, p.z, t);
     }
@@ -2442,6 +2771,27 @@ struct USimplexNoise {
         result = 0.5f * (simplexnoise3 (p.x, p.y, p.z) + 1.0f);
     }
 
+    template<int WidthT>
+    inline void operator() (Wide<float, WidthT> &wresult, const Wide<Vec3, WidthT> &wp) const {
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+#ifndef OSL_VERIFY_SIMPLEX3  
+			OSL_INTEL_PRAGMA("ivdep")
+			//OSL_INTEL_PRAGMA("vector always assert")
+			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
+			//OSL_INTEL_PRAGMA("novector")
+#endif
+			for(int i=0; i< WidthT; ++i) {
+				Vec3 p = wp.get(i);
+				
+				float result = 0.5f * (fast::simplexnoise3<0/* seed */>(p.x, p.y, p.z) + 1.0f);
+		        
+		        wresult.set(i, result); 
+			}
+		}
+    }
+    
+    
     inline void operator() (float &result, const Vec3 &p, float t) const {
         result = 0.5f * (simplexnoise4 (p.x, p.y, p.z, t) + 1.0f);
     }
@@ -2557,6 +2907,11 @@ struct USimplexNoise {
 
 
 Dual2<float> gabor (const Dual2<Vec3> &P, const NoiseParams *opt);
+
+void gabor (Wide<Dual2<Vec3>,4> const &wP, Wide<Dual2<float>,4> &wResult, const NoiseParams *opt);
+void gabor (Wide<Dual2<Vec3>,8> const &wP, Wide<Dual2<float>,8> &wResult, const NoiseParams *opt);
+void gabor (Wide<Dual2<Vec3>,16> const &wP, Wide<Dual2<float>,16> &wResult, const NoiseParams *opt);
+
 Dual2<float> gabor (const Dual2<float> &x, const Dual2<float> &y,
                     const NoiseParams *opt);
 Dual2<float> gabor (const Dual2<float> &x, const NoiseParams *opt);

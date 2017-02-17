@@ -154,8 +154,16 @@ ShaderMaster::resolve_syms ()
             if (s.dataoffset() >= 0) {
                 if (s.typespec().simpletype().basetype == TypeDesc::INT)
                     s.data (&(m_idefaults[s.dataoffset()]));
-                else if (s.typespec().simpletype().basetype == TypeDesc::FLOAT)
-                    s.data (&(m_fdefaults[s.dataoffset()]));
+				#if 1 // TODO: remove hackery
+					else if (s.typespec().simpletype().basetype == TypeDesc::FLOAT)
+					{
+						std::cout << "assigning default value for symbol=" << s.name() << " with dataoffset=" << s.dataoffset() << std::endl;
+						s.data (&(m_fdefaults[s.dataoffset()]));
+					}
+                #else
+					else if (s.typespec().simpletype().basetype == TypeDesc::FLOAT)
+						s.data (&(m_fdefaults[s.dataoffset()]));
+                #endif
                 else if (s.typespec().simpletype().basetype == TypeDesc::STRING)
                     s.data (&(m_sdefaults[s.dataoffset()]));
             }

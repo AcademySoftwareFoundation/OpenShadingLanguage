@@ -449,6 +449,10 @@ public:
     /// setup, don't actually run the shader.
     bool execute (ShadingContext *ctx, ShaderGroup &group,
                   ShaderGlobals &globals, bool run=true);
+
+    bool execute_batch(ShadingContext *ctx, ShaderGroup &group,
+       			  ShaderGlobalsBatch &globals_batch, bool run=true);
+        
     OSL_DEPRECATED("Deprecated since 1.6, pass context pointer, not reference.")
     bool execute (ShadingContext &ctx, ShaderGroup &group,
                   ShaderGlobals &globals, bool run=true);
@@ -463,7 +467,9 @@ public:
     /// was empty).
     bool execute_init (ShadingContext &ctx, ShaderGroup &group,
                        ShaderGlobals &globals, bool run=true);
-
+    bool execute_batch_init (ShadingContext &ctx, ShaderGroup &group,
+                             ShaderGlobalsBatch &globals_batch, bool run=true);
+    
     /// Execute the layer whose index is specified, in this context. It is
     /// presumed that execute_init() has already been called, with
     /// run==true, and that the call to execute_init() returned true. (One
@@ -471,14 +477,20 @@ public:
     /// turned out, after optimization, to do nothing.)
     bool execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
                         int layernumber);
+    bool execute_batch_layer (ShadingContext &ctx, ShaderGlobalsBatch &globals_batch,
+                        int layernumber);
     /// Execute the layer by name.
     bool execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
                         ustring layername);
+    bool execute_batch_layer (ShadingContext &ctx, ShaderGlobalsBatch &globals_batch,
+                              ustring layername);
     /// Execute the layer that has the given ShaderSymbol as an output.
     /// (The symbol is one returned by find_symbol()).
     bool execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
                         const ShaderSymbol *symbol);
-
+    bool execute_batch_layer (ShadingContext &ctx, ShaderGlobalsBatch &globals_batch,
+                              const ShaderSymbol *symbol);
+ 
     /// Signify that the context is done with the current execution of the
     /// group that was kicked off by execute_init and one or more calls to
     /// execute_layer.
@@ -537,6 +549,18 @@ public:
     const void* symbol_address (const ShadingContext &ctx,
                                 const ShaderSymbol *sym) const;
 
+	/// Given a context (that has executed a shader) and an opaque
+	/// ShserSymbol*, return the actual memory address where the value of
+	/// the symbol resides within the heap memory of the context. This
+	/// is only valid for the shader execution that had happened immediately
+	/// prior for this context, but it is a very inexpensive operation.
+	template<typename DataT>
+	ShaderGlobalsBatch::OutputAccessor<DataT> symbol_batch_accessor(const ShadingContext &ctx,
+								const ShaderSymbol *sym) const
+	{
+		return ShaderGlobalsBatch::OutputAccessor<DataT>(symbol_address(ctx, sym)); 
+    }
+    
     /// Return the statistics output as a huge string.
     ///
     std::string getstats (int level=1) const;

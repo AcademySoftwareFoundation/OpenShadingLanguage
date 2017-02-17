@@ -35,7 +35,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslexec_pvt.h"
 #include "OSL/genclosure.h"
-#include "backendllvm.h"
+#if OSL_USE_WIDE_LLVM_BACKEND 
+#include "backendllvm_wide.h"
+#else
+ #include "backendllvm.h"
+#endif
 #include "OSL/oslquery.h"
 
 #include <OpenImageIO/strutil.h>
@@ -245,6 +249,13 @@ ShadingSystem::execute (ShadingContext &ctx, ShaderGroup &group,
 }
 
 
+bool
+ShadingSystem::execute_batch (ShadingContext *ctx, ShaderGroup &group,
+		ShaderGlobalsBatch &globals_batch, bool run)
+{
+    return m_impl->execute_batch (ctx, group, globals_batch, run);
+}
+
 
 bool
 ShadingSystem::execute_init (ShadingContext &ctx, ShaderGroup &group,
@@ -252,6 +263,14 @@ ShadingSystem::execute_init (ShadingContext &ctx, ShaderGroup &group,
 {
     return ctx.execute_init (group, globals, run);
 }
+
+bool
+ShadingSystem::execute_batch_init (ShadingContext &ctx, ShaderGroup &group,
+		ShaderGlobalsBatch &globals_batch, bool run)
+{
+    return ctx.execute_batch_init (group, globals_batch, run);
+}
+
 
 
 
@@ -262,6 +281,12 @@ ShadingSystem::execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
     return ctx.execute_layer (globals, layernumber);
 }
 
+bool
+ShadingSystem::execute_batch_layer (ShadingContext &ctx, ShaderGlobalsBatch &globals_batch,
+                              int layernumber)
+{
+    return ctx.execute_batch_layer (globals_batch, layernumber);
+}
 
 
 bool
@@ -272,6 +297,13 @@ ShadingSystem::execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
     return layernumber >= 0 ? ctx.execute_layer (globals, layernumber) : false;
 }
 
+bool
+ShadingSystem::execute_batch_layer (ShadingContext &ctx, ShaderGlobalsBatch &globals_batch,
+                              ustring layername)
+{
+    int layernumber = find_layer (*ctx.group(), layername);
+    return layernumber >= 0 ? ctx.execute_batch_layer (globals_batch, layernumber) : false;
+}
 
 
 bool
@@ -284,6 +316,15 @@ ShadingSystem::execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
     return layernumber >= 0 ? ctx.execute_layer (globals, layernumber) : false;
 }
 
+bool
+ShadingSystem::execute_batch_layer (ShadingContext &ctx, ShaderGlobalsBatch &globals_batch,
+                              const ShaderSymbol *symbol)
+{
+    ASSERT (symbol);
+    const Symbol *sym = reinterpret_cast<const Symbol *>(symbol);
+    int layernumber = sym->layer();
+    return layernumber >= 0 ? ctx.execute_batch_layer (globals_batch, layernumber) : false;
+}
 
 
 bool
@@ -773,11 +814,19 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
 static void
 shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_descriptor)
 {
+#if OSL_USE_WIDE_LLVM_BACKEND 
+#define OP2(alias,name,ll,fold,simp,flag)                                \
+    extern bool llvm_gen_##ll (BackendLLVMWide &rop, int opnum);             \
+    extern int  constfold_##fold (RuntimeOptimizer &rop, int opnum);     \
+    op_descriptor[ustring(#alias)] = OpDescriptor(#name, llvm_gen_##ll,  \
+                                                  constfold_##fold, simp, flag);
+#else
 #define OP2(alias,name,ll,fold,simp,flag)                                \
     extern bool llvm_gen_##ll (BackendLLVM &rop, int opnum);             \
     extern int  constfold_##fold (RuntimeOptimizer &rop, int opnum);     \
     op_descriptor[ustring(#alias)] = OpDescriptor(#name, llvm_gen_##ll,  \
                                                   constfold_##fold, simp, flag);
+#endif
 #define OP(name,ll,fold,simp,flag) OP2(name,name,ll,fold,simp,flag)
 #define TEX OpDescriptor::Tex
 
@@ -2413,6 +2462,21 @@ ShadingSystemImpl::execute (ShadingContext *ctx, ShaderGroup &group,
 }
 
 
+bool
+ShadingSystemImpl::execute_batch (ShadingContext *ctx, ShaderGroup &group,
+							ShaderGlobalsBatch &sgb, bool run)
+{
+    bool free_context = false;
+    if (! ctx) {
+        ctx = get_context();
+        free_context = true;
+    }
+    bool result = ctx->execute_batch (group, sgb, run);
+    if (free_context)
+        release_context (ctx);
+    return result;
+}
+	
 
 const void *
 ShadingSystemImpl::get_symbol (ShadingContext &ctx, ustring layername,
@@ -2665,7 +2729,11 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group,
         group.m_attribute_scopes.push_back (f.scope);
     }
 
-    BackendLLVM lljitter (*this, group, ctx);
+#if OSL_USE_WIDE_LLVM_BACKEND    
+    BackendLLVMWide lljitter (*this, group, ctx);
+#else
+	 BackendLLVM lljitter (*this, group, ctx);
+#endif    
     lljitter.run ();
 
     group_post_jit_cleanup (group);

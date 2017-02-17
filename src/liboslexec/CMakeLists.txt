@@ -12,8 +12,11 @@ SET ( liboslexec_srcs
           lpexp.cpp lpeparse.cpp automata.cpp accum.cpp
           opclosure.cpp
           shadeimage.cpp
-          backendllvm.cpp
-          llvm_gen.cpp llvm_instance.cpp llvm_util.cpp
+         backendllvm.cpp
+         llvm_gen.cpp llvm_instance.cpp 
+         #backendllvm_wide.cpp
+         #llvm_gen_wide.cpp llvm_instance_wide.cpp
+          llvm_util.cpp 
     )
 
 # oslcomp symbols used in oslexec
@@ -49,6 +52,12 @@ FLEX_BISON ( osolex.l osogram.y oso liboslexec_srcs exec_headers )
 FLEX_BISON ( ../liboslcomp/osllex.l ../liboslcomp/oslgram.y osl liboslexec_srcs compiler_headers )
 
 SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS" )
+#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS" )
+#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -mavx" )
+#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -xCORE-AVX2 -mCG_gathers_autogen_ctrl=0" )
+#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -xCORE-AVX2 -prec-div" )
+#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -xCORE-AVX512" )
+SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -fp-model consistent -qopt-report=5 -qopt-report-phase=vec -qoverride-limits" )
 
 MACRO ( LLVM_COMPILE llvm_src srclist )
     GET_FILENAME_COMPONENT ( llvmsrc_we ${llvm_src} NAME_WE )
@@ -129,8 +138,51 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
 ENDMACRO ( )
 
+MACRO ( LLVM_COMPILE_ASM llvm_asm srclist )
+    GET_FILENAME_COMPONENT ( llvmams_we ${llvm_asm} NAME_WE )
+    SET ( llvm_bc "${CMAKE_CURRENT_BINARY_DIR}/${llvmams_we}.bc" )
+    SET ( llvm_bc_cpp "${CMAKE_CURRENT_BINARY_DIR}/${llvmams_we}.bc.cpp" )
+    if (VERBOSE)
+        MESSAGE (STATUS "LLVM_COMPILE_ASM in=${llvm_asm}")
+        MESSAGE (STATUS "LLVM_COMPILE_ASM bc=${llvm_bc}")
+        MESSAGE (STATUS "LLVM_COMPILE_ASM cpp=${llvm_bc_cpp}")
+    endif ()
+    SET ( ${srclist} ${${srclist}} ${llvm_bc_cpp} )
+
+    # Figure out what program we will use to make the bitcode.
+    if (NOT LLVM_BC_GENERATOR)
+        FIND_PROGRAM(LLVM_BC_GENERATOR NAMES "clang++" PATHS "${LLVM_DIRECTORY}/bin" NO_DEFAULT_PATH NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_ENVIRONMENT_PATH NO_CMAKE_PATH)
+    endif ()
+    # If that didn't work, look anywhere
+    if (NOT LLVM_BC_GENERATOR)
+        # Wasn't in their build, look anywhere
+        FIND_PROGRAM(LLVM_BC_GENERATOR NAMES clang++ llvm-g++)
+    endif ()
+
+    if (NOT LLVM_BC_GENERATOR)
+        message (FATAL_ERROR "You must have a valid llvm bitcode generator (clang++) somewhere.")
+    endif ()
+    if (VERBOSE)
+        message (STATUS "Using ${LLVM_BC_GENERATOR} to generate bitcode.")
+    endif()
+
+    # Command to turn the assembly language .s, into
+    # LLVM bitcode .bc, then back into a C++ file with the bc embedded!
+    ADD_CUSTOM_COMMAND ( OUTPUT ${llvm_bc_cpp}      
+      COMMAND "${LLVM_DIRECTORY}/bin/llvm-as" -f -o ${llvm_bc} ${llvm_asm}
+      COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash" ${llvm_bc} ${llvm_bc_cpp}
+      MAIN_DEPENDENCY ${llvm_asm}
+      DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash"
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
+ENDMACRO ( )
+
+
 if (USE_LLVM_BITCODE)
+	# Only use clang build of .cpp to .s to get a starting point
+	# for vector types, it has fewer complications if we just author
+	# these helpers in LLVM assembly directly.
     LLVM_COMPILE ( llvm_ops.cpp liboslexec_srcs )
+    #LLVM_COMPILE_ASM ( llvm_ops_wide.s liboslexec_srcs )
 else ()
     # With MSVC/Mingw, we don't compile llvm_ops.cpp to LLVM bitcode, due
     # to clang being unable to compile MSVC C++ header files at this time.

@@ -52,6 +52,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #  error "This version of OSL requires C++11"
 #endif
 
+#if __INTEL_COMPILER >= 1100
+        #define OSL_INTEL_PRAGMA(aQuotedPragma) _Pragma(aQuotedPragma)
+#else
+        #define OSL_INTEL_PRAGMA(aQuotedPragma)
+#endif
+
 // Symbol export defines
 #include "export.h"
 
@@ -131,4 +137,8 @@ using OIIO::string_view;
 #  define OSL_DEPRECATED(msg)
 #endif
 
+  
+//#define OSL_USE_WIDE_LLVM_BACKEND 1    
+#define OSL_USE_WIDE_LLVM_BACKEND 0
+  
 OSL_NAMESPACE_EXIT

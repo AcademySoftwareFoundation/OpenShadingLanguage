@@ -145,6 +145,21 @@ OSL_SHADEOP void osl_ ##opname## _vvf (char *r, char *x, float y) {     \
 
 
 
+// TODO: expand to cover all combinations
+#define NOISE_WIMPL(opname,implname)                                    \
+OSL_SHADEOP void osl_ ##opname## _w4fw4v(char *r, char *x) {        \
+    implname impl;                                                      \
+    impl (WFLOAT(r), WVEC(x));                                          \
+}                                                                       \
+OSL_SHADEOP void osl_ ##opname## _w8fw8v(char *r, char *x) {        \
+    implname impl;                                                      \
+    impl (W8FLOAT(r), W8VEC(x));                                          \
+}                                                                       \
+OSL_SHADEOP void osl_ ##opname## _w16fw16v(char *r, char *x) {        \
+    implname impl;                                                      \
+    impl (W16FLOAT(r), W16VEC(x));                                          \
+}                                                                       \
+ 
 
 
 #define NOISE_IMPL_DERIV(opname,implname)                               \
@@ -275,16 +290,35 @@ OSL_SHADEOP void osl_ ##opname## _dvdvdf (char *name, char *r, char *x, char *y,
 }
 
 
+#define NOISE_WIMPL_DERIV_OPT(opname,implname)                           \
+OSL_SHADEOP void osl_ ##opname## _w4dfw4dv (char *name, char *r, char *x, char *sgb, char *opt) {  \
+    implname impl;                                                      \
+    impl (USTR(name), W4DFLOAT(r), W4DVEC(x), (ShaderGlobalsBatch *)sgb, (NoiseParams *)opt);                                     \
+}                                                                        \
+OSL_SHADEOP void osl_ ##opname## _w8dfw8dv (char *name, char *r, char *x, char *sgb, char *opt) {  \
+    implname impl;                                                      \
+    impl (USTR(name), W8DFLOAT(r), W8DVEC(x), (ShaderGlobalsBatch *)sgb, (NoiseParams *)opt);                                     \
+}                                                                       \
+OSL_SHADEOP void osl_ ##opname## _w16dfw16dv (char *name, char *r, char *x, char *sgb, char *opt) {  \
+    implname impl;                                                      \
+    impl (USTR(name), W16DFLOAT(r), W16DVEC(x), (ShaderGlobalsBatch *)sgb, (NoiseParams *)opt);                                     \
+}                                                                       
+
 
 
 NOISE_IMPL (cellnoise, CellNoise)
+NOISE_WIMPL (cellnoise, CellNoise)
 NOISE_IMPL (noise, Noise)
+NOISE_WIMPL (noise, Noise)
 NOISE_IMPL_DERIV (noise, Noise)
 NOISE_IMPL (snoise, SNoise)
+NOISE_WIMPL (snoise, SNoise)
 NOISE_IMPL_DERIV (snoise, SNoise)
 NOISE_IMPL (simplexnoise, SimplexNoise)
+NOISE_WIMPL (simplexnoise, SimplexNoise)
 NOISE_IMPL_DERIV (simplexnoise, SimplexNoise)
 NOISE_IMPL (usimplexnoise, USimplexNoise)
+NOISE_WIMPL (usimplexnoise, USimplexNoise)
 NOISE_IMPL_DERIV (usimplexnoise, USimplexNoise)
 
 
@@ -504,6 +538,35 @@ struct GaborNoise {
         result = gabor (p, opt);
     }
 
+    template<int WidthT>
+    //inline void operator() (Wide<float, WidthT> &wresult, const Wide<Vec3, WidthT> &wp) const {
+	inline void operator() (ustring noisename, 
+			Wide<Dual2<float>, WidthT> &wresult,
+            const Wide<Dual2<Vec3>, WidthT> &wp,
+            ShaderGlobalsBatch *sgb, const NoiseParams *opt) const {
+
+        gabor (wp, wresult, opt);
+    	
+//		OSL_INTEL_PRAGMA("forceinline recursive")
+//		{
+//			//OSL_INTEL_PRAGMA("ivdep")
+//			//OSL_INTEL_PRAGMA("vector always assert")
+//			//OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
+//			//OSL_INTEL_PRAGMA("novector")
+//			for(int i=0; i< WidthT; ++i) {
+//				const Dual2<Vec3> p = wp.get(i);
+////				std::cout << "p.x=" << p.val() << std::endl;
+////				std::cout << "p.dx=" << p.dx() << std::endl;
+////				std::cout << "p.dy=" << p.dy() << std::endl;
+//				Dual2<float> result = gabor (p, opt);
+////				std::cout << "result.x=" << result.val() << std::endl;
+////				std::cout << "result.dx=" << result.dx() << std::endl;
+////				std::cout << "result.dy=" << result.dy() << std::endl;
+//		        wresult.set(i, result); 
+//			}
+//		}
+    }    
+    
     inline void operator() (ustring noisename, Dual2<float> &result,
                             const Dual2<Vec3> &p, const Dual2<float> &t,
                             ShaderGlobals *sg, const NoiseParams *opt) const {
@@ -602,6 +665,7 @@ struct GaborPNoise {
 
 
 NOISE_IMPL_DERIV_OPT (gabornoise, GaborNoise)
+NOISE_WIMPL_DERIV_OPT (gabornoise, GaborNoise)
 PNOISE_IMPL_DERIV_OPT (gaborpnoise, GaborPNoise)
 
 
@@ -807,7 +871,17 @@ osl_get_noise_options (void *sg_)
     return opt;
 }
 
-
+// Utility: retrieve a pointer to the ShadingContext's noise params
+// struct, also re-initialize its contents.
+OSL_SHADEOP void *
+osl_wide_get_noise_options (void *sgb_)
+{
+	ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
+    RendererServices::NoiseOpt *opt = sgb->uniform().context->noise_options_ptr ();
+    new (opt) RendererServices::NoiseOpt;
+    return opt;
+}
+ 
 
 OSL_SHADEOP void
 osl_noiseparams_set_anisotropic (void *opt, int a)

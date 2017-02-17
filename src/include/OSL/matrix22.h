@@ -234,9 +234,11 @@ template <class T> class Matrix22
     const Matrix22 &    invert (bool singExc = false)
                         throw (Iex::MathExc);
 
-    Matrix22<T>         inverse (bool singExc = false) const
-                        throw (Iex::MathExc);
+    Matrix22<T>         inverse () const;
 
+    Matrix22<T>         inverse (bool singExc) const
+                        throw (Iex::MathExc);
+    
 
     //-----------------------------------------
     // Set matrix to rotation by r (in radians)
@@ -391,8 +393,12 @@ Matrix22<T>::Matrix22 (T a, T b, T c, T d)
 template <class T>
 inline
 Matrix22<T>::Matrix22 (const Matrix22 &v)
+: x{v.x[0][0],
+	v.x[0][1],
+	v.x[1][0],
+	v.x[1][1]}
 {
-    memcpy (x, v.x, sizeof (x));
+    //memcpy (x, v.x, sizeof (x));
 }
 
 template <class T>
@@ -410,7 +416,11 @@ template <class T>
 inline const Matrix22<T> &
 Matrix22<T>::operator = (const Matrix22 &v)
 {
-    memcpy (x, v.x, sizeof (x));
+    //memcpy (x, v.x, sizeof (x));
+    x[0][0] = v.x[0][0];
+	x[0][1] = v.x[0][1];
+	x[1][0] = v.x[1][0];
+	x[1][1] = v.x[1][1];	
     return *this;
 }
 
@@ -689,12 +699,32 @@ template <class T>
 Matrix22<T>
 Matrix22<T>::operator * (const Matrix22<T> &v) const
 {
-    Matrix22 tmp (T (0));
 
+#if 0
+    Matrix22 tmp (T (0));
+    
+	OSL_INTEL_PRAGMA("unroll")
+	OSL_INTEL_PRAGMA("novector")
     for (int i = 0; i < 2; i++)
+		OSL_INTEL_PRAGMA("unroll")
+		OSL_INTEL_PRAGMA("novector")
         for (int j = 0; j < 2; j++)
+			OSL_INTEL_PRAGMA("unroll")
+			OSL_INTEL_PRAGMA("novector")
             for (int k = 0; k < 2; k++)
                 tmp.x[i][j] += x[i][k] * v.x[k][j];
+#else
+    Matrix22 tmp (Imathx::UNINITIALIZED);
+    
+    tmp.x[0][0] = x[0][0] * v.x[0][0] + x[0][1] * v.x[1][0];
+    tmp.x[0][1] = x[0][0] * v.x[0][1] + x[0][1] * v.x[1][1];
+    
+    tmp.x[1][0] = x[1][0] * v.x[0][0] + x[1][1] * v.x[1][0];
+    tmp.x[1][1] = x[1][0] * v.x[0][1] + x[1][1] * v.x[1][1];
+    
+    
+#endif
+    
 
     return tmp;
 }
@@ -768,6 +798,41 @@ Matrix22<T>::invert (bool singExc) throw (Iex::MathExc)
 
 template <class T>
 Matrix22<T>
+Matrix22<T>::inverse () const
+{
+    Matrix22 s ( x[1][1],  -x[0][1],
+                -x[1][0],   x[0][0]);
+    T r = x[0][0] * x[1][1] - x[1][0] * x[0][1];  // determinant
+
+    T abs_r = Imath::abs (r);
+    
+	int may_have_divided_by_zero = 0;
+	if (__builtin_expect(abs_r < T(1), 0))
+	{
+		float mr = abs_r / Imath::limits<T>::smallest();
+		
+		if ((mr <= Imath::abs (s[0][0])) ||
+			(mr <= Imath::abs (s[0][1])) ||
+			(mr <= Imath::abs (s[1][0])) ||
+			(mr <= Imath::abs (s[1][1])))
+		{
+			may_have_divided_by_zero = 1;
+		}
+	}
+	
+	s /= r;
+	
+	if (__builtin_expect(may_have_divided_by_zero == 1, 0))
+	{
+		s = Matrix22();
+	}
+	
+    return s;
+}
+
+
+template <class T>
+Matrix22<T>
 Matrix22<T>::inverse (bool singExc) const throw (Iex::MathExc)
 {
     Matrix22 s ( x[1][1],  -x[0][1],
@@ -782,8 +847,10 @@ Matrix22<T>::inverse (bool singExc) const throw (Iex::MathExc)
     {
         T mr = Imath::abs (r) / Imath::limits<T>::smallest();
 
+		OSL_INTEL_PRAGMA("unroll")
         for (int i = 0; i < 2; ++i)
         {
+			OSL_INTEL_PRAGMA("unroll")
             for (int j = 0; j < 2; ++j)
             {
                 if (mr > Imath::abs (s[i][j]))

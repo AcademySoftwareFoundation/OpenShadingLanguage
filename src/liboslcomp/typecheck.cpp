@@ -1408,6 +1408,72 @@ OSLCompilerImpl::type_from_code (const char *code, int *advance)
 }
 
 
+TypeSpec
+OSLCompilerImpl::wide_type_from_code (const char *code, int *advance, bool &is_uniform)
+{
+    TypeSpec t;
+    int i = 0;
+    if(code[i] == 'w')
+    {
+    	is_uniform = false;
+    	++i;
+    } else
+    {
+    	is_uniform = true;
+    }
+    
+    switch (code[i]) {
+    case 'i' : t = TypeDesc::TypeInt;          break;
+    case 'f' : t = TypeDesc::TypeFloat;        break;
+    case 'c' : t = TypeDesc::TypeColor;        break;
+    case 'p' : t = TypeDesc::TypePoint;        break;
+    case 'v' : t = TypeDesc::TypeVector;       break;
+    case 'n' : t = TypeDesc::TypeNormal;       break;
+    case 'm' : t = TypeDesc::TypeMatrix;       break;
+    case 's' : t = TypeDesc::TypeString;       break;
+    case 'x' : t = TypeDesc (TypeDesc::NONE);  break;
+    case 'X' : t = TypeDesc (TypeDesc::PTR);   break;
+    case 'L' : t = TypeDesc (TypeDesc::LONGLONG); break;
+    case 'C' : // color closure
+        t = TypeSpec (TypeDesc::TypeColor, true);
+        break;
+    case 'S' : // structure
+        // Following the 'S' is the numeric structure ID
+        t = TypeSpec ("struct", atoi (code+i+1));
+        // Skip to the last digit
+        while (isdigit(code[i+1]))
+            ++i;
+        break;
+    case '?' : break; // anything will match, so keep 'UNKNOWN'
+    case '*' : break; // anything will match, so keep 'UNKNOWN'
+    case '.' : break; // anything will match, so keep 'UNKNOWN'
+    default:
+        ASSERTMSG (0, "Don't know how to decode type code '%d'", (int)code[0]);
+        if (advance)
+            *advance = 1;
+        return TypeSpec();
+    }
+    ++i;
+
+    if (code[i] == '[') {
+        ++i;
+        t.make_array (-1);   // signal arrayness, unknown length
+        if (isdigit(code[i]) || code[i] == ']') {
+            if (isdigit(code[i]))
+                t.make_array (atoi (code+i));
+            while (isdigit(code[i]))
+                ++i;
+            if (code[i] == ']')
+                ++i;
+        }
+    }
+
+    if (advance)
+        *advance = i;
+    return t;
+}
+
+
 
 std::string
 OSLCompilerImpl::typelist_from_code (const char *code) const

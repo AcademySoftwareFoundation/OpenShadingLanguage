@@ -160,6 +160,7 @@ public:
     /// characters taken by the first code so the caller can advance
     /// their pointer to the next code in the string.
     static TypeSpec type_from_code (const char *code, int *advance=NULL);
+    static TypeSpec wide_type_from_code (const char *code, int *advance, bool &is_uniform);
 
     /// Return the argument checking code ("p", "v", etc.) corresponding
     /// to the type.

@@ -208,6 +208,124 @@ SimpleRenderer::get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
 }
 
 
+#if OSL_USE_WIDE_LLVM_BACKEND
+bool
+SimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
+        const Wide<TransformationPtr> & xform, const Wide<float> &time)
+{
+    // SimpleRenderer doesn't understand motion blur and transformations
+    // are just simple 4x4 matrices.
+//    result = *reinterpret_cast<const Matrix44*>(xform);
+    
+	for(int lane=0; lane < SimdLaneCount; ++lane) {    
+		const Matrix44 & transformFromShaderGlobals = *reinterpret_cast<const Matrix44*>(xform.get(lane));
+        result.set(lane,transformFromShaderGlobals);
+	}	
+    
+    return true;
+}
+
+
+
+bool
+SimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
+                            ustring from, float time)
+{
+    TransformMap::const_iterator found = m_named_xforms.find (from);
+    if (found != m_named_xforms.end()) {
+        result = *(found->second);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+
+
+bool
+SimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
+                            TransformationPtr xform)
+{
+    // SimpleRenderer doesn't understand motion blur and transformations
+    // are just simple 4x4 matrices.
+    result = *reinterpret_cast<const Matrix44*>(xform);
+    return true;
+}
+
+
+
+bool
+SimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
+                            ustring from)
+{
+    // SimpleRenderer doesn't understand motion blur, so we never fail
+    // on account of time-varying transformations.
+    TransformMap::const_iterator found = m_named_xforms.find (from);
+    if (found != m_named_xforms.end()) {
+        result = *(found->second);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+
+
+bool
+SimpleRenderer::get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
+                                    ustring to, float time)
+{
+    if (to == u_camera || to == u_screen || to == u_NDC || to == u_raster) {
+        Matrix44 M = m_world_to_camera;
+        if (to == u_screen || to == u_NDC || to == u_raster) {
+            float depthrange = (double)m_yon-(double)m_hither;
+            if (m_projection == u_perspective) {
+                float tanhalffov = tanf (0.5f * m_fov * M_PI/180.0);
+                Matrix44 camera_to_screen (1/tanhalffov, 0, 0, 0,
+                                           0, 1/tanhalffov, 0, 0,
+                                           0, 0, m_yon/depthrange, 1,
+                                           0, 0, -m_yon*m_hither/depthrange, 0);
+                M = M * camera_to_screen;
+            } else {
+                Matrix44 camera_to_screen (1, 0, 0, 0,
+                                           0, 1, 0, 0,
+                                           0, 0, 1/depthrange, 0,
+                                           0, 0, -m_hither/depthrange, 1);
+                M = M * camera_to_screen;
+            }
+            if (to == u_NDC || to == u_raster) {
+                float screenleft = -1.0, screenwidth = 2.0;
+                float screenbottom = -1.0, screenheight = 2.0;
+                Matrix44 screen_to_ndc (1/screenwidth, 0, 0, 0,
+                                        0, 1/screenheight, 0, 0,
+                                        0, 0, 1, 0,
+                                        -screenleft/screenwidth, -screenbottom/screenheight, 0, 1);
+                M = M * screen_to_ndc;
+                if (to == u_raster) {
+                    Matrix44 ndc_to_raster (m_xres, 0, 0, 0,
+                                            0, m_yres, 0, 0,
+                                            0, 0, 1, 0,
+                                            0, 0, 0, 1);
+                    M = M * ndc_to_raster;
+                }
+            }
+        }
+        result = M;
+        return true;
+    }
+
+    TransformMap::const_iterator found = m_named_xforms.find (to);
+    if (found != m_named_xforms.end()) {
+        result = *(found->second);
+        result.invert();
+        return true;
+    } else {
+        return false;
+    }
+}
+ 
+#endif
+
 
 void
 SimpleRenderer::name_transform (const char *name, const OSL::Matrix44 &xform)

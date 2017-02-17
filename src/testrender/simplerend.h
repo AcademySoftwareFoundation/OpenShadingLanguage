@@ -74,6 +74,24 @@ public:
                         float hfov, float hither, float yon,
                         int xres, int yres);
                         
+    
+#ifndef OSL_USE_WIDE_LLVM_BACKEND
+	#error FAIL
+#endif 
+    
+#if OSL_USE_WIDE_LLVM_BACKEND
+    virtual bool get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
+            const Wide<TransformationPtr> & xform, const Wide<float> &time);
+    virtual bool get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
+                             ustring from, float time);
+    virtual bool get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
+                             TransformationPtr xform);
+    virtual bool get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
+                             ustring from);
+    virtual bool get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
+                                     ustring to, float time);
+#endif
+    
 private:
     // Camera parameters
     Matrix44 m_world_to_camera;

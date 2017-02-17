@@ -187,6 +187,26 @@ public:
                                ShaderGlobals *sg, void *val) {
         return false;   // FIXME?
     }
+    
+#if OSL_USE_WIDE_LLVM_BACKEND
+    virtual bool get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
+                const Wide<TransformationPtr> & xform, const Wide<float> &time) {
+        return false;   // FIXME?
+    }
+    virtual bool get_matrix (ShaderGlobalsBatch *sg, Matrix44 &result,
+                             TransformationPtr xform) {
+        return false;   // FIXME?
+    }
+    virtual bool get_matrix (ShaderGlobalsBatch *sg, Matrix44 &result,
+                             ustring from, float time) {
+        return false;   // FIXME?
+    }
+    virtual bool get_matrix (ShaderGlobalsBatch *sg, Matrix44 &result,
+                             ustring from) {
+        return false;   // FIXME?
+    }
+#endif
+    
 };
 
 

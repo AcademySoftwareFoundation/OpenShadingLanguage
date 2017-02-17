@@ -43,11 +43,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec_pvt.h"
 #include "OSL/dual.h"
 #include "OSL/dual_vec.h"
+#include "OSL/wide.h"
 
 
 OSL_NAMESPACE_ENTER
 namespace pvt {
 
+
+#if OSL_USE_WIDE_LLVM_BACKEND
+typedef int wide_int __attribute__((vector_size(SimdLaneCount*sizeof(int))));
+#endif
 
 
 // Matrix ops
@@ -136,6 +141,51 @@ osl_get_matrix (void *sg_, void *r, const char *from)
     return ok;
 }
 
+#if OSL_USE_WIDE_LLVM_BACKEND
+OSL_SHADEOP int
+osl_wide_get_matrix (void *sgb_, void *wr, const char *from)
+{
+    ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
+    ShadingContext *ctx = (ShadingContext *)sgb->uniform().context;
+	Wide<Matrix44> & wrm = WMAT(wr);
+    if (USTR(from) == Strings::common ||
+            USTR(from) == ctx->shadingsys().commonspace_synonym()) {
+    	Matrix44 ident;
+    	ident.makeIdentity();
+		OSL_INTEL_PRAGMA("simd")
+    	for(int lane=0; lane < SimdLaneCount; ++lane) {
+    		wrm.set(lane, ident);
+    	}
+        return true;
+    }
+    
+    // TODO:  consider passing wide matrix through to renderer
+	if (USTR(from) == Strings::shader) {
+		ctx->renderer()->get_matrix (sgb, wrm, sgb->varyingData().shader2common, sgb->varyingData().time);
+		return true;
+	}
+	if (USTR(from) == Strings::object) {
+		ctx->renderer()->get_matrix (sgb, wrm, sgb->varyingData().object2common, sgb->varyingData().time);
+		return true;
+	}
+	int wok = true;
+	for(int lane=0; lane < SimdLaneCount; ++lane) {    
+		Matrix44 r;
+		int ok = ctx->renderer()->get_matrix (sgb, r, USTR(from), sgb->varyingData().time.get(lane));
+		if (! ok) {
+			wok = false;
+			r.makeIdentity();
+			ShadingContext *ctx = sgb->uniform().context;
+			if (ctx->shadingsys().unknown_coordsys_error())
+				ctx->error ("Unknown transformation \"%s\"", from);
+		}
+		wrm.set(lane, r);
+	}
+    return wok;
+
+}
+#endif
+
 
 
 OSL_SHADEOP int
@@ -166,6 +216,51 @@ osl_get_inverse_matrix (void *sg_, void *r, const char *to)
     return ok;
 }
 
+#if OSL_USE_WIDE_LLVM_BACKEND
+OSL_SHADEOP int
+osl_wide_get_inverse_matrix (void *sgb_, void *wr, const char *to)
+{
+    ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
+    ShadingContext *ctx = (ShadingContext *)sgb->uniform().context;
+	Wide<Matrix44> & wrm = WMAT(wr);
+    
+    if (USTR(to) == Strings::common ||
+            USTR(to) == ctx->shadingsys().commonspace_synonym()) {
+    	
+    	Matrix44 ident;
+    	ident.makeIdentity();
+    	for(int lane=0; lane < SimdLaneCount; ++lane) {
+    		wrm.set(lane, ident);
+    	}
+        return true;
+    }
+    if (USTR(to) == Strings::shader) {
+    	ctx->renderer()->get_inverse_matrix (sgb, wrm, sgb->varyingData().shader2common, sgb->varyingData().time);        
+        return true;
+    }
+    if (USTR(to) == Strings::object) {
+    	ctx->renderer()->get_inverse_matrix (sgb, wrm, sgb->varyingData().object2common, sgb->varyingData().time);        
+        return true;
+    }
+
+	int wok = true;
+	for(int lane=0; lane < SimdLaneCount; ++lane) {    
+		Matrix44 r;
+	    int ok = ctx->renderer()->get_inverse_matrix (sgb, r, USTR(to), sgb->varyingData().time.get(lane));
+		if (! ok) {
+			wok = false;
+			r.makeIdentity();
+			ShadingContext *ctx = sgb->uniform().context;
+			if (ctx->shadingsys().unknown_coordsys_error())
+				ctx->error ("Unknown transformation \"%s\"", to);
+		}
+		wrm.set(lane, r);
+	}
+    return wok;
+    
+}
+#endif
+
 
 
 OSL_SHADEOP int
@@ -195,19 +290,64 @@ osl_get_from_to_matrix (void *sg, void *r, const char *from, const char *to)
     return ok;
 }
 
+#if OSL_USE_WIDE_LLVM_BACKEND
+
+OSL_SHADEOP int
+osl_wide_get_from_to_matrix (void *sgb, void *wr, const char *from, const char *to)
+{
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+		Wide<Matrix44> wMfrom, wMto;
+		int ok = osl_wide_get_matrix ((ShaderGlobalsBatch *)sgb, &wMfrom, from);
+		ok &= osl_wide_get_inverse_matrix ((ShaderGlobalsBatch *)sgb, &wMto, to);
+		
+		Wide<Matrix44> & wrm = WMAT(wr);
+	
+		OSL_INTEL_PRAGMA("simd assert")
+		for(int lane=0; lane < SimdLaneCount; ++lane) {    
+			Matrix44 mat_From = wMfrom.get(lane);
+			Matrix44 mat_To = wMto.get(lane);		
+	
+			Matrix44 result = mat_From * mat_To;
+			
+			wrm.set(lane, result);
+		}
+		return ok;
+	}
+}
+
+#endif
 
 
 // point = M * point
 inline void osl_transform_vmv(void *result, const Matrix44 &M, void* v_)
 {
+	//std::cout << "osl_transform_vmv" << std::endl;
    const Vec3 &v = VEC(v_);
    robust_multVecMatrix (M, v, VEC(result));
 }
+
+inline void osl_transform_wvwmwv(void *result, const Wide<Matrix44> &M, void* v_)
+{
+	//std::cout << "osl_transform_vmv" << std::endl;
+	
+   const Wide<Vec3> &v = WVEC(v_);
+   robust_multVecMatrix (M, v, WVEC(result));
+}
+
+
+OSL_INTEL_PRAGMA("intel optimization_level 2")
 
 inline void osl_transform_dvmdv(void *result, const Matrix44 &M, void* v_)
 {
    const Dual2<Vec3> &v = DVEC(v_);
    robust_multVecMatrix (M, v, DVEC(result));
+}
+
+inline void osl_transform_wdvwmwdv(void *result, const Wide<Matrix44> &M, void* v_)
+{
+   const Wide<Dual2<Vec3>> &v = WDVEC(v_);
+   robust_multVecMatrix (M, v, WDVEC(result));
 }
 
 // vector = M * vector
@@ -287,6 +427,71 @@ osl_transform_triple (void *sg_, void *Pin, int Pin_derivs,
     return ok;
 }
 
+
+
+#if OSL_USE_WIDE_LLVM_BACKEND
+OSL_SHADEOP wide_int
+osl_wide_transform_triple (void *sgb_, void *Pin, int Pin_derivs,
+                      void *Pout, int Pout_derivs,
+					  void * from, void * to, int vectype)
+{
+    static ustring u_common ("common");
+    ASSERT(Pin != Pout);
+    
+    ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
+    
+    Wide<Matrix44> M;
+    int ok;
+    Pin_derivs &= Pout_derivs;   // ignore derivs if output doesn't need it
+    
+#if 0 
+    if (USTR(from) == u_common)
+        ok = osl_get_inverse_matrix (sgb, &M, (const char *)to);
+    else if (USTR(to) == u_common)
+        ok = osl_get_matrix (sgb, &M, (const char *)from);
+    else
+#endif
+        ok = osl_wide_get_from_to_matrix (sgb, &M, (const char *)from,
+                                     (const char *)to);
+    if (ok) {
+        if (vectype == TypeDesc::POINT) {
+            if (Pin_derivs) {
+                osl_transform_wdvwmwdv(Pout, M, Pin);
+            } else {
+                osl_transform_wvwmwv(Pout, M, Pin);
+            }
+#if 0 
+        } else if (vectype == TypeDesc::VECTOR) {
+            if (Pin_derivs)
+                osl_transformv_dvmdv(Pout, M, Pin);
+            else
+                osl_transformv_vmv(Pout, M, Pin);
+        } else if (vectype == TypeDesc::NORMAL) {
+            if (Pin_derivs)
+                osl_transformn_dvmdv(Pout, M, Pin);
+            else
+                osl_transformn_vmv(Pout, M, Pin);
+#endif
+        }
+        else ASSERT(0);
+    } else {
+    	ASSERT(0);
+        *(Vec3 *)Pout = *(Vec3 *)Pin;
+        if (Pin_derivs) {
+            ((Vec3 *)Pout)[1] = ((Vec3 *)Pin)[1];
+            ((Vec3 *)Pout)[2] = ((Vec3 *)Pin)[2];
+        }
+    }
+    if (Pout_derivs && !Pin_derivs) {
+    	ASSERT(0);
+        ((Vec3 *)Pout)[1].setValue (0.0f, 0.0f, 0.0f);
+        ((Vec3 *)Pout)[2].setValue (0.0f, 0.0f, 0.0f);
+    }
+    
+    wide_int wresult = { ok, ok, ok, ok};
+    return wresult;
+}
+#endif
 
 
 OSL_SHADEOP int

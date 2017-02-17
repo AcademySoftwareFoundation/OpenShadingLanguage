@@ -218,6 +218,145 @@ ShadingContext::execute (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
     return result;
 }
 
+bool
+ShadingContext::execute_batch_init (ShaderGroup &sgroup, ShaderGlobalsBatch &sgb, bool run)
+{
+    if (m_group)
+        execute_cleanup ();
+    m_group = &sgroup;
+    m_ticks = 0;
+    
+    //std::cout << "execut_batch_init " << sgb.size() << " points" << std::endl;
+    //for(int bi=0; bi < sgb.size(); ++bi) {
+//    	Vec3 P = sgb.varyingData().P.get(bi);
+  //  	std::cout << "(" << P[0] << ", " << P[1] << ", " << P[2] << ")" << std::endl;
+//    }
+
+    // Optimize if we haven't already
+    if (sgroup.nlayers()) {
+        sgroup.start_running ();
+        if (! sgroup.optimized()) {
+            shadingsys().optimize_group (sgroup);
+            if (shadingsys().m_greedyjit && shadingsys().m_groups_to_compile_count) {
+                // If we are greedily JITing, optimize/JIT everything now
+                shadingsys().optimize_all_groups ();
+            }
+        }
+        if (sgroup.does_nothing())
+            return false;
+    } else {
+       // empty shader - nothing to do!
+       return false;
+    }
+
+    int profile = shadingsys().m_profile;
+#if OIIO_VERSION >= 10608
+    OIIO::Timer timer (profile ? OIIO::Timer::StartNow : OIIO::Timer::DontStartNow);
+#else
+    OIIO::Timer timer (profile);
+#endif
+
+    // Allocate enough space on the heap
+    size_t heap_size_needed = sgroup.llvm_groupdata_size();
+    if (heap_size_needed > m_heap.size()) {
+        if (shadingsys().debug())
+            info ("  ShadingContext %p growing heap to %llu",
+                  this, (unsigned long long) heap_size_needed);
+        m_heap.resize (heap_size_needed);
+    }
+    // Zero out the heap memory we will be using
+    if (shadingsys().m_clearmemory)
+        memset (&m_heap[0], 0, heap_size_needed);
+
+    // Set up closure storage
+    m_closure_pool.clear();
+
+    // Clear the message blackboard
+    m_messages.clear ();
+
+    // Clear miscellaneous scratch space
+    m_scratch_pool.clear ();
+
+    // Zero out stats for this execution
+    clear_runtime_stats ();
+
+    if (run) {
+    	sgb.uniform().context = this;
+    	sgb.uniform().renderer = renderer();
+        // TODO: consider removing Ci from batched shader globals
+    	sgb.uniform().Ci = NULL;
+        RunLLVMGroupFunc run_func = sgroup.llvm_compiled_init();
+        DASSERT (run_func);
+        DASSERT (sgroup.llvm_groupdata_size() <= m_heap.size());
+        //run_func (&sgb, &m_heap[0]);
+    }
+
+    if (profile)
+        m_ticks += timer.ticks();
+    return true;
+}
+
+bool
+ShadingContext::execute_batch_layer (ShaderGlobalsBatch &sgb, int layernumber)
+{
+    DASSERT (group() && group()->nlayers() && !group()->does_nothing());
+    DASSERT (sgb.uniform().context == this && sgb.uniform().renderer == renderer());
+
+    int profile = shadingsys().m_profile;
+#if OIIO_VERSION >= 10608
+    OIIO::Timer timer (profile ? OIIO::Timer::StartNow : OIIO::Timer::DontStartNow);
+#else
+    OIIO::Timer timer (profile);
+#endif
+
+    RunLLVMGroupFunc run_func = group()->llvm_compiled_layer (layernumber);
+    if (! run_func)
+        return false;
+
+    run_func (&sgb, &m_heap[0]);
+
+    if (profile)
+        m_ticks += timer.ticks();
+
+    return true;
+}
+
+
+bool
+ShadingContext::execute_batch (ShaderGroup &sgroup, ShaderGlobalsBatch &sgb, bool run)
+{
+    int n = sgroup.m_exec_repeat;
+    
+    Wide<Vec3> Psave, Nsave;   // for repeats
+    bool repeat = (n > 1);
+    if (repeat) {
+        // If we're going to repeat more than once, we need to save any
+        // globals that might get modified.
+        Psave = sgb.varyingData().P;
+        Nsave = sgb.varyingData().N;
+        if (! run)
+            n = 1;
+    }
+
+    bool result = true;
+    while (1) {
+        if (! execute_batch_init (sgroup, sgb, run))
+            return false;
+        if (run && n)
+            execute_batch_layer (sgb, group()->nlayers()-1);
+        result = execute_cleanup ();
+        if (--n < 1)
+            break;   // done
+        if (repeat) {
+            // Going around for another pass... restore things as best as we
+            // can.
+        	sgb.varyingData().P = Psave;
+        	sgb.varyingData().N = Nsave;
+        	sgb.uniform().Ci = NULL;
+        }
+    }
+    return result;
+}
 
 
 void

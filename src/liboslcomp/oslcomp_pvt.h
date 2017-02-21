@@ -323,8 +323,15 @@ private:
     void write_oso_const_value (const ConstantSymbol *sym) const;
     void write_oso_symbol (const Symbol *sym);
     void write_oso_metadata (const ASTNode *metanode) const;
-    // void oso (const char *fmt, ...) const;
+
+#if OIIO_VERSION >= 10803
+    template<typename... Args>
+    inline void oso (string_view fmt, const Args&... args) const {
+        (*m_osofile) << OIIO::Strutil::format (fmt, args...);
+    }
+#else
     TINYFORMAT_WRAP_FORMAT (void, oso, const, , (*m_osofile), )
+#endif
 
     void track_variable_lifetimes () {
         track_variable_lifetimes (m_ircode, m_opargs, symtab().allsyms());

@@ -501,7 +501,32 @@ public:
                       TypeDesc type, const void *val);
 
     // Internal error, warning, info, and message reporting routines that
-    // take printf-like arguments.  Based on Tinyformat.
+    // take printf-like arguments.
+#if OIIO_VERSION >= 10803
+    template<typename T1, typename... Args>
+    inline void error (string_view fmt, const T1& v1, const Args&... args) const {
+        error (Strutil::format (fmt, v1, args...));
+    }
+    void error (const std::string &message) const;
+
+    template<typename T1, typename... Args>
+    inline void warning (string_view fmt, const T1& v1, const Args&... args) const {
+        warning (Strutil::format (fmt, v1, args...));
+    }
+    void warning (const std::string &message) const;
+
+    template<typename T1, typename... Args>
+    inline void info (string_view fmt, const T1& v1, const Args&... args) const {
+        info (Strutil::format (fmt, v1, args...));
+    }
+    void info (const std::string &message) const;
+
+    template<typename T1, typename... Args>
+    inline void message (string_view fmt, const T1& v1, const Args&... args) const {
+        message (Strutil::format (fmt, v1, args...));
+    }
+    void message (const std::string &message) const;
+#else
     TINYFORMAT_WRAP_FORMAT (void, error, const,
                             std::ostringstream msg;, msg, error(msg.str());)
     TINYFORMAT_WRAP_FORMAT (void, warning, const,
@@ -510,13 +535,11 @@ public:
                             std::ostringstream msg;, msg, info(msg.str());)
     TINYFORMAT_WRAP_FORMAT (void, message, const,
                             std::ostringstream msg;, msg, message(msg.str());)
-
-    /// Error reporting routines that take a pre-formatted string only.
-    ///
     void error (const std::string &message) const;
     void warning (const std::string &message) const;
     void info (const std::string &message) const;
     void message (const std::string &message) const;
+#endif
 
     std::string getstats (int level=1) const;
 
@@ -1694,6 +1717,27 @@ public:
     // Process all the recorded errors, warnings, printfs
     void process_errors () const;
 
+#if OIIO_VERSION >= 10803
+    template<typename... Args>
+    inline void error (string_view fmt, const Args&... args) const {
+        record_error(ErrorHandler::EH_ERROR, Strutil::format (fmt, args...));
+    }
+
+    template<typename... Args>
+    inline void warning (string_view fmt, const Args&... args) const {
+        record_error(ErrorHandler::EH_WARNING, Strutil::format (fmt, args...));
+    }
+
+    template<typename... Args>
+    inline void info (string_view fmt, const Args&... args) const {
+        record_error(ErrorHandler::EH_INFO, Strutil::format (fmt, args...));
+    }
+
+    template<typename... Args>
+    inline void message (string_view fmt, const Args&... args) const {
+        record_error(ErrorHandler::EH_MESSAGE, Strutil::format (fmt, args...));
+    }
+#else
     TINYFORMAT_WRAP_FORMAT (void, error, const,
                             std::ostringstream msg;, msg,
                             record_error(ErrorHandler::EH_ERROR, msg.str());)
@@ -1706,6 +1750,7 @@ public:
     TINYFORMAT_WRAP_FORMAT (void, message, const,
                             std::ostringstream msg;, msg,
                             record_error(ErrorHandler::EH_MESSAGE, msg.str());)
+#endif
 
 private:
 

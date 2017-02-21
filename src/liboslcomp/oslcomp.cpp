@@ -843,7 +843,11 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename,
         // %argderivs documents which arguments have derivs taken of
         // them by the op.
         if (op->argtakesderivs_all()) {
+#if OIIO_VERSION >= 10803
             oso (" %%argderivs{");
+#else
+            oso (" %cargderivs{", '%');  // trick to work with older OIIO
+#endif
             int any = 0;
             for (int i = 0;  i < op->nargs();  ++i)
                 if (op->argtakesderivs(i)) {

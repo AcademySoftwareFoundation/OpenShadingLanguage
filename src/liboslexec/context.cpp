@@ -30,8 +30,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <cstdio>
 
-#include <boost/regex.hpp>
-
 #include <OpenImageIO/dassert.h>
 #include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/timer.h>
@@ -61,9 +59,6 @@ ShadingContext::~ShadingContext ()
 {
     process_errors ();
     m_shadingsys.m_stat_contexts -= 1;
-    for (RegexMap::iterator it = m_regex_map.begin(); it != m_regex_map.end(); ++it) {
-      delete it->second;
-    }
     free_dict_resources ();
 }
 
@@ -301,14 +296,14 @@ ShadingContext::symbol_data (const Symbol &sym) const
 
 
 
-const boost::regex &
+const regex &
 ShadingContext::find_regex (ustring r)
 {
     RegexMap::const_iterator found = m_regex_map.find (r);
     if (found != m_regex_map.end())
         return *found->second;
     // otherwise, it wasn't found, add it
-    m_regex_map[r] = new boost::regex(r.c_str());
+    m_regex_map[r].reset (new regex(r.c_str()));
     m_shadingsys.m_stat_regexes += 1;
     // std::cerr << "Made new regex for " << r << "\n";
     return *m_regex_map[r];

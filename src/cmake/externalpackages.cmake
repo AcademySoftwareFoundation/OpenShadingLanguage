@@ -72,10 +72,12 @@ if (BOOST_CUSTOM)
     # N.B. For a custom version, the caller had better set up the variables
     # Boost_VERSION, Boost_INCLUDE_DIRS, Boost_LIBRARY_DIRS, Boost_LIBRARIES.
 else ()
-    set (Boost_COMPONENTS filesystem regex system thread wave)
+    set (Boost_COMPONENTS filesystem system thread wave)
+    if (NOT USE_STD_REGEX)
+        list (APPEND Boost_COMPONENTS regex)
+    endif ()
     find_package (Boost 1.55 REQUIRED
-                  COMPONENTS ${Boost_COMPONENTS}
-                 )
+                  COMPONENTS ${Boost_COMPONENTS})
 endif ()
 
 # On Linux, Boost 1.55 and higher seems to need to link against -lrt

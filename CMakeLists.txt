@@ -341,6 +341,27 @@ if (NOT USE_SIMD STREQUAL "")
     endif ()
 endif ()
 
+
+# Test for features
+if (NOT VERBOSE)
+    set (CMAKE_REQUIRED_QUIET 1)
+endif ()
+include (CMakePushCheckState)
+include (CheckCXXSourceRuns)
+
+check_cxx_source_runs("
+      #include <regex>
+      int main() {
+          return std::regex_match(\"abc\", std::regex(\"(a)(.*)\")) ? 0 : 1;
+      }"
+      USE_STD_REGEX)
+if (USE_STD_REGEX)
+    add_definitions (-DUSE_STD_REGEX)
+else ()
+    add_definitions (-DUSE_BOOST_REGEX)
+endif ()
+
+
 # Set the default namespace
 if (OSL_NAMESPACE)
     add_definitions ("-DOSL_NAMESPACE=${OSL_NAMESPACE}")

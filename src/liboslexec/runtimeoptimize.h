@@ -156,9 +156,17 @@ public:
     int turn_into_nop (int begin, int end, string_view why=NULL);
 
     void debug_opt_impl (string_view message) const;
+#if OIIO_VERSION >= 10803
+    template<typename... Args>
+    inline void debug_opt (string_view fmt, const Args&... args) const {
+        debug_opt_impl (Strutil::format (fmt, args...));
+    }
+#else
     TINYFORMAT_WRAP_FORMAT (void, debug_opt, const,
                             std::ostringstream msg;, msg,
                             debug_opt_impl(msg.str());)
+#endif
+
     void debug_opt_ops (int opbegin, int opend, string_view message) const;
     void debug_turn_into (const Opcode &op, int numops,
                           string_view newop, int newarg0,

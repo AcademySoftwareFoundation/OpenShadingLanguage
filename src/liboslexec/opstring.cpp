@@ -41,7 +41,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslexec_pvt.h"
 
-#include <boost/regex.hpp>
 
 #define USTR(cstr) (*((ustring *)&cstr))
 
@@ -137,12 +136,12 @@ osl_regex_impl (void *sg_, const char *subject_, void *results, int nresults,
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     ShadingContext *ctx = sg->context;
     const std::string &subject (ustring::from_unique(subject_).string());
-    boost::match_results<std::string::const_iterator> mresults;
-    const boost::regex &regex (ctx->find_regex (USTR(pattern)));
+    match_results<std::string::const_iterator> mresults;
+    const regex &regex (ctx->find_regex (USTR(pattern)));
     if (nresults > 0) {
         std::string::const_iterator start = subject.begin();
-        int res = fullmatch ? boost::regex_match (subject, mresults, regex)
-                            : boost::regex_search (subject, mresults, regex);
+        int res = fullmatch ? regex_match (subject, mresults, regex)
+                            : regex_search (subject, mresults, regex);
         int *m = (int *)results;
         for (int r = 0;  r < nresults;  ++r) {
             if (r/2 < (int)mresults.size()) {
@@ -156,8 +155,8 @@ osl_regex_impl (void *sg_, const char *subject_, void *results, int nresults,
         }
         return res;
     } else {
-        return fullmatch ? boost::regex_match (subject, regex)
-                         : boost::regex_search (subject, regex);
+        return fullmatch ? regex_match (subject, regex)
+                         : regex_search (subject, regex);
     }
 }
 

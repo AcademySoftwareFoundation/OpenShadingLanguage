@@ -37,13 +37,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <set>
 #include <unordered_map>
 
-#include <boost/regex_fwd.hpp>
 #include <boost/thread/tss.hpp>   /* for thread_specific_ptr */
 
 #include <OpenImageIO/ustring.h>
 #include <OpenImageIO/thread.h>
 #include <OpenImageIO/paramlist.h>
 #include <OpenImageIO/refcnt.h>
+
+#ifdef USE_BOOST_REGEX
+# include <boost/regex.hpp>
+#else
+# include <regex>
+#endif
 
 #include "OSL/genclosure.h"
 #include "OSL/oslexec.h"
@@ -68,6 +73,19 @@ namespace Strutil = OIIO::Strutil;
 
 
 OSL_NAMESPACE_ENTER
+
+
+#ifdef USE_BOOST_REGEX
+  using boost::regex;
+  using boost::regex_search;
+  using boost::regex_match;
+  using boost::match_results;
+#else
+  using std::regex;
+  using std::regex_search;
+  using std::regex_match;
+  using std::match_results;
+#endif
 
 
 
@@ -1628,7 +1646,7 @@ public:
     /// Return a reference to a compiled regular expression for the
     /// given string, being careful to cache already-created ones so we
     /// aren't constantly compiling new ones.
-    const boost::regex & find_regex (ustring r);
+    const regex & find_regex (ustring r);
 
     /// Return a pointer to the shading group for this context.
     ///
@@ -1762,7 +1780,7 @@ private:
     mutable TextureSystem::Perthread *m_texture_thread_info; ///< Ptr to texture thread info
     ShaderGroup *m_group;               ///< Ptr to shader group
     std::vector<char> m_heap;           ///< Heap memory
-    typedef std::unordered_map<ustring, boost::regex*, ustringHash> RegexMap;
+    typedef std::unordered_map<ustring, std::unique_ptr<regex>, ustringHash> RegexMap;
     RegexMap m_regex_map;               ///< Compiled regex's
     MessageList m_messages;             ///< Message blackboard
     int m_max_warnings;                 ///< To avoid processing too many warnings

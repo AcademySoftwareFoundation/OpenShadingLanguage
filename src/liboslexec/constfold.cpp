@@ -30,8 +30,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 #include <cstdlib>
 
-#include <boost/regex.hpp>
-
 #include <OpenImageIO/fmath.h>
 #include <OpenImageIO/sysutil.h>
 
@@ -1430,8 +1428,8 @@ DECLFOLDER(constfold_regex_search)
         DASSERT (Subj.typespec().is_string() && Reg.typespec().is_string());
         const ustring &s (*(ustring *)Subj.data());
         const ustring &r (*(ustring *)Reg.data());
-        boost::regex reg (r.string());
-        int result = boost::regex_search (s.string(), reg);
+        regex reg (r.string());
+        int result = regex_search (s.string(), reg);
         int cind = rop.add_constant (result);
         rop.turn_into_assign (op, cind, "const fold regex_search");
         return 1;

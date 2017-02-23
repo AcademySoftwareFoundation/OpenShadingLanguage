@@ -138,7 +138,7 @@ using OIIO::string_view;
 #endif
 
   
-//#define OSL_USE_WIDE_LLVM_BACKEND 1    
-#define OSL_USE_WIDE_LLVM_BACKEND 0
+#define OSL_USE_WIDE_LLVM_BACKEND 1    
+//#define OSL_USE_WIDE_LLVM_BACKEND 0
   
 OSL_NAMESPACE_EXIT

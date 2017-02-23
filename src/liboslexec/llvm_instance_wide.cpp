@@ -643,6 +643,16 @@ BackendLLVMWide::llvm_generate_debug_uninit (const Opcode &op)
 }
 
 
+void
+BackendLLVMWide::llvm_generate_debug_op_printf (const Opcode &op)
+{
+    std::ostringstream msg;
+    msg << op.sourcefile() << ':' << op.sourceline() << ' ' << op.opname();
+    for (int i = 0;  i < op.nargs();  ++i)
+        msg << ' ' << opargsym (op, i)->mangled();
+    llvm_gen_debug_printf (msg.str());
+}
+
 
 bool
 BackendLLVMWide::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
@@ -656,6 +666,8 @@ BackendLLVMWide::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
         if (opd && opd->llvmgen) {
             if (shadingsys().debug_uninit() /* debug uninitialized vals */)
                 llvm_generate_debug_uninit (op);
+            if (shadingsys().llvm_debug_ops())
+                llvm_generate_debug_op_printf (op);
             bool ok = (*opd->llvmgen) (*this, opnum);
             if (! ok)
                 return false;
@@ -816,7 +828,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
     // Setup the symbols
     m_named_values.clear ();
     m_layers_already_run.clear ();
-    BOOST_FOREACH (Symbol &s, inst()->symbols()) {
+	for (auto&& s : inst()->symbols()) {    	
         // Skip constants -- we always inline scalar constants, and for
         // array constants we will just use the pointers to the copy of
         // the constant that belongs to the instance.
@@ -1001,11 +1013,20 @@ BackendLLVMWide::initialize_llvm_group ()
     m_llvm_type_setup_closure_func = m_llvm_type_prepare_closure_func;
 }
 
+static void empty_group_func (void*, void*)
+{
+}
 
 
 void
 BackendLLVMWide::run ()
 {
+    if (group().does_nothing()) {
+        group().llvm_compiled_init ((RunLLVMGroupFunc)empty_group_func);
+        group().llvm_compiled_version ((RunLLVMGroupFunc)empty_group_func);
+        return;
+    }
+    
     // At this point, we already hold the lock for this group, by virtue
     // of ShadingSystemImpl::optimize_group.
     OIIO::Timer timer;

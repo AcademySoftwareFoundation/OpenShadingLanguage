@@ -12,10 +12,10 @@ SET ( liboslexec_srcs
           lpexp.cpp lpeparse.cpp automata.cpp accum.cpp
           opclosure.cpp
           shadeimage.cpp
-         backendllvm.cpp
-         llvm_gen.cpp llvm_instance.cpp 
-         #backendllvm_wide.cpp
-         #llvm_gen_wide.cpp llvm_instance_wide.cpp
+         #backendllvm.cpp
+         #llvm_gen.cpp llvm_instance.cpp 
+         backendllvm_wide.cpp
+         llvm_gen_wide.cpp llvm_instance_wide.cpp
           llvm_util.cpp 
     )
 
@@ -181,8 +181,8 @@ if (USE_LLVM_BITCODE)
 	# Only use clang build of .cpp to .s to get a starting point
 	# for vector types, it has fewer complications if we just author
 	# these helpers in LLVM assembly directly.
-    LLVM_COMPILE ( llvm_ops.cpp liboslexec_srcs )
-    #LLVM_COMPILE_ASM ( llvm_ops_wide.s liboslexec_srcs )
+    #LLVM_COMPILE ( llvm_ops.cpp liboslexec_srcs )
+    LLVM_COMPILE_ASM ( llvm_ops_wide.s liboslexec_srcs )
 else ()
     # With MSVC/Mingw, we don't compile llvm_ops.cpp to LLVM bitcode, due
     # to clang being unable to compile MSVC C++ header files at this time.

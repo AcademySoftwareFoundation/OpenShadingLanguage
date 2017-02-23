@@ -124,7 +124,7 @@ set_shadingsys_options ()
 {
     if (shadingsys_options_set)
         return;
-//    shadingsys->attribute ("llvm_debug", 2);
+    shadingsys->attribute ("llvm_debug", 2);
     shadingsys->attribute ("debug", debug2 ? 2 : (debug ? 1 : 0));
     shadingsys->attribute ("compile_report", debug|debug2);
     int opt = 2;  // default
@@ -1232,6 +1232,7 @@ batched_shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
 extern "C" OSL_DLL_EXPORT int
 test_shade (int argc, const char *argv[])
 {
+    
     OIIO::Timer timer;
 
     // Create a new shading system.  We pass it the RendererServices
@@ -1363,14 +1364,28 @@ test_shade (int argc, const char *argv[])
     // object.
     setup_transformations (rend, Mshad, Mobj);
 
+    if (num_threads < 1) {
+    	// TODO:  number of logical cores isn't a good choice
+    	// as taskset or numactl or mpi may have launched this process with
+    	// fewer threads.  This can lead to oversubscription.
+        num_threads = OIIO::Sysutil::hardware_concurrency();
+    }
+    std::cout << "num_threads = " << num_threads << std::endl;
+
+    // We need to set the global attribute so any helper functions
+    // respect our thread count, especially if we wanted only 1
+    // thread, we want to avoid spinning up a thread pool or
+    // OS overhead of destroying threads (like clearing virtual 
+    // memory pages they occupied)
+    OIIO::attribute("threads",num_threads);
+    
     // Set up the image outputs requested on the command line
     setup_output_images (shadingsys, shadergroup);
+    
 
     if (debug)
         test_group_attributes (shadergroup.get());
 
-    if (num_threads < 1)
-        num_threads = OIIO::Sysutil::hardware_concurrency();
 
     double setuptime = timer.lap ();
 
@@ -1386,11 +1401,12 @@ test_shade (int argc, const char *argv[])
                               pixelcenters ? ShadePixelCenters : ShadePixelGrid,
                               roi, num_threads);
         else {
-            bool save = (iter == (iters-1));   // save on last iteration
+            //bool save = (iter == (iters-1));   // save on last iteration
+        	bool save = true;   // save on last iteration
 #if OSL_USE_WIDE_LLVM_BACKEND
             batched_shade_region (shadergroup.get(), roi, save);
 #else
-	#if 1
+	#if 0
             shade_region (shadergroup.get(), roi, save);
 	#else
             OIIO::ImageBufAlgo::parallel_image (

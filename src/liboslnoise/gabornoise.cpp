@@ -893,13 +893,16 @@ fast_gabor (
 	{
     	
     	fast::GaborUniformParams gup(*opt);
-    	
+
+// AVX512 is generating an internal compiler error currently
+#ifndef __AVX512F__
 		//OSL_INTEL_PRAGMA("ivdep")
 		//OSL_INTEL_PRAGMA("vector always")
 //		OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
 		OSL_INTEL_PRAGMA("omp simd safelen(WidthT)")
 		//OSL_INTEL_PRAGMA("simd")
 		//OSL_INTEL_PRAGMA("novector")
+#endif
 		for(int i=0; i< WidthT; ++i) {
 			
 			const Dual2<Vec3> P = wP.get(i);

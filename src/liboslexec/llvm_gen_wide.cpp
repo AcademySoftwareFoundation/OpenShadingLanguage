@@ -101,10 +101,10 @@ LLVMGEN (llvm_gen_generic);
 
 
 void
-BackendLLVMWide::llvm_gen_debug_printf (const std::string &message)
+BackendLLVMWide::llvm_gen_debug_printf (string_view message)
 {
-    ustring s = ustring::format ("(%s %s) %s", inst()->shadername().c_str(),
-                                 inst()->layername().c_str(), message.c_str());
+    ustring s = ustring::format ("(%s %s) %s", inst()->shadername(),
+                                 inst()->layername(), message);
     ll.call_function ("osl_printf", sg_void_ptr(), ll.constant("%s\n"),
                       ll.constant(s));
 }
@@ -112,7 +112,7 @@ BackendLLVMWide::llvm_gen_debug_printf (const std::string &message)
     
 
 void
-BackendLLVMWide::llvm_gen_warning (const std::string &message)
+BackendLLVMWide::llvm_gen_warning (string_view message)
 {
     ll.call_function ("osl_warning", sg_void_ptr(), ll.constant("%s\n"),
                       ll.constant(message));
@@ -121,7 +121,7 @@ BackendLLVMWide::llvm_gen_warning (const std::string &message)
 
 
 void
-BackendLLVMWide::llvm_gen_error (const std::string &message)
+BackendLLVMWide::llvm_gen_error (string_view message)
 {
     ll.call_function ("osl_error", sg_void_ptr(), ll.constant("%s\n"),
                       ll.constant(message));
@@ -931,6 +931,52 @@ LLVMGEN (llvm_gen_mix)
         
     return true;
 }
+
+
+LLVMGEN (llvm_gen_select)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& A = *rop.opargsym (op, 1);
+    Symbol& B = *rop.opargsym (op, 2);
+    Symbol& X = *rop.opargsym (op, 3);
+    TypeDesc type = Result.typespec().simpletype();
+    ASSERT (!Result.typespec().is_closure_based() &&
+            Result.typespec().is_floatbased());
+    int num_components = type.aggregate;
+    int x_components = X.typespec().aggregate();
+    bool derivs = (Result.has_derivs() &&
+                   (A.has_derivs() || B.has_derivs()));
+
+    llvm::Value *zero = X.typespec().is_int() ? rop.ll.constant (0)
+                                              : rop.ll.constant (0.0f);
+    llvm::Value *cond[3];
+    for (int i = 0; i < x_components; ++i)
+        cond[i] = rop.ll.op_ne (rop.llvm_load_value (X, 0, i), zero);
+
+    for (int i = 0; i < num_components; i++) {
+        llvm::Value *a = rop.llvm_load_value (A, 0, i, type);
+        llvm::Value *b = rop.llvm_load_value (B, 0, i, type);
+        llvm::Value *c = (i >= x_components) ? cond[0] : cond[i];
+        llvm::Value *r = rop.ll.op_select (c, b, a);
+        rop.llvm_store_value (r, Result, 0, i);
+        if (derivs) {
+            for (int d = 1; d < 3; ++d) {
+                a = rop.llvm_load_value (A, d, i, type);
+                b = rop.llvm_load_value (B, d, i, type);
+                r = rop.ll.op_select (c, b, a);
+                rop.llvm_store_value (r, Result, d, i);
+            }
+        }
+    }
+
+    if (Result.has_derivs() && !derivs) {
+        // Result has derivs, operands do not
+        rop.llvm_zero_derivs (Result);
+    }
+    return true;
+}
+
 
 
 
@@ -2362,13 +2408,11 @@ LLVMGEN (llvm_gen_texture)
     std::vector<llvm::Value *> args;
     args.push_back (rop.sg_void_ptr());
     RendererServices::TextureHandle *texture_handle = NULL;
-#if OIIO_VERSION >= 10602
     if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
         texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data());
         if (! rop.renderer()->good (texture_handle))
             texture_handle = NULL;
     }
-#endif
     args.push_back (rop.llvm_load_value (Filename));
     args.push_back (rop.ll.constant_ptr (texture_handle));
     args.push_back (opt);
@@ -2428,13 +2472,11 @@ LLVMGEN (llvm_gen_texture3d)
     std::vector<llvm::Value *> args;
     args.push_back (rop.sg_void_ptr());
     RendererServices::TextureHandle *texture_handle = NULL;
-#if OIIO_VERSION >= 10602
     if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
         texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data());
         if (! rop.renderer()->good (texture_handle))
             texture_handle = NULL;
     }
-#endif
     args.push_back (rop.llvm_load_value (Filename));
     args.push_back (rop.ll.constant_ptr (texture_handle));
     args.push_back (opt);
@@ -2502,13 +2544,11 @@ LLVMGEN (llvm_gen_environment)
     std::vector<llvm::Value *> args;
     args.push_back (rop.sg_void_ptr());
     RendererServices::TextureHandle *texture_handle = NULL;
-#if OIIO_VERSION >= 10602
     if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
         texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data());
         if (! rop.renderer()->good (texture_handle))
             texture_handle = NULL;
     }
-#endif
     args.push_back (rop.llvm_load_value (Filename));
     args.push_back (rop.ll.constant_ptr (texture_handle));
     args.push_back (opt);
@@ -3012,13 +3052,11 @@ LLVMGEN (llvm_gen_gettextureinfo)
 
     args.push_back (rop.sg_void_ptr());
     RendererServices::TextureHandle *texture_handle = NULL;
-#if OIIO_VERSION >= 10602
     if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
         texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data());
         if (! rop.renderer()->good (texture_handle))
             texture_handle = NULL;
     }
-#endif
     args.push_back (rop.llvm_load_value (Filename));
     args.push_back (rop.ll.constant_ptr (texture_handle));
     args.push_back (rop.llvm_load_value (Dataname));

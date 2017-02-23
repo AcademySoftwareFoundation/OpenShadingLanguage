@@ -473,7 +473,10 @@ osl_wide_transform_triple (void *sgb_, void *Pin, int Pin_derivs,
                 osl_transformn_vmv(Pout, M, Pin);
 #endif
         }
-        else ASSERT(0);
+        else {
+        	std::cout << "osl_wide_transform_triple vectype=" << vectype << std::endl;
+        	ASSERT(0);
+        }
     } else {
     	ASSERT(0);
         *(Vec3 *)Pout = *(Vec3 *)Pin;

@@ -1784,6 +1784,7 @@ RuntimeOptimizer::mark_outgoing_connections ()
     FOREACH_PARAM (auto&& s, inst())
         s.connected_down (false);
     for (int lay = layer()+1;  lay < group().nlayers();  ++lay) {
+    	//OSL_INTEL_PRAGMA("novector")    	
         for (auto&& c : group()[lay]->m_connections)
             if (c.srclayer == layer()) {
                 inst()->symbol(c.src.param)->connected_down (true);

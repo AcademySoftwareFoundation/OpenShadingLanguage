@@ -69,15 +69,16 @@ message (STATUS "Using OpenImageIO ${OPENIMAGEIO_VERSION}")
 
 find_package (LLVM 3.4 REQUIRED)
 
-if (LLVM_FOUND)
-  # ensure include directory is added (in case of non-standard locations
-  include_directories (BEFORE SYSTEM "${LLVM_INCLUDES}")
-  link_directories ("${LLVM_LIB_DIR}")
-  # Extract and concatenate major & minor, remove wayward patches,
-  # dots, and "svn" or other suffixes.
-  string (REGEX REPLACE "([0-9]+)\\.([0-9]+).*" "\\1\\2" OSL_LLVM_VERSION ${LLVM_VERSION})
-  add_definitions (-DOSL_LLVM_VERSION=${OSL_LLVM_VERSION})
-  add_definitions (-DOSL_LLVM_FULL_VERSION="${LLVM_VERSION}")
+# ensure include directory is added (in case of non-standard locations
+include_directories (BEFORE SYSTEM "${LLVM_INCLUDES}")
+link_directories ("${LLVM_LIB_DIR}")
+# Extract and concatenate major & minor, remove wayward patches,
+# dots, and "svn" or other suffixes.
+string (REGEX REPLACE "([0-9]+)\\.([0-9]+).*" "\\1\\2" OSL_LLVM_VERSION ${LLVM_VERSION})
+add_definitions (-DOSL_LLVM_VERSION=${OSL_LLVM_VERSION})
+add_definitions (-DOSL_LLVM_FULL_VERSION="${LLVM_VERSION}")
+if (LLVM_NAMESPACE)
+    add_definitions ("-DLLVM_NAMESPACE=${LLVM_NAMESPACE}")
 endif ()
 
 # end LLVM library setup
@@ -96,7 +97,7 @@ if (NOT DEFINED Boost_ADDITIONAL_VERSIONS)
                                  "1.59" "1.58" "1.57" "1.56" "1.55")
 endif ()
 if (LINKSTATIC)
-    set (Boost_USE_STATIC_LIBS   ON)
+    set (Boost_USE_STATIC_LIBS ON)
 endif ()
 set (Boost_USE_MULTITHREADED ON)
 if (BOOST_CUSTOM)
@@ -131,6 +132,12 @@ else ()
     endif ()
     find_package (Boost 1.55 REQUIRED
                   COMPONENTS ${Boost_COMPONENTS})
+endif ()
+
+# Needed for static boost libraries on Windows
+if (WIN32 AND Boost_USE_STATIC_LIBS)
+    add_definitions ("-DBOOST_ALL_NO_LIB")
+    add_definitions ("-DBOOST_THREAD_USE_LIB")
 endif ()
 
 # On Linux, Boost 1.55 and higher seems to need to link against -lrt
@@ -181,6 +188,7 @@ if (USE_EXTERNAL_PUGIXML)
     # insert include path to pugixml first, to ensure that the external
     # pugixml is found, and not the one in OIIO's include directory.
     include_directories (BEFORE "${PUGIXML_INCLUDE_DIR}")
+    add_definitions ("-DUSE_EXTERNAL_PUGIXML")
 endif()
 # end Pugixml setup
 ###########################################################################

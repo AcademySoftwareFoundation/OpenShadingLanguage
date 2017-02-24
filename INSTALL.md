@@ -6,7 +6,13 @@ OSL currently compiles and runs cleanly on Linux, Mac OS X, and Windows.
 Dependencies
 ------------
 
-OSL requires the following dependencies:
+OSL requires the following dependencies or tools:
+
+* A suitable C++11 compiler to build OSL itself, which may be any of:
+   - GCC 4.8.5 or newer
+   - Clang 3.4 or newer
+   - Microsoft Visual Studio 2015 or newer
+   - Intel C++ compiler icc version 13 (?) or newer
 
 * [OpenImageIO](http://openimageio.org) 1.6 or newer
 
@@ -36,10 +42,18 @@ OSL requires the following dependencies:
    JIT may be important for interactive applications). We anticipate that
    future OSL releases will improve JIT performance and then drop support
    for the older LLVM versions.
+
+   Optionally, if Clang libraries are installed alongside LLVM, OSL will
+   in most circumstances use Clang's internals for C-style preprocessing of
+   OSL source. If not found, it will fall back on Boost Wave (but on many
+   platforms, that requires that Boost has been built in C++11 mode).
+
 * [Boost](www.boost.org) 1.55 or newer.
 * [Imath/OpenEXR](http://openexr.com/downloads.html)
 * [Flex](https://github.com/westes/flex)
 * [GNU Bison](https://www.gnu.org/software/bison/)
+* [PugiXML](http://pugixml.org/)
+
 
 
 Build process

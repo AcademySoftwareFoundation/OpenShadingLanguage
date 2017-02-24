@@ -37,7 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslcomp_pvt.h"
 
-#include <OpenImageIO/strutil.h>
+#include <OpenImageIO/platform.h>
 #include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/dassert.h>
@@ -46,11 +46,30 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/foreach.hpp>
 
-#include <boost/wave.hpp>
-#include <boost/wave/cpplexer/cpp_lex_token.hpp>
-#include <boost/wave/cpplexer/cpp_lex_iterator.hpp>
 #if OIIO_VERSION < 10604
 #include <boost/filesystem.hpp>
+#endif
+
+#ifndef USE_BOOST_WAVE
+# define USE_BOOST_WAVE 0
+#endif
+#if USE_BOOST_WAVE
+# include <boost/wave.hpp>
+# include <boost/wave/cpplexer/cpp_lex_token.hpp>
+# include <boost/wave/cpplexer/cpp_lex_iterator.hpp>
+#else
+# if !defined(__STDC_CONSTANT_MACROS)
+#   define __STDC_CONSTANT_MACROS 1
+# endif
+# include <clang/Frontend/CompilerInstance.h>
+# include <clang/Frontend/TextDiagnosticPrinter.h>
+# include <clang/Frontend/Utils.h>
+# include <clang/Basic/TargetInfo.h>
+# include <clang/Lex/PreprocessorOptions.h>
+# include <llvm/Support/ToolOutputFile.h>
+# include <llvm/Support/Host.h>
+# include <llvm/Support/MemoryBuffer.h>
+# include <llvm/Support/raw_ostream.h>
 #endif
 
 
@@ -200,6 +219,8 @@ OSLCompilerImpl::preprocess_file (const std::string &filename,
 
 
 
+#if USE_BOOST_WAVE
+
 bool
 OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
                                     const std::string &filename,
@@ -291,6 +312,110 @@ OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
 
     return true;
 }
+
+
+#else /* LLVM: vvvvvvvvvv */
+
+bool
+OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
+                                    const std::string &filename,
+                                    const std::string &stdoslpath,
+                                    const std::vector<std::string> &defines,
+                                    const std::vector<std::string> &includepaths,
+                                    std::string &result)
+{
+    std::string instring;
+    if (!stdoslpath.empty())
+        instring = OIIO::Strutil::format("#include \"%s\"\n", stdoslpath);
+    else
+        instring = "\n";
+    instring += buffer;
+    std::unique_ptr<llvm::MemoryBuffer> mbuf (llvm::MemoryBuffer::getMemBuffer(instring, filename));
+
+    clang::CompilerInstance inst;
+
+#if 1
+    inst.createDiagnostics();
+#else
+    // I think these are unnecessary?
+    llvm::raw_fd_ostream stderrRaw(2, false);
+    clang::DiagnosticOptions *diagOptions = new clang::DiagnosticOptions();
+    clang::TextDiagnosticPrinter *diagPrinter =
+        new clang::TextDiagnosticPrinter(stderrRaw, diagOptions);
+    llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagIDs(new clang::DiagnosticIDs);
+    clang::DiagnosticsEngine *diagEngine =
+        new clang::DiagnosticsEngine(diagIDs, diagOptions, diagPrinter);
+    inst.setDiagnostics(diagEngine);
+#endif
+
+#if OSL_LLVM_VERSION <= 34
+    clang::TargetOptions &targetopts = inst.getTargetOpts();
+    targetopts.Triple = llvm::sys::getDefaultTargetTriple();
+    clang::TargetInfo *target =
+        clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(), &targetopts);
+#else // LLVM 3.5+
+    const std::shared_ptr<clang::TargetOptions> &targetopts =
+          std::make_shared<clang::TargetOptions>(inst.getTargetOpts());
+    targetopts->Triple = llvm::sys::getDefaultTargetTriple();
+    clang::TargetInfo *target =
+        clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(), targetopts);
+#endif
+
+    inst.setTarget(target);
+
+    inst.createFileManager();
+    inst.createSourceManager(inst.getFileManager());
+#if OSL_LLVM_VERSION <= 35
+    clang::FrontendInputFile inputFile(mbuf.release(), clang::IK_None);
+    inst.InitializeSourceManager(inputFile);
+#else
+    clang::SourceManager &sm = inst.getSourceManager();
+    sm.setMainFileID (sm.createFileID(std::move(mbuf), clang::SrcMgr::C_User));
+#endif
+
+    inst.getPreprocessorOutputOpts().ShowCPP = 1;
+    inst.getPreprocessorOutputOpts().ShowMacros = 0;
+
+    clang::HeaderSearchOptions &headerOpts = inst.getHeaderSearchOpts();
+    headerOpts.UseBuiltinIncludes = 0;
+    headerOpts.UseStandardSystemIncludes = 0;
+    headerOpts.UseStandardCXXIncludes = 0;
+    std::string directory = OIIO::Filesystem::parent_path(filename);
+    if (directory.empty())
+        directory = OIIO::Filesystem::current_path();
+    headerOpts.AddPath (directory, clang::frontend::Angled, false, true);
+    for (auto&& inc : includepaths) {
+        headerOpts.AddPath (inc, clang::frontend::Angled,
+                            false /* not a framework */,
+                            true /* ignore sys root */);
+    }
+
+    clang::PreprocessorOptions &preprocOpts = inst.getPreprocessorOpts();
+    preprocOpts.UsePredefines = 0;
+    for (auto&& d : defines) {
+        if (d[1] == 'D')
+            preprocOpts.addMacroDef (d.c_str()+2);
+        else if (d[1] == 'U')
+            preprocOpts.addMacroUndef (d.c_str()+2);
+    }
+
+    inst.getLangOpts().LineComment = 1;
+
+#if OSL_LLVM_VERSION >= 35
+    inst.createPreprocessor(clang::TU_Prefix);
+#else
+    inst.createPreprocessor();
+#endif
+
+    llvm::raw_string_ostream ostream(result);
+    // diagPrinter->BeginSourceFile (inst.getLangOpts(), &inst.getPreprocessor());
+    clang::DoPrintPreprocessedInput (inst.getPreprocessor(),
+                                     &ostream, inst.getPreprocessorOutputOpts());
+    // diagPrinter->EndSourceFile ();
+    return true;
+}
+
+#endif
 
 
 

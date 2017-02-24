@@ -108,9 +108,9 @@ matrix:
       - os: linux
         compiler: gcc
         env: DEBUG=1 USE_CPP11=1 USE_CPP=11
-      - os: osx
-        compiler: clang
-        env: DEBUG=1 USE_CPP11=1 USE_CPP=11
+      #- os: osx
+      #  compiler: clang
+      #  env: DEBUG=1 USE_CPP11=1 USE_CPP=11
     # Test against the older release branch of OIIO (all the other tests
     # are against OIIO master), and also use C++03.
       - os: linux

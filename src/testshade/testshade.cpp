@@ -1401,8 +1401,7 @@ test_shade (int argc, const char *argv[])
                               pixelcenters ? ShadePixelCenters : ShadePixelGrid,
                               roi, num_threads);
         else {
-            //bool save = (iter == (iters-1));   // save on last iteration
-        	bool save = true;   // save on last iteration
+            bool save = (iter == (iters-1));   // save on last iteration
 #if OSL_USE_WIDE_LLVM_BACKEND
             batched_shade_region (shadergroup.get(), roi, save);
 #else

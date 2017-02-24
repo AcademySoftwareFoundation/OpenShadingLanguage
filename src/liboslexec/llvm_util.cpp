@@ -74,6 +74,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm/Support/ManagedStatic.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/ExecutionEngine/GenericValue.h>
+#include <llvm/ExecutionEngine/JITEventListener.h>
 #if USE_MCJIT
 #  include <llvm/ExecutionEngine/MCJIT.h>
 #endif
@@ -643,6 +644,10 @@ LLVM_Util::make_jit_execengine (std::string *err)
     if (! m_llvm_exec)
         return NULL;
 
+    llvm::JITEventListener* vtuneProfiler = llvm::JITEventListener::createIntelJITEventListener();
+    assert (vtuneProfiler != NULL);
+    m_llvm_exec->RegisterJITEventListener(vtuneProfiler);
+      
     // Force it to JIT as soon as we ask it for the code pointer,
     // don't take any chances that it might JIT lazily, since we
     // will be stealing the JIT code memory from under its nose and

@@ -24,8 +24,6 @@ addons:
       - cmake-data
       - gcc-4.8
       - g++-4.8
-      - gcc-6
-      - g++-6
       - libboost1.55-all-dev
       - libtiff4-dev
       #- llvm-3.9-dev
@@ -115,21 +113,37 @@ matrix:
       - os: linux
         compiler: gcc
         env: DEBUG=1
-      - os: osx
-        compiler: clang
-        env: DEBUG=1
+      # - os: osx
+      #   compiler: clang
+      #   env: DEBUG=1
     # Test against the older release branch of OIIO (all the other tests
     # are against OIIO master).
       - os: linux
         compiler: gcc
         env: OIIOBRANCH=release USE_CPP11=1
-      - os: osx
-        compiler: clang
-        env: OIIOBRANCH=release USE_CPP11=1
+      # - os: osx
+      #   compiler: clang
+      #   env: OIIOBRANCH=release USE_CPP11=1
     # Make sure the older LLVM still works
       - os: linux
         compiler: gcc
         env: LLVM_VERSION=3.5.2
+    # Linux only: test gcc 4.9
+      - os: linux
+        compiler: gcc
+        addons:
+          apt:
+            sources: [ 'ubuntu-toolchain-r-test', 'boost-latest', 'george-edison55-precise-backports' ]
+            packages: [ 'g++-4.9', 'cmake', 'cmake-data', 'libboost1.55-all-dev', 'libtiff4-dev' ]
+        env: WHICHGCC=4.9
+    # Linux only: test gcc 5
+      - os: linux
+        compiler: gcc
+        addons:
+          apt:
+            sources: [ 'ubuntu-toolchain-r-test', 'boost-latest', 'george-edison55-precise-backports' ]
+            packages: [ 'g++-5', 'cmake', 'cmake-data', 'libboost1.55-all-dev', 'libtiff4-dev' ]
+        env: WHICHGCC=5
     # Linux only: test gcc 6 (catch new warnings hot off the presses) and
     # also use a higher SIMD level, avx and f16c, to make sure all is well.
     # TravisCI's OSX images don't yet support avx/f16c, so we only do this
@@ -137,7 +151,19 @@ matrix:
     # into separate tests.
       - os: linux
         compiler: gcc
+        addons:
+          apt:
+            sources: [ 'ubuntu-toolchain-r-test', 'boost-latest', 'george-edison55-precise-backports' ]
+            packages: [ 'g++-6', 'cmake', 'cmake-data', 'libboost1.55-all-dev', 'libtiff4-dev' ]
         env: WHICHGCC=6 USE_SIMD=avx,f16c
+    # Test new gcc against older LLVM
+      - os: linux
+        compiler: gcc
+        addons:
+          apt:
+            sources: [ 'ubuntu-toolchain-r-test', 'boost-latest', 'george-edison55-precise-backports' ]
+            packages: [ 'g++-6', 'cmake', 'cmake-data', 'libboost1.55-all-dev', 'libtiff4-dev' ]
+        env: WHICHGCC=6 USE_SIMD=avx,f16c LLVM_VERSION=3.5.2
     # One more, just for the heck of it, turn all SIMD off.  I guess this
     # should/could be both platforms, but in the interest of making the
     # tests go faster, don't bother doing it on OSX.

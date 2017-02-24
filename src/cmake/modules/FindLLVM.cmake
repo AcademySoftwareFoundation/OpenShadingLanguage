@@ -8,6 +8,8 @@
 #  LLVM_SYSTEM_LIBRARIES - additional libraries needed by LLVM
 #  LLVM_DIRECTORY   - If not already set, the root of the LLVM install
 #  LLVM_LIB_DIR     - where to find llvm libs
+#  CLANG_LIBRARIES  - list of libraries for clang components (optional,
+#                        those may not be found)
 #
 # The following input symbols may be used to help guide the search:
 #  LLVM_DIRECTORY   - the root of the LLVM installation (if custom)
@@ -66,6 +68,19 @@ find_library ( LLVM_MCJIT_LIBRARY
                NAMES LLVMMCJIT
                PATHS ${LLVM_LIB_DIR})
 
+
+foreach (COMPONENT clangFrontend clangDriver clangSerialization
+                   clangParse clangSema clangAnalysis clangAST clangBasic
+                   clangEdit clangLex)
+    find_library ( _CLANG_${COMPONENT}_LIBRARY
+                  NAMES ${COMPONENT}
+                  PATHS ${LLVM_LIB_DIR})
+    if (_CLANG_${COMPONENT}_LIBRARY)
+        list (APPEND CLANG_LIBRARIES ${_CLANG_${COMPONENT}_LIBRARY})
+    endif ()
+endforeach ()
+
+
 # if (NOT LLVM_LIBRARY)
 #     execute_process (COMMAND ${LLVM_CONFIG} --libfiles engine
 #                      OUTPUT_VARIABLE LLVM_LIBRARIES
@@ -100,11 +115,12 @@ find_package_handle_standard_args (LLVM
 if (LLVM_FOUND)
     message (STATUS "LLVM version  = ${LLVM_VERSION}")
     if (NOT LLVM_FIND_QUIETLY)
-        message (STATUS "LLVM dir       = ${LLVM_DIRECTORY}")
-        message (STATUS "LLVM includes  = ${LLVM_INCLUDES}")
-        message (STATUS "LLVM lib dir   = ${LLVM_LIB_DIR}")
-        message (STATUS "LLVM libraries = ${LLVM_LIBRARIES}")
-        message (STATUS "LLVM sys libs  = ${LLVM_SYSTEM_LIBRARIES}")
+        message (STATUS "LLVM dir        = ${LLVM_DIRECTORY}")
+        message (STATUS "LLVM includes   = ${LLVM_INCLUDES}")
+        message (STATUS "LLVM lib dir    = ${LLVM_LIB_DIR}")
+        message (STATUS "LLVM libraries  = ${LLVM_LIBRARIES}")
+        message (STATUS "LLVM sys libs   = ${LLVM_SYSTEM_LIBRARIES}")
+        message (STATUS "Clang libraries = ${CLANG_LIBRARIES}")
     endif ()
 else()
     message (STATUS "LLVM not found. Specify LLVM_DIRECTORY to locate it.")

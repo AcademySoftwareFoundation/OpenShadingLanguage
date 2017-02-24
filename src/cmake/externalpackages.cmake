@@ -75,6 +75,18 @@ endif ()
 
 
 ###########################################################################
+# OpenImageIO
+
+find_package (OpenImageIO 1.6 REQUIRED)
+include_directories ("${OPENIMAGEIO_INCLUDE_DIR}")
+link_directories ("${OPENIMAGEIO_LIBRARY_DIRS}")
+message (STATUS "Using OpenImageIO ${OPENIMAGEIO_VERSION}")
+
+# end OpenImageIO setup
+###########################################################################
+
+
+###########################################################################
 # Boost setup
 
 if (NOT Boost_FIND_QUIETLY)

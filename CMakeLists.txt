@@ -351,12 +351,10 @@ set (CMAKE_MODULE_PATH
 include (util_macros)
 include (platform)
 include (externalpackages)
-include (oiio)
 include (flexbison)
 include_directories (
     "${CMAKE_SOURCE_DIR}/src/include"
     "${CMAKE_BINARY_DIR}/include/OSL"
-    "${OPENIMAGEIO_INCLUDES}"
   )
 
 

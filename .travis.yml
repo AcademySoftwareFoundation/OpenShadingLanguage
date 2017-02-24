@@ -18,7 +18,10 @@ addons:
    sources:
       - boost-latest
       - ubuntu-toolchain-r-test
+      - george-edison55-precise-backports
    packages:
+      - cmake
+      - cmake-data
       - gcc-4.8
       - g++-4.8
       - gcc-6
@@ -41,7 +44,7 @@ before_install:
           sysctl machdep.cpu.features ;
       elif [ $TRAVIS_OS_NAME == linux ] ; then
           export PLATFORM=linux64 ;
-          cat /proc/cpuinfo ;
+          cat /proc/cpuinfo | head -26 ;
       fi
     - export OIIOPLATFORM=$PLATFORM
     - if [ "$DEBUG" == 1 ] ; then export PLATFORM=${PLATFORM}.debug ; fi
@@ -58,7 +61,7 @@ install:
           export ILMBASE_HOME=$PWD/openexr-install ;
           export OPENEXR_HOME=$PWD/openexr-install ;
       fi
-    - export OIIOMAKEFLAGS="$OIIOMAKEFLAGS -j2 DEBUG= "
+    - export OIIOMAKEFLAGS="$OIIOMAKEFLAGS -j2 DEBUG= USE_PYTHON=0 OIIO_BUILD_TESTS=0"
     - src/build-scripts/build_openimageio.bash
     - export OPENIMAGEIOHOME=$PWD/OpenImageIO/dist/$OIIOPLATFORM
     - export DYLD_LIBRARY_PATH=$OPENIMAGEIOHOME/lib:$DYLD_LIBRARY_PATH

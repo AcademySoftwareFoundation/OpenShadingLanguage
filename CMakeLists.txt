@@ -10,13 +10,10 @@ set (OSL_LIBRARY_VERSION_RELEASE_TYPE "RC1")   # "dev", "betaX", "RCY", ""
 set (OSO_FILE_VERSION_MAJOR 1)
 set (OSO_FILE_VERSION_MINOR 0)
 
-cmake_minimum_required (VERSION 2.6)
-if (NOT CMAKE_VERSION VERSION_LESS 2.8.4)
-    cmake_policy (SET CMP0017 NEW)
-endif ()
-if (NOT CMAKE_VERSION VERSION_LESS 3.0)
-    cmake_policy (SET CMP0025 NEW)  # Detect AppleClang for new CMake
-endif ()
+message (STATUS "CMake version is ${CMAKE_VERSION}")
+cmake_minimum_required (VERSION 3.0)
+cmake_policy (SET CMP0017 NEW)
+cmake_policy (SET CMP0025 NEW)  # Detect AppleClang for new CMake
 if (NOT CMAKE_VERSION VERSION_LESS 3.2.2)
     cmake_policy (SET CMP0042 OLD)
     cmake_policy (SET CMP0046 OLD)

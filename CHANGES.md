@@ -1,4 +1,4 @@
-Release 1.8 [1.8.3] -- 20 Feb 2017 (compared to 1.7)
+Release 1.8 [1.8.3] -- 25 Feb 2017 (compared to 1.7)
 --------------------------------------------------
 
 Dependency and standards changes:
@@ -151,6 +151,12 @@ Build & test system improvements and developer goodies:
 * Improve search for Partio. #689 (1.8.3)
 * More robust finding of LLVM components. (1.8.3)
 * OSL now builds properly with LLVM 3.9 and 4.0. #693 (1.8.3)
+* When available (and with the right compiler version combinations), OSL
+  will rely on Clang library internals to "preprocess" oso input, rather
+  than Boost Wave. This solves problems particularly on OSX and FreeBSD
+  where clang/C++11-compiled OSL was having trouble using Boost Wave if
+  Boost was not compiled in C++11 mode (which is difficult to ensure if
+  you don't control the machine or build boost yourself). #715 (1.8.5)
 
 Documentation:
 * Various typos fixed.

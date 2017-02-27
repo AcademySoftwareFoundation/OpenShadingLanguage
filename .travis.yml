@@ -86,6 +86,7 @@ script:
     - export DYLD_LIBRARY_PATH=$OSLHOME/lib:$DYLD_LIBRARY_PATH 
     - export LD_LIBRARY_PATH=$OSLHOME/lib:$LD_LIBRARY_PATH
     - export PYTHONPATH=$OSLHOME/python:$OPENIMAGEIOHOME/python:$PYTHONPATH
+    - export LSAN_OPTIONS=suppressions=$PWD/src/build-scripts/nosanitize.txt
     - make $BUILD_FLAGS test
 
 

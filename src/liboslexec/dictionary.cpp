@@ -261,8 +261,8 @@ Dictionary::dict_find (int nodeID, ustring query)
     if (nodeID <= 0 || nodeID >= (int)m_nodes.size())
         return 0;     // invalid node ID
 
-    const Dictionary::Node &node (m_nodes[nodeID]);
-    Query q (node.document, nodeID, query);
+    int document = m_nodes[nodeID].document;
+    Query q (document, nodeID, query);
     QueryMap::iterator qfound = m_cache.find (q);
     if (qfound != m_cache.end()) {
         return qfound->second.valueoffset;
@@ -271,7 +271,7 @@ Dictionary::dict_find (int nodeID, ustring query)
     // Query was not found.  Do the expensive lookup and cache it
     pugi::xpath_node_set matches;
     try {
-        matches = node.node.select_nodes (query.c_str());
+        matches = m_nodes[nodeID].node.select_nodes (query.c_str());
     }
     catch (const pugi::xpath_exception& e) {
         m_context->error ("Invalid dict_find query '%s': %s",
@@ -286,7 +286,7 @@ Dictionary::dict_find (int nodeID, ustring query)
     int firstmatch = (int) m_nodes.size();
     int last = -1;
     for (int i = 0, e = (int)matches.size(); i < e;  ++i) {
-        m_nodes.push_back (Node (node.document, matches[i].node()));
+        m_nodes.push_back (Node (document, matches[i].node()));
         int nodeid = (int) m_nodes.size()-1;
         if (last < 0) {
             // If this is the first match, add a cache entry for it

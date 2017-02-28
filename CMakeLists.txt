@@ -44,11 +44,6 @@ endif ()
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     set (DEBUGMODE ON)
 endif ()
-if (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-    # cmake bug workaround -- on some platforms, cmake doesn't set
-    # NDEBUG for RelWithDebInfo mode
-    add_definitions ("-DNDEBUG")
-endif ()
 
 option (CMAKE_USE_FOLDERS "Use the FOLDER target property to organize targets into folders." ON)
 mark_as_advanced (CMAKE_USE_FOLDERS)
@@ -56,126 +51,12 @@ if (CMAKE_USE_FOLDERS)
     set_property (GLOBAL PROPERTY USE_FOLDERS ON)
 endif ()
 
-## turn on more detailed warnings and consider warnings as errors
-set (STOP_ON_WARNING ON CACHE BOOL "Stop building if there are any compiler warnings")
-if (NOT MSVC)
-    add_definitions ("-Wall")
-    if (STOP_ON_WARNING)
-        add_definitions ("-Werror")
-    endif ()
-endif ()
+set (CMAKE_MODULE_PATH
+     "${PROJECT_SOURCE_DIR}/src/cmake/modules"
+     "${PROJECT_SOURCE_DIR}/src/cmake")
 
-message (STATUS "CMAKE_CXX_COMPILER is ${CMAKE_CXX_COMPILER}")
-message (STATUS "CMAKE_CXX_COMPILER_ID is ${CMAKE_CXX_COMPILER_ID}")
-
-# Figure out which compiler we're using
-if (CMAKE_COMPILER_IS_GNUCC)
-    execute_process (COMMAND ${CMAKE_CXX_COMPILER} -dumpversion
-                     OUTPUT_VARIABLE GCC_VERSION
-                     OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if (VERBOSE)
-        message (STATUS "Using gcc ${GCC_VERSION} as the compiler")
-    endif ()
-endif ()
-
-# Figure out which compiler we're using, for tricky cases
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER MATCHES "[Cc]lang")
-    # If using any flavor of clang, set CMAKE_COMPILER_IS_CLANG. If it's
-    # Apple's variety, set CMAKE_COMPILER_IS_APPLECLANG and
-    # APPLECLANG_VERSION_STRING, otherwise for generic clang set
-    # CLANG_VERSION_STRING.
-    set (CMAKE_COMPILER_IS_CLANG 1)
-    EXECUTE_PROCESS( COMMAND ${CMAKE_CXX_COMPILER} --version OUTPUT_VARIABLE clang_full_version_string )
-    if (clang_full_version_string MATCHES "Apple")
-        set (CMAKE_CXX_COMPILER_ID "AppleClang")
-        set (CMAKE_COMPILER_IS_APPLECLANG 1)
-        string (REGEX REPLACE ".* version ([0-9]+\\.[0-9]+).*" "\\1" APPLECLANG_VERSION_STRING ${clang_full_version_string})
-        if (VERBOSE)
-            message (STATUS "The compiler is Clang: ${CMAKE_CXX_COMPILER_ID} version ${APPLECLANG_VERSION_STRING}")
-        endif ()
-    else ()
-        string (REGEX REPLACE ".* version ([0-9]+\\.[0-9]+).*" "\\1" CLANG_VERSION_STRING ${clang_full_version_string})
-        if (VERBOSE)
-            message (STATUS "The compiler is Clang: ${CMAKE_CXX_COMPILER_ID} version ${CLANG_VERSION_STRING}")
-        endif ()
-    endif ()
-elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
-    set (CMAKE_COMPILER_IS_INTEL 1)
-    if (VERBOSE)
-        message (STATUS "Using Intel as the compiler")
-    endif ()
-endif ()
-
-# Options common to gcc and clang
-if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
-    # CMake doesn't automatically know what do do with
-    # include_directories(SYSTEM...) when using clang or gcc.
-    set (CMAKE_INCLUDE_SYSTEM_FLAG_CXX "-isystem ")
-    # Ensure this macro is set for stdint.h
-    add_definitions ("-D__STDC_LIMIT_MACROS")
-    # this allows native instructions to be used for sqrtf instead of a function call
-    add_definitions ("-fno-math-errno")
-    if (HIDE_SYMBOLS AND NOT DEBUGMODE)
-        # Turn default symbol visibility to hidden
-        set (VISIBILITY_COMMAND "-fvisibility=hidden -fvisibility-inlines-hidden")
-        add_definitions (${VISIBILITY_COMMAND})
-        if (CMAKE_SYSTEM_NAME MATCHES "Linux|kFreeBSD" OR CMAKE_SYSTEM_NAME STREQUAL "GNU")
-            # Linux/FreeBSD/Hurd: also hide all the symbols of dependent
-            # libraries to prevent clashes if an app using this library is
-            # linked against other verions of our dependencies.
-            set (VISIBILITY_MAP_COMMAND "-Wl,--version-script=${PROJECT_SOURCE_DIR}/src/liboslexec/liboslexec.map")
-        endif ()
-    endif ()
-    if (LLVM_STATIC AND ${CMAKE_SYSTEM_NAME} STREQUAL "Linux" AND NOT DEBUGMODE)
-        # Linux: When linking against LLVM statically, we can also hide
-        # all its symbols to prevent clashes if OSL is linked against an
-        # app that also embeds LLVM.
-        set (VISIBILITY_MAP_COMMAND "-Wl,--version-script=${PROJECT_SOURCE_DIR}/src/liboslexec/liboslexec.map")
-    endif ()
-endif ()
-
-# Clang-specific options
-if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG)
-    # Disable some warnings for Clang, for some things that are too awkward
-    # to change just for the sake of having no warnings.
-    add_definitions ("-Wno-unused-function")
-    add_definitions ("-Wno-overloaded-virtual")
-    add_definitions ("-Wno-unneeded-internal-declaration")
-    add_definitions ("-Wno-unused-private-field")
-    add_definitions ("-Wno-tautological-compare")
-    # disable warning about unused command line arguments
-    add_definitions ("-Qunused-arguments")
-    # Don't warn if we ask it not to warn about warnings it doesn't know
-    add_definitions ("-Wunknown-warning-option")
-    add_definitions ("-Wno-unknown-pragmas")
-    # disable warning in flex-generated code
-    add_definitions ("-Wno-null-conversion")
-    add_definitions ("-Wno-error=strict-overflow")
-    if (DEBUGMODE)
-        add_definitions ("-Wno-unused-function -Wno-unused-variable")
-    endif ()
-    if (CLANG_VERSION_STRING VERSION_GREATER 3.5 OR
-        APPLECLANG_VERSION_STRING VERSION_GREATER 6.1)
-        add_definitions ("-Wno-unused-local-typedefs")
-    endif ()
-    if (CLANG_VERSION_STRING VERSION_EQUAL 3.9 OR CLANG_VERSION_STRING VERSION_GREATER 3.9)
-        # Don't warn about using unknown preprocessor symbols in #if'set
-        add_definitions ("-Wno-expansion-to-defined")
-    endif ()
-endif ()
-
-# gcc specific options
-if (CMAKE_COMPILER_IS_GNUCC AND NOT (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG))
-    if (NOT ${GCC_VERSION} VERSION_LESS 4.8)
-        add_definitions ("-Wno-error=strict-overflow")
-        # suppress a warning that Boost::Python hits in g++ 4.8
-        add_definitions ("-Wno-error=unused-local-typedefs")
-        add_definitions ("-Wno-unused-local-typedefs")
-    endif ()
-    if (NOT ${GCC_VERSION} VERSION_LESS 4.5)
-        add_definitions ("-Wno-unused-result")
-    endif ()
-endif ()
+include (platform)
+include (compiler)   # All the C++ and compiler related options live here
 
 
 ## enable RTTI
@@ -192,174 +73,39 @@ if (NOT ENABLERTTI)
     else ()
         set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti" )
     endif()
-
-    # For gcc < 4.3, Boost needs some extra help detecting that we've
-    # disabled RTTI.
-    if ((CMAKE_COMPILER_IS_GNUCC AND GCC_VERSION VERSION_LESS 4.3)
-        OR CMAKE_COMPILER_IS_CLANG)
-        add_definitions ("-DBOOST_NO_RTTI")
-        add_definitions ("-DBOOST_NO_TYPEID")
-    endif ()
 endif()
 
-# Needed for static boost libraries on Windows
-if (WIN32 AND Boost_USE_STATIC_LIBS)
-    add_definitions ("-DBOOST_ALL_NO_LIB")
-    add_definitions ("-DBOOST_THREAD_USE_LIB")
-endif ()
 
-# Needed to disable dllimport/dllexport for static library
-if (BUILDSTATIC)
-    add_definitions ("-DOSL_STATIC_LIBRARY")
-endif()
-
-set (USE_fPIC OFF CACHE BOOL "Build with -fPIC")
-if (USE_fPIC)
-    add_definitions ("-fPIC")
-endif ()
-
-# Try to detect if this is an OSX distro new enough that the system library
-# is libc++.
-if (EXISTS "/usr/lib/libc++.dylib")
-    set (OSL_SYSTEM_HAS_LIBCPP ON)
-endif ()
-
-
-set (VERBOSE OFF CACHE BOOL "Print lots of messages while compiling")
-set (OSL_BUILD_TESTS ON CACHE BOOL "Build the unit tests, testshade, testrender")
-set (BUILDSTATIC OFF CACHE BOOL "Build static library instead of shared")
-set (HIDE_SYMBOLS OFF CACHE BOOL "Hide symbols not in the public API")
-set (USE_EXTERNAL_PUGIXML OFF CACHE BOOL
-     "Use an externally built shared library version of the pugixml library")
-set (PUGIXML_HOME "" CACHE STRING "Hint about where to find external PugiXML library")
+option (VERBOSE "Print lots of messages while compiling" OF)
+option (OSL_BUILD_TESTS "Build the unit tests, testshade, testrender" ON)
 if (WIN32)
-    set (USE_LLVM_BITCODE OFF CACHE BOOL "Generate embedded LLVM bitcode")
+    option (USE_LLVM_BITCODE "Generate embedded LLVM bitcode" OFF)
 else ()
-    set (USE_LLVM_BITCODE ON CACHE BOOL "Generated embedded LLVM bitcode")
+    option (USE_LLVM_BITCODE "Generate embedded LLVM bitcode" ON)
 endif ()
-set (USE_PARTIO ON CACHE BOOL "Use Partio if found")
+option (USE_PARTIO "Use Partio if found" ON)
 set (PARTIO_HOME "" CACHE STRING "Search path for Partio components")
-set (USE_FAST_MATH ON CACHE BOOL "Use fast math approximations (if no, then use system math library)")
-set (USE_CPP 11 CACHE STRING "C++ standard to prefer (11, 14, etc.)")
-set (USE_LIBCPLUSPLUS OFF CACHE BOOL "Compile with clang libc++")
-set (EXTRA_CPP_ARGS "" CACHE STRING "Extra C++ command line definitions")
-set (USE_SIMD "" CACHE STRING "Use SIMD directives (0, sse2, sse3, sse4.1, sse4.2)")
-set (OSL_NO_DEFAULT_TEXTURESYSTEM OFF CACHE BOOL "Do not use create a raw OIIO::TextureSystem")
-set (OSL_BUILD_PLUGINS ON CACHE BOOL "Bool OSL plugins, for example OIIO plugin")
-set (USE_CCACHE ON CACHE BOOL "Use ccache if found")
-set (CODECOV OFF CACHE BOOL "Build code coverage tests")
+option (USE_EXTERNAL_PUGIXML "Use an externally built shared library version of the pugixml library" OFF)
+set (PUGIXML_HOME "" CACHE STRING "Hint about where to find external PugiXML library")
+option (USE_FAST_MATH "Use fast math approximations (if no, then use system math library)" ON)
+option (OSL_BUILD_PLUGINS "Bool OSL plugins, for example OIIO plugin" ON)
 option (USE_BOOST_WAVE "Use Boost Wave for C preprocessor (alternative is to use clang)" OFF)
 
-# Use ccache if found
-find_program (CCACHE_FOUND ccache)
-if (CCACHE_FOUND AND USE_CCACHE)
-    set_property (GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
-    set_property (GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
-endif ()
-
-if (LLVM_NAMESPACE)
-    add_definitions ("-DLLVM_NAMESPACE=${LLVM_NAMESPACE}")
-endif ()
-
-if (USE_EXTERNAL_PUGIXML)
-    add_definitions ("-DUSE_EXTERNAL_PUGIXML")
-endif ()
-
-if (USE_FAST_MATH)
-	add_definitions ("-DOSL_FAST_MATH=1")
-else ()
-	add_definitions ("-DOSL_FAST_MATH=0")
-endif ()
 
 # set (USE_OIIO_STATIC ON CACHE BOOL "If OIIO is built static")
 # if (USE_OIIO_STATIC)
 #     add_definitions ("-DOIIO_STATIC_BUILD=1")
 # endif ()
 
+set (OSL_NO_DEFAULT_TEXTURESYSTEM OFF CACHE BOOL "Do not use create a raw OIIO::TextureSystem")
 if (OSL_NO_DEFAULT_TEXTURESYSTEM)
     add_definitions ("-DOSL_NO_DEFAULT_TEXTURESYSTEM=1")
 endif ()
 
-if (EXTRA_CPP_ARGS)
-    message (STATUS "Extra C++ args: ${EXTRA_CPP_ARGS}")
-    add_definitions ("${EXTRA_CPP_ARGS}")
-endif()
-
-if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG OR CMAKE_COMPILER_IS_INTEL)
-    if (USE_CPP VERSION_GREATER 11)
-        message (STATUS "Building for C++14")
-        add_definitions ("-std=c++14")
-        set (OSL_CSTD_FLAGS ${OSL_CSTD_FLAGS} "-std=c++14")
-    else ()
-        message (STATUS "Building for C++11")
-        add_definitions ("-std=c++11")
-        set (OSL_CSTD_FLAGS ${OSL_CSTD_FLAGS} "-std=c++11")
-    endif ()
-    if (CMAKE_COMPILER_IS_CLANG)
-        # C++ >= 11 doesn't like 'register' keyword, which is in Qt headers
-        add_definitions ("-Wno-deprecated-register")
-    endif ()
-endif ()
-
-if (USE_LIBCPLUSPLUS AND CMAKE_COMPILER_IS_CLANG)
-    message (STATUS "Using libc++")
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-endif ()
-
-# Options common to gcc and clang
-if (CODECOV AND (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG))
-    message (STATUS "Compiling for code coverage analysis")
-    add_definitions ("-ftest-coverage -fprofile-arcs -O0 -DOSL_CODE_COVERAGE=1")
-    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -ftest-coverage -fprofile-arcs")
-    set (CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -ftest-coverage -fprofile-arcs")
-    set (CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -ftest-coverage -fprofile-arcs")
-endif ()
-
-if (DEFINED ENV{TRAVIS})
-    add_definitions ("-DOSL_TRAVIS=1")
-endif ()
-
-set (OSL_SIMD_FLAGS "")
-if (NOT USE_SIMD STREQUAL "")
-    message (STATUS "Compiling with SIMD level ${USE_SIMD}")
-    if (USE_SIMD STREQUAL "0")
-        add_definitions ("-DOIIO_NO_SSE=1")
-        set (OSL_SIMD_FLAGS ${OSL_SIMD_FLAGS} "-DOIIO_NO_SSE=1")
-    else ()
-        string (REPLACE "," ";" SIMD_FEATURE_LIST ${USE_SIMD})
-        foreach (feature ${SIMD_FEATURE_LIST})
-            if (VERBOSE)
-                message (STATUS "SIMD feature: ${feature}")
-            endif ()
-            if (MSVC OR CMAKE_COMPILER_IS_INTEL)
-                add_definitions ("/arch:${feature}")
-                set (OSL_SIMD_FLAGS ${OSL_SIMD_FLAGS} "/arch:${feature}")
-            else ()
-                add_definitions ("-m${feature}")
-                set (OSL_SIMD_FLAGS ${OSL_SIMD_FLAGS} "-m${feature}")
-            endif ()
-        endforeach()
-    endif ()
-endif ()
-
-
-# Test for features
-if (NOT VERBOSE)
-    set (CMAKE_REQUIRED_QUIET 1)
-endif ()
-include (CMakePushCheckState)
-include (CheckCXXSourceRuns)
-
-check_cxx_source_runs("
-      #include <regex>
-      int main() {
-          return std::regex_match(\"abc\", std::regex(\"(a)(.*)\")) ? 0 : 1;
-      }"
-      USE_STD_REGEX)
-if (USE_STD_REGEX)
-    add_definitions (-DUSE_STD_REGEX)
+if (USE_FAST_MATH)
+    add_definitions ("-DOSL_FAST_MATH=1")
 else ()
-    add_definitions (-DUSE_BOOST_REGEX)
+    add_definitions ("-DOSL_FAST_MATH=0")
 endif ()
 
 
@@ -369,102 +115,20 @@ if (OSL_NAMESPACE)
 endif ()
 message(STATUS "Setting Namespace to: ${OSL_NAMESPACE}")
 
-set (CMAKE_MODULE_PATH
-     "${PROJECT_SOURCE_DIR}/src/cmake/modules"
-     "${PROJECT_SOURCE_DIR}/src/cmake")
-
 include (util_macros)
-include (platform)
 include (externalpackages)
 include (flexbison)
+include (install)          # installation options all implemented here
+
 include_directories (
     "${CMAKE_SOURCE_DIR}/src/include"
     "${CMAKE_BINARY_DIR}/include/OSL"
-    "${OPENIMAGEIO_INCLUDE_DIR}"
   )
 
 
-###########################################################################
-# Paths for install tree customization.  Note that relative paths are relative
-# to CMAKE_INSTALL_PREFIX.
-set (DEFAULT_BIN_INSTALL_DIR   "bin")
-set (DEFAULT_LIB_INSTALL_DIR   "lib")
-set (DEFAULT_INCLUDE_INSTALL_DIR "include/OSL")
-if (UNIX AND NOT SELF_CONTAINED_INSTALL_TREE)
-    # Try to be well-behaved and install into reasonable places according to
-    # the "standard" unix directory heirarchy
-    # TODO: Figure out how to get the correct python directory
-    set (DEFAULT_PYLIB_INSTALL_DIR "lib/python/site-packages")
-    set (DEFAULT_PYLIB3_INSTALL_DIR "lib/python3/site-packages")
-    set (DEFAULT_DOC_INSTALL_DIR "share/doc/OSL")
-    set (DEFAULT_MAN_INSTALL_DIR "share/man/man1")
-else ()
-    # Here is the "self-contained install tree" case: the expectation here is
-    # that everything OSL related will go into its own directory, not into
-    # some standard system heirarchy.
-    set (DEFAULT_PYLIB_INSTALL_DIR "python")
-    set (DEFAULT_PYLIB3_INSTALL_DIR "python3")
-    set (DEFAULT_DOC_INSTALL_DIR "doc")
-    set (DEFAULT_MAN_INSTALL_DIR "doc/man")
-endif ()
-if (EXEC_INSTALL_PREFIX)
-    # Tack on an extra prefix to support multi-arch builds.
-    set (DEFAULT_BIN_INSTALL_DIR   "${EXEC_INSTALL_PREFIX}/${DEFAULT_BIN_INSTALL_DIR}")
-    set (DEFAULT_LIB_INSTALL_DIR   "${EXEC_INSTALL_PREFIX}/${DEFAULT_LIB_INSTALL_DIR}")
-    set (DEFAULT_PYLIB_INSTALL_DIR "${EXEC_INSTALL_PREFIX}/${DEFAULT_PYLIB_INSTALL_DIR}")
-    set (DEFAULT_PYLIB3_INSTALL_DIR "${EXEC_INSTALL_PREFIX}/${DEFAULT_PYLIB3_INSTALL_DIR}")
-endif ()
-# Set up cmake cache variables corresponding to the defaults deduced above, so
-# that the user can override them as desired:
-set (BIN_INSTALL_DIR ${DEFAULT_BIN_INSTALL_DIR} CACHE STRING
-     "Install location for binaries (relative to CMAKE_INSTALL_PREFIX or absolute)")
-set (LIB_INSTALL_DIR ${DEFAULT_LIB_INSTALL_DIR} CACHE STRING
-     "Install location for libraries (relative to CMAKE_INSTALL_PREFIX or absolute)")
-set (PYLIB_INSTALL_DIR ${DEFAULT_PYLIB_INSTALL_DIR} CACHE STRING
-     "Install location for python libraries (relative to CMAKE_INSTALL_PREFIX or absolute)")
-set (PYLIB3_INSTALL_DIR ${DEFAULT_PYLIB3_INSTALL_DIR} CACHE STRING
-     "Install location for python3 libraries (relative to CMAKE_INSTALL_PREFIX or absolute)")
-set (INCLUDE_INSTALL_DIR ${DEFAULT_INCLUDE_INSTALL_DIR} CACHE STRING
-     "Install location of header files (relative to CMAKE_INSTALL_PREFIX or absolute)")
-set (DOC_INSTALL_DIR ${DEFAULT_DOC_INSTALL_DIR} CACHE STRING
-     "Install location for documentation (relative to CMAKE_INSTALL_PREFIX or absolute)")
-if (UNIX)
-    set (MAN_INSTALL_DIR ${DEFAULT_MAN_INSTALL_DIR} CACHE STRING
-         "Install location for manual pages (relative to CMAKE_INSTALL_PREFIX or absolute)")
-endif()
-set (PLUGIN_SEARCH_PATH "" CACHE STRING "Default plugin search path")
-set (INSTALL_DOCS ON CACHE BOOL "Install documentation")
-
-
-if (APPLE)
-    set (MACOSX_RPATH ON)
-endif ()
-
-# use, i.e. don't skip the full RPATH for the build tree
-set (CMAKE_SKIP_BUILD_RPATH  FALSE)
-# when building, don't use the install RPATH already
-# (but later on when installing)
-set (CMAKE_BUILD_WITH_INSTALL_RPATH FALSE) 
-# the RPATH to be used when installing
-set (CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-# add the automatically determined parts of the RPATH
-# which point to directories outside the build tree to the install RPATH
-set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-
-message (STATUS "CMAKE_INSTALL_RPATH = ${CMAKE_INSTALL_RPATH}")
 
 
 ###########################################################################
-if (MSVC)
-    add_definitions (-D_CRT_SECURE_NO_DEPRECATE)
-    add_definitions (-D_CRT_SECURE_NO_WARNINGS)
-    add_definitions (-D_CRT_NONSTDC_NO_WARNINGS)
-    add_definitions (-D_SCL_SECURE_NO_WARNINGS)
-    if(NOT LINKSTATIC)
-        add_definitions (-DBOOST_ALL_DYN_LINK)
-        add_definitions (-DOPENEXR_DLL)
-    endif ()
-endif (MSVC)
 
 
 # We want CTest for testing

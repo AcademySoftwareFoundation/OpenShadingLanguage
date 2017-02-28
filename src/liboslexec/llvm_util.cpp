@@ -48,7 +48,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define USE_OLD_JIT (OSL_LLVM_VERSION <  36)
 
 #include <llvm/IR/Constants.h>
+#include <llvm/IR/DebugInfo.h>
 #include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Intrinsics.h>
 #include <llvm/IR/Module.h>
@@ -126,6 +128,16 @@ static OIIO::spin_mutex llvm_global_mutex;
 static bool setup_done = false;
 static boost::thread_specific_ptr<LLVM_Util::PerThreadInfo> perthread_infos;
 static std::vector<std::shared_ptr<LLVMMemoryManager> > jitmm_hold;
+
+static struct DebugInfo {
+	llvm::DICompileUnit *TheCU;
+	llvm::DIType *DblTy;
+	std::vector<llvm::DIScope *> LexicalBlocks;
+
+	//void emitLocation(ExprAST *AST);
+	//llvm::DIType *getDoubleTy();
+} DbgInfo;
+
 };
 
 
@@ -323,6 +335,7 @@ public:
 LLVM_Util::LLVM_Util (int debuglevel)
     : m_debug(debuglevel), m_thread(NULL),
       m_llvm_context(NULL), m_llvm_module(NULL),
+      m_llvm_debug_builder(NULL),
       m_builder(NULL), m_llvm_jitmm(NULL),
       m_current_function(NULL),
       m_llvm_module_passes(NULL), m_llvm_func_passes(NULL),
@@ -472,6 +485,106 @@ LLVM_Util::new_module (const char *id)
 {
     return new llvm::Module(id, context());
 }
+
+void 
+LLVM_Util::enable_debug_info() {
+	module()->addModuleFlag(llvm::Module::Error, "Debug Info Version",
+			llvm::DEBUG_METADATA_VERSION);
+
+	unsigned int modulesDebugInfoVersion = 0;
+	if (auto *Val = llvm::mdconst::dyn_extract_or_null < llvm::ConstantInt
+			> (module()->getModuleFlag("Debug Info Version"))) {
+		modulesDebugInfoVersion = Val->getZExtValue();
+	}
+
+	std::cout
+			<< "------------------>enable_debug_info<-----------------------------module flag['Debug Info Version']= "
+			<< modulesDebugInfoVersion << std::endl;
+}
+
+void 
+LLVM_Util::set_debug_info() {
+	std::cout << "LLVM_Util::set_debug_info" << std::endl;
+
+//    llvm::SourceLocations DebugLocations;
+//    llvm::DebugLocations.push_back(std::make_pair(std::string("MyImaginary.osl"),
+//                                               static_cast<unsigned int>(99)));
+
+	m_llvm_debug_builder = (new llvm::DIBuilder(*m_llvm_module));
+
+	DbgInfo.TheCU = m_llvm_debug_builder->createCompileUnit(
+			llvm::dwarf::DW_LANG_C, 
+			"JIT", // filename
+			".", // directory
+			"OSLv1.9", // Identify the producer of debugging information and code. Usually this is a compiler version string.
+			0, // Identify the producer of debugging information and code. Usually this is a compiler version string.
+			"", // This string lists command line options. This string is directly embedded in debug info output which may be used by a tool analyzing generated debugging information.
+			0); // This indicates runtime version for languages like Objective-C
+
+	llvm::DIFile *file = m_llvm_debug_builder->createFile(
+			DbgInfo.TheCU->getFilename(), DbgInfo.TheCU->getDirectory());
+	//llvm::DIScope *FContext = Unit;
+	unsigned int LineNo = 99;
+	unsigned int ScopeLine = 42;
+
+//     llvm::DISubroutineType *subroutineType =  m_llvm_debug_builder->createSubroutineType(m_llvm_debug_builder->getOrCreateTypeArray(EltTys));
+//     
+//     llvm::DISubprogram *SP = m_llvm_debug_builder->createFunction(
+//    		 file, "function name", 
+//    		 StringRef(), ScopeLine, LineNo,
+//         subroutineType,
+//         false /* internal linkage */, true /* definition */, ScopeLine,
+//         llvm::DINode::FlagPrototyped, false);
+
+//     if (DbgInfo.TheCU == nullptr) { exit(-1); }
+//     
+//     llvm::DILexicalBlock *lb = m_llvm_debug_builder->createLexicalBlock	(DbgInfo.TheCU,
+//    		 file,
+//    		 LineNo,
+//    		 ScopeLine 
+//     );
+//     
+
+	llvm::DISubroutineType *subType;
+	{
+		llvm::SmallVector<llvm::Metadata *, 8> EltTys;
+		//llvm::DIType *DblTy = KSDbgInfo.getDoubleTy();
+		llvm::DIType *debug_double_type = m_llvm_debug_builder->createBasicType(
+				"double", 64, 64, llvm::dwarf::DW_ATE_float);
+#if 0
+		// Add the result type.
+		EltTys.push_back(DblTy);
+
+		for (unsigned i = 0, e = NumArgs; i != e; ++i)
+		EltTys.push_back(DblTy);
+#endif
+		EltTys.push_back(debug_double_type);
+		EltTys.push_back(debug_double_type);
+
+		subType = m_llvm_debug_builder->createSubroutineType(
+				m_llvm_debug_builder->getOrCreateTypeArray(EltTys));
+	}
+
+	llvm::DISubprogram *function = m_llvm_debug_builder->createFunction(file,
+			"fabs_ff", llvm::StringRef(), file, LineNo, subType,
+			false /*isLocalToUnit*/, true /*bool isDefinition*/, ScopeLine,
+			llvm::DINode::FlagPrototyped, false);
+	current_function()->setSubprogram(function);
+	 
+	llvm::DebugLoc debug_location =
+			llvm::DebugLoc::get(static_cast<unsigned int>(99),
+					static_cast<unsigned int>(42),
+					function /*m_llvm_debug_builder->createFile(std::string("MyImaginary.osl"), ".")*/);
+	m_builder->SetCurrentDebugLocation(debug_location);
+}
+
+void 
+LLVM_Util::clear_debug_info() {
+	std::cout << "LLVM_Util::clear_debug_info" << std::endl;
+	m_builder->SetCurrentDebugLocation(llvm::DebugLoc());
+	m_llvm_debug_builder->finalize();
+}
+
 
 
 

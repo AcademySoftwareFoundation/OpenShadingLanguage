@@ -51,6 +51,8 @@ namespace llvm {
   class Type;
   class Value;
   class VectorType;
+  class DIBuilder;
+  
   namespace legacy {
     class FunctionPassManager;
     class PassManager;
@@ -106,6 +108,11 @@ public:
                                        const std::string &name=std::string(),
                                        std::string *err=NULL);
 
+    void enable_debug_info();
+    void set_debug_info();
+    void clear_debug_info();
+    
+    
     /// Create a new function (that will later be populated with
     /// instructions) with up to 4 args.
     llvm::Function *make_function (const std::string &name, bool fastcall,
@@ -554,6 +561,7 @@ private:
     PerThreadInfo *m_thread;
     llvm::LLVMContext *m_llvm_context;
     llvm::Module *m_llvm_module;
+    llvm::DIBuilder* m_llvm_debug_builder; 
     IRBuilder *m_builder;
     MemoryManager *m_llvm_jitmm;
     llvm::Function *m_current_function;

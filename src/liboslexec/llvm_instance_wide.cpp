@@ -689,7 +689,7 @@ BackendLLVMWide::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
         int next = op.farthest_jump ();
         if (next >= 0)
             opnum = next-1;
-    }
+    }       
     return true;
 }
 
@@ -713,6 +713,7 @@ BackendLLVMWide::build_llvm_init ()
     // Set up a new IR builder
     llvm::BasicBlock *entry_bb = ll.new_basic_block (unique_name);
     ll.new_builder (entry_bb);
+    
 #if 0 /* helpful for debugging */
     if (llvm_debug()) {
         llvm_gen_debug_printf (Strutil::format("\n\n\n\nGROUP! %s",group().name()));
@@ -793,6 +794,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
 
     // Set up a new IR builder
     ll.new_builder (entry_bb);
+	ll.set_debug_info();
 
     llvm::Value *layerfield = layer_run_ref(layer_remap(layer()));
     if (is_entry_layer && ! group().is_last_layer(layer())) {
@@ -934,7 +936,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
     // All done
     if (shadingsys().llvm_debug_layers())
         llvm_gen_debug_printf (Strutil::format("exit layer %d %s %s",
-                               this->layer(), inst()->layername(), inst()->shadername()));
+                               this->layer(), inst()->layername(), inst()->shadername()));    
     ll.op_return();
 
     if (llvm_debug())
@@ -942,6 +944,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
                   << "/" << group().nlayers() << " after llvm  = " 
                   << ll.bitcode_string(ll.current_function()) << "\n";
 
+    ll.clear_debug_info();
     ll.end_builder();  // clear the builder
 
     return ll.current_function();
@@ -1052,6 +1055,7 @@ BackendLLVMWide::run ()
         shadingcontext()->error ("ParseBitcodeFile returned '%s'\n", err.c_str());
     ASSERT (ll.module());
 #endif
+    ll.enable_debug_info();
 
     // Create the ExecutionEngine
     if (! ll.make_jit_execengine (&err)) {

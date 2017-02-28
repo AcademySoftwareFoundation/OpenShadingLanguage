@@ -668,6 +668,8 @@ BackendLLVMWide::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
                 llvm_generate_debug_uninit (op);
             if (shadingsys().llvm_debug_ops())
                 llvm_generate_debug_op_printf (op);
+            // TODO: optionally enable
+            ll.set_debug_location(op.sourcefile().string(), op.method().string(), op.sourceline());
             bool ok = (*opd->llvmgen) (*this, opnum);
             if (! ok)
                 return false;

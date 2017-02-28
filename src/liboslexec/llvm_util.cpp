@@ -30,6 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <memory>
 #include <OpenImageIO/thread.h>
 #include <boost/thread/tss.hpp>   /* for thread_specific_ptr */
+#include <unordered_map>
 
 #include "OSL/oslconfig.h"
 #include "OSL/llvm_util.h"
@@ -134,9 +135,11 @@ static struct DebugInfo {
 	llvm::DIType *DblTy;
 	std::vector<llvm::DIScope *> LexicalBlocks;
 
+	typedef std::unordered_map<std::string, llvm::DISubprogram *> ScopeByNameType;
+	ScopeByNameType ScopeByName;
 	//void emitLocation(ExprAST *AST);
 	//llvm::DIType *getDoubleTy();
-} DbgInfo;
+} TheDebugInfo;
 
 };
 
@@ -512,17 +515,20 @@ LLVM_Util::set_debug_info() {
 
 	m_llvm_debug_builder = (new llvm::DIBuilder(*m_llvm_module));
 
-	DbgInfo.TheCU = m_llvm_debug_builder->createCompileUnit(
+#if 1
+	TheDebugInfo.TheCU = m_llvm_debug_builder->createCompileUnit(
 			llvm::dwarf::DW_LANG_C, 
 			"JIT", // filename
 			".", // directory
 			"OSLv1.9", // Identify the producer of debugging information and code. Usually this is a compiler version string.
 			0, // Identify the producer of debugging information and code. Usually this is a compiler version string.
 			"", // This string lists command line options. This string is directly embedded in debug info output which may be used by a tool analyzing generated debugging information.
-			0); // This indicates runtime version for languages like Objective-C
-
+			1900); // This indicates runtime version for languages like Objective-C
+#endif
+#if 0
 	llvm::DIFile *file = m_llvm_debug_builder->createFile(
-			DbgInfo.TheCU->getFilename(), DbgInfo.TheCU->getDirectory());
+			//TheDebugInfo.TheCU->getFilename(), TheDebugInfo.TheCU->getDirectory());
+			"DogFood", "EatYourOwn");
 	//llvm::DIScope *FContext = Unit;
 	unsigned int LineNo = 99;
 	unsigned int ScopeLine = 42;
@@ -536,46 +542,111 @@ LLVM_Util::set_debug_info() {
 //         false /* internal linkage */, true /* definition */, ScopeLine,
 //         llvm::DINode::FlagPrototyped, false);
 
-//     if (DbgInfo.TheCU == nullptr) { exit(-1); }
+//     if (TheDebugInfo.TheCU == nullptr) { exit(-1); }
 //     
-//     llvm::DILexicalBlock *lb = m_llvm_debug_builder->createLexicalBlock	(DbgInfo.TheCU,
+//     llvm::DILexicalBlock *lb = m_llvm_debug_builder->createLexicalBlock	(TheDebugInfo.TheCU,
 //    		 file,
 //    		 LineNo,
 //    		 ScopeLine 
 //     );
 //     
 
-	llvm::DISubroutineType *subType;
-	{
-		llvm::SmallVector<llvm::Metadata *, 8> EltTys;
-		//llvm::DIType *DblTy = KSDbgInfo.getDoubleTy();
-		llvm::DIType *debug_double_type = m_llvm_debug_builder->createBasicType(
-				"double", 64, 64, llvm::dwarf::DW_ATE_float);
-#if 0
-		// Add the result type.
-		EltTys.push_back(DblTy);
-
-		for (unsigned i = 0, e = NumArgs; i != e; ++i)
-		EltTys.push_back(DblTy);
-#endif
-		EltTys.push_back(debug_double_type);
-		EltTys.push_back(debug_double_type);
-
-		subType = m_llvm_debug_builder->createSubroutineType(
-				m_llvm_debug_builder->getOrCreateTypeArray(EltTys));
-	}
-
-	llvm::DISubprogram *function = m_llvm_debug_builder->createFunction(file,
-			"fabs_ff", llvm::StringRef(), file, LineNo, subType,
-			false /*isLocalToUnit*/, true /*bool isDefinition*/, ScopeLine,
-			llvm::DINode::FlagPrototyped, false);
-	current_function()->setSubprogram(function);
 	 
 	llvm::DebugLoc debug_location =
 			llvm::DebugLoc::get(static_cast<unsigned int>(99),
 					static_cast<unsigned int>(42),
 					function /*m_llvm_debug_builder->createFile(std::string("MyImaginary.osl"), ".")*/);
 	m_builder->SetCurrentDebugLocation(debug_location);
+#endif
+}
+
+void 
+LLVM_Util::set_debug_location(const std::string &source_file_name, const std::string & method_name, int sourceline)
+{
+	
+	
+	
+	
+	std::cout << "sourcefile=" << source_file_name << " method_name=" << method_name << std::endl;
+	
+	llvm::DISubprogram * methodMetaDataNode = nullptr;
+	auto scopeForSourcefile = TheDebugInfo.ScopeByName.find(source_file_name);
+	if(scopeForSourcefile == TheDebugInfo.ScopeByName.end()) {
+		std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>CREATING FILE<<<<<<<<<<<<<<<<<<<<<<<<< " << source_file_name << std::endl;
+		llvm::DIFile *file = m_llvm_debug_builder->createFile(
+				//TheDebugInfo.TheCU->getFilename(), TheDebugInfo.TheCU->getDirectory());
+				source_file_name, ".\\");
+		//llvm::DIScope *FContext = Unit;
+				
+		unsigned int method_line = 0;
+		unsigned int method_scope_line = 0;
+		
+		
+		static llvm::DISubroutineType *subType = NULL;
+		if (subType == NULL)
+		{
+			llvm::SmallVector<llvm::Metadata *, 8> EltTys;
+			//llvm::DIType *DblTy = KSTheDebugInfo.getDoubleTy();
+			llvm::DIType *debug_double_type = m_llvm_debug_builder->createBasicType(
+					"double", 64, 64, llvm::dwarf::DW_ATE_float);
+	#if 0
+			// Add the result type.
+			EltTys.push_back(DblTy);
+
+			for (unsigned i = 0, e = NumArgs; i != e; ++i)
+			EltTys.push_back(DblTy);
+	#endif
+			EltTys.push_back(debug_double_type);
+			EltTys.push_back(debug_double_type);
+
+			subType = m_llvm_debug_builder->createSubroutineType(
+					m_llvm_debug_builder->getOrCreateTypeArray(EltTys));
+		}
+
+		llvm::DISubprogram *function = m_llvm_debug_builder->createFunction(file,
+				"_2", llvm::StringRef(), file, method_line, subType,
+				false /*isLocalToUnit*/, true /*bool isDefinition*/, method_scope_line,
+				llvm::DINode::FlagPrototyped, false);
+				
+		TheDebugInfo.ScopeByName.insert(std::make_pair(source_file_name, function));
+		methodMetaDataNode = function;
+		
+	} else {
+		methodMetaDataNode = scopeForSourcefile->second;
+	}
+		
+	
+	
+	const llvm::DebugLoc & current_debug_location = m_builder->getCurrentDebugLocation();
+	bool newDebugLocation = true;
+	bool newScope = true;
+	if (current_debug_location)
+	{
+		const llvm::MDNode *current_scope = current_debug_location.getScope();
+		if (current_scope == methodMetaDataNode)
+		{			
+			newScope = false;
+			if(sourceline == current_debug_location.getLine()) {		
+				newDebugLocation = false;
+			}
+		} 
+	} 
+	if (newScope) {
+		std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>newScope<<<<<<<<<<<<<<<<<<<<<<<<< " << source_file_name << std::endl;
+		current_function()->setSubprogram(methodMetaDataNode);			
+	}
+		
+	ASSERT (current_function()->getSubprogram() == methodMetaDataNode);
+	
+	if (newDebugLocation)
+	{
+		std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>newDebugLocation<<<<<<<<<<<<<<<<<<<<<<<<< " << sourceline << std::endl;
+		llvm::DebugLoc debug_location =
+				llvm::DebugLoc::get(static_cast<unsigned int>(sourceline),
+						static_cast<unsigned int>(0), /* column? */
+						methodMetaDataNode);
+		m_builder->SetCurrentDebugLocation(debug_location);
+	}
 }
 
 void 

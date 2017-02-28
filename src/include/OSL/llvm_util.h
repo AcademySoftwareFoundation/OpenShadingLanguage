@@ -110,6 +110,7 @@ public:
 
     void enable_debug_info();
     void set_debug_info();
+    void set_debug_location(const std::string &source_file_name, const std::string & method_name, int sourceline);
     void clear_debug_info();
     
     

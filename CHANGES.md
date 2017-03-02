@@ -11,8 +11,8 @@ Dependency and standards changes:
 * **OpenImageIO 1.7+**: This release of OSL should build properly against
   OIIO 1.7 or newer. You may find that 1.6 is still ok, but we are not doing
   any work to ensure that.
-* CMake >= 3.2.2
-* Boost >= 1.55
+* **CMake >= 3.2.2**
+* **Boost >= 1.55**
 
 Language features:
 
@@ -27,15 +27,46 @@ API changes, new options, new ShadingSystem features (for renderer writers):
 Performance improvements:
 
 Bug fixes and other improvements:
+* Avoid division by 0 when computing derivatives in pointcloud_search.
+  #710 (1.9.0)
+* Avoid subtle use-after-free memory error in dictionary_find().
+  #718 (1.9.0/1.8.6)
 
 Build & test system improvements and developer goodies:
+* C++11 is the new language baseline. #704, #707
+* Many uses of Boost have been switched to use C++11 features, including
+  prior uses of boost::shared_ptr, bind, ref, unordered_map, unordered_set
+  now using the std:: equivalents; BOOST_FOREACH -> C++11 "range for"; Boost
+  string algorithms replaced by OIIO::Strutil functions; Boost filesystem
+  replaced by OIIO::Filesystem functions; Boost scoped_ptr replaced by
+  std::unique_ptr; boost::random replaced by std::random;
+  boost::intrusive_ptr replaced by OIIO::intrusive_ptr; boost thread
+  replaced by std::thread and various OIIO::thread utilities. #707 (1.9.0)
+* CMake 3.2.2 or higher is now required. The CMake build scripts have been
+  refactored substantially and cleaned up with this requirement in mind.
+  #705 (1.9.0)
+* Boost 1.55 or higher is now required (per VFXPlatform guidelines).
+* Big refactor of the CMake scripts for how we find LLVM, now also broken
+  out into a separate FindLLVM.cmake. #711 (1.9.0)
+* Remove direct references to tinyformat in lieu of C++11 variadic
+  templates and use of OIIO::Strutil::format. #713 (1.9.0)
+* Use std::regex rather than boost::regex any time the former is available.
+  (Note: gcc 4.8 will automatically still fall back to boost, since correct
+  implementation of std::regex did not happen until gcc 4.9.) #714 (1.9.0)
+* When available (and with the right compiler version combinations), OSL
+  will rely on Clang library internals to "preprocess" oso input, rather
+  than Boost Wave. This solves problems particularly on OSX and FreeBSD
+  where clang/C++11-compiled OSL was having trouble using Boost Wave if
+  Boost was not compiled in C++11 mode (which is difficult to ensure if
+  you don't control the machine or build boost yourself). #715 (1.8.5/1.9.0)
+* Tweaks to FindOpenImageIO.cmake. (1.9.0)
 
 Documentation:
 
 
 
-Release 1.8 [1.8.3] -- 20 Feb 2017 (compared to 1.7)
---------------------------------------------------
+Release 1.8 [1.8.6] -- 1 Mar 2017 (compared to 1.7)
+---------------------------------------------------
 
 Dependency and standards changes:
 * OSL now builds properly against LLVM 3.9 and 4.0 (in addition to 3.5 and
@@ -51,7 +82,8 @@ Dependency and standards changes:
   **OSL 1.8 is the last release that will build against C++03. Future
   major releases will require C++11 as a minimum.**
 * OpenImageIO: This release of OSL should build properly against OIIO
-  1.6 or newer.
+  1.6 or newer (although 1.7 is the current release and therefore
+  recommended).
 
 **New library: `liboslnoise`** and header `oslnoise.h` expose OSL's noise
   functions to C++ apps. Currently, only signed and unsigned perlin, and
@@ -187,6 +219,12 @@ Build & test system improvements and developer goodies:
 * Improve search for Partio. #689 (1.8.3)
 * More robust finding of LLVM components. (1.8.3)
 * OSL now builds properly with LLVM 3.9 and 4.0. #693 (1.8.3)
+* When available (and with the right compiler version combinations), OSL
+  will rely on Clang library internals to "preprocess" oso input, rather
+  than Boost Wave. This solves problems particularly on OSX and FreeBSD
+  where clang/C++11-compiled OSL was having trouble using Boost Wave if
+  Boost was not compiled in C++11 mode (which is difficult to ensure if
+  you don't control the machine or build boost yourself). #715 (1.8.5)
 
 Documentation:
 * Various typos fixed.

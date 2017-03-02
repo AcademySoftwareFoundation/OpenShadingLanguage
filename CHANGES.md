@@ -1,3 +1,7 @@
+Release 1.8.6 -- ?? 2016 (compared to 1.8.6)
+--------------------------------------------------
+
+
 Release 1.8 [1.8.6] -- 1 Mar 2017 (compared to 1.7)
 ---------------------------------------------------
 
@@ -87,10 +91,6 @@ API changes, new options, new ShadingSystem features (for renderer writers):
       not intended for users.) #667 (1.8.2)
     * Attribute "llvm_debug_ops" adds a printf before running each op.
       This is mostly for debugging OSL itself, not for users. (1.8.3)
-
-<!--* Shader group attribute additions/changes:
-* RendererServices:
--->
 
 Performance improvements:
 * New runtime optimization: better at understanding the initial values of

@@ -131,7 +131,7 @@ OSLCompilerImpl::OSLCompilerImpl (ErrorHandler *errhandler)
       m_verbose(false), m_quiet(false), m_debug(false),
       m_preprocess_only(false), m_optimizelevel(1),
       m_next_temp(0), m_next_const(0),
-      m_osofile(NULL), m_sourcefile(NULL), m_last_sourceline(0),
+      m_osofile(NULL),
       m_total_nesting(0), m_loop_nesting(0), m_derivsym(NULL),
       m_main_method_start(-1),
       m_declaring_shader_formals(false)
@@ -144,10 +144,6 @@ OSLCompilerImpl::OSLCompilerImpl (ErrorHandler *errhandler)
 
 OSLCompilerImpl::~OSLCompilerImpl ()
 {
-    if (m_sourcefile) {
-        fclose (m_sourcefile);
-        m_sourcefile = NULL;
-    }
     delete m_derivsym;
 }
 
@@ -1000,38 +996,25 @@ OSLCompilerImpl::retrieve_source (ustring filename, int line)
 {
     // If we don't already have the file open, open it
     if (filename != m_last_sourcefile) {
-        // If we have another file open, close that one
-        if (m_sourcefile)
-            fclose (m_sourcefile);
-        m_last_sourcefile = filename;
-        m_sourcefile = OIIO::Filesystem::fopen (filename, "r");
-        if (! m_sourcefile) {
+        bool ok = OIIO::Filesystem::read_text_file (filename, m_filecontents);
+        if (ok) {
+            m_last_sourcefile = filename;
+        } else {
             m_last_sourcefile = ustring();
-            return "<not found>";
+            return "<file not found>";
         }
     }
 
-    // If we want something *before* the last line read in the open file,
-    // rewind to the beginning.
-    if (m_last_sourceline > line) {
-        rewind (m_sourcefile);
-        m_last_sourceline = 0;
-    }
-
     // Now read lines up to and including the file we want.
-    char buf[10240];
-    while (m_last_sourceline < line) {
-        if (fgets (buf, sizeof(buf), m_sourcefile))
-            ++m_last_sourceline;
-        else
-            break;
+    OIIO::string_view s (m_filecontents);
+    for ( ; line > 1; --line) {
+        size_t p = s.find_first_of ('\n');
+        if (p == OIIO::string_view::npos)
+            return "<line not found>";
+        s.remove_prefix (p+1);
     }
-
-    // strip trailing newline
-    if (buf[strlen(buf)-1] == '\n')
-        buf[strlen(buf)-1] = '\0';
-
-    return std::string (buf);
+    s = s.substr (0, s.find_first_of ('\n'));
+    return s;
 }
 
 

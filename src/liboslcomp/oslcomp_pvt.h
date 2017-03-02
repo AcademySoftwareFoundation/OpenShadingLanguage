@@ -405,9 +405,8 @@ private:
     int m_next_const;         ///< Next const symbol index
     std::vector<ConstantSymbol *> m_const_syms;  ///< All consts we've made
     std::ostream *m_osofile;  ///< Open .oso stream for output
-    FILE *m_sourcefile;       ///< Open file handle for retrieve_source
+    std::string m_filecontents; ///< Contents of source file
     ustring m_last_sourcefile;///< Last filename for retrieve_source
-    int m_last_sourceline;    ///< Last line read for retrieve_source
     ustring m_codegenmethod;  ///< Current method we're generating code for
     std::stack<FunctionSymbol *> m_function_stack; ///< Stack of called funcs
     int m_total_nesting;      ///< total conditional nesting level (0 == none)

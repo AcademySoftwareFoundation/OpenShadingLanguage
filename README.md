@@ -275,7 +275,9 @@ Films using OSL (grouped by year of release date):
   Miss Peregrine's Home for Peculiar Children, Assassin's Creed
 * **(2017) / upcoming**
   Lego Batman,
-  The Great Wall
+  The Great Wall,
+  A Cure for Wellness,
+  Logan
   ...
 
 

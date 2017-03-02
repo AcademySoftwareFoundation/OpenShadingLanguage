@@ -1,5 +1,5 @@
-Release 1.8 [1.8.3] -- 25 Feb 2017 (compared to 1.7)
---------------------------------------------------
+Release 1.8 [1.8.6] -- 1 Mar 2017 (compared to 1.7)
+---------------------------------------------------
 
 Dependency and standards changes:
 * OSL now builds properly against LLVM 3.9 and 4.0 (in addition to 3.5 and
@@ -15,7 +15,8 @@ Dependency and standards changes:
   **OSL 1.8 is the last release that will build against C++03. Future
   major releases will require C++11 as a minimum.**
 * OpenImageIO: This release of OSL should build properly against OIIO
-  1.6 or newer.
+  1.6 or newer (although 1.7 is the current release and therefore
+  recommended).
 
 **New library: `liboslnoise`** and header `oslnoise.h` expose OSL's noise
   functions to C++ apps. Currently, only signed and unsigned perlin, and

@@ -104,6 +104,9 @@ if (BOOST_CUSTOM)
     set (Boost_FOUND true)
     # N.B. For a custom version, the caller had better set up the variables
     # Boost_VERSION, Boost_INCLUDE_DIRS, Boost_LIBRARY_DIRS, Boost_LIBRARIES.
+    if (USE_BOOST_WAVE)
+        add_definitions (-DUSE_BOOST_WAVE=1)
+    endif ()
 else ()
     set (Boost_COMPONENTS system thread)
     if (NOT USE_STD_REGEX)

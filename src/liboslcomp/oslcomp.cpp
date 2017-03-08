@@ -334,19 +334,16 @@ OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
 
     clang::CompilerInstance inst;
 
-#if 1
-    inst.createDiagnostics();
-#else
-    // I think these are unnecessary?
-    llvm::raw_fd_ostream stderrRaw(2, false);
+    // Set up error capture for the preprocessor
+    std::string preproc_errors;
+    llvm::raw_string_ostream errstream(preproc_errors);
     clang::DiagnosticOptions *diagOptions = new clang::DiagnosticOptions();
     clang::TextDiagnosticPrinter *diagPrinter =
-        new clang::TextDiagnosticPrinter(stderrRaw, diagOptions);
+        new clang::TextDiagnosticPrinter(errstream, diagOptions);
     llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagIDs(new clang::DiagnosticIDs);
     clang::DiagnosticsEngine *diagEngine =
         new clang::DiagnosticsEngine(diagIDs, diagOptions, diagPrinter);
     inst.setDiagnostics(diagEngine);
-#endif
 
 #if OSL_LLVM_VERSION <= 34
     clang::TargetOptions &targetopts = inst.getTargetOpts();
@@ -408,10 +405,18 @@ OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
 #endif
 
     llvm::raw_string_ostream ostream(result);
-    // diagPrinter->BeginSourceFile (inst.getLangOpts(), &inst.getPreprocessor());
+    diagPrinter->BeginSourceFile (inst.getLangOpts(), &inst.getPreprocessor());
     clang::DoPrintPreprocessedInput (inst.getPreprocessor(),
                                      &ostream, inst.getPreprocessorOutputOpts());
-    // diagPrinter->EndSourceFile ();
+    diagPrinter->EndSourceFile ();
+
+    if (preproc_errors.size()) {
+        while (preproc_errors.size() &&
+               preproc_errors[preproc_errors.size()-1] == '\n')
+            preproc_errors.erase (preproc_errors.size()-1);
+        error (ustring(), -1, "%s", preproc_errors.c_str());
+        return false;
+    }
     return true;
 }
 

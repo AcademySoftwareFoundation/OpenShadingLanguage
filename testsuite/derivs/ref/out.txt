@@ -202,7 +202,7 @@ cross product: c = cross(1 -1 1, 1 1 1) = -2 0 2  Dx(c) = -4 0 4  Dy(c) = -4 0 4
 
 comp assign: C[0]=u, C[1]=v: now C = 1 0 0, Dx(C) = 1 0 0, Dy(C) = 0 1 0
 
-normalize: n = normalize(1 1 1) = 0.5774 0.5774 0.5774  Dx(n) = 5.96e-08 5.96e-08 5.96e-08  Dy(n) = 0.3849 -0.7698 0.3849
+normalize: n = normalize(1 1 1) = 0.5774 0.5774 0.5774  Dx(n) = 3.441e-08 3.441e-08 3.441e-08  Dy(n) = 0.3849 -0.7698 0.3849
 
 length: l = length(1 1 1) = 1.732  Dx(l) = 1.732  Dy(l) = 0.5774
 
@@ -309,7 +309,7 @@ cross product: c = cross(1 -1 1, 1 1 1) = -2 0 2  Dx(c) = -4 0 4  Dy(c) = -4 0 4
 
 comp assign: C[0]=u, C[1]=v: now C = 0 1 0, Dx(C) = 1 0 0, Dy(C) = 0 1 0
 
-normalize: n = normalize(1 -1 1) = 0.5774 -0.5774 0.5774  Dx(n) = 0.3849 0.7698 0.3849  Dy(n) = 5.96e-08 -5.96e-08 5.96e-08
+normalize: n = normalize(1 -1 1) = 0.5774 -0.5774 0.5774  Dx(n) = 0.3849 0.7698 0.3849  Dy(n) = 3.441e-08 -3.441e-08 3.441e-08
 
 length: l = length(1 -1 1) = 1.732  Dx(l) = 0.5774  Dy(l) = 1.732
 
@@ -416,7 +416,7 @@ cross product: c = cross(2 -2 2, 2 2 2) = -8 0 8  Dx(c) = -8 0 8  Dy(c) = -8 0 8
 
 comp assign: C[0]=u, C[1]=v: now C = 1 1 0, Dx(C) = 1 0 0, Dy(C) = 0 1 0
 
-normalize: n = normalize(2 0 2) = 0.7071 0 0.7071  Dx(n) = 2.98e-08 0.3536 2.98e-08  Dy(n) = 2.98e-08 -0.3536 2.98e-08
+normalize: n = normalize(2 0 2) = 0.7071 0 0.7071  Dx(n) = 2.107e-08 0.3536 2.107e-08  Dy(n) = 2.107e-08 -0.3536 2.107e-08
 
 length: l = length(2 0 2) = 2.828  Dx(l) = 1.414  Dy(l) = 1.414
 

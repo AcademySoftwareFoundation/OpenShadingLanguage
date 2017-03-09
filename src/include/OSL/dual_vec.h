@@ -371,21 +371,22 @@ length (const Dual2<Vec3> &a)
 inline Dual2<Vec3>
 normalize (const Dual2<Vec3> &a)
 {
-    if (a.val().x == 0 && a.val().y == 0 && a.val().z == 0) {
+    Dual2<float> ax (a.val().x, a.dx().x, a.dy().x);
+    Dual2<float> ay (a.val().y, a.dx().y, a.dy().y);
+    Dual2<float> az (a.val().z, a.dx().z, a.dy().z);
+    Dual2<float> length = sqrt(ax * ax + ay * ay + az * az);
+    if (length.val() > 0.0f) {
+        // NOTE: do a full division here to match what OpenEXR Imath does in the non-dual case
+        ax = ax / length;
+        ay = ay / length;
+        az = az / length;
+        return Dual2<Vec3>(Vec3(ax.val(), ay.val(), az.val()),
+                           Vec3(ax.dx(), ay.dx(), az.dx()),
+                           Vec3(ax.dy(), ay.dy(), az.dy()));
+    } else {
         return Dual2<Vec3> (Vec3(0, 0, 0),
                             Vec3(0, 0, 0),
                             Vec3(0, 0, 0));
-    } else {
-        Dual2<float> ax (a.val().x, a.dx().x, a.dy().x);
-        Dual2<float> ay (a.val().y, a.dx().y, a.dy().y);
-        Dual2<float> az (a.val().z, a.dx().z, a.dy().z);
-        Dual2<float> inv_length = 1.0f / sqrt(ax*ax + ay*ay + az*az);
-        ax = ax*inv_length;
-        ay = ay*inv_length;
-        az = az*inv_length;
-        return Dual2<Vec3> (Vec3(ax.val(), ay.val(), az.val()),
-                            Vec3(ax.dx(),  ay.dx(),  az.dx() ),
-                            Vec3(ax.dy(),  ay.dy(),  az.dy() ));
     }
 }
 

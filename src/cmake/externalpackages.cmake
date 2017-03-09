@@ -100,39 +100,45 @@ if (LINKSTATIC)
     set (Boost_USE_STATIC_LIBS ON)
 endif ()
 set (Boost_USE_MULTITHREADED ON)
-if (BOOST_CUSTOM)
-    set (Boost_FOUND true)
-    # N.B. For a custom version, the caller had better set up the variables
-    # Boost_VERSION, Boost_INCLUDE_DIRS, Boost_LIBRARY_DIRS, Boost_LIBRARIES.
-    if (USE_BOOST_WAVE)
-        add_definitions (-DUSE_BOOST_WAVE=1)
-    endif ()
-else ()
-    set (Boost_COMPONENTS system thread)
-    if (NOT USE_STD_REGEX)
-        list (APPEND Boost_COMPONENTS regex)
-    endif ()
-    if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG OR
-            ${LLVM_VERSION} VERSION_LESS 3.6)
+set (Boost_COMPONENTS system thread)
+if (NOT USE_STD_REGEX)
+    list (APPEND Boost_COMPONENTS regex)
+endif ()
+if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG OR
+    ${LLVM_VERSION} VERSION_LESS 3.6)
+    set (_CLANG_PREPROCESSOR_CAN_WORK ON)
+endif ()
+if (GCC_VERSION)
+    if (${GCC_VERSION} VERSION_LESS 4.9)
         set (_CLANG_PREPROCESSOR_CAN_WORK ON)
     endif ()
-    if (GCC_VERSION)
-        if (${GCC_VERSION} VERSION_LESS 4.9)
-            set (_CLANG_PREPROCESSOR_CAN_WORK ON)
-        endif ()
-    endif ()
-    if (USE_BOOST_WAVE OR (NOT CLANG_LIBRARIES)
-        OR (NOT _CLANG_PREPROCESSOR_CAN_WORK))
-        # N.B. Using clang for preprocessing seems to work when using clang,
-        # or gcc 4.8.x, or LLVM <= 3.5. When those conditions aren't met,
-        # fall back on Boost Wave. We'll lift this restriction as soon as we
-        # fix whatever is broken.
-        list (APPEND Boost_COMPONENTS filesystem wave)
-        add_definitions (-DUSE_BOOST_WAVE=1)
-        message (STATUS "Using Boost Wave for preprocessing")
-    else ()
-        message (STATUS "Using clang internals for preprocessing")
-    endif ()
+endif ()
+if (${LLVM_VERSION} VERSION_LESS 3.9)
+    # Bug in old LLVM creates some linkage problems we've seen involving
+    # some singleton globals that are duplicated when we include both
+    # the clang libs we need for the preprocessing as well as certain
+    # LLVM support libraries we also need, triggering assertions.
+    # See this for description of the issue:
+    # http://lists.llvm.org/pipermail/llvm-commits/Week-of-Mon-20140203/203968.html
+    # Sweep under the rug by falling back to boost wave when using older
+    # LLVM (it seems fixed and no longer triggers for 3.9+).
+    set (_CLANG_PREPROCESSOR_CAN_WORK OFF)
+endif ()
+if (USE_BOOST_WAVE OR (NOT CLANG_LIBRARIES)
+    OR (NOT _CLANG_PREPROCESSOR_CAN_WORK))
+    # N.B. Using clang for preprocessing seems to work when using clang,
+    # or gcc 4.8.x, or LLVM <= 3.5. When those conditions aren't met,
+    # fall back on Boost Wave. We'll lift this restriction as soon as we
+    # fix whatever is broken.
+    list (APPEND Boost_COMPONENTS filesystem wave)
+    add_definitions (-DUSE_BOOST_WAVE=1)
+    message (STATUS "Using Boost Wave for preprocessing")
+else ()
+    message (STATUS "Using clang internals for preprocessing")
+endif ()
+if (BOOST_CUSTOM)
+    set (Boost_FOUND true)
+else ()
     find_package (Boost 1.55 REQUIRED
                   COMPONENTS ${Boost_COMPONENTS})
 endif ()

@@ -16,9 +16,6 @@ ifeq ($(SP_OS), rhel7)
     NINJA := ninja
     MY_CMAKE_FLAGS += -DCMAKE_MAKE_PROGRAM=${NINJA}
 
-    # Temporary bug fix, having problems with clang cpp, revert to Boost wave.
-    USE_BOOST_WAVE ?= 1
-
     ## If not overridden, here is our preferred LLVM installation
     ## (may be changed as new versions are rolled out to the facility)
     LLVM_DIRECTORY ?= /shots/spi/home/lib/arnold/spinux1/llvm_3.5

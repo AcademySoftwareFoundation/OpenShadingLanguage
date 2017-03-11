@@ -244,7 +244,8 @@ public:
 
     /// Is the op a "simple" assignment (arg 0 completely overwritten,
     /// no side effects or funny business)?
-    bool is_simple_assign (Opcode &op);
+    /// Optional OpDescriptor is passed to save an extra lookup.
+    bool is_simple_assign (Opcode &op, const OpDescriptor *opd=NULL);
 
     /// Called when symbol sym is "simply" assigned at the given op.  An
     /// assignment is considered simple if it completely overwrites the

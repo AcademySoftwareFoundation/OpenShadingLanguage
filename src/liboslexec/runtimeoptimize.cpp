@@ -1195,12 +1195,13 @@ RuntimeOptimizer::use_stale_sym (int sym)
 
 
 bool
-RuntimeOptimizer::is_simple_assign (Opcode &op)
+RuntimeOptimizer::is_simple_assign (Opcode &op, const OpDescriptor *opd)
 {
     // Simple only if arg0 is the only write, and is write only.
     if (op.argwrite_bits() != 1 || op.argread(0))
         return false;
-    const OpDescriptor *opd = shadingsys().op_descriptor (op.opname());
+    if (! opd)
+        opd = shadingsys().op_descriptor (op.opname());
     if (!opd || !opd->simple_assign)
         return false;   // reject all other known non-simple assignments
     // Make sure the result isn't also read
@@ -2131,9 +2132,11 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop,
             if (op->argread(i))
                 use_stale_sym (oparg(*op,i));
         }
+
+        const OpDescriptor *opd = shadingsys().op_descriptor (op->opname());
         // If it's a simple assignment and the lvalue is "stale", go
         // back and eliminate its last assignment.
-        if (is_simple_assign(*op))
+        if (is_simple_assign(*op, opd))
             simple_sym_assign (oparg (*op, 0), opnum);
         // Make sure there's room for several more symbols, so that we
         // can add a few consts if we need to, without worrying about
@@ -2142,7 +2145,6 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop,
         // For various ops that we know how to effectively
         // constant-fold, dispatch to the appropriate routine.
         if (optimize() >= 2 && m_opt_constant_fold) {
-            const OpDescriptor *opd = shadingsys().op_descriptor (op->opname());
             if (opd && opd->folder) {
                 int c = (*opd->folder) (*this, opnum);
                 if (c) {
@@ -2163,7 +2165,8 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop,
         // Now we handle assignments.
         if (optimize() >= 2 && op->opname() == u_assign && m_opt_assign)
             changed += optimize_assignment (*op, opnum);
-        if (optimize() >= 2 && m_opt_elide_useless_ops)
+        if (optimize() >= 2 && m_opt_elide_useless_ops && opd
+            && !(opd->flags & OpDescriptor::SideEffects))
             changed += useless_op_elision (*op, opnum);
         if (m_stop_optimizing)
             break;

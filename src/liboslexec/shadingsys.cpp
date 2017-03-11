@@ -783,6 +783,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
                                                   constfold_##fold, simp, flag);
 #define OP(name,ll,fold,simp,flag) OP2(name,name,ll,fold,simp,flag)
 #define TEX OpDescriptor::Tex
+#define SIDE OpDescriptor::SideEffects
 
     // name          llvmgen              folder         simple     flags
     OP (aassign,     aassign,             aassign,       false,     0);
@@ -835,7 +836,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (eq,          compare_op,          eq,            true,      0);
     OP (erf,         generic,             erf,           true,      0);
     OP (erfc,        generic,             erfc,          true,      0);
-    OP (error,       printf,              none,          false,     0);
+    OP (error,       printf,              none,          false,     SIDE);
     OP (exit,        return,              none,          false,     0);
     OP (exp,         generic,             exp,           true,      0);
     OP (exp2,        generic,             exp2,          true,      0);
@@ -890,9 +891,9 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (pointcloud_search, pointcloud_search, pointcloud_search,
                                                          false,     TEX);
     OP (pointcloud_get, pointcloud_get,   pointcloud_get,false,     TEX);
-    OP (pointcloud_write, pointcloud_write, none,        false,     0);
+    OP (pointcloud_write, pointcloud_write, none,        false,     SIDE);
     OP (pow,         generic,             pow,           true,      0);
-    OP (printf,      printf,              none,          false,     0);
+    OP (printf,      printf,              none,          false,     SIDE);
     OP (psnoise,     noise,               noise,         true,      0);
     OP (radians,     generic,             radians,       true,      0);
     OP (raytype,     raytype,             raytype,       true,      0);
@@ -901,7 +902,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (return,      return,              none,          false,     0);
     OP (round,       generic,             none,          true,      0);
     OP (select,      select,              select,        true,      0);
-    OP (setmessage,  setmessage,          setmessage,    false,     0);
+    OP (setmessage,  setmessage,          setmessage,    false,     SIDE);
     OP (shl,         bitwise_binary_op,   none,          true,      0);
     OP (shr,         bitwise_binary_op,   none,          true,      0);
     OP (sign,        generic,             none,          true,      0);
@@ -928,7 +929,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (tanh,        generic,             none,          true,      0);
     OP (texture,     texture,             texture,       true,      TEX);
     OP (texture3d,   texture3d,           none,          true,      TEX);
-    OP (trace,       trace,               none,          false,     0);
+    OP (trace,       trace,               none,          false,     SIDE);
     OP (transform,   transform,           transform,     true,      0);
     OP (transformn,  transform,           transform,     true,      0);
     OP (transformv,  transform,           transform,     true,      0);
@@ -936,12 +937,13 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (trunc,       generic,             none,          true,      0);
     OP (useparam,    useparam,            useparam,      false,     0);
     OP (vector,      construct_triple,    triple,        true,      0);
-    OP (warning,     printf,              warning,       false,     0);
+    OP (warning,     printf,              warning,       false,     SIDE);
     OP (wavelength_color, blackbody,      none,          true,      0);
     OP (while,       loop_op,             none,          false,     0);
     OP (xor,         bitwise_binary_op,   xor,           true,      0);
 #undef OP
 #undef TEX
+#undef SIDE
 }
 
 

@@ -375,7 +375,7 @@ ShadingContext::osl_get_attribute (ShaderGlobals *sg, void *objdata,
 
 
 OSL_SHADEOP void
-osl_incr_layers_executed (ShaderGlobals *sg)
+OSL_LLVM_PREFIXED_TOKEN(osl_incr_layers_executed) (ShaderGlobals *sg)
 {
     ShadingContext *ctx = (ShadingContext *)sg->context;
     ctx->incr_layers_executed ();

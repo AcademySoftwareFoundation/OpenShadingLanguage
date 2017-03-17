@@ -115,6 +115,11 @@ if (OSL_NAMESPACE)
 endif ()
 message(STATUS "Setting Namespace to: ${OSL_NAMESPACE}")
 
+if (OSL_LLVM_PREFIX)
+    add_definitions ("-DOSL_LLVM_PREFIX=${OSL_LLVM_PREFIX}")
+endif ()
+message(STATUS "Setting OSL LLVM prefix to: ${OSL_LLVM_PREFIX}")
+
 include (util_macros)
 include (externalpackages)
 include (flexbison)

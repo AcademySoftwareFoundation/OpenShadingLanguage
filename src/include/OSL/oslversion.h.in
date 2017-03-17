@@ -87,6 +87,34 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define OSL_NAMESPACE_EXIT }
 #endif
 
+// When the C++ API is wrapped in a namespace using OSL_NAMESPACE above, it may
+// also be desirable to ensure that the C free functions invoked by LLVM are
+// disambiguated as well. This can be enabled by providing a string value for
+// OSL_LLVM_PREFIX. This string will be prefixed to all free functions that may
+// be invoked via LLVM so that the right version of OSL API finds the right
+// version of the free function. If no prefix is supplied, we use an empty one.
+#ifndef OSL_LLVM_PREFIX
+#define OSL_LLVM_PREFIX
+#endif
+
+// These "internal" macros are not intended to be used anywhere other than as
+// part of the "public" OSL_LLVM_ macros below. The indirection is necessary to
+// ensure that OSL_LLVM_PREFIX is properly expanded to its value and is not
+// string-ified literally.
+#define __INTERNAL__STRINGIFY(token) #token
+#define __INTERNAL__STRINGIFY_INDIRECT(token) __INTERNAL__STRINGIFY(token)
+#define __INTERNAL__ADD_PREFIX_TO_TOKEN(prefix, token) prefix ## token
+#define __INTERNAL__ADD_PREFIX_TO_TOKEN_INDIRECT(prefix, token) __INTERNAL__ADD_PREFIX_TO_TOKEN(prefix, token)
+#define __INTERNAL__ADD_PREFIX_TO_OP(prefix, opname, signature) prefix ## osl_ ## opname ## signature
+#define __INTERNAL__ADD_PREFIX_TO_OP_INDIRECT(prefix, opname, signature) __INTERNAL__ADD_PREFIX_TO_OP(prefix, opname, signature)
+
+#define OSL_LLVM_PREFIX_AS_STRING __INTERNAL__STRINGIFY_INDIRECT(OSL_LLVM_PREFIX)
+#define OSL_LLVM_PREFIXED_STRING(stringarg) OSL_LLVM_PREFIX_AS_STRING stringarg
+#define OSL_LLVM_PREFIXED_TOKEN_AS_STRING(token) OSL_LLVM_PREFIX_AS_STRING #token
+#define OSL_LLVM_PREFIXED_TOKEN(token) __INTERNAL__ADD_PREFIX_TO_TOKEN_INDIRECT(OSL_LLVM_PREFIX, token)
+#define OSL_LLVM_OP_TOKEN(opname, signature) __INTERNAL__ADD_PREFIX_TO_OP_INDIRECT(OSL_LLVM_PREFIX, opname, signature)
+
+
 #define OSL_BUILD_CPP11 1 /* Always build for C++ >= 11 */
 // OSL_BUILD_CPP14 will be 1 if this OSL was built using C++14
 #cmakedefine01 OSL_BUILD_CPP14

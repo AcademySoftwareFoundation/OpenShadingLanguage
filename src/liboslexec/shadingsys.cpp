@@ -469,17 +469,18 @@ ShadingSystem::archive_shadergroup (ShaderGroup *group, string_view filename)
 void
 ShadingSystem::optimize_group (ShaderGroup *group)
 {
-    optimize_group (group, 0, 0);   // No knowledge of the ray flags
+    ASSERT (group);
+    m_impl->optimize_group (*group);
 }
 
 
 
 void
-ShadingSystem::optimize_group (ShaderGroup *group,
-                               int raytypes_on, int raytypes_off)
+ShadingSystem::set_raytypes (ShaderGroup *group,
+                             int raytypes_on, int raytypes_off)
 {
     ASSERT (group);
-    m_impl->optimize_group (*group, raytypes_on, raytypes_off);
+    m_impl->set_raytypes (*group, raytypes_on, raytypes_off);
 }
 
 
@@ -2576,8 +2577,7 @@ ShadingSystemImpl::group_post_jit_cleanup (ShaderGroup &group)
 
 
 void
-ShadingSystemImpl::optimize_group (ShaderGroup &group,
-                                   int raytypes_on, int raytypes_off)
+ShadingSystemImpl::optimize_group (ShaderGroup &group)
 {
     if (group.optimized())
         return;    // already optimized
@@ -2613,7 +2613,7 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group,
 
     ShadingContext *ctx = get_context ();
     RuntimeOptimizer rop (*this, group, ctx);
-    rop.set_raytypes (raytypes_on, raytypes_off);
+    rop.set_raytypes (group.m_raytypes_on, group.m_raytypes_off);
     rop.run ();
 
     // Copy some info recorted by the RuntimeOptimizer into the group
@@ -2663,6 +2663,16 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group,
     m_stat_groups_compiled += 1;
     m_stat_instances_compiled += group.nlayers();
     m_groups_to_compile_count -= 1;
+}
+
+
+
+void
+ShadingSystemImpl::set_raytypes (ShaderGroup &group,
+								 int raytypes_on, int raytypes_off)
+{
+	group.m_raytypes_on = raytypes_on;
+	group.m_raytypes_off = raytypes_off;
 }
 
 

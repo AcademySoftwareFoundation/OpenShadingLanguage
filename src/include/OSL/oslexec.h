@@ -564,8 +564,8 @@ public:
     /// raytypes_off describes which ray flags are known to be 0. Bits that
     /// are not set in either set of flags are not known to the optimizer,
     /// and will be determined strictly at execution time.
-    void optimize_group (ShaderGroup *group, int raytypes_on,
-                         int raytypes_off);
+    void set_raytypes (ShaderGroup *group,
+					   int raytypes_on, int raytypes_off);
 
     /// If option "greedyjit" was set, this call will trigger all
     /// shader groups that have not yet been compiled to do so with the

@@ -581,8 +581,11 @@ public:
     /// The group is set and won't be changed again; take advantage of
     /// this by optimizing the code knowing all our instance parameters
     /// (at least the ones that can't be overridden by the geometry).
-    void optimize_group (ShaderGroup &group,
-                         int raytypes_on=0, int raytypes_off=0);
+    void optimize_group (ShaderGroup &group);
+
+	/// Change current raytypes for optimize_group called later.
+	void set_raytypes (ShaderGroup &group,
+					   int raytypes_on=0, int raytypes_off=0);
 
     /// After doing all optimization and code JIT, we can clean up by
     /// deleting the instances' code and arguments, and paring their
@@ -1481,6 +1484,8 @@ private:
     bool m_unknown_attributes_needed;
     atomic_ll m_executions;          ///< Number of times the group executed
     atomic_ll m_stat_total_shading_time_ticks; ///< Total shading time (ticks)
+	int m_raytypes_on;
+	int m_raytypes_off;
 
     friend class OSL::pvt::ShadingSystemImpl;
     friend class OSL::pvt::BackendLLVM;

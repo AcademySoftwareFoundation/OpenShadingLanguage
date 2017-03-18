@@ -663,7 +663,8 @@ ShaderGroup::ShaderGroup (string_view name)
   : m_optimized(0), m_does_nothing(false),
     m_llvm_groupdata_size(0), m_num_entry_layers(0),
     m_llvm_compiled_version(NULL),
-    m_name(name), m_exec_repeat(1), m_raytype_queries(-1)
+    m_name(name), m_exec_repeat(1), m_raytype_queries(-1),
+	m_raytypes_on(0), m_raytypes_off(0)
 {
     m_executions = 0;
     m_stat_total_shading_time_ticks = 0;
@@ -677,7 +678,8 @@ ShaderGroup::ShaderGroup (const ShaderGroup &g, string_view name)
     m_llvm_groupdata_size(0), m_num_entry_layers(g.m_num_entry_layers),
     m_llvm_compiled_version(NULL),
     m_layers(g.m_layers),
-    m_name(name), m_exec_repeat(1), m_raytype_queries(-1)
+    m_name(name), m_exec_repeat(1), m_raytype_queries(-1),
+	m_raytypes_on(g.m_raytypes_on), m_raytypes_off(g.m_raytypes_off)
 {
     m_executions = 0;
     m_stat_total_shading_time_ticks = 0;

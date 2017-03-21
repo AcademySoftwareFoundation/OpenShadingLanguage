@@ -52,6 +52,9 @@ failthresh = 0.004
 hardfail = 0.01
 failpercent = 0.02
 
+image_extensions = [ ".tif", ".tx", ".exr", ".jpg", ".png", ".rla",
+                     ".dpx", ".iff", ".psd" ]
+
 compile_osl_files = True
 splitsymbol = ';'
 
@@ -61,14 +64,24 @@ splitsymbol = ';'
 #print ("refdir = " + refdir)
 print ("test source dir = " + test_source_dir)
 
-if not os.path.exists("./ref") :
-    os.symlink (os.path.join (test_source_dir, "ref"), "./ref")
-if os.path.exists (os.path.join (test_source_dir, "src")) and not os.path.exists("./src") :
-    os.symlink (os.path.join (test_source_dir, "src"), "./src")
-if not os.path.exists("./data") :
-    os.symlink (test_source_dir, "./data")
-if not os.path.exists("../common") :
-    os.symlink ("../../../testsuite/common", "../common")
+if platform.system() == 'Windows' :
+    if not os.path.exists("./ref") :
+        shutil.copytree (os.path.join (test_source_dir, "ref"), "./ref")
+    if os.path.exists (os.path.join (test_source_dir, "src")) and not os.path.exists("./src") :
+        shutil.copytree (os.path.join (test_source_dir, "src"), "./src")
+    # if not os.path.exists("../data") :
+    #     shutil.copytree ("../../../testsuite/data", "..")
+    # if not os.path.exists("../common") :
+    #     shutil.copytree ("../../../testsuite/common", "..")
+else :
+    if not os.path.exists("./ref") :
+        os.symlink (os.path.join (test_source_dir, "ref"), "./ref")
+    if os.path.exists (os.path.join (test_source_dir, "src")) and not os.path.exists("./src") :
+        os.symlink (os.path.join (test_source_dir, "src"), "./src")
+    if not os.path.exists("./data") :
+        os.symlink (test_source_dir, "./data")
+    if not os.path.exists("../common") :
+        os.symlink ("../../../testsuite/common", "../common")
 
 ###########################################################################
 

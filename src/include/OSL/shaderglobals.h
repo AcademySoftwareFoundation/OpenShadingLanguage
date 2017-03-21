@@ -37,7 +37,9 @@ class ShadingContext;
 class RendererServices;
 class ShaderSymbol;
 
-
+namespace pvt {
+	class BackendLLVMWide;
+}
 
 /// Type for an opaque pointer to whatever the renderer uses to represent a
 /// coordinate transformation.
@@ -444,7 +446,8 @@ struct alignas(64) ShaderGlobalsBatch
 		std::cout << "};" << std::endl;
 	}
 	
-//private:
+private:
+	friend class pvt::BackendLLVMWide;
 	
 	UniformShaderGlobals m_uniform;
 	VaryingData m_varying;// __attribute__((aligned(16)));

@@ -294,7 +294,7 @@ endif()
 if (BUILDSTATIC)
     message (STATUS "Building static libraries")
     set (LIBRARY_BUILD_TYPE STATIC)
-    add_definitions ("-DOSL_STATIC_LIBRARY=1")
+    add_definitions(-D${PROJECT_NAME}_STATIC_BUILD=1)
     if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
         # On Linux, the lack of -fPIC when building static libraries seems
         # incompatible with the dynamic library needed for the Python bindings.

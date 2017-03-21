@@ -3,6 +3,7 @@ cmake_policy (SET CMP0048 NEW)  # Allow VERSION specifier in project()
 project (OSL
          VERSION 1.9.0
          LANGUAGES CXX C)
+set (PROJ_NAME ${PROJECT_NAME})    # short name
 set (PROJECT_VERSION_RELEASE_TYPE "dev")   # "dev", "betaX", "RCY", ""
 set (${PROJECT_NAME}_VERSION_RELEASE_TYPE ${PROJECT_VERSION_RELEASE_TYPE})
 set (PROJECT_COPYRIGHTYEARS "2008-2017")
@@ -66,7 +67,6 @@ include (compiler)   # All the C++ and compiler related options live here
 ##   LLVM with RRTI, otherwise OSL classes extending LLVM ones
 ##   will cause linker errors.
 set (ENABLERTTI OFF CACHE BOOL "Build with RTTI. Requires a LLVM build with RTTI enabled.")
-
 if (NOT ENABLERTTI)
     if (MSVC)
         set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR-" )
@@ -121,8 +121,9 @@ include (flexbison)
 include (install)          # installation options all implemented here
 
 include_directories (
+    BEFORE
     "${CMAKE_SOURCE_DIR}/src/include"
-    "${CMAKE_BINARY_DIR}/include/OSL"
+    "${CMAKE_BINARY_DIR}/include/${PROJECT_NAME}"
   )
 
 
@@ -305,15 +306,15 @@ endif (OSL_BUILD_TESTS)
 
 #########################################################################
 # Packaging
-set (CPACK_PACKAGE_VERSION_MAJOR ${OSL_LIBRARY_VERSION_MAJOR})
-set (CPACK_PACKAGE_VERSION_MINOR ${OSL_LIBRARY_VERSION_MINOR})
-set (CPACK_PACKAGE_VERSION_PATCH ${OSL_LIBRARY_VERSION_PATCH})
+set (CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+set (CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+set (CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
 # "Vendor" is only used in copyright notices, so we use the same thing that
 # the rest of the copyright notices say.
-set (CPACK_PACKAGE_VENDOR "Sony Pictures Imageworks")
+set (CPACK_PACKAGE_VENDOR ${PROJECT_AUTHORS})
 set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "OpenShadingLanguage is...")
 set (CPACK_PACKAGE_DESCRIPTION_FILE "${PROJECT_SOURCE_DIR}/src/doc/Description.txt")
-set (CPACK_PACKAGE_FILE_NAME OSL-${OSL_LIBRARY_VERSION_MAJOR}.${OSL_LIBRARY_VERSION_MINOR}.${OSL_LIBRARY_VERSION_PATCH}-${platform})
+set (CPACK_PACKAGE_FILE_NAME ${PROJECT_NAME}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}-${platform})
 file (COPY "${PROJECT_SOURCE_DIR}/LICENSE" DESTINATION "${CMAKE_BINARY_DIR}")
 file (RENAME "${CMAKE_BINARY_DIR}/LICENSE" "${CMAKE_BINARY_DIR}/License.txt")
 set (CPACK_RESOURCE_FILE_LICENSE "${CMAKE_BINARY_DIR}/License.txt")
@@ -331,7 +332,7 @@ if (APPLE)
     set (CPACK_GENERATOR "TGZ;STGZ;PackageMaker")
     set (CPACK_SOURCE_GENERATOR "TGZ")
 endif ()
-set (CPACK_SOURCE_PACKAGE_FILE_NAME OSL-${OSL_LIBRARY_VERSION_MAJOR}.${OSL_LIBRARY_VERSION_MINOR}.${OSL_LIBRARY_VERSION_PATCH}-source)
+set (CPACK_SOURCE_PACKAGE_FILE_NAME ${PROJECT_NAME}-${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}-source)
 #set (CPACK_SOURCE_STRIP_FILES ...FIXME...)
 set (CPACK_SOURCE_IGNORE_FILES ".*~")
 include (CPack)

@@ -225,7 +225,7 @@ DECL (osl_get_inverse_matrix, "iXXs")
 DECL (osl_transform_triple, "iXXiXiXXi")
 DECL (osl_transform_triple_nonlinear, "iXXiXiXXi")
 #if OSL_USE_WIDE_LLVM_BACKEND
-DECL (osl_wide_transform_triple, "iXXiXiXXi")
+DECL (osl_wide_transform_triple, "xXXiXiXXi")
 #endif
 
 DECL (osl_dict_find_iis, "iXiX")

@@ -254,7 +254,7 @@ BackendLLVMWide::llvm_zero_derivs (const Symbol &sym, llvm::Value *count)
 namespace
 {
     // N.B. The order of names in this table MUST exactly match the
-    // ShaderGlobals struct in oslexec.h, as well as the llvm 'sg' type
+    // ShaderGlobalsBatch struct in ShaderGlobals.h, as well as the llvm 'sg' type
     // defined in llvm_type_sg().
     static ustring fields[] = {
 		// Uniform
@@ -265,9 +265,12 @@ namespace
         ustring("renderer"),
         ustring("Ci"),
 		ustring("raytype"),
+		ustring("pad0"),
+		ustring("pad1"),
+		ustring("pad2"),
 		// Varying
         ustring("P"), 
-		ustring("_dPdz"), 
+		ustring("dPdz"), 
 		ustring("I"),
         ustring("N"), 
 		ustring("Ng"),
@@ -295,9 +298,12 @@ namespace
 		true, //ustring("renderer"),
 		true, //ustring("Ci"),
 		true, //ustring("raytype"),
+		true, //ustring("pad0"),
+		true, //ustring("pad1"),
+		true, //ustring("pad2"),
 		// Varying
         false, //ustring("P"), 
-		false, //ustring("_dPdz"), 
+		false, //ustring("dPdz"), 
 		false, //ustring("I"),
 		false, //ustring("N"), 
 		false, //ustring("Ng"),
@@ -338,6 +344,7 @@ BackendLLVMWide::ShaderGlobalNameToIndex (ustring name, bool &is_uniform)
         	is_uniform = field_is_uniform[i];
             return i;
         }
+    std::cout << "ShaderGlobalNameToIndex failed with " << name << std::endl;
     return -1;
 }
 

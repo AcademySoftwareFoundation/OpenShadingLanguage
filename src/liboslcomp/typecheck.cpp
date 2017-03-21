@@ -1409,7 +1409,7 @@ OSLCompilerImpl::type_from_code (const char *code, int *advance)
 
 
 TypeSpec
-OSLCompilerImpl::wide_type_from_code (const char *code, int *advance, bool &is_uniform)
+OSLCompilerImpl::possibly_wide_type_from_code (const char *code, int *advance, bool &is_uniform)
 {
     TypeSpec t;
     int i = 0;

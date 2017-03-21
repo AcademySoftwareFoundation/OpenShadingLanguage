@@ -430,15 +430,19 @@ osl_transform_triple (void *sg_, void *Pin, int Pin_derivs,
 
 
 #if OSL_USE_WIDE_LLVM_BACKEND
-OSL_SHADEOP wide_int
+OSL_SHADEOP void /*wide_int*/
 osl_wide_transform_triple (void *sgb_, void *Pin, int Pin_derivs,
                       void *Pout, int Pout_derivs,
 					  void * from, void * to, int vectype)
 {
     static ustring u_common ("common");
+
+    ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
+    //std::cout << std::endl << std::endl << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<osl_wide_transform_triple>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl << std::endl;
+    //sgb->dump();
+    
     ASSERT(Pin != Pout);
     
-    ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
     
     Wide<Matrix44> M;
     int ok;
@@ -491,8 +495,8 @@ osl_wide_transform_triple (void *sgb_, void *Pin, int Pin_derivs,
         ((Vec3 *)Pout)[2].setValue (0.0f, 0.0f, 0.0f);
     }
     
-    wide_int wresult = { ok, ok, ok, ok};
-    return wresult;
+    //wide_int wresult = { ok, ok, ok, ok};
+    //return wresult;
 }
 #endif
 

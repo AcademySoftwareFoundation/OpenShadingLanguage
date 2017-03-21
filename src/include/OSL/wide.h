@@ -35,7 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 OSL_NAMESPACE_ENTER
 
 // TODO: add conditional compilation to change this
-static constexpr int SimdLaneCount = 8;
+static constexpr int SimdLaneCount = 16;
 
 
 /// Type for an opaque pointer to whatever the renderer uses to represent a
@@ -59,6 +59,22 @@ struct WideBuiltin
 	{
 		return data[index];
 	}	
+	
+	void dump(const char *name) const
+	{
+		if (name != nullptr) {
+			std::cout << name << " = ";
+		}
+		std::cout << "{";				
+		for(int i=0; i < WidthT; ++i)
+		{
+			std::cout << data[i];
+			if (i < (WidthT-1))
+				std::cout << ",";
+				
+		}
+		std::cout << "}" << std::endl;
+	}
 };
 
 
@@ -159,6 +175,41 @@ public:
 	{
 		return Vec3(x[index], y[index], z[index]);
 	}		
+	
+	void dump(const char *name) const
+	{
+		if (name != nullptr) {
+			std::cout << name << " = ";
+		}
+		std::cout << "x{";				
+		for(int i=0; i < WidthT; ++i)
+		{
+			std::cout << x[i];
+			if (i < (WidthT-1))
+				std::cout << ",";
+				
+		}
+		std::cout << "}" << std::endl;
+		std::cout << "y{";				
+		for(int i=0; i < WidthT; ++i)
+		{
+			std::cout << y[i];
+			if (i < (WidthT-1))
+				std::cout << ",";
+				
+		}
+		std::cout << "}" << std::endl;
+		std::cout << "z{"	;			
+		for(int i=0; i < WidthT; ++i)
+		{
+			std::cout << z[i];
+			if (i < (WidthT-1))
+				std::cout << ",";
+				
+		}
+		std::cout << "}" << std::endl;
+	}
+	
 };
 
 

@@ -109,7 +109,7 @@ public:
                                        std::string *err=NULL);
 
     void enable_debug_info();
-    void set_debug_info();
+    void set_debug_info(const std::string &function_name);
     void set_debug_location(const std::string &source_file_name, const std::string & method_name, int sourceline);
     void clear_debug_info();
     
@@ -154,6 +154,10 @@ public:
     /// errors there.
     llvm::ExecutionEngine *make_jit_execengine (std::string *err=NULL);
 
+    void dump_struct_data_layout(llvm::Type *Ty);
+    void validate_struct_data_layout(llvm::Type *Ty, const std::vector<unsigned int> & expected_offset_by_index);
+    
+    
     /// Return a pointer to the current ExecutionEngine.  Create a JITing
     /// ExecutionEngine if one isn't already set up.
     llvm::ExecutionEngine *execengine () {
@@ -265,7 +269,7 @@ public:
     /// This will return a llvm::Type that is the same as a C struct
     /// comprised fields of the given types[], in order.
     llvm::Type *type_struct (const std::vector<llvm::Type *> &types,
-                             const std::string &name="");
+                             const std::string &name="", bool is_packed=false);
 
     /// Return the llvm::Type that is a pointer to the given llvm type.
     llvm::Type *type_ptr (llvm::Type *type);

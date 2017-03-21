@@ -9386,24 +9386,25 @@ define float @osl_abs_ff(float) local_unnamed_addr #3 {
 
 declare <4 x float> @llvm.fabs.v4f32(<4 x float>)
 
-define <4 x float> @osl_abs_w4fw4f(<4 x float> %a) #3 {
+define <4 x float> @osl_abs_w4fw4f(<4 x float> %a) alwaysinline #3 {
   %r = call <4 x float> @llvm.fabs.v4f32(<4 x float> %a)
   ret <4 x float> %r
 }
 
-declare <8 x float> @llvm.fabs.v8f32(<8 x float>)
+declare <8 x float> @llvm.fabs.v8f32(<8 x float>) 
 
-define <8 x float> @osl_abs_w8fw8f(<8 x float> %a) #3 {
+define <8 x float> @osl_abs_w8fw8f(<8 x float> %a) alwaysinline #3 {
   %r = call <8 x float> @llvm.fabs.v8f32(<8 x float> %a)
   ret <8 x float> %r
 }
 
 declare <16 x float> @llvm.fabs.v16f32(<16 x float>)
 
-define <16 x float> @osl_abs_w16fw16f(<16 x float> %a) #3 {
+define <16 x float> @osl_abs_w16fw16f(<16 x float> %a) alwaysinline  #3 {
   %r = call <16 x float> @llvm.fabs.v16f32(<16 x float> %a)
   ret <16 x float> %r
 }
+
 
 ; Function Attrs: nounwind readnone
 declare float @fabsf(float) local_unnamed_addr #9

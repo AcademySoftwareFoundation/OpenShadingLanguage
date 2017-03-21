@@ -48,6 +48,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define USE_MCJIT   (OSL_LLVM_VERSION >= 36)
 #define USE_OLD_JIT (OSL_LLVM_VERSION <  36)
 
+#include <llvm/CodeGen/CommandFlags.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DebugInfo.h>
 #include <llvm/IR/DerivedTypes.h>
@@ -137,9 +138,28 @@ static struct DebugInfo {
 
 	typedef std::unordered_map<std::string, llvm::DISubprogram *> ScopeByNameType;
 	ScopeByNameType ScopeByName;
+	
+	typedef std::unordered_map<std::string, llvm::DIFile *> FileByNameType;
+	FileByNameType FileByName;
+	
+	
 	//void emitLocation(ExprAST *AST);
 	//llvm::DIType *getDoubleTy();
 } TheDebugInfo;
+
+llvm::DIFile * getFileFor(llvm::DIBuilder* diBuilder, const std::string &file_name) {
+	auto iter = TheDebugInfo.FileByName.find(file_name);
+	if(iter == TheDebugInfo.FileByName.end()) {
+		//std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>CREATING FILE<<<<<<<<<<<<<<<<<<<<<<<<< " << file_name << std::endl;
+		llvm::DIFile *file = diBuilder->createFile(
+				//TheDebugInfo.TheCU->getFilename(), TheDebugInfo.TheCU->getDirectory());
+				file_name, ".\\");
+		//llvm::DIScope *FContext = Unit;
+		TheDebugInfo.FileByName.insert(std::make_pair(file_name,file));
+		return file;
+	}
+	return iter->second;
+}
 
 };
 
@@ -500,22 +520,17 @@ LLVM_Util::enable_debug_info() {
 		modulesDebugInfoVersion = Val->getZExtValue();
 	}
 
-	std::cout
-			<< "------------------>enable_debug_info<-----------------------------module flag['Debug Info Version']= "
-			<< modulesDebugInfoVersion << std::endl;
+//	std::cout
+//			<< "------------------>enable_debug_info<-----------------------------module flag['Debug Info Version']= "
+//			<< modulesDebugInfoVersion << std::endl;
 }
 
 void 
-LLVM_Util::set_debug_info() {
-	std::cout << "LLVM_Util::set_debug_info" << std::endl;
-
-//    llvm::SourceLocations DebugLocations;
-//    llvm::DebugLocations.push_back(std::make_pair(std::string("MyImaginary.osl"),
-//                                               static_cast<unsigned int>(99)));
+LLVM_Util::set_debug_info(const std::string &function_name) {
+//	std::cout << "LLVM_Util::set_debug_info" << std::endl;
 
 	m_llvm_debug_builder = (new llvm::DIBuilder(*m_llvm_module));
 
-#if 1
 	TheDebugInfo.TheCU = m_llvm_debug_builder->createCompileUnit(
 			llvm::dwarf::DW_LANG_C, 
 			"JIT", // filename
@@ -524,127 +539,67 @@ LLVM_Util::set_debug_info() {
 			0, // Identify the producer of debugging information and code. Usually this is a compiler version string.
 			"", // This string lists command line options. This string is directly embedded in debug info output which may be used by a tool analyzing generated debugging information.
 			1900); // This indicates runtime version for languages like Objective-C
-#endif
-#if 0
-	llvm::DIFile *file = m_llvm_debug_builder->createFile(
-			//TheDebugInfo.TheCU->getFilename(), TheDebugInfo.TheCU->getDirectory());
-			"DogFood", "EatYourOwn");
-	//llvm::DIScope *FContext = Unit;
-	unsigned int LineNo = 99;
-	unsigned int ScopeLine = 42;
+	
+	llvm::DIFile * file = getFileFor(m_llvm_debug_builder, function_name); 
+	
+			unsigned int method_line = 0;
+				unsigned int method_scope_line = 0;
+				
+				
+				static llvm::DISubroutineType *subType;
+				{
+					llvm::SmallVector<llvm::Metadata *, 8> EltTys;
+					//llvm::DIType *DblTy = KSTheDebugInfo.getDoubleTy();
+					llvm::DIType *debug_double_type = m_llvm_debug_builder->createBasicType(
+							"double", 64, 64, llvm::dwarf::DW_ATE_float);
+			#if 0
+					// Add the result type.
+					EltTys.push_back(DblTy);
 
-//     llvm::DISubroutineType *subroutineType =  m_llvm_debug_builder->createSubroutineType(m_llvm_debug_builder->getOrCreateTypeArray(EltTys));
-//     
-//     llvm::DISubprogram *SP = m_llvm_debug_builder->createFunction(
-//    		 file, "function name", 
-//    		 StringRef(), ScopeLine, LineNo,
-//         subroutineType,
-//         false /* internal linkage */, true /* definition */, ScopeLine,
-//         llvm::DINode::FlagPrototyped, false);
+					for (unsigned i = 0, e = NumArgs; i != e; ++i)
+					EltTys.push_back(DblTy);
+			#endif
+					EltTys.push_back(debug_double_type);
+					EltTys.push_back(debug_double_type);
 
-//     if (TheDebugInfo.TheCU == nullptr) { exit(-1); }
-//     
-//     llvm::DILexicalBlock *lb = m_llvm_debug_builder->createLexicalBlock	(TheDebugInfo.TheCU,
-//    		 file,
-//    		 LineNo,
-//    		 ScopeLine 
-//     );
-//     
+					subType = m_llvm_debug_builder->createSubroutineType(
+							m_llvm_debug_builder->getOrCreateTypeArray(EltTys));
+				}
 
-	 
-	llvm::DebugLoc debug_location =
-			llvm::DebugLoc::get(static_cast<unsigned int>(99),
-					static_cast<unsigned int>(42),
-					function /*m_llvm_debug_builder->createFile(std::string("MyImaginary.osl"), ".")*/);
-	m_builder->SetCurrentDebugLocation(debug_location);
-#endif
+				llvm::DISubprogram *function = m_llvm_debug_builder->createFunction(file,
+						function_name, llvm::StringRef(), file, method_line, subType,
+						false /*isLocalToUnit*/, true /*bool isDefinition*/, method_scope_line,
+						llvm::DINode::FlagPrototyped, false);		
+				
+		current_function()->setSubprogram(function);							
+	
+	
 }
 
 void 
 LLVM_Util::set_debug_location(const std::string &source_file_name, const std::string & method_name, int sourceline)
 {
-	
-	
-	
-	
-	std::cout << "sourcefile=" << source_file_name << " method_name=" << method_name << std::endl;
-	
-	llvm::DISubprogram * methodMetaDataNode = nullptr;
-	auto scopeForSourcefile = TheDebugInfo.ScopeByName.find(source_file_name);
-	if(scopeForSourcefile == TheDebugInfo.ScopeByName.end()) {
-		std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>CREATING FILE<<<<<<<<<<<<<<<<<<<<<<<<< " << source_file_name << std::endl;
-		llvm::DIFile *file = m_llvm_debug_builder->createFile(
-				//TheDebugInfo.TheCU->getFilename(), TheDebugInfo.TheCU->getDirectory());
-				source_file_name, ".\\");
-		//llvm::DIScope *FContext = Unit;
-				
-		unsigned int method_line = 0;
-		unsigned int method_scope_line = 0;
 		
-		
-		static llvm::DISubroutineType *subType = NULL;
-		if (subType == NULL)
-		{
-			llvm::SmallVector<llvm::Metadata *, 8> EltTys;
-			//llvm::DIType *DblTy = KSTheDebugInfo.getDoubleTy();
-			llvm::DIType *debug_double_type = m_llvm_debug_builder->createBasicType(
-					"double", 64, 64, llvm::dwarf::DW_ATE_float);
-	#if 0
-			// Add the result type.
-			EltTys.push_back(DblTy);
-
-			for (unsigned i = 0, e = NumArgs; i != e; ++i)
-			EltTys.push_back(DblTy);
-	#endif
-			EltTys.push_back(debug_double_type);
-			EltTys.push_back(debug_double_type);
-
-			subType = m_llvm_debug_builder->createSubroutineType(
-					m_llvm_debug_builder->getOrCreateTypeArray(EltTys));
-		}
-
-		llvm::DISubprogram *function = m_llvm_debug_builder->createFunction(file,
-				"_2", llvm::StringRef(), file, method_line, subType,
-				false /*isLocalToUnit*/, true /*bool isDefinition*/, method_scope_line,
-				llvm::DINode::FlagPrototyped, false);
-				
-		TheDebugInfo.ScopeByName.insert(std::make_pair(source_file_name, function));
-		methodMetaDataNode = function;
-		
-	} else {
-		methodMetaDataNode = scopeForSourcefile->second;
-	}
-		
+	llvm::DISubprogram *sp = current_function()->getSubprogram();
+	ASSERT(sp != NULL);
 	
 	
 	const llvm::DebugLoc & current_debug_location = m_builder->getCurrentDebugLocation();
 	bool newDebugLocation = true;
-	bool newScope = true;
 	if (current_debug_location)
 	{
-		const llvm::MDNode *current_scope = current_debug_location.getScope();
-		if (current_scope == methodMetaDataNode)
-		{			
-			newScope = false;
-			if(sourceline == current_debug_location.getLine()) {		
-				newDebugLocation = false;
-			}
-		} 
+		if(sourceline == current_debug_location.getLine()) {		
+			newDebugLocation = false;
+		}
 	} 
-	if (newScope) {
-		std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>newScope<<<<<<<<<<<<<<<<<<<<<<<<< " << source_file_name << std::endl;
-		current_function()->setSubprogram(methodMetaDataNode);			
-	}
-		
-	ASSERT (current_function()->getSubprogram() == methodMetaDataNode);
 	
 	if (newDebugLocation)
 	{
-		std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>newDebugLocation<<<<<<<<<<<<<<<<<<<<<<<<< " << sourceline << std::endl;
+		//std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>newDebugLocation<<<<<<<<<<<<<<<<<<<<<<<<< " << sourceline << std::endl;
 		llvm::DebugLoc debug_location =
 				llvm::DebugLoc::get(static_cast<unsigned int>(sourceline),
 						static_cast<unsigned int>(0), /* column? */
-						methodMetaDataNode);
+						sp);
 		m_builder->SetCurrentDebugLocation(debug_location);
 	}
 }
@@ -762,6 +717,7 @@ LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
     for (llvm::Module::iterator i = m->begin(); i != m->end(); ++i)
         std::cout << "  found " << i->getName().data() << "\n";
 # endif
+    
     return m;
 
 #endif /* MCJIT ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ */
@@ -811,6 +767,9 @@ LLVM_Util::make_jit_execengine (std::string *err)
 
     engine_builder.setEngineKind (llvm::EngineKind::JIT);
     engine_builder.setErrorStr (err);
+    //engine_builder.setRelocationModel(llvm::Reloc::PIC_);
+    //engine_builder.setCodeModel(llvm::CodeModel::Default);
+    engine_builder.setVerifyModules(true);
 
 #if USE_OLD_JIT
     engine_builder.setJITMemoryManager (m_llvm_jitmm);
@@ -822,11 +781,128 @@ LLVM_Util::make_jit_execengine (std::string *err)
         (new MemoryManager(reinterpret_cast<LLVMMemoryManager*>(m_llvm_jitmm))));
 #endif /* USE_OLD_JIT */
 
+    
     engine_builder.setOptLevel (llvm::CodeGenOpt::Default);
+    
+#if 1
+    llvm::TargetOptions options;
+    options.LessPreciseFPMADOption = true;
+    options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
+    options.UnsafeFPMath = true;
 
-    m_llvm_exec = engine_builder.create();
+    #if LLVM_VERSION < 40
+    // Turn off approximate reciprocals for division. It's too
+    // inaccurate even for us. In LLVM 4.0+ this moved to be a
+    // function attribute.
+    options.Reciprocals.setDefaults("all", false, 0);
+    #endif
+
+    options.NoInfsFPMath = true;
+    options.NoNaNsFPMath = true;
+    options.HonorSignDependentRoundingFPMathOption = false;
+    options.NoZerosInBSS = false;
+    options.GuaranteedTailCallOpt = false;
+    options.StackAlignmentOverride = 0;
+    options.FunctionSections = true;
+    options.UseInitArray = false;
+    bool use_soft_float_abi = false;
+    options.FloatABIType =
+        use_soft_float_abi ? llvm::FloatABI::Soft : llvm::FloatABI::Hard;
+    #if LLVM_VERSION >= 39
+    // Not supported by older linkers
+    options.RelaxELFRelocations = false;    
+    #endif    
+    
+    //options.PrintMachineCode = true;
+    engine_builder.setTargetOptions(options);
+    
+    
+#endif
+    
+#if 0
+//    llvm::TargetOptions options = InitTargetOptionsFromCodeGenFlags();
+    llvm::TargetOptions options;
+    options.LessPreciseFPMADOption = EnableFPMAD;
+   options.AllowFPOpFusion = FuseFPOps;
+   options.Reciprocals = TargetRecip(ReciprocalOps);
+   options.UnsafeFPMath = EnableUnsafeFPMath;
+   options.NoInfsFPMath = EnableNoInfsFPMath;
+   options.NoNaNsFPMath = EnableNoNaNsFPMath;
+   options.HonorSignDependentRoundingFPMathOption =
+		   EnableHonorSignDependentRoundingFPMath;
+   if (FloatABIForCalls != FloatABI::Default)
+      options.FloatABIType = FloatABIForCalls;
+   options.NoZerosInBSS = DontPlaceZerosInBSS;
+   options.GuaranteedTailCallOpt = EnableGuaranteedTailCallOpt;
+   //options.StackAlignmentOverride = OverrideStackAlignment;
+   options.StackAlignmentOverride = 32;
+   //options.PositionIndependentExecutable = EnablePIE;
+   options.UseInitArray = !UseCtors;
+   options.DataSections = DataSections;
+   options.FunctionSections = FunctionSections;
+   options.UniqueSectionNames = UniqueSectionNames;
+   options.EmulatedTLS = EmulatedTLS;
+   
+   options.MCOptions = InitMCTargetOptionsFromFlags();
+   options.JTType = JTableType;
+   
+   options.ThreadModel = TMModel;
+   options.EABIVersion = EABIVersion;
+   //options.EABIVersion = EABI::EABI4;
+   options.DebuggerTuning = DebuggerTuningOpt;   
+   options.RelaxELFRelocations = false;
+   //options.PrintMachineCode = true;
+   engine_builder.setTargetOptions(options);
+#endif
+    
+    //engine_builder.setMArch("core-avx2");
+    std::cout << std::endl<< "llvm::sys::getHostCPUName()>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << llvm::sys::getHostCPUName().str() << std::endl;
+    //engine_builder.setMCPU(llvm::sys::getHostCPUName());
+    //engine_builder.setMCPU("skylake-avx512");
+    //engine_builder.setMCPU("broadwell");
+    engine_builder.setMArch("x86-64");    
+
+    llvm::StringMap< bool > cpuFeatures;
+    if (llvm::sys::getHostCPUFeatures(cpuFeatures)) {
+		std::cout << std::endl<< "llvm::sys::getHostCPUFeatures()>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl;
+		std::vector<std::string> attrvec;
+		for (auto &cpuFeature : cpuFeatures) 
+		{
+			//auto enabled = (cpuFeature.second && (cpuFeature.first().str().find("512") == std::string::npos)) ? "+" : "-";
+			auto enabled = (cpuFeature.second) ? "+" : "-";
+			std::cout << cpuFeature.first().str()  << " is " << enabled << std::endl;
+			attrvec.push_back(enabled + cpuFeature.first().str());
+			
+		}
+		//The particular format of the names are target dependent, and suitable for passing as -mattr to the target which matches the host.
+	//    const char *mattr[] = {"avx"};
+	//    std::vector<std::string> attrvec (mattr, mattr+1);
+			
+		
+		//attrvec.push_back("+sse2");
+		
+		//attrvec.push_back("+sse4.2");
+		//attrvec.push_back("+avx2");
+		//attrvec.push_back("+avx");
+		//attrvec.push_back("avx");
+		//attrvec.push_back("+avx512f");
+		engine_builder.setMAttrs(attrvec);
+    }
+    
+
+    m_llvm_exec = engine_builder.create();        
     if (! m_llvm_exec)
         return NULL;
+    
+    const llvm::DataLayout & data_layout = m_llvm_exec->getDataLayout();
+    std::cout << "data_layout.getStringRepresentation()=" << data_layout.getStringRepresentation() << std::endl;
+    		
+    
+    TargetMachine * target_machine = m_llvm_exec->getTargetMachine();
+    std::cout << "target_machine.getTargetCPU()=" << target_machine->getTargetCPU().str() << std::endl;
+	std::cout << "target_machine.getTargetFeatureString ()=" << target_machine->getTargetFeatureString ().str() << std::endl;
+	std::cout << "target_machine.getTargetTriple ()=" << target_machine->getTargetTriple().str() << std::endl;
+    
 
     llvm::JITEventListener* vtuneProfiler = llvm::JITEventListener::createIntelJITEventListener();
     assert (vtuneProfiler != NULL);
@@ -838,6 +914,73 @@ LLVM_Util::make_jit_execengine (std::string *err)
     // destroying the Module & ExecutionEngine.
     m_llvm_exec->DisableLazyCompilation ();
     return m_llvm_exec;
+}
+
+
+void
+LLVM_Util::dump_struct_data_layout(llvm::Type *Ty)
+{
+	ASSERT(Ty);
+	ASSERT(Ty->isStructTy());
+			
+	llvm::StructType *structTy = static_cast<llvm::StructType *>(Ty);
+    const llvm::DataLayout & data_layout = m_llvm_exec->getDataLayout();
+    
+    int number_of_elements = structTy->getNumElements();
+
+
+	const StructLayout * layout = data_layout.getStructLayout (structTy);
+	std::cout << "dump_struct_data_layout: getSizeInBytes(" << layout->getSizeInBytes() << ") "
+		<< " getAlignment(" << layout->getAlignment() << ")"		
+		<< " hasPadding(" << layout->hasPadding() << ")" << std::endl;
+	for(int index=0; index < number_of_elements; ++index) {
+		llvm::Type * et = structTy->getElementType(index);
+		std::cout << "   element[" << index << "] offset in bytes = " << layout->getElementOffset(index) << 
+				" type is "; 
+				et->dump();
+		std::cout << std::endl;
+	}
+		
+}
+
+void
+LLVM_Util::validate_struct_data_layout(llvm::Type *Ty, const std::vector<unsigned int> & expected_offset_by_index)
+{
+	ASSERT(Ty);
+	ASSERT(Ty->isStructTy());
+			
+	llvm::StructType *structTy = static_cast<llvm::StructType *>(Ty);
+    const llvm::DataLayout & data_layout = m_llvm_exec->getDataLayout();
+    
+    int number_of_elements = structTy->getNumElements();
+
+
+	const StructLayout * layout = data_layout.getStructLayout (structTy);
+	std::cout << "dump_struct_data_layout: getSizeInBytes(" << layout->getSizeInBytes() << ") "
+		<< " getAlignment(" << layout->getAlignment() << ")"		
+		<< " hasPadding(" << layout->hasPadding() << ")" << std::endl;
+	
+	for(int index=0; index < number_of_elements; ++index) {
+		llvm::Type * et = structTy->getElementType(index);
+		
+		auto actual_offset = layout->getElementOffset(index);
+
+		ASSERT(index < expected_offset_by_index.size());
+		
+
+		
+		std::cout << "   element[" << index << "] offset in bytes = " << actual_offset << " expect offset = " << expected_offset_by_index[index] << 
+				" type is "; 
+				et->dump();
+				
+				
+		ASSERT(expected_offset_by_index[index] == actual_offset);
+		std::cout << std::endl;
+	}		
+	if (expected_offset_by_index.size() != number_of_elements)
+	{
+		std::cout << "   expected " << expected_offset_by_index.size() << " members but actual member count is = " << number_of_elements << std::endl;
+	}
 }
 
 
@@ -1092,8 +1235,11 @@ LLVM_Util::make_function (const std::string &name, bool fastcall,
     ASSERT_MSG (llvm::isa<llvm::Function>(c),
                 "Declaration for %s is wrong, LLVM had to make a cast", name.c_str());
     llvm::Function *func = llvm::cast<llvm::Function>(c);
-    if (fastcall)
+    if (fastcall) {
+    	
+    	std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>FAST_CALL MAKE FUNCTION=" << name << std::endl;
         func->setCallingConv(llvm::CallingConv::Fast);
+    }
     return func;
 }
 
@@ -1225,9 +1371,14 @@ LLVM_Util::type_union(const std::vector<llvm::Type *> &types)
 
 llvm::Type *
 LLVM_Util::type_struct (const std::vector<llvm::Type *> &types,
-                        const std::string &name)
+                        const std::string &name, bool is_packed)
 {
-    return llvm::StructType::create(context(), types, name);
+	llvm::StructType * st = llvm::StructType::create(context(), types, name, is_packed);
+	ASSERT(st->isStructTy());
+	llvm::Type * t= st;
+	ASSERT(t->isStructTy());
+	return t;
+    //return llvm::StructType::create(context(), types, name, is_packed);
 }
 
 
@@ -1517,7 +1668,11 @@ LLVM_Util::llvm_vector_type (const TypeDesc &typedesc)
         ASSERT (0 && "not handling this type yet");
     }
     if (typedesc.arraylen)
+    {
+    	
+    	std::cout << "llvm_vector_type typedesc.arraylen = " << typedesc.arraylen << std::endl;
         lt = llvm::ArrayType::get (lt, typedesc.arraylen);
+    }
     DASSERT (lt);
     return lt;
 }

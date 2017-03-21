@@ -178,10 +178,33 @@ struct UniformShaderGlobals {
 
     /// Bit field of ray type flags.
     int raytype;
+
+    // We want to manually pad this structure out to 64 byte boundary
+    // and make it simple to duplicate in LLVM without relying on
+    // compiler structure alignment rules
+    int pad0;
+    int pad1;
+    int pad2;
+    
+	void dump()
+	{
+		#define __OSL_DUMP(VARIABLE_NAME) std::cout << #VARIABLE_NAME << " = " << VARIABLE_NAME << std::endl;
+		std::cout << "UniformShaderGlobals = {"  << std::endl;
+		__OSL_DUMP(renderstate);
+		__OSL_DUMP(tracedata);
+		__OSL_DUMP(objdata);
+		__OSL_DUMP(context);
+		__OSL_DUMP(renderer);
+		__OSL_DUMP(Ci); 
+		__OSL_DUMP(raytype);
+
+	    std::cout << "};" << std::endl;
+		#undef __OSL_DUMP
+	}    
 };
 
 template<int WidthT> 
-struct VaryingShaderGlobals {
+struct alignas(64) VaryingShaderGlobals {
 
 	template<typename T>
 	using  Wide = OSL::Wide<T, WidthT>;
@@ -238,6 +261,43 @@ struct VaryingShaderGlobals {
 
     /// If nonzero, we are shading the back side of a surface.
     Wide<int> backfacing;
+    
+	void dump()
+	{
+		#define __OSL_DUMP(VARIABLE_NAME) VARIABLE_NAME.dump(#VARIABLE_NAME)
+		std::cout << "VaryingShaderGlobals = {"  << std::endl;
+		__OSL_DUMP(P);
+		__OSL_DUMP(dPdx);
+		__OSL_DUMP(dPdy);
+		__OSL_DUMP(dPdz);
+		__OSL_DUMP(I);
+		__OSL_DUMP(dIdx); 
+		__OSL_DUMP(dIdy);
+		__OSL_DUMP(N);
+		__OSL_DUMP(Ng);
+		__OSL_DUMP(u); 
+		__OSL_DUMP(dudx); 
+		__OSL_DUMP(dudy);
+		__OSL_DUMP(v); 
+		__OSL_DUMP(dvdx); 
+		__OSL_DUMP(dvdy);
+		__OSL_DUMP(dPdu); 
+		__OSL_DUMP(dPdv);
+		__OSL_DUMP(time);
+		__OSL_DUMP(dtime);
+		__OSL_DUMP(dPdtime);
+		__OSL_DUMP(Ps); 
+		__OSL_DUMP(dPsdx); 
+		__OSL_DUMP(dPsdy);
+		__OSL_DUMP(object2common);
+		__OSL_DUMP(shader2common);
+		__OSL_DUMP(surfacearea);
+		__OSL_DUMP(flipHandedness);
+		__OSL_DUMP(backfacing);
+	    std::cout << "};" << std::endl;
+		#undef __OSL_DUMP
+	}
+    
 };
 
 template<int WidthT> 
@@ -323,7 +383,7 @@ public:
 	Proxy<int> backfacing() const { return Proxy<int>(m_vsg.backfacing, m_index); }
 };
 
-struct ShaderGlobalsBatch
+struct alignas(64) ShaderGlobalsBatch
 {
 	ShaderGlobalsBatch()
 	{
@@ -376,11 +436,18 @@ struct ShaderGlobalsBatch
 	template<typename DataT>
 	using OutputAccessor = WideAccessor<DataT, maxSize>;
 	
+	void dump()
+	{
+		std::cout << "ShaderGlobalsBatch(m_size=" << m_size << ")" << " = {"  << std::endl;
+		m_uniform.dump();
+		m_varying.dump();
+		std::cout << "};" << std::endl;
+	}
 	
-private:
+//private:
 	
 	UniformShaderGlobals m_uniform;
-	VaryingData m_varying __attribute__((aligned(16)));
+	VaryingData m_varying;// __attribute__((aligned(16)));
 	int m_size;
 };
 	

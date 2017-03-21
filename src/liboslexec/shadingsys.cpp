@@ -2466,6 +2466,9 @@ bool
 ShadingSystemImpl::execute_batch (ShadingContext *ctx, ShaderGroup &group,
 							ShaderGlobalsBatch &sgb, bool run)
 {
+//	std::cout << "execute_batch = ";
+//	sgb.dump();
+//	std::cout << std::endl;
     bool free_context = false;
     if (! ctx) {
         ctx = get_context();

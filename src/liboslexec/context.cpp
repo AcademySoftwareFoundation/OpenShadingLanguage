@@ -38,6 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/thread.h>
 
 #include "oslexec_pvt.h"
+#include "aligned_allocator.h"
 
 OSL_NAMESPACE_ENTER
 
@@ -99,6 +100,7 @@ ShadingContext::execute_init (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
 
     // Allocate enough space on the heap
     size_t heap_size_needed = sgroup.llvm_groupdata_size();
+    //size_t heap_size_needed = 8*sgroup.llvm_groupdata_size();
     if (heap_size_needed > m_heap.size()) {
         if (shadingsys().debug())
             info ("  ShadingContext %p growing heap to %llu",
@@ -170,7 +172,7 @@ ShadingContext::execute_cleanup ()
     }
 
     // Process any queued up error messages, warnings, printfs from shaders
-    process_errors ();
+ //   process_errors ();
 
     if (shadingsys().m_profile) {
         record_runtime_stats ();   // Transfer runtime stats to the shadingsys
@@ -313,6 +315,8 @@ ShadingContext::execute_batch_layer (ShaderGlobalsBatch &sgb, int layernumber)
     if (! run_func)
         return false;
 
+    ASSERT(pvt::is_aligned<64>(&sgb));    
+    
     run_func (&sgb, &m_heap[0]);
 
     if (profile)

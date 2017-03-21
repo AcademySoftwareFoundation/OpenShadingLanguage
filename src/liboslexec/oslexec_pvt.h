@@ -50,6 +50,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OSL/oslclosure.h"
 #include "osl_pvt.h"
 #include "constantpool.h"
+#include "aligned_allocator.h"
 
 
 using namespace OSL;
@@ -1780,8 +1781,7 @@ private:
     PerThreadInfo *m_threadinfo;        ///< Ptr to our thread's info
     mutable TextureSystem::Perthread *m_texture_thread_info; ///< Ptr to texture thread info
     ShaderGroup *m_group;               ///< Ptr to shader group
-    std::vector<char> m_heap;           ///< Heap memory
-    std::vector<char> m_wide_heap;      ///< Wide Heap memory
+    std::vector<char, aligned_allocator<char>> m_heap;           ///< Heap memory
     typedef std::unordered_map<ustring, boost::regex*, ustringHash> RegexMap;
     RegexMap m_regex_map;               ///< Compiled regex's
     MessageList m_messages;             ///< Message blackboard

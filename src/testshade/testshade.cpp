@@ -216,6 +216,7 @@ add_shader (int argc, const char *argv[])
 {
     ASSERT (argc == 1);
     string_view shadername (argv[0]);
+    std::cout << "SHADER NAME=" << shadername << std::endl;
 
     set_shadingsys_options ();
 

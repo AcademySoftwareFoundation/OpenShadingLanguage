@@ -119,9 +119,11 @@ matrix:
       - os: linux
         compiler: gcc
         env: OIIOBRANCH=release USE_CPP11=0
-      - os: osx
-        compiler: clang
-        env: OIIOBRANCH=release USE_CPP11=0
+      # Seems LLVM 3.4 has disappeared from Homebrew, so there's not an
+      # easy way to test C++03 builds on OSX on TravisCI.
+      #- os: osx
+      #  compiler: clang
+      #  env: OIIOBRANCH=release USE_CPP11=0 LLVMBREWVER=3.4
     # Linux only: test gcc 6 (catch new warnings hot off the presses) and
     # also use a higher SIMD level, avx and f16c, to make sure all is well.
     # TravisCI's OSX images don't yet support avx/f16c, so we only do this

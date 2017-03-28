@@ -25,6 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+#include <stack>
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/strutil.h>
 
@@ -400,60 +401,194 @@ bool
 BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 {
 	if (m_is_uniform_by_symbol.size() == 0) {
-		const OpcodeVec & opcodes = inst()->ops();
-		int numCodes = static_cast<int>(opcodes.size());
 		
+		const OpcodeVec & opcodes = inst()->ops();
+		
+		ASSERT(m_requires_masking_by_op_index.empty());
+		m_requires_masking_by_op_index.resize(opcodes.size(), false);
+				
 		// TODO:  Optimize: could probably use symbol index vs. a pointer 
 		// allowing a lookup table vs. hash_map
+		 
 		
 		std::unordered_multimap<const Symbol * /* parent */ , const Symbol * /* dependent */> symbolFeedForwardMap;
-		
-		for(int opIndex = 0; opIndex < numCodes; ++opIndex)
+
+		struct UsageInfo
 		{
-			Opcode & opcode = op(opIndex);
-			std::cout << "op=" << opcode.opname();
-			int argCount = opcode.nargs();
-			
-			const Symbol * symbolsReadByOp[argCount];
-			int symbolsRead = 0;
-			const Symbol * symbolsWrittenByOp[argCount];
-			int symbolsWritten = 0;
-			for(int argIndex = 0; argIndex < argCount; ++argIndex) {
-				const Symbol * aSymbol = opargsym (opcode, argIndex);
-				if (opcode.argwrite(argIndex)) {
-					std::cout << " write to ";
-					symbolsWrittenByOp[symbolsWritten++] = aSymbol;
-				}
-				if (opcode.argread(argIndex)) {
-					symbolsReadByOp[symbolsRead++] = aSymbol;
-					std::cout << " read from ";					
-				}
-				std::cout << " " << aSymbol->name();
+			int last_depth;
+			int last_maskId;
+			std::vector <std::pair<int /*blockDepth*/, int /*op_num*/>> potentially_unmasked_ops;
+		};
+		std::unordered_map<const Symbol *, UsageInfo > usageInfoBySymbol;
+		
+		std::vector<const Symbol *> symbolsCurrentBlockDependsOn;
+		
+		int nextMaskId = 0;
+		int blockId = 0;
+    	std::function<void(int, int, int, int)> discoverSymbolsBetween;
+    	discoverSymbolsBetween = [&](int beginop, int endop, int blockDepth, int maskId)->void
+		{		
+			for(int opIndex = beginop; opIndex < endop; ++opIndex)
+			{
+				Opcode & opcode = op(opIndex);
+				std::cout << "op=" << opcode.opname();
+				int argCount = opcode.nargs();
 				
-				bool isUniform = true;
-				if (aSymbol->symtype() == SymTypeOutputParam) {
+				const Symbol * symbolsReadByOp[argCount];
+				int symbolsRead = 0;
+				const Symbol * symbolsWrittenByOp[argCount];
+				int symbolsWritten = 0;
+				for(int argIndex = 0; argIndex < argCount; ++argIndex) {
+					const Symbol * aSymbol = opargsym (opcode, argIndex);
+					if (opcode.argwrite(argIndex)) {
+						std::cout << " write to ";
+						symbolsWrittenByOp[symbolsWritten++] = aSymbol;
+					}
+					if (opcode.argread(argIndex)) {
+						symbolsReadByOp[symbolsRead++] = aSymbol;
+						std::cout << " read from ";					
+					}
+					std::cout << " " << aSymbol->name();
 					
-		                //&& ! aSymbol->lockgeom() && ! aSymbol->typespec().is_closure()
-		                //&& ! aSymbol->connected() && ! aSymbol->connected_down())
-					isUniform = false;
+					bool isUniform = true;
+					if (aSymbol->symtype() == SymTypeOutputParam) {
+						
+							//&& ! aSymbol->lockgeom() && ! aSymbol->typespec().is_closure()
+							//&& ! aSymbol->connected() && ! aSymbol->connected_down())
+						isUniform = false;
+					}
+					std::cout << " discovery " << aSymbol->name() << " initial isUniform=" << isUniform << std::endl;
+					m_is_uniform_by_symbol[aSymbol] = isUniform;
 				}
-				std::cout << " discovery " << aSymbol->name() << " initial isUniform=" << isUniform << std::endl;
-				m_is_uniform_by_symbol[aSymbol] = isUniform;
-			}
-			std::cout << std::endl;
-			
-			for(int readIndex=0; readIndex < symbolsRead; ++readIndex) {
-				const Symbol * symbolReadFrom = symbolsReadByOp[readIndex];
+				std::cout << std::endl;
+				
+				for(int readIndex=0; readIndex < symbolsRead; ++readIndex) {
+					const Symbol * symbolReadFrom = symbolsReadByOp[readIndex];
+					for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
+						const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
+						// Skip self dependencies
+						if (symbolWrittenTo != symbolReadFrom) {
+							symbolFeedForwardMap.insert(std::make_pair(symbolReadFrom, symbolWrittenTo));
+						}
+					}		
+					
+					// Check if reading a Symbol that was written to from a different 
+					// maskId than we are reading, if so we need to mark it as requiring masking
+					auto lookup = usageInfoBySymbol.find(symbolReadFrom);
+					if(lookup != usageInfoBySymbol.end()) {
+						UsageInfo & info = lookup->second;
+						if ((info.last_depth > blockDepth) && (info.last_maskId != maskId))
+						{
+							std::cout << symbolReadFrom->name() << " will need to have last write be masked" << std::endl;
+							ASSERT(info.potentially_unmasked_ops.empty() == false);
+							decltype(info.potentially_unmasked_ops) remaining_ops;
+							for(auto usage: info.potentially_unmasked_ops) {
+								// Only mark deeper usages as requiring masking
+								if(usage.first > blockDepth)
+								{
+									std::cout << " marking op " << usage.second << " as masked" << std::endl;
+									m_requires_masking_by_op_index[usage.second] = true;									
+								} else {
+									remaining_ops.push_back(usage);
+								}
+							}
+							
+							info.potentially_unmasked_ops.swap(remaining_ops);		
+							// Now that all ops writing to the symbol at higher depths have been marked to be masked
+							// we can now consider the matter handled at this point at reset the
+							// last_depth written at to the current depth to avoid needlessly repeating the work.
+							info.last_depth = blockDepth;
+						}
+					}
+				}
+				
 				for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
 					const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
-					// Skip self dependencies
-					if (symbolWrittenTo != symbolReadFrom) {
-						symbolFeedForwardMap.insert(std::make_pair(symbolReadFrom, symbolWrittenTo));
+					UsageInfo & info = usageInfoBySymbol[symbolWrittenTo];
+					info.last_depth = blockDepth;
+					info.last_maskId = maskId;
+					info.potentially_unmasked_ops.push_back(std::make_pair(blockDepth, opIndex));
+				}
+				
+				// Add dependencies between symbols written to in this basic block
+				// to the set of symbols the code blocks where dependent upon to be executed
+				for(const Symbol *symbolCurrentBlockDependsOn : symbolsCurrentBlockDependsOn)
+				{
+					for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
+						const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
+						// Skip self dependencies
+						if (symbolWrittenTo != symbolCurrentBlockDependsOn) {
+							symbolFeedForwardMap.insert(std::make_pair(symbolCurrentBlockDependsOn, symbolWrittenTo));
+						}
+					}									
+				}
+				
+				if (opcode.jump(0) >= 0)
+				{
+					// The operation with a jump depends on reading the follow symbols
+					// track them for the following basic blocks as the writes
+					// within those basic blocks will depend on the uniformity of 
+					// the values read by this operation
+			    	std::function<void()> pushSymbolsCurentBlockDependsOn;
+			    	pushSymbolsCurentBlockDependsOn = [&]()->void {			    			
+						for(int readIndex=0; readIndex < symbolsRead; ++readIndex) {
+							const Symbol * symbolReadFrom = symbolsReadByOp[readIndex];
+							symbolsCurrentBlockDependsOn.push_back(symbolReadFrom);
+						}
+			    	};
+									
+					// op must have jumps, therefore have nested code we need to process
+					// We need to process these in the same order as the code generator
+					// so our "block depth" lines up for symbol lookups
+					if (opcode.opname() == ustring("if"))
+					{
+						pushSymbolsCurentBlockDependsOn();
+						// Then block
+						discoverSymbolsBetween(opIndex+1, opcode.jump(0), blockDepth+1, nextMaskId++);
+						// else block
+						discoverSymbolsBetween(opcode.jump(0), opcode.jump(1), blockDepth+1, nextMaskId++);
+					} else if (opcode.opname() == ustring("for"))
+					{
+						// Init block
+						// NOTE: init block doesn't depend on the for loops conditions and should be exempt
+						discoverSymbolsBetween(opIndex+1, opcode.jump(0), blockDepth, maskId);						
+						// Condition block
+						// NOTE: the first execution of the condition doesn't depend on the for loops conditions and should be exempt
+						// TODO: unclear about subsequent executions, they might need to be masked... Hmmm
+						discoverSymbolsBetween(opcode.jump(0), opcode.jump(1), blockDepth, maskId);
+						
+						pushSymbolsCurentBlockDependsOn();
+						
+						int maskIdForBodyAndStep = nextMaskId++;
+						// Body block
+						discoverSymbolsBetween(opcode.jump(1), opcode.jump(2), blockDepth+1, maskIdForBodyAndStep);
+						// Step block
+						discoverSymbolsBetween(opcode.jump(2), opcode.jump(3), blockDepth+1, maskIdForBodyAndStep);
+					} else {
+
+						ASSERT(0 && "Unhandled OSL instruction which contains jumps, note this uniform detection code needs to walk the code blocks identical to build_llvm_code");
 					}
-				}				
+
+					// Now that we have processed the dependent basic blocks
+					// we continue processing instructions and those will no
+					// longer be dependent on this operations read symbols
+					for(int readIndex=symbolsRead-1; readIndex >= 0; --readIndex) {
+						// TODO: change to DASSERT later once we are confident
+						ASSERT(symbolsCurrentBlockDependsOn.back() == symbolsReadByOp[readIndex]);
+						symbolsCurrentBlockDependsOn.pop_back();
+					}					
+				}
+				
+		        // If the op we coded jumps around, skip past its recursive block
+		        // executions.
+		        int next = opcode.farthest_jump ();
+		        if (next >= 0)
+		        	opIndex = next-1;				
 			}
-		}
-		
+		};
+    	
+    	discoverSymbolsBetween(inst()->maincodebegin(), inst()->maincodeend(), 0, nextMaskId++);
+    	
 		std::cout << "About to build m_is_uniform_by_symbol" << std::endl;			
 		
     	std::function<void(const Symbol *)> recursivelyMarkNonUniform;
@@ -529,6 +664,14 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 	
 	bool is_uniform = iter->second;
 	return is_uniform;
+}
+
+bool 
+BackendLLVMWide::requiresMasking(int opIndex)
+{
+	ASSERT(m_requires_masking_by_op_index.empty() == false);
+	ASSERT(m_requires_masking_by_op_index.size() > opIndex);
+	return m_requires_masking_by_op_index[opIndex];
 }
 
 
@@ -692,6 +835,7 @@ BackendLLVMWide::llvm_load_value (const Symbol& sym, int deriv,
         ASSERT (0 && "unhandled constant type");
     }
 
+    std::cout << "  llvm_load_value " << sym.typespec().string() << " cast " << cast << std::endl;
     return llvm_load_value (llvm_get_pointer (sym), sym.typespec(),
                             deriv, arrayindex, component, cast, op_is_uniform);
 }
@@ -732,22 +876,32 @@ BackendLLVMWide::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
         return result;
 
     // Handle int<->float type casting
-    if (type.is_floatbased() && cast == TypeDesc::TypeInt)
-        result = ll.op_float_to_int (result);
-    else if (type.is_int() && cast == TypeDesc::TypeFloat)
-        result = ll.op_int_to_float (result);
-    
-    if (op_is_uniform == false) {
+    if (op_is_uniform) {
+		if (type.is_floatbased() && cast == TypeDesc::TypeInt)
+			result = ll.op_float_to_int (result);
+		else if (type.is_int() && cast == TypeDesc::TypeFloat)
+			result = ll.op_int_to_float (result);
+    } else {
     	// TODO:  remove this assert once we have confirmed correct handling off all the
     	// different data types.  Using assert as a checklist to verify what we have 
     	// handled so far during development
-    	ASSERT(cast == TypeDesc::UNKNOWN || cast == TypeDesc::TypeColor || cast == TypeDesc::TypePoint || cast == TypeDesc::TypeFloat);
+    	ASSERT(cast == TypeDesc::UNKNOWN || cast == TypeDesc::TypeColor || cast == TypeDesc::TypeVector || cast == TypeDesc::TypePoint || cast == TypeDesc::TypeFloat || cast == TypeDesc::TypeInt);
     	
+		if (type.is_floatbased() && cast == TypeDesc::TypeInt)
+			result = ll.wide_op_float_to_int (result);
+		else if (type.is_int() && cast == TypeDesc::TypeFloat)
+			result = ll.wide_op_int_to_float (result);
     	
     	if (ll.llvm_typeof(result) ==  ll.type_float()) {
             result = ll.widen_value(result);    		    		
+    	} else if (ll.llvm_typeof(result) ==  ll.type_triple()) {
+            result = ll.widen_value(result);    		    		
+    	} else if (ll.llvm_typeof(result) ==  ll.type_int()) {
+            result = ll.widen_value(result);    		    		
     	} else {
-        	ASSERT(ll.llvm_typeof(result) ==  ll.type_wide_float());
+        	ASSERT((ll.llvm_typeof(result) ==  ll.type_wide_float()) ||
+        		   (ll.llvm_typeof(result) ==  ll.type_wide_int()) ||
+        		   (ll.llvm_typeof(result) ==  ll.type_wide_triple()));
     	}
     }
 
@@ -868,7 +1022,13 @@ BackendLLVMWide::llvm_load_arg (const Symbol& sym, bool derivs)
         // Scalar case
     	bool is_uniform = isSymbolUniform(sym);
 
-        return llvm_load_value (sym, is_uniform);
+    	// If we are not uniform, then the argument should
+    	// get passed as a pointer intstead of by value
+    	// So let this case fall through
+    	// NOTE:  Unclear of behavior if symbol is a constant
+    	if (is_uniform) {
+    		return llvm_load_value (sym, is_uniform);
+    	}
     }
 
     if (derivs && !sym.has_derivs()) {

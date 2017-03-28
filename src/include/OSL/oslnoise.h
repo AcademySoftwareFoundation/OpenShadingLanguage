@@ -273,6 +273,23 @@ struct CellNoise {
         hash1<1> (result, iv);
     }
 
+	template<int WidthT>
+	inline void operator() (Wide<float, WidthT> &wresult, const Wide<float, WidthT> &wx) const {
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			//OSL_INTEL_PRAGMA("ivdep")
+			//OSL_INTEL_PRAGMA("vector always assert")
+			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
+			//OSL_INTEL_PRAGMA("novector")
+			for(int i=0; i< WidthT; ++i) {
+				const float x = wx.get(i);
+				float result;
+				this->operator()(result, x);		        
+				wresult.set(i, result); 
+			}
+		}
+	}    
+    
     inline void operator() (float &result, float x, float y) const {
         unsigned int iv[2];
         iv[0] = quick_floor (x);
@@ -300,7 +317,7 @@ struct CellNoise {
 			for(int i=0; i< WidthT; ++i) {
 				const Vec3 p = wp.get(i);
 				float result;
-				this->operator() (result, p);		        
+				this->operator()(result, p);		        
 				wresult.set(i, result); 
 			}
 		}
@@ -320,6 +337,24 @@ struct CellNoise {
         iv[0] = quick_floor (x);
         hash3<2> (result, iv);
     }
+    
+	template<int WidthT>
+	inline void operator() (Wide<Vec3, WidthT> &wresult, const Wide<float, WidthT> &wx) const {
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			//OSL_INTEL_PRAGMA("ivdep")
+			//OSL_INTEL_PRAGMA("vector always assert")
+			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
+			//OSL_INTEL_PRAGMA("novector")
+			for(int i=0; i< WidthT; ++i) {
+				const float x = wx.get(i);
+				Vec3 result;
+				this->operator()(result, x);		        
+				wresult.set(i, result); 
+			}
+		}
+	}    
+    
 
     inline void operator() (Vec3 &result, float x, float y) const {
         unsigned int iv[3];
@@ -335,6 +370,24 @@ struct CellNoise {
         iv[2] = quick_floor (p.z);
         hash3<4> (result, iv);
     }
+    
+	template<int WidthT>
+	inline void operator() (Wide<Vec3, WidthT> &wresult, const Wide<Vec3, WidthT> &wp) const {
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			//OSL_INTEL_PRAGMA("ivdep")
+			//OSL_INTEL_PRAGMA("vector always assert")
+			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
+			//OSL_INTEL_PRAGMA("novector")
+			for(int i=0; i< WidthT; ++i) {
+				const Vec3 p = wp.get(i);
+				Vec3 result;
+				this->operator()(result, p);		        
+				wresult.set(i, result); 
+			}
+		}
+	}    
+    
 
     inline void operator() (Vec3 &result, const Vec3 &p, float t) const {
         unsigned int iv[5];
@@ -1463,6 +1516,22 @@ inline void perlin (Dual2<float> &result, const H &hash,
 }
 
 
+template <typename H>
+inline void perlin_scalar (Vec3 &result, const H &hash,
+                    const float &x, const float &y)
+{
+    // Non-SIMD case
+    typedef float T;
+    int X; T fx = floorfrac(x, &X);
+    int Y; T fy = floorfrac(y, &Y);
+    T u = fade(fx);
+    T v = fade(fy);
+    result = OIIO::bilerp (grad (hash (X  , Y  ), fx     , fy     ),
+                           grad (hash (X+1, Y  ), fx-1.0f, fy     ),
+                           grad (hash (X  , Y+1), fx     , fy-1.0f),
+                           grad (hash (X+1, Y+1), fx-1.0f, fy-1.0f), u, v);
+    result = scale2 (result);
+}
 
 
 template <typename H>
@@ -1516,6 +1585,31 @@ inline void perlin (Vec3 &result, const H &hash,
 }
 
 
+template <typename H>
+inline void perlin_scalar (Vec3 &result, const H &hash,
+                    const float &x, const float &y, const float &z)
+{
+    // ORIGINAL -- non-SIMD
+    int X; float fx = floorfrac(x, &X);
+    int Y; float fy = floorfrac(y, &Y);
+    int Z; float fz = floorfrac(z, &Z);
+    float u = fade(fx);
+    float v = fade(fy);
+    float w = fade(fz);
+    // TODO: FIX ME, doesn't match up with non-scalar impl
+    float fresult = OIIO::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz      ),
+    //result = OIIO::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz      ),
+                            grad (hash (X+1, Y  , Z  ), fx-1.0f, fy     , fz      ),
+                            grad (hash (X  , Y+1, Z  ), fx     , fy-1.0f, fz      ),
+                            grad (hash (X+1, Y+1, Z  ), fx-1.0f, fy-1.0f, fz      ),
+                            grad (hash (X  , Y  , Z+1), fx     , fy     , fz-1.0f ),
+                            grad (hash (X+1, Y  , Z+1), fx-1.0f, fy     , fz-1.0f ),
+                            grad (hash (X  , Y+1, Z+1), fx     , fy-1.0f, fz-1.0f ),
+                            grad (hash (X+1, Y+1, Z+1), fx-1.0f, fy-1.0f, fz-1.0f ),
+                            u, v, w);
+    //result = scale3 (result);
+    result = Vec3(scale3 (fresult));
+}
 
 template <typename H>
 inline void perlin (Vec3 &result, const H &hash,
@@ -1936,6 +2030,24 @@ struct Noise {
         perlin(result, h, x);
         result = 0.5f * (result + 1.0f);
     }
+    
+	template<int WidthT>
+	inline void operator() (Wide<float, WidthT> &result, const Wide<float, WidthT> &wx) const {
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			//OSL_INTEL_PRAGMA("ivdep")
+			//OSL_INTEL_PRAGMA("vector always assert")
+			OSL_INTEL_PRAGMA("simd assert")
+			//OSL_INTEL_PRAGMA("novector") 
+			for(int i=0; i< WidthT; ++i) {
+				float x = wx.get(i);
+				float perlinResult;
+				this->operator()(perlinResult,x);
+				result.set(i, perlinResult); 
+			}
+		}
+	}
+    
 
     inline void operator() (float &result, float x, float y) const {
         HashScalar h;
@@ -1979,6 +2091,26 @@ struct Noise {
         perlin(result, h, x);
         result = 0.5f * (result + Vec3(1.0f, 1.0f, 1.0f));
     }
+    
+	template<int WidthT>
+	inline void operator() (Wide<Vec3, WidthT> &result, const Wide<float, WidthT> &wx) const {
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			//OSL_INTEL_PRAGMA("ivdep")
+			//OSL_INTEL_PRAGMA("vector always assert")
+			OSL_INTEL_PRAGMA("simd assert")
+			//OSL_INTEL_PRAGMA("novector") 
+			for(int i=0; i< WidthT; ++i) {
+				float x = wx.get(i);
+				Vec3 perlinResult;
+				HashVector h;
+				perlin(perlinResult, h, x);
+				Vec3 scaledResult = 0.5f * (perlinResult + Vec3(1.0f, 1.0f, 1.0f));								
+				result.set(i, scaledResult); 
+			}
+		}
+	}
+    
 
     inline void operator() (Vec3 &result, float x, float y) const {
         HashVector h;
@@ -1992,6 +2124,25 @@ struct Noise {
         result = 0.5f * (result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
+	template<int WidthT>
+	inline void operator() (Wide<Vec3, WidthT> &result, const Wide<Vec3, WidthT> &wp) const {
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			//OSL_INTEL_PRAGMA("ivdep")
+			//OSL_INTEL_PRAGMA("vector always assert")
+			OSL_INTEL_PRAGMA("simd assert")
+			//OSL_INTEL_PRAGMA("novector") 
+			for(int i=0; i< WidthT; ++i) {
+				Vec3 p = wp.get(i);
+				Vec3 perlinResult;
+				HashScalar h;
+				perlin_scalar(perlinResult, h, p.x, p.y, p.z);
+				Vec3 scaledResult = 0.5f * (perlinResult + Vec3(1.0f, 1.0f, 1.0f));								
+				result.set(i, scaledResult); 
+			}
+		}
+	}
+    
     inline void operator() (Vec3 &result, const Vec3 &p, float t) const {
         HashVector h;
         perlin(result, h, p.x, p.y, p.z, t);
@@ -2069,6 +2220,23 @@ struct SNoise {
         perlin(result, h, x);
     }
 
+    template<int WidthT>
+	inline void operator() (Wide<float, WidthT> &result, const Wide<float, WidthT> &wx) const {
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			//OSL_INTEL_PRAGMA("ivdep")
+			//OSL_INTEL_PRAGMA("vector always assert")
+			OSL_INTEL_PRAGMA("simd assert")
+			//OSL_INTEL_PRAGMA("novector")
+			for(int i=0; i< WidthT; ++i) {
+				float x = wx.get(i);
+				float perlinResult;
+				this->operator()(perlinResult,x);
+				result.set(i, perlinResult); 
+			}
+		}
+	}
+    
     inline void operator() (float &result, float x, float y) const {
         HashScalar h;
         perlin(result, h, x, y);
@@ -2107,6 +2275,25 @@ struct SNoise {
         perlin(result, h, x);
     }
 
+    template<int WidthT>
+	inline void operator() (Wide<Vec3, WidthT> &result, const Wide<float, WidthT> &wx) const {
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			//OSL_INTEL_PRAGMA("ivdep")
+			//OSL_INTEL_PRAGMA("vector always assert")
+			OSL_INTEL_PRAGMA("simd assert")
+			//OSL_INTEL_PRAGMA("novector")
+			for(int i=0; i< WidthT; ++i) {
+				float x = wx.get(i);
+				Vec3 perlinResult;
+				HashVector h;
+				perlin(perlinResult, h, x);
+				result.set(i, perlinResult); 
+			}
+		}
+	}
+
+    
     inline void operator() (Vec3 &result, float x, float y) const {
         HashVector h;
         perlin(result, h, x, y);
@@ -2117,6 +2304,24 @@ struct SNoise {
         perlin(result, h, p.x, p.y, p.z);
     }
 
+    template<int WidthT>
+	inline void operator() (Wide<Vec3, WidthT> &result, const Wide<Vec3, WidthT> &wp) const {
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			//OSL_INTEL_PRAGMA("ivdep")
+			//OSL_INTEL_PRAGMA("vector always assert")
+			OSL_INTEL_PRAGMA("simd assert")
+			//OSL_INTEL_PRAGMA("novector")
+			for(int i=0; i< WidthT; ++i) {
+				Vec3 p = wp.get(i);
+				Vec3 perlinResult;
+				HashScalar h;
+				perlin_scalar(perlinResult, h, p.x, p.y, p.z);
+				result.set(i, perlinResult); 
+			}
+		}
+	}
+    
     inline void operator() (Vec3 &result, const Vec3 &p, float t) const {
         HashVector h;
         perlin(result, h, p.x, p.y, p.z, t);
@@ -2625,6 +2830,24 @@ struct SimplexNoise {
     inline void operator() (float &result, float x) const {
         result = simplexnoise1 (x);
     }
+    
+    template<int WidthT>
+    inline void operator() (Wide<float, WidthT> &wresult, const Wide<float, WidthT> &wx) const {
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+#ifndef OSL_VERIFY_SIMPLEX3  			
+			OSL_INTEL_PRAGMA("ivdep")
+			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
+#endif
+			for(int i=0; i< WidthT; ++i) {
+				float x = wx.get(i);
+				float result;
+				this->operator()(result,x);		        
+		        wresult.set(i, result); 
+			}
+		}
+    }
+    
 
     inline void operator() (float &result, float x, float y) const {
         result = simplexnoise2 (x, y);
@@ -2661,11 +2884,30 @@ struct SimplexNoise {
     }
 
     inline void operator() (Vec3 &result, float x) const {
-        result[0] = simplexnoise1 (x, 0);
-        result[1] = simplexnoise1 (x, 1);
-        result[2] = simplexnoise1 (x, 2);
+        result.x = simplexnoise1 (x, 0);
+        result.y = simplexnoise1 (x, 1);
+        result.z = simplexnoise1 (x, 2);
     }
 
+    template<int WidthT>
+    inline void operator() (Wide<Vec3, WidthT> &wresult, const Wide<float, WidthT> &wx) const {
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			OSL_INTEL_PRAGMA("ivdep")
+			//OSL_INTEL_PRAGMA("vector always assert")
+			//OSL_INTEL_PRAGMA("vector aligned")
+			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
+			//OSL_INTEL_PRAGMA("novector")
+			for(int i=0; i< WidthT; ++i) {
+				float x = wx.get(i);
+				//float result = simplexnoise3 (p.x, p.y, p.z);
+				Vec3 result;	        
+				this->operator()(result, x);
+		        wresult.set(i, result); 
+			}
+		}
+    }
+    
     inline void operator() (Vec3 &result, float x, float y) const {
         result[0] = simplexnoise2 (x, y, 0);
         result[1] = simplexnoise2 (x, y, 1);
@@ -2677,6 +2919,30 @@ struct SimplexNoise {
         result[1] = simplexnoise3 (p.x, p.y, p.z, 1);
         result[2] = simplexnoise3 (p.x, p.y, p.z, 2);
     }
+    
+    template<int WidthT>
+    inline void operator() (Wide<Vec3, WidthT> &wresult, const Wide<Vec3, WidthT> &wp) const {
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+#ifndef OSL_VERIFY_SIMPLEX3  			
+			OSL_INTEL_PRAGMA("ivdep")
+			//OSL_INTEL_PRAGMA("vector always assert")
+			//OSL_INTEL_PRAGMA("vector aligned")
+			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
+			//OSL_INTEL_PRAGMA("novector")
+#endif
+			for(int i=0; i< WidthT; ++i) {
+				Vec3 p = wp.get(i);
+				
+				//float result = simplexnoise3 (p.x, p.y, p.z);
+				Vec3 result;
+				result.x = fast::simplexnoise3<0/* seed */>(p.x, p.y, p.z);		        
+				result.y = fast::simplexnoise3<1/* seed */>(p.x, p.y, p.z);		        
+				result.z = fast::simplexnoise3<2/* seed */>(p.x, p.y, p.z);		        
+		        wresult.set(i, result); 
+			}
+		}
+    }    
 
     inline void operator() (Vec3 &result, const Vec3 &p, float t) const {
         result[0] = simplexnoise4 (p.x, p.y, p.z, t, 0);
@@ -2763,6 +3029,23 @@ struct USimplexNoise {
         result = 0.5f * (simplexnoise1 (x) + 1.0f);
     }
 
+    template<int WidthT>
+    inline void operator() (Wide<float, WidthT> &wresult, const Wide<float, WidthT> &wx) const {
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+#ifndef OSL_VERIFY_SIMPLEX3  
+			OSL_INTEL_PRAGMA("ivdep")
+			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
+#endif
+			for(int i=0; i< WidthT; ++i) {
+				float x = wx.get(i);
+				float result;
+				this->operator()(result,x);
+		        wresult.set(i, result); 
+			}
+		}
+    }
+    
     inline void operator() (float &result, float x, float y) const {
         result = 0.5f * (simplexnoise2 (x, y) + 1.0f);
     }
@@ -2797,10 +3080,29 @@ struct USimplexNoise {
     }
 
     inline void operator() (Vec3 &result, float x) const {
-        result[0] = 0.5f * (simplexnoise1 (x, 0) + 1.0f);
-        result[1] = 0.5f * (simplexnoise1 (x, 1) + 1.0f);
-        result[2] = 0.5f * (simplexnoise1 (x, 2) + 1.0f);
+        result.x = 0.5f * (simplexnoise1 (x, 0) + 1.0f);
+        result.y = 0.5f * (simplexnoise1 (x, 1) + 1.0f);
+        result.z = 0.5f * (simplexnoise1 (x, 2) + 1.0f);
     }
+    
+    template<int WidthT>
+    inline void operator() (Wide<Vec3, WidthT> &wresult, const Wide<float, WidthT> &wx) const {
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			OSL_INTEL_PRAGMA("ivdep")
+			//OSL_INTEL_PRAGMA("vector always assert")
+			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
+			//OSL_INTEL_PRAGMA("novector")
+			for(int i=0; i< WidthT; ++i) {
+				float x = wx.get(i);
+				
+				Vec3 result;
+				this->operator()(result,x);
+		        
+		        wresult.set(i, result); 
+			}
+		}
+    }    
 
     inline void operator() (Vec3 &result, float x, float y) const {
         result[0] = 0.5f * (simplexnoise2 (x, y, 0) + 1.0f);
@@ -2813,6 +3115,29 @@ struct USimplexNoise {
         result[1] = 0.5f * (simplexnoise3 (p.x, p.y, p.z, 1) + 1.0f);
         result[2] = 0.5f * (simplexnoise3 (p.x, p.y, p.z, 2) + 1.0f);
     }
+    
+    template<int WidthT>
+    inline void operator() (Wide<Vec3, WidthT> &wresult, const Wide<Vec3, WidthT> &wp) const {
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+#ifndef OSL_VERIFY_SIMPLEX3  
+			OSL_INTEL_PRAGMA("ivdep")
+			//OSL_INTEL_PRAGMA("vector always assert")
+			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
+			//OSL_INTEL_PRAGMA("novector")
+#endif
+			for(int i=0; i< WidthT; ++i) {
+				Vec3 p = wp.get(i);
+				
+				Vec3 result;
+				result.x = 0.5f * (fast::simplexnoise3<0/* seed */>(p.x, p.y, p.z) + 1.0f);
+				result.y = 0.5f * (fast::simplexnoise3<1/* seed */>(p.x, p.y, p.z) + 1.0f);
+				result.z = 0.5f * (fast::simplexnoise3<2/* seed */>(p.x, p.y, p.z) + 1.0f);
+		        
+		        wresult.set(i, result); 
+			}
+		}
+    }    
 
     inline void operator() (Vec3 &result, const Vec3 &p, float t) const {
         result[0] = 0.5f * (simplexnoise4 (p.x, p.y, p.z, t, 0) + 1.0f);

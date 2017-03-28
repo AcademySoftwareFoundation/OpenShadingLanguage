@@ -398,6 +398,8 @@ LLVMGEN (llvm_gen_add)
     Symbol& A = *rop.opargsym (op, 1);
     Symbol& B = *rop.opargsym (op, 2);
 
+    bool op_is_uniform = rop.isSymbolUniform(A) && rop.isSymbolUniform(B);
+
     ASSERT (! A.typespec().is_array() && ! B.typespec().is_array());
     if (Result.typespec().is_closure()) {
         ASSERT (A.typespec().is_closure() && B.typespec().is_closure());
@@ -417,8 +419,8 @@ LLVMGEN (llvm_gen_add)
     // That's all that should be allowed by oslc.
     for (int i = 0; i < num_components; i++) {
     	std::cout << "llvm_gen_add component(" << i << ") of " << A.name() << " " << B.name() << std::endl;
-        llvm::Value *a = rop.loadLLVMValue (A, i, 0, type);
-        llvm::Value *b = rop.loadLLVMValue (B, i, 0, type);
+        llvm::Value *a = rop.loadLLVMValue (A, i, 0, type, op_is_uniform);
+        llvm::Value *b = rop.loadLLVMValue (B, i, 0, type, op_is_uniform);
         if (!a || !b)
             return false;
 		// TODO:  switching back to non-wide to figure out uniform vs. varying data
@@ -831,6 +833,9 @@ LLVMGEN (llvm_gen_mix)
     Symbol& A = *rop.opargsym (op, 1);
     Symbol& B = *rop.opargsym (op, 2);
     Symbol& X = *rop.opargsym (op, 3);
+    
+    bool op_is_uniform = rop.isSymbolUniform(A) && rop.isSymbolUniform(B)  && rop.isSymbolUniform(X);
+
     TypeDesc type = Result.typespec().simpletype();
     ASSERT (!Result.typespec().is_closure_based() &&
             Result.typespec().is_floatbased());
@@ -841,21 +846,26 @@ LLVMGEN (llvm_gen_mix)
 
 	// TODO:  switching back to non-wide to figure out uniform vs. varying data
     //llvm::Value *one = rop.ll.wide_constant (1.0f);
-    llvm::Value *one = rop.ll.constant (1.0f);
+    llvm::Value *one;
+    if (op_is_uniform)
+    	one = rop.ll.constant (1.0f);
+    else
+    	one = rop.ll.wide_constant (1.0f);
+    
     llvm::Value *x = rop.llvm_load_value (X, 0, 0, type);
 	// TODO:  switching back to non-wide to figure out uniform vs. varying data
     //llvm::Value *one_minus_x = rop.ll.wide_op_sub (one, x);
     llvm::Value *one_minus_x = rop.ll.op_sub (one, x);
-    llvm::Value *xx = derivs ? rop.llvm_load_value (X, 1, 0, type) : NULL;
-    llvm::Value *xy = derivs ? rop.llvm_load_value (X, 2, 0, type) : NULL;
+    llvm::Value *xx = derivs ? rop.llvm_load_value (X, 1, 0, type, op_is_uniform) : NULL;
+    llvm::Value *xy = derivs ? rop.llvm_load_value (X, 2, 0, type, op_is_uniform) : NULL;
     for (int i = 0; i < num_components; i++) {
-        llvm::Value *a = rop.llvm_load_value (A, 0, i, type);
-        llvm::Value *b = rop.llvm_load_value (B, 0, i, type);
+        llvm::Value *a = rop.llvm_load_value (A, 0, i, type, op_is_uniform);
+        llvm::Value *b = rop.llvm_load_value (B, 0, i, type, op_is_uniform);
         if (!a || !b)
             return false;
         if (i > 0 && x_components > 1) {
             // Only need to recompute x and 1-x if they change
-            x = rop.llvm_load_value (X, 0, i, type);
+            x = rop.llvm_load_value (X, 0, i, type, op_is_uniform);
         	// TODO:  switching back to non-wide to figure out uniform vs. varying data
             //one_minus_x = rop.ll.wide_op_sub (one, x);
             one_minus_x = rop.ll.op_sub (one, x);
@@ -988,12 +998,14 @@ LLVMGEN (llvm_gen_minmax)
     Symbol& x = *rop.opargsym (op, 1);
     Symbol& y = *rop.opargsym (op, 2);
 
+    bool op_is_uniform = rop.isSymbolUniform(x) && rop.isSymbolUniform(y);
+    
     TypeDesc type = Result.typespec().simpletype();
     int num_components = type.aggregate;
     for (int i = 0; i < num_components; i++) {
         // First do the lower bound
-        llvm::Value *x_val = rop.llvm_load_value (x, 0, i, type);
-        llvm::Value *y_val = rop.llvm_load_value (y, 0, i, type);
+        llvm::Value *x_val = rop.llvm_load_value (x, 0, i, type, op_is_uniform);
+        llvm::Value *y_val = rop.llvm_load_value (y, 0, i, type, op_is_uniform);
 
         llvm::Value* cond = NULL;
         // NOTE(boulos): Using <= instead of < to match old behavior
@@ -1779,6 +1791,8 @@ LLVMGEN (llvm_gen_compare_op)
     Symbol &B (*rop.opargsym (op, 2));
     ASSERT (Result.typespec().is_int() && ! Result.has_derivs());
 
+    bool op_is_uniform = rop.isSymbolUniform(A) && rop.isSymbolUniform(B);
+    
     if (A.typespec().is_closure()) {
         ASSERT (B.typespec().is_int() &&
                 "Only closure==0 and closure!=0 allowed");
@@ -1804,22 +1818,24 @@ LLVMGEN (llvm_gen_compare_op)
     for (int i = 0; i < num_components; i++) {
         // Get A&B component i -- note that these correctly handle mixed
         // scalar/triple comparisons as well as int->float casts as needed.
-        llvm::Value* a = rop.loadLLVMValue (A, i, 0, cast);
-        llvm::Value* b = rop.loadLLVMValue (B, i, 0, cast);
+        llvm::Value* a = rop.loadLLVMValue (A, i, 0, cast, op_is_uniform);
+        llvm::Value* b = rop.loadLLVMValue (B, i, 0, cast, op_is_uniform);
 
         // Trickery for mixed matrix/scalar comparisons -- compare
         // on-diagonal to the scalar, off-diagonal to zero
         if (A.typespec().is_matrix() && !B.typespec().is_matrix()) {
             if ((i/4) != (i%4))
-        		// TODO:  switching back to non-wide to figure out uniform vs. varying data
-                //b = rop.ll.wide_constant (0.0f);
-            	b = rop.ll.constant (0.0f);
+            	if (op_is_uniform)
+            		b = rop.ll.constant (0.0f);
+            	else
+            		b = rop.ll.wide_constant (0.0f);
         }
         if (! A.typespec().is_matrix() && B.typespec().is_matrix()) {
             if ((i/4) != (i%4))
-        		// TODO:  switching back to non-wide to figure out uniform vs. varying data
-                //a = rop.ll.wide_constant (0.0f);
-            	a = rop.ll.constant (0.0f);
+            	if (op_is_uniform)
+            		a = rop.ll.constant (0.0f);
+            	else
+            		a = rop.ll.wide_constant (0.0f);
         }
 
         // Perform the op
@@ -1854,11 +1870,18 @@ LLVMGEN (llvm_gen_compare_op)
     }
     ASSERT (final_result);
 
-    // Convert the single bit bool into an int for now.
-	// TODO:  switching back to non-wide to figure out uniform vs. varying data
-    //final_result = rop.ll.wide_op_bool_to_int (final_result);
-    final_result = rop.ll.op_bool_to_int (final_result);
+	if (op_is_uniform) {
+	    // Convert the single bit bool into an int for now.
+		final_result = rop.ll.op_bool_to_int (final_result);
+	} else {
+		// Not sure we want an vector <16 x i8> as masks line up with <16 x i1>
+		final_result = rop.ll.wide_op_bool_to_int (final_result);		
+	}
+	
+	std::cout << "About to rop.storeLLVMValue (final_result, Result, 0, 0);" << std::endl;
     rop.storeLLVMValue (final_result, Result, 0, 0);
+	std::cout << "AFTER to rop.storeLLVMValue (final_result, Result, 0, 0);" << std::endl;
+    
     return true;
 }
 
@@ -2089,22 +2112,55 @@ LLVMGEN (llvm_gen_if)
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol& cond = *rop.opargsym (op, 0);
 
-    // Load the condition variable and figure out if it's nonzero
-    llvm::Value* cond_val = rop.llvm_test_nonzero (cond);
+    bool op_is_uniform = rop.isSymbolUniform(cond);
+    
+    if (op_is_uniform) {
+		// Load the condition variable and figure out if it's nonzero
+		llvm::Value* cond_val = rop.llvm_test_nonzero (cond);
+	
+		// Branch on the condition, to our blocks
+		llvm::BasicBlock* then_block = rop.ll.new_basic_block ("then");
+		llvm::BasicBlock* else_block = rop.ll.new_basic_block ("else");
+		llvm::BasicBlock* after_block = rop.ll.new_basic_block ("");
+		rop.ll.op_branch (cond_val, then_block, else_block);
+	
+		// Then block
+		rop.build_llvm_code (opnum+1, op.jump(0), then_block);
+		rop.ll.op_branch (after_block);
+	
+		// Else block
+		rop.build_llvm_code (op.jump(0), op.jump(1), else_block);
+		rop.ll.op_branch (after_block);  // insert point is now after_block
+    } else {
+    	llvm::Value* int_mask = rop.llvm_load_value (cond, /*deriv*/ 0, /*component*/ 0, /*cast*/ TypeDesc::UNKNOWN, /*op_is_uniform*/ false);
+//		ASSERT(mask->getType() == rop.ll.type_wide_bool());
+		ASSERT(int_mask->getType() == rop.ll.type_wide_int());
+		std::cout << "wide llvm_gen_if" << std::endl;
+		llvm::Value* mask =  rop.ll.wide_op_int_to_bool(int_mask);		
 
-    // Branch on the condition, to our blocks
-    llvm::BasicBlock* then_block = rop.ll.new_basic_block ("then");
-    llvm::BasicBlock* else_block = rop.ll.new_basic_block ("else");
-    llvm::BasicBlock* after_block = rop.ll.new_basic_block ("");
-    rop.ll.op_branch (cond_val, then_block, else_block);
-
-    // Then block
-    rop.build_llvm_code (opnum+1, op.jump(0), then_block);
-    rop.ll.op_branch (after_block);
-
-    // Else block
-    rop.build_llvm_code (op.jump(0), op.jump(1), else_block);
-    rop.ll.op_branch (after_block);  // insert point is now after_block
+		
+		
+		// Branch on the condition, to our blocks
+		llvm::BasicBlock* then_block = rop.ll.new_basic_block ("then");
+		llvm::BasicBlock* else_block = rop.ll.new_basic_block ("else");
+		llvm::BasicBlock* after_block = rop.ll.new_basic_block ("");
+		rop.ll.op_branch (then_block);
+	
+		// Then block
+		// Perhaps mask should be parameter to build_llvm_code?
+		rop.ll.push_mask(mask);
+		rop.build_llvm_code (opnum+1, op.jump(0), then_block);
+		rop.ll.pop_mask();
+		
+		// Execute both the "then" and the "else" blocks with masking
+		rop.ll.op_branch (else_block);
+	
+		// Else block
+		rop.ll.push_mask(rop.ll.negate_mask(mask));
+		rop.build_llvm_code (op.jump(0), op.jump(1), else_block);
+		rop.ll.pop_mask();
+		rop.ll.op_branch (after_block);  // insert point is now after_block				
+    }
 
     // Continue on with the previous flow
     return true;
@@ -2116,40 +2172,94 @@ LLVMGEN (llvm_gen_loop_op)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol& cond = *rop.opargsym (op, 0);
-
-    // Branch on the condition, to our blocks
-    llvm::BasicBlock* cond_block = rop.ll.new_basic_block ("cond");
-    llvm::BasicBlock* body_block = rop.ll.new_basic_block ("body");
-    llvm::BasicBlock* step_block = rop.ll.new_basic_block ("step");
-    llvm::BasicBlock* after_block = rop.ll.new_basic_block ("");
-    // Save the step and after block pointers for possible break/continue
-    rop.ll.push_loop (step_block, after_block);
-
-    // Initialization (will be empty except for "for" loops)
-    rop.build_llvm_code (opnum+1, op.jump(0));
-
-    // For "do-while", we go straight to the body of the loop, but for
-    // "for" or "while", we test the condition next.
-    rop.ll.op_branch (op.opname() == op_dowhile ? body_block : cond_block);
-
-    // Load the condition variable and figure out if it's nonzero
-    rop.build_llvm_code (op.jump(0), op.jump(1), cond_block);
-    llvm::Value* cond_val = rop.llvm_test_nonzero (cond);
-
-    // Jump to either LoopBody or AfterLoop
-    rop.ll.op_branch (cond_val, body_block, after_block);
-
-    // Body of loop
-    rop.build_llvm_code (op.jump(1), op.jump(2), body_block);
-    rop.ll.op_branch (step_block);
-
-    // Step
-    rop.build_llvm_code (op.jump(2), op.jump(3), step_block);
-    rop.ll.op_branch (cond_block);
-
-    // Continue on with the previous flow
-    rop.ll.set_insert_point (after_block);
-    rop.ll.pop_loop ();
+    
+    bool op_is_uniform = rop.isSymbolUniform(cond);
+    
+    if (op_is_uniform) {  
+	
+		// Branch on the condition, to our blocks
+		llvm::BasicBlock* cond_block = rop.ll.new_basic_block ("cond");
+		llvm::BasicBlock* body_block = rop.ll.new_basic_block ("body");
+		llvm::BasicBlock* step_block = rop.ll.new_basic_block ("step");
+		llvm::BasicBlock* after_block = rop.ll.new_basic_block ("");
+		// Save the step and after block pointers for possible break/continue
+		rop.ll.push_loop (step_block, after_block);
+	
+		// Initialization (will be empty except for "for" loops)
+		rop.build_llvm_code (opnum+1, op.jump(0));
+	
+		// For "do-while", we go straight to the body of the loop, but for
+		// "for" or "while", we test the condition next.
+		rop.ll.op_branch (op.opname() == op_dowhile ? body_block : cond_block);
+	
+		// Load the condition variable and figure out if it's nonzero
+		rop.build_llvm_code (op.jump(0), op.jump(1), cond_block);
+		llvm::Value* cond_val = rop.llvm_test_nonzero (cond);
+	
+		// Jump to either LoopBody or AfterLoop
+		rop.ll.op_branch (cond_val, body_block, after_block);
+	
+		// Body of loop
+		rop.build_llvm_code (op.jump(1), op.jump(2), body_block);
+		rop.ll.op_branch (step_block);
+	
+		// Step
+		rop.build_llvm_code (op.jump(2), op.jump(3), step_block);
+		rop.ll.op_branch (cond_block);
+	
+		// Continue on with the previous flow
+		rop.ll.set_insert_point (after_block);
+		rop.ll.pop_loop ();
+    } else {
+    	
+		// Branch on the condition, to our blocks
+		llvm::BasicBlock* cond_block = rop.ll.new_basic_block ("cond");
+		llvm::BasicBlock* body_block = rop.ll.new_basic_block ("body");
+		llvm::BasicBlock* step_block = rop.ll.new_basic_block ("step");
+		llvm::BasicBlock* after_block = rop.ll.new_basic_block ("");
+		// Save the step and after block pointers for possible break/continue
+		rop.ll.push_loop (step_block, after_block);
+	
+		// Initialization (will be empty except for "for" loops)
+		rop.build_llvm_code (opnum+1, op.jump(0));
+	
+		// For "do-while", we go straight to the body of the loop, but for
+		// "for" or "while", we test the condition next.
+		rop.ll.op_branch (op.opname() == op_dowhile ? body_block : cond_block);
+	
+		// Load the condition variable and figure out if it's nonzero
+		rop.build_llvm_code (op.jump(0), op.jump(1), cond_block);
+		
+		
+    	llvm::Value* int_mask = rop.llvm_load_value (cond, /*deriv*/ 0, /*component*/ 0, /*cast*/ TypeDesc::UNKNOWN, /*op_is_uniform*/ false);
+//		ASSERT(mask->getType() == rop.ll.type_wide_bool());
+		ASSERT(int_mask->getType() == rop.ll.type_wide_int());
+		std::cout << "wide llvm_gen_loop_op" << std::endl;
+		llvm::Value* mask =  rop.ll.wide_op_int_to_bool(int_mask);		
+		
+		//llvm::Value* cond_val = rop.llvm_test_nonzero (cond);
+		
+		llvm::Value* mask_int =  rop.ll.mask_to_int(mask);		
+		llvm::Value* cond_val =  rop.ll.op_ne (mask_int, rop.ll.constant128(0));
+	
+		// Jump to either LoopBody or AfterLoop
+		rop.ll.op_branch (cond_val, body_block, after_block);
+	
+		// Body of loop
+		// Perhaps mask should be parameter to build_llvm_code?
+		rop.ll.push_mask(mask);
+		rop.build_llvm_code (op.jump(1), op.jump(2), body_block);
+		rop.ll.pop_mask();	
+		rop.ll.op_branch (step_block);
+	
+		// Step
+		rop.build_llvm_code (op.jump(2), op.jump(3), step_block);
+		rop.ll.op_branch (cond_block);
+	
+		// Continue on with the previous flow
+		rop.ll.set_insert_point (after_block);
+		rop.ll.pop_loop ();    	
+    }
 
     return true;
 }

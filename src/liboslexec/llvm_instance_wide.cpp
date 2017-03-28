@@ -668,6 +668,7 @@ BackendLLVMWide::llvm_generate_debug_op_printf (const Opcode &op)
 bool
 BackendLLVMWide::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
 {
+    std::cout << "build_llvm_code : beginop="<< beginop << " endop="<< endop << " bb=" << bb << std::endl;
     if (bb)
         ll.set_insert_point (bb);
 
@@ -680,8 +681,11 @@ BackendLLVMWide::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
             if (shadingsys().llvm_debug_ops())
                 llvm_generate_debug_op_printf (op);
             // TODO: optionally enable
+            std::cout << "Generating :"<< op.opname() << std::endl;
             ll.set_debug_location(op.sourcefile().string(), op.method().string(), op.sourceline());
+            ll.push_masking_enabled(requiresMasking(opnum));
             bool ok = (*opd->llvmgen) (*this, opnum);
+            ll.pop_masking_enabled();
             if (! ok)
                 return false;
             if (shadingsys().debug_nan() /* debug NaN/Inf */
@@ -700,6 +704,7 @@ BackendLLVMWide::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
         // If the op we coded jumps around, skip past its recursive block
         // executions.
         int next = op.farthest_jump ();
+        std::cout << "farthest_jump=" << next;
         if (next >= 0)
             opnum = next-1;
     }       
@@ -1116,11 +1121,11 @@ BackendLLVMWide::run ()
     m_llvm_local_mem = 0;
     llvm::Function* init_func = build_llvm_init ();
 
-    std::cout << "llvm's data layout of GroupData" << std::endl;
-    ll.dump_struct_data_layout(m_llvm_type_groupdata);
+    //std::cout << "llvm's data layout of GroupData" << std::endl;
+    //ll.dump_struct_data_layout(m_llvm_type_groupdata);
 
-    std::cout << std::endl << std::endl << "llvm's data layout of ShaderGlobalBatch" << std::endl;
-    ll.dump_struct_data_layout(m_llvm_type_sg);
+    //std::cout << std::endl << std::endl << "llvm's data layout of ShaderGlobalBatch" << std::endl;
+    //ll.dump_struct_data_layout(m_llvm_type_sg);
     
     std::vector<unsigned int> offset_by_index;
     

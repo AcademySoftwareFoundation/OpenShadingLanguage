@@ -156,6 +156,7 @@ public:
     }
     
     bool isSymbolUniform(const Symbol& sym);
+    bool requiresMasking(int opIndex);
 
     /// Return an llvm::Value* that is either a scalar and derivs is
     /// false, or a pointer to sym's values (if sym is an aggreate or
@@ -450,6 +451,7 @@ private:
     int m_llvm_local_mem;             // Amount of memory we use for locals
 
 	std::unordered_map<const Symbol *, bool> m_is_uniform_by_symbol;
+	std::vector<bool> m_requires_masking_by_op_index;
     
     friend class ShadingSystemImpl;
 };

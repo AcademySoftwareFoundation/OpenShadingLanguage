@@ -870,8 +870,8 @@ LLVM_Util::make_jit_execengine (std::string *err)
 		{
 			//auto enabled = (cpuFeature.second && (cpuFeature.first().str().find("512") == std::string::npos)) ? "+" : "-";
 			auto enabled = (cpuFeature.second) ? "+" : "-";
-			std::cout << cpuFeature.first().str()  << " is " << enabled << std::endl;
-			attrvec.push_back(enabled + cpuFeature.first().str());
+			//std::cout << cpuFeature.first().str()  << " is " << enabled << std::endl;
+			//attrvec.push_back(enabled + cpuFeature.first().str());
 			
 		}
 		//The particular format of the names are target dependent, and suitable for passing as -mattr to the target which matches the host.
@@ -882,11 +882,14 @@ LLVM_Util::make_jit_execengine (std::string *err)
 		//attrvec.push_back("+sse2");
 		
 		//attrvec.push_back("+sse4.2");
-		//attrvec.push_back("+avx2");
+		attrvec.push_back("+avx2");
 		//attrvec.push_back("+avx");
 		//attrvec.push_back("avx");
 		//attrvec.push_back("+avx512f");
 		engine_builder.setMAttrs(attrvec);
+		
+		//m_supports_masked_stores = false;
+		m_supports_masked_stores = true;
     }
     
 
@@ -895,13 +898,13 @@ LLVM_Util::make_jit_execengine (std::string *err)
         return NULL;
     
     const llvm::DataLayout & data_layout = m_llvm_exec->getDataLayout();
-    std::cout << "data_layout.getStringRepresentation()=" << data_layout.getStringRepresentation() << std::endl;
+    //std::cout << "data_layout.getStringRepresentation()=" << data_layout.getStringRepresentation() << std::endl;
     		
     
     TargetMachine * target_machine = m_llvm_exec->getTargetMachine();
-    std::cout << "target_machine.getTargetCPU()=" << target_machine->getTargetCPU().str() << std::endl;
-	std::cout << "target_machine.getTargetFeatureString ()=" << target_machine->getTargetFeatureString ().str() << std::endl;
-	std::cout << "target_machine.getTargetTriple ()=" << target_machine->getTargetTriple().str() << std::endl;
+    //std::cout << "target_machine.getTargetCPU()=" << target_machine->getTargetCPU().str() << std::endl;
+	//std::cout << "target_machine.getTargetFeatureString ()=" << target_machine->getTargetFeatureString ().str() << std::endl;
+	//std::cout << "target_machine.getTargetTriple ()=" << target_machine->getTargetTriple().str() << std::endl;
     
 
     llvm::JITEventListener* vtuneProfiler = llvm::JITEventListener::createIntelJITEventListener();
@@ -956,9 +959,9 @@ LLVM_Util::validate_struct_data_layout(llvm::Type *Ty, const std::vector<unsigne
 
 
 	const StructLayout * layout = data_layout.getStructLayout (structTy);
-	std::cout << "dump_struct_data_layout: getSizeInBytes(" << layout->getSizeInBytes() << ") "
-		<< " getAlignment(" << layout->getAlignment() << ")"		
-		<< " hasPadding(" << layout->hasPadding() << ")" << std::endl;
+//	std::cout << "dump_struct_data_layout: getSizeInBytes(" << layout->getSizeInBytes() << ") "
+//		<< " getAlignment(" << layout->getAlignment() << ")"		
+//		<< " hasPadding(" << layout->hasPadding() << ")" << std::endl;
 	
 	for(int index=0; index < number_of_elements; ++index) {
 		llvm::Type * et = structTy->getElementType(index);
@@ -969,9 +972,9 @@ LLVM_Util::validate_struct_data_layout(llvm::Type *Ty, const std::vector<unsigne
 		
 
 		
-		std::cout << "   element[" << index << "] offset in bytes = " << actual_offset << " expect offset = " << expected_offset_by_index[index] << 
-				" type is "; 
-				et->dump();
+//		std::cout << "   element[" << index << "] offset in bytes = " << actual_offset << " expect offset = " << expected_offset_by_index[index] << 
+//				" type is "; 
+//				et->dump();
 				
 				
 		ASSERT(expected_offset_by_index[index] == actual_offset);
@@ -1473,6 +1476,12 @@ LLVM_Util::constant (int i)
 }
 
 llvm::Value *
+LLVM_Util::constant128 (int i)
+{
+    return llvm::ConstantInt::get (context(), llvm::APInt(128,i));
+}
+
+llvm::Value *
 LLVM_Util::wide_constant (int i)
 {
 	return llvm::ConstantVector::getSplat(m_vector_width, llvm::ConstantInt::get (context(), llvm::APInt(32,i))); 
@@ -1512,8 +1521,6 @@ LLVM_Util::constant_ptr (void *p, llvm::PointerType *type)
     return builder().CreateIntToPtr (constant (size_t (p)), type, "const pointer");
 }
 
-
-
 llvm::Value *
 LLVM_Util::constant (ustring s)
 {
@@ -1549,11 +1556,32 @@ LLVM_Util::wide_constant (ustring s)
 
 
 llvm::Value *
+LLVM_Util::mask_to_int (llvm::Value *mask)
+{
+	ASSERT(mask->getType() == type_wide_bool());
+
+	llvm::Type * extended_int_vector_type = (llvm::Type *) llvm::VectorType::get(llvm::Type::getInt8Ty (*m_llvm_context), m_vector_width);
+	
+	llvm::Value * wide_int_mask = builder().CreateSExt(mask, extended_int_vector_type);
+	
+	llvm::Type * int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt128Ty (*m_llvm_context);
+
+    return builder().CreateBitCast (wide_int_mask, int_reinterpret_cast_vector_type);
+}
+
+
+llvm::Value *
 LLVM_Util::widen_value (llvm::Value *val)
 {
     return builder().CreateVectorSplat(m_vector_width, val);
 }
  
+llvm::Value * 
+LLVM_Util::negate_mask(llvm::Value *mask)
+{
+	ASSERT(mask->getType() == type_wide_bool());
+	return builder().CreateNot(mask);
+}
 
 llvm::Value *
 LLVM_Util::constant (const TypeDesc &type)
@@ -1871,11 +1899,72 @@ LLVM_Util::op_load (llvm::Value *ptr)
 }
 
 
+void
+LLVM_Util::push_mask(llvm::Value *mask)
+{	
+	ASSERT(mask->getType() == type_wide_bool());
+	if(m_mask_stack.empty()) {
+		m_mask_stack.push_back(mask);
+	} else {
+		
+		llvm::Value *prev_mask = m_mask_stack.back();
+		llvm::Value *combined_mask = builder().CreateAnd(prev_mask, mask);
+		m_mask_stack.push_back(combined_mask);		
+	}
+}
+
+void
+LLVM_Util::pop_mask()
+{
+	ASSERT(false == m_mask_stack.empty());
+	m_mask_stack.pop_back();
+}
+
+void
+LLVM_Util::push_masking_enabled(bool enabled)
+{
+	m_enable_masking_stack.push_back(enabled);	
+}
+
+void
+LLVM_Util::pop_masking_enabled()
+{
+	ASSERT(false == m_enable_masking_stack.empty());
+	m_enable_masking_stack.pop_back();	
+}
+
+
 
 void
 LLVM_Util::op_store (llvm::Value *val, llvm::Value *ptr)
-{
-    builder().CreateStore (val, ptr);
+{	
+	if(m_mask_stack.empty() || val->getType()->isVectorTy() == false || m_enable_masking_stack.empty() || m_enable_masking_stack.back() == false) {		
+		// We may not be in a non-uniform code block
+		// or the value being stored may be uniform, which case it shouldn't
+		// be a vector type
+	    builder().CreateStore (val, ptr);		
+	} else {				
+		// TODO: could probably make these DASSERT as  the conditional above "should" be checking all of this
+		ASSERT(m_enable_masking_stack.back());
+		ASSERT(val->getType()->isVectorTy());
+		ASSERT(false == m_mask_stack.empty());
+		
+		// TODO: add assert for ptr alignment in debug builds	
+		if (m_supports_masked_stores) {
+			builder().CreateMaskedStore(val, ptr, 64, m_mask_stack.back());
+		} else {
+			// Transform the masted store to a load+blend+store
+			// Technically, the behavior is different than a masked store
+			// as different thread could technically have modified the masked off
+			// data lane values inbetween the read+store
+			// As this language sits below the threading level that could
+			// never happen and a read+store
+			llvm::Value *previous_value = builder().CreateLoad (ptr);
+			llvm::Value *blended_value = builder().CreateSelect(m_mask_stack.back(), val, previous_value);
+			builder().CreateStore(blended_value, ptr);
+		}
+	}
+	
 }
 
 
@@ -2081,7 +2170,7 @@ llvm::Value *
 LLVM_Util::wide_op_float_to_int (llvm::Value* a)
 {
     if (a->getType() == type_wide_float())
-        return builder().CreateFPToSI(a, type_int());
+        return builder().CreateFPToSI(a, type_wide_int());
     if (a->getType() == type_wide_int())
         return a;
     ASSERT (0 && "Op has bad value type combination");
@@ -2120,7 +2209,7 @@ llvm::Value *
 LLVM_Util::wide_op_int_to_float (llvm::Value* a)
 {
     if (a->getType() == type_wide_int())
-        return builder().CreateSIToFP(a, type_float());
+        return builder().CreateSIToFP(a, type_wide_float());
     if (a->getType() == type_wide_float())
         return a;
     ASSERT (0 && "Op has bad value type combination");
@@ -2142,9 +2231,26 @@ LLVM_Util::op_bool_to_int (llvm::Value* a)
 llvm::Value *
 LLVM_Util::wide_op_bool_to_int (llvm::Value* a)
 {
-    if (a->getType() == type_wide_bool())
-        return builder().CreateZExt (a, type_int());
+    if (a->getType() == type_wide_bool()) {
+    	//std::cout << " wide_op_bool_to_int CreateZExt "
+        //return builder().CreateZExt (a, type_int());
+    	return builder().CreateZExt (a, type_wide_int());
+    }
     if (a->getType() == type_wide_int())
+        return a;
+    ASSERT (0 && "Op has bad value type combination");
+	return NULL;
+}
+
+llvm::Value *
+LLVM_Util::wide_op_int_to_bool(llvm::Value* a)
+{
+    if (a->getType() == type_wide_int()) {
+    	//std::cout << " wide_op_int_to_bool CreateZExt "
+        //return builder().CreateTrunc (a, type_int());
+    	return builder().CreateTrunc (a, type_wide_bool());
+    }
+    if (a->getType() == type_wide_bool())
         return a;
     ASSERT (0 && "Op has bad value type combination");
 	return NULL;
@@ -2217,7 +2323,7 @@ llvm::Value *
 LLVM_Util::op_eq (llvm::Value *a, llvm::Value *b, bool ordered)
 {
     ASSERT (a->getType() == b->getType());
-    if (a->getType() == type_float())
+    if ((a->getType() == type_float()) || (a->getType() == type_wide_float()))
         return ordered ? builder().CreateFCmpOEQ (a, b) : builder().CreateFCmpUEQ (a, b);
     else
         return builder().CreateICmpEQ (a, b);
@@ -2229,7 +2335,7 @@ llvm::Value *
 LLVM_Util::op_ne (llvm::Value *a, llvm::Value *b, bool ordered)
 {
     ASSERT (a->getType() == b->getType());
-    if (a->getType() == type_float())
+    if ((a->getType() == type_float()) || (a->getType() == type_wide_float()))
         return ordered ? builder().CreateFCmpONE (a, b) : builder().CreateFCmpUNE (a, b);
     else
         return builder().CreateICmpNE (a, b);
@@ -2241,7 +2347,7 @@ llvm::Value *
 LLVM_Util::op_gt (llvm::Value *a, llvm::Value *b, bool ordered)
 {
     ASSERT (a->getType() == b->getType());
-    if (a->getType() == type_float())
+    if ((a->getType() == type_float()) || (a->getType() == type_wide_float()))
         return ordered ? builder().CreateFCmpOGT (a, b) : builder().CreateFCmpUGT (a, b);
     else
         return builder().CreateICmpSGT (a, b);
@@ -2253,7 +2359,7 @@ llvm::Value *
 LLVM_Util::op_lt (llvm::Value *a, llvm::Value *b, bool ordered)
 {
     ASSERT (a->getType() == b->getType());
-    if (a->getType() == type_float())
+    if ((a->getType() == type_float()) || (a->getType() == type_wide_float()))
         return ordered ? builder().CreateFCmpOLT (a, b) : builder().CreateFCmpULT (a, b);
     else
         return builder().CreateICmpSLT (a, b);
@@ -2265,7 +2371,7 @@ llvm::Value *
 LLVM_Util::op_ge (llvm::Value *a, llvm::Value *b, bool ordered)
 {
     ASSERT (a->getType() == b->getType());
-    if (a->getType() == type_float())
+    if ((a->getType() == type_float()) || (a->getType() == type_wide_float()))
         return ordered ? builder().CreateFCmpOGE (a, b) : builder().CreateFCmpUGE (a, b);
     else
         return builder().CreateICmpSGE (a, b);
@@ -2277,7 +2383,7 @@ llvm::Value *
 LLVM_Util::op_le (llvm::Value *a, llvm::Value *b, bool ordered)
 {
     ASSERT (a->getType() == b->getType());
-    if (a->getType() == type_float())
+    if ((a->getType() == type_float()) || (a->getType() == type_wide_float()))
         return ordered ? builder().CreateFCmpOLE (a, b) : builder().CreateFCmpULE (a, b);
     else
         return builder().CreateICmpSLE (a, b);

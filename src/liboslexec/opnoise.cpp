@@ -149,7 +149,7 @@ OSL_SHADEOP void osl_ ##opname## _vvf (char *r, char *x, float y) {     \
 #define NOISE_WIMPL(opname,implname)                                    \
 OSL_SHADEOP void osl_ ##opname## _w4fw4v(char *r, char *x) {        \
     implname impl;                                                      \
-    impl (WFLOAT(r), WVEC(x));                                          \
+    impl (W4FLOAT(r), W4VEC(x));                                          \
 }                                                                       \
 OSL_SHADEOP void osl_ ##opname## _w8fw8v(char *r, char *x) {        \
     implname impl;                                                      \
@@ -159,6 +159,20 @@ OSL_SHADEOP void osl_ ##opname## _w16fw16v(char *r, char *x) {        \
     implname impl;                                                      \
     impl (W16FLOAT(r), W16VEC(x));                                          \
 }                                                                       \
+OSL_SHADEOP void osl_ ##opname## _w16vw16v (char *r, char *x) {               \
+implname impl;                                                      \
+impl (W16VEC(r), W16VEC(x));                                              \
+}                                                                       \
+OSL_SHADEOP void osl_ ##opname## _w16vw16f (char *r, char *x) {               \
+implname impl;                                                      \
+impl (W16VEC(r), W16FLOAT(x));                                              \
+}                                                                       \
+OSL_SHADEOP void osl_ ##opname## _w16fw16f (char *r, char *x) {               \
+implname impl;                                                      \
+impl (W16FLOAT(r), W16FLOAT(x));                                              \
+}                                                                       \
+\
+\
  
 
 

@@ -207,7 +207,16 @@ public:
     /// resetting the IR insertion point to the block following the
     /// corresponding function call.
     void pop_function ();
+    
+    // Push a mask onto the mask stack, which actually will AND the existing
+    // top mask with the new mask and store that off. The mask must be of 
+    // type <16 x i1>
+    void push_mask(llvm::Value *mask);
+    void pop_mask();
 
+    void push_masking_enabled(bool enable);
+    void pop_masking_enabled();
+	
     /// Return the basic block where we go after returning from the current
     /// function.
     llvm::BasicBlock *return_block () const;
@@ -312,6 +321,9 @@ public:
     /// Return an llvm::Value holding the given integer constant.
     llvm::Value *constant (int i);
 
+    /// Return an llvm::Value holding the given integer constant.
+    llvm::Value *constant128 (int i);
+    
     /// Return an llvm::Value holding wide version of the given integer constant.
     llvm::Value *wide_constant (int i);
      
@@ -347,7 +359,9 @@ public:
     }
 
     
+    llvm::Value * mask_to_int (llvm::Value *mask);
     llvm::Value * widen_value (llvm::Value *val);
+    llvm::Value * negate_mask(llvm::Value *mask);
 
     /// Return an llvm::Value for a long long that is a packed
     /// representation of a TypeDesc.
@@ -512,6 +526,7 @@ public:
     llvm::Value *wide_op_int_to_float (llvm::Value *a);
     llvm::Value *op_bool_to_int (llvm::Value *a);
     llvm::Value *wide_op_bool_to_int (llvm::Value *a);
+    llvm::Value *wide_op_int_to_bool (llvm::Value *a);
     llvm::Value *op_float_to_double (llvm::Value *a);
     llvm::Value *wide_op_float_to_double (llvm::Value *a);
 
@@ -576,6 +591,8 @@ private:
     std::vector<llvm::BasicBlock *> m_return_block;     // stack for func call
     std::vector<llvm::BasicBlock *> m_loop_after_block; // stack for break
     std::vector<llvm::BasicBlock *> m_loop_step_block;  // stack for continue
+    std::vector<llvm::Value *> m_mask_stack;  			// stack for masks that all stores should use when enabled
+    std::vector<bool> m_enable_masking_stack;  			// stack for enabling stores to be masked
 
     llvm::Type *m_llvm_type_float;
     llvm::Type *m_llvm_type_int;
@@ -604,6 +621,8 @@ private:
     llvm::Type * m_llvm_type_wide_matrix;
     llvm::Type * m_llvm_type_wide_void_ptr; 
     llvm::PointerType * m_llvm_type_wide_char_ptr;    
+    
+    bool m_supports_masked_stores;
 };
 
 

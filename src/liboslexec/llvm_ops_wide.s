@@ -8604,6 +8604,21 @@ define float @osl_sqrt_ff(float) local_unnamed_addr #3 {
   ret float %6
 }
 
+
+declare void @llvm.masked.store.v16f32.p0v16f32 (<16 x float>, <16 x float>*, i32,  <16 x i1>)
+declare <16 x float> @llvm.sqrt.v16f32(<16 x float>)
+
+; Function Attrs: nounwind readnone uwtable
+define <16 x float> @osl_sqrt_w16fw16f(<16 x float>) local_unnamed_addr #3 {
+  %2 = fcmp ult <16 x float> %0, <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>
+  %3 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %0)
+  %"$result" = alloca <16 x float>
+  store <16 x float> %3, <16 x float>* %"$result"     
+  call void @llvm.masked.store.v16f32.p0v16f32 (<16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <16 x float>* %"$result", i32 64,  <16 x i1> %2 )
+  %4 = load <16 x float>, <16 x float>* %"$result"
+  ret <16 x float> %4
+}
+
 ; Function Attrs: nounwind uwtable
 define void @osl_sqrt_dfdf(i8* nocapture, i8* nocapture readonly) local_unnamed_addr #4 {
   %3 = bitcast i8* %1 to float*
@@ -9122,11 +9137,23 @@ define void @osl_logb_vv(i8* nocapture, i8* nocapture readonly) local_unnamed_ad
   ret void
 }
 
+declare float     @llvm.floor.f32(float  %Val)
+declare <16 x float> @llvm.floor.v16f32(<16 x float> %Val)
+
 ; Function Attrs: nounwind readnone uwtable
 define float @osl_floor_ff(float) local_unnamed_addr #3 {
+
   %2 = tail call float @floorf(float %0) #13
   ret float %2
 }
+
+; Function Attrs: nounwind readnone uwtable
+define <16 x float> @osl_floor_w16fw16f(<16 x float> ) local_unnamed_addr #3 {
+
+  %2 = tail call <16 x float> @llvm.floor.v16f32(<16 x float> %0)
+  ret  <16 x float>  %2
+}
+
 
 ; Function Attrs: nounwind readnone
 declare float @floorf(float) local_unnamed_addr #9
@@ -10262,6 +10289,35 @@ define float @osl_smoothstep_ffff(float, float, float) local_unnamed_addr #6 {
   %16 = phi float [ %14, %7 ], [ 0.000000e+00, %3 ], [ 1.000000e+00, %5 ]
   ret float %16
 }
+
+
+; Function Attrs: norecurse nounwind readnone uwtable
+define <16 x float> @osl_smoothstep_w16fffw16f(float, float, <16 x float>) local_unnamed_addr #6 {
+  %.splatinsert = insertelement <16 x float> undef, float %0, i32 0
+  %e0 = shufflevector <16 x float> %.splatinsert, <16 x float> undef, <16 x i32> zeroinitializer
+  %4 = fcmp olt <16 x float> %2, %e0
+
+  %.splatinsert1 = insertelement <16 x float> undef, float %1, i32 0
+  %e1 = shufflevector <16 x float> %.splatinsert1, <16 x float> undef, <16 x i32> zeroinitializer
+  %5 = fcmp ult <16 x float> %2, %e1
+
+  %6 = fsub <16 x float> %2, %e0
+  %7 = fsub <16 x float> %e1, %e0
+  %8 = fdiv <16 x float> %6, %7
+  %9 = fmul <16 x float> %8, <float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00>
+  %10 = fsub <16 x float> <float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00>, %9
+  %11 = fmul <16 x float> %8, %8
+  %12 = fmul <16 x float> %11, %10
+  
+  %"$result" = alloca <16 x float>
+  store <16 x float> %12, <16 x float>* %"$result"     
+  call void @llvm.masked.store.v16f32.p0v16f32 (<16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <16 x float>* %"$result", i32 64,  <16 x i1> %4 )
+  call void @llvm.masked.store.v16f32.p0v16f32 (<16 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, <16 x float>* %"$result", i32 64,  <16 x i1> %5 )
+  
+  %13 = load <16 x float>, <16 x float>* %"$result"
+  ret <16 x float> %13
+}
+
 
 ; Function Attrs: nounwind uwtable
 define void @osl_smoothstep_dfffdf(i8* nocapture, float, float, i8* nocapture readonly) local_unnamed_addr #4 {

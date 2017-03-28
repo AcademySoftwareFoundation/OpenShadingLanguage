@@ -41,7 +41,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define NOISE_WIMPL(name)                           \
     DECL (osl_ ## name ## _w4fw4v,  "wfwv")			\
     DECL (osl_ ## name ## _w8fw8v,  "wfwv")			\
-    DECL (osl_ ## name ## _w16fw16v,  "wfwv")   
+    DECL (osl_ ## name ## _w16fw16v,  "wfwv")		\
+    DECL (osl_ ## name ## _w16vw16v,  "wvwv")      \
+    DECL (osl_ ## name ## _w16vw16f,  "wvwf")      \
+    DECL (osl_ ## name ## _w16fw16f,  "wfwf")      \
+    
 
 #define GENERIC_NOISE_DERIV_WIMPL(name)             \
     DECL (osl_ ## name ## _w4dfw4dv,   "xsXXXX")    \

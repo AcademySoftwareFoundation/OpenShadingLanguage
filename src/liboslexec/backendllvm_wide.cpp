@@ -25,7 +25,6 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-#include <stack>
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/strutil.h>
 
@@ -676,7 +675,7 @@ BackendLLVMWide::requiresMasking(int opIndex)
 
 
 llvm::Value *
-BackendLLVMWide::llvm_alloca (const TypeSpec &type, bool derivs, bool is_uniform,
+BackendLLVMWide::llvm_alloca (const TypeSpec &type, bool derivs, bool is_uniform, bool forceBool,
                           const std::string &name)
 {
 	std::cout << "llvm_alloca " << name ;
@@ -687,17 +686,25 @@ BackendLLVMWide::llvm_alloca (const TypeSpec &type, bool derivs, bool is_uniform
     if (is_uniform)
     {
     	std::cout << " as UNIFORM " << std::endl ;
-        return ll.op_alloca (t, n, name);
+    	if (forceBool) {    		
+    		return ll.op_alloca (ll.type_bool(), n, name);
+    	} else {
+    		return ll.op_alloca (t, n, name);
+    	}
     } else {
     	std::cout << " as VARYING " << std::endl ;
-    	return ll.wide_op_alloca (t, n, name);
+    	if (forceBool) {    		
+    		return ll.op_alloca (ll.type_wide_bool(), n, name);
+    	} else {
+    		return ll.wide_op_alloca (t, n, name);
+    	}
     }
 }
 
 
 
 llvm::Value *
-BackendLLVMWide::getOrAllocateLLVMSymbol (const Symbol& sym)
+BackendLLVMWide::getOrAllocateLLVMSymbol (const Symbol& sym, bool forceBool)
 {
     DASSERT ((sym.symtype() == SymTypeLocal || sym.symtype() == SymTypeTemp ||
               sym.symtype() == SymTypeConst)
@@ -709,7 +716,7 @@ BackendLLVMWide::getOrAllocateLLVMSymbol (const Symbol& sym)
     if (map_iter == named_values().end()) {
     	bool is_uniform = isSymbolUniform(sym);
     	
-        llvm::Value* a = llvm_alloca (sym.typespec(), sym.has_derivs(), is_uniform, mangled_name);
+        llvm::Value* a = llvm_alloca (sym.typespec(), sym.has_derivs(), is_uniform, forceBool, mangled_name);
         named_values()[mangled_name] = a;
         return a;
     }
@@ -901,7 +908,8 @@ BackendLLVMWide::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
     	} else {
         	ASSERT((ll.llvm_typeof(result) ==  ll.type_wide_float()) ||
         		   (ll.llvm_typeof(result) ==  ll.type_wide_int()) ||
-        		   (ll.llvm_typeof(result) ==  ll.type_wide_triple()));
+        		   (ll.llvm_typeof(result) ==  ll.type_wide_triple()) ||
+        		   (ll.llvm_typeof(result) ==  ll.type_wide_bool()));
     	}
     }
 

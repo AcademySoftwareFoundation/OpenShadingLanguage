@@ -1801,9 +1801,9 @@ LLVMGEN (llvm_gen_compare_op)
         llvm::Value *r = (op.opname()==op_eq) ? rop.ll.op_eq(a,b)
                                               : rop.ll.op_ne(a,b);
         // Convert the single bit bool into an int
-		// TODO:  switching back to non-wide to figure out uniform vs. varying data
-        //r = rop.ll.wide_op_bool_to_int (r);
+#if OSL_CONVERT_BOOL_TO_INT
         r = rop.ll.op_bool_to_int (r);
+#endif
         rop.llvm_store_value (r, Result);
         return true;
     }
@@ -1870,6 +1870,7 @@ LLVMGEN (llvm_gen_compare_op)
     }
     ASSERT (final_result);
 
+#if OSL_CONVERT_BOOL_TO_INT
 	if (op_is_uniform) {
 	    // Convert the single bit bool into an int for now.
 		final_result = rop.ll.op_bool_to_int (final_result);
@@ -1877,6 +1878,8 @@ LLVMGEN (llvm_gen_compare_op)
 		// Not sure we want an vector <16 x i8> as masks line up with <16 x i1>
 		final_result = rop.ll.wide_op_bool_to_int (final_result);		
 	}
+#endif
+	// Lets not convert comparions from bool to int
 	
 	std::cout << "About to rop.storeLLVMValue (final_result, Result, 0, 0);" << std::endl;
     rop.storeLLVMValue (final_result, Result, 0, 0);
@@ -2099,10 +2102,12 @@ LLVMGEN (llvm_gen_andor)
         llvm::Value* or_ab_ne_0 = rop.ll.op_ne (or_ab, rop.ll.constant(0));
         i1_res = or_ab_ne_0;
     }
-	// TODO:  switching back to non-wide to figure out uniform vs. varying data
-    //llvm::Value* i32_res = rop.ll.wide_op_bool_to_int(i1_res);
+#if OSL_CONVERT_BOOL_TO_INT
     llvm::Value* i32_res = rop.ll.op_bool_to_int(i1_res);
     rop.llvm_store_value(i32_res, result, 0, 0);
+#else
+    rop.llvm_store_value(i1_res, result, 0, 0);
+#endif
     return true;
 }
 
@@ -2132,11 +2137,11 @@ LLVMGEN (llvm_gen_if)
 		rop.build_llvm_code (op.jump(0), op.jump(1), else_block);
 		rop.ll.op_branch (after_block);  // insert point is now after_block
     } else {
-    	llvm::Value* int_mask = rop.llvm_load_value (cond, /*deriv*/ 0, /*component*/ 0, /*cast*/ TypeDesc::UNKNOWN, /*op_is_uniform*/ false);
-//		ASSERT(mask->getType() == rop.ll.type_wide_bool());
-		ASSERT(int_mask->getType() == rop.ll.type_wide_int());
-		std::cout << "wide llvm_gen_if" << std::endl;
-		llvm::Value* mask =  rop.ll.wide_op_int_to_bool(int_mask);		
+    	llvm::Value* mask = rop.llvm_load_value (cond, /*deriv*/ 0, /*component*/ 0, /*cast*/ TypeDesc::UNKNOWN, /*op_is_uniform*/ false);
+		ASSERT(mask->getType() == rop.ll.type_wide_bool());
+//		ASSERT(int_mask->getType() == rop.ll.type_wide_int());
+//		std::cout << "wide llvm_gen_if" << std::endl;
+//		llvm::Value* mask =  rop.ll.wide_op_int_to_bool(int_mask);		
 
 		
 		
@@ -2231,11 +2236,11 @@ LLVMGEN (llvm_gen_loop_op)
 		rop.build_llvm_code (op.jump(0), op.jump(1), cond_block);
 		
 		
-    	llvm::Value* int_mask = rop.llvm_load_value (cond, /*deriv*/ 0, /*component*/ 0, /*cast*/ TypeDesc::UNKNOWN, /*op_is_uniform*/ false);
-//		ASSERT(mask->getType() == rop.ll.type_wide_bool());
-		ASSERT(int_mask->getType() == rop.ll.type_wide_int());
-		std::cout << "wide llvm_gen_loop_op" << std::endl;
-		llvm::Value* mask =  rop.ll.wide_op_int_to_bool(int_mask);		
+    	llvm::Value* mask = rop.llvm_load_value (cond, /*deriv*/ 0, /*component*/ 0, /*cast*/ TypeDesc::UNKNOWN, /*op_is_uniform*/ false);
+		ASSERT(mask->getType() == rop.ll.type_wide_bool());
+//		ASSERT(int_mask->getType() == rop.ll.type_wide_int());
+//		std::cout << "wide llvm_gen_loop_op" << std::endl;
+//		llvm::Value* mask =  rop.ll.wide_op_int_to_bool(int_mask);		
 		
 		//llvm::Value* cond_val = rop.llvm_test_nonzero (cond);
 		

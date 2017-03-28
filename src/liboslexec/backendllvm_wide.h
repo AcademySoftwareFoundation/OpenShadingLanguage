@@ -210,7 +210,7 @@ public:
 
     /// Generate an alloca instruction to allocate space for the given
     /// type, with derivs if derivs==true, and return the its pointer.
-    llvm::Value *llvm_alloca (const TypeSpec &type, bool derivs, bool is_uniform,
+    llvm::Value *llvm_alloca (const TypeSpec &type, bool derivs, bool is_uniform, bool forceBool=false,
                               const std::string &name="");
 
     /// Given the OSL symbol, return the llvm::Value* corresponding to the
@@ -218,7 +218,7 @@ public:
     /// and just the plain value if it has derivatives).  This is retrieved
     /// from the allocation map if already there; and if not yet in the
     /// map, the symbol is alloca'd and placed in the map.
-    llvm::Value *getOrAllocateLLVMSymbol (const Symbol& sym);
+    llvm::Value *getOrAllocateLLVMSymbol (const Symbol& sym, bool forceBool);
 
     /// Retrieve an llvm::Value that is a pointer holding the start address
     /// of the specified symbol. This always works for globals and params;

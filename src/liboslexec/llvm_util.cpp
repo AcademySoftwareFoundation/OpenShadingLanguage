@@ -782,7 +782,8 @@ LLVM_Util::make_jit_execengine (std::string *err)
 #endif /* USE_OLD_JIT */
 
     
-    engine_builder.setOptLevel (llvm::CodeGenOpt::Default);
+    //engine_builder.setOptLevel (llvm::CodeGenOpt::Default);
+    engine_builder.setOptLevel (llvm::CodeGenOpt::Aggressive);
     
 #if 1
     llvm::TargetOptions options;

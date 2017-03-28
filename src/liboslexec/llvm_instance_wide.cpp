@@ -28,7 +28,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cmath>
 #include <cstddef>
+#include <unordered_set>
 #include <vector>
+
 
 #include <boost/unordered_map.hpp>
 
@@ -788,6 +790,8 @@ BackendLLVMWide::build_llvm_init ()
 }
 
 
+// To identify set of instructions that are generated with the compare_op
+extern bool llvm_gen_compare_op(BackendLLVMWide &rop, int opnum);  
 
 llvm::Function*
 BackendLLVMWide::build_llvm_instance (bool groupentry)
@@ -850,6 +854,28 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
             ll.call_function ("osl_incr_layers_executed", sg_void_ptr());
     }
 
+    // Identify any symbols that are the result of a compare_op as we will
+    // keep them as i1 (bool) vs. int to enable better code generation
+    // but underlying OIIO::TypeDesc as well as OSL don't support bool so
+    // will need to promote to int when interacting with others
+    std::unordered_set<Symbol *> comparisonResults;
+    {
+    	const OpcodeVec & opcodes = inst()->ops();
+    	int numOps = static_cast<int>(opcodes.size());
+    	for(int opIndex=0; opIndex < numOps; ++opIndex) {
+    		Opcode & opcode = op(opIndex);
+    		const OpDescriptor *opd = shadingsys().op_descriptor (opcode.opname());
+    		if (opd->llvmgen == llvm_gen_compare_op) {
+    		    Symbol * result = opargsym (opcode, 0);
+    		    comparisonResults.insert(result);
+    			std::cout << "RESULT of compare op = " << result->name() << std::endl;
+    		}
+    	}    	
+    }
+
+    
+    
+    
     // Setup the symbols
     m_named_values.clear ();
     m_layers_already_run.clear ();
@@ -864,8 +890,10 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
             continue;
         // Allocate space for locals, temps, aggregate constants
         if (s.symtype() == SymTypeLocal || s.symtype() == SymTypeTemp ||
-                s.symtype() == SymTypeConst)
-            getOrAllocateLLVMSymbol (s);
+                s.symtype() == SymTypeConst) {
+        	bool forceBool = comparisonResults.find(&s) != comparisonResults.end(); 
+            getOrAllocateLLVMSymbol (s, forceBool);
+        }
         // Set initial value for constants, closures, and strings that are
         // not parameters.
         if (s.symtype() != SymTypeParam && s.symtype() != SymTypeOutputParam &&

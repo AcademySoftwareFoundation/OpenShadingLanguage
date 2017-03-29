@@ -1276,10 +1276,23 @@ BackendLLVMWide::llvm_test_nonzero (Symbol &val, bool test_derivs)
     TypeDesc t = ts.simpletype();
 
     // Handle int case -- guaranteed no derivs, no multi-component
-    if (t == TypeDesc::TypeInt)
-		// TODO:  switching back to non-wide to figure out uniform vs. varying data
-        //return ll.op_ne (llvm_load_value(val), ll.wide_constant(0));
-    	return ll.op_ne (llvm_load_value(val), ll.constant(0));
+    if (t == TypeDesc::TypeInt) {
+
+    	
+    	// Because we allow temporaries and local results of comparison operations
+    	// to use the native bool type of i1, we will need to build an matching constant 0
+    	// for comparisons.  We can just interrogate the underlying llvm symbol to see if 
+    	// it is a bool
+    	llvm::Value * llvmValue = llvm_get_pointer (val);
+    	//std::cout << "llvmValue type=" << ll.llvm_typenameof(llvmValue) << std::endl;
+    	
+    	if(ll.llvm_typeof(llvmValue) == ll.type_ptr(ll.type_bool())) {
+    		return ll.op_ne (llvm_load_value(val), ll.constant_bool(0));
+    	} else {
+    		return ll.op_ne (llvm_load_value(val), ll.constant(0));
+    	}
+    	
+    }
 
     // float-based
     int ncomps = t.aggregate;

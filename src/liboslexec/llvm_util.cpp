@@ -533,8 +533,14 @@ LLVM_Util::set_debug_info(const std::string &function_name) {
 
 	TheDebugInfo.TheCU = m_llvm_debug_builder->createCompileUnit(
 			llvm::dwarf::DW_LANG_C, 
+# if OSL_LLVM_VERSION >= 40
+			m_llvm_debug_builder->createFile("JIT", // filename
+					"." // directory
+					),
+#else			
 			"JIT", // filename
 			".", // directory
+#endif
 			"OSLv1.9", // Identify the producer of debugging information and code. Usually this is a compiler version string.
 			0, // Identify the producer of debugging information and code. Usually this is a compiler version string.
 			"", // This string lists command line options. This string is directly embedded in debug info output which may be used by a tool analyzing generated debugging information.
@@ -551,7 +557,11 @@ LLVM_Util::set_debug_info(const std::string &function_name) {
 					llvm::SmallVector<llvm::Metadata *, 8> EltTys;
 					//llvm::DIType *DblTy = KSTheDebugInfo.getDoubleTy();
 					llvm::DIType *debug_double_type = m_llvm_debug_builder->createBasicType(
-							"double", 64, 64, llvm::dwarf::DW_ATE_float);
+# if OSL_LLVM_VERSION >= 40
+							"double", 64, llvm::dwarf::DW_ATE_float);
+#else
+					"double", 64, 64, llvm::dwarf::DW_ATE_float);
+#endif
 			#if 0
 					// Add the result type.
 					EltTys.push_back(DblTy);
@@ -791,7 +801,7 @@ LLVM_Util::make_jit_execengine (std::string *err)
     options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
     options.UnsafeFPMath = true;
 
-    #if LLVM_VERSION < 40
+    #if OSL_LLVM_VERSION < 40
     // Turn off approximate reciprocals for division. It's too
     // inaccurate even for us. In LLVM 4.0+ this moved to be a
     // function attribute.
@@ -869,10 +879,10 @@ LLVM_Util::make_jit_execengine (std::string *err)
 		std::vector<std::string> attrvec;
 		for (auto &cpuFeature : cpuFeatures) 
 		{
-			//auto enabled = (cpuFeature.second && (cpuFeature.first().str().find("512") == std::string::npos)) ? "+" : "-";
-			auto enabled = (cpuFeature.second) ? "+" : "-";
+			auto enabled = (cpuFeature.second && (cpuFeature.first().str().find("512") == std::string::npos)) ? "+" : "-";
+			//auto enabled = (cpuFeature.second) ? "+" : "-";
 			//std::cout << cpuFeature.first().str()  << " is " << enabled << std::endl;
-			//attrvec.push_back(enabled + cpuFeature.first().str());
+			attrvec.push_back(enabled + cpuFeature.first().str());
 			
 		}
 		//The particular format of the names are target dependent, and suitable for passing as -mattr to the target which matches the host.
@@ -883,7 +893,7 @@ LLVM_Util::make_jit_execengine (std::string *err)
 		//attrvec.push_back("+sse2");
 		
 		//attrvec.push_back("+sse4.2");
-		attrvec.push_back("+avx2");
+		//attrvec.push_back("+avx2");
 		//attrvec.push_back("+avx");
 		//attrvec.push_back("avx");
 		//attrvec.push_back("+avx512f");
@@ -2323,6 +2333,9 @@ LLVM_Util::op_select (llvm::Value *cond, llvm::Value *a, llvm::Value *b)
 llvm::Value *
 LLVM_Util::op_eq (llvm::Value *a, llvm::Value *b, bool ordered)
 {
+    if (a->getType() != b->getType()) {
+    	std::cout << "a type=" << llvm_typenameof(a) << " b type=" << llvm_typenameof(b) << std::endl;
+    }
     ASSERT (a->getType() == b->getType());
     if ((a->getType() == type_float()) || (a->getType() == type_wide_float()))
         return ordered ? builder().CreateFCmpOEQ (a, b) : builder().CreateFCmpUEQ (a, b);
@@ -2335,6 +2348,9 @@ LLVM_Util::op_eq (llvm::Value *a, llvm::Value *b, bool ordered)
 llvm::Value *
 LLVM_Util::op_ne (llvm::Value *a, llvm::Value *b, bool ordered)
 {
+    if (a->getType() != b->getType()) {
+    	std::cout << "a type=" << llvm_typenameof(a) << " b type=" << llvm_typenameof(b) << std::endl;
+    }
     ASSERT (a->getType() == b->getType());
     if ((a->getType() == type_float()) || (a->getType() == type_wide_float()))
         return ordered ? builder().CreateFCmpONE (a, b) : builder().CreateFCmpUNE (a, b);

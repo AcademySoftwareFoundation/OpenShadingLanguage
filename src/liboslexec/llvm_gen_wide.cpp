@@ -2161,7 +2161,8 @@ LLVMGEN (llvm_gen_if)
 		rop.ll.op_branch (else_block);
 	
 		// Else block
-		rop.ll.push_mask(rop.ll.negate_mask(mask));
+		//rop.ll.push_mask(rop.ll.negate_mask(mask));
+		rop.ll.push_mask(mask, true /* negate */);
 		rop.build_llvm_code (op.jump(0), op.jump(1), else_block);
 		rop.ll.pop_mask();
 		rop.ll.op_branch (after_block);  // insert point is now after_block				

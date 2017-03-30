@@ -879,10 +879,10 @@ LLVM_Util::make_jit_execengine (std::string *err)
 		std::vector<std::string> attrvec;
 		for (auto &cpuFeature : cpuFeatures) 
 		{
-			auto enabled = (cpuFeature.second && (cpuFeature.first().str().find("512") == std::string::npos)) ? "+" : "-";
-			//auto enabled = (cpuFeature.second) ? "+" : "-";
+			//auto enabled = (cpuFeature.second && (cpuFeature.first().str().find("512") == std::string::npos)) ? "+" : "-";
+			auto enabled = (cpuFeature.second) ? "+" : "-";
 			//std::cout << cpuFeature.first().str()  << " is " << enabled << std::endl;
-			//attrvec.push_back(enabled + cpuFeature.first().str());
+			attrvec.push_back(enabled + cpuFeature.first().str());
 			
 		}
 		//The particular format of the names are target dependent, and suitable for passing as -mattr to the target which matches the host.
@@ -892,7 +892,7 @@ LLVM_Util::make_jit_execengine (std::string *err)
 		
 		//attrvec.push_back("+sse2");
 		
-		attrvec.push_back("+sse4.2");
+		//attrvec.push_back("+sse4.2");
 		//attrvec.push_back("+avx2");
 		//attrvec.push_back("+avx");
 		//attrvec.push_back("avx");
@@ -1911,45 +1911,73 @@ LLVM_Util::op_load (llvm::Value *ptr)
 
 
 void
-LLVM_Util::push_mask(llvm::Value *mask)
+LLVM_Util::push_mask(llvm::Value *mask, bool negate)
 {	
 	ASSERT(mask->getType() == type_wide_bool());
 	if(m_mask_stack.empty()) {
-		m_mask_stack.push_back(mask);
+		m_mask_stack.push_back(MaskInfo{mask, negate});
 	} else {
 		
-		llvm::Value *prev_mask = m_mask_stack.back();
+		MaskInfo & mi = m_mask_stack.back();
+		llvm::Value *prev_mask = mi.mask;
+		bool prev_negate = mi.negate;
 	
 #if 1
 		//llvm::Value *false_mask = wide_constant_bool(false);
-		llvm::Value *blended_mask = builder().CreateSelect(prev_mask, mask, prev_mask);
-		m_mask_stack.push_back(blended_mask);
+		if (false == prev_negate) {
+			if (false == negate)
+			{
+				llvm::Value *blended_mask = builder().CreateSelect(prev_mask, mask, prev_mask);
+				m_mask_stack.push_back(MaskInfo{blended_mask, false});
+			} else {
+				llvm::Value *blended_mask = builder().CreateSelect(mask, wide_constant_bool(false), prev_mask);
+				m_mask_stack.push_back(MaskInfo{blended_mask, false});			
+				//llvm::Value *blended_mask = builder().CreateSelect(prev_mask, mask, wide_constant_bool(true));
+				//m_mask_stack.push_back(MaskInfo{blended_mask, true});			
+			}
+		} else {
+			if (false == negate)
+			{
+				
+				// Good one
+				llvm::Value *blended_mask = builder().CreateSelect(prev_mask, wide_constant_bool(false), mask);
+				m_mask_stack.push_back(MaskInfo{blended_mask, false});
+//				llvm::Value *blended_mask = builder().CreateSelect(mask, prev_mask, wide_constant_bool(true));
+//				m_mask_stack.push_back(MaskInfo{blended_mask, true});
+//				llvm::Value *blended_mask = builder().CreateSelect(prev_mask, wide_constant_bool(false), mask);
+				//m_mask_stack.push_back(MaskInfo{blended_mask, true});
+				
+			} else {
+				llvm::Value *blended_mask = builder().CreateSelect(prev_mask, prev_mask, mask);
+				m_mask_stack.push_back(MaskInfo{blended_mask, true});			
+			}			
+		}
 #endif
 		
 #if 0
 		llvm::Value *combined_mask = builder().CreateAnd(prev_mask, mask);
-		m_mask_stack.push_back(combined_mask);
+		m_mask_stack.push_back(MaskInfo{combined_mask, negate});
 #endif
 #if 0
 		llvm::Value *combined_mask = builder().CreateMul(prev_mask, mask);
-		m_mask_stack.push_back(combined_mask);
+		m_mask_stack.push_back(MaskInfo{combined_mask, negate});
 #endif
 #if 0
 		llvm::Value *combined_mask = builder().CreateICmpEQ(prev_mask, mask);
-		m_mask_stack.push_back(combined_mask);
+		m_mask_stack.push_back(MaskInfo{combined_mask, negate});
 #endif
 #if 0
 		//llvm::Type *int16_type = (llvm::Type *) llvm::Type::getInt32Ty (*m_llvm_context);
 		
 		llvm::Value *combined_mask = builder().CreateTrunc(builder().CreateMul(builder().CreateSExt(prev_mask, type_wide_int()), builder().CreateSExt(mask, type_wide_int())), type_wide_bool());
-		m_mask_stack.push_back(combined_mask);
+		m_mask_stack.push_back(MaskInfo{combined_mask, negate});
 #endif
 
 #if 0
 		llvm::Type *int16_type = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);	
 		
 		llvm::Value *combined_mask = builder().CreateBitCast(builder().CreateAnd(builder().CreateBitCast(prev_mask, int16_type), builder().CreateBitCast(mask, int16_type)), type_wide_bool());
-		m_mask_stack.push_back(combined_mask);
+		m_mask_stack.push_back(MaskInfo{combined_mask, negate});
 #endif
 #if 0
 		llvm::Function* andIntrinsic = llvm::Intrinsic::getDeclaration(m_llvm_module, llvm::Intrinsic::x86_avx512_kand_w);
@@ -1961,7 +1989,7 @@ LLVM_Util::push_mask(llvm::Value *mask)
         args.push_back (builder().CreateBitCast(prev_mask, int16_type));
         args.push_back (builder().CreateBitCast(mask, int16_type));
         llvm::Value *combined_mask = builder().CreateBitCast(call_function (andIntrinsic, &args[0], args.size()), type_wide_bool());
-        m_mask_stack.push_back(combined_mask);
+        m_mask_stack.push_back(MaskInfo{combined_mask, negate});
 #endif	
 	}
 }
@@ -2002,10 +2030,14 @@ LLVM_Util::op_store (llvm::Value *val, llvm::Value *ptr)
 		ASSERT(val->getType()->isVectorTy());
 		ASSERT(false == m_mask_stack.empty());
 		
+		MaskInfo & mi = m_mask_stack.back();
 		// TODO: add assert for ptr alignment in debug builds	
+#if 0
 		if (m_supports_masked_stores) {
-			builder().CreateMaskedStore(val, ptr, 64, m_mask_stack.back());
-		} else {
+			builder().CreateMaskedStore(val, ptr, 64, mi.mask);
+		} else 
+#endif
+		{
 			// Transform the masted store to a load+blend+store
 			// Technically, the behavior is different than a masked store
 			// as different thread could technically have modified the masked off
@@ -2013,8 +2045,13 @@ LLVM_Util::op_store (llvm::Value *val, llvm::Value *ptr)
 			// As this language sits below the threading level that could
 			// never happen and a read+store
 			llvm::Value *previous_value = builder().CreateLoad (ptr);
-			llvm::Value *blended_value = builder().CreateSelect(m_mask_stack.back(), val, previous_value);
-			builder().CreateStore(blended_value, ptr);
+			if (false == mi.negate) {
+				llvm::Value *blended_value = builder().CreateSelect(mi.mask, val, previous_value);
+				builder().CreateStore(blended_value, ptr);
+			} else {
+				llvm::Value *blended_value = builder().CreateSelect(mi.mask, previous_value, val);
+				builder().CreateStore(blended_value, ptr);				
+			}
 		}
 	}
 	

@@ -211,7 +211,7 @@ public:
     // Push a mask onto the mask stack, which actually will AND the existing
     // top mask with the new mask and store that off. The mask must be of 
     // type <16 x i1>
-    void push_mask(llvm::Value *mask);
+    void push_mask(llvm::Value *mask, bool negate = false);
     void pop_mask();
 
     void push_masking_enabled(bool enable);
@@ -591,7 +591,12 @@ private:
     std::vector<llvm::BasicBlock *> m_return_block;     // stack for func call
     std::vector<llvm::BasicBlock *> m_loop_after_block; // stack for break
     std::vector<llvm::BasicBlock *> m_loop_step_block;  // stack for continue
-    std::vector<llvm::Value *> m_mask_stack;  			// stack for masks that all stores should use when enabled
+    struct MaskInfo
+    {
+    	llvm::Value * mask;
+    	bool negate;
+    };
+    std::vector<MaskInfo> m_mask_stack;  			// stack for masks that all stores should use when enabled
     std::vector<bool> m_enable_masking_stack;  			// stack for enabling stores to be masked
 
     llvm::Type *m_llvm_type_float;

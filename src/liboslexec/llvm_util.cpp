@@ -857,7 +857,7 @@ LLVM_Util::make_jit_execengine (std::string *err)
    options.MCOptions = InitMCTargetOptionsFromFlags();
    options.JTType = JTableType;
    
-   options.ThreadModel = TMModel;
+   options.ThreadModel = llvm::ThreadModel::Single;
    options.EABIVersion = EABIVersion;
    //options.EABIVersion = EABI::EABI4;
    options.DebuggerTuning = DebuggerTuningOpt;   
@@ -882,7 +882,7 @@ LLVM_Util::make_jit_execengine (std::string *err)
 			auto enabled = (cpuFeature.second && (cpuFeature.first().str().find("512") == std::string::npos)) ? "+" : "-";
 			//auto enabled = (cpuFeature.second) ? "+" : "-";
 			//std::cout << cpuFeature.first().str()  << " is " << enabled << std::endl;
-			attrvec.push_back(enabled + cpuFeature.first().str());
+			//attrvec.push_back(enabled + cpuFeature.first().str());
 			
 		}
 		//The particular format of the names are target dependent, and suitable for passing as -mattr to the target which matches the host.
@@ -892,15 +892,15 @@ LLVM_Util::make_jit_execengine (std::string *err)
 		
 		//attrvec.push_back("+sse2");
 		
-		//attrvec.push_back("+sse4.2");
+		attrvec.push_back("+sse4.2");
 		//attrvec.push_back("+avx2");
 		//attrvec.push_back("+avx");
 		//attrvec.push_back("avx");
 		//attrvec.push_back("+avx512f");
 		engine_builder.setMAttrs(attrvec);
 		
-		//m_supports_masked_stores = false;
-		m_supports_masked_stores = true;
+		m_supports_masked_stores = false;
+		//m_supports_masked_stores = true;
     }
     
 
@@ -1919,8 +1919,50 @@ LLVM_Util::push_mask(llvm::Value *mask)
 	} else {
 		
 		llvm::Value *prev_mask = m_mask_stack.back();
+	
+#if 1
+		//llvm::Value *false_mask = wide_constant_bool(false);
+		llvm::Value *blended_mask = builder().CreateSelect(prev_mask, mask, prev_mask);
+		m_mask_stack.push_back(blended_mask);
+#endif
+		
+#if 0
 		llvm::Value *combined_mask = builder().CreateAnd(prev_mask, mask);
-		m_mask_stack.push_back(combined_mask);		
+		m_mask_stack.push_back(combined_mask);
+#endif
+#if 0
+		llvm::Value *combined_mask = builder().CreateMul(prev_mask, mask);
+		m_mask_stack.push_back(combined_mask);
+#endif
+#if 0
+		llvm::Value *combined_mask = builder().CreateICmpEQ(prev_mask, mask);
+		m_mask_stack.push_back(combined_mask);
+#endif
+#if 0
+		//llvm::Type *int16_type = (llvm::Type *) llvm::Type::getInt32Ty (*m_llvm_context);
+		
+		llvm::Value *combined_mask = builder().CreateTrunc(builder().CreateMul(builder().CreateSExt(prev_mask, type_wide_int()), builder().CreateSExt(mask, type_wide_int())), type_wide_bool());
+		m_mask_stack.push_back(combined_mask);
+#endif
+
+#if 0
+		llvm::Type *int16_type = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);	
+		
+		llvm::Value *combined_mask = builder().CreateBitCast(builder().CreateAnd(builder().CreateBitCast(prev_mask, int16_type), builder().CreateBitCast(mask, int16_type)), type_wide_bool());
+		m_mask_stack.push_back(combined_mask);
+#endif
+#if 0
+		llvm::Function* andIntrinsic = llvm::Intrinsic::getDeclaration(m_llvm_module, llvm::Intrinsic::x86_avx512_kand_w);
+		ASSERT(andIntrinsic);
+
+		llvm::Type *int16_type = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);	
+		
+        std::vector<llvm::Value*> args;
+        args.push_back (builder().CreateBitCast(prev_mask, int16_type));
+        args.push_back (builder().CreateBitCast(mask, int16_type));
+        llvm::Value *combined_mask = builder().CreateBitCast(call_function (andIntrinsic, &args[0], args.size()), type_wide_bool());
+        m_mask_stack.push_back(combined_mask);
+#endif	
 	}
 }
 

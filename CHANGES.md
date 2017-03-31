@@ -28,9 +28,17 @@ Performance improvements:
 
 Bug fixes and other improvements:
 * Avoid division by 0 when computing derivatives in pointcloud_search.
-  #710 (1.9.0)
+  #710 (1.9.0/1.8.7)
 * Avoid subtle use-after-free memory error in dictionary_find().
   #718 (1.9.0/1.8.6)
+* Fix minor inconsistency in the behavior of `normalize()` when the input
+  has derivatives versus when it does not. #720 (1.9.0/1.8.7)
+* Fix an optimization bug where calls to `trace()` could accidentally get
+  elided if the results of the function call were unused in the shader.
+  This is incorrect! Because `trace()` has side effects upon subsequent
+  calls to `getmessage("trace",...)`. #722 (1.9.0/1.8.7)
+* Runtime optimizer is sped up by avoiding some string operations related
+  to searching for render outputs when none are registered. (1.9.0)
 
 Build & test system improvements and developer goodies:
 * C++11 is the new language baseline. #704, #707
@@ -59,15 +67,43 @@ Build & test system improvements and developer goodies:
   where clang/C++11-compiled OSL was having trouble using Boost Wave if
   Boost was not compiled in C++11 mode (which is difficult to ensure if
   you don't control the machine or build boost yourself). #715 (1.8.5/1.9.0)
+  #719 #721 (1.9.0/1.8.7)
 * Tweaks to FindOpenImageIO.cmake. (1.9.0)
+* Fixed linkage problems where some of our unit test programs were unwisely
+  linking against both liboslcomp and liboslexec (not necessary, and caused
+  problems for certain LLVM components that appeared statically in both).
+  #727 (1.9.0/1.8.7)
+* Added an easy way to invoke clang-tidy on all the files. #728
+* All internal references to our public headers have been changed to the
+  form #include <OSL/foo.h>, and not "OSL/foo.h" or "foo.h". #728
 
 Documentation:
 
 
 
+Release 1.8.7 -- 1 Apr 2017 (compared to 1.8.6)
+--------------------------------------------------
+* Fix possible division-by-zero when computing derivatives in
+  pointcloud_search. #710
+* When using clang components as the C preprocessor for .osl files, better
+  reporting of any C preprocessor errors. #719
+* Fix minor inconsistency in the behavior of `normalize()` when the input
+  has derivatives versus when it does not. #720
+* Fixes to using clang for the C preprocessing -- we discovered cases where
+  it's unreliable for older clang versions, so it now only works when using
+  LLVM >= 3.9 (for older LLVM versions, we fall back to boost wave for our
+  preprocessing needs). #721
+* Fix an optimization bug where calls to `trace()` could accidentally get
+  elided if the results of the function call were unused in the shader.
+  This is incorrect! Because `trace()` has side effects upon subsequent
+  calls to `getmessage("trace",...)`. #722
+* Fixed linkage problems where some of our unit test programs were unwisely
+  linking against both liboslcomp and liboslexec (not necessary, and caused
+  problems for certain LLVM components that appeared statically in both).
+  #727
+
 Release 1.8 [1.8.6] -- 1 Mar 2017 (compared to 1.7)
 ---------------------------------------------------
-
 Dependency and standards changes:
 * OSL now builds properly against LLVM 3.9 and 4.0 (in addition to 3.5 and
   3.4). Please note that for 3.9 or 4.0 (which use MCJIT), the JIT overhead

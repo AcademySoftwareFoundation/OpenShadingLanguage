@@ -17,6 +17,10 @@ option (BUILDSTATIC "Build static libraries instead of shared")
 option (LINKSTATIC  "Link with static external libraries when possible")
 option (CODECOV "Build code coverage tests")
 set (SANITIZE "" CACHE STRING "Build code using sanitizer (address, thread)")
+option (CLANG_TIDY "Enable clang-tidy" OFF)
+set (CLANG_TIDY_CHECKS "-*" CACHE STRING "clang-tidy checks to perform")
+set (CLANG_TIDY_ARGS "" CACHE STRING "clang-tidy args")
+option (CLANG_TIDY_FIX "Have clang-tidy fix source" OFF)
 
 
 # Figure out which compiler we're using
@@ -284,6 +288,18 @@ if (SANITIZE AND (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG))
     add_definitions ("-D${PROJECT_NAME}_SANITIZE=1")
 endif ()
 
+# clang-tidy options
+if (CLANG_TIDY)
+    set (CMAKE_CXX_CLANG_TIDY "clang-tidy;-header-filter=(${PROJECT_NAME})|(${PROJ_NAME})|(${PROJ_NAME_LOWER})|(_pvt.h)")
+    if (CLANG_TIDY_ARGS)
+        set (CMAKE_CXX_CLANG_TIDY "${CMAKE_CXX_CLANG_TIDY};${CLANG_TIDY_ARGS}")
+    endif ()
+    if (CLANG_TIDY_FIX)
+        set (CMAKE_CXX_CLANG_TIDY "${CMAKE_CXX_CLANG_TIDY};-fix")
+    endif ()
+    set (CMAKE_CXX_CLANG_TIDY "${CMAKE_CXX_CLANG_TIDY};-checks=${CLANG_TIDY_CHECKS}")
+    message (STATUS, "clang-tidy command line is: ${CMAKE_CXX_CLANG_TIDY}")
+endif ()
 
 if (EXTRA_CPP_ARGS)
     message (STATUS "Extra C++ args: ${EXTRA_CPP_ARGS}")
@@ -323,7 +339,6 @@ if (LINKSTATIC)
 else ()
     if (MSVC)
         add_definitions (-DBOOST_ALL_DYN_LINK)
-        # Necessary?  add_definitions (-DOPENEXR_DLL)
     endif ()
 endif ()
 

@@ -4,6 +4,7 @@ project (OSL
          VERSION 1.9.0
          LANGUAGES CXX C)
 set (PROJ_NAME ${PROJECT_NAME})    # short name
+string (TOLOWER ${PROJ_NAME} PROJ_NAME_LOWER)  # short name lower case
 set (PROJECT_VERSION_RELEASE_TYPE "dev")   # "dev", "betaX", "RCY", ""
 set (${PROJECT_NAME}_VERSION_RELEASE_TYPE ${PROJECT_VERSION_RELEASE_TYPE})
 set (PROJECT_COPYRIGHTYEARS "2008-2017")
@@ -123,7 +124,7 @@ include (install)          # installation options all implemented here
 include_directories (
     BEFORE
     "${CMAKE_SOURCE_DIR}/src/include"
-    "${CMAKE_BINARY_DIR}/include/${PROJECT_NAME}"
+    "${CMAKE_BINARY_DIR}/include"
   )
 
 
@@ -139,6 +140,7 @@ include (CTest)
 
 
 # Tell CMake to process the sub-directories
+add_subdirectory (src/include)
 add_subdirectory (src/liboslcomp)
 add_subdirectory (src/liboslquery)
 add_subdirectory (src/liboslexec)
@@ -157,7 +159,6 @@ if (OSL_BUILD_PLUGINS)
 add_subdirectory (src/osl.imageio)
 endif ()
 
-add_subdirectory (src/include)
 add_subdirectory (src/doc)
 
 

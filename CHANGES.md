@@ -1,5 +1,22 @@
-Release 1.8.6 -- ?? 2016 (compared to 1.8.6)
+Release 1.8.7 -- 1 Apr 2017 (compared to 1.8.6)
 --------------------------------------------------
+* Fix possible division-by-zero when computing derivatives in
+  pointcloud_search. #710
+* When using clang components as the C preprocessor for .osl files, better
+  reporting of any C preprocessor errors. #719
+* Fix minor inconsistency in the behavior of `normalize()` when the input
+  has derivatives versus when it does not. #720
+* Fixes to using clang for the C preprocessing -- we discovered cases where
+  it's unreliable for older clang versions, so it now only works when using
+  LLVM >= 3.9 (for older LLVM versions, we fall back to boost wave for our
+  preprocessing needs). #721
+* Fix an optimization bug where calls to `trace()` could accidentally get
+  elided if the results of the function call were unused in the shader.
+  This is incorrect! Because `trace()` has side effects upon subsequent
+  calls to `getmessage("trace",...)`. #722
+* Fixed linkage problems where some of our unit test programs were unwisely
+  linking against both liboslcomp and liboslexec (not necessary, and caused
+  problems for certain LLVM components that appeared statically in both).
 
 
 Release 1.8 [1.8.6] -- 1 Mar 2017 (compared to 1.7)

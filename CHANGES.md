@@ -1,3 +1,6 @@
+Release 1.8.8 -- ??? 2017 (compared to 1.8.7)
+--------------------------------------------------
+
 Release 1.8.7 -- 1 Apr 2017 (compared to 1.8.6)
 --------------------------------------------------
 * Fix possible division-by-zero when computing derivatives in

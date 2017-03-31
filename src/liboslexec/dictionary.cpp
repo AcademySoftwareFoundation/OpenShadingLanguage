@@ -30,7 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <cstdio>
 #include <cstdlib>
-#include <ctype.h>
+#include <cctype>
 #include <unordered_map>
 
 #include <OpenImageIO/dassert.h>

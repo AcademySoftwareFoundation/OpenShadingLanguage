@@ -32,7 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <memory>
 #include <unordered_map>
 #include <OpenImageIO/ustring.h>
-#include "OSL/oslexec.h"
+#include <OSL/oslexec.h>
 
 OSL_NAMESPACE_ENTER
 

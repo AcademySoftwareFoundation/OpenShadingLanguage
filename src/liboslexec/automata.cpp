@@ -27,7 +27,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "automata.h"
-#include "OSL/optautomata.h"
+#include <OSL/optautomata.h>
 #include <algorithm>
 #include <cstdio>
 

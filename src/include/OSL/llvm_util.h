@@ -28,8 +28,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-#include "export.h"
-#include "oslversion.h"
+#include <OSL/export.h>
+#include <OSL/oslversion.h>
 
 #include <vector>
 

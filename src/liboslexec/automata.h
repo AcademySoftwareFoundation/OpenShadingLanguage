@@ -35,7 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <unordered_map>
 #include <unordered_set>
 
-#include "OSL/oslconfig.h"
+#include <OSL/oslconfig.h>
 
 
 OSL_NAMESPACE_ENTER

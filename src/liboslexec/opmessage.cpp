@@ -27,7 +27,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "oslexec_pvt.h"
-#include "OSL/shaderglobals.h"
+#include <OSL/shaderglobals.h>
 
 
 /////////////////////////////////////////////////////////////////////////

@@ -29,7 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pragma once
 
 #include <OpenImageIO/ustring.h>
-#include "oslconfig.h"
+#include <OSL/oslconfig.h>
 
 OSL_NAMESPACE_ENTER
 

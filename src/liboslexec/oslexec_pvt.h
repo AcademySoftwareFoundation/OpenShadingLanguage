@@ -50,9 +50,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # include <regex>
 #endif
 
-#include "OSL/genclosure.h"
-#include "OSL/oslexec.h"
-#include "OSL/oslclosure.h"
+#include <OSL/genclosure.h>
+#include <OSL/oslexec.h>
+#include <OSL/oslclosure.h>
 #include "osl_pvt.h"
 #include "constantpool.h"
 

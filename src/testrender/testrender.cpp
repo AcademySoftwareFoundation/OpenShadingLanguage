@@ -45,7 +45,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # include <OpenImageIO/pugixml.hpp>
 #endif
 
-#include "OSL/oslexec.h"
+#include <OSL/oslexec.h>
 #include "simplerend.h"
 #include "raytracer.h"
 #include "background.h"

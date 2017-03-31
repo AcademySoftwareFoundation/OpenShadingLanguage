@@ -1,10 +1,10 @@
 #pragma once
 
 #include "sampling.h"
-#include "OSL/dual_vec.h"
-#include "OSL/oslexec.h"
-#include "OSL/oslclosure.h"
-#include "OSL/oslconfig.h"
+#include <OSL/dual_vec.h>
+#include <OSL/oslexec.h>
+#include <OSL/oslclosure.h>
+#include <OSL/oslconfig.h>
 
 
 OSL_NAMESPACE_ENTER

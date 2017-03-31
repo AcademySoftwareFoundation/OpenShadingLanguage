@@ -34,9 +34,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <mutex>
 
 #include "oslexec_pvt.h"
-#include "OSL/genclosure.h"
+#include <OSL/genclosure.h>
 #include "backendllvm.h"
-#include "OSL/oslquery.h"
+#include <OSL/oslquery.h>
 
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/dassert.h>

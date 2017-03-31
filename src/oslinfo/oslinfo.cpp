@@ -46,7 +46,7 @@ Sony Pictures Imageworks terms, above.
 #include <OpenImageIO/timer.h>
 #include <OpenImageIO/filesystem.h>
 
-#include "OSL/oslquery.h"
+#include <OSL/oslquery.h>
 using namespace OSL;
 
 

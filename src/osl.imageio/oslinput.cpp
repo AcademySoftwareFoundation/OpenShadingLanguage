@@ -41,8 +41,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/thread.h>
 #include <OpenImageIO/imagebuf.h>
 
-#include "OSL/oslexec.h"
-#include "OSL/oslcomp.h"
+#include <OSL/oslexec.h>
+#include <OSL/oslcomp.h>
 
 using namespace OIIO;
 

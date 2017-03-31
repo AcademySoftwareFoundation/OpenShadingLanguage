@@ -43,9 +43,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/timer.h>
 
-#include "OSL/oslexec.h"
-#include "OSL/oslcomp.h"
-#include "OSL/oslquery.h"
+#include <OSL/oslexec.h>
+#include <OSL/oslcomp.h>
+#include <OSL/oslquery.h>
 #include "simplerend.h"
 using namespace OSL;
 using OIIO::TypeDesc;

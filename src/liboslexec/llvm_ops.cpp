@@ -101,10 +101,10 @@ typedef long double max_align_t;
 #include <iostream>
 #include <cstddef>
 
-#include "OSL/oslconfig.h"
-#include "OSL/shaderglobals.h"
-#include "OSL/dual.h"
-#include "OSL/dual_vec.h"
+#include <OSL/oslconfig.h>
+#include <OSL/shaderglobals.h>
+#include <OSL/dual.h>
+#include <OSL/dual_vec.h>
 using namespace OSL;
 
 #include <OpenEXR/ImathFun.h>

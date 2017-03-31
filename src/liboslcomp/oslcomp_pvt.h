@@ -33,10 +33,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <set>
 #include <map>
 
-#include "OSL/oslcomp.h"
+#include <OSL/oslcomp.h>
 #include "ast.h"
 #include "symtab.h"
-#include "OSL/genclosure.h"
+#include <OSL/genclosure.h>
 
 
 extern int oslparse ();

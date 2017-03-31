@@ -31,7 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <memory>
 #include <OpenImageIO/dassert.h>
 
-#include "OSL/oslconfig.h"
+#include <OSL/oslconfig.h>
 
 
 OSL_NAMESPACE_ENTER

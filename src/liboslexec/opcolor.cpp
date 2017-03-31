@@ -40,7 +40,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 
 #include "oslexec_pvt.h"
-#include "OSL/dual.h"
+#include <OSL/dual.h>
 
 #if defined(_MSC_VER) && _MSC_VER < 1800
 using OIIO::expm1;

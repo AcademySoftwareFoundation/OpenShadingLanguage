@@ -30,7 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/refcnt.h>
 
-#include "OSL/oslcomp.h"
+#include <OSL/oslcomp.h>
 #include "symtab.h"
 
 

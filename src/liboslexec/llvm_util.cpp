@@ -31,8 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/thread.h>
 #include <boost/thread/tss.hpp>   /* for thread_specific_ptr */
 
-#include "OSL/oslconfig.h"
-#include "OSL/llvm_util.h"
+#include <OSL/oslconfig.h>
+#include <OSL/llvm_util.h>
 
 #if OSL_LLVM_VERSION < 34
 #error "LLVM minimum version required for OSL is 3.4"

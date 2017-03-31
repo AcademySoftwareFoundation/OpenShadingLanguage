@@ -41,7 +41,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 
 #include "oslexec_pvt.h"
-#include "OSL/dual.h"
+#include <OSL/dual.h>
 
 
 OSL_NAMESPACE_ENTER

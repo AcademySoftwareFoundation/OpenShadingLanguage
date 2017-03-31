@@ -28,7 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-#include "oslversion.h"
+#include <OSL/oslversion.h>
 #include <OpenImageIO/fmath.h>
 OSL_NAMESPACE_ENTER
 

@@ -37,8 +37,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/thread.h>
 
-#include "OSL/oslcomp.h"
-#include "OSL/oslexec.h"
+#include <OSL/oslcomp.h>
+#include <OSL/oslexec.h>
 using namespace OSL;
 
 

@@ -30,9 +30,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <memory>
 
-#include "OSL/oslconfig.h"
-#include "OSL/shaderglobals.h"
-#include "OSL/rendererservices.h"
+#include <OSL/oslconfig.h>
+#include <OSL/shaderglobals.h>
+#include <OSL/rendererservices.h>
 
 #include <OpenImageIO/refcnt.h>
 #include <OpenImageIO/ustring.h>

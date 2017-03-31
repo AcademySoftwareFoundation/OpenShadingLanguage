@@ -42,7 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenEXR/ImathMatrix.h>
 #include <OpenEXR/ImathColor.h>
 
-#include "matrix22.h"
+#include <OSL/matrix22.h>
 
 
 OSL_NAMESPACE_ENTER

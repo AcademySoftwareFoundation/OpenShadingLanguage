@@ -28,8 +28,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-#include "oslconfig.h"
-#include "optautomata.h"
+#include <OSL/oslconfig.h>
+#include <OSL/optautomata.h>
 #include <list>
 #include <stack>
 

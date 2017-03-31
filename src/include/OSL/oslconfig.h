@@ -69,9 +69,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/platform.h>
 
 // Extensions to Imath
-#include "matrix22.h"
+#include <OSL/matrix22.h>
 
-#include "oslversion.h"
+#include <OSL/oslversion.h>
 
 OSL_NAMESPACE_ENTER
 

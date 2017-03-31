@@ -42,7 +42,7 @@ Sony Pictures Imageworks terms, above.
 #include <string>
 #include <vector>
 
-#include "oslconfig.h"
+#include <OSL/oslconfig.h>
 
 OSL_NAMESPACE_ENTER
 

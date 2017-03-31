@@ -31,7 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <cstdio>
 
-#include "OSL/oslquery.h"
+#include <OSL/oslquery.h>
 #include "../liboslexec/osoreader.h"
 using namespace OSL;
 using namespace OSL::pvt;

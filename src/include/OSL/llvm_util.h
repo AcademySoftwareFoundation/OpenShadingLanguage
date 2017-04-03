@@ -213,6 +213,9 @@ public:
     // type <16 x i1>
     void push_mask(llvm::Value *mask, bool negate = false);
     void pop_mask();
+    
+    llvm::Value * current_mask();
+    
 
     void push_masking_enabled(bool enable);
     void pop_masking_enabled();

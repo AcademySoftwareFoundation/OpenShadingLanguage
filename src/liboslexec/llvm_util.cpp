@@ -909,7 +909,7 @@ LLVM_Util::make_jit_execengine (std::string *err)
 		{
 			//auto enabled = (cpuFeature.second && (cpuFeature.first().str().find("512") == std::string::npos)) ? "+" : "-";
 			auto enabled = (cpuFeature.second) ? "+" : "-";
-			//std::cout << cpuFeature.first().str()  << " is " << enabled << std::endl;
+			std::cout << cpuFeature.first().str()  << " is " << enabled << std::endl;
 			
 			if (oslIsa == TargetISA_UNLIMITTED) {
 				attrvec.push_back(enabled + cpuFeature.first().str());
@@ -940,6 +940,12 @@ LLVM_Util::make_jit_execengine (std::string *err)
 		case TargetISA_AVX512:
 			m_supports_masked_stores = true;
 			attrvec.push_back("+avx512f");
+			attrvec.push_back("+avx512dq");
+			attrvec.push_back("+avx512bw");
+			attrvec.push_back("+avx512vl");
+			attrvec.push_back("+avx512cd");
+			attrvec.push_back("+avx512f");
+			
 			std::cout << "Intended OSL ISA: AVX512" << std::endl;
 			break;		
 		case TargetISA_UNLIMITTED:		
@@ -2138,6 +2144,22 @@ LLVM_Util::pop_mask()
 {
 	ASSERT(false == m_mask_stack.empty());
 	m_mask_stack.pop_back();
+}
+
+llvm::Value *
+LLVM_Util::current_mask()
+{
+	if(m_mask_stack.empty()) {
+		return wide_constant_bool(true);
+	} else {
+		auto & mi = m_mask_stack.back();
+		if (mi.negate) {
+			llvm::Value *negated_mask = builder().CreateSelect(mi.mask, wide_constant_bool(false), wide_constant_bool(true));
+			return negated_mask;
+		} else {
+			return mi.mask;
+		}
+	}
 }
 
 void

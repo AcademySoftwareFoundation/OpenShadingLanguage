@@ -424,9 +424,10 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 		
 		int nextMaskId = 0;
 		int blockId = 0;
-    	std::function<void(int, int, int, int)> discoverSymbolsBetween;
-    	discoverSymbolsBetween = [&](int beginop, int endop, int blockDepth, int maskId)->void
+    	std::function<void(int, int, int, int, int, int)> discoverSymbolsBetween;
+    	discoverSymbolsBetween = [&](int beginop, int endop, int blockDepth, int writeBlockDepth, int maskId, int writeMaskId)->void
 		{		
+    		// NOTE: allowing a seperate writeMask is to handle condition blocks that are self modifying
 			for(int opIndex = beginop; opIndex < endop; ++opIndex)
 			{
 				Opcode & opcode = op(opIndex);
@@ -504,9 +505,9 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 				for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
 					const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
 					UsageInfo & info = usageInfoBySymbol[symbolWrittenTo];
-					info.last_depth = blockDepth;
-					info.last_maskId = maskId;
-					info.potentially_unmasked_ops.push_back(std::make_pair(blockDepth, opIndex));
+					info.last_depth = writeBlockDepth;
+					info.last_maskId = writeMaskId;
+					info.potentially_unmasked_ops.push_back(std::make_pair(writeBlockDepth, opIndex));
 				}
 				
 				// Add dependencies between symbols written to in this basic block
@@ -556,9 +557,17 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 					{
 						pushSymbolsCurentBlockDependsOn();
 						// Then block
-						discoverSymbolsBetween(opIndex+1, opcode.jump(0), blockDepth+1, nextMaskId++);
+						std::cout << " THEN BLOCK BEGIN" << std::endl;
+						int thenBlockDepth = blockDepth+1;
+						int thenMaskId = nextMaskId++;
+						discoverSymbolsBetween(opIndex+1, opcode.jump(0), thenBlockDepth, thenBlockDepth, thenMaskId, thenMaskId);
+						std::cout << " THEN BLOCK END" << std::endl;
 						// else block
-						discoverSymbolsBetween(opcode.jump(0), opcode.jump(1), blockDepth+1, nextMaskId++);
+						std::cout << " ELSE BLOCK BEGIN" << std::endl;
+						int elseBlockDepth = blockDepth+1;
+						int elseMaskId = nextMaskId++;
+						discoverSymbolsBetween(opcode.jump(0), opcode.jump(1), elseBlockDepth, elseBlockDepth, elseMaskId, elseMaskId);
+						std::cout << " ELSE BLOCK END" << std::endl;
 						
 						popSymbolsCurentBlockDependsOn();
 						
@@ -566,29 +575,39 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 					{
 						// Init block
 						// NOTE: init block doesn't depend on the for loops conditions and should be exempt
-						discoverSymbolsBetween(opIndex+1, opcode.jump(0), blockDepth, maskId);
+						std::cout << " FOR INIT BLOCK BEGIN" << std::endl;
+						discoverSymbolsBetween(opIndex+1, opcode.jump(0), blockDepth, blockDepth, maskId, maskId);
+						std::cout << " FOR INIT BLOCK END" << std::endl;
 
+						int depthForBodyAndStep = blockDepth+1;
 						int maskIdForBodyAndStep = nextMaskId++;
 						pushSymbolsCurentBlockDependsOn();
 						
 						
 						// Body block
-						discoverSymbolsBetween(opcode.jump(1), opcode.jump(2), blockDepth+1, maskIdForBodyAndStep);
+						std::cout << " FOR BODY BLOCK BEGIN" << std::endl;
+						discoverSymbolsBetween(opcode.jump(1), opcode.jump(2), depthForBodyAndStep, depthForBodyAndStep, maskIdForBodyAndStep, maskIdForBodyAndStep);
+						std::cout << " FOR BODY BLOCK END" << std::endl;
 											
 						// Step block
 						// Because the number of times the step block is executed depends on
 						// when the loop condition block returns false, that means if 
 						// the loop condition block is varying, then so would the condition block
-						discoverSymbolsBetween(opcode.jump(2), opcode.jump(3), blockDepth+1, maskIdForBodyAndStep);
+						std::cout << " FOR STEP BLOCK BEGIN" << std::endl;
+						discoverSymbolsBetween(opcode.jump(2), opcode.jump(3), depthForBodyAndStep, depthForBodyAndStep, maskIdForBodyAndStep, maskIdForBodyAndStep);
+						std::cout << " FOR STEP BLOCK END" << std::endl;
 
-						popSymbolsCurentBlockDependsOn();
 						
 						// Condition block
 						// NOTE: Although the first execution of the condition doesn't depend on the for loops conditions 
 						// subsequent executions will depend on it on the previous loop's mask
 						// We are processing the condition block out of order so that
 						// any writes to any symbols it depends on can be marked first
-						discoverSymbolsBetween(opcode.jump(0), opcode.jump(1), blockDepth, maskId);
+						std::cout << " FOR COND BLOCK BEGIN" << std::endl;
+						discoverSymbolsBetween(opcode.jump(0), opcode.jump(1), blockDepth, depthForBodyAndStep, maskId, maskIdForBodyAndStep);
+						std::cout << " FOR COND BLOCK END" << std::endl;
+
+						popSymbolsCurentBlockDependsOn();
 						
 						
 					} else {
@@ -606,7 +625,8 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 			}
 		};
     	
-    	discoverSymbolsBetween(inst()->maincodebegin(), inst()->maincodeend(), 0, nextMaskId++);
+    	int mainMask = nextMaskId++;
+    	discoverSymbolsBetween(inst()->maincodebegin(), inst()->maincodeend(), 0, 0, mainMask, mainMask);
     	
 		std::cout << "About to build m_is_uniform_by_symbol" << std::endl;			
 		

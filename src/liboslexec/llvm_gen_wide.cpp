@@ -2245,8 +2245,12 @@ LLVMGEN (llvm_gen_loop_op)
 		
 		//llvm::Value* cond_val = rop.llvm_test_nonzero (cond);
 		
-		llvm::Value* mask_int =  rop.ll.mask_to_int(mask);		
-		llvm::Value* cond_val =  rop.ll.op_ne (mask_int, rop.ll.constant128(0));
+		//llvm::Value* mask_int =  rop.ll.mask_to_int(mask);		
+		//llvm::Value* cond_val =  rop.ll.op_ne (mask_int, rop.ll.constant128(0));
+		llvm::Value* cond_val = rop.ll.test_if_mask_is_non_zero(mask);
+		
+		// Won't work as condition must be i1
+		//llvm::Value* cond_val =  rop.ll.op_ne (mask, rop.ll.wide_constant_bool(false));
 	
 		// Jump to either LoopBody or AfterLoop
 		rop.ll.op_branch (cond_val, body_block, after_block);
@@ -2259,7 +2263,9 @@ LLVMGEN (llvm_gen_loop_op)
 		rop.ll.op_branch (step_block);
 	
 		// Step
+		rop.ll.push_mask(mask);
 		rop.build_llvm_code (op.jump(2), op.jump(3), step_block);
+		rop.ll.pop_mask();	
 		rop.ll.op_branch (cond_block);
 	
 		// Continue on with the previous flow

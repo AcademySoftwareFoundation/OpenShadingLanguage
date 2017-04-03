@@ -866,6 +866,34 @@ LLVM_Util::make_jit_execengine (std::string *err)
    engine_builder.setTargetOptions(options);
 #endif
     
+   
+   enum TargetISA
+   {
+	   TargetISA_UNLIMITTED,
+	   TargetISA_SSE4_2,
+	   TargetISA_AVX,
+	   TargetISA_AVX2,
+	   TargetISA_AVX512
+   };
+   
+   TargetISA oslIsa = TargetISA_UNLIMITTED;
+   const char * oslIsaString = std::getenv("OSL_ISA");
+   if (oslIsaString != NULL) {
+	   if (strcmp(oslIsaString, "SSE4.2") == 0)
+	   {
+		   oslIsa = TargetISA_SSE4_2;
+	   } else if (strcmp(oslIsaString, "AVX") == 0)
+	   {
+		   oslIsa = TargetISA_AVX;
+	   } else if (strcmp(oslIsaString, "AVX2") == 0)
+	   {
+		   oslIsa = TargetISA_AVX2;
+	   } else if (strcmp(oslIsaString, "AVX512") == 0)
+	   {
+		   oslIsa = TargetISA_AVX512;
+	   }
+   }
+   
     //engine_builder.setMArch("core-avx2");
     std::cout << std::endl<< "llvm::sys::getHostCPUName()>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << llvm::sys::getHostCPUName().str() << std::endl;
     //engine_builder.setMCPU(llvm::sys::getHostCPUName());
@@ -882,25 +910,44 @@ LLVM_Util::make_jit_execengine (std::string *err)
 			//auto enabled = (cpuFeature.second && (cpuFeature.first().str().find("512") == std::string::npos)) ? "+" : "-";
 			auto enabled = (cpuFeature.second) ? "+" : "-";
 			//std::cout << cpuFeature.first().str()  << " is " << enabled << std::endl;
-			attrvec.push_back(enabled + cpuFeature.first().str());
+			
+			if (oslIsa == TargetISA_UNLIMITTED) {
+				attrvec.push_back(enabled + cpuFeature.first().str());
+			}
 			
 		}
 		//The particular format of the names are target dependent, and suitable for passing as -mattr to the target which matches the host.
 	//    const char *mattr[] = {"avx"};
 	//    std::vector<std::string> attrvec (mattr, mattr+1);
-			
+
+		m_supports_masked_stores = false;
 		
-		//attrvec.push_back("+sse2");
-		
-		//attrvec.push_back("+sse4.2");
-		//attrvec.push_back("+avx2");
-		//attrvec.push_back("+avx");
-		//attrvec.push_back("avx");
-		//attrvec.push_back("+avx512f");
+		switch(oslIsa) {
+		case TargetISA_SSE4_2:
+			attrvec.push_back("+sse4.2");
+			std::cout << "Intended OSL ISA: SSE4.2" << std::endl;
+			break;
+		case TargetISA_AVX:
+			m_supports_masked_stores = true;
+			attrvec.push_back("+avx");
+			std::cout << "Intended OSL ISA: AVX" << std::endl;
+			break;		
+		case TargetISA_AVX2:
+			m_supports_masked_stores = true;
+			attrvec.push_back("+avx2");
+			std::cout << "Intended OSL ISA: AVX2" << std::endl;
+			break;		
+		case TargetISA_AVX512:
+			m_supports_masked_stores = true;
+			attrvec.push_back("+avx512f");
+			std::cout << "Intended OSL ISA: AVX512" << std::endl;
+			break;		
+		case TargetISA_UNLIMITTED:		
+		default:
+			break;
+		};
 		engine_builder.setMAttrs(attrvec);
 		
-		m_supports_masked_stores = false;
-		//m_supports_masked_stores = true;
     }
     
 
@@ -914,7 +961,7 @@ LLVM_Util::make_jit_execengine (std::string *err)
     
     TargetMachine * target_machine = m_llvm_exec->getTargetMachine();
     //std::cout << "target_machine.getTargetCPU()=" << target_machine->getTargetCPU().str() << std::endl;
-	//std::cout << "target_machine.getTargetFeatureString ()=" << target_machine->getTargetFeatureString ().str() << std::endl;
+	std::cout << "target_machine.getTargetFeatureString ()=" << target_machine->getTargetFeatureString ().str() << std::endl;
 	//std::cout << "target_machine.getTargetTriple ()=" << target_machine->getTargetTriple().str() << std::endl;
     
 
@@ -1487,6 +1534,12 @@ LLVM_Util::constant (int i)
 }
 
 llvm::Value *
+LLVM_Util::constant64 (int i)
+{
+    return llvm::ConstantInt::get (context(), llvm::APInt(64,i));
+}
+
+llvm::Value *
 LLVM_Util::constant128 (int i)
 {
     return llvm::ConstantInt::get (context(), llvm::APInt(128,i));
@@ -1567,17 +1620,103 @@ LLVM_Util::wide_constant (ustring s)
 
 
 llvm::Value *
-LLVM_Util::mask_to_int (llvm::Value *mask)
+LLVM_Util::test_if_mask_is_non_zero(llvm::Value *mask)
 {
 	ASSERT(mask->getType() == type_wide_bool());
 
+#if 0
 	llvm::Type * extended_int_vector_type = (llvm::Type *) llvm::VectorType::get(llvm::Type::getInt8Ty (*m_llvm_context), m_vector_width);
 	
 	llvm::Value * wide_int_mask = builder().CreateSExt(mask, extended_int_vector_type);
-	
-	llvm::Type * int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt128Ty (*m_llvm_context);
 
-    return builder().CreateBitCast (wide_int_mask, int_reinterpret_cast_vector_type);
+	llvm::Type * int_reinterpret_cast_vector_type;
+	llvm::Value * zeroConstant;
+	switch(m_vector_width) {
+	case 4:
+		int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt32Ty (*m_llvm_context);
+		zeroConstant = constant(0);
+		break;
+	case 8:
+		int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt64Ty (*m_llvm_context);
+		zeroConstant = constant64(0);
+		break;
+	case 16:
+		int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt128Ty (*m_llvm_context);
+		zeroConstant = constant128(0);
+		break;
+	default:
+		ASSERT(0 && "Unhandled vector width");
+		break;
+	};		
+
+	llvm::Value * mask_as_int =  builder().CreateBitCast (wide_int_mask, int_reinterpret_cast_vector_type);
+    
+    return op_ne (mask_as_int, zeroConstant);
+#endif
+#if 0
+	llvm::Type * extended_int_vector_type = (llvm::Type *) llvm::VectorType::get(llvm::Type::getInt16Ty (*m_llvm_context), m_vector_width);
+	
+	llvm::Value * wide_int_mask = builder().CreateSExt(mask, extended_int_vector_type);
+
+	llvm::Type * int_reinterpret_cast_vector_type;
+	llvm::Value * zeroConstant;
+	switch(m_vector_width) {
+	case 4:
+		int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt64Ty (*m_llvm_context);
+		zeroConstant = constant64(0);
+		break;
+	case 8:
+		int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt128Ty (*m_llvm_context);
+		zeroConstant = constant128(0);
+		break;
+	case 16:
+		int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt128Ty (*m_llvm_context);
+		zeroConstant = constant128(0);
+		break;
+	default:
+		ASSERT(0 && "Unhandled vector width");
+		break;
+	};		
+
+	llvm::Value * mask_as_int =  builder().CreateBitCast (wide_int_mask, int_reinterpret_cast_vector_type);
+    
+    return op_ne (mask_as_int, zeroConstant);
+#endif
+#if 1
+	llvm::Type * extended_int_vector_type;
+	llvm::Type * int_reinterpret_cast_vector_type;
+	llvm::Value * zeroConstant;
+	switch(m_vector_width) {
+	case 4:
+		extended_int_vector_type = (llvm::Type *) llvm::VectorType::get(llvm::Type::getInt32Ty (*m_llvm_context), m_vector_width);
+		int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt128Ty (*m_llvm_context);
+		zeroConstant = constant128(0);
+		break;
+	case 8:
+		extended_int_vector_type = (llvm::Type *) llvm::VectorType::get(llvm::Type::getInt32Ty (*m_llvm_context), m_vector_width);
+		int_reinterpret_cast_vector_type = (llvm::Type *) llvm::IntegerType::get(*m_llvm_context,256);
+		zeroConstant = llvm::ConstantInt::get (context(), llvm::APInt(256,0));
+		break;
+	case 16:
+		extended_int_vector_type = (llvm::Type *) llvm::VectorType::get(llvm::Type::getInt8Ty (*m_llvm_context), m_vector_width);
+		int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt128Ty (*m_llvm_context);
+		zeroConstant = constant128(0);
+		break;
+	default:
+		ASSERT(0 && "Unhandled vector width");
+		break;
+	};		
+
+	llvm::Value * wide_int_mask = builder().CreateSExt(mask, extended_int_vector_type);
+	llvm::Value * mask_as_int =  builder().CreateBitCast (wide_int_mask, int_reinterpret_cast_vector_type);
+    
+    return op_ne (mask_as_int, zeroConstant);
+#endif
+#if 0
+    Value *int_result = builder().CreateBitCast(mask, Type::getInt8Ty(*m_llvm_context));
+    Value *result = builder().CreateSExt(int_result, Type::getInt32Ty(*m_llvm_context));    
+    return op_ne (result, constant(0));
+#endif
 }
 
 

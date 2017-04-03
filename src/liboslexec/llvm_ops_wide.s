@@ -9139,6 +9139,8 @@ define void @osl_logb_vv(i8* nocapture, i8* nocapture readonly) local_unnamed_ad
 
 declare float     @llvm.floor.f32(float  %Val)
 declare <16 x float> @llvm.floor.v16f32(<16 x float> %Val)
+declare <8 x float> @llvm.floor.v8f32(<8 x float> %Val)
+declare <4 x float> @llvm.floor.v4f32(<4 x float> %Val)
 
 ; Function Attrs: nounwind readnone uwtable
 define float @osl_floor_ff(float) local_unnamed_addr #3 {
@@ -9148,11 +9150,26 @@ define float @osl_floor_ff(float) local_unnamed_addr #3 {
 }
 
 ; Function Attrs: nounwind readnone uwtable
-define <16 x float> @osl_floor_w16fw16f(<16 x float> ) local_unnamed_addr #3 {
+define <16 x float> @osl_floor_w16fw16f(<16 x float> ) alwaysinline #3 {
 
   %2 = tail call <16 x float> @llvm.floor.v16f32(<16 x float> %0)
   ret  <16 x float>  %2
 }
+
+; Function Attrs: nounwind readnone uwtable
+define <8 x float> @osl_floor_w8fw8f(<8 x float> ) alwaysinline #3 {
+
+  %2 = tail call <8 x float> @llvm.floor.v8f32(<8 x float> %0)
+  ret  <8 x float>  %2
+}
+
+; Function Attrs: nounwind readnone uwtable
+define <4 x float> @osl_floor_w4fw4f(<4 x float> ) alwaysinline #3 {
+
+  %2 = tail call <4 x float> @llvm.floor.v4f32(<4 x float> %0)
+  ret  <4 x float>  %2
+}
+
 
 
 ; Function Attrs: nounwind readnone

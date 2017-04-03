@@ -535,6 +535,19 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 							symbolsCurrentBlockDependsOn.push_back(symbolReadFrom);
 						}
 			    	};
+			    	
+			    	std::function<void()> popSymbolsCurentBlockDependsOn;
+			    	popSymbolsCurentBlockDependsOn = [&]()->void {			    			
+						// Now that we have processed the dependent basic blocks
+						// we continue processing instructions and those will no
+						// longer be dependent on this operations read symbols
+						for(int readIndex=symbolsRead-1; readIndex >= 0; --readIndex) {
+							// TODO: change to DASSERT later once we are confident
+							ASSERT(symbolsCurrentBlockDependsOn.back() == symbolsReadByOp[readIndex]);
+							symbolsCurrentBlockDependsOn.pop_back();
+						}					
+			    	};
+			    	
 									
 					// op must have jumps, therefore have nested code we need to process
 					// We need to process these in the same order as the code generator
@@ -546,36 +559,43 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 						discoverSymbolsBetween(opIndex+1, opcode.jump(0), blockDepth+1, nextMaskId++);
 						// else block
 						discoverSymbolsBetween(opcode.jump(0), opcode.jump(1), blockDepth+1, nextMaskId++);
+						
+						popSymbolsCurentBlockDependsOn();
+						
 					} else if (opcode.opname() == ustring("for"))
 					{
 						// Init block
 						// NOTE: init block doesn't depend on the for loops conditions and should be exempt
-						discoverSymbolsBetween(opIndex+1, opcode.jump(0), blockDepth, maskId);						
-						// Condition block
-						// NOTE: the first execution of the condition doesn't depend on the for loops conditions and should be exempt
-						// TODO: unclear about subsequent executions, they might need to be masked... Hmmm
-						discoverSymbolsBetween(opcode.jump(0), opcode.jump(1), blockDepth, maskId);
-						
+						discoverSymbolsBetween(opIndex+1, opcode.jump(0), blockDepth, maskId);
+
+						int maskIdForBodyAndStep = nextMaskId++;
 						pushSymbolsCurentBlockDependsOn();
 						
-						int maskIdForBodyAndStep = nextMaskId++;
+						
 						// Body block
 						discoverSymbolsBetween(opcode.jump(1), opcode.jump(2), blockDepth+1, maskIdForBodyAndStep);
+											
 						// Step block
+						// Because the number of times the step block is executed depends on
+						// when the loop condition block returns false, that means if 
+						// the loop condition block is varying, then so would the condition block
 						discoverSymbolsBetween(opcode.jump(2), opcode.jump(3), blockDepth+1, maskIdForBodyAndStep);
+
+						popSymbolsCurentBlockDependsOn();
+						
+						// Condition block
+						// NOTE: Although the first execution of the condition doesn't depend on the for loops conditions 
+						// subsequent executions will depend on it on the previous loop's mask
+						// We are processing the condition block out of order so that
+						// any writes to any symbols it depends on can be marked first
+						discoverSymbolsBetween(opcode.jump(0), opcode.jump(1), blockDepth, maskId);
+						
+						
 					} else {
 
 						ASSERT(0 && "Unhandled OSL instruction which contains jumps, note this uniform detection code needs to walk the code blocks identical to build_llvm_code");
 					}
 
-					// Now that we have processed the dependent basic blocks
-					// we continue processing instructions and those will no
-					// longer be dependent on this operations read symbols
-					for(int readIndex=symbolsRead-1; readIndex >= 0; --readIndex) {
-						// TODO: change to DASSERT later once we are confident
-						ASSERT(symbolsCurrentBlockDependsOn.back() == symbolsReadByOp[readIndex]);
-						symbolsCurrentBlockDependsOn.pop_back();
-					}					
 				}
 				
 		        // If the op we coded jumps around, skip past its recursive block

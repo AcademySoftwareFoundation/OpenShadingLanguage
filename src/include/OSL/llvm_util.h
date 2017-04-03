@@ -322,6 +322,7 @@ public:
     llvm::Value *constant (int i);
 
     /// Return an llvm::Value holding the given integer constant.
+    llvm::Value *constant64 (int i);
     llvm::Value *constant128 (int i);
     
     /// Return an llvm::Value holding wide version of the given integer constant.
@@ -359,7 +360,7 @@ public:
     }
 
     
-    llvm::Value * mask_to_int (llvm::Value *mask);
+    llvm::Value * test_if_mask_is_non_zero(llvm::Value *mask);
     llvm::Value * widen_value (llvm::Value *val);
     llvm::Value * negate_mask(llvm::Value *mask);
 

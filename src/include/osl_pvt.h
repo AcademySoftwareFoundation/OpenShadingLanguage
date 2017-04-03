@@ -431,7 +431,7 @@ public:
     /// Append a new field (with type and name) to this struct.
     ///
     void add_field (const TypeSpec &type, ustring name) {
-        m_fields.push_back (FieldSpec (type, name));
+        m_fields.emplace_back(type, name);
     }
 
     /// The name of this struct (may not be unique across all scopes).

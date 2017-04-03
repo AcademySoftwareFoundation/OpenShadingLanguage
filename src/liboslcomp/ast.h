@@ -257,7 +257,7 @@ protected:
 
     /// Add a new node to the list of children.
     ///
-    void addchild (ASTNode *n) { m_children.push_back (n); }
+    void addchild (ASTNode *n) { m_children.emplace_back(n); }
 
     /// Call the print() method of all the children of this node.
     ///
@@ -428,7 +428,7 @@ public:
     Symbol *codegen_struct_initializers (ref init, Symbol *sym);
 
     void register_struct_init (ustring name, ASTNode *init) {
-        m_struct_field_inits.push_back (NamedInit (name, init));
+        m_struct_field_inits.emplace_back(name, init);
     }
 
 private:

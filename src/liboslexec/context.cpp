@@ -219,7 +219,7 @@ void
 ShadingContext::record_error (ErrorHandler::ErrCode code,
                               const std::string &text) const
 {
-    m_buffered_errors.push_back (ErrorItem(code,text));
+    m_buffered_errors.emplace_back(code,text);
     // If we aren't buffering, just process immediately
     if (! shadingsys().m_buffer_printf)
         process_errors ();

@@ -388,7 +388,7 @@ ShaderInstance::add_connection (int srclayer, const ConnectedParam &srccon,
     }
 
     off_t oldmem = vectorbytes(m_connections);
-    m_connections.push_back (Connection (srclayer, srccon, dstcon));
+    m_connections.emplace_back(srclayer, srccon, dstcon);
 
     // adjust stats
     off_t mem = vectorbytes(m_connections) - oldmem;

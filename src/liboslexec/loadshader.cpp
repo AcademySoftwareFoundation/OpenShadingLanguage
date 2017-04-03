@@ -231,7 +231,7 @@ void
 OSOReaderToMaster::add_param_default (const char *def, size_t offset, const Symbol& sym)
 {
   if (sym.typespec().is_unsized_array() && offset >= m_master->m_sdefaults.size())
-      m_master->m_sdefaults.push_back(ustring(def));
+      m_master->m_sdefaults.emplace_back(def);
   else
       m_master->m_sdefaults[offset] = ustring(def);
 }

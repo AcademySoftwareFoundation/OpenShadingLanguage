@@ -676,7 +676,7 @@ setup_output_images (ShadingSystem *shadingsys,
     // For each output file specified on the command line...
     for (size_t i = 0;  i < outputfiles.size();  ++i) {
         // Make a ustring version of the output name, for fast manipulation
-        outputvarnames.push_back (ustring(outputvars[i]));
+        outputvarnames.emplace_back(outputvars[i]);
         // Start with a NULL ImageBuf pointer
         outputimgs.push_back (NULL);
 

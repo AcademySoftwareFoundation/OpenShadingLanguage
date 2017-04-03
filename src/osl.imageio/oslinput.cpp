@@ -460,7 +460,7 @@ OSLInput::open (const std::string &name, ImageSpec &newspec,
             parse_res (args[i].second, m_topspec.tile_width, m_topspec.tile_height,
                        m_topspec.tile_depth);
         } else if (args[i].first == "OUTPUT") {
-            m_outputs.push_back (ustring(args[i].second));
+            m_outputs.emplace_back(args[i].second);
         } else if (args[i].first == "MIP") {
             m_mip = Strutil::from_string<int>(args[i].second);
         } else if (args[i].first.size() && args[i].second.size()) {
@@ -468,8 +468,8 @@ OSLInput::open (const std::string &name, ImageSpec &newspec,
         }
     }
     if (m_outputs.empty()) {
-        m_outputs.push_back (ustring("result"));
-        m_outputs.push_back (ustring("alpha"));
+        m_outputs.emplace_back("result");
+        m_outputs.emplace_back("alpha");
     }
 
     m_topspec.full_x = m_topspec.x;

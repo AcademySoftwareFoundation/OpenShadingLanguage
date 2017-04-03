@@ -148,7 +148,7 @@ int main()
     // Create our fake testing AOV's
     std::vector<MyAov> aovs;
     for (int i = 0; i < naovs; ++i)
-        aovs.push_back (MyAov (test, i));
+        aovs.emplace_back(test, i);
 
     // Create the automata and add the rules
     AccumAutomata automata;

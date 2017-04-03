@@ -1110,13 +1110,13 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
                 "ShaderGlobals.raytype is an int, max of 32 raytypes");
         m_raytypes.clear ();
         for (size_t i = 0;  i < type.numelements();  ++i)
-            m_raytypes.push_back (ustring(((const char **)val)[i]));
+            m_raytypes.emplace_back(((const char **)val)[i]);
         return true;
     }
     if (name == "renderer_outputs" && type.basetype == TypeDesc::STRING) {
         m_renderer_outputs.clear ();
         for (size_t i = 0;  i < type.numelements();  ++i)
-            m_renderer_outputs.push_back (ustring(((const char **)val)[i]));
+            m_renderer_outputs.emplace_back(((const char **)val)[i]);
         return true;
     }
     return false;
@@ -1281,7 +1281,7 @@ ShadingSystemImpl::attribute (ShaderGroup *group, string_view name,
     if (name == "renderer_outputs" && type.basetype == TypeDesc::STRING) {
         group->m_renderer_outputs.clear ();
         for (size_t i = 0;  i < type.numelements();  ++i)
-            group->m_renderer_outputs.push_back (ustring(((const char **)val)[i]));
+            group->m_renderer_outputs.emplace_back(((const char **)val)[i]);
         return true;
     }
     if (name == "entry_layers" && type.basetype == TypeDesc::STRING) {
@@ -1777,7 +1777,7 @@ ShadingSystemImpl::getstats (int level) const
             std::vector<GroupTimeVal> grouptimes;
             for (std::map<ustring,long long>::const_iterator m = m_group_profile_times.begin();
                  m != m_group_profile_times.end(); ++m) {
-                grouptimes.push_back (GroupTimeVal(m->first, m->second));
+                grouptimes.emplace_back(m->first, m->second);
             }
             std::sort (grouptimes.begin(), grouptimes.end(), group_time_compare());
             if (grouptimes.size() > 5)
@@ -2215,7 +2215,7 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
                     if (s.size() == 0)
                         break;
                 }
-                stringvals.push_back (ustring(s));
+                stringvals.emplace_back(s);
             }
             if (type.is_unsized_array()) {
                 // For unsized arrays, now set the size based on how many

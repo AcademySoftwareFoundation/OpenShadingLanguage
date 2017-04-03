@@ -163,17 +163,17 @@ main (int argc, const char *argv[])
                  ! strcmp (argv[a], "-O") || ! strcmp (argv[a], "-O0") ||
                  ! strcmp (argv[a], "-O1") || ! strcmp (argv[a], "-O2")) {
             // Valid command-line argument
-            args.push_back (argv[a]);
+            args.emplace_back(argv[a]);
             quiet |= (strcmp (argv[a], "-q") == 0);
         }
         else if (! strcmp (argv[a], "-o") && a < argc-1) {
-            args.push_back (argv[a]);
+            args.emplace_back(argv[a]);
             ++a;
-            args.push_back (argv[a]);
+            args.emplace_back(argv[a]);
         }
         else if (argv[a][0] == '-' &&
                  (argv[a][1] == 'D' || argv[a][1] == 'U' || argv[a][1] == 'I')) {
-            args.push_back (argv[a]);
+            args.emplace_back(argv[a]);
         }
         else {
             OSLCompiler compiler (&default_oslc_error_handler);

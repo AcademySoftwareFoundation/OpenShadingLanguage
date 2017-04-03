@@ -139,7 +139,7 @@ OSOReaderQuery::symdefault (const char *def)
 {
     if (m_reading_param && m_query.nparams() > 0) {
         OSLQuery::Parameter &p (m_query.m_params[m_query.nparams()-1]);
-        p.sdefault.push_back (ustring(def));
+        p.sdefault.emplace_back(def);
         p.validdefault = true;
         m_default_values++;
     }
@@ -199,7 +199,7 @@ OSOReaderQuery::hint (string_view hintstring)
         if (p.type.basetype == TypeDesc::STRING) {
             string_view val;
             while (Strutil::parse_string (hintstring, val)) {
-                p.sdefault.push_back (ustring(val));
+                p.sdefault.emplace_back(val);
                 if (Strutil::parse_char (hintstring, '}'))
                     break;
                 Strutil::parse_char (hintstring, ',');
@@ -230,7 +230,7 @@ OSOReaderQuery::hint (string_view hintstring)
         while (1) {
             string_view ident = Strutil::parse_identifier (hintstring);
             if (ident.length()) {
-                param.fields.push_back (ustring(ident));
+                param.fields.emplace_back(ident);
                 Strutil::parse_char (hintstring, ',');
             } else {
                 break;

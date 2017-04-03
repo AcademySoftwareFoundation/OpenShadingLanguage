@@ -79,7 +79,7 @@ public:
     Dictionary (ShadingContext *ctx) : m_context(ctx)
     {
         // Create placeholder element 0 == 'not found'
-        m_nodes.push_back (Node(0, pugi::xml_node()));
+        m_nodes.emplace_back(0, pugi::xml_node());
     }
     ~Dictionary () {
         // Free all the documents.
@@ -238,7 +238,7 @@ Dictionary::dict_find (ustring dictionaryname, ustring query)
     int firstmatch = (int) m_nodes.size();
     int last = -1;
     for (int i = 0, e = (int)matches.size(); i < e;  ++i) {
-        m_nodes.push_back (Node (dindex, matches[i].node()));
+        m_nodes.emplace_back(dindex, matches[i].node());
         int nodeid = (int) m_nodes.size()-1;
         if (last < 0) {
             // If this is the first match, add a cache entry for it
@@ -285,7 +285,7 @@ Dictionary::dict_find (int nodeID, ustring query)
     int firstmatch = (int) m_nodes.size();
     int last = -1;
     for (int i = 0, e = (int)matches.size(); i < e;  ++i) {
-        m_nodes.push_back (Node (document, matches[i].node()));
+        m_nodes.emplace_back(document, matches[i].node());
         int nodeid = (int) m_nodes.size()-1;
         if (last < 0) {
             // If this is the first match, add a cache entry for it

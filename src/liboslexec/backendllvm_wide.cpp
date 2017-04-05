@@ -40,6 +40,11 @@ OSL_NAMESPACE_ENTER
 
 namespace pvt {
 
+static ustring op_if("if");
+static ustring op_for("for");
+static ustring op_dowhile("dowhile");
+static ustring op_while("while");
+
 
 #ifdef OSL_SPI
 static void
@@ -571,7 +576,7 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 						
 						popSymbolsCurentBlockDependsOn();
 						
-					} else if (opcode.opname() == ustring("for"))
+					} else if ((opcode.opname() == op_for) || (opcode.opname() == op_while) || (opcode.opname() == op_dowhile))
 					{
 						// Init block
 						// NOTE: init block doesn't depend on the for loops conditions and should be exempt
@@ -598,8 +603,10 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 						std::cout << " FOR STEP BLOCK END" << std::endl;
 
 						
+					
 						// Condition block
-						// NOTE: Although the first execution of the condition doesn't depend on the for loops conditions 
+						// NOTE: Processing condition like it was a do/while
+						// Although the first execution of the condition doesn't depend on the for loops conditions 
 						// subsequent executions will depend on it on the previous loop's mask
 						// We are processing the condition block out of order so that
 						// any writes to any symbols it depends on can be marked first
@@ -609,9 +616,7 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 
 						popSymbolsCurentBlockDependsOn();
 						
-						
 					} else {
-
 						ASSERT(0 && "Unhandled OSL instruction which contains jumps, note this uniform detection code needs to walk the code blocks identical to build_llvm_code");
 					}
 

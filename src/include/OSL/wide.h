@@ -35,7 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 OSL_NAMESPACE_ENTER
 
 // TODO: add conditional compilation to change this
-static constexpr int SimdLaneCount = 8;
+static constexpr int SimdLaneCount = 16;
 
 
 /// Type for an opaque pointer to whatever the renderer uses to represent a

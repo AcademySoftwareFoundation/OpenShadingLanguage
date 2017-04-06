@@ -1630,65 +1630,6 @@ LLVM_Util::test_if_mask_is_non_zero(llvm::Value *mask)
 {
 	ASSERT(mask->getType() == type_wide_bool());
 
-#if 0
-	llvm::Type * extended_int_vector_type = (llvm::Type *) llvm::VectorType::get(llvm::Type::getInt8Ty (*m_llvm_context), m_vector_width);
-	
-	llvm::Value * wide_int_mask = builder().CreateSExt(mask, extended_int_vector_type);
-
-	llvm::Type * int_reinterpret_cast_vector_type;
-	llvm::Value * zeroConstant;
-	switch(m_vector_width) {
-	case 4:
-		int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt32Ty (*m_llvm_context);
-		zeroConstant = constant(0);
-		break;
-	case 8:
-		int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt64Ty (*m_llvm_context);
-		zeroConstant = constant64(0);
-		break;
-	case 16:
-		int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt128Ty (*m_llvm_context);
-		zeroConstant = constant128(0);
-		break;
-	default:
-		ASSERT(0 && "Unhandled vector width");
-		break;
-	};		
-
-	llvm::Value * mask_as_int =  builder().CreateBitCast (wide_int_mask, int_reinterpret_cast_vector_type);
-    
-    return op_ne (mask_as_int, zeroConstant);
-#endif
-#if 0
-	llvm::Type * extended_int_vector_type = (llvm::Type *) llvm::VectorType::get(llvm::Type::getInt16Ty (*m_llvm_context), m_vector_width);
-	
-	llvm::Value * wide_int_mask = builder().CreateSExt(mask, extended_int_vector_type);
-
-	llvm::Type * int_reinterpret_cast_vector_type;
-	llvm::Value * zeroConstant;
-	switch(m_vector_width) {
-	case 4:
-		int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt64Ty (*m_llvm_context);
-		zeroConstant = constant64(0);
-		break;
-	case 8:
-		int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt128Ty (*m_llvm_context);
-		zeroConstant = constant128(0);
-		break;
-	case 16:
-		int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt128Ty (*m_llvm_context);
-		zeroConstant = constant128(0);
-		break;
-	default:
-		ASSERT(0 && "Unhandled vector width");
-		break;
-	};		
-
-	llvm::Value * mask_as_int =  builder().CreateBitCast (wide_int_mask, int_reinterpret_cast_vector_type);
-    
-    return op_ne (mask_as_int, zeroConstant);
-#endif
-#if 1
 	llvm::Type * extended_int_vector_type;
 	llvm::Type * int_reinterpret_cast_vector_type;
 	llvm::Value * zeroConstant;
@@ -1717,12 +1658,6 @@ LLVM_Util::test_if_mask_is_non_zero(llvm::Value *mask)
 	llvm::Value * mask_as_int =  builder().CreateBitCast (wide_int_mask, int_reinterpret_cast_vector_type);
     
     return op_ne (mask_as_int, zeroConstant);
-#endif
-#if 0
-    Value *int_result = builder().CreateBitCast(mask, Type::getInt8Ty(*m_llvm_context));
-    Value *result = builder().CreateSExt(int_result, Type::getInt32Ty(*m_llvm_context));    
-    return op_ne (result, constant(0));
-#endif
 }
 
 
@@ -2056,7 +1991,7 @@ LLVM_Util::op_load (llvm::Value *ptr)
 
 
 void
-LLVM_Util::push_mask(llvm::Value *mask, bool negate)
+LLVM_Util::push_mask(llvm::Value *mask, bool negate, bool absolute)
 {	
 	ASSERT(mask->getType() == type_wide_bool());
 	if(m_mask_stack.empty()) {
@@ -2067,75 +2002,37 @@ LLVM_Util::push_mask(llvm::Value *mask, bool negate)
 		llvm::Value *prev_mask = mi.mask;
 		bool prev_negate = mi.negate;
 	
-#if 1
-		//llvm::Value *false_mask = wide_constant_bool(false);
 		if (false == prev_negate) {
 			if (false == negate)
 			{
-				llvm::Value *blended_mask = builder().CreateSelect(prev_mask, mask, prev_mask);
+				llvm::Value *blended_mask;
+				if (absolute) {
+					blended_mask = mask;
+				} else {
+					blended_mask = builder().CreateSelect(prev_mask, mask, prev_mask);
+				}
 				m_mask_stack.push_back(MaskInfo{blended_mask, false});
-			} else {
+			} else {				
+				ASSERT(false == absolute);
 				llvm::Value *blended_mask = builder().CreateSelect(mask, wide_constant_bool(false), prev_mask);
 				m_mask_stack.push_back(MaskInfo{blended_mask, false});			
-				//llvm::Value *blended_mask = builder().CreateSelect(prev_mask, mask, wide_constant_bool(true));
-				//m_mask_stack.push_back(MaskInfo{blended_mask, true});			
 			}
 		} else {
 			if (false == negate)
 			{
-				
-				// Good one
-				llvm::Value *blended_mask = builder().CreateSelect(prev_mask, wide_constant_bool(false), mask);
+				llvm::Value *blended_mask;
+				if (absolute) {
+					blended_mask = mask;
+				} else {
+					blended_mask = builder().CreateSelect(prev_mask, wide_constant_bool(false), mask);
+				}
 				m_mask_stack.push_back(MaskInfo{blended_mask, false});
-//				llvm::Value *blended_mask = builder().CreateSelect(mask, prev_mask, wide_constant_bool(true));
-//				m_mask_stack.push_back(MaskInfo{blended_mask, true});
-//				llvm::Value *blended_mask = builder().CreateSelect(prev_mask, wide_constant_bool(false), mask);
-				//m_mask_stack.push_back(MaskInfo{blended_mask, true});
-				
 			} else {
+				ASSERT(false == absolute);
 				llvm::Value *blended_mask = builder().CreateSelect(prev_mask, prev_mask, mask);
 				m_mask_stack.push_back(MaskInfo{blended_mask, true});			
 			}			
 		}
-#endif
-		
-#if 0
-		llvm::Value *combined_mask = builder().CreateAnd(prev_mask, mask);
-		m_mask_stack.push_back(MaskInfo{combined_mask, negate});
-#endif
-#if 0
-		llvm::Value *combined_mask = builder().CreateMul(prev_mask, mask);
-		m_mask_stack.push_back(MaskInfo{combined_mask, negate});
-#endif
-#if 0
-		llvm::Value *combined_mask = builder().CreateICmpEQ(prev_mask, mask);
-		m_mask_stack.push_back(MaskInfo{combined_mask, negate});
-#endif
-#if 0
-		//llvm::Type *int16_type = (llvm::Type *) llvm::Type::getInt32Ty (*m_llvm_context);
-		
-		llvm::Value *combined_mask = builder().CreateTrunc(builder().CreateMul(builder().CreateSExt(prev_mask, type_wide_int()), builder().CreateSExt(mask, type_wide_int())), type_wide_bool());
-		m_mask_stack.push_back(MaskInfo{combined_mask, negate});
-#endif
-
-#if 0
-		llvm::Type *int16_type = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);	
-		
-		llvm::Value *combined_mask = builder().CreateBitCast(builder().CreateAnd(builder().CreateBitCast(prev_mask, int16_type), builder().CreateBitCast(mask, int16_type)), type_wide_bool());
-		m_mask_stack.push_back(MaskInfo{combined_mask, negate});
-#endif
-#if 0
-		llvm::Function* andIntrinsic = llvm::Intrinsic::getDeclaration(m_llvm_module, llvm::Intrinsic::x86_avx512_kand_w);
-		ASSERT(andIntrinsic);
-
-		llvm::Type *int16_type = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);	
-		
-        std::vector<llvm::Value*> args;
-        args.push_back (builder().CreateBitCast(prev_mask, int16_type));
-        args.push_back (builder().CreateBitCast(mask, int16_type));
-        llvm::Value *combined_mask = builder().CreateBitCast(call_function (andIntrinsic, &args[0], args.size()), type_wide_bool());
-        m_mask_stack.push_back(MaskInfo{combined_mask, negate});
-#endif	
 	}
 }
 

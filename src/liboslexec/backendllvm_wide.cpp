@@ -467,24 +467,16 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 				}
 				std::cout << std::endl;
 				
-				for(int readIndex=0; readIndex < symbolsRead; ++readIndex) {
-					const Symbol * symbolReadFrom = symbolsReadByOp[readIndex];
-					for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
-						const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
-						// Skip self dependencies
-						if (symbolWrittenTo != symbolReadFrom) {
-							symbolFeedForwardMap.insert(std::make_pair(symbolReadFrom, symbolWrittenTo));
-						}
-					}		
-					
+		    	std::function<void(const Symbol *)> ensureWritesAtLowerDepthAreMasked;
+		    	ensureWritesAtLowerDepthAreMasked = [&](const Symbol *symbolToCheck)->void {			    			
 					// Check if reading a Symbol that was written to from a different 
 					// maskId than we are reading, if so we need to mark it as requiring masking
-					auto lookup = usageInfoBySymbol.find(symbolReadFrom);
+					auto lookup = usageInfoBySymbol.find(symbolToCheck);
 					if(lookup != usageInfoBySymbol.end()) {
 						UsageInfo & info = lookup->second;
 						if ((info.last_depth > blockDepth) && (info.last_maskId != maskId))
 						{
-							std::cout << symbolReadFrom->name() << " will need to have last write be masked" << std::endl;
+							std::cout << symbolToCheck->name() << " will need to have last write be masked" << std::endl;
 							ASSERT(info.potentially_unmasked_ops.empty() == false);
 							decltype(info.potentially_unmasked_ops) remaining_ops;
 							for(auto usage: info.potentially_unmasked_ops) {
@@ -505,6 +497,19 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 							info.last_depth = blockDepth;
 						}
 					}
+		    	};
+				
+				for(int readIndex=0; readIndex < symbolsRead; ++readIndex) {
+					const Symbol * symbolReadFrom = symbolsReadByOp[readIndex];
+					for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
+						const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
+						// Skip self dependencies
+						if (symbolWrittenTo != symbolReadFrom) {
+							symbolFeedForwardMap.insert(std::make_pair(symbolReadFrom, symbolWrittenTo));
+						}
+					}		
+					
+					ensureWritesAtLowerDepthAreMasked(symbolReadFrom);
 				}
 				
 				for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
@@ -558,7 +563,7 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 					// op must have jumps, therefore have nested code we need to process
 					// We need to process these in the same order as the code generator
 					// so our "block depth" lines up for symbol lookups
-					if (opcode.opname() == ustring("if"))
+					if (opcode.opname() == op_if)
 					{
 						pushSymbolsCurentBlockDependsOn();
 						// Then block
@@ -614,6 +619,14 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 						discoverSymbolsBetween(opcode.jump(0), opcode.jump(1), blockDepth, depthForBodyAndStep, maskId, maskIdForBodyAndStep);
 						std::cout << " FOR COND BLOCK END" << std::endl;
 
+						// Special case for symbols that are conditions
+						// becuase we will be doing horizontal operations on these
+						// to check if they are all 'false' to be able to stop
+						// executing the loop, we need any writes to the
+						// condition to be masked
+						const Symbol * condition = opargsym (opcode, 0);
+						ensureWritesAtLowerDepthAreMasked(condition);
+						
 						popSymbolsCurentBlockDependsOn();
 						
 					} else {

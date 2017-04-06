@@ -211,7 +211,7 @@ public:
     // Push a mask onto the mask stack, which actually will AND the existing
     // top mask with the new mask and store that off. The mask must be of 
     // type <16 x i1>
-    void push_mask(llvm::Value *mask, bool negate = false);
+    void push_mask(llvm::Value *mask, bool negate = false, bool absolute = false);
     void pop_mask();
     
     llvm::Value * current_mask();

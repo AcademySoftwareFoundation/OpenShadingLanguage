@@ -2232,7 +2232,9 @@ LLVMGEN (llvm_gen_loop_op)
 		// Store current top of the mask stack (or all 1's) as the current mask value
 		// as we enter the loop
 		llvm::Value* initial_mask = rop.ll.current_mask();
+		rop.ll.push_masking_enabled(false);		
     	rop.llvm_store_value (initial_mask, cond, /*deriv*/ 0, /*component*/ 0);
+		rop.ll.pop_masking_enabled();		
 
 		// For "do-while", we go straight to the body of the loop, but for
 		// "for" or "while", we test the condition next.
@@ -2245,26 +2247,21 @@ LLVMGEN (llvm_gen_loop_op)
 			llvm::Value* pre_condition_mask = rop.llvm_load_value (cond, /*deriv*/ 0, /*component*/ 0, /*cast*/ TypeDesc::UNKNOWN, /*op_is_uniform*/ false);
 			ASSERT(pre_condition_mask->getType() == rop.ll.type_wide_bool());    	
 			
-			rop.ll.push_mask(pre_condition_mask);
+			rop.ll.push_mask(pre_condition_mask, false /* negate */, true /* absolute */);
 			rop.build_llvm_code (op.jump(1), op.jump(2), body_block);
-			rop.ll.pop_mask();	
 			rop.ll.op_branch (step_block);
 		
 			// Step
-			rop.ll.push_mask(pre_condition_mask);
 			rop.build_llvm_code (op.jump(2), op.jump(3), step_block);
-			rop.ll.pop_mask();
 			
 			rop.ll.op_branch (cond_block);
 			
 			
 			// Load the condition variable and figure out if it's nonzero
-			rop.ll.push_mask(pre_condition_mask);
 			rop.build_llvm_code (op.jump(0), op.jump(1), cond_block);
 			rop.ll.pop_mask();	
-			llvm::Value* post_condition_mask = rop.llvm_load_value (cond, /*deriv*/ 0, /*component*/ 0, /*cast*/ TypeDesc::UNKNOWN, /*op_is_uniform*/ false);
 			
-		
+			llvm::Value* post_condition_mask = rop.llvm_load_value (cond, /*deriv*/ 0, /*component*/ 0, /*cast*/ TypeDesc::UNKNOWN, /*op_is_uniform*/ false);
 			llvm::Value* cond_val = rop.ll.test_if_mask_is_non_zero(post_condition_mask);
 			// Jump to either LoopBody or AfterLoop
 			rop.ll.op_branch (cond_val, body_block, after_block);
@@ -2275,10 +2272,9 @@ LLVMGEN (llvm_gen_loop_op)
 			rop.ll.op_branch (cond_block);
 		
 			// Load the condition variable and figure out if it's nonzero
-			rop.ll.set_insert_point (cond_block);
 			llvm::Value* pre_condition_mask = rop.llvm_load_value (cond, /*deriv*/ 0, /*component*/ 0, /*cast*/ TypeDesc::UNKNOWN, /*op_is_uniform*/ false);
 			ASSERT(pre_condition_mask->getType() == rop.ll.type_wide_bool());    	
-			rop.ll.push_mask(pre_condition_mask);
+			rop.ll.push_mask(pre_condition_mask, false /* negate */, true /* absolute */);
 			rop.build_llvm_code (op.jump(0), op.jump(1), cond_block);
 			rop.ll.pop_mask();	
 			llvm::Value* post_condition_mask = rop.llvm_load_value (cond, /*deriv*/ 0, /*component*/ 0, /*cast*/ TypeDesc::UNKNOWN, /*op_is_uniform*/ false);
@@ -2286,21 +2282,16 @@ LLVMGEN (llvm_gen_loop_op)
 		
 			llvm::Value* cond_val = rop.ll.test_if_mask_is_non_zero(post_condition_mask);
 			
-			// Won't work as condition must be i1
-			//llvm::Value* cond_val =  rop.ll.op_ne (mask, rop.ll.wide_constant_bool(false));
-		
 			// Jump to either LoopBody or AfterLoop
 			rop.ll.op_branch (cond_val, body_block, after_block);
 		
 			// Body of loop
 			// Perhaps mask should be parameter to build_llvm_code?
-			rop.ll.push_mask(post_condition_mask);
+			rop.ll.push_mask(post_condition_mask, false /* negate */, true /* absolute */);
 			rop.build_llvm_code (op.jump(1), op.jump(2), body_block);
-			rop.ll.pop_mask();	
 			rop.ll.op_branch (step_block);
 		
 			// Step
-			rop.ll.push_mask(post_condition_mask);
 			rop.build_llvm_code (op.jump(2), op.jump(3), step_block);
 			rop.ll.pop_mask();
 			

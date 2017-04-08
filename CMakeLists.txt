@@ -77,7 +77,8 @@ if (NOT ENABLERTTI)
 endif()
 
 
-option (VERBOSE "Print lots of messages while compiling" OF)
+option (VERBOSE "Print lots of messages while compiling" OFF)
+set (${PROJ_NAME}_NAMESPACE ${PROJ_NAME} CACHE STRING "Customized outer namespace base name (version will be added)")
 option (OSL_BUILD_TESTS "Build the unit tests, testshade, testrender" ON)
 if (WIN32)
     option (USE_LLVM_BITCODE "Generate embedded LLVM bitcode" OFF)
@@ -111,10 +112,9 @@ endif ()
 
 
 # Set the default namespace
-if (OSL_NAMESPACE)
-    add_definitions ("-DOSL_NAMESPACE=${OSL_NAMESPACE}")
-endif ()
-message(STATUS "Setting Namespace to: ${OSL_NAMESPACE}")
+set (PROJ_NAMESPACE "${${PROJ_NAME}_NAMESPACE}")
+set (PROJ_NAMESPACE_V "${PROJ_NAMESPACE}_v${PROJECT_VERSION_MAJOR}_${PROJECT_VERSION_MINOR}")
+message(STATUS "Setting Namespace to: ${PROJ_NAMESPACE_V}")
 
 include (util_macros)
 include (externalpackages)

@@ -1,7 +1,6 @@
 # SPI-specific settings
 
-OSL_NAMESPACE ?= 'OSL_Arnold'
-OPENIMAGEIO_NAMESPACE ?= 'OpenImageIO_Arnold'
+NAMESPACE ?= 'OSL_Arnold'
 
 MY_CMAKE_FLAGS += -DEXTRA_CPP_ARGS="-DOSL_SPI=1"
 
@@ -120,11 +119,9 @@ endif  # endif $(SP_OS)
 
 # set up OpenImageIO distribution environment
 ifeq (${OPENIMAGEIOHOME},)
-    MY_CMAKE_FLAGS += -DOPENIMAGEIOHOME:STRING=${working_dir}/../OpenImageIO_local/dist/${platform}${variant}/ \
-                      -DOSL_NAMESPACE:STRING=${OSL_NAMESPACE}
+    MY_CMAKE_FLAGS += -DOPENIMAGEIOHOME:STRING=${working_dir}/../OpenImageIO_local/dist/${platform}${variant}/
 else
-    MY_CMAKE_FLAGS += -DOPENIMAGEIOHOME:STRING=${IMAGEIOHOME} \
-                      -DOSL_NAMESPACE:STRING=${OSL_NAMESPACE}
+    MY_CMAKE_FLAGS += -DOPENIMAGEIOHOME:STRING=${IMAGEIOHOME}
 endif
 
 

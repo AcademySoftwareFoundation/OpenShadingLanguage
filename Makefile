@@ -375,7 +375,7 @@ help:
 	@echo "      USE_LLVM_BITCODE=0       Don't generate embedded LLVM bitcode"
 	@echo "      USE_BOOST_WAVE=1         Force boost wave rather than clang preprocessor"
 	@echo "  OSL build-time options:"
-	@echo "      NAMESPACE=name           Wrap OSL APIs in another namespace"
+	@echo "      NAMESPACE=name           Override namespace base name (default: OSL)"
 	@echo "      USE_FAST_MATH=1          Use faster, but less accurate math (set to 0 for libm defaults)"
 	@echo "      OSL_BUILD_TESTS=0        Don't build unit tests, testshade, testrender"
 	@echo "      USE_SIMD=arch            Build with SIMD support (choices: 0, sse2, sse3,"

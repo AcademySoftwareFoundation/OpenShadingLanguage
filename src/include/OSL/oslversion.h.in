@@ -78,14 +78,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define OSL_SHADERGLOBALS_HAS_RENDERER_PTR 1
 
 
-#ifdef OSL_NAMESPACE
 // Macros to use in each file to enter and exit the right name spaces.
-#define OSL_NAMESPACE_ENTER namespace OSL_NAMESPACE { namespace OSL {
-#define OSL_NAMESPACE_EXIT } } using namespace OSL_NAMESPACE;
-#else
-#define OSL_NAMESPACE_ENTER namespace OSL {
-#define OSL_NAMESPACE_EXIT }
-#endif
+#define @PROJ_NAME@_NAMESPACE @PROJ_NAMESPACE_V@
+#define @PROJ_NAME@_NAMESPACE_STRING "@PROJ_NAMESPACE_V@"
+#define @PROJ_NAME@_NAMESPACE_ENTER namespace @PROJ_NAMESPACE_V@ {
+#define @PROJ_NAME@_NAMESPACE_EXIT } namespace @PROJ_NAME@ = @PROJ_NAMESPACE_V@;
 
 #define OSL_BUILD_CPP11 1 /* Always build for C++ >= 11 */
 // OSL_BUILD_CPP14 will be 1 if this OSL was built using C++14

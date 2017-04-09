@@ -34,12 +34,15 @@ which will be used to "seed" the LLVM JIT engine at runtime.  This is
 *much* easier than creating LLVM IR directly (see llvm_instance.cpp for
 examples), as you are just coding in C++, but there are some rules:
 
-* Shadeop implementations MUST be named: osl_NAME_{args} where NAME is
+* Shadeop implementations MUST be named: NAMESPACE_NAME_{args} where NAME is
   the traditional name of the oso shadeop, and {args} is the
   concatenation of type codes for all args including the return value --
   f/i/v/m/s for float/int/triple/matrix/string that don't have
   derivatives, and df/dv/dm for duals (values with derivatives).
-  (Special case: x for 'void' return value.)
+  (Special case: x for 'void' return value.) The shadeop name should also
+  be constructed using the OSL_LLVM_OP_TOKEN() macro to ensure that
+  the namespace is prepended in case it is being used to disambiguate
+  multiple versions of OSL.
 
 * Shadeops that return a string, int, or float without derivatives, just
   return the value directly.  Shadeops that "return" a float with
@@ -105,6 +108,7 @@ typedef long double max_align_t;
 #include <OSL/shaderglobals.h>
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
+#include "osl_pvt.h"
 using namespace OSL;
 
 #include <OpenEXR/ImathFun.h>
@@ -154,19 +158,19 @@ void * __dso_handle = 0; // necessary to avoid linkage issues in bitcode
 
 #define MAKE_UNARY_PERCOMPONENT_OP(name,floatfunc,dualfunc)         \
 OSL_SHADEOP float                                                   \
-osl_##name##_ff (float a)                                           \
+OSL_LLVM_OP_TOKEN(name, ff) (float a)                               \
 {                                                                   \
     return floatfunc(a);                                            \
 }                                                                   \
                                                                     \
 OSL_SHADEOP void                                                    \
-osl_##name##_dfdf (void *r, void *a)                                \
+OSL_LLVM_OP_TOKEN(name, dfdf) (void *r, void *a)                    \
 {                                                                   \
     DFLOAT(r) = dualfunc (DFLOAT(a));                               \
 }                                                                   \
                                                                     \
 OSL_SHADEOP void                                                    \
-osl_##name##_vv (void *r_, void *a_)                                \
+OSL_LLVM_OP_TOKEN(name, vv) (void *r_, void *a_)                    \
 {                                                                   \
     Vec3 &r (VEC(r_));                                              \
     Vec3 &a (VEC(a_));                                              \
@@ -176,7 +180,7 @@ osl_##name##_vv (void *r_, void *a_)                                \
 }                                                                   \
                                                                     \
 OSL_SHADEOP void                                                    \
-osl_##name##_dvdv (void *r_, void *a_)                              \
+OSL_LLVM_OP_TOKEN(name, dvdv) (void *r_, void *a_)                  \
 {                                                                   \
     Dual2<Vec3> &r (DVEC(r_));                                      \
     Dual2<Vec3> &a (DVEC(a_));                                      \
@@ -193,23 +197,23 @@ osl_##name##_dvdv (void *r_, void *a_)                              \
 
 
 #define MAKE_BINARY_PERCOMPONENT_OP(name,floatfunc,dualfunc)        \
-OSL_SHADEOP float osl_##name##_fff (float a, float b) {             \
+OSL_SHADEOP float OSL_LLVM_OP_TOKEN(name, fff) (float a, float b) { \
     return floatfunc(a,b);                                          \
 }                                                                   \
                                                                     \
-OSL_SHADEOP void osl_##name##_dfdfdf (void *r, void *a, void *b) {  \
+OSL_SHADEOP void OSL_LLVM_OP_TOKEN(name, dfdfdf) (void *r, void *a, void *b) { \
     DFLOAT(r) = dualfunc (DFLOAT(a),DFLOAT(b));                     \
 }                                                                   \
                                                                     \
-OSL_SHADEOP void osl_##name##_dffdf (void *r, float a, void *b) {   \
+OSL_SHADEOP void OSL_LLVM_OP_TOKEN(name, dffdf) (void *r, float a, void *b) { \
     DFLOAT(r) = dualfunc (Dual2<float>(a),DFLOAT(b));               \
 }                                                                   \
                                                                     \
-OSL_SHADEOP void osl_##name##_dfdff (void *r, void *a, float b) {   \
+OSL_SHADEOP void OSL_LLVM_OP_TOKEN(name, dfdff) (void *r, void *a, float b) { \
     DFLOAT(r) = dualfunc (DFLOAT(a),Dual2<float>(b));               \
 }                                                                   \
                                                                     \
-OSL_SHADEOP void osl_##name##_vvv (void *r_, void *a_, void *b_) {  \
+OSL_SHADEOP void OSL_LLVM_OP_TOKEN(name, vvv) (void *r_, void *a_, void *b_) { \
     Vec3 &r (VEC(r_));                                              \
     Vec3 &a (VEC(a_));                                              \
     Vec3 &b (VEC(b_));                                              \
@@ -218,7 +222,7 @@ OSL_SHADEOP void osl_##name##_vvv (void *r_, void *a_, void *b_) {  \
     r[2] = floatfunc (a[2], b[2]);                                  \
 }                                                                   \
                                                                     \
-OSL_SHADEOP void osl_##name##_dvdvdv (void *r_, void *a_, void *b_) \
+OSL_SHADEOP void OSL_LLVM_OP_TOKEN(name, dvdvdv) (void *r_, void *a_, void *b_) \
 {                                                                   \
     Dual2<Vec3> &r (DVEC(r_));                                      \
     Dual2<Vec3> &a (DVEC(a_));                                      \
@@ -237,22 +241,22 @@ OSL_SHADEOP void osl_##name##_dvdvdv (void *r_, void *a_, void *b_) \
            Vec3( ax.dy(),  ay.dy(),  az.dy() ));                    \
 }                                                                   \
                                                                     \
-OSL_SHADEOP void osl_##name##_dvvdv (void *r_, void *a_, void *b_)  \
+OSL_SHADEOP void OSL_LLVM_OP_TOKEN(name, dvvdv) (void *r_, void *a_, void *b_) \
 {                                                                   \
     Dual2<Vec3> a (VEC(a_));                                        \
-    osl_##name##_dvdvdv (r_, &a, b_);                               \
+    OSL_LLVM_OP_TOKEN(name, dvdvdv) (r_, &a, b_);                   \
 }                                                                   \
                                                                     \
-OSL_SHADEOP void osl_##name##_dvdvv (void *r_, void *a_, void *b_)  \
+OSL_SHADEOP void OSL_LLVM_OP_TOKEN(name, dvdvv) (void *r_, void *a_, void *b_) \
 {                                                                   \
     Dual2<Vec3> b (VEC(b_));                                        \
-    osl_##name##_dvdvdv (r_, a_, &b);                               \
+    OSL_LLVM_OP_TOKEN(name, dvdvdv) (r_, a_, &b);                   \
 }
 
 
 // Mixed vec func(vec,float)
 #define MAKE_BINARY_PERCOMPONENT_VF_OP(name,floatfunc,dualfunc)         \
-OSL_SHADEOP void osl_##name##_vvf (void *r_, void *a_, float b) {       \
+OSL_SHADEOP void OSL_LLVM_OP_TOKEN(name, vvf) (void *r_, void *a_, float b) { \
     Vec3 &r (VEC(r_));                                                  \
     Vec3 &a (VEC(a_));                                                  \
     r[0] = floatfunc (a[0], b);                                         \
@@ -260,7 +264,7 @@ OSL_SHADEOP void osl_##name##_vvf (void *r_, void *a_, float b) {       \
     r[2] = floatfunc (a[2], b);                                         \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_##name##_dvdvdf (void *r_, void *a_, void *b_)     \
+OSL_SHADEOP void OSL_LLVM_OP_TOKEN(name, dvdvdf) (void *r_, void *a_, void *b_) \
 {                                                                       \
     Dual2<Vec3> &r (DVEC(r_));                                          \
     Dual2<Vec3> &a (DVEC(a_));                                          \
@@ -275,16 +279,16 @@ OSL_SHADEOP void osl_##name##_dvdvdf (void *r_, void *a_, void *b_)     \
            Vec3( ax.dy(),  ay.dy(),  az.dy() ));                        \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_##name##_dvvdf (void *r_, void *a_, void *b_)      \
+OSL_SHADEOP void OSL_LLVM_OP_TOKEN(name, dvvdf) (void *r_, void *a_, void *b_) \
 {                                                                       \
     Dual2<Vec3> a (VEC(a_));                                            \
-    osl_##name##_dvdvdf (r_, &a, b_);                                   \
+    OSL_LLVM_OP_TOKEN(name, dvdvdf) (r_, &a, b_);                       \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_##name##_dvdvf (void *r_, void *a_, float b_)      \
+OSL_SHADEOP void OSL_LLVM_OP_TOKEN(name, dvdvf) (void *r_, void *a_, float b_) \
 {                                                                       \
     Dual2<float> b (b_);                                                \
-    osl_##name##_dvdvdf (r_, a_, &b);                                   \
+    OSL_LLVM_OP_TOKEN(name, dvdvdf) (r_, a_, &b);                       \
 }
 
 
@@ -312,7 +316,7 @@ MAKE_UNARY_PERCOMPONENT_OP (cosh , coshf     , cosh )
 MAKE_UNARY_PERCOMPONENT_OP (tanh , tanhf     , tanh )
 #endif
 
-OSL_SHADEOP void osl_sincos_fff(float x, void *s_, void *c_)
+OSL_SHADEOP void OSL_PREFIX_NS(sincos_fff)(float x, void *s_, void *c_)
 {
 #if OSL_FAST_MATH
     OIIO::fast_sincos(x, (float *)s_, (float *)c_);
@@ -321,7 +325,7 @@ OSL_SHADEOP void osl_sincos_fff(float x, void *s_, void *c_)
 #endif
 }
 
-OSL_SHADEOP void osl_sincos_dfdff(void *x_, void *s_, void *c_)
+OSL_SHADEOP void OSL_PREFIX_NS(sincos_dfdff)(void *x_, void *s_, void *c_)
 {
     Dual2<float> &x      = DFLOAT(x_);
     Dual2<float> &sine   = DFLOAT(s_);
@@ -339,7 +343,7 @@ OSL_SHADEOP void osl_sincos_dfdff(void *x_, void *s_, void *c_)
     cosine = c_f;
 }
 
-OSL_SHADEOP void osl_sincos_dffdf(void *x_, void *s_, void *c_)
+OSL_SHADEOP void OSL_PREFIX_NS(sincos_dffdf)(void *x_, void *s_, void *c_)
 {
     Dual2<float> &x      = DFLOAT(x_);
     float        &sine   = *(float *)s_;
@@ -356,7 +360,7 @@ OSL_SHADEOP void osl_sincos_dffdf(void *x_, void *s_, void *c_)
     cosine = Dual2<float>(c_f, -s_f * xdx, -s_f * xdy);
 }
 
-OSL_SHADEOP void osl_sincos_dfdfdf(void *x_, void *s_, void *c_)
+OSL_SHADEOP void OSL_PREFIX_NS(sincos_dfdfdf)(void *x_, void *s_, void *c_)
 {
     Dual2<float> &x      = DFLOAT(x_);
     Dual2<float> &sine   = DFLOAT(s_);
@@ -373,7 +377,7 @@ OSL_SHADEOP void osl_sincos_dfdfdf(void *x_, void *s_, void *c_)
     cosine = Dual2<float>(c_f, -s_f * xdx, -s_f * xdy);
 }
 
-OSL_SHADEOP void osl_sincos_vvv(void *x_, void *s_, void *c_)
+OSL_SHADEOP void OSL_PREFIX_NS(sincos_vvv)(void *x_, void *s_, void *c_)
 {
     for (int i = 0; i < 3; i++)
 #if OSL_FAST_MATH
@@ -383,7 +387,7 @@ OSL_SHADEOP void osl_sincos_vvv(void *x_, void *s_, void *c_)
 #endif
 }
 
-OSL_SHADEOP void osl_sincos_dvdvv(void *x_, void *s_, void *c_)
+OSL_SHADEOP void OSL_PREFIX_NS(sincos_dvdvv)(void *x_, void *s_, void *c_)
 {
     Dual2<Vec3> &x      = DVEC(x_);
     Dual2<Vec3> &sine   = DVEC(s_);
@@ -402,7 +406,7 @@ OSL_SHADEOP void osl_sincos_dvdvv(void *x_, void *s_, void *c_)
     }
 }
 
-OSL_SHADEOP void osl_sincos_dvvdv(void *x_, void *s_, void *c_)
+OSL_SHADEOP void OSL_PREFIX_NS(sincos_dvvdv)(void *x_, void *s_, void *c_)
 {
     Dual2<Vec3> &x      = DVEC(x_);
     Vec3        &sine   = VEC(s_);
@@ -421,7 +425,7 @@ OSL_SHADEOP void osl_sincos_dvvdv(void *x_, void *s_, void *c_)
     }
 }
 
-OSL_SHADEOP void osl_sincos_dvdvdv(void *x_, void *s_, void *c_)
+OSL_SHADEOP void OSL_PREFIX_NS(sincos_dvdvdv)(void *x_, void *s_, void *c_)
 {
     Dual2<Vec3> &x      = DVEC(x_);
     Dual2<Vec3> &sine   = DVEC(s_);
@@ -466,56 +470,83 @@ MAKE_UNARY_PERCOMPONENT_OP     (erfc       , erfcf                , erfc)
 MAKE_UNARY_PERCOMPONENT_OP     (sqrt       , OIIO::safe_sqrt      , sqrt)
 MAKE_UNARY_PERCOMPONENT_OP     (inversesqrt, OIIO::safe_inversesqrt, inversesqrt)
 
-OSL_SHADEOP float osl_logb_ff (float x) { return OIIO::fast_logb(x); }
-OSL_SHADEOP void osl_logb_vv (void *r, void *x_) {
+OSL_SHADEOP float OSL_PREFIX_NS(logb_ff) (float x)
+{
+    return OIIO::fast_logb(x);
+}
+OSL_SHADEOP void OSL_PREFIX_NS(logb_vv) (void *r, void *x_)
+{
     const Vec3 &x (VEC(x_));
     VEC(r).setValue (OIIO::fast_logb(x[0]), OIIO::fast_logb(x[1]), OIIO::fast_logb(x[2]));
 }
 
-OSL_SHADEOP float osl_floor_ff (float x) { return floorf(x); }
-OSL_SHADEOP void osl_floor_vv (void *r, void *x_) {
+OSL_SHADEOP float OSL_PREFIX_NS(floor_ff) (float x)
+{
+    return floorf(x);
+}
+OSL_SHADEOP void OSL_PREFIX_NS(floor_vv) (void *r, void *x_)
+{
     const Vec3 &x (VEC(x_));
     VEC(r).setValue (floorf(x[0]), floorf(x[1]), floorf(x[2]));
 }
-OSL_SHADEOP float osl_ceil_ff (float x) { return ceilf(x); }
-OSL_SHADEOP void osl_ceil_vv (void *r, void *x_) {
+OSL_SHADEOP float OSL_PREFIX_NS(ceil_ff) (float x)
+{
+    return ceilf(x);
+}
+OSL_SHADEOP void OSL_PREFIX_NS(ceil_vv) (void *r, void *x_)
+{
     const Vec3 &x (VEC(x_));
     VEC(r).setValue (ceilf(x[0]), ceilf(x[1]), ceilf(x[2]));
 }
-OSL_SHADEOP float osl_round_ff (float x) { return roundf(x); }
-OSL_SHADEOP void osl_round_vv (void *r, void *x_) {
+OSL_SHADEOP float OSL_PREFIX_NS(round_ff) (float x) {
+    return roundf(x);
+}
+OSL_SHADEOP void OSL_PREFIX_NS(round_vv) (void *r, void *x_)
+{
     const Vec3 &x (VEC(x_));
     VEC(r).setValue (roundf(x[0]), roundf(x[1]), roundf(x[2]));
 }
-OSL_SHADEOP float osl_trunc_ff (float x) { return truncf(x); }
-OSL_SHADEOP void osl_trunc_vv (void *r, void *x_) {
+OSL_SHADEOP float OSL_PREFIX_NS(trunc_ff) (float x)
+{
+    return truncf(x);
+}
+OSL_SHADEOP void OSL_PREFIX_NS(trunc_vv) (void *r, void *x_)
+{
     const Vec3 &x (VEC(x_));
     VEC(r).setValue (truncf(x[0]), truncf(x[1]), truncf(x[2]));
 }
-OSL_SHADEOP float osl_sign_ff (float x) {
+OSL_SHADEOP float OSL_PREFIX_NS(sign_ff) (float x)
+{
     return x < 0.0f ? -1.0f : (x==0.0f ? 0.0f : 1.0f);
 }
-OSL_SHADEOP void osl_sign_vv (void *r, void *x_) {
+OSL_SHADEOP void OSL_PREFIX_NS(sign_vv) (void *r, void *x_)
+{
     const Vec3 &x (VEC(x_));
-    VEC(r).setValue (osl_sign_ff(x[0]), osl_sign_ff(x[1]), osl_sign_ff(x[2]));
+    VEC(r).setValue (OSL_PREFIX_NS(sign_ff)(x[0]),
+                     OSL_PREFIX_NS(sign_ff)(x[1]),
+                     OSL_PREFIX_NS(sign_ff)(x[2]));
 }
-OSL_SHADEOP float osl_step_fff (float edge, float x) {
+OSL_SHADEOP float OSL_PREFIX_NS(step_fff) (float edge, float x)
+{
     return x < edge ? 0.0f : 1.0f;
 }
-OSL_SHADEOP void osl_step_vvv (void *result, void *edge, void *x) {
+OSL_SHADEOP void OSL_PREFIX_NS(step_vvv) (void *result,
+                                                        void *edge,
+                                                        void *x)
+{
     VEC(result).setValue (((float *)x)[0] < ((float *)edge)[0] ? 0.0f : 1.0f,
                           ((float *)x)[1] < ((float *)edge)[1] ? 0.0f : 1.0f,
                           ((float *)x)[2] < ((float *)edge)[2] ? 0.0f : 1.0f);
 
 }
 
-OSL_SHADEOP int osl_isnan_if (float f) { return OIIO::isnan (f); }
-OSL_SHADEOP int osl_isinf_if (float f) { return OIIO::isinf (f); }
-OSL_SHADEOP int osl_isfinite_if (float f) { return OIIO::isfinite (f); }
+OSL_SHADEOP int OSL_PREFIX_NS(isnan_if) (float f) { return OIIO::isnan (f); }
+OSL_SHADEOP int OSL_PREFIX_NS(isinf_if) (float f) { return OIIO::isinf (f); }
+OSL_SHADEOP int OSL_PREFIX_NS(isfinite_if) (float f) { return OIIO::isfinite (f); }
 
 
-OSL_SHADEOP int osl_abs_ii (int x) { return abs(x); }
-OSL_SHADEOP int osl_fabs_ii (int x) { return abs(x); }
+OSL_SHADEOP int OSL_PREFIX_NS(abs_ii) (int x) { return abs(x); }
+OSL_SHADEOP int OSL_PREFIX_NS(fabs_ii) (int x) { return abs(x); }
 
 inline Dual2<float> fabsf (const Dual2<float> &x) {
     return x.val() >= 0 ? x : -x;
@@ -524,7 +555,7 @@ inline Dual2<float> fabsf (const Dual2<float> &x) {
 MAKE_UNARY_PERCOMPONENT_OP (abs, fabsf, fabsf);
 MAKE_UNARY_PERCOMPONENT_OP (fabs, fabsf, fabsf);
 
-OSL_SHADEOP int osl_safe_mod_iii (int a, int b) {
+OSL_SHADEOP int OSL_PREFIX_NS(safe_mod_iii) (int a, int b) {
     return (b != 0) ? (a % b) : 0;
 }
 
@@ -539,17 +570,21 @@ inline Dual2<float> safe_fmod (const Dual2<float> &a, const Dual2<float> &b) {
 MAKE_BINARY_PERCOMPONENT_OP (fmod, safe_fmod, safe_fmod);
 MAKE_BINARY_PERCOMPONENT_VF_OP (fmod, safe_fmod, safe_fmod)
 
-OSL_SHADEOP float osl_safe_div_fff (float a, float b) {
+OSL_SHADEOP float OSL_PREFIX_NS(safe_div_fff) (float a, float b) {
     return (b != 0.0f) ? (a / b) : 0.0f;
 }
 
-OSL_SHADEOP int osl_safe_div_iii (int a, int b) {
+OSL_SHADEOP int OSL_PREFIX_NS(safe_div_iii) (int a, int b) {
     return (b != 0) ? (a / b) : 0;
 }
 
-OSL_SHADEOP float osl_smoothstep_ffff(float e0, float e1, float x) { return smoothstep(e0, e1, x); }
+OSL_SHADEOP float OSL_PREFIX_NS(smoothstep_ffff)(float e0, float e1, float x)
+{
+    return smoothstep(e0, e1, x);
+}
 
-OSL_SHADEOP void osl_smoothstep_dfffdf(void *result, float e0_, float e1_, void *x_)
+OSL_SHADEOP void
+OSL_PREFIX_NS(smoothstep_dfffdf)(void *result, float e0_, float e1_, void *x_)
 {
    Dual2<float> e0 (e0_);
    Dual2<float> e1 (e1_);
@@ -558,7 +593,8 @@ OSL_SHADEOP void osl_smoothstep_dfffdf(void *result, float e0_, float e1_, void 
    DFLOAT(result) = smoothstep(e0, e1, x);
 }
 
-OSL_SHADEOP void osl_smoothstep_dffdff(void *result, float e0_, void* e1_, float x_)
+OSL_SHADEOP void
+OSL_PREFIX_NS(smoothstep_dffdff)(void *result, float e0_, void* e1_, float x_)
 {
    Dual2<float> e0 (e0_);
    Dual2<float> e1 = DFLOAT(e1_);
@@ -567,7 +603,8 @@ OSL_SHADEOP void osl_smoothstep_dffdff(void *result, float e0_, void* e1_, float
    DFLOAT(result) = smoothstep(e0, e1, x);
 }
 
-OSL_SHADEOP void osl_smoothstep_dffdfdf(void *result, float e0_, void* e1_, void* x_)
+OSL_SHADEOP void
+OSL_PREFIX_NS(smoothstep_dffdfdf)(void *result, float e0_, void* e1_, void* x_)
 {
    Dual2<float> e0 (e0_);
    Dual2<float> e1 = DFLOAT(e1_);
@@ -576,7 +613,8 @@ OSL_SHADEOP void osl_smoothstep_dffdfdf(void *result, float e0_, void* e1_, void
    DFLOAT(result) = smoothstep(e0, e1, x);
 }
 
-OSL_SHADEOP void osl_smoothstep_dfdfff(void *result, void* e0_, float e1_, float x_)
+OSL_SHADEOP void
+OSL_PREFIX_NS(smoothstep_dfdfff)(void *result, void* e0_, float e1_, float x_)
 {
    Dual2<float> e0 = DFLOAT(e0_);
    Dual2<float> e1 (e1_);
@@ -585,7 +623,8 @@ OSL_SHADEOP void osl_smoothstep_dfdfff(void *result, void* e0_, float e1_, float
    DFLOAT(result) = smoothstep(e0, e1, x);
 }
 
-OSL_SHADEOP void osl_smoothstep_dfdffdf(void *result, void* e0_, float e1_, void* x_)
+OSL_SHADEOP void
+OSL_PREFIX_NS(smoothstep_dfdffdf)(void *result, void* e0_, float e1_, void* x_)
 {
    Dual2<float> e0 = DFLOAT(e0_);
    Dual2<float> e1 (e1_);
@@ -594,7 +633,8 @@ OSL_SHADEOP void osl_smoothstep_dfdffdf(void *result, void* e0_, float e1_, void
    DFLOAT(result) = smoothstep(e0, e1, x);
 }
 
-OSL_SHADEOP void osl_smoothstep_dfdfdff(void *result, void* e0_, void* e1_, float x_)
+OSL_SHADEOP void
+OSL_PREFIX_NS(smoothstep_dfdfdff)(void *result, void* e0_, void* e1_, float x_)
 {
    Dual2<float> e0 = DFLOAT(e0_);
    Dual2<float> e1 = DFLOAT(e1_);
@@ -603,7 +643,8 @@ OSL_SHADEOP void osl_smoothstep_dfdfdff(void *result, void* e0_, void* e1_, floa
    DFLOAT(result) = smoothstep(e0, e1, x);
 }
 
-OSL_SHADEOP void osl_smoothstep_dfdfdfdf(void *result, void* e0_, void* e1_, void* x_)
+OSL_SHADEOP void
+OSL_PREFIX_NS(smoothstep_dfdfdfdf)(void *result, void* e0_, void* e1_, void* x_)
 {
    Dual2<float> e0 = DFLOAT(e0_);
    Dual2<float> e1 = DFLOAT(e1_);
@@ -614,14 +655,14 @@ OSL_SHADEOP void osl_smoothstep_dfdfdfdf(void *result, void* e0_, void* e1_, voi
 
 
 // point = M * point
-OSL_SHADEOP void osl_transform_vmv(void *result, void* M_, void* v_)
+OSL_SHADEOP void OSL_PREFIX_NS(transform_vmv)(void *result, void* M_, void* v_)
 {
    const Vec3 &v = VEC(v_);
    const Matrix44 &M = MAT(M_);
    robust_multVecMatrix (M, v, VEC(result));
 }
 
-OSL_SHADEOP void osl_transform_dvmdv(void *result, void* M_, void* v_)
+OSL_SHADEOP void OSL_PREFIX_NS(transform_dvmdv)(void *result, void* M_, void* v_)
 {
    const Dual2<Vec3> &v = DVEC(v_);
    const Matrix44    &M = MAT(M_);
@@ -629,14 +670,14 @@ OSL_SHADEOP void osl_transform_dvmdv(void *result, void* M_, void* v_)
 }
 
 // vector = M * vector
-OSL_SHADEOP void osl_transformv_vmv(void *result, void* M_, void* v_)
+OSL_SHADEOP void OSL_PREFIX_NS(transformv_vmv)(void *result, void* M_, void* v_)
 {
    const Vec3 &v = VEC(v_);
    const Matrix44 &M = MAT(M_);
    M.multDirMatrix (v, VEC(result));
 }
 
-OSL_SHADEOP void osl_transformv_dvmdv(void *result, void* M_, void* v_)
+OSL_SHADEOP void OSL_PREFIX_NS(transformv_dvmdv)(void *result, void* M_, void* v_)
 {
    const Dual2<Vec3> &v = DVEC(v_);
    const Matrix44    &M = MAT(M_);
@@ -644,14 +685,14 @@ OSL_SHADEOP void osl_transformv_dvmdv(void *result, void* M_, void* v_)
 }
 
 // normal = M * normal
-OSL_SHADEOP void osl_transformn_vmv(void *result, void* M_, void* v_)
+OSL_SHADEOP void OSL_PREFIX_NS(transformn_vmv)(void *result, void* M_, void* v_)
 {
    const Vec3 &v = VEC(v_);
    const Matrix44 &M = MAT(M_);
    M.inverse().transposed().multDirMatrix (v, VEC(result));
 }
 
-OSL_SHADEOP void osl_transformn_dvmdv(void *result, void* M_, void* v_)
+OSL_SHADEOP void OSL_PREFIX_NS(transformn_dvmdv)(void *result, void* M_, void* v_)
 {
    const Dual2<Vec3> &v = DVEC(v_);
    const Matrix44    &M = MAT(M_);
@@ -663,74 +704,74 @@ OSL_SHADEOP void osl_transformn_dvmdv(void *result, void* M_, void* v_)
 // Vector ops
 
 OSL_SHADEOP float
-osl_dot_fvv (void *a, void *b)
+OSL_PREFIX_NS(dot_fvv) (void *a, void *b)
 {
     return VEC(a).dot (VEC(b));
 }
 
 OSL_SHADEOP void
-osl_dot_dfdvdv (void *result, void *a, void *b)
+OSL_PREFIX_NS(dot_dfdvdv) (void *result, void *a, void *b)
 {
     DFLOAT(result) = dot (DVEC(a), DVEC(b));
 }
 
 OSL_SHADEOP void
-osl_dot_dfdvv (void *result, void *a, void *b_)
+OSL_PREFIX_NS(dot_dfdvv) (void *result, void *a, void *b_)
 {
     Dual2<Vec3> b (VEC(b_));
-    osl_dot_dfdvdv (result, a, &b);
+    OSL_PREFIX_NS(dot_dfdvdv) (result, a, &b);
 }
 
 OSL_SHADEOP void
-osl_dot_dfvdv (void *result, void *a_, void *b)
+OSL_PREFIX_NS(dot_dfvdv) (void *result, void *a_, void *b)
 {
     Dual2<Vec3> a (VEC(a_));
-    osl_dot_dfdvdv (result, &a, b);
+    OSL_PREFIX_NS(dot_dfdvdv) (result, &a, b);
 }
 
 
 OSL_SHADEOP void
-osl_cross_vvv (void *result, void *a, void *b)
+OSL_PREFIX_NS(cross_vvv) (void *result, void *a, void *b)
 {
     VEC(result) = VEC(a).cross (VEC(b));
 }
 
 OSL_SHADEOP void
-osl_cross_dvdvdv (void *result, void *a, void *b)
+OSL_PREFIX_NS(cross_dvdvdv) (void *result, void *a, void *b)
 {
     DVEC(result) = cross (DVEC(a), DVEC(b));
 }
 
 OSL_SHADEOP void
-osl_cross_dvdvv (void *result, void *a, void *b_)
+OSL_PREFIX_NS(cross_dvdvv) (void *result, void *a, void *b_)
 {
     Dual2<Vec3> b (VEC(b_));
-    osl_cross_dvdvdv (result, a, &b);
+    OSL_PREFIX_NS(cross_dvdvdv) (result, a, &b);
 }
 
 OSL_SHADEOP void
-osl_cross_dvvdv (void *result, void *a_, void *b)
+OSL_PREFIX_NS(cross_dvvdv) (void *result, void *a_, void *b)
 {
     Dual2<Vec3> a (VEC(a_));
-    osl_cross_dvdvdv (result, &a, b);
+    OSL_PREFIX_NS(cross_dvdvdv) (result, &a, b);
 }
 
 
 OSL_SHADEOP float
-osl_length_fv (void *a)
+OSL_PREFIX_NS(length_fv) (void *a)
 {
     return VEC(a).length();
 }
 
 OSL_SHADEOP void
-osl_length_dfdv (void *result, void *a)
+OSL_PREFIX_NS(length_dfdv) (void *result, void *a)
 {
     DFLOAT(result) = length(DVEC(a));
 }
 
 
 OSL_SHADEOP float
-osl_distance_fvv (void *a_, void *b_)
+OSL_PREFIX_NS(distance_fvv) (void *a_, void *b_)
 {
     const Vec3 &a (VEC(a_));
     const Vec3 &b (VEC(b_));
@@ -741,32 +782,32 @@ osl_distance_fvv (void *a_, void *b_)
 }
 
 OSL_SHADEOP void
-osl_distance_dfdvdv (void *result, void *a, void *b)
+OSL_PREFIX_NS(distance_dfdvdv) (void *result, void *a, void *b)
 {
     DFLOAT(result) = distance (DVEC(a), DVEC(b));
 }
 
 OSL_SHADEOP void
-osl_distance_dfdvv (void *result, void *a, void *b)
+OSL_PREFIX_NS(distance_dfdvv) (void *result, void *a, void *b)
 {
     DFLOAT(result) = distance (DVEC(a), VEC(b));
 }
 
 OSL_SHADEOP void
-osl_distance_dfvdv (void *result, void *a, void *b)
+OSL_PREFIX_NS(distance_dfvdv) (void *result, void *a, void *b)
 {
     DFLOAT(result) = distance (VEC(a), DVEC(b));
 }
 
 
 OSL_SHADEOP void
-osl_normalize_vv (void *result, void *a)
+OSL_PREFIX_NS(normalize_vv) (void *result, void *a)
 {
     VEC(result) = VEC(a).normalized();
 }
 
 OSL_SHADEOP void
-osl_normalize_dvdv (void *result, void *a)
+OSL_PREFIX_NS(normalize_dvdv) (void *result, void *a)
 {
     DVEC(result) = normalize(DVEC(a));
 }
@@ -782,7 +823,7 @@ inline Vec3 calculatenormal(void *P_, bool flipHandedness)
         return tmpP.dx().cross( tmpP.dy());
 }
 
-OSL_SHADEOP void osl_calculatenormal(void *out, void *sg_, void *P_)
+OSL_SHADEOP void OSL_PREFIX_NS(calculatenormal)(void *out, void *sg_, void *P_)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     Vec3 N = calculatenormal(P_, sg->flipHandedness);
@@ -790,7 +831,7 @@ OSL_SHADEOP void osl_calculatenormal(void *out, void *sg_, void *P_)
     VEC(out) = N;
 }
 
-OSL_SHADEOP float osl_area(void *P_)
+OSL_SHADEOP float OSL_PREFIX_NS(area)(void *P_)
 {
     Vec3 N = calculatenormal(P_, false);
     return N.length();
@@ -803,13 +844,13 @@ inline float filter_width(float dx, float dy)
     return sqrtf(dx*dx + dy*dy);
 }
 
-OSL_SHADEOP float osl_filterwidth_fdf(void *x_)
+OSL_SHADEOP float OSL_PREFIX_NS(filterwidth_fdf)(void *x_)
 {
     Dual2<float> &x = DFLOAT(x_);
     return filter_width(x.dx(), x.dy());
 }
 
-OSL_SHADEOP void osl_filterwidth_vdv(void *out, void *x_)
+OSL_SHADEOP void OSL_PREFIX_NS(filterwidth_vdv)(void *out, void *x_)
 {
     Dual2<Vec3> &x = DVEC(x_);
 
@@ -823,7 +864,7 @@ OSL_SHADEOP void osl_filterwidth_vdv(void *out, void *x_)
 
 
 // Asked if the raytype includes a bit pattern.
-OSL_SHADEOP int osl_raytype_bit (void *sg_, int bit)
+OSL_SHADEOP int OSL_PREFIX_NS(raytype_bit) (void *sg_, int bit)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     return (sg->raytype & bit) != 0;

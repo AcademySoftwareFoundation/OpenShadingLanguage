@@ -1265,7 +1265,11 @@ LLVM_Util::call_function (llvm::Value *func, llvm::Value **args, int nargs)
         llvm::outs() << "\t" << *(args[i]) << "\n";
 #endif
     //llvm_gen_debug_printf (std::string("start ") + std::string(name));
-    llvm::Value *r = builder().CreateCall (func, llvm::ArrayRef<llvm::Value *>(args, nargs));
+    auto llargs = llvm::ArrayRef<llvm::Value *>(args, nargs);
+    // Trim trailing NULLs
+    while (llargs.size() && llargs.back() == nullptr)
+        llargs.drop_back();
+    llvm::Value *r = builder().CreateCall (func, llargs);
     //llvm_gen_debug_printf (std::string(" end  ") + std::string(name));
     return r;
 }

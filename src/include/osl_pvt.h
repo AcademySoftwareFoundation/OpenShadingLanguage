@@ -41,6 +41,44 @@ class ASTNode;
 class StructSpec;
 
 
+
+// All our C++ functions are wrapped in a namespace to prevent version
+// clashes, but there are some things that for the sake of LLVM we need to
+// declare as 'extern "C"' and thus cannot use C++ namespacing. For those,
+// we turn the namespace into a simple prefix. The C preprocessor makes this
+// a little tricky, so there is the funny indirection in a couple places to
+// ensure that the macros get properly expanded to their value and not
+// string-ified literally.
+
+// Helper macro to stringize:  OSL_CPP_STRINGIZE(foo) -> "foo"
+// Uses helper function OSL_CPP_STRINGIZE_IMPL, don't call that directly!
+#define OSL_CPP_STRINGIZE_IMPL(text) #text
+#define OSL_CPP_STRINGIZE(text) OSL_CPP_STRINGIZE_IMPL(text)
+
+// Helper macro to concatenate:  OSL_CPP_concat(foo,bar) -> foobar
+// Uses helper function OSL_CPP_CONCAT_IMPL, don't call that directly!
+#define OSL_CPP_CONCAT_IMPL(a,b) a ## b
+#define OSL_CPP_CONCAT(a,b) OSL_CPP_CONCAT_IMPL(a,b)
+
+// Macro to produce a symbol that prefixes the token with the namespace and
+// then an underscore: OSL_PREFIX_NS(foo) -> OSL_v1_9_foo
+#define OSL_PREFIX_NS(token) OSL_CPP_CONCAT(OSL_NAMESPACE,OSL_CPP_CONCAT(_,token))
+
+// Macro to prefix a string with the namespace:
+// OSL_PREFIX_NS_STR("foo") -> "OSL_v1_9_foo"
+#define OSL_PREFIX_NS_STR(str) OSL_NAMESPACE_STRING "_" str
+
+// Macro to prefix a token with the namespace and turn into a string:
+// OSL_PREFIX_NS_TO_STR(foo) -> "OSL_v1_9_foo"
+#define OSL_PREFIX_NS_TO_STR(token) OSL_CPP_STRINGIZE(OSL_PREFIX_NS(token))
+
+// Macro to prefix and then concatenate the argument signature:
+// OSL_LLVM_OP_TOKEN(foo, fff) -> OSL_v1_9_foo_fff
+#define OSL_LLVM_OP_TOKEN(token,suffix) OSL_CPP_CONCAT (OSL_PREFIX_NS(token), OSL_CPP_CONCAT(_,suffix))
+
+
+
+
 /// Kinds of shaders
 ///
 enum ShaderType {

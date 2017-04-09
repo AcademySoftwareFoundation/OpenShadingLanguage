@@ -50,32 +50,32 @@ namespace pvt {
 
 // Only define 2-arg version of concat, sort it out upstream
 OSL_SHADEOP const char *
-osl_concat_sss (const char *s, const char *t)
+OSL_PREFIX_NS(concat_sss) (const char *s, const char *t)
 {
     return ustring::format("%s%s", s, t).c_str();
 }
 
 OSL_SHADEOP int
-osl_strlen_is (const char *s)
+OSL_PREFIX_NS(strlen_is) (const char *s)
 {
     return (int) USTR(s).length();
 }
 
 OSL_SHADEOP int
-osl_hash_is (const char *s)
+OSL_PREFIX_NS(hash_is) (const char *s)
 {
     return (int) USTR(s).hash();
 }
 
 OSL_SHADEOP int
-osl_getchar_isi (const char *str, int index)
+OSL_PREFIX_NS(getchar_isi) (const char *str, int index)
 {
     return str && unsigned(index) < USTR(str).length() ? str[index] : 0;
 }
 
 
-    OSL_SHADEOP int
-osl_startswith_iss (const char *s_, const char *substr_)
+OSL_SHADEOP int
+OSL_PREFIX_NS(startswith_iss) (const char *s_, const char *substr_)
 {
     ustring substr (USTR(substr_));
     size_t substr_len = substr.length();
@@ -89,7 +89,7 @@ osl_startswith_iss (const char *s_, const char *substr_)
 }
 
 OSL_SHADEOP int
-osl_endswith_iss (const char *s_, const char *substr_)
+OSL_PREFIX_NS(endswith_iss) (const char *s_, const char *substr_)
 {
     ustring substr (USTR(substr_));
     size_t substr_len = substr.length();
@@ -103,19 +103,19 @@ osl_endswith_iss (const char *s_, const char *substr_)
 }
 
 OSL_SHADEOP int
-osl_stoi_is (const char *str)
+OSL_PREFIX_NS(stoi_is) (const char *str)
 {
     return str ? strtol(str, NULL, 10) : 0;
 }
 
 OSL_SHADEOP float
-osl_stof_fs (const char *str)
+OSL_PREFIX_NS(stof_fs) (const char *str)
 {
     return str ? (float)strtod(str, NULL) : 0.0f;
 }
 
 OSL_SHADEOP const char *
-osl_substr_ssii (const char *s_, int start, int length)
+OSL_PREFIX_NS(substr_ssii) (const char *s_, int start, int length)
 {
     ustring s (USTR(s_));
     int slen = int (s.length());
@@ -130,8 +130,8 @@ osl_substr_ssii (const char *s_, int start, int length)
 
 
 OSL_SHADEOP int
-osl_regex_impl (void *sg_, const char *subject_, void *results, int nresults,
-                const char *pattern, int fullmatch)
+OSL_PREFIX_NS(regex_impl) (void *sg_, const char *subject_, void *results,
+                           int nresults, const char *pattern, int fullmatch)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     ShadingContext *ctx = sg->context;
@@ -162,7 +162,7 @@ osl_regex_impl (void *sg_, const char *subject_, void *results, int nresults,
 
 
 OSL_SHADEOP const char *
-osl_format (const char* format_str, ...)
+OSL_PREFIX_NS(format) (const char* format_str, ...)
 {
     va_list args;
     va_start (args, format_str);
@@ -173,7 +173,7 @@ osl_format (const char* format_str, ...)
 
 
 OSL_SHADEOP void
-osl_printf (ShaderGlobals *sg, const char* format_str, ...)
+OSL_PREFIX_NS(printf) (ShaderGlobals *sg, const char* format_str, ...)
 {
     va_list args;
     va_start (args, format_str);
@@ -189,7 +189,7 @@ osl_printf (ShaderGlobals *sg, const char* format_str, ...)
 
 
 OSL_SHADEOP void
-osl_error (ShaderGlobals *sg, const char* format_str, ...)
+OSL_PREFIX_NS(error) (ShaderGlobals *sg, const char* format_str, ...)
 {
     va_list args;
     va_start (args, format_str);
@@ -200,7 +200,7 @@ osl_error (ShaderGlobals *sg, const char* format_str, ...)
 
 
 OSL_SHADEOP void
-osl_warning (ShaderGlobals *sg, const char* format_str, ...)
+OSL_PREFIX_NS(warning) (ShaderGlobals *sg, const char* format_str, ...)
 {
     if (sg->context->allow_warnings()) {
         va_list args;
@@ -214,8 +214,8 @@ osl_warning (ShaderGlobals *sg, const char* format_str, ...)
 
 
 OSL_SHADEOP int
-osl_split (const char *str, ustring *results, const char *sep,
-           int maxsplit, int resultslen)
+OSL_PREFIX_NS(split) (const char *str, ustring *results, const char *sep,
+                      int maxsplit, int resultslen)
 {
     maxsplit = OIIO::clamp (maxsplit, 0, resultslen);
     std::vector<std::string> splits;

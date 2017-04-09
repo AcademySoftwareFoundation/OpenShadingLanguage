@@ -39,8 +39,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "../liboslcomp/oslcomp_pvt.h"
 #include "backendllvm.h"
 
-// Create extrenal declarations for all built-in funcs we may call from LLVM
-#define DECL(name,signature) extern "C" void name();
+// Create external declarations for all built-in funcs we may call from LLVM
+#define DECL(name,signature) extern "C" void OSL_PREFIX_NS(name)();
 #include "builtindecl.h"
 #undef DECL
 
@@ -152,8 +152,8 @@ initialize_llvm_helper_function_map ()
     if (llvm_helper_function_map_initialized)
         return;
 #define DECL(name,signature) \
-    llvm_helper_function_map[#name] = HelperFuncRecord(signature,name); \
-    external_function_names.push_back (#name);
+    llvm_helper_function_map[OSL_PREFIX_NS_TO_STR(name)] = HelperFuncRecord(signature,OSL_PREFIX_NS(name)); \
+    external_function_names.push_back (OSL_PREFIX_NS_TO_STR(name));
 #include "builtindecl.h"
 #undef DECL
 
@@ -452,7 +452,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym)
         args.push_back (ll.void_ptr (userdata_initialized_ref(userdata_index)));
         args.push_back (ll.constant (userdata_index));
         llvm::Value *got_userdata =
-            ll.call_function ("osl_bind_interpolated_param",
+            ll.call_function (OSL_PREFIX_NS_STR("bind_interpolated_param"),
                               &args[0], args.size());
         if (shadingsys().debug_nan() && type.basetype == TypeDesc::FLOAT) {
             // check for NaN/Inf for float-based types
@@ -464,7 +464,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym)
                  ll.constant(0), ll.constant(ncomps),
                  ll.constant("<get_userdata>")
             };
-            ll.call_function ("osl_naninf_check", args, 10);
+            ll.call_function (OSL_PREFIX_NS_STR("naninf_check"), args, 10);
         }
         // We will enclose the subsequent initialization of default values
         // or init ops in an "if" so that the extra copies or code don't
@@ -558,7 +558,7 @@ BackendLLVM::llvm_generate_debugnan (const Opcode &op)
                                 ncheck,
                                 ll.constant(op.opname())
                               };
-        ll.call_function ("osl_naninf_check", args, 10);
+        ll.call_function (OSL_PREFIX_NS_STR("naninf_check"), args, 10);
     }
 }
 
@@ -622,7 +622,7 @@ BackendLLVM::llvm_generate_debug_uninit (const Opcode &op)
                                 offset,
                                 ncheck
                               };
-        ll.call_function ("osl_uninit_check", args, 15);
+        ll.call_function (OSL_PREFIX_NS_STR("uninit_check"), args, 15);
     }
 }
 
@@ -808,7 +808,7 @@ BackendLLVM::build_llvm_instance (bool groupentry)
     if (! group().is_last_layer(layer())) {
         ll.op_store (ll.constant_bool(true), layerfield);
         if (shadingsys().countlayerexecs())
-            ll.call_function ("osl_incr_layers_executed", sg_void_ptr());
+            ll.call_function (OSL_PREFIX_NS_STR("incr_layers_executed"), sg_void_ptr());
     }
 
     // Setup the symbols
@@ -848,7 +848,7 @@ BackendLLVM::build_llvm_instance (bool groupentry)
                      ll.constant(0), ll.constant(ncomps),
                      ll.constant("<none>")
                 };
-                ll.call_function ("osl_naninf_check", args, 10);
+                ll.call_function (OSL_PREFIX_NS_STR("naninf_check"), args, 10);
             }
         }
     }
@@ -1100,7 +1100,9 @@ BackendLLVM::run ()
         if (f && group().is_entry_layer(layer))
             entry_function_names.push_back (ll.func_name(f));
     }
-    ll.internalize_module_functions ("osl_", external_function_names, entry_function_names);
+    ll.internalize_module_functions (OSL_NAMESPACE_STRING "_",
+                                     external_function_names,
+                                     entry_function_names);
 
     // Optimize the LLVM IR unless it's a do-nothing group.
     if (! group().does_nothing())

@@ -445,9 +445,10 @@ RendererServices::pointcloud_write (ShaderGlobals *sg,
 
 
 OSL_SHADEOP int
-osl_pointcloud_search (ShaderGlobals *sg, const char *filename, void *center, float radius,
-                       int max_points, int sort, void *out_indices, void *out_distances, int derivs_offset,
-                       int nattrs, ...)
+OSL_PREFIX_NS(pointcloud_search) (ShaderGlobals *sg, const char *filename,
+                                  void *center, float radius, int max_points,
+                                  int sort, void *out_indices, void *out_distances,
+                                  int derivs_offset, int nattrs, ...)
 {
     ShadingSystemImpl &shadingsys (sg->context->shadingsys());
     if (shadingsys.no_pointcloud()) // Debug mode to skip pointcloud expense
@@ -493,8 +494,9 @@ osl_pointcloud_search (ShaderGlobals *sg, const char *filename, void *center, fl
 
 
 OSL_SHADEOP int
-osl_pointcloud_get (ShaderGlobals *sg, const char *filename, void *in_indices, int count,
-                    const char *attr_name, long long attr_type, void *out_data)
+OSL_PREFIX_NS(pointcloud_get) (ShaderGlobals *sg, const char *filename,
+                               void *in_indices, int count, const char *attr_name,
+                               long long attr_type, void *out_data)
 {
     ShadingSystemImpl &shadingsys (sg->context->shadingsys());
     if (shadingsys.no_pointcloud()) // Debug mode to skip pointcloud expense
@@ -513,9 +515,9 @@ osl_pointcloud_get (ShaderGlobals *sg, const char *filename, void *in_indices, i
 
 
 OSL_SHADEOP void
-osl_pointcloud_write_helper (ustring *names, TypeDesc *types, void **values,
-                             int index, const char *name, long long type,
-                             void *val)
+OSL_PREFIX_NS(pointcloud_write_helper) (ustring *names, TypeDesc *types,
+                                        void **values, int index, const char *name,
+                                        long long type, void *val)
 {
     names[index] = USTR(name);
     types[index] = TYPEDESC(type);
@@ -525,9 +527,10 @@ osl_pointcloud_write_helper (ustring *names, TypeDesc *types, void **values,
 
 
 OSL_SHADEOP int
-osl_pointcloud_write (ShaderGlobals *sg, const char *filename, const Vec3 *pos,
-                      int nattribs, const ustring *names,
-                      const TypeDesc *types, const void **values)
+OSL_PREFIX_NS(pointcloud_write) (ShaderGlobals *sg, const char *filename,
+                                 const Vec3 *pos, int nattribs,
+                                 const ustring *names, const TypeDesc *types,
+                                 const void **values)
 {
     ShadingSystemImpl &shadingsys (sg->context->shadingsys());
     if (shadingsys.no_pointcloud()) // Debug mode to skip pointcloud expense

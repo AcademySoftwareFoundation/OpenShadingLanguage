@@ -34,6 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <streambuf>
 #include <cstdio>
 #include <cerrno>
+#include <cstdarg>
 
 #include "oslcomp_pvt.h"
 

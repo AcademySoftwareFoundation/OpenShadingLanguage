@@ -179,9 +179,28 @@ public:
 
     void sourceline (int line) { m_sourceline = line; }
 
-    // FIXME - some day, replace this with TinyFormat-based version.
-    void error (const char *format, ...);
-    void warning (const char *format, ...);
+    template<typename... Args>
+    void error (string_view format, const Args&... args) const
+    {
+        DASSERT (format.size());
+#if OIIO_VERSION >= 10803
+        error_impl (OIIO::Strutil::format (format, args...));
+#else /* DEPRECATE when OIIO minimum is at least 1.8 */
+        error_impl (OIIO::Strutil::format (format.c_str(), args...));
+#endif
+    }
+
+    /// Warning reporting
+    template<typename... Args>
+    void warning (string_view format, const Args&... args) const
+    {
+        DASSERT (format.size());
+#if OIIO_VERSION >= 10803
+        warning_impl (OIIO::Strutil::format (format, args...));
+#else /* DEPRECATE when OIIO minimum is at least 1.8 */
+        warning_impl (OIIO::Strutil::format (format.c_str(), args...));
+#endif
+    }
 
     bool is_lvalue () const { return m_is_lvalue; }
 
@@ -319,6 +338,9 @@ protected:
                                 Symbol *arrayindex,
                                 bool copywholearrays, int intindex,
                                 bool paraminit);
+
+    void error_impl (string_view msg) const;
+    void warning_impl (string_view msg) const;
 
 protected:
     NodeType m_nodetype;          ///< Type of node this is

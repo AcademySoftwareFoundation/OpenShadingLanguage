@@ -26,6 +26,8 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <cstdarg>
+
 #include "oslexec_pvt.h"
 using namespace OSL;
 using namespace OSL::pvt;

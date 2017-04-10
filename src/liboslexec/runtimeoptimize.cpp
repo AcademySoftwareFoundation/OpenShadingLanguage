@@ -125,7 +125,7 @@ RuntimeOptimizer::RuntimeOptimizer (ShadingSystemImpl &shadingsys,
       m_next_newconst(0), m_next_newtemp(0),
       m_stat_opt_locking_time(0), m_stat_specialization_time(0),
       m_stop_optimizing(false),
-      m_raytypes_on(0), m_raytypes_off(0)
+      m_raytypes_on(group.raytypes_on()), m_raytypes_off(group.raytypes_off())
 {
     memset (&m_shaderglobals, 0, sizeof(ShaderGlobals));
     m_shaderglobals.context = shadingcontext();

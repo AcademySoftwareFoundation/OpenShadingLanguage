@@ -208,8 +208,9 @@ struct AttributeNeeded {
     }
 };
 
-// Prefix for OSL shade up declarations, so LLVM can find them
-#define OSL_SHADEOP extern "C" OSL_LLVM_EXPORT
+// Prefix for OSL shade op declarations. Make them local visibility, but
+// "C" linkage (no C++ name mangling).
+#define OSL_SHADEOP extern "C" OSL_DLL_LOCAL
 
 
 // Handy re-casting macros

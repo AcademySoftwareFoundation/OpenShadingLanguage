@@ -1,4 +1,0 @@
-{
-    global: *OSL*; osl_*; test_shade;
-    local: *;
-};

@@ -75,7 +75,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     #define OSL_DLL_EXPORT __declspec(dllexport)
     #define OSL_DLL_LOCAL
   #endif
-  #define OSL_LLVM_EXPORT __declspec(dllexport)
+  //#define OSL_LLVM_EXPORT __declspec(dllexport)
+  #define OSL_LLVM_EXPORT OSL_DLL_LOCAL
 #else
   #if (10000*__GNUC__ + 100*__GNUC_MINOR__ + __GNUC_PATCHLEVEL__) > 40102
     #define OSL_DLL_IMPORT __attribute__ ((visibility ("default")))
@@ -86,7 +87,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     #define OSL_DLL_EXPORT
     #define OSL_DLL_LOCAL
   #endif
-  #define OSL_LLVM_EXPORT OSL_DLL_EXPORT
+  #define OSL_LLVM_EXPORT OSL_DLL_LOCAL
 #endif
 
 

@@ -114,14 +114,14 @@ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
             # Linux/FreeBSD/Hurd: also hide all the symbols of dependent
             # libraries to prevent clashes if an app using this library is
             # linked against other verions of our dependencies.
-            set (VISIBILITY_MAP_COMMAND "-Wl,--version-script=${PROJECT_SOURCE_DIR}/src/libOpenImageIO/libOpenImageIO.map")
+            set (VISIBILITY_MAP_COMMAND "-Wl,--version-script=${PROJECT_SOURCE_DIR}/src/build-scripts/hidesymbols.map")
         endif ()
     endif ()
     if (LLVM_STATIC AND ${CMAKE_SYSTEM_NAME} STREQUAL "Linux" AND NOT DEBUGMODE)
         # Linux: When linking against LLVM statically, we can also hide
         # all its symbols to prevent clashes if OSL is linked against an
         # app that also embeds LLVM.
-        set (VISIBILITY_MAP_COMMAND "-Wl,--version-script=${PROJECT_SOURCE_DIR}/src/liboslexec/liboslexec.map")
+        set (VISIBILITY_MAP_COMMAND "-Wl,--version-script=${PROJECT_SOURCE_DIR}/src/build-scripts/hidesymbols.map")
     endif ()
 endif ()
 

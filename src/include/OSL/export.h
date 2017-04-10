@@ -75,12 +75,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     #define OSL_DLL_EXPORT __declspec(dllexport)
     #define OSL_DLL_LOCAL
   #endif
-  #define OSL_LLVM_EXPORT __declspec(dllexport)
+  //#define OSL_LLVM_EXPORT __declspec(dllexport)
+  #define OSL_LLVM_EXPORT OSL_DLL_LOCAL
 #else
   #define OSL_DLL_IMPORT __attribute__ ((visibility ("default")))
   #define OSL_DLL_EXPORT __attribute__ ((visibility ("default")))
   #define OSL_DLL_LOCAL  __attribute__ ((visibility ("hidden")))
-  #define OSL_LLVM_EXPORT OSL_DLL_EXPORT
+  #define OSL_LLVM_EXPORT OSL_DLL_LOCAL
 #endif
 
 

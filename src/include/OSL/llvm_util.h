@@ -121,6 +121,10 @@ public:
                                    const std::vector<llvm::Type*> &paramtypes,
                                    bool varargs=false);
 
+    /// Add a global mapping of a function to its callable address
+    /// explicitly instead of relying on dlsym.
+    void add_function_mapping (llvm::Function *func, void *addr);
+
     /// Set up a new current function that subsequent basic blocks will
     /// be added to.
     void current_function (llvm::Function *func) { m_current_function = func; }

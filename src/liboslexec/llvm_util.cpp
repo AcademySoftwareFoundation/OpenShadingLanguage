@@ -888,6 +888,14 @@ LLVM_Util::make_function (const std::string &name, bool fastcall,
 
 
 
+void
+LLVM_Util::add_function_mapping (llvm::Function *func, void *addr)
+{
+    execengine()->addGlobalMapping (func, addr);
+}
+
+
+
 llvm::Value *
 LLVM_Util::current_function_arg (int a)
 {

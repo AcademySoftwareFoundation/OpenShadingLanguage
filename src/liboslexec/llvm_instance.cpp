@@ -951,7 +951,7 @@ BackendLLVM::initialize_llvm_group ()
 
     for (HelperFuncMap::iterator i = llvm_helper_function_map.begin(),
          e = llvm_helper_function_map.end(); i != e; ++i) {
-        const char *funcname = i->first.c_str();
+        const std::string &funcname (i->first);
         bool varargs = false;
         const char *types = i->second.argtypes;
         int advance;
@@ -970,7 +970,8 @@ BackendLLVM::initialize_llvm_group ()
             }
             types += advance;
         }
-        ll.make_function (funcname, false, llvm_type(rettype), params, varargs);
+        llvm::Function *f = ll.make_function (funcname, false, llvm_type(rettype), params, varargs);
+        ll.add_function_mapping (f, (void *)i->second.function);
     }
 
     // Needed for closure setup

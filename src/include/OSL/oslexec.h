@@ -557,15 +557,19 @@ public:
     /// data passed in via attribute("raytypes")).
     int raytype_bit (ustring name);
 
+    /// Configure the default raytypes to assume to be on (or off) at optimization
+    /// time for the given group. The raytypes_on gives a bitfield describing which
+    /// ray flags are known to be 1, and raytypes_off describes which ray flags are
+    /// known to be 0. Bits that are not set in either set of flags are not known
+    /// to the optimizer, and will be determined strictly at execution time.
+    void set_raytypes(ShaderGroup *group, int raytypes_on, int raytypes_off);
+
     /// Ensure that the group has been optimized and JITed.
     /// Ensure that the group has been optimized and JITed.
     void optimize_group (ShaderGroup *group);
 
-    /// Ensure that the group has been optimized and JITed. The raytypes_on
-    /// gives a bitfield describing which ray flags are known to be 1, and
-    /// raytypes_off describes which ray flags are known to be 0. Bits that
-    /// are not set in either set of flags are not known to the optimizer,
-    /// and will be determined strictly at execution time.
+    /// Ensure that the group has been optimized and JITed. This is a
+    /// convenience function that simply calls set_raytypes followed by optimize_group.
     void optimize_group (ShaderGroup *group, int raytypes_on,
                          int raytypes_off);
 

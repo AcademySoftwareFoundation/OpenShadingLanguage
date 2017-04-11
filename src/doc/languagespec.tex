@@ -62,7 +62,7 @@ Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
 \date{{\large Date: 6 Feb 2017 \\
-% (with corrections, 6 Feb 2017)
+ (with corrections, 11 Apr 2017)
 }
 \bigskip
 \bigskip
@@ -2056,35 +2056,33 @@ using the `dot' operator.  The syntax for declaring and using structures
 is similar to C or C++:
 
 \begin{code}
-    struct ray {                   // Define a structure type
+    struct Ray {                   // Define a structure type
         point pos;
         vector dir;
     };
 
-    ray r;                         // Declare a structure
+    Ray r;                         // Declare a structure
     r.pos = point (1, 0, 0);       // Assign to one field
     point p = r.pos;               // Read from a structure field
 \end{code}
 
-It is permitted to have a structure field that is an array, as well as
-to have an array of structures.  But it is not permitted for one
-structure to have a field that is another structure.  For example:
+It is permitted to have a structure field that is an array, as well as to
+have an array of structures.  But it is not currently permitted to ``nest''
+arrays (that is, to have an array of structs which contain members that are
+arrays).
 
 \begin{code}
     struct A {
         color a;
-        float b[4];       // struct may contain an array
+        float b[4];       // Ok: struct may contain an array
     };
 
-    A d[5];               // Array of structures
-    color e = d[0].a;     // Field of one element of array of struct
-    d[2].b[4] = 0.25;     // Element of a field of a struct in an array
+    Ray rays[4];          // Ok: Array of structures
+    rays[0].pos = 0;
+
+    A d[5];               // NO: Array of structures that contain arrays
 \end{code}
 
-%\begin{annotate}
-%\QUESTION Is this restriction (no ``structure recursion'') acceptable?
-%It certainly makes the implementation of the language easier.
-%\end{annotate}
 
 \index{types|)}   % end of chapter
 

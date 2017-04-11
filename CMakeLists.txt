@@ -78,7 +78,7 @@ endif()
 
 
 option (VERBOSE "Print lots of messages while compiling" OFF)
-set (${PROJ_NAME}_NAMESPACE ${PROJ_NAME} CACHE STRING "Customized outer namespace base name (version will be added)")
+set (${PROJ_NAME}_NAMESPACE ${PROJECT_NAME} CACHE STRING "Customized outer namespace base name (version will be added)")
 option (OSL_BUILD_TESTS "Build the unit tests, testshade, testrender" ON)
 if (WIN32)
     option (USE_LLVM_BITCODE "Generate embedded LLVM bitcode" OFF)

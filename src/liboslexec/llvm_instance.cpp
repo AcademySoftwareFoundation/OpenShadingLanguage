@@ -39,8 +39,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "../liboslcomp/oslcomp_pvt.h"
 #include "backendllvm.h"
 
-// Create extrenal declarations for all built-in funcs we may call from LLVM
-#define DECL(name,signature) extern "C" void name();
+// Create external declarations for all built-in funcs we may call from LLVM
+#define DECL(name,signature) extern "C" void OSL_LLVM_PREFIXED_TOKEN(name)();
 #include "builtindecl.h"
 #undef DECL
 
@@ -152,8 +152,8 @@ initialize_llvm_helper_function_map ()
     if (llvm_helper_function_map_initialized)
         return;
 #define DECL(name,signature) \
-    llvm_helper_function_map[#name] = HelperFuncRecord(signature,name); \
-    external_function_names.push_back (#name);
+    llvm_helper_function_map[OSL_LLVM_PREFIXED_TOKEN_AS_STRING(name)] = HelperFuncRecord(signature,OSL_LLVM_PREFIXED_TOKEN(name)); \
+    external_function_names.push_back (OSL_LLVM_PREFIXED_TOKEN_AS_STRING(name));
 #include "builtindecl.h"
 #undef DECL
 
@@ -1100,7 +1100,9 @@ BackendLLVM::run ()
         if (f && group().is_entry_layer(layer))
             entry_function_names.push_back (ll.func_name(f));
     }
-    ll.internalize_module_functions ("osl_", external_function_names, entry_function_names);
+    ll.internalize_module_functions (OSL_LLVM_PREFIXED_STRING("osl_"),
+                                     external_function_names,
+                                     entry_function_names);
 
     // Optimize the LLVM IR unless it's a do-nothing group.
     if (! group().does_nothing())

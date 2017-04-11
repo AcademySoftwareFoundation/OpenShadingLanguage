@@ -493,7 +493,9 @@ ShadingSystemImpl::blackbody_rgb (float T)
 
 
 
-OSL_SHADEOP void osl_blackbody_vf (void *sg, void *out, float temp)
+OSL_SHADEOP void OSL_LLVM_PREFIXED_TOKEN(osl_blackbody_vf) (void *sg,
+                                                            void *out,
+                                                            float temp)
 {
     ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
     *(Color3 *)out = ctx->shadingsys().blackbody_rgb (temp);
@@ -501,7 +503,9 @@ OSL_SHADEOP void osl_blackbody_vf (void *sg, void *out, float temp)
 
 
 
-OSL_SHADEOP void osl_wavelength_color_vf (void *sg, void *out, float lambda)
+OSL_SHADEOP void OSL_LLVM_PREFIXED_TOKEN(osl_wavelength_color_vf) (void *sg,
+                                                                   void *out,
+                                                                   float lambda)
 {
     ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
     Color3 rgb = ctx->shadingsys().XYZ_to_RGB (wavelength_color_XYZ (lambda));
@@ -514,7 +518,9 @@ OSL_SHADEOP void osl_wavelength_color_vf (void *sg, void *out, float lambda)
 
 
 
-OSL_SHADEOP void osl_luminance_fv (void *sg, void *out, void *c)
+OSL_SHADEOP void OSL_LLVM_PREFIXED_TOKEN(osl_luminance_fv) (void *sg,
+                                                            void *out,
+                                                            void *c)
 {
     ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
     ((float *)out)[0] = ctx->shadingsys().luminance (((const Color3 *)c)[0]);
@@ -522,7 +528,9 @@ OSL_SHADEOP void osl_luminance_fv (void *sg, void *out, void *c)
 
 
 
-OSL_SHADEOP void osl_luminance_dfdv (void *sg, void *out, void *c)
+OSL_SHADEOP void OSL_LLVM_PREFIXED_TOKEN(osl_luminance_dfdv) (void *sg,
+                                                              void *out,
+                                                              void *c)
 {
     ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
     ((float *)out)[0] = ctx->shadingsys().luminance (((const Color3 *)c)[0]);
@@ -533,7 +541,9 @@ OSL_SHADEOP void osl_luminance_dfdv (void *sg, void *out, void *c)
 
 
 OSL_SHADEOP void
-osl_prepend_color_from (void *sg, void *c_, const char *from)
+OSL_LLVM_PREFIXED_TOKEN(osl_prepend_color_from) (void *sg,
+                                                 void *c_,
+                                                 const char *from)
 {
     ShadingContext *ctx (((ShaderGlobals *)sg)->context);
     Color3 &c (*(Color3*)c_);

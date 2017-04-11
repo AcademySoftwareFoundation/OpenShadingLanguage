@@ -53,19 +53,19 @@ namespace pvt {
 // Matrix ops
 
 OSL_SHADEOP void
-osl_mul_mm (void *r, void *a, void *b)
+OSL_LLVM_PREFIXED_TOKEN(osl_mul_mm) (void *r, void *a, void *b)
 {
     MAT(r) = MAT(a) * MAT(b);
 }
 
 OSL_SHADEOP void
-osl_mul_mf (void *r, void *a, float b)
+OSL_LLVM_PREFIXED_TOKEN(osl_mul_mf) (void *r, void *a, float b)
 {
     MAT(r) = MAT(a) * b;
 }
 
 OSL_SHADEOP void
-osl_mul_m_ff (void *r, float a, float b)
+OSL_LLVM_PREFIXED_TOKEN(osl_mul_m_ff) (void *r, float a, float b)
 {
     float f = a * b;
     MAT(r) = Matrix44 (f,0,0,0, 0,f,0,0, 0,0,f,0, 0,0,0,f);
@@ -74,25 +74,25 @@ osl_mul_m_ff (void *r, float a, float b)
 
 
 OSL_SHADEOP void
-osl_div_mm (void *r, void *a, void *b)
+OSL_LLVM_PREFIXED_TOKEN(osl_div_mm) (void *r, void *a, void *b)
 {
     MAT(r) = MAT(a) * MAT(b).inverse();
 }
 
 OSL_SHADEOP void
-osl_div_mf (void *r, void *a, float b)
+OSL_LLVM_PREFIXED_TOKEN(osl_div_mf) (void *r, void *a, float b)
 {
     MAT(r) = MAT(a) * (1.0f/b);
 }
 
 OSL_SHADEOP void
-osl_div_fm (void *r, float a, void *b)
+OSL_LLVM_PREFIXED_TOKEN(osl_div_fm) (void *r, float a, void *b)
 {
     MAT(r) = a * MAT(b).inverse();
 }
 
 OSL_SHADEOP void
-osl_div_m_ff (void *r, float a, float b)
+OSL_LLVM_PREFIXED_TOKEN(osl_div_m_ff) (void *r, float a, float b)
 {
     float f = (b == 0) ? 0.0f : (a / b);
     MAT(r) = Matrix44 (f,0,0,0, 0,f,0,0, 0,0,f,0, 0,0,0,f);
@@ -101,7 +101,7 @@ osl_div_m_ff (void *r, float a, float b)
 
 
 OSL_SHADEOP void
-osl_transpose_mm (void *r, void *m)
+OSL_LLVM_PREFIXED_TOKEN(osl_transpose_mm) (void *r, void *m)
 {
     MAT(r) = MAT(m).transposed();
 }
@@ -109,7 +109,7 @@ osl_transpose_mm (void *r, void *m)
 
 
 OSL_SHADEOP int
-osl_get_matrix (void *sg_, void *r, const char *from)
+OSL_LLVM_PREFIXED_TOKEN(osl_get_matrix) (void *sg_, void *r, const char *from)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     ShadingContext *ctx = (ShadingContext *)sg->context;
@@ -139,7 +139,9 @@ osl_get_matrix (void *sg_, void *r, const char *from)
 
 
 OSL_SHADEOP int
-osl_get_inverse_matrix (void *sg_, void *r, const char *to)
+OSL_LLVM_PREFIXED_TOKEN(osl_get_inverse_matrix) (void *sg_,
+                                                 void *r,
+                                                 const char *to)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     ShadingContext *ctx = (ShadingContext *)sg->context;
@@ -169,10 +171,14 @@ osl_get_inverse_matrix (void *sg_, void *r, const char *to)
 
 
 OSL_SHADEOP int
-osl_prepend_matrix_from (void *sg, void *r, const char *from)
+OSL_LLVM_PREFIXED_TOKEN(osl_prepend_matrix_from) (void *sg,
+                                                  void *r,
+                                                  const char *from)
 {
     Matrix44 m;
-    bool ok = osl_get_matrix ((ShaderGlobals *)sg, &m, from);
+    bool ok = OSL_LLVM_PREFIXED_TOKEN(osl_get_matrix) ((ShaderGlobals *)sg,
+                                                       &m,
+                                                       from);
     if (ok)
         MAT(r) = m * MAT(r);
     else {
@@ -186,11 +192,18 @@ osl_prepend_matrix_from (void *sg, void *r, const char *from)
 
 
 OSL_SHADEOP int
-osl_get_from_to_matrix (void *sg, void *r, const char *from, const char *to)
+OSL_LLVM_PREFIXED_TOKEN(osl_get_from_to_matrix) (void *sg,
+                                                 void *r,
+                                                 const char *from,
+                                                 const char *to)
 {
     Matrix44 Mfrom, Mto;
-    int ok = osl_get_matrix ((ShaderGlobals *)sg, &Mfrom, from);
-    ok &= osl_get_inverse_matrix ((ShaderGlobals *)sg, &Mto, to);
+    int ok = OSL_LLVM_PREFIXED_TOKEN(osl_get_matrix) ((ShaderGlobals *)sg,
+                                                      &Mfrom,
+                                                      from);
+    ok &= OSL_LLVM_PREFIXED_TOKEN(osl_get_inverse_matrix) ((ShaderGlobals *)sg,
+                                                           &Mto,
+                                                           to);
     MAT(r) = Mfrom * Mto;
     return ok;
 }
@@ -198,39 +211,51 @@ osl_get_from_to_matrix (void *sg, void *r, const char *from, const char *to)
 
 
 // point = M * point
-inline void osl_transform_vmv(void *result, const Matrix44 &M, void* v_)
+inline void OSL_LLVM_PREFIXED_TOKEN(osl_transform_vmv)(void *result,
+                                                       const Matrix44 &M,
+                                                       void* v_)
 {
    const Vec3 &v = VEC(v_);
    robust_multVecMatrix (M, v, VEC(result));
 }
 
-inline void osl_transform_dvmdv(void *result, const Matrix44 &M, void* v_)
+inline void OSL_LLVM_PREFIXED_TOKEN(osl_transform_dvmdv)(void *result,
+                                                         const Matrix44 &M,
+                                                         void* v_)
 {
    const Dual2<Vec3> &v = DVEC(v_);
    robust_multVecMatrix (M, v, DVEC(result));
 }
 
 // vector = M * vector
-inline void osl_transformv_vmv(void *result, const Matrix44 &M, void* v_)
+inline void OSL_LLVM_PREFIXED_TOKEN(osl_transformv_vmv)(void *result,
+                                                        const Matrix44 &M,
+                                                        void* v_)
 {
    const Vec3 &v = VEC(v_);
    M.multDirMatrix (v, VEC(result));
 }
 
-inline void osl_transformv_dvmdv(void *result, const Matrix44 &M, void* v_)
+inline void OSL_LLVM_PREFIXED_TOKEN(osl_transformv_dvmdv)(void *result,
+                                                          const Matrix44 &M,
+                                                          void* v_)
 {
    const Dual2<Vec3> &v = DVEC(v_);
    multDirMatrix (M, v, DVEC(result));
 }
 
 // normal = M * normal
-inline void osl_transformn_vmv(void *result, const Matrix44 &M, void* v_)
+inline void OSL_LLVM_PREFIXED_TOKEN(osl_transformn_vmv)(void *result,
+                                                        const Matrix44 &M,
+                                                        void* v_)
 {
    const Vec3 &v = VEC(v_);
    M.inverse().transposed().multDirMatrix (v, VEC(result));
 }
 
-inline void osl_transformn_dvmdv(void *result, const Matrix44 &M, void* v_)
+inline void OSL_LLVM_PREFIXED_TOKEN(osl_transformn_dvmdv)(void *result,
+                                                          const Matrix44 &M,
+                                                          void* v_)
 {
    const Dual2<Vec3> &v = DVEC(v_);
    multDirMatrix (M.inverse().transposed(), v, DVEC(result));
@@ -239,9 +264,14 @@ inline void osl_transformn_dvmdv(void *result, const Matrix44 &M, void* v_)
 
 
 OSL_SHADEOP int
-osl_transform_triple (void *sg_, void *Pin, int Pin_derivs,
-                      void *Pout, int Pout_derivs,
-                      void *from, void *to, int vectype)
+OSL_LLVM_PREFIXED_TOKEN(osl_transform_triple) (void *sg_,
+                                               void *Pin,
+                                               int Pin_derivs,
+                                               void *Pout,
+                                               int Pout_derivs,
+                                               void *from,
+                                               void *to,
+                                               int vectype)
 {
     static ustring u_common ("common");
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
@@ -249,28 +279,34 @@ osl_transform_triple (void *sg_, void *Pin, int Pin_derivs,
     int ok;
     Pin_derivs &= Pout_derivs;   // ignore derivs if output doesn't need it
     if (USTR(from) == u_common)
-        ok = osl_get_inverse_matrix (sg, &M, (const char *)to);
+        ok = OSL_LLVM_PREFIXED_TOKEN(osl_get_inverse_matrix) (sg,
+                                                              &M,
+                                                              (const char *)to);
     else if (USTR(to) == u_common)
-        ok = osl_get_matrix (sg, &M, (const char *)from);
+        ok = OSL_LLVM_PREFIXED_TOKEN(osl_get_matrix) (sg,
+                                                      &M,
+                                                      (const char *)from);
     else
-        ok = osl_get_from_to_matrix (sg, &M, (const char *)from,
-                                     (const char *)to);
+        ok = OSL_LLVM_PREFIXED_TOKEN(osl_get_from_to_matrix) (sg,
+                                                              &M,
+                                                              (const char *)from,
+                                                              (const char *)to);
     if (ok) {
         if (vectype == TypeDesc::POINT) {
             if (Pin_derivs)
-                osl_transform_dvmdv(Pout, M, Pin);
+                OSL_LLVM_PREFIXED_TOKEN(osl_transform_dvmdv)(Pout, M, Pin);
             else
-                osl_transform_vmv(Pout, M, Pin);
+                OSL_LLVM_PREFIXED_TOKEN(osl_transform_vmv)(Pout, M, Pin);
         } else if (vectype == TypeDesc::VECTOR) {
             if (Pin_derivs)
-                osl_transformv_dvmdv(Pout, M, Pin);
+                OSL_LLVM_PREFIXED_TOKEN(osl_transformv_dvmdv)(Pout, M, Pin);
             else
-                osl_transformv_vmv(Pout, M, Pin);
+                OSL_LLVM_PREFIXED_TOKEN(osl_transformv_vmv)(Pout, M, Pin);
         } else if (vectype == TypeDesc::NORMAL) {
             if (Pin_derivs)
-                osl_transformn_dvmdv(Pout, M, Pin);
+                OSL_LLVM_PREFIXED_TOKEN(osl_transformn_dvmdv)(Pout, M, Pin);
             else
-                osl_transformn_vmv(Pout, M, Pin);
+                OSL_LLVM_PREFIXED_TOKEN(osl_transformn_vmv)(Pout, M, Pin);
         }
         else ASSERT(0);
     } else {
@@ -290,10 +326,14 @@ osl_transform_triple (void *sg_, void *Pin, int Pin_derivs,
 
 
 OSL_SHADEOP int
-osl_transform_triple_nonlinear (void *sg_, void *Pin, int Pin_derivs,
-                                void *Pout, int Pout_derivs,
-                                void *from, void *to,
-                                int vectype)
+OSL_LLVM_PREFIXED_TOKEN(osl_transform_triple_nonlinear) (void *sg_,
+                                                         void *Pin,
+                                                         int Pin_derivs,
+                                                         void *Pout,
+                                                         int Pout_derivs,
+                                                         void *from,
+                                                         void *to,
+                                                         int vectype)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     RendererServices *rend = sg->renderer;
@@ -316,8 +356,14 @@ osl_transform_triple_nonlinear (void *sg_, void *Pin, int Pin_derivs,
     }
 
     // Renderer couldn't or wouldn't transform directly
-    return osl_transform_triple (sg, Pin, Pin_derivs, Pout, Pout_derivs,
-                                 from, to, vectype);
+    return OSL_LLVM_PREFIXED_TOKEN(osl_transform_triple) (sg,
+                                                          Pin,
+                                                          Pin_derivs,
+                                                          Pout,
+                                                          Pout_derivs,
+                                                          from,
+                                                          to,
+                                                          vectype);
 }
 
 
@@ -357,7 +403,7 @@ inline F det4x4(const Imath::Matrix44<F> &m)
 }
 
 OSL_SHADEOP float
-osl_determinant_fm (void *m)
+OSL_LLVM_PREFIXED_TOKEN(osl_determinant_fm) (void *m)
 {
     return det4x4 (MAT(m));
 }

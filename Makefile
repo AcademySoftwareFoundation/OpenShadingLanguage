@@ -94,6 +94,10 @@ ifneq (${NAMESPACE},)
 MY_CMAKE_FLAGS += -DOSL_NAMESPACE:STRING=${NAMESPACE}
 endif
 
+ifneq (${OSL_LLVM_PREFIX},)
+MY_CMAKE_FLAGS += -DOSL_LLVM_PREFIX:STRING=${OSL_LLVM_PREFIX}
+endif
+
 ifneq (${HIDE_SYMBOLS},)
 MY_CMAKE_FLAGS += -DHIDE_SYMBOLS:BOOL=${HIDE_SYMBOLS}
 endif
@@ -376,6 +380,7 @@ help:
 	@echo "      USE_BOOST_WAVE=1         Force boost wave rather than clang preprocessor"
 	@echo "  OSL build-time options:"
 	@echo "      NAMESPACE=name           Wrap OSL APIs in another namespace"
+	@echo "      OSL_LLVM_PREFIX=prefix   Apply prefix to names of OSL functions invoked by LLVM"
 	@echo "      USE_FAST_MATH=1          Use faster, but less accurate math (set to 0 for libm defaults)"
 	@echo "      OSL_BUILD_TESTS=0        Don't build unit tests, testshade, testrender"
 	@echo "      USE_SIMD=arch            Build with SIMD support (choices: 0, sse2, sse3,"

@@ -1275,9 +1275,11 @@ LLVM_Util::call_function (llvm::Value *func, llvm::Value **args, int nargs)
 llvm::Value *
 LLVM_Util::call_function (const char *name, llvm::Value **args, int nargs)
 {
-    llvm::Function *func = module()->getFunction (name);
+    std::string func_name(OSL_LLVM_PREFIX_AS_STRING);
+    func_name += name;
+    llvm::Function *func = module()->getFunction (func_name.c_str());
     if (! func)
-        std::cerr << "Couldn't find function " << name << "\n";
+        std::cerr << "Couldn't find function " << func_name << "\n";
     return call_function (func, args, nargs);
 }
 

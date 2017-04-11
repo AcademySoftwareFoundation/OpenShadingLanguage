@@ -51,7 +51,13 @@ namespace pvt {
 
 
 OSL_SHADEOP void
-osl_setmessage (ShaderGlobals *sg, const char *name_, long long type_, void *val, int layeridx, const char* sourcefile_, int sourceline)
+OSL_LLVM_PREFIXED_TOKEN(osl_setmessage) (ShaderGlobals *sg,
+                                         const char *name_,
+                                         long long type_,
+                                         void *val,
+                                         int layeridx,
+                                         const char* sourcefile_,
+                                         int sourceline)
 {
     const ustring &name (USTR(name_));
     const ustring &sourcefile (USTR(sourcefile_));
@@ -94,9 +100,15 @@ osl_setmessage (ShaderGlobals *sg, const char *name_, long long type_, void *val
 
 
 OSL_SHADEOP int
-osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
-                long long type_, void *val, int derivs,
-                int layeridx, const char* sourcefile_, int sourceline)
+OSL_LLVM_PREFIXED_TOKEN(osl_getmessage) (ShaderGlobals *sg,
+                                         const char *source_,
+                                         const char *name_,
+                                         long long type_,
+                                         void *val,
+                                         int derivs,
+                                         int layeridx,
+                                         const char* sourcefile_,
+                                         int sourceline)
 {
     const ustring &source (USTR(source_));
     const ustring &name (USTR(name_));

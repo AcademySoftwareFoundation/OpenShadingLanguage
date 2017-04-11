@@ -3091,10 +3091,10 @@ OSL::OSLQuery::init (const ShaderGroup *group, int layernum)
 // we are checking the entire contents of the symbol.  More restrictive
 // firstcheck,nchecks are used to check just one element of an array.
 OSL_SHADEOP void
-osl_naninf_check (int ncomps, const void *vals_, int has_derivs,
-                  void *sg, const void *sourcefile, int sourceline,
-                  void *symbolname, int firstcheck, int nchecks,
-                  const void *opname)
+OSL_LLVM_PREFIXED_TOKEN(osl_naninf_check) (int ncomps, const void *vals_, int has_derivs,
+                                           void *sg, const void *sourcefile, int sourceline,
+                                           void *symbolname, int firstcheck, int nchecks,
+                                           const void *opname)
 {
     ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
     const float *vals = (const float *)vals_;
@@ -3124,12 +3124,12 @@ osl_naninf_check (int ncomps, const void *vals_, int has_derivs,
 // More restrictive firstcheck,nchecks are used to check just one
 // element of an array.
 OSL_SHADEOP void
-osl_uninit_check (long long typedesc_, void *vals_,
-                  void *sg, const void *sourcefile, int sourceline,
-                  const char *groupname, int layer, const char *layername,
-                  const char *shadername,
-                  int opnum, const char *opname, int argnum,
-                  void *symbolname, int firstcheck, int nchecks)
+OSL_LLVM_PREFIXED_TOKEN(osl_uninit_check) (long long typedesc_, void *vals_,
+                                           void *sg, const void *sourcefile, int sourceline,
+                                           const char *groupname, int layer, const char *layername,
+                                           const char *shadername,
+                                           int opnum, const char *opname, int argnum,
+                                           void *symbolname, int firstcheck, int nchecks)
 {
     TypeDesc typedesc = TYPEDESC(typedesc_);
     ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
@@ -3170,10 +3170,10 @@ osl_uninit_check (long long typedesc_, void *vals_,
 
 
 OSL_SHADEOP int
-osl_range_check (int indexvalue, int length, const char *symname,
-                 void *sg, const void *sourcefile, int sourceline,
-                 const char *groupname, int layer, const char *layername,
-                 const char *shadername)
+OSL_LLVM_PREFIXED_TOKEN(osl_range_check) (int indexvalue, int length, const char *symname,
+                                          void *sg, const void *sourcefile, int sourceline,
+                                          const char *groupname, int layer, const char *layername,
+                                          const char *shadername)
 {
     if (indexvalue < 0 || indexvalue >= length) {
         ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
@@ -3195,7 +3195,8 @@ osl_range_check (int indexvalue, int length, const char *symname,
 
 
 // Asked if the raytype is a name we can't know until mid-shader.
-OSL_SHADEOP int osl_raytype_name (void *sg_, void *name)
+OSL_SHADEOP int OSL_LLVM_PREFIXED_TOKEN(osl_raytype_name) (void *sg_,
+                                                           void *name)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     int bit = sg->context->shadingsys().raytype_bit (USTR(name));
@@ -3203,14 +3204,14 @@ OSL_SHADEOP int osl_raytype_name (void *sg_, void *name)
 }
 
 
-OSL_SHADEOP int osl_get_attribute(void *sg_,
-                             int   dest_derivs,
-                             void *obj_name_,
-                             void *attr_name_,
-                             int   array_lookup,
-                             int   index,
-                             const void *attr_type,
-                             void *attr_dest)
+OSL_SHADEOP int OSL_LLVM_PREFIXED_TOKEN(osl_get_attribute)(void *sg_,
+                                                           int   dest_derivs,
+                                                           void *obj_name_,
+                                                           void *attr_name_,
+                                                           int   array_lookup,
+                                                           int   index,
+                                                           const void *attr_type,
+                                                           void *attr_dest)
 {
     ShaderGlobals *sg   = (ShaderGlobals *)sg_;
     const ustring &obj_name  = USTR(obj_name_);
@@ -3226,11 +3227,16 @@ OSL_SHADEOP int osl_get_attribute(void *sg_,
 
 
 OSL_SHADEOP int
-osl_bind_interpolated_param (void *sg_, const void *name, long long type,
-                             int userdata_has_derivs, void *userdata_data,
-                             int symbol_has_derivs, void *symbol_data,
-                             int symbol_data_size,
-                             char *userdata_initialized, int userdata_index)
+OSL_LLVM_PREFIXED_TOKEN(osl_bind_interpolated_param) (void *sg_,
+                                                      const void *name,
+                                                      long long type,
+                                                      int userdata_has_derivs,
+                                                      void *userdata_data,
+                                                      int symbol_has_derivs,
+                                                      void *symbol_data,
+                                                      int symbol_data_size,
+                                                      char *userdata_initialized,
+                                                      int userdata_index)
 {
     char status = *userdata_initialized;
     if (status == 0) {

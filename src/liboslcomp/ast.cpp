@@ -26,7 +26,6 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <cstdarg>
 #include <vector>
 #include <string>
 #include <sstream>
@@ -113,25 +112,27 @@ ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
 
 
 void
-ASTNode::error (const char *format, ...)
+ASTNode::error_impl (string_view msg) const
 {
-    va_list ap;
-    va_start (ap, format);
-    std::string errmsg = format ? Strutil::vformat (format, ap) : "syntax error";
-    va_end (ap);
-    m_compiler->error (sourcefile(), sourceline(), "%s", errmsg.c_str());
+#if OIIO_VERSION >= 10803
+    m_compiler->error (sourcefile(), sourceline(), "%s", msg);
+#else
+    // DEPRECATED -- delete when minimum OIIO is at least 1.8
+    m_compiler->error (sourcefile(), sourceline(), "%s", msg.c_str());
+#endif
 }
 
 
 
 void
-ASTNode::warning (const char *format, ...)
+ASTNode::warning_impl (string_view msg) const
 {
-    va_list ap;
-    va_start (ap, format);
-    std::string errmsg = format ? Strutil::vformat (format, ap) : "unknown warning";
-    va_end (ap);
-    m_compiler->warning (sourcefile(), sourceline(), "%s", errmsg.c_str());
+#if OIIO_VERSION >= 10803
+    m_compiler->warning (sourcefile(), sourceline(), "%s", msg);
+#else
+    // DEPRECATED -- delete when minimum OIIO is at least 1.8
+    m_compiler->warning (sourcefile(), sourceline(), "%s", msg.c_str());
+#endif
 }
 
 

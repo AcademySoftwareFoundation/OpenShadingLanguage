@@ -99,12 +99,47 @@ public:
     ErrorHandler &errhandler () const { return *m_errhandler; }
 
     /// Error reporting
-    ///
-    void error (ustring filename, int line, const char *format, ...) const;
+    template<typename... Args>
+    void error (string_view filename, int line,
+                string_view format, const Args&... args) const
+    {
+        ASSERT (format.size());
+#if OIIO_VERSION >= 10804
+        std::string msg = OIIO::Strutil::format (format, args...);
+        if (filename.size())
+            m_errhandler->error ("%s:%d: error: %s", filename, line, msg);
+        else
+            m_errhandler->error ("error: %s", msg);
+#else /* Deprecate when the OIIO minimum is 1.8 */
+        std::string msg = OIIO::Strutil::format (format.c_str(), args...);
+        if (filename.size())
+            m_errhandler->error ("%s:%d: error: %s", filename.c_str(), line, msg.c_str());
+        else
+            m_errhandler->error ("error: %s", msg.c_str());
+#endif
+        m_err = true;
+    }
 
     /// Warning reporting
-    ///
-    void warning (ustring filename, int line, const char *format, ...) const;
+    template<typename... Args>
+    void warning (string_view filename, int line,
+                  string_view format, const Args&... args) const
+    {
+        ASSERT (format.size());
+#if OIIO_VERSION >= 10804
+        std::string msg = OIIO::Strutil::format (format, args...);
+        if (filename.size())
+            m_errhandler->warning ("%s:%d: warning: %s", filename, line, msg);
+        else
+            m_errhandler->warning ("warning: %s", msg);
+#else /* Deprecate when the OIIO minimum is 1.8 */
+        std::string msg = OIIO::Strutil::format (format.c_str(), args...);
+        if (filename.size())
+            m_errhandler->warning ("%s:%d: warning: %s", filename.c_str(), line, msg.c_str());
+        else
+            m_errhandler->warning ("warning: %s", msg.c_str());
+#endif
+    }
 
     /// Have we hit an error?
     ///

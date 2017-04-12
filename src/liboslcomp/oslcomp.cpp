@@ -34,7 +34,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <streambuf>
 #include <cstdio>
 #include <cerrno>
-#include <cstdarg>
 
 #include "oslcomp_pvt.h"
 
@@ -146,40 +145,6 @@ OSLCompilerImpl::OSLCompilerImpl (ErrorHandler *errhandler)
 OSLCompilerImpl::~OSLCompilerImpl ()
 {
     delete m_derivsym;
-}
-
-
-
-void
-OSLCompilerImpl::error (ustring filename, int line, const char *format, ...) const
-{
-    va_list ap;
-    va_start (ap, format);
-    std::string errmsg = format ? OIIO::Strutil::vformat (format, ap) : "syntax error";
-    if (filename.c_str())
-        m_errhandler->error ("%s:%d: error: %s",
-                             filename.c_str(), line, errmsg.c_str());
-    else
-        m_errhandler->error ("error: %s", errmsg.c_str());
-
-    va_end (ap);
-    m_err = true;
-}
-
-
-
-void
-OSLCompilerImpl::warning (ustring filename, int line, const char *format, ...) const
-{
-    va_list ap;
-    va_start (ap, format);
-    std::string errmsg = format ? OIIO::Strutil::vformat (format, ap) : "";
-    if (filename.c_str())
-        m_errhandler->error ("%s:%d: warning: %s",
-                             filename.c_str(), line, errmsg.c_str());
-    else
-        m_errhandler->error ("warning: %s", errmsg.c_str());
-    va_end (ap);
 }
 
 

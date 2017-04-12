@@ -107,6 +107,52 @@ osl_transpose_mm (void *r, void *m)
 }
 
 
+// point = M * point
+OSL_SHADEOP void osl_transform_vmv(void *result, void* M_, void* v_)
+{
+   const Vec3 &v = VEC(v_);
+   const Matrix44 &M = MAT(M_);
+   robust_multVecMatrix (M, v, VEC(result));
+}
+
+OSL_SHADEOP void osl_transform_dvmdv(void *result, void* M_, void* v_)
+{
+   const Dual2<Vec3> &v = DVEC(v_);
+   const Matrix44    &M = MAT(M_);
+   robust_multVecMatrix (M, v, DVEC(result));
+}
+
+// vector = M * vector
+OSL_SHADEOP void osl_transformv_vmv(void *result, void* M_, void* v_)
+{
+   const Vec3 &v = VEC(v_);
+   const Matrix44 &M = MAT(M_);
+   M.multDirMatrix (v, VEC(result));
+}
+
+OSL_SHADEOP void osl_transformv_dvmdv(void *result, void* M_, void* v_)
+{
+   const Dual2<Vec3> &v = DVEC(v_);
+   const Matrix44    &M = MAT(M_);
+   multDirMatrix (M, v, DVEC(result));
+}
+
+
+// normal = M * normal
+OSL_SHADEOP void osl_transformn_vmv(void *result, void* M_, void* v_)
+{
+   const Vec3 &v = VEC(v_);
+   const Matrix44 &M = MAT(M_);
+   M.inverse().transposed().multDirMatrix (v, VEC(result));
+}
+
+OSL_SHADEOP void osl_transformn_dvmdv(void *result, void* M_, void* v_)
+{
+   const Dual2<Vec3> &v = DVEC(v_);
+   const Matrix44    &M = MAT(M_);
+   multDirMatrix (M.inverse().transposed(), v, DVEC(result));
+}
+
 
 OSL_SHADEOP int
 osl_get_matrix (void *sg_, void *r, const char *from)
@@ -197,47 +243,6 @@ osl_get_from_to_matrix (void *sg, void *r, const char *from, const char *to)
 
 
 
-// point = M * point
-inline void osl_transform_vmv(void *result, const Matrix44 &M, void* v_)
-{
-   const Vec3 &v = VEC(v_);
-   robust_multVecMatrix (M, v, VEC(result));
-}
-
-inline void osl_transform_dvmdv(void *result, const Matrix44 &M, void* v_)
-{
-   const Dual2<Vec3> &v = DVEC(v_);
-   robust_multVecMatrix (M, v, DVEC(result));
-}
-
-// vector = M * vector
-inline void osl_transformv_vmv(void *result, const Matrix44 &M, void* v_)
-{
-   const Vec3 &v = VEC(v_);
-   M.multDirMatrix (v, VEC(result));
-}
-
-inline void osl_transformv_dvmdv(void *result, const Matrix44 &M, void* v_)
-{
-   const Dual2<Vec3> &v = DVEC(v_);
-   multDirMatrix (M, v, DVEC(result));
-}
-
-// normal = M * normal
-inline void osl_transformn_vmv(void *result, const Matrix44 &M, void* v_)
-{
-   const Vec3 &v = VEC(v_);
-   M.inverse().transposed().multDirMatrix (v, VEC(result));
-}
-
-inline void osl_transformn_dvmdv(void *result, const Matrix44 &M, void* v_)
-{
-   const Dual2<Vec3> &v = DVEC(v_);
-   multDirMatrix (M.inverse().transposed(), v, DVEC(result));
-}
-
-
-
 OSL_SHADEOP int
 osl_transform_triple (void *sg_, void *Pin, int Pin_derivs,
                       void *Pout, int Pout_derivs,
@@ -258,19 +263,19 @@ osl_transform_triple (void *sg_, void *Pin, int Pin_derivs,
     if (ok) {
         if (vectype == TypeDesc::POINT) {
             if (Pin_derivs)
-                osl_transform_dvmdv(Pout, M, Pin);
+                osl_transform_dvmdv(Pout, &M, Pin);
             else
-                osl_transform_vmv(Pout, M, Pin);
+                osl_transform_vmv(Pout, &M, Pin);
         } else if (vectype == TypeDesc::VECTOR) {
             if (Pin_derivs)
-                osl_transformv_dvmdv(Pout, M, Pin);
+                osl_transformv_dvmdv(Pout, &M, Pin);
             else
-                osl_transformv_vmv(Pout, M, Pin);
+                osl_transformv_vmv(Pout, &M, Pin);
         } else if (vectype == TypeDesc::NORMAL) {
             if (Pin_derivs)
-                osl_transformn_dvmdv(Pout, M, Pin);
+                osl_transformn_dvmdv(Pout, &M, Pin);
             else
-                osl_transformn_vmv(Pout, M, Pin);
+                osl_transformn_vmv(Pout, &M, Pin);
         }
         else ASSERT(0);
     } else {

@@ -612,54 +612,6 @@ OSL_SHADEOP void osl_smoothstep_dfdfdfdf(void *result, void* e0_, void* e1_, voi
    DFLOAT(result) = smoothstep(e0, e1, x);
 }
 
-
-// point = M * point
-OSL_SHADEOP void osl_transform_vmv(void *result, void* M_, void* v_)
-{
-   const Vec3 &v = VEC(v_);
-   const Matrix44 &M = MAT(M_);
-   robust_multVecMatrix (M, v, VEC(result));
-}
-
-OSL_SHADEOP void osl_transform_dvmdv(void *result, void* M_, void* v_)
-{
-   const Dual2<Vec3> &v = DVEC(v_);
-   const Matrix44    &M = MAT(M_);
-   robust_multVecMatrix (M, v, DVEC(result));
-}
-
-// vector = M * vector
-OSL_SHADEOP void osl_transformv_vmv(void *result, void* M_, void* v_)
-{
-   const Vec3 &v = VEC(v_);
-   const Matrix44 &M = MAT(M_);
-   M.multDirMatrix (v, VEC(result));
-}
-
-OSL_SHADEOP void osl_transformv_dvmdv(void *result, void* M_, void* v_)
-{
-   const Dual2<Vec3> &v = DVEC(v_);
-   const Matrix44    &M = MAT(M_);
-   multDirMatrix (M, v, DVEC(result));
-}
-
-// normal = M * normal
-OSL_SHADEOP void osl_transformn_vmv(void *result, void* M_, void* v_)
-{
-   const Vec3 &v = VEC(v_);
-   const Matrix44 &M = MAT(M_);
-   M.inverse().transposed().multDirMatrix (v, VEC(result));
-}
-
-OSL_SHADEOP void osl_transformn_dvmdv(void *result, void* M_, void* v_)
-{
-   const Dual2<Vec3> &v = DVEC(v_);
-   const Matrix44    &M = MAT(M_);
-   multDirMatrix (M.inverse().transposed(), v, DVEC(result));
-}
-
-
-
 // Vector ops
 
 OSL_SHADEOP float

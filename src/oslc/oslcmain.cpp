@@ -66,36 +66,6 @@ usage ()
 
 
 
-// Guess the path for stdosl.h. Try ../shaders, if this is oslc, that's
-// where you'd expect it to be.
-static std::string
-stdoslpath ()
-{
-    std::string program = OIIO::Sysutil::this_program_path ();
-    if (program.size()) {
-        std::string path (program);  // our program
-        path = OIIO::Filesystem::parent_path(path);  // the bin dir of our program
-        path = OIIO::Filesystem::parent_path(path);  // now the parent dir
-        std::string savepath = path;
-        // We search two spots: ../../lib/osl/include, and ../shaders
-        path = savepath + "/lib/osl/include";
-        if (OIIO::Filesystem::exists (path)) {
-            path = path + "/stdosl.h";
-            if (OIIO::Filesystem::exists (path))
-                return path;
-        }
-        path = savepath + "/shaders";
-        if (OIIO::Filesystem::exists (path)) {
-            path = path + "/stdosl.h";
-            if (OIIO::Filesystem::exists (path))
-                return path;
-        }
-    }
-    return std::string();
-}
-
-
-
 namespace { // anonymous
 
 // Subclass ErrorHandler because we want our messages to appear somewhat
@@ -177,7 +147,7 @@ main (int argc, const char *argv[])
         }
         else {
             OSLCompiler compiler (&default_oslc_error_handler);
-            bool ok = compiler.compile (argv[a], args, stdoslpath());
+            bool ok = compiler.compile (argv[a], args);
             if (ok) {
                 if (!quiet)
                     std::cout << "Compiled " << argv[a] << " -> " 

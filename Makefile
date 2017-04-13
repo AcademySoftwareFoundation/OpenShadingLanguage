@@ -52,6 +52,7 @@ top_build_dir := build
 build_dir     := ${top_build_dir}/${platform}${variant}
 top_dist_dir  := dist
 dist_dir      := ${top_dist_dir}/${platform}${variant}
+OSLHOME       ?= ${working_dir}/${dist_dir}
 
 VERBOSE ?= ${SHOWCOMMANDS}
 ifneq (${VERBOSE},)
@@ -296,19 +297,19 @@ TEST_FLAGS += --force-new-ctest-process --output-on-failure
 test: cmake
 	@ ${CMAKE} -E cmake_echo_color --switch=$(COLOR) --cyan "Running tests ${TEST_FLAGS}..."
 	@ # if [ "${CODECOV}" == "1" ] ; then lcov -b ${build_dir} -d ${build_dir} -z ; rm -rf ${build_dir}/cov ; fi
-	@ ( cd ${build_dir} ; PYTHONPATH=${PWD}/${build_dir}/src/python ctest -E broken ${TEST_FLAGS} )
+	@ ( cd ${build_dir} ; \
+	    OSLHOME=${OSLHOME} \
+	    LD_LIBRARY_PATH=${working_dir}/${dist_dir}/lib:${LD_LIBRARY_PATH} \
+	    DYLD_LIBRARY_PATH=${working_dir}/${dist_dir}/lib:${DYLD_LIBRARY_PATH} \
+	    PYTHONPATH=${working_dir}/${build_dir}/src/python:${PYTHONPATH} \
+	    ctest -E broken ${TEST_FLAGS} ;\
+	  )
 	@ ( if [ "${CODECOV}" == "1" ] ; then \
 	      cd ${build_dir} ; \
 	      lcov -b . -d . -c -o cov.info ; \
 	      lcov --remove cov.info "/usr*" -o cov.info ; \
 	      genhtml -o ./cov -t "OSL test coverage" --num-spaces 4 cov.info ; \
 	  fi )
-
-# 'make testall' does a full build and then runs all tests (even the ones
-# that are expected to fail on some platforms)
-testall: cmake
-	${CMAKE} -E cmake_echo_color --switch=$(COLOR) --cyan "Running all tests ${TEST_FLAGS}..."
-	( cd ${build_dir} ; PYTHONPATH=${PWD}/${build_dir}/src/python ctest ${TEST_FLAGS} )
 
 # 'make clean' clears out the build directory for this platform
 clean:
@@ -340,7 +341,6 @@ help:
 	@echo "  make realclean    Remove both ${build_dir} AND ${dist_dir}"
 	@echo "  make nuke         Remove ALL of build and dist (not just ${platform})"
 	@echo "  make test         Run tests"
-	@echo "  make testall      Run all tests, even broken ones"
 	@echo ""
 	@echo "Helpful modifiers:"
 	@echo "  C++ compiler and build process:"

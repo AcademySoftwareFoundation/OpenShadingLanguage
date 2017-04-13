@@ -420,6 +420,82 @@ OSLCompilerImpl::read_compile_options (const std::vector<std::string> &options,
 
 
 
+// Guess the path for stdosl.h. This is only called if no explicit
+// stdoslpath is given to the compile command.
+static string_view
+find_stdoslpath ()
+{
+    // first look in $OSLHOME/shaders
+    std::string OSLHOME = OIIO::Sysutil::getenv ("OSLHOME");
+    if (! OSLHOME.empty()) {
+        std::string path = OSLHOME + "/shaders";
+        if (OIIO::Filesystem::is_directory (path)) {
+            path = path + "/stdosl.h";
+            if (OIIO::Filesystem::exists (path))
+                return ustring(path);
+        }
+    }
+
+    // If no OSLHOME, try looking wherever this program (the one running)
+    // lives, in a shaders or lib/osl/include directory.
+    std::string program = OIIO::Sysutil::this_program_path ();
+    if (program.size()) {
+        std::string path (program);  // our program
+        path = OIIO::Filesystem::parent_path(path);  // the bin dir of our program
+        path = OIIO::Filesystem::parent_path(path);  // now the parent dir
+        std::string savepath = path;
+        // We search two spots: ../../lib/osl/include, and ../shaders
+        path = savepath + "/lib/osl/include";
+        if (OIIO::Filesystem::is_directory (path)) {
+            path = path + "/stdosl.h";
+            if (OIIO::Filesystem::exists (path))
+                return ustring(path);
+        }
+        path = savepath + "/shaders";
+        if (OIIO::Filesystem::is_directory (path)) {
+            path = path + "/stdosl.h";
+            if (OIIO::Filesystem::exists (path))
+                return ustring(path);
+        }
+        path = OIIO::Filesystem::parent_path(savepath); // Try one level higher
+        path = path + "/shaders";
+        if (OIIO::Filesystem::is_directory (path)) {
+            path = path + "/stdosl.h";
+            if (OIIO::Filesystem::exists (path))
+                return ustring(path);
+        }
+    }
+
+    // Try looking for "oslc" binary in the $PATH, and if so, look in
+    // ../../shaders/stdosl.h
+    std::vector<std::string> exec_path_dirs;
+    OIIO::Filesystem::searchpath_split (OIIO::Sysutil::getenv("PATH"),
+                                        exec_path_dirs, true);
+    if (exec_path_dirs.size()) {
+#ifdef WIN32
+        std::string oslcbin = "oslc.exe";
+#else
+        std::string oslcbin = "oslc";
+#endif
+        oslcbin = OIIO::Filesystem::searchpath_find (oslcbin, exec_path_dirs);
+        if (oslcbin.size()) {
+            std::string path = OIIO::Filesystem::parent_path(oslcbin);  // the bin dir of our program
+            path = OIIO::Filesystem::parent_path(path);  // now the parent dir
+            path += "/shaders";
+            if (OIIO::Filesystem::is_directory (path)) {
+                path = path + "/stdosl.h";
+                if (OIIO::Filesystem::exists (path))
+                    return ustring(path);
+            }
+        }
+    }
+
+    // Give up
+    return string_view();
+}
+
+
+
 bool
 OSLCompilerImpl::compile (string_view filename,
                           const std::vector<std::string> &options,
@@ -438,16 +514,7 @@ OSLCompilerImpl::compile (string_view filename,
     // Determine where the installed shader include directory is, and
     // look for ../shaders/stdosl.h and force it to include.
     if (stdoslpath.empty()) {
-        // look in $OSLHOME/shaders
-        const char *OSLHOME = getenv ("OSLHOME");
-        if (OSLHOME && OSLHOME[0]) {
-            std::string path = std::string(OSLHOME) + "/shaders";
-            if (OIIO::Filesystem::exists (path)) {
-                path = path + "/stdosl.h";
-                if (OIIO::Filesystem::exists (path))
-                    stdoslpath = ustring(path);
-            }
-        }
+        stdoslpath = find_stdoslpath();
     }
     if (stdoslpath.empty() || ! OIIO::Filesystem::exists(stdoslpath))
         warning (ustring(filename), 0, "Unable to find \"stdosl.h\"");
@@ -529,16 +596,7 @@ OSLCompilerImpl::compile_buffer (string_view sourcecode,
     // Determine where the installed shader include directory is, and
     // look for ../shaders/stdosl.h and force it to include.
     if (stdoslpath.empty()) {
-        // look in $OSLHOME/shaders
-        const char *OSLHOME = getenv ("OSLHOME");
-        if (OSLHOME && OSLHOME[0]) {
-            std::string path = std::string(OSLHOME) + "/shaders";
-            if (OIIO::Filesystem::exists (path)) {
-                path = path + "/stdosl.h";
-                if (OIIO::Filesystem::exists (path))
-                    stdoslpath = ustring(path);
-            }
-        }
+        stdoslpath = find_stdoslpath();
     }
     if (stdoslpath.empty() || ! OIIO::Filesystem::exists(stdoslpath))
         warning (ustring(filename), 0, "Unable to find \"stdosl.h\"");

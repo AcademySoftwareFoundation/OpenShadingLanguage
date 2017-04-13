@@ -3170,7 +3170,7 @@ osl_uninit_check (long long typedesc_, void *vals_,
 
 
 OSL_SHADEOP int
-osl_range_check (int indexvalue, int length, const char *symname,
+osl_range_check_err (int indexvalue, int length, const char *symname,
                  void *sg, const void *sourcefile, int sourceline,
                  const char *groupname, int layer, const char *layername,
                  const char *shadername)

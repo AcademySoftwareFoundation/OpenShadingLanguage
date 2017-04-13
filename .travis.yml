@@ -68,9 +68,10 @@ install:
     - export OIIOMAKEFLAGS="$OIIOMAKEFLAGS -j2 DEBUG= USE_PYTHON=0 OIIO_BUILD_TESTS=0"
     - src/build-scripts/build_openimageio.bash
     - export OPENIMAGEIOHOME=$PWD/OpenImageIO/dist/$OIIOPLATFORM
+    - export PATH=$OPENIMAGEIOHOME/bin:$PATH
     - export DYLD_LIBRARY_PATH=$OPENIMAGEIOHOME/lib:$DYLD_LIBRARY_PATH
     - export LD_LIBRARY_PATH=$OPENIMAGEIOHOME/lib:$LD_LIBRARY_PATH
-    - export PATH=$OPENIMAGEIOHOME/bin:$PATH
+    - export PYTHONPATH=$OPENIMAGEIOHOME/python:$PYTHONPATH
     - if [ $TRAVIS_OS_NAME == linux ] ; then
           export BUILD_FLAGS="$BUILD_FLAGS LLVM_STATIC=1" ;
           export TEST_FLAGS="-E broken\|render-cornell\|render-oren-nayar\|render-veachmis\|render-ward" ;
@@ -82,10 +83,6 @@ install:
 script:
     - make VERBOSE=1 $BUILD_FLAGS cmakesetup
     - make -j2 $BUILD_FLAGS
-    - export OSLHOME=$PWD/dist/$PLATFORM
-    - export DYLD_LIBRARY_PATH=$OSLHOME/lib:$DYLD_LIBRARY_PATH 
-    - export LD_LIBRARY_PATH=$OSLHOME/lib:$LD_LIBRARY_PATH
-    - export PYTHONPATH=$OSLHOME/python:$OPENIMAGEIOHOME/python:$PYTHONPATH
     - export LSAN_OPTIONS=suppressions=$PWD/src/build-scripts/nosanitize.txt
     - make $BUILD_FLAGS test
 

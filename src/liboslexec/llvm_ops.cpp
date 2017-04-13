@@ -772,11 +772,37 @@ OSL_SHADEOP void osl_filterwidth_vdv(void *out, void *x_)
 
 
 
-
-
 // Asked if the raytype includes a bit pattern.
 OSL_SHADEOP int osl_raytype_bit (void *sg_, int bit)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     return (sg->raytype & bit) != 0;
 }
+
+
+
+// extern declaration
+OSL_SHADEOP int osl_range_check_err (int indexvalue, int length,
+                         const char *symname, void *sg,
+                         const void *sourcefile, int sourceline,
+                         const char *groupname, int layer,
+                         const char *layername, const char *shadername);
+
+
+
+OSL_SHADEOP int
+osl_range_check (int indexvalue, int length, const char *symname,
+                 void *sg, const void *sourcefile, int sourceline,
+                 const char *groupname, int layer, const char *layername,
+                 const char *shadername)
+{
+    if (indexvalue < 0 || indexvalue >= length) {
+        indexvalue = osl_range_check_err (indexvalue, length, symname, sg,
+                                          sourcefile, sourceline, groupname,
+                                          layer, layername, shadername);
+    }
+    return indexvalue;
+}
+
+
+

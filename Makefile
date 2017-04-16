@@ -12,7 +12,6 @@
 .PHONY: all debug profile clean realclean nuke
 
 working_dir	:= ${shell pwd}
-INSTALLDIR	=${working_dir}
 
 # Figure out which architecture we're on
 include ${working_dir}/src/make/detectplatform.mk
@@ -54,6 +53,13 @@ top_dist_dir  := dist
 dist_dir      := ${top_dist_dir}/${platform}${variant}
 OSLHOME       ?= ${working_dir}/${dist_dir}
 
+ifndef INSTALL_PREFIX
+INSTALL_PREFIX := ${working_dir}/${dist_dir}
+INSTALL_PREFIX_BRIEF := ${dist_dir}
+else
+INSTALL_PREFIX_BRIEF := ${INSTALL_PREFIX}
+endif
+
 VERBOSE ?= ${SHOWCOMMANDS}
 ifneq (${VERBOSE},)
 MY_MAKE_FLAGS += VERBOSE=${VERBOSE}
@@ -64,7 +70,7 @@ ifneq (${VERBOSE},0)
 endif
 $(info OSL_SITE = ${OSL_SITE})
 $(info dist_dir = ${dist_dir})
-$(info INSTALLDIR = ${INSTALLDIR})
+$(info INSTALL_PREFIX = ${INSTALL_PREFIX})
 endif
 
 ifneq (${LLVM_DIRECTORY},)
@@ -239,7 +245,7 @@ cmakesetup:
 	@ (if [ ! -e ${build_dir}/${BUILDSENTINEL} ] ; then \
 		${CMAKE} -E make_directory ${build_dir} ; \
 		cd ${build_dir} ; \
-		${CMAKE} -DCMAKE_INSTALL_PREFIX=${INSTALLDIR}/${dist_dir} \
+		${CMAKE} -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} \
 			${MY_CMAKE_FLAGS} -DBOOST_ROOT=${BOOST_HOME} \
 			../.. ; \
 	 fi)
@@ -299,8 +305,9 @@ test: cmake
 	@ # if [ "${CODECOV}" == "1" ] ; then lcov -b ${build_dir} -d ${build_dir} -z ; rm -rf ${build_dir}/cov ; fi
 	@ ( cd ${build_dir} ; \
 	    OSLHOME=${OSLHOME} \
-	    LD_LIBRARY_PATH=${working_dir}/${dist_dir}/lib:${LD_LIBRARY_PATH} \
-	    DYLD_LIBRARY_PATH=${working_dir}/${dist_dir}/lib:${DYLD_LIBRARY_PATH} \
+	    LD_LIBRARY_PATH=${INSTALL_PREFIX}/lib:${LD_LIBRARY_PATH} \
+	    DYLD_LIBRARY_PATH=${INSTALL_PREFIX}/lib:${DYLD_LIBRARY_PATH} \
+	    OIIO_LIBRARY_PATH=${INSTALL_PREFIX}/lib:${OIIO_LIBRARY_PATH} \
 	    PYTHONPATH=${working_dir}/${build_dir}/src/python:${PYTHONPATH} \
 	    ctest -E broken ${TEST_FLAGS} ;\
 	  )
@@ -331,12 +338,9 @@ nuke:
 # 'make help' prints important make targets
 help:
 	@echo "Targets:"
-	@echo "  make              Build optimized binaries and libraries in ${dist_dir},"
-	@echo "                        temporary build files in ${build_dir}"
-	@echo "  make debug        Build unoptimized with symbols in ${dist_dir}.debug,"
-	@echo "                        temporary build files in ${build_dir}.debug"
-	@echo "  make profile      Build for profiling in ${dist_dir}.profile,"
-	@echo "                        temporary build files in ${build_dir}.profile"
+	@echo "  make              Build optimized binaries and libraries"
+	@echo "  make debug        Build unoptimized with symbols"
+	@echo "  make profile      Build for profiling"
 	@echo "  make clean        Remove the temporary files in ${build_dir}"
 	@echo "  make realclean    Remove both ${build_dir} AND ${dist_dir}"
 	@echo "  make nuke         Remove ALL of build and dist (not just ${platform})"
@@ -375,6 +379,7 @@ help:
 	@echo "      USE_LLVM_BITCODE=0       Don't generate embedded LLVM bitcode"
 	@echo "      USE_BOOST_WAVE=1         Force boost wave rather than clang preprocessor"
 	@echo "  OSL build-time options:"
+	@echo "      INSTALL_PREFIX=path      Set installation prefix (default: ./${INSTALL_PREFIX_BRIEF})"
 	@echo "      NAMESPACE=name           Override namespace base name (default: OSL)"
 	@echo "      USE_FAST_MATH=1          Use faster, but less accurate math (set to 0 for libm defaults)"
 	@echo "      OSL_BUILD_TESTS=0        Don't build unit tests, testshade, testrender"

@@ -84,6 +84,8 @@ script:
     - make VERBOSE=1 $BUILD_FLAGS cmakesetup
     - make -j2 $BUILD_FLAGS
     - export LSAN_OPTIONS=suppressions=$PWD/src/build-scripts/nosanitize.txt
+    - export OSLHOME=$PWD/dist/$PLATFORM
+    - export OIIO_LIBRARY_PATH=$OSLHOME/lib:${OIIO_LIBRARY_PATH}
     - make $BUILD_FLAGS test
 
 

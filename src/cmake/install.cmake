@@ -59,6 +59,7 @@ set (INSTALL_FONTS OFF CACHE BOOL "Install default fonts")
 
 ###########################################################################
 # Rpath handling at the install step
+set (MACOSX_RPATH ON)
 if (CMAKE_SKIP_RPATH)
     # We need to disallow the user from truly setting CMAKE_SKIP_RPATH, since
     # we want to run the generated executables from the build tree in order to
@@ -87,7 +88,6 @@ endif ()
 set (CMAKE_SKIP_BUILD_RPATH  FALSE)
 # When building, don't use the install RPATH already (but later on when installing)
 set (CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
-
 
 
 

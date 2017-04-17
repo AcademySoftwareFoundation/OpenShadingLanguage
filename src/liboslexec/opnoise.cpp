@@ -319,7 +319,6 @@ OSL_SHADEOP void osl_ ##opname## _w16dfw16dv (char *name, char *r, char *x, char
 }                                                                       
 
 
-
 NOISE_IMPL (cellnoise, CellNoise)
 NOISE_WIMPL (cellnoise, CellNoise)
 NOISE_IMPL (noise, Noise)

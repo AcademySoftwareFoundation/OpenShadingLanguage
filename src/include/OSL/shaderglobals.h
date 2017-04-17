@@ -150,6 +150,9 @@ struct ShaderGlobals {
 
 struct UniformShaderGlobals {
 
+	UniformShaderGlobals() = default;
+	UniformShaderGlobals(const UniformShaderGlobals &other) = delete;
+	
     /// There are three opaque pointers that may be set by the renderer here
     /// in the ShaderGlobals before shading execution begins, and then
     /// retrieved again from the within the implementation of various
@@ -208,6 +211,9 @@ struct UniformShaderGlobals {
 template<int WidthT> 
 struct alignas(64) VaryingShaderGlobals {
 
+	VaryingShaderGlobals() = default;
+	VaryingShaderGlobals(const VaryingShaderGlobals &other) = delete;
+	
 	template<typename T>
 	using  Wide = OSL::Wide<T, WidthT>;
 	
@@ -310,59 +316,71 @@ private:
 	
 public:
 	
+	OSL_INLINE
 	VaryingShaderProxy(VaryingShaderGlobals<WidthT> & vsg, int index)
 	: m_vsg(vsg)
 	, m_index(index)
 	{}
+	
+	// Must provide user defined copy constructor to 
+	// get compiler to be able to follow individual 
+	// data members througk back to original object
+	// when fully inlined the proxy should disappear
+	OSL_INLINE
+	VaryingShaderProxy(const VaryingShaderProxy &other)
+	: m_vsg(other.m_vsg)
+	, m_index(other.m_index)
+	{}	
+	
 
 	template<typename T>
 	using  Proxy = WideProxy<T, WidthT>;
 		
     /// Surface position (and its x & y differentials).
-	Proxy<Vec3> P() const { return Proxy<Vec3>(m_vsg.P, m_index); }
-	Proxy<Vec3> dPdx() const { return Proxy<Vec3>(m_vsg.dPdx, m_index); }
-	Proxy<Vec3> dPdy() const { return Proxy<Vec3>(m_vsg.dPdy, m_index); }
+	OSL_INLINE Proxy<Vec3> P() const { return Proxy<Vec3>(m_vsg.P, m_index); }
+	OSL_INLINE Proxy<Vec3> dPdx() const { return Proxy<Vec3>(m_vsg.dPdx, m_index); }
+	OSL_INLINE Proxy<Vec3> dPdy() const { return Proxy<Vec3>(m_vsg.dPdy, m_index); }
 	
     /// P's z differential, used for volume shading only.
-	Proxy<Vec3> dPdz() const { return Proxy<Vec3>(m_vsg.dPdz, m_index); }
+	OSL_INLINE Proxy<Vec3> dPdz() const { return Proxy<Vec3>(m_vsg.dPdz, m_index); }
 
     /// Incident ray, and its x and y derivatives.
-	Proxy<Vec3> I() const { return Proxy<Vec3>(m_vsg.I, m_index); }
-	Proxy<Vec3> dIdx() const { return Proxy<Vec3>(m_vsg.dIdx, m_index); }
-	Proxy<Vec3> dIdy() const { return Proxy<Vec3>(m_vsg.dIdy, m_index); }
+	OSL_INLINE Proxy<Vec3> I() const { return Proxy<Vec3>(m_vsg.I, m_index); }
+	OSL_INLINE Proxy<Vec3> dIdx() const { return Proxy<Vec3>(m_vsg.dIdx, m_index); }
+	OSL_INLINE Proxy<Vec3> dIdy() const { return Proxy<Vec3>(m_vsg.dIdy, m_index); }
 
     /// Shading normal, already front-facing.
-	Proxy<Vec3> N() const { return Proxy<Vec3>(m_vsg.N, m_index); }
+	OSL_INLINE Proxy<Vec3> N() const { return Proxy<Vec3>(m_vsg.N, m_index); }
 
     /// True geometric normal.
-	Proxy<Vec3> Ng() const { return Proxy<Vec3>(m_vsg.Ng, m_index); }
+	OSL_INLINE Proxy<Vec3> Ng() const { return Proxy<Vec3>(m_vsg.Ng, m_index); }
 
     /// 2D surface parameter u, and its differentials.
-	Proxy<float> u() const { return Proxy<float>(m_vsg.u, m_index); }
-	Proxy<float> dudx() const { return Proxy<float>(m_vsg.dudx, m_index); }
-	Proxy<float> dudy() const { return Proxy<float>(m_vsg.dudy, m_index); }
+	OSL_INLINE Proxy<float> u() const { return Proxy<float>(m_vsg.u, m_index); }
+	OSL_INLINE Proxy<float> dudx() const { return Proxy<float>(m_vsg.dudx, m_index); }
+	OSL_INLINE Proxy<float> dudy() const { return Proxy<float>(m_vsg.dudy, m_index); }
 	
     /// 2D surface parameter v, and its differentials.
-	Proxy<float> v() const { return Proxy<float>(m_vsg.v, m_index); }
-	Proxy<float> dvdx() const { return Proxy<float>(m_vsg.dvdx, m_index); }
-	Proxy<float> dvdy() const { return Proxy<float>(m_vsg.dvdy, m_index); }
+	OSL_INLINE Proxy<float> v() const { return Proxy<float>(m_vsg.v, m_index); }
+	OSL_INLINE Proxy<float> dvdx() const { return Proxy<float>(m_vsg.dvdx, m_index); }
+	OSL_INLINE Proxy<float> dvdy() const { return Proxy<float>(m_vsg.dvdy, m_index); }
 
     /// Surface tangents: derivative of P with respect to surface u and v.
-	Proxy<Vec3> dPdu() const { return Proxy<Vec3>(m_vsg.dPdu, m_index); }
-	Proxy<Vec3> dPdv() const { return Proxy<Vec3>(m_vsg.dPdv, m_index); }
+	OSL_INLINE Proxy<Vec3> dPdu() const { return Proxy<Vec3>(m_vsg.dPdu, m_index); }
+	OSL_INLINE Proxy<Vec3> dPdv() const { return Proxy<Vec3>(m_vsg.dPdv, m_index); }
 
     /// Time for this shading sample.
-	Proxy<float> time() const { return Proxy<float>(m_vsg.time, m_index); }
+	OSL_INLINE Proxy<float> time() const { return Proxy<float>(m_vsg.time, m_index); }
     /// Time interval for the frame (or shading sample).
-	Proxy<float> dtime() const { return Proxy<float>(m_vsg.dtime, m_index); }
+	OSL_INLINE Proxy<float> dtime() const { return Proxy<float>(m_vsg.dtime, m_index); }
     ///  Velocity vector: derivative of position P with respect to time.
-	Proxy<Vec3> dPdtime() const { return Proxy<Vec3>(m_vsg.dPdtime, m_index); }
+	OSL_INLINE Proxy<Vec3> dPdtime() const { return Proxy<Vec3>(m_vsg.dPdtime, m_index); }
 
     /// For lights or light attenuation shaders: the point being illuminated
     /// (Ps), and its differentials.
-	Proxy<Vec3> Ps() const { return Proxy<Vec3>(m_vsg.Ps, m_index); }
-	Proxy<Vec3> dPsdx() const { return Proxy<Vec3>(m_vsg.dPsdx, m_index); }
-	Proxy<Vec3> dPsdy() const { return Proxy<Vec3>(m_vsg.dPsdy, m_index); }
+	OSL_INLINE Proxy<Vec3> Ps() const { return Proxy<Vec3>(m_vsg.Ps, m_index); }
+	OSL_INLINE Proxy<Vec3> dPsdx() const { return Proxy<Vec3>(m_vsg.dPsdx, m_index); }
+	OSL_INLINE Proxy<Vec3> dPsdy() const { return Proxy<Vec3>(m_vsg.dPsdy, m_index); }
 
     /// Opaque pointers set by the renderer before shader execution, to
     /// allow later retrieval of the object->common and shader->common
@@ -371,18 +389,18 @@ public:
     /// to the 4x4 matrix itself; rather, it's just a pointer to whatever
     /// structure the RenderServices::get_matrix() needs to (if and when
     /// requested) generate the 4x4 matrix for the right time value.
-	Proxy<TransformationPtr> object2common() const { return Proxy<TransformationPtr>(m_vsg.object2common, m_index); }
-	Proxy<TransformationPtr> shader2common() const { return Proxy<TransformationPtr>(m_vsg.shader2common, m_index); }
+	OSL_INLINE Proxy<TransformationPtr> object2common() const { return Proxy<TransformationPtr>(m_vsg.object2common, m_index); }
+	OSL_INLINE Proxy<TransformationPtr> shader2common() const { return Proxy<TransformationPtr>(m_vsg.shader2common, m_index); }
 
     /// Surface area of the emissive object (used by light shaders for
     /// energy normalization).
-	Proxy<float> surfacearea() const { return Proxy<float>(m_vsg.surfacearea, m_index); }
+	OSL_INLINE Proxy<float> surfacearea() const { return Proxy<float>(m_vsg.surfacearea, m_index); }
 
     /// If nonzero, will flip the result of calculatenormal().
-	Proxy<int> flipHandedness() const { return Proxy<int>(m_vsg.flipHandedness, m_index); }
+	OSL_INLINE Proxy<int> flipHandedness() const { return Proxy<int>(m_vsg.flipHandedness, m_index); }
 
     /// If nonzero, we are shading the back side of a surface.
-	Proxy<int> backfacing() const { return Proxy<int>(m_vsg.backfacing, m_index); }
+	OSL_INLINE Proxy<int> backfacing() const { return Proxy<int>(m_vsg.backfacing, m_index); }
 };
 
 struct alignas(64) ShaderGlobalsBatch
@@ -400,34 +418,46 @@ struct alignas(64) ShaderGlobalsBatch
 	
 	typedef VaryingShaderProxy<maxSize> VaryingProxyType;
 	// proxy to the "next" varying dataset  
-	VaryingProxyType varying() { return VaryingProxyType(m_varying, m_size); }
+	OSL_INLINE VaryingProxyType 
+	varying() { return VaryingProxyType(m_varying, m_size); }
+	
 	// TODO: consider removing/demoting the ASSERT with a debug only option
-	VaryingProxyType varying(int batchIndex) { ASSERT(batchIndex < m_size); return VaryingProxyType(m_varying, batchIndex); }
+	OSL_INLINE VaryingProxyType 
+	varying(int batchIndex) { ASSERT(batchIndex < m_size); return VaryingProxyType(m_varying, batchIndex); }
 	
 	typedef VaryingShaderGlobals<maxSize> VaryingData;
-	VaryingData & varyingData() { return m_varying; } 
-	const VaryingData & varyingData() const { return m_varying; } 
 	
-	int size() const
+	OSL_INLINE VaryingData & 
+	varyingData() { return m_varying; }
+	
+	OSL_INLINE const VaryingData & 
+	varyingData() const { return m_varying; } 
+	
+	OSL_INLINE int 
+	size() const
 	{
 		return m_size;
 	}
 	
-	bool isFull() const
+	OSL_INLINE bool 
+	isFull() const
 	{
 		return (m_size == maxSize);
 	}
 
-	bool isEmpty() const
+	OSL_INLINE bool 
+	isEmpty() const
 	{
 		return (m_size == 0);
 	}
 	
-	void clear() {
+	OSL_INLINE void 
+	clear() {
 		m_size=0;
 	}
 	
-	void commitVarying() {
+	OSL_INLINE void 
+	commitVarying() {
 		assert(m_size < maxSize);
 		++m_size;
 	}	
@@ -450,7 +480,7 @@ private:
 	friend class pvt::BackendLLVMWide;
 	
 	UniformShaderGlobals m_uniform;
-	VaryingData m_varying;// __attribute__((aligned(16)));
+	VaryingData m_varying;
 	int m_size;
 };
 	

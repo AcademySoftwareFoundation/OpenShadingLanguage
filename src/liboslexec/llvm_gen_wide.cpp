@@ -99,6 +99,25 @@ static ustring u__empty;  // empty/default ustring
 LLVMGEN (llvm_gen_generic);
 
 
+static const char * warg_lane_count(void)
+{
+	switch(SimdLaneCount)
+	{
+	case 4:
+		return "w4";
+		break;
+	case 8:
+		return "w8";
+		break;
+	case 16:
+		return "w16";
+		break;
+	default:
+		ASSERT(0);
+	};
+	return nullptr;
+}
+
 
 void
 BackendLLVMWide::llvm_gen_debug_printf (string_view message)
@@ -637,7 +656,23 @@ LLVMGEN (llvm_gen_div)
 
     // The following should handle f/f, v/v, v/f, f/v, i/i
     // That's all that should be allowed by oslc.
-    const char *safe_div = is_float ? "osl_safe_div_fff" : "osl_safe_div_iii";
+    std::string safe_div;
+    if (is_float) {
+    	if (op_is_uniform) {
+    		safe_div = "osl_safe_div_fff";
+    	} else {
+    		
+    		std::string wf(warg_lane_count());
+    		wf.append("f");
+    		safe_div = "osl_safe_div_";
+    		safe_div.append(wf).append(wf).append(wf);
+    	}    		
+    } else {
+    	// TODO: finish handling all combinations
+    	ASSERT(op_is_uniform);
+		safe_div = "osl_safe_div_iii";
+    }
+    
     bool deriv = (Result.has_derivs() && (A.has_derivs() || B.has_derivs()));
     for (int i = 0; i < num_components; i++) {
         llvm::Value *a = rop.llvm_load_value (A, 0, i, type, op_is_uniform);
@@ -650,7 +685,7 @@ LLVMGEN (llvm_gen_div)
             //a_div_b = rop.ll.wide_op_div (a, b);
         	a_div_b = rop.ll.op_div (a, b);
         else
-            a_div_b = rop.ll.call_function (safe_div, a, b);
+            a_div_b = rop.ll.call_function (safe_div.c_str(), a, b);
         llvm::Value *rx = NULL, *ry = NULL;
 
         if (deriv) {
@@ -664,7 +699,7 @@ LLVMGEN (llvm_gen_div)
             else
         		// TODO:  switching back to non-wide to figure out uniform vs. varying data
                 //binv = rop.ll.call_function (safe_div, rop.ll.wide_constant(1.0f), b);
-            	binv = rop.ll.call_function (safe_div, rop.ll.constant(1.0f), b);
+            	binv = rop.ll.call_function (safe_div.c_str(), rop.ll.constant(1.0f), b);
             llvm::Value *ax = rop.llvm_load_value (A, 1, i, type);
             llvm::Value *bx = rop.llvm_load_value (B, 1, i, type);
     		// TODO:  switching back to non-wide to figure out uniform vs. varying data
@@ -1957,8 +1992,17 @@ LLVMGEN (llvm_gen_regex)
 LLVMGEN (llvm_gen_generic)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol& Result  = *rop.opargsym (op, 0);
     
+    bool uniformFormOfFunction = true;
+    for (int i = 0;  i < op.nargs();  ++i) {
+        Symbol *s (rop.opargsym (op, i));
+        if(rop.isSymbolUniform(*s) == false) {
+        	uniformFormOfFunction = false;
+        }
+    }
+    
+    Symbol& Result  = *rop.opargsym (op, 0);
+
     std::vector<const Symbol *> args;
     bool any_deriv_args = false;
     for (int i = 0;  i < op.nargs();  ++i) {
@@ -1979,9 +2023,11 @@ LLVMGEN (llvm_gen_generic)
 	// TODO:  switching back to non-wide to figure out uniform vs. varying data
     //std::string name = std::string("osl_wide_") + op.opname().string() + "_";
     std::string name = std::string("osl_") + op.opname().string() + "_";
+    
+    
     for (int i = 0;  i < op.nargs();  ++i) {
         Symbol *s (rop.opargsym (op, i));
-        if(rop.isSymbolUniform(*s) == false) {
+        if(uniformFormOfFunction == false) {
         	// Non uniform, so add the "wide" prefix
         	name += "w";
         	name += std::to_string(SimdLaneCount);
@@ -2005,11 +2051,11 @@ LLVMGEN (llvm_gen_generic)
         // Don't compute derivs -- either not needed or not provided in args
         if (Result.typespec().aggregate() == TypeDesc::SCALAR) {
             llvm::Value *r = rop.llvm_call_function (name.c_str(),
-                                                     &(args[1]), op.nargs()-1);
+                                                     &(args[1]), op.nargs()-1, /*deriv_ptrs*/ false, uniformFormOfFunction);
             rop.llvm_store_value (r, Result);
         } else {
             rop.llvm_call_function (name.c_str(),
-                                    (args.size())? &(args[0]): NULL, op.nargs());
+                                    (args.size())? &(args[0]): NULL, op.nargs(), /*deriv_ptrs*/ false, uniformFormOfFunction);
         }
         rop.llvm_zero_derivs (Result);
     } else {
@@ -2017,7 +2063,7 @@ LLVMGEN (llvm_gen_generic)
         ASSERT (Result.has_derivs() && any_deriv_args);
         rop.llvm_call_function (name.c_str(),
                                 (args.size())? &(args[0]): NULL, op.nargs(),
-                                true);
+                                /*deriv_ptrs*/ true, uniformFormOfFunction);
     }
     return true;
 }
@@ -2830,23 +2876,8 @@ arg_typecode (Symbol *sym, bool derivs)
 static std::string
 warg_typecode (Symbol *sym, bool derivs)
 {
-    std::string name;
+    std::string name(warg_lane_count());
     
-	switch(SimdLaneCount)
-	{
-	case 4:
-		name = "w4";
-		break;
-	case 8:
-		name = "w8";
-		break;
-	case 16:
-		name = "w16";
-		break;
-	default:
-		ASSERT(0);
-	}
-	
     const TypeSpec &t (sym->typespec());
     if (t.is_int())
         name += "i";

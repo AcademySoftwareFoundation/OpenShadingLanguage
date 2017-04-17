@@ -53,9 +53,6 @@ public:
     BackendLLVMWide (ShadingSystemImpl &shadingsys, ShaderGroup &group,
                 ShadingContext *context);
 
-    // TODO:  not sure this should be a constant, just putting here to get going
-    static constexpr int vec_width = 4;
-    
     virtual ~BackendLLVMWide ();
 
     virtual void set_inst (int layer);
@@ -357,7 +354,7 @@ public:
     /// Return an llvm::Value* corresponding to the return value of the
     /// function, if any.
     llvm::Value *llvm_call_function (const char *name,  const Symbol **args,
-                                     int nargs, bool deriv_ptrs=false);
+                                     int nargs, bool deriv_ptrs=false, bool function_is_uniform=true);
     llvm::Value *llvm_call_function (const char *name, const Symbol &A,
                                      bool deriv_ptrs=false);
     llvm::Value *llvm_call_function (const char *name, const Symbol &A,

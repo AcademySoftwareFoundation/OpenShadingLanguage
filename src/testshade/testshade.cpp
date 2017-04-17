@@ -711,7 +711,6 @@ setup_varying_shaderglobals (ShaderGlobalsBatch & sgb, ShadingSystem *shadingsys
     vsp.P() = Vec3 (u, v, 1.0f);
     
     sgb.commitVarying();
-    
 }
  
 
@@ -1136,7 +1135,7 @@ batched_shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
     ShadingContext *ctx = shadingsys->get_context (thread_info);
 
     // Set up shader globals and a little test grid of points to shade.
-    ShaderGlobalsBatch sgBatch;
+    ShaderGlobalsBatch sgBatch alignas(64);
     setup_uniform_shaderglobals (sgBatch, shadingsys);
     
 //    std::cout << "shading roi y(" << roi.ybegin << ", " << roi.yend << ")";

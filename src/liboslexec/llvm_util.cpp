@@ -901,6 +901,23 @@ LLVM_Util::make_jit_execengine (std::string *err)
     //engine_builder.setMCPU("broadwell");
     engine_builder.setMArch("x86-64");    
 
+//    bool disableFMA = true;
+    bool disableFMA = false;
+    const char * oslNoFmaString = std::getenv("OSL_NO_FMA");
+    if (oslNoFmaString != NULL) {
+ 	   if ((strcmp(oslNoFmaString, "1") == 0) || 
+		   (strcmp(oslNoFmaString, "y") == 0) ||
+		   (strcmp(oslNoFmaString, "Y") == 0) ||
+		   (strcmp(oslNoFmaString, "yes") == 0) ||
+		   (strcmp(oslNoFmaString, "t") == 0) ||
+		   (strcmp(oslNoFmaString, "true") == 0) ||
+		   (strcmp(oslNoFmaString, "T") == 0) ||
+		   (strcmp(oslNoFmaString, "TRUE") == 0))
+ 	   {
+ 		  disableFMA = true;
+ 	   } 
+    }
+    
     llvm::StringMap< bool > cpuFeatures;
     if (llvm::sys::getHostCPUFeatures(cpuFeatures)) {
 		std::cout << std::endl<< "llvm::sys::getHostCPUFeatures()>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl;
@@ -911,10 +928,11 @@ LLVM_Util::make_jit_execengine (std::string *err)
 			auto enabled = (cpuFeature.second) ? "+" : "-";
 			std::cout << cpuFeature.first().str()  << " is " << enabled << std::endl;
 			
-			if (oslIsa == TargetISA_UNLIMITTED) {
-				attrvec.push_back(enabled + cpuFeature.first().str());
+			if (oslIsa == TargetISA_UNLIMITTED) {				
+				if (!disableFMA || std::string("fma") != cpuFeature.first().str()) {
+					attrvec.push_back(enabled + cpuFeature.first().str());
+				}
 			}
-			
 		}
 		//The particular format of the names are target dependent, and suitable for passing as -mattr to the target which matches the host.
 	//    const char *mattr[] = {"avx"};
@@ -952,6 +970,10 @@ LLVM_Util::make_jit_execengine (std::string *err)
 		default:
 			break;
 		};
+		
+	    if (disableFMA) {
+			attrvec.push_back("-fma");
+	    }
 		engine_builder.setMAttrs(attrvec);
 		
     }

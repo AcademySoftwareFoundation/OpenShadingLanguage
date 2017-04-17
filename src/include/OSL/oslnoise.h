@@ -1589,26 +1589,61 @@ template <typename H>
 inline void perlin_scalar (Vec3 &result, const H &hash,
                     const float &x, const float &y, const float &z)
 {
-    // ORIGINAL -- non-SIMD
-    int X; float fx = floorfrac(x, &X);
-    int Y; float fy = floorfrac(y, &Y);
-    int Z; float fz = floorfrac(z, &Z);
-    float u = fade(fx);
-    float v = fade(fy);
-    float w = fade(fz);
-    // TODO: FIX ME, doesn't match up with non-scalar impl
-    float fresult = OIIO::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz      ),
-    //result = OIIO::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz      ),
-                            grad (hash (X+1, Y  , Z  ), fx-1.0f, fy     , fz      ),
-                            grad (hash (X  , Y+1, Z  ), fx     , fy-1.0f, fz      ),
-                            grad (hash (X+1, Y+1, Z  ), fx-1.0f, fy-1.0f, fz      ),
-                            grad (hash (X  , Y  , Z+1), fx     , fy     , fz-1.0f ),
-                            grad (hash (X+1, Y  , Z+1), fx-1.0f, fy     , fz-1.0f ),
-                            grad (hash (X  , Y+1, Z+1), fx     , fy-1.0f, fz-1.0f ),
-                            grad (hash (X+1, Y+1, Z+1), fx-1.0f, fy-1.0f, fz-1.0f ),
-                            u, v, w);
-    //result = scale3 (result);
-    result = Vec3(scale3 (fresult));
+	  int X; float fx = floorfrac(x, &X);
+      int Y; float fy = floorfrac(y, &Y);
+      int Z; float fz = floorfrac(z, &Z);
+      float u = fade(fx);
+      float v = fade(fy);
+      float w = fade(fz);
+            
+      int h000 = hash (X  , Y  , Z  );
+      int h100 = hash (X+1, Y  , Z  );
+      int h010 = hash (X  , Y+1, Z  );
+      int h110 = hash (X+1, Y+1, Z  );
+      int h001 = hash (X  , Y  , Z+1);
+      int h101 = hash (X+1, Y  , Z+1);
+      int h011 = hash (X  , Y+1, Z+1);
+      int h111 = hash (X+1, Y+1, Z+1);
+      
+      // We are mimicing the OIIO_SSE behavior
+      //      result[0] = (h        ) & 0xFF;
+      //	  result[1] = (srl(h,8 )) & 0xFF;
+      //	  result[2] = (srl(h,16)) & 0xFF;
+      // skipping masking the 0th version, perhaps that is a mistake
+
+      float result0 = OIIO::trilerp (grad (h000, fx     , fy     , fz      ),
+                              grad (h100, fx-1.0f, fy     , fz      ),
+                              grad (h010, fx     , fy-1.0f, fz      ),
+                              grad (h110, fx-1.0f, fy-1.0f, fz      ),
+                              grad (h001, fx     , fy     , fz-1.0f ),
+                              grad (h101, fx-1.0f, fy     , fz-1.0f ),
+                              grad (h011, fx     , fy-1.0f, fz-1.0f ),
+                              grad (h111, fx-1.0f, fy-1.0f, fz-1.0f ),
+                              u, v, w);
+      
+      float result1 = OIIO::trilerp (
+		  grad ((h000>>8) & 0xFF, fx     , fy     , fz      ),
+		  grad ((h100>>8) & 0xFF, fx-1.0f, fy     , fz      ),
+		  grad ((h010>>8) & 0xFF, fx     , fy-1.0f, fz      ),
+		  grad ((h110>>8) & 0xFF, fx-1.0f, fy-1.0f, fz      ),
+		  grad ((h001>>8) & 0xFF, fx     , fy     , fz-1.0f ),
+		  grad ((h101>>8) & 0xFF, fx-1.0f, fy     , fz-1.0f ),
+		  grad ((h011>>8) & 0xFF, fx     , fy-1.0f, fz-1.0f ),
+		  grad ((h111>>8) & 0xFF, fx-1.0f, fy-1.0f, fz-1.0f ),
+		  u, v, w);
+      
+      float result2 = OIIO::trilerp (
+		  grad ((h000>>16) & 0xFF, fx     , fy     , fz      ),
+		  grad ((h100>>16) & 0xFF, fx-1.0f, fy     , fz      ),
+		  grad ((h010>>16) & 0xFF, fx     , fy-1.0f, fz      ),
+		  grad ((h110>>16) & 0xFF, fx-1.0f, fy-1.0f, fz      ),
+		  grad ((h001>>16) & 0xFF, fx     , fy     , fz-1.0f ),
+		  grad ((h101>>16) & 0xFF, fx-1.0f, fy     , fz-1.0f ),
+		  grad ((h011>>16) & 0xFF, fx     , fy-1.0f, fz-1.0f ),
+		  grad ((h111>>16) & 0xFF, fx-1.0f, fy-1.0f, fz-1.0f ),
+		  u, v, w);
+      
+      result = Vec3(scale3 (result0), scale3 (result1), scale3 (result2));    
 }
 
 template <typename H>

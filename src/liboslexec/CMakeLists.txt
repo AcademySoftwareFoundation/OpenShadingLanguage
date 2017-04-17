@@ -57,7 +57,8 @@ SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTAN
 #SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -xCORE-AVX2 -mCG_gathers_autogen_ctrl=0" )
 #SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -xCORE-AVX2 -prec-div" )
 #SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -xCORE-AVX512" )
-SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -fp-model consistent -qopt-report=5 -qopt-report-phase=vec -qoverride-limits" )
+#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -fp-model consistent -qopt-report=5 -qopt-report-phase=vec -qoverride-limits" )
+#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -qopt-report=5 -qopt-report-phase=vec -qoverride-limits" )
 
 MACRO ( LLVM_COMPILE llvm_src srclist )
     GET_FILENAME_COMPONENT ( llvmsrc_we ${llvm_src} NAME_WE )

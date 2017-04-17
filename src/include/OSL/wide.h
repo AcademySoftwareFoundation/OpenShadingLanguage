@@ -50,12 +50,14 @@ struct WideBuiltin
 	
 	BuiltinT data[WidthT];
 	
-	void set(int index, BuiltinT value) 
+	OSL_INLINE void
+	set(int index, BuiltinT value) 
 	{
 		data[index] = value;
 	}
 
-	BuiltinT get(int index) const 
+	OSL_INLINE BuiltinT 
+	get(int index) const 
 	{
 		return data[index];
 	}	
@@ -136,7 +138,8 @@ struct Wide<Vec3, WidthT>
 	float y[WidthT];
 	float z[WidthT];
 	
-	void set(int index, const Vec3 & value) 
+	OSL_INLINE void 
+	set(int index, const Vec3 & value) 
 	{
 		x[index] = value.x;
 		y[index] = value.y;
@@ -145,13 +148,15 @@ struct Wide<Vec3, WidthT>
 	
 protected:
 	template<int HeadIndexT>
-	void set(internal::int_sequence<HeadIndexT>, const Vec3 & value)
+	OSL_INLINE void 
+	set(internal::int_sequence<HeadIndexT>, const Vec3 & value)
 	{
 		set(HeadIndexT, value);
 	}
 
 	template<int HeadIndexT, int... TailIndexListT, typename... Vec3ListT>
-	void set(internal::int_sequence<HeadIndexT, TailIndexListT...>, Vec3 headValue, Vec3ListT... tailValues)
+	OSL_INLINE void 
+	set(internal::int_sequence<HeadIndexT, TailIndexListT...>, Vec3 headValue, Vec3ListT... tailValues)
 	{
 		set(HeadIndexT, headValue);
 		set(internal::int_sequence<TailIndexListT...>(), tailValues...);
@@ -163,6 +168,7 @@ public:
 	Wide(const Wide &other) = delete;
 
 	template<typename... Vec3ListT, typename = internal::enable_if_type<(sizeof...(Vec3ListT) == WidthT)> >
+	OSL_INLINE
 	Wide(const Vec3ListT &...values)
 	{
 		typedef internal::make_int_sequence<sizeof...(Vec3ListT)> int_seq_type;
@@ -171,7 +177,8 @@ public:
 	}
 	
 
-	Vec3 get(int index) const 
+	OSL_INLINE Vec3 
+	get(int index) const 
 	{
 		return Vec3(x[index], y[index], z[index]);
 	}		
@@ -219,7 +226,8 @@ struct Wide<Matrix44, WidthT>
 	static constexpr int width = WidthT; 
 	Wide<float, WidthT> x[4][4];
 	
-	void set(int index, const Matrix44 & value) 
+	OSL_INLINE void 
+	set(int index, const Matrix44 & value) 
 	{
 		x[0][0].set(index, value.x[0][0]);
 		x[0][1].set(index, value.x[0][1]);
@@ -237,9 +245,10 @@ struct Wide<Matrix44, WidthT>
 		x[3][1].set(index, value.x[3][1]);
 		x[3][2].set(index, value.x[3][2]);
 		x[3][3].set(index, value.x[3][3]);
-}
+	}
 
-	Matrix44 get(int index) const 
+	OSL_INLINE Matrix44 
+	get(int index) const 
 	{
 		return Matrix44(
 			x[0][0].get(index), x[0][1].get(index), x[0][2].get(index), x[0][3].get(index),
@@ -259,7 +268,8 @@ struct Wide<Dual2<float>, WidthT>
 	float dx[WidthT];
 	float dy[WidthT];
 	
-	void set(int index, const value_type & value) 
+	OSL_INLINE void 
+	set(int index, const value_type & value) 
 	{
 		x[index] = value.val();
 		dx[index] = value.dx();
@@ -268,13 +278,15 @@ struct Wide<Dual2<float>, WidthT>
 	
 protected:
 	template<int HeadIndexT>
-	void set(internal::int_sequence<HeadIndexT>, const value_type &value)
+	OSL_INLINE void 
+	set(internal::int_sequence<HeadIndexT>, const value_type &value)
 	{
 		set(HeadIndexT, value);
 	}
 
 	template<int HeadIndexT, int... TailIndexListT, typename... ValueListT>
-	void set(internal::int_sequence<HeadIndexT, TailIndexListT...>, value_type headValue, ValueListT... tailValues)
+	OSL_INLINE void 
+	set(internal::int_sequence<HeadIndexT, TailIndexListT...>, value_type headValue, ValueListT... tailValues)
 	{
 		set(HeadIndexT, headValue);
 		set(internal::int_sequence<TailIndexListT...>(), tailValues...);
@@ -282,10 +294,12 @@ protected:
 	}
 public:
 	
+	// TODO:  should other wide types delete their copy constructors?
 	Wide() = default;
 	Wide(const Wide &other) = delete;
 
 	template<typename... ValueListT, typename = internal::enable_if_type<(sizeof...(ValueListT) == WidthT)> >
+	OSL_INLINE 
 	Wide(const ValueListT &...values)
 	{
 		typedef internal::make_int_sequence<sizeof...(ValueListT)> int_seq_type;
@@ -294,7 +308,8 @@ public:
 	}
 	
 
-	value_type get(int index) const 
+	OSL_INLINE value_type 
+	get(int index) const 
 	{
 		return value_type(x[index], dx[index], dy[index]);
 	}		
@@ -309,7 +324,8 @@ struct Wide<Dual2<Vec3>, WidthT>
 	Wide<Vec3> dx;
 	Wide<Vec3> dy;
 	
-	void set(int index, const value_type & value) 
+	OSL_INLINE void 
+	set(int index, const value_type & value) 
 	{
 		x.set(index, value.val());
 		dx.set(index, value.dx());
@@ -318,13 +334,15 @@ struct Wide<Dual2<Vec3>, WidthT>
 	
 protected:
 	template<int HeadIndexT>
-	void set(internal::int_sequence<HeadIndexT>, const value_type &value)
+	OSL_INLINE void 
+	set(internal::int_sequence<HeadIndexT>, const value_type &value)
 	{
 		set(HeadIndexT, value);
 	}
 
 	template<int HeadIndexT, int... TailIndexListT, typename... ValueListT>
-	void set(internal::int_sequence<HeadIndexT, TailIndexListT...>, value_type headValue, ValueListT... tailValues)
+	OSL_INLINE void 
+	set(internal::int_sequence<HeadIndexT, TailIndexListT...>, value_type headValue, ValueListT... tailValues)
 	{
 		set(HeadIndexT, headValue);
 		set(internal::int_sequence<TailIndexListT...>(), tailValues...);
@@ -336,6 +354,7 @@ public:
 	Wide(const Wide &other) = delete;
 
 	template<typename... ValueListT, typename = internal::enable_if_type<(sizeof...(ValueListT) == WidthT)> >
+	OSL_INLINE
 	Wide(const ValueListT &...values)
 	{
 		typedef internal::make_int_sequence<sizeof...(ValueListT)> int_seq_type;
@@ -344,7 +363,8 @@ public:
 	}
 	
 
-	value_type get(int index) const 
+	OSL_INLINE value_type 
+	get(int index) const 
 	{
 		return value_type(x.get(index), dx.get(index), dy.get(index));
 	}		
@@ -354,13 +374,26 @@ public:
 template <typename DataT, int WidthT>
 struct WideUniformProxy
 {
+	OSL_INLINE
 	WideUniformProxy(Wide<DataT, WidthT> & ref_wide_data)
 	: m_ref_wide_data(ref_wide_data)
 	{}
 
+	// Must provide user defined copy constructor to 
+	// get compiler to be able to follow individual 
+	// data members througk back to original object
+	// when fully inlined the proxy should disappear
+	OSL_INLINE
+	WideUniformProxy(const WideUniformProxy &other)
+	: m_ref_wide_data(other.m_ref_wide_data)
+	{}
+	
 	// Sets all data lanes of wide to the value
-	const DataT & operator = (const DataT & value)  
+	OSL_INLINE const DataT & 
+	operator = (const DataT & value)  
 	{
+		// Should auto vectorizes although we
+		// could add explicity SIMD
 		for(int i = 0; i < WidthT; ++i) {
 			m_ref_wide_data.set(i, value);
 		}
@@ -375,24 +408,40 @@ private:
 template <typename DataT, int WidthT>
 struct WideProxy
 {
+	OSL_INLINE 
 	WideProxy(Wide<DataT, WidthT> & ref_wide_data, const int index)
 	: m_ref_wide_data(ref_wide_data)
 	, m_index(index)
 	{}
 
+	// Must provide user defined copy constructor to 
+	// get compiler to be able to follow individual 
+	// data members througk back to original object
+	// when fully inlined the proxy should disappear
+	OSL_INLINE
+	WideProxy(const WideProxy &other)
+	: m_ref_wide_data(other.m_ref_wide_data)
+	, m_index(other.m_index)
+	{}
 	
+	OSL_INLINE 
 	operator DataT const () const 
 	{
 		return m_ref_wide_data.get(m_index);
 	}
 
-	const DataT & operator = (const DataT & value)  
+	OSL_INLINE const DataT &
+	operator = (const DataT & value)  
 	{
 		m_ref_wide_data.set(m_index, value);
 		return value;
 	}
 	
-	WideUniformProxy<DataT, WidthT> uniform() { return WideUniformProxy<DataT, WidthT>(m_ref_wide_data); }
+	OSL_INLINE WideUniformProxy<DataT, WidthT> 
+	uniform() 
+	{
+		return WideUniformProxy<DataT, WidthT>(m_ref_wide_data); 
+	}
 	
 private:
 	Wide<DataT, WidthT> & m_ref_wide_data;
@@ -402,12 +451,23 @@ private:
 template <typename DataT, int WidthT>
 struct ConstWideProxy
 {
+	OSL_INLINE
 	ConstWideProxy(const Wide<DataT, WidthT> & ref_wide_data, const int index)
 	: m_ref_wide_data(ref_wide_data)
 	, m_index(index)
 	{}
 
+	// Must provide user defined copy constructor to 
+	// get compiler to be able to follow individual 
+	// data members througk back to original object
+	// when fully inlined the proxy should disappear
+	OSL_INLINE
+	ConstWideProxy(const ConstWideProxy &other)
+	: m_ref_wide_data(other.m_ref_wide_data)
+	, m_index(other.m_index)
+	{}	
 	
+	OSL_INLINE
 	operator DataT const () const 
 	{
 		return m_ref_wide_data.get(m_index);
@@ -422,17 +482,30 @@ private:
 template <typename DataT, int WidthT>
 struct WideAccessor
 {
+	OSL_INLINE
 	WideAccessor(const void *ptr_wide_data)
 	: m_ref_wide_data(*reinterpret_cast<const Wide<DataT, WidthT> *>(ptr_wide_data))
 	{}
 	
+	OSL_INLINE
 	WideAccessor(const Wide<DataT, WidthT> & ref_wide_data)
 	: m_ref_wide_data(ref_wide_data)
 	{}
 	
+	// Must provide user defined copy constructor to 
+	// get compiler to be able to follow individual 
+	// data members througk back to original object
+	// when fully inlined the proxy should disappear
+	OSL_INLINE
+	WideAccessor(const WideAccessor &other)
+	: m_ref_wide_data(other.m_ref_wide_data)
+	{}	
+	
+	
 	typedef ConstWideProxy<DataT, WidthT> Proxy;
 	
-	Proxy const operator[](int index) const
+	OSL_INLINE Proxy const 
+	operator[](int index) const
 	{
 		return Proxy(m_ref_wide_data, index);
 	}
@@ -442,7 +515,7 @@ private:
 };
 
 
-inline void robust_multVecMatrix(const Wide<Matrix44>& wx, const Wide< Imath::Vec3<float> >& wsrc, Wide< Imath::Vec3<float> >& wdst)
+OSL_INLINE void robust_multVecMatrix(const Wide<Matrix44>& wx, const Wide< Imath::Vec3<float> >& wsrc, Wide< Imath::Vec3<float> >& wdst)
 {
 	OSL_INTEL_PRAGMA("forceinline recursive")
 	{
@@ -497,7 +570,7 @@ inline void robust_multVecMatrix(const Wide<Matrix44>& wx, const Wide< Imath::Ve
 	}
 }
 
-inline void
+OSL_INLINE void
 avoidAliasingMultDirMatrix (const Matrix44 &M, const Vec3 &src, Vec3 &dst)
 {
 	float a = src.x * M[0][0] + src.y * M[1][0] + src.z * M[2][0];
@@ -513,7 +586,7 @@ avoidAliasingMultDirMatrix (const Matrix44 &M, const Vec3 &src, Vec3 &dst)
 #if 0 // In development, not done 
 /// Multiply a matrix times a direction with derivatives to obtain
 /// a transformed direction with derivatives.
-inline void
+OSL_INLINE void
 multDirMatrix (const Matrix44 &M, const Wide<Dual2<Vec3>> &win, Wide<Dual2<Vec3>> &wout)
 {   
 	OSL_INTEL_PRAGMA("forceinline recursive")
@@ -543,7 +616,7 @@ multDirMatrix (const Matrix44 &M, const Wide<Dual2<Vec3>> &win, Wide<Dual2<Vec3>
 
 /// Multiply a matrix times a vector with derivatives to obtain
 /// a transformed vector with derivatives.
-inline void
+OSL_INLINE void
 robust_multVecMatrix (const Wide<Matrix44> &WM, const Wide<Dual2<Vec3>> &win, Wide<Dual2<Vec3>> &wout)
 {
 	OSL_INTEL_PRAGMA("forceinline recursive")

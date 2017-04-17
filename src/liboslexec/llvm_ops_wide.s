@@ -8609,7 +8609,7 @@ declare void @llvm.masked.store.v16f32.p0v16f32 (<16 x float>, <16 x float>*, i3
 declare <16 x float> @llvm.sqrt.v16f32(<16 x float>)
 
 ; Function Attrs: nounwind readnone uwtable
-define <16 x float> @osl_sqrt_w16fw16f(<16 x float>) local_unnamed_addr #3 {
+define <16 x float> @osl_sqrt_w16fw16f(<16 x float>) alwaysinline #3 {
   %2 = fcmp ult <16 x float> %0, <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>
   %3 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %0)
   %"$result" = alloca <16 x float>
@@ -10270,6 +10270,14 @@ define float @osl_safe_div_fff(float, float) local_unnamed_addr #6 {
 }
 
 ; Function Attrs: norecurse nounwind readnone uwtable
+define <16 x float> @osl_safe_div_w16fw16fw16f(<16 x float>, <16 x float>) alwaysinline #6 {
+  %3 = fcmp une <16 x float> %1, zeroinitializer
+  %4 = fdiv <16 x float> %0, %1
+  %5 = select <16 x i1> %3, <16 x float> %4, <16 x float> zeroinitializer
+  ret <16 x float> %5
+}
+
+; Function Attrs: norecurse nounwind readnone uwtable
 define i32 @osl_safe_div_iii(i32, i32) local_unnamed_addr #6 {
   %3 = icmp eq i32 %1, 0
   br i1 %3, label %6, label %4
@@ -10309,32 +10317,48 @@ define float @osl_smoothstep_ffff(float, float, float) local_unnamed_addr #6 {
 
 
 ; Function Attrs: norecurse nounwind readnone uwtable
-define <16 x float> @osl_smoothstep_w16fffw16f(float, float, <16 x float>) local_unnamed_addr #6 {
-  %.splatinsert = insertelement <16 x float> undef, float %0, i32 0
-  %e0 = shufflevector <16 x float> %.splatinsert, <16 x float> undef, <16 x i32> zeroinitializer
-  %4 = fcmp olt <16 x float> %2, %e0
+;define <16 x float> @osl_smoothstep_w16fffw16f(float, float, <16 x float>) alwaysinline #6 {
+  ;%.splatinsert = insertelement <16 x float> undef, float %0, i32 0
+  ;%e0 = shufflevector <16 x float> %.splatinsert, <16 x float> undef, <16 x i32> zeroinitializer
 
-  %.splatinsert1 = insertelement <16 x float> undef, float %1, i32 0
-  %e1 = shufflevector <16 x float> %.splatinsert1, <16 x float> undef, <16 x i32> zeroinitializer
-  %5 = fcmp ult <16 x float> %2, %e1
+  ;%.splatinsert1 = insertelement <16 x float> undef, float %1, i32 0
+  ;%e1 = shufflevector <16 x float> %.splatinsert1, <16 x float> undef, <16 x i32> zeroinitializer
 
-  %6 = fsub <16 x float> %2, %e0
-  %7 = fsub <16 x float> %e1, %e0
-  %8 = fdiv <16 x float> %6, %7
-  %9 = fmul <16 x float> %8, <float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00,float 2.000000e+00>
-  %10 = fsub <16 x float> <float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00,float 3.000000e+00>, %9
-  %11 = fmul <16 x float> %8, %8
-  %12 = fmul <16 x float> %11, %10
+  ;%11 = fcmp ult <16 x float> %2, %e0
+  ;%12 = fcmp ugt <16 x float> %2, %e1
+  ;%not. = xor <16 x i1> %11, <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, !dbg !24
+  ;%13 = and <16 x i1> %12, %not., !dbg !24
+  ;%14 = select <16 x i1> %13, <16 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, <16 x float> zeroinitializer, !dbg !25
+  ;%15 = or <16 x i1> %11, %12, !dbg !25
+  ;%16 = fsub <16 x float> %6, %8, !dbg !26
+  ;%17 = fsub <16 x float> %10, %8, !dbg !26
+  ;%18 = fcmp une <16 x float> %17, zeroinitializer, !dbg !26
+  ;%19 = fdiv <16 x float> %16, %17, !dbg !26
+  ;%20 = select <16 x i1> %18, <16 x float> %19, <16 x float> zeroinitializer, !dbg !26
+  ;%21 = select <16 x i1> %15, <16 x float> %14, <16 x float> %20, !dbg !26
+
+  ;ret <16 x float> %21
+;}
+
+; Function Attrs: norecurse nounwind readnone uwtable
+define <16 x float> @osl_smoothstep_w16fw16fw16fw16f(<16 x float>, <16 x float>, <16 x float>) alwaysinline #6 {
+  %4 = fcmp ult <16 x float> %2, %0
+  %5 = fcmp ugt <16 x float> %2, %1
+  %not. = xor <16 x i1> %4, <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+  %6 = and <16 x i1> %5, %not.
+  %7 = select <16 x i1> %6, <16 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, <16 x float> zeroinitializer
+  %8 = or <16 x i1> %4, %5
+  %9 = fsub <16 x float> %2, %0
+  %10 = fsub <16 x float> %1, %0
+  %11 = fdiv <16 x float> %9, %10
+  %12 = fmul <16 x float> %11, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+  %13 = fsub <16 x float> <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>, %12
+  %14 = fmul <16 x float> %11, %11, !dbg !32
+  %15 = fmul <16 x float> %14, %13, !dbg !32
+  %16 = select <16 x i1> %8, <16 x float> %7, <16 x float> %15
   
-  %"$result" = alloca <16 x float>
-  store <16 x float> %12, <16 x float>* %"$result"     
-  call void @llvm.masked.store.v16f32.p0v16f32 (<16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <16 x float>* %"$result", i32 64,  <16 x i1> %4 )
-  call void @llvm.masked.store.v16f32.p0v16f32 (<16 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, <16 x float>* %"$result", i32 64,  <16 x i1> %5 )
-  
-  %13 = load <16 x float>, <16 x float>* %"$result"
-  ret <16 x float> %13
+  ret <16 x float> %16
 }
-
 
 ; Function Attrs: nounwind uwtable
 define void @osl_smoothstep_dfffdf(i8* nocapture, float, float, i8* nocapture readonly) local_unnamed_addr #4 {

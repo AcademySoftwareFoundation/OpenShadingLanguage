@@ -58,6 +58,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         #define OSL_INTEL_PRAGMA(aQuotedPragma)
 #endif
 
+#ifndef OSL_INLINE
+	#if __INTEL_COMPILER >= 1100 || (defined(_WIN32) || defined(_WIN64))
+		#define OSL_INLINE __forceinline
+	#else
+		//#define OSL_INLINE inline
+		#define OSL_INLINE inline __attribute__((always_inline))
+	#endif
+#endif
+
 // Symbol export defines
 #include "export.h"
 
@@ -138,7 +147,7 @@ using OIIO::string_view;
 #endif
 
   
-#define OSL_USE_WIDE_LLVM_BACKEND 1    
+#define OSL_USE_WIDE_LLVM_BACKEND 1   
 //#define OSL_USE_WIDE_LLVM_BACKEND 0
   
 OSL_NAMESPACE_EXIT

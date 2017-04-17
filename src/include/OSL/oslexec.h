@@ -542,8 +542,8 @@ public:
     std::string getstats (int level=1) const;
 
     void register_closure (string_view name, int id, const ClosureParam *params,
-                           PrepareClosureFunc prepare, SetupClosureFunc setup,
-                           int alignment = 1);
+                           PrepareClosureFunc prepare, SetupClosureFunc setup);
+
     /// Query either by name or id an existing closure. If name is non
     /// NULL it will use it for the search, otherwise id would be used
     /// and the name will be placed in name if successful. Also return

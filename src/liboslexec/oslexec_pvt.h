@@ -447,16 +447,13 @@ public:
         std::vector<ClosureParam> params;
         // the needed size for the structure
         int                       struct_size;
-        // the needed alignment of the structure
-        int                       alignment;
         // Creation callbacks
         PrepareClosureFunc        prepare;
         SetupClosureFunc          setup;
     };
 
     void register_closure (string_view name, int id, const ClosureParam *params,
-                           PrepareClosureFunc prepare, SetupClosureFunc setup,
-                           int alignment = 1);
+                           PrepareClosureFunc prepare, SetupClosureFunc setup);
 
     const ClosureEntry *get_entry (ustring name) const;
     const ClosureEntry *get_entry (int id) const {
@@ -643,8 +640,7 @@ public:
     ustring *alloc_string_constants (size_t n) { return m_string_pool.alloc (n); }
 
     void register_closure (string_view name, int id, const ClosureParam *params,
-                           PrepareClosureFunc prepare, SetupClosureFunc setup,
-                           int alignment = 1);
+                           PrepareClosureFunc prepare, SetupClosureFunc setup);
     bool query_closure (const char **name, int *id,
                         const ClosureParam **params);
     const ClosureRegistry::ClosureEntry *find_closure(ustring name) const {
@@ -1302,63 +1298,66 @@ template<int BlockSize>
 class SimplePool {
 public:
     SimplePool() {
-        m_blocks.push_back(new char[BlockSize]);
+        // pool must have at least one block available to avoid special cases
+        m_blocks.emplace_back(new char[BlockSize]);
         m_block_offset = BlockSize;
         m_current_block = 0;
     }
 
-    ~SimplePool() {
-        for (size_t i =0; i < m_blocks.size(); ++i)
-            delete [] m_blocks[i];
-    }
+    ~SimplePool() {}
 
     char * alloc(size_t size, size_t alignment=1) {
         // Alignment must be power of two
         DASSERT ((alignment & (alignment - 1)) == 0);
-        // Fail if beyond allocation limits (we make sure there's enough space
-        // for alignment padding here as well).
-        if (size + alignment - 1 > BlockSize)
-            return NULL;
+
+        // Assume sizes are never larger than the configured BlockSize
+        DASSERT(size + alignment - 1 <= BlockSize);
+
         // Fix up alignment
-        size_t alignment_offset = alignment_offset_calc(alignment);
-        if (size + alignment_offset <= m_block_offset) {
-            // Enough space in current block
-            m_block_offset -= size + alignment_offset;
-        } else {
-            // Need to allocate a new block
+        m_block_offset += alignment_offset_calc(m_blocks[m_current_block].get() + m_block_offset, alignment);
+
+        // Do we have at least 'size' bytes available in our current block?
+        if (m_block_offset + size > BlockSize) {
+            // the current block doesn't have enough room, make a new block
             m_current_block++;
-            m_block_offset = BlockSize - size;
             if (m_blocks.size() == m_current_block)
-                m_blocks.push_back(new char[BlockSize]);
-            alignment_offset = alignment_offset_calc(alignment);
-            DASSERT (m_block_offset >= alignment_offset);
-            m_block_offset -= alignment_offset;
+                m_blocks.emplace_back(new char[BlockSize]);
+            m_block_offset = alignment_offset_calc(m_blocks[m_current_block].get(), alignment);
         }
-        return m_blocks[m_current_block] + m_block_offset;
+        char* ptr = m_blocks[m_current_block].get() + m_block_offset;
+        DASSERT(reinterpret_cast<uintptr_t>(ptr) % alignment == 0);
+        m_block_offset += size;
+        return ptr;
     }
 
-    void clear () { m_current_block = 0; m_block_offset = BlockSize; }
+    void clear () {
+        m_current_block = 0;
+        m_block_offset = 0;
+    }
 
 private:
-    inline size_t alignment_offset_calc(size_t alignment) {
-        return (((uintptr_t)m_blocks[m_current_block] + m_block_offset) & (alignment - 1));
+    static inline size_t alignment_offset_calc(void* ptr, size_t alignment) {
+        uintptr_t ptrbits = reinterpret_cast<uintptr_t>(ptr);
+        uintptr_t offset = ((ptrbits + alignment - 1) & -alignment) - ptrbits;
+        DASSERT((ptrbits + offset) % alignment == 0);
+        return offset;
     }
 
-    std::vector<char *> m_blocks;
-    size_t              m_current_block;
-    size_t              m_block_offset;
+    std::vector<std::unique_ptr<char[]>> m_blocks; ///< Hold blocks of BlockSize bytes
+    size_t  m_current_block;    ///< Index into the m_blocks array
+    size_t  m_block_offset;     ///< Offset from the start of the current block
 };
 
 /// Represents a single message for use by getmessage and setmessage opcodes
 ///
 struct Message {
     Message(ustring name, const TypeDesc& type, int layeridx, ustring sourcefile, int sourceline, Message* next) :
-       name(name), data(NULL), type(type), layeridx(layeridx), sourcefile(sourcefile), sourceline(sourceline), next(next) {}
+       name(name), data(nullptr), type(type), layeridx(layeridx), sourcefile(sourcefile), sourceline(sourceline), next(next) {}
 
     /// Some messages don't have data because getmessage() was called before setmessage
     /// (which is flagged as an error to avoid ambiguities caused by execution order)
     ///
-    bool has_data() const { return data != NULL; }
+    bool has_data() const { return data != nullptr; }
 
     ustring name;           ///< name of this message
     char* data;             ///< actual data of the message (will never change once the message is created)
@@ -1372,7 +1371,7 @@ struct Message {
 /// Represents the list of messages set by a given shader using setmessage and getmessage
 ///
 struct MessageList {
-     MessageList() : list_head(NULL), message_data() {}
+     MessageList() : list_head(nullptr), message_data() {}
 
      void clear() {
          list_head = NULL;
@@ -1383,11 +1382,11 @@ struct MessageList {
         for (const Message* m = list_head; m != NULL; m = m->next)
             if (m->name == name)
                 return m; // name matches
-        return NULL; // not found
+        return nullptr; // not found
     }
 
     void add(ustring name, void* data, const TypeDesc& type, int layeridx, ustring sourcefile, int sourceline) {
-        list_head = new (message_data.alloc(sizeof(Message))) Message(name, type, layeridx, sourcefile, sourceline, list_head);
+        list_head = new (message_data.alloc(sizeof(Message), alignof(Message))) Message(name, type, layeridx, sourcefile, sourceline, list_head);
         if (data) {
             list_head->data = message_data.alloc(type.size());
             memcpy(list_head->data, data, type.size());
@@ -1607,17 +1606,15 @@ public:
 
     ClosureComponent * closure_component_allot(int id, size_t prim_size, const Color3 &w) {
         // Allocate the component and the mul back to back
-        size_t needed = sizeof(ClosureComponent) + (prim_size >= 4 ? prim_size - 4 : 0);
-        int alignment = m_shadingsys.find_closure(id)->alignment;
-        size_t alignment_offset = closure_alignment_offset_calc(alignment);
-        ClosureComponent *comp = (ClosureComponent *) (m_closure_pool.alloc(needed + alignment_offset, alignment) + alignment_offset);
+        size_t needed = sizeof(ClosureComponent) - sizeof(void*) + prim_size;
+        ClosureComponent *comp = (ClosureComponent *) m_closure_pool.alloc(needed, alignof(ClosureComponent));
         comp->id = id;
         comp->w = w;
         return comp;
     }
 
     ClosureMul *closure_mul_allot (const Color3 &w, const ClosureColor *c) {
-        ClosureMul *mul = (ClosureMul *) m_closure_pool.alloc(sizeof(ClosureMul));
+        ClosureMul *mul = (ClosureMul *) m_closure_pool.alloc(sizeof(ClosureMul), alignof(ClosureMul));
         mul->id = ClosureColor::MUL;
         mul->weight = w;
         mul->closure = c;
@@ -1625,7 +1622,7 @@ public:
     }
 
     ClosureMul *closure_mul_allot (float w, const ClosureColor *c) {
-        ClosureMul *mul = (ClosureMul *) m_closure_pool.alloc(sizeof(ClosureMul));
+        ClosureMul *mul = (ClosureMul *) m_closure_pool.alloc(sizeof(ClosureMul), alignof(ClosureMul));
         mul->id = ClosureColor::MUL;
         mul->weight.setValue (w,w,w);
         mul->closure = c;
@@ -1633,7 +1630,7 @@ public:
     }
 
     ClosureAdd *closure_add_allot (const ClosureColor *a, const ClosureColor *b) {
-        ClosureAdd *add = (ClosureAdd *) m_closure_pool.alloc(sizeof(ClosureAdd));
+        ClosureAdd *add = (ClosureAdd *) m_closure_pool.alloc(sizeof(ClosureAdd), alignof(ClosureAdd));
         add->id = ClosureColor::ADD;
         add->closureA = a;
         add->closureB = b;
@@ -1804,7 +1801,7 @@ private:
     RendererServices::TraceOpt m_traceopt; ///< trace call options
 
     SimplePool<20 * 1024> m_closure_pool;
-    SimplePool<64*1024> m_scratch_pool;
+    SimplePool<64 * 1024> m_scratch_pool;
 
     Dictionary *m_dictionary;
 

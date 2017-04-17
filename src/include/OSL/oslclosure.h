@@ -120,11 +120,11 @@ struct OSLEXECPUBLIC ClosureColor {
 /// whatever type of custom primitive component it actually is.
 struct OSLEXECPUBLIC ClosureComponent : public ClosureColor
 {
-    Vec3   w;        ///< Weight of this component
-    char   mem[4];   ///< Memory for the primitive
-                     ///  4 is the minimum, allocation
-                     ///  will be scaled to requirements
-                     ///  of the primitive
+    Vec3 w;                     ///< Weight of this component
+    alignas(void*) char mem[8]; ///< Memory for the primitive, 8 is the minimum, allocation will be
+                                ///  scaled to requirements of the registered closure struct.
+                                ///  Alignment is forced to a void* to match likely alignement requirements
+                                ///  of the user's structs.
 
     /// Handy method for getting the parameter memory as a void*.
     ///

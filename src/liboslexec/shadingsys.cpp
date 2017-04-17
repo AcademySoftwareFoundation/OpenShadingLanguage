@@ -388,10 +388,9 @@ void
 ShadingSystem::register_closure (string_view name, int id,
                                  const ClosureParam *params,
                                  PrepareClosureFunc prepare,
-                                 SetupClosureFunc setup,
-                                 int alignment)
+                                 SetupClosureFunc setup)
 {
-    return m_impl->register_closure (name, id, params, prepare, setup, alignment);
+    return m_impl->register_closure (name, id, params, prepare, setup);
 }
 
 
@@ -970,8 +969,7 @@ void
 ShadingSystemImpl::register_closure (string_view name, int id,
                                      const ClosureParam *params,
                                      PrepareClosureFunc prepare,
-                                     SetupClosureFunc setup,
-                                     int alignment)
+                                     SetupClosureFunc setup)
 {
     for (int i = 0; params && params[i].type != TypeDesc(); ++i) {
         if (params[i].key == NULL && params[i].type.size() != (size_t)params[i].field_size) {
@@ -979,7 +977,7 @@ ShadingSystemImpl::register_closure (string_view name, int id,
             return;
         }
     }
-    m_closure_registry.register_closure(name, id, params, prepare, setup, alignment);
+    m_closure_registry.register_closure(name, id, params, prepare, setup);
 }
 
 
@@ -2975,8 +2973,7 @@ void
 ClosureRegistry::register_closure (string_view name, int id,
                                    const ClosureParam *params,
                                    PrepareClosureFunc prepare,
-                                   SetupClosureFunc setup,
-                                   int alignment)
+                                   SetupClosureFunc setup)
 {
     if (m_closure_table.size() <= (size_t)id)
         m_closure_table.resize(id + 1);
@@ -2991,16 +2988,22 @@ ClosureRegistry::register_closure (string_view name, int id,
         entry.params.push_back(params[i]);
         if (params[i].type == TypeDesc()) {
             entry.struct_size = params[i].offset;
+            /* CLOSURE_FINISH_PARAM stashes the real struct alignement here
+             * make sure that the closure struct doesn't want more alignment than ClosureComponent
+             * because we will be allocating the real struct inside it. */
+            ASSERT_MSG(params[i].field_size <= int(alignof(ClosureComponent)),
+                "Closure %s wants alignment of %d which is larger than that of ClosureComponent",
+                name.c_str(),
+                params[i].field_size);
             break;
         }
-        if (params[i].key == NULL)
+        if (params[i].key == nullptr)
             entry.nformal ++;
         else
             entry.nkeyword ++;
     }
     entry.prepare = prepare;
     entry.setup = setup;
-    entry.alignment = alignment;
     m_closure_name_to_id[ustring(name)] = id;
 }
 

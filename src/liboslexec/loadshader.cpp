@@ -566,6 +566,8 @@ OSOReaderToMaster::instruction_end ()
 ShaderMaster::ref
 ShadingSystemImpl::loadshader (string_view cname)
 {
+    if (Strutil::ends_with (cname, ".oso"))
+        cname.remove_suffix (4);   // strip superfluous .oso
     if (! cname.size()) {
         error ("Attempt to load shader with empty name \"\".");
         return NULL;

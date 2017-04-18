@@ -171,6 +171,10 @@ OSL_SHADEOP void osl_ ##opname## _w16fw16f (char *r, char *x) {               \
 implname impl;                                                      \
 impl (W16FLOAT(r), W16FLOAT(x));                                              \
 }                                                                       \
+OSL_SHADEOP void osl_ ##opname## _w16vw16vw16f (char *r, char *x, char *y) {     \
+    implname impl;                                                      \
+    impl (W16VEC(r), W16VEC(x), W16FLOAT(y)); 							\
+}	\
 \
 \
  

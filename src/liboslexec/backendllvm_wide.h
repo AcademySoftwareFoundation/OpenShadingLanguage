@@ -152,6 +152,8 @@ public:
         return llvm_load_value (sym, deriv, NULL, component, cast, op_is_uniform);
     }
     
+    void discoverVaryingAndMasking();
+    
     bool isSymbolUniform(const Symbol& sym);
     bool requiresMasking(int opIndex);
 
@@ -159,7 +161,7 @@ public:
     /// false, or a pointer to sym's values (if sym is an aggreate or
     /// derivs == true).  Furthermore, if deriv == true and sym doesn't
     /// have derivs, coerce it into a variable with zero derivs.
-    llvm::Value *llvm_load_arg (const Symbol& sym, bool derivs);
+    llvm::Value *llvm_load_arg (const Symbol& sym, bool derivs, bool is_uniform=true);
 
     /// Just like llvm_load_arg(sym,deriv), except use use sym's derivs
     /// as-is, no coercion.

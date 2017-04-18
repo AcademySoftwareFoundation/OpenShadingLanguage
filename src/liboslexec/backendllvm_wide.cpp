@@ -401,10 +401,11 @@ BackendLLVMWide::getLLVMSymbolBase (const Symbol &sym)
 }
 
 
-bool 
-BackendLLVMWide::isSymbolUniform(const Symbol& sym)
+void 
+BackendLLVMWide::discoverVaryingAndMasking()
 {
 	if (m_is_uniform_by_symbol.size() == 0) {
+		std::cout << "start discoverVaryingAndMasking" << std::endl;
 		
 		const OpcodeVec & opcodes = inst()->ops();
 		
@@ -432,6 +433,7 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
     	std::function<void(int, int, int, int, int, int)> discoverSymbolsBetween;
     	discoverSymbolsBetween = [&](int beginop, int endop, int blockDepth, int writeBlockDepth, int maskId, int writeMaskId)->void
 		{		
+    		std::cout << "discoverSymbolsBetween [" << beginop << "-" << endop <<"]" << std::endl;
     		// NOTE: allowing a seperate writeMask is to handle condition blocks that are self modifying
 			for(int opIndex = beginop; opIndex < endop; ++opIndex)
 			{
@@ -454,15 +456,12 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 						std::cout << " read from ";					
 					}
 					std::cout << " " << aSymbol->name();
-					
-					bool isUniform = true;
-					if (aSymbol->symtype() == SymTypeOutputParam) {
-						
-							//&& ! aSymbol->lockgeom() && ! aSymbol->typespec().is_closure()
-							//&& ! aSymbol->connected() && ! aSymbol->connected_down())
-						isUniform = false;
-					}
-					std::cout << " discovery " << aSymbol->name() << " initial isUniform=" << isUniform << std::endl;
+		
+					std::cout << " discovery " << aSymbol->name()  << std::endl;
+					// Initially let all symbols be uniform 
+					// so we get proper cascading of all dependencies
+					// when we feed forward from varying shader globals, output parameters, and connected parameters
+					constexpr bool isUniform = true;
 					m_is_uniform_by_symbol[aSymbol] = isUniform;
 				}
 				std::cout << std::endl;
@@ -644,6 +643,62 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 		};
     	
     	int mainMask = nextMaskId++;
+
+    	// NOTE:  The order symbols are discovered should match the flow
+    	// of build_llvm_code calls coming from build_llvm_instance 
+    	// And build_llvm_code is called indirectly throught llvm_assign_initial_value.
+    	
+    	// TODO: not sure the main scope should be at a deepr scoope than the init operations 
+    	// for symbols.  I think they should be fine
+    	for (auto&& s : inst()->symbols()) {    	
+            // Skip constants -- we always inline scalar constants, and for
+            // array constants we will just use the pointers to the copy of
+            // the constant that belongs to the instance.
+            if (s.symtype() == SymTypeConst)
+                continue;
+            // Skip structure placeholders
+            if (s.typespec().is_structure())
+                continue;
+            // Set initial value for constants, closures, and strings that are
+            // not parameters.
+            if (s.symtype() != SymTypeParam && s.symtype() != SymTypeOutputParam &&
+                s.symtype() != SymTypeGlobal &&
+                (s.is_constant() || s.typespec().is_closure_based() ||
+                 s.typespec().is_string_based() || 
+                 ((s.symtype() == SymTypeLocal || s.symtype() == SymTypeTemp)
+                  && shadingsys().debug_uninit())))
+            {
+                if (s.has_init_ops() && s.valuesource() == Symbol::DefaultVal) {
+                    // Handle init ops.
+                    discoverSymbolsBetween(s.initbegin(), s.initend(), 0, 0, mainMask, mainMask);
+                }
+            }
+        }
+    	
+        // make a second pass for the parameters (which may make use of
+        // locals and constants from the first pass)
+        FOREACH_PARAM (Symbol &s, inst()) {
+            // Skip structure placeholders
+            if (s.typespec().is_structure())
+                continue;
+            // Skip if it's never read and isn't connected
+            if (! s.everread() && ! s.connected_down() && ! s.connected()
+                  && ! s.renderer_output())
+                continue;
+            // Skip if it's an interpolated (userdata) parameter and we're
+            // initializing them lazily.
+            if (s.symtype() == SymTypeParam
+                    && ! s.lockgeom() && ! s.typespec().is_closure()
+                    && ! s.connected() && ! s.connected_down()
+                    && shadingsys().lazy_userdata())
+                continue;
+            // Set initial value for params (may contain init ops)
+            if (s.has_init_ops() && s.valuesource() == Symbol::DefaultVal) {
+                // Handle init ops.
+                discoverSymbolsBetween(s.initbegin(), s.initend(), 0, 0, mainMask, mainMask);
+            }
+        }    	
+    	
     	discoverSymbolsBetween(inst()->maincodebegin(), inst()->maincodeend(), 0, 0, mainMask, mainMask);
     	
 		std::cout << "About to build m_is_uniform_by_symbol" << std::endl;			
@@ -677,7 +732,7 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 					// TODO: perhaps the connected params do not necessarily
 					// need to be varying 
 					is_uniform = false;
-			}
+			} 
 			if (is_uniform == false) {
 				// So we have a symbol that is not uniform, so it will be a wide type
 				// Thus anyone who depends on it will need to be wide as well.
@@ -700,8 +755,14 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 			std::cout << "--->" << rSym << " " << rSym->name() << " is " << (is_uniform ? "UNIFORM" : "VARYING") << std::endl;			
 		}
 		std::cout << std::flush;		
+		std::cout << "done discoverVaryingAndMasking" << std::endl;
 	}
+}
 	
+bool 
+BackendLLVMWide::isSymbolUniform(const Symbol& sym)
+{
+	discoverVaryingAndMasking();
 	
 	auto iter = m_is_uniform_by_symbol.find(&sym);
 	if (iter == m_is_uniform_by_symbol.end()) 
@@ -726,6 +787,8 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 bool 
 BackendLLVMWide::requiresMasking(int opIndex)
 {
+	discoverVaryingAndMasking();
+	
 	ASSERT(m_requires_masking_by_op_index.empty() == false);
 	ASSERT(m_requires_masking_by_op_index.size() > opIndex);
 	return m_requires_masking_by_op_index[opIndex];
@@ -930,7 +993,7 @@ BackendLLVMWide::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
     // If it's multi-component (triple or matrix), step to the right field
     if (! type.is_closure_based() && t.aggregate > 1)
     {
-    	std::cout << "step to the right field" << std::endl;
+    	std::cout << "step to the right field " << component << std::endl;
         ptr = ll.GEP (ptr, 0, component);
     }
 
@@ -1080,13 +1143,12 @@ BackendLLVMWide::llvm_load_component_value (const Symbol& sym, int deriv,
 
 
 llvm::Value *
-BackendLLVMWide::llvm_load_arg (const Symbol& sym, bool derivs)
+BackendLLVMWide::llvm_load_arg (const Symbol& sym, bool derivs, bool is_uniform)
 {
     ASSERT (sym.typespec().is_floatbased());
     if (sym.typespec().is_int() ||
         (sym.typespec().is_float() && !derivs)) {
         // Scalar case
-    	bool is_uniform = isSymbolUniform(sym);
 
     	// If we are not uniform, then the argument should
     	// get passed as a pointer intstead of by value
@@ -1100,19 +1162,16 @@ BackendLLVMWide::llvm_load_arg (const Symbol& sym, bool derivs)
     if (derivs && !sym.has_derivs()) {
         // Manufacture-derivs case
         const TypeSpec &t = sym.typespec();
-		// TODO:  switching back to non-wide to figure out uniform vs. varying data
-        //bool temp_is_uniform = false;
-    	bool temp_is_uniform = isSymbolUniform(sym);
+    	
         // Copy the non-deriv values component by component
-        llvm::Value *tmpptr = llvm_alloca (t, true, temp_is_uniform);
+        llvm::Value *tmpptr = llvm_alloca (t, true, is_uniform);
         for (int c = 0;  c < t.aggregate();  ++c) {
-            llvm::Value *v = llvm_load_value (sym, 0, c);
+            llvm::Value *v = llvm_load_value (sym, 0, c, TypeDesc::UNKNOWN, is_uniform);
             llvm_store_value (v, tmpptr, t, 0, NULL, c);
         }
         // Zero out the deriv values
-		// TODO:  switching back to non-wide to figure out uniform vs. varying data
         llvm::Value *zero;
-        if (temp_is_uniform)
+        if (is_uniform)
             zero = ll.constant (0.0f);
         else
         	zero = ll.wide_constant (0.0f);

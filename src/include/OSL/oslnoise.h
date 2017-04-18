@@ -398,6 +398,25 @@ struct CellNoise {
         hash3<5> (result, iv);
     }
 
+	template<int WidthT>
+    inline void operator() (Wide<Vec3, WidthT> &wresult, const Wide<Vec3, WidthT> &wp, Wide<float, WidthT> wt) const {
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			//OSL_INTEL_PRAGMA("ivdep")
+			//OSL_INTEL_PRAGMA("vector always assert")
+			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
+			//OSL_INTEL_PRAGMA("novector")
+			for(int i=0; i< WidthT; ++i) {
+				const Vec3 p = wp.get(i);
+				const float t = wt.get(i);
+				Vec3 result;
+				this->operator()(result, p, t);		        
+				wresult.set(i, result); 
+			}
+		}
+        
+    }
+    
 private:
     template <int N>
     inline void hash1 (float &result, const unsigned int k[N]) const {
@@ -1729,6 +1748,43 @@ inline void perlin (Vec3 &result, const H &hash,
 }
 
 
+template <typename H>
+inline void perlin_scalar (Vec3 &result, const H &hash,
+                    const float &x, const float &y, const float &z, const float &w)
+{
+    int X; float fx = floorfrac(x, &X);
+    int Y; float fy = floorfrac(y, &Y);
+    int Z; float fz = floorfrac(z, &Z);
+    int W; float fw = floorfrac(w, &W);
+
+    float u = fade(fx);
+    float v = fade(fy);
+    float t = fade(fz);
+    float s = fade(fw);
+
+    result = OIIO::lerp (
+               OIIO::trilerp (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
+                              grad (hash (X+1, Y  , Z  , W  ), fx-1.0f, fy     , fz     , fw     ),
+                              grad (hash (X  , Y+1, Z  , W  ), fx     , fy-1.0f, fz     , fw     ),
+                              grad (hash (X+1, Y+1, Z  , W  ), fx-1.0f, fy-1.0f, fz     , fw     ),
+                              grad (hash (X  , Y  , Z+1, W  ), fx     , fy     , fz-1.0f, fw     ),
+                              grad (hash (X+1, Y  , Z+1, W  ), fx-1.0f, fy     , fz-1.0f, fw     ),
+                              grad (hash (X  , Y+1, Z+1, W  ), fx     , fy-1.0f, fz-1.0f, fw     ),
+                              grad (hash (X+1, Y+1, Z+1, W  ), fx-1.0f, fy-1.0f, fz-1.0f, fw     ),
+                              u, v, t),
+               OIIO::trilerp (grad (hash (X  , Y  , Z  , W+1), fx     , fy     , fz     , fw-1.0f),
+                              grad (hash (X+1, Y  , Z  , W+1), fx-1.0f, fy     , fz     , fw-1.0f),
+                              grad (hash (X  , Y+1, Z  , W+1), fx     , fy-1.0f, fz     , fw-1.0f),
+                              grad (hash (X+1, Y+1, Z  , W+1), fx-1.0f, fy-1.0f, fz     , fw-1.0f),
+                              grad (hash (X  , Y  , Z+1, W+1), fx     , fy     , fz-1.0f, fw-1.0f),
+                              grad (hash (X+1, Y  , Z+1, W+1), fx-1.0f, fy     , fz-1.0f, fw-1.0f),
+                              grad (hash (X  , Y+1, Z+1, W+1), fx     , fy-1.0f, fz-1.0f, fw-1.0f),
+                              grad (hash (X+1, Y+1, Z+1, W+1), fx-1.0f, fy-1.0f, fz-1.0f, fw-1.0f),
+                              u, v, t),
+               s);
+    result = scale4 (result);
+}
+
 
 template <typename H>
 inline void perlin (Vec3 &result, const H &hash,
@@ -2184,6 +2240,26 @@ struct Noise {
         result = 0.5f * (result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
+	template<int WidthT>
+    inline void operator() (Wide<Vec3, WidthT>  &result, const Wide<Vec3, WidthT> &wp, Wide<float, WidthT> & wt) const {
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			//OSL_INTEL_PRAGMA("ivdep")
+			//OSL_INTEL_PRAGMA("vector always assert")
+			OSL_INTEL_PRAGMA("simd assert")
+			//OSL_INTEL_PRAGMA("novector") 
+			for(int i=0; i< WidthT; ++i) {
+				Vec3 p = wp.get(i);
+				float t = wt.get(i);
+		        Vec3 perlinResult;
+		        HashVector h;
+		        perlin_scalar(perlinResult, h, p.x, p.y, p.z, t);
+		        Vec3 scaledResult =  0.5f * (perlinResult + Vec3(1.0f, 1.0f, 1.0f));
+				result.set(i, scaledResult); 
+			}
+		}
+	}
+    
     // dual versions
 
     inline void operator() (Dual2<float> &result, const Dual2<float> &x) const {
@@ -2362,6 +2438,27 @@ struct SNoise {
         perlin(result, h, p.x, p.y, p.z, t);
     }
 
+    template<int WidthT>
+	inline void operator() (Wide<Vec3, WidthT> &result, const Wide<Vec3, WidthT> &wp, Wide<float, WidthT> &wt) const {
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			//OSL_INTEL_PRAGMA("ivdep")
+			//OSL_INTEL_PRAGMA("vector always assert")
+			OSL_INTEL_PRAGMA("simd assert")
+			//OSL_INTEL_PRAGMA("novector")
+			for(int i=0; i< WidthT; ++i) {
+				Vec3 p = wp.get(i);
+				float t = wt.get(i);
+				Vec3 perlinResult;
+				
+		        HashVector h;
+		        perlin_scalar(perlinResult, h, p.x, p.y, p.z, t);
+		        
+				result.set(i, perlinResult); 
+			}
+		}
+	}
+    
 
     // dual versions
 
@@ -2985,6 +3082,11 @@ struct SimplexNoise {
         result[2] = simplexnoise4 (p.x, p.y, p.z, t, 2);
     }
 
+	template<int WidthT>
+    inline void operator() (Wide<Vec3, WidthT> &wresult, const Wide<Vec3, WidthT> &wp, const Wide<float, WidthT> & t) const {
+    	ASSERT(0 && "unimplemented fast::simplexnoise4 ");
+    }
+    
 
     // dual versions
 
@@ -3180,6 +3282,11 @@ struct USimplexNoise {
         result[2] = 0.5f * (simplexnoise4 (p.x, p.y, p.z, t, 2) + 1.0f);
     }
 
+	template<int WidthT>
+    inline void operator() (Wide<Vec3, WidthT> &wresult, const Wide<Vec3, WidthT> &wp, const Wide<float, WidthT> & t) const {
+    	ASSERT(0 && "unimplemented fast::simplexnoise4 ");
+    }
+    
     // dual versions
 
     inline void operator() (Dual2<float> &result, const Dual2<float> &x,

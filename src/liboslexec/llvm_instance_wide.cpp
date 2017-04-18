@@ -670,6 +670,8 @@ BackendLLVMWide::llvm_generate_debug_op_printf (const Opcode &op)
 bool
 BackendLLVMWide::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
 {
+	discoverVaryingAndMasking();
+	
     std::cout << "build_llvm_code : beginop="<< beginop << " endop="<< endop << " bb=" << bb << std::endl;
     if (bb)
         ll.set_insert_point (bb);
@@ -919,6 +921,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
             }
         }
     }
+	
     // make a second pass for the parameters (which may make use of
     // locals and constants from the first pass)
     FOREACH_PARAM (Symbol &s, inst()) {

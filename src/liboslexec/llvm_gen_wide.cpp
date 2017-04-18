@@ -1236,6 +1236,11 @@ LLVMGEN (llvm_gen_compassign)
     Symbol& Index = *rop.opargsym (op, 1);
     Symbol& Val = *rop.opargsym (op, 2);
 
+    // TODO:  Technically the index could be varying as well
+    // Lets see if that is true in the wild before getting complicated
+    ASSERT(rop.isSymbolUniform(Index));
+    bool op_is_uniform = rop.isSymbolUniform(Result) && rop.isSymbolUniform(Val);
+    
     llvm::Value *c = rop.llvm_load_value(Index);
     if (rop.shadingsys().range_checking()) {
         if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
@@ -1254,7 +1259,7 @@ LLVMGEN (llvm_gen_compassign)
     }
 
     for (int d = 0;  d < 3;  ++d) {  // deriv
-        llvm::Value *val = rop.llvm_load_value (Val, d, 0, TypeDesc::TypeFloat);
+        llvm::Value *val = rop.llvm_load_value (Val, d, 0, TypeDesc::TypeFloat, op_is_uniform);
         if (Index.is_constant()) {
             int i = *(int*)Index.data();
             i = Imath::clamp (i, 0, 2);
@@ -1532,6 +1537,25 @@ LLVMGEN (llvm_gen_construct_triple)
             Y.typespec().is_float() && Z.typespec().is_float() &&
             (using_space == false || Space.typespec().is_string()));
     
+#if 0
+    bool spaceIsUniform = rop.isSymbolUniform(Space);
+    bool xIsUniform = rop.isSymbolUniform(X);
+    bool yIsUniform = rop.isSymbolUniform(Y);
+    bool zIsUniform = rop.isSymbolUniform(Z);
+    std::cout << "llvm_gen_construct_triple Result=" << Result.name().c_str();
+    if (using_space) {
+    	    std::cout << " Space=" << Space.name().c_str() << ((spaceIsUniform) ? "(uniform)" : "(varying)");
+    }
+    std::cout << " X=" << X.name().c_str() << ((xIsUniform) ? "(uniform)" : "(varying)")  			  
+			  << " Y=" << Y.name().c_str()<< ((yIsUniform) ? "(uniform)" : "(varying)")
+			  << " Z=" << Z.name().c_str()<< ((zIsUniform) ? "(uniform)" : "(varying)")
+    		  << std::endl; 
+#endif
+    
+    bool op_is_uniform = rop.isSymbolUniform(X) && rop.isSymbolUniform(Y) && rop.isSymbolUniform(Z);
+    ASSERT(rop.isSymbolUniform(Result) == op_is_uniform);
+    ASSERT(!using_space || rop.isSymbolUniform(Space));
+    
     
 //    Symbol *s (rop.opargsym (op, i));
 //    if(rop.isSymbolUniform(*s) == false) {
@@ -1544,7 +1568,8 @@ LLVMGEN (llvm_gen_construct_triple)
     for (int d = 0;  d < dmax;  ++d) {  // loop over derivs
         for (int c = 0;  c < 3;  ++c) {  // loop over components
             const Symbol& comp = *rop.opargsym (op, c+1+using_space);
-            llvm::Value* val = rop.llvm_load_value (comp, d, NULL, 0, TypeDesc::TypeFloat);
+            llvm::Value* val = rop.llvm_load_value (comp, d, NULL, 0, TypeDesc::TypeFloat, op_is_uniform);
+            
             rop.llvm_store_value (val, Result, d, NULL, c);
         }
     }
@@ -3085,25 +3110,25 @@ LLVMGEN (llvm_gen_noise)
     // Always pass result as we can't return a wide type through C ABI
     //if (outdim == 3 || derivs) {
         if (derivs && !Result.has_derivs()) {
-            tmpresult = rop.llvm_load_arg (Result, true);
+            tmpresult = rop.llvm_load_arg (Result, true, op_is_uniform);
             args.push_back (tmpresult);
         }
         else
             args.push_back (rop.llvm_void_ptr (Result));
     //}
     funcname += warg_typecode(S, derivs);
-    args.push_back (rop.llvm_load_arg (*S, derivs));
+    args.push_back (rop.llvm_load_arg (*S, derivs, op_is_uniform));
     if (T) {
         funcname += warg_typecode(T, derivs);
-        args.push_back (rop.llvm_load_arg (*T, derivs));
+        args.push_back (rop.llvm_load_arg (*T, derivs, op_is_uniform));
     }
 
     if (periodic) {
         funcname += warg_typecode (Sper, false /* no derivs */);
-        args.push_back (rop.llvm_load_arg (*Sper, false));
+        args.push_back (rop.llvm_load_arg (*Sper, false, op_is_uniform));
         if (Tper) {
             funcname += warg_typecode (Tper, false /* no derivs */);
-            args.push_back (rop.llvm_load_arg (*Tper, false));
+            args.push_back (rop.llvm_load_arg (*Tper, false, op_is_uniform));
         }
     }
 

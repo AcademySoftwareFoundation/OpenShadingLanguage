@@ -52,6 +52,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #  error "This version of OSL requires C++11"
 #endif
 
+// Boost v1.61 uses std::mutex instead of boost::mutex
+// This forces the use of boost::mutex which compiles
+#define BOOST_NO_CXX11_HDR_MUTEX 1
+
 // Symbol export defines
 #include "export.h"
 

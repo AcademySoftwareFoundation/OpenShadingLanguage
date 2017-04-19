@@ -15,7 +15,7 @@ cmake_minimum_required (VERSION 3.0)
 cmake_policy (SET CMP0017 NEW)
 cmake_policy (SET CMP0025 NEW)  # Detect AppleClang for new CMake
 if (NOT CMAKE_VERSION VERSION_LESS 3.2.2)
-    cmake_policy (SET CMP0042 OLD)
+    # cmake_policy (SET CMP0042 OLD)
     cmake_policy (SET CMP0046 OLD)
 endif ()
 set (CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)

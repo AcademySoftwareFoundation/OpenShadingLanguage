@@ -79,8 +79,9 @@ script:
     - make VERBOSE=1 $BUILD_FLAGS cmakesetup
     - make -j2 $BUILD_FLAGS
     - export OSLHOME=$PWD/dist/$PLATFORM
-    - export DYLD_LIBRARY_PATH=$OSLHOME/lib:$DYLD_LIBRARY_PATH 
+    - export DYLD_LIBRARY_PATH=$OSLHOME/lib:$DYLD_LIBRARY_PATH
     - export LD_LIBRARY_PATH=$OSLHOME/lib:$LD_LIBRARY_PATH
+    - export OIIO_LIBRARY_PATH=$OSLHOME/lib:${OIIO_LIBRARY_PATH}
     - export PYTHONPATH=$OSLHOME/python:$OPENIMAGEIOHOME/python:$PYTHONPATH
     - make $BUILD_FLAGS test
 

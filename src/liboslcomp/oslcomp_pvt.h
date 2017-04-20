@@ -350,6 +350,13 @@ public:
 
     bool debug () const { return m_debug; }
 
+    /// As the compiler generates function declarations, we need to remember
+    /// them (with ref-counted pointers). They'll get freed automatically
+    /// when the compiler destructs.
+    void remember_function_decl (ASTfunction_declaration *f) {
+        m_func_decls.emplace_back (f);
+    }
+
 private:
     void initialize_globals ();
     void initialize_builtin_funcs ();
@@ -427,6 +434,7 @@ private:
     ErrorHandler *m_errhandler; ///< Error handler
     mutable bool m_err;       ///< Has an error occurred?
     SymbolTable m_symtab;     ///< Symbol table
+    std::vector<ASTNode::ref> m_func_decls; ///< Ref-counted function decls
     TypeSpec m_current_typespec;  ///< Currently-declared type
     bool m_current_output;        ///< Currently-declared output status
     bool m_verbose;           ///< Verbose mode

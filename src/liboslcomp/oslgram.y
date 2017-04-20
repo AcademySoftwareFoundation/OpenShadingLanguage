@@ -195,6 +195,7 @@ shader_or_function_declaration
                                                          typespec_stack.top(),
                                                          ustring($2), $7 /*formals*/,
                                                          $11 /*statements*/);
+                        oslcompiler->remember_function_decl (f);
                         f->add_meta (concat($4, $10));
                         $$ = f;
                         $$->sourceline (@2.first_line);
@@ -332,6 +333,7 @@ function_declaration
                     f = new ASTfunction_declaration (oslcompiler,
                                                      typespec_stack.top(),
                                                      ustring($2), $5, $8, NULL);
+                    oslcompiler->remember_function_decl (f);
                     f->add_meta ($7);
                     $$ = f;
                     typespec_stack.pop ();

@@ -92,7 +92,7 @@ public:
     ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
              ASTNode *a, ASTNode *b, ASTNode *c, ASTNode *d);
 
-    virtual ~ASTNode () { }
+    virtual ~ASTNode ();
 
     /// Print a text description of this node (and its children) to the
     /// console, for debugging.
@@ -400,7 +400,7 @@ public:
     FunctionSymbol *func () const { return (FunctionSymbol *)m_sym; }
 
     bool is_builtin () const { return m_is_builtin; }
-    void add_meta (ASTNode *meta);
+    void add_meta (ref meta);
 
 private:
     ustring m_name;
@@ -426,7 +426,7 @@ public:
     ref init () const { return child (0); }
     ref meta () const { return child (1); }
 
-    void add_meta (ASTNode *meta) {
+    void add_meta (ref meta) {
         while (nchildren() < 2)
             addchild (NULL);
         m_children[1] = meta;  // beware changing the order!

@@ -29,6 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <string>
 #include <sstream>
+#include <functional>
 
 #include "osl_pvt.h"
 #include "oslcomp_pvt.h"
@@ -36,6 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/dassert.h>
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/strutil.h>
+#include <OpenImageIO/atomic.h>
 namespace Strutil = OIIO::Strutil;
 
 OSL_NAMESPACE_ENTER
@@ -43,11 +45,43 @@ OSL_NAMESPACE_ENTER
 namespace pvt {   // OSL::pvt
 
 
+#ifndef NDEBUG
+// When in DEBUG mode, track the number of AST nodes of each type that
+// are allocated and remaining, and at program exit print a message about
+// any leaked nodes.
+namespace {
+std::atomic<int> node_counts[ASTNode::_last_node];
+std::atomic<int> node_counts_peak[ASTNode::_last_node];
+
+class ScopeExit {
+public:
+    typedef std::function<void()> Task;
+    explicit ScopeExit (Task&& task) : m_task(std::forward<Task>(task)) {}
+    ~ScopeExit () { m_task(); }
+private:
+    Task m_task;
+};
+
+ScopeExit print_node_counts ([](){
+    for (int i = 0; i < ASTNode::_last_node; ++i)
+        if (node_counts[i] > 0)
+            Strutil::printf ("ASTNode type %2d: %5d   (peak %5d)\n",
+                             i, node_counts[i], node_counts_peak[i]);
+});
+}
+#endif
+
+
+
 ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler) 
     : m_nodetype(nodetype), m_compiler(compiler),
       m_sourcefile(compiler->filename()),
       m_sourceline(compiler->lineno()), m_op(0), m_is_lvalue(false)
 {
+#ifndef NDEBUG
+    node_counts[nodetype] += 1;
+    node_counts_peak[nodetype] += 1;
+#endif
 }
 
 
@@ -59,6 +93,10 @@ ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
       m_sourceline(compiler->lineno()), m_op(op), m_is_lvalue(false)
 {
     addchild (a);
+#ifndef NDEBUG
+    node_counts[nodetype] += 1;
+    node_counts_peak[nodetype] += 1;
+#endif
 }
 
 
@@ -68,6 +106,10 @@ ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op)
       m_sourcefile(compiler->filename()),
       m_sourceline(compiler->lineno()), m_op(op), m_is_lvalue(false)
 {
+#ifndef NDEBUG
+    node_counts[nodetype] += 1;
+    node_counts_peak[nodetype] += 1;
+#endif
 }
 
 
@@ -80,6 +122,10 @@ ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
 {
     addchild (a);
     addchild (b);
+#ifndef NDEBUG
+    node_counts[nodetype] += 1;
+    node_counts_peak[nodetype] += 1;
+#endif
 }
 
 
@@ -93,6 +139,10 @@ ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
     addchild (a);
     addchild (b);
     addchild (c);
+#ifndef NDEBUG
+    node_counts[nodetype] += 1;
+    node_counts_peak[nodetype] += 1;
+#endif
 }
 
 
@@ -107,6 +157,19 @@ ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
     addchild (b);
     addchild (c);
     addchild (d);
+#ifndef NDEBUG
+    node_counts[nodetype] += 1;
+    node_counts_peak[nodetype] += 1;
+#endif
+}
+
+
+
+ASTNode::~ASTNode ()
+{
+#ifndef NDEBUG
+    node_counts[nodetype()] -= 1;
+#endif
 }
 
 
@@ -280,9 +343,9 @@ ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
 
 
 void
-ASTfunction_declaration::add_meta (ASTNode *meta)
+ASTfunction_declaration::add_meta (ref metaref)
 {
-    for (  ;  meta;  meta = meta->nextptr()) {
+    for (ASTNode *meta = metaref.get();  meta;  meta = meta->nextptr()) {
         ASSERT (meta->nodetype() == ASTNode::variable_declaration_node);
         const ASTvariable_declaration *metavar = static_cast<const ASTvariable_declaration *>(meta);
         Symbol *metasym = metavar->sym();

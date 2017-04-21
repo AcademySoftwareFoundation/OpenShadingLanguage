@@ -1,17 +1,13 @@
 
 ## Description
 
-<!--
-Please provide a description of what this PR is meant to fix,
-and how it works (if it's not going to be very clear from the code).
--->
+<!-- Please provide a description of what this PR is meant to fix, and  -->
+<!-- how it works (if it's not going to be very clear from the code).   -->
 
 ## Tests
 
-<!--
-Did you / should you add a testsuite case (new test, or add to an existing
-test) to verify that this works?
--->
+<!-- Did you / should you add a testsuite case (new test, or add to an  -->
+<!-- existing test) to verify that this works?                          -->
 
 
 ## Checklist:

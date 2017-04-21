@@ -93,6 +93,7 @@ static std::string raytype = "camera";
 static int raytype_bit = 0;
 static bool raytype_opt = false;
 static std::string extraoptions;
+static std::string texoptions;
 static SimpleRenderer rend;  // RendererServices
 static OSL::Matrix44 Mshad;  // "shader" space to "common" space matrix
 static OSL::Matrix44 Mobj;   // "object" space to "common" space matrix
@@ -445,6 +446,7 @@ getargs (int argc, const char *argv[])
                 "-g %d %d", &xres, &yres, "Make an X x Y grid of shading points",
                 "-res %d %d", &xres, &yres, "", // synonym for -g
                 "--options %s", &extraoptions, "Set extra OSL options",
+                "--texoptions %s", &texoptions, "Set extra TextureSystem options",
                 "-o %L %L", &outputvars, &outputfiles,
                         "Output (variable, filename)",
                 "-od %s", &dataformatname, "Set the output data format to one of: "
@@ -646,6 +648,8 @@ setup_output_images (ShadingSystem *shadingsys,
 
     if (extraoptions.size())
         shadingsys->attribute ("options", extraoptions);
+    if (texoptions.size())
+        shadingsys->texturesys()->attribute ("options", texoptions);
 
     ShadingContext *ctx = shadingsys->get_context ();
     // Because we can only call find_symbol or get_symbol on something that

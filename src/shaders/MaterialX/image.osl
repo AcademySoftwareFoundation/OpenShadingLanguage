@@ -1,0 +1,91 @@
+/////////////////////////////////////////////////////////////////////////////
+// Copyright (c) 2016 Sony Pictures Imageworks Inc., et al.
+// All Rights Reserved.
+// BSD 3-clause license:
+// https://github.com/imageworks/OpenShadingLanguage/License.md
+/////////////////////////////////////////////////////////////////////////////
+
+
+#include "oslutil.h"
+
+
+
+vector2 rotate2d (vector2 st, float rotate, vector2 offset, vector2 scale)
+{
+    float s = st.x - 0.5;
+    float t = st.y - 0.5;
+    float sintheta, costheta;
+    sincos (radians(rotate), sintheta, costheta);
+    vector2 r;
+    r.x = (s * costheta - t * sintheta + 0.5 + offset.x) * scale.x;
+    r.y = (t * costheta + t * costheta + 0.5 + offset.y) * scale.y;
+    return r;
+}
+
+
+
+shader
+image
+    [[ string help = "Texture lookup" ]]
+(
+    string file = ""
+        [[  string help = "Texture filename",
+            string widget = "filename" ]],
+    string layer = ""
+        [[  string help = "Layer/subimage name within the texture (optional)" ]],
+    color defaultvalue = 0
+        [[  string help = "Default value if no texture is specified"  ]],
+    // MaterialX calls swrap & twrap, uaddressmode and vaddressmode
+    string swrap = "periodic"
+        [[  string help = "Wrap mode for the s direction",
+            string widget = "popup",
+            string options = "black|clamp|periodic|mirror" ]],
+    string twrap = "periodic"
+        [[  string help = "Wrap mode for the t direction",
+            string widget = "popup",
+            string options = "black|clamp|periodic|mirror" ]],
+    int uvset = 0
+        [[  string help = "Index of the UV set to use"  ]],
+    vector2 uvscale = { 1, 1 }
+        [[  string help = "Scaling factor about the (0,0) corner" ]],
+    float uvrotate = 0
+        [[  string help = "Rotation in degrees about the center" ]],
+    vector2 uvoffset = { 0, 0 }
+        [[  string help = "Offset applied to the texture coordinates"  ]],
+
+    float s = u
+        [[  string help = "s coordinate for the lookup",
+            int lockgeom = 0  ]],
+    float t = v
+        [[  string help = "t coordinate for the lookup",
+            int lockgeom = 0  ]],
+
+    float  sblur = 0
+        [[  string help = "Blur in the s direction",
+            float min = 0, float max = 1 ]],
+    float  tblur = 0
+        [[  string help = "Blur in the t direction",
+            float min = 0, float max = 1 ]],
+    float  swidth = 0
+        [[  string help = "Filter footprint scale in the s direction",
+            float min = 0, float max = 1 ]],
+    float  twidth = 0
+        [[  string help = "Filter footprint scale in the t direction",
+            float min = 0, float max = 1 ]],
+
+    output color Cout = 0
+        [[  string help = "Output color" ]]
+  )
+{
+    float theta = radians (uvrotate);
+    float sintheta, costheta;
+    sincos (theta, sintheta, costheta);
+    float ss = (s * costheta - t * sintheta + uvoffset.x) * uvscale.x;
+    float tt = (t * costheta + t * costheta + uvoffset.y) * uvscale.y;
+
+    Cout = texture (file, s, t,
+                    "sblur", sblur, "tblur", tblur,
+                    "swidth", swidth, "twidth", twidth,
+                    "swrap", swrap, "twrap", twrap
+                    );
+}

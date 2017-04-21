@@ -1,0 +1,60 @@
+/////////////////////////////////////////////////////////////////////////////
+// Copyright (c) 2016 Sony Pictures Imageworks Inc., et al.
+// All Rights Reserved.
+// BSD 3-clause license:
+// https://github.com/imageworks/OpenShadingLanguage/License.md
+/////////////////////////////////////////////////////////////////////////////
+
+
+#include "oslutil.h"
+
+
+
+shader
+mx_noise3d
+    [[ string help = "3D noise"  ]]
+  (
+    point position = transform ("common", "object", P)
+        [[  string help = "input coordinate position (default: object space P)",
+            int lockgeom = 0 ]],
+
+    float scale = 1
+        [[  string help = "scaling factor for the noise function coordinate"  ]],
+    float amplitude = 1
+        [[  string help = "center-to-peak amplitude of the noise" ]],
+    float pivot = 0
+        [[  string help = "the center value of the output noise" ]],
+    string noisetype = "snoise"
+        [[  string help = "type of noise" ]],
+
+    int outdim = 3
+        [[  string help = "dimensions of output (1-4)",
+            int min = 1, int max = 3 ]],
+    output color Cout = 0
+        [[  string help = "color output (if outdim > 1)"  ]],
+    output float fout = 0
+        [[  string help = "float output (if outdim == 1)"  ]]
+  )
+{
+#if 1
+    if (outdim == 1) {
+        float fnoise = (float) noise (noisetype, position*scale);
+        fout = pivot + amplitude * fnoise;
+    } else {
+        color cnoise = (color) noise (noisetype, position*scale);
+        Cout = pivot + amplitude * cnoise;
+        fout = Cout[0];
+    }
+
+#else
+    // Alternate formulation: compute both 1D and 3D noise. OSL will
+    // optimize away all the computations leading to any output that isn't
+    // connected to anything downstream in the shader network.
+
+    float fnoise = (float) noise (noisetype, position*scale);
+    fout = pivot + amplitude * fnoise;
+
+    color cnoise = (color) noise (noisetype, position*scale);
+    Cout = pivot + amplitude * cnoise;
+#endif
+}

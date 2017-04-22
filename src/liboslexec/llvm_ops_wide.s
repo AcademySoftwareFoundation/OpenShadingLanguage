@@ -7926,25 +7926,24 @@ define void @osl_pow_vvf(i8* nocapture, i8* nocapture readonly, float) local_unn
   ret void
 }
 
-
-define void @osl_pow_w16vw16vw16f(i8* nocapture %r, i8* nocapture readonly %base, <16 x float> %exp) alwaysinline  #3 {
-  %base_ptr = bitcast i8* %base to %"Wide_Vec3_16"*
-  %x_ptr = getelementptr inbounds %"Wide_Vec3_16", %"Wide_Vec3_16"* %base_ptr, i32 0, i32 0
-  %y_ptr = getelementptr inbounds %"Wide_Vec3_16", %"Wide_Vec3_16"* %base_ptr, i32 0, i32 1
-  %z_ptr = getelementptr inbounds %"Wide_Vec3_16", %"Wide_Vec3_16"* %base_ptr, i32 0, i32 2
-  %x = load <16 x float>, <16 x float>* %x_ptr, align 64
-  %y = load <16 x float>, <16 x float>* %y_ptr, align 64
-  %z = load <16 x float>, <16 x float>* %z_ptr, align 64  
+define void @osl_pow_w16vw16vw16f(i8* sret %r_ptr, i8* readonly %base_ptr, <16 x float> %exp) alwaysinline  {
+  %bs_ptr = bitcast i8* %base_ptr to %"WideVec3"*
+  %b_x = getelementptr inbounds %"WideVec3", %"WideVec3"* %bs_ptr, i32 0, i32 0, i32 0
+  %b_y = getelementptr inbounds %"WideVec3", %"WideVec3"* %bs_ptr, i32 0, i32 0, i32 1
+  %b_z = getelementptr inbounds %"WideVec3", %"WideVec3"* %bs_ptr, i32 0, i32 0, i32 2
+  %x = load <16 x float>, <16 x float>* %b_x, align 64
+  %y = load <16 x float>, <16 x float>* %b_y, align 64
+  %z = load <16 x float>, <16 x float>* %b_z, align 64  
   %pow_x = call <16 x float> @llvm.pow.v16f32(<16 x float> %x, <16 x float> %exp)
   %pow_y = call <16 x float> @llvm.pow.v16f32(<16 x float> %y, <16 x float> %exp)
   %pow_z = call <16 x float> @llvm.pow.v16f32(<16 x float> %z, <16 x float> %exp)
-  %result_ptr = bitcast i8* %r to %"Wide_Vec3_16"*
-  %rx = getelementptr inbounds %"Wide_Vec3_16", %"Wide_Vec3_16"* %result_ptr, i32 0, i32 0
-  %ry = getelementptr inbounds %"Wide_Vec3_16", %"Wide_Vec3_16"* %result_ptr, i32 0, i32 1
-  %rz = getelementptr inbounds %"Wide_Vec3_16", %"Wide_Vec3_16"* %result_ptr, i32 0, i32 2
-  store <16 x float> %pow_x, <16 x float>* %rx     
-  store <16 x float> %pow_y, <16 x float>* %ry     
-  store <16 x float> %pow_z, <16 x float>* %rz     
+  %rs_ptr = bitcast i8* %r_ptr to %"WideVec3"*
+  %r_x = getelementptr inbounds %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 0
+  %r_y = getelementptr inbounds %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 1
+  %r_z = getelementptr inbounds %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 2
+  store <16 x float> %pow_x, <16 x float>* %r_x     
+  store <16 x float> %pow_y, <16 x float>* %r_y     
+  store <16 x float> %pow_z, <16 x float>* %r_z     
   ret void
 }
 
@@ -9376,24 +9375,24 @@ define void @osl_sign_vv(i8* nocapture, i8* nocapture readonly) local_unnamed_ad
 
 declare <16 x float> @llvm.copysign.v16f32(<16 x float>, <16 x float>)
 
-define void @osl_sign_w16vw16v(i8* nocapture %r, i8* nocapture readonly %p) alwaysinline {
-  %p_ptr = bitcast i8* %p to %"Wide_Vec3_16"*
-  %x_ptr = getelementptr inbounds %"Wide_Vec3_16", %"Wide_Vec3_16"* %p_ptr, i32 0, i32 0
-  %y_ptr = getelementptr inbounds %"Wide_Vec3_16", %"Wide_Vec3_16"* %p_ptr, i32 0, i32 1
-  %z_ptr = getelementptr inbounds %"Wide_Vec3_16", %"Wide_Vec3_16"* %p_ptr, i32 0, i32 2
-  %x = load <16 x float>, <16 x float>* %x_ptr, align 64
-  %y = load <16 x float>, <16 x float>* %y_ptr, align 64
-  %z = load <16 x float>, <16 x float>* %z_ptr, align 64 
+define void @osl_sign_w16vw16v(i8* sret %r_ptr, i8* readonly %p_ptr) alwaysinline {
+  %ps_ptr = bitcast i8* %p_ptr to %"WideVec3"*
+  %p_x = getelementptr inbounds %"WideVec3", %"WideVec3"* %ps_ptr, i32 0, i32 0, i32 0
+  %p_y = getelementptr inbounds %"WideVec3", %"WideVec3"* %ps_ptr, i32 0, i32 0, i32 1
+  %p_z = getelementptr inbounds %"WideVec3", %"WideVec3"* %ps_ptr, i32 0, i32 0, i32 2
+  %x = load <16 x float>, <16 x float>* %p_x, align 64
+  %y = load <16 x float>, <16 x float>* %p_y, align 64
+  %z = load <16 x float>, <16 x float>* %p_z, align 64 
   %sign_of_x = tail call <16 x float> @llvm.copysign.v16f32(<16 x float><float 1.000000e+00, float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00>, <16 x float> %x)
   %sign_of_y = tail call <16 x float> @llvm.copysign.v16f32(<16 x float><float 1.000000e+00, float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00>, <16 x float> %y)
   %sign_of_z = tail call <16 x float> @llvm.copysign.v16f32(<16 x float><float 1.000000e+00, float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00>, <16 x float> %z)
-  %result_ptr = bitcast i8* %r to %"Wide_Vec3_16"*
-  %rx = getelementptr inbounds %"Wide_Vec3_16", %"Wide_Vec3_16"* %result_ptr, i32 0, i32 0
-  %ry = getelementptr inbounds %"Wide_Vec3_16", %"Wide_Vec3_16"* %result_ptr, i32 0, i32 1
-  %rz = getelementptr inbounds %"Wide_Vec3_16", %"Wide_Vec3_16"* %result_ptr, i32 0, i32 2
-  store <16 x float> %sign_of_x, <16 x float>* %rx     
-  store <16 x float> %sign_of_y, <16 x float>* %ry     
-  store <16 x float> %sign_of_z, <16 x float>* %rz     
+  %rs_ptr = bitcast i8* %r_ptr to %"WideVec3"*
+  %r_x = getelementptr inbounds %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 0
+  %r_y = getelementptr inbounds %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 1
+  %r_z = getelementptr inbounds %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 2
+  store <16 x float> %sign_of_x, <16 x float>* %r_x     
+  store <16 x float> %sign_of_y, <16 x float>* %r_y     
+  store <16 x float> %sign_of_z, <16 x float>* %r_z     
   ret void
 }
 

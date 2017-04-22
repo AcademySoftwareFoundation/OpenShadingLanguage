@@ -1873,6 +1873,26 @@ LLVM_Util::call_function (llvm::Value *func, llvm::Value **args, int nargs)
 
 
 
+void
+LLVM_Util::mark_structure_return_value(llvm::Value *funccall)
+{
+    llvm::CallInst* call = llvm::cast<llvm::CallInst>(funccall);
+    
+    auto attrs = llvm::AttributeSet::get(
+    		call->getContext(),
+        llvm::AttributeSet::FunctionIndex,
+        llvm::Attribute::NoUnwind);
+
+    //attrs = attrs.addAttribute(call->getContext(), 1, llvm::Attribute::NoAlias);
+
+    attrs = attrs.addAttribute(call->getContext(), 1,
+                               llvm::Attribute::StructRet);
+
+    call->setAttributes(attrs);
+}
+
+
+
 llvm::Value *
 LLVM_Util::call_function (const char *name, llvm::Value **args, int nargs)
 {
@@ -2228,6 +2248,13 @@ LLVM_Util::op_neg (llvm::Value *a)
         return builder().CreateFNeg (a);
     if (a->getType() == type_int())
         return builder().CreateNeg (a);
+
+	// TODO: consider removing wide version, as it doesn't appear strictly necessary    
+	if (a->getType() == type_wide_float())
+		return builder().CreateFNeg (a);
+	if (a->getType() == type_wide_int())
+		return builder().CreateNeg (a);
+    
     ASSERT (0 && "Op has bad value type combination");
 }
 

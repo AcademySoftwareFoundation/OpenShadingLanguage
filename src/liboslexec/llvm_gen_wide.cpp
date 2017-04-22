@@ -800,11 +800,13 @@ LLVMGEN (llvm_gen_neg)
     Symbol& Result = *rop.opargsym (op, 0);
     Symbol& A = *rop.opargsym (op, 1);
 
+    bool op_is_uniform = rop.isSymbolUniform(Result);
+    
     TypeDesc type = Result.typespec().simpletype();
     int num_components = type.aggregate;
     for (int d = 0;  d < 3;  ++d) {  // dx, dy
         for (int i = 0; i < num_components; i++) {
-            llvm::Value *a = rop.llvm_load_value (A, d, i, type);
+            llvm::Value *a = rop.llvm_load_value (A, d, i, type, op_is_uniform);
             llvm::Value *r = rop.ll.op_neg (a);
             rop.llvm_store_value (r, Result, d, i);
         }
@@ -2071,25 +2073,32 @@ LLVMGEN (llvm_gen_generic)
             name += "i";
         else ASSERT (0);
     }
+	std::cout << "llvm_gen_generic " << name.c_str() ;
 
     if (! Result.has_derivs() || ! any_deriv_args) {
         // Don't compute derivs -- either not needed or not provided in args
         if (Result.typespec().aggregate() == TypeDesc::SCALAR) {
+        	std::cout << "stores return value " << name.c_str() ;
             llvm::Value *r = rop.llvm_call_function (name.c_str(),
                                                      &(args[1]), op.nargs()-1, /*deriv_ptrs*/ false, uniformFormOfFunction);
             rop.llvm_store_value (r, Result);
         } else {
+        	std::cout << "return value is pointer " << name.c_str() ;
             rop.llvm_call_function (name.c_str(),
-                                    (args.size())? &(args[0]): NULL, op.nargs(), /*deriv_ptrs*/ false, uniformFormOfFunction);
+                                    (args.size())? &(args[0]): NULL, op.nargs(), /*deriv_ptrs*/ false, uniformFormOfFunction, true /*ptrToReturnStructIs1stArg*/);
         }
         rop.llvm_zero_derivs (Result);
     } else {
         // Cases with derivs
+    	std::cout << " Cases with derivs";
         ASSERT (Result.has_derivs() && any_deriv_args);
         rop.llvm_call_function (name.c_str(),
                                 (args.size())? &(args[0]): NULL, op.nargs(),
                                 /*deriv_ptrs*/ true, uniformFormOfFunction);
     }
+    
+	std::cout << std::endl;
+    
     return true;
 }
 
@@ -3428,7 +3437,7 @@ LLVMGEN (llvm_gen_area)
         return true;
     }
     
-    llvm::Value *r = rop.ll.call_function ("osl_area", rop.llvm_void_ptr (P));
+    llvm::Value *r = rop.ll.call_function ("osl_area_w16", rop.llvm_void_ptr (P));
     rop.llvm_store_value (r, Result);
     if (Result.has_derivs())
         rop.llvm_zero_derivs (Result);

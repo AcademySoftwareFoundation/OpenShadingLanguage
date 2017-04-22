@@ -454,6 +454,10 @@ public:
         return call_function (name, args, 4);
     }
 
+    /// Mark the function call to pass the pointer to the structure 
+    /// to be used as the return value.
+    void mark_structure_return_value(llvm::Value *funccall);
+    
     /// Mark the function call (which MUST be the value returned by a
     /// call_function()) as using the 'fast' calling convention.
     void mark_fast_func_call (llvm::Value *funccall);

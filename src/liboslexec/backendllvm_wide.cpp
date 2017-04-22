@@ -44,6 +44,7 @@ static ustring op_if("if");
 static ustring op_for("for");
 static ustring op_dowhile("dowhile");
 static ustring op_while("while");
+static ustring op_functioncall("functioncall");
 
 
 #ifdef OSL_SPI
@@ -628,6 +629,14 @@ BackendLLVMWide::discoverVaryingAndMasking()
 						
 						popSymbolsCurentBlockDependsOn();
 						
+					} else if (opcode.opname() == op_functioncall)
+					{
+						// Function call itself operates on the same symbol dependencies
+						// as the current block, there was no conditionals involved
+						std::cout << " FUNCTION CALL BLOCK BEGIN" << std::endl;
+						discoverSymbolsBetween(opIndex+1, opcode.jump(0), blockDepth, writeBlockDepth, maskId, writeMaskId);
+						std::cout << " FUNCTION CALL END" << std::endl;
+						
 					} else {
 						ASSERT(0 && "Unhandled OSL instruction which contains jumps, note this uniform detection code needs to walk the code blocks identical to build_llvm_code");
 					}
@@ -892,8 +901,6 @@ BackendLLVMWide::llvm_get_pointer (const Symbol& sym, int deriv,
     return result;
 }
 
-
-
 llvm::Value *
 BackendLLVMWide::llvm_load_value (const Symbol& sym, int deriv,
                                    llvm::Value *arrayindex, int component,
@@ -1143,7 +1150,7 @@ BackendLLVMWide::llvm_load_component_value (const Symbol& sym, int deriv,
 
 
 llvm::Value *
-BackendLLVMWide::llvm_load_arg (const Symbol& sym, bool derivs, bool is_uniform)
+BackendLLVMWide::llvm_load_arg (const Symbol& sym, bool derivs, bool op_is_uniform)
 {
     ASSERT (sym.typespec().is_floatbased());
     if (sym.typespec().is_int() ||
@@ -1154,8 +1161,24 @@ BackendLLVMWide::llvm_load_arg (const Symbol& sym, bool derivs, bool is_uniform)
     	// get passed as a pointer intstead of by value
     	// So let this case fall through
     	// NOTE:  Unclear of behavior if symbol is a constant
-    	if (is_uniform) {
-    		return llvm_load_value (sym, is_uniform);
+    	if (op_is_uniform) {
+    		return llvm_load_value (sym, op_is_uniform);
+    	} else if (sym.symtype() == SymTypeConst) {
+    		// As the case to deliver a pointer to a symbol data
+    		// doesn't provide an opportunity to promote a uniform constant
+    		// to a wide value that the non-uniform function is expecting
+    		// we will handle it here.
+    		llvm::Value * wide_constant_value = llvm_load_constant_value (sym, 0, 0, TypeDesc::UNKNOWN, op_is_uniform);
+    		
+    		// Have to have a place on the stack for the pointer to the wide constant to point to
+            const TypeSpec &t = sym.typespec();
+            llvm::Value *tmpptr = llvm_alloca (t, true, op_is_uniform);
+            
+            // Store our wide pointer on the stack
+            llvm_store_value (wide_constant_value, tmpptr, t, 0, NULL, 0);
+    												
+            // return pointer to our stacked wide constant
+            return ll.void_ptr (tmpptr);    		
     	}
     }
 
@@ -1164,14 +1187,14 @@ BackendLLVMWide::llvm_load_arg (const Symbol& sym, bool derivs, bool is_uniform)
         const TypeSpec &t = sym.typespec();
     	
         // Copy the non-deriv values component by component
-        llvm::Value *tmpptr = llvm_alloca (t, true, is_uniform);
+        llvm::Value *tmpptr = llvm_alloca (t, true, op_is_uniform);
         for (int c = 0;  c < t.aggregate();  ++c) {
-            llvm::Value *v = llvm_load_value (sym, 0, c, TypeDesc::UNKNOWN, is_uniform);
+            llvm::Value *v = llvm_load_value (sym, 0, c, TypeDesc::UNKNOWN, op_is_uniform);
             llvm_store_value (v, tmpptr, t, 0, NULL, c);
         }
         // Zero out the deriv values
         llvm::Value *zero;
-        if (is_uniform)
+        if (op_is_uniform)
             zero = ll.constant (0.0f);
         else
         	zero = ll.wide_constant (0.0f);
@@ -1328,7 +1351,8 @@ llvm::Value *
 BackendLLVMWide::llvm_call_function (const char *name, 
                                       const Symbol **symargs, int nargs,
                                       bool deriv_ptrs,
-                                      bool function_is_uniform)
+                                      bool function_is_uniform,
+                                      bool ptrToReturnStructIs1stArg)
 {
     std::vector<llvm::Value *> valargs;
     valargs.resize ((size_t)nargs);
@@ -1337,14 +1361,23 @@ BackendLLVMWide::llvm_call_function (const char *name,
         if (s.typespec().is_closure())
             valargs[i] = llvm_load_value (s);
         else if (s.typespec().simpletype().aggregate > 1 ||
-                 (deriv_ptrs && s.has_derivs()))
+                 (deriv_ptrs && s.has_derivs())) {
+        	
+        	std::cout << "....pushing " << s.name().c_str() << "as void_ptr"  << std::endl;
             valargs[i] = llvm_void_ptr (s);
+        }
         else
+        {
+        	std::cout << "....pushing " << s.name().c_str() << "as value" << std::endl;
             valargs[i] = llvm_load_value (s, /*deriv*/ 0, /*component*/ 0, TypeDesc::UNKNOWN, function_is_uniform);
+        }
     }
     std::cout << "call_function " << name << std::endl;
-    return ll.call_function (name, (valargs.size())? &valargs[0]: NULL,
+    llvm::Value * func_call = ll.call_function (name, (valargs.size())? &valargs[0]: NULL,
                              (int)valargs.size());
+    if (ptrToReturnStructIs1stArg)
+    	ll.mark_structure_return_value(func_call);
+    return func_call;
 }
 
 

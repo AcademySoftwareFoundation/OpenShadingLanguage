@@ -2439,7 +2439,7 @@ struct SNoise {
     }
 
     template<int WidthT>
-	inline void operator() (Wide<Vec3, WidthT> &result, const Wide<Vec3, WidthT> &wp, Wide<float, WidthT> &wt) const {
+	inline void operator() (Wide<Vec3, WidthT> &result, const Wide<Vec3, WidthT> &wp, const Wide<float, WidthT> &wt) const {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
 			//OSL_INTEL_PRAGMA("ivdep")

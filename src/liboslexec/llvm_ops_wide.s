@@ -14,6 +14,9 @@ target triple = "x86_64-unknown-linux-gnu"
 %"struct.std::basic_string<char, std::char_traits<char>, std::allocator<char> >::_Alloc_hider" = type { i8* }
 %"class.Imath_2_2::SingMatrixExc" = type { %"class.Iex_2_2::MathExc" }
 %"class.Iex_2_2::MathExc" = type { %"class.Iex_2_2::BaseExc" }
+%"WideVec3" = type { [3 x <16 x float>] }
+%"Wide_Vec3_16" = type { <16 x float>, <16 x float>, <16 x float> }
+%"Wide_Dual_Vec3_16" = type { %"Wide_Vec3_16", %"Wide_Vec3_16", %"Wide_Vec3_16" }
 
 $_ZN11OpenImageIO4v1_713fast_safe_powEff = comdat any
 
@@ -7232,6 +7235,14 @@ define float @osl_pow_fff(float, float) local_unnamed_addr #4 {
   ret float %3
 }
 
+declare <16 x float> @llvm.pow.v16f32(<16 x float>, <16 x float>)
+
+define <16 x float> @osl_pow_w16fw16fw16f(<16 x float> %base, <16 x float> %exp) alwaysinline  #3 {
+  %pow_r = call <16 x float> @llvm.pow.v16f32(<16 x float> %base, <16 x float> %exp)
+  ret <16 x float> %pow_r
+}
+
+
 ; Function Attrs: inlinehint nounwind uwtable
 define linkonce_odr float @_ZN11OpenImageIO4v1_713fast_safe_powEff(float, float) local_unnamed_addr #8 comdat {
   %3 = fcmp oeq float %1, 0.000000e+00
@@ -7914,6 +7925,29 @@ define void @osl_pow_vvf(i8* nocapture, i8* nocapture readonly, float) local_unn
   store float %17, float* %19, align 4, !tbaa !1
   ret void
 }
+
+
+define void @osl_pow_w16vw16vw16f(i8* nocapture %r, i8* nocapture readonly %base, <16 x float> %exp) alwaysinline  #3 {
+  %base_ptr = bitcast i8* %base to %"Wide_Vec3_16"*
+  %x_ptr = getelementptr inbounds %"Wide_Vec3_16", %"Wide_Vec3_16"* %base_ptr, i32 0, i32 0
+  %y_ptr = getelementptr inbounds %"Wide_Vec3_16", %"Wide_Vec3_16"* %base_ptr, i32 0, i32 1
+  %z_ptr = getelementptr inbounds %"Wide_Vec3_16", %"Wide_Vec3_16"* %base_ptr, i32 0, i32 2
+  %x = load <16 x float>, <16 x float>* %x_ptr, align 64
+  %y = load <16 x float>, <16 x float>* %y_ptr, align 64
+  %z = load <16 x float>, <16 x float>* %z_ptr, align 64  
+  %pow_x = call <16 x float> @llvm.pow.v16f32(<16 x float> %x, <16 x float> %exp)
+  %pow_y = call <16 x float> @llvm.pow.v16f32(<16 x float> %y, <16 x float> %exp)
+  %pow_z = call <16 x float> @llvm.pow.v16f32(<16 x float> %z, <16 x float> %exp)
+  %result_ptr = bitcast i8* %r to %"Wide_Vec3_16"*
+  %rx = getelementptr inbounds %"Wide_Vec3_16", %"Wide_Vec3_16"* %result_ptr, i32 0, i32 0
+  %ry = getelementptr inbounds %"Wide_Vec3_16", %"Wide_Vec3_16"* %result_ptr, i32 0, i32 1
+  %rz = getelementptr inbounds %"Wide_Vec3_16", %"Wide_Vec3_16"* %result_ptr, i32 0, i32 2
+  store <16 x float> %pow_x, <16 x float>* %rx     
+  store <16 x float> %pow_y, <16 x float>* %ry     
+  store <16 x float> %pow_z, <16 x float>* %rz     
+  ret void
+}
+
 
 ; Function Attrs: nounwind uwtable
 define void @osl_pow_dvdvdf(i8* nocapture, i8* nocapture readonly, i8* nocapture readonly) local_unnamed_addr #4 {
@@ -9340,6 +9374,29 @@ define void @osl_sign_vv(i8* nocapture, i8* nocapture readonly) local_unnamed_ad
   ret void
 }
 
+declare <16 x float> @llvm.copysign.v16f32(<16 x float>, <16 x float>)
+
+define void @osl_sign_w16vw16v(i8* nocapture %r, i8* nocapture readonly %p) alwaysinline {
+  %p_ptr = bitcast i8* %p to %"Wide_Vec3_16"*
+  %x_ptr = getelementptr inbounds %"Wide_Vec3_16", %"Wide_Vec3_16"* %p_ptr, i32 0, i32 0
+  %y_ptr = getelementptr inbounds %"Wide_Vec3_16", %"Wide_Vec3_16"* %p_ptr, i32 0, i32 1
+  %z_ptr = getelementptr inbounds %"Wide_Vec3_16", %"Wide_Vec3_16"* %p_ptr, i32 0, i32 2
+  %x = load <16 x float>, <16 x float>* %x_ptr, align 64
+  %y = load <16 x float>, <16 x float>* %y_ptr, align 64
+  %z = load <16 x float>, <16 x float>* %z_ptr, align 64 
+  %sign_of_x = tail call <16 x float> @llvm.copysign.v16f32(<16 x float><float 1.000000e+00, float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00>, <16 x float> %x)
+  %sign_of_y = tail call <16 x float> @llvm.copysign.v16f32(<16 x float><float 1.000000e+00, float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00>, <16 x float> %y)
+  %sign_of_z = tail call <16 x float> @llvm.copysign.v16f32(<16 x float><float 1.000000e+00, float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00>, <16 x float> %z)
+  %result_ptr = bitcast i8* %r to %"Wide_Vec3_16"*
+  %rx = getelementptr inbounds %"Wide_Vec3_16", %"Wide_Vec3_16"* %result_ptr, i32 0, i32 0
+  %ry = getelementptr inbounds %"Wide_Vec3_16", %"Wide_Vec3_16"* %result_ptr, i32 0, i32 1
+  %rz = getelementptr inbounds %"Wide_Vec3_16", %"Wide_Vec3_16"* %result_ptr, i32 0, i32 2
+  store <16 x float> %sign_of_x, <16 x float>* %rx     
+  store <16 x float> %sign_of_y, <16 x float>* %ry     
+  store <16 x float> %sign_of_z, <16 x float>* %rz     
+  ret void
+}
+
 ; Function Attrs: norecurse nounwind readnone uwtable
 define float @osl_step_fff(float, float) local_unnamed_addr #6 {
   %3 = fcmp olt float %1, %0
@@ -9447,6 +9504,28 @@ declare <16 x float> @llvm.fabs.v16f32(<16 x float>)
 define <16 x float> @osl_abs_w16fw16f(<16 x float> %a) alwaysinline  #3 {
   %r = call <16 x float> @llvm.fabs.v16f32(<16 x float> %a)
   ret <16 x float> %r
+}
+
+; Function Attrs: nounwind uwtable
+define void @osl_abs_w16vw16v(i8* nonnull sret %r_ptr, i8* nonnull %v_ptr) alwaysinline  {
+  %vs_ptr = bitcast i8* %v_ptr to %"WideVec3"*
+  %v_x = getelementptr %"WideVec3", %"WideVec3"* %vs_ptr, i32 0, i32 0, i32 0
+  %v_y = getelementptr %"WideVec3", %"WideVec3"* %vs_ptr, i32 0, i32 0, i32 1
+  %v_z = getelementptr %"WideVec3", %"WideVec3"* %vs_ptr, i32 0, i32 0, i32 2
+  %x = load <16 x float>, <16 x float>* %v_x, align 64
+  %y = load <16 x float>, <16 x float>* %v_y, align 64
+  %z = load <16 x float>, <16 x float>* %v_z, align 64
+  %abs_x = call <16 x float> @llvm.fabs.v16f32(<16 x float> %x)
+  %abs_y = call <16 x float> @llvm.fabs.v16f32(<16 x float> %y)
+  %abs_z = call <16 x float> @llvm.fabs.v16f32(<16 x float> %z)
+  %rs_ptr = bitcast i8* %r_ptr to %"WideVec3"*
+  %r_x = getelementptr %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 0
+  %r_y = getelementptr %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 1
+  %r_z = getelementptr %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 2
+  store <16 x float> %abs_x, <16 x float>* %r_x
+  store <16 x float> %abs_y, <16 x float>* %r_y
+  store <16 x float> %abs_z, <16 x float>* %r_z
+  ret void
 }
 
 
@@ -10326,16 +10405,16 @@ define float @osl_smoothstep_ffff(float, float, float) local_unnamed_addr #6 {
 
   ;%11 = fcmp ult <16 x float> %2, %e0
   ;%12 = fcmp ugt <16 x float> %2, %e1
-  ;%not. = xor <16 x i1> %11, <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, !dbg !24
-  ;%13 = and <16 x i1> %12, %not., !dbg !24
-  ;%14 = select <16 x i1> %13, <16 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, <16 x float> zeroinitializer, !dbg !25
-  ;%15 = or <16 x i1> %11, %12, !dbg !25
-  ;%16 = fsub <16 x float> %6, %8, !dbg !26
-  ;%17 = fsub <16 x float> %10, %8, !dbg !26
-  ;%18 = fcmp une <16 x float> %17, zeroinitializer, !dbg !26
-  ;%19 = fdiv <16 x float> %16, %17, !dbg !26
-  ;%20 = select <16 x i1> %18, <16 x float> %19, <16 x float> zeroinitializer, !dbg !26
-  ;%21 = select <16 x i1> %15, <16 x float> %14, <16 x float> %20, !dbg !26
+  ;%not. = xor <16 x i1> %11, <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+  ;%13 = and <16 x i1> %12, %not.
+  ;%14 = select <16 x i1> %13, <16 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, <16 x float> zeroinitializer
+  ;%15 = or <16 x i1> %11, %12
+  ;%16 = fsub <16 x float> %6, %8
+  ;%17 = fsub <16 x float> %10, %8
+  ;%18 = fcmp une <16 x float> %17, zeroinitializer
+  ;%19 = fdiv <16 x float> %16, %17
+  ;%20 = select <16 x i1> %18, <16 x float> %19, <16 x float> zeroinitializer
+  ;%21 = select <16 x i1> %15, <16 x float> %14, <16 x float> %20
 
   ;ret <16 x float> %21
 ;}
@@ -10353,8 +10432,8 @@ define <16 x float> @osl_smoothstep_w16fw16fw16fw16f(<16 x float>, <16 x float>,
   %11 = fdiv <16 x float> %9, %10
   %12 = fmul <16 x float> %11, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
   %13 = fsub <16 x float> <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>, %12
-  %14 = fmul <16 x float> %11, %11, !dbg !32
-  %15 = fmul <16 x float> %14, %13, !dbg !32
+  %14 = fmul <16 x float> %11, %11
+  %15 = fmul <16 x float> %14, %13
   %16 = select <16 x i1> %8, <16 x float> %7, <16 x float> %15
   
   ret <16 x float> %16
@@ -13379,6 +13458,107 @@ define float @osl_area(i8* nocapture readonly) local_unnamed_addr #12 {
 ; <label>:63:                                     ; preds = %35, %50, %61
   %64 = phi float [ %62, %61 ], [ %60, %50 ], [ 0.000000e+00, %35 ]
   ret float %64
+}
+
+; Function Attrs: nounwind readonly uwtable
+define <16 x float> @osl_area_w16(i8* nocapture readonly) alwaysinline #12 {
+  %2 = bitcast i8* %0 to %"Wide_Dual_Vec3_16" *
+  
+  %dxx2 = getelementptr %"Wide_Dual_Vec3_16", %"Wide_Dual_Vec3_16"* %2, i32 0, i32 1, i32 0
+  
+  %3 = load <16 x float>, <16 x float>* %dxx2, align 64
+  ; NO-OP, too lazy to renumber
+  %4 = bitcast i8* %0 to <16 x float> *
+  
+  %5 = getelementptr %"Wide_Dual_Vec3_16", %"Wide_Dual_Vec3_16"* %2, i32 0, i32 1, i32 1
+  %6 = load <16 x float>, <16 x float>* %5, align 64
+  ; NO-OP, too lazy to renumber
+  %7 = bitcast i8* %0 to <16 x float> *
+  
+  %8 = getelementptr %"Wide_Dual_Vec3_16", %"Wide_Dual_Vec3_16"* %2, i32 0, i32 1, i32 2
+  %9 = load <16 x float>, <16 x float>* %8, align 64
+  ; NO-OP, too lazy to renumber
+  %10 = bitcast i8* %0 to <16 x float> *
+
+  %11 = getelementptr %"Wide_Dual_Vec3_16", %"Wide_Dual_Vec3_16"* %2, i32 0, i32 2, i32 0
+  %12 = load <16 x float>, <16 x float>* %11, align 64
+  ; NO-OP, too lazy to renumber
+  %13 = bitcast i8* %0 to <16 x float> *
+
+  %14 = getelementptr %"Wide_Dual_Vec3_16", %"Wide_Dual_Vec3_16"* %2, i32 0, i32 2, i32 1
+  %15 = load <16 x float>, <16 x float>* %14, align 64
+  ; NO-OP, too lazy to renumber
+  %16 = bitcast i8* %0 to <16 x float> *
+  
+  %17 = getelementptr %"Wide_Dual_Vec3_16", %"Wide_Dual_Vec3_16"* %2, i32 0, i32 2, i32 2
+  %18 = load <16 x float>, <16 x float>* %17, align 64
+  ; NO-OP, too lazy to renumber
+  %19 = bitcast i8* %0 to <16 x float> *
+  %20 = bitcast i8* %0 to <16 x float> *
+  %21 = bitcast i8* %0 to <16 x float> *
+  %22 = bitcast i8* %0 to <16 x float> *
+  
+  %23 = fmul <16 x float> %6, %18
+  %24 = fmul <16 x float> %9, %15
+  %25 = fsub <16 x float> %23, %24
+  %26 = fmul <16 x float> %9, %12
+  %27 = fmul <16 x float> %3, %18
+  %28 = fsub <16 x float> %26, %27
+  %29 = fmul <16 x float> %3, %15
+  %30 = fmul <16 x float> %6, %12
+  %31 = fsub <16 x float> %29, %30
+  %32 = fmul <16 x float> %25, %25
+  %33 = fmul <16 x float> %28, %28
+  %34 = fadd <16 x float> %32, %33
+  %35 = fmul <16 x float> %31, %31
+  %36 = fadd <16 x float> %34, %35
+  %37 = fcmp ult <16 x float> %36, <float 0x3851039D40000000, float 0x3851039D40000000, float 0x3851039D40000000, float 0x3851039D40000000, float 0x3851039D40000000, float 0x3851039D40000000, float 0x3851039D40000000, float 0x3851039D40000000, float 0x3851039D40000000, float 0x3851039D40000000, float 0x3851039D40000000, float 0x3851039D40000000, float 0x3851039D40000000, float 0x3851039D40000000, float 0x3851039D40000000, float 0x3851039D40000000>
+  %not. = fcmp olt <16 x float> %25, zeroinitializer
+  %38 = and <16 x i1> %37, %not.
+  %39 = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %25
+  %40 = select <16 x i1> %38, <16 x float> %39, <16 x float> %25
+  %not.13 = fcmp olt <16 x float> %28, zeroinitializer
+  %41 = and <16 x i1> %not.13, %37
+  %42 = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %28
+  %43 = select <16 x i1> %41, <16 x float> %42, <16 x float> %28
+  %not.14 = fcmp olt <16 x float> %31, zeroinitializer
+  %44 = and <16 x i1> %not.14, %37
+  %45 = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %31
+  %46 = select <16 x i1> %44, <16 x float> %45, <16 x float> %31
+  %47 = fcmp ult <16 x float> %40, %43
+  %48 = and <16 x i1> %47, %37
+  %49 = select <16 x i1> %48, <16 x float> %43, <16 x float> %40
+  %50 = fcmp ult <16 x float> %49, %46
+  %51 = and <16 x i1> %50, %37
+  %52 = select <16 x i1> %51, <16 x float> %46, <16 x float> %49
+  %not.15 = fcmp one <16 x float> %52, zeroinitializer
+  %53 = and <16 x i1> %not.15, %37
+  %54 = fcmp une <16 x float> %52, zeroinitializer
+  %55 = fdiv <16 x float> %40, %52
+  %56 = select <16 x i1> %54, <16 x float> %55, <16 x float> zeroinitializer
+  %57 = fdiv <16 x float> %43, %52
+  %58 = select <16 x i1> %54, <16 x float> %57, <16 x float> zeroinitializer
+  %59 = fdiv <16 x float> %46, %52
+  %60 = select <16 x i1> %54, <16 x float> %59, <16 x float> zeroinitializer
+  %61 = fmul <16 x float> %56, %56
+  %62 = fmul <16 x float> %58, %58
+  %63 = fadd <16 x float> %61, %62
+  %64 = fmul <16 x float> %60, %60
+  %65 = fadd <16 x float> %64, %63
+  %66 = bitcast i8* %0 to <16 x float> *
+  %67 = fcmp ult <16 x float> %65, zeroinitializer
+  %68 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %65) #2
+  %69 = select <16 x i1> %67, <16 x float> zeroinitializer, <16 x float> %68
+  
+  %70 = fmul <16 x float> %69, %52
+  %71 = select <16 x i1> %53, <16 x float> %70, <16 x float> zeroinitializer
+  %72 = bitcast i8* %0 to <16 x float> *
+  %73 = fcmp ult <16 x float> %36, zeroinitializer
+  %74 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %36) #2
+  %75 = select <16 x i1> %73, <16 x float> zeroinitializer, <16 x float> %74
+
+  %76 = select <16 x i1> %37, <16 x float> %71, <16 x float> %75
+  ret <16 x float> %76
 }
 
 ; Function Attrs: nounwind readonly uwtable

@@ -356,7 +356,7 @@ public:
     /// Return an llvm::Value* corresponding to the return value of the
     /// function, if any.
     llvm::Value *llvm_call_function (const char *name,  const Symbol **args,
-                                     int nargs, bool deriv_ptrs=false, bool function_is_uniform=true);
+                                     int nargs, bool deriv_ptrs=false, bool function_is_uniform=true, bool ptrToReturnStructIs1stArg = false);
     llvm::Value *llvm_call_function (const char *name, const Symbol &A,
                                      bool deriv_ptrs=false);
     llvm::Value *llvm_call_function (const char *name, const Symbol &A,

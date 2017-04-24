@@ -377,6 +377,21 @@ action_param (int argc, const char *argv[])
         return;
     }
 
+    // String arrays are slightly tricky
+    if (type.basetype == TypeDesc::STRING && type.is_array()) {
+        std::vector<string_view> splitelements;
+        OIIO::Strutil::split (stringval, splitelements, ",", type.arraylen);
+        splitelements.resize (type.arraylen);
+        std::vector<ustring> strelements;
+        for (auto&& s : splitelements)
+            strelements.push_back (ustring(s));
+        params.push_back (ParamValue());
+        params.back().init (paramname, type, 1, &strelements[0]);
+        if (unlockgeom)
+            params.back().interp (ParamValue::INTERP_VERTEX);
+        return;
+    }
+
     // All remaining cases -- it's a string
     const char *s = stringval.c_str();
     params.push_back (ParamValue());

@@ -6,6 +6,7 @@ SET ( liboslexec_srcs
           opcolor.cpp opmatrix.cpp opmessage.cpp
           opnoise.cpp
           opspline.cpp opstring.cpp optexture.cpp
+          optranscendental.cpp
           oslexec.cpp
           pointcloud.cpp rendservices.cpp
           constfold.cpp runtimeoptimize.cpp typespec.cpp

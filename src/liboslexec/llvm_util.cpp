@@ -926,7 +926,7 @@ LLVM_Util::make_jit_execengine (std::string *err)
 		{
 			//auto enabled = (cpuFeature.second && (cpuFeature.first().str().find("512") == std::string::npos)) ? "+" : "-";
 			auto enabled = (cpuFeature.second) ? "+" : "-";
-			std::cout << cpuFeature.first().str()  << " is " << enabled << std::endl;
+			//std::cout << cpuFeature.first().str()  << " is " << enabled << std::endl;
 			
 			if (oslIsa == TargetISA_UNLIMITTED) {				
 				if (!disableFMA || std::string("fma") != cpuFeature.first().str()) {
@@ -2079,7 +2079,40 @@ LLVM_Util::push_mask(llvm::Value *mask, bool negate, bool absolute)
 }
 
 void
-LLVM_Util::pop_mask()
+LLVM_Util::pop_if_mask()
+{
+	ASSERT(false == m_mask_stack.empty());
+	
+	if(m_mask_break_stack.empty()) {	
+		m_mask_stack.pop_back();
+	} else {
+		m_mask_stack.pop_back();
+		// Apply the break mask to the outter scope's mask (if one?)
+		if (false == m_mask_stack.empty())
+		{
+			auto & mi = m_mask_stack.back();			
+			llvm::Value * existing_mask = mi.mask;
+			
+			const auto & bsi = m_mask_break_stack.back();
+			if (bsi.negate) {
+				if(mi.negate) {
+					mi.mask = builder().CreateSelect(bsi.mask, bsi.mask, existing_mask);
+				} else {
+					mi.mask = builder().CreateSelect(bsi.mask, wide_constant_bool(false), existing_mask);
+				}
+			} else {				
+				if(mi.negate) {
+					mi.mask = builder().CreateSelect(bsi.mask, existing_mask, wide_constant_bool(true));
+				} else {
+					mi.mask = builder().CreateSelect(bsi.mask, existing_mask, bsi.mask);
+				}
+			}			
+		}		
+	}
+}
+
+void
+LLVM_Util::pop_loop_mask()
 {
 	ASSERT(false == m_mask_stack.empty());
 	m_mask_stack.pop_back();
@@ -2100,6 +2133,55 @@ LLVM_Util::current_mask()
 		}
 	}
 }
+
+llvm::Value *
+LLVM_Util::apply_break_mask_to(llvm::Value *existing_mask)
+{
+	if(m_mask_break_stack.empty()) {
+		return existing_mask;
+	} else {
+		auto & bsi = m_mask_break_stack.back();
+		if (bsi.negate) {
+			llvm::Value *result = builder().CreateSelect(bsi.mask, wide_constant_bool(false), existing_mask);
+			return result;
+		} else {
+			llvm::Value *result = builder().CreateSelect(bsi.mask, existing_mask, bsi.mask);
+			return result;
+		}
+	}
+}
+
+void
+LLVM_Util::push_mask_break()
+{
+	ASSERT(false == m_mask_stack.empty());
+
+	// TODO: determine if we need a stack or just the latest break
+	{
+		MaskInfo copy_of_mi = m_mask_stack.back();
+		copy_of_mi.negate = !copy_of_mi.negate;
+		m_mask_break_stack.push_back(copy_of_mi);
+	}
+		
+	// Now modify the current mask to turn off all lanes
+	// because the only active lanes just hit a break statement
+	// so all future instructions should execute against an empty mask
+	// NOTE: this is technically unreachable code, ideally front end
+	// optimizations would get rid of it before hand
+	// at this point don't want to introduce complexity of trying to
+	// skip instructions
+	auto & mi = m_mask_stack.back();
+	mi.mask = wide_constant_bool(false);
+	// NOTE: if there are no other instructions, then this mask will just not
+	// get used/generated (we think)
+}
+
+void
+LLVM_Util::clear_mask_break()
+{
+	m_mask_break_stack.clear();
+}
+
 
 void
 LLVM_Util::push_masking_enabled(bool enabled)

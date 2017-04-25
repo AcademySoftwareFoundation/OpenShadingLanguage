@@ -686,6 +686,9 @@ BackendLLVMWide::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
                 llvm_generate_debug_op_printf (op);
             // TODO: optionally enable
             std::cout << "Generating :"<< op.opname() << std::endl;
+            if (requiresMasking(opnum))
+            	std::cout << " with MASKING";
+            std::cout << std::endl;
             ll.set_debug_location(op.sourcefile().string(), op.method().string(), op.sourceline());
             ll.push_masking_enabled(requiresMasking(opnum));
             bool ok = (*opd->llvmgen) (*this, opnum);
@@ -708,7 +711,7 @@ BackendLLVMWide::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
         // If the op we coded jumps around, skip past its recursive block
         // executions.
         int next = op.farthest_jump ();
-        std::cout << "farthest_jump=" << next;
+        std::cout << "farthest_jump=" << next << std::endl;
         if (next >= 0)
             opnum = next-1;
     }       
@@ -798,6 +801,7 @@ extern bool llvm_gen_compare_op(BackendLLVMWide &rop, int opnum);
 llvm::Function*
 BackendLLVMWide::build_llvm_instance (bool groupentry)
 {
+	ASSERT(m_generated_loops_condition_stack.empty());
     // Make a layer function: void layer_func(ShaderGlobals*, GroupData*)
     // Note that the GroupData* is passed as a void*.
     std::string unique_layer_name = Strutil::format ("%s_%d", inst()->layername(), inst()->id());
@@ -1001,6 +1005,8 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
     ll.clear_debug_info();
     ll.end_builder();  // clear the builder
 
+	ASSERT(m_generated_loops_condition_stack.empty());
+    
     return ll.current_function();
 }
 

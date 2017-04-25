@@ -1,3 +1,7 @@
 Add support for continue & break to loop control flow
+	Add more tests for breaks in nested control flow and nested conditional blocks
+	Add continue support
 Add support for if/else blocks to test for coherency and skip the block
 Update results of calling function that need to store results to try and use select instead of a masked store
+for any mask operations, what happens when the result is an address passed the the function and that function may have not concept of masking
+	Do we need a temporary to hold a function call's result, then used a masked assignment to the original destination.  Maynot be a big deal for local variables but if writing directly to an output variable, it could be an issue

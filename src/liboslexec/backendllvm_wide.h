@@ -356,7 +356,10 @@ public:
     /// Return an llvm::Value* corresponding to the return value of the
     /// function, if any.
     llvm::Value *llvm_call_function (const char *name,  const Symbol **args,
-                                     int nargs, bool deriv_ptrs=false, bool function_is_uniform=true, bool ptrToReturnStructIs1stArg = false);
+                                     int nargs, bool deriv_ptrs=false,
+                                     bool function_is_uniform=true, 
+                                     bool functionIsLlvmInlined = false,
+                                     bool ptrToReturnStructIs1stArg = false);
     llvm::Value *llvm_call_function (const char *name, const Symbol &A,
                                      bool deriv_ptrs=false);
     llvm::Value *llvm_call_function (const char *name, const Symbol &A,
@@ -423,6 +426,10 @@ public:
             shadingsys().m_stat_tex_calls_as_handles += 1;
     }
 
+    void push_varying_loop_condition(Symbol *);
+    Symbol * varying_condition_of_innermost_loop() const;
+    void pop_varying_loop_condition();
+    
     LLVM_Util ll;
 
 private:
@@ -451,6 +458,7 @@ private:
 
 	std::unordered_map<const Symbol *, bool> m_is_uniform_by_symbol;
 	std::vector<bool> m_requires_masking_by_op_index;
+	std::vector<Symbol *> m_generated_loops_condition_stack;
     
     friend class ShadingSystemImpl;
 };

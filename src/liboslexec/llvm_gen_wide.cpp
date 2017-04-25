@@ -1494,13 +1494,32 @@ LLVMGEN (llvm_gen_construct_color)
     ASSERT (Result.typespec().is_triple() && X.typespec().is_float() &&
             Y.typespec().is_float() && Z.typespec().is_float() &&
             (using_space == false || Space.typespec().is_string()));
+    
+#if 0
+    bool resultIsUniform = rop.isSymbolUniform(Result);
+    bool spaceIsUniform = rop.isSymbolUniform(Space);
+    bool xIsUniform = rop.isSymbolUniform(X);
+    bool yIsUniform = rop.isSymbolUniform(Y);
+    bool zIsUniform = rop.isSymbolUniform(Z);
+    std::cout << "llvm_gen_construct_color Result=" << Result.name().c_str() << ((resultIsUniform) ? "(uniform)" : "(varying)");
+    if (using_space) {
+    	    std::cout << " Space=" << Space.name().c_str() << ((spaceIsUniform) ? "(uniform)" : "(varying)");
+    }
+    std::cout << " X=" << X.name().c_str() << ((xIsUniform) ? "(uniform)" : "(varying)")  			  
+			  << " Y=" << Y.name().c_str()<< ((yIsUniform) ? "(uniform)" : "(varying)")
+			  << " Z=" << Z.name().c_str()<< ((zIsUniform) ? "(uniform)" : "(varying)")
+    		  << std::endl; 
+#endif
+    bool op_is_uniform = rop.isSymbolUniform(Result);
+    ASSERT(!using_space || rop.isSymbolUniform(Space));
+
 
     // First, copy the floats into the vector
     int dmax = Result.has_derivs() ? 3 : 1;
     for (int d = 0;  d < dmax;  ++d) {  // loop over derivs
         for (int c = 0;  c < 3;  ++c) {  // loop over components
             const Symbol& comp = *rop.opargsym (op, c+1+using_space);
-            llvm::Value* val = rop.llvm_load_value (comp, d, NULL, 0, TypeDesc::TypeFloat);
+            llvm::Value* val = rop.llvm_load_value (comp, d, NULL, 0, TypeDesc::TypeFloat, op_is_uniform);
             rop.llvm_store_value (val, Result, d, NULL, c);
         }
     }
@@ -2073,19 +2092,32 @@ LLVMGEN (llvm_gen_generic)
             name += "i";
         else ASSERT (0);
     }
-	std::cout << "llvm_gen_generic " << name.c_str() ;
+	std::cout << "llvm_gen_generic " << name.c_str() << std::endl ;
 
     if (! Result.has_derivs() || ! any_deriv_args) {
+    	
+        const OpDescriptor *opd = rop.shadingsys().op_descriptor (op.opname());
+
+        bool functionIsLlvmInlined = opd->flags & OpDescriptor::LLVMInlined;
+    	
         // Don't compute derivs -- either not needed or not provided in args
         if (Result.typespec().aggregate() == TypeDesc::SCALAR) {
-        	std::cout << "stores return value " << name.c_str() ;
+        	std::cout << ">>stores return value " << name.c_str() << std::endl;
             llvm::Value *r = rop.llvm_call_function (name.c_str(),
-                                                     &(args[1]), op.nargs()-1, /*deriv_ptrs*/ false, uniformFormOfFunction);
+                                                     &(args[1]), op.nargs()-1, 
+                                                     /*deriv_ptrs*/ false, 
+                                                     uniformFormOfFunction, 
+                                                     functionIsLlvmInlined, 
+                                                     false /*ptrToReturnStructIs1stArg*/);
             rop.llvm_store_value (r, Result);
         } else {
-        	std::cout << "return value is pointer " << name.c_str() ;
+        	std::cout << ">>return value is pointer " << name.c_str() << std::endl;
             rop.llvm_call_function (name.c_str(),
-                                    (args.size())? &(args[0]): NULL, op.nargs(), /*deriv_ptrs*/ false, uniformFormOfFunction, true /*ptrToReturnStructIs1stArg*/);
+                                    (args.size())? &(args[0]): NULL, op.nargs(), 
+                                    /*deriv_ptrs*/ false, 
+                                    uniformFormOfFunction, 
+                                    functionIsLlvmInlined, 
+                                    true /*ptrToReturnStructIs1stArg*/);
         }
         rop.llvm_zero_derivs (Result);
     } else {
@@ -2235,7 +2267,7 @@ LLVMGEN (llvm_gen_if)
 		// Perhaps mask should be parameter to build_llvm_code?
 		rop.ll.push_mask(mask);
 		rop.build_llvm_code (opnum+1, op.jump(0), then_block);
-		rop.ll.pop_mask();
+		rop.ll.pop_if_mask();
 		
 		// Execute both the "then" and the "else" blocks with masking
 		rop.ll.op_branch (else_block);
@@ -2244,7 +2276,7 @@ LLVMGEN (llvm_gen_if)
 		//rop.ll.push_mask(rop.ll.negate_mask(mask));
 		rop.ll.push_mask(mask, true /* negate */);
 		rop.build_llvm_code (op.jump(0), op.jump(1), else_block);
-		rop.ll.pop_mask();
+		rop.ll.pop_if_mask();
 		rop.ll.op_branch (after_block);  // insert point is now after_block				
     }
 
@@ -2262,6 +2294,7 @@ LLVMGEN (llvm_gen_loop_op)
     bool op_is_uniform = rop.isSymbolUniform(cond);
     
     if (op_is_uniform) {  
+        std::cout << "llvm_gen_loop_op UNIFORM based on " << cond.name().c_str() << std::endl;
 	
 		// Branch on the condition, to our blocks
 		llvm::BasicBlock* cond_block = rop.ll.new_basic_block ("cond");
@@ -2282,6 +2315,13 @@ LLVMGEN (llvm_gen_loop_op)
 		rop.build_llvm_code (op.jump(0), op.jump(1), cond_block);
 		llvm::Value* cond_val = rop.llvm_test_nonzero (cond);
 	
+		// We need to track uniform loops as well
+		// to properly handle a uniform loop inside of a varying loop
+		// and since the "break" op has no symbol for us to check for
+		// uniformity, it can check the current rop.varying_condition_of_innermost_loop
+		// to find out if the break needs to be varying or not
+		rop.push_varying_loop_condition(nullptr);
+		
 		// Jump to either LoopBody or AfterLoop
 		rop.ll.op_branch (cond_val, body_block, after_block);
 	
@@ -2293,10 +2333,13 @@ LLVMGEN (llvm_gen_loop_op)
 		rop.build_llvm_code (op.jump(2), op.jump(3), step_block);
 		rop.ll.op_branch (cond_block);
 	
+		rop.pop_varying_loop_condition();
+		
 		// Continue on with the previous flow
 		rop.ll.set_insert_point (after_block);
 		rop.ll.pop_loop ();
     } else {
+        std::cout << "llvm_gen_loop_op VARYING based on " << cond.name().c_str() << std::endl;
     	
 		// Branch on the condition, to our blocks
 		llvm::BasicBlock* cond_block = rop.ll.new_basic_block ("cond");
@@ -2321,6 +2364,8 @@ LLVMGEN (llvm_gen_loop_op)
     	if (op.opname() == op_dowhile) {
 			rop.ll.op_branch (body_block);
 		
+			rop.push_varying_loop_condition(&cond);
+			
 			// Body of loop
 			// Perhaps mask should be parameter to build_llvm_code?
 			rop.ll.set_insert_point (body_block);
@@ -2336,10 +2381,11 @@ LLVMGEN (llvm_gen_loop_op)
 			
 			rop.ll.op_branch (cond_block);
 			
+			rop.pop_varying_loop_condition();
 			
 			// Load the condition variable and figure out if it's nonzero
 			rop.build_llvm_code (op.jump(0), op.jump(1), cond_block);
-			rop.ll.pop_mask();	
+			rop.ll.pop_loop_mask();	
 			
 			llvm::Value* post_condition_mask = rop.llvm_load_value (cond, /*deriv*/ 0, /*component*/ 0, /*cast*/ TypeDesc::UNKNOWN, /*op_is_uniform*/ false);
 			llvm::Value* cond_val = rop.ll.test_if_mask_is_non_zero(post_condition_mask);
@@ -2350,13 +2396,14 @@ LLVMGEN (llvm_gen_loop_op)
 			
     	} else {
 			rop.ll.op_branch (cond_block);
+			
 		
 			// Load the condition variable and figure out if it's nonzero
 			llvm::Value* pre_condition_mask = rop.llvm_load_value (cond, /*deriv*/ 0, /*component*/ 0, /*cast*/ TypeDesc::UNKNOWN, /*op_is_uniform*/ false);
 			ASSERT(pre_condition_mask->getType() == rop.ll.type_wide_bool());    	
 			rop.ll.push_mask(pre_condition_mask, false /* negate */, true /* absolute */);
 			rop.build_llvm_code (op.jump(0), op.jump(1), cond_block);
-			rop.ll.pop_mask();	
+			rop.ll.pop_loop_mask();	
 			llvm::Value* post_condition_mask = rop.llvm_load_value (cond, /*deriv*/ 0, /*component*/ 0, /*cast*/ TypeDesc::UNKNOWN, /*op_is_uniform*/ false);
 			
 		
@@ -2364,7 +2411,9 @@ LLVMGEN (llvm_gen_loop_op)
 			
 			// Jump to either LoopBody or AfterLoop
 			rop.ll.op_branch (cond_val, body_block, after_block);
-		
+
+			rop.push_varying_loop_condition(&cond);
+			
 			// Body of loop
 			// Perhaps mask should be parameter to build_llvm_code?
 			rop.ll.push_mask(post_condition_mask, false /* negate */, true /* absolute */);
@@ -2373,7 +2422,10 @@ LLVMGEN (llvm_gen_loop_op)
 		
 			// Step
 			rop.build_llvm_code (op.jump(2), op.jump(3), step_block);
-			rop.ll.pop_mask();
+			rop.ll.pop_loop_mask();
+			
+			rop.pop_varying_loop_condition();
+			
 			
 			rop.ll.op_branch (cond_block);    		
     	}
@@ -2392,13 +2444,49 @@ LLVMGEN (llvm_gen_loopmod_op)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
     DASSERT (op.nargs() == 0);
-    if (op.opname() == op_break) {
-        rop.ll.op_branch (rop.ll.loop_after_block());
-    } else {  // continue
-        rop.ll.op_branch (rop.ll.loop_step_block());
+    
+    Symbol * varying_condition = rop.varying_condition_of_innermost_loop();
+    if (nullptr == varying_condition)
+    {
+    	// Inside a uniform loop, can use branching
+		if (op.opname() == op_break) {
+			rop.ll.op_branch (rop.ll.loop_after_block());
+		} else {  // continue
+			rop.ll.op_branch (rop.ll.loop_step_block());
+		}
+		llvm::BasicBlock* next_block = rop.ll.new_basic_block ("");
+		rop.ll.set_insert_point (next_block);
+    } else {
+    	
+    	ASSERT(op.opname() == op_break && "INCOMPLETE:  haven't coded 'continue'");
+    	
+    	// Inside a varying loop, can not only branch
+    	// must mask off additional lanes for remainder of loop
+    	// We can just take the absolute mask that is executing the 'break'
+    	// instruction and store an absolute modified mask to the
+    	// condition variable (which the conditional block of the loop
+    	// will hopefully pickup and use)
+    	// Trick is we then will need to pop and push a different mask
+    	// back on the stack for the remainder of the loop body.
+		llvm::Value * existing_mask = rop.llvm_load_value (*varying_condition, /*deriv*/ 0, /*component*/ 0, /*cast*/ TypeDesc::UNKNOWN, /*op_is_uniform*/ false);   	
+		
+		// But there may still be more instructions in the body after the break
+		// so all data lanes that didn't get broken need to continue
+		// and we need to mask off the lanes that were broken.
+		rop.ll.push_mask_break();
+
+    	llvm::Value * broken_mask = rop.ll.apply_break_mask_to(existing_mask);
+    	
+    	// Store our broken mask out to the condition variable for use by the "condition block"
+		rop.ll.push_masking_enabled(false);		
+    	rop.llvm_store_value (broken_mask, *varying_condition, /*deriv*/ 0, /*component*/ 0);
+		rop.ll.pop_masking_enabled();		
+		
+    	// TODO: additional optimization to check the postBreakMask 
+    	// to see if all lanes are 0 and branch to the condition/after
+    	// block.
     }
-    llvm::BasicBlock* next_block = rop.ll.new_basic_block ("");
-    rop.ll.set_insert_point (next_block);
+    
     return true;
 }
 
@@ -3437,8 +3525,18 @@ LLVMGEN (llvm_gen_area)
         return true;
     }
     
-    llvm::Value *r = rop.ll.call_function ("osl_area_w16", rop.llvm_void_ptr (P));
-    rop.llvm_store_value (r, Result);
+    bool op_is_uniform = rop.isSymbolUniform(Result);
+
+    std::vector<const Symbol *> args;
+    args.push_back (&Result);
+    args.push_back (&P);
+    rop.llvm_call_function (op_is_uniform ? "osl_area" : "osl_area_w16",
+                            &(args[0]), 2, 
+                            /*deriv_ptrs*/ true, 
+                            op_is_uniform, 
+                            false /*functionIsLlvmInlined*/, 
+                            !op_is_uniform/*ptrToReturnStructIs1stArg*/);
+    
     if (Result.has_derivs())
         rop.llvm_zero_derivs (Result);
     return true;

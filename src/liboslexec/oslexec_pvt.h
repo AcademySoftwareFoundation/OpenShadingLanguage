@@ -160,7 +160,7 @@ struct OpDescriptor {
         : name(n), llvmgen(ll), folder(fold), simple_assign(simple), flags(flags)
     {}
 
-    enum FlagValues { None=0, Tex=1 };
+    enum FlagValues { None=0, Tex=1, LLVMInlined=2 };
 };
 
 

@@ -45,6 +45,9 @@ static ustring op_for("for");
 static ustring op_dowhile("dowhile");
 static ustring op_while("while");
 static ustring op_functioncall("functioncall");
+static ustring op_break("break");
+static ustring op_continue("continue");
+
 
 
 #ifdef OSL_SPI
@@ -424,10 +427,16 @@ BackendLLVMWide::discoverVaryingAndMasking()
 			int last_depth;
 			int last_maskId;
 			std::vector <std::pair<int /*blockDepth*/, int /*op_num*/>> potentially_unmasked_ops;
+			
+			UsageInfo()
+			:last_depth(0)
+			,last_maskId(0)
+			{}				
 		};
 		std::unordered_map<const Symbol *, UsageInfo > usageInfoBySymbol;
 		
 		std::vector<const Symbol *> symbolsCurrentBlockDependsOn;
+		std::vector<const Symbol *> loopControlFlowSymbolStack;
 		
 		int nextMaskId = 0;
 		int blockId = 0;
@@ -540,11 +549,10 @@ BackendLLVMWide::discoverVaryingAndMasking()
 					// within those basic blocks will depend on the uniformity of 
 					// the values read by this operation
 			    	std::function<void()> pushSymbolsCurentBlockDependsOn;
-			    	pushSymbolsCurentBlockDependsOn = [&]()->void {			    			
-						for(int readIndex=0; readIndex < symbolsRead; ++readIndex) {
-							const Symbol * symbolReadFrom = symbolsReadByOp[readIndex];
-							symbolsCurrentBlockDependsOn.push_back(symbolReadFrom);
-						}
+			    	pushSymbolsCurentBlockDependsOn = [&]()->void {
+						// Only coding for a single conditional variable
+						ASSERT(symbolsRead == 1);			    		
+						symbolsCurrentBlockDependsOn.push_back(symbolsReadByOp[0]);
 			    	};
 			    	
 			    	std::function<void()> popSymbolsCurentBlockDependsOn;
@@ -552,11 +560,11 @@ BackendLLVMWide::discoverVaryingAndMasking()
 						// Now that we have processed the dependent basic blocks
 						// we continue processing instructions and those will no
 						// longer be dependent on this operations read symbols
-						for(int readIndex=symbolsRead-1; readIndex >= 0; --readIndex) {
-							// TODO: change to DASSERT later once we are confident
-							ASSERT(symbolsCurrentBlockDependsOn.back() == symbolsReadByOp[readIndex]);
-							symbolsCurrentBlockDependsOn.pop_back();
-						}					
+
+						// Only coding for a single conditional variable
+						ASSERT(symbolsRead == 1);			    		
+						ASSERT(symbolsCurrentBlockDependsOn.back() == symbolsReadByOp[0]);
+						symbolsCurrentBlockDependsOn.pop_back();
 			    	};
 			    	
 									
@@ -593,6 +601,10 @@ BackendLLVMWide::discoverVaryingAndMasking()
 						int maskIdForBodyAndStep = nextMaskId++;
 						pushSymbolsCurentBlockDependsOn();
 						
+						// Only coding for a single conditional variable
+						ASSERT(symbolsRead == 1);
+						loopControlFlowSymbolStack.push_back(symbolsReadByOp[0]);
+						
 						
 						// Body block
 						std::cout << " FOR BODY BLOCK BEGIN" << std::endl;
@@ -628,6 +640,9 @@ BackendLLVMWide::discoverVaryingAndMasking()
 						ensureWritesAtLowerDepthAreMasked(condition);
 						
 						popSymbolsCurentBlockDependsOn();
+						ASSERT(loopControlFlowSymbolStack.back() == symbolsReadByOp[0]);
+						loopControlFlowSymbolStack.pop_back();
+
 						
 					} else if (opcode.opname() == op_functioncall)
 					{
@@ -641,6 +656,37 @@ BackendLLVMWide::discoverVaryingAndMasking()
 						ASSERT(0 && "Unhandled OSL instruction which contains jumps, note this uniform detection code needs to walk the code blocks identical to build_llvm_code");
 					}
 
+				}
+				if (opcode.opname() == op_break)
+				{
+					// The break will need change the loop control flow which is dependent upon
+					// a conditional.  By making a circular dependency between the break operation
+					// and the conditionals value, any varying values in the conditional controlling 
+					// the break should flow back to the loop control variable, which might need to
+					// be varying so allow lanes to terminate the loop independently
+					ASSERT(false == loopControlFlowSymbolStack.empty());
+					const Symbol * loopCondition = loopControlFlowSymbolStack.back();
+					
+					// Now that last loop control condition should exist in our stack of symbols that
+					// the current block with depends upon, we only need to add dependencies to the loop control
+					// to conditionas inside the loop
+					auto conditionIter = std::find(symbolsCurrentBlockDependsOn.begin(), symbolsCurrentBlockDependsOn.end(), loopCondition);
+					ASSERT(conditionIter != symbolsCurrentBlockDependsOn.end());
+					while(++conditionIter != symbolsCurrentBlockDependsOn.end()) {
+						const Symbol * conditionBreakDependsOn =  *conditionIter;
+						std::cout << ">>>Loop Conditional " << loopCondition->name().c_str() << " needs to depend on conditional " << conditionBreakDependsOn->name().c_str() << std::endl;
+						symbolFeedForwardMap.insert(std::make_pair(conditionBreakDependsOn, loopCondition));
+					}
+
+					// Also update the usageInfo for the loop conditional to mark it as being written to
+					// by the break operation (which it would be in varying scenario
+					UsageInfo & info = usageInfoBySymbol[loopCondition];
+					if (writeBlockDepth > info.last_depth)
+					{
+						info.last_depth = writeBlockDepth;
+						info.last_maskId = writeMaskId;
+					}
+					info.potentially_unmasked_ops.push_back(std::make_pair(writeBlockDepth, opIndex));
 				}
 				
 		        // If the op we coded jumps around, skip past its recursive block
@@ -756,6 +802,18 @@ BackendLLVMWide::discoverVaryingAndMasking()
 			} while (feedIter != endOfFeeds && symbolReadFrom == feedIter->first);
 		}
 
+    	// Mark all output parameters as varying to catch
+		// output parameters written to by uniform variables, 
+		// as nothing would have made them varying, however as 
+		// we write directly into wide data, we need to mark it
+		// as varying so that the code generation will promote the uniform value
+		// to varying before writing
+    	FOREACH_PARAM (Symbol &s, inst()) {    	
+			if (s.symtype() == SymTypeOutputParam) {
+				recursivelyMarkNonUniform(&s);
+			}    			
+    	}
+		
 		std::cout << "Emit m_is_uniform_by_symbol" << std::endl;			
 		
 		for(auto rIter = m_is_uniform_by_symbol.begin(); rIter != m_is_uniform_by_symbol.end(); ++rIter) {
@@ -801,6 +859,36 @@ BackendLLVMWide::requiresMasking(int opIndex)
 	ASSERT(m_requires_masking_by_op_index.empty() == false);
 	ASSERT(m_requires_masking_by_op_index.size() > opIndex);
 	return m_requires_masking_by_op_index[opIndex];
+}
+
+void 
+BackendLLVMWide::push_varying_loop_condition(Symbol *condition)
+{
+	// Self documenting that nullptr is expected and 
+	// indicates current loop scope is not varying
+	DASSERT(condition == nullptr || condition != nullptr);
+	m_generated_loops_condition_stack.push_back(condition);
+}
+
+Symbol * 
+BackendLLVMWide::varying_condition_of_innermost_loop() const
+{
+	ASSERT(false == m_generated_loops_condition_stack.empty());
+	return m_generated_loops_condition_stack.back();	
+}
+
+void 
+BackendLLVMWide::pop_varying_loop_condition()
+{
+	ASSERT(false == m_generated_loops_condition_stack.empty());
+	Symbol * varying_loop_condition = m_generated_loops_condition_stack.back();
+	m_generated_loops_condition_stack.pop_back();
+	if (nullptr != varying_loop_condition) {
+		// However many break statements executed,
+		// we are leaving the scope of the loop
+		// so we can go ahead and clear them out
+		ll.clear_mask_break();
+	}
 }
 
 
@@ -1346,29 +1434,57 @@ BackendLLVMWide::userdata_initialized_ref (int userdata_index)
 }
 
 
-
 llvm::Value *
 BackendLLVMWide::llvm_call_function (const char *name, 
                                       const Symbol **symargs, int nargs,
                                       bool deriv_ptrs,
                                       bool function_is_uniform,
+                                      bool functionIsLlvmInlined,
                                       bool ptrToReturnStructIs1stArg)
 {
     std::vector<llvm::Value *> valargs;
     valargs.resize ((size_t)nargs);
     for (int i = 0;  i < nargs;  ++i) {
         const Symbol &s = *(symargs[i]);
-        if (s.typespec().is_closure())
+        const TypeSpec &t = s.typespec();
+
+        if (t.is_closure())
             valargs[i] = llvm_load_value (s);
-        else if (s.typespec().simpletype().aggregate > 1 ||
-                 (deriv_ptrs && s.has_derivs())) {
+        else if (t.simpletype().aggregate > 1 ||
+                (deriv_ptrs && s.has_derivs()) ||
+                (!function_is_uniform && !functionIsLlvmInlined)
+                 ) 
+        {
+        	// Need to pass a pointer to the function
+        	if (function_is_uniform || (s.symtype() != SymTypeConst)) {
+                valargs[i] = llvm_void_ptr (s);
+        	} else {
+            	std::cout << "....widening constant value " << s.name().c_str() << std::endl;
+
+        		DASSERT(s.symtype() == SymTypeConst);
+        		DASSERT(function_is_uniform);
+        		// As the case to deliver a pointer to a symbol data
+        		// doesn't provide an opportunity to promote a uniform constant
+        		// to a wide value that the non-uniform function is expecting
+        		// we will handle it here.
+        		llvm::Value * wide_constant_value = llvm_load_constant_value (s, 0, 0, TypeDesc::UNKNOWN, function_is_uniform);
+        		
+        		// Have to have a place on the stack for the pointer to the wide constant to point to
+                llvm::Value *tmpptr = llvm_alloca (t, true, function_is_uniform);
+                
+                // Store our wide pointer on the stack
+                llvm_store_value (wide_constant_value, tmpptr, t, 0, NULL, 0);
+        												
+                // return pointer to our stacked wide constant
+                valargs[i] =  ll.void_ptr (tmpptr);    		
+        	}
         	
-        	std::cout << "....pushing " << s.name().c_str() << "as void_ptr"  << std::endl;
-            valargs[i] = llvm_void_ptr (s);
+        	
+        	std::cout << "....pushing " << s.name().c_str() << " as void_ptr"  << std::endl;
         }
         else
         {
-        	std::cout << "....pushing " << s.name().c_str() << "as value" << std::endl;
+        	std::cout << "....pushing " << s.name().c_str() << " as value" << std::endl;
             valargs[i] = llvm_load_value (s, /*deriv*/ 0, /*component*/ 0, TypeDesc::UNKNOWN, function_is_uniform);
         }
     }

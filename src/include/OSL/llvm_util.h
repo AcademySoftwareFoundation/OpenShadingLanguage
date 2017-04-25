@@ -212,9 +212,15 @@ public:
     // top mask with the new mask and store that off. The mask must be of 
     // type <16 x i1>
     void push_mask(llvm::Value *mask, bool negate = false, bool absolute = false);
-    void pop_mask();
+    void pop_if_mask();
+    void pop_loop_mask();
     
     llvm::Value * current_mask();
+    llvm::Value * apply_break_mask_to(llvm::Value *existing_mask);
+    
+
+    void push_mask_break();
+    void clear_mask_break();
     
 
     void push_masking_enabled(bool enable);
@@ -606,6 +612,7 @@ private:
     };
     std::vector<MaskInfo> m_mask_stack;  			// stack for masks that all stores should use when enabled
     std::vector<bool> m_enable_masking_stack;  			// stack for enabling stores to be masked
+    std::vector<MaskInfo> m_mask_break_stack;  		// stack for masks at the time a break statement executed
 
     llvm::Type *m_llvm_type_float;
     llvm::Type *m_llvm_type_int;

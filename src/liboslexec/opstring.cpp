@@ -189,7 +189,7 @@ osl_printf (ShaderGlobals *sg, const char* format_str, ...)
 }
 
 OSL_SHADEOP void
-osl_printf_b (ShaderGlobalsBatch *sgb, const char* format_str, ...)
+osl_printf_batched (ShaderGlobalsBatch *sgb, const char* format_str, ...)
 {
     va_list args;
     va_start (args, format_str);
@@ -215,6 +215,15 @@ osl_error (ShaderGlobals *sg, const char* format_str, ...)
     sg->context->error ("%s", s);
 }
 
+OSL_SHADEOP void
+osl_error_batched (ShaderGlobalsBatch *sgb, const char* format_str, ...)
+{
+    va_list args;
+    va_start (args, format_str);
+    std::string s = Strutil::vformat (format_str, args);
+    va_end (args);
+    sgb->uniform().context->error ("%s", s);
+}
 
 OSL_SHADEOP void
 osl_warning (ShaderGlobals *sg, const char* format_str, ...)
@@ -228,7 +237,22 @@ osl_warning (ShaderGlobals *sg, const char* format_str, ...)
     }
 }
 
-
+OSL_SHADEOP void
+osl_warning_batched (ShaderGlobalsBatch *sgb, const char* format_str, ...)
+{
+    if (sgb->uniform().context->allow_warnings()) {
+        va_list args;
+        va_start (args, format_str);
+#if 0
+        // Make super sure we know we are excuting LLVM-generated code!
+        std::string newfmt = std::string("llvm: ") + format_str;
+        format_str = newfmt.c_str();
+#endif
+        std::string s = Strutil::vformat (format_str, args);
+        va_end (args);
+        sgb->uniform().context->warning("%s", s);
+    }
+}
 
 OSL_SHADEOP int
 osl_split (const char *str, ustring *results, const char *sep,

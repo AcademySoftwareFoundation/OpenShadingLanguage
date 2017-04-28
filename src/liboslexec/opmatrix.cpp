@@ -370,6 +370,31 @@ inline void osl_transformn_vmv(void *result, const Matrix44 &M, void* v_)
    M.inverse().transposed().multDirMatrix (v, VEC(result));
 }
 
+inline void osl_transformn_wvwmwv(void *result, const Wide<Matrix44> &wM, void* v_)
+{
+	//std::cout << "osl_transform_vmv" << std::endl;
+	
+   OSL_INTEL_PRAGMA("forceinline recursive")
+   {		
+	   const Wide<Vec3> &wv = WVEC(v_);
+	   Wide<Vec3> &wr = WVEC(result);
+	   
+	   
+	   OSL_INTEL_PRAGMA("simd")	   
+	   for(int i=0; i < SimdLaneCount; ++i)
+	   {
+		   Vec3 v = wv.get(i);
+		   Matrix44 M = wM.get(i);
+		   Vec3 r;
+		   
+		   M.inverse().transposed().multDirMatrix (v, r);
+		   
+		   wr.set(i, r);
+	   }
+   }
+}
+
+
 inline void osl_transformn_dvmdv(void *result, const Matrix44 &M, void* v_)
 {
    const Dual2<Vec3> &v = DVEC(v_);
@@ -464,17 +489,18 @@ osl_wide_transform_triple (void *sgb_, void *Pin, int Pin_derivs,
             } else {
                 osl_transform_wvwmwv(Pout, M, Pin);
             }
+        } else if (vectype == TypeDesc::NORMAL) {
+            //if (Pin_derivs)
+            //    osl_transformn_dvmdv(Pout, M, Pin);
+            //else
+        	ASSERT(Pin_derivs==false);
+			osl_transformn_wvwmwv(Pout, M, Pin);
 #if 0 
         } else if (vectype == TypeDesc::VECTOR) {
             if (Pin_derivs)
                 osl_transformv_dvmdv(Pout, M, Pin);
             else
                 osl_transformv_vmv(Pout, M, Pin);
-        } else if (vectype == TypeDesc::NORMAL) {
-            if (Pin_derivs)
-                osl_transformn_dvmdv(Pout, M, Pin);
-            else
-                osl_transformn_vmv(Pout, M, Pin);
 #endif
         }
         else {

@@ -404,7 +404,7 @@ LLVMGEN (llvm_gen_printf)
     call_args[new_format_slot] = rop.ll.constant (s.c_str());
 
     // Construct the function name and call it.
-    std::string opname = std::string("osl_") + op.opname().string() + std::string("_b");
+    std::string opname = std::string("osl_") + op.opname().string() + std::string("_batched");
     llvm::Value *ret = rop.ll.call_function (opname.c_str(), &call_args[0],
                                                (int)call_args.size());
 
@@ -1205,6 +1205,10 @@ LLVMGEN (llvm_gen_compref)
     Symbol& Val = *rop.opargsym (op, 1);
     Symbol& Index = *rop.opargsym (op, 2);
 
+    
+    bool op_is_uniform = rop.isSymbolUniform(Result);
+    
+
     llvm::Value *c = rop.llvm_load_value(Index);
     if (rop.shadingsys().range_checking()) {
         if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
@@ -1228,8 +1232,9 @@ LLVMGEN (llvm_gen_compref)
         if (Index.is_constant()) {
             int i = *(int*)Index.data();
             i = Imath::clamp (i, 0, 2);
-            val = rop.llvm_load_value (Val, d, i);
+            val = rop.llvm_load_value (Val, d, i, TypeDesc::UNKNOWN, op_is_uniform);
         } else {
+        	// TODO: handle non constant index
             val = rop.llvm_load_component_value (Val, d, c);
         }
         rop.llvm_store_value (val, Result, d);

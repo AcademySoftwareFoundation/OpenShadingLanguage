@@ -1098,21 +1098,16 @@ BackendLLVMWide::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
         return result;
 
     // Handle int<->float type casting
-    if (op_is_uniform) {
-		if (type.is_floatbased() && cast == TypeDesc::TypeInt)
-			result = ll.op_float_to_int (result);
-		else if (type.is_int() && cast == TypeDesc::TypeFloat)
-			result = ll.op_int_to_float (result);
-    } else {
+	if (type.is_floatbased() && cast == TypeDesc::TypeInt)
+		result = ll.op_float_to_int (result);
+	else if (type.is_int() && cast == TypeDesc::TypeFloat)
+		result = ll.op_int_to_float (result);
+	
+	if (!op_is_uniform) { 
     	// TODO:  remove this assert once we have confirmed correct handling off all the
     	// different data types.  Using assert as a checklist to verify what we have 
     	// handled so far during development
     	ASSERT(cast == TypeDesc::UNKNOWN || cast == TypeDesc::TypeColor || cast == TypeDesc::TypeVector || cast == TypeDesc::TypePoint || cast == TypeDesc::TypeFloat || cast == TypeDesc::TypeInt);
-    	
-		if (type.is_floatbased() && cast == TypeDesc::TypeInt)
-			result = ll.wide_op_float_to_int (result);
-		else if (type.is_int() && cast == TypeDesc::TypeFloat)
-			result = ll.wide_op_int_to_float (result);
     	
     	if (ll.llvm_typeof(result) ==  ll.type_float()) {
             result = ll.widen_value(result);    		    		

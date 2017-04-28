@@ -1963,13 +1963,9 @@ LLVMGEN (llvm_gen_compare_op)
     ASSERT (final_result);
 
 #if OSL_CONVERT_BOOL_TO_INT
-	if (op_is_uniform) {
-	    // Convert the single bit bool into an int for now.
-		final_result = rop.ll.op_bool_to_int (final_result);
-	} else {
-		// Not sure we want an vector <16 x i8> as masks line up with <16 x i1>
-		final_result = rop.ll.wide_op_bool_to_int (final_result);		
-	}
+	// Convert the single bit bool into an int for now.
+	// Not sure we want an vector <16 x i8> as masks line up with <16 x i1>
+	final_result = rop.ll.op_bool_to_int (final_result);
 #endif
 	// Lets not convert comparions from bool to int
 	

@@ -244,6 +244,7 @@ public:
 
 
     llvm::Type *type_float() const { return m_llvm_type_float; }
+    llvm::Type *type_double() const { return m_llvm_type_double; }
     llvm::Type *type_int() const { return m_llvm_type_int; }
     llvm::Type *type_addrint() const { return m_llvm_type_addrint; }
     llvm::Type *type_bool() const { return m_llvm_type_bool; }
@@ -263,6 +264,7 @@ public:
     llvm::PointerType *type_matrix_ptr() const { return m_llvm_type_matrix_ptr; }
 
     llvm::Type *type_wide_float() const { return m_llvm_type_wide_float; }
+    llvm::Type *type_wide_double() const { return m_llvm_type_wide_double; }
     llvm::Type *type_wide_int() const { return m_llvm_type_wide_int; }
     llvm::Type *type_wide_bool() const { return m_llvm_type_wide_bool; }
     llvm::Type *type_wide_char() const { return m_llvm_type_wide_char; }
@@ -522,33 +524,22 @@ public:
     // Arithmetic ops.  It auto-detects the type (int vs float).
     // ...
     llvm::Value *op_add (llvm::Value *a, llvm::Value *b);
-    llvm::Value *wide_op_add (llvm::Value *a, llvm::Value *b);
     llvm::Value *op_sub (llvm::Value *a, llvm::Value *b);
-    llvm::Value *wide_op_sub (llvm::Value *a, llvm::Value *b);
     llvm::Value *op_neg (llvm::Value *a);
-    llvm::Value *wide_op_neg (llvm::Value *a);
     llvm::Value *op_mul (llvm::Value *a, llvm::Value *b);
-    llvm::Value *wide_op_mul (llvm::Value *a, llvm::Value *b);
     llvm::Value *op_div (llvm::Value *a, llvm::Value *b);
-    llvm::Value *wide_op_div (llvm::Value *a, llvm::Value *b);
     llvm::Value *op_mod (llvm::Value *a, llvm::Value *b);
-    llvm::Value *wide_op_mod (llvm::Value *a, llvm::Value *b);
     llvm::Value *op_float_to_int (llvm::Value *a);
-    llvm::Value *wide_op_float_to_int (llvm::Value *a);
     llvm::Value *op_int_to_float (llvm::Value *a);
-    llvm::Value *wide_op_int_to_float (llvm::Value *a);
     llvm::Value *op_bool_to_int (llvm::Value *a);
-    llvm::Value *wide_op_bool_to_int (llvm::Value *a);
-    llvm::Value *wide_op_int_to_bool (llvm::Value *a);
+    llvm::Value *op_int_to_bool (llvm::Value *a);
     llvm::Value *op_float_to_double (llvm::Value *a);
-    llvm::Value *wide_op_float_to_double (llvm::Value *a);
 
     llvm::Value *op_and (llvm::Value *a, llvm::Value *b);
     llvm::Value *op_or (llvm::Value *a, llvm::Value *b);
     llvm::Value *op_xor (llvm::Value *a, llvm::Value *b);
     llvm::Value *op_shl (llvm::Value *a, llvm::Value *b);
     llvm::Value *op_shr (llvm::Value *a, llvm::Value *b);
-    llvm::Value *wide_op_shr (llvm::Value *a, llvm::Value *b);
     llvm::Value *op_not (llvm::Value *a);
 
     /// Generate IR for (cond ? a : b).  Cond should be a bool.
@@ -614,6 +605,7 @@ private:
     std::vector<MaskInfo> m_mask_break_stack;  		// stack for masks at the time a break statement executed
 
     llvm::Type *m_llvm_type_float;
+    llvm::Type *m_llvm_type_double;
     llvm::Type *m_llvm_type_int;
     llvm::Type *m_llvm_type_addrint;
     llvm::Type *m_llvm_type_bool;
@@ -632,6 +624,7 @@ private:
 
     unsigned int m_vector_width;
     llvm::Type * m_llvm_type_wide_float;
+    llvm::Type * m_llvm_type_wide_double;
     llvm::Type * m_llvm_type_wide_int;
     llvm::Type * m_llvm_type_wide_bool;
     llvm::Type * m_llvm_type_wide_char;

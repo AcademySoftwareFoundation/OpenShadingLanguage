@@ -394,6 +394,7 @@ LLVM_Util::LLVM_Util (int debuglevel)
 
     // Set up aliases for types we use over and over
     m_llvm_type_float = (llvm::Type *) llvm::Type::getFloatTy (*m_llvm_context);
+    m_llvm_type_double = (llvm::Type *) llvm::Type::getDoubleTy (*m_llvm_context);
     m_llvm_type_int = (llvm::Type *) llvm::Type::getInt32Ty (*m_llvm_context);
     if (sizeof(char *) == 4)
         m_llvm_type_addrint = (llvm::Type *) llvm::Type::getInt32Ty (*m_llvm_context);
@@ -423,6 +424,7 @@ LLVM_Util::LLVM_Util (int debuglevel)
     m_vector_width = SimdLaneCount;
     // TODO:  why are there casts to the base class llvm::Type *?  
     m_llvm_type_wide_float = llvm::VectorType::get(m_llvm_type_float, m_vector_width);
+    m_llvm_type_wide_double = llvm::VectorType::get(m_llvm_type_double, m_vector_width);
     m_llvm_type_wide_int = llvm::VectorType::get(m_llvm_type_int, m_vector_width);
     m_llvm_type_wide_bool = llvm::VectorType::get(m_llvm_type_bool, m_vector_width);
     m_llvm_type_wide_char = llvm::VectorType::get(m_llvm_type_char, m_vector_width);
@@ -2286,13 +2288,6 @@ LLVM_Util::op_add (llvm::Value *a, llvm::Value *b)
 }
 
 
-llvm::Value *
-LLVM_Util::wide_op_add (llvm::Value *a, llvm::Value *b)
-{
-    ASSERT (0 && "Op has bad value type combination");
-	return NULL;
-}
- 
 
 llvm::Value *
 LLVM_Util::op_sub (llvm::Value *a, llvm::Value *b)
@@ -2302,7 +2297,6 @@ LLVM_Util::op_sub (llvm::Value *a, llvm::Value *b)
     if (a->getType() == type_int() && b->getType() == type_int())
         return builder().CreateSub (a, b);
         
-	// TODO: consider removing wide version, as it doesn't appear strictly necessary    
 	if (a->getType() == type_wide_float() && b->getType() == type_wide_float())
 		return builder().CreateFSub (a, b);
 	if (a->getType() == type_wide_int() && b->getType() == type_wide_int())
@@ -2320,18 +2314,6 @@ LLVM_Util::op_sub (llvm::Value *a, llvm::Value *b)
 
 
 llvm::Value *
-LLVM_Util::wide_op_sub (llvm::Value *a, llvm::Value *b)
-{
-    if (a->getType() == type_wide_float() && b->getType() == type_wide_float())
-        return builder().CreateFSub (a, b);
-    if (a->getType() == type_wide_int() && b->getType() == type_wide_int())
-        return builder().CreateSub (a, b);
-    ASSERT (0 && "Op has bad value type combination");
-	return NULL;
-}
-
-
-llvm::Value *
 LLVM_Util::op_neg (llvm::Value *a)
 {
     if (a->getType() == type_float())
@@ -2339,26 +2321,12 @@ LLVM_Util::op_neg (llvm::Value *a)
     if (a->getType() == type_int())
         return builder().CreateNeg (a);
 
-	// TODO: consider removing wide version, as it doesn't appear strictly necessary    
 	if (a->getType() == type_wide_float())
 		return builder().CreateFNeg (a);
 	if (a->getType() == type_wide_int())
 		return builder().CreateNeg (a);
     
     ASSERT (0 && "Op has bad value type combination");
-}
-
-
-llvm::Value *
-LLVM_Util::wide_op_neg (llvm::Value *a)
-{
-    if (a->getType() == type_wide_float())
-        return builder().CreateFNeg (a);
-    if (a->getType() == type_wide_int())
-        return builder().CreateNeg (a);
-    ASSERT (0 && "Op has bad value type combination");
-	return NULL;
-
 }
 
 
@@ -2371,25 +2339,12 @@ LLVM_Util::op_mul (llvm::Value *a, llvm::Value *b)
         return builder().CreateMul (a, b);
     
 	
-	// TODO: consider removing wide version, as it doesn't appear strictly necessary
 	if (a->getType() == type_wide_float() && b->getType() == type_wide_float())
 		return builder().CreateFMul (a, b);
 	if (a->getType() == type_wide_int() && b->getType() == type_wide_int())
 		return builder().CreateMul (a, b);
         
     ASSERT (0 && "Op has bad value type combination");
-}
-
-llvm::Value *
-LLVM_Util::wide_op_mul (llvm::Value *a, llvm::Value *b)
-{
-    if (a->getType() == type_wide_float() && b->getType() == type_wide_float())
-        return builder().CreateFMul (a, b);
-    if (a->getType() == type_wide_int() && b->getType() == type_wide_int())
-        return builder().CreateMul (a, b);
-    ASSERT (0 && "Op has bad value type combination");
-	return NULL;
-
 }
 
 llvm::Value *
@@ -2400,7 +2355,6 @@ LLVM_Util::op_div (llvm::Value *a, llvm::Value *b)
     if (a->getType() == type_int() && b->getType() == type_int())
         return builder().CreateSDiv (a, b);
         
-	// TODO: consider removing wide version, as it doesn't appear strictly necessary
 	if (a->getType() == type_wide_float() && b->getType() == type_wide_float())
 		return builder().CreateFDiv (a, b);
 	if (a->getType() == type_wide_int() && b->getType() == type_wide_int())
@@ -2410,36 +2364,18 @@ LLVM_Util::op_div (llvm::Value *a, llvm::Value *b)
 
 
 llvm::Value *
-LLVM_Util::wide_op_div (llvm::Value *a, llvm::Value *b)
-{
-    if (a->getType() == type_wide_float() && b->getType() == type_wide_float())
-        return builder().CreateFDiv (a, b);
-    if (a->getType() == type_wide_int() && b->getType() == type_wide_int())
-        return builder().CreateSDiv (a, b);
-    ASSERT (0 && "Op has bad value type combination");
-	return NULL;
-}
- 
-
-llvm::Value *
 LLVM_Util::op_mod (llvm::Value *a, llvm::Value *b)
 {
     if (a->getType() == type_float() && b->getType() == type_float())
         return builder().CreateFRem (a, b);
     if (a->getType() == type_int() && b->getType() == type_int())
         return builder().CreateSRem (a, b);
-    ASSERT (0 && "Op has bad value type combination");
-}
 
-llvm::Value *
-LLVM_Util::wide_op_mod (llvm::Value *a, llvm::Value *b)
-{
     if (a->getType() == type_wide_float() && b->getType() == type_wide_float())
         return builder().CreateFRem (a, b);
     if (a->getType() == type_wide_int() && b->getType() == type_wide_int())
         return builder().CreateSRem (a, b);
     ASSERT (0 && "Op has bad value type combination");
-	return NULL;
 }
 
 llvm::Value *
@@ -2447,37 +2383,23 @@ LLVM_Util::op_float_to_int (llvm::Value* a)
 {
     if (a->getType() == type_float())
         return builder().CreateFPToSI(a, type_int());
-    if (a->getType() == type_int())
-        return a;
-    ASSERT (0 && "Op has bad value type combination");
-}
-
-
-llvm::Value *
-LLVM_Util::wide_op_float_to_int (llvm::Value* a)
-{
     if (a->getType() == type_wide_float())
         return builder().CreateFPToSI(a, type_wide_int());
-    if (a->getType() == type_wide_int())
+    if ((a->getType() == type_int()) || (a->getType() == type_wide_int()))
         return a;
     ASSERT (0 && "Op has bad value type combination");
-	return NULL;
 }
 
 
 llvm::Value *
 LLVM_Util::op_float_to_double (llvm::Value* a)
 {
-    ASSERT (a->getType() == type_float());
-    return builder().CreateFPExt(a, llvm::Type::getDoubleTy(context()));
-}
-
-
-llvm::Value *
-LLVM_Util::wide_op_float_to_double (llvm::Value* a)
-{
-    ASSERT (a->getType() == type_wide_float());
-    return builder().CreateFPExt(a, llvm::Type::getDoubleTy(context()));
+    if(a->getType() == type_float())
+    	return builder().CreateFPExt(a, type_double());
+    if(a->getType() == type_wide_float())
+    	return builder().CreateFPExt(a, type_wide_double());
+    
+    ASSERT (0 && "Op has bad value type combination");
 }
 
 
@@ -2486,21 +2408,11 @@ LLVM_Util::op_int_to_float (llvm::Value* a)
 {
     if (a->getType() == type_int())
         return builder().CreateSIToFP(a, type_float());
-    if (a->getType() == type_float())
-        return a;
-    ASSERT (0 && "Op has bad value type combination");
-}
-
-
-llvm::Value *
-LLVM_Util::wide_op_int_to_float (llvm::Value* a)
-{
     if (a->getType() == type_wide_int())
         return builder().CreateSIToFP(a, type_wide_float());
-    if (a->getType() == type_wide_float())
+    if ((a->getType() == type_float()) || (a->getType() == type_wide_float()))
         return a;
     ASSERT (0 && "Op has bad value type combination");
-	return NULL;
 }
 
 
@@ -2509,35 +2421,25 @@ LLVM_Util::op_bool_to_int (llvm::Value* a)
 {
     if (a->getType() == type_bool())
         return builder().CreateZExt (a, type_int());
-    if (a->getType() == type_int())
-        return a;
-    ASSERT (0 && "Op has bad value type combination");
-}
-
-
-llvm::Value *
-LLVM_Util::wide_op_bool_to_int (llvm::Value* a)
-{
     if (a->getType() == type_wide_bool()) {
-    	//std::cout << " wide_op_bool_to_int CreateZExt "
-        //return builder().CreateZExt (a, type_int());
     	return builder().CreateZExt (a, type_wide_int());
     }
-    if (a->getType() == type_wide_int())
+    if ((a->getType() == type_int()) || (a->getType() == type_wide_int()))
         return a;
     ASSERT (0 && "Op has bad value type combination");
-	return NULL;
 }
 
+
 llvm::Value *
-LLVM_Util::wide_op_int_to_bool(llvm::Value* a)
+LLVM_Util::op_int_to_bool(llvm::Value* a)
 {
+    if (a->getType() == type_int()) {
+    	return builder().CreateTrunc (a, type_bool());
+    }
     if (a->getType() == type_wide_int()) {
-    	//std::cout << " wide_op_int_to_bool CreateZExt "
-        //return builder().CreateTrunc (a, type_int());
     	return builder().CreateTrunc (a, type_wide_bool());
     }
-    if (a->getType() == type_wide_bool())
+    if ((a->getType() == type_bool()) || (a->getType() == type_wide_bool()))
         return a;
     ASSERT (0 && "Op has bad value type combination");
 	return NULL;
@@ -2577,18 +2479,11 @@ LLVM_Util::op_shr (llvm::Value *a, llvm::Value *b)
 {
     if (a->getType() == type_int() && b->getType() == type_int())
         return builder().CreateAShr (a, b);  // signed int -> arithmetic shift
-    ASSERT (0 && "Op has bad value type combination");
-}
-
-
-llvm::Value *
-LLVM_Util::wide_op_shr (llvm::Value *a, llvm::Value *b)
-{
     if (a->getType() == type_wide_int() && b->getType() == type_wide_int())
         return builder().CreateAShr (a, b);  // signed int -> arithmetic shift
     ASSERT (0 && "Op has bad value type combination");
-	return NULL;
 }
+
 
 llvm::Value *
 LLVM_Util::op_not (llvm::Value *a)

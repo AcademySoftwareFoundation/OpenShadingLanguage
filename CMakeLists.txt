@@ -1,9 +1,16 @@
 project (OSL)
 
 # Release version of the library
-set (OSL_LIBRARY_VERSION_MAJOR 1)
-set (OSL_LIBRARY_VERSION_MINOR 8)
-set (OSL_LIBRARY_VERSION_PATCH 8)
+set (PROJ_NAME OSL)
+set (PROJECT_VERSION_PATCH 8)
+set (PROJECT_VERSION_MINOR 8)
+set (PROJECT_VERSION_MAJOR 1)
+set (OSL_LIBRARY_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+set (OSL_LIBRARY_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+set (OSL_LIBRARY_VERSION_PATCH ${PROJECT_VERSION_PATCH})
+set (OSL_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+set (OSL_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+set (OSL_VERSION_PATCH ${PROJECT_VERSION_PATCH})
 set (OSL_LIBRARY_VERSION_RELEASE_TYPE "")   # "dev", "betaX", "RCY", ""
 
 # Version of the OSO file format and instruction set
@@ -566,6 +573,7 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             oslc-err-struct-array-init oslc-err-struct-dup
             oslc-warn-commainit
             oslc-variadic-macro
+            oslc-version
             oslinfo-arrayparams oslinfo-colorctrfloat
             oslinfo-metadata oslinfo-noparams
             osl-imageio

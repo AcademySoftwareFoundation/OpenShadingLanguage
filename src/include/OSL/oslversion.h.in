@@ -40,6 +40,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //     for compiled shaders.
 // These are all independent, though loosely coupled.
 
+// Version of the language:
+#define @PROJ_NAME@_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
+#define @PROJ_NAME@_VERSION_MINOR @PROJECT_VERSION_MINOR@
+#define @PROJ_NAME@_VERSION_PATCH @PROJECT_VERSION_PATCH@
+#define @PROJ_NAME@_VERSION (10000 * @PROJ_NAME@_VERSION_MAJOR + \
+                               100 * @PROJ_NAME@_VERSION_MINOR + \
+                                     @PROJ_NAME@_VERSION_PATCH)
+
 // Version of this library:
 #define OSL_LIBRARY_VERSION_MAJOR @OSL_LIBRARY_VERSION_MAJOR@
 #define OSL_LIBRARY_VERSION_MINOR @OSL_LIBRARY_VERSION_MINOR@

@@ -1,0 +1,21 @@
+
+shader test ()
+{
+    int ok = 1;
+    printf ("Test versions:\n");
+    int version = 0;
+    getattribute ("osl:version", version);
+    if (version != OSL_VERSION) {
+        printf ("OSL_VERSION and attribute \"osl:version\" DO NOT MATCH!\n");
+        ok = 0;
+    }
+    if (version != OSL_VERSION_MAJOR*10000+OSL_VERSION_MINOR*100+OSL_VERSION_PATCH) {
+        printf ("OSL_VERSION and (maj*10000+min*100+patch) DO NOT MATCH!\n");
+        ok = 0;
+    }
+    if (ok)
+        printf ("OK!\n");
+    // printf ("Version = %d\n", version);
+    // printf ("VERSION = %d\n", OSL_VERSION);
+}
+

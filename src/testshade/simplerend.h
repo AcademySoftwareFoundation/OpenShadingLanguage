@@ -102,6 +102,8 @@ private:
     AttrGetterMap m_attr_getters;
 
     // Attribute getters
+    bool get_osl_version (ShaderGlobals *sg, bool derivs, ustring object,
+                         TypeDesc type, ustring name, void *val);
     bool get_camera_resolution (ShaderGlobals *sg, bool derivs, ustring object,
                          TypeDesc type, ustring name, void *val);
     bool get_camera_projection (ShaderGlobals *sg, bool derivs, ustring object,

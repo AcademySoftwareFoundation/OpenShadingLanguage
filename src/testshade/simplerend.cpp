@@ -150,6 +150,7 @@ SimpleRenderer::SimpleRenderer ()
                    0.1f, 1000.0f, 256, 256);
 
     // Set up getters
+    m_attr_getters[ustring("osl:version")] = &SimpleRenderer::get_osl_version;
     m_attr_getters[ustring("camera:resolution")] = &SimpleRenderer::get_camera_resolution;
     m_attr_getters[ustring("camera:projection")] = &SimpleRenderer::get_camera_projection;
     m_attr_getters[ustring("camera:pixelaspect")] = &SimpleRenderer::get_camera_pixelaspect;
@@ -383,6 +384,18 @@ SimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type,
         return true;
     }
 
+    return false;
+}
+
+
+bool
+SimpleRenderer::get_osl_version (ShaderGlobals *sg, bool derivs, ustring object,
+                                    TypeDesc type, ustring name, void *val)
+{
+    if (type == TypeDesc::TypeInt) {
+        ((int *)val)[0] = OSL_VERSION;
+        return true;
+    }
     return false;
 }
 

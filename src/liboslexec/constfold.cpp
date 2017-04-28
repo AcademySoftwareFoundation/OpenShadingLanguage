@@ -2243,7 +2243,11 @@ DECLFOLDER(constfold_getattribute)
     bool found = false;
 
     // Check global things first
-    if (attr_name == "shader:shadername" && attr_type == TypeDesc::TypeString) {
+    if (attr_name == "osl:version" && attr_type == TypeDesc::TypeInt) {
+        int *val = (int *)(char *)buf;
+        *val = OSL_VERSION;
+        found = true;
+    } else if (attr_name == "shader:shadername" && attr_type == TypeDesc::TypeString) {
         ustring *up = (ustring *)(char *)buf;
         *up = ustring(rop.inst()->shadername());
         found = true;

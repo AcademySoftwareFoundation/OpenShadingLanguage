@@ -260,6 +260,7 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             oslc-err-struct-array-init oslc-err-struct-dup
             oslc-warn-commainit
             oslc-variadic-macro
+            oslc-version
             oslinfo-arrayparams oslinfo-colorctrfloat
             oslinfo-metadata oslinfo-noparams
             osl-imageio

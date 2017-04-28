@@ -208,6 +208,14 @@ OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
                 ctx.get_language() | boost::wave::support_option_variadics);
         ctx.set_language (lang);
 
+        ctx.add_macro_definition (OIIO::Strutil::format("OSL_VERSION_MAJOR=%d",
+                                                  OSL_LIBRARY_VERSION_MAJOR).c_str());
+        ctx.add_macro_definition (OIIO::Strutil::format("OSL_VERSION_MINOR=%d",
+                                                  OSL_LIBRARY_VERSION_MINOR).c_str());
+        ctx.add_macro_definition (OIIO::Strutil::format("OSL_VERSION_PATCH=%d",
+                                                  OSL_LIBRARY_VERSION_PATCH).c_str());
+        ctx.add_macro_definition (OIIO::Strutil::format("OSL_VERSION=%d",
+                                                  OSL_LIBRARY_VERSION_CODE).c_str());
         for (size_t i = 0; i < defines.size(); ++i) {
             if (defines[i][1] == 'D')
                 ctx.add_macro_definition (defines[i].c_str()+2);
@@ -345,6 +353,14 @@ OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
 
     clang::PreprocessorOptions &preprocOpts = inst.getPreprocessorOpts();
     preprocOpts.UsePredefines = 0;
+    preprocOpts.addMacroDef (OIIO::Strutil::format("OSL_VERSION_MAJOR=%d",
+                                             OSL_LIBRARY_VERSION_MAJOR).c_str());
+    preprocOpts.addMacroDef (OIIO::Strutil::format("OSL_VERSION_MINOR=%d",
+                                             OSL_LIBRARY_VERSION_MINOR).c_str());
+    preprocOpts.addMacroDef (OIIO::Strutil::format("OSL_VERSION_PATCH=%d",
+                                             OSL_LIBRARY_VERSION_PATCH).c_str());
+    preprocOpts.addMacroDef (OIIO::Strutil::format("OSL_VERSION=%d",
+                                             OSL_LIBRARY_VERSION_CODE).c_str());
     for (auto&& d : defines) {
         if (d[1] == 'D')
             preprocOpts.addMacroDef (d.c_str()+2);

@@ -2274,16 +2274,13 @@ LLVM_Util::GEP (llvm::Value *ptr, int elem1, int elem2)
 llvm::Value *
 LLVM_Util::op_add (llvm::Value *a, llvm::Value *b)
 {
-    if (a->getType() == type_float() && b->getType() == type_float())
+    if ((a->getType() == type_float() && b->getType() == type_float()) ||
+		(a->getType() == type_wide_float() && b->getType() == type_wide_float()))
         return builder().CreateFAdd (a, b);
-    if (a->getType() == type_int() && b->getType() == type_int())
+    if ((a->getType() == type_int() && b->getType() == type_int()) ||
+		(a->getType() == type_wide_int() && b->getType() == type_wide_int()))
         return builder().CreateAdd (a, b);
         
-    // TODO: consider removing wide version, as it doesn't appear strictly necessary    
-    if (a->getType() == type_wide_float() && b->getType() == type_wide_float())
-        return builder().CreateFAdd (a, b);
-    if (a->getType() == type_wide_int() && b->getType() == type_wide_int())
-        return builder().CreateAdd (a, b);
     ASSERT (0 && "Op has bad value type combination");
 }
 
@@ -2292,23 +2289,13 @@ LLVM_Util::op_add (llvm::Value *a, llvm::Value *b)
 llvm::Value *
 LLVM_Util::op_sub (llvm::Value *a, llvm::Value *b)
 {
-    if (a->getType() == type_float() && b->getType() == type_float())
+    if ((a->getType() == type_float() && b->getType() == type_float()) ||
+		(a->getType() == type_wide_float() && b->getType() == type_wide_float()))
         return builder().CreateFSub (a, b);
-    if (a->getType() == type_int() && b->getType() == type_int())
+    if ((a->getType() == type_int() && b->getType() == type_int()) ||
+		(a->getType() == type_wide_int() && b->getType() == type_wide_int()))
         return builder().CreateSub (a, b);
         
-	if (a->getType() == type_wide_float() && b->getType() == type_wide_float())
-		return builder().CreateFSub (a, b);
-	if (a->getType() == type_wide_int() && b->getType() == type_wide_int())
-		return builder().CreateSub (a, b);
-	
-#if 0
-	std::cout << "LLVM_Util::op_sub a type=";
-	a->getType()->dump();
-	std::cout << "b type=";
-	b->getType()->dump();
-	std::cout << std::endl;
-#endif
     ASSERT (0 && "Op has bad value type combination");
 }
 
@@ -2316,15 +2303,12 @@ LLVM_Util::op_sub (llvm::Value *a, llvm::Value *b)
 llvm::Value *
 LLVM_Util::op_neg (llvm::Value *a)
 {
-    if (a->getType() == type_float())
+    if ((a->getType() == type_float()) ||
+		(a->getType() == type_wide_float()))
         return builder().CreateFNeg (a);
-    if (a->getType() == type_int())
+    if ((a->getType() == type_int()) ||
+		(a->getType() == type_wide_int()))
         return builder().CreateNeg (a);
-
-	if (a->getType() == type_wide_float())
-		return builder().CreateFNeg (a);
-	if (a->getType() == type_wide_int())
-		return builder().CreateNeg (a);
     
     ASSERT (0 && "Op has bad value type combination");
 }
@@ -2333,32 +2317,26 @@ LLVM_Util::op_neg (llvm::Value *a)
 llvm::Value *
 LLVM_Util::op_mul (llvm::Value *a, llvm::Value *b)
 {
-    if (a->getType() == type_float() && b->getType() == type_float())
+    if ((a->getType() == type_float() && b->getType() == type_float()) ||
+		(a->getType() == type_wide_float() && b->getType() == type_wide_float()))
         return builder().CreateFMul (a, b);
-    if (a->getType() == type_int() && b->getType() == type_int())
+    if ((a->getType() == type_int() && b->getType() == type_int()) ||
+		(a->getType() == type_wide_int() && b->getType() == type_wide_int()))
         return builder().CreateMul (a, b);
-    
-	
-	if (a->getType() == type_wide_float() && b->getType() == type_wide_float())
-		return builder().CreateFMul (a, b);
-	if (a->getType() == type_wide_int() && b->getType() == type_wide_int())
-		return builder().CreateMul (a, b);
-        
+           
     ASSERT (0 && "Op has bad value type combination");
 }
 
 llvm::Value *
 LLVM_Util::op_div (llvm::Value *a, llvm::Value *b)
 {
-    if (a->getType() == type_float() && b->getType() == type_float())
+    if ((a->getType() == type_float() && b->getType() == type_float()) ||
+		(a->getType() == type_wide_float() && b->getType() == type_wide_float()))
         return builder().CreateFDiv (a, b);
-    if (a->getType() == type_int() && b->getType() == type_int())
+    if ((a->getType() == type_int() && b->getType() == type_int()) ||
+		(a->getType() == type_wide_int() && b->getType() == type_wide_int()))
         return builder().CreateSDiv (a, b);
         
-	if (a->getType() == type_wide_float() && b->getType() == type_wide_float())
-		return builder().CreateFDiv (a, b);
-	if (a->getType() == type_wide_int() && b->getType() == type_wide_int())
-		return builder().CreateSDiv (a, b);
     ASSERT (0 && "Op has bad value type combination");
 }
 
@@ -2366,15 +2344,13 @@ LLVM_Util::op_div (llvm::Value *a, llvm::Value *b)
 llvm::Value *
 LLVM_Util::op_mod (llvm::Value *a, llvm::Value *b)
 {
-    if (a->getType() == type_float() && b->getType() == type_float())
+    if ((a->getType() == type_float() && b->getType() == type_float()) ||
+		(a->getType() == type_wide_float() && b->getType() == type_wide_float()))
         return builder().CreateFRem (a, b);
-    if (a->getType() == type_int() && b->getType() == type_int())
+    if ((a->getType() == type_int() && b->getType() == type_int()) ||
+		(a->getType() == type_wide_int() && b->getType() == type_wide_int()))
         return builder().CreateSRem (a, b);
 
-    if (a->getType() == type_wide_float() && b->getType() == type_wide_float())
-        return builder().CreateFRem (a, b);
-    if (a->getType() == type_wide_int() && b->getType() == type_wide_int())
-        return builder().CreateSRem (a, b);
     ASSERT (0 && "Op has bad value type combination");
 }
 
@@ -2398,6 +2374,8 @@ LLVM_Util::op_float_to_double (llvm::Value* a)
     	return builder().CreateFPExt(a, type_double());
     if(a->getType() == type_wide_float())
     	return builder().CreateFPExt(a, type_wide_double());
+    // TODO: unclear why this is inconsistent vs. the other conversion ops
+    // which become no-ops if the type is already the target
     
     ASSERT (0 && "Op has bad value type combination");
 }
@@ -2421,9 +2399,8 @@ LLVM_Util::op_bool_to_int (llvm::Value* a)
 {
     if (a->getType() == type_bool())
         return builder().CreateZExt (a, type_int());
-    if (a->getType() == type_wide_bool()) {
+    if (a->getType() == type_wide_bool()) 
     	return builder().CreateZExt (a, type_wide_int());
-    }
     if ((a->getType() == type_int()) || (a->getType() == type_wide_int()))
         return a;
     ASSERT (0 && "Op has bad value type combination");
@@ -2433,12 +2410,10 @@ LLVM_Util::op_bool_to_int (llvm::Value* a)
 llvm::Value *
 LLVM_Util::op_int_to_bool(llvm::Value* a)
 {
-    if (a->getType() == type_int()) {
+    if (a->getType() == type_int()) 
     	return builder().CreateTrunc (a, type_bool());
-    }
-    if (a->getType() == type_wide_int()) {
+    if (a->getType() == type_wide_int()) 
     	return builder().CreateTrunc (a, type_wide_bool());
-    }
     if ((a->getType() == type_bool()) || (a->getType() == type_wide_bool()))
         return a;
     ASSERT (0 && "Op has bad value type combination");
@@ -2449,6 +2424,8 @@ LLVM_Util::op_int_to_bool(llvm::Value* a)
 llvm::Value *
 LLVM_Util::op_and (llvm::Value *a, llvm::Value *b)
 {
+	// TODO: unlclear why inconsistent and not checking for operand types 
+	// with final ASSERT for "bad value type combination"
     return builder().CreateAnd (a, b);
 }
 
@@ -2456,6 +2433,8 @@ LLVM_Util::op_and (llvm::Value *a, llvm::Value *b)
 llvm::Value *
 LLVM_Util::op_or (llvm::Value *a, llvm::Value *b)
 {
+	// TODO: unlclear why inconsistent and not checking for operand types 
+	// with final ASSERT for "bad value type combination"
     return builder().CreateOr (a, b);
 }
 
@@ -2463,6 +2442,8 @@ LLVM_Util::op_or (llvm::Value *a, llvm::Value *b)
 llvm::Value *
 LLVM_Util::op_xor (llvm::Value *a, llvm::Value *b)
 {
+	// TODO: unlclear why inconsistent and not checking for operand types 
+	// with final ASSERT for "bad value type combination"
     return builder().CreateXor (a, b);
 }
 
@@ -2470,6 +2451,8 @@ LLVM_Util::op_xor (llvm::Value *a, llvm::Value *b)
 llvm::Value *
 LLVM_Util::op_shl (llvm::Value *a, llvm::Value *b)
 {
+	// TODO: unlclear why inconsistent and not checking for operand types 
+	// with final ASSERT for "bad value type combination"
     return builder().CreateShl (a, b);
 }
 
@@ -2477,10 +2460,10 @@ LLVM_Util::op_shl (llvm::Value *a, llvm::Value *b)
 llvm::Value *
 LLVM_Util::op_shr (llvm::Value *a, llvm::Value *b)
 {
-    if (a->getType() == type_int() && b->getType() == type_int())
+    if ((a->getType() == type_int() && b->getType() == type_int()) ||
+		(a->getType() == type_wide_int() && b->getType() == type_wide_int()))
         return builder().CreateAShr (a, b);  // signed int -> arithmetic shift
-    if (a->getType() == type_wide_int() && b->getType() == type_wide_int())
-        return builder().CreateAShr (a, b);  // signed int -> arithmetic shift
+    
     ASSERT (0 && "Op has bad value type combination");
 }
 
@@ -2488,6 +2471,8 @@ LLVM_Util::op_shr (llvm::Value *a, llvm::Value *b)
 llvm::Value *
 LLVM_Util::op_not (llvm::Value *a)
 {
+	// TODO: unlclear why inconsistent and not checking for operand types 
+	// with final ASSERT for "bad value type combination"
     return builder().CreateNot (a);
 }
 
@@ -2496,6 +2481,8 @@ LLVM_Util::op_not (llvm::Value *a)
 llvm::Value *
 LLVM_Util::op_select (llvm::Value *cond, llvm::Value *a, llvm::Value *b)
 {
+	// TODO: unlclear why inconsistent and not checking for operand types 
+	// with final ASSERT for "bad value type combination"
     return builder().CreateSelect (cond, a, b);
 }
 

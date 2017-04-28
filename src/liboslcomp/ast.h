@@ -248,24 +248,15 @@ protected:
 
     /// Flatten a list of nodes (headed by A) into a vector of node refs
     /// (vec).
-    static void list_to_vec (const ref &A, std::vector<ref> &vec) {
-        vec.clear ();
-        for (ref node = A; node; node = node->next())
-            vec.push_back (node);
-    }
+    static void list_to_vec (const ref &A, std::vector<ref> &vec);
 
     /// Turn a vector of node refs into a list of nodes, returning its
     /// head.
-    static ref vec_to_list (std::vector<ref> &vec) {
-        if (vec.size()) {
-            for (size_t i = 0;  i < vec.size()-1;  ++i)
-                vec[i]->m_next = vec[i+1];
-            vec[vec.size()-1]->m_next = NULL;
-            return vec[0];
-        } else {
-            return ref();
-        }
-    }
+    static ref vec_to_list (std::vector<ref> &vec);
+
+    /// Generate a comma-separated string of data types of the list headed
+    /// by node (for example, "float, int, string").
+    static std::string list_to_types_string (const ASTNode *node);
 
     /// Return the number of child nodes.
     ///
@@ -420,7 +411,8 @@ class ASTfunction_declaration : public ASTNode
 {
 public:
     ASTfunction_declaration (OSLCompilerImpl *comp, TypeSpec type, ustring name,
-                             ASTNode *form, ASTNode *stmts, ASTNode *meta=NULL);
+                             ASTNode *form, ASTNode *stmts, ASTNode *meta=NULL,
+                             int sourceline_start=-1);
     const char *nodetypename () const { return "function_declaration"; }
     const char *childname (size_t i) const;
     void print (std::ostream &out, int indentlevel=0) const;

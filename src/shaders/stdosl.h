@@ -60,6 +60,7 @@
     color  name (color x) BUILTIN;              \
     float  name (float x) BUILTIN;
 
+// Declare name (T,T) for T in {triples,float}
 #define PERCOMP2(name)                          \
     normal name (normal x, normal y) BUILTIN;   \
     vector name (vector x, vector y) BUILTIN;   \
@@ -67,13 +68,12 @@
     color  name (color x, color y) BUILTIN;     \
     float  name (float x, float y) BUILTIN;
 
+// Declare name(T,float) for T in {triples}
 #define PERCOMP2F(name)                         \
     normal name (normal x, float y) BUILTIN;    \
     vector name (vector x, float y) BUILTIN;    \
     point  name (point x, float y) BUILTIN;     \
-    color  name (color x, float y) BUILTIN;     \
-    float  name (float x, float y) BUILTIN;
-
+    color  name (color x, float y) BUILTIN;
 
 // Basic math
 normal degrees (normal x) { return x*(180.0/M_PI); }

@@ -151,6 +151,7 @@ BackendLLVMWide::llvm_gen_error (string_view message)
 void
 BackendLLVMWide::llvm_call_layer (int layer, bool unconditional)
 {
+	std::cout << "llvm_call_layer layer=" <<layer<< " unconditional=" << unconditional << std::endl; 
     // Make code that looks like:
     //     if (! groupdata->run[parentlayer])
     //         parent_layer (sg, groupdata);
@@ -197,6 +198,7 @@ BackendLLVMWide::llvm_run_connected_layers (Symbol &sym, int symindex,
     if (sym.valuesource() != Symbol::ConnectedVal)
         return;  // Nothing to do
 
+    std::cout << "BackendLLVMWide::llvm_run_connected_layers " << sym.name().c_str() << " opnum " << opnum << std::endl;
     bool inmain = (opnum >= inst()->maincodebegin() &&
                    opnum < inst()->maincodeend());
 
@@ -250,8 +252,11 @@ LLVMGEN (llvm_gen_nop)
 
 LLVMGEN (llvm_gen_useparam)
 {
+	
+#if 1
     ASSERT (! rop.inst()->unused() &&
             "oops, thought this layer was unused, why do we call it?");
+    std::cout << ">>>>>>>>>>>>>>>>>>>>>llvm_gen_useparam <<<<<<<<<<<<<<<<<<<" << std::endl;
 
     // If we have multiple params needed on this statement, don't waste
     // time checking the same upstream layer more than once.
@@ -272,6 +277,7 @@ LLVMGEN (llvm_gen_useparam)
         }
     }
     return true;
+#endif
 }
 
 
@@ -452,8 +458,8 @@ LLVMGEN (llvm_gen_add)
         if (A.has_derivs() || B.has_derivs()) {
             for (int d = 1;  d <= 2;  ++d) {  // dx, dy
                 for (int i = 0; i < num_components; i++) {
-                    llvm::Value *a = rop.loadLLVMValue (A, i, d, type);
-                    llvm::Value *b = rop.loadLLVMValue (B, i, d, type);
+                    llvm::Value *a = rop.loadLLVMValue (A, i, d, type, op_is_uniform);
+                    llvm::Value *b = rop.loadLLVMValue (B, i, d, type, op_is_uniform);
             		// TODO:  switching back to non-wide to figure out uniform vs. varying data
                     //llvm::Value *r = rop.ll.wide_op_add (a, b);
                     llvm::Value *r = rop.ll.op_add (a, b);
@@ -503,8 +509,8 @@ LLVMGEN (llvm_gen_sub)
         if (A.has_derivs() || B.has_derivs()) {
             for (int d = 1;  d <= 2;  ++d) {  // dx, dy
                 for (int i = 0; i < num_components; i++) {
-                    llvm::Value *a = rop.loadLLVMValue (A, i, d, type);
-                    llvm::Value *b = rop.loadLLVMValue (B, i, d, type);
+                    llvm::Value *a = rop.loadLLVMValue (A, i, d, type, op_is_uniform);
+                    llvm::Value *b = rop.loadLLVMValue (B, i, d, type, op_is_uniform);
                 	// TODO:  switching back to non-wide to figure out uniform vs. varying data
                     //llvm::Value *r = rop.ll.wide_op_sub (a, b);
                     llvm::Value *r = rop.ll.op_sub (a, b);
@@ -692,16 +698,21 @@ LLVMGEN (llvm_gen_div)
             // Division of duals: (a/b, 1/b*(ax-a/b*bx), 1/b*(ay-a/b*by))
             ASSERT (is_float);
             llvm::Value *binv;
-            if (B.is_constant() && ! rop.is_zero(B))
+            if (B.is_constant() && ! rop.is_zero(B)) {
         		// TODO:  switching back to non-wide to figure out uniform vs. varying data
                 //binv = rop.ll.wide_op_div (rop.ll.wide_constant(1.0f), b);
-            	binv = rop.ll.op_div (rop.ll.constant(1.0f), b);
-            else
+            	if (op_is_uniform) {
+            		binv = rop.ll.op_div (rop.ll.constant(1.0f), b);
+            	} else {
+            		binv = rop.ll.op_div (rop.ll.wide_constant(1.0f), b);
+            	}
+            } else {
         		// TODO:  switching back to non-wide to figure out uniform vs. varying data
                 //binv = rop.ll.call_function (safe_div, rop.ll.wide_constant(1.0f), b);
             	binv = rop.ll.call_function (safe_div.c_str(), rop.ll.constant(1.0f), b);
-            llvm::Value *ax = rop.llvm_load_value (A, 1, i, type);
-            llvm::Value *bx = rop.llvm_load_value (B, 1, i, type);
+            }
+            llvm::Value *ax = rop.llvm_load_value (A, 1, i, type, op_is_uniform);
+            llvm::Value *bx = rop.llvm_load_value (B, 1, i, type, op_is_uniform);
     		// TODO:  switching back to non-wide to figure out uniform vs. varying data
             //llvm::Value *a_div_b_mul_bx = rop.ll.wide_op_mul (a_div_b, bx);
             //llvm::Value *ax_minus_a_div_b_mul_bx = rop.ll.wide_op_sub (ax, a_div_b_mul_bx);
@@ -710,8 +721,8 @@ LLVMGEN (llvm_gen_div)
     		// TODO:  switching back to non-wide to figure out uniform vs. varying data
             //rx = rop.ll.wide_op_mul (binv, ax_minus_a_div_b_mul_bx);
             rx = rop.ll.op_mul (binv, ax_minus_a_div_b_mul_bx);
-            llvm::Value *ay = rop.llvm_load_value (A, 2, i, type);
-            llvm::Value *by = rop.llvm_load_value (B, 2, i, type);
+            llvm::Value *ay = rop.llvm_load_value (A, 2, i, type, op_is_uniform);
+            llvm::Value *by = rop.llvm_load_value (B, 2, i, type, op_is_uniform);
     		// TODO:  switching back to non-wide to figure out uniform vs. varying data
             //llvm::Value *a_div_b_mul_by = rop.ll.wide_op_mul (a_div_b, by);
             //llvm::Value *ay_minus_a_div_b_mul_by = rop.ll.wide_op_sub (ay, a_div_b_mul_by);

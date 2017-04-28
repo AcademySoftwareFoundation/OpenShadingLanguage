@@ -266,7 +266,6 @@ public:
     llvm::Type *type_wide_int() const { return m_llvm_type_wide_int; }
     llvm::Type *type_wide_bool() const { return m_llvm_type_wide_bool; }
     llvm::Type *type_wide_char() const { return m_llvm_type_wide_char; }
-    llvm::Type *type_wide_void() const { return m_llvm_type_wide_void; }
     llvm::Type *type_wide_triple() const { return m_llvm_type_wide_triple; }
     llvm::Type *type_wide_matrix() const { return m_llvm_type_wide_matrix; }
     llvm::Type *type_wide_void_ptr() const { return m_llvm_type_wide_void_ptr; }

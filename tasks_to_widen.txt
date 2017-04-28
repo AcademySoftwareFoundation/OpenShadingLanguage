@@ -1,3 +1,4 @@
+Add support for OSL defined structures
 Add support for continue & break to loop control flow
 	Add more tests for breaks in nested control flow and nested conditional blocks
 	Add continue support

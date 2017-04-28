@@ -670,8 +670,6 @@ BackendLLVMWide::llvm_generate_debug_op_printf (const Opcode &op)
 bool
 BackendLLVMWide::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
 {
-	discoverVaryingAndMasking();
-	
     std::cout << "build_llvm_code : beginop="<< beginop << " endop="<< endop << " bb=" << bb << std::endl;
     if (bb)
         ll.set_insert_point (bb);
@@ -812,7 +810,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
                              !is_entry_layer, // fastcall for non-entry layer functions
                              ll.type_void(), // return type
                              llvm_type_sg_ptr(), llvm_type_groupdata_ptr()));
-
+    
     // Get shader globals and groupdata pointers
     m_llvm_shaderglobals_ptr = ll.current_function_arg(0); //arg_it++;
     m_llvm_groupdata_ptr = ll.current_function_arg(1); //arg_it++;
@@ -823,6 +821,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
     // Set up a new IR builder
     ll.new_builder (entry_bb);
 	ll.set_debug_info(/*unique_layer_name*/inst()->op(inst()->maincodebegin()).sourcefile().string());
+    ll.set_debug_location(unique_layer_name, unique_layer_name, 0);
 	
 	std::cout << "Master Shadername = " << inst()->master()->shadername() << std::endl;
 	std::cout << "Master osofilename = " << inst()->master()->osofilename() << std::endl;
@@ -1214,6 +1213,16 @@ BackendLLVMWide::run ()
     offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,backfacing));
     
     ll.validate_struct_data_layout(m_llvm_type_sg, offset_by_index);
+
+    // We need to discover uniformity and masking requirements of our layers before generating code
+    m_requires_masking_by_layer_and_op_index.resize(nlayers);
+    for (int layer = 0; layer < nlayers; ++layer) {
+        set_inst (layer);
+        if (m_layer_remap[layer] != -1) {
+        	discoverVaryingAndMaskingOfLayer();
+        }
+    }
+    
     
     std::vector<llvm::Function*> funcs (nlayers, NULL);
     for (int layer = 0; layer < nlayers; ++layer) {
@@ -1222,6 +1231,8 @@ BackendLLVMWide::run ()
             // If no entry points were specified, the last layer is special,
             // it's the single entry point for the whole group.
             bool is_single_entry = (layer == (nlayers-1) && group().num_entry_layers() == 0);
+            
+            std::cout << "build_llvm_instance for layer=" << layer << std::endl;            
             funcs[layer] = build_llvm_instance (is_single_entry);
         }
     }

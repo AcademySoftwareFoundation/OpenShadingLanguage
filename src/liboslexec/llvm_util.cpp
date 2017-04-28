@@ -426,11 +426,9 @@ LLVM_Util::LLVM_Util (int debuglevel)
     m_llvm_type_wide_int = llvm::VectorType::get(m_llvm_type_int, m_vector_width);
     m_llvm_type_wide_bool = llvm::VectorType::get(m_llvm_type_bool, m_vector_width);
     m_llvm_type_wide_char = llvm::VectorType::get(m_llvm_type_char, m_vector_width);
-    //m_llvm_type_wide_void = llvm::VectorType::get(m_llvm_type_void, m_vector_width);
-    m_llvm_type_wide_void = llvm::VectorType::get(m_llvm_type_void, m_vector_width);
     
     m_llvm_type_wide_char_ptr = llvm::PointerType::get(m_llvm_type_wide_char, 0);    
-    m_llvm_type_wide_void_ptr = llvm::VectorType::get(llvm::PointerType::get(m_llvm_type_wide_void, 0), m_vector_width);
+    m_llvm_type_wide_void_ptr = llvm::VectorType::get(m_llvm_type_void_ptr, m_vector_width);
     	
     // A triple is a struct composed of 3 floats
     std::vector<llvm::Type*> triple_wide_fields(3, m_llvm_type_wide_float);
@@ -527,7 +525,6 @@ LLVM_Util::enable_debug_info() {
 
 void 
 LLVM_Util::set_debug_info(const std::string &function_name) {
-//	std::cout << "LLVM_Util::set_debug_info" << std::endl;
 
 	m_llvm_debug_builder = (new llvm::DIBuilder(*m_llvm_module));
 
@@ -1798,8 +1795,11 @@ LLVM_Util::llvm_vector_type (const TypeDesc &typedesc)
         lt = type_wide_triple();
     else if (t.aggregate == TypeDesc::MATRIX44)
         lt = type_wide_matrix();
-    else if (t == TypeDesc::NONE)
-        lt = type_wide_void();
+    // TODO:  No such thing as a wide void?
+    // so let this fall through to error below
+    // see if we ever run into it
+//    else if (t == TypeDesc::NONE)
+//        lt = type_wide_void();
     else if (t == TypeDesc::UINT8)
         lt = type_wide_char();
     else if (t == TypeDesc::PTR)
@@ -2307,6 +2307,14 @@ LLVM_Util::op_sub (llvm::Value *a, llvm::Value *b)
 		return builder().CreateFSub (a, b);
 	if (a->getType() == type_wide_int() && b->getType() == type_wide_int())
 		return builder().CreateSub (a, b);
+	
+#if 0
+	std::cout << "LLVM_Util::op_sub a type=";
+	a->getType()->dump();
+	std::cout << "b type=";
+	b->getType()->dump();
+	std::cout << std::endl;
+#endif
     ASSERT (0 && "Op has bad value type combination");
 }
 

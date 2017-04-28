@@ -406,434 +406,433 @@ BackendLLVMWide::getLLVMSymbolBase (const Symbol &sym)
 
 
 void 
-BackendLLVMWide::discoverVaryingAndMasking()
+BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 {
-	if (m_is_uniform_by_symbol.size() == 0) {
-		std::cout << "start discoverVaryingAndMasking" << std::endl;
-		
-		const OpcodeVec & opcodes = inst()->ops();
-		
-		ASSERT(m_requires_masking_by_op_index.empty());
-		m_requires_masking_by_op_index.resize(opcodes.size(), false);
-				
-		// TODO:  Optimize: could probably use symbol index vs. a pointer 
-		// allowing a lookup table vs. hash_map
-		 
-		
-		std::unordered_multimap<const Symbol * /* parent */ , const Symbol * /* dependent */> symbolFeedForwardMap;
-
-		struct UsageInfo
-		{
-			int last_depth;
-			int last_maskId;
-			std::vector <std::pair<int /*blockDepth*/, int /*op_num*/>> potentially_unmasked_ops;
+	std::cout << "start discoverVaryingAndMaskingOfLayer of layer=" << layer() << std::endl;
+	
+	const OpcodeVec & opcodes = inst()->ops();
+	
+	ASSERT(m_requires_masking_by_layer_and_op_index.size() > layer());	
+	ASSERT(m_requires_masking_by_layer_and_op_index[layer()].empty());
+	m_requires_masking_by_layer_and_op_index[layer()].resize(opcodes.size(), false);
 			
-			UsageInfo()
-			:last_depth(0)
-			,last_maskId(0)
-			{}				
-		};
-		std::unordered_map<const Symbol *, UsageInfo > usageInfoBySymbol;
+	// TODO:  Optimize: could probably use symbol index vs. a pointer 
+	// allowing a lookup table vs. hash_map
+	 
+	
+	std::unordered_multimap<const Symbol * /* parent */ , const Symbol * /* dependent */> symbolFeedForwardMap;
+
+	struct UsageInfo
+	{
+		int last_depth;
+		int last_maskId;
+		std::vector <std::pair<int /*blockDepth*/, int /*op_num*/>> potentially_unmasked_ops;
 		
-		std::vector<const Symbol *> symbolsCurrentBlockDependsOn;
-		std::vector<const Symbol *> loopControlFlowSymbolStack;
-		
-		int nextMaskId = 0;
-		int blockId = 0;
-    	std::function<void(int, int, int, int, int, int)> discoverSymbolsBetween;
-    	discoverSymbolsBetween = [&](int beginop, int endop, int blockDepth, int writeBlockDepth, int maskId, int writeMaskId)->void
-		{		
-    		std::cout << "discoverSymbolsBetween [" << beginop << "-" << endop <<"]" << std::endl;
-    		// NOTE: allowing a seperate writeMask is to handle condition blocks that are self modifying
-			for(int opIndex = beginop; opIndex < endop; ++opIndex)
-			{
-				Opcode & opcode = op(opIndex);
-				std::cout << "op=" << opcode.opname();
-				int argCount = opcode.nargs();
-				
-				const Symbol * symbolsReadByOp[argCount];
-				int symbolsRead = 0;
-				const Symbol * symbolsWrittenByOp[argCount];
-				int symbolsWritten = 0;
-				for(int argIndex = 0; argIndex < argCount; ++argIndex) {
-					const Symbol * aSymbol = opargsym (opcode, argIndex);
-					if (opcode.argwrite(argIndex)) {
-						std::cout << " write to ";
-						symbolsWrittenByOp[symbolsWritten++] = aSymbol;
-					}
-					if (opcode.argread(argIndex)) {
-						symbolsReadByOp[symbolsRead++] = aSymbol;
-						std::cout << " read from ";					
-					}
-					std::cout << " " << aSymbol->name();
-		
-					std::cout << " discovery " << aSymbol->name()  << std::endl;
-					// Initially let all symbols be uniform 
-					// so we get proper cascading of all dependencies
-					// when we feed forward from varying shader globals, output parameters, and connected parameters
-					constexpr bool isUniform = true;
-					m_is_uniform_by_symbol[aSymbol] = isUniform;
+		UsageInfo()
+		:last_depth(0)
+		,last_maskId(0)
+		{}				
+	};
+	std::unordered_map<const Symbol *, UsageInfo > usageInfoBySymbol;
+	
+	std::vector<const Symbol *> symbolsCurrentBlockDependsOn;
+	std::vector<const Symbol *> loopControlFlowSymbolStack;
+	
+	int nextMaskId = 0;
+	int blockId = 0;
+	std::function<void(int, int, int, int, int, int)> discoverSymbolsBetween;
+	discoverSymbolsBetween = [&](int beginop, int endop, int blockDepth, int writeBlockDepth, int maskId, int writeMaskId)->void
+	{		
+		std::cout << "discoverSymbolsBetween [" << beginop << "-" << endop <<"]" << std::endl;
+		// NOTE: allowing a seperate writeMask is to handle condition blocks that are self modifying
+		for(int opIndex = beginop; opIndex < endop; ++opIndex)
+		{
+			Opcode & opcode = op(opIndex);
+			std::cout << "op=" << opcode.opname();
+			int argCount = opcode.nargs();
+			
+			const Symbol * symbolsReadByOp[argCount];
+			int symbolsRead = 0;
+			const Symbol * symbolsWrittenByOp[argCount];
+			int symbolsWritten = 0;
+			for(int argIndex = 0; argIndex < argCount; ++argIndex) {
+				const Symbol * aSymbol = opargsym (opcode, argIndex);
+				if (opcode.argwrite(argIndex)) {
+					std::cout << " write to ";
+					symbolsWrittenByOp[symbolsWritten++] = aSymbol;
 				}
-				std::cout << std::endl;
-				
-		    	std::function<void(const Symbol *)> ensureWritesAtLowerDepthAreMasked;
-		    	ensureWritesAtLowerDepthAreMasked = [&](const Symbol *symbolToCheck)->void {			    			
-					// Check if reading a Symbol that was written to from a different 
-					// maskId than we are reading, if so we need to mark it as requiring masking
-					auto lookup = usageInfoBySymbol.find(symbolToCheck);
-					if(lookup != usageInfoBySymbol.end()) {
-						UsageInfo & info = lookup->second;
-						if ((info.last_depth > blockDepth) && (info.last_maskId != maskId))
-						{
-							std::cout << symbolToCheck->name() << " will need to have last write be masked" << std::endl;
-							ASSERT(info.potentially_unmasked_ops.empty() == false);
-							decltype(info.potentially_unmasked_ops) remaining_ops;
-							for(auto usage: info.potentially_unmasked_ops) {
-								// Only mark deeper usages as requiring masking
-								if(usage.first > blockDepth)
-								{
-									std::cout << " marking op " << usage.second << " as masked" << std::endl;
-									m_requires_masking_by_op_index[usage.second] = true;									
-								} else {
-									remaining_ops.push_back(usage);
-								}
+				if (opcode.argread(argIndex)) {
+					symbolsReadByOp[symbolsRead++] = aSymbol;
+					std::cout << " read from ";					
+				}
+				std::cout << " " << aSymbol->name();
+	
+				std::cout << " discovery " << aSymbol->name()  << std::endl;
+				// Initially let all symbols be uniform 
+				// so we get proper cascading of all dependencies
+				// when we feed forward from varying shader globals, output parameters, and connected parameters
+				constexpr bool isUniform = true;
+				m_is_uniform_by_symbol[aSymbol] = isUniform;
+			}
+			std::cout << std::endl;
+			
+			std::function<void(const Symbol *)> ensureWritesAtLowerDepthAreMasked;
+			ensureWritesAtLowerDepthAreMasked = [&](const Symbol *symbolToCheck)->void {			    			
+				// Check if reading a Symbol that was written to from a different 
+				// maskId than we are reading, if so we need to mark it as requiring masking
+				auto lookup = usageInfoBySymbol.find(symbolToCheck);
+				if(lookup != usageInfoBySymbol.end()) {
+					UsageInfo & info = lookup->second;
+					if ((info.last_depth > blockDepth) && (info.last_maskId != maskId))
+					{
+						std::cout << symbolToCheck->name() << " will need to have last write be masked" << std::endl;
+						ASSERT(info.potentially_unmasked_ops.empty() == false);
+						decltype(info.potentially_unmasked_ops) remaining_ops;
+						for(auto usage: info.potentially_unmasked_ops) {
+							// Only mark deeper usages as requiring masking
+							if(usage.first > blockDepth)
+							{
+								std::cout << " marking op " << usage.second << " as masked" << std::endl;
+								m_requires_masking_by_layer_and_op_index[layer()][usage.second] = true;									
+							} else {
+								remaining_ops.push_back(usage);
 							}
-							
-							info.potentially_unmasked_ops.swap(remaining_ops);		
-							// Now that all ops writing to the symbol at higher depths have been marked to be masked
-							// we can now consider the matter handled at this point at reset the
-							// last_depth written at to the current depth to avoid needlessly repeating the work.
-							info.last_depth = blockDepth;
 						}
+						
+						info.potentially_unmasked_ops.swap(remaining_ops);		
+						// Now that all ops writing to the symbol at higher depths have been marked to be masked
+						// we can now consider the matter handled at this point at reset the
+						// last_depth written at to the current depth to avoid needlessly repeating the work.
+						info.last_depth = blockDepth;
 					}
-		    	};
-				
-				for(int readIndex=0; readIndex < symbolsRead; ++readIndex) {
-					const Symbol * symbolReadFrom = symbolsReadByOp[readIndex];
-					for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
-						const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
-						// Skip self dependencies
-						if (symbolWrittenTo != symbolReadFrom) {
-							symbolFeedForwardMap.insert(std::make_pair(symbolReadFrom, symbolWrittenTo));
-						}
-					}		
-					
-					ensureWritesAtLowerDepthAreMasked(symbolReadFrom);
 				}
-				
+			};
+			
+			for(int readIndex=0; readIndex < symbolsRead; ++readIndex) {
+				const Symbol * symbolReadFrom = symbolsReadByOp[readIndex];
 				for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
 					const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
-					UsageInfo & info = usageInfoBySymbol[symbolWrittenTo];
+					// Skip self dependencies
+					if (symbolWrittenTo != symbolReadFrom) {
+						symbolFeedForwardMap.insert(std::make_pair(symbolReadFrom, symbolWrittenTo));
+					}
+				}		
+				
+				ensureWritesAtLowerDepthAreMasked(symbolReadFrom);
+			}
+			
+			for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
+				const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
+				UsageInfo & info = usageInfoBySymbol[symbolWrittenTo];
+				info.last_depth = writeBlockDepth;
+				info.last_maskId = writeMaskId;
+				info.potentially_unmasked_ops.push_back(std::make_pair(writeBlockDepth, opIndex));
+			}
+			
+			// Add dependencies between symbols written to in this basic block
+			// to the set of symbols the code blocks where dependent upon to be executed
+			for(const Symbol *symbolCurrentBlockDependsOn : symbolsCurrentBlockDependsOn)
+			{
+				for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
+					const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
+					// Skip self dependencies
+					if (symbolWrittenTo != symbolCurrentBlockDependsOn) {
+						symbolFeedForwardMap.insert(std::make_pair(symbolCurrentBlockDependsOn, symbolWrittenTo));
+					}
+				}									
+			}
+			
+			if (opcode.jump(0) >= 0)
+			{
+				// The operation with a jump depends on reading the follow symbols
+				// track them for the following basic blocks as the writes
+				// within those basic blocks will depend on the uniformity of 
+				// the values read by this operation
+				std::function<void()> pushSymbolsCurentBlockDependsOn;
+				pushSymbolsCurentBlockDependsOn = [&]()->void {
+					// Only coding for a single conditional variable
+					ASSERT(symbolsRead == 1);			    		
+					symbolsCurrentBlockDependsOn.push_back(symbolsReadByOp[0]);
+				};
+				
+				std::function<void()> popSymbolsCurentBlockDependsOn;
+				popSymbolsCurentBlockDependsOn = [&]()->void {			    			
+					// Now that we have processed the dependent basic blocks
+					// we continue processing instructions and those will no
+					// longer be dependent on this operations read symbols
+
+					// Only coding for a single conditional variable
+					ASSERT(symbolsRead == 1);			    		
+					ASSERT(symbolsCurrentBlockDependsOn.back() == symbolsReadByOp[0]);
+					symbolsCurrentBlockDependsOn.pop_back();
+				};
+				
+								
+				// op must have jumps, therefore have nested code we need to process
+				// We need to process these in the same order as the code generator
+				// so our "block depth" lines up for symbol lookups
+				if (opcode.opname() == op_if)
+				{
+					pushSymbolsCurentBlockDependsOn();
+					// Then block
+					std::cout << " THEN BLOCK BEGIN" << std::endl;
+					int thenBlockDepth = blockDepth+1;
+					int thenMaskId = nextMaskId++;
+					discoverSymbolsBetween(opIndex+1, opcode.jump(0), thenBlockDepth, thenBlockDepth, thenMaskId, thenMaskId);
+					std::cout << " THEN BLOCK END" << std::endl;
+					// else block
+					std::cout << " ELSE BLOCK BEGIN" << std::endl;
+					int elseBlockDepth = blockDepth+1;
+					int elseMaskId = nextMaskId++;
+					discoverSymbolsBetween(opcode.jump(0), opcode.jump(1), elseBlockDepth, elseBlockDepth, elseMaskId, elseMaskId);
+					std::cout << " ELSE BLOCK END" << std::endl;
+					
+					popSymbolsCurentBlockDependsOn();
+					
+				} else if ((opcode.opname() == op_for) || (opcode.opname() == op_while) || (opcode.opname() == op_dowhile))
+				{
+					// Init block
+					// NOTE: init block doesn't depend on the for loops conditions and should be exempt
+					std::cout << " FOR INIT BLOCK BEGIN" << std::endl;
+					discoverSymbolsBetween(opIndex+1, opcode.jump(0), blockDepth, blockDepth, maskId, maskId);
+					std::cout << " FOR INIT BLOCK END" << std::endl;
+
+					int depthForBodyAndStep = blockDepth+1;
+					int maskIdForBodyAndStep = nextMaskId++;
+					pushSymbolsCurentBlockDependsOn();
+					
+					// Only coding for a single conditional variable
+					ASSERT(symbolsRead == 1);
+					loopControlFlowSymbolStack.push_back(symbolsReadByOp[0]);
+					
+					
+					// Body block
+					std::cout << " FOR BODY BLOCK BEGIN" << std::endl;
+					discoverSymbolsBetween(opcode.jump(1), opcode.jump(2), depthForBodyAndStep, depthForBodyAndStep, maskIdForBodyAndStep, maskIdForBodyAndStep);
+					std::cout << " FOR BODY BLOCK END" << std::endl;
+										
+					// Step block
+					// Because the number of times the step block is executed depends on
+					// when the loop condition block returns false, that means if 
+					// the loop condition block is varying, then so would the condition block
+					std::cout << " FOR STEP BLOCK BEGIN" << std::endl;
+					discoverSymbolsBetween(opcode.jump(2), opcode.jump(3), depthForBodyAndStep, depthForBodyAndStep, maskIdForBodyAndStep, maskIdForBodyAndStep);
+					std::cout << " FOR STEP BLOCK END" << std::endl;
+
+					
+				
+					// Condition block
+					// NOTE: Processing condition like it was a do/while
+					// Although the first execution of the condition doesn't depend on the for loops conditions 
+					// subsequent executions will depend on it on the previous loop's mask
+					// We are processing the condition block out of order so that
+					// any writes to any symbols it depends on can be marked first
+					std::cout << " FOR COND BLOCK BEGIN" << std::endl;
+					discoverSymbolsBetween(opcode.jump(0), opcode.jump(1), blockDepth, depthForBodyAndStep, maskId, maskIdForBodyAndStep);
+					std::cout << " FOR COND BLOCK END" << std::endl;
+
+					// Special case for symbols that are conditions
+					// becuase we will be doing horizontal operations on these
+					// to check if they are all 'false' to be able to stop
+					// executing the loop, we need any writes to the
+					// condition to be masked
+					const Symbol * condition = opargsym (opcode, 0);
+					ensureWritesAtLowerDepthAreMasked(condition);
+					
+					popSymbolsCurentBlockDependsOn();
+					ASSERT(loopControlFlowSymbolStack.back() == symbolsReadByOp[0]);
+					loopControlFlowSymbolStack.pop_back();
+
+					
+				} else if (opcode.opname() == op_functioncall)
+				{
+					// Function call itself operates on the same symbol dependencies
+					// as the current block, there was no conditionals involved
+					std::cout << " FUNCTION CALL BLOCK BEGIN" << std::endl;
+					discoverSymbolsBetween(opIndex+1, opcode.jump(0), blockDepth, writeBlockDepth, maskId, writeMaskId);
+					std::cout << " FUNCTION CALL BLOCK END" << std::endl;
+					
+				} else {
+					ASSERT(0 && "Unhandled OSL instruction which contains jumps, note this uniform detection code needs to walk the code blocks identical to build_llvm_code");
+				}
+
+			}
+			if (opcode.opname() == op_break)
+			{
+				// The break will need change the loop control flow which is dependent upon
+				// a conditional.  By making a circular dependency between the break operation
+				// and the conditionals value, any varying values in the conditional controlling 
+				// the break should flow back to the loop control variable, which might need to
+				// be varying so allow lanes to terminate the loop independently
+				ASSERT(false == loopControlFlowSymbolStack.empty());
+				const Symbol * loopCondition = loopControlFlowSymbolStack.back();
+				
+				// Now that last loop control condition should exist in our stack of symbols that
+				// the current block with depends upon, we only need to add dependencies to the loop control
+				// to conditionas inside the loop
+				auto conditionIter = std::find(symbolsCurrentBlockDependsOn.begin(), symbolsCurrentBlockDependsOn.end(), loopCondition);
+				ASSERT(conditionIter != symbolsCurrentBlockDependsOn.end());
+				while(++conditionIter != symbolsCurrentBlockDependsOn.end()) {
+					const Symbol * conditionBreakDependsOn =  *conditionIter;
+					std::cout << ">>>Loop Conditional " << loopCondition->name().c_str() << " needs to depend on conditional " << conditionBreakDependsOn->name().c_str() << std::endl;
+					symbolFeedForwardMap.insert(std::make_pair(conditionBreakDependsOn, loopCondition));
+				}
+
+				// Also update the usageInfo for the loop conditional to mark it as being written to
+				// by the break operation (which it would be in varying scenario
+				UsageInfo & info = usageInfoBySymbol[loopCondition];
+				if (writeBlockDepth > info.last_depth)
+				{
 					info.last_depth = writeBlockDepth;
 					info.last_maskId = writeMaskId;
-					info.potentially_unmasked_ops.push_back(std::make_pair(writeBlockDepth, opIndex));
 				}
-				
-				// Add dependencies between symbols written to in this basic block
-				// to the set of symbols the code blocks where dependent upon to be executed
-				for(const Symbol *symbolCurrentBlockDependsOn : symbolsCurrentBlockDependsOn)
-				{
-					for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
-						const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
-						// Skip self dependencies
-						if (symbolWrittenTo != symbolCurrentBlockDependsOn) {
-							symbolFeedForwardMap.insert(std::make_pair(symbolCurrentBlockDependsOn, symbolWrittenTo));
-						}
-					}									
-				}
-				
-				if (opcode.jump(0) >= 0)
-				{
-					// The operation with a jump depends on reading the follow symbols
-					// track them for the following basic blocks as the writes
-					// within those basic blocks will depend on the uniformity of 
-					// the values read by this operation
-			    	std::function<void()> pushSymbolsCurentBlockDependsOn;
-			    	pushSymbolsCurentBlockDependsOn = [&]()->void {
-						// Only coding for a single conditional variable
-						ASSERT(symbolsRead == 1);			    		
-						symbolsCurrentBlockDependsOn.push_back(symbolsReadByOp[0]);
-			    	};
-			    	
-			    	std::function<void()> popSymbolsCurentBlockDependsOn;
-			    	popSymbolsCurentBlockDependsOn = [&]()->void {			    			
-						// Now that we have processed the dependent basic blocks
-						// we continue processing instructions and those will no
-						// longer be dependent on this operations read symbols
-
-						// Only coding for a single conditional variable
-						ASSERT(symbolsRead == 1);			    		
-						ASSERT(symbolsCurrentBlockDependsOn.back() == symbolsReadByOp[0]);
-						symbolsCurrentBlockDependsOn.pop_back();
-			    	};
-			    	
-									
-					// op must have jumps, therefore have nested code we need to process
-					// We need to process these in the same order as the code generator
-					// so our "block depth" lines up for symbol lookups
-					if (opcode.opname() == op_if)
-					{
-						pushSymbolsCurentBlockDependsOn();
-						// Then block
-						std::cout << " THEN BLOCK BEGIN" << std::endl;
-						int thenBlockDepth = blockDepth+1;
-						int thenMaskId = nextMaskId++;
-						discoverSymbolsBetween(opIndex+1, opcode.jump(0), thenBlockDepth, thenBlockDepth, thenMaskId, thenMaskId);
-						std::cout << " THEN BLOCK END" << std::endl;
-						// else block
-						std::cout << " ELSE BLOCK BEGIN" << std::endl;
-						int elseBlockDepth = blockDepth+1;
-						int elseMaskId = nextMaskId++;
-						discoverSymbolsBetween(opcode.jump(0), opcode.jump(1), elseBlockDepth, elseBlockDepth, elseMaskId, elseMaskId);
-						std::cout << " ELSE BLOCK END" << std::endl;
-						
-						popSymbolsCurentBlockDependsOn();
-						
-					} else if ((opcode.opname() == op_for) || (opcode.opname() == op_while) || (opcode.opname() == op_dowhile))
-					{
-						// Init block
-						// NOTE: init block doesn't depend on the for loops conditions and should be exempt
-						std::cout << " FOR INIT BLOCK BEGIN" << std::endl;
-						discoverSymbolsBetween(opIndex+1, opcode.jump(0), blockDepth, blockDepth, maskId, maskId);
-						std::cout << " FOR INIT BLOCK END" << std::endl;
-
-						int depthForBodyAndStep = blockDepth+1;
-						int maskIdForBodyAndStep = nextMaskId++;
-						pushSymbolsCurentBlockDependsOn();
-						
-						// Only coding for a single conditional variable
-						ASSERT(symbolsRead == 1);
-						loopControlFlowSymbolStack.push_back(symbolsReadByOp[0]);
-						
-						
-						// Body block
-						std::cout << " FOR BODY BLOCK BEGIN" << std::endl;
-						discoverSymbolsBetween(opcode.jump(1), opcode.jump(2), depthForBodyAndStep, depthForBodyAndStep, maskIdForBodyAndStep, maskIdForBodyAndStep);
-						std::cout << " FOR BODY BLOCK END" << std::endl;
-											
-						// Step block
-						// Because the number of times the step block is executed depends on
-						// when the loop condition block returns false, that means if 
-						// the loop condition block is varying, then so would the condition block
-						std::cout << " FOR STEP BLOCK BEGIN" << std::endl;
-						discoverSymbolsBetween(opcode.jump(2), opcode.jump(3), depthForBodyAndStep, depthForBodyAndStep, maskIdForBodyAndStep, maskIdForBodyAndStep);
-						std::cout << " FOR STEP BLOCK END" << std::endl;
-
-						
-					
-						// Condition block
-						// NOTE: Processing condition like it was a do/while
-						// Although the first execution of the condition doesn't depend on the for loops conditions 
-						// subsequent executions will depend on it on the previous loop's mask
-						// We are processing the condition block out of order so that
-						// any writes to any symbols it depends on can be marked first
-						std::cout << " FOR COND BLOCK BEGIN" << std::endl;
-						discoverSymbolsBetween(opcode.jump(0), opcode.jump(1), blockDepth, depthForBodyAndStep, maskId, maskIdForBodyAndStep);
-						std::cout << " FOR COND BLOCK END" << std::endl;
-
-						// Special case for symbols that are conditions
-						// becuase we will be doing horizontal operations on these
-						// to check if they are all 'false' to be able to stop
-						// executing the loop, we need any writes to the
-						// condition to be masked
-						const Symbol * condition = opargsym (opcode, 0);
-						ensureWritesAtLowerDepthAreMasked(condition);
-						
-						popSymbolsCurentBlockDependsOn();
-						ASSERT(loopControlFlowSymbolStack.back() == symbolsReadByOp[0]);
-						loopControlFlowSymbolStack.pop_back();
-
-						
-					} else if (opcode.opname() == op_functioncall)
-					{
-						// Function call itself operates on the same symbol dependencies
-						// as the current block, there was no conditionals involved
-						std::cout << " FUNCTION CALL BLOCK BEGIN" << std::endl;
-						discoverSymbolsBetween(opIndex+1, opcode.jump(0), blockDepth, writeBlockDepth, maskId, writeMaskId);
-						std::cout << " FUNCTION CALL END" << std::endl;
-						
-					} else {
-						ASSERT(0 && "Unhandled OSL instruction which contains jumps, note this uniform detection code needs to walk the code blocks identical to build_llvm_code");
-					}
-
-				}
-				if (opcode.opname() == op_break)
-				{
-					// The break will need change the loop control flow which is dependent upon
-					// a conditional.  By making a circular dependency between the break operation
-					// and the conditionals value, any varying values in the conditional controlling 
-					// the break should flow back to the loop control variable, which might need to
-					// be varying so allow lanes to terminate the loop independently
-					ASSERT(false == loopControlFlowSymbolStack.empty());
-					const Symbol * loopCondition = loopControlFlowSymbolStack.back();
-					
-					// Now that last loop control condition should exist in our stack of symbols that
-					// the current block with depends upon, we only need to add dependencies to the loop control
-					// to conditionas inside the loop
-					auto conditionIter = std::find(symbolsCurrentBlockDependsOn.begin(), symbolsCurrentBlockDependsOn.end(), loopCondition);
-					ASSERT(conditionIter != symbolsCurrentBlockDependsOn.end());
-					while(++conditionIter != symbolsCurrentBlockDependsOn.end()) {
-						const Symbol * conditionBreakDependsOn =  *conditionIter;
-						std::cout << ">>>Loop Conditional " << loopCondition->name().c_str() << " needs to depend on conditional " << conditionBreakDependsOn->name().c_str() << std::endl;
-						symbolFeedForwardMap.insert(std::make_pair(conditionBreakDependsOn, loopCondition));
-					}
-
-					// Also update the usageInfo for the loop conditional to mark it as being written to
-					// by the break operation (which it would be in varying scenario
-					UsageInfo & info = usageInfoBySymbol[loopCondition];
-					if (writeBlockDepth > info.last_depth)
-					{
-						info.last_depth = writeBlockDepth;
-						info.last_maskId = writeMaskId;
-					}
-					info.potentially_unmasked_ops.push_back(std::make_pair(writeBlockDepth, opIndex));
-				}
-				
-		        // If the op we coded jumps around, skip past its recursive block
-		        // executions.
-		        int next = opcode.farthest_jump ();
-		        if (next >= 0)
-		        	opIndex = next-1;				
-			}
-		};
-    	
-    	int mainMask = nextMaskId++;
-
-    	// NOTE:  The order symbols are discovered should match the flow
-    	// of build_llvm_code calls coming from build_llvm_instance 
-    	// And build_llvm_code is called indirectly throught llvm_assign_initial_value.
-    	
-    	// TODO: not sure the main scope should be at a deepr scoope than the init operations 
-    	// for symbols.  I think they should be fine
-    	for (auto&& s : inst()->symbols()) {    	
-            // Skip constants -- we always inline scalar constants, and for
-            // array constants we will just use the pointers to the copy of
-            // the constant that belongs to the instance.
-            if (s.symtype() == SymTypeConst)
-                continue;
-            // Skip structure placeholders
-            if (s.typespec().is_structure())
-                continue;
-            // Set initial value for constants, closures, and strings that are
-            // not parameters.
-            if (s.symtype() != SymTypeParam && s.symtype() != SymTypeOutputParam &&
-                s.symtype() != SymTypeGlobal &&
-                (s.is_constant() || s.typespec().is_closure_based() ||
-                 s.typespec().is_string_based() || 
-                 ((s.symtype() == SymTypeLocal || s.symtype() == SymTypeTemp)
-                  && shadingsys().debug_uninit())))
-            {
-                if (s.has_init_ops() && s.valuesource() == Symbol::DefaultVal) {
-                    // Handle init ops.
-                    discoverSymbolsBetween(s.initbegin(), s.initend(), 0, 0, mainMask, mainMask);
-                }
-            }
-        }
-    	
-        // make a second pass for the parameters (which may make use of
-        // locals and constants from the first pass)
-        FOREACH_PARAM (Symbol &s, inst()) {
-            // Skip structure placeholders
-            if (s.typespec().is_structure())
-                continue;
-            // Skip if it's never read and isn't connected
-            if (! s.everread() && ! s.connected_down() && ! s.connected()
-                  && ! s.renderer_output())
-                continue;
-            // Skip if it's an interpolated (userdata) parameter and we're
-            // initializing them lazily.
-            if (s.symtype() == SymTypeParam
-                    && ! s.lockgeom() && ! s.typespec().is_closure()
-                    && ! s.connected() && ! s.connected_down()
-                    && shadingsys().lazy_userdata())
-                continue;
-            // Set initial value for params (may contain init ops)
-            if (s.has_init_ops() && s.valuesource() == Symbol::DefaultVal) {
-                // Handle init ops.
-                discoverSymbolsBetween(s.initbegin(), s.initend(), 0, 0, mainMask, mainMask);
-            }
-        }    	
-    	
-    	discoverSymbolsBetween(inst()->maincodebegin(), inst()->maincodeend(), 0, 0, mainMask, mainMask);
-    	
-		std::cout << "About to build m_is_uniform_by_symbol" << std::endl;			
-		
-    	std::function<void(const Symbol *)> recursivelyMarkNonUniform;
-    	recursivelyMarkNonUniform = [&](const Symbol* nonUniformSymbol)->void
-		{
-        	bool previously_was_uniform = m_is_uniform_by_symbol[nonUniformSymbol];
-        	m_is_uniform_by_symbol[nonUniformSymbol] = false;
-        	if (previously_was_uniform) {
-        		auto range = symbolFeedForwardMap.equal_range(nonUniformSymbol);
-        		auto iter = range.first;
-        		for(;iter != range.second; ++iter) {
-        			const Symbol * symbolWrittenTo = iter->second;
-        			recursivelyMarkNonUniform(symbolWrittenTo);
-        		};
-        	}
-		};
-		
-		auto endOfFeeds = symbolFeedForwardMap.end();	
-		for(auto feedIter = symbolFeedForwardMap.begin();feedIter != endOfFeeds; )
-		{
-			const Symbol * symbolReadFrom = feedIter->first;
-			//std::cout << " " << symbolReadFrom->name() << " feeds into " << symbolWrittenTo->name() << std::endl;
-			
-			bool is_uniform = true;			
-			auto symType = symbolReadFrom->symtype();
-			if (symType == SymTypeGlobal) {
-				is_uniform = IsShaderGlobalUniformByName(symbolReadFrom->name());
-			} else if (symType == SymTypeParam) {
-					// TODO: perhaps the connected params do not necessarily
-					// need to be varying 
-					is_uniform = false;
-			} 
-			if (is_uniform == false) {
-				// So we have a symbol that is not uniform, so it will be a wide type
-				// Thus anyone who depends on it will need to be wide as well.
-				recursivelyMarkNonUniform(symbolReadFrom);
+				info.potentially_unmasked_ops.push_back(std::make_pair(writeBlockDepth, opIndex));
 			}
 			
-			// The multimap may have multiple entries with the same key
-			// And we only need to iterate over unique keys,
-			// so skip any consecutive duplicate keys
-			do {
-				++feedIter;
-			} while (feedIter != endOfFeeds && symbolReadFrom == feedIter->first);
+			// If the op we coded jumps around, skip past its recursive block
+			// executions.
+			int next = opcode.farthest_jump ();
+			if (next >= 0)
+				opIndex = next-1;				
 		}
+	};
+	
+	int mainMask = nextMaskId++;
 
-    	// Mark all output parameters as varying to catch
-		// output parameters written to by uniform variables, 
-		// as nothing would have made them varying, however as 
-		// we write directly into wide data, we need to mark it
-		// as varying so that the code generation will promote the uniform value
-		// to varying before writing
-    	FOREACH_PARAM (Symbol &s, inst()) {    	
-			if (s.symtype() == SymTypeOutputParam) {
-				recursivelyMarkNonUniform(&s);
-			}    			
-    	}
-		
-		std::cout << "Emit m_is_uniform_by_symbol" << std::endl;			
-		
-		for(auto rIter = m_is_uniform_by_symbol.begin(); rIter != m_is_uniform_by_symbol.end(); ++rIter) {
-			const Symbol * rSym = rIter->first;
-			bool is_uniform = rIter->second;
-			std::cout << "--->" << rSym << " " << rSym->name() << " is " << (is_uniform ? "UNIFORM" : "VARYING") << std::endl;			
+	// NOTE:  The order symbols are discovered should match the flow
+	// of build_llvm_code calls coming from build_llvm_instance 
+	// And build_llvm_code is called indirectly throught llvm_assign_initial_value.
+	
+	// TODO: not sure the main scope should be at a deepr scoope than the init operations 
+	// for symbols.  I think they should be fine
+	for (auto&& s : inst()->symbols()) {    	
+		// Skip constants -- we always inline scalar constants, and for
+		// array constants we will just use the pointers to the copy of
+		// the constant that belongs to the instance.
+		if (s.symtype() == SymTypeConst)
+			continue;
+		// Skip structure placeholders
+		if (s.typespec().is_structure())
+			continue;
+		// Set initial value for constants, closures, and strings that are
+		// not parameters.
+		if (s.symtype() != SymTypeParam && s.symtype() != SymTypeOutputParam &&
+			s.symtype() != SymTypeGlobal &&
+			(s.is_constant() || s.typespec().is_closure_based() ||
+			 s.typespec().is_string_based() || 
+			 ((s.symtype() == SymTypeLocal || s.symtype() == SymTypeTemp)
+			  && shadingsys().debug_uninit())))
+		{
+			if (s.has_init_ops() && s.valuesource() == Symbol::DefaultVal) {
+				// Handle init ops.
+				discoverSymbolsBetween(s.initbegin(), s.initend(), 0, 0, mainMask, mainMask);
+			}
 		}
-		std::cout << std::flush;		
-		std::cout << "done discoverVaryingAndMasking" << std::endl;
 	}
+	
+	// make a second pass for the parameters (which may make use of
+	// locals and constants from the first pass)
+	FOREACH_PARAM (Symbol &s, inst()) {
+		// Skip structure placeholders
+		if (s.typespec().is_structure())
+			continue;
+		// Skip if it's never read and isn't connected
+		if (! s.everread() && ! s.connected_down() && ! s.connected()
+			  && ! s.renderer_output())
+			continue;
+		// Skip if it's an interpolated (userdata) parameter and we're
+		// initializing them lazily.
+		if (s.symtype() == SymTypeParam
+				&& ! s.lockgeom() && ! s.typespec().is_closure()
+				&& ! s.connected() && ! s.connected_down()
+				&& shadingsys().lazy_userdata())
+			continue;
+		// Set initial value for params (may contain init ops)
+		if (s.has_init_ops() && s.valuesource() == Symbol::DefaultVal) {
+			// Handle init ops.
+			discoverSymbolsBetween(s.initbegin(), s.initend(), 0, 0, mainMask, mainMask);
+		}
+	}    	
+	
+	discoverSymbolsBetween(inst()->maincodebegin(), inst()->maincodeend(), 0, 0, mainMask, mainMask);
+	
+	std::cout << "About to build m_is_uniform_by_symbol" << std::endl;			
+	
+	std::function<void(const Symbol *)> recursivelyMarkNonUniform;
+	recursivelyMarkNonUniform = [&](const Symbol* nonUniformSymbol)->void
+	{
+		bool previously_was_uniform = m_is_uniform_by_symbol[nonUniformSymbol];
+		m_is_uniform_by_symbol[nonUniformSymbol] = false;
+		if (previously_was_uniform) {
+			auto range = symbolFeedForwardMap.equal_range(nonUniformSymbol);
+			auto iter = range.first;
+			for(;iter != range.second; ++iter) {
+				const Symbol * symbolWrittenTo = iter->second;
+				recursivelyMarkNonUniform(symbolWrittenTo);
+			};
+		}
+	};
+	
+	auto endOfFeeds = symbolFeedForwardMap.end();	
+	for(auto feedIter = symbolFeedForwardMap.begin();feedIter != endOfFeeds; )
+	{
+		const Symbol * symbolReadFrom = feedIter->first;
+		//std::cout << " " << symbolReadFrom->name() << " feeds into " << symbolWrittenTo->name() << std::endl;
+		
+		bool is_uniform = true;			
+		auto symType = symbolReadFrom->symtype();
+		if (symType == SymTypeGlobal) {
+			is_uniform = IsShaderGlobalUniformByName(symbolReadFrom->name());
+		} else if (symType == SymTypeParam) {
+				// TODO: perhaps the connected params do not necessarily
+				// need to be varying 
+				is_uniform = false;
+		} 
+		if (is_uniform == false) {
+			// So we have a symbol that is not uniform, so it will be a wide type
+			// Thus anyone who depends on it will need to be wide as well.
+			recursivelyMarkNonUniform(symbolReadFrom);
+		}
+		
+		// The multimap may have multiple entries with the same key
+		// And we only need to iterate over unique keys,
+		// so skip any consecutive duplicate keys
+		do {
+			++feedIter;
+		} while (feedIter != endOfFeeds && symbolReadFrom == feedIter->first);
+	}
+
+	// Mark all output parameters as varying to catch
+	// output parameters written to by uniform variables, 
+	// as nothing would have made them varying, however as 
+	// we write directly into wide data, we need to mark it
+	// as varying so that the code generation will promote the uniform value
+	// to varying before writing
+	FOREACH_PARAM (Symbol &s, inst()) {    	
+		if (s.symtype() == SymTypeOutputParam) {
+			recursivelyMarkNonUniform(&s);
+		}    			
+	}
+	
+	std::cout << "Emit m_is_uniform_by_symbol" << std::endl;			
+	
+	for(auto rIter = m_is_uniform_by_symbol.begin(); rIter != m_is_uniform_by_symbol.end(); ++rIter) {
+		const Symbol * rSym = rIter->first;
+		bool is_uniform = rIter->second;
+		std::cout << "--->" << rSym << " " << rSym->name() << " is " << (is_uniform ? "UNIFORM" : "VARYING") << std::endl;			
+	}
+	std::cout << std::flush;		
+	std::cout << "done discoverVaryingAndMaskingOfLayer" << std::endl;
 }
 	
 bool 
 BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 {
-	discoverVaryingAndMasking();
+	ASSERT(false == m_is_uniform_by_symbol.empty());
 	
 	auto iter = m_is_uniform_by_symbol.find(&sym);
 	if (iter == m_is_uniform_by_symbol.end()) 
-	{	// TODO:  Any symbols not involved in oprations would be uniform
+	{	// TODO:  Any symbols not involved in operations would be uniform
 		// unless they are an output, but I think not just an output of an invidual
 		// shader, but the output of the entire network
 		std::cout << " undiscovered " << sym.name() << " initial isUniform=";
@@ -854,11 +853,9 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 bool 
 BackendLLVMWide::requiresMasking(int opIndex)
 {
-	discoverVaryingAndMasking();
-	
-	ASSERT(m_requires_masking_by_op_index.empty() == false);
-	ASSERT(m_requires_masking_by_op_index.size() > opIndex);
-	return m_requires_masking_by_op_index[opIndex];
+	ASSERT(m_requires_masking_by_layer_and_op_index[layer()].empty() == false);
+	ASSERT(m_requires_masking_by_layer_and_op_index[layer()].size() > opIndex);
+	return m_requires_masking_by_layer_and_op_index[layer()][opIndex];
 }
 
 void 
@@ -977,7 +974,9 @@ BackendLLVMWide::llvm_get_pointer (const Symbol& sym, int deriv,
     TypeDesc t = sym.typespec().simpletype();
     if (t.arraylen || has_derivs) {
     	std::cout << "llvm_get_pointer we're dealing with derivatives<-------" << std::endl;
-    	std::cout << "arrayindex" << arrayindex << "deriv=" << deriv << " t.arraylen="  << t.arraylen << std::endl;
+    	std::cout << "arrayindex=" << arrayindex << " deriv=" << deriv << " t.arraylen="  << t.arraylen; 
+    	std::cout << " isSymbolUniform="<< isSymbolUniform(sym) << std::endl;
+    	
         int d = deriv * std::max(1,t.arraylen);
         if (arrayindex)
             arrayindex = ll.op_add (arrayindex, ll.constant(d));

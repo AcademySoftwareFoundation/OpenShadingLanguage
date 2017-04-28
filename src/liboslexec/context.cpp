@@ -290,7 +290,7 @@ ShadingContext::execute_batch_init (ShaderGroup &sgroup, ShaderGlobalsBatch &sgb
         RunLLVMGroupFunc run_func = sgroup.llvm_compiled_init();
         DASSERT (run_func);
         DASSERT (sgroup.llvm_groupdata_size() <= m_heap.size());
-        //run_func (&sgb, &m_heap[0]);
+        run_func (&sgb, &m_heap[0]);
     }
 
     if (profile)

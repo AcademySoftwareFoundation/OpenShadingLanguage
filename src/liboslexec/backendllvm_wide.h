@@ -152,7 +152,7 @@ public:
         return llvm_load_value (sym, deriv, NULL, component, cast, op_is_uniform);
     }
     
-    void discoverVaryingAndMasking();
+    void discoverVaryingAndMaskingOfLayer();
     
     bool isSymbolUniform(const Symbol& sym);
     bool requiresMasking(int opIndex);
@@ -457,7 +457,7 @@ private:
     int m_llvm_local_mem;             // Amount of memory we use for locals
 
 	std::unordered_map<const Symbol *, bool> m_is_uniform_by_symbol;
-	std::vector<bool> m_requires_masking_by_op_index;
+	std::vector<std::vector<bool>> m_requires_masking_by_layer_and_op_index;
 	std::vector<Symbol *> m_generated_loops_condition_stack;
     
     friend class ShadingSystemImpl;

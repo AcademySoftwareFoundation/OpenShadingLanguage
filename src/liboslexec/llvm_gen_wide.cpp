@@ -2262,7 +2262,11 @@ LLVMGEN (llvm_gen_if)
 		rop.ll.op_branch (after_block);  // insert point is now after_block
     } else {
     	llvm::Value* mask = rop.llvm_load_value (cond, /*deriv*/ 0, /*component*/ 0, /*cast*/ TypeDesc::UNKNOWN, /*op_is_uniform*/ false);
-		ASSERT(mask->getType() == rop.ll.type_wide_bool());
+        if (mask->getType() != rop.ll.type_wide_bool()) {
+            ASSERT(mask->getType() == rop.ll.type_wide_int());
+            mask = rop.ll.op_int_to_bool(mask);
+            ASSERT(mask->getType() == rop.ll.type_wide_bool());
+        }
 //		ASSERT(int_mask->getType() == rop.ll.type_wide_int());
 //		std::cout << "wide llvm_gen_if" << std::endl;
 //		llvm::Value* mask =  rop.ll.wide_op_int_to_bool(int_mask);		

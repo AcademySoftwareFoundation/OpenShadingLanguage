@@ -39,8 +39,38 @@ OSL_NAMESPACE_ENTER
 
 void register_closures(OSL::ShadingSystem* shadingsys);
 
+
+#ifndef OSL_USE_WIDE_LLVM_BACKEND
+#error FAIL must enable or disable OSL_USE_WIDE_LLVM_BACKEND to 1 or 0
+#endif 
+
+class SimpleRenderer;
+
+#if OSL_USE_WIDE_LLVM_BACKEND
+class BatchedSimpleRenderer : public BatchedRendererServices
+{
+public:
+	BatchedSimpleRenderer(SimpleRenderer &sr);
+	virtual ~BatchedSimpleRenderer();
+		
+	virtual bool get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
+		const Wide<TransformationPtr> & xform, const Wide<float> &time);
+	virtual bool get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
+							 ustring from, float time);
+	virtual bool get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
+							 TransformationPtr xform);
+	virtual bool get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
+							 ustring from);
+	virtual bool get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
+									 ustring to, float time);
+private:
+	SimpleRenderer &m_sr;
+};
+#endif
+
 class SimpleRenderer : public RendererServices
 {
+	friend class BatchedSimpleRenderer;
 public:
     // Just use 4x4 matrix for transformations
     typedef Matrix44 Transformation;
@@ -76,24 +106,13 @@ public:
     void camera_params (const Matrix44 &world_to_camera, ustring projection,
                         float hfov, float hither, float yon,
                         int xres, int yres);
-                        
-#ifndef OSL_USE_WIDE_LLVM_BACKEND
-#error FAIL must enable or disable OSL_USE_WIDE_LLVM_BACKEND to 1 or 0
-#endif 
-    
+
 #if OSL_USE_WIDE_LLVM_BACKEND
-    virtual bool get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
-		const Wide<TransformationPtr> & xform, const Wide<float> &time);
-    virtual bool get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
-                             ustring from, float time);
-    virtual bool get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
-                             TransformationPtr xform);
-    virtual bool get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
-                             ustring from);
-    virtual bool get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
-                                     ustring to, float time);
-#endif
-    
+    virtual BatchedRendererServices * batched();    
+private:
+    BatchedSimpleRenderer m_batched_simple_renderer;
+#endif    
+
 private:
     // Camera parameters
     Matrix44 m_world_to_camera;
@@ -106,7 +125,7 @@ private:
     // Named transforms
     typedef std::map <ustring, std::shared_ptr<Transformation> > TransformMap;
     TransformMap m_named_xforms;
-
+    
     // Attribute and userdata retrieval -- for fast dispatch, use a hash
     // table to map attribute names to functions that retrieve them. We
     // imagine this to be fairly quick, but for a performance-critical

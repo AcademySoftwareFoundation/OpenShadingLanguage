@@ -208,6 +208,7 @@ SimpleRenderer::get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
 }
 
 
+#if 0
 #if OSL_USE_WIDE_LLVM_BACKEND
 bool
 SimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
@@ -324,6 +325,7 @@ SimpleRenderer::get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
     }
 }
  
+#endif
 #endif
 
 

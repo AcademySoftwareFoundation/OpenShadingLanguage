@@ -545,8 +545,6 @@ public:
     /// Generate IR for (cond ? a : b).  Cond should be a bool.
     llvm::Value *op_select (llvm::Value *cond, llvm::Value *a, llvm::Value *b);
 
-    llvm::Value *wide_op_int_to_float (llvm::Value *a);
-    llvm::Value *wide_op_int_to_bool (llvm::Value *a);
 
     // Comparison ops.  It auto-detects the type (int vs float).
     // ordered only applies to float comparisons -- ordered means the

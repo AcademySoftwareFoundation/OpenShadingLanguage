@@ -2267,9 +2267,6 @@ LLVMGEN (llvm_gen_if)
             mask = rop.ll.op_int_to_bool(mask);
             ASSERT(mask->getType() == rop.ll.type_wide_bool());
         }
-//		ASSERT(int_mask->getType() == rop.ll.type_wide_int());
-//		std::cout << "wide llvm_gen_if" << std::endl;
-//		llvm::Value* mask =  rop.ll.wide_op_int_to_bool(int_mask);		
 
 		
 		

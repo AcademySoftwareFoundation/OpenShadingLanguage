@@ -1,5 +1,14 @@
-Release 1.8.8 -- ??? 2017 (compared to 1.8.7)
+Release 1.8.8 -- 1 May 2017 (compared to 1.8.7)
 --------------------------------------------------
+* New ShadingSystem::set_raytypes() can be used to configure default ray
+  types for subsequent lazy optimization of the group upon first execution.
+  #733
+* Hide symbol visibility for extern "C" linkage osl_* functions that LLVM
+  needs. #732
+* New oslc-time macros OSL_VERSION, OSL_VERSION_MAJOR, OSL_VERSION_MINOR,
+  OSL_VERSION_PATCH lets you easily test OSL version while compiling your
+  shader. You can also find out at runtime with getattribute("osl:version").
+  #747
 
 Release 1.8.7 -- 1 Apr 2017 (compared to 1.8.6)
 --------------------------------------------------

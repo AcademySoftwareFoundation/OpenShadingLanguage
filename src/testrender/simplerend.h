@@ -75,6 +75,7 @@ public:
                         int xres, int yres);
                         
     
+#if 0
 #ifndef OSL_USE_WIDE_LLVM_BACKEND
 	#error FAIL
 #endif 
@@ -90,6 +91,7 @@ public:
                              ustring from);
     virtual bool get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
                                      ustring to, float time);
+#endif
 #endif
     
 private:

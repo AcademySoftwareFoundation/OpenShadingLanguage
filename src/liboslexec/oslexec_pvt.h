@@ -1582,6 +1582,11 @@ public:
     /// Get a pointer to the RendererServices for this execution.
     ///
     RendererServices *renderer () const { return m_renderer; }
+    
+#if OSL_USE_WIDE_LLVM_BACKEND
+    /// Return a reference to the BatchedRendererServices.
+    BatchedRendererServices *batched_renderer () const { return m_renderer->batched(); }
+#endif    
 
     /// Bind a shader group and globals to this context and prepare to
     /// execute. (See similarly named method of ShadingSystem.)
@@ -1891,6 +1896,11 @@ public:
     /// Return a reference to the RendererServices.
     RendererServices *renderer () const { return shadingsys().renderer(); }
 
+#if OSL_USE_WIDE_LLVM_BACKEND
+    /// Return a reference to the RendererServices.
+    BatchedRendererServices *batched_renderer () const { return renderer()->batched(); }
+#endif
+    
     /// Retrieve the dummy shading context.
     ShadingContext *shadingcontext () const { return m_context; }
 

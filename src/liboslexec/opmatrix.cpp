@@ -161,17 +161,17 @@ osl_wide_get_matrix (void *sgb_, void *wr, const char *from)
     
     // TODO:  consider passing wide matrix through to renderer
 	if (USTR(from) == Strings::shader) {
-		ctx->renderer()->get_matrix (sgb, wrm, sgb->varyingData().shader2common, sgb->varyingData().time);
+		ctx->batched_renderer()->get_matrix (sgb, wrm, sgb->varyingData().shader2common, sgb->varyingData().time);
 		return true;
 	}
 	if (USTR(from) == Strings::object) {
-		ctx->renderer()->get_matrix (sgb, wrm, sgb->varyingData().object2common, sgb->varyingData().time);
+		ctx->batched_renderer()->get_matrix (sgb, wrm, sgb->varyingData().object2common, sgb->varyingData().time);
 		return true;
 	}
 	int wok = true;
 	for(int lane=0; lane < SimdLaneCount; ++lane) {    
 		Matrix44 r;
-		int ok = ctx->renderer()->get_matrix (sgb, r, USTR(from), sgb->varyingData().time.get(lane));
+		int ok = ctx->batched_renderer()->get_matrix (sgb, r, USTR(from), sgb->varyingData().time.get(lane));
 		if (! ok) {
 			wok = false;
 			r.makeIdentity();
@@ -235,18 +235,18 @@ osl_wide_get_inverse_matrix (void *sgb_, void *wr, const char *to)
         return true;
     }
     if (USTR(to) == Strings::shader) {
-    	ctx->renderer()->get_inverse_matrix (sgb, wrm, sgb->varyingData().shader2common, sgb->varyingData().time);        
+    	ctx->batched_renderer()->get_inverse_matrix (sgb, wrm, sgb->varyingData().shader2common, sgb->varyingData().time);        
         return true;
     }
     if (USTR(to) == Strings::object) {
-    	ctx->renderer()->get_inverse_matrix (sgb, wrm, sgb->varyingData().object2common, sgb->varyingData().time);        
+    	ctx->batched_renderer()->get_inverse_matrix (sgb, wrm, sgb->varyingData().object2common, sgb->varyingData().time);        
         return true;
     }
 
 	int wok = true;
 	for(int lane=0; lane < SimdLaneCount; ++lane) {    
 		Matrix44 r;
-	    int ok = ctx->renderer()->get_inverse_matrix (sgb, r, USTR(to), sgb->varyingData().time.get(lane));
+	    int ok = ctx->batched_renderer()->get_inverse_matrix (sgb, r, USTR(to), sgb->varyingData().time.get(lane));
 		if (! ok) {
 			wok = false;
 			r.makeIdentity();

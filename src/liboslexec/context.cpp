@@ -49,7 +49,7 @@ static mutex buffered_errors_mutex;
 ShadingContext::ShadingContext (ShadingSystemImpl &shadingsys,
                                 PerThreadInfo *threadinfo)
     : m_shadingsys(shadingsys), m_renderer(m_shadingsys.renderer()),
-      m_group(NULL), m_max_warnings(shadingsys.max_warnings_per_thread()), m_dictionary(NULL), m_next_failed_attrib(0)
+      m_group(NULL), m_max_warnings(shadingsys.max_warnings_per_thread()), m_dictionary(NULL), m_next_failed_attrib{0}
 {
     m_shadingsys.m_stat_contexts += 1;
     m_threadinfo = threadinfo ? threadinfo : shadingsys.get_perthread_info ();
@@ -473,13 +473,13 @@ ShadingContext::osl_get_attribute (ShaderGlobals *sg, void *objdata,
     bool ok;
 
     for (int i = 0;  i < FAILED_ATTRIBS;  ++i) {
-        if ((obj_name || m_failed_attribs[i].objdata == objdata) &&
-            m_failed_attribs[i].attr_name == attr_name &&
-            m_failed_attribs[i].obj_name == obj_name &&
-            m_failed_attribs[i].attr_type == attr_type &&
-            m_failed_attribs[i].array_lookup == array_lookup &&
-            m_failed_attribs[i].index == index &&
-            m_failed_attribs[i].objdata) {
+        if ((obj_name || m_failed_attribs[0][i].objdata == objdata) &&
+            m_failed_attribs[0][i].attr_name == attr_name &&
+            m_failed_attribs[0][i].obj_name == obj_name &&
+            m_failed_attribs[0][i].attr_type == attr_type &&
+            m_failed_attribs[0][i].array_lookup == array_lookup &&
+            m_failed_attribs[0][i].index == index &&
+            m_failed_attribs[0][i].objdata) {
 #if 0
             double time = timer();
             shadingsys().m_stat_getattribute_time += time;
@@ -499,14 +499,14 @@ ShadingContext::osl_get_attribute (ShaderGlobals *sg, void *objdata,
                                         obj_name, attr_type,
                                         attr_name, attr_dest);
     if (!ok) {
-        int i = m_next_failed_attrib;
-        m_failed_attribs[i].objdata = objdata;
-        m_failed_attribs[i].obj_name = obj_name;
-        m_failed_attribs[i].attr_name = attr_name;
-        m_failed_attribs[i].attr_type = attr_type;
-        m_failed_attribs[i].array_lookup = array_lookup;
-        m_failed_attribs[i].index = index;
-        m_next_failed_attrib = (i == FAILED_ATTRIBS-1) ? 0 : (i+1);
+        int i = m_next_failed_attrib[0];
+        m_failed_attribs[0][i].objdata = objdata;
+        m_failed_attribs[0][i].obj_name = obj_name;
+        m_failed_attribs[0][i].attr_name = attr_name;
+        m_failed_attribs[0][i].attr_type = attr_type;
+        m_failed_attribs[0][i].array_lookup = array_lookup;
+        m_failed_attribs[0][i].index = index;
+        m_next_failed_attrib[0] = (i == FAILED_ATTRIBS-1) ? 0 : (i+1);
     }
 
 #if 0
@@ -532,28 +532,25 @@ ShadingContext::osl_get_attribute_batched (Wide<int>* retVal,
     // Change the #if's below if you want to
     OIIO::Timer timer;
 #endif
-    bool ok;
 
-    // XXX lfeng: What does it mean when some lanes failed, others were OK?
-    // this is just for debugging...
-    for (int i = 0;  i < FAILED_ATTRIBS;  ++i) {
-        if ((obj_name || m_failed_attribs[i].objdata == objdata) &&
-            m_failed_attribs[i].attr_name == attr_name &&
-            m_failed_attribs[i].obj_name == obj_name &&
-            m_failed_attribs[i].attr_type == attr_type &&
-            m_failed_attribs[i].array_lookup == array_lookup &&
-            m_failed_attribs[i].index == index &&
-            m_failed_attribs[i].objdata) {
+    // check result for each lane
+    for (int j = 0; j < retVal->width; ++j) {
+        for (int i = 0;  i < FAILED_ATTRIBS;  ++i) {
+            if ((obj_name || m_failed_attribs[j][i].objdata == objdata) &&
+                m_failed_attribs[j][i].attr_name == attr_name &&
+                m_failed_attribs[j][i].obj_name == obj_name &&
+                m_failed_attribs[j][i].attr_type == attr_type &&
+                m_failed_attribs[j][i].array_lookup == array_lookup &&
+                m_failed_attribs[j][i].index == index &&
+                m_failed_attribs[j][i].objdata) {
 #if 0
-            double time = timer();
-            shadingsys().m_stat_getattribute_time += time;
-            shadingsys().m_stat_getattribute_fail_time += time;
-            shadingsys().m_stat_getattribute_calls += 1;
+                double time = timer();
+                shadingsys().m_stat_getattribute_time += time;
+                shadingsys().m_stat_getattribute_fail_time += time;
+                shadingsys().m_stat_getattribute_calls += 1;
 #endif
-            for (int j = 0; j < retVal->width; ++j) {
                 retVal->set(j, false);
             }
-            return;
         }
     }
 
@@ -567,18 +564,17 @@ ShadingContext::osl_get_attribute_batched (Wide<int>* retVal,
                                           obj_name, attr_type,
                                           attr_name, attr_dest);
     }
-    // XXX lfeng: What does it mean when some lanes failed, others were OK?
+    // for each simd lane check for errors.
     for (int j = 0; j < retVal->width; ++j) {
         if (!retVal->get(j)) {
-            int i = m_next_failed_attrib;
-            m_failed_attribs[i].objdata = objdata;
-            m_failed_attribs[i].obj_name = obj_name;
-            m_failed_attribs[i].attr_name = attr_name;
-            m_failed_attribs[i].attr_type = attr_type;
-            m_failed_attribs[i].array_lookup = array_lookup;
-            m_failed_attribs[i].index = index;
-            m_next_failed_attrib = (i == FAILED_ATTRIBS-1) ? 0 : (i+1);
-            break;
+            int i = m_next_failed_attrib[j];
+            m_failed_attribs[j][i].objdata = objdata;
+            m_failed_attribs[j][i].obj_name = obj_name;
+            m_failed_attribs[j][i].attr_name = attr_name;
+            m_failed_attribs[j][i].attr_type = attr_type;
+            m_failed_attribs[j][i].array_lookup = array_lookup;
+            m_failed_attribs[j][i].index = index;
+            m_next_failed_attrib[j] = (i == FAILED_ATTRIBS-1) ? 0 : (i+1);
         }
     }
 

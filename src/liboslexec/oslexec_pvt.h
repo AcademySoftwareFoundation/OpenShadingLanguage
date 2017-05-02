@@ -1819,9 +1819,10 @@ private:
         int array_lookup, index;
         GetAttribQuery () : objdata(NULL), array_lookup(0), index(0) { }
     };
+
     static const int FAILED_ATTRIBS = 16;
-    GetAttribQuery m_failed_attribs[FAILED_ATTRIBS];
-    int m_next_failed_attrib;
+    GetAttribQuery m_failed_attribs[SimdLaneCount][FAILED_ATTRIBS];
+    int m_next_failed_attrib[SimdLaneCount];
 
     // Buffering of error messages and printfs
     typedef std::pair<ErrorHandler::ErrCode, std::string> ErrorItem;

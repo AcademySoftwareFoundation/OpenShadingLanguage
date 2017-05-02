@@ -159,10 +159,19 @@ inline float simdFriendlyLength(const Vec3 &N)
 	return Imath::Math<float>::sqrt (length2);
 }
 
+inline Vec3 simdFriendlyNormalize(const Vec3 &N)
+{
+    float l = simdFriendlyLength(N);
+
+    if (l == float (0))
+    	return Vec3 (float (0));
+
+    return Vec3 (N.x / l, N.y / l, N.z / l);
+}
+
 OSL_SHADEOP void
 osl_area_w16(void *r_, void *DP_)
 {
-	//std::cout << "Made it to osl_pow_w16vw16vw16f" << std::endl;
 	OSL_INTEL_PRAGMA("forceinline recursive")
 	{
 		const Wide<Dual2<Vec3>> &wDP = WDVEC(DP_);
@@ -177,6 +186,25 @@ osl_area_w16(void *r_, void *DP_)
 		    //float r = N.length();
 		    float r = simdFriendlyLength(N);
 			wr.set(lane, r);
+		}
+	}	
+}
+
+OSL_SHADEOP void
+osl_normalize_w16vw16v(void *r_, void *V_)
+{
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+		const Wide<Vec3> &wV = WVEC(V_);
+	    
+		Wide<Vec3> &wr = WVEC(r_);
+	
+		OSL_INTEL_PRAGMA("simd")
+		for(int lane=0; lane < SimdLaneCount; ++lane) {
+			Vec3 V = wV.get(lane);
+			
+		    Vec3 N = simdFriendlyNormalize(V);
+			wr.set(lane, N);
 		}
 	}	
 }

@@ -363,6 +363,7 @@ DECL (osl_normalize_dvdv, "xXX")
 DECL (osl_pow_w16fw16fw16f, "xXXf")
 DECL (osl_pow_w16vw16vw16f, "xXXX")
 DECL (osl_area_w16, "xXX")
+DECL (osl_normalize_w16vw16v, "xXX")
 
 DECL (osl_mul_mm, "xXXX")
 DECL (osl_mul_mf, "xXXf")

@@ -47,6 +47,7 @@ static ustring op_while("while");
 static ustring op_functioncall("functioncall");
 static ustring op_break("break");
 static ustring op_continue("continue");
+static ustring op_getattribute("getattribute");
 
 
 
@@ -437,6 +438,9 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	
 	std::vector<const Symbol *> symbolsCurrentBlockDependsOn;
 	std::vector<const Symbol *> loopControlFlowSymbolStack;
+
+    std::vector<const Symbol *> symbolsWrittenToByGetAttribute;
+
 	
 	int nextMaskId = 0;
 	int blockId = 0;
@@ -688,6 +692,13 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				}
 				info.potentially_unmasked_ops.push_back(std::make_pair(writeBlockDepth, opIndex));
 			}
+            if (opcode.opname() == op_getattribute)
+            {
+                for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
+                    const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
+                    symbolsWrittenToByGetAttribute.push_back(symbolWrittenTo);
+                }
+            }
 			
 			// If the op we coded jumps around, skip past its recursive block
 			// executions.
@@ -813,7 +824,15 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 			recursivelyMarkNonUniform(&s);
 		}    			
 	}
-	
+
+
+    //std::cout << "symbolsWrittenToByGetAttribute begin" << std::endl;
+    for(const Symbol *s: symbolsWrittenToByGetAttribute) {
+        //std::cout << s->name() << std::endl;
+        recursivelyMarkNonUniform(s);
+    }
+    //std::cout << "symbolsWrittenToByGetAttribute end" << std::endl;
+
 	std::cout << "Emit m_is_uniform_by_symbol" << std::endl;			
 	
 	for(auto rIter = m_is_uniform_by_symbol.begin(); rIter != m_is_uniform_by_symbol.end(); ++rIter) {

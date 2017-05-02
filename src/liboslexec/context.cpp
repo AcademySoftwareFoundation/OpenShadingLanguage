@@ -520,7 +520,77 @@ ShadingContext::osl_get_attribute (ShaderGlobals *sg, void *objdata,
     return ok;
 }
 
+void
+ShadingContext::osl_get_attribute_batched (Wide<int>* retVal,
+                                           ShaderGlobalsBatch *sgb, void *objdata,
+                                           int dest_derivs,
+                                           ustring obj_name, ustring attr_name,
+                                           int array_lookup, int index,
+                                           TypeDesc attr_type, void *attr_dest)
+{
+#if 0
+    // Change the #if's below if you want to
+    OIIO::Timer timer;
+#endif
+    bool ok;
 
+    // XXX lfeng: What does it mean when some lanes failed, others were OK?
+    // this is just for debugging...
+    for (int i = 0;  i < FAILED_ATTRIBS;  ++i) {
+        if ((obj_name || m_failed_attribs[i].objdata == objdata) &&
+            m_failed_attribs[i].attr_name == attr_name &&
+            m_failed_attribs[i].obj_name == obj_name &&
+            m_failed_attribs[i].attr_type == attr_type &&
+            m_failed_attribs[i].array_lookup == array_lookup &&
+            m_failed_attribs[i].index == index &&
+            m_failed_attribs[i].objdata) {
+#if 0
+            double time = timer();
+            shadingsys().m_stat_getattribute_time += time;
+            shadingsys().m_stat_getattribute_fail_time += time;
+            shadingsys().m_stat_getattribute_calls += 1;
+#endif
+            for (int j = 0; j < retVal->width; ++j) {
+                retVal->set(j, false);
+            }
+            return;
+        }
+    }
+
+    if (array_lookup) {
+        batched_renderer()->get_array_attribute(retVal, sgb, dest_derivs,
+                                                obj_name, attr_type,
+                                                attr_name, index, attr_dest);
+    }
+    else {
+        batched_renderer()->get_attribute(retVal, sgb, dest_derivs,
+                                          obj_name, attr_type,
+                                          attr_name, attr_dest);
+    }
+    // XXX lfeng: What does it mean when some lanes failed, others were OK?
+    for (int j = 0; j < retVal->width; ++j) {
+        if (!retVal->get(j)) {
+            int i = m_next_failed_attrib;
+            m_failed_attribs[i].objdata = objdata;
+            m_failed_attribs[i].obj_name = obj_name;
+            m_failed_attribs[i].attr_name = attr_name;
+            m_failed_attribs[i].attr_type = attr_type;
+            m_failed_attribs[i].array_lookup = array_lookup;
+            m_failed_attribs[i].index = index;
+            m_next_failed_attrib = (i == FAILED_ATTRIBS-1) ? 0 : (i+1);
+            break;
+        }
+    }
+
+#if 0
+    double time = timer();
+    shadingsys().m_stat_getattribute_time += time;
+    if (!ok)
+        shadingsys().m_stat_getattribute_fail_time += time;
+    shadingsys().m_stat_getattribute_calls += 1;
+#endif
+//    std::cout << "getattribute BATCHED! '" << obj_name << "' " << attr_name << ' ' << attr_type.c_str() << ", objdata was " << objdata << "\n";
+}
 
 OSL_SHADEOP void
 osl_incr_layers_executed (ShaderGlobals *sg)

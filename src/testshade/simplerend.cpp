@@ -146,7 +146,7 @@ void register_closures(OSL::ShadingSystem* shadingsys) {
 #if OSL_USE_WIDE_LLVM_BACKEND
 
 BatchedSimpleRenderer::BatchedSimpleRenderer(SimpleRenderer &sr)
-: m_sr(sr)
+    : m_sr(sr)
 {}
 
 BatchedSimpleRenderer::~BatchedSimpleRenderer()
@@ -155,208 +155,236 @@ BatchedSimpleRenderer::~BatchedSimpleRenderer()
 #if 0
 bool
 BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
-        const Wide<TransformationPtr> & xform, const Wide<float> &time)
+                                   const Wide<TransformationPtr> & xform, const Wide<float> &time)
 {
     // SimpleRenderer doesn't understand motion blur and transformations
     // are just simple 4x4 matrices.
     //result = *reinterpret_cast<const Matrix44*>(xform);
-	
+
 #if 0
-	int is_uniform_xform = 1;
-	
-	OSL_INTEL_PRAGMA("simd")
-	for(int lane=0; lane < SimdLaneCount; ++lane) {
-		if (uniform_xform != xform.get(lane))
-			is_uniform_xform = 0;
-	}
+    int is_uniform_xform = 1;
+
+    OSL_INTEL_PRAGMA("simd")
+            for(int lane=0; lane < SimdLaneCount; ++lane) {
+        if (uniform_xform != xform.get(lane))
+            is_uniform_xform = 0;
+    }
 #endif 
-	TransformationPtr uniform_xform = xform.get(0);
-	
+    TransformationPtr uniform_xform = xform.get(0);
+
 #if 0
-	bool is_uniform_xform = 
-		(xform.get(0) == xform.get(1)) &&
-		(xform.get(1) == xform.get(2)) &&
-		(xform.get(2) == xform.get(3)) &&
-		(xform.get(3) == xform.get(4)) &&
-		(xform.get(4) == xform.get(5)) &&
-		(xform.get(5) == xform.get(6)) &&
-		(xform.get(6) == xform.get(7));
+    bool is_uniform_xform =
+            (xform.get(0) == xform.get(1)) &&
+            (xform.get(1) == xform.get(2)) &&
+            (xform.get(2) == xform.get(3)) &&
+            (xform.get(3) == xform.get(4)) &&
+            (xform.get(4) == xform.get(5)) &&
+            (xform.get(5) == xform.get(6)) &&
+            (xform.get(6) == xform.get(7));
 #endif
 
 #if 0
-	int numLanesMatch1st = 0;
-	OSL_INTEL_PRAGMA("simd reduction(+:numLanesMatch1st)  assert")
-	for(int lane=0; lane < SimdLaneCount; ++lane) {
-		int match = (uniform_xform == xform.get(lane)) ? 1 : 0;
-		numLanesMatch1st += match;
-	}
+    int numLanesMatch1st = 0;
+    OSL_INTEL_PRAGMA("simd reduction(+:numLanesMatch1st)  assert")
+            for(int lane=0; lane < SimdLaneCount; ++lane) {
+        int match = (uniform_xform == xform.get(lane)) ? 1 : 0;
+        numLanesMatch1st += match;
+    }
 
-	if (numLanesMatch1st == 8) {
+    if (numLanesMatch1st == 8) {
 #elif 0
-		int numLanesMatch1st = 0;
-		OSL_INTEL_PRAGMA("simd reduction(+:numLanesMatch1st) vectorlength(8) assert")
-		for(int lane=0; lane < SimdLaneCount; ++lane) {
-			numLanesMatch1st += (uniform_xform == xform.get(lane));
-		}
+    int numLanesMatch1st = 0;
+    OSL_INTEL_PRAGMA("simd reduction(+:numLanesMatch1st) vectorlength(8) assert")
+            for(int lane=0; lane < SimdLaneCount; ++lane) {
+        numLanesMatch1st += (uniform_xform == xform.get(lane));
+    }
 
-		if (numLanesMatch1st == 8) {
-		
+    if (numLanesMatch1st == 8) {
+
 #else
-		register __m256i xformPointers  = _mm2565_load_epi32(xform.data);
-		
-		if (1)
+    register __m256i xformPointers  = _mm2565_load_epi32(xform.data);
+
+    if (1)
 
 #endif
-		const Matrix44 & transformFromShaderGlobals = *reinterpret_cast<const Matrix44*>(uniform_xform);
-		OSL_INTEL_PRAGMA("simd")
-		for(int lane=0; lane < SimdLaneCount; ++lane) {    
-			result.set(lane,transformFromShaderGlobals);
-		}		
-	} else {			
-		for(int lane=0; lane < SimdLaneCount; ++lane) {    
-			const Matrix44 & transformFromShaderGlobals = *reinterpret_cast<const Matrix44*>(xform.get(lane));
-			result.set(lane,transformFromShaderGlobals);
-		}
-	}
-    return true;
+        const Matrix44 & transformFromShaderGlobals = *reinterpret_cast<const Matrix44*>(uniform_xform);
+    OSL_INTEL_PRAGMA("simd")
+            for(int lane=0; lane < SimdLaneCount; ++lane) {
+        result.set(lane,transformFromShaderGlobals);
+    }
+} else {
+for(int lane=0; lane < SimdLaneCount; ++lane) {
+    const Matrix44 & transformFromShaderGlobals = *reinterpret_cast<const Matrix44*>(xform.get(lane));
+    result.set(lane,transformFromShaderGlobals);
+}
+}
+return true;
 }
 
 #else
-	bool
-	BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
-	        const Wide<TransformationPtr> & xform, const Wide<float> &time)
-	{
-	    // SimpleRenderer doesn't understand motion blur and transformations
-	    // are just simple 4x4 matrices.
-	    //result = *reinterpret_cast<const Matrix44*>(xform);
-		
-		TransformationPtr uniform_xform = xform.get(0);
-		
+bool
+BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
+                                   const Wide<TransformationPtr> & xform, const Wide<float> &time)
+{
+    // SimpleRenderer doesn't understand motion blur and transformations
+    // are just simple 4x4 matrices.
+    //result = *reinterpret_cast<const Matrix44*>(xform);
+
+    TransformationPtr uniform_xform = xform.get(0);
+
 #if 0
-		// In general, one can't assume that the transformation is uniform
-		const Matrix44 & uniformTransform = *reinterpret_cast<const Matrix44*>(uniform_xform);
-		OSL_INTEL_PRAGMA("simd")
-		for(int lane=0; lane < SimdLaneCount; ++lane) {
-			if (__builtin_expect((uniform_xform == xform.get(lane)),1)) {
-				result.set(lane,uniformTransform);	
-			} else {				
-				const Matrix44 & transformFromShaderGlobals = *reinterpret_cast<const Matrix44*>(xform.get(lane));
-				result.set(lane,transformFromShaderGlobals);
-			}
-		}	
+    // In general, one can't assume that the transformation is uniform
+    const Matrix44 & uniformTransform = *reinterpret_cast<const Matrix44*>(uniform_xform);
+    OSL_INTEL_PRAGMA("simd")
+            for(int lane=0; lane < SimdLaneCount; ++lane) {
+        if (__builtin_expect((uniform_xform == xform.get(lane)),1)) {
+            result.set(lane,uniformTransform);
+        } else {
+            const Matrix44 & transformFromShaderGlobals = *reinterpret_cast<const Matrix44*>(xform.get(lane));
+            result.set(lane,transformFromShaderGlobals);
+        }
+    }
 #else
-		// But this is "testshade" and we know we only have one object, so lets just 
-		// use that fact
-		const Matrix44 & uniformTransform = *reinterpret_cast<const Matrix44*>(uniform_xform);
-		
-		OSL_INTEL_PRAGMA("simd")
-		for(int lane=0; lane < SimdLaneCount; ++lane) {
-			result.set(lane,uniformTransform);	
-		}	
-		
+    // But this is "testshade" and we know we only have one object, so lets just
+    // use that fact
+    const Matrix44 & uniformTransform = *reinterpret_cast<const Matrix44*>(uniform_xform);
+
+    OSL_INTEL_PRAGMA("simd")
+            for(int lane=0; lane < SimdLaneCount; ++lane) {
+        result.set(lane,uniformTransform);
+    }
+
 #endif
-		
-	    return true;
-	}
 
-	
+    return true;
+}
+
+
 #endif
-	bool
-	BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
-	                            ustring from, float time)
-	{
-		auto found = m_sr.m_named_xforms.find (from);
-	    if (found != m_sr.m_named_xforms.end()) {
-	        result = *(found->second);
-	        return true;
-	    } else {
-	        return false;
-	    }
-	}
+bool
+BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
+                                   ustring from, float time)
+{
+    auto found = m_sr.m_named_xforms.find (from);
+    if (found != m_sr.m_named_xforms.end()) {
+        result = *(found->second);
+        return true;
+    } else {
+        return false;
+    }
+}
 
 
 
-	bool
-	BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
-	                            TransformationPtr xform)
-	{
-	    // SimpleRenderer doesn't understand motion blur and transformations
-	    // are just simple 4x4 matrices.
-	    result = *(OSL::Matrix44 *)xform;
-	    return true;
-	}
+bool
+BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
+                                   TransformationPtr xform)
+{
+    // SimpleRenderer doesn't understand motion blur and transformations
+    // are just simple 4x4 matrices.
+    result = *(OSL::Matrix44 *)xform;
+    return true;
+}
 
 
 
-	bool
-	BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
-	                            ustring from)
-	{
-	    // SimpleRenderer doesn't understand motion blur, so we never fail
-	    // on account of time-varying transformations.
-	    auto found = m_sr.m_named_xforms.find (from);
-	    if (found != m_sr.m_named_xforms.end()) {
-	        result = *(found->second);
-	        return true;
-	    } else {
-	        return false;
-	    }
-	}
+bool
+BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
+                                   ustring from)
+{
+    // SimpleRenderer doesn't understand motion blur, so we never fail
+    // on account of time-varying transformations.
+    auto found = m_sr.m_named_xforms.find (from);
+    if (found != m_sr.m_named_xforms.end()) {
+        result = *(found->second);
+        return true;
+    } else {
+        return false;
+    }
+}
 
 
 
-	bool
-	BatchedSimpleRenderer::get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
-	                                    ustring to, float time)
-	{
-	    if (to == u_camera || to == u_screen || to == u_NDC || to == u_raster) {
-	        Matrix44 M = m_sr.m_world_to_camera;
-	        if (to == u_screen || to == u_NDC || to == u_raster) {
-	            float depthrange = (double)m_sr.m_yon-(double)m_sr.m_hither;
-	            if (m_sr.m_projection == u_perspective) {
-	                float tanhalffov = tanf (0.5f * m_sr.m_fov * M_PI/180.0);
-	                Matrix44 camera_to_screen (1/tanhalffov, 0, 0, 0,
-	                                           0, 1/tanhalffov, 0, 0,
-	                                           0, 0, m_sr.m_yon/depthrange, 1,
-	                                           0, 0, -m_sr.m_yon*m_sr.m_hither/depthrange, 0);
-	                M = M * camera_to_screen;
-	            } else {
-	                Matrix44 camera_to_screen (1, 0, 0, 0,
-	                                           0, 1, 0, 0,
-	                                           0, 0, 1/depthrange, 0,
-	                                           0, 0, -m_sr.m_hither/depthrange, 1);
-	                M = M * camera_to_screen;
-	            }
-	            if (to == u_NDC || to == u_raster) {
-	                float screenleft = -1.0, screenwidth = 2.0;
-	                float screenbottom = -1.0, screenheight = 2.0;
-	                Matrix44 screen_to_ndc (1/screenwidth, 0, 0, 0,
-	                                        0, 1/screenheight, 0, 0,
-	                                        0, 0, 1, 0,
-	                                        -screenleft/screenwidth, -screenbottom/screenheight, 0, 1);
-	                M = M * screen_to_ndc;
-	                if (to == u_raster) {
-	                    Matrix44 ndc_to_raster (m_sr.m_xres, 0, 0, 0,
-	                                            0, m_sr.m_yres, 0, 0,
-	                                            0, 0, 1, 0,
-	                                            0, 0, 0, 1);
-	                    M = M * ndc_to_raster;
-	                }
-	            }
-	        }
-	        result = M;
-	        return true;
-	    }
+bool
+BatchedSimpleRenderer::get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
+                                           ustring to, float time)
+{
+    if (to == u_camera || to == u_screen || to == u_NDC || to == u_raster) {
+        Matrix44 M = m_sr.m_world_to_camera;
+        if (to == u_screen || to == u_NDC || to == u_raster) {
+            float depthrange = (double)m_sr.m_yon-(double)m_sr.m_hither;
+            if (m_sr.m_projection == u_perspective) {
+                float tanhalffov = tanf (0.5f * m_sr.m_fov * M_PI/180.0);
+                Matrix44 camera_to_screen (1/tanhalffov, 0, 0, 0,
+                                           0, 1/tanhalffov, 0, 0,
+                                           0, 0, m_sr.m_yon/depthrange, 1,
+                                           0, 0, -m_sr.m_yon*m_sr.m_hither/depthrange, 0);
+                M = M * camera_to_screen;
+            } else {
+                Matrix44 camera_to_screen (1, 0, 0, 0,
+                                           0, 1, 0, 0,
+                                           0, 0, 1/depthrange, 0,
+                                           0, 0, -m_sr.m_hither/depthrange, 1);
+                M = M * camera_to_screen;
+            }
+            if (to == u_NDC || to == u_raster) {
+                float screenleft = -1.0, screenwidth = 2.0;
+                float screenbottom = -1.0, screenheight = 2.0;
+                Matrix44 screen_to_ndc (1/screenwidth, 0, 0, 0,
+                                        0, 1/screenheight, 0, 0,
+                                        0, 0, 1, 0,
+                                        -screenleft/screenwidth, -screenbottom/screenheight, 0, 1);
+                M = M * screen_to_ndc;
+                if (to == u_raster) {
+                    Matrix44 ndc_to_raster (m_sr.m_xres, 0, 0, 0,
+                                            0, m_sr.m_yres, 0, 0,
+                                            0, 0, 1, 0,
+                                            0, 0, 0, 1);
+                    M = M * ndc_to_raster;
+                }
+            }
+        }
+        result = M;
+        return true;
+    }
 
-	    auto found = m_sr.m_named_xforms.find (to);
-	    if (found != m_sr.m_named_xforms.end()) {
-	        result = *(found->second);
-	        result.invert();
-	        return true;
-	    } else {
-	        return false;
-	    }
-	}
+    auto found = m_sr.m_named_xforms.find (to);
+    if (found != m_sr.m_named_xforms.end()) {
+        result = *(found->second);
+        result.invert();
+        return true;
+    } else {
+        return false;
+    }
+}
+
+void
+BatchedSimpleRenderer::get_array_attribute (Wide<int>* retVal, ShaderGlobalsBatch *sgb, bool derivatives,
+                                            ustring object, TypeDesc type, ustring name,
+                                            int index, void *val )
+{
+//    std::cout << "BatchedSimpleRenderer::get_array_attribute" << std::endl;
+
+//    std::cout << "ATTR: " << name << std::endl;
+//    Wide<Color3>* out = reinterpret_cast<Wide<Color3>*>(val);
+    for (int i = 0; i < retVal->width; ++i) {
+//        out->set(i, Color3(1.0, 0, 0));
+        retVal->set(i, false);
+    }
+}
+void
+BatchedSimpleRenderer::get_attribute (Wide<int>* retVal, ShaderGlobalsBatch *sgb, bool derivatives, ustring object,
+                            TypeDesc type, ustring name, void *val)
+{
+//    std::cout << "BatchedSimpleRenderer::get_attribute" << std::endl;
+//    std::cout << "ATTR: " << name << std::endl;
+//    Wide<Color3>* out = reinterpret_cast<Wide<Color3>*>(val);
+    for (int i = 0; i < retVal->width; ++i) {
+//        out->set(i, Color3(i*0.1, i*0.1, i*0.1));
+        retVal->set(i, false);
+    }
+}
+
 #endif
 
 

@@ -567,6 +567,7 @@ public:
                                    TypeDesc::VECSEMANTICS vectype)
         { return false; }
 
+#endif
 
     /// Get the named attribute from the renderer and if found then
     /// write it into 'val'.  Otherwise, return false.  If no object is
@@ -580,15 +581,17 @@ public:
     /// run on. Be robust to this situation, return 'true' (retrieve the
     /// attribute) if you can (known object and attribute name), but
     /// otherwise just fail by returning 'false'.
-    virtual bool get_attribute (ShaderGlobals *sg, bool derivatives,
+    virtual void get_attribute (Wide<int>* retVal, ShaderGlobalsBatch *sgb, bool derivatives,
                                 ustring object, TypeDesc type, ustring name,
                                 void *val ) = 0;
 
     /// Similar to get_attribute();  this method will return the 'index'
     /// element of an attribute array.
-    virtual bool get_array_attribute (ShaderGlobals *sg, bool derivatives,
+    virtual void get_array_attribute (Wide<int>* retVal, ShaderGlobalsBatch *sgb, bool derivatives,
                                       ustring object, TypeDesc type,
                                       ustring name, int index, void *val ) = 0;
+
+#if 0
 
     /// Get the named user-data from the current object and write it into
     /// 'val'. If derivatives is true, the derivatives should be written into val

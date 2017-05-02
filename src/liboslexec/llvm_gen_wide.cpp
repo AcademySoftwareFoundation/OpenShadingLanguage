@@ -3331,18 +3331,18 @@ LLVMGEN (llvm_gen_getattribute)
     const TypeDesc* dest_type = &Destination.typespec().simpletype();
 
     std::vector<llvm::Value *> args;
+    args.push_back (rop.llvm_void_ptr(Result));
     args.push_back (rop.sg_void_ptr());
     args.push_back (rop.ll.constant ((int)Destination.has_derivs()));
     args.push_back (object_lookup ? rop.llvm_load_value (ObjectName) :
                                     rop.ll.constant (ustring()));
     args.push_back (rop.llvm_load_value (Attribute));
     args.push_back (rop.ll.constant ((int)array_lookup));
-    args.push_back (rop.llvm_load_value (Index));
+    args.push_back (array_lookup ? rop.llvm_load_value (Index) : rop.ll.constant((int)0)); // Never load a symbol that is invalid
     args.push_back (rop.ll.constant_ptr ((void *) dest_type));
     args.push_back (rop.llvm_void_ptr (Destination));
 
-    llvm::Value *r = rop.ll.call_function ("osl_get_attribute", &args[0], args.size());
-    rop.llvm_store_value (r, Result);
+    llvm::Value *r = rop.ll.call_function ("osl_get_attribute_batched", &args[0], args.size());
 
     return true;
 }

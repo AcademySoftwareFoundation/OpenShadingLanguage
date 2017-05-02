@@ -3281,7 +3281,28 @@ OSL_SHADEOP int osl_get_attribute(void *sg_,
                                            attr_dest);
 }
 
+OSL_SHADEOP void osl_get_attribute_batched(void* retVal_,
+                                           void *sgb_,
+                                           int   dest_derivs,
+                                           void *obj_name_,
+                                           void *attr_name_,
+                                           int   array_lookup,
+                                           int   index,
+                                           const void *attr_type,
+                                           void *attr_dest)
+{
+    ShaderGlobalsBatch *sgb   = reinterpret_cast<ShaderGlobalsBatch *>(sgb_);
+    Wide<int>* retVal = reinterpret_cast<Wide<int>*>(retVal_);
+    const ustring &obj_name  = USTR(obj_name_);
+    const ustring &attr_name = USTR(attr_name_);
 
+    sgb->uniform().context->osl_get_attribute_batched (retVal,
+                                                       sgb, sgb->uniform().objdata,
+                                                       dest_derivs, obj_name, attr_name,
+                                                       array_lookup, index,
+                                                       *(const TypeDesc *)attr_type,
+                                                       attr_dest);
+}
 
 OSL_SHADEOP int
 osl_bind_interpolated_param (void *sg_, const void *name, long long type,

@@ -219,6 +219,94 @@ public:
 	
 };
 
+template <int WidthT>
+struct Wide<Color3, WidthT>
+{
+    static constexpr int width = WidthT;
+    float x[WidthT];
+    float y[WidthT];
+    float z[WidthT];
+
+    OSL_INLINE void
+    set(int index, const Color3 & value)
+    {
+        x[index] = value.x;
+        y[index] = value.y;
+        z[index] = value.z;
+    }
+
+protected:
+    template<int HeadIndexT>
+    OSL_INLINE void
+    set(internal::int_sequence<HeadIndexT>, const Color3 & value)
+    {
+        set(HeadIndexT, value);
+    }
+
+    template<int HeadIndexT, int... TailIndexListT, typename... Color3ListT>
+    OSL_INLINE void
+    set(internal::int_sequence<HeadIndexT, TailIndexListT...>, Color3 headValue, Color3ListT... tailValues)
+    {
+        set(HeadIndexT, headValue);
+        set(internal::int_sequence<TailIndexListT...>(), tailValues...);
+        return;
+    }
+public:
+
+    Wide() = default;
+    Wide(const Wide &other) = delete;
+
+    template<typename... Color3ListT, typename = internal::enable_if_type<(sizeof...(Color3ListT) == WidthT)> >
+    OSL_INLINE
+    Wide(const Color3ListT &...values)
+    {
+        typedef internal::make_int_sequence<sizeof...(Color3ListT)> int_seq_type;
+        set(int_seq_type(), values...);
+        return;
+    }
+
+
+    OSL_INLINE Color3
+    get(int index) const
+    {
+        return Color3(x[index], y[index], z[index]);
+    }
+
+    void dump(const char *name) const
+    {
+        if (name != nullptr) {
+            std::cout << name << " = ";
+        }
+        std::cout << "x{";
+        for(int i=0; i < WidthT; ++i)
+        {
+            std::cout << x[i];
+            if (i < (WidthT-1))
+                std::cout << ",";
+
+        }
+        std::cout << "}" << std::endl;
+        std::cout << "y{";
+        for(int i=0; i < WidthT; ++i)
+        {
+            std::cout << y[i];
+            if (i < (WidthT-1))
+                std::cout << ",";
+
+        }
+        std::cout << "}" << std::endl;
+        std::cout << "z{"	;
+        for(int i=0; i < WidthT; ++i)
+        {
+            std::cout << z[i];
+            if (i < (WidthT-1))
+                std::cout << ",";
+
+        }
+        std::cout << "}" << std::endl;
+    }
+
+};
 
 template <int WidthT>
 struct Wide<Matrix44, WidthT>

@@ -357,6 +357,34 @@ BatchedSimpleRenderer::get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &re
         return false;
     }
 }
+
+void
+BatchedSimpleRenderer::get_array_attribute (Wide<int>* retVal, ShaderGlobalsBatch *sgb, bool derivatives,
+                                            ustring object, TypeDesc type, ustring name,
+                                            int index, void *val )
+{
+//    std::cout << "BatchedSimpleRenderer::get_array_attribute" << std::endl;
+
+//    std::cout << "ATTR: " << name << std::endl;
+//    Wide<Color3>* out = reinterpret_cast<Wide<Color3>*>(val);
+    for (int i = 0; i < retVal->width; ++i) {
+//        out->set(i, Color3(1.0, 0, 0));
+        retVal->set(i, false);
+    }
+}
+void
+BatchedSimpleRenderer::get_attribute (Wide<int>* retVal, ShaderGlobalsBatch *sgb, bool derivatives, ustring object,
+                            TypeDesc type, ustring name, void *val)
+{
+//    std::cout << "BatchedSimpleRenderer::get_attribute" << std::endl;
+//    std::cout << "ATTR: " << name << std::endl;
+//    Wide<Color3>* out = reinterpret_cast<Wide<Color3>*>(val);
+    for (int i = 0; i < retVal->width; ++i) {
+//        out->set(i, Color3(i*0.1, i*0.1, i*0.1));
+        retVal->set(i, false);
+    }
+}
+
 #endif
 
 

@@ -1,3 +1,7 @@
+Release 1.8.9 -- 1 Jun? 2017 (compared to 1.8.8)
+--------------------------------------------------
+
+
 Release 1.8.8 -- 1 May 2017 (compared to 1.8.7)
 --------------------------------------------------
 * New ShadingSystem::set_raytypes() can be used to configure default ray

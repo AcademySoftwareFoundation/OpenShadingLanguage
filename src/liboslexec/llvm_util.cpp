@@ -2486,7 +2486,11 @@ LLVM_Util::op_select (llvm::Value *cond, llvm::Value *a, llvm::Value *b)
     return builder().CreateSelect (cond, a, b);
 }
 
-
+llvm::Value *
+LLVM_Util::op_extract (llvm::Value *a, int index)
+{
+    return builder().CreateExtractElement (a, index);
+}
 
 llvm::Value *
 LLVM_Util::op_eq (llvm::Value *a, llvm::Value *b, bool ordered)

@@ -442,6 +442,38 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
     std::vector<const Symbol *> symbolsWrittenToByGetAttribute;
 
 	
+	std::function<void(const Symbol *, int, int)> ensureWritesAtLowerDepthAreMasked;
+	ensureWritesAtLowerDepthAreMasked = [&](const Symbol *symbolToCheck, int blockDepth, int maskId)->void {			    			
+		// Check if reading a Symbol that was written to from a different 
+		// maskId than we are reading, if so we need to mark it as requiring masking
+		auto lookup = usageInfoBySymbol.find(symbolToCheck);
+		if(lookup != usageInfoBySymbol.end()) {
+			UsageInfo & info = lookup->second;
+			if ((info.last_depth > blockDepth) && (info.last_maskId != maskId))
+			{
+				std::cout << symbolToCheck->name() << " will need to have last write be masked" << std::endl;
+				ASSERT(info.potentially_unmasked_ops.empty() == false);
+				decltype(info.potentially_unmasked_ops) remaining_ops;
+				for(auto usage: info.potentially_unmasked_ops) {
+					// Only mark deeper usages as requiring masking
+					if(usage.first > blockDepth)
+					{
+						std::cout << " marking op " << usage.second << " as masked" << std::endl;
+						m_requires_masking_by_layer_and_op_index[layer()][usage.second] = true;									
+					} else {
+						remaining_ops.push_back(usage);
+					}
+				}
+				
+				info.potentially_unmasked_ops.swap(remaining_ops);		
+				// Now that all ops writing to the symbol at higher depths have been marked to be masked
+				// we can now consider the matter handled at this point at reset the
+				// last_depth written at to the current depth to avoid needlessly repeating the work.
+				info.last_depth = blockDepth;
+			}
+		}
+	};
+    
 	int nextMaskId = 0;
 	int blockId = 0;
 	std::function<void(int, int, int, int, int, int)> discoverSymbolsBetween;
@@ -479,39 +511,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				m_is_uniform_by_symbol[aSymbol] = isUniform;
 			}
 			std::cout << std::endl;
-			
-			std::function<void(const Symbol *)> ensureWritesAtLowerDepthAreMasked;
-			ensureWritesAtLowerDepthAreMasked = [&](const Symbol *symbolToCheck)->void {			    			
-				// Check if reading a Symbol that was written to from a different 
-				// maskId than we are reading, if so we need to mark it as requiring masking
-				auto lookup = usageInfoBySymbol.find(symbolToCheck);
-				if(lookup != usageInfoBySymbol.end()) {
-					UsageInfo & info = lookup->second;
-					if ((info.last_depth > blockDepth) && (info.last_maskId != maskId))
-					{
-						std::cout << symbolToCheck->name() << " will need to have last write be masked" << std::endl;
-						ASSERT(info.potentially_unmasked_ops.empty() == false);
-						decltype(info.potentially_unmasked_ops) remaining_ops;
-						for(auto usage: info.potentially_unmasked_ops) {
-							// Only mark deeper usages as requiring masking
-							if(usage.first > blockDepth)
-							{
-								std::cout << " marking op " << usage.second << " as masked" << std::endl;
-								m_requires_masking_by_layer_and_op_index[layer()][usage.second] = true;									
-							} else {
-								remaining_ops.push_back(usage);
-							}
-						}
-						
-						info.potentially_unmasked_ops.swap(remaining_ops);		
-						// Now that all ops writing to the symbol at higher depths have been marked to be masked
-						// we can now consider the matter handled at this point at reset the
-						// last_depth written at to the current depth to avoid needlessly repeating the work.
-						info.last_depth = blockDepth;
-					}
-				}
-			};
-			
+
 			for(int readIndex=0; readIndex < symbolsRead; ++readIndex) {
 				const Symbol * symbolReadFrom = symbolsReadByOp[readIndex];
 				for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
@@ -522,7 +522,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					}
 				}		
 				
-				ensureWritesAtLowerDepthAreMasked(symbolReadFrom);
+				ensureWritesAtLowerDepthAreMasked(symbolReadFrom, blockDepth, maskId);
 			}
 			
 			for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
@@ -636,12 +636,12 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					std::cout << " FOR COND BLOCK END" << std::endl;
 
 					// Special case for symbols that are conditions
-					// becuase we will be doing horizontal operations on these
+					// because we will be doing horizontal operations on these
 					// to check if they are all 'false' to be able to stop
 					// executing the loop, we need any writes to the
 					// condition to be masked
 					const Symbol * condition = opargsym (opcode, 0);
-					ensureWritesAtLowerDepthAreMasked(condition);
+					ensureWritesAtLowerDepthAreMasked(condition, blockDepth, maskId);
 					
 					popSymbolsCurentBlockDependsOn();
 					ASSERT(loopControlFlowSymbolStack.back() == symbolsReadByOp[0]);
@@ -767,6 +767,24 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	
 	discoverSymbolsBetween(inst()->maincodebegin(), inst()->maincodeend(), 0, 0, mainMask, mainMask);
 	
+	// Now that all of the instructions have been discovered, we need to
+	// make sure any writes to the output parameters that happened at 
+	// lower depths are masked, as there may be no actual instruction
+	// that reads the output variables at the outtermost scope
+	// we will simulate that right here
+	FOREACH_PARAM (Symbol &s, inst()) {
+		// Skip structure placeholders
+		if (s.typespec().is_structure())
+			continue;
+		// Skip if it's never read and isn't connected
+		if (! s.everread() && ! s.connected_down() && ! s.connected()
+			  && ! s.renderer_output())
+			continue;
+		if (s.symtype() == SymTypeOutputParam) {
+			ensureWritesAtLowerDepthAreMasked(&s, 0, mainMask);
+		}
+	}    	
+	
 	std::cout << "About to build m_is_uniform_by_symbol" << std::endl;			
 	
 	std::function<void(const Symbol *)> recursivelyMarkNonUniform;
@@ -842,6 +860,23 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	}
 	std::cout << std::flush;		
 	std::cout << "done discoverVaryingAndMaskingOfLayer" << std::endl;
+	
+	
+	std::cout << "Emit m_requires_masking_by_layer_and_op_index" << std::endl;			
+	
+	auto & requires_masking_by_op_index = m_requires_masking_by_layer_and_op_index[layer()];
+	
+	int opCount = requires_masking_by_op_index.size();
+	for(int opIndex=0; opIndex < opCount; ++opIndex) {
+		if (requires_masking_by_op_index[opIndex])
+		{
+			Opcode & opcode = op(opIndex);
+			std::cout << "---> inst#" << opIndex << " op=" << opcode.opname() << " requires MASKING" << std::endl;
+		}
+	}
+	std::cout << std::flush;		
+	std::cout << "done m_requires_masking_by_layer_and_op_index" << std::endl;
+
 }
 	
 bool 

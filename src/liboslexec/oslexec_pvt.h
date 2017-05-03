@@ -1709,11 +1709,10 @@ public:
                             int array_lookup, int index,
                             TypeDesc attr_type, void *attr_dest);
 
-    void osl_get_attribute_batched (Wide<int>* retVal,
-                                    ShaderGlobalsBatch *sgb, void *objdata, int dest_derivs,
+    Mask osl_get_attribute_batched (ShaderGlobalsBatch *sgb, void *objdata, int dest_derivs,
                                     ustring obj_name, ustring attr_name,
                                     int array_lookup, int index,
-                                    TypeDesc attr_type, void *attr_dest);
+                                    TypeDesc attr_type, void *attr_dest, Mask mask);
 
     PerThreadInfo *thread_info () const { return m_threadinfo; }
 

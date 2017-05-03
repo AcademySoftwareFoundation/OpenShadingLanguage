@@ -520,19 +520,20 @@ ShadingContext::osl_get_attribute (ShaderGlobals *sg, void *objdata,
     return ok;
 }
 
-void
-ShadingContext::osl_get_attribute_batched (Wide<int>* retVal,
-                                           ShaderGlobalsBatch *sgb, void *objdata,
+Mask
+ShadingContext::osl_get_attribute_batched (ShaderGlobalsBatch *sgb, void *objdata,
                                            int dest_derivs,
                                            ustring obj_name, ustring attr_name,
                                            int array_lookup, int index,
-                                           TypeDesc attr_type, void *attr_dest)
+                                           TypeDesc attr_type, void *attr_dest,
+                                           Mask mask)
 {
 #if 0
     // Change the #if's below if you want to
     OIIO::Timer timer;
 #endif
 
+#if 0
     // check result for each lane
     for (int j = 0; j < retVal->width; ++j) {
         for (int i = 0;  i < FAILED_ATTRIBS;  ++i) {
@@ -553,17 +554,21 @@ ShadingContext::osl_get_attribute_batched (Wide<int>* retVal,
             }
         }
     }
+#endif
 
+    Mask success;
     if (array_lookup) {
-        batched_renderer()->get_array_attribute(retVal, sgb, dest_derivs,
+        success = batched_renderer()->get_array_attribute(sgb, dest_derivs,
                                                 obj_name, attr_type,
-                                                attr_name, index, attr_dest);
+                                                attr_name, index, attr_dest, mask);
     }
     else {
-        batched_renderer()->get_attribute(retVal, sgb, dest_derivs,
+        success = batched_renderer()->get_attribute(sgb, dest_derivs,
                                           obj_name, attr_type,
-                                          attr_name, attr_dest);
+                                          attr_name, attr_dest, mask);
     }
+
+#if 0
     // for each simd lane check for errors.
     for (int j = 0; j < retVal->width; ++j) {
         if (!retVal->get(j)) {
@@ -577,6 +582,7 @@ ShadingContext::osl_get_attribute_batched (Wide<int>* retVal,
             m_next_failed_attrib[j] = (i == FAILED_ATTRIBS-1) ? 0 : (i+1);
         }
     }
+#endif
 
 #if 0
     double time = timer();
@@ -586,6 +592,7 @@ ShadingContext::osl_get_attribute_batched (Wide<int>* retVal,
     shadingsys().m_stat_getattribute_calls += 1;
 #endif
 //    std::cout << "getattribute BATCHED! '" << obj_name << "' " << attr_name << ' ' << attr_type.c_str() << ", objdata was " << objdata << "\n";
+    return success;
 }
 
 OSL_SHADEOP void

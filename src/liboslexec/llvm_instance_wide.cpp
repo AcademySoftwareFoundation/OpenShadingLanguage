@@ -795,6 +795,7 @@ BackendLLVMWide::build_llvm_init ()
 
 // To identify set of instructions that are generated with the compare_op
 extern bool llvm_gen_compare_op(BackendLLVMWide &rop, int opnum);  
+extern bool llvm_gen_getattribute(BackendLLVMWide &rop, int opnum);
 
 llvm::Function*
 BackendLLVMWide::build_llvm_instance (bool groupentry)
@@ -870,7 +871,8 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
     	for(int opIndex=0; opIndex < numOps; ++opIndex) {
     		Opcode & opcode = op(opIndex);
     		const OpDescriptor *opd = shadingsys().op_descriptor (opcode.opname());
-    		if (opd->llvmgen == llvm_gen_compare_op) {
+            if ((opd->llvmgen == llvm_gen_compare_op) ||
+                (opd->llvmgen == llvm_gen_getattribute) ) {
     		    Symbol * result = opargsym (opcode, 0);
     		    comparisonResults.insert(result);
     			std::cout << "RESULT of compare op = " << result->name() << std::endl;

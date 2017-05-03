@@ -603,6 +603,107 @@ private:
 };
 
 
+template <int WidthT>
+class WideMask
+{
+    typedef unsigned int value_type;
+    static_assert(sizeof(value_type)*8 > WidthT, "unsupported WidthT");
+
+    value_type m_value;
+public:
+
+    OSL_INLINE WideMask()
+    {}
+
+    OSL_INLINE WideMask(value_type value_)
+        : m_value(value_)
+    {}
+
+    OSL_INLINE WideMask(int value_)
+        : m_value(static_cast<value_type>(value_))
+    {}
+
+    OSL_INLINE WideMask(const WideMask &other)
+        : m_value(other.m_value)
+    {}
+
+    OSL_INLINE value_type value() const
+    { return m_value; }
+
+    // Testers
+    OSL_INLINE bool operator[](int lane) const
+    {
+        // From testing code generation this is the preferred form
+        return (m_value & (1<<lane))==(1<<lane);
+    }
+
+    OSL_INLINE bool is_on(int lane) const
+    {
+        // From testing code generation this is the preferred form
+        return (m_value & (1<<lane))==(1<<lane);
+    }
+
+    OSL_INLINE bool is_off(int lane) const
+    {
+        // From testing code generation this is the preferred form
+        return (m_value & (1<<lane))==0;
+    }
+
+    OSL_INLINE bool all_on() const
+    {
+        // TODO:  is this more expensive than == ?
+        return (m_value >= (0xFFFFFFFF >> (32-WidthT));
+    }
+
+    OSL_INLINE bool all_off() const
+    {
+        return (m_value == static_cast<value_type>(0));
+    }
+
+    OSL_INLINE bool any_on() const
+    {
+        return (m_value != static_cast<value_type>(0));
+    }
+
+    OSL_INLINE bool any_off() const
+    {
+        return (m_value < (0xFFFFFFFF >> (32-WidthT));
+    }
+
+
+    // Setters
+    OSL_INLINE void set(int lane, bool flag)
+    {
+        if (flag) {
+            m_value |= (1<<lane);
+        } else {
+            m_value &= (~(1<<lane));
+        }
+    }
+
+    OSL_INLINE void set_on(int lane)
+    {
+        m_value |= (1<<lane);
+    }
+
+    OSL_INLINE void set_all_on()
+    {
+        m_value = (0xFFFFFFFF >> (32-WidthT));
+    }
+
+    OSL_INLINE void set_off(int lane)
+    {
+        m_value &= (~(1<<lane));
+    }
+
+    OSL_INLINE void set_all_off()
+    {
+        m_value = 0;
+    }
+};
+
+typedef WideMask<SimdLaneCount> Mask;
+
 OSL_INLINE void robust_multVecMatrix(const Wide<Matrix44>& wx, const Wide< Imath::Vec3<float> >& wsrc, Wide< Imath::Vec3<float> >& wdst)
 {
 	OSL_INTEL_PRAGMA("forceinline recursive")

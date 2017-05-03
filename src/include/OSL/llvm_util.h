@@ -369,7 +369,8 @@ public:
         return wide_constant(OIIO::ustring(s));
     }
 
-    
+    llvm::Value * mask_as_int(llvm::Value *mask);
+    llvm::Value * int_as_mask(llvm::Value *value);
     llvm::Value * test_if_mask_is_non_zero(llvm::Value *mask);
     llvm::Value * widen_value (llvm::Value *val);
     llvm::Value * negate_mask(llvm::Value *mask);

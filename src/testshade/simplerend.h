@@ -63,11 +63,11 @@ public:
 							 ustring from);
 	virtual bool get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
 									 ustring to, float time);
-    virtual void get_array_attribute (Wide<int>* retVal, ShaderGlobalsBatch *sgb, bool derivatives,
+    virtual Mask get_array_attribute (ShaderGlobalsBatch *sgb, bool derivatives,
                                       ustring object, TypeDesc type, ustring name,
-                                      int index, void *val );
-    virtual void get_attribute (Wide<int>* retVal, ShaderGlobalsBatch *sgb, bool derivatives, ustring object,
-                                TypeDesc type, ustring name, void *val);
+                                      int index, void *val, Mask mask);
+    virtual Mask get_attribute (ShaderGlobalsBatch *sgb, bool derivatives, ustring object,
+                                TypeDesc type, ustring name, void *val, Mask mask);
 private:
 	SimpleRenderer &m_sr;
 };

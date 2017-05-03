@@ -1647,6 +1647,32 @@ LLVM_Util::wide_constant (ustring s)
 
 
 llvm::Value *
+LLVM_Util::mask_as_int(llvm::Value *mask)
+{
+    ASSERT(mask->getType() == type_wide_bool());
+
+    llvm::Type * int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);
+
+    llvm::Value* result = builder().CreateBitCast (mask, int_reinterpret_cast_vector_type);
+
+    return builder().CreateZExt(result, (llvm::Type *) llvm::Type::getInt32Ty (*m_llvm_context));
+}
+
+llvm::Value *
+LLVM_Util::int_as_mask(llvm::Value *value)
+{
+    ASSERT(value->getType() == type_int());
+
+    llvm::Value* int16 = builder().CreateTrunc(value, (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context));
+
+    llvm::Value* result = builder().CreateBitCast (int16, type_wide_bool());
+
+    ASSERT(result->getType() == type_wide_bool());
+
+    return result;
+}
+
+llvm::Value *
 LLVM_Util::test_if_mask_is_non_zero(llvm::Value *mask)
 {
 	ASSERT(mask->getType() == type_wide_bool());

@@ -358,31 +358,38 @@ BatchedSimpleRenderer::get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &re
     }
 }
 
-void
-BatchedSimpleRenderer::get_array_attribute (Wide<int>* retVal, ShaderGlobalsBatch *sgb, bool derivatives,
+Mask
+BatchedSimpleRenderer::get_array_attribute (ShaderGlobalsBatch *sgb, bool derivatives,
                                             ustring object, TypeDesc type, ustring name,
-                                            int index, void *val )
+                                            int index, void *val, Mask mask)
 {
 //    std::cout << "BatchedSimpleRenderer::get_array_attribute" << std::endl;
 
 //    std::cout << "ATTR: " << name << std::endl;
 //    Wide<Color3>* out = reinterpret_cast<Wide<Color3>*>(val);
-    for (int i = 0; i < retVal->width; ++i) {
+    Mask success;
+    success.set_all_off();
+    //for (int i = 0; i < retVal->width; ++i) {
 //        out->set(i, Color3(1.0, 0, 0));
-        retVal->set(i, false);
-    }
+    //}
+    return success;
 }
-void
-BatchedSimpleRenderer::get_attribute (Wide<int>* retVal, ShaderGlobalsBatch *sgb, bool derivatives, ustring object,
-                            TypeDesc type, ustring name, void *val)
+Mask
+BatchedSimpleRenderer::get_attribute (ShaderGlobalsBatch *sgb, bool derivatives, ustring object,
+                            TypeDesc type, ustring name, void *val, Mask mask)
 {
 //    std::cout << "BatchedSimpleRenderer::get_attribute" << std::endl;
 //    std::cout << "ATTR: " << name << std::endl;
-//    Wide<Color3>* out = reinterpret_cast<Wide<Color3>*>(val);
-    for (int i = 0; i < retVal->width; ++i) {
-//        out->set(i, Color3(i*0.1, i*0.1, i*0.1));
-        retVal->set(i, false);
+    Wide<Color3>* out = reinterpret_cast<Wide<Color3>*>(val);
+    Mask success;
+    success.set_all_off();
+    for (int i = 0; i < SimdLaneCount; ++i) {
+        if (mask.is_on(i)) {
+            out->set(i, Color3(1.0, i*0.1, i*0.1));
+            success.set_on(i);
+        }
     }
+    return success;
 }
 
 #endif

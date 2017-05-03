@@ -581,15 +581,15 @@ public:
     /// run on. Be robust to this situation, return 'true' (retrieve the
     /// attribute) if you can (known object and attribute name), but
     /// otherwise just fail by returning 'false'.
-    virtual void get_attribute (Wide<int>* retVal, ShaderGlobalsBatch *sgb, bool derivatives,
+    virtual Mask get_attribute (ShaderGlobalsBatch *sgb, bool derivatives,
                                 ustring object, TypeDesc type, ustring name,
-                                void *val ) = 0;
+                                void *val, Mask mask) = 0;
 
-    /// Similar to get_attribute();  this method will return the 'index'
+    /// Similar to get_attribute();  this method will fetch the 'index'
     /// element of an attribute array.
-    virtual void get_array_attribute (Wide<int>* retVal, ShaderGlobalsBatch *sgb, bool derivatives,
+    virtual Mask get_array_attribute (ShaderGlobalsBatch *sgb, bool derivatives,
                                       ustring object, TypeDesc type,
-                                      ustring name, int index, void *val ) = 0;
+                                      ustring name, int index, void *val, Mask mask) = 0;
 
 #if 0
 

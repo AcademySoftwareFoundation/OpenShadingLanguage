@@ -294,27 +294,65 @@ LLVMGEN (llvm_gen_printf)
     int format_arg = (op.opname() == "format" ? 1 : 0);
     Symbol& format_sym = *rop.opargsym (op, format_arg);
 
-    std::vector<llvm::Value*> call_args;
+    ASSERT(rop.isSymbolUniform(format_sym));
+    
+    std::vector<std::vector<llvm::Value*>> call_args;
     if (!format_sym.is_constant()) {
         rop.shadingcontext()->warning ("%s must currently have constant format\n",
                                   op.opname().c_str());
         return false;
     }
 
-    // For some ops, we push the shader globals pointer
-    if (op.opname() == op_printf || op.opname() == op_error ||
-            op.opname() == op_warning)
-        call_args.push_back (rop.sg_void_ptr());
-
-    // We're going to need to adjust the format string as we go, but I'd
-    // like to reserve a spot for the char*.
-    size_t new_format_slot = call_args.size();
-    call_args.push_back(NULL);
-
     ustring format_ustring = *((ustring*)format_sym.data());
     const char* format = format_ustring.c_str();
     std::string s;
     int arg = format_arg + 1;
+    
+    // Check all arguments to see if we will need to generate
+    // a seperate printf call for each data lane or not
+    // consider the op to be uniform until we find an argument that isn't
+    bool op_is_uniform = true;    
+    for (int a=arg; a < op.nargs(); ++a)
+    {
+        Symbol& sym (*rop.opargsym (op, a));
+        bool arg_is_uniform = rop.isSymbolUniform(sym);
+        if (arg_is_uniform == false)
+        {
+        	op_is_uniform = false;
+        }    	
+    }
+    if (op_is_uniform) {
+    	call_args.resize(1);
+    } else {
+    	call_args.resize(SimdLaneCount);    	
+    }
+    
+    // For some ops, we push the shader globals pointer
+    if (op.opname() == op_printf || op.opname() == op_error ||
+            op.opname() == op_warning) {
+		auto sg = rop.sg_void_ptr();
+		if (op_is_uniform) {
+			call_args[0].push_back (sg);
+		} else {
+			// Need to populate all lane's call arguments with same value
+        	for(int lane_index=0; lane_index < SimdLaneCount; ++lane_index) {
+            	call_args[lane_index].push_back (sg);					
+        	}							
+		}
+    }
+
+    // We're going to need to adjust the format string as we go, but I'd
+    // like to reserve a spot for the char*.
+    size_t new_format_slot = call_args[0].size();
+	if (op_is_uniform) {
+		call_args[0].push_back (NULL);
+	} else {
+		// Need to populate all lane's call arguments with same value
+    	for(int lane_index=0; lane_index < SimdLaneCount; ++lane_index) {
+        	call_args[lane_index].push_back (NULL);					
+    	}							
+	}
+    
     while (*format != '\0') {
         if (*format == '%') {
             if (format[1] == '%') {
@@ -341,6 +379,9 @@ LLVMGEN (llvm_gen_printf)
             std::string ourformat (oldfmt, format);  // straddle the format
             // Doctor it to fix mismatches between format and data
             Symbol& sym (*rop.opargsym (op, arg));
+
+            bool arg_is_uniform = rop.isSymbolUniform(sym);
+
             TypeDesc simpletype (sym.typespec().simpletype());
             int num_elements = simpletype.numelements();
             int num_components = simpletype.aggregate;
@@ -364,10 +405,11 @@ LLVMGEN (llvm_gen_printf)
             for (int a = 0;  a < num_elements;  ++a) {
                 llvm::Value *arrind = simpletype.arraylen ? rop.ll.constant(a) : NULL;
                 if (sym.typespec().is_closure_based()) {
+                	ASSERT(0 && "INCOMPLETE");
                     s += ourformat;
                     llvm::Value *v = rop.llvm_load_value (sym, 0, arrind, 0);
                     v = rop.ll.call_function ("osl_closure_to_string", rop.sg_void_ptr(), v);
-                    call_args.push_back (v);
+					call_args[0].push_back (v);
                     continue;
                 }
 
@@ -377,12 +419,32 @@ LLVMGEN (llvm_gen_printf)
                     s += ourformat;
 
                     llvm::Value* loaded = rop.llvm_load_value (sym, 0, arrind, c);
-                    if (simpletype.basetype == TypeDesc::FLOAT) {
-                        // C varargs convention upconverts float->double.
-                        loaded = rop.ll.op_float_to_double(loaded);
+                    
+                    if (arg_is_uniform) {                    
+						if (simpletype.basetype == TypeDesc::FLOAT) {
+							// C varargs convention upconverts float->double.
+							loaded = rop.ll.op_float_to_double(loaded);
+						}
+						if (op_is_uniform) {
+							call_args[0].push_back (loaded);
+						} else {
+							// Need to populate all lane's call arguments with same value
+	                    	for(int lane_index=0; lane_index < SimdLaneCount; ++lane_index) {
+	                        	call_args[lane_index].push_back (loaded);					
+	                    	}							
+						}
+                    } else {
+                    	ASSERT(false == op_is_uniform);
+                    	for(int lane_index=0; lane_index < SimdLaneCount; ++lane_index) {
+                    		llvm::Value* scalar_val = rop.ll.op_extract(loaded, lane_index);					
+							
+							if (simpletype.basetype == TypeDesc::FLOAT) {
+								// C varargs convention upconverts float->double.
+								scalar_val = rop.ll.op_float_to_double(scalar_val);
+							}
+                        	call_args[lane_index].push_back (scalar_val);
+                    	}
                     }
-
-                    call_args.push_back (loaded);
                 }
             }
             ++arg;
@@ -401,16 +463,39 @@ LLVMGEN (llvm_gen_printf)
     }
 
     // Now go back and put the new format string in its place
-    call_args[new_format_slot] = rop.ll.constant (s.c_str());
+    auto llvm_new_format_string = rop.ll.constant (s.c_str());
+	if (op_is_uniform) {
+		call_args[0][new_format_slot] = llvm_new_format_string;
+	} else {
+		// Need to populate all lane's call arguments with same value
+    	for(int lane_index=0; lane_index < SimdLaneCount; ++lane_index) {
+    		call_args[lane_index][new_format_slot] = llvm_new_format_string;
+    	}							
+	}
 
+    // TODO:  handle masking!  We could check here, or possibly just pass the mask
+	// along through to osl_xxx_batched call and let it sort it out, probably easier
+    
+	
     // Construct the function name and call it.
     std::string opname = std::string("osl_") + op.opname().string() + std::string("_batched");
-    llvm::Value *ret = rop.ll.call_function (opname.c_str(), &call_args[0],
-                                               (int)call_args.size());
-
-    // The format op returns a string value, put in in the right spot
-    if (op.opname() == op_format)
-        rop.llvm_store_value (ret, *rop.opargsym (op, 0));
+    if (op_is_uniform) {
+		llvm::Value *ret = rop.ll.call_function (opname.c_str(), &call_args[0][0],
+												   (int)call_args[0].size());
+	
+		// The format op returns a string value, put in in the right spot
+		if (op.opname() == op_format)
+			rop.llvm_store_value (ret, *rop.opargsym (op, 0));
+    } else {
+    	for(int lane_index=0; lane_index < SimdLaneCount; ++lane_index) {
+    		llvm::Value *ret = rop.ll.call_function (opname.c_str(), &call_args[lane_index][0],
+    												   (int)call_args[lane_index].size());
+    	
+    		// The format op returns a string value, put in in the right spot
+    		ASSERT(op.opname() != op_format && "INCOMPLETE");
+    	}    	
+    }
+    	
     return true;
 }
 

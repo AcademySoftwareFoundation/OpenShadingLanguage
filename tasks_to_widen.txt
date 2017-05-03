@@ -7,5 +7,8 @@ Update results of calling function that need to store results to try and use sel
 for any mask operations, what happens when the result is an address passed the the function and that function may have not concept of masking
 	Do we need a temporary to hold a function call's result, then used a masked assignment to the original destination.  Maynot be a big deal for local variables but if writing directly to an output variable, it could be an issue
 
+Add masking to printf (lower priority)
+
 Add getattribute support (Primvar_3).
 Add osl_get_textureinfo support.
+

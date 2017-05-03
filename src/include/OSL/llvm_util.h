@@ -546,6 +546,8 @@ public:
     /// Generate IR for (cond ? a : b).  Cond should be a bool.
     llvm::Value *op_select (llvm::Value *cond, llvm::Value *a, llvm::Value *b);
 
+    /// Extracts a scalar value from a vector type
+    llvm::Value *op_extract(llvm::Value *a, int index);
 
     // Comparison ops.  It auto-detects the type (int vs float).
     // ordered only applies to float comparisons -- ordered means the

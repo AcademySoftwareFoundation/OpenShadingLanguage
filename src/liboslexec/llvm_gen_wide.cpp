@@ -2003,6 +2003,19 @@ LLVMGEN (llvm_gen_compare_op)
         llvm::Value* a = rop.loadLLVMValue (A, i, 0, cast, op_is_uniform);
         llvm::Value* b = rop.loadLLVMValue (B, i, 0, cast, op_is_uniform);
 
+        llvm::Type * typeOfA = rop.ll.llvm_typeof(a);
+        llvm::Type * typeOfB = rop.ll.llvm_typeof(b);
+        if (typeOfA != typeOfB) {
+            if ((typeOfA == rop.ll.type_bool() && typeOfB == rop.ll.type_int()) ||
+                (typeOfA == rop.ll.type_wide_bool() && typeOfB == rop.ll.type_wide_int())) {
+                a = rop.ll.op_bool_to_int(a);
+            }
+            if ((typeOfB == rop.ll.type_bool() && typeOfA == rop.ll.type_int()) ||
+                (typeOfB == rop.ll.type_wide_bool() && typeOfA == rop.ll.type_wide_int())) {
+                b = rop.ll.op_bool_to_int(b);
+            }
+        }
+
         // Trickery for mixed matrix/scalar comparisons -- compare
         // on-diagonal to the scalar, off-diagonal to zero
         if (A.typespec().is_matrix() && !B.typespec().is_matrix()) {
@@ -3429,6 +3442,11 @@ LLVMGEN (llvm_gen_getattribute)
 
     llvm::Value *r = rop.ll.call_function ("osl_get_attribute_batched", &args[0], args.size());
     r = rop.ll.int_as_mask(r);
+    if (rop.ll.llvm_typeof(rop.llvm_get_pointer(Result)) != (llvm::Type *)rop.ll.type_wide_bool_ptr())
+    {
+        ASSERT(rop.ll.llvm_typeof(rop.llvm_get_pointer(Result)) == (llvm::Type *)rop.ll.type_wide_int_ptr());
+        r = rop.ll.op_bool_to_int(r);
+    }
     rop.llvm_store_value (r, Result);
 
     return true;

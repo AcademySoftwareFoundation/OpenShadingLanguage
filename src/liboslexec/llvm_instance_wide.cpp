@@ -864,7 +864,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
     // keep them as i1 (bool) vs. int to enable better code generation
     // but underlying OIIO::TypeDesc as well as OSL don't support bool so
     // will need to promote to int when interacting with others
-    std::unordered_set<Symbol *> comparisonResults;
+    std::unordered_set<Symbol *> booleanResults;
     {
     	const OpcodeVec & opcodes = inst()->ops();
     	int numOps = static_cast<int>(opcodes.size());
@@ -874,12 +874,38 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
             if ((opd->llvmgen == llvm_gen_compare_op) ||
                 (opd->llvmgen == llvm_gen_getattribute) ) {
     		    Symbol * result = opargsym (opcode, 0);
-    		    comparisonResults.insert(result);
+                booleanResults.insert(result);
     			std::cout << "RESULT of compare op = " << result->name() << std::endl;
     		}
     	}    	
     }
 
+    // 2nd pass to remove any booleanResults that get written to by
+    // non boolean operations
+    {
+        const OpcodeVec & opcodes = inst()->ops();
+        int numOps = static_cast<int>(opcodes.size());
+        for(int opIndex=0; opIndex < numOps; ++opIndex) {
+            Opcode & opcode = op(opIndex);
+            const OpDescriptor *opd = shadingsys().op_descriptor (opcode.opname());
+            if ((opd->llvmgen != llvm_gen_compare_op) &&
+                (opd->llvmgen != llvm_gen_getattribute) ) {
+
+                int argCount = opcode.nargs();
+                for(int argIndex = 0; argIndex < argCount; ++argIndex) {
+                    if (opcode.argwrite(argIndex)) {
+                        Symbol * aSymbol = opargsym (opcode, argIndex);
+                        booleanResults.erase(aSymbol);
+                    }
+                }
+            }
+        }
+    }
+
+    for(Symbol *sym:booleanResults)
+    {
+        std::cout << "Forcing symbol " << sym->name() << " to be boolean" << std::endl;
+    }
     
     
     
@@ -898,7 +924,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
         // Allocate space for locals, temps, aggregate constants
         if (s.symtype() == SymTypeLocal || s.symtype() == SymTypeTemp ||
                 s.symtype() == SymTypeConst) {
-        	bool forceBool = comparisonResults.find(&s) != comparisonResults.end(); 
+            bool forceBool = booleanResults.find(&s) != booleanResults.end();
             getOrAllocateLLVMSymbol (s, forceBool);
         }
         // Set initial value for constants, closures, and strings that are

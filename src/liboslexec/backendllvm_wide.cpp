@@ -1151,11 +1151,23 @@ BackendLLVMWide::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
     if (type.is_closure_based())
         return result;
 
+    // We may have bool masquarading as int's and need to promote them for
+    // use in any int arithmetic
+    if (type.is_int() &&
+        (ll.llvm_typeof(result) == ll.type_wide_bool())) {
+        if(cast == TypeDesc::TypeInt)
+        {
+            result = ll.op_bool_to_int(result);
+        } else if (cast == TypeDesc::TypeFloat)
+        {
+            result = ll.op_bool_to_float(result);
+        }
+    }
     // Handle int<->float type casting
-	if (type.is_floatbased() && cast == TypeDesc::TypeInt)
-		result = ll.op_float_to_int (result);
-	else if (type.is_int() && cast == TypeDesc::TypeFloat)
-		result = ll.op_int_to_float (result);
+    if (type.is_floatbased() && cast == TypeDesc::TypeInt)
+        result = ll.op_float_to_int (result);
+    else if (type.is_int() && cast == TypeDesc::TypeFloat)
+        result = ll.op_int_to_float (result);
 	
 	if (!op_is_uniform) { 
     	// TODO:  remove this assert once we have confirmed correct handling off all the

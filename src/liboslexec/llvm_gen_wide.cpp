@@ -2008,6 +2008,8 @@ LLVMGEN (llvm_gen_compare_op)
         if (typeOfA != typeOfB) {
             if ((typeOfA == rop.ll.type_bool() && typeOfB == rop.ll.type_int()) ||
                 (typeOfA == rop.ll.type_wide_bool() && typeOfB == rop.ll.type_wide_int())) {
+
+                // TODO: could optimize for contant 0 and 1 and skip the comparison
                 a = rop.ll.op_bool_to_int(a);
             }
             if ((typeOfB == rop.ll.type_bool() && typeOfA == rop.ll.type_int()) ||
@@ -2363,8 +2365,8 @@ LLVMGEN (llvm_gen_if)
         if (mask->getType() != rop.ll.type_wide_bool()) {
             ASSERT(mask->getType() == rop.ll.type_wide_int());
             mask = rop.ll.op_int_to_bool(mask);
-            ASSERT(mask->getType() == rop.ll.type_wide_bool());
         }
+        ASSERT(mask->getType() == rop.ll.type_wide_bool());
 
 		
 		

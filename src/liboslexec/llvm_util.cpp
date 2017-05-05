@@ -796,6 +796,10 @@ LLVM_Util::make_jit_execengine (std::string *err)
     //engine_builder.setOptLevel (llvm::CodeGenOpt::Default);
     engine_builder.setOptLevel (llvm::CodeGenOpt::Aggressive);
     
+
+    const char * oslDumpAsmString = std::getenv("OSL_DUMP_ASM");
+    bool dumpAsm = (oslDumpAsmString != NULL);
+
 #if 1
     llvm::TargetOptions options;
     options.LessPreciseFPMADOption = true;
@@ -825,7 +829,9 @@ LLVM_Util::make_jit_execengine (std::string *err)
     options.RelaxELFRelocations = false;    
     #endif    
     
-    //options.PrintMachineCode = true;
+    if (dumpAsm) {
+        options.PrintMachineCode = true;
+    }
     engine_builder.setTargetOptions(options);
     
     
@@ -2434,14 +2440,26 @@ LLVM_Util::op_bool_to_int (llvm::Value* a)
     ASSERT (0 && "Op has bad value type combination");
 }
 
+llvm::Value *
+LLVM_Util::op_bool_to_float (llvm::Value* a)
+{
+    if (a->getType() == type_bool())
+        return builder().CreateSIToFP(a, type_float());
+    if (a->getType() == type_wide_bool())
+        return builder().CreateSIToFP(a, type_wide_float());
+    if ((a->getType() == type_float()) || (a->getType() == type_wide_float()))
+        return a;
+    ASSERT (0 && "Op has bad value type combination");
+}
+
 
 llvm::Value *
 LLVM_Util::op_int_to_bool(llvm::Value* a)
 {
     if (a->getType() == type_int()) 
-    	return builder().CreateTrunc (a, type_bool());
+        return op_ne (a, constant(static_cast<int>(0)));
     if (a->getType() == type_wide_int()) 
-    	return builder().CreateTrunc (a, type_wide_bool());
+        return op_ne (a, wide_constant(static_cast<int>(0)));
     if ((a->getType() == type_bool()) || (a->getType() == type_wide_bool()))
         return a;
     ASSERT (0 && "Op has bad value type combination");

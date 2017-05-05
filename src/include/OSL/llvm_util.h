@@ -535,6 +535,7 @@ public:
     llvm::Value *op_float_to_int (llvm::Value *a);
     llvm::Value *op_int_to_float (llvm::Value *a);
     llvm::Value *op_bool_to_int (llvm::Value *a);
+    llvm::Value *op_bool_to_float (llvm::Value *a);
     llvm::Value *op_int_to_bool (llvm::Value *a);
     llvm::Value *op_float_to_double (llvm::Value *a);
 

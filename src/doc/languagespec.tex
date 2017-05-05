@@ -872,6 +872,18 @@ directives, including:
     #pragma once
 \end{code}
 
+\noindent Additionally, the following preprocessor symbols will already be
+defined by the compiler:
+
+\smallskip
+
+\begin{tabular}{p{1.5in} p{3.5in}}
+{\cf OSL_VERSION_MAJOR}   & Major version (e.g., 1) \\[0.5ex]
+{\cf OSL_VERSION_MINOR}   & Minor version (e.g., 9) \\[0.5ex]
+{\cf OSL_VERSION_PATCH}   & Patch version (e.g., 3) \\[0.5ex]
+{\cf OSL_VERSION}   & Combined version number = 10000*major + 100*minor + patch
+(e.g., 10903 for version 1.9.3)
+\end{tabular}
 
 
 \chapter{Gross syntax, shader types, parameters, functions}
@@ -4793,7 +4805,7 @@ wish to make queryable.
 \hline
 {\bf Name} & {\bf Type} & {\bf Description} \\
 \hline
-{\cf "osl:version\"}          & {\cf int}       & Major*10000 + Minor*100 + patch. \\
+{\cf "osl:version"}           & {\cf int}       & Major*10000 + Minor*100 + patch. \\
 {\cf "shader:shadername"}     & {\cf string}    & Name of the shader master. \\
 {\cf "shader:layername"}      & {\cf string}    & Name of the layer instance. \\
 {\cf "shader:groupname"}      & {\cf string}    & Name of the shader group. \\

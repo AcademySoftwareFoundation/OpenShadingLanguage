@@ -1,0 +1,4 @@
+Compiled test.osl -> test.oso
+a=10 10 10
+p=42 21 7
+

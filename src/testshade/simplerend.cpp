@@ -143,8 +143,6 @@ void register_closures(OSL::ShadingSystem* shadingsys) {
 
 
 
-#if OSL_USE_WIDE_LLVM_BACKEND
-
 BatchedSimpleRenderer::BatchedSimpleRenderer(SimpleRenderer &sr)
     : m_sr(sr)
 {}
@@ -391,8 +389,6 @@ BatchedSimpleRenderer::get_attribute (ShaderGlobalsBatch *sgb, bool derivatives,
     }
     return success;
 }
-
-#endif
 
 
 

@@ -13,8 +13,8 @@ SET ( liboslexec_srcs
           lpexp.cpp lpeparse.cpp automata.cpp accum.cpp
           opclosure.cpp
           shadeimage.cpp
-         #backendllvm.cpp
-         #llvm_gen.cpp llvm_instance.cpp 
+         backendllvm.cpp
+         llvm_gen.cpp llvm_instance.cpp 
          backendllvm_wide.cpp
          llvm_gen_wide.cpp llvm_instance_wide.cpp
           llvm_util.cpp 

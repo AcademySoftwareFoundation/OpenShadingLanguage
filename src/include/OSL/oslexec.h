@@ -579,12 +579,17 @@ public:
     /// For the proposed raytype name, return the bit pattern that
     /// describes it, or 0 for an unrecognized name.  (This retrieves
     /// data passed in via attribute("raytypes")).
-    int raytype_bit (ustring name);
-
-    /// Ensure that the group has been optimized and JITed.
-    /// Ensure that the group has been optimized and JITed.
+    int raytype_bit (ustring name);   
+    
+    /// Ensure that the group has been optimized.
     void optimize_group (ShaderGroup *group);
 
+    /// Ensure that the group has been JITed.
+    void jit_group (ShaderGroup *group);
+
+    /// Ensure that the group has been JITed.
+    void batched_jit_group (ShaderGroup *group);
+    
     /// Ensure that the group has been optimized and JITed. The raytypes_on
     /// gives a bitfield describing which ray flags are known to be 1, and
     /// raytypes_off describes which ray flags are known to be 0. Bits that
@@ -597,6 +602,8 @@ public:
     /// shader groups that have not yet been compiled to do so with the
     /// specified number of threads (0 means use all available HW cores).
     void optimize_all_groups (int nthreads=0);
+    void jit_all_groups (int nthreads=0);
+    void batched_jit_all_groups (int nthreads=0);
 
     /// Return a pointer to the TextureSystem being used.
     TextureSystem * texturesys () const;

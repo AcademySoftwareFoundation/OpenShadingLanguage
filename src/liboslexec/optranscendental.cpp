@@ -51,8 +51,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 OSL_NAMESPACE_ENTER
 namespace pvt {
 
-#if OSL_USE_WIDE_LLVM_BACKEND
-
 OSL_SHADEOP void
 osl_pow_w16fw16fw16f (void *r_, void *base_, void *exponent_)
 {
@@ -208,8 +206,6 @@ osl_normalize_w16vw16v(void *r_, void *V_)
 		}
 	}	
 }
-
-#endif
 
 
 } // namespace pvt

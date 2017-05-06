@@ -50,11 +50,6 @@ OSL_NAMESPACE_ENTER
 namespace pvt {
 
 
-#if OSL_USE_WIDE_LLVM_BACKEND
-typedef int wide_int __attribute__((vector_size(SimdLaneCount*sizeof(int))));
-#endif
-
-
 // Matrix ops
 
 OSL_SHADEOP void
@@ -141,7 +136,6 @@ osl_get_matrix (void *sg_, void *r, const char *from)
     return ok;
 }
 
-#if OSL_USE_WIDE_LLVM_BACKEND
 OSL_SHADEOP int
 osl_wide_get_matrix (void *sgb_, void *wr, const char *from)
 {
@@ -184,8 +178,6 @@ osl_wide_get_matrix (void *sgb_, void *wr, const char *from)
     return wok;
 
 }
-#endif
-
 
 
 OSL_SHADEOP int
@@ -216,7 +208,6 @@ osl_get_inverse_matrix (void *sg_, void *r, const char *to)
     return ok;
 }
 
-#if OSL_USE_WIDE_LLVM_BACKEND
 OSL_SHADEOP int
 osl_wide_get_inverse_matrix (void *sgb_, void *wr, const char *to)
 {
@@ -259,8 +250,6 @@ osl_wide_get_inverse_matrix (void *sgb_, void *wr, const char *to)
     return wok;
     
 }
-#endif
-
 
 
 OSL_SHADEOP int
@@ -290,7 +279,6 @@ osl_get_from_to_matrix (void *sg, void *r, const char *from, const char *to)
     return ok;
 }
 
-#if OSL_USE_WIDE_LLVM_BACKEND
 
 OSL_SHADEOP int
 osl_wide_get_from_to_matrix (void *sgb, void *wr, const char *from, const char *to)
@@ -316,7 +304,6 @@ osl_wide_get_from_to_matrix (void *sgb, void *wr, const char *from, const char *
 	}
 }
 
-#endif
 
 
 // point = M * point
@@ -454,8 +441,7 @@ osl_transform_triple (void *sg_, void *Pin, int Pin_derivs,
 
 
 
-#if OSL_USE_WIDE_LLVM_BACKEND
-OSL_SHADEOP void /*wide_int*/
+OSL_SHADEOP void 
 osl_wide_transform_triple (void *sgb_, void *Pin, int Pin_derivs,
                       void *Pout, int Pout_derivs,
 					  void * from, void * to, int vectype)
@@ -519,12 +505,8 @@ osl_wide_transform_triple (void *sgb_, void *Pin, int Pin_derivs,
     	ASSERT(0);
         ((Vec3 *)Pout)[1].setValue (0.0f, 0.0f, 0.0f);
         ((Vec3 *)Pout)[2].setValue (0.0f, 0.0f, 0.0f);
-    }
-    
-    //wide_int wresult = { ok, ok, ok, ok};
-    //return wresult;
+    }   
 }
-#endif
 
 
 OSL_SHADEOP int

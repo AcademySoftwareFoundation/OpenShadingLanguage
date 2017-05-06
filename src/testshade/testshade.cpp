@@ -68,6 +68,7 @@ static bool debug = false;
 static bool debug2 = false;
 static bool verbose = false;
 static bool runstats = false;
+static bool batched = false;
 static int profile = 0;
 static bool O0 = false, O1 = false, O2 = false;
 static bool pixelcenters = false;
@@ -103,10 +104,6 @@ static bool shadingsys_options_set = false;
 static float sscale = 1, tscale = 1;
 static float soffset = 0, toffset = 0;
 
-#ifndef OSL_USE_WIDE_LLVM_BACKEND
-	#error OSL_USE_WIDE_LLVM_BACKEND must be defined [0|1]
-#endif
-
 static void
 inject_params ()
 {
@@ -141,10 +138,11 @@ set_shadingsys_options ()
     if (! shaderpath.empty())
         shadingsys->attribute ("searchpath:shader", shaderpath);
     
-#if OSL_USE_WIDE_LLVM_BACKEND
-    // For batched operations turn off coalesce temps
-    shadingsys->attribute ("opt_coalesce_temps", 0);
-#endif
+    if (batched) {
+    	// For batched operations turn off coalesce temps
+    	// TODO:  Investigate if this is necessary, and document why
+    	shadingsys->attribute ("opt_coalesce_temps", 0);
+    } 
     
     shadingsys_options_set = true;
 }
@@ -450,6 +448,7 @@ getargs (int argc, const char *argv[])
                 "--debug2", &debug2, "Even more debugging info",
                 "--runstats", &runstats, "Print run statistics",
                 "--stats", &runstats, "",  // DEPRECATED 1.7
+                "--batched", &batched, "Submit batches to ShadingSystem",                  
                 "--profile %@", &set_profile, NULL, "Print profile information",
                 "--path %s", &shaderpath, "Specify oso search path",
                 "-g %d %d", &xres, &yres, "Make an X x Y grid of shading points",
@@ -713,6 +712,15 @@ setup_varying_shaderglobals (ShaderGlobalsBatch & sgb, ShadingSystem *shadingsys
     sgb.commitVarying();
 }
  
+// Had weird behavior if a ShaderGlobals and ShaderGlobalsBatch existed in the
+// same function stack, so broke them out into separate non-inlined helpers
+static __attribute__((noinline)) void
+setup_output_images (ShadingSystem *shadingsys,
+					 ShaderGroupRef &shadergroup);
+
+static __attribute__((noinline)) void
+setup_output_images_batched (ShadingSystem *shadingsys,
+                     ShaderGroupRef &shadergroup);
 
 static void
 setup_output_images (ShadingSystem *shadingsys,
@@ -756,29 +764,145 @@ setup_output_images (ShadingSystem *shadingsys,
 
     if (extraoptions.size())
         shadingsys->attribute ("options", extraoptions);
+    
+    alignas(64) ShaderGlobals sg;
+	setup_shaderglobals (sg, shadingsys, 0, 0);
 
-    ShadingContext *ctx = shadingsys->get_context ();
-    // Because we can only call find_symbol or get_symbol on something that
-    // has been set up to shade (or executed), we call execute() but tell it
-    // not to actually run the shader.
-#if OSL_USE_WIDE_LLVM_BACKEND
-    ShaderGlobalsBatch sgBatch;
-    setup_uniform_shaderglobals (sgBatch, shadingsys);
-	setup_varying_shaderglobals (sgBatch, shadingsys, 0, 0);
-            
-#else
-    ShaderGlobals sg;
-    setup_shaderglobals (sg, shadingsys, 0, 0);
-#endif
     if (raytype_opt)
+    {
         shadingsys->optimize_group (shadergroup.get(), raytype_bit, ~raytype_bit);
+        shadingsys->jit_group (shadergroup.get());
+    }
 
     
-#if OSL_USE_WIDE_LLVM_BACKEND
+    ShadingContext *ctx = shadingsys->get_context ();
+	shadingsys->execute (ctx, *shadergroup, sg, false);	
+
+    if (entryoutputs.size()) {
+        std::cout << "Entry outputs:";
+        for (size_t i = 0; i < entryoutputs.size(); ++i) {
+            ustring name (entryoutputs[i]);  // convert to ustring
+            const ShaderSymbol *sym = shadingsys->find_symbol (*shadergroup, name);
+            if (!sym) {
+                std::cout << "\nEntry output " << entryoutputs[i] << " not found. Abording.\n";
+                exit (EXIT_FAILURE);
+            }
+            entrylayer_symbols.push_back (sym);
+            std::cout << ' ' << entryoutputs[i];
+        }
+        std::cout << "\n";
+    }
+
+    // For each output file specified on the command line...
+    for (size_t i = 0;  i < outputfiles.size();  ++i) {
+        // Make a ustring version of the output name, for fast manipulation
+        outputvarnames.push_back (ustring(outputvars[i]));
+        // Start with a NULL ImageBuf pointer
+        outputimgs.push_back (NULL);
+
+        // Ask for a pointer to the symbol's data, as computed by this
+        // shader.
+        TypeDesc t;
+        const void *data = shadingsys->get_symbol (*ctx, outputvarnames[i], t);
+        if (!data) {
+            std::cout << "Output " << outputvars[i] 
+                      << " not found, skipping.\n";
+            continue;  // Skip if symbol isn't found
+        }
+        std::cout << "Output " << outputvars[i] << " to "
+                  << outputfiles[i] << "\n";
+
+        // And the "base" type, i.e. the type of each element or channel
+        TypeDesc tbase = TypeDesc ((TypeDesc::BASETYPE)t.basetype);
+
+        // But which type are we going to write?  Use the true data type
+        // from OSL, unless the command line options indicated that
+        // something else was desired.
+        TypeDesc outtypebase = tbase;
+        if (dataformatname == "uint8")
+            outtypebase = TypeDesc::UINT8;
+        else if (dataformatname == "half")
+            outtypebase = TypeDesc::HALF;
+        else if (dataformatname == "float")
+            outtypebase = TypeDesc::FLOAT;
+
+        // Number of channels to write to the image is the number of (array)
+        // elements times the number of channels (e.g. 1 for scalar, 3 for
+        // vector, etc.)
+        int nchans = t.numelements() * t.aggregate;
+
+        // Make an ImageBuf of the right type and size to hold this
+        // symbol's output, and initially clear it to all black pixels.
+        OIIO::ImageSpec spec (xres, yres, nchans, TypeDesc::FLOAT);
+        outputimgs[i] = new OIIO::ImageBuf(outputfiles[i], spec);
+        outputimgs[i]->set_write_format (outtypebase);
+        OIIO::ImageBufAlgo::zero (*outputimgs[i]);
+    }
+
+    if (outputimgs.empty()) {
+        OIIO::ImageSpec spec (xres, yres, 3, TypeDesc::FLOAT);
+        outputimgs.push_back(new OIIO::ImageBuf(spec));
+    }
+
+    shadingsys->release_context (ctx);  // don't need this anymore for now
+}
+
+static void
+setup_output_images_batched (ShadingSystem *shadingsys,
+                     ShaderGroupRef &shadergroup)
+{
+    // Tell the shading system which outputs we want
+    if (outputvars.size()) {
+        std::vector<const char *> aovnames (outputvars.size());
+        for (size_t i = 0; i < outputvars.size(); ++i) {
+            ustring varname (outputvars[i]);
+            aovnames[i] = varname.c_str();
+            size_t dot = varname.find('.');
+            if (dot != ustring::npos) {
+                // If the name contains a dot, it's intended to be layer.symbol
+                varname = ustring (varname, dot+1);
+            }
+        }
+        shadingsys->attribute (use_group_outputs ? shadergroup.get() : NULL,
+                               "renderer_outputs",
+                               TypeDesc(TypeDesc::STRING,(int)aovnames.size()),
+                               &aovnames[0]);
+        if (use_group_outputs)
+            std::cout << "Marking group outputs, not global renderer outputs.\n";
+    }
+
+    if (entrylayers.size()) {
+        std::vector<const char *> layers;
+        std::cout << "Entry layers:";
+        for (size_t i = 0; i < entrylayers.size(); ++i) {
+            ustring layername (entrylayers[i]);  // convert to ustring
+            int layid = shadingsys->find_layer (*shadergroup, layername);
+            layers.push_back (layername.c_str());
+            entrylayer_index.push_back (layid);
+            std::cout << ' ' << entrylayers[i] << "(" << layid << ")";
+        }
+        std::cout << "\n";
+        shadingsys->attribute (shadergroup.get(), "entry_layers",
+                               TypeDesc(TypeDesc::STRING,(int)entrylayers.size()),
+                               &layers[0]);
+    }
+
+    
+    if (extraoptions.size())
+        shadingsys->attribute ("options", extraoptions);
+    
+    alignas(64) ShaderGlobalsBatch sgBatch;
+    setup_uniform_shaderglobals (sgBatch, shadingsys);
+    setup_varying_shaderglobals (sgBatch, shadingsys, 0, 0);
+
+    if (raytype_opt)
+    {
+        shadingsys->optimize_group (shadergroup.get(), raytype_bit, ~raytype_bit);
+        shadingsys->batched_jit_group (shadergroup.get());
+    }
+
+    ShadingContext *ctx = shadingsys->get_context ();
     shadingsys->execute_batch (ctx, *shadergroup, sgBatch, false);
-#else
-    shadingsys->execute (ctx, *shadergroup, sg, false);
-#endif
 
     if (entryoutputs.size()) {
         std::cout << "Entry outputs:";
@@ -1135,7 +1259,7 @@ batched_shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
     ShadingContext *ctx = shadingsys->get_context (thread_info);
 
     // Set up shader globals and a little test grid of points to shade.
-    ShaderGlobalsBatch sgBatch alignas(64);
+    alignas(64) ShaderGlobalsBatch sgBatch;
     setup_uniform_shaderglobals (sgBatch, shadingsys);
     
 //    std::cout << "shading roi y(" << roi.ybegin << ", " << roi.yend << ")";
@@ -1380,7 +1504,11 @@ test_shade (int argc, const char *argv[])
     OIIO::attribute("threads",num_threads);
     
     // Set up the image outputs requested on the command line
-    setup_output_images (shadingsys, shadergroup);
+    if (batched) {
+    	setup_output_images_batched (shadingsys, shadergroup);
+    } else {
+    	setup_output_images (shadingsys, shadergroup);
+    }
     
 
     if (debug)
@@ -1402,17 +1530,17 @@ test_shade (int argc, const char *argv[])
                               roi, num_threads);
         else {
             bool save = (iter == (iters-1));   // save on last iteration
-#if OSL_USE_WIDE_LLVM_BACKEND
-            batched_shade_region (shadergroup.get(), roi, save);
-#else
-	#if 0
-            shade_region (shadergroup.get(), roi, save);
-	#else
-            OIIO::ImageBufAlgo::parallel_image (
-                    std::bind (shade_region, shadergroup.get(), std::placeholders::_1, save),
-                    roi, num_threads);
-	#endif
-#endif
+			if (batched) {
+				batched_shade_region (shadergroup.get(), roi, save);
+			} else {
+				#if 0
+					shade_region (shadergroup.get(), roi, save);
+				#else
+					OIIO::ImageBufAlgo::parallel_image (
+							std::bind (shade_region, shadergroup.get(), std::placeholders::_1, save),
+							roi, num_threads);
+				#endif
+			}
         }
 
         // If any reparam was requested, do it now

@@ -35,11 +35,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslexec_pvt.h"
 #include "OSL/genclosure.h"
-#if OSL_USE_WIDE_LLVM_BACKEND 
 #include "backendllvm_wide.h"
-#else
- #include "backendllvm.h"
-#endif
+#include "backendllvm.h"
 #include "OSL/oslquery.h"
 
 #include <OpenImageIO/strutil.h>
@@ -460,6 +457,17 @@ ShadingSystem::optimize_all_groups (int nthreads)
     return m_impl->optimize_all_groups (nthreads);
 }
 
+void
+ShadingSystem::jit_all_groups (int nthreads)
+{
+    return m_impl->jit_all_groups (nthreads);
+}
+
+void
+ShadingSystem::batched_jit_all_groups (int nthreads)
+{
+    return m_impl->batched_jit_all_groups (nthreads);
+}
 
 
 TextureSystem *
@@ -500,6 +508,20 @@ ShadingSystem::optimize_group (ShaderGroup *group,
 {
     ASSERT (group);
     m_impl->optimize_group (*group, raytypes_on, raytypes_off);
+}
+
+void
+ShadingSystem::jit_group (ShaderGroup *group)
+{
+    ASSERT (group);
+    m_impl->jit_group (*group);	
+}
+
+void
+ShadingSystem::batched_jit_group (ShaderGroup *group)
+{
+    ASSERT (group);
+    m_impl->batched_jit_group (*group);	
 }
 
 
@@ -814,19 +836,12 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
 static void
 shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_descriptor)
 {
-#if OSL_USE_WIDE_LLVM_BACKEND 
 #define OP2(alias,name,ll,fold,simp,flag)                                \
     extern bool llvm_gen_##ll (BackendLLVMWide &rop, int opnum);             \
-    extern int  constfold_##fold (RuntimeOptimizer &rop, int opnum);     \
-    op_descriptor[ustring(#alias)] = OpDescriptor(#name, llvm_gen_##ll,  \
-                                                  constfold_##fold, simp, flag);
-#else
-#define OP2(alias,name,ll,fold,simp,flag)                                \
     extern bool llvm_gen_##ll (BackendLLVM &rop, int opnum);             \
     extern int  constfold_##fold (RuntimeOptimizer &rop, int opnum);     \
-    op_descriptor[ustring(#alias)] = OpDescriptor(#name, llvm_gen_##ll,  \
+    op_descriptor[ustring(#alias)] = OpDescriptor(#name, llvm_gen_##ll, llvm_gen_##ll,  \
                                                   constfold_##fold, simp, flag);
-#endif
 #define OP(name,ll,fold,simp,flag) OP2(name,name,ll,fold,simp,flag)
 #define TEX OpDescriptor::Tex
 #define LLVM_INLINED OpDescriptor::LLVMInlined
@@ -1047,6 +1062,21 @@ ShadingSystemImpl::query_closure(const char **name, int *id,
 
 ShadingSystemImpl::~ShadingSystemImpl ()
 {
+	// ignoring multithreaded locking, 
+	// why would we be destroying this if there are other
+	// threads pointing to it
+    size_t ngroups = m_all_shader_groups.size();
+    for (size_t i = 0;  i < ngroups;  ++i) {
+    	if (ShaderGroupRef g = m_all_shader_groups[i].lock()) {
+			if (!g->jitted() || !g->batch_jitted()) {
+				// As we are now lazier in jitting and need to keep the OSL IR
+				// around in case we want to create a batched JIT or vice versa
+				// we may have OSL IR to cleanup
+				group_post_jit_cleanup(*g);
+			}
+    	}
+    }
+	
     printstats ();
     // N.B. just let m_texsys go -- if we asked for one to be created,
     // we asked for a shared one.
@@ -2634,6 +2664,7 @@ ShadingSystemImpl::is_renderer_output (ustring layername, ustring paramname,
 void
 ShadingSystemImpl::group_post_jit_cleanup (ShaderGroup &group)
 {
+	std::cout << "ShadingSystemImpl::group_post_jit_cleanup (ShaderGroup &group)" << std::endl;
     // Once we're generated the IR, we really don't need the ops and args,
     // and we only need the syms that include the params.
     off_t symmem = 0;
@@ -2701,6 +2732,8 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group,
         return;
     }
 
+    std::cout << "ShadingSystemImpl::optimize_group" << std::endl;
+    
     double locking_time = timer();
 
     ShadingContext *ctx = get_context ();
@@ -2733,15 +2766,6 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group,
         group.m_attribute_scopes.push_back (f.scope);
     }
 
-#if OSL_USE_WIDE_LLVM_BACKEND    
-    BackendLLVMWide lljitter (*this, group, ctx);
-#else
-	 BackendLLVM lljitter (*this, group, ctx);
-#endif    
-    lljitter.run ();
-
-    group_post_jit_cleanup (group);
-
     release_context (ctx);
 
     group.m_optimized = true;
@@ -2749,6 +2773,46 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group,
     m_stat_optimization_time += timer();
     m_stat_opt_locking_time += locking_time + rop.m_stat_opt_locking_time;
     m_stat_specialization_time += rop.m_stat_specialization_time;
+}
+
+void
+ShadingSystemImpl::jit_group (ShaderGroup &group)
+{
+    if (group.jitted())
+        return;    // already optimized
+    
+    if (!group.optimized())
+        optimize_group (group);
+
+    OIIO::Timer timer;
+    // TODO: we could have separate mutexes for jit vs. batched_jit
+    // choose to keep it simple to start with
+    lock_guard lock (group.m_mutex);
+    if (group.jitted()) {
+        // The group was somehow jitted by another thread between the
+        // time we checked group.jitted() and now that we have the lock.
+        // Nothing to do (expect maybe record how long we waited for the lock).
+        spin_lock stat_lock (m_stat_mutex);
+        double t = timer();
+        m_stat_optimization_time += t;
+        m_stat_opt_locking_time += t;
+        return;
+    }
+	
+    ShadingContext *ctx = get_context ();
+    BackendLLVM lljitter (*this, group, ctx);
+    lljitter.run ();
+
+	// Keep OSL instructions around in case someone 
+    // wants the batch version jitted
+    if (group.batch_jitted()) {
+    	group_post_jit_cleanup (group);
+    }
+
+    release_context (ctx);
+
+    group.m_jitted = true;
+    spin_lock stat_lock (m_stat_mutex);   
     m_stat_total_llvm_time += lljitter.m_stat_total_llvm_time;
     m_stat_llvm_setup_time += lljitter.m_stat_llvm_setup_time;
     m_stat_llvm_irgen_time += lljitter.m_stat_llvm_irgen_time;
@@ -2756,9 +2820,64 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group,
     m_stat_llvm_jit_time += lljitter.m_stat_llvm_jit_time;
     m_stat_max_llvm_local_mem = std::max (m_stat_max_llvm_local_mem,
                                           lljitter.m_llvm_local_mem);
+    
+    // TODO: not sure how to count these given batched vs. not
     m_stat_groups_compiled += 1;
     m_stat_instances_compiled += group.nlayers();
-    m_groups_to_compile_count -= 1;
+    m_groups_to_compile_count -= 1;	
+}
+
+void
+ShadingSystemImpl::batched_jit_group (ShaderGroup &group)
+{
+    
+    if (group.batch_jitted())
+        return;    // already optimized
+    
+    if (!group.optimized())
+        optimize_group (group);
+
+    OIIO::Timer timer;
+    // TODO: we could have separate mutexes for jit vs. batched_jit
+    // choose to keep it simple to start with
+    lock_guard lock (group.m_mutex);
+    if (group.batch_jitted()) {
+        // The group was somehow batch_jitted by another thread between the
+        // time we checked group.batch_jitted() and now that we have the lock.
+        // Nothing to do (expect maybe record how long we waited for the lock).
+        spin_lock stat_lock (m_stat_mutex);
+        double t = timer();
+        m_stat_optimization_time += t;
+        m_stat_opt_locking_time += t;
+        return;
+    }
+	
+    ShadingContext *ctx = get_context ();
+    BackendLLVMWide lljitter (*this, group, ctx);
+    lljitter.run ();
+
+	// Keep OSL instructions around in case someone 
+    // wants the scalar version jitted
+    if (group.jitted()) {
+    	group_post_jit_cleanup (group);
+    }
+
+    release_context (ctx);
+
+    group.m_batch_jitted = true;
+    spin_lock stat_lock (m_stat_mutex);   
+    m_stat_total_llvm_time += lljitter.m_stat_total_llvm_time;
+    m_stat_llvm_setup_time += lljitter.m_stat_llvm_setup_time;
+    m_stat_llvm_irgen_time += lljitter.m_stat_llvm_irgen_time;
+    m_stat_llvm_opt_time += lljitter.m_stat_llvm_opt_time;
+    m_stat_llvm_jit_time += lljitter.m_stat_llvm_jit_time;
+    m_stat_max_llvm_local_mem = std::max (m_stat_max_llvm_local_mem,
+                                          lljitter.m_llvm_local_mem);
+    
+    // TODO: not sure how to count these given batched vs. not
+    m_stat_groups_compiled += 1;
+    m_stat_instances_compiled += group.nlayers();
+    m_groups_to_compile_count -= 1;	
 }
 
 
@@ -2766,6 +2885,16 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group,
 static void optimize_all_groups_wrapper (ShadingSystemImpl *ss, int mythread, int totalthreads)
 {
     ss->optimize_all_groups (1, mythread, totalthreads);
+}
+
+static void jit_all_groups_wrapper (ShadingSystemImpl *ss, int mythread, int totalthreads)
+{
+    ss->jit_all_groups (1, mythread, totalthreads);
+}
+
+static void batched_jit_all_groups_wrapper (ShadingSystemImpl *ss, int mythread, int totalthreads)
+{
+    ss->batched_jit_all_groups (1, mythread, totalthreads);
 }
 
 
@@ -2810,6 +2939,85 @@ ShadingSystemImpl::optimize_all_groups (int nthreads, int mythread, int totalthr
     }
 }
 
+void
+ShadingSystemImpl::jit_all_groups (int nthreads, int mythread, int totalthreads)
+{
+    // Spawn a bunch of threads to do this in parallel -- just call this
+    // routine again (with threads=1) for each thread.
+    if (nthreads < 1)  // threads <= 0 means use all hardware available
+        nthreads = std::min ((int)std::thread::hardware_concurrency(),
+                             (int)m_groups_to_compile_count);
+    if (nthreads > 1) {
+        if (m_threads_currently_compiling)
+            return;   // never mind, somebody else spawned the JIT threads
+        OIIO::thread_group threads;
+        m_threads_currently_compiling += nthreads;
+        for (int t = 0;  t < nthreads;  ++t)
+            threads.add_thread (new std::thread (jit_all_groups_wrapper, this, t, nthreads));
+        threads.join_all ();
+        m_threads_currently_compiling -= nthreads;
+        return;
+    }
+
+    // And here's the single thread case
+    size_t ngroups = 0;
+    {
+        spin_lock lock (m_all_shader_groups_mutex);
+        ngroups = m_all_shader_groups.size();
+    }
+    for (size_t i = 0;  i < ngroups;  ++i) {
+        // Assign to threads based on mod of totalthreads
+        if ((i % totalthreads) == (unsigned)mythread) {
+            ShaderGroupRef group;
+            {
+                spin_lock lock (m_all_shader_groups_mutex);
+                group = m_all_shader_groups[i].lock();
+            }
+            if (group)
+                jit_group (*group);
+        }
+    }
+}
+
+void
+ShadingSystemImpl::batched_jit_all_groups (int nthreads, int mythread, int totalthreads)
+{
+    // Spawn a bunch of threads to do this in parallel -- just call this
+    // routine again (with threads=1) for each thread.
+    if (nthreads < 1)  // threads <= 0 means use all hardware available
+        nthreads = std::min ((int)std::thread::hardware_concurrency(),
+                             (int)m_groups_to_compile_count);
+    if (nthreads > 1) {
+        if (m_threads_currently_compiling)
+            return;   // never mind, somebody else spawned the JIT threads
+        OIIO::thread_group threads;
+        m_threads_currently_compiling += nthreads;
+        for (int t = 0;  t < nthreads;  ++t)
+            threads.add_thread (new std::thread (batched_jit_all_groups_wrapper, this, t, nthreads));
+        threads.join_all ();
+        m_threads_currently_compiling -= nthreads;
+        return;
+    }
+
+    // And here's the single thread case
+    size_t ngroups = 0;
+    {
+        spin_lock lock (m_all_shader_groups_mutex);
+        ngroups = m_all_shader_groups.size();
+    }
+    for (size_t i = 0;  i < ngroups;  ++i) {
+        // Assign to threads based on mod of totalthreads
+        if ((i % totalthreads) == (unsigned)mythread) {
+            ShaderGroupRef group;
+            {
+                spin_lock lock (m_all_shader_groups_mutex);
+                group = m_all_shader_groups[i].lock();
+            }
+            if (group)
+                batched_jit_group (*group);
+        }
+    }
+}
 
 
 int

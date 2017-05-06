@@ -430,21 +430,13 @@ public:
             direction(1.0f,0.0f,0.0f), bandwidth(1.0f), impulses(16.0f) { }
     };
 
-#ifndef OSL_USE_WIDE_LLVM_BACKEND
-#error FAIL
-#endif
-    
-#if OSL_USE_WIDE_LLVM_BACKEND
     virtual BatchedRendererServices * batched();
-#endif
     
     
 protected:
     TextureSystem *m_texturesys;   // A place to hold a TextureSystem
 };
 
-
-#if OSL_USE_WIDE_LLVM_BACKEND
 
 class OSLEXECPUBLIC BatchedRendererServices {
 public:
@@ -837,9 +829,6 @@ public:
 protected:
     TextureSystem *m_texturesys;   // A place to hold a TextureSystem
 };
-
-#endif    
-
 
 
 OSL_NAMESPACE_EXIT

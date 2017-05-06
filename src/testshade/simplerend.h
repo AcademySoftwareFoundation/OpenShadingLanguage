@@ -40,13 +40,8 @@ OSL_NAMESPACE_ENTER
 void register_closures(OSL::ShadingSystem* shadingsys);
 
 
-#ifndef OSL_USE_WIDE_LLVM_BACKEND
-#error FAIL must enable or disable OSL_USE_WIDE_LLVM_BACKEND to 1 or 0
-#endif 
-
 class SimpleRenderer;
 
-#if OSL_USE_WIDE_LLVM_BACKEND
 class BatchedSimpleRenderer : public BatchedRendererServices
 {
 public:
@@ -71,7 +66,6 @@ public:
 private:
 	SimpleRenderer &m_sr;
 };
-#endif
 
 class SimpleRenderer : public RendererServices
 {
@@ -112,11 +106,9 @@ public:
                         float hfov, float hither, float yon,
                         int xres, int yres);
 
-#if OSL_USE_WIDE_LLVM_BACKEND
     virtual BatchedRendererServices * batched();    
 private:
     BatchedSimpleRenderer m_batched_simple_renderer;
-#endif    
 
 private:
     // Camera parameters

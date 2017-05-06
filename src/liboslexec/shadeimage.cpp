@@ -66,7 +66,7 @@ shade_image (ShadingSystem &shadingsys, ShaderGroup &group,
                    buf.spec().format);
         return false;
     }
-    shadingsys.optimize_group (&group);
+    shadingsys.jit_group (&group);
 
     if (nthreads != 1 && roi.npixels() >= 64*64) {
         // Parallelize

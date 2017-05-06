@@ -38,20 +38,24 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #error Do not include this file unless DECL is defined
 #endif
 
+#ifndef WDECL
+#error Do not include this file unless WDECL is defined
+#endif
+
 #define NOISE_WIMPL(name)                           \
-    DECL (osl_ ## name ## _w16fw16f,  "wfwf")      \
-    DECL (osl_ ## name ## _w4fw4v,  "wfwv")			\
-    DECL (osl_ ## name ## _w8fw8v,  "wfwv")			\
-    DECL (osl_ ## name ## _w16fw16v,  "wfwv")		\
-    DECL (osl_ ## name ## _w16vw16v,  "wvwv")      \
-    DECL (osl_ ## name ## _w16vw16f,  "wvwf")      \
-    DECL (osl_ ## name ## _w16vw16vw16f, "wvwvwf") \
+    WDECL (osl_ ## name ## _w16fw16f,  "wfwf")      \
+    WDECL (osl_ ## name ## _w4fw4v,  "wfwv")			\
+    WDECL (osl_ ## name ## _w8fw8v,  "wfwv")			\
+    WDECL (osl_ ## name ## _w16fw16v,  "wfwv")		\
+    WDECL (osl_ ## name ## _w16vw16v,  "wvwv")      \
+    WDECL (osl_ ## name ## _w16vw16f,  "wvwf")      \
+    WDECL (osl_ ## name ## _w16vw16vw16f, "wvwvwf") \
     
 
 #define GENERIC_NOISE_DERIV_WIMPL(name)             \
-    DECL (osl_ ## name ## _w4dfw4dv,   "xsXXXX")    \
-    DECL (osl_ ## name ## _w8dfw8dv,   "xsXXXX")    \
-    DECL (osl_ ## name ## _w16dfw16dv,   "xsXXXX")    
+    WDECL (osl_ ## name ## _w4dfw4dv,   "xsXXXX")    \
+    WDECL (osl_ ## name ## _w8dfw8dv,   "xsXXXX")    \
+    WDECL (osl_ ## name ## _w16dfw16dv,   "xsXXXX")    
 
 #define NOISE_IMPL(name)                           \
     DECL (osl_ ## name ## _ff,  "ff")              \
@@ -164,18 +168,18 @@ DECL (osl_incr_layers_executed, "xX")
 NOISE_IMPL(cellnoise)
 //NOISE_DERIV_IMPL(cellnoise)
 NOISE_IMPL(noise)
-#if OSL_USE_WIDE_LLVM_BACKEND
-    DECL (osl_printf_batched, "xXs*")
-    DECL (osl_warning_batched, "xXs*")
-    DECL (osl_error_batched, "xXs*")
-    DECL (osl_get_attribute_batched, "iXiXXiiXXi")
-    NOISE_WIMPL(cellnoise)
-	NOISE_WIMPL(noise)
-	NOISE_WIMPL(snoise)
-	NOISE_WIMPL(simplexnoise)
-	NOISE_WIMPL(usimplexnoise)
-	GENERIC_NOISE_DERIV_WIMPL(gabornoise)
-#endif
+
+WDECL (osl_printf_batched, "xXs*")
+WDECL (osl_warning_batched, "xXs*")
+WDECL (osl_error_batched, "xXs*")
+WDECL (osl_get_attribute_batched, "iXiXXiiXXi")
+NOISE_WIMPL(cellnoise)
+NOISE_WIMPL(noise)
+NOISE_WIMPL(snoise)
+NOISE_WIMPL(simplexnoise)
+NOISE_WIMPL(usimplexnoise)
+GENERIC_NOISE_DERIV_WIMPL(gabornoise)
+
 NOISE_DERIV_IMPL(noise)
 NOISE_IMPL(snoise)
 NOISE_DERIV_IMPL(snoise)
@@ -232,9 +236,8 @@ DECL (osl_get_matrix, "iXXs")
 DECL (osl_get_inverse_matrix, "iXXs")
 DECL (osl_transform_triple, "iXXiXiXXi")
 DECL (osl_transform_triple_nonlinear, "iXXiXiXXi")
-#if OSL_USE_WIDE_LLVM_BACKEND
-DECL (osl_wide_transform_triple, "xXXiXiXXi")
-#endif
+
+WDECL (osl_wide_transform_triple, "xXXiXiXXi")
 
 DECL (osl_dict_find_iis, "iXiX")
 DECL (osl_dict_find_iss, "iXXX")
@@ -250,9 +253,7 @@ DECL (osl_get_texture_options, "XX");
 DECL (osl_get_noise_options, "XX");
 DECL (osl_get_trace_options, "XX");
 
-#if OSL_USE_WIDE_LLVM_BACKEND
-DECL (osl_wide_get_noise_options, "XX");
-#endif
+WDECL (osl_wide_get_noise_options, "XX");
 
 // The following are defined inside llvm_ops.cpp. Only include these
 // declarations in the OSL_LLVM_NO_BITCODE case.
@@ -270,7 +271,7 @@ UNARY_OP_IMPL(tanh)
 
 DECL (osl_safe_div_iii, "iii")
 DECL (osl_safe_div_fff, "fff")
-DECL (osl_safe_div_w16fw16fw16f, "wfwfwf")
+WDECL (osl_safe_div_w16fw16fw16f, "wfwfwf")
 DECL (osl_safe_mod_iii, "iii")
 DECL (osl_sincos_fff, "xfXX")
 DECL (osl_sincos_dfdff, "xXXX")
@@ -326,7 +327,7 @@ UNARY_OP_IMPL(fabs)
 BINARY_OP_IMPL(fmod)
 
 DECL (osl_smoothstep_ffff, "ffff")
-DECL (osl_smoothstep_w16fw16fw16fw16f, "wfwfwfwf")
+WDECL (osl_smoothstep_w16fw16fw16fw16f, "wfwfwfwf")
 DECL (osl_smoothstep_dfffdf, "xXffX")
 DECL (osl_smoothstep_dffdff, "xXfXf")
 DECL (osl_smoothstep_dffdfdf, "xXfXX")
@@ -360,10 +361,10 @@ DECL (osl_normalize_vv, "xXX")
 DECL (osl_normalize_dvdv, "xXX")
 #endif
 
-DECL (osl_pow_w16fw16fw16f, "xXXf")
-DECL (osl_pow_w16vw16vw16f, "xXXX")
-DECL (osl_area_w16, "xXX")
-DECL (osl_normalize_w16vw16v, "xXX")
+WDECL (osl_pow_w16fw16fw16f, "xXXf")
+WDECL (osl_pow_w16vw16vw16f, "xXXX")
+WDECL (osl_area_w16, "xXX")
+WDECL (osl_normalize_w16vw16v, "xXX")
 
 DECL (osl_mul_mm, "xXXX")
 DECL (osl_mul_mf, "xXXf")

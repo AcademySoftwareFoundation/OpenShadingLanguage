@@ -41,8 +41,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // Create extrenal declarations for all built-in funcs we may call from LLVM
 #define DECL(name,signature) extern "C" void name();
+#define WDECL(name,signature) 
 #include "builtindecl.h"
 #undef DECL
+#undef WDECL
 
 
 /*
@@ -136,10 +138,10 @@ struct HelperFuncRecord {
 };
 
 typedef std::unordered_map<std::string,HelperFuncRecord> HelperFuncMap;
-HelperFuncMap llvm_helper_function_map;
-atomic_int llvm_helper_function_map_initialized (0);
-spin_mutex llvm_helper_function_map_mutex;
-std::vector<std::string> external_function_names;
+static HelperFuncMap llvm_helper_function_map;
+static atomic_int llvm_helper_function_map_initialized (0);
+static spin_mutex llvm_helper_function_map_mutex;
+static std::vector<std::string> external_function_names;
 
 
 
@@ -154,15 +156,17 @@ initialize_llvm_helper_function_map ()
 #define DECL(name,signature) \
     llvm_helper_function_map[#name] = HelperFuncRecord(signature,name); \
     external_function_names.push_back (#name);
+#define WDECL(name,signature) 
 #include "builtindecl.h"
 #undef DECL
+#undef WDECL
 
     llvm_helper_function_map_initialized = 1;
 }
 
 
 
-void *
+static void *
 helper_function_lookup (const std::string &name)
 {
     HelperFuncMap::const_iterator i = llvm_helper_function_map.find (name);
@@ -1000,7 +1004,7 @@ BackendLLVM::run ()
     }
 
     // At this point, we already hold the lock for this group, by virtue
-    // of ShadingSystemImpl::optimize_group.
+    // of ShadingSystemImpl::jit_group.
     OIIO::Timer timer;
     std::string err;
 

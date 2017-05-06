@@ -46,8 +46,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // Create extrenal declarations for all built-in funcs we may call from LLVM
 #define DECL(name,signature) extern "C" void name();
+#define WDECL(name,signature) extern "C" void name();
 #include "builtindecl.h"
 #undef DECL
+#undef WDECL
 
 
 /*
@@ -141,10 +143,10 @@ struct HelperFuncRecord {
 };
 
 typedef boost::unordered_map<std::string,HelperFuncRecord> HelperFuncMap;
-HelperFuncMap llvm_helper_function_map;
-atomic_int llvm_helper_function_map_initialized (0);
-spin_mutex llvm_helper_function_map_mutex;
-std::vector<std::string> external_function_names;
+static HelperFuncMap llvm_helper_function_map;
+static atomic_int llvm_helper_function_map_initialized (0);
+static spin_mutex llvm_helper_function_map_mutex;
+static std::vector<std::string> external_function_names;
 
 
 
@@ -159,15 +161,19 @@ initialize_llvm_helper_function_map ()
 #define DECL(name,signature) \
     llvm_helper_function_map[#name] = HelperFuncRecord(signature,name); \
     external_function_names.push_back (#name);
+#define WDECL(name,signature) \
+    llvm_helper_function_map[#name] = HelperFuncRecord(signature,name); \
+    external_function_names.push_back (#name);
 #include "builtindecl.h"
 #undef DECL
+#undef WDECL
 
     llvm_helper_function_map_initialized = 1;
 }
 
 
 
-void *
+static void *
 helper_function_lookup (const std::string &name)
 {
 	std::cout << "helper_function_lookup (" << name << ")" << std::endl;
@@ -677,7 +683,7 @@ BackendLLVMWide::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
     for (int opnum = beginop;  opnum < endop;  ++opnum) {
         const Opcode& op = inst()->ops()[opnum];
         const OpDescriptor *opd = shadingsys().op_descriptor (op.opname());
-        if (opd && opd->llvmgen) {
+        if (opd && opd->llvmgenwide) {
             if (shadingsys().debug_uninit() /* debug uninitialized vals */)
                 llvm_generate_debug_uninit (op);
             if (shadingsys().llvm_debug_ops())
@@ -689,7 +695,7 @@ BackendLLVMWide::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
             std::cout << std::endl;
             ll.set_debug_location(op.sourcefile().string(), op.method().string(), op.sourceline());
             ll.push_masking_enabled(requiresMasking(opnum));
-            bool ok = (*opd->llvmgen) (*this, opnum);
+            bool ok = (*opd->llvmgenwide) (*this, opnum);
             ll.pop_masking_enabled();
             if (! ok)
                 return false;
@@ -871,8 +877,8 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
     	for(int opIndex=0; opIndex < numOps; ++opIndex) {
     		Opcode & opcode = op(opIndex);
     		const OpDescriptor *opd = shadingsys().op_descriptor (opcode.opname());
-            if ((opd->llvmgen == llvm_gen_compare_op) ||
-                (opd->llvmgen == llvm_gen_getattribute) ) {
+            if ((opd->llvmgenwide == llvm_gen_compare_op) ||
+                (opd->llvmgenwide == llvm_gen_getattribute) ) {
     		    Symbol * result = opargsym (opcode, 0);
                 booleanResults.insert(result);
     			std::cout << "RESULT of compare op = " << result->name() << std::endl;
@@ -888,8 +894,8 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
         for(int opIndex=0; opIndex < numOps; ++opIndex) {
             Opcode & opcode = op(opIndex);
             const OpDescriptor *opd = shadingsys().op_descriptor (opcode.opname());
-            if ((opd->llvmgen != llvm_gen_compare_op) &&
-                (opd->llvmgen != llvm_gen_getattribute) ) {
+            if ((opd->llvmgenwide != llvm_gen_compare_op) &&
+                (opd->llvmgenwide != llvm_gen_getattribute) ) {
 
                 int argCount = opcode.nargs();
                 for(int argIndex = 0; argIndex < argCount; ++argIndex) {
@@ -1118,7 +1124,7 @@ BackendLLVMWide::run ()
     }
     
     // At this point, we already hold the lock for this group, by virtue
-    // of ShadingSystemImpl::optimize_group.
+    // of ShadingSystemImpl::batch_jit_group.
     OIIO::Timer timer;
     std::string err;
 

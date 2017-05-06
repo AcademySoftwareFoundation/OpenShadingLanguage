@@ -387,8 +387,6 @@ RendererServices::get_texture_info (ShaderGlobals *sg, ustring filename,
 }
 
 
-#if OSL_USE_WIDE_LLVM_BACKEND
-
 BatchedRendererServices::BatchedRendererServices (TextureSystem *texsys)
     : m_texturesys(texsys)
 {
@@ -558,8 +556,6 @@ BatchedRendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &
         result.invert ();
     return ok;
 }
-
-#endif
 
 
 OSL_NAMESPACE_EXIT

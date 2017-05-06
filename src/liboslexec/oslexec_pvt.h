@@ -124,11 +124,8 @@ class ShaderInstance;
 typedef std::shared_ptr<ShaderInstance> ShaderInstanceRef;
 class Dictionary;
 class RuntimeOptimizer;
-#if OSL_USE_WIDE_LLVM_BACKEND    
 class BackendLLVMWide;
-#else
- class BackendLLVM;
-#endif
+class BackendLLVM;
 struct ConnectedParam;
 
 void print_closure (std::ostream &out, const ClosureColor *closure, ShadingSystemImpl *ss);
@@ -141,23 +138,21 @@ typedef void (*RunLLVMGroupFunc)(void* /* shader globals */, void*);
 typedef int (*OpFolder) (RuntimeOptimizer &rop, int opnum);
 
 /// Signature of an LLVM-IR-generating method
-#if OSL_USE_WIDE_LLVM_BACKEND    
-typedef bool (*OpLLVMGen) (BackendLLVMWide &rop, int opnum);
-#else
- typedef bool (*OpLLVMGen) (BackendLLVM &rop, int opnum);
-#endif
+typedef bool (*OpLLVMGenWide) (BackendLLVMWide &rop, int opnum);
+typedef bool (*OpLLVMGen) (BackendLLVM &rop, int opnum);
 
 struct OpDescriptor {
     ustring name;           // name of op
     OpLLVMGen llvmgen;      // llvm-generating routine
+    OpLLVMGenWide llvmgenwide;      // wide version of llvm-generating routine
     OpFolder folder;        // constant-folding routine
     bool simple_assign;     // wholy overwites arg0, no other writes,
                             //     no side effects
     int flags;              // other flags
     OpDescriptor () { }
-    OpDescriptor (const char *n, OpLLVMGen ll, OpFolder fold=NULL,
+    OpDescriptor (const char *n, OpLLVMGen ll, OpLLVMGenWide llw, OpFolder fold=NULL,
                   bool simple=false, int flags=0)
-        : name(n), llvmgen(ll), folder(fold), simple_assign(simple), flags(flags)
+        : name(n), llvmgen(ll), llvmgenwide(llw), folder(fold), simple_assign(simple), flags(flags)
     {}
 
     enum FlagValues { None=0, Tex=1, LLVMInlined=2 };
@@ -629,6 +624,13 @@ public:
     /// (at least the ones that can't be overridden by the geometry).
     void optimize_group (ShaderGroup &group,
                          int raytypes_on=0, int raytypes_off=0);
+    
+    /// Ensure that the group has been JITed.
+    void jit_group (ShaderGroup &group);
+
+    /// Ensure that the group has been JITed.
+    void batched_jit_group (ShaderGroup &group);
+    
 
     /// After doing all optimization and code JIT, we can clean up by
     /// deleting the instances' code and arguments, and paring their
@@ -675,6 +677,8 @@ public:
     int raytype_bit (ustring name);
 
     void optimize_all_groups (int nthreads=0, int mythread=0, int totalthreads=1);
+    void jit_all_groups (int nthreads=0, int mythread=0, int totalthreads=1);
+    void batched_jit_all_groups (int nthreads=0, int mythread=0, int totalthreads=1);
 
     typedef std::unordered_map<ustring,OpDescriptor,ustringHash> OpDescriptorMap;
 
@@ -906,11 +910,8 @@ private:
     friend class ShaderMaster;
     friend class ShaderInstance;
     friend class RuntimeOptimizer;
-#if OSL_USE_WIDE_LLVM_BACKEND    
     friend class BackendLLVMWide;
-#else
-	 friend class BackendLLVM;
-#endif
+    friend class BackendLLVM;
 };
 
 
@@ -1415,7 +1416,7 @@ public:
 
     /// Clear the layers
     ///
-    void clear () { m_layers.clear ();  m_optimized = 0;  m_executions = 0; }
+    void clear () { m_layers.clear ();  m_optimized = 0;  m_jitted = 0; m_batch_jitted = 0; m_executions = 0; }
 
     /// Append a new shader instance on to the end of this group
     ///
@@ -1436,6 +1437,12 @@ public:
     int optimized () const { return m_optimized; }
     void optimized (int opt) { m_optimized = opt; }
 
+    int jitted () const { return m_jitted; }
+    void jitted (int jitted) { m_jitted = jitted; }
+
+    int batch_jitted () const { return m_batch_jitted; }
+    void batch_jitted (int batch_jitted) { m_batch_jitted = batch_jitted; }
+    
     size_t llvm_groupdata_size () const { return m_llvm_groupdata_size; }
     void llvm_groupdata_size (size_t size) { m_llvm_groupdata_size = size; }
 
@@ -1529,6 +1536,8 @@ private:
     // needed on every shade execution at the front of the struct, as much
     // together on one cache line as possible.
     volatile int m_optimized;        ///< Is it already optimized?
+    volatile int m_jitted;        	 ///< Is it already jitted?
+    volatile int m_batch_jitted;   ///< Is it already jitted for batch execution?
     bool m_does_nothing;             ///< Is the shading group just func() { return; }
     size_t m_llvm_groupdata_size;    ///< Heap size needed for its groupdata
     int m_id;                        ///< Unique ID for the group
@@ -1558,11 +1567,8 @@ private:
     atomic_ll m_stat_total_shading_time_ticks; ///< Total shading time (ticks)
 
     friend class OSL::pvt::ShadingSystemImpl;
-#if OSL_USE_WIDE_LLVM_BACKEND
     friend class OSL::pvt::BackendLLVMWide;
-#else
-	 friend class OSL::pvt::BackendLLVM;
-#endif
+	friend class OSL::pvt::BackendLLVM;
     friend class ShadingContext;
 };
 
@@ -1583,10 +1589,8 @@ public:
     ///
     RendererServices *renderer () const { return m_renderer; }
     
-#if OSL_USE_WIDE_LLVM_BACKEND
     /// Return a reference to the BatchedRendererServices.
     BatchedRendererServices *batched_renderer () const { return m_renderer->batched(); }
-#endif    
 
     /// Bind a shader group and globals to this context and prepare to
     /// execute. (See similarly named method of ShadingSystem.)
@@ -1902,10 +1906,8 @@ public:
     /// Return a reference to the RendererServices.
     RendererServices *renderer () const { return shadingsys().renderer(); }
 
-#if OSL_USE_WIDE_LLVM_BACKEND
     /// Return a reference to the RendererServices.
     BatchedRendererServices *batched_renderer () const { return renderer()->batched(); }
-#endif
     
     /// Retrieve the dummy shading context.
     ShadingContext *shadingcontext () const { return m_context; }

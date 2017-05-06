@@ -413,7 +413,7 @@ struct alignas(64) ShaderGlobalsBatch
 	
 	static constexpr int maxSize = SimdLaneCount;
 	
-	UniformShaderGlobals & uniform() { return m_uniform; }
+	OSL_INLINE UniformShaderGlobals & uniform() { return m_uniform; }
 	
 	
 	typedef VaryingShaderProxy<maxSize> VaryingProxyType;

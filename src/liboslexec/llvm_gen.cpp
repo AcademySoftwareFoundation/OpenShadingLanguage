@@ -2171,6 +2171,12 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
         PARAM_INT (subimage)
 
         if (name == Strings::subimage && valtype == TypeDesc::STRING) {
+            if (Val.is_constant()) {
+                ustring v = *(ustring *)Val.data();
+                if (! v && ! subimage_set) {
+                    continue;     // Ignore nulls unless they are overrides
+                }
+            }
             llvm::Value *val = rop.llvm_load_value (Val);
             rop.ll.call_function ("osl_texture_set_subimagename", opt, val);
             subimage_set = true;

@@ -264,6 +264,7 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             oslinfo-arrayparams oslinfo-colorctrfloat
             oslinfo-metadata oslinfo-noparams
             osl-imageio
+            paramval-floatpromotion
             printf-whole-array
             raytype raytype-specialized reparam
             render-background render-bumptest

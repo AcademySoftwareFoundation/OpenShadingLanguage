@@ -1,0 +1,6 @@
+shader test (color a = color(.1,.2,.3),
+             point p = point(1,2,3))
+{
+    printf ("a=%g\n", a);
+    printf ("p=%g\n", p);
+}

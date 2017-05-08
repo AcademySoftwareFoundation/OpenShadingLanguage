@@ -189,15 +189,13 @@ ShaderInstance::param_storage (int index) const
 
 
 
-// Can a parameter with type 'a' be bound to a value of type b.
-// This is true when they are identical types, but also when 'a' is an
-// array of unspecified length, while b is an array of the same type, with
-// definite length.
-inline bool compatible (const TypeDesc& a, const TypeDesc& b)
+// Can a parameter with type 'a' be bound to a value of type b?
+// Requires matching types (and if arrays, matching lengths or for
+// a's length to be undetermined), or it's also ok to bind a single float to
+// a non-array triple. All triples are considered equivalent for this test.
+inline bool compatible_param (const TypeDesc& a, const TypeDesc& b)
 {
-    return a.basetype == b.basetype && a.aggregate == b.aggregate &&
-           a.vecsemantics == b.vecsemantics &&
-           (a.arraylen == b.arraylen || (a.arraylen == -1 && b.arraylen > 0));
+    return equivalent (a, b) || (a.is_vec3() && b == TypeDesc::FLOAT);
 }
 
 
@@ -242,7 +240,7 @@ ShaderInstance::parameters (const ParamValueList &params)
             // compatible accounts for indefinite-length arrays.
             TypeDesc paramtype = sm_typespec.simpletype();
             TypeDesc valuetype = p.type();
-            if (!compatible(paramtype, valuetype)) {
+            if (!compatible_param(paramtype, valuetype)) {
                 shadingsys().warning ("attempting to set parameter with wrong type: %s (expected '%s', received '%s')",
                                       sm->name(), paramtype, valuetype);
                 continue;
@@ -261,6 +259,18 @@ ShaderInstance::parameters (const ParamValueList &params)
 
             DASSERT (so->dataoffset() == sm->dataoffset());
             so->dataoffset (sm->dataoffset());
+
+            const void *data = p.data();
+            float tmpdata[3];
+            if (paramtype.is_vec3() && valuetype == TypeDesc::FLOAT) {
+                // Handle the special case of assigning a float for a triple
+                // by replicating it into local memory.
+                tmpdata[0] = *(const float *)data;
+                tmpdata[1] = *(const float *)data;
+                tmpdata[2] = *(const float *)data;
+                data = &tmpdata;
+                valuetype = paramtype;
+            }
 
             if (paramtype.arraylen < 0) {
                 // An array of definite size was supplied to a parameter
@@ -301,7 +311,7 @@ ShaderInstance::parameters (const ParamValueList &params)
                 // clause of that test.
                 void *defaultdata = m_master->param_default_storage(i);
                 if (lockgeom &&
-                      memcmp (defaultdata, p.data(), valuetype.size()) == 0) {
+                      memcmp (defaultdata, data, valuetype.size()) == 0) {
                     // Must reset valuesource to default, in case the parameter
                     // was set already, and now is being changed back to default.
                     so->valuesource (Symbol::DefaultVal);
@@ -309,7 +319,7 @@ ShaderInstance::parameters (const ParamValueList &params)
             }
 
             // Copy the supplied data into place.
-            memcpy (param_storage(i), p.data(), valuetype.size());
+            memcpy (param_storage(i), data, valuetype.size());
         }
         else {
             shadingsys().warning ("attempting to set nonexistent parameter: %s", p.name());

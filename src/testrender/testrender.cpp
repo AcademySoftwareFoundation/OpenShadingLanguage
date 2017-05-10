@@ -57,7 +57,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "util.h"
 
 
-using namespace OIIO;
 using namespace OSL;
 
 namespace { // anonymous namespace
@@ -236,6 +235,9 @@ void parse_scene() {
     }
     text.push_back(0); // make sure text ends with trailing 0
 
+#ifdef USING_OIIO_PUGI
+    namespace pugi = OIIO::pugi;
+#endif
     // build DOM tree
     pugi::xml_document doc;
     pugi::xml_parse_result parse_result = doc.load_file(scenefile.c_str());
@@ -585,6 +587,7 @@ void scanline_worker(Counter& counter, std::vector<Color3>& pixels) {
 } // anonymous namespace
 
 int main (int argc, const char *argv[]) {
+    using namespace OIIO;
     Timer timer;
 
     // Create a new shading system.  We pass it the RendererServices

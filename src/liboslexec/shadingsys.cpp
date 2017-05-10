@@ -2007,7 +2007,7 @@ ShadingSystemImpl::Shader (string_view shaderusage,
     }
 
     ShaderInstanceRef instance (new ShaderInstance (master, layername));
-    instance->parameters (m_pending_params);
+    instance->parameters(m_pending_params);
     m_pending_params.clear ();
 
     if (singleton || m_group_use == ShadUseUnknown) {
@@ -2829,8 +2829,7 @@ ShadingSystemImpl::jit_group (ShaderGroup &group)
 
 void
 ShadingSystemImpl::batched_jit_group (ShaderGroup &group)
-{
-    
+{    
     if (group.batch_jitted())
         return;    // already optimized
     

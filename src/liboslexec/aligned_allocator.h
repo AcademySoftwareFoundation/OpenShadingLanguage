@@ -46,6 +46,14 @@ namespace pvt {
 // For converting pointers to numbers for alignment or other math operations
 template<typename T = void>
 union pointer_or_number {
+	pointer_or_number() {}
+	pointer_or_number(const T * pointer_)
+	:pointer(pointer_)
+	{}
+	pointer_or_number(size_t number_)
+	:number(number_)
+	{}
+	
     const T * pointer;
     size_t number;
 };
@@ -122,6 +130,7 @@ template <class ObjT>
 typename aligned_allocator<ObjT>::pointer
 aligned_allocator<ObjT>::allocate(size_type a_count, std::allocator<void>::const_pointer /*a_hint*/)
 {
+	//std::cout << "aligned_allocator<ObjT>::allocate(count=" << a_count<< ")" << std::endl;
     size_t byte_count = sizeof(ObjT)*a_count;
     		
     size_t padded_byte_count = byte_count + boundary;
@@ -143,14 +152,18 @@ aligned_allocator<ObjT>::allocate(size_type a_count, std::allocator<void>::const
     // Store how many bytes we skipped in the 1st byte before the data_pointer,
     // we will always skip 4 to boundary bytes, so there should always be room
     *(reinterpret_cast<int *>(reinterpret_cast<unsigned char *>(data_pointer) - sizeof(int))) = byte_count_to_cacheline_boundary;
-    return reinterpret_cast<pointer>(data_pointer);   
+
+	//std::cout << "data_pointer=" << pointer_or_number(data_pointer).number << std::endl;
+	return reinterpret_cast<pointer>(data_pointer);   
 }
 
 template <class ObjT>
 void
-aligned_allocator<ObjT>::deallocate(pointer a_pointer, size_type /*a_count*/)
+aligned_allocator<ObjT>::deallocate(pointer a_pointer, size_type a_count)
 {
+	//std::cout << "aligned_allocator<ObjT>::deallocate(count=" << a_count<< ") pointer="<< pointer_or_number(a_pointer).number << std::endl;
     int byte_count_to_cacheline_boundary = *(reinterpret_cast<int *>(reinterpret_cast<unsigned char *>(a_pointer) - sizeof(int)));
+//	std::cout << "byte_count_to_cacheline_boundary=" << byte_count_to_cacheline_boundary << std::endl;
     void * base_pointer = reinterpret_cast<unsigned char *>(a_pointer) - boundary + byte_count_to_cacheline_boundary;
     ::free(base_pointer);    
 }
@@ -167,6 +180,8 @@ template <class ObjT>
 void
 aligned_allocator<ObjT>::construct(pointer a_pointer, const_reference a_value)
 {
+//	std::cout << "aligned_allocator<ObjT>::construct() pointer="<< pointer_or_number(a_pointer).number << std::endl;
+	
     ::new((void *)(a_pointer)) value_type(a_value);
 }
 
@@ -174,6 +189,7 @@ template <class ObjT>
 void
 aligned_allocator<ObjT>::destroy(pointer a_pointer)
 {
+//	std::cout << "aligned_allocator<ObjT>::destroy() pointer="<< pointer_or_number(a_pointer).number << std::endl;
     a_pointer->~ObjT();
 }
 

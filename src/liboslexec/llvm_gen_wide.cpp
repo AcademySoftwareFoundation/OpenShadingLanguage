@@ -177,7 +177,7 @@ BackendLLVMWide::llvm_call_layer (int layer, bool unconditional)
         // insert point is now then_block
     }
 
-    std::string name = Strutil::format ("%s_%d", parent->layername().c_str(),
+    std::string name = Strutil::format ("wide_%s_%d", parent->layername().c_str(),
                                         parent->id());
     // Mark the call as a fast call
     llvm::Value *funccall = ll.call_function (name.c_str(), args, 2);

@@ -29,6 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <iostream>
 #include <fstream>
+#include <functional>
 #include <string>
 #include <vector>
 #include <cmath>
@@ -52,6 +53,21 @@ using OIIO::TypeDesc;
 using OIIO::ParamValue;
 using OIIO::ParamValueList;
 
+
+template<typename T = void>
+union pointer_or_number {
+	pointer_or_number() {}
+	pointer_or_number(const T * pointer_)
+	:pointer(pointer_)
+	{}
+	pointer_or_number(size_t number_)
+	:number(number_)
+	{}
+	
+    const T * pointer;
+    size_t number;
+};
+
 static ShadingSystem *shadingsys = NULL;
 static std::vector<std::string> shadernames;
 static std::vector<std::string> outputfiles;
@@ -69,6 +85,10 @@ static bool debug2 = false;
 static bool verbose = false;
 static bool runstats = false;
 static bool batched = false;
+static bool alternate_batched = false;
+static bool vary_Pdxdy = false;
+static bool vary_Udxdy = false;
+static bool vary_Vdxdy = false;
 static int profile = 0;
 static bool O0 = false, O1 = false, O2 = false;
 static bool pixelcenters = false;
@@ -449,6 +469,10 @@ getargs (int argc, const char *argv[])
                 "--runstats", &runstats, "Print run statistics",
                 "--stats", &runstats, "",  // DEPRECATED 1.7
                 "--batched", &batched, "Submit batches to ShadingSystem",                  
+                "--alternate_batched", &alternate_batched, "At the end of each iteration, toggle batched flag (allows testing batched & scalar in the same run)",                  
+                "--vary_pdxdy", &vary_Pdxdy, "populate Dx(P) & Dy(P) with varying values (vs. uniform)",                  
+                "--vary_udxdy", &vary_Udxdy, "populate Dx(U) & Dy(U) with varying values (vs. uniform)",                  
+                "--vary_vdxdy", &vary_Vdxdy, "populate Dx(V) & Dy(V) with varying values (vs. uniform)",                  
                 "--profile %@", &set_profile, NULL, "Print profile information",
                 "--path %s", &shaderpath, "Specify oso search path",
                 "-g %d %d", &xres, &yres, "Make an X x Y grid of shading points",
@@ -581,23 +605,48 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
         // centers of each pixel.
         sg.u = sscale * (float)(x+0.5f) / xres + soffset;
         sg.v = tscale * (float)(y+0.5f) / yres + toffset;
-        sg.dudx = sscale / xres;
-        sg.dvdy = tscale / yres;
+        if (vary_Udxdy) {
+			sg.dudx = 1.0f - sg.u;
+			sg.dudy = sg.u;
+        } else {
+			sg.dudx = sscale / xres;
+        }
+        if (vary_Vdxdy) {
+			sg.dvdx = 1.0f - sg.v;
+			sg.dvdy = sg.v;
+        } else {
+			sg.dvdy = tscale / yres;
+        }
     } else {
         // Our patch is like a Reyes grid of points, with the border
         // samples being exactly on u,v == 0 or 1.
         sg.u = sscale * ((xres == 1) ? 0.5f : (float) x / (xres - 1)) + soffset;
         sg.v = tscale * ((yres == 1) ? 0.5f : (float) y / (yres - 1)) + toffset;
-        sg.dudx = sscale / std::max (1, xres-1);
-        sg.dvdy = tscale / std::max (1, yres-1);
+        if (vary_Udxdy) {
+			sg.dudx = 1.0f - sg.u;
+			sg.dudy = sg.u;
+        } else {
+			sg.dudx = sscale / std::max (1, xres-1);
+        }
+        if (vary_Vdxdy) {
+			sg.dvdx = 1.0f - sg.v;
+			sg.dvdy = sg.v;
+        } else {
+			sg.dvdy = tscale / std::max (1, yres-1);
+        }
     }
 
     // Assume that position P is simply (u,v,1), that makes the patch lie
     // on [0,1] at z=1.
     sg.P = Vec3 (sg.u, sg.v, 1.0f);
     // Derivatives with respect to x,y
-    sg.dPdx = Vec3 (sg.dudx, sg.dudy, 0.0f);
-    sg.dPdy = Vec3 (sg.dvdx, sg.dvdy, 0.0f);
+    if (vary_Pdxdy) {
+    	sg.dPdx = Vec3 (1.0f - sg.u, 0.0f, 0.0f); 
+    	sg.dPdy = Vec3 (1.0f - sg.v, 0.0f, 0.0f);
+    } else {     
+		sg.dPdx = Vec3 (sg.dudx, sg.dudy, 0.0f);
+		sg.dPdy = Vec3 (sg.dvdx, sg.dvdy, 0.0f);
+    }
     sg.dPdz = Vec3 (0.0f, 0.0f, 0.0f);  // just use 0 for volume tangent
     // Tangents of P with respect to surface u,v
     sg.dPdu = Vec3 (1.0f, 0.0f, 0.0f);
@@ -645,27 +694,38 @@ setup_uniform_shaderglobals (ShaderGlobalsBatch &sgb, ShadingSystem *shadingsys)
 
     // Set up u,v to vary across the "patch", and also their derivatives.
     // Note that since u & x, and v & y are aligned, we only need to set
-    // values for dudx and dvdy, we can use the memset above to have set
-    // dvdx and dudy to 0.
+    // values for dudx and dvdy, we can set dvdx and dudy to 0.
     if (pixelcenters) {
         // Our patch is like an "image" with shading samples at the
         // centers of each pixel.
-    	vsp.dudx().uniform() = sscale / xres;
-    	vsp.dvdy().uniform() = tscale / yres;
+    	if (false == vary_Udxdy) {
+    		vsp.dudx().uniform() = sscale / xres;
+    		vsp.dudy().uniform() = 0.0f;
+    	}
+    	if (false == vary_Vdxdy) {
+    		vsp.dvdx().uniform() = 0.0f;
+    		vsp.dvdy().uniform() = tscale / yres;
+    	}
     } else {
         // Our patch is like a Reyes grid of points, with the border
         // samples being exactly on u,v == 0 or 1.
-    	vsp.dudx().uniform() = sscale / std::max (1, xres-1);
-    	vsp.dvdy().uniform() = tscale / std::max (1, yres-1);
+    	if (false == vary_Udxdy) {
+    		vsp.dudx().uniform() = sscale / std::max (1, xres-1);
+    		vsp.dudy().uniform() = 0.0f;
+    	}
+    	if (false == vary_Vdxdy) {
+    		vsp.dvdx().uniform() = 0.0f;
+    		vsp.dvdy().uniform() = tscale / std::max (1, yres-1);
+    	}
     }
 
     // Assume that position P is simply (u,v,1), that makes the patch lie
     // on [0,1] at z=1.
     // Derivatives with respect to x,y
-    Vec3 dPdx = Vec3 (vsp.dudx(), vsp.dudy(), 0.0f);
-    //vsp.dPdx().uniform() = Vec3 (vsp.dudx(), vsp.dudy(), 0.0f);
-    vsp.dPdx().uniform() = dPdx; 
-    vsp.dPdy().uniform() = Vec3 (vsp.dvdx(), vsp.dvdy(), 0.0f);
+    if (false == vary_Pdxdy) {
+		vsp.dPdx().uniform() = Vec3 (vsp.dudx(), vsp.dudy(), 0.0f);
+		vsp.dPdy().uniform() = Vec3 (vsp.dvdx(), vsp.dvdy(), 0.0f);
+    } 
     vsp.dPdz().uniform() = Vec3 (0.0f, 0.0f, 0.0f);  // just use 0 for volume tangent
     // Tangents of P with respect to surface u,v
     vsp.dPdu().uniform() = Vec3 (1.0f, 0.0f, 0.0f);
@@ -705,9 +765,24 @@ setup_varying_shaderglobals (ShaderGlobalsBatch & sgb, ShadingSystem *shadingsys
  
     vsp.u() = u;
     vsp.v() = v;
+    if (vary_Udxdy) {
+    	vsp.dudx() = 1.0f - u;
+    	vsp.dudy() = u;
+    } 
+    if (vary_Vdxdy) {
+    	vsp.dvdx() = 1.0f - v;
+    	vsp.dvdy() = v;
+    }
+    
     // Assume that position P is simply (u,v,1), that makes the patch lie
     // on [0,1] at z=1.
     vsp.P() = Vec3 (u, v, 1.0f);
+    if (vary_Pdxdy) {
+		vsp.dPdx() = Vec3 (1.0f - u, 0.0f, 0.0f); 
+		vsp.dPdy() = Vec3 (1.0f - v, 0.0f, 0.0f);
+    } 
+    
+    
     
     sgb.commitVarying();
 }
@@ -1157,10 +1232,12 @@ test_group_attributes (ShaderGroup *group)
 
 
 
+void __attribute__((noinline))
+shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save);
+
 void
 shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
 {
-	std::cout << "shade_region(roi.x[" << roi.xbegin << "," << roi.xend << ") roi.y[" << roi.ybegin << "," << roi.yend << ")" << std::endl;
     // Optional: high-performance apps may request this thread-specific
     // pointer in order to save a bit of time on each shade.  Just like
     // the name implies, a multithreaded renderer would need to do this
@@ -1236,6 +1313,9 @@ shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
     shadingsys->destroy_thread_info(thread_info);
 }
 
+
+void __attribute((noinline))
+batched_shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save);
 
 void
 batched_shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
@@ -1502,14 +1582,13 @@ test_shade (int argc, const char *argv[])
     // OS overhead of destroying threads (like clearing virtual 
     // memory pages they occupied)
     OIIO::attribute("threads",num_threads);
-    
+
     // Set up the image outputs requested on the command line
     if (batched) {
     	setup_output_images_batched (shadingsys, shadergroup);
     } else {
     	setup_output_images (shadingsys, shadergroup);
-    }
-    
+    }  
 
     if (debug)
         test_group_attributes (shadergroup.get());
@@ -1537,7 +1616,8 @@ test_shade (int argc, const char *argv[])
 					shade_region (shadergroup.get(), roi, save);
 				#else
 					OIIO::ImageBufAlgo::parallel_image (
-							std::bind (shade_region, shadergroup.get(), std::placeholders::_1, save),
+							//std::bind (shade_region, shadergroup.get(), std::placeholders::_1, save),
+							[&](OIIO::ROI sub_roi)->void { shade_region (shadergroup.get(), sub_roi, save); },
 							roi, num_threads);
 				#endif
 			}
@@ -1546,11 +1626,16 @@ test_shade (int argc, const char *argv[])
         // If any reparam was requested, do it now
         if (reparams.size() && reparam_layer.size()) {
             for (size_t p = 0;  p < reparams.size();  ++p) {
+                std::cout << "<<<<<<<<<<<<<<<<<<<<shadingsys->ReParameter >>>>>>>>>>>>>>>>>>>>>>" << std::endl;
                 const ParamValue &pv (reparams[p]);
                 shadingsys->ReParameter (*shadergroup, reparam_layer.c_str(),
                                          pv.name().c_str(), pv.type(),
                                          pv.data());
             }
+        }
+        
+        if (alternate_batched) {
+        	batched = ! batched;
         }
     }
 

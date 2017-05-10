@@ -49,7 +49,7 @@ static mutex buffered_errors_mutex;
 ShadingContext::ShadingContext (ShadingSystemImpl &shadingsys,
                                 PerThreadInfo *threadinfo)
     : m_shadingsys(shadingsys), m_renderer(m_shadingsys.renderer()),
-      m_group(NULL), m_max_warnings(shadingsys.max_warnings_per_thread()), m_dictionary(NULL), m_next_failed_attrib{0}
+      m_group(NULL), m_max_warnings(shadingsys.max_warnings_per_thread()), m_dictionary(NULL), m_next_failed_attrib{0}, m_execution_is_batched(false)
 {
     m_shadingsys.m_stat_contexts += 1;
     m_threadinfo = threadinfo ? threadinfo : shadingsys.get_perthread_info ();
@@ -75,13 +75,16 @@ ShadingContext::execute_init (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
 {
     if (m_group)
         execute_cleanup ();
+    
+    m_execution_is_batched = false;
+    
     m_group = &sgroup;
     m_ticks = 0;
 
     // Optimize if we haven't already
     if (sgroup.nlayers()) {
         sgroup.start_running ();
-        if (! sgroup.optimized()) {
+        if (! sgroup.jitted()) {
             shadingsys().jit_group (sgroup);
             if (shadingsys().m_greedyjit && shadingsys().m_groups_to_compile_count) {
                 // If we are greedily JITing, optimize/JIT everything now
@@ -100,7 +103,6 @@ ShadingContext::execute_init (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
 
     // Allocate enough space on the heap
     size_t heap_size_needed = sgroup.llvm_groupdata_size();
-    //size_t heap_size_needed = 8*sgroup.llvm_groupdata_size();
     if (heap_size_needed > m_heap.size()) {
         if (shadingsys().debug())
             info ("  ShadingContext %p growing heap to %llu",
@@ -225,6 +227,8 @@ ShadingContext::execute_batch_init (ShaderGroup &sgroup, ShaderGlobalsBatch &sgb
 {
     if (m_group)
         execute_cleanup ();
+    
+    m_execution_is_batched = true;
     m_group = &sgroup;
     m_ticks = 0;
     
@@ -237,7 +241,7 @@ ShadingContext::execute_batch_init (ShaderGroup &sgroup, ShaderGlobalsBatch &sgb
     // Optimize if we haven't already
     if (sgroup.nlayers()) {
         sgroup.start_running ();
-        if (! sgroup.optimized()) {
+        if (! sgroup.batch_jitted()) {
             shadingsys().batched_jit_group (sgroup);
             if (shadingsys().m_greedyjit && shadingsys().m_groups_to_compile_count) {
                 // If we are greedily JITing, optimize/JIT everything now
@@ -259,7 +263,7 @@ ShadingContext::execute_batch_init (ShaderGroup &sgroup, ShaderGlobalsBatch &sgb
 #endif
 
     // Allocate enough space on the heap
-    size_t heap_size_needed = sgroup.llvm_groupdata_size();
+    size_t heap_size_needed = sgroup.llvm_groupdata_wide_size();
     if (heap_size_needed > m_heap.size()) {
         if (shadingsys().debug())
             info ("  ShadingContext %p growing heap to %llu",
@@ -287,9 +291,9 @@ ShadingContext::execute_batch_init (ShaderGroup &sgroup, ShaderGlobalsBatch &sgb
     	sgb.uniform().renderer = renderer();
         // TODO: consider removing Ci from batched shader globals
     	sgb.uniform().Ci = NULL;
-        RunLLVMGroupFunc run_func = sgroup.llvm_compiled_init();
+        RunLLVMGroupFunc run_func = sgroup.llvm_compiled_wide_init();
         DASSERT (run_func);
-        DASSERT (sgroup.llvm_groupdata_size() <= m_heap.size());
+        DASSERT (sgroup.llvm_groupdata_wide_size() <= m_heap.size());
         run_func (&sgb, &m_heap[0]);
     }
 
@@ -311,11 +315,12 @@ ShadingContext::execute_batch_layer (ShaderGlobalsBatch &sgb, int layernumber)
     OIIO::Timer timer (profile);
 #endif
 
-    RunLLVMGroupFunc run_func = group()->llvm_compiled_layer (layernumber);
+    RunLLVMGroupFunc run_func = group()->llvm_compiled_wide_layer (layernumber);
     if (! run_func)
         return false;
 
     ASSERT(pvt::is_aligned<64>(&sgb));    
+    ASSERT(pvt::is_aligned<64>(&m_heap[0]));    
     
     run_func (&sgb, &m_heap[0]);
 
@@ -353,6 +358,8 @@ ShadingContext::execute_batch (ShaderGroup &sgroup, ShaderGlobalsBatch &sgb, boo
         if (--n < 1)
             break;   // done
         if (repeat) {
+        	std::cout << "ShadingContext::execute_batch repeating, untested case" << std::endl;
+        	ASSERT(0 && "untested");
             // Going around for another pass... restore things as best as we
             // can.
         	sgb.varyingData().P = Psave;
@@ -428,9 +435,16 @@ ShadingContext::symbol_data (const Symbol &sym) const
     if (! sgroup.optimized())
         return NULL;   // can't retrieve symbol if we didn't optimize it
 
-    if (sym.dataoffset() >= 0 && (int)m_heap.size() > sym.dataoffset()) {
-        // lives on the heap
-        return &m_heap[sym.dataoffset()];
+    if (m_execution_is_batched) {
+        if (sym.wide_dataoffset() >= 0 && (int)m_heap.size() > sym.wide_dataoffset()) {
+            // lives on the heap
+            return &m_heap[sym.wide_dataoffset()];
+        }    	
+    } else {
+		if (sym.dataoffset() >= 0 && (int)m_heap.size() > sym.dataoffset()) {
+			// lives on the heap
+			return &m_heap[sym.dataoffset()];
+		}
     }
 
     // doesn't live on the heap
@@ -439,7 +453,6 @@ ShadingContext::symbol_data (const Symbol &sym) const
         ASSERT (sym.data());
         return sym.data() ? sym.data() : NULL;
     }
-
     return NULL;  // not something we can retrieve
 }
 

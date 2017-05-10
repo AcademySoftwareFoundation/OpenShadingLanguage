@@ -479,7 +479,7 @@ public:
           m_initialized(false), m_lockgeom(false), m_renderer_output(false),
           m_valuesource(DefaultVal), m_free_data(false),
           m_fieldid(-1), m_layer(-1),
-          m_scope(0), m_dataoffset(-1), m_initializers(0),
+          m_scope(0), m_dataoffset(-1), m_wide_dataoffset(-1), m_initializers(0),
           m_node(declaration_node), m_alias(NULL),
           m_initbegin(0), m_initend(0),
           m_firstread(std::numeric_limits<int>::max()), m_lastread(-1),
@@ -566,6 +566,7 @@ public:
     const char *symtype_shortname () const {
         return symtype_shortname(symtype());
     }
+    
 
     /// Return a pointer to the symbol's data.
     ///
@@ -578,6 +579,10 @@ public:
     void dataoffset (int d) { m_dataoffset = d; }
     int dataoffset () const { return m_dataoffset; }
 
+    void wide_dataoffset (int d) { m_wide_dataoffset = d; }
+    int wide_dataoffset () const { return m_wide_dataoffset; }
+
+    
     void initializers (int d) { m_initializers = d; }
     int initializers () const { return m_initializers; }
 
@@ -738,6 +743,7 @@ protected:
     short m_layer;              ///< Layer (within the group) this belongs to
     int m_scope;                ///< Scope where this symbol was declared
     int m_dataoffset;           ///< Offset of the data (-1 for unknown)
+    int m_wide_dataoffset;           ///< Offset of the data (-1 for unknown)
     int m_initializers;         ///< Number of default initializers
     ASTNode *m_node;            ///< Ptr to the declaration of this symbol
     Symbol *m_alias;            ///< Another symbol that this is an alias for

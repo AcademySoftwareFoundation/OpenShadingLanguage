@@ -339,14 +339,14 @@ BackendLLVMWide::llvm_type_groupdata ()
                           << " " << ts.c_str() << ", field " << order 
                           << ", size " << derivSize * int(sym.size())
                           << ", offset " << offset << std::endl;
-            sym.dataoffset ((int)offset);
+            sym.wide_dataoffset ((int)offset);
             offset += derivSize* int(sym.size())*ShaderGlobalsBatch::maxSize;
 
             m_param_order_map[&sym] = order;
             ++order;
         }
     }
-    group().llvm_groupdata_size (offset);
+    group().llvm_groupdata_wide_size (offset);
     if (llvm_debug() >= 2)
         std::cout << " Group struct had " << order << " fields, total size "
                   << offset << "\n\n";
@@ -729,7 +729,7 @@ BackendLLVMWide::build_llvm_init ()
 {
     // Make a group init function: void group_init(ShaderGlobals*, GroupData*)
     // Note that the GroupData* is passed as a void*.
-    std::string unique_name = Strutil::format ("group_%d_init", group().id());
+    std::string unique_name = Strutil::format ("wide_group_%d_init", group().id());
     ll.current_function (
            ll.make_function (unique_name, false,
                              ll.type_void(), // return type
@@ -809,7 +809,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
 	ASSERT(m_generated_loops_condition_stack.empty());
     // Make a layer function: void layer_func(ShaderGlobals*, GroupData*)
     // Note that the GroupData* is passed as a void*.
-    std::string unique_layer_name = Strutil::format ("%s_%d", inst()->layername(), inst()->id());
+    std::string unique_layer_name = Strutil::format ("wide_%s_%d", inst()->layername(), inst()->id());
 
     bool is_entry_layer = group().is_entry_layer(layer());
     ll.current_function (
@@ -1118,8 +1118,8 @@ void
 BackendLLVMWide::run ()
 {
     if (group().does_nothing()) {
-        group().llvm_compiled_init ((RunLLVMGroupFunc)empty_group_func);
-        group().llvm_compiled_version ((RunLLVMGroupFunc)empty_group_func);
+        group().llvm_compiled_wide_init ((RunLLVMGroupFunc)empty_group_func);
+        group().llvm_compiled_wide_version ((RunLLVMGroupFunc)empty_group_func);
         return;
     }
     
@@ -1319,16 +1319,16 @@ BackendLLVMWide::run ()
 
     // Force the JIT to happen now and retrieve the JITed function pointers
     // for the initialization and all public entry points.
-    group().llvm_compiled_init ((RunLLVMGroupFunc) ll.getPointerToFunction(init_func));
+    group().llvm_compiled_wide_init ((RunLLVMGroupFunc) ll.getPointerToFunction(init_func));
     for (int layer = 0; layer < nlayers; ++layer) {
         llvm::Function* f = funcs[layer];
         if (f && group().is_entry_layer (layer))
-            group().llvm_compiled_layer (layer, (RunLLVMGroupFunc) ll.getPointerToFunction(f));
+            group().llvm_compiled_wide_layer (layer, (RunLLVMGroupFunc) ll.getPointerToFunction(f));
     }
     if (group().num_entry_layers())
-        group().llvm_compiled_version (NULL);
+        group().llvm_compiled_wide_version (NULL);
     else
-        group().llvm_compiled_version (group().llvm_compiled_layer(nlayers-1));
+        group().llvm_compiled_wide_version (group().llvm_compiled_wide_layer(nlayers-1));
 
     // Remove the IR for the group layer functions, we've already JITed it
     // and will never need the IR again.  This saves memory, and also saves

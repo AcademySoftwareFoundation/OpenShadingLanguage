@@ -139,8 +139,7 @@ ASTvariable_declaration::typecheck (TypeSpec expected)
 
 
 void
-ASTvariable_declaration::typecheck_initlist (ref init, TypeSpec type,
-                                             const char *name)
+ASTNode::typecheck_initlist (ref init, TypeSpec type, string_view name)
 {
     // Loop over a list of initializers (it's just 1 if not an array)...
     for (int i = 0;  init;  init = init->next(), ++i) {
@@ -170,8 +169,8 @@ ASTvariable_declaration::typecheck_initlist (ref init, TypeSpec type,
 
 
 TypeSpec
-ASTvariable_declaration::typecheck_struct_initializers (ref init, TypeSpec type,
-                                                        const char *name)
+ASTNode::typecheck_struct_initializers (ref init, TypeSpec type,
+                                        string_view name)
 {
     ASSERT (type.is_structure());
 
@@ -197,16 +196,12 @@ ASTvariable_declaration::typecheck_struct_initializers (ref init, TypeSpec type,
             // Initializer is itself a compound, it ought to be initializing
             // a field that is an array.
             ASTcompound_initializer *cinit = (ASTcompound_initializer *)init.get();
+            ustring fieldname = ustring::format ("%s.%s", name, field.name);
             if (field.type.is_array ()) {
-                ustring fieldname = ustring::format ("%s.%s", name,
-                                                     field.name.c_str());
-                typecheck_initlist (cinit->initlist(),
-                                    field.type, fieldname.c_str());
+                typecheck_initlist (cinit->initlist(), field.type, fieldname);
             } else if (field.type.is_structure()) {
-                ustring fieldname = ustring::format ("%s.%s", name,
-                                                     field.name.c_str());
                 typecheck_struct_initializers (cinit->initlist(), field.type,
-                                               fieldname.c_str());
+                                               fieldname);
             } else {
                 error ("Can't use '{...}' for a struct field that is not an array");
             }
@@ -225,7 +220,7 @@ ASTvariable_declaration::typecheck_struct_initializers (ref init, TypeSpec type,
         if (! assignable(field.type, init->typespec()))
             error ("Can't assign '%s' to '%s %s.%s'",
                    type_c_str(init->typespec()),
-                   type_c_str(field.type), name, field.name.c_str());
+                   type_c_str(field.type), name, field.name);
     }
     return type;
 }
@@ -1118,9 +1113,29 @@ ASTfunction_call::typecheck_builtin_specialcase ()
 
 
 TypeSpec
+ASTfunction_call::typecheck_struct_constructor ()
+{
+    StructSpec *structspec = m_sym->typespec().structspec();
+    ASSERT (structspec);
+    m_typespec = m_sym->typespec();
+    if (structspec->numfields() != (int)listlength(args())) {
+        error ("Constructor for '%s' has the wrong number of arguments (expected %d, got %d)",
+               structspec->name(), structspec->numfields(), listlength(args()));
+    }
+    return typecheck_struct_initializers (args(), m_typespec, "this");
+}
+
+
+
+TypeSpec
 ASTfunction_call::typecheck (TypeSpec expected)
 {
     typecheck_children ();
+
+    if (is_struct_ctr()) {
+        // Looks like function call, but is actually struct constructor
+        return typecheck_struct_constructor ();
+    }
 
     bool match = false;
 

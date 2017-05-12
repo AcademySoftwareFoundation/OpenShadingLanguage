@@ -998,6 +998,9 @@ ASTfunction_call::ASTfunction_call (OSLCompilerImpl *comp, ustring name,
         // find the things that almost matched and offer suggestions.
         return;
     }
+    if (is_struct_ctr()) {
+        return;  // It's a struct constructor
+    }
     if (m_sym->symtype() != SymTypeFunction) {
         error ("'%s' is not a function", name.c_str());
         m_sym = NULL;

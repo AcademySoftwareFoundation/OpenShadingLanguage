@@ -339,6 +339,33 @@ protected:
                                 bool copywholearrays, int intindex,
                                 bool paraminit);
 
+    // Helper: type check an initializer list -- either a single item to
+    // a scalar, or a list to an array.
+    void typecheck_initlist (ref init, TypeSpec type, string_view name);
+
+    // Helper: generate code for an initializer list -- either a single
+    // item to a scalar, or a list to an array.
+    void codegen_initlist (ref init, TypeSpec type, Symbol *sym);
+
+    // Special type checking for structure member initializers.
+    // It's in the ASTNode base class because it's used from mutiple
+    // subclasses.
+    TypeSpec typecheck_struct_initializers (ref init, TypeSpec type,
+                                            string_view name);
+
+    // Special code generation for structure initializers.
+    // It's in the ASTNode base class because it's used from mutiple
+    // subclasses.
+    Symbol *codegen_struct_initializers (ref init, Symbol *sym,
+                                         bool is_constructor=false);
+
+    // Helper for param_default_literals: generate the string that gives
+    // the initialization of the literal value (and/or the default, if
+    // init==NULL) and append it to 'out'.  Return whether the full
+    // initialization is comprised only of literals (no init ops needed).
+    bool one_default_literal (const Symbol *sym, ASTNode *init,
+                      std::string &out, string_view separator=" ") const;
+
     void error_impl (string_view msg) const;
     void warning_impl (string_view msg) const;
 
@@ -446,33 +473,11 @@ public:
 
     void codegen_initializer (ref init, Symbol *sym);
 
-    // Special code generation for structure initializers
-    Symbol *codegen_struct_initializers (ref init, Symbol *sym);
-
     void register_struct_init (ustring name, ASTNode *init) {
         m_struct_field_inits.emplace_back(name, init);
     }
 
 private:
-    // Helper: type check an initializer list -- either a single item to
-    // a scalar, or a list to an array.
-    void typecheck_initlist (ref init, TypeSpec type, const char *name);
-
-    // Special type checking for structure initializers
-    TypeSpec typecheck_struct_initializers (ref init, TypeSpec type,
-                                            const char *name);
-
-    // Helper: generate code for an initializer list -- either a single
-    // item to a scalar, or a list to an array.
-    void codegen_initlist (ref init, TypeSpec type, Symbol *sym);
-
-    // Helper for param_default_literals: generate the string that gives
-    // the initialization of the literal value (and/or the default, if
-    // init==NULL) and append it to 'out'.  Return whether the full
-    // initialization is comprised only of literals (no init ops needed).
-    bool param_one_default_literal (const Symbol *sym, ASTNode *init,
-                      std::string &out, const std::string &separator=" ") const;
-
     ustring m_name;     ///< Name of the symbol (unmangled)
     Symbol *m_sym;      ///< Ptr to the symbol this declares
     bool m_isparam;     ///< Is this a parameter?
@@ -859,10 +864,13 @@ public:
     FunctionSymbol *func () const { return (FunctionSymbol *)m_sym; }
     ref args () const { return child (0); }
 
+    /// Is it a struct constructor?
+    bool is_struct_ctr () const { return m_sym && m_sym->is_structure(); }
+
     /// Is it a user-defined function (as opposed to an OSL built-in)?
     ///
     bool is_user_function () const {
-        return user_function() && !user_function()->is_builtin();
+        return !is_struct_ctr() && user_function() && !user_function()->is_builtin();
     }
 
     /// Pointer to the ASTfunction_declaration node that defines the user
@@ -892,6 +900,9 @@ private:
     /// arguments poitned to by arg.  If ok, return true, otherwise
     /// return false and call an appropriate error().
     bool typecheck_printf_args (const char *format, ASTNode *arg);
+
+    /// Handle "funcion calls" that are really struct ctrs.
+    TypeSpec typecheck_struct_constructor ();
 
     /// Is the argument number 'arg' read by the op?
     ///

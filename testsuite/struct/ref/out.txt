@@ -2,6 +2,8 @@ Compiled test.osl -> test.oso
 test struct
 a == { 3.14159, 42, [0 1 2], foobar }
 
+constructed x == { 6.28319, 21, [1 2 3], constructed }
+
 struct param:  aparam == { 1, 0, [3 4 5], foo! }
 
 after c=a, c == { 3.14159, 42, [0 1 2], foobar }
@@ -26,6 +28,8 @@ Varying:
 after a.p=P, a == { 310.5, 42, [0 0 1], foobar }
 test struct
 a == { 3.14159, 42, [0 1 2], foobar }
+
+constructed x == { 6.28319, 21, [1 2 3], constructed }
 
 struct param:  aparam == { 1, 0, [3 4 5], foo! }
 
@@ -52,6 +56,8 @@ after a.p=P, a == { 310.5, 42, [1 0 1], foobar }
 test struct
 a == { 3.14159, 42, [0 1 2], foobar }
 
+constructed x == { 6.28319, 21, [1 2 3], constructed }
+
 struct param:  aparam == { 1, 0, [3 4 5], foo! }
 
 after c=a, c == { 3.14159, 42, [0 1 2], foobar }
@@ -76,6 +82,8 @@ Varying:
 after a.p=P, a == { 310.5, 42, [0 1 1], foobar }
 test struct
 a == { 3.14159, 42, [0 1 2], foobar }
+
+constructed x == { 6.28319, 21, [1 2 3], constructed }
 
 struct param:  aparam == { 1, 0, [3 4 5], foo! }
 

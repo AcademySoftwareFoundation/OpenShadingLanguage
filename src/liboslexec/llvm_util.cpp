@@ -430,6 +430,7 @@ LLVM_Util::LLVM_Util (int debuglevel)
     m_llvm_type_wide_char = llvm::VectorType::get(m_llvm_type_char, m_vector_width);
     
     m_llvm_type_wide_char_ptr = llvm::PointerType::get(m_llvm_type_wide_char, 0);    
+    m_llvm_type_wide_ustring_ptr = llvm::VectorType::get(m_llvm_type_char_ptr, m_vector_width);
     m_llvm_type_wide_void_ptr = llvm::VectorType::get(m_llvm_type_void_ptr, m_vector_width);
     m_llvm_type_wide_int_ptr = llvm::PointerType::get(m_llvm_type_wide_int, 0);
     m_llvm_type_wide_bool_ptr = llvm::PointerType::get(m_llvm_type_wide_bool, 0);

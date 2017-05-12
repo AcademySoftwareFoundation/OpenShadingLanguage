@@ -844,12 +844,12 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	}
 
 
-    //std::cout << "symbolsWrittenToByGetAttribute begin" << std::endl;
+    //std::cout << "symbolsWrittenToByVaryingFunc begin" << std::endl;
     for(const Symbol *s: symbolsWrittenToByGetAttribute) {
         //std::cout << s->name() << std::endl;
         recursivelyMarkNonUniform(s);
     }
-    //std::cout << "symbolsWrittenToByGetAttribute end" << std::endl;
+    //std::cout << "symbolsWrittenToByVaryingFunc end" << std::endl;
 
 	std::cout << "Emit m_is_uniform_by_symbol" << std::endl;			
 	
@@ -1252,9 +1252,9 @@ BackendLLVMWide::llvm_load_constant_value (const Symbol& sym,
     if (sym.typespec().is_string()) {
         const ustring *val = (const ustring *)sym.data();
     	if (op_is_uniform) {
-    		return ll.constant (val[arrayindex]);
+            return ll.constant (val[arrayindex]);
     	} else {
-            return ll.wide_constant (val[arrayindex]);    		
+            return ll.wide_constant (val[arrayindex]);
     	}
     }
 

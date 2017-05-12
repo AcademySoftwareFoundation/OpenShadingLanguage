@@ -346,6 +346,25 @@ struct Wide<Matrix44, WidthT>
 	}		
 };
 
+template <int WidthT>
+struct Wide<ustring, WidthT>
+{	
+	static constexpr int width = WidthT; 
+    ustring str[WidthT];
+    static_assert(sizeof(ustring) == sizeof(char*), "ustring must be pointer size");
+	
+	OSL_INLINE void 
+	set(int index, const ustring& value) 
+	{
+        str[index] = value;
+	}
+
+	OSL_INLINE ustring 
+	get(int index) const 
+	{
+        return str[index];
+	}		
+};
 
 template <int WidthT>
 struct Wide<Dual2<float>, WidthT>
@@ -699,6 +718,15 @@ public:
     OSL_INLINE void set_all_off()
     {
         m_value = 0;
+    }
+
+    OSL_INLINE static WideMask on()
+    {
+        return WideMask(0xFFFFFFFF >> (32-WidthT));
+    }
+    OSL_INLINE static WideMask off()
+    {
+        return WideMask(0x0);
     }
 };
 

@@ -2870,7 +2870,7 @@ LLVMGEN (llvm_gen_texture)
     args.push_back (rop.ll.void_ptr (alpha    ? alpha    : rop.ll.void_ptr_null()));
     args.push_back (rop.ll.void_ptr (dalphadx ? dalphadx : rop.ll.void_ptr_null()));
     args.push_back (rop.ll.void_ptr (dalphady ? dalphady : rop.ll.void_ptr_null()));
-    rop.ll.call_function ("osl_texture", &args[0], (int)args.size());
+    rop.ll.call_function ("osl_texture_batched", &args[0], (int)args.size());
     rop.generated_texture_call (texture_handle != NULL);
     return true;
 }
@@ -3458,6 +3458,7 @@ LLVMGEN (llvm_gen_getattribute)
 
 LLVMGEN (llvm_gen_gettextureinfo)
 {
+    std::cout << "llvm_gen_gettextureinfo" << std::endl;
     Opcode &op (rop.inst()->ops()[opnum]);
 
     DASSERT (op.nargs() == 4);
@@ -3466,6 +3467,9 @@ LLVMGEN (llvm_gen_gettextureinfo)
     Symbol& Filename = *rop.opargsym (op, 1);
     Symbol& Dataname = *rop.opargsym (op, 2);
     Symbol& Data     = *rop.opargsym (op, 3);
+
+    // make sure query string is uniform
+    ASSERT(rop.isSymbolUniform(Dataname));
 
     DASSERT (!Result.typespec().is_closure_based() &&
              Filename.typespec().is_string() && 
@@ -3476,24 +3480,54 @@ LLVMGEN (llvm_gen_gettextureinfo)
     std::vector<llvm::Value *> args;
 
     args.push_back (rop.sg_void_ptr());
-    RendererServices::TextureHandle *texture_handle = NULL;
-    if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
-        texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data());
-        if (! rop.renderer()->good (texture_handle))
-            texture_handle = NULL;
-    }
-    args.push_back (rop.llvm_load_value (Filename));
-    args.push_back (rop.ll.constant_ptr (texture_handle));
-    args.push_back (rop.llvm_load_value (Dataname));
-    // this is passes a TypeDesc to an LLVM op-code
-    args.push_back (rop.ll.constant((int) Data.typespec().simpletype().basetype));
-    args.push_back (rop.ll.constant((int) Data.typespec().simpletype().arraylen));
-    args.push_back (rop.ll.constant((int) Data.typespec().simpletype().aggregate));
-    // destination
-    args.push_back (rop.llvm_void_ptr (Data));
 
-    llvm::Value *r = rop.ll.call_function ("osl_get_textureinfo",
-                                           &args[0], args.size());
+    bool fileNameIsUniform = rop.isSymbolUniform(Filename);
+    bool dataIsUniform = rop.isSymbolUniform(Data);
+    llvm::Value *r = NULL;
+    // file name is uniform, generate scalar version of the function
+    if (fileNameIsUniform && dataIsUniform) {
+        std::cout << "texture filename is uniform, running scalar version." << std::endl;
+        RendererServices::TextureHandle *texture_handle = NULL;
+        if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
+            texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data());
+            if (! rop.renderer()->good (texture_handle))
+                texture_handle = NULL;
+        }
+
+        args.push_back (rop.llvm_load_value (Filename));
+        args.push_back (rop.ll.constant_ptr (texture_handle));
+        args.push_back (rop.llvm_load_value (Dataname));
+        // this is passes a TypeDesc to an LLVM op-code
+        args.push_back (rop.ll.constant((int) Data.typespec().simpletype().basetype));
+        args.push_back (rop.ll.constant((int) Data.typespec().simpletype().arraylen));
+        args.push_back (rop.ll.constant((int) Data.typespec().simpletype().aggregate));
+        // destination
+        args.push_back (rop.llvm_void_ptr (Data));
+
+        r = rop.ll.call_function ("osl_get_textureinfo_batched_uniform",
+                                               &args[0], args.size());
+    }
+    else {
+        std::cout << "texture filename is varying, running batched version." << std::endl;
+
+        args.push_back (rop.llvm_void_ptr (Filename));
+        args.push_back (rop.llvm_load_value (Dataname));
+        // this is passes a TypeDesc to an LLVM op-code
+        args.push_back (rop.ll.constant((int) Data.typespec().simpletype().basetype));
+        args.push_back (rop.ll.constant((int) Data.typespec().simpletype().arraylen));
+        args.push_back (rop.ll.constant((int) Data.typespec().simpletype().aggregate));
+        // destination
+        args.push_back (rop.llvm_void_ptr (Data));
+        args.push_back (rop.ll.mask_as_int(rop.ll.current_mask()));
+
+        r = rop.ll.call_function ("osl_get_textureinfo_batched", &args[0], args.size());
+        r = rop.ll.int_as_mask(r);
+        if (rop.ll.llvm_typeof(rop.llvm_get_pointer(Result)) != (llvm::Type *)rop.ll.type_wide_bool_ptr())
+        {
+            ASSERT(rop.ll.llvm_typeof(rop.llvm_get_pointer(Result)) == (llvm::Type *)rop.ll.type_wide_int_ptr());
+            r = rop.ll.op_bool_to_int(r);
+        }
+    }
     rop.llvm_store_value (r, Result);
     /* Do not leave derivs uninitialized */
     if (Data.has_derivs())

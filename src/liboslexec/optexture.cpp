@@ -290,7 +290,59 @@ osl_texture (void *sg_, const char *name, void *handle,
     return ok;
 }
 
+OSL_SHADEOP int
+osl_texture_batched (void *sgb_, const char *name, void *handle,
+                     void *opt_, float s, float t,
+                     float dsdx, float dtdx, float dsdy, float dtdy,
+                     int chans, void *result, void *dresultdx, void *dresultdy,
+                     void *alpha, void *dalphadx, void *dalphady,
+                     ustring *errormessage,
+                     int mask_)
+{
+    std::cout << "osl_texture_batched" << std::endl;
+    Mask mask(mask_);
+    // TODO: LLVM could check this before calling this function
+    if (mask.all_off()) {
+        return 0;
+    }
+    ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
+    TextureOpt *opt = (TextureOpt *)opt_;
+    bool derivs = (dresultdx != NULL);
+    // It's actually faster to ask for 4 channels (even if we need fewer)
+    // and ensure that they're being put in aligned memory.
+    OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd;
+    Mask retVal = sgb->uniform().renderer->batched()->texture (USTR(name),
+                                                               (TextureSystem::TextureHandle *)handle, NULL,
+                                                               *opt, sgb, s, t, dsdx, dtdx, dsdy, dtdy, 4,
+                                                               (float *)&result_simd,
+                                                               derivs ? (float *)&dresultds_simd : NULL,
+                                                               derivs ? (float *)&dresultdt_simd : NULL,
+                                                               errormessage, mask_);
 
+    for (int i = 0;  i < chans;  ++i)
+        ((float *)result)[i] = result_simd[i];
+    if (alpha)
+        ((float *)alpha)[0] = result_simd[chans];
+
+    // Correct our st texture space gradients into xy-space gradients
+    if (derivs) {
+        OIIO::simd::float4 dresultdx_simd = dresultds_simd * dsdx + dresultdt_simd * dtdx;
+        OIIO::simd::float4 dresultdy_simd = dresultds_simd * dsdy + dresultdt_simd * dtdy;
+        for (int i = 0;  i < chans;  ++i)
+            ((float *)dresultdx)[i] = dresultdx_simd[i];
+        for (int i = 0;  i < chans;  ++i)
+            ((float *)dresultdy)[i] = dresultdy_simd[i];
+        if (dalphadx) {
+            ((float *)dalphadx)[0] = dresultdx_simd[chans];
+            ((float *)dalphady)[0] = dresultdy_simd[chans];
+        }
+    }
+
+    /// XXX lfeng: maybe we need to pass in wide errormessages?
+//    if (ok && errormessage)
+//        *errormessage = Strings::_emptystring_;
+    return retVal.value();
+}
 
 OSL_SHADEOP int
 osl_texture3d (void *sg_, const char *name, void *handle,
@@ -427,6 +479,51 @@ osl_get_textureinfo (void *sg_, const char *name, void *handle,
 }
 
 
+OSL_SHADEOP int
+osl_get_textureinfo_batched_uniform (void *sgb_, const char *name, void *handle,
+                     void *dataname,  int type,
+                     int arraylen, int aggregate, void *data)
+{
+    // recreate TypeDesc
+    TypeDesc typedesc;
+    typedesc.basetype  = type;
+    typedesc.arraylen  = arraylen;
+    typedesc.aggregate = aggregate;
+
+    ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
+
+    return sgb->uniform().renderer->batched()->get_texture_info (sgb, USTR(name),
+                                                                 (RendererServices::TextureHandle *)handle,
+                                                                 0 /*FIXME-ptex*/,
+                                                                 USTR(dataname), typedesc, data);
+}
+
+OSL_SHADEOP int
+osl_get_textureinfo_batched (void *sgb_, void* name,
+                             void *dataname,  int type,
+                             int arraylen, int aggregate, void *data,
+                             int mask_)
+{
+    std::cout << "osl_get_textureinfo_batched" << std::endl;
+    Mask mask(mask_);
+    // TODO: LLVM could check this before calling this function
+    if (mask.all_off()) {
+        return 0;
+    }
+
+    // recreate TypeDesc
+    TypeDesc typedesc;
+    typedesc.basetype  = type;
+    typedesc.arraylen  = arraylen;
+    typedesc.aggregate = aggregate;
+
+    ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
+
+    Mask retVal = sgb->uniform().renderer->batched()->get_texture_info (sgb, WUSTR(name),
+                                                             0 /*FIXME-ptex*/,
+                                                             USTR(dataname), typedesc, data, mask);
+    return retVal.value();
+}
 
 // Trace
 

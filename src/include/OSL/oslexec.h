@@ -557,7 +557,7 @@ public:
 	template<typename DataT>
 	ShaderGlobalsBatch::OutputAccessor<DataT> symbol_batch_accessor(const ShadingContext &ctx,
 								const ShaderSymbol *sym) const
-	{
+	{		
 		return ShaderGlobalsBatch::OutputAccessor<DataT>(symbol_address(ctx, sym)); 
     }
     

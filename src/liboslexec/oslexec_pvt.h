@@ -1447,6 +1447,9 @@ public:
     size_t llvm_groupdata_size () const { return m_llvm_groupdata_size; }
     void llvm_groupdata_size (size_t size) { m_llvm_groupdata_size = size; }
 
+    size_t llvm_groupdata_wide_size () const { return m_llvm_groupdata_wide_size; }
+    void llvm_groupdata_wide_size (size_t size) { m_llvm_groupdata_wide_size = size; }
+    
     RunLLVMGroupFunc llvm_compiled_version() const {
         return m_llvm_compiled_version;
     }
@@ -1469,6 +1472,29 @@ public:
             m_llvm_compiled_layers[layer] = func;
     }
 
+    // Hold onto wide versions of llvm functions side by side with scalar
+    RunLLVMGroupFunc llvm_compiled_wide_version() const {
+        return m_llvm_compiled_wide_version;
+    }
+    void llvm_compiled_wide_version (RunLLVMGroupFunc func) {
+        m_llvm_compiled_wide_version = func;
+    }
+    RunLLVMGroupFunc llvm_compiled_wide_init() const {
+        return m_llvm_compiled_wide_init;
+    }
+    void llvm_compiled_wide_init (RunLLVMGroupFunc func) {
+        m_llvm_compiled_wide_init = func;
+    }
+    RunLLVMGroupFunc llvm_compiled_wide_layer (int layer) const {
+        return layer < (int)m_llvm_compiled_wide_layers.size()
+                            ? m_llvm_compiled_wide_layers[layer] : NULL;
+    }
+    void llvm_compiled_wide_layer (int layer, RunLLVMGroupFunc func) {
+        m_llvm_compiled_wide_layers.resize ((size_t)nlayers(), NULL);
+        if (layer < nlayers())
+            m_llvm_compiled_wide_layers[layer] = func;
+    }
+    
     /// Is this shader group equivalent to ret void?
     bool does_nothing() const {
         return m_does_nothing;
@@ -1541,11 +1567,17 @@ private:
     volatile int m_batch_jitted;   ///< Is it already jitted for batch execution?
     bool m_does_nothing;             ///< Is the shading group just func() { return; }
     size_t m_llvm_groupdata_size;    ///< Heap size needed for its groupdata
+    size_t m_llvm_groupdata_wide_size;    ///< Heap size needed for its wide groupdata
     int m_id;                        ///< Unique ID for the group
     int m_num_entry_layers;          ///< Number of marked entry layers
     RunLLVMGroupFunc m_llvm_compiled_version;
     RunLLVMGroupFunc m_llvm_compiled_init;
     std::vector<RunLLVMGroupFunc> m_llvm_compiled_layers;
+    
+    RunLLVMGroupFunc m_llvm_compiled_wide_version;
+    RunLLVMGroupFunc m_llvm_compiled_wide_init;
+    std::vector<RunLLVMGroupFunc> m_llvm_compiled_wide_layers;
+    
     std::vector<ShaderInstanceRef> m_layers;
     ustring m_name;
     int m_exec_repeat;               ///< How many times to execute group
@@ -1838,7 +1870,8 @@ private:
             ? 0
             : alignment - (reckless_offsetof(ClosureComponent, mem) & (alignment - 1));
     }
-
+    
+    bool m_execution_is_batched;  // When interpreting symbol addresses we need to know if the batched data offsets should be used 
 };
 
 

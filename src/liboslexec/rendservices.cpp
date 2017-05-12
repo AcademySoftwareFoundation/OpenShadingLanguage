@@ -647,7 +647,7 @@ BatchedRendererServices::texture (ustring filename, TextureHandle *texture_handl
             *errormessage = Strings::unknown;
         }
     }
-    return status ? Mask::on() : Mask::off();
+    return Mask(status);
 }
 
 OSL_NAMESPACE_EXIT

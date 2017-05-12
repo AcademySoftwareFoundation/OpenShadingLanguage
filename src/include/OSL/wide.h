@@ -43,6 +43,112 @@ static constexpr int SimdLaneCount = 16;
 typedef const void * TransformationPtr;
 
 
+template <int WidthT>
+class WideMask
+{
+    typedef unsigned int value_type;
+    static_assert(sizeof(value_type)*8 > WidthT, "unsupported WidthT");
+
+    value_type m_value;
+public:
+
+    OSL_INLINE WideMask()
+    {}
+
+    explicit OSL_INLINE WideMask(bool all_on_or_off)
+    : m_value((all_on_or_off) ? (0xFFFFFFFF >> (32-WidthT)) : 0)
+    {}
+    
+    OSL_INLINE WideMask(value_type value_)
+        : m_value(value_)
+    {}
+
+    OSL_INLINE WideMask(int value_)
+        : m_value(static_cast<value_type>(value_))
+    {}
+
+    OSL_INLINE WideMask(const WideMask &other)
+        : m_value(other.m_value)
+    {}
+
+    OSL_INLINE value_type value() const
+    { return m_value; }
+
+    // Testers
+    OSL_INLINE bool operator[](int lane) const
+    {
+        // From testing code generation this is the preferred form
+        return (m_value & (1<<lane))==(1<<lane);
+    }
+
+    OSL_INLINE bool is_on(int lane) const
+    {
+        // From testing code generation this is the preferred form
+        return (m_value & (1<<lane))==(1<<lane);
+    }
+
+    OSL_INLINE bool is_off(int lane) const
+    {
+        // From testing code generation this is the preferred form
+        return (m_value & (1<<lane))==0;
+    }
+
+    OSL_INLINE bool all_on() const
+    {
+        // TODO:  is this more expensive than == ?
+        return (m_value >= (0xFFFFFFFF >> (32-WidthT));
+    }
+
+    OSL_INLINE bool all_off() const
+    {
+        return (m_value == static_cast<value_type>(0));
+    }
+
+    OSL_INLINE bool any_on() const
+    {
+        return (m_value != static_cast<value_type>(0));
+    }
+
+    OSL_INLINE bool any_off() const
+    {
+        return (m_value < (0xFFFFFFFF >> (32-WidthT));
+    }
+
+
+    // Setters
+    OSL_INLINE void set(int lane, bool flag)
+    {
+        if (flag) {
+            m_value |= (1<<lane);
+        } else {
+            m_value &= (~(1<<lane));
+        }
+    }
+
+    OSL_INLINE void set_on(int lane)
+    {
+        m_value |= (1<<lane);
+    }
+
+    OSL_INLINE void set_all_on()
+    {
+        m_value = (0xFFFFFFFF >> (32-WidthT));
+    }
+
+    OSL_INLINE void set_off(int lane)
+    {
+        m_value &= (~(1<<lane));
+    }
+
+    OSL_INLINE void set_all_off()
+    {
+        m_value = 0;
+    }
+};
+
+typedef WideMask<SimdLaneCount> Mask;
+
+
 template <typename BuiltinT, int WidthT>
 struct WideBuiltin
 {	
@@ -56,6 +162,22 @@ struct WideBuiltin
 		data[index] = value;
 	}
 
+	OSL_INLINE void 
+	blendin(WideMask<WidthT> mask, const WideBuiltin & other) 
+	{
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			OSL_INTEL_PRAGMA("ivdep")
+			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			for(int i = 0; i < WidthT; ++i)
+			{
+				if (mask[i]) {
+					data[i] = other.get(i);
+				}
+			}
+		}
+	}
+	
 	OSL_INLINE BuiltinT 
 	get(int index) const 
 	{
@@ -144,6 +266,24 @@ struct Wide<Vec3, WidthT>
 		x[index] = value.x;
 		y[index] = value.y;
 		z[index] = value.z;
+	}
+	
+	OSL_INLINE void 
+	blendin(WideMask<WidthT> mask, const Wide & other) 
+	{
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			OSL_INTEL_PRAGMA("ivdep")
+			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			for(int i = 0; i < WidthT; ++i)
+			{
+				if (mask[i]) {
+					x[i] = other.x.get(i);
+					y[i] = other.y.get(i);
+					z[i] = other.z.get(i);
+				}
+			}
+		}
 	}
 	
 protected:
@@ -235,6 +375,24 @@ struct Wide<Color3, WidthT>
         z[index] = value.z;
     }
 
+	OSL_INLINE void 
+	blendin(WideMask<WidthT> mask, const Wide & other) 
+	{
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			OSL_INTEL_PRAGMA("ivdep")
+			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			for(int i = 0; i < WidthT; ++i)
+			{
+				if (mask[i]) {
+					x[i] = other.x.get(i);
+					y[i] = other.y.get(i);
+					z[i] = other.z.get(i);
+				}
+			}
+		}
+	}
+    
 protected:
     template<int HeadIndexT>
     OSL_INLINE void
@@ -335,6 +493,37 @@ struct Wide<Matrix44, WidthT>
 		x[3][3].set(index, value.x[3][3]);
 	}
 
+	OSL_INLINE void 
+	blendin(WideMask<WidthT> mask, const Wide & other) 
+	{
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			OSL_INTEL_PRAGMA("ivdep")
+			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			for(int i = 0; i < WidthT; ++i)
+			{
+				if (mask[i]) {
+					x[0][0].set(i, other.x[0][0].get(i));
+					x[0][1].set(i, other.x[0][1].get(i));
+					x[0][2].set(i, other.x[0][2].get(i));
+					x[0][3].set(i, other.x[0][3].get(i));
+					x[1][0].set(i, other.x[1][0].get(i));
+					x[1][1].set(i, other.x[1][1].get(i));
+					x[1][2].set(i, other.x[1][2].get(i));
+					x[1][3].set(i, other.x[1][3].get(i));
+					x[2][0].set(i, other.x[2][0].get(i));
+					x[2][1].set(i, other.x[2][1].get(i));
+					x[2][2].set(i, other.x[2][2].get(i));
+					x[2][3].set(i, other.x[2][3].get(i));
+					x[3][0].set(i, other.x[3][0].get(i));
+					x[3][1].set(i, other.x[3][1].get(i));
+					x[3][2].set(i, other.x[3][2].get(i));
+					x[3][3].set(i, other.x[3][3].get(i));
+				}
+			}
+		}
+	}
+	
 	OSL_INLINE Matrix44 
 	get(int index) const 
 	{
@@ -381,6 +570,24 @@ struct Wide<Dual2<float>, WidthT>
 		x[index] = value.val();
 		dx[index] = value.dx();
 		dy[index] = value.dy();
+	}
+	
+	OSL_INLINE void 
+	blendin(WideMask<WidthT> mask, const Wide & other) 
+	{
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			OSL_INTEL_PRAGMA("ivdep")
+			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			for(int i = 0; i < WidthT; ++i)
+			{
+				if (mask[i]) {
+					x[i] = other.x.get(i);
+					dx[i] = other.dx.get(i);
+					dy[i] = other.dy.get(i);
+				}
+			}
+		}
 	}
 	
 protected:
@@ -437,6 +644,24 @@ struct Wide<Dual2<Vec3>, WidthT>
 		x.set(index, value.val());
 		dx.set(index, value.dx());
 		dy.set(index, value.dy());
+	}
+	
+	OSL_INLINE void 
+	blendin(WideMask<WidthT> mask, const Wide & other) 
+	{
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			OSL_INTEL_PRAGMA("ivdep")
+			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			for(int i = 0; i < WidthT; ++i)
+			{
+				if (mask[i]) {
+					x.set(i, other.x.get(i);
+					dx.set(i, other.dx.get(i);
+					dy.set(i, other.dy.get(i);
+				}
+			}
+		}
 	}
 	
 protected:
@@ -499,17 +724,37 @@ struct WideUniformProxy
 	OSL_INLINE const DataT & 
 	operator = (const DataT & value)  
 	{
-		// Should auto vectorizes although we
-		// could add explicity SIMD
-		for(int i = 0; i < WidthT; ++i) {
-			m_ref_wide_data.set(i, value);
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			OSL_INTEL_PRAGMA("ivdep")
+			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			for(int i = 0; i < WidthT; ++i) {
+				m_ref_wide_data.set(i, value);
+			}
 		}
+		
 		return value;
 	}
 	
 private:
 	Wide<DataT, WidthT> & m_ref_wide_data;
 };
+
+template <typename DataT, int WidthT>
+OSL_INLINE void 
+make_uniform(Wide<DataT, WidthT> &wide_data, const DataT &value)
+{
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+		OSL_INTEL_PRAGMA("ivdep")
+		OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+		for(int i = 0; i < WidthT; ++i) {
+			wide_data.set(i, value);
+		}
+	}
+}
+
+
 
 
 template <typename DataT, int WidthT>
@@ -554,6 +799,7 @@ private:
 	Wide<DataT, WidthT> & m_ref_wide_data;
 	const int m_index;
 };
+
 
 template <typename DataT, int WidthT>
 struct ConstWideProxy
@@ -622,115 +868,6 @@ private:
 };
 
 
-template <int WidthT>
-class WideMask
-{
-    typedef unsigned int value_type;
-    static_assert(sizeof(value_type)*8 > WidthT, "unsupported WidthT");
-
-    value_type m_value;
-public:
-
-    OSL_INLINE WideMask()
-    {}
-
-    OSL_INLINE WideMask(value_type value_)
-        : m_value(value_)
-    {}
-
-    OSL_INLINE WideMask(int value_)
-        : m_value(static_cast<value_type>(value_))
-    {}
-
-    OSL_INLINE WideMask(const WideMask &other)
-        : m_value(other.m_value)
-    {}
-
-    OSL_INLINE value_type value() const
-    { return m_value; }
-
-    // Testers
-    OSL_INLINE bool operator[](int lane) const
-    {
-        // From testing code generation this is the preferred form
-        return (m_value & (1<<lane))==(1<<lane);
-    }
-
-    OSL_INLINE bool is_on(int lane) const
-    {
-        // From testing code generation this is the preferred form
-        return (m_value & (1<<lane))==(1<<lane);
-    }
-
-    OSL_INLINE bool is_off(int lane) const
-    {
-        // From testing code generation this is the preferred form
-        return (m_value & (1<<lane))==0;
-    }
-
-    OSL_INLINE bool all_on() const
-    {
-        // TODO:  is this more expensive than == ?
-        return (m_value >= (0xFFFFFFFF >> (32-WidthT));
-    }
-
-    OSL_INLINE bool all_off() const
-    {
-        return (m_value == static_cast<value_type>(0));
-    }
-
-    OSL_INLINE bool any_on() const
-    {
-        return (m_value != static_cast<value_type>(0));
-    }
-
-    OSL_INLINE bool any_off() const
-    {
-        return (m_value < (0xFFFFFFFF >> (32-WidthT));
-    }
-
-
-    // Setters
-    OSL_INLINE void set(int lane, bool flag)
-    {
-        if (flag) {
-            m_value |= (1<<lane);
-        } else {
-            m_value &= (~(1<<lane));
-        }
-    }
-
-    OSL_INLINE void set_on(int lane)
-    {
-        m_value |= (1<<lane);
-    }
-
-    OSL_INLINE void set_all_on()
-    {
-        m_value = (0xFFFFFFFF >> (32-WidthT));
-    }
-
-    OSL_INLINE void set_off(int lane)
-    {
-        m_value &= (~(1<<lane));
-    }
-
-    OSL_INLINE void set_all_off()
-    {
-        m_value = 0;
-    }
-
-    OSL_INLINE static WideMask on()
-    {
-        return WideMask(0xFFFFFFFF >> (32-WidthT));
-    }
-    OSL_INLINE static WideMask off()
-    {
-        return WideMask(0x0);
-    }
-};
-
-typedef WideMask<SimdLaneCount> Mask;
 
 OSL_INLINE void robust_multVecMatrix(const Wide<Matrix44>& wx, const Wide< Imath::Vec3<float> >& wsrc, Wide< Imath::Vec3<float> >& wdst)
 {

@@ -249,6 +249,7 @@ DECL (osl_naninf_check, "xiXiXXiXiiX")
 DECL (osl_uninit_check, "xLXXXiXiXXiXiXii")
 DECL (osl_get_attribute, "iXiXXiiXX")
 DECL (osl_bind_interpolated_param, "iXXLiXiXiXi")
+WDECL (osl_bind_interpolated_param_wide, "iXXLiXiXiXi")
 DECL (osl_get_texture_options, "XX");
 DECL (osl_get_noise_options, "XX");
 DECL (osl_get_trace_options, "XX");

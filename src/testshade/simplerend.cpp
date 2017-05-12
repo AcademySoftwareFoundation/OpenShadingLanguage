@@ -390,6 +390,43 @@ BatchedSimpleRenderer::get_attribute (ShaderGlobalsBatch *sgb, bool derivatives,
     return success;
 }
 
+Mask
+BatchedSimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type,
+									 ShaderGlobalsBatch *sgb, void *wide_val)
+{
+    // Just to illustrate how this works, respect s and t userdata, filled
+    // in with the uv coordinates.  In a real renderer, it would probably
+    // look up something specific to the primitive, rather than have hard-
+    // coded names.
+	
+	// For testing of interactions with default values
+	// may not provide data for all lanes
+	
+	// However as the user data is kept separate from the parameters
+	// writes to *val can be unmasked.
+	// The returned mask will be used to no overwrite user data with
+	// default values
+    if (name == u_s && type == TypeDesc::TypeFloat) {
+    	Wide<float> * out = reinterpret_cast<Wide<float>*>(wide_val);
+    	out[0] = sgb->varyingData().u;
+        if (derivatives) {
+        	out[1] = sgb->varyingData().dudx;
+        	out[2] = sgb->varyingData().dudy;
+        }
+        return Mask(true);
+    }
+    if (name == u_t && type == TypeDesc::TypeFloat) {
+    	Wide<float> * out = reinterpret_cast<Wide<float>*>(wide_val);
+    	out[0] = sgb->varyingData().v;
+        if (derivatives) {
+        	out[1] = sgb->varyingData().dvdx;
+        	out[2] = sgb->varyingData().dvdy;
+        }
+        return Mask(true);
+    }
+
+    return Mask(false);
+}
 
 
 SimpleRenderer::SimpleRenderer ()
@@ -626,7 +663,6 @@ SimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type,
     // look up something specific to the primitive, rather than have hard-
     // coded names.
 
-	ASSERT(false && "unsupported for batch mode, not refactored this function");
     if (name == u_s && type == TypeDesc::TypeFloat) {
         ((float *)val)[0] = sg->u;
         if (derivatives) {

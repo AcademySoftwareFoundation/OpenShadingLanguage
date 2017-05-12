@@ -583,15 +583,16 @@ public:
                                       ustring object, TypeDesc type,
                                       ustring name, int index, void *val, Mask mask) = 0;
 
-#if 0
-
-    /// Get the named user-data from the current object and write it into
+    /// Get multiple named user-data from the current object and write them into
     /// 'val'. If derivatives is true, the derivatives should be written into val
-    /// as well. Return false if no user-data with the given name and type was
+    /// as well. It is assumed the results are varying and returns Mask 
+    // with its bit set to off if no user-data with the given name and type was
     /// found.
-    virtual bool get_userdata (bool derivatives, ustring name, TypeDesc type,
-                               ShaderGlobals *sg, void *val) = 0;
+    virtual Mask get_userdata (bool derivatives, ustring name, TypeDesc type,
+    						   ShaderGlobalsBatch *sgb, void *wide_val) = 0;
 
+#if 0
+    
     /// Given the name of a texture, return an opaque handle that can be
     /// used with texture calls to avoid the name lookups.
     virtual TextureHandle * get_texture_handle (ustring filename);

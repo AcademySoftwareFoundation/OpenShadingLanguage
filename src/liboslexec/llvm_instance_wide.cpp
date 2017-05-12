@@ -289,23 +289,24 @@ BackendLLVMWide::llvm_type_groupdata ()
         std::cout << "USERDATA " << *names << std::endl;
         TypeDesc *types = & group().m_userdata_types[0];
         int *offsets = & group().m_userdata_offsets[0];
-        int sz = (nuserdata + 3) & (~3);
-        fields.push_back (ll.type_array (ll.type_bool(), sz));
-        offset += nuserdata * sizeof(bool);
+        int sz = nuserdata;
+        fields.push_back (ll.type_array (ll.type_int(), sz));
+        offset += nuserdata * sizeof(int);
         ++order;
         for (int i = 0; i < nuserdata; ++i) {
             TypeDesc type = types[i];
+            // TODO: why do we always make deriv room? Do we not know
             int n = type.numelements() * 3;   // always make deriv room
             type.arraylen = n;
-            fields.push_back (llvm_type (type));
+            fields.push_back (llvm_wide_type (type));
             // Alignment
-            int align = type.basesize();
+            int align = type.basesize()*ShaderGlobalsBatch::maxSize;
             offset = OIIO::round_to_multiple_of_pow2 (offset, align);
             if (llvm_debug() >= 2)
                 std::cout << "  userdata " << names[i] << ' ' << type
                           << ", field " << order << ", offset " << offset << "\n";
             offsets[i] = offset;
-            offset += int(type.size());
+            offset += int(type.size())*ShaderGlobalsBatch::maxSize;
             ++order;
         }
     }
@@ -457,6 +458,7 @@ BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym)
     // retrieved de novo or copied from a previous retrieval), or 0 if no
     // such userdata was available.
     llvm::BasicBlock *after_userdata_block = NULL;
+    bool partial_userdata_mask_was_pushed = false;
     if (! sym.lockgeom() && ! sym.typespec().is_closure() && ! (sym.symtype() == SymTypeOutputParam)) {
         int userdata_index = -1;
         ustring symname = sym.name();
@@ -469,6 +471,8 @@ BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym)
             }
         }
         ASSERT (userdata_index >= 0);
+        // User connectable params must be varying
+        ASSERT (isSymbolUniform(sym) == false);
         std::vector<llvm::Value*> args;
         args.push_back (sg_void_ptr());
         args.push_back (ll.constant (symname));
@@ -477,12 +481,14 @@ BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym)
         args.push_back (groupdata_field_ptr (2 + userdata_index)); // userdata data ptr
         args.push_back (ll.constant ((int) sym.has_derivs()));
         args.push_back (llvm_void_ptr (sym));
-        args.push_back (ll.constant (sym.derivsize()));
+        args.push_back (ll.constant (sym.derivsize()*SimdLaneCount));
         args.push_back (ll.void_ptr (userdata_initialized_ref(userdata_index)));
         args.push_back (ll.constant (userdata_index));
         llvm::Value *got_userdata =
-            ll.call_function ("osl_bind_interpolated_param",
+            ll.call_function ("osl_bind_interpolated_param_wide",
                               &args[0], args.size());
+        llvm::Value *got_userdata_mask = ll.int_as_mask(got_userdata);
+        
         if (shadingsys().debug_nan() && type.basetype == TypeDesc::FLOAT) {
             // check for NaN/Inf for float-based types
             int ncomps = type.numelements() * type.aggregate;
@@ -498,22 +504,33 @@ BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym)
         // We will enclose the subsequent initialization of default values
         // or init ops in an "if" so that the extra copies or code don't
         // happen if the userdata was retrieved.
-        llvm::BasicBlock *no_userdata_block = ll.new_basic_block ("no_userdata");
+        llvm::BasicBlock *partial_userdata_block = ll.new_basic_block ("partial_userdata");
         after_userdata_block = ll.new_basic_block ();
-        llvm::Value *cond_val = ll.op_eq (got_userdata, ll.constant(0));
-        ll.op_branch (cond_val, no_userdata_block, after_userdata_block);
+        llvm::Value *cond_val = ll.op_ne (got_userdata, ll.constant(int(Mask(true).value())));
+        ll.op_branch (cond_val, partial_userdata_block, after_userdata_block);
+        
+        // If we got no or partial user data, we need to mask out the lanes
+        // that successfully got user data from the initops or default value
+        // assignment
+		ll.push_mask(got_userdata_mask, /* negate */ true /*, absolute = false (not sure how it wouldn't be an absolute mask) */);
+		ll.push_masking_enabled(true);		
+        partial_userdata_mask_was_pushed = true;        
     }
 
     if (sym.has_init_ops() && sym.valuesource() == Symbol::DefaultVal) {
         // Handle init ops.
         build_llvm_code (sym.initbegin(), sym.initend());
+#if 0 // We think the non-memcpy route is preferable as it give the compiler a chance to optimize constant values
+      // Also memcpy is ignoring the mask stack, which is problematic
     } else if (! sym.lockgeom() && ! sym.typespec().is_closure()) {
         // geometrically-varying param; memcpy its default value
         TypeDesc t = sym.typespec().simpletype();
+        std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>geometrically-varying param; memcpy its default value\n";
         ll.op_memcpy (llvm_void_ptr (sym), ll.constant_ptr (sym.data()),
                       t.size(), t.basesize() /*align*/);
         if (sym.has_derivs())
             llvm_zero_derivs (sym);
+#endif
     } else {
         // Use default value
         int num_components = sym.typespec().simpletype().aggregate;
@@ -545,6 +562,11 @@ BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym)
             llvm_zero_derivs (sym);
     }
 
+    if (partial_userdata_mask_was_pushed) {
+		ll.pop_masking_enabled();		
+    	ll.pop_if_mask();
+    }
+    
     if (after_userdata_block) {
         // If we enclosed the default initialization in an "if", jump to the
         // next basic block now.
@@ -757,7 +779,7 @@ BackendLLVMWide::build_llvm_init ()
     }
     int num_userdata = (int) group().m_userdata_names.size();
     if (num_userdata) {
-        int sz = (num_userdata + 3) & (~3);  // round up to 32 bits
+        int sz = num_userdata*sizeof(int);  
         ll.op_memset (ll.void_ptr(userdata_initialized_ref(0)), 0, sz, 4 /*align*/);
     }
 

@@ -63,6 +63,9 @@ public:
                                       int index, void *val, Mask mask);
     virtual Mask get_attribute (ShaderGlobalsBatch *sgb, bool derivatives, ustring object,
                                 TypeDesc type, ustring name, void *val, Mask mask);
+    
+    virtual Mask get_userdata (bool derivatives, ustring name, TypeDesc type,
+    						   ShaderGlobalsBatch *sgb, void *val);    
 private:
 	SimpleRenderer &m_sr;
 };

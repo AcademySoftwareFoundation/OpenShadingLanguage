@@ -3541,3 +3541,38 @@ osl_bind_interpolated_param (void *sg_, const void *name, long long type,
     }
     return 0;  // no such user data
 }
+
+OSL_SHADEOP int
+osl_bind_interpolated_param_wide (void *sgb_, const void *name, long long type,
+                             int userdata_has_derivs, void *userdata_data,
+                             int symbol_has_derivs, void *symbol_data,
+                             int symbol_data_size,
+                             unsigned int *userdata_initialized, int userdata_index)
+{
+    // Top bit indicate if we have checked for user data yet or not
+    // the bottom half is a mask of which lanes successfully retrieved 
+	// user data 
+	int status = (*userdata_initialized)>>31;
+    if (status == 0) {
+        // First time retrieving this userdata
+        ShaderGlobalsBatch *sgb   = reinterpret_cast<ShaderGlobalsBatch *>(sgb_);    	
+        Mask foundUserData = sgb->uniform().renderer->batched()->get_userdata (userdata_has_derivs, USTR(name),
+                                              TYPEDESC(type),
+                                              sgb, userdata_data);
+        // printf ("Binding %s %s : index %d, ok = %d\n", name,
+        //         TYPEDESC(type).c_str(),userdata_index, ok);
+        
+        *userdata_initialized = (1<<31) | foundUserData.value();
+        sgb->uniform().context->incr_get_userdata_calls ();
+    }
+    DASSERT((*userdata_initialized)>>31 == 1);
+    Mask foundUserData(*userdata_initialized & 0x7FFFFFFF);
+    if (foundUserData.any_on()) {
+        // If userdata was present, copy it to the shader variable
+    	// Don't bother masking as any lanes without user data
+    	// will be overwritten by init ops or by default value
+        memcpy (symbol_data, userdata_data, symbol_data_size);
+    }    
+    
+    return foundUserData.value();  
+}

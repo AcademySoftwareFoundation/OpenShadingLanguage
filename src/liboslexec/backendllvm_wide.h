@@ -309,7 +309,7 @@ public:
     /// the specified layer.
     llvm::Value *layer_run_ref (int layer);
 
-    /// Return a ref to the bool where the "userdata_initialized" flag is
+    /// Return a ref to the int where the "userdata_initialized" WideMask is
     /// stored for the specified userdata index.
     llvm::Value *userdata_initialized_ref (int userdata_index=0);
 

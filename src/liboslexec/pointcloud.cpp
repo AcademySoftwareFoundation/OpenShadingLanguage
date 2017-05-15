@@ -163,28 +163,66 @@ PartioType (TypeDesc t)
 
 
 
-inline bool
-compatiblePartioType (Partio::ParticleAttribute *received, int expected)
+// Helper: number of base values
+inline int
+basevals (TypeDesc t)
 {
-    return ((expected == Partio::VECTOR) &&
-            (received->type == expected || received->type == Partio::FLOAT) &&
-            received->count == 3) ||
-        (received->type == expected && received->count == 1);
+    return t.numelements() * int(t.aggregate);
 }
 
 
 
-inline const char *
-partioTypeString(Partio::ParticleAttribute *ptype)
+bool
+compatiblePartioType (TypeDesc partio_type, TypeDesc osl_element_type)
 {
+    // Matching types (treating all VEC3 aggregates as equivalent)...
+    if (equivalent (partio_type, osl_element_type))
+        return true;
+
+    // Consider arrays and aggregates as interchangeable, as long as the
+    // totals are the same.
+    if (partio_type.basetype == osl_element_type.basetype &&
+        basevals(partio_type) == basevals(osl_element_type))
+        return true;
+
+    // The Partio file may contain an array size that OSL can't exactly
+    // represent, for example the partio type may be float[4], and the
+    // OSL array will be float[] but the element type will be just float
+    // because OSL doesn't permit multi-dimensional arrays.
+    // Just allow it anyway and fill in the OSL array.
+    if (TypeDesc::BASETYPE(partio_type.basetype) == osl_element_type)
+        return true;
+
+    return false;
+}
+
+
+
+TypeDesc
+TypeDescOfPartioType (const Partio::ParticleAttribute *ptype)
+{
+    TypeDesc type;  // default to UNKNOWN
     switch (ptype->type) {
-    case Partio::INT:    return "int";
-    case Partio::FLOAT:  return "float";
-    case Partio::VECTOR: return "vector";
-    default:             return "none";
+    case Partio::INT:
+        type = TypeDesc::INT;
+        if (ptype->count > 1)
+            type.arraylen = ptype->count;
+        break;
+    case Partio::FLOAT:
+        type = TypeDesc::FLOAT;
+        if (ptype->count > 1)
+            type.arraylen = ptype->count;
+        break;
+    case Partio::VECTOR:
+        type = TypeDesc (TypeDesc::FLOAT, TypeDesc::VEC3, TypeDesc::NOSEMANTICS);
+        if (ptype->count != 3)
+            type = TypeDesc::UNKNOWN;  // Must be 3: punt
+        break;
+    default:
+        break;   // Any other future types -- return UNKNOWN
     }
+    return type;
 }
-
 
 #endif
 
@@ -308,50 +346,44 @@ RendererServices::pointcloud_get (ShaderGlobals *sg,
 
     PointCloud *pc = PointCloud::get(filename);
     if (pc == NULL) { // The file failed to load
-        sg->context->error ("pointcloud_get: could not open \"%s\"", filename.c_str());
+        sg->context->error ("pointcloud_get: could not open \"%s\"", filename);
         return 0;
     }
 
     const Partio::ParticlesData *cloud = pc->read_access();
     if (cloud == NULL) { // The file failed to load
-        sg->context->error ("pointcloud_get: could not open \"%s\"", filename.c_str());
+        sg->context->error ("pointcloud_get: could not open \"%s\"", filename);
         return 0;
     }
 
     // lookup the ParticleAttribute pointer needed for a query
     Partio::ParticleAttribute *attr = pc->m_attributes[attr_name].get();
     if (! attr) {
-        sg->context->error ("Accessing unexisting attribute %s in pointcloud \"%s\"", attr_name.c_str(), filename.c_str());
+        sg->context->error ("Accessing unexisting attribute %s in pointcloud \"%s\"", attr_name, filename);
         return 0;
     }
 
-    // Now make sure that types are compatible
+    // Type the partio file contains:
+    TypeDesc partio_type = TypeDescOfPartioType (attr);
+    // Type the OSL shader has provided in destination array:
     TypeDesc element_type = attr_type.elementtype ();
-    int attr_partio_type = 0;
-
-    // Convert the OSL (OIIO) type to the equivalent Partio type
-    if (element_type == TypeDesc::TypeFloat)
-        attr_partio_type = Partio::FLOAT;
-    else if (element_type == TypeDesc::TypeInt)
-        attr_partio_type = Partio::INT;
-    else if (element_type == TypeDesc::TypeColor  || element_type == TypeDesc::TypePoint ||
-             element_type == TypeDesc::TypeVector || element_type == TypeDesc::TypeNormal)
-        attr_partio_type = Partio::VECTOR;
-    else {
-        // error ("Unsupported attribute type %s for pointcloud query in attribute %s",
-        //       element_type.c_str(), attr_name.c_str());
-        return 0;
-    }
 
     // Finally check for some equivalent types like float3 and vector
-    if (!compatiblePartioType(attr, attr_partio_type)) {
-        sg->context->error ("Type of attribute \"%s\" : %s[%d] not compatible with OSL's %s in \"%s\" pointcloud",
-                    attr_name.c_str(), partioTypeString(attr), attr->count,
-                    element_type.c_str(), filename.c_str());
+    if (!compatiblePartioType(partio_type, element_type)) {
+        sg->context->error ("Type of attribute \"%s\" : %s not compatible with OSL's %s in \"%s\" pointcloud",
+                            attr_name, partio_type, element_type, filename);
         return 0;
     }
 
-    ASSERT (sizeof(size_t) == sizeof(Partio::ParticleIndex) &&
+    // For safety, clamp the count to the most that will fit in the output
+    int maxn = basevals(attr_type) / basevals(partio_type);
+    if (maxn < count) {
+        sg->context->error ("Point cloud attribute \"%s\" : %s with retrieval count %d will not fit in %s",
+                            attr_name, partio_type, count, attr_type);
+        count = maxn;
+    }
+
+    static_assert (sizeof(size_t) == sizeof(Partio::ParticleIndex),
             "Only will work if Partio ParticleIndex is the size of a size_t");
     // FIXME -- if anybody cares about an architecture in which that is not
     // the case, we can easily allocate local space to retrieve the indices,

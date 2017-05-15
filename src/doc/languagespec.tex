@@ -4337,6 +4337,15 @@ Note that the named point cloud will be created, if it does not yet
 exist in memory, and that it will be initialized by reading a point
 cloud from disk, if there is one matching the name.
 
+Generally, the element type of the data arrays must match exactly the type
+of the point data attribute, or else you will get a runtime error. But there
+are two exceptions: (1) ``triple'' types (\color, \point, \vector, \normal)
+are considered interchangeable; and (2) it is legal to retrieve {\cf float}
+arrays (e.g., a point cloud attribute that is {\cf float[4]}) into a regular
+array of {\cf float}, and the results will simply be concatenated into the
+larger array (which must still be big enough, in total, to hold {\cf
+maxpoints} of the data type in the file).
+
 \noindent Example:
 
 \begin{code}
@@ -4370,10 +4379,20 @@ in the following example:
       int indices[10];
       int n = pointcloud_search ("particles.ptc", P, r, 10,
                                  "index", indices);
-      float temp[10];
+      float temp[10];         // presumed to be "float" attribute
+      float quaternions[40];  // presumed to be "float[4]" attribute
       int ok = pointcloud_get ("particles.ptc", indices, n,
-                               "temperature", temp);
+                               "temperature", temp,
+                               "quat", quaternions);
 \end{code}
+
+As with {\cf pointcloud_search}, the element type of the data array must
+either be equivalent to the point cloud attribute being retrieved, or else
+when retrieving {\cf float} arrays (e.g., a point cloud attribute
+that is {\cf float[4]}) into a regular array of {\cf float}, and the
+results will simply be concatenated into the larger array (which must
+still be big enough, in total, to hold {\cf maxpoints} of the data type
+in the file).
 \apiend
 
 

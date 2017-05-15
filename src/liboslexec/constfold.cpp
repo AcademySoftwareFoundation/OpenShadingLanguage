@@ -2594,10 +2594,6 @@ DECLFOLDER(constfold_pointcloud_search)
             continue;
         void *const_data = NULL;
         TypeDesc const_valtype = value_types[i];
-        // How big should the constant arrays be?  Shrink to the size of
-        // the results if they are much smaller.
-        if (count < const_valtype.arraylen/2 && const_valtype.arraylen > 8)
-            const_valtype.arraylen = count;
         tmp.clear ();
         tmp.resize (const_valtype.size(), 0);
         const_data = &tmp[0];
@@ -2688,7 +2684,7 @@ DECLFOLDER(constfold_pointcloud_get)
     int ok = rop.renderer()->pointcloud_get (rop.shaderglobals(), filename,
                                              indices, count,
                                              *(ustring *)Attr_name.data(),
-                                             valtype.elementtype(), &data[0]);
+                                             valtype, &data[0]);
     rop.shadingsys().pointcloud_stats (0, 1, 0);
 
     rop.turn_into_assign (op, rop.add_constant (TypeDesc::TypeInt, &ok),

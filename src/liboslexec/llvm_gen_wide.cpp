@@ -3507,6 +3507,33 @@ LLVMGEN (llvm_gen_gettextureinfo)
         r = rop.ll.call_function ("osl_get_textureinfo_batched_uniform",
                                                &args[0], args.size());
     }
+    else if (fileNameIsUniform && !dataIsUniform) {
+        std::cout << "texture filename is uniform, running broadcast version." << std::endl;
+        RendererServices::TextureHandle *texture_handle = NULL;
+        if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
+            texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data());
+            if (! rop.renderer()->good (texture_handle))
+                texture_handle = NULL;
+        }
+        args.push_back (rop.llvm_void_ptr (Filename));
+        args.push_back (rop.ll.constant_ptr (texture_handle));
+        args.push_back (rop.llvm_load_value (Dataname));
+        // this is passes a TypeDesc to an LLVM op-code
+        args.push_back (rop.ll.constant((int) Data.typespec().simpletype().basetype));
+        args.push_back (rop.ll.constant((int) Data.typespec().simpletype().arraylen));
+        args.push_back (rop.ll.constant((int) Data.typespec().simpletype().aggregate));
+        // destination
+        args.push_back (rop.llvm_void_ptr (Data));
+        args.push_back (rop.ll.mask_as_int(rop.ll.current_mask()));
+
+        r = rop.ll.call_function ("osl_get_textureinfo_batched_broadcast", &args[0], args.size());
+        r = rop.ll.int_as_mask(r);
+        if (rop.ll.llvm_typeof(rop.llvm_get_pointer(Result)) != (llvm::Type *)rop.ll.type_wide_bool_ptr())
+        {
+            ASSERT(rop.ll.llvm_typeof(rop.llvm_get_pointer(Result)) == (llvm::Type *)rop.ll.type_wide_int_ptr());
+            r = rop.ll.op_bool_to_int(r);
+        }
+    }
     else {
         std::cout << "texture filename is varying, running batched version." << std::endl;
 

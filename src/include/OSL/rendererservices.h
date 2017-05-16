@@ -757,11 +757,11 @@ public:
                                    void *data,
                                    Mask mask);
 
-    virtual bool get_texture_info (ShaderGlobalsBatch *sgb, ustring filename,
-                                   TextureHandle *texture_handle,
-                                   int subimage,
-                                   ustring dataname, TypeDesc datatype,
-                                   void *data);
+    virtual bool get_texture_info_uniform (ShaderGlobalsBatch *sgb, ustring filename,
+                                           TextureHandle *texture_handle,
+                                           int subimage,
+                                           ustring dataname, TypeDesc datatype,
+                                           void *data);
 
 
 #if 0

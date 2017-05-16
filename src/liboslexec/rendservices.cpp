@@ -593,10 +593,10 @@ BatchedRendererServices::get_texture_info (ShaderGlobalsBatch *sgb,
 }
 
 bool
-BatchedRendererServices::get_texture_info (ShaderGlobalsBatch *sgb, ustring filename,
-                                           TextureHandle *texture_handle,
-                                           int subimage, ustring dataname,
-                                           TypeDesc datatype, void *data)
+BatchedRendererServices::get_texture_info_uniform (ShaderGlobalsBatch *sgb, ustring filename,
+                                                   TextureHandle *texture_handle,
+                                                   int subimage, ustring dataname,
+                                                   TypeDesc datatype, void *data)
 {
     bool status;
     if (texture_handle)

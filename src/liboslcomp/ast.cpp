@@ -854,6 +854,18 @@ ASTassign_expression::opword () const
 
 
 
+ASTunary_expression::ASTunary_expression (OSLCompilerImpl *comp, int op,
+                                          ASTNode *expr)
+    : ASTNode (unary_expression_node, comp, op, expr)
+{
+    // Check for a user-overloaded function for this operator
+    Symbol *sym = comp->symtab().find (ustring::format ("__operator__%s__", opword()));
+    if (sym && sym->symtype() == SymTypeFunction)
+        m_function_overload = (FunctionSymbol *)sym;
+}
+
+
+
 const char *
 ASTunary_expression::childname (size_t i) const
 {
@@ -886,6 +898,22 @@ ASTunary_expression::opword () const
     case Not   : return "not";
     case Compl : return "compl";
     default: ASSERT (0 && "unknown unary expression");
+    }
+}
+
+
+
+ASTbinary_expression::ASTbinary_expression (OSLCompilerImpl *comp, Operator op,
+                                            ASTNode *left, ASTNode *right)
+    : ASTNode (binary_expression_node, comp, op, left, right)
+{
+    // Check for a user-overloaded function for this operator.
+    // Disallow a few ops from overloading.
+    if (op != And && op != Or) {
+        ustring funcname = ustring::format ("__operator__%s__", opword());
+        Symbol *sym = comp->symtab().find (funcname);
+        if (sym && sym->symtype() == SymTypeFunction)
+            m_function_overload = (FunctionSymbol *)sym;
     }
 }
 
@@ -985,13 +1013,14 @@ ASTtype_constructor::childname (size_t i) const
 
 
 ASTfunction_call::ASTfunction_call (OSLCompilerImpl *comp, ustring name,
-                                    ASTNode *args)
+                                    ASTNode *args, FunctionSymbol *funcsym)
     : ASTNode (function_call_node, comp, 0, args), m_name(name),
       m_argread(~1),      // Default - all args are read except the first
       m_argwrite(1),      // Default - first arg only is written by the op
       m_argtakesderivs(0) // Default - doesn't take derivs
 {
-    m_sym = comp->symtab().find (name);
+    // If we weren't passed a function symbol directly, look it up.
+    m_sym = funcsym ? funcsym : comp->symtab().find (name);
     if (! m_sym) {
         error ("function '%s' was not declared in this scope", name.c_str());
         // FIXME -- would be fun to troll through the symtab and try to

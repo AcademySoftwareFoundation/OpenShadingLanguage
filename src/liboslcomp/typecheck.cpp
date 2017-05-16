@@ -504,6 +504,23 @@ ASTunary_expression::typecheck (TypeSpec expected)
 {
     typecheck_children (expected);
     TypeSpec t = expr()->typespec();
+
+    if (m_function_overload) {
+        // There was a function with the special name. See if the types
+        // match.
+        for (FunctionSymbol *f = m_function_overload; f; f = f->nextpoly()) {
+            const char *code = f->argcodes().c_str();
+            int advance;
+            TypeSpec returntype = m_compiler->type_from_code (code, &advance);
+            code += advance;
+            if (code[0] && check_simple_arg (t, code, true) && !code[0]) {
+                return m_typespec = returntype;
+            }
+        }
+        // No match, so forget about the potentially overloaded function
+        m_function_overload = nullptr;
+    }
+
     if (t.is_structure() || t.is_array()) {
         error ("Can't do '%s' to a %s.", opname(), type_c_str(t));
         return TypeSpec ();
@@ -560,6 +577,24 @@ ASTbinary_expression::typecheck (TypeSpec expected)
     typecheck_children (expected);
     TypeSpec l = left()->typespec();
     TypeSpec r = right()->typespec();
+
+    if (m_function_overload) {
+        // There was a function with the special name. See if the types
+        // match.
+        for (FunctionSymbol *f = m_function_overload; f; f = f->nextpoly()) {
+            const char *code = f->argcodes().c_str();
+            int advance;
+            TypeSpec returntype = m_compiler->type_from_code (code, &advance);
+            code += advance;
+            if (code[0] && check_simple_arg (l, code, true) &&
+                code[0] && check_simple_arg (r, code, true) &&
+                ! code[0]) {
+                return m_typespec = returntype;
+            }
+        }
+        // No match, so forget about the potentially overloaded function
+        m_function_overload = nullptr;
+    }
 
     // No binary ops work on structs or arrays
     if (l.is_structure() || r.is_structure() || l.is_array() || r.is_array()) {
@@ -800,6 +835,31 @@ ASTtype_constructor::typecheck (TypeSpec expected)
 
 
 bool
+ASTNode::check_simple_arg (const TypeSpec &argtype,
+                           const char * &formals, bool coerce)
+{
+    int advance;
+    TypeSpec formaltype = m_compiler->type_from_code (formals, &advance);
+    formals += advance;
+    // std::cerr << "\targ is " << argtype.string()
+    //           << ", formal is " << formaltype.string() << "\n";
+    if (argtype == formaltype)
+        return true;   // ok, move on to next arg
+    if (coerce && assignable (formaltype, argtype))
+        return true;
+    // Allow a fixed-length array match to a formal array with
+    // unspecified length, if the element types are the same.
+    if (formaltype.is_unsized_array() && argtype.is_sized_array() &&
+          formaltype.elementtype() == argtype.elementtype())
+        return true;
+
+    // anything that gets this far we don't consider a match
+    return false;
+}
+
+
+
+bool
 ASTNode::check_arglist (const char *funcname, ASTNode::ref arg,
                         const char *formals, bool coerce)
 {
@@ -831,24 +891,10 @@ ASTNode::check_arglist (const char *funcname, ASTNode::ref arg,
             continue;  // match anything
         }
 
-        TypeSpec argtype = arg->typespec();
-        int advance;
-        TypeSpec formaltype = m_compiler->type_from_code (formals, &advance);
-        formals += advance;
-        // std::cerr << "\targ is " << argtype.string()
-        //           << ", formal is " << formaltype.string() << "\n";
-        if (argtype == formaltype)
-            continue;   // ok, move on to next arg
-        if (coerce && assignable (formaltype, argtype))
-            continue;
-        // Allow a fixed-length array match to a formal array with
-        // unspecified length, if the element types are the same.
-        if (formaltype.is_unsized_array() && argtype.is_sized_array() &&
-              formaltype.elementtype() == argtype.elementtype())
-            continue;
-
-        // anything that gets this far we don't consider a match
-        return false;
+        if (! check_simple_arg (arg->typespec(), formals, coerce))
+            return false;
+        // If check_simple_arg succeeded, it advanced formals, and we
+        // repeat for the next argument.
     }
     if (*formals && *formals != '*' && *formals != '.')
         return false;  // Non-*, non-... formals expected, no more actuals

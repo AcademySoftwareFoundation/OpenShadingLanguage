@@ -1360,6 +1360,15 @@ ASTunary_expression::codegen (Symbol *dest)
 {
     // Code generation for unary expressions (-x, !x, etc.)
 
+    if (m_function_overload) {
+        // A little crazy, but we temporarily construct an ASTfunction_call
+        // in order to codegen this overloaded operator.
+        ustring funcname = ustring::format ("__operator__%s__", opword());
+        ASTfunction_call fc (m_compiler, funcname, expr().get(), m_function_overload);
+        fc.typecheck (typespec());
+        return dest = fc.codegen (dest);
+    }
+
     if (m_op == Not) {
         // Special case for logical ops
         return expr()->codegen_int (NULL, true /*boolify*/, true /*invert*/);
@@ -1396,6 +1405,27 @@ ASTunary_expression::codegen (Symbol *dest)
 Symbol *
 ASTbinary_expression::codegen (Symbol *dest)
 {
+    if (m_function_overload) {
+        // A little crazy, but we temporarily construct an ASTfunction_call
+        // in order to codegen this overloaded operator. Slightly tricky
+        // is that we need to concatenate our left and right arguments into
+        // an arg list.
+        ustring funcname = ustring::format ("__operator__%s__", opword());
+        if (left()->nextptr() || right()->nextptr()) {
+            error ("Overloaded %s cannot be passed arguments %s and %s",
+                   funcname, left()->nodetypename(), right()->nodetypename());
+            return dest;
+        }
+        ref args = left();
+        args->append (right().get());
+        ASTfunction_call fc (m_compiler, funcname, args.get(), m_function_overload);
+        fc.typecheck (typespec());
+        dest = fc.codegen (dest);
+        // now put things back the way we found them
+        left()->detach_next ();
+        return dest;
+    }
+
     // Special case for logic ops that short-circuit
     if (m_op == And || m_op == Or)
         return codegen_logic (dest);

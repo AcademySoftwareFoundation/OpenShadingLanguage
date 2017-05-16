@@ -526,7 +526,7 @@ osl_get_textureinfo_batched (void *sgb_, void* name,
 }
 
 OSL_SHADEOP int
-osl_get_textureinfo_batched_broadcast (void *sgb_, void* name, void *handle,
+osl_get_textureinfo_batched_broadcast (void *sgb_, const char* name, void *handle,
                                        void *dataname,  int type,
                                        int arraylen, int aggregate, void *data,
                                        int mask_)

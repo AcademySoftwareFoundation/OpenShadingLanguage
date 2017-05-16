@@ -1490,7 +1490,7 @@ operation & result & ~ \\
 {\ce ++} \inttype & \inttype & pre-increment by 1 \\[0.5ex]
 {\ce --} \inttype & \inttype & pre-decrement by 1 \\[0.5ex]
 {\cf {\bfseries -} int} & \inttype & unary negation \\[0.5ex]
-\verb|~| {\cf int} & \inttype & bitwise complement (1 and 0 bits flipped) \\[0.5ex]
+{\ce \textasciitilde} {\cf int} & \inttype & bitwise complement (1 and 0 bits flipped) \\[0.5ex]
 {\cf {\bfseries !} int} & \inttype & boolean `not' (1 if operand is zero, otherwise 0) \\[0.5ex]
 \hline
 {\cf int {\bfseries *} int} & \inttype & multiplication \\[0.5ex]
@@ -1519,7 +1519,7 @@ else 0 \\[0.5ex]
 \hline
 {\cf int {\bfseries \&} int} & \inttype & bitwise and \\[0.5ex]
 \hline
-{\cf int {\bfseries \verb|^|} int} & \inttype & bitwise exclusive or \\[0.5ex]
+{\cf int {\bfseries \textasciicircum} int} & \inttype & bitwise exclusive or \\[0.5ex]
 \hline
 {\cf int {\bfseries |} int} & \inttype & bitwise or \\[0.5ex]
 \hline
@@ -2366,7 +2366,7 @@ variable, then return the new value.
 
 \begin{tabbing}
 \hspace{0.25in} {\cf -} \emph{expr} \hspace{1in} \= (negation) \\
-\hspace{0.25in} \verb|~| \emph{expr} \> (bitwise complement) \\
+\hspace{0.25in} {\cf \textasciitilde} \emph{expr} \> (bitwise complement) \\
 \hspace{0.25in} \emph{expr} {\cf *} \emph{expr} \> (multiplication) \\
 \hspace{0.25in} \emph{expr} {\cf /} \emph{expr} \> (division) \\
 \hspace{0.25in} \emph{expr} {\cf +} \emph{expr} \> (addition) \\
@@ -2376,7 +2376,7 @@ variable, then return the new value.
 \hspace{0.25in} \emph{expr} {\cf >>} \emph{expr} \> (integer shift right) \\
 \hspace{0.25in} \emph{expr} {\cf \&} \emph{expr} \> (bitwise and) \\
 \hspace{0.25in} \emph{expr} {\cf |} \emph{expr} \> (bitwise or) \\
-\hspace{0.25in} \emph{expr} \verb|^| \emph{expr} \> (bitwise exclusive or) \\
+\hspace{0.25in} \emph{expr} {\cf \textasciicircum} \emph{expr} \> (bitwise exclusive or) \\
 \end{tabbing}
 
 The operators {\cf +}, {\cf -}, {\cf *}, {\cf /}, and the unary {\cf -}
@@ -2389,7 +2389,7 @@ multiplication and matrix multiplication by the inverse of another
 matrix.
 
 The integer and bit-wise operators {\cf \%}, {\cf <<}, {\cf >>},
-{\cf \&}, {\cf |}, {\cf \verb|^|}, and {\cf \verb|~|} may only be 
+{\cf \&}, {\cf |}, {\cf \textasciicircum}, and {\cf \textasciitilde} may only be 
 used with expressions of type \inttype.
 
 For details on which operators are allowed, please consult the operator

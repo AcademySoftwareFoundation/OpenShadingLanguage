@@ -1,0 +1,20 @@
+struct rgba {
+   color rgb;
+   float a;
+};
+
+
+shader test ()
+{
+    // wrong entire type
+    rgba A = 1;
+
+    // not enough args
+    rgba B = rgba(1);
+
+    // too many args
+    rgba C = rgba (color(1,1,1), 0, 1);
+
+    // wrong type of args
+    rgba D = rgba ("foo", "bar");
+}

@@ -62,7 +62,7 @@ Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
 \date{{\large Date: 6 Feb 2017 \\
- (with corrections, 28 Apr 2017)
+ (with corrections, 12 May 2017)
 }
 \bigskip
 \bigskip
@@ -2068,14 +2068,37 @@ using the `dot' operator.  The syntax for declaring and using structures
 is similar to C or C++:
 
 \begin{code}
-    struct Ray {                   // Define a structure type
-        point pos;
-        vector dir;
+    struct RGBA {                    // Define a structure type
+        color rgb;
+        float alpha;
     };
 
-    Ray r;                         // Declare a structure
-    r.pos = point (1, 0, 0);       // Assign to one field
-    point p = r.pos;               // Read from a structure field
+    RGBA col;                        // Declare a structure
+    r.rgb = color (1, 0, 0);         // Assign to one field
+    color c = r.rgb;                 // Read from a structure field
+
+    RGBA b = { color(.1,.2,.3), 1 }; // Member-by-member initialization
+\end{code}
+
+You can use ``constructor expressions'' for a your struct types much like
+you can construct built-in types like \color or \point:
+
+\vspace{10pt}
+\hspace{0.25in} \emph{struct\_name ( first\_member\_value, ... )}
+\vspace{10pt}
+
+\noindent For example,
+
+\begin{code}
+    RGBA c = RGBA(col,alpha);        // Constructor syntax
+
+    RGBA add (RGBA a, RGBA b)
+    {
+        return RGBA (a.rgb+b.rgb, a.a+b.a);   // return expression
+    }
+
+    // pass constructor expression as a parameter:
+    RGBA d = add (c, RGBA(color(.3,.4,.5), 0));
 \end{code}
 
 It is permitted to have a structure field that is an array, as well as to
@@ -2089,8 +2112,8 @@ arrays).
         float b[4];       // Ok: struct may contain an array
     };
 
-    Ray rays[4];          // Ok: Array of structures
-    rays[0].pos = 0;
+    RGBA vals[4];         // Ok: Array of structures
+    vals[0].a = 0;
 
     A d[5];               // NO: Array of structures that contain arrays
 \end{code}

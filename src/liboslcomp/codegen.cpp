@@ -620,8 +620,8 @@ ASTNode::codegen_assign_struct (StructSpec *structspec,
 
 
 bool
-ASTvariable_declaration::param_one_default_literal (const Symbol *sym,
-               ASTNode *init, std::string &out, const std::string &sep) const
+ASTNode::one_default_literal (const Symbol *sym, ASTNode *init,
+                              std::string &out, string_view sep) const
 {
     // FIXME -- this only works for single values or arrays made of
     // literals.  Needs to be seriously beefed up.
@@ -792,7 +792,7 @@ ASTvariable_declaration::param_default_literals (const Symbol *sym,
     for (int i = 0;  i==0 || init;  ++i, init = init->nextptr()) {
         if (i)
             out += separator;
-        completed &= param_one_default_literal (sym, init, out, separator);
+        completed &= one_default_literal (sym, init, out, separator);
         if (! compound || ! init)
             break;
     }
@@ -831,15 +831,14 @@ ASTvariable_declaration::codegen_initializer (ref init, Symbol *sym)
 
 
 void
-ASTvariable_declaration::codegen_initlist (ref init, TypeSpec type,
-                                           Symbol *sym)
+ASTNode::codegen_initlist (ref init, TypeSpec type, Symbol *sym)
 {
     // If we're doing this initialization for shader params for their
     // init ops, we need to take care to set the codegen method names
     // properly.
     bool paraminit = (m_compiler->codegen_method() != m_compiler->main_method_name() &&
-                      (m_sym->symtype() == SymTypeParam ||
-                       m_sym->symtype() == SymTypeOutputParam));
+                      (sym->symtype() == SymTypeParam ||
+                       sym->symtype() == SymTypeOutputParam));
 
     if (type.is_structure()) {
         // Special case -- structure : Recurse to handle each field
@@ -850,9 +849,13 @@ ASTvariable_declaration::codegen_initlist (ref init, TypeSpec type,
             ustring fieldname = ustring::format ("%s.%s", sym->mangled(),
                                                  field.name);
             Symbol *fieldsym = m_compiler->symtab().find_exact (fieldname);
-            std::string out;
-            if (paraminit && param_default_literals(fieldsym, init.get(), out))
-                continue;  // Skip if we had a static initalizer
+            if (paraminit) {
+                ASSERT (nodetype() == variable_declaration_node);
+                ASTvariable_declaration *v = (ASTvariable_declaration *)this;
+                std::string out;
+                if (v->param_default_literals(fieldsym, init.get(), out))
+                    continue;  // Skip if we had a static initalizer
+            }
             codegen_initlist (init, fieldsym->typespec(), fieldsym);
         }
         return;
@@ -954,17 +957,18 @@ ASTvariable_declaration::codegen_initlist (ref init, TypeSpec type,
 
 
 Symbol *
-ASTvariable_declaration::codegen_struct_initializers (ref init, Symbol *sym)
+ASTNode::codegen_struct_initializers (ref init, Symbol *sym,
+                                      bool is_constructor)
 {
     // If we're doing this initialization for shader params for their
     // init ops, we need to take care to set the codegen method names
     // properly.
     bool paraminit = (m_compiler->codegen_method() != m_compiler->main_method_name() &&
-                      (m_sym->symtype() == SymTypeParam ||
-                       m_sym->symtype() == SymTypeOutputParam));
+                      (sym->symtype() == SymTypeParam ||
+                       sym->symtype() == SymTypeOutputParam));
 
     ASSERT (sym->typespec().is_structure());
-    if (init->nodetype() != compound_initializer_node) {
+    if (init->nodetype() != compound_initializer_node && !is_constructor) {
         // Just one initializer, it's a whole struct of the right type.
         Symbol *initsym = init->codegen (sym);
         if (initsym != sym) {
@@ -977,7 +981,9 @@ ASTvariable_declaration::codegen_struct_initializers (ref init, Symbol *sym)
     }
 
     // General case -- per-field initializers
-    init = ((ASTcompound_initializer *)init.get())->initlist();
+    if (init->nodetype() == compound_initializer_node) {
+        init = ((ASTcompound_initializer *)init.get())->initlist();
+    }
     StructSpec *structspec (sym->typespec().structspec());
     for (int i = 0; init && i < structspec->numfields(); init = init->next(), ++i) {
         // Structure element -- assign to the i-th member field
@@ -995,7 +1001,9 @@ ASTvariable_declaration::codegen_struct_initializers (ref init, Symbol *sym)
             // For parameter initialization, don't really generate ops if it
             // can be statically initialized.
             std::string out;
-            if (param_default_literals (fieldsym, init.get(), out))
+            ASSERT (nodetype() == variable_declaration_node);
+            ASTvariable_declaration *v = (ASTvariable_declaration *)this;
+            if (v->param_default_literals (fieldsym, init.get(), out))
                 continue;
 
             // Delineate and remember the init ops for this field individually
@@ -1639,6 +1647,14 @@ ASTfunction_call::argwrite (int arg) const
 Symbol *
 ASTfunction_call::codegen (Symbol *dest)
 {
+    if (is_struct_ctr()) {
+        // Looks like function call, but is actually struct constructor
+        if (! dest)
+            dest = m_compiler->make_temporary (typespec());
+        codegen_struct_initializers (args(), dest, true /*is_constructor*/);
+        return dest;
+    }
+
     // Set up a return destination if not passed one (or not the right type)
     if (! typespec().is_void()) {
         if (dest == NULL || ! equivalent (dest->typespec(), typespec()))

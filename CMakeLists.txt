@@ -257,7 +257,8 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             oslc-err-format oslc-err-intoverflow
             oslc-err-noreturn oslc-err-notfunc
             oslc-err-outputparamvararray oslc-err-paramdefault
-            oslc-err-struct-array-init oslc-err-struct-dup
+            oslc-err-struct-array-init oslc-err-struct-ctr
+            oslc-err-struct-dup
             oslc-warn-commainit
             oslc-variadic-macro
             oslc-version

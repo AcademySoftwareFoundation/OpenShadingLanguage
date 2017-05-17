@@ -1,0 +1,7 @@
+test.osl:10: error: Cannot initialize structure 'A' with a scalar value
+test.osl:13: error: Constructor for 'rgba' has the wrong number of arguments (expected 2, got 1)
+test.osl:16: error: Constructor for 'rgba' has the wrong number of arguments (expected 2, got 3)
+test.osl:16: error: Too many initializers for 'struct rgba this'
+test.osl:19: error: Can't assign 'string' to 'color this.rgb'
+test.osl:19: error: Can't assign 'string' to 'float this.a'
+FAILED test.osl

@@ -176,7 +176,8 @@ WDECL (osl_get_attribute_batched, "iXiXXiiXXi")
 WDECL (osl_get_textureinfo_batched, "iXXXiiiXi")
 WDECL (osl_get_textureinfo_batched_uniform, "iXXXXiiiX")
 WDECL (osl_get_textureinfo_batched_broadcast, "iXXXXiiiXi")
-WDECL (osl_texture_batched, "iXXXXffffffiXXXXXXXi")
+WDECL (osl_texture_batched, "iXXXXXXXXXiXXXXXXXi")
+WDECL (osl_texture_batched_uniform, "iXXXXXXXXXXiXXXXXXXi")
 NOISE_WIMPL(cellnoise)
 NOISE_WIMPL(noise)
 NOISE_WIMPL(snoise)
@@ -255,6 +256,7 @@ DECL (osl_get_attribute, "iXiXXiiXX")
 DECL (osl_bind_interpolated_param, "iXXLiXiXiXi")
 WDECL (osl_bind_interpolated_param_wide, "iXXLiXiXiXi")
 DECL (osl_get_texture_options, "XX");
+WDECL (osl_get_texture_options_batched, "XX");
 DECL (osl_get_noise_options, "XX");
 DECL (osl_get_trace_options, "XX");
 

@@ -633,12 +633,22 @@ public:
     /// messages (in case of failure, when the function returns false) will
     /// be stored there, leaving it up to the caller/shader to handle the
     /// error.
-    virtual Mask texture (ustring filename, TextureHandle *texture_handle,
+    virtual Mask texture_uniform (ustring filename, TextureHandle *texture_handle,
+                                  TexturePerthread *texture_thread_info,
+                                  TextureOpt &options, ShaderGlobalsBatch *sgb,
+                                  Wide<float> s, Wide<float> t, Wide<float> dsdx, Wide<float> dtdx,
+                                  Wide<float> dsdy, Wide<float> dtdy, int nchannels,
+                                  void* result, void* dresultds, void* dresultdt,
+                                  void* alpha, void* dalphadx, void* dalphady,
+                                  ustring *errormessage, Mask mask);
+
+    virtual Mask texture (const Wide<ustring>& filename,
                           TexturePerthread *texture_thread_info,
                           TextureOpt &options, ShaderGlobalsBatch *sgb,
-                          float s, float t, float dsdx, float dtdx,
-                          float dsdy, float dtdy, int nchannels,
-                          float *result, float *dresultds, float *dresultdt,
+                          Wide<float> s, Wide<float> t, Wide<float> dsdx, Wide<float> dtdx,
+                          Wide<float> dsdy, Wide<float> dtdy, int nchannels,
+                          void* result, void* dresultds, void* dresultdt,
+                          void* alpha, void* dalphadx, void* dalphady,
                           ustring *errormessage, Mask mask);
 #if 0
     // Deprecated version, with no errormessage parameter. This will

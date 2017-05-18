@@ -59,6 +59,17 @@ osl_get_texture_options (void *sg_)
     return opt;
 }
 
+// Utility: retrieve a pointer to the ShadingContext's texture options
+// struct, also re-initialize its contents.
+OSL_SHADEOP void *
+osl_get_texture_options_batched (void *sgb_)
+{
+    ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
+    TextureOpt *opt = sgb->uniform().context->texture_options_ptr ();
+    new (opt) TextureOpt;
+    return opt;
+}
+
 
 OSL_SHADEOP void
 osl_texture_set_firstchannel (void *opt, int x)
@@ -291,9 +302,9 @@ osl_texture (void *sg_, const char *name, void *handle,
 }
 
 OSL_SHADEOP int
-osl_texture_batched (void *sgb_, const char *name, void *handle,
-                     void *opt_, float s, float t,
-                     float dsdx, float dtdx, float dsdy, float dtdy,
+osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
+                     void *opt_, void *s, void *t,
+                     void *dsdx, void *dtdx, void *dsdy, void *dtdy,
                      int chans, void *result, void *dresultdx, void *dresultdy,
                      void *alpha, void *dalphadx, void *dalphady,
                      ustring *errormessage,
@@ -307,24 +318,32 @@ osl_texture_batched (void *sgb_, const char *name, void *handle,
     }
     ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
     TextureOpt *opt = (TextureOpt *)opt_;
+
+    // XXX lfeng: original code use simd float4, then copy back to result.
+    // for batched. The renderer should decide which way is more efficient
+    // (thus implement this in renderservices)?
+    Mask retVal = sgb->uniform().renderer->batched()->texture_uniform (USTR(name),
+                                                               (TextureSystem::TextureHandle *)handle,
+                                                               NULL,
+                                                               *opt, sgb,
+                                                               WFLOAT(s),
+                                                               WFLOAT(t),
+                                                               WFLOAT(dsdx),
+                                                               WFLOAT(dtdx),
+                                                               WFLOAT(dsdy),
+                                                               WFLOAT(dtdy),
+                                                               chans,
+                                                               result,
+                                                               dresultdx,
+                                                               dresultdy,
+                                                               alpha,
+                                                               dalphadx,
+                                                               dalphady,
+                                                               errormessage, mask);
+
     bool derivs = (dresultdx != NULL);
-    // It's actually faster to ask for 4 channels (even if we need fewer)
-    // and ensure that they're being put in aligned memory.
-    OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd;
-    Mask retVal = sgb->uniform().renderer->batched()->texture (USTR(name),
-                                                               (TextureSystem::TextureHandle *)handle, NULL,
-                                                               *opt, sgb, s, t, dsdx, dtdx, dsdy, dtdy, 4,
-                                                               (float *)&result_simd,
-                                                               derivs ? (float *)&dresultds_simd : NULL,
-                                                               derivs ? (float *)&dresultdt_simd : NULL,
-                                                               errormessage, mask_);
-
-    for (int i = 0;  i < chans;  ++i)
-        ((float *)result)[i] = result_simd[i];
-    if (alpha)
-        ((float *)alpha)[0] = result_simd[chans];
-
     // Correct our st texture space gradients into xy-space gradients
+    /*
     if (derivs) {
         OIIO::simd::float4 dresultdx_simd = dresultds_simd * dsdx + dresultdt_simd * dtdx;
         OIIO::simd::float4 dresultdy_simd = dresultds_simd * dsdy + dresultdt_simd * dtdy;
@@ -337,6 +356,69 @@ osl_texture_batched (void *sgb_, const char *name, void *handle,
             ((float *)dalphady)[0] = dresultdy_simd[chans];
         }
     }
+    */
+
+    /// XXX lfeng: maybe we need to pass in wide errormessages?
+//    if (ok && errormessage)
+//        *errormessage = Strings::_emptystring_;
+    return retVal.value();
+}
+
+OSL_SHADEOP int
+osl_texture_batched (void *sgb_, void *name,
+                     void *opt_, void *s, void *t,
+                     void *dsdx, void *dtdx, void *dsdy, void *dtdy,
+                     int chans, void *result, void *dresultdx, void *dresultdy,
+                     void *alpha, void *dalphadx, void *dalphady,
+                     ustring *errormessage,
+                     int mask_)
+{
+    std::cout << "osl_texture_batched" << std::endl;
+    Mask mask(mask_);
+    // TODO: LLVM could check this before calling this function
+    if (mask.all_off()) {
+        return 0;
+    }
+    ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
+    TextureOpt *opt = (TextureOpt *)opt_;
+
+    // XXX lfeng: original code use simd float4, then copy back to result.
+    // for batched. The renderer should decide which way is more efficient
+    // (thus implement this in renderservices)?
+    Mask retVal = sgb->uniform().renderer->batched()->texture (WUSTR(name),
+                                                               NULL,
+                                                               *opt, sgb,
+                                                               WFLOAT(s),
+                                                               WFLOAT(t),
+                                                               WFLOAT(dsdx),
+                                                               WFLOAT(dtdx),
+                                                               WFLOAT(dsdy),
+                                                               WFLOAT(dtdy),
+                                                               chans,
+                                                               result,
+                                                               dresultdx,
+                                                               dresultdy,
+                                                               alpha,
+                                                               dalphadx,
+                                                               dalphady,
+                                                               errormessage, mask);
+
+    bool derivs = (dresultdx != NULL);
+    // Correct our st texture space gradients into xy-space gradients
+    /*
+    if (derivs) {
+        OIIO::simd::float4 dresultdx_simd = dresultds_simd * dsdx + dresultdt_simd * dtdx;
+        OIIO::simd::float4 dresultdy_simd = dresultds_simd * dsdy + dresultdt_simd * dtdy;
+        for (int i = 0;  i < chans;  ++i)
+            ((float *)dresultdx)[i] = dresultdx_simd[i];
+        for (int i = 0;  i < chans;  ++i)
+            ((float *)dresultdy)[i] = dresultdy_simd[i];
+        if (dalphadx) {
+            ((float *)dalphadx)[0] = dresultdx_simd[chans];
+            ((float *)dalphady)[0] = dresultdy_simd[chans];
+        }
+    }
+    */
 
     /// XXX lfeng: maybe we need to pass in wide errormessages?
 //    if (ok && errormessage)

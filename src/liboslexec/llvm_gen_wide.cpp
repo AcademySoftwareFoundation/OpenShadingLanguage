@@ -2609,11 +2609,9 @@ static llvm::Value *
 llvm_gen_texture_options (BackendLLVMWide &rop, int opnum,
                           int first_optional_arg, bool tex3d, int nchans,
                           llvm::Value* &alpha, llvm::Value* &dalphadx,
-                          llvm::Value* &dalphady)
+                          llvm::Value* &dalphady, llvm::Value* &errormessage)
 {
-	// TODO:  investigate what this means for a wide data type, 
-	// might need to execute serial for each data lane
-    llvm::Value* opt = rop.ll.call_function ("osl_get_texture_options",
+    llvm::Value* opt = rop.ll.call_function ("osl_get_texture_options_batched",
                                              rop.sg_void_ptr());
     llvm::Value* missingcolor = NULL;
     TextureOpt optdefaults;  // So we can check the defaults
@@ -2755,13 +2753,16 @@ llvm_gen_texture_options (BackendLLVMWide &rop, int opnum,
                 // NO z derivs!  dalphadz = rop.llvm_get_pointer (Val, 3);
             }
             continue;
-
+        }
+        if (name == Strings::errormessage && valtype == TypeDesc::STRING) {
+            errormessage = rop.llvm_get_pointer (Val);
+            continue;
         }
         if (name == Strings::missingcolor &&
                    equivalent(valtype,TypeDesc::TypeColor)) {
             if (! missingcolor) {
                 // If not already done, allocate enough storage for the
-                // missingcolor value (4 floats), and call the special 
+                // missingcolor value (4 floats), and call the special
                 // function that points the TextureOpt.missingcolor to it.
                 missingcolor = rop.ll.op_alloca(rop.ll.type_float(), 4);
                 rop.ll.call_function ("osl_texture_set_missingcolor_arena",
@@ -2774,7 +2775,7 @@ llvm_gen_texture_options (BackendLLVMWide &rop, int opnum,
         if (name == Strings::missingalpha && valtype == TypeDesc::FLOAT) {
             if (! missingcolor) {
                 // If not already done, allocate enough storage for the
-                // missingcolor value (4 floats), and call the special 
+                // missingcolor value (4 floats), and call the special
                 // function that points the TextureOpt.missingcolor to it.
                 missingcolor = rop.ll.op_alloca(rop.ll.type_float(), 4);
                 rop.ll.call_function ("osl_texture_set_missingcolor_arena",
@@ -2832,36 +2833,51 @@ LLVMGEN (llvm_gen_texture)
 
     llvm::Value* opt;   // TextureOpt
     llvm::Value *alpha = NULL, *dalphadx = NULL, *dalphady = NULL;
+    llvm::Value *errormessage = NULL;
     opt = llvm_gen_texture_options (rop, opnum, first_optional_arg,
                                     false /*3d*/, nchans,
-                                    alpha, dalphadx, dalphady);
+                                    alpha, dalphadx, dalphady, errormessage);
 
     // Now call the osl_texture function, passing the options and all the
     // explicit args like texture coordinates.
     std::vector<llvm::Value *> args;
     args.push_back (rop.sg_void_ptr());
-    RendererServices::TextureHandle *texture_handle = NULL;
-    if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
-        texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data());
-        if (! rop.renderer()->good (texture_handle))
-            texture_handle = NULL;
+
+    bool fileNameIsUniform = rop.isSymbolUniform(Filename);
+    ustring texFuncName;
+    if (fileNameIsUniform) {
+        texFuncName = "osl_texture_batched_uniform";
+        RendererServices::TextureHandle *texture_handle = NULL;
+        if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
+            texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data());
+            if (! rop.renderer()->good (texture_handle))
+                texture_handle = NULL;
+        }
+        args.push_back (rop.llvm_load_value (Filename));
+        args.push_back (rop.ll.constant_ptr (texture_handle));
+        rop.generated_texture_call (texture_handle != NULL);
     }
-    args.push_back (rop.llvm_load_value (Filename));
-    args.push_back (rop.ll.constant_ptr (texture_handle));
+    else {
+        texFuncName = "osl_texture_batched";
+        args.push_back (rop.llvm_void_ptr (Filename));
+        // XXX lfeng: this need to be fixed to count calls properly.
+        rop.generated_texture_call(true);
+    }
+
     args.push_back (opt);
-    args.push_back (rop.llvm_load_value (S));
-    args.push_back (rop.llvm_load_value (T));
+    args.push_back (rop.llvm_void_ptr (S));
+    args.push_back (rop.llvm_void_ptr (T));
     if (user_derivs) {
-        args.push_back (rop.llvm_load_value (*rop.opargsym (op, 4)));
-        args.push_back (rop.llvm_load_value (*rop.opargsym (op, 5)));
-        args.push_back (rop.llvm_load_value (*rop.opargsym (op, 6)));
-        args.push_back (rop.llvm_load_value (*rop.opargsym (op, 7)));
+        args.push_back (rop.llvm_void_ptr (*rop.opargsym (op, 4)));
+        args.push_back (rop.llvm_void_ptr (*rop.opargsym (op, 5)));
+        args.push_back (rop.llvm_void_ptr (*rop.opargsym (op, 6)));
+        args.push_back (rop.llvm_void_ptr (*rop.opargsym (op, 7)));
     } else {
         // Auto derivs of S and T
-        args.push_back (rop.llvm_load_value (S, 1));
-        args.push_back (rop.llvm_load_value (T, 1));
-        args.push_back (rop.llvm_load_value (S, 2));
-        args.push_back (rop.llvm_load_value (T, 2));
+        args.push_back (rop.llvm_void_ptr (S, 1));
+        args.push_back (rop.llvm_void_ptr (T, 1));
+        args.push_back (rop.llvm_void_ptr (S, 2));
+        args.push_back (rop.llvm_void_ptr (T, 2));
     }
     args.push_back (rop.ll.constant (nchans));
     args.push_back (rop.ll.void_ptr (rop.llvm_get_pointer (Result, 0)));
@@ -2870,8 +2886,9 @@ LLVMGEN (llvm_gen_texture)
     args.push_back (rop.ll.void_ptr (alpha    ? alpha    : rop.ll.void_ptr_null()));
     args.push_back (rop.ll.void_ptr (dalphadx ? dalphadx : rop.ll.void_ptr_null()));
     args.push_back (rop.ll.void_ptr (dalphady ? dalphady : rop.ll.void_ptr_null()));
-    rop.ll.call_function ("osl_texture_batched", &args[0], (int)args.size());
-    rop.generated_texture_call (texture_handle != NULL);
+    args.push_back (rop.ll.void_ptr (errormessage ? errormessage : rop.ll.void_ptr_null()));
+    args.push_back (rop.ll.mask_as_int(rop.ll.current_mask()));
+    rop.ll.call_function (texFuncName.c_str(), &args[0], (int)args.size());
     return true;
 }
 
@@ -2896,9 +2913,10 @@ LLVMGEN (llvm_gen_texture3d)
 
     llvm::Value* opt;   // TextureOpt
     llvm::Value *alpha = NULL, *dalphadx = NULL, *dalphady = NULL;
+    llvm::Value *errormessage = NULL;
     opt = llvm_gen_texture_options (rop, opnum, first_optional_arg,
                                     true /*3d*/, nchans,
-                                    alpha, dalphadx, dalphady);
+                                    alpha, dalphadx, dalphady, errormessage);
 
     // Now call the osl_texture3d function, passing the options and all the
     // explicit args like texture coordinates.
@@ -2943,6 +2961,7 @@ LLVMGEN (llvm_gen_texture3d)
     args.push_back (rop.ll.void_ptr (dalphadx ? dalphadx : rop.ll.void_ptr_null()));
     args.push_back (rop.ll.void_ptr (dalphady ? dalphady : rop.ll.void_ptr_null()));
     args.push_back (rop.ll.void_ptr_null());  // No dalphadz for now
+    args.push_back (rop.ll.void_ptr (errormessage ? errormessage : rop.ll.void_ptr_null()));
     rop.ll.call_function ("osl_texture3d", &args[0], (int)args.size());
     rop.generated_texture_call (texture_handle != NULL);
     return true;
@@ -2968,9 +2987,10 @@ LLVMGEN (llvm_gen_environment)
 
     llvm::Value* opt;   // TextureOpt
     llvm::Value *alpha = NULL, *dalphadx = NULL, *dalphady = NULL;
+    llvm::Value *errormessage = NULL;
     opt = llvm_gen_texture_options (rop, opnum, first_optional_arg,
                                     false /*3d*/, nchans,
-                                    alpha, dalphadx, dalphady);
+                                    alpha, dalphadx, dalphady, errormessage);
 
     // Now call the osl_environment function, passing the options and all the
     // explicit args like texture coordinates.
@@ -3007,6 +3027,7 @@ LLVMGEN (llvm_gen_environment)
         args.push_back (rop.ll.void_ptr_null());
         args.push_back (rop.ll.void_ptr_null());
     }
+    args.push_back (rop.ll.void_ptr (errormessage ? errormessage : rop.ll.void_ptr_null()));
     rop.ll.call_function ("osl_environment", &args[0], (int)args.size());
     rop.generated_texture_call (texture_handle != NULL);
     return true;

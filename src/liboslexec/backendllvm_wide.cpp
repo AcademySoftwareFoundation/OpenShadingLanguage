@@ -561,9 +561,8 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	ASSERT(m_requires_masking_by_layer_and_op_index[layer()].empty());
 	m_requires_masking_by_layer_and_op_index[layer()].resize(op_count, false);
 
-	ASSERT(m_get_attribute_is_uniform_by_layer_and_op_index.size() > layer());	
-	ASSERT(m_get_attribute_is_uniform_by_layer_and_op_index[layer()].empty());
-	m_get_attribute_is_uniform_by_layer_and_op_index[layer()].resize(op_count, false);
+	ASSERT(m_uniform_get_attribute_op_indices_by_layer.size() > layer());	
+	ASSERT(m_uniform_get_attribute_op_indices_by_layer[layer()].empty());
 	
 	// TODO:  Optimize: could probably use symbol index vs. a pointer 
 	// allowing a lookup table vs. hash_map
@@ -858,7 +857,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
                 }
                 
                 if (get_attr_is_uniform) {
-                	m_get_attribute_is_uniform_by_layer_and_op_index[layer()][opIndex] = true;                	
+                	m_uniform_get_attribute_op_indices_by_layer[layer()].insert(opIndex);                	
                 } else {
 					for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
 						const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
@@ -1086,19 +1085,16 @@ std::cout << "requires_masking_by_op_index " << op_index << std::endl;
 
 	
 	{
-		std::cout << "Emit m_get_attribute_is_uniform_by_layer_and_op_index" << std::endl;			
-		auto & get_attribute_is_uniform_by_op_index = m_get_attribute_is_uniform_by_layer_and_op_index[layer()];
+		std::cout << "Emit m_uniform_get_attribute_op_indices_by_layer" << std::endl;			
+		const auto & uniform_get_attribute_op_indices = m_uniform_get_attribute_op_indices_by_layer[layer()];
 		
-		int opCount = get_attribute_is_uniform_by_op_index.size();
-		for(int opIndex=0; opIndex < opCount; ++opIndex) {
-			if (get_attribute_is_uniform_by_op_index[opIndex])
-			{
-				Opcode & opcode = op(opIndex);
-				std::cout << "---> inst#" << opIndex << " op=" << opcode.opname() << " is UNIFORM get_attribute" << std::endl;
-			}
+		for(int opIndex: uniform_get_attribute_op_indices)
+		{
+			Opcode & opcode = op(opIndex);
+			std::cout << "---> inst#" << opIndex << " op=" << opcode.opname() << " is UNIFORM get_attribute" << std::endl;
 		}
 		std::cout << std::flush;		
-		std::cout << "done m_get_attribute_is_uniform_by_layer_and_op_index" << std::endl;
+		std::cout << "done m_uniform_get_attribute_op_indices_by_layer" << std::endl;
 	}
 }
 	
@@ -1138,9 +1134,8 @@ BackendLLVMWide::requiresMasking(int opIndex)
 bool 
 BackendLLVMWide::getAttributesIsUniform(int opIndex)
 {
-	ASSERT(m_get_attribute_is_uniform_by_layer_and_op_index[layer()].empty() == false);
-	ASSERT(m_get_attribute_is_uniform_by_layer_and_op_index[layer()].size() > opIndex);
-	return m_get_attribute_is_uniform_by_layer_and_op_index[layer()][opIndex];
+	const auto & uniform_get_attribute_op_indices = m_uniform_get_attribute_op_indices_by_layer[layer()];
+	return (uniform_get_attribute_op_indices.find(opIndex) != uniform_get_attribute_op_indices.end());
 }
 
 

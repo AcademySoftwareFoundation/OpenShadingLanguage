@@ -28,8 +28,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-#include <vector>
 #include <map>
+#include <vector>
+#include <unordered_set>
 
 #include "oslexec_pvt.h"
 using namespace OSL;
@@ -465,7 +466,7 @@ private:
 
 	std::unordered_map<const Symbol *, bool> m_is_uniform_by_symbol;
 	std::vector<std::vector<bool>> m_requires_masking_by_layer_and_op_index;
-	std::vector<std::vector<bool>> m_get_attribute_is_uniform_by_layer_and_op_index;
+	std::vector<std::unordered_set<int>> m_uniform_get_attribute_op_indices_by_layer;
 	std::vector<Symbol *> m_generated_loops_condition_stack;
     
     friend class ShadingSystemImpl;

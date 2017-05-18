@@ -1272,6 +1272,7 @@ BackendLLVMWide::run ()
 
     // We need to discover uniformity and masking requirements of our layers before generating code
     m_requires_masking_by_layer_and_op_index.resize(nlayers);
+    m_get_attribute_is_uniform_by_layer_and_op_index.resize(nlayers);
     for (int layer = 0; layer < nlayers; ++layer) {
         set_inst (layer);
         if (m_layer_remap[layer] != -1) {

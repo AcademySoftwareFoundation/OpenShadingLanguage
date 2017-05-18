@@ -145,7 +145,12 @@ void register_closures(OSL::ShadingSystem* shadingsys) {
 
 BatchedSimpleRenderer::BatchedSimpleRenderer(SimpleRenderer &sr)
     : m_sr(sr)
-{}
+{
+	m_uniform_objects.insert(ustring("global"));	
+	m_uniform_objects.insert(ustring("options"));	
+	
+	m_uniform_attributes.insert(ustring("camera:resolution"));
+}
 
 BatchedSimpleRenderer::~BatchedSimpleRenderer()
 {}
@@ -356,43 +361,97 @@ BatchedSimpleRenderer::get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &re
     }
 }
 
+bool 
+BatchedSimpleRenderer::is_attribute_uniform(ustring object, ustring name)
+{
+	
+	if (m_uniform_objects.find(object) != m_uniform_objects.end())
+		return true;
+
+	if ((!object) && m_uniform_attributes.find(name) != m_uniform_attributes.end())
+		return true;
+		
+	return false;
+}
+
 Mask
 BatchedSimpleRenderer::get_array_attribute (ShaderGlobalsBatch *sgb, bool derivatives,
                                             ustring object, TypeDesc type, ustring name,
-                                            int index, void *val, Mask mask)
+                                            int index, void *wide_val, Mask mask)
 {
-//    std::cout << "BatchedSimpleRenderer::get_array_attribute" << std::endl;
+	
+	ASSERT(is_attribute_uniform(object, name) == false);
+#if 0 // Currently all getters are for uniform values
+    // but not sure shader know this or has to assume they all differ
+    // perhaps need a seperate method to ask if they are uniform or not
+    AttrGetterMap::const_iterator g = m_attr_getters.find (name);
+    if (g != m_attr_getters.end()) {
+        AttrGetter getter = g->second;
+        return (this->*(getter)) (sg, derivatives, object, type, name, val);
+    }
+#endif      
+    
+    // In order to test getattribute(), respond positively to
+    // "options"/"blahblah"
+    if (object == "options" && name == "blahblah" &&
+		// Should never reach this case when constant folding is enabled 
+		// However can add '--options "opt_fold_getattribute=0"'
+		// to turn off constant folding
+    		
+        type == TypeDesc::TypeFloat) {
+        Wide<float>* out = reinterpret_cast<Wide<float>*>(wide_val);
+        make_uniform(out[0], 3.14159f);
+        return Mask(true);
+    }
 
-//    std::cout << "ATTR: " << name << std::endl;
-//    Wide<Color3>* out = reinterpret_cast<Wide<Color3>*>(val);
-    Mask success;
-    success.set_all_off();
-    //for (int i = 0; i < retVal->width; ++i) {
-//        out->set(i, Color3(1.0, 0, 0));
-    //}
-    return success;
+    if (object == nullptr && name == "blahblah" &&
+        type == TypeDesc::TypeFloat) {
+        Wide<float>* out = reinterpret_cast<Wide<float>*>(wide_val);
+        for(int i=0; i < out[0].width; ++i) {
+        	out[0].set(i, float(i)/out[0].width);        	
+        }
+        return Mask(true);
+    }
+    
+    // If no named attribute was found, allow userdata to bind to the
+    // attribute request.
+    if (object.empty() && index == -1)
+        return get_userdata (derivatives, name, type, sgb, wide_val, mask);
+
+    return Mask(false);
 }
+
 Mask
 BatchedSimpleRenderer::get_attribute (ShaderGlobalsBatch *sgb, bool derivatives, ustring object,
-                            TypeDesc type, ustring name, void *val, Mask mask)
+                            TypeDesc type, ustring name, void *wide_val, Mask mask)
 {
-//    std::cout << "BatchedSimpleRenderer::get_attribute" << std::endl;
-//    std::cout << "ATTR: " << name << std::endl;
-    Wide<Color3>* out = reinterpret_cast<Wide<Color3>*>(val);
-    Mask success;
-    success.set_all_off();
-    for (int i = 0; i < SimdLaneCount; ++i) {
-        if (mask.is_on(i)) {
-            out->set(i, Color3(1.0, i*0.1, i*0.1));
-            success.set_on(i);
-        }
-    }
-    return success;
+	
+    return get_array_attribute (sgb, derivatives, object,
+                                type, name, -1, wide_val, mask);
 }
+
+
+bool
+BatchedSimpleRenderer::get_array_attribute_uniform (ShaderGlobalsBatch *sgb, bool derivatives,
+                                            ustring object, TypeDesc type, ustring name,
+                                            int index, void *val)
+{
+	return m_sr.get_array_attribute (NULL, derivatives, object, type, name, index, val);
+}
+
+bool
+BatchedSimpleRenderer::get_attribute_uniform (ShaderGlobalsBatch *sgb, bool derivatives, ustring object,
+                            TypeDesc type, ustring name, void *val)
+{
+	
+    return get_array_attribute_uniform (sgb, derivatives, object,
+                                type, name, -1, val);
+}
+
 
 Mask
 BatchedSimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type,
-									 ShaderGlobalsBatch *sgb, void *wide_val)
+									 ShaderGlobalsBatch *sgb, void *wide_val, Mask mask)
 {
     // Just to illustrate how this works, respect s and t userdata, filled
     // in with the uv coordinates.  In a real renderer, it would probably
@@ -402,27 +461,24 @@ BatchedSimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc ty
 	// For testing of interactions with default values
 	// may not provide data for all lanes
 	
-	// However as the user data is kept separate from the parameters
-	// writes to *val can be unmasked.
-	// The returned mask will be used to no overwrite user data with
-	// default values
     if (name == u_s && type == TypeDesc::TypeFloat) {
     	Wide<float> * out = reinterpret_cast<Wide<float>*>(wide_val);
-    	out[0] = sgb->varyingData().u;
+    	
+    	out[0].blendin(mask, sgb->varyingData().u);
         if (derivatives) {
-        	out[1] = sgb->varyingData().dudx;
-        	out[2] = sgb->varyingData().dudy;
+        	out[1].blendin(mask, sgb->varyingData().dudx);
+        	out[2].blendin(mask, sgb->varyingData().dudy);
         }
-        return Mask(true);
+        return mask;
     }
     if (name == u_t && type == TypeDesc::TypeFloat) {
     	Wide<float> * out = reinterpret_cast<Wide<float>*>(wide_val);
-    	out[0] = sgb->varyingData().v;
+    	out[0].blendin(mask, sgb->varyingData().v);
         if (derivatives) {
-        	out[1] = sgb->varyingData().dvdx;
-        	out[2] = sgb->varyingData().dvdy;
+        	out[1].blendin(mask, sgb->varyingData().dvdx);
+        	out[2].blendin(mask, sgb->varyingData().dvdy);
         }
-        return Mask(true);
+        return mask;
     }
 
     return Mask(false);

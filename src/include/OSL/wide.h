@@ -149,58 +149,6 @@ public:
 typedef WideMask<SimdLaneCount> Mask;
 
 
-template <typename BuiltinT, int WidthT>
-struct WideBuiltin
-{	
-	static constexpr int width = WidthT; 
-	
-	BuiltinT data[WidthT];
-	
-	OSL_INLINE void
-	set(int index, BuiltinT value) 
-	{
-		data[index] = value;
-	}
-
-	OSL_INLINE void 
-	blendin(WideMask<WidthT> mask, const WideBuiltin & other) 
-	{
-		OSL_INTEL_PRAGMA("forceinline recursive")
-		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
-			for(int i = 0; i < WidthT; ++i)
-			{
-				if (mask[i]) {
-					data[i] = other.get(i);
-				}
-			}
-		}
-	}
-	
-	OSL_INLINE BuiltinT 
-	get(int index) const 
-	{
-		return data[index];
-	}	
-	
-	void dump(const char *name) const
-	{
-		if (name != nullptr) {
-			std::cout << name << " = ";
-		}
-		std::cout << "{";				
-		for(int i=0; i < WidthT; ++i)
-		{
-			std::cout << data[i];
-			if (i < (WidthT-1))
-				std::cout << ",";
-				
-		}
-		std::cout << "}" << std::endl;
-	}
-};
-
 
 namespace internal {
 
@@ -239,8 +187,142 @@ using enable_if_type = typename std::enable_if<TestT, TypeT>::type;
 } // namespace internal
 
 
+
 template <typename DataT, int WidthT = SimdLaneCount>
 struct Wide; // undefined
+
+
+template <typename BuiltinT, int WidthT>
+struct WideBuiltin
+{
+	typedef BuiltinT value_type;
+	static constexpr int width = WidthT; 
+	
+	value_type data[WidthT];
+	
+	OSL_INLINE void
+	set(int index, value_type value) 
+	{
+		data[index] = value;
+	}
+
+	OSL_INLINE void
+	set_all(value_type value) 
+	{
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			OSL_INTEL_PRAGMA("ivdep")
+			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			for(int i = 0; i < WidthT; ++i)
+			{
+					data[i] = value;
+			}
+		}
+	}
+	
+	OSL_INLINE void 
+	blendin(WideMask<WidthT> mask, const WideBuiltin & other) 
+	{
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			OSL_INTEL_PRAGMA("ivdep")
+			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			for(int i = 0; i < WidthT; ++i)
+			{
+				if (mask[i]) {
+					data[i] = other.get(i);
+				}
+			}
+		}
+	}
+
+	OSL_INLINE void 
+	blendin(WideMask<WidthT> mask, value_type value) 
+	{
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			OSL_INTEL_PRAGMA("ivdep")
+			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			for(int i = 0; i < WidthT; ++i)
+			{
+				if (mask[i]) {
+					data[i] = value;
+				}
+			}
+		}
+	}
+	
+protected:
+	template<int HeadIndexT>
+	OSL_INLINE void 
+	set(internal::int_sequence<HeadIndexT>, const value_type & value)
+	{
+		set(HeadIndexT, value);
+	}
+
+	template<int HeadIndexT, int... TailIndexListT, typename... BuiltinListT>
+	OSL_INLINE void 
+	set(internal::int_sequence<HeadIndexT, TailIndexListT...>, value_type headValue, BuiltinListT... tailValues)
+	{
+		set(HeadIndexT, headValue);
+		set(internal::int_sequence<TailIndexListT...>(), tailValues...);
+		return;
+	}
+public:
+	
+	WideBuiltin() = default;
+
+	template<typename... BuiltinListT, typename = internal::enable_if_type<(sizeof...(BuiltinListT) == WidthT)> >
+	OSL_INLINE
+	WideBuiltin(const BuiltinListT &...values)
+	{
+		typedef internal::make_int_sequence<sizeof...(BuiltinListT)> int_seq_type;
+		set(int_seq_type(), values...);
+		return;
+	}
+	
+	OSL_INLINE explicit  
+	WideBuiltin(const value_type & uniformValue) 
+	{
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			OSL_INTEL_PRAGMA("ivdep")
+			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			for(int i = 0; i < WidthT; ++i)
+			{
+				data[i] = uniformValue;
+			}
+		}
+	}
+	
+	
+	
+	OSL_INLINE BuiltinT 
+	get(int index) const 
+	{
+		return data[index];
+	}	
+	
+	void dump(const char *name) const
+	{
+		if (name != nullptr) {
+			std::cout << name << " = ";
+		}
+		std::cout << "{";				
+		for(int i=0; i < WidthT; ++i)
+		{
+			std::cout << data[i];
+			if (i < (WidthT-1))
+				std::cout << ",";
+				
+		}
+		std::cout << "}" << std::endl;
+	}
+};
+
+
+
+
 
 // Specializations
 template <int WidthT>
@@ -255,6 +337,7 @@ struct Wide<TransformationPtr, WidthT> : public WideBuiltin<TransformationPtr, W
 template <int WidthT>
 struct Wide<Vec3, WidthT>
 {	
+	typedef Vec3 value_type;
 	static constexpr int width = WidthT; 
 	float x[WidthT];
 	float y[WidthT];
@@ -286,6 +369,25 @@ struct Wide<Vec3, WidthT>
 		}
 	}
 	
+	OSL_INLINE void 
+	blendin(WideMask<WidthT> mask, const value_type & value) 
+	{
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			OSL_INTEL_PRAGMA("ivdep")
+			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			for(int i = 0; i < WidthT; ++i)
+			{
+				if (mask[i]) {
+					x[i] = value.x;
+					y[i] = value.y;
+					z[i] = value.z;
+				}
+			}
+		}
+	}
+	
+	
 protected:
 	template<int HeadIndexT>
 	OSL_INLINE void 
@@ -305,6 +407,8 @@ protected:
 public:
 	
 	Wide() = default;
+	// We want to avoid accidentially copying these when the intent was to just have
+	// a reference
 	Wide(const Wide &other) = delete;
 
 	template<typename... Vec3ListT, typename = internal::enable_if_type<(sizeof...(Vec3ListT) == WidthT)> >
@@ -362,6 +466,7 @@ public:
 template <int WidthT>
 struct Wide<Color3, WidthT>
 {
+	typedef Color3 value_type;	
     static constexpr int width = WidthT;
     float x[WidthT];
     float y[WidthT];
@@ -393,6 +498,24 @@ struct Wide<Color3, WidthT>
 		}
 	}
     
+	OSL_INLINE void 
+	blendin(WideMask<WidthT> mask, const value_type & value) 
+	{
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			OSL_INTEL_PRAGMA("ivdep")
+			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			for(int i = 0; i < WidthT; ++i)
+			{
+				if (mask[i]) {
+					x[i] = value.x;
+					y[i] = value.y;
+					z[i] = value.z;
+				}
+			}
+		}
+	}
+	
 protected:
     template<int HeadIndexT>
     OSL_INLINE void
@@ -469,6 +592,7 @@ public:
 template <int WidthT>
 struct Wide<Matrix44, WidthT>
 {	
+	typedef Matrix44 value_type;
 	static constexpr int width = WidthT; 
 	Wide<float, WidthT> x[4][4];
 	
@@ -524,6 +648,38 @@ struct Wide<Matrix44, WidthT>
 		}
 	}
 	
+	OSL_INLINE void 
+	blendin(WideMask<WidthT> mask, const value_type & value) 
+	{
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			OSL_INTEL_PRAGMA("ivdep")
+			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			for(int i = 0; i < WidthT; ++i)
+			{
+				if (mask[i]) {
+					x[0][0].set(i, value.x[0][0]);
+					x[0][1].set(i, value.x[0][1]);
+					x[0][2].set(i, value.x[0][2]);
+					x[0][3].set(i, value.x[0][3]);
+					x[1][0].set(i, value.x[1][0]);
+					x[1][1].set(i, value.x[1][1]);
+					x[1][2].set(i, value.x[1][2]);
+					x[1][3].set(i, value.x[1][3]);
+					x[2][0].set(i, value.x[2][0]);
+					x[2][1].set(i, value.x[2][1]);
+					x[2][2].set(i, value.x[2][2]);
+					x[2][3].set(i, value.x[2][3]);
+					x[3][0].set(i, value.x[3][0]);
+					x[3][1].set(i, value.x[3][1]);
+					x[3][2].set(i, value.x[3][2]);
+					x[3][3].set(i, value.x[3][3]);
+				}
+			}
+		}
+	}
+	
+	
 	OSL_INLINE Matrix44 
 	get(int index) const 
 	{
@@ -566,6 +722,24 @@ struct Wide<Dual2<float>, WidthT>
 					x[i] = other.x.get(i);
 					dx[i] = other.dx.get(i);
 					dy[i] = other.dy.get(i);
+				}
+			}
+		}
+	}
+
+	OSL_INLINE void 
+	blendin(WideMask<WidthT> mask, const value_type & value) 
+	{
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			OSL_INTEL_PRAGMA("ivdep")
+			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			for(int i = 0; i < WidthT; ++i)
+			{
+				if (mask[i]) {
+					x[i] = value.x;
+					dx[i] = value.dx;
+					dy[i] = value.dy;
 				}
 			}
 		}
@@ -644,6 +818,25 @@ struct Wide<Dual2<Vec3>, WidthT>
 			}
 		}
 	}
+	
+	OSL_INLINE void 
+	blendin(WideMask<WidthT> mask, const value_type & value) 
+	{
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			OSL_INTEL_PRAGMA("ivdep")
+			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			for(int i = 0; i < WidthT; ++i)
+			{
+				if (mask[i]) {
+					x.set(i, value.x;
+					dx.set(i, value.dx;
+					dy.set(i, value.dy;
+				}
+			}
+		}
+	}
+	
 	
 protected:
 	template<int HeadIndexT>

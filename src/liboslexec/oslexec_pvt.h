@@ -1750,6 +1750,12 @@ public:
                                     int array_lookup, int index,
                                     TypeDesc attr_type, void *attr_dest, Mask mask);
 
+    bool osl_get_attribute_batched_uniform (ShaderGlobalsBatch *sgb, void *objdata, 
+    								int dest_derivs,
+                                    ustring obj_name, ustring attr_name,
+                                    int array_lookup, int index,
+                                    TypeDesc attr_type, void *attr_dest);
+    
     PerThreadInfo *thread_info () const { return m_threadinfo; }
 
     TextureSystem::Perthread *texture_thread_info () const {

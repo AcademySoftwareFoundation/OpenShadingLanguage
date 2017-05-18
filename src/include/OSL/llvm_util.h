@@ -258,6 +258,7 @@ public:
     llvm::PointerType *type_string() { return m_llvm_type_char_ptr; }
     llvm::PointerType *type_ustring_ptr() const { return m_llvm_type_ustring_ptr; }
     llvm::PointerType *type_char_ptr() const { return m_llvm_type_char_ptr; }
+    llvm::PointerType *type_bool_ptr() const { return m_llvm_type_bool_ptr; }
     llvm::PointerType *type_int_ptr() const { return m_llvm_type_int_ptr; }
     llvm::PointerType *type_float_ptr() const { return m_llvm_type_float_ptr; }
     llvm::PointerType *type_triple_ptr() const { return m_llvm_type_triple_ptr; }
@@ -624,6 +625,7 @@ private:
     llvm::PointerType *m_llvm_type_void_ptr;
     llvm::PointerType *m_llvm_type_ustring_ptr;
     llvm::PointerType *m_llvm_type_char_ptr;
+    llvm::PointerType *m_llvm_type_bool_ptr;
     llvm::PointerType *m_llvm_type_int_ptr;
     llvm::PointerType *m_llvm_type_float_ptr;
     llvm::PointerType *m_llvm_type_triple_ptr;

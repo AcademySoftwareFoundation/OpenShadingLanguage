@@ -30,6 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <map>
 #include <memory>
+#include <unordered_set>
 #include <unordered_map>
 #include <OpenImageIO/ustring.h>
 #include "OSL/oslexec.h"
@@ -58,16 +59,29 @@ public:
 							 ustring from);
 	virtual bool get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
 									 ustring to, float time);
+	
+	virtual bool is_attribute_uniform(ustring object, ustring name);
+	
     virtual Mask get_array_attribute (ShaderGlobalsBatch *sgb, bool derivatives,
                                       ustring object, TypeDesc type, ustring name,
-                                      int index, void *val, Mask mask);
+                                      int index, void *wide_val, Mask mask);
+    
     virtual Mask get_attribute (ShaderGlobalsBatch *sgb, bool derivatives, ustring object,
-                                TypeDesc type, ustring name, void *val, Mask mask);
+                                TypeDesc type, ustring name, void *wide_val, Mask mask);
+
+    virtual bool get_array_attribute_uniform (ShaderGlobalsBatch *sgb, bool derivatives,
+                                      ustring object, TypeDesc type, ustring name,
+                                      int index, void *val);
+    
+    virtual bool get_attribute_uniform (ShaderGlobalsBatch *sgb, bool derivatives, ustring object,
+                                TypeDesc type, ustring name, void *val);
     
     virtual Mask get_userdata (bool derivatives, ustring name, TypeDesc type,
-    						   ShaderGlobalsBatch *sgb, void *val);    
+    						   ShaderGlobalsBatch *sgb, void *wide_val, Mask mask);    
 private:
 	SimpleRenderer &m_sr;
+	std::unordered_set<ustring, ustringHash> m_uniform_objects;
+	std::unordered_set<ustring, ustringHash> m_uniform_attributes;
 };
 
 class SimpleRenderer : public RendererServices

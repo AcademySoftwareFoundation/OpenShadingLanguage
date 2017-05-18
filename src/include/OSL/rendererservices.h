@@ -622,6 +622,7 @@ public:
     /// Knowing the context may help this go faster.
     virtual TexturePerthread * get_texture_perthread (ShadingContext *context=NULL);
 
+#endif
     /// Filtered 2D texture lookup for a single point.
     ///
     /// s,t are the texture coordinates; dsdx, dtdx, dsdy, and dtdy are
@@ -648,13 +649,14 @@ public:
     /// messages (in case of failure, when the function returns false) will
     /// be stored there, leaving it up to the caller/shader to handle the
     /// error.
-    virtual bool texture (ustring filename, TextureHandle *texture_handle,
+    virtual Mask texture (ustring filename, TextureHandle *texture_handle,
                           TexturePerthread *texture_thread_info,
-                          TextureOpt &options, ShaderGlobals *sg,
+                          TextureOpt &options, ShaderGlobalsBatch *sgb,
                           float s, float t, float dsdx, float dtdx,
                           float dsdy, float dtdy, int nchannels,
                           float *result, float *dresultds, float *dresultdt,
-                          ustring *errormessage);
+                          ustring *errormessage, Mask mask);
+#if 0
     // Deprecated version, with no errormessage parameter. This will
     // eventually disappear.
     virtual bool texture (ustring filename, TextureHandle *texture_handle,
@@ -745,6 +747,8 @@ public:
                               int nchannels, float *result,
                               float *dresultds, float *dresultdt);
 
+#endif
+
     /// Get information about the given texture.  Return true if found
     /// and the data has been put in *data.  Return false if the texture
     /// doesn't exist, doesn't have the requested data, if the data
@@ -761,13 +765,22 @@ public:
     /// Note to renderers: if sg is NULL, that means get_texture_info is
     /// being called speculatively by the runtime optimizer, and it doesn't
     /// know which object the shader will be run on.
-    virtual bool get_texture_info (ShaderGlobals *sg, ustring filename,
-                                   TextureHandle *texture_handle,
+    virtual Mask get_texture_info (ShaderGlobalsBatch *sgb,
+                                   const Wide<ustring>& filename,
+                                   // We do not need to support texture handle for varying data.
                                    int subimage,
                                    ustring dataname, TypeDesc datatype,
-                                   void *data);
+                                   void *data,
+                                   Mask mask);
+
+    virtual bool get_texture_info_uniform (ShaderGlobalsBatch *sgb, ustring filename,
+                                           TextureHandle *texture_handle,
+                                           int subimage,
+                                           ustring dataname, TypeDesc datatype,
+                                           void *data);
 
 
+#if 0
     /// Lookup nearest points in a point cloud. It will search for
     /// points around the given center within the specified radius. A
     /// list of indices is returned so the programmer can later retrieve
@@ -825,10 +838,12 @@ public:
                              TypeDesc type, void *val, bool derivatives) {
         return false;
     }
+#endif
 
     /// Return a pointer to the texture system (if available).
     virtual TextureSystem *texturesys () const;
 
+#if 0
     /// Options we use for noise calls.
     struct NoiseOpt {
         int anisotropic;

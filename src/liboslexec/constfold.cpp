@@ -2321,6 +2321,7 @@ DECLFOLDER(constfold_getattribute)
 
 DECLFOLDER(constfold_gettextureinfo)
 {
+    return 0;
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol &Result (*rop.inst()->argsymbol(op.firstarg()+0));
     Symbol &Filename (*rop.inst()->argsymbol(op.firstarg()+1));

@@ -218,6 +218,7 @@ struct AttributeNeeded {
 
 // Handy re-casting macros
 #define USTR(cstr) (*((ustring *)&cstr))
+#define WUSTR(cstr) (*(reinterpret_cast<Wide<ustring> *>(cstr)))
 #define MAT(m) (*(Matrix44 *)m)
 #define WMAT(m) (*(Wide<Matrix44> *)m)
 #define W4MAT(m) (*(Wide<Matrix44, 4> *)m)

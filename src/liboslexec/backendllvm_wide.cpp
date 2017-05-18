@@ -1046,7 +1046,6 @@ std::cout << "requires_masking_by_op_index " << op_index << std::endl;
 		}    			
 	}
 
-
     std::cout << "symbolsWrittenToByVaryingGetAttribute begin" << std::endl;
     for(const Symbol *s: symbolsWrittenToByVaryingGetAttribute) {
         std::cout << s->name() << std::endl;
@@ -1492,9 +1491,9 @@ BackendLLVMWide::llvm_load_constant_value (const Symbol& sym,
     if (elementType.is_string()) {
         const ustring *val = (const ustring *)sym.data();
     	if (op_is_uniform) {
-    		return ll.constant (val[arrayindex]);
+            return ll.constant (val[arrayindex]);
     	} else {
-            return ll.wide_constant (val[arrayindex]);    		
+            return ll.wide_constant (val[arrayindex]);
     	}
     }
 

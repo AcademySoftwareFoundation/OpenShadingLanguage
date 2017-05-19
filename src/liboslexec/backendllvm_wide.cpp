@@ -1043,6 +1043,18 @@ BackendLLVMWide::llvm_get_pointer (const Symbol& sym, int deriv,
 }
 
 llvm::Value *
+BackendLLVMWide::llvm_alloca_and_widen_value(const Symbol& sym, int deriv)
+{
+    ASSERT(isSymbolUniform(sym) == true);
+    TypeDesc symType = sym.typespec().simpletype();
+    ASSERT(symType.is_unknown() == false);
+    llvm::Value* widePtr = ll.wide_op_alloca(symType);
+    llvm::Value* wideValue = ll.widen_value(llvm_load_value(sym, deriv));
+    ll.op_store(wideValue, widePtr);
+    return widePtr;
+}
+
+llvm::Value *
 BackendLLVMWide::llvm_load_value (const Symbol& sym, int deriv,
                                    llvm::Value *arrayindex, int component,
                                    TypeDesc cast, bool op_is_uniform)
@@ -1181,12 +1193,15 @@ BackendLLVMWide::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
             result = ll.widen_value(result);    		    		
     	} else if (ll.llvm_typeof(result) ==  ll.type_int()) {
             result = ll.widen_value(result);    		    		
-    	} else {
+        } else if (ll.llvm_typeof(result) ==  (llvm::Type*)ll.type_string()) {
+            result = ll.widen_value(result);
+        } else {
         	ASSERT((ll.llvm_typeof(result) ==  ll.type_wide_float()) ||
         		   (ll.llvm_typeof(result) ==  ll.type_wide_int()) ||
         		   (ll.llvm_typeof(result) ==  ll.type_wide_triple()) ||
-        		   (ll.llvm_typeof(result) ==  ll.type_wide_bool()));
-    	}
+                   (ll.llvm_typeof(result) ==  ll.type_wide_string()) ||
+                   (ll.llvm_typeof(result) ==  ll.type_wide_bool()));
+        }
     }
 
     return result;

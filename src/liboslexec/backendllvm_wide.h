@@ -95,6 +95,11 @@ public:
     llvm::Value *llvm_get_pointer (const Symbol& sym, int deriv=0,
                                    llvm::Value *arrayindex=NULL);
 
+    /// Allocate a new memory location to store a wide copy of the value
+    /// in sym. Optionally pass in the deriv to create wide copy of the deriv.
+    /// XXX lfeng: should we alloca and widen once for all base data and deriv values?
+    llvm::Value *llvm_alloca_and_widen_value(const Symbol& sym, int deriv=0);
+
     /// Return the llvm::Value* corresponding to the given element
     /// value, with derivative (0=value, 1=dx, 2=dy), array index (NULL
     /// if it's not an array), and component (x=0 or scalar, y=1, z=2).

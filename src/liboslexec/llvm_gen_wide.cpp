@@ -2864,9 +2864,38 @@ LLVMGEN (llvm_gen_texture)
         rop.generated_texture_call(true);
     }
 
+    // check S & T are not uniform
+
+    llvm::Value* wideS = nullptr;
+    llvm::Value* wideSD1 = nullptr;
+    llvm::Value* wideSD2 = nullptr;
+    llvm::Value* wideT = nullptr;
+    llvm::Value* wideTD1 = nullptr;
+    llvm::Value* wideTD2 = nullptr;
+
+    if (rop.isSymbolUniform(S)) {
+        wideS = rop.ll.void_ptr(rop.llvm_alloca_and_widen_value(S, 0));
+        wideSD1 = rop.ll.void_ptr(rop.llvm_alloca_and_widen_value(S, 1));
+        wideSD2 = rop.ll.void_ptr(rop.llvm_alloca_and_widen_value(S, 2));
+    }
+    else {
+        wideS = rop.llvm_void_ptr(S, 0);
+        wideSD1 = rop.llvm_void_ptr(S, 1);
+        wideSD2 = rop.llvm_void_ptr(S, 2);
+    }
+    if (rop.isSymbolUniform(T)) {
+        wideT = rop.ll.void_ptr(rop.llvm_alloca_and_widen_value(S, 0));
+        wideTD1 = rop.ll.void_ptr(rop.llvm_alloca_and_widen_value(S, 1));
+        wideTD2 = rop.ll.void_ptr(rop.llvm_alloca_and_widen_value(S, 2));
+    }
+    else {
+        wideT = rop.llvm_void_ptr(T);
+        wideTD1 = rop.llvm_void_ptr(T, 1);
+        wideTD2 = rop.llvm_void_ptr(T, 2);
+    }
     args.push_back (opt);
-    args.push_back (rop.llvm_void_ptr (S));
-    args.push_back (rop.llvm_void_ptr (T));
+    args.push_back (wideS);
+    args.push_back (wideT);
     if (user_derivs) {
         args.push_back (rop.llvm_void_ptr (*rop.opargsym (op, 4)));
         args.push_back (rop.llvm_void_ptr (*rop.opargsym (op, 5)));
@@ -2874,10 +2903,10 @@ LLVMGEN (llvm_gen_texture)
         args.push_back (rop.llvm_void_ptr (*rop.opargsym (op, 7)));
     } else {
         // Auto derivs of S and T
-        args.push_back (rop.llvm_void_ptr (S, 1));
-        args.push_back (rop.llvm_void_ptr (T, 1));
-        args.push_back (rop.llvm_void_ptr (S, 2));
-        args.push_back (rop.llvm_void_ptr (T, 2));
+        args.push_back (wideSD1);
+        args.push_back (wideTD1);
+        args.push_back (wideSD2);
+        args.push_back (wideTD2);
     }
     args.push_back (rop.ll.constant (nchans));
     args.push_back (rop.ll.void_ptr (rop.llvm_get_pointer (Result, 0)));

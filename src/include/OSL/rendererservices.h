@@ -635,18 +635,22 @@ public:
     /// error.
     virtual Mask texture_uniform (ustring filename, TextureHandle *texture_handle,
                                   TexturePerthread *texture_thread_info,
-                                  TextureOpt &options, ShaderGlobalsBatch *sgb,
-                                  Wide<float> s, Wide<float> t, Wide<float> dsdx, Wide<float> dtdx,
-                                  Wide<float> dsdy, Wide<float> dtdy, int nchannels,
+                                  const TextureOpt &options, ShaderGlobalsBatch *sgb,
+                                  const Wide<float>& s, const Wide<float>& t,
+                                  const Wide<float>& dsdx, const Wide<float>& dtdx,
+                                  const Wide<float>& dsdy, const Wide<float>& dtdy,
+                                  int nchannels,
                                   void* result, void* dresultds, void* dresultdt,
                                   void* alpha, void* dalphadx, void* dalphady,
                                   ustring *errormessage, Mask mask);
 
     virtual Mask texture (const Wide<ustring>& filename,
                           TexturePerthread *texture_thread_info,
-                          TextureOpt &options, ShaderGlobalsBatch *sgb,
-                          Wide<float> s, Wide<float> t, Wide<float> dsdx, Wide<float> dtdx,
-                          Wide<float> dsdy, Wide<float> dtdy, int nchannels,
+                          const TextureOpt &options, ShaderGlobalsBatch *sgb,
+                          const Wide<float>& s, const Wide<float>& t,
+                          const Wide<float>& dsdx, const Wide<float>& dtdx,
+                          const Wide<float>& dsdy, const Wide<float>& dtdy,
+                          int nchannels,
                           void* result, void* dresultds, void* dresultdt,
                           void* alpha, void* dalphadx, void* dalphady,
                           ustring *errormessage, Mask mask);

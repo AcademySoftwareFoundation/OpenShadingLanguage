@@ -159,6 +159,9 @@ public:
     /// reference-counted pointer to *this.
     ref append (ref &x) { append (x.get()); return this; }
 
+    /// Detatch any 'next' nodes.
+    void detach_next () { m_next.reset(); }
+
     /// Concatenate ASTNode sequences A and B, returning a raw pointer to
     /// the concatenated sequence.  This is robust to either A or B or
     /// both being NULL.
@@ -289,6 +292,11 @@ protected:
     /// Type check all the children of this node.
     ///
     void typecheck_children (TypeSpec expected = TypeSpec());
+
+    /// Helper for check_arglist: simple case of checking a single arg type
+    /// agaisnt the front of the formals list (which will be advanced).
+    bool check_simple_arg (const TypeSpec &argtype,
+                           const char * &formals, bool coerce);
 
     /// Type check a list (whose head is given by 'arg' against the list
     /// of expected types given in encoded form by 'formals'.
@@ -731,9 +739,7 @@ public:
 class ASTunary_expression : public ASTNode
 {
 public:
-    ASTunary_expression (OSLCompilerImpl *comp, int op, ASTNode *expr)
-        : ASTNode (unary_expression_node, comp, op, expr)
-    { }
+    ASTunary_expression (OSLCompilerImpl *comp, int op, ASTNode *expr);
 
     const char *nodetypename () const { return "unary_expression"; }
     const char *childname (size_t i) const;
@@ -743,6 +749,8 @@ public:
     Symbol *codegen (Symbol *dest = NULL);
 
     ref expr () const { return child (0); }
+private:
+    FunctionSymbol *m_function_overload = nullptr;
 };
 
 
@@ -751,9 +759,7 @@ class ASTbinary_expression : public ASTNode
 {
 public:
     ASTbinary_expression (OSLCompilerImpl *comp, Operator op,
-                          ASTNode *left, ASTNode *right)
-        : ASTNode (binary_expression_node, comp, op, left, right)
-    { }
+                          ASTNode *left, ASTNode *right);
 
     const char *nodetypename () const { return "binary_expression"; }
     const char *childname (size_t i) const;
@@ -765,6 +771,8 @@ public:
     ref left () const { return child (0); }
     ref right () const { return child (1); }
 private:
+    FunctionSymbol *m_function_overload = nullptr;
+
     // Special code generation for short-circuiting logical ops
     Symbol *codegen_logic (Symbol *dest);
 };
@@ -853,7 +861,8 @@ public:
 class ASTfunction_call : public ASTNode
 {
 public:
-    ASTfunction_call (OSLCompilerImpl *comp, ustring name, ASTNode *args);
+    ASTfunction_call (OSLCompilerImpl *comp, ustring name, ASTNode *args,
+                      FunctionSymbol *funcsym = nullptr);
     const char *nodetypename () const { return "function_call"; }
     const char *childname (size_t i) const;
     const char *opname () const;

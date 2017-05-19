@@ -61,8 +61,8 @@ Language Specification
 Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
-\date{{\large Date: 6 Feb 2017 \\
- (with corrections, 12 May 2017)
+\date{{\large Date: 16 May 2017 \\
+% (with corrections, 12 May 2017)
 }
 \bigskip
 \bigskip
@@ -886,7 +886,7 @@ defined by the compiler:
 \end{tabular}
 
 
-\chapter{Gross syntax, shader types, parameters, functions}
+\chapter{Gross syntax, shader types, parameters}
 \label{chap:grosssyntax}
 
 The overall structure of a shader is as follows:
@@ -1336,48 +1336,6 @@ if a \qkw{degrees} variable is passed as the argument to {\cf cos}).
 
 
 \newpage
-\section{Functions}
-\label{sec:functions}
-\index{functions!declarations}
-
-You may define functions much like in C or C++.
-
-\begin{quote}
-\em
-return-type ~ function-name ~ {\rm\cf (} optional-parameters {\rm\cf )} \\
-\rm
-{\cf \{ } \\
-\em
-\spc statements
-
-{\cf \} }
-\end{quote}
-
-Parameters to functions are similar to shader parameters, except that
-they do not permit initializers.  A function call must pass values for
-all formal parameters.  Function parameters in \langname are all
-\emph{passed by reference}, and are read-only within the body of the
-function unless they are also designated as {\cf output} (in the same
-manner as output shader parameters).
-
-Like for shaders, statements inside functions may be actual executions
-(assignments, function call, etc.), local variable declarations (visible
-only from within the body of the function), or local function
-declarations (callable only from within the body of the function).
-
-The return type may be any simple data type, a {\cf struct}, or a {\cf
-  closure}.  Functions may not return arrays.  The return type may be
-{\cf void}, indicating that the function does not return a value (and
-should not contain a {\cf return} statement).  A {\cf return} statement
-inside the body of the function will halt execution of the function at
-that point, and designates the value that will be returned (if not a
-{\cf void} function).
-
-Functions may be \emph{overloaded}.  That is, multiple functions may be
-defined to have the same name, as long as they have differently-typed
-parameters, so that when the function is called the list of arguments
-can disambiguate which version of the function is desired.
-
 \section{Public methods}
 \label{sec:publicmethods}
 \indexapi{public}
@@ -2632,7 +2590,10 @@ altogether, and the {\cf continue} statement skip to the end of the body
 and proceeds to the next iteration of the loop.
 
 \section{Functions}
-\label{sec:syntax:functions}
+\label{sec:functions}
+
+\subsection{Function calls}
+\label{sec:syntax:functioncalls}
 \index{function calls}
 
 Function calls are very similar to C and related programming languages:
@@ -2651,8 +2612,111 @@ will not be noticeably different from C-style ``pass by value''
 semantics, except if you pass the same variable as two separate
 arguments to a function that modifies an argument's value.
 
-Function definitions are described in detail in Section~\ref{sec:functions}.
 
+\subsection{Function definitions}
+\label{sec:syntax:functiondefinitions}
+\index{functions!definitions}
+
+You may define functions much like in C or C++.
+
+\begin{quote}
+\em
+return-type ~ function-name ~ {\rm\cf (} optional-parameters {\rm\cf )} \\
+\rm
+{\cf \{ } \\
+\em
+\spc statements
+
+{\cf \} }
+\end{quote}
+
+Parameters to functions are similar to shader parameters, except that
+they do not permit initializers.  A function call must pass values for
+all formal parameters.  Function parameters in \langname are all
+\emph{passed by reference}, and are read-only within the body of the
+function unless they are also designated as {\cf output} (in the same
+manner as output shader parameters).
+
+Like for shaders, statements inside functions may be actual executions
+(assignments, function call, etc.), local variable declarations (visible
+only from within the body of the function), or local function
+declarations (callable only from within the body of the function).
+
+The return type may be any simple data type, a {\cf struct}, or a {\cf
+  closure}.  Functions may not return arrays.  The return type may be
+{\cf void}, indicating that the function does not return a value (and
+should not contain a {\cf return} statement).  A {\cf return} statement
+inside the body of the function will halt execution of the function at
+that point, and designates the value that will be returned (if not a
+{\cf void} function).
+
+Functions may be \emph{overloaded}.  That is, multiple functions may be
+defined to have the same name, as long as they have differently-typed
+parameters, so that when the function is called the list of arguments
+can disambiguate which version of the function is desired.
+
+\subsection{Operator overloading}
+\label{sec:syntax:operatoroverloading}
+\index{operator overloading}
+
+\NEW  % 1.9
+OSL permits \emph{operator overloading}, which is the practice of providing
+a function that will be called when you use an operator like {\cf +} or
+{\cf *}. This is especially handy when you use {\cf struct} to define
+mathematical types and wish for the usual math operators to work with them.
+Here is a typical example, which also shows the special naming convention
+that allows operator overloading:
+
+\begin{code}
+    struct vector4 {
+        float x, y, z, w;
+    };
+
+    vector4 __operator__add__ (vector4 a, vector4 b) {
+        return vector4 (a.x+b.x, a.y+b.y, a.z+b.z, a.w+b.w);
+    }
+
+    shader test ()
+    {
+        vector4 a = vector4 (.2, .3, .4, .5);
+        vector4 b = vector4 (1, 2, 3, 4);
+
+        vector4 c = a + b;   // Will call __operator__add__(vector4,vector4)
+        printf ("a+b = %g %g %g %g\n", c.x, c.y, c.z, c.w);
+    }
+\end{code}
+
+\noindent The full list of these special function names is as follows (in
+order of decreasing operator precedence):
+
+\smallskip
+
+\begin{tabular}{ p{0.5in} p{2in} p{1.75in}}
+%op & overload function name & ~ \\
+%\hline
+{\cf \bfseries -} & {\cf __operator__neg__} & unary negation \\
+{\cf \bfseries \textasciitilde} & {\cf __operator__compl__} & unary bitwise complement \\
+{\cf \bfseries !} & {\cf __operator__not__} & unary boolean `not' \\[1.5ex]
+{\cf \bfseries *} & {\cf __operator__mul__} &  \\
+{\cf \bfseries /} & {\cf __operator__div__} &  \\
+{\cf \bfseries \%} & {\cf __operator__mod__} &  \\
+{\cf \bfseries +} & {\cf __operator__add__} &  \\
+{\cf \bfseries -} & {\cf __operator__sub__} &  \\[1.5ex]
+{\cf \bfseries <<} & {\cf __operator__shl__} & \\
+{\cf \bfseries >>} & {\cf __operator__shr__} & \\[1.5ex]
+{\cf \bfseries <} & {\cf __operator__lt__} &  \\
+{\cf \bfseries <=} & {\cf __operator__le__} &  \\
+{\cf \bfseries >} & {\cf __operator__gt__} &  \\
+{\cf \bfseries >=} & {\cf __operator__ge__} & \\
+{\cf \bfseries ==} & {\cf __operator__eq__} & \\
+{\cf \bfseries !=} & {\cf __operator__ne__} & \\[1.5ex]
+{\cf \bfseries \&} & {\cf __operator__bitand__} & \\
+{\cf \bfseries \textasciicircum} & {\cf __operator__xor__} & \\
+{\cf \bfseries |} & {\cf __operator__bitor__} & \\
+%{\cf \bfseries \&\&} & {\cf __operator__and__} & boolean and \\
+%{\cf \bfseries ||} & {\cf __operator__or__} & boolean or \\
+%\hline
+\end{tabular}
 
 
 \section{Global variables}

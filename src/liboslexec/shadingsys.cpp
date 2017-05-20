@@ -473,6 +473,7 @@ ShadingSystem::optimize_group (ShaderGroup *group,
 
 
 static TypeDesc TypeFloatArray2 (TypeDesc::FLOAT, 2);
+static TypeDesc TypeFloatArray3 (TypeDesc::FLOAT, 3);
 
 
 
@@ -532,6 +533,14 @@ ShadingSystem::convert_value (void *dst, TypeDesc dsttype,
             return true;
         }
         return false; // Unsupported conversion
+    }
+
+    // float[3] -> triple
+    if ((srctype == TypeFloatArray3 && equivalent(dsttype, TypeDesc::TypePoint)) ||
+        (dsttype == TypeFloatArray3 && equivalent(srctype, TypeDesc::TypePoint))) {
+        if (dst && src)
+            memcpy (dst, src, dsttype.size());
+        return true;
     }
 
     // float[2] -> triple

@@ -1177,7 +1177,7 @@ BackendLLVMWide::llvm_alloca (const TypeSpec &type, bool derivs, bool is_uniform
 	std::cout << "llvm_alloca " << name ;
     TypeDesc t = llvm_typedesc (type);
     int n = derivs ? 3 : 1;
-    std::cout << "n=" << n << " t.size()=" << t.size();
+    std::cout << " n=" << n << " t.size()=" << t.size();
     m_llvm_local_mem += t.size() * n;
     if (is_uniform)
     {

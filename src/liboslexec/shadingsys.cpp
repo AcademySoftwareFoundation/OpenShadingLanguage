@@ -3512,6 +3512,7 @@ OSL_SHADEOP int osl_get_attribute_batched(void *sgb_,
                                                        array_lookup, index,
                                                        *(const TypeDesc *)attr_type,
                                                        wide_attr_dest, mask);
+    
     return retVal.value();
 }
 
@@ -3586,11 +3587,11 @@ osl_bind_interpolated_param_wide (void *sgb_, const void *name, long long type,
     if (status == 0) {
         // First time retrieving this userdata
         ShaderGlobalsBatch *sgb   = reinterpret_cast<ShaderGlobalsBatch *>(sgb_);  
-        Mask mask(true);
-        Mask foundUserData = sgb->uniform().renderer->batched()->get_userdata (userdata_has_derivs, USTR(name),
-                                              TYPEDESC(type),
+        MaskedDataRef userDest(TYPEDESC(type), userdata_has_derivs, Mask(true), userdata_data);
+        Mask foundUserData = sgb->uniform().renderer->batched()->get_userdata (USTR(name),
+                                              
         // printf ("Binding %s %s : index %d, ok = %d\n", name,
-                                              sgb, userdata_data, mask);
+                                              sgb, userDest);
         //         TYPEDESC(type).c_str(),userdata_index, ok);
         
         *userdata_initialized = (1<<31) | foundUserData.value();

@@ -45,6 +45,7 @@ class SimpleRenderer;
 
 class BatchedSimpleRenderer : public BatchedRendererServices
 {
+	friend class SimpleRenderer;
 public:
 	BatchedSimpleRenderer(SimpleRenderer &sr);
 	virtual ~BatchedSimpleRenderer();
@@ -62,22 +63,23 @@ public:
 	
 	virtual bool is_attribute_uniform(ustring object, ustring name);
 	
-    virtual Mask get_array_attribute (ShaderGlobalsBatch *sgb, bool derivatives,
-                                      ustring object, TypeDesc type, ustring name,
-                                      int index, void *wide_val, Mask mask);
+    virtual Mask get_array_attribute (ShaderGlobalsBatch *sgb, 
+                                      ustring object, ustring name,
+                                      int index, MaskedDataRef amd);
     
-    virtual Mask get_attribute (ShaderGlobalsBatch *sgb, bool derivatives, ustring object,
-                                TypeDesc type, ustring name, void *wide_val, Mask mask);
+    virtual Mask get_attribute (ShaderGlobalsBatch *sgb, ustring object,
+                                ustring name, MaskedDataRef amd);
 
-    virtual bool get_array_attribute_uniform (ShaderGlobalsBatch *sgb, bool derivatives,
-                                      ustring object, TypeDesc type, ustring name,
-                                      int index, void *val);
     
-    virtual bool get_attribute_uniform (ShaderGlobalsBatch *sgb, bool derivatives, ustring object,
-                                TypeDesc type, ustring name, void *val);
+    virtual bool get_array_attribute_uniform (ShaderGlobalsBatch *sgb, 
+                                      ustring object, ustring name,
+                                      int index, DataRef val);
     
-    virtual Mask get_userdata (bool derivatives, ustring name, TypeDesc type,
-    						   ShaderGlobalsBatch *sgb, void *wide_val, Mask mask);    
+    virtual bool get_attribute_uniform (ShaderGlobalsBatch *sgb, ustring object,
+                                ustring name, DataRef val);
+    
+    virtual Mask get_userdata (ustring name, 
+    						   ShaderGlobalsBatch *sgb, MaskedDataRef val);    
 private:
 	SimpleRenderer &m_sr;
 	std::unordered_set<ustring, ustringHash> m_uniform_objects;
@@ -108,10 +110,14 @@ public:
                                      ustring to, float time);
 
     void name_transform (const char *name, const Transformation &xform);
-
+    
     virtual bool get_array_attribute (ShaderGlobals *sg, bool derivatives, 
                                       ustring object, TypeDesc type, ustring name,
                                       int index, void *val );
+    
+    // Common impl shared with BatchedSimpleRenderer  
+    bool common_get_attribute(ustring object, ustring name, DataRef val);
+    
     virtual bool get_attribute (ShaderGlobals *sg, bool derivatives, ustring object,
                                 TypeDesc type, ustring name, void *val);
     virtual bool get_userdata (bool derivatives, ustring name, TypeDesc type, 
@@ -145,35 +151,22 @@ private:
     // imagine this to be fairly quick, but for a performance-critical
     // renderer, we would encourage benchmarking various methods and
     // alternate data structures.
-    typedef bool (SimpleRenderer::*AttrGetter)(ShaderGlobals *sg, bool derivs,
-                                               ustring object, TypeDesc type,
-                                               ustring name, void *val);
+    typedef bool (SimpleRenderer::*AttrGetter)(ustring object, ustring name, DataRef val);
     typedef std::unordered_map<ustring, AttrGetter, ustringHash> AttrGetterMap;
     AttrGetterMap m_attr_getters;
 
     // Attribute getters
-    bool get_camera_resolution (ShaderGlobals *sg, bool derivs, ustring object,
-                         TypeDesc type, ustring name, void *val);
-    bool get_camera_projection (ShaderGlobals *sg, bool derivs, ustring object,
-                         TypeDesc type, ustring name, void *val);
-    bool get_camera_fov (ShaderGlobals *sg, bool derivs, ustring object,
-                         TypeDesc type, ustring name, void *val);
-    bool get_camera_pixelaspect (ShaderGlobals *sg, bool derivs, ustring object,
-                         TypeDesc type, ustring name, void *val);
-    bool get_camera_clip (ShaderGlobals *sg, bool derivs, ustring object,
-                         TypeDesc type, ustring name, void *val);
-    bool get_camera_clip_near (ShaderGlobals *sg, bool derivs, ustring object,
-                         TypeDesc type, ustring name, void *val);
-    bool get_camera_clip_far (ShaderGlobals *sg, bool derivs, ustring object,
-                         TypeDesc type, ustring name, void *val);
-    bool get_camera_shutter (ShaderGlobals *sg, bool derivs, ustring object,
-                         TypeDesc type, ustring name, void *val);
-    bool get_camera_shutter_open (ShaderGlobals *sg, bool derivs, ustring object,
-                         TypeDesc type, ustring name, void *val);
-    bool get_camera_shutter_close (ShaderGlobals *sg, bool derivs, ustring object,
-                         TypeDesc type, ustring name, void *val);
-    bool get_camera_screen_window (ShaderGlobals *sg, bool derivs, ustring object,
-                         TypeDesc type, ustring name, void *val);
+    bool get_camera_resolution (ustring object, ustring name, DataRef val);
+    bool get_camera_projection (ustring object, ustring name, DataRef val);
+    bool get_camera_fov (ustring object, ustring name, DataRef val);
+    bool get_camera_pixelaspect (ustring object, ustring name, DataRef val);
+    bool get_camera_clip (ustring object, ustring name, DataRef val);
+    bool get_camera_clip_near (ustring object, ustring name, DataRef val);
+    bool get_camera_clip_far (ustring object, ustring name, DataRef val);
+    bool get_camera_shutter (ustring object, ustring name, DataRef val);
+    bool get_camera_shutter_open (ustring object, ustring name, DataRef val);
+    bool get_camera_shutter_close (ustring object, ustring name, DataRef val);
+    bool get_camera_screen_window (ustring object, ustring name, DataRef val);
 
 };
 

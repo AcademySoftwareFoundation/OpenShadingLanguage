@@ -547,16 +547,18 @@ ShadingContext::osl_get_attribute_batched (ShaderGlobalsBatch *sgb, void *objdat
     OIIO::Timer timer;
 #endif
 
+    MaskedDataRef dest(attr_type, dest_derivs, mask, attr_dest);
     Mask success;
     if (array_lookup) {
-        success = batched_renderer()->get_array_attribute(sgb, dest_derivs,
-                                                obj_name, attr_type,
-                                                attr_name, index, attr_dest, mask);
+        success = batched_renderer()->get_array_attribute(sgb, 
+                                                obj_name, 
+                                                attr_name, index, dest);
     }
     else {
-        success = batched_renderer()->get_attribute(sgb, dest_derivs,
-                                          obj_name, attr_type,
-                                          attr_name, attr_dest, mask);
+    	
+        success = batched_renderer()->get_attribute(sgb, 
+                                          obj_name, attr_name,
+                                          dest);
     }
 
 #if 0
@@ -582,16 +584,18 @@ ShadingContext::osl_get_attribute_batched_uniform (ShaderGlobalsBatch *sgb, void
     OIIO::Timer timer;
 #endif
 
+    DataRef dest(attr_type, dest_derivs, attr_dest);
+    
     bool success;
     if (array_lookup) {
-        success = batched_renderer()->get_array_attribute_uniform(sgb, dest_derivs,
-                                                obj_name, attr_type,
-                                                attr_name, index, attr_dest);
+        success = batched_renderer()->get_array_attribute_uniform(sgb, 
+                                                obj_name, 
+                                                attr_name, index, dest);
     }
     else {
-        success = batched_renderer()->get_attribute_uniform(sgb, dest_derivs,
-                                          obj_name, attr_type,
-                                          attr_name, attr_dest);
+        success = batched_renderer()->get_attribute_uniform(sgb, 
+                                          obj_name, 
+                                          attr_name, dest);
     }
 
 #if 0

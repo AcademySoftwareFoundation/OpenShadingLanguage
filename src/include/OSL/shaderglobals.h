@@ -334,7 +334,7 @@ public:
 	
 
 	template<typename T>
-	using  Proxy = WideProxy<T, WidthT>;
+	using  Proxy = LaneProxy<T, WidthT>;
 		
     /// Surface position (and its x & y differentials).
 	OSL_INLINE Proxy<Vec3> P() const { return Proxy<Vec3>(m_vsg.P, m_index); }
@@ -458,7 +458,7 @@ struct alignas(64) ShaderGlobalsBatch
 	
 	OSL_INLINE void 
 	commitVarying() {
-		assert(m_size < maxSize);
+		ASSERT(m_size < maxSize);
 		++m_size;
 	}	
 

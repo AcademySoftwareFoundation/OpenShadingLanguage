@@ -579,33 +579,33 @@ public:
     /// run on. Be robust to this situation, return 'true' (retrieve the
     /// attribute) if you can (known object and attribute name), but
     /// otherwise just fail by returning 'false'.
-    virtual Mask get_attribute (ShaderGlobalsBatch *sgb, bool derivatives,
-                                ustring object, TypeDesc type, ustring name,
-                                void *wide_val, Mask mask) = 0;
+
+    virtual Mask get_attribute (ShaderGlobalsBatch *sgb, 
+                                ustring object, ustring name,
+                                MaskedDataRef val) = 0;
+    
+    /// Similar to get_attribute();  this method will fetch the 'index'
+    /// element of an attribute array.
+    virtual Mask get_array_attribute (ShaderGlobalsBatch *sgb, 
+                                      ustring object,
+                                      ustring name, int index, MaskedDataRef val) = 0;
+
+    virtual bool get_attribute_uniform (ShaderGlobalsBatch *sgb, 
+                                ustring object, ustring name, DataRef val) = 0;
 
     /// Similar to get_attribute();  this method will fetch the 'index'
     /// element of an attribute array.
-    virtual Mask get_array_attribute (ShaderGlobalsBatch *sgb, bool derivatives,
-                                      ustring object, TypeDesc type,
-                                      ustring name, int index, void *wide_val, Mask mask) = 0;
-
-    virtual bool get_attribute_uniform (ShaderGlobalsBatch *sgb, bool derivatives,
-                                ustring object, TypeDesc type, ustring name,
-                                void *val) = 0;
-
-    /// Similar to get_attribute();  this method will fetch the 'index'
-    /// element of an attribute array.
-    virtual bool get_array_attribute_uniform (ShaderGlobalsBatch *sgb, bool derivatives,
-                                      ustring object, TypeDesc type,
-                                      ustring name, int index, void *val) = 0;
+    virtual bool get_array_attribute_uniform (ShaderGlobalsBatch *sgb,
+                                      ustring object,
+                                      ustring name, int index, DataRef val) = 0;
     
     /// Get multiple named user-data from the current object and write them into
     /// 'val'. If derivatives is true, the derivatives should be written into val
     /// as well. It is assumed the results are varying and returns Mask 
     // with its bit set to off if no user-data with the given name and type was
     /// found.
-    virtual Mask get_userdata (bool derivatives, ustring name, TypeDesc type,
-    						   ShaderGlobalsBatch *sgb, void *wide_val, Mask mask) = 0;
+    virtual Mask get_userdata (ustring name, 
+    						   ShaderGlobalsBatch *sgb, MaskedDataRef val) = 0;
 
 #if 0
     

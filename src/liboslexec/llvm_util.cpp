@@ -1717,6 +1717,14 @@ LLVM_Util::test_if_mask_is_non_zero(llvm::Value *mask)
     return op_ne (mask_as_int, zeroConstant);
 }
 
+llvm::Value *
+LLVM_Util::test_mask_lane(llvm::Value *mask, int lane_index)
+{
+	ASSERT(mask->getType() == type_wide_bool());
+	
+	return builder().CreateExtractElement (mask, lane_index);
+}
+
 
 llvm::Value *
 LLVM_Util::widen_value (llvm::Value *val)
@@ -2188,6 +2196,13 @@ LLVM_Util::apply_break_mask_to(llvm::Value *existing_mask)
 		}
 	}
 }
+
+bool 
+LLVM_Util::is_mask_stack_empty()
+{
+	return m_mask_stack.empty();
+}
+
 
 void
 LLVM_Util::push_mask_break()

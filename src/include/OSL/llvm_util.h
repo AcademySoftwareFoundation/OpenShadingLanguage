@@ -214,6 +214,7 @@ public:
     void push_mask(llvm::Value *mask, bool negate = false, bool absolute = false);
     void pop_if_mask();
     void pop_loop_mask();
+    bool is_mask_stack_empty();
     
     llvm::Value * current_mask();
     llvm::Value * apply_break_mask_to(llvm::Value *existing_mask);
@@ -376,6 +377,7 @@ public:
     llvm::Value * mask_as_int(llvm::Value *mask);
     llvm::Value * int_as_mask(llvm::Value *value);
     llvm::Value * test_if_mask_is_non_zero(llvm::Value *mask);
+    llvm::Value * test_mask_lane(llvm::Value *mask, int lane_index);
     llvm::Value * widen_value (llvm::Value *val);
     llvm::Value * negate_mask(llvm::Value *mask);
 

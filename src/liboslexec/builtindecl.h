@@ -169,7 +169,7 @@ NOISE_IMPL(cellnoise)
 //NOISE_DERIV_IMPL(cellnoise)
 NOISE_IMPL(noise)
 
-WDECL (osl_printf_batched, "xXs*")
+WDECL (osl_printf_batched, "xXis*")
 WDECL (osl_warning_batched, "xXs*")
 WDECL (osl_error_batched, "xXs*")
 WDECL (osl_get_attribute_batched, "iXiXXiiXXi")

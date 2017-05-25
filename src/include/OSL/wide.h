@@ -46,11 +46,10 @@ typedef const void * TransformationPtr;
 template <int WidthT>
 class WideMask
 {
+public:
     typedef unsigned int value_type;
     static_assert(sizeof(value_type)*8 > WidthT, "unsupported WidthT");
-
-    value_type m_value;
-public:
+	static constexpr int width = WidthT; 
 
     OSL_INLINE WideMask()
     {}
@@ -144,6 +143,8 @@ public:
     {
         m_value = 0;
     }
+private:
+    value_type m_value;
 };
 
 typedef WideMask<SimdLaneCount> Mask;

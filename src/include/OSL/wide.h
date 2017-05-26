@@ -1084,177 +1084,6 @@ private:
 };
 
 
-
-
-
-
-OSL_INLINE void robust_multVecMatrix(const Wide<Matrix44>& wx, const Wide< Imath::Vec3<float> >& wsrc, Wide< Imath::Vec3<float> >& wdst)
-{
-	OSL_INTEL_PRAGMA("forceinline recursive")
-	{
-		//OSL_INTEL_PRAGMA("ivdep")
-		//OSL_INTEL_PRAGMA("novector")
-		//OSL_INTEL_PRAGMA("nounroll")
-		//OSL_INTEL_PRAGMA("novector")
-		OSL_INTEL_PRAGMA("simd vectorlength(Wide<Matrix44>::width)")
-		for(int index=0; index < Wide<Matrix44>::width; ++index)
-		{
-		   const Matrix44 x = wx.get(index);
-		   Imath::Vec3<float> src = wsrc.get(index);
-		   
-		   //std::cout << "----src>" << src << std::endl;
-		   
-		   Imath::Vec3<float> dst;	   
-	
-		   
-		   //robust_multVecMatrix(x, src, dst);
-#if 1
-#if 0
-		   float a = src[0] * x[0][0] + src[1] * x[1][0] + src[2] * x[2][0] + x[3][0];
-		    float b = src[0] * x[0][1] + src[1] * x[1][1] + src[2] * x[2][1] + x[3][1];
-		    float c = src[0] * x[0][2] + src[1] * x[1][2] + src[2] * x[2][2] + x[3][2];
-		    float w = src[0] * x[0][3] + src[1] * x[1][3] + src[2] * x[2][3] + x[3][3];
-#else
-			   float a = src.x * x[0][0] + src.y * x[1][0] + src.z * x[2][0] + x[3][0];
-			    float b = src.x * x[0][1] + src.y * x[1][1] + src.z * x[2][1] + x[3][1];
-			    float c = src.x * x[0][2] + src.y * x[1][2] + src.z * x[2][2] + x[3][2];
-			    float w = src.x * x[0][3] + src.y * x[1][3] + src.z * x[2][3] + x[3][3];
-		    
-#endif
-
-		    if (__builtin_expect(w != 0, 1)) {
-		       dst.x = a / w;
-		       dst.y = b / w;
-		       dst.z = c / w;
-		    } else {
-		       dst.x = 0;
-		       dst.y = 0;
-		       dst.z = 0;
-		    }		   
-#endif
-		    
-		   //std::cout << "----dst>" << dst << std::endl;
-		   
-		   wdst.set(index, dst);
-		   
-		   //Imath::Vec3<float> verify = wdst.get(index);
-		   //std::cout << "---->" << verify << "<-----" << std::endl;
-		}
-	}
-}
-
-OSL_INLINE void
-avoidAliasingMultDirMatrix (const Matrix44 &M, const Vec3 &src, Vec3 &dst)
-{
-	float a = src.x * M[0][0] + src.y * M[1][0] + src.z * M[2][0];
-	float b = src.x * M[0][1] + src.y * M[1][1] + src.z * M[2][1];
-	float c = src.x * M[0][2] + src.y * M[1][2] + src.z * M[2][2];
-
-	dst.x = a;
-	dst.y = b;
-	dst.z = c;
-    
-}
-
-#if 0 // In development, not done 
-/// Multiply a matrix times a direction with derivatives to obtain
-/// a transformed direction with derivatives.
-OSL_INLINE void
-multDirMatrix (const Matrix44 &M, const Wide<Dual2<Vec3>> &win, Wide<Dual2<Vec3>> &wout)
-{   
-	OSL_INTEL_PRAGMA("forceinline recursive")
-	{
-		//OSL_INTEL_PRAGMA("ivdep")
-		//OSL_INTEL_PRAGMA("novector")
-		//OSL_INTEL_PRAGMA("nounroll")
-		//OSL_INTEL_PRAGMA("novector")
-		//OSL_INTEL_PRAGMA("simd vectorlength(Wide<Matrix44>::width)")
-		for(int index=0; index < Wide<Matrix44>::width; ++index)
-		{
-		   const Matrix44 M = win.get(index);
-		   Dual2<Imath::Vec3<float>> src = wsrc.get(index);
-		   
-		   Dual2<Imath::Vec3<float>> dst;	   
-	
-		   avoidAliasingMultDirMatrix(M, src.val(), dst.val());
-		   avoidAliasingMultDirMatrix(M, src.dx(), dst.dx());
-		   avoidAliasingMultDirMatrix(M, src.dy(), dst.dy());
-		   
-		   wout.set(index, dst);
-		}
-	}    
-}
-#endif
-
-
-/// Multiply a matrix times a vector with derivatives to obtain
-/// a transformed vector with derivatives.
-OSL_INLINE void
-robust_multVecMatrix (const Wide<Matrix44> &WM, const Wide<Dual2<Vec3>> &win, Wide<Dual2<Vec3>> &wout)
-{
-	OSL_INTEL_PRAGMA("forceinline recursive")
-	{
-		//OSL_INTEL_PRAGMA("ivdep")
-		//OSL_INTEL_PRAGMA("novector")
-		//OSL_INTEL_PRAGMA("nounroll")
-		//OSL_INTEL_PRAGMA("novector")
-		//OSL_INTEL_PRAGMA("simd vectorlength(Wide<Matrix44>::width)")
-		for(int index=0; index < Wide<Matrix44>::width; ++index)
-		{
-			const Matrix44 M = WM.get(index);			
-			const Dual2<Vec3> in = win.get(index);
-	
-			// Rearrange into a Vec3<Dual2<float> >
-			Imath::Vec3<Dual2<float> > din, dout;
-			for (int i = 0;  i < 3;  ++i)
-				din[i].set (in.val()[i], in.dx()[i], in.dy()[i]);
-		
-#if 0
-			Dual2<float> a = din[0] * M[0][0] + din[1] * M[1][0] + din[2] * M[2][0] + M[3][0];
-			Dual2<float> b = din[0] * M[0][1] + din[1] * M[1][1] + din[2] * M[2][1] + M[3][1];
-			Dual2<float> c = din[0] * M[0][2] + din[1] * M[1][2] + din[2] * M[2][2] + M[3][2];
-			Dual2<float> w = din[0] * M[0][3] + din[1] * M[1][3] + din[2] * M[2][3] + M[3][3];
-#else
-			Dual2<float> a = din.x * M[0][0] + din.y * M[1][0] + din.z * M[2][0] + M[3][0];
-			Dual2<float> b = din.x * M[0][1] + din.y * M[1][1] + din.z * M[2][1] + M[3][1];
-			Dual2<float> c = din.x * M[0][2] + din.y * M[1][2] + din.z * M[2][2] + M[3][2];
-			Dual2<float> w = din.x * M[0][3] + din.y * M[1][3] + din.z * M[2][3] + M[3][3];
-#endif
-			
-		
-			if (w.val() != 0) {
-			   dout.x = a / w;
-			   dout.y = b / w;
-			   dout.z = c / w;
-			} else {
-			   dout.x = 0;
-			   dout.y = 0;
-			   dout.z = 0;
-			}
-		
-			Dual2<Vec3> out;
-			// Rearrange back into Dual2<Vec3>
-#if 0
-			out.set (Vec3 (dout[0].val(), dout[1].val(), dout[2].val()),
-					 Vec3 (dout[0].dx(),  dout[1].dx(),  dout[2].dx()),
-					 Vec3 (dout[0].dy(),  dout[1].dy(),  dout[2].dy()));
-#else
-			out.set (Vec3 (dout.x.val(), dout.y.val(), dout.z.val()),
-					 Vec3 (dout.x.dx(),  dout.y.dx(),  dout.z.dx()),
-					 Vec3 (dout.x.dy(),  dout.y.dy(),  dout.z.dy()));
-#endif
-			
-			wout.set(index, out);
-		   
-		   //Imath::Vec3<float> verify = wdst.get(index);
-		   //std::cout << "---->" << verify << "<-----" << std::endl;
-		}
-	}
-    
-}
-
-
-
 template <typename DataT, int WidthT>
 struct MaskedLaneProxy
 {
@@ -1395,13 +1224,13 @@ private:
 
 
 
-template <typename DataT, int WidthT>
+template <typename DataT, int WidthT = SimdLaneCount>
 struct MaskedAccessor
 {
 	static constexpr int width = WidthT; 
 	
 	explicit OSL_INLINE
-	MaskedAccessor(void *ptr_wide_data, int derivIndex, Mask mask)
+	MaskedAccessor(void *ptr_wide_data, Mask mask, int derivIndex=0)
 	: m_ref_wide_data(reinterpret_cast<Wide<DataT, WidthT> *>(ptr_wide_data)[derivIndex])
 	, m_mask(mask)
 	{}
@@ -1566,7 +1395,7 @@ protected:
    masked_impl(std::false_type) 
    { 
 	   DASSERT(is<DataT>());
-	   return MaskedAccessor<DataT, WidthT>(m_ptr, DerivIndexT, m_mask);
+	   return MaskedAccessor<DataT, WidthT>(m_ptr, m_mask, DerivIndexT);
    }
 
    template<typename DataT, int DerivIndexT>

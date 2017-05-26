@@ -1916,16 +1916,18 @@ LLVMGEN (llvm_gen_transform)
         vectype = TypeDesc::VECTOR;
     else if (op.opname() == "transformn")
         vectype = TypeDesc::NORMAL;
-    llvm::Value *args[8] = { rop.sg_void_ptr(),
+    llvm::Value *args[9] = { rop.sg_void_ptr(),
         rop.llvm_void_ptr(*P),
 		rop.ll.constant(P->has_derivs()),
         rop.llvm_void_ptr(*Result), 
 		rop.ll.constant(Result->has_derivs()),
         rop.llvm_load_value(*From), 
 		rop.llvm_load_value(*To),
-        rop.ll.constant((int)vectype) };
+        rop.ll.constant((int)vectype),
+        rop.ll.mask_as_int(rop.ll.current_mask())};
     RendererServices *rend (rop.shadingsys().renderer());
     if (rend->transform_points (NULL, from, to, 0.0f, NULL, NULL, 0, vectype)) {
+    	ASSERT(0 && "Incomplete");
         // renderer potentially knows about a nonlinear transformation.
         // Note that for the case of non-constant strings, passing empty
         // from & to will make transform_points just tell us if ANY 
@@ -1933,9 +1935,7 @@ LLVMGEN (llvm_gen_transform)
         rop.ll.call_function ("osl_transform_triple_nonlinear", args, 8);
     } else {
         // definitely not a nonlinear transformation
-		// TODO:  switching back to non-wide to figure out uniform vs. varying data
-        rop.ll.call_function ("osl_wide_transform_triple", args, 8);
-        //rop.ll.call_function ("osl_transform_triple", args, 8);
+        rop.ll.call_function ("osl_wide_transform_triple", args, 9);
     }
     return true;
 }

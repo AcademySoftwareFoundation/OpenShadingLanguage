@@ -101,8 +101,8 @@ static ShaderGroupRef shadergroup;
 static std::string archivegroup;
 static int exprcount = 0;
 static bool shadingsys_options_set = false;
-static float sscale = 1, tscale = 1;
-static float soffset = 0, toffset = 0;
+static float uscale = 1, vscale = 1;
+static float uoffset = 0, voffset = 0;
 
 
 
@@ -496,8 +496,10 @@ getargs (int argc, const char *argv[])
                 "--shadeimage", &use_shade_image, "Use shade_image utility",
                 "--noshadeimage %!", &use_shade_image, "Don't use shade_image utility",
                 "--expr %@ %s", &specify_expr, NULL, "Specify an OSL expression to evaluate",
-                "--offsetst %f %f", &soffset, &toffset, "Offset s & t texture coordinates (default: 0 0)",
-                "--scalest %f %f", &sscale, &tscale, "Scale s & t texture lookups (default: 1, 1)",
+                "--offsetuv %f %f", &uoffset, &voffset, "Offset s & t texture coordinates (default: 0 0)",
+                "--offsetst %f %f", &uoffset, &voffset, "", // old name
+                "--scaleuv %f %f", &uscale, &vscale, "Scale s & t texture lookups (default: 1, 1)",
+                "--scalest %f %f", &uscale, &vscale, "", // old name
                 "--userdata_isconnected", &userdata_isconnected, "Consider lockgeom=0 to be isconnected()",
                 "-v", &verbose, "Verbose output",
                 NULL);
@@ -587,17 +589,17 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
     if (pixelcenters) {
         // Our patch is like an "image" with shading samples at the
         // centers of each pixel.
-        sg.u = sscale * (float)(x+0.5f) / xres + soffset;
-        sg.v = tscale * (float)(y+0.5f) / yres + toffset;
-        sg.dudx = sscale / xres;
-        sg.dvdy = tscale / yres;
+        sg.u = uscale * (float)(x+0.5f) / xres + uoffset;
+        sg.v = vscale * (float)(y+0.5f) / yres + voffset;
+        sg.dudx = uscale / xres;
+        sg.dvdy = vscale / yres;
     } else {
         // Our patch is like a Reyes grid of points, with the border
         // samples being exactly on u,v == 0 or 1.
-        sg.u = sscale * ((xres == 1) ? 0.5f : (float) x / (xres - 1)) + soffset;
-        sg.v = tscale * ((yres == 1) ? 0.5f : (float) y / (yres - 1)) + toffset;
-        sg.dudx = sscale / std::max (1, xres-1);
-        sg.dvdy = tscale / std::max (1, yres-1);
+        sg.u = uscale * ((xres == 1) ? 0.5f : (float) x / (xres - 1)) + uoffset;
+        sg.v = vscale * ((yres == 1) ? 0.5f : (float) y / (yres - 1)) + voffset;
+        sg.dudx = uscale / std::max (1, xres-1);
+        sg.dvdy = vscale / std::max (1, yres-1);
     }
 
     // Assume that position P is simply (u,v,1), that makes the patch lie

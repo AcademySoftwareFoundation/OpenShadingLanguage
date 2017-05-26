@@ -55,6 +55,9 @@ OSL requires the following dependencies or tools:
 * [Flex](https://github.com/westes/flex)
 * [GNU Bison](https://www.gnu.org/software/bison/)
 * [PugiXML](http://pugixml.org/)
+* [Partio](https://www.disneyanimation.com/technology/partio.html) --
+  optional, but if it is not found at build time, the OSL `pointcloud`
+  functions will not be operative.
 
 
 

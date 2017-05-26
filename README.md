@@ -1,12 +1,16 @@
-README for Open Shading Language
-================================
+<div align="center">
+  <img src="https://github.com/imageworks/OpenShadingLanguage/blob/master/src/doc/Figures/osl-short.png" width=256 height=128>
+</div>
+
+
+Open Shading Language
+=====================
 
 Build status:
 
 [![Build Status](https://travis-ci.org/imageworks/OpenShadingLanguage.svg?branch=master)](https://travis-ci.org/imageworks/OpenShadingLanguage)
 
-Table of contents
-------------------
+**Table of contents**
 
 * [Introduction](#introduction)
 * [How OSL is different](#how-osl-is-different)
@@ -31,9 +35,8 @@ house renderer used for feature film animation and visual effects, released
 as open source so it could be used by other visual effects and animation
 studios and rendering software vendors. Now it's the de facto standard
 shading language for VFX and animated features, used across the industry in
-many commercial and studio- proprietary renderers. Because of this, its
-designer won an Academy Award for Technical Achievement in 2017, for the
-work on OSL.
+many commercial and studio- proprietary renderers. Because of this, the work
+on OSL received an Academy Award for Technical Achievement in 2017.
 
 OSL is robust and production-proven, and has been used in films as diverse
 as "The Amazing Spider-Man," "Hotel Transylvania," "Edge of Tomorrow", "Ant
@@ -41,14 +44,14 @@ Man", "Finding Dory," and many more. OSL support is in most leading
 renderers used for high-end VFX and animation work. For a full list of films
 and products, see the [filmography](#where-osl-has-been-used).
 
-The OSL code is distributed under the "New BSD" license (see the
-"LICENSE" file that comes with the distribution), and the documentation
-under the Creative Commons Attribution 3.0 Unported License
-(http://creativecommons.org/licenses/by/3.0/).  In short, you are free
-to use OSL in your own applications, whether they are free or
+The OSL code is distributed under the
+["New BSD" license](https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE),
+and the documentation under the [Creative Commons Attribution 3.0 Unported
+License](http://creativecommons.org/licenses/by/3.0/).  In short, you are
+free to use OSL in your own applications, whether they are free or
 commercial, open or proprietary, as well as to modify the OSL code and
-documentation as you desire, provided that you retain the original
-copyright notices as described in the license.
+documentation as you desire, provided that you retain the original copyright
+notices as described in the license.
 
 
 How OSL is different
@@ -277,15 +280,23 @@ Films using OSL (grouped by year of release date):
   Lego Batman,
   The Great Wall,
   A Cure for Wellness,
-  Logan
+  Logan,
+  Power Rangers,
+  Life,
+  Smurfs: The Lost Village,
+  The Fate of the Furious,
+  Alien Covenant,
+  Guardians of the Galaxy 2,
+  The Mummy,
+  Wonder Woman,
   ...
 
 
 Building OSL
 ------------
 
-Please see the "INSTALL.md" file in the OSL distribution for instructions
-for building the OSL source code.
+Please see the [INSTALL.md](INSTALL.md) file in the OSL distribution for
+instructions for building the OSL source code.
 
 
 Contacts, Links, and References

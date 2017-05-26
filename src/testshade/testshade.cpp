@@ -78,6 +78,7 @@ static bool do_oslquery = false;
 static bool inbuffer = false;
 static bool use_shade_image = false;
 static bool userdata_isconnected = false;
+static bool print_outputs = false;
 static int xres = 1, yres = 1;
 static int num_threads = 0;
 static std::string groupname;
@@ -466,6 +467,7 @@ getargs (int argc, const char *argv[])
                         "Output (variable, filename)",
                 "-od %s", &dataformatname, "Set the output data format to one of: "
                         "uint8, half, float",
+                "--print", &print_outputs, "Print values of all -o outputs to console instead of saving images",
                 "--groupname %s", &groupname, "Set shader group name",
                 "--layer %s", &layername, "Set next layer name",
                 "--param %@ %s %s", &action_param, NULL, NULL,
@@ -762,6 +764,8 @@ setup_output_images (ShadingSystem *shadingsys,
 static void
 save_outputs (ShadingSystem *shadingsys, ShadingContext *ctx, int x, int y)
 {
+    if (print_outputs)
+        printf ("Pixel (%d, %d):\n", x, y);
     // For each output requested on the command line...
     for (size_t i = 0;  i < outputfiles.size();  ++i) {
         // Skip if we couldn't open the image or didn't match a known output
@@ -775,18 +779,30 @@ save_outputs (ShadingSystem *shadingsys, ShadingContext *ctx, int x, int y)
         if (!data)
             continue;  // Skip if symbol isn't found
 
+        int nchans = outputimgs[i]->nchannels();
         if (t.basetype == TypeDesc::FLOAT) {
             // If the variable we are outputting is float-based, set it
             // directly in the output buffer.
             outputimgs[i]->setpixel (x, y, (const float *)data);
+            if (print_outputs) {
+                printf ("  %s :", outputvarnames[i].c_str());
+                for (int c = 0; c < nchans; ++c)
+                    printf (" %g", ((const float *)data)[c]);
+                printf ("\n");
+            }
         } else if (t.basetype == TypeDesc::INT) {
             // We are outputting an integer variable, so we need to
             // convert it to floating point.
-            int nchans = outputimgs[i]->nchannels();
             float *pixel = (float *) alloca (nchans * sizeof(float));
             OIIO::convert_types (TypeDesc::BASETYPE(t.basetype), data,
                                  TypeDesc::FLOAT, pixel, nchans);
             outputimgs[i]->setpixel (x, y, &pixel[0]);
+            if (print_outputs) {
+                printf ("  %s :", outputvarnames[i].c_str());
+                for (int c = 0; c < nchans; ++c)
+                    printf (" %d", ((const int *)data)[c]);
+                printf ("\n");
+            }
         }
         // N.B. Drop any outputs that aren't float- or int-based
     }
@@ -1144,7 +1160,8 @@ test_shade (int argc, const char *argv[])
     // Write the output images to disk
     for (size_t i = 0;  i < outputimgs.size();  ++i) {
         if (outputimgs[i]) {
-            outputimgs[i]->write (outputimgs[i]->name());
+            if (! print_outputs)
+                outputimgs[i]->write (outputimgs[i]->name());
             delete outputimgs[i];
             outputimgs[i] = NULL;
         }

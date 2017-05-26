@@ -25,6 +25,8 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+#include <iterator>
+
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/strutil.h>
 
@@ -406,17 +408,162 @@ BackendLLVMWide::getLLVMSymbolBase (const Symbol &sym)
 }
 
 
+// Historically tracks stack of dependent symbols over scopes
+// The Position returned by top_pos changes and symbols are pushed and popped.
+// However any given position is invariant as scopes change, and one 
+// can iterate over any previous representation of the dependency stack by 
+// calling begin_at(pos).
+// Idea is the top_pos can be cached per instruction and later be used
+// to iterate over the stack of dependent symbols at for that instruction.
+// This should be much cheaper than keeping a unique list per instruction.
+// Nothing invalidates can iterator. 
+class DependencyTreeTracker
+{
+public:
+	// Simple wrapper to improve readability
+	class Position
+	{		
+		int m_index;
+		
+	public:
+		explicit OSL_INLINE Position(int node_index)
+		: m_index(node_index)
+		{}
+		Position(const Position &) = default;	
+		
+		OSL_INLINE int 
+		operator()() const { return m_index; }
+	};
+	
+	static OSL_INLINE Position end_pos() { return Position(-1); }
+	
+private:
+	
+	struct Node
+	{
+		Node(Position parent_, const Symbol * sym_)
+		: parent(parent_)
+		, sym(sym_)
+		{}
+		
+		Position parent;
+		const Symbol * sym;
+	};
+
+	std::vector<Node> m_nodes;
+	Position m_top_of_stack;
+public:
+	DependencyTreeTracker()
+	: m_top_of_stack(end_pos())
+	{}
+	
+
+	class Iterator {		
+		Position m_pos;
+		const DependencyTreeTracker &m_dtt;
+		
+		OSL_INLINE const Node & node() const { return  m_dtt.m_nodes[m_pos()]; }
+	public:
+		
+		typedef const Symbol * value_type;
+		typedef int difference_type;
+		// read only data, no intention of giving a reference out
+		typedef const Symbol * reference;
+		typedef const Symbol * pointer;
+		typedef std::forward_iterator_tag iterator_category;
+		
+		OSL_INLINE Iterator(const DependencyTreeTracker &dtt, Position pos)
+		: m_dtt(dtt)
+		, m_pos(pos)
+		{}
+		
+		OSL_INLINE Position pos() const { return m_pos; };
+		
+		OSL_INLINE Iterator 
+		operator ++()
+		{
+			// prefix operator
+			m_pos = node().parent;
+			return *this;
+		}
+
+		OSL_INLINE Iterator 
+		operator ++(int)
+		{
+			// postfix operator
+			Iterator retVal(*this);
+			m_pos = node().parent;
+			return retVal;
+		}
+		
+		OSL_INLINE const Symbol * 
+		operator *() const 
+		{
+			// Make sure we didn't try to access the end
+			ASSERT(m_pos() != end_pos()());
+			return node().sym;
+		}
+		
+		OSL_INLINE bool 
+		operator==(const Iterator &other)
+		{
+			return m_pos() == other.m_pos();
+		}
+
+		OSL_INLINE bool 
+		operator!=(const Iterator &other)
+		{
+			return m_pos() != other.m_pos();
+		}
+	};
+	
+
+	OSL_INLINE Iterator 
+	begin() const { return Iterator(*this, top_pos()); }
+	
+	OSL_INLINE Iterator 
+	begin_at(Position pos) const { return Iterator(*this, pos); }
+	
+	OSL_INLINE Iterator 
+	end() const { return Iterator(*this, end_pos()); }
+	
+	OSL_INLINE void 
+	push(const Symbol * sym)
+	{
+		Position parent(m_top_of_stack);
+		Node node(parent, sym);
+		m_top_of_stack = Position(static_cast<int>(m_nodes.size()));		
+		m_nodes.push_back(node);
+	}
+	
+	OSL_INLINE Position 
+	top_pos() const { return m_top_of_stack; }
+	
+	OSL_INLINE const Symbol * 
+	top() const { return m_nodes[m_top_of_stack()].sym; }
+	
+	void pop()
+	{
+		ASSERT(m_top_of_stack() != end_pos()());
+		m_top_of_stack = m_nodes[m_top_of_stack()].parent;
+	}
+};
+
+
 void 
 BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 {
 	std::cout << "start discoverVaryingAndMaskingOfLayer of layer=" << layer() << std::endl;
 	
 	const OpcodeVec & opcodes = inst()->ops();
-	
+	int op_count = static_cast<int>(opcodes.size());
 	ASSERT(m_requires_masking_by_layer_and_op_index.size() > layer());	
 	ASSERT(m_requires_masking_by_layer_and_op_index[layer()].empty());
-	m_requires_masking_by_layer_and_op_index[layer()].resize(opcodes.size(), false);
-			
+	m_requires_masking_by_layer_and_op_index[layer()].resize(op_count, false);
+
+	ASSERT(m_uniform_get_attribute_op_indices_by_layer.size() > layer());	
+	ASSERT(m_uniform_get_attribute_op_indices_by_layer[layer()].empty());
+	
 	// TODO:  Optimize: could probably use symbol index vs. a pointer 
 	// allowing a lookup table vs. hash_map
 	 
@@ -436,10 +583,13 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	};
 	std::unordered_map<const Symbol *, UsageInfo > usageInfoBySymbol;
 	
-	std::vector<const Symbol *> symbolsCurrentBlockDependsOn;
+	DependencyTreeTracker stackOfSymbolsCurrentBlockDependsOn;
+	
+	std::vector<DependencyTreeTracker::Position> pos_in_dependent_sym_stack_by_op_index(opcodes.size(), DependencyTreeTracker::end_pos());
+	
 	std::vector<const Symbol *> loopControlFlowSymbolStack;
 
-    std::vector<const Symbol *> symbolsWrittenToByGetAttribute;
+    std::vector<const Symbol *> symbolsWrittenToByVaryingGetAttribute;
 
 	
 	std::function<void(const Symbol *, int, int)> ensureWritesAtLowerDepthAreMasked;
@@ -484,7 +634,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 		for(int opIndex = beginop; opIndex < endop; ++opIndex)
 		{
 			Opcode & opcode = op(opIndex);
-			std::cout << "op=" << opcode.opname();
+			std::cout << "op(" << opIndex << ")=" << opcode.opname();
 			int argCount = opcode.nargs();
 			
 			const Symbol * symbolsReadByOp[argCount];
@@ -535,16 +685,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 			
 			// Add dependencies between symbols written to in this basic block
 			// to the set of symbols the code blocks where dependent upon to be executed
-			for(const Symbol *symbolCurrentBlockDependsOn : symbolsCurrentBlockDependsOn)
-			{
-				for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
-					const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
-					// Skip self dependencies
-					if (symbolWrittenTo != symbolCurrentBlockDependsOn) {
-						symbolFeedForwardMap.insert(std::make_pair(symbolCurrentBlockDependsOn, symbolWrittenTo));
-					}
-				}									
-			}
+			pos_in_dependent_sym_stack_by_op_index[opIndex] = stackOfSymbolsCurrentBlockDependsOn.top_pos();
 			
 			if (opcode.jump(0) >= 0)
 			{
@@ -556,7 +697,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				pushSymbolsCurentBlockDependsOn = [&]()->void {
 					// Only coding for a single conditional variable
 					ASSERT(symbolsRead == 1);			    		
-					symbolsCurrentBlockDependsOn.push_back(symbolsReadByOp[0]);
+					stackOfSymbolsCurrentBlockDependsOn.push(symbolsReadByOp[0]);
 				};
 				
 				std::function<void()> popSymbolsCurentBlockDependsOn;
@@ -567,8 +708,8 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 
 					// Only coding for a single conditional variable
 					ASSERT(symbolsRead == 1);			    		
-					ASSERT(symbolsCurrentBlockDependsOn.back() == symbolsReadByOp[0]);
-					symbolsCurrentBlockDependsOn.pop_back();
+					ASSERT(stackOfSymbolsCurrentBlockDependsOn.top() == symbolsReadByOp[0]);
+					stackOfSymbolsCurrentBlockDependsOn.pop();
 				};
 				
 								
@@ -674,9 +815,9 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				// Now that last loop control condition should exist in our stack of symbols that
 				// the current block with depends upon, we only need to add dependencies to the loop control
 				// to conditionas inside the loop
-				auto conditionIter = std::find(symbolsCurrentBlockDependsOn.begin(), symbolsCurrentBlockDependsOn.end(), loopCondition);
-				ASSERT(conditionIter != symbolsCurrentBlockDependsOn.end());
-				while(++conditionIter != symbolsCurrentBlockDependsOn.end()) {
+				ASSERT(std::find(stackOfSymbolsCurrentBlockDependsOn.begin(), stackOfSymbolsCurrentBlockDependsOn.end(), loopCondition) != stackOfSymbolsCurrentBlockDependsOn.end());
+				for(auto conditionIter = stackOfSymbolsCurrentBlockDependsOn.begin();
+					*conditionIter != loopCondition; ++conditionIter) {
 					const Symbol * conditionBreakDependsOn =  *conditionIter;
 					std::cout << ">>>Loop Conditional " << loopCondition->name().c_str() << " needs to depend on conditional " << conditionBreakDependsOn->name().c_str() << std::endl;
 					symbolFeedForwardMap.insert(std::make_pair(conditionBreakDependsOn, loopCondition));
@@ -694,10 +835,35 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 			}
             if (opcode.opname() == op_getattribute)
             {
-                for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
-                    const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
-                    symbolsWrittenToByGetAttribute.push_back(symbolWrittenTo);
+            	// As getattribute could have uniform input parameters but require
+            	// varying results we need to detect that case and track the 
+            	// symbols it writes to so that we can recursively mark them as varying
+                bool object_lookup = opargsym(opcode,2)->typespec().is_string() && 
+                		             (argCount >= 4);
+                int object_slot = static_cast<int>(object_lookup);
+                int attrib_slot = object_slot + 1;
+                Symbol& ObjectName  = *opargsym (opcode, object_slot); // only valid if object_slot is true
+                Symbol& Attribute   = *opargsym (opcode, attrib_slot);
+
+                bool get_attr_is_uniform = false;
+                if (Attribute.is_constant() && 
+                    (!object_lookup || ObjectName.is_constant()) ) {
+					ustring attr_name = *(const ustring *)Attribute.data();
+					ustring obj_name;
+					if (object_lookup)
+						obj_name = *(const ustring *)ObjectName.data();
+					
+					get_attr_is_uniform = renderer()->batched()->is_attribute_uniform(obj_name, attr_name);
                 }
+                
+                if (get_attr_is_uniform) {
+                	m_uniform_get_attribute_op_indices_by_layer[layer()].insert(opIndex);                	
+                } else {
+					for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
+						const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
+						symbolsWrittenToByVaryingGetAttribute.push_back(symbolWrittenTo);
+					}
+            	}
             }
 			
 			// If the op we coded jumps around, skip past its recursive block
@@ -785,6 +951,42 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 		}
 	}    	
 	
+	// At this point we should be done figuring out which instructions require masking
+	// So those instructions will be dependent on the mask and that mask was 
+	// dependent on the symbols used in the conditionals that produced it as well
+	// as the previous mask on the stack
+	// So we need to setup those dependencies, so lets walk through all
+	// of the masked instructions and hook them up
+	std::cout << "FIXUP DEPENDENCIES FOR MASKED INSTRUCTIONS" << std::endl;
+	const auto & requires_masking_by_op_index = m_requires_masking_by_layer_and_op_index[layer()];
+	for(int op_index=0; op_index < op_count; ++op_index) {
+		if (requires_masking_by_op_index[op_index]) {
+std::cout << "requires_masking_by_op_index " << op_index << std::endl;
+			auto beginDepIter = stackOfSymbolsCurrentBlockDependsOn.begin_at(pos_in_dependent_sym_stack_by_op_index[op_index]);			
+			auto endDepIter = stackOfSymbolsCurrentBlockDependsOn.end();
+			
+			Opcode & opcode = op(op_index);
+			int argCount = opcode.nargs();			
+			for(int argIndex = 0; argIndex < argCount; ++argIndex) {
+				const Symbol * sym_possibly_written_to = opargsym (opcode, argIndex);
+				if (opcode.argwrite(argIndex)) {
+					std::cout << "Symbol written to " <<  sym_possibly_written_to->name().c_str() << std::endl;
+					std::cout << "beginDepIter " <<  beginDepIter.pos()() << std::endl;
+					std::cout << "endDepIter " <<  stackOfSymbolsCurrentBlockDependsOn.end().pos()() << std::endl;
+					for(auto iter=beginDepIter;iter != endDepIter; ++iter) {
+						const Symbol * symMaskDependsOn = *iter;
+						// Skip self dependencies
+						if (sym_possibly_written_to != symMaskDependsOn) {
+							std::cout << "Mapping " <<  symMaskDependsOn->name().c_str() << std::endl;
+							symbolFeedForwardMap.insert(std::make_pair(symMaskDependsOn, sym_possibly_written_to));
+						}
+					}					
+				}
+			}			
+		}
+	}
+	std::cout << "END FIXUP DEPENDENCIES FOR MASKED INSTRUCTIONS" << std::endl;
+	
 	std::cout << "About to build m_is_uniform_by_symbol" << std::endl;			
 	
 	std::function<void(const Symbol *)> recursivelyMarkNonUniform;
@@ -843,40 +1045,57 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 		}    			
 	}
 
-
-    //std::cout << "symbolsWrittenToByVaryingFunc begin" << std::endl;
-    for(const Symbol *s: symbolsWrittenToByGetAttribute) {
-        //std::cout << s->name() << std::endl;
+    std::cout << "symbolsWrittenToByVaryingGetAttribute begin" << std::endl;
+    for(const Symbol *s: symbolsWrittenToByVaryingGetAttribute) {
+        std::cout << s->name() << std::endl;
         recursivelyMarkNonUniform(s);
     }
-    //std::cout << "symbolsWrittenToByVaryingFunc end" << std::endl;
+    std::cout << "symbolsWrittenToByVaryingGetAttribute end" << std::endl;
 
-	std::cout << "Emit m_is_uniform_by_symbol" << std::endl;			
+    {
+		std::cout << "Emit m_is_uniform_by_symbol" << std::endl;			
+		
+		for(auto rIter = m_is_uniform_by_symbol.begin(); rIter != m_is_uniform_by_symbol.end(); ++rIter) {
+			const Symbol * rSym = rIter->first;
+			bool is_uniform = rIter->second;
+			std::cout << "--->" << rSym << " " << rSym->name() << " is " << (is_uniform ? "UNIFORM" : "VARYING") << std::endl;			
+		}
+		std::cout << std::flush;		
+		std::cout << "done discoverVaryingAndMaskingOfLayer" << std::endl;
+    }
 	
-	for(auto rIter = m_is_uniform_by_symbol.begin(); rIter != m_is_uniform_by_symbol.end(); ++rIter) {
-		const Symbol * rSym = rIter->first;
-		bool is_uniform = rIter->second;
-		std::cout << "--->" << rSym << " " << rSym->name() << " is " << (is_uniform ? "UNIFORM" : "VARYING") << std::endl;			
+	
+	{
+		std::cout << "Emit m_requires_masking_by_layer_and_op_index" << std::endl;			
+		
+		auto & requires_masking_by_op_index = m_requires_masking_by_layer_and_op_index[layer()];
+		
+		int opCount = requires_masking_by_op_index.size();
+		for(int opIndex=0; opIndex < opCount; ++opIndex) {
+			if (requires_masking_by_op_index[opIndex])
+			{
+				Opcode & opcode = op(opIndex);
+				std::cout << "---> inst#" << opIndex << " op=" << opcode.opname() << " requires MASKING" << std::endl;
+			}
+		}
+		std::cout << std::flush;		
+		std::cout << "done m_requires_masking_by_layer_and_op_index" << std::endl;
 	}
-	std::cout << std::flush;		
-	std::cout << "done discoverVaryingAndMaskingOfLayer" << std::endl;
+
+
 	
-	
-	std::cout << "Emit m_requires_masking_by_layer_and_op_index" << std::endl;			
-	
-	auto & requires_masking_by_op_index = m_requires_masking_by_layer_and_op_index[layer()];
-	
-	int opCount = requires_masking_by_op_index.size();
-	for(int opIndex=0; opIndex < opCount; ++opIndex) {
-		if (requires_masking_by_op_index[opIndex])
+	{
+		std::cout << "Emit m_uniform_get_attribute_op_indices_by_layer" << std::endl;			
+		const auto & uniform_get_attribute_op_indices = m_uniform_get_attribute_op_indices_by_layer[layer()];
+		
+		for(int opIndex: uniform_get_attribute_op_indices)
 		{
 			Opcode & opcode = op(opIndex);
-			std::cout << "---> inst#" << opIndex << " op=" << opcode.opname() << " requires MASKING" << std::endl;
+			std::cout << "---> inst#" << opIndex << " op=" << opcode.opname() << " is UNIFORM get_attribute" << std::endl;
 		}
+		std::cout << std::flush;		
+		std::cout << "done m_uniform_get_attribute_op_indices_by_layer" << std::endl;
 	}
-	std::cout << std::flush;		
-	std::cout << "done m_requires_masking_by_layer_and_op_index" << std::endl;
-
 }
 	
 bool 
@@ -911,6 +1130,14 @@ BackendLLVMWide::requiresMasking(int opIndex)
 	ASSERT(m_requires_masking_by_layer_and_op_index[layer()].size() > opIndex);
 	return m_requires_masking_by_layer_and_op_index[layer()][opIndex];
 }
+
+bool 
+BackendLLVMWide::getAttributesIsUniform(int opIndex)
+{
+	const auto & uniform_get_attribute_op_indices = m_uniform_get_attribute_op_indices_by_layer[layer()];
+	return (uniform_get_attribute_op_indices.find(opIndex) != uniform_get_attribute_op_indices.end());
+}
+
 
 void 
 BackendLLVMWide::push_varying_loop_condition(Symbol *condition)
@@ -950,7 +1177,7 @@ BackendLLVMWide::llvm_alloca (const TypeSpec &type, bool derivs, bool is_uniform
 	std::cout << "llvm_alloca " << name ;
     TypeDesc t = llvm_typedesc (type);
     int n = derivs ? 3 : 1;
-    std::cout << "n=" << n << " t.size()=" << t.size();
+    std::cout << " n=" << n << " t.size()=" << t.size();
     m_llvm_local_mem += t.size() * n;
     if (is_uniform)
     {
@@ -1027,7 +1254,7 @@ BackendLLVMWide::llvm_get_pointer (const Symbol& sym, int deriv,
     // right element.
     TypeDesc t = sym.typespec().simpletype();
     if (t.arraylen || has_derivs) {
-    	std::cout << "llvm_get_pointer we're dealing with derivatives<-------" << std::endl;
+    	std::cout << "llvm_get_pointer we're dealing with an array(" << t.arraylen << ") or has_derivs(" << has_derivs << ")<<-------" << std::endl;
     	std::cout << "arrayindex=" << arrayindex << " deriv=" << deriv << " t.arraylen="  << t.arraylen; 
     	std::cout << " isSymbolUniform="<< isSymbolUniform(sym) << std::endl;
     	
@@ -1223,8 +1450,15 @@ BackendLLVMWide::llvm_load_constant_value (const Symbol& sym,
         arrayindex = 0;
     ASSERT (arrayindex >= 0 &&
             "Called llvm_load_constant_value with negative array index");
+    
+    
+    // TODO: might want to take this fix for array types back to the non-wide backend
+    TypeSpec elementType = sym.typespec();
+    // The symbol we are creating a constant for might be an array
+    // and our checks for types use non-array types
+    elementType.make_array(0);
 
-    if (sym.typespec().is_float()) {
+    if (elementType.is_float()) {
         const float *val = (const float *)sym.data();
         if (cast == TypeDesc::TypeInt)
         	if (op_is_uniform) {
@@ -1240,7 +1474,7 @@ BackendLLVMWide::llvm_load_constant_value (const Symbol& sym,
                 return ll.wide_constant (val[arrayindex]);        		
         	}
     }
-    if (sym.typespec().is_int()) {
+    if (elementType.is_int()) {
         const int *val = (const int *)sym.data();
         if (cast == TypeDesc::TypeFloat)
         	if (op_is_uniform) {
@@ -1255,7 +1489,7 @@ BackendLLVMWide::llvm_load_constant_value (const Symbol& sym,
                 return ll.wide_constant (val[arrayindex]);        		
         	}
     }
-    if (sym.typespec().is_triple() || sym.typespec().is_matrix()) {
+    if (elementType.is_triple() || elementType.is_matrix()) {
         const float *val = (const float *)sym.data();
         int ncomps = (int) sym.typespec().aggregate();
     	if (op_is_uniform) {
@@ -1264,7 +1498,7 @@ BackendLLVMWide::llvm_load_constant_value (const Symbol& sym,
             return ll.wide_constant (val[ncomps*arrayindex + component]);
     	}
     }
-    if (sym.typespec().is_string()) {
+    if (elementType.is_string()) {
         const ustring *val = (const ustring *)sym.data();
     	if (op_is_uniform) {
             return ll.constant (val[arrayindex]);
@@ -1273,6 +1507,7 @@ BackendLLVMWide::llvm_load_constant_value (const Symbol& sym,
     	}
     }
 
+    std::cout << "SYMBOL " << sym.name().c_str() << " type=" << sym.typespec() << std::endl;
     ASSERT (0 && "unhandled constant type");
     return NULL;
 }
@@ -1466,7 +1701,92 @@ BackendLLVMWide::llvm_store_component_value (llvm::Value* new_val,
     return true;
 }
 
+void 
+BackendLLVMWide::llvm_broadcast_uniform_value(
+	llvm::Value * tempUniform, 
+	Symbol & Destination)
+{
+    const TypeDesc & dest_type = Destination.typespec().simpletype();
+    bool derivs = Destination.has_derivs();
+    
+	int derivCount =  derivs ? 1 : 3;
 
+	int arrayIndex;
+	int arrayEnd;
+	
+	if (dest_type.is_array()) {
+		ASSERT(dest_type.arraylen != 0);
+		ASSERT(dest_type.arraylen != -1 && "We don't support an unsized array with getattribute");
+		arrayEnd = dest_type.arraylen;			
+	} else {
+		arrayEnd = 1;
+	}
+	
+	int componentCount = dest_type.aggregate;
+	
+	for (int derivIndex=0; derivIndex < derivCount; ++derivIndex)
+	{
+		for(int arrayIndex =0;arrayIndex < arrayEnd; ++arrayIndex) {
+			llvm::Value * llvm_array_index = ll.constant(arrayIndex);
+			for(int componentIndex=0;componentIndex < componentCount; ++componentIndex) {
+			
+				// Load the uniform component from the temporary
+				// base passing false for op_is_uniform, the llvm_load_value will
+				// automatically broadcast the uniform value to a vector type
+				llvm::Value *wide_component_value = llvm_load_value (tempUniform, dest_type,
+											  derivIndex, llvm_array_index,
+											  componentIndex, TypeDesc::UNKNOWN,
+											  false /*op_is_uniform*/);
+				bool success = llvm_store_value (wide_component_value, Destination, derivIndex,
+						llvm_array_index, componentIndex);
+				ASSERT(success);
+			}
+		}
+	}
+}
+
+void 
+BackendLLVMWide::llvm_conversion_store_masked_status(
+	llvm::Value * val, 
+	Symbol & Status)
+{
+	ASSERT(ll.type_int() == ll.llvm_typeof(val));
+	
+	llvm::Value * mask = ll.int_as_mask(val);
+	
+	llvm::Type * statusType = ll.llvm_typeof(llvm_get_pointer(Status));
+	
+	if (statusType != reinterpret_cast<llvm::Type *>(ll.type_wide_bool_ptr()))
+	{
+		ASSERT(statusType == reinterpret_cast<llvm::Type *>(ll.type_wide_int_ptr()));
+		mask = ll.op_bool_to_int(mask);
+	}
+	llvm_store_value (mask, Status);		
+}
+
+void 
+BackendLLVMWide::llvm_conversion_store_uniform_status(
+	llvm::Value * val, 
+	Symbol & Status)
+{
+	ASSERT(ll.type_int() == ll.llvm_typeof(val));
+	
+	llvm::Type * statusType = ll.llvm_typeof(llvm_get_pointer(Status));
+	// expanding out to wide int 
+	if (statusType == reinterpret_cast<llvm::Type *>(ll.type_bool_ptr())) {
+		// Handle demoting to bool 
+		val = ll.op_int_to_bool(val);
+	} else if (statusType == reinterpret_cast<llvm::Type *>(ll.type_wide_bool_ptr())) {
+		// Handle demoting to bool and expanding out to wide bool 
+		val = ll.widen_value(ll.op_int_to_bool(val));
+	} else if (statusType == reinterpret_cast<llvm::Type *>(ll.type_wide_int_ptr())) {
+		// Expanding out to wide int 
+		val = ll.widen_value(val);
+	} else {
+		ASSERT(0 && "Unhandled return status symbol type");
+	}
+	llvm_store_value (val, Status);
+}
 
 llvm::Value *
 BackendLLVMWide::groupdata_field_ref (int fieldnum)
@@ -1662,12 +1982,16 @@ BackendLLVMWide::llvm_assign_impl (Symbol &Result, Symbol &Src,
     ASSERT (! Result.typespec().is_structure());
     ASSERT (! Src.typespec().is_structure());
 
+	bool op_is_uniform = isSymbolUniform(Result);
+    
     const TypeSpec &result_t (Result.typespec());
     const TypeSpec &src_t (Src.typespec());
 
     llvm::Value *arrind = arrayindex >= 0 ? ll.constant (arrayindex) : NULL;
 
     if (Result.typespec().is_closure() || Src.typespec().is_closure()) {
+    	ASSERT(0 && "unhandled case"); // TODO: implement
+    	
         if (Src.typespec().is_closure()) {
             llvm::Value *srcval = llvm_load_value (Src, 0, arrind, 0);
             llvm_store_value (srcval, Result, 0, arrind, 0);
@@ -1679,6 +2003,8 @@ BackendLLVMWide::llvm_assign_impl (Symbol &Result, Symbol &Src,
     }
 
     if (Result.typespec().is_matrix() && Src.typespec().is_int_or_float()) {
+    	ASSERT(0 && "unhandled case"); // TODO: implement
+    	
         // Handle m=f, m=i separately
         llvm::Value *src = llvm_load_value (Src, 0, arrind, 0, TypeDesc::FLOAT /*cast*/);
         // m=f sets the diagonal components to f, the others to zero
@@ -1690,6 +2016,7 @@ BackendLLVMWide::llvm_assign_impl (Symbol &Result, Symbol &Src,
         return true;
     }
 
+#if 0  // memcpy compicated by promotion of uniform to wide during assignment, dissallow
     // Copying of entire arrays.  It's ok if the array lengths don't match,
     // it will only copy up to the length of the smaller one.  The compiler
     // will ensure they are the same size, except for certain cases where
@@ -1710,40 +2037,55 @@ BackendLLVMWide::llvm_assign_impl (Symbol &Result, Symbol &Src,
         }
         return true;
     }
+#endif
 
-	bool is_uniform = isSymbolUniform(Result);
     // The following code handles f=f, f=i, v=v, v=f, v=i, m=m, s=s.
     // Remember that llvm_load_value will automatically convert scalar->triple.
     TypeDesc rt = Result.typespec().simpletype();
     TypeDesc basetype = TypeDesc::BASETYPE(rt.basetype);
     int num_components = rt.aggregate;
-    for (int i = 0; i < num_components; ++i) {
-    	llvm::Value* src_val ;
-    	// Automatically handle widening the source value to match the destination's
-		src_val = Src.is_constant()
-			? llvm_load_constant_value (Src, arrayindex, i, basetype, is_uniform)
-			: llvm_load_value (Src, 0, arrind, i, basetype, is_uniform);
-        if (!src_val)
-            return false;
-        
-        llvm_store_value (src_val, Result, 0, arrind, i);
+    
+    int start_array_index = arrayindex;
+    int end_array_index = start_array_index + 1;
+    if (start_array_index == -1)
+    {
+    	if (result_t.is_array() && src_t.is_array())
+    	{
+    		start_array_index = 0;
+    		end_array_index = std::min(result_t.arraylength(), src_t.arraylength());
+    	}
     }
-
-    // Handle derivatives
-    if (Result.has_derivs()) {
-        if (Src.has_derivs()) {
-            // src and result both have derivs -- copy them
-            for (int d = 1;  d <= 2;  ++d) {
-                for (int i = 0; i < num_components; ++i) {
-                    llvm::Value* val = llvm_load_value (Src, d, arrind, i);
-                    llvm_store_value (val, Result, d, arrind, i);
-                }
-            }
-        } else {
-            // Result wants derivs but src didn't have them -- zero them
-            llvm_zero_derivs (Result);
-        }
-    }
+	for(arrayindex=start_array_index; arrayindex < end_array_index; ++arrayindex) {
+		arrind = arrayindex >= 0 ? ll.constant (arrayindex) : NULL;
+		
+		for (int i = 0; i < num_components; ++i) {
+			llvm::Value* src_val ;
+			// Automatically handle widening the source value to match the destination's
+			src_val = Src.is_constant()
+				? llvm_load_constant_value (Src, arrayindex, i, basetype, op_is_uniform)
+				: llvm_load_value (Src, 0, arrind, i, basetype, op_is_uniform);
+			if (!src_val)
+				return false;
+			
+			llvm_store_value (src_val, Result, 0, arrind, i);
+		}
+	
+		// Handle derivatives
+		if (Result.has_derivs()) {
+			if (Src.has_derivs()) {
+				// src and result both have derivs -- copy them
+				for (int d = 1;  d <= 2;  ++d) {
+					for (int i = 0; i < num_components; ++i) {
+						llvm::Value* val = llvm_load_value (Src, d, arrind, i);
+						llvm_store_value (val, Result, d, arrind, i);
+					}
+				}
+			} else {
+				// Result wants derivs but src didn't have them -- zero them
+				llvm_zero_derivs (Result);
+			}
+		}
+	}
     return true;
 }
 

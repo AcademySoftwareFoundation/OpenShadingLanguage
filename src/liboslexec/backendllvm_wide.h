@@ -28,8 +28,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-#include <vector>
 #include <map>
+#include <vector>
+#include <unordered_set>
 
 #include "oslexec_pvt.h"
 using namespace OSL;
@@ -161,6 +162,7 @@ public:
     
     bool isSymbolUniform(const Symbol& sym);
     bool requiresMasking(int opIndex);
+    bool getAttributesIsUniform(int opIndex);
 
     /// Return an llvm::Value* that is either a scalar and derivs is
     /// false, or a pointer to sym's values (if sym is an aggreate or
@@ -212,6 +214,12 @@ public:
         return llvm_store_value (new_val, sym, deriv, component);
     }
 
+    void llvm_conversion_store_masked_status(llvm::Value * val, Symbol & Status);
+    void llvm_conversion_store_uniform_status(llvm::Value * val, Symbol & Status);
+    
+    void llvm_broadcast_uniform_value(llvm::Value * tempUniform, 
+    								  Symbol & Destination);
+    
     /// Generate an alloca instruction to allocate space for the given
     /// type, with derivs if derivs==true, and return the its pointer.
     llvm::Value *llvm_alloca (const TypeSpec &type, bool derivs, bool is_uniform, bool forceBool=false,
@@ -463,6 +471,7 @@ private:
 
 	std::unordered_map<const Symbol *, bool> m_is_uniform_by_symbol;
 	std::vector<std::vector<bool>> m_requires_masking_by_layer_and_op_index;
+	std::vector<std::unordered_set<int>> m_uniform_get_attribute_op_indices_by_layer;
 	std::vector<Symbol *> m_generated_loops_condition_stack;
     
     friend class ShadingSystemImpl;

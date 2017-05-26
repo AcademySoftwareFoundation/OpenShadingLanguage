@@ -402,6 +402,7 @@ LLVM_Util::LLVM_Util (int debuglevel)
         m_llvm_type_addrint = (llvm::Type *) llvm::Type::getInt64Ty (*m_llvm_context);
     m_llvm_type_int_ptr = (llvm::PointerType *) llvm::Type::getInt32PtrTy (*m_llvm_context);
     m_llvm_type_bool = (llvm::Type *) llvm::Type::getInt1Ty (*m_llvm_context);
+    m_llvm_type_bool_ptr = (llvm::PointerType *) llvm::Type::getInt1PtrTy (*m_llvm_context);
     m_llvm_type_char = (llvm::Type *) llvm::Type::getInt8Ty (*m_llvm_context);
     m_llvm_type_longlong = (llvm::Type *) llvm::Type::getInt64Ty (*m_llvm_context);
     m_llvm_type_void = (llvm::Type *) llvm::Type::getVoidTy (*m_llvm_context);
@@ -2238,12 +2239,15 @@ LLVM_Util::pop_masking_enabled()
 void
 LLVM_Util::op_store (llvm::Value *val, llvm::Value *ptr)
 {	
-	if(m_mask_stack.empty() || val->getType()->isVectorTy() == false || m_enable_masking_stack.empty() || m_enable_masking_stack.back() == false) {		
+	if(m_mask_stack.empty() || val->getType()->isVectorTy() == false || m_enable_masking_stack.empty() || m_enable_masking_stack.back() == false) {
+		
+		std::cout << "unmasked op_store" << std::endl;
 		// We may not be in a non-uniform code block
 		// or the value being stored may be uniform, which case it shouldn't
 		// be a vector type
 	    builder().CreateStore (val, ptr);		
 	} else {				
+		std::cout << "MASKED op_store" << std::endl;
 		// TODO: could probably make these DASSERT as  the conditional above "should" be checking all of this
 		ASSERT(m_enable_masking_stack.back());
 		ASSERT(val->getType()->isVectorTy());

@@ -845,6 +845,8 @@ LLVMGEN (llvm_gen_modulus)
     bool is_float = Result.typespec().is_floatbased();
     int num_components = type.aggregate;
 
+    bool op_is_uniform = rop.isSymbolUniform(Result);
+    
 #ifdef OSL_LLVM_NO_BITCODE
     // On Windows 32 bit this calls an unknown instruction, probably need to
     // link with LLVM compiler-rt to fix, for now just fall back to op
@@ -854,19 +856,27 @@ LLVMGEN (llvm_gen_modulus)
 
     // The following should handle f%f, v%v, v%f, i%i
     // That's all that should be allowed by oslc.
-    const char *safe_mod = is_float ? "osl_fmod_fff" : "osl_safe_mod_iii";
+    std::string safe_mod;
+	if (op_is_uniform) {
+		safe_mod = is_float ? "osl_fmod_fff" : "osl_safe_mod_iii";
+	} else {
+		
+		std::string wf(warg_lane_count());
+		wf.append(is_float ? "f" : "i");
+		safe_mod = is_float ? "osl_fmod_" : "osl_safe_mod_";		
+		safe_mod.append(wf).append(wf).append(wf);
+	}    		
+    
     for (int i = 0; i < num_components; i++) {
-        llvm::Value *a = rop.loadLLVMValue (A, i, 0, type);
-        llvm::Value *b = rop.loadLLVMValue (B, i, 0, type);
+        llvm::Value *a = rop.loadLLVMValue (A, i, 0, type, op_is_uniform);
+        llvm::Value *b = rop.loadLLVMValue (B, i, 0, type, op_is_uniform);
         if (!a || !b)
             return false;
         llvm::Value *r;
         if (B.is_constant() && ! rop.is_zero(B))
-    		// TODO:  switching back to non-wide to figure out uniform vs. varying data
-            //r = rop.ll.wide_op_mod (a, b);
         	r = rop.ll.op_mod (a, b);
         else
-            r = rop.ll.call_function (safe_mod, a, b);
+            r = rop.ll.call_function (safe_mod.c_str(), a, b);
         rop.storeLLVMValue (r, Result, i, 0);
     }
 
@@ -876,7 +886,7 @@ LLVMGEN (llvm_gen_modulus)
             // Modulus of duals: (a mod b, ax, ay)
             for (int d = 1;  d <= 2;  ++d) {
                 for (int i = 0; i < num_components; i++) {
-                    llvm::Value *deriv = rop.loadLLVMValue (A, i, d, type);
+                    llvm::Value *deriv = rop.loadLLVMValue (A, i, d, type, op_is_uniform);
                     rop.storeLLVMValue (deriv, Result, i, d);
                 }
             }
@@ -1499,6 +1509,8 @@ LLVMGEN (llvm_gen_aref)
     Symbol& Src = *rop.opargsym (op, 1);
     Symbol& Index = *rop.opargsym (op, 2);
 
+    bool op_is_uniform = rop.isSymbolUniform(Result);
+    
     // Get array index we're interested in
     llvm::Value *index = rop.loadLLVMValue (Index);
     if (! index)
@@ -1524,7 +1536,7 @@ LLVMGEN (llvm_gen_aref)
     int num_components = Src.typespec().simpletype().aggregate;
     for (int d = 0;  d <= 2;  ++d) {
         for (int c = 0;  c < num_components;  ++c) {
-            llvm::Value *val = rop.llvm_load_value (Src, d, index, c);
+            llvm::Value *val = rop.llvm_load_value (Src, d, index, c, TypeDesc::UNKNOWN, op_is_uniform);
             rop.storeLLVMValue (val, Result, c, d);
         }
         if (! Result.has_derivs())
@@ -1544,6 +1556,8 @@ LLVMGEN (llvm_gen_aassign)
     Symbol& Index = *rop.opargsym (op, 1);
     Symbol& Src = *rop.opargsym (op, 2);
 
+    bool resultIsUniform = rop.isSymbolUniform(Result);
+    
     // Get array index we're interested in
     llvm::Value *index = rop.loadLLVMValue (Index);
     if (! index)
@@ -1569,7 +1583,7 @@ LLVMGEN (llvm_gen_aassign)
     int num_components = Result.typespec().simpletype().aggregate;
     for (int d = 0;  d <= 2;  ++d) {
         for (int c = 0;  c < num_components;  ++c) {
-            llvm::Value *val = rop.loadLLVMValue (Src, c, d);
+            llvm::Value *val = rop.loadLLVMValue (Src, c, d, TypeDesc::UNKNOWN, resultIsUniform);
             rop.llvm_store_value (val, Result, d, index, c);
         }
         if (! Result.has_derivs())
@@ -3475,31 +3489,66 @@ LLVMGEN (llvm_gen_getattribute)
              !Index.typespec().is_closure_based() && 
              !Destination.typespec().is_closure_based());
 
+    
+    // Special case for get attributes where the result uniformity can differ
+    // from the callback
+    bool result_is_uniform = rop.isSymbolUniform(Result);
+    bool destination_is_uniform = rop.isSymbolUniform(Destination);
+    
+    
+    bool op_is_uniform = rop.getAttributesIsUniform(opnum);
+    
     // We'll pass the destination's attribute type directly to the 
     // RenderServices callback so that the renderer can perform any
     // necessary conversions from its internal format to OSL's.
     const TypeDesc* dest_type = &Destination.typespec().simpletype();
 
     std::vector<llvm::Value *> args;
-    args.push_back (rop.sg_void_ptr());
-    args.push_back (rop.ll.constant ((int)Destination.has_derivs()));
-    args.push_back (object_lookup ? rop.llvm_load_value (ObjectName) :
-                                    rop.ll.constant (ustring()));
-    args.push_back (rop.llvm_load_value (Attribute));
-    args.push_back (rop.ll.constant ((int)array_lookup));
-    args.push_back (array_lookup ? rop.llvm_load_value (Index) : rop.ll.constant((int)0)); // Never load a symbol that is invalid
-    args.push_back (rop.ll.constant_ptr ((void *) dest_type));
-    args.push_back (rop.llvm_void_ptr (Destination));
-    args.push_back (rop.ll.mask_as_int(rop.ll.current_mask()));
-
-    llvm::Value *r = rop.ll.call_function ("osl_get_attribute_batched", &args[0], args.size());
-    r = rop.ll.int_as_mask(r);
-    if (rop.ll.llvm_typeof(rop.llvm_get_pointer(Result)) != (llvm::Type *)rop.ll.type_wide_bool_ptr())
-    {
-        ASSERT(rop.ll.llvm_typeof(rop.llvm_get_pointer(Result)) == (llvm::Type *)rop.ll.type_wide_int_ptr());
-        r = rop.ll.op_bool_to_int(r);
+    if (false == op_is_uniform) {
+		ASSERT((!result_is_uniform) && (!destination_is_uniform));
+		
+		args.push_back (rop.sg_void_ptr());
+		args.push_back (rop.ll.constant ((int)Destination.has_derivs()));
+		args.push_back (object_lookup ? rop.llvm_load_value (ObjectName) :
+										rop.ll.constant (ustring()));
+		args.push_back (rop.llvm_load_value (Attribute));
+		args.push_back (rop.ll.constant ((int)array_lookup));
+		args.push_back (array_lookup ? rop.llvm_load_value (Index) : rop.ll.constant((int)0)); // Never load a symbol that is invalid
+		args.push_back (rop.ll.constant_ptr ((void *) dest_type));
+		args.push_back (rop.llvm_void_ptr (Destination));
+		args.push_back (rop.ll.mask_as_int(rop.ll.current_mask()));
+	
+		llvm::Value *r = rop.ll.call_function ("osl_get_attribute_batched", &args[0], args.size());
+		rop.llvm_conversion_store_masked_status(r, Result);
+    } else {
+		ASSERT((!object_lookup || rop.isSymbolUniform(ObjectName)) && rop.isSymbolUniform(Attribute));
+		
+		args.push_back (rop.sg_void_ptr());
+		args.push_back (rop.ll.constant ((int)Destination.has_derivs()));
+		args.push_back (object_lookup ? rop.llvm_load_value (ObjectName) :
+										rop.ll.constant (ustring()));
+		args.push_back (rop.llvm_load_value (Attribute));
+		args.push_back (rop.ll.constant ((int)array_lookup));
+		args.push_back (array_lookup ? rop.llvm_load_value (Index) : rop.ll.constant((int)0)); // Never load a symbol that is invalid
+		args.push_back (rop.ll.constant_ptr ((void *) dest_type));
+		llvm::Value *tempUniformDestination = nullptr;
+		if (destination_is_uniform)
+		{
+			args.push_back (rop.llvm_void_ptr (Destination));
+		} else {
+			tempUniformDestination = rop.llvm_alloca (Destination.typespec(), Destination.has_derivs(), true /*is_uniform*/);
+			args.push_back (rop.ll.void_ptr(tempUniformDestination));
+		}
+		llvm::Value *r = rop.ll.call_function ("osl_get_attribute_batched_uniform"
+				, &args[0], args.size());
+		
+		if (!destination_is_uniform)
+		{
+			rop.llvm_broadcast_uniform_value(tempUniformDestination, Destination);
+		}
+		
+		rop.llvm_conversion_store_uniform_status(r, Result);
     }
-    rop.llvm_store_value (r, Result);
 
     return true;
 }

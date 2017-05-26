@@ -2269,6 +2269,11 @@ DECLFOLDER(constfold_getattribute)
             obj_name = *(const ustring *)ObjectName.data();
         if (! obj_name)
             return 0;
+        
+        // If the attribute is varing, we cant allow it to be constant
+        // TODO: we could cache this answer to avoid calling it again in discoverVaryingAndMaskingOfLayer
+        if (rop.renderer()->batched() && !rop.renderer()->batched()->is_attribute_uniform(obj_name, attr_name))
+			return 0;
 
         found = array_lookup
             ? rop.renderer()->get_array_attribute (NULL, false,

@@ -75,10 +75,6 @@ static ustring u_camera("camera"), u_screen("screen");
 static ustring u_NDC("NDC"), u_raster("raster");
 static ustring u_perspective("perspective");
 static ustring u_s("s"), u_t("t");
-static TypeDesc TypeFloatArray2 (TypeDesc::FLOAT, 2);
-static TypeDesc TypeFloatArray4 (TypeDesc::FLOAT, 4);
-static TypeDesc TypeIntArray2 (TypeDesc::INT, 2);
-
 
 void register_closures(OSL::ShadingSystem* shadingsys) {
     // Describe the memory layout of each closure type to the OSL runtime
@@ -145,7 +141,10 @@ void register_closures(OSL::ShadingSystem* shadingsys) {
 
 BatchedSimpleRenderer::BatchedSimpleRenderer(SimpleRenderer &sr)
     : m_sr(sr)
-{}
+{
+	m_uniform_objects.insert(ustring("global"));	
+	m_uniform_objects.insert(ustring("options"));		
+}
 
 BatchedSimpleRenderer::~BatchedSimpleRenderer()
 {}
@@ -356,43 +355,144 @@ BatchedSimpleRenderer::get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &re
     }
 }
 
-Mask
-BatchedSimpleRenderer::get_array_attribute (ShaderGlobalsBatch *sgb, bool derivatives,
-                                            ustring object, TypeDesc type, ustring name,
-                                            int index, void *val, Mask mask)
+bool 
+BatchedSimpleRenderer::is_attribute_uniform(ustring object, ustring name)
 {
-//    std::cout << "BatchedSimpleRenderer::get_array_attribute" << std::endl;
+	
+	if (m_uniform_objects.find(object) != m_uniform_objects.end())
+		return true;
 
-//    std::cout << "ATTR: " << name << std::endl;
-//    Wide<Color3>* out = reinterpret_cast<Wide<Color3>*>(val);
-    Mask success;
-    success.set_all_off();
-    //for (int i = 0; i < retVal->width; ++i) {
-//        out->set(i, Color3(1.0, 0, 0));
-    //}
-    return success;
+	if ((!object) && m_uniform_attributes.find(name) != m_uniform_attributes.end())
+		return true;
+		
+	return false;
 }
+
+
 Mask
-BatchedSimpleRenderer::get_attribute (ShaderGlobalsBatch *sgb, bool derivatives, ustring object,
-                            TypeDesc type, ustring name, void *val, Mask mask)
+BatchedSimpleRenderer::get_array_attribute (ShaderGlobalsBatch *sgb, 
+                                            ustring object, ustring name,
+                                            int index, MaskedDataRef val)
 {
-//    std::cout << "BatchedSimpleRenderer::get_attribute" << std::endl;
-//    std::cout << "ATTR: " << name << std::endl;
-    Wide<Color3>* out = reinterpret_cast<Wide<Color3>*>(val);
-    Mask success;
-    success.set_all_off();
-    for (int i = 0; i < SimdLaneCount; ++i) {
-        if (mask.is_on(i)) {
-            out->set(i, Color3(1.0, i*0.1, i*0.1));
-            success.set_on(i);
-        }
+	ASSERT(is_attribute_uniform(object, name) == false);
+	
+    if (object == nullptr && name == "blahblah") {
+    	if(val.is<float>()) {
+			auto out = val.masked<float>();
+			for(int i=0; i < out.width; ++i) {
+#if 0 
+				// Example of how to test the lane of the proxy 
+				// if you wantto skip expensive code on the right
+				// hand side of the assignment, such as a function call
+				if(out[i].is_on()) {
+					out[i] = 1.0f - sgb->varying(i).P().get().x;
+				}
+#else
+				// Masking is silently handled by the assignment operator
+				// of the proxy out[i]
+				out[i] = 1.0f - Vec3(sgb->varying(i).P()).x;
+#endif
+			}
+			return val.mask();
+    	} else if(val.is<Vec3>()) {    		
+			auto out = val.masked<Vec3>();
+			for(int i=0; i < out.width; ++i) {							
+				out[i] = Vec3(1.0f) - sgb->varying(i).P();
+			}
+			return val.mask();
+    	}      
     }
-    return success;
+    
+    if (object == nullptr && name == "not_a_color") {
+    	if(val.is<float[3]>()) {
+			float valArray[3] = { 0.0f, 0.5f, 1.0f };
+    		
+			auto out = val.masked<float[3]>();
+			
+			for(int i=0; i < out.width; ++i) {
+				out[i] = valArray;
+			}
+
+			
+#if 0 // Some test code to show that arrays can be extracted
+	  // from the proxy out[i] in multiple ways
+			for(int i=0; i < out.width; ++i) {
+				if(out[i].is_on()) {
+					float valArray[3];
+					// Illegal to return an array by value
+					// so will have to pass the local array to
+					// be populated
+					out[i].get(valArray);
+					// Alternatively can use the [arrayindex] operator on 
+					// the proxy out[i] to get access to underlying data
+					valArray[0] = out[i][0];
+					valArray[1] = out[i][1];
+					valArray[2] = out[i][2];
+					
+
+					valArray[0] = 0.0;
+					valArray[1] = 0.5;
+					valArray[2] = 1.0;
+					
+					// NOTE: proxy handles pulling values out of the
+					// the local array and distributing to the
+					// correct wide arrays, including testing
+					// the mask during assignment
+					out[i] = valArray;
+				}
+			}
+#endif
+			return val.mask();
+    	} 
+    }
+    
+    // If no named attribute was found, allow userdata to bind to the
+    // attribute request.
+    if (object.empty() && index == -1)
+        return get_userdata (name, sgb, val);
+
+    return Mask(false);
 }
 
 Mask
-BatchedSimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type,
-									 ShaderGlobalsBatch *sgb, void *wide_val)
+BatchedSimpleRenderer::get_attribute (ShaderGlobalsBatch *sgb, ustring object,
+                            ustring name, MaskedDataRef val)
+{
+	
+    return get_array_attribute (sgb, object,
+                                name, -1, val);
+}
+
+
+
+bool
+BatchedSimpleRenderer::get_array_attribute_uniform (ShaderGlobalsBatch *sgb, 
+                                            ustring object, ustring name,
+                                            int index, DataRef val)
+{
+	if (m_sr.common_get_attribute (object, name, val) )
+		return true;
+	
+	// NOTE: we do not bother calling through to get_userdata
+	// The only way to get inside this call was to of had the
+	// is_attribute_uniform return true.  It is a logic bug on the renderer
+	// if it claims user data is uniform.
+	// TODO: validate the above comment
+	return false;
+}
+
+bool
+BatchedSimpleRenderer::get_attribute_uniform (ShaderGlobalsBatch *sgb, ustring object,
+                            ustring name, DataRef val)
+{
+	
+    return get_array_attribute_uniform (sgb, object,
+                                name, -1, val);
+}
+
+Mask
+BatchedSimpleRenderer::get_userdata (ustring name, 
+									 ShaderGlobalsBatch *sgb, MaskedDataRef val)
 {
     // Just to illustrate how this works, respect s and t userdata, filled
     // in with the uv coordinates.  In a real renderer, it would probably
@@ -401,28 +501,49 @@ BatchedSimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc ty
 	
 	// For testing of interactions with default values
 	// may not provide data for all lanes
-	
-	// However as the user data is kept separate from the parameters
-	// writes to *val can be unmasked.
-	// The returned mask will be used to no overwrite user data with
-	// default values
-    if (name == u_s && type == TypeDesc::TypeFloat) {
-    	Wide<float> * out = reinterpret_cast<Wide<float>*>(wide_val);
-    	out[0] = sgb->varyingData().u;
-        if (derivatives) {
-        	out[1] = sgb->varyingData().dudx;
-        	out[2] = sgb->varyingData().dudy;
+    if (name == u_s && val.is<float>()) {
+    	
+    
+    	std::cout << "get_userdata u type=" << val.type() << std::endl;
+    	auto out = val.masked<float>();
+		for(int i=0; i < out.width; ++i) {
+			// NOTE: assigning to out[i] will mask by itself
+			// this check is just to show how you could do it if you
+			// wanted to skip executing right hand side of assignment
+			if(out[i].is_on()) {
+				out[i] = sgb->varying(i).u();
+			}
+		}
+        if (val.has_derivs()) {
+        	auto out_dx = val.maskedDx<float>();
+    		for(int i=0; i < out_dx.width; ++i) {
+    			out_dx[i] = sgb->varying(i).dudx();
+    		}
+        	auto out_dy = val.maskedDy<float>();
+    		for(int i=0; i < out.width; ++i) {
+    			out_dy[i] = sgb->varying(i).dudy();
+    		}
         }
-        return Mask(true);
+    	
+        return val.mask();
     }
-    if (name == u_t && type == TypeDesc::TypeFloat) {
-    	Wide<float> * out = reinterpret_cast<Wide<float>*>(wide_val);
-    	out[0] = sgb->varyingData().v;
-        if (derivatives) {
-        	out[1] = sgb->varyingData().dvdx;
-        	out[2] = sgb->varyingData().dvdy;
+    if (name == u_t && val.is<float>()) {
+    	auto out = val.masked<float>();
+		for(int i=0; i < out.width; ++i) {
+			out[i] = sgb->varying(i).v();
+		}
+        if (val.has_derivs()) {
+        	auto out_dx = val.maskedDx<float>();
+    		for(int i=0; i < out_dx.width; ++i) {
+    			out_dx[i] = sgb->varying(i).dvdx();
+    		}
+        	auto out_dy = val.maskedDy<float>();
+    		for(int i=0; i < out.width; ++i) {
+    			out_dy[i] = sgb->varying(i).dvdy();
+    		}
         }
-        return Mask(true);
+    	
+        return val.mask();
     }
 
     return Mask(false);
@@ -448,6 +569,12 @@ SimpleRenderer::SimpleRenderer ()
     m_attr_getters[ustring("camera:shutter")] = &SimpleRenderer::get_camera_shutter;
     m_attr_getters[ustring("camera:shutter_open")] = &SimpleRenderer::get_camera_shutter_open;
     m_attr_getters[ustring("camera:shutter_close")] = &SimpleRenderer::get_camera_shutter_close;
+
+    for(const auto & entry: m_attr_getters)
+    {
+    	m_batched_simple_renderer.m_uniform_attributes.insert(entry.first);
+    }
+    
 }
 
 
@@ -613,36 +740,55 @@ SimpleRenderer::name_transform (const char *name, const OSL::Matrix44 &xform)
     m_named_xforms[ustring(name)] = M;
 }
 
+bool
+SimpleRenderer::common_get_attribute (ustring object, ustring name,
+		  DataRef val)
+{
+    AttrGetterMap::const_iterator g = m_attr_getters.find (name);
+    if (g != m_attr_getters.end()) {
+        AttrGetter getter = g->second;
+        return (this->*(getter)) (object, name, val);
+    }
+
+    // In order to test getattribute(), respond positively to
+    // "options"/"blahblah"
+    if (object == "options" && name == "blahblah" && val.is<float>()) {
+    	val.ref<float>() = 3.14159;
+        return true;
+    }
+    
+    return false;
+}
+
 
 
 bool
 SimpleRenderer::get_array_attribute (ShaderGlobals *sg, bool derivatives, ustring object,
                                      TypeDesc type, ustring name,
-                                     int index, void *val)
+                                     int index, void *val_ptr)
 {
-    AttrGetterMap::const_iterator g = m_attr_getters.find (name);
-    if (g != m_attr_getters.end()) {
-        AttrGetter getter = g->second;
-        return (this->*(getter)) (sg, derivatives, object, type, name, val);
-    }
+	DataRef val(type, derivatives, val_ptr);
+	if (common_get_attribute (object, name, val) )
+		return true;
+	
+    if (object == nullptr && name == "blahblah") {
+		if (val.is<float>()) {
+			val.ref<float>() = 1.0f - sg->P.x;
+			return true;
+		} else if (val.is<Vec3>()) {
+			val.ref<Vec3>() = Vec3(1.0f) - sg->P;
+			return true;
+		}
 
-    // In order to test getattribute(), respond positively to
-    // "options"/"blahblah"
-    if (object == "options" && name == "blahblah" &&
-        type == TypeDesc::TypeFloat) {
-        *(float *)val = 3.14159;
-        return true;
     }
 
     // If no named attribute was found, allow userdata to bind to the
     // attribute request.
     if (object.empty() && index == -1)
-        return get_userdata (derivatives, name, type, sg, val);
+        return get_userdata (derivatives, name, type, sg, val_ptr);
 
     return false;
 }
-
-
 
 bool
 SimpleRenderer::get_attribute (ShaderGlobals *sg, bool derivatives, ustring object,
@@ -656,26 +802,27 @@ SimpleRenderer::get_attribute (ShaderGlobals *sg, bool derivatives, ustring obje
 
 bool
 SimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type,
-                              ShaderGlobals *sg, void *val)
+                              ShaderGlobals *sg, void *val_ptr)
 {
     // Just to illustrate how this works, respect s and t userdata, filled
     // in with the uv coordinates.  In a real renderer, it would probably
     // look up something specific to the primitive, rather than have hard-
     // coded names.
+	DataRef val(type, derivatives, val_ptr);
 
-    if (name == u_s && type == TypeDesc::TypeFloat) {
-        ((float *)val)[0] = sg->u;
-        if (derivatives) {
-            ((float *)val)[1] = sg->dudx;
-            ((float *)val)[2] = sg->dudy;
+    if (name == u_s && val.is<float>()) {
+        val.ref<float>() = sg->u;
+        if (val.has_derivs()) {
+            val.refDx<float>() = sg->dudx;
+            val.refDy<float>() = sg->dudy;
         }
         return true;
     }
-    if (name == u_t && type == TypeDesc::TypeFloat) {
-        ((float *)val)[0] = sg->v;
+    if (name == u_t && type == val.is<float>()) {
+    	val.ref<float>() = sg->v;
         if (derivatives) {
-            ((float *)val)[1] = sg->dvdx;
-            ((float *)val)[2] = sg->dvdy;
+        	val.refDx<float>() = sg->dvdx;
+        	val.refDy<float>() = sg->dvdy;
         }
         return true;
     }
@@ -685,12 +832,12 @@ SimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type,
 
 
 bool
-SimpleRenderer::get_camera_resolution (ShaderGlobals *sg, bool derivs, ustring object,
-                                    TypeDesc type, ustring name, void *val)
+SimpleRenderer::get_camera_resolution (ustring object, ustring name, DataRef val)
 {
-    if (type == TypeIntArray2) {
-        ((int *)val)[0] = m_xres;
-        ((int *)val)[1] = m_yres;
+    if (val.is<int[2]>()) {    	
+    	auto v = val.ref<int[2]>();
+        v[0] = m_xres;
+        v[1] = m_yres;
         return true;
     }
     return false;
@@ -698,11 +845,10 @@ SimpleRenderer::get_camera_resolution (ShaderGlobals *sg, bool derivs, ustring o
 
 
 bool
-SimpleRenderer::get_camera_projection (ShaderGlobals *sg, bool derivs, ustring object,
-                                    TypeDesc type, ustring name, void *val)
+SimpleRenderer::get_camera_projection (ustring object, ustring name, DataRef val)
 {
-    if (type == TypeDesc::TypeString) {
-        ((ustring *)val)[0] = m_projection;
+    if (val.is<ustring>()) {
+        val.ref<ustring>() = m_projection;
         return true;
     }
     return false;
@@ -710,14 +856,16 @@ SimpleRenderer::get_camera_projection (ShaderGlobals *sg, bool derivs, ustring o
 
 
 bool
-SimpleRenderer::get_camera_fov (ShaderGlobals *sg, bool derivs, ustring object,
-                                    TypeDesc type, ustring name, void *val)
+SimpleRenderer::get_camera_fov (ustring object, ustring name, DataRef val)
 {
     // N.B. in a real rederer, this may be time-dependent
-    if (type == TypeDesc::TypeFloat) {
-        ((float *)val)[0] = m_fov;
-        if (derivs)
-            memset ((char *)val+type.size(), 0, 2*type.size());
+    if (val.is<float>()) {
+        val.ref<float>() = m_fov;
+        if(val.has_derivs())
+        {
+			val.refDx<float>() = 0.0f;
+			val.refDy<float>() = 0.0f;
+        }
         return true;
     }
     return false;
@@ -725,13 +873,15 @@ SimpleRenderer::get_camera_fov (ShaderGlobals *sg, bool derivs, ustring object,
 
 
 bool
-SimpleRenderer::get_camera_pixelaspect (ShaderGlobals *sg, bool derivs, ustring object,
-                                    TypeDesc type, ustring name, void *val)
+SimpleRenderer::get_camera_pixelaspect (ustring object, ustring name, DataRef val)
 {
-    if (type == TypeDesc::TypeFloat) {
-        ((float *)val)[0] = m_pixelaspect;
-        if (derivs)
-            memset ((char *)val+type.size(), 0, 2*type.size());
+    if (val.is<float>()) {
+        val.ref<float>() = m_pixelaspect;
+        if(val.has_derivs())
+        {
+			val.refDx<float>() = 0.0f;
+			val.refDy<float>() = 0.0f;
+        }
         return true;
     }
     return false;
@@ -739,14 +889,34 @@ SimpleRenderer::get_camera_pixelaspect (ShaderGlobals *sg, bool derivs, ustring 
 
 
 bool
-SimpleRenderer::get_camera_clip (ShaderGlobals *sg, bool derivs, ustring object,
-                                    TypeDesc type, ustring name, void *val)
+SimpleRenderer::get_camera_clip (ustring object, ustring name, DataRef val)
 {
-    if (type == TypeFloatArray2) {
-        ((float *)val)[0] = m_hither;
-        ((float *)val)[1] = m_yon;
-        if (derivs)
-            memset ((char *)val+type.size(), 0, 2*type.size());
+    if (val.is<float[2]>()) {
+    	
+    	float clip[2];
+    	clip[0] = m_hither;
+    	clip[1] = m_yon;
+    	
+    	// various ways of assigning through a DataRef proxy
+        val.ref<float[2]>() = clip;
+    	
+        //val.ref<float[2]>()[0] = clip[0];
+        //val.ref<float[2]>()[1] = clip[1];
+    	
+    	//auto r = val.ref<float[2]>();
+    	//r = clip;
+    	
+    	//typedef float (&RefFloat2)[2];
+    	//RefFloat2 ar = val.ref<float[2]>();
+    	//ar[0] = clip[0];
+    	//ar[1] = clip[1];
+        
+        if(val.has_derivs())
+        {        	
+        	float zero2[2] = {0.0f, 0.0f};
+			val.refDx<float[2]>() = zero2;
+			val.refDy<float[2]>() = zero2;
+        }
         return true;
     }
     return false;
@@ -754,13 +924,27 @@ SimpleRenderer::get_camera_clip (ShaderGlobals *sg, bool derivs, ustring object,
 
 
 bool
-SimpleRenderer::get_camera_clip_near (ShaderGlobals *sg, bool derivs, ustring object,
-                                    TypeDesc type, ustring name, void *val)
+SimpleRenderer::get_camera_clip_near (ustring object, ustring name, DataRef val)
 {
-    if (type == TypeDesc::TypeFloat) {
-        ((float *)val)[0] = m_hither;
-        if (derivs)
-            memset ((char *)val+type.size(), 0, 2*type.size());
+    if (val.is<float>()) {
+    	
+		// various ways of assigning through a DataRef proxy
+        val.ref<float>() = m_hither;
+    	
+    	//float & r =val.ref<float>();
+    	//r=m_hither;
+
+    	// NOTE: r is a proxy object, so no need to think about &, 
+    	// as the reference is inside the object
+    	//auto r =val.ref<float>();
+    	//r=m_hither;
+    	
+    	
+        if(val.has_derivs())
+        {
+			val.refDx<float>() = 0.0f;
+			val.refDy<float>() = 0.0f;
+        }
         return true;
     }
     return false;
@@ -768,13 +952,15 @@ SimpleRenderer::get_camera_clip_near (ShaderGlobals *sg, bool derivs, ustring ob
 
 
 bool
-SimpleRenderer::get_camera_clip_far (ShaderGlobals *sg, bool derivs, ustring object,
-                                    TypeDesc type, ustring name, void *val)
+SimpleRenderer::get_camera_clip_far (ustring object, ustring name, DataRef val)
 {
-    if (type == TypeDesc::TypeFloat) {
-        ((float *)val)[0] = m_yon;
-        if (derivs)
-            memset ((char *)val+type.size(), 0, 2*type.size());
+    if (val.is<float>()) {
+        val.ref<float>() = m_yon;
+        if(val.has_derivs())
+        {
+			val.refDx<float>() = 0.0f;
+			val.refDy<float>() = 0.0f;
+        }
         return true;
     }
     return false;
@@ -783,14 +969,16 @@ SimpleRenderer::get_camera_clip_far (ShaderGlobals *sg, bool derivs, ustring obj
 
 
 bool
-SimpleRenderer::get_camera_shutter (ShaderGlobals *sg, bool derivs, ustring object,
-                                    TypeDesc type, ustring name, void *val)
+SimpleRenderer::get_camera_shutter (ustring object, ustring name, DataRef val)
 {
-    if (type == TypeFloatArray2) {
-        ((float *)val)[0] = m_shutter[0];
-        ((float *)val)[1] = m_shutter[1];
-        if (derivs)
-            memset ((char *)val+type.size(), 0, 2*type.size());
+    if (val.is<float[2]>()) {    	
+        val.ref<float[2]>() = m_shutter;        
+        if(val.has_derivs())
+        {        	
+        	float zero2[2] = {0.0f, 0.0f};
+			val.refDx<float[2]>() = zero2;
+			val.refDy<float[2]>() = zero2;
+        }
         return true;
     }
     return false;
@@ -798,27 +986,31 @@ SimpleRenderer::get_camera_shutter (ShaderGlobals *sg, bool derivs, ustring obje
 
 
 bool
-SimpleRenderer::get_camera_shutter_open (ShaderGlobals *sg, bool derivs, ustring object,
-                                    TypeDesc type, ustring name, void *val)
+SimpleRenderer::get_camera_shutter_open (ustring object, ustring name, DataRef val)
 {
-    if (type == TypeDesc::TypeFloat) {
-        ((float *)val)[0] = m_shutter[0];
-        if (derivs)
-            memset ((char *)val+type.size(), 0, 2*type.size());
+    if (val.is<float>()) {
+        val.ref<float>() = m_shutter[0];
+        if(val.has_derivs())
+        {
+			val.refDx<float>() = 0.0f;
+			val.refDy<float>() = 0.0f;
+        }
         return true;
     }
-    return false;
+    return false;    
 }
 
 
 bool
-SimpleRenderer::get_camera_shutter_close (ShaderGlobals *sg, bool derivs, ustring object,
-                                    TypeDesc type, ustring name, void *val)
+SimpleRenderer::get_camera_shutter_close (ustring object, ustring name, DataRef val)
 {
-    if (type == TypeDesc::TypeFloat) {
-        ((float *)val)[0] = m_shutter[1];
-        if (derivs)
-            memset ((char *)val+type.size(), 0, 2*type.size());
+    if (val.is<float>()) {
+        val.ref<float>() = m_shutter[1];
+        if(val.has_derivs())
+        {
+			val.refDx<float>() = 0.0f;
+			val.refDy<float>() = 0.0f;
+        }
         return true;
     }
     return false;
@@ -826,20 +1018,21 @@ SimpleRenderer::get_camera_shutter_close (ShaderGlobals *sg, bool derivs, ustrin
 
 
 bool
-SimpleRenderer::get_camera_screen_window (ShaderGlobals *sg, bool derivs, ustring object,
-                                    TypeDesc type, ustring name, void *val)
+SimpleRenderer::get_camera_screen_window (ustring object, ustring name, DataRef val)
 {
     // N.B. in a real rederer, this may be time-dependent
-    if (type == TypeFloatArray4) {
-        ((float *)val)[0] = m_screen_window[0];
-        ((float *)val)[1] = m_screen_window[1];
-        ((float *)val)[2] = m_screen_window[2];
-        ((float *)val)[3] = m_screen_window[3];
-        if (derivs)
-            memset ((char *)val+type.size(), 0, 2*type.size());
+    if (val.is<float[4]>()) {    	
+        val.ref<float[4]>() = m_screen_window;        
+        if(val.has_derivs())
+        {        	
+        	float zero4[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+			val.refDx<float[4]>() = zero4;
+			val.refDy<float[4]>() = zero4;
+        }
         return true;
     }
     return false;
+    
 }
 
 

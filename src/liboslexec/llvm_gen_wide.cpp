@@ -296,6 +296,16 @@ LLVMGEN (llvm_gen_printf)
 
     ASSERT(rop.isSymbolUniform(format_sym));
     
+    // For WIDE parameters we want to test the lane first to see
+    // if we need to extract values or not
+    struct DelayedExtraction
+    {
+    	int argument_slot;
+    	bool is_float;
+    	llvm::Value* loaded_value;
+    };
+    
+    std::vector<DelayedExtraction> delay_extraction_args; 
     std::vector<std::vector<llvm::Value*>> call_args;
     if (!format_sym.is_constant()) {
         rop.shadingcontext()->warning ("%s must currently have constant format\n",
@@ -331,12 +341,17 @@ LLVMGEN (llvm_gen_printf)
     if (op.opname() == op_printf || op.opname() == op_error ||
             op.opname() == op_warning) {
 		auto sg = rop.sg_void_ptr();
+		llvm::Value * mask = rop.ll.current_mask();
 		if (op_is_uniform) {
 			call_args[0].push_back (sg);
+			call_args[0].push_back (rop.ll.mask_as_int(mask));
 		} else {
 			// Need to populate all lane's call arguments with same value
         	for(int lane_index=0; lane_index < SimdLaneCount; ++lane_index) {
-            	call_args[lane_index].push_back (sg);					
+            	call_args[lane_index].push_back (sg);
+            	Mask laneMask(false);
+            	laneMask.set_on(lane_index);            	
+            	call_args[lane_index].push_back (rop.ll.constant(static_cast<int>(laneMask.value())));					
         	}							
 		}
     }
@@ -435,15 +450,13 @@ LLVMGEN (llvm_gen_printf)
 						}
                     } else {
                     	ASSERT(false == op_is_uniform);
+                    	delay_extraction_args.push_back(DelayedExtraction{call_args[0].size(), simpletype.basetype == TypeDesc::FLOAT, loaded});
+						// Need to populate all lane's call arguments with a place holder
+                    	// that we can fill in later once we test the lane
                     	for(int lane_index=0; lane_index < SimdLaneCount; ++lane_index) {
-                    		llvm::Value* scalar_val = rop.ll.op_extract(loaded, lane_index);					
-							
-							if (simpletype.basetype == TypeDesc::FLOAT) {
-								// C varargs convention upconverts float->double.
-								scalar_val = rop.ll.op_float_to_double(scalar_val);
-							}
-                        	call_args[lane_index].push_back (scalar_val);
-                    	}
+                        	call_args[lane_index].push_back (nullptr);					
+                    	}							
+                    	
                     }
                 }
             }
@@ -473,10 +486,6 @@ LLVMGEN (llvm_gen_printf)
     	}							
 	}
 
-    // TODO:  handle masking!  We could check here, or possibly just pass the mask
-	// along through to osl_xxx_batched call and let it sort it out, probably easier
-    
-	
     // Construct the function name and call it.
     std::string opname = std::string("osl_") + op.opname().string() + std::string("_batched");
     if (op_is_uniform) {
@@ -487,10 +496,40 @@ LLVMGEN (llvm_gen_printf)
 		if (op.opname() == op_format)
 			rop.llvm_store_value (ret, *rop.opargsym (op, 0));
     } else {
+    	
+		llvm::Value *mask = rop.ll.is_mask_stack_empty() ? nullptr : rop.ll.current_mask();
+    	
     	for(int lane_index=0; lane_index < SimdLaneCount; ++lane_index) {
+    		
+    		llvm::BasicBlock* after_block = nullptr;
+    		if (mask)
+    		{
+    			llvm::Value *lane_is_active =  rop.ll.test_mask_lane(mask, lane_index);
+    		
+    			// skip the printf if the lane is not active
+    			llvm::BasicBlock* then_block = rop.ll.new_basic_block ("test_lane_then");
+    			after_block = rop.ll.new_basic_block ("");
+    			rop.ll.op_branch (lane_is_active, then_block, after_block);
+    			
+    		}
+    		for(const DelayedExtraction &de : delay_extraction_args)
+    		{
+        		llvm::Value* scalar_val = rop.ll.op_extract(de.loaded_value, lane_index);					
+				
+				if (de.is_float) {
+					// C varargs convention upconverts float->double.
+					scalar_val = rop.ll.op_float_to_double(scalar_val);
+				}
+            	call_args[lane_index][de.argument_slot] = scalar_val;
+    			
+    		}
     		llvm::Value *ret = rop.ll.call_function (opname.c_str(), &call_args[lane_index][0],
     												   (int)call_args[lane_index].size());
     	
+    		if (after_block) {
+    			rop.ll.op_branch (after_block);  // insert point is now after_block				
+    		}
+    		
     		// The format op returns a string value, put in in the right spot
     		ASSERT(op.opname() != op_format && "INCOMPLETE");
     	}    	

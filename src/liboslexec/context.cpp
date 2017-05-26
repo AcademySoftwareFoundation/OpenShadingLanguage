@@ -315,6 +315,8 @@ ShadingContext::execute_batch_layer (ShaderGlobalsBatch &sgb, int layernumber)
     OIIO::Timer timer (profile);
 #endif
 
+    size_t prev_end_of_errors = m_buffered_errors.size();
+    
     RunLLVMGroupFunc run_func = group()->llvm_compiled_wide_layer (layernumber);
     if (! run_func)
         return false;
@@ -327,6 +329,13 @@ ShadingContext::execute_batch_layer (ShaderGlobalsBatch &sgb, int layernumber)
     if (profile)
         m_ticks += timer.ticks();
 
+    size_t new_end_of_errors = m_buffered_errors.size();
+    if (new_end_of_errors != prev_end_of_errors) {
+    	m_buffered_error_batches.push_back(
+			ErrorBatch{static_cast<int>(prev_end_of_errors), 
+					   static_cast<int>(new_end_of_errors)});
+    }
+    
     return true;
 }
 
@@ -375,13 +384,51 @@ void
 ShadingContext::record_error (ErrorHandler::ErrCode code,
                               const std::string &text) const
 {
-    m_buffered_errors.push_back (ErrorItem(code,text));
+    m_buffered_errors.push_back (ErrorItem(code,text, Mask(false)));
+    // If we aren't buffering, just process immediately
+    if (! shadingsys().m_buffer_printf)
+        process_errors ();
+}
+
+void
+ShadingContext::record_error (ErrorHandler::ErrCode code,
+                              const std::string &text, Mask mask) const
+{
+    m_buffered_errors.push_back (ErrorItem(code,text, mask));
     // If we aren't buffering, just process immediately
     if (! shadingsys().m_buffer_printf)
         process_errors ();
 }
 
 
+
+template<typename ErrorsT, typename TestFunctorT>
+void process_errors_helper (ShadingSystemImpl &shading_sys, const ErrorsT &errors, int startAtError, int endBeforeError, const TestFunctorT & test_func) 
+{
+    for (size_t i = startAtError;  i < endBeforeError;  ++i) {
+    	const auto & error_item = errors[i];
+    	if (test_func(error_item.mask)) {
+			switch (errors[i].err_code) {
+			case ErrorHandler::EH_MESSAGE :
+			case ErrorHandler::EH_DEBUG :
+				shading_sys.message (error_item.msgString);
+				break;
+			case ErrorHandler::EH_INFO :
+				shading_sys.info (error_item.msgString);
+				break;
+			case ErrorHandler::EH_WARNING :
+				shading_sys.warning (error_item.msgString);
+				break;
+			case ErrorHandler::EH_ERROR :
+			case ErrorHandler::EH_SEVERE :
+				shading_sys.error (error_item.msgString);
+				break;
+			default:
+				break;
+			}
+    	}
+    }
+}
 
 void
 ShadingContext::process_errors () const
@@ -395,27 +442,45 @@ ShadingContext::process_errors () const
     // interleaved with other threads.
     lock_guard lock (buffered_errors_mutex);
 
-    for (size_t i = 0;  i < nerrors;  ++i) {
-        switch (m_buffered_errors[i].first) {
-        case ErrorHandler::EH_MESSAGE :
-        case ErrorHandler::EH_DEBUG :
-           shadingsys().message (m_buffered_errors[i].second);
-            break;
-        case ErrorHandler::EH_INFO :
-            shadingsys().info (m_buffered_errors[i].second);
-            break;
-        case ErrorHandler::EH_WARNING :
-            shadingsys().warning (m_buffered_errors[i].second);
-            break;
-        case ErrorHandler::EH_ERROR :
-        case ErrorHandler::EH_SEVERE :
-            shadingsys().error (m_buffered_errors[i].second);
-            break;
-        default:
-            break;
-        }
-    }
+    int boundaryIndex = 0;
+    int errorIndex=0;
+    do {
+    	// We need to process all errors belonging to the same batch before moving on
+    	// to the next to get the output order correct.
+    	ErrorBatch error_batch;
+		if (boundaryIndex < m_buffered_error_batches.size()) {
+			error_batch = m_buffered_error_batches[boundaryIndex++];
+		} else {
+			error_batch.startAt = nerrors;
+			error_batch.endBefore = nerrors;
+		}
+		//TODO: Change to DASSERT
+		ASSERT(error_batch.startAt >= errorIndex);
+		ASSERT(error_batch.endBefore >= errorIndex);
+		ASSERT(error_batch.endBefore >= error_batch.startAt);
+		
+		// Process non-batched errors up to the start of the batch
+		// A mask will all lanes off is how non-batch errors got recorded, just print them out once
+		
+		process_errors_helper(shadingsys(), m_buffered_errors, errorIndex, error_batch.startAt, 
+			[](Mask mask)->bool 
+			{ 
+				//TODO: Change to DASSERT
+				ASSERT(mask.all_off()); 
+				return true;
+			});
+		errorIndex = error_batch.startAt;
+		
+		// Now for batched, emit each data lane separately and in the correct order
+		for(int lane_mask=0; lane_mask < Mask::width; ++lane_mask) {
+			#pragma noinline
+			process_errors_helper(shadingsys(), m_buffered_errors, errorIndex, error_batch.endBefore, [=](Mask mask)->bool { return mask.is_on(lane_mask);} );    	
+		}
+		errorIndex = error_batch.endBefore;
+	} while (errorIndex < nerrors);
+    
     m_buffered_errors.clear();
+    m_buffered_error_batches.clear();
 }
 
 

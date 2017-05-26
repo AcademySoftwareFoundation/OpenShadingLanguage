@@ -1809,12 +1809,14 @@ public:
 
     // Record an error (or warning, printf, etc.)
     void record_error (ErrorHandler::ErrCode code, const std::string &text) const;
+    void record_error (ErrorHandler::ErrCode code, const std::string &text, Mask mask) const;
     // Process all the recorded errors, warnings, printfs
     void process_errors () const;
 
     TINYFORMAT_WRAP_FORMAT (void, error, const,
                             std::ostringstream msg;, msg,
                             record_error(ErrorHandler::EH_ERROR, msg.str());)
+        
     TINYFORMAT_WRAP_FORMAT (void, warning, const,
                             std::ostringstream msg;, msg,
                             record_error(ErrorHandler::EH_WARNING, msg.str());)
@@ -1825,6 +1827,15 @@ public:
                             std::ostringstream msg;, msg,
                             record_error(ErrorHandler::EH_MESSAGE, msg.str());)
 
+	template<typename ...ArgListT>
+	inline                                 
+	void message(Mask mask, const char* fmt, ArgListT... args) const
+	{
+    	std::ostringstream msg;
+    	tinyformat::format(msg, fmt, args...);  
+		record_error(ErrorHandler::EH_MESSAGE, msg.str(), mask);
+	}            
+                            
 private:
 
     void free_dict_resources ();
@@ -1867,8 +1878,26 @@ private:
     int m_next_failed_attrib[SimdLaneCount];
 
     // Buffering of error messages and printfs
-    typedef std::pair<ErrorHandler::ErrCode, std::string> ErrorItem;
+    struct ErrorItem
+    {
+    	ErrorItem() = default;
+    	ErrorItem(ErrorHandler::ErrCode err_code_, std::string msgString_, Mask mask_)
+    	: err_code(err_code_)
+    	, msgString(msgString_)
+    	, mask(mask_)
+    	{}
+    	
+    	ErrorHandler::ErrCode err_code;
+    	std::string msgString;
+    	Mask mask;
+    };
     mutable std::vector<ErrorItem> m_buffered_errors;
+    struct ErrorBatch
+    {
+    	int startAt;
+    	int endBefore;
+    };
+    mutable std::vector<ErrorBatch> m_buffered_error_batches;
 
     // Calculate offset needed to align ClosureComponent's mem to a given alignment.
     inline size_t closure_alignment_offset_calc(size_t alignment) {

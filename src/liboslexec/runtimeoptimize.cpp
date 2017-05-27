@@ -700,9 +700,10 @@ RuntimeOptimizer::add_useparam (SymbolPtrVec &allsyms)
             int argind = op.firstarg() + a;
             SymbolPtr s = inst()->argsymbol (argind);
             DASSERT (s->dealias() == s);
-            // If this arg is a param and is read, remember it
-            if (s->symtype() != SymTypeParam && s->symtype() != SymTypeOutputParam)
-                continue;  // skip non-params
+           // If this arg is a param or a global and is read, remember it
+			if (s->symtype() != SymTypeParam && s->symtype() != SymTypeOutputParam && s->symtype() != SymTypeGlobal)
+                continue;  // skip all other types
+
             // skip if we've already 'usedparam'ed it unconditionally
             if (s->initialized() && in_main_code)
                 continue;

@@ -191,6 +191,16 @@ Symbol::print (std::ostream &out, int maxvals) const
         if (symtype() == SymTypeParam && ! lockgeom())
             out << " lockgeom=0";
     }
+    if (symtype() == SymTypeGlobal) {
+        if (connected())
+            out << " connected";
+        if (connected_down())
+            out << " down-connected";
+        if (!connected() && !connected_down())
+            out << " unconnected";
+        if (renderer_output())
+            out << " renderer-output";
+    }
     out << "\n";
     if (symtype() == SymTypeConst) {
         out << "\tconst: ";

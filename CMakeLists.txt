@@ -237,6 +237,7 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             draw_string
             error-dupes exit exponential
             function-earlyreturn function-simple function-outputelem
+            function-overload-struct
             geomath getattribute-camera getattribute-shader
             getsymbol-nonheap gettextureinfo
             group-outputs groupstring

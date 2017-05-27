@@ -148,19 +148,22 @@ bool
 equivalent (const TypeSpec &a, const TypeSpec &b)
 {
     // The two complex types are equivalent if...
+    // they are actually identical (duh)
+    if (a == b)
+        return true;
+    // or if they are structs, and the structs are equivalent
+    if (a.is_structure() || b.is_structure())
+        return a.is_structure() && b.is_structure() &&
+               equivalent(a.structspec(), b.structspec());
+    // or if the underlying simple types are equivalent
     return
-        // they are actually identical (duh)
-        (a == b) ||
-        // or if the underlying simple types are equivalent
-        (((a.is_vectriple_based() && b.is_vectriple_based()) || equivalent(a.m_simple, b.m_simple))  &&
-         //     ... and either both or neither are closures
-         a.is_closure() == b.is_closure() &&
-         //     ... and, if arrays, they are the same length, or both unsized,
-         //         or one is unsized and the other isn't
-         (a.m_simple.arraylen == b.m_simple.arraylen || a.is_unsized_array() != b.is_unsized_array())) ||
-        // or if they are structs, and the structs are equivalent
-        (a.is_structure() && b.is_structure() &&
-         equivalent(a.structspec(), b.structspec()));
+        ((a.is_vectriple_based() && b.is_vectriple_based()) || equivalent(a.m_simple, b.m_simple))
+         // ... and either both or neither are closures
+         && a.is_closure() == b.is_closure()
+         // ... and, if arrays, they are the same length, or both unsized,
+         //     or one is unsized and the other isn't
+         && (a.m_simple.arraylen == b.m_simple.arraylen ||
+             a.is_unsized_array() != b.is_unsized_array());
 }
 
 

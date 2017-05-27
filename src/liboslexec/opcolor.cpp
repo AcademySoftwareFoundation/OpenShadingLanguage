@@ -427,7 +427,6 @@ ShadingSystemImpl::set_colorspace (ustring colorspace)
                 lastT = T;
                 bb_spectrum spec (T);
                 Color3 rgb = XYZ_to_RGB (spectrum_to_XYZ (spec));
-                clamp_zero (rgb);
                 rgb = colpow (rgb, 1.0f/BB_TABLE_YPOWER);
                 m_blackbody_table.push_back (rgb);
                 // std::cout << "Table[" << i << "; T=" << T << "] = " << rgb << "\n";
@@ -487,7 +486,6 @@ ShadingSystemImpl::blackbody_rgb (float T)
     // Otherwise, compute for real
     bb_spectrum spec (T);
     Color3 rgb = XYZ_to_RGB (spectrum_to_XYZ (spec));
-    clamp_zero (rgb);
     return rgb;
 }
 
@@ -508,7 +506,6 @@ OSL_SHADEOP void osl_wavelength_color_vf (void *sg, void *out, float lambda)
 //    constrain_rgb (rgb);
     rgb *= 1.0/2.52;    // Empirical scale from lg to make all comps <= 1
 //    norm_rgb (rgb);
-    clamp_zero (rgb);
     *(Color3 *)out = rgb;
 }
 

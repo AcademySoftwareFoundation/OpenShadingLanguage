@@ -1160,8 +1160,26 @@ test_shade (int argc, const char *argv[])
     // Write the output images to disk
     for (size_t i = 0;  i < outputimgs.size();  ++i) {
         if (outputimgs[i]) {
-            if (! print_outputs)
-                outputimgs[i]->write (outputimgs[i]->name());
+            if (! print_outputs) {
+                std::string filename = outputimgs[i]->name();
+                // JPEG, GIF, and PNG images should be automatically saved
+                // as sRGB because they are almost certainly supposed to
+                // be displayed on web pages.
+                using namespace OIIO;
+                if (Strutil::iends_with (filename, ".jpg") ||
+                    Strutil::iends_with (filename, ".jpeg") ||
+                    Strutil::iends_with (filename, ".gif") ||
+                    Strutil::iends_with (filename, ".png")) {
+                    ImageBuf ccbuf;
+                    ImageBufAlgo::colorconvert (ccbuf, *outputimgs[i],
+                                                "linear", "sRGB", false,
+                                                "", "");
+                    ccbuf.set_write_format (outputimgs[i]->spec().format);
+                    ccbuf.write (filename);
+                } else {
+                    outputimgs[i]->write (filename);
+                }
+            }
             delete outputimgs[i];
             outputimgs[i] = NULL;
         }

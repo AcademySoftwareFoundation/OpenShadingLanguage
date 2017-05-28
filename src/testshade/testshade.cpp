@@ -1135,6 +1135,7 @@ test_shade (int argc, const char *argv[])
             }
         }
     }
+    double runtime = timer.lap();
 
     if (outputfiles.size() == 0)
         std::cout << "\n";
@@ -1169,10 +1170,11 @@ test_shade (int argc, const char *argv[])
 
     // Print some debugging info
     if (debug || runstats || profile) {
-        double runtime = timer.lap();
+        double writetime = timer.lap();
         std::cout << "\n";
         std::cout << "Setup: " << OIIO::Strutil::timeintervalformat (setuptime,2) << "\n";
         std::cout << "Run  : " << OIIO::Strutil::timeintervalformat (runtime,2) << "\n";
+        std::cout << "Write: " << OIIO::Strutil::timeintervalformat (writetime,2) << "\n";
         std::cout << "\n";
         std::cout << shadingsys->getstats (5) << "\n";
         OIIO::TextureSystem *texturesys = shadingsys->texturesys();

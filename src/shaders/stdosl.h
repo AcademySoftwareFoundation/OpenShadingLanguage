@@ -202,8 +202,14 @@ float distance (point a, point b, point q)
 }
 normal normalize (normal v) BUILTIN;
 vector normalize (vector v) BUILTIN;
-vector faceforward (vector N, vector I, vector Nref) BUILTIN;
-vector faceforward (vector N, vector I) BUILTIN;
+vector faceforward (vector N, vector I, vector Nref)
+{
+    return (dot(I, Nref) > 0) ? -N : N;
+}
+vector faceforward (vector N, vector I)
+{
+    return faceforward(N, I, Ng);
+}
 vector reflect (vector I, vector N) { return I - 2*dot(N,I)*N; }
 vector refract (vector I, vector N, float eta) {
     float IdotN = dot (I, N);

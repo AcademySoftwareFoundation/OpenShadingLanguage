@@ -449,8 +449,9 @@ getargs (int argc, const char *argv[])
                 "--options %s", &extraoptions, "Set extra OSL options",
                 "-o %L %L", &outputvars, &outputfiles,
                         "Output (variable, filename)",
-                "-od %s", &dataformatname, "Set the output data format to one of: "
+                "-d %s", &dataformatname, "Set the output data format to one of: "
                         "uint8, half, float",
+                "-od %s", &dataformatname, "", // old name
                 "--print", &print_outputs, "Print values of all -o outputs to console instead of saving images",
                 "--groupname %s", &groupname, "Set shader group name",
                 "--layer %s", &layername, "Set next layer name",

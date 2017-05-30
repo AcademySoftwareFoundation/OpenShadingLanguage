@@ -25,7 +25,8 @@ TYPE fmod(TYPE in, float amount){return fmod(in, amount); }
 
 #endif
 
-color smoothstep(color low, color high, color in){
+color smoothstep(color low, color high, color in)
+{
     color out = in;
     out[0] = smoothstep(low[0], high[0], in[0]);
     out[1] = smoothstep(low[1], high[1], in[1]);
@@ -33,7 +34,8 @@ color smoothstep(color low, color high, color in){
     return out;
 }
 
-color smoothstep(float low, float high, color in){
+color smoothstep(float low, float high, color in)
+{
     color out = in;
     out[0] = smoothstep(low, high, in[0]);
     out[1] = smoothstep(low, high, in[1]);
@@ -81,34 +83,52 @@ color fgamma(color in, float g){ return sign(in) * pow(abs(in), g);}
 color premult(color in, float alpha) { return in * alpha; }
 color unpremult(color in, float alpha) { return in * (1/alpha); }
 
-float contrast(float in, float amount, float pivot){
+float contrast(float in, float amount, float pivot)
+{
     float out = in - pivot;
     out *= amount;
     out += pivot;
     return out;
 }
 
-color contrast(color in, color amount, color pivot){
+color contrast(color in, color amount, color pivot)
+{
     color out = in - pivot;
     out *= amount;
     out += pivot;
     return out;
 }
 
-color contrast(color in, float amount, float pivot){
+color contrast(color in, float amount, float pivot)
+{
     color out = in - pivot;
     out *= amount;
     out += pivot;
     return out;
 }
-float exponent(float in, float amount){ return (in > 0) ? pow(in, amount) : in;}
-color exponent(color in, color amount){ return (luminance(in) > 0) ? pow(in, amount) : in; }
-color exponent(color in, float amount){ return (luminance(in) > 0) ? pow(in, amount) : in; }
+float exponent(float in, float amount)
+{ 
+    return (in > 0) ? pow(in, amount) : in;
+}
+color exponent(color in, color amount)
+{ 
+    return (luminance(in) > 0) ? pow(in, amount) : in; 
+}
+color exponent(color in, float amount)
+{ 
+    return (luminance(in) > 0) ? pow(in, amount) : in; 
+}
 
-vector vscale(vector in, vector amount, vector center){ return ((in - center)/amount); }
+vector vscale(vector in, vector amount, vector center){ return ((in - center)/amount + center); }
 float mag(vector in){    return length(in); }
 
-float fBm( point position, int octaves, float lacunarity, float diminish, string noisetype){
+float cluminance( color in, color lumacoeffs)
+{
+    return dot(in, lumacoeffs);
+}
+
+float fBm( point position, int octaves, float lacunarity, float diminish, string noisetype)
+{
 
     float out = 0;
     float amp = 1.0;
@@ -123,7 +143,8 @@ float fBm( point position, int octaves, float lacunarity, float diminish, string
     return out;
 }
 
-color fBm( point position, int octaves, float lacunarity, float diminish, string noisetype){
+color fBm( point position, int octaves, float lacunarity, float diminish, string noisetype)
+{
 
     color out = 0;
     float amp = 1.0;
@@ -138,7 +159,8 @@ color fBm( point position, int octaves, float lacunarity, float diminish, string
     return out;
 }
 
-color hueshift(color in, float amount){
+color hueshift(color in, float amount)
+{
     color hsv3 = transformc("rgb","hsv", in);
     hsv3[0] += amount;
     hsv3[0] = fmod(hsv3[0], 1.0);
@@ -146,7 +168,8 @@ color hueshift(color in, float amount){
     return out;
 }
 
-color saturate(color in, float amount){
+color saturate(color in, float amount)
+{
     color hsv3 = transformc("rgb","hsv", in);
     hsv3[1] *= amount;
     color out =  transformc("hsv","rgb", hsv3);
@@ -160,25 +183,29 @@ color screen(color fg, color bg){ return 1 - (1 - fg) * (1 - bg);}
 float difference(float fg, float bg){ return abs(fg - bg);}
 color difference(color fg, color bg){ return abs(fg - bg);}
 
-float overlay(float fg, float bg){
+float overlay(float fg, float bg)
+{
     if (fg < 0.5){
       return 2 * fg *bg;
     }
     return 1 - (1 - fg) * (1 - bg);
 }
 
-color overlay(color fg, color bg){
+color overlay(color fg, color bg)
+{
     if (luminance(fg) < 0.5){
       return 2 * fg * bg;
     }
     return color(1) - (color(1) - fg) * (color(1) - bg);
 }
 
-closure color add(closure color in1, closure color in2){
+closure color add(closure color in1, closure color in2)
+{
     return in1 + in2;
 }
 
-closure color mix(closure color in1, closure color in2, float mask){
+closure color mix(closure color in1, closure color in2, float mask)
+{
     return (in1 * mask) +  (in2 * (1.0-mask));
 }
 

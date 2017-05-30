@@ -35,7 +35,8 @@ vector4 make_vector4(float x)
     return out;
 }
 
-vector4 abs(vector4 in){
+vector4 abs(vector4 in)
+{
     vector4 out;
     out.x = abs(in.x);
     out.y = abs(in.y);
@@ -44,7 +45,8 @@ vector4 abs(vector4 in){
     return out;
 }
 
-vector4 floor(vector4 in){
+vector4 floor(vector4 in)
+{
     vector4 out;
     out.x = floor(in.x);
     out.y = floor(in.y);
@@ -53,7 +55,8 @@ vector4 floor(vector4 in){
     return out;
 }
 
-vector4 mix(vector4 value1, vector4 value2, float x ){
+vector4 mix(vector4 value1, vector4 value2, float x )
+{
     vector4 out;
     
     out.x = mix( value1.x, value2.x, x);
@@ -64,18 +67,21 @@ vector4 mix(vector4 value1, vector4 value2, float x ){
     return out;
 }
 
-vector vec4ToVec3(vector4 v){
+vector vec4ToVec3(vector4 v)
+{
     float s = 1/v.w;
     return vector(v.x * s,
                   v.y * s, 
                   v.z * s);
 }
 
-float dot(vector4 a, vector4 b){
-    return dot(vec4ToVec3(a), vec4ToVec3(b));
+float dot(vector4 a, vector4 b)
+{
+    return (a.x*b.x + a.y*b.y + a.z*b.z + a.w*b.w);
 }
 
-vector4 add(vector4 in, vector4 amount){
+vector4 add(vector4 in, vector4 amount)
+{
     vector4 out = in;
     out.x = in.x + amount.x;
     out.y = in.y + amount.y;
@@ -84,7 +90,8 @@ vector4 add(vector4 in, vector4 amount){
     return out;
 }
 
-vector4 add(vector4 in, float amount){
+vector4 add(vector4 in, float amount)
+{
     vector4 out = in;
     out.x = in.x + amount;
     out.y = in.y + amount;
@@ -93,7 +100,8 @@ vector4 add(vector4 in, float amount){
     return out;
 }
 
-vector4 subtract(vector4 in, vector4 amount){
+vector4 subtract(vector4 in, vector4 amount)
+{
     vector4 out = in;
     out.x = in.x - amount.x;
     out.y = in.y - amount.y;
@@ -102,7 +110,8 @@ vector4 subtract(vector4 in, vector4 amount){
     return out;
 }
 
-vector4 subtract(vector4 in, float amount){
+vector4 subtract(vector4 in, float amount)
+{
     vector4 out = in;
     out.x = in.x - amount;
     out.y = in.y - amount;
@@ -111,7 +120,8 @@ vector4 subtract(vector4 in, float amount){
     return out;
 }
 
-vector4 smoothstep(vector4 low, vector4 high, vector4 in){
+vector4 smoothstep(vector4 low, vector4 high, vector4 in)
+{
     vector4 out = in;
     out.x = smoothstep(low.x, high.x, in.x);
     out.y = smoothstep(low.y, high.y, in.y);
@@ -120,7 +130,8 @@ vector4 smoothstep(vector4 low, vector4 high, vector4 in){
     return out;
 }
 
-vector4 smoothstep(float low, float high, vector4 in){
+vector4 smoothstep(float low, float high, vector4 in)
+{
     vector4 out = in;
     out.x = smoothstep(low, high, in.x);
     out.y = smoothstep(low, high, in.y);
@@ -131,30 +142,31 @@ vector4 smoothstep(float low, float high, vector4 in){
 
 vector4 remap(vector4 in, vector4 inLow, vector4 inHigh, vector4 outLow, vector4 outHigh, int doClamp)
 {
-      //remap in from [inLow, inHigh] to [outLow, outHigh], optionally clamping to the new range
+    //remap in from [inLow, inHigh] to [outLow, outHigh], optionally clamping to the new range
 
-      vector4 out = in;
-      out.x = remap(in.x, inLow.x, inHigh.x, outLow.x, outHigh.x, doClamp);
-      out.y = remap(in.y, inLow.y, inHigh.y, outLow.y, outHigh.y, doClamp);
-      out.z = remap(in.z, inLow.z, inHigh.z, outLow.z, outHigh.z, doClamp);
-      out.w = remap(in.w, inLow.w, inHigh.w, outLow.w, outHigh.w, doClamp);
-      return out;
+    vector4 out = in;
+    out.x = remap(in.x, inLow.x, inHigh.x, outLow.x, outHigh.x, doClamp);
+    out.y = remap(in.y, inLow.y, inHigh.y, outLow.y, outHigh.y, doClamp);
+    out.z = remap(in.z, inLow.z, inHigh.z, outLow.z, outHigh.z, doClamp);
+    out.w = remap(in.w, inLow.w, inHigh.w, outLow.w, outHigh.w, doClamp);
+    return out;
 }
 
 vector4 remap(vector4 in, float inLow, float inHigh, float outLow, float outHigh, int doClamp)
 {
-      //remap in from [inLow, inHigh] to [outLow, outHigh], optionally clamping to the new range
+    //remap in from [inLow, inHigh] to [outLow, outHigh], optionally clamping to the new range
 
-      vector4 out = in;
-      out.x = remap(in.x, inLow, inHigh, outLow, outHigh, doClamp);
-      out.y = remap(in.y, inLow, inHigh, outLow, outHigh, doClamp);
-      out.z = remap(in.z, inLow, inHigh, outLow, outHigh, doClamp);
-      out.w = remap(in.w, inLow, inHigh, outLow, outHigh, doClamp);
+    vector4 out = in;
+    out.x = remap(in.x, inLow, inHigh, outLow, outHigh, doClamp);
+    out.y = remap(in.y, inLow, inHigh, outLow, outHigh, doClamp);
+    out.z = remap(in.z, inLow, inHigh, outLow, outHigh, doClamp);
+    out.w = remap(in.w, inLow, inHigh, outLow, outHigh, doClamp);
 
-      return out;
+    return out;
 }
 
-vector4 fgamma(vector4 in, vector4 g){
+vector4 fgamma(vector4 in, vector4 g)
+{
     vector4 out = in;
 
     out.x = fgamma(in.x, g.x);
@@ -164,7 +176,8 @@ vector4 fgamma(vector4 in, vector4 g){
       return out;
 }
 
-vector4 fgamma(vector4 in, float g){
+vector4 fgamma(vector4 in, float g)
+{
     vector4 out = in;
 
     out.x = fgamma(in.x, g);
@@ -174,7 +187,8 @@ vector4 fgamma(vector4 in, float g){
       return out;
 }
 
-vector4 invert(vector4 in, vector4 amount){
+vector4 invert(vector4 in, vector4 amount)
+{
     vector4 out = in;
     out.x = amount.x - in.x;
     out.y = amount.y - in.y;
@@ -184,7 +198,8 @@ vector4 invert(vector4 in, vector4 amount){
     return out;
 }
 
-vector4 invert(vector4 in, float amount){
+vector4 invert(vector4 in, float amount)
+{
     vector4 out = in;
     out.x = amount - in.x;
     out.y = amount - in.y;
@@ -194,12 +209,14 @@ vector4 invert(vector4 in, float amount){
     return out;
 }
 
-vector4 invert(vector4 in){
+vector4 invert(vector4 in)
+{
     vector4 out = invert(in, 1.0);
     return out;
 }
 
-vector4 clamp(vector4 in, vector4 low, vector4 high){
+vector4 clamp(vector4 in, vector4 low, vector4 high)
+{
     vector4 out = in;
     out.x = clamp(in.x, low.x, high.x);
     out.y = clamp(in.y, low.y, high.y);
@@ -208,7 +225,8 @@ vector4 clamp(vector4 in, vector4 low, vector4 high){
     return out;
 }
 
-vector4 clamp(vector4 in, float low, float high){
+vector4 clamp(vector4 in, float low, float high)
+{
     vector4 out = in;
     out.x = clamp(in.x, low, high);
     out.y = clamp(in.y, low, high);
@@ -217,7 +235,8 @@ vector4 clamp(vector4 in, float low, float high){
     return out;
 }
 
-vector4 contrast(vector4 in, vector4 amount, vector4 pivot){
+vector4 contrast(vector4 in, vector4 amount, vector4 pivot)
+{
     vector4 out = in;
     out.x = contrast(in.x, amount.x, pivot.x);
     out.y = contrast(in.y, amount.y, pivot.y);
@@ -226,7 +245,8 @@ vector4 contrast(vector4 in, vector4 amount, vector4 pivot){
     return out;
 }
 
-vector4 contrast(vector4 in, float amount, float pivot){
+vector4 contrast(vector4 in, float amount, float pivot)
+{
     vector4 out = in;
     out.x = contrast(in.x, amount, pivot);
     out.y = contrast(in.y, amount, pivot);
@@ -235,7 +255,8 @@ vector4 contrast(vector4 in, float amount, float pivot){
     return out;
 }
 
-vector4 divide(vector4 in1, vector4 amount){
+vector4 divide(vector4 in1, vector4 amount)
+{
     vector4 out = in1;
     out.x = in1.x / amount.x;
     out.y = in1.y / amount.y;
@@ -244,7 +265,8 @@ vector4 divide(vector4 in1, vector4 amount){
     return out;
 }
 
-vector4 divide(vector4 in1, float amount){
+vector4 divide(vector4 in1, float amount)
+{
     vector4 out = in1;
     out.x = in1.x / amount;
     out.y = in1.y / amount;
@@ -253,7 +275,8 @@ vector4 divide(vector4 in1, float amount){
     return out;
 }
 
-vector4 exponent(vector4 in, vector4 amount){
+vector4 exponent(vector4 in, vector4 amount)
+{
     vector4 out = in;
     out.x = exponent(in.x, amount.x);
     out.y = exponent(in.y, amount.y);
@@ -262,7 +285,8 @@ vector4 exponent(vector4 in, vector4 amount){
     return out;
 }
 
-vector4 exponent(vector4 in, float amount){
+vector4 exponent(vector4 in, float amount)
+{
     vector4 out = in;
     out.x = exponent(in.x, amount);
     out.y = exponent(in.y, amount);
@@ -272,7 +296,8 @@ vector4 exponent(vector4 in, float amount){
 }
 
 
-vector4 max(vector4 in, vector4 amount){
+vector4 max(vector4 in, vector4 amount)
+{
     vector4 out = in;
     out.x = max(in.x, amount.x);
     out.y = max(in.y, amount.y);
@@ -281,7 +306,8 @@ vector4 max(vector4 in, vector4 amount){
     return out;
 }
 
-vector4 max(vector4 in, float amount){
+vector4 max(vector4 in, float amount)
+{
     vector4 out = in;
     out.x = max(in.x, amount);
     out.y = max(in.y, amount);
@@ -290,7 +316,8 @@ vector4 max(vector4 in, float amount){
     return out;
 }
 
-vector4 normalize(vector4 in){
+vector4 normalize(vector4 in)
+{
     vector v = normalize(vec4ToVec3(in));
     vector4 out;
     out.x = v[0];
@@ -300,7 +327,8 @@ vector4 normalize(vector4 in){
     return out;
 }
 
-vector4 multiply(vector4 in1, vector4 amount){
+vector4 multiply(vector4 in1, vector4 amount)
+{
     vector4 out = in1;
     out.x = in1.x * amount.x;
     out.y = in1.y * amount.y;
@@ -309,7 +337,8 @@ vector4 multiply(vector4 in1, vector4 amount){
     return out;
 }
 
-vector4 multiply(vector4 in1, float amount){
+vector4 multiply(vector4 in1, float amount)
+{
     vector4 out = in1;
     out.x = in1.x * amount;
     out.y = in1.y * amount;
@@ -318,7 +347,8 @@ vector4 multiply(vector4 in1, float amount){
     return out;
 }
 
-vector4 min(vector4 in, vector4 amount){
+vector4 min(vector4 in, vector4 amount)
+{
     vector4 out = in;
     out.x = min(in.x, amount.x);
     out.y = min(in.y, amount.y);
@@ -328,7 +358,8 @@ vector4 min(vector4 in, vector4 amount){
     return out;
 }
 
-vector4 min(vector4 in, float amount){
+vector4 min(vector4 in, float amount)
+{
     vector4 out = in;
     out.x = min(in.x, amount);
     out.y = min(in.y, amount);
@@ -338,7 +369,8 @@ vector4 min(vector4 in, float amount){
     return out;
 }
 
-vector4 fmod(vector4 in, vector4 amount){
+vector4 fmod(vector4 in, vector4 amount)
+{
     vector4 out = in;
     out.x = fmod(in.x, amount.x);
     out.y = fmod(in.y, amount.y);
@@ -347,7 +379,8 @@ vector4 fmod(vector4 in, vector4 amount){
     return out;
 }
 
-vector4 fmod(vector4 in, float amount){
+vector4 fmod(vector4 in, float amount)
+{
     vector4 out = in;
     out.x = fmod(in.x, amount);
     out.y = fmod(in.y, amount);
@@ -356,14 +389,15 @@ vector4 fmod(vector4 in, float amount){
     return out;
 }
 
-float mag(vector4 in){
+float mag(vector4 in)
+{
     return length(vector(in.x/in.w, in.y/in.w, in.z/in.w));
 }
 
 vector4 difference(vector4 fg, vector4 bg){
-    vector4 out = { difference(fg.x, bg.x),  
-                 difference(fg.y, bg.y)                 ,
-                 difference(fg.z, bg.z),  
+    vector4 out = { difference(fg.x, bg.x),
+                 difference(fg.y, bg.y),
+                 difference(fg.z, bg.z),
                  difference(fg.w, bg.w)
                };
 

@@ -1223,6 +1223,66 @@ private:
 };
 
 
+template <typename DataT, int WidthT>
+struct MaskedUnboundedArrayLaneProxy
+{
+	explicit OSL_INLINE 
+	MaskedUnboundedArrayLaneProxy(Wide<DataT, WidthT> * array_of_wide_data, int array_length, const Mask & mask, int index)
+	: m_array_of_wide_data(array_of_wide_data)
+	, m_array_length(array_length)
+	, m_mask(mask)
+	, m_index(index)
+	{}
+
+	// Must provide user defined copy constructor to 
+	// get compiler to be able to follow individual 
+	// data members through back to original object
+	// when fully inlined the proxy should disappear
+	OSL_INLINE
+	MaskedUnboundedArrayLaneProxy(const MaskedUnboundedArrayLaneProxy &other)
+	: m_array_of_wide_data(other.m_array_of_wide_data)
+	, m_array_length(array_length)
+	, m_mask(other.m_mask)
+	, m_index(other.m_index)
+	{}
+	
+	OSL_INLINE int 
+	length() const { return m_array_length; }
+	
+	// Although having free helper functions
+	// might be cleaner, we choose to expose
+	// this functionality here to increase 
+	// visibility to end user whose IDE
+	// might display these methods vs. free 
+	// functions
+    OSL_INLINE bool 
+    is_on() const
+    {
+        return m_mask.is_on(m_index);
+    }
+
+    OSL_INLINE bool 
+    is_off()
+    {
+        return m_mask.is_off(m_index);
+    }
+ 
+	OSL_INLINE MaskedLaneProxy<DataT, WidthT> 
+	operator[](int array_index) const 
+	{
+		DASSERT(array_index < m_array_length);
+		return MaskedLaneProxy<DataT, WidthT>(m_array_of_wide_data[array_index], m_mask, m_index);
+	}
+	
+	
+private:
+	Wide<DataT, WidthT> * m_array_of_wide_data;
+	int m_array_length;
+	const Mask &m_mask;
+	const int m_index;
+};
+
+
 
 template <typename DataT, int WidthT = SimdLaneCount>
 struct MaskedAccessor
@@ -1313,6 +1373,126 @@ private:
 	Mask m_mask;
 };
 
+template <typename DataT, int WidthT>
+struct MaskedUnboundArrayAccessor
+{
+	static constexpr int width = WidthT; 
+	
+	explicit OSL_INLINE
+	MaskedUnboundArrayAccessor(void *ptr_wide_data, int derivIndex, int array_length, Mask mask)
+	: m_array_of_wide_data(&reinterpret_cast<Wide<DataT, WidthT> *>(ptr_wide_data)[array_length*derivIndex])
+	, m_array_length(array_length)
+	, m_mask(mask)
+	{}
+	
+	// Must provide user defined copy constructor to 
+	// get compiler to be able to follow individual 
+	// data members through back to original object
+	// when fully inlined the proxy should disappear
+	OSL_INLINE
+	MaskedUnboundArrayAccessor(const MaskedUnboundArrayAccessor &other)
+	: m_array_of_wide_data(other.m_array_of_wide_data)
+	, m_array_length(other.m_array_length)
+	, m_mask(other.m_mask)
+	{}	
+	
+	
+	typedef MaskedUnboundedArrayLaneProxy<DataT, WidthT> Proxy;
+	
+	OSL_INLINE Proxy  
+	operator[](int index) 
+	{
+		return Proxy(m_array_of_wide_data, m_array_length, m_mask, index);
+	}
+
+	OSL_INLINE Proxy const  
+	operator[](int index) const
+	{
+		return Proxy(m_array_of_wide_data, m_array_length, m_mask, index);
+	}
+	
+private:
+	Wide<DataT, WidthT> * m_array_of_wide_data;
+	int m_array_length;
+	Mask m_mask;
+};
+
+
+// End users can add specialize wide for their own types
+// and specialize traits to enable them to be used in the proxies
+// NOTE: array detection is handled separately
+template <typename DataT>
+struct WideTraits; // undefined, all types used should be specialized
+//{
+	//static bool mathes(const TypeDesc &) { return false; }
+//};
+
+template <>
+struct WideTraits<float> {
+	static bool matches(const TypeDesc &type_desc) { 
+		return type_desc.basetype == TypeDesc::FLOAT && 
+		       type_desc.aggregate == TypeDesc::SCALAR; 
+	}
+};
+
+template <>
+struct WideTraits<int> {
+	static bool matches(const TypeDesc &type_desc) { 
+		return type_desc.basetype == TypeDesc::INT && 
+		       type_desc.aggregate == TypeDesc::SCALAR; 
+	}
+};
+
+template <>
+struct WideTraits<char *> {
+	static bool matches(const TypeDesc &type_desc) {
+		return type_desc.basetype == TypeDesc::STRING && 
+               type_desc.aggregate == TypeDesc::SCALAR; 
+	}
+};
+
+template <>
+struct WideTraits<ustring> {
+	static bool matches(const TypeDesc &type_desc) {
+		return type_desc.basetype == TypeDesc::STRING && 
+               type_desc.aggregate == TypeDesc::SCALAR; 
+	}
+};
+
+// We let Vec3 match any vector semantics as we don't have a seperate Point or Normal classes
+template <>
+struct WideTraits<Vec3> {
+	static bool matches(const TypeDesc &type_desc) {
+		return type_desc.basetype == TypeDesc::FLOAT && 
+		    type_desc.aggregate == TypeDesc::VEC3; 
+	}
+};
+
+template <>
+struct WideTraits<Color3> {
+	static bool matches(const TypeDesc &type_desc) {
+		return type_desc.basetype == TypeDesc::FLOAT && 
+		    type_desc.aggregate == TypeDesc::VEC3 &&
+			type_desc.vecsemantics == TypeDesc::COLOR; 
+	}
+};
+
+template <>
+struct WideTraits<Matrix33> {
+	static bool matches(const TypeDesc &type_desc) {
+		return type_desc.basetype == TypeDesc::FLOAT && 
+		type_desc.aggregate == TypeDesc::MATRIX33;
+	}
+};
+
+template <>
+struct WideTraits<Matrix44> {
+	static bool matches(const TypeDesc &type_desc) {
+		return type_desc.basetype == TypeDesc::FLOAT && 
+		    type_desc.aggregate == TypeDesc::MATRIX44; }
+};
+
+
 
 template <int WidthT = SimdLaneCount>
 class MaskedData
@@ -1350,60 +1530,65 @@ public:
 protected:
    
    
-   OSL_INLINE bool is_impl(float) const { return m_type == TypeDesc::TypeFloat; }
-   OSL_INLINE bool is_impl(int) const { return m_type == TypeDesc::TypeInt; }
-   OSL_INLINE bool is_impl(char *) const { return m_type == TypeDesc::TypeString; }
-   OSL_INLINE bool is_impl(ustring) const { return m_type == TypeDesc::TypeString; }
-   OSL_INLINE bool is_impl(Vec3) const { return m_type == TypeDesc::TypeVector; }
-   OSL_INLINE bool is_impl(Color3) const { return m_type == TypeDesc::TypeColor; }
-   OSL_INLINE bool is_impl(Matrix33) const { return m_type == TypeDesc::TypeMatrix33; }
-   OSL_INLINE bool is_impl(Matrix44) const { return m_type == TypeDesc::TypeMatrix44; }
+   template<typename DataT>
+   OSL_INLINE bool 
+   is_array_unbounded_selector(std::false_type) {
+	   return (m_type.arraylen == std::extent<DataT>::value) && 
+			   WideTraits<DataT>::matches(m_type);
+   }
 
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(float) const { return m_type == TypeDesc(TypeDesc::FLOAT, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(int) const { return m_type == TypeDesc(TypeDesc::INT32, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(char *) const { return m_type == TypeDesc(TypeDesc::STRING, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(ustring) const { return m_type == TypeDesc(TypeDesc::STRING, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(Vec3) const { return m_type == TypeDesc(TypeDesc::FLOAT, TypeDesc::VEC3, TypeDesc::VECTOR, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(Color3) const { return m_type == TypeDesc(TypeDesc::FLOAT, TypeDesc::VEC3, TypeDesc::COLOR, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(Matrix33) const { return m_type == TypeDesc(TypeDesc::FLOAT, TypeDesc::MATRIX33, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(Matrix44) const { return m_type == TypeDesc(TypeDesc::FLOAT, TypeDesc::MATRIX44, ArrayLenT); }
-
+   template<typename DataT>
+   OSL_INLINE bool 
+   is_array_unbounded_selector(std::true_type) {
+	   return (m_type.arraylen != 0) 
+			  && WideTraits<DataT>::matches(m_type);
+   }
+   
    
    template<typename DataT>
    OSL_INLINE bool 
    is_array_selector(std::false_type) {
-	   return is_impl(DataT());
+	   return (m_type.arraylen == 0) && 
+			   WideTraits<DataT>::matches(m_type);
    }
 
    template<typename DataT>
    OSL_INLINE bool 
    is_array_selector(std::true_type) {
-	   return is_array_impl<std::extent<DataT>::value>(std::remove_all_extents<DataT>::type());
-   }
-   
+	   typedef typename std::remove_all_extents<DataT>::type ElementType;
+	   return is_array_unbounded_selector<ElementType>(std::integral_constant<bool, (std::extent<DataT>::value == 0)>());
+   }   
   
    template<typename DataT, int DerivIndexT>
    OSL_INLINE MaskedAccessor<DataT, WidthT>
-   masked_impl(std::false_type) 
+   masked_impl(std::false_type /*is array*/) 
    { 
 	   DASSERT(is<DataT>());
 	   return MaskedAccessor<DataT, WidthT>(m_ptr, m_mask, DerivIndexT);
    }
 
    template<typename DataT, int DerivIndexT>
+   OSL_INLINE MaskedUnboundArrayAccessor<typename std::remove_all_extents<DataT>::type, WidthT>
+   masked_array_impl(std::true_type /*is unbounded array*/) 
+   { 
+	   DASSERT(is<DataT>());
+	   return MaskedUnboundArrayAccessor<typename std::remove_all_extents<DataT>::type, WidthT>(m_ptr, DerivIndexT, m_type.arraylen, m_mask);
+   }
+
+   template<typename DataT, int DerivIndexT>
    OSL_INLINE MaskedArrayAccessor<typename std::remove_all_extents<DataT>::type, std::extent<DataT>::value, WidthT>
-   masked_impl(std::true_type) 
+   masked_array_impl(std::false_type /*is unbounded array*/) 
    { 
 	   DASSERT(is<DataT>());
 	   return MaskedArrayAccessor<typename std::remove_all_extents<DataT>::type, std::extent<DataT>::value, WidthT>(m_ptr, DerivIndexT, m_mask);
+   }
+   
+   template<typename DataT, int DerivIndexT>
+   OSL_INLINE decltype(std::declval<MaskedData<WidthT>>().masked_array_impl<DataT, DerivIndexT>(std::integral_constant<bool, (std::extent<DataT>::value == 0)>()))  
+   masked_impl(std::true_type /*is array*/) 
+   { 
+	   DASSERT(is<DataT>());
+	   return masked_array_impl<DataT, DerivIndexT>(std::integral_constant<bool, (std::extent<DataT>::value == 0)>());
    }
    
 public:
@@ -1555,6 +1740,50 @@ private:
 };
 
 
+
+template <typename DataT>
+struct RefUnboundedArrayProxy
+{
+	OSL_INLINE 
+	explicit RefUnboundedArrayProxy(DataT *array_data, int array_length)
+	: m_array_data(array_data)
+	, m_array_length(array_length)
+	{}
+
+	// Must provide user defined copy constructor to 
+	// get compiler to be able to follow individual 
+	// data members through back to original object
+	// when fully inlined the proxy should disappear
+	OSL_INLINE
+	RefUnboundedArrayProxy(const RefUnboundedArrayProxy &other)
+	: m_array_data(other.m_array_data)
+	, m_array_length(other.m_array_length)
+	{}
+	
+	OSL_INLINE int 
+	length() const { return m_array_length; }
+	
+	OSL_INLINE DataT & 
+	operator[](int array_index)  
+	{
+		DASSERT(array_index >= 0 && array_index < m_array_length);
+		return m_array_data[array_index];
+	}
+
+	OSL_INLINE DataT const & 
+	operator[](int array_index) const  
+	{
+		DASSERT(array_index >= 0 && array_index < m_array_length);
+		return m_array_data[array_index];
+	}
+	
+private:
+	DataT * m_array_data;
+	int m_array_length;
+};
+
+
+
 class DataRef
 {
     void *m_ptr;
@@ -1585,66 +1814,70 @@ public:
    
 protected:
    
-   // TODO: see if impl can be shared with MaskedData
-   OSL_INLINE bool is_impl(float) const { return m_type == TypeDesc::TypeFloat; }
-   OSL_INLINE bool is_impl(int) const { return m_type == TypeDesc::TypeInt; }
-   OSL_INLINE bool is_impl(char *) const { return m_type == TypeDesc::TypeString; }
-   OSL_INLINE bool is_impl(ustring) const { return m_type == TypeDesc::TypeString; }
-   OSL_INLINE bool is_impl(Vec3) const { return m_type == TypeDesc::TypeVector; }
-   OSL_INLINE bool is_impl(Color3) const { return m_type == TypeDesc::TypeColor; }
-   OSL_INLINE bool is_impl(Matrix33) const { return m_type == TypeDesc::TypeMatrix33; }
-   OSL_INLINE bool is_impl(Matrix44) const { return m_type == TypeDesc::TypeMatrix44; }
+   // TODO: see if impl can be shared with MaskedData   
+   template<typename DataT>
+   OSL_INLINE bool 
+   is_array_unbounded_selector(std::false_type) {
+	   return (m_type.arraylen == std::extent<DataT>::value) && 
+			   WideTraits<DataT>::matches(m_type);
+   }
 
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(float) const { return m_type == TypeDesc(TypeDesc::FLOAT, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(int) const { return m_type == TypeDesc(TypeDesc::INT32, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(char *) const { return m_type == TypeDesc(TypeDesc::STRING, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(ustring) const { return m_type == TypeDesc(TypeDesc::STRING, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(Vec3) const { return m_type == TypeDesc(TypeDesc::FLOAT, TypeDesc::VEC3, TypeDesc::VECTOR, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(Color3) const { return m_type == TypeDesc(TypeDesc::FLOAT, TypeDesc::VEC3, TypeDesc::COLOR, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(Matrix33) const { return m_type == TypeDesc(TypeDesc::FLOAT, TypeDesc::MATRIX33, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(Matrix44) const { return m_type == TypeDesc(TypeDesc::FLOAT, TypeDesc::MATRIX44, ArrayLenT); }
-
+   template<typename DataT>
+   OSL_INLINE bool 
+   is_array_unbounded_selector(std::true_type) {
+	   return (m_type.arraylen != 0) 
+			  && WideTraits<DataT>::matches(m_type);
+   }
+   
    
    template<typename DataT>
    OSL_INLINE bool 
    is_array_selector(std::false_type) {
-	   return is_impl(DataT());
+	   return (m_type.arraylen == 0) && 
+			   WideTraits<DataT>::matches(m_type);
    }
 
    template<typename DataT>
    OSL_INLINE bool 
    is_array_selector(std::true_type) {
-	   return is_array_impl<std::extent<DataT>::value>(std::remove_all_extents<DataT>::type());
-   }
+	   typedef typename std::remove_all_extents<DataT>::type ElementType;
+	   return is_array_unbounded_selector<ElementType>(std::integral_constant<bool, (std::extent<DataT>::value == 0)>());
+   }   
    
-  
+   
    template<typename DataT, int DerivIndexT>
-   //OSL_INLINE DataT &
    OSL_INLINE RefProxy<DataT>
-   ref_impl(std::false_type) 
+   ref_impl(std::false_type /* is array */) 
    { 
 	   DASSERT(is<DataT>());	   
-	   //return reinterpret_cast<DataT *>(m_ptr)[DerivIndexT];
 	   return RefProxy<DataT>(reinterpret_cast<DataT *>(m_ptr)[DerivIndexT]);
    }
 
-   // TODO: consider returning a proxy to enable array index bounds checking
    template<typename DataT, int DerivIndexT>
    OSL_INLINE RefArrayProxy<typename std::remove_all_extents<DataT>::type, std::extent<DataT>::value> 
-   ref_impl(std::true_type) 
+   ref_array_impl(std::false_type /* is array unbounded*/) 
+   { 
+	   DASSERT(is<DataT>());	   
+	   // NOTE: DataT is a fixed size array, so the array length is baked into it, 
+	   // thus the DerivIndex will step over the whole array, no need to multiply it
+	   return RefArrayProxy<typename std::remove_all_extents<DataT>::type, std::extent<DataT>::value>(reinterpret_cast<DataT *>(m_ptr)[DerivIndexT]);
+   }
+
+   template<typename DataT, int DerivIndexT>
+   OSL_INLINE RefUnboundedArrayProxy<typename std::remove_all_extents<DataT>::type> 
+   ref_array_impl(std::true_type /* is array unbounded*/) 
    { 
 	   DASSERT(is<DataT>());
-	   //return &(reinterpret_cast<DataT *>(m_ptr)[std::extent<DataT>::value*derivIndex]);
-	   
-	   return RefArrayProxy<typename std::remove_all_extents<DataT>::type, std::extent<DataT>::value>(reinterpret_cast<DataT *>(m_ptr)[DerivIndexT]);
+	   typedef typename std::remove_all_extents<DataT>::type ElementType;
+	   return RefUnboundedArrayProxy<ElementType>(&(reinterpret_cast<ElementType *>(m_ptr)[DerivIndexT*m_type.arraylen]), m_type.arraylen);
+   }
+   
+   template<typename DataT, int DerivIndexT>
+   OSL_INLINE decltype(std::declval<DataRef>().ref_array_impl<DataT, DerivIndexT>(std::integral_constant<bool, (std::extent<DataT>::value == 0)>()))  
+   ref_impl(std::true_type/* is array */) 
+   { 
+	   DASSERT(is<DataT>());
+	   return ref_array_impl<DataT, DerivIndexT>(std::integral_constant<bool, (std::extent<DataT>::value == 0)>());
    }
    
 public:

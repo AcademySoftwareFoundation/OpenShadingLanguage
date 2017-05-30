@@ -6,7 +6,6 @@
 
 #pragma once
 
-
 #ifdef FLOAT
 #define TYPE float
 #define TYPE_STR "Float"
@@ -171,3 +170,4 @@
 #include "vector4.h"
 #include "color2.h"
 #include "color4.h"
+

@@ -1,6 +1,17 @@
-Release 1.8.9 -- 1 Jun? 2017 (compared to 1.8.8)
+Release 1.8.9 -- 1 Jun 2017 (compared to 1.8.8)
 --------------------------------------------------
-
+* Minor speedup when passing blank subimage name:
+  texture (..., "subimage", "", ...)
+  #749
+* Fix namespace clash after recent OIIO (master branch) PugiXML version
+  upgrade.
+* Several testshade changes: renamed options --scalest/--offsetst to
+  --scaleuv/--offsetuv to more closely say what they really do;
+  rename -od to -d to match how oiiotool and maketx call the same
+  option; automatically convert to sRGB when instructed to save an
+  output image as JPEG, GIF, or PNG; -runstats is more careful with
+  timing to not include image output in shader run time; new --print
+  option prints outputs to console (don't use with large images!). #757
 
 Release 1.8.8 -- 1 May 2017 (compared to 1.8.7)
 --------------------------------------------------

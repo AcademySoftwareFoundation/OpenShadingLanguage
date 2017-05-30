@@ -1,0 +1,36 @@
+struct color2
+{
+    float r;
+    float g;
+};
+
+struct color4
+{
+    color rgb;
+    float a;
+};
+
+
+color2 __operator__add__(color2 c1, color2 c2)
+{
+    return color2(c1.r + c2.r, c1.g + c2.g);
+}
+
+color4 __operator__add__(color4 c1, color4 c2)
+{
+    return color4(c1.rgb + c2.rgb, c1.a + c2.a);
+}
+
+
+shader test
+  (
+    color2 c2_in_1 = {.1, .1},
+    color2 c2_in_2 = {.2, .2},
+
+    output color2 c2_out = {0, 0},
+  )
+{
+    c2_out = c2_in_1 + c2_in_2;
+    printf ("c2_out = %g %g\n", c2_out.r, c2_out.g);
+}
+

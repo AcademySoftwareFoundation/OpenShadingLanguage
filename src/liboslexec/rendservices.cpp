@@ -567,27 +567,24 @@ Mask
 BatchedRendererServices::get_texture_info (ShaderGlobalsBatch *sgb,
                                            const Wide<ustring>& filename,
                                            int subimage,
-                                           ustring dataname, TypeDesc datatype,
-                                           void *data,
-                                           Mask mask)
+                                           ustring dataname,
+                                           MaskedDataRef val)
 {
     Mask success;
-    int stride = (datatype == TypeDesc::TypeFloat) ? sizeof(float) :
-                 (datatype == TypeDesc::TypeInt) ? sizeof(int): 0;
-    for (int i = 0; i < filename.width; ++i) {
-        std::cout << "osl_get_textureinfo_batched: " << filename.get(i) << " mask: " << mask[i] << std::endl;
-        if (mask[i]) {
-            bool status = texturesys()->get_texture_info (filename.get(i), subimage,
-                                             dataname, datatype, static_cast<char*>(data)+stride*i);
-            if (!status) {
-                std::string err = texturesys()->geterror();
-                if (err.size() && sgb) {
-                    sgb->uniform().context->error ("[BatchRendererServices::get_texture_info] %s", err);
-                }
-            }
-            success.set(i, status);
-        }
-    }
+//    for (int i = 0; i < filename.width; ++i) {
+//        std::cout << "osl_get_textureinfo_batched: " << filename.get(i) << " mask: " << mask[i] << std::endl;
+//        if (mask[i]) {
+//            bool status = texturesys()->get_texture_info (filename.get(i), subimage,
+//                                             dataname, datatype, static_cast<char*>(data)+stride*i);
+//            if (!status) {
+//                std::string err = texturesys()->geterror();
+//                if (err.size() && sgb) {
+//                    sgb->uniform().context->error ("[BatchRendererServices::get_texture_info] %s", err);
+//                }
+//            }
+//            success.set(i, status);
+//        }
+//    }
 
     return success;
 }
@@ -596,15 +593,15 @@ bool
 BatchedRendererServices::get_texture_info_uniform (ShaderGlobalsBatch *sgb, ustring filename,
                                                    TextureHandle *texture_handle,
                                                    int subimage, ustring dataname,
-                                                   TypeDesc datatype, void *data)
+                                                   DataRef val)
 {
     bool status;
     if (texture_handle)
         status = texturesys()->get_texture_info (texture_handle, NULL, subimage,
-                                                 dataname, datatype, data);
+                                                 dataname, val.type(), val.ptr());
     else
         status = texturesys()->get_texture_info (filename, subimage,
-                                                 dataname, datatype, data);
+                                                 dataname, val.type(), val.ptr());
     if (!status) {
         std::string err = texturesys()->geterror();
         if (err.size() && sgb) {

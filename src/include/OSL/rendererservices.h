@@ -783,15 +783,14 @@ public:
                                    const Wide<ustring>& filename,
                                    // We do not need to support texture handle for varying data.
                                    int subimage,
-                                   ustring dataname, TypeDesc datatype,
-                                   void *data,
-                                   Mask mask);
+                                   ustring dataname,
+                                   MaskedDataRef val);
 
     virtual bool get_texture_info_uniform (ShaderGlobalsBatch *sgb, ustring filename,
                                            TextureHandle *texture_handle,
                                            int subimage,
-                                           ustring dataname, TypeDesc datatype,
-                                           void *data);
+                                           ustring dataname,
+                                           DataRef val);
 
 
 #if 0

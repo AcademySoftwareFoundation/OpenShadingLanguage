@@ -1344,8 +1344,12 @@ BackendLLVMWide::llvm_load_value (const Symbol& sym, int deriv,
         if (sym.typespec().is_string()) {
 			// TODO:  NOT SURE WHAT TO DO WITH VARYING STRING
             //return ll.wide_constant (*(ustring *)sym.data());
-        	ASSERT(op_is_uniform);
-            return ll.constant (*(ustring *)sym.data());
+            //ASSERT(op_is_uniform);
+            if (op_is_uniform) {
+                return ll.constant (*(ustring *)sym.data());
+            } else {
+                return ll.wide_constant (*(ustring *)sym.data());
+            }
         }
         ASSERT (0 && "unhandled constant type");
     }

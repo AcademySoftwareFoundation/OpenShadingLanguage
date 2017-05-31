@@ -563,27 +563,26 @@ osl_get_textureinfo (void *sg_, const char *name, void *handle,
 
 OSL_SHADEOP int
 osl_get_textureinfo_batched_uniform (void *sgb_, const char *name, void *handle,
-                     void *dataname,  int type,
-                     int arraylen, int aggregate, void *data)
+                     void *dataname,
+                     const void *attr_type,
+                     void *attr_dest)
 {
     // recreate TypeDesc
-    TypeDesc typedesc;
-    typedesc.basetype  = type;
-    typedesc.arraylen  = arraylen;
-    typedesc.aggregate = aggregate;
-
     ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
 
-    return sgb->uniform().renderer->batched()->get_texture_info_uniform (sgb, USTR(name),
-                                                                         (RendererServices::TextureHandle *)handle,
-                                                                         0 /*FIXME-ptex*/,
-                                                                         USTR(dataname), typedesc, data);
+    DataRef dest(*(const TypeDesc *)attr_type, false, attr_dest);
+
+    return sgb->uniform().renderer->batched()->get_texture_info_uniform(sgb, USTR(name),
+                                                                        (RendererServices::TextureHandle *)handle,
+                                                                        0 /*FIXME-ptex*/,
+                                                                        USTR(dataname), dest);
 }
 
 OSL_SHADEOP int
 osl_get_textureinfo_batched (void *sgb_, void* name,
-                             void *dataname,  int type,
-                             int arraylen, int aggregate, void *data,
+                             void *dataname,
+                             const void *attr_type,
+                             void *wide_attr_dest,
                              int mask_)
 {
     std::cout << "osl_get_textureinfo_batched" << std::endl;
@@ -593,56 +592,14 @@ osl_get_textureinfo_batched (void *sgb_, void* name,
         return 0;
     }
 
-    // recreate TypeDesc
-    TypeDesc typedesc;
-    typedesc.basetype  = type;
-    typedesc.arraylen  = arraylen;
-    typedesc.aggregate = aggregate;
-
     ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
 
-    Mask retVal = sgb->uniform().renderer->batched()->get_texture_info (sgb, WUSTR(name),
-                                                                        0 /*FIXME-ptex*/,
-                                                                        USTR(dataname), typedesc, data, mask);
+    MaskedDataRef dest(*(const TypeDesc *)attr_type, false, mask, wide_attr_dest);
+
+    Mask retVal = sgb->uniform().renderer->batched()->get_texture_info(sgb, WUSTR(name),
+                                                                       0 /*FIXME-ptex*/,
+                                                                       USTR(dataname), dest);
     return retVal.value();
-}
-
-OSL_SHADEOP int
-osl_get_textureinfo_batched_broadcast (void *sgb_, const char* name, void *handle,
-                                       void *dataname,  int type,
-                                       int arraylen, int aggregate, void *data,
-                                       int mask_)
-{
-    std::cout << "osl_get_textureinfo_batched" << std::endl;
-    Mask mask(mask_);
-    // TODO: LLVM could check this before calling this function
-    if (mask.all_off()) {
-        return 0;
-    }
-
-    // recreate TypeDesc
-    TypeDesc typedesc;
-    typedesc.basetype  = type;
-    typedesc.arraylen  = arraylen;
-    typedesc.aggregate = aggregate;
-
-    ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
-
-    // create a temporary data of one element size to hold the uniform result.
-    int elemSize = typedesc.elementsize();
-    void* tempData = alloca(elemSize);
-
-    bool success = sgb->uniform().renderer->batched()->get_texture_info_uniform (sgb, USTR(name),
-                                                                                 (RendererServices::TextureHandle *)handle,
-                                                                                 0 /*FIXME-ptex*/,
-                                                                                 USTR(dataname), typedesc, tempData);
-    // now replicate the result to all lanes with mask
-    for (int i = 0; i < SimdLaneCount; ++i) {
-        if (mask[i]) {
-            memcpy(data+i*elemSize, tempData, elemSize);
-        }
-    }
-    return Mask(success).value();
 }
 
 // Trace

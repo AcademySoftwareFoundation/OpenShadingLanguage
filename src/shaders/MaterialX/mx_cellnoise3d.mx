@@ -4,10 +4,8 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-
 #include "mx_types.h"
 #include "oslutil.h"
-
 
 shader
 SHADER_NAME(mx_cellnoise3d)
@@ -16,7 +14,6 @@ SHADER_NAME(mx_cellnoise3d)
     point position = transform ("object", P)
         [[  string help = "input coordinate position (default: object space P)",
             int lockgeom = 0 ]],
-
     output TYPE out = TYPE_ZERO
 
   )

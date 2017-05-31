@@ -6,17 +6,13 @@
 
 #include "mx_types.h"
 
-
 shader SHADER_NAME(mx_divide_float)
     [[ string help = TYPE_STR" Divide an incoming float/color/vector by the in2" ]]
   (
     TYPE in1 = TYPE_DEFAULT_IN,
-
     float in2 = 1.0,
-
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {
     out = divide(in1, in2); 
-
 }

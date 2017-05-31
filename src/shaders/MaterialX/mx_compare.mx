@@ -24,5 +24,4 @@ SHADER_NAME(mx_compare)
     } else {    
         out = in1;
     }
-    
 }

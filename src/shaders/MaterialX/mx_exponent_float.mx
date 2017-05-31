@@ -6,18 +6,13 @@
 
 #include "mx_types.h"
 
-
 shader SHADER_NAME(mx_exponent_float)
     [[ string help = TYPE_STR" Raise incoming float/color/vector values to the in2 exponent value/stream" ]]
   (
     TYPE in1 = TYPE_DEFAULT_IN,
-
     float in2 = 1.0,
-
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {
-
     out = exponent(in1, in2); 
-
 }

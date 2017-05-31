@@ -14,7 +14,6 @@ SHADER_NAME(mx_fractal3d_fa)
     point position = transform ("object", P)
         [[  string help = "input coordinate position (default: object space P)",
             int lockgeom = 0 ]],
-
     float amplitude = 1
         [[  string help = "center-to-peak amplitude of the noise" ]],
     int octaves = 3
@@ -23,10 +22,8 @@ SHADER_NAME(mx_fractal3d_fa)
         [[  string help = "exponential scale between successive octaves" ]],
     float diminish = 0.5
         [[  string help = "rate at which amplitude is diminished per octave"]],
-    
     string noisetype = "snoise"
         [[  string help = "type of noise" ]],
-
     output TYPE out = TYPE_ZERO
   )
 {

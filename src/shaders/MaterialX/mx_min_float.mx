@@ -10,12 +10,9 @@ shader SHADER_NAME(mx_min_float)
     [[ string help = TYPE_STR" Select the minimum among incoming values." ]]
   (
     TYPE in1 = TYPE_DEFAULT_IN,
-
     float in2 = 0.0,
-
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {
     out = min(in1, in2); 
-
 }

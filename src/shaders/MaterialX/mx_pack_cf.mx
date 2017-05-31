@@ -4,7 +4,6 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-
 #include "mx_types.h"
 
 shader
@@ -14,7 +13,6 @@ SHADER_NAME(mx_pack_cf)
   (
     color in1 = 0,
     float in2 = 0,
-
     output TYPE out = {color(0),0}
   )
 {

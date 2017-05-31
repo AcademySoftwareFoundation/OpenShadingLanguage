@@ -4,19 +4,14 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-
-
 #include "mx_types.h"
-
 
 shader SHADER_NAME(mx_clamp_float) 
     [[ string help = TYPE_STR" Clamp incoming value to a specified range of values." ]]
   (
     TYPE in = TYPE_DEFAULT_IN,
-
     float low = 0.0,
     float high = 1.0,
-
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {

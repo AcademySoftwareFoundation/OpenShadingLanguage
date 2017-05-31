@@ -4,7 +4,6 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-
 #include "mx_types.h"
 
 shader SHADER_NAME(mx_disjointover)
@@ -13,7 +12,6 @@ shader SHADER_NAME(mx_disjointover)
   (
     TYPE fg = TYPE_DEFAULT_IN,
     TYPE bg = TYPE_DEFAULT_IN,
-
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {

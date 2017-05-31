@@ -15,16 +15,6 @@ struct vector4
     float w;
 };
 
-vector4 make_vector4(float x, float y, float z, float w)
-{
-    return vector4 (x, y, z, w);
-}
-
-vector4 make_vector4(float x)
-{
-    return vector4 (x, x, x, x);
-}
-
 vector4 abs(vector4 in)
 {
     return vector4 (abs(in.x),

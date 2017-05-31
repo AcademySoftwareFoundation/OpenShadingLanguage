@@ -12,7 +12,6 @@ shader SHADER_NAME(mx_in)
   (
     TYPE fg = TYPE_DEFAULT_IN,
     TYPE bg = TYPE_DEFAULT_IN,
-
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {

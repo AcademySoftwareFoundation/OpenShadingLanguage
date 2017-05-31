@@ -4,15 +4,12 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-
 #include "mx_types.h"
 #include "swizzle.h"
-
 
 shader
 SHADER_NAME(mx_swizzle_vector2)
     [[ string help = "Perform an arbitrary permutation of the channels of the input stream" ]]
-
   (
     vector2 in = {0,0},
     string channels = "xy",

@@ -5,12 +5,11 @@
 // http://www.materialx.org/
 
 #include "mx_types.h"
-    
+
 shader
 SHADER_NAME(mx_splitlr)
     [[ string help = "split left/right"  ]]
   (
-
     TYPE valuel = TYPE_ZERO
         [[  string help = "value on the left"  ]],
     TYPE valuer = TYPE_ONE
@@ -20,10 +19,8 @@ SHADER_NAME(mx_splitlr)
     vector2 texcoord = { u, v }
         [[  string help = "input coordinate position",
             int lockgeom = 0 ]],
-
     output TYPE out = TYPE_ZERO
   )
 {
-
     out = mix (valuel, valuer, aastep (center, texcoord.x));
 }

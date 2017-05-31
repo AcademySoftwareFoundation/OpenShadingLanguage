@@ -13,21 +13,6 @@ struct color2
     float g;
 };
 
-color2 make_color2(float r, float g)
-{
-    return color2 (r, g);
-}
-
-color2 make_color2(float r)
-{
-    return color2 (r, r);
-}
-
-color2 make_color2()
-{
-    return color2 (0, 0);
-}
-
 color2 abs(color2 in)
 {
     return color2 (abs(in.r),

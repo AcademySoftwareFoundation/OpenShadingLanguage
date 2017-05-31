@@ -4,7 +4,6 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-
 #include "mx_types.h"
 
 shader SHADER_NAME(mx_remap_float)
@@ -17,7 +16,6 @@ shader SHADER_NAME(mx_remap_float)
     float outlow = 0,
     float outhigh = 1,
     int doclamp = 0,
-
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {

@@ -6,12 +6,10 @@
 
 #include "mx_types.h"
 
-
 shader SHADER_NAME(mx_normalize)
     [[ string help = TYPE_STR"  Outputs the normalized vector from the incoming vector stream." ]]
   (
     TYPE in = TYPE_DEFAULT_IN,
-
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {

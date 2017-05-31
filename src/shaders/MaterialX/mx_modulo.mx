@@ -4,8 +4,6 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-
-
 #include "mx_types.h"
 
 shader SHADER_NAME(mx_modulo)
@@ -14,13 +12,9 @@ shader SHADER_NAME(mx_modulo)
     The modula amount cannot be 0." ]]
   (
     TYPE in1 = TYPE_DEFAULT_IN,
-
     TYPE in2 = TYPE_ONE,
-
-
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {
     out = fmod(in1, in2); 
-
 }

@@ -16,7 +16,6 @@ SHADER_NAME(mx_smoothstep_float)
         [[  string help = "input value of this or lower will return 0"  ]],
     float high = 1
         [[  string help = " an input value of this or higher will result in an output value of 1"  ]],
-
     output TYPE out = TYPE_ZERO
   )
 {

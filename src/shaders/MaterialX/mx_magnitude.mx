@@ -4,17 +4,12 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-
-
-
 #include "mx_types.h"
 
 shader SHADER_NAME(mx_magnitude)
     [[ string help = TYPE_STR" Outputs the float magnitude (vector length) of the incoming vector stream." ]]
   (
-
     TYPE in = TYPE_DEFAULT_IN,
-
     output float out = 0
   )
 {

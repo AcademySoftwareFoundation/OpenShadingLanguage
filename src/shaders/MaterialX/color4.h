@@ -13,26 +13,6 @@ struct color4
     float a;
 };
 
-color4 make_color4(float r, float g, float b, float a)
-{
-    return color4 (color(r,g,b), a);
-}
-
-color4 make_color4(float r)
-{
-    return color4 (color(r,r,r), r);
-}
-
-color4 make_color4(color rgb, float a)
-{
-    return color4 (rgb, a);
-}
-
-color4 make_color4(color rgb)
-{
-    return color4 (rgb, 1);
-}
-
 color4 abs(color4 in)
 {
     return color4 (abs(in.rgb),

@@ -6,16 +6,12 @@
 
 #include "mx_types.h"
 
-
 shader SHADER_NAME(mx_contrast_float)
     [[ string help = TYPE_STR" Increase or decrease contrast of a float/color value using a linear slope multiplier." ]]
   (
     TYPE in = TYPE_DEFAULT_IN,
-
     float amount = 1.0,
     float pivot = 0.5,
-
-
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {

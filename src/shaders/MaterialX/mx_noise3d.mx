@@ -14,14 +14,12 @@ SHADER_NAME(mx_noise3d)
     point position = transform ("object", P)
         [[  string help = "input coordinate position (default: object space P)",
             int lockgeom = 0 ]],
-
     TYPE amplitude = TYPE_ONE
         [[  string help = "center-to-peak amplitude of the noise" ]],
     float pivot = 0
         [[  string help = "the center value of the output noise" ]],
     string noisetype = "snoise"
         [[  string help = "type of noise" ]],
-
     output TYPE out = TYPE_ZERO,
   )
 {

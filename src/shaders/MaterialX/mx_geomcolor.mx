@@ -6,7 +6,6 @@
 
 #include "mx_types.h"
 
-
 shader
 SHADER_NAME(mx_geomcolor)
     [[ string help = "The color associated with the current geometry " ]]

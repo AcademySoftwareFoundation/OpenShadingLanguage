@@ -10,7 +10,6 @@ shader
 SHADER_NAME(mx_frame)
     [[ string help = "The current frame number as defined by the host environment." ]]
   (
-
     output float out = 0
   )
 {

@@ -10,13 +10,9 @@ shader SHADER_NAME(mx_divide)
     [[ string help = TYPE_STR" divide an incoming float/color/vector by in2" ]]
   (
     TYPE in1 = TYPE_DEFAULT_IN,
-
     TYPE in2 = TYPE_ONE,
-
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {
-
     out = divide(in1, in2); 
-
 }

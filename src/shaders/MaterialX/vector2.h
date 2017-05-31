@@ -13,11 +13,6 @@ struct vector2
     float y;
 };
 
-vector2 make_vector2(float x, float y)
-{
-    return vector2 (x, y);
-}
-
 vector2 abs(vector2 in)
 {
     return vector2 (abs(in.x),

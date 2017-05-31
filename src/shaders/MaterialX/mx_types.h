@@ -133,8 +133,8 @@
 #define TYPE_ZERO "zero"
 #define TYPE_ZERO_POINT_FIVE "zero point five"
 #define TYPE_ONE "one"
-#define TYPE_DEFAULT_IN TYPE_ZERO
-#define TYPE_DEFAULT_OUT TYPE_ZERO
+#define TYPE_DEFAULT_IN "default"
+#define TYPE_DEFAULT_OUT "default"
 #define TYPE_DEFAULT_CHANNELS "a"
 #define SHADER_NAME(NAME)  NAME ## _string
 
@@ -144,8 +144,8 @@
 #define TYPE_ZERO "zero"
 #define TYPE_ZERO_POINT_FIVE "zero point five"
 #define TYPE_ONE "one"
-#define TYPE_DEFAULT_IN TYPE_ZERO
-#define TYPE_DEFAULT_OUT TYPE_ZERO
+#define TYPE_DEFAULT_IN "default"
+#define TYPE_DEFAULT_OUT "default"
 #define TYPE_DEFAULT_CHANNELS "a"
 #define SHADER_NAME(NAME)  NAME ## _filename
 

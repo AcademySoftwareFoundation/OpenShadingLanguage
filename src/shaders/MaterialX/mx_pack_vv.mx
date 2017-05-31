@@ -4,7 +4,6 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-
 #include "mx_types.h"
 
 shader
@@ -14,7 +13,6 @@ SHADER_NAME(mx_pack_vv)
   (
     vector2 in1 = {0,0},
     vector2 in2 = {0.0},
-
     output vector4 out = {0,0,0,0}
   )
 {

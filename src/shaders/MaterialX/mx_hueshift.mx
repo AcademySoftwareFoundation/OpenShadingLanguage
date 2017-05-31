@@ -4,15 +4,7 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-
 #include "mx_types.h"
-
-#if defined(COLOR)
-
-#elif defined(COLOR4)
-
-#endif
-
 
 shader
 SHADER_NAME(mx_hueshift)
@@ -23,6 +15,5 @@ SHADER_NAME(mx_hueshift)
     output TYPE out = TYPE_ZERO
   )
 {
-
     out = hueshift(in, amount);
 }

@@ -4,20 +4,15 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-
 #include "mx_types.h"
-
 
 shader SHADER_NAME(mx_max_float)
     [[ string help = TYPE_STR" Select the maximum among incoming values." ]]
   (
     TYPE in1 = TYPE_DEFAULT_IN,
-
     float in2 = 0.0,
-
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {
     out = max(in1, in2); 
-
 }

@@ -10,11 +10,9 @@ shader SHADER_NAME(mx_premult)
     [[ string help = TYPE_STR" Multiply the R or RGB channels of the input by the Alpha channel of the input." ]]
   (
     TYPE in = TYPE_DEFAULT_IN,
-
 #ifdef COLOR
     float alpha = 1,
 #endif
-
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {

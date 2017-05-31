@@ -10,7 +10,6 @@ shader SHADER_NAME(mx_absval)
     [[ string help = "The per-channel absolute value of the incoming float/color/vector." ]]
   (
     TYPE in = TYPE_DEFAULT_IN,
-
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {

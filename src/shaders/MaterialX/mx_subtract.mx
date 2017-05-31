@@ -11,10 +11,8 @@ shader SHADER_NAME(mx_subtract)
   (
     TYPE in1 = TYPE_DEFAULT_IN,
     TYPE in2 = TYPE_ZERO,
-
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {
     out = subtract(in1, in2); 
-
 }

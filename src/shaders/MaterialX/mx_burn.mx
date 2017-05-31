@@ -4,7 +4,6 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-
 #include "mx_types.h"
 
 shader SHADER_NAME(mx_burn)
@@ -12,7 +11,6 @@ shader SHADER_NAME(mx_burn)
   (
     TYPE fg = TYPE_DEFAULT_IN,
     TYPE bg = TYPE_DEFAULT_IN,
-
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {
@@ -20,4 +18,3 @@ shader SHADER_NAME(mx_burn)
     TYPE bg_div = divide(bg_inv, fg);
     out =  invert( bg_div ) ; 
 }
-

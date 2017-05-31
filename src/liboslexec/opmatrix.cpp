@@ -144,11 +144,15 @@ osl_wide_get_matrix (void *sgb_, void *wr, const char *from)
 	Wide<Matrix44> & wrm = WMAT(wr);
     if (USTR(from) == Strings::common ||
             USTR(from) == ctx->shadingsys().commonspace_synonym()) {
-    	Matrix44 ident;
-    	ident.makeIdentity();
-		OSL_INTEL_PRAGMA("simd")
-    	for(int lane=0; lane < wrm.width; ++lane) {
-    		wrm.set(lane, ident);
+    	OSL_INTEL_PRAGMA("forceinline recursive")
+    	{
+			
+			Matrix44 ident;
+			ident.makeIdentity();
+			OSL_INTEL_PRAGMA("omp simd simdlen(wrm.width)")				    	
+			for(int lane=0; lane < wrm.width; ++lane) {
+				wrm.set(lane, ident);
+			}
     	}
         return true;
     }
@@ -291,7 +295,7 @@ osl_wide_get_from_to_matrix (void *sgb, void *wr, const char *from, const char *
 		
 		Wide<Matrix44> & wrm = WMAT(wr);
 	
-		OSL_INTEL_PRAGMA("simd assert vectorlength(wrm.width)")
+		OSL_INTEL_PRAGMA("omp simd simdlen(wrm.width)")
 		for(int lane=0; lane < wrm.width; ++lane) {    
 			Matrix44 mat_From = wMfrom.get(lane);
 			Matrix44 mat_To = wMto.get(lane);		
@@ -323,11 +327,7 @@ OSL_INLINE void avoidAliasingRobustMultVecMatrix(
 {
 	OSL_INTEL_PRAGMA("forceinline recursive")
 	{
-		//OSL_INTEL_PRAGMA("ivdep")
-		//OSL_INTEL_PRAGMA("novector")
-		//OSL_INTEL_PRAGMA("nounroll")
-		//OSL_INTEL_PRAGMA("novector")
-		OSL_INTEL_PRAGMA("simd vectorlength(wdst.width)")
+		OSL_INTEL_PRAGMA("omp simd simdlen(wdst.width)")
 		for(int index=0; index < wdst.width; ++index)
 		{
 		   const Matrix44 x = wx.get(index);
@@ -387,37 +387,6 @@ avoidAliasingMultDirMatrix (const Matrix44 &M, const Vec3 &src, Vec3 &dst)
     
 }
 
-#if 0 // In development, not done 
-/// Multiply a matrix times a direction with derivatives to obtain
-/// a transformed direction with derivatives.
-OSL_INLINE void
-multDirMatrix (const Matrix44 &M, const Wide<Dual2<Vec3>> &win, Wide<Dual2<Vec3>> &wout)
-{   
-	OSL_INTEL_PRAGMA("forceinline recursive")
-	{
-		//OSL_INTEL_PRAGMA("ivdep")
-		//OSL_INTEL_PRAGMA("novector")
-		//OSL_INTEL_PRAGMA("nounroll")
-		//OSL_INTEL_PRAGMA("novector")
-		//OSL_INTEL_PRAGMA("simd vectorlength(wout.width)")
-		for(int index=0; index < wout.width; ++index)
-		{
-		   const Matrix44 M = win.get(index);
-		   Dual2<Imath::Vec3<float>> src = wsrc.get(index);
-		   
-		   Dual2<Imath::Vec3<float>> dst;	   
-	
-		   avoidAliasingMultDirMatrix(M, src.val(), dst.val());
-		   avoidAliasingMultDirMatrix(M, src.dx(), dst.dx());
-		   avoidAliasingMultDirMatrix(M, src.dy(), dst.dy());
-		   
-		   wout.set(index, dst);
-		}
-	}    
-}
-#endif
-
-
 /// Multiply a matrix times a vector with derivatives to obtain
 /// a transformed vector with derivatives.
 OSL_INLINE void
@@ -428,11 +397,7 @@ avoidAliasingRobustMultVecMatrix (
 {
 	OSL_INTEL_PRAGMA("forceinline recursive")
 	{
-		//OSL_INTEL_PRAGMA("ivdep")
-		//OSL_INTEL_PRAGMA("novector")
-		//OSL_INTEL_PRAGMA("nounroll")
-		//OSL_INTEL_PRAGMA("novector")
-		//OSL_INTEL_PRAGMA("simd vectorlength(wout.width)")
+		OSL_INTEL_PRAGMA("omp simd simdlen(wout.width)")
 		for(int index=0; index < wout.width; ++index)
 		{
 			const Matrix44 M = WM.get(index);			
@@ -502,6 +467,8 @@ inline void osl_transform_wvwmwv(void *result, const Wide<Matrix44> &M, void* v_
 }
 
 
+// TODO: do we need this control of optimization level?  
+// Remove after verifying correct results
 OSL_INTEL_PRAGMA("intel optimization_level 2")
 
 inline void osl_transform_dvmdv(void *result, const Matrix44 &M, void* v_)
@@ -534,7 +501,7 @@ inline void osl_transformv_wvwmwv(void *result, const Wide<Matrix44> &wM, void* 
 	   const Wide<Vec3> &wv = WVEC(v_);
 	   MaskedAccessor<Vec3> resultRef(result, mask);   
 	   
-	   OSL_INTEL_PRAGMA("simd vectorlength(resultRef.width)")	   
+	   OSL_INTEL_PRAGMA("omp simd simdlen(resultRef.width)")
 	   for(int i=0; i < resultRef.width; ++i)
 	   {
 		   Matrix44 M = wM.get(i);
@@ -575,7 +542,7 @@ inline void osl_transformv_wdvwmwdv(void *result, const Wide<Matrix44> &wM, void
 
 	   const Wide<Dual2<Vec3>> &wv = WDVEC(v_);
 		  	   
-	   OSL_INTEL_PRAGMA("simd vectorlength(resultRef.width)")	   
+	   OSL_INTEL_PRAGMA("omp simd simdlen(resultRef.width)")
 	   for(int i=0; i < resultRef.width; ++i)
 	   {
 		   Dual2<Vec3> v = wv.get(i);
@@ -606,9 +573,8 @@ inline void osl_transformn_wvwmwv(void *result, const Wide<Matrix44> &wM, void* 
 	   const Wide<Vec3> &wv = WVEC(v_);
 	   //Wide<Vec3> &wr = WVEC(result);
 	   MaskedAccessor<Vec3> resultRef(result, mask);
-	   
-	   
-	   OSL_INTEL_PRAGMA("simd")
+	   	   
+	   OSL_INTEL_PRAGMA("omp simd simdlen(resultRef.width)")
 	   for(int i=0; i < resultRef.width; ++i)
 	   {
 		   Vec3 v = wv.get(i);
@@ -640,8 +606,7 @@ inline void osl_transformn_wdvwmwdv(void *result, const Wide<Matrix44> &wM, void
 
 	   const Wide<Dual2<Vec3>> &wv = WDVEC(v_);
 	      
-	   
-	   OSL_INTEL_PRAGMA("simd")
+	   OSL_INTEL_PRAGMA("omp simd simdlen(resultRef.width)")
 	   for(int i=0; i < resultRef.width; ++i)
 	   {
 		   Dual2<Vec3> v = wv.get(i);

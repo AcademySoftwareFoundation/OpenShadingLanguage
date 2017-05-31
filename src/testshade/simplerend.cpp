@@ -167,8 +167,8 @@ BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &resu
 #if 0
     int is_uniform_xform = 1;
 
-    OSL_INTEL_PRAGMA("simd")
-            for(int lane=0; lane < SimdLaneCount; ++lane) {
+	OSL_INTEL_PRAGMA("omp simd simdlen(SimdLaneCount)")								    
+    for(int lane=0; lane < SimdLaneCount; ++lane) {
         if (uniform_xform != xform.get(lane))
             is_uniform_xform = 0;
     }
@@ -189,7 +189,7 @@ BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &resu
 #if 0
     int numLanesMatch1st = 0;
     OSL_INTEL_PRAGMA("simd reduction(+:numLanesMatch1st)  assert")
-            for(int lane=0; lane < SimdLaneCount; ++lane) {
+	for(int lane=0; lane < SimdLaneCount; ++lane) {
         int match = (uniform_xform == xform.get(lane)) ? 1 : 0;
         numLanesMatch1st += match;
     }
@@ -211,8 +211,8 @@ BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &resu
 
 #endif
         const Matrix44 & transformFromShaderGlobals = *reinterpret_cast<const Matrix44*>(uniform_xform);
-    OSL_INTEL_PRAGMA("simd")
-            for(int lane=0; lane < SimdLaneCount; ++lane) {
+	OSL_INTEL_PRAGMA("omp simd simdlen(SimdLaneCount)")								        
+    for(int lane=0; lane < SimdLaneCount; ++lane) {
         result.set(lane,transformFromShaderGlobals);
     }
 } else {
@@ -238,8 +238,8 @@ BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &resu
 #if 0
     // In general, one can't assume that the transformation is uniform
     const Matrix44 & uniformTransform = *reinterpret_cast<const Matrix44*>(uniform_xform);
-    OSL_INTEL_PRAGMA("simd")
-            for(int lane=0; lane < SimdLaneCount; ++lane) {
+	OSL_INTEL_PRAGMA("omp simd simdlen(SimdLaneCount)")								        
+    for(int lane=0; lane < SimdLaneCount; ++lane) {
         if (__builtin_expect((uniform_xform == xform.get(lane)),1)) {
             result.set(lane,uniformTransform);
         } else {
@@ -252,8 +252,8 @@ BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &resu
     // use that fact
     const Matrix44 & uniformTransform = *reinterpret_cast<const Matrix44*>(uniform_xform);
 
-    OSL_INTEL_PRAGMA("simd")
-            for(int lane=0; lane < SimdLaneCount; ++lane) {
+	OSL_INTEL_PRAGMA("omp simd simdlen(SimdLaneCount)")								        
+    for(int lane=0; lane < SimdLaneCount; ++lane) {
         result.set(lane,uniformTransform);
     }
 

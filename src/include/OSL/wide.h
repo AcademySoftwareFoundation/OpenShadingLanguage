@@ -212,8 +212,7 @@ struct WideBuiltin
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 					data[i] = value;
@@ -226,8 +225,7 @@ struct WideBuiltin
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				if (mask[i]) {
@@ -242,8 +240,7 @@ struct WideBuiltin
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				if (mask[i]) {
@@ -287,8 +284,7 @@ public:
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				data[i] = uniformValue;
@@ -357,8 +353,7 @@ struct Wide<Vec3, WidthT>
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				if (mask[i]) {
@@ -375,8 +370,7 @@ struct Wide<Vec3, WidthT>
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				if (mask[i]) {
@@ -486,8 +480,7 @@ struct Wide<Color3, WidthT>
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				if (mask[i]) {
@@ -504,8 +497,7 @@ struct Wide<Color3, WidthT>
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				if (mask[i]) {
@@ -623,8 +615,7 @@ struct Wide<Matrix44, WidthT>
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				if (mask[i]) {
@@ -654,8 +645,7 @@ struct Wide<Matrix44, WidthT>
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				if (mask[i]) {
@@ -734,8 +724,7 @@ struct Wide<Dual2<float>, WidthT>
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				if (mask[i]) {
@@ -752,8 +741,7 @@ struct Wide<Dual2<float>, WidthT>
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				if (mask[i]) {
@@ -826,8 +814,7 @@ struct Wide<Dual2<Vec3>, WidthT>
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				if (mask[i]) {
@@ -844,8 +831,7 @@ struct Wide<Dual2<Vec3>, WidthT>
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				if (mask[i]) {
@@ -920,8 +906,7 @@ struct WideUniformProxy
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i) {
 				m_ref_wide_data.set(i, value);
 			}
@@ -940,8 +925,7 @@ make_uniform(Wide<DataT, WidthT> &wide_data, const DataT &value)
 {
 	OSL_INTEL_PRAGMA("forceinline recursive")
 	{
-		OSL_INTEL_PRAGMA("ivdep")
-		OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+		OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 		for(int i = 0; i < WidthT; ++i) {
 			wide_data.set(i, value);
 		}

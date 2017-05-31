@@ -484,8 +484,8 @@ BatchedRendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb, Wide<Matri
 		/*bool ok =*/ get_matrix (sgb, wmatrix, xform, time);
 		
 	    int allAreAffine = 1;
-		OSL_INTEL_PRAGMA("simd assert")
-		for(int lane=0; lane < SimdLaneCount; ++lane) {
+		OSL_INTEL_PRAGMA("omp simd simdlen(wmatrix.width)")
+		for(int lane=0; lane < wmatrix.width; ++lane) {
 			Matrix44 m = wmatrix.get(lane);        
 		    if (m.x[0][3] != 0.0f || m.x[1][3] != 0.0f || m.x[2][3] != 0.0f || m.x[3][3] != 1.0f) {
 		    	allAreAffine = 0;
@@ -494,8 +494,8 @@ BatchedRendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb, Wide<Matri
 		
 #if 1
 		if (allAreAffine) {
-			OSL_INTEL_PRAGMA("simd assert vectorlength(SimdLaneCount)")
-			for(int lane=0; lane < SimdLaneCount; ++lane) {    
+			OSL_INTEL_PRAGMA("omp simd simdlen(wmatrix.width)")
+			for(int lane=0; lane < wmatrix.width; ++lane) {    
 				Matrix44 m = wmatrix.get(lane);        
 				//bool ok = get_matrix (sgb, r, xform.get(lane), time.get(lane));
 				//r.invert();

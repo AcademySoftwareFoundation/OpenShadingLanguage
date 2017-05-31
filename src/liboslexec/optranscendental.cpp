@@ -60,8 +60,8 @@ osl_pow_w16fw16fw16f (void *r_, void *base_, void *exponent_)
 		const Wide<float> &wexponent = WFLOAT(exponent_);
 		Wide<float> &wr = WFLOAT(r_);
 	
-		OSL_INTEL_PRAGMA("simd")
-		for(int lane=0; lane < SimdLaneCount; ++lane) {
+		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")				
+		for(int lane=0; lane < wr.width; ++lane) {
 			float base = wbase.get(lane);
 			float exponent = wexponent.get(lane);
 			// TODO: perhaps a custom pow implementation to take
@@ -82,8 +82,8 @@ osl_pow_w16vw16vw16f (void *r_, void *base_, void *exponent_)
 		const Wide<float> &wexponent = WFLOAT(exponent_);
 		Wide<Vec3> &wr = WVEC(r_);
 	
-		OSL_INTEL_PRAGMA("simd")
-		for(int lane=0; lane < SimdLaneCount; ++lane) {
+		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")				
+		for(int lane=0; lane < wr.width; ++lane) {
 			Vec3 base = wbase.get(lane);
 			float exponent = wexponent.get(lane);
 			//std::cout << "lane[" << lane << "] base = " << base << " exp=" << exponent << std::endl;
@@ -176,8 +176,8 @@ osl_area_w16(void *r_, void *DP_)
 	    
 		Wide<float> &wr = WFLOAT(r_);
 	
-		OSL_INTEL_PRAGMA("simd")
-		for(int lane=0; lane < SimdLaneCount; ++lane) {
+		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")		
+		for(int lane=0; lane < wr.width; ++lane) {
 			Dual2<Vec3> DP = wDP.get(lane);
 			
 		    Vec3 N = calculatenormal(DP, false);
@@ -197,8 +197,8 @@ osl_normalize_w16vw16v(void *r_, void *V_)
 	    
 		Wide<Vec3> &wr = WVEC(r_);
 	
-		OSL_INTEL_PRAGMA("simd")
-		for(int lane=0; lane < SimdLaneCount; ++lane) {
+		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")		
+		for(int lane=0; lane < wr.width; ++lane) {
 			Vec3 V = wV.get(lane);
 			
 		    Vec3 N = simdFriendlyNormalize(V);

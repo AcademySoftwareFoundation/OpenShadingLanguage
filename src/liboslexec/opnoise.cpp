@@ -562,26 +562,7 @@ struct GaborNoise {
             const Wide<Dual2<Vec3>, WidthT> &wp,
             ShaderGlobalsBatch *sgb, const NoiseParams *opt) const {
 
-        gabor (wp, wresult, opt);
-    	
-//		OSL_INTEL_PRAGMA("forceinline recursive")
-//		{
-//			//OSL_INTEL_PRAGMA("ivdep")
-//			//OSL_INTEL_PRAGMA("vector always assert")
-//			//OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
-//			//OSL_INTEL_PRAGMA("novector")
-//			for(int i=0; i< WidthT; ++i) {
-//				const Dual2<Vec3> p = wp.get(i);
-////				std::cout << "p.x=" << p.val() << std::endl;
-////				std::cout << "p.dx=" << p.dx() << std::endl;
-////				std::cout << "p.dy=" << p.dy() << std::endl;
-//				Dual2<float> result = gabor (p, opt);
-////				std::cout << "result.x=" << result.val() << std::endl;
-////				std::cout << "result.dx=" << result.dx() << std::endl;
-////				std::cout << "result.dy=" << result.dy() << std::endl;
-//		        wresult.set(i, result); 
-//			}
-//		}
+        gabor (wp, wresult, opt);    	
     }    
     
     inline void operator() (ustring noisename, Dual2<float> &result,

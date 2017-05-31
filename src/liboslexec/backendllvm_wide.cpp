@@ -596,11 +596,9 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 		int op_num;		
 	};
 	
-	struct UsageInfo
-	{
-		std::vector <WriteEvent> potentially_unmasked_ops;
-	};
-	std::unordered_map<const Symbol *, UsageInfo > usageInfoBySymbol;
+	typedef std::vector<WriteEvent> WriteChronology;
+	
+	std::unordered_map<const Symbol *, WriteChronology > potentiallyUnmaskedOpsBySymbol;
 	
 	DependencyTreeTracker stackOfSymbolsCurrentBlockDependsOn;
 	
@@ -615,31 +613,34 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	ensureWritesAtLowerDepthAreMasked = [&](const Symbol *symbolToCheck, DependencyTreeTracker::Position readAtPos)->void {			    			
 		// Check if reading a Symbol that was written to from a different 
 		// dependency lineage than we are reading, if so we need to mark it as requiring masking
-		auto lookup = usageInfoBySymbol.find(symbolToCheck);
-		if(lookup != usageInfoBySymbol.end()) {
-			UsageInfo & info = lookup->second;
-			if (!info.potentially_unmasked_ops.empty() &&
-				false == stackOfSymbolsCurrentBlockDependsOn.isDescendentOrSelf(readAtPos, info.potentially_unmasked_ops.back().pos_in_tree))
-			{
-				std::cout << symbolToCheck->name() << " will need to have last write be masked" << std::endl;
-				ASSERT(info.potentially_unmasked_ops.empty() == false);
-				decltype(info.potentially_unmasked_ops) remaining_ops;
-				for(auto usage: info.potentially_unmasked_ops) {
-					// Only mark deeper usages as requiring masking
-					if(false == stackOfSymbolsCurrentBlockDependsOn.isDescendentOrSelf(readAtPos, usage.pos_in_tree))
-					{
-						std::cout << " marking op " << usage.op_num << " as masked" << std::endl;
-						m_requires_masking_by_layer_and_op_index[layer()][usage.op_num] = true;									
-					} else {
-						remaining_ops.push_back(usage);
+		auto lookup = potentiallyUnmaskedOpsBySymbol.find(symbolToCheck);
+		if(lookup != potentiallyUnmaskedOpsBySymbol.end()) {
+			auto & write_chronology = lookup->second;
+			if (!write_chronology.empty()) {
+				// We only need to consider the last block that wrote to the symbol being read
+				auto backIter = --write_chronology.end();
+				if (false == stackOfSymbolsCurrentBlockDependsOn.isDescendentOrSelf(readAtPos, backIter->pos_in_tree))
+				{
+					std::cout << " marking op " << backIter->op_num << " as masked" << std::endl;
+					m_requires_masking_by_layer_and_op_index[layer()][backIter->op_num] = true;
+					
+					WriteChronology remaining_ops;
+					// Now that we have to do masking, go through all older writes and update them
+					// if they have a different lineage, if not keep them for consideration by
+					// other reads
+					for (auto writeIter=write_chronology.begin(); writeIter != backIter; ++writeIter) {
+						if (false == stackOfSymbolsCurrentBlockDependsOn.isDescendentOrSelf(readAtPos, writeIter->pos_in_tree))
+						{
+							std::cout << " marking op " << writeIter->op_num << " as masked" << std::endl;
+							m_requires_masking_by_layer_and_op_index[layer()][writeIter->op_num] = true;
+						} else {
+							// Keep any writes that share the same lineage
+							remaining_ops.push_back(*writeIter);
+						}
 					}
+					lookup->second.swap(remaining_ops);		
+					// we can now consider the matter handled at this point
 				}
-				
-				info.potentially_unmasked_ops.swap(remaining_ops);		
-				// Now that all ops writing to the symbol at higher depths have been marked to be masked
-				// we can now consider the matter handled at this point at reset the
-				// last_depth written at to the current depth to avoid needlessly repeating the work.
-				//info.last_depth = blockDepth;
 			}
 		}
 	};
@@ -695,7 +696,8 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 			
 			for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
 				const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
-				usageInfoBySymbol[symbolWrittenTo].potentially_unmasked_ops.push_back(WriteEvent{stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex});
+				potentiallyUnmaskedOpsBySymbol[symbolWrittenTo].push_back(
+					WriteEvent{stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex});
 			}
 			
 			// Add dependencies between symbols written to in this basic block
@@ -848,7 +850,8 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 
 				// Also update the usageInfo for the loop conditional to mark it as being written to
 				// by the break operation (which it would be in varying scenario
-				usageInfoBySymbol[loopCondition].potentially_unmasked_ops.push_back(WriteEvent{stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex});
+				potentiallyUnmaskedOpsBySymbol[loopCondition].push_back(
+					WriteEvent{stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex});
 			}
             if (opcode.opname() == op_getattribute)
             {

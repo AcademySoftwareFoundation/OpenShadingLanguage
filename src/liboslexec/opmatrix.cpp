@@ -339,7 +339,12 @@ OSL_INLINE void avoidAliasingRobustMultVecMatrix(
 	
 		   
 		   //robust_multVecMatrix(x, src, dst);
-#if 1
+		   
+			// Avoid alising issues when mixing data member access vs. 
+			// reinterpret casted array based access.
+			// Legally, compiler could assume no alaising because they are technically			
+			// different types.  As they actually over the same memory incorrect
+			// code generation can ensue
 #if 0
 		   float a = src[0] * x[0][0] + src[1] * x[1][0] + src[2] * x[2][0] + x[3][0];
 		    float b = src[0] * x[0][1] + src[1] * x[1][1] + src[2] * x[2][1] + x[3][1];
@@ -362,8 +367,7 @@ OSL_INLINE void avoidAliasingRobustMultVecMatrix(
 		       dst.y = 0;
 		       dst.z = 0;
 		    }		   
-#endif
-		    
+	    
 		   //std::cout << "----dst>" << dst << std::endl;
 		   
 		   wdst[index] = dst;
@@ -405,20 +409,25 @@ avoidAliasingRobustMultVecMatrix (
 	
 			// Rearrange into a Vec3<Dual2<float> >
 			Imath::Vec3<Dual2<float> > din, dout;
-			for (int i = 0;  i < 3;  ++i)
-				din[i].set (in.val()[i], in.dx()[i], in.dy()[i]);
-	
+			
 			// Avoid alising issues when mixing data member access vs. 
 			// reinterpret casted array based access.
 			// Legally, compiler could assume no alaising because they are technically			
 			// different types.  As they actually over the same memory incorrect
 			// code generation can ensue
 #if 0
+			for (int i = 0;  i < 3;  ++i)
+				din[i].set (in.val()[i], in.dx()[i], in.dy()[i]);
+			
 			Dual2<float> a = din[0] * M[0][0] + din[1] * M[1][0] + din[2] * M[2][0] + M[3][0];
 			Dual2<float> b = din[0] * M[0][1] + din[1] * M[1][1] + din[2] * M[2][1] + M[3][1];
 			Dual2<float> c = din[0] * M[0][2] + din[1] * M[1][2] + din[2] * M[2][2] + M[3][2];
 			Dual2<float> w = din[0] * M[0][3] + din[1] * M[1][3] + din[2] * M[2][3] + M[3][3];
 #else
+			din.x.set (in.val().x, in.dx().x, in.dy().x);
+			din.y.set (in.val().y, in.dx().y, in.dy().y);
+			din.z.set (in.val().z, in.dx().z, in.dy().z);
+			
 			Dual2<float> a = din.x * M[0][0] + din.y * M[1][0] + din.z * M[2][0] + M[3][0];
 			Dual2<float> b = din.x * M[0][1] + din.y * M[1][1] + din.z * M[2][1] + M[3][1];
 			Dual2<float> c = din.x * M[0][2] + din.y * M[1][2] + din.z * M[2][2] + M[3][2];

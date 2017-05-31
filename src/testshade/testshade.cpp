@@ -78,6 +78,7 @@ static bool do_oslquery = false;
 static bool inbuffer = false;
 static bool use_shade_image = false;
 static bool userdata_isconnected = false;
+static bool print_outputs = false;
 static int xres = 1, yres = 1;
 static int num_threads = 0;
 static std::string groupname;
@@ -101,8 +102,8 @@ static ShaderGroupRef shadergroup;
 static std::string archivegroup;
 static int exprcount = 0;
 static bool shadingsys_options_set = false;
-static float sscale = 1, tscale = 1;
-static float soffset = 0, toffset = 0;
+static float uscale = 1, vscale = 1;
+static float uoffset = 0, voffset = 0;
 
 
 
@@ -464,8 +465,10 @@ getargs (int argc, const char *argv[])
                 "--texoptions %s", &texoptions, "Set extra TextureSystem options",
                 "-o %L %L", &outputvars, &outputfiles,
                         "Output (variable, filename)",
-                "-od %s", &dataformatname, "Set the output data format to one of: "
+                "-d %s", &dataformatname, "Set the output data format to one of: "
                         "uint8, half, float",
+                "-od %s", &dataformatname, "", // old name
+                "--print", &print_outputs, "Print values of all -o outputs to console instead of saving images",
                 "--groupname %s", &groupname, "Set shader group name",
                 "--layer %s", &layername, "Set next layer name",
                 "--param %@ %s %s", &action_param, NULL, NULL,
@@ -496,8 +499,10 @@ getargs (int argc, const char *argv[])
                 "--shadeimage", &use_shade_image, "Use shade_image utility",
                 "--noshadeimage %!", &use_shade_image, "Don't use shade_image utility",
                 "--expr %@ %s", &specify_expr, NULL, "Specify an OSL expression to evaluate",
-                "--offsetst %f %f", &soffset, &toffset, "Offset s & t texture coordinates (default: 0 0)",
-                "--scalest %f %f", &sscale, &tscale, "Scale s & t texture lookups (default: 1, 1)",
+                "--offsetuv %f %f", &uoffset, &voffset, "Offset s & t texture coordinates (default: 0 0)",
+                "--offsetst %f %f", &uoffset, &voffset, "", // old name
+                "--scaleuv %f %f", &uscale, &vscale, "Scale s & t texture lookups (default: 1, 1)",
+                "--scalest %f %f", &uscale, &vscale, "", // old name
                 "--userdata_isconnected", &userdata_isconnected, "Consider lockgeom=0 to be isconnected()",
                 "-v", &verbose, "Verbose output",
                 NULL);
@@ -587,17 +592,17 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
     if (pixelcenters) {
         // Our patch is like an "image" with shading samples at the
         // centers of each pixel.
-        sg.u = sscale * (float)(x+0.5f) / xres + soffset;
-        sg.v = tscale * (float)(y+0.5f) / yres + toffset;
-        sg.dudx = sscale / xres;
-        sg.dvdy = tscale / yres;
+        sg.u = uscale * (float)(x+0.5f) / xres + uoffset;
+        sg.v = vscale * (float)(y+0.5f) / yres + voffset;
+        sg.dudx = uscale / xres;
+        sg.dvdy = vscale / yres;
     } else {
         // Our patch is like a Reyes grid of points, with the border
         // samples being exactly on u,v == 0 or 1.
-        sg.u = sscale * ((xres == 1) ? 0.5f : (float) x / (xres - 1)) + soffset;
-        sg.v = tscale * ((yres == 1) ? 0.5f : (float) y / (yres - 1)) + toffset;
-        sg.dudx = sscale / std::max (1, xres-1);
-        sg.dvdy = tscale / std::max (1, yres-1);
+        sg.u = uscale * ((xres == 1) ? 0.5f : (float) x / (xres - 1)) + uoffset;
+        sg.v = vscale * ((yres == 1) ? 0.5f : (float) y / (yres - 1)) + voffset;
+        sg.dudx = uscale / std::max (1, xres-1);
+        sg.dvdy = vscale / std::max (1, yres-1);
     }
 
     // Assume that position P is simply (u,v,1), that makes the patch lie
@@ -760,6 +765,8 @@ setup_output_images (ShadingSystem *shadingsys,
 static void
 save_outputs (ShadingSystem *shadingsys, ShadingContext *ctx, int x, int y)
 {
+    if (print_outputs)
+        printf ("Pixel (%d, %d):\n", x, y);
     // For each output requested on the command line...
     for (size_t i = 0;  i < outputfiles.size();  ++i) {
         // Skip if we couldn't open the image or didn't match a known output
@@ -773,18 +780,30 @@ save_outputs (ShadingSystem *shadingsys, ShadingContext *ctx, int x, int y)
         if (!data)
             continue;  // Skip if symbol isn't found
 
+        int nchans = outputimgs[i]->nchannels();
         if (t.basetype == TypeDesc::FLOAT) {
             // If the variable we are outputting is float-based, set it
             // directly in the output buffer.
             outputimgs[i]->setpixel (x, y, (const float *)data);
+            if (print_outputs) {
+                printf ("  %s :", outputvarnames[i].c_str());
+                for (int c = 0; c < nchans; ++c)
+                    printf (" %g", ((const float *)data)[c]);
+                printf ("\n");
+            }
         } else if (t.basetype == TypeDesc::INT) {
             // We are outputting an integer variable, so we need to
             // convert it to floating point.
-            int nchans = outputimgs[i]->nchannels();
             float *pixel = (float *) alloca (nchans * sizeof(float));
             OIIO::convert_types (TypeDesc::BASETYPE(t.basetype), data,
                                  TypeDesc::FLOAT, pixel, nchans);
             outputimgs[i]->setpixel (x, y, &pixel[0]);
+            if (print_outputs) {
+                printf ("  %s :", outputvarnames[i].c_str());
+                for (int c = 0; c < nchans; ++c)
+                    printf (" %d", ((const int *)data)[c]);
+                printf ("\n");
+            }
         }
         // N.B. Drop any outputs that aren't float- or int-based
     }
@@ -1135,6 +1154,7 @@ test_shade (int argc, const char *argv[])
             }
         }
     }
+    double runtime = timer.lap();
 
     if (outputfiles.size() == 0)
         std::cout << "\n";
@@ -1142,7 +1162,26 @@ test_shade (int argc, const char *argv[])
     // Write the output images to disk
     for (size_t i = 0;  i < outputimgs.size();  ++i) {
         if (outputimgs[i]) {
-            outputimgs[i]->write (outputimgs[i]->name());
+            if (! print_outputs) {
+                std::string filename = outputimgs[i]->name();
+                // JPEG, GIF, and PNG images should be automatically saved
+                // as sRGB because they are almost certainly supposed to
+                // be displayed on web pages.
+                using namespace OIIO;
+                if (Strutil::iends_with (filename, ".jpg") ||
+                    Strutil::iends_with (filename, ".jpeg") ||
+                    Strutil::iends_with (filename, ".gif") ||
+                    Strutil::iends_with (filename, ".png")) {
+                    ImageBuf ccbuf;
+                    ImageBufAlgo::colorconvert (ccbuf, *outputimgs[i],
+                                                "linear", "sRGB", false,
+                                                "", "");
+                    ccbuf.set_write_format (outputimgs[i]->spec().format);
+                    ccbuf.write (filename);
+                } else {
+                    outputimgs[i]->write (filename);
+                }
+            }
             delete outputimgs[i];
             outputimgs[i] = NULL;
         }
@@ -1150,10 +1189,11 @@ test_shade (int argc, const char *argv[])
 
     // Print some debugging info
     if (debug || runstats || profile) {
-        double runtime = timer.lap();
+        double writetime = timer.lap();
         std::cout << "\n";
         std::cout << "Setup: " << OIIO::Strutil::timeintervalformat (setuptime,2) << "\n";
         std::cout << "Run  : " << OIIO::Strutil::timeintervalformat (runtime,2) << "\n";
+        std::cout << "Write: " << OIIO::Strutil::timeintervalformat (writetime,2) << "\n";
         std::cout << "\n";
         std::cout << shadingsys->getstats (5) << "\n";
         OIIO::TextureSystem *texturesys = shadingsys->texturesys();

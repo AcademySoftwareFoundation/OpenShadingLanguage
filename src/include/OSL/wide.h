@@ -154,12 +154,32 @@ public:
     operator &=(const WideMask &other)
     {
         m_value = m_value&other.m_value;
+        return *this;
     }
 
     OSL_INLINE WideMask & 
     operator |=(const WideMask &other)
     {
         m_value = m_value|other.m_value;
+        return *this;
+    }
+
+    OSL_INLINE WideMask  
+    operator & (const WideMask &other) const
+    {
+        return WideMask(m_value&other.m_value);
+    }
+
+    OSL_INLINE WideMask  
+    operator | (const WideMask &other) const
+    {
+        return WideMask(m_value|other.m_value);
+    }
+
+    OSL_INLINE WideMask  
+    operator ~() const
+    {
+        return invert();
     }
     
 private:

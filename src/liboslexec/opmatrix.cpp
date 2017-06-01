@@ -168,25 +168,14 @@ osl_wide_get_matrix (void *sgb_, void *wr, const char *from, WeakMask weak_mask)
         return Mask(true);
 	}
 	
-	Mask succeeded(true);
-	OSL_INTEL_PRAGMA("novector")				    	
-	for(int lane=0; lane < wrm.width; ++lane) {
-		if (weak_mask.is_on(lane)) {
-			Matrix44 r;
-			// TODO: make this a wide call
-			bool ok = ctx->batched_renderer()->get_matrix (sgb, r, USTR(from), sgb->varyingData().time.get(lane));
-			if (! ok) {
-				succeeded.set_off(lane);
-				// TODO: validate the following comment
-				// Based on the 1 function that calls this function
-				// the results of the failed data lanes will get overwritten
-				// so no need to make sure that the values are valid (assuming FP exceptions are disabled)
-				//r.makeIdentity();
-				ShadingContext *ctx = sgb->uniform().context;
-				if (ctx->shadingsys().unknown_coordsys_error())
-					ctx->error ("Unknown transformation \"%s\"", from);
-			}
-			wrm.set(lane, r);
+	Mask succeeded = ctx->batched_renderer()->get_matrix (sgb, wrm, USTR(from), sgb->varyingData().time, weak_mask);
+	
+	if (succeeded.any_off())
+	{
+		ShadingContext *ctx = sgb->uniform().context;
+		if (ctx->shadingsys().unknown_coordsys_error())
+		{
+			ctx->error ("Unknown transformation \"%s\"", from);			
 		}
 	}
     return succeeded;
@@ -249,24 +238,16 @@ osl_wide_get_inverse_matrix (void *sgb_, void *wr, const char *to, WeakMask weak
         return Mask(true);
     }
 
-    Mask succeeded(true);	
-	for(int lane=0; lane < wrm.width; ++lane) {    
-		if (weak_mask.is_on(lane)) {
-			Matrix44 r;
-			// TODO: make this a wide call
-			bool ok = ctx->batched_renderer()->get_inverse_matrix (sgb, r, USTR(to), sgb->varyingData().time.get(lane));
-			if (! ok) {
-				succeeded.set_off(lane);
-				// TODO: validate the following comment
-				// Based on the 1 function that calls this function
-				// the results of the failed data lanes will get overwritten
-				// so no need to make sure that the values are valid (assuming FP exceptions are disabled)
-				//r.makeIdentity();
-				ShadingContext *ctx = sgb->uniform().context;
-				if (ctx->shadingsys().unknown_coordsys_error())
-					ctx->error ("Unknown transformation \"%s\"", to);
-			}
-			wrm.set(lane, r);
+	// Based on the 1 function that calls this function
+	// the results of the failed data lanes will get overwritten
+	// so no need to make sure that the values are valid (assuming FP exceptions are disabled)
+    Mask succeeded = ctx->batched_renderer()->get_inverse_matrix (sgb, wrm, USTR(to), sgb->varyingData().time, weak_mask);
+	if (succeeded.any_off())
+	{
+		ShadingContext *ctx = sgb->uniform().context;
+		if (ctx->shadingsys().unknown_coordsys_error())
+		{
+			ctx->error ("Unknown transformation \"%s\"", to);			
 		}
 	}
     return succeeded;

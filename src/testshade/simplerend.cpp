@@ -268,16 +268,22 @@ BatchedSimpleRenderer::get_matrix (
 
 
 #endif
-bool
-BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
-                                   ustring from, float time)
+Mask
+BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
+        ustring from, const Wide<float> &/*time*/, WeakMask /*weak_mask*/)
 {
     auto found = m_sr.m_named_xforms.find (from);
     if (found != m_sr.m_named_xforms.end()) {
-        result = *(found->second);
-        return true;
+        const Matrix44 & uniformTransform =  *(found->second);
+        
+    	OSL_INTEL_PRAGMA("omp simd simdlen(result.width)")								        
+        for(int lane=0; lane < result.width; ++lane) {
+            result.set(lane,uniformTransform);
+        }
+        
+        return Mask(true);
     } else {
-        return false;
+        return Mask(false);
     }
 }
 

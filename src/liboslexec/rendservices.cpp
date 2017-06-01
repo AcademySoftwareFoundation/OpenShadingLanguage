@@ -406,7 +406,7 @@ BatchedRendererServices::BatchedRendererServices (TextureSystem *texsys)
     }
 }
 
-inline Matrix44 affineInvert(const Matrix44 &m)
+OSL_INLINE static Matrix44 affineInvert(const Matrix44 &m)
 {
     //assert(__builtin_expect(m.x[0][3] == 0.0f && m.x[1][3] == 0.0f && m.x[2][3] == 0.0f && m.x[3][3] == 1.0f, 1))
 	Matrix44 s (m.x[1][1] * m.x[2][2] - m.x[2][1] * m.x[1][2],
@@ -472,6 +472,43 @@ inline Matrix44 affineInvert(const Matrix44 &m)
 	return s;
 }
  
+
+OSL_INLINE static void invert_wide_matrix(Wide<Matrix44> &result, const Wide<Matrix44> &wmatrix, WeakMask mask)
+{
+	// TODO: As we don't expect failure, not sure it is worth overhead to skip this work
+	if (mask.any_on()) {
+		int allAreAffine = 1;
+		OSL_INTEL_PRAGMA("omp simd simdlen(wmatrix.width)")
+		for(int lane=0; lane < wmatrix.width; ++lane) {
+			Matrix44 m = wmatrix.get(lane);        
+			if (mask.is_on(lane) && 
+			    (m.x[0][3] != 0.0f || m.x[1][3] != 0.0f || m.x[2][3] != 0.0f || m.x[3][3] != 1.0f)) {
+				allAreAffine = 0;
+			}
+		}
+		
+		if (allAreAffine) {
+			OSL_INTEL_PRAGMA("omp simd simdlen(wmatrix.width)")
+			for(int lane=0; lane < wmatrix.width; ++lane) {    
+				Matrix44 m = wmatrix.get(lane);        
+				//bool ok = get_matrix (sgb, r, xform.get(lane), time.get(lane));
+				//r.invert();
+				Matrix44 r = affineInvert(m);
+				result.set(lane, r);        
+			}
+		} else
+		{
+			// Scalar code for non affine matrix (well at least 1 lane isn't)
+			for(int lane=0; lane < SimdLaneCount; ++lane) {
+				if (mask.is_on(lane)) {
+					Matrix44 r = wmatrix.get(lane);
+					r.invert();
+					result.set(lane, r);
+				}
+			}			
+		}
+	}
+}
 Mask
 BatchedRendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
                                       const Wide<TransformationPtr> & xform, const Wide<float> &time,
@@ -481,38 +518,7 @@ BatchedRendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb, Wide<Matri
 	{
 		Wide<Matrix44> wmatrix;
 		Mask succeeded = get_matrix (sgb, wmatrix, xform, time, weak_mask);
-		// TODO: As we don't expect failure, not sure it is worth overhead to skip this work
-		if (succeeded.any_on()) {
-			int allAreAffine = 1;
-			OSL_INTEL_PRAGMA("omp simd simdlen(wmatrix.width)")
-			for(int lane=0; lane < wmatrix.width; ++lane) {
-				Matrix44 m = wmatrix.get(lane);        
-				if (m.x[0][3] != 0.0f || m.x[1][3] != 0.0f || m.x[2][3] != 0.0f || m.x[3][3] != 1.0f) {
-					allAreAffine = 0;
-				}
-			}
-			
-			if (allAreAffine) {
-				OSL_INTEL_PRAGMA("omp simd simdlen(wmatrix.width)")
-				for(int lane=0; lane < wmatrix.width; ++lane) {    
-					Matrix44 m = wmatrix.get(lane);        
-					//bool ok = get_matrix (sgb, r, xform.get(lane), time.get(lane));
-					//r.invert();
-					Matrix44 r = affineInvert(m);
-					result.set(lane, r);        
-				}
-			} else
-			{
-				// Scalar code for non affine matrix (well at least 1 lane isn't)
-				for(int lane=0; lane < SimdLaneCount; ++lane) {    
-					if (succeeded.is_on(lane)) {
-						Matrix44 r = wmatrix.get(lane);
-						r.invert();
-						result.set(lane, r);
-					}
-				}			
-			}
-		}
+		invert_wide_matrix(result, wmatrix, succeeded&weak_mask);
 	    return succeeded;	
 	}
 }
@@ -530,14 +536,17 @@ BatchedRendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &
 
 
 
-bool
-BatchedRendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
-                                      ustring to, float time)
+Mask
+BatchedRendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb,  Wide<Matrix44> &result,
+                                      ustring to, const Wide<float> &time, WeakMask weak_mask)
 {
-    bool ok = get_matrix (sgb, result, to, time);
-    if (ok)
-        result.invert ();
-    return ok;
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+		Wide<Matrix44> wmatrix;
+		Mask succeeded = get_matrix (sgb, wmatrix, to, time, weak_mask);
+		invert_wide_matrix(result, wmatrix, succeeded&weak_mask);
+	    return succeeded;
+	}    
 }
 
 

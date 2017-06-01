@@ -3,6 +3,8 @@ Compiled test.osl -> test.oso
    hypot (3, 4, 5) = 7.07107
    reflect (0.447214 -0.894427 0, 0 1 0) =  0.447214 0.894427 0
    reflect (0.447214 -0.894427 0, -1 0 0) =  -0.447214 -0.894427 0
+   faceforward (0 0 1, 0 -0.707107 -0.707107) =  0 0 1
+   faceforward (0 0 1, 0 -0.707107 -0.707107, 0 0 -1) =  0 0 -1
  testing total-internal reflection:
    refract (0.707107 -0.707107 0, 0 1 0, 1.42) =  0 0 0
    frensel:  Kr= 1  Kt = 0  R = 0.707107 0.707107 0  T = 0 0 0
@@ -23,6 +25,8 @@ Compiled test.osl -> test.oso
    hypot (3, 4, 5) = 7.07107
    reflect (0.447214 -0.894427 0, 0 1 0) =  0.447214 0.894427 0
    reflect (0.447214 -0.894427 0, -1 0 0) =  -0.447214 -0.894427 0
+   faceforward (0 0 1, 0 -0.707107 -0.707107) =  0 0 1
+   faceforward (0 0 1, 0 -0.707107 -0.707107, 0 0 -1) =  0 0 -1
  testing total-internal reflection:
    refract (0.707107 -0.707107 0, 0 1 0, 1.42) =  0 0 0
    frensel:  Kr= 1  Kt = 0  R = 0.707107 0.707107 0  T = 0 0 0
@@ -43,6 +47,8 @@ Compiled test.osl -> test.oso
    hypot (3, 4, 5) = 7.07107
    reflect (0.447214 -0.894427 0, 0 1 0) =  0.447214 0.894427 0
    reflect (0.447214 -0.894427 0, -1 0 0) =  -0.447214 -0.894427 0
+   faceforward (0 0 1, 0 -0.707107 -0.707107) =  0 0 1
+   faceforward (0 0 1, 0 -0.707107 -0.707107, 0 0 -1) =  0 0 -1
  testing total-internal reflection:
    refract (0.707107 -0.707107 0, 0 1 0, 1.42) =  0 0 0
    frensel:  Kr= 1  Kt = 0  R = 0.707107 0.707107 0  T = 0 0 0
@@ -63,6 +69,8 @@ Compiled test.osl -> test.oso
    hypot (3, 4, 5) = 7.07107
    reflect (0.447214 -0.894427 0, 0 1 0) =  0.447214 0.894427 0
    reflect (0.447214 -0.894427 0, -1 0 0) =  -0.447214 -0.894427 0
+   faceforward (0 0 1, 0 -0.707107 -0.707107) =  0 0 1
+   faceforward (0 0 1, 0 -0.707107 -0.707107, 0 0 -1) =  0 0 -1
  testing total-internal reflection:
    refract (0.707107 -0.707107 0, 0 1 0, 1.42) =  0 0 0
    frensel:  Kr= 1  Kt = 0  R = 0.707107 0.707107 0  T = 0 0 0

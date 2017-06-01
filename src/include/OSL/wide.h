@@ -73,6 +73,12 @@ public:
     OSL_INLINE value_type value() const
     { return m_value; }
 
+    
+    OSL_INLINE WideMask invert() const
+    {
+    	return WideMask((~m_value)&(0xFFFFFFFF >> (32-WidthT)));
+    }
+    
     // Testers
     OSL_INLINE bool operator[](int lane) const
     {
@@ -110,7 +116,7 @@ public:
 
     OSL_INLINE bool any_off() const
     {
-        return (m_value < (0xFFFFFFFF >> (32-WidthT));
+        return (m_value < (0xFFFFFFFF >> (32-WidthT)));
     }
 
 
@@ -143,11 +149,31 @@ public:
     {
         m_value = 0;
     }
+    
+    OSL_INLINE WideMask & 
+    operator &=(const WideMask &other)
+    {
+        m_value = m_value&other.m_value;
+    }
+
+    OSL_INLINE WideMask & 
+    operator |=(const WideMask &other)
+    {
+        m_value = m_value|other.m_value;
+    }
+    
 private:
     value_type m_value;
 };
 
 typedef WideMask<SimdLaneCount> Mask;
+// Technically identical to Mask, but intended use is that 
+// the implementor may ignore the mask and populate
+// all data lanes of the destination object, however
+// implementor may still find it usefull to avoid
+// pulling/gathering data for that lane.
+// Intent is for self documenting code
+typedef WideMask<SimdLaneCount> WeakMask;
 
 
 
@@ -1029,19 +1055,56 @@ unproxy(const ConstLaneProxy<DataT,WidthT> &proxy)
 	return proxy.operator DataT const ();
 }
 
+template <typename DataT, int WidthT = SimdLaneCount>
+struct ConstWideAccessor
+{
+	static constexpr int width = WidthT; 
+	
+	OSL_INLINE
+	ConstWideAccessor(const void *ptr_wide_data, int derivIndex=0)
+	: m_ref_wide_data(reinterpret_cast<const Wide<DataT, WidthT> *>(ptr_wide_data)[derivIndex])
+	{}
+	
+	OSL_INLINE
+	ConstWideAccessor(const Wide<DataT, WidthT> & ref_wide_data)
+	: m_ref_wide_data(ref_wide_data)
+	{}
+	
+	// Must provide user defined copy constructor to 
+	// get compiler to be able to follow individual 
+	// data members through back to original object
+	// when fully inlined the proxy should disappear
+	OSL_INLINE
+	ConstWideAccessor(const ConstWideAccessor &other)
+	: m_ref_wide_data(other.m_ref_wide_data)
+	{}	
+	
+	
+	typedef ConstLaneProxy<DataT, WidthT> ConstProxy;
+	
+	OSL_INLINE ConstProxy const 
+	operator[](int index) const
+	{
+		return ConstProxy(m_ref_wide_data, index);
+	}
 
-template <typename DataT, int WidthT>
+private:
+	const Wide<DataT, WidthT> & m_ref_wide_data;	
+};
+
+
+template <typename DataT, int WidthT = SimdLaneCount>
 struct WideAccessor
 {
 	static constexpr int width = WidthT; 
 	
 	OSL_INLINE
-	WideAccessor(const void *ptr_wide_data)
-	: m_ref_wide_data(*reinterpret_cast<const Wide<DataT, WidthT> *>(ptr_wide_data))
+	WideAccessor(void *ptr_wide_data, int derivIndex=0)
+	: m_ref_wide_data(reinterpret_cast<Wide<DataT, WidthT> *>(ptr_wide_data)[derivIndex])
 	{}
 	
 	OSL_INLINE
-	WideAccessor(const Wide<DataT, WidthT> & ref_wide_data)
+	WideAccessor(Wide<DataT, WidthT> & ref_wide_data)
 	: m_ref_wide_data(ref_wide_data)
 	{}
 	
@@ -1055,16 +1118,23 @@ struct WideAccessor
 	{}	
 	
 	
-	typedef ConstLaneProxy<DataT, WidthT> Proxy;
+	typedef LaneProxy<DataT, WidthT> Proxy;
+	typedef ConstLaneProxy<DataT, WidthT> ConstProxy;
 	
-	OSL_INLINE Proxy const 
+	OSL_INLINE ConstProxy const 
 	operator[](int index) const
+	{
+		return ConstProxy(m_ref_wide_data, index);
+	}
+
+	OSL_INLINE Proxy  
+	operator[](int index)
 	{
 		return Proxy(m_ref_wide_data, index);
 	}
-		
+	
 private:
-	const Wide<DataT, WidthT> & m_ref_wide_data;	
+	Wide<DataT, WidthT> & m_ref_wide_data;	
 };
 
 

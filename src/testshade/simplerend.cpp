@@ -225,9 +225,13 @@ return true;
 }
 
 #else
-bool
-BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
-                                   const Wide<TransformationPtr> & xform, const Wide<float> &time)
+Mask
+BatchedSimpleRenderer::get_matrix (
+	ShaderGlobalsBatch *sgb, 
+	Wide<Matrix44> &result,
+    const Wide<TransformationPtr> & xform, 
+    const Wide<float> &time, 
+    WeakMask /*weak_mask*/)
 {
     // SimpleRenderer doesn't understand motion blur and transformations
     // are just simple 4x4 matrices.
@@ -238,8 +242,8 @@ BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &resu
 #if 0
     // In general, one can't assume that the transformation is uniform
     const Matrix44 & uniformTransform = *reinterpret_cast<const Matrix44*>(uniform_xform);
-	OSL_INTEL_PRAGMA("omp simd simdlen(SimdLaneCount)")								        
-    for(int lane=0; lane < SimdLaneCount; ++lane) {
+	OSL_INTEL_PRAGMA("omp simd simdlen(result.width)")								        
+    for(int lane=0; lane < result.width; ++lane) {
         if (__builtin_expect((uniform_xform == xform.get(lane)),1)) {
             result.set(lane,uniformTransform);
         } else {
@@ -252,14 +256,14 @@ BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &resu
     // use that fact
     const Matrix44 & uniformTransform = *reinterpret_cast<const Matrix44*>(uniform_xform);
 
-	OSL_INTEL_PRAGMA("omp simd simdlen(SimdLaneCount)")								        
-    for(int lane=0; lane < SimdLaneCount; ++lane) {
+	OSL_INTEL_PRAGMA("omp simd simdlen(result.width)")								        
+    for(int lane=0; lane < result.width; ++lane) {
         result.set(lane,uniformTransform);
     }
 
 #endif
 
-    return true;
+    return Mask(true);
 }
 
 

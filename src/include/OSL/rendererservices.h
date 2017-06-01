@@ -470,16 +470,16 @@ public:
     virtual bool get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
                              TransformationPtr xform, float time) = 0;
 #endif
-    virtual bool get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
-            const Wide<TransformationPtr> & xform, const Wide<float> &time) = 0;    
+    virtual Mask get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
+            const Wide<TransformationPtr> & xform, const Wide<float> &time, WeakMask weak_mask) = 0;    
 
     /// Get the 4x4 matrix that transforms by the specified
     /// transformation at the given time.  Return true if ok, false on
     /// error.  The default implementation is to use get_matrix and
     /// invert it, but a particular renderer may have a better technique
     /// and overload the implementation.
-    virtual bool get_inverse_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
-            const Wide<TransformationPtr> & xform, const Wide<float> &time);    
+    virtual Mask get_inverse_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
+            const Wide<TransformationPtr> & xform, const Wide<float> &time, WeakMask weak_mask);    
 										  
 
     /// Get the 4x4 matrix that transforms by the specified

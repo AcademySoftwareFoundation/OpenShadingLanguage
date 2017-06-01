@@ -136,8 +136,8 @@ osl_get_matrix (void *sg_, void *r, const char *from)
     return ok;
 }
 
-OSL_SHADEOP int
-osl_wide_get_matrix (void *sgb_, void *wr, const char *from)
+OSL_SHADEOP Mask
+osl_wide_get_matrix (void *sgb_, void *wr, const char *from, WeakMask weak_mask)
 {
     ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
     ShadingContext *ctx = (ShadingContext *)sgb->uniform().context;
@@ -154,33 +154,42 @@ osl_wide_get_matrix (void *sgb_, void *wr, const char *from)
 				wrm.set(lane, ident);
 			}
     	}
-        return true;
+        return Mask(true);
     }
     
-    // TODO:  consider passing wide matrix through to renderer
 	if (USTR(from) == Strings::shader) {
-		ctx->batched_renderer()->get_matrix (sgb, wrm, sgb->varyingData().shader2common, sgb->varyingData().time);
-		return true;
+		ctx->batched_renderer()->get_matrix (sgb, wrm, sgb->varyingData().shader2common, sgb->varyingData().time, weak_mask);
+		// NOTE: matching scalar version of code which ignores the renderservices return value
+        return Mask(true);
 	}
 	if (USTR(from) == Strings::object) {
-		ctx->batched_renderer()->get_matrix (sgb, wrm, sgb->varyingData().object2common, sgb->varyingData().time);
-		return true;
+		ctx->batched_renderer()->get_matrix (sgb, wrm, sgb->varyingData().object2common, sgb->varyingData().time, weak_mask);
+		// NOTE: matching scalar version of code which ignores the renderservices return value
+        return Mask(true);
 	}
-	int wok = true;
-	for(int lane=0; lane < wrm.width; ++lane) {    
-		Matrix44 r;
-		int ok = ctx->batched_renderer()->get_matrix (sgb, r, USTR(from), sgb->varyingData().time.get(lane));
-		if (! ok) {
-			wok = false;
-			r.makeIdentity();
-			ShadingContext *ctx = sgb->uniform().context;
-			if (ctx->shadingsys().unknown_coordsys_error())
-				ctx->error ("Unknown transformation \"%s\"", from);
+	
+	Mask succeeded(true);
+	OSL_INTEL_PRAGMA("novector")				    	
+	for(int lane=0; lane < wrm.width; ++lane) {
+		if (weak_mask.is_on(lane)) {
+			Matrix44 r;
+			// TODO: make this a wide call
+			bool ok = ctx->batched_renderer()->get_matrix (sgb, r, USTR(from), sgb->varyingData().time.get(lane));
+			if (! ok) {
+				succeeded.set_off(lane);
+				// TODO: validate the following comment
+				// Based on the 1 function that calls this function
+				// the results of the failed data lanes will get overwritten
+				// so no need to make sure that the values are valid (assuming FP exceptions are disabled)
+				//r.makeIdentity();
+				ShadingContext *ctx = sgb->uniform().context;
+				if (ctx->shadingsys().unknown_coordsys_error())
+					ctx->error ("Unknown transformation \"%s\"", from);
+			}
+			wrm.set(lane, r);
 		}
-		wrm.set(lane, r);
 	}
-    return wok;
-
+    return succeeded;
 }
 
 
@@ -212,8 +221,8 @@ osl_get_inverse_matrix (void *sg_, void *r, const char *to)
     return ok;
 }
 
-OSL_SHADEOP int
-osl_wide_get_inverse_matrix (void *sgb_, void *wr, const char *to)
+OSL_SHADEOP Mask
+osl_wide_get_inverse_matrix (void *sgb_, void *wr, const char *to, WeakMask weak_mask)
 {
     ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
     ShadingContext *ctx = (ShadingContext *)sgb->uniform().context;
@@ -227,31 +236,40 @@ osl_wide_get_inverse_matrix (void *sgb_, void *wr, const char *to)
     	for(int lane=0; lane < wrm.width; ++lane) {
     		wrm.set(lane, ident);
     	}
-        return true;
+        return Mask(true);
     }
     if (USTR(to) == Strings::shader) {
-    	ctx->batched_renderer()->get_inverse_matrix (sgb, wrm, sgb->varyingData().shader2common, sgb->varyingData().time);        
-        return true;
+    	ctx->batched_renderer()->get_inverse_matrix (sgb, wrm, sgb->varyingData().shader2common, sgb->varyingData().time, weak_mask);        
+		// NOTE: matching scalar version of code which ignores the renderservices return value
+        return Mask(true);
     }
     if (USTR(to) == Strings::object) {
-    	ctx->batched_renderer()->get_inverse_matrix (sgb, wrm, sgb->varyingData().object2common, sgb->varyingData().time);        
-        return true;
+    	ctx->batched_renderer()->get_inverse_matrix (sgb, wrm, sgb->varyingData().object2common, sgb->varyingData().time, weak_mask);        
+		// NOTE: matching scalar version of code which ignores the renderservices return value
+        return Mask(true);
     }
 
-	int wok = true;
+    Mask succeeded(true);	
 	for(int lane=0; lane < wrm.width; ++lane) {    
-		Matrix44 r;
-	    int ok = ctx->batched_renderer()->get_inverse_matrix (sgb, r, USTR(to), sgb->varyingData().time.get(lane));
-		if (! ok) {
-			wok = false;
-			r.makeIdentity();
-			ShadingContext *ctx = sgb->uniform().context;
-			if (ctx->shadingsys().unknown_coordsys_error())
-				ctx->error ("Unknown transformation \"%s\"", to);
+		if (weak_mask.is_on(lane)) {
+			Matrix44 r;
+			// TODO: make this a wide call
+			bool ok = ctx->batched_renderer()->get_inverse_matrix (sgb, r, USTR(to), sgb->varyingData().time.get(lane));
+			if (! ok) {
+				succeeded.set_off(lane);
+				// TODO: validate the following comment
+				// Based on the 1 function that calls this function
+				// the results of the failed data lanes will get overwritten
+				// so no need to make sure that the values are valid (assuming FP exceptions are disabled)
+				//r.makeIdentity();
+				ShadingContext *ctx = sgb->uniform().context;
+				if (ctx->shadingsys().unknown_coordsys_error())
+					ctx->error ("Unknown transformation \"%s\"", to);
+			}
+			wrm.set(lane, r);
 		}
-		wrm.set(lane, r);
 	}
-    return wok;
+    return succeeded;
     
 }
 
@@ -284,19 +302,20 @@ osl_get_from_to_matrix (void *sg, void *r, const char *from, const char *to)
 }
 
 
-OSL_SHADEOP int
-osl_wide_get_from_to_matrix (void *sgb, void *wr, const char *from, const char *to)
+OSL_SHADEOP Mask
+osl_wide_get_from_to_matrix (void *sgb, void *wr, const char *from, const char *to, WeakMask weak_mask)
 {
 	OSL_INTEL_PRAGMA("forceinline recursive")
 	{
 		Wide<Matrix44> wMfrom, wMto;
-		int ok = osl_wide_get_matrix ((ShaderGlobalsBatch *)sgb, &wMfrom, from);
-		ok &= osl_wide_get_inverse_matrix ((ShaderGlobalsBatch *)sgb, &wMto, to);
+		Mask succeeded = osl_wide_get_matrix ((ShaderGlobalsBatch *)sgb, &wMfrom, from, weak_mask);
+		succeeded &= osl_wide_get_inverse_matrix ((ShaderGlobalsBatch *)sgb, &wMto, to, weak_mask);
 		
 		Wide<Matrix44> & wrm = WMAT(wr);
 	
+		// No savings from using weak_mask or succeeded
 		OSL_INTEL_PRAGMA("omp simd simdlen(wrm.width)")
-		for(int lane=0; lane < wrm.width; ++lane) {    
+		for(int lane=0; lane < wrm.width; ++lane) {
 			Matrix44 mat_From = wMfrom.get(lane);
 			Matrix44 mat_To = wMto.get(lane);		
 	
@@ -304,7 +323,7 @@ osl_wide_get_from_to_matrix (void *sgb, void *wr, const char *from, const char *
 			
 			wrm.set(lane, result);
 		}
-		return ok;
+		return succeeded;
 	}
 }
 
@@ -637,14 +656,13 @@ osl_transform_triple (void *sg_, void *Pin, int Pin_derivs,
                       void *Pout, int Pout_derivs,
                       void *from, void *to, int vectype)
 {
-    static ustring u_common ("common");
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     Matrix44 M;
     int ok;
     Pin_derivs &= Pout_derivs;   // ignore derivs if output doesn't need it
-    if (USTR(from) == u_common)
+    if (USTR(from) == Strings::common)
         ok = osl_get_inverse_matrix (sg, &M, (const char *)to);
-    else if (USTR(to) == u_common)
+    else if (USTR(to) == Strings::common)
         ok = osl_get_matrix (sg, &M, (const char *)from);
     else
         ok = osl_get_from_to_matrix (sg, &M, (const char *)from,
@@ -688,31 +706,40 @@ osl_wide_transform_triple (void *sgb_, void *Pin, int Pin_derivs,
                       void *Pout, int Pout_derivs,
 					  void * from, void * to, int vectype, unsigned int mask_value)
 {
-    static ustring u_common ("common");
-
     ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
-    //std::cout << std::endl << std::endl << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<osl_wide_transform_triple>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl << std::endl;
-    //sgb->dump();
+    ShadingContext *ctx = (ShadingContext *)sgb->uniform().context;
     
     Mask mask(mask_value);
     
-    ASSERT(Pin != Pout);
-    
+    ASSERT(Pin != Pout);  
     
     Wide<Matrix44> M;
     int ok;
     Pin_derivs &= Pout_derivs;   // ignore derivs if output doesn't need it
     
-#if 0 
-    if (USTR(from) == u_common)
-        ok = osl_get_inverse_matrix (sgb, &M, (const char *)to);
-    else if (USTR(to) == u_common)
-        ok = osl_get_matrix (sgb, &M, (const char *)from);
-    else
-#endif
-        ok = osl_wide_get_from_to_matrix (sgb, &M, (const char *)from,
-                                     (const char *)to);
-    if (ok) {
+    Mask succeeded;
+    // Avoid matrix concatenation if possible by detecting when the 
+    // adjacent matrix would be identity
+    // We don't expect both from and to == common, so we are not
+    // optimizing for it
+    if (USTR(from) == Strings::common ||
+            USTR(from) == ctx->shadingsys().commonspace_synonym()) {
+    	succeeded = osl_wide_get_inverse_matrix (sgb, &M, (const char *)to, mask);
+    } else if (USTR(to) == Strings::common ||
+            USTR(to) == ctx->shadingsys().commonspace_synonym()) {
+    	succeeded = osl_wide_get_matrix(sgb, &M, (const char *)from, mask);
+    } else {
+		succeeded = osl_wide_get_from_to_matrix (sgb, &M, (const char *)from,
+										 (const char *)to, mask);
+    }
+    
+    // regardless of which data lanes succeeded we can just tranform
+    // all data lanes and not bother to combine success and result mask
+    {
+    	// TODO:  consider templatising this function and having
+    	// a specific version for each vec type, as we know the type 
+    	// at code gen time we can call a specific version versus
+    	// the cost testing the type here.
         if (vectype == TypeDesc::POINT) {
             if (Pin_derivs) {
                 osl_transform_wdvwmwdv(Pout, M, Pin, mask);
@@ -732,23 +759,52 @@ osl_wide_transform_triple (void *sgb_, void *Pin, int Pin_derivs,
             	osl_transformn_wvwmwv(Pout, M, Pin, mask);
             }
         }
-        else {
-        	std::cout << "Unhandled osl_wide_transform_triple vectype=" << vectype << std::endl;
+        else {        	
         	ASSERT(0);
         }
-    } else {
-    	ASSERT(0);
-        *(Vec3 *)Pout = *(Vec3 *)Pin;
-        if (Pin_derivs) {
-            ((Vec3 *)Pout)[1] = ((Vec3 *)Pin)[1];
-            ((Vec3 *)Pout)[2] = ((Vec3 *)Pin)[2];
-        }
     }
-    if (Pout_derivs && !Pin_derivs) {
-    	ASSERT(0);
-        ((Vec3 *)Pout)[1].setValue (0.0f, 0.0f, 0.0f);
-        ((Vec3 *)Pout)[2].setValue (0.0f, 0.0f, 0.0f);
-    }   
+    OSL_INTEL_PRAGMA("forceinline recursive")
+    {		
+        // Handle cleaning up any data lanes that did not succeed
+		if (succeeded.any_off())
+		{
+			// For any lanes we failed to get a matrix for
+			// just copy the output to the input values
+			WideAccessor<Vec3> inVec(Pin);
+			// NOTE:  As we only only want to copy lanes that failed, 
+			// we will invert our success mask
+			Mask failed = succeeded.invert();
+			MaskedAccessor<Vec3> outVec(Pout, failed);
+			OSL_INTEL_PRAGMA("omp simd simdlen(outVec.width)")
+			for(int i=0; i< outVec.width; ++i)
+			{
+				outVec[i] = inVec[i];
+			}
+			if (Pin_derivs) {
+				WideAccessor<Vec3> inDx(Pin, 1 /*derivIndex*/);
+				WideAccessor<Vec3> inDy(Pin, 2 /*derivIndex*/);
+				MaskedAccessor<Vec3> outDx(Pout, failed, 1 /*derivIndex*/);
+				MaskedAccessor<Vec3> outDy(Pout, failed, 2 /*derivIndex*/);
+				OSL_INTEL_PRAGMA("omp simd simdlen(outDx.width)")
+				for(int i=0; i< outDx.width; ++i)
+				{
+					outDx[i] = inDx[i];
+					outDy[i] = inDy[i];
+				}        	
+			}    	
+		}
+        // Handle zeroing derivs if necessary
+		if (Pout_derivs && !Pin_derivs) {
+			WideAccessor<Vec3> outDx(Pout, 1 /*derivIndex*/);
+			WideAccessor<Vec3> outDy(Pout, 2 /*derivIndex*/);
+			OSL_INTEL_PRAGMA("omp simd simdlen(outDx.width)")
+			for(int i=0; i< outDx.width; ++i)
+			{	    	
+				outDx[i] = Vec3(0.0f, 0.0f, 0.0f);
+				outDy[i] = Vec3(0.0f, 0.0f, 0.0f);
+			}        	
+		}
+    }
 }
 
 

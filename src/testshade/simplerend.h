@@ -50,8 +50,8 @@ public:
 	BatchedSimpleRenderer(SimpleRenderer &sr);
 	virtual ~BatchedSimpleRenderer();
 		
-	virtual bool get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
-		const Wide<TransformationPtr> & xform, const Wide<float> &time);
+	virtual Mask get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
+		const Wide<TransformationPtr> & xform, const Wide<float> &time, WeakMask weak_mask);
 	virtual bool get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
 							 ustring from, float time);
 	virtual bool get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,

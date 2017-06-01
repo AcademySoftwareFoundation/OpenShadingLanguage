@@ -44,40 +44,6 @@ namespace pvt {   // OSL::pvt
 
 
 std::string
-TypeSpec::string () const
-{
-    std::string str;
-    if (is_closure() || is_closure_array()) {
-        str += "closure color";
-        if (is_unsized_array())
-            str += "[]";
-        else if (arraylength() > 0)
-            str += Strutil::format ("[%d]", arraylength());
-    }
-    else if (structure() > 0) {
-        str += Strutil::format ("struct %d", structure());
-        if (is_unsized_array())
-            str += "[]";
-        else if (arraylength() > 0)
-            str += Strutil::format ("[%d]", arraylength());
-    } else {
-        str += simpletype().c_str();
-    }
-    return str;
-}
-
-
-
-const char *
-TypeSpec::c_str () const
-{
-    ustring s (this->string());
-    return s.c_str ();
-}
-
-
-
-std::string
 Symbol::mangled () const
 {
     // FIXME: De-alias

@@ -1,0 +1,3 @@
+Compiled test.osl -> test.oso
+c2_out = 0.3 0.3
+

@@ -237,7 +237,6 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             draw_string
             error-dupes exit exponential
             function-earlyreturn function-simple function-outputelem
-            function-overload-struct
             geomath getattribute-camera getattribute-shader
             getsymbol-nonheap gettextureinfo
             group-outputs groupstring
@@ -276,8 +275,9 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             select shortcircuit spline splineinverse spline-derivbug
             string
             struct struct-array struct-array-mixture
-            struct-err struct-init-copy struct-layers
-            struct-return struct-with-array
+            struct-err struct-init-copy
+            struct-isomorphic-overload struct-layers
+            struct-operator-overload struct-return struct-with-array
             struct-nested struct-nested-assign struct-nested-deep
             ternary
             testshade-expr

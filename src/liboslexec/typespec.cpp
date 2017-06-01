@@ -152,9 +152,11 @@ equivalent (const TypeSpec &a, const TypeSpec &b)
     if (a == b)
         return true;
     // or if they are structs, and the structs are equivalent
-    if (a.is_structure() || b.is_structure())
+    if (a.is_structure() || b.is_structure()) {
         return a.is_structure() && b.is_structure() &&
+               a.structspec()->name() == b.structspec()->name() &&
                equivalent(a.structspec(), b.structspec());
+    }
     // or if the underlying simple types are equivalent
     return
         ((a.is_vectriple_based() && b.is_vectriple_based()) || equivalent(a.m_simple, b.m_simple))

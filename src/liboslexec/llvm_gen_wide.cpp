@@ -2867,6 +2867,10 @@ struct TextureOptionPack {
     TextureOptions::Mask activeMask;
     TextureOptions::Mask varyingMask;
     std::array<llvm::Value*, TextureOptions::MAX_OPTIONS> values;
+    TextureOptionPack()
+        : activeMask(false),
+          varyingMask(false)
+          {}
     void add(TextureOptions::Options index,
              llvm::Value* val,
              bool isVarying) {
@@ -2881,14 +2885,12 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
                                        llvm::Value* &alpha, llvm::Value* &dalphadx,
                                        llvm::Value* &dalphady, llvm::Value* &errormessage)
 {
-    llvm::Value* missingcolor = NULL;
-    TextureOpt optDefaults;  // So we can check the defaults
+    TextureOpt optdefaults;  // So we can check the defaults
 
     TextureOptionPack options;
 
-
     // allocate
-
+    Opcode &op (rop.inst()->ops()[opnum]);
     for (int a = first_optional_arg;  a < op.nargs();  ++a) {
         Symbol &Name(*rop.opargsym(op,a));
         ASSERT (Name.typespec().is_string() &&
@@ -2900,6 +2902,7 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
         if (! name)    // skip empty string param name
             continue;
         Symbol &Val(*rop.opargsym(op,a));
+        TypeDesc valtype = Val.typespec().simpletype ();
         const int *ival = Val.typespec().is_int() && Val.is_constant() ? (const int *)Val.data() : NULL;
         const float *fval = Val.typespec().is_float() && Val.is_constant() ? (const float *)Val.data() : NULL;
 
@@ -2913,44 +2916,37 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
         // XXX lfeng: check for default values if uniform
 #define PARAM_INT(paramname, index)                                     \
         if (name == Strings::paramname && valtype == TypeDesc::INT)   { \
-            if (!options.activeMask[index] &&                           \
+            if (!options.activeMask[TextureOptions::index] &&                           \
                 ival && *ival == optdefaults.paramname)                 \
                 continue;   /* default constant */                      \
-            llvm::Value *val = rop.llvm_load_value (Val);               \
-            options.add(TextureOptions::index, val, valIsVarying);      \
+            options.add(TextureOptions::index, rop.llvm_void_ptr(Val), valIsVarying);      \
             continue;                                                   \
         }
 
 #define PARAM_FLOAT(paramname, index)                                   \
         if (name == Strings::paramname &&                               \
             (valtype == TypeDesc::FLOAT || valtype == TypeDesc::INT)) { \
-            if (!options.activeMask[index] &&                           \
+            if (!options.activeMask[TextureOptions::index] &&                           \
                 ((ival && *ival == optdefaults.paramname) ||            \
                  (fval && *fval == optdefaults.paramname)))             \
                 continue;   /* default constant */                      \
-            llvm::Value *val = rop.llvm_load_value (Val);               \
-            if (valtype == TypeDesc::INT)                               \
-                val = rop.ll.op_int_to_float (val);                     \
-            options.add(TextureOptions::index, val, valIsVarying);      \
+            options.add(TextureOptions::index, rop.llvm_void_ptr(Val), valIsVarying);      \
             continue;                                                   \
         }
 
 #define PARAM_FLOAT_STR(paramname, index)                               \
         if (name == Strings::paramname &&                               \
             (valtype == TypeDesc::FLOAT || valtype == TypeDesc::INT)) { \
-            if (!options.activeMask[S##index] &&                                \
-                !options.activeMask[T##index] &&                                \
-                !options.activeMask[R##index] &&                                \
+            if (!options.activeMask[TextureOptions::S##index] &&                                \
+                !options.activeMask[TextureOptions::T##index] &&                                \
+                !options.activeMask[TextureOptions::R##index] &&                                \
                 ((ival && *ival == optdefaults.s##paramname) ||         \
                  (fval && *fval == optdefaults.s##paramname)))          \
                 continue;                                               \
-            llvm::Value *val = rop.llvm_load_value (Val);               \
-            if (valtype == TypeDesc::INT)                               \
-                val = rop.ll.op_int_to_float (val);                     \
-            options.add(TextureOptions::S##index, val, valIsVarying);      \
-            options.add(TextureOptions::T##index, val, valIsVarying);      \
+            options.add(TextureOptions::S##index, rop.llvm_void_ptr(Val), valIsVarying);      \
+            options.add(TextureOptions::T##index, rop.llvm_void_ptr(Val), valIsVarying);      \
             if (tex3d)                                                     \
-                options.add(TextureOptions::R##index, val, valIsVarying);  \
+                options.add(TextureOptions::R##index, rop.llvm_void_ptr(Val), valIsVarying);  \
             continue;                                                   \
         }
 
@@ -2963,11 +2959,12 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
                     continue;                                           \
                 if (code >= 0) {                                        \
                     llvm::Value *val = rop.ll.constant (code);          \
-                    options.add(TextureOptions::index, val, valIsVarying);  \
+                    llvm::Value* codePtr = rop.ll.op_alloca(rop.ll.type_int());\
+                    rop.ll.op_store(val, codePtr);                       \
+                    options.add(TextureOptions::index, rop.ll.void_ptr(codePtr), valIsVarying);  \
                 }                                                       \
             } else {                                                    \
-                llvm::Value *val = rop.llvm_load_value (Val);           \
-                options.add(TextureOptions::index##_STRING, val, valIsVarying);  \
+                options.add(TextureOptions::index##_STRING, rop.llvm_void_ptr(Val), valIsVarying);  \
             }                                                           \
             continue;                                                       \
         }
@@ -2985,16 +2982,17 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
             if (Val.is_constant()) {
                 int mode = TextureOpt::decode_wrapmode (*(ustring *)Val.data());
                 llvm::Value *val = rop.ll.constant (mode);
-                options.add(TextureOptions::SWRAP, val, valIsVarying);
-                options.add(TextureOptions::TWRAP, val, valIsVarying);
-                if (tex3D)
+                llvm::Value* codePtr = rop.ll.op_alloca(rop.ll.type_int());
+                rop.ll.op_store(val, codePtr);
+                options.add(TextureOptions::SWRAP, rop.ll.void_ptr(codePtr), valIsVarying);
+                options.add(TextureOptions::TWRAP, rop.ll.void_ptr(codePtr), valIsVarying);
+                if (tex3d)
                     options.add(TextureOptions::RWRAP, val, valIsVarying);
             } else {
-                llvm::Value *val = rop.llvm_load_value (Val);
-                options.add(TextureOptions::SWRAP_STRING, val, valIsVarying);
-                options.add(TextureOptions::TWRAP_STRING, val, valIsVarying);
-                if (tex3D)
-                    options.add(TextureOptions::RWRAP_STRING, val, valIsVarying);
+                options.add(TextureOptions::SWRAP_STRING, rop.llvm_void_ptr(Val), valIsVarying);
+                options.add(TextureOptions::TWRAP_STRING, rop.llvm_void_ptr(Val), valIsVarying);
+                if (tex3d)
+                    options.add(TextureOptions::RWRAP_STRING, rop.llvm_void_ptr(Val), valIsVarying);
             }
             continue;
         }
@@ -3009,8 +3007,7 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
         PARAM_INT (subimage, SUBIMAGE)
 
         if (name == Strings::subimage && valtype == TypeDesc::STRING) {
-            llvm::Value *val = rop.llvm_load_value (Val);
-            options.add(TextureOptions::SUBIMAGE_STRING, val, valIsVarying);
+            options.add(TextureOptions::SUBIMAGE_STRING, rop.llvm_void_ptr(Val), valIsVarying);
             continue;
         }
 
@@ -3018,37 +3015,16 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
 
         if (name == Strings::missingcolor &&
                    equivalent(valtype,TypeDesc::TypeColor)) {
-            if (! missingcolor) {
-                // If not already done, allocate enough storage for the
-                // missingcolor value (4 floats), and call the special
-                // function that points the TextureOpt.missingcolor to it.
-                if (valIsVarying) {
-                    missingcolor = rop.ll.op_alloca(rop.ll.type_float(), 4);
-                }
-                else {
-                    missingcolor = rop.ll.wide_op_alloca(rop.ll.type_float(), 4);
-                }
-            }
-            rop.ll.op_memcpy (rop.ll.void_ptr(missingcolor),
-                              rop.llvm_void_ptr(Val), (int)sizeof(Color3));
+            options.add(TextureOptions::MISSINGCOLOR, rop.llvm_void_ptr(Val), valIsVarying);
             continue;
         }
         if (name == Strings::missingalpha && valtype == TypeDesc::FLOAT) {
-            if (! missingcolor) {
-                // If not already done, allocate enough storage for the
-                // missingcolor value (4 floats), and call the special
-                // function that points the TextureOpt.missingcolor to it.
-                missingcolor = rop.ll.op_alloca(rop.ll.type_float(), 4);
-                rop.ll.call_function ("osl_texture_set_missingcolor_arena",
-                                      opt, missingcolor);
-            }
-            llvm::Value *val = rop.llvm_load_value (Val);
-            rop.ll.call_function ("osl_texture_set_missingcolor_alpha",
-                                    opt, rop.ll.constant(nchans), val);
+            options.add(TextureOptions::MISSINGCOLOR, rop.llvm_void_ptr(Val), valIsVarying);
             continue;
 
         }
 
+        // These values are not passed in TextureOptions
         if (name == Strings::alpha && valtype == TypeDesc::FLOAT) {
             alpha = rop.llvm_get_pointer (Val);
             if (Val.has_derivs()) {
@@ -3072,22 +3048,38 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
 #undef PARAM_FLOAT_STR
 #undef PARAM_STRING_CODE
     }
-    const int numVal = options.activeMask.count();
-    const int numBytes = sizeof(options.activeMask) +
-                   sizeof(options.varyingMask) +
-                   numVal * sizeof(void*);
-    llvm::Value* optionPack =  rop.ll.op_alloca(rop.ll.type_int(), numBytes/sizeof(int));
-    int offset = 0;
-    llvm::Value* activeMaskPtr = rop.ll.GEP(optionPack, offset++);
-    llvm::Value* activeMaskVal = rop.ll.constant(options.activeMask.value());
-    rop.ll.op_store(activeMaskVal, activeMaskPtr);
-    llvm::Value* varyingMaskPtr = rop.ll.GEP(optionPack, offset++);
-    llvm::Value* varyingMaskVal = rop.ll.constant(options.varyingMask.value());
-    rop.ll.op_store(varyingMaskVal, varyingMaskPtr);
 
-    for(int i = 0; i < numVal; ++i) {
-        llvm::Value* varyingMaskPtr = rop.ll.GEP(optionPack, offset);
+    const int numVal = options.activeMask.count();
+    if (numVal > 0) {
+        const int numBytes = sizeof(options.activeMask) +
+                       sizeof(options.varyingMask) +
+                       numVal * sizeof(void*);
+        llvm::Value* optionPack =  rop.ll.op_alloca(rop.ll.type_int(), numBytes/sizeof(int));
+        int offset = 0;
+        llvm::Value* activeMaskPtr = rop.ll.GEP(optionPack, offset++);
+        llvm::Value* activeMaskVal = rop.ll.constant((int)options.activeMask.value());
+        rop.ll.op_store(activeMaskVal, activeMaskPtr);
+        llvm::Value* varyingMaskPtr = rop.ll.GEP(optionPack, offset++);
+        llvm::Value* varyingMaskVal = rop.ll.constant((int)options.varyingMask.value());
+        rop.ll.op_store(varyingMaskVal, varyingMaskPtr);
+
+        // get address to the first void pointer
+//        llvm::Value* voidPtrBase = rop.ll.ptr_cast(rop.ll.GEP(optionPack, offset), rop.ll.type_array((llvm::Type*)rop.ll.type_void_ptr(), numVal));
+        llvm::Value* voidPtrBase = rop.ll.ptr_to_cast(rop.ll.GEP(optionPack, offset), (llvm::Type*)rop.ll.type_void_ptr());
+        offset = 0;
+        std::cout << "active mask: " << options.activeMask.value() << std::endl;
+        for(int i = 0; i < TextureOptions::MAX_OPTIONS; ++i) {
+            std::cout << "i: " << i << std::endl;
+            if (options.activeMask[i]) {
+                llvm::Value* voidPtr = rop.ll.GEP(voidPtrBase, offset++);
+//                llvm::Value* voidPtr = rop.ll.offset_ptr(voidPtrBase, offset++);
+                rop.ll.op_store(options.values[i], voidPtr);
+                std::cout << "active" << std::endl;
+            }
+        }
+        return rop.ll.void_ptr(optionPack);
     }
+    return rop.ll.void_ptr_null();
 
 }
 
@@ -3114,7 +3106,10 @@ LLVMGEN (llvm_gen_texture)
     llvm::Value* opt;   // TextureOpt
     llvm::Value *alpha = NULL, *dalphadx = NULL, *dalphady = NULL;
     llvm::Value *errormessage = NULL;
-    opt = llvm_gen_texture_options (rop, opnum, first_optional_arg,
+//    opt = llvm_gen_texture_options (rop, opnum, first_optional_arg,
+//                                    false /*3d*/, nchans,
+//                                    alpha, dalphadx, dalphady, errormessage);
+    opt = llvm_pack_texture_options (rop, opnum, first_optional_arg,
                                     false /*3d*/, nchans,
                                     alpha, dalphadx, dalphady, errormessage);
 

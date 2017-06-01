@@ -48,7 +48,7 @@ class WideMask
 {
 public:
     typedef unsigned int value_type;
-    static_assert(sizeof(value_type)*8 > WidthT, "unsupported WidthT");
+    static_assert(sizeof(value_type)*8 >= WidthT, "unsupported WidthT");
 	static constexpr int width = WidthT; 
 
     OSL_INLINE WideMask()
@@ -1870,6 +1870,7 @@ public:
 
 class TextureOptions
 {
+public:
     enum Options {
         SWIDTH = 0,
         TWIDTH,
@@ -1904,21 +1905,17 @@ private:
     Mask m_varying;
     void* m_options[MAX_OPTIONS];
 public:
-    void TextureOptions()
-        : m_active(0),
-          m_varying(0),
-          m_options(0)
-    {
-        m_options.fill(nullptr);
-    }
-
-    OSL_INLINE TextureOptions(const TextureOptions &other)
-    : m_active(other.m_active)
-    , m_varying(other.m_varying)
-    , m_options(other.m_options)
+    TextureOptions()
+    : m_active(false),
+      m_varying(false)
     {}
 
-    void set(void* val, )
+//    OSL_INLINE TextureOptions(const TextureOptions &other)
+//    : m_active(other.m_active)
+//    , m_varying(other.m_varying)
+//    , m_options(other.m_options)
+//    {}
+
 };
 
 OSL_NAMESPACE_EXIT

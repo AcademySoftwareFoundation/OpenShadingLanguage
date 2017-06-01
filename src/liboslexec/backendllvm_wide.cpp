@@ -1278,7 +1278,7 @@ BackendLLVMWide::llvm_alloca_and_widen_value(const Symbol& sym, int deriv)
     llvm::Value* widePtr = ll.wide_op_alloca(symType);
     llvm::Value* wideValue = ll.widen_value(llvm_load_value(sym, deriv));
     ll.op_store(wideValue, widePtr);
-    return widePtr;
+    return ll.void_ptr(widePtr);
 }
 
 llvm::Value *

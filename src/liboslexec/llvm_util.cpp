@@ -1900,6 +1900,11 @@ LLVM_Util::wide_op_alloca (const TypeDesc &type, int n, const std::string &name)
     return op_alloca (llvm_vector_type(type.elementtype()), n*type.numelements(), name);
 }
 
+llvm::Value *
+LLVM_Util::wide_op_alloca (llvm::Type *type, int n, const std::string &name)
+{
+    return op_alloca (llvm_vector_type(type), n*type.numelements(), name);
+}
 
 llvm::Value *
 LLVM_Util::call_function (llvm::Value *func, llvm::Value **args, int nargs)

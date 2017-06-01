@@ -73,6 +73,16 @@ public:
     OSL_INLINE value_type value() const
     { return m_value; }
 
+    // count number of active bits
+    OSL_INLINE int count() const {
+        value_type m(m_value);
+        int count = 0;
+        for (count = 0; m != 0; ++count) {
+            m &= m-1;
+        }
+        return count;
+    }
+
     // Testers
     OSL_INLINE bool operator[](int lane) const
     {
@@ -1858,6 +1868,57 @@ public:
    }   
 };
 
+class TextureOptions
+{
+    enum Options {
+        SWIDTH = 0,
+        TWIDTH,
+        RWIDTH,
+        SBLUR,
+        TBLUR,
+        RBLUR,
+        SWRAP,
+        SWRAP_STRING,
+        TWRAP,
+        TWRAP_STRING,
+        RWRAP,
+        RWRAP_STRING,
+        FILL,
+        TIME,
+        FIRSTCHANNEL,
+        SUBIMAGE,
+        SUBIMAGE_STRING,
+        INTERP,
+        INTERP_STRING,
+        MISSINGCOLOR,
+        MISSINGALPHA,
 
+        MAX_OPTIONS
+    };
+    static constexpr unsigned int maskSize = 32;
+    static_assert(MAX_OPTIONS <= maskSize, "expecting MAX_OPTIONS <= maskSize");
+    typedef WideMask<maskSize> Mask;
+
+private:
+    Mask m_active;
+    Mask m_varying;
+    void* m_options[MAX_OPTIONS];
+public:
+    void TextureOptions()
+        : m_active(0),
+          m_varying(0),
+          m_options(0)
+    {
+        m_options.fill(nullptr);
+    }
+
+    OSL_INLINE TextureOptions(const TextureOptions &other)
+    : m_active(other.m_active)
+    , m_varying(other.m_varying)
+    , m_options(other.m_options)
+    {}
+
+    void set(void* val, )
+};
 
 OSL_NAMESPACE_EXIT

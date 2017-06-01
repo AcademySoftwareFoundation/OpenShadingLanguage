@@ -16,6 +16,14 @@ test ()
         printf ("   reflect (%g, %g) =  %g\n", vI, vN, pretty(reflect (vI, vN)));
         vN = vector(-1, 0, 0);
         printf ("   reflect (%g, %g) =  %g\n", vI, vN, pretty(reflect (vI, vN)));
+        vI = vector(0, -1, -1);
+        vI = normalize(vI);
+        vN = vector(0, 0, 1);
+        printf ("   faceforward (%g, %g) =  %g\n",
+                vN, vI, pretty(faceforward (vN, vI)));
+        vector vNg = vector(0, 0, -1);
+        printf ("   faceforward (%g, %g, %g) =  %g\n",
+                vN, vI, vNg, pretty(faceforward (vN, vI, vNg)));
 
         // test total internal reflection (going from greater to lesser IOR)
         printf (" testing total-internal reflection:\n");

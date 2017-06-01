@@ -15,6 +15,83 @@ struct vector4
     float w;
 };
 
+vector4 __operator__neg__(vector4 a)
+{
+    return vector4(-a.x, -a.y, -a.z, -a.w);
+}
+
+vector4 __operator__add__(vector4 a, vector4 b)
+{
+    return vector4(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
+}
+
+vector4 __operator__add__(vector4 a, int b)
+{
+    return a + vector4(a.x + b, a.y + b, a.z + b, a.w + b);
+}
+
+vector4 __operator__add__(vector4 a, float b)
+{
+    return a + vector4(a.x + b, a.y + b, a.z + b, a.w + b);
+}
+
+vector4 __operator__sub__(vector4 a, vector4 b)
+{
+    return vector4(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w);
+}
+
+vector4 __operator__sub__(vector4 a, int b)
+{
+    return a + vector4(a.x - b, a.y - b, a.z - b, a.w - b);
+}
+
+vector4 __operator__sub__(vector4 a, float b)
+{
+    return a + vector4(a.x - b, a.y - b, a.z - b, a.w - b);
+}
+
+vector4 __operator__mul__(vector4 a, vector4 b)
+{
+    return vector4(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w);
+}
+
+vector4 __operator__mul__(vector4 a, int b)
+{
+    return a + vector4(a.x * b, a.y * b, a.z * b, a.w * b);
+}
+
+vector4 __operator__mul__(vector4 a, float b)
+{
+    return a + vector4(a.x * b, a.y * b, a.z * b, a.w * b);
+}
+
+vector4 __operator__div__(vector4 a, vector4 b)
+{
+    return vector4(a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w);
+}
+
+vector4 __operator__div__(vector4 a, int b)
+{
+    float b_inv = 1/b;
+    return a + vector4(a.x * b_inv, a.y * b_inv, a.z * b_inv, a.w * b_inv);
+}
+
+vector4 __operator__div__(vector4 a, float b)
+{
+    float b_inv = 1/b;
+    return a + vector4(a.x * b_inv, a.y * b_inv, a.z * b_inv, a.w * b_inv);
+}
+
+int __operator__eq__(vector4 a, vector4 b)
+{
+    return (a.x == b.x) && (a.y == b.y) && (a.z == b.z) && (a.w == b.w);
+}
+
+int __operator__ne__(vector4 a, vector4 b)
+{
+    return (a.x != b.x) || (a.y != b.y) || (a.z != b.z) || (a.w != b.w);
+}
+
 vector4 abs(vector4 in)
 {
     return vector4 (abs(in.x),
@@ -55,41 +132,6 @@ float dot(vector4 in1, vector4 in2)
     return (in1.x*in2.x + in1.y*in2.y + in1.z*in2.z + in1.w*in2.w);
 }
 
-vector4 add(vector4 in, vector4 amount)
-{
-    return vector4 (in.x + amount.x,
-                    in.y + amount.y,
-                    in.z + amount.z,
-                    in.w + amount.w
-                    );
-}
-
-vector4 add(vector4 in, float amount)
-{
-    return vector4 (in.x + amount,
-                    in.y + amount,
-                    in.z + amount,
-                    in.w + amount
-                    );
-}
-
-vector4 subtract(vector4 in, vector4 amount)
-{
-    return vector4 (in.x - amount.x,
-                    in.y - amount.y,
-                    in.z - amount.z,
-                    in.w - amount.w
-                    );
-}
-
-vector4 subtract(vector4 in, float amount)
-{
-    return vector4 (in.x - amount,
-                    in.y - amount,
-                    in.z - amount,
-                    in.w - amount
-                    );
-}
 
 vector4 smoothstep(vector4 low, vector4 high, vector4 in)
 {
@@ -208,23 +250,6 @@ vector4 contrast(vector4 in, float amount, float pivot)
                     );
 }
 
-vector4 divide(vector4 in1, vector4 amount)
-{
-    return vector4 (in1.x / amount.x,
-                    in1.y / amount.y,
-                    in1.z / amount.z,
-                    in1.w / amount.w
-                    );
-}
-
-vector4 divide(vector4 in1, float amount)
-{
-    return vector4 (in1.x / amount,
-                    in1.y / amount,
-                    in1.z / amount,
-                    in1.w / amount
-                    );
-}
 
 vector4 exponent(vector4 in, vector4 amount)
 {
@@ -267,24 +292,6 @@ vector4 normalize(vector4 in)
 {
     vector v = normalize(vec4ToVec3(in));
     return vector4 (v[0], v[1], v[2], 1.0 );
-}
-
-vector4 multiply(vector4 in, vector4 amount)
-{
-    return vector4 (in.x * amount.x,
-                    in.y * amount.y,
-                    in.z * amount.z,
-                    in.w * amount.w
-                    );
-}
-
-vector4 multiply(vector4 in, float amount)
-{
-    return vector4 (in.x * amount,
-                    in.y * amount,
-                    in.z * amount,
-                    in.w * amount
-                    );
 }
 
 vector4 min(vector4 in, vector4 amount)

@@ -15,5 +15,5 @@ shader SHADER_NAME(mx_dodge)
   )
 {
 
-    out =  divide(bg, invert(fg)); 
+    out =  bg / invert(fg); 
 }

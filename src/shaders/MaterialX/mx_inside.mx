@@ -15,5 +15,5 @@ shader SHADER_NAME(mx_inside)
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {
-    out =  multiply(in, mask); 
+    out = in * mask; 
 }

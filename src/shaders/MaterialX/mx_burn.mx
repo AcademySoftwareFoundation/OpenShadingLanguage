@@ -14,7 +14,7 @@ shader SHADER_NAME(mx_burn)
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {
-    TYPE bg_inv    = invert(  bg);
-    TYPE bg_div = divide(bg_inv, fg);
+    TYPE bg_inv    = invert(bg);
+    TYPE bg_div = bg_inv / fg;
     out =  invert( bg_div ) ; 
 }

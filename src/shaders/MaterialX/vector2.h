@@ -13,58 +13,108 @@ struct vector2
     float y;
 };
 
-vector2 abs(vector2 in)
+vector2 __operator__neg__(vector2 a)
 {
-    return vector2 (abs(in.x),
-                    abs(in.y)
+    return vector2(-a.x, -a.y);
+}
+
+vector2 __operator__add__(vector2 a, vector2 b)
+{
+    return vector2(a.x + b.x, a.y + b.y);
+}
+
+vector2 __operator__add__(vector2 a, int b)
+{
+    return a + vector2(b, b);
+}
+
+vector2 __operator__add__(vector2 a, float b)
+{
+    return a + vector2(b, b);
+}
+
+vector2 __operator__sub__(vector2 a, vector2 b)
+{
+    return vector2(a.x - b.x, a.y - b.y);
+}
+
+vector2 __operator__sub__(vector2 a, int b)
+{
+    return a - vector2(b, b);
+}
+
+vector2 __operator__sub__(vector2 a, float b)
+{
+    return a - vector2(b, b);
+}
+
+vector2 __operator__mul__(vector2 a, vector2 b)
+{
+    return vector2(a.x * b.x, a.y * b.y);
+}
+
+vector2 __operator__mul__(vector2 a, int b)
+{
+    return a * vector2(b, b);
+}
+
+vector2 __operator__mul__(vector2 a, float b)
+{
+    return a * vector2(b, b);
+}
+
+vector2 __operator__div__(vector2 a, vector2 b)
+{
+    return vector2(a.x / b.x, a.y / b.y);
+}
+
+vector2 __operator__div__(vector2 a, int b)
+{
+    float b_inv = 1/b;
+    return a * vector2(b_inv, b_inv);
+}
+
+vector2 __operator__div__(vector2 a, float b)
+{
+    float b_inv = 1/b;
+    return a * vector2(b_inv, b_inv);
+}
+
+int __operator__eq__(vector2 a, vector2 b)
+{
+    return (a.x == b.x) && (a.y == b.y);
+}
+
+int __operator__ne__(vector2 a, vector2 b)
+{
+    return (a.x != b.x) || (a.y != b.y);
+}
+
+
+vector2 abs(vector2 a)
+{
+    return vector2 (abs(a.x),
+                    abs(a.y)
                     );
 }
 
-vector2 floor(vector2 in)
+vector2 floor(vector2 a)
 {
-    return vector2 (floor(in.x),
-                    floor(in.y)
+    return vector2 (floor(a.x),
+                    floor(a.y)
                     );
 }
 
-vector2 mix(vector2 in1, vector2 in2, float x )
+vector2 mix(vector2 a, vector2 b, float x )
 {
-    return vector2 (mix(in1.x, in2.x, x),
-                    mix(in1.y, in2.y, x)
+    return vector2 (mix(a.x, b.x, x),
+                    mix(a.y, b.y, x)
                     );
 }
 
-float dot(vector2 in1, vector2 in2)
+float dot(vector2 a, vector2 b)
 {
-    return (in1.x*in2.x + in1.y*in2.y);
-}
-
-vector2 add(vector2 in, vector2 amount)
-{
-    return vector2 (in.x + amount.x,
-                    in.y + amount.y
-                    );
-}
-
-vector2 add(vector2 in, float amount)
-{
-    return vector2 (in.x + amount,
-                    in.y + amount
-                    );
-}
-
-vector2 subtract(vector2 in, vector2 amount)
-{
-    return vector2 (in.x - amount.x,
-                    in.y - amount.y
-                    );
-}
-
-vector2 subtract(vector2 in, float amount)
-{
-    return vector2 (in.x - amount,
-                    in.y - amount
-                    );
+    return (a.x * b.x + a.y * b.y);
 }
 
 vector2 smoothstep(vector2 low, vector2 high, vector2 in)
@@ -161,19 +211,6 @@ vector2 contrast(vector2 in, float amount, float pivot)
                     );
 }
 
-vector2 divide(vector2 in, vector2 amount)
-{
-    return vector2 (in.x / amount.x,
-                    in.y / amount.y
-                    );
-}
-
-vector2 divide(vector2 in, float amount){
-    return vector2 (in.x / amount,
-                    in.y / amount
-                    );
-}
-
 vector2 exponent(vector2 in, vector2 amount)
 {
     return vector2 (exponent(in.x, amount.x),
@@ -215,19 +252,6 @@ vector2 vscale(vector2 in, vector2 amount, vector2 center)
                     );
 }
 
-vector2 multiply(vector2 in, vector2 amount)
-{
-    return vector2 (in.x * amount.x,
-                    in.y * amount.y
-                    );
-}
-
-vector2 multiply(vector2 in, float amount)
-{
-    return vector2 (in.x * amount,
-                    in.y * amount
-                    );
-}
 
 vector2 min(vector2 in, vector2 amount)
 {

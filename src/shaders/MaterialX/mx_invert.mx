@@ -14,5 +14,5 @@ shader SHADER_NAME(mx_invert)
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {
-    out = invert(in1, amount); 
+    out = in1 - amount; 
 }

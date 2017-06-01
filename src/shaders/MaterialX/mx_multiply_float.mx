@@ -14,5 +14,5 @@ shader SHADER_NAME(mx_multiply_float)
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {
-    out = multiply(in1, in2); 
+    out = in1 * in2; 
 }

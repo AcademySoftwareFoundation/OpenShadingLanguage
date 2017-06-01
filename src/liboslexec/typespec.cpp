@@ -76,7 +76,11 @@ TypeSpec::string () const
             str += Strutil::format ("[%d]", arraylength());
     }
     else if (structure() > 0) {
-        str += Strutil::format ("struct %d", structure());
+        StructSpec *ss = structspec();
+        if (ss)
+            str += Strutil::format ("struct %s", structspec()->name());
+        else
+            str += Strutil::format ("struct %d", structure());
         if (is_unsized_array())
             str += "[]";
         else if (arraylength() > 0)

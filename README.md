@@ -273,11 +273,15 @@ Films using OSL (grouped by year of release date):
   Kingsglaive: Final Fantasy XV,
   Storks,
   Miss Peregrine's Home for Peculiar Children, Assassin's Creed
-* **(2017) / upcoming**
+* **(2017)**
   Lego Batman,
   The Great Wall,
   A Cure for Wellness,
   Logan
+  Power Rangers
+  Life
+  Smurfs: The Lost Village
+  The Fate of the Furious
   ...
 
 

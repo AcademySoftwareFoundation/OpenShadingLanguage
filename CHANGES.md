@@ -15,18 +15,63 @@ Dependency and standards changes:
 * **Boost >= 1.55**
 
 Language features:
+* New preprocessor symbols: OSL_VERSION_MAJOR, OSL_VERSION_MINOR,
+  OSL_VERSION_PATCH, and OSL_VERSION (e.g. 10900 for 1.9.0) reveal the
+  OSL release at shader compile time. #747 (1.9.0)
+* Structure constructors: If you have a struct `S` comprising fields with
+  types T1, T2, ..., you may now have an expression `S(T1 v2,T2 v2,...)` that
+  constructs and returns an `S` with those field values, much in the same
+  way that you can say `color(a,b,c)` to construct a color out of components
+  a, b, c.  #751 (1.9.0)
+* User-defined operator overloading: If you make a new (struct) type, it
+  is possible to define overloaded operators, like this:
+
+      struct vec2 { float x; float y; };
+
+      vec2 __operator__add__ (vec2 a, vec2 b) { return vec2(a.x+b.x, ay+b.y); }
+
+      vec2 a, b, c;
+      a = b + c;   // chooses __operator__add__()
+
+  This can be done with any of the operators, see the OSL Language Spec PDF
+  for details. #753 (1.9.0)
 
 Standard library additions/changes:
+* `getattribute ("osl:version", intvar)` at runtime can reveal the OSL
+  version on which the shader is being executed. #747 (1.9.0)
+* `pointcloud_search()/pointcloud_get()` have more flexibility in what type
+  of data it may retrieve: you can now retrieve arrays, if that is what is
+  stored per-point in the point cloud (for example, a `float[4]`).
+  #752 (1.9.0)
 
 API changes, new options, new ShadingSystem features (for renderer writers):
 * ShadingSystem API changes:
+    * New `set_raytypes()` call sets the known raytypes (on and off) for
+      a shader group for subsequent optimization. This lets you combine ray
+      specialization with lazy compilation. #733 (1.9.0)
+    * `Parameter()` is now less strict about type checking when setting
+      parameter instance values. In particular, it's now ok to pass a
+      `float` value to a "triple" (color, point, etc.) parameter, and to
+      pass one kind of triple when a different kind of triple was the
+      declared parameter type. In this respect, the rules now more closely
+      resample what we always allowed for `ConnectShaders`. #750 (1.9.0)
 * ShadingSystem attribute additions/changes:
+    * `Shader()` will now accept the name of the shader as if it were the
+      filename, with trailing `.oso`, and it will be automatically stripped
+      off. #741 (1.9.0)
+    * `convert_value()` now allows conversions between `float[3]` and triple
+      values. #754 (1.9.0)
 * Shader group attribute additions/changes:
 * RendererServices:
 
 Performance improvements:
+* Shader JIT time is improved by about 10% as a result of pre-declaring
+  certain function addresses instead of relying on LLVM to use dlsym() calls
+  to find them within the executable. #732 (1.9.0)
+* The runtime cost of range checking array accesses has been reduced by
+  about 50%. #739 (1.9.0)
 
-Bug fixes and other improvements:
+Bug fixes and other improvements (internals):
 * Avoid division by 0 when computing derivatives in pointcloud_search.
   #710 (1.9.0/1.8.7)
 * Avoid subtle use-after-free memory error in dictionary_find().
@@ -39,6 +84,35 @@ Bug fixes and other improvements:
   calls to `getmessage("trace",...)`. #722 (1.9.0/1.8.7)
 * Runtime optimizer is sped up by avoiding some string operations related
   to searching for render outputs when none are registered. (1.9.0)
+* Searching for stdosl.h now works uniformly whether it's oslc itself, or
+  apps that use OSLCompiler, and in all cases are better about guessing
+  where the header is located even when `$OSLHOME` environment variable is
+  not set. #737 (1.9.0)
+* Internals: Fix the handling of alignment for closure structs. #740 (1.9.0)
+* oslc: fix internal memory leak of ASTNode's. #743 (1.9.0)
+* testshade improvements:
+    * New option `--texoptions` lets you directly set extra TextureSystem
+      options for tests. #744 (1.9.0)
+    * Fix that allows you to set a parameters that is an array-of-strings.
+      #745 (1.9.0)
+    * Rename `--scalest/--offsetst` to `--scaleuv/--offsetuv` to properly
+      reflect that they alter u and v (there is no s, t). #757 (1.9.0)
+    * `--print` prints the value of all saved outputs. #757 (1.9.0)
+    * Automatically convert to sRGB when saving outputs to JPEG, PNG, or GIF
+      images, to make them more "web ready." #757 (1.9.0)
+    * `--runstats` is more careful about not including the time to write
+      output images in the main shader run time statistic. #757 (1.9.0)
+    * Rename `-od` option to `-d` to match oiiotool and maketx. #757 (1.9.0)
+* testrender: Automatically convert to sRGB when saving outputs to JPEG,
+  PNG, or GIF images, to make them more "web ready." #757 (1.9.0)
+
+* Slight efficiency improvement when you call texture functions with the
+  optional `"subimage"` parameter and pass the empty string (which means
+  the first subimage, equivalent to not passing `"subimage"` at all).
+  #749 (1.9.0)
+* oslc bug fixes where in some circumstances polymorphic overloaded
+  functions or operators could not be properly distinguished if their
+  parameters were differing `struct` types. #755 (1.9.0)
 
 Build & test system improvements and developer goodies:
 * C++11 is the new language baseline. #704, #707
@@ -76,10 +150,45 @@ Build & test system improvements and developer goodies:
 * Added an easy way to invoke clang-tidy on all the files. #728
 * All internal references to our public headers have been changed to the
   form #include <OSL/foo.h>, and not "OSL/foo.h" or "foo.h". #728
+* The namespace has been changed somewhat, is now only one level deep and
+  contains the version, eliminating version clashes within the same
+  executable. You still refer to namespace "OSL", it's an alias for the
+  real versioned (and potentially customized) one. #732 (1.9.0)
+* Symbol visibility is now properly restricted for certain "C" linkage
+  functions needed for availability by the LLVM-generated code. And overall,
+  the HIDE_SYMBOLS build mode is now on by default. #732 (1.9.0)
+* More robust finding of external PugiXML headers. (1.9.0)
 
 Documentation:
+* Fixed unclear explanation about structures with nested arrays. (1.9.0)
 
 
+Release 1.8.9 -- 1 Jun 2017 (compared to 1.8.8)
+--------------------------------------------------
+* Minor speedup when passing blank subimage name:
+  texture (..., "subimage", "", ...)
+  #749
+* Fix namespace clash after recent OIIO (master branch) PugiXML version
+  upgrade.
+* Several testshade changes: renamed options --scalest/--offsetst to
+  --scaleuv/--offsetuv to more closely say what they really do;
+  rename -od to -d to match how oiiotool and maketx call the same
+  option; automatically convert to sRGB when instructed to save an
+  output image as JPEG, GIF, or PNG; -runstats is more careful with
+  timing to not include image output in shader run time; new --print
+  option prints outputs to console (don't use with large images!). #757
+
+Release 1.8.8 -- 1 May 2017 (compared to 1.8.7)
+--------------------------------------------------
+* New ShadingSystem::set_raytypes() can be used to configure default ray
+  types for subsequent lazy optimization of the group upon first execution.
+  #733
+* Hide symbol visibility for extern "C" linkage osl_* functions that LLVM
+  needs. #732
+* New oslc-time macros OSL_VERSION, OSL_VERSION_MAJOR, OSL_VERSION_MINOR,
+  OSL_VERSION_PATCH lets you easily test OSL version while compiling your
+  shader. You can also find out at runtime with getattribute("osl:version").
+  #747
 
 Release 1.8.7 -- 1 Apr 2017 (compared to 1.8.6)
 --------------------------------------------------

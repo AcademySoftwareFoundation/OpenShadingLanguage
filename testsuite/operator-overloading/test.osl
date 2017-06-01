@@ -24,6 +24,15 @@ vector4 __operator__neg__ (vector4 a) {
 }
 
 
+// Make a function to double check it's ok to pass the result of a
+// binary operator into a function argument
+vector4 add (vector4 a, vector4 b)
+{
+    return a+b;
+}
+
+
+
 shader test ()
 {
     vector4 a = vector4 (.2, .3, .4, .5);
@@ -46,4 +55,8 @@ shader test ()
 
     c = -a;
     printf ("-a = %g %g %g %g\n", c.x, c.y, c.z, c.w);
+
+    // regression test: #762 fixed a bug where passing a struct-returning
+    // binary expression into a function argument would hit an asseriton.
+    c = add (c,c);
 }

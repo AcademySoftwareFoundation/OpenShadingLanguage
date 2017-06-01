@@ -1732,7 +1732,9 @@ ASTfunction_call::codegen (Symbol *dest)
                 // If the formal parameter is a struct, we also need to
                 // alias each of the fields
                 if (a->nodetype() == variable_ref_node ||
-                    a->nodetype() == function_call_node) {
+                    a->nodetype() == function_call_node ||
+                    a->nodetype() == binary_expression_node ||
+                    a->nodetype() == unary_expression_node) {
                     // Passed a variable that is a struct ; make the struct
                     // fields of the formal param alias to the struct fields
                     // of the actual param. Exact same logic if passed the

@@ -1,0 +1,42 @@
+// The point of this test is to see what happens when we overload
+// two structs that have the same layout. There was a bug where this
+// got messed up because we distinguished polymorphic args for structs
+// based only on layout. Now we do it on name, but still double check
+// the layout.
+
+struct taco
+{
+    float r;
+    float g;
+};
+
+
+taco __operator__add__(taco c1, taco c2)
+{
+    return taco(c1.r + c2.r, c1.g + c2.g);
+}
+
+
+
+struct cheese
+{
+    float r;
+    float g;
+};
+
+cheese __operator__add__(cheese c1, cheese c2)
+{
+    return cheese(c1.r + c2.r, c1.g + c2.g);
+}
+
+
+
+shader test (
+    taco c2_in_1 = {.1, .1},
+    taco c2_in_2 = {.2, .2},
+    output taco c2_out = {0, 0},
+  )
+{
+    c2_out = c2_in_1 + c2_in_2;
+    printf ("c2_out = %g %g\n", c2_out.r, c2_out.g);
+}

@@ -43,6 +43,36 @@ OSL_NAMESPACE_ENTER
 
 
 
+namespace { // anonymous
+std::ostream& operator<<(std::ostream& os, const TextureOpt& opt)  
+{     
+	os << "Updated Texture Options:" << std::endl;
+	os << "firstchannel =" << opt.firstchannel << std::endl;
+	os << "subimage =" << opt.subimage << std::endl;
+	os << "subimagename =" << opt.subimagename << std::endl;
+	os << "swrap =" << opt.swrap << std::endl;
+	os << "twrap =" << opt.twrap << std::endl;
+	os << "mipmode =" << opt.mipmode << std::endl;
+	os << "interpmode =" << opt.interpmode << std::endl;
+	os << "anisotropic =" << opt.anisotropic << std::endl;
+	os << "conservative_filter =" << opt.conservative_filter << std::endl;
+	os << "sblur =" << opt.sblur << std::endl;
+	os << "tblur =" << opt.tblur << std::endl;
+	os << "swidth =" << opt.swidth << std::endl;
+	os << "twidth =" << opt.twidth << std::endl;
+	os << "fill =" << opt.fill << std::endl;
+	os << "missingcolor =" << opt.missingcolor << std::endl;
+	os << "time =" << opt.time << std::endl;
+	os << "bias =" << opt.bias << std::endl;
+	os << "samples =" << opt.samples << std::endl;
+	os << "rwrap =" << opt.rwrap << std::endl;
+	os << "rblur =" << opt.rblur << std::endl;
+	os << "rwidth =" << opt.rwidth << std::endl;
+    
+    return os;  
+}  
+} // anonymous namespace
+
 RendererServices::RendererServices (TextureSystem *texsys)
     : m_texturesys(texsys)
 {
@@ -640,28 +670,6 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle *textu
             if(options) {
                 options->updateOption(opt, i);
             }
-//            	std::cout << "Updated Texture Options:" << std::endl;
-//            	std::cout << "firstchannel =" << opt.firstchannel << std::endl;
-//            	std::cout << "subimage =" << opt.subimage << std::endl;
-//            	std::cout << "subimagename =" << opt.subimagename << std::endl;
-//            	std::cout << "swrap =" << opt.swrap << std::endl;
-//            	std::cout << "twrap =" << opt.twrap << std::endl;
-//            	std::cout << "mipmode =" << opt.mipmode << std::endl;
-//            	std::cout << "interpmode =" << opt.interpmode << std::endl;
-//            	std::cout << "anisotropic =" << opt.anisotropic << std::endl;
-//            	std::cout << "conservative_filter =" << opt.conservative_filter << std::endl;
-//            	std::cout << "sblur =" << opt.sblur << std::endl;
-//            	std::cout << "tblur =" << opt.tblur << std::endl;
-//            	std::cout << "swidth =" << opt.swidth << std::endl;
-//            	std::cout << "twidth =" << opt.twidth << std::endl;
-//            	std::cout << "fill =" << opt.fill << std::endl;
-//            	std::cout << "missingcolor =" << opt.missingcolor << std::endl;
-//            	std::cout << "time =" << opt.time << std::endl;
-//            	std::cout << "bias =" << opt.bias << std::endl;
-//            	std::cout << "samples =" << opt.samples << std::endl;
-//            	std::cout << "rwrap =" << opt.rwrap << std::endl;
-//            	std::cout << "rblur =" << opt.rblur << std::endl;
-//            	std::cout << "rwidth =" << opt.rwidth << std::endl;
             float* texResult = nullptr;
             float* texResultds = nullptr;
             float* texResultdt = nullptr;

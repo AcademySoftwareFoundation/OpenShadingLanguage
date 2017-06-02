@@ -7,4 +7,4 @@ install ( FILES "${PROJECT_SOURCE_DIR}/LICENSE"
                 "${PROJECT_SOURCE_DIR}/INSTALL.md"
                 "${PROJECT_SOURCE_DIR}/CHANGES.md"
                 "${PROJECT_SOURCE_DIR}/README.md"
-          DESTINATION . )
+          DESTINATION doc )

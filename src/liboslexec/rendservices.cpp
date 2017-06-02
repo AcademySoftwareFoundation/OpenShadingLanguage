@@ -633,14 +633,13 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle *textu
 
     Mask status(false);
     //std::cout << "nchannels: " << nchannels << std::endl;
-    if (texture_handle) {
     	TextureOpt opt;
-        for (int i = 0; i < SimdLaneCount; ++i) {
-            if (mask[i]) {
-                //TextureOpt opt = options ? options->getOption(i) : TextureOpt();
-            	if(options) {
-            		options->updateOption(opt, i);
-            	}
+    for (int i = 0; i < SimdLaneCount; ++i) {
+        if (mask[i]) {
+            //TextureOpt opt = options ? options->getOption(i) : TextureOpt();
+            if(options) {
+                options->updateOption(opt, i);
+            }
 //            	std::cout << "Updated Texture Options:" << std::endl;
 //            	std::cout << "firstchannel =" << opt.firstchannel << std::endl;
 //            	std::cout << "subimage =" << opt.subimage << std::endl;
@@ -663,57 +662,38 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle *textu
 //            	std::cout << "rwrap =" << opt.rwrap << std::endl;
 //            	std::cout << "rblur =" << opt.rblur << std::endl;
 //            	std::cout << "rwidth =" << opt.rwidth << std::endl;
-                float* texResult = nullptr;
-                Color3 resultColor;
-                if (nchannels == 1) {
-                    texResult = reinterpret_cast<float*>(result);
-                }
-                else if (nchannels == 3) {
-                    texResult = (float*)&(resultColor.x);
-                }
+            float* texResult = nullptr;
+            Color3 resultColor;
+            if (nchannels == 1) {
+                texResult = reinterpret_cast<float*>(result);
+            }
+            else if (nchannels == 3) {
+                texResult = (float*)&(resultColor.x);
+            }
+            bool retVal = false;
+            if (texture_handle) {
                 bool retVal = texturesys()->texture (texture_handle, texture_thread_info, opt,
                                                      s.get(i), t.get(i),
                                                      dsdx.get(i), dtdx.get(i),
                                                      dsdy.get(i), dtdy.get(i),
                                                      nchannels, texResult/*, dresultds, dresultdt*/);
-                if (nchannels == 3) {
-                    Wide<Color3>& wideResult= *reinterpret_cast<Wide<Color3>*>(result);
-                    wideResult.set(i, resultColor);
-                    //std::cout << "s: " << s.get(i) << " t: " << t.get(i) << " color: " << resultColor << " " << wideResult.get(i) << std::endl;
-                }
-                status.set(i, retVal);
             }
-        }
-    }
-    else {
-    	TextureOpt opt;
-        for (int i = 0; i < SimdLaneCount; ++i) {
-            if (mask[i]) {
-            	if(options) {
-            		options->updateOption(opt, i);
-            	}
-                float* texResult = nullptr;
-                Color3 resultColor;
-                if (nchannels == 1) {
-                    texResult = reinterpret_cast<float*>(result);
-                }
-                else if (nchannels == 3) {
-                    texResult = (float*)&(resultColor.x);
-                }
+            else {
                 bool retVal = texturesys()->texture (filename, opt,
-                                                     s.get(i), t.get(i),
-                                                     dsdx.get(i), dtdx.get(i),
-                                                     dsdy.get(i), dtdy.get(i),
-                                                     nchannels, texResult/*, dresultds, dresultdt*/);
-                //std::cout << "s: " << s.get(i) << " t: " << t.get(i) << " color: " << resultColor << std::endl;
-                if (nchannels == 3) {
-                    Wide<Color3>& wideResult= *reinterpret_cast<Wide<Color3>*>(result);
-                    wideResult.set(i, resultColor);
-                }
-                status.set(i, retVal);
+                                                 s.get(i), t.get(i),
+                                                 dsdx.get(i), dtdx.get(i),
+                                                 dsdy.get(i), dtdy.get(i),
+                                                 nchannels, texResult/*, dresultds, dresultdt*/);
             }
+            if (nchannels == 3) {
+                Wide<Color3>& wideResult= *reinterpret_cast<Wide<Color3>*>(result);
+                wideResult.set(i, resultColor);
+                //std::cout << "s: " << s.get(i) << " t: " << t.get(i) << " color: " << resultColor << " " << wideResult.get(i) << std::endl;
+            }
+            status.set(i, retVal);
         }
     }
+
     /*
     if (!status) {
         std::string err = texturesys()->geterror();

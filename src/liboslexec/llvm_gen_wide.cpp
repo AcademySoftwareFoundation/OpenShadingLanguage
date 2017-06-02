@@ -2913,6 +2913,8 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
 
     TextureOptionPack options;
 
+    llvm::Value* missingcolor = NULL;
+
     // allocate
     Opcode &op (rop.inst()->ops()[opnum]);
     for (int a = first_optional_arg;  a < op.nargs();  ++a) {
@@ -3044,11 +3046,29 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
         PARAM_STRING_CODE (interp, tex_interp_to_code, interpmode, INTERP)
 
         if (name == Strings::missingcolor && equivalent(valtype,TypeDesc::TypeColor)) {
-            options.add(TextureOptions::MISSINGCOLOR, rop.llvm_void_ptr(Val), TextureOptions::COLOR, valIsVarying);
+            if (! missingcolor) {
+                // If not already done, allocate enough storage for the
+                // missingcolor value (4 floats), and call the special
+                // function that points the TextureOpt.missingcolor to it.
+                missingcolor = rop.ll.op_alloca(rop.ll.type_float(), 4);
+            }
+            rop.ll.op_memcpy (rop.ll.void_ptr(missingcolor),
+                              rop.llvm_void_ptr(Val), (int)sizeof(Color3));
+            options.add(TextureOptions::MISSINGCOLOR, rop.ll.void_ptr(missingcolor), TextureOptions::COLOR, valIsVarying);
             continue;
         }
         if (name == Strings::missingalpha && valtype == TypeDesc::FLOAT) {
-            options.add(TextureOptions::MISSINGALPHA, rop.llvm_void_ptr(Val), TextureOptions::FLOAT, valIsVarying);
+            if (! missingcolor) {
+                // If not already done, allocate enough storage for the
+                // missingcolor value (4 floats), and call the special
+                // function that points the TextureOpt.missingcolor to it.
+                missingcolor = rop.ll.op_alloca(rop.ll.type_float(), 4);
+            }
+            // store alpha value in the last channel of missing color
+            llvm::Value* alphaPtr = rop.ll.GEP(missingcolor, 3);
+            llvm::Value* val = rop.llvm_load_value (Val);
+            rop.ll.op_store(val, alphaPtr);
+            options.add(TextureOptions::MISSINGALPHA, rop.ll.void_ptr(missingcolor), TextureOptions::FLOAT, valIsVarying);
             continue;
         }
 
@@ -3082,6 +3102,7 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
         const int numBytes = sizeof(options.activeMask) +
                              sizeof(options.varyingMask) +
                              sizeof(options.typeMask) +
+                             sizeof(TextureOptions::Mask) + //
                              numVal * sizeof(void*);
         llvm::Value* optionPack =  rop.ll.op_alloca(rop.ll.type_int(), numBytes/sizeof(int));
         int offset = 0;
@@ -3096,6 +3117,9 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
         llvm::Value* typeMaskPtr = rop.ll.GEP(optionPack, offset++);
         llvm::Value* typeMaskVal = rop.ll.constant((int)options.typeMask.value());
         rop.ll.op_store(typeMaskVal, typeMaskPtr);
+
+        // skip 4 byte for matching alignment with TextureOptions
+        ++offset;
 
         // get address to the first void pointer
 //        llvm::Value* voidPtrBase = rop.ll.ptr_cast(rop.ll.GEP(optionPack, offset), rop.ll.type_array((llvm::Type*)rop.ll.type_void_ptr(), numVal));

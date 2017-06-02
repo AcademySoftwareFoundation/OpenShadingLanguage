@@ -2053,47 +2053,46 @@ public:
    ,   m_type(false)
     {}
 
-    TextureOpt getOption(unsigned int l) const
+    void updateOption(TextureOpt &opt, unsigned int l) const
     {
-        std::cout << "size: " << sizeof(TextureOptions) << std::endl;
-        std::cout << "active: " << &m_active << " " << m_active.value() << std::endl;
-        std::cout << "varying: " << m_varying.value() << std::endl;
-        std::cout << "type: " << m_type.value() << std::endl;
+     //   std::cout << "size: " << sizeof(TextureOptions) << std::endl;
+       // std::cout << "active: " << &m_active << " " << m_active.value() << std::endl;
+        //std::cout << "varying: " << m_varying.value() << std::endl;
+        //std::cout << "type: " << m_type.value() << std::endl;
         const void* ptr = reinterpret_cast<const void*>(&m_options[0]);
         void* const* optPtr = reinterpret_cast<void* const*>(ptr);
-        for (int i = 0; i < m_active.count(); ++i) {
-            std::cout << "void* " << optPtr[i] << std::endl;
-            std::cout << "int " << *(int*)(optPtr[i]) << std::endl;
+        //for (int i = 0; i < m_active.count(); ++i) {
+          //  std::cout << "void* " << optPtr[i] << std::endl;
+            //std::cout << "int " << *(int*)(optPtr[i]) << std::endl;
 //            std::cout << "void* " << m_options[i] << std::endl;
 //            std::cout << "int " << *(int*)m_options[i] << std::endl;
-        }
-        TextureOpt opt;
+        //}
         int j = 0; // offset index to next void pointer
 
 #define OPTION_CASE(optIndex, optName)                                              \
     case optIndex:                                                                  \
-    std::cout << "OPTION " #optIndex << std::endl; \
+    /*std::cout << "OPTION " #optIndex << std::endl;*/ \
     if (m_varying[i]) {                                                             \
-        std::cout << "OPTION varying " << std::endl; \
+        /*std::cout << "OPTION varying " << std::endl;*/ \
         if (m_type[i] == static_cast<bool>(INT)) {                                  \
-        std::cout << "OPTION int" << std::endl; \
+        /*std::cout << "OPTION int" << std::endl;*/ \
             Wide<int>& wideResult = *reinterpret_cast<Wide<int>*>(optPtr[j]);    \
             opt.optName = static_cast<float>(wideResult.get(l));                    \
         }                                                                           \
         else {                                                                      \
-        std::cout << "OPTION float" << std::endl; \
+        /*std::cout << "OPTION float" << std::endl;*/ \
             Wide<float>& wideResult = *reinterpret_cast<Wide<float>*>(optPtr[j]);\
             opt.optName = wideResult.get(l);                                        \
         }                                                                           \
     }                                                                               \
     else {                                                                          \
-        std::cout << "OPTION uniform" << std::endl; \
+        /*std::cout << "OPTION uniform" << std::endl;*/ \
         if (m_type[i] == static_cast<bool>(INT)) {                                  \
-        std::cout << "OPTION int" << std::endl; \
+        /*std::cout << "OPTION int" << std::endl;*/ \
             opt.optName = static_cast<float>(*reinterpret_cast<int*>(optPtr[j]));\
         } \
         else  {                                                                       \
-        std::cout << "OPTION float" << std::endl; \
+        /*std::cout << "OPTION float" << std::endl;*/ \
             opt.optName = *reinterpret_cast<float*>(optPtr[j]);                  \
         }\
     }                                                                               \
@@ -2138,7 +2137,6 @@ public:
                 ++j;
             }
         }
-        return opt;
     }
 
 //    OSL_INLINE TextureOptions(const TextureOptions &other)

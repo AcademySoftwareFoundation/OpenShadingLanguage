@@ -310,7 +310,7 @@ osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
                      ustring *errormessage,
                      int mask_)
 {
-    std::cout << "osl_texture_batched" << std::endl;
+    //std::cout << "osl_texture_batched" << std::endl;
     Mask mask(mask_);
     // TODO: LLVM could check this before calling this function
     if (mask.all_off()) {

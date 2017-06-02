@@ -632,11 +632,37 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle *textu
         texture_thread_info = context->texture_thread_info();
 
     Mask status(false);
-    std::cout << "nchannels: " << nchannels << std::endl;
+    //std::cout << "nchannels: " << nchannels << std::endl;
     if (texture_handle) {
+    	TextureOpt opt;
         for (int i = 0; i < SimdLaneCount; ++i) {
             if (mask[i]) {
-                TextureOpt opt = options ? options->getOption(i) : TextureOpt();
+                //TextureOpt opt = options ? options->getOption(i) : TextureOpt();
+            	if(options) {
+            		options->updateOption(opt, i);
+            	}
+//            	std::cout << "Updated Texture Options:" << std::endl;
+//            	std::cout << "firstchannel =" << opt.firstchannel << std::endl;
+//            	std::cout << "subimage =" << opt.subimage << std::endl;
+//            	std::cout << "subimagename =" << opt.subimagename << std::endl;
+//            	std::cout << "swrap =" << opt.swrap << std::endl;
+//            	std::cout << "twrap =" << opt.twrap << std::endl;
+//            	std::cout << "mipmode =" << opt.mipmode << std::endl;
+//            	std::cout << "interpmode =" << opt.interpmode << std::endl;
+//            	std::cout << "anisotropic =" << opt.anisotropic << std::endl;
+//            	std::cout << "conservative_filter =" << opt.conservative_filter << std::endl;
+//            	std::cout << "sblur =" << opt.sblur << std::endl;
+//            	std::cout << "tblur =" << opt.tblur << std::endl;
+//            	std::cout << "swidth =" << opt.swidth << std::endl;
+//            	std::cout << "twidth =" << opt.twidth << std::endl;
+//            	std::cout << "fill =" << opt.fill << std::endl;
+//            	std::cout << "missingcolor =" << opt.missingcolor << std::endl;
+//            	std::cout << "time =" << opt.time << std::endl;
+//            	std::cout << "bias =" << opt.bias << std::endl;
+//            	std::cout << "samples =" << opt.samples << std::endl;
+//            	std::cout << "rwrap =" << opt.rwrap << std::endl;
+//            	std::cout << "rblur =" << opt.rblur << std::endl;
+//            	std::cout << "rwidth =" << opt.rwidth << std::endl;
                 float* texResult = nullptr;
                 Color3 resultColor;
                 if (nchannels == 1) {
@@ -653,16 +679,19 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle *textu
                 if (nchannels == 3) {
                     Wide<Color3>& wideResult= *reinterpret_cast<Wide<Color3>*>(result);
                     wideResult.set(i, resultColor);
-                    std::cout << "s: " << s.get(i) << " t: " << t.get(i) << " color: " << resultColor << " " << wideResult.get(i) << std::endl;
+                    //std::cout << "s: " << s.get(i) << " t: " << t.get(i) << " color: " << resultColor << " " << wideResult.get(i) << std::endl;
                 }
                 status.set(i, retVal);
             }
         }
     }
     else {
+    	TextureOpt opt;
         for (int i = 0; i < SimdLaneCount; ++i) {
             if (mask[i]) {
-                TextureOpt opt = options ? options->getOption(i) : TextureOpt();
+            	if(options) {
+            		options->updateOption(opt, i);
+            	}
                 float* texResult = nullptr;
                 Color3 resultColor;
                 if (nchannels == 1) {
@@ -676,7 +705,7 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle *textu
                                                      dsdx.get(i), dtdx.get(i),
                                                      dsdy.get(i), dtdy.get(i),
                                                      nchannels, texResult/*, dresultds, dresultdt*/);
-                std::cout << "s: " << s.get(i) << " t: " << t.get(i) << " color: " << resultColor << std::endl;
+                //std::cout << "s: " << s.get(i) << " t: " << t.get(i) << " color: " << resultColor << std::endl;
                 if (nchannels == 3) {
                     Wide<Color3>& wideResult= *reinterpret_cast<Wide<Color3>*>(result);
                     wideResult.set(i, resultColor);

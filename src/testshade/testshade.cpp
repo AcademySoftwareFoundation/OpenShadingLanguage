@@ -227,6 +227,17 @@ add_shader (int argc, const char *argv[])
 
 
 
+static void
+action_shaderdecl (int argc, const char *argv[])
+{
+    // `--shader shadername layername` is exactly equivalent to:
+    // `--layer layername` followed by naming the shader.
+    layername = argv[2];
+    add_shader (1, argv+1);
+}
+
+
+
 // The --expr ARG command line option will take ARG that is a snipped of
 // OSL source code, embed it in some boilerplate shader wrapper, compile
 // it from memory, and run that in the same way that would have been done
@@ -457,6 +468,8 @@ getargs (int argc, const char *argv[])
                 "--layer %s", &layername, "Set next layer name",
                 "--param %@ %s %s", &action_param, NULL, NULL,
                         "Add a parameter (args: name value) (options: type=%s, lockgeom=%d)",
+                "--shader %@ %s %s", &action_shaderdecl, NULL, NULL,
+                        "Declare a shader node (args: shader layername)",
                 "--connect %L %L %L %L",
                     &connections, &connections, &connections, &connections,
                     "Connect fromlayer fromoutput tolayer toinput",

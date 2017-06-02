@@ -649,9 +649,12 @@ public:
     /// messages (in case of failure, when the function returns false) will
     /// be stored there, leaving it up to the caller/shader to handle the
     /// error.
+    ///
+    /// Batch uniform version is called when filename is uniform, but everything else
+    /// could be varying
     virtual Mask texture_uniform (ustring filename, TextureHandle *texture_handle,
                                   TexturePerthread *texture_thread_info,
-                                  const TextureOpt &options, ShaderGlobalsBatch *sgb,
+                                  const TextureOptions *options, ShaderGlobalsBatch *sgb,
                                   const Wide<float>& s, const Wide<float>& t,
                                   const Wide<float>& dsdx, const Wide<float>& dtdx,
                                   const Wide<float>& dsdy, const Wide<float>& dtdy,
@@ -660,9 +663,10 @@ public:
                                   void* alpha, void* dalphadx, void* dalphady,
                                   ustring *errormessage, Mask mask);
 
+    /// Batch version where filename is varying also
     virtual Mask texture (const Wide<ustring>& filename,
                           TexturePerthread *texture_thread_info,
-                          const TextureOpt &options, ShaderGlobalsBatch *sgb,
+                          const TextureOptions *options, ShaderGlobalsBatch *sgb,
                           const Wide<float>& s, const Wide<float>& t,
                           const Wide<float>& dsdx, const Wide<float>& dtdx,
                           const Wide<float>& dsdy, const Wide<float>& dtdy,

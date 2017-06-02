@@ -317,7 +317,7 @@ osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
         return 0;
     }
     ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
-    TextureOpt *opt = (TextureOpt *)opt_;
+    TextureOptions *opt = reinterpret_cast<TextureOptions *>(opt_);
 
     // XXX lfeng: original code use simd float4, then copy back to result.
     // for batched. The renderer should decide which way is more efficient
@@ -325,7 +325,7 @@ osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
     Mask retVal = sgb->uniform().renderer->batched()->texture_uniform (USTR(name),
                                                                (TextureSystem::TextureHandle *)handle,
                                                                NULL,
-                                                               *opt, sgb,
+                                                               opt, sgb,
                                                                WFLOAT(s),
                                                                WFLOAT(t),
                                                                WFLOAT(dsdx),
@@ -380,14 +380,14 @@ osl_texture_batched (void *sgb_, void *name,
         return 0;
     }
     ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
-    TextureOpt *opt = (TextureOpt *)opt_;
+    TextureOptions *opt = reinterpret_cast<TextureOptions *>(opt_);
 
     // XXX lfeng: original code use simd float4, then copy back to result.
     // for batched. The renderer should decide which way is more efficient
     // (thus implement this in renderservices)?
     Mask retVal = sgb->uniform().renderer->batched()->texture (WUSTR(name),
                                                                NULL,
-                                                               *opt, sgb,
+                                                               opt, sgb,
                                                                WFLOAT(s),
                                                                WFLOAT(t),
                                                                WFLOAT(dsdx),

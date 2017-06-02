@@ -1872,30 +1872,32 @@ class TextureOptions
 {
 public:
     enum Options {
-        SWIDTH = 0,
-        TWIDTH,
-        RWIDTH,
-        SBLUR,
-        TBLUR,
-        RBLUR,
-        SWRAP,
-        SWRAP_STRING,
-        TWRAP,
-        TWRAP_STRING,
-        RWRAP,
-        RWRAP_STRING,
-        FILL,
-        TIME,
-        FIRSTCHANNEL,
-        SUBIMAGE,
-        SUBIMAGE_STRING,
-        INTERP,
-        INTERP_STRING,
-        MISSINGCOLOR,
-        MISSINGALPHA,
+        SWIDTH = 0,         // int | float
+        TWIDTH,             // int | float
+        RWIDTH,             // int | float
+        SBLUR,              // int | float
+        TBLUR,              // int | float
+        RBLUR,              // int | float
+        SWRAP,              // int | string
+        TWRAP,              // int | string
+        RWRAP,              // int | string
+        FILL,               // int | float
+        TIME,               // int | float
+        FIRSTCHANNEL,       // int
+        SUBIMAGE,           // int | string
+        INTERP,             // int | string
+        MISSINGCOLOR,       // color
+        MISSINGALPHA,       // float
 
         MAX_OPTIONS
     };
+    enum DataType {
+        INT = 0,
+        COLOR = 0,
+        FLOAT = 1,
+        STRING = 1,
+    };
+
     static constexpr unsigned int maskSize = 32;
     static_assert(MAX_OPTIONS <= maskSize, "expecting MAX_OPTIONS <= maskSize");
     typedef WideMask<maskSize> Mask;
@@ -1903,12 +1905,105 @@ public:
 private:
     Mask m_active;
     Mask m_varying;
-    void* m_options[MAX_OPTIONS];
+    Mask m_type; // data type is int = 0 or float = 1
+    unsigned int m_options[2*MAX_OPTIONS];
+//    void* m_options[MAX_OPTIONS];
+
+    static const TextureOpt defaultOpt;
 public:
     TextureOptions()
-    : m_active(false),
-      m_varying(false)
+    : m_active(false)
+     , m_varying(false)
+   ,   m_type(false)
     {}
+
+    TextureOpt getOption(unsigned int l) const
+    {
+        std::cout << "size: " << sizeof(TextureOptions) << std::endl;
+        std::cout << "active: " << &m_active << " " << m_active.value() << std::endl;
+        std::cout << "varying: " << m_varying.value() << std::endl;
+        std::cout << "type: " << m_type.value() << std::endl;
+        const void* ptr = reinterpret_cast<const void*>(&m_options[0]);
+        void* const* optPtr = reinterpret_cast<void* const*>(ptr);
+        for (int i = 0; i < m_active.count(); ++i) {
+            std::cout << "void* " << optPtr[i] << std::endl;
+            std::cout << "int " << *(int*)(optPtr[i]) << std::endl;
+//            std::cout << "void* " << m_options[i] << std::endl;
+//            std::cout << "int " << *(int*)m_options[i] << std::endl;
+        }
+        TextureOpt opt;
+        int j = 0; // offset index to next void pointer
+
+#define OPTION_CASE(optIndex, optName)                                              \
+    case optIndex:                                                                  \
+    std::cout << "OPTION " #optIndex << std::endl; \
+    if (m_varying[i]) {                                                             \
+        std::cout << "OPTION varying " << std::endl; \
+        if (m_type[i] == static_cast<bool>(INT)) {                                  \
+        std::cout << "OPTION int" << std::endl; \
+            Wide<int>& wideResult = *reinterpret_cast<Wide<int>*>(optPtr[j]);    \
+            opt.optName = static_cast<float>(wideResult.get(l));                    \
+        }                                                                           \
+        else {                                                                      \
+        std::cout << "OPTION float" << std::endl; \
+            Wide<float>& wideResult = *reinterpret_cast<Wide<float>*>(optPtr[j]);\
+            opt.optName = wideResult.get(l);                                        \
+        }                                                                           \
+    }                                                                               \
+    else {                                                                          \
+        std::cout << "OPTION uniform" << std::endl; \
+        if (m_type[i] == static_cast<bool>(INT)) {                                  \
+        std::cout << "OPTION int" << std::endl; \
+            opt.optName = static_cast<float>(*reinterpret_cast<int*>(optPtr[j]));\
+        } \
+        else  {                                                                       \
+        std::cout << "OPTION float" << std::endl; \
+            opt.optName = *reinterpret_cast<float*>(optPtr[j]);                  \
+        }\
+    }                                                                               \
+    break;
+
+#define OPTION_CASE_WRAP(optIndex, optName)                                         \
+    case optIndex:                                                                  \
+    if (m_varying[i]) {                                                             \
+        if (m_type[i] == static_cast<bool>(STRING)) {                               \
+            Wide<ustring>& wideResult = *reinterpret_cast<Wide<ustring>*>(optPtr[j]); \
+            opt.optName = TextureOpt::decode_wrapmode(wideResult.get(l));           \
+        }                                                                           \
+        else {                                                                      \
+            Wide<int>& wideResult = *reinterpret_cast<Wide<int>*>(optPtr[j]);    \
+            opt.optName = (TextureOpt::Wrap)wideResult.get(l);                                        \
+        }                                                                           \
+    }                                                                               \
+    else {                                                                          \
+        if (m_type[i] == static_cast<bool>(STRING)) {                               \
+            ustring& castValue = *reinterpret_cast<ustring*>(optPtr[j]);         \
+            opt.optName = TextureOpt::decode_wrapmode(castValue);                   \
+        }                                                                           \
+        else                                                                        \
+            opt.optName = (TextureOpt::Wrap)*reinterpret_cast<int*>(optPtr[j]);                    \
+    }                                                                               \
+    break;
+
+        for (int i = 0; i < MAX_OPTIONS; ++i) {
+            if (m_active[i]) {
+                switch (i) {
+                OPTION_CASE(SWIDTH, swidth)
+                OPTION_CASE(TWIDTH, twidth)
+                OPTION_CASE(RWIDTH, rwidth)
+                OPTION_CASE(SBLUR, sblur)
+                OPTION_CASE(TBLUR, tblur)
+                OPTION_CASE(RBLUR, rblur)
+                OPTION_CASE_WRAP(SWRAP, swrap)
+                OPTION_CASE_WRAP(TWRAP, twrap)
+                OPTION_CASE_WRAP(RWRAP, rwrap)
+
+                }
+                ++j;
+            }
+        }
+        return opt;
+    }
 
 //    OSL_INLINE TextureOptions(const TextureOptions &other)
 //    : m_active(other.m_active)

@@ -301,16 +301,67 @@ osl_texture (void *sg_, const char *name, void *handle,
     return ok;
 }
 
+void transformWideTextureGradients(int chans,
+                                   void* drdsPtr, void* drdtPtr, // write results here
+                                   void* dadsPtr, void* dadtPtr, // write results here
+                                   Wide<float>& dsdx, Wide<float>& dsdy,
+                                   Wide<float>& dtdx, Wide<float>& dtdy,
+                                   Mask mask)
+{
+    if (!drdsPtr || !drdtPtr) return;
+
+    if (chans == 1) {
+        float* drds = reinterpret_cast<float*>(drdsPtr);
+        float* drdt = reinterpret_cast<float*>(drdtPtr);
+        for (int i = 0; i < SimdLaneCount; ++i) {
+            if (mask[i]) {
+                float drdx = drds[i] * dsdx.get(i) +  drdt[i] * dtdx.get(i);
+                float drdy = drds[i] * dsdy.get(i) +  drdt[i] * dtdy.get(i);
+                drds[i] = drdx;
+                drdt[i] = drdy;
+            }
+        }
+    }
+    else if (chans == 3) {
+        Wide<Color3>& widedrds = *reinterpret_cast<Wide<Color3>*>(drdsPtr);
+        Wide<Color3>& widedrdt = *reinterpret_cast<Wide<Color3>*>(drdtPtr);
+
+        for (int i = 0; i < SimdLaneCount; ++i) {
+            if (mask[i]) {
+                Color3 drdsColor = widedrds.get(i);
+                Color3 drdtColor = widedrdt.get(i);
+
+                Color3 drdxColor = drdsColor * dsdx.get(i) +  drdtColor * dtdx.get(i);
+                Color3 drdyColor = drdsColor * dsdy.get(i) +  drdtColor * dtdy.get(i);
+
+                widedrds.set(i, drdxColor);
+                widedrdt.set(i, drdyColor);
+            }
+        }
+    }
+    if (dadsPtr && dadtPtr) {
+        float* dads = reinterpret_cast<float*>(dadsPtr);
+        float* dadt = reinterpret_cast<float*>(dadtPtr);
+        for (int i = 0; i < SimdLaneCount; ++i) {
+            if (mask[i]) {
+                float dadx = dads[i] * dsdx.get(i) +  dadt[i] * dtdx.get(i);
+                float dady = dads[i] * dsdy.get(i) +  dadt[i] * dtdy.get(i);
+                dads[i] = dadx;
+                dadt[i] = dady;
+            }
+        }
+    }
+}
+
 OSL_SHADEOP int
 osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
                      void *opt_, void *s, void *t,
                      void *dsdx, void *dtdx, void *dsdy, void *dtdy,
-                     int chans, void *result, void *dresultdx, void *dresultdy,
-                     void *alpha, void *dalphadx, void *dalphady,
+                     int chans, void *result, void *dresultds, void *dresultdt,
+                     void *alpha, void *dalphads, void *dalphadt,
                      void *errormessage,
                      int mask_)
 {
-    //std::cout << "osl_texture_batched" << std::endl;
     Mask mask(mask_);
     // TODO: LLVM could check this before calling this function
     if (mask.all_off()) {
@@ -334,34 +385,19 @@ osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
                                                                WFLOAT(dtdy),
                                                                chans,
                                                                result,
-                                                               dresultdx,
-                                                               dresultdy,
+                                                               dresultds,
+                                                               dresultdt,
                                                                WFLOATPTR(alpha),
-                                                               WFLOATPTR(dalphadx),
-                                                               WFLOATPTR(dalphady),
+                                                               WFLOATPTR(dalphads),
+                                                               WFLOATPTR(dalphadt),
                                                                WUSTRPTR(errormessage),
                                                                mask);
 
-    bool derivs = (dresultdx != NULL);
     // Correct our st texture space gradients into xy-space gradients
-    /*
-    if (derivs) {
-        OIIO::simd::float4 dresultdx_simd = dresultds_simd * dsdx + dresultdt_simd * dtdx;
-        OIIO::simd::float4 dresultdy_simd = dresultds_simd * dsdy + dresultdt_simd * dtdy;
-        for (int i = 0;  i < chans;  ++i)
-            ((float *)dresultdx)[i] = dresultdx_simd[i];
-        for (int i = 0;  i < chans;  ++i)
-            ((float *)dresultdy)[i] = dresultdy_simd[i];
-        if (dalphadx) {
-            ((float *)dalphadx)[0] = dresultdx_simd[chans];
-            ((float *)dalphady)[0] = dresultdy_simd[chans];
-        }
-    }
-    */
+//    transformWideTextureGradients(chans, dresultds, dresultdt, dalphads, dalphadt,
+//                                  WFLOAT(dsdx), WFLOAT(dtdx), WFLOAT(dsdy), WFLOAT(dtdy),
+//                                  mask);
 
-    /// XXX lfeng: maybe we need to pass in wide errormessages?
-//    if (ok && errormessage)
-//        *errormessage = Strings::_emptystring_;
     return retVal.value();
 }
 
@@ -369,12 +405,11 @@ OSL_SHADEOP int
 osl_texture_batched (void *sgb_, void *name,
                      void *opt_, void *s, void *t,
                      void *dsdx, void *dtdx, void *dsdy, void *dtdy,
-                     int chans, void *result, void *dresultdx, void *dresultdy,
-                     void *alpha, void *dalphadx, void *dalphady,
+                     int chans, void *result, void *dresultds, void *dresultdt,
+                     void *alpha, void *dalphads, void *dalphadt,
                      void *errormessage,
                      int mask_)
 {
-    std::cout << "osl_texture_batched" << std::endl;
     Mask mask(mask_);
     // TODO: LLVM could check this before calling this function
     if (mask.all_off()) {
@@ -397,30 +432,18 @@ osl_texture_batched (void *sgb_, void *name,
                                                                WFLOAT(dtdy),
                                                                chans,
                                                                result,
-                                                               dresultdx,
-                                                               dresultdy,
+                                                               dresultds,
+                                                               dresultdt,
                                                                WFLOATPTR(alpha),
-                                                               WFLOATPTR(dalphadx),
-                                                               WFLOATPTR(dalphady),
+                                                               WFLOATPTR(dalphads),
+                                                               WFLOATPTR(dalphadt),
                                                                WUSTRPTR(errormessage),
                                                                mask);
 
-    bool derivs = (dresultdx != NULL);
     // Correct our st texture space gradients into xy-space gradients
-    /*
-    if (derivs) {
-        OIIO::simd::float4 dresultdx_simd = dresultds_simd * dsdx + dresultdt_simd * dtdx;
-        OIIO::simd::float4 dresultdy_simd = dresultds_simd * dsdy + dresultdt_simd * dtdy;
-        for (int i = 0;  i < chans;  ++i)
-            ((float *)dresultdx)[i] = dresultdx_simd[i];
-        for (int i = 0;  i < chans;  ++i)
-            ((float *)dresultdy)[i] = dresultdy_simd[i];
-        if (dalphadx) {
-            ((float *)dalphadx)[0] = dresultdx_simd[chans];
-            ((float *)dalphady)[0] = dresultdy_simd[chans];
-        }
-    }
-    */
+//    transformWideTextureGradients(chans, dresultds, dresultdt, dalphads, dalphadt,
+//                                  WFLOAT(dsdx), WFLOAT(dtdx), WFLOAT(dsdy), WFLOAT(dtdy),
+//                                  mask);
 
     return retVal.value();
 }

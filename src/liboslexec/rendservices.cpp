@@ -670,13 +670,17 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle *textu
             Color3 resultColordt;
             if (nchannels == 1) {
                 texResult = reinterpret_cast<float*>(result);
-                texResultds = reinterpret_cast<float*>(dresultds);
-                texResultdt = reinterpret_cast<float*>(dresultdt);
+                if (dresultds && dresultdt) {
+                    texResultds = reinterpret_cast<float*>(dresultds);
+                    texResultdt = reinterpret_cast<float*>(dresultdt);
+                }
             }
             else if (nchannels == 3) {
                 texResult = (float*)&(resultColor.x);
-                texResultds = (float*)&(resultColords.x);
-                texResultdt = (float*)&(resultColordt.x);
+                if (dresultds && dresultdt) {
+                    texResultds = (float*)&(resultColords.x);
+                    texResultdt = (float*)&(resultColordt.x);
+                }
             }
             bool retVal = false;
             if (texture_handle) {
@@ -696,10 +700,12 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle *textu
             if (retVal && (nchannels == 3)) {
                 Wide<Color3>& wideResult = *reinterpret_cast<Wide<Color3>*>(result);
                 wideResult.set(i, resultColor);
-                Wide<Color3>& wideResultds = *reinterpret_cast<Wide<Color3>*>(dresultds);
-                wideResultds.set(i, resultColords);
-                Wide<Color3>& wideResultdt = *reinterpret_cast<Wide<Color3>*>(dresultdt);
-                wideResultdt.set(i, resultColordt);
+                if (dresultds && dresultdt) {
+                    Wide<Color3>& wideResultds = *reinterpret_cast<Wide<Color3>*>(dresultds);
+                    wideResultds.set(i, resultColords);
+                    Wide<Color3>& wideResultdt = *reinterpret_cast<Wide<Color3>*>(dresultdt);
+                    wideResultdt.set(i, resultColordt);
+                }
                 //std::cout << "s: " << s.get(i) << " t: " << t.get(i) << " color: " << resultColor << " " << wideResult.get(i) << std::endl;
             }
 

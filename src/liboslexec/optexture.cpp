@@ -394,9 +394,9 @@ osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
                                                                mask);
 
     // Correct our st texture space gradients into xy-space gradients
-//    transformWideTextureGradients(chans, dresultds, dresultdt, dalphads, dalphadt,
-//                                  WFLOAT(dsdx), WFLOAT(dtdx), WFLOAT(dsdy), WFLOAT(dtdy),
-//                                  mask);
+    transformWideTextureGradients(chans, dresultds, dresultdt, dalphads, dalphadt,
+                                  WFLOAT(dsdx), WFLOAT(dtdx), WFLOAT(dsdy), WFLOAT(dtdy),
+                                  mask);
 
     return retVal.value();
 }
@@ -441,9 +441,9 @@ osl_texture_batched (void *sgb_, void *name,
                                                                mask);
 
     // Correct our st texture space gradients into xy-space gradients
-//    transformWideTextureGradients(chans, dresultds, dresultdt, dalphads, dalphadt,
-//                                  WFLOAT(dsdx), WFLOAT(dtdx), WFLOAT(dsdy), WFLOAT(dtdy),
-//                                  mask);
+    transformWideTextureGradients(chans, dresultds, dresultdt, dalphads, dalphadt,
+                                  WFLOAT(dsdx), WFLOAT(dtdx), WFLOAT(dsdy), WFLOAT(dtdy),
+                                  mask);
 
     return retVal.value();
 }

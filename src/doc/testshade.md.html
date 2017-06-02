@@ -1,0 +1,1009 @@
+    **Using _testshade_ for shader unit tests, texture baking, benchmarks, and exploring optimization**
+                Larry Gritz
+          revision date: 2 Jun 2017
+
+
+
+
+_testshade_ basics
+==================================================
+
+The OSL software distribution inculdes `testshade`, a command-line utility
+that was written for OSL unit tests, and for a "test harness" in which we
+can execute shaders for debugging (the shaders or OSL itself) in isolation
+from any particular rendering system.
+
+But testshade is very flexible, and in addition to testing the OSL library
+itself, it has a number of potential uses in a production studio, including:
+
+* Unit testing production shaders (particularly "utility" shader nodes)
+  without the overhead of a full render or the trouble of constructing a
+  full scene.
+
+* Providing a "test harness" for debugging shaders (or the OSL)
+
+* Baking procedural patterns into textures.
+
+* Benchmarking shaders and evaluating their performance, including
+  comparitive tests such as "is it faster to code it this way or that way?"
+
+* Exploring the inner workings of OSL's runtime optimizer, to answer
+  questions like: "will this idiom optimize away at runtime when I use
+  the default parameter values?"
+
+
+
+## Running a shader once
+
+Let's run testshade on a simple shader.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+shader hello (float a = 0, float b = 1)
+{
+    printf ("hello, a+b = %g\n", a+b);
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Compile your shader as usual:
+
+```
+$ oslc hello.osl
+Compiled hello.osl -> hello.oso
+```
+
+Now run the shader in the `testshade` harness:
+
+```shell
+$ testshade hello
+hello, a+b = 1
+```
+
+
+
+## Setting parameters
+
+You can set the value of shaders parameters (that is, per-material
+_instance value_ overrides of the default values of parameters) using
+
+   `--param` *name* *value*
+
+prior to the name of the shader to load.  For example,
+
+```shell
+$ testshade --param a 3.14 --param b 5.0 hello
+hello, a+b = 8.14
+```
+
+The type of data you pass will be inferred from the formatting of the
+value you pass:
+
+ Formatting                 | OSL type | Example
+ ---------------------------|----------|--------
+ single whole number        | `int`    | `42`
+ single number with decimal | `float`  | `42.0`
+ three comma-separated numbers (no spaces) | `color`, `point`, `vector`, or `normal` | `0.6,0.35,0.99`
+ 16 comma-separated numbers (no spaces) | `matrix` | `1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1`
+ anything else              | `string` | `"Now is the time..."`
+
+
+Be careful to match the types of your parameters correctly, or you will see
+an error like this (note that we pass the value of `b` as `5` rather than
+`5.0`):
+
+```shell
+$ testshade --param a 3.14 --param b 5 hello
+WARNING: attempting to set parameter with wrong type: b (expected 'float', received 'int')
+hello, a+b = 4.14
+```
+
+However, for other types, or to resolve ambiguities (for example if you want
+three numbers passed as `float[3]` rather than `vector`, or you want to pass
+the *string* `"1"` instead of an integer), you can explicitly specify the
+type using an optional modifier `--param:type=`*mytype*, like this:
+
+```shell
+$ testshade --param:type=color c 0,0,0 --param:type=string s "1" testshader
+```
+
+## Saving outputs to images
+
+Most shaders that aren't trying to be unit tests don't have `printf()`
+calls to show you their output. And you probably want to see what they do
+for varying inputs. Let us consider a more typical shader
+with real outputs and spatially-varying behavior:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+shader show_uv (output color out = 0)
+{
+    out = color (u, v, 0);
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+![`uv.jpg`](Figures/testshade/show_uv.jpg)
+```
+$ oslc show_uv.osl
+Compiled show_uv.osl -> show_uv.oso
+
+$ testshade -g 100 100 show_uv -o out uv.jpg
+Output out to uv.jpg
+```
+
+Helpful command line arguments:
+
+`-g` *xres yres*
+:   Specifies the resolution of the "grid" to shade.  For example, `-g 512 256`
+    will shade 512 horizontal samples by 256 vertical samples. The default
+    is 1x1, shading only one location.
+
+`-o` *variable* *filename*
+: Specifies that *variable* (which must be a shader `output` parameter)
+  should be saved.
+
+  It is important to be aware that you may have *multiple* `-o` commands,
+  and each may output a different `output` variable of the shader to
+  different files.
+
+`-d` *datatype*
+: By default, image files will generally save `float` data. But the `-od`
+  command can let you select an alternative pixel data format. For example,
+
+  `testshade -g 100 100 show_uv -od uint8 out.tif`
+
+  will ensure that the `out.tif` file is written with 8 bit integer pixels.
+
+`--print`
+: This override causes the `-o` outputs to print their values to the console
+  rather than save images. This is not very useful except when shading very
+  small grids.
+
+`--offsetuv` *uoffset voffset* `--scaleuv` *uscale vscale*
+: Controls the range of the `u` and `v` surface parameters over the shading
+  grid, which defaults to the leftmost column having `u=0` and rightmost
+  column uaving `u=1`, and the top scanline having `v=0` and the bottom
+  scanline having `v=1`.
+
+  As an example, to make the uv range go from 0-2 rather than 0-1, you
+  can:
+
+  `testshade -g 100 100 show_uv -scaleuv 2 2 -od uint8 out.tif`
+
+
+
+## Specifying shader networks
+
+For the sake of simplicity, this document presents almost all examples as if
+they consisted of just a single shader node. But `testshade` is able to
+specify and execut entire shader groups (networks of shader nodes). The
+remainder of this section will explain how this can be done.
+
+Let's make a simple shader network as an example.
+
+We have the following shaders:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+shader texturemap (string texturename = "", output color out = 0)
+{
+    out = texture (texturename, u, v);
+}
+
+shader contrast (color in = 0, color mid = 0.5, color scale = 1,
+                 output color out = 0)
+{
+    color val = in - mid;
+    val *= scale;
+    out = val + mid;
+}
+
+shader noisy (point position = P, float frequency = 1,
+              output color out = 0)
+{
+    point p = position * frequency;
+    color fBm =        (color) snoise(p)
+              + 0.5  * (color) snoise(p*2)
+              + 0.25 * (color) snoise(p*4);
+    out = 0.5 + 0.5*fBm;
+}
+
+shader umixer (color left = 0, color right = 0, output color out = 0)
+{
+    out = mix (left, right, smoothstep (0, 1, u));
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+And we wish to construct the following shader group:
+
+*******************************************************************
+*
+*  .------------.out     in.----------.out
+*  | texturemap +--------->| contrast +---.
+*  '------------'          '----------'    \ left .--------.out
+*                                           '---->| umixer +--->
+*                                   .------------>|        |
+*       .------------.out          /        right '--------'
+*       |   noisy    +------------'
+*       '------------'
+*
+*******************************************************************
+
+
+### Simple networks on the command line: Using `--layer` and `--connect`
+
+For relatively simple networks, we can simply specify them in full
+on the `testshade` command line, using the following commands:
+
+`--param` *name* *value*
+: As you know, `--param` sets the value of a parameter by name. But
+  specifically, it sets a parameter, *of the next declared shader*.  Thus,
+  you may intersperse `--param` and named shaders and set parameters
+  separately for each of them:
+
+      `testshade -param a 1 -param b 2 shader1 -param c 0 shader2`
+
+  This example sets parameters `a` and `b` of *shader1* and parameter `c`
+  of *shader2*.
+
+`--shader` *shadername* *layername*
+: Creates a new shader node of the kind of shader named by *shadername*,
+  and binds any pending `--param` settings to that shader node. The shader
+  node is assigned the label *layername*, which may be used with any
+  `--connect` directives later in the command line.
+
+`--connect` *layer1 param1 layer2 param2*
+: Establishes a connection from shader *layer1*'s output parameter *param1*
+  to shader *layer2*'s input parameter *param2*. Both *layer1* and *layer2*
+  must be layer names bestowed via `--shader` on shaders declared earlier on
+  the command line, and *layer1* must have been declared prior to *layer2*.
+
+So the following would be the command lineto declare the shader network
+described above:
+
+![noisetex network](Figures/testshade/noisetex.jpg width="180px")
+```shell
+$ testshade -param texturename "grid.tx" \
+            -shader texturemap tex1 \
+            -param frequency 4.0 \
+            -shader noisy noise1 \
+            -param scale 1.0 \
+            -shader contrast cont1 \
+            -shader umixer mix1 \
+            -connect tex1 out cont1 in \
+            -connect cont1 out mix1 left \
+            -connect noise1 out mix1 right \
+            -g 256 256 -o out noisetex.jpg
+```
+
+
+### Complex networks: deserializing with `--group`
+
+For very complex networks, it is unweildy to specify a large number of
+`-layer`, `-param`, and `-connect` directives on the command line. But OSL
+supports serialization of shader group declarations. Please refer to the
+*OSL Language Specification* for details, in the chapter titled "Describing
+shader groups."
+
+`--group` *groupspec*
+: Specify an entire shader network using OSL's serialized shader group
+  notation. The *groupspec* may be either the whole thing inline, or the
+  name of a file containing the serialization.
+
+The serialization corresponding to the shader group that we've used in
+this section is:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+param string texturename "grid.tx" ;
+shader texturemap tex1 ;
+param float frequency 4.0 ;
+shader noisy noise1 ;
+param float scale 1.0 ;
+shader contrast cont1 ;
+shader umixer mix1 ;
+connect tex1.out cont1.in ;
+connect cont1.out mix1.left ;
+connect noise1.out mix1.right ;
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[`noisetex.shadergroup`:]
+
+And so the equivalent command is:
+
+```shell
+$ testshade -group noisetex.shadergroup -g 256 256 -o out noisetex.jpg
+```
+
+
+
+Shading unit testing with _testshade_
+==================================================
+
+You can use `testshade` to run quick tests to verify the behavior of your
+shaders (particular utility shaders), for example as part of a testsuite.
+Using `testshade` can be much more convenient than testing your shaders in a
+renderer -- you can easily run it on one or a few points, it will execute
+very quickly, you do not need to build a "scene" or invoke the whole
+renderer, and it may be much more straightforward to run test cases
+involving specific values.
+
+Let's construct a concrete example.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~C
+shader clamped_mix (color in1=0, color in2=0, float mask = 0,
+                    output color out = 0)
+{
+    out = mix (in1, in2, clamp(0, 1, mask));
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Now we go off and think deep thoughts about this shader, and come up with
+several test cases:
+* mask=0, should return in1
+* mask=1, should return in2
+* mask=0.5, should return the average
+* verify that mask < 0 clamps to in1
+* verify that mask > 1 clamps to in2
+
+So our unit test script might look like this:
+
+```shell
+testshade -print -param in1 1,2,3 -param in2 4,5,6 -param mask 0.0 clamped_mix -o out out.exr
+testshade -print -param in1 1,2,3 -param in2 4,5,6 -param mask 1.0 clamped_mix -o out out.exr
+testshade -print -param in1 1,2,3 -param in2 4,5,6 -param mask 0.5 clamped_mix -o out out.exr
+testshade -print -param in1 1,2,3 -param in2 4,5,6 -param mask -1.0 clamped_mix -o out out.exr
+testshade -print -param in1 1,2,3 -param in2 4,5,6 -param mask 2.0 clamped_mix -o out out.exr
+```
+
+Resulting in the following output:
+
+```shell
+Output out to out.exr
+Pixel (0, 0):
+  out : 4 5 6
+Output out to out.exr
+Pixel (0, 0):
+  out : 4 5 6
+Output out to out.exr
+Pixel (0, 0):
+  out : 4 5 6
+Output out to out.exr
+Pixel (0, 0):
+  out : 4 5 6
+Output out to out.exr
+Pixel (0, 0):
+  out : 4 5 6
+```
+
+Wait a minute... **that's not right at all!**
+
+Good thing we unit-tested this shader. Do you see the bug? We wrote
+the arguments to `clamp()` in the wrong order. Here is the correct shader:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~C
+shader clamped_mix (color in1=0, color in2=0, float mask = 0,
+                    output color out = 0)
+{
+    out = mix (in1, in2, clamp(mask, 0, 1));
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+And the new output from our tests is:
+
+```shell
+Output out to out.exr
+Pixel (0, 0):
+  out : 1 2 3
+Output out to out.exr
+Pixel (0, 0):
+  out : 4 5 6
+Output out to out.exr
+Pixel (0, 0):
+  out : 2.5 3.5 4.5
+Output out to out.exr
+Pixel (0, 0):
+  out : 1 2 3
+Output out to out.exr
+Pixel (0, 0):
+  out : 4 5 6
+```
+
+That's better. Unit tests are great!
+
+We can also debug visual patterns. Let's look at a shader that computes
+fractional Brownian motion:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~C
+shader fBm (point position = P, int octaves = 4, float lacunarity = 2,
+            float gain = 0.5, float offset = 0.5,
+            float amplitude = 0.5, float frequency = 1,
+            output float out = 0)
+{
+    point p = position * frequency;
+    float amp = amplitude;
+    float sum = offset;
+    for (int i = 0;  i < octaves;  i += 1) {
+        sum += amp * snoise (p);
+        amp *= gain;
+        p *= lacunarity;
+    }
+    out = sum;
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We might want to construct a number of unit tests to ensure that each
+parameter produces the visual control we expect:
+
+```shell
+SETUP="-g 100 100 --scaleuv 4 4"
+testshade $SETUP fbm -o out fBm_default.jpg
+testshade $SETUP -param octaves 2 fbm -o out fBm_octaves.jpg
+testshade $SETUP -param lacunarity 4.0 fbm -o out fBm_lac.jpg
+testshade $SETUP -param gain 0.75 fbm -o out fBm_gain.jpg
+testshade $SETUP -param frequency 0.25 fbm -o out fBm_freq.jpg
+```
+
+![frequency=0.25](Figures/testshade/fBm_freq.jpg)
+![gain=0.75](Figures/testshade/fBm_gain.jpg)
+![lacunarity=4](Figures/testshade/fBm_lac.jpg)
+![octaves=2](Figures/testshade/fBm_octaves.jpg)
+![default](Figures/testshade/fBm_default.jpg)
+
+
+
+Procedural texture baking
+==================================================
+
+The previous example of unit-testing the fBm pattern might make you wonder:
+If I have an expensive procedural pattern, can I use testshade to "bake" it
+into a texture, and then at runtime I can just do a single texture lookup as
+a simpler and less expensive alternative than evaluating the procedural
+pattern? And as a bonus, the texture lookup will be automatically
+antialiased, whereas a procedural pattern often requires great care to
+analytically antialias.
+
+And we are, indeed, very close to that working. It really only needs the
+addition of a single command to change the behavior of the sample
+placement.
+
+## Evaluating like a texture, rather than like a geometric grid
+
+When we use `-g` *x y* to set the resolution of the evaluation grid, by
+default the `u` and `v` values are set up as if we are evaluating a
+geometric mesh, with the first and last samples exactly on the uv
+boundaries.
+
+In concrete terms `testshade -g 2 2` will do 4 shader evaluations with u,v
+coordinates at (0,0), (1,0), (0,1), and (1,1).
+
+This is great for unit testing because you probably want, very specifically,
+to be able to inspect what happens right at those extreme values. But it
+doesn't correspond to the locations of the pixel centers of a 2x2 image.
+
+`--center`
+: Adjust the `u` and `v` values to be at *pixel centers* as if the grid
+  truly represented a texture and you want to evaluate the pattern at the
+  exact center of each pixel.
+
+If you `testshade -g 2 2 --center`, the 4 shader evaluations will have u,v
+coordinates of (0.25,0.25), (0.75,0.25), (0.75,0.25), and (0.75,0.75), which
+are the normalized image space (or texture space) coordinates of the centers
+of each of the 2x2 pixels in a texture.
+
+So, here's an example of converting OSL's `pnoise` (periodic noise) function
+call into a texture:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~C
+shader makenoise (float frequency = 32,
+                  output float out = 0)
+{
+    out = pnoise (u*frequency, v*frequency,
+                  frequency, frequency);
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+![noise.tx](Figures/testshade/makenoise.jpg width="128px")
+```shell
+$ testshade -g 1024 1024 --center makenoise -o out noise.exr
+$ maketx noise.exr -wrap periodic -d uint8 -o noise.tx
+```
+
+## Baking simple expressions
+
+For *short* shaders that are really just evaluating a single expression
+(basically, one-liners like `makenoise` above), there's a simple way to have
+`testshade` create an image that evaluates the expression without saving the
+OSL source to a file, compiling it, and running it as separate steps.
+
+`--expr "`*expression*`"`
+: Simply evaluate a code expression that assigns to a variable called
+  `result` (which is a `color`), for each point being shaded.
+
+Example:
+
+```shell
+$ testshade -g 1024 1024 -center \
+    -expr "result = (float)pnoise(u*32,v*32,32,32);" -o result noise.exr
+```
+
+
+Benchmarking shaders
+==================================================
+
+## Basic shader benchmarking
+
+Here are some more command line options that are helpful for benchmarking:
+
+`--iters` *n*
+: Runs the whole grid of shaders $n$ times. This is useful when, even with
+  a large grid, you want the benchmark to run longer, to get more accurate
+  times.
+
+`-t` *threads*
+: Controls the number of threads used. The default is automatically detected
+  based on your hardware profile. But when benchmarking, it may be helpful
+  to have explicit control over the number of threads.
+
+
+## Example: Which is more expensive, fBm or texture?
+
+```shell
+$ time testshade -center -g 1024 1024 -t 1 -iters 100 fBm -o out fBm.tif
+real    0m20.492s
+
+
+$ time testshade -center -g 1024 1024 -t 1 -iters 100 \
+    -expr "result = (float)texture (\"fBm.tx\",u,v);" -o result fBm-tex.tif
+real    0m32.663s
+```
+
+Also, we can measure the "overhead" of testshade (all the iterating, setup
+of the shades and retrieval of outputs, output of image, etc.) by running a
+trivial shader the same number of iterations:
+
+```shell
+$ time testshade -center -g 1024 1024 -t 1 -iters 100 \
+    -expr "result = 0;" -o result null.tif
+real    0m6.429s
+```
+
+Computing the default of 4 octaves of noise is $(20.5-6.4)/(32.7-6.4) =
+53\%$ of the speed of a single texture lookup. So baking that pattern to
+texture would not be a wise optimization.
+
+But if we needed to compute 8 octaves of noise in our fBm loop...
+
+```shell
+$ time testshade -center -g 1024 1024 -t 1 -iters 100 \
+    -param octaves 8 fBm -o out fBm.tif
+real    0m34.532s
+```
+
+So computing at least 8 octaves of noise is definitely more expensive than a
+single texture lookup.
+
+
+
+## Controling optimization
+
+You can control the optimization level overall:
+
+`-O0 -O1 -O2`
+: Sets runtime optimization level. The default is 2, which means to do
+  all reasonable optimizations (just like in production). Sometimes it is
+  helpful to set a lower level of optimization (`-O1`) or turn off almost
+  all runtime optimizations (`-O0`) in order to either understand exactly
+  how much the optimizations change performance, or to rule out any
+  suspected bugs in the optimizer if you are witnessing weird behavior.
+
+
+## Lockgeom parameters
+
+Remember that one of the most important runtime optimizations that OSL
+performs is to take any parameters whose values are known at that time and
+turn them into constants, with known values that can be propagated to all
+the computations that involve that parameter.
+
+So if you are benchmarking a shader which in typical production use will
+have a parameter that is usually connected to an output of an upstream
+shader that computes something spatially-varying (and therefore not able to
+turn into a constant), it is important for your benchmarks to understand
+shader performance under that condition, and not be misled by allowing the
+parameter to be optimized away.
+
+Recall that OSL's runtime assumes that parameters are not by default able to
+be overridden by interpolated per-geometric-primitive data (in OSL lingo, we
+say its value is "locked from modification by the geometry", or
+`lockgeom=1`). The alternative override, `lockgeom=0`, means that
+interpolated the value may vary from object to object, or across each
+object, if a similarly named geometric variable is available on the object.
+
+Now, this is not exactly the same situation -- lockgeom versus a spatially-
+varying value from an earlier layer. But nonetheless, declaring a parameter
+as `lockgeom=0` has the effect we want for this purpose, which is to prevent
+the runtime optimizer from assuming that the parameter's value is a known
+constant. This is easily achieved via an optional modifier to the `--param`
+command line argument:
+
+`--param:lockgeom=0` *name* *value*
+: Declares the parameter and its value, and marks it as `lockgeom=0`, and
+  thus prevents the runtime optimizer from assuming a known constant value
+  for the parameter. Note that you can combine this with the other optional
+  modifier, `:type=`, by simply appending: `--param:type=color:lockgeom=0`
+
+There is not an automatic way to handle this situation. Only you, human,
+know which shader parameters are highly likely to be connected to non-
+constant values from earlier layers (or indeed supplied as interpolated
+values on the objects) when used in real production material networks. It's
+up to you to tell `testshade` which parameters fall into this situation so
+that they are not optimized away so as to lead you to an inaccurate
+reflection of what optimizations would really happen at render time. At the
+same time, be careful not to inadvertently set `lockgeom=0` for parameters
+that will typically be set to default values, instance values, or
+connections from layers that are likely to be analized and found to emit
+constants for theor outputs -- you also don't want your benchmarks to
+incorrectly disable optimizations what would typically happen at render
+time.
+
+
+<!-- I'm too lazy to document this now
+## Simulating ray types
+
+`--raytype` `--raytypeopt`
+-->
+
+
+## Full Statistics Log
+
+Here are some additional runtime options that are helpful
+
+`--runstats`
+: Prints the full OSL shading system statistics, and also if your shaders access
+  any texture, the full OpenImageIO texture system statistics.
+
+Here's an example:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~shell
+$ testshade -t 1 --runstats -group noisetex.shadergroup -g 1024 1024  -o out noisetex.jpg
+
+Output out to noisetex.jpg
+
+Setup: 0.10s
+Run  : 0.81s
+Write: 0.07s
+
+OSL ShadingSystem statistics (0x7f8399092400) ver 1.9.0dev, LLVM 4.0.0
+  Options:  optimize=2 llvm_optimize=0 debug=0 profile=0 llvm_debug=0
+            llvm_debug_layers=0 llvm_debug_ops=0 lazylayers=1
+            lazyglobals=1 lazyunconnected=1 lazy_userdata=0
+            userdata_isconnected=0 clearmemory=0 debugnan=0 debug_uninit=0
+            lockgeom_default=1 strict_messages=1 range_checking=1
+            greedyjit=0 countlayerexecs=0 opt_simplify_param=1
+            opt_constant_fold=1 opt_stale_assign=1 opt_elide_useless_ops=1
+            opt_elide_unconnected_outputs=1 opt_peephole=1
+            opt_coalesce_temps=1 opt_assign=1 opt_mix=1
+            opt_merge_instances=1 opt_merge_instances_with_userdata=1
+            opt_fold_getattribute=1 opt_middleman=1 opt_texture_handle=1
+            opt_seed_bblock_aliases=1 opt_passes=10 no_noise=0
+            no_pointcloud=0 force_derivs=0 exec_repeat=1
+  Shaders:
+    Requested: 4
+    Loaded:    4
+    Masters:   4
+    Instances: 4 requested, 4 peak, 4 current
+  Time loading masters: 0.00s
+  Shading groups:   1
+    Total instances in all groups: 4
+    Avg instances per group: 4.0
+  Shading contexts: 3 requested, 3 peak, 2 current
+  Compiled 1 groups, 4 instances
+  Merged 0 instances (0 initial, 0 after opt) in 0.00s
+  After optimization, 0 empty instances (0%)
+  After optimization, 0 empty groups (0%)
+  Optimized 23 ops to 34 (47.8%)
+  Optimized 35 symbols to 28 (-20.0%)
+  Constant connections eliminated: 0
+  Global connections eliminated: 0
+  Middlemen eliminated: 1
+  Derivatives needed on 2 / 28 symbols (7.1%)
+  Runtime optimization cost: 0.09s
+    locking:                   0.00s
+    runtime specialization:    0.00s
+    LLVM setup:                0.00s
+    LLVM IR gen:               0.00s
+    LLVM optimize:             0.05s
+    LLVM JIT:                  0.04s
+  Texture calls compiled: 1 (1 used handles)
+  Regex's compiled: 0
+  Largest generated function local memory size: 0 KB
+  Number of get_userdata calls: 0
+  Memory total: 20 KB requested, 20 KB peak, 12 KB current
+    Master memory: 8 KB requested, 8 KB peak, 8 KB current
+        Master ops:            1 KB requested, 1 KB peak, 1 KB current
+        Master args:           368 B requested, 368 B peak, 368 B current
+        Master syms:           4 KB requested, 4 KB peak, 4 KB current
+        Master defaults:       164 B requested, 164 B peak, 164 B current
+        Master consts:         24 B requested, 24 B peak, 24 B current
+    Instance memory: 12 KB requested, 12 KB peak, 3 KB current
+        Instance syms:         10 KB requested, 10 KB peak, 2 KB current
+        Instance param values: 132 B requested, 132 B peak, 132 B current
+        Instance connections:  132 B requested, 132 B peak, 132 B current
+    LLVM JIT memory: 0 B
+
+OpenImageIO Texture statistics
+  Options:  gray_to_rgb=0 flip_t=0 max_tile_channels=5
+  Queries/batches :
+    texture     :  1048576 queries in 1048576 batches
+    texture 3d  :  0 queries in 0 batches
+    shadow      :  0 queries in 0 batches
+    environment :  0 queries in 0 batches
+  Interpolations :
+    closest  : 0
+    bilinear : 1048576
+    bicubic  : 1048576
+  Average anisotropic probes : 1
+  Max anisotropy in the wild : 1
+
+OpenImageIO ImageCache statistics (shared) ver 1.8.5dev
+  Options:  max_memory_MB=256.0 max_open_files=100 autotile=64
+            autoscanline=0 automip=1 forcefloat=0 accept_untiled=1
+            accept_unmipped=1 read_before_insert=0 deduplicate=1
+            unassociatedalpha=0 failure_retries=0
+  Images : 1 unique
+    ImageInputs : 1 created, 1 current, 1 peak
+    Total pixel data size of all images referenced : 5.3 MB
+    Total actual file size of all images referenced : 495 KB
+    Pixel data read : 5.0 MB
+    File I/O time : 0.0s
+    File open time only : 0.0s
+  Tiles: 320 created, 320 current, 320 peak
+    total tile requests : 2618076
+    micro-cache misses : 288448 (11.0176%)
+    main cache misses : 320 (0.0122227%)
+    redundant reads: 110 tiles, 1.7 MB
+    Peak cache memory : 5.0 MB
+  Image file statistics:
+        opens   tiles    MB read   --redundant--   I/O time  res              File
+      1    1      320        5.0   (  110    1.7)      0.0s  1024x1024x4.u8   grid.tx  MIP-COUNT[256,64,0,0,0,0,0,0,0,0,0]
+
+  Tot:     1      320        5.0   (  110    1.7)      0.0s
+  Broken or invalid files: 0
+
+ustring statistics:
+  unique strings: 471
+  ustring memory: 12.0 MB
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+Exploring OSL runtime optimization
+==================================================
+
+`--debug --debug2`
+: `--debug` will show you the corresponding "oso" (essentially OSL's
+  assembly language for its virtual machine execution model) of each
+  shader in the network before, and after, the runtime optimization step.
+
+  `--debug2` also tries to print status messages explaining every
+  optimization performed.
+
+Let's use a small shader network consisting of a texture lookup node,
+connected to a contrast adjustment node, and run it with `--debug`:
+
+```shell
+$ testshade -debug -param texturename "grid.tx" -shader texturemap tex1 \
+            -shader contrast cont1 -connect tex1 out cont1 in \
+            -g 256 256 -o out out.jpg
+```
+
+In addition to seeing the timing and end statistics like you so with
+`--runstats` (to reduce clutter, those parts will not be reproduced in the
+output example below), you will see the code pre- and post-optimization:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~shell
+About to optimize shader group
+Before optimizing layer 0 "tex1" (ID 2) :
+Shader texturemap
+ connections in=0 out=1 run_unconditionally outgoing_connections renderer_outputs
+  symbols:
+param string texturename (used 0 0 read 0 0 write 2147483647 -1) unconnected
+    value: "grid.tx"
+oparam color out (used 0 0 read 2147483647 -1 write 0 0) down-connected renderer-output
+    default: 0 0 0
+global float u (used 0 0 read 0 0 write 2147483647 -1)
+global float v (used 0 0 read 0 0 write 2147483647 -1)
+  code:
+(main)
+    0: texture out texturename u v  #  %derivs(12)   BBLOCK-START  (texturemap.osl:3)
+    1: end  #   CONST  (texturemap.osl:3)
+
+--------------------------------
+
+Before optimizing layer 1 "cont1" (ID 3) :
+Shader contrast
+ connections in=1 out=0 run_unconditionally renderer_outputs last_layer
+  symbols:
+param color in (used 0 0 read 0 0 write 2147483647 -1) connected
+param color mid (used 0 2 read 0 2 write 2147483647 -1) unconnected
+    default: 0.5 0.5 0.5
+param color scale (used 1 1 read 1 1 write 2147483647 -1) unconnected
+    default: 1 1 1
+oparam color out (used 2 2 read 2147483647 -1 write 2 2) unconnected renderer-output
+    default: 0 0 0
+local color val (used 0 2 read 1 2 write 0 1)
+  code:
+(main)
+    0: sub val in mid   #   BBLOCK-START  (contrast.osl:4)
+    1: mul val val scale    #   (contrast.osl:5)
+    2: add out val mid  #   (contrast.osl:6)
+    3: end  #   CONST  (contrast.osl:6)
+  connections upstream:
+    color in upconnected from layer 0 (tex1)     color out
+
+--------------------------------
+
+After optimizing layer 0 "tex1" (ID 2) :
+Shader texturemap
+ connections in=0 out=1 run_unconditionally outgoing_connections renderer_outputs
+  symbols:
+oparam color out (used 0 0 read 2147483647 -1 write 0 0) down-connected renderer-output
+    default: 0 0 0
+global float u (used 0 0 read 0 0 write 2147483647 -1 derivs)
+global float v (used 0 0 read 0 0 write 2147483647 -1 derivs)
+const string $newconst0 (used 0 0 read 0 0 write 2147483647 -1)
+    const: "grid.tx"
+  code:
+(main)
+    0: texture out $newconst0 ("grid.tx") u v   #  %derivs(12)   BBLOCK-START  (texturemap.osl:3)
+    1: end  #   CONST  (texturemap.osl:3)
+
+--------------------------------
+
+After optimizing layer 1 "cont1" (ID 3) :
+Shader contrast
+ connections in=1 out=0 run_unconditionally renderer_outputs last_layer
+  symbols:
+param color in (used 0 1 read 0 1 write 2147483647 -1) connected
+oparam color out (used 1 1 read 2147483647 -1 write 1 1) unconnected renderer-output
+    default: 0 0 0
+  code:
+(main)
+    0: useparam in  #   BBLOCK-START  (contrast.osl:6)
+    1: assign out in    #   (contrast.osl:6)
+    2: end  #   CONST  (contrast.osl:6)
+  connections upstream:
+    color in upconnected from layer 0 (tex1)     color out
+
+--------------------------------
+
+
+Layers used: (group )
+  0 tex1
+  1 cont1
+INFO: About to optimize shader group  (2 layers):
+INFO: Optimized shader group :
+INFO:  spec 0.00s, New syms 6/9 (-33.3%), ops 5/6 (-16.7%)
+INFO: Group needs textures:
+INFO:     grid.tx
+INFO: JITed shader group :
+INFO:     (0.09s = 0.00 setup, 0.00 ir, 0.05 opt, 0.03 jit; local mem 0KB)
+INFO:   ShadingContext 0x7f8219893200 growing heap to 40
+Output out to out.jpg
+Need 1 textures:
+    grid.tx
+Need 0 closures:
+Need 2 globals:
+    u
+    v
+raytype() query mask: 0
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you pay particular attention to the "layer 1" information, you'll see
+that it started off comprising the following operations:
+
+```
+    0: sub val in mid   #   BBLOCK-START  (contrast.osl:4)
+    1: mul val val scale    #   (contrast.osl:5)
+    2: add out val mid  #   (contrast.osl:6)
+    3: end  #   CONST  (contrast.osl:6)
+```
+
+and then after optimizations, it was reduced to:
+
+```shell
+    0: useparam in  #   BBLOCK-START  (contrast.osl:6)
+    1: assign out in    #   (contrast.osl:6)
+    2: end  #   CONST  (contrast.osl:6)
+```
+
+That is, the math all constant-folded away, and all that was left was
+copying input `in` to output `out`.
+
+You can get even more information about what's happening if you use the
+`--debug2` option. In addition to the previous debug output, the debug level
+2 output will try include messages explaining exactly what sequence of code
+simplification steps occurred and why. For example, buried in the output
+you will see:
+
+```shell
+...
+layer 1 "cont1", pass 0:
+op 1 turned 'mul val val $newconst3' to 'assign val val' : A * 1 => A (@ contrast.osl:5)
+op 1 turned 'assign val val' to 'nop' : self-assignment (@ contrast.osl:5)
+layer 1 "cont1", pass 1:
+op 2 turned 'add out val $newconst2' to 'assign out in' : simplify add/sub pair (@ contrast.osl:6)
+op 0 turned 'sub val in $newconst2' to 'nop' : simplify add/sub pair (@ contrast.osl:4)
+layer 1 "cont1", pass 2:
+...
+```
+
+
+Why would you want this?
+
+One of the strengths of OSL is that you can write a shader with lots of
+options and parameters, which if left in their unused/default state, will
+optimize away completely and truly have no runtime execution penalty.
+
+But sometimes you want to be extra sure that the functionality you are
+adding will indeed be optimized away. Using the debug options gives you a
+way to verify that OSL runtime optimization is simplifying your shaders in
+the manner you expect.
+
+
+
+<!--  FINISH THIS LATER?
+
+Advanced usage topics
+==================================================
+
+
+## Misc
+
+`--options`
+
+`--texoptions`
+
+`--debugnan`
+
+`--debuguninit`
+
+-->
+
+
+
+Conclusion
+==================================================
+
+Using the `testshade` utility that was designed for OSL's internal unit
+tests, you can:
+
+* Create fast unit tests for your shader node library to verify their
+  correct operation with input test cases, independent of any renderer.
+
+* Test shader nodes or entire shader networks (at least for patterns that
+  make sense rendered and imaged on a 2D plane), to view it directly or
+  compare to reference imagery to test correctness or for bugs/regressions.
+
+* Generate image swatches for shaders, useful for documentation.
+
+* "Bake" procedural patterns into texture maps.
+
+* Benchmark shaders to ensure that there is no performance regression, to
+  compare different hardware platforms, to compare versions of OSL against
+  each other for performance improvement.
+
+* Benchmark different shader coding approaches against each other to know
+  what shader idioms execute faster or slower.
+
+* Understand deeply what runtime optimizations are being performed by OSL.
+
+* Verify that your shaders are optimizing in ways that you expect, such as
+  ensuring that unused/default parameters get optimized away and have no
+  runtime cost when executing the shader.
+
+* Test a suspected buggy shader (or buggy shading system!) independent of
+  any renderer, to verify that it works properly.
+
+
+
+<!-- Markdeep: --><style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style><script src="markdeep.min.js"></script><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+
+<style>
+h1, .nonumberh1 { page-break-before: always }
+</style>

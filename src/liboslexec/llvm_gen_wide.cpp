@@ -688,15 +688,15 @@ LLVMGEN (llvm_gen_mul)
     if (Result.typespec().is_matrix()) {
         if (A.typespec().is_float()) {
             if (B.typespec().is_float())
-                rop.llvm_call_function ("osl_mul_m_ff", Result, A, B);
+                rop.llvm_call_function ("osl_mul_m_ff", Result, A, B, false /*deriv_ptrs*/, true /*function_is_uniform*/, false /*functionIsLlvmInlined*/,  true /*ptrToReturnStructIs1stArg*/);
             else if (B.typespec().is_matrix())
-                rop.llvm_call_function ("osl_mul_mf", Result, B, A);
+                rop.llvm_call_function ("osl_mul_mf", Result, B, A, false /*deriv_ptrs*/, true /*function_is_uniform*/, false /*functionIsLlvmInlined*/,  true /*ptrToReturnStructIs1stArg*/);
             else ASSERT(0);
         } else if (A.typespec().is_matrix()) {
             if (B.typespec().is_float())
-                rop.llvm_call_function ("osl_mul_mf", Result, A, B);
+                rop.llvm_call_function ("osl_mul_mf", Result, A, B, false /*deriv_ptrs*/, true /*function_is_uniform*/, false /*functionIsLlvmInlined*/,  true /*ptrToReturnStructIs1stArg*/);
             else if (B.typespec().is_matrix())
-                rop.llvm_call_function ("osl_mul_mm", Result, A, B);
+                rop.llvm_call_function ("osl_mul_mm", Result, A, B, false /*deriv_ptrs*/, true /*function_is_uniform*/, false /*functionIsLlvmInlined*/,  true /*ptrToReturnStructIs1stArg*/);
             else ASSERT(0);
         } else ASSERT (0);
         if (Result.has_derivs())
@@ -766,17 +766,20 @@ LLVMGEN (llvm_gen_div)
 
     // division involving matrices
     if (Result.typespec().is_matrix()) {
+    	// TODO: finish handling all combinations, remove assert afterwards
+    	ASSERT(op_is_uniform);
+    	
         if (A.typespec().is_float()) {
             if (B.typespec().is_float())
-                rop.llvm_call_function ("osl_div_m_ff", Result, A, B);
+                rop.llvm_call_function ("osl_div_m_ff", Result, A, B, false /*deriv_ptrs*/, true /*function_is_uniform*/, false /*functionIsLlvmInlined*/,  true /*ptrToReturnStructIs1stArg*/);
             else if (B.typespec().is_matrix())
-                rop.llvm_call_function ("osl_div_fm", Result, A, B);
+                rop.llvm_call_function ("osl_div_fm", Result, A, B, false /*deriv_ptrs*/, true /*function_is_uniform*/, false /*functionIsLlvmInlined*/,  true /*ptrToReturnStructIs1stArg*/);
             else ASSERT (0);
         } else if (A.typespec().is_matrix()) {
             if (B.typespec().is_float())
-                rop.llvm_call_function ("osl_div_mf", Result, A, B);
+                rop.llvm_call_function ("osl_div_mf", Result, A, B, false /*deriv_ptrs*/, true /*function_is_uniform*/, false /*functionIsLlvmInlined*/,  true /*ptrToReturnStructIs1stArg*/);
             else if (B.typespec().is_matrix())
-                rop.llvm_call_function ("osl_div_mm", Result, A, B);
+                rop.llvm_call_function ("osl_div_mm", Result, A, B, false /*deriv_ptrs*/, true /*function_is_uniform*/, false /*functionIsLlvmInlined*/,  true /*ptrToReturnStructIs1stArg*/);
             else ASSERT (0);
         } else ASSERT (0);
         if (Result.has_derivs())
@@ -796,9 +799,11 @@ LLVMGEN (llvm_gen_div)
     		wf.append("f");
     		safe_div = "osl_safe_div_";
     		safe_div.append(wf).append(wf).append(wf);
+    		// osl_safe_div_w16w16w16 is inlined and does pass a pointer to the result
+    		// so no need for a masked version
     	}    		
     } else {
-    	// TODO: finish handling all combinations
+    	// TODO: finish handling all combinations, remove assert afterwards
     	ASSERT(op_is_uniform);
 		safe_div = "osl_safe_div_iii";
     }
@@ -823,34 +828,25 @@ LLVMGEN (llvm_gen_div)
             ASSERT (is_float);
             llvm::Value *binv;
             if (B.is_constant() && ! rop.is_zero(B)) {
-        		// TODO:  switching back to non-wide to figure out uniform vs. varying data
-                //binv = rop.ll.wide_op_div (rop.ll.wide_constant(1.0f), b);
             	if (op_is_uniform) {
             		binv = rop.ll.op_div (rop.ll.constant(1.0f), b);
             	} else {
             		binv = rop.ll.op_div (rop.ll.wide_constant(1.0f), b);
             	}
             } else {
-        		// TODO:  switching back to non-wide to figure out uniform vs. varying data
-                //binv = rop.ll.call_function (safe_div, rop.ll.wide_constant(1.0f), b);
-            	binv = rop.ll.call_function (safe_div.c_str(), rop.ll.constant(1.0f), b);
+            	if (op_is_uniform) {
+            		binv = rop.ll.call_function (safe_div.c_str(), rop.ll.constant(1.0f), b);
+            	} else {
+            		binv = rop.ll.call_function (safe_div.c_str(), rop.ll.wide_constant(1.0f), b);
+            	}
             }
             llvm::Value *ax = rop.llvm_load_value (A, 1, i, type, op_is_uniform);
             llvm::Value *bx = rop.llvm_load_value (B, 1, i, type, op_is_uniform);
-    		// TODO:  switching back to non-wide to figure out uniform vs. varying data
-            //llvm::Value *a_div_b_mul_bx = rop.ll.wide_op_mul (a_div_b, bx);
-            //llvm::Value *ax_minus_a_div_b_mul_bx = rop.ll.wide_op_sub (ax, a_div_b_mul_bx);
             llvm::Value *a_div_b_mul_bx = rop.ll.op_mul (a_div_b, bx);
             llvm::Value *ax_minus_a_div_b_mul_bx = rop.ll.op_sub (ax, a_div_b_mul_bx);
-    		// TODO:  switching back to non-wide to figure out uniform vs. varying data
-            //rx = rop.ll.wide_op_mul (binv, ax_minus_a_div_b_mul_bx);
             rx = rop.ll.op_mul (binv, ax_minus_a_div_b_mul_bx);
             llvm::Value *ay = rop.llvm_load_value (A, 2, i, type, op_is_uniform);
             llvm::Value *by = rop.llvm_load_value (B, 2, i, type, op_is_uniform);
-    		// TODO:  switching back to non-wide to figure out uniform vs. varying data
-            //llvm::Value *a_div_b_mul_by = rop.ll.wide_op_mul (a_div_b, by);
-            //llvm::Value *ay_minus_a_div_b_mul_by = rop.ll.wide_op_sub (ay, a_div_b_mul_by);
-            //ry = rop.ll.wide_op_mul (binv, ay_minus_a_div_b_mul_by);
             llvm::Value *a_div_b_mul_by = rop.ll.op_mul (a_div_b, by);
             llvm::Value *ay_minus_a_div_b_mul_by = rop.ll.op_sub (ay, a_div_b_mul_by);
             ry = rop.ll.op_mul (binv, ay_minus_a_div_b_mul_by);
@@ -904,6 +900,7 @@ LLVMGEN (llvm_gen_modulus)
 		wf.append(is_float ? "f" : "i");
 		safe_mod = is_float ? "osl_fmod_" : "osl_safe_mod_";		
 		safe_mod.append(wf).append(wf).append(wf);
+		// Intended for implementation of wide version to be inlined as to not have to handle masking
 	}    		
     
     for (int i = 0; i < num_components; i++) {
@@ -1684,6 +1681,9 @@ LLVMGEN (llvm_gen_construct_color)
         args[0] = rop.sg_void_ptr ();  // shader globals
         args[1] = rop.llvm_void_ptr (Result, 0);  // color
         args[2] = rop.llvm_load_value (Space); // from
+        
+        // TODO: handle wide case and a _masked version if necessary, then remove assert
+        ASSERT(op_is_uniform);
         rop.ll.call_function ("osl_prepend_color_from", args, 3);
         // FIXME(deriv): Punt on derivs for color ctrs with space names.
         // We should try to do this right, but we never had it right for
@@ -1765,6 +1765,9 @@ LLVMGEN (llvm_gen_construct_triple)
             vectype = TypeDesc::NORMAL;
         
         std::cout << "llvm_gen_construct_triple Result.has_derivs()=" << Result.has_derivs() << std::endl; 
+        // TODO: Handle non-uniform case below minding mask values
+        ASSERT(op_is_uniform);
+        
         llvm::Value *args[8] = { rop.sg_void_ptr(),
             rop.llvm_void_ptr(Result), 
 			rop.ll.constant(Result.has_derivs()),
@@ -1808,6 +1811,9 @@ LLVMGEN (llvm_gen_matrix)
     int nfloats = nargs - 1 - (int)using_space;
     ASSERT (nargs == 2 || nargs == 3 || nargs == 17 || nargs == 18);
 
+    // TODO: Handle non-uniform case below minding mask values
+    ASSERT(rop.isSymbolUniform(Result));
+    
     if (using_two_spaces) {
         llvm::Value *args[4];
         args[0] = rop.sg_void_ptr();  // shader globals
@@ -1859,6 +1865,9 @@ LLVMGEN (llvm_gen_getmatrix)
     Symbol& To = *rop.opargsym (op, 2);
     Symbol& M = *rop.opargsym (op, 3);
 
+    // TODO: Handle non-uniform case below minding mask values
+    ASSERT(rop.isSymbolUniform(Result));
+    
     llvm::Value *args[4];
     args[0] = rop.sg_void_ptr();  // shader globals
     args[1] = rop.llvm_void_ptr(M);  // matrix result
@@ -1927,7 +1936,10 @@ LLVMGEN (llvm_gen_transform)
         rop.ll.mask_as_int(rop.ll.current_mask())};
     RendererServices *rend (rop.shadingsys().renderer());
     if (rend->transform_points (NULL, from, to, 0.0f, NULL, NULL, 0, vectype)) {
-    	ASSERT(0 && "Incomplete");
+    	
+        // TODO: Handle non-uniform case below minding mask values
+        ASSERT(rop.isSymbolUniform(*Result));
+        
         // renderer potentially knows about a nonlinear transformation.
         // Note that for the case of non-constant strings, passing empty
         // from & to will make transform_points just tell us if ANY 
@@ -2001,6 +2013,9 @@ LLVMGEN (llvm_gen_filterwidth)
                                                      rop.llvm_void_ptr (Src));
             rop.llvm_store_value (r, Result);
         } else {
+            // TODO: Handle non-uniform case below minding mask values
+            ASSERT(rop.isSymbolUniform(Result));
+            
             rop.ll.call_function ("osl_filterwidth_vdv",
                                     rop.llvm_void_ptr (Result),
                                     rop.llvm_void_ptr (Src));
@@ -2175,6 +2190,9 @@ LLVMGEN (llvm_gen_regex)
     
     // TODO:  probably need to serialize calls to regex, one for reach data lane
 
+    // TODO: Handle non-uniform case below minding mask values
+    ASSERT(rop.isSymbolUniform(Result));
+    
     llvm::Value *ret = rop.ll.call_function ("osl_regex_impl", &call_args[0],
                                                (int)call_args.size());
     rop.llvm_store_value (ret, Result);
@@ -2274,9 +2292,11 @@ LLVMGEN (llvm_gen_generic)
                                                      uniformFormOfFunction, 
                                                      functionIsLlvmInlined, 
                                                      false /*ptrToReturnStructIs1stArg*/);
+            // The store will deal with masking
             rop.llvm_store_value (r, Result);
         } else {
         	std::cout << ">>return value is pointer " << name.c_str() << std::endl;
+        	
             rop.llvm_call_function (name.c_str(),
                                     (args.size())? &(args[0]): NULL, op.nargs(), 
                                     /*deriv_ptrs*/ false, 

@@ -1840,8 +1840,10 @@ BackendLLVMWide::llvm_call_function (const char *name,
                                       bool functionIsLlvmInlined,
                                       bool ptrToReturnStructIs1stArg)
 {
+	bool requiresMasking = ptrToReturnStructIs1stArg && ll.is_masking_enabled();
+	
     std::vector<llvm::Value *> valargs;
-    valargs.resize ((size_t)nargs);
+    valargs.resize ((size_t)nargs + (requiresMasking ? 1 : 0));
     for (int i = 0;  i < nargs;  ++i) {
         const Symbol &s = *(symargs[i]);
         const TypeSpec &t = s.typespec();
@@ -1886,8 +1888,21 @@ BackendLLVMWide::llvm_call_function (const char *name,
             valargs[i] = llvm_load_value (s, /*deriv*/ 0, /*component*/ 0, TypeDesc::UNKNOWN, function_is_uniform);
         }
     }
-    std::cout << "call_function " << name << std::endl;
-    llvm::Value * func_call = ll.call_function (name, (valargs.size())? &valargs[0]: NULL,
+    
+    std::string modifiedName(name);
+    if (requiresMasking) {
+    	if(functionIsLlvmInlined) {
+    		// For inlined functions, keep the native mask type 
+    		valargs[nargs] = ll.current_mask();
+    	} else {
+    		// For non-inlined functions, cast the mask to an int32 
+    		valargs[nargs] = ll.mask_as_int(ll.current_mask());
+    	}
+    	modifiedName += "_masked";
+    }
+    
+    std::cout << "call_function " << modifiedName << std::endl;
+    llvm::Value * func_call = ll.call_function (modifiedName.c_str(), (valargs.size())? &valargs[0]: NULL,
                              (int)valargs.size());
     if (ptrToReturnStructIs1stArg)
     	ll.mark_structure_return_value(func_call);
@@ -1922,13 +1937,16 @@ BackendLLVMWide::llvm_call_function (const char *name, const Symbol &A,
 llvm::Value *
 BackendLLVMWide::llvm_call_function (const char *name, const Symbol &A,
                                  const Symbol &B, const Symbol &C,
-                                 bool deriv_ptrs)
+                                 bool deriv_ptrs,
+                                 bool function_is_uniform, 
+                                 bool functionIsLlvmInlined,
+                                 bool ptrToReturnStructIs1stArg)
 {
     const Symbol *args[3];
     args[0] = &A;
     args[1] = &B;
     args[2] = &C;
-    return llvm_call_function (name, args, 3, deriv_ptrs);
+    return llvm_call_function (name, args, 3, deriv_ptrs, function_is_uniform, functionIsLlvmInlined, ptrToReturnStructIs1stArg);
 }
 
 

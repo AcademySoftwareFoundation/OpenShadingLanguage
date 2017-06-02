@@ -189,6 +189,27 @@ osl_area_w16(void *r_, void *DP_)
 }
 
 OSL_SHADEOP void
+osl_area_w16_masked(void *r_, void *DP_, unsigned int mask_value)
+{
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+		const Wide<Dual2<Vec3>> &wDP = WDVEC(DP_);
+	    
+		MaskedAccessor<float> wr(r_, Mask(mask_value));
+	
+		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")		
+		for(int lane=0; lane < wr.width; ++lane) {
+			Dual2<Vec3> DP = wDP.get(lane);
+			
+		    Vec3 N = calculatenormal(DP, false);
+		    //float r = N.length();
+		    float r = simdFriendlyLength(N);
+			wr[lane] = r;
+		}
+	}	
+}
+
+OSL_SHADEOP void
 osl_normalize_w16vw16v(void *r_, void *V_)
 {
 	OSL_INTEL_PRAGMA("forceinline recursive")

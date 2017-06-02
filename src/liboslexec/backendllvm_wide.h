@@ -374,7 +374,10 @@ public:
                                      const Symbol &B, bool deriv_ptrs=false);
     llvm::Value *llvm_call_function (const char *name, const Symbol &A,
                                      const Symbol &B, const Symbol &C,
-                                     bool deriv_ptrs=false);
+                                     bool deriv_ptrs=false,
+                                     bool function_is_uniform=true, 
+									 bool functionIsLlvmInlined = false,
+                                     bool ptrToReturnStructIs1stArg = false);                                     
 
     TypeDesc llvm_typedesc (const TypeSpec &typespec) {
         return typespec.is_closure_based()

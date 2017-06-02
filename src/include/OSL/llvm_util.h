@@ -225,6 +225,7 @@ public:
     
 
     void push_masking_enabled(bool enable);
+    bool is_masking_enabled() const { return (m_enable_masking_stack.empty() == false) && (m_enable_masking_stack.back() == true); } 
     void pop_masking_enabled();
 	
     /// Return the basic block where we go after returning from the current

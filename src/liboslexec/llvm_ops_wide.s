@@ -9560,6 +9560,28 @@ define void @osl_abs_w16vw16v(i8* nonnull sret %r_ptr, i8* nonnull %v_ptr) alway
   ret void
 }
 
+; Function Attrs: nounwind uwtable
+define void @osl_abs_w16vw16v_masked(i8* nonnull sret %r_ptr, i8* nonnull %v_ptr, <16 x i1> %mask) alwaysinline  {
+  %vs_ptr = bitcast i8* %v_ptr to %"WideVec3"*
+  %v_x = getelementptr %"WideVec3", %"WideVec3"* %vs_ptr, i32 0, i32 0, i32 0
+  %v_y = getelementptr %"WideVec3", %"WideVec3"* %vs_ptr, i32 0, i32 0, i32 1
+  %v_z = getelementptr %"WideVec3", %"WideVec3"* %vs_ptr, i32 0, i32 0, i32 2
+  %x = load <16 x float>, <16 x float>* %v_x, align 64
+  %y = load <16 x float>, <16 x float>* %v_y, align 64
+  %z = load <16 x float>, <16 x float>* %v_z, align 64
+  %abs_x = call <16 x float> @llvm.fabs.v16f32(<16 x float> %x)
+  %abs_y = call <16 x float> @llvm.fabs.v16f32(<16 x float> %y)
+  %abs_z = call <16 x float> @llvm.fabs.v16f32(<16 x float> %z)
+  %rs_ptr = bitcast i8* %r_ptr to %"WideVec3"*
+  %r_x = getelementptr %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 0
+  %r_y = getelementptr %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 1
+  %r_z = getelementptr %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 2
+  call void @llvm.masked.store.v16f32.p0v16f32 (<16 x float> %abs_x, <16 x float>* %r_x, i32 64,  <16 x i1> %mask )
+  call void @llvm.masked.store.v16f32.p0v16f32 (<16 x float> %abs_y, <16 x float>* %r_y, i32 64,  <16 x i1> %mask )
+  call void @llvm.masked.store.v16f32.p0v16f32 (<16 x float> %abs_z, <16 x float>* %r_z, i32 64,  <16 x i1> %mask )
+  ret void
+}
+
 
 ; Function Attrs: nounwind readnone
 declare float @fabsf(float) local_unnamed_addr #9

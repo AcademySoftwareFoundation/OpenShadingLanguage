@@ -9512,6 +9512,32 @@ define <16 x float> @osl_abs_w16fw16f(<16 x float> %a) alwaysinline  #3 {
   ret <16 x float> %r
 }
 
+define void @osl_abs_w16dfw16df(i8* nonnull sret %r_ptr, i8* nonnull %v_ptr) alwaysinline  {
+  %wv_ptr = bitcast i8* %v_ptr to <16 x float>*
+  %v_a = getelementptr <16 x float>, <16 x float>* %wv_ptr, i32 0
+  %v_dx_a = getelementptr <16 x float>, <16 x float>* %wv_ptr, i32 1
+  %v_dy_a = getelementptr <16 x float>, <16 x float>* %wv_ptr, i32 2
+  %a = load <16 x float>, <16 x float>* %v_a, align 64
+  %dx_a = load <16 x float>, <16 x float>* %v_dx_a, align 64
+  %dy_a = load <16 x float>, <16 x float>* %v_dy_a, align 64
+  %a_is_positive = fcmp uge <16 x float> %a, zeroinitializer
+  %neg_a = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %a
+  %abs_a = select <16 x i1> %a_is_positive, <16 x float> %a, <16 x float> %neg_a
+  %neg_dx_a = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %dx_a
+  %abs_dx_a = select <16 x i1> %a_is_positive, <16 x float> %dx_a, <16 x float> %neg_dx_a
+  %neg_dy_a = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %dy_a
+  %abs_dy_a = select <16 x i1> %a_is_positive, <16 x float> %dy_a, <16 x float> %neg_dy_a  
+  %wr_ptr = bitcast i8* %r_ptr to <16 x float>*
+  %r_a = getelementptr <16 x float>, <16 x float>* %wr_ptr, i32 0
+  %r_dx_a = getelementptr <16 x float>, <16 x float>* %wr_ptr, i32 1
+  %r_dy_a = getelementptr <16 x float>, <16 x float>* %wr_ptr, i32 2
+  store <16 x float> %abs_a, <16 x float>* %r_a
+  store <16 x float> %abs_dx_a, <16 x float>* %r_dx_a
+  store <16 x float> %abs_dy_a, <16 x float>* %r_dy_a
+  ret void
+}
+
+
 ; Function Attrs: nounwind uwtable
 define void @osl_abs_w16vw16v(i8* nonnull sret %r_ptr, i8* nonnull %v_ptr) alwaysinline  {
   %vs_ptr = bitcast i8* %v_ptr to %"WideVec3"*
@@ -9531,6 +9557,28 @@ define void @osl_abs_w16vw16v(i8* nonnull sret %r_ptr, i8* nonnull %v_ptr) alway
   store <16 x float> %abs_x, <16 x float>* %r_x
   store <16 x float> %abs_y, <16 x float>* %r_y
   store <16 x float> %abs_z, <16 x float>* %r_z
+  ret void
+}
+
+; Function Attrs: nounwind uwtable
+define void @osl_abs_w16vw16v_masked(i8* nonnull sret %r_ptr, i8* nonnull %v_ptr, <16 x i1> %mask) alwaysinline  {
+  %vs_ptr = bitcast i8* %v_ptr to %"WideVec3"*
+  %v_x = getelementptr %"WideVec3", %"WideVec3"* %vs_ptr, i32 0, i32 0, i32 0
+  %v_y = getelementptr %"WideVec3", %"WideVec3"* %vs_ptr, i32 0, i32 0, i32 1
+  %v_z = getelementptr %"WideVec3", %"WideVec3"* %vs_ptr, i32 0, i32 0, i32 2
+  %x = load <16 x float>, <16 x float>* %v_x, align 64
+  %y = load <16 x float>, <16 x float>* %v_y, align 64
+  %z = load <16 x float>, <16 x float>* %v_z, align 64
+  %abs_x = call <16 x float> @llvm.fabs.v16f32(<16 x float> %x)
+  %abs_y = call <16 x float> @llvm.fabs.v16f32(<16 x float> %y)
+  %abs_z = call <16 x float> @llvm.fabs.v16f32(<16 x float> %z)
+  %rs_ptr = bitcast i8* %r_ptr to %"WideVec3"*
+  %r_x = getelementptr %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 0
+  %r_y = getelementptr %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 1
+  %r_z = getelementptr %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 2
+  call void @llvm.masked.store.v16f32.p0v16f32 (<16 x float> %abs_x, <16 x float>* %r_x, i32 64,  <16 x i1> %mask )
+  call void @llvm.masked.store.v16f32.p0v16f32 (<16 x float> %abs_y, <16 x float>* %r_y, i32 64,  <16 x i1> %mask )
+  call void @llvm.masked.store.v16f32.p0v16f32 (<16 x float> %abs_z, <16 x float>* %r_z, i32 64,  <16 x i1> %mask )
   ret void
 }
 

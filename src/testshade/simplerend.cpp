@@ -75,6 +75,12 @@ static ustring u_camera("camera"), u_screen("screen");
 static ustring u_NDC("NDC"), u_raster("raster");
 static ustring u_perspective("perspective");
 static ustring u_s("s"), u_t("t");
+static ustring u_lookupTable("lookupTable");
+static ustring u_blahblah("blahblah");
+static ustring u_options("options");
+static ustring u_global("global");
+
+
 
 void register_closures(OSL::ShadingSystem* shadingsys) {
     // Describe the memory layout of each closure type to the OSL runtime
@@ -142,8 +148,8 @@ void register_closures(OSL::ShadingSystem* shadingsys) {
 BatchedSimpleRenderer::BatchedSimpleRenderer(SimpleRenderer &sr)
     : m_sr(sr)
 {
-	m_uniform_objects.insert(ustring("global"));	
-	m_uniform_objects.insert(ustring("options"));		
+	m_uniform_objects.insert(u_global);	
+	m_uniform_objects.insert(u_options);		
 }
 
 BatchedSimpleRenderer::~BatchedSimpleRenderer()
@@ -161,8 +167,8 @@ BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &resu
 #if 0
     int is_uniform_xform = 1;
 
-    OSL_INTEL_PRAGMA("simd")
-            for(int lane=0; lane < SimdLaneCount; ++lane) {
+	OSL_INTEL_PRAGMA("omp simd simdlen(SimdLaneCount)")								    
+    for(int lane=0; lane < SimdLaneCount; ++lane) {
         if (uniform_xform != xform.get(lane))
             is_uniform_xform = 0;
     }
@@ -183,7 +189,7 @@ BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &resu
 #if 0
     int numLanesMatch1st = 0;
     OSL_INTEL_PRAGMA("simd reduction(+:numLanesMatch1st)  assert")
-            for(int lane=0; lane < SimdLaneCount; ++lane) {
+	for(int lane=0; lane < SimdLaneCount; ++lane) {
         int match = (uniform_xform == xform.get(lane)) ? 1 : 0;
         numLanesMatch1st += match;
     }
@@ -205,8 +211,8 @@ BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &resu
 
 #endif
         const Matrix44 & transformFromShaderGlobals = *reinterpret_cast<const Matrix44*>(uniform_xform);
-    OSL_INTEL_PRAGMA("simd")
-            for(int lane=0; lane < SimdLaneCount; ++lane) {
+	OSL_INTEL_PRAGMA("omp simd simdlen(SimdLaneCount)")								        
+    for(int lane=0; lane < SimdLaneCount; ++lane) {
         result.set(lane,transformFromShaderGlobals);
     }
 } else {
@@ -219,9 +225,13 @@ return true;
 }
 
 #else
-bool
-BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
-                                   const Wide<TransformationPtr> & xform, const Wide<float> &time)
+Mask
+BatchedSimpleRenderer::get_matrix (
+	ShaderGlobalsBatch *sgb, 
+	Wide<Matrix44> &result,
+    const Wide<TransformationPtr> & xform, 
+    const Wide<float> &time, 
+    WeakMask /*weak_mask*/)
 {
     // SimpleRenderer doesn't understand motion blur and transformations
     // are just simple 4x4 matrices.
@@ -232,8 +242,8 @@ BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &resu
 #if 0
     // In general, one can't assume that the transformation is uniform
     const Matrix44 & uniformTransform = *reinterpret_cast<const Matrix44*>(uniform_xform);
-    OSL_INTEL_PRAGMA("simd")
-            for(int lane=0; lane < SimdLaneCount; ++lane) {
+	OSL_INTEL_PRAGMA("omp simd simdlen(result.width)")								        
+    for(int lane=0; lane < result.width; ++lane) {
         if (__builtin_expect((uniform_xform == xform.get(lane)),1)) {
             result.set(lane,uniformTransform);
         } else {
@@ -246,28 +256,34 @@ BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &resu
     // use that fact
     const Matrix44 & uniformTransform = *reinterpret_cast<const Matrix44*>(uniform_xform);
 
-    OSL_INTEL_PRAGMA("simd")
-            for(int lane=0; lane < SimdLaneCount; ++lane) {
+	OSL_INTEL_PRAGMA("omp simd simdlen(result.width)")								        
+    for(int lane=0; lane < result.width; ++lane) {
         result.set(lane,uniformTransform);
     }
 
 #endif
 
-    return true;
+    return Mask(true);
 }
 
 
 #endif
-bool
-BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
-                                   ustring from, float time)
+Mask
+BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
+        ustring from, const Wide<float> &/*time*/, WeakMask /*weak_mask*/)
 {
     auto found = m_sr.m_named_xforms.find (from);
     if (found != m_sr.m_named_xforms.end()) {
-        result = *(found->second);
-        return true;
+        const Matrix44 & uniformTransform =  *(found->second);
+        
+    	OSL_INTEL_PRAGMA("omp simd simdlen(result.width)")								        
+        for(int lane=0; lane < result.width; ++lane) {
+            result.set(lane,uniformTransform);
+        }
+        
+        return Mask(true);
     } else {
-        return false;
+        return Mask(false);
     }
 }
 
@@ -376,7 +392,7 @@ BatchedSimpleRenderer::get_array_attribute (ShaderGlobalsBatch *sgb,
 {
 	ASSERT(is_attribute_uniform(object, name) == false);
 	
-    if (object == nullptr && name == "blahblah") {
+    if (object == nullptr && name == u_blahblah) {
     	if(val.is<float>()) {
 			auto out = val.masked<float>();
 			for(int i=0; i < out.width; ++i) {
@@ -402,6 +418,25 @@ BatchedSimpleRenderer::get_array_attribute (ShaderGlobalsBatch *sgb,
 			return val.mask();
     	}      
     }
+    
+    if (object == nullptr && name == u_lookupTable) {
+    	
+    	if(val.is<float[]>())
+    	{
+    		auto out = val.masked<float[]>();
+			for(int lane_index=0; lane_index < out.width; ++lane_index) {
+				
+				auto lut = out[lane_index];
+	    		for(int i=0; i < lut.length(); ++i)
+	    		{
+	    			lut[i] = 1.0 - float(i)/float(lut.length());
+	    		}
+			
+			}    		
+			return true;
+    	}
+    }
+    
     
     if (object == nullptr && name == "not_a_color") {
     	if(val.is<float[3]>()) {
@@ -470,6 +505,9 @@ BatchedSimpleRenderer::get_array_attribute_uniform (ShaderGlobalsBatch *sgb,
                                             ustring object, ustring name,
                                             int index, DataRef val)
 {
+	
+	ASSERT(!name.empty());
+
 	if (m_sr.common_get_attribute (object, name, val) )
 		return true;
 	
@@ -485,9 +523,8 @@ bool
 BatchedSimpleRenderer::get_attribute_uniform (ShaderGlobalsBatch *sgb, ustring object,
                             ustring name, DataRef val)
 {
-	
     return get_array_attribute_uniform (sgb, object,
-                                name, -1, val);
+                                		name, -1, val);
 }
 
 Mask
@@ -502,9 +539,7 @@ BatchedSimpleRenderer::get_userdata (ustring name,
 	// For testing of interactions with default values
 	// may not provide data for all lanes
     if (name == u_s && val.is<float>()) {
-    	
     
-    	std::cout << "get_userdata u type=" << val.type() << std::endl;
     	auto out = val.masked<float>();
 		for(int i=0; i < out.width; ++i) {
 			// NOTE: assigning to out[i] will mask by itself
@@ -574,6 +609,7 @@ SimpleRenderer::SimpleRenderer ()
     {
     	m_batched_simple_renderer.m_uniform_attributes.insert(entry.first);
     }
+    m_batched_simple_renderer.m_uniform_attributes.insert(u_lookupTable);
     
 }
 
@@ -744,6 +780,9 @@ bool
 SimpleRenderer::common_get_attribute (ustring object, ustring name,
 		  DataRef val)
 {
+	//std::cout << " common_get_attribute object=" << (object.empty() ? "" : object.c_str() ) << " name = " << name.c_str() << std::endl;
+	
+
     AttrGetterMap::const_iterator g = m_attr_getters.find (name);
     if (g != m_attr_getters.end()) {
         AttrGetter getter = g->second;
@@ -752,9 +791,33 @@ SimpleRenderer::common_get_attribute (ustring object, ustring name,
 
     // In order to test getattribute(), respond positively to
     // "options"/"blahblah"
-    if (object == "options" && name == "blahblah" && val.is<float>()) {
+    if (object == u_options && name == u_blahblah && val.is<float>()) {
     	val.ref<float>() = 3.14159;
         return true;
+    }
+    
+    
+    if (/*object == nullptr &&*/ name == u_lookupTable) {
+#if 0 // old way of checking typedesc and arraylength
+    	if (val.type().is_array() && val.type().basetype == TypeDesc::FLOAT && val.type().aggregate == TypeDesc::SCALAR)
+    	{
+    		float * lt = reinterpret_cast<float *>(val.ptr());
+    		for(int i=0; i < val.type().arraylen; ++i)
+    		{
+    			lt[i] = 1.0 - float(i)/float(val.type().arraylen);
+    		}
+    		return true;
+    	}
+#endif
+    	// New way of checking for array of a given type
+    	if (val.is<float[]>()) {    
+			auto lut = val.ref<float[]>();
+			for(int i=0; i < lut.length(); ++i)
+			{
+				lut[i] = 1.0 - float(i)/float(lut.length());
+			}
+			return true;
+    	}
     }
     
     return false;
@@ -771,7 +834,7 @@ SimpleRenderer::get_array_attribute (ShaderGlobals *sg, bool derivatives, ustrin
 	if (common_get_attribute (object, name, val) )
 		return true;
 	
-    if (object == nullptr && name == "blahblah") {
+    if (object == nullptr && name == u_blahblah) {
 		if (val.is<float>()) {
 			val.ref<float>() = 1.0f - sg->P.x;
 			return true;

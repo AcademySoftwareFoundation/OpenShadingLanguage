@@ -4,7 +4,7 @@ setenv PATH /opt/intel/cmake/bin:$PATH
 # use gcc, not icc 
 unsetenv CC
 unsetenv CXX
-source /opt/intel/compilers_and_libraries_2017.2.174/linux/bin/compilervars.csh intel64
+source /opt/intel/compilers_and_libraries_2017.4.196/linux/bin/compilervars.csh intel64
 setenv CC icc
 setenv CXX icpc
 
@@ -43,10 +43,10 @@ setenv LDFLAGS "-lirc $LDFLAGS"
 
 #make
 #make -j28 USE_CPP11=1 VERBOSE=1
-make profile VERBOSE=1 USE_CCACHE=0 LLVM_VERSION=3.9.1 BOOST_HOME=/nfs/pdx/home/amwells/Pixar/boost OPENEXR_HOME=/nfs/pdx/home/amwells/Pixar/OSL/install ILMBASE_HOME=/nfs/pdx/home/amwells/Pixar/OSL/install -j 48
+make profile VERBOSE=1 USE_CCACHE=0 LLVM_VERSION=4.0.0 BOOST_HOME=/nfs/pdx/home/amwells/Pixar/boost OPENEXR_HOME=/nfs/pdx/home/amwells/Pixar/OSL/install ILMBASE_HOME=/nfs/pdx/home/amwells/Pixar/OSL/install -j 48
 
 # after  building add 
-source /opt/intel/compilers_and_libraries_2017.2.174/linux/bin/compilervars.csh intel64
+source /opt/intel/compilers_and_libraries_2017.4.196/linux/bin/compilervars.csh intel64
 setenv PATH /nfs/pdx/home/amwells/Pixar/OSL/OSL_Dev/OpenShadingLanguage/dist/linux64.profile/bin:$PATH
 setenv LD_LIBRARY_PATH /nfs/pdx/home/amwells/Pixar/OSL/OSL_Dev/OpenShadingLanguage/dist/linux64.profile/lib:$LD_LIBRARY_PATH
 setenv LD_LIBRARY_PATH ~/Pixar/boost/lib/:$LD_LIBRARY_PATH

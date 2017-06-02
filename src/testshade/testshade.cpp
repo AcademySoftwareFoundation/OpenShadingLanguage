@@ -163,6 +163,7 @@ set_shadingsys_options ()
     	// TODO:  Investigate if this is necessary, and document why
     	shadingsys->attribute ("opt_coalesce_temps", 0);
     } 
+	shadingsys->attribute ("range_checking", 0);
     
     shadingsys_options_set = true;
 }

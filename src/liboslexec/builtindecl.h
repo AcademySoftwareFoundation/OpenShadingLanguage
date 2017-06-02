@@ -242,7 +242,7 @@ DECL (osl_get_inverse_matrix, "iXXs")
 DECL (osl_transform_triple, "iXXiXiXXi")
 DECL (osl_transform_triple_nonlinear, "iXXiXiXXi")
 
-WDECL (osl_wide_transform_triple, "xXXiXiXXi")
+WDECL (osl_wide_transform_triple, "xXXiXiXXii")
 
 DECL (osl_dict_find_iis, "iXiX")
 DECL (osl_dict_find_iss, "iXXX")
@@ -371,6 +371,7 @@ DECL (osl_normalize_dvdv, "xXX")
 WDECL (osl_pow_w16fw16fw16f, "xXXf")
 WDECL (osl_pow_w16vw16vw16f, "xXXX")
 WDECL (osl_area_w16, "xXX")
+WDECL (osl_area_w16_masked, "xXXi")
 WDECL (osl_normalize_w16vw16v, "xXX")
 
 DECL (osl_mul_mm, "xXXX")

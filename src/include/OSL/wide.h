@@ -83,6 +83,12 @@ public:
         return count;
     }
 
+    
+    OSL_INLINE WideMask invert() const
+    {
+    	return WideMask((~m_value)&(0xFFFFFFFF >> (32-WidthT)));
+    }
+    
     // Testers
     OSL_INLINE bool operator[](int lane) const
     {
@@ -120,7 +126,7 @@ public:
 
     OSL_INLINE bool any_off() const
     {
-        return (m_value < (0xFFFFFFFF >> (32-WidthT));
+        return (m_value < (0xFFFFFFFF >> (32-WidthT)));
     }
 
 
@@ -153,11 +159,51 @@ public:
     {
         m_value = 0;
     }
+    
+    OSL_INLINE WideMask & 
+    operator &=(const WideMask &other)
+    {
+        m_value = m_value&other.m_value;
+        return *this;
+    }
+
+    OSL_INLINE WideMask & 
+    operator |=(const WideMask &other)
+    {
+        m_value = m_value|other.m_value;
+        return *this;
+    }
+
+    OSL_INLINE WideMask  
+    operator & (const WideMask &other) const
+    {
+        return WideMask(m_value&other.m_value);
+    }
+
+    OSL_INLINE WideMask  
+    operator | (const WideMask &other) const
+    {
+        return WideMask(m_value|other.m_value);
+    }
+
+    OSL_INLINE WideMask  
+    operator ~() const
+    {
+        return invert();
+    }
+    
 private:
     value_type m_value;
 };
 
 typedef WideMask<SimdLaneCount> Mask;
+// Technically identical to Mask, but intended use is that 
+// the implementor may ignore the mask and populate
+// all data lanes of the destination object, however
+// implementor may still find it usefull to avoid
+// pulling/gathering data for that lane.
+// Intent is for self documenting code
+typedef WideMask<SimdLaneCount> WeakMask;
 
 
 
@@ -222,8 +268,7 @@ struct WideBuiltin
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 					data[i] = value;
@@ -236,8 +281,7 @@ struct WideBuiltin
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				if (mask[i]) {
@@ -252,8 +296,7 @@ struct WideBuiltin
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				if (mask[i]) {
@@ -297,8 +340,7 @@ public:
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				data[i] = uniformValue;
@@ -367,8 +409,7 @@ struct Wide<Vec3, WidthT>
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				if (mask[i]) {
@@ -385,8 +426,7 @@ struct Wide<Vec3, WidthT>
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				if (mask[i]) {
@@ -496,8 +536,7 @@ struct Wide<Color3, WidthT>
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				if (mask[i]) {
@@ -514,8 +553,7 @@ struct Wide<Color3, WidthT>
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				if (mask[i]) {
@@ -633,8 +671,7 @@ struct Wide<Matrix44, WidthT>
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				if (mask[i]) {
@@ -664,8 +701,7 @@ struct Wide<Matrix44, WidthT>
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				if (mask[i]) {
@@ -744,8 +780,7 @@ struct Wide<Dual2<float>, WidthT>
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				if (mask[i]) {
@@ -762,8 +797,7 @@ struct Wide<Dual2<float>, WidthT>
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				if (mask[i]) {
@@ -836,8 +870,7 @@ struct Wide<Dual2<Vec3>, WidthT>
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				if (mask[i]) {
@@ -854,8 +887,7 @@ struct Wide<Dual2<Vec3>, WidthT>
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i)
 			{
 				if (mask[i]) {
@@ -930,8 +962,7 @@ struct WideUniformProxy
 	{
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 			for(int i = 0; i < WidthT; ++i) {
 				m_ref_wide_data.set(i, value);
 			}
@@ -950,8 +981,7 @@ make_uniform(Wide<DataT, WidthT> &wide_data, const DataT &value)
 {
 	OSL_INTEL_PRAGMA("forceinline recursive")
 	{
-		OSL_INTEL_PRAGMA("ivdep")
-		OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
+		OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
 		for(int i = 0; i < WidthT; ++i) {
 			wide_data.set(i, value);
 		}
@@ -1055,19 +1085,56 @@ unproxy(const ConstLaneProxy<DataT,WidthT> &proxy)
 	return proxy.operator DataT const ();
 }
 
+template <typename DataT, int WidthT = SimdLaneCount>
+struct ConstWideAccessor
+{
+	static constexpr int width = WidthT; 
+	
+	OSL_INLINE
+	ConstWideAccessor(const void *ptr_wide_data, int derivIndex=0)
+	: m_ref_wide_data(reinterpret_cast<const Wide<DataT, WidthT> *>(ptr_wide_data)[derivIndex])
+	{}
+	
+	OSL_INLINE
+	ConstWideAccessor(const Wide<DataT, WidthT> & ref_wide_data)
+	: m_ref_wide_data(ref_wide_data)
+	{}
+	
+	// Must provide user defined copy constructor to 
+	// get compiler to be able to follow individual 
+	// data members through back to original object
+	// when fully inlined the proxy should disappear
+	OSL_INLINE
+	ConstWideAccessor(const ConstWideAccessor &other)
+	: m_ref_wide_data(other.m_ref_wide_data)
+	{}	
+	
+	
+	typedef ConstLaneProxy<DataT, WidthT> ConstProxy;
+	
+	OSL_INLINE ConstProxy const 
+	operator[](int index) const
+	{
+		return ConstProxy(m_ref_wide_data, index);
+	}
 
-template <typename DataT, int WidthT>
+private:
+	const Wide<DataT, WidthT> & m_ref_wide_data;	
+};
+
+
+template <typename DataT, int WidthT = SimdLaneCount>
 struct WideAccessor
 {
 	static constexpr int width = WidthT; 
 	
 	OSL_INLINE
-	WideAccessor(const void *ptr_wide_data)
-	: m_ref_wide_data(*reinterpret_cast<const Wide<DataT, WidthT> *>(ptr_wide_data))
+	WideAccessor(void *ptr_wide_data, int derivIndex=0)
+	: m_ref_wide_data(reinterpret_cast<Wide<DataT, WidthT> *>(ptr_wide_data)[derivIndex])
 	{}
 	
 	OSL_INLINE
-	WideAccessor(const Wide<DataT, WidthT> & ref_wide_data)
+	WideAccessor(Wide<DataT, WidthT> & ref_wide_data)
 	: m_ref_wide_data(ref_wide_data)
 	{}
 	
@@ -1081,188 +1148,24 @@ struct WideAccessor
 	{}	
 	
 	
-	typedef ConstLaneProxy<DataT, WidthT> Proxy;
+	typedef LaneProxy<DataT, WidthT> Proxy;
+	typedef ConstLaneProxy<DataT, WidthT> ConstProxy;
 	
-	OSL_INLINE Proxy const 
+	OSL_INLINE ConstProxy const 
 	operator[](int index) const
+	{
+		return ConstProxy(m_ref_wide_data, index);
+	}
+
+	OSL_INLINE Proxy  
+	operator[](int index)
 	{
 		return Proxy(m_ref_wide_data, index);
 	}
-		
+	
 private:
-	const Wide<DataT, WidthT> & m_ref_wide_data;	
+	Wide<DataT, WidthT> & m_ref_wide_data;	
 };
-
-
-
-
-
-
-OSL_INLINE void robust_multVecMatrix(const Wide<Matrix44>& wx, const Wide< Imath::Vec3<float> >& wsrc, Wide< Imath::Vec3<float> >& wdst)
-{
-	OSL_INTEL_PRAGMA("forceinline recursive")
-	{
-		//OSL_INTEL_PRAGMA("ivdep")
-		//OSL_INTEL_PRAGMA("novector")
-		//OSL_INTEL_PRAGMA("nounroll")
-		//OSL_INTEL_PRAGMA("novector")
-		OSL_INTEL_PRAGMA("simd vectorlength(Wide<Matrix44>::width)")
-		for(int index=0; index < Wide<Matrix44>::width; ++index)
-		{
-		   const Matrix44 x = wx.get(index);
-		   Imath::Vec3<float> src = wsrc.get(index);
-		   
-		   //std::cout << "----src>" << src << std::endl;
-		   
-		   Imath::Vec3<float> dst;	   
-	
-		   
-		   //robust_multVecMatrix(x, src, dst);
-#if 1
-#if 0
-		   float a = src[0] * x[0][0] + src[1] * x[1][0] + src[2] * x[2][0] + x[3][0];
-		    float b = src[0] * x[0][1] + src[1] * x[1][1] + src[2] * x[2][1] + x[3][1];
-		    float c = src[0] * x[0][2] + src[1] * x[1][2] + src[2] * x[2][2] + x[3][2];
-		    float w = src[0] * x[0][3] + src[1] * x[1][3] + src[2] * x[2][3] + x[3][3];
-#else
-			   float a = src.x * x[0][0] + src.y * x[1][0] + src.z * x[2][0] + x[3][0];
-			    float b = src.x * x[0][1] + src.y * x[1][1] + src.z * x[2][1] + x[3][1];
-			    float c = src.x * x[0][2] + src.y * x[1][2] + src.z * x[2][2] + x[3][2];
-			    float w = src.x * x[0][3] + src.y * x[1][3] + src.z * x[2][3] + x[3][3];
-		    
-#endif
-
-		    if (__builtin_expect(w != 0, 1)) {
-		       dst.x = a / w;
-		       dst.y = b / w;
-		       dst.z = c / w;
-		    } else {
-		       dst.x = 0;
-		       dst.y = 0;
-		       dst.z = 0;
-		    }		   
-#endif
-		    
-		   //std::cout << "----dst>" << dst << std::endl;
-		   
-		   wdst.set(index, dst);
-		   
-		   //Imath::Vec3<float> verify = wdst.get(index);
-		   //std::cout << "---->" << verify << "<-----" << std::endl;
-		}
-	}
-}
-
-OSL_INLINE void
-avoidAliasingMultDirMatrix (const Matrix44 &M, const Vec3 &src, Vec3 &dst)
-{
-	float a = src.x * M[0][0] + src.y * M[1][0] + src.z * M[2][0];
-	float b = src.x * M[0][1] + src.y * M[1][1] + src.z * M[2][1];
-	float c = src.x * M[0][2] + src.y * M[1][2] + src.z * M[2][2];
-
-	dst.x = a;
-	dst.y = b;
-	dst.z = c;
-    
-}
-
-#if 0 // In development, not done 
-/// Multiply a matrix times a direction with derivatives to obtain
-/// a transformed direction with derivatives.
-OSL_INLINE void
-multDirMatrix (const Matrix44 &M, const Wide<Dual2<Vec3>> &win, Wide<Dual2<Vec3>> &wout)
-{   
-	OSL_INTEL_PRAGMA("forceinline recursive")
-	{
-		//OSL_INTEL_PRAGMA("ivdep")
-		//OSL_INTEL_PRAGMA("novector")
-		//OSL_INTEL_PRAGMA("nounroll")
-		//OSL_INTEL_PRAGMA("novector")
-		//OSL_INTEL_PRAGMA("simd vectorlength(Wide<Matrix44>::width)")
-		for(int index=0; index < Wide<Matrix44>::width; ++index)
-		{
-		   const Matrix44 M = win.get(index);
-		   Dual2<Imath::Vec3<float>> src = wsrc.get(index);
-		   
-		   Dual2<Imath::Vec3<float>> dst;	   
-	
-		   avoidAliasingMultDirMatrix(M, src.val(), dst.val());
-		   avoidAliasingMultDirMatrix(M, src.dx(), dst.dx());
-		   avoidAliasingMultDirMatrix(M, src.dy(), dst.dy());
-		   
-		   wout.set(index, dst);
-		}
-	}    
-}
-#endif
-
-
-/// Multiply a matrix times a vector with derivatives to obtain
-/// a transformed vector with derivatives.
-OSL_INLINE void
-robust_multVecMatrix (const Wide<Matrix44> &WM, const Wide<Dual2<Vec3>> &win, Wide<Dual2<Vec3>> &wout)
-{
-	OSL_INTEL_PRAGMA("forceinline recursive")
-	{
-		//OSL_INTEL_PRAGMA("ivdep")
-		//OSL_INTEL_PRAGMA("novector")
-		//OSL_INTEL_PRAGMA("nounroll")
-		//OSL_INTEL_PRAGMA("novector")
-		//OSL_INTEL_PRAGMA("simd vectorlength(Wide<Matrix44>::width)")
-		for(int index=0; index < Wide<Matrix44>::width; ++index)
-		{
-			const Matrix44 M = WM.get(index);			
-			const Dual2<Vec3> in = win.get(index);
-	
-			// Rearrange into a Vec3<Dual2<float> >
-			Imath::Vec3<Dual2<float> > din, dout;
-			for (int i = 0;  i < 3;  ++i)
-				din[i].set (in.val()[i], in.dx()[i], in.dy()[i]);
-		
-#if 0
-			Dual2<float> a = din[0] * M[0][0] + din[1] * M[1][0] + din[2] * M[2][0] + M[3][0];
-			Dual2<float> b = din[0] * M[0][1] + din[1] * M[1][1] + din[2] * M[2][1] + M[3][1];
-			Dual2<float> c = din[0] * M[0][2] + din[1] * M[1][2] + din[2] * M[2][2] + M[3][2];
-			Dual2<float> w = din[0] * M[0][3] + din[1] * M[1][3] + din[2] * M[2][3] + M[3][3];
-#else
-			Dual2<float> a = din.x * M[0][0] + din.y * M[1][0] + din.z * M[2][0] + M[3][0];
-			Dual2<float> b = din.x * M[0][1] + din.y * M[1][1] + din.z * M[2][1] + M[3][1];
-			Dual2<float> c = din.x * M[0][2] + din.y * M[1][2] + din.z * M[2][2] + M[3][2];
-			Dual2<float> w = din.x * M[0][3] + din.y * M[1][3] + din.z * M[2][3] + M[3][3];
-#endif
-			
-		
-			if (w.val() != 0) {
-			   dout.x = a / w;
-			   dout.y = b / w;
-			   dout.z = c / w;
-			} else {
-			   dout.x = 0;
-			   dout.y = 0;
-			   dout.z = 0;
-			}
-		
-			Dual2<Vec3> out;
-			// Rearrange back into Dual2<Vec3>
-#if 0
-			out.set (Vec3 (dout[0].val(), dout[1].val(), dout[2].val()),
-					 Vec3 (dout[0].dx(),  dout[1].dx(),  dout[2].dx()),
-					 Vec3 (dout[0].dy(),  dout[1].dy(),  dout[2].dy()));
-#else
-			out.set (Vec3 (dout.x.val(), dout.y.val(), dout.z.val()),
-					 Vec3 (dout.x.dx(),  dout.y.dx(),  dout.z.dx()),
-					 Vec3 (dout.x.dy(),  dout.y.dy(),  dout.z.dy()));
-#endif
-			
-			wout.set(index, out);
-		   
-		   //Imath::Vec3<float> verify = wdst.get(index);
-		   //std::cout << "---->" << verify << "<-----" << std::endl;
-		}
-	}
-    
-}
-
 
 
 template <typename DataT, int WidthT>
@@ -1404,14 +1307,74 @@ private:
 };
 
 
-
 template <typename DataT, int WidthT>
+struct MaskedUnboundedArrayLaneProxy
+{
+	explicit OSL_INLINE 
+	MaskedUnboundedArrayLaneProxy(Wide<DataT, WidthT> * array_of_wide_data, int array_length, const Mask & mask, int index)
+	: m_array_of_wide_data(array_of_wide_data)
+	, m_array_length(array_length)
+	, m_mask(mask)
+	, m_index(index)
+	{}
+
+	// Must provide user defined copy constructor to 
+	// get compiler to be able to follow individual 
+	// data members through back to original object
+	// when fully inlined the proxy should disappear
+	OSL_INLINE
+	MaskedUnboundedArrayLaneProxy(const MaskedUnboundedArrayLaneProxy &other)
+	: m_array_of_wide_data(other.m_array_of_wide_data)
+	, m_array_length(array_length)
+	, m_mask(other.m_mask)
+	, m_index(other.m_index)
+	{}
+	
+	OSL_INLINE int 
+	length() const { return m_array_length; }
+	
+	// Although having free helper functions
+	// might be cleaner, we choose to expose
+	// this functionality here to increase 
+	// visibility to end user whose IDE
+	// might display these methods vs. free 
+	// functions
+    OSL_INLINE bool 
+    is_on() const
+    {
+        return m_mask.is_on(m_index);
+    }
+
+    OSL_INLINE bool 
+    is_off()
+    {
+        return m_mask.is_off(m_index);
+    }
+ 
+	OSL_INLINE MaskedLaneProxy<DataT, WidthT> 
+	operator[](int array_index) const 
+	{
+		DASSERT(array_index < m_array_length);
+		return MaskedLaneProxy<DataT, WidthT>(m_array_of_wide_data[array_index], m_mask, m_index);
+	}
+	
+	
+private:
+	Wide<DataT, WidthT> * m_array_of_wide_data;
+	int m_array_length;
+	const Mask &m_mask;
+	const int m_index;
+};
+
+
+
+template <typename DataT, int WidthT = SimdLaneCount>
 struct MaskedAccessor
 {
 	static constexpr int width = WidthT; 
 	
 	explicit OSL_INLINE
-	MaskedAccessor(void *ptr_wide_data, int derivIndex, Mask mask)
+	MaskedAccessor(void *ptr_wide_data, Mask mask, int derivIndex=0)
 	: m_ref_wide_data(reinterpret_cast<Wide<DataT, WidthT> *>(ptr_wide_data)[derivIndex])
 	, m_mask(mask)
 	{}
@@ -1494,6 +1457,126 @@ private:
 	Mask m_mask;
 };
 
+template <typename DataT, int WidthT>
+struct MaskedUnboundArrayAccessor
+{
+	static constexpr int width = WidthT; 
+	
+	explicit OSL_INLINE
+	MaskedUnboundArrayAccessor(void *ptr_wide_data, int derivIndex, int array_length, Mask mask)
+	: m_array_of_wide_data(&reinterpret_cast<Wide<DataT, WidthT> *>(ptr_wide_data)[array_length*derivIndex])
+	, m_array_length(array_length)
+	, m_mask(mask)
+	{}
+	
+	// Must provide user defined copy constructor to 
+	// get compiler to be able to follow individual 
+	// data members through back to original object
+	// when fully inlined the proxy should disappear
+	OSL_INLINE
+	MaskedUnboundArrayAccessor(const MaskedUnboundArrayAccessor &other)
+	: m_array_of_wide_data(other.m_array_of_wide_data)
+	, m_array_length(other.m_array_length)
+	, m_mask(other.m_mask)
+	{}	
+	
+	
+	typedef MaskedUnboundedArrayLaneProxy<DataT, WidthT> Proxy;
+	
+	OSL_INLINE Proxy  
+	operator[](int index) 
+	{
+		return Proxy(m_array_of_wide_data, m_array_length, m_mask, index);
+	}
+
+	OSL_INLINE Proxy const  
+	operator[](int index) const
+	{
+		return Proxy(m_array_of_wide_data, m_array_length, m_mask, index);
+	}
+	
+private:
+	Wide<DataT, WidthT> * m_array_of_wide_data;
+	int m_array_length;
+	Mask m_mask;
+};
+
+
+// End users can add specialize wide for their own types
+// and specialize traits to enable them to be used in the proxies
+// NOTE: array detection is handled separately
+template <typename DataT>
+struct WideTraits; // undefined, all types used should be specialized
+//{
+	//static bool mathes(const TypeDesc &) { return false; }
+//};
+
+template <>
+struct WideTraits<float> {
+	static bool matches(const TypeDesc &type_desc) { 
+		return type_desc.basetype == TypeDesc::FLOAT && 
+		       type_desc.aggregate == TypeDesc::SCALAR; 
+	}
+};
+
+template <>
+struct WideTraits<int> {
+	static bool matches(const TypeDesc &type_desc) { 
+		return type_desc.basetype == TypeDesc::INT && 
+		       type_desc.aggregate == TypeDesc::SCALAR; 
+	}
+};
+
+template <>
+struct WideTraits<char *> {
+	static bool matches(const TypeDesc &type_desc) {
+		return type_desc.basetype == TypeDesc::STRING && 
+               type_desc.aggregate == TypeDesc::SCALAR; 
+	}
+};
+
+template <>
+struct WideTraits<ustring> {
+	static bool matches(const TypeDesc &type_desc) {
+		return type_desc.basetype == TypeDesc::STRING && 
+               type_desc.aggregate == TypeDesc::SCALAR; 
+	}
+};
+
+// We let Vec3 match any vector semantics as we don't have a seperate Point or Normal classes
+template <>
+struct WideTraits<Vec3> {
+	static bool matches(const TypeDesc &type_desc) {
+		return type_desc.basetype == TypeDesc::FLOAT && 
+		    type_desc.aggregate == TypeDesc::VEC3; 
+	}
+};
+
+template <>
+struct WideTraits<Color3> {
+	static bool matches(const TypeDesc &type_desc) {
+		return type_desc.basetype == TypeDesc::FLOAT && 
+		    type_desc.aggregate == TypeDesc::VEC3 &&
+			type_desc.vecsemantics == TypeDesc::COLOR; 
+	}
+};
+
+template <>
+struct WideTraits<Matrix33> {
+	static bool matches(const TypeDesc &type_desc) {
+		return type_desc.basetype == TypeDesc::FLOAT && 
+		type_desc.aggregate == TypeDesc::MATRIX33;
+	}
+};
+
+template <>
+struct WideTraits<Matrix44> {
+	static bool matches(const TypeDesc &type_desc) {
+		return type_desc.basetype == TypeDesc::FLOAT && 
+		    type_desc.aggregate == TypeDesc::MATRIX44; }
+};
+
+
 
 template <int WidthT = SimdLaneCount>
 class MaskedData
@@ -1531,60 +1614,65 @@ public:
 protected:
    
    
-   OSL_INLINE bool is_impl(float) const { return m_type == TypeDesc::TypeFloat; }
-   OSL_INLINE bool is_impl(int) const { return m_type == TypeDesc::TypeInt; }
-   OSL_INLINE bool is_impl(char *) const { return m_type == TypeDesc::TypeString; }
-   OSL_INLINE bool is_impl(ustring) const { return m_type == TypeDesc::TypeString; }
-   OSL_INLINE bool is_impl(Vec3) const { return m_type == TypeDesc::TypeVector; }
-   OSL_INLINE bool is_impl(Color3) const { return m_type == TypeDesc::TypeColor; }
-   OSL_INLINE bool is_impl(Matrix33) const { return m_type == TypeDesc::TypeMatrix33; }
-   OSL_INLINE bool is_impl(Matrix44) const { return m_type == TypeDesc::TypeMatrix44; }
+   template<typename DataT>
+   OSL_INLINE bool 
+   is_array_unbounded_selector(std::false_type) {
+	   return (m_type.arraylen == std::extent<DataT>::value) && 
+			   WideTraits<DataT>::matches(m_type);
+   }
 
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(float) const { return m_type == TypeDesc(TypeDesc::FLOAT, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(int) const { return m_type == TypeDesc(TypeDesc::INT32, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(char *) const { return m_type == TypeDesc(TypeDesc::STRING, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(ustring) const { return m_type == TypeDesc(TypeDesc::STRING, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(Vec3) const { return m_type == TypeDesc(TypeDesc::FLOAT, TypeDesc::VEC3, TypeDesc::VECTOR, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(Color3) const { return m_type == TypeDesc(TypeDesc::FLOAT, TypeDesc::VEC3, TypeDesc::COLOR, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(Matrix33) const { return m_type == TypeDesc(TypeDesc::FLOAT, TypeDesc::MATRIX33, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(Matrix44) const { return m_type == TypeDesc(TypeDesc::FLOAT, TypeDesc::MATRIX44, ArrayLenT); }
-
+   template<typename DataT>
+   OSL_INLINE bool 
+   is_array_unbounded_selector(std::true_type) {
+	   return (m_type.arraylen != 0) 
+			  && WideTraits<DataT>::matches(m_type);
+   }
+   
    
    template<typename DataT>
    OSL_INLINE bool 
    is_array_selector(std::false_type) {
-	   return is_impl(DataT());
+	   return (m_type.arraylen == 0) && 
+			   WideTraits<DataT>::matches(m_type);
    }
 
    template<typename DataT>
    OSL_INLINE bool 
    is_array_selector(std::true_type) {
-	   return is_array_impl<std::extent<DataT>::value>(std::remove_all_extents<DataT>::type());
-   }
-   
+	   typedef typename std::remove_all_extents<DataT>::type ElementType;
+	   return is_array_unbounded_selector<ElementType>(std::integral_constant<bool, (std::extent<DataT>::value == 0)>());
+   }   
   
    template<typename DataT, int DerivIndexT>
    OSL_INLINE MaskedAccessor<DataT, WidthT>
-   masked_impl(std::false_type) 
+   masked_impl(std::false_type /*is array*/) 
    { 
 	   DASSERT(is<DataT>());
-	   return MaskedAccessor<DataT, WidthT>(m_ptr, DerivIndexT, m_mask);
+	   return MaskedAccessor<DataT, WidthT>(m_ptr, m_mask, DerivIndexT);
+   }
+
+   template<typename DataT, int DerivIndexT>
+   OSL_INLINE MaskedUnboundArrayAccessor<typename std::remove_all_extents<DataT>::type, WidthT>
+   masked_array_impl(std::true_type /*is unbounded array*/) 
+   { 
+	   DASSERT(is<DataT>());
+	   return MaskedUnboundArrayAccessor<typename std::remove_all_extents<DataT>::type, WidthT>(m_ptr, DerivIndexT, m_type.arraylen, m_mask);
    }
 
    template<typename DataT, int DerivIndexT>
    OSL_INLINE MaskedArrayAccessor<typename std::remove_all_extents<DataT>::type, std::extent<DataT>::value, WidthT>
-   masked_impl(std::true_type) 
+   masked_array_impl(std::false_type /*is unbounded array*/) 
    { 
 	   DASSERT(is<DataT>());
 	   return MaskedArrayAccessor<typename std::remove_all_extents<DataT>::type, std::extent<DataT>::value, WidthT>(m_ptr, DerivIndexT, m_mask);
+   }
+   
+   template<typename DataT, int DerivIndexT>
+   OSL_INLINE decltype(std::declval<MaskedData<WidthT>>().masked_array_impl<DataT, DerivIndexT>(std::integral_constant<bool, (std::extent<DataT>::value == 0)>()))  
+   masked_impl(std::true_type /*is array*/) 
+   { 
+	   DASSERT(is<DataT>());
+	   return masked_array_impl<DataT, DerivIndexT>(std::integral_constant<bool, (std::extent<DataT>::value == 0)>());
    }
    
 public:
@@ -1736,6 +1824,50 @@ private:
 };
 
 
+
+template <typename DataT>
+struct RefUnboundedArrayProxy
+{
+	OSL_INLINE 
+	explicit RefUnboundedArrayProxy(DataT *array_data, int array_length)
+	: m_array_data(array_data)
+	, m_array_length(array_length)
+	{}
+
+	// Must provide user defined copy constructor to 
+	// get compiler to be able to follow individual 
+	// data members through back to original object
+	// when fully inlined the proxy should disappear
+	OSL_INLINE
+	RefUnboundedArrayProxy(const RefUnboundedArrayProxy &other)
+	: m_array_data(other.m_array_data)
+	, m_array_length(other.m_array_length)
+	{}
+	
+	OSL_INLINE int 
+	length() const { return m_array_length; }
+	
+	OSL_INLINE DataT & 
+	operator[](int array_index)  
+	{
+		DASSERT(array_index >= 0 && array_index < m_array_length);
+		return m_array_data[array_index];
+	}
+
+	OSL_INLINE DataT const & 
+	operator[](int array_index) const  
+	{
+		DASSERT(array_index >= 0 && array_index < m_array_length);
+		return m_array_data[array_index];
+	}
+	
+private:
+	DataT * m_array_data;
+	int m_array_length;
+};
+
+
+
 class DataRef
 {
     void *m_ptr;
@@ -1766,66 +1898,70 @@ public:
    
 protected:
    
-   // TODO: see if impl can be shared with MaskedData
-   OSL_INLINE bool is_impl(float) const { return m_type == TypeDesc::TypeFloat; }
-   OSL_INLINE bool is_impl(int) const { return m_type == TypeDesc::TypeInt; }
-   OSL_INLINE bool is_impl(char *) const { return m_type == TypeDesc::TypeString; }
-   OSL_INLINE bool is_impl(ustring) const { return m_type == TypeDesc::TypeString; }
-   OSL_INLINE bool is_impl(Vec3) const { return m_type == TypeDesc::TypeVector; }
-   OSL_INLINE bool is_impl(Color3) const { return m_type == TypeDesc::TypeColor; }
-   OSL_INLINE bool is_impl(Matrix33) const { return m_type == TypeDesc::TypeMatrix33; }
-   OSL_INLINE bool is_impl(Matrix44) const { return m_type == TypeDesc::TypeMatrix44; }
+   // TODO: see if impl can be shared with MaskedData   
+   template<typename DataT>
+   OSL_INLINE bool 
+   is_array_unbounded_selector(std::false_type) {
+	   return (m_type.arraylen == std::extent<DataT>::value) && 
+			   WideTraits<DataT>::matches(m_type);
+   }
 
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(float) const { return m_type == TypeDesc(TypeDesc::FLOAT, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(int) const { return m_type == TypeDesc(TypeDesc::INT32, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(char *) const { return m_type == TypeDesc(TypeDesc::STRING, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(ustring) const { return m_type == TypeDesc(TypeDesc::STRING, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(Vec3) const { return m_type == TypeDesc(TypeDesc::FLOAT, TypeDesc::VEC3, TypeDesc::VECTOR, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(Color3) const { return m_type == TypeDesc(TypeDesc::FLOAT, TypeDesc::VEC3, TypeDesc::COLOR, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(Matrix33) const { return m_type == TypeDesc(TypeDesc::FLOAT, TypeDesc::MATRIX33, ArrayLenT); }
-   template <int ArrayLenT>
-   OSL_INLINE bool is_array_impl(Matrix44) const { return m_type == TypeDesc(TypeDesc::FLOAT, TypeDesc::MATRIX44, ArrayLenT); }
-
+   template<typename DataT>
+   OSL_INLINE bool 
+   is_array_unbounded_selector(std::true_type) {
+	   return (m_type.arraylen != 0) 
+			  && WideTraits<DataT>::matches(m_type);
+   }
+   
    
    template<typename DataT>
    OSL_INLINE bool 
    is_array_selector(std::false_type) {
-	   return is_impl(DataT());
+	   return (m_type.arraylen == 0) && 
+			   WideTraits<DataT>::matches(m_type);
    }
 
    template<typename DataT>
    OSL_INLINE bool 
    is_array_selector(std::true_type) {
-	   return is_array_impl<std::extent<DataT>::value>(std::remove_all_extents<DataT>::type());
-   }
+	   typedef typename std::remove_all_extents<DataT>::type ElementType;
+	   return is_array_unbounded_selector<ElementType>(std::integral_constant<bool, (std::extent<DataT>::value == 0)>());
+   }   
    
-  
+   
    template<typename DataT, int DerivIndexT>
-   //OSL_INLINE DataT &
    OSL_INLINE RefProxy<DataT>
-   ref_impl(std::false_type) 
+   ref_impl(std::false_type /* is array */) 
    { 
 	   DASSERT(is<DataT>());	   
-	   //return reinterpret_cast<DataT *>(m_ptr)[DerivIndexT];
 	   return RefProxy<DataT>(reinterpret_cast<DataT *>(m_ptr)[DerivIndexT]);
    }
 
-   // TODO: consider returning a proxy to enable array index bounds checking
    template<typename DataT, int DerivIndexT>
    OSL_INLINE RefArrayProxy<typename std::remove_all_extents<DataT>::type, std::extent<DataT>::value> 
-   ref_impl(std::true_type) 
+   ref_array_impl(std::false_type /* is array unbounded*/) 
+   { 
+	   DASSERT(is<DataT>());	   
+	   // NOTE: DataT is a fixed size array, so the array length is baked into it, 
+	   // thus the DerivIndex will step over the whole array, no need to multiply it
+	   return RefArrayProxy<typename std::remove_all_extents<DataT>::type, std::extent<DataT>::value>(reinterpret_cast<DataT *>(m_ptr)[DerivIndexT]);
+   }
+
+   template<typename DataT, int DerivIndexT>
+   OSL_INLINE RefUnboundedArrayProxy<typename std::remove_all_extents<DataT>::type> 
+   ref_array_impl(std::true_type /* is array unbounded*/) 
    { 
 	   DASSERT(is<DataT>());
-	   //return &(reinterpret_cast<DataT *>(m_ptr)[std::extent<DataT>::value*derivIndex]);
-	   
-	   return RefArrayProxy<typename std::remove_all_extents<DataT>::type, std::extent<DataT>::value>(reinterpret_cast<DataT *>(m_ptr)[DerivIndexT]);
+	   typedef typename std::remove_all_extents<DataT>::type ElementType;
+	   return RefUnboundedArrayProxy<ElementType>(&(reinterpret_cast<ElementType *>(m_ptr)[DerivIndexT*m_type.arraylen]), m_type.arraylen);
+   }
+   
+   template<typename DataT, int DerivIndexT>
+   OSL_INLINE decltype(std::declval<DataRef>().ref_array_impl<DataT, DerivIndexT>(std::integral_constant<bool, (std::extent<DataT>::value == 0)>()))  
+   ref_impl(std::true_type/* is array */) 
+   { 
+	   DASSERT(is<DataT>());
+	   return ref_array_impl<DataT, DerivIndexT>(std::integral_constant<bool, (std::extent<DataT>::value == 0)>());
    }
    
 public:

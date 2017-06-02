@@ -466,7 +466,7 @@ struct alignas(64) ShaderGlobalsBatch
 	using  OutputData = Wide<T, maxSize>;
 	
 	template<typename DataT>
-	using OutputAccessor = WideAccessor<DataT, maxSize>;
+	using OutputAccessor = ConstWideAccessor<DataT, maxSize>;
 	
 	void dump()
 	{

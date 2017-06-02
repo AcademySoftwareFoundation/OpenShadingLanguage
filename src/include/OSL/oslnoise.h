@@ -277,10 +277,7 @@ struct CellNoise {
 	inline void operator() (Wide<float, WidthT> &wresult, const Wide<float, WidthT> &wx) const {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			//OSL_INTEL_PRAGMA("ivdep")
-			//OSL_INTEL_PRAGMA("vector always assert")
-			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
-			//OSL_INTEL_PRAGMA("novector")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
 			for(int i=0; i< WidthT; ++i) {
 				const float x = wx.get(i);
 				float result;
@@ -310,10 +307,7 @@ struct CellNoise {
 	inline void operator() (Wide<float, WidthT> &wresult, const Wide<Vec3, WidthT> &wp) const {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			//OSL_INTEL_PRAGMA("ivdep")
-			//OSL_INTEL_PRAGMA("vector always assert")
-			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
-			//OSL_INTEL_PRAGMA("novector")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")										
 			for(int i=0; i< WidthT; ++i) {
 				const Vec3 p = wp.get(i);
 				float result;
@@ -342,10 +336,7 @@ struct CellNoise {
 	inline void operator() (Wide<Vec3, WidthT> &wresult, const Wide<float, WidthT> &wx) const {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			//OSL_INTEL_PRAGMA("ivdep")
-			//OSL_INTEL_PRAGMA("vector always assert")
-			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
-			//OSL_INTEL_PRAGMA("novector")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
 			for(int i=0; i< WidthT; ++i) {
 				const float x = wx.get(i);
 				Vec3 result;
@@ -375,10 +366,7 @@ struct CellNoise {
 	inline void operator() (Wide<Vec3, WidthT> &wresult, const Wide<Vec3, WidthT> &wp) const {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			//OSL_INTEL_PRAGMA("ivdep")
-			//OSL_INTEL_PRAGMA("vector always assert")
-			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
-			//OSL_INTEL_PRAGMA("novector")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
 			for(int i=0; i< WidthT; ++i) {
 				const Vec3 p = wp.get(i);
 				Vec3 result;
@@ -402,10 +390,7 @@ struct CellNoise {
     inline void operator() (Wide<Vec3, WidthT> &wresult, const Wide<Vec3, WidthT> &wp, Wide<float, WidthT> wt) const {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			//OSL_INTEL_PRAGMA("ivdep")
-			//OSL_INTEL_PRAGMA("vector always assert")
-			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
-			//OSL_INTEL_PRAGMA("novector")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
 			for(int i=0; i< WidthT; ++i) {
 				const Vec3 p = wp.get(i);
 				const float t = wt.get(i);
@@ -2126,10 +2111,7 @@ struct Noise {
 	inline void operator() (Wide<float, WidthT> &result, const Wide<float, WidthT> &wx) const {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			//OSL_INTEL_PRAGMA("ivdep")
-			//OSL_INTEL_PRAGMA("vector always assert")
-			OSL_INTEL_PRAGMA("simd assert")
-			//OSL_INTEL_PRAGMA("novector") 
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
 			for(int i=0; i< WidthT; ++i) {
 				float x = wx.get(i);
 				float perlinResult;
@@ -2156,10 +2138,7 @@ struct Noise {
 	inline void operator() (Wide<float, WidthT> &result, const Wide<Vec3, WidthT> &wp) const {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			//OSL_INTEL_PRAGMA("ivdep")
-			//OSL_INTEL_PRAGMA("vector always assert")
-			OSL_INTEL_PRAGMA("simd assert")
-			//OSL_INTEL_PRAGMA("novector") 
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp.get(i);
 				float perlinResult;
@@ -2187,10 +2166,7 @@ struct Noise {
 	inline void operator() (Wide<Vec3, WidthT> &result, const Wide<float, WidthT> &wx) const {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			//OSL_INTEL_PRAGMA("ivdep")
-			//OSL_INTEL_PRAGMA("vector always assert")
-			OSL_INTEL_PRAGMA("simd assert")
-			//OSL_INTEL_PRAGMA("novector") 
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
 			for(int i=0; i< WidthT; ++i) {
 				float x = wx.get(i);
 				Vec3 perlinResult;
@@ -2219,10 +2195,7 @@ struct Noise {
 	inline void operator() (Wide<Vec3, WidthT> &result, const Wide<Vec3, WidthT> &wp) const {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			//OSL_INTEL_PRAGMA("ivdep")
-			//OSL_INTEL_PRAGMA("vector always assert")
-			OSL_INTEL_PRAGMA("simd assert")
-			//OSL_INTEL_PRAGMA("novector") 
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp.get(i);
 				Vec3 perlinResult;
@@ -2244,10 +2217,7 @@ struct Noise {
     inline void operator() (Wide<Vec3, WidthT>  &result, const Wide<Vec3, WidthT> &wp, Wide<float, WidthT> & wt) const {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			//OSL_INTEL_PRAGMA("ivdep")
-			//OSL_INTEL_PRAGMA("vector always assert")
-			OSL_INTEL_PRAGMA("simd assert")
-			//OSL_INTEL_PRAGMA("novector") 
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp.get(i);
 				float t = wt.get(i);
@@ -2335,10 +2305,7 @@ struct SNoise {
 	inline void operator() (Wide<float, WidthT> &result, const Wide<float, WidthT> &wx) const {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			//OSL_INTEL_PRAGMA("ivdep")
-			//OSL_INTEL_PRAGMA("vector always assert")
-			OSL_INTEL_PRAGMA("simd assert")
-			//OSL_INTEL_PRAGMA("novector")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
 			for(int i=0; i< WidthT; ++i) {
 				float x = wx.get(i);
 				float perlinResult;
@@ -2362,10 +2329,7 @@ struct SNoise {
 	inline void operator() (Wide<float, WidthT> &result, const Wide<Vec3, WidthT> &wp) const {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			//OSL_INTEL_PRAGMA("ivdep")
-			//OSL_INTEL_PRAGMA("vector always assert")
-			OSL_INTEL_PRAGMA("simd assert")
-			//OSL_INTEL_PRAGMA("novector")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp.get(i);
 				float perlinResult;
@@ -2390,10 +2354,7 @@ struct SNoise {
 	inline void operator() (Wide<Vec3, WidthT> &result, const Wide<float, WidthT> &wx) const {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			//OSL_INTEL_PRAGMA("ivdep")
-			//OSL_INTEL_PRAGMA("vector always assert")
-			OSL_INTEL_PRAGMA("simd assert")
-			//OSL_INTEL_PRAGMA("novector")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
 			for(int i=0; i< WidthT; ++i) {
 				float x = wx.get(i);
 				Vec3 perlinResult;
@@ -2419,10 +2380,7 @@ struct SNoise {
 	inline void operator() (Wide<Vec3, WidthT> &result, const Wide<Vec3, WidthT> &wp) const {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			//OSL_INTEL_PRAGMA("ivdep")
-			//OSL_INTEL_PRAGMA("vector always assert")
-			OSL_INTEL_PRAGMA("simd assert")
-			//OSL_INTEL_PRAGMA("novector")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp.get(i);
 				Vec3 perlinResult;
@@ -2442,10 +2400,7 @@ struct SNoise {
 	inline void operator() (Wide<Vec3, WidthT> &result, const Wide<Vec3, WidthT> &wp, const Wide<float, WidthT> &wt) const {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			//OSL_INTEL_PRAGMA("ivdep")
-			//OSL_INTEL_PRAGMA("vector always assert")
-			OSL_INTEL_PRAGMA("simd assert")
-			//OSL_INTEL_PRAGMA("novector")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp.get(i);
 				float t = wt.get(i);
@@ -2968,8 +2923,7 @@ struct SimplexNoise {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
 #ifndef OSL_VERIFY_SIMPLEX3  			
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
 #endif
 			for(int i=0; i< WidthT; ++i) {
 				float x = wx.get(i);
@@ -2994,11 +2948,7 @@ struct SimplexNoise {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
 #ifndef OSL_VERIFY_SIMPLEX3  			
-			OSL_INTEL_PRAGMA("ivdep")
-			//OSL_INTEL_PRAGMA("vector always assert")
-			//OSL_INTEL_PRAGMA("vector aligned")
-			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
-			//OSL_INTEL_PRAGMA("novector")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
 #endif
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp.get(i);
@@ -3025,11 +2975,7 @@ struct SimplexNoise {
     inline void operator() (Wide<Vec3, WidthT> &wresult, const Wide<float, WidthT> &wx) const {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			//OSL_INTEL_PRAGMA("vector always assert")
-			//OSL_INTEL_PRAGMA("vector aligned")
-			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
-			//OSL_INTEL_PRAGMA("novector")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
 			for(int i=0; i< WidthT; ++i) {
 				float x = wx.get(i);
 				//float result = simplexnoise3 (p.x, p.y, p.z);
@@ -3057,11 +3003,7 @@ struct SimplexNoise {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
 #ifndef OSL_VERIFY_SIMPLEX3  			
-			OSL_INTEL_PRAGMA("ivdep")
-			//OSL_INTEL_PRAGMA("vector always assert")
-			//OSL_INTEL_PRAGMA("vector aligned")
-			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
-			//OSL_INTEL_PRAGMA("novector")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
 #endif
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp.get(i);
@@ -3171,8 +3113,7 @@ struct USimplexNoise {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
 #ifndef OSL_VERIFY_SIMPLEX3  
-			OSL_INTEL_PRAGMA("ivdep")
-			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
 #endif
 			for(int i=0; i< WidthT; ++i) {
 				float x = wx.get(i);
@@ -3196,10 +3137,7 @@ struct USimplexNoise {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
 #ifndef OSL_VERIFY_SIMPLEX3  
-			OSL_INTEL_PRAGMA("ivdep")
-			//OSL_INTEL_PRAGMA("vector always assert")
-			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
-			//OSL_INTEL_PRAGMA("novector")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
 #endif
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp.get(i);
@@ -3226,10 +3164,7 @@ struct USimplexNoise {
     inline void operator() (Wide<Vec3, WidthT> &wresult, const Wide<float, WidthT> &wx) const {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("ivdep")
-			//OSL_INTEL_PRAGMA("vector always assert")
-			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
-			//OSL_INTEL_PRAGMA("novector")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
 			for(int i=0; i< WidthT; ++i) {
 				float x = wx.get(i);
 				
@@ -3258,10 +3193,7 @@ struct USimplexNoise {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
 #ifndef OSL_VERIFY_SIMPLEX3  
-			OSL_INTEL_PRAGMA("ivdep")
-			//OSL_INTEL_PRAGMA("vector always assert")
-			OSL_INTEL_PRAGMA("simd assert vectorlength(WidthT)")
-			//OSL_INTEL_PRAGMA("novector")
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
 #endif
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp.get(i);

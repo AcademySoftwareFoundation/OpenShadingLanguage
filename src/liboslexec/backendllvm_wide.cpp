@@ -433,6 +433,10 @@ public:
 		
 		OSL_INLINE int 
 		operator()() const { return m_index; }
+		
+		bool operator==(const Position & other) const {
+			return m_index == other.m_index;
+		}
 	};
 	
 	static OSL_INLINE Position end_pos() { return Position(-1); }
@@ -547,7 +551,23 @@ public:
 		ASSERT(m_top_of_stack() != end_pos()());
 		m_top_of_stack = m_nodes[m_top_of_stack()].parent;
 	}
+	
+	
+	
+	bool isDescendentOrSelf(Position pos, Position potentialAncestor)
+	{
+		auto endAt = end();
+		auto iter = begin_at(pos); 
+		// allow testing of pos == potentialAncestor when potentialAncestor == end_pos()
+		do {
+			if (iter.pos() == potentialAncestor) {
+				return true;
+			}
+		} while (iter++ != endAt);
+		return false;
+	}
 };
+
 
 
 void 
@@ -570,18 +590,15 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	
 	std::unordered_multimap<const Symbol * /* parent */ , const Symbol * /* dependent */> symbolFeedForwardMap;
 
-	struct UsageInfo
+	struct WriteEvent
 	{
-		int last_depth;
-		int last_maskId;
-		std::vector <std::pair<int /*blockDepth*/, int /*op_num*/>> potentially_unmasked_ops;
-		
-		UsageInfo()
-		:last_depth(0)
-		,last_maskId(0)
-		{}				
+		DependencyTreeTracker::Position pos_in_tree;
+		int op_num;		
 	};
-	std::unordered_map<const Symbol *, UsageInfo > usageInfoBySymbol;
+	
+	typedef std::vector<WriteEvent> WriteChronology;
+	
+	std::unordered_map<const Symbol *, WriteChronology > potentiallyUnmaskedOpsBySymbol;
 	
 	DependencyTreeTracker stackOfSymbolsCurrentBlockDependsOn;
 	
@@ -592,42 +609,44 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
     std::vector<const Symbol *> symbolsWrittenToByVaryingGetAttribute;
 
 	
-	std::function<void(const Symbol *, int, int)> ensureWritesAtLowerDepthAreMasked;
-	ensureWritesAtLowerDepthAreMasked = [&](const Symbol *symbolToCheck, int blockDepth, int maskId)->void {			    			
+	std::function<void(const Symbol *, DependencyTreeTracker::Position)> ensureWritesAtLowerDepthAreMasked;
+	ensureWritesAtLowerDepthAreMasked = [&](const Symbol *symbolToCheck, DependencyTreeTracker::Position readAtPos)->void {			    			
 		// Check if reading a Symbol that was written to from a different 
-		// maskId than we are reading, if so we need to mark it as requiring masking
-		auto lookup = usageInfoBySymbol.find(symbolToCheck);
-		if(lookup != usageInfoBySymbol.end()) {
-			UsageInfo & info = lookup->second;
-			if ((info.last_depth > blockDepth) && (info.last_maskId != maskId))
-			{
-				std::cout << symbolToCheck->name() << " will need to have last write be masked" << std::endl;
-				ASSERT(info.potentially_unmasked_ops.empty() == false);
-				decltype(info.potentially_unmasked_ops) remaining_ops;
-				for(auto usage: info.potentially_unmasked_ops) {
-					// Only mark deeper usages as requiring masking
-					if(usage.first > blockDepth)
-					{
-						std::cout << " marking op " << usage.second << " as masked" << std::endl;
-						m_requires_masking_by_layer_and_op_index[layer()][usage.second] = true;									
-					} else {
-						remaining_ops.push_back(usage);
+		// dependency lineage than we are reading, if so we need to mark it as requiring masking
+		auto lookup = potentiallyUnmaskedOpsBySymbol.find(symbolToCheck);
+		if(lookup != potentiallyUnmaskedOpsBySymbol.end()) {
+			auto & write_chronology = lookup->second;
+			if (!write_chronology.empty()) {
+				// We only need to consider the last block that wrote to the symbol being read
+				auto backIter = --write_chronology.end();
+				if (false == stackOfSymbolsCurrentBlockDependsOn.isDescendentOrSelf(readAtPos, backIter->pos_in_tree))
+				{
+					std::cout << " marking op " << backIter->op_num << " as masked" << std::endl;
+					m_requires_masking_by_layer_and_op_index[layer()][backIter->op_num] = true;
+					
+					WriteChronology remaining_ops;
+					// Now that we have to do masking, go through all older writes and update them
+					// if they have a different lineage, if not keep them for consideration by
+					// other reads
+					for (auto writeIter=write_chronology.begin(); writeIter != backIter; ++writeIter) {
+						if (false == stackOfSymbolsCurrentBlockDependsOn.isDescendentOrSelf(readAtPos, writeIter->pos_in_tree))
+						{
+							std::cout << " marking op " << writeIter->op_num << " as masked" << std::endl;
+							m_requires_masking_by_layer_and_op_index[layer()][writeIter->op_num] = true;
+						} else {
+							// Keep any writes that share the same lineage
+							remaining_ops.push_back(*writeIter);
+						}
 					}
+					lookup->second.swap(remaining_ops);		
+					// we can now consider the matter handled at this point
 				}
-				
-				info.potentially_unmasked_ops.swap(remaining_ops);		
-				// Now that all ops writing to the symbol at higher depths have been marked to be masked
-				// we can now consider the matter handled at this point at reset the
-				// last_depth written at to the current depth to avoid needlessly repeating the work.
-				info.last_depth = blockDepth;
 			}
 		}
 	};
     
-	int nextMaskId = 0;
-	int blockId = 0;
-	std::function<void(int, int, int, int, int, int)> discoverSymbolsBetween;
-	discoverSymbolsBetween = [&](int beginop, int endop, int blockDepth, int writeBlockDepth, int maskId, int writeMaskId)->void
+	std::function<void(int, int)> discoverSymbolsBetween;
+	discoverSymbolsBetween = [&](int beginop, int endop)->void
 	{		
 		std::cout << "discoverSymbolsBetween [" << beginop << "-" << endop <<"]" << std::endl;
 		// NOTE: allowing a seperate writeMask is to handle condition blocks that are self modifying
@@ -672,15 +691,13 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					}
 				}		
 				
-				ensureWritesAtLowerDepthAreMasked(symbolReadFrom, blockDepth, maskId);
+				ensureWritesAtLowerDepthAreMasked(symbolReadFrom, stackOfSymbolsCurrentBlockDependsOn.top_pos());
 			}
 			
 			for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
 				const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
-				UsageInfo & info = usageInfoBySymbol[symbolWrittenTo];
-				info.last_depth = writeBlockDepth;
-				info.last_maskId = writeMaskId;
-				info.potentially_unmasked_ops.push_back(std::make_pair(writeBlockDepth, opIndex));
+				potentiallyUnmaskedOpsBySymbol[symbolWrittenTo].push_back(
+					WriteEvent{stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex});
 			}
 			
 			// Add dependencies between symbols written to in this basic block
@@ -721,15 +738,18 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					pushSymbolsCurentBlockDependsOn();
 					// Then block
 					std::cout << " THEN BLOCK BEGIN" << std::endl;
-					int thenBlockDepth = blockDepth+1;
-					int thenMaskId = nextMaskId++;
-					discoverSymbolsBetween(opIndex+1, opcode.jump(0), thenBlockDepth, thenBlockDepth, thenMaskId, thenMaskId);
+					discoverSymbolsBetween(opIndex+1, opcode.jump(0));
 					std::cout << " THEN BLOCK END" << std::endl;
+					popSymbolsCurentBlockDependsOn();
+					
 					// else block
+					// NOTE: we are purposefully pushing the same symbol back onto the 
+					// dependency tree, this is necessary so that the else block receives
+					// its own unique position in the the dependency tree that we can
+					// tell is different from the then block
+					pushSymbolsCurentBlockDependsOn();
 					std::cout << " ELSE BLOCK BEGIN" << std::endl;
-					int elseBlockDepth = blockDepth+1;
-					int elseMaskId = nextMaskId++;
-					discoverSymbolsBetween(opcode.jump(0), opcode.jump(1), elseBlockDepth, elseBlockDepth, elseMaskId, elseMaskId);
+					discoverSymbolsBetween(opcode.jump(0), opcode.jump(1));
 					std::cout << " ELSE BLOCK END" << std::endl;
 					
 					popSymbolsCurentBlockDependsOn();
@@ -739,11 +759,12 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					// Init block
 					// NOTE: init block doesn't depend on the for loops conditions and should be exempt
 					std::cout << " FOR INIT BLOCK BEGIN" << std::endl;
-					discoverSymbolsBetween(opIndex+1, opcode.jump(0), blockDepth, blockDepth, maskId, maskId);
+					discoverSymbolsBetween(opIndex+1, opcode.jump(0));
 					std::cout << " FOR INIT BLOCK END" << std::endl;
 
-					int depthForBodyAndStep = blockDepth+1;
-					int maskIdForBodyAndStep = nextMaskId++;
+					// Save for use later
+					auto treatConditionalAsBeingReadAt = stackOfSymbolsCurrentBlockDependsOn.top_pos();
+							
 					pushSymbolsCurentBlockDependsOn();
 					
 					// Only coding for a single conditional variable
@@ -753,7 +774,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					
 					// Body block
 					std::cout << " FOR BODY BLOCK BEGIN" << std::endl;
-					discoverSymbolsBetween(opcode.jump(1), opcode.jump(2), depthForBodyAndStep, depthForBodyAndStep, maskIdForBodyAndStep, maskIdForBodyAndStep);
+					discoverSymbolsBetween(opcode.jump(1), opcode.jump(2));
 					std::cout << " FOR BODY BLOCK END" << std::endl;
 										
 					// Step block
@@ -761,8 +782,10 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					// when the loop condition block returns false, that means if 
 					// the loop condition block is varying, then so would the condition block
 					std::cout << " FOR STEP BLOCK BEGIN" << std::endl;
-					discoverSymbolsBetween(opcode.jump(2), opcode.jump(3), depthForBodyAndStep, depthForBodyAndStep, maskIdForBodyAndStep, maskIdForBodyAndStep);
+					discoverSymbolsBetween(opcode.jump(2), opcode.jump(3));
 					std::cout << " FOR STEP BLOCK END" << std::endl;
+					
+					popSymbolsCurentBlockDependsOn();
 
 					
 				
@@ -772,8 +795,10 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					// subsequent executions will depend on it on the previous loop's mask
 					// We are processing the condition block out of order so that
 					// any writes to any symbols it depends on can be marked first
+					pushSymbolsCurentBlockDependsOn();
+					
 					std::cout << " FOR COND BLOCK BEGIN" << std::endl;
-					discoverSymbolsBetween(opcode.jump(0), opcode.jump(1), blockDepth, depthForBodyAndStep, maskId, maskIdForBodyAndStep);
+					discoverSymbolsBetween(opcode.jump(0), opcode.jump(1));
 					std::cout << " FOR COND BLOCK END" << std::endl;
 
 					// Special case for symbols that are conditions
@@ -782,7 +807,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					// executing the loop, we need any writes to the
 					// condition to be masked
 					const Symbol * condition = opargsym (opcode, 0);
-					ensureWritesAtLowerDepthAreMasked(condition, blockDepth, maskId);
+					ensureWritesAtLowerDepthAreMasked(condition, treatConditionalAsBeingReadAt);
 					
 					popSymbolsCurentBlockDependsOn();
 					ASSERT(loopControlFlowSymbolStack.back() == symbolsReadByOp[0]);
@@ -794,7 +819,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					// Function call itself operates on the same symbol dependencies
 					// as the current block, there was no conditionals involved
 					std::cout << " FUNCTION CALL BLOCK BEGIN" << std::endl;
-					discoverSymbolsBetween(opIndex+1, opcode.jump(0), blockDepth, writeBlockDepth, maskId, writeMaskId);
+					discoverSymbolsBetween(opIndex+1, opcode.jump(0));
 					std::cout << " FUNCTION CALL BLOCK END" << std::endl;
 					
 				} else {
@@ -825,13 +850,8 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 
 				// Also update the usageInfo for the loop conditional to mark it as being written to
 				// by the break operation (which it would be in varying scenario
-				UsageInfo & info = usageInfoBySymbol[loopCondition];
-				if (writeBlockDepth > info.last_depth)
-				{
-					info.last_depth = writeBlockDepth;
-					info.last_maskId = writeMaskId;
-				}
-				info.potentially_unmasked_ops.push_back(std::make_pair(writeBlockDepth, opIndex));
+				potentiallyUnmaskedOpsBySymbol[loopCondition].push_back(
+					WriteEvent{stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex});
 			}
             if (opcode.opname() == op_getattribute)
             {
@@ -874,8 +894,6 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 		}
 	};
 	
-	int mainMask = nextMaskId++;
-
 	// NOTE:  The order symbols are discovered should match the flow
 	// of build_llvm_code calls coming from build_llvm_instance 
 	// And build_llvm_code is called indirectly throught llvm_assign_initial_value.
@@ -902,7 +920,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 		{
 			if (s.has_init_ops() && s.valuesource() == Symbol::DefaultVal) {
 				// Handle init ops.
-				discoverSymbolsBetween(s.initbegin(), s.initend(), 0, 0, mainMask, mainMask);
+				discoverSymbolsBetween(s.initbegin(), s.initend());
 			}
 		}
 	}
@@ -927,11 +945,11 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 		// Set initial value for params (may contain init ops)
 		if (s.has_init_ops() && s.valuesource() == Symbol::DefaultVal) {
 			// Handle init ops.
-			discoverSymbolsBetween(s.initbegin(), s.initend(), 0, 0, mainMask, mainMask);
+			discoverSymbolsBetween(s.initbegin(), s.initend());
 		}
 	}    	
 	
-	discoverSymbolsBetween(inst()->maincodebegin(), inst()->maincodeend(), 0, 0, mainMask, mainMask);
+	discoverSymbolsBetween(inst()->maincodebegin(), inst()->maincodeend());
 	
 	// Now that all of the instructions have been discovered, we need to
 	// make sure any writes to the output parameters that happened at 
@@ -947,7 +965,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 			  && ! s.renderer_output())
 			continue;
 		if (s.symtype() == SymTypeOutputParam) {
-			ensureWritesAtLowerDepthAreMasked(&s, 0, mainMask);
+			ensureWritesAtLowerDepthAreMasked(&s, stackOfSymbolsCurrentBlockDependsOn.end_pos());
 		}
 	}    	
 	
@@ -1841,8 +1859,10 @@ BackendLLVMWide::llvm_call_function (const char *name,
                                       bool functionIsLlvmInlined,
                                       bool ptrToReturnStructIs1stArg)
 {
+	bool requiresMasking = ptrToReturnStructIs1stArg && ll.is_masking_enabled();
+	
     std::vector<llvm::Value *> valargs;
-    valargs.resize ((size_t)nargs);
+    valargs.resize ((size_t)nargs + (requiresMasking ? 1 : 0));
     for (int i = 0;  i < nargs;  ++i) {
         const Symbol &s = *(symargs[i]);
         const TypeSpec &t = s.typespec();
@@ -1887,8 +1907,21 @@ BackendLLVMWide::llvm_call_function (const char *name,
             valargs[i] = llvm_load_value (s, /*deriv*/ 0, /*component*/ 0, TypeDesc::UNKNOWN, function_is_uniform);
         }
     }
-    std::cout << "call_function " << name << std::endl;
-    llvm::Value * func_call = ll.call_function (name, (valargs.size())? &valargs[0]: NULL,
+    
+    std::string modifiedName(name);
+    if (requiresMasking) {
+    	if(functionIsLlvmInlined) {
+    		// For inlined functions, keep the native mask type 
+    		valargs[nargs] = ll.current_mask();
+    	} else {
+    		// For non-inlined functions, cast the mask to an int32 
+    		valargs[nargs] = ll.mask_as_int(ll.current_mask());
+    	}
+    	modifiedName += "_masked";
+    }
+    
+    std::cout << "call_function " << modifiedName << std::endl;
+    llvm::Value * func_call = ll.call_function (modifiedName.c_str(), (valargs.size())? &valargs[0]: NULL,
                              (int)valargs.size());
     if (ptrToReturnStructIs1stArg)
     	ll.mark_structure_return_value(func_call);
@@ -1923,13 +1956,16 @@ BackendLLVMWide::llvm_call_function (const char *name, const Symbol &A,
 llvm::Value *
 BackendLLVMWide::llvm_call_function (const char *name, const Symbol &A,
                                  const Symbol &B, const Symbol &C,
-                                 bool deriv_ptrs)
+                                 bool deriv_ptrs,
+                                 bool function_is_uniform, 
+                                 bool functionIsLlvmInlined,
+                                 bool ptrToReturnStructIs1stArg)
 {
     const Symbol *args[3];
     args[0] = &A;
     args[1] = &B;
     args[2] = &C;
-    return llvm_call_function (name, args, 3, deriv_ptrs);
+    return llvm_call_function (name, args, 3, deriv_ptrs, function_is_uniform, functionIsLlvmInlined, ptrToReturnStructIs1stArg);
 }
 
 

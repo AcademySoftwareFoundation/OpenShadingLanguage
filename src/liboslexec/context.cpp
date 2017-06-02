@@ -462,8 +462,9 @@ ShadingContext::process_errors () const
 		// Process non-batched errors up to the start of the batch
 		// A mask will all lanes off is how non-batch errors got recorded, just print them out once
 		
+		#pragma noinline
 		process_errors_helper(shadingsys(), m_buffered_errors, errorIndex, error_batch.startAt, 
-			[](Mask mask)->bool 
+			[=](Mask mask)->bool 
 			{ 
 				//TODO: Change to DASSERT
 				ASSERT(mask.all_off()); 
@@ -471,10 +472,16 @@ ShadingContext::process_errors () const
 			});
 		errorIndex = error_batch.startAt;
 		
+		// Now for batched, non-masked errors
+		#pragma noinline
+		process_errors_helper(shadingsys(), m_buffered_errors, errorIndex, error_batch.endBefore, 
+		    [=](Mask mask)->bool { return mask.all_off();} );
+		
 		// Now for batched, emit each data lane separately and in the correct order
 		for(int lane_mask=0; lane_mask < Mask::width; ++lane_mask) {
 			#pragma noinline
-			process_errors_helper(shadingsys(), m_buffered_errors, errorIndex, error_batch.endBefore, [=](Mask mask)->bool { return mask.is_on(lane_mask);} );    	
+			process_errors_helper(shadingsys(), m_buffered_errors, errorIndex, error_batch.endBefore, 
+			    [=](Mask mask)->bool { return mask.is_on(lane_mask);} );    	
 		}
 		errorIndex = error_batch.endBefore;
 	} while (errorIndex < nerrors);

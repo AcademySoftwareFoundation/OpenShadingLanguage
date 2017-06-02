@@ -894,18 +894,11 @@ fast_gabor (
     	
     	fast::GaborUniformParams gup(*opt);
 
-// AVX512 is generating an internal compiler error currently
-// And we are using automatic dispatch, so we will just have to skip using
-// a simd loop until the compiler bug is fixed 
-//#ifndef __AVX512F__
-		//OSL_INTEL_PRAGMA("ivdep")
-		//OSL_INTEL_PRAGMA("vector always")
-//		OSL_INTEL_PRAGMA("simd vectorlength(WidthT)")
-//		OSL_INTEL_PRAGMA("omp simd safelen(WidthT)")
-		//OSL_INTEL_PRAGMA("simd")
-		//OSL_INTEL_PRAGMA("novector")
-//#endif
-   
+    	// Complicated code caused compilation issues with icc17u2 
+    	// but verified fixed in icc17u4
+#if __INTEL_COMPILER >= 1700 && __INTEL_COMPILER_UPDATE >= 4
+		OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
+#endif
 		for(int i=0; i< WidthT; ++i) {
 			
 			const Dual2<Vec3> P = wP.get(i);

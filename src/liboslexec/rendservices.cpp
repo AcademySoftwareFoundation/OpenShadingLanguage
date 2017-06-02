@@ -623,9 +623,9 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle *textu
                            const Wide<float>& dsdx, const Wide<float>& dtdx,
                            const Wide<float>& dsdy, const Wide<float>& dtdy,
                            int nchannels,
-                           void* result, void* dresultds, void* dresultdt,
-                           void* alpha, void* dalphadx, void* dalphady,
-                           ustring *errormessage, Mask mask)
+                            void* result, void* dresultds, void* dresultdt,
+                            Wide<float>* alpha, Wide<float>* dalphadx, Wide<float>* dalphady,
+                            Wide<ustring>* errormessage, Mask mask)
 {
     ShadingContext *context = sgb->uniform().context;
     if (! texture_thread_info)
@@ -663,51 +663,62 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle *textu
 //            	std::cout << "rblur =" << opt.rblur << std::endl;
 //            	std::cout << "rwidth =" << opt.rwidth << std::endl;
             float* texResult = nullptr;
+            float* texResultds = nullptr;
+            float* texResultdt = nullptr;
             Color3 resultColor;
+            Color3 resultColords;
+            Color3 resultColordt;
             if (nchannels == 1) {
                 texResult = reinterpret_cast<float*>(result);
+                texResultds = reinterpret_cast<float*>(dresultds);
+                texResultdt = reinterpret_cast<float*>(dresultdt);
             }
             else if (nchannels == 3) {
                 texResult = (float*)&(resultColor.x);
+                texResultds = (float*)&(resultColords.x);
+                texResultdt = (float*)&(resultColordt.x);
             }
             bool retVal = false;
             if (texture_handle) {
-                bool retVal = texturesys()->texture (texture_handle, texture_thread_info, opt,
-                                                     s.get(i), t.get(i),
-                                                     dsdx.get(i), dtdx.get(i),
-                                                     dsdy.get(i), dtdy.get(i),
-                                                     nchannels, texResult/*, dresultds, dresultdt*/);
+                retVal = texturesys()->texture (texture_handle, texture_thread_info, opt,
+                                                s.get(i), t.get(i),
+                                                dsdx.get(i), dtdx.get(i),
+                                                dsdy.get(i), dtdy.get(i),
+                                                nchannels, texResult, texResultds, texResultdt);
             }
             else {
-                bool retVal = texturesys()->texture (filename, opt,
-                                                 s.get(i), t.get(i),
-                                                 dsdx.get(i), dtdx.get(i),
-                                                 dsdy.get(i), dtdy.get(i),
-                                                 nchannels, texResult/*, dresultds, dresultdt*/);
+                retVal = texturesys()->texture (filename, opt,
+                                                s.get(i), t.get(i),
+                                                dsdx.get(i), dtdx.get(i),
+                                                dsdy.get(i), dtdy.get(i),
+                                                nchannels, texResult, texResultds, texResultdt);
             }
-            if (nchannels == 3) {
-                Wide<Color3>& wideResult= *reinterpret_cast<Wide<Color3>*>(result);
+            if (retVal && (nchannels == 3)) {
+                Wide<Color3>& wideResult = *reinterpret_cast<Wide<Color3>*>(result);
                 wideResult.set(i, resultColor);
+                Wide<Color3>& wideResultds = *reinterpret_cast<Wide<Color3>*>(dresultds);
+                wideResultds.set(i, resultColords);
+                Wide<Color3>& wideResultdt = *reinterpret_cast<Wide<Color3>*>(dresultdt);
+                wideResultdt.set(i, resultColordt);
                 //std::cout << "s: " << s.get(i) << " t: " << t.get(i) << " color: " << resultColor << " " << wideResult.get(i) << std::endl;
+            }
+
+            if (!retVal) {
+                std::string err = texturesys()->geterror();
+                if (err.size() && sgb) {
+                    if (errormessage) {
+                        errormessage->set(i, ustring(err));
+                    } else {
+                        context->error ("[RendererServices::texture] %s", err);
+                    }
+                } else if (errormessage) {
+                    errormessage->set(i, ustring(err));
+                }
             }
             status.set(i, retVal);
         }
     }
 
-    /*
-    if (!status) {
-        std::string err = texturesys()->geterror();
-        if (err.size() && sgb) {
-            if (errormessage) {
-                *errormessage = ustring(err);
-            } else {
-                context->error ("[RendererServices::texture] %s", err);
-            }
-        } else if (errormessage) {
-            *errormessage = Strings::unknown;
-        }
-    }
-    */
     return status;
 }
 
@@ -720,8 +731,8 @@ BatchedRendererServices::texture (const Wide<ustring>& filename,
                            const Wide<float>& dsdy, const Wide<float>& dtdy,
                            int nchannels,
                            void* result, void* dresultds, void* dresultdt,
-                           void* alpha, void* dalphadx, void* dalphady,
-                           ustring *errormessage, Mask mask)
+                           Wide<float>* alpha, Wide<float>* dalphadx, Wide<float>* dalphady,
+                           Wide<ustring>* errormessage, Mask mask)
 {
     ShadingContext *context = sgb->uniform().context;
     if (! texture_thread_info)

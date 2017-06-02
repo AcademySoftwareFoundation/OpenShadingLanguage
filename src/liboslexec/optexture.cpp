@@ -307,7 +307,7 @@ osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
                      void *dsdx, void *dtdx, void *dsdy, void *dtdy,
                      int chans, void *result, void *dresultdx, void *dresultdy,
                      void *alpha, void *dalphadx, void *dalphady,
-                     ustring *errormessage,
+                     void *errormessage,
                      int mask_)
 {
     //std::cout << "osl_texture_batched" << std::endl;
@@ -336,10 +336,11 @@ osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
                                                                result,
                                                                dresultdx,
                                                                dresultdy,
-                                                               alpha,
-                                                               dalphadx,
-                                                               dalphady,
-                                                               errormessage, mask);
+                                                               WFLOATPTR(alpha),
+                                                               WFLOATPTR(dalphadx),
+                                                               WFLOATPTR(dalphady),
+                                                               WUSTRPTR(errormessage),
+                                                               mask);
 
     bool derivs = (dresultdx != NULL);
     // Correct our st texture space gradients into xy-space gradients
@@ -370,7 +371,7 @@ osl_texture_batched (void *sgb_, void *name,
                      void *dsdx, void *dtdx, void *dsdy, void *dtdy,
                      int chans, void *result, void *dresultdx, void *dresultdy,
                      void *alpha, void *dalphadx, void *dalphady,
-                     ustring *errormessage,
+                     void *errormessage,
                      int mask_)
 {
     std::cout << "osl_texture_batched" << std::endl;
@@ -398,10 +399,11 @@ osl_texture_batched (void *sgb_, void *name,
                                                                result,
                                                                dresultdx,
                                                                dresultdy,
-                                                               alpha,
-                                                               dalphadx,
-                                                               dalphady,
-                                                               errormessage, mask);
+                                                               WFLOATPTR(alpha),
+                                                               WFLOATPTR(dalphadx),
+                                                               WFLOATPTR(dalphady),
+                                                               WUSTRPTR(errormessage),
+                                                               mask);
 
     bool derivs = (dresultdx != NULL);
     // Correct our st texture space gradients into xy-space gradients
@@ -420,9 +422,6 @@ osl_texture_batched (void *sgb_, void *name,
     }
     */
 
-    /// XXX lfeng: maybe we need to pass in wide errormessages?
-//    if (ok && errormessage)
-//        *errormessage = Strings::_emptystring_;
     return retVal.value();
 }
 

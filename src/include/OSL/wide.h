@@ -2065,104 +2065,101 @@ public:
         }
         int j = 0; // offset index to next void pointer
 
-#define OPTION_CASE(optIndex, optName)                                              \
-    case optIndex:                                                                  \
-    /*std::cout << "OPTION " #optIndex << std::endl;*/ \
-    if (m_varying[i]) {                                                             \
-        /*std::cout << "OPTION varying " << std::endl;*/ \
-        if (m_type[i] == static_cast<bool>(INT)) {                                  \
-        /*std::cout << "OPTION int" << std::endl;*/ \
-            Wide<int>& wideResult = *reinterpret_cast<Wide<int>*>(m_options[j]);    \
-            opt.optName = static_cast<float>(wideResult.get(l));                    \
-        }                                                                           \
-        else {                                                                      \
-        /*std::cout << "OPTION float" << std::endl;*/ \
-            Wide<float>& wideResult = *reinterpret_cast<Wide<float>*>(m_options[j]);\
-            opt.optName = wideResult.get(l);                                        \
-        }                                                                           \
-    }                                                                               \
-    else {                                                                          \
-        /*std::cout << "OPTION uniform" << std::endl;*/ \
-        if (m_type[i] == static_cast<bool>(INT)) {                                  \
-        /*std::cout << "OPTION int" << std::endl;*/ \
-            opt.optName = static_cast<float>(*reinterpret_cast<int*>(m_options[j]));\
-        } \
-        else  {                                                                       \
-        /*std::cout << "OPTION float" << std::endl;*/ \
-            opt.optName = *reinterpret_cast<float*>(m_options[j]);                  \
-        }\
-    }                                                                               \
-    break;
+#define OPTION_CASE(i, optName)                                              \
+        if (m_active[i]) {                                                       \
+            /*std::cout << "OPTION " #optIndex << std::endl;*/ \
+            if (m_varying[i]) {                                                             \
+                /*std::cout << "OPTION varying " << std::endl;*/ \
+                if (m_type[i] == static_cast<bool>(INT)) {                                  \
+                /*std::cout << "OPTION int" << std::endl;*/ \
+                    Wide<int>& wideResult = *reinterpret_cast<Wide<int>*>(m_options[j]);    \
+                    opt.optName = static_cast<float>(wideResult.get(l));                    \
+                }                                                                           \
+                else {                                                                      \
+                /*std::cout << "OPTION float" << std::endl;*/ \
+                    Wide<float>& wideResult = *reinterpret_cast<Wide<float>*>(m_options[j]);\
+                    opt.optName = wideResult.get(l);                                        \
+                }                                                                           \
+            }                                                                               \
+            else {                                                                          \
+                /*std::cout << "OPTION uniform" << std::endl;*/ \
+                if (m_type[i] == static_cast<bool>(INT)) {                                  \
+                /*std::cout << "OPTION int" << std::endl;*/ \
+                    opt.optName = static_cast<float>(*reinterpret_cast<int*>(m_options[j]));\
+                } \
+                else  {                                                                     \
+                /*std::cout << "OPTION float" << std::endl;*/ \
+                    opt.optName = *reinterpret_cast<float*>(m_options[j]);                  \
+                }                                                                           \
+            }                                                                               \
+            ++j;                                                                            \
+        }
 
-#define OPTION_CASE_DECODE(optIndex, optName, decode, typeCast)                                         \
-    case optIndex:                                                                  \
-    if (m_varying[i]) {                                                             \
-        if (m_type[i] == static_cast<bool>(STRING)) {                               \
-            Wide<ustring>& wideResult = *reinterpret_cast<Wide<ustring>*>(m_options[j]); \
-            opt.optName = decode(wideResult.get(l));           \
-        }                                                                           \
-        else {                                                                      \
-            Wide<int>& wideResult = *reinterpret_cast<Wide<int>*>(m_options[j]);    \
-            opt.optName = (typeCast)wideResult.get(l);                                        \
-        }                                                                           \
-    }                                                                               \
-    else {                                                                          \
-        if (m_type[i] == static_cast<bool>(STRING)) {                               \
-            ustring& castValue = *reinterpret_cast<ustring*>(m_options[j]);         \
-            opt.optName = decode(castValue);                   \
-        }                                                                           \
-        else                                                                        \
-            opt.optName = (typeCast)*reinterpret_cast<int*>(m_options[j]);                    \
-    }                                                                               \
-    break;
+#define OPTION_CASE_DECODE(i, optName, decode, typeCast)                                    \
+        if (m_active[i]) {                                                                  \
+            if (m_varying[i]) {                                                             \
+                if (m_type[i] == static_cast<bool>(STRING)) {                               \
+                    Wide<ustring>& wideResult = *reinterpret_cast<Wide<ustring>*>(m_options[j]); \
+                    opt.optName = decode(wideResult.get(l));           \
+                }                                                                           \
+                else {                                                                      \
+                    Wide<int>& wideResult = *reinterpret_cast<Wide<int>*>(m_options[j]);    \
+                    opt.optName = (typeCast)wideResult.get(l);                              \
+                }                                                                           \
+            }                                                                               \
+            else {                                                                          \
+                if (m_type[i] == static_cast<bool>(STRING)) {                               \
+                    ustring& castValue = *reinterpret_cast<ustring*>(m_options[j]);         \
+                    opt.optName = decode(castValue);                                        \
+                }                                                                           \
+                else                                                                        \
+                    opt.optName = (typeCast)*reinterpret_cast<int*>(m_options[j]);          \
+            }                                                                               \
+            ++j;                                                                            \
+        }
 
+        // Check all options
 
-        // Loop through all active options and extract values to opt
-        for (int i = 0; i < MAX_OPTIONS; ++i) {
-            if (m_active[i]) {
-                switch (i) {
-                OPTION_CASE(SWIDTH, swidth)
-                OPTION_CASE(TWIDTH, twidth)
-                OPTION_CASE(RWIDTH, rwidth)
-                OPTION_CASE(SBLUR, sblur)
-                OPTION_CASE(TBLUR, tblur)
-                OPTION_CASE(RBLUR, rblur)
-                OPTION_CASE_DECODE(SWRAP, swrap, TextureOpt::decode_wrapmode, TextureOpt::Wrap)
-                OPTION_CASE_DECODE(TWRAP, twrap, TextureOpt::decode_wrapmode, TextureOpt::Wrap)
-                OPTION_CASE_DECODE(RWRAP, rwrap, TextureOpt::decode_wrapmode, TextureOpt::Wrap)
-                OPTION_CASE(FILL, fill)
-                OPTION_CASE(TIME, time)
-                case FIRSTCHANNEL:
-                    opt.firstchannel = *reinterpret_cast<int*>(m_options[j]);                    \
-                    break;
-                case SUBIMAGE:
-                    if (m_varying[i]) {                                                             \
-                        if (m_type[i] == static_cast<bool>(STRING)) {                               \
-                            Wide<ustring>& wideResult = *reinterpret_cast<Wide<ustring>*>(m_options[j]); \
-                            opt.subimagename = wideResult.get(l);           \
-                        }                                                                           \
-                        else {                                                                      \
-                            Wide<int>& wideResult = *reinterpret_cast<Wide<int>*>(m_options[j]);    \
-                            opt.subimage = wideResult.get(l);                                        \
-                        }                                                                           \
-                    }                                                                               \
-                    else {                                                                          \
-                        if (m_type[i] == static_cast<bool>(STRING)) {                               \
-                            ustring& castValue = *reinterpret_cast<ustring*>(m_options[j]);         \
-                            opt.subimagename = castValue;                   \
-                        }                                                                           \
-                        else                                                                        \
-                            opt.subimage = *reinterpret_cast<int*>(m_options[j]);                    \
-                    }                                                                               \
-                    break;
-                OPTION_CASE_DECODE(INTERP, interpmode, texInterpToCode, TextureOpt::InterpMode)
-                case MISSINGCOLOR:
-                case MISSINGALPHA:
-                    opt.missingcolor = reinterpret_cast<float*>(m_options[j]);                    \
-                    break;
+        OPTION_CASE(SWIDTH, swidth)
+        OPTION_CASE(TWIDTH, twidth)
+        OPTION_CASE(RWIDTH, rwidth)
+        OPTION_CASE(SBLUR, sblur)
+        OPTION_CASE(TBLUR, tblur)
+        OPTION_CASE(RBLUR, rblur)
+        OPTION_CASE_DECODE(SWRAP, swrap, TextureOpt::decode_wrapmode, TextureOpt::Wrap)
+        OPTION_CASE_DECODE(TWRAP, twrap, TextureOpt::decode_wrapmode, TextureOpt::Wrap)
+        OPTION_CASE_DECODE(RWRAP, rwrap, TextureOpt::decode_wrapmode, TextureOpt::Wrap)
+        OPTION_CASE(FILL, fill)
+        OPTION_CASE(TIME, time)
+        if (m_active[FIRSTCHANNEL]) {
+            opt.firstchannel = *reinterpret_cast<int*>(m_options[j]);
+            ++j;
+        }
+        if (m_active[SUBIMAGE]) {
+            if (m_varying[SUBIMAGE]) {
+                if (m_type[SUBIMAGE] == static_cast<bool>(STRING)) {
+                    Wide<ustring>& wideResult = *reinterpret_cast<Wide<ustring>*>(m_options[j]);
+                    opt.subimagename = wideResult.get(l);           \
                 }
-                ++j;
+                else {
+                    Wide<int>& wideResult = *reinterpret_cast<Wide<int>*>(m_options[j]);
+                    opt.subimage = wideResult.get(l);
+                }
             }
+            else {
+                if (m_type[SUBIMAGE] == static_cast<bool>(STRING)) {
+                    ustring& castValue = *reinterpret_cast<ustring*>(m_options[j]);
+                    opt.subimagename = castValue;                   \
+                }
+                else
+                    opt.subimage = *reinterpret_cast<int*>(m_options[j]);
+            }
+            ++j;
+        }
+        OPTION_CASE_DECODE(INTERP, interpmode, texInterpToCode, TextureOpt::InterpMode)
+        if (m_active[MISSINGCOLOR] || m_active[MISSINGALPHA]) {
+            opt.missingcolor = reinterpret_cast<float*>(m_options[j]);
+            ++j;
         }
 #undef OPTION_CASE
 #undef OPTION_CASE_DECODE

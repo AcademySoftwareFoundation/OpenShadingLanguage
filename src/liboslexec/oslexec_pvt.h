@@ -219,6 +219,7 @@ struct AttributeNeeded {
 // Handy re-casting macros
 #define USTR(cstr) (*((ustring *)&cstr))
 #define WUSTR(cstr) (*(reinterpret_cast<Wide<ustring> *>(cstr)))
+#define WUSTRPTR(cstr) (reinterpret_cast<Wide<ustring> *>(cstr))
 #define MAT(m) (*(Matrix44 *)m)
 #define WMAT(m) (*(Wide<Matrix44> *)m)
 #define W4MAT(m) (*(Wide<Matrix44, 4> *)m)
@@ -232,6 +233,7 @@ struct AttributeNeeded {
 #define W16VEC(v) (*(Wide<Vec3, 16> *)v)
 
 #define WFLOAT(x) (*(Wide<Float> *)x)
+#define WFLOATPTR(x) ((Wide<Float> *)x)
 #define W4FLOAT(x) (*(Wide<Float, 4> *)x)
 #define W8FLOAT(x) (*(Wide<Float, 8> *)x)
 #define W16FLOAT(x) (*(Wide<Float, 16> *)x)

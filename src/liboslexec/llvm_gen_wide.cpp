@@ -3122,7 +3122,6 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
         ++offset;
 
         // get address to the first void pointer
-//        llvm::Value* voidPtrBase = rop.ll.ptr_cast(rop.ll.GEP(optionPack, offset), rop.ll.type_array((llvm::Type*)rop.ll.type_void_ptr(), numVal));
         llvm::Value* voidPtrBase = rop.ll.ptr_to_cast(rop.ll.GEP(optionPack, offset), (llvm::Type*)rop.ll.type_void_ptr());
         offset = 0;
         std::cout << "active mask: " << options.activeMask.value() << std::endl;
@@ -3130,9 +3129,7 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
             std::cout << "i: " << i << std::endl;
             if (options.activeMask[i]) {
                 llvm::Value* voidPtr = rop.ll.GEP(voidPtrBase, offset++);
-//                llvm::Value* voidPtr = rop.ll.offset_ptr(voidPtrBase, offset++);
                 rop.ll.op_store(options.values[i], voidPtr);
-                std::cout << "active" << std::endl;
             }
         }
         return rop.ll.void_ptr(optionPack);
@@ -3164,9 +3161,7 @@ LLVMGEN (llvm_gen_texture)
     llvm::Value* opt;   // TextureOpt
     llvm::Value *alpha = NULL, *dalphadx = NULL, *dalphady = NULL;
     llvm::Value *errormessage = NULL;
-//    opt = llvm_gen_texture_options (rop, opnum, first_optional_arg,
-//                                    false /*3d*/, nchans,
-//                                    alpha, dalphadx, dalphady, errormessage);
+
     opt = llvm_pack_texture_options (rop, opnum, first_optional_arg,
                                     false /*3d*/, nchans,
                                     alpha, dalphadx, dalphady, errormessage);
@@ -3241,6 +3236,7 @@ LLVMGEN (llvm_gen_texture)
         args.push_back (wideSD2);
         args.push_back (wideTD2);
     }
+    std::cout << "result derivative type: " << rop.ll.llvm_typenameof(rop.llvm_get_pointer (Result, 1)) << std::endl;
     args.push_back (rop.ll.constant (nchans));
     args.push_back (rop.ll.void_ptr (rop.llvm_get_pointer (Result, 0)));
     args.push_back (rop.ll.void_ptr (rop.llvm_get_pointer (Result, 1)));

@@ -659,9 +659,10 @@ public:
                                   const Wide<float>& dsdx, const Wide<float>& dtdx,
                                   const Wide<float>& dsdy, const Wide<float>& dtdy,
                                   int nchannels,
+                                  // result, dresultds, dresultdt, could be Wide<float>*, or Wide<Color3>*
                                   void* result, void* dresultds, void* dresultdt,
-                                  void* alpha, void* dalphadx, void* dalphady,
-                                  ustring *errormessage, Mask mask);
+                                  Wide<float>* alpha, Wide<float>* dalphadx, Wide<float>* dalphady,
+                                  Wide<ustring>* errormessage, Mask mask);
 
     /// Batch version where filename is varying also
     virtual Mask texture (const Wide<ustring>& filename,
@@ -671,9 +672,10 @@ public:
                           const Wide<float>& dsdx, const Wide<float>& dtdx,
                           const Wide<float>& dsdy, const Wide<float>& dtdy,
                           int nchannels,
+                          // result, dresultds, dresultdt, could be Wide<float>*, or Wide<Color3>*
                           void* result, void* dresultds, void* dresultdt,
-                          void* alpha, void* dalphadx, void* dalphady,
-                          ustring *errormessage, Mask mask);
+                          Wide<float>* alpha, Wide<float>* dalphadx, Wide<float>* dalphady,
+                          Wide<ustring>* errormessage, Mask mask);
 #if 0
     // Deprecated version, with no errormessage parameter. This will
     // eventually disappear.

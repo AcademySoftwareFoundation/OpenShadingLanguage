@@ -661,63 +661,75 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle *textu
     if (! texture_thread_info)
         texture_thread_info = context->texture_thread_info();
 
+    // TODO: change to DASSERT once confidenty
+    ASSERT((dresultds != NULL) == (dresultdt != NULL));
+    bool has_derivs = dresultds != NULL;
+    
     Mask status(false);
     //std::cout << "nchannels: " << nchannels << std::endl;
-    	TextureOpt opt;
     for (int i = 0; i < SimdLaneCount; ++i) {
         if (mask[i]) {
-            //TextureOpt opt = options ? options->getOption(i) : TextureOpt();
+        	// Apparently the members of TextureOpt get modified from calls into
+        	// the texture system, so lets start with a fresh set of defaults for now
+        	TextureOpt opt;
             if(options) {
                 options->updateOption(opt, i);
             }
-            float* texResult = nullptr;
-            float* texResultds = nullptr;
-            float* texResultdt = nullptr;
-            Color3 resultColor;
-            Color3 resultColords;
-            Color3 resultColordt;
-            if (nchannels == 1) {
-                texResult = reinterpret_cast<float*>(result);
-                if (dresultds && dresultdt) {
-                    texResultds = reinterpret_cast<float*>(dresultds);
-                    texResultdt = reinterpret_cast<float*>(dresultdt);
-                }
-            }
-            else if (nchannels == 3) {
-                texResult = (float*)&(resultColor.x);
-                if (dresultds && dresultdt) {
-                    texResultds = (float*)&(resultColords.x);
-                    texResultdt = (float*)&(resultColordt.x);
-                }
-            }
+            // It's actually faster to ask for 4 channels (even if we need fewer)
+            // and ensure that they're being put in aligned memory.
+            // TODO:  investigate if the above statement is true when nchannels==1
+            OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd;
+            // TODO:  investigate if there any magic to this simd::float4 or 
+            // can we just use a float[4] to the same effect and avoid confustion
+            
             bool retVal = false;
             if (texture_handle) {
                 retVal = texturesys()->texture (texture_handle, texture_thread_info, opt,
                                                 s.get(i), t.get(i),
                                                 dsdx.get(i), dtdx.get(i),
                                                 dsdy.get(i), dtdy.get(i),
-                                                nchannels, texResult, texResultds, texResultdt);
+                                                4, 
+                                                (float *)&result_simd,
+                                                has_derivs ? (float *)&dresultds_simd : NULL,
+												has_derivs ? (float *)&dresultdt_simd : NULL);
             }
             else {
                 retVal = texturesys()->texture (filename, opt,
                                                 s.get(i), t.get(i),
                                                 dsdx.get(i), dtdx.get(i),
                                                 dsdy.get(i), dtdy.get(i),
-                                                nchannels, texResult, texResultds, texResultdt);
+                                                4, 
+                                                (float *)&result_simd,
+                                                has_derivs ? (float *)&dresultds_simd : NULL,
+												has_derivs ? (float *)&dresultdt_simd : NULL);
             }
-            if (retVal && (nchannels == 3)) {
-                Wide<Color3>& wideResult = *reinterpret_cast<Wide<Color3>*>(result);
-                wideResult.set(i, resultColor);
-                if (dresultds && dresultdt) {
-                    Wide<Color3>& wideResultds = *reinterpret_cast<Wide<Color3>*>(dresultds);
-                    wideResultds.set(i, resultColords);
-                    Wide<Color3>& wideResultdt = *reinterpret_cast<Wide<Color3>*>(dresultdt);
-                    wideResultdt.set(i, resultColordt);
-                }
+            
+            if (retVal) {
+            	if (nchannels == 3) {
+					Wide<Color3>& wideResult = *reinterpret_cast<Wide<Color3>*>(result);
+					wideResult.set(i, Color3(result_simd[0], result_simd[1], result_simd[2]));
+					if (has_derivs) {
+						Wide<Color3>& wideResultds = *reinterpret_cast<Wide<Color3>*>(dresultds);
+						wideResultds.set(i, Color3(dresultds_simd[0], dresultds_simd[1], dresultds_simd[2]));
+						Wide<Color3>& wideResultdt = *reinterpret_cast<Wide<Color3>*>(dresultdt);
+						wideResultdt.set(i, Color3(dresultdt_simd[0], dresultdt_simd[1], dresultdt_simd[2]));
+					}
+            	} else if (nchannels == 1) {
+					Wide<float>& wideResult = *reinterpret_cast<Wide<float>*>(result);
+					wideResult.set(i, result_simd[0]);
+					if (has_derivs) {
+						Wide<float>& wideResultds = *reinterpret_cast<Wide<float>*>(dresultds);
+						wideResultds.set(i, dresultds_simd[0]);
+						Wide<float>& wideResultdt = *reinterpret_cast<Wide<float>*>(dresultdt);
+						wideResultdt.set(i, dresultdt_simd[0]);
+					}
+            	}
+            	if (alpha)
+            	{
+            		alpha->set(i, result_simd[nchannels]);
+            	}
                 //std::cout << "s: " << s.get(i) << " t: " << t.get(i) << " color: " << resultColor << " " << wideResult.get(i) << std::endl;
-            }
-
-            if (!retVal) {
+            } else {
                 std::string err = texturesys()->geterror();
                 if (err.size() && sgb) {
                     if (errormessage) {

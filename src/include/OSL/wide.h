@@ -2055,6 +2055,7 @@ public:
 
     void updateOption(TextureOpt &opt, unsigned int l) const
     {
+#if 0
         std::cout << "size: " << sizeof(TextureOptions) << std::endl;
         std::cout << "active: " << &m_active << " " << m_active.value() << std::endl;
         std::cout << "varying: " << m_varying.value() << std::endl;
@@ -2063,6 +2064,7 @@ public:
             std::cout << "void* " << m_options[i] << std::endl;
             std::cout << "int " << *(int*)m_options[i] << std::endl;
         }
+#endif
         int j = 0; // offset index to next void pointer
 
 #define OPTION_CASE(i, optName)                                              \

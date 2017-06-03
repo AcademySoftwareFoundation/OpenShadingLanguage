@@ -58,11 +58,11 @@ public:
     : m_value((all_on_or_off) ? (0xFFFFFFFF >> (32-WidthT)) : 0)
     {}
     
-    OSL_INLINE WideMask(value_type value_)
+    explicit OSL_INLINE WideMask(value_type value_)
         : m_value(value_)
     {}
 
-    OSL_INLINE WideMask(int value_)
+    explicit OSL_INLINE WideMask(int value_)
         : m_value(static_cast<value_type>(value_))
     {}
 

@@ -433,7 +433,7 @@ BatchedSimpleRenderer::get_array_attribute (ShaderGlobalsBatch *sgb,
 	    		}
 			
 			}    		
-			return true;
+			return Mask(true);
     	}
     }
     

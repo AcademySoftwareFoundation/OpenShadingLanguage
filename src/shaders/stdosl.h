@@ -165,6 +165,9 @@ color  mix (color  x, color  y, color  a) BUILTIN;
 color  mix (color  x, color  y, float  a) BUILTIN;
 float  mix (float  x, float  y, float  a) BUILTIN;
 #endif
+closure color mix (closure color x, closure color y, float a) { return x*(1-a) + y*a; }
+closure color mix (closure color x, closure color y, color a) { return x*(1-a) + y*a; }
+
 normal select (normal x, normal y, normal cond) BUILTIN;
 vector select (vector x, vector y, vector cond) BUILTIN;
 point  select (point  x, point  y, point  cond) BUILTIN;

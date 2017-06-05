@@ -3447,13 +3447,18 @@ and performs a linear
 interpolation between 0 and 1 when ${\mathit edge0} < x < {\mathit edge1}$.
 \apiend
 
-\apiitem{float {\ce smoothstep} (float edge0, float edge1, float x)}
+\apiitem{float {\ce smoothstep} (float edge0, float edge1, float x) \\
+\emph{type} {\ce smoothstep} (\emph{type} edge0, \emph{type} edge1, \emph{type} x)}
 \indexapi{smoothstep()}
 Returns 0 if $x \le {\mathit edge0}$, and 1 if $x \ge {\mathit edge1}$,
 and performs a smooth Hermite
 interpolation between 0 and 1 when ${\mathit edge0} < x < {\mathit edge1}$.
 This is useful in cases where you would want a thresholding function
 with a smooth transition.
+
+The \emph{type} may be any of of \float, \color, \point, \vector, or
+\normal.  For \color and \point-like types, the computations are
+performed component-by-component (separately for $x$, $y$, and $z$).
 \apiend
 
 \apiitem{float {\ce smooth_linearstep} (float edge0, float edge1, float x, float eps)}

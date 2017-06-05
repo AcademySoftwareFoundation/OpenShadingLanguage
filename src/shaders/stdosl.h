@@ -440,6 +440,19 @@ normal step (normal edge, normal x) BUILTIN;
 float step (float edge, float x) BUILTIN;
 float smoothstep (float edge0, float edge1, float x) BUILTIN;
 
+color smoothstep (color edge0, color edge1, color in)
+{
+    return color (smoothstep(edge0[0], edge1[0], in[0]),
+                  smoothstep(edge0[1], edge1[1], in[1]),
+                  smoothstep(edge0[2], edge1[2], in[2]));
+}
+vector smoothstep (vector edge0, vector edge1, vector in)
+{
+    return vector (smoothstep(edge0[0], edge1[0], in[0]),
+                   smoothstep(edge0[1], edge1[1], in[1]),
+                   smoothstep(edge0[2], edge1[2], in[2]));
+}
+
 float linearstep (float edge0, float edge1, float x) {
     float result;
     if (edge0 != edge1) {

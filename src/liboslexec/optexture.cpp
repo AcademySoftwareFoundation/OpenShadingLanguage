@@ -598,7 +598,6 @@ osl_get_textureinfo_batched_uniform (void *sgb_, const char *name, void *handle,
                                                                                (RendererServices::TextureHandle *)handle,
                                                                                0 /*FIXME-ptex*/,
                                                                                USTR(dataname), dest);
-    std::cout << "osl textureinfo: " << *(int*)dest.ptr() << std::endl;
     return retVal;
 }
 
@@ -609,7 +608,6 @@ osl_get_textureinfo_batched (void *sgb_, void* name,
                              void *wide_attr_dest,
                              int mask_)
 {
-    std::cout << "osl_get_textureinfo_batched" << std::endl;
     Mask mask(mask_);
     // TODO: LLVM could check this before calling this function
     if (mask.all_off()) {

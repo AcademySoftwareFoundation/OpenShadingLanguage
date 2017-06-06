@@ -3124,7 +3124,6 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
         // get address to the first void pointer
         llvm::Value* voidPtrBase = rop.ll.ptr_to_cast(rop.ll.GEP(optionPack, offset), (llvm::Type*)rop.ll.type_void_ptr());
         offset = 0;
-        std::cout << "active mask: " << options.activeMask.value() << std::endl;
         for(int i = 0; i < TextureOptions::MAX_OPTIONS; ++i) {
             std::cout << "i: " << i << std::endl;
             if (options.activeMask[i]) {

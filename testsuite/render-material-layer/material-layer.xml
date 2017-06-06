@@ -1,0 +1,60 @@
+<World>
+   <Camera eye="0, 100, 300" look_at="0,0,0" fov="70" />
+   <Option max_bounces="int 1" />
+   <ShaderGroup>
+      <Parameter scale_s="float 20" />
+      <Parameter scale_t="float 20" />
+      <Parameter Ca="color 0.1 0.1 0.1" />
+      <Parameter Cb="color 0.5 0.5 0.5" />
+      <Shader name="checkerboard" layer="tex" />
+      <Shader name="matte" layer="layer1" />      
+      <ConnectShaders srclayer="tex" srcparam="Cout" dstlayer="layer1" dstparam="Cs" />
+   </ShaderGroup>
+   <Quad corner="-200,0,0" edge_x="400,0,0" edge_y="0,400,0" /> <!-- Back -->
+   <Quad corner="-200,0,0" edge_x="0,0,400" edge_y="400,0,0" /> <!-- Botm -->
+
+<!--
+   <Sphere center="-60,15,120"        radius="5" />
+   <Sphere center="-20,15,120"        radius="5" />
+   <Sphere center=" 20,15,120"        radius="5" />
+   <Sphere center=" 60,15,120"        radius="5" />
+-->
+
+   <ShaderGroup>
+      <Parameter scale_s="float 10" />
+      <Parameter scale_t="float 20" />
+      <Parameter Ca="color 0.0 0.0 0.0" />
+      <Parameter Cb="color 1 1 1" />
+      <Shader name="checkerboard" layer="opac_tex" />
+      <Parameter Kd="float 0" />
+      <Parameter Ks="float 1" />
+
+      <Parameter Roughness="float 0.1" />
+      <Parameter Specular_Color="color 1 1 1" /> 
+
+      <Shader name="ubersurface" layer="layer2" />
+      <Parameter Kd="float 1" />
+      <Parameter Ks="float 1" />
+      <Parameter Kt="float 0.5" />
+
+      <Parameter Roughness="float 0.02" />
+      <Parameter Diffuse_Color="color 0.8 0.2 0.2" /> 
+      <Parameter Refraction_Color="color 0.8 0.0 0.0" /> 
+
+      <Shader name="ubersurface" layer="layer1" />
+      <ConnectShaders srclayer="opac_tex" srcparam="Fout" dstlayer="layer1" dstparam="Opacity" />
+      <ConnectShaders srclayer="layer2" srcparam="Out_Ci" dstlayer="layer1" dstparam="Next_Layer" />
+
+   </ShaderGroup>
+   <Quad corner="-80,70, 20" edge_x="0,-60 ,90" edge_y="160,0,0" />
+
+   <ShaderGroup>
+      <Parameter power="float 2000" />
+      <Shader name="emitter" layer="layer1" />
+   </ShaderGroup>
+   <Sphere center="-90, 130, 50" radius="1" is_light="yes" /> <!--Lite -->
+   <Sphere center="-35, 130, 50" radius="5" is_light="yes" /> <!--Lite -->
+   <Sphere center=" 30, 130, 50" radius="10" is_light="yes" /> <!--Lite -->
+   <Sphere center=" 90, 130, 50" radius="20" is_light="yes" /> <!--Lite -->
+   
+</World>

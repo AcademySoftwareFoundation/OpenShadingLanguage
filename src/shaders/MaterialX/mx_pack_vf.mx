@@ -1,0 +1,23 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_types.h"
+
+shader
+SHADER_NAME(mx_pack_vf)
+    [[ string help = "Pack the channels from two, three or four streams into the same number of channels of a \
+    single stream of a specified compatible type;" ]]
+  (
+    vector in1 = 0,
+    float in2 = 0,
+    output vector4 out = {0,0,0,0}
+  )
+{
+    out.x = in1[0];
+    out.y = in1[1];
+    out.z = in1[2];
+    out.w = in2;
+}

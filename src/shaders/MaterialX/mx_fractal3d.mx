@@ -1,0 +1,58 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_types.h"
+#include "oslutil.h"
+
+shader
+SHADER_NAME(mx_fractal3d)
+    [[ string help = "3D fractal noise"  ]]
+  (
+    point position = transform ("object", P)
+        [[  string help = "input coordinate position (default: object space P)",
+            int lockgeom = 0 ]],
+    TYPE amplitude = TYPE_ONE
+        [[  string help = "center-to-peak amplitude of the noise" ]],
+    int octaves = 3
+        [[  string help = "number of summed octaves" ]],
+    float lacunarity = 2.0
+        [[  string help = "exponential scale between successive octaves" ]],
+    float diminish = 0.5
+        [[  string help = "rate at which amplitude is diminished per octave"]],
+    string noisetype = "snoise"
+        [[  string help = "type of noise" ]],
+    output TYPE out = TYPE_ZERO
+  )
+{
+
+    // Alternate formulation: compute both 1D and 3D noise. OSL will
+    // optimize away all the computations leading to any output that isn't
+    // connected to anything downstream in the shader network.
+
+    float fnoise = (float) fBm (position, octaves, lacunarity, diminish, noisetype);
+
+    color cnoise = (color) fBm (position, octaves, lacunarity, diminish, noisetype);
+    
+    #if defined(FLOAT)
+        out = fnoise * amplitude;
+    #elif defined(COLOR) || defined(VECTOR)
+        out = cnoise * amplitude;
+    #elif defined(COLOR2)
+        out.r = cnoise[0] * amplitude.r;
+        out.g = cnoise[1] * amplitude.g;
+    #elif defined(COLOR4)
+        out.rgb = cnoise * amplitude.rgb;
+        out.a = fnoise * amplitude.a;
+    #elif defined(VECTOR2) || defined(VECTOR4)
+        out.x = cnoise[0] * amplitude.x;
+        out.y = cnoise[1] * amplitude.y;
+    # if defined(VECTOR4)
+        out.z = cnoise[2] * amplitude.z;
+        out.w = fnoise * amplitude.w;
+    # endif
+    #endif
+    
+}

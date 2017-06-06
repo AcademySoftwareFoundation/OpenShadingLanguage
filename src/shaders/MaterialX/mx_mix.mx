@@ -1,0 +1,19 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_types.h"
+
+shader SHADER_NAME(mx_mix)
+    [[ string help = TYPE_STR" Mix two inputs according to an input mask or a constant amount." ]]
+  (
+    TYPE fg = TYPE_DEFAULT_IN,
+    TYPE bg = TYPE_DEFAULT_IN,
+    float mask = 0.0,
+    output TYPE out = TYPE_DEFAULT_OUT
+  )
+{
+    out = mix(fg, bg, mask); 
+}

@@ -1,0 +1,50 @@
+struct taco
+{
+    float r;
+    float g;
+};
+
+
+taco __operator__add__(taco c1, taco c2)
+{
+    return taco(c1.r + c2.r, c1.g + c2.g);
+}
+
+
+
+
+
+#define FAIL
+#ifdef FAIL
+struct cheese
+{
+    float r;
+    float g;
+};
+#else
+struct cheese
+{
+    color r;
+    float g;
+};
+#endif
+
+cheese __operator__add__(cheese c1, cheese c2)
+{
+    return cheese(c1.r + c2.r, c1.g + c2.g);
+}
+
+
+
+shader test
+  (
+    taco c2_in_1 = {.1, .1},
+    taco c2_in_2 = {.2, .2},
+
+    output taco c2_out = {0, 0},
+  )
+{
+    c2_out = c2_in_1 + c2_in_2;
+
+}
+

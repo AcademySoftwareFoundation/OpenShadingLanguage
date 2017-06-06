@@ -1,0 +1,20 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_types.h"
+
+shader
+SHADER_NAME(mx_geomattrvalue)
+    [[ string help = "The value assigned to the current geometry through the specified geomattr name" ]]
+  (
+    string attrname = "",
+    output TYPE out = TYPE_DEFAULT_OUT
+  )
+{
+    TYPE attr = TYPE_ZERO;
+    getattribute(attrname, attr);
+    out = attr;
+}

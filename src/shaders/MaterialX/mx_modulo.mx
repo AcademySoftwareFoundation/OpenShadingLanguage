@@ -1,0 +1,20 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_types.h"
+
+shader SHADER_NAME(mx_modulo)
+    [[ string help = TYPE_STR" The remaining fraction after dividing the incoming \
+    float/color/vector by the constant amount and subtracting the integer portion.\
+    The modula amount cannot be 0." ]]
+  (
+    TYPE in1 = TYPE_DEFAULT_IN,
+    TYPE in2 = TYPE_ONE,
+    output TYPE out = TYPE_DEFAULT_OUT
+  )
+{
+    out = fmod(in1, in2); 
+}

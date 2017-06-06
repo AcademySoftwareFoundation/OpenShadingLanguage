@@ -1,0 +1,106 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_types.h"
+
+shader
+SHADER_NAME(mx_triplanarprojection)
+    [[ string help = "triplanarprojection node" ]]
+  (
+    string filex = ""        
+        [[  string help = "Texture filename",
+            string widget = "filename" ]],
+    string filey = ""
+        [[  string help = "Texture filename",
+            string widget = "filename" ]],
+    string filez = ""
+        [[  string help = "Texture filename",
+            string widget = "filename" ]],
+    string layerx = "",
+    string layery = "",
+    string layerz = "",
+    TYPE default_value = TYPE_DEFAULT_IN,
+    vector position = P,
+	normal inN   = N,
+    output TYPE out = TYPE_ZERO
+  )
+{
+    color filex_rgb;
+    float filex_a;
+    
+    color filey_rgb;
+    float filey_a;
+    
+    color filez_rgb;
+    float filez_a;
+	point Po = transform("object", position);
+    normal objN = normalize(abs(transform("object", inN)));
+
+    float blendx = dot(objN, vector(1,0,0));
+    float blendy = dot(objN, vector(0,1,0));
+    float blendz = dot(objN, vector(0,0,1));
+    
+    out = default_value;
+    
+    #if defined(COLOR) || defined(VECTOR)
+        filex_rgb = texture(filex, Po[1], Po[2], "alpha", filex_a, "subimage", layerx, "missingcolor", default_value);
+        filey_rgb = texture(filey, Po[0], Po[2], "alpha", filey_a, "subimage", layery, "missingcolor", default_value);
+        filez_rgb = texture(filez, Po[0], Po[1], "alpha", filez_a, "subimage", layerz, "missingcolor", default_value);
+        color blended_rgb = (filex_rgb * blendx) + (filey_rgb * blendy) + (filez_rgb * blendz);
+        out = blended_rgb;
+    #elif defined(FLOAT)
+        filex_rgb = texture(filex, Po[1], Po[2], "alpha", filex_a, "subimage", layerx, "missingcolor", default_value);
+        filey_rgb = texture(filey, Po[0], Po[2], "alpha", filey_a, "subimage", layery, "missingcolor", default_value);
+        filez_rgb = texture(filez, Po[0], Po[1], "alpha", filez_a, "subimage", layerz, "missingcolor", default_value);
+        float blended_a = (filex_a * blendx) + (filey_a * blendy) + (filez_a * blendz);
+        out = blended_a;
+    #elif defined(COLOR2)
+        color missingcolor = color(default_value.r, default_value.g, 0);
+        filex_rgb = texture(filex, Po[1], Po[2], "alpha", filex_a, "subimage", layerx, "missingcolor", missingcolor);
+        filey_rgb = texture(filey, Po[0], Po[2], "alpha", filey_a, "subimage", layery, "missingcolor", missingcolor);
+        filez_rgb = texture(filez, Po[0], Po[1], "alpha", filez_a, "subimage", layerz, "missingcolor", missingcolor);
+        color blended_rgb = (filex_rgb * blendx) + (filey_rgb * blendy) + (filez_rgb * blendz);
+        color2 outC2;
+        outC2.r = blended_rgb[0];
+        outC2.g = blended_rgb[1];
+        out = outC2;
+    #elif defined(COLOR4)
+        color missingcolor = default_value.rgb;
+        filex_rgb = texture(filex, Po[1], Po[2], "alpha", filex_a, "subimage", layerx, "missingcolor", missingcolor);
+        filey_rgb = texture(filey, Po[0], Po[2], "alpha", filey_a, "subimage", layery, "missingcolor", missingcolor);
+        filez_rgb = texture(filez, Po[0], Po[1], "alpha", filez_a, "subimage", layerz, "missingcolor", missingcolor);
+        color blended_rgb = (filex_rgb * blendx) + (filey_rgb * blendy) + (filez_rgb * blendz);
+        float blended_a = (filex_a * blendx) + (filey_a * blendy) + (filez_a * blendz);
+        color4 outC4;
+        outC4.rgb = blended_rgb;
+        outC4.a = blended_a;
+        out = outC4;
+    #elif defined(VECTOR2)
+        color missingcolor = color(default_value.x, default_value.y, 0);
+        filex_rgb = texture(filex, Po[1], Po[2], "alpha", filex_a, "subimage", layerx, "missingcolor", missingcolor);
+        filey_rgb = texture(filey, Po[0], Po[2], "alpha", filey_a, "subimage", layery, "missingcolor", missingcolor);
+        filez_rgb = texture(filez, Po[0], Po[1], "alpha", filez_a, "subimage", layerz, "missingcolor", missingcolor);
+        color blended_rgb = (filex_rgb * blendx) + (filey_rgb * blendy) + (filez_rgb * blendz);
+        vector2 outV2;
+        outV2.x = blended_rgb[0];
+        outV2.y = blended_rgb[1];
+        out = outV2;
+    #elif defined(VECTOR4)
+        color missingcolor = color(default_value.x, default_value.y, default_value.z);
+        filex_rgb = texture(filex, Po[1], Po[2], "alpha", filex_a, "subimage", layerx, "missingcolor", missingcolor);
+        filey_rgb = texture(filey, Po[0], Po[2], "alpha", filey_a, "subimage", layery, "missingcolor", missingcolor);
+        filez_rgb = texture(filez, Po[0], Po[1], "alpha", filez_a, "subimage", layerz, "missingcolor", missingcolor);
+        color blended_rgb = (filex_rgb * blendx) + (filey_rgb * blendy) + (filez_rgb * blendz);
+        float blended_a = (filex_a * blendx) + (filey_a * blendy) + (filez_a * blendz);
+        vector4 outV4;
+        outV4.x = blended_rgb[0];
+        outV4.y = blended_rgb[1];
+        outV4.z = blended_rgb[2];
+        outV4.w = blended_a;
+        out = outV4;
+    #endif
+
+}

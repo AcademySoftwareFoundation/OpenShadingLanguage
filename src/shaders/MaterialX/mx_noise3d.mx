@@ -1,0 +1,47 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_types.h"
+#include "oslutil.h"
+
+shader
+SHADER_NAME(mx_noise3d)
+    [[ string help = "3D noise"  ]]
+  (
+    point position = transform ("object", P)
+        [[  string help = "input coordinate position (default: object space P)",
+            int lockgeom = 0 ]],
+    TYPE amplitude = TYPE_ONE
+        [[  string help = "center-to-peak amplitude of the noise" ]],
+    float pivot = 0
+        [[  string help = "the center value of the output noise" ]],
+    string noisetype = "snoise"
+        [[  string help = "type of noise" ]],
+    output TYPE out = TYPE_ZERO,
+  )
+{
+    float fnoise = (float) noise (noisetype, position);
+    color cnoise = (color) noise (noisetype, position);
+
+    #if defined(FLOAT)
+        out = pivot + fnoise * amplitude;
+    #elif defined(COLOR) || defined(VECTOR)
+        out = pivot + cnoise * amplitude;
+    #elif defined(COLOR2)
+        out.r = pivot + cnoise[0] * amplitude.r;
+        out.g = pivot + cnoise[1] * amplitude.g;
+    #elif defined(COLOR4)
+        out.rgb = pivot + cnoise * amplitude.rgb;
+        out.a = pivot + fnoise * amplitude.a;
+    #elif defined(VECTOR2) || defined(VECTOR4)
+        out.x = pivot + cnoise[0] * amplitude.x;
+        out.y = pivot + cnoise[1] * amplitude.y;
+    # if defined(VECTOR4)
+        out.z = pivot + cnoise[2] * amplitude.z;
+        out.w = pivot + fnoise * amplitude.w;
+    # endif
+    #endif
+}

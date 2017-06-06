@@ -1,0 +1,21 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+
+
+#include "mx_types.h"
+
+shader
+SHADER_NAME(mx_luminance)
+    [[ string help = "Output a grayscale image containing the luminance of the incoming RGB color in all color channels;" ]]
+  (
+    TYPE in = TYPE_ZERO,
+    color lumacoeffs = color(0.2126, 0.7152, 0.0722),
+    output TYPE out = TYPE_ZERO
+  )
+{
+    out = cluminance(in, lumacoeffs);
+}

@@ -1,0 +1,28 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_types.h"
+
+shader SHADER_NAME(mx_screen)
+    [[ string help = TYPE_STR" Take two 1-4 channel inputs and apply the same operator to all channels: 1-(1-F)*(1-B)" ]]
+  (
+    TYPE fg = TYPE_DEFAULT_IN,
+    TYPE bg = TYPE_DEFAULT_IN,
+    output TYPE out = TYPE_DEFAULT_OUT
+  )
+{
+
+#define FAIL
+#ifndef FAIL
+    TYPE fg_inv = invert(fg);
+    TYPE bg_inv = invert(bg);
+    TYPE product = fg_inv * bg_inv;
+
+    out =  invert(product); 
+#else
+    out =  invert(invert(fg) * invert(bg)); 
+#endif    
+}

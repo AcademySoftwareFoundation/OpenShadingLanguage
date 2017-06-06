@@ -219,6 +219,9 @@ DECL (osl_dict_find_iss, "iXXX")
 DECL (osl_dict_next, "iXi")
 DECL (osl_dict_value, "iXiXLX")
 DECL (osl_raytype_name, "iXX")
+#ifdef OSL_LLVM_NO_BITCODE
+DECL (osl_range_check, "iiiXXXiXiXX")
+#endif
 DECL (osl_range_check_err, "iiiXXXiXiXX")
 DECL (osl_naninf_check, "xiXiXXiXiiX")
 DECL (osl_uninit_check, "xLXXXiXiXXiXiXii")

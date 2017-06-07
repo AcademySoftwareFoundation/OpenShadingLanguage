@@ -3499,6 +3499,19 @@ OSL_SHADEOP int osl_get_attribute_batched(void *sgb_,
                                            int mask_)
 {
     Mask mask(mask_);
+#if 0 // hacker test code
+	printf("input mask(%d)\n", mask.value());
+	ShaderGlobalsBatch *sgb   = reinterpret_cast<ShaderGlobalsBatch *>(sgb_);
+	Mask status(false);
+	for(int i =0; i < SimdLaneCount;++i) {
+		std::cout<< "sgb->varyingData().P.get(i).x=" << (sgb->varyingData().P.get(i).x) << std::endl;
+		if (sgb->varyingData().P.get(i).x > 0.3f && sgb->varyingData().P.get(i).x < 0.7f)
+			status.set_on(i);
+	}
+	printf("output mask(%d)\n", status.value());
+	return status.value();
+	//return Mask(true).value();
+#else
     // TODO: LLVM could check this before calling this function
     if (mask.all_off()) {
         return 0;
@@ -3514,6 +3527,7 @@ OSL_SHADEOP int osl_get_attribute_batched(void *sgb_,
                                                        wide_attr_dest, mask);
     
     return retVal.value();
+#endif
 }
 
 

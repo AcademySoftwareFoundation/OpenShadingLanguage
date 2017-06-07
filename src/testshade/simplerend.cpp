@@ -375,6 +375,7 @@ bool
 BatchedSimpleRenderer::is_attribute_uniform(ustring object, ustring name)
 {
 	
+	
 	if (m_uniform_objects.find(object) != m_uniform_objects.end())
 		return true;
 
@@ -481,6 +482,54 @@ BatchedSimpleRenderer::get_array_attribute (ShaderGlobalsBatch *sgb,
     	} 
     }
     
+#if 0 // extra hackery to create a reproducer 
+    if (name == ustring("user:testvartype") && val.is<float>()) {
+    	auto out = val.masked<float>();
+		
+		for(int i=0; i < 4; ++i) {
+			out[i] = 0.0;
+		}
+		for(int i=4; i < 8; ++i) {
+			out[i] = 1.0;
+		}
+		for(int i=8; i < 12; ++i) {
+			out[i] = 2.0;
+		}
+		for(int i=12; i < 16; ++i) {
+			out[i] = -1;
+		}
+		
+    	
+        return val.mask();
+		//return Mask(0xFF);
+    	//return Mask(false);
+    }
+    if (object == ustring("primvar") && name == ustring("vryfloat") && val.is<float>()) {
+    	
+    	std::cout << "MADE IT, mask=" << val.mask().value() << std::endl;
+    	auto out = val.masked<float>();
+		for(int i=0; i < out.width; ++i) {
+			out[i] = 2.0;
+		}
+    	
+        //return val.mask();
+		return Mask(true);
+    }
+    
+    if (object == ustring("primvar") && name == ustring("unffloat") && val.is<float>()) {
+    	
+    	std::cout << "MADE IT, mask=" << val.mask().value() << std::endl;
+    	auto out = val.masked<float>();
+		for(int i=0; i < out.width; ++i) {
+			out[i] = 2.0;
+		}
+    	
+        //return val.mask();
+		return Mask(true);
+    }
+    
+#endif
+    
     // If no named attribute was found, allow userdata to bind to the
     // attribute request.
     if (object.empty() && index == -1)
@@ -581,6 +630,7 @@ BatchedSimpleRenderer::get_userdata (ustring name,
         return val.mask();
     }
 
+    
     return Mask(false);
 }
 

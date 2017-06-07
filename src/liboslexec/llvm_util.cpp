@@ -949,18 +949,20 @@ LLVM_Util::make_jit_execengine (std::string *err)
 
 		m_supports_masked_stores = false;
 		
+		// TODO: consider extending adding all CPU features for different target platforms
+		// and also intersecting with supported features vs. blindly adding them
 		switch(oslIsa) {
 		case TargetISA_SSE4_2:
 			attrvec.push_back("+sse4.2");
 			std::cout << "Intended OSL ISA: SSE4.2" << std::endl;
 			break;
 		case TargetISA_AVX:
-			m_supports_masked_stores = true;
 			attrvec.push_back("+avx");
 			std::cout << "Intended OSL ISA: AVX" << std::endl;
 			break;		
 		case TargetISA_AVX2:
-			m_supports_masked_stores = true;
+			attrvec.push_back("+sse4.2");
+			attrvec.push_back("+avx");
 			attrvec.push_back("+avx2");
 			std::cout << "Intended OSL ISA: AVX2" << std::endl;
 			break;		
@@ -1570,6 +1572,13 @@ LLVM_Util::constant (int i)
     return llvm::ConstantInt::get (context(), llvm::APInt(32,i));
 }
 
+
+llvm::Value *
+LLVM_Util::constant8 (int i)
+{
+    return llvm::ConstantInt::get (context(), llvm::APInt(8,i));
+}
+
 llvm::Value *
 LLVM_Util::constant64 (int i)
 {
@@ -1661,9 +1670,48 @@ LLVM_Util::mask_as_int(llvm::Value *mask)
 {
     ASSERT(mask->getType() == type_wide_bool());
 
-    llvm::Type * int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);
+    llvm::Value* result;
+    llvm::Type * int_reinterpret_cast_vector_type;
+    switch(m_vector_width)
+    {
+    case 4:
+    	ASSERT(0 && "incomplete, should do something similar to case for 8 below if no mask support");
+    	int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt32Ty (*m_llvm_context);
+    	result = builder().CreateBitCast (mask, int_reinterpret_cast_vector_type);
+    	break;
+    case 8:
+    	// Since we know vectorized comparisons for AVX&AVX2 end up setting 8 32 bit integers
+    	// to 0xFFFFFFFF or 0x00000000,
+    	// We need to do more than a simple cast to an int.
+    	// We need to convert our native <VecWidth x i1> to match the expected native representation.
+    	// Since the native impl already has it in in that format, it should end up being a noop
+    	llvm::Type * extended_int_vector_type =
+		    (llvm::Type *) llvm::VectorType::get(llvm::Type::getInt32Ty (*m_llvm_context), m_vector_width);
+		llvm::Value * wide_int_mask = builder().CreateSExt(mask, extended_int_vector_type);
+		
+		// Now we will use the horizontal sign extraction intrinsic to build a 32 bit mask value.
+		// However the only 256bit version works on floats, so we will cast from int32 to float beforehand
+    	llvm::Type * extended_float_vector_type =
+		    (llvm::Type *) llvm::VectorType::get(llvm::Type::getFloatTy (*m_llvm_context), m_vector_width);
+    	llvm::Value * wide_float_mask = builder().CreateBitCast (wide_int_mask, extended_float_vector_type);
 
-    llvm::Value* result = builder().CreateBitCast (mask, int_reinterpret_cast_vector_type);
+	    llvm::Function* func = llvm::Intrinsic::getDeclaration (module(),
+	        llvm::Intrinsic::x86_avx_movmsk_ps_256); 
+
+	    llvm::Value *args[1] = {
+	    		wide_float_mask
+	    };
+	    result = builder().CreateCall (func, llvm::ArrayRef<llvm::Value*>(args, 1));
+	   
+   
+    	break;
+    case 16:    	
+    	int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);
+    	result = builder().CreateBitCast (mask, int_reinterpret_cast_vector_type);
+    	break;
+    }
+
+    
 
     return builder().CreateZExt(result, (llvm::Type *) llvm::Type::getInt32Ty (*m_llvm_context));
 }
@@ -1673,9 +1721,59 @@ LLVM_Util::int_as_mask(llvm::Value *value)
 {
     ASSERT(value->getType() == type_int());
 
-    llvm::Value* int16 = builder().CreateTrunc(value, (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context));
+    llvm::Value* result;
+    switch(m_vector_width)
+    {
+    case 4:
+    {
+    	ASSERT(0 && "incomplete, should do something similar to case for 8 below if no mask support");
+    	llvm::Type * intMaskType = (llvm::Type *) llvm::Type::getInt32Ty (*m_llvm_context);
+        llvm::Value* intMask = builder().CreateTrunc(value, intMaskType);
 
-    llvm::Value* result = builder().CreateBitCast (int16, type_wide_bool());
+        result = builder().CreateBitCast (intMask, type_wide_bool());
+    	break;
+    }
+    case 8:
+    {
+    	// Since we know vectorized comparisons for AVX&AVX2 end up setting 8 32 bit integers
+    	// to 0xFFFFFFFF or 0x00000000,
+    	// We need to do more than a simple cast to an int.
+    	
+        // Broadcast out the int32 mask to all data lanes
+        llvm::Value * wide_int_mask = widen_value(value);
+        
+        // Create a filter for each lane to 0 out the other lane's bits
+        std::vector<Constant *> lane_masks(m_vector_width);
+		for (int lane_index = 0; lane_index < m_vector_width; ++lane_index) {
+		   lane_masks[lane_index] = ConstantInt::get(type_int(), (1<<lane_index));
+		}                    
+		llvm::Value * lane_filter = ConstantVector::get(lane_masks);        
+        
+		// Bitwise AND the wide_mask and the lane filter
+        llvm::Value * filtered_mask = op_and(wide_int_mask, lane_filter);
+		//llvm::Value * filtered_mask = wide_int_mask;
+        
+		// We get better code gen using the floating point comparison ops
+        // as the integer based ones at 256 seem to be work on the XMM only and OR
+        // the results together
+    	//llvm::Type * extended_float_vector_type =
+//		    (llvm::Type *) llvm::VectorType::get(llvm::Type::getFloatTy (*m_llvm_context), m_vector_width);
+  //  	llvm::Value * filtered_float_mask = builder().CreateBitCast (filtered_mask, extended_float_vector_type);
+  
+	    result = op_ne(filtered_mask, wide_constant(0));
+    //    result = op_ne(filtered_float_mask, wide_constant(0.0f));
+        //result = op_gt(filtered_float_mask, wide_constant(0.0f));
+    	break;
+    }
+    case 16:
+    {
+    	llvm::Type * intMaskType = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);
+        llvm::Value* intMask = builder().CreateTrunc(value, intMaskType);
+
+        result = builder().CreateBitCast (intMask, type_wide_bool());
+    	break;
+    }
+    }
 
     ASSERT(result->getType() == type_wide_bool());
 

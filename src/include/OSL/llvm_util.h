@@ -338,6 +338,7 @@ public:
     llvm::Value *constant (int i);
 
     /// Return an llvm::Value holding the given integer constant.
+    llvm::Value *constant8 (int i);
     llvm::Value *constant64 (int i);
     llvm::Value *constant128 (int i);
     

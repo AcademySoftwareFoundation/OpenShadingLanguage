@@ -368,8 +368,8 @@ DECL (osl_normalize_vv, "xXX")
 DECL (osl_normalize_dvdv, "xXX")
 #endif
 
-WDECL (osl_pow_w16fw16fw16f, "xXXf")
-WDECL (osl_pow_w16fw16fw16f_masked, "xXXfi")
+WDECL (osl_pow_w16fw16fw16f, "xXXX")
+WDECL (osl_pow_w16fw16fw16f_masked, "xXXXi")
 WDECL (osl_pow_w16vw16vw16f, "xXXX")
 WDECL (osl_area_w16, "xXX")
 WDECL (osl_area_w16_masked, "xXXi")

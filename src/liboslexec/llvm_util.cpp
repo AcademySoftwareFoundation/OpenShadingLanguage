@@ -435,6 +435,7 @@ LLVM_Util::LLVM_Util (int debuglevel)
     m_llvm_type_wide_void_ptr = llvm::VectorType::get(m_llvm_type_void_ptr, m_vector_width);
     m_llvm_type_wide_int_ptr = llvm::PointerType::get(m_llvm_type_wide_int, 0);
     m_llvm_type_wide_bool_ptr = llvm::PointerType::get(m_llvm_type_wide_bool, 0);
+    m_llvm_type_wide_float_ptr = llvm::PointerType::get(m_llvm_type_wide_float, 0);
 
     // A triple is a struct composed of 3 floats
     std::vector<llvm::Type*> triple_wide_fields(3, m_llvm_type_wide_float);

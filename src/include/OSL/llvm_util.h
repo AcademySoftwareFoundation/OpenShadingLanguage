@@ -278,6 +278,7 @@ public:
     llvm::PointerType *type_wide_char_ptr() const { return m_llvm_type_wide_char_ptr; }
     llvm::PointerType *type_wide_bool_ptr() const { return m_llvm_type_wide_bool_ptr; }
     llvm::PointerType *type_wide_int_ptr() const { return m_llvm_type_wide_int_ptr; }
+    llvm::PointerType *type_wide_float_ptr() const { return m_llvm_type_wide_float_ptr; }
 
     /// Generate the appropriate llvm type definition for a TypeDesc
     /// (this is the actual type, for example when we allocate it).
@@ -650,6 +651,7 @@ private:
     llvm::PointerType * m_llvm_type_wide_char_ptr;
     llvm::PointerType * m_llvm_type_wide_int_ptr;
     llvm::PointerType * m_llvm_type_wide_bool_ptr;
+    llvm::PointerType * m_llvm_type_wide_float_ptr;
 
     bool m_supports_masked_stores;
 };

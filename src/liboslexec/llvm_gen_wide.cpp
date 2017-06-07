@@ -1338,6 +1338,7 @@ LLVMGEN (llvm_gen_compref)
 
 
     bool op_is_uniform = rop.isSymbolUniform(Result);
+    ASSERT(rop.isSymbolUniform(Index));
 
 
     llvm::Value *c = rop.llvm_load_value(Index);
@@ -1366,7 +1367,7 @@ LLVMGEN (llvm_gen_compref)
             val = rop.llvm_load_value (Val, d, i, TypeDesc::UNKNOWN, op_is_uniform);
         } else {
             // TODO: handle non constant index
-            val = rop.llvm_load_component_value (Val, d, c);
+            val = rop.llvm_load_component_value (Val, d, c, op_is_uniform);
         }
         rop.llvm_store_value (val, Result, d);
         if (! Result.has_derivs())  // skip the derivs if we don't need them

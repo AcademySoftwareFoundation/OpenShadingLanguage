@@ -1538,7 +1538,8 @@ BackendLLVMWide::llvm_load_constant_value (const Symbol& sym,
 
 llvm::Value *
 BackendLLVMWide::llvm_load_component_value (const Symbol& sym, int deriv,
-                                             llvm::Value *component)
+                                             llvm::Value *component,
+                                             bool op_is_uniform)
 {
     bool has_derivs = sym.has_derivs();
     if (!has_derivs && deriv != 0) {
@@ -1547,24 +1548,42 @@ BackendLLVMWide::llvm_load_component_value (const Symbol& sym, int deriv,
         // so we don't need to worry about that case.
         ASSERT (sym.typespec().is_floatbased() && 
                 "can't ask for derivs of an int");
-		// TODO:  switching back to non-wide to figure out uniform vs. varying data
-        //return ll.wide_constant (0.0f);
-        return ll.constant (0.0f);
+    	if (op_is_uniform) {
+    		return ll.constant (0.0f);
+    	} else {
+    		return ll.wide_constant (0.0f);
+    	}
+        
     }
 
     // Start with the initial pointer to the value's memory location
-    llvm::Value* result = llvm_get_pointer (sym, deriv);
-    if (!result)
+    llvm::Value* pointer = llvm_get_pointer (sym, deriv);
+    if (!pointer)
         return NULL;  // Error
 
     TypeDesc t = sym.typespec().simpletype();
+    ASSERT (t.basetype == TypeDesc::FLOAT);
     ASSERT (t.aggregate != TypeDesc::SCALAR);
     // cast the Vec* to a float*
-    result = ll.ptr_cast (result, ll.type_float_ptr());
-    result = ll.GEP (result, component);  // get the component
+    
+    if (isSymbolUniform(sym)) { 
+    	pointer = ll.ptr_cast (pointer, ll.type_float_ptr());
+    } else { 
+    	pointer = ll.ptr_cast (pointer, ll.type_wide_float_ptr());
+    }
+    pointer = ll.GEP (pointer, component);  // get the component
 
     // Now grab the value
-    return ll.op_load (result);
+    llvm::Value* result = ll.op_load (pointer);
+    
+	if (!op_is_uniform) { 
+    	if (ll.llvm_typeof(result) ==  ll.type_float()) {
+            result = ll.widen_value(result);    		    		
+        } else {
+        	ASSERT(ll.llvm_typeof(result) ==  ll.type_wide_float());
+        }
+    }
+	return result;
 }
 
 

@@ -141,7 +141,7 @@ public:
     /// llvm_load_value with non-constant component designation.  Does
     /// not work with arrays or do type casts!
     llvm::Value *llvm_load_component_value (const Symbol& sym, int deriv,
-                                            llvm::Value *component);
+                                            llvm::Value *component, bool op_is_uniform = true);
 
     /// Non-array version of llvm_load_value, with default deriv &
     /// component.

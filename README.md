@@ -276,7 +276,7 @@ Films using OSL (grouped by year of release date):
   Kingsglaive: Final Fantasy XV,
   Storks,
   Miss Peregrine's Home for Peculiar Children, Assassin's Creed
-* **(2017)**
+* **(2017) / upcoming**
   Lego Batman,
   The Great Wall,
   A Cure for Wellness,
@@ -351,19 +351,18 @@ you, and we hope we've been responsive to your needs.
 
 OSL was not developed in isolation.  We owe a debt to the individuals
 and studios who patiently read early drafts of the language
-specification and gave us very helpful feedback and additional ideas.
-(I hope to mention them by name after we get permission of the people
-and studios involved.)
+specification and gave us very helpful feedback and additional ideas,
+as well as to the continuing contributions and feedback of its current
+developers and users at other VFX and animation studios.
 
-The OSL implementation incorporates or depends upon several other open
-source packages:
+The OSL implementation depends upon several other open source packages,
+all with compatible licenses:
 
-[OpenImageIO (c) Larry Gritz, et al](http://www.openimageio.org)
+* [OpenImageIO (c) Larry Gritz, et al](http://www.openimageio.org)
+* [Boost - various authors](http://www.boost.org)
+* [IlmBase (c) Industrial Light & Magic](http://www.openexr.com)
+* [LLVM Compiler Infrastructure](http://llvm.org)
 
-[Boost - various authors](http://www.boost.org)
-
-[IlmBase (c) Industrial Light & Magic](http://www.openexr.com)
-
-[LLVM Compiler Infrastructure](http://llvm.org)
-
-
+OSL's documentation incorporates parts of [Markdeep](https://casual-effects.com/markdeep/)
+(c) 2015-2016, Morgan McGuire, and [highlight.js](https://highlightjs.org/)
+(c) 2006, Ivan Sagalaev, both distributed under BSD licenses.

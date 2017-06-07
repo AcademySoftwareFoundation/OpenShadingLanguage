@@ -73,6 +73,30 @@ osl_pow_w16fw16fw16f (void *r_, void *base_, void *exponent_)
 }
 
 OSL_SHADEOP void
+osl_pow_w16fw16fw16f_masked (void *r_, void *base_, void *exponent_, int mask_)
+{
+    OSL_INTEL_PRAGMA("forceinline recursive")
+    {
+        const Wide<float> &wbase = WFLOAT(base_);
+        const Wide<float> &wexponent = WFLOAT(exponent_);
+        const Mask mask(mask_);
+        Wide<float> &wr = WFLOAT(r_);
+
+        OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+        for(int lane=0; lane < wr.width; ++lane) {
+            if (mask[lane]) {
+                float base = wbase.get(lane);
+                float exponent = wexponent.get(lane);
+                // TODO: perhaps a custom pow implementation to take
+                // advantage of the exponent being the same?
+                float r = powf(base,exponent);
+                wr.set(lane, r);
+            }
+        }
+    }
+}
+
+OSL_SHADEOP void
 osl_pow_w16vw16vw16f (void *r_, void *base_, void *exponent_)
 {
 	//std::cout << "Made it to osl_pow_w16vw16vw16f" << std::endl;

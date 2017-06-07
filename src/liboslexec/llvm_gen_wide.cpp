@@ -1389,7 +1389,7 @@ LLVMGEN (llvm_gen_compassign)
     // TODO:  Technically the index could be varying as well
     // Lets see if that is true in the wild before getting complicated
     ASSERT(rop.isSymbolUniform(Index));
-    bool op_is_uniform = rop.isSymbolUniform(Result) && rop.isSymbolUniform(Val);
+    bool op_is_uniform = rop.isSymbolUniform(Result);
 
     llvm::Value *c = rop.llvm_load_value(Index);
     if (rop.shadingsys().range_checking()) {
@@ -1415,7 +1415,7 @@ LLVMGEN (llvm_gen_compassign)
             i = Imath::clamp (i, 0, 2);
             rop.llvm_store_value (val, Result, d, i);
         } else {
-            rop.llvm_store_component_value (val, Result, d, c);
+            rop.llvm_store_component_value (val, Result, d, c, op_is_uniform);
         }
         if (! Result.has_derivs())  // skip the derivs if we don't need them
             break;

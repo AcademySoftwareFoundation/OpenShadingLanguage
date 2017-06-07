@@ -205,7 +205,7 @@ public:
     /// llvm_store_value with non-constant component designation.  Does
     /// not work with arrays or do type casts!
     bool llvm_store_component_value (llvm::Value *new_val, const Symbol& sym,
-                                     int deriv, llvm::Value *component);
+                                     int deriv, llvm::Value *component, bool op_is_uniform=true);
 
     /// Legacy version
     ///

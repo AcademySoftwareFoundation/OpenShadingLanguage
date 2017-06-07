@@ -1571,10 +1571,10 @@ BackendLLVMWide::llvm_load_component_value (const Symbol& sym, int deriv,
     } else { 
     	pointer = ll.ptr_cast (pointer, ll.type_wide_float_ptr());
     }
-    pointer = ll.GEP (pointer, component);  // get the component
+    llvm::Value * component_pointer = ll.GEP (pointer, component);  // get the component
 
     // Now grab the value
-    llvm::Value* result = ll.op_load (pointer);
+    llvm::Value* result = ll.op_load (component_pointer);
     
 	if (!op_is_uniform) { 
     	if (ll.llvm_typeof(result) ==  ll.type_float()) {
@@ -1717,7 +1717,7 @@ BackendLLVMWide::llvm_store_value (llvm::Value* new_val, llvm::Value* dst_ptr,
 bool
 BackendLLVMWide::llvm_store_component_value (llvm::Value* new_val,
                                               const Symbol& sym, int deriv,
-                                              llvm::Value* component)
+                                              llvm::Value* component, bool op_is_uniform)
 {
     bool has_derivs = sym.has_derivs();
     if (!has_derivs && deriv != 0) {
@@ -1727,18 +1727,23 @@ BackendLLVMWide::llvm_store_component_value (llvm::Value* new_val,
 
     // Let llvm_get_pointer do most of the heavy lifting to get us a
     // pointer to where our data lives.
-    llvm::Value *result = llvm_get_pointer (sym, deriv);
-    if (!result)
+    llvm::Value *pointer = llvm_get_pointer (sym, deriv);
+    if (!pointer)
         return false;  // Error
 
     TypeDesc t = sym.typespec().simpletype();
+    ASSERT (t.basetype == TypeDesc::FLOAT);
     ASSERT (t.aggregate != TypeDesc::SCALAR);
     // cast the Vec* to a float*
-    result = ll.ptr_cast (result, ll.type_float_ptr());
-    result = ll.GEP (result, component);  // get the component
+    if (isSymbolUniform(sym)) { 
+        pointer = ll.ptr_cast (pointer, ll.type_float_ptr());
+    } else { 
+        pointer = ll.ptr_cast (pointer, ll.type_wide_float_ptr());
+    }    
+    llvm::Value * component_pointer = ll.GEP (pointer, component);  // get the component
 
     // Finally, store the value.
-    ll.op_store (new_val, result);
+    ll.op_store (new_val, component_pointer);
     return true;
 }
 

@@ -604,21 +604,59 @@ BatchedRendererServices::get_texture_info (ShaderGlobalsBatch *sgb,
                                            ustring dataname,
                                            MaskedDataRef val)
 {
-    Mask success;
-//    for (int i = 0; i < filename.width; ++i) {
-//        std::cout << "osl_get_textureinfo_batched: " << filename.get(i) << " mask: " << mask[i] << std::endl;
-//        if (mask[i]) {
-//            bool status = texturesys()->get_texture_info (filename.get(i), subimage,
-//                                             dataname, datatype, static_cast<char*>(data)+stride*i);
-//            if (!status) {
-//                std::string err = texturesys()->geterror();
-//                if (err.size() && sgb) {
-//                    sgb->uniform().context->error ("[BatchRendererServices::get_texture_info] %s", err);
-//                }
-//            }
-//            success.set(i, status);
-//        }
-//    }
+    Mask success(false);
+
+#define TEXTURE_INFO_FOR_TYPE(data_type)                                                        \
+    if (val.is<data_type>()) {                                                                  \
+        auto out = val.masked<data_type>();                                                     \
+        for (int i = 0; i < out.width; ++i) {                                                   \
+            data_type data;                                                                     \
+            bool status = texturesys()->get_texture_info (filename.get(i), subimage,            \
+                                                          dataname, val.type(), &data);         \
+            /* masked assignment */                                                             \
+            out[i] = data;                                                                      \
+            success.set(i, status);                                                             \
+            if (!status) {                                                                      \
+                std::string err = texturesys()->geterror();                                     \
+                if (err.size() && sgb) {                                                        \
+                    sgb->uniform().context->error ("[BatchRendererServices::get_texture_info] %s", err);\
+                }                                                                               \
+            }                                                                                   \
+        }                                                                                       \
+        return success;                                                                         \
+    }
+
+#define TEXTURE_INFO_FOR_ARRAY(data_type)                                                       \
+    if (val.is<data_type[]>()) {                                                                \
+        auto out = val.masked<data_type[]>();                                                   \
+        for (int l = 0; l < out.width; ++l) {                                                   \
+            auto arrayData = out[l];                                                            \
+            data_type data[arrayData.length()];                                                       \
+            bool status = texturesys()->get_texture_info (filename.get(l), subimage,            \
+                                                          dataname, val.type(), data);          \
+            for (int i = 0; i < arrayData.length(); ++i) {                                      \
+                arrayData[i] = data[i];                                                         \
+            }                                                                                   \
+            success.set(l, status);                                                             \
+            if (!status) {                                                                      \
+                std::string err = texturesys()->geterror();                                     \
+                if (err.size() && sgb) {                                                        \
+                    sgb->uniform().context->error ("[BatchRendererServices::get_texture_info] %s", err);\
+                }                                                                               \
+            }                                                                                   \
+        }                                                                                       \
+        return success;                                                                         \
+    }
+
+    TEXTURE_INFO_FOR_TYPE(int);
+    TEXTURE_INFO_FOR_ARRAY(int);
+    TEXTURE_INFO_FOR_TYPE(float);
+    TEXTURE_INFO_FOR_ARRAY(float);
+    TEXTURE_INFO_FOR_TYPE(Vec2);
+    TEXTURE_INFO_FOR_TYPE(Vec3);
+    TEXTURE_INFO_FOR_TYPE(Color3);
+    TEXTURE_INFO_FOR_TYPE(Matrix44);
+    TEXTURE_INFO_FOR_TYPE(ustring);
 
     return success;
 }
@@ -626,7 +664,8 @@ BatchedRendererServices::get_texture_info (ShaderGlobalsBatch *sgb,
 bool
 BatchedRendererServices::get_texture_info_uniform (ShaderGlobalsBatch *sgb, ustring filename,
                                                    TextureHandle *texture_handle,
-                                                   int subimage, ustring dataname,
+                                                   int subimage,
+                                                   ustring dataname,
                                                    DataRef val)
 {
     bool status;
@@ -647,15 +686,15 @@ BatchedRendererServices::get_texture_info_uniform (ShaderGlobalsBatch *sgb, ustr
 
 Mask
 BatchedRendererServices::texture_uniform (ustring filename, TextureHandle *texture_handle,
-                           TexturePerthread *texture_thread_info,
-                           const TextureOptions *options, ShaderGlobalsBatch *sgb,
-                           const Wide<float>& s, const Wide<float>& t,
-                           const Wide<float>& dsdx, const Wide<float>& dtdx,
-                           const Wide<float>& dsdy, const Wide<float>& dtdy,
-                           int nchannels,
-                            void* result, void* dresultds, void* dresultdt,
-                            Wide<float>* alpha, Wide<float>* dalphadx, Wide<float>* dalphady,
-                            Wide<ustring>* errormessage, Mask mask)
+                                          TexturePerthread *texture_thread_info,
+                                          const TextureOptions *options, ShaderGlobalsBatch *sgb,
+                                          const Wide<float>& s, const Wide<float>& t,
+                                          const Wide<float>& dsdx, const Wide<float>& dtdx,
+                                          const Wide<float>& dsdy, const Wide<float>& dtdy,
+                                          int nchannels,
+                                          void* result, void* dresultds, void* dresultdt,
+                                          Wide<float>* alpha, Wide<float>* dalphadx, Wide<float>* dalphady,
+                                          Wide<ustring>* errormessage, Mask mask)
 {
     ShadingContext *context = sgb->uniform().context;
     if (! texture_thread_info)
@@ -763,25 +802,79 @@ BatchedRendererServices::texture (const Wide<ustring>& filename,
     ShadingContext *context = sgb->uniform().context;
     if (! texture_thread_info)
         texture_thread_info = context->texture_thread_info();
-    bool status;
-    /*
-    status = texturesys()->texture (filename,
-                                    options, s, t, dsdx, dtdx, dsdy, dtdy,
-                                    nchannels, result, dresultds, dresultdt);
-    if (!status) {
-        std::string err = texturesys()->geterror();
-        if (err.size() && sgb) {
-            if (errormessage) {
-                *errormessage = ustring(err);
-            } else {
-                context->error ("[RendererServices::texture] %s", err);
+    // TODO: change to DASSERT once confidenty
+    ASSERT((dresultds != NULL) == (dresultdt != NULL));
+    bool has_derivs = dresultds != NULL;
+
+    Mask status(false);
+    //std::cout << "nchannels: " << nchannels << std::endl;
+    for (int i = 0; i < SimdLaneCount; ++i) {
+        if (mask[i]) {
+            // Apparently the members of TextureOpt get modified from calls into
+            // the texture system, so lets start with a fresh set of defaults for now
+            TextureOpt opt;
+            if(options) {
+                options->updateOption(opt, i);
             }
-        } else if (errormessage) {
-            *errormessage = Strings::unknown;
+            // It's actually faster to ask for 4 channels (even if we need fewer)
+            // and ensure that they're being put in aligned memory.
+            // TODO:  investigate if the above statement is true when nchannels==1
+            OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd;
+            // TODO:  investigate if there any magic to this simd::float4 or
+            // can we just use a float[4] to the same effect and avoid confustion
+
+            bool retVal = false;
+            retVal = texturesys()->texture (filename.get(i), opt,
+                                            s.get(i), t.get(i),
+                                            dsdx.get(i), dtdx.get(i),
+                                            dsdy.get(i), dtdy.get(i),
+                                            4,
+                                            (float *)&result_simd,
+                                            has_derivs ? (float *)&dresultds_simd : NULL,
+                                            has_derivs ? (float *)&dresultdt_simd : NULL);
+
+            if (retVal) {
+                if (nchannels == 3) {
+                    Wide<Color3>& wideResult = *reinterpret_cast<Wide<Color3>*>(result);
+                    wideResult.set(i, Color3(result_simd[0], result_simd[1], result_simd[2]));
+                    if (has_derivs) {
+                        Wide<Color3>& wideResultds = *reinterpret_cast<Wide<Color3>*>(dresultds);
+                        wideResultds.set(i, Color3(dresultds_simd[0], dresultds_simd[1], dresultds_simd[2]));
+                        Wide<Color3>& wideResultdt = *reinterpret_cast<Wide<Color3>*>(dresultdt);
+                        wideResultdt.set(i, Color3(dresultdt_simd[0], dresultdt_simd[1], dresultdt_simd[2]));
+                    }
+                } else if (nchannels == 1) {
+                    Wide<float>& wideResult = *reinterpret_cast<Wide<float>*>(result);
+                    wideResult.set(i, result_simd[0]);
+                    if (has_derivs) {
+                        Wide<float>& wideResultds = *reinterpret_cast<Wide<float>*>(dresultds);
+                        wideResultds.set(i, dresultds_simd[0]);
+                        Wide<float>& wideResultdt = *reinterpret_cast<Wide<float>*>(dresultdt);
+                        wideResultdt.set(i, dresultdt_simd[0]);
+                    }
+                }
+                if (alpha)
+                {
+                    alpha->set(i, result_simd[nchannels]);
+                }
+                //std::cout << "s: " << s.get(i) << " t: " << t.get(i) << " color: " << resultColor << " " << wideResult.get(i) << std::endl;
+            } else {
+                std::string err = texturesys()->geterror();
+                if (err.size() && sgb) {
+                    if (errormessage) {
+                        errormessage->set(i, ustring(err));
+                    } else {
+                        context->error ("[RendererServices::texture] %s", err);
+                    }
+                } else if (errormessage) {
+                    errormessage->set(i, ustring(err));
+                }
+            }
+            status.set(i, retVal);
         }
     }
-    */
-    return Mask(status);
+
+    return status;
 }
 
 OSL_NAMESPACE_EXIT

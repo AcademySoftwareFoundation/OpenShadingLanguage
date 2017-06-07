@@ -515,6 +515,120 @@ public:
 };
 
 template <int WidthT>
+struct Wide<Vec2, WidthT>
+{
+    typedef Vec2 value_type;
+    static constexpr int width = WidthT;
+    float x[WidthT];
+    float y[WidthT];
+
+    OSL_INLINE void
+    set(int index, const Vec2 & value)
+    {
+        x[index] = value.x;
+        y[index] = value.y;
+    }
+
+    OSL_INLINE void
+    blendin(WideMask<WidthT> mask, const Wide & other)
+    {
+        OSL_INTEL_PRAGMA("forceinline recursive")
+        {
+            OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
+            for(int i = 0; i < WidthT; ++i)
+            {
+                if (mask[i]) {
+                    x[i] = other.x.get(i);
+                    y[i] = other.y.get(i);
+                }
+            }
+        }
+    }
+
+    OSL_INLINE void
+    blendin(WideMask<WidthT> mask, const value_type & value)
+    {
+        OSL_INTEL_PRAGMA("forceinline recursive")
+        {
+            OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
+            for(int i = 0; i < WidthT; ++i)
+            {
+                if (mask[i]) {
+                    x[i] = value.x;
+                    y[i] = value.y;
+                }
+            }
+        }
+    }
+
+
+protected:
+    template<int HeadIndexT>
+    OSL_INLINE void
+    set(internal::int_sequence<HeadIndexT>, const Vec2 & value)
+    {
+        set(HeadIndexT, value);
+    }
+
+    template<int HeadIndexT, int... TailIndexListT, typename... Vec2ListT>
+    OSL_INLINE void
+    set(internal::int_sequence<HeadIndexT, TailIndexListT...>, Vec2 headValue, Vec2ListT... tailValues)
+    {
+        set(HeadIndexT, headValue);
+        set(internal::int_sequence<TailIndexListT...>(), tailValues...);
+        return;
+    }
+public:
+
+    OSL_INLINE Wide() = default;
+    // We want to avoid accidentially copying these when the intent was to just have
+    // a reference
+    Wide(const Wide &other) = delete;
+
+    template<typename... Vec2ListT, typename = internal::enable_if_type<(sizeof...(Vec2ListT) == WidthT)> >
+    OSL_INLINE
+    Wide(const Vec2ListT &...values)
+    {
+        typedef internal::make_int_sequence<sizeof...(Vec2ListT)> int_seq_type;
+        set(int_seq_type(), values...);
+        return;
+    }
+
+
+    OSL_INLINE Vec2
+    get(int index) const
+    {
+        return Vec2(x[index], y[index]);
+    }
+
+    void dump(const char *name) const
+    {
+        if (name != nullptr) {
+            std::cout << name << " = ";
+        }
+        std::cout << "x{";
+        for(int i=0; i < WidthT; ++i)
+        {
+            std::cout << x[i];
+            if (i < (WidthT-1))
+                std::cout << ",";
+
+        }
+        std::cout << "}" << std::endl;
+        std::cout << "y{";
+        for(int i=0; i < WidthT; ++i)
+        {
+            std::cout << y[i];
+            if (i < (WidthT-1))
+                std::cout << ",";
+
+        }
+        std::cout << "}" << std::endl;
+    }
+
+};
+
+template <int WidthT>
 struct Wide<Color3, WidthT>
 {
 	typedef Color3 value_type;	
@@ -1553,6 +1667,14 @@ struct WideTraits<Vec3> {
 };
 
 template <>
+struct WideTraits<Vec2> {
+    static bool matches(const TypeDesc &type_desc) {
+        return type_desc.basetype == TypeDesc::FLOAT &&
+            type_desc.aggregate == TypeDesc::VEC2;
+    }
+};
+
+template <>
 struct WideTraits<Color3> {
 	static bool matches(const TypeDesc &type_desc) {
 		return type_desc.basetype == TypeDesc::FLOAT && 
@@ -2067,30 +2189,23 @@ public:
 #endif
         int j = 0; // offset index to next void pointer
 
-#define OPTION_CASE(i, optName)                                              \
-        if (m_active[i]) {                                                       \
-            /*std::cout << "OPTION " #optIndex << std::endl;*/ \
+#define OPTION_CASE(i, optName)                                                             \
+        if (m_active[i]) {                                                                  \
             if (m_varying[i]) {                                                             \
-                /*std::cout << "OPTION varying " << std::endl;*/ \
                 if (m_type[i] == static_cast<bool>(INT)) {                                  \
-                /*std::cout << "OPTION int" << std::endl;*/ \
                     Wide<int>& wideResult = *reinterpret_cast<Wide<int>*>(m_options[j]);    \
                     opt.optName = static_cast<float>(wideResult.get(l));                    \
                 }                                                                           \
                 else {                                                                      \
-                /*std::cout << "OPTION float" << std::endl;*/ \
                     Wide<float>& wideResult = *reinterpret_cast<Wide<float>*>(m_options[j]);\
                     opt.optName = wideResult.get(l);                                        \
                 }                                                                           \
             }                                                                               \
             else {                                                                          \
-                /*std::cout << "OPTION uniform" << std::endl;*/ \
                 if (m_type[i] == static_cast<bool>(INT)) {                                  \
-                /*std::cout << "OPTION int" << std::endl;*/ \
                     opt.optName = static_cast<float>(*reinterpret_cast<int*>(m_options[j]));\
-                } \
+                }                                                                           \
                 else  {                                                                     \
-                /*std::cout << "OPTION float" << std::endl;*/ \
                     opt.optName = *reinterpret_cast<float*>(m_options[j]);                  \
                 }                                                                           \
             }                                                                               \
@@ -2102,7 +2217,7 @@ public:
             if (m_varying[i]) {                                                             \
                 if (m_type[i] == static_cast<bool>(STRING)) {                               \
                     Wide<ustring>& wideResult = *reinterpret_cast<Wide<ustring>*>(m_options[j]); \
-                    opt.optName = decode(wideResult.get(l));           \
+                    opt.optName = decode(wideResult.get(l));                                \
                 }                                                                           \
                 else {                                                                      \
                     Wide<int>& wideResult = *reinterpret_cast<Wide<int>*>(m_options[j]);    \

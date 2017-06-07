@@ -374,24 +374,24 @@ osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
     // for batched. The renderer should decide which way is more efficient
     // (thus implement this in renderservices)?
     Mask retVal = sgb->uniform().renderer->batched()->texture_uniform (USTR(name),
-                                                               (TextureSystem::TextureHandle *)handle,
-                                                               NULL,
-                                                               opt, sgb,
-                                                               WFLOAT(s),
-                                                               WFLOAT(t),
-                                                               WFLOAT(dsdx),
-                                                               WFLOAT(dtdx),
-                                                               WFLOAT(dsdy),
-                                                               WFLOAT(dtdy),
-                                                               chans,
-                                                               result,
-                                                               dresultds,
-                                                               dresultdt,
-                                                               WFLOATPTR(alpha),
-                                                               WFLOATPTR(dalphads),
-                                                               WFLOATPTR(dalphadt),
-                                                               WUSTRPTR(errormessage),
-                                                               mask);
+                                                                       (TextureSystem::TextureHandle *)handle,
+                                                                       NULL,
+                                                                       opt, sgb,
+                                                                       WFLOAT(s),
+                                                                       WFLOAT(t),
+                                                                       WFLOAT(dsdx),
+                                                                       WFLOAT(dtdx),
+                                                                       WFLOAT(dsdy),
+                                                                       WFLOAT(dtdy),
+                                                                       chans,
+                                                                       result,
+                                                                       dresultds,
+                                                                       dresultdt,
+                                                                       WFLOATPTR(alpha),
+                                                                       WFLOATPTR(dalphads),
+                                                                       WFLOATPTR(dalphadt),
+                                                                       WUSTRPTR(errormessage),
+                                                                       mask);
 
     // Correct our st texture space gradients into xy-space gradients
     transformWideTextureGradients(chans, dresultds, dresultdt, dalphads, dalphadt,
@@ -594,10 +594,11 @@ osl_get_textureinfo_batched_uniform (void *sgb_, const char *name, void *handle,
 
     DataRef dest(*(const TypeDesc *)attr_type, false, attr_dest);
 
-    return sgb->uniform().renderer->batched()->get_texture_info_uniform(sgb, USTR(name),
-                                                                        (RendererServices::TextureHandle *)handle,
-                                                                        0 /*FIXME-ptex*/,
-                                                                        USTR(dataname), dest);
+    bool retVal = sgb->uniform().renderer->batched()->get_texture_info_uniform(sgb, USTR(name),
+                                                                               (RendererServices::TextureHandle *)handle,
+                                                                               0 /*FIXME-ptex*/,
+                                                                               USTR(dataname), dest);
+    return retVal;
 }
 
 OSL_SHADEOP int
@@ -607,7 +608,6 @@ osl_get_textureinfo_batched (void *sgb_, void* name,
                              void *wide_attr_dest,
                              int mask_)
 {
-    std::cout << "osl_get_textureinfo_batched" << std::endl;
     Mask mask(mask_);
     // TODO: LLVM could check this before calling this function
     if (mask.all_off()) {

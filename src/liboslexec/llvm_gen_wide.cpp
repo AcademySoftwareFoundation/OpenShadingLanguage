@@ -2284,8 +2284,17 @@ LLVMGEN (llvm_gen_generic)
 
         bool functionIsLlvmInlined = opd->flags & OpDescriptor::LLVMInlined;
 
+        // This can get a bit confusing here,
+        // basically in the uniform version, scalar values can be returned by value
+        // by functions.  However, if varying, those scalar's are really wide
+        // and we can't return by value.  Except if the function in question
+        // is llvm source marked as always inline.  In that case we can return
+        // wide types.  For all other cases we need to pass a pointer to the
+        // where the return value needs to go.
+        
         // Don't compute derivs -- either not needed or not provided in args
-        if (Result.typespec().aggregate() == TypeDesc::SCALAR) {
+        if (Result.typespec().aggregate() == TypeDesc::SCALAR &&
+			(uniformFormOfFunction || functionIsLlvmInlined)) {
             std::cout << ">>stores return value " << name.c_str() << std::endl;
             llvm::Value *r = rop.llvm_call_function (name.c_str(),
                                                      &(args[1]), op.nargs()-1,

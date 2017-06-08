@@ -1,12 +1,13 @@
-add_custom_command (OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/stdosl.h"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/stdosl.h" "${CMAKE_CURRENT_BINARY_DIR}"
-    MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/stdosl.h"
-    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+file (GLOB shader_headers "*.h")
+file (GLOB shader_source "*.osl")
 
-add_custom_command (OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/oslutil.h"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/oslutil.h" "${CMAKE_CURRENT_BINARY_DIR}"
-        MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/oslutil.h"
+foreach (_shader_header ${shader_headers})
+    get_filename_component (_shader_header_name ${_shader_header} NAME)
+    add_custom_command (OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${_shader_header_name}"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_shader_header}" "${CMAKE_CURRENT_BINARY_DIR}"
+        MAIN_DEPENDENCY "${_shader_header}"
         WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+endforeach()
 
 
 if (${CMAKE_GENERATOR} MATCHES "(Visual Studio.*)")
@@ -40,10 +41,6 @@ macro (osl_compile oslsrc objlist headers)
 endmacro ()
 
 
-
-
-file (GLOB shader_headers "*.h")
-file (GLOB shader_source "*.osl")
 
 foreach (_shadername ${shader_source})
     osl_compile (${_shadername} shader_objs shader_headers)

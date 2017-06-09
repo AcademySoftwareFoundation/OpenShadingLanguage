@@ -1338,6 +1338,8 @@ LLVMGEN (llvm_gen_compref)
 
 
     bool op_is_uniform = rop.isSymbolUniform(Result);
+    // TODO: we expect we will need to handle varying indices
+    // performance could be quite bad though so want to avoid if possible
     ASSERT(rop.isSymbolUniform(Index));
 
 

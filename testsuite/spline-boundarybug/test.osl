@@ -1,0 +1,22 @@
+// Reguression test -- this used to have a bug where right at 0.6, there
+// was a precision problem.
+
+
+float invspline(float x, float uu){
+    string basis = "bspline";
+    float knots[8];
+    for (int i=0;i<4;i++) knots[i] = x;
+    for (int i=4;i<8;i++) knots[i] = 1.0;
+    float floats[8] ={0.0, 0.0, 0.0, 0.0,  1.0, 1.0, 1.0, 1.0};
+    return splineinverse(basis,uu,knots);
+}
+
+surface test() {
+   float uu;
+   uu = 0.59;
+   printf("(%f,%f)\n",0.6,invspline(0.6,uu));
+   uu = 0.6;
+   printf("(%f,%f)\n",0.6,invspline(0.6,uu));
+   uu = 0.61;
+   printf("(%f,%f)\n",0.6,invspline(0.6,uu));
+}

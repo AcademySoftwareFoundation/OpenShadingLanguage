@@ -313,8 +313,18 @@ inline bool operator<= (const Dual2<T> &a, const Dual2<T> &b) {
 }
 
 template<class T>
+inline bool operator<= (const Dual2<T> &a, const T &b) {
+    return a.val() <= b;
+}
+
+template<class T>
 inline bool operator>= (const Dual2<T> &a, const Dual2<T> &b) {
     return a.val() >= b.val();
+}
+
+template<class T>
+inline bool operator>= (const Dual2<T> &a, const T &b) {
+    return a.val() >= b;
 }
 
 

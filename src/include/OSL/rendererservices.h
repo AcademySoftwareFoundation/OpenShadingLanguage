@@ -654,10 +654,10 @@ public:
     /// could be varying
     virtual Mask texture_uniform (ustring filename, TextureHandle *texture_handle,
                                   TexturePerthread *texture_thread_info,
-                                  const TextureOptions *options, ShaderGlobalsBatch *sgb,
-                                  const Wide<float>& s, const Wide<float>& t,
-                                  const Wide<float>& dsdx, const Wide<float>& dtdx,
-                                  const Wide<float>& dsdy, const Wide<float>& dtdy,
+                                  const BatchedTextureOptionProvider *options, ShaderGlobalsBatch *sgb,
+                                  ConstWideAccessor<float> s, ConstWideAccessor<float> t,
+                                  ConstWideAccessor<float> dsdx, ConstWideAccessor<float> dtdx,
+                                  ConstWideAccessor<float> dsdy, ConstWideAccessor<float> dtdy,
                                   int nchannels,
                                   // result, dresultds, dresultdt, could be Wide<float>*, or Wide<Color3>*
                                   void* result, void* dresultds, void* dresultdt,
@@ -665,12 +665,12 @@ public:
                                   Wide<ustring>* errormessage, Mask mask);
 
     /// Batch version where filename is varying also
-    virtual Mask texture (const Wide<ustring>& filename,
+    virtual Mask texture (ConstWideAccessor<ustring> filename,
                           TexturePerthread *texture_thread_info,
-                          const TextureOptions *options, ShaderGlobalsBatch *sgb,
-                          const Wide<float>& s, const Wide<float>& t,
-                          const Wide<float>& dsdx, const Wide<float>& dtdx,
-                          const Wide<float>& dsdy, const Wide<float>& dtdy,
+                          const BatchedTextureOptionProvider *options, ShaderGlobalsBatch *sgb,
+                          ConstWideAccessor<float> s, ConstWideAccessor<float> t,
+                          ConstWideAccessor<float> dsdx, ConstWideAccessor<float> dtdx,
+                          ConstWideAccessor<float> dsdy, ConstWideAccessor<float> dtdy,
                           int nchannels,
                           // result, dresultds, dresultdt, could be Wide<float>*, or Wide<Color3>*
                           void* result, void* dresultds, void* dresultdt,

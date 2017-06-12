@@ -368,7 +368,7 @@ osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
         return 0;
     }
     ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
-    TextureOptions *opt = reinterpret_cast<TextureOptions *>(opt_);
+    BatchedTextureOptionProvider *opt = reinterpret_cast<BatchedTextureOptionProvider *>(opt_);
 
     // XXX lfeng: original code use simd float4, then copy back to result.
     // for batched. The renderer should decide which way is more efficient
@@ -377,12 +377,12 @@ osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
                                                                        (TextureSystem::TextureHandle *)handle,
                                                                        NULL,
                                                                        opt, sgb,
-                                                                       WFLOAT(s),
-                                                                       WFLOAT(t),
-                                                                       WFLOAT(dsdx),
-                                                                       WFLOAT(dtdx),
-                                                                       WFLOAT(dsdy),
-                                                                       WFLOAT(dtdy),
+                                                                       ConstWideAccessor<float>(s),
+                                                                       ConstWideAccessor<float>(t),
+                                                                       ConstWideAccessor<float>(dsdx),
+                                                                       ConstWideAccessor<float>(dtdx),
+                                                                       ConstWideAccessor<float>(dsdy),
+                                                                       ConstWideAccessor<float>(dtdy),
                                                                        chans,
                                                                        result,
                                                                        dresultds,
@@ -416,20 +416,20 @@ osl_texture_batched (void *sgb_, void *name,
         return 0;
     }
     ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
-    TextureOptions *opt = reinterpret_cast<TextureOptions *>(opt_);
+    BatchedTextureOptionProvider *opt = reinterpret_cast<BatchedTextureOptionProvider *>(opt_);
 
     // XXX lfeng: original code use simd float4, then copy back to result.
     // for batched. The renderer should decide which way is more efficient
     // (thus implement this in renderservices)?
-    Mask retVal = sgb->uniform().renderer->batched()->texture (WUSTR(name),
+    Mask retVal = sgb->uniform().renderer->batched()->texture (ConstWideAccessor<ustring>(name),
                                                                NULL,
                                                                opt, sgb,
-                                                               WFLOAT(s),
-                                                               WFLOAT(t),
-                                                               WFLOAT(dsdx),
-                                                               WFLOAT(dtdx),
-                                                               WFLOAT(dsdy),
-                                                               WFLOAT(dtdy),
+                                                               ConstWideAccessor<float>(s),
+                                                               ConstWideAccessor<float>(t),
+                                                               ConstWideAccessor<float>(dsdx),
+                                                               ConstWideAccessor<float>(dtdx),
+                                                               ConstWideAccessor<float>(dsdy),
+                                                               ConstWideAccessor<float>(dtdy),
                                                                chans,
                                                                result,
                                                                dresultds,

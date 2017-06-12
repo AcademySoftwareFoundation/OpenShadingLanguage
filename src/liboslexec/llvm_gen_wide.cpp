@@ -2884,18 +2884,18 @@ llvm_gen_texture_options (BackendLLVMWide &rop, int opnum,
 }
 
 struct TextureOptionPack {
-    TextureOptions::Mask activeMask;
-    TextureOptions::Mask varyingMask;
-    TextureOptions::Mask typeMask;
-    std::array<llvm::Value*, TextureOptions::MAX_OPTIONS> values;
+    BatchedTextureOptionProvider::Mask activeMask;
+    BatchedTextureOptionProvider::Mask varyingMask;
+    BatchedTextureOptionProvider::Mask typeMask;
+    std::array<llvm::Value*, BatchedTextureOptionProvider::MAX_OPTIONS> values;
     TextureOptionPack()
         : activeMask(false),
           varyingMask(false),
           typeMask(false)
           {}
-    void add(TextureOptions::Options index,
+    void add(BatchedTextureOptionProvider::Options index,
              llvm::Value* val,
-             TextureOptions::DataType type,
+             BatchedTextureOptionProvider::DataType type,
              bool isVarying) {
         activeMask.set_on(index);
         varyingMask.set(index, isVarying);
@@ -2942,43 +2942,43 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
         // XXX lfeng: check for default values if uniform
 #define PARAM_INT(paramname, index)                                     \
         if (name == Strings::paramname && valtype == TypeDesc::INT)   { \
-            if (!options.activeMask[TextureOptions::index] &&           \
+            if (!options.activeMask[BatchedTextureOptionProvider::index] &&           \
                 ival && *ival == optdefaults.paramname)                 \
                 continue;   /* default constant */                      \
-            options.add(TextureOptions::index, rop.llvm_void_ptr(Val), TextureOptions::INT, valIsVarying);      \
+            options.add(BatchedTextureOptionProvider::index, rop.llvm_void_ptr(Val), BatchedTextureOptionProvider::INT, valIsVarying);      \
             continue;                                                   \
         }
 
 #define PARAM_FLOAT(paramname, index)                                   \
         if (name == Strings::paramname &&                               \
             (valtype == TypeDesc::FLOAT || valtype == TypeDesc::INT)) { \
-            if (!options.activeMask[TextureOptions::index] &&           \
+            if (!options.activeMask[BatchedTextureOptionProvider::index] &&           \
                 ((ival && *ival == optdefaults.paramname) ||            \
                  (fval && *fval == optdefaults.paramname)))             \
                 continue;   /* default constant */                      \
-            TextureOptions::DataType optType = TextureOptions::FLOAT;   \
+            BatchedTextureOptionProvider::DataType optType = BatchedTextureOptionProvider::FLOAT;   \
             if (valtype == TypeDesc::INT)                               \
-                optType = TextureOptions::INT;                          \
-            options.add(TextureOptions::index, rop.llvm_void_ptr(Val), optType, valIsVarying);      \
+                optType = BatchedTextureOptionProvider::INT;                          \
+            options.add(BatchedTextureOptionProvider::index, rop.llvm_void_ptr(Val), optType, valIsVarying);      \
             continue;                                                   \
         }
 
 #define PARAM_FLOAT_STR(paramname, index)                               \
         if (name == Strings::paramname &&                               \
             (valtype == TypeDesc::FLOAT || valtype == TypeDesc::INT)) { \
-            if (!options.activeMask[TextureOptions::S##index] &&        \
-                !options.activeMask[TextureOptions::T##index] &&        \
-                !options.activeMask[TextureOptions::R##index] &&        \
+            if (!options.activeMask[BatchedTextureOptionProvider::S##index] &&        \
+                !options.activeMask[BatchedTextureOptionProvider::T##index] &&        \
+                !options.activeMask[BatchedTextureOptionProvider::R##index] &&        \
                 ((ival && *ival == optdefaults.s##paramname) ||         \
                  (fval && *fval == optdefaults.s##paramname)))          \
                 continue;                                               \
-            TextureOptions::DataType optType = TextureOptions::FLOAT;   \
+            BatchedTextureOptionProvider::DataType optType = BatchedTextureOptionProvider::FLOAT;   \
             if (valtype == TypeDesc::INT)                               \
-                optType = TextureOptions::INT;                          \
-            options.add(TextureOptions::S##index, rop.llvm_void_ptr(Val), optType, valIsVarying);      \
-            options.add(TextureOptions::T##index, rop.llvm_void_ptr(Val), optType, valIsVarying);      \
+                optType = BatchedTextureOptionProvider::INT;                          \
+            options.add(BatchedTextureOptionProvider::S##index, rop.llvm_void_ptr(Val), optType, valIsVarying);      \
+            options.add(BatchedTextureOptionProvider::T##index, rop.llvm_void_ptr(Val), optType, valIsVarying);      \
             if (tex3d)                                                                                 \
-                options.add(TextureOptions::R##index, rop.llvm_void_ptr(Val), optType, valIsVarying);  \
+                options.add(BatchedTextureOptionProvider::R##index, rop.llvm_void_ptr(Val), optType, valIsVarying);  \
             continue;                                                   \
         }
 
@@ -2986,17 +2986,17 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
         if (name == Strings::paramname && valtype == TypeDesc::STRING) {\
             if (Val.is_constant()) {                                    \
                 int code = decoder (*(ustring *)Val.data());            \
-                if (!options.activeMask[TextureOptions::index] &&       \
+                if (!options.activeMask[BatchedTextureOptionProvider::index] &&       \
                     code == optdefaults.fieldname)                      \
                     continue;                                           \
                 if (code >= 0) {                                        \
                     llvm::Value *val = rop.ll.constant (code);          \
                     llvm::Value* codePtr = rop.ll.op_alloca(rop.ll.type_int());\
                     rop.ll.op_store(val, codePtr);                      \
-                    options.add(TextureOptions::index, rop.ll.void_ptr(codePtr), TextureOptions::INT, valIsVarying);  \
+                    options.add(BatchedTextureOptionProvider::index, rop.ll.void_ptr(codePtr), BatchedTextureOptionProvider::INT, valIsVarying);  \
                 }                                                       \
             } else {                                                    \
-                options.add(TextureOptions::index, rop.llvm_void_ptr(Val), TextureOptions::STRING, valIsVarying);  \
+                options.add(BatchedTextureOptionProvider::index, rop.llvm_void_ptr(Val), BatchedTextureOptionProvider::STRING, valIsVarying);  \
             }                                                           \
             continue;                                                   \
         }
@@ -3016,15 +3016,15 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
                 llvm::Value *val = rop.ll.constant (mode);
                 llvm::Value* codePtr = rop.ll.op_alloca(rop.ll.type_int());
                 rop.ll.op_store(val, codePtr);
-                options.add(TextureOptions::SWRAP, rop.ll.void_ptr(codePtr), TextureOptions::INT, valIsVarying);
-                options.add(TextureOptions::TWRAP, rop.ll.void_ptr(codePtr), TextureOptions::INT, valIsVarying);
+                options.add(BatchedTextureOptionProvider::SWRAP, rop.ll.void_ptr(codePtr), BatchedTextureOptionProvider::INT, valIsVarying);
+                options.add(BatchedTextureOptionProvider::TWRAP, rop.ll.void_ptr(codePtr), BatchedTextureOptionProvider::INT, valIsVarying);
                 if (tex3d)
-                    options.add(TextureOptions::RWRAP, val, TextureOptions::INT, valIsVarying);
+                    options.add(BatchedTextureOptionProvider::RWRAP, val, BatchedTextureOptionProvider::INT, valIsVarying);
             } else {
-                options.add(TextureOptions::SWRAP, rop.llvm_void_ptr(Val), TextureOptions::STRING, valIsVarying);
-                options.add(TextureOptions::TWRAP, rop.llvm_void_ptr(Val), TextureOptions::STRING, valIsVarying);
+                options.add(BatchedTextureOptionProvider::SWRAP, rop.llvm_void_ptr(Val), BatchedTextureOptionProvider::STRING, valIsVarying);
+                options.add(BatchedTextureOptionProvider::TWRAP, rop.llvm_void_ptr(Val), BatchedTextureOptionProvider::STRING, valIsVarying);
                 if (tex3d)
-                    options.add(TextureOptions::RWRAP, rop.llvm_void_ptr(Val), TextureOptions::STRING, valIsVarying);
+                    options.add(BatchedTextureOptionProvider::RWRAP, rop.llvm_void_ptr(Val), BatchedTextureOptionProvider::STRING, valIsVarying);
             }
             continue;
         }
@@ -3039,7 +3039,7 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
         PARAM_INT (subimage, SUBIMAGE)
 
         if (name == Strings::subimage && valtype == TypeDesc::STRING) {
-            options.add(TextureOptions::SUBIMAGE, rop.llvm_void_ptr(Val), TextureOptions::STRING, valIsVarying);
+            options.add(BatchedTextureOptionProvider::SUBIMAGE, rop.llvm_void_ptr(Val), BatchedTextureOptionProvider::STRING, valIsVarying);
             continue;
         }
 
@@ -3054,7 +3054,7 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
             }
             rop.ll.op_memcpy (rop.ll.void_ptr(missingcolor),
                               rop.llvm_void_ptr(Val), (int)sizeof(Color3));
-            options.add(TextureOptions::MISSINGCOLOR, rop.ll.void_ptr(missingcolor), TextureOptions::COLOR, valIsVarying);
+            options.add(BatchedTextureOptionProvider::MISSINGCOLOR, rop.ll.void_ptr(missingcolor), BatchedTextureOptionProvider::COLOR, valIsVarying);
             continue;
         }
         if (name == Strings::missingalpha && valtype == TypeDesc::FLOAT) {
@@ -3068,11 +3068,11 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
             llvm::Value* alphaPtr = rop.ll.GEP(missingcolor, 3);
             llvm::Value* val = rop.llvm_load_value (Val);
             rop.ll.op_store(val, alphaPtr);
-            options.add(TextureOptions::MISSINGALPHA, rop.ll.void_ptr(missingcolor), TextureOptions::FLOAT, valIsVarying);
+            options.add(BatchedTextureOptionProvider::MISSINGALPHA, rop.ll.void_ptr(missingcolor), BatchedTextureOptionProvider::FLOAT, valIsVarying);
             continue;
         }
 
-        // These values are not passed in TextureOptions
+        // These values are not passed in BatchedTextureOptionProvider
         if (name == Strings::alpha && valtype == TypeDesc::FLOAT) {
             alpha = rop.llvm_get_pointer (Val);
             if (Val.has_derivs()) {
@@ -3102,7 +3102,7 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
         const int numBytes = sizeof(options.activeMask) +
                              sizeof(options.varyingMask) +
                              sizeof(options.typeMask) +
-                             sizeof(TextureOptions::Mask) + //
+                             sizeof(BatchedTextureOptionProvider::Mask) + //
                              numVal * sizeof(void*);
         llvm::Value* optionPack =  rop.ll.op_alloca(rop.ll.type_int(), numBytes/sizeof(int));
         int offset = 0;
@@ -3118,13 +3118,13 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
         llvm::Value* typeMaskVal = rop.ll.constant((int)options.typeMask.value());
         rop.ll.op_store(typeMaskVal, typeMaskPtr);
 
-        // skip 4 byte for matching alignment with TextureOptions
+        // skip 4 byte for matching alignment with BatchedTextureOptionProvider
         ++offset;
 
         // get address to the first void pointer
         llvm::Value* voidPtrBase = rop.ll.ptr_to_cast(rop.ll.GEP(optionPack, offset), (llvm::Type*)rop.ll.type_void_ptr());
         offset = 0;
-        for(int i = 0; i < TextureOptions::MAX_OPTIONS; ++i) {
+        for(int i = 0; i < BatchedTextureOptionProvider::MAX_OPTIONS; ++i) {
             std::cout << "i: " << i << std::endl;
             if (options.activeMask[i]) {
                 llvm::Value* voidPtr = rop.ll.GEP(voidPtrBase, offset++);

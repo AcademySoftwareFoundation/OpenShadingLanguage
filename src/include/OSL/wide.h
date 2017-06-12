@@ -2126,7 +2126,7 @@ public:
    }   
 };
 
-class TextureOptions
+class BatchedTextureOptionProvider
 {
 public:
     enum Options {
@@ -2169,7 +2169,7 @@ private:
 
     static const TextureOpt defaultOpt;
 public:
-    TextureOptions()
+    BatchedTextureOptionProvider()
     : m_active(false)
      , m_varying(false)
    ,   m_type(false)
@@ -2302,6 +2302,32 @@ private:
             mode = TextureOpt::InterpClosest;
         return mode;
     }
+};
+
+// Wrapper class to provide outputs resusing existing MaskedDataRef wrapper
+// one new method added "bool MaskedDataRef::valid()"
+// The wrapper class itself exists to get the 3 different MaskedDataRef classes
+// to all sharethe same mask value (after inlining) vs. 3 different copies
+// NOTE: detection and access to derivatives for result and alpha can be done
+// using methods "has_derivs", "maskedDx()", and "maskedDy()"
+// Detection of nchannels shouldn't be necessary, instead check results().is<float>() or results.is<Color3>()
+class BatchedTextureOutputs
+{
+    Mask mask();
+
+    MaskedDataRef result();
+    //ASSERT(result().is<float>() || result().is<Color3>());
+    //ASSERT(alpha().has_derivs() == true || alpha().has_derivs() == false);
+
+    MaskedDataRef alpha();
+    // ASSERT(alpha().is<float>());
+    // ASSERT(alpha().valid() == true || alpha().valid() == false);
+    // ASSERT(alpha().has_derivs() == true || alpha().has_derivs() == false);
+
+    MaskedDataRef errormessage();
+    // ASSERT(errormessage().is<ustring>());
+    // ASSERT(errormessage().valid() == true || errormessage().valid() == false);
+    // ASSERT(errormessage().has_derivs() == false);
 };
 
 OSL_NAMESPACE_EXIT

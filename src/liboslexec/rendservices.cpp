@@ -687,10 +687,10 @@ BatchedRendererServices::get_texture_info_uniform (ShaderGlobalsBatch *sgb, ustr
 Mask
 BatchedRendererServices::texture_uniform (ustring filename, TextureHandle *texture_handle,
                                           TexturePerthread *texture_thread_info,
-                                          const TextureOptions *options, ShaderGlobalsBatch *sgb,
-                                          const Wide<float>& s, const Wide<float>& t,
-                                          const Wide<float>& dsdx, const Wide<float>& dtdx,
-                                          const Wide<float>& dsdy, const Wide<float>& dtdy,
+                                          const BatchedTextureOptionProvider *options, ShaderGlobalsBatch *sgb,
+                                          ConstWideAccessor<float> s, ConstWideAccessor<float> t,
+                                          ConstWideAccessor<float> dsdx, ConstWideAccessor<float> dtdx,
+                                          ConstWideAccessor<float> dsdy, ConstWideAccessor<float> dtdy,
                                           int nchannels,
                                           void* result, void* dresultds, void* dresultdt,
                                           Wide<float>* alpha, Wide<float>* dalphadx, Wide<float>* dalphady,
@@ -724,23 +724,23 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle *textu
             bool retVal = false;
             if (texture_handle) {
                 retVal = texturesys()->texture (texture_handle, texture_thread_info, opt,
-                                                s.get(i), t.get(i),
-                                                dsdx.get(i), dtdx.get(i),
-                                                dsdy.get(i), dtdy.get(i),
-                                                4, 
+                                                s[i], t[i],
+                                                dsdx[i], dtdx[i],
+                                                dsdy[i], dtdy[i],
+                                                4,
                                                 (float *)&result_simd,
                                                 has_derivs ? (float *)&dresultds_simd : NULL,
-												has_derivs ? (float *)&dresultdt_simd : NULL);
+                                                has_derivs ? (float *)&dresultdt_simd : NULL);
             }
             else {
                 retVal = texturesys()->texture (filename, opt,
-                                                s.get(i), t.get(i),
-                                                dsdx.get(i), dtdx.get(i),
-                                                dsdy.get(i), dtdy.get(i),
-                                                4, 
+                                                s[i], t[i],
+                                                dsdx[i], dtdx[i],
+                                                dsdy[i], dtdy[i],
+                                                4,
                                                 (float *)&result_simd,
                                                 has_derivs ? (float *)&dresultds_simd : NULL,
-												has_derivs ? (float *)&dresultdt_simd : NULL);
+                                                has_derivs ? (float *)&dresultdt_simd : NULL);
             }
             
             if (retVal) {
@@ -788,12 +788,12 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle *textu
 }
 
 Mask
-BatchedRendererServices::texture (const Wide<ustring>& filename,
+BatchedRendererServices::texture (ConstWideAccessor<ustring> filename,
                            TexturePerthread *texture_thread_info,
-                           const TextureOptions* options, ShaderGlobalsBatch *sgb,
-                           const Wide<float>& s, const Wide<float>& t,
-                           const Wide<float>& dsdx, const Wide<float>& dtdx,
-                           const Wide<float>& dsdy, const Wide<float>& dtdy,
+                           const BatchedTextureOptionProvider* options, ShaderGlobalsBatch *sgb,
+                           ConstWideAccessor<float> s, ConstWideAccessor<float> t,
+                           ConstWideAccessor<float> dsdx, ConstWideAccessor<float> dtdx,
+                           ConstWideAccessor<float> dsdy, ConstWideAccessor<float> dtdy,
                            int nchannels,
                            void* result, void* dresultds, void* dresultdt,
                            Wide<float>* alpha, Wide<float>* dalphadx, Wide<float>* dalphady,
@@ -824,10 +824,10 @@ BatchedRendererServices::texture (const Wide<ustring>& filename,
             // can we just use a float[4] to the same effect and avoid confustion
 
             bool retVal = false;
-            retVal = texturesys()->texture (filename.get(i), opt,
-                                            s.get(i), t.get(i),
-                                            dsdx.get(i), dtdx.get(i),
-                                            dsdy.get(i), dtdy.get(i),
+            retVal = texturesys()->texture (filename[i], opt,
+                                            s[i], t[i],
+                                            dsdx[i], dtdx[i],
+                                            dsdy[i], dtdy[i],
                                             4,
                                             (float *)&result_simd,
                                             has_derivs ? (float *)&dresultds_simd : NULL,

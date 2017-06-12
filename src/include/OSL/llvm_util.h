@@ -222,6 +222,9 @@ public:
 
     void push_mask_break();
     void clear_mask_break();
+
+    void push_mask_return();
+    void clear_mask_return();
     
 
     void push_masking_enabled(bool enable);
@@ -617,6 +620,8 @@ private:
     std::vector<MaskInfo> m_mask_stack;  			// stack for masks that all stores should use when enabled
     std::vector<bool> m_enable_masking_stack;  			// stack for enabling stores to be masked
     std::vector<MaskInfo> m_mask_break_stack;  		// stack for masks at the time a break statement executed
+    std::vector<MaskInfo> m_mask_return_stack;  		// stack for masks at the time a return statement executed
+    std::vector<int> m_mask_levels_belong_to_function_stack; // stack to track number of masks belonging to the current function
 
     llvm::Type *m_llvm_type_float;
     llvm::Type *m_llvm_type_double;

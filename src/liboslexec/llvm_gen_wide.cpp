@@ -2471,7 +2471,6 @@ LLVMGEN (llvm_gen_if)
         rop.ll.op_branch (else_block);
 
         // Else block
-        //rop.ll.push_mask(rop.ll.negate_mask(mask));
         rop.ll.push_mask(mask, true /* negate */);
         rop.build_llvm_code (op.jump(0), op.jump(1), else_block);
         rop.ll.pop_if_mask();
@@ -4790,17 +4789,29 @@ LLVMGEN (llvm_gen_return)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
     ASSERT (op.nargs() == 0);
-    if (op.opname() == Strings::op_exit) {
-        // If it's a real "exit", totally jump out of the shader instance.
-        // The exit instance block will be created if it doesn't yet exist.
-        rop.ll.op_branch (rop.llvm_exit_instance_block());
+    if (rop.ll.is_mask_stack_empty()) {
+		if (op.opname() == Strings::op_exit) {
+			// If it's a real "exit", totally jump out of the shader instance.
+			// The exit instance block will be created if it doesn't yet exist.
+			rop.ll.op_branch (rop.llvm_exit_instance_block());
+		} else {
+			// If it's a "return", jump to the exit point of the function.
+			rop.ll.op_branch (rop.ll.return_block());
+		}
+		llvm::BasicBlock* next_block = rop.ll.new_basic_block ("");
+		rop.ll.set_insert_point (next_block);
     } else {
-        // If it's a "return", jump to the exit point of the function.
-        rop.ll.op_branch (rop.ll.return_block());
+    	ASSERT(op.opname() != Strings::op_exit && "Incomplete");
+    	
+        // There may still be more instructions in the body after the return
+    	// Ideally front end dead code elimination should have gotten these
+    	// we will be a bit pedantic, and mask off all data lanes
+    	
+    	// However we still need to track the current mask to be applied
+    	// to all conditionals higher up in the conditional stack
+        rop.ll.push_mask_return();    	
     }
-    llvm::BasicBlock* next_block = rop.ll.new_basic_block ("");
-    rop.ll.set_insert_point (next_block);
-    return true;
+	return true;
 }
 
 

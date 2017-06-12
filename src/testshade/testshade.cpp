@@ -110,11 +110,9 @@ static float uoffset = 0, voffset = 0;
 static void
 inject_params ()
 {
-    for (size_t p = 0;  p < params.size();  ++p) {
-        const ParamValue &pv (params[p]);
+    for (auto&& pv : params)
         shadingsys->Parameter (pv.name(), pv.type(), pv.data(),
                                pv.interp() == ParamValue::INTERP_CONSTANT);
-    }
 }
 
 
@@ -1056,6 +1054,15 @@ test_shade (int argc, const char *argv[])
     // Get the command line arguments.  That will set up all the shader
     // instances and their parameters for the group.
     getargs (argc, argv);
+
+    if (params.size()) {
+        std::cerr << "ERROR: Pending parameters without a shader:";
+        for (auto&& pv : params)
+            std::cerr << " " << pv.name();
+        std::cerr << "\n";
+        std::cerr << "Did you mistakenly put --param after the shader declaration?\n";
+        return EXIT_FAILURE;
+    }
 
     if (! shadergroup) {
         std::cerr << "ERROR: Invalid shader group. Exiting testshade.\n";

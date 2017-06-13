@@ -435,6 +435,7 @@ LLVM_Util::LLVM_Util (int debuglevel)
     m_llvm_type_wide_void_ptr = llvm::VectorType::get(m_llvm_type_void_ptr, m_vector_width);
     m_llvm_type_wide_int_ptr = llvm::PointerType::get(m_llvm_type_wide_int, 0);
     m_llvm_type_wide_bool_ptr = llvm::PointerType::get(m_llvm_type_wide_bool, 0);
+    m_llvm_type_wide_float_ptr = llvm::PointerType::get(m_llvm_type_wide_float, 0);
 
     // A triple is a struct composed of 3 floats
     std::vector<llvm::Type*> triple_wide_fields(3, m_llvm_type_wide_float);
@@ -443,6 +444,8 @@ LLVM_Util::LLVM_Util (int debuglevel)
     // A matrix is a struct composed 16 floats
     std::vector<llvm::Type*> matrix_wide_fields(16, m_llvm_type_wide_float);
     m_llvm_type_wide_matrix = type_struct (matrix_wide_fields, "WideMatrix4");
+    
+    m_mask_levels_belong_to_function_stack.push_back(0);
 }
 
 
@@ -1374,6 +1377,7 @@ LLVM_Util::push_function (llvm::BasicBlock *after)
     if (! after)
         after = new_basic_block ();
     m_return_block.push_back (after);
+    m_mask_levels_belong_to_function_stack.push_back(0);
     return after;
 }
 
@@ -1385,6 +1389,8 @@ LLVM_Util::pop_function ()
     ASSERT (! m_return_block.empty());
     builder().SetInsertPoint (m_return_block.back());
     m_return_block.pop_back ();
+    m_mask_levels_belong_to_function_stack.pop_back();
+    clear_mask_return();
 }
 
 
@@ -2179,6 +2185,8 @@ LLVM_Util::op_load (llvm::Value *ptr)
 void
 LLVM_Util::push_mask(llvm::Value *mask, bool negate, bool absolute)
 {	
+	ASSERT(false == m_mask_levels_belong_to_function_stack.empty());
+	++m_mask_levels_belong_to_function_stack.back();
 	ASSERT(mask->getType() == type_wide_bool());
 	if(m_mask_stack.empty()) {
 		m_mask_stack.push_back(MaskInfo{mask, negate});
@@ -2225,41 +2233,86 @@ LLVM_Util::push_mask(llvm::Value *mask, bool negate, bool absolute)
 void
 LLVM_Util::pop_if_mask()
 {
+	ASSERT(false == m_mask_levels_belong_to_function_stack.empty());
 	ASSERT(false == m_mask_stack.empty());
 	
-	if(m_mask_break_stack.empty()) {	
+	if(m_mask_break_stack.empty() && m_mask_return_stack.empty()) {	
 		m_mask_stack.pop_back();
+		--m_mask_levels_belong_to_function_stack.back();	
+		
 	} else {
 		m_mask_stack.pop_back();
-		// Apply the break mask to the outter scope's mask (if one?)
-		if (false == m_mask_stack.empty())
-		{
-			auto & mi = m_mask_stack.back();			
-			llvm::Value * existing_mask = mi.mask;
+		--m_mask_levels_belong_to_function_stack.back();
+		
+		// Does outter scope have a mask 
+		if (false == m_mask_stack.empty()) {				
+			// Apply the return mask to the outter scope's mask
+			if (false == m_mask_return_stack.empty())
+			{
 			
-			const auto & bsi = m_mask_break_stack.back();
-			if (bsi.negate) {
-				if(mi.negate) {
-					mi.mask = builder().CreateSelect(bsi.mask, bsi.mask, existing_mask);
-				} else {
-					mi.mask = builder().CreateSelect(bsi.mask, wide_constant_bool(false), existing_mask);
+				std::cout << "m_mask_levels_belong_to_function_stack.back() = " << m_mask_levels_belong_to_function_stack.back() << std::endl;
+				ASSERT(m_mask_levels_belong_to_function_stack.back() >= 0);
+				// As we pop off masks, update the mask above to respect
+				// any return masks, however only do this for conditional masks
+				// inside of the latest function.
+				// We are tracking how many conditional masks belong to 
+				// each function in the call stack
+				if (m_mask_levels_belong_to_function_stack.back() > 0)
+				{
+					auto & mi = m_mask_stack.back();			
+					llvm::Value * existing_mask = mi.mask;
+					
+					const auto & rsi = m_mask_return_stack.back();
+					if (rsi.negate) {
+						if(mi.negate) {
+							mi.mask = builder().CreateSelect(rsi.mask, rsi.mask, existing_mask);
+						} else {
+							mi.mask = builder().CreateSelect(rsi.mask, wide_constant_bool(false), existing_mask);
+						}
+					} else {				
+						if(mi.negate) {
+							mi.mask = builder().CreateSelect(rsi.mask, existing_mask, wide_constant_bool(true));
+						} else {
+							mi.mask = builder().CreateSelect(rsi.mask, existing_mask, rsi.mask);
+						}
+					}
 				}
-			} else {				
-				if(mi.negate) {
-					mi.mask = builder().CreateSelect(bsi.mask, existing_mask, wide_constant_bool(true));
-				} else {
-					mi.mask = builder().CreateSelect(bsi.mask, existing_mask, bsi.mask);
-				}
-			}			
-		}		
+			}		
+			// TODO:  investigate break and return interacting
+			
+			// Apply the break mask to the outter scope's mask
+			if (false ==  m_mask_break_stack.empty())
+			{
+				auto & mi = m_mask_stack.back();			
+				llvm::Value * existing_mask = mi.mask;
+				
+				const auto & bsi = m_mask_break_stack.back();
+				if (bsi.negate) {
+					if(mi.negate) {
+						mi.mask = builder().CreateSelect(bsi.mask, bsi.mask, existing_mask);
+					} else {
+						mi.mask = builder().CreateSelect(bsi.mask, wide_constant_bool(false), existing_mask);
+					}
+				} else {				
+					if(mi.negate) {
+						mi.mask = builder().CreateSelect(bsi.mask, existing_mask, wide_constant_bool(true));
+					} else {
+						mi.mask = builder().CreateSelect(bsi.mask, existing_mask, bsi.mask);
+					}
+				}			
+			}		
+		}
 	}
+	
 }
 
 void
 LLVM_Util::pop_loop_mask()
 {
 	ASSERT(false == m_mask_stack.empty());
+	ASSERT(false == m_mask_levels_belong_to_function_stack.empty());
 	m_mask_stack.pop_back();
+	--m_mask_levels_belong_to_function_stack.back();	
 }
 
 llvm::Value *
@@ -2294,6 +2347,7 @@ LLVM_Util::apply_break_mask_to(llvm::Value *existing_mask)
 		}
 	}
 }
+
 
 bool 
 LLVM_Util::is_mask_stack_empty()
@@ -2331,6 +2385,40 @@ void
 LLVM_Util::clear_mask_break()
 {
 	m_mask_break_stack.clear();
+}
+
+
+void
+LLVM_Util::push_mask_return()
+{
+	ASSERT(false == m_mask_stack.empty());
+
+	// TODO: determine if we need a stack or just the latest break
+	{
+		MaskInfo copy_of_mi = m_mask_stack.back();
+		copy_of_mi.negate = !copy_of_mi.negate;
+		m_mask_return_stack.push_back(copy_of_mi);
+	}
+		
+	// Now modify the current mask to turn off all lanes
+	// because the only active lanes just hit a break statement
+	// so all future instructions should execute against an empty mask
+	// NOTE: this is technically unreachable code, ideally front end
+	// optimizations would get rid of it before hand
+	// at this point don't want to introduce complexity of trying to
+	// skip instructions
+	//auto & mi = m_mask_stack.back();
+	//mi.mask = wide_constant_bool(false);
+	// NOTE: if there are no other instructions, then this mask will just not
+	// get used/generated (we think)
+}
+
+void
+LLVM_Util::clear_mask_return()
+{
+	
+	std::cout << "clear_mask_return <<<<<<<<<<<<<<<<<\n" << std::endl;
+	m_mask_return_stack.clear();
 }
 
 

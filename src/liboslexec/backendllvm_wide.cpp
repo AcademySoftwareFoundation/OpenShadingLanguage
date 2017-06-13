@@ -429,6 +429,10 @@ public:
 		explicit OSL_INLINE Position(int node_index)
 		: m_index(node_index)
 		{}
+
+		OSL_INLINE Position()
+		{}
+		
 		Position(const Position &) = default;	
 		
 		OSL_INLINE int 
@@ -436,6 +440,10 @@ public:
 		
 		bool operator==(const Position & other) const {
 			return m_index == other.m_index;
+		}
+
+		bool operator!=(const Position & other) const {
+			return m_index != other.m_index;
 		}
 	};
 	
@@ -445,21 +453,27 @@ private:
 	
 	struct Node
 	{
-		Node(Position parent_, const Symbol * sym_)
+		Node(Position parent_, int depth_, const Symbol * sym_)
 		: parent(parent_)
+		, depth(depth_)
 		, sym(sym_)
 		{}
 		
 		Position parent;
+		int depth;
 		const Symbol * sym;
 	};
 
 	std::vector<Node> m_nodes;
 	Position m_top_of_stack;
+	int m_current_depth;
 public:
 	DependencyTreeTracker()
 	: m_top_of_stack(end_pos())
+	, m_current_depth(0)
 	{}
+	
+	DependencyTreeTracker(const DependencyTreeTracker&) = delete;
 	
 
 	class Iterator {		
@@ -482,6 +496,13 @@ public:
 		{}
 		
 		OSL_INLINE Position pos() const { return m_pos; };
+		OSL_INLINE int depth() const 
+		{
+			// Make sure we didn't try to access the end
+			if(m_pos() == end_pos()())
+				return 0;
+			return node().depth; 
+		};
 		
 		OSL_INLINE Iterator 
 		operator ++()
@@ -534,10 +555,13 @@ public:
 	OSL_INLINE void 
 	push(const Symbol * sym)
 	{
+		++m_current_depth;
+		
 		Position parent(m_top_of_stack);
-		Node node(parent, sym);
+		Node node(parent, m_current_depth, sym);
 		m_top_of_stack = Position(static_cast<int>(m_nodes.size()));		
 		m_nodes.push_back(node);
+		
 	}
 	
 	OSL_INLINE Position 
@@ -550,6 +574,7 @@ public:
 	{
 		ASSERT(m_top_of_stack() != end_pos()());
 		m_top_of_stack = m_nodes[m_top_of_stack()].parent;
+		--m_current_depth;
 	}
 	
 	
@@ -565,6 +590,67 @@ public:
 			}
 		} while (iter++ != endAt);
 		return false;
+	}
+	
+	Position commonAncestorBetween(Position posReadAt, Position posWrittenAt)
+	{
+		// To find common anscenstor 
+		// Walk up both paths building 2 stacks of positions
+		// now iterate from tops of stack while the positions are the same.
+		// When the differ the previous position was the common anscenstor
+		auto readIter = begin_at(posReadAt);
+		auto writeIter = begin_at(posWrittenAt);
+		
+		int readCount = readIter.depth()+1;
+		Position readPath[readCount];
+		int readDepth = 0;
+		{
+			// Loop structure is to allow
+			// writing the end position into the read path
+			for(;;) 	
+			{
+				ASSERT(readDepth < readCount);
+				readPath[readDepth++] = readIter.pos();
+				if (readIter == end())
+					break;
+				++readIter;
+			} 
+		}
+		
+		int writeCount = writeIter.depth()+1;
+		Position writePath[writeCount];
+		int writeDepth = 0;
+		{
+			// Loop structure is to allow
+			// writing the end position into the write path
+			for(;;) 	
+			{
+				ASSERT(writeDepth < writeCount);
+				writePath[writeDepth++] = writeIter.pos();
+				if (writeIter == end())
+					break;
+				++writeIter;
+			} 
+		}
+		int levelCount = std::min(readDepth, writeDepth);
+		int readLevel = readDepth-1;
+		int writeLevel = writeDepth-1;
+		ASSERT(writePath[writeLevel]==end_pos());
+		ASSERT(readPath[readLevel]==end_pos());
+		
+		
+			
+		int level=0;
+		ASSERT(readPath[readLevel - level] == writePath[writeLevel - level]);
+		do {
+			++level;
+			if (readPath[readLevel - level]() != writePath[writeLevel - level]())
+				break;
+		} while (level < levelCount);
+		--level;
+		ASSERT(readPath[readLevel - level] == writePath[writeLevel - level]);
+		ASSERT(readLevel - level >= 0);
+		return readPath[readLevel - level];
 	}
 };
 
@@ -590,6 +676,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	
 	std::unordered_multimap<const Symbol * /* parent */ , const Symbol * /* dependent */> symbolFeedForwardMap;
 
+	
 	struct WriteEvent
 	{
 		DependencyTreeTracker::Position pos_in_tree;
@@ -601,6 +688,22 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	std::unordered_map<const Symbol *, WriteChronology > potentiallyUnmaskedOpsBySymbol;
 	
 	DependencyTreeTracker stackOfSymbolsCurrentBlockDependsOn;
+
+	// Track the eldest ancenstor that reads the results of a particular operation
+	// We will need to fix up that operations symbol dependencies to depend on any conditionals
+	// that exist between the branch to the eldest reader and itself
+	struct ReadBranch
+	{
+		DependencyTreeTracker::Position pos;
+		int depth;
+		
+		ReadBranch()
+		: pos(DependencyTreeTracker::end_pos())
+		, depth(std::numeric_limits<int>::max())
+		{}
+	};
+	std::vector<ReadBranch> eldest_read_branch_by_op_index(op_count);
+	
 	
 	std::vector<DependencyTreeTracker::Position> pos_in_dependent_sym_stack_by_op_index(opcodes.size(), DependencyTreeTracker::end_pos());
 	
@@ -617,29 +720,30 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 		if(lookup != potentiallyUnmaskedOpsBySymbol.end()) {
 			auto & write_chronology = lookup->second;
 			if (!write_chronology.empty()) {
-				// We only need to consider the last block that wrote to the symbol being read
-				auto backIter = --write_chronology.end();
-				if (false == stackOfSymbolsCurrentBlockDependsOn.isDescendentOrSelf(readAtPos, backIter->pos_in_tree))
-				{
-					std::cout << " marking op " << backIter->op_num << " as masked" << std::endl;
-					m_requires_masking_by_layer_and_op_index[layer()][backIter->op_num] = true;
+				
+				auto writeEnd = write_chronology.end();
+				// Find common ancestor (ca) between the read position and the write pos
+				// if generation of ca is older than current oldest ca for write instruction, record it
+				for (auto writeIter=write_chronology.begin(); writeIter != writeEnd; ++writeIter) {
 					
-					WriteChronology remaining_ops;
-					// Now that we have to do masking, go through all older writes and update them
-					// if they have a different lineage, if not keep them for consideration by
-					// other reads
-					for (auto writeIter=write_chronology.begin(); writeIter != backIter; ++writeIter) {
-						if (false == stackOfSymbolsCurrentBlockDependsOn.isDescendentOrSelf(readAtPos, writeIter->pos_in_tree))
-						{
-							std::cout << " marking op " << writeIter->op_num << " as masked" << std::endl;
-							m_requires_masking_by_layer_and_op_index[layer()][writeIter->op_num] = true;
-						} else {
-							// Keep any writes that share the same lineage
-							remaining_ops.push_back(*writeIter);
-						}
+					auto commonAncestor = stackOfSymbolsCurrentBlockDependsOn.commonAncestorBetween(readAtPos, writeIter->pos_in_tree);
+					
+					if (commonAncestor == writeIter->pos_in_tree) {
+						// if common ancestor is the write position, then no need to mask					
+						// otherwise we know masking will be needed for the instruction
+						continue;
 					}
-					lookup->second.swap(remaining_ops);		
-					// we can now consider the matter handled at this point
+					
+					m_requires_masking_by_layer_and_op_index[layer()][writeIter->op_num] = true;
+					
+					auto ancestor = stackOfSymbolsCurrentBlockDependsOn.begin_at(commonAncestor);
+					
+					auto & eldest_read_branch = eldest_read_branch_by_op_index[writeIter->op_num];
+					if(ancestor.depth() < eldest_read_branch.depth)
+					{
+						eldest_read_branch.depth = ancestor.depth();
+						eldest_read_branch.pos = ancestor.pos();
+					}
 				}
 			}
 		}
@@ -980,8 +1084,8 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	for(int op_index=0; op_index < op_count; ++op_index) {
 		if (requires_masking_by_op_index[op_index]) {
 std::cout << "requires_masking_by_op_index " << op_index << std::endl;
-			auto beginDepIter = stackOfSymbolsCurrentBlockDependsOn.begin_at(pos_in_dependent_sym_stack_by_op_index[op_index]);			
-			auto endDepIter = stackOfSymbolsCurrentBlockDependsOn.end();
+			auto beginDepIter = stackOfSymbolsCurrentBlockDependsOn.begin_at(pos_in_dependent_sym_stack_by_op_index[op_index]);						
+			auto endDepIter = stackOfSymbolsCurrentBlockDependsOn.begin_at(eldest_read_branch_by_op_index[op_index].pos);
 			
 			Opcode & opcode = op(op_index);
 			int argCount = opcode.nargs();			
@@ -990,7 +1094,7 @@ std::cout << "requires_masking_by_op_index " << op_index << std::endl;
 				if (opcode.argwrite(argIndex)) {
 					std::cout << "Symbol written to " <<  sym_possibly_written_to->name().c_str() << std::endl;
 					std::cout << "beginDepIter " <<  beginDepIter.pos()() << std::endl;
-					std::cout << "endDepIter " <<  stackOfSymbolsCurrentBlockDependsOn.end().pos()() << std::endl;
+					std::cout << "endDepIter " <<  endDepIter.pos()() << std::endl;
 					for(auto iter=beginDepIter;iter != endDepIter; ++iter) {
 						const Symbol * symMaskDependsOn = *iter;
 						// Skip self dependencies
@@ -1002,7 +1106,7 @@ std::cout << "requires_masking_by_op_index " << op_index << std::endl;
 				}
 			}			
 		}
-	}
+	}	
 	std::cout << "END FIXUP DEPENDENCIES FOR MASKED INSTRUCTIONS" << std::endl;
 	
 	std::cout << "About to build m_is_uniform_by_symbol" << std::endl;			
@@ -1538,7 +1642,8 @@ BackendLLVMWide::llvm_load_constant_value (const Symbol& sym,
 
 llvm::Value *
 BackendLLVMWide::llvm_load_component_value (const Symbol& sym, int deriv,
-                                             llvm::Value *component)
+                                             llvm::Value *component,
+                                             bool op_is_uniform)
 {
     bool has_derivs = sym.has_derivs();
     if (!has_derivs && deriv != 0) {
@@ -1547,24 +1652,42 @@ BackendLLVMWide::llvm_load_component_value (const Symbol& sym, int deriv,
         // so we don't need to worry about that case.
         ASSERT (sym.typespec().is_floatbased() && 
                 "can't ask for derivs of an int");
-		// TODO:  switching back to non-wide to figure out uniform vs. varying data
-        //return ll.wide_constant (0.0f);
-        return ll.constant (0.0f);
+    	if (op_is_uniform) {
+    		return ll.constant (0.0f);
+    	} else {
+    		return ll.wide_constant (0.0f);
+    	}
+        
     }
 
     // Start with the initial pointer to the value's memory location
-    llvm::Value* result = llvm_get_pointer (sym, deriv);
-    if (!result)
+    llvm::Value* pointer = llvm_get_pointer (sym, deriv);
+    if (!pointer)
         return NULL;  // Error
 
     TypeDesc t = sym.typespec().simpletype();
+    ASSERT (t.basetype == TypeDesc::FLOAT);
     ASSERT (t.aggregate != TypeDesc::SCALAR);
     // cast the Vec* to a float*
-    result = ll.ptr_cast (result, ll.type_float_ptr());
-    result = ll.GEP (result, component);  // get the component
+    
+    if (isSymbolUniform(sym)) { 
+    	pointer = ll.ptr_cast (pointer, ll.type_float_ptr());
+    } else { 
+    	pointer = ll.ptr_cast (pointer, ll.type_wide_float_ptr());
+    }
+    llvm::Value * component_pointer = ll.GEP (pointer, component);  // get the component
 
     // Now grab the value
-    return ll.op_load (result);
+    llvm::Value* result = ll.op_load (component_pointer);
+    
+	if (!op_is_uniform) { 
+    	if (ll.llvm_typeof(result) ==  ll.type_float()) {
+            result = ll.widen_value(result);    		    		
+        } else {
+        	ASSERT(ll.llvm_typeof(result) ==  ll.type_wide_float());
+        }
+    }
+	return result;
 }
 
 
@@ -1698,7 +1821,7 @@ BackendLLVMWide::llvm_store_value (llvm::Value* new_val, llvm::Value* dst_ptr,
 bool
 BackendLLVMWide::llvm_store_component_value (llvm::Value* new_val,
                                               const Symbol& sym, int deriv,
-                                              llvm::Value* component)
+                                              llvm::Value* component, bool op_is_uniform)
 {
     bool has_derivs = sym.has_derivs();
     if (!has_derivs && deriv != 0) {
@@ -1708,18 +1831,23 @@ BackendLLVMWide::llvm_store_component_value (llvm::Value* new_val,
 
     // Let llvm_get_pointer do most of the heavy lifting to get us a
     // pointer to where our data lives.
-    llvm::Value *result = llvm_get_pointer (sym, deriv);
-    if (!result)
+    llvm::Value *pointer = llvm_get_pointer (sym, deriv);
+    if (!pointer)
         return false;  // Error
 
     TypeDesc t = sym.typespec().simpletype();
+    ASSERT (t.basetype == TypeDesc::FLOAT);
     ASSERT (t.aggregate != TypeDesc::SCALAR);
     // cast the Vec* to a float*
-    result = ll.ptr_cast (result, ll.type_float_ptr());
-    result = ll.GEP (result, component);  // get the component
+    if (isSymbolUniform(sym)) { 
+        pointer = ll.ptr_cast (pointer, ll.type_float_ptr());
+    } else { 
+        pointer = ll.ptr_cast (pointer, ll.type_wide_float_ptr());
+    }    
+    llvm::Value * component_pointer = ll.GEP (pointer, component);  // get the component
 
     // Finally, store the value.
-    ll.op_store (new_val, result);
+    ll.op_store (new_val, component_pointer);
     return true;
 }
 

@@ -1338,6 +1338,9 @@ LLVMGEN (llvm_gen_compref)
 
 
     bool op_is_uniform = rop.isSymbolUniform(Result);
+    // TODO: we expect we will need to handle varying indices
+    // performance could be quite bad though so want to avoid if possible
+    ASSERT(rop.isSymbolUniform(Index));
 
 
     llvm::Value *c = rop.llvm_load_value(Index);
@@ -1366,7 +1369,7 @@ LLVMGEN (llvm_gen_compref)
             val = rop.llvm_load_value (Val, d, i, TypeDesc::UNKNOWN, op_is_uniform);
         } else {
             // TODO: handle non constant index
-            val = rop.llvm_load_component_value (Val, d, c);
+            val = rop.llvm_load_component_value (Val, d, c, op_is_uniform);
         }
         rop.llvm_store_value (val, Result, d);
         if (! Result.has_derivs())  // skip the derivs if we don't need them
@@ -1388,7 +1391,7 @@ LLVMGEN (llvm_gen_compassign)
     // TODO:  Technically the index could be varying as well
     // Lets see if that is true in the wild before getting complicated
     ASSERT(rop.isSymbolUniform(Index));
-    bool op_is_uniform = rop.isSymbolUniform(Result) && rop.isSymbolUniform(Val);
+    bool op_is_uniform = rop.isSymbolUniform(Result);
 
     llvm::Value *c = rop.llvm_load_value(Index);
     if (rop.shadingsys().range_checking()) {
@@ -1414,7 +1417,7 @@ LLVMGEN (llvm_gen_compassign)
             i = Imath::clamp (i, 0, 2);
             rop.llvm_store_value (val, Result, d, i);
         } else {
-            rop.llvm_store_component_value (val, Result, d, c);
+            rop.llvm_store_component_value (val, Result, d, c, op_is_uniform);
         }
         if (! Result.has_derivs())  // skip the derivs if we don't need them
             break;
@@ -2283,8 +2286,17 @@ LLVMGEN (llvm_gen_generic)
 
         bool functionIsLlvmInlined = opd->flags & OpDescriptor::LLVMInlined;
 
+        // This can get a bit confusing here,
+        // basically in the uniform version, scalar values can be returned by value
+        // by functions.  However, if varying, those scalar's are really wide
+        // and we can't return by value.  Except if the function in question
+        // is llvm source marked as always inline.  In that case we can return
+        // wide types.  For all other cases we need to pass a pointer to the
+        // where the return value needs to go.
+        
         // Don't compute derivs -- either not needed or not provided in args
-        if (Result.typespec().aggregate() == TypeDesc::SCALAR) {
+        if (Result.typespec().aggregate() == TypeDesc::SCALAR &&
+			(uniformFormOfFunction || functionIsLlvmInlined)) {
             std::cout << ">>stores return value " << name.c_str() << std::endl;
             llvm::Value *r = rop.llvm_call_function (name.c_str(),
                                                      &(args[1]), op.nargs()-1,
@@ -2459,7 +2471,6 @@ LLVMGEN (llvm_gen_if)
         rop.ll.op_branch (else_block);
 
         // Else block
-        //rop.ll.push_mask(rop.ll.negate_mask(mask));
         rop.ll.push_mask(mask, true /* negate */);
         rop.build_llvm_code (op.jump(0), op.jump(1), else_block);
         rop.ll.pop_if_mask();
@@ -4776,17 +4787,29 @@ LLVMGEN (llvm_gen_return)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
     ASSERT (op.nargs() == 0);
-    if (op.opname() == Strings::op_exit) {
-        // If it's a real "exit", totally jump out of the shader instance.
-        // The exit instance block will be created if it doesn't yet exist.
-        rop.ll.op_branch (rop.llvm_exit_instance_block());
+    if (rop.ll.is_mask_stack_empty()) {
+		if (op.opname() == Strings::op_exit) {
+			// If it's a real "exit", totally jump out of the shader instance.
+			// The exit instance block will be created if it doesn't yet exist.
+			rop.ll.op_branch (rop.llvm_exit_instance_block());
+		} else {
+			// If it's a "return", jump to the exit point of the function.
+			rop.ll.op_branch (rop.ll.return_block());
+		}
+		llvm::BasicBlock* next_block = rop.ll.new_basic_block ("");
+		rop.ll.set_insert_point (next_block);
     } else {
-        // If it's a "return", jump to the exit point of the function.
-        rop.ll.op_branch (rop.ll.return_block());
+    	ASSERT(op.opname() != Strings::op_exit && "Incomplete");
+    	
+        // There may still be more instructions in the body after the return
+    	// Ideally front end dead code elimination should have gotten these
+    	// we will be a bit pedantic, and mask off all data lanes
+    	
+    	// However we still need to track the current mask to be applied
+    	// to all conditionals higher up in the conditional stack
+        rop.ll.push_mask_return();    	
     }
-    llvm::BasicBlock* next_block = rop.ll.new_basic_block ("");
-    rop.ll.set_insert_point (next_block);
-    return true;
+	return true;
 }
 
 

@@ -301,18 +301,19 @@ osl_texture (void *sg_, const char *name, void *handle,
     return ok;
 }
 
-void transformWideTextureGradients(int chans,
-                                   void* drdsPtr, void* drdtPtr, // write results here
-                                   void* dadsPtr, void* dadtPtr, // write results here
+void transformWideTextureGradients(BatchedTextureOutputs& outputs,
                                    Wide<float>& dsdx, Wide<float>& dsdy,
                                    Wide<float>& dtdx, Wide<float>& dtdy,
                                    Mask mask)
 {
-    if (!drdsPtr || !drdtPtr) return;
+    MaskedDataRef resultRef = outputs.result();
+    bool has_derivs = resultRef.has_derivs();
 
-    if (chans == 1) {
-        float* drds = reinterpret_cast<float*>(drdsPtr);
-        float* drdt = reinterpret_cast<float*>(drdtPtr);
+    if (!has_derivs) return;
+
+    if (resultRef.is<float>()) {
+        auto drds = resultRef.maskedDx<float>();
+        auto drdt = resultRef.maskedDy<float>();
         for (int i = 0; i < SimdLaneCount; ++i) {
             if (mask[i]) {
                 float drdx = drds[i] * dsdx.get(i) +  drdt[i] * dtdx.get(i);
@@ -322,26 +323,24 @@ void transformWideTextureGradients(int chans,
             }
         }
     }
-    else if (chans == 3) {
-        Wide<Color3>& widedrds = *reinterpret_cast<Wide<Color3>*>(drdsPtr);
-        Wide<Color3>& widedrdt = *reinterpret_cast<Wide<Color3>*>(drdtPtr);
-
+    else if (resultRef.is<Color3>()) {
+        auto widedrds = resultRef.maskedDx<Color3>();
+        auto widedrdt = resultRef.maskedDy<Color3>();
         for (int i = 0; i < SimdLaneCount; ++i) {
             if (mask[i]) {
-                Color3 drdsColor = widedrds.get(i);
-                Color3 drdtColor = widedrdt.get(i);
+                Color3 drdsColor = widedrds[i];
+                Color3 drdtColor = widedrdt[i];
 
-                Color3 drdxColor = drdsColor * dsdx.get(i) +  drdtColor * dtdx.get(i);
-                Color3 drdyColor = drdsColor * dsdy.get(i) +  drdtColor * dtdy.get(i);
-
-                widedrds.set(i, drdxColor);
-                widedrdt.set(i, drdyColor);
+                widedrds[i] = drdsColor * dsdx.get(i) +  drdtColor * dtdx.get(i);
+                widedrdt[i] = drdsColor * dsdy.get(i) +  drdtColor * dtdy.get(i);
             }
         }
     }
-    if (dadsPtr && dadtPtr) {
-        float* dads = reinterpret_cast<float*>(dadsPtr);
-        float* dadt = reinterpret_cast<float*>(dadtPtr);
+
+    MaskedDataRef alphaRef = outputs.alpha();
+    auto dads = alphaRef.maskedDx<float>();
+    auto dadt = alphaRef.maskedDy<float>();
+    if (has_derivs) {
         for (int i = 0; i < SimdLaneCount; ++i) {
             if (mask[i]) {
                 float dadx = dads[i] * dsdx.get(i) +  dadt[i] * dtdx.get(i);
@@ -357,10 +356,9 @@ OSL_SHADEOP int
 osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
                      void *opt_, void *s, void *t,
                      void *dsdx, void *dtdx, void *dsdy, void *dtdy,
-                     int chans, void *result, void *dresultds, void *dresultdt,
-                     void *alpha, void *dalphads, void *dalphadt,
-                     void *errormessage,
-                     int mask_)
+                     int chans, void *result, int resultHasDerivs,
+                     void *alpha, int alphaHasDerivs,
+                     void *errormessage, int mask_)
 {
     Mask mask(mask_);
     // TODO: LLVM could check this before calling this function
@@ -370,6 +368,12 @@ osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
     ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
     BatchedTextureOptionProvider *opt = reinterpret_cast<BatchedTextureOptionProvider *>(opt_);
 
+    ASSERT(chans == 1 || chans == 3);
+    TypeDesc resultType = (chans == 1) ? TypeDesc::TypeFloat : TypeDesc::TypeColor;
+
+    BatchedTextureOutputs outputs(result, (bool)resultHasDerivs, resultType,
+                                  alpha, (bool)alphaHasDerivs,
+                                  errormessage, mask);
     // XXX lfeng: original code use simd float4, then copy back to result.
     // for batched. The renderer should decide which way is more efficient
     // (thus implement this in renderservices)?
@@ -383,20 +387,15 @@ osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
                                                                        ConstWideAccessor<float>(dtdx),
                                                                        ConstWideAccessor<float>(dsdy),
                                                                        ConstWideAccessor<float>(dtdy),
-                                                                       chans,
-                                                                       result,
-                                                                       dresultds,
-                                                                       dresultdt,
-                                                                       WFLOATPTR(alpha),
-                                                                       WFLOATPTR(dalphads),
-                                                                       WFLOATPTR(dalphadt),
-                                                                       WUSTRPTR(errormessage),
-                                                                       mask);
+                                                                       outputs);
 
     // Correct our st texture space gradients into xy-space gradients
-    transformWideTextureGradients(chans, dresultds, dresultdt, dalphads, dalphadt,
-                                  WFLOAT(dsdx), WFLOAT(dtdx), WFLOAT(dsdy), WFLOAT(dtdy),
-                                  mask);
+    if (resultHasDerivs) {
+        transformWideTextureGradients(outputs,
+                                      WFLOAT(dsdx), WFLOAT(dtdx),
+                                      WFLOAT(dsdy), WFLOAT(dtdy),
+                                      retVal);
+    }
 
     return retVal.value();
 }
@@ -405,10 +404,9 @@ OSL_SHADEOP int
 osl_texture_batched (void *sgb_, void *name,
                      void *opt_, void *s, void *t,
                      void *dsdx, void *dtdx, void *dsdy, void *dtdy,
-                     int chans, void *result, void *dresultds, void *dresultdt,
-                     void *alpha, void *dalphads, void *dalphadt,
-                     void *errormessage,
-                     int mask_)
+                     int chans, void *result, int resultHasDerivs,
+                     void *alpha, int alphaHasDerivs,
+                     void *errormessage, int mask_)
 {
     Mask mask(mask_);
     // TODO: LLVM could check this before calling this function
@@ -418,6 +416,12 @@ osl_texture_batched (void *sgb_, void *name,
     ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
     BatchedTextureOptionProvider *opt = reinterpret_cast<BatchedTextureOptionProvider *>(opt_);
 
+    ASSERT(chans == 1 || chans == 3);
+    TypeDesc resultType = (chans == 1) ? TypeDesc::TypeFloat : TypeDesc::TypeColor;
+
+    BatchedTextureOutputs outputs(result, (bool)resultHasDerivs, resultType,
+                                  alpha, (bool)alphaHasDerivs,
+                                  errormessage, mask);
     // XXX lfeng: original code use simd float4, then copy back to result.
     // for batched. The renderer should decide which way is more efficient
     // (thus implement this in renderservices)?
@@ -430,20 +434,15 @@ osl_texture_batched (void *sgb_, void *name,
                                                                ConstWideAccessor<float>(dtdx),
                                                                ConstWideAccessor<float>(dsdy),
                                                                ConstWideAccessor<float>(dtdy),
-                                                               chans,
-                                                               result,
-                                                               dresultds,
-                                                               dresultdt,
-                                                               WFLOATPTR(alpha),
-                                                               WFLOATPTR(dalphads),
-                                                               WFLOATPTR(dalphadt),
-                                                               WUSTRPTR(errormessage),
-                                                               mask);
+                                                               outputs);
 
     // Correct our st texture space gradients into xy-space gradients
-    transformWideTextureGradients(chans, dresultds, dresultdt, dalphads, dalphadt,
-                                  WFLOAT(dsdx), WFLOAT(dtdx), WFLOAT(dsdy), WFLOAT(dtdy),
-                                  mask);
+    if (resultHasDerivs) {
+        transformWideTextureGradients(outputs,
+                                      WFLOAT(dsdx), WFLOAT(dtdx),
+                                      WFLOAT(dsdy), WFLOAT(dtdy),
+                                      retVal);
+    }
 
     return retVal.value();
 }

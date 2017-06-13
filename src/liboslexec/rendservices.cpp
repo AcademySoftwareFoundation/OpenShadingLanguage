@@ -691,21 +691,27 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle *textu
                                           ConstWideAccessor<float> s, ConstWideAccessor<float> t,
                                           ConstWideAccessor<float> dsdx, ConstWideAccessor<float> dtdx,
                                           ConstWideAccessor<float> dsdy, ConstWideAccessor<float> dtdy,
-                                          int nchannels,
-                                          void* result, void* dresultds, void* dresultdt,
-                                          Wide<float>* alpha, Wide<float>* dalphadx, Wide<float>* dalphady,
-                                          Wide<ustring>* errormessage, Mask mask)
+                                          BatchedTextureOutputs& outputs)
 {
+    Mask status(false);
+
     ShadingContext *context = sgb->uniform().context;
     if (! texture_thread_info)
         texture_thread_info = context->texture_thread_info();
 
-    // TODO: change to DASSERT once confidenty
-    ASSERT((dresultds != NULL) == (dresultdt != NULL));
-    bool has_derivs = dresultds != NULL;
-    
-    Mask status(false);
-    //std::cout << "nchannels: " << nchannels << std::endl;
+    Mask mask = outputs.mask();
+    MaskedDataRef resultRef = outputs.result();
+    bool has_derivs = resultRef.has_derivs();
+    MaskedDataRef alphaRef = outputs.alpha();
+    auto alpha = alphaRef.masked<float>();
+    bool alphaIsValid = outputs.alpha().valid();
+    auto alphaDs = alphaRef.maskedDx<float>();
+    auto alphaDt = alphaRef.maskedDy<float>();
+    bool errormessageIsValid = outputs.errormessage().valid();
+    auto errormessage = outputs.errormessage().masked<ustring>();
+
+    ASSERT(resultRef.valid());
+
     for (int i = 0; i < SimdLaneCount; ++i) {
         if (mask[i]) {
         	// Apparently the members of TextureOpt get modified from calls into
@@ -722,6 +728,7 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle *textu
             // can we just use a float[4] to the same effect and avoid confustion
             
             bool retVal = false;
+
             if (texture_handle) {
                 retVal = texturesys()->texture (texture_handle, texture_thread_info, opt,
                                                 s[i], t[i],
@@ -744,46 +751,49 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle *textu
             }
             
             if (retVal) {
-            	if (nchannels == 3) {
-					Wide<Color3>& wideResult = *reinterpret_cast<Wide<Color3>*>(result);
-					wideResult.set(i, Color3(result_simd[0], result_simd[1], result_simd[2]));
+                if (resultRef.is<Color3>()) {
+
+                    auto result= resultRef.masked<Color3>();
+                    auto resultDs = resultRef.maskedDx<Color3>();
+                    auto resultDt = resultRef.maskedDy<Color3>();
+                    result[i] = Color3(result_simd[0], result_simd[1], result_simd[2]);
 					if (has_derivs) {
-						Wide<Color3>& wideResultds = *reinterpret_cast<Wide<Color3>*>(dresultds);
-						wideResultds.set(i, Color3(dresultds_simd[0], dresultds_simd[1], dresultds_simd[2]));
-						Wide<Color3>& wideResultdt = *reinterpret_cast<Wide<Color3>*>(dresultdt);
-						wideResultdt.set(i, Color3(dresultdt_simd[0], dresultdt_simd[1], dresultdt_simd[2]));
+                        resultDs[i] = Color3(dresultds_simd[0], dresultds_simd[1], dresultds_simd[2]);
+                        resultDt[i] = Color3(dresultdt_simd[0], dresultdt_simd[1], dresultdt_simd[2]);
 					}
-            	} else if (nchannels == 1) {
-					Wide<float>& wideResult = *reinterpret_cast<Wide<float>*>(result);
-					wideResult.set(i, result_simd[0]);
+                } else if (resultRef.is<float>()) {
+                    auto result= resultRef.masked<float>();
+                    auto resultDs = resultRef.maskedDx<float>();
+                    auto resultDt = resultRef.maskedDy<float>();
+                    result[i] = result_simd[0];
 					if (has_derivs) {
-						Wide<float>& wideResultds = *reinterpret_cast<Wide<float>*>(dresultds);
-						wideResultds.set(i, dresultds_simd[0]);
-						Wide<float>& wideResultdt = *reinterpret_cast<Wide<float>*>(dresultdt);
-						wideResultdt.set(i, dresultdt_simd[0]);
+                        resultDs[i] = dresultds_simd[0];
+                        resultDt[i] = dresultdt_simd[0];
 					}
             	}
-            	if (alpha)
-            	{
-            		alpha->set(i, result_simd[nchannels]);
-            	}
+                if (alphaIsValid) {
+                    alpha[i] = result_simd[3];
+                    if (has_derivs) {
+                        alphaDs[i] = dresultds_simd[3];
+                        alphaDt[i] = dresultdt_simd[3];
+                    }
+                }
                 //std::cout << "s: " << s.get(i) << " t: " << t.get(i) << " color: " << resultColor << " " << wideResult.get(i) << std::endl;
             } else {
                 std::string err = texturesys()->geterror();
                 if (err.size() && sgb) {
-                    if (errormessage) {
-                        errormessage->set(i, ustring(err));
+                    if (errormessageIsValid) {
+                        errormessage[i] = ustring(err);
                     } else {
                         context->error ("[RendererServices::texture] %s", err);
                     }
-                } else if (errormessage) {
-                    errormessage->set(i, ustring(err));
+                } else if (errormessageIsValid) {
+                    errormessage[i] = ustring(err);
                 }
             }
             status.set(i, retVal);
         }
     }
-
     return status;
 }
 
@@ -794,20 +804,26 @@ BatchedRendererServices::texture (ConstWideAccessor<ustring> filename,
                            ConstWideAccessor<float> s, ConstWideAccessor<float> t,
                            ConstWideAccessor<float> dsdx, ConstWideAccessor<float> dtdx,
                            ConstWideAccessor<float> dsdy, ConstWideAccessor<float> dtdy,
-                           int nchannels,
-                           void* result, void* dresultds, void* dresultdt,
-                           Wide<float>* alpha, Wide<float>* dalphadx, Wide<float>* dalphady,
-                           Wide<ustring>* errormessage, Mask mask)
+                           BatchedTextureOutputs& outputs)
 {
+    Mask status(false);
     ShadingContext *context = sgb->uniform().context;
     if (! texture_thread_info)
         texture_thread_info = context->texture_thread_info();
-    // TODO: change to DASSERT once confidenty
-    ASSERT((dresultds != NULL) == (dresultdt != NULL));
-    bool has_derivs = dresultds != NULL;
 
-    Mask status(false);
-    //std::cout << "nchannels: " << nchannels << std::endl;
+    Mask mask = outputs.mask();
+    MaskedDataRef resultRef = outputs.result();
+    bool has_derivs = resultRef.has_derivs();
+    MaskedDataRef alphaRef = outputs.alpha();
+    auto alpha = alphaRef.masked<float>();
+    bool alphaIsValid = outputs.alpha().valid();
+    auto alphaDs = alphaRef.maskedDx<float>();
+    auto alphaDt = alphaRef.maskedDy<float>();
+    bool errormessageIsValid = outputs.errormessage().valid();
+    auto errormessage = outputs.errormessage().masked<ustring>();
+
+    ASSERT(resultRef.valid());
+
     for (int i = 0; i < SimdLaneCount; ++i) {
         if (mask[i]) {
             // Apparently the members of TextureOpt get modified from calls into
@@ -824,6 +840,7 @@ BatchedRendererServices::texture (ConstWideAccessor<ustring> filename,
             // can we just use a float[4] to the same effect and avoid confustion
 
             bool retVal = false;
+
             retVal = texturesys()->texture (filename[i], opt,
                                             s[i], t[i],
                                             dsdx[i], dtdx[i],
@@ -834,46 +851,49 @@ BatchedRendererServices::texture (ConstWideAccessor<ustring> filename,
                                             has_derivs ? (float *)&dresultdt_simd : NULL);
 
             if (retVal) {
-                if (nchannels == 3) {
-                    Wide<Color3>& wideResult = *reinterpret_cast<Wide<Color3>*>(result);
-                    wideResult.set(i, Color3(result_simd[0], result_simd[1], result_simd[2]));
+                if (resultRef.is<Color3>()) {
+
+                    auto result= resultRef.masked<Color3>();
+                    auto resultDs = resultRef.maskedDx<Color3>();
+                    auto resultDt = resultRef.maskedDy<Color3>();
+                    result[i] = Color3(result_simd[0], result_simd[1], result_simd[2]);
                     if (has_derivs) {
-                        Wide<Color3>& wideResultds = *reinterpret_cast<Wide<Color3>*>(dresultds);
-                        wideResultds.set(i, Color3(dresultds_simd[0], dresultds_simd[1], dresultds_simd[2]));
-                        Wide<Color3>& wideResultdt = *reinterpret_cast<Wide<Color3>*>(dresultdt);
-                        wideResultdt.set(i, Color3(dresultdt_simd[0], dresultdt_simd[1], dresultdt_simd[2]));
+                        resultDs[i] = Color3(dresultds_simd[0], dresultds_simd[1], dresultds_simd[2]);
+                        resultDt[i] = Color3(dresultdt_simd[0], dresultdt_simd[1], dresultdt_simd[2]);
                     }
-                } else if (nchannels == 1) {
-                    Wide<float>& wideResult = *reinterpret_cast<Wide<float>*>(result);
-                    wideResult.set(i, result_simd[0]);
+                } else if (resultRef.is<float>()) {
+                    auto result= resultRef.masked<float>();
+                    auto resultDs = resultRef.maskedDx<float>();
+                    auto resultDt = resultRef.maskedDy<float>();
+                    result[i] = result_simd[0];
                     if (has_derivs) {
-                        Wide<float>& wideResultds = *reinterpret_cast<Wide<float>*>(dresultds);
-                        wideResultds.set(i, dresultds_simd[0]);
-                        Wide<float>& wideResultdt = *reinterpret_cast<Wide<float>*>(dresultdt);
-                        wideResultdt.set(i, dresultdt_simd[0]);
+                        resultDs[i] = dresultds_simd[0];
+                        resultDt[i] = dresultdt_simd[0];
                     }
                 }
-                if (alpha)
-                {
-                    alpha->set(i, result_simd[nchannels]);
+                if (alphaIsValid) {
+                    alpha[i] = result_simd[3];
+                    if (has_derivs) {
+                        alphaDs[i] = dresultds_simd[3];
+                        alphaDt[i] = dresultdt_simd[3];
+                    }
                 }
                 //std::cout << "s: " << s.get(i) << " t: " << t.get(i) << " color: " << resultColor << " " << wideResult.get(i) << std::endl;
             } else {
                 std::string err = texturesys()->geterror();
                 if (err.size() && sgb) {
-                    if (errormessage) {
-                        errormessage->set(i, ustring(err));
+                    if (errormessageIsValid) {
+                        errormessage[i] = ustring(err);
                     } else {
                         context->error ("[RendererServices::texture] %s", err);
                     }
-                } else if (errormessage) {
-                    errormessage->set(i, ustring(err));
+                } else if (errormessageIsValid) {
+                    errormessage[i] = ustring(err);
                 }
             }
             status.set(i, retVal);
         }
     }
-
     return status;
 }
 

@@ -658,11 +658,7 @@ public:
                                   ConstWideAccessor<float> s, ConstWideAccessor<float> t,
                                   ConstWideAccessor<float> dsdx, ConstWideAccessor<float> dtdx,
                                   ConstWideAccessor<float> dsdy, ConstWideAccessor<float> dtdy,
-                                  int nchannels,
-                                  // result, dresultds, dresultdt, could be Wide<float>*, or Wide<Color3>*
-                                  void* result, void* dresultds, void* dresultdt,
-                                  Wide<float>* alpha, Wide<float>* dalphadx, Wide<float>* dalphady,
-                                  Wide<ustring>* errormessage, Mask mask);
+                                  BatchedTextureOutputs& outputs);
 
     /// Batch version where filename is varying also
     virtual Mask texture (ConstWideAccessor<ustring> filename,
@@ -671,11 +667,7 @@ public:
                           ConstWideAccessor<float> s, ConstWideAccessor<float> t,
                           ConstWideAccessor<float> dsdx, ConstWideAccessor<float> dtdx,
                           ConstWideAccessor<float> dsdy, ConstWideAccessor<float> dtdy,
-                          int nchannels,
-                          // result, dresultds, dresultdt, could be Wide<float>*, or Wide<Color3>*
-                          void* result, void* dresultds, void* dresultdt,
-                          Wide<float>* alpha, Wide<float>* dalphadx, Wide<float>* dalphady,
-                          Wide<ustring>* errormessage, Mask mask);
+                          BatchedTextureOutputs& outputs);
 #if 0
     // Deprecated version, with no errormessage parameter. This will
     // eventually disappear.

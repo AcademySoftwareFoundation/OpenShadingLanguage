@@ -3238,11 +3238,9 @@ LLVMGEN (llvm_gen_texture)
     std::cout << "result derivative type: " << rop.ll.llvm_typenameof(rop.llvm_get_pointer (Result, 1)) << std::endl;
     args.push_back (rop.ll.constant (nchans));
     args.push_back (rop.ll.void_ptr (rop.llvm_get_pointer (Result, 0)));
-    args.push_back (rop.ll.void_ptr (rop.llvm_get_pointer (Result, 1)));
-    args.push_back (rop.ll.void_ptr (rop.llvm_get_pointer (Result, 2)));
+    args.push_back (Result.has_derivs() ? rop.ll.constant(1) : rop.ll.constant(0));
     args.push_back (rop.ll.void_ptr (alpha    ? alpha    : rop.ll.void_ptr_null()));
-    args.push_back (rop.ll.void_ptr (dalphadx ? dalphadx : rop.ll.void_ptr_null()));
-    args.push_back (rop.ll.void_ptr (dalphady ? dalphady : rop.ll.void_ptr_null()));
+    args.push_back ((dalphadx && dalphady) ? rop.ll.constant(1) : rop.ll.constant(0));
     args.push_back (rop.ll.void_ptr (errormessage ? errormessage : rop.ll.void_ptr_null()));
     args.push_back (rop.ll.mask_as_int(rop.ll.current_mask()));
     rop.ll.call_function (texFuncName.c_str(), &args[0], (int)args.size());

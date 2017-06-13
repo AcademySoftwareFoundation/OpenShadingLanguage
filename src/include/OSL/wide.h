@@ -1732,7 +1732,8 @@ public:
    OSL_INLINE TypeDesc type() { return m_type; }
    OSL_INLINE bool has_derivs() { return m_has_derivs; }
    OSL_INLINE Mask mask() { return m_mask; }
-   
+   OSL_INLINE bool valid() { return m_ptr != nullptr; }
+
 protected:
    
    
@@ -2017,7 +2018,8 @@ public:
    OSL_INLINE void *ptr() const { return m_ptr; }
    OSL_INLINE TypeDesc type() { return m_type; }
    OSL_INLINE bool has_derivs() { return m_has_derivs; }
-   
+   OSL_INLINE bool valid() { return m_ptr != nullptr; }
+
 protected:
    
    // TODO: see if impl can be shared with MaskedData   
@@ -2313,21 +2315,56 @@ private:
 // Detection of nchannels shouldn't be necessary, instead check results().is<float>() or results.is<Color3>()
 class BatchedTextureOutputs
 {
-    Mask mask();
+public:
+    BatchedTextureOutputs(void* result, bool resultHasDerivs, const TypeDesc& type,
+                          void* alpha, bool alphaHasDerivs,
+                          void* errormessage, Mask mask)
+        : m_result(result),
+          m_resultHasDerivs(resultHasDerivs),
+          m_resultType(type),
+          m_alpha(alpha),
+          m_alphaHasDerivs(alphaHasDerivs),
+          m_errormessage(errormessage),
+          m_mask(mask)
+    {}
 
-    MaskedDataRef result();
-    //ASSERT(result().is<float>() || result().is<Color3>());
-    //ASSERT(alpha().has_derivs() == true || alpha().has_derivs() == false);
+    OSL_INLINE Mask mask() const
+    {
+        return m_mask;
+    }
 
-    MaskedDataRef alpha();
-    // ASSERT(alpha().is<float>());
-    // ASSERT(alpha().valid() == true || alpha().valid() == false);
-    // ASSERT(alpha().has_derivs() == true || alpha().has_derivs() == false);
+    OSL_INLINE MaskedDataRef result()
+    {
+        //ASSERT(result().is<float>() || result().is<Color3>());
+        //ASSERT(result().has_derivs() == true);
+        return MaskedDataRef(m_resultType, m_resultHasDerivs, m_mask, m_result);
+    }
 
-    MaskedDataRef errormessage();
-    // ASSERT(errormessage().is<ustring>());
-    // ASSERT(errormessage().valid() == true || errormessage().valid() == false);
-    // ASSERT(errormessage().has_derivs() == false);
+    OSL_INLINE MaskedDataRef alpha()
+    {
+        // ASSERT(alpha().is<float>());
+        // ASSERT(alpha().valid() == true || alpha().valid() == false);
+        // ASSERT(alpha().has_derivs() == true || alpha().has_derivs() == false);
+        return MaskedDataRef(TypeDesc::TypeFloat, m_alphaHasDerivs, m_mask, m_alpha);
+    }
+
+    OSL_INLINE MaskedDataRef errormessage()
+    {
+        // ASSERT(errormessage().is<ustring>());
+        // ASSERT(errormessage().valid() == true || errormessage().valid() == false);
+        // ASSERT(errormessage().has_derivs() == false);
+        return MaskedDataRef(TypeDesc::TypeString, false, m_mask, m_errormessage);
+    }
+
+private:
+    void* m_result;
+    bool m_resultHasDerivs;
+    TypeDesc m_resultType;
+    void* m_alpha;
+    bool m_alphaHasDerivs;
+    void* m_errormessage;
+    Mask m_mask;
 };
+
 
 OSL_NAMESPACE_EXIT

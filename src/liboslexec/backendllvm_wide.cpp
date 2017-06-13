@@ -1538,7 +1538,13 @@ BackendLLVMWide::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
     	// TODO:  remove this assert once we have confirmed correct handling off all the
     	// different data types.  Using assert as a checklist to verify what we have 
     	// handled so far during development
-    	ASSERT(cast == TypeDesc::UNKNOWN || cast == TypeDesc::TypeColor || cast == TypeDesc::TypeVector || cast == TypeDesc::TypePoint || cast == TypeDesc::TypeFloat || cast == TypeDesc::TypeInt);
+    	ASSERT(cast == TypeDesc::UNKNOWN || 
+    		   cast == TypeDesc::TypeColor || 
+    		   cast == TypeDesc::TypeVector || 
+    		   cast == TypeDesc::TypePoint || 
+    		   cast == TypeDesc::TypeNormal || 
+    		   cast == TypeDesc::TypeFloat || 
+    		   cast == TypeDesc::TypeInt);
     	
     	if (ll.llvm_typeof(result) ==  ll.type_float()) {
             result = ll.widen_value(result);    		    		

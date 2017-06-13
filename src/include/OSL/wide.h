@@ -1708,6 +1708,9 @@ class MaskedData
     Mask m_mask;
     bool m_has_derivs; 
 public:
+
+   static constexpr int width = WidthT;
+
    MaskedData() = delete;
    
    explicit OSL_INLINE MaskedData(TypeDesc type, bool has_derivs, Mask mask, void *ptr)
@@ -1729,10 +1732,10 @@ public:
    {}
 
    OSL_INLINE void *ptr() const { return m_ptr; }
-   OSL_INLINE TypeDesc type() { return m_type; }
-   OSL_INLINE bool has_derivs() { return m_has_derivs; }
-   OSL_INLINE Mask mask() { return m_mask; }
-   OSL_INLINE bool valid() { return m_ptr != nullptr; }
+   OSL_INLINE TypeDesc type() const { return m_type; }
+   OSL_INLINE bool has_derivs() const { return m_has_derivs; }
+   OSL_INLINE Mask mask() const { return m_mask; }
+   OSL_INLINE bool valid() const { return m_ptr != nullptr; }
 
 protected:
    
@@ -2016,9 +2019,9 @@ public:
    {}
     
    OSL_INLINE void *ptr() const { return m_ptr; }
-   OSL_INLINE TypeDesc type() { return m_type; }
-   OSL_INLINE bool has_derivs() { return m_has_derivs; }
-   OSL_INLINE bool valid() { return m_ptr != nullptr; }
+   OSL_INLINE TypeDesc type() const { return m_type; }
+   OSL_INLINE bool has_derivs() const { return m_has_derivs; }
+   OSL_INLINE bool valid() const { return m_ptr != nullptr; }
 
 protected:
    
@@ -2316,17 +2319,19 @@ private:
 class BatchedTextureOutputs
 {
 public:
-    BatchedTextureOutputs(void* result, bool resultHasDerivs, const TypeDesc& type,
+    BatchedTextureOutputs(void* result, bool resultHasDerivs, int chans,
                           void* alpha, bool alphaHasDerivs,
                           void* errormessage, Mask mask)
         : m_result(result),
           m_resultHasDerivs(resultHasDerivs),
-          m_resultType(type),
+          m_resultType((chans == 1) ? TypeDesc::TypeFloat : TypeDesc::TypeColor),
           m_alpha(alpha),
           m_alphaHasDerivs(alphaHasDerivs),
           m_errormessage(errormessage),
           m_mask(mask)
-    {}
+    {
+        ASSERT(chans == 1 || chans == 3);
+    }
 
     OSL_INLINE Mask mask() const
     {

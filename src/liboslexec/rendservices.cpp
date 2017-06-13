@@ -685,13 +685,13 @@ BatchedRendererServices::get_texture_info_uniform (ShaderGlobalsBatch *sgb, ustr
 }
 
 Mask
-BatchedRendererServices::texture_uniform (ustring filename, TextureHandle *texture_handle,
-                                          TexturePerthread *texture_thread_info,
-                                          const BatchedTextureOptionProvider *options, ShaderGlobalsBatch *sgb,
+BatchedRendererServices::texture_uniform (ustring filename, TextureHandle * texture_handle,
+                                          TexturePerthread * texture_thread_info,
+                                          const BatchedTextureOptionProvider * options, ShaderGlobalsBatch * sgb,
                                           ConstWideAccessor<float> s, ConstWideAccessor<float> t,
                                           ConstWideAccessor<float> dsdx, ConstWideAccessor<float> dtdx,
                                           ConstWideAccessor<float> dsdy, ConstWideAccessor<float> dtdy,
-                                          BatchedTextureOutputs& outputs)
+                                          BatchedTextureOutputs & outputs)
 {
     Mask status(false);
 
@@ -703,12 +703,8 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle *textu
     MaskedDataRef resultRef = outputs.result();
     bool has_derivs = resultRef.has_derivs();
     MaskedDataRef alphaRef = outputs.alpha();
-    auto alpha = alphaRef.masked<float>();
     bool alphaIsValid = outputs.alpha().valid();
-    auto alphaDs = alphaRef.maskedDx<float>();
-    auto alphaDt = alphaRef.maskedDy<float>();
     bool errormessageIsValid = outputs.errormessage().valid();
-    auto errormessage = outputs.errormessage().masked<ustring>();
 
     ASSERT(resultRef.valid());
 
@@ -772,8 +768,11 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle *textu
 					}
             	}
                 if (alphaIsValid) {
+				    auto alpha = alphaRef.masked<float>();
                     alpha[i] = result_simd[3];
-                    if (has_derivs) {
+                    if (alphaRef.has_derivs()) {
+						auto alphaDs = alphaRef.maskedDx<float>();
+    					auto alphaDt = alphaRef.maskedDy<float>();
                         alphaDs[i] = dresultds_simd[3];
                         alphaDt[i] = dresultdt_simd[3];
                     }
@@ -781,15 +780,19 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle *textu
                 //std::cout << "s: " << s.get(i) << " t: " << t.get(i) << " color: " << resultColor << " " << wideResult.get(i) << std::endl;
             } else {
                 std::string err = texturesys()->geterror();
-                if (err.size() && sgb) {
-                    if (errormessageIsValid) {
-                        errormessage[i] = ustring(err);
-                    } else {
-                        context->error ("[RendererServices::texture] %s", err);
-                    }
-                } else if (errormessageIsValid) {
-                    errormessage[i] = ustring(err);
-                }
+				bool errMsgSize = err.size() > 0;
+				if (errormessageIsValid) {
+					auto errormessage = outputs.errormessage().masked<ustring>();
+					if (errMsgSize) {
+	                    errormessage[i] = ustring(err);
+					}
+					else {
+						errormessage[i] = Strings::unknown;
+					}
+				}
+				else if (errMsgSize) {
+					context->error ("[RendererServices::texture] %s", err);
+				}
             }
             status.set(i, retVal);
         }
@@ -815,12 +818,8 @@ BatchedRendererServices::texture (ConstWideAccessor<ustring> filename,
     MaskedDataRef resultRef = outputs.result();
     bool has_derivs = resultRef.has_derivs();
     MaskedDataRef alphaRef = outputs.alpha();
-    auto alpha = alphaRef.masked<float>();
     bool alphaIsValid = outputs.alpha().valid();
-    auto alphaDs = alphaRef.maskedDx<float>();
-    auto alphaDt = alphaRef.maskedDy<float>();
     bool errormessageIsValid = outputs.errormessage().valid();
-    auto errormessage = outputs.errormessage().masked<ustring>();
 
     ASSERT(resultRef.valid());
 
@@ -872,8 +871,11 @@ BatchedRendererServices::texture (ConstWideAccessor<ustring> filename,
                     }
                 }
                 if (alphaIsValid) {
+                    auto alpha = alphaRef.masked<float>();
                     alpha[i] = result_simd[3];
-                    if (has_derivs) {
+                    if (alphaRef.has_derivs()) {
+                        auto alphaDs = alphaRef.maskedDx<float>();
+                        auto alphaDt = alphaRef.maskedDy<float>();
                         alphaDs[i] = dresultds_simd[3];
                         alphaDt[i] = dresultdt_simd[3];
                     }
@@ -881,14 +883,18 @@ BatchedRendererServices::texture (ConstWideAccessor<ustring> filename,
                 //std::cout << "s: " << s.get(i) << " t: " << t.get(i) << " color: " << resultColor << " " << wideResult.get(i) << std::endl;
             } else {
                 std::string err = texturesys()->geterror();
-                if (err.size() && sgb) {
-                    if (errormessageIsValid) {
+                bool errMsgSize = err.size() > 0;
+                if (errormessageIsValid) {
+                    auto errormessage = outputs.errormessage().masked<ustring>();
+                    if (errMsgSize) {
                         errormessage[i] = ustring(err);
-                    } else {
-                        context->error ("[RendererServices::texture] %s", err);
                     }
-                } else if (errormessageIsValid) {
-                    errormessage[i] = ustring(err);
+                    else {
+                        errormessage[i] = Strings::unknown;
+                    }
+                }
+                else if (errMsgSize) {
+                    context->error ("[RendererServices::texture] %s", err);
                 }
             }
             status.set(i, retVal);

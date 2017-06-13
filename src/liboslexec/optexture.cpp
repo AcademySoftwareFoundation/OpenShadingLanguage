@@ -302,52 +302,57 @@ osl_texture (void *sg_, const char *name, void *handle,
 }
 
 void transformWideTextureGradients(BatchedTextureOutputs& outputs,
-                                   Wide<float>& dsdx, Wide<float>& dsdy,
-                                   Wide<float>& dtdx, Wide<float>& dtdy,
-                                   Mask mask)
+                                   ConstWideAccessor<float> dsdx, ConstWideAccessor<float> dsdy,
+                                   ConstWideAccessor<float> dtdx, ConstWideAccessor<float> dtdy)
 {
     MaskedDataRef resultRef = outputs.result();
     bool has_derivs = resultRef.has_derivs();
-
-    if (!has_derivs) return;
+	// Matching scalar code path behavior to check only result derivs.
+    ASSERT(has_derivs);
 
     if (resultRef.is<float>()) {
-        auto drds = resultRef.maskedDx<float>();
-        auto drdt = resultRef.maskedDy<float>();
-        for (int i = 0; i < SimdLaneCount; ++i) {
-            if (mask[i]) {
-                float drdx = drds[i] * dsdx.get(i) +  drdt[i] * dtdx.get(i);
-                float drdy = drds[i] * dsdy.get(i) +  drdt[i] * dtdy.get(i);
+        OSL_INTEL_PRAGMA("forceinline recursive")
+        {
+            auto drds = resultRef.maskedDx<float>();
+            auto drdt = resultRef.maskedDy<float>();
+            OSL_INTEL_PRAGMA("omp simd simdlen(resultRef.width)")
+            for (int i = 0; i < resultRef.width; ++i) {
+                float drdx = drds[i] * dsdx[i] +  drdt[i] * dtdx[i];
+                float drdy = drds[i] * dsdy[i] +  drdt[i] * dtdy[i];
                 drds[i] = drdx;
                 drdt[i] = drdy;
             }
         }
     }
-    else if (resultRef.is<Color3>()) {
-        auto widedrds = resultRef.maskedDx<Color3>();
-        auto widedrdt = resultRef.maskedDy<Color3>();
-        for (int i = 0; i < SimdLaneCount; ++i) {
-            if (mask[i]) {
+    else {
+        // keep assert out of inlined code
+        ASSERT(resultRef.is<Color3>());
+        OSL_INTEL_PRAGMA("forceinline recursive")
+        {
+            auto widedrds = resultRef.maskedDx<Color3>();
+            auto widedrdt = resultRef.maskedDy<Color3>();
+            OSL_INTEL_PRAGMA("omp simd simdlen(resultRef.width)")
+            for (int i = 0; i < resultRef.width; ++i) {
                 Color3 drdsColor = widedrds[i];
                 Color3 drdtColor = widedrdt[i];
 
-                widedrds[i] = drdsColor * dsdx.get(i) +  drdtColor * dtdx.get(i);
-                widedrdt[i] = drdsColor * dsdy.get(i) +  drdtColor * dtdy.get(i);
+                widedrds[i] = drdsColor * dsdx[i] +  drdtColor * dtdx[i];
+                widedrdt[i] = drdsColor * dsdy[i] +  drdtColor * dtdy[i];
             }
         }
     }
 
     MaskedDataRef alphaRef = outputs.alpha();
-    auto dads = alphaRef.maskedDx<float>();
-    auto dadt = alphaRef.maskedDy<float>();
-    if (has_derivs) {
-        for (int i = 0; i < SimdLaneCount; ++i) {
-            if (mask[i]) {
-                float dadx = dads[i] * dsdx.get(i) +  dadt[i] * dtdx.get(i);
-                float dady = dads[i] * dsdy.get(i) +  dadt[i] * dtdy.get(i);
-                dads[i] = dadx;
-                dadt[i] = dady;
-            }
+    OSL_INTEL_PRAGMA("forceinline recursive")
+    if (alphaRef.valid() && alphaRef.has_derivs()) {
+        auto dads = alphaRef.maskedDx<float>();
+        auto dadt = alphaRef.maskedDy<float>();
+        OSL_INTEL_PRAGMA("omp simd simdlen(alphaRef.width)")
+        for (int i = 0; i < alphaRef.width; ++i) {
+            float dadx = dads[i] * dsdx[i] +  dadt[i] * dtdx[i];
+            float dady = dads[i] * dsdy[i] +  dadt[i] * dtdy[i];
+            dads[i] = dadx;
+            dadt[i] = dady;
         }
     }
 }
@@ -368,10 +373,7 @@ osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
     ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
     BatchedTextureOptionProvider *opt = reinterpret_cast<BatchedTextureOptionProvider *>(opt_);
 
-    ASSERT(chans == 1 || chans == 3);
-    TypeDesc resultType = (chans == 1) ? TypeDesc::TypeFloat : TypeDesc::TypeColor;
-
-    BatchedTextureOutputs outputs(result, (bool)resultHasDerivs, resultType,
+    BatchedTextureOutputs outputs(result, (bool)resultHasDerivs, chans,
                                   alpha, (bool)alphaHasDerivs,
                                   errormessage, mask);
     // XXX lfeng: original code use simd float4, then copy back to result.
@@ -392,9 +394,19 @@ osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
     // Correct our st texture space gradients into xy-space gradients
     if (resultHasDerivs) {
         transformWideTextureGradients(outputs,
-                                      WFLOAT(dsdx), WFLOAT(dtdx),
-                                      WFLOAT(dsdy), WFLOAT(dtdy),
-                                      retVal);
+                                      ConstWideAccessor<float>(dsdx), ConstWideAccessor<float>(dtdx),
+                                      ConstWideAccessor<float>(dsdy), ConstWideAccessor<float>(dtdy));
+    }
+
+    OSL_INTEL_PRAGMA("forceinline recursive")
+    if (outputs.errormessage().valid()) {
+        auto err = outputs.errormessage().masked<ustring>();
+        OSL_INTEL_PRAGMA("omp simd simdlen(err.width)")
+        for (int i = 0; i < err.width; ++i) {
+            if (retVal[i]) {
+                err[i] = Strings::_emptystring_;
+            }
+        }
     }
 
     return retVal.value();
@@ -416,10 +428,7 @@ osl_texture_batched (void *sgb_, void *name,
     ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
     BatchedTextureOptionProvider *opt = reinterpret_cast<BatchedTextureOptionProvider *>(opt_);
 
-    ASSERT(chans == 1 || chans == 3);
-    TypeDesc resultType = (chans == 1) ? TypeDesc::TypeFloat : TypeDesc::TypeColor;
-
-    BatchedTextureOutputs outputs(result, (bool)resultHasDerivs, resultType,
+    BatchedTextureOutputs outputs(result, (bool)resultHasDerivs, chans,
                                   alpha, (bool)alphaHasDerivs,
                                   errormessage, mask);
     // XXX lfeng: original code use simd float4, then copy back to result.
@@ -439,11 +448,20 @@ osl_texture_batched (void *sgb_, void *name,
     // Correct our st texture space gradients into xy-space gradients
     if (resultHasDerivs) {
         transformWideTextureGradients(outputs,
-                                      WFLOAT(dsdx), WFLOAT(dtdx),
-                                      WFLOAT(dsdy), WFLOAT(dtdy),
-                                      retVal);
+                                      ConstWideAccessor<float>(dsdx), ConstWideAccessor<float>(dtdx),
+                                      ConstWideAccessor<float>(dsdy), ConstWideAccessor<float>(dtdy));
     }
 
+    OSL_INTEL_PRAGMA("forceinline recursive")
+    if (outputs.errormessage().valid()) {
+        auto err = outputs.errormessage().masked<ustring>();
+        OSL_INTEL_PRAGMA("omp simd simdlen(err.width)")
+        for (int i = 0; i < err.width; ++i) {
+            if (retVal[i]) {
+                err[i] = Strings::_emptystring_;
+            }
+        }
+    }
     return retVal.value();
 }
 

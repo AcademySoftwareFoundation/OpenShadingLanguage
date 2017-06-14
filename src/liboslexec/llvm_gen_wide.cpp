@@ -1889,7 +1889,7 @@ LLVMGEN (llvm_gen_transform)
     Symbol *P = rop.opargsym (op, (nargs == 3) ? 2 : 3);
 
     ASSERT(rop.isSymbolUniform(*To));
-    ASSERT(rop.isSymbolUniform(*From));
+    ASSERT((From == NULL) || rop.isSymbolUniform(*From));
     if (To->typespec().is_matrix()) {
         // llvm_ops has the matrix version already implemented
         llvm_gen_generic (rop, opnum);

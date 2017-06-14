@@ -1835,9 +1835,18 @@ public:
 	{
     	std::ostringstream msg;
     	tinyformat::format(msg, fmt, args...);  
+		record_error(ErrorHandler::EH_WARNING, msg.str(), mask);
+	}
+
+	template<typename ...ArgListT>
+	inline
+	void warning(Mask mask, const char* fmt, ArgListT... args) const
+	{
+    	std::ostringstream msg;
+    	tinyformat::format(msg, fmt, args...);
 		record_error(ErrorHandler::EH_MESSAGE, msg.str(), mask);
 	}            
-                            
+
 private:
 
     void free_dict_resources ();

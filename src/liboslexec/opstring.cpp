@@ -240,11 +240,14 @@ osl_warning (ShaderGlobals *sg, const char* format_str, ...)
 }
 
 OSL_SHADEOP void
-osl_warning_batched (ShaderGlobalsBatch *sgb, const char* format_str, ...)
+osl_warning_batched (ShaderGlobalsBatch *sgb, unsigned int mask_value, const char* format_str, ...)
 {
     if (sgb->uniform().context->allow_warnings()) {
         va_list args;
         va_start (args, format_str);
+
+        Mask mask(mask_value);
+
 #if 0
         // Make super sure we know we are excuting LLVM-generated code!
         std::string newfmt = std::string("llvm: ") + format_str;
@@ -252,7 +255,7 @@ osl_warning_batched (ShaderGlobalsBatch *sgb, const char* format_str, ...)
 #endif
         std::string s = Strutil::vformat (format_str, args);
         va_end (args);
-        sgb->uniform().context->warning("%s", s);
+        sgb->uniform().context->warning(mask, "%s", s);
     }
 }
 

@@ -2165,77 +2165,84 @@ public:
     static_assert(MAX_OPTIONS <= maskSize, "expecting MAX_OPTIONS <= maskSize");
     typedef WideMask<maskSize> Mask;
 
-private:
-    Mask m_active;
-    Mask m_varying;
-    Mask m_type; // data type is int = 0 or float = 1
-    Mask m_ALIGN; // not used, for 64 bit data alignment
-    void* m_options[MAX_OPTIONS];
+    struct OptionData
+    {
+        Mask active;
+        Mask varying;
+        Mask type; // data type is int = 0 or float = 1
+        Mask ALIGN; // not used, for 64 bit data alignment
+        void* options[MAX_OPTIONS];
+    };
 
-    static const TextureOpt defaultOpt;
+private:
+    OptionData* m_opt;
+    float m_missingcolor[4];
+
 public:
-    BatchedTextureOptionProvider()
-    : m_active(false)
-     , m_varying(false)
-   ,   m_type(false)
+    BatchedTextureOptionProvider(OptionData * data)
+    : m_opt(data)
+     ,m_missingcolor{0.f,0.f,0.f,0.f}
     {}
 
-    void updateOption(TextureOpt &opt, unsigned int l) const
+    void updateOption(TextureOpt &opt, unsigned int l)
     {
+        // check we actually have valid option data.
+        if (m_opt == nullptr) return;
+
 #if 0
         std::cout << "size: " << sizeof(TextureOptions) << std::endl;
-        std::cout << "active: " << &m_active << " " << m_active.value() << std::endl;
-        std::cout << "varying: " << m_varying.value() << std::endl;
-        std::cout << "type: " << m_type.value() << std::endl;
-        for (int i = 0; i < m_active.count(); ++i) {
-            std::cout << "void* " << m_options[i] << std::endl;
-            std::cout << "int " << *(int*)m_options[i] << std::endl;
+        std::cout << "active: " << &m_opt->active << " " << m_opt->active.value() << std::endl;
+        std::cout << "varying: " << m_opt->varying.value() << std::endl;
+        std::cout << "type: " << m_opt->type.value() << std::endl;
+        for (int i = 0; i < m_opt->active.count(); ++i) {
+            std::cout << "void* " << m_opt->options[i] << std::endl;
+            std::cout << "int " << *(int*)m_opt->options[i] << std::endl;
         }
 #endif
         int j = 0; // offset index to next void pointer
 
 #define OPTION_CASE(i, optName)                                                             \
-        if (m_active[i]) {                                                                  \
-            if (m_varying[i]) {                                                             \
-                if (m_type[i] == static_cast<bool>(INT)) {                                  \
-                    Wide<int>& wideResult = *reinterpret_cast<Wide<int>*>(m_options[j]);    \
+        if (m_opt->active[i]) {                                                                  \
+            if (m_opt->varying[i]) {                                                             \
+                if (m_opt->type[i] == static_cast<bool>(INT)) {                                  \
+                    Wide<int>& wideResult = *reinterpret_cast<Wide<int>*>(m_opt->options[j]);    \
                     opt.optName = static_cast<float>(wideResult.get(l));                    \
                 }                                                                           \
                 else {                                                                      \
-                    Wide<float>& wideResult = *reinterpret_cast<Wide<float>*>(m_options[j]);\
+                    Wide<float>& wideResult = *reinterpret_cast<Wide<float>*>(m_opt->options[j]);\
                     opt.optName = wideResult.get(l);                                        \
                 }                                                                           \
             }                                                                               \
             else {                                                                          \
-                if (m_type[i] == static_cast<bool>(INT)) {                                  \
-                    opt.optName = static_cast<float>(*reinterpret_cast<int*>(m_options[j]));\
+                if (m_opt->type[i] == static_cast<bool>(INT)) {                                  \
+                    opt.optName = static_cast<float>(*reinterpret_cast<int*>(m_opt->options[j]));\
                 }                                                                           \
                 else  {                                                                     \
-                    opt.optName = *reinterpret_cast<float*>(m_options[j]);                  \
+                    opt.optName = *reinterpret_cast<float*>(m_opt->options[j]);                  \
                 }                                                                           \
             }                                                                               \
             ++j;                                                                            \
         }
 
 #define OPTION_CASE_DECODE(i, optName, decode, typeCast)                                    \
-        if (m_active[i]) {                                                                  \
-            if (m_varying[i]) {                                                             \
-                if (m_type[i] == static_cast<bool>(STRING)) {                               \
-                    Wide<ustring>& wideResult = *reinterpret_cast<Wide<ustring>*>(m_options[j]); \
+        if (m_opt->active[i]) {                                                                  \
+            if (m_opt->varying[i]) {                                                             \
+                if (m_opt->type[i] == static_cast<bool>(STRING)) {                               \
+                    Wide<ustring>& wideResult = *reinterpret_cast<Wide<ustring>*>(m_opt->options[j]); \
                     opt.optName = decode(wideResult.get(l));                                \
                 }                                                                           \
                 else {                                                                      \
-                    Wide<int>& wideResult = *reinterpret_cast<Wide<int>*>(m_options[j]);    \
+                    Wide<int>& wideResult = *reinterpret_cast<Wide<int>*>(m_opt->options[j]);    \
                     opt.optName = (typeCast)wideResult.get(l);                              \
                 }                                                                           \
             }                                                                               \
             else {                                                                          \
-                if (m_type[i] == static_cast<bool>(STRING)) {                               \
-                    ustring& castValue = *reinterpret_cast<ustring*>(m_options[j]);         \
+                if (m_opt->type[i] == static_cast<bool>(STRING)) {                               \
+                    ustring& castValue = *reinterpret_cast<ustring*>(m_opt->options[j]);         \
                     opt.optName = decode(castValue);                                        \
                 }                                                                           \
                 else                                                                        \
-                    opt.optName = (typeCast)*reinterpret_cast<int*>(m_options[j]);          \
+                    opt.optName = (typeCast)*reinterpret_cast<int*>(m_opt->options[j]);          \
             }                                                                               \
             ++j;                                                                            \
         }
@@ -2253,34 +2260,63 @@ public:
         OPTION_CASE_DECODE(RWRAP, rwrap, TextureOpt::decode_wrapmode, TextureOpt::Wrap)
         OPTION_CASE(FILL, fill)
         OPTION_CASE(TIME, time)
-        if (m_active[FIRSTCHANNEL]) {
-            opt.firstchannel = *reinterpret_cast<int*>(m_options[j]);
+        if (m_opt->active[FIRSTCHANNEL]) {
+            if (m_opt->varying[FIRSTCHANNEL]) {
+                Wide<int>& firstchannel = *reinterpret_cast<Wide<int>*>(m_opt->options[j]);
+                opt.firstchannel = firstchannel.get(l);
+            }
+            else {
+                opt.firstchannel = *reinterpret_cast<int*>(m_opt->options[j]);
+            }
             ++j;
         }
-        if (m_active[SUBIMAGE]) {
-            if (m_varying[SUBIMAGE]) {
-                if (m_type[SUBIMAGE] == static_cast<bool>(STRING)) {
-                    Wide<ustring>& wideResult = *reinterpret_cast<Wide<ustring>*>(m_options[j]);
+        if (m_opt->active[SUBIMAGE]) {
+            if (m_opt->varying[SUBIMAGE]) {
+                if (m_opt->type[SUBIMAGE] == static_cast<bool>(STRING)) {
+                    Wide<ustring>& wideResult = *reinterpret_cast<Wide<ustring>*>(m_opt->options[j]);
                     opt.subimagename = wideResult.get(l);           \
                 }
                 else {
-                    Wide<int>& wideResult = *reinterpret_cast<Wide<int>*>(m_options[j]);
+                    Wide<int>& wideResult = *reinterpret_cast<Wide<int>*>(m_opt->options[j]);
                     opt.subimage = wideResult.get(l);
                 }
             }
             else {
-                if (m_type[SUBIMAGE] == static_cast<bool>(STRING)) {
-                    ustring& castValue = *reinterpret_cast<ustring*>(m_options[j]);
+                if (m_opt->type[SUBIMAGE] == static_cast<bool>(STRING)) {
+                    ustring& castValue = *reinterpret_cast<ustring*>(m_opt->options[j]);
                     opt.subimagename = castValue;                   \
                 }
                 else
-                    opt.subimage = *reinterpret_cast<int*>(m_options[j]);
+                    opt.subimage = *reinterpret_cast<int*>(m_opt->options[j]);
             }
             ++j;
         }
         OPTION_CASE_DECODE(INTERP, interpmode, texInterpToCode, TextureOpt::InterpMode)
-        if (m_active[MISSINGCOLOR] || m_active[MISSINGALPHA]) {
-            opt.missingcolor = reinterpret_cast<float*>(m_options[j]);
+        if (m_opt->active[MISSINGCOLOR]) {
+            Color3 missingcolor;
+            if (m_opt->varying[MISSINGCOLOR]) {
+                Wide<Color3> & widemissingcolor = *reinterpret_cast<Wide<Color3>*>(m_opt->options[j]);
+                missingcolor = widemissingcolor.get(j);
+            }
+            else {
+                missingcolor = *reinterpret_cast<Color3*>(m_opt->options[j]);
+            }
+            m_missingcolor[0] = missingcolor.x;
+            m_missingcolor[1] = missingcolor.y;
+            m_missingcolor[2] = missingcolor.z;
+            opt.missingcolor = m_missingcolor;
+            ++j;
+        }
+        if (m_opt->active[MISSINGALPHA]) {
+            Color3 missingcolor;
+            if (m_opt->varying[MISSINGALPHA]) {
+                Wide<float>& widemissingalpha = *reinterpret_cast<Wide<float>*>(m_opt->options[j]);
+                m_missingcolor[3] = widemissingalpha.get(j);
+            }
+            else {
+                m_missingcolor[3] = *reinterpret_cast<float*>(m_opt->options[j]);
+            }
+            opt.missingcolor = m_missingcolor;
             ++j;
         }
 #undef OPTION_CASE

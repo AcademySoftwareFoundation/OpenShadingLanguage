@@ -687,7 +687,7 @@ BatchedRendererServices::get_texture_info_uniform (ShaderGlobalsBatch *sgb, ustr
 Mask
 BatchedRendererServices::texture_uniform (ustring filename, TextureHandle * texture_handle,
                                           TexturePerthread * texture_thread_info,
-                                          const BatchedTextureOptionProvider * options, ShaderGlobalsBatch * sgb,
+                                          BatchedTextureOptionProvider & options, ShaderGlobalsBatch * sgb,
                                           ConstWideAccessor<float> s, ConstWideAccessor<float> t,
                                           ConstWideAccessor<float> dsdx, ConstWideAccessor<float> dtdx,
                                           ConstWideAccessor<float> dsdy, ConstWideAccessor<float> dtdy,
@@ -713,9 +713,7 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle * text
         	// Apparently the members of TextureOpt get modified from calls into
         	// the texture system, so lets start with a fresh set of defaults for now
         	TextureOpt opt;
-            if(options) {
-                options->updateOption(opt, i);
-            }
+            options.updateOption(opt, i);
             // It's actually faster to ask for 4 channels (even if we need fewer)
             // and ensure that they're being put in aligned memory.
             // TODO:  investigate if the above statement is true when nchannels==1
@@ -803,7 +801,7 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle * text
 Mask
 BatchedRendererServices::texture (ConstWideAccessor<ustring> filename,
                            TexturePerthread *texture_thread_info,
-                           const BatchedTextureOptionProvider* options, ShaderGlobalsBatch *sgb,
+                           BatchedTextureOptionProvider & options, ShaderGlobalsBatch *sgb,
                            ConstWideAccessor<float> s, ConstWideAccessor<float> t,
                            ConstWideAccessor<float> dsdx, ConstWideAccessor<float> dtdx,
                            ConstWideAccessor<float> dsdy, ConstWideAccessor<float> dtdy,
@@ -828,9 +826,7 @@ BatchedRendererServices::texture (ConstWideAccessor<ustring> filename,
             // Apparently the members of TextureOpt get modified from calls into
             // the texture system, so lets start with a fresh set of defaults for now
             TextureOpt opt;
-            if(options) {
-                options->updateOption(opt, i);
-            }
+            options.updateOption(opt, i);
             // It's actually faster to ask for 4 channels (even if we need fewer)
             // and ensure that they're being put in aligned memory.
             // TODO:  investigate if the above statement is true when nchannels==1

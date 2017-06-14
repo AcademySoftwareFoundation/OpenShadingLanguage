@@ -371,7 +371,7 @@ osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
         return 0;
     }
     ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
-    BatchedTextureOptionProvider *opt = reinterpret_cast<BatchedTextureOptionProvider *>(opt_);
+    BatchedTextureOptionProvider opt(reinterpret_cast<BatchedTextureOptionProvider::OptionData *>(opt_));
 
     BatchedTextureOutputs outputs(result, (bool)resultHasDerivs, chans,
                                   alpha, (bool)alphaHasDerivs,
@@ -426,7 +426,7 @@ osl_texture_batched (void *sgb_, void *name,
         return 0;
     }
     ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
-    BatchedTextureOptionProvider *opt = reinterpret_cast<BatchedTextureOptionProvider *>(opt_);
+    BatchedTextureOptionProvider opt(reinterpret_cast<BatchedTextureOptionProvider::OptionData *>(opt_));
 
     BatchedTextureOutputs outputs(result, (bool)resultHasDerivs, chans,
                                   alpha, (bool)alphaHasDerivs,

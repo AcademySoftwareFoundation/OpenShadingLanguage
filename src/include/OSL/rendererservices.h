@@ -654,7 +654,7 @@ public:
     /// could be varying
     virtual Mask texture_uniform (ustring filename, TextureHandle *texture_handle,
                                   TexturePerthread *texture_thread_info,
-                                  const BatchedTextureOptionProvider *options, ShaderGlobalsBatch *sgb,
+                                  BatchedTextureOptionProvider & options, ShaderGlobalsBatch *sgb,
                                   ConstWideAccessor<float> s, ConstWideAccessor<float> t,
                                   ConstWideAccessor<float> dsdx, ConstWideAccessor<float> dtdx,
                                   ConstWideAccessor<float> dsdy, ConstWideAccessor<float> dtdy,
@@ -663,7 +663,7 @@ public:
     /// Batch version where filename is varying also
     virtual Mask texture (ConstWideAccessor<ustring> filename,
                           TexturePerthread *texture_thread_info,
-                          const BatchedTextureOptionProvider *options, ShaderGlobalsBatch *sgb,
+                          BatchedTextureOptionProvider & options, ShaderGlobalsBatch *sgb,
                           ConstWideAccessor<float> s, ConstWideAccessor<float> t,
                           ConstWideAccessor<float> dsdx, ConstWideAccessor<float> dtdx,
                           ConstWideAccessor<float> dsdy, ConstWideAccessor<float> dtdy,

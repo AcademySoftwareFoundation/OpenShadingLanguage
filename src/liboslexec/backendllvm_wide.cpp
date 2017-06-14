@@ -1555,6 +1555,15 @@ BackendLLVMWide::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
         } else if (ll.llvm_typeof(result) ==  (llvm::Type*)ll.type_string()) {
             result = ll.widen_value(result);
         } else {
+#if 0
+        	if (!((ll.llvm_typeof(result) ==  ll.type_wide_float()) ||
+         		   (ll.llvm_typeof(result) ==  ll.type_wide_int()) ||
+         		   (ll.llvm_typeof(result) ==  ll.type_wide_triple()) ||
+                    (ll.llvm_typeof(result) ==  ll.type_wide_string()) ||
+                    (ll.llvm_typeof(result) ==  ll.type_wide_bool()))) {
+        		std::cout << ">>>>>>>>>>>>>> TYPENAME OF " << ll.llvm_typenameof(result) << std::endl;
+        	}
+#endif
         	ASSERT((ll.llvm_typeof(result) ==  ll.type_wide_float()) ||
         		   (ll.llvm_typeof(result) ==  ll.type_wide_int()) ||
         		   (ll.llvm_typeof(result) ==  ll.type_wide_triple()) ||
@@ -1858,38 +1867,38 @@ BackendLLVMWide::llvm_store_component_value (llvm::Value* new_val,
 }
 
 void 
-BackendLLVMWide::llvm_broadcast_uniform_value(
-	llvm::Value * tempUniform, 
+BackendLLVMWide::llvm_broadcast_uniform_value_at(
+	llvm::Value * pointerTotempUniform,
 	Symbol & Destination)
 {
     const TypeDesc & dest_type = Destination.typespec().simpletype();
     bool derivs = Destination.has_derivs();
-    
+
 	int derivCount =  derivs ? 1 : 3;
 
 	int arrayIndex;
 	int arrayEnd;
-	
+
 	if (dest_type.is_array()) {
 		ASSERT(dest_type.arraylen != 0);
 		ASSERT(dest_type.arraylen != -1 && "We don't support an unsized array with getattribute");
-		arrayEnd = dest_type.arraylen;			
+		arrayEnd = dest_type.arraylen;
 	} else {
 		arrayEnd = 1;
 	}
-	
+
 	int componentCount = dest_type.aggregate;
-	
+
 	for (int derivIndex=0; derivIndex < derivCount; ++derivIndex)
 	{
 		for(int arrayIndex =0;arrayIndex < arrayEnd; ++arrayIndex) {
 			llvm::Value * llvm_array_index = ll.constant(arrayIndex);
 			for(int componentIndex=0;componentIndex < componentCount; ++componentIndex) {
-			
+
 				// Load the uniform component from the temporary
 				// base passing false for op_is_uniform, the llvm_load_value will
 				// automatically broadcast the uniform value to a vector type
-				llvm::Value *wide_component_value = llvm_load_value (tempUniform, dest_type,
+				llvm::Value *wide_component_value = llvm_load_value (pointerTotempUniform, dest_type,
 											  derivIndex, llvm_array_index,
 											  componentIndex, TypeDesc::UNKNOWN,
 											  false /*op_is_uniform*/);
@@ -1899,6 +1908,20 @@ BackendLLVMWide::llvm_broadcast_uniform_value(
 			}
 		}
 	}
+}
+
+void
+BackendLLVMWide::llvm_broadcast_uniform_value(
+	llvm::Value * tempUniform, 
+	Symbol & Destination)
+{
+    const TypeDesc & dest_type = Destination.typespec().simpletype();
+    ASSERT(false == Destination.has_derivs());
+	ASSERT(false == dest_type.is_array());
+	ASSERT(1 == dest_type.aggregate);
+	
+	llvm::Value *wide_value = ll.widen_value(tempUniform);
+	llvm_store_value (wide_value, Destination, 0, 0, 0);
 }
 
 void 

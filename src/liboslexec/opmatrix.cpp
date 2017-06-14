@@ -534,7 +534,7 @@ inline void osl_transformv_dvmdv(void *result, const Matrix44 &M, void* v_)
 }
 
 inline void
-avoidAliasingmultDirMatrix (const Matrix44 &M, const Dual2<Vec3> &in, Dual2<Vec3> &out)
+avoidAliasingMultDirMatrix (const Matrix44 &M, const Dual2<Vec3> &in, Dual2<Vec3> &out)
 {
 	avoidAliasingMultDirMatrix(M, in.val(), out.val());
 	avoidAliasingMultDirMatrix(M, in.dx(), out.dx());
@@ -558,7 +558,7 @@ inline void osl_transformv_wdvwmwdv(void *result, const Wide<Matrix44> &wM, void
 		   Matrix44 M = wM.get(i);
 		   Dual2<Vec3> r;
 		   
-		   avoidAliasingmultDirMatrix (M, v, r);		   
+		   avoidAliasingMultDirMatrix (M, v, r);
 	   
 		   resultRef[i] = r;
 	   }
@@ -628,6 +628,51 @@ inline void osl_transformn_wdvwmwdv(void *result, const Wide<Matrix44> &wM, void
 		   resultRef[i] = r;
 	   }
    }   
+}
+
+
+OSL_SHADEOP void
+osl_transformv_w16vw16mw16v (void *r_, void *matrix_, void *s_)
+{
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+		ConstWideAccessor<Vec3> wsource(s_);
+		ConstWideAccessor<Matrix44> wmatrix(matrix_);
+		WideAccessor<Vec3> wr(r_);
+
+		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		for(int lane=0; lane < wr.width; ++lane) {
+			Vec3 s = wsource[lane];
+			Matrix44 m = wmatrix[lane];
+			Vec3 r;
+
+			avoidAliasingMultDirMatrix (m, s, r);
+
+			wr[lane] = r;
+		}
+	}
+}
+
+OSL_SHADEOP void
+osl_transformv_w16dvw16mw16dv (void *r_, void *matrix_, void *s_)
+{
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+		ConstWideAccessor<Dual2<Vec3>> wsource(s_);
+		ConstWideAccessor<Matrix44> wmatrix(matrix_);
+		WideAccessor<Dual2<Vec3>> wr(r_);
+
+		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		for(int lane=0; lane < wr.width; ++lane) {
+			Dual2<Vec3> s = wsource[lane];
+			Matrix44 m = wmatrix[lane];
+			Dual2<Vec3> r;
+
+			avoidAliasingMultDirMatrix (m, s, r);
+
+			wr[lane] = r;
+		}
+	}
 }
 
 

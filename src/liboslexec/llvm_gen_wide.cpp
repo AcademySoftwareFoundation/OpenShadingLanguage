@@ -1889,7 +1889,7 @@ LLVMGEN (llvm_gen_transform)
     Symbol *P = rop.opargsym (op, (nargs == 3) ? 2 : 3);
 
     ASSERT(rop.isSymbolUniform(*To));
-    ASSERT(rop.isSymbolUniform(*From));
+    ASSERT((From == NULL) || rop.isSymbolUniform(*From));
     if (To->typespec().is_matrix()) {
         // llvm_ops has the matrix version already implemented
         llvm_gen_generic (rop, opnum);
@@ -3839,7 +3839,7 @@ LLVMGEN (llvm_gen_getattribute)
 
         if (!destination_is_uniform)
         {
-            rop.llvm_broadcast_uniform_value(tempUniformDestination, Destination);
+            rop.llvm_broadcast_uniform_value_at(tempUniformDestination, Destination);
         }
 
         rop.llvm_conversion_store_uniform_status(r, Result);
@@ -3879,6 +3879,7 @@ LLVMGEN (llvm_gen_gettextureinfo)
 
     bool fileNameIsUniform = rop.isSymbolUniform(Filename);
     bool dataIsUniform = rop.isSymbolUniform(Data);
+    bool resultIsUniform = rop.isSymbolUniform(Result);
     llvm::Value *r = NULL;
     // file name is uniform, generate scalar version of the function
     if (fileNameIsUniform) {
@@ -3910,10 +3911,13 @@ LLVMGEN (llvm_gen_gettextureinfo)
         r = rop.ll.call_function ("osl_get_textureinfo_batched_uniform", &args[0], args.size());
 
         if (!dataIsUniform) {
-            rop.llvm_broadcast_uniform_value(tempUniformData, Data);
+            rop.llvm_broadcast_uniform_value_at(tempUniformData, Data);
         }
-//        rop.llvm_conversion_store_uniform_status(r, Result);
-        rop.llvm_store_value (r, Result);
+        if (!resultIsUniform) {
+        	rop.llvm_broadcast_uniform_value(r, Result);
+        } else {
+        	rop.llvm_store_value (r, Result);
+        }
     }
     else {
         std::cout << "texture filename is varying, running batched version." << std::endl;

@@ -374,6 +374,7 @@ WDECL (osl_pow_w16vw16vw16f, "xXXX")
 WDECL (osl_area_w16, "xXX")
 WDECL (osl_area_w16_masked, "xXXi")
 WDECL (osl_normalize_w16vw16v, "xXX")
+WDECL (osl_transformv_w16vw16mw16v, "xXXX")
 
 DECL (osl_mul_mm, "xXXX")
 DECL (osl_mul_mf, "xXXf")

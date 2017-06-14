@@ -631,6 +631,29 @@ inline void osl_transformn_wdvwmwdv(void *result, const Wide<Matrix44> &wM, void
 }
 
 
+OSL_SHADEOP void
+osl_transformv_w16vw16mw16v (void *r_, void *matrix_, void *s_)
+{
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+		ConstWideAccessor<Vec3> wsource(s_);
+		ConstWideAccessor<Matrix44> wmatrix(matrix_);
+		WideAccessor<Vec3> wr(r_);
+
+		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		for(int lane=0; lane < wr.width; ++lane) {
+			Vec3 s = wsource[lane];
+			Matrix44 m = wmatrix[lane];
+			Vec3 r;
+
+			avoidAliasingMultDirMatrix (m, s, r);
+
+			wr[lane] = r;
+		}
+	}
+}
+
+
 
 OSL_SHADEOP int
 osl_transform_triple (void *sg_, void *Pin, int Pin_derivs,

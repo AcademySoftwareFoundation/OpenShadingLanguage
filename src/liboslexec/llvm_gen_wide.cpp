@@ -1013,7 +1013,7 @@ LLVMGEN (llvm_gen_mix)
     Symbol& B = *rop.opargsym (op, 2);
     Symbol& X = *rop.opargsym (op, 3);
 
-    bool op_is_uniform = rop.isSymbolUniform(A) && rop.isSymbolUniform(B)  && rop.isSymbolUniform(X);
+    bool op_is_uniform = rop.isSymbolUniform(Result);
 
     TypeDesc type = Result.typespec().simpletype();
     ASSERT (!Result.typespec().is_closure_based() &&
@@ -1031,7 +1031,7 @@ LLVMGEN (llvm_gen_mix)
     else
         one = rop.ll.wide_constant (1.0f);
 
-    llvm::Value *x = rop.llvm_load_value (X, 0, 0, type);
+    llvm::Value *x = rop.llvm_load_value (X, 0, 0, type, op_is_uniform);
     // TODO:  switching back to non-wide to figure out uniform vs. varying data
     //llvm::Value *one_minus_x = rop.ll.wide_op_sub (one, x);
     llvm::Value *one_minus_x = rop.ll.op_sub (one, x);
@@ -1068,10 +1068,10 @@ LLVMGEN (llvm_gen_mix)
             //   (a*one_minus_x + b*x,
             //    -a*x.dx + a.dx*one_minus_x + b*x.dx + b.dx*x,
             //    -a*x.dy + a.dy*one_minus_x + b*x.dy + b.dy*x)
-            llvm::Value *ax = rop.llvm_load_value (A, 1, i, type);
-            llvm::Value *bx = rop.llvm_load_value (B, 1, i, type);
+            llvm::Value *ax = rop.llvm_load_value (A, 1, i, type, op_is_uniform);
+            llvm::Value *bx = rop.llvm_load_value (B, 1, i, type, op_is_uniform);
             if (i > 0 && x_components > 1)
-                xx = rop.llvm_load_value (X, 1, i, type);
+                xx = rop.llvm_load_value (X, 1, i, type, op_is_uniform);
             // TODO:  switching back to non-wide to figure out uniform vs. varying data
             //llvm::Value *rx1 = rop.ll.wide_op_mul (a, xx);
 //            llvm::Value *rx2 = rop.ll.wide_op_mul (ax, one_minus_x);
@@ -1088,18 +1088,10 @@ LLVMGEN (llvm_gen_mix)
             llvm::Value *rx4 = rop.ll.op_mul (bx, x);
             rx = rop.ll.op_add (rx, rx4);
 
-            llvm::Value *ay = rop.llvm_load_value (A, 2, i, type);
-            llvm::Value *by = rop.llvm_load_value (B, 2, i, type);
+            llvm::Value *ay = rop.llvm_load_value (A, 2, i, type, op_is_uniform);
+            llvm::Value *by = rop.llvm_load_value (B, 2, i, type, op_is_uniform);
             if (i > 0 && x_components > 1)
-                xy = rop.llvm_load_value (X, 2, i, type);
-            // TODO:  switching back to non-wide to figure out uniform vs. varying data
-//            llvm::Value *ry1 = rop.ll.wide_op_mul (a, xy);
-//            llvm::Value *ry2 = rop.ll.wide_op_mul (ay, one_minus_x);
-//            llvm::Value *ry = rop.ll.wide_op_sub (ry2, ry1);
-//            llvm::Value *ry3 = rop.ll.wide_op_mul (b, xy);
-//            ry = rop.ll.wide_op_add (ry, ry3);
-//            llvm::Value *ry4 = rop.ll.wide_op_mul (by, x);
-//            ry = rop.ll.wide_op_add (ry, ry4);
+                xy = rop.llvm_load_value (X, 2, i, type, op_is_uniform);
             llvm::Value *ry1 = rop.ll.op_mul (a, xy);
             llvm::Value *ry2 = rop.ll.op_mul (ay, one_minus_x);
             llvm::Value *ry = rop.ll.op_sub (ry2, ry1);

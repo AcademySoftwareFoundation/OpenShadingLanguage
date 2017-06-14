@@ -2175,11 +2175,11 @@ public:
     };
 
 private:
-    OptionData* m_opt;
+    const OptionData * m_opt;
     float m_missingcolor[4];
 
 public:
-    BatchedTextureOptionProvider(OptionData * data)
+    BatchedTextureOptionProvider(const OptionData * data)
     : m_opt(data)
      ,m_missingcolor{0.f,0.f,0.f,0.f}
     {}
@@ -2205,12 +2205,12 @@ public:
         if (m_opt->active[i]) {                                                                  \
             if (m_opt->varying[i]) {                                                             \
                 if (m_opt->type[i] == static_cast<bool>(INT)) {                                  \
-                    Wide<int>& wideResult = *reinterpret_cast<Wide<int>*>(m_opt->options[j]);    \
-                    opt.optName = static_cast<float>(wideResult.get(l));                    \
+                    ConstWideAccessor<int> wideResult(m_opt->options[j]);    \
+                    opt.optName = static_cast<float>(wideResult[l]);                    \
                 }                                                                           \
                 else {                                                                      \
-                    Wide<float>& wideResult = *reinterpret_cast<Wide<float>*>(m_opt->options[j]);\
-                    opt.optName = wideResult.get(l);                                        \
+                    ConstWideAccessor<float> wideResult(m_opt->options[j]);    \
+                    opt.optName = wideResult[l];                                        \
                 }                                                                           \
             }                                                                               \
             else {                                                                          \
@@ -2228,12 +2228,12 @@ public:
         if (m_opt->active[i]) {                                                                  \
             if (m_opt->varying[i]) {                                                             \
                 if (m_opt->type[i] == static_cast<bool>(STRING)) {                               \
-                    Wide<ustring>& wideResult = *reinterpret_cast<Wide<ustring>*>(m_opt->options[j]); \
-                    opt.optName = decode(wideResult.get(l));                                \
+                    ConstWideAccessor<ustring> wideResult(m_opt->options[j]);    \
+                    opt.optName = decode(static_cast<const ustring>(wideResult[l]));                                \
                 }                                                                           \
                 else {                                                                      \
-                    Wide<int>& wideResult = *reinterpret_cast<Wide<int>*>(m_opt->options[j]);    \
-                    opt.optName = (typeCast)wideResult.get(l);                              \
+                    ConstWideAccessor<int> wideResult(m_opt->options[j]);    \
+                    opt.optName = (typeCast)static_cast<int>(wideResult[l]);                              \
                 }                                                                           \
             }                                                                               \
             else {                                                                          \
@@ -2248,7 +2248,6 @@ public:
         }
 
         // Check all options
-
         OPTION_CASE(SWIDTH, swidth)
         OPTION_CASE(TWIDTH, twidth)
         OPTION_CASE(RWIDTH, rwidth)
@@ -2262,8 +2261,8 @@ public:
         OPTION_CASE(TIME, time)
         if (m_opt->active[FIRSTCHANNEL]) {
             if (m_opt->varying[FIRSTCHANNEL]) {
-                Wide<int>& firstchannel = *reinterpret_cast<Wide<int>*>(m_opt->options[j]);
-                opt.firstchannel = firstchannel.get(l);
+                ConstWideAccessor<int> wideResult(m_opt->options[j]);    \
+                opt.firstchannel = wideResult[l];
             }
             else {
                 opt.firstchannel = *reinterpret_cast<int*>(m_opt->options[j]);
@@ -2273,12 +2272,12 @@ public:
         if (m_opt->active[SUBIMAGE]) {
             if (m_opt->varying[SUBIMAGE]) {
                 if (m_opt->type[SUBIMAGE] == static_cast<bool>(STRING)) {
-                    Wide<ustring>& wideResult = *reinterpret_cast<Wide<ustring>*>(m_opt->options[j]);
-                    opt.subimagename = wideResult.get(l);           \
+                    ConstWideAccessor<ustring> wideResult(m_opt->options[j]);    \
+                    opt.subimagename = wideResult[l];           \
                 }
                 else {
-                    Wide<int>& wideResult = *reinterpret_cast<Wide<int>*>(m_opt->options[j]);
-                    opt.subimage = wideResult.get(l);
+                    ConstWideAccessor<int> wideResult(m_opt->options[j]);    \
+                    opt.subimage = wideResult[l];
                 }
             }
             else {
@@ -2295,8 +2294,8 @@ public:
         if (m_opt->active[MISSINGCOLOR]) {
             Color3 missingcolor;
             if (m_opt->varying[MISSINGCOLOR]) {
-                Wide<Color3> & widemissingcolor = *reinterpret_cast<Wide<Color3>*>(m_opt->options[j]);
-                missingcolor = widemissingcolor.get(j);
+                ConstWideAccessor<Color3> wideResult(m_opt->options[j]);    \
+                missingcolor = wideResult[l];
             }
             else {
                 missingcolor = *reinterpret_cast<Color3*>(m_opt->options[j]);
@@ -2308,10 +2307,9 @@ public:
             ++j;
         }
         if (m_opt->active[MISSINGALPHA]) {
-            Color3 missingcolor;
             if (m_opt->varying[MISSINGALPHA]) {
-                Wide<float>& widemissingalpha = *reinterpret_cast<Wide<float>*>(m_opt->options[j]);
-                m_missingcolor[3] = widemissingalpha.get(j);
+                ConstWideAccessor<float> wideResult(m_opt->options[j]);    \
+                m_missingcolor[3] = wideResult[l];
             }
             else {
                 m_missingcolor[3] = *reinterpret_cast<float*>(m_opt->options[j]);

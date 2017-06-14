@@ -1529,6 +1529,8 @@ LLVM_Util::type_function_ptr (llvm::Type *rettype,
 std::string
 LLVM_Util::llvm_typename (llvm::Type *type) const
 {
+	ASSERT(type != nullptr);
+
     std::string s;
     llvm::raw_string_ostream stream (s);
     stream << (*type);

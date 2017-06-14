@@ -219,6 +219,8 @@ public:
     
     void llvm_broadcast_uniform_value(llvm::Value * tempUniform, 
     								  Symbol & Destination);
+    void llvm_broadcast_uniform_value_at(llvm::Value * pointerTotempUniform,
+    								  Symbol & Destination);
     
     /// Generate an alloca instruction to allocate space for the given
     /// type, with derivs if derivs==true, and return the its pointer.

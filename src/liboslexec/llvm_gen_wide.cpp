@@ -2924,8 +2924,6 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
 
     TextureOptionPack options;
 
-    llvm::Value* missingcolor = NULL;
-
     // allocate
     Opcode &op (rop.inst()->ops()[opnum]);
     for (int a = first_optional_arg;  a < op.nargs();  ++a) {
@@ -3057,29 +3055,11 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
         PARAM_STRING_CODE (interp, tex_interp_to_code, interpmode, INTERP)
 
         if (name == Strings::missingcolor && equivalent(valtype,TypeDesc::TypeColor)) {
-            if (! missingcolor) {
-                // If not already done, allocate enough storage for the
-                // missingcolor value (4 floats), and call the special
-                // function that points the TextureOpt.missingcolor to it.
-                missingcolor = rop.ll.op_alloca(rop.ll.type_float(), 4);
-            }
-            rop.ll.op_memcpy (rop.ll.void_ptr(missingcolor),
-                              rop.llvm_void_ptr(Val), (int)sizeof(Color3));
-            options.add(BatchedTextureOptionProvider::MISSINGCOLOR, rop.ll.void_ptr(missingcolor), BatchedTextureOptionProvider::COLOR, valIsVarying);
+            options.add(BatchedTextureOptionProvider::MISSINGCOLOR, rop.llvm_void_ptr(Val), BatchedTextureOptionProvider::COLOR, valIsVarying);
             continue;
         }
         if (name == Strings::missingalpha && valtype == TypeDesc::FLOAT) {
-            if (! missingcolor) {
-                // If not already done, allocate enough storage for the
-                // missingcolor value (4 floats), and call the special
-                // function that points the TextureOpt.missingcolor to it.
-                missingcolor = rop.ll.op_alloca(rop.ll.type_float(), 4);
-            }
-            // store alpha value in the last channel of missing color
-            llvm::Value* alphaPtr = rop.ll.GEP(missingcolor, 3);
-            llvm::Value* val = rop.llvm_load_value (Val);
-            rop.ll.op_store(val, alphaPtr);
-            options.add(BatchedTextureOptionProvider::MISSINGALPHA, rop.ll.void_ptr(missingcolor), BatchedTextureOptionProvider::FLOAT, valIsVarying);
+            options.add(BatchedTextureOptionProvider::MISSINGALPHA, rop.llvm_void_ptr(Val), BatchedTextureOptionProvider::FLOAT, valIsVarying);
             continue;
         }
 

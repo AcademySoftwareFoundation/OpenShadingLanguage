@@ -359,11 +359,11 @@ void transformWideTextureGradients(BatchedTextureOutputs& outputs,
 
 OSL_SHADEOP int
 osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
-                     void *opt_, void *s, void *t,
-                     void *dsdx, void *dtdx, void *dsdy, void *dtdy,
-                     int chans, void *result, int resultHasDerivs,
-                     void *alpha, int alphaHasDerivs,
-                     void *errormessage, int mask_)
+                             const void *opt_, const void *s, const void *t,
+                             const void *dsdx, const void *dtdx, const void *dsdy, const void *dtdy,
+                             int chans, void *result, int resultHasDerivs,
+                             void *alpha, int alphaHasDerivs,
+                             void *errormessage, int mask_)
 {
     Mask mask(mask_);
     // TODO: LLVM could check this before calling this function
@@ -371,7 +371,7 @@ osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
         return 0;
     }
     ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
-    BatchedTextureOptionProvider opt(reinterpret_cast<BatchedTextureOptionProvider::OptionData *>(opt_));
+    BatchedTextureOptionProvider opt(reinterpret_cast<const BatchedTextureOptionProvider::OptionData *>(opt_));
 
     BatchedTextureOutputs outputs(result, (bool)resultHasDerivs, chans,
                                   alpha, (bool)alphaHasDerivs,
@@ -414,8 +414,8 @@ osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
 
 OSL_SHADEOP int
 osl_texture_batched (void *sgb_, void *name,
-                     void *opt_, void *s, void *t,
-                     void *dsdx, void *dtdx, void *dsdy, void *dtdy,
+                     const void *opt_, const void *s, const void *t,
+                     const void *dsdx, const void *dtdx, const void *dsdy, const void *dtdy,
                      int chans, void *result, int resultHasDerivs,
                      void *alpha, int alphaHasDerivs,
                      void *errormessage, int mask_)
@@ -426,7 +426,7 @@ osl_texture_batched (void *sgb_, void *name,
         return 0;
     }
     ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
-    BatchedTextureOptionProvider opt(reinterpret_cast<BatchedTextureOptionProvider::OptionData *>(opt_));
+    BatchedTextureOptionProvider opt(reinterpret_cast<const BatchedTextureOptionProvider::OptionData *>(opt_));
 
     BatchedTextureOutputs outputs(result, (bool)resultHasDerivs, chans,
                                   alpha, (bool)alphaHasDerivs,

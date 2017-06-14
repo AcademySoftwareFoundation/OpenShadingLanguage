@@ -2285,10 +2285,10 @@ LLVMGEN (llvm_gen_generic)
         // is llvm source marked as always inline.  In that case we can return
         // wide types.  For all other cases we need to pass a pointer to the
         // where the return value needs to go.
-        
+
         // Don't compute derivs -- either not needed or not provided in args
         if (Result.typespec().aggregate() == TypeDesc::SCALAR &&
-			(uniformFormOfFunction || functionIsLlvmInlined)) {
+            (uniformFormOfFunction || functionIsLlvmInlined)) {
             std::cout << ">>stores return value " << name.c_str() << std::endl;
             llvm::Value *r = rop.llvm_call_function (name.c_str(),
                                                      &(args[1]), op.nargs()-1,
@@ -2959,7 +2959,7 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
                 continue;   /* default constant */                      \
             BatchedTextureOptionProvider::DataType optType = BatchedTextureOptionProvider::FLOAT;   \
             if (valtype == TypeDesc::INT)                               \
-                optType = BatchedTextureOptionProvider::INT;                          \
+                optType = BatchedTextureOptionProvider::INT;            \
             options.add(BatchedTextureOptionProvider::index, rop.llvm_void_ptr(Val), optType, valIsVarying);      \
             continue;                                                   \
         }
@@ -2975,7 +2975,7 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
                 continue;                                               \
             BatchedTextureOptionProvider::DataType optType = BatchedTextureOptionProvider::FLOAT;   \
             if (valtype == TypeDesc::INT)                               \
-                optType = BatchedTextureOptionProvider::INT;                          \
+                optType = BatchedTextureOptionProvider::INT;            \
             options.add(BatchedTextureOptionProvider::S##index, rop.llvm_void_ptr(Val), optType, valIsVarying);      \
             options.add(BatchedTextureOptionProvider::T##index, rop.llvm_void_ptr(Val), optType, valIsVarying);      \
             if (tex3d)                                                                                 \
@@ -2987,12 +2987,12 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
         if (name == Strings::paramname && valtype == TypeDesc::STRING) {\
             if (Val.is_constant()) {                                    \
                 int code = decoder (*(ustring *)Val.data());            \
-                if (!options.activeMask[BatchedTextureOptionProvider::index] &&       \
+                if (!options.activeMask[BatchedTextureOptionProvider::index] && \
                     code == optdefaults.fieldname)                      \
                     continue;                                           \
                 if (code >= 0) {                                        \
                     llvm::Value *val = rop.ll.constant (code);          \
-                    llvm::Value* codePtr = rop.ll.op_alloca(rop.ll.type_int());\
+                    llvm::Value* codePtr = rop.ll.op_alloca(rop.ll.type_int()); \
                     rop.ll.op_store(val, codePtr);                      \
                     options.add(BatchedTextureOptionProvider::index, rop.ll.void_ptr(codePtr), BatchedTextureOptionProvider::INT, valIsVarying);  \
                 }                                                       \
@@ -4764,28 +4764,28 @@ LLVMGEN (llvm_gen_return)
     Opcode &op (rop.inst()->ops()[opnum]);
     ASSERT (op.nargs() == 0);
     if (rop.ll.is_mask_stack_empty()) {
-		if (op.opname() == Strings::op_exit) {
-			// If it's a real "exit", totally jump out of the shader instance.
-			// The exit instance block will be created if it doesn't yet exist.
-			rop.ll.op_branch (rop.llvm_exit_instance_block());
-		} else {
-			// If it's a "return", jump to the exit point of the function.
-			rop.ll.op_branch (rop.ll.return_block());
-		}
-		llvm::BasicBlock* next_block = rop.ll.new_basic_block ("");
-		rop.ll.set_insert_point (next_block);
+        if (op.opname() == Strings::op_exit) {
+            // If it's a real "exit", totally jump out of the shader instance.
+            // The exit instance block will be created if it doesn't yet exist.
+            rop.ll.op_branch (rop.llvm_exit_instance_block());
+        } else {
+            // If it's a "return", jump to the exit point of the function.
+            rop.ll.op_branch (rop.ll.return_block());
+        }
+        llvm::BasicBlock* next_block = rop.ll.new_basic_block ("");
+        rop.ll.set_insert_point (next_block);
     } else {
-    	ASSERT(op.opname() != Strings::op_exit && "Incomplete");
-    	
+        ASSERT(op.opname() != Strings::op_exit && "Incomplete");
+
         // There may still be more instructions in the body after the return
-    	// Ideally front end dead code elimination should have gotten these
-    	// we will be a bit pedantic, and mask off all data lanes
-    	
-    	// However we still need to track the current mask to be applied
-    	// to all conditionals higher up in the conditional stack
-        rop.ll.push_mask_return();    	
+        // Ideally front end dead code elimination should have gotten these
+        // we will be a bit pedantic, and mask off all data lanes
+
+        // However we still need to track the current mask to be applied
+        // to all conditionals higher up in the conditional stack
+        rop.ll.push_mask_return();
     }
-	return true;
+    return true;
 }
 
 

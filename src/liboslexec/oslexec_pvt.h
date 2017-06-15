@@ -1835,7 +1835,7 @@ public:
 	{
     	std::ostringstream msg;
     	tinyformat::format(msg, fmt, args...);  
-		record_error(ErrorHandler::EH_WARNING, msg.str(), mask);
+		record_error(ErrorHandler::EH_MESSAGE, msg.str(), mask);
 	}
 
 	template<typename ...ArgListT>
@@ -1844,7 +1844,7 @@ public:
 	{
     	std::ostringstream msg;
     	tinyformat::format(msg, fmt, args...);
-		record_error(ErrorHandler::EH_MESSAGE, msg.str(), mask);
+		record_error(ErrorHandler::EH_WARNING, msg.str(), mask);
 	}            
 
 private:

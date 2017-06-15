@@ -497,6 +497,8 @@ LLVMGEN (llvm_gen_printf)
             rop.llvm_store_value (ret, *rop.opargsym (op, 0));
     } else {
 
+    	// Could be printing wide value at top scope (no mask)
+    	// so no need to add a conditional to check
         llvm::Value *mask = rop.ll.is_mask_stack_empty() ? nullptr : rop.ll.current_mask();
 
         for(int lane_index=0; lane_index < SimdLaneCount; ++lane_index) {

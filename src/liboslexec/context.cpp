@@ -472,11 +472,8 @@ ShadingContext::process_errors () const
 			});
 		errorIndex = error_batch.startAt;
 		
-		// Now for batched, non-masked errors
-		#pragma noinline
-		process_errors_helper(shadingsys(), m_buffered_errors, errorIndex, error_batch.endBefore, 
-		    [=](Mask mask)->bool { return mask.all_off();} );
-		
+		// the printf call always sends a valid mask over, it could be 0x0000 to 0xFFFF
+
 		// Now for batched, emit each data lane separately and in the correct order
 		for(int lane_mask=0; lane_mask < Mask::width; ++lane_mask) {
 			#pragma noinline

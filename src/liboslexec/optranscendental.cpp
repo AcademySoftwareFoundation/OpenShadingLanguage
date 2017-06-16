@@ -192,6 +192,41 @@ inline Vec3 simdFriendlyNormalize(const Vec3 &N)
 }
 
 OSL_SHADEOP void
+osl_length_w16fw16v(void *r_, void *V_)
+{
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+		ConstWideAccessor<Vec3> wV(V_);
+		WideAccessor<float> wr(r_);
+
+		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		for(int lane=0; lane < wr.width; ++lane) {
+			Vec3 V = wV[lane];
+		    float r = simdFriendlyLength(V);
+			wr[lane] = r;
+		}
+	}
+}
+
+OSL_SHADEOP void
+osl_length_w16fw16v_masked(void *r_, void *V_, int mask_value)
+{
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+		ConstWideAccessor<Vec3> wV(V_);
+		MaskedAccessor<float> wr(r_, Mask(mask_value));
+
+		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		for(int lane=0; lane < wr.width; ++lane) {
+			Vec3 V = wV[lane];
+		    float r = simdFriendlyLength(V);
+			wr[lane] = r;
+		}
+	}
+}
+
+
+OSL_SHADEOP void
 osl_area_w16(void *r_, void *DP_)
 {
 	OSL_INTEL_PRAGMA("forceinline recursive")
@@ -238,19 +273,35 @@ osl_normalize_w16vw16v(void *r_, void *V_)
 {
 	OSL_INTEL_PRAGMA("forceinline recursive")
 	{
-		const Wide<Vec3> &wV = WVEC(V_);
-	    
-		Wide<Vec3> &wr = WVEC(r_);
+		ConstWideAccessor<Vec3> wV(V_);
+		WideAccessor<Vec3> wr(r_);
 	
 		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")		
 		for(int lane=0; lane < wr.width; ++lane) {
-			Vec3 V = wV.get(lane);
-			
+			Vec3 V = wV[lane];
 		    Vec3 N = simdFriendlyNormalize(V);
-			wr.set(lane, N);
+			wr[lane] = N;
 		}
 	}	
 }
+
+OSL_SHADEOP void
+osl_normalize_w16vw16v_masked(void *r_, void *V_, int mask_value)
+{
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+		ConstWideAccessor<Vec3> wV(V_);
+		MaskedAccessor<Vec3> wr(r_, Mask(mask_value));
+
+		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		for(int lane=0; lane < wr.width; ++lane) {
+			Vec3 V = wV[lane];
+		    Vec3 N = simdFriendlyNormalize(V);
+			wr[lane] = N;
+		}
+	}
+}
+
 
 OSL_SHADEOP void
 osl_cross_w16vw16vw16v (void *result_, void *a_, void *b_)
@@ -272,6 +323,45 @@ osl_cross_w16vw16vw16v (void *result_, void *a_, void *b_)
 	}
 }
 
+OSL_SHADEOP void
+osl_cross_w16vw16vw16v_masked (void *result_, void *a_, void *b_, int mask_value)
+{
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+		ConstWideAccessor<Vec3> wA(a_);
+		ConstWideAccessor<Vec3> wB(b_);
+		MaskedAccessor<Vec3> wr(result_, Mask(mask_value));
+
+		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		for(int lane=0; lane < wr.width; ++lane) {
+			Vec3 a = wA[lane];
+			Vec3 b = wB[lane];
+
+		    Vec3 r = a.cross(b);
+			wr[lane] = r;
+		}
+	}
+}
+
+OSL_SHADEOP void
+osl_dot_w16fw16vw16v (void *result_, void *a_, void *b_)
+{
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+		ConstWideAccessor<Vec3> wA(a_);
+		ConstWideAccessor<Vec3> wB(b_);
+		WideAccessor<float> wr(result_);
+
+		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		for(int lane=0; lane < wr.width; ++lane) {
+			Vec3 a = wA[lane];
+			Vec3 b = wB[lane];
+
+		    float r = a.dot(b);
+			wr[lane] = r;
+		}
+	}
+}
 
 } // namespace pvt
 OSL_NAMESPACE_EXIT

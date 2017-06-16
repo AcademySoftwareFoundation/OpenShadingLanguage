@@ -667,6 +667,7 @@ LLVMGEN (llvm_gen_mul)
     int num_components = type.aggregate;
 
     bool resultIsUniform = rop.isSymbolUniform(Result);
+    ASSERT(op_is_uniform || !resultIsUniform);
 
     // multiplication involving closures
     if (Result.typespec().is_closure()) {
@@ -724,7 +725,7 @@ LLVMGEN (llvm_gen_mul)
             return false;
         llvm::Value *r = rop.ll.op_mul (a, b);
 
-        if (!resultIsUniform) {
+        if (op_is_uniform && !resultIsUniform) {
             rop.llvm_broadcast_uniform_value(r, Result, 0, i);
         } else {
             rop.llvm_store_value (r, Result, 0, i);
@@ -744,7 +745,7 @@ LLVMGEN (llvm_gen_mul)
             llvm::Value *ayb = rop.ll.op_mul (ay, b);
             llvm::Value *ry = rop.ll.op_add (aby, ayb);
 
-            if (!resultIsUniform) {
+            if (op_is_uniform && !resultIsUniform) {
                 rop.llvm_broadcast_uniform_value(rx, Result, 1, i);
                 rop.llvm_broadcast_uniform_value(ry, Result, 2, i);
             } else {

@@ -327,7 +327,7 @@ public:
 	OSL_INLINE WideBuiltin() = default;
 
 	template<typename... BuiltinListT, typename = internal::enable_if_type<(sizeof...(BuiltinListT) == WidthT)> >
-	OSL_INLINE
+	explicit OSL_INLINE
 	WideBuiltin(const BuiltinListT &...values)
 	{
 		typedef internal::make_int_sequence<sizeof...(BuiltinListT)> int_seq_type;
@@ -463,7 +463,7 @@ public:
 	Wide(const Wide &other) = delete;
 
 	template<typename... Vec3ListT, typename = internal::enable_if_type<(sizeof...(Vec3ListT) == WidthT)> >
-	OSL_INLINE
+	explicit OSL_INLINE
 	Wide(const Vec3ListT &...values)
 	{
 		typedef internal::make_int_sequence<sizeof...(Vec3ListT)> int_seq_type;
@@ -586,7 +586,7 @@ public:
     Wide(const Wide &other) = delete;
 
     template<typename... Vec2ListT, typename = internal::enable_if_type<(sizeof...(Vec2ListT) == WidthT)> >
-    OSL_INLINE
+    explicit OSL_INLINE
     Wide(const Vec2ListT &...values)
     {
         typedef internal::make_int_sequence<sizeof...(Vec2ListT)> int_seq_type;
@@ -701,7 +701,7 @@ public:
     Wide(const Wide &other) = delete;
 
     template<typename... Color3ListT, typename = internal::enable_if_type<(sizeof...(Color3ListT) == WidthT)> >
-    OSL_INLINE
+    explicit OSL_INLINE
     Wide(const Color3ListT &...values)
     {
         typedef internal::make_int_sequence<sizeof...(Color3ListT)> int_seq_type;
@@ -946,7 +946,7 @@ public:
 	Wide(const Wide &other) = delete;
 
 	template<typename... ValueListT, typename = internal::enable_if_type<(sizeof...(ValueListT) == WidthT)> >
-	OSL_INLINE 
+	explicit OSL_INLINE
 	Wide(const ValueListT &...values)
 	{
 		typedef internal::make_int_sequence<sizeof...(ValueListT)> int_seq_type;
@@ -1036,7 +1036,7 @@ public:
 	Wide(const Wide &other) = delete;
 
 	template<typename... ValueListT, typename = internal::enable_if_type<(sizeof...(ValueListT) == WidthT)> >
-	OSL_INLINE
+	explicit OSL_INLINE
 	Wide(const ValueListT &...values)
 	{
 		typedef internal::make_int_sequence<sizeof...(ValueListT)> int_seq_type;
@@ -1056,7 +1056,7 @@ public:
 template <typename DataT, int WidthT>
 struct WideUniformProxy
 {
-	OSL_INLINE
+	explicit OSL_INLINE
 	WideUniformProxy(Wide<DataT, WidthT> & ref_wide_data)
 	: m_ref_wide_data(ref_wide_data)
 	{}
@@ -1108,7 +1108,7 @@ make_uniform(Wide<DataT, WidthT> &wide_data, const DataT &value)
 template <typename DataT, int WidthT>
 struct LaneProxy
 {
-	OSL_INLINE 
+	explicit OSL_INLINE
 	LaneProxy(Wide<DataT, WidthT> & ref_wide_data, const int index)
 	: m_ref_wide_data(ref_wide_data)
 	, m_index(index)
@@ -1165,7 +1165,7 @@ unproxy(const LaneProxy<DataT,WidthT> &proxy)
 template <typename DataT, int WidthT>
 struct ConstLaneProxy
 {
-	OSL_INLINE
+	explicit OSL_INLINE
 	ConstLaneProxy(const Wide<DataT, WidthT> & ref_wide_data, const int index)
 	: m_ref_wide_data(ref_wide_data)
 	, m_index(index)
@@ -1204,12 +1204,12 @@ struct ConstWideAccessor
 {
 	static constexpr int width = WidthT; 
 	
-	OSL_INLINE
+	explicit OSL_INLINE
 	ConstWideAccessor(const void *ptr_wide_data, int derivIndex=0)
 	: m_ref_wide_data(reinterpret_cast<const Wide<DataT, WidthT> *>(ptr_wide_data)[derivIndex])
 	{}
 	
-	OSL_INLINE
+	explicit OSL_INLINE
 	ConstWideAccessor(const Wide<DataT, WidthT> & ref_wide_data)
 	: m_ref_wide_data(ref_wide_data)
 	{}
@@ -1242,7 +1242,7 @@ struct WideAccessor
 {
 	static constexpr int width = WidthT; 
 	
-	OSL_INLINE
+	explicit OSL_INLINE
 	WideAccessor(void *ptr_wide_data, int derivIndex=0)
 	: m_ref_wide_data(reinterpret_cast<Wide<DataT, WidthT> *>(ptr_wide_data)[derivIndex])
 	{}
@@ -1713,7 +1713,8 @@ public:
 
    MaskedData() = delete;
    
-   explicit OSL_INLINE MaskedData(TypeDesc type, bool has_derivs, Mask mask, void *ptr)
+   explicit OSL_INLINE
+   MaskedData(TypeDesc type, bool has_derivs, Mask mask, void *ptr)
    : m_ptr(ptr)
    , m_type(type)
    , m_mask(mask)
@@ -1889,8 +1890,8 @@ private:
 template <typename DataT, int ArrayLenT>
 struct RefArrayProxy
 {
-	OSL_INLINE 
-	explicit RefArrayProxy(DataT (&ref_array_data)[ArrayLenT])
+	explicit OSL_INLINE
+	RefArrayProxy(DataT (&ref_array_data)[ArrayLenT])
 	: m_ref_array_data(ref_array_data)
 	{}
 
@@ -1954,8 +1955,8 @@ private:
 template <typename DataT>
 struct RefUnboundedArrayProxy
 {
-	OSL_INLINE 
-	explicit RefUnboundedArrayProxy(DataT *array_data, int array_length)
+	explicit OSL_INLINE
+	RefUnboundedArrayProxy(DataT *array_data, int array_length)
 	: m_array_data(array_data)
 	, m_array_length(array_length)
 	{}
@@ -2002,7 +2003,8 @@ class DataRef
 public:
    DataRef() = delete;
    
-   explicit OSL_INLINE DataRef(TypeDesc type, bool has_derivs, void *ptr)
+   explicit OSL_INLINE
+   DataRef(TypeDesc type, bool has_derivs, void *ptr)
    : m_ptr(ptr)
    , m_type(type)
    , m_has_derivs(has_derivs)
@@ -2179,7 +2181,8 @@ private:
     float m_missingcolor[4];
 
 public:
-    BatchedTextureOptionProvider(const OptionData * data)
+    explicit
+	BatchedTextureOptionProvider(const OptionData * data)
     : m_opt(data)
      ,m_missingcolor{0.f,0.f,0.f,0.f}
     {}
@@ -2353,7 +2356,8 @@ private:
 class BatchedTextureOutputs
 {
 public:
-    BatchedTextureOutputs(void* result, bool resultHasDerivs, int chans,
+	explicit
+	BatchedTextureOutputs(void* result, bool resultHasDerivs, int chans,
                           void* alpha, bool alphaHasDerivs,
                           void* errormessage, Mask mask)
         : m_result(result),

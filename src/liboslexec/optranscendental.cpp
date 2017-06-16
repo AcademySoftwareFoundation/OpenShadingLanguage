@@ -252,6 +252,26 @@ osl_normalize_w16vw16v(void *r_, void *V_)
 	}	
 }
 
+OSL_SHADEOP void
+osl_cross_w16vw16vw16v (void *result_, void *a_, void *b_)
+{
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+		ConstWideAccessor<Vec3> wA(a_);
+		ConstWideAccessor<Vec3> wB(b_);
+		WideAccessor<Vec3> wr(result_);
+
+		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		for(int lane=0; lane < wr.width; ++lane) {
+			Vec3 a = wA[lane];
+			Vec3 b = wB[lane];
+
+		    Vec3 r = a.cross(b);
+			wr[lane] = r;
+		}
+	}
+}
+
 
 } // namespace pvt
 OSL_NAMESPACE_EXIT

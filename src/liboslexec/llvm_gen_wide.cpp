@@ -666,6 +666,8 @@ LLVMGEN (llvm_gen_mul)
     bool is_float = !Result.typespec().is_closure_based() && Result.typespec().is_floatbased();
     int num_components = type.aggregate;
 
+    bool resultIsUniform = rop.isSymbolUniform(Result);
+
     // multiplication involving closures
     if (Result.typespec().is_closure()) {
         llvm::Value *valargs[3];
@@ -714,14 +716,19 @@ LLVMGEN (llvm_gen_mul)
         llvm::Value *a = rop.llvm_load_value (A, 0, i, type, op_is_uniform);
         llvm::Value *b = rop.llvm_load_value (B, 0, i, type, op_is_uniform);
         // TODO: remove this commented out debug info
-//    	std::cout << "typeof(A)==";
-//    	a->getType()->dump();
-//    	std::cout << "typeof(B)=="
-//    	b->getType()->dump();
+//        std::cout << "typeof(A)==";
+//        a->getType()->dump();
+//        std::cout << "typeof(B)==";
+//        b->getType()->dump();
         if (!a || !b)
             return false;
         llvm::Value *r = rop.ll.op_mul (a, b);
-        rop.llvm_store_value (r, Result, 0, i);
+
+        if (!resultIsUniform) {
+            rop.llvm_broadcast_uniform_value(r, Result, 0, i);
+        } else {
+            rop.llvm_store_value (r, Result, 0, i);
+        }
 
         if (Result.has_derivs() && (A.has_derivs() || B.has_derivs())) {
             // Multiplication of duals: (a*b, a*b.dx + a.dx*b, a*b.dy + a.dy*b)
@@ -736,8 +743,14 @@ LLVMGEN (llvm_gen_mul)
             llvm::Value *aby = rop.ll.op_mul (a, by);
             llvm::Value *ayb = rop.ll.op_mul (ay, b);
             llvm::Value *ry = rop.ll.op_add (aby, ayb);
-            rop.llvm_store_value (rx, Result, 1, i);
-            rop.llvm_store_value (ry, Result, 2, i);
+
+            if (!resultIsUniform) {
+                rop.llvm_broadcast_uniform_value(rx, Result, 1, i);
+                rop.llvm_broadcast_uniform_value(ry, Result, 2, i);
+            } else {
+                rop.llvm_store_value (rx, Result, 1, i);
+                rop.llvm_store_value (ry, Result, 2, i);
+            }
         }
     }
 

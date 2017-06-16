@@ -1913,15 +1913,17 @@ BackendLLVMWide::llvm_broadcast_uniform_value_at(
 void
 BackendLLVMWide::llvm_broadcast_uniform_value(
 	llvm::Value * tempUniform, 
-	Symbol & Destination)
+    Symbol & Destination,
+    int derivs,
+    int component)
 {
     const TypeDesc & dest_type = Destination.typespec().simpletype();
-    ASSERT(false == Destination.has_derivs());
+//    ASSERT(false == Destination.has_derivs());
 	ASSERT(false == dest_type.is_array());
-	ASSERT(1 == dest_type.aggregate);
+//	ASSERT(1 == dest_type.aggregate);
 	
 	llvm::Value *wide_value = ll.widen_value(tempUniform);
-	llvm_store_value (wide_value, Destination, 0, 0, 0);
+    llvm_store_value (wide_value, Destination, derivs, nullptr, component);
 }
 
 void 

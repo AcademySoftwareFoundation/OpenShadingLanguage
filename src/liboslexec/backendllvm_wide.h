@@ -218,7 +218,9 @@ public:
     void llvm_conversion_store_uniform_status(llvm::Value * val, Symbol & Status);
     
     void llvm_broadcast_uniform_value(llvm::Value * tempUniform, 
-    								  Symbol & Destination);
+                                      Symbol & Destination,
+                                      int derivs=0,
+                                      int component=0);
     void llvm_broadcast_uniform_value_at(llvm::Value * pointerTotempUniform,
     								  Symbol & Destination);
     

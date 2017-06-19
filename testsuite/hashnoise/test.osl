@@ -1,0 +1,36 @@
+shader
+test (float angle = 10, float scale = 20,
+      output color Cout = 0)
+{
+   // setup some coordinates
+   float theta = radians(angle);
+   float ru = cos(theta) * u + sin(theta) * v;
+   float rv = sin(theta) * u - cos(theta) * v;
+   ru *= scale;
+   rv *= scale;
+   float rz = (scale * (u + v)) / M_SQRT2;
+   float t = u*scale;
+
+   Cout = 0;
+   if (v < 0.49) {
+       // float noise in 1,2,3,4 dimensions
+       if (u < 0.24)
+           Cout = (float) hashnoise(ru);
+       else if (u > 0.26 && u < 0.49)
+           Cout = (float) hashnoise(ru, rv);
+       else if (u > 0.51 && u < 0.74)
+           Cout = (float) hashnoise(point(ru, rv, rz));
+       else if (u > 0.76)
+           Cout = (float) hashnoise(point(ru, rv, rz), t);
+   } else if (v > 0.51) {
+       // color noise in 1,2,3,4 dimensions
+       if (u < 0.24)
+           Cout = hashnoise(ru);
+       else if (u > 0.26 && u < 0.49)
+           Cout = hashnoise(ru, rv);
+       else if (u > 0.51 && u < 0.74)
+           Cout = hashnoise(point(ru, rv, rz));
+       else if (u > 0.76)
+           Cout = hashnoise(point(ru, rv, rz), t);
+   }
+}

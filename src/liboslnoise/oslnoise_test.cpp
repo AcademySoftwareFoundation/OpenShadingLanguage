@@ -262,7 +262,6 @@ test_cell ()
     };
 
     for (int i = 0; i < 2*N; ++i) {
-        // Signed perlin noise
         float x = 0.5f + float(i)/float(N);
         Vec3 p (x, x, x);
         float t = x;
@@ -306,6 +305,79 @@ test_cell ()
 
 
 
+void
+test_hash ()
+{
+    const int N = 1;
+    static float results_1d[2*N+1] = {
+        0.983315, 0.914303
+    };
+    static float results_2d[2*N+1] = {
+        0.716016, 0.360764
+    };
+    static float results_3d[2*N+1] = {
+        0.311887, 0.273953
+    };
+    static float results_4d[2*N+1] = {
+        0.480826, 0.84257
+    };
+    static Vec3 vresults_1d[2*N+1] = {
+        Vec3(0.253513, 0.658608, 0.718555), Vec3(0.673784, 0.825515, 0.827693)
+    };
+    static Vec3 vresults_2d[2*N+1] = {
+        Vec3(0.172726, 0.779528, 0.780237), Vec3(0.431263, 0.443849, 0.592155)
+    };
+    static Vec3 vresults_3d[2*N+1] = {
+        Vec3(0.59078, 0.79799, 0.0202766), Vec3(0.593547, 0.156555, 0.978352)
+    };
+    static Vec3 vresults_4d[2*N+1] = {
+        Vec3(0.297735, 0.240833, 0.386421), Vec3(0.642915, 0.367309, 0.879035)
+    };
+
+    for (int i = 0; i < 2*N; ++i) {
+        float x = 0.5f + float(i)/float(N);
+        Vec3 p (x, x, x);
+        float t = x;
+        float s1 = hashnoise (x);
+        float s2 = hashnoise (x, x);
+        float s3 = hashnoise (p);
+        float s4 = hashnoise (p, t);
+        // std::cerr << s4 << ", ";
+        OIIO_CHECK_EQUAL_THRESH (s1, results_1d[i], eps);
+        OIIO_CHECK_EQUAL_THRESH (s2, results_2d[i], eps);
+        OIIO_CHECK_EQUAL_THRESH (s3, results_3d[i], eps);
+        OIIO_CHECK_EQUAL_THRESH (s4, results_4d[i], eps);
+
+        // Test vector variety
+        Vec3 vs1 = vhashnoise (x);
+        Vec3 vs2 = vhashnoise (x, x);
+        Vec3 vs3 = vhashnoise (p);
+        Vec3 vs4 = vhashnoise (p, t);
+        // std::cerr << "Vec3" << vs4 << ",";
+        OIIO_CHECK_EQUAL_THRESH (vs1, vresults_1d[i], eps);
+        OIIO_CHECK_EQUAL_THRESH (vs2, vresults_2d[i], eps);
+        OIIO_CHECK_EQUAL_THRESH (vs3, vresults_3d[i], eps);
+        OIIO_CHECK_EQUAL_THRESH (vs4, vresults_4d[i], eps);
+    }
+
+    if (make_images) {
+        MAKE_IMAGE (hashnoise);
+    }
+
+    // Time trials
+    benchmark1 ("hashnoise(f)   ", hashnoise<float>, 0.5f);
+    benchmark2 ("hashnoise(f,f) ", hashnoise<float,float>, 0.5f, 0.5f);
+    benchmark1 ("hashnoise(v)   ", hashnoise<const Vec3&>, Vec3(0,0,0));
+    benchmark2 ("hashnoise(v,f) ", hashnoise<const Vec3&,float>, Vec3(0,0,0), 0.5f);
+
+    benchmark1 ("vhashnoise(f)  ", vhashnoise<float>, 0.5f);
+    benchmark2 ("vhashnoise(f,f)", vhashnoise<float,float>, 0.5f, 0.5f);
+    benchmark1 ("vhashnoise(v)  ", vhashnoise<const Vec3&>, Vec3(0,0,0));
+    benchmark2 ("vhashnoise(v,f)", vhashnoise<const Vec3&,float>, Vec3(0,0,0), 0.5f);
+}
+
+
+
 static void
 getargs (int argc, const char *argv[])
 {
@@ -341,6 +413,7 @@ main (int argc, char const *argv[])
 
     test_perlin ();
     test_cell ();
+    test_hash ();
 
     return unit_test_failures;
 }

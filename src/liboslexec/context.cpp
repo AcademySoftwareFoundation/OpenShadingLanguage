@@ -384,7 +384,7 @@ void
 ShadingContext::record_error (ErrorHandler::ErrCode code,
                               const std::string &text) const
 {
-    m_buffered_errors.push_back (ErrorItem(code,text, Mask(false)));
+    m_buffered_errors.push_back (ErrorItem(code,text, Mask(true)));
     // If we aren't buffering, just process immediately
     if (! shadingsys().m_buffer_printf)
         process_errors ();
@@ -467,7 +467,7 @@ ShadingContext::process_errors () const
 			[=](Mask mask)->bool 
 			{ 
 				//TODO: Change to DASSERT
-				ASSERT(mask.all_off()); 
+				ASSERT(mask.all_on());
 				return true;
 			});
 		errorIndex = error_batch.startAt;

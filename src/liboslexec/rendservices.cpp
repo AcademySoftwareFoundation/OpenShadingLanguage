@@ -619,7 +619,7 @@ BatchedRendererServices::get_texture_info (ShaderGlobalsBatch *sgb,
             if (!status) {                                                                      \
                 std::string err = texturesys()->geterror();                                     \
                 if (err.size() && sgb) {                                                        \
-                    sgb->uniform().context->error ("[BatchRendererServices::get_texture_info] %s", err);\
+                    sgb->uniform().context->error (Mask(Lane(i)), "[BatchRendererServices::get_texture_info] %s", err);\
                 }                                                                               \
             }                                                                                   \
         }                                                                                       \
@@ -641,7 +641,7 @@ BatchedRendererServices::get_texture_info (ShaderGlobalsBatch *sgb,
             if (!status) {                                                                      \
                 std::string err = texturesys()->geterror();                                     \
                 if (err.size() && sgb) {                                                        \
-                    sgb->uniform().context->error ("[BatchRendererServices::get_texture_info] %s", err);\
+                    sgb->uniform().context->error (Mask(Lane(l)), "[BatchRendererServices::get_texture_info] %s", err);\
                 }                                                                               \
             }                                                                                   \
         }                                                                                       \
@@ -694,7 +694,7 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle * text
                                           BatchedTextureOutputs & outputs)
 {
     Mask status(false);
-
+    ASSERT(nullptr != sgb);
     ShadingContext *context = sgb->uniform().context;
     if (! texture_thread_info)
         texture_thread_info = context->texture_thread_info();
@@ -789,7 +789,9 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle * text
 					}
 				}
 				else if (errMsgSize) {
-					context->error ("[RendererServices::texture] %s", err);
+					// compilation error when using commented out form, investigate further...
+					//Mask errMask(Lane(i));
+					context->error (Mask(Lane(i)), "[BatchedRendererServices::texture] %s", err);
 				}
             }
             status.set(i, retVal);
@@ -890,7 +892,7 @@ BatchedRendererServices::texture (ConstWideAccessor<ustring> filename,
                     }
                 }
                 else if (errMsgSize) {
-                    context->error ("[RendererServices::texture] %s", err);
+                    context->error (Mask(Lane(i)), "[BatchedRendererServices::texture] %s", err);
                 }
             }
             status.set(i, retVal);

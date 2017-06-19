@@ -42,6 +42,27 @@ static constexpr int SimdLaneCount = 16;
 /// coordinate transformation.
 typedef const void * TransformationPtr;
 
+// Simple wrapper to identify a single lane index vs. a mask_value
+class Lane
+{
+	const int m_index;
+public:
+	explicit OSL_INLINE
+	Lane(int index)
+	: m_index(index)
+	{}
+
+	Lane() = delete;
+
+    OSL_INLINE Lane(const Lane &other)
+        : m_index(other.m_index)
+    {}
+
+    OSL_INLINE int
+	value() const {
+    	return m_index;
+    }
+};
 
 template <int WidthT>
 class WideMask
@@ -54,15 +75,23 @@ public:
     OSL_INLINE WideMask()
     {}
 
-    explicit OSL_INLINE WideMask(bool all_on_or_off)
+    explicit OSL_INLINE
+	WideMask(Lane lane)
+    : m_value(1<<lane.value())
+    {}
+
+    explicit OSL_INLINE
+	WideMask(bool all_on_or_off)
     : m_value((all_on_or_off) ? (0xFFFFFFFF >> (32-WidthT)) : 0)
     {}
     
-    explicit OSL_INLINE WideMask(value_type value_)
+    explicit OSL_INLINE
+	WideMask(value_type value_)
         : m_value(value_)
     {}
 
-    explicit OSL_INLINE WideMask(int value_)
+    explicit OSL_INLINE
+	WideMask(int value_)
         : m_value(static_cast<value_type>(value_))
     {}
 
@@ -111,7 +140,7 @@ public:
     OSL_INLINE bool all_on() const
     {
         // TODO:  is this more expensive than == ?
-        return (m_value >= (0xFFFFFFFF >> (32-WidthT));
+        return (m_value >= (0xFFFFFFFF >> (32-WidthT)));
     }
 
     OSL_INLINE bool all_off() const

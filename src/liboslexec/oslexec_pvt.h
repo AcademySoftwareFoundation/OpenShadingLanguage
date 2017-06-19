@@ -1831,11 +1831,11 @@ public:
 
 	template<typename ...ArgListT>
 	inline                                 
-	void message(Mask mask, const char* fmt, ArgListT... args) const
+	void error(Mask mask, const char* fmt, ArgListT... args) const
 	{
-    	std::ostringstream msg;
-    	tinyformat::format(msg, fmt, args...);  
-		record_error(ErrorHandler::EH_MESSAGE, msg.str(), mask);
+		std::ostringstream msg;
+		tinyformat::format(msg, fmt, args...);
+		record_error(ErrorHandler::EH_ERROR, msg.str(), mask);
 	}
 
 	template<typename ...ArgListT>
@@ -1846,6 +1846,25 @@ public:
     	tinyformat::format(msg, fmt, args...);
 		record_error(ErrorHandler::EH_WARNING, msg.str(), mask);
 	}            
+
+	template<typename ...ArgListT>
+	inline
+	void info(Mask mask, const char* fmt, ArgListT... args) const
+	{
+    	std::ostringstream msg;
+    	tinyformat::format(msg, fmt, args...);
+		record_error(ErrorHandler::EH_INFO, msg.str(), mask);
+	}
+
+	template<typename ...ArgListT>
+	inline
+	void message(Mask mask, const char* fmt, ArgListT... args) const
+	{
+    	std::ostringstream msg;
+    	tinyformat::format(msg, fmt, args...);
+		record_error(ErrorHandler::EH_MESSAGE, msg.str(), mask);
+	}
+
 
 private:
 

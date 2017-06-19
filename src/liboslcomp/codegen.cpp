@@ -532,11 +532,13 @@ ASTassign_expression::codegen (Symbol *dest)
         return dest;
     }
 
-    if (index)
+    if (index) {
         index->codegen_assign (operand);
-    else if (operand != dest)
+        dest = operand;  // so transitive assignment works for array refs
+    } else if (operand != dest) {
         emitcode (typespec().is_array() ? "arraycopy" : "assign",
                   dest, operand);
+    }
     return dest;
 }
 

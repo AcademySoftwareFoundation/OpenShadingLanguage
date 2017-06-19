@@ -597,7 +597,9 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             texture-missingcolor texture-simple
             texture-smallderivs texture-swirl texture-udim
             texture-width texture-withderivs texture-wrap
-            trailing-commas transform transformc trig typecast
+            trailing-commas
+            transitive-assign
+            transform transformc trig typecast
             unknown-instruction
             vararray-connect vararray-default
             vararray-deserialize vararray-param

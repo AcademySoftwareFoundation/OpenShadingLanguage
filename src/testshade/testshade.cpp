@@ -1124,10 +1124,20 @@ batched_save_outputs (ShadingSystem *shadingsys, ShadingContext *ctx, ShaderGrou
         
         if (t.basetype == TypeDesc::FLOAT) {
         	if (t.aggregate == TypeDesc::VEC3) {        	
+                ASSERT(outputimgs[i]->nchannels() == 3);
 				// If the variable we are outputting is float-based, set it
 				// directly in the output buffer.
 				auto batchResults = shadingsys->symbol_batch_accessor<Vec3>(*ctx, out_symbol);
 				Vec3 data = batchResults[batchIndex];
+				//printf("xy=(%d,%d) = (%f,%f,%f)\n", x, y, data[0], data[1], data[2]);
+				outputimgs[i]->setpixel (x, y, reinterpret_cast<const float *>(&data));
+        	}
+        	if (t.aggregate == TypeDesc::SCALAR) {
+                ASSERT(outputimgs[i]->nchannels() == 1);
+				// If the variable we are outputting is float-based, set it
+				// directly in the output buffer.
+				auto batchResults = shadingsys->symbol_batch_accessor<float>(*ctx, out_symbol);
+				float data = batchResults[batchIndex];
 				//printf("xy=(%d,%d) = (%f,%f,%f)\n", x, y, data[0], data[1], data[2]);
 				outputimgs[i]->setpixel (x, y, reinterpret_cast<const float *>(&data));
         	}
@@ -1137,6 +1147,8 @@ batched_save_outputs (ShadingSystem *shadingsys, ShadingContext *ctx, ShaderGrou
             // We are outputting an integer variable, so we need to
             // convert it to floating point.
             int nchans = outputimgs[i]->nchannels();
+            // TODO: Do we need to handle more variations, int[2], int[3], int[4]?
+            ASSERT(nchans == 1);
             float *pixel = (float *) alloca (nchans * sizeof(float));
             OIIO::convert_types (TypeDesc::BASETYPE(t.basetype), &data,
                                  TypeDesc::FLOAT, pixel, nchans);

@@ -1275,6 +1275,7 @@ static const char * builtin_func_args [] = {
     "getattribute", "is?", "is?[]", "iss?", "iss?[]",  "isi?", "isi?[]", "issi?", "issi?[]", "!rw", NULL,  // FIXME -- further checking?
     "getmessage", "is?", "is?[]", "iss?", "iss?[]", "!rw", NULL,
     "gettextureinfo", "iss?", "iss?[]", "!rw", NULL,  // FIXME -- further checking?
+    "hashnoise", NOISE_ARGS, NULL,
     "isconnected", "i?", NULL,
     "isconstant", "i?", NULL,
     "noise", GNOISE_ARGS, NOISE_ARGS, "!deriv", NULL,

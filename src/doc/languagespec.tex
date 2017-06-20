@@ -103,6 +103,7 @@ Editor: Larry Gritz \\
 \def\pnoise{{\cf pnoise()}\xspace}
 \def\psnoise{{\cf psnoise()}\xspace}
 \def\cellnoise{{\cf cellnoise()}\xspace}
+\def\hashnoise{{\cf hashnoise()}\xspace}
 \def\illuminance{{\cf illuminance}\xspace}
 \def\illuminate{{\cf illuminate}\xspace}
 
@@ -3436,6 +3437,14 @@ large-scale average is 0.5, and its values are evenly distributed over
 $[0,1]$.
 \apiend
 
+\apiitem{"hash"}
+\vspace{12pt}
+A function that returns a different, uncorrelated (but deterministic and
+repeatable) value at every real input coordinate.  The range is $[0,1]$, its
+large-scale average is 0.5, and its values are evenly distributed over
+$[0,1]$.
+\apiend
+
 \apiitem{"simplex"}
 \vspace{12pt}
 A signed simplex noise with an output range of $[-1,1]$,
@@ -3576,29 +3585,31 @@ The old {\cf cellnoise(...coords...)} function is equivalent to
 {\cf noise("cell",...coords...)}.
 \apiend
 
-\begin{comment}   % couldn't find a use for this
-\apiitem{\emph{type} {\ce hash} (float u) \\
-\emph{type} {\ce hash} (float u, float v) \\
-\emph{type} {\ce hash} (point p) \\
-\emph{type} {\ce hash} (point p, float t) \\
-\emph{type} {\ce hash} (int i) \\
-\emph{type} {\ce hash} (string s)}
-\indexapi{hash()}
+\apiitem{\emph{type} {\ce hashnoise} (float u) \\
+\emph{type} {\ce hashnoise} (float u, float v) \\
+\emph{type} {\ce hashnoise} (point p) \\
+\emph{type} {\ce hashnoise} (point p, float t)}
+\indexapi{hashnoise()}
+\NEW % 1.9
 Returns a deterministic, repeatable \emph{hash} of the 1-, 2-, 3-, or
-4-D coordinates, integer, or string.  The return values will be evenly
+4-D coordinates.  The return values will be evenly
 distributed on $[0,1]$ and be completely repeatable when passed the same
 coordinates again, yet will be uncorrellated to hashes of any other
 positions (including nearby points).  This is like having a random value
 indexed spatially, but that will be repeatable from frame to frame of an
 animation (provided its input is \emph{precisely} identical).
-
-The return \emph{type} may be any of \float, \color, \point, \vector, or
-\normal, depending on the type of the variable the result is assigned to
-(or based on an explicit type cast).  For multi-component return types
-(e.g., \point), each component is an uncorrelated \float\ {\cf hash}
-function.
 \apiend
-\end{comment}
+
+\apiitem{int {\ce hash} (float u) \\
+int {\ce hash} (float u, float v) \\
+int {\ce hash} (point p) \\
+int {\ce hash} (point p, float t) \\
+int {\ce hash) (int i)}}
+\indexapi{hash()}
+\NEW % 1.9
+Returns a deterministic, repeatable integer \emph{hash} of the 1-, 2-, 3-,
+or 4-D coordinates.
+\apiend
 
 \apiitem{\emph{type} {\ce spline} (string basis, float x, \emph{type} $\mathtt{y}_0$, \emph{type} $\mathtt{y}_1$, ... \emph{type} $\mathtt{y}_{n-1}$)\\
 \emph{type} {\ce spline} (string basis, float x, \emph{type} y[]) \\

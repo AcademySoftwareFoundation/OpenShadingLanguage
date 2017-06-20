@@ -1133,13 +1133,27 @@ DECLFOLDER(constfold_hash)
 {
     // Try to turn R=hash(s) into R=C
     Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &S (*rop.inst()->argsymbol(op.firstarg()+1));
-    if (S.is_constant()) {
-        ASSERT (S.typespec().is_string());
-        int result = (int) (*(ustring *)S.data()).hash();
-        int cind = rop.add_constant (result);
-        rop.turn_into_assign (op, cind, "const fold hash");
-        return 1;
+    Symbol *S (rop.inst()->argsymbol(op.firstarg()+1));
+    Symbol *T (op.nargs() > 2 ? rop.inst()->argsymbol(op.firstarg()+2) : NULL);
+    if (S->is_constant() && (T == NULL || T->is_constant())) {
+        int cind = -1;
+        if (S->typespec().is_string()) {
+            cind = rop.add_constant ((int) (*(ustring *)S->data()).hash());
+        } else if (op.nargs() == 2 && S->typespec().is_int()) {
+            cind = rop.add_constant (inthashi (S->get_int()));
+        } else if (op.nargs() == 2 && S->typespec().is_float()) {
+            cind = rop.add_constant (inthashf (S->get_float()));
+        } else if (op.nargs() == 3 && S->typespec().is_float() && T->typespec().is_float()) {
+            cind = rop.add_constant (inthashf (S->get_float(), T->get_float()));
+        } else if (op.nargs() == 2 && S->typespec().is_triple()) {
+            cind = rop.add_constant (inthashf ((const float *)S->data()));
+        } else if (op.nargs() == 3 && S->typespec().is_triple() && T->typespec().is_float()) {
+            cind = rop.add_constant (inthashf ((const float *)S->data(), T->get_float()));
+        }
+        if (cind >= 0) {
+            rop.turn_into_assign (op, cind, "const fold hash");
+            return 1;
+        }
     }
     return 0;
 }

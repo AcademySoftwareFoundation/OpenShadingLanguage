@@ -77,10 +77,22 @@ template <typename S >             Vec3  vnoise (S x);
 template <typename S, typename T>  Vec3  vnoise (S x, T y);
 
 // Cell noise on 1-4 dimensional domain, range [0,1].
+// cellnoise is constant within each unit cube (cell) on the domain, but
+// discontinuous at integer boundaries (and uncorrellated from cell to
+// cell).
 template <typename S >             float cellnoise (S x);
 template <typename S, typename T>  float cellnoise (S x, T y);
 template <typename S >             Vec3  vcellnoise (S x);
 template <typename S, typename T>  Vec3  vcellnoise (S x, T y);
+
+// Hash noise on 1-4 dimensional domain, range [0,1].
+// hashnoise is like cellnoise, but without the 'floor' -- in other words,
+// it's an uncorrellated hash that is different for every floating point
+// value.
+template <typename S >             float hashnoise (S x);
+template <typename S, typename T>  float hashnoise (S x, T y);
+template <typename S >             Vec3  vhashnoise (S x);
+template <typename S, typename T>  Vec3  vhashnoise (S x, T y);
 
 // FIXME -- eventually consider adding to the public API:
 //  * periodic varieties
@@ -404,6 +416,232 @@ struct PeriodicCellNoise {
         iv[1] = quick_floor (wrap (p.y, pp.y));
         iv[2] = quick_floor (wrap (p.z, pp.z));
         iv[3] = quick_floor (wrap (t, tt));
+        hash3<5> (result, iv);
+    }
+
+private:
+    template <int N>
+    inline void hash1 (float &result, const unsigned int k[N]) const {
+        result = bits_to_01(inthash<N>(k));
+    }
+
+    template <int N>
+    inline void hash3 (Vec3 &result, unsigned int k[N]) const {
+        k[N-1] = 0; result.x = bits_to_01 (inthash<N> (k));
+        k[N-1] = 1; result.y = bits_to_01 (inthash<N> (k));
+        k[N-1] = 2; result.z = bits_to_01 (inthash<N> (k));
+    }
+
+    inline float wrap (float s, float period) const {
+        period = floorf (period);
+        if (period < 1.0f)
+            period = 1.0f;
+        return s - period * floorf (s / period);
+    }
+
+    inline Vec3 wrap (const Vec3 &s, const Vec3 &period) {
+        return Vec3 (wrap (s[0], period[0]),
+                     wrap (s[1], period[1]),
+                     wrap (s[2], period[2]));
+    }
+};
+
+
+
+inline int
+inthashi (int x)
+{
+    unsigned int i[1];
+    i[0] = (unsigned int)x;
+    return (int) inthash<1>(i);
+}
+
+inline int
+inthashf (float x)
+{
+    unsigned int i[1];
+    i[0] = OIIO::bit_cast<float,unsigned int>(x);
+    return (int) inthash<1>(i);
+}
+
+inline int
+inthashf (float x, float y)
+{
+    unsigned int i[2];
+    i[0] = OIIO::bit_cast<float,unsigned int>(x);
+    i[1] = OIIO::bit_cast<float,unsigned int>(y);
+    return (int) inthash<2>(i);
+}
+
+
+inline int
+inthashf (const float *x)
+{
+    unsigned int i[3];
+    i[0] = OIIO::bit_cast<float,unsigned int>(x[0]);
+    i[1] = OIIO::bit_cast<float,unsigned int>(x[1]);
+    i[2] = OIIO::bit_cast<float,unsigned int>(x[2]);
+    return (int) inthash<3>(i);
+}
+
+
+inline int
+inthashf (const float *x, float y)
+{
+    unsigned int i[4];
+    i[0] = OIIO::bit_cast<float,unsigned int>(x[0]);
+    i[1] = OIIO::bit_cast<float,unsigned int>(x[1]);
+    i[2] = OIIO::bit_cast<float,unsigned int>(x[2]);
+    i[3] = OIIO::bit_cast<float,unsigned int>(y);
+    return (int) inthash<4>(i);
+}
+
+
+
+struct HashNoise {
+    HashNoise () { }
+
+    inline void operator() (float &result, float x) const {
+        unsigned int iv[1];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (x);
+        hash1<1> (result, iv);
+    }
+
+    inline void operator() (float &result, float x, float y) const {
+        unsigned int iv[2];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (x);
+        iv[1] = OIIO::bit_cast<float,unsigned int> (y);
+        hash1<2> (result, iv);
+    }
+
+    inline void operator() (float &result, const Vec3 &p) const {
+        unsigned int iv[3];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (p.x);
+        iv[1] = OIIO::bit_cast<float,unsigned int> (p.y);
+        iv[2] = OIIO::bit_cast<float,unsigned int> (p.z);
+        hash1<3> (result, iv);
+    }
+
+    inline void operator() (float &result, const Vec3 &p, float t) const {
+        unsigned int iv[4];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (p.x);
+        iv[1] = OIIO::bit_cast<float,unsigned int> (p.y);
+        iv[2] = OIIO::bit_cast<float,unsigned int> (p.z);
+        iv[3] = OIIO::bit_cast<float,unsigned int> (t);
+        hash1<4> (result, iv);
+    }
+
+    inline void operator() (Vec3 &result, float x) const {
+        unsigned int iv[2];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (x);
+        hash3<2> (result, iv);
+    }
+
+    inline void operator() (Vec3 &result, float x, float y) const {
+        unsigned int iv[3];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (x);
+        iv[1] = OIIO::bit_cast<float,unsigned int> (y);
+        hash3<3> (result, iv);
+    }
+
+    inline void operator() (Vec3 &result, const Vec3 &p) const {
+        unsigned int iv[4];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (p.x);
+        iv[1] = OIIO::bit_cast<float,unsigned int> (p.y);
+        iv[2] = OIIO::bit_cast<float,unsigned int> (p.z);
+        hash3<4> (result, iv);
+    }
+
+    inline void operator() (Vec3 &result, const Vec3 &p, float t) const {
+        unsigned int iv[5];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (p.x);
+        iv[1] = OIIO::bit_cast<float,unsigned int> (p.y);
+        iv[2] = OIIO::bit_cast<float,unsigned int> (p.z);
+        iv[3] = OIIO::bit_cast<float,unsigned int> (t);
+        hash3<5> (result, iv);
+    }
+
+private:
+    template <int N>
+    inline void hash1 (float &result, const unsigned int k[N]) const {
+        result = bits_to_01(inthash<N>(k));
+    }
+
+    template <int N>
+    inline void hash3 (Vec3 &result, unsigned int k[N]) const {
+        k[N-1] = 0; result.x = bits_to_01 (inthash<N> (k));
+        k[N-1] = 1; result.y = bits_to_01 (inthash<N> (k));
+        k[N-1] = 2; result.z = bits_to_01 (inthash<N> (k));
+    }
+};
+
+
+
+struct PeriodicHashNoise {
+    PeriodicHashNoise () { }
+
+    inline void operator() (float &result, float x, float px) const {
+        unsigned int iv[1];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (wrap (x, px));
+        hash1<1> (result, iv);
+    }
+
+    inline void operator() (float &result, float x, float y,
+                            float px, float py) const {
+        unsigned int iv[2];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (wrap (x, px));
+        iv[1] = OIIO::bit_cast<float,unsigned int> (wrap (y, py));
+        hash1<2> (result, iv);
+    }
+
+    inline void operator() (float &result, const Vec3 &p,
+                            const Vec3 &pp) const {
+        unsigned int iv[3];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (wrap (p.x, pp.x));
+        iv[1] = OIIO::bit_cast<float,unsigned int> (wrap (p.y, pp.y));
+        iv[2] = OIIO::bit_cast<float,unsigned int> (wrap (p.z, pp.z));
+        hash1<3> (result, iv);
+    }
+
+    inline void operator() (float &result, const Vec3 &p, float t,
+                            const Vec3 &pp, float tt) const {
+        unsigned int iv[4];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (wrap (p.x, pp.x));
+        iv[1] = OIIO::bit_cast<float,unsigned int> (wrap (p.y, pp.y));
+        iv[2] = OIIO::bit_cast<float,unsigned int> (wrap (p.z, pp.z));
+        iv[3] = OIIO::bit_cast<float,unsigned int> (wrap (t, tt));
+        hash1<4> (result, iv);
+    }
+
+    inline void operator() (Vec3 &result, float x, float px) const {
+        unsigned int iv[2];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (wrap (x, px));
+        hash3<2> (result, iv);
+    }
+
+    inline void operator() (Vec3 &result, float x, float y,
+                            float px, float py) const {
+        unsigned int iv[3];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (wrap (x, px));
+        iv[1] = OIIO::bit_cast<float,unsigned int> (wrap (y, py));
+        hash3<3> (result, iv);
+    }
+
+    inline void operator() (Vec3 &result, const Vec3 &p, const Vec3 &pp) const {
+        unsigned int iv[4];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (wrap (p.x, pp.x));
+        iv[1] = OIIO::bit_cast<float,unsigned int> (wrap (p.y, pp.y));
+        iv[2] = OIIO::bit_cast<float,unsigned int> (wrap (p.z, pp.z));
+        hash3<4> (result, iv);
+    }
+
+    inline void operator() (Vec3 &result, const Vec3 &p, float t,
+                            const Vec3 &pp, float tt) const {
+        unsigned int iv[5];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (wrap (p.x, pp.x));
+        iv[1] = OIIO::bit_cast<float,unsigned int> (wrap (p.y, pp.y));
+        iv[2] = OIIO::bit_cast<float,unsigned int> (wrap (p.z, pp.z));
+        iv[3] = OIIO::bit_cast<float,unsigned int> (wrap (t, tt));
         hash3<5> (result, iv);
     }
 
@@ -2629,6 +2867,7 @@ namespace oslnoise {
 DECLNOISE (snoise, SNoise)
 DECLNOISE (noise, Noise)
 DECLNOISE (cellnoise, CellNoise)
+DECLNOISE (hashnoise, HashNoise)
 
 #undef DECLNOISE
 

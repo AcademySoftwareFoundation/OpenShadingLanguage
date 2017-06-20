@@ -59,6 +59,7 @@ static ustring op_for("for");
 static ustring op_format("format");
 static ustring op_ge("ge");
 static ustring op_gt("gt");
+static ustring op_hashnoise("hashnoise");
 static ustring op_if("if");
 static ustring op_le("le");
 static ustring op_logb("logb");
@@ -2689,6 +2690,9 @@ LLVMGEN (llvm_gen_noise)
     } else if (name == Strings::cell || name == Strings::cellnoise) {
         name = periodic ? Strings::pcellnoise : Strings::cellnoise;
         derivs = false;  // cell noise derivs are always zero
+    } else if (name == Strings::hash || name == Strings::hashnoise) {
+        name = periodic ? Strings::phashnoise : Strings::hashnoise;
+        derivs = false;  // hash noise derivs are always zero
     } else if (name == Strings::simplex && !periodic) {
         name = Strings::simplexnoise;
     } else if (name == Strings::usimplex && !periodic) {
@@ -2714,6 +2718,7 @@ LLVMGEN (llvm_gen_noise)
         if (name == Strings::uperlin || name == Strings::noise ||
             name == Strings::usimplexnoise || name == Strings::usimplex ||
             name == Strings::cell || name == Strings::cellnoise ||
+            name == Strings::hash || name == Strings::hashnoise ||
             name == Strings::pcellnoise || name == Strings::pnoise)
             name = ustring("unullnoise");
         else

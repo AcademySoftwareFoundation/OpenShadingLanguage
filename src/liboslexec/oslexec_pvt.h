@@ -98,6 +98,7 @@ namespace Strings {
     extern ustring interp, closest, linear, cubic, smartcubic;
     extern ustring perlin, uperlin, noise, snoise, pnoise, psnoise;
     extern ustring cell, cellnoise, pcellnoise;
+    extern ustring hash, hashnoise, phashnoise;
     extern ustring genericnoise, genericpnoise, gabor, gabornoise, gaborpnoise;
     extern ustring simplex, usimplex, simplexnoise, usimplexnoise;
     extern ustring anisotropic, direction, do_filter, bandwidth, impulses;

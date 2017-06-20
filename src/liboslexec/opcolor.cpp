@@ -530,6 +530,22 @@ OSL_SHADEOP void osl_luminance_dfdv (void *sg, void *out, void *c)
     ((float *)out)[2] = ctx->shadingsys().luminance (((const Color3 *)c)[2]);
 }
 
+OSL_SHADEOP void osl_luminance_fv_batched_uniform (void *sgb, void *out, void *c)
+{
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
+    ((float *)out)[0] = ctx->shadingsys().luminance (((const Color3 *)c)[0]);
+}
+
+
+
+OSL_SHADEOP void osl_luminance_dfdv_batched_uniform (void *sgb, void *out, void *c)
+{
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
+    ((float *)out)[0] = ctx->shadingsys().luminance (((const Color3 *)c)[0]);
+    ((float *)out)[1] = ctx->shadingsys().luminance (((const Color3 *)c)[1]);
+    ((float *)out)[2] = ctx->shadingsys().luminance (((const Color3 *)c)[2]);
+}
+
 
 
 OSL_SHADEOP void

@@ -122,6 +122,7 @@ static const char * warg_lane_count(void)
 void
 BackendLLVMWide::llvm_gen_debug_printf (string_view message)
 {
+	ASSERT(0 && "incomplete, unsure if callable");
     ustring s = ustring::format ("(%s %s) %s", inst()->shadername(),
                                  inst()->layername(), message);
     ll.call_function ("osl_printf", sg_void_ptr(), ll.constant("%s\n"),
@@ -133,6 +134,7 @@ BackendLLVMWide::llvm_gen_debug_printf (string_view message)
 void
 BackendLLVMWide::llvm_gen_warning (string_view message)
 {
+	ASSERT(0 && "incomplete, unsure if callable");
     ll.call_function ("osl_warning", sg_void_ptr(), ll.constant("%s\n"),
                       ll.constant(message));
 }
@@ -142,6 +144,7 @@ BackendLLVMWide::llvm_gen_warning (string_view message)
 void
 BackendLLVMWide::llvm_gen_error (string_view message)
 {
+	ASSERT(0 && "incomplete, unsure if callable");
     ll.call_function ("osl_error", sg_void_ptr(), ll.constant("%s\n"),
                       ll.constant(message));
 }
@@ -420,9 +423,9 @@ LLVMGEN (llvm_gen_printf)
             for (int a = 0;  a < num_elements;  ++a) {
                 llvm::Value *arrind = simpletype.arraylen ? rop.ll.constant(a) : NULL;
                 if (sym.typespec().is_closure_based()) {
-                    ASSERT(0 && "INCOMPLETE");
                     s += ourformat;
                     llvm::Value *v = rop.llvm_load_value (sym, 0, arrind, 0);
+                	ASSERT(0 && "incomplete");
                     v = rop.ll.call_function ("osl_closure_to_string", rop.sg_void_ptr(), v);
                     call_args[0].push_back (v);
                     continue;
@@ -558,6 +561,7 @@ LLVMGEN (llvm_gen_add)
         valargs[0] = rop.sg_void_ptr();
         valargs[1] = rop.llvm_load_value (A);
         valargs[2] = rop.llvm_load_value (B);
+    	ASSERT(0 && "incomplete");
         llvm::Value *res = rop.ll.call_function ("osl_add_closure_closure", valargs, 3);
         rop.llvm_store_value (res, Result, 0, NULL, 0);
         return true;
@@ -683,6 +687,7 @@ LLVMGEN (llvm_gen_mul)
             valargs[1] = rop.llvm_load_value (B);
             valargs[2] = tfloat ? rop.llvm_load_value (A) : rop.llvm_void_ptr(A);
         }
+    	ASSERT(0 && "incomplete");
         llvm::Value *res = tfloat ? rop.ll.call_function ("osl_mul_closure_float", valargs, 3)
                                   : rop.ll.call_function ("osl_mul_closure_color", valargs, 3);
         rop.llvm_store_value (res, Result, 0, NULL, 0);
@@ -691,6 +696,8 @@ LLVMGEN (llvm_gen_mul)
 
     // multiplication involving matrices
     if (Result.typespec().is_matrix()) {
+        // TODO: finish handling all combinations, remove assert afterwards
+        ASSERT(op_is_uniform);
         if (A.typespec().is_float()) {
             if (B.typespec().is_float())
                 rop.llvm_call_function ("osl_mul_m_ff", Result, A, B, false /*deriv_ptrs*/, true /*function_is_uniform*/, false /*functionIsLlvmInlined*/,  true /*ptrToReturnStructIs1stArg*/);
@@ -1353,6 +1360,8 @@ LLVMGEN (llvm_gen_compref)
 
     llvm::Value *c = rop.llvm_load_value(Index);
     if (rop.shadingsys().range_checking()) {
+    	// TODO: handle varying cases, then remove the ASSERT
+    	ASSERT(op_is_uniform);
         if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
                *(int *)Index.data() < 3)) {
             llvm::Value *args[] = { c, rop.ll.constant(3),
@@ -1403,6 +1412,8 @@ LLVMGEN (llvm_gen_compassign)
 
     llvm::Value *c = rop.llvm_load_value(Index);
     if (rop.shadingsys().range_checking()) {
+    	// TODO: handle varying cases, then remove the ASSERT
+    	ASSERT(op_is_uniform);
         if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
                *(int *)Index.data() < 3)) {
             llvm::Value *args[] = { c, rop.ll.constant(3),
@@ -1447,6 +1458,10 @@ LLVMGEN (llvm_gen_mxcompref)
     llvm::Value *row = rop.llvm_load_value (Row);
     llvm::Value *col = rop.llvm_load_value (Col);
     if (rop.shadingsys().range_checking()) {
+        // TODO: Handle non-uniform case below minding mask values
+        ASSERT(rop.isSymbolUniform(Result));
+        ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
+
         llvm::Value *args[] = { row, rop.ll.constant(4),
                                 rop.ll.constant(M.name()),
                                 rop.sg_void_ptr(),
@@ -1495,6 +1510,10 @@ LLVMGEN (llvm_gen_mxcompassign)
     llvm::Value *row = rop.llvm_load_value (Row);
     llvm::Value *col = rop.llvm_load_value (Col);
     if (rop.shadingsys().range_checking()) {
+        // TODO: Handle non-uniform case below minding mask values
+        ASSERT(rop.isSymbolUniform(Result));
+        ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
+
         // TODO:  investigate range checking with wide types
         llvm::Value *args[] = { row, rop.ll.constant(4),
                                 rop.ll.constant(Result.name()),
@@ -1563,6 +1582,8 @@ LLVMGEN (llvm_gen_aref)
     if (! index)
         return false;
     if (rop.shadingsys().range_checking()) {
+    	// TODO: handle varying cases, then remove the ASSERT
+    	ASSERT(op_is_uniform);
         if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
                *(int *)Index.data() < Src.typespec().arraylength())) {
             // TODO:  investigate range checking with wide types
@@ -1610,6 +1631,8 @@ LLVMGEN (llvm_gen_aassign)
     if (! index)
         return false;
     if (rop.shadingsys().range_checking()) {
+    	// TODO: handle varying cases, then remove the ASSERT
+    	ASSERT(resultIsUniform);
         if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
                *(int *)Index.data() < Result.typespec().arraylength())) {
             // TODO:  investigate range checking with wide types
@@ -1789,6 +1812,10 @@ LLVMGEN (llvm_gen_construct_triple)
             rop.ll.constant((int)vectype) };
         RendererServices *rend (rop.shadingsys().renderer());
         if (rend->transform_points (NULL, from, to, 0.0f, NULL, NULL, 0, vectype)) {
+            // TODO: Handle non-uniform case below minding mask values
+            ASSERT(rop.isSymbolUniform(Result));
+            ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
+
             // renderer potentially knows about a nonlinear transformation.
             // Note that for the case of non-constant strings, passing empty
             // from & to will make transform_points just tell us if ANY
@@ -1831,6 +1858,7 @@ LLVMGEN (llvm_gen_matrix)
         args[1] = rop.llvm_void_ptr(Result);  // result
         args[2] = rop.llvm_load_value(*rop.opargsym (op, 1));  // from
         args[3] = rop.llvm_load_value(*rop.opargsym (op, 2));  // to
+        ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
         rop.ll.call_function ("osl_get_from_to_matrix", args, 4);
     } else {
         if (nfloats == 1) {
@@ -1855,6 +1883,7 @@ LLVMGEN (llvm_gen_matrix)
             args[0] = rop.sg_void_ptr();  // shader globals
             args[1] = rop.llvm_void_ptr(Result);  // result
             args[2] = rop.llvm_load_value(*rop.opargsym (op, 1));  // from
+            ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
             rop.ll.call_function ("osl_prepend_matrix_from", args, 3);
         }
     }
@@ -1878,6 +1907,7 @@ LLVMGEN (llvm_gen_getmatrix)
 
     // TODO: Handle non-uniform case below minding mask values
     ASSERT(rop.isSymbolUniform(Result));
+    ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
 
     llvm::Value *args[4];
     args[0] = rop.sg_void_ptr();  // shader globals
@@ -1950,6 +1980,7 @@ LLVMGEN (llvm_gen_transform)
 
         // TODO: Handle non-uniform case below minding mask values
         ASSERT(rop.isSymbolUniform(*Result));
+        ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
 
         // renderer potentially knows about a nonlinear transformation.
         // Note that for the case of non-constant strings, passing empty
@@ -2019,13 +2050,14 @@ LLVMGEN (llvm_gen_filterwidth)
 
     ASSERT (Src.typespec().is_float() || Src.typespec().is_triple());
     if (Src.has_derivs()) {
+        // TODO: Handle non-uniform case below minding mask values
+        ASSERT(rop.isSymbolUniform(Result));
+
         if (Src.typespec().is_float()) {
             llvm::Value *r = rop.ll.call_function ("osl_filterwidth_fdf",
                                                      rop.llvm_void_ptr (Src));
             rop.llvm_store_value (r, Result);
         } else {
-            // TODO: Handle non-uniform case below minding mask values
-            ASSERT(rop.isSymbolUniform(Result));
 
             rop.ll.call_function ("osl_filterwidth_vdv",
                                     rop.llvm_void_ptr (Result),
@@ -2061,10 +2093,7 @@ LLVMGEN (llvm_gen_compare_op)
         llvm::Value *b = rop.ll.void_ptr_null ();
         llvm::Value *r = (op.opname()==op_eq) ? rop.ll.op_eq(a,b)
                                               : rop.ll.op_ne(a,b);
-        // Convert the single bit bool into an int
-#if OSL_CONVERT_BOOL_TO_INT
-        r = rop.ll.op_bool_to_int (r);
-#endif
+        // TODO: handle convert the single bit bool into an int, if necessary
         rop.llvm_store_value (r, Result);
         return true;
     }
@@ -2146,14 +2175,19 @@ LLVMGEN (llvm_gen_compare_op)
     }
     ASSERT (final_result);
 
-#if OSL_CONVERT_BOOL_TO_INT
-    // Convert the single bit bool into an int for now.
-    // Not sure we want an vector <16 x i8> as masks line up with <16 x i1>
-    final_result = rop.ll.op_bool_to_int (final_result);
-#endif
     // Lets not convert comparions from bool to int
 
     std::cout << "About to rop.storeLLVMValue (final_result, Result, 0, 0);" << std::endl;
+    // Although we try to use llvm bool (i1) for comparison results
+    // sometimes we could not force the data type to be an bool and it remains
+    // an int, for those cases we will need to convert the boolean to int
+	llvm::Type * resultType = rop.ll.llvm_typeof(rop.llvm_get_pointer(Result));
+	if ((resultType == reinterpret_cast<llvm::Type *>(rop.ll.type_wide_int_ptr())) ||
+		(resultType == reinterpret_cast<llvm::Type *>(rop.ll.type_int_ptr()))) {
+		final_result = rop.ll.op_bool_to_int (final_result);
+	}
+
+
     rop.storeLLVMValue (final_result, Result, 0, 0);
     std::cout << "AFTER to rop.storeLLVMValue (final_result, Result, 0, 0);" << std::endl;
 
@@ -2203,6 +2237,7 @@ LLVMGEN (llvm_gen_regex)
 
     // TODO: Handle non-uniform case below minding mask values
     ASSERT(rop.isSymbolUniform(Result));
+    ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
 
     llvm::Value *ret = rop.ll.call_function ("osl_regex_impl", &call_args[0],
                                                (int)call_args.size());
@@ -2351,6 +2386,10 @@ LLVMGEN (llvm_gen_sincos)
     bool theta_deriv   = Theta.has_derivs();
     bool result_derivs = (Sin_out.has_derivs() || Cos_out.has_derivs());
 
+    // TODO: Handle non-uniform case below minding mask values
+    ASSERT(rop.isSymbolUniform(Sin_out));
+    ASSERT(rop.isSymbolUniform(Cos_out));
+
     std::string name = std::string("osl_sincos_");
     for (int i = 0;  i < op.nargs();  ++i) {
         Symbol *s (rop.opargsym (op, i));
@@ -2419,12 +2458,18 @@ LLVMGEN (llvm_gen_andor)
         llvm::Value* or_ab_ne_0 = rop.ll.op_ne (or_ab, rop.ll.constant(0));
         i1_res = or_ab_ne_0;
     }
-#if OSL_CONVERT_BOOL_TO_INT
-    llvm::Value* i32_res = rop.ll.op_bool_to_int(i1_res);
-    rop.llvm_store_value(i32_res, result, 0, 0);
-#else
-    rop.llvm_store_value(i1_res, result, 0, 0);
-#endif
+
+    // Although we try to use llvm bool (i1) for comparison results
+    // sometimes we could not force the data type to be an bool and it remains
+    // an int, for those cases we will need to convert the boolean to int
+	llvm::Type * resultType = rop.ll.llvm_typeof(rop.llvm_get_pointer(result));
+	if ((resultType == reinterpret_cast<llvm::Type *>(rop.ll.type_wide_int_ptr())) ||
+		(resultType == reinterpret_cast<llvm::Type *>(rop.ll.type_int_ptr()))) {
+		llvm::Value* final_result = rop.ll.op_bool_to_int (i1_res);
+		rop.llvm_store_value(final_result, result, 0, 0);
+	} else {
+		rop.llvm_store_value(i1_res, result, 0, 0);
+	}
     return true;
 }
 
@@ -3256,6 +3301,10 @@ LLVMGEN (llvm_gen_texture3d)
     Symbol &P = *rop.opargsym (op, 2);
     int nchans = Result.typespec().aggregate();
 
+    // TODO: Handle non-uniform case below minding mask values
+    ASSERT(rop.isSymbolUniform(Result));
+    ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
+
     bool user_derivs = false;
     int first_optional_arg = 3;
     if (op.nargs() > 3 && rop.opargsym(op,3)->typespec().is_triple()) {
@@ -3330,6 +3379,10 @@ LLVMGEN (llvm_gen_environment)
     Symbol &Filename = *rop.opargsym (op, 1);
     Symbol &R = *rop.opargsym (op, 2);
     int nchans = Result.typespec().aggregate();
+
+    // TODO: Handle non-uniform case below minding mask values
+    ASSERT(rop.isSymbolUniform(Result));
+    ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
 
     bool user_derivs = false;
     int first_optional_arg = 3;
@@ -3437,6 +3490,10 @@ LLVMGEN (llvm_gen_trace)
     Symbol &Pos = *rop.opargsym (op, 1);
     Symbol &Dir = *rop.opargsym (op, 2);
     int first_optional_arg = 3;
+
+    // TODO: Handle non-uniform case below minding mask values
+    ASSERT(rop.isSymbolUniform(Result));
+    ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
 
     llvm::Value* opt;   // TraceOpt
     opt = llvm_gen_trace_options (rop, opnum, first_optional_arg);
@@ -3975,6 +4032,10 @@ LLVMGEN (llvm_gen_getmessage)
     DASSERT (Result.typespec().is_int() && Name.typespec().is_string());
     DASSERT (has_source == 0 || Source.typespec().is_string());
 
+    // TODO: Handle non-uniform case below minding mask values
+    ASSERT(rop.isSymbolUniform(Result));
+    ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
+
     llvm::Value *args[9];
     args[0] = rop.sg_void_ptr();
     args[1] = has_source ? rop.llvm_load_value(Source)
@@ -4012,6 +4073,11 @@ LLVMGEN (llvm_gen_setmessage)
     Symbol& Name   = *rop.opargsym (op, 0);
     Symbol& Data   = *rop.opargsym (op, 1);
     DASSERT (Name.typespec().is_string());
+
+    // TODO: Handle non-uniform case below minding mask values
+    ASSERT(rop.isSymbolUniform(Name));
+    ASSERT(rop.isSymbolUniform(Data));
+    ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
 
     llvm::Value *args[7];
     args[0] = rop.sg_void_ptr();
@@ -4064,6 +4130,10 @@ LLVMGEN (llvm_gen_calculatenormal)
 
     Symbol& Result = *rop.opargsym (op, 0);
     Symbol& P      = *rop.opargsym (op, 1);
+
+    // TODO: Handle non-uniform case below minding mask values
+    ASSERT(rop.isSymbolUniform(Result));
+    ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
 
     DASSERT (Result.typespec().is_triple() && P.typespec().is_triple());
     if (! P.has_derivs()) {
@@ -4130,6 +4200,9 @@ LLVMGEN (llvm_gen_spline)
     Symbol& Knot_count = *rop.opargsym (op, 3); // might alias Knots
     Symbol& Knots    = has_knot_count ? *rop.opargsym (op, 4) :
                                         *rop.opargsym (op, 3);
+
+    // TODO: Handle non-uniform case below minding mask values
+    ASSERT(rop.isSymbolUniform(Result));
 
     DASSERT (!Result.typespec().is_closure_based() &&
              Spline.typespec().is_string()  &&
@@ -4351,6 +4424,10 @@ LLVMGEN (llvm_gen_pointcloud_search)
              Center.typespec().is_triple() && Radius.typespec().is_float() &&
              Max_points.typespec().is_int());
 
+    // TODO: Handle non-uniform case below minding mask values
+    ASSERT(rop.isSymbolUniform(Result));
+    ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
+
     std::vector<Symbol *> clear_derivs_of; // arguments whose derivs we need to zero at the end
     int attr_arg_offset = 5; // where the opt attrs begin
     Symbol *Sort = NULL;
@@ -4461,6 +4538,10 @@ LLVMGEN (llvm_gen_pointcloud_get)
     Symbol& Attr_name  = *rop.opargsym (op, 4);
     Symbol& Data       = *rop.opargsym (op, 5);
 
+    // TODO: Handle non-uniform case below minding mask values
+    ASSERT(rop.isSymbolUniform(Result));
+    ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
+
     llvm::Value *count = rop.llvm_load_value (Count);
 
     int capacity = std::min ((int)Data.typespec().simpletype().numelements(), (int)Indices.typespec().simpletype().numelements());
@@ -4519,6 +4600,10 @@ LLVMGEN (llvm_gen_pointcloud_write)
              Pos.typespec().is_triple());
     DASSERT ((op.nargs() & 1) && "must have an even number of attribs");
 
+    // TODO: Handle non-uniform case below minding mask values
+    ASSERT(rop.isSymbolUniform(Result));
+    ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
+
     int nattrs = (op.nargs() - 3) / 2;
 
     // Generate local space for the names/types/values arrays
@@ -4573,6 +4658,11 @@ LLVMGEN (llvm_gen_dict_find)
     Symbol& Query  = *rop.opargsym (op, 2);
     DASSERT (Result.typespec().is_int() && Query.typespec().is_string() &&
              (Source.typespec().is_int() || Source.typespec().is_string()));
+
+    // TODO: Handle non-uniform case below minding mask values
+    ASSERT(rop.isSymbolUniform(Result));
+    ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
+
     bool sourceint = Source.typespec().is_int();  // is it an int?
     llvm::Value *args[3];
     args[0] = rop.sg_void_ptr();
@@ -4594,6 +4684,11 @@ LLVMGEN (llvm_gen_dict_next)
     Symbol& Result = *rop.opargsym (op, 0);
     Symbol& NodeID = *rop.opargsym (op, 1);
     DASSERT (Result.typespec().is_int() && NodeID.typespec().is_int());
+
+    // TODO: Handle non-uniform case below minding mask values
+    ASSERT(rop.isSymbolUniform(Result));
+    ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
+
     llvm::Value *ret = rop.ll.call_function ("osl_dict_next",
                                                rop.sg_void_ptr(),
                                                rop.llvm_load_value(NodeID));
@@ -4614,6 +4709,10 @@ LLVMGEN (llvm_gen_dict_value)
     Symbol& Value  = *rop.opargsym (op, 3);
     DASSERT (Result.typespec().is_int() && NodeID.typespec().is_int() &&
              Name.typespec().is_string());
+    // TODO: Handle non-uniform case below minding mask values
+    ASSERT(rop.isSymbolUniform(Result));
+    ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
+
     llvm::Value *args[5];
     // arg 0: shaderglobals ptr
     args[0] = rop.sg_void_ptr();
@@ -4643,6 +4742,9 @@ LLVMGEN (llvm_gen_split)
     DASSERT (R.typespec().is_int() && Str.typespec().is_string() &&
              Results.typespec().is_array() &&
              Results.typespec().is_string_based());
+
+    // TODO: Handle non-uniform case below minding mask values
+    ASSERT(rop.isSymbolUniform(R));
 
     llvm::Value *args[5];
     args[0] = rop.llvm_load_value (Str);
@@ -4676,6 +4778,10 @@ LLVMGEN (llvm_gen_raytype)
     DASSERT (op.nargs() == 2);
     Symbol& Result = *rop.opargsym (op, 0);
     Symbol& Name = *rop.opargsym (op, 1);
+    // TODO: Handle non-uniform case below minding mask values
+    ASSERT(rop.isSymbolUniform(Result));
+    ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
+
     llvm::Value *args[2] = { rop.sg_void_ptr(), NULL };
     const char *func = NULL;
     if (Name.is_constant()) {
@@ -4704,6 +4810,9 @@ LLVMGEN (llvm_gen_blackbody)
     Symbol &Result (*rop.opargsym (op, 0));
     Symbol &Temperature (*rop.opargsym (op, 1));
     ASSERT (Result.typespec().is_triple() && Temperature.typespec().is_float());
+    // TODO: Handle non-uniform case below minding mask values
+    ASSERT(rop.isSymbolUniform(Result));
+    ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
 
     llvm::Value* args[3] = { rop.sg_void_ptr(), rop.llvm_void_ptr(Result),
                              rop.llvm_load_value(Temperature) };
@@ -4729,10 +4838,14 @@ LLVMGEN (llvm_gen_luminance)
     Symbol &C (*rop.opargsym (op, 1));
     ASSERT (Result.typespec().is_float() && C.typespec().is_triple());
 
+    // TODO: Handle non-uniform case below minding mask values
+    ASSERT(rop.isSymbolUniform(Result));
+    ASSERT(rop.isSymbolUniform(C));
+
     bool deriv = C.has_derivs() && Result.has_derivs();
     llvm::Value* args[3] = { rop.sg_void_ptr(), rop.llvm_void_ptr(Result),
                              rop.llvm_void_ptr(C) };
-    rop.ll.call_function (deriv ? "osl_luminance_dfdv" : "osl_luminance_fv",
+    rop.ll.call_function (deriv ? "osl_luminance_dfdv_batched_uniform" : "osl_luminance_fv_batched_uniform",
                             args, 3);
 
     if (Result.has_derivs() && !C.has_derivs())
@@ -4750,6 +4863,9 @@ LLVMGEN (llvm_gen_isconstant)
     Symbol &Result (*rop.opargsym (op, 0));
     ASSERT (Result.typespec().is_int());
     Symbol &A (*rop.opargsym (op, 1));
+    // TODO: Handle non-uniform case below minding mask values
+    ASSERT(rop.isSymbolUniform(Result));
+
     rop.llvm_store_value (rop.ll.constant(A.is_constant() ? 1 : 0), Result);
     return true;
 }

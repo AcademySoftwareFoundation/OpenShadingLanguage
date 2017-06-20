@@ -363,5 +363,27 @@ osl_dot_w16fw16vw16v (void *result_, void *a_, void *b_)
 	}
 }
 
+
+
+OSL_SHADEOP void
+osl_acos_w16fw16f (void *result_, void *value_)
+{
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+		ConstWideAccessor<float> wV(value_);
+		WideAccessor<float> wr(result_);
+
+		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		for(int lane=0; lane < wr.width; ++lane) {
+			float V = wV[lane];
+
+		    float r = acos(V);
+			wr[lane] = r;
+		}
+	}
+}
+
+
+
 } // namespace pvt
 OSL_NAMESPACE_EXIT

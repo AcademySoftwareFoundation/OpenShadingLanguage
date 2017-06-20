@@ -380,6 +380,7 @@ WDECL (osl_cross_w16vw16vw16v_masked, "xXXXi")
 WDECL (osl_length_w16fw16v, "xXX")
 WDECL (osl_length_w16fw16v_masked, "xXXi")
 WDECL (osl_dot_w16fw16vw16v, "xXXX")
+WDECL (osl_acos_w16fw16f, "xXX")
 
 
 

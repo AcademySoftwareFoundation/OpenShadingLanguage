@@ -455,6 +455,9 @@ DECL (osl_filterwidth_fdf, "fX")
 DECL (osl_filterwidth_vdv, "xXX")
 DECL (osl_raytype_bit, "iXi")
 #endif
+DECL (osl_calculatenormal_batched, "xXXX")
+DECL (osl_filterwidth_w16fw16df, "xXX")
+DECL (osl_filterwidth_w16vw16dv, "xXX")
 
 
 // Clean up local definitions

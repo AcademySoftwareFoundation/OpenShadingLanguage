@@ -215,17 +215,41 @@ BackendLLVMWide::llvm_pass_wide_type (const TypeSpec &typespec)
 void
 BackendLLVMWide::llvm_assign_zero (const Symbol &sym)
 {
-    // Just memset the whole thing to zero, let LLVM sort it out.
-    // This even works for closures.
-    int len;
-    if (sym.typespec().is_closure_based())
-        len = sizeof(void *) * sym.typespec().numelements();
-    else
-        len = sym.derivsize();
-    // N.B. derivsize() includes derivs, if there are any
-    size_t align = sym.typespec().is_closure_based() ? sizeof(void*) :
-                         sym.typespec().simpletype().basesize();
-    ll.op_memset (llvm_void_ptr(sym), 0, len, (int)align);
+#if 1
+	ASSERT(isSymbolUniform(sym));
+		// Just memset the whole thing to zero, let LLVM sort it out.
+		// This even works for closures.
+		int len;
+		if (sym.typespec().is_closure_based())
+			len = sizeof(void *) * sym.typespec().numelements();
+		else
+			len = sym.derivsize();
+		// N.B. derivsize() includes derivs, if there are any
+		size_t align = sym.typespec().is_closure_based() ? sizeof(void*) :
+							 sym.typespec().simpletype().basesize();
+		ll.op_memset (llvm_void_ptr(sym), 0, len, (int)align);
+#else
+
+    llvm::Value *zero;
+	llvm::Value *pointer = llvm_void_ptr(sym);
+
+    TypeSpec elemtype = t.elementtype();
+    if (elemtype.is_floatbased()) {
+        if (isSymbolUniform(sym))
+            zero = ll.constant (0.0f);
+        else
+        	zero = ll.wide_constant (0.0f);
+    } else if (elemtype.is_intbased()) {
+        if (isSymbolUniform(sym))
+            zero = ll.constant (0);
+        else
+        	zero = ll.wide_constant (0);
+    }
+
+    for (int c = 0;  c < t.aggregate();  ++c)
+        llvm_store_value (zero, pointer, t, 1, NULL, c);
+
+#endif
 }
 
 
@@ -233,15 +257,24 @@ BackendLLVMWide::llvm_assign_zero (const Symbol &sym)
 void
 BackendLLVMWide::llvm_zero_derivs (const Symbol &sym)
 {
-    if (sym.typespec().is_closure_based())
+    const TypeSpec &t = sym.typespec();
+
+    if (t.is_closure_based())
         return; // Closures don't have derivs
-    // Just memset the derivs to zero, let LLVM sort it out.
-    TypeSpec elemtype = sym.typespec().elementtype();
+
+    TypeSpec elemtype = t.elementtype();
     if (sym.has_derivs() && elemtype.is_floatbased()) {
-        int len = sym.size();
-        size_t align = sym.typespec().simpletype().basesize();
-        ll.op_memset (llvm_void_ptr(sym,1), /* point to start of x deriv */
-                      0, 2*len /* size of both derivs */, (int)align);
+
+    	llvm::Value *pointer = llvm_void_ptr(sym);
+        llvm::Value *zero;
+        if (isSymbolUniform(sym))
+            zero = ll.constant (0.0f);
+        else
+        	zero = ll.wide_constant (0.0f);
+        for (int c = 0;  c < t.aggregate();  ++c)
+            llvm_store_value (zero, pointer, t, 1, NULL, c);
+        for (int c = 0;  c < t.aggregate();  ++c)
+            llvm_store_value (zero, pointer, t, 2, NULL, c);
     }
 }
 
@@ -255,6 +288,7 @@ BackendLLVMWide::llvm_zero_derivs (const Symbol &sym, llvm::Value *count)
     // Same thing as the above version but with just the first count derivs
     TypeSpec elemtype = sym.typespec().elementtype();
     if (sym.has_derivs() && elemtype.is_floatbased()) {
+    	ASSERT(isSymbolUniform(sym)); // TODO: handle varying case and remove ASSERT
         size_t esize = sym.typespec().simpletype().elementsize();
         size_t align = sym.typespec().simpletype().basesize();
         count = ll.op_mul (count, ll.constant((int)esize));

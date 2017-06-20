@@ -383,6 +383,65 @@ osl_acos_w16fw16f (void *result_, void *value_)
 	}
 }
 
+inline float filter_width(float dx, float dy)
+{
+    return sqrtf(dx*dx + dy*dy);
+}
+
+OSL_SHADEOP void osl_filterwidth_w16fw16df(void *result_, void *x_)
+{
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+		ConstWideAccessor<Dual2<float>> wX(x_);
+
+		WideAccessor<float> wr(result_);
+
+		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		for(int lane=0; lane < wr.width; ++lane) {
+		    Dual2<float> x = wX[lane];
+		    wr[lane] = filter_width(x.dx(), x.dy());
+		}
+	}
+}
+
+OSL_SHADEOP void osl_filterwidth_w16vw16dv(void *out, void *x_)
+{
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+		ConstWideAccessor<Dual2<Vec3>> wX(x_);
+
+		WideAccessor<Vec3> wr(out);
+
+		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		for(int lane=0; lane < wr.width; ++lane) {
+		    Dual2<Vec3> x = wX[lane];
+		    Vec3 r;
+		    r.x = filter_width (x.dx().x, x.dy().x);
+		    r.y = filter_width (x.dx().y, x.dy().y);
+		    r.z = filter_width (x.dx().z, x.dy().z);
+
+		    wr[lane] = r;
+		}
+	}
+}
+
+OSL_SHADEOP void osl_calculatenormal_batched(void *out, void *sgb_, void *P_)
+{
+	ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+		ConstWideAccessor<Dual2<Vec3>> wP(P_);
+		ConstWideAccessor<int> wFlipHandedness(sgb->varyingData().flipHandedness);
+		WideAccessor<Vec3> wr(out);
+
+		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		for(int lane=0; lane < wr.width; ++lane) {
+		    Dual2<Vec3> P = wP[lane];
+		    Vec3 N = calculatenormal(P, wFlipHandedness[lane]);
+		    wr[lane] = N;
+		}
+	}
+}
 
 
 } // namespace pvt

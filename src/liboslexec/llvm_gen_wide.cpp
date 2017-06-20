@@ -2049,22 +2049,43 @@ LLVMGEN (llvm_gen_filterwidth)
     Symbol& Src (*rop.opargsym (op, 1));
 
     ASSERT (Src.typespec().is_float() || Src.typespec().is_triple());
+
+    bool op_is_uniform = rop.isSymbolUniform(Result);
+
     if (Src.has_derivs()) {
-        // TODO: Handle non-uniform case below minding mask values
-        ASSERT(rop.isSymbolUniform(Result));
 
-        if (Src.typespec().is_float()) {
-            llvm::Value *r = rop.ll.call_function ("osl_filterwidth_fdf",
-                                                     rop.llvm_void_ptr (Src));
-            rop.llvm_store_value (r, Result);
+        if (op_is_uniform)
+        {
+			if (Src.typespec().is_float()) {
+				// TODO: Handle non-uniform case below minding mask values
+				ASSERT(rop.isSymbolUniform(Result));
+				llvm::Value *r = rop.ll.call_function ("osl_filterwidth_fdf",
+														 rop.llvm_void_ptr (Src));
+				rop.llvm_store_value (r, Result);
+			} else {
+				// TODO: Handle non-uniform case below minding mask values
+				ASSERT(rop.isSymbolUniform(Result));
+
+				rop.ll.call_function ("osl_filterwidth_vdv",
+										rop.llvm_void_ptr (Result),
+										rop.llvm_void_ptr (Src));
+			}
+			// Don't have 2nd order derivs
+			rop.llvm_zero_derivs (Result);
         } else {
-
-            rop.ll.call_function ("osl_filterwidth_vdv",
-                                    rop.llvm_void_ptr (Result),
-                                    rop.llvm_void_ptr (Src));
+			// TODO: minding mask values
+			if (Src.typespec().is_float()) {
+				rop.ll.call_function ("osl_filterwidth_w16fw16df",
+									  rop.llvm_void_ptr (Result),
+									  rop.llvm_void_ptr (Src));
+			} else {
+				rop.ll.call_function ("osl_filterwidth_w16vw16dv",
+										rop.llvm_void_ptr (Result),
+										rop.llvm_void_ptr (Src));
+			}
+			// Don't have 2nd order derivs
+			rop.llvm_zero_derivs (Result);
         }
-        // Don't have 2nd order derivs
-        rop.llvm_zero_derivs (Result);
     } else {
         // No derivs to be had
         rop.llvm_assign_zero (Result);
@@ -4131,9 +4152,12 @@ LLVMGEN (llvm_gen_calculatenormal)
     Symbol& Result = *rop.opargsym (op, 0);
     Symbol& P      = *rop.opargsym (op, 1);
 
-    // TODO: Handle non-uniform case below minding mask values
-    ASSERT(rop.isSymbolUniform(Result));
-    ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
+    // TODO: because calculatenormal implicitly uses the flip-handedness
+    // of the BatchedShaderGlobals, all of its results must be varying
+    // TODO: Update uniform discovery to handle widening results that are
+    // implicitly dependent upon varying shader globals
+    ASSERT(false == rop.isSymbolUniform(Result));
+    ASSERT(false == rop.isSymbolUniform(P));
 
     DASSERT (Result.typespec().is_triple() && P.typespec().is_triple());
     if (! P.has_derivs()) {
@@ -4145,7 +4169,7 @@ LLVMGEN (llvm_gen_calculatenormal)
     args.push_back (rop.llvm_void_ptr (Result));
     args.push_back (rop.sg_void_ptr());
     args.push_back (rop.llvm_void_ptr (P));
-    rop.ll.call_function ("osl_calculatenormal", &args[0], args.size());
+    rop.ll.call_function ("osl_calculatenormal_batched", &args[0], args.size());
     if (Result.has_derivs())
         rop.llvm_zero_derivs (Result);
     return true;

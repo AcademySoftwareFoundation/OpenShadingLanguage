@@ -612,6 +612,7 @@ ustring cubic("cubic"), smartcubic("smartcubic");
 ustring perlin("perlin"), uperlin("uperlin");
 ustring noise("noise"), snoise("snoise");
 ustring cell("cell"), cellnoise("cellnoise"), pcellnoise("pcellnoise");
+ustring hash("hash"), hashnoise("hashnoise"), phashnoise("phashnoise");
 ustring pnoise("pnoise"), psnoise("psnoise");
 ustring genericnoise("genericnoise"), genericpnoise("genericpnoise");
 ustring gabor("gabor"), gabornoise("gabornoise"), gaborpnoise("gaborpnoise");
@@ -871,6 +872,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (gettextureinfo, gettextureinfo,   gettextureinfo,false,     TEX);
     OP (gt,          compare_op,          gt,            true,      0);
     OP (hash,        generic,             hash,          true,      0);
+    OP (hashnoise,   noise,               noise,         true,      0);
     OP (if,          if,                  if,            false,     0);
     OP (inversesqrt, generic,             inversesqrt,   true,      0);
     OP (isconnected, generic,             none,          true,      0);

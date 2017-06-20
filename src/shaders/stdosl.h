@@ -500,6 +500,14 @@ float aastep (float edge, float s) {
 }
 
 
+// Noise and related functions
+
+int hash (int u) BUILTIN;
+int hash (float u) BUILTIN;
+int hash (float u, float v) BUILTIN;
+int hash (point p) BUILTIN;
+int hash (point p, float t) BUILTIN;
+
 // Derivatives and area operators
 
 

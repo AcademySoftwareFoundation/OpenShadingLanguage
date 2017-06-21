@@ -2066,6 +2066,7 @@ BackendLLVMWide::llvm_call_function (const char *name,
         {
         	// Need to pass a pointer to the function
         	if (function_is_uniform || (s.symtype() != SymTypeConst)) {
+        		ASSERT(function_is_uniform || (false == isSymbolUniform(s)));
                 valargs[i] = llvm_void_ptr (s);
         	} else {
             	std::cout << "....widening constant value " << s.name().c_str() << std::endl;

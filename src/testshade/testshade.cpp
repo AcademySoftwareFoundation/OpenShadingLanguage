@@ -1138,7 +1138,7 @@ batched_save_outputs (ShadingSystem *shadingsys, ShadingContext *ctx, ShaderGrou
 				// directly in the output buffer.
 				auto batchResults = shadingsys->symbol_batch_accessor<float>(*ctx, out_symbol);
 				float data = batchResults[batchIndex];
-				//printf("xy=(%d,%d) = (%f,%f,%f)\n", x, y, data[0], data[1], data[2]);
+				//printf("xy=(%d,%d) = (%f)\n", x, y, data);
 				outputimgs[i]->setpixel (x, y, reinterpret_cast<const float *>(&data));
         	}
         } else if (t.basetype == TypeDesc::INT) {

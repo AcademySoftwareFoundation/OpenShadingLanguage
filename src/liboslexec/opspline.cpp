@@ -118,6 +118,17 @@ OSL_SHADEOP void  osl_spline_fff(void *out, const char *spline_, void *x,
       (spline, *(float *)out, *(float *)x, knots, knot_count, knot_arraylen);
 }
 
+OSL_SHADEOP void  osl_spline_w16fff(void *out, const char *spline_, void *x,
+                                 float *knots, int knot_count, int knot_arraylen)
+{
+   const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
+   float result;
+   Spline::spline_evaluate<float, float, float, float, false>
+      (spline, result, *(float *)x, knots, knot_count, knot_arraylen);
+   Wide<float>  & wr = *reinterpret_cast<Wide<float> *>(out);
+   wr.set_all(result);
+}
+
 OSL_SHADEOP void  osl_spline_dfdfdf(void *out, const char *spline_, void *x, 
                                     float *knots, int knot_count, int knot_arraylen)
 {

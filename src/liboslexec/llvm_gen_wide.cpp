@@ -4225,9 +4225,6 @@ LLVMGEN (llvm_gen_spline)
     Symbol& Knots    = has_knot_count ? *rop.opargsym (op, 4) :
                                         *rop.opargsym (op, 3);
 
-    // TODO: Handle non-uniform case below minding mask values
-    ASSERT(rop.isSymbolUniform(Result));
-
     DASSERT (!Result.typespec().is_closure_based() &&
              Spline.typespec().is_string()  &&
              Value.typespec().is_float() &&
@@ -4235,12 +4232,16 @@ LLVMGEN (llvm_gen_spline)
              Knots.typespec().is_array() &&
              (!has_knot_count || (has_knot_count && Knot_count.typespec().is_int())));
 
+    bool op_is_uniform = rop.isSymbolUniform(Value) && rop.isSymbolUniform(Spline)  && rop.isSymbolUniform(Knots);
+    ASSERT(op_is_uniform);
     std::string name = Strutil::format("osl_%s_", op.opname().c_str());
     std::vector<llvm::Value *> args;
     // only use derivatives for result if:
     //   result has derivs and (value || knots) have derivs
     bool result_derivs = Result.has_derivs() && (Value.has_derivs() || Knots.has_derivs());
 
+    if (false == rop.isSymbolUniform(Result))
+    	name += warg_lane_count();
     if (result_derivs)
         name += "d";
     if (Result.typespec().is_float())
@@ -4248,6 +4249,8 @@ LLVMGEN (llvm_gen_spline)
     else if (Result.typespec().is_triple())
         name += "v";
 
+    if (false == rop.isSymbolUniform(Value))
+    	name += warg_lane_count();
     if (result_derivs && Value.has_derivs())
         name += "d";
     if (Value.typespec().is_float())
@@ -4255,6 +4258,8 @@ LLVMGEN (llvm_gen_spline)
     else if (Value.typespec().is_triple())
         name += "v";
 
+    if (false == rop.isSymbolUniform(Knots))
+    	name += warg_lane_count();
     if (result_derivs && Knots.has_derivs())
         name += "d";
     if (Knots.typespec().simpletype().elementtype() == TypeDesc::FLOAT)

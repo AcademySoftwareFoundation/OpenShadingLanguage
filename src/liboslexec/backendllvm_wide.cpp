@@ -2070,19 +2070,23 @@ BackendLLVMWide::llvm_call_function (const char *name,
         	} else {
             	std::cout << "....widening constant value " << s.name().c_str() << std::endl;
 
-        		DASSERT(s.symtype() == SymTypeConst);
-        		DASSERT(function_is_uniform);
+        		ASSERT(s.symtype() == SymTypeConst);
+        		ASSERT(false == function_is_uniform);
         		// As the case to deliver a pointer to a symbol data
         		// doesn't provide an opportunity to promote a uniform constant
         		// to a wide value that the non-uniform function is expecting
         		// we will handle it here.
-        		llvm::Value * wide_constant_value = llvm_load_constant_value (s, 0, 0, TypeDesc::UNKNOWN, function_is_uniform);
+
+        		ASSERT(!t.is_array() && "incomplete");
         		
         		// Have to have a place on the stack for the pointer to the wide constant to point to
                 llvm::Value *tmpptr = llvm_alloca (t, true, function_is_uniform);
                 
-                // Store our wide pointer on the stack
-                llvm_store_value (wide_constant_value, tmpptr, t, 0, NULL, 0);
+                for(int a=0; a < t.simpletype().aggregate; ++ a) {
+                	llvm::Value * wide_constant_value = llvm_load_constant_value (s, 0, a, TypeDesc::UNKNOWN, function_is_uniform);
+                	// Store our wide pointer on the stack
+                	llvm_store_value (wide_constant_value, tmpptr, t, 0, NULL, a);
+        		}
         												
                 // return pointer to our stacked wide constant
                 valargs[i] =  ll.void_ptr (tmpptr);    		

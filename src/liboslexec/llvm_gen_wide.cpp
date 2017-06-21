@@ -1938,6 +1938,8 @@ LLVMGEN (llvm_gen_transform)
     ASSERT((From == NULL) || rop.isSymbolUniform(*From));
     if (To->typespec().is_matrix()) {
         // llvm_ops has the matrix version already implemented
+        std::cout << "generic matrix transform" << std::endl;
+
         llvm_gen_generic (rop, opnum);
         return true;
     }

@@ -215,41 +215,39 @@ BackendLLVMWide::llvm_pass_wide_type (const TypeSpec &typespec)
 void
 BackendLLVMWide::llvm_assign_zero (const Symbol &sym)
 {
-#if 1
-	ASSERT(isSymbolUniform(sym));
-		// Just memset the whole thing to zero, let LLVM sort it out.
-		// This even works for closures.
-		int len;
-		if (sym.typespec().is_closure_based())
-			len = sizeof(void *) * sym.typespec().numelements();
-		else
-			len = sym.derivsize();
-		// N.B. derivsize() includes derivs, if there are any
-		size_t align = sym.typespec().is_closure_based() ? sizeof(void*) :
-							 sym.typespec().simpletype().basesize();
-		ll.op_memset (llvm_void_ptr(sym), 0, len, (int)align);
-#else
-
     llvm::Value *zero;
-	llvm::Value *pointer = llvm_void_ptr(sym);
 
+    const TypeSpec &t = sym.typespec();
     TypeSpec elemtype = t.elementtype();
     if (elemtype.is_floatbased()) {
         if (isSymbolUniform(sym))
             zero = ll.constant (0.0f);
         else
         	zero = ll.wide_constant (0.0f);
-    } else if (elemtype.is_intbased()) {
+    } else if (elemtype.is_int_based()) {
         if (isSymbolUniform(sym))
             zero = ll.constant (0);
         else
         	zero = ll.wide_constant (0);
+    } else if (elemtype.is_string_based()) {
+        if (isSymbolUniform(sym))
+            zero = ll.constant (ustring());
+        else
+        	zero = ll.wide_constant (ustring());
+    } else {
+    	ASSERT(0 && "Unsupported element type");
     }
 
-    for (int c = 0;  c < t.aggregate();  ++c)
-        llvm_store_value (zero, pointer, t, 1, NULL, c);
-
-#endif
+    int num_elements = t.numelements();
+    for (int a = 0;  a < num_elements;  ++a) {
+    	int numDeriv = sym.has_derivs() ? 3 : 1;
+    	for (int d=0; d < numDeriv; ++d) {
+			llvm::Value *arrind = t.simpletype().arraylen ? ll.constant(a) : NULL;
+			for (int c = 0;  c < t.aggregate();  ++c) {
+				llvm_store_value (zero, sym, d, arrind, c);
+			}
+    	}
+    }
 }
 
 
@@ -265,16 +263,15 @@ BackendLLVMWide::llvm_zero_derivs (const Symbol &sym)
     TypeSpec elemtype = t.elementtype();
     if (sym.has_derivs() && elemtype.is_floatbased()) {
 
-    	llvm::Value *pointer = llvm_void_ptr(sym);
         llvm::Value *zero;
         if (isSymbolUniform(sym))
             zero = ll.constant (0.0f);
         else
         	zero = ll.wide_constant (0.0f);
         for (int c = 0;  c < t.aggregate();  ++c)
-            llvm_store_value (zero, pointer, t, 1, NULL, c);
+            llvm_store_value (zero, sym, 1, NULL, c);
         for (int c = 0;  c < t.aggregate();  ++c)
-            llvm_store_value (zero, pointer, t, 2, NULL, c);
+            llvm_store_value (zero, sym, 2, NULL, c);
     }
 }
 

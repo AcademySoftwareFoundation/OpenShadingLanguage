@@ -317,8 +317,15 @@ BackendLLVMWide::llvm_type_groupdata ()
     m_param_order_map.clear ();
     for (int layer = 0;  layer < group().nlayers();  ++layer) {
         ShaderInstance *inst = group()[layer];
-        if (inst->unused())
-            continue;
+        //if (inst->unused())
+          //  continue;
+        // TODO:  Does anything bad happen from not skipping unused layers?
+        // We wanted space for default parameters to still be
+        // part of group data so we have a place to create a wide version
+        // So we choose to always have a run function for a layer
+        // just to broadcast out the scalar default value.
+        // TODO: Optimize to only run unused layers once, shouldn't
+        // need to be run again as nothing should overwrite the values.
         FOREACH_PARAM (Symbol &sym, inst) {
             TypeSpec ts = sym.typespec();
             if (ts.is_structure())  // skip the struct symbol itself
@@ -1139,11 +1146,23 @@ static void empty_group_func (void*, void*)
 void
 BackendLLVMWide::run ()
 {
+	// We choose to always run a JIT function to allow scalar default values to be
+	// broadcast out to GroupData, so do not skip running if a group().does_nothing()
+	// TODO: Technically we could run just 1 time, then not bother afterwards
+#if 0
     if (group().does_nothing()) {
         group().llvm_compiled_wide_init ((RunLLVMGroupFunc)empty_group_func);
         group().llvm_compiled_wide_version ((RunLLVMGroupFunc)empty_group_func);
+
+        // We still need heap and offsets for groupdata as it will have
+        // wide slots for any output symbols with default values
+        m_num_used_layers = 0;
+        m_llvm_type_groupdata = NULL;
+    	OSL_INTEL_PRAGMA("noinline")
+        llvm_type_groupdata();
         return;
     }
+#endif
     
     // At this point, we already hold the lock for this group, by virtue
     // of ShadingSystemImpl::batch_jit_group.
@@ -1320,9 +1339,10 @@ BackendLLVMWide::run ()
     }
     ll.internalize_module_functions ("osl_", external_function_names, entry_function_names);
 
-    // Optimize the LLVM IR unless it's a do-nothing group.
-    if (! group().does_nothing())
-        ll.do_optimize();
+    // Optimize the LLVM IR EVEV IF it's a do-nothing group.
+	// We choose to always run a JIT function to allow scalar default values to be
+	// broadcast out to GroupData, so do not skip running if a group().does_nothing()
+	ll.do_optimize();
 
     m_stat_llvm_opt_time += timer.lap();
 

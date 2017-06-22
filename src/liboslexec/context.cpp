@@ -249,109 +249,14 @@ ShadingContext::execute_batch_init (ShaderGroup &sgroup, ShaderGlobalsBatch &sgb
             }
         }
         // To handle layers that were not used but still possibly had
-        // render outputs, we always built a GroupData on the heap
-        // and can broadcast default values there.
-        // The code below does that for shader group that does nothing
-        // but doesn't really help for individual layers that did nothing
-        // so simple solution is to always build a run function and let it
-        // just initialize the default value.
+        // render outputs, we always generate a run function even for
+        // dothing groups, so that a GroupData on the heap gets built
+        // and the run function can broadcast default values there.
+        //
         // Observation is that nothing ever overwrites that default value
         // so we could just run it once, or deal with broadcasting the
-        // default value ourselves (the code below was 1st attempt at that
-        // getting it promoted at least once so there is bread crumb
-        // TODO: remove the conditionally compiled code block
-#if 0
-        if (sgroup.does_nothing()) {
-            // Allocate enough space on the heap for default values
-            size_t heap_size_needed = sgroup.llvm_groupdata_wide_size();
-            if (heap_size_needed > m_heap.size()) {
-                if (shadingsys().debug())
-                    info ("  ShadingContext %p growing heap to %llu",
-                          this, (unsigned long long) heap_size_needed);
-                m_heap.resize (heap_size_needed);
-            }
-            // Broadcast scalar defaults to wide group data entries
-            for (int layer = 0;  layer < sgroup.nlayers();  ++layer) {
-                ShaderInstance *inst = sgroup[layer];
-                // Only unused layers have the issue of non-existent
-                // wide defaults
-                //if (false == inst->unused())
-                //    continue;
+        // default value ourselves
 
-                FOREACH_PARAM (Symbol &sym, inst) {
-                    TypeSpec ts = sym.typespec();
-                    if (ts.is_structure())  // skip the struct symbol itself
-                        continue;
-
-                    // doesn't live on the heap
-                    // we need a wide version of it,
-                    // so we are going to broadcast it to the heap
-                    // TODO: haven't investigated Symbol::InstanceVal
-                    ASSERT(sym.valuesource() != Symbol::InstanceVal && "incomplete");
-                    if ((sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) &&
-                        (sym.valuesource() == Symbol::DefaultVal ||
-						 sym.valuesource() == Symbol::InstanceVal)) {
-                        ASSERT (sym.data());
-
-                        const int arraylen = std::max (1, ts.arraylength());
-                        const int derivSize = (sym.has_derivs() ? 3 : 1);
-
-                    	ASSERT(m_execution_is_batched);
-                    	ASSERT(sym.wide_dataoffset() >= 0);
-                    	ASSERT((int)m_heap.size() > sym.wide_dataoffset());
-
-                        if (ts.is_floatbased() || ts.is_int_based()) {
-                        	static_assert(sizeof(float) == sizeof(int), "implementation reuses float code for int assuming same sizes");
-
-                        	float * dest = reinterpret_cast<float * >(&m_heap[sym.wide_dataoffset()]);
-                        	const float * source = reinterpret_cast<const float * >(sym.data());
-                        	int arrayStride = derivSize*ts.aggregate();
-                        	int derivStride = ts.aggregate();
-                        	for (int a=0; a < arraylen; ++a)
-                        	{
-                        		for (int d=0; d < derivSize; ++d) {
-                        			for (int c=0; c < ts.aggregate(); ++c)
-                        			{
-                        				float v = source[a*arrayStride + d*derivStride + c];
-                        				float *wideDest = &dest[(a*arrayStride + d*derivStride + c)*SimdLaneCount];
-                        				OSL_INTEL_PRAGMA("omp simd simdlen(SimdLaneCount) aligned(wideDest)")
-                        				for(int lane=0; lane < SimdLaneCount; ++lane) {
-                        					wideDest[lane] = v;
-                        				}
-                        			}
-                        		}
-                        	}
-                        } else if (ts.is_string_based()) {
-                        	ustring * dest = reinterpret_cast<ustring * >(&m_heap[sym.wide_dataoffset()]);
-                        	const ustring * source = reinterpret_cast<const ustring * >(sym.data());
-                        	int arrayStride = derivSize*ts.aggregate();
-                        	int derivStride = ts.aggregate();
-                        	for (int a=0; a < arraylen; ++a)
-                        	{
-                        		for (int d=0; d < derivSize; ++d) {
-                        			for (int c=0; c < ts.aggregate(); ++c)
-                        			{
-                        				ustring v = source[a*arrayStride + d*derivStride + c];
-                        				ustring *wideDest = &dest[(a*arrayStride + d*derivStride + c)*SimdLaneCount];
-                        				OSL_INTEL_PRAGMA("omp simd simdlen(SimdLaneCount) aligned(wideDest)")
-                        				for(int lane=0; lane < SimdLaneCount; ++lane) {
-                        					wideDest[lane] = v;
-                        				}
-                        			}
-                        		}
-                        	}
-                        } else {
-                        	ASSERT(0 && "unsupported base type");
-                        }
-
-                        return sym.data() ? sym.data() : NULL;
-                    }
-                }
-            }
-
-            return false;
-        }
-#endif
     } else {
        // empty shader - nothing to do!
        return false;

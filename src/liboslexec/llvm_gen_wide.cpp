@@ -2108,6 +2108,7 @@ LLVMGEN (llvm_gen_compare_op)
     ASSERT (Result.typespec().is_int() && ! Result.has_derivs());
 
     bool op_is_uniform = rop.isSymbolUniform(A) && rop.isSymbolUniform(B);
+    bool result_is_uniform = rop.isSymbolUniform(Result);
 
     if (A.typespec().is_closure()) {
         ASSERT (B.typespec().is_int() &&
@@ -2198,9 +2199,9 @@ LLVMGEN (llvm_gen_compare_op)
     }
     ASSERT (final_result);
 
-    // Lets not convert comparions from bool to int
+    // Lets not convert comparisons from bool to int
 
-    std::cout << "About to rop.storeLLVMValue (final_result, Result, 0, 0);" << std::endl;
+    std::cout << "About to rop.storeLLVMValue (final_result, Result, 0, 0); op_is_uniform=" << op_is_uniform  << std::endl;
     // Although we try to use llvm bool (i1) for comparison results
     // sometimes we could not force the data type to be an bool and it remains
     // an int, for those cases we will need to convert the boolean to int
@@ -2210,7 +2211,11 @@ LLVMGEN (llvm_gen_compare_op)
 		final_result = rop.ll.op_bool_to_int (final_result);
 	}
 
-
+	ASSERT(op_is_uniform || !result_is_uniform);
+	if (op_is_uniform && !result_is_uniform)
+	{
+		final_result = rop.ll.widen_value(final_result);
+	}
     rop.storeLLVMValue (final_result, Result, 0, 0);
     std::cout << "AFTER to rop.storeLLVMValue (final_result, Result, 0, 0);" << std::endl;
 

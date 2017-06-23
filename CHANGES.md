@@ -43,6 +43,18 @@ Standard library additions/changes:
   of data it may retrieve: you can now retrieve arrays, if that is what is
   stored per-point in the point cloud (for example, a `float[4]`).
   #752 (1.9.0)
+* `smoothstep()` has been extended to `T smoothstep(T edge0, T edge1, T x)`
+  for T of any the `triple` types (previously, `smoothstep` only came in
+  the `float` variety). #765 (1.9.0/1.8.10)
+* `mix()` has been extenended to support
+      `color closure mix (color closure A, color closure B, color x)`
+  #766 (1.9.0/1.8.10)
+* `hashnoise()` is like cellnoise (1D, 2D, 3D, or 4D input, 1D or 4D output
+  on [0,1]), but is discontinuous everywhere (versus cellnoise, which is
+  constant within each unit cube and discontinuous at at integer coordinates).
+  #775 (1.9.0/1.8.10)
+* `int hash (...)` has been extended to take arguments that are int, float,
+  2 floats, point, or point+float. #775 (1.9.0/1.8.10)
 
 API changes, new options, new ShadingSystem features (for renderer writers):
 * ShadingSystem API changes:
@@ -105,7 +117,6 @@ Bug fixes and other improvements (internals):
     * Rename `-od` option to `-d` to match oiiotool and maketx. #757 (1.9.0)
 * testrender: Automatically convert to sRGB when saving outputs to JPEG,
   PNG, or GIF images, to make them more "web ready." #757 (1.9.0)
-
 * Slight efficiency improvement when you call texture functions with the
   optional `"subimage"` parameter and pass the empty string (which means
   the first subimage, equivalent to not passing `"subimage"` at all).
@@ -113,6 +124,11 @@ Bug fixes and other improvements (internals):
 * oslc bug fixes where in some circumstances polymorphic overloaded
   functions or operators could not be properly distinguished if their
   parameters were differing `struct` types. #755 (1.9.0)
+* Fix minor numerical precision problems with `inversespline()`. #772 (1.9.0)
+* `testshade` gives better error messages for the common mistake of using
+  `-param` after the shader is set up. #773 (1.9.0)
+* Fix bug with transitive assignment for arrays, like `a[0] = a[1] = 0;`
+  #774 (1.9.0)
 
 Build & test system improvements and developer goodies:
 * C++11 is the new language baseline. #704, #707
@@ -158,10 +174,37 @@ Build & test system improvements and developer goodies:
   functions needed for availability by the LLVM-generated code. And overall,
   the HIDE_SYMBOLS build mode is now on by default. #732 (1.9.0)
 * More robust finding of external PugiXML headers. (1.9.0)
+* Fix ilmbase linker warning with LINKSTATIC on Windows. #768 (1.9.0)
+* Fix osl_range_check not found error when USE_LLVM_BITCODE=OFF. #767 (1.9.0)
+* Windows fixes where BUILDSTATIC incorrectly set /MT flag. #769 (1.9.0)
 
 Documentation:
 * Fixed unclear explanation about structures with nested arrays. (1.9.0)
+* Full testshade docs in `doc/testshade.md.html` (1.9.0)
 
+
+Release 1.8.10 -- 1 Jul 2017 (compared to 1.8.9)
+--------------------------------------------------
+* Missing faceforward() implementation was added to stdosl.h. #759
+* `testshade` new option `--shader <shadername> <layername>` is a
+  convenience that takes the place of a separate `--layer` and `--shader`
+  arguments, and makes the command line look more similar to the serialized
+  (text) description of a shader group. #763
+* README.md, CHANGES.md, and INSTALL.md are now installed in the "doc"
+  directory of a fully-built dist area, rather than at its top level.
+* `smoothstep()` now has variants where the arguments and return type may
+  be color, vector, etc. (previously it only worked for `float`. #765
+* `mix()` now has a variant that combines closures. #766
+* testshade comprehensive documentation in `doc/testshade.md.html`, just
+  view with your browser.
+* Fixed a numerical precision problem with `inversespline()`. #772
+* Fixed a bug in transitive assignment of indexed arrays, like
+  `f[0] = f[1] = f[2]`. This previously hit an assertion. #774
+* New standard OSL function `hash()` makes a repeatable integer hash of
+  a float, 2 floats, a triple, or triple + float. #775
+* New `hashnoise()` is similar to cellnoise(), but has a different
+  repeatable 0.0-1.0 range value for every input position (whereas cellnoise
+  is constant between integer coordinates). #775
 
 Release 1.8.9 -- 1 Jun 2017 (compared to 1.8.8)
 --------------------------------------------------

@@ -731,13 +731,29 @@ setup_uniform_shaderglobals (ShaderGlobalsBatch &sgb, ShadingSystem *shadingsys)
     // Tangents of P with respect to surface u,v
     vsp.dPdu().uniform() = Vec3 (1.0f, 0.0f, 0.0f);
     vsp.dPdv().uniform() = Vec3 (0.0f, 1.0f, 0.0f);
+
+    vsp.I().uniform()    = Vec3 (0, 0, 0);
+    vsp.dIdx().uniform() = Vec3 (0, 0, 0);
+    vsp.dIdy().uniform() = Vec3 (0, 0, 0);
+
     // That also implies that our normal points to (0,0,1)
     vsp.N().uniform()    = Vec3 (0, 0, 1);
     vsp.Ng().uniform()   = Vec3 (0, 0, 1);
 
+    vsp.time().uniform() = 0.0;
+    vsp.dtime().uniform() = 0.0;
+    vsp.dPdtime().uniform()   = Vec3 (0, 0, 0);
+
+    vsp.Ps().uniform()   = Vec3 (0, 0, 0);
+    vsp.dPsdx().uniform()   = Vec3 (0, 0, 0);
+    vsp.dPsdy().uniform()   = Vec3 (0, 0, 0);
+
     // Set the surface area of the patch to 1 (which it is).  This is
     // only used for light shaders that call the surfacearea() function.
     vsp.surfacearea().uniform() = 1;    
+
+    vsp.flipHandedness().uniform() = 0;
+    vsp.backfacing().uniform() = 0;
 }
 
 static inline void

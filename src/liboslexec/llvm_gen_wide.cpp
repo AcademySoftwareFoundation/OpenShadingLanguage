@@ -4875,13 +4875,33 @@ LLVMGEN (llvm_gen_luminance)
     ASSERT (Result.typespec().is_float() && C.typespec().is_triple());
 
     // TODO: Handle non-uniform case below minding mask values
-    ASSERT(rop.isSymbolUniform(Result));
-    ASSERT(rop.isSymbolUniform(C));
+    bool op_is_uniform = rop.isSymbolUniform(C);
+    bool result_is_uniform = rop.isSymbolUniform(Result);
 
     bool deriv = C.has_derivs() && Result.has_derivs();
     llvm::Value* args[3] = { rop.sg_void_ptr(), rop.llvm_void_ptr(Result),
                              rop.llvm_void_ptr(C) };
-    rop.ll.call_function (deriv ? "osl_luminance_dfdv_batched_uniform" : "osl_luminance_fv_batched_uniform",
+    std::string name("osl_luminance_");
+    if(result_is_uniform == false) {
+	  // Non uniform, so add the "wide" prefix
+	  name += "w";
+	  name += std::to_string(SimdLaneCount);
+    }
+    if (deriv) {
+    	name += "d";
+    }
+    name += "f";
+    if(op_is_uniform == false) {
+	  // Non uniform, so add the "wide" prefix
+	  name += "w";
+	  name += std::to_string(SimdLaneCount);
+    }
+    if (deriv) {
+    	name += "d";
+    }
+    name += "v_batched";
+
+    rop.ll.call_function (name.c_str(),
                             args, 3);
 
     if (Result.has_derivs() && !C.has_derivs())

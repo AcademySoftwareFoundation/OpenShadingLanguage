@@ -530,15 +530,36 @@ OSL_SHADEOP void osl_luminance_dfdv (void *sg, void *out, void *c)
     ((float *)out)[2] = ctx->shadingsys().luminance (((const Color3 *)c)[2]);
 }
 
-OSL_SHADEOP void osl_luminance_fv_batched_uniform (void *sgb, void *out, void *c)
+OSL_SHADEOP void osl_luminance_fv_batched(void *sgb, void *out, void *c)
 {
     ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
     ((float *)out)[0] = ctx->shadingsys().luminance (((const Color3 *)c)[0]);
 }
 
+OSL_SHADEOP void osl_luminance_w16fw16v_batched(void *sgb, void *wout_, void *wc_)
+{
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
+
+	ConstWideAccessor<Color3> wC(wc_);
+
+	WideAccessor<float> wR(wout_);
+
+	// calling a function below, don't bother vectorizing
+	//OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+	OSL_INTEL_PRAGMA("novector")
+	for(int lane=0; lane < wR.width; ++lane) {
+	    Color3 c = wC[lane];
+
+	    // TODO: investigate removing this function call to enable SIMD
+	    float R = ctx->shadingsys().luminance (c);
+
+	    wR[lane] = R;
+	}
+}
 
 
-OSL_SHADEOP void osl_luminance_dfdv_batched_uniform (void *sgb, void *out, void *c)
+
+OSL_SHADEOP void osl_luminance_dfdv_batched(void *sgb, void *out, void *c)
 {
     ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
     ((float *)out)[0] = ctx->shadingsys().luminance (((const Color3 *)c)[0]);

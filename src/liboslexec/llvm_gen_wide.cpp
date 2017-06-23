@@ -4239,8 +4239,8 @@ LLVMGEN (llvm_gen_spline)
              Knots.typespec().is_array() &&
              (!has_knot_count || (has_knot_count && Knot_count.typespec().is_int())));
 
-    bool op_is_uniform = rop.isSymbolUniform(Value) && rop.isSymbolUniform(Spline)  && rop.isSymbolUniform(Knots);
-    ASSERT(op_is_uniform);
+    ASSERT(rop.isSymbolUniform(Spline));
+
     std::string name = Strutil::format("osl_%s_", op.opname().c_str());
     std::vector<llvm::Value *> args;
     // only use derivatives for result if:

@@ -129,6 +129,29 @@ OSL_SHADEOP void  osl_spline_w16fff(void *out, const char *spline_, void *x,
    wr.set_all(result);
 }
 
+OSL_SHADEOP void  osl_spline_w16fw16ff(void *wout_, const char *spline_, void *wx_,
+                                 float *knots, int knot_count, int knot_arraylen)
+{
+	const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
+	ConstWideAccessor<float> wX(wx_);
+
+	WideAccessor<float> wR(wout_);
+
+	// calling a function below, don't bother vectorizing
+	//OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+	OSL_INTEL_PRAGMA("novector")
+	for(int lane=0; lane < wR.width; ++lane) {
+	    float x = wX[lane];
+
+	    // TODO: investigate removing this function call to enable SIMD
+	    float result;
+	    Spline::spline_evaluate<float, float, float, float, false>
+	       (spline, result, x, knots, knot_count, knot_arraylen);
+
+	    wR[lane] = result;
+	}
+}
+
 OSL_SHADEOP void  osl_spline_dfdfdf(void *out, const char *spline_, void *x, 
                                     float *knots, int knot_count, int knot_arraylen)
 {

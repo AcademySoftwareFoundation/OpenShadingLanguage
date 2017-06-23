@@ -215,6 +215,7 @@ DECL (osl_count_noise, "xX")
 
 DECL (osl_spline_fff, "xXXXXii")
 DECL (osl_spline_w16fff, "xXXXXii")
+DECL (osl_spline_w16fw16ff, "xXXXXii")
 DECL (osl_spline_dfdfdf, "xXXXXii")
 DECL (osl_spline_dfdff, "xXXXXii")
 DECL (osl_spline_dffdf, "xXXXXii")

@@ -40,7 +40,8 @@ using namespace OSL::pvt;
 
 OSL_NAMESPACE_ENTER
 
-namespace pvt {
+namespace Strings {
+
 
 static ustring op_if("if");
 static ustring op_for("for");
@@ -50,8 +51,14 @@ static ustring op_functioncall("functioncall");
 static ustring op_break("break");
 static ustring op_continue("continue");
 static ustring op_getattribute("getattribute");
+static ustring op_getmatrix("getmatrix");
 
+static ustring object2common("object2common");
+static ustring shader2common("shader2common");
 
+}
+
+namespace pvt {
 
 #ifdef OSL_SPI
 static void
@@ -321,12 +328,12 @@ namespace
 		ustring("v"), 
 		ustring("dPdu"), 
 		ustring("dPdv"),
-        ustring("time"), 
+		Strings::time,
 		ustring("dtime"), 
 		ustring("dPdtime"), 
 		ustring("Ps"),        
-        ustring("object2common"), 
-		ustring("shader2common"),
+        Strings::object2common,
+		Strings::shader2common,
         ustring("surfacearea"), 
         ustring("flipHandedness"), 
 		ustring("backfacing")
@@ -701,6 +708,36 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	ASSERT(m_uniform_get_attribute_op_indices_by_layer.size() > layer());	
 	ASSERT(m_uniform_get_attribute_op_indices_by_layer[layer()].empty());
 	
+
+	std::function<const Symbol * (ustring)> findGlobalSymbol;
+	findGlobalSymbol = [&](ustring symbolname)->const Symbol * {
+	    int symidx = inst()->findsymbol (symbolname);
+	    ASSERT(symidx >= 0);
+		const Symbol * sym = inst()->symbol (symidx);
+		ASSERT(sym->symtype() == SymTypeGlobal);
+		return sym;
+	};
+
+	ASSERT(false == IsShaderGlobalUniformByName(Strings::shader2common));
+	ASSERT(false == IsShaderGlobalUniformByName(Strings::object2common));
+	ASSERT(false == IsShaderGlobalUniformByName(Strings::time));
+
+	// Create some temporary symbols for shader globals that have don't normally have symbols
+	// or for implicitly referenced symbols (even if they already have symbols)
+	// This is just allow some our our data structures to Symbol * as a key
+	const Symbol sg_shader2common(Strings::shader2common, TypeSpec (), SymTypeGlobal);
+	const Symbol sg_object2common(Strings::object2common, TypeSpec (), SymTypeGlobal);
+	//const Symbol & sg_time = *findGlobalSymbol(Strings::time);
+	const Symbol sg_time(Strings::time, TypeSpec (), SymTypeGlobal);
+
+	// Initially let all symbols be uniform
+	// so we get proper cascading of all dependencies
+	// when we feed forward from varying shader globals, output parameters, and connected parameters
+	m_is_uniform_by_symbol[&sg_shader2common] = true;
+	m_is_uniform_by_symbol[&sg_object2common] = true;
+	m_is_uniform_by_symbol[&sg_time] = true;
+
+
 	// TODO:  Optimize: could probably use symbol index vs. a pointer 
 	// allowing a lookup table vs. hash_map
 	 
@@ -835,6 +872,39 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					WriteEvent{stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex});
 			}
 			
+			// Add dependencies for operations that implicitly read global variables
+			// Those global variables might be varying, and would need their results
+			// to be varying
+			if (opcode.opname() == Strings::matrix) {
+				// Only certain variations of matrix use shader globals
+			    bool using_space = (argCount == 3 || argCount == 18);
+			    bool using_two_spaces = (argCount == 3 && opargsym(opcode,2)->typespec().is_string());
+			    if (using_space || using_two_spaces) {
+			    	// No need for check to be more detailed, currently all possibilities
+			    	// lead to a varying result
+			    	// TODO:  Add optimization for common to and from spaces, could
+			    	// avoid creating a dependency for those
+					for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
+						const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
+						symbolFeedForwardMap.insert(std::make_pair(&sg_shader2common, symbolWrittenTo));
+						symbolFeedForwardMap.insert(std::make_pair(&sg_object2common, symbolWrittenTo));
+						symbolFeedForwardMap.insert(std::make_pair(&sg_time, symbolWrittenTo));
+					}
+			    }
+			}
+			if (opcode.opname() == Strings::op_getmatrix) {
+		    	// TODO:  Add optimization for common to and from spaces, could
+		    	// avoid creating a dependency for those
+				for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
+					const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
+					symbolFeedForwardMap.insert(std::make_pair(&sg_shader2common, symbolWrittenTo));
+					symbolFeedForwardMap.insert(std::make_pair(&sg_object2common, symbolWrittenTo));
+					symbolFeedForwardMap.insert(std::make_pair(&sg_time, symbolWrittenTo));
+				}
+			}
+
+
+
 			// Add dependencies between symbols written to in this basic block
 			// to the set of symbols the code blocks where dependent upon to be executed
 			pos_in_dependent_sym_stack_by_op_index[opIndex] = stackOfSymbolsCurrentBlockDependsOn.top_pos();
@@ -868,7 +938,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				// op must have jumps, therefore have nested code we need to process
 				// We need to process these in the same order as the code generator
 				// so our "block depth" lines up for symbol lookups
-				if (opcode.opname() == op_if)
+				if (opcode.opname() == Strings::op_if)
 				{
 					pushSymbolsCurentBlockDependsOn();
 					// Then block
@@ -889,7 +959,9 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					
 					popSymbolsCurentBlockDependsOn();
 					
-				} else if ((opcode.opname() == op_for) || (opcode.opname() == op_while) || (opcode.opname() == op_dowhile))
+				} else if ((opcode.opname() == Strings::op_for) ||
+						   (opcode.opname() == Strings::op_while) ||
+						   (opcode.opname() == Strings::op_dowhile))
 				{
 					// Init block
 					// NOTE: init block doesn't depend on the for loops conditions and should be exempt
@@ -949,7 +1021,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					loopControlFlowSymbolStack.pop_back();
 
 					
-				} else if (opcode.opname() == op_functioncall)
+				} else if (opcode.opname() == Strings::op_functioncall)
 				{
 					// Function call itself operates on the same symbol dependencies
 					// as the current block, there was no conditionals involved
@@ -962,7 +1034,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				}
 
 			}
-			if (opcode.opname() == op_break)
+			if (opcode.opname() == Strings::op_break)
 			{
 				// The break will need change the loop control flow which is dependent upon
 				// a conditional.  By making a circular dependency between the break operation
@@ -988,7 +1060,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				potentiallyUnmaskedOpsBySymbol[loopCondition].push_back(
 					WriteEvent{stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex});
 			}
-            if (opcode.opname() == op_getattribute)
+            if (opcode.opname() == Strings::op_getattribute)
             {
             	// As getattribute could have uniform input parameters but require
             	// varying results we need to detect that case and track the 
@@ -1089,7 +1161,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	// Now that all of the instructions have been discovered, we need to
 	// make sure any writes to the output parameters that happened at 
 	// lower depths are masked, as there may be no actual instruction
-	// that reads the output variables at the outtermost scope
+	// that reads the output variables at the outermost scope
 	// we will simulate that right here
 	FOREACH_PARAM (Symbol &s, inst()) {
 		// Skip structure placeholders
@@ -1575,20 +1647,20 @@ BackendLLVMWide::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
     		   cast == TypeDesc::TypePoint || 
     		   cast == TypeDesc::TypeNormal || 
     		   cast == TypeDesc::TypeFloat || 
-    		   cast == TypeDesc::TypeInt);
+    		   cast == TypeDesc::TypeInt ||
+    		   cast == TypeDesc::TypeMatrix);
     	
-    	if (ll.llvm_typeof(result) ==  ll.type_float()) {
-            result = ll.widen_value(result);    		    		
-    	} else if (ll.llvm_typeof(result) ==  ll.type_triple()) {
-            result = ll.widen_value(result);    		    		
-    	} else if (ll.llvm_typeof(result) ==  ll.type_int()) {
-            result = ll.widen_value(result);    		    		
-        } else if (ll.llvm_typeof(result) ==  (llvm::Type*)ll.type_string()) {
+    	if ((ll.llvm_typeof(result) ==  ll.type_float()) ||
+			(ll.llvm_typeof(result) ==  ll.type_triple()) ||
+			(ll.llvm_typeof(result) ==  ll.type_int()) ||
+			(ll.llvm_typeof(result) ==  (llvm::Type*)ll.type_string()) ||
+			(ll.llvm_typeof(result) ==  ll.type_matrix())) {
             result = ll.widen_value(result);
         } else {
 #if 0
         	if (!((ll.llvm_typeof(result) ==  ll.type_wide_float()) ||
          		   (ll.llvm_typeof(result) ==  ll.type_wide_int()) ||
+                   (ll.llvm_typeof(result) ==  ll.type_wide_matrix()) ||
          		   (ll.llvm_typeof(result) ==  ll.type_wide_triple()) ||
                     (ll.llvm_typeof(result) ==  ll.type_wide_string()) ||
                     (ll.llvm_typeof(result) ==  ll.type_wide_bool()))) {
@@ -1599,7 +1671,8 @@ BackendLLVMWide::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
         		   (ll.llvm_typeof(result) ==  ll.type_wide_int()) ||
         		   (ll.llvm_typeof(result) ==  ll.type_wide_triple()) ||
                    (ll.llvm_typeof(result) ==  ll.type_wide_string()) ||
-                   (ll.llvm_typeof(result) ==  ll.type_wide_bool()));
+                   (ll.llvm_typeof(result) ==  ll.type_wide_bool()) ||
+				   (ll.llvm_typeof(result) ==  ll.type_wide_matrix()));
         }
     }
 
@@ -1867,7 +1940,7 @@ BackendLLVMWide::llvm_store_value (llvm::Value* new_val, llvm::Value* dst_ptr,
 bool
 BackendLLVMWide::llvm_store_component_value (llvm::Value* new_val,
                                               const Symbol& sym, int deriv,
-                                              llvm::Value* component, bool op_is_uniform)
+                                              llvm::Value* component)
 {
     bool has_derivs = sym.has_derivs();
     if (!has_derivs && deriv != 0) {
@@ -2238,12 +2311,16 @@ BackendLLVMWide::llvm_assign_impl (Symbol &Result, Symbol &Src,
     }
 
     if (Result.typespec().is_matrix() && Src.typespec().is_int_or_float()) {
-    	ASSERT(0 && "unhandled case"); // TODO: implement
     	
         // Handle m=f, m=i separately
-        llvm::Value *src = llvm_load_value (Src, 0, arrind, 0, TypeDesc::FLOAT /*cast*/);
+        llvm::Value *src = llvm_load_value (Src, 0, arrind, 0, TypeDesc::FLOAT /*cast*/, op_is_uniform);
         // m=f sets the diagonal components to f, the others to zero
-        llvm::Value *zero = ll.constant (0.0f);
+        llvm::Value *zero;
+        if (op_is_uniform)
+        	zero = ll.constant (0.0f);
+        else
+        	zero = ll.wide_constant (0.0f);
+
         for (int i = 0;  i < 4;  ++i)
             for (int j = 0;  j < 4;  ++j)
                 llvm_store_value (i==j ? src : zero, Result, 0, arrind, i*4+j);

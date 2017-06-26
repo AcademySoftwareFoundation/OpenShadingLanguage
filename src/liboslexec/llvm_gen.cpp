@@ -521,15 +521,15 @@ LLVMGEN (llvm_gen_mul)
     if (Result.typespec().is_matrix()) {
         if (A.typespec().is_float()) {
             if (B.typespec().is_float())
-                rop.llvm_call_function ("osl_mul_m_ff", Result, A, B);
+                rop.llvm_call_function ("osl_mul_mff", Result, A, B);
             else if (B.typespec().is_matrix())
-                rop.llvm_call_function ("osl_mul_mf", Result, B, A);
+                rop.llvm_call_function ("osl_mul_mmf", Result, B, A);
             else ASSERT(0);
         } else if (A.typespec().is_matrix()) {
             if (B.typespec().is_float())
-                rop.llvm_call_function ("osl_mul_mf", Result, A, B);
+                rop.llvm_call_function ("osl_mul_mmf", Result, A, B);
             else if (B.typespec().is_matrix())
-                rop.llvm_call_function ("osl_mul_mm", Result, A, B);
+                rop.llvm_call_function ("osl_mul_mmm", Result, A, B);
             else ASSERT(0);
         } else ASSERT (0);
         if (Result.has_derivs())
@@ -592,15 +592,15 @@ LLVMGEN (llvm_gen_div)
     if (Result.typespec().is_matrix()) {
         if (A.typespec().is_float()) {
             if (B.typespec().is_float())
-                rop.llvm_call_function ("osl_div_m_ff", Result, A, B);
+                rop.llvm_call_function ("osl_div_mff", Result, A, B);
             else if (B.typespec().is_matrix())
-                rop.llvm_call_function ("osl_div_fm", Result, A, B);
+                rop.llvm_call_function ("osl_div_mfm", Result, A, B);
             else ASSERT (0);
         } else if (A.typespec().is_matrix()) {
             if (B.typespec().is_float())
-                rop.llvm_call_function ("osl_div_mf", Result, A, B);
+                rop.llvm_call_function ("osl_div_mmf", Result, A, B);
             else if (B.typespec().is_matrix())
-                rop.llvm_call_function ("osl_div_mm", Result, A, B);
+                rop.llvm_call_function ("osl_div_mmm", Result, A, B);
             else ASSERT (0);
         } else ASSERT (0);
         if (Result.has_derivs())

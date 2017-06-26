@@ -118,6 +118,60 @@ static const char * warg_lane_count(void)
     return nullptr;
 }
 
+static std::string
+warg_typecode (Symbol *sym, bool derivs)
+{
+    std::string name(warg_lane_count());
+
+    const TypeSpec &t (sym->typespec());
+    if (t.is_int())
+        name += "i";
+    else if (t.is_matrix())
+        name += "m";
+    else if (t.is_string())
+        name += "s";
+    else {
+		if (derivs)
+			name += "d";
+
+		if (t.is_float())
+			name += "f";
+		else if (t.is_triple())
+			name += "v";
+		else ASSERT (0);
+    }
+    return name;
+}
+
+static std::string
+arg_typecode (Symbol &sym, bool derivs, bool is_uniform)
+{
+    std::string name;
+    if(!is_uniform) {
+    	name = warg_lane_count();
+    }
+
+    const TypeSpec &t (sym.typespec());
+    if (t.is_int())
+        name += "i";
+    else if (t.is_matrix())
+        name += "m";
+    else if (t.is_string())
+        name += "s";
+    else {
+
+		if (derivs)
+			name += "d";
+
+		if (t.is_float())
+			name += "f";
+		else if (t.is_triple())
+			name += "v";
+		else ASSERT (0);
+    }
+    return name;
+}
+
 
 void
 BackendLLVMWide::llvm_gen_debug_printf (string_view message)
@@ -696,21 +750,12 @@ LLVMGEN (llvm_gen_mul)
 
     // multiplication involving matrices
     if (Result.typespec().is_matrix()) {
-        // TODO: finish handling all combinations, remove assert afterwards
-        ASSERT(op_is_uniform);
-        if (A.typespec().is_float()) {
-            if (B.typespec().is_float())
-                rop.llvm_call_function ("osl_mul_m_ff", Result, A, B, false /*deriv_ptrs*/, true /*function_is_uniform*/, false /*functionIsLlvmInlined*/,  true /*ptrToReturnStructIs1stArg*/);
-            else if (B.typespec().is_matrix())
-                rop.llvm_call_function ("osl_mul_mf", Result, B, A, false /*deriv_ptrs*/, true /*function_is_uniform*/, false /*functionIsLlvmInlined*/,  true /*ptrToReturnStructIs1stArg*/);
-            else ASSERT(0);
-        } else if (A.typespec().is_matrix()) {
-            if (B.typespec().is_float())
-                rop.llvm_call_function ("osl_mul_mf", Result, A, B, false /*deriv_ptrs*/, true /*function_is_uniform*/, false /*functionIsLlvmInlined*/,  true /*ptrToReturnStructIs1stArg*/);
-            else if (B.typespec().is_matrix())
-                rop.llvm_call_function ("osl_mul_mm", Result, A, B, false /*deriv_ptrs*/, true /*function_is_uniform*/, false /*functionIsLlvmInlined*/,  true /*ptrToReturnStructIs1stArg*/);
-            else ASSERT(0);
-        } else ASSERT (0);
+    	std::string func_name("osl_mul_");
+    	func_name.append(arg_typecode(Result,false,op_is_uniform));
+    	func_name.append(arg_typecode(A,false,op_is_uniform));
+    	func_name.append(arg_typecode(B,false,op_is_uniform));
+        rop.llvm_call_function (func_name.c_str(), Result, A, B, false /*deriv_ptrs*/, op_is_uniform, false /*functionIsLlvmInlined*/,  true /*ptrToReturnStructIs1stArg*/);
+
         if (Result.has_derivs())
             rop.llvm_zero_derivs (Result);
         return true;
@@ -780,6 +825,8 @@ LLVMGEN (llvm_gen_div)
     Symbol& B = *rop.opargsym (op, 2);
 
     bool op_is_uniform = rop.isSymbolUniform(A) && rop.isSymbolUniform(B);
+    bool resultIsUniform = rop.isSymbolUniform(Result);
+    ASSERT(op_is_uniform || !resultIsUniform);
 
     TypeDesc type = Result.typespec().simpletype();
     bool is_float = Result.typespec().is_floatbased();
@@ -789,22 +836,12 @@ LLVMGEN (llvm_gen_div)
 
     // division involving matrices
     if (Result.typespec().is_matrix()) {
-        // TODO: finish handling all combinations, remove assert afterwards
-        ASSERT(op_is_uniform);
+    	std::string func_name("osl_div_");
+    	func_name.append(arg_typecode(Result,false,op_is_uniform));
+    	func_name.append(arg_typecode(A,false,op_is_uniform));
+    	func_name.append(arg_typecode(B,false,op_is_uniform));
+        rop.llvm_call_function (func_name.c_str(), Result, A, B, false /*deriv_ptrs*/, op_is_uniform, false /*functionIsLlvmInlined*/,  true /*ptrToReturnStructIs1stArg*/);
 
-        if (A.typespec().is_float()) {
-            if (B.typespec().is_float())
-                rop.llvm_call_function ("osl_div_m_ff", Result, A, B, false /*deriv_ptrs*/, true /*function_is_uniform*/, false /*functionIsLlvmInlined*/,  true /*ptrToReturnStructIs1stArg*/);
-            else if (B.typespec().is_matrix())
-                rop.llvm_call_function ("osl_div_fm", Result, A, B, false /*deriv_ptrs*/, true /*function_is_uniform*/, false /*functionIsLlvmInlined*/,  true /*ptrToReturnStructIs1stArg*/);
-            else ASSERT (0);
-        } else if (A.typespec().is_matrix()) {
-            if (B.typespec().is_float())
-                rop.llvm_call_function ("osl_div_mf", Result, A, B, false /*deriv_ptrs*/, true /*function_is_uniform*/, false /*functionIsLlvmInlined*/,  true /*ptrToReturnStructIs1stArg*/);
-            else if (B.typespec().is_matrix())
-                rop.llvm_call_function ("osl_div_mm", Result, A, B, false /*deriv_ptrs*/, true /*function_is_uniform*/, false /*functionIsLlvmInlined*/,  true /*ptrToReturnStructIs1stArg*/);
-            else ASSERT (0);
-        } else ASSERT (0);
         if (Result.has_derivs())
             rop.llvm_zero_derivs (Result);
         return true;
@@ -875,10 +912,18 @@ LLVMGEN (llvm_gen_div)
             ry = rop.ll.op_mul (binv, ay_minus_a_div_b_mul_by);
         }
 
-        rop.llvm_store_value (a_div_b, Result, 0, i);
-        if (deriv) {
-            rop.llvm_store_value (rx, Result, 1, i);
-            rop.llvm_store_value (ry, Result, 2, i);
+        if (op_is_uniform && !resultIsUniform) {
+            rop.llvm_broadcast_uniform_value(a_div_b, Result, 0, i);
+            if (deriv) {
+                rop.llvm_broadcast_uniform_value (rx, Result, 1, i);
+                rop.llvm_broadcast_uniform_value (ry, Result, 2, i);
+            }
+        } else {
+            rop.llvm_store_value (a_div_b, Result, 0, i);
+            if (deriv) {
+                rop.llvm_store_value (rx, Result, 1, i);
+                rop.llvm_store_value (ry, Result, 2, i);
+            }
         }
     }
 
@@ -1436,7 +1481,7 @@ LLVMGEN (llvm_gen_compassign)
             i = Imath::clamp (i, 0, 2);
             rop.llvm_store_value (val, Result, d, i);
         } else {
-            rop.llvm_store_component_value (val, Result, d, c, op_is_uniform);
+            rop.llvm_store_component_value (val, Result, d, c);
         }
         if (! Result.has_derivs())  // skip the derivs if we don't need them
             break;
@@ -1507,6 +1552,11 @@ LLVMGEN (llvm_gen_mxcompassign)
     Symbol& Col = *rop.opargsym (op, 2);
     Symbol& Val = *rop.opargsym (op, 3);
 
+    ASSERT(rop.isSymbolUniform(Col) && "incomplete");
+    ASSERT(rop.isSymbolUniform(Row) && "incomplete");
+
+    bool op_is_uniform = rop.isSymbolUniform(Result);
+
     llvm::Value *row = rop.llvm_load_value (Row);
     llvm::Value *col = rop.llvm_load_value (Col);
     if (rop.shadingsys().range_checking()) {
@@ -1529,7 +1579,7 @@ LLVMGEN (llvm_gen_mxcompassign)
         col = rop.ll.call_function ("osl_range_check", args);
     }
 
-    llvm::Value *val = rop.llvm_load_value (Val, 0, 0, TypeDesc::TypeFloat);
+    llvm::Value *val = rop.llvm_load_value (Val, 0, 0, TypeDesc::TypeFloat, op_is_uniform);
 
     if (Row.is_constant() && Col.is_constant()) {
         int r = Imath::clamp (((int*)Row.data())[0], 0, 3);
@@ -1537,9 +1587,6 @@ LLVMGEN (llvm_gen_mxcompassign)
         int comp = 4 * r + c;
         rop.llvm_store_value (val, Result, 0, comp);
     } else {
-        // TODO:  switching back to non-wide to figure out uniform vs. varying data
-//        llvm::Value *comp = rop.ll.wide_op_mul (row, rop.ll.wide_constant(4));
-//        comp = rop.ll.wide_op_add (comp, col);
         llvm::Value *comp = rop.ll.op_mul (row, rop.ll.wide_constant(4));
         comp = rop.ll.op_add (comp, col);
         rop.llvm_store_component_value (val, Result, 0, comp);
@@ -1849,42 +1896,61 @@ LLVMGEN (llvm_gen_matrix)
     int nfloats = nargs - 1 - (int)using_space;
     ASSERT (nargs == 2 || nargs == 3 || nargs == 17 || nargs == 18);
 
-    // TODO: Handle non-uniform case below minding mask values
-    ASSERT(rop.isSymbolUniform(Result));
+    bool op_is_uniform = rop.isSymbolUniform(Result);
+
+	// We are generating a matrix, not sure how that would ever require masking
+	// as the store should be at the same dependency scope as the local
+	// object being generated
+	ASSERT(false == rop.ll.is_masking_enabled());
 
     if (using_two_spaces) {
+    	// Implicit dependencies to shader globals
+    	// mean the result needs to be varying
+		ASSERT(false == op_is_uniform);
         llvm::Value *args[4];
         args[0] = rop.sg_void_ptr();  // shader globals
         args[1] = rop.llvm_void_ptr(Result);  // result
-        args[2] = rop.llvm_load_value(*rop.opargsym (op, 1));  // from
-        args[3] = rop.llvm_load_value(*rop.opargsym (op, 2));  // to
-        ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
-        rop.ll.call_function ("osl_get_from_to_matrix", args, 4);
+        Symbol& From = *rop.opargsym (op, 1);
+        Symbol& To = *rop.opargsym (op, 2);
+        ASSERT(rop.isSymbolUniform(From) && rop.isSymbolUniform(To) && "incomplete");
+        args[2] = rop.llvm_load_value(From);  // from
+        args[3] = rop.llvm_load_value(To);  // to
+        // TODO: dynamically build width suffix
+        rop.ll.call_function ("osl_get_from_to_matrix_w16m_batched", args, 4);
     } else {
         if (nfloats == 1) {
+        	llvm::Value *zero;
+            if (op_is_uniform)
+                zero = rop.ll.constant (0.0f);
+            else
+            	zero = rop.ll.wide_constant (0.0f);
+
             for (int i = 0; i < 16; i++) {
                 llvm::Value* src_val = ((i%4) == (i/4))
-                    ? rop.llvm_load_value (*rop.opargsym(op,1+using_space))
-                    // TODO:  switching back to non-wide to figure out uniform vs. varying data
-//                    : rop.ll.wide_constant(0.0f);
-                    : rop.ll.constant(0.0f);
+                    ? rop.llvm_load_value (*rop.opargsym(op,1+using_space),0,0,TypeDesc::UNKNOWN,op_is_uniform)
+                    : zero;
                 rop.llvm_store_value (src_val, Result, 0, i);
             }
         } else if (nfloats == 16) {
             for (int i = 0; i < 16; i++) {
-                llvm::Value* src_val = rop.llvm_load_value (*rop.opargsym(op,i+1+using_space));
+                llvm::Value* src_val = rop.llvm_load_value (*rop.opargsym(op,i+1+using_space),0,0,TypeDesc::UNKNOWN,op_is_uniform);
                 rop.llvm_store_value (src_val, Result, 0, i);
             }
         } else {
             ASSERT (0);
         }
         if (using_space) {
+        	// Implicit dependencies to shader globals
+        	// mean the result needs to be varying
+        	ASSERT(false == op_is_uniform);
             llvm::Value *args[3];
             args[0] = rop.sg_void_ptr();  // shader globals
             args[1] = rop.llvm_void_ptr(Result);  // result
-            args[2] = rop.llvm_load_value(*rop.opargsym (op, 1));  // from
-            ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
-            rop.ll.call_function ("osl_prepend_matrix_from", args, 3);
+            Symbol& From = *rop.opargsym (op, 1);
+            ASSERT(rop.isSymbolUniform(From) && "incomplete");
+            args[2] = rop.llvm_load_value(From);  // from
+            // TODO: dynamically build width suffix
+            rop.ll.call_function ("osl_prepend_matrix_from_w16m_batched", args, 3);
         }
     }
     if (Result.has_derivs())
@@ -1905,17 +1971,22 @@ LLVMGEN (llvm_gen_getmatrix)
     Symbol& To = *rop.opargsym (op, 2);
     Symbol& M = *rop.opargsym (op, 3);
 
-    // TODO: Handle non-uniform case below minding mask values
-    ASSERT(rop.isSymbolUniform(Result));
-    ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
+
+	// Implicit dependencies to shader globals
+	// mean the result needs to be varying
+	ASSERT(false == rop.isSymbolUniform(Result));
+	ASSERT(false == rop.isSymbolUniform(M));
+
+    ASSERT(rop.isSymbolUniform(From) && rop.isSymbolUniform(To) && "incomplete");
 
     llvm::Value *args[4];
     args[0] = rop.sg_void_ptr();  // shader globals
     args[1] = rop.llvm_void_ptr(M);  // matrix result
     args[2] = rop.llvm_load_value(From);
     args[3] = rop.llvm_load_value(To);
-    llvm::Value *result = rop.ll.call_function ("osl_get_from_to_matrix", args, 4);
-    rop.llvm_store_value (result, Result);
+    // TODO: dynamically build width suffix
+    llvm::Value *result = rop.ll.call_function ("osl_get_from_to_matrix_w16m_batched", args, 4);
+    rop.llvm_conversion_store_masked_status(result, Result);
     rop.llvm_zero_derivs (M);
     return true;
 }
@@ -2077,10 +2148,12 @@ LLVMGEN (llvm_gen_filterwidth)
         } else {
 			// TODO: minding mask values
 			if (Src.typespec().is_float()) {
+		        // TODO: dynamically build width suffix
 				rop.ll.call_function ("osl_filterwidth_w16fw16df",
 									  rop.llvm_void_ptr (Result),
 									  rop.llvm_void_ptr (Src));
 			} else {
+		        // TODO: dynamically build width suffix
 				rop.ll.call_function ("osl_filterwidth_w16vw16dv",
 										rop.llvm_void_ptr (Result),
 										rop.llvm_void_ptr (Src));
@@ -3544,52 +3617,6 @@ LLVMGEN (llvm_gen_trace)
 }
 
 
-#if 0
-static std::string
-arg_typecode (Symbol *sym, bool derivs)
-{
-    const TypeSpec &t (sym->typespec());
-    if (t.is_int())
-        return "i";
-    else if (t.is_matrix())
-        return "m";
-    else if (t.is_string())
-        return "s";
-
-    std::string name;
-    if (derivs)
-        name = "d";
-    if (t.is_float())
-        name += "f";
-    else if (t.is_triple())
-        name += "v";
-    else ASSERT (0);
-    return name;
-}
-#endif
-
-static std::string
-warg_typecode (Symbol *sym, bool derivs)
-{
-    std::string name(warg_lane_count());
-
-    const TypeSpec &t (sym->typespec());
-    if (t.is_int())
-        name += "i";
-    else if (t.is_matrix())
-        name += "m";
-    else if (t.is_string())
-        name += "s";
-
-    if (derivs)
-        name += "d";
-    if (t.is_float())
-        name += "f";
-    else if (t.is_triple())
-        name += "v";
-    else ASSERT (0);
-    return name;
-}
 
 
 
@@ -4204,6 +4231,7 @@ LLVMGEN (llvm_gen_area)
     std::vector<const Symbol *> args;
     args.push_back (&Result);
     args.push_back (&P);
+    // TODO: dynamically build width suffix
     rop.llvm_call_function (op_is_uniform ? "osl_area" : "osl_area_w16",
                             &(args[0]), 2,
                             /*deriv_ptrs*/ true,

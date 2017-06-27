@@ -607,9 +607,12 @@ LLVMGEN (llvm_gen_add)
     Symbol& B = *rop.opargsym (op, 2);
 
     bool op_is_uniform = rop.isSymbolUniform(A) && rop.isSymbolUniform(B);
+    bool result_is_uniform = rop.isSymbolUniform(Result);
+	ASSERT(op_is_uniform || !result_is_uniform);
 
     ASSERT (! A.typespec().is_array() && ! B.typespec().is_array());
     if (Result.typespec().is_closure()) {
+    	ASSERT(0 && "incomplete");
         ASSERT (A.typespec().is_closure() && B.typespec().is_closure());
         llvm::Value *valargs[3];
         valargs[0] = rop.sg_void_ptr();
@@ -632,9 +635,11 @@ LLVMGEN (llvm_gen_add)
         llvm::Value *b = rop.loadLLVMValue (B, i, 0, type, op_is_uniform);
         if (!a || !b)
             return false;
-        // TODO:  switching back to non-wide to figure out uniform vs. varying data
-        //llvm::Value *r = rop.ll.wide_op_add (a, b);
         llvm::Value *r = rop.ll.op_add (a, b);
+    	if (op_is_uniform && !result_is_uniform)
+    	{
+    		r = rop.ll.widen_value(r);
+    	}
         rop.storeLLVMValue (r, Result, i, 0);
     }
 
@@ -644,9 +649,11 @@ LLVMGEN (llvm_gen_add)
                 for (int i = 0; i < num_components; i++) {
                     llvm::Value *a = rop.loadLLVMValue (A, i, d, type, op_is_uniform);
                     llvm::Value *b = rop.loadLLVMValue (B, i, d, type, op_is_uniform);
-                    // TODO:  switching back to non-wide to figure out uniform vs. varying data
-                    //llvm::Value *r = rop.ll.wide_op_add (a, b);
                     llvm::Value *r = rop.ll.op_add (a, b);
+                	if (op_is_uniform && !result_is_uniform)
+                	{
+                		r = rop.ll.widen_value(r);
+                	}
                     rop.storeLLVMValue (r, Result, i, d);
                 }
             }
@@ -668,6 +675,8 @@ LLVMGEN (llvm_gen_sub)
     Symbol& B = *rop.opargsym (op, 2);
 
     bool op_is_uniform = rop.isSymbolUniform(A) && rop.isSymbolUniform(B);
+    bool result_is_uniform = rop.isSymbolUniform(Result);
+	ASSERT(op_is_uniform || !result_is_uniform);
 
     TypeDesc type = Result.typespec().simpletype();
     int num_components = type.aggregate;
@@ -683,9 +692,11 @@ LLVMGEN (llvm_gen_sub)
         llvm::Value *b = rop.loadLLVMValue (B, i, 0, type, op_is_uniform);
         if (!a || !b)
             return false;
-        // TODO:  switching back to non-wide to figure out uniform vs. varying data
-        //llvm::Value *r = rop.ll.wide_op_sub (a, b);
         llvm::Value *r = rop.ll.op_sub (a, b);
+    	if (op_is_uniform && !result_is_uniform)
+    	{
+    		r = rop.ll.widen_value(r);
+    	}
         rop.storeLLVMValue (r, Result, i, 0);
     }
 
@@ -695,9 +706,11 @@ LLVMGEN (llvm_gen_sub)
                 for (int i = 0; i < num_components; i++) {
                     llvm::Value *a = rop.loadLLVMValue (A, i, d, type, op_is_uniform);
                     llvm::Value *b = rop.loadLLVMValue (B, i, d, type, op_is_uniform);
-                    // TODO:  switching back to non-wide to figure out uniform vs. varying data
-                    //llvm::Value *r = rop.ll.wide_op_sub (a, b);
                     llvm::Value *r = rop.ll.op_sub (a, b);
+                	if (op_is_uniform && !result_is_uniform)
+                	{
+                		r = rop.ll.widen_value(r);
+                	}
                     rop.storeLLVMValue (r, Result, i, d);
                 }
             }
@@ -729,6 +742,7 @@ LLVMGEN (llvm_gen_mul)
 
     // multiplication involving closures
     if (Result.typespec().is_closure()) {
+    	ASSERT(0 && "incomplete");
         llvm::Value *valargs[3];
         valargs[0] = rop.sg_void_ptr();
         bool tfloat;
@@ -778,10 +792,10 @@ LLVMGEN (llvm_gen_mul)
         llvm::Value *r = rop.ll.op_mul (a, b);
 
         if (op_is_uniform && !resultIsUniform) {
-            rop.llvm_broadcast_uniform_value(r, Result, 0, i);
-        } else {
-            rop.llvm_store_value (r, Result, 0, i);
+            r = rop.ll.widen_value(r);
         }
+
+        rop.llvm_store_value (r, Result, 0, i);
 
         if (Result.has_derivs() && (A.has_derivs() || B.has_derivs())) {
             // Multiplication of duals: (a*b, a*b.dx + a.dx*b, a*b.dy + a.dy*b)
@@ -798,12 +812,12 @@ LLVMGEN (llvm_gen_mul)
             llvm::Value *ry = rop.ll.op_add (aby, ayb);
 
             if (op_is_uniform && !resultIsUniform) {
-                rop.llvm_broadcast_uniform_value(rx, Result, 1, i);
-                rop.llvm_broadcast_uniform_value(ry, Result, 2, i);
-            } else {
-                rop.llvm_store_value (rx, Result, 1, i);
-                rop.llvm_store_value (ry, Result, 2, i);
+                rx = rop.ll.widen_value(rx);
+                ry = rop.ll.widen_value(ry);
             }
+
+            rop.llvm_store_value (rx, Result, 1, i);
+            rop.llvm_store_value (ry, Result, 2, i);
         }
     }
 
@@ -913,18 +927,18 @@ LLVMGEN (llvm_gen_div)
         }
 
         if (op_is_uniform && !resultIsUniform) {
-            rop.llvm_broadcast_uniform_value(a_div_b, Result, 0, i);
+            a_div_b = rop.ll.widen_value(a_div_b);
             if (deriv) {
-                rop.llvm_broadcast_uniform_value (rx, Result, 1, i);
-                rop.llvm_broadcast_uniform_value (ry, Result, 2, i);
-            }
-        } else {
-            rop.llvm_store_value (a_div_b, Result, 0, i);
-            if (deriv) {
-                rop.llvm_store_value (rx, Result, 1, i);
-                rop.llvm_store_value (ry, Result, 2, i);
+            	rx = rop.ll.widen_value(rx);
+            	ry = rop.ll.widen_value(ry);
             }
         }
+		rop.llvm_store_value (a_div_b, Result, 0, i);
+		if (deriv) {
+			rop.llvm_store_value (rx, Result, 1, i);
+			rop.llvm_store_value (ry, Result, 2, i);
+		}
+
     }
 
     if (Result.has_derivs() &&  ! (A.has_derivs() || B.has_derivs())) {
@@ -948,7 +962,12 @@ LLVMGEN (llvm_gen_modulus)
     bool is_float = Result.typespec().is_floatbased();
     int num_components = type.aggregate;
 
-    bool op_is_uniform = rop.isSymbolUniform(Result);
+    bool op_is_uniform = rop.isSymbolUniform(A) && rop.isSymbolUniform(B);
+    bool result_is_uniform = rop.isSymbolUniform(Result);
+	ASSERT(op_is_uniform || !result_is_uniform);
+
+	ASSERT((!op_is_uniform || result_is_uniform) && "incomplete not handled widening results yet");
+
 
 #ifdef OSL_LLVM_NO_BITCODE
     // On Windows 32 bit this calls an unknown instruction, probably need to
@@ -1010,7 +1029,9 @@ LLVMGEN (llvm_gen_neg)
     Symbol& Result = *rop.opargsym (op, 0);
     Symbol& A = *rop.opargsym (op, 1);
 
-    bool op_is_uniform = rop.isSymbolUniform(Result);
+    bool op_is_uniform = rop.isSymbolUniform(A);
+    bool result_is_uniform = rop.isSymbolUniform(Result);
+	ASSERT(op_is_uniform || !result_is_uniform);
 
     TypeDesc type = Result.typespec().simpletype();
     int num_components = type.aggregate;
@@ -1018,6 +1039,10 @@ LLVMGEN (llvm_gen_neg)
         for (int i = 0; i < num_components; i++) {
             llvm::Value *a = rop.llvm_load_value (A, d, i, type, op_is_uniform);
             llvm::Value *r = rop.ll.op_neg (a);
+        	if (op_is_uniform && !result_is_uniform)
+        	{
+        		r = rop.ll.widen_value(r);
+        	}
             rop.llvm_store_value (r, Result, d, i);
         }
         if (! Result.has_derivs())
@@ -2184,6 +2209,7 @@ LLVMGEN (llvm_gen_compare_op)
     bool result_is_uniform = rop.isSymbolUniform(Result);
 
     if (A.typespec().is_closure()) {
+    	ASSERT(0 && "incomplete");
         ASSERT (B.typespec().is_int() &&
                 "Only closure==0 and closure!=0 allowed");
         llvm::Value *a = rop.llvm_load_value (A);
@@ -4098,6 +4124,7 @@ LLVMGEN (llvm_gen_getmessage)
     args[2] = rop.llvm_load_value (Name);
 
     if (Data.typespec().is_closure_based()) {
+    	ASSERT(0 && "incomplete");
         // FIXME: secret handshake for closures ...
         args[3] = rop.ll.constant (TypeDesc(TypeDesc::UNKNOWN,
                                               Data.typespec().arraylength()));
@@ -4138,6 +4165,7 @@ LLVMGEN (llvm_gen_setmessage)
     args[0] = rop.sg_void_ptr();
     args[1] = rop.llvm_load_value (Name);
     if (Data.typespec().is_closure_based()) {
+    	ASSERT(0 && "incomplete");
         // FIXME: secret handshake for closures ...
         args[2] = rop.ll.constant (TypeDesc(TypeDesc::UNKNOWN,
                                               Data.typespec().arraylength()));
@@ -4364,6 +4392,7 @@ llvm_gen_keyword_fill(BackendLLVMWide &rop, Opcode &op, const ClosureRegistry::C
 
 LLVMGEN (llvm_gen_closure)
 {
+	ASSERT(0 && "incomplete");
     Opcode &op (rop.inst()->ops()[opnum]);
     ASSERT (op.nargs() >= 2); // at least the result and the ID
 

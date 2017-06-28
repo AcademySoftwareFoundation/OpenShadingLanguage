@@ -2139,8 +2139,37 @@ BackendLLVMWide::llvm_call_function (const char *name,
         {
         	// Need to pass a pointer to the function
         	if (function_is_uniform || (s.symtype() != SymTypeConst)) {
-        		ASSERT(function_is_uniform || (false == isSymbolUniform(s)));
-                valargs[i] = llvm_void_ptr (s);
+        		//ASSERT(function_is_uniform || (false == isSymbolUniform(s)));
+        		if (function_is_uniform || (false == isSymbolUniform(s))) {
+        			valargs[i] = llvm_void_ptr (s);
+        		} else {
+					// TODO: Consider dynamically generating function name based on varying/uniform paramters
+        			// and their types.  Could even detect what function names exist and only promote necessary
+        			// parameters to be wide.  This would allow library implementer to add mixed varying uniform
+        			// parameter versions of their functions as deemed necessary for highly used comibnations
+        			// versus supplying all combinations possible
+                	std::cout << "....widening value " << s.name().c_str() << std::endl;
+
+            		ASSERT(false == function_is_uniform);
+            		// As the case to deliver a pointer to a symbol data
+            		// doesn't provide an opportunity to promote a uniform value
+            		// to a wide value that the non-uniform function is expecting
+            		// we will handle it here.
+
+            		ASSERT(!t.is_array() && "incomplete");
+
+            		// Have to have a place on the stack for the pointer to the wide constant to point to
+                    llvm::Value *tmpptr = llvm_alloca (t, true, function_is_uniform);
+
+                    for(int a=0; a < t.simpletype().aggregate; ++ a) {
+                    	llvm::Value * wide_value = llvm_load_value (s, /*deriv*/ 0, /*component*/ 0, TypeDesc::UNKNOWN, function_is_uniform);
+                    	// Store our wide pointer on the stack
+                    	llvm_store_value (wide_value, tmpptr, t, 0, NULL, a);
+            		}
+
+                    // return pointer to our stacked wide variable
+                    valargs[i] =  ll.void_ptr (tmpptr);
+        		}
         	} else {
             	std::cout << "....widening constant value " << s.name().c_str() << std::endl;
 

@@ -1002,8 +1002,13 @@ setup_output_images_batched (ShadingSystem *shadingsys,
             ustring name (entryoutputs[i]);  // convert to ustring
             const ShaderSymbol *sym = shadingsys->find_symbol (*shadergroup, name);
             if (!sym) {
-                std::cout << "\nEntry output " << entryoutputs[i] << " not found. Abording.\n";
+                std::cout << "\nEntry output " << entryoutputs[i] << " not found. Aborting.\n";
                 exit (EXIT_FAILURE);
+            }
+            TypeDesc td = shadingsys->symbol_typedesc (sym);
+            if (td.basetype == TypeDesc::UNKNOWN) {
+                std::cout << "\nEntry output " << entryoutputs[i] << " is a structure. Skipping.\n";
+            	continue;
             }
             entrylayer_symbols.push_back (sym);
             std::cout << ' ' << entryoutputs[i];
@@ -1021,12 +1026,18 @@ setup_output_images_batched (ShadingSystem *shadingsys,
         // Ask for a pointer to the symbol's data, as computed by this
         // shader.
         TypeDesc t;
-        const void *data = shadingsys->get_symbol (*ctx, outputvarnames[i], t);
-        if (!data) {
-            std::cout << "Output " << outputvars[i] 
+        const ShaderSymbol *sym = shadingsys->find_symbol (*shadergroup, outputvarnames[i]);
+        if (!sym) {
+            std::cout << "Output symbol" << outputvars[i]
                       << " not found, skipping.\n";
             continue;  // Skip if symbol isn't found
         }
+        TypeDesc td = shadingsys->symbol_typedesc (sym);
+        if (td.basetype == TypeDesc::UNKNOWN) {
+            std::cout << "Output symbol " << outputvars[i] << " is a structure. Skipping.\n";
+        	continue;
+        }
+
         std::cout << "Output " << outputvars[i] << " to "
                   << outputfiles[i] << "\n";
 

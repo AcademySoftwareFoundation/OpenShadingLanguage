@@ -1025,15 +1025,14 @@ setup_output_images_batched (ShadingSystem *shadingsys,
 
         // Ask for a pointer to the symbol's data, as computed by this
         // shader.
-        TypeDesc t;
         const ShaderSymbol *sym = shadingsys->find_symbol (*shadergroup, outputvarnames[i]);
         if (!sym) {
             std::cout << "Output symbol" << outputvars[i]
                       << " not found, skipping.\n";
             continue;  // Skip if symbol isn't found
         }
-        TypeDesc td = shadingsys->symbol_typedesc (sym);
-        if (td.basetype == TypeDesc::UNKNOWN) {
+        TypeDesc t = shadingsys->symbol_typedesc (sym);
+        if (t == TypeDesc()) {
             std::cout << "Output symbol " << outputvars[i] << " is a structure. Skipping.\n";
         	continue;
         }

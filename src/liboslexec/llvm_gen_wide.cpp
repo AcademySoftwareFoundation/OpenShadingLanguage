@@ -1062,33 +1062,45 @@ LLVMGEN (llvm_gen_clamp)
     Symbol& Min = *rop.opargsym (op, 2);
     Symbol& Max = *rop.opargsym (op, 3);
 
+    bool op_is_uniform = rop.isSymbolUniform(X) && rop.isSymbolUniform(Min) && rop.isSymbolUniform(Max);
+    bool result_is_uniform = rop.isSymbolUniform(Result);
+	ASSERT(op_is_uniform || !result_is_uniform);
+
     TypeDesc type = Result.typespec().simpletype();
     int num_components = type.aggregate;
     for (int i = 0; i < num_components; i++) {
         // First do the lower bound
-        llvm::Value *val = rop.llvm_load_value (X, 0, i, type);
-        llvm::Value *min = rop.llvm_load_value (Min, 0, i, type);
+        llvm::Value *val = rop.llvm_load_value (X, 0, i, type, op_is_uniform);
+        llvm::Value *min = rop.llvm_load_value (Min, 0, i, type, op_is_uniform);
         llvm::Value *cond = rop.ll.op_lt (val, min);
         val = rop.ll.op_select (cond, min, val);
         llvm::Value *valdx=NULL, *valdy=NULL;
         if (Result.has_derivs()) {
-            valdx = rop.llvm_load_value (X, 1, i, type);
-            valdy = rop.llvm_load_value (X, 2, i, type);
-            llvm::Value *mindx = rop.llvm_load_value (Min, 1, i, type);
-            llvm::Value *mindy = rop.llvm_load_value (Min, 2, i, type);
+            valdx = rop.llvm_load_value (X, 1, i, type, op_is_uniform);
+            valdy = rop.llvm_load_value (X, 2, i, type, op_is_uniform);
+            llvm::Value *mindx = rop.llvm_load_value (Min, 1, i, type, op_is_uniform);
+            llvm::Value *mindy = rop.llvm_load_value (Min, 2, i, type, op_is_uniform);
             valdx = rop.ll.op_select (cond, mindx, valdx);
             valdy = rop.ll.op_select (cond, mindy, valdy);
         }
         // Now do the upper bound
-        llvm::Value *max = rop.llvm_load_value (Max, 0, i, type);
+        llvm::Value *max = rop.llvm_load_value (Max, 0, i, type, op_is_uniform);
         cond = rop.ll.op_gt (val, max);
         val = rop.ll.op_select (cond, max, val);
         if (Result.has_derivs()) {
-            llvm::Value *maxdx = rop.llvm_load_value (Max, 1, i, type);
-            llvm::Value *maxdy = rop.llvm_load_value (Max, 2, i, type);
+            llvm::Value *maxdx = rop.llvm_load_value (Max, 1, i, type, op_is_uniform);
+            llvm::Value *maxdy = rop.llvm_load_value (Max, 2, i, type, op_is_uniform);
             valdx = rop.ll.op_select (cond, maxdx, valdx);
             valdy = rop.ll.op_select (cond, maxdy, valdy);
         }
+
+    	if (op_is_uniform && !result_is_uniform)
+    	{
+    		val = rop.ll.widen_value(val);
+    		valdx = rop.ll.widen_value(valdx);
+    		valdy = rop.ll.widen_value(valdy);
+    	}
+
         rop.llvm_store_value (val, Result, 0, i);
         rop.llvm_store_value (valdx, Result, 1, i);
         rop.llvm_store_value (valdy, Result, 2, i);
@@ -1283,10 +1295,10 @@ LLVMGEN (llvm_gen_minmax)
         llvm::Value* res_val = rop.ll.op_select (cond, x_val, y_val);
         rop.llvm_store_value (res_val, Result, 0, i);
         if (Result.has_derivs()) {
-          llvm::Value* x_dx = rop.llvm_load_value (x, 1, i, type);
-          llvm::Value* x_dy = rop.llvm_load_value (x, 2, i, type);
-          llvm::Value* y_dx = rop.llvm_load_value (y, 1, i, type);
-          llvm::Value* y_dy = rop.llvm_load_value (y, 2, i, type);
+          llvm::Value* x_dx = rop.llvm_load_value (x, 1, i, type, op_is_uniform);
+          llvm::Value* x_dy = rop.llvm_load_value (x, 2, i, type, op_is_uniform);
+          llvm::Value* y_dx = rop.llvm_load_value (y, 1, i, type, op_is_uniform);
+          llvm::Value* y_dy = rop.llvm_load_value (y, 2, i, type, op_is_uniform);
           rop.llvm_store_value (rop.ll.op_select(cond, x_dx, y_dx), Result, 1, i);
           rop.llvm_store_value (rop.ll.op_select(cond, x_dy, y_dy), Result, 2, i);
         }

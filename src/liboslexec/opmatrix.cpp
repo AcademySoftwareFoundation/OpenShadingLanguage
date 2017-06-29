@@ -357,8 +357,8 @@ osl_get_matrix_batched (void *sgb_, void *r, const char *from)
 }
 #endif
 
-OSL_SHADEOP Mask
-osl_wide_get_matrix (void *sgb_, void *wr, const char *from, WeakMask weak_mask)
+OSL_INLINE Mask
+impl_osl_wide_get_matrix_masked (void *sgb_, void *wr, const char *from, WeakMask weak_mask)
 {
     ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
     ShadingContext *ctx = (ShadingContext *)sgb->uniform().context;
@@ -391,7 +391,7 @@ osl_wide_get_matrix (void *sgb_, void *wr, const char *from, WeakMask weak_mask)
 	
 	Mask succeeded = ctx->batched_renderer()->get_matrix (sgb, wrm, USTR(from), sgb->varyingData().time, weak_mask);
 	
-	if (succeeded.any_off())
+    if (succeeded.any_off(weak_mask))
 	{
 		ShadingContext *ctx = sgb->uniform().context;
 		if (ctx->shadingsys().unknown_coordsys_error())
@@ -431,8 +431,8 @@ osl_get_inverse_matrix (void *sg_, void *r, const char *to)
     return ok;
 }
 
-OSL_SHADEOP Mask
-osl_wide_get_inverse_matrix (void *sgb_, void *wr, const char *to, WeakMask weak_mask)
+OSL_INLINE Mask
+impl_osl_wide_get_inverse_matrix_masked (void *sgb_, void *wr, const char *to, WeakMask weak_mask)
 {
     ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
     ShadingContext *ctx = (ShadingContext *)sgb->uniform().context;
@@ -499,7 +499,7 @@ osl_prepend_matrix_from_w16m_batched (void *sgb, void *wr, const char *from)
 	{
 		Wide<Matrix44> wMfrom;
 		/*Mask succeeded =*/
-		osl_wide_get_matrix ((ShaderGlobalsBatch *)sgb, &wMfrom, from, Mask(true));
+        impl_osl_wide_get_matrix_masked ((ShaderGlobalsBatch *)sgb, &wMfrom, from, Mask(true));
 
 		Wide<Matrix44> & wrm = WMAT(wr);
 
@@ -529,13 +529,13 @@ osl_get_from_to_matrix (void *sg, void *r, const char *from, const char *to)
 }
 
 OSL_INLINE Mask
-impl_osl_wide_get_from_to_matrix (void *sgb, void *wr, const char *from, const char *to, WeakMask weak_mask)
+impl_osl_wide_get_from_to_matrix_masked (void *sgb, void *wr, const char *from, const char *to, WeakMask weak_mask)
 {
 	OSL_INTEL_PRAGMA("forceinline recursive")
 	{
 		Wide<Matrix44> wMfrom, wMto;
-		Mask succeeded = osl_wide_get_matrix ((ShaderGlobalsBatch *)sgb, &wMfrom, from, weak_mask);
-		succeeded &= osl_wide_get_inverse_matrix ((ShaderGlobalsBatch *)sgb, &wMto, to, weak_mask);
+        Mask succeeded = impl_osl_wide_get_matrix_masked ((ShaderGlobalsBatch *)sgb, &wMfrom, from, weak_mask);
+        succeeded &= impl_osl_wide_get_inverse_matrix_masked ((ShaderGlobalsBatch *)sgb, &wMto, to, weak_mask);
 		
 		Wide<Matrix44> & wrm = WMAT(wr);
 	
@@ -556,7 +556,7 @@ impl_osl_wide_get_from_to_matrix (void *sgb, void *wr, const char *from, const c
 OSL_SHADEOP int
 osl_get_from_to_matrix_w16m_batched (void *sgb, void *r, const char *from, const char *to)
 {
-	return impl_osl_wide_get_from_to_matrix(sgb, r, from, to, Mask(true)).value();
+    return impl_osl_wide_get_from_to_matrix_masked(sgb, r, from, to, Mask(true)).value();
 }
 
 
@@ -990,10 +990,9 @@ osl_wide_transform_triple (void *sgb_, void *Pin, int Pin_derivs,
     
     Mask mask(mask_value);
     
-    ASSERT(Pin != Pout);  
-    
+    //ASSERT(Pin != Pout);
+
     Wide<Matrix44> M;
-    int ok;
     Pin_derivs &= Pout_derivs;   // ignore derivs if output doesn't need it
     
     Mask succeeded;
@@ -1003,39 +1002,40 @@ osl_wide_transform_triple (void *sgb_, void *Pin, int Pin_derivs,
     // optimizing for it
     if (USTR(from) == Strings::common ||
             USTR(from) == ctx->shadingsys().commonspace_synonym()) {
-    	succeeded = osl_wide_get_inverse_matrix (sgb, &M, (const char *)to, mask);
+        succeeded = impl_osl_wide_get_inverse_matrix_masked (sgb, &M, (const char *)to, mask);
     } else if (USTR(to) == Strings::common ||
             USTR(to) == ctx->shadingsys().commonspace_synonym()) {
-    	succeeded = osl_wide_get_matrix(sgb, &M, (const char *)from, mask);
+        succeeded = impl_osl_wide_get_matrix_masked(sgb, &M, (const char *)from, mask);
     } else {
-		succeeded = impl_osl_wide_get_from_to_matrix (sgb, &M, (const char *)from,
+        succeeded = impl_osl_wide_get_from_to_matrix_masked (sgb, &M, (const char *)from,
 										 (const char *)to, mask);
     }
     
-    // regardless of which data lanes succeeded we can just tranform
-    // all data lanes and not bother to combine success and result mask
+
     {
-    	// TODO:  consider templatising this function and having
+        // only operate on active lanes
+        Mask activeMask = mask & succeeded;
+        // TODO:  consider templatising this function and having
     	// a specific version for each vec type, as we know the type 
     	// at code gen time we can call a specific version versus
     	// the cost testing the type here.
         if (vectype == TypeDesc::POINT) {
             if (Pin_derivs) {
-                osl_transform_wdvwmwdv(Pout, M, Pin, mask);
+                osl_transform_wdvwmwdv(Pout, M, Pin, activeMask);
             } else {
-                osl_transform_wvwmwv(Pout, M, Pin, mask);
+                osl_transform_wvwmwv(Pout, M, Pin, activeMask);
             }
         } else if (vectype == TypeDesc::VECTOR) {
             if (Pin_derivs) {
-                osl_transformv_wdvwmwdv(Pout, M, Pin, mask);
+                osl_transformv_wdvwmwdv(Pout, M, Pin, activeMask);
             } else {
-                osl_transformv_wvwmwv(Pout, M, Pin, mask);
+                osl_transformv_wvwmwv(Pout, M, Pin, activeMask);
             }
         } else if (vectype == TypeDesc::NORMAL) {
             if (Pin_derivs)
-                osl_transformn_wdvwmwdv(Pout, M, Pin, mask);
+                osl_transformn_wdvwmwdv(Pout, M, Pin, activeMask);
             else {
-            	osl_transformn_wvwmwv(Pout, M, Pin, mask);
+                osl_transformn_wvwmwv(Pout, M, Pin, activeMask);
             }
         }
         else {        	
@@ -1044,15 +1044,16 @@ osl_wide_transform_triple (void *sgb_, void *Pin, int Pin_derivs,
     }
     OSL_INTEL_PRAGMA("forceinline recursive")
     {		
+        // if Pin != Pout, we still need to copy inactive data over to Pout
         // Handle cleaning up any data lanes that did not succeed
-		if (succeeded.any_off())
+        if ((Pin != Pout) && succeeded.any_off(mask))
 		{
 			// For any lanes we failed to get a matrix for
 			// just copy the output to the input values
 			WideAccessor<Vec3> inVec(Pin);
 			// NOTE:  As we only only want to copy lanes that failed, 
 			// we will invert our success mask
-			Mask failed = succeeded.invert();
+            Mask failed = succeeded.invert(mask);
 			MaskedAccessor<Vec3> outVec(Pout, failed);
 			OSL_INTEL_PRAGMA("omp simd simdlen(outVec.width)")
 			for(int i=0; i< outVec.width; ++i)

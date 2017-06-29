@@ -875,6 +875,8 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 			// Add dependencies for operations that implicitly read global variables
 			// Those global variables might be varying, and would need their results
 			// to be varying
+			// TODO: consider optimizing by adding a handler to OpDescription to avoid
+			// all of these comparisons to opname
 			if (opcode.opname() == Strings::matrix) {
 				// Only certain variations of matrix use shader globals
 			    bool using_space = (argCount == 3 || argCount == 18);
@@ -901,6 +903,21 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					symbolFeedForwardMap.insert(std::make_pair(&sg_object2common, symbolWrittenTo));
 					symbolFeedForwardMap.insert(std::make_pair(&sg_time, symbolWrittenTo));
 				}
+			}
+			if ((opcode.opname() == Strings::vector) ||
+				(opcode.opname() == Strings::point) ||
+				(opcode.opname() == Strings::normal)) {
+			    bool using_space = (argCount == 5);
+			    if (using_space) {
+					// TODO:  Add optimization for common to and from spaces, could
+					// avoid creating a dependency for those
+					for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
+						const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
+						symbolFeedForwardMap.insert(std::make_pair(&sg_shader2common, symbolWrittenTo));
+						symbolFeedForwardMap.insert(std::make_pair(&sg_object2common, symbolWrittenTo));
+						symbolFeedForwardMap.insert(std::make_pair(&sg_time, symbolWrittenTo));
+					}
+			    }
 			}
 
 

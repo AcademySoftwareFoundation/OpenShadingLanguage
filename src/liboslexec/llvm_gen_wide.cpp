@@ -1885,15 +1885,16 @@ LLVMGEN (llvm_gen_construct_triple)
         std::cout << "llvm_gen_construct_triple Result.has_derivs()=" << Result.has_derivs() << std::endl;
         // TODO: Handle non-uniform case below minding mask values
         ASSERT(op_is_uniform);
-
-        llvm::Value *args[8] = { rop.sg_void_ptr(),
+        ASSERT(rop.ll.is_masking_enabled() == false);
+        llvm::Value *args[9] = { rop.sg_void_ptr(),
             rop.llvm_void_ptr(Result),
             rop.ll.constant(Result.has_derivs()),
             rop.llvm_void_ptr(Result),
             rop.ll.constant(Result.has_derivs()),
             rop.llvm_load_value(Space),
             rop.ll.constant(Strings::common),
-            rop.ll.constant((int)vectype) };
+            rop.ll.constant((int)vectype),
+            rop.ll.mask_as_int(rop.ll.current_mask())};
         RendererServices *rend (rop.shadingsys().renderer());
         if (rend->transform_points (NULL, from, to, 0.0f, NULL, NULL, 0, vectype)) {
             // TODO: Handle non-uniform case below minding mask values
@@ -1908,7 +1909,7 @@ LLVMGEN (llvm_gen_construct_triple)
         } else {
             // definitely not a nonlinear transformation
             //rop.ll.call_function ("osl_transform_triple", args, 8);
-            rop.ll.call_function ("osl_wide_transform_triple", args, 8);
+            rop.ll.call_function ("osl_wide_transform_triple", args, 9);
         }
     }
 

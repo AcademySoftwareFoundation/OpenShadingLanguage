@@ -117,6 +117,12 @@ public:
     {
     	return WideMask((~m_value)&(0xFFFFFFFF >> (32-WidthT)));
     }
+
+    OSL_INLINE WideMask invert(const WideMask &mask) const
+    {
+        return WideMask(mask.m_value&(~m_value)&(0xFFFFFFFF >> (32-WidthT)));
+    }
+
     
     // Testers
     OSL_INLINE bool operator[](int lane) const
@@ -158,6 +164,10 @@ public:
         return (m_value < (0xFFFFFFFF >> (32-WidthT)));
     }
 
+    OSL_INLINE bool any_off(const WideMask &mask) const
+    {
+        return m_value != (m_value & mask.m_value);
+    }
 
     // Setters
     OSL_INLINE void set(int lane, bool flag)

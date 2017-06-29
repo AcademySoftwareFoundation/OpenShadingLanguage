@@ -1796,13 +1796,18 @@ LLVMGEN (llvm_gen_construct_color)
     // Do the color space conversion in-place, if called for
     if (using_space) {
         llvm::Value *args[3];
+        // NOTE:  Shader Globals is only passed to provide access to report an error to the context
+        // no implicit dependency on any Shader Globals is necessary
         args[0] = rop.sg_void_ptr ();  // shader globals
         args[1] = rop.llvm_void_ptr (Result, 0);  // color
         args[2] = rop.llvm_load_value (Space); // from
 
-        // TODO: handle wide case and a _masked version if necessary, then remove assert
-        ASSERT(op_is_uniform);
-        rop.ll.call_function ("osl_prepend_color_from", args, 3);
+        ASSERT(false == rop.ll.is_masking_enabled());
+        std::string func_name("osl_prepend_color_from");
+        func_name.append(arg_typecode(Result, false /*derivs*/, op_is_uniform));
+        func_name.append("_batched");
+
+        rop.ll.call_function (func_name.c_str(), args, 3);
         // FIXME(deriv): Punt on derivs for color ctrs with space names.
         // We should try to do this right, but we never had it right for
         // the interpreter, to it's probably not an emergency.

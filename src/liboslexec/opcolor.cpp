@@ -545,7 +545,7 @@ OSL_SHADEOP void osl_luminance_w16fw16v_batched(void *sgb, void *wout_, void *wc
 	WideAccessor<float> wR(wout_);
 
 	// calling a function below, don't bother vectorizing
-	//OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+	//OSL_INTEL_PRAGMA("omp simd simdlen(wR.width)")
 	OSL_INTEL_PRAGMA("novector")
 	for(int lane=0; lane < wR.width; ++lane) {
 	    Color3 c = wC[lane];
@@ -576,6 +576,35 @@ osl_prepend_color_from (void *sg, void *c_, const char *from)
     Color3 &c (*(Color3*)c_);
     c = ctx->shadingsys().to_rgb (USTR(from), c[0], c[1], c[2]);
 }
+
+OSL_SHADEOP void
+osl_prepend_color_from_v_batched (void *sgb, void *c_, const char *from)
+{
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
+    Color3 &c (*(Color3*)c_);
+    c = ctx->shadingsys().to_rgb (USTR(from), c[0], c[1], c[2]);
+}
+
+OSL_SHADEOP void
+osl_prepend_color_from_w16v_batched (void *sgb, void *c_, const char *from)
+{
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
+
+	WideAccessor<Color3> wR(c_);
+
+	// calling a function below, don't bother vectorizing
+	//OSL_INTEL_PRAGMA("omp simd simdlen(wR.width)")
+	OSL_INTEL_PRAGMA("novector")
+	for(int lane=0; lane < wR.width; ++lane) {
+	    Color3 c = wR[lane];
+
+	    // TODO: investigate removing this function call to enable SIMD
+	    Color3 R = ctx->shadingsys().to_rgb (USTR(from), c[0], c[1], c[2]);
+
+	    wR[lane] = R;
+	}
+}
+
 
 
 } // namespace pvt

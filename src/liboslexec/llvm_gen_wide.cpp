@@ -3591,6 +3591,7 @@ static llvm::Value *
 llvm_gen_trace_options (BackendLLVMWide &rop, int opnum,
                         int first_optional_arg)
 {
+    ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
     llvm::Value* opt = rop.ll.call_function ("osl_get_trace_options",
                                              rop.sg_void_ptr());
     Opcode &op (rop.inst()->ops()[opnum]);

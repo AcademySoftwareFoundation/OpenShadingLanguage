@@ -736,6 +736,8 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	const Symbol sg_shader2common(Strings::shader2common, TypeSpec (), SymTypeGlobal);
 	const Symbol sg_object2common(Strings::object2common, TypeSpec (), SymTypeGlobal);
 	const Symbol sg_flipHandedness(Strings::flipHandedness, TypeSpec (), SymTypeGlobal);
+	const Symbol sg_raytype(Strings::raytype, TypeSpec (), SymTypeGlobal);
+
 	//const Symbol & sg_time = *findGlobalSymbol(Strings::time);
 	const Symbol sg_time(Strings::time, TypeSpec (), SymTypeGlobal);
 
@@ -963,6 +965,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					}
 				}
 			}
+
 			if (opcode.opname() == Strings::op_calculatenormal) {
 				for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
 					const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
@@ -973,6 +976,12 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
 					const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
 					symbolsWrittenToByImplicitlyVaryingOps.push_back(symbolWrittenTo);
+				}
+			}
+			if (opcode.opname() == Strings::raytype) {
+				for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
+					const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
+					symbolFeedForwardMap.insert(std::make_pair(&sg_raytype, symbolWrittenTo));
 				}
 			}
 

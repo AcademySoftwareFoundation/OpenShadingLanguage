@@ -1,3 +1,26 @@
+Release 1.8.10 -- 1 Jul 2017 (compared to 1.8.9)
+--------------------------------------------------
+* Missing faceforward() implementation was added to stdosl.h. #759
+* `testshade` new option `--shader <shadername> <layername>` is a
+  convenience that takes the place of a separate `--layer` and `--shader`
+  arguments, and makes the command line look more similar to the serialized
+  (text) description of a shader group. #763
+* README.md, CHANGES.md, and INSTALL.md are now installed in the "doc"
+  directory of a fully-built dist area, rather than at its top level.
+* `smoothstep()` now has variants where the arguments and return type may
+  be color, vector, etc. (previously it only worked for `float`. #765
+* `mix()` now has a variant that combines closures. #766
+* testshade comprehensive documentation in `doc/testshade.md.html`, just
+  view with your browser.
+* Fixed a numerical precision problem with `inversespline()`. #772
+* Fixed a bug in transitive assignment of indexed arrays, like
+  `f[0] = f[1] = f[2]`. This previously hit an assertion. #774
+* New standard OSL function `hash()` makes a repeatable integer hash of
+  a float, 2 floats, a triple, or triple + float. #775
+* New `hashnoise()` is similar to cellnoise(), but has a different
+  repeatable 0.0-1.0 range value for every input position (whereas cellnoise
+  is constant between integer coordinates). #775
+
 Release 1.8.9 -- 1 Jun 2017 (compared to 1.8.8)
 --------------------------------------------------
 * Minor speedup when passing blank subimage name:

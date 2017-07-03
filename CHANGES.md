@@ -1,3 +1,6 @@
+Release 1.8.11 -- 1 Aug 2017 (compared to 1.8.10)
+--------------------------------------------------
+
 Release 1.8.10 -- 1 Jul 2017 (compared to 1.8.9)
 --------------------------------------------------
 * Missing faceforward() implementation was added to stdosl.h. #759

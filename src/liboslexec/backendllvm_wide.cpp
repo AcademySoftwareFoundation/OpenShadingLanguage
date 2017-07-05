@@ -42,20 +42,28 @@ OSL_NAMESPACE_ENTER
 
 namespace Strings {
 
-
-static ustring op_if("if");
-static ustring op_for("for");
-static ustring op_dowhile("dowhile");
-static ustring op_while("while");
-static ustring op_functioncall("functioncall");
+// TODO: What qualifies these to move to oslexec_pvt.h?
+//       Being used in more than one .cpp?
+// Operation strings
 static ustring op_break("break");
+static ustring op_calculatenormal("calculatenormal");
 static ustring op_continue("continue");
+static ustring op_dowhile("dowhile");
+static ustring op_for("for");
+static ustring op_functioncall("functioncall");
 static ustring op_getattribute("getattribute");
 static ustring op_getmatrix("getmatrix");
+static ustring op_getmessage("getmessage");
+static ustring op_if("if");
+static ustring op_transform("transform");
+static ustring op_transformv("transformv");
+static ustring op_transformn("transformn");
+static ustring op_while("while");
 
+// Shader global strings
 static ustring object2common("object2common");
 static ustring shader2common("shader2common");
-
+static ustring flipHandedness("flipHandedness");
 }
 
 namespace pvt {
@@ -727,6 +735,9 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	// This is just allow some our our data structures to Symbol * as a key
 	const Symbol sg_shader2common(Strings::shader2common, TypeSpec (), SymTypeGlobal);
 	const Symbol sg_object2common(Strings::object2common, TypeSpec (), SymTypeGlobal);
+	const Symbol sg_flipHandedness(Strings::flipHandedness, TypeSpec (), SymTypeGlobal);
+	const Symbol sg_raytype(Strings::raytype, TypeSpec (), SymTypeGlobal);
+
 	//const Symbol & sg_time = *findGlobalSymbol(Strings::time);
 	const Symbol sg_time(Strings::time, TypeSpec (), SymTypeGlobal);
 
@@ -777,7 +788,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	
 	std::vector<const Symbol *> loopControlFlowSymbolStack;
 
-    std::vector<const Symbol *> symbolsWrittenToByVaryingGetAttribute;
+    std::vector<const Symbol *> symbolsWrittenToByImplicitlyVaryingOps;
 
 	
 	std::function<void(const Symbol *, DependencyTreeTracker::Position)> ensureWritesAtLowerDepthAreMasked;
@@ -875,6 +886,8 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 			// Add dependencies for operations that implicitly read global variables
 			// Those global variables might be varying, and would need their results
 			// to be varying
+			// TODO: consider optimizing by adding a handler to OpDescription to avoid
+			// all of these comparisons to opname
 			if (opcode.opname() == Strings::matrix) {
 				// Only certain variations of matrix use shader globals
 			    bool using_space = (argCount == 3 || argCount == 18);
@@ -902,7 +915,75 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					symbolFeedForwardMap.insert(std::make_pair(&sg_time, symbolWrittenTo));
 				}
 			}
+			if ((opcode.opname() == Strings::vector) ||
+				(opcode.opname() == Strings::point) ||
+				(opcode.opname() == Strings::normal)) {
+			    bool using_space = (argCount == 5);
+			    if (using_space) {
+					// TODO:  Add optimization for common to and from spaces, could
+					// avoid creating a dependency for those
+					for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
+						const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
+						symbolFeedForwardMap.insert(std::make_pair(&sg_shader2common, symbolWrittenTo));
+						symbolFeedForwardMap.insert(std::make_pair(&sg_object2common, symbolWrittenTo));
+						symbolFeedForwardMap.insert(std::make_pair(&sg_time, symbolWrittenTo));
+					}
+			    }
+			}
+			if ((opcode.opname() == Strings::op_transform) ||
+				(opcode.opname() == Strings::op_transformn) ||
+				(opcode.opname() == Strings::op_transformv)) {
 
+				Symbol *To = opargsym (opcode, (argCount == 3) ? 1 : 2);
+			    if (false == To->typespec().is_matrix()) {
+			        Symbol *From = (argCount == 3) ? NULL : opargsym (opcode, 1);
+
+			    	bool using_space = true;
+			        if((From == NULL || From->is_constant()) && To->is_constant()) {
+			            // We can know all the space names at this time
+			            ustring from = From ? *((ustring *)From->data()) : Strings::common;
+			            ustring to = *((ustring *)To->data());
+			            ustring syn = shadingsys().commonspace_synonym();
+			            if (from == syn)
+			                from = Strings::common;
+			            if (to == syn)
+			                to = Strings::common;
+			            if (from == to) {
+			            	using_space = false;
+			            }
+			        }
+
+					if (using_space) {
+						// TODO:  Add optimization for common to and from spaces, could
+						// avoid creating a dependency for those
+						for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
+							const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
+							symbolFeedForwardMap.insert(std::make_pair(&sg_shader2common, symbolWrittenTo));
+							symbolFeedForwardMap.insert(std::make_pair(&sg_object2common, symbolWrittenTo));
+							symbolFeedForwardMap.insert(std::make_pair(&sg_time, symbolWrittenTo));
+						}
+					}
+				}
+			}
+
+			if (opcode.opname() == Strings::op_calculatenormal) {
+				for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
+					const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
+					symbolFeedForwardMap.insert(std::make_pair(&sg_flipHandedness, symbolWrittenTo));
+				}
+			}
+			if (opcode.opname() == Strings::op_getmessage) {
+				for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
+					const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
+					symbolsWrittenToByImplicitlyVaryingOps.push_back(symbolWrittenTo);
+				}
+			}
+			if (opcode.opname() == Strings::raytype) {
+				for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
+					const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
+					symbolFeedForwardMap.insert(std::make_pair(&sg_raytype, symbolWrittenTo));
+				}
+			}
 
 
 			// Add dependencies between symbols written to in this basic block
@@ -1088,7 +1169,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
                 } else {
 					for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
 						const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
-						symbolsWrittenToByVaryingGetAttribute.push_back(symbolWrittenTo);
+						symbolsWrittenToByImplicitlyVaryingOps.push_back(symbolWrittenTo);
 					}
             	}
             }
@@ -1270,12 +1351,12 @@ std::cout << "requires_masking_by_op_index " << op_index << std::endl;
 		}    			
 	}
 
-    std::cout << "symbolsWrittenToByVaryingGetAttribute begin" << std::endl;
-    for(const Symbol *s: symbolsWrittenToByVaryingGetAttribute) {
+    std::cout << "symbolsWrittenToByImplicitlyVaryingOps begin" << std::endl;
+    for(const Symbol *s: symbolsWrittenToByImplicitlyVaryingOps) {
         std::cout << s->name() << std::endl;
         recursivelyMarkNonUniform(s);
     }
-    std::cout << "symbolsWrittenToByVaryingGetAttribute end" << std::endl;
+    std::cout << "symbolsWrittenToByImplicitlyVaryingOps end" << std::endl;
 
     {
 		std::cout << "Emit m_is_uniform_by_symbol" << std::endl;			

@@ -390,9 +390,17 @@ impl_osl_wide_get_matrix_masked (void *sgb_, void *wr, const char *from, WeakMas
 	}
 	
 	Mask succeeded = ctx->batched_renderer()->get_matrix (sgb, wrm, USTR(from), sgb->varyingData().time, weak_mask);
-	
-    if (succeeded.any_off(weak_mask))
-	{
+    Mask failedLanes = succeeded.invert(weak_mask);
+    if (failedLanes.any_on())
+    {
+        Matrix44 ident;
+        ident.makeIdentity();
+        OSL_INTEL_PRAGMA("omp simd simdlen(wrm.width)")
+        for(int lane=0; lane < wrm.width; ++lane) {
+            if (failedLanes[lane]) {
+                wrm.set(lane, ident);
+            }
+        }
 		ShadingContext *ctx = sgb->uniform().context;
 		if (ctx->shadingsys().unknown_coordsys_error())
 		{
@@ -463,8 +471,17 @@ impl_osl_wide_get_inverse_matrix_masked (void *sgb_, void *wr, const char *to, W
 	// the results of the failed data lanes will get overwritten
 	// so no need to make sure that the values are valid (assuming FP exceptions are disabled)
     Mask succeeded = ctx->batched_renderer()->get_inverse_matrix (sgb, wrm, USTR(to), sgb->varyingData().time, weak_mask);
-	if (succeeded.any_off())
+
+    Mask failedLanes = succeeded.invert(weak_mask);
+    if (failedLanes.any_on())
 	{
+        Matrix44 ident;
+        ident.makeIdentity();
+        for(int lane=0; lane < wrm.width; ++lane) {
+            if (failedLanes[lane]) {
+                wrm.set(lane, ident);
+            }
+        }
 		ShadingContext *ctx = sgb->uniform().context;
 		if (ctx->shadingsys().unknown_coordsys_error())
 		{

@@ -120,7 +120,7 @@ public:
 
     OSL_INLINE WideMask invert(const WideMask &mask) const
     {
-        return WideMask(mask.m_value&(~m_value)&(0xFFFFFFFF >> (32-WidthT)));
+        return WideMask(mask.m_value&((~m_value)&(0xFFFFFFFF >> (32-WidthT))));
     }
 
     

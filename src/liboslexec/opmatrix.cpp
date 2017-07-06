@@ -404,6 +404,7 @@ impl_osl_wide_get_matrix_masked (void *sgb_, void *wr, const char *from, WeakMas
 		ShadingContext *ctx = sgb->uniform().context;
 		if (ctx->shadingsys().unknown_coordsys_error())
 		{
+			ASSERT(weak_mask.any_on());
 			ctx->error ("Unknown transformation \"%s\"", from);			
 		}
 	}

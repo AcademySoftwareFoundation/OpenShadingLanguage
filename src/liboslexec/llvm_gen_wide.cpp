@@ -1850,9 +1850,13 @@ LLVMGEN (llvm_gen_construct_triple)
               << std::endl;
 #endif
 
+
     bool op_is_uniform = rop.isSymbolUniform(X) && rop.isSymbolUniform(Y) && rop.isSymbolUniform(Z);
-    ASSERT(rop.isSymbolUniform(Result) == op_is_uniform);
     ASSERT(!using_space || rop.isSymbolUniform(Space));
+
+    bool resultIsUniform = rop.isSymbolUniform(Result);
+    ASSERT(op_is_uniform || !resultIsUniform);
+
 
 
 //    Symbol *s (rop.opargsym (op, i));
@@ -1868,7 +1872,12 @@ LLVMGEN (llvm_gen_construct_triple)
             const Symbol& comp = *rop.opargsym (op, c+1+using_space);
             llvm::Value* val = rop.llvm_load_value (comp, d, NULL, 0, TypeDesc::TypeFloat, op_is_uniform);
 
-            rop.llvm_store_value (val, Result, d, NULL, c);
+            if (op_is_uniform && !resultIsUniform) {
+            	rop.llvm_broadcast_uniform_value(val, Result, d, c);
+            } else {
+                rop.llvm_store_value (val, Result, d, NULL, c);
+            }
+
         }
     }
 
@@ -1903,7 +1912,6 @@ LLVMGEN (llvm_gen_construct_triple)
         RendererServices *rend (rop.shadingsys().renderer());
         if (rend->transform_points (NULL, from, to, 0.0f, NULL, NULL, 0, vectype)) {
             // TODO: Handle non-uniform case below minding mask values
-            ASSERT(rop.isSymbolUniform(Result));
             ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
 
             // renderer potentially knows about a nonlinear transformation.
@@ -1914,6 +1922,7 @@ LLVMGEN (llvm_gen_construct_triple)
         } else {
             // definitely not a nonlinear transformation
             //rop.ll.call_function ("osl_transform_triple", args, 8);
+            ASSERT(rop.isSymbolUniform(Result) == false && "incomplete");
             rop.ll.call_function ("osl_wide_transform_triple", args, 9);
         }
     }
@@ -2104,6 +2113,7 @@ LLVMGEN (llvm_gen_transform)
         // nonlinear transformations potentially are supported.
         rop.ll.call_function ("osl_transform_triple_nonlinear", args, 8);
     } else {
+        ASSERT(rop.isSymbolUniform(*Result) == false && "incomplete");
         // definitely not a nonlinear transformation
         rop.ll.call_function ("osl_wide_transform_triple", args, 9);
     }

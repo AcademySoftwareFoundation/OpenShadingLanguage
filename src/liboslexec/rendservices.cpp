@@ -609,20 +609,22 @@ BatchedRendererServices::get_texture_info (ShaderGlobalsBatch *sgb,
 #define TEXTURE_INFO_FOR_TYPE(data_type)                                                        \
     if (val.is<data_type>()) {                                                                  \
         auto out = val.masked<data_type>();                                                     \
-        for (int i = 0; i < out.width; ++i) {                                                   \
-            data_type data;                                                                     \
-            bool status = texturesys()->get_texture_info (filename.get(i), subimage,            \
-                                                          dataname, val.type(), &data);         \
-                                                          success.set(i, status);               \
-    		if (status) {                                                                       \
-                /* masked assignment */                                                         \
-    			out[i] = data;                                                                  \
-            } else {                                                                            \
-                std::string err = texturesys()->geterror();                                     \
-                if (err.size() && sgb) {                                                        \
-                    sgb->uniform().context->error (Mask(Lane(i)), "[BatchRendererServices::get_texture_info] %s", err);\
-                }                                                                               \
-            }                                                                                   \
+        for (int l = 0; l < out.width; ++l) {                                                   \
+        	if(val.mask()[l]) {                                                                 \
+				data_type data;                                                                 \
+				bool status = texturesys()->get_texture_info (filename.get(l), subimage,        \
+															  dataname, val.type(), &data);     \
+															  success.set(l, status);           \
+				if (status) {                                                                   \
+					/* masked assignment */                                                     \
+					out[l] = data;                                                              \
+				} else {                                                                        \
+					std::string err = texturesys()->geterror();                                 \
+					if (err.size() && sgb) {                                                    \
+						sgb->uniform().context->error (Mask(Lane(l)), "[BatchRendererServices::get_texture_info] %s", err);\
+					}                                                                           \
+				}                                                                               \
+			}                                                                                   \
         }                                                                                       \
         return success;                                                                         \
     }
@@ -631,22 +633,24 @@ BatchedRendererServices::get_texture_info (ShaderGlobalsBatch *sgb,
     if (val.is<data_type[]>()) {                                                                \
         auto out = val.masked<data_type[]>();                                                   \
         for (int l = 0; l < out.width; ++l) {                                                   \
-            auto arrayData = out[l];                                                            \
-            data_type data[arrayData.length()];                                                       \
-            bool status = texturesys()->get_texture_info (filename.get(l), subimage,            \
-                                                          dataname, val.type(), data);          \
-		    success.set(l, status);                                                             \
-			if (status) {                                                                       \
-			    /* masked assignment */                                                         \
-				for (int i = 0; i < arrayData.length(); ++i) {                                  \
-					arrayData[i] = data[i];                                                     \
+        	if(val.mask()[l]) {                                                                 \
+				auto arrayData = out[l];                                                        \
+				data_type data[arrayData.length()];                                             \
+				bool status = texturesys()->get_texture_info (filename.get(l), subimage,        \
+															  dataname, val.type(), data);      \
+				success.set(l, status);                                                         \
+				if (status) {                                                                   \
+					/* masked assignment */                                                     \
+					for (int i = 0; i < arrayData.length(); ++i) {                              \
+						arrayData[i] = data[i];                                                 \
+					}                                                                           \
+				} else {                                                                        \
+					std::string err = texturesys()->geterror();                                 \
+					if (err.size() && sgb) {                                                    \
+						sgb->uniform().context->error (Mask(Lane(l)), "[BatchRendererServices::get_texture_info] %s", err);\
+					}                                                                           \
 				}                                                                               \
-            } else {                                                                            \
-                std::string err = texturesys()->geterror();                                     \
-                if (err.size() && sgb) {                                                        \
-                    sgb->uniform().context->error (Mask(Lane(l)), "[BatchRendererServices::get_texture_info] %s", err);\
-                }                                                                               \
-            }                                                                                   \
+			}                                                                                   \
         }                                                                                       \
         return success;                                                                         \
     }

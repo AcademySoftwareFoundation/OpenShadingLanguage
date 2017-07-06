@@ -613,10 +613,11 @@ BatchedRendererServices::get_texture_info (ShaderGlobalsBatch *sgb,
             data_type data;                                                                     \
             bool status = texturesys()->get_texture_info (filename.get(i), subimage,            \
                                                           dataname, val.type(), &data);         \
-            /* masked assignment */                                                             \
-            out[i] = data;                                                                      \
-            success.set(i, status);                                                             \
-            if (!status) {                                                                      \
+                                                          success.set(i, status);               \
+    		if (status) {                                                                       \
+                /* masked assignment */                                                         \
+    			out[i] = data;                                                                  \
+            } else {                                                                            \
                 std::string err = texturesys()->geterror();                                     \
                 if (err.size() && sgb) {                                                        \
                     sgb->uniform().context->error (Mask(Lane(i)), "[BatchRendererServices::get_texture_info] %s", err);\
@@ -634,11 +635,13 @@ BatchedRendererServices::get_texture_info (ShaderGlobalsBatch *sgb,
             data_type data[arrayData.length()];                                                       \
             bool status = texturesys()->get_texture_info (filename.get(l), subimage,            \
                                                           dataname, val.type(), data);          \
-            for (int i = 0; i < arrayData.length(); ++i) {                                      \
-                arrayData[i] = data[i];                                                         \
-            }                                                                                   \
-            success.set(l, status);                                                             \
-            if (!status) {                                                                      \
+		    success.set(l, status);                                                             \
+			if (status) {                                                                       \
+			    /* masked assignment */                                                         \
+				for (int i = 0; i < arrayData.length(); ++i) {                                  \
+					arrayData[i] = data[i];                                                     \
+				}                                                                               \
+            } else {                                                                            \
                 std::string err = texturesys()->geterror();                                     \
                 if (err.size() && sgb) {                                                        \
                     sgb->uniform().context->error (Mask(Lane(l)), "[BatchRendererServices::get_texture_info] %s", err);\
@@ -678,7 +681,7 @@ BatchedRendererServices::get_texture_info_uniform (ShaderGlobalsBatch *sgb, ustr
     if (!status) {
         std::string err = texturesys()->geterror();
         if (err.size() && sgb) {
-            sgb->uniform().context->error ("[BatchRendererServices::get_texture_info] %s", err);
+            sgb->uniform().context->error ("[BatchRendererServices::get_texture_info_uniform] %s", err);
         }
     }
     return status;
@@ -809,6 +812,7 @@ BatchedRendererServices::texture (ConstWideAccessor<ustring> filename,
                            ConstWideAccessor<float> dsdy, ConstWideAccessor<float> dtdy,
                            BatchedTextureOutputs& outputs)
 {
+	ASSERT(sgb);
     Mask status(false);
     ShadingContext *context = sgb->uniform().context;
     if (! texture_thread_info)

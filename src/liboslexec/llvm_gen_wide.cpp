@@ -2661,28 +2661,79 @@ LLVMGEN (llvm_gen_if)
         }
         ASSERT(mask->getType() == rop.ll.type_wide_bool());
 
+        // TODO:  Add heuristic to control if we can avoid testing
+        // for any lanes active and just execute masked.
+        // However must make sure the then or else block does not
+        // contain a call to a lower level, those must not be executed
+        // if the mask is all off
+#if 1
+        bool elseBlockRequired = op.jump(0) != op.jump(1);
 
+        if (elseBlockRequired) {
+            llvm::Value* anyOn;
+            llvm::Value* anyOff;
+            rop.ll.test_if_mask_has_any_on_or_off(mask, anyOn, anyOff);
 
-        // Branch on the condition, to our blocks
-        llvm::BasicBlock* then_block = rop.ll.new_basic_block ("then");
-        llvm::BasicBlock* else_block = rop.ll.new_basic_block ("else");
-        llvm::BasicBlock* after_block = rop.ll.new_basic_block ("");
-        rop.ll.op_branch (then_block);
+			// Branch on the condition, to our blocks
+			llvm::BasicBlock* then_block = rop.ll.new_basic_block ("then");
+			llvm::BasicBlock* test_else_block = rop.ll.new_basic_block ("test_else");
+			llvm::BasicBlock* else_block = rop.ll.new_basic_block ("else");
+			llvm::BasicBlock* after_block = rop.ll.new_basic_block ("");
 
-        // Then block
-        // Perhaps mask should be parameter to build_llvm_code?
-        rop.ll.push_mask(mask);
-        rop.build_llvm_code (opnum+1, op.jump(0), then_block);
-        rop.ll.pop_if_mask();
+			// Then block
+			// Perhaps mask should be parameter to build_llvm_code?
+			rop.ll.push_mask(mask);
+			rop.ll.op_branch (anyOn, then_block, test_else_block);
+			rop.build_llvm_code (opnum+1, op.jump(0), then_block);
+			// Execute both the "then" and the "else" blocks with masking
+			rop.ll.op_branch (test_else_block); // insert point is now test_else_block
+			rop.ll.pop_if_mask();
 
-        // Execute both the "then" and the "else" blocks with masking
-        rop.ll.op_branch (else_block);
+			// Else block
+			rop.ll.push_mask(mask, true /* negate */);
+			rop.ll.op_branch (anyOff, else_block, after_block);
+			rop.build_llvm_code (op.jump(0), op.jump(1), else_block);
+			rop.ll.op_branch (after_block);  // insert point is now after_block
+			rop.ll.pop_if_mask();
+        } else {
+            llvm::Value* anyOn = rop.ll.test_if_mask_is_non_zero(mask);
 
-        // Else block
-        rop.ll.push_mask(mask, true /* negate */);
-        rop.build_llvm_code (op.jump(0), op.jump(1), else_block);
-        rop.ll.pop_if_mask();
-        rop.ll.op_branch (after_block);  // insert point is now after_block
+			// Branch on the condition, to our blocks
+			llvm::BasicBlock* then_block = rop.ll.new_basic_block ("then");
+			llvm::BasicBlock* after_block = rop.ll.new_basic_block ("");
+
+			// Then block
+			// Perhaps mask should be parameter to build_llvm_code?
+			rop.ll.push_mask(mask);
+			rop.ll.op_branch (anyOn, then_block, after_block);
+			rop.build_llvm_code (opnum+1, op.jump(0), then_block);
+			// Execute both the "then" block with masking
+			rop.ll.op_branch (after_block); // insert point is now test_else_block
+			rop.ll.pop_if_mask();
+        }
+#else
+		        // Branch on the condition, to our blocks
+		        llvm::BasicBlock* then_block = rop.ll.new_basic_block ("then");
+		        llvm::BasicBlock* else_block = rop.ll.new_basic_block ("else");
+		        llvm::BasicBlock* after_block = rop.ll.new_basic_block ("");
+		        rop.ll.op_branch (then_block);
+
+		        // Then block
+		        // Perhaps mask should be parameter to build_llvm_code?
+		        rop.ll.push_mask(mask);
+		        rop.build_llvm_code (opnum+1, op.jump(0), then_block);
+		        rop.ll.pop_if_mask();
+
+		        // Execute both the "then" and the "else" blocks with masking
+		        rop.ll.op_branch (else_block);
+
+		        // Else block
+		        rop.ll.push_mask(mask, true /* negate */);
+		        rop.build_llvm_code (op.jump(0), op.jump(1), else_block);
+		        rop.ll.pop_if_mask();
+		        rop.ll.op_branch (after_block);  // insert point is now after_block
+
+#endif
     }
 
     // Continue on with the previous flow

@@ -193,6 +193,10 @@ if (CMAKE_COMPILER_IS_INTEL)
 	#add_definitions ("-xSSE4.2")
 	#add_definitions ("-no-vec")
 	#add_definitions ("-no-simd")
+	#add_definitions ("-qno-openmp-simd")	
+	#add_definitions ("-wd15552")
+	# unrecognized OpenMP #pragma
+	#add_definitions ("-wd3180")
 	#add_definitions ("-wd161")
 
 endif ()

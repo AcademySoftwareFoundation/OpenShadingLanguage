@@ -1588,16 +1588,36 @@ LLVM_Util::constant8 (int i)
 }
 
 llvm::Value *
-LLVM_Util::constant64 (int i)
+LLVM_Util::constant16 (uint16_t i)
+{
+    return llvm::ConstantInt::get (context(), llvm::APInt(16,i));
+}
+
+llvm::Value *
+LLVM_Util::constant64 (uint64_t i)
 {
     return llvm::ConstantInt::get (context(), llvm::APInt(64,i));
 }
 
 llvm::Value *
-LLVM_Util::constant128 (int i)
+LLVM_Util::constant128 (uint64_t i)
 {
     return llvm::ConstantInt::get (context(), llvm::APInt(128,i));
 }
+
+llvm::Value *
+LLVM_Util::constant128 (uint64_t left, uint64_t right)
+{
+
+	uint64_t bigNum[2];
+	bigNum[0] = left;
+	bigNum[1] = right;
+
+	ArrayRef< uint64_t > refBigNum(&bigNum[0], 2);
+
+    return llvm::ConstantInt::get (context(), llvm::APInt(128,refBigNum));
+}
+
 
 llvm::Value *
 LLVM_Util::wide_constant (int i)
@@ -1821,6 +1841,59 @@ LLVM_Util::test_if_mask_is_non_zero(llvm::Value *mask)
 	llvm::Value * mask_as_int =  builder().CreateBitCast (wide_int_mask, int_reinterpret_cast_vector_type);
     
     return op_ne (mask_as_int, zeroConstant);
+}
+
+void
+LLVM_Util::test_if_mask_has_any_on_or_off(llvm::Value *mask, llvm::Value* & any_on, llvm::Value* & any_off)
+{
+	ASSERT(mask->getType() == type_wide_bool());
+
+	llvm::Type * extended_int_vector_type;
+	llvm::Type * int_reinterpret_cast_vector_type;
+	llvm::Value * allOffConstant;
+	llvm::Value * allOnConstant;
+	llvm::Value * mask_as_int;
+	switch(m_vector_width) {
+	case 4:
+		{
+			extended_int_vector_type = (llvm::Type *) llvm::VectorType::get(llvm::Type::getInt32Ty (*m_llvm_context), m_vector_width);
+			int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt128Ty (*m_llvm_context);
+			allOffConstant = constant128(0);
+			ASSERT(0 && "incomplete the allOnConstant is wrong");
+			allOnConstant = constant128(0xF);
+			llvm::Value * wide_int_mask = builder().CreateSExt(mask, extended_int_vector_type);
+			mask_as_int =  builder().CreateBitCast (wide_int_mask, int_reinterpret_cast_vector_type);
+		}
+		break;
+
+	case 8:
+		{
+			extended_int_vector_type = (llvm::Type *) llvm::VectorType::get(llvm::Type::getInt32Ty (*m_llvm_context), m_vector_width);
+			int_reinterpret_cast_vector_type = (llvm::Type *) llvm::IntegerType::get(*m_llvm_context,256);
+			allOffConstant = llvm::ConstantInt::get (context(), llvm::APInt(256,0));
+			ASSERT(0 && "incomplete the allOnConstant is wrong");
+			allOnConstant = llvm::ConstantInt::get (context(), llvm::APInt(256,0xFF));
+			llvm::Value * wide_int_mask = builder().CreateSExt(mask, extended_int_vector_type);
+			mask_as_int =  builder().CreateBitCast (wide_int_mask, int_reinterpret_cast_vector_type);
+
+		}
+		break;
+	case 16:
+		{
+			allOffConstant = constant16(0);
+			allOnConstant = constant16(0xFFFF);
+
+			int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);
+			mask_as_int = builder().CreateBitCast (mask, int_reinterpret_cast_vector_type);
+		}
+		break;
+	default:
+		ASSERT(0 && "Unhandled vector width");
+		break;
+	};
+
+	any_on = op_ne (mask_as_int, allOffConstant);
+	any_off = op_ne (mask_as_int, allOnConstant);
 }
 
 llvm::Value *

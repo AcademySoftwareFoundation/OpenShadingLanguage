@@ -343,8 +343,10 @@ public:
 
     /// Return an llvm::Value holding the given integer constant.
     llvm::Value *constant8 (int i);
-    llvm::Value *constant64 (int i);
-    llvm::Value *constant128 (int i);
+    llvm::Value *constant16 (uint16_t i);
+    llvm::Value *constant64 (uint64_t i);
+    llvm::Value *constant128 (uint64_t i);
+    llvm::Value *constant128 (uint64_t left, uint64_t right);
     
     /// Return an llvm::Value holding wide version of the given integer constant.
     llvm::Value *wide_constant (int i);
@@ -383,6 +385,8 @@ public:
     llvm::Value * mask_as_int(llvm::Value *mask);
     llvm::Value * int_as_mask(llvm::Value *value);
     llvm::Value * test_if_mask_is_non_zero(llvm::Value *mask);
+    void test_if_mask_has_any_on_or_off(llvm::Value *mask, llvm::Value* & any_on, llvm::Value* & any_off);
+
     llvm::Value * test_mask_lane(llvm::Value *mask, int lane_index);
     llvm::Value * widen_value (llvm::Value *val);
     llvm::Value * negate_mask(llvm::Value *mask);

@@ -1,0 +1,19 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_types.h"
+
+shader SHADER_NAME(mx_contrast)
+    [[ string help = TYPE_STR" Increase or decrease contrast of a float/color value using a linear slope multiplier." ]]
+  (
+    TYPE in = TYPE_DEFAULT_IN,
+    TYPE amount = TYPE_ONE,
+    TYPE pivot = TYPE_ZERO_POINT_FIVE,
+    output TYPE out = TYPE_DEFAULT_OUT
+  )
+{
+    out = contrast(in, amount, pivot); 
+}

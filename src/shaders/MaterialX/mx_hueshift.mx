@@ -1,0 +1,38 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_types.h"
+
+
+//
+// Shift the hue of a color by the given amount.
+//
+color hueshift(color in, float amount)
+{
+    color hsv3 = transformc("rgb","hsv", in);
+    hsv3[0] += amount;
+    hsv3[0] = fmod(hsv3[0], 1.0);
+    color out = transformc("hsv","rgb", hsv3);
+    return out;
+}
+
+color4 hueshift(color4 in, float amount)
+{
+    return color4 (hueshift(in.rgb, amount), in.a);
+}
+
+
+
+shader SHADER_NAME(mx_hueshift)
+    [[ string help = "Shift the hue of a color; the alpha channel will be unchanged if present." ]]
+  (
+    TYPE in = TYPE_ZERO,
+    float amount = 0.0,
+    output TYPE out = TYPE_ZERO
+  )
+{
+    out = hueshift(in, amount);
+}

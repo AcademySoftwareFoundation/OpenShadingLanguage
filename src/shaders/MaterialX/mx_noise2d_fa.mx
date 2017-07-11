@@ -1,0 +1,52 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_types.h"
+
+shader SHADER_NAME(mx_noise2d_fa)
+    [[ string help = "2D noise"  ]]
+  (
+    vector2 texcoord = { u, v }
+        [[  string help = "input coordinate position",
+            int lockgeom = 0 ]],
+            
+    float amplitude = 1
+        [[  string help = "center-to-peak amplitude of the noise" ]],
+
+    float pivot = 0
+        [[  string help = "the center value of the output noise" ]],
+
+    string noisetype = "snoise"
+        [[  string help = "type of noise" ]],
+
+    output TYPE out = TYPE_ZERO
+  )
+{
+    //float noise(P) is equal to the red channel of color noise(P)
+    //so we offset the float noise lookup to make them different.
+    float fnoise = (float) noise (noisetype, texcoord.x + 19, texcoord.y + 73);
+    
+    color cnoise = (color) noise (noisetype, texcoord.x, texcoord.y);
+
+    #if defined(FLOAT)
+        out = pivot + fnoise * amplitude;
+    #elif defined(COLOR) || defined(VECTOR)
+        out = pivot + cnoise * amplitude;
+    #elif defined(COLOR2)
+        out.r = pivot + cnoise[0] * amplitude;
+        out.a = pivot + cnoise[1] * amplitude;
+    #elif defined(COLOR4)
+        out.rgb = pivot + cnoise * amplitude;
+        out.a = pivot + fnoise * amplitude;
+    #elif defined(VECTOR2) || defined(VECTOR4)
+        out.x = pivot + cnoise[0] * amplitude;
+        out.y = pivot + cnoise[1] * amplitude;
+    # if defined(VECTOR4)
+        out.z = pivot + cnoise[2] * amplitude;
+        out.w = pivot + fnoise * amplitude;
+    # endif
+    #endif
+}

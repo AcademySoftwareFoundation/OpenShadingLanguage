@@ -1,0 +1,18 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_types.h"
+
+shader SHADER_NAME(mx_dotproduct)
+    [[ string help = TYPE_STR" Perform a dot product of two 2-4 channel vectors" ]]
+  (
+    TYPE in1 = TYPE_DEFAULT_IN,
+    TYPE in2 = TYPE_DEFAULT_IN,
+    output float out = 0
+  )
+{
+    out = dot(in1, in2); 
+}

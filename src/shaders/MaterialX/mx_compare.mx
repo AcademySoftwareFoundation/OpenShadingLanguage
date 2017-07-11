@@ -1,0 +1,26 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_types.h"
+
+shader SHADER_NAME(mx_compare)
+    [[ string help = "Test the value of an incoming float selector stream against a specified cutoff value, \
+                      then pass the value of one of two other incoming streams depending on whether the selector stream \
+                      value is greater than the fixed cutoff value." ]]
+  (
+    float intest = 0.0,
+    TYPE in1 = TYPE_ONE,
+    TYPE in2 = TYPE_ZERO,
+    float cutoff = 0.0,
+    output TYPE out = TYPE_ZERO
+  )
+{
+    if (intest > cutoff) {
+        out = in2;
+    } else {    
+        out = in1;
+    }
+}

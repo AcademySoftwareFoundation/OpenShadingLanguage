@@ -1,0 +1,45 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_types.h"
+
+
+float overlay(float fg, float bg)
+{
+    return (fg < 0.5) ? (2 * fg * bg) : (1 - (1 - fg) * (1 - bg));
+}
+
+color overlay(color fg, color bg)
+{
+    return color(overlay(fg[0], bg[0]),
+                 overlay(fg[1], bg[1]),
+                 overlay(fg[2], bg[2]));
+}
+
+color2 overlay(color2 fg, color2 bg)
+{
+    return color2(overlay(fg.r, bg.r),
+                  overlay(fg.a, bg.a));
+}
+
+color4 overlay(color4 fg, color4 bg)
+{
+    return color4(overlay(fg.rgb, bg.rgb),
+                  overlay(fg.a, bg.a));
+}
+
+
+
+shader SHADER_NAME(mx_overlay)
+    [[ string help = TYPE_STR" overlay composite operator" ]]
+  (
+    TYPE fg = TYPE_DEFAULT_IN,
+    TYPE bg = TYPE_DEFAULT_IN,
+    output TYPE out = TYPE_DEFAULT_OUT
+  )
+{
+    out = overlay(fg, bg); 
+}

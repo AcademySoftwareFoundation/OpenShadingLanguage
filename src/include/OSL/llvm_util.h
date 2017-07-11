@@ -203,6 +203,11 @@ public:
     /// function return.  Return the after BB.
     llvm::BasicBlock *push_function (llvm::BasicBlock *after=NULL);
 
+    bool inside_function() const;
+
+    /// Apply any returned lanes to the current mask
+    void mask_off_returned_lanes();
+
     /// Pop basic return destination when exiting a function.  This includes
     /// resetting the IR insertion point to the block following the
     /// corresponding function call.
@@ -224,7 +229,6 @@ public:
     void clear_mask_break();
 
     void push_mask_return();
-    void clear_mask_return();
     
 
     void push_masking_enabled(bool enable);
@@ -497,6 +501,13 @@ public:
     /// the new code insertion point.
     void op_branch (llvm::BasicBlock *block);
 
+    /// Track that the next mask will be inside a different branch
+    void push_masked_branch();
+
+    /// Finalize exitting branch by utilizing any modified mask value
+    /// This can happen if a return statement was encountered
+    void pop_masked_branch();
+
     /// Create a conditional branch instruction to trueblock if cond is
     /// true, to falseblock if cond is false, and establish trueblock as the
     /// new insertion point).
@@ -624,8 +635,12 @@ private:
     std::vector<MaskInfo> m_mask_stack;  			// stack for masks that all stores should use when enabled
     std::vector<bool> m_enable_masking_stack;  			// stack for enabling stores to be masked
     std::vector<MaskInfo> m_mask_break_stack;  		// stack for masks at the time a break statement executed
-    std::vector<MaskInfo> m_mask_return_stack;  		// stack for masks at the time a return statement executed
+    std::vector< std::vector<MaskInfo> > m_function_stack_of_return_masks;  	// stack for masks at the time a return statement executed
     std::vector<int> m_mask_levels_belong_to_function_stack; // stack to track number of masks belonging to the current function
+    // For each pushed function call, keep a slot for modified masks
+    // to be stored from code blocks that might be branched over
+    std::vector<llvm::Value *> m_alloca_for_modified_mask_stack;
+    int m_mask_levels_belong_to_branch;
 
     llvm::Type *m_llvm_type_float;
     llvm::Type *m_llvm_type_double;

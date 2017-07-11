@@ -228,8 +228,8 @@ BackendLLVMWide::llvm_call_layer (int layer, bool unconditional)
     if (! unconditional) {
         llvm::Value *executed = ll.op_load (layerfield);
         executed = ll.op_ne (executed, trueval);
-        then_block = ll.new_basic_block ("");
-        after_block = ll.new_basic_block ("");
+        then_block = ll.new_basic_block (std::string("then layer ").append(std::to_string(layer)));
+        after_block = ll.new_basic_block (std::string("after layer ").append(std::to_string(layer)));
         ll.op_branch (executed, then_block, after_block);
         // insert point is now then_block
     }
@@ -567,7 +567,7 @@ LLVMGEN (llvm_gen_printf)
 
                 // skip the printf if the lane is not active
                 llvm::BasicBlock* then_block = rop.ll.new_basic_block ("test_lane_then");
-                after_block = rop.ll.new_basic_block ("");
+                after_block = rop.ll.new_basic_block ("test_lane_after");
                 rop.ll.op_branch (lane_is_active, then_block, after_block);
 
             }
@@ -2643,7 +2643,7 @@ LLVMGEN (llvm_gen_if)
         // Branch on the condition, to our blocks
         llvm::BasicBlock* then_block = rop.ll.new_basic_block ("then");
         llvm::BasicBlock* else_block = rop.ll.new_basic_block ("else");
-        llvm::BasicBlock* after_block = rop.ll.new_basic_block ("");
+        llvm::BasicBlock* after_block = rop.ll.new_basic_block ("after");
         rop.ll.op_branch (cond_val, then_block, else_block);
 
         // Then block
@@ -2667,7 +2667,8 @@ LLVMGEN (llvm_gen_if)
         // contain a call to a lower level, those must not be executed
         // if the mask is all off
 #if 1
-        bool elseBlockRequired = op.jump(0) != op.jump(1);
+        //bool elseBlockRequired = op.jump(0) != op.jump(1);
+        const bool elseBlockRequired = true;
 
         if (elseBlockRequired) {
             llvm::Value* anyOn;
@@ -2678,38 +2679,68 @@ LLVMGEN (llvm_gen_if)
 			llvm::BasicBlock* then_block = rop.ll.new_basic_block ("then");
 			llvm::BasicBlock* test_else_block = rop.ll.new_basic_block ("test_else");
 			llvm::BasicBlock* else_block = rop.ll.new_basic_block ("else");
-			llvm::BasicBlock* after_block = rop.ll.new_basic_block ("");
+			llvm::BasicBlock* test_return_block = rop.ll.new_basic_block ("test_return");
+			llvm::BasicBlock* after_block = rop.ll.new_basic_block ("after_if");
 
 			// Then block
 			// Perhaps mask should be parameter to build_llvm_code?
-			rop.ll.push_mask(mask);
+			//rop.ll.push_masked_branch();
 			rop.ll.op_branch (anyOn, then_block, test_else_block);
+
+	        rop.ll.set_insert_point (then_block);
+			rop.ll.push_mask(mask);
 			rop.build_llvm_code (opnum+1, op.jump(0), then_block);
+			rop.ll.pop_if_mask();
 			// Execute both the "then" and the "else" blocks with masking
 			rop.ll.op_branch (test_else_block); // insert point is now test_else_block
-			rop.ll.pop_if_mask();
+			//rop.ll.pop_masked_branch();
 
 			// Else block
+			//rop.ll.push_masked_branch();
+			rop.ll.op_branch (anyOff, else_block, test_return_block);
+	        rop.ll.set_insert_point (else_block);
 			rop.ll.push_mask(mask, true /* negate */);
-			rop.ll.op_branch (anyOff, else_block, after_block);
 			rop.build_llvm_code (op.jump(0), op.jump(1), else_block);
-			rop.ll.op_branch (after_block);  // insert point is now after_block
 			rop.ll.pop_if_mask();
+			rop.ll.op_branch (test_return_block);  // insert point is now test_return_block
+			//rop.ll.pop_masked_branch();
+
+			if (rop.ll.inside_function() ) {
+				// continue execution with any lanes that executed returns
+				// masked off
+				rop.ll.mask_off_returned_lanes();
+
+				// If all lanes are now masked off, we can jump to the return point
+				// of the function, as it may not be legal to execute masked
+				// for instance calling down to lower layer or really expensive
+				// function calls
+
+				llvm::Value* anyLanesNotReturned = rop.ll.test_if_mask_is_non_zero(rop.ll.current_mask());
+				rop.ll.op_branch (anyLanesNotReturned, after_block, rop.ll.return_block());
+			} else {
+
+				rop.ll.op_branch (after_block);  // insert point is now test_return_block
+			}
         } else {
+#if 0
             llvm::Value* anyOn = rop.ll.test_if_mask_is_non_zero(mask);
 
 			// Branch on the condition, to our blocks
 			llvm::BasicBlock* then_block = rop.ll.new_basic_block ("then");
-			llvm::BasicBlock* after_block = rop.ll.new_basic_block ("");
+			llvm::BasicBlock* after_block = rop.ll.new_basic_block ("after_if");
 
 			// Then block
 			// Perhaps mask should be parameter to build_llvm_code?
-			rop.ll.push_mask(mask);
+			rop.ll.push_masked_branch();
 			rop.ll.op_branch (anyOn, then_block, after_block);
+	        rop.ll.set_insert_point (then_block);
+			rop.ll.push_mask(mask);
 			rop.build_llvm_code (opnum+1, op.jump(0), then_block);
+			rop.ll.pop_if_mask();
 			// Execute both the "then" block with masking
 			rop.ll.op_branch (after_block); // insert point is now test_else_block
-			rop.ll.pop_if_mask();
+			rop.ll.pop_masked_branch();
+#endif
         }
 #else
 		        // Branch on the condition, to our blocks
@@ -2753,10 +2784,10 @@ LLVMGEN (llvm_gen_loop_op)
         std::cout << "llvm_gen_loop_op UNIFORM based on " << cond.name().c_str() << std::endl;
 
         // Branch on the condition, to our blocks
-        llvm::BasicBlock* cond_block = rop.ll.new_basic_block ("cond");
-        llvm::BasicBlock* body_block = rop.ll.new_basic_block ("body");
-        llvm::BasicBlock* step_block = rop.ll.new_basic_block ("step");
-        llvm::BasicBlock* after_block = rop.ll.new_basic_block ("");
+        llvm::BasicBlock* cond_block = rop.ll.new_basic_block ("cond (uniform)");
+        llvm::BasicBlock* body_block = rop.ll.new_basic_block ("body (uniform)");
+        llvm::BasicBlock* step_block = rop.ll.new_basic_block ("step (uniform)");
+        llvm::BasicBlock* after_block = rop.ll.new_basic_block ("after_loop (uniform)");
         // Save the step and after block pointers for possible break/continue
         rop.ll.push_loop (step_block, after_block);
 
@@ -2801,7 +2832,7 @@ LLVMGEN (llvm_gen_loop_op)
         llvm::BasicBlock* cond_block = rop.ll.new_basic_block ("cond");
         llvm::BasicBlock* body_block = rop.ll.new_basic_block ("body");
         llvm::BasicBlock* step_block = rop.ll.new_basic_block ("step");
-        llvm::BasicBlock* after_block = rop.ll.new_basic_block ("");
+        llvm::BasicBlock* after_block = rop.ll.new_basic_block ("after_loop");
         // Save the step and after block pointers for possible break/continue
         rop.ll.push_loop (step_block, after_block);
 
@@ -2818,6 +2849,7 @@ LLVMGEN (llvm_gen_loop_op)
         // For "do-while", we go straight to the body of the loop, but for
         // "for" or "while", we test the condition next.
         if (op.opname() == op_dowhile) {
+        	ASSERT(0 && "unexpected dowhile");
             rop.ll.op_branch (body_block);
 
             rop.push_varying_loop_condition(&cond);
@@ -2910,7 +2942,7 @@ LLVMGEN (llvm_gen_loopmod_op)
         } else {  // continue
             rop.ll.op_branch (rop.ll.loop_step_block());
         }
-        llvm::BasicBlock* next_block = rop.ll.new_basic_block ("");
+        llvm::BasicBlock* next_block = rop.ll.new_basic_block ("next_block");
         rop.ll.set_insert_point (next_block);
     } else {
 
@@ -5097,7 +5129,7 @@ LLVMGEN (llvm_gen_return)
             // If it's a "return", jump to the exit point of the function.
             rop.ll.op_branch (rop.ll.return_block());
         }
-        llvm::BasicBlock* next_block = rop.ll.new_basic_block ("");
+        llvm::BasicBlock* next_block = rop.ll.new_basic_block ("next_block");
         rop.ll.set_insert_point (next_block);
     } else {
         ASSERT(op.opname() != Strings::op_exit && "Incomplete");

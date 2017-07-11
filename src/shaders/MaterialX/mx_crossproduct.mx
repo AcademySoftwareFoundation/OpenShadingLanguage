@@ -1,0 +1,18 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_types.h"
+
+shader SHADER_NAME(mx_crossproduct) 
+    [[ string help = "Perform a cross product of two vectors" ]]
+  (
+    vector in1 = 0,
+    vector in2 = 0,
+    output vector out = 0
+  )
+{
+    out = cross(in1, in2);
+}

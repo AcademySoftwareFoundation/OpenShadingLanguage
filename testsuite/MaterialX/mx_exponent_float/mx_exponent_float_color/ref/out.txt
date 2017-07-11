@@ -1,0 +1,4 @@
+
+Output out to mx.exr
+Pixel (0, 0):
+  out : 0.398106 0.525308 0.617803

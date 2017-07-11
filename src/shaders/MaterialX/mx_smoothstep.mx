@@ -1,0 +1,22 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_types.h"
+
+shader SHADER_NAME(mx_smoothstep)
+    [[ string help = "outputs a smooth (hermite-interpolated) remapping of input values from low-high to output 0-1."  ]]
+  (
+    TYPE in = TYPE_ZERO
+        [[  string help = "input"  ]],
+    TYPE low = TYPE_ZERO
+        [[  string help = "input value of this or lower will return 0"  ]],
+    TYPE high = TYPE_ONE
+        [[  string help = " an input value of this or higher will result in an output value of 1"  ]],
+    output TYPE out = TYPE_ZERO
+  )
+{
+    out = smoothstep(low, high, in);
+}

@@ -426,6 +426,151 @@ struct Wide<int, WidthT> : public WideBuiltin<int, WidthT> {};
 template <int WidthT>
 struct Wide<TransformationPtr, WidthT> : public WideBuiltin<TransformationPtr, WidthT> {};
 
+
+// Vec4 isn't used by external interfaces, but some internal
+// noise functions utilize a wide version of it.
+typedef Imath::Vec4<Float>     Vec4;
+
+template <int WidthT>
+struct Wide<Vec4, WidthT>
+{
+	typedef Vec4 value_type;
+	static constexpr int width = WidthT;
+	float x[WidthT];
+	float y[WidthT];
+	float z[WidthT];
+	float w[WidthT];
+
+	OSL_INLINE void
+	set(int index, const Vec4 & value)
+	{
+		x[index] = value.x;
+		y[index] = value.y;
+		z[index] = value.z;
+		w[index] = value.w;
+	}
+
+	OSL_INLINE void
+	blendin(WideMask<WidthT> mask, const Wide & other)
+	{
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
+			for(int i = 0; i < WidthT; ++i)
+			{
+				if (mask[i]) {
+					x[i] = other.x.get(i);
+					y[i] = other.y.get(i);
+					z[i] = other.z.get(i);
+					w[i] = other.w.get(i);
+				}
+			}
+		}
+	}
+
+	OSL_INLINE void
+	blendin(WideMask<WidthT> mask, const value_type & value)
+	{
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
+			for(int i = 0; i < WidthT; ++i)
+			{
+				if (mask[i]) {
+					x[i] = value.x;
+					y[i] = value.y;
+					z[i] = value.z;
+					w[i] = value.w;
+				}
+			}
+		}
+	}
+
+
+protected:
+	template<int HeadIndexT>
+	OSL_INLINE void
+	set(internal::int_sequence<HeadIndexT>, const Vec4 & value)
+	{
+		set(HeadIndexT, value);
+	}
+
+	template<int HeadIndexT, int... TailIndexListT, typename... Vec4ListT>
+	OSL_INLINE void
+	set(internal::int_sequence<HeadIndexT, TailIndexListT...>, Vec4 headValue, Vec4ListT... tailValues)
+	{
+		set(HeadIndexT, headValue);
+		set(internal::int_sequence<TailIndexListT...>(), tailValues...);
+		return;
+	}
+public:
+
+	OSL_INLINE Wide() = default;
+	// We want to avoid accidentially copying these when the intent was to just have
+	// a reference
+	Wide(const Wide &other) = delete;
+
+	template<typename... Vec4ListT, typename = internal::enable_if_type<(sizeof...(Vec4ListT) == WidthT)> >
+	explicit OSL_INLINE
+	Wide(const Vec4ListT &...values)
+	{
+		typedef internal::make_int_sequence<sizeof...(Vec4ListT)> int_seq_type;
+		set(int_seq_type(), values...);
+		return;
+	}
+
+
+	OSL_INLINE Vec4
+	get(int index) const
+	{
+		return Vec4(x[index], y[index], z[index], w[index]);
+	}
+
+	void dump(const char *name) const
+	{
+		if (name != nullptr) {
+			std::cout << name << " = ";
+		}
+		std::cout << "x{";
+		for(int i=0; i < WidthT; ++i)
+		{
+			std::cout << x[i];
+			if (i < (WidthT-1))
+				std::cout << ",";
+
+		}
+		std::cout << "}" << std::endl;
+		std::cout << "y{";
+		for(int i=0; i < WidthT; ++i)
+		{
+			std::cout << y[i];
+			if (i < (WidthT-1))
+				std::cout << ",";
+
+		}
+		std::cout << "}" << std::endl;
+		std::cout << "z{"	;
+		for(int i=0; i < WidthT; ++i)
+		{
+			std::cout << z[i];
+			if (i < (WidthT-1))
+				std::cout << ",";
+
+		}
+		std::cout << "}" << std::endl;
+		std::cout << "w{"	;
+		for(int i=0; i < WidthT; ++i)
+		{
+			std::cout << w[i];
+			if (i < (WidthT-1))
+				std::cout << ",";
+
+		}
+		std::cout << "}" << std::endl;
+	}
+
+};
+
 template <int WidthT>
 struct Wide<Vec3, WidthT>
 {	

@@ -2712,6 +2712,26 @@ static const Wide<Vec3,16> fast_grad3lut_wide(
 	Vec3(  1.0f,  0.0f,  1.0f ), Vec3( -1.0f,  0.0f,  1.0f ), // 4 repeats to make 16
 	Vec3(  0.0f,  1.0f, -1.0f ), Vec3( 0.0f, -1.0f, -1.0f ));
 
+static const Wide<Vec4,32> fast_grad4lut_wide(
+  Vec4( 0.0f, 1.0f, 1.0f, 1.0f ),  Vec4( 0.0f, 1.0f, 1.0f, -1.0f ),  Vec4( 0.0f, 1.0f, -1.0f, 1.0f ),  Vec4( 0.0f, 1.0f, -1.0f, -1.0f ), // 32 tesseract edges
+  Vec4( 0.0f, -1.0f, 1.0f, 1.0f ), Vec4( 0.0f, -1.0f, 1.0f, -1.0f ), Vec4( 0.0f, -1.0f, -1.0f, 1.0f ), Vec4( 0.0f, -1.0f, -1.0f, -1.0f ),
+  Vec4( 1.0f, 0.0f, 1.0f, 1.0f ),  Vec4( 1.0f, 0.0f, 1.0f, -1.0f ),  Vec4( 1.0f, 0.0f, -1.0f, 1.0f ),  Vec4( 1.0f, 0.0f, -1.0f, -1.0f ),
+  Vec4( -1.0f, 0.0f, 1.0f, 1.0f ), Vec4( -1.0f, 0.0f, 1.0f, -1.0f ), Vec4( -1.0f, 0.0f, -1.0f, 1.0f ), Vec4( -1.0f, 0.0f, -1.0f, -1.0f ),
+  Vec4( 1.0f, 1.0f, 0.0f, 1.0f ),  Vec4( 1.0f, 1.0f, 0.0f, -1.0f ),  Vec4( 1.0f, -1.0f, 0.0f, 1.0f ),  Vec4( 1.0f, -1.0f, 0.0f, -1.0f ),
+  Vec4( -1.0f, 1.0f, 0.0f, 1.0f ), Vec4( -1.0f, 1.0f, 0.0f, -1.0f ), Vec4( -1.0f, -1.0f, 0.0f, 1.0f ), Vec4( -1.0f, -1.0f, 0.0f, -1.0f ),
+  Vec4( 1.0f, 1.0f, 1.0f, 0.0f ),  Vec4( 1.0f, 1.0f, -1.0f, 0.0f ),  Vec4( 1.0f, -1.0f, 1.0f, 0.0f ),  Vec4( 1.0f, -1.0f, -1.0f, 0.0f ),
+  Vec4( -1.0f, 1.0f, 1.0f, 0.0f ), Vec4( -1.0f, 1.0f, -1.0f, 0.0f ), Vec4( -1.0f, -1.0f, 1.0f, 0.0f ), Vec4( -1.0f, -1.0f, -1.0f, 0.0f ));
+
+static const unsigned char fast_simplex[64][4] = {
+  {0,1,2,3},{0,1,3,2},{0,0,0,0},{0,2,3,1},{0,0,0,0},{0,0,0,0},{0,0,0,0},{1,2,3,0},
+  {0,2,1,3},{0,0,0,0},{0,3,1,2},{0,3,2,1},{0,0,0,0},{0,0,0,0},{0,0,0,0},{1,3,2,0},
+  {0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},
+  {1,2,0,3},{0,0,0,0},{1,3,0,2},{0,0,0,0},{0,0,0,0},{0,0,0,0},{2,3,0,1},{2,3,1,0},
+  {1,0,2,3},{1,0,3,2},{0,0,0,0},{0,0,0,0},{0,0,0,0},{2,0,3,1},{0,0,0,0},{2,1,3,0},
+  {0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},
+  {2,0,1,3},{0,0,0,0},{0,0,0,0},{0,0,0,0},{3,0,1,2},{3,0,2,1},{0,0,0,0},{3,1,2,0},
+  {2,1,0,3},{0,0,0,0},{0,0,0,0},{0,0,0,0},{3,1,0,2},{0,0,0,0},{3,2,0,1},{3,2,1,0}};
+
 
 //#define OSL_VERIFY_SIMPLEX3 1	
 #ifdef OSL_VERIFY_SIMPLEX3
@@ -2742,6 +2762,15 @@ struct fast {
 	    return fast_grad3lut_wide.get(h & 15);
 	}
 
+	template<int seedT>
+	static inline const Vec4
+	grad4 (int i, int j, int k, int l)
+	{
+	    int h = scramble (i, j, scramble (k, l, seedT));
+
+	    // return fast_grad4lut[h & 31];
+	    return fast_grad4lut_wide.get(h & 15);
+	}
 
 	// 3D simplex noise with derivatives.
 	// If the last tthree arguments are not null, the analytic derivative
@@ -2909,6 +2938,165 @@ struct fast {
 	
 	    return noise;		
 	}	
+
+
+	// 4D simplex noise with derivatives.
+	// If the last four arguments are not null, the analytic derivative
+	// (the 4D gradient of the scalar noise field) is also calculated.
+	template<int seedT>
+	static inline float
+	simplexnoise4 (float x, float y, float z, float w)
+	{
+	    // The skewing and unskewing factors are hairy again for the 4D case
+	    const float F4 = 0.309016994; // F4 = (Math.sqrt(5.0)-1.0)/4.0
+	    const float G4 = 0.138196601; // G4 = (5.0-Math.sqrt(5.0))/20.0
+
+	    // Gradients at simplex corners
+	    //const float *g0 = zero, *g1 = zero, *g2 = zero, *g3 = zero, *g4 = zero;
+
+	    // Noise contributions from the four simplex corners
+	    //float n0=0.0f, n1=0.0f, n2=0.0f, n3=0.0f, n4=0.0f;
+	    //float t20 = 0.0f, t21 = 0.0f, t22 = 0.0f, t23 = 0.0f, t24 = 0.0f;
+	    //float t40 = 0.0f, t41 = 0.0f, t42 = 0.0f, t43 = 0.0f, t44 = 0.0f;
+
+	    // Skew the (x,y,z,w) space to determine which cell of 24 simplices we're in
+	    float s = (x + y + z + w) * F4; // Factor for 4D skewing
+	    float xs = x + s;
+	    float ys = y + s;
+	    float zs = z + s;
+	    float ws = w + s;
+	    int i = quick_floor(xs);
+	    int j = quick_floor(ys);
+	    int k = quick_floor(zs);
+	    int l = quick_floor(ws);
+
+	    float t = (i + j + k + l) * G4; // Factor for 4D unskewing
+	    float X0 = i - t; // Unskew the cell origin back to (x,y,z,w) space
+	    float Y0 = j - t;
+	    float Z0 = k - t;
+	    float W0 = l - t;
+
+	    float x0 = x - X0;  // The x,y,z,w distances from the cell origin
+	    float y0 = y - Y0;
+	    float z0 = z - Z0;
+	    float w0 = w - W0;
+
+	    // For the 4D case, the simplex is a 4D shape I won't even try to describe.
+	    // To find out which of the 24 possible simplices we're in, we need to
+	    // determine the magnitude ordering of x0, y0, z0 and w0.
+	    // The method below is a reasonable way of finding the ordering of x,y,z,w
+	    // and then find the correct traversal order for the simplex we’re in.
+	    // First, six pair-wise comparisons are performed between each possible pair
+	    // of the four coordinates, and then the results are used to add up binary
+	    // bits for an integer index into a precomputed lookup table, simplex[].
+	    int c1 = (x0 > y0) ? 32 : 0;
+	    int c2 = (x0 > z0) ? 16 : 0;
+	    int c3 = (y0 > z0) ? 8 : 0;
+	    int c4 = (x0 > w0) ? 4 : 0;
+	    int c5 = (y0 > w0) ? 2 : 0;
+	    int c6 = (z0 > w0) ? 1 : 0;
+	    int c = c1 | c2 | c3 | c4 | c5 | c6; // '|' is mostly faster than '+'
+
+	    int i1, j1, k1, l1; // The integer offsets for the second simplex corner
+	    int i2, j2, k2, l2; // The integer offsets for the third simplex corner
+	    int i3, j3, k3, l3; // The integer offsets for the fourth simplex corner
+
+	    // simplex[c] is a 4-vector with the numbers 0, 1, 2 and 3 in some order.
+	    // Many values of c will never occur, since e.g. x>y>z>w makes x<z, y<w and x<w
+	    // impossible. Only the 24 indices which have non-zero entries make any sense.
+	    // We use a thresholding to set the coordinates in turn from the largest magnitude.
+	    // The number 3 in the "simplex" array is at the position of the largest coordinate.
+
+	    // TODO: get rid of this lookup, try it with pure conditionals,
+	    // TODO: This should not be required, backport it from Bill's GLSL code!
+	    i1 = fast_simplex[c][0]>=3 ? 1 : 0;
+	    j1 = fast_simplex[c][1]>=3 ? 1 : 0;
+	    k1 = fast_simplex[c][2]>=3 ? 1 : 0;
+	    l1 = fast_simplex[c][3]>=3 ? 1 : 0;
+	    // The number 2 in the "simplex" array is at the second largest coordinate.
+	    i2 = fast_simplex[c][0]>=2 ? 1 : 0;
+	    j2 = fast_simplex[c][1]>=2 ? 1 : 0;
+	    k2 = fast_simplex[c][2]>=2 ? 1 : 0;
+	    l2 = fast_simplex[c][3]>=2 ? 1 : 0;
+	    // The number 1 in the "simplex" array is at the second smallest coordinate.
+	    i3 = fast_simplex[c][0]>=1 ? 1 : 0;
+	    j3 = fast_simplex[c][1]>=1 ? 1 : 0;
+	    k3 = fast_simplex[c][2]>=1 ? 1 : 0;
+	    l3 = fast_simplex[c][3]>=1 ? 1 : 0;
+	    // The fifth corner has all coordinate offsets = 1, so no need to look that up.
+
+	    float x1 = x0 - i1 + G4; // Offsets for second corner in (x,y,z,w) coords
+	    float y1 = y0 - j1 + G4;
+	    float z1 = z0 - k1 + G4;
+	    float w1 = w0 - l1 + G4;
+	    float x2 = x0 - i2 + 2.0f * G4; // Offsets for third corner in (x,y,z,w) coords
+	    float y2 = y0 - j2 + 2.0f * G4;
+	    float z2 = z0 - k2 + 2.0f * G4;
+	    float w2 = w0 - l2 + 2.0f * G4;
+	    float x3 = x0 - i3 + 3.0f * G4; // Offsets for fourth corner in (x,y,z,w) coords
+	    float y3 = y0 - j3 + 3.0f * G4;
+	    float z3 = z0 - k3 + 3.0f * G4;
+	    float w3 = w0 - l3 + 3.0f * G4;
+	    float x4 = x0 - 1.0f + 4.0f * G4; // Offsets for last corner in (x,y,z,w) coords
+	    float y4 = y0 - 1.0f + 4.0f * G4;
+	    float z4 = z0 - 1.0f + 4.0f * G4;
+	    float w4 = w0 - 1.0f + 4.0f * G4;
+
+	    // As we do not expect any coherency between data lanes
+	    // Hoisted work out of conditionals to encourage masking blending
+    	// versus a check for coherency
+	    // In other words we will do all the work, all the time versus
+	    // trying to manage it on a per lane basis.
+	    // NOTE: this may be slower if used for serial vs. simd
+	    Vec4 g0 = grad4<seedT>(i, j, k, l);
+	    Vec4 g1 = grad4<seedT>(i+i1, j+j1, k+k1, l+l1);
+	    Vec4 g2 = grad4<seedT>(i+i2, j+j2, k+k2, l+l2);
+	    Vec4 g3 = grad4<seedT>(i+i3, j+j3, k+k3, l+l3);
+	    Vec4 g4 = grad4<seedT>(i+1, j+1, k+1, l+1);
+
+	    // Calculate the contribution from the five corners
+	    float t0 = 0.5f - x0*x0 - y0*y0 - z0*z0 - w0*w0;
+        // NOTE: avoid array access of points, always use
+        // the real data members to avoid aliasing issues
+
+        float t20 = t0 * t0;
+        float t40 = t20 * t20;
+        float tn0 = t40 * (g0.x * x0 + g0.y * y0 + g0.z * z0 + g0.w * w0);
+	    float n0 = (t0 >= 0.0f) ? tn0 : 0.0f;
+
+	    float t1 = 0.5f - x1*x1 - y1*y1 - z1*z1 - w1*w1;
+    	float t21 = t1 * t1;
+    	float t41 = t21 * t21;
+		float tn1 = t41 * (g1.x * x1 + g1.y * y1 + g1.z * z1 + g1.w * w1);
+	    float n1 = (t1 >= 0.0f) ? tn1 : 0.0f;
+
+	    float t2 = 0.5f - x2*x2 - y2*y2 - z2*z2 - w2*w2;
+    	float t22 = t2 * t2;
+    	float t42 = t22 * t22;
+        float tn2 = t42 * (g2.x * x2 + g2.y * y2 + g2.z * z2 + g2.w * w2);
+	    float n2 = (t2 >= 0.0f) ? tn2 : 0.0f;
+
+	    float t3 = 0.5f - x3*x3 - y3*y3 - z3*z3 - w3*w3;
+    	float t23 = t3 * t3;
+    	float t43 = t23 * t23;
+        float tn3 = t43 * (g3.x * x3 + g3.y * y3 + g3.z * z3 + g3.w * w3);
+	    float n3 = (t3 >= 0.0f) ? tn3 : 0.0f;
+
+	    float t4 = 0.5f - x4*x4 - y4*y4 - z4*z4 - w4*w4;
+    	float t24 = t4 * t4;
+    	float t44 = t24 * t24;
+        float tn4 = t44 * (g4.x * x4 + g4.y * y4 + g4.z * z4 + g4.w * w4);
+	    float n4 = (t4 >= 0.0f) ? tn4 : 0.0f;
+
+	    // Sum up and scale the result.  The scale is empirical, to make it
+	    // cover [-1,1], and to make it approximately match the range of our
+	    // Perlin noise implementation.
+	    const float scale = 54.0f;
+	    float noise = scale * (n0 + n1 + n2 + n3 + n4);
+
+	    return noise;
+	}
+
 };
 
 struct SimplexNoise {
@@ -3025,8 +3213,27 @@ struct SimplexNoise {
     }
 
 	template<int WidthT>
-    inline void operator() (Wide<Vec3, WidthT> &wresult, const Wide<Vec3, WidthT> &wp, const Wide<float, WidthT> & t) const {
-    	ASSERT(0 && "unimplemented fast::simplexnoise4 ");
+    inline void operator() (Wide<Vec3, WidthT> &wresult, const Wide<Vec3, WidthT> &wp, const Wide<float, WidthT> & wt) const {
+		OSL_INTEL_PRAGMA("forceinline recursive")
+		{
+#ifndef OSL_VERIFY_SIMPLEX3
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
+#endif
+			for(int i=0; i< WidthT; ++i) {
+				Vec3 p = wp.get(i);
+				float t = wt.get(i);
+
+		        //result[0] = simplexnoise4 (p.x, p.y, p.z, t, 0);
+		        //result[1] = simplexnoise4 (p.x, p.y, p.z, t, 1);
+		        //result[2] = simplexnoise4 (p.x, p.y, p.z, t, 2);
+				Vec3 result;
+				result.x = fast::simplexnoise4<0/* seed */>(p.x, p.y, p.z, t);
+				result.y = fast::simplexnoise4<1/* seed */>(p.x, p.y, p.z, t);
+				result.z = fast::simplexnoise4<2/* seed */>(p.x, p.y, p.z, t);
+		        wresult.set(i, result);
+			}
+		}
+
     }
     
 

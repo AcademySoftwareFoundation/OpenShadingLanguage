@@ -8654,6 +8654,34 @@ define <16 x float> @osl_sqrt_w16fw16f(<16 x float>) alwaysinline #3 {
   ret <16 x float> %4
 }
 
+define void @osl_sqrt_w16vw16v(i8* sret %r_ptr, i8* readonly %p_ptr) alwaysinline {
+  %ps_ptr = bitcast i8* %p_ptr to %"WideVec3"*
+  %p_x = getelementptr inbounds %"WideVec3", %"WideVec3"* %ps_ptr, i32 0, i32 0, i32 0
+  %p_y = getelementptr inbounds %"WideVec3", %"WideVec3"* %ps_ptr, i32 0, i32 0, i32 1
+  %p_z = getelementptr inbounds %"WideVec3", %"WideVec3"* %ps_ptr, i32 0, i32 0, i32 2
+  %x = load <16 x float>, <16 x float>* %p_x, align 64
+  %y = load <16 x float>, <16 x float>* %p_y, align 64
+  %z = load <16 x float>, <16 x float>* %p_z, align 64
+  %x_less_than_0 = fcmp ult <16 x float> %x, <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>
+  %y_less_than_0 = fcmp ult <16 x float> %y, <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>
+  %z_less_than_0 = fcmp ult <16 x float> %z, <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>
+  %x_unsafe_sqrt = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %x)
+  %y_unsafe_sqrt = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %y)
+  %z_unsafe_sqrt = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %z)
+  %x_safe_sqrt = select <16 x i1> %x_less_than_0, <16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <16 x float> %x_unsafe_sqrt
+  %y_safe_sqrt = select <16 x i1> %y_less_than_0, <16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <16 x float> %y_unsafe_sqrt
+  %z_safe_sqrt = select <16 x i1> %z_less_than_0, <16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <16 x float> %z_unsafe_sqrt
+  %rs_ptr = bitcast i8* %r_ptr to %"WideVec3"*
+  %r_x = getelementptr inbounds %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 0
+  %r_y = getelementptr inbounds %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 1
+  %r_z = getelementptr inbounds %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 2
+  store <16 x float> %x_safe_sqrt, <16 x float>* %r_x
+  store <16 x float> %y_safe_sqrt, <16 x float>* %r_y
+  store <16 x float> %z_safe_sqrt, <16 x float>* %r_z
+  ret void
+}
+
+
 ; Function Attrs: nounwind uwtable
 define void @osl_sqrt_dfdf(i8* nocapture, i8* nocapture readonly) local_unnamed_addr #4 {
   %3 = bitcast i8* %1 to float*

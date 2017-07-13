@@ -1,0 +1,5 @@
+shader test (string filename = "data.txt")
+{
+    fprintf (filename, "hello, world\n");
+    fprintf (filename, "uv = %g %g\n", u, v);
+}

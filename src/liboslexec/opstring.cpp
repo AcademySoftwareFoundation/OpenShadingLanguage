@@ -213,6 +213,24 @@ osl_warning (ShaderGlobals *sg, const char* format_str, ...)
 
 
 
+OSL_SHADEOP void
+osl_fprintf (ShaderGlobals *sg, const char *filename,
+             const char* format_str, ...)
+{
+    va_list args;
+    va_start (args, format_str);
+    std::string s = Strutil::vformat (format_str, args);
+    va_end (args);
+
+    static OIIO::mutex fprintf_mutex;
+    OIIO::lock_guard lock (fprintf_mutex);
+    FILE *file = fopen (filename, "a");
+    fputs (s.c_str(), file);
+    fclose (file);
+}
+
+
+
 OSL_SHADEOP int
 osl_split (const char *str, ustring *results, const char *sep,
            int maxsplit, int resultslen)

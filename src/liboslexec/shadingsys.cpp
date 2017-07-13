@@ -863,6 +863,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (fmod,        modulus,             none,          true,      0);
     OP (for,         loop_op,             none,          false,     0);
     OP (format,      printf,              format,        true,      0);
+    OP (fprintf,     printf,              none,          false,     SIDE);
     OP (functioncall, functioncall,       functioncall,  false,     0);
     OP (ge,          compare_op,          ge,            true,      0);
     OP (getattribute, getattribute,       getattribute,  false,     0);

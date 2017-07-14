@@ -439,7 +439,7 @@ OSLCompilerImpl::read_compile_options (const std::vector<std::string> &options,
 // Guess the path for stdosl.h. This is only called if no explicit
 // stdoslpath is given to the compile command.
 static string_view
-find_stdoslpath ()
+find_stdoslpath (const std::vector<std::string>& includepaths)
 {
     // first look in $OSLHOME/shaders
     std::string OSLHOME = OIIO::Sysutil::getenv ("OSLHOME");
@@ -506,6 +506,13 @@ find_stdoslpath ()
         }
     }
 
+    // Try the include paths
+    for (const auto& incpath : includepaths) {
+        std::string path = incpath + "/stdosl.h";
+        if (OIIO::Filesystem::exists (path))
+            return ustring(path);
+    }
+
     // Give up
     return string_view();
 }
@@ -527,10 +534,12 @@ OSLCompilerImpl::compile (string_view filename,
     m_cwd = OIIO::Filesystem::current_path();
     m_main_filename = filename;
 
+    read_compile_options (options, defines, includepaths);
+
     // Determine where the installed shader include directory is, and
     // look for ../shaders/stdosl.h and force it to include.
     if (stdoslpath.empty()) {
-        stdoslpath = find_stdoslpath();
+        stdoslpath = find_stdoslpath(includepaths);
     }
     if (stdoslpath.empty() || ! OIIO::Filesystem::exists(stdoslpath))
         warning (ustring(filename), 0, "Unable to find \"stdosl.h\"");
@@ -538,8 +547,6 @@ OSLCompilerImpl::compile (string_view filename,
         // Add the directory of stdosl.h to the include paths
         includepaths.push_back (OIIO::Filesystem::parent_path (stdoslpath));
     }
-
-    read_compile_options (options, defines, includepaths);
 
     std::string preprocess_result;
     if (! preprocess_file (filename, stdoslpath,
@@ -606,20 +613,20 @@ OSLCompilerImpl::compile_buffer (string_view sourcecode,
 {
     string_view filename ("<buffer>");
 
+    std::vector<std::string> defines;
+    std::vector<std::string> includepaths;
+    read_compile_options (options, defines, includepaths);
+
     m_cwd = OIIO::Filesystem::current_path();
     m_main_filename = filename;
 
     // Determine where the installed shader include directory is, and
     // look for ../shaders/stdosl.h and force it to include.
     if (stdoslpath.empty()) {
-        stdoslpath = find_stdoslpath();
+        stdoslpath = find_stdoslpath(includepaths);
     }
     if (stdoslpath.empty() || ! OIIO::Filesystem::exists(stdoslpath))
         warning (ustring(filename), 0, "Unable to find \"stdosl.h\"");
-
-    std::vector<std::string> defines;
-    std::vector<std::string> includepaths;
-    read_compile_options (options, defines, includepaths);
 
     std::string preprocess_result;
     if (! preprocess_buffer (sourcecode, filename, stdoslpath,

@@ -2664,7 +2664,7 @@ ShadingSystemImpl::is_renderer_output (ustring layername, ustring paramname,
 void
 ShadingSystemImpl::group_post_jit_cleanup (ShaderGroup &group)
 {
-	std::cout << "ShadingSystemImpl::group_post_jit_cleanup (ShaderGroup &group)" << std::endl;
+	OSL_DEV_ONLY(std::cout << "ShadingSystemImpl::group_post_jit_cleanup (ShaderGroup &group)" << std::endl);
     // Once we're generated the IR, we really don't need the ops and args,
     // and we only need the syms that include the params.
     off_t symmem = 0;
@@ -2732,7 +2732,7 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group,
         return;
     }
 
-    std::cout << "ShadingSystemImpl::optimize_group" << std::endl;
+    OSL_DEV_ONLY(std::cout << "ShadingSystemImpl::optimize_group" << std::endl);
     
     double locking_time = timer();
 

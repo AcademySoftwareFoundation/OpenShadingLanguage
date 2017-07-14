@@ -402,7 +402,7 @@ BackendLLVMWide::ShaderGlobalNameToIndex (ustring name, bool &is_uniform)
         	is_uniform = field_is_uniform[i];
             return i;
         }
-    std::cout << "ShaderGlobalNameToIndex failed with " << name << std::endl;
+    OSL_DEV_ONLY(std::cout << "ShaderGlobalNameToIndex failed with " << name << std::endl);
     return -1;
 }
 
@@ -705,7 +705,7 @@ public:
 void 
 BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 {
-	std::cout << "start discoverVaryingAndMaskingOfLayer of layer=" << layer() << std::endl;
+	OSL_DEV_ONLY(std::cout << "start discoverVaryingAndMaskingOfLayer of layer=" << layer() << std::endl);
 	
 	const OpcodeVec & opcodes = inst()->ops();
 	int op_count = static_cast<int>(opcodes.size());
@@ -831,12 +831,12 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	std::function<void(int, int)> discoverSymbolsBetween;
 	discoverSymbolsBetween = [&](int beginop, int endop)->void
 	{		
-		std::cout << "discoverSymbolsBetween [" << beginop << "-" << endop <<"]" << std::endl;
+		OSL_DEV_ONLY(std::cout << "discoverSymbolsBetween [" << beginop << "-" << endop <<"]" << std::endl);
 		// NOTE: allowing a seperate writeMask is to handle condition blocks that are self modifying
 		for(int opIndex = beginop; opIndex < endop; ++opIndex)
 		{
 			Opcode & opcode = op(opIndex);
-			std::cout << "op(" << opIndex << ")=" << opcode.opname();
+			OSL_DEV_ONLY(std::cout << "op(" << opIndex << ")=" << opcode.opname());
 			int argCount = opcode.nargs();
 			
 			const Symbol * symbolsReadByOp[argCount];
@@ -846,23 +846,23 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 			for(int argIndex = 0; argIndex < argCount; ++argIndex) {
 				const Symbol * aSymbol = opargsym (opcode, argIndex);
 				if (opcode.argwrite(argIndex)) {
-					std::cout << " write to ";
+					OSL_DEV_ONLY(std::cout << " write to ");
 					symbolsWrittenByOp[symbolsWritten++] = aSymbol;
 				}
 				if (opcode.argread(argIndex)) {
 					symbolsReadByOp[symbolsRead++] = aSymbol;
-					std::cout << " read from ";					
+					OSL_DEV_ONLY(std::cout << " read from ");
 				}
-				std::cout << " " << aSymbol->name();
+				OSL_DEV_ONLY(std::cout << " " << aSymbol->name());
 	
-				std::cout << " discovery " << aSymbol->name()  << std::endl;
+				OSL_DEV_ONLY(std::cout << " discovery " << aSymbol->name()  << std::endl);
 				// Initially let all symbols be uniform 
 				// so we get proper cascading of all dependencies
 				// when we feed forward from varying shader globals, output parameters, and connected parameters
 				constexpr bool isUniform = true;
 				m_is_uniform_by_symbol[aSymbol] = isUniform;
 			}
-			std::cout << std::endl;
+			OSL_DEV_ONLY(std::cout << std::endl);
 
 			for(int readIndex=0; readIndex < symbolsRead; ++readIndex) {
 				const Symbol * symbolReadFrom = symbolsReadByOp[readIndex];
@@ -1023,9 +1023,9 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				{
 					pushSymbolsCurentBlockDependsOn();
 					// Then block
-					std::cout << " THEN BLOCK BEGIN" << std::endl;
+					OSL_DEV_ONLY(std::cout << " THEN BLOCK BEGIN" << std::endl);
 					discoverSymbolsBetween(opIndex+1, opcode.jump(0));
-					std::cout << " THEN BLOCK END" << std::endl;
+					OSL_DEV_ONLY(std::cout << " THEN BLOCK END" << std::endl);
 					popSymbolsCurentBlockDependsOn();
 					
 					// else block
@@ -1034,9 +1034,9 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					// its own unique position in the the dependency tree that we can
 					// tell is different from the then block
 					pushSymbolsCurentBlockDependsOn();
-					std::cout << " ELSE BLOCK BEGIN" << std::endl;
+					OSL_DEV_ONLY(std::cout << " ELSE BLOCK BEGIN" << std::endl);
 					discoverSymbolsBetween(opcode.jump(0), opcode.jump(1));
-					std::cout << " ELSE BLOCK END" << std::endl;
+					OSL_DEV_ONLY(std::cout << " ELSE BLOCK END" << std::endl);
 					
 					popSymbolsCurentBlockDependsOn();
 					
@@ -1046,9 +1046,9 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				{
 					// Init block
 					// NOTE: init block doesn't depend on the for loops conditions and should be exempt
-					std::cout << " FOR INIT BLOCK BEGIN" << std::endl;
+					OSL_DEV_ONLY(std::cout << " FOR INIT BLOCK BEGIN" << std::endl);
 					discoverSymbolsBetween(opIndex+1, opcode.jump(0));
-					std::cout << " FOR INIT BLOCK END" << std::endl;
+					OSL_DEV_ONLY(std::cout << " FOR INIT BLOCK END" << std::endl);
 
 					// Save for use later
 					auto treatConditionalAsBeingReadAt = stackOfSymbolsCurrentBlockDependsOn.top_pos();
@@ -1061,17 +1061,17 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					
 					
 					// Body block
-					std::cout << " FOR BODY BLOCK BEGIN" << std::endl;
+					OSL_DEV_ONLY(std::cout << " FOR BODY BLOCK BEGIN" << std::endl);
 					discoverSymbolsBetween(opcode.jump(1), opcode.jump(2));
-					std::cout << " FOR BODY BLOCK END" << std::endl;
+					OSL_DEV_ONLY(std::cout << " FOR BODY BLOCK END" << std::endl);
 										
 					// Step block
 					// Because the number of times the step block is executed depends on
 					// when the loop condition block returns false, that means if 
 					// the loop condition block is varying, then so would the condition block
-					std::cout << " FOR STEP BLOCK BEGIN" << std::endl;
+					OSL_DEV_ONLY(std::cout << " FOR STEP BLOCK BEGIN" << std::endl);
 					discoverSymbolsBetween(opcode.jump(2), opcode.jump(3));
-					std::cout << " FOR STEP BLOCK END" << std::endl;
+					OSL_DEV_ONLY(std::cout << " FOR STEP BLOCK END" << std::endl);
 					
 					popSymbolsCurentBlockDependsOn();
 
@@ -1085,9 +1085,9 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					// any writes to any symbols it depends on can be marked first
 					pushSymbolsCurentBlockDependsOn();
 					
-					std::cout << " FOR COND BLOCK BEGIN" << std::endl;
+					OSL_DEV_ONLY(std::cout << " FOR COND BLOCK BEGIN" << std::endl);
 					discoverSymbolsBetween(opcode.jump(0), opcode.jump(1));
-					std::cout << " FOR COND BLOCK END" << std::endl;
+					OSL_DEV_ONLY(std::cout << " FOR COND BLOCK END" << std::endl);
 
 					// Special case for symbols that are conditions
 					// because we will be doing horizontal operations on these
@@ -1106,9 +1106,9 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				{
 					// Function call itself operates on the same symbol dependencies
 					// as the current block, there was no conditionals involved
-					std::cout << " FUNCTION CALL BLOCK BEGIN" << std::endl;
+					OSL_DEV_ONLY(std::cout << " FUNCTION CALL BLOCK BEGIN" << std::endl);
 					discoverSymbolsBetween(opIndex+1, opcode.jump(0));
-					std::cout << " FUNCTION CALL BLOCK END" << std::endl;
+					OSL_DEV_ONLY(std::cout << " FUNCTION CALL BLOCK END" << std::endl);
 					
 				} else {
 					ASSERT(0 && "Unhandled OSL instruction which contains jumps, note this uniform detection code needs to walk the code blocks identical to build_llvm_code");
@@ -1132,7 +1132,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				for(auto conditionIter = stackOfSymbolsCurrentBlockDependsOn.begin();
 					*conditionIter != loopCondition; ++conditionIter) {
 					const Symbol * conditionBreakDependsOn =  *conditionIter;
-					std::cout << ">>>Loop Conditional " << loopCondition->name().c_str() << " needs to depend on conditional " << conditionBreakDependsOn->name().c_str() << std::endl;
+					OSL_DEV_ONLY(std::cout << ">>>Loop Conditional " << loopCondition->name().c_str() << " needs to depend on conditional " << conditionBreakDependsOn->name().c_str() << std::endl);
 					symbolFeedForwardMap.insert(std::make_pair(conditionBreakDependsOn, loopCondition));
 				}
 
@@ -1263,11 +1263,11 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	// as the previous mask on the stack
 	// So we need to setup those dependencies, so lets walk through all
 	// of the masked instructions and hook them up
-	std::cout << "FIXUP DEPENDENCIES FOR MASKED INSTRUCTIONS" << std::endl;
+	OSL_DEV_ONLY(std::cout << "FIXUP DEPENDENCIES FOR MASKED INSTRUCTIONS" << std::endl);
 	const auto & requires_masking_by_op_index = m_requires_masking_by_layer_and_op_index[layer()];
 	for(int op_index=0; op_index < op_count; ++op_index) {
 		if (requires_masking_by_op_index[op_index]) {
-std::cout << "requires_masking_by_op_index " << op_index << std::endl;
+			OSL_DEV_ONLY(std::cout << "requires_masking_by_op_index " << op_index << std::endl);
 			auto beginDepIter = stackOfSymbolsCurrentBlockDependsOn.begin_at(pos_in_dependent_sym_stack_by_op_index[op_index]);						
 			auto endDepIter = stackOfSymbolsCurrentBlockDependsOn.begin_at(eldest_read_branch_by_op_index[op_index].pos);
 			
@@ -1276,14 +1276,16 @@ std::cout << "requires_masking_by_op_index " << op_index << std::endl;
 			for(int argIndex = 0; argIndex < argCount; ++argIndex) {
 				const Symbol * sym_possibly_written_to = opargsym (opcode, argIndex);
 				if (opcode.argwrite(argIndex)) {
+#ifdef OSL_DEV
 					std::cout << "Symbol written to " <<  sym_possibly_written_to->name().c_str() << std::endl;
 					std::cout << "beginDepIter " <<  beginDepIter.pos()() << std::endl;
 					std::cout << "endDepIter " <<  endDepIter.pos()() << std::endl;
+#endif
 					for(auto iter=beginDepIter;iter != endDepIter; ++iter) {
 						const Symbol * symMaskDependsOn = *iter;
 						// Skip self dependencies
 						if (sym_possibly_written_to != symMaskDependsOn) {
-							std::cout << "Mapping " <<  symMaskDependsOn->name().c_str() << std::endl;
+							OSL_DEV_ONLY(std::cout << "Mapping " <<  symMaskDependsOn->name().c_str() << std::endl);
 							symbolFeedForwardMap.insert(std::make_pair(symMaskDependsOn, sym_possibly_written_to));
 						}
 					}					
@@ -1291,9 +1293,9 @@ std::cout << "requires_masking_by_op_index " << op_index << std::endl;
 			}			
 		}
 	}	
-	std::cout << "END FIXUP DEPENDENCIES FOR MASKED INSTRUCTIONS" << std::endl;
+	OSL_DEV_ONLY(std::cout << "END FIXUP DEPENDENCIES FOR MASKED INSTRUCTIONS" << std::endl);
 	
-	std::cout << "About to build m_is_uniform_by_symbol" << std::endl;			
+	OSL_DEV_ONLY(std::cout << "About to build m_is_uniform_by_symbol" << std::endl);
 	
 	std::function<void(const Symbol *)> recursivelyMarkNonUniform;
 	recursivelyMarkNonUniform = [&](const Symbol* nonUniformSymbol)->void
@@ -1314,7 +1316,7 @@ std::cout << "requires_masking_by_op_index " << op_index << std::endl;
 	for(auto feedIter = symbolFeedForwardMap.begin();feedIter != endOfFeeds; )
 	{
 		const Symbol * symbolReadFrom = feedIter->first;
-		//std::cout << " " << symbolReadFrom->name() << " feeds into " << symbolWrittenTo->name() << std::endl;
+		//OSL_DEV_ONLY(std::cout << " " << symbolReadFrom->name() << " feeds into " << symbolWrittenTo->name() << std::endl);
 		
 		bool is_uniform = true;			
 		auto symType = symbolReadFrom->symtype();
@@ -1351,13 +1353,14 @@ std::cout << "requires_masking_by_op_index " << op_index << std::endl;
 		}    			
 	}
 
-    std::cout << "symbolsWrittenToByImplicitlyVaryingOps begin" << std::endl;
+	OSL_DEV_ONLY(std::cout << "symbolsWrittenToByImplicitlyVaryingOps begin" << std::endl);
     for(const Symbol *s: symbolsWrittenToByImplicitlyVaryingOps) {
-        std::cout << s->name() << std::endl;
+    	OSL_DEV_ONLY(std::cout << s->name() << std::endl);
         recursivelyMarkNonUniform(s);
     }
-    std::cout << "symbolsWrittenToByImplicitlyVaryingOps end" << std::endl;
+    OSL_DEV_ONLY(std::cout << "symbolsWrittenToByImplicitlyVaryingOps end" << std::endl);
 
+#ifdef OSL_DEV
     {
 		std::cout << "Emit m_is_uniform_by_symbol" << std::endl;			
 		
@@ -1367,7 +1370,7 @@ std::cout << "requires_masking_by_op_index " << op_index << std::endl;
 			std::cout << "--->" << rSym << " " << rSym->name() << " is " << (is_uniform ? "UNIFORM" : "VARYING") << std::endl;			
 		}
 		std::cout << std::flush;		
-		std::cout << "done discoverVaryingAndMaskingOfLayer" << std::endl;
+		std::cout << "done m_is_uniform_by_symbol" << std::endl;
     }
 	
 	
@@ -1402,6 +1405,7 @@ std::cout << "requires_masking_by_op_index " << op_index << std::endl;
 		std::cout << std::flush;		
 		std::cout << "done m_uniform_get_attribute_op_indices_by_layer" << std::endl;
 	}
+#endif
 }
 	
 bool 
@@ -1414,14 +1418,14 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 	{	// TODO:  Any symbols not involved in operations would be uniform
 		// unless they are an output, but I think not just an output of an invidual
 		// shader, but the output of the entire network
-		std::cout << " undiscovered " << sym.name() << " initial isUniform=";
+		OSL_DEV_ONLY(std::cout << " undiscovered " << sym.name() << " initial isUniform=");
 		if (sym.symtype() == SymTypeOutputParam) {
                 //&& ! sym.lockgeom() && ! sym.typespec().is_closure()
                 //&& ! sym.connected() && ! sym.connected_down())
-			std::cout << false << std::endl;
+			OSL_DEV_ONLY(std::cout << false << std::endl);
 			return false;
 		}
-		std::cout << true << std::endl;		
+		OSL_DEV_ONLY(std::cout << true << std::endl);
 		return true;
 	}
 	
@@ -1480,21 +1484,21 @@ llvm::Value *
 BackendLLVMWide::llvm_alloca (const TypeSpec &type, bool derivs, bool is_uniform, bool forceBool,
                           const std::string &name)
 {
-	std::cout << "llvm_alloca " << name ;
+	OSL_DEV_ONLY(std::cout << "llvm_alloca " << name );
     TypeDesc t = llvm_typedesc (type);
     int n = derivs ? 3 : 1;
-    std::cout << " n=" << n << " t.size()=" << t.size();
+    OSL_DEV_ONLY(std::cout << " n=" << n << " t.size()=" << t.size());
     m_llvm_local_mem += t.size() * n;
     if (is_uniform)
     {
-    	std::cout << " as UNIFORM " << std::endl ;
+    	OSL_DEV_ONLY(std::cout << " as UNIFORM " << std::endl);
     	if (forceBool) {    		
     		return ll.op_alloca (ll.type_bool(), n, name);
     	} else {
     		return ll.op_alloca (t, n, name);
     	}
     } else {
-    	std::cout << " as VARYING " << std::endl ;
+    	OSL_DEV_ONLY(std::cout << " as VARYING " << std::endl);
     	if (forceBool) {    		
     		return ll.op_alloca (ll.type_wide_bool(), n, name);
     	} else {
@@ -1548,9 +1552,11 @@ BackendLLVMWide::llvm_get_pointer (const Symbol& sym, int deriv,
     } else {
         // Start with the initial pointer to the variable's memory location
         result = getLLVMSymbolBase (sym);
+#ifdef OSL_DEV
     	std::cerr << " llvm_get_pointer(" << sym.name() << ") result=";
     	ll.llvm_typeof(result)->dump();
     	std::cerr << std::endl;
+#endif
         
     }
     if (!result)
@@ -1560,9 +1566,11 @@ BackendLLVMWide::llvm_get_pointer (const Symbol& sym, int deriv,
     // right element.
     TypeDesc t = sym.typespec().simpletype();
     if (t.arraylen || has_derivs) {
+#ifdef OSL_DEV
     	std::cout << "llvm_get_pointer we're dealing with an array(" << t.arraylen << ") or has_derivs(" << has_derivs << ")<<-------" << std::endl;
     	std::cout << "arrayindex=" << arrayindex << " deriv=" << deriv << " t.arraylen="  << t.arraylen; 
     	std::cout << " isSymbolUniform="<< isSymbolUniform(sym) << std::endl;
+#endif
     	
         int d = deriv * std::max(1,t.arraylen);
         if (arrayindex)
@@ -1660,7 +1668,7 @@ BackendLLVMWide::llvm_load_value (const Symbol& sym, int deriv,
         ASSERT (0 && "unhandled constant type");
     }
 
-    std::cout << "  llvm_load_value " << sym.typespec().string() << " cast " << cast << std::endl;
+    OSL_DEV_ONLY(std::cout << "  llvm_load_value " << sym.typespec().string() << " cast " << cast << std::endl);
     return llvm_load_value (llvm_get_pointer (sym), sym.typespec(),
                             deriv, arrayindex, component, cast, op_is_uniform);
 }
@@ -1690,7 +1698,7 @@ BackendLLVMWide::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
     // If it's multi-component (triple or matrix), step to the right field
     if (! type.is_closure_based() && t.aggregate > 1)
     {
-    	std::cout << "step to the right field " << component << std::endl;
+    	OSL_DEV_ONLY(std::cout << "step to the right field " << component << std::endl);
         ptr = ll.GEP (ptr, 0, component);
     }
 
@@ -1745,7 +1753,7 @@ BackendLLVMWide::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
          		   (ll.llvm_typeof(result) ==  ll.type_wide_triple()) ||
                     (ll.llvm_typeof(result) ==  ll.type_wide_string()) ||
                     (ll.llvm_typeof(result) ==  ll.type_wide_bool()))) {
-        		std::cout << ">>>>>>>>>>>>>> TYPENAME OF " << ll.llvm_typenameof(result) << std::endl;
+        		OSL_DEV_ONLY(std::cout << ">>>>>>>>>>>>>> TYPENAME OF " << ll.llvm_typenameof(result) << std::endl);
         	}
 #endif
         	ASSERT((ll.llvm_typeof(result) ==  ll.type_wide_float()) ||
@@ -2229,7 +2237,7 @@ BackendLLVMWide::llvm_call_function (const char *name,
         			// parameters to be wide.  This would allow library implementer to add mixed varying uniform
         			// parameter versions of their functions as deemed necessary for highly used comibnations
         			// versus supplying all combinations possible
-                	std::cout << "....widening value " << s.name().c_str() << std::endl;
+        			OSL_DEV_ONLY(std::cout << "....widening value " << s.name().c_str() << std::endl);
 
             		ASSERT(false == function_is_uniform);
             		// As the case to deliver a pointer to a symbol data
@@ -2252,7 +2260,7 @@ BackendLLVMWide::llvm_call_function (const char *name,
                     valargs[i] =  ll.void_ptr (tmpptr);
         		}
         	} else {
-            	std::cout << "....widening constant value " << s.name().c_str() << std::endl;
+        		OSL_DEV_ONLY(std::cout << "....widening constant value " << s.name().c_str() << std::endl);
 
         		ASSERT(s.symtype() == SymTypeConst);
         		ASSERT(false == function_is_uniform);
@@ -2277,11 +2285,11 @@ BackendLLVMWide::llvm_call_function (const char *name,
         	}
         	
         	
-        	std::cout << "....pushing " << s.name().c_str() << " as void_ptr"  << std::endl;
+        	OSL_DEV_ONLY(std::cout << "....pushing " << s.name().c_str() << " as void_ptr"  << std::endl);
         }
         else
         {
-        	std::cout << "....pushing " << s.name().c_str() << " as value" << std::endl;
+        	OSL_DEV_ONLY(std::cout << "....pushing " << s.name().c_str() << " as value" << std::endl);
             valargs[i] = llvm_load_value (s, /*deriv*/ 0, /*component*/ 0, TypeDesc::UNKNOWN, function_is_uniform);
         }
     }
@@ -2298,7 +2306,7 @@ BackendLLVMWide::llvm_call_function (const char *name,
     	modifiedName += "_masked";
     }
     
-    std::cout << "call_function " << modifiedName << std::endl;
+    OSL_DEV_ONLY(std::cout << "call_function " << modifiedName << std::endl);
     llvm::Value * func_call = ll.call_function (modifiedName.c_str(), (valargs.size())? &valargs[0]: NULL,
                              (int)valargs.size());
     if (ptrToReturnStructIs1stArg)
@@ -2364,7 +2372,7 @@ BackendLLVMWide::llvm_test_nonzero (Symbol &val, bool test_derivs)
     	// for comparisons.  We can just interrogate the underlying llvm symbol to see if 
     	// it is a bool
     	llvm::Value * llvmValue = llvm_get_pointer (val);
-    	//std::cout << "llvmValue type=" << ll.llvm_typenameof(llvmValue) << std::endl;
+    	//OSL_DEV_ONLY(std::cout << "llvmValue type=" << ll.llvm_typenameof(llvmValue) << std::endl);
     	
     	if(ll.llvm_typeof(llvmValue) == ll.type_ptr(ll.type_bool())) {
     		return ll.op_ne (llvm_load_value(val), ll.constant_bool(0));

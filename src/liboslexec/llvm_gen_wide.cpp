@@ -208,7 +208,7 @@ BackendLLVMWide::llvm_gen_error (string_view message)
 void
 BackendLLVMWide::llvm_call_layer (int layer, bool unconditional)
 {
-    std::cout << "llvm_call_layer layer=" <<layer<< " unconditional=" << unconditional << std::endl;
+    OSL_DEV_ONLY(std::cout << "llvm_call_layer layer=" <<layer<< " unconditional=" << unconditional << std::endl);
     // Make code that looks like:
     //     if (! groupdata->run[parentlayer])
     //         parent_layer (sg, groupdata);
@@ -255,7 +255,7 @@ BackendLLVMWide::llvm_run_connected_layers (Symbol &sym, int symindex,
     if (sym.valuesource() != Symbol::ConnectedVal)
         return;  // Nothing to do
 
-    std::cout << "BackendLLVMWide::llvm_run_connected_layers " << sym.name().c_str() << " opnum " << opnum << std::endl;
+    OSL_DEV_ONLY(std::cout << "BackendLLVMWide::llvm_run_connected_layers " << sym.name().c_str() << " opnum " << opnum << std::endl);
     bool inmain = (opnum >= inst()->maincodebegin() &&
                    opnum < inst()->maincodeend());
 
@@ -313,7 +313,7 @@ LLVMGEN (llvm_gen_useparam)
 #if 1
     ASSERT (! rop.inst()->unused() &&
             "oops, thought this layer was unused, why do we call it?");
-    std::cout << ">>>>>>>>>>>>>>>>>>>>>llvm_gen_useparam <<<<<<<<<<<<<<<<<<<" << std::endl;
+    OSL_DEV_ONLY(std::cout << ">>>>>>>>>>>>>>>>>>>>>llvm_gen_useparam <<<<<<<<<<<<<<<<<<<" << std::endl);
 
     // If we have multiple params needed on this statement, don't waste
     // time checking the same upstream layer more than once.
@@ -630,7 +630,7 @@ LLVMGEN (llvm_gen_add)
     // The following should handle f+f, v+v, v+f, f+v, i+i
     // That's all that should be allowed by oslc.
     for (int i = 0; i < num_components; i++) {
-        std::cout << "llvm_gen_add component(" << i << ") of " << A.name() << " " << B.name() << std::endl;
+    	OSL_DEV_ONLY(std::cout << "llvm_gen_add component(" << i << ") of " << A.name() << " " << B.name() << std::endl);
         llvm::Value *a = rop.loadLLVMValue (A, i, 0, type, op_is_uniform);
         llvm::Value *b = rop.loadLLVMValue (B, i, 0, type, op_is_uniform);
         if (!a || !b)
@@ -687,7 +687,7 @@ LLVMGEN (llvm_gen_sub)
     // The following should handle f-f, v-v, v-f, f-v, i-i
     // That's all that should be allowed by oslc.
     for (int i = 0; i < num_components; i++) {
-        std::cout << "llvm_gen_sub component(" << i << ") of " << A.name() << " " << B.name() << std::endl;
+    	OSL_DEV_ONLY(std::cout << "llvm_gen_sub component(" << i << ") of " << A.name() << " " << B.name() << std::endl);
         llvm::Value *a = rop.loadLLVMValue (A, i, 0, type, op_is_uniform);
         llvm::Value *b = rop.loadLLVMValue (B, i, 0, type, op_is_uniform);
         if (!a || !b)
@@ -778,15 +778,10 @@ LLVMGEN (llvm_gen_mul)
     // The following should handle f*f, v*v, v*f, f*v, i*i
     // That's all that should be allowed by oslc.
     for (int i = 0; i < num_components; i++) {
-        std::cout << "llvm_gen_mul component(" << i << ") of " << A.name() << " " << B.name() << std::endl;
+    	OSL_DEV_ONLY(std::cout << "llvm_gen_mul component(" << i << ") of " << A.name() << " " << B.name() << std::endl);
 
         llvm::Value *a = rop.llvm_load_value (A, 0, i, type, op_is_uniform);
         llvm::Value *b = rop.llvm_load_value (B, 0, i, type, op_is_uniform);
-        // TODO: remove this commented out debug info
-//        std::cout << "typeof(A)==";
-//        a->getType()->dump();
-//        std::cout << "typeof(B)==";
-//        b->getType()->dump();
         if (!a || !b)
             return false;
         llvm::Value *r = rop.ll.op_mul (a, b);
@@ -1764,7 +1759,7 @@ LLVMGEN (llvm_gen_construct_color)
             Y.typespec().is_float() && Z.typespec().is_float() &&
             (using_space == false || Space.typespec().is_string()));
 
-#if 0
+#if 0 && defined(OSL_DEV)
     bool resultIsUniform = rop.isSymbolUniform(Result);
     bool spaceIsUniform = rop.isSymbolUniform(Space);
     bool xIsUniform = rop.isSymbolUniform(X);
@@ -1835,7 +1830,7 @@ LLVMGEN (llvm_gen_construct_triple)
             Y.typespec().is_float() && Z.typespec().is_float() &&
             (using_space == false || Space.typespec().is_string()));
 
-#if 0
+#if 0 && defined(OSL_DEV)
     bool spaceIsUniform = rop.isSymbolUniform(Space);
     bool xIsUniform = rop.isSymbolUniform(X);
     bool yIsUniform = rop.isSymbolUniform(Y);
@@ -1896,7 +1891,7 @@ LLVMGEN (llvm_gen_construct_triple)
         else if (op.opname() == "normal")
             vectype = TypeDesc::NORMAL;
 
-        std::cout << "llvm_gen_construct_triple Result.has_derivs()=" << Result.has_derivs() << std::endl;
+        OSL_DEV_ONLY(std::cout << "llvm_gen_construct_triple Result.has_derivs()=" << Result.has_derivs() << std::endl);
         // TODO: Handle non-uniform case below minding mask values
         ASSERT(op_is_uniform);
         ASSERT(rop.ll.is_masking_enabled() == false);
@@ -2061,7 +2056,7 @@ LLVMGEN (llvm_gen_transform)
     ASSERT((From == NULL) || rop.isSymbolUniform(*From));
     if (To->typespec().is_matrix()) {
         // llvm_ops has the matrix version already implemented
-        std::cout << "generic matrix transform" << std::endl;
+    	OSL_DEV_ONLY(std::cout << "generic matrix transform" << std::endl);
 
         llvm_gen_generic (rop, opnum);
         return true;
@@ -2085,7 +2080,7 @@ LLVMGEN (llvm_gen_transform)
             return true;
         }
     }
-    std::cout << "wide transform 'source space' = " << from << " 'dest space' = " << to << std::endl;
+    OSL_DEV_ONLY(std::cout << "wide transform 'source space' = " << from << " 'dest space' = " << to << std::endl);
     TypeDesc::VECSEMANTICS vectype = TypeDesc::POINT;
     if (op.opname() == "transformv")
         vectype = TypeDesc::VECTOR;
@@ -2328,7 +2323,7 @@ LLVMGEN (llvm_gen_compare_op)
 
     // Lets not convert comparisons from bool to int
 
-    std::cout << "About to rop.storeLLVMValue (final_result, Result, 0, 0); op_is_uniform=" << op_is_uniform  << std::endl;
+    OSL_DEV_ONLY(std::cout << "About to rop.storeLLVMValue (final_result, Result, 0, 0); op_is_uniform=" << op_is_uniform  << std::endl);
     // Although we try to use llvm bool (i1) for comparison results
     // sometimes we could not force the data type to be an bool and it remains
     // an int, for those cases we will need to convert the boolean to int
@@ -2344,7 +2339,7 @@ LLVMGEN (llvm_gen_compare_op)
 		final_result = rop.ll.widen_value(final_result);
 	}
     rop.storeLLVMValue (final_result, Result, 0, 0);
-    std::cout << "AFTER to rop.storeLLVMValue (final_result, Result, 0, 0);" << std::endl;
+    OSL_DEV_ONLY(std::cout << "AFTER to rop.storeLLVMValue (final_result, Result, 0, 0);" << std::endl);
 
     return true;
 }
@@ -2476,7 +2471,7 @@ LLVMGEN (llvm_gen_generic)
             name += "i";
         else ASSERT (0);
     }
-    std::cout << "llvm_gen_generic " << name.c_str() << std::endl ;
+    OSL_DEV_ONLY(std::cout << "llvm_gen_generic " << name.c_str() << std::endl);
 
     if (! Result.has_derivs() || ! any_deriv_args) {
 
@@ -2495,7 +2490,7 @@ LLVMGEN (llvm_gen_generic)
         // Don't compute derivs -- either not needed or not provided in args
         if (Result.typespec().aggregate() == TypeDesc::SCALAR &&
             (uniformFormOfFunction || functionIsLlvmInlined)) {
-            std::cout << ">>stores return value " << name.c_str() << std::endl;
+        	OSL_DEV_ONLY(std::cout << ">>stores return value " << name.c_str() << std::endl);
             llvm::Value *r = rop.llvm_call_function (name.c_str(),
                                                      &(args[1]), op.nargs()-1,
                                                      /*deriv_ptrs*/ false,
@@ -2505,7 +2500,7 @@ LLVMGEN (llvm_gen_generic)
             // The store will deal with masking
             rop.llvm_store_value (r, Result);
         } else {
-            std::cout << ">>return value is pointer " << name.c_str() << std::endl;
+        	OSL_DEV_ONLY(std::cout << ">>return value is pointer " << name.c_str() << std::endl);
 
             rop.llvm_call_function (name.c_str(),
                                     (args.size())? &(args[0]): NULL, op.nargs(),
@@ -2517,14 +2512,14 @@ LLVMGEN (llvm_gen_generic)
         rop.llvm_zero_derivs (Result);
     } else {
         // Cases with derivs
-        std::cout << " Cases with derivs";
+    	OSL_DEV_ONLY(std::cout << " Cases with derivs");
         ASSERT (Result.has_derivs() && any_deriv_args);
         rop.llvm_call_function (name.c_str(),
                                 (args.size())? &(args[0]): NULL, op.nargs(),
                                 /*deriv_ptrs*/ true, uniformFormOfFunction);
     }
 
-    std::cout << std::endl;
+    OSL_DEV_ONLY(std::cout << std::endl);
 
     return true;
 }
@@ -2736,7 +2731,7 @@ LLVMGEN (llvm_gen_loop_op)
     bool op_is_uniform = rop.isSymbolUniform(cond);
 
     if (op_is_uniform) {
-        std::cout << "llvm_gen_loop_op UNIFORM based on " << cond.name().c_str() << std::endl;
+    	OSL_DEV_ONLY(std::cout << "llvm_gen_loop_op UNIFORM based on " << cond.name().c_str() << std::endl);
 
         // Branch on the condition, to our blocks
         llvm::BasicBlock* cond_block = rop.ll.new_basic_block ("cond (uniform)");
@@ -2781,7 +2776,7 @@ LLVMGEN (llvm_gen_loop_op)
         rop.ll.set_insert_point (after_block);
         rop.ll.pop_loop ();
     } else {
-        std::cout << "llvm_gen_loop_op VARYING based on " << cond.name().c_str() << std::endl;
+    	OSL_DEV_ONLY(std::cout << "llvm_gen_loop_op VARYING based on " << cond.name().c_str() << std::endl);
 
         // Branch on the condition, to our blocks
         llvm::BasicBlock* cond_block = rop.ll.new_basic_block ("cond");
@@ -3126,7 +3121,7 @@ llvm_gen_texture_options (BackendLLVMWide &rop, int opnum,
 #undef PARAM_FLOAT_STR
 #undef PARAM_STRING_CODE
 
-#if 0
+#if 0 && defined(OSL_DEV)
         // Helps me find any constant optional params that aren't elided
         if (Name.is_constant() && Val.is_constant()) {
             std::cout << "! texture constant optional arg '" << name << "'\n";
@@ -3362,7 +3357,7 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
         llvm::Value* voidPtrBase = rop.ll.ptr_to_cast(rop.ll.GEP(optionPack, offset), (llvm::Type*)rop.ll.type_void_ptr());
         offset = 0;
         for(int i = 0; i < BatchedTextureOptionProvider::MAX_OPTIONS; ++i) {
-            std::cout << "i: " << i << std::endl;
+        	OSL_DEV_ONLY(std::cout << "i: " << i << std::endl;)
             if (options.activeMask[i]) {
                 llvm::Value* voidPtr = rop.ll.GEP(voidPtrBase, offset++);
                 rop.ll.op_store(options.values[i], voidPtr);
@@ -3472,7 +3467,7 @@ LLVMGEN (llvm_gen_texture)
         args.push_back (wideSD2);
         args.push_back (wideTD2);
     }
-    std::cout << "result derivative type: " << rop.ll.llvm_typenameof(rop.llvm_get_pointer (Result, 1)) << std::endl;
+    OSL_DEV_ONLY(std::cout << "result derivative type: " << rop.ll.llvm_typenameof(rop.llvm_get_pointer (Result, 1)) << std::endl);
     args.push_back (rop.ll.constant (nchans));
     args.push_back (rop.ll.void_ptr (rop.llvm_get_pointer (Result, 0)));
     args.push_back (Result.has_derivs() ? rop.ll.constant(1) : rop.ll.constant(0));
@@ -3783,7 +3778,7 @@ LLVMGEN (llvm_gen_noise)
     Symbol &Result = *rop.opargsym (op, arg++);
 
     bool op_is_uniform = rop.isSymbolUniform(Result);
-    std::cout << "llvm_gen_noise op_is_uniform="<<op_is_uniform<< std::endl;
+    OSL_DEV_ONLY(std::cout << "llvm_gen_noise op_is_uniform="<<op_is_uniform<< std::endl);
 
     //int outdim =  Result.typespec().is_triple() ? 3 : 1;
     Symbol *Name = rop.opargsym (op, arg++);
@@ -3884,7 +3879,7 @@ LLVMGEN (llvm_gen_noise)
         opt = llvm_gen_noise_options (rop, opnum, arg);
     }
 
-    std::cout << "llvm_gen_noise function name=" << name << std::endl;
+    OSL_DEV_ONLY(std::cout << "llvm_gen_noise function name=" << name << std::endl);
 
     std::string funcname = "osl_" + name.string() + "_" + warg_typecode(&Result,derivs);
     std::vector<llvm::Value *> args;
@@ -3927,7 +3922,7 @@ LLVMGEN (llvm_gen_noise)
     if (pass_options)
         args.push_back (opt);
 
-#if 1
+#ifdef OSL_DEV
     std::cout << "About to push " << funcname << "\n";
     for (size_t i = 0;  i < args.size();  ++i) {
         args[i]->dump(); std::cout << "\n";
@@ -4073,7 +4068,7 @@ LLVMGEN (llvm_gen_getattribute)
 
 LLVMGEN (llvm_gen_gettextureinfo)
 {
-    std::cout << "llvm_gen_gettextureinfo" << std::endl;
+	OSL_DEV_ONLY(std::cout << "llvm_gen_gettextureinfo" << std::endl);
     Opcode &op (rop.inst()->ops()[opnum]);
 
     DASSERT (op.nargs() == 4);
@@ -4104,7 +4099,7 @@ LLVMGEN (llvm_gen_gettextureinfo)
     llvm::Value *r = NULL;
     // file name is uniform, generate scalar version of the function
     if (fileNameIsUniform) {
-        std::cout << "texture file name is uniform." << std::endl;
+    	OSL_DEV_ONLY(std::cout << "texture file name is uniform." << std::endl);
         RendererServices::TextureHandle *texture_handle = NULL;
         if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
             texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data());
@@ -4120,11 +4115,11 @@ LLVMGEN (llvm_gen_gettextureinfo)
         // destination
         llvm::Value *tempUniformData = nullptr;
         if (dataIsUniform) {
-            std::cout << "texture info data is uniform." << std::endl;
+        	OSL_DEV_ONLY(std::cout << "texture info data is uniform." << std::endl);
             args.push_back (rop.llvm_void_ptr (Data));
         }
         else {
-            std::cout << "texture info data is varying." << std::endl;
+        	OSL_DEV_ONLY(std::cout << "texture info data is varying." << std::endl);
             tempUniformData = rop.llvm_alloca (Data.typespec(), Data.has_derivs(), true /*is_uniform*/);
             args.push_back (rop.ll.void_ptr(tempUniformData));
         }
@@ -4141,7 +4136,7 @@ LLVMGEN (llvm_gen_gettextureinfo)
         }
     }
     else {
-        std::cout << "texture filename is varying, running batched version." << std::endl;
+    	OSL_DEV_ONLY(std::cout << "texture filename is varying, running batched version." << std::endl);
 
         args.push_back (rop.llvm_void_ptr (Filename));
         args.push_back (rop.llvm_load_value (Dataname));

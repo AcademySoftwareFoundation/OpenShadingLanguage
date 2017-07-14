@@ -146,5 +146,14 @@ using OIIO::string_view;
 #  define OSL_DEPRECATED(msg)
 #endif
 
+// During development it can be useful to output extra information
+// NOTE:  internal use only
+//#define OSL_DEV
+#ifdef OSL_DEV
+	#define OSL_DEV_ONLY(STUFF) STUFF
+#else
+	#define OSL_DEV_ONLY(STUFF)
+#endif
+
   
 OSL_NAMESPACE_EXIT

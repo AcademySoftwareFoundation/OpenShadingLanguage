@@ -117,8 +117,6 @@ ShaderMaster::param_default_storage (int index) const
     }
 }
 
-
-
 void
 ShaderMaster::resolve_syms ()
 {
@@ -157,7 +155,7 @@ ShaderMaster::resolve_syms ()
 				#if 1 // TODO: remove hackery
 					else if (s.typespec().simpletype().basetype == TypeDesc::FLOAT)
 					{
-						std::cout << "assigning default value for symbol=" << s.name() << " with dataoffset=" << s.dataoffset() << std::endl;
+						OSL_DEV_ONLY(std::cout << "assigning default value for symbol=" << s.name() << " with dataoffset=" << s.dataoffset() << std::endl);
 						s.data (&(m_fdefaults[s.dataoffset()]));
 					}
                 #else

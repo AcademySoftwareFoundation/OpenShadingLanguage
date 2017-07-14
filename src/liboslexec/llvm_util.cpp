@@ -150,7 +150,7 @@ static struct DebugInfo {
 llvm::DIFile * getFileFor(llvm::DIBuilder* diBuilder, const std::string &file_name) {
 	auto iter = TheDebugInfo.FileByName.find(file_name);
 	if(iter == TheDebugInfo.FileByName.end()) {
-		//std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>CREATING FILE<<<<<<<<<<<<<<<<<<<<<<<<< " << file_name << std::endl;
+		//OSL_DEV_ONLY(std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>CREATING FILE<<<<<<<<<<<<<<<<<<<<<<<<< " << file_name << std::endl);
 		llvm::DIFile *file = diBuilder->createFile(
 				//TheDebugInfo.TheCU->getFilename(), TheDebugInfo.TheCU->getDirectory());
 				file_name, ".\\");
@@ -525,9 +525,9 @@ LLVM_Util::enable_debug_info() {
 		modulesDebugInfoVersion = Val->getZExtValue();
 	}
 
-//	std::cout
-//			<< "------------------>enable_debug_info<-----------------------------module flag['Debug Info Version']= "
-//			<< modulesDebugInfoVersion << std::endl;
+//	OSL_DEV_ONLY(std::cout)
+//	OSL_DEV_ONLY(		<< "------------------>enable_debug_info<-----------------------------module flag['Debug Info Version']= ")
+//	OSL_DEV_ONLY(		<< modulesDebugInfoVersion << std::endl);
 }
 
 void 
@@ -609,7 +609,7 @@ LLVM_Util::set_debug_location(const std::string &source_file_name, const std::st
 	
 	if (newDebugLocation)
 	{
-		//std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>newDebugLocation<<<<<<<<<<<<<<<<<<<<<<<<< " << sourceline << std::endl;
+		//OSL_DEV_ONLY(std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>newDebugLocation<<<<<<<<<<<<<<<<<<<<<<<<< " << sourceline << std::endl);
 		llvm::DebugLoc debug_location =
 				llvm::DebugLoc::get(static_cast<unsigned int>(sourceline),
 						static_cast<unsigned int>(0), /* column? */
@@ -620,7 +620,7 @@ LLVM_Util::set_debug_location(const std::string &source_file_name, const std::st
 
 void 
 LLVM_Util::clear_debug_info() {
-	std::cout << "LLVM_Util::clear_debug_info" << std::endl;
+	OSL_DEV_ONLY(std::cout << "LLVM_Util::clear_debug_info" << std::endl);
 	m_builder->SetCurrentDebugLocation(llvm::DebugLoc());
 	m_llvm_debug_builder->finalize();
 }
@@ -905,7 +905,7 @@ LLVM_Util::make_jit_execengine (std::string *err)
    }
    
     //engine_builder.setMArch("core-avx2");
-    std::cout << std::endl<< "llvm::sys::getHostCPUName()>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << llvm::sys::getHostCPUName().str() << std::endl;
+    OSL_DEV_ONLY(std::cout << std::endl<< "llvm::sys::getHostCPUName()>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << llvm::sys::getHostCPUName().str() << std::endl);
     //engine_builder.setMCPU(llvm::sys::getHostCPUName());
     //engine_builder.setMCPU("skylake-avx512");
     //engine_builder.setMCPU("broadwell");
@@ -930,13 +930,13 @@ LLVM_Util::make_jit_execengine (std::string *err)
     
     llvm::StringMap< bool > cpuFeatures;
     if (llvm::sys::getHostCPUFeatures(cpuFeatures)) {
-		std::cout << std::endl<< "llvm::sys::getHostCPUFeatures()>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl;
+    	OSL_DEV_ONLY(std::cout << std::endl<< "llvm::sys::getHostCPUFeatures()>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl);
 		std::vector<std::string> attrvec;
 		for (auto &cpuFeature : cpuFeatures) 
 		{
 			//auto enabled = (cpuFeature.second && (cpuFeature.first().str().find("512") == std::string::npos)) ? "+" : "-";
 			auto enabled = (cpuFeature.second) ? "+" : "-";
-			//std::cout << cpuFeature.first().str()  << " is " << enabled << std::endl;
+			//OSL_DEV_ONLY(std::cout << cpuFeature.first().str()  << " is " << enabled << std::endl);
 			
 			if (oslIsa == TargetISA_UNLIMITTED) {				
 				if (!disableFMA || std::string("fma") != cpuFeature.first().str()) {
@@ -955,17 +955,17 @@ LLVM_Util::make_jit_execengine (std::string *err)
 		switch(oslIsa) {
 		case TargetISA_SSE4_2:
 			attrvec.push_back("+sse4.2");
-			std::cout << "Intended OSL ISA: SSE4.2" << std::endl;
+			OSL_DEV_ONLY(std::cout << "Intended OSL ISA: SSE4.2" << std::endl);
 			break;
 		case TargetISA_AVX:
 			attrvec.push_back("+avx");
-			std::cout << "Intended OSL ISA: AVX" << std::endl;
+			OSL_DEV_ONLY(std::cout << "Intended OSL ISA: AVX" << std::endl);
 			break;		
 		case TargetISA_AVX2:
 			attrvec.push_back("+sse4.2");
 			attrvec.push_back("+avx");
 			attrvec.push_back("+avx2");
-			std::cout << "Intended OSL ISA: AVX2" << std::endl;
+			OSL_DEV_ONLY(std::cout << "Intended OSL ISA: AVX2" << std::endl);
 			break;		
 		case TargetISA_AVX512:
 			m_supports_masked_stores = true;
@@ -976,7 +976,7 @@ LLVM_Util::make_jit_execengine (std::string *err)
 			attrvec.push_back("+avx512cd");
 			attrvec.push_back("+avx512f");
 			
-			std::cout << "Intended OSL ISA: AVX512" << std::endl;
+			OSL_DEV_ONLY(std::cout << "Intended OSL ISA: AVX512" << std::endl);
 			break;		
 		case TargetISA_UNLIMITTED:		
 		default:
@@ -996,13 +996,13 @@ LLVM_Util::make_jit_execengine (std::string *err)
         return NULL;
     
     const llvm::DataLayout & data_layout = m_llvm_exec->getDataLayout();
-    //std::cout << "data_layout.getStringRepresentation()=" << data_layout.getStringRepresentation() << std::endl;
+    //OSL_DEV_ONLY(std::cout << "data_layout.getStringRepresentation()=" << data_layout.getStringRepresentation() << std::endl);
     		
     
     TargetMachine * target_machine = m_llvm_exec->getTargetMachine();
-    //std::cout << "target_machine.getTargetCPU()=" << target_machine->getTargetCPU().str() << std::endl;
-	std::cout << "target_machine.getTargetFeatureString ()=" << target_machine->getTargetFeatureString ().str() << std::endl;
-	//std::cout << "target_machine.getTargetTriple ()=" << target_machine->getTargetTriple().str() << std::endl;
+    //OSL_DEV_ONLY(std::cout << "target_machine.getTargetCPU()=" << target_machine->getTargetCPU().str() << std::endl);
+    OSL_DEV_ONLY(std::cout << "target_machine.getTargetFeatureString ()=" << target_machine->getTargetFeatureString ().str() << std::endl);
+	//OSL_DEV_ONLY(std::cout << "target_machine.getTargetTriple ()=" << target_machine->getTargetTriple().str() << std::endl);
     
 
     llvm::JITEventListener* vtuneProfiler = llvm::JITEventListener::createIntelJITEventListener();
@@ -1057,9 +1057,9 @@ LLVM_Util::validate_struct_data_layout(llvm::Type *Ty, const std::vector<unsigne
 
 
 	const StructLayout * layout = data_layout.getStructLayout (structTy);
-//	std::cout << "dump_struct_data_layout: getSizeInBytes(" << layout->getSizeInBytes() << ") "
-//		<< " getAlignment(" << layout->getAlignment() << ")"		
-//		<< " hasPadding(" << layout->hasPadding() << ")" << std::endl;
+//	OSL_DEV_ONLY(std::cout << "dump_struct_data_layout: getSizeInBytes(" << layout->getSizeInBytes() << ") ")
+//	OSL_DEV_ONLY(	<< " getAlignment(" << layout->getAlignment() << ")")
+//	OSL_DEV_ONLY(	<< " hasPadding(" << layout->hasPadding() << ")" << std::endl);
 	
 	for(int index=0; index < number_of_elements; ++index) {
 		llvm::Type * et = structTy->getElementType(index);
@@ -1070,17 +1070,18 @@ LLVM_Util::validate_struct_data_layout(llvm::Type *Ty, const std::vector<unsigne
 		
 
 		
-//		std::cout << "   element[" << index << "] offset in bytes = " << actual_offset << " expect offset = " << expected_offset_by_index[index] << 
-//				" type is "; 
-//				et->dump();
+//		OSL_DEV_ONLY(std::cout << "   element[" << index << "] offset in bytes = " << actual_offset << " expect offset = " << expected_offset_by_index[index] <<)
+//		OSL_DEV_ONLY(		" type is ");
+//		OSL_DEV_ONLY(		et->dump());
 				
 				
 		ASSERT(expected_offset_by_index[index] == actual_offset);
-		std::cout << std::endl;
+//		OSL_DEV_ONLY(std::cout << std::endl);
 	}		
 	if (expected_offset_by_index.size() != number_of_elements)
 	{
 		std::cout << "   expected " << expected_offset_by_index.size() << " members but actual member count is = " << number_of_elements << std::endl;
+		ASSERT(expected_offset_by_index.size() == number_of_elements);
 	}
 }
 
@@ -1253,21 +1254,21 @@ LLVM_Util::internalize_module_functions (const std::string &prefix,
         for (size_t i = 0, e = exceptions.size(); i < e; ++i)
             if (sym->getName() == exceptions[i]) {
                 needed = true;
-                // std::cout << "    necessary LLVM module function "
-                //           << sym->getName().str() << "\n";
+                // OSL_DEV_ONLY(std::cout << "    necessary LLVM module function ")
+                // OSL_DEV_ONLY(          << sym->getName().str() << "\n");
                 break;
             }
         for (size_t i = 0, e = moreexceptions.size(); i < e; ++i)
             if (sym->getName() == moreexceptions[i]) {
                 needed = true;
-                // std::cout << "    necessary LLVM module function "
-                //           << sym->getName().str() << "\n";
+                // OSL_DEV_ONLY(std::cout << "    necessary LLVM module function ")
+                // OSL_DEV_ONLY(          << sym->getName().str() << "\n");
                 break;
             }
         if (!needed) {
             llvm::GlobalValue::LinkageTypes linkage = sym->getLinkage();
-            // std::cout << "    unnecessary LLVM module function "
-            //           << sym->getName().str() << " linkage " << int(linkage) << "\n";
+            // OSL_DEV_ONLY(std::cout << "    unnecessary LLVM module function ")
+            // OSL_DEV_ONLY(          << sym->getName().str() << " linkage " << int(linkage) << "\n");
             if (linkage == llvm::GlobalValue::ExternalLinkage)
                 sym->setLinkage (llvm::GlobalValue::LinkOnceODRLinkage);
             // ExternalLinkage means it's potentially externally callable,
@@ -1295,8 +1296,8 @@ LLVM_Util::internalize_module_functions (const std::string &prefix,
             }
         if (! needed) {
             llvm::GlobalValue::LinkageTypes linkage = sym->getLinkage();
-            // std::cout << "    unnecessary LLVM global " << sym->getName().str()
-            //           << " linkage " << int(linkage) << "\n";
+            // OSL_DEV_ONLY(std::cout << "    unnecessary LLVM global " << sym->getName().str())
+            // OSL_DEV_ONLY(          << " linkage " << int(linkage) << "\n");
             if (linkage == llvm::GlobalValue::ExternalLinkage)
                 f->setLinkage (llvm::GlobalValue::LinkOnceODRLinkage);
         }
@@ -1338,7 +1339,7 @@ LLVM_Util::make_function (const std::string &name, bool fastcall,
     llvm::Function *func = llvm::cast<llvm::Function>(c);
     if (fastcall) {
     	
-    	std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>FAST_CALL MAKE FUNCTION=" << name << std::endl;
+    	OSL_DEV_ONLY(std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>FAST_CALL MAKE FUNCTION=" << name << std::endl);
         func->setCallingConv(llvm::CallingConv::Fast);
     }
     return func;
@@ -2076,7 +2077,7 @@ LLVM_Util::llvm_vector_type (const TypeDesc &typedesc)
     if (typedesc.arraylen)
     {
     	
-    	std::cout << "llvm_vector_type typedesc.arraylen = " << typedesc.arraylen << std::endl;
+    	OSL_DEV_ONLY(std::cout << "llvm_vector_type typedesc.arraylen = " << typedesc.arraylen << std::endl);
         lt = llvm::ArrayType::get (lt, typedesc.arraylen);
     }
     DASSERT (lt);
@@ -2538,13 +2539,13 @@ LLVM_Util::op_store (llvm::Value *val, llvm::Value *ptr)
 {	
 	if(m_mask_stack.empty() || val->getType()->isVectorTy() == false || m_enable_masking_stack.empty() || m_enable_masking_stack.back() == false) {
 		
-		//std::cout << "unmasked op_store" << std::endl;
+		//OSL_DEV_ONLY(std::cout << "unmasked op_store" << std::endl);
 		// We may not be in a non-uniform code block
 		// or the value being stored may be uniform, which case it shouldn't
 		// be a vector type
 	    builder().CreateStore (val, ptr);		
 	} else {				
-		//std::cout << "MASKED op_store" << std::endl;
+		//OSL_DEV_ONLY(std::cout << "MASKED op_store" << std::endl);
 		// TODO: could probably make these DASSERT as  the conditional above "should" be checking all of this
 		ASSERT(m_enable_masking_stack.back());
 		ASSERT(val->getType()->isVectorTy());

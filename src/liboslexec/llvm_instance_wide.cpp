@@ -176,7 +176,7 @@ initialize_llvm_helper_function_map ()
 static void *
 helper_function_lookup (const std::string &name)
 {
-	std::cout << "helper_function_lookup (" << name << ")" << std::endl;
+	OSL_DEV_ONLY(std::cout << "helper_function_lookup (" << name << ")" << std::endl);
     HelperFuncMap::const_iterator i = llvm_helper_function_map.find (name);
     if (i == llvm_helper_function_map.end())
         return NULL;
@@ -195,7 +195,7 @@ BackendLLVMWide::llvm_type_sg ()
 
     
     int offset_to_varying_p = offsetof(ShaderGlobalsBatch, m_varying);
-    std::cout << ">>>>>>>>>>>>>> ShaderGlobalsBatch::m_varying = " << offset_to_varying_p << std::endl;
+    OSL_DEV_ONLY(std::cout << ">>>>>>>>>>>>>> ShaderGlobalsBatch::m_varying = " << offset_to_varying_p << std::endl);
     
     // Derivs look like arrays of 3 values
     llvm::Type *wide_float_deriv = llvm_wide_type (TypeDesc(TypeDesc::FLOAT, TypeDesc::SCALAR, 3));
@@ -286,7 +286,7 @@ BackendLLVMWide::llvm_type_groupdata ()
             std::cout << "  userdata initialized flags: " << nuserdata
                       << " at offset " << offset << ", field " << order << "\n";
         ustring *names = & group().m_userdata_names[0];
-        std::cout << "USERDATA " << *names << std::endl;
+        OSL_DEV_ONLY(std::cout << "USERDATA " << *names << std::endl);
         TypeDesc *types = & group().m_userdata_types[0];
         int *offsets = & group().m_userdata_offsets[0];
         int sz = nuserdata;
@@ -530,7 +530,7 @@ BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym)
     } else if (! sym.lockgeom() && ! sym.typespec().is_closure()) {
         // geometrically-varying param; memcpy its default value
         TypeDesc t = sym.typespec().simpletype();
-        std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>geometrically-varying param; memcpy its default value\n";
+        OSL_DEV_ONLY(std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>geometrically-varying param; memcpy its default value\n");
         ll.op_memcpy (llvm_void_ptr (sym), ll.constant_ptr (sym.data()),
                       t.size(), t.basesize() /*align*/);
         if (sym.has_derivs())
@@ -703,7 +703,7 @@ BackendLLVMWide::llvm_generate_debug_op_printf (const Opcode &op)
 bool
 BackendLLVMWide::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
 {
-    std::cout << "build_llvm_code : beginop="<< beginop << " endop="<< endop << " bb=" << bb << std::endl;
+    OSL_DEV_ONLY(std::cout << "build_llvm_code : beginop="<< beginop << " endop="<< endop << " bb=" << bb << std::endl);
     if (bb)
         ll.set_insert_point (bb);
 
@@ -716,10 +716,12 @@ BackendLLVMWide::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
             if (shadingsys().llvm_debug_ops())
                 llvm_generate_debug_op_printf (op);
             // TODO: optionally enable
+#ifdef OSL_DEV
             std::cout << "Generating :"<< op.opname() << std::endl;
             if (requiresMasking(opnum))
             	std::cout << " with MASKING";
             std::cout << std::endl;
+#endif
             ll.set_debug_location(op.sourcefile().string(), op.method().string(), op.sourceline());
             ll.push_masking_enabled(requiresMasking(opnum));
             bool ok = (*opd->llvmgenwide) (*this, opnum);
@@ -742,7 +744,7 @@ BackendLLVMWide::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
         // If the op we coded jumps around, skip past its recursive block
         // executions.
         int next = op.farthest_jump ();
-        std::cout << "farthest_jump=" << next << std::endl;
+        OSL_DEV_ONLY(std::cout << "farthest_jump=" << next << std::endl);
         if (next >= 0)
             opnum = next-1;
     }       
@@ -857,9 +859,9 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
 	ll.set_debug_info(/*unique_layer_name*/inst()->op(inst()->maincodebegin()).sourcefile().string());
     ll.set_debug_location(unique_layer_name, unique_layer_name, 0);
 	
-	std::cout << "Master Shadername = " << inst()->master()->shadername() << std::endl;
-	std::cout << "Master osofilename = " << inst()->master()->osofilename() << std::endl;
-	std::cout << "source of maincodebegin operation = " << inst()->op(inst()->maincodebegin()).sourcefile() << std::endl;
+    OSL_DEV_ONLY(std::cout << "Master Shadername = " << inst()->master()->shadername() << std::endl);
+    OSL_DEV_ONLY(std::cout << "Master osofilename = " << inst()->master()->osofilename() << std::endl);
+    OSL_DEV_ONLY(std::cout << "source of maincodebegin operation = " << inst()->op(inst()->maincodebegin()).sourcefile() << std::endl);
 	
 
     llvm::Value *layerfield = layer_run_ref(layer_remap(layer()));
@@ -908,7 +910,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
                 (opd->llvmgenwide == llvm_gen_getattribute) ) {
     		    Symbol * result = opargsym (opcode, 0);
                 booleanResults.insert(result);
-    			std::cout << "RESULT of compare op = " << result->name() << std::endl;
+    			OSL_DEV_ONLY(std::cout << "RESULT of compare op = " << result->name() << std::endl);
     		}
     	}    	
     }
@@ -935,10 +937,12 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
         }
     }
 
+#ifdef OSL_DEV
     for(Symbol *sym:booleanResults)
     {
         std::cout << "Forcing symbol " << sym->name() << " to be boolean" << std::endl;
     }
+#endif
     
     
     
@@ -1216,11 +1220,13 @@ BackendLLVMWide::run ()
     m_llvm_local_mem = 0;
     llvm::Function* init_func = build_llvm_init ();
 
-    //std::cout << "llvm's data layout of GroupData" << std::endl;
-    //ll.dump_struct_data_layout(m_llvm_type_groupdata);
+#if 0 && defined(OSL_DEV)
+    std::cout << "llvm's data layout of GroupData" << std::endl;
+    ll.dump_struct_data_layout(m_llvm_type_groupdata);
 
-    //std::cout << std::endl << std::endl << "llvm's data layout of ShaderGlobalBatch" << std::endl;
-    //ll.dump_struct_data_layout(m_llvm_type_sg);
+    std::cout << std::endl << std::endl << "llvm's data layout of ShaderGlobalBatch" << std::endl;
+    ll.dump_struct_data_layout(m_llvm_type_sg);
+#endif
     
     std::vector<unsigned int> offset_by_index;
     
@@ -1292,7 +1298,7 @@ BackendLLVMWide::run ()
             // it's the single entry point for the whole group.
             bool is_single_entry = (layer == (nlayers-1) && group().num_entry_layers() == 0);
             
-            std::cout << "build_llvm_instance for layer=" << layer << std::endl;            
+            OSL_DEV_ONLY(std::cout << "build_llvm_instance for layer=" << layer << std::endl);
             funcs[layer] = build_llvm_instance (is_single_entry);
         }
     }

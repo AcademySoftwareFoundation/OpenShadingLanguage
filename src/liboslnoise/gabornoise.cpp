@@ -829,7 +829,7 @@ OSL_INTEL_PRAGMA("nounroll")
 		Dual2<Vec3> x_g = x * gup.radius_inv;
 		return fast::gabor_grid<AnisotropicT, FilterPolicyT, PeriodicT>(gup, gp, x_g, seed);
 	}
-}
+} // namespace fast
 
 Dual2<float>
 gabor (const Dual2<float> &x, const NoiseParams *opt)
@@ -1015,6 +1015,106 @@ gabor3 (const Dual2<Vec3> &P, const NoiseParams *opt)
 }
 
 
+
+
+template<int AnisotropicT, typename FilterPolicyT, int WidthT>
+static __attribute__((noinline)) void
+fast_gabor3 (
+		Wide<Dual2<Vec3>, WidthT> const &wP,
+		Wide<Dual2<Vec3>, WidthT> &wResult,
+		NoiseParams const *opt)
+{
+    DASSERT (opt);
+
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+
+    	fast::GaborUniformParams gup(*opt);
+
+    	// Complicated code caused compilation issues with icc17u2
+    	// but verified fixed in icc17u4
+#if __INTEL_COMPILER >= 1700 && __INTEL_COMPILER_UPDATE >= 4
+		OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
+#endif
+		for(int i=0; i< WidthT; ++i) {
+
+			const Dual2<Vec3> P = wP.get(i);
+
+		    fast::GaborParams gp;
+
+		    if (FilterPolicyT::active)
+		        fast::gabor_setup_filter (P, gp);
+
+			Dual2<Vec3> result = make_Vec3(
+				fast::gabor_evaluate<AnisotropicT, FilterPolicyT, false>(gup, gp, P, 0),
+				fast::gabor_evaluate<AnisotropicT, FilterPolicyT, false>(gup, gp, P, 1),
+				fast::gabor_evaluate<AnisotropicT, FilterPolicyT, false>(gup, gp, P, 2));
+
+			float gabor_variance = 1.0f / (4.0f*sqrtf(2.0f) * (gup.a * gup.a * gup.a));
+			float scale = 1.0f / (3.0f*sqrtf(gabor_variance));
+			scale *= 0.5f;  // empirical -- make it fit in [-1..1]
+
+			Dual2<Vec3> scaled_result = result * scale;
+
+			wResult.set(i, scaled_result);
+		}
+	}
+
+}
+
+template<int WidthT>
+inline
+void
+do_gabor3 (
+		Wide<Dual2<Vec3>,WidthT> const &wP,
+		Wide<Dual2<Vec3>,WidthT> &wResult,
+		NoiseParams const *opt)
+{
+    DASSERT (opt);
+
+    if (opt->do_filter)
+    {
+		switch(opt->anisotropic)
+		{
+		case 0: // isotropic
+			fast_gabor3<0, EnabledFilterPolicy, WidthT>(wP, wResult, opt);
+			break;
+		case 1: // ansiotropic
+			fast_gabor3<1, EnabledFilterPolicy, WidthT>(wP, wResult, opt);
+			break;
+		default:  // hybrid
+			fast_gabor3<3, EnabledFilterPolicy, WidthT>(wP, wResult, opt);
+			break;
+		};
+    } else {
+		switch(opt->anisotropic)
+		{
+		case 0: // isotropic
+			fast_gabor3<0, DisabledFilterPolicy, WidthT>(wP, wResult, opt);
+			break;
+		case 1: // ansiotropic
+			fast_gabor3<1, DisabledFilterPolicy, WidthT>(wP, wResult, opt);
+			break;
+		default:  // hybrid
+			fast_gabor3<3, DisabledFilterPolicy, WidthT>(wP, wResult, opt);
+			break;
+		};
+    }
+}
+void gabor3 (Wide<Dual2<Vec3>, 4> const &wP, Wide<Dual2<Vec3>,4> &wResult, const NoiseParams *opt)
+{
+	do_gabor3<4>(wP, wResult, opt);
+}
+
+void gabor3 (Wide<Dual2<Vec3>,8> const &wP, Wide<Dual2<Vec3>,8> &wResult, const NoiseParams *opt)
+{
+	do_gabor3<8>(wP, wResult, opt);
+}
+
+void gabor3 (Wide<Dual2<Vec3>,16> const &wP, Wide<Dual2<Vec3>,16> &wResult, const NoiseParams *opt)
+{
+	do_gabor3<16>(wP, wResult, opt);
+}
 
 
 Dual2<float>

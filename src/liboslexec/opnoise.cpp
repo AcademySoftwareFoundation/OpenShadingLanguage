@@ -320,8 +320,11 @@ OSL_SHADEOP void osl_ ##opname## _w8dfw8dv (char *name, char *r, char *x, char *
 OSL_SHADEOP void osl_ ##opname## _w16dfw16dv (char *name, char *r, char *x, char *sgb, char *opt) {  \
     implname impl;                                                      \
     impl (USTR(name), W16DFLOAT(r), W16DVEC(x), (ShaderGlobalsBatch *)sgb, (NoiseParams *)opt);                                     \
-}                                                                       
-
+}                                                                       \
+OSL_SHADEOP void osl_ ##opname## _w16dvw16dvw16df (char *name, char *r, char *x, char *y, char *sgb, char *opt) { \
+    implname impl;                                                      \
+    impl (USTR(name), W16DVEC(r), W16DVEC(x), W16DFLOAT(y), (ShaderGlobalsBatch *)sgb, (NoiseParams *)opt);                            \
+}
 
 NOISE_IMPL (cellnoise, CellNoise)
 NOISE_WIMPL (cellnoise, CellNoise)
@@ -596,6 +599,16 @@ struct GaborNoise {
         // FIXME -- This is very broken, we are ignoring 4D!
         result = gabor3 (p, opt);
     }
+
+    template<int WidthT>
+	inline void operator() (ustring noisename,
+			Wide<Dual2<Vec3>, WidthT> &wresult,
+            const Wide<Dual2<Vec3>, WidthT> &wp,
+			const Wide<Dual2<float>> &wt,
+            ShaderGlobalsBatch *sgb, const NoiseParams *opt) const {
+        gabor3 (wp, wresult, opt);
+    }
+
 };
 
 

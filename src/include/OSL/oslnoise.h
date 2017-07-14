@@ -3525,6 +3525,14 @@ Dual2<Vec3> gabor3 (const Dual2<Vec3> &P, const NoiseParams *opt);
 Dual2<Vec3> gabor3 (const Dual2<float> &x, const Dual2<float> &y,
                     const NoiseParams *opt);
 Dual2<Vec3> gabor3 (const Dual2<float> &x, const NoiseParams *opt);
+
+
+void gabor3 (Wide<Dual2<Vec3>,4> const &wP, Wide<Dual2<Vec3>,4> &wResult, const NoiseParams *opt);
+void gabor3 (Wide<Dual2<Vec3>,8> const &wP, Wide<Dual2<Vec3>,8> &wResult, const NoiseParams *opt);
+void gabor3 (Wide<Dual2<Vec3>,16> const &wP, Wide<Dual2<Vec3>,16> &wResult, const NoiseParams *opt);
+
+
+
 Dual2<float> pgabor (const Dual2<Vec3> &P, const Vec3 &Pperiod,
                      const NoiseParams *opt);
 Dual2<float> pgabor (const Dual2<float> &x, const Dual2<float> &y,

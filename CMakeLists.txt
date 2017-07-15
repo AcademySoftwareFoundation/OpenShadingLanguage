@@ -147,9 +147,7 @@ add_subdirectory (src/liboslexec)
 add_subdirectory (src/liboslnoise)
 
 add_subdirectory (src/oslc)
-add_subdirectory (src/shaders)
 add_subdirectory (src/oslinfo)
-add_subdirectory (src/shaders/MaterialX)
 
 if (OSL_BUILD_TESTS)
 add_subdirectory (src/testshade)
@@ -159,6 +157,9 @@ endif ()
 if (OSL_BUILD_PLUGINS)
 add_subdirectory (src/osl.imageio)
 endif ()
+
+add_subdirectory (src/shaders)
+add_subdirectory (src/shaders/MaterialX)
 
 add_subdirectory (src/doc)
 
@@ -178,7 +179,7 @@ add_custom_command (OUTPUT "${CMAKE_BINARY_DIR}/testsuite/runtest.py"
 add_custom_target ( CopyFiles ALL DEPENDS "${CMAKE_BINARY_DIR}/testsuite/runtest.py" )
 
 macro ( TESTSUITE )
-    parse_arguments (_ats "LABEL" "" ${ARGN})
+    cmake_parse_arguments (_ats "" "LABEL" "" ${ARGN})
     # If there was a FOUNDVAR param specified and that variable name is
     # not defined, mark the test as broken.
     if (_ats_FOUNDVAR AND NOT ${_ats_FOUNDVAR})
@@ -186,7 +187,7 @@ macro ( TESTSUITE )
     endif ()
     # Add the tests if all is well.
     set (ALL_TEST_LIST "")
-    foreach (_testname ${_ats_DEFAULT_ARGS})
+    foreach (_testname ${_ats_UNPARSED_ARGUMENTS})
         set (_testsrcdir "${CMAKE_SOURCE_DIR}/testsuite/${_testname}")
         set (_testdir "${CMAKE_BINARY_DIR}/testsuite/${_testname}")
         if (_ats_LABEL MATCHES "broken")

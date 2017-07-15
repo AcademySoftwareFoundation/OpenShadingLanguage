@@ -1,19 +1,7 @@
-file (GLOB shader_headers "*.h")
+file (GLOB mx_shader_headers "*.h")
+file (GLOB shader_source "*.mx")
 
-foreach (_shader_header ${shader_headers})
-    get_filename_component (_shader_header_name ${_shader_header} NAME)
-    add_custom_command (OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${_shader_header_name}"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_shader_header}" "${CMAKE_CURRENT_BINARY_DIR}"
-        MAIN_DEPENDENCY "${_shader_header}"
-        WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-endforeach()
-
-add_custom_command (OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/oslutil.h"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/oslutil.h" "${CMAKE_CURRENT_BINARY_DIR}"
-        MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/oslutil.h"
-        WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-
-
+# FIXME -- is this really necessary?
 if (${CMAKE_GENERATOR} MATCHES "(Visual Studio.*)")
     # Work around visual studio outputting oslc.exe in a subfolder
     add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/../../oslc/oslc"
@@ -21,255 +9,113 @@ if (${CMAKE_GENERATOR} MATCHES "(Visual Studio.*)")
         DEPENDS oslc)
 endif ()
 
-macro (osl_compile oslsrc osltype objlist headers)
-    # message (STATUS "OSL_COMPILE src=${oslsrc}")
-    # message (STATUS "  src ${CMAKE_CURRENT_SOURCE_DIR}")
-    # message (STATUS "  bin ${CMAKE_CURRENT_BINARY_DIR}")
-    get_filename_component ( oslsrc_we ${oslsrc} NAME_WE )
-    set ( oslname "${oslsrc_we}_${osltype}")
-    string (TOLOWER ${oslname} osolower )
-    set ( osofile "${CMAKE_CURRENT_BINARY_DIR}/${osolower}.oso" )
-    
-    # message (STATUS "  osl output ${osofile}")
 
-    set ( ${objlist} ${${objlist}} ${osofile} )
-    # message (STATUS "  obj list now ${${objlist}}")
+# Macro to compile a bunch of mx templates, each in several type flavors.
+# Syntax is:
+#   make_mx_flavors (mx_template_source_list
+#                    TYPES type_list)
+macro (make_mx_flavors)
+    cmake_parse_arguments (mxflav "" "" "TYPES" ${ARGN})
+    # ^^ syntax: prefix options one-arg-keywords multi-arg-keywords args
+    foreach (oslsrc ${mxflav_UNPARSED_ARGUMENTS})
+        get_filename_component ( oslsrc_we ${oslsrc} NAME_WE )
+        foreach (osltype ${mxflav_TYPES})
+            set (oslname "${oslsrc_we}_${osltype}")
+            string (TOLOWER ${oslname} osolower )
+            set (osofile "${CMAKE_CURRENT_BINARY_DIR}/${osolower}.oso")
+            # Rely on oslc_compile that was defined in src/shaders/CMakeLists.txt
+            oslc_compile (OSL ${CMAKE_CURRENT_SOURCE_DIR}/${oslsrc}
+                          OSO_FILE ${osofile}
+                          DEFINES -D${osltype}
+                          HEADERS ${mx_shader_headers}
+                          INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
+                                       ${CMAKE_SOURCE_DIR}/src/shaders
+                          OSO_LIST mx_shader_objs)
+        endforeach ()
+    endforeach ()
+endmacro()
 
-#    include_directories ( ${CMAKE_CURRENT_BINARY_DIR} )
-#    include_directories ( ${CMAKE_CURRENT_SOURCE_DIR} )
-    #if (VERBOSE)
-    #    message (STATUS "cmd: ${CMAKE_CURRENT_BINARY_DIR}/../../oslc/oslc  -D${osltype} ${CMAKE_CURRENT_SOURCE_DIR}/${oslsrc} -o ${osofile}")
-    #endif ()
-    add_custom_command (OUTPUT ${osofile}
-        COMMAND "${CMAKE_CURRENT_BINARY_DIR}/../../oslc/oslc" -D${osltype} -q ${CMAKE_CURRENT_SOURCE_DIR}/${oslsrc} -o ${osofile}
-        MAIN_DEPENDENCY ${CMAKE_CURRENT_SOURCE_DIR}/${oslsrc}
-        DEPENDS ${${headers}} ${CMAKE_CURRENT_SOURCE_DIR}/${oslsrc} "${CMAKE_CURRENT_BINARY_DIR}/../../oslc/oslc"
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-endmacro ()
 
-file (GLOB shader_headers "*.h")
-file (GLOB shader_source "*.mx")
-LIST(APPEND all_types FLOAT COLOR COLOR2 COLOR4 VECTOR VECTOR2 VECTOR4)
-LIST(APPEND FA_op_types COLOR COLOR2 COLOR4 VECTOR VECTOR2 VECTOR4)
+# The MaterialX shader zoo is very complicated, many of our shader templates
+# need to be compiled separately for each of many types. But not all the
+# same types for all shaders. Try to organize this as cleanly as possible
+# below.
 
-foreach (_shadertype ${all_types})
-    osl_compile (mx_constant.mx ${_shadertype} shader_objs shader_headers)
+# MX shaders that come in flavors for all color/vector types, and float.
+make_mx_flavors (
+            mx_absval.mx mx_add.mx mx_blur.mx mx_clamp.mx mx_compare.mx
+            mx_constant.mx mx_contrast.mx mx_divide.mx mx_dot.mx
+            mx_exponent.mx mx_floor.mx mx_fractal3d.mx mx_geomattrvalue.mx
+            mx_image.mx mx_invert.mx mx_max.mx mx_min.mx mx_mix.mx
+            mx_modulo.mx mx_multiply.mx mx_noise2d.mx mx_noise3d.mx
+            mx_ramp4.mx mx_ramplr.mx mx_ramptb.mx mx_remap.mx
+            mx_smoothstep.mx mx_splitlr.mx mx_splittb.mx mx_subtract.mx
+            mx_switch.mx mx_swizzle_color.mx mx_swizzle_color2.mx
+            mx_swizzle_color4.mx mx_swizzle_vector.mx mx_swizzle_vector2.mx
+            mx_swizzle_vector4.mx mx_triplanarprojection.mx
+    TYPES   FLOAT COLOR COLOR2 COLOR4 VECTOR VECTOR2 VECTOR4)
 
-    osl_compile (mx_absval.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_add.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_subtract.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_multiply.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_divide.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_modulo.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_invert.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_exponent.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_contrast.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_clamp.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_remap.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_floor.mx ${_shadertype} shader_objs shader_headers)
+# MX shaders that come in flavors for all color/vector types.
+make_mx_flavors (
+            mx_add_float.mx mx_clamp_float.mx mx_contrast_float.mx
+            mx_divide_float.mx mx_exponent_float.mx mx_fractal3d_fa.mx
+            mx_invert_float.mx mx_max_float.mx mx_min_float.mx
+            mx_modulo_float.mx mx_multiply_float.mx mx_noise2d_fa.mx
+            mx_noise3d_fa.mx mx_pack.mx mx_remap_float.mx
+            mx_smoothstep_float.mx mx_subtract_float.mx mx_swizzle_float.mx
+    TYPES   COLOR COLOR2 COLOR4 VECTOR VECTOR2 VECTOR4)
 
-    osl_compile (mx_geomattrvalue.mx ${_shadertype} shader_objs shader_headers)
-    
-    osl_compile (mx_blur.mx ${_shadertype} shader_objs shader_headers)
-    
-    osl_compile (mx_compare.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_switch.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_smoothstep.mx ${_shadertype} shader_objs shader_headers)
+# MX shaders that come in flavors for all color types, and float
+make_mx_flavors (
+            mx_burn.mx mx_dodge.mx mx_geomcolor.mx mx_inside.mx
+            mx_outside.mx mx_overlay.mx mx_screen.mx
+    TYPES FLOAT COLOR COLOR2 COLOR4)
 
-    osl_compile (mx_splitlr.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_splittb.mx ${_shadertype} shader_objs shader_headers)
+# All the rest of the odds and ends follow:
+make_mx_flavors (mx_add.mx              TYPES SURFACESHADER)
+make_mx_flavors (mx_ambientocclusion.mx TYPES FLOAT)
+make_mx_flavors (mx_bitangent.mx        TYPES VECTOR)
+make_mx_flavors (mx_cellnoise2d.mx      TYPES FLOAT)
+make_mx_flavors (mx_cellnoise3d.mx      TYPES FLOAT)
+make_mx_flavors (mx_constant.mx         TYPES MATRIX44 MATRIX33 STRING FILENAME BOOL INT)
+make_mx_flavors (mx_crossproduct.mx     TYPES VECTOR)
+make_mx_flavors (mx_disjointover.mx     TYPES COLOR2 COLOR4)
+make_mx_flavors (mx_dot.mx              TYPES MATRIX44 MATRIX33 STRING FILENAME BOOL INT SURFACESHADER)
+make_mx_flavors (mx_dotproduct.mx       TYPES VECTOR VECTOR2 VECTOR4)
+make_mx_flavors (mx_frame.mx            TYPES FLOAT)
+make_mx_flavors (mx_geomattrvalue.mx    TYPES INT BOOL STRING)
+make_mx_flavors (mx_heighttonormal.mx   TYPES VECTOR)
+make_mx_flavors (mx_hueshift.mx         TYPES COLOR COLOR4)
+make_mx_flavors (mx_in.mx               TYPES COLOR2 COLOR4)
+make_mx_flavors (mx_luminance.mx        TYPES COLOR COLOR4)
+make_mx_flavors (mx_magnitude.mx        TYPES VECTOR VECTOR2 VECTOR4)
+make_mx_flavors (mx_mask.mx             TYPES COLOR2 COLOR4)
+make_mx_flavors (mx_matte.mx            TYPES COLOR2 COLOR4)
+make_mx_flavors (mx_mix.mx              TYPES SURFACESHADER)
+make_mx_flavors (mx_mult_surfaceshader.mx TYPES COLOR FLOAT)
+make_mx_flavors (mx_normal.mx           TYPES VECTOR)
+make_mx_flavors (mx_normalize.mx        TYPES VECTOR VECTOR2 VECTOR4)
+make_mx_flavors (mx_out.mx              TYPES COLOR2 COLOR4)
+make_mx_flavors (mx_over.mx             TYPES COLOR2 COLOR4)
+make_mx_flavors (mx_pack_cc.mx          TYPES COLOR4)
+make_mx_flavors (mx_pack_cf.mx          TYPES COLOR4)
+make_mx_flavors (mx_pack_vf.mx          TYPES VECTOR4)
+make_mx_flavors (mx_pack_vv.mx          TYPES VECTOR4)
+make_mx_flavors (mx_position.mx         TYPES VECTOR)
+make_mx_flavors (mx_premult.mx          TYPES COLOR COLOR2 COLOR4)
+make_mx_flavors (mx_rotate2d.mx         TYPES VECTOR2)
+make_mx_flavors (mx_saturate.mx         TYPES COLOR COLOR4)
+make_mx_flavors (mx_scale.mx            TYPES VECTOR VECTOR2)
+make_mx_flavors (mx_tangent.mx          TYPES VECTOR)
+make_mx_flavors (mx_texcoord.mx         TYPES VECTOR VECTOR2)
+make_mx_flavors (mx_time.mx             TYPES FLOAT)
+make_mx_flavors (mx_unpremult.mx        TYPES COLOR COLOR2 COLOR4)
 
-    osl_compile (mx_ramplr.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_ramptb.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_ramp4.mx ${_shadertype} shader_objs shader_headers)
-    
-    osl_compile (mx_noise2d.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_noise3d.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_fractal3d.mx ${_shadertype} shader_objs shader_headers)
-        
-    osl_compile (mx_image.mx ${_shadertype} shader_objs shader_headers)
-    
-    osl_compile (mx_max.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_min.mx ${_shadertype} shader_objs shader_headers)
-
-    osl_compile (mx_mix.mx ${_shadertype} shader_objs shader_headers)
-
-    osl_compile (mx_swizzle_color.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_swizzle_color2.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_swizzle_color4.mx ${_shadertype} shader_objs shader_headers)
-    
-    osl_compile (mx_swizzle_vector.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_swizzle_vector2.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_swizzle_vector4.mx ${_shadertype} shader_objs shader_headers)
-    
-    osl_compile (mx_triplanarprojection.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_dot.mx ${_shadertype} shader_objs shader_headers)
-
-endforeach ()
-
-foreach (_shadertype ${FA_op_types})
-    osl_compile (mx_multiply_float.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_divide_float.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_invert_float.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_modulo_float.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_exponent_float.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_clamp_float.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_add_float.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_subtract_float.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_max_float.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_min_float.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_contrast_float.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_remap_float.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_smoothstep_float.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_swizzle_float.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_noise2d_fa.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_noise3d_fa.mx ${_shadertype} shader_objs shader_headers)    
-    osl_compile (mx_fractal3d_fa.mx ${_shadertype} shader_objs shader_headers)
-    osl_compile (mx_pack.mx ${_shadertype} shader_objs shader_headers)
-
-endforeach ()
-
-    osl_compile (mx_constant.mx MATRIX44 shader_objs shader_headers)
-    osl_compile (mx_constant.mx MATRIX33 shader_objs shader_headers)
-    osl_compile (mx_constant.mx STRING shader_objs shader_headers)
-    osl_compile (mx_constant.mx FILENAME shader_objs shader_headers)
-    osl_compile (mx_constant.mx BOOL shader_objs shader_headers)
-    osl_compile (mx_constant.mx INT shader_objs shader_headers)
-    
-    osl_compile (mx_dot.mx MATRIX44 shader_objs shader_headers)
-    osl_compile (mx_dot.mx MATRIX33 shader_objs shader_headers)
-    osl_compile (mx_dot.mx STRING shader_objs shader_headers)
-    osl_compile (mx_dot.mx FILENAME shader_objs shader_headers)
-    osl_compile (mx_dot.mx BOOL shader_objs shader_headers)
-    osl_compile (mx_dot.mx INT shader_objs shader_headers)
-    osl_compile (mx_dot.mx SURFACESHADER shader_objs shader_headers)
-    
-    osl_compile (mx_geomattrvalue.mx INT shader_objs shader_headers)
-    osl_compile (mx_geomattrvalue.mx BOOL shader_objs shader_headers)
-    osl_compile (mx_geomattrvalue.mx STRING shader_objs shader_headers)
-        
-    osl_compile (mx_ambientocclusion.mx FLOAT shader_objs shader_headers)
-
-    osl_compile (mx_position.mx VECTOR shader_objs shader_headers)
-    osl_compile (mx_normal.mx VECTOR shader_objs shader_headers)
-    osl_compile (mx_tangent.mx VECTOR shader_objs shader_headers)
-    osl_compile (mx_bitangent.mx VECTOR shader_objs shader_headers)
-
-    osl_compile (mx_texcoord.mx VECTOR shader_objs shader_headers)
-    osl_compile (mx_texcoord.mx VECTOR2 shader_objs shader_headers)
-    
-    osl_compile (mx_geomcolor.mx FLOAT shader_objs shader_headers)
-    osl_compile (mx_geomcolor.mx COLOR shader_objs shader_headers)
-    osl_compile (mx_geomcolor.mx COLOR2 shader_objs shader_headers)
-    osl_compile (mx_geomcolor.mx COLOR4 shader_objs shader_headers)
-
-    osl_compile (mx_normalize.mx VECTOR shader_objs shader_headers)
-    osl_compile (mx_normalize.mx VECTOR2 shader_objs shader_headers)
-    osl_compile (mx_normalize.mx VECTOR4 shader_objs shader_headers)
-
-    osl_compile (mx_magnitude.mx VECTOR shader_objs shader_headers)
-    osl_compile (mx_magnitude.mx VECTOR2 shader_objs shader_headers)
-    osl_compile (mx_magnitude.mx VECTOR4 shader_objs shader_headers)
-    
-    osl_compile (mx_rotate2d.mx VECTOR2 shader_objs shader_headers)
-
-    osl_compile (mx_frame.mx FLOAT shader_objs shader_headers)
-    osl_compile (mx_time.mx FLOAT shader_objs shader_headers)
-
-    osl_compile (mx_hueshift.mx COLOR shader_objs shader_headers)
-    osl_compile (mx_hueshift.mx COLOR4 shader_objs shader_headers)
-    
-    osl_compile (mx_saturate.mx COLOR shader_objs shader_headers)
-    osl_compile (mx_saturate.mx COLOR4 shader_objs shader_headers)
-    
-    osl_compile (mx_luminance.mx COLOR shader_objs shader_headers)
-    osl_compile (mx_luminance.mx COLOR4 shader_objs shader_headers)
-
-    osl_compile (mx_premult.mx COLOR shader_objs shader_headers)
-    osl_compile (mx_premult.mx COLOR2 shader_objs shader_headers)
-    osl_compile (mx_premult.mx COLOR4 shader_objs shader_headers)
-
-    osl_compile (mx_unpremult.mx COLOR shader_objs shader_headers)
-    osl_compile (mx_unpremult.mx COLOR2 shader_objs shader_headers)
-    osl_compile (mx_unpremult.mx COLOR4 shader_objs shader_headers)
-    
-    osl_compile (mx_dotproduct.mx VECTOR shader_objs shader_headers)
-    osl_compile (mx_dotproduct.mx VECTOR2 shader_objs shader_headers)
-    osl_compile (mx_dotproduct.mx VECTOR4 shader_objs shader_headers)
-
-    osl_compile (mx_burn.mx FLOAT shader_objs shader_headers)
-    osl_compile (mx_burn.mx COLOR shader_objs shader_headers)
-    osl_compile (mx_burn.mx COLOR2 shader_objs shader_headers)
-    osl_compile (mx_burn.mx COLOR4 shader_objs shader_headers)
-
-    osl_compile (mx_dodge.mx FLOAT shader_objs shader_headers)
-    osl_compile (mx_dodge.mx COLOR shader_objs shader_headers)
-    osl_compile (mx_dodge.mx COLOR2 shader_objs shader_headers)
-    osl_compile (mx_dodge.mx COLOR4 shader_objs shader_headers)
-    
-    osl_compile (mx_screen.mx FLOAT shader_objs shader_headers)
-    osl_compile (mx_screen.mx COLOR shader_objs shader_headers)
-    osl_compile (mx_screen.mx COLOR2 shader_objs shader_headers)
-    osl_compile (mx_screen.mx COLOR4 shader_objs shader_headers)
-    
-    osl_compile (mx_overlay.mx FLOAT shader_objs shader_headers)
-    osl_compile (mx_overlay.mx COLOR shader_objs shader_headers)
-    osl_compile (mx_overlay.mx COLOR2 shader_objs shader_headers)
-    osl_compile (mx_overlay.mx COLOR4 shader_objs shader_headers)    
-    
-    osl_compile (mx_crossproduct.mx VECTOR shader_objs shader_headers)
-    
-    osl_compile (mx_disjointover.mx COLOR2 shader_objs shader_headers)
-    osl_compile (mx_disjointover.mx COLOR4 shader_objs shader_headers)
-
-    osl_compile (mx_in.mx COLOR2 shader_objs shader_headers)
-    osl_compile (mx_in.mx COLOR4 shader_objs shader_headers)
-    
-    osl_compile (mx_mask.mx COLOR2 shader_objs shader_headers)
-    osl_compile (mx_mask.mx COLOR4 shader_objs shader_headers)    
-    
-    osl_compile (mx_matte.mx COLOR2 shader_objs shader_headers)
-    osl_compile (mx_matte.mx COLOR4 shader_objs shader_headers)    
-    
-    osl_compile (mx_out.mx COLOR2 shader_objs shader_headers)
-    osl_compile (mx_out.mx COLOR4 shader_objs shader_headers)    
-    
-    osl_compile (mx_over.mx COLOR2 shader_objs shader_headers)
-    osl_compile (mx_over.mx COLOR4 shader_objs shader_headers)
-    
-    osl_compile (mx_inside.mx FLOAT shader_objs shader_headers)
-    osl_compile (mx_inside.mx COLOR2 shader_objs shader_headers)
-    osl_compile (mx_inside.mx COLOR shader_objs shader_headers)
-    osl_compile (mx_inside.mx COLOR4 shader_objs shader_headers)
-    
-    osl_compile (mx_outside.mx FLOAT shader_objs shader_headers)
-    osl_compile (mx_outside.mx COLOR2 shader_objs shader_headers)
-    osl_compile (mx_outside.mx COLOR shader_objs shader_headers)
-    osl_compile (mx_outside.mx COLOR4 shader_objs shader_headers)
-
-    osl_compile (mx_pack_cf.mx COLOR4 shader_objs shader_headers)
-    osl_compile (mx_pack_cc.mx COLOR4 shader_objs shader_headers)
-        
-    osl_compile (mx_pack_vf.mx VECTOR4 shader_objs shader_headers)
-    osl_compile (mx_pack_vv.mx VECTOR4 shader_objs shader_headers)
-
-    osl_compile (mx_cellnoise2d.mx FLOAT shader_objs shader_headers)
-    osl_compile (mx_cellnoise3d.mx FLOAT shader_objs shader_headers)
-    
-    osl_compile (mx_heighttonormal.mx VECTOR shader_objs shader_headers)
-
-    osl_compile (mx_scale.mx VECTOR shader_objs shader_headers)
-    osl_compile (mx_scale.mx VECTOR2 shader_objs shader_headers)
-    
-    osl_compile (mx_add.mx SURFACESHADER shader_objs shader_headers)
-    osl_compile (mx_mult_surfaceshader.mx COLOR shader_objs shader_headers)
-    osl_compile (mx_mult_surfaceshader.mx FLOAT shader_objs shader_headers)
-    osl_compile (mx_mix.mx SURFACESHADER shader_objs shader_headers)
 
 add_custom_target (mxshaders ALL
-                   DEPENDS ${shader_objs}
-                   SOURCES ${shader_source} ${shader_headers})
+                   DEPENDS ${mx_shader_objs}
+                   SOURCES ${shader_source} ${mx_shader_headers})
 
-install (FILES ${shader_headers} ${shader_objs}
+install (FILES ${mx_shader_headers} ${mx_shader_objs}
          DESTINATION shaders/MaterialX)
 

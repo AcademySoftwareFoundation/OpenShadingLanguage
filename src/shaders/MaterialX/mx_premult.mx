@@ -4,41 +4,36 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-#include "mx_types.h"
+#include "mx_funcs.h"
 
 //
-// premult multiplies an RGB color by alpha
+// premult multiplies an RGB color by alpha(the extra alpha parameter
+// is ignored )
 //
-color premult(color in, float alpha)
+color premult (color in, float alpha)
 {
     return in * alpha;
 }
 
-color2 premult(color2 a)
+color2 premult (color2 in, float alpha)
 {
-    return color2(a.r * a.a, a.a);
+    return color2 (in.r * in.a, in.a);
 }
 
-color4 premult(color4 a)
+color4 premult (color4 in, float alpha)
 {
-    return color4(a.rgb * a.a, a.a);
+    return color4 (in.rgb * in.a, in.a);
 }
 
 
 
-shader SHADER_NAME(mx_premult)
+shader mx_premult_TYPE_SUFFIX
     [[ string help = TYPE_STR" Multiply the R or RGB channels of the input by the Alpha channel of the input." ]]
   (
     TYPE in = TYPE_DEFAULT_IN,
-#ifdef COLOR
     float alpha = 1,
-#endif
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {
-#ifdef COLOR
-    out = premult(in, alpha);
-#elif defined(COLOR2) || defined (COLOR4)
-    out = premult(in);
-#endif
+    out = premult (in, alpha);
 }

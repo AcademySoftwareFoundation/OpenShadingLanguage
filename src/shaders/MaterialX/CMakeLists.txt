@@ -10,6 +10,58 @@ if (${CMAKE_GENERATOR} MATCHES "(Visual Studio.*)")
 endif ()
 
 
+# Macro to compile a shader with oslc, with MX type substitution. Syntax is:
+#   mx_oslc_compile (MX mx_template_file
+#                    TYPE substitition_type
+#                    SHADERNAME shader_name_no_extension_or_type
+#                 [ DEPENDS list_of_dependencies ]
+#                 [ INCLUDE_DIRS list_of_include_dirs_for_oslc ]
+#                 [ DEFINES list_of_extra_definitions_for_oslc ]
+#                 [ OSO_FILE optional_oso_filename_override ]
+#                 [ OSO_LIST list_to_append_oso_filename ]
+#                 [ GEN_OSL_LIST list_to_append_generated_osl_filename ]
+#                 )
+# This is based on the oslc_compile macro found in src/shaders, but we've
+# modified it to do the type substitution that MaterialX needs.
+macro (mx_oslc_compile)
+    cmake_parse_arguments (_shader ""
+                           "OSL;OSO_FILE;OSO_LIST;TYPE;SHADERNAME;GEN_OSL_LIST"
+                           "DEPENDS;INCLUDE_DIRS;DEFINES" ${ARGN})
+    # ^^ syntax: prefix options one-arg-keywords multi-arg-keywords args
+    set (oslfile ${_shader_OSL})
+    if (_shader_OSO_FILE)
+        set (osofile ${_shader_OSO_FILE})
+    else ()
+        get_filename_component ( oslsrc_we ${_shader_OSL} NAME_WE )
+        set (osofile "${CMAKE_CURRENT_BINARY_DIR}/${oslsrc_we}.oso")
+    endif ()
+    if (VERBOSE)
+        message (STATUS "oslc will make '${oslfile}'  ->  '${osofile}'")
+    endif ()
+    set (stdosl_header "${CMAKE_SOURCE_DIR}/src/shaders/stdosl.h")
+    set (oslc_args -q ${_shader_DEFINES} "-I${CMAKE_CURRENT_SOURCE_DIR}")
+    foreach (_incdir ${_shader_INCLUDE_DIRS})
+        list (APPEND oslc_args "-I${_incdir}")
+    endforeach ()
+    list (APPEND oslc_args "-I${CMAKE_SOURCE_DIR}/src/shaders")
+    string (TOLOWER ${_shader_TYPE} osltype_lower)
+    set (gen_osl_file "${CMAKE_CURRENT_BINARY_DIR}/${_shader_SHADERNAME}_${osltype_lower}.osl")
+    add_custom_command (OUTPUT ${osofile}
+        COMMAND python "${CMAKE_CURRENT_SOURCE_DIR}/build_materialX_osl.py" -s "${_shader_SHADERNAME}" -t "${osltype_lower}" -mx "${CMAKE_CURRENT_SOURCE_DIR}" -o "${CMAKE_CURRENT_BINARY_DIR}"
+        COMMAND oslc ${oslc_args} "${gen_osl_file}" -o "${osofile}"
+        MAIN_DEPENDENCY ${oslsrc}
+        DEPENDS ${_shader_DEPENDS} "${stdosl_header}" oslc "${CMAKE_CURRENT_SOURCE_DIR}/build_materialX_osl.py"
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMENT "oslc ${gen_osl_file}")
+    if (_shader_OSO_LIST)
+        list (APPEND ${_shader_OSO_LIST} ${osofile})
+    endif ()
+    if (_shader_GEN_OSL_LIST)
+        list (APPEND ${_shader_GEN_OSL_LIST} ${gen_osl_file})
+    endif ()
+endmacro ()
+
+
 # Macro to compile a bunch of mx templates, each in several type flavors.
 # Syntax is:
 #   make_mx_flavors (mx_template_source_list
@@ -20,17 +72,20 @@ macro (make_mx_flavors)
     foreach (oslsrc ${mxflav_UNPARSED_ARGUMENTS})
         get_filename_component ( oslsrc_we ${oslsrc} NAME_WE )
         foreach (osltype ${mxflav_TYPES})
-            set (oslname "${oslsrc_we}_${osltype}")
-            string (TOLOWER ${oslname} osolower )
-            set (osofile "${CMAKE_CURRENT_BINARY_DIR}/${osolower}.oso")
-            # Rely on oslc_compile that was defined in src/shaders/CMakeLists.txt
-            oslc_compile (OSL ${CMAKE_CURRENT_SOURCE_DIR}/${oslsrc}
+            string (TOLOWER ${osltype} osltype_lower)
+            set (_shadername "${oslsrc_we}_${osltype_lower}")
+            set (osofile "${CMAKE_CURRENT_BINARY_DIR}/${_shadername}.oso")
+            set (mx_template_file "${CMAKE_CURRENT_SOURCE_DIR}/${oslsrc}")
+            mx_oslc_compile (OSL ${mx_template_file}
+                          SHADERNAME ${oslsrc_we}
+                          TYPE ${osltype_lower}
                           OSO_FILE ${osofile}
-                          DEFINES -D${osltype}
-                          HEADERS ${mx_shader_headers}
+                          DEPENDS ${mx_shader_headers}
                           INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
                                        ${CMAKE_SOURCE_DIR}/src/shaders
-                          OSO_LIST mx_shader_objs)
+                          OSO_LIST mx_shader_objs
+                          GEN_OSL_LIST mx_shader_osls
+                          )
         endforeach ()
     endforeach ()
 endmacro()
@@ -116,6 +171,6 @@ add_custom_target (mxshaders ALL
                    DEPENDS ${mx_shader_objs}
                    SOURCES ${shader_source} ${mx_shader_headers})
 
-install (FILES ${mx_shader_headers} ${mx_shader_objs}
+install (FILES ${mx_shader_headers} ${mx_shader_objs} ${mx_shader_osls}
          DESTINATION shaders/MaterialX)
 

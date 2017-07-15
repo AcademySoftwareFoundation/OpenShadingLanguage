@@ -4,9 +4,9 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-#include "mx_types.h"
+#include "mx_funcs.h"
 
-shader SHADER_NAME(mx_image)
+shader mx_image_TYPE_SUFFIX
     [[ string help = "Texture lookup" ]]
 (
     string file = ""
@@ -40,38 +40,14 @@ shader SHADER_NAME(mx_image)
         [[  string help = "Output color" ]]
   )
 {
-    out = default_value;
-
-    #if defined(COLOR) || defined(VECTOR) || defined(FLOAT)
-        color missingColor = default_value;   
-        float missingAlpha = 1;        
-    #elif defined(COLOR2)
-        color missingColor = color(default_value.r, default_value.a, 0);
-        float missingAlpha = 1;                
-    #elif defined(VECTOR2)
-        color missingColor = color(default_value.x, default_value.y, 0);
-        float missingAlpha = 1;                
-    #elif defined(COLOR4)
-        color missingColor = default_value.rgb;
-        float missingAlpha = default_value.a;        
-    #elif defined(VECTOR4)
-        color missingColor = color(default_value.x, default_value.y, default_value.z);
-        float missingAlpha = default_value.w;        
-    #endif
+    color missingColor;
+    float missingAlpha;
+    setup_missing_color_alpha (default_value, missingColor, missingAlpha);
 
     float alpha;
-    color rgb = texture(file, texcoord.x, texcoord.y, "alpha", alpha, "subimage", layer,
+    color rgb = texture(file, texcoord.x, texcoord.y,
+                        "alpha", alpha, "subimage", layer,
                         "missingcolor", missingColor, "missingalpha", missingAlpha);
 
-    #if defined(COLOR) || defined(VECTOR)
-        out = rgb;           
-    #elif defined(FLOAT)
-        out = rgb[0];
-    #elif defined(COLOR2) || defined(VECTOR2)
-        out = TYPE(rgb[0], rgb[1]);
-    #elif defined(COLOR4)
-        out = color4(rgb, alpha);
-    #elif defined(VECTOR4)
-        out = vector4(rgb[0], rgb[1], rgb[2], alpha);
-    #endif 
+    out = pack (rgb, alpha);
 }

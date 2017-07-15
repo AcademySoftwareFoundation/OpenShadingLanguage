@@ -50,6 +50,162 @@ TYPE_STRING = {
     'BOOL': 'bool',
     'INT': 'int',
 }
+replacements = {
+    "FLOAT" : (
+        ('TYPE_ZERO_POINT_FIVE',   '0.5'),
+        ('TYPE_ZERO',              '0'),
+        ('TYPE_ONE',               '1'),
+        ('TYPE_DEFAULT_IN',        '0'),
+        ('TYPE_DEFAULT_OUT',       '0'),
+        ('TYPE_DEFAULT_CHANNELS',  '"r"'),
+        ('TYPE_STR',               '"Float"'),
+        ('TYPE_SUFFIX',            'float'),
+        ('TYPE',                   'float'),
+    ),
+   "COLOR" : (
+        ('TYPE_ZERO_POINT_FIVE',   '0.5'),
+        ('TYPE_ZERO',              '0'),
+        ('TYPE_ONE',               '1'),
+        ('TYPE_DEFAULT_IN',        '0'),
+        ('TYPE_DEFAULT_OUT',       '0'),
+        ('TYPE_DEFAULT_CHANNELS',  '"rgb"'),
+        ('TYPE_STR',               '"Color"'),
+        ('TYPE_SUFFIX',            'color'),
+        ('TYPE',                   'color'),
+    ),
+    "VECTOR" : (
+        ('TYPE_ZERO_POINT_FIVE',   '0.5'),
+        ('TYPE_ZERO',              '0'),
+        ('TYPE_ONE',               '1'),
+        ('TYPE_DEFAULT_IN',        '0'),
+        ('TYPE_DEFAULT_OUT',       '0'),
+        ('TYPE_DEFAULT_CHANNELS',  '"xyz"'),
+        ('TYPE_STR',               '"Vector"'),
+        ('TYPE_SUFFIX',            'vector'),
+        ('TYPE',                   'vector'),
+    ),
+    "COLOR2" : (
+        ('TYPE_ZERO_POINT_FIVE',   '{0.5,0.5}'),
+        ('TYPE_ZERO',              '{0,0}'),
+        ('TYPE_ONE',               '{1,1}'),
+        ('TYPE_DEFAULT_IN',        '{0,0}'),
+        ('TYPE_DEFAULT_OUT',       '{0,0}'),
+        ('TYPE_DEFAULT_CHANNELS',  '"rg"'),
+        ('TYPE_STR',               '"Color2"'),
+        ('TYPE_SUFFIX',            'color2'),
+        ('TYPE',                   'color2'),
+    ),
+    "VECTOR2" : (
+        ('TYPE_ZERO_POINT_FIVE',   '{0.5,0.5}'),
+        ('TYPE_ZERO',              '{0,0}'),
+        ('TYPE_ONE',               '{1,1}'),
+        ('TYPE_DEFAULT_IN',        '{0,0}'),
+        ('TYPE_DEFAULT_OUT',       '{0,0}'),
+        ('TYPE_DEFAULT_CHANNELS',  '"xy"'),
+        ('TYPE_STR',               '"Vector2"'),
+        ('TYPE_SUFFIX',            'vector2'),
+        ('TYPE',                   'vector2'),
+    ),
+    "COLOR4" : (
+        ('TYPE_ZERO_POINT_FIVE',   '{color(0.5,0.5,0.5), 0.5}'),
+        ('TYPE_ZERO',              '{color(0,0,0), 0}'),
+        ('TYPE_ONE',               '{color(1,1,1), 1}'),
+        ('TYPE_DEFAULT_IN',        '{color(0,0,0), 0}'),
+        ('TYPE_DEFAULT_OUT',       '{color(0,0,0), 0}'),
+        ('TYPE_DEFAULT_CHANNELS',  '"rgba"'),
+        ('TYPE_STR',               '"Color4"'),
+        ('TYPE_SUFFIX',            'color4'),
+        ('TYPE',                   'color4'),
+    ),
+    "VECTOR4" : (
+        ('TYPE_ZERO_POINT_FIVE',   '{0.5,0.5,0.5,0.5}'),
+        ('TYPE_ZERO',              '{0,0,0,0}'),
+        ('TYPE_ONE',               '{1,1,1,1}'),
+        ('TYPE_DEFAULT_IN',        '{0,0,0,0}'),
+        ('TYPE_DEFAULT_OUT',       '{0,0,0,0}'),
+        ('TYPE_DEFAULT_CHANNELS',  '"xyzw"'),
+        ('TYPE_STR',               '"Vector4"'),
+        ('TYPE_SUFFIX',            'vector4'),
+        ('TYPE',                   'vector4'),
+    ),
+    "MATRIX44" : (
+        ('TYPE_ZERO_POINT_FIVE',   'matrix(0.5,0,0,0, 0,0.5,0,0, 0,0,0.5,0, 0,0,0,0.5)'),
+        ('TYPE_ZERO',              'matrix(0)'),
+        ('TYPE_ONE',               'matrix(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1)'),
+        ('TYPE_DEFAULT_IN',        'matrix(0)'),
+        ('TYPE_DEFAULT_OUT',       'matrix(0)'),
+        ('TYPE_DEFAULT_CHANNELS',  '"xyzw"'),
+        ('TYPE_STR',               '"Matrix44"'),
+        ('TYPE_SUFFIX',            'matrix44'),
+        ('TYPE',                   'matrix'),
+    ),
+    "MATRIX33" : (
+        ('TYPE_ZERO_POINT_FIVE',   'matrix(0.5,0,0,0, 0,0.5,0,0, 0,0,0.5,0, 0,0,0,0)'),
+        ('TYPE_ZERO',              'matrix(0)'),
+        ('TYPE_ONE',               'matrix(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,0)'),
+        ('TYPE_DEFAULT_IN',        'matrix(0)'),
+        ('TYPE_DEFAULT_OUT',       'matrix(0)'),
+        ('TYPE_DEFAULT_CHANNELS',  '"xyzw"'),
+        ('TYPE_STR',               '"Matrix33"'),
+        ('TYPE_SUFFIX',            'matrix33'),
+        ('TYPE',                   'matrix'),
+    ),
+    "INT" : (
+        ('TYPE_ZERO_POINT_FIVE',   '1'),
+        ('TYPE_ZERO',              '0'),
+        ('TYPE_ONE',               '1'),
+        ('TYPE_DEFAULT_IN',        '0'),
+        ('TYPE_DEFAULT_OUT',       '0'),
+        ('TYPE_DEFAULT_CHANNELS',  '"x"'),
+        ('TYPE_STR',               '"int"'),
+        ('TYPE_SUFFIX',            'int'),
+        ('TYPE',                   'int'),
+    ),
+    "BOOL" : (
+        ('TYPE_ZERO_POINT_FIVE',   '1'),
+        ('TYPE_ZERO',              '0'),
+        ('TYPE_ONE',               '1'),
+        ('TYPE_DEFAULT_IN',        '0'),
+        ('TYPE_DEFAULT_OUT',       '0'),
+        ('TYPE_DEFAULT_CHANNELS',  '"x"'),
+        ('TYPE_STR',               '"bool"'),
+        ('TYPE_SUFFIX',            'bool'),
+        ('TYPE',                   'int'),
+    ),
+    "STRING" : (
+        ('TYPE_ZERO_POINT_FIVE',   '"zero point five"'),
+        ('TYPE_ZERO',              '"zero"'),
+        ('TYPE_ONE',               '"one"'),
+        ('TYPE_DEFAULT_IN',        '"default"'),
+        ('TYPE_DEFAULT_OUT',       '"default"'),
+        ('TYPE_DEFAULT_CHANNELS',  '"a"'),
+        ('TYPE_STR',               '"string"'),
+        ('TYPE_SUFFIX',            'string'),
+        ('TYPE',                   'string'),
+    ),
+  "FILENAME" :  (
+        ('TYPE_ZERO_POINT_FIVE',   '"zero point five"'),
+        ('TYPE_ZERO',              '"zero"'),
+        ('TYPE_ONE',               '"one"'),
+        ('TYPE_DEFAULT_IN',        '"default"'),
+        ('TYPE_DEFAULT_OUT',       '"default"'),
+        ('TYPE_DEFAULT_CHANNELS',  '"a"'),
+        ('TYPE_STR',               '"filename"'),
+        ('TYPE_SUFFIX',            'filename'),
+        ('TYPE',                   'string'),
+    ),
+    "SURFACESHADER" : (
+        ('TYPE_ZERO_POINT_FIVE',   '0'),
+        ('TYPE_ZERO',              '0'),
+        ('TYPE_ONE',               '1'),
+        ('TYPE_DEFAULT_IN',        '0'),
+        ('TYPE_DEFAULT_OUT',       '0'),
+        ('TYPE_DEFAULT_CHANNELS',  '"a"'),
+        ('TYPE_STR',               '"surfaceshader"'),
+        ('TYPE_SUFFIX',            'surfaceshader'),
+        ('TYPE',                   'closure color'),
+    ) 
+}
 
 ALL_TYPES = ['FLOAT', 'COLOR', 'COLOR2', 'COLOR4', 'VECTOR', 'VECTOR2', 'VECTOR4']
 EXTRA_TYPES = ['MATRIX44', 'MATRIX33', 'STRING', 'FILENAME', 'BOOL', 'INT', 'SURFACESHADER']
@@ -192,13 +348,17 @@ def mx_to_osl(shader, build_types, options):
                     if not var_type in options['types']:
                         if options['v']: print('OSL Generation for type %s skipped.'%var_type)
                         continue
+                substitutions = replacements[var_type]
                 osl_shadername = '%s_%s' % (shader, TYPE_STRING[var_type])            
                 if options['v']:
                     print('Building %s' % osl_shadername)
-                osl_code = mx_code.replace('SHADER_NAME(%s)' % shader, osl_shadername)
-                osl_code = osl_code.replace('#include \"mx_types.h\"', '#define %s 1\n#include \"mx_types.h\"' % var_type)
-                osl_code = re.sub(r'\bTYPE\b', SHADER_TYPES[var_type], osl_code)
-                osl_filepath = write_osl_file(osl_shadername, osl_code, options)
+                #osl_code = mx_code.replace('SHADER_NAME(%s)' % shader, osl_shadername)
+                #osl_code = osl_code.replace('#include \"mx_types.h\"', '#define %s 1\n#include \"mx_types.h\"' % var_type)
+                #osl_code = re.sub(r'\bTYPE\b', SHADER_TYPES[var_type], osl_code)
+                for s in substitutions :
+                    mx_code = mx_code.replace(s[0], s[1])
+                
+                osl_filepath = write_osl_file(osl_shadername, mx_code, options)
                 build_count += 1
                 # build oso bytecode if compile flag is on
                 if options['compile']:
@@ -215,13 +375,13 @@ def mx_to_osl(shader, build_types, options):
 def main():
     # Parse arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('-arch','--arch', default='linux64', help='Build architecture flag.  Default: linux64')
     parser.add_argument('-v','--v', default=0, help='Verbosity, 0|1.  Default: 0')
-    parser.add_argument('-mx','--mx', default='../shaders/MaterialX', help='MaterialX source directory.  Default: ../shaders/MaterialX')
+    parser.add_argument('-mx','--mx', default='.', help='MaterialX source directory.  Default: .')
     parser.add_argument('-oslc_path', '--oslc_path', default='', help='Path to oslc executable.  Default: environment default')
     parser.add_argument('-compile', '--compile', default=0, help='Compile generated osl files in place. 0|1.  Default: 0')
-    parser.add_argument('-s', '--shader', default='', help='Specify a comma separated list of mx shaders to convert without the file extension, e.g. mx_add,mx_absval.  Default: none')
+    parser.add_argument('-s', '--shader', default='', help='Specify a comma separated list of mx shaders to convert, e.g. mx_add,mx_absval.  Default: all')
     parser.add_argument('-t', '--types', default='', help='Comma separated list of types to convert, e.g. FLOAT,COLOR.  Default: all')
+    parser.add_argument('-o', '--out', default='.', help='Destination folder.  Default: current')
 
     args = parser.parse_args()
 
@@ -234,12 +394,12 @@ def main():
 
     if args.types != '':
         types = args.types.split(',')
+        types = [t.upper() for t in types]
 
-    options_dict = {
+    options = {
         'v':int(args.v),
         'source': args.mx,
-        'dest': '../../build/%s/src/shaders/MaterialX'%args.arch,
-        'arch': args.arch,
+        'dest':  args.out,
         'mx_ext': 'mx',
         'oslc_path': args.oslc_path,
         'oslc_exec': oslc_exec,
@@ -248,12 +408,12 @@ def main():
     }
 
     # sanity check paths
-    if not os.path.exists(options_dict['dest']):
-        print('ERROR: Destination path %s does not exist'%options_dict['dest'])
+    if not os.path.exists(options['dest']):
+        print('ERROR: Destination path %s does not exist'%options['dest'])
         return
 
-    if not os.path.exists(options_dict['source']):
-        print('ERROR: Source path %s does not exist'%options_dict['source'])
+    if not os.path.exists(options['source']):
+        print('ERROR: Source path %s does not exist'%options['source'])
         return
 
     # If the shader flag was specified, we're only going to build the 
@@ -261,15 +421,17 @@ def main():
     # only generate osl for those types
     if args.shader:
         shaders = args.shader.split(',')
-        shader_list = {s: BUILD_DICT[s] for s in shaders}
+        shaders = [s.split('.')[0] for s in shaders]
+        shader_list = { s: BUILD_DICT[s] for s in shaders}
     else:
         shader_list = BUILD_DICT
 
     # Loop over each shader
     i = 0    
     for shader, shader_types in shader_list.items():
-        i += mx_to_osl(shader, shader_types, options_dict)
-    print('Generated ' + str(i) + ' OSL files in ' + options_dict['dest'])
+        i += mx_to_osl(shader, shader_types, options)
+    if options['v']:
+        print('Generated ' + str(i) + ' OSL files in ' + options['dest'])
 
 if __name__ == '__main__':
     main()

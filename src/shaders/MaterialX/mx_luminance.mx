@@ -4,26 +4,26 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-#include "mx_types.h"
+#include "mx_funcs.h"
 
 
 //
 // cluminance extracts the luminance of a color (with given color channel
 // weight coefficients).
 //
-float cluminance( color in, color lumacoeffs)
+color cluminance (color in, color lumacoeffs)
 {
     return dot(in, lumacoeffs);
 }
 
-float cluminance(color4 in, color lumacoeffs)
+color4 cluminance (color4 in, color lumacoeffs)
 {
-    return cluminance (in.rgb, lumacoeffs);
+    return color4 (dot(in.rgb, lumacoeffs), in.a);
 }
 
 
 
-shader SHADER_NAME(mx_luminance)
+shader mx_luminance_TYPE_SUFFIX
     [[ string help = "Output a grayscale image containing the luminance of the incoming RGB color in all color channels." ]]
   (
     TYPE in = TYPE_ZERO,
@@ -31,9 +31,5 @@ shader SHADER_NAME(mx_luminance)
     output TYPE out = TYPE_ZERO
   )
 {
-#if defined(COLOR2) || defined(COLOR4)
-    out = TYPE (cluminance(in, lumacoeffs), in.a);
-#else
-    out = cluminance(in, lumacoeffs);
-#endif
+    out = cluminance (in, lumacoeffs);
 }

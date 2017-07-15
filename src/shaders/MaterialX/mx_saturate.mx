@@ -4,27 +4,25 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-#include "mx_types.h"
+#include "mx_funcs.h"
 
 
 //
 // Shift the hue of a color by the given amount.
 //
-color saturate (color in, float amount)
+color saturate (color in, color lumacoeffs)
 {
-    color hsv = transformc("rgb","hsv", in);
-    hsv[1] *= amount;
-    return transformc("hsv","rgb", hsv);
+    return dot (in, lumacoeffs);
 }
 
-color4 saturate (color4 in, float amount)
+color4 saturate (color4 in, color lumacoeffs)
 {
-    return color4 (saturate (in.rgb, amount), in.a);
+    return color4 (dot (in.rgb, lumacoeffs), in.a);
 }
 
 
 
-shader SHADER_NAME(mx_saturate)
+shader mx_saturate_TYPE_SUFFIX
     [[ string help = "Adjust the saturation of a color; the alpha channel will be unchanged if present." ]]
   (
     TYPE in = TYPE_ZERO,
@@ -33,13 +31,5 @@ shader SHADER_NAME(mx_saturate)
     output TYPE out = TYPE_ZERO
   )
 {
-    color lum = dot(in, lumacoeffs);
-
-#if defined(COLOR4)
-    out = color4(lum, in.a);
-#else
-    out = lum;
-#endif
-
-    out = mix(out, in, amount);
+    out = mix (saturate (in, lumacoeffs), in, amount);
 }

@@ -4,10 +4,10 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-#include "mx_types.h"
-#include "swizzle.h"
+#include "mx_funcs.h"
 
-shader SHADER_NAME(mx_swizzle_vector)
+
+shader mx_swizzle_vector_TYPE_SUFFIX
     [[ string help = "Perform an arbitrary permutation of the channels of the input stream" ]]
   (
     vector in = 0,
@@ -21,6 +21,6 @@ shader SHADER_NAME(mx_swizzle_vector)
     inF[1] = in[1];
     inF[2] = in[2];
     
-    out = swizzle(inF, channels);
+    out = swizzle_TYPE(inF, channels);
 }
 

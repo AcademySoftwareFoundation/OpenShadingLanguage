@@ -4,46 +4,19 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-#include "mx_types.h"
+#include "mx_funcs.h"
 
-shader SHADER_NAME(mx_pack)
+shader mx_pack_TYPE_SUFFIX
     [[ string help = "Pack the channels from two, three or four streams into the same number of channels of a \
                       single stream of a specified compatible type;" ]]
   (
-    
     float in1 = 0,
     float in2 = 0,
-
-    #if defined(COLOR) || defined(VECTOR) || defined(COLOR4) || defined(VECTOR4)
     float in3 = 0,
-    #endif
-
-    #if defined(COLOR4) || defined(VECTOR4)   
     float in4 = 0,
-    #endif
-    
+
     output TYPE out = TYPE_ZERO
   )
 {
-
-    #if defined(COLOR)
-        out = color(in1, in2, in3);
-    #elif defined(VECTOR)
-        out = vector(in1, in2, in3);
-    #elif defined(COLOR2)
-        out.r = in1;
-        out.a = in2;
-    #elif defined(VECTOR2)
-        out.x = in1;
-        out.y = in2;
-    #elif defined(COLOR4)
-        out.rgb = color(in1, in2, in3);
-        out.a = in4;
-    #elif defined(VECTOR4)
-        out.x = in1;
-        out.y = in2;
-        out.z = in3; 
-        out.w = in4;
-    #endif
-
+    out = pack (in1, in2, in3, in4);
 }

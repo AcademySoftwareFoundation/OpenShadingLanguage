@@ -4,9 +4,9 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-#include "mx_types.h"
+#include "mx_funcs.h"
 
-shader SHADER_NAME(mx_blur)
+shader mx_blur_TYPE_SUFFIX
     [[ string help = "A gaussian-falloff blur." ]]
   (
     TYPE in = TYPE_ZERO,

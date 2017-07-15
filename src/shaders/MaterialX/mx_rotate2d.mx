@@ -4,9 +4,9 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-#include "mx_types.h"
+#include "mx_funcs.h"
 
-shader SHADER_NAME(mx_rotate2d)
+shader mx_rotate2d_TYPE_SUFFIX
     [[ string help = "Rotates a vector2 value about a center point in 2D pattern space." ]]
   (
     TYPE in = TYPE_ZERO,

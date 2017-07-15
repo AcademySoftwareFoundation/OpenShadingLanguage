@@ -4,7 +4,7 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-#include "mx_types.h"
+#include "mx_funcs.h"
 
 
 //
@@ -26,7 +26,7 @@ color4 hueshift(color4 in, float amount)
 
 
 
-shader SHADER_NAME(mx_hueshift)
+shader mx_hueshift_TYPE_SUFFIX
     [[ string help = "Shift the hue of a color; the alpha channel will be unchanged if present." ]]
   (
     TYPE in = TYPE_ZERO,

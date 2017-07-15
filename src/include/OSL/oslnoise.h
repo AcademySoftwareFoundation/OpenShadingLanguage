@@ -673,20 +673,20 @@ private:
 template <typename B, typename F>
 OIIO_FORCEINLINE F select (const B& b, const F& t, const F& f) { return b ? t : f; }
 
-template <> OIIO_FORCEINLINE int4 select (const mask4& b, const int4& t, const int4& f) {
+template <> OIIO_FORCEINLINE int4 select (const bool4& b, const int4& t, const int4& f) {
     return blend (f, t, b);
 }
 
-template <> OIIO_FORCEINLINE float4 select (const mask4& b, const float4& t, const float4& f) {
+template <> OIIO_FORCEINLINE float4 select (const bool4& b, const float4& t, const float4& f) {
     return blend (f, t, b);
 }
 
 template <> OIIO_FORCEINLINE float4 select (const int4& b, const float4& t, const float4& f) {
-    return blend (f, t, mask4(b));
+    return blend (f, t, bool4(b));
 }
 
 template <> OIIO_FORCEINLINE Dual2<float4>
-select (const mask4& b, const Dual2<float4>& t, const Dual2<float4>& f) {
+select (const bool4& b, const Dual2<float4>& t, const Dual2<float4>& f) {
     return Dual2<float4> (blend (f.val(), t.val(), b),
                           blend (f.dx(),  t.dx(),  b),
                           blend (f.dy(),  t.dy(),  b));
@@ -694,7 +694,7 @@ select (const mask4& b, const Dual2<float4>& t, const Dual2<float4>& f) {
 
 template <>
 OIIO_FORCEINLINE Dual2<float4> select (const int4& b, const Dual2<float4>& t, const Dual2<float4>& f) {
-    return select (mask4(b), t, f);
+    return select (bool4(b), t, f);
 }
 
 
@@ -709,7 +709,7 @@ OIIO_FORCEINLINE FLOAT negate_if (const FLOAT& val, const BOOL& b) {
 template<> OIIO_FORCEINLINE float4 negate_if (const float4& val, const int4& b) {
     // Special case negate_if for SIMD -- can do it with bit tricks, no branches
     int4 highbit (0x80000000);
-    return bitcast_to_float4 (bitcast_to_int4(val) ^ (blend0 (highbit, mask4(b))));
+    return bitcast_to_float4 (bitcast_to_int4(val) ^ (blend0 (highbit, bool4(b))));
 }
 
 // Special case negate_if for SIMD -- can do it with bit tricks, no branches

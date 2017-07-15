@@ -57,6 +57,7 @@ static ustring op_fabs("fabs");
 static ustring op_floor("floor");
 static ustring op_for("for");
 static ustring op_format("format");
+static ustring op_fprintf("fprintf");
 static ustring op_ge("ge");
 static ustring op_gt("gt");
 static ustring op_hashnoise("hashnoise");
@@ -256,7 +257,7 @@ LLVMGEN (llvm_gen_useparam)
 
 
 
-// Used for printf, error, warning, format
+// Used for printf, error, warning, format, fprintf
 LLVMGEN (llvm_gen_printf)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
@@ -264,8 +265,8 @@ LLVMGEN (llvm_gen_printf)
     // Prepare the args for the call
     
     // Which argument is the format string?  Usually 0, but for op
-    // format(), the formatting string is argument #1.
-    int format_arg = (op.opname() == "format" ? 1 : 0);
+    // format() and fprintf(), the formatting string is argument #1.
+    int format_arg = (op.opname() == "format" || op.opname() == "fprintf") ? 1 : 0;
     Symbol& format_sym = *rop.opargsym (op, format_arg);
 
     std::vector<llvm::Value*> call_args;
@@ -277,8 +278,15 @@ LLVMGEN (llvm_gen_printf)
 
     // For some ops, we push the shader globals pointer
     if (op.opname() == op_printf || op.opname() == op_error ||
-            op.opname() == op_warning)
+            op.opname() == op_warning || op.opname() == op_fprintf)
         call_args.push_back (rop.sg_void_ptr());
+
+    // fprintf also needs the filename
+    if (op.opname() == op_fprintf) {
+        Symbol& Filename = *rop.opargsym (op, 0);
+        llvm::Value* fn = rop.llvm_load_value (Filename);
+        call_args.push_back (fn);
+    }
 
     // We're going to need to adjust the format string as we go, but I'd
     // like to reserve a spot for the char*.

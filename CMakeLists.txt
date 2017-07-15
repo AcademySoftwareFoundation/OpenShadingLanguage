@@ -238,6 +238,7 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             derivs derivs-muldiv-clobber
             draw_string
             error-dupes exit exponential
+            fprintf
             function-earlyreturn function-simple function-outputelem
             geomath getattribute-camera getattribute-shader
             getsymbol-nonheap gettextureinfo

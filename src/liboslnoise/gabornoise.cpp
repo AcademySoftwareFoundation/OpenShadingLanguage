@@ -961,20 +961,26 @@ do_gabor (
     }
 }
 
+#if SIMD_LANE_COUNT == 4
 void gabor (Wide<Dual2<Vec3>, 4> const &wP, Wide<Dual2<float>,4> &wResult, const NoiseParams *opt)
 {
 	do_gabor<4>(wP, wResult, opt);
 }
+#endif
 
+#if SIMD_LANE_COUNT == 8
 void gabor (Wide<Dual2<Vec3>,8> const &wP, Wide<Dual2<float>,8> &wResult, const NoiseParams *opt)
 {
 	do_gabor<8>(wP, wResult, opt);
 }
+#endif
 
+#if SIMD_LANE_COUNT == 16
 void gabor (Wide<Dual2<Vec3>,16> const &wP, Wide<Dual2<float>,16> &wResult, const NoiseParams *opt)
 {
 	do_gabor<16>(wP, wResult, opt);
 }
+#endif
 
 Dual2<Vec3>
 gabor3 (const Dual2<float> &x, const NoiseParams *opt)
@@ -1101,21 +1107,27 @@ do_gabor3 (
 		};
     }
 }
+
+#if SIMD_LANE_COUNT == 4
 void gabor3 (Wide<Dual2<Vec3>, 4> const &wP, Wide<Dual2<Vec3>,4> &wResult, const NoiseParams *opt)
 {
 	do_gabor3<4>(wP, wResult, opt);
 }
+#endif
 
+#if SIMD_LANE_COUNT == 8
 void gabor3 (Wide<Dual2<Vec3>,8> const &wP, Wide<Dual2<Vec3>,8> &wResult, const NoiseParams *opt)
 {
 	do_gabor3<8>(wP, wResult, opt);
 }
+#endif
 
+#if SIMD_LANE_COUNT == 16
 void gabor3 (Wide<Dual2<Vec3>,16> const &wP, Wide<Dual2<Vec3>,16> &wResult, const NoiseParams *opt)
 {
 	do_gabor3<16>(wP, wResult, opt);
 }
-
+#endif
 
 Dual2<float>
 pgabor (const Dual2<float> &x, float xperiod, const NoiseParams *opt)

@@ -1123,6 +1123,7 @@ void
 LLVM_Util::setup_optimization_passes (int optlevel)
 {
     ASSERT (m_llvm_module_passes == NULL && m_llvm_func_passes == NULL);
+    OSL_DEV_ONLY(std::cout << "setup_optimization_passes " << optlevel);
 
     // Construct the per-function passes and module-wide (interprocedural
     // optimization) passes.

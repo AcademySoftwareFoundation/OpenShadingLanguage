@@ -146,15 +146,26 @@ OSL_SHADEOP void osl_ ##opname## _vvf (char *r, char *x, float y) {     \
 
 
 // TODO: expand to cover all combinations
+#if SIMD_LANE_COUNT == 4
 #define NOISE_WIMPL(opname,implname)                                    \
 OSL_SHADEOP void osl_ ##opname## _w4fw4v(char *r, char *x) {        \
     implname impl;                                                      \
     impl (W4FLOAT(r), W4VEC(x));                                          \
 }                                                                       \
+
+#endif
+
+#if SIMD_LANE_COUNT == 8
+#define NOISE_WIMPL(opname,implname)                                    \
 OSL_SHADEOP void osl_ ##opname## _w8fw8v(char *r, char *x) {        \
     implname impl;                                                      \
     impl (W8FLOAT(r), W8VEC(x));                                          \
 }                                                                       \
+
+#endif
+
+#if SIMD_LANE_COUNT == 16
+#define NOISE_WIMPL(opname,implname)                                    \
 OSL_SHADEOP void osl_ ##opname## _w16fw16v(char *r, char *x) {        \
     implname impl;                                                      \
     impl (W16FLOAT(r), W16VEC(x));                                          \
@@ -175,9 +186,8 @@ OSL_SHADEOP void osl_ ##opname## _w16vw16vw16f (char *r, char *x, char *y) {    
     implname impl;                                                      \
     impl (W16VEC(r), W16VEC(x), W16FLOAT(y)); 							\
 }	\
-\
-\
- 
+
+#endif
 
 
 #define NOISE_IMPL_DERIV(opname,implname)                               \
@@ -308,15 +318,26 @@ OSL_SHADEOP void osl_ ##opname## _dvdvdf (char *name, char *r, char *x, char *y,
 }
 
 
+#if SIMD_LANE_COUNT == 4
 #define NOISE_WIMPL_DERIV_OPT(opname,implname)                           \
 OSL_SHADEOP void osl_ ##opname## _w4dfw4dv (char *name, char *r, char *x, char *sgb, char *opt) {  \
     implname impl;                                                      \
     impl (USTR(name), W4DFLOAT(r), W4DVEC(x), (ShaderGlobalsBatch *)sgb, (NoiseParams *)opt);                                     \
 }                                                                        \
+
+#endif
+
+#if SIMD_LANE_COUNT == 8
+#define NOISE_WIMPL_DERIV_OPT(opname,implname)                           \
 OSL_SHADEOP void osl_ ##opname## _w8dfw8dv (char *name, char *r, char *x, char *sgb, char *opt) {  \
     implname impl;                                                      \
     impl (USTR(name), W8DFLOAT(r), W8DVEC(x), (ShaderGlobalsBatch *)sgb, (NoiseParams *)opt);                                     \
 }                                                                       \
+
+#endif
+
+#if SIMD_LANE_COUNT == 16
+#define NOISE_WIMPL_DERIV_OPT(opname,implname)                           \
 OSL_SHADEOP void osl_ ##opname## _w16dfw16dv (char *name, char *r, char *x, char *sgb, char *opt) {  \
     implname impl;                                                      \
     impl (USTR(name), W16DFLOAT(r), W16DVEC(x), (ShaderGlobalsBatch *)sgb, (NoiseParams *)opt);                                     \
@@ -325,6 +346,8 @@ OSL_SHADEOP void osl_ ##opname## _w16dvw16dvw16df (char *name, char *r, char *x,
     implname impl;                                                      \
     impl (USTR(name), W16DVEC(r), W16DVEC(x), W16DFLOAT(y), (ShaderGlobalsBatch *)sgb, (NoiseParams *)opt);                            \
 }
+
+#endif
 
 NOISE_IMPL (cellnoise, CellNoise)
 NOISE_WIMPL (cellnoise, CellNoise)

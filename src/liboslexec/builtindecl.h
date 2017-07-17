@@ -42,21 +42,38 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #error Do not include this file unless WDECL is defined
 #endif
 
+#if SIMD_LANE_COUNT == 4
+#define NOISE_WIMPL(name)                           \
+    WDECL (osl_ ## name ## _w4fw4v,  "wfwv")			\
+
+#define GENERIC_NOISE_DERIV_WIMPL(name)             \
+    WDECL (osl_ ## name ## _w4dfw4dv,   "xsXXXX")    \
+
+#endif
+
+#if SIMD_LANE_COUNT == 8
+#define NOISE_WIMPL(name)                           \
+    WDECL (osl_ ## name ## _w8fw8v,  "wfwv")			\
+
+#define GENERIC_NOISE_DERIV_WIMPL(name)             \
+    WDECL (osl_ ## name ## _w8dfw8dv,   "xsXXXX")    \
+
+#endif
+
+#if SIMD_LANE_COUNT == 16
 #define NOISE_WIMPL(name)                           \
     WDECL (osl_ ## name ## _w16fw16f,  "wfwf")      \
-    WDECL (osl_ ## name ## _w4fw4v,  "wfwv")			\
-    WDECL (osl_ ## name ## _w8fw8v,  "wfwv")			\
     WDECL (osl_ ## name ## _w16fw16v,  "wfwv")		\
     WDECL (osl_ ## name ## _w16vw16v,  "wvwv")      \
     WDECL (osl_ ## name ## _w16vw16f,  "wvwf")      \
     WDECL (osl_ ## name ## _w16vw16vw16f, "wvwvwf") \
     
-
 #define GENERIC_NOISE_DERIV_WIMPL(name)             \
-    WDECL (osl_ ## name ## _w4dfw4dv,   "xsXXXX")    \
-    WDECL (osl_ ## name ## _w8dfw8dv,   "xsXXXX")    \
     WDECL (osl_ ## name ## _w16dfw16dv,   "xsXXXX")   \
     WDECL (osl_ ## name ## _w16dvw16dvw16df,   "xsXXXXX")
+
+#endif
+
 
 #define NOISE_IMPL(name)                           \
     DECL (osl_ ## name ## _ff,  "ff")              \

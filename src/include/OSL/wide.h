@@ -36,6 +36,7 @@ OSL_NAMESPACE_ENTER
 
 // TODO: add conditional compilation to change this
 static constexpr int SimdLaneCount = 16;
+#define SIMD_LANE_COUNT 16
 
 
 /// Type for an opaque pointer to whatever the renderer uses to represent a

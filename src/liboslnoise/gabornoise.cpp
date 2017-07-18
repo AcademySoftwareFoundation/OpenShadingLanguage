@@ -883,8 +883,8 @@ struct EnabledFilterPolicy
 template<int AnisotropicT, typename FilterPolicyT, int WidthT>
 static __attribute__((noinline)) void
 fast_gabor (
-		Wide<Dual2<Vec3>, WidthT> const &wP, 
-		Wide<Dual2<float>, WidthT> &wResult, 
+		ConstWideAccessor<Dual2<Vec3>,WidthT> wP,
+		WideAccessor<Dual2<float>,WidthT> wResult,
 		NoiseParams const *opt)
 {
     DASSERT (opt);
@@ -901,7 +901,7 @@ fast_gabor (
 #endif
 		for(int i=0; i< WidthT; ++i) {
 			
-			const Dual2<Vec3> P = wP.get(i);
+			const Dual2<Vec3> P = wP[i];
 		
 		    fast::GaborParams gp;
 		    
@@ -915,7 +915,7 @@ fast_gabor (
 		
 			Dual2<float> scaled_result = result * scale;
 			
-			wResult.set(i, scaled_result); 
+			wResult[i] = scaled_result;
 		}
 	}
     
@@ -925,8 +925,8 @@ template<int WidthT>
 inline 
 void
 do_gabor (
-		Wide<Dual2<Vec3>,WidthT> const &wP, 
-		Wide<Dual2<float>,WidthT> &wResult, 
+		ConstWideAccessor<Dual2<Vec3>,WidthT> wP,
+		WideAccessor<Dual2<float>,WidthT> wResult,
 		NoiseParams const *opt)
 {
     DASSERT (opt);
@@ -961,26 +961,12 @@ do_gabor (
     }
 }
 
-#if SIMD_LANE_COUNT == 4
-void gabor (Wide<Dual2<Vec3>, 4> const &wP, Wide<Dual2<float>,4> &wResult, const NoiseParams *opt)
+void gabor (ConstWideAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wP,
+		    WideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wResult,
+			const NoiseParams *opt)
 {
-	do_gabor<4>(wP, wResult, opt);
+	do_gabor<__OSL_SIMD_LANE_COUNT>(wP, wResult, opt);
 }
-#endif
-
-#if SIMD_LANE_COUNT == 8
-void gabor (Wide<Dual2<Vec3>,8> const &wP, Wide<Dual2<float>,8> &wResult, const NoiseParams *opt)
-{
-	do_gabor<8>(wP, wResult, opt);
-}
-#endif
-
-#if SIMD_LANE_COUNT == 16
-void gabor (Wide<Dual2<Vec3>,16> const &wP, Wide<Dual2<float>,16> &wResult, const NoiseParams *opt)
-{
-	do_gabor<16>(wP, wResult, opt);
-}
-#endif
 
 Dual2<Vec3>
 gabor3 (const Dual2<float> &x, const NoiseParams *opt)
@@ -1026,8 +1012,8 @@ gabor3 (const Dual2<Vec3> &P, const NoiseParams *opt)
 template<int AnisotropicT, typename FilterPolicyT, int WidthT>
 static __attribute__((noinline)) void
 fast_gabor3 (
-		Wide<Dual2<Vec3>, WidthT> const &wP,
-		Wide<Dual2<Vec3>, WidthT> &wResult,
+		ConstWideAccessor<Dual2<Vec3>, WidthT> wP,
+		WideAccessor<Dual2<Vec3>,WidthT> wResult,
 		NoiseParams const *opt)
 {
     DASSERT (opt);
@@ -1044,7 +1030,7 @@ fast_gabor3 (
 #endif
 		for(int i=0; i< WidthT; ++i) {
 
-			const Dual2<Vec3> P = wP.get(i);
+			const Dual2<Vec3> P = wP[i];
 
 		    fast::GaborParams gp;
 
@@ -1062,7 +1048,7 @@ fast_gabor3 (
 
 			Dual2<Vec3> scaled_result = result * scale;
 
-			wResult.set(i, scaled_result);
+			wResult[i] = scaled_result;
 		}
 	}
 
@@ -1072,8 +1058,8 @@ template<int WidthT>
 inline
 void
 do_gabor3 (
-		Wide<Dual2<Vec3>,WidthT> const &wP,
-		Wide<Dual2<Vec3>,WidthT> &wResult,
+		ConstWideAccessor<Dual2<Vec3>, WidthT> wP,
+		WideAccessor<Dual2<Vec3>,WidthT> wResult,
 		NoiseParams const *opt)
 {
     DASSERT (opt);
@@ -1108,26 +1094,12 @@ do_gabor3 (
     }
 }
 
-#if SIMD_LANE_COUNT == 4
-void gabor3 (Wide<Dual2<Vec3>, 4> const &wP, Wide<Dual2<Vec3>,4> &wResult, const NoiseParams *opt)
+void gabor3 (ConstWideAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wP,
+		     WideAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wResult,
+			 const NoiseParams *opt)
 {
-	do_gabor3<4>(wP, wResult, opt);
+	do_gabor3<__OSL_SIMD_LANE_COUNT>(wP, wResult, opt);
 }
-#endif
-
-#if SIMD_LANE_COUNT == 8
-void gabor3 (Wide<Dual2<Vec3>,8> const &wP, Wide<Dual2<Vec3>,8> &wResult, const NoiseParams *opt)
-{
-	do_gabor3<8>(wP, wResult, opt);
-}
-#endif
-
-#if SIMD_LANE_COUNT == 16
-void gabor3 (Wide<Dual2<Vec3>,16> const &wP, Wide<Dual2<Vec3>,16> &wResult, const NoiseParams *opt)
-{
-	do_gabor3<16>(wP, wResult, opt);
-}
-#endif
 
 Dual2<float>
 pgabor (const Dual2<float> &x, float xperiod, const NoiseParams *opt)

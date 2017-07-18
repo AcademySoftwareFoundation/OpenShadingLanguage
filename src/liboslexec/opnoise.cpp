@@ -146,48 +146,31 @@ OSL_SHADEOP void osl_ ##opname## _vvf (char *r, char *x, float y) {     \
 
 
 // TODO: expand to cover all combinations
-#if SIMD_LANE_COUNT == 4
-#define NOISE_WIMPL(opname,implname)                                    \
-OSL_SHADEOP void osl_ ##opname## _w4fw4v(char *r, char *x) {        \
+#define NOISE_WIMPL_INDIRECT(opname,implname,LANE_COUNT)                         \
+OSL_SHADEOP void osl_ ##opname## _w ##LANE_COUNT## fw ##LANE_COUNT## v(char *r, char *x) {        \
     implname impl;                                                      \
-    impl (W4FLOAT(r), W4VEC(x));                                          \
+    impl (WideAccessor<float,LANE_COUNT>(r), ConstWideAccessor<Vec3,LANE_COUNT>(x));    \
 }                                                                       \
-
-#endif
-
-#if SIMD_LANE_COUNT == 8
-#define NOISE_WIMPL(opname,implname)                                    \
-OSL_SHADEOP void osl_ ##opname## _w8fw8v(char *r, char *x) {        \
-    implname impl;                                                      \
-    impl (W8FLOAT(r), W8VEC(x));                                          \
-}                                                                       \
-
-#endif
-
-#if SIMD_LANE_COUNT == 16
-#define NOISE_WIMPL(opname,implname)                                    \
-OSL_SHADEOP void osl_ ##opname## _w16fw16v(char *r, char *x) {        \
-    implname impl;                                                      \
-    impl (W16FLOAT(r), W16VEC(x));                                          \
-}                                                                       \
-OSL_SHADEOP void osl_ ##opname## _w16vw16v (char *r, char *x) {               \
+OSL_SHADEOP void osl_ ##opname## _w ##LANE_COUNT## vw ##LANE_COUNT## v (char *r, char *x) {               \
 implname impl;                                                      \
-impl (W16VEC(r), W16VEC(x));                                              \
+impl (WideAccessor<Vec3,LANE_COUNT>(r), ConstWideAccessor<Vec3,LANE_COUNT>(x));                                              \
 }                                                                       \
-OSL_SHADEOP void osl_ ##opname## _w16vw16f (char *r, char *x) {               \
+OSL_SHADEOP void osl_ ##opname## _w ##LANE_COUNT## vw ##LANE_COUNT## f (char *r, char *x) {               \
 implname impl;                                                      \
-impl (W16VEC(r), W16FLOAT(x));                                              \
+impl (WideAccessor<Vec3,LANE_COUNT>(r), ConstWideAccessor<float,LANE_COUNT>(x));                                              \
 }                                                                       \
-OSL_SHADEOP void osl_ ##opname## _w16fw16f (char *r, char *x) {               \
+OSL_SHADEOP void osl_ ##opname## _w ##LANE_COUNT## fw ##LANE_COUNT## f (char *r, char *x) {               \
 implname impl;                                                      \
-impl (W16FLOAT(r), W16FLOAT(x));                                              \
+impl (WideAccessor<float,LANE_COUNT>(r), ConstWideAccessor<float,LANE_COUNT>(x));                                              \
 }                                                                       \
-OSL_SHADEOP void osl_ ##opname## _w16vw16vw16f (char *r, char *x, char *y) {     \
+OSL_SHADEOP void osl_ ##opname## _w ##LANE_COUNT## vw ##LANE_COUNT## vw ##LANE_COUNT## f (char *r, char *x, char *y) {     	\
     implname impl;                                                      \
-    impl (W16VEC(r), W16VEC(x), W16FLOAT(y)); 							\
+    impl (WideAccessor<Vec3,LANE_COUNT>(r), ConstWideAccessor<Vec3,LANE_COUNT>(x), ConstWideAccessor<float,LANE_COUNT>(y));	\
 }	\
 
-#endif
+
+#define NOISE_WIMPL(opname,implname,LANE_COUNT)                         \
+		NOISE_WIMPL_INDIRECT(opname,implname,LANE_COUNT)
 
 
 #define NOISE_IMPL_DERIV(opname,implname)                               \
@@ -318,50 +301,33 @@ OSL_SHADEOP void osl_ ##opname## _dvdvdf (char *name, char *r, char *x, char *y,
 }
 
 
-#if SIMD_LANE_COUNT == 4
-#define NOISE_WIMPL_DERIV_OPT(opname,implname)                           \
-OSL_SHADEOP void osl_ ##opname## _w4dfw4dv (char *name, char *r, char *x, char *sgb, char *opt) {  \
+#define NOISE_WIMPL_DERIV_OPT_INDIRECT(opname,implname, LANE_COUNT)                           \
+OSL_SHADEOP void osl_ ##opname## _w ##LANE_COUNT## dfw ##LANE_COUNT## dv (char *name, char *r, char *x, char *sgb, char *opt) {  \
     implname impl;                                                      \
-    impl (USTR(name), W4DFLOAT(r), W4DVEC(x), (ShaderGlobalsBatch *)sgb, (NoiseParams *)opt);                                     \
-}                                                                        \
-
-#endif
-
-#if SIMD_LANE_COUNT == 8
-#define NOISE_WIMPL_DERIV_OPT(opname,implname)                           \
-OSL_SHADEOP void osl_ ##opname## _w8dfw8dv (char *name, char *r, char *x, char *sgb, char *opt) {  \
-    implname impl;                                                      \
-    impl (USTR(name), W8DFLOAT(r), W8DVEC(x), (ShaderGlobalsBatch *)sgb, (NoiseParams *)opt);                                     \
+    impl (USTR(name), WideAccessor<Dual2<Float>,LANE_COUNT>(r), ConstWideAccessor<Dual2<Vec3>,LANE_COUNT>(x), (ShaderGlobalsBatch *)sgb, (NoiseParams *)opt);	\
 }                                                                       \
-
-#endif
-
-#if SIMD_LANE_COUNT == 16
-#define NOISE_WIMPL_DERIV_OPT(opname,implname)                           \
-OSL_SHADEOP void osl_ ##opname## _w16dfw16dv (char *name, char *r, char *x, char *sgb, char *opt) {  \
+OSL_SHADEOP void osl_ ##opname## _w ##LANE_COUNT## dvw ##LANE_COUNT## dvw ##LANE_COUNT## df (char *name, char *r, char *x, char *y, char *sgb, char *opt) { \
     implname impl;                                                      \
-    impl (USTR(name), W16DFLOAT(r), W16DVEC(x), (ShaderGlobalsBatch *)sgb, (NoiseParams *)opt);                                     \
-}                                                                       \
-OSL_SHADEOP void osl_ ##opname## _w16dvw16dvw16df (char *name, char *r, char *x, char *y, char *sgb, char *opt) { \
-    implname impl;                                                      \
-    impl (USTR(name), W16DVEC(r), W16DVEC(x), W16DFLOAT(y), (ShaderGlobalsBatch *)sgb, (NoiseParams *)opt);                            \
+    impl (USTR(name), WideAccessor<Dual2<Vec3>,LANE_COUNT>(r), ConstWideAccessor<Dual2<Vec3>,LANE_COUNT>(x), ConstWideAccessor<Dual2<Float>,LANE_COUNT>(y), (ShaderGlobalsBatch *)sgb, (NoiseParams *)opt);                            \
 }
 
-#endif
+#define NOISE_WIMPL_DERIV_OPT(opname,implname, LANE_COUNT)                           \
+		NOISE_WIMPL_DERIV_OPT_INDIRECT(opname,implname, LANE_COUNT)
+
 
 NOISE_IMPL (cellnoise, CellNoise)
-NOISE_WIMPL (cellnoise, CellNoise)
+NOISE_WIMPL (cellnoise, CellNoise, __OSL_SIMD_LANE_COUNT )
 NOISE_IMPL (noise, Noise)
-NOISE_WIMPL (noise, Noise)
+NOISE_WIMPL (noise, Noise, __OSL_SIMD_LANE_COUNT)
 NOISE_IMPL_DERIV (noise, Noise)
 NOISE_IMPL (snoise, SNoise)
-NOISE_WIMPL (snoise, SNoise)
+NOISE_WIMPL (snoise, SNoise, __OSL_SIMD_LANE_COUNT)
 NOISE_IMPL_DERIV (snoise, SNoise)
 NOISE_IMPL (simplexnoise, SimplexNoise)
-NOISE_WIMPL (simplexnoise, SimplexNoise)
+NOISE_WIMPL (simplexnoise, SimplexNoise, __OSL_SIMD_LANE_COUNT)
 NOISE_IMPL_DERIV (simplexnoise, SimplexNoise)
 NOISE_IMPL (usimplexnoise, USimplexNoise)
-NOISE_WIMPL (usimplexnoise, USimplexNoise)
+NOISE_WIMPL (usimplexnoise, USimplexNoise, __OSL_SIMD_LANE_COUNT)
 NOISE_IMPL_DERIV (usimplexnoise, USimplexNoise)
 
 
@@ -584,8 +550,8 @@ struct GaborNoise {
     template<int WidthT>
     //inline void operator() (Wide<float, WidthT> &wresult, const Wide<Vec3, WidthT> &wp) const {
 	inline void operator() (ustring noisename, 
-			Wide<Dual2<float>, WidthT> &wresult,
-            const Wide<Dual2<Vec3>, WidthT> &wp,
+			WideAccessor<Dual2<float>, WidthT> wresult,
+			ConstWideAccessor<Dual2<Vec3>, WidthT> wp,
             ShaderGlobalsBatch *sgb, const NoiseParams *opt) const {
 
         gabor (wp, wresult, opt);    	
@@ -625,9 +591,9 @@ struct GaborNoise {
 
     template<int WidthT>
 	inline void operator() (ustring noisename,
-			Wide<Dual2<Vec3>, WidthT> &wresult,
-            const Wide<Dual2<Vec3>, WidthT> &wp,
-			const Wide<Dual2<float>> &wt,
+			WideAccessor<Dual2<Vec3>, WidthT> wresult,
+			ConstWideAccessor<Dual2<Vec3>, WidthT> wp,
+			ConstWideAccessor<Dual2<float>, WidthT> wt,
             ShaderGlobalsBatch *sgb, const NoiseParams *opt) const {
         gabor3 (wp, wresult, opt);
     }
@@ -699,7 +665,7 @@ struct GaborPNoise {
 
 
 NOISE_IMPL_DERIV_OPT (gabornoise, GaborNoise)
-NOISE_WIMPL_DERIV_OPT (gabornoise, GaborNoise)
+NOISE_WIMPL_DERIV_OPT (gabornoise, GaborNoise, __OSL_SIMD_LANE_COUNT)
 PNOISE_IMPL_DERIV_OPT (gaborpnoise, GaborPNoise)
 
 

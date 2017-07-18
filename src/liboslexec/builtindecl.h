@@ -42,37 +42,23 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #error Do not include this file unless WDECL is defined
 #endif
 
-#if SIMD_LANE_COUNT == 4
-#define NOISE_WIMPL(name)                           \
-    WDECL (osl_ ## name ## _w4fw4v,  "wfwv")			\
 
-#define GENERIC_NOISE_DERIV_WIMPL(name)             \
-    WDECL (osl_ ## name ## _w4dfw4dv,   "xsXXXX")    \
+#define NOISE_WIMPL_INDIRECT(name, LANE_COUNT)                           \
+    WDECL (osl_ ## name ## _w ##LANE_COUNT## fw ##LANE_COUNT## f,  "wfwf")      \
+    WDECL (osl_ ## name ## _w ##LANE_COUNT## fw ##LANE_COUNT## v,  "wfwv")		\
+    WDECL (osl_ ## name ## _w ##LANE_COUNT## vw ##LANE_COUNT## v,  "wvwv")      \
+    WDECL (osl_ ## name ## _w ##LANE_COUNT## vw ##LANE_COUNT## f,  "wvwf")      \
+    WDECL (osl_ ## name ## _w ##LANE_COUNT## vw ##LANE_COUNT## vw ##LANE_COUNT## f, "wvwvwf") \
 
-#endif
+#define NOISE_WIMPL(name, LANE_COUNT)                           \
+	NOISE_WIMPL_INDIRECT(name, LANE_COUNT)
 
-#if SIMD_LANE_COUNT == 8
-#define NOISE_WIMPL(name)                           \
-    WDECL (osl_ ## name ## _w8fw8v,  "wfwv")			\
+#define GENERIC_NOISE_DERIV_WIMPL_INDIRECT(name, LANE_COUNT)             \
+    WDECL (osl_ ## name ## _w ##LANE_COUNT## dfw ##LANE_COUNT## dv,   "xsXXXX")   \
+    WDECL (osl_ ## name ## _w ##LANE_COUNT## dvw ##LANE_COUNT## dvw ##LANE_COUNT## df,   "xsXXXXX")
 
-#define GENERIC_NOISE_DERIV_WIMPL(name)             \
-    WDECL (osl_ ## name ## _w8dfw8dv,   "xsXXXX")    \
-
-#endif
-
-#if SIMD_LANE_COUNT == 16
-#define NOISE_WIMPL(name)                           \
-    WDECL (osl_ ## name ## _w16fw16f,  "wfwf")      \
-    WDECL (osl_ ## name ## _w16fw16v,  "wfwv")		\
-    WDECL (osl_ ## name ## _w16vw16v,  "wvwv")      \
-    WDECL (osl_ ## name ## _w16vw16f,  "wvwf")      \
-    WDECL (osl_ ## name ## _w16vw16vw16f, "wvwvwf") \
-    
-#define GENERIC_NOISE_DERIV_WIMPL(name)             \
-    WDECL (osl_ ## name ## _w16dfw16dv,   "xsXXXX")   \
-    WDECL (osl_ ## name ## _w16dvw16dvw16df,   "xsXXXXX")
-
-#endif
+#define GENERIC_NOISE_DERIV_WIMPL(name, LANE_COUNT)             \
+	GENERIC_NOISE_DERIV_WIMPL_INDIRECT(name, LANE_COUNT)             \
 
 
 #define NOISE_IMPL(name)                           \
@@ -196,12 +182,12 @@ WDECL (osl_get_textureinfo_batched, "iXXXXXi")
 WDECL (osl_get_textureinfo_batched_uniform, "iXXXXXX")
 WDECL (osl_texture_batched, "iXXXXXXXXXiXiXiXi")
 WDECL (osl_texture_batched_uniform, "iXXXXXXXXXXiXiXiXi")
-NOISE_WIMPL(cellnoise)
-NOISE_WIMPL(noise)
-NOISE_WIMPL(snoise)
-NOISE_WIMPL(simplexnoise)
-NOISE_WIMPL(usimplexnoise)
-GENERIC_NOISE_DERIV_WIMPL(gabornoise)
+NOISE_WIMPL(cellnoise, __OSL_SIMD_LANE_COUNT)
+NOISE_WIMPL(noise, __OSL_SIMD_LANE_COUNT)
+NOISE_WIMPL(snoise, __OSL_SIMD_LANE_COUNT)
+NOISE_WIMPL(simplexnoise, __OSL_SIMD_LANE_COUNT)
+NOISE_WIMPL(usimplexnoise, __OSL_SIMD_LANE_COUNT)
+GENERIC_NOISE_DERIV_WIMPL(gabornoise, __OSL_SIMD_LANE_COUNT)
 
 NOISE_DERIV_IMPL(noise)
 NOISE_IMPL(snoise)

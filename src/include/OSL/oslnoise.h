@@ -2775,7 +2775,7 @@ struct fast {
 	    int h = scramble (i, j, scramble (k, l, seedT));
 
 	    // return fast_grad4lut[h & 31];
-	    return fast_grad4lut_wide.get(h & 15);
+	    return fast_grad4lut_wide.get(h & 31);
 	}
 
 	// 3D simplex noise with derivatives.

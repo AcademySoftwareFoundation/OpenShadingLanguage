@@ -4,9 +4,9 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-#include "mx_types.h"
+#include "mx_funcs.h"
 
-shader SHADER_NAME(mx_frame)
+shader mx_frame_TYPE_SUFFIX
     [[ string help = "The current frame number as defined by the host environment." ]]
   (
     output float out = 0

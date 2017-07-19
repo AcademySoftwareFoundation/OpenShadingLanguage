@@ -4,9 +4,9 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-#include "mx_types.h"
+#include "mx_funcs.h"
 
-shader SHADER_NAME(mx_noise2d)
+shader mx_noise2d_TYPE_SUFFIX
     [[ string help = "2D noise"  ]]
   (
     vector2 texcoord = { u, v }
@@ -21,32 +21,9 @@ shader SHADER_NAME(mx_noise2d)
 
     string noisetype = "snoise"
         [[  string help = "type of noise" ]],
-        
+
     output TYPE out = TYPE_ZERO
   )
 {
-    //float noise(P) is equal to the red channel of color noise(P)
-    //so we offset the float noise lookup to make them different.
-    float fnoise = (float) noise (noisetype, texcoord.x + 19, texcoord.y + 73);
-    
-    color cnoise = (color) noise (noisetype, texcoord.x, texcoord.y);
-
-    #if defined(FLOAT)
-        out = pivot + fnoise * amplitude;
-    #elif defined(COLOR) || defined(VECTOR)
-        out = pivot + cnoise * amplitude;
-    #elif defined(COLOR2)
-        out.r = pivot + cnoise[0] * amplitude.r;
-        out.a = pivot + cnoise[1] * amplitude.a;
-    #elif defined(COLOR4)
-        out.rgb = pivot + cnoise * amplitude.rgb;
-        out.a = pivot + fnoise * amplitude.a;
-    #elif defined(VECTOR2) || defined(VECTOR4)
-        out.x = pivot + cnoise[0] * amplitude.x;
-        out.y = pivot + cnoise[1] * amplitude.y;
-    # if defined(VECTOR4)
-        out.z = pivot + cnoise[2] * amplitude.z;
-        out.w = pivot + fnoise * amplitude.w;
-    # endif
-    #endif
+    out = noise (noisetype, texcoord.x, texcoord.y);
 }

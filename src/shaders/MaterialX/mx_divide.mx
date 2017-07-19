@@ -4,9 +4,9 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-#include "mx_types.h"
+#include "mx_funcs.h"
 
-shader SHADER_NAME(mx_divide)
+shader mx_divide_TYPE_SUFFIX
     [[ string help = TYPE_STR" divide an incoming float/color/vector by in2" ]]
   (
     TYPE in1 = TYPE_DEFAULT_IN,

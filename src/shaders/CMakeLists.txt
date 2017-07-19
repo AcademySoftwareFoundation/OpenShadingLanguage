@@ -12,7 +12,7 @@ endif ()
 
 # Macro to compile a shader with oslc. Syntax is:
 #   oslc_compile (OSL osl_source_file
-#                 [ HEADERS list_of_osl_header_dependencies ]
+#                 [ DEPENDS list_of_dependencies ]
 #                 [ INCLUDE_DIRS list_of_include_dirs_for_oslc ]
 #                 [ DEFINES list_of_extra_definitions_for_oslc ]
 #                 [ OSO_FILE optional_oso_filename_override ]
@@ -20,7 +20,7 @@ endif ()
 macro (oslc_compile)
     cmake_parse_arguments (_shader ""
                            "OSL;OSO_FILE;OSO_LIST"
-                           "HEADERS;INCLUDE_DIRS;DEFINES" ${ARGN})
+                           "DEPENDS;INCLUDE_DIRS;DEFINES" ${ARGN})
     # ^^ syntax: prefix options one-arg-keywords multi-arg-keywords args
     set (oslfile ${_shader_OSL})
     if (_shader_OSO_FILE)
@@ -41,7 +41,7 @@ macro (oslc_compile)
     add_custom_command (OUTPUT ${osofile}
         COMMAND oslc ${oslc_args} "${oslfile}" -o "${osofile}"
         MAIN_DEPENDENCY ${oslsrc}
-        DEPENDS ${_shader_HEADERS} "${stdosl_header}" oslc
+        DEPENDS ${_shader_DEPENDS} "${stdosl_header}" oslc
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         COMMENT "oslc ${oslsrc_we}")
     if (_shader_OSO_LIST)
@@ -52,7 +52,7 @@ endmacro ()
 
 foreach (_shadername ${shader_source})
     oslc_compile (OSL ${_shadername}
-                  HEADERS ${shader_headers}
+                  DEPENDS ${shader_headers}
                   INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}"
                   OSO_LIST shader_objs)
 endforeach ()

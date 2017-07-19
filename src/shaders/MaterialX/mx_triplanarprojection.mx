@@ -4,12 +4,13 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-#include "mx_types.h"
+#include "mx_funcs.h"
 
-shader SHADER_NAME(mx_triplanarprojection)
+
+shader mx_triplanarprojection_TYPE_SUFFIX
     [[ string help = "triplanarprojection node" ]]
   (
-    string filex = ""        
+    string filex = ""
         [[  string help = "Texture filename",
             string widget = "filename" ]],
 
@@ -30,35 +31,27 @@ shader SHADER_NAME(mx_triplanarprojection)
     output TYPE out = TYPE_ZERO
   )
 {
-
-    #if defined(COLOR) || defined(VECTOR) || defined(FLOAT)
-        color missingColor = default_value;   
-        float missingAlpha = 1;        
-    #elif defined(COLOR2)
-        color missingColor = color(default_value.r, default_value.a, 0);
-        float missingAlpha = 1;                
-    #elif defined(VECTOR2)
-        color missingColor = color(default_value.x, default_value.y, 0);
-        float missingAlpha = 1;                
-    #elif defined(COLOR4)
-        color missingColor = default_value.rgb;
-        float missingAlpha = default_value.a;        
-    #elif defined(VECTOR4)
-        color missingColor = color(default_value.x, default_value.y, default_value.z);
-        float missingAlpha = default_value.w;        
-    #endif
+    color missingColor;
+    float missingAlpha;
+    setup_missing_color_alpha (default_value, missingColor, missingAlpha);
 
     float filex_a;
-    color filex_rgb = texture(filex, position[1], position[2], "alpha", filex_a, "subimage", layerx,
-                              "missingcolor", missingColor, "missingalpha", missingAlpha);
+    color filex_rgb = texture(filex, position[1], position[2],
+                              "alpha", filex_a, "subimage", layerx,
+                              "missingcolor", missingColor,
+                              "missingalpha", missingAlpha);
 
     float filey_a;
-    color filey_rgb = texture(filey, position[0], position[2], "alpha", filey_a, "subimage", layery,
-                              "missingcolor", missingColor, "missingalpha", missingAlpha);
+    color filey_rgb = texture(filey, position[0], position[2],
+                              "alpha", filey_a, "subimage", layery,
+                              "missingcolor", missingColor,
+                              "missingalpha", missingAlpha);
 
     float filez_a;
-    color filez_rgb = texture(filez, position[0], position[1], "alpha", filez_a, "subimage", layerz,
-                              "missingcolor", missingColor, "missingalpha", missingAlpha);
+    color filez_rgb = texture(filez, position[0], position[1],
+                              "alpha", filez_a, "subimage", layerz,
+                              "missingcolor", missingColor,
+                              "missingalpha", missingAlpha);
 
     normal nIn = normalize(inN);
     float blendx = dot(nIn, vector(1, 0, 0));
@@ -68,15 +61,5 @@ shader SHADER_NAME(mx_triplanarprojection)
     color rgb = (filex_rgb * blendx) + (filey_rgb * blendy) + (filez_rgb * blendz);
     float alpha = (filex_a * blendx) + (filey_a * blendy) + (filez_a * blendz);
 
-    #if defined(COLOR) || defined(VECTOR)
-        out = rgb;           
-    #elif defined(FLOAT)
-        out = rgb[0];
-    #elif defined(COLOR2) || defined(VECTOR2)
-        out = TYPE(rgb[0], rgb[1]);
-    #elif defined(COLOR4)
-        out = color4(rgb, alpha);
-    #elif defined(VECTOR4)
-        out = vector4(rgb[0], rgb[1], rgb[2], alpha);
-    #endif 
+    out = pack (rgb, alpha);
 }

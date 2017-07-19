@@ -4,18 +4,27 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
-#include "mx_types.h"
+#include "mx_funcs.h"
 
-shader SHADER_NAME(mx_texcoord)
+
+
+vector2 mk_coord (float u, float v)
+{
+    return vector2(u,v);
+}
+
+vector mk_coord (float u, float v)
+{
+    return vector(u,v,0);
+}
+
+
+
+shader mx_texcoord_TYPE_SUFFIX
     [[ string help = " The 2D texture coordinates" ]]
   (
     output TYPE out = TYPE_ZERO
   )
 {
-    
-#if defined(VECTOR2)
-    out = vector2(u, v);
-#elif defined(VECTOR)
-    out = vector(u, v, 0);
-#endif
+    out = mk_coord (u, v);
 }

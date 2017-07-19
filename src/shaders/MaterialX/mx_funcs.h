@@ -9,7 +9,7 @@
 #include "color4.h"
 #include "vector2.h"
 #include "vector4.h"
-#include "mx_types.h"
+
 
 ///////////////////////////////////////////////////////////////////////////
 // This file contains lots of functions helpful in the implementation of
@@ -244,6 +244,118 @@ vector4 contrast(vector4 in, float amount, float pivot)
 }
 
 
+
+color2 noise (string noisetype, float x, float y)
+{
+    color cnoise = (color) noise (noisetype, x, y);
+    return color2 (cnoise[0], cnoise[1]);
+}
+
+vector2 noise (string noisetype, float x, float y)
+{
+    color cnoise = (color) noise (noisetype, x, y);
+    return vector2 (cnoise[0], cnoise[1]);
+}
+
+color4 noise (string noisetype, float x, float y)
+{
+    color cnoise = (color) noise (noisetype, x, y);
+    float fnoise = (float) noise (noisetype, x + 19, y + 73);
+    return color4 (cnoise, fnoise);
+}
+
+vector4 noise (string noisetype, float x, float y)
+{
+    color cnoise = (color) noise (noisetype, x, y);
+    float fnoise = (float) noise (noisetype, x + 19, y + 73);
+    return vector4 (cnoise[0], cnoise[1], cnoise[2], fnoise);
+}
+
+
+color2 noise (string noisetype, point position)
+{
+    color cnoise = (color) noise (noisetype, position);
+    return color2 (cnoise[0], cnoise[1]);
+}
+
+vector2 noise (string noisetype, point position)
+{
+    color cnoise = (color) noise (noisetype, position);
+    return vector2 (cnoise[0], cnoise[1]);
+}
+
+color4 noise (string noisetype, point position)
+{
+    color cnoise = (color) noise (noisetype, position);
+    float fnoise = (float) noise (noisetype, position+vector(19,73,29));
+    return color4 (cnoise, fnoise);
+}
+
+vector4 noise (string noisetype, point position)
+{
+    color cnoise = (color) noise (noisetype, position);
+    float fnoise = (float) noise (noisetype, position+vector(19,73,29));
+    return vector4 (cnoise[0], cnoise[1], cnoise[2], fnoise);
+}
+
+
+
+color2 cellnoise (float x, float y)
+{
+    color cnoise = (color) cellnoise (x, y);
+    return color2 (cnoise[0], cnoise[1]);
+}
+
+vector2 cellnoise (float x, float y)
+{
+    color cnoise = (color) cellnoise (x, y);
+    return vector2 (cnoise[0], cnoise[1]);
+}
+
+color4 cellnoise (float x, float y)
+{
+    color cnoise = (color) cellnoise (x, y);
+    float fnoise = (float) cellnoise (x + 19, y + 73);
+    return color4 (cnoise, fnoise);
+}
+
+vector4 cellnoise (float x, float y)
+{
+    color cnoise = (color) cellnoise (x, y);
+    float fnoise = (float) cellnoise (x + 19, y + 73);
+    return vector4 (cnoise[0], cnoise[1], cnoise[2], fnoise);
+}
+
+
+
+color2 cellnoise (point position)
+{
+    color cnoise = (color) cellnoise (position);
+    return color2 (cnoise[0], cnoise[1]);
+}
+
+vector2 cellnoise (point position)
+{
+    color cnoise = (color) cellnoise (position);
+    return vector2 (cnoise[0], cnoise[1]);
+}
+
+color4 cellnoise (point position)
+{
+    color cnoise = (color) cellnoise (position);
+    float fnoise = (float) cellnoise (position+vector(19,73,29));
+    return color4 (cnoise, fnoise);
+}
+
+vector4 cellnoise (point position)
+{
+    color cnoise = (color) cellnoise (position);
+    float fnoise = (float) cellnoise (position+vector(19,73,29));
+    return vector4 (cnoise[0], cnoise[1], cnoise[2], fnoise);
+}
+
+
+
 //
 // fractional Brownian motion
 //
@@ -263,7 +375,6 @@ float fBm( point position, int octaves, float lacunarity, float diminish, string
 
 color fBm( point position, int octaves, float lacunarity, float diminish, string noisetype)
 {
-
     color out = 0;
     float amp = 1.0;
     point p = position;
@@ -275,3 +386,363 @@ color fBm( point position, int octaves, float lacunarity, float diminish, string
     }
     return out;
 }
+
+color2 fBm( point position, int octaves, float lacunarity, float diminish, string noisetype)
+{
+    return color2 ((float) fBm (position, octaves, lacunarity, diminish, noisetype),
+                   (float) fBm (position+point(19, 193, 17), octaves, lacunarity, diminish, noisetype));
+}
+
+vector2 fBm( point position, int octaves, float lacunarity, float diminish, string noisetype)
+{
+    return vector2 ((float) fBm (position, octaves, lacunarity, diminish, noisetype),
+                    (float) fBm (position+point(19, 193, 17), octaves, lacunarity, diminish, noisetype));
+}
+
+color4 fBm( point position, int octaves, float lacunarity, float diminish, string noisetype)
+{
+    color c = (color) fBm (position, octaves, lacunarity, diminish, noisetype);
+    float f = (float) fBm (position+point(19, 193, 17), octaves, lacunarity, diminish, noisetype);
+    return color4 (c, f);
+}
+
+vector4 fBm( point position, int octaves, float lacunarity, float diminish, string noisetype)
+{
+    color c = (color) fBm (position, octaves, lacunarity, diminish, noisetype);
+    float f = (float) fBm (position+point(19, 193, 17), octaves, lacunarity, diminish, noisetype);
+    return vector4 (c[0], c[1], c[2], f);
+}
+
+
+
+
+
+
+float swizzle_float (float in[4], string channels)
+{
+    float out;
+    float outF[4];
+    int c_len = strlen(channels);
+
+    for (int i=0; i<c_len; i++) {
+        string ch = substr(channels, i, 1);
+        if (ch == "r" || ch == "x")
+            outF[i] = in[0];
+        else if (ch == "g" || ch == "y")
+            outF[i] = in[1];
+        else if (ch == "b" || ch == "z")
+            outF[i] = in[2];
+        else if (ch == "a" || ch == "w")
+            outF[i] = in[3];
+        else if(ch == "1")
+            outF[i] = 1;
+        else
+            outF[i] = 0;
+    }
+    out = outF[0];
+    return out;
+}
+
+
+
+color swizzle_color (float in[4], string channels)
+{
+    color out;
+    float outF[4];
+    int c_len = strlen(channels);
+
+    for (int i=0; i<c_len; i++) {
+        string ch = substr(channels, i, 1);
+        if (ch == "r" || ch == "x")
+            outF[i] = in[0];
+        else if (ch == "g" || ch == "y")
+            outF[i] = in[1];
+        else if (ch == "b" || ch == "z")
+            outF[i] = in[2];
+        else if (ch == "a" || ch == "w")
+            outF[i] = in[3];
+        else if(ch == "1")
+            outF[i] = 1;
+        else
+            outF[i] = 0;
+    }
+    return color(outF[0],outF[1],outF[2]);
+}
+
+
+
+vector swizzle_vector (float in[4], string channels)
+{
+    vector out;
+    float outF[4];
+    int c_len = strlen(channels);
+
+    for (int i=0; i<c_len; i++) {
+        string ch = substr(channels, i, 1);
+        if (ch == "r" || ch == "x")
+            outF[i] = in[0];
+        else if (ch == "g" || ch == "y")
+            outF[i] = in[1];
+        else if (ch == "b" || ch == "z")
+            outF[i] = in[2];
+        else if (ch == "a" || ch == "w")
+            outF[i] = in[3];
+        else if(ch == "1")
+            outF[i] = 1;
+        else
+            outF[i] = 0;
+    }
+    return vector(outF[0],outF[1],outF[2]);
+}
+
+
+
+color2 swizzle_color2 (float in[4], string channels)
+{
+    color2  out;
+    float outF[4];
+    int c_len = strlen(channels);
+
+    for (int i=0; i<c_len; i++) {
+        string ch = substr(channels, i, 1);
+        if (ch == "r" || ch == "x")
+            outF[i] = in[0];
+        else if (ch == "g" || ch == "y")
+            outF[i] = in[1];
+        else if (ch == "b" || ch == "z")
+            outF[i] = in[2];
+        else if (ch == "a")
+            outF[i] = in[1];
+        else if(ch == "1")
+            outF[i] = 1;
+        else
+            outF[i] = 0;
+    }
+    out.r = outF[0];
+    out.a = outF[1];
+
+    return out;
+}
+
+
+
+color4 swizzle_color4 (float in[4], string channels)
+{
+    color4  out;
+    float outF[4];
+    int c_len = strlen(channels);
+
+    for (int i=0; i<c_len; i++) {
+        string ch = substr(channels, i, 1);
+        if (ch == "r" || ch == "x")
+            outF[i] = in[0];
+        else if (ch == "g" || ch == "y")
+            outF[i] = in[1];
+        else if (ch == "b" || ch == "z")
+            outF[i] = in[2];
+        else if (ch == "a" || ch == "w")
+            outF[i] = in[3];
+        else if(ch == "1")
+            outF[i] = 1;
+        else
+            outF[i] = 0;
+    }
+    out.rgb = color(outF[0],outF[1],outF[2]);
+    out.a = outF[3];
+
+    return out;
+}
+
+
+vector2 swizzle_vector2 (float in[4], string channels)
+{
+    vector2  out;
+    float outF[4];
+    int c_len = strlen(channels);
+
+    for (int i=0; i<c_len; i++) {
+        string ch = substr(channels, i, 1);
+        if (ch == "r" || ch == "x")
+            outF[i] = in[0];
+        else if (ch == "g" || ch == "y")
+            outF[i] = in[1];
+        else if (ch == "b" || ch == "z")
+            outF[i] = in[2];
+        else if (ch == "a" || ch == "w")
+            outF[i] = in[3];
+        else if(ch == "1")
+            outF[i] = 1;
+        else
+            outF[i] = 0;
+    }
+    out.x = outF[0];
+    out.y = outF[1];
+
+    return out;
+}
+
+
+
+vector4 swizzle_vector4 (float in[4], string channels)
+{
+    vector4  out;
+    float outF[4];
+    int c_len = strlen(channels);
+
+    for (int i=0; i<c_len; i++) {
+        string ch = substr(channels, i, 1);
+        if (ch == "r" || ch == "x")
+            outF[i] = in[0];
+        else if (ch == "g" || ch == "y")
+            outF[i] = in[1];
+        else if (ch == "b" || ch == "z")
+            outF[i] = in[2];
+        else if (ch == "a" || ch == "w")
+            outF[i] = in[3];
+        else if(ch == "1")
+            outF[i] = 1;
+        else
+            outF[i] = 0;
+    }
+    out.x = outF[0];
+    out.y = outF[1];
+    out.z = outF[2];
+    out.w = outF[3];
+    return out;
+}
+
+
+//
+// setup_missing_color_alpha() implements all the type permutations for
+// setting up missingColor and missingAlpha given the default_value (and its
+// specific type).
+//
+
+void setup_missing_color_alpha (float default_value,
+              output color missingColor, output float missingAlpha)
+{
+    missingColor = default_value;
+    missingAlpha = 1;
+}
+
+void setup_missing_color_alpha (color default_value,
+              output color missingColor, output float missingAlpha)
+{
+    missingColor = default_value;
+    missingAlpha = 1;
+}
+
+
+void setup_missing_color_alpha (vector default_value,
+              output color missingColor, output float missingAlpha)
+{
+    missingColor = vector (default_value);
+    missingAlpha = 1;
+}
+
+void setup_missing_color_alpha (color2 default_value,
+              output color missingColor, output float missingAlpha)
+{
+    missingColor = color (default_value.r, default_value.a, 0);
+    missingAlpha = 1;
+}
+
+void setup_missing_color_alpha (vector2 default_value,
+              output color missingColor, output float missingAlpha)
+{
+    missingColor = color (default_value.x, default_value.y, 0);
+    missingAlpha = 1;
+}
+
+void setup_missing_color_alpha (vector4 default_value,
+              output color missingColor, output float missingAlpha)
+{
+    missingColor = color (default_value.x, default_value.y, default_value.z);
+    missingAlpha = default_value.w;
+}
+
+void setup_missing_color_alpha (color4 default_value,
+              output color missingColor, output float missingAlpha)
+{
+    missingColor = color (default_value.rgb);
+    missingAlpha = default_value.a;
+}
+
+
+
+//
+// pack() combines an up to 4 floats, or an rgb and alpha, into the given
+// return type, in a way that makes as much sense as possible.
+//
+float pack (float a, float b, float c, float d)
+{
+    return a;
+}
+
+color pack (float a, float b, float c, float d)
+{
+    return color (a, b, c);
+}
+
+vector pack (float a, float b, float c, float d)
+{
+    return vector (a, b, c);
+}
+
+color2 pack (float a, float b, float c, float d)
+{
+    return color2 (a, b);
+}
+
+vector2 pack (float a, float b, float c, float d)
+{
+    return vector2 (a, b);
+}
+
+color4 pack (float a, float b, float c, float d)
+{
+    return color4 (color(a,b,c), d);
+}
+
+vector4 pack (float a, float b, float c, float d)
+{
+    return vector4 (a, b, c, d);
+}
+
+
+float pack (color rgb, float alpha)
+{
+    return rgb[0];
+}
+
+color pack (color rgb, float alpha)
+{
+    return rgb;
+}
+
+vector pack (color rgb, float alpha)
+{
+    return (vector)rgb;
+}
+
+color2 pack (color rgb, float alpha)
+{
+    return color2 (rgb[0], rgb[1]);
+}
+
+vector2 pack (color rgb, float alpha)
+{
+    return vector2 (rgb[0], rgb[1]);
+}
+
+color4 pack (color rgb, float alpha)
+{
+    return color4 (rgb, alpha);
+}
+
+vector4 pack (color rgb, float alpha)
+{
+    return vector4 (rgb[0], rgb[1], rgb[2], alpha);
+}
+
+

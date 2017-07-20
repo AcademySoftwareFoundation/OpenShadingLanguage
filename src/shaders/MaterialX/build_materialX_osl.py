@@ -15,43 +15,26 @@ import re
 import argparse
 from subprocess import call
 
-# SHADER_TYPES map preprocessor flags to osl type declarations 
+# SHADER_TYPES map preprocessor flags to osl type declarations
 SHADER_TYPES = {
-    'FLOAT': 'float',
-    'COLOR': 'color',
-    'COLOR2': 'color2',
-    'COLOR4': 'color4',
-    'VECTOR': 'vector',
-    'VECTOR2': 'vector2',
-    'VECTOR4': 'vector4',
-    'SURFACESHADER': 'closure color',
-    'MATRIX44': 'matrix',
-    'MATRIX33': 'matrix',
-    'STRING': 'string',
-    'FILENAME': 'string',
-    'BOOL': 'bool',
-    'INT': 'int',
+    'float': 'float',
+    'color': 'color',
+    'color2': 'color2',
+    'color4': 'color4',
+    'vector': 'vector',
+    'vector2': 'vector2',
+    'vector4': 'vector4',
+    'surfaceshader': 'closure color',
+    'matrix44': 'matrix',
+    'matrix33': 'matrix',
+    'string': 'string',
+    'filename': 'string',
+    'bool': 'bool',
+    'int': 'int',
 }
 
-# TYPE_STRING used for type suffix in osl filenames. Could use var_type.lower(). 
-TYPE_STRING = {
-    'FLOAT': 'float',
-    'COLOR': 'color',
-    'COLOR2': 'color2',
-    'COLOR4': 'color4',
-    'VECTOR': 'vector',
-    'VECTOR2': 'vector2',
-    'VECTOR4': 'vector4',
-    'SURFACESHADER': 'surfaceshader',
-    'MATRIX44': 'matrix44',
-    'MATRIX33': 'matrix33',
-    'STRING': 'string',
-    'FILENAME': 'filename',
-    'BOOL': 'bool',
-    'INT': 'int',
-}
 replacements = {
-    "FLOAT" : (
+    "float" : (
         ('TYPE_ZERO_POINT_FIVE',   '0.5'),
         ('TYPE_ZERO',              '0'),
         ('TYPE_ONE',               '1'),
@@ -62,7 +45,7 @@ replacements = {
         ('TYPE_SUFFIX',            'float'),
         ('TYPE',                   'float'),
     ),
-   "COLOR" : (
+   "color" : (
         ('TYPE_ZERO_POINT_FIVE',   '0.5'),
         ('TYPE_ZERO',              '0'),
         ('TYPE_ONE',               '1'),
@@ -73,7 +56,7 @@ replacements = {
         ('TYPE_SUFFIX',            'color'),
         ('TYPE',                   'color'),
     ),
-    "VECTOR" : (
+    "vector" : (
         ('TYPE_ZERO_POINT_FIVE',   '0.5'),
         ('TYPE_ZERO',              '0'),
         ('TYPE_ONE',               '1'),
@@ -84,7 +67,7 @@ replacements = {
         ('TYPE_SUFFIX',            'vector'),
         ('TYPE',                   'vector'),
     ),
-    "COLOR2" : (
+    "color2" : (
         ('TYPE_ZERO_POINT_FIVE',   '{0.5,0.5}'),
         ('TYPE_ZERO',              '{0,0}'),
         ('TYPE_ONE',               '{1,1}'),
@@ -95,7 +78,7 @@ replacements = {
         ('TYPE_SUFFIX',            'color2'),
         ('TYPE',                   'color2'),
     ),
-    "VECTOR2" : (
+    "vector2" : (
         ('TYPE_ZERO_POINT_FIVE',   '{0.5,0.5}'),
         ('TYPE_ZERO',              '{0,0}'),
         ('TYPE_ONE',               '{1,1}'),
@@ -106,7 +89,7 @@ replacements = {
         ('TYPE_SUFFIX',            'vector2'),
         ('TYPE',                   'vector2'),
     ),
-    "COLOR4" : (
+    "color4" : (
         ('TYPE_ZERO_POINT_FIVE',   '{color(0.5,0.5,0.5), 0.5}'),
         ('TYPE_ZERO',              '{color(0,0,0), 0}'),
         ('TYPE_ONE',               '{color(1,1,1), 1}'),
@@ -117,7 +100,7 @@ replacements = {
         ('TYPE_SUFFIX',            'color4'),
         ('TYPE',                   'color4'),
     ),
-    "VECTOR4" : (
+    "vector4" : (
         ('TYPE_ZERO_POINT_FIVE',   '{0.5,0.5,0.5,0.5}'),
         ('TYPE_ZERO',              '{0,0,0,0}'),
         ('TYPE_ONE',               '{1,1,1,1}'),
@@ -128,7 +111,7 @@ replacements = {
         ('TYPE_SUFFIX',            'vector4'),
         ('TYPE',                   'vector4'),
     ),
-    "MATRIX44" : (
+    "matrix44" : (
         ('TYPE_ZERO_POINT_FIVE',   'matrix(0.5,0,0,0, 0,0.5,0,0, 0,0,0.5,0, 0,0,0,0.5)'),
         ('TYPE_ZERO',              'matrix(0)'),
         ('TYPE_ONE',               'matrix(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1)'),
@@ -139,7 +122,7 @@ replacements = {
         ('TYPE_SUFFIX',            'matrix44'),
         ('TYPE',                   'matrix'),
     ),
-    "MATRIX33" : (
+    "matrix33" : (
         ('TYPE_ZERO_POINT_FIVE',   'matrix(0.5,0,0,0, 0,0.5,0,0, 0,0,0.5,0, 0,0,0,0)'),
         ('TYPE_ZERO',              'matrix(0)'),
         ('TYPE_ONE',               'matrix(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,0)'),
@@ -150,7 +133,7 @@ replacements = {
         ('TYPE_SUFFIX',            'matrix33'),
         ('TYPE',                   'matrix'),
     ),
-    "INT" : (
+    "int" : (
         ('TYPE_ZERO_POINT_FIVE',   '1'),
         ('TYPE_ZERO',              '0'),
         ('TYPE_ONE',               '1'),
@@ -161,7 +144,7 @@ replacements = {
         ('TYPE_SUFFIX',            'int'),
         ('TYPE',                   'int'),
     ),
-    "BOOL" : (
+    "bool" : (
         ('TYPE_ZERO_POINT_FIVE',   '1'),
         ('TYPE_ZERO',              '0'),
         ('TYPE_ONE',               '1'),
@@ -172,7 +155,7 @@ replacements = {
         ('TYPE_SUFFIX',            'bool'),
         ('TYPE',                   'int'),
     ),
-    "STRING" : (
+    "string" : (
         ('TYPE_ZERO_POINT_FIVE',   '"zero point five"'),
         ('TYPE_ZERO',              '"zero"'),
         ('TYPE_ONE',               '"one"'),
@@ -183,7 +166,7 @@ replacements = {
         ('TYPE_SUFFIX',            'string'),
         ('TYPE',                   'string'),
     ),
-  "FILENAME" :  (
+  "filename" :  (
         ('TYPE_ZERO_POINT_FIVE',   '"zero point five"'),
         ('TYPE_ZERO',              '"zero"'),
         ('TYPE_ONE',               '"one"'),
@@ -194,7 +177,7 @@ replacements = {
         ('TYPE_SUFFIX',            'filename'),
         ('TYPE',                   'string'),
     ),
-    "SURFACESHADER" : (
+    "surfaceshader" : (
         ('TYPE_ZERO_POINT_FIVE',   '0'),
         ('TYPE_ZERO',              '0'),
         ('TYPE_ONE',               '1'),
@@ -204,98 +187,98 @@ replacements = {
         ('TYPE_STR',               '"surfaceshader"'),
         ('TYPE_SUFFIX',            'surfaceshader'),
         ('TYPE',                   'closure color'),
-    ) 
+    )
 }
 
-ALL_TYPES = ['FLOAT', 'COLOR', 'COLOR2', 'COLOR4', 'VECTOR', 'VECTOR2', 'VECTOR4']
-EXTRA_TYPES = ['MATRIX44', 'MATRIX33', 'STRING', 'FILENAME', 'BOOL', 'INT', 'SURFACESHADER']
+ALL_TYPES = ['float', 'color', 'color2', 'color4', 'vector', 'vector2', 'vector4']
+EXTRA_TYPES = ['matrix44', 'matrix33', 'string', 'filename', 'bool', 'int', 'surfaceshader']
 
 BUILD_DICT = {
     'mx_absval': ALL_TYPES,
-    'mx_add': ALL_TYPES + ['SURFACESHADER'],
-    'mx_add_float': ['COLOR', 'COLOR2', 'COLOR4', 'VECTOR', 'VECTOR2', 'VECTOR4'],
-    'mx_ambientocclusion': ['FLOAT'],
-    'mx_bitangent': ['VECTOR'],
+    'mx_add': ALL_TYPES + ['surfaceshader'],
+    'mx_add_float': ['color', 'color2', 'color4', 'vector', 'vector2', 'vector4'],
+    'mx_ambientocclusion': ['float'],
+    'mx_bitangent': ['vector'],
     'mx_blur': ALL_TYPES,
-    'mx_burn': ['FLOAT', 'COLOR', 'COLOR2', 'COLOR4'],
-    'mx_cellnoise2d': ['FLOAT'],
-    'mx_cellnoise3d': ['FLOAT'],
+    'mx_burn': ['float', 'color', 'color2', 'color4'],
+    'mx_cellnoise2d': ['float'],
+    'mx_cellnoise3d': ['float'],
     'mx_clamp': ALL_TYPES,
-    'mx_clamp_float': ['COLOR', 'COLOR2', 'COLOR4', 'VECTOR', 'VECTOR2', 'VECTOR4'],
+    'mx_clamp_float': ['color', 'color2', 'color4', 'vector', 'vector2', 'vector4'],
     'mx_compare': ALL_TYPES,
-    'mx_constant': ALL_TYPES + ['MATRIX44', 'MATRIX33', 'STRING', 'FILENAME', 'BOOL', 'INT'],
-    'mx_crossproduct': ['VECTOR'],
-    'mx_dodge': ['FLOAT', 'COLOR', 'COLOR2', 'COLOR4'],
-    'mx_dotproduct': ['VECTOR', 'VECTOR2', 'VECTOR4'],
-    'mx_dot': ALL_TYPES + ['MATRIX44', 'MATRIX33', 'STRING', 'FILENAME', 'BOOL', 'INT', 'SURFACESHADER'],
+    'mx_constant': ALL_TYPES + ['matrix44', 'matrix33', 'string', 'filename', 'bool', 'int'],
+    'mx_crossproduct': ['vector'],
+    'mx_dodge': ['float', 'color', 'color2', 'color4'],
+    'mx_dotproduct': ['vector', 'vector2', 'vector4'],
+    'mx_dot': ALL_TYPES + ['matrix44', 'matrix33', 'string', 'filename', 'bool', 'int', 'surfaceshader'],
     'mx_floor': ALL_TYPES,
-    'mx_frame': ['FLOAT'],
-    'mx_geomattrvalue': ALL_TYPES + ['BOOL', 'STRING', 'INT'],
-    'mx_geomcolor': ['FLOAT', 'COLOR', 'COLOR2', 'COLOR4'],
-    'mx_heighttonormal': ['VECTOR'],
-    'mx_hueshift': ['COLOR', 'COLOR4'],
+    'mx_frame': ['float'],
+    'mx_geomattrvalue': ALL_TYPES + ['bool', 'string', 'int'],
+    'mx_geomcolor': ['float', 'color', 'color2', 'color4'],
+    'mx_heighttonormal': ['vector'],
+    'mx_hueshift': ['color', 'color4'],
     'mx_image': ALL_TYPES,
     'mx_max': ALL_TYPES,
     'mx_min': ALL_TYPES,
-    'mx_overlay': ['FLOAT', 'COLOR', 'COLOR2', 'COLOR4'],
-    'mx_screen': ['FLOAT', 'COLOR', 'COLOR2', 'COLOR4'],
-    'mx_inside': ['FLOAT','COLOR', 'COLOR2', 'COLOR4'],
-    'mx_outside': ['FLOAT','COLOR', 'COLOR2', 'COLOR4'],
-    'mx_disjointover': ['COLOR2', 'COLOR4'],
-    'mx_in': ['COLOR2', 'COLOR4'],
-    'mx_mask': ['COLOR2', 'COLOR4'],
-    'mx_matte': ['COLOR2', 'COLOR4'],
-    'mx_out': ['COLOR2', 'COLOR4'],
-    'mx_over': ['COLOR2', 'COLOR4'],
-    'mx_mix': ALL_TYPES + ['SURFACESHADER'],
+    'mx_overlay': ['float', 'color', 'color2', 'color4'],
+    'mx_screen': ['float', 'color', 'color2', 'color4'],
+    'mx_inside': ['float','color', 'color2', 'color4'],
+    'mx_outside': ['float','color', 'color2', 'color4'],
+    'mx_disjointover': ['color2', 'color4'],
+    'mx_in': ['color2', 'color4'],
+    'mx_mask': ['color2', 'color4'],
+    'mx_matte': ['color2', 'color4'],
+    'mx_out': ['color2', 'color4'],
+    'mx_over': ['color2', 'color4'],
+    'mx_mix': ALL_TYPES + ['surfaceshader'],
     'mx_fractal3d': ALL_TYPES,
-    'mx_fractal3d_fa':['COLOR', 'COLOR2', 'COLOR4', 'VECTOR', 'VECTOR2', 'VECTOR4'],
+    'mx_fractal3d_fa':['color', 'color2', 'color4', 'vector', 'vector2', 'vector4'],
     'mx_contrast': ALL_TYPES,
-    'mx_contrast_float': ['COLOR', 'COLOR2', 'COLOR4', 'VECTOR', 'VECTOR2', 'VECTOR4'],
+    'mx_contrast_float': ['color', 'color2', 'color4', 'vector', 'vector2', 'vector4'],
     'mx_smoothstep': ALL_TYPES,
-    'mx_smoothstep_float': ['COLOR', 'COLOR2', 'COLOR4', 'VECTOR', 'VECTOR2', 'VECTOR4'],
+    'mx_smoothstep_float': ['color', 'color2', 'color4', 'vector', 'vector2', 'vector4'],
     'mx_divide': ALL_TYPES,
-    'mx_divide_float': ['COLOR', 'COLOR2', 'COLOR4', 'VECTOR', 'VECTOR2', 'VECTOR4'],
+    'mx_divide_float': ['color', 'color2', 'color4', 'vector', 'vector2', 'vector4'],
     'mx_exponent': ALL_TYPES,
-    'mx_exponent_float': ['COLOR', 'COLOR2', 'COLOR4', 'VECTOR', 'VECTOR2', 'VECTOR4'],
+    'mx_exponent_float': ['color', 'color2', 'color4', 'vector', 'vector2', 'vector4'],
     'mx_invert': ALL_TYPES,
-    'mx_invert_float': ['COLOR', 'COLOR2', 'COLOR4', 'VECTOR', 'VECTOR2', 'VECTOR4'],
-    'mx_luminance': ['COLOR', 'COLOR4'],
-    'mx_magnitude': ['VECTOR', 'VECTOR2', 'VECTOR4'],
+    'mx_invert_float': ['color', 'color2', 'color4', 'vector', 'vector2', 'vector4'],
+    'mx_luminance': ['color', 'color4'],
+    'mx_magnitude': ['vector', 'vector2', 'vector4'],
     'mx_max': ALL_TYPES,
-    'mx_max_float': ['COLOR', 'COLOR2', 'COLOR4', 'VECTOR', 'VECTOR2', 'VECTOR4'],
+    'mx_max_float': ['color', 'color2', 'color4', 'vector', 'vector2', 'vector4'],
     'mx_min': ALL_TYPES,
-    'mx_min_float': ['COLOR', 'COLOR2', 'COLOR4', 'VECTOR', 'VECTOR2', 'VECTOR4'],
+    'mx_min_float': ['color', 'color2', 'color4', 'vector', 'vector2', 'vector4'],
     'mx_modulo': ALL_TYPES,
-    'mx_modulo_float': ['COLOR', 'COLOR2', 'COLOR4', 'VECTOR', 'VECTOR2', 'VECTOR4'],
+    'mx_modulo_float': ['color', 'color2', 'color4', 'vector', 'vector2', 'vector4'],
     'mx_multiply': ALL_TYPES,
-    'mx_multiply_float':['COLOR', 'COLOR2', 'COLOR4', 'VECTOR', 'VECTOR2', 'VECTOR4'],
+    'mx_multiply_float':['color', 'color2', 'color4', 'vector', 'vector2', 'vector4'],
     'mx_noise2d': ALL_TYPES,
-    'mx_noise2d_fa':['COLOR', 'COLOR2', 'COLOR4', 'VECTOR', 'VECTOR2', 'VECTOR4'],
+    'mx_noise2d_fa':['color', 'color2', 'color4', 'vector', 'vector2', 'vector4'],
     'mx_noise3d': ALL_TYPES,
-    'mx_noise3d_fa':['COLOR', 'COLOR2', 'COLOR4', 'VECTOR', 'VECTOR2', 'VECTOR4'],
-    'mx_normal': ['VECTOR'],
-    'mx_normalize': ['VECTOR', 'VECTOR2', 'VECTOR4'],
-    'mx_pack': ['COLOR', 'COLOR2', 'COLOR4', 'VECTOR', 'VECTOR2', 'VECTOR4'],
-    'mx_pack_cf': ['COLOR4'],
-    'mx_pack_cc': ['COLOR4'],
-    'mx_pack_vf': ['VECTOR4'],
-    'mx_pack_vv': ['VECTOR4'],
-    'mx_position': ['VECTOR'],
-    'mx_premult': ['COLOR', 'COLOR2', 'COLOR4'],
+    'mx_noise3d_fa':['color', 'color2', 'color4', 'vector', 'vector2', 'vector4'],
+    'mx_normal': ['vector'],
+    'mx_normalize': ['vector', 'vector2', 'vector4'],
+    'mx_pack': ['color', 'color2', 'color4', 'vector', 'vector2', 'vector4'],
+    'mx_pack_cf': ['color4'],
+    'mx_pack_cc': ['color4'],
+    'mx_pack_vf': ['vector4'],
+    'mx_pack_vv': ['vector4'],
+    'mx_position': ['vector'],
+    'mx_premult': ['color', 'color2', 'color4'],
     'mx_ramp4': ALL_TYPES,
     'mx_ramplr': ALL_TYPES,
     'mx_ramptb': ALL_TYPES,
     'mx_remap': ALL_TYPES,
-    'mx_remap_float': ['COLOR', 'COLOR2', 'COLOR4', 'VECTOR', 'VECTOR2', 'VECTOR4'],
-    'mx_rotate2d': ['VECTOR2'],
-    'mx_saturate': ['COLOR', 'COLOR4'],
-    'mx_scale': ['VECTOR', 'VECTOR2'],
+    'mx_remap_float': ['color', 'color2', 'color4', 'vector', 'vector2', 'vector4'],
+    'mx_rotate2d': ['vector2'],
+    'mx_saturate': ['color', 'color4'],
+    'mx_scale': ['vector', 'vector2'],
     'mx_splitlr': ALL_TYPES,
     'mx_splittb': ALL_TYPES,
     'mx_subtract': ALL_TYPES,
-    'mx_subtract_float': ['COLOR', 'COLOR2', 'COLOR4', 'VECTOR', 'VECTOR2', 'VECTOR4'],
-    'mx_swizzle_float': ['COLOR', 'COLOR2', 'COLOR4', 'VECTOR', 'VECTOR2', 'VECTOR4'],
+    'mx_subtract_float': ['color', 'color2', 'color4', 'vector', 'vector2', 'vector4'],
+    'mx_swizzle_float': ['color', 'color2', 'color4', 'vector', 'vector2', 'vector4'],
     'mx_swizzle_color': ALL_TYPES,
     'mx_swizzle_color2': ALL_TYPES,
     'mx_swizzle_color4': ALL_TYPES,
@@ -303,12 +286,12 @@ BUILD_DICT = {
     'mx_swizzle_vector2': ALL_TYPES,
     'mx_swizzle_vector4': ALL_TYPES,
     'mx_switch': ALL_TYPES,
-    'mx_tangent': ['VECTOR'],
-    'mx_texcoord': ['VECTOR', 'VECTOR2'],
-    'mx_time': ['FLOAT'],
+    'mx_tangent': ['vector'],
+    'mx_texcoord': ['vector', 'vector2'],
+    'mx_time': ['float'],
     'mx_triplanarprojection': ALL_TYPES,
-    'mx_unpremult': ['COLOR', 'COLOR2', 'COLOR4'],
-    'mx_mult_surfaceshader': ['COLOR', 'FLOAT']
+    'mx_unpremult': ['color', 'color2', 'color4'],
+    'mx_mult_surfaceshader': ['color', 'float']
 }
 
 # open_mx_file:  open a file on disk and return its contents
@@ -338,7 +321,7 @@ def write_osl_file(osl_shadername, osl_code, options):
         return None
 
 # mx_to_osl: open an mx file and for each type in the BUILD_DICT, generate a corresponding .osl file
-def mx_to_osl(shader, build_types, options):    
+def mx_to_osl(shader, build_types, options):
     mx_code = open_mx_file(shader, options)
     build_count = 0
     if mx_code is not None:
@@ -349,7 +332,7 @@ def mx_to_osl(shader, build_types, options):
                         if options['v']: print('OSL Generation for type %s skipped.'%var_type)
                         continue
                 substitutions = replacements[var_type]
-                osl_shadername = '%s_%s' % (shader, TYPE_STRING[var_type])            
+                osl_shadername = '%s_%s' % (shader, var_type)
                 if options['v']:
                     print('Building %s' % osl_shadername)
                 #osl_code = mx_code.replace('SHADER_NAME(%s)' % shader, osl_shadername)
@@ -357,7 +340,7 @@ def mx_to_osl(shader, build_types, options):
                 #osl_code = re.sub(r'\bTYPE\b', SHADER_TYPES[var_type], osl_code)
                 for s in substitutions :
                     mx_code = mx_code.replace(s[0], s[1])
-                
+
                 osl_filepath = write_osl_file(osl_shadername, mx_code, options)
                 build_count += 1
                 # build oso bytecode if compile flag is on
@@ -380,7 +363,7 @@ def main():
     parser.add_argument('-oslc_path', '--oslc_path', default='', help='Path to oslc executable.  Default: environment default')
     parser.add_argument('-compile', '--compile', default=0, help='Compile generated osl files in place. 0|1.  Default: 0')
     parser.add_argument('-s', '--shader', default='', help='Specify a comma separated list of mx shaders to convert, e.g. mx_add,mx_absval.  Default: all')
-    parser.add_argument('-t', '--types', default='', help='Comma separated list of types to convert, e.g. FLOAT,COLOR.  Default: all')
+    parser.add_argument('-t', '--types', default='', help='Comma separated list of types to convert, e.g. float,color.  Default: all')
     parser.add_argument('-o', '--out', default='.', help='Destination folder.  Default: current')
 
     args = parser.parse_args()
@@ -394,7 +377,7 @@ def main():
 
     if args.types != '':
         types = args.types.split(',')
-        types = [t.upper() for t in types]
+        types = [t.lower() for t in types]
 
     options = {
         'v':int(args.v),
@@ -416,8 +399,8 @@ def main():
         print('ERROR: Source path %s does not exist'%options['source'])
         return
 
-    # If the shader flag was specified, we're only going to build the 
-    # osl for the named mx file.  If the types flag was specified as well, 
+    # If the shader flag was specified, we're only going to build the
+    # osl for the named mx file.  If the types flag was specified as well,
     # only generate osl for those types
     if args.shader:
         shaders = args.shader.split(',')
@@ -427,7 +410,7 @@ def main():
         shader_list = BUILD_DICT
 
     # Loop over each shader
-    i = 0    
+    i = 0
     for shader, shader_types in shader_list.items():
         i += mx_to_osl(shader, shader_types, options)
     if options['v']:

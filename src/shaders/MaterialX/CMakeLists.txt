@@ -108,7 +108,7 @@ make_mx_flavors (
             mx_switch.mx mx_swizzle_color.mx mx_swizzle_color2.mx
             mx_swizzle_color4.mx mx_swizzle_vector.mx mx_swizzle_vector2.mx
             mx_swizzle_vector4.mx mx_triplanarprojection.mx
-    TYPES   FLOAT COLOR COLOR2 COLOR4 VECTOR VECTOR2 VECTOR4)
+    TYPES   float color color2 color4 vector vector2 vector4)
 
 # MX shaders that come in flavors for all color/vector types.
 make_mx_flavors (
@@ -118,53 +118,53 @@ make_mx_flavors (
             mx_modulo_float.mx mx_multiply_float.mx mx_noise2d_fa.mx
             mx_noise3d_fa.mx mx_pack.mx mx_remap_float.mx
             mx_smoothstep_float.mx mx_subtract_float.mx mx_swizzle_float.mx
-    TYPES   COLOR COLOR2 COLOR4 VECTOR VECTOR2 VECTOR4)
+    TYPES   color color2 color4 vector vector2 vector4)
 
 # MX shaders that come in flavors for all color types, and float
 make_mx_flavors (
             mx_burn.mx mx_dodge.mx mx_geomcolor.mx mx_inside.mx
             mx_outside.mx mx_overlay.mx mx_screen.mx
-    TYPES FLOAT COLOR COLOR2 COLOR4)
+    TYPES float color color2 color4)
 
 # All the rest of the odds and ends follow:
-make_mx_flavors (mx_add.mx              TYPES SURFACESHADER)
-make_mx_flavors (mx_ambientocclusion.mx TYPES FLOAT)
-make_mx_flavors (mx_bitangent.mx        TYPES VECTOR)
-make_mx_flavors (mx_cellnoise2d.mx      TYPES FLOAT)
-make_mx_flavors (mx_cellnoise3d.mx      TYPES FLOAT)
-make_mx_flavors (mx_constant.mx         TYPES MATRIX44 MATRIX33 STRING FILENAME BOOL INT)
-make_mx_flavors (mx_crossproduct.mx     TYPES VECTOR)
-make_mx_flavors (mx_disjointover.mx     TYPES COLOR2 COLOR4)
-make_mx_flavors (mx_dot.mx              TYPES MATRIX44 MATRIX33 STRING FILENAME BOOL INT SURFACESHADER)
-make_mx_flavors (mx_dotproduct.mx       TYPES VECTOR VECTOR2 VECTOR4)
-make_mx_flavors (mx_frame.mx            TYPES FLOAT)
-make_mx_flavors (mx_geomattrvalue.mx    TYPES INT BOOL STRING)
-make_mx_flavors (mx_heighttonormal.mx   TYPES VECTOR)
-make_mx_flavors (mx_hueshift.mx         TYPES COLOR COLOR4)
-make_mx_flavors (mx_in.mx               TYPES COLOR2 COLOR4)
-make_mx_flavors (mx_luminance.mx        TYPES COLOR COLOR4)
-make_mx_flavors (mx_magnitude.mx        TYPES VECTOR VECTOR2 VECTOR4)
-make_mx_flavors (mx_mask.mx             TYPES COLOR2 COLOR4)
-make_mx_flavors (mx_matte.mx            TYPES COLOR2 COLOR4)
-make_mx_flavors (mx_mix.mx              TYPES SURFACESHADER)
-make_mx_flavors (mx_mult_surfaceshader.mx TYPES COLOR FLOAT)
-make_mx_flavors (mx_normal.mx           TYPES VECTOR)
-make_mx_flavors (mx_normalize.mx        TYPES VECTOR VECTOR2 VECTOR4)
-make_mx_flavors (mx_out.mx              TYPES COLOR2 COLOR4)
-make_mx_flavors (mx_over.mx             TYPES COLOR2 COLOR4)
-make_mx_flavors (mx_pack_cc.mx          TYPES COLOR4)
-make_mx_flavors (mx_pack_cf.mx          TYPES COLOR4)
-make_mx_flavors (mx_pack_vf.mx          TYPES VECTOR4)
-make_mx_flavors (mx_pack_vv.mx          TYPES VECTOR4)
-make_mx_flavors (mx_position.mx         TYPES VECTOR)
-make_mx_flavors (mx_premult.mx          TYPES COLOR COLOR2 COLOR4)
-make_mx_flavors (mx_rotate2d.mx         TYPES VECTOR2)
-make_mx_flavors (mx_saturate.mx         TYPES COLOR COLOR4)
-make_mx_flavors (mx_scale.mx            TYPES VECTOR VECTOR2)
-make_mx_flavors (mx_tangent.mx          TYPES VECTOR)
-make_mx_flavors (mx_texcoord.mx         TYPES VECTOR VECTOR2)
-make_mx_flavors (mx_time.mx             TYPES FLOAT)
-make_mx_flavors (mx_unpremult.mx        TYPES COLOR COLOR2 COLOR4)
+make_mx_flavors (mx_add.mx              TYPES surfaceshader)
+make_mx_flavors (mx_ambientocclusion.mx TYPES float)
+make_mx_flavors (mx_bitangent.mx        TYPES vector)
+make_mx_flavors (mx_cellnoise2d.mx      TYPES float)
+make_mx_flavors (mx_cellnoise3d.mx      TYPES float)
+make_mx_flavors (mx_constant.mx         TYPES matrix44 matrix33 string filename bool int)
+make_mx_flavors (mx_crossproduct.mx     TYPES vector)
+make_mx_flavors (mx_disjointover.mx     TYPES color2 color4)
+make_mx_flavors (mx_dot.mx              TYPES matrix44 matrix33 string filename bool int surfaceshader)
+make_mx_flavors (mx_dotproduct.mx       TYPES vector vector2 vector4)
+make_mx_flavors (mx_frame.mx            TYPES float)
+make_mx_flavors (mx_geomattrvalue.mx    TYPES int bool string)
+make_mx_flavors (mx_heighttonormal.mx   TYPES vector)
+make_mx_flavors (mx_hueshift.mx         TYPES color color4)
+make_mx_flavors (mx_in.mx               TYPES color2 color4)
+make_mx_flavors (mx_luminance.mx        TYPES color color4)
+make_mx_flavors (mx_magnitude.mx        TYPES vector vector2 vector4)
+make_mx_flavors (mx_mask.mx             TYPES color2 color4)
+make_mx_flavors (mx_matte.mx            TYPES color2 color4)
+make_mx_flavors (mx_mix.mx              TYPES surfaceshader)
+make_mx_flavors (mx_mult_surfaceshader.mx TYPES color float)
+make_mx_flavors (mx_normal.mx           TYPES vector)
+make_mx_flavors (mx_normalize.mx        TYPES vector vector2 vector4)
+make_mx_flavors (mx_out.mx              TYPES color2 color4)
+make_mx_flavors (mx_over.mx             TYPES color2 color4)
+make_mx_flavors (mx_pack_cc.mx          TYPES color4)
+make_mx_flavors (mx_pack_cf.mx          TYPES color4)
+make_mx_flavors (mx_pack_vf.mx          TYPES vector4)
+make_mx_flavors (mx_pack_vv.mx          TYPES vector4)
+make_mx_flavors (mx_position.mx         TYPES vector)
+make_mx_flavors (mx_premult.mx          TYPES color color2 color4)
+make_mx_flavors (mx_rotate2d.mx         TYPES vector2)
+make_mx_flavors (mx_saturate.mx         TYPES color color4)
+make_mx_flavors (mx_scale.mx            TYPES vector vector2)
+make_mx_flavors (mx_tangent.mx          TYPES vector)
+make_mx_flavors (mx_texcoord.mx         TYPES vector vector2)
+make_mx_flavors (mx_time.mx             TYPES float)
+make_mx_flavors (mx_unpremult.mx        TYPES color color2 color4)
 
 
 add_custom_target (mxshaders ALL

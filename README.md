@@ -291,6 +291,10 @@ Films using OSL (grouped by year of release date):
   Wonder Woman,
   Cars 3,
   Baby Driver,
+  Spider-Man: Homecoming,
+  Dunkirk,
+  The Emoji Movie,
+  Detroit,
   ...
 
 

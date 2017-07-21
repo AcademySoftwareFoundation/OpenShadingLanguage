@@ -289,6 +289,12 @@ Films using OSL (grouped by year of release date):
   Guardians of the Galaxy 2,
   The Mummy,
   Wonder Woman,
+  Cars 3,
+  Baby Driver,
+  Spider-Man: Homecoming,
+  Dunkirk,
+  The Emoji Movie,
+  Detroit,
   ...
 
 

@@ -45,6 +45,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec_pvt.h"
 #include "OSL/dual.h"
 #include "OSL/dual_vec.h"
+#include <OSL/Imathx.h>
 #include "OSL/wide.h"
 
 
@@ -131,88 +132,7 @@ inline Vec3 calculatenormal(const Dual2<Vec3> &tmpP, bool flipHandedness)
 }
 
 
-// Imath::Vec3::lengthTiny is private
-// local copy here no changes
-inline float accessibleTinyLength(const Vec3 &N)
-{
-    float absX = (N.x >= float (0))? N.x: -N.x;
-    float absY = (N.y >= float (0))? N.y: -N.y;
-    float absZ = (N.z >= float (0))? N.z: -N.z;
-    
-    float max = absX;
 
-    if (max < absY)
-	max = absY;
-
-    if (max < absZ)
-	max = absZ;
-
-    if (max == float (0))
-	return float (0);
-
-    //
-    // Do not replace the divisions by max with multiplications by 1/max.
-    // Computing 1/max can overflow but the divisions below will always
-    // produce results less than or equal to 1.
-    //
-
-    absX /= max;
-    absY /= max;
-    absZ /= max;
-
-    return max * Imath::Math<float>::sqrt (absX * absX + absY * absY + absZ * absZ);
-}
-
-// because lengthTiny does alot of work including another
-// sqrt, we really want to skip that if possible because
-// with SIMD execution, we end up doing the sqrt twice
-// and blending the results.  Although code could be 
-// refactored to do a single sqrt, think its better
-// to skip the code block as we don't expect near 0 lengths
-// TODO: get OpenEXR ImathVec to update to similar, don't think
-// it can cause harm
-OSL_INLINE
-float simdFriendlyLength(const Vec3 &N)
-{
-	float length2 = N.dot (N);
-
-	if (__builtin_expect(length2 < float (2) * Imath::limits<float>::smallest(), 0))
-		return accessibleTinyLength(N);
-
-	return Imath::Math<float>::sqrt (length2);
-}
-
-OSL_INLINE Vec3
-simdFriendlyNormalize(const Vec3 &N)
-{
-    float l = simdFriendlyLength(N);
-
-    if (l == float (0))
-    	return Vec3 (float (0));
-
-    return Vec3 (N.x / l, N.y / l, N.z / l);
-}
-
-OSL_INLINE Dual2<Vec3>
-simdFriendlyNormalize (const Dual2<Vec3> &a)
-{
-    if (__builtin_expect(a.val().x == 0 && a.val().y == 0 && a.val().z == 0, 0)) {
-        return Dual2<Vec3> (Vec3(0, 0, 0),
-                            Vec3(0, 0, 0),
-                            Vec3(0, 0, 0));
-    } else {
-        Dual2<float> ax (a.val().x, a.dx().x, a.dy().x);
-        Dual2<float> ay (a.val().y, a.dx().y, a.dy().y);
-        Dual2<float> az (a.val().z, a.dx().z, a.dy().z);
-        Dual2<float> inv_length = 1.0f / sqrt(ax*ax + ay*ay + az*az);
-        ax = ax*inv_length;
-        ay = ay*inv_length;
-        az = az*inv_length;
-        return Dual2<Vec3> (Vec3(ax.val(), ay.val(), az.val()),
-                            Vec3(ax.dx(),  ay.dx(),  az.dx() ),
-                            Vec3(ax.dy(),  ay.dy(),  az.dy() ));
-    }
-}
 
 OSL_SHADEOP void
 osl_length_w16fw16v(void *r_, void *V_)

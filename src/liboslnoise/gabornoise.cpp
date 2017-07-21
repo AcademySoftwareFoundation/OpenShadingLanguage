@@ -689,7 +689,8 @@ namespace fast {
 			float sin_omega_t = sinf(omega_t);
 			float cos_omega_t = cosf(omega_t);
 #endif
-			omega = Vec3 (cos_omega_t*sin_omega_p, sin_omega_t*sin_omega_p, cos_omega_p).normalized();
+			//omega = Vec3 (cos_omega_t*sin_omega_p, sin_omega_t*sin_omega_p, cos_omega_p).normalized();
+			omega = simdFriendlyNormalize(Vec3 (cos_omega_t*sin_omega_p, sin_omega_t*sin_omega_p, cos_omega_p));
 		} else {
 			// otherwise hybrid
 			float omega_r = gup.omega.length();
@@ -712,6 +713,24 @@ namespace fast {
 		phi = float(M_TWO_PI) * rng();
 	}
 
+	// gabor_cell was unnecesarily calling down to sample even when outside the radius
+	// however to match existing results, we need to bump the random number generator
+	// an equivalent # of times.  Here the sample function stripped down to just
+	// the rng() calls
+	template<int AnisotropicT>
+	inline void
+	gabor_no_sample (fast_rng &rng)
+	{
+		// section 3.3, solid random-phase gabor noise
+		if (AnisotropicT == 1 /* anisotropic */) {
+		} else if (AnisotropicT == 0 /* isotropic */) {
+			rng();
+			rng();
+		} else {
+			rng();
+		}
+		rng();
+	}
 
 	// Evaluate the summed contribution of all gabor impulses within the
 	// cell whose corner is c_i.  x_c_i is vector from x (the point
@@ -736,10 +755,12 @@ namespace fast {
 			float z_rng = rng(), y_rng = rng(), x_rng = rng();
 			Vec3 x_i_c (x_rng, y_rng, z_rng);
 			Dual2<Vec3> x_k_i = gup.radius * (x_c_i - x_i_c);        
-			float phi_i;
-			Vec3 omega_i;
-			fast::gabor_sample<AnisotropicT>(gup, c_i, rng, omega_i, phi_i);
 			if (x_k_i.val().length2() < gup.radius2) {
+				float phi_i;
+				Vec3 omega_i;
+		        // moved inside of conditional, notice workaround in the else
+				// case to match random number generator of the original version
+				fast::gabor_sample<AnisotropicT>(gup, c_i, rng, omega_i, phi_i);
 //				if ((!FilterPolicyT::active)  || (gp.do_filter == 0)) {
 					// N.B. if determinant(gp.filter) is too small, we will
 					// run into numerical problems.  But the filtering isn't
@@ -789,7 +810,11 @@ namespace fast {
 					// tiny.
 					sum += gabor_kernel (Gabor_Impulse_Weight, omega_i, phi_i, gup.a, x_k_i);  // 3D
 			    }
+			} else {
+				// Since we skipped the sample, we still need to bump the rng as if we had
+				fast::gabor_no_sample<AnisotropicT>(rng);
 			}
+
 		}
 	
 		return sum;

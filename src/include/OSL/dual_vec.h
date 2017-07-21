@@ -399,4 +399,26 @@ distance (const Dual2<Vec3> &a, const Dual2<Vec3> &b)
 
 
 
+OSL_INLINE Dual2<Vec3>
+simdFriendlyNormalize (const Dual2<Vec3> &a)
+{
+    if (__builtin_expect(a.val().x == 0 && a.val().y == 0 && a.val().z == 0, 0)) {
+        return Dual2<Vec3> (Vec3(0, 0, 0),
+                            Vec3(0, 0, 0),
+                            Vec3(0, 0, 0));
+    } else {
+        Dual2<float> ax (a.val().x, a.dx().x, a.dy().x);
+        Dual2<float> ay (a.val().y, a.dx().y, a.dy().y);
+        Dual2<float> az (a.val().z, a.dx().z, a.dy().z);
+        Dual2<float> inv_length = 1.0f / sqrt(ax*ax + ay*ay + az*az);
+        ax = ax*inv_length;
+        ay = ay*inv_length;
+        az = az*inv_length;
+        return Dual2<Vec3> (Vec3(ax.val(), ay.val(), az.val()),
+                            Vec3(ax.dx(),  ay.dx(),  az.dx() ),
+                            Vec3(ax.dy(),  ay.dy(),  az.dy() ));
+    }
+}
+
+
 OSL_NAMESPACE_EXIT

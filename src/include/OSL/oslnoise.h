@@ -694,7 +694,7 @@ inline T fade (const T &t) {
 
 // 1,2,3 and 4 dimensional gradient functions - perform a dot product against a
 // randomly chosen vector. Note that the gradient vector is not normalized, but
-// this only affects the overal "scale" of the result, so we simply account for
+// this only affects the overall "scale" of the result, so we simply account for
 // the scale by multiplying in the corresponding "perlin" function.
 // These factors were experimentally calculated to be:
 //    1D:   0.188
@@ -1736,8 +1736,8 @@ inline void perlin (Vec3 &result, const H &hash,
 
 
 template <typename H>
-inline void perlin_scalar (Vec3 &result, const H &hash,
-                    const float &x, const float &y, const float &z, const float &w)
+OSL_INLINE Vec3 perlin_scalar (const H hash,
+                    const float x, const float y, const float z, const float w)
 {
     int X; float fx = floorfrac(x, &X);
     int Y; float fy = floorfrac(y, &Y);
@@ -1749,8 +1749,8 @@ inline void perlin_scalar (Vec3 &result, const H &hash,
     float t = fade(fz);
     float s = fade(fw);
 
-    result = OIIO::lerp (
-               OIIO::trilerp (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
+    auto result = OIIO::lerp (
+    		  OIIO::trilerp  (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
                               grad (hash (X+1, Y  , Z  , W  ), fx-1.0f, fy     , fz     , fw     ),
                               grad (hash (X  , Y+1, Z  , W  ), fx     , fy-1.0f, fz     , fw     ),
                               grad (hash (X+1, Y+1, Z  , W  ), fx-1.0f, fy-1.0f, fz     , fw     ),
@@ -1759,7 +1759,7 @@ inline void perlin_scalar (Vec3 &result, const H &hash,
                               grad (hash (X  , Y+1, Z+1, W  ), fx     , fy-1.0f, fz-1.0f, fw     ),
                               grad (hash (X+1, Y+1, Z+1, W  ), fx-1.0f, fy-1.0f, fz-1.0f, fw     ),
                               u, v, t),
-               OIIO::trilerp (grad (hash (X  , Y  , Z  , W+1), fx     , fy     , fz     , fw-1.0f),
+		      OIIO::trilerp  (grad (hash (X  , Y  , Z  , W+1), fx     , fy     , fz     , fw-1.0f),
                               grad (hash (X+1, Y  , Z  , W+1), fx-1.0f, fy     , fz     , fw-1.0f),
                               grad (hash (X  , Y+1, Z  , W+1), fx     , fy-1.0f, fz     , fw-1.0f),
                               grad (hash (X+1, Y+1, Z  , W+1), fx-1.0f, fy-1.0f, fz     , fw-1.0f),
@@ -1769,7 +1769,7 @@ inline void perlin_scalar (Vec3 &result, const H &hash,
                               grad (hash (X+1, Y+1, Z+1, W+1), fx-1.0f, fy-1.0f, fz-1.0f, fw-1.0f),
                               u, v, t),
                s);
-    result = scale4 (result);
+    return scale4 (result);
 }
 
 
@@ -2201,6 +2201,8 @@ struct Noise {
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp[i];
 				Vec3 perlinResult;
+				// NOT A BUG:  this version of perlin scalar requires a scalar hash
+				// despite operation on Vec3
 				HashScalar h;
 				perlin_scalar(perlinResult, h, p.x, p.y, p.z);
 				Vec3 scaledResult = 0.5f * (perlinResult + Vec3(1.0f, 1.0f, 1.0f));								
@@ -2221,13 +2223,13 @@ struct Noise {
 			                ConstWideAccessor<float,WidthT> wt) const {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp[i];
 				float t = wt[i];
-		        Vec3 perlinResult;
+
 		        HashVector h;
-		        perlin_scalar(perlinResult, h, p.x, p.y, p.z, t);
+		        Vec3 perlinResult = perlin_scalar(h, p.x, p.y, p.z, t);
 		        Vec3 scaledResult =  0.5f * (perlinResult + Vec3(1.0f, 1.0f, 1.0f));
 				wresult[i] = scaledResult;
 			}
@@ -2406,15 +2408,14 @@ struct SNoise {
                             ConstWideAccessor<float,WidthT> wt) const {
 		OSL_INTEL_PRAGMA("forceinline recursive")
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp[i];
 				float t = wt[i];
-				Vec3 perlinResult;
-				
+
 		        HashVector h;
-		        perlin_scalar(perlinResult, h, p.x, p.y, p.z, t);
-		        
+		        Vec3 perlinResult = perlin_scalar(h, p.x, p.y, p.z, t);
+
 				wresult[i] = perlinResult;
 			}
 		}

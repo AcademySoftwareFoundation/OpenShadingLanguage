@@ -47,8 +47,8 @@ make profile VERBOSE=1 USE_CCACHE=0 LLVM_VERSION=4.0.0 BOOST_HOME=/nfs/pdx/home/
 
 # after  building add 
 source /opt/intel/compilers_and_libraries_2017.4.196/linux/bin/compilervars.csh intel64
-setenv PATH /nfs/pdx/home/amwells/Pixar/OSL/OSL_Dev/OpenShadingLanguage/dist/linux64.profile/bin:$PATH
-setenv LD_LIBRARY_PATH /nfs/pdx/home/amwells/Pixar/OSL/OSL_Dev/OpenShadingLanguage/dist/linux64.profile/lib:$LD_LIBRARY_PATH
+setenv PATH /data/awells-np/OSL_Dev/BatchedOSL/dist/linux64.profile/bin:$PATH
+setenv LD_LIBRARY_PATH /data/awells-np/OSL_Dev/BatchedOSL/dist/linux64.profile/lib:$LD_LIBRARY_PATH
 setenv LD_LIBRARY_PATH ~/Pixar/boost/lib/:$LD_LIBRARY_PATH
 setenv LD_LIBRARY_PATH ~/Pixar/OSL/install/lib/:$LD_LIBRARY_PATH
 

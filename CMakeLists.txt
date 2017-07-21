@@ -192,17 +192,20 @@ if (CMAKE_COMPILER_IS_INTEL)
 	add_definitions ("-prec-div")
 	#add_definitions ("-xAVX")
 	#add_definitions ("-xCORE-AVX2")
-	add_definitions ("-xCORE-AVX512")
+	#add_definitions ("-xCORE-AVX512")
+	add_definitions ("-axSSE3,SSSE3,CORE-AVX512")
 	#add_definitions ("-fp-model consistent")	 
 	#add_definitions ("-xSSE4.2")
 	#add_definitions ("-no-vec")
 	#add_definitions ("-no-simd")
 	#add_definitions ("-qno-openmp-simd")
 	# loop not vectorized with #pragma SIMD	
-	#add_definitions ("-wd15552")
+	add_definitions ("-wd15552")
 	# unrecognized OpenMP #pragma
 	#add_definitions ("-wd3180")
 	#add_definitions ("-wd161")
+	#add_definitions ("-no-fma")
+	
 
 endif ()
 ## enable RTTI

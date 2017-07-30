@@ -3,8 +3,7 @@ Release 1.9 -- ?? 2017 (compared to 1.8)
 
 Dependency and standards changes:
 * **C++11 required**: OSL 1.9 requires a minimum standard of C++11. It
-  should also build against C++14 (and we intend to make it C++-17-safe,
-  as soon as it is ratified.
+  should also build against C++14 and C++17.
 * **LLVM 3.9 / 4.0**: Support for LLVM 3.4 has already been removed, and
   support for LLVM 3.5 will be removed as soon as we address some
   performance issues with the JIT in 3.9+.
@@ -55,6 +54,14 @@ Standard library additions/changes:
   #775 (1.9.0/1.8.10)
 * `int hash (...)` has been extended to take arguments that are int, float,
   2 floats, point, or point+float. #775 (1.9.0/1.8.10)
+
+Contributed shader library changes:
+* New headers: color2.h, color4.h, vector2.h, vector4.h. Technically these
+  are not part of the OSL specification and standard library, but are
+  "contributed" code that you may find handy. They implement 2- and 4-
+  component colors (RA and RGBA) and 2D and 4D vectors. #777 (1.9.1)
+* A full complement of MaterialX shaders is now included in the OSL
+  distribution. #777 (1.9.1)
 
 API changes, new options, new ShadingSystem features (for renderer writers):
 * ShadingSystem API changes:
@@ -129,6 +136,8 @@ Bug fixes and other improvements (internals):
   `-param` after the shader is set up. #773 (1.9.0)
 * Fix bug with transitive assignment for arrays, like `a[0] = a[1] = 0;`
   #774 (1.9.0)
+* The standard OSL library function fprintf() was not properly implemented.
+  #780 (1.9.1)
 
 Build & test system improvements and developer goodies:
 * C++11 is the new language baseline. #704, #707

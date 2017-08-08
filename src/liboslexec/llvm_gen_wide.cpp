@@ -3821,6 +3821,7 @@ LLVMGEN (llvm_gen_noise)
     derivs &= Result.has_derivs();  // ignore derivs if result doesn't need
 
     bool pass_name = false, pass_sg = false, pass_options = false;
+    bool pass_mask = false;
     if (! name) {
         // name is not a constant
         name = periodic ? Strings::genericpnoise : Strings::genericnoise;
@@ -3848,6 +3849,10 @@ LLVMGEN (llvm_gen_noise)
         pass_name = true;
         pass_sg = true;
         pass_options = true;
+        // Incomplete, adding masking support for expensive noise calls
+        // or calls that might want to change direction of vectorization
+        // making use of the mask to avoid work.
+        //pass_mask = true;
         derivs = true;
         name = periodic ? Strings::gaborpnoise : Strings::gabornoise;
     } else {
@@ -3922,6 +3927,10 @@ LLVMGEN (llvm_gen_noise)
     if (pass_options)
         args.push_back (opt);
 
+    if (pass_mask)
+    {
+    	rop.ll.push_masking_enabled(true);
+    }
 #ifdef OSL_DEV
     std::cout << "About to push " << funcname << "\n";
     for (size_t i = 0;  i < args.size();  ++i) {
@@ -3932,6 +3941,11 @@ LLVMGEN (llvm_gen_noise)
     // We always pass the result as a parameter, so no return value to store
     /*llvm::Value *r =*/ rop.ll.call_function (funcname.c_str(),
                                              &args[0], (int)args.size());
+
+    if (pass_mask)
+    {
+    	rop.ll.pop_masking_enabled();
+    }
 
 #if 0
     if (outdim == 1 && !derivs) {

@@ -1,4 +1,24 @@
-SET ( liboslnoise_srcs gabornoise.cpp simplexnoise.cpp )
+SET ( liboslnoise_srcs 
+	gabornoise.cpp 
+	fast_gabor_ansiotropic_disabled_16.cpp
+	fast_gabor_ansiotropic_enabled_16.cpp
+	fast_gabor_hybrid_disabled_16.cpp
+	fast_gabor_hybrid_enabled_16.cpp
+	fast_gabor_isotropic_disabled_16.cpp
+	fast_gabor_isotropic_enabled_16.cpp
+	fast_gabor3_ansiotropic_disabled_16.cpp
+	fast_gabor3_ansiotropic_enabled_16.cpp
+	fast_gabor3_hybrid_disabled_16.cpp
+	fast_gabor3_hybrid_enabled_16.cpp
+	fast_gabor3_isotropic_disabled_16.cpp
+	fast_gabor3_isotropic_enabled_16.cpp
+	fast_simplexnoise3_16_float.cpp
+	fast_simplexnoise3_16_vec3.cpp
+	fast_simplexnoise4_16_vec3.cpp
+	fast_usimplexnoise3_16_float.cpp
+	fast_usimplexnoise3_16_vec3.cpp
+	fast_usimplexnoise4_16_vec3.cpp
+ 	simplexnoise.cpp )
 
 #FILE ( GLOB compiler_headers "../liboslexec/*.h" )
 INCLUDE_DIRECTORIES ( ../liboslexec )

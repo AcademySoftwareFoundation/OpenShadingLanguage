@@ -503,15 +503,14 @@ OSL_INLINE static Matrix44 affineInvert(const Matrix44 &m)
 }
  
 
-OSL_INLINE static void invert_wide_matrix(Wide<Matrix44> &result, const Wide<Matrix44> &wmatrix, WeakMask mask)
+OSL_INLINE static void invert_wide_matrix(MaskedAccessor<Matrix44> result, ConstWideAccessor<Matrix44> wmatrix)
 {
-	// TODO: As we don't expect failure, not sure it is worth overhead to skip this work
-	if (mask.any_on()) {
+	if (result.mask().any_on()) {
 		int allAreAffine = 1;
 		OSL_INTEL_PRAGMA("omp simd simdlen(wmatrix.width)")
 		for(int lane=0; lane < wmatrix.width; ++lane) {
-			Matrix44 m = wmatrix.get(lane);        
-			if (mask.is_on(lane) && 
+			Matrix44 m = wmatrix[lane];
+			if (result.mask().is_on(lane) &&
 			    (m.x[0][3] != 0.0f || m.x[1][3] != 0.0f || m.x[2][3] != 0.0f || m.x[3][3] != 1.0f)) {
 				allAreAffine = 0;
 			}
@@ -520,35 +519,35 @@ OSL_INLINE static void invert_wide_matrix(Wide<Matrix44> &result, const Wide<Mat
 		if (allAreAffine) {
 			OSL_INTEL_PRAGMA("omp simd simdlen(wmatrix.width)")
 			for(int lane=0; lane < wmatrix.width; ++lane) {    
-				Matrix44 m = wmatrix.get(lane);        
+				Matrix44 m = wmatrix[lane];
 				//bool ok = get_matrix (sgb, r, xform.get(lane), time.get(lane));
 				//r.invert();
 				Matrix44 r = affineInvert(m);
-				result.set(lane, r);        
+				result[lane] = r;
 			}
 		} else
 		{
 			// Scalar code for non affine matrix (well at least 1 lane isn't)
 			for(int lane=0; lane < SimdLaneCount; ++lane) {
-				if (mask.is_on(lane)) {
-					Matrix44 r = wmatrix.get(lane);
+				if (result.mask().is_on(lane)) {
+					Matrix44 r = wmatrix[lane];
 					r.invert();
-					result.set(lane, r);
+					result[lane] = r;
 				}
 			}			
 		}
 	}
 }
+
 Mask
-BatchedRendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
-                                      const Wide<TransformationPtr> & xform, const Wide<float> &time,
-                                      WeakMask weak_mask)
+BatchedRendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb, MaskedAccessor<Matrix44> result,
+		ConstWideAccessor<TransformationPtr> xform, ConstWideAccessor<float> time)
 {
 	OSL_INTEL_PRAGMA("forceinline recursive")
 	{
 		Wide<Matrix44> wmatrix;
-		Mask succeeded = get_matrix (sgb, wmatrix, xform, time, weak_mask);
-		invert_wide_matrix(result, wmatrix, succeeded&weak_mask);
+		Mask succeeded = get_matrix (sgb, MaskedAccessor<Matrix44>(wmatrix, result.mask()), xform, time);
+		invert_wide_matrix(result&succeeded, wmatrix);
 	    return succeeded;	
 	}
 }
@@ -567,16 +566,29 @@ BatchedRendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &
 
 
 Mask
-BatchedRendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb,  Wide<Matrix44> &result,
-                                      ustring to, const Wide<float> &time, WeakMask weak_mask)
+BatchedRendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb,  MaskedAccessor<Matrix44> result,
+                                      ustring to, ConstWideAccessor<float> time)
 {
 	OSL_INTEL_PRAGMA("forceinline recursive")
 	{
 		Wide<Matrix44> wmatrix;
-		Mask succeeded = get_matrix (sgb, wmatrix, to, time, weak_mask);
-		invert_wide_matrix(result, wmatrix, succeeded&weak_mask);
+		Mask succeeded = get_matrix (sgb, MaskedAccessor<Matrix44>(wmatrix, result.mask()), to, time);
+		invert_wide_matrix(result&succeeded, wmatrix);
 	    return succeeded;
 	}    
+}
+
+Mask
+BatchedRendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb,  MaskedAccessor<Matrix44> result,
+		ConstWideAccessor<ustring> to, ConstWideAccessor<float> time)
+{
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+		Wide<Matrix44> wmatrix;
+		Mask succeeded = get_matrix (sgb, MaskedAccessor<Matrix44>(wmatrix,result.mask()), to, time);
+		invert_wide_matrix(result& succeeded, wmatrix);
+	    return succeeded;
+	}
 }
 
 
@@ -599,7 +611,7 @@ BatchedRendererServices::texturesys () const
 
 Mask
 BatchedRendererServices::get_texture_info (ShaderGlobalsBatch *sgb,
-                                           const Wide<ustring>& filename,
+										   ConstWideAccessor<ustring> filename,
                                            int subimage,
                                            ustring dataname,
                                            MaskedDataRef val)
@@ -612,7 +624,7 @@ BatchedRendererServices::get_texture_info (ShaderGlobalsBatch *sgb,
         for (int l = 0; l < out.width; ++l) {                                                   \
         	if(val.mask()[l]) {                                                                 \
 				data_type data;                                                                 \
-				bool status = texturesys()->get_texture_info (filename.get(l), subimage,        \
+				bool status = texturesys()->get_texture_info (filename[l], subimage,        \
 															  dataname, val.type(), &data);     \
 															  success.set(l, status);           \
 				if (status) {                                                                   \
@@ -636,7 +648,7 @@ BatchedRendererServices::get_texture_info (ShaderGlobalsBatch *sgb,
         	if(val.mask()[l]) {                                                                 \
 				auto arrayData = out[l];                                                        \
 				data_type data[arrayData.length()];                                             \
-				bool status = texturesys()->get_texture_info (filename.get(l), subimage,        \
+				bool status = texturesys()->get_texture_info (filename[l], subimage,        \
 															  dataname, val.type(), data);      \
 				success.set(l, status);                                                         \
 				if (status) {                                                                   \

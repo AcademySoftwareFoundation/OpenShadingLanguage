@@ -358,11 +358,10 @@ osl_get_matrix_batched (void *sgb_, void *r, const char *from)
 #endif
 
 OSL_INLINE Mask
-impl_osl_wide_get_matrix_masked (void *sgb_, void *wr, const char *from, WeakMask weak_mask)
+impl_get_uniform_from_matrix_batched (void *sgb_, MaskedAccessor<Matrix44> wrm, const char *from)
 {
     ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
     ShadingContext *ctx = (ShadingContext *)sgb->uniform().context;
-	Wide<Matrix44> & wrm = WMAT(wr);
     if (USTR(from) == Strings::common ||
             USTR(from) == ctx->shadingsys().commonspace_synonym()) {
     	OSL_INTEL_PRAGMA("forceinline recursive")
@@ -372,25 +371,25 @@ impl_osl_wide_get_matrix_masked (void *sgb_, void *wr, const char *from, WeakMas
 			ident.makeIdentity();
 			OSL_INTEL_PRAGMA("omp simd simdlen(wrm.width)")				    	
 			for(int lane=0; lane < wrm.width; ++lane) {
-				wrm.set(lane, ident);
+				wrm[lane] = ident;
 			}
     	}
         return Mask(true);
     }
     
 	if (USTR(from) == Strings::shader) {
-		ctx->batched_renderer()->get_matrix (sgb, wrm, sgb->varyingData().shader2common, sgb->varyingData().time, weak_mask);
+		ctx->batched_renderer()->get_matrix (sgb, wrm, sgb->varyingData().shader2common, sgb->varyingData().time);
 		// NOTE: matching scalar version of code which ignores the renderservices return value
         return Mask(true);
 	}
 	if (USTR(from) == Strings::object) {
-		ctx->batched_renderer()->get_matrix (sgb, wrm, sgb->varyingData().object2common, sgb->varyingData().time, weak_mask);
+		ctx->batched_renderer()->get_matrix (sgb, wrm, sgb->varyingData().object2common, sgb->varyingData().time);
 		// NOTE: matching scalar version of code which ignores the renderservices return value
         return Mask(true);
 	}
 	
-	Mask succeeded = ctx->batched_renderer()->get_matrix (sgb, wrm, USTR(from), sgb->varyingData().time, weak_mask);
-    Mask failedLanes = succeeded.invert(weak_mask);
+	Mask succeeded = ctx->batched_renderer()->get_matrix (sgb, wrm, USTR(from), sgb->varyingData().time);
+    Mask failedLanes = succeeded.invert(wrm.mask());
     if (failedLanes.any_on())
     {
         Matrix44 ident;
@@ -398,13 +397,13 @@ impl_osl_wide_get_matrix_masked (void *sgb_, void *wr, const char *from, WeakMas
         OSL_INTEL_PRAGMA("omp simd simdlen(wrm.width)")
         for(int lane=0; lane < wrm.width; ++lane) {
             if (failedLanes[lane]) {
-                wrm.set(lane, ident);
+                wrm[lane] = ident;
             }
         }
 		ShadingContext *ctx = sgb->uniform().context;
 		if (ctx->shadingsys().unknown_coordsys_error())
 		{
-			ASSERT(weak_mask.any_on());
+			ASSERT(wrm.mask().any_on());
 			ctx->error ("Unknown transformation \"%s\"", from);			
 		}
 	}
@@ -440,30 +439,30 @@ osl_get_inverse_matrix (void *sg_, void *r, const char *to)
     return ok;
 }
 
-OSL_INLINE Mask
-impl_osl_wide_get_inverse_matrix_masked (void *sgb_, void *wr, const char *to, WeakMask weak_mask)
+static OSL_INLINE Mask
+impl_get_uniform_to_inverse_matrix_batched (void *sgb_, MaskedAccessor<Matrix44> wrm, const char *to)
 {
     ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
-    ShadingContext *ctx = (ShadingContext *)sgb->uniform().context;
-	Wide<Matrix44> & wrm = WMAT(wr);
+    ShadingContext *ctx = sgb->uniform().context;
     
     if (USTR(to) == Strings::common ||
             USTR(to) == ctx->shadingsys().commonspace_synonym()) {
     	
     	Matrix44 ident;
     	ident.makeIdentity();
+		OSL_INTEL_PRAGMA("omp simd simdlen(wrm.width)")
     	for(int lane=0; lane < wrm.width; ++lane) {
-    		wrm.set(lane, ident);
+    		wrm[lane] = ident;
     	}
         return Mask(true);
     }
     if (USTR(to) == Strings::shader) {
-    	ctx->batched_renderer()->get_inverse_matrix (sgb, wrm, sgb->varyingData().shader2common, sgb->varyingData().time, weak_mask);        
+    	ctx->batched_renderer()->get_inverse_matrix (sgb, wrm, sgb->varyingData().shader2common, sgb->varyingData().time);
 		// NOTE: matching scalar version of code which ignores the renderservices return value
         return Mask(true);
     }
     if (USTR(to) == Strings::object) {
-    	ctx->batched_renderer()->get_inverse_matrix (sgb, wrm, sgb->varyingData().object2common, sgb->varyingData().time, weak_mask);        
+    	ctx->batched_renderer()->get_inverse_matrix (sgb, wrm, sgb->varyingData().object2common, sgb->varyingData().time);
 		// NOTE: matching scalar version of code which ignores the renderservices return value
         return Mask(true);
     }
@@ -471,19 +470,18 @@ impl_osl_wide_get_inverse_matrix_masked (void *sgb_, void *wr, const char *to, W
 	// Based on the 1 function that calls this function
 	// the results of the failed data lanes will get overwritten
 	// so no need to make sure that the values are valid (assuming FP exceptions are disabled)
-    Mask succeeded = ctx->batched_renderer()->get_inverse_matrix (sgb, wrm, USTR(to), sgb->varyingData().time, weak_mask);
+    Mask succeeded = ctx->batched_renderer()->get_inverse_matrix (sgb, wrm, USTR(to), sgb->varyingData().time);
 
-    Mask failedLanes = succeeded.invert(weak_mask);
+    Mask failedLanes = succeeded.invert(wrm.mask());
     if (failedLanes.any_on())
 	{
         Matrix44 ident;
         ident.makeIdentity();
         for(int lane=0; lane < wrm.width; ++lane) {
             if (failedLanes[lane]) {
-                wrm.set(lane, ident);
+                wrm[lane] = ident;
             }
         }
-		ShadingContext *ctx = sgb->uniform().context;
 		if (ctx->shadingsys().unknown_coordsys_error())
 		{
 			ctx->error ("Unknown transformation \"%s\"", to);			
@@ -510,27 +508,139 @@ osl_prepend_matrix_from (void *sg, void *r, const char *from)
 }
 
 
+static OSL_INLINE Mask
+impl_wide_mat_multiply(WideAccessor<Matrix44> wresult, ConstWideAccessor<Matrix44> wfrom, ConstWideAccessor<Matrix44> wto)
+{
+	// No savings from using a WeakMask
+	OSL_INTEL_PRAGMA("omp simd simdlen(wresult.width)")
+	for(int lane=0; lane < wresult.width; ++lane) {
+		Matrix44 mat_From = wfrom[lane];
+		Matrix44 mat_To = wto[lane];
+
+		Matrix44 result = mat_From * mat_To;
+
+		wresult[lane] = result;
+	}
+}
+
+static OSL_INLINE Mask
+impl_get_varying_from_matrix_batched(ShaderGlobalsBatch *sgb, ShadingContext *ctx, void * w_from_ptr, Wide<Matrix44> & wMfrom, WeakMask weak_mask)
+{
+    // Deal with a varying 'from' space
+    ConstWideAccessor<ustring> wFrom(w_from_ptr);
+
+    ustring commonspace_synonym = ctx->shadingsys().commonspace_synonym();
+
+	Mask commonSpaceMask(false);
+	Mask shaderSpaceMask(false);
+	Mask objectSpaceMask(false);
+	Mask namedSpaceMask(false);
+
+	OSL_INTEL_PRAGMA("omp simd simdlen(wFrom.width)")
+	for(int lane=0; lane < wFrom.width; ++lane) {
+		if (weak_mask[lane]) {
+			ustring from = wFrom[lane];
+			if (from == Strings::common ||
+				from == commonspace_synonym) {
+				commonSpaceMask.set_on(lane);
+			} else if (from == Strings::shader) {
+				shaderSpaceMask.set_on(lane);
+			} else if (from == Strings::object) {
+				objectSpaceMask.set_on(lane);
+			} else {
+				namedSpaceMask.set_on(lane);
+			}
+		}
+	}
+
+	if (commonSpaceMask.any_on())
+	{
+    	Matrix44 ident;
+    	ident.makeIdentity();
+		MaskedAccessor<Matrix44> mfrom(wMfrom, commonSpaceMask);
+		OSL_INTEL_PRAGMA("omp simd simdlen(mfrom.width)")
+		for(int lane=0; lane < mfrom.width; ++lane) {
+			mfrom[lane] = ident;
+		}
+	}
+    const auto & sgbv = sgb->varyingData();
+	if (shaderSpaceMask.any_on())
+	{
+		MaskedAccessor<Matrix44> mfrom(wMfrom, shaderSpaceMask);
+        ctx->batched_renderer()->get_matrix (sgb, mfrom, sgbv.shader2common, sgbv.time);
+		// NOTE: matching scalar version of code which ignores the renderservices return value
+	}
+	if (objectSpaceMask.any_on())
+	{
+		MaskedAccessor<Matrix44> mfrom(wMfrom, objectSpaceMask);
+        ctx->batched_renderer()->get_matrix (sgb, mfrom, sgbv.object2common, sgbv.time);
+		// NOTE: matching scalar version of code which ignores the renderservices return value
+	}
+	// Only named lookups can fail, so we can just subtract those lanes
+	Mask succeeded(weak_mask);
+	if (namedSpaceMask.any_on())
+	{
+		MaskedAccessor<Matrix44> mfrom(wMfrom, namedSpaceMask);
+
+        Mask success = ctx->batched_renderer()->get_matrix (sgb, mfrom, wFrom, sgbv.time);
+
+        Mask failedLanes = success.invert(namedSpaceMask);
+        if (failedLanes.any_on())
+    	{
+            Matrix44 ident;
+            ident.makeIdentity();
+			MaskedAccessor<Matrix44> mto_failed(wMfrom, failedLanes);
+			OSL_INTEL_PRAGMA("omp simd simdlen(mto_failed.width)")
+            for(int lane=0; lane < mto_failed.width; ++lane) {
+            	mto_failed[lane] = ident;
+            }
+    		if (ctx->shadingsys().unknown_coordsys_error())
+    		{
+                for(int lane=0; lane < mto_failed.width; ++lane) {
+                	if (failedLanes[lane]) {
+                		ustring from = wFrom[lane];
+                		ctx->error (Mask(Lane(lane)), "Unknown transformation \"%s\"", from);
+                	}
+                }
+    		}
+
+    		// Remove any failed lanes from the success mask
+    		succeeded &= ~failedLanes;
+    	}
+	}
+	return succeeded;
+}
+
+
 OSL_SHADEOP void
-osl_prepend_matrix_from_w16m_batched (void *sgb, void *wr, const char *from)
+osl_prepend_matrix_from_w16ms_batched (void *sgb, void *wr, const char *from)
 {
 	OSL_INTEL_PRAGMA("forceinline recursive")
 	{
 		Wide<Matrix44> wMfrom;
 		/*Mask succeeded =*/
-        impl_osl_wide_get_matrix_masked ((ShaderGlobalsBatch *)sgb, &wMfrom, from, Mask(true));
+        impl_get_uniform_from_matrix_batched ((ShaderGlobalsBatch *)sgb, MaskedAccessor<Matrix44>(wMfrom, Mask(true)), from);
 
-		Wide<Matrix44> & wrm = WMAT(wr);
+		WideAccessor<Matrix44> wrm(wr);
 
-		// No savings from using weak_mask or succeeded
-		OSL_INTEL_PRAGMA("omp simd simdlen(wrm.width)")
-		for(int lane=0; lane < wrm.width; ++lane) {
-			Matrix44 mat_From = wMfrom.get(lane);
-			Matrix44 mat_input = wrm.get(lane);
+		impl_wide_mat_multiply(wrm, wMfrom, wrm);
+	}
+}
 
-			Matrix44 result = mat_From * mat_input;
+OSL_SHADEOP void
+osl_prepend_matrix_from_w16mw16s_batched (void *sgb_, void *wr, void * w_from_name)
+{
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+        ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
+        ShadingContext *ctx = (ShadingContext *)sgb->uniform().context;
 
-			wrm.set(lane, result);
-		}
+		Wide<Matrix44> wMfrom;
+		/*Mask succeeded =*/
+        impl_get_varying_from_matrix_batched(sgb, ctx, w_from_name, wMfrom, Mask(true));
+
+		WideAccessor<Matrix44> wrm(wr);
+		impl_wide_mat_multiply(wrm, wMfrom, wrm);
 	}
 }
 
@@ -547,38 +657,188 @@ osl_get_from_to_matrix (void *sg, void *r, const char *from, const char *to)
 }
 
 OSL_INLINE Mask
-impl_osl_wide_get_from_to_matrix_masked (void *sgb, void *wr, const char *from, const char *to, WeakMask weak_mask)
+impl_get_uniform_from_to_matrix_batched (ShaderGlobalsBatch *sgb, MaskedAccessor<Matrix44> wrm, const char *from, const char *to)
 {
 	OSL_INTEL_PRAGMA("forceinline recursive")
 	{
 		Wide<Matrix44> wMfrom, wMto;
-        Mask succeeded = impl_osl_wide_get_matrix_masked ((ShaderGlobalsBatch *)sgb, &wMfrom, from, weak_mask);
-        succeeded &= impl_osl_wide_get_inverse_matrix_masked ((ShaderGlobalsBatch *)sgb, &wMto, to, weak_mask);
+		MaskedAccessor<Matrix44> w_from(wMfrom, wrm.mask());
+		MaskedAccessor<Matrix44> w_to(wMto, wrm.mask());
+        Mask succeeded = impl_get_uniform_from_matrix_batched (sgb, w_from, from);
+        succeeded &= impl_get_uniform_to_inverse_matrix_batched (sgb, w_to, to);
 		
-		Wide<Matrix44> & wrm = WMAT(wr);
-	
 		// No savings from using weak_mask or succeeded
 		OSL_INTEL_PRAGMA("omp simd simdlen(wrm.width)")
 		for(int lane=0; lane < wrm.width; ++lane) {
-			Matrix44 mat_From = wMfrom.get(lane);
-			Matrix44 mat_To = wMto.get(lane);		
+			Matrix44 mat_From = w_from[lane];
+			Matrix44 mat_To = w_to[lane];
 	
 			Matrix44 result = mat_From * mat_To;
 			
-			wrm.set(lane, result);
+			wrm[lane] = result;
 		}
 		return succeeded;
 	}
 }
 
 OSL_SHADEOP int
-osl_get_from_to_matrix_w16m_batched (void *sgb, void *r, const char *from, const char *to)
+osl_get_from_to_matrix_w16mss_batched (void *sgb_, void *wr, const char *from, const char *to)
 {
-    return impl_osl_wide_get_from_to_matrix_masked(sgb, r, from, to, Mask(true)).value();
+	ShaderGlobalsBatch * sgb = (ShaderGlobalsBatch *)sgb_;
+	MaskedAccessor<Matrix44> wrm(wr,Mask(true));
+    return impl_get_uniform_from_to_matrix_batched(sgb, wrm, from, to).value();
+}
+
+static OSL_INLINE Mask
+impl_get_varying_to_matrix_batched(ShaderGlobalsBatch *sgb, ShadingContext *ctx, void * w_to_ptr, Wide<Matrix44> & wMto, WeakMask weak_mask)
+{
+    // Deal with a varying 'to' space
+    ConstWideAccessor<ustring> wTo(w_to_ptr);
+
+    ustring commonspace_synonym = ctx->shadingsys().commonspace_synonym();
+
+	Mask commonSpaceMask(false);
+	Mask shaderSpaceMask(false);
+	Mask objectSpaceMask(false);
+	Mask namedSpaceMask(false);
+
+	OSL_INTEL_PRAGMA("omp simd simdlen(wTo.width)")
+	for(int lane=0; lane < wTo.width; ++lane) {
+		if (weak_mask[lane]) {
+			ustring to = wTo[lane];
+
+			if (to == Strings::common ||
+				to == commonspace_synonym) {
+				commonSpaceMask.set_on(lane);
+			} else if (to == Strings::shader) {
+				shaderSpaceMask.set_on(lane);
+			} else if (to == Strings::object) {
+				objectSpaceMask.set_on(lane);
+			} else {
+				namedSpaceMask.set_on(lane);
+			}
+		}
+	}
+
+	if (commonSpaceMask.any_on())
+	{
+    	Matrix44 ident;
+    	ident.makeIdentity();
+		MaskedAccessor<Matrix44> mto(wMto, commonSpaceMask);
+		OSL_INTEL_PRAGMA("omp simd simdlen(mto.width)")
+		for(int lane=0; lane < mto.width; ++lane) {
+			mto[lane] = ident;
+		}
+	}
+    const auto & sgbv = sgb->varyingData();
+	if (shaderSpaceMask.any_on())
+	{
+		MaskedAccessor<Matrix44> mto(wMto, shaderSpaceMask);
+        ctx->batched_renderer()->get_inverse_matrix (sgb, mto, sgbv.shader2common, sgbv.time);
+		// NOTE: matching scalar version of code which ignores the renderservices return value
+	}
+	if (objectSpaceMask.any_on())
+	{
+		MaskedAccessor<Matrix44> mto(wMto, objectSpaceMask);
+        ctx->batched_renderer()->get_inverse_matrix (sgb, mto, sgbv.object2common, sgbv.time);
+		// NOTE: matching scalar version of code which ignores the renderservices return value
+	}
+	// Only named lookups can fail, so we can just subtract those lanes
+	Mask succeeded(weak_mask);
+	if (namedSpaceMask.any_on())
+	{
+		MaskedAccessor<Matrix44> mto(wMto, namedSpaceMask);
+
+        Mask success = ctx->batched_renderer()->get_inverse_matrix (sgb, mto, wTo, sgbv.time);
+
+        Mask failedLanes = success.invert(namedSpaceMask);
+        if (failedLanes.any_on())
+    	{
+            Matrix44 ident;
+            ident.makeIdentity();
+			MaskedAccessor<Matrix44> mto(wMto, failedLanes);
+			OSL_INTEL_PRAGMA("omp simd simdlen(mto.width)")
+            for(int lane=0; lane < mto.width; ++lane) {
+				mto[lane] = ident;
+            }
+    		if (ctx->shadingsys().unknown_coordsys_error())
+    		{
+                for(int lane=0; lane < mto.width; ++lane) {
+                	if (failedLanes[lane]) {
+                		ustring to = wTo[lane];
+                		ctx->error (Mask(Lane(lane)), "Unknown transformation \"%s\"", to);
+                	}
+                }
+    		}
+
+    		// Remove any failed lanes from the success mask
+    		succeeded &= ~failedLanes;
+    	}
+	}
+	return succeeded;
+}
+
+OSL_SHADEOP int
+osl_get_from_to_matrix_w16msw16s_batched (void *sgb_, void *wr, const char *from, void * w_to_ptr)
+{
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+        ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
+        ShadingContext *ctx = (ShadingContext *)sgb->uniform().context;
+		Wide<Matrix44> wMfrom;
+        Mask from_succeeded = impl_get_uniform_from_matrix_batched (sgb, MaskedAccessor<Matrix44>(wMfrom, Mask(true)), from);
+
+		Wide<Matrix44> wMto;
+		Mask succeeded = impl_get_varying_to_matrix_batched(sgb, ctx, w_to_ptr, wMto, from_succeeded);
+
+		// No savings from using succeeded
+		impl_wide_mat_multiply(WideAccessor<Matrix44>(wr), wMfrom, wMto);
+		return succeeded.value();
+	}
 }
 
 
 
+
+
+OSL_SHADEOP int
+osl_get_from_to_matrix_w16mw16ss_batched (void *sgb_, void *wr, void  *w_from_ptr, const char * to)
+{
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+        ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
+        ShadingContext *ctx = (ShadingContext *)sgb->uniform().context;
+
+		Wide<Matrix44> wMto;
+        Mask to_succeeded = impl_get_uniform_to_inverse_matrix_batched (sgb, MaskedAccessor<Matrix44>(wMto, Mask(true)), to);
+
+		Wide<Matrix44> wMfrom;
+        Mask succeeded = impl_get_varying_from_matrix_batched(sgb, ctx, w_from_ptr, wMfrom, to_succeeded);
+
+		// No savings from using succeeded
+		impl_wide_mat_multiply(WideAccessor<Matrix44>(wr), wMfrom, wMto);
+		return succeeded.value();
+	}
+}
+
+OSL_SHADEOP int
+osl_get_from_to_matrix_w16mw16sw16s_batched (void *sgb_, void *wr, void  *w_from_ptr, void * w_to_ptr)
+{
+	OSL_INTEL_PRAGMA("forceinline recursive")
+	{
+        ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
+        ShadingContext *ctx = (ShadingContext *)sgb->uniform().context;
+		Wide<Matrix44> wMfrom;
+        Mask from_succeeded = impl_get_varying_from_matrix_batched(sgb, ctx, w_from_ptr, wMfrom, Mask(true));
+
+		Wide<Matrix44> wMto;
+		Mask succeeded = impl_get_varying_to_matrix_batched(sgb, ctx, w_to_ptr, wMto, from_succeeded);
+
+		// No savings from using succeeded
+		impl_wide_mat_multiply(WideAccessor<Matrix44>(wr), wMfrom, wMto);
+		return succeeded.value();
+	}
+}
 
 // point = M * point
 inline void osl_transform_vmv(void *result, const Matrix44 &M, void* v_)
@@ -591,9 +851,9 @@ inline void osl_transform_vmv(void *result, const Matrix44 &M, void* v_)
 
 
 
-OSL_INLINE void avoidAliasingRobustMultVecMatrix(
-	const Wide<Matrix44>& wx,
-	const Wide< Imath::Vec3<float> >& wsrc,
+static OSL_INLINE void avoidAliasingRobustMultVecMatrix(
+	ConstWideAccessor<Matrix44> wx,
+	ConstWideAccessor<Vec3> wsrc,
 	MaskedAccessor<Vec3>& wdst)
 {
 	OSL_INTEL_PRAGMA("forceinline recursive")
@@ -601,8 +861,8 @@ OSL_INLINE void avoidAliasingRobustMultVecMatrix(
 		OSL_INTEL_PRAGMA("omp simd simdlen(wdst.width)")
 		for(int index=0; index < wdst.width; ++index)
 		{
-		   const Matrix44 x = wx.get(index);
-		   Imath::Vec3<float> src = wsrc.get(index);
+		   const Matrix44 x = wx[index];
+		   Imath::Vec3<float> src = wsrc[index];
 		   
 		   //std::cout << "----src>" << src << std::endl;
 		   
@@ -643,7 +903,7 @@ OSL_INLINE void avoidAliasingRobustMultVecMatrix(
 		   
 		   wdst[index] = dst;
 		   
-		   //Imath::Vec3<float> verify = wdst.get(index);
+		   //Imath::Vec3<float> verify = wdst[index];
 		   //std::cout << "---->" << verify << "<-----" << std::endl;
 		}
 	}
@@ -666,8 +926,8 @@ avoidAliasingMultDirMatrix (const Matrix44 &M, const Vec3 &src, Vec3 &dst)
 /// a transformed vector with derivatives.
 OSL_INLINE void
 avoidAliasingRobustMultVecMatrix (
-	const Wide<Matrix44> &WM, 
-	const Wide<Dual2<Vec3>> &win, 
+	ConstWideAccessor<Matrix44> WM,
+	ConstWideAccessor<Dual2<Vec3>> win,
 	MaskedAccessor<Dual2<Vec3>> &wout)
 {
 	OSL_INTEL_PRAGMA("forceinline recursive")
@@ -675,8 +935,8 @@ avoidAliasingRobustMultVecMatrix (
 		OSL_INTEL_PRAGMA("omp simd simdlen(wout.width)")
 		for(int index=0; index < wout.width; ++index)
 		{
-			const Matrix44 M = WM.get(index);			
-			const Dual2<Vec3> in = win.get(index);
+			const Matrix44 M = WM[index];
+			const Dual2<Vec3> in = win[index];
 	
 			// Rearrange into a Vec3<Dual2<float> >
 			Imath::Vec3<Dual2<float> > din, dout;
@@ -730,7 +990,7 @@ avoidAliasingRobustMultVecMatrix (
 			
 			wout[index] = out;
 		   
-		   //Imath::Vec3<float> verify = wdst.get(index);
+		   //Imath::Vec3<float> verify = wdst[index];
 		   //std::cout << "---->" << verify << "<-----" << std::endl;
 		}
 	}
@@ -738,12 +998,13 @@ avoidAliasingRobustMultVecMatrix (
 }
 
 
-inline void osl_transform_wvwmwv(void *result, const Wide<Matrix44> &M, void* v_, Mask mask)
+static OSL_INLINE void
+impl_transform_wvwmwv(
+	MaskedAccessor<Vec3> wresult,
+	ConstWideAccessor<Matrix44> wM,
+	ConstWideAccessor<Vec3> wv)
 {
-   MaskedAccessor<Vec3> resultRef(result, mask);
-	
-   const Wide<Vec3> &v = WVEC(v_);
-   avoidAliasingRobustMultVecMatrix (M, v, resultRef);
+   avoidAliasingRobustMultVecMatrix (wM, wv, wresult);
 }
 
 
@@ -757,12 +1018,13 @@ inline void osl_transform_dvmdv(void *result, const Matrix44 &M, void* v_)
    robust_multVecMatrix (M, v, DVEC(result));
 }
 
-inline void osl_transform_wdvwmwdv(void *result, const Wide<Matrix44> &M, void* v_, Mask mask)
+static OSL_INLINE void
+impl_transform_wdvwmwdv(
+	MaskedAccessor<Dual2<Vec3>> wresult,
+	ConstWideAccessor<Matrix44> wM,
+	ConstWideAccessor<Dual2<Vec3>> wv)
 {
-   MaskedAccessor<Dual2<Vec3>> resultRef(result, mask);
-   
-   const Wide<Dual2<Vec3>> &v = WDVEC(v_);
-   avoidAliasingRobustMultVecMatrix (M, v, resultRef);
+   avoidAliasingRobustMultVecMatrix (wM, wv, wresult);
 }
 
 // vector = M * vector
@@ -772,20 +1034,19 @@ inline void osl_transformv_vmv(void *result, const Matrix44 &M, void* v_)
    M.multDirMatrix (v, VEC(result));
 }
 
-inline void osl_transformv_wvwmwv(void *result, const Wide<Matrix44> &wM, void* v_, Mask mask)
+static OSL_INLINE void
+impl_transformv_wvwmwv(
+	MaskedAccessor<Vec3> wresult,
+	ConstWideAccessor<Matrix44> wM,
+	ConstWideAccessor<Vec3> wv)
 {
-   //const Vec3 &v = VEC(v_);
-	
    OSL_INTEL_PRAGMA("forceinline recursive")
    {			   
-	   const Wide<Vec3> &wv = WVEC(v_);
-	   MaskedAccessor<Vec3> resultRef(result, mask);   
-	   
-	   OSL_INTEL_PRAGMA("omp simd simdlen(resultRef.width)")
-	   for(int i=0; i < resultRef.width; ++i)
+	   OSL_INTEL_PRAGMA("omp simd simdlen(wresult.width)")
+	   for(int i=0; i < wresult.width; ++i)
 	   {
-		   Matrix44 M = wM.get(i);
-		   Vec3 v = wv.get(i);
+		   Matrix44 M = wM[i];
+		   Vec3 v = wv[i];
 		   Vec3 r;
 
 		   // Do to illegal aliasing in OpenEXR version
@@ -793,7 +1054,7 @@ inline void osl_transformv_wvwmwv(void *result, const Wide<Matrix44> &wM, void* 
 		   //M.multDirMatrix (v, VEC(result));
 		   avoidAliasingMultDirMatrix(M, v, r);
 		   
-		   resultRef[i] = r;
+		   wresult[i] = r;
 	   }
    }	
 }
@@ -812,26 +1073,24 @@ avoidAliasingMultDirMatrix (const Matrix44 &M, const Dual2<Vec3> &in, Dual2<Vec3
 	avoidAliasingMultDirMatrix(M, in.dy(), out.dy());
 }
 
-inline void osl_transformv_wdvwmwdv(void *result, const Wide<Matrix44> &wM, void* v_, Mask mask)
+static OSL_INLINE void
+impl_transformv_wdvwmwdv(
+	MaskedAccessor<Dual2<Vec3>> wresult,
+	ConstWideAccessor<Matrix44> wM,
+	ConstWideAccessor<Dual2<Vec3>> wv)
 {
-   //const Dual2<Vec3> &v = DVEC(v_);
-   //multDirMatrix (M, v, DVEC(result));
    OSL_INTEL_PRAGMA("forceinline recursive")
    {		
-	   MaskedAccessor<Dual2<Vec3>> resultRef(result, mask);
-
-	   const Wide<Dual2<Vec3>> &wv = WDVEC(v_);
-		  	   
-	   OSL_INTEL_PRAGMA("omp simd simdlen(resultRef.width)")
-	   for(int i=0; i < resultRef.width; ++i)
+	   OSL_INTEL_PRAGMA("omp simd simdlen(wresult.width)")
+	   for(int i=0; i < wresult.width; ++i)
 	   {
-		   Dual2<Vec3> v = wv.get(i);
-		   Matrix44 M = wM.get(i);
+		   Dual2<Vec3> v = wv[i];
+		   Matrix44 M = wM[i];
 		   Dual2<Vec3> r;
 		   
 		   avoidAliasingMultDirMatrix (M, v, r);
 	   
-		   resultRef[i] = r;
+		   wresult[i] = r;
 	   }
    }	
 }
@@ -843,60 +1102,55 @@ inline void osl_transformn_vmv(void *result, const Matrix44 &M, void* v_)
    M.inverse().transposed().multDirMatrix (v, VEC(result));
 }
 
-inline void osl_transformn_wvwmwv(void *result, const Wide<Matrix44> &wM, void* v_, Mask mask)
+static OSL_INLINE void
+impl_transformn_wvwmwv(
+	MaskedAccessor<Vec3> wresult,
+	ConstWideAccessor<Matrix44> wM,
+	ConstWideAccessor<Vec3> wv)
 {
-	//std::cout << "osl_transform_vmv" << std::endl;
-	
    OSL_INTEL_PRAGMA("forceinline recursive")
    {		
-	   
-	   const Wide<Vec3> &wv = WVEC(v_);
-	   //Wide<Vec3> &wr = WVEC(result);
-	   MaskedAccessor<Vec3> resultRef(result, mask);
-	   	   
-	   OSL_INTEL_PRAGMA("omp simd simdlen(resultRef.width)")
-	   for(int i=0; i < resultRef.width; ++i)
+	   OSL_INTEL_PRAGMA("omp simd simdlen(wresult.width)")
+	   for(int i=0; i < wresult.width; ++i)
 	   {
-		   Vec3 v = wv.get(i);
-		   Matrix44 M = wM.get(i);
+		   Vec3 v = wv[i];
+		   Matrix44 M = wM[i];
 		   Vec3 r;
 		   
 		   M.inverse().transposed().multDirMatrix (v, r);
 		   
-		   resultRef[i] = r;
+		   wresult[i] = r;
 	   }
    }
 }
 
 
-inline void osl_transformn_dvmdv(void *result, const Matrix44 &M, void* v_)
+static inline void
+osl_transformn_dvmdv(void *result, const Matrix44 &M, void* v_)
 {
    const Dual2<Vec3> &v = DVEC(v_);
    multDirMatrix (M.inverse().transposed(), v, DVEC(result));
 }
 
-inline void osl_transformn_wdvwmwdv(void *result, const Wide<Matrix44> &wM, void* v_, Mask mask)
+static OSL_INLINE void
+impl_transformn_wdvwmwdv(
+	MaskedAccessor<Dual2<Vec3>> wresult,
+	ConstWideAccessor<Matrix44> wM,
+	ConstWideAccessor<Dual2<Vec3>> wv)
 {
-   
-   //multDirMatrix (M.inverse().transposed(), v, DVEC(result));
-   
    OSL_INTEL_PRAGMA("forceinline recursive")
    {		
-	   MaskedAccessor<Dual2<Vec3>> resultRef(result, mask);
-
-	   const Wide<Dual2<Vec3>> &wv = WDVEC(v_);
-	      
-	   OSL_INTEL_PRAGMA("omp simd simdlen(resultRef.width)")
-	   for(int i=0; i < resultRef.width; ++i)
+	   OSL_INTEL_PRAGMA("omp simd simdlen(wresult.width)")
+	   for(int i=0; i < wresult.width; ++i)
 	   {
-		   Dual2<Vec3> v = wv.get(i);
-		   Matrix44 M = wM.get(i);
+		   Dual2<Vec3> v = wv[i];
+		   Matrix44 M = wM[i];
 		   Dual2<Vec3> r;
 		   
 		   multDirMatrix (M.inverse().transposed(), v, r);
 		   
 	   
-		   resultRef[i] = r;
+		   wresult[i] = r;
 	   }
    }   
 }
@@ -1011,6 +1265,7 @@ osl_wide_transform_triple (void *sgb_, void *Pin, int Pin_derivs,
     //ASSERT(Pin != Pout);
 
     Wide<Matrix44> M;
+    MaskedAccessor<Matrix44> mm(M, mask);
     Pin_derivs &= Pout_derivs;   // ignore derivs if output doesn't need it
     
     Mask succeeded;
@@ -1020,13 +1275,13 @@ osl_wide_transform_triple (void *sgb_, void *Pin, int Pin_derivs,
     // optimizing for it
     if (USTR(from) == Strings::common ||
             USTR(from) == ctx->shadingsys().commonspace_synonym()) {
-        succeeded = impl_osl_wide_get_inverse_matrix_masked (sgb, &M, (const char *)to, mask);
+        succeeded = impl_get_uniform_to_inverse_matrix_batched (sgb, mm, (const char *)to);
     } else if (USTR(to) == Strings::common ||
             USTR(to) == ctx->shadingsys().commonspace_synonym()) {
-        succeeded = impl_osl_wide_get_matrix_masked(sgb, &M, (const char *)from, mask);
+        succeeded = impl_get_uniform_from_matrix_batched(sgb, mm, (const char *)from);
     } else {
-        succeeded = impl_osl_wide_get_from_to_matrix_masked (sgb, &M, (const char *)from,
-										 (const char *)to, mask);
+        succeeded = impl_get_uniform_from_to_matrix_batched (sgb, mm, (const char *)from,
+										 (const char *)to);
     }
     
 
@@ -1039,21 +1294,33 @@ osl_wide_transform_triple (void *sgb_, void *Pin, int Pin_derivs,
     	// the cost testing the type here.
         if (vectype == TypeDesc::POINT) {
             if (Pin_derivs) {
-                osl_transform_wdvwmwdv(Pout, M, Pin, activeMask);
+                impl_transform_wdvwmwdv(MaskedAccessor<Dual2<Vec3>>(Pout, activeMask),
+                		                M,
+										ConstWideAccessor<Dual2<Vec3>>(Pin));
             } else {
-                osl_transform_wvwmwv(Pout, M, Pin, activeMask);
+                impl_transform_wvwmwv(MaskedAccessor<Vec3>(Pout, activeMask),
+                					  M,
+									  ConstWideAccessor<Vec3>(Pin));
             }
         } else if (vectype == TypeDesc::VECTOR) {
             if (Pin_derivs) {
-                osl_transformv_wdvwmwdv(Pout, M, Pin, activeMask);
+                impl_transformv_wdvwmwdv(MaskedAccessor<Dual2<Vec3>>(Pout, activeMask),
+                						 M,
+										 ConstWideAccessor<Dual2<Vec3>>(Pin));
             } else {
-                osl_transformv_wvwmwv(Pout, M, Pin, activeMask);
+                impl_transformv_wvwmwv(MaskedAccessor<Vec3>(Pout, activeMask),
+                					   M,
+									   ConstWideAccessor<Vec3>(Pin));
             }
         } else if (vectype == TypeDesc::NORMAL) {
             if (Pin_derivs)
-                osl_transformn_wdvwmwdv(Pout, M, Pin, activeMask);
+                impl_transformn_wdvwmwdv(MaskedAccessor<Dual2<Vec3>>(Pout, activeMask),
+                		                 M,
+										 ConstWideAccessor<Dual2<Vec3>>(Pin));
             else {
-                osl_transformn_wvwmwv(Pout, M, Pin, activeMask);
+                impl_transformn_wvwmwv(MaskedAccessor<Vec3>(Pout, activeMask),
+                		               M,
+									   ConstWideAccessor<Vec3>(Pin));
             }
         }
         else {        	

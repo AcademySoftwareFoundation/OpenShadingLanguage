@@ -1959,11 +1959,19 @@ LLVMGEN (llvm_gen_matrix)
         args[1] = rop.llvm_void_ptr(Result);  // result
         Symbol& From = *rop.opargsym (op, 1);
         Symbol& To = *rop.opargsym (op, 2);
-        ASSERT(rop.isSymbolUniform(From) && rop.isSymbolUniform(To) && "incomplete");
-        args[2] = rop.llvm_load_value(From);  // from
-        args[3] = rop.llvm_load_value(To);  // to
-        // TODO: dynamically build width suffix
-        rop.ll.call_function ("osl_get_from_to_matrix_w16m_batched", args, 4);
+        bool from_is_uniform = rop.isSymbolUniform(From);
+        bool to_is_uniform = rop.isSymbolUniform(To);
+
+        args[2] = from_is_uniform ? rop.llvm_load_value(From) : rop.llvm_void_ptr(From);
+        args[3] = to_is_uniform ? rop.llvm_load_value(To): rop.llvm_void_ptr(To);
+        // Dynamically build width suffix
+        std::string func_name("osl_get_from_to_matrix_");
+        func_name += warg_typecode(&Result, false);
+        func_name += arg_typecode(From, false, rop.isSymbolUniform(From));
+        func_name += arg_typecode(To, false, rop.isSymbolUniform(To));
+        func_name += "_batched";
+
+        rop.ll.call_function (func_name.c_str(), args, 4);
     } else {
         if (nfloats == 1) {
         	llvm::Value *zero;
@@ -1994,10 +2002,17 @@ LLVMGEN (llvm_gen_matrix)
             args[0] = rop.sg_void_ptr();  // shader globals
             args[1] = rop.llvm_void_ptr(Result);  // result
             Symbol& From = *rop.opargsym (op, 1);
-            ASSERT(rop.isSymbolUniform(From) && "incomplete");
-            args[2] = rop.llvm_load_value(From);  // from
+            bool from_is_uniform = rop.isSymbolUniform(From);
+            args[2] = from_is_uniform ? rop.llvm_load_value(From) : rop.llvm_void_ptr(From);
+
+            // Dynamically build width suffix
+            std::string func_name("osl_prepend_matrix_from_");
+            func_name += warg_typecode(&Result, false);
+            func_name += arg_typecode(From, false, rop.isSymbolUniform(From));
+            func_name += "_batched";
+
             // TODO: dynamically build width suffix
-            rop.ll.call_function ("osl_prepend_matrix_from_w16m_batched", args, 3);
+            rop.ll.call_function (func_name.c_str(), args, 3);
         }
     }
     if (Result.has_derivs())
@@ -2024,15 +2039,23 @@ LLVMGEN (llvm_gen_getmatrix)
 	ASSERT(false == rop.isSymbolUniform(Result));
 	ASSERT(false == rop.isSymbolUniform(M));
 
-    ASSERT(rop.isSymbolUniform(From) && rop.isSymbolUniform(To) && "incomplete");
-
     llvm::Value *args[4];
     args[0] = rop.sg_void_ptr();  // shader globals
     args[1] = rop.llvm_void_ptr(M);  // matrix result
-    args[2] = rop.llvm_load_value(From);
-    args[3] = rop.llvm_load_value(To);
-    // TODO: dynamically build width suffix
-    llvm::Value *result = rop.ll.call_function ("osl_get_from_to_matrix_w16m_batched", args, 4);
+
+    bool from_is_uniform = rop.isSymbolUniform(From);
+    bool to_is_uniform = rop.isSymbolUniform(To);
+
+    args[2] = from_is_uniform ? rop.llvm_load_value(From) : rop.llvm_void_ptr(From);
+    args[3] = to_is_uniform ? rop.llvm_load_value(To): rop.llvm_void_ptr(To);
+    // Dynamically build width suffix
+    std::string func_name("osl_get_from_to_matrix_");
+    func_name += warg_typecode(&M, false);
+    func_name += arg_typecode(From, false, rop.isSymbolUniform(From));
+    func_name += arg_typecode(To, false, rop.isSymbolUniform(To));
+    func_name += "_batched";
+
+    llvm::Value *result = rop.ll.call_function (func_name.c_str(), args, 4);
     rop.llvm_conversion_store_masked_status(result, Result);
     rop.llvm_zero_derivs (M);
     return true;

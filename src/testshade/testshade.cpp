@@ -141,7 +141,9 @@ set_shadingsys_options ()
 {
     if (shadingsys_options_set)
         return;
-    shadingsys->attribute ("llvm_debug", 2);
+
+    OSL_DEV_ONLY(shadingsys->attribute ("llvm_debug", 2));
+
     shadingsys->attribute ("debug", debug2 ? 2 : (debug ? 1 : 0));
     shadingsys->attribute ("compile_report", debug|debug2);
     int opt = 2;  // default
@@ -235,7 +237,7 @@ add_shader (int argc, const char *argv[])
 {
     ASSERT (argc == 1);
     string_view shadername (argv[0]);
-    std::cout << "SHADER NAME=" << shadername << std::endl;
+    OSL_DEV_ONLY(std::cout << "SHADER NAME=" << shadername << std::endl);
 
     set_shadingsys_options ();
 
@@ -453,7 +455,8 @@ set_profile (int argc, const char *argv[])
     shadingsys->attribute ("profile", profile);
 }
 
-
+// HACK ALERT, added next line for debuggin, remove it
+static bool ignore_batched = false;
 
 static void
 getargs (int argc, const char *argv[])
@@ -469,7 +472,8 @@ getargs (int argc, const char *argv[])
                 "--debug2", &debug2, "Even more debugging info",
                 "--runstats", &runstats, "Print run statistics",
                 "--stats", &runstats, "",  // DEPRECATED 1.7
-                "--batched", &batched, "Submit batches to ShadingSystem",                  
+			    // HACK ALERT, added next line for debuggin, remove it
+                "--batched", &batched, "Submit batches to ShadingSystem",
                 "--alternate_batched", &alternate_batched, "At the end of each iteration, toggle batched flag (allows testing batched & scalar in the same run)",                  
                 "--vary_pdxdy", &vary_Pdxdy, "populate Dx(P) & Dy(P) with varying values (vs. uniform)",                  
                 "--vary_udxdy", &vary_Udxdy, "populate Dx(U) & Dy(U) with varying values (vs. uniform)",                  
@@ -1613,7 +1617,7 @@ test_shade (int argc, const char *argv[])
     	// fewer threads.  This can lead to oversubscription.
         num_threads = OIIO::Sysutil::hardware_concurrency();
     }
-    std::cout << "num_threads = " << num_threads << std::endl;
+    OSL_DEV_ONLY(std::cout << "num_threads = " << num_threads << std::endl);
 
     // We need to set the global attribute so any helper functions
     // respect our thread count, especially if we wanted only 1

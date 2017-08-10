@@ -2637,6 +2637,7 @@ ShadingSystemImpl::raytype_bit (ustring name)
 
 
 
+
 bool
 ShadingSystemImpl::is_renderer_output (ustring layername, ustring paramname,
                                        ShaderGroup *group) const

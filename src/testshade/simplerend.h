@@ -50,10 +50,19 @@ public:
 	BatchedSimpleRenderer(SimpleRenderer &sr);
 	virtual ~BatchedSimpleRenderer();
 		
-	virtual Mask get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
-		const Wide<TransformationPtr> & xform, const Wide<float> &time, WeakMask weak_mask);
-	virtual Mask get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
-            ustring from, const Wide<float> &time, WeakMask weak_mask);
+	virtual Mask get_matrix (ShaderGlobalsBatch *sgb,
+			                 MaskedAccessor<Matrix44> result,
+		                     ConstWideAccessor<TransformationPtr> xform,
+							 ConstWideAccessor<float> time);
+	virtual Mask get_matrix (ShaderGlobalsBatch *sgb,
+			MaskedAccessor<Matrix44> result,
+							 ustring from,
+							 ConstWideAccessor<float> time);
+    virtual Mask get_matrix (ShaderGlobalsBatch *sgb,
+    						 MaskedAccessor<Matrix44> result,
+    						 ConstWideAccessor<ustring> from,
+							 ConstWideAccessor<float> time);
+
 	virtual bool get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
 							 TransformationPtr xform);
 	virtual bool get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
@@ -79,7 +88,8 @@ public:
                                 ustring name, DataRef val);
     
     virtual Mask get_userdata (ustring name, 
-    						   ShaderGlobalsBatch *sgb, MaskedDataRef val);    
+    						   ShaderGlobalsBatch *sgb, MaskedDataRef val);
+
 private:
 	SimpleRenderer &m_sr;
 	std::unordered_set<ustring, ustringHash> m_uniform_objects;
@@ -122,7 +132,6 @@ public:
                                 TypeDesc type, ustring name, void *val);
     virtual bool get_userdata (bool derivatives, ustring name, TypeDesc type, 
                                ShaderGlobals *sg, void *val);
-
     // Super simple camera and display parameters.  Many options not
     // available, no motion blur, etc.
     void camera_params (const Matrix44 &world_to_camera, ustring projection,

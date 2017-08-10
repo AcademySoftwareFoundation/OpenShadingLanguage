@@ -635,7 +635,7 @@ osl_get_textureinfo_batched (void *sgb_, void* name,
 
     MaskedDataRef dest(*(const TypeDesc *)attr_type, false, mask, wide_attr_dest);
 
-    Mask retVal = sgb->uniform().renderer->batched()->get_texture_info(sgb, WUSTR(name),
+    Mask retVal = sgb->uniform().renderer->batched()->get_texture_info(sgb, ConstWideAccessor<ustring>(name),
                                                                        0 /*FIXME-ptex*/,
                                                                        USTR(dataname), dest);
     return retVal.value();

@@ -332,6 +332,7 @@ def mx_to_osl(shader, build_types, options):
                         if options['v']: print('OSL Generation for type %s skipped.'%var_type)
                         continue
                 substitutions = replacements[var_type]
+                osl_code = mx_code
                 osl_shadername = '%s_%s' % (shader, var_type)
                 if options['v']:
                     print('Building %s' % osl_shadername)
@@ -339,9 +340,9 @@ def mx_to_osl(shader, build_types, options):
                 #osl_code = osl_code.replace('#include \"mx_types.h\"', '#define %s 1\n#include \"mx_types.h\"' % var_type)
                 #osl_code = re.sub(r'\bTYPE\b', SHADER_TYPES[var_type], osl_code)
                 for s in substitutions :
-                    mx_code = mx_code.replace(s[0], s[1])
+                    osl_code = osl_code.replace(s[0], s[1])
 
-                osl_filepath = write_osl_file(osl_shadername, mx_code, options)
+                osl_filepath = write_osl_file(osl_shadername, osl_code, options)
                 build_count += 1
                 # build oso bytecode if compile flag is on
                 if options['compile']:

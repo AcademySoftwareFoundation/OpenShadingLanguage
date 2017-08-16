@@ -83,7 +83,7 @@ else ifeq (${platform}, macosx)
         -DCMAKE_BUILD_WITH_INSTALL_RPATH=1 \
         -DCMAKE_INSTALL_NAME_DIR="${working_dir}/dist/${platform}${variant}/lib"
 
-    LLVM_DIRECTORY ?= /usr/local/opt/llvm35/3.5.1/lib/llvm-3.5
+    LLVM_DIRECTORY ?= /usr/local/opt/llvm
 
     # A variety of tags can be used to try specific versions of gcc or
     # clang from the site-specific places we have installed them.
@@ -97,8 +97,8 @@ else ifeq (${platform}, macosx)
         USE_LIBCPLUSPLUS := 0
     else ifeq (${COMPILER},clang35)
         MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=clang-3.5 -DCMAKE_CXX_COMPILER=clang++-3.5
-    else ifeq (${COMPILER},clang38)
-        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=clang-3.8 -DCMAKE_CXX_COMPILER=clang++-3.8
+    else ifeq (${COMPILER},clang40)
+        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=/usr/local/opt/llvm@4/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@4/bin/clang++
     else ifeq (${COMPILER},clang)
         MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
     else ifeq (${COMPILER},gcc)

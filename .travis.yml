@@ -2,14 +2,8 @@
 
 language: cpp
 sudo: false
-#compiler:
-#    - clang
-#    - gcc
-#os:
-#    - linux
-#    - osx
 osx_image: xcode7.3
-dist: precise
+dist: trusty
 
 
 # Add-ons: specify apt packages for Linux
@@ -22,12 +16,12 @@ addons:
    packages:
       - cmake
       - cmake-data
-      - gcc-4.8
       - g++-4.8
+      - g++-5
+      - g++-6
+      - g++-7
       - libboost1.55-all-dev
       - libtiff4-dev
-      #- llvm-3.9-dev
-      #- clang-3.9
 
 cache:
     ccache: true
@@ -52,6 +46,11 @@ install:
     - if [ "$CXX" == "g++" ]; then export CXX="g++-${WHICHGCC}" ; fi
     - export USE_CCACHE=1
     - export CCACHE_CPP2=1
+    # Temporary fix: Use LG's private openexr branch, until the
+    # fixes are merged into the OpenEXR project that will address
+    # the warnings for gcc7 and C++17 compatibility.
+    -   export EXRREPO=https://github.com/lgritz/openexr.git ;
+    -   export EXRBRANCH=lg-cpp11 ;
     - if [ $TRAVIS_OS_NAME == osx ] ; then
           src/build-scripts/install_homebrew_deps.bash ;
       elif [ $TRAVIS_OS_NAME == linux ] ; then
@@ -104,69 +103,37 @@ branches:
 matrix:
     fast_finish: true
     include:
-      # Build with C++11, optimized build, against OIIO master
+      # Build with C++11, default compiler, optimized build, against OIIO master
       - os: linux
         compiler: gcc
       - os: osx
         compiler: clang
-      # Build with C++11, DEBUG build, against OIIO master
-      - os: linux
-        compiler: gcc
-        env: DEBUG=1
-      # - os: osx
-      #   compiler: clang
-      #   env: DEBUG=1
     # Test against the older release branch of OIIO (all the other tests
     # are against OIIO master).
       - os: linux
         compiler: gcc
-        env: OIIOBRANCH=release USE_CPP11=1
-      # - os: osx
-      #   compiler: clang
-      #   env: OIIOBRANCH=release USE_CPP11=1
-    # Make sure the older LLVM still works
+        env: OIIOBRANCH=release
+    # Test gcc 5, also against higher SSE level
+      - os: linux
+        compiler: gcc
+        env: WHICHGCC=5 USE_SIMD=sse4.2
+    # Test gcc6, and highest SIMD level supported by Travis.
+      - os: linux
+        compiler: gcc
+        env: WHICHGCC=6 USE_SIMD=avx,f16c
+    # Linux only: test gcc 7, also test C++14
+      - os: linux
+        compiler: gcc
+        env: WHICHGCC=7 USE_CPP=14
+    # Build with C++11, DEBUG build, against OIIO master
+      - os: linux
+        compiler: gcc
+        env: DEBUG=1
+    # Test against older LLVM
       - os: linux
         compiler: gcc
         env: LLVM_VERSION=3.5.2
-    # Linux only: test gcc 4.9
-      - os: linux
-        compiler: gcc
-        addons:
-          apt:
-            sources: [ 'ubuntu-toolchain-r-test', 'boost-latest', 'george-edison55-precise-backports' ]
-            packages: [ 'g++-4.9', 'cmake', 'cmake-data', 'libboost1.55-all-dev', 'libtiff4-dev' ]
-        env: WHICHGCC=4.9
-    # Linux only: test gcc 5
-      - os: linux
-        compiler: gcc
-        addons:
-          apt:
-            sources: [ 'ubuntu-toolchain-r-test', 'boost-latest', 'george-edison55-precise-backports' ]
-            packages: [ 'g++-5', 'cmake', 'cmake-data', 'libboost1.55-all-dev', 'libtiff4-dev' ]
-        env: WHICHGCC=5
-    # Linux only: test gcc 6 (catch new warnings hot off the presses) and
-    # also use a higher SIMD level, avx and f16c, to make sure all is well.
-    # TravisCI's OSX images don't yet support avx/f16c, so we only do this
-    # on Linux for now, but eventually we'll want to separate these concerns
-    # into separate tests.
-      - os: linux
-        compiler: gcc
-        addons:
-          apt:
-            sources: [ 'ubuntu-toolchain-r-test', 'boost-latest', 'george-edison55-precise-backports' ]
-            packages: [ 'g++-6', 'cmake', 'cmake-data', 'libboost1.55-all-dev', 'libtiff4-dev' ]
-        env: WHICHGCC=6 USE_SIMD=avx,f16c
-    # Test new gcc against older LLVM
-      - os: linux
-        compiler: gcc
-        addons:
-          apt:
-            sources: [ 'ubuntu-toolchain-r-test', 'boost-latest', 'george-edison55-precise-backports' ]
-            packages: [ 'g++-6', 'cmake', 'cmake-data', 'libboost1.55-all-dev', 'libtiff4-dev' ]
-        env: WHICHGCC=6 USE_SIMD=avx,f16c LLVM_VERSION=3.5.2
-    # One more, just for the heck of it, turn all SIMD off.  I guess this
-    # should/could be both platforms, but in the interest of making the
-    # tests go faster, don't bother doing it on OSX.
+    # One more, just for the heck of it, turn all SIMD off.
       - os: linux
         compiler: gcc
         env: USE_SIMD=0

@@ -233,28 +233,28 @@ ShaderMaster::print ()
                   << " " << s.name() << "\n";
     }
     out << "  int consts:\n    ";
-    for (size_t i = 0;  i < m_iconsts.size();  ++i)
-        out << m_iconsts[i] << ' ';
+    for (auto val : m_iconsts)
+        out << val << ' ';
     out << "\n";
     out << "  float consts:\n    ";
-    for (size_t i = 0;  i < m_fconsts.size();  ++i)
-        out << m_fconsts[i] << ' ';
+    for (auto val : m_fconsts)
+        out << val << ' ';
     out << "\n";
     out << "  string consts:\n    ";
-    for (size_t i = 0;  i < m_sconsts.size();  ++i)
-        out << "\"" << m_sconsts[i] << "\" ";
+    for (const auto& val : m_sconsts)
+        out << "\"" << val << "\" ";
     out << "\n";
     out << "  int defaults:\n    ";
-    for (size_t i = 0;  i < m_idefaults.size();  ++i)
-        out << m_idefaults[i] << ' ';
+    for (auto val : m_idefaults)
+        out << val << ' ';
     out << "\n";
     out << "  float defaults:\n    ";
-    for (size_t i = 0;  i < m_fdefaults.size();  ++i)
-        out << m_fdefaults[i] << ' ';
+    for (auto val : m_fdefaults)
+        out << val << ' ';
     out << "\n";
     out << "  string defaults:\n    ";
-    for (size_t i = 0;  i < m_sdefaults.size();  ++i)
-        out << "\"" << m_sdefaults[i] << "\" ";
+    for (const auto& val : m_sdefaults)
+        out << "\"" << val << "\" ";
     out << "\n";
     out << "  code:\n";
     for (size_t i = 0;  i < m_ops.size();  ++i) {

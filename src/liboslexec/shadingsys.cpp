@@ -1784,8 +1784,8 @@ ShadingSystemImpl::getstats (int level) const
         // Account for times of any groups that haven't yet been destroyed
         {
             spin_lock lock (m_all_shader_groups_mutex);
-            for (size_t i = 0, e = m_all_shader_groups.size(); i < e; ++i) {
-                if (ShaderGroupRef g = m_all_shader_groups[i].lock()) {
+            for (auto&& grp : m_all_shader_groups) {
+                if (ShaderGroupRef g = grp.lock()) {
                     long long ticks = g->m_stat_total_shading_time_ticks;
                     m_group_profile_times[g->name()] += ticks;
                     g->m_stat_total_shading_time_ticks -= ticks;

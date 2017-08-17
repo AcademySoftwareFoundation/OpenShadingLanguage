@@ -945,37 +945,37 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename,
     int lastline = -1;
     ustring lastfile;
     ustring lastmethod ("___uninitialized___");
-    for (OpcodeVec::iterator op = m_ircode.begin(); op != m_ircode.end();  ++op) {
-        if (lastmethod != op->method()) {
-            oso ("code %s\n", op->method().c_str());
-            lastmethod = op->method();
+    for (auto& op : m_ircode) {
+        if (lastmethod != op.method()) {
+            oso ("code %s\n", op.method());
+            lastmethod = op.method();
             lastfile = ustring();
             lastline = -1;
         }
 
-        if (/*m_debug &&*/ op->sourcefile()) {
-            ustring file = op->sourcefile();
-            int line = op->sourceline();
+        if (/*m_debug &&*/ op.sourcefile()) {
+            ustring file = op.sourcefile();
+            int line = op.sourceline();
             if (file != lastfile || line != lastline)
-                oso ("# %s:%d\n# %s\n", file.c_str(), line,
-                     retrieve_source (file, line).c_str());
+                oso ("# %s:%d\n# %s\n", file, line,
+                     retrieve_source (file, line));
         }
 
         // Op name
-        oso ("\t%s", op->opname().c_str());
+        oso ("\t%s", op.opname());
 
         // Register arguments
-        if (op->nargs())
-            oso (op->opname().length() < 8 ? "\t\t" : "\t");
-        for (int i = 0;  i < op->nargs();  ++i) {
-            int arg = op->firstarg() + i;
-            oso ("%s ", m_opargs[arg]->dealias()->mangled().c_str());
+        if (op.nargs())
+            oso (op.opname().length() < 8 ? "\t\t" : "\t");
+        for (int i = 0;  i < op.nargs();  ++i) {
+            int arg = op.firstarg() + i;
+            oso ("%s ", m_opargs[arg]->dealias()->mangled());
         }
 
         // Jump targets
         for (size_t i = 0;  i < Opcode::max_jumps;  ++i)
-            if (op->jump(i) >= 0)
-                oso ("%d ", op->jump(i));
+            if (op.jump(i) >= 0)
+                oso ("%d ", op.jump(i));
 
         //
         // Opcode Hints
@@ -986,27 +986,27 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename,
         // %filename and %line document the source code file and line that
         // contained code that generated this op.  To avoid clutter, we
         // only output these hints when they DIFFER from the previous op.
-        if (op->sourcefile()) {
-            if (op->sourcefile() != lastfile) {
-                lastfile = op->sourcefile();
-                oso ("%c%%filename{\"%s\"}", firsthint ? '\t' : ' ', lastfile.c_str());
+        if (op.sourcefile()) {
+            if (op.sourcefile() != lastfile) {
+                lastfile = op.sourcefile();
+                oso ("%c%%filename{\"%s\"}", firsthint ? '\t' : ' ', lastfile);
                 firsthint = false;
             }
-            if (op->sourceline() != lastline) {
-                lastline = op->sourceline();
+            if (op.sourceline() != lastline) {
+                lastline = op.sourceline();
                 oso ("%c%%line{%d}", firsthint ? '\t' : ' ', lastline);
                 firsthint = false;
             }
         }
 
         // %argrw documents which arguments are read, written, or both (rwW).
-        if (op->nargs()) {
+        if (op.nargs()) {
             oso ("%c%%argrw{\"", firsthint ? '\t' : ' ');
-            for (int i = 0;  i < op->nargs();  ++i) {
-                if (op->argwrite(i))
-                    oso (op->argread(i) ? "W" : "w");
+            for (int i = 0;  i < op.nargs();  ++i) {
+                if (op.argwrite(i))
+                    oso (op.argread(i) ? "W" : "w");
                 else
-                    oso (op->argread(i) ? "r" : "-");
+                    oso (op.argread(i) ? "r" : "-");
             }
             oso ("\"}");
             firsthint = false;
@@ -1014,15 +1014,15 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename,
 
         // %argderivs documents which arguments have derivs taken of
         // them by the op.
-        if (op->argtakesderivs_all()) {
+        if (op.argtakesderivs_all()) {
 #if OIIO_VERSION >= 10803
             oso (" %%argderivs{");
 #else
             oso (" %cargderivs{", '%');  // trick to work with older OIIO
 #endif
             int any = 0;
-            for (int i = 0;  i < op->nargs();  ++i)
-                if (op->argtakesderivs(i)) {
+            for (int i = 0;  i < op.nargs();  ++i)
+                if (op.argtakesderivs(i)) {
                     if (any++)
                         oso (",");
                     oso ("%d", i);

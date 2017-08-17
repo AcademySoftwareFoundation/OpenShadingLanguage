@@ -219,12 +219,12 @@ RuntimeOptimizer::set_debug ()
 int
 RuntimeOptimizer::find_constant (const TypeSpec &type, const void *data)
 {
-    for (int i = 0;  i < (int)m_all_consts.size();  ++i) {
-        const Symbol &s (*inst()->symbol(m_all_consts[i]));
+    for (int c : m_all_consts) {
+        const Symbol &s (*inst()->symbol(c));
         ASSERT (s.symtype() == SymTypeConst);
         if (equivalent (s.typespec(), type) &&
               !memcmp (s.data(), data, s.typespec().simpletype().size())) {
-            return m_all_consts[i];
+            return c;
         }
     }
     return -1;
@@ -520,8 +520,7 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
     // the jump addresses of other ops and the param init ranges.
     if (opnum < (int)code.size()-1) {
         // Adjust jump offsets
-        for (size_t n = 0;  n < code.size();  ++n) {
-            Opcode &c (code[n]);
+        for (auto& c : code) {
             for (int j = 0; j < (int)Opcode::max_jumps && c.jump(j) >= 0; ++j) {
                 if (c.jump(j) > opnum) {
                     c.jump(j) = c.jump(j) + 1;
@@ -1509,9 +1508,9 @@ RuntimeOptimizer::block_unalias (int symindex)
         i->second = -1;
     // In addition to the current block_aliases, unalias from any
     // saved alias lists.
-    for (size_t s = 0, send = m_block_aliases_stack.size(); s < send; ++s) {
-        FastIntMap::iterator i = m_block_aliases_stack[s]->find (symindex);
-        if (i != m_block_aliases_stack[s]->end())
+    for (auto& ba : m_block_aliases_stack) {
+        FastIntMap::iterator i = ba->find (symindex);
+        if (i != ba->end())
             i->second = -1;
     }
 }
@@ -2035,17 +2034,16 @@ RuntimeOptimizer::copy_block_aliases (const FastIntMap &old_block_aliases,
     // Find all symbols written anywhere in the instruction range
     new_block_aliases.clear ();
     new_block_aliases.reserve (old_block_aliases.size());
-    for (FastIntMap::const_iterator alias = old_block_aliases.begin();
-         alias != old_block_aliases.end();  ++alias) {
-        if (alias->second < 0)
+    for (auto&& oba : old_block_aliases) {
+        if (oba.second < 0)
             continue;    // erased alias -- don't copy
-        if (! copy_temps && (inst()->symbol(alias->first)->is_temp() ||
-                             inst()->symbol(alias->second)->is_temp()))
+        if (! copy_temps && (inst()->symbol(oba.first)->is_temp() ||
+                             inst()->symbol(oba.second)->is_temp()))
             continue;    // don't copy temp aliases unless told to
-        if (excluded && (excluded->find(alias->first) != excluded->end() ||
-                         excluded->find(alias->second) != excluded->end()))
+        if (excluded && (excluded->find(oba.first) != excluded->end() ||
+                         excluded->find(oba.second) != excluded->end()))
             continue;    // don't copy from excluded list
-        new_block_aliases[alias->first] = alias->second;
+        new_block_aliases[oba.first] = oba.second;
     }
 }
 
@@ -2371,8 +2369,7 @@ RuntimeOptimizer::optimize_instance ()
     // Now that we've optimized this layer, walk through the ops and
     // note which messages may have been sent, so subsequent layers will
     // know.
-    for (int opnum = 0, e = (int)inst()->ops().size();  opnum < e;   ++opnum) {
-        Opcode &op (inst()->ops()[opnum]);
+    for (auto& op : inst()->ops()) {
         if (op.opname() == u_setmessage) {
             Symbol &Name (*inst()->argsymbol(op.firstarg()+0));
             if (Name.is_constant())
@@ -2388,8 +2385,7 @@ RuntimeOptimizer::optimize_instance ()
 void
 RuntimeOptimizer::resolve_isconnected ()
 {
-    for (int i = 0, n = (int)inst()->ops().size();  i < n;  ++i) {
-        Opcode &op (inst()->ops()[i]);
+    for (auto& op : inst()->ops()) {
         if (op.opname() == u_isconnected) {
             inst()->make_symbol_room (1);
             SymbolPtr s = inst()->argsymbol (op.firstarg() + 1);

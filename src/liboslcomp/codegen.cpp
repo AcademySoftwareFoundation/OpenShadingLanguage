@@ -98,8 +98,7 @@ OSLCompilerImpl::insert_code (int opnum, const char *opname,
     // the jump addresses of other ops and the param init ranges.
     if (opnum < (int)m_ircode.size()-1) {
         // Adjust jump offsets
-        for (size_t n = 0;  n < m_ircode.size();  ++n) {
-            Opcode &c (m_ircode[n]);
+        for (auto& c : m_ircode) {
             for (int j = 0; j < (int)Opcode::max_jumps && c.jump(j) >= 0; ++j) {
                 if (c.jump(j) > opnum) {
                     c.jump(j) = c.jump(j) + 1;

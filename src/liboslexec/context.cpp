@@ -324,14 +324,11 @@ ShadingContext::osl_get_attribute (ShaderGlobals *sg, void *objdata,
 #endif
     bool ok;
 
-    for (int i = 0;  i < FAILED_ATTRIBS;  ++i) {
-        if ((obj_name || m_failed_attribs[i].objdata == objdata) &&
-            m_failed_attribs[i].attr_name == attr_name &&
-            m_failed_attribs[i].obj_name == obj_name &&
-            m_failed_attribs[i].attr_type == attr_type &&
-            m_failed_attribs[i].array_lookup == array_lookup &&
-            m_failed_attribs[i].index == index &&
-            m_failed_attribs[i].objdata) {
+    for (auto& f : m_failed_attribs) {
+        if ((obj_name || f.objdata == objdata) &&
+            f.attr_name == attr_name && f.obj_name == obj_name &&
+            f.attr_type == attr_type && f.array_lookup == array_lookup &&
+            f.index == index && f.objdata) {
 #if 0
             double time = timer();
             shadingsys().m_stat_getattribute_time += time;

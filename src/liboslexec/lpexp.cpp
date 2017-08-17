@@ -42,8 +42,8 @@ lpexp::Cat::genAuto(NdfAutomata &automata)const
     // Sequentially create the states for the expressions and link them all by
     // lambda transitions. Making the begin state of the first one our begin, and the
     // end state of the last one our end
-    for (std::list<LPexp *>::const_iterator i = m_children.begin(); i != m_children.end(); ++i) {
-        FirstLast fl = (*i)->genAuto(automata);
+    for (auto child : m_children) {
+        FirstLast fl = child->genAuto(automata);
         if (!first)
             first = fl.first;
         else
@@ -67,8 +67,8 @@ lpexp::Cat::append(LPexp *lpexp)
 
 lpexp::Cat::~Cat()
 {
-    for (std::list<LPexp *>::iterator i = m_children.begin(); i != m_children.end(); ++i)
-        delete *i;
+    for (auto& child : m_children)
+        delete child;
 }
 
 
@@ -77,8 +77,8 @@ lpexp::LPexp *
 lpexp::Cat::clone()const
 {
     Cat *newcat = new Cat();
-    for (std::list<LPexp *>::const_iterator i = m_children.begin(); i != m_children.end(); ++i)
-        newcat->append((*i)->clone());
+    for (auto child : m_children)
+        newcat->append(child->clone());
     return newcat;
 }
 
@@ -116,10 +116,10 @@ lpexp::Orlist::genAuto(NdfAutomata &automata)const
     // two new states begin and end
     NdfAutomata::State *begin = automata.newState();
     NdfAutomata::State *end = automata.newState();
-    for (std::list<LPexp *>::const_iterator i = m_children.begin(); i != m_children.end(); ++i) {
+    for (auto child : m_children) {
         // And then for every child we create its part of automata and link our begin to its
         // begin and its end to our end with lambda transitions
-        FirstLast fl = (*i)->genAuto(automata);
+        FirstLast fl = child->genAuto(automata);
         begin->addTransition(lambda, fl.first);
         fl.second->addTransition(lambda, end);
     }
@@ -138,8 +138,8 @@ lpexp::Orlist::append(LPexp *lpexp)
 
 lpexp::Orlist::~Orlist()
 {
-    for (std::list<LPexp *>::iterator i = m_children.begin(); i != m_children.end(); ++i)
-        delete *i;
+    for (auto& child : m_children)
+        delete child;
 }
 
 
@@ -148,8 +148,8 @@ lpexp::LPexp *
 lpexp::Orlist::clone()const
 {
     Orlist *newor = new Orlist();
-    for (std::list<LPexp *>::const_iterator i = m_children.begin(); i != m_children.end(); ++i)
-        newor->append((*i)->clone());
+    for (auto child : m_children)
+        newor->append(child->clone());
     return newor;
 }
 

@@ -83,8 +83,8 @@ public:
     }
     ~Dictionary () {
         // Free all the documents.
-        for (size_t i = 0, e = m_documents.size(); i < e; ++i)
-            delete m_documents[i];
+        for (auto& doc : m_documents)
+            delete doc;
     }
 
     int dict_find (ustring dictionaryname, ustring query);
@@ -237,8 +237,8 @@ Dictionary::dict_find (ustring dictionaryname, ustring query)
     }
     int firstmatch = (int) m_nodes.size();
     int last = -1;
-    for (int i = 0, e = (int)matches.size(); i < e;  ++i) {
-        m_nodes.emplace_back(dindex, matches[i].node());
+    for (auto&& m : matches) {
+        m_nodes.emplace_back(dindex, m.node());
         int nodeid = (int) m_nodes.size()-1;
         if (last < 0) {
             // If this is the first match, add a cache entry for it
@@ -284,8 +284,8 @@ Dictionary::dict_find (int nodeID, ustring query)
     }
     int firstmatch = (int) m_nodes.size();
     int last = -1;
-    for (int i = 0, e = (int)matches.size(); i < e;  ++i) {
-        m_nodes.emplace_back(document, matches[i].node());
+    for (auto&& m : matches) {
+        m_nodes.emplace_back(document, m.node());
         int nodeid = (int) m_nodes.size()-1;
         if (last < 0) {
             // If this is the first match, add a cache entry for it

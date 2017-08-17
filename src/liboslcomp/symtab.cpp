@@ -286,8 +286,8 @@ SymbolTable::pop ()
 void
 SymbolTable::delete_syms ()
 {
-    for (SymbolPtrVec::iterator i = m_allsyms.begin(); i != m_allsyms.end(); ++i)
-        delete (*i);
+    for (auto& sym : m_allsyms)
+        delete sym;
     m_allsyms.clear ();
     TypeSpec::struct_list().clear ();
 }

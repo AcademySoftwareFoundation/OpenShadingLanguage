@@ -800,9 +800,9 @@ public:
     }
 
     void add_jump (int target) {
-        for (unsigned int i = 0;  i < max_jumps;  ++i)
-            if (m_jump[i] < 0) {
-                m_jump[i] = target;
+        for (int& j : m_jump)
+            if (j < 0) {
+                j = target;
                 return;
             }
     }

@@ -849,8 +849,6 @@ inline void osl_transform_vmv(void *result, const Matrix44 &M, void* v_)
 }
 
 
-
-
 static OSL_INLINE void avoidAliasingRobustMultVecMatrix(
 	ConstWideAccessor<Matrix44> wx,
 	ConstWideAccessor<Vec3> wsrc,
@@ -1463,6 +1461,13 @@ osl_determinant_w16fw16m(void *wr_, void * wm_)
 	}
 }
 
+OSL_SHADEOP void
+osl_transform_w16vw16mw16v_masked(void *wresult_, const void * wM_, const void* wv_, unsigned int mask_value)
+{
+    impl_transform_wvwmwv(MaskedAccessor<Vec3>(wresult_, Mask(mask_value)),
+    					  ConstWideAccessor<Matrix44>(wM_),
+						  ConstWideAccessor<Vec3>(wv_));
+}
 
 
 } // namespace pvt

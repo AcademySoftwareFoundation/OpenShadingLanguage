@@ -34,6 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "backendllvm_wide.h"
 
 #include <llvm/IR/Type.h>
+#include <llvm/Support/raw_os_ostream.h>
 
 using namespace OSL;
 using namespace OSL::pvt;
@@ -1554,7 +1555,10 @@ BackendLLVMWide::llvm_get_pointer (const Symbol& sym, int deriv,
         result = getLLVMSymbolBase (sym);
 #ifdef OSL_DEV
     	std::cerr << " llvm_get_pointer(" << sym.name() << ") result=";
-    	ll.llvm_typeof(result)->dump();
+    	{
+    		llvm::raw_os_ostream os_cerr(std::cerr);
+    		ll.llvm_typeof(result)->print(os_cerr);
+    	}
     	std::cerr << std::endl;
 #endif
         
@@ -2010,9 +2014,10 @@ BackendLLVMWide::llvm_store_value (llvm::Value* new_val, llvm::Value* dst_ptr,
     {
     	std::cerr << " new_val type=";
     	assert(0);
-    	ll.llvm_typeof(new_val)->dump();
+    	llvm::raw_os_ostream os_cerr(std::cout);
+    	ll.llvm_typeof(new_val)->print(os_cerr);
     	std::cerr << " dest_ptr type=";
-    	ll.llvm_typeof(dst_ptr)->dump();
+    	ll.llvm_typeof(dst_ptr)->print(os_cerr);
     	std::cerr << std::endl;
     }
     ASSERT(ll.type_ptr(ll.llvm_typeof(new_val)) == ll.llvm_typeof(dst_ptr));

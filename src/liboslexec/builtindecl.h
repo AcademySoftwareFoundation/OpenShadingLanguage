@@ -256,6 +256,8 @@ DECL (osl_transform_triple, "iXXiXiXXi")
 DECL (osl_transform_triple_nonlinear, "iXXiXiXXi")
 
 WDECL (osl_wide_transform_triple, "xXXiXiXXii")
+WDECL (osl_transform_w16vw16mw16v_masked, "xXXXi")
+
 
 DECL (osl_dict_find_iis, "iXiX")
 DECL (osl_dict_find_iss, "iXXX")

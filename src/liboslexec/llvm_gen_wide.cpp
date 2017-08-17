@@ -35,6 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // TODO:  remove is possible, having the here breaks original encapsulation
 #include <llvm/IR/Value.h>
 #include <llvm/IR/Type.h>
+#include <llvm/Support/raw_os_ostream.h>
 
 using namespace OSL;
 using namespace OSL::pvt;
@@ -2075,7 +2076,6 @@ LLVMGEN (llvm_gen_transform)
     Symbol *To = rop.opargsym (op, (nargs == 3) ? 1 : 2);
     Symbol *P = rop.opargsym (op, (nargs == 3) ? 2 : 3);
 
-    ASSERT(rop.isSymbolUniform(*To));
     ASSERT((From == NULL) || rop.isSymbolUniform(*From));
     if (To->typespec().is_matrix()) {
         // llvm_ops has the matrix version already implemented
@@ -2084,6 +2084,7 @@ LLVMGEN (llvm_gen_transform)
         llvm_gen_generic (rop, opnum);
         return true;
     }
+    ASSERT(rop.isSymbolUniform(*To));
 
     // Named space versions from here on out.
     ustring from, to;  // N.B.: initialize to empty strings
@@ -2691,7 +2692,12 @@ LLVMGEN (llvm_gen_if)
         if (elseBlockRequired) {
             llvm::Value* anyOn;
             llvm::Value* anyOff;
+#if 1
             rop.ll.test_if_mask_has_any_on_or_off(mask, anyOn, anyOff);
+#else
+            anyOn = rop.ll.constant_bool(true);
+            anyOff = rop.ll.constant_bool(true);
+#endif
 
 			// Branch on the condition, to our blocks
 			llvm::BasicBlock* then_block = rop.ll.new_basic_block ("then");
@@ -3957,7 +3963,11 @@ LLVMGEN (llvm_gen_noise)
 #ifdef OSL_DEV
     std::cout << "About to push " << funcname << "\n";
     for (size_t i = 0;  i < args.size();  ++i) {
-        args[i]->dump(); std::cout << "\n";
+    	{
+    		llvm::raw_os_ostream os_cout(std::cout);
+    		args[i]->print(os_cout);
+    	}
+    	std::cout << "\n";
     }
 #endif
 

@@ -116,12 +116,24 @@ public:
     
     /// Create a new function (that will later be populated with
     /// instructions) with up to 4 args.
+#if OSL_LLVM_VERSION < 50
     llvm::Function *make_function (const std::string &name, bool fastcall,
                                    llvm::Type *rettype,
                                    llvm::Type *arg1=NULL,
                                    llvm::Type *arg2=NULL,
                                    llvm::Type *arg3=NULL,
                                    llvm::Type *arg4=NULL);
+#else
+    llvm::Function *make_function (const std::string &name, bool fastcall,
+                                   llvm::Type *rettype,
+                                   llvm::Type *arg1,
+                                   llvm::Type *arg2);
+    llvm::Function *make_function (const std::string &name, bool fastcall,
+                                   llvm::Type *rettype,
+                                   llvm::Type *arg1,
+                                   llvm::Type *arg2,
+    							   llvm::Type *arg3);
+#endif
 
     /// Create a new function (that will later be populated with
     /// instructions) with a vector of args.
@@ -668,6 +680,7 @@ private:
     llvm::PointerType * m_llvm_type_wide_float_ptr;
 
     bool m_supports_masked_stores;
+    bool m_supports_native_bit_masks;
 };
 
 

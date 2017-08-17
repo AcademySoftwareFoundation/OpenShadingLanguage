@@ -66,6 +66,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #  include <llvm/Linker.h>
 #endif
 #include <llvm/Support/ErrorOr.h>
+#include <llvm/Support/raw_os_ostream.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Support/TargetRegistry.h>
 
@@ -323,7 +324,12 @@ public:
         mm->registerEHFrames (Addr, LoadAddr, Size);
     }
     virtual void deregisterEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) {
+#if OSL_LLVM_VERSION < 50
         mm->deregisterEHFrames(Addr, LoadAddr, Size);
+#else
+        // TODO: verify this is correct
+        mm->deregisterEHFrames();
+#endif
     }
     virtual uint64_t getSymbolAddress(const std::string &Name) {
         return mm->getSymbolAddress (Name);
@@ -805,7 +811,6 @@ LLVM_Util::make_jit_execengine (std::string *err)
 
 #if 1
     llvm::TargetOptions options;
-    options.LessPreciseFPMADOption = true;
     options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
     options.UnsafeFPMath = true;
 
@@ -930,6 +935,9 @@ LLVM_Util::make_jit_execengine (std::string *err)
     
     llvm::StringMap< bool > cpuFeatures;
     if (llvm::sys::getHostCPUFeatures(cpuFeatures)) {
+		m_supports_masked_stores = false;
+		m_supports_native_bit_masks = false;
+
     	OSL_DEV_ONLY(std::cout << std::endl<< "llvm::sys::getHostCPUFeatures()>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl);
 		std::vector<std::string> attrvec;
 		for (auto &cpuFeature : cpuFeatures) 
@@ -942,13 +950,17 @@ LLVM_Util::make_jit_execengine (std::string *err)
 				if (!disableFMA || std::string("fma") != cpuFeature.first().str()) {
 					attrvec.push_back(enabled + cpuFeature.first().str());
 				}
+
+				if(cpuFeature.first().str().find("512") != std::string::npos) {
+					m_supports_masked_stores = true;
+					m_supports_native_bit_masks = true;
+				}
 			}
 		}
 		//The particular format of the names are target dependent, and suitable for passing as -mattr to the target which matches the host.
 	//    const char *mattr[] = {"avx"};
 	//    std::vector<std::string> attrvec (mattr, mattr+1);
 
-		m_supports_masked_stores = false;
 		
 		// TODO: consider extending adding all CPU features for different target platforms
 		// and also intersecting with supported features vs. blindly adding them
@@ -969,6 +981,7 @@ LLVM_Util::make_jit_execengine (std::string *err)
 			break;		
 		case TargetISA_AVX512:
 			m_supports_masked_stores = true;
+			m_supports_native_bit_masks = true;
 			attrvec.push_back("+avx512f");
 			attrvec.push_back("+avx512dq");
 			attrvec.push_back("+avx512bw");
@@ -1037,8 +1050,11 @@ LLVM_Util::dump_struct_data_layout(llvm::Type *Ty)
 	for(int index=0; index < number_of_elements; ++index) {
 		llvm::Type * et = structTy->getElementType(index);
 		std::cout << "   element[" << index << "] offset in bytes = " << layout->getElementOffset(index) << 
-				" type is "; 
-				et->dump();
+				" type is ";
+		{
+			llvm::raw_os_ostream os_cout(std::cout);
+			et->print(os_cout);
+		}
 		std::cout << std::endl;
 	}
 		
@@ -1072,7 +1088,10 @@ LLVM_Util::validate_struct_data_layout(llvm::Type *Ty, const std::vector<unsigne
 		
 //		OSL_DEV_ONLY(std::cout << "   element[" << index << "] offset in bytes = " << actual_offset << " expect offset = " << expected_offset_by_index[index] <<)
 //		OSL_DEV_ONLY(		" type is ");
-//		OSL_DEV_ONLY(		et->dump());
+//		{
+//			llvm::raw_os_ostream os_cout(std::cout);
+//			OSL_DEV_ONLY(		et->print(os_cout));
+//		}
 				
 				
 		ASSERT(expected_offset_by_index[index] == actual_offset);
@@ -1307,7 +1326,7 @@ LLVM_Util::internalize_module_functions (const std::string &prefix,
 }
 
 
-
+#if OSL_LLVM_VERSION < 50
 llvm::Function *
 LLVM_Util::make_function (const std::string &name, bool fastcall,
                           llvm::Type *rettype,
@@ -1319,11 +1338,45 @@ LLVM_Util::make_function (const std::string &name, bool fastcall,
     llvm::Function *func = llvm::cast<llvm::Function>(
         module()->getOrInsertFunction (name, rettype,
                                        arg1, arg2, arg3, arg4, NULL));
+
+    if (fastcall)
+        func->setCallingConv(llvm::CallingConv::Fast);
+    return func;
+}
+#else
+llvm::Function *
+LLVM_Util::make_function (const std::string &name, bool fastcall,
+                          llvm::Type *rettype,
+                          llvm::Type *arg1,
+                          llvm::Type *arg2)
+{
+    llvm::Function *func = llvm::cast<llvm::Function>(
+    // TODO: verify this is correct for LLVM 5.0
+    module()->getOrInsertFunction (name, rettype,
+                                   arg1, arg2));
+
     if (fastcall)
         func->setCallingConv(llvm::CallingConv::Fast);
     return func;
 }
 
+llvm::Function *
+LLVM_Util::make_function (const std::string &name, bool fastcall,
+                          llvm::Type *rettype,
+                          llvm::Type *arg1,
+                          llvm::Type *arg2,
+						  llvm::Type *arg3)
+{
+    llvm::Function *func = llvm::cast<llvm::Function>(
+    // TODO: verify this is correct for LLVM 5.0
+    module()->getOrInsertFunction (name, rettype,
+                                   arg1, arg2, arg3));
+
+    if (fastcall)
+        func->setCallingConv(llvm::CallingConv::Fast);
+    return func;
+}
+#endif
 
 
 llvm::Function *
@@ -1740,6 +1793,7 @@ LLVM_Util::mask_as_int(llvm::Value *mask)
 
     llvm::Value* result;
     llvm::Type * int_reinterpret_cast_vector_type;
+#if 0
     switch(m_vector_width)
     {
     case 4:
@@ -1778,7 +1832,10 @@ LLVM_Util::mask_as_int(llvm::Value *mask)
     	result = builder().CreateBitCast (mask, int_reinterpret_cast_vector_type);
     	break;
     }
-
+#else
+	int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);
+	result = builder().CreateBitCast (mask, int_reinterpret_cast_vector_type);
+#endif
     
 
     return builder().CreateZExt(result, (llvm::Type *) llvm::Type::getInt32Ty (*m_llvm_context));
@@ -1790,6 +1847,7 @@ LLVM_Util::int_as_mask(llvm::Value *value)
     ASSERT(value->getType() == type_int());
 
     llvm::Value* result;
+#if 0
     switch(m_vector_width)
     {
     case 4:
@@ -1841,6 +1899,37 @@ LLVM_Util::int_as_mask(llvm::Value *value)
         result = builder().CreateBitCast (intMask, type_wide_bool());
     	break;
     }
+    }
+#endif
+
+    if (m_supports_native_bit_masks) {
+
+    	// We can just reinterpret cast a 16 bit integer to a 16 bit mask
+    	// and all types are happy
+    	llvm::Type * intMaskType = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);
+		llvm::Value* intMask = builder().CreateTrunc(value, intMaskType);
+
+		result = builder().CreateBitCast (intMask, type_wide_bool());
+    } else
+    {
+    	// Since we know vectorized comparisons for AVX&AVX2 end up setting 8 32 bit integers
+    	// to 0xFFFFFFFF or 0x00000000,
+    	// We need to do more than a simple cast to an int.
+
+        // Broadcast out the int32 mask to all data lanes
+        llvm::Value * wide_int_mask = widen_value(value);
+
+        // Create a filter for each lane to 0 out the other lane's bits
+        std::vector<Constant *> lane_masks(m_vector_width);
+		for (int lane_index = 0; lane_index < m_vector_width; ++lane_index) {
+		   lane_masks[lane_index] = ConstantInt::get(type_int(), (1<<lane_index));
+		}
+		llvm::Value * lane_filter = ConstantVector::get(lane_masks);
+
+		// Bitwise AND the wide_mask and the lane filter
+        llvm::Value * filtered_mask = op_and(wide_int_mask, lane_filter);
+
+	    result = op_ne(filtered_mask, wide_constant(0));
     }
 
     ASSERT(result->getType() == type_wide_bool());
@@ -1922,6 +2011,7 @@ LLVM_Util::test_if_mask_has_any_on_or_off(llvm::Value *mask, llvm::Value* & any_
 		break;
 	case 16:
 		{
+
 			allOffConstant = constant16(0);
 			allOnConstant = constant16(0xFFFF);
 
@@ -2145,6 +2235,7 @@ LLVM_Util::mark_structure_return_value(llvm::Value *funccall)
 {
     llvm::CallInst* call = llvm::cast<llvm::CallInst>(funccall);
     
+#if OSL_LLVM_VERSION < 50
     auto attrs = llvm::AttributeSet::get(
     		call->getContext(),
         llvm::AttributeSet::FunctionIndex,
@@ -2154,6 +2245,12 @@ LLVM_Util::mark_structure_return_value(llvm::Value *funccall)
 
     attrs = attrs.addAttribute(call->getContext(), 1,
                                llvm::Attribute::StructRet);
+#else
+    // TODO: verify this is correct for LLVM 5.0
+    AttributeList attrs = llvm::AttributeList::get(call->getContext(), llvm::AttributeList::FunctionIndex, llvm::Attribute::NoUnwind);
+    attrs.addAttribute(call->getContext(), llvm::AttributeList::ReturnIndex, llvm::Attribute::StructRet);
+#endif
+
 
     call->setAttributes(attrs);
 }

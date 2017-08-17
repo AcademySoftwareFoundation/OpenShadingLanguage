@@ -231,11 +231,9 @@ template <class T> class Matrix22
     // 
     //------------------------------------------------------------
 
-    const Matrix22 &    invert (bool singExc = false)
-                        throw (Iex::MathExc);
+    const Matrix22 &    invert (bool singExc = false);
 
-    Matrix22<T>         inverse (bool singExc = false) const
-                        throw (Iex::MathExc);
+    Matrix22<T>         inverse (bool singExc = false) const;
 
 
     //-----------------------------------------
@@ -760,7 +758,7 @@ Matrix22<T>::transposed () const
 
 template <class T>
 const Matrix22<T> &
-Matrix22<T>::invert (bool singExc) throw (Iex::MathExc)
+Matrix22<T>::invert (bool singExc)
 {
     *this = inverse (singExc);
     return *this;
@@ -768,7 +766,7 @@ Matrix22<T>::invert (bool singExc) throw (Iex::MathExc)
 
 template <class T>
 Matrix22<T>
-Matrix22<T>::inverse (bool singExc) const throw (Iex::MathExc)
+Matrix22<T>::inverse (bool singExc) const
 {
     Matrix22 s ( x[1][1],  -x[0][1],
                 -x[1][0],   x[0][0]);

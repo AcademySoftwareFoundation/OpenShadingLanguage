@@ -248,6 +248,8 @@ set (OSL_BUILD_PLUGINS ON CACHE BOOL "Bool OSL plugins, for example OIIO plugin"
 set (USE_CCACHE ON CACHE BOOL "Use ccache if found")
 set (CODECOV OFF CACHE BOOL "Build code coverage tests")
 option (USE_BOOST_WAVE "Use Boost Wave for C preprocessor (alternative is to use clang)" OFF)
+set (PLUGIN_SEARCH_PATH "" CACHE STRING "Default plugin search path")
+set (INSTALL_DOCS ON CACHE BOOL "Install documentation")
 
 # Use ccache if found
 find_program (CCACHE_FOUND ccache)
@@ -349,6 +351,14 @@ if (OSL_NAMESPACE)
 endif ()
 message(STATUS "Setting Namespace to: ${OSL_NAMESPACE}")
 
+include (GNUInstallDirs)
+
+message (STATUS "CMAKE_INSTALL_PREFIX is ${CMAKE_INSTALL_PREFIX}")
+message (STATUS "CMAKE_INSTALL_LIBDIR is ${CMAKE_INSTALL_LIBDIR}")
+message (STATUS "CMAKE_INSTALL_BINDIR is ${CMAKE_INSTALL_BINDIR}")
+message (STATUS "CMAKE_INSTALL_DOCDIR is ${CMAKE_INSTALL_DOCDIR}")
+message (STATUS "CMAKE_INSTALL_INCLUDEDIR is ${CMAKE_INSTALL_INCLUDEDIR}")
+
 set (CMAKE_MODULE_PATH
      "${PROJECT_SOURCE_DIR}/src/cmake/modules"
      "${PROJECT_SOURCE_DIR}/src/cmake")
@@ -363,58 +373,6 @@ include_directories (
   )
 
 
-###########################################################################
-# Paths for install tree customization.  Note that relative paths are relative
-# to CMAKE_INSTALL_PREFIX.
-set (DEFAULT_BIN_INSTALL_DIR   "bin")
-set (DEFAULT_LIB_INSTALL_DIR   "lib")
-set (DEFAULT_INCLUDE_INSTALL_DIR "include/OSL")
-if (UNIX AND NOT SELF_CONTAINED_INSTALL_TREE)
-    # Try to be well-behaved and install into reasonable places according to
-    # the "standard" unix directory heirarchy
-    # TODO: Figure out how to get the correct python directory
-    set (DEFAULT_PYLIB_INSTALL_DIR "lib/python/site-packages")
-    set (DEFAULT_PYLIB3_INSTALL_DIR "lib/python3/site-packages")
-    set (DEFAULT_DOC_INSTALL_DIR "share/doc/OSL")
-    set (DEFAULT_MAN_INSTALL_DIR "share/man/man1")
-else ()
-    # Here is the "self-contained install tree" case: the expectation here is
-    # that everything OSL related will go into its own directory, not into
-    # some standard system heirarchy.
-    set (DEFAULT_PYLIB_INSTALL_DIR "python")
-    set (DEFAULT_PYLIB3_INSTALL_DIR "python3")
-    set (DEFAULT_DOC_INSTALL_DIR "doc")
-    set (DEFAULT_MAN_INSTALL_DIR "doc/man")
-endif ()
-if (EXEC_INSTALL_PREFIX)
-    # Tack on an extra prefix to support multi-arch builds.
-    set (DEFAULT_BIN_INSTALL_DIR   "${EXEC_INSTALL_PREFIX}/${DEFAULT_BIN_INSTALL_DIR}")
-    set (DEFAULT_LIB_INSTALL_DIR   "${EXEC_INSTALL_PREFIX}/${DEFAULT_LIB_INSTALL_DIR}")
-    set (DEFAULT_PYLIB_INSTALL_DIR "${EXEC_INSTALL_PREFIX}/${DEFAULT_PYLIB_INSTALL_DIR}")
-    set (DEFAULT_PYLIB3_INSTALL_DIR "${EXEC_INSTALL_PREFIX}/${DEFAULT_PYLIB3_INSTALL_DIR}")
-endif ()
-# Set up cmake cache variables corresponding to the defaults deduced above, so
-# that the user can override them as desired:
-set (BIN_INSTALL_DIR ${DEFAULT_BIN_INSTALL_DIR} CACHE STRING
-     "Install location for binaries (relative to CMAKE_INSTALL_PREFIX or absolute)")
-set (LIB_INSTALL_DIR ${DEFAULT_LIB_INSTALL_DIR} CACHE STRING
-     "Install location for libraries (relative to CMAKE_INSTALL_PREFIX or absolute)")
-set (PYLIB_INSTALL_DIR ${DEFAULT_PYLIB_INSTALL_DIR} CACHE STRING
-     "Install location for python libraries (relative to CMAKE_INSTALL_PREFIX or absolute)")
-set (PYLIB3_INSTALL_DIR ${DEFAULT_PYLIB3_INSTALL_DIR} CACHE STRING
-     "Install location for python3 libraries (relative to CMAKE_INSTALL_PREFIX or absolute)")
-set (INCLUDE_INSTALL_DIR ${DEFAULT_INCLUDE_INSTALL_DIR} CACHE STRING
-     "Install location of header files (relative to CMAKE_INSTALL_PREFIX or absolute)")
-set (DOC_INSTALL_DIR ${DEFAULT_DOC_INSTALL_DIR} CACHE STRING
-     "Install location for documentation (relative to CMAKE_INSTALL_PREFIX or absolute)")
-if (UNIX)
-    set (MAN_INSTALL_DIR ${DEFAULT_MAN_INSTALL_DIR} CACHE STRING
-         "Install location for manual pages (relative to CMAKE_INSTALL_PREFIX or absolute)")
-endif()
-set (PLUGIN_SEARCH_PATH "" CACHE STRING "Default plugin search path")
-set (INSTALL_DOCS ON CACHE BOOL "Install documentation")
-
-
 if (APPLE)
     set (MACOSX_RPATH ON)
 endif ()
@@ -425,7 +383,7 @@ set (CMAKE_SKIP_BUILD_RPATH  FALSE)
 # (but later on when installing)
 set (CMAKE_BUILD_WITH_INSTALL_RPATH FALSE) 
 # the RPATH to be used when installing
-set (CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+set (CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_FULL_LIBDIR}")
 # add the automatically determined parts of the RPATH
 # which point to directories outside the build tree to the install RPATH
 set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
@@ -472,7 +430,9 @@ add_subdirectory (src/osl.imageio)
 endif ()
 
 add_subdirectory (src/include)
+if (INSTALL_DOCS)
 add_subdirectory (src/doc)
+endif ()
 
 
 

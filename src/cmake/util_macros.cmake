@@ -107,6 +107,8 @@ endmacro ()
 #    install_targets (target1 [target2 ...])
 #
 macro (install_targets)
-    install (TARGETS ${ARGN} RUNTIME DESTINATION bin
-             LIBRARY DESTINATION lib  ARCHIVE DESTINATION lib)
+    install (TARGETS ${ARGN}
+             RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT user
+             LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT user
+             ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT developer)
 endmacro()

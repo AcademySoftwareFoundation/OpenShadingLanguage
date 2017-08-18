@@ -157,7 +157,7 @@ TARGET_LINK_LIBRARIES ( oslexec
                         ${LLVM_SYSTEM_LIBRARIES})
 ADD_DEPENDENCIES (oslexec "${CMAKE_SOURCE_DIR}/src/build-scripts/hidesymbols.map")
 
-INSTALL ( TARGETS oslexec RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib )
+install_targets (oslexec)
 
 # Unit tests
 if (OSL_BUILD_TESTS)

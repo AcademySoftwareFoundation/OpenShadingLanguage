@@ -286,7 +286,12 @@ public:
         mm->registerEHFrames (Addr, LoadAddr, Size);
     }
     virtual void deregisterEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) {
+#if OSL_LLVM_VERSION < 50
         mm->deregisterEHFrames(Addr, LoadAddr, Size);
+#else
+        // TODO: verify this is correct
+        mm->deregisterEHFrames();
+#endif
     }
     virtual uint64_t getSymbolAddress(const std::string &Name) {
         return mm->getSymbolAddress (Name);
@@ -859,12 +864,16 @@ LLVM_Util::make_function (const std::string &name, bool fastcall,
                           llvm::Type *arg3,
                           llvm::Type *arg4)
 {
-    llvm::Function *func = llvm::cast<llvm::Function>(
-        module()->getOrInsertFunction (name, rettype,
-                                       arg1, arg2, arg3, arg4, NULL));
-    if (fastcall)
-        func->setCallingConv(llvm::CallingConv::Fast);
-    return func;
+    std::vector<llvm::Type*> argtypes;
+    if (arg1)
+        argtypes.emplace_back(arg1);
+    if (arg2)
+        argtypes.emplace_back(arg2);
+    if (arg3)
+        argtypes.emplace_back(arg3);
+    if (arg4)
+        argtypes.emplace_back(arg4);
+    return make_function (name, fastcall, rettype, argtypes, false);
 }
 
 

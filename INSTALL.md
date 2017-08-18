@@ -34,7 +34,7 @@ OSL requires the following dependencies or tools:
     well as for $OPENIMAGEIOHOME/lib to be in your LD_LIBRARY_PATH (or
     DYLD_LIBRARY_PATH on OS X) and then OSL's build scripts will be able
     to find it.
-* [LLVM](http://www.llvm.org) 3.4, 3.5, 3.9, or 4.0
+* [LLVM](http://www.llvm.org) 3.4, 3.5, 3.9, 4.0, or 5.0
 
    It's possible that other intermediate versions will work, but we are not
    testing them. Please note that for version 3.5 or later, you'll need to

@@ -1,5 +1,6 @@
-Release 1.8.11 -- 1 Aug 2017 (compared to 1.8.10)
+Release 1.8.11 -- 11 Sep 2017 (compared to 1.8.10)
 --------------------------------------------------
+* Builds properly against LLVM 5.0.
 
 Release 1.8.10 -- 1 Jul 2017 (compared to 1.8.9)
 --------------------------------------------------

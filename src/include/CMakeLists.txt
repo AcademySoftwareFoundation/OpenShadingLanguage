@@ -12,4 +12,4 @@ endif ()
 configure_file (OSL/oslversion.h.in "${CMAKE_BINARY_DIR}/include/OSL/oslversion.h" @ONLY)
 list (APPEND public_headers "${CMAKE_BINARY_DIR}/include/OSL/oslversion.h")
 
-INSTALL ( FILES ${public_headers} DESTINATION include/OSL )
+INSTALL ( FILES ${public_headers} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/OSL )

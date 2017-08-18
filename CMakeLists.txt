@@ -53,6 +53,8 @@ if (CMAKE_USE_FOLDERS)
     set_property (GLOBAL PROPERTY USE_FOLDERS ON)
 endif ()
 
+include (GNUInstallDirs)
+
 set (CMAKE_MODULE_PATH
      "${PROJECT_SOURCE_DIR}/src/cmake/modules"
      "${PROJECT_SOURCE_DIR}/src/cmake")
@@ -161,7 +163,9 @@ endif ()
 add_subdirectory (src/shaders)
 add_subdirectory (src/shaders/MaterialX)
 
+if (INSTALL_DOCS)
 add_subdirectory (src/doc)
+endif ()
 
 
 

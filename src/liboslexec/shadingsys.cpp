@@ -895,7 +895,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (mxcompref,   mxcompref,           none,          true,      0);
     OP (min,         minmax,              min,           true,      0);
     OP (mix,         mix,                 mix,           true,      0);
-    OP (mod,         modulus,             none,          true,      0);
+    OP (mod,         modulus,             mod,           true,      0);
     OP (mul,         mul,                 mul,           true,      0);
     OP (neg,         neg,                 neg,           true,      0);
     OP (neq,         compare_op,          neq,           true,      0);

@@ -12,8 +12,9 @@ Executing...
 ../common/textures/grid.tx unknown constantcolor
 ../common/textures/grid.tx unknown constantalpha
 ../common/textures/grid.tx foobar: not found (0)
-ERROR: [RendererServices::get_texture_info] Invalid image file "badfile": Image "badfile" does not exist. Also, it is not the name of an image format that OpenImageIO recognizes.
+ERROR: [RendererServices::get_texture_info] Image "badfile" does not exist. Also, it is not the name of an image format that OpenImageIO recognizes.
 
+Invalid image file "badfile"
 badfile data: not found (0)
 ../common/textures/grid.tx exists? 1 (return 1)
 badfile3 exists? 0 (return 1)
@@ -30,8 +31,9 @@ win.exr unknown averagealpha
 win.exr unknown constantcolor
 win.exr unknown constantalpha
 win.exr foobar: not found (0)
-ERROR: [RendererServices::get_texture_info] Invalid image file "badfile": Image "badfile" does not exist. Also, it is not the name of an image format that OpenImageIO recognizes.
+ERROR: [RendererServices::get_texture_info] Image "badfile" does not exist. Also, it is not the name of an image format that OpenImageIO recognizes.
 
+Invalid image file "badfile"
 badfile data: not found (0)
 win.exr exists? 1 (return 1)
 badfile3 exists? 0 (return 1)
@@ -48,8 +50,9 @@ green.tx averagealpha: 1
 green.tx constantcolor: 0.101961 0.501961 0.101961
 green.tx constantalpha: 1
 green.tx foobar: not found (0)
-ERROR: [RendererServices::get_texture_info] Invalid image file "badfile": Image "badfile" does not exist. Also, it is not the name of an image format that OpenImageIO recognizes.
+ERROR: [RendererServices::get_texture_info] Image "badfile" does not exist. Also, it is not the name of an image format that OpenImageIO recognizes.
 
+Invalid image file "badfile"
 badfile data: not found (0)
 green.tx exists? 1 (return 1)
 badfile3 exists? 0 (return 1)

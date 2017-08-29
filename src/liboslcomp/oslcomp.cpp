@@ -309,18 +309,11 @@ OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
         new clang::DiagnosticsEngine(diagIDs, diagOptions, diagPrinter);
     inst.setDiagnostics(diagEngine);
 
-#if OSL_LLVM_VERSION <= 34
-    clang::TargetOptions &targetopts = inst.getTargetOpts();
-    targetopts.Triple = llvm::sys::getDefaultTargetTriple();
-    clang::TargetInfo *target =
-        clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(), &targetopts);
-#else // LLVM 3.5+
     const std::shared_ptr<clang::TargetOptions> &targetopts =
           std::make_shared<clang::TargetOptions>(inst.getTargetOpts());
     targetopts->Triple = llvm::sys::getDefaultTargetTriple();
     clang::TargetInfo *target =
         clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(), targetopts);
-#endif
 
     inst.setTarget(target);
 
@@ -369,12 +362,7 @@ OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
     }
 
     inst.getLangOpts().LineComment = 1;
-
-#if OSL_LLVM_VERSION >= 35
     inst.createPreprocessor(clang::TU_Prefix);
-#else
-    inst.createPreprocessor();
-#endif
 
     llvm::raw_string_ostream ostream(result);
     diagPrinter->BeginSourceFile (inst.getLangOpts(), &inst.getPreprocessor());

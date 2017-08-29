@@ -372,7 +372,7 @@ help:
 	@echo "      PARTIO_HOME=             Use Partio from the given location"
 	@echo "      USE_EXTERNAL_PUGIXML=1   Use the system PugiXML, not the one in OIIO"
 	@echo "  LLVM-related options:"
-	@echo "      LLVM_VERSION=3.4         Specify which LLVM version to use"
+	@echo "      LLVM_VERSION=4.0         Specify which LLVM version to use"
 	@echo "      LLVM_DIRECTORY=xx        Specify where LLVM lives"
 	@echo "      LLVM_NAMESPACE=xx        Specify custom LLVM namespace"
 	@echo "      LLVM_STATIC=1            Use static LLVM libraries"

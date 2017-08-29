@@ -308,20 +308,19 @@ DECLFOLDER(constfold_mod)
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
-    ASSERT (A.typespec().is_int() && B.typespec().is_int());
+
     if (rop.is_zero(A)) {
         // R = 0 % B  =>   R = 0
-        rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+1),
-                              "0 % A => 0");
+        rop.turn_into_assign_zero (op, "0 % A => 0");
         return 1;
     }
     if (rop.is_zero(B)) {
         // R = A % 0   =>   R = 0
-        rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+2),
-                              "A % 0 => 0");
+        rop.turn_into_assign_zero (op, "A % 0 => 0");
         return 1;
     }
-    if (A.is_constant() && B.is_constant()) {
+    if (A.is_constant() && B.is_constant() &&
+        A.typespec().is_int() && B.typespec().is_int()) {
         int a = A.get_int();
         int b = B.get_int();
         int cind = rop.add_constant (b ? (a % b) : 0);

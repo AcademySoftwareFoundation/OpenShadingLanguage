@@ -12,6 +12,7 @@ Dependency and standards changes:
   any work to ensure that.
 * **CMake >= 3.2.2**
 * **Boost >= 1.55**
+* **OpenEXR >= 2.0** (recommended: 2.2)
 
 Language features:
 * New preprocessor symbols: OSL_VERSION_MAJOR, OSL_VERSION_MINOR,

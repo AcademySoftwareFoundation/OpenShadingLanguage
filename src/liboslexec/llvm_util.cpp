@@ -34,12 +34,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/oslconfig.h>
 #include <OSL/llvm_util.h>
 
-#if OSL_LLVM_VERSION < 34
-#error "LLVM minimum version required for OSL is 3.4"
-#endif
-
-#if OSL_LLVM_VERSION >= 35 && OSL_CPLUSPLUS_VERSION < 11
-#error "LLVM >= 3.5 requires C++11 or newer"
+#if OSL_LLVM_VERSION < 35 || OSL_CPLUSPLUS_VERSION < 11
+#error "C++11 and LLVM >= 3.5 are required"
 #endif
 
 // Use MCJIT for LLVM 3.6 and beyind, old JIT for earlier
@@ -54,12 +50,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/DataLayout.h>
-#if OSL_LLVM_VERSION >= 35
-#  include <llvm/Linker/Linker.h>
-#  include <llvm/Support/FileSystem.h>
-#else
-#  include <llvm/Linker.h>
-#endif
+#include <llvm/Linker/Linker.h>
+#include <llvm/Support/FileSystem.h>
 #include <llvm/Support/ErrorOr.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Support/TargetRegistry.h>
@@ -83,11 +75,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/PrettyStackTrace.h>
-#if OSL_LLVM_VERSION >= 35
-#  include <llvm/IR/Verifier.h>
-#else
-#  include <llvm/Analysis/Verifier.h>
-#endif
+#include <llvm/IR/Verifier.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/IPO.h>
@@ -110,12 +98,10 @@ namespace pvt {
     typedef llvm::SectionMemoryManager LLVMMemoryManager;
 #endif
 
-#if OSL_LLVM_VERSION >= 35
 #if OSL_LLVM_VERSION < 40
     typedef std::error_code LLVMErr;
 #else
     typedef llvm::Error LLVMErr;
-#endif
 #endif
 
 
@@ -410,13 +396,6 @@ LLVM_Util::SetupLLVM ()
     // Some global LLVM initialization for the first thread that
     // gets here.
 
-#if OSL_LLVM_VERSION < 35
-    // enable it to be thread-safe
-    llvm::llvm_start_multithreaded ();
-#endif
-// new versions (>=3.5)don't need this anymore
-
-
 #if USE_MCJIT
     LLVMInitializeNativeTarget();
     LLVMInitializeNativeDisassembler();
@@ -457,7 +436,6 @@ LLVM_Util::new_module (const char *id)
 
 
 
-#if OSL_LLVM_VERSION >= 35
 #if OSL_LLVM_VERSION < 40
 inline bool error_string (const std::error_code &err, std::string *str) {
     if (err) {
@@ -478,7 +456,6 @@ inline bool error_string (llvm::Error err, std::string *str) {
     return false;
 }
 #endif
-#endif
 
 
 
@@ -495,11 +472,7 @@ LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
 
     // Create a lazily deserialized IR module
     // This can only be done for old JIT
-# if OSL_LLVM_VERSION >= 35
     llvm::Module *m = llvm::getLazyBitcodeModule (buf, context()).get();
-# else
-    llvm::Module *m = llvm::getLazyBitcodeModule (buf, context(), err);
-# endif
     // don't delete buf, the module has taken ownership of it
 
 #if 0
@@ -705,16 +678,6 @@ LLVM_Util::setup_optimization_passes (int optlevel)
     m_llvm_module_passes = new llvm::legacy::PassManager;
     llvm::legacy::PassManager &mpm (*m_llvm_module_passes);
     mpm.add (new llvm::DataLayoutPass(module()));
-
-#elif OSL_LLVM_VERSION == 34
-
-    m_llvm_func_passes = new llvm::legacy::FunctionPassManager(module());
-    llvm::legacy::FunctionPassManager &fpm (*m_llvm_func_passes);
-    fpm.add (new llvm::DataLayout(module()));
-
-    m_llvm_module_passes = new llvm::legacy::PassManager;
-    llvm::legacy::PassManager &mpm (*m_llvm_module_passes);
-    mpm.add (new llvm::DataLayout(module()));
 
 #endif
 
@@ -1714,12 +1677,9 @@ LLVM_Util::write_bitcode_file (const char *filename, std::string *err)
 #if OSL_LLVM_VERSION >= 36
     std::error_code local_error;
     llvm::raw_fd_ostream out (filename, local_error, llvm::sys::fs::F_None);
-#elif OSL_LLVM_VERSION >= 35
-    std::string local_error;
-    llvm::raw_fd_ostream out (filename, err ? *err : local_error, llvm::sys::fs::F_None);
 #else
     std::string local_error;
-    llvm::raw_fd_ostream out (filename, err ? *err : local_error);
+    llvm::raw_fd_ostream out (filename, err ? *err : local_error, llvm::sys::fs::F_None);
 #endif
     llvm::WriteBitcodeToFile (module(), out);
 

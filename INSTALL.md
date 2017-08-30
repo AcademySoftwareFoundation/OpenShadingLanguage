@@ -16,6 +16,9 @@ OSL requires the following dependencies or tools:
    - Microsoft Visual Studio 2015 or newer
    - Intel C++ compiler icc version 13 (?) or newer
 
+  OSL should compile also properly with C++14 or C++17, but they are not
+  required.
+
 * [OpenImageIO](http://openimageio.org) 1.7 or newer
 
     OSL uses OIIO both for its texture mapping functionality as well as
@@ -34,16 +37,10 @@ OSL requires the following dependencies or tools:
     well as for $OPENIMAGEIOHOME/lib to be in your LD_LIBRARY_PATH (or
     DYLD_LIBRARY_PATH on OS X) and then OSL's build scripts will be able
     to find it.
-* [LLVM](http://www.llvm.org) 3.4, 3.5, 3.9, or 4.0
 
-   It's possible that other intermediate versions will work, but we are not
-   testing them. Please note that for version 3.5 or later, you'll need to
-   be building OSL with C++11 (LLVM 3.4 is the last to support C++03).
-   Currently, the newer versions (3.9 & 4.0) take longer to JIT, but the
-   JITed code runs faster, so you may wish to consider this tradeoff (faster
-   JIT may be important for interactive applications). We anticipate that
-   future OSL releases will improve JIT performance and then drop support
-   for the older LLVM versions.
+* [LLVM](http://www.llvm.org) 3.5, 3.9, 4.0, or 5.0
+
+   It's possible that other versions will work, but we are not testing them.
 
    Optionally, if Clang libraries are installed alongside LLVM, OSL will
    in most circumstances use Clang's internals for C-style preprocessing of
@@ -51,9 +48,9 @@ OSL requires the following dependencies or tools:
    platforms, that requires that Boost has been built in C++11 mode).
 
 * [Boost](www.boost.org) 1.55 or newer.
-* [Imath/OpenEXR](http://openexr.com/downloads.html)
-* [Flex](https://github.com/westes/flex)
-* [GNU Bison](https://www.gnu.org/software/bison/)
+* [Ilmbase/OpenEXR](http://openexr.com/downloads.html) 2.0 or newer
+* [Flex](https://github.com/westes/flex) and
+  [GNU Bison](https://www.gnu.org/software/bison/)
 * [PugiXML](http://pugixml.org/)
 * [Partio](https://www.disneyanimation.com/technology/partio.html) --
   optional, but if it is not found at build time, the OSL `pointcloud`

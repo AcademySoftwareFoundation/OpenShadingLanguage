@@ -26,6 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 #include <iterator>
+#include <type_traits>
 
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/strutil.h>
@@ -525,9 +526,9 @@ public:
 
 	class Iterator {		
 		Position m_pos;
-		const DependencyTreeTracker &m_dtt;
+		const DependencyTreeTracker *m_dtt;
 		
-		OSL_INLINE const Node & node() const { return  m_dtt.m_nodes[m_pos()]; }
+		OSL_INLINE const Node & node() const { return  m_dtt->m_nodes[m_pos()]; }
 	public:
 		
 		typedef const Symbol * value_type;
@@ -537,13 +538,21 @@ public:
 		typedef const Symbol * pointer;
 		typedef std::forward_iterator_tag iterator_category;
 		
-		OSL_INLINE Iterator(const DependencyTreeTracker &dtt, Position pos)
-		: m_dtt(dtt)
+		OSL_INLINE
+		Iterator()
+		: m_dtt(nullptr)
+		{}
+
+		OSL_INLINE explicit
+		Iterator(const DependencyTreeTracker &dtt, Position pos)
+		: m_dtt(&dtt)
 		, m_pos(pos)
 		{}
 		
 		OSL_INLINE Position pos() const { return m_pos; };
-		OSL_INLINE int depth() const 
+
+		OSL_INLINE int
+		depth() const
 		{
 			// Make sure we didn't try to access the end
 			if(m_pos() == end_pos()())
@@ -551,7 +560,7 @@ public:
 			return node().depth; 
 		};
 		
-		OSL_INLINE Iterator 
+		OSL_INLINE Iterator &
 		operator ++()
 		{
 			// prefix operator
@@ -589,6 +598,25 @@ public:
 		}
 	};
 	
+	// Validate that the Iterator meets the requirements of a std::forward_iterator_tag
+	static_assert(std::is_default_constructible<DependencyTreeTracker::Iterator>::value, "DependencyTreeTracker::Iterator must be default constructible");
+	static_assert(std::is_copy_constructible<DependencyTreeTracker::Iterator>::value, "DependencyTreeTracker::Iterator must be copy constructible");
+	static_assert(std::is_copy_assignable<DependencyTreeTracker::Iterator>::value, "DependencyTreeTracker::Iterator must be copy assignable");
+	static_assert(std::is_move_assignable<DependencyTreeTracker::Iterator>::value, "DependencyTreeTracker::Iterator must be move assignable");
+	static_assert(std::is_destructible<DependencyTreeTracker::Iterator>::value, "DependencyTreeTracker::Iterator must be destructible");
+	static_assert(std::is_same<decltype(std::declval<DependencyTreeTracker::Iterator>() == std::declval<DependencyTreeTracker::Iterator>()), bool>::value, "DependencyTreeTracker::Iterator must be equality comparable");
+	static_assert(std::is_same<typename std::iterator_traits<DependencyTreeTracker::Iterator>::value_type, const Symbol *>::value, "DependencyTreeTracker::Iterator must define type value_type");
+	static_assert(std::is_same<typename std::iterator_traits<DependencyTreeTracker::Iterator>::difference_type, int>::value, "DependencyTreeTracker::Iterator must define type difference_type");
+	static_assert(std::is_same<typename std::iterator_traits<DependencyTreeTracker::Iterator>::reference, const Symbol *>::value, "DependencyTreeTracker::Iterator must define type reference");
+	static_assert(std::is_same<typename std::iterator_traits<DependencyTreeTracker::Iterator>::pointer, const Symbol *>::value, "DependencyTreeTracker::Iterator must define type pointer");
+	static_assert(std::is_same<typename std::iterator_traits<DependencyTreeTracker::Iterator>::iterator_category, std::forward_iterator_tag>::value, "DependencyTreeTracker::Iterator must define type iterator_category");
+	static_assert(std::is_same<decltype(*std::declval<DependencyTreeTracker::Iterator>()), const Symbol *>::value, "DependencyTreeTracker::Iterator must implement reference operator *");
+	static_assert(std::is_same<decltype(++std::declval<DependencyTreeTracker::Iterator>()), DependencyTreeTracker::Iterator &>::value, "DependencyTreeTracker::Iterator must implement Iterator & operator ++");
+	static_assert(std::is_same<decltype((void)std::declval<DependencyTreeTracker::Iterator>()++), void>::value, "DependencyTreeTracker::Iterator must implement Iterator & operator ++ (int)");
+	static_assert(std::is_same<decltype(*std::declval<DependencyTreeTracker::Iterator>()++), const Symbol *>::value, "DependencyTreeTracker::Iterator must support *it++");
+
+	static_assert(std::is_same<decltype(std::declval<DependencyTreeTracker::Iterator>() != std::declval<DependencyTreeTracker::Iterator>()), bool>::value, "DependencyTreeTracker::Iterator must implement bool operator != (const Iterator &)");
+	static_assert(std::is_same<decltype(!(std::declval<DependencyTreeTracker::Iterator>() == std::declval<DependencyTreeTracker::Iterator>())), bool>::value, "DependencyTreeTracker::Iterator must implement bool operator == (const Iterator &)");
 
 	OSL_INLINE Iterator 
 	begin() const { return Iterator(*this, top_pos()); }

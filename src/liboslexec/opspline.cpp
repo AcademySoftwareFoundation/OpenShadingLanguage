@@ -138,8 +138,8 @@ OSL_SHADEOP void  osl_spline_w16fw16ff(void *wout_, const char *spline_, void *w
 	WideAccessor<float> wR(wout_);
 
 	// calling a function below, don't bother vectorizing
-	//OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
-	OSL_INTEL_PRAGMA("novector")
+	//OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
+	OSL_INTEL_PRAGMA(novector)
 	for(int lane=0; lane < wR.width; ++lane) {
 	    float x = wX[lane];
 

@@ -50,8 +50,6 @@ namespace Strings {
 static ustring op_break("break");
 static ustring op_calculatenormal("calculatenormal");
 static ustring op_continue("continue");
-static ustring op_dowhile("dowhile");
-static ustring op_for("for");
 static ustring op_functioncall("functioncall");
 static ustring op_getattribute("getattribute");
 static ustring op_getmatrix("getmatrix");
@@ -60,7 +58,6 @@ static ustring op_if("if");
 static ustring op_transform("transform");
 static ustring op_transformv("transformv");
 static ustring op_transformn("transformn");
-static ustring op_while("while");
 
 // Shader global strings
 static ustring object2common("object2common");
@@ -545,8 +542,8 @@ public:
 
 		OSL_INLINE explicit
 		Iterator(const DependencyTreeTracker &dtt, Position pos)
-		: m_dtt(&dtt)
-		, m_pos(pos)
+		: m_pos(pos)
+		, m_dtt(&dtt)
 		{}
 		
 		OSL_INLINE Position pos() const { return m_pos; };
@@ -2102,7 +2099,6 @@ BackendLLVMWide::llvm_broadcast_uniform_value_at(
 
 	int derivCount =  derivs ? 1 : 3;
 
-	int arrayIndex;
 	int arrayEnd;
 
 	if (dest_type.is_array()) {

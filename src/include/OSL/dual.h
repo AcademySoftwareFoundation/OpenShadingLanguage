@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
+#include "oslconfig.h"
 #include "oslversion.h"
 #include <OpenImageIO/fmath.h>
 OSL_NAMESPACE_ENTER
@@ -53,54 +54,56 @@ class Dual2 {
 public:
     /// Default ctr leaves everything uninitialized
     ///
-    Dual2 () { }
+    OSL_INLINE Dual2 () { }
 
     /// Construct a Dual from just a real value (derivs set to 0)
     ///
-    Dual2 (const T &x) : m_val(x), m_dx(T(0.0)), m_dy(T(0.0)) { }
+    OSL_INLINE Dual2 (const T &x) : m_val(x), m_dx(T(0.0)), m_dy(T(0.0)) { }
+
+    OSL_INLINE Dual2 (const Dual2 &x) : m_val(x.val()), m_dx(x.dx()), m_dy(x.dy()) { }
 
     template <class F>
-    Dual2 (const Dual2<F> &x) : m_val(T(x.val())), m_dx(T(x.dx())), m_dy(T(x.dy())) { }
+    OSL_INLINE Dual2 (const Dual2<F> &x) : m_val(T(x.val())), m_dx(T(x.dx())), m_dy(T(x.dy())) { }
 
     /// Construct a Dual from a real and both infinitesimal.
     ///
-    Dual2 (const T &x, const T &dx, const T &dy) 
+    OSL_INLINE Dual2 (const T &x, const T &dx, const T &dy)
         : m_val(x), m_dx(dx), m_dy(dy) { }
 
-    void set (const T &x, const T &dx, const T &dy) {
+    OSL_INLINE void set (const T &x, const T &dx, const T &dy) {
         m_val = x;  m_dx = dx;  m_dy = dy;
     }
 
     /// Return the real value of *this.
     ///
-    const T& val () const { return m_val; }
-    T& val () { return m_val; }
+    OSL_INLINE const T& val () const { return m_val; }
+    OSL_INLINE T& val () { return m_val; }
 
     /// Return the partial derivative with respect to x
     ///
-    const T& dx () const { return m_dx; }
-    T& dx () { return m_dx; }
+    OSL_INLINE const T& dx () const { return m_dx; }
+    OSL_INLINE T& dx () { return m_dx; }
 
     /// Return the partial derivative with respect to y
     ///
-    const T& dy () const { return m_dy; }
-    T& dy () { return m_dy; }
+    OSL_INLINE const T& dy () const { return m_dy; }
+    OSL_INLINE T& dy () { return m_dy; }
 
-    void set_val (const T &val) { m_val = val; }
-    void set_dx  (const T &dx)  { m_dx  = dx;  }
-    void set_dy  (const T &dy)  { m_dy  = dy;  }
+    OSL_INLINE void set_val (const T &val) { m_val = val; }
+    OSL_INLINE void set_dx  (const T &dx)  { m_dx  = dx;  }
+    OSL_INLINE void set_dy  (const T &dy)  { m_dy  = dy;  }
 
     /// Clear the derivatives; leave the value alone.
     ///
-    void clear_d () { m_dx = T(0);  m_dy = T(0); }
+    OSL_INLINE void clear_d () { m_dx = T(0);  m_dy = T(0); }
 
     /// Return the special dual number (i == 0 is the dx imaginary
     /// number, i == 1 is the dy imaginary number).
-    static Dual2<T> d (int i) {
+    OSL_INLINE static Dual2<T> d (int i) {
         return i==0 ? Dual2<T> (T(0),T(1),T(0)) : Dual2<T> (T(0),T(0),T(1));
     }
 
-    const Dual2<T> & operator= (const T &x) {
+    OSL_INLINE const Dual2<T> & operator= (const T &x) {
         set (x, T(0), T(0));
         return *this;
     }
@@ -123,28 +126,28 @@ private:
 /// Addition of duals.
 ///
 template<class T>
-inline Dual2<T> operator+ (const Dual2<T> &a, const Dual2<T> &b)
+OSL_INLINE Dual2<T> operator+ (const Dual2<T> &a, const Dual2<T> &b)
 {
     return Dual2<T> (a.val()+b.val(), a.dx()+b.dx(), a.dy()+b.dy());
 }
 
 
 template<class T>
-inline Dual2<T> operator+ (const Dual2<T> &a, const T &b)
+OSL_INLINE Dual2<T> operator+ (const Dual2<T> &a, const T &b)
 {
     return Dual2<T> (a.val()+b, a.dx(), a.dy());
 }
 
 
 template<class T>
-inline Dual2<T> operator+ (const T &a, const Dual2<T> &b)
+OSL_INLINE Dual2<T> operator+ (const T &a, const Dual2<T> &b)
 {
     return Dual2<T> (a+b.val(), b.dx(), b.dy());
 }
 
 
 template<class T>
-inline Dual2<T>& operator+= (Dual2<T> &a, const Dual2<T> &b)
+OSL_INLINE Dual2<T>& operator+= (Dual2<T> &a, const Dual2<T> &b)
 {
     a.val() += b.val();
     a.dx()  += b.dx();
@@ -154,7 +157,7 @@ inline Dual2<T>& operator+= (Dual2<T> &a, const Dual2<T> &b)
 
 
 template<class T>
-inline Dual2<T>& operator+= (Dual2<T> &a, const T &b)
+OSL_INLINE Dual2<T>& operator+= (Dual2<T> &a, const T &b)
 {
     a.val() += b;
     return a;
@@ -164,28 +167,28 @@ inline Dual2<T>& operator+= (Dual2<T> &a, const T &b)
 /// Subtraction of duals.
 ///
 template<class T>
-inline Dual2<T> operator- (const Dual2<T> &a, const Dual2<T> &b)
+OSL_INLINE Dual2<T> operator- (const Dual2<T> &a, const Dual2<T> &b)
 {
     return Dual2<T> (a.val()-b.val(), a.dx()-b.dx(), a.dy()-b.dy());
 }
 
 
 template<class T>
-inline Dual2<T> operator- (const Dual2<T> &a, const T &b)
+OSL_INLINE Dual2<T> operator- (const Dual2<T> &a, const T &b)
 {
     return Dual2<T> (a.val()-b, a.dx(), a.dy());
 }
 
 
 template<class T>
-inline Dual2<T> operator- (const T &a, const Dual2<T> &b)
+OSL_INLINE Dual2<T> operator- (const T &a, const Dual2<T> &b)
 {
     return Dual2<T> (a-b.val(), -b.dx(), -b.dy());
 }
 
 
 template<class T>
-inline Dual2<T>& operator-= (Dual2<T> &a, const Dual2<T> &b)
+OSL_INLINE Dual2<T>& operator-= (Dual2<T> &a, const Dual2<T> &b)
 {
     a.val() -= b.val();
     a.dx()  -= b.dx();
@@ -195,7 +198,7 @@ inline Dual2<T>& operator-= (Dual2<T> &a, const Dual2<T> &b)
 
 
 template<class T>
-inline Dual2<T>& operator-= (Dual2<T> &a, const T &b)
+OSL_INLINE Dual2<T>& operator-= (Dual2<T> &a, const T &b)
 {
     a.val() -= b.val();
     return a;
@@ -206,7 +209,7 @@ inline Dual2<T>& operator-= (Dual2<T> &a, const T &b)
 /// Negation of duals.
 ///
 template<class T>
-inline Dual2<T> operator- (const Dual2<T> &a)
+OSL_INLINE Dual2<T> operator- (const Dual2<T> &a)
 {
     return Dual2<T> (-a.val(), -a.dx(), -a.dy());
 }
@@ -215,7 +218,7 @@ inline Dual2<T> operator- (const Dual2<T> &a)
 /// Multiplication of duals.
 ///
 template<class T>
-inline Dual2<T> operator* (const Dual2<T> &a, const Dual2<T> &b)
+OSL_INLINE Dual2<T> operator* (const Dual2<T> &a, const Dual2<T> &b)
 {
     // Use the chain rule
     return Dual2<T> (a.val()*b.val(),
@@ -227,7 +230,7 @@ inline Dual2<T> operator* (const Dual2<T> &a, const Dual2<T> &b)
 /// Multiplication of dual by scalar.
 ///
 template<class T>
-inline Dual2<T> operator* (const Dual2<T> &a, const T &b)
+OSL_INLINE Dual2<T> operator* (const Dual2<T> &a, const T &b)
 {
     return Dual2<T> (a.val()*b, a.dx()*b, a.dy()*b);
 }
@@ -236,13 +239,13 @@ inline Dual2<T> operator* (const Dual2<T> &a, const T &b)
 /// Multiplication of dual by scalar.
 ///
 template<class T>
-inline Dual2<T> operator* (const T &b, const Dual2<T> &a)
+OSL_INLINE Dual2<T> operator* (const T &b, const Dual2<T> &a)
 {
     return Dual2<T> (a.val()*b, a.dx()*b, a.dy()*b);
 }
 
 template<class T, class S>
-inline Dual2<T> operator* (const S &b, const Dual2<T> &a)
+OSL_INLINE Dual2<T> operator* (const S &b, const Dual2<T> &a)
 {
     return Dual2<T> (a.val()*T(b), a.dx()*T(b), a.dy()*T(b));
 }
@@ -252,7 +255,7 @@ inline Dual2<T> operator* (const S &b, const Dual2<T> &a)
 /// Division of duals.
 ///
 template<class T>
-inline Dual2<T> operator/ (const Dual2<T> &a, const Dual2<T> &b)
+OSL_INLINE Dual2<T> operator/ (const Dual2<T> &a, const Dual2<T> &b)
 {
     T bvalinv = 1.0f / b.val();
     T aval_bval = a.val() * bvalinv;
@@ -265,7 +268,7 @@ inline Dual2<T> operator/ (const Dual2<T> &a, const Dual2<T> &b)
 /// Division of dual by scalar.
 ///
 template<class T>
-inline Dual2<T> operator/ (const Dual2<T> &a, const T &b)
+OSL_INLINE Dual2<T> operator/ (const Dual2<T> &a, const T &b)
 {
     T binv = 1.0f / b;
     return a * binv;
@@ -275,7 +278,7 @@ inline Dual2<T> operator/ (const Dual2<T> &a, const T &b)
 /// Division of scalar by dual.
 ///
 template<class T>
-inline Dual2<T> operator/ (const T &aval, const Dual2<T> &b)
+OSL_INLINE Dual2<T> operator/ (const T &aval, const Dual2<T> &b)
 {
     T bvalinv = 1.0f / b.val();
     T aval_bval = aval * bvalinv;
@@ -288,65 +291,65 @@ inline Dual2<T> operator/ (const T &aval, const Dual2<T> &b)
 
 
 template<class T>
-inline bool operator< (const Dual2<T> &a, const Dual2<T> &b) {
+OSL_INLINE bool operator< (const Dual2<T> &a, const Dual2<T> &b) {
     return a.val() < b.val();
 }
 
 template<class T>
-inline bool operator< (const Dual2<T> &a, const T &b) {
+OSL_INLINE bool operator< (const Dual2<T> &a, const T &b) {
     return a.val() < b;
 }
 
 template<class T>
-inline bool operator> (const Dual2<T> &a, const Dual2<T> &b) {
+OSL_INLINE bool operator> (const Dual2<T> &a, const Dual2<T> &b) {
     return a.val() > b.val();
 }
 
 template<class T>
-inline bool operator> (const Dual2<T> &a, const T &b) {
+OSL_INLINE bool operator> (const Dual2<T> &a, const T &b) {
     return a.val() > b;
 }
 
 template<class T>
-inline bool operator<= (const Dual2<T> &a, const Dual2<T> &b) {
+OSL_INLINE bool operator<= (const Dual2<T> &a, const Dual2<T> &b) {
     return a.val() <= b.val();
 }
 
 template<class T>
-inline bool operator>= (const Dual2<T> &a, const Dual2<T> &b) {
+OSL_INLINE bool operator>= (const Dual2<T> &a, const Dual2<T> &b) {
     return a.val() >= b.val();
 }
 
 
 
 // Eliminate the derivatives of a number
-template<class T> inline T removeDerivatives (const T x)         { return x;       }
-template<class T> inline T removeDerivatives (const Dual2<T> &x) { return x.val(); }
+template<class T> OSL_INLINE T removeDerivatives (const T x)         { return x;       }
+template<class T> OSL_INLINE T removeDerivatives (const Dual2<T> &x) { return x.val(); }
 
 // Get the x derivative (or 0 for a non-Dual)
-template<class T> inline T getXDerivative (const T x)         { return T(0);   }
-template<class T> inline T getXDerivative (const Dual2<T> &x) { return x.dx(); }
+template<class T> OSL_INLINE T getXDerivative (const T x)         { return T(0);   }
+template<class T> OSL_INLINE T getXDerivative (const Dual2<T> &x) { return x.dx(); }
 
 // Get the y derivative (or 0 for a non-Dual)
-template<class T> inline T getYDerivative (const T x)         { return T(0);   }
-template<class T> inline T getYDerivative (const Dual2<T> &x) { return x.dy(); }
+template<class T> OSL_INLINE T getYDerivative (const T x)         { return T(0);   }
+template<class T> OSL_INLINE T getYDerivative (const Dual2<T> &x) { return x.dy(); }
 
 // Simple templated "copy" function
-template <class T> inline void assignment(T &a, T &b)        { a = b;       }
-template <class T> inline void assignment(T &a, Dual2<T> &b) { a = b.val(); }
+template <class T> OSL_INLINE void assignment(T &a, T &b)        { a = b;       }
+template <class T> OSL_INLINE void assignment(T &a, Dual2<T> &b) { a = b.val(); }
 
 
 
 // f(x) = cos(x), f'(x) = -sin(x)
 template<class T>
-inline Dual2<T> cos (const Dual2<T> &a)
+OSL_INLINE Dual2<T> cos (const Dual2<T> &a)
 {
     T sina, cosa;
     OIIO::sincos(a.val(), &sina, &cosa);
     return Dual2<T> (cosa, -sina * a.dx(), -sina * a.dy());
 }
 
-inline Dual2<float> fast_cos(const Dual2<float> &a)
+OSL_INLINE Dual2<float> fast_cos(const Dual2<float> &a)
 {
     float sina, cosa;
     OIIO::fast_sincos (a.val(), &sina, &cosa);
@@ -355,14 +358,14 @@ inline Dual2<float> fast_cos(const Dual2<float> &a)
 
 // f(x) = sin(x),  f'(x) = cos(x)
 template<class T>
-inline Dual2<T> sin (const Dual2<T> &a)
+OSL_INLINE Dual2<T> sin (const Dual2<T> &a)
 {
     T sina, cosa;
     OIIO::sincos(a.val(), &sina, &cosa);
     return Dual2<T> (sina, cosa * a.dx(), cosa * a.dy());
 }
 
-inline Dual2<float> fast_sin(const Dual2<float> &a)
+OSL_INLINE Dual2<float> fast_sin(const Dual2<float> &a)
 {
     float sina, cosa;
     OIIO::fast_sincos (a.val(), &sina, &cosa);
@@ -370,7 +373,7 @@ inline Dual2<float> fast_sin(const Dual2<float> &a)
 }
 
 template <class T>
-inline void sincos(const Dual2<T> &a, Dual2<T> *sine, Dual2<T> *cosine)
+OSL_INLINE void sincos(const Dual2<T> &a, Dual2<T> *sine, Dual2<T> *cosine)
 {
 	T sina, cosa;
 	OIIO::sincos(a.val(), &sina, &cosa);
@@ -378,7 +381,7 @@ inline void sincos(const Dual2<T> &a, Dual2<T> *sine, Dual2<T> *cosine)
 	  *sine = Dual2<T> (sina,  cosa * a.dx(),  cosa * a.dy());
 }
 
-inline void fast_sincos(const Dual2<float> &a, Dual2<float> *sine, Dual2<float> *cosine)
+OSL_INLINE void fast_sincos(const Dual2<float> &a, Dual2<float> *sine, Dual2<float> *cosine)
 {
 	float sina, cosa;
 	OIIO::fast_sincos(a.val(), &sina, &cosa);
@@ -388,7 +391,7 @@ inline void fast_sincos(const Dual2<float> &a, Dual2<float> *sine, Dual2<float> 
 
 // f(x) = tan(x), f'(x) = sec^2(x)
 template<class T>
-inline Dual2<T> tan (const Dual2<T> &a)
+OSL_INLINE Dual2<T> tan (const Dual2<T> &a)
 {
     T tana  = std::tan (a.val());
     T cosa  = std::cos (a.val());
@@ -396,7 +399,7 @@ inline Dual2<T> tan (const Dual2<T> &a)
     return Dual2<T> (tana, sec2a * a.dx(), sec2a * a.dy());
 }
 
-inline Dual2<float> fast_tan(const Dual2<float> &a)
+OSL_INLINE Dual2<float> fast_tan(const Dual2<float> &a)
 {
     float tana  = OIIO::fast_tan (a.val());
     float cosa  = OIIO::fast_cos (a.val());
@@ -406,14 +409,14 @@ inline Dual2<float> fast_tan(const Dual2<float> &a)
 
 // f(x) = cosh(x), f'(x) = sinh(x)
 template<class T>
-inline Dual2<T> cosh (const Dual2<T> &a)
+OSL_INLINE Dual2<T> cosh (const Dual2<T> &a)
 {
     T cosha = std::cosh(a.val());
     T sinha = std::sinh(a.val());
     return Dual2<T> (cosha, sinha * a.dx(), sinha * a.dy());
 }
 
-inline Dual2<float> fast_cosh(const Dual2<float> &a)
+OSL_INLINE Dual2<float> fast_cosh(const Dual2<float> &a)
 {
     float cosha = OIIO::fast_cosh(a.val());
     float sinha = OIIO::fast_sinh(a.val());
@@ -423,14 +426,14 @@ inline Dual2<float> fast_cosh(const Dual2<float> &a)
 
 // f(x) = sinh(x), f'(x) = cosh(x)
 template<class T>
-inline Dual2<T> sinh (const Dual2<T> &a)
+OSL_INLINE Dual2<T> sinh (const Dual2<T> &a)
 {
     T cosha = std::cosh(a.val());
     T sinha = std::sinh(a.val());
     return Dual2<T> (sinha, cosha * a.dx(), cosha * a.dy());
 }
 
-inline Dual2<float> fast_sinh(const Dual2<float> &a)
+OSL_INLINE Dual2<float> fast_sinh(const Dual2<float> &a)
 {
     float cosha = OIIO::fast_cosh(a.val());
     float sinha = OIIO::fast_sinh(a.val());
@@ -439,7 +442,7 @@ inline Dual2<float> fast_sinh(const Dual2<float> &a)
 
 // f(x) = tanh(x), f'(x) = sech^2(x)
 template<class T>
-inline Dual2<T> tanh (const Dual2<T> &a)
+OSL_INLINE Dual2<T> tanh (const Dual2<T> &a)
 {
     T tanha = std::tanh(a.val());
     T cosha = std::cosh(a.val());
@@ -447,7 +450,7 @@ inline Dual2<T> tanh (const Dual2<T> &a)
     return Dual2<T> (tanha, sech2a * a.dx(), sech2a * a.dy());
 }
 
-inline Dual2<float> fast_tanh(const Dual2<float> &a)
+OSL_INLINE Dual2<float> fast_tanh(const Dual2<float> &a)
 {
     float tanha = OIIO::fast_tanh(a.val());
     float cosha = OIIO::fast_cosh(a.val());
@@ -457,7 +460,7 @@ inline Dual2<float> fast_tanh(const Dual2<float> &a)
 
 // f(x) = acos(x), f'(x) = -1/(sqrt(1 - x^2))
 template<class T>
-inline Dual2<T> safe_acos (const Dual2<T> &a)
+OSL_INLINE Dual2<T> safe_acos (const Dual2<T> &a)
 {
     if (a.val() >= T(1))
         return Dual2<T> (T(0), T(0), T(0));
@@ -468,7 +471,7 @@ inline Dual2<T> safe_acos (const Dual2<T> &a)
     return Dual2<T> (arccosa, denom * a.dx(), denom * a.dy());
 }
 
-inline Dual2<float> fast_acos(const Dual2<float> &a)
+OSL_INLINE Dual2<float> fast_acos(const Dual2<float> &a)
 {
     float arccosa = OIIO::fast_acos(a.val());
     float denom   = fabsf(a.val()) < 1.0f ? -1.0f / sqrtf(1.0f - a.val() * a.val()) : 0.0f;
@@ -477,7 +480,7 @@ inline Dual2<float> fast_acos(const Dual2<float> &a)
 
 // f(x) = asin(x), f'(x) = 1/(sqrt(1 - x^2))
 template<class T>
-inline Dual2<T> safe_asin (const Dual2<T> &a)
+OSL_INLINE Dual2<T> safe_asin (const Dual2<T> &a)
 {
     if (a.val() >= T(1))
         return Dual2<T> (T(M_PI/2), T(0), T(0));
@@ -489,7 +492,7 @@ inline Dual2<T> safe_asin (const Dual2<T> &a)
     return Dual2<T> (arcsina, denom * a.dx(), denom * a.dy());
 }
 
-inline Dual2<float> fast_asin(const Dual2<float> &a)
+OSL_INLINE Dual2<float> fast_asin(const Dual2<float> &a)
 {
     float arcsina = OIIO::fast_asin(a.val());
     float denom   = fabsf(a.val()) < 1.0f ? 1.0f / sqrtf(1.0f - a.val() * a.val()) : 0.0f;
@@ -499,14 +502,14 @@ inline Dual2<float> fast_asin(const Dual2<float> &a)
 
 // f(x) = atan(x), f'(x) = 1/(1 + x^2)
 template<class T>
-inline Dual2<T> atan (const Dual2<T> &a)
+OSL_INLINE Dual2<T> atan (const Dual2<T> &a)
 {
     T arctana = std::atan (a.val());
     T denom   = T(1) / (T(1) + a.val()*a.val());
     return Dual2<T> (arctana, denom * a.dx(), denom * a.dy());
 }
 
-inline Dual2<float> fast_atan(const Dual2<float> &a)
+OSL_INLINE Dual2<float> fast_atan(const Dual2<float> &a)
 {
     float arctana = OIIO::fast_atan(a.val());
     float denom   = 1.0f / (1.0f + a.val() * a.val());
@@ -519,7 +522,7 @@ inline Dual2<float> fast_atan(const Dual2<float> &a)
 // reference:  http://en.wikipedia.org/wiki/Atan2 
 // (above link has other formulations)
 template<class T>
-inline Dual2<T> atan2 (const Dual2<T> &y, const Dual2<T> &x)
+OSL_INLINE Dual2<T> atan2 (const Dual2<T> &y, const Dual2<T> &x)
 {
     T atan2xy = std::atan2 (y.val(), x.val());
     T denom = (x.val() == T(0) && y.val() == T(0)) ? T(0) : T(1) / (x.val()*x.val() + y.val()*y.val());
@@ -527,7 +530,7 @@ inline Dual2<T> atan2 (const Dual2<T> &y, const Dual2<T> &x)
                                (y.val()*x.dy() - x.val()*y.dy())*denom );
 }
 
-inline Dual2<float> fast_atan2(const Dual2<float> &y, const Dual2<float> &x)
+OSL_INLINE Dual2<float> fast_atan2(const Dual2<float> &y, const Dual2<float> &x)
 {
     float atan2xy = OIIO::fast_atan2(y.val(), x.val());
     float denom = (x.val() == 0 && y.val() == 0) ? 0.0f : 1.0f / (x.val() * x.val() + y.val() * y.val());
@@ -543,7 +546,7 @@ inline Dual2<float> fast_atan2(const Dual2<float> &y, const Dual2<float> &x)
 //   (from http://en.wikipedia.org/wiki/Automatic_differentiation)
 // so, pow(u,v) = < u^v, vu^(v-1) u' + log(u)u^v v' >
 template<class T>
-inline Dual2<T> safe_pow (const Dual2<T> &u, const Dual2<T> &v)
+OSL_INLINE Dual2<T> safe_pow (const Dual2<T> &u, const Dual2<T> &v)
 {
     // NOTE: this function won't return exactly the same as pow(x,y) because we
     // use the identity u^v=u * u^(v-1) which does not hold in all cases for our
@@ -555,7 +558,7 @@ inline Dual2<T> safe_pow (const Dual2<T> &u, const Dual2<T> &v)
                              v.val()*powuvm1 * u.dy() + logu*powuv * v.dy() );
 }
 
-inline Dual2<float> fast_safe_pow(const Dual2<float> &u, const Dual2<float> &v)
+OSL_INLINE Dual2<float> fast_safe_pow(const Dual2<float> &u, const Dual2<float> &v)
 {
     // NOTE: same issue as above (fast_safe_pow does even more clamping)
     float powuvm1 = OIIO::fast_safe_pow (u.val(), v.val() - 1.0f);
@@ -569,14 +572,14 @@ inline Dual2<float> fast_safe_pow(const Dual2<float> &u, const Dual2<float> &v)
 // f(x) = log(a), f'(x) = 1/x
 // (log base e)
 template<class T>
-inline Dual2<T> safe_log (const Dual2<T> &a)
+OSL_INLINE Dual2<T> safe_log (const Dual2<T> &a)
 {
     T loga = safe_log(a.val());
     T inva = a.val() < std::numeric_limits<T>::min() ? T(0) : T(1) / a.val();
     return Dual2<T> (loga, inva * a.dx(), inva * a.dy());
 }
 
-inline Dual2<float> fast_log(const Dual2<float> &a)
+OSL_INLINE Dual2<float> fast_log(const Dual2<float> &a)
 {
     float loga = OIIO::fast_log(a.val());
     float inva = a.val() < std::numeric_limits<float>::min() ? 0.0f : 1.0f / a.val();
@@ -586,14 +589,14 @@ inline Dual2<float> fast_log(const Dual2<float> &a)
 // f(x) = log2(x), f'(x) = 1/(x*log2)
 // (log base 2)
 template<class T>
-inline Dual2<T> safe_log2 (const Dual2<T> &a)
+OSL_INLINE Dual2<T> safe_log2 (const Dual2<T> &a)
 {
     T loga = safe_log2(a.val());
     T inva = a.val() < std::numeric_limits<T>::min() ? T(0) : T(1) / (a.val() * T(M_LN2));
     return Dual2<T> (loga, inva * a.dx(), inva * a.dy());
 }
 
-inline Dual2<float> fast_log2(const Dual2<float> &a)
+OSL_INLINE Dual2<float> fast_log2(const Dual2<float> &a)
 {
     float loga = OIIO::fast_log2(a.val());
     float aln2 = a.val() * float(M_LN2);
@@ -604,14 +607,14 @@ inline Dual2<float> fast_log2(const Dual2<float> &a)
 // f(x) = log10(x), f'(x) = 1/(x*log10)
 // (log base 10)
 template<class T>
-inline Dual2<T> safe_log10 (const Dual2<T> &a)
+OSL_INLINE Dual2<T> safe_log10 (const Dual2<T> &a)
 {
     T loga = safe_log10(a.val());
     T inva = a.val() < std::numeric_limits<T>::min() ? T(0) : T(1) / (a.val() * T(M_LN10));
     return Dual2<T> (loga, inva * a.dx(), inva * a.dy());
 }
 
-inline Dual2<float> fast_log10(const Dual2<float> &a)
+OSL_INLINE Dual2<float> fast_log10(const Dual2<float> &a)
 {
     float loga  = OIIO::fast_log10(a.val());
     float aln10 = a.val() * float(M_LN10);
@@ -621,13 +624,13 @@ inline Dual2<float> fast_log10(const Dual2<float> &a)
 
 // f(x) = e^x, f'(x) = e^x
 template<class T>
-inline Dual2<T> exp (const Dual2<T> &a)
+OSL_INLINE Dual2<T> exp (const Dual2<T> &a)
 {
     T expa = std::exp(a.val());
     return Dual2<T> (expa, expa * a.dx(), expa * a.dy());
 }
 
-inline Dual2<float> fast_exp(const Dual2<float> &a)
+OSL_INLINE Dual2<float> fast_exp(const Dual2<float> &a)
 {
     float expa = OIIO::fast_exp(a.val());
     return Dual2<float> (expa, expa * a.dx(), expa * a.dy());
@@ -635,14 +638,14 @@ inline Dual2<float> fast_exp(const Dual2<float> &a)
 
 // f(x) = 2^x, f'(x) = (2^x)*log(2)
 template<class T>
-inline Dual2<T> exp2 (const Dual2<T> &a)
+OSL_INLINE Dual2<T> exp2 (const Dual2<T> &a)
 {
     // FIXME: std::exp2 is only available in C++11
     T exp2a = exp2f(float(a.val()));
     return Dual2<T> (exp2a, exp2a*T(M_LN2)*a.dx(), exp2a*T(M_LN2)*a.dy());
 }
 
-inline Dual2<float> fast_exp2(const Dual2<float> &a)
+OSL_INLINE Dual2<float> fast_exp2(const Dual2<float> &a)
 {
     float exp2a = OIIO::fast_exp2(float(a.val()));
     return Dual2<float> (exp2a, exp2a*float(M_LN2)*a.dx(), exp2a*float(M_LN2)*a.dy());
@@ -651,7 +654,7 @@ inline Dual2<float> fast_exp2(const Dual2<float> &a)
 
 // f(x) = e^x - 1, f'(x) = e^x
 template<class T>
-inline Dual2<T> expm1 (const Dual2<T> &a)
+OSL_INLINE Dual2<T> expm1 (const Dual2<T> &a)
 {
     // FIXME: std::expm1 is only available in C++11
     T expm1a = expm1f(float(a.val())); // float version!
@@ -659,7 +662,7 @@ inline Dual2<T> expm1 (const Dual2<T> &a)
     return Dual2<T> (expm1a, expa * a.dx(), expa * a.dy());
 }
 
-inline Dual2<float> fast_expm1(const Dual2<float> &a)
+OSL_INLINE Dual2<float> fast_expm1(const Dual2<float> &a)
 {
     float expm1a = OIIO::fast_expm1(a.val());
     float expa   = OIIO::fast_exp  (a.val());
@@ -668,7 +671,7 @@ inline Dual2<float> fast_expm1(const Dual2<float> &a)
 
 // f(x) = erf(x), f'(x) = (2e^(-x^2))/sqrt(pi)
 template<class T>
-inline Dual2<T> erf (const Dual2<T> &a)
+OSL_INLINE Dual2<T> erf (const Dual2<T> &a)
 {
     // FIXME: std::erf is only defined in C++11
     T erfa = erff (float(a.val())); // float version!
@@ -677,7 +680,7 @@ inline Dual2<T> erf (const Dual2<T> &a)
     return Dual2<T> (erfa, derfadx * a.dx(), derfadx * a.dy());
 }
 
-inline Dual2<float> fast_erf(const Dual2<float> &a)
+OSL_INLINE Dual2<float> fast_erf(const Dual2<float> &a)
 {
     float erfa = OIIO::fast_erf (float(a.val())); // float version!
     float two_over_sqrt_pi = 1.128379167095512573896158903f;
@@ -687,7 +690,7 @@ inline Dual2<float> fast_erf(const Dual2<float> &a)
 
 // f(x) = erfc(x), f'(x) = -(2e^(-x^2))/sqrt(pi)
 template<class T>
-inline Dual2<T> erfc (const Dual2<T> &a)
+OSL_INLINE Dual2<T> erfc (const Dual2<T> &a)
 {
     // FIXME: std::erfc is only defined in C++11
     T erfca = erfcf (float(a.val())); // float version!
@@ -696,7 +699,7 @@ inline Dual2<T> erfc (const Dual2<T> &a)
     return Dual2<T> (erfca, derfcadx * a.dx(), derfcadx * a.dy());
 }
 
-inline Dual2<float> fast_erfc(const Dual2<float> &a)
+OSL_INLINE Dual2<float> fast_erfc(const Dual2<float> &a)
 {
     float erfa = OIIO::fast_erfc (float(a.val())); // float version!
     float two_over_sqrt_pi = -1.128379167095512573896158903f;
@@ -707,7 +710,7 @@ inline Dual2<float> fast_erfc(const Dual2<float> &a)
 
 // f(x) = sqrt(x), f'(x) = 1/(2*sqrt(x))
 template<class T>
-inline Dual2<T> sqrt (const Dual2<T> &a)
+OSL_INLINE Dual2<T> sqrt (const Dual2<T> &a)
 {
     if (a.val() <= T(0))
         return Dual2<T> (T(0), T(0), T(0));
@@ -720,7 +723,7 @@ inline Dual2<T> sqrt (const Dual2<T> &a)
 
 // f(x) = 1/sqrt(x), f'(x) = -1/(2*x^(3/2))
 template<class T>
-inline Dual2<T> inversesqrt (const Dual2<T> &a)
+OSL_INLINE Dual2<T> inversesqrt (const Dual2<T> &a)
 {
     // do we want to print an error message?
     if (a.val() <= T(0))
@@ -734,7 +737,7 @@ inline Dual2<T> inversesqrt (const Dual2<T> &a)
 
 // (fx) = x*(1-a) + y*a, f'(x) = (1-a)x' + (y - x)*a' + a*y'
 template<class T>
-inline Dual2<T> mix (const Dual2<T> &x, const Dual2<T> &y, const Dual2<T> &a)
+OSL_INLINE Dual2<T> mix (const Dual2<T> &x, const Dual2<T> &y, const Dual2<T> &a)
 {
    T mixval = x.val()*(T(1)-a.val()) + y.val()*a.val();
 
@@ -743,7 +746,7 @@ inline Dual2<T> mix (const Dual2<T> &x, const Dual2<T> &y, const Dual2<T> &a)
 }
 
 template<class T>
-inline Dual2<T> dual_min (const Dual2<T> &x, const Dual2<T> &y)
+OSL_INLINE Dual2<T> dual_min (const Dual2<T> &x, const Dual2<T> &y)
 {
    if (x.val() > y.val())
       return y;
@@ -752,7 +755,7 @@ inline Dual2<T> dual_min (const Dual2<T> &x, const Dual2<T> &y)
 }
 
 template<class T>
-inline Dual2<T> dual_max (const Dual2<T> &x, const Dual2<T> &y)
+OSL_INLINE Dual2<T> dual_max (const Dual2<T> &x, const Dual2<T> &y)
 {
    if (x.val() > y.val())
       return x;
@@ -762,7 +765,7 @@ inline Dual2<T> dual_max (const Dual2<T> &x, const Dual2<T> &y)
 
 
 template<class T>
-inline Dual2<T> fabs (const Dual2<T> &x)
+OSL_INLINE Dual2<T> fabs (const Dual2<T> &x)
 {
     return x.val() >= T(0) ? x : -x;
 }
@@ -770,14 +773,14 @@ inline Dual2<T> fabs (const Dual2<T> &x)
 
 
 template<class T>
-inline Dual2<T> dual_clamp (const Dual2<T> &x, const Dual2<T> &minv, const Dual2<T> &maxv)
+OSL_INLINE Dual2<T> dual_clamp (const Dual2<T> &x, const Dual2<T> &minv, const Dual2<T> &maxv)
 {
    if (x.val() < minv.val()) return minv;
    else if (x.val() > maxv.val()) return maxv;
    else return x;
 }
 
-inline float smoothstep(float e0, float e1, float x) { 
+OSL_INLINE float smoothstep(float e0, float e1, float x) {
     if (x < e0) return 0.0f;
     else if (x >= e1) return 1.0f;
     else {
@@ -788,7 +791,7 @@ inline float smoothstep(float e0, float e1, float x) {
 
 // f(t) = (3-2t)t^2,   t = (x-e0)/(e1-e0)
 template<class T>
-inline Dual2<T> smoothstep (const Dual2<T> &e0, const Dual2<T> &e1, const Dual2<T> &x)
+OSL_INLINE Dual2<T> smoothstep (const Dual2<T> &e0, const Dual2<T> &e1, const Dual2<T> &x)
 {
    if (x.val() < e0.val()) {
       return Dual2<T> (T(0), T(0), T(0));

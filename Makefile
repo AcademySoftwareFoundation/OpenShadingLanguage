@@ -46,12 +46,17 @@ ifneq (${shell echo ${OSL_SITE} | grep pixar},)
 include ${working_dir}/site/pixar/Makefile-bits
 endif
 
+
 # Set up variables holding the names of platform-dependent directories --
 # set these after evaluating site-specific instructions
+# Optional id to allow different build directories for different configurations(ie compilers)
+ifdef MYID
+    compiler_id := $(addprefix .,${MYID})
+endif
 top_build_dir := build
-build_dir     := ${top_build_dir}/${platform}${variant}
+build_dir     := ${top_build_dir}/${platform}${variant}${compiler_id}
 top_dist_dir  := dist
-dist_dir      := ${top_dist_dir}/${platform}${variant}
+dist_dir      := ${top_dist_dir}/${platform}${variant}${compiler_id}
 
 VERBOSE ?= ${SHOWCOMMANDS}
 ifneq (${VERBOSE},)
@@ -325,6 +330,7 @@ help:
 	@echo "      STOP_ON_WARNING=0        Do not stop building if compiler warns"
 	@echo "      OSL_SITE=xx              Use custom site build mods"
 	@echo "      MYCC=xx MYCXX=yy         Use custom compilers"
+	@echo "      MYID=                    Appended to build and dist subdirectories"
 	@echo "      USE_CPP=14               Compile in C++14 mode (default is C++11)"
 	@echo "      USE_LIBCPLUSPLUS=1       Use clang libc++"
 	@echo "      EXTRA_CPP_ARGS=          Additional args to the C++ command"

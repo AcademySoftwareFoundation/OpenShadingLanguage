@@ -194,7 +194,7 @@ BackendLLVMWide::llvm_type_sg ()
         return m_llvm_type_sg;
 
     
-    int offset_to_varying_p = offsetof(ShaderGlobalsBatch, m_varying);
+    OSL_DEV_ONLY(int offset_to_varying_p = offsetof(ShaderGlobalsBatch, m_varying));
     OSL_DEV_ONLY(std::cout << ">>>>>>>>>>>>>> ShaderGlobalsBatch::m_varying = " << offset_to_varying_p << std::endl);
     
     // Derivs look like arrays of 3 values

@@ -31,6 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdio>
 
 #include "oslexec_pvt.h"
+#include <OSL/Imathx.h>
+
 using namespace OSL;
 using namespace OSL::pvt;
 
@@ -436,78 +438,12 @@ BatchedRendererServices::BatchedRendererServices (TextureSystem *texsys)
     }
 }
 
-OSL_INLINE static Matrix44 affineInvert(const Matrix44 &m)
-{
-    //assert(__builtin_expect(m.x[0][3] == 0.0f && m.x[1][3] == 0.0f && m.x[2][3] == 0.0f && m.x[3][3] == 1.0f, 1))
-	Matrix44 s (m.x[1][1] * m.x[2][2] - m.x[2][1] * m.x[1][2],
-				m.x[2][1] * m.x[0][2] - m.x[0][1] * m.x[2][2],
-				m.x[0][1] * m.x[1][2] - m.x[1][1] * m.x[0][2],
-				0.0f,
-
-				m.x[2][0] * m.x[1][2] - m.x[1][0] * m.x[2][2],
-				m.x[0][0] * m.x[2][2] - m.x[2][0] * m.x[0][2],
-				m.x[1][0] * m.x[0][2] - m.x[0][0] * m.x[1][2],
-				0.0f,
-
-				m.x[1][0] * m.x[2][1] - m.x[2][0] * m.x[1][1],
-				m.x[2][0] * m.x[0][1] - m.x[0][0] * m.x[2][1],
-				m.x[0][0] * m.x[1][1] - m.x[1][0] * m.x[0][1],
-				0.0f,
-
-				0.0f,
-				0.0f,
-				0.0f,
-				1.0f);
-
-	float r = m.x[0][0] * s[0][0] + m.x[0][1] * s[1][0] + m.x[0][2] * s[2][0];
-	float abs_r = IMATH_INTERNAL_NAMESPACE::abs (r);
-
-
-	int may_have_divided_by_zero = 0;
-	if (__builtin_expect(abs_r < 1.0f, 0))
-	{
-		float mr = abs_r / Imath::limits<float>::smallest();
-		OSL_INTEL_PRAGMA("unroll")
-		for (int i = 0; i < 3; ++i)
-		{
-			OSL_INTEL_PRAGMA("unroll")
-			for (int j = 0; j < 3; ++j)
-			{
-				if (mr <= IMATH_INTERNAL_NAMESPACE::abs (s[i][j]))
-				{
-					may_have_divided_by_zero = 1;
-				}
-			}
-		}
-	}
-	
-	OSL_INTEL_PRAGMA("unroll")
-	for (int i = 0; i < 3; ++i)
-	{
-		OSL_INTEL_PRAGMA("unroll")
-		for (int j = 0; j < 3; ++j)
-		{
-			s[i][j] /= r;
-		}
-	}
-
-	s[3][0] = -m.x[3][0] * s[0][0] - m.x[3][1] * s[1][0] - m.x[3][2] * s[2][0];
-	s[3][1] = -m.x[3][0] * s[0][1] - m.x[3][1] * s[1][1] - m.x[3][2] * s[2][1];
-	s[3][2] = -m.x[3][0] * s[0][2] - m.x[3][1] * s[1][2] - m.x[3][2] * s[2][2];
-	
-	if (__builtin_expect(may_have_divided_by_zero == 1, 0))
-	{
-		s = Matrix44();
-	}
-	return s;
-}
- 
 
 OSL_INLINE static void invert_wide_matrix(MaskedAccessor<Matrix44> result, ConstWideAccessor<Matrix44> wmatrix)
 {
 	if (result.mask().any_on()) {
 		int allAreAffine = 1;
-		OSL_INTEL_PRAGMA("omp simd simdlen(wmatrix.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wmatrix.width))
 		for(int lane=0; lane < wmatrix.width; ++lane) {
 			Matrix44 m = wmatrix[lane];
 			if (result.mask().is_on(lane) &&
@@ -517,12 +453,12 @@ OSL_INLINE static void invert_wide_matrix(MaskedAccessor<Matrix44> result, Const
 		}
 		
 		if (allAreAffine) {
-			OSL_INTEL_PRAGMA("omp simd simdlen(wmatrix.width)")
+			OSL_INTEL_PRAGMA(omp simd simdlen(wmatrix.width))
 			for(int lane=0; lane < wmatrix.width; ++lane) {    
 				Matrix44 m = wmatrix[lane];
 				//bool ok = get_matrix (sgb, r, xform.get(lane), time.get(lane));
 				//r.invert();
-				Matrix44 r = affineInvert(m);
+				Matrix44 r = OSL::affineInvert(m);
 				result[lane] = r;
 			}
 		} else
@@ -543,7 +479,7 @@ Mask
 BatchedRendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb, MaskedAccessor<Matrix44> result,
 		ConstWideAccessor<TransformationPtr> xform, ConstWideAccessor<float> time)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		Wide<Matrix44> wmatrix;
 		Mask succeeded = get_matrix (sgb, MaskedAccessor<Matrix44>(wmatrix, result.mask()), xform, time);
@@ -569,7 +505,7 @@ Mask
 BatchedRendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb,  MaskedAccessor<Matrix44> result,
                                       ustring to, ConstWideAccessor<float> time)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		Wide<Matrix44> wmatrix;
 		Mask succeeded = get_matrix (sgb, MaskedAccessor<Matrix44>(wmatrix, result.mask()), to, time);
@@ -582,7 +518,7 @@ Mask
 BatchedRendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb,  MaskedAccessor<Matrix44> result,
 		ConstWideAccessor<ustring> to, ConstWideAccessor<float> time)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		Wide<Matrix44> wmatrix;
 		Mask succeeded = get_matrix (sgb, MaskedAccessor<Matrix44>(wmatrix,result.mask()), to, time);

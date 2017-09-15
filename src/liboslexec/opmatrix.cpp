@@ -43,12 +43,249 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec_pvt.h"
 #include "OSL/dual.h"
 #include "OSL/dual_vec.h"
+#include "OSL/Imathx.h"
 #include "OSL/wide.h"
 
 
 OSL_NAMESPACE_ENTER
-namespace pvt {
 
+namespace fast {
+
+// Considering having functionally equivalent versions of Vec3, Color3, Matrix44
+// with slight modifications to inlining and implmentation to avoid aliasing and
+// improve likelyhood of proper privation of local variables within a SIMD loop
+#if 0
+
+namespace Imath {
+template <class T> class Matrix44
+{
+  public:
+	OSL_INLINE Matrix44() {}
+	OSL_INLINE Matrix44(const Matrix44 &other);
+
+    //-------------------
+    // Access to elements
+    //-------------------
+
+    T           x00;
+    T           x01;
+    T           x02;
+    T           x03;
+
+    T           x10;
+    T           x11;
+    T           x12;
+    T           x13;
+
+    T           x20;
+    T           x21;
+    T           x22;
+    T           x23;
+
+    T           x30;
+    T           x31;
+    T           x32;
+    T           x33;
+
+    OSL_INLINE Matrix44 (T a, T b, T c, T d, T e, T f, T g, T h,
+              T i, T j, T k, T l, T m, T n, T o, T p);
+
+                                // a b c d
+                                // e f g h
+                                // i j k l
+                                // m n o p
+};
+
+template <class T>
+Matrix44<T>::Matrix44 (const Matrix44 &other)
+: x00(other.x00)
+, x01(other.x01)
+, x02(other.x02)
+, x03(other.x03)
+, x10(other.x10)
+, x11(other.x11)
+, x12(other.x12)
+, x13(other.x13)
+, x20(other.x20)
+, x21(other.x21)
+, x22(other.x22)
+, x23(other.x23)
+, x30(other.x30)
+, x31(other.x31)
+, x32(other.x32)
+, x33(other.x33)
+{}
+
+template <class T>
+Matrix44<T>::Matrix44 (T a, T b, T c, T d, T e, T f, T g, T h,
+                       T i, T j, T k, T l, T m, T n, T o, T p)
+: x00(a)
+, x01(b)
+, x02(c)
+, x03(d)
+, x10(e)
+, x11(f)
+, x12(g)
+, x13(h)
+, x20(i)
+, x21(j)
+, x22(k)
+, x23(l)
+, x30(m)
+, x31(n)
+, x32(o)
+, x33(p)
+{
+//    x[0][0] = a;
+//    x[0][1] = b;
+//    x[0][2] = c;
+//    x[0][3] = d;
+//    x[1][0] = e;
+//    x[1][1] = f;
+//    x[1][2] = g;
+//    x[1][3] = h;
+//    x[2][0] = i;
+//    x[2][1] = j;
+//    x[2][2] = k;
+//    x[2][3] = l;
+//    x[3][0] = m;
+//    x[3][1] = n;
+//    x[3][2] = o;
+//    x[3][3] = p;
+}
+} // namespace Imath
+
+typedef Imath::Matrix44<Float> Matrix44;
+#endif
+
+} // fast
+
+#if 0
+template <int WidthT>
+struct Wide<fast::Matrix44, WidthT>
+{
+	typedef fast::Matrix44 value_type;
+	static constexpr int width = WidthT;
+	//Wide<float, WidthT> x[4][4];
+	Wide<float, WidthT>           x00;
+	Wide<float, WidthT>           x01;
+	Wide<float, WidthT>           x02;
+	Wide<float, WidthT>           x03;
+
+	Wide<float, WidthT>           x10;
+	Wide<float, WidthT>           x11;
+	Wide<float, WidthT>           x12;
+	Wide<float, WidthT>           x13;
+
+	Wide<float, WidthT>           x20;
+	Wide<float, WidthT>           x21;
+	Wide<float, WidthT>           x22;
+	Wide<float, WidthT>           x23;
+
+	Wide<float, WidthT>           x30;
+	Wide<float, WidthT>           x31;
+	Wide<float, WidthT>           x32;
+	Wide<float, WidthT>           x33;
+
+	OSL_INLINE void
+	set(int index, const value_type & value)
+	{
+		x00.set(index, value.x00);
+		x01.set(index, value.x01);
+		x02.set(index, value.x02);
+		x03.set(index, value.x03);
+		x10.set(index, value.x10);
+		x11.set(index, value.x11);
+//		x12.set(index, value.x12);
+		//x13.set(index, value.x13);
+		x12.set(index, 0.0f);
+		x13.set(index, 0.0f);
+		//x20.set(index, value.x20);
+
+		x21.set(index, value.x21);
+		x22.set(index, value.x22);
+		x23.set(index, value.x23);
+		x30.set(index, value.x30);
+		x31.set(index, value.x31);
+		x32.set(index, value.x32);
+		x33.set(index, value.x33);
+	}
+
+	OSL_INLINE value_type
+	get(int index) const
+	{
+		return value_type(
+			x00.get(index), x01.get(index), x02.get(index), x03.get(index),
+			x10.get(index), x11.get(index), x12.get(index), x13.get(index),
+			x20.get(index), x21.get(index), x22.get(index), x23.get(index),
+			x30.get(index), x31.get(index), x32.get(index), x33.get(index));
+	}
+
+#if 0
+	OSL_INLINE void
+	set(int index, const value_type & value)
+	{
+		x[0][0].set(index, value.x00);
+		x[0][1].set(index, value.x01);
+		x[0][2].set(index, value.x02);
+		x[0][3].set(index, value.x03);
+		x[1][0].set(index, value.x10);
+		x[1][1].set(index, value.x11);
+		x[1][2].set(index, value.x12);
+		x[1][3].set(index, value.x13);
+		x[2][0].set(index, value.x20);
+		x[2][1].set(index, value.x21);
+		x[2][2].set(index, value.x22);
+		x[2][3].set(index, value.x23);
+		x[3][0].set(index, value.x30);
+		x[3][1].set(index, value.x31);
+		x[3][2].set(index, value.x32);
+		x[3][3].set(index, value.x33);
+	}
+
+	OSL_INLINE value_type
+	get(int index) const
+	{
+		return value_type(
+			x[0][0].get(index), x[0][1].get(index), x[0][2].get(index), x[0][3].get(index),
+			x[1][0].get(index), x[1][1].get(index), x[1][2].get(index), x[1][3].get(index),
+			x[2][0].get(index), x[2][1].get(index), x[2][2].get(index), x[2][3].get(index),
+			x[3][0].get(index), x[3][1].get(index), x[3][2].get(index), x[3][3].get(index));
+	}
+#endif
+	OSL_INLINE Wide() {}
+	Wide(const Wide &value) = delete;
+//	OSL_INLINE Wide(const Wide &value)
+//	: x00(value.x00),
+//	x01(value.x01),
+//	x02(value.x02),
+//	x03(value.x03),
+//	x10(value.x10),
+//	x11(value.x11),
+//	x12(value.x12),
+//	x13(value.x13),
+//	x20(value.x20),
+//	x21(value.x21),
+//	x22(value.x22),
+//	x23(value.x23),
+//	x30(value.x30),
+//	x31(value.x31),
+//	x32(value.x32),
+//	x33(value.x33)
+//	{}
+
+
+};
+
+template <>
+struct WideTraits<fast::Matrix44> {
+	static bool matches(const TypeDesc &type_desc) {
+		return type_desc.basetype == TypeDesc::FLOAT &&
+		    type_desc.aggregate == TypeDesc::MATRIX44; }
+};
+#endif
+
+namespace pvt {
 
 // Matrix ops
 OSL_SHADEOP void
@@ -57,16 +294,17 @@ osl_mul_mfm (void *r, float a, void * b)
     MAT(r) = MAT(b) * a;
 }
 
-OSL_SHADEOP void
+// flatten is workaround to enable inlining of non-inlined methods
+OSL_SHADEOP OSL_CLANG_ATTRIBUTE(flatten) void
 osl_mul_w16mw16fw16m(void *wr_, void *wa_, void * wb_)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<float> wa(wa_);
 		ConstWideAccessor<Matrix44> wb(wb_);
 		WideAccessor<Matrix44> wr(wr_);
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 			float a = wa[lane];
 			Matrix44 b = wb[lane];
@@ -82,16 +320,17 @@ osl_mul_mmf (void *r, void *a, float b)
     MAT(r) = MAT(a) * b;
 }
 
-OSL_SHADEOP void
+// flatten is workaround to enable inlining of non-inlined methods
+OSL_SHADEOP OSL_CLANG_ATTRIBUTE(flatten) void
 osl_mul_w16mw16mw16f(void *wr_, void *wa_, void * wb_)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<Matrix44> wa(wa_);
 		ConstWideAccessor<float> wb(wb_);
 		WideAccessor<Matrix44> wr(wr_);
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 			Matrix44 a = wa[lane];
 			float b = wb[lane];
@@ -107,20 +346,24 @@ osl_mul_mmm (void *r, void *a, void *b)
     MAT(r) = MAT(a) * MAT(b);
 }
 
-OSL_SHADEOP void
+// flatten is workaround to enable inlining of non-inlined methods
+OSL_SHADEOP OSL_CLANG_ATTRIBUTE(flatten) void
 osl_mul_w16mw16mw16m(void *wr_, void *wa_, void * wb_)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<Matrix44> wa(wa_);
 		ConstWideAccessor<Matrix44> wb(wb_);
 		WideAccessor<Matrix44> wr(wr_);
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 			Matrix44 a = wa[lane];
 			Matrix44 b = wb[lane];
-			Matrix44 r = a * b;
+			// Need inlinable version for vectorization
+			// Matrix44 r = a * b;
+			Matrix44 r;
+			inlinedMultMatrixMatrix(a, b, r);
 			wr[lane] = r;
 		}
 	}
@@ -137,15 +380,20 @@ osl_mul_mff (void *r, float a, float b)
 }
 
 OSL_SHADEOP void
-osl_mul_w16mw16fw16f(void *wr_, void *wa_, void * wb_)
+osl_mul_w16mw16fw16f(void * __restrict__ wr_, void * __restrict__ wa_, void * __restrict__ wb_)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<float> wa(wa_);
 		ConstWideAccessor<float> wb(wb_);
 		WideAccessor<Matrix44> wr(wr_);
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		// Workaround clang omp loop analysis issue by using its native pragma
+		// Suspect a different implementation of Matrix44 with proper inlining,
+		// user defined copy constructor, and a POD compatible default constructor
+		// would solve the issue
+		OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(wr.width))
+		OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 			float a = wa[lane];
 			float b = wb[lane];
@@ -159,28 +407,54 @@ osl_mul_w16mw16fw16f(void *wr_, void *wa_, void * wb_)
 	}
 }
 
-
 OSL_SHADEOP void
 osl_div_mmm (void *r, void *a, void *b)
 {
     MAT(r) = MAT(a) * MAT(b).inverse();
 }
 
-OSL_SHADEOP void
+// flatten is workaround to enable inlining of non-inlined methods
+OSL_SHADEOP OSL_CLANG_ATTRIBUTE(flatten) void
 osl_div_w16mw16mw16m(void *wr_, void *wa_, void * wb_)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<Matrix44> wa(wa_);
 		ConstWideAccessor<Matrix44> wb(wb_);
 		WideAccessor<Matrix44> wr(wr_);
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
-		for(int lane=0; lane < wr.width; ++lane) {
-			Matrix44 a = wa[lane];
-			Matrix44 b = wb[lane];
-			Matrix44 r = a * b.inverse();
-			wr[lane] = r;
+		int allAreAffine = 1;
+		OSL_OMP_PRAGMA(omp simd simdlen(wb.width))
+		for(int lane=0; lane < wb.width; ++lane) {
+			Matrix44 m = wb[lane];
+			if ((m.x[0][3] != 0.0f || m.x[1][3] != 0.0f || m.x[2][3] != 0.0f || m.x[3][3] != 1.0f)) {
+				allAreAffine = 0;
+			}
+		}
+
+		if (allAreAffine) {
+			// Workaround clang omp loop analysis issue by using its native pragma
+			// Suspect a different implementation of Matrix44 with proper inlining,
+			// user defined copy constructor, and a POD compatible default constructor
+			// would solve the issue
+			OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(wr.width))
+			OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(wr.width))
+			for(int lane=0; lane < wr.width; ++lane) {
+				Matrix44 a = wa[lane];
+				Matrix44 b = wb[lane];
+				// Need inlineable version
+				//Matrix44 r = a * b.inverse();
+				Matrix44 r;
+				inlinedMultMatrixMatrix(a, affineInvert(b), r);
+				wr[lane] = r;
+			}
+		} else {
+			for(int lane=0; lane < wr.width; ++lane) {
+				Matrix44 a = wa[lane];
+				Matrix44 b = wb[lane];
+				Matrix44 r = a * b.inverse();
+				wr[lane] = r;
+			}
 		}
 	}
 }
@@ -191,16 +465,17 @@ osl_div_mmf (void *r, void *a, float b)
     MAT(r) = MAT(a) * (1.0f/b);
 }
 
-OSL_SHADEOP void
+// flatten is workaround to enable inlining of non-inlined methods
+OSL_SHADEOP OSL_CLANG_ATTRIBUTE(flatten) void
 osl_div_w16mw16mw16f(void *wr_, void *wa_, void * wb_)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<Matrix44> wa(wa_);
 		ConstWideAccessor<float> wb(wb_);
 		WideAccessor<Matrix44> wr(wr_);
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 			Matrix44 a = wa[lane];
 			float b = wb[lane];
@@ -217,21 +492,45 @@ osl_div_mfm (void *r, float a, void *b)
 }
 
 
-OSL_SHADEOP void
+// flatten is workaround to enable inlining of non-inlined methods
+OSL_SHADEOP OSL_CLANG_ATTRIBUTE(flatten) void
 osl_div_w16mw16fw16m(void *wr_, void *wa_, void * wb_)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<float> wa(wa_);
 		ConstWideAccessor<Matrix44> wb(wb_);
 		WideAccessor<Matrix44> wr(wr_);
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
-		for(int lane=0; lane < wr.width; ++lane) {
-			float a = wa[lane];
-			Matrix44 b = wb[lane];
-			Matrix44 r = a * b.inverse();
-			wr[lane] = r;
+		int allAreAffine = 1;
+		OSL_OMP_PRAGMA(omp simd simdlen(wb.width))
+		for(int lane=0; lane < wb.width; ++lane) {
+			Matrix44 m = wb[lane];
+			if ((m.x[0][3] != 0.0f || m.x[1][3] != 0.0f || m.x[2][3] != 0.0f || m.x[3][3] != 1.0f)) {
+				allAreAffine = 0;
+			}
+		}
+
+		if (allAreAffine) {
+			// Workaround clang omp loop analysis issue by using its native pragma
+			// Suspect a different implementation of Matrix44 with proper inlining,
+			// user defined copy constructor, and a POD compatible default constructor
+			// would solve the issue
+			OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(wr.width))
+			OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(wr.width))
+			for(int lane=0; lane < wr.width; ++lane) {
+				float a = wa[lane];
+				Matrix44 b = wb[lane];
+				Matrix44 r = a * affineInvert(b);
+				wr[lane] = r;
+			}
+		} else {
+			for(int lane=0; lane < wr.width; ++lane) {
+				float a = wa[lane];
+				Matrix44 b = wb[lane];
+				Matrix44 r = a * b.inverse();
+				wr[lane] = r;
+			}
 		}
 	}
 }
@@ -249,13 +548,13 @@ osl_div_mff (void *r, float a, float b)
 OSL_SHADEOP void
 osl_div_w16mw16fw16f(void *wr_, void *wa_, void * wb_)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<float> wa(wa_);
 		ConstWideAccessor<float> wb(wb_);
 		WideAccessor<Matrix44> wr(wr_);
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 			float a = wa[lane];
 			float b = wb[lane];
@@ -279,18 +578,21 @@ osl_transpose_mm (void *r, void *m)
     MAT(r) = MAT(m).transposed();
 }
 
-OSL_SHADEOP void
+// flatten is workaround to enable inlining of non-inlined methods
+OSL_SHADEOP OSL_CLANG_ATTRIBUTE(flatten) void
 osl_transpose_w16mw16m(void *wr_, void *wm_)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<Matrix44> wm(wm_);
 		WideAccessor<Matrix44> wr(wr_);
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 			Matrix44 m = wm[lane];
-			Matrix44 r = m.transposed();
+			// Call inlineable transposed
+			//Matrix44 r = m.transposed();
+			Matrix44 r = inlinedTransposed(m);
 			wr[lane] = r;
 		}
 	}
@@ -364,12 +666,12 @@ impl_get_uniform_from_matrix_batched (void *sgb_, MaskedAccessor<Matrix44> wrm, 
     ShadingContext *ctx = (ShadingContext *)sgb->uniform().context;
     if (USTR(from) == Strings::common ||
             USTR(from) == ctx->shadingsys().commonspace_synonym()) {
-    	OSL_INTEL_PRAGMA("forceinline recursive")
+    	OSL_INTEL_PRAGMA(forceinline recursive)
     	{
 			
 			Matrix44 ident;
 			ident.makeIdentity();
-			OSL_INTEL_PRAGMA("omp simd simdlen(wrm.width)")				    	
+			OSL_OMP_PRAGMA(omp simd simdlen(wrm.width))
 			for(int lane=0; lane < wrm.width; ++lane) {
 				wrm[lane] = ident;
 			}
@@ -394,7 +696,7 @@ impl_get_uniform_from_matrix_batched (void *sgb_, MaskedAccessor<Matrix44> wrm, 
     {
         Matrix44 ident;
         ident.makeIdentity();
-        OSL_INTEL_PRAGMA("omp simd simdlen(wrm.width)")
+        OSL_OMP_PRAGMA(omp simd simdlen(wrm.width))
         for(int lane=0; lane < wrm.width; ++lane) {
             if (failedLanes[lane]) {
                 wrm[lane] = ident;
@@ -409,7 +711,6 @@ impl_get_uniform_from_matrix_batched (void *sgb_, MaskedAccessor<Matrix44> wrm, 
 	}
     return succeeded;
 }
-
 
 OSL_SHADEOP int
 osl_get_inverse_matrix (void *sg_, void *r, const char *to)
@@ -450,7 +751,7 @@ impl_get_uniform_to_inverse_matrix_batched (void *sgb_, MaskedAccessor<Matrix44>
     	
     	Matrix44 ident;
     	ident.makeIdentity();
-		OSL_INTEL_PRAGMA("omp simd simdlen(wrm.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wrm.width))
     	for(int lane=0; lane < wrm.width; ++lane) {
     		wrm[lane] = ident;
     	}
@@ -491,7 +792,6 @@ impl_get_uniform_to_inverse_matrix_batched (void *sgb_, MaskedAccessor<Matrix44>
     
 }
 
-
 OSL_SHADEOP int
 osl_prepend_matrix_from (void *sg, void *r, const char *from)
 {
@@ -507,17 +807,20 @@ osl_prepend_matrix_from (void *sg, void *r, const char *from)
     return ok;
 }
 
-
-static OSL_INLINE Mask
+// flatten is workaround to enable inlining of non-inlined methods
+static OSL_INLINE OSL_CLANG_ATTRIBUTE(flatten) void
 impl_wide_mat_multiply(WideAccessor<Matrix44> wresult, ConstWideAccessor<Matrix44> wfrom, ConstWideAccessor<Matrix44> wto)
 {
 	// No savings from using a WeakMask
-	OSL_INTEL_PRAGMA("omp simd simdlen(wresult.width)")
+	OSL_OMP_PRAGMA(omp simd simdlen(wresult.width))
 	for(int lane=0; lane < wresult.width; ++lane) {
 		Matrix44 mat_From = wfrom[lane];
 		Matrix44 mat_To = wto[lane];
 
-		Matrix44 result = mat_From * mat_To;
+		// Need to call inlinable version
+		//Matrix44 result = mat_From * mat_To;
+		Matrix44 result;
+		inlinedMultMatrixMatrix(mat_From, mat_To, result);
 
 		wresult[lane] = result;
 	}
@@ -536,7 +839,7 @@ impl_get_varying_from_matrix_batched(ShaderGlobalsBatch *sgb, ShadingContext *ct
 	Mask objectSpaceMask(false);
 	Mask namedSpaceMask(false);
 
-	OSL_INTEL_PRAGMA("omp simd simdlen(wFrom.width)")
+	OSL_OMP_PRAGMA(omp simd simdlen(wFrom.width))
 	for(int lane=0; lane < wFrom.width; ++lane) {
 		if (weak_mask[lane]) {
 			ustring from = wFrom[lane];
@@ -558,7 +861,7 @@ impl_get_varying_from_matrix_batched(ShaderGlobalsBatch *sgb, ShadingContext *ct
     	Matrix44 ident;
     	ident.makeIdentity();
 		MaskedAccessor<Matrix44> mfrom(wMfrom, commonSpaceMask);
-		OSL_INTEL_PRAGMA("omp simd simdlen(mfrom.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(mfrom.width))
 		for(int lane=0; lane < mfrom.width; ++lane) {
 			mfrom[lane] = ident;
 		}
@@ -590,7 +893,7 @@ impl_get_varying_from_matrix_batched(ShaderGlobalsBatch *sgb, ShadingContext *ct
             Matrix44 ident;
             ident.makeIdentity();
 			MaskedAccessor<Matrix44> mto_failed(wMfrom, failedLanes);
-			OSL_INTEL_PRAGMA("omp simd simdlen(mto_failed.width)")
+			OSL_OMP_PRAGMA(omp simd simdlen(mto_failed.width))
             for(int lane=0; lane < mto_failed.width; ++lane) {
             	mto_failed[lane] = ident;
             }
@@ -611,11 +914,10 @@ impl_get_varying_from_matrix_batched(ShaderGlobalsBatch *sgb, ShadingContext *ct
 	return succeeded;
 }
 
-
 OSL_SHADEOP void
 osl_prepend_matrix_from_w16ms_batched (void *sgb, void *wr, const char *from)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		Wide<Matrix44> wMfrom;
 		/*Mask succeeded =*/
@@ -630,7 +932,7 @@ osl_prepend_matrix_from_w16ms_batched (void *sgb, void *wr, const char *from)
 OSL_SHADEOP void
 osl_prepend_matrix_from_w16mw16s_batched (void *sgb_, void *wr, void * w_from_name)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
         ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
         ShadingContext *ctx = (ShadingContext *)sgb->uniform().context;
@@ -656,10 +958,11 @@ osl_get_from_to_matrix (void *sg, void *r, const char *from, const char *to)
     return ok;
 }
 
-OSL_INLINE Mask
+// flatten is workaround to enable inlining of non-inlined methods
+OSL_INLINE OSL_CLANG_ATTRIBUTE(flatten) Mask
 impl_get_uniform_from_to_matrix_batched (ShaderGlobalsBatch *sgb, MaskedAccessor<Matrix44> wrm, const char *from, const char *to)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		Wide<Matrix44> wMfrom, wMto;
 		MaskedAccessor<Matrix44> w_from(wMfrom, wrm.mask());
@@ -668,12 +971,15 @@ impl_get_uniform_from_to_matrix_batched (ShaderGlobalsBatch *sgb, MaskedAccessor
         succeeded &= impl_get_uniform_to_inverse_matrix_batched (sgb, w_to, to);
 		
 		// No savings from using weak_mask or succeeded
-		OSL_INTEL_PRAGMA("omp simd simdlen(wrm.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wrm.width))
 		for(int lane=0; lane < wrm.width; ++lane) {
 			Matrix44 mat_From = w_from[lane];
 			Matrix44 mat_To = w_to[lane];
 	
-			Matrix44 result = mat_From * mat_To;
+			// Need to call inlinable version
+			//Matrix44 result = mat_From * mat_To;
+			Matrix44 result;
+			inlinedMultMatrixMatrix(mat_From, mat_To, result);
 			
 			wrm[lane] = result;
 		}
@@ -702,7 +1008,7 @@ impl_get_varying_to_matrix_batched(ShaderGlobalsBatch *sgb, ShadingContext *ctx,
 	Mask objectSpaceMask(false);
 	Mask namedSpaceMask(false);
 
-	OSL_INTEL_PRAGMA("omp simd simdlen(wTo.width)")
+	OSL_OMP_PRAGMA(omp simd simdlen(wTo.width))
 	for(int lane=0; lane < wTo.width; ++lane) {
 		if (weak_mask[lane]) {
 			ustring to = wTo[lane];
@@ -725,7 +1031,7 @@ impl_get_varying_to_matrix_batched(ShaderGlobalsBatch *sgb, ShadingContext *ctx,
     	Matrix44 ident;
     	ident.makeIdentity();
 		MaskedAccessor<Matrix44> mto(wMto, commonSpaceMask);
-		OSL_INTEL_PRAGMA("omp simd simdlen(mto.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(mto.width))
 		for(int lane=0; lane < mto.width; ++lane) {
 			mto[lane] = ident;
 		}
@@ -757,7 +1063,7 @@ impl_get_varying_to_matrix_batched(ShaderGlobalsBatch *sgb, ShadingContext *ctx,
             Matrix44 ident;
             ident.makeIdentity();
 			MaskedAccessor<Matrix44> mto(wMto, failedLanes);
-			OSL_INTEL_PRAGMA("omp simd simdlen(mto.width)")
+			OSL_OMP_PRAGMA(omp simd simdlen(mto.width))
             for(int lane=0; lane < mto.width; ++lane) {
 				mto[lane] = ident;
             }
@@ -778,10 +1084,11 @@ impl_get_varying_to_matrix_batched(ShaderGlobalsBatch *sgb, ShadingContext *ctx,
 	return succeeded;
 }
 
+
 OSL_SHADEOP int
 osl_get_from_to_matrix_w16msw16s_batched (void *sgb_, void *wr, const char *from, void * w_to_ptr)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
         ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
         ShadingContext *ctx = (ShadingContext *)sgb->uniform().context;
@@ -804,7 +1111,7 @@ osl_get_from_to_matrix_w16msw16s_batched (void *sgb_, void *wr, const char *from
 OSL_SHADEOP int
 osl_get_from_to_matrix_w16mw16ss_batched (void *sgb_, void *wr, void  *w_from_ptr, const char * to)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
         ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
         ShadingContext *ctx = (ShadingContext *)sgb->uniform().context;
@@ -824,7 +1131,7 @@ osl_get_from_to_matrix_w16mw16ss_batched (void *sgb_, void *wr, void  *w_from_pt
 OSL_SHADEOP int
 osl_get_from_to_matrix_w16mw16sw16s_batched (void *sgb_, void *wr, void  *w_from_ptr, void * w_to_ptr)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
         ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
         ShadingContext *ctx = (ShadingContext *)sgb->uniform().context;
@@ -848,15 +1155,21 @@ inline void osl_transform_vmv(void *result, const Matrix44 &M, void* v_)
    robust_multVecMatrix (M, v, VEC(result));
 }
 
-
-static OSL_INLINE void avoidAliasingRobustMultVecMatrix(
+// flatten is workaround to enable inlining of non-inlined methods
+static OSL_INLINE OSL_CLANG_ATTRIBUTE(flatten) void
+avoidAliasingRobustMultVecMatrix(
 	ConstWideAccessor<Matrix44> wx,
 	ConstWideAccessor<Vec3> wsrc,
-	MaskedAccessor<Vec3>& wdst)
+	MaskedAccessor<Vec3> wdst)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
-		OSL_INTEL_PRAGMA("omp simd simdlen(wdst.width)")
+		// Workaround clang omp loop analysis issue by using its native pragma
+		// Suspect a different implementation of Matrix44 with proper inlining,
+		// user defined copy constructor, and a POD compatible default constructor
+		// would solve the issue
+		OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(wdst.width))
+		OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(wdst.width))
 		for(int index=0; index < wdst.width; ++index)
 		{
 		   const Matrix44 x = wx[index];
@@ -922,15 +1235,16 @@ avoidAliasingMultDirMatrix (const Matrix44 &M, const Vec3 &src, Vec3 &dst)
 
 /// Multiply a matrix times a vector with derivatives to obtain
 /// a transformed vector with derivatives.
-OSL_INLINE void
+// flatten is workaround to enable inlining of non-inlined methods
+static OSL_INLINE OSL_CLANG_ATTRIBUTE(flatten) void
 avoidAliasingRobustMultVecMatrix (
 	ConstWideAccessor<Matrix44> WM,
 	ConstWideAccessor<Dual2<Vec3>> win,
-	MaskedAccessor<Dual2<Vec3>> &wout)
+	MaskedAccessor<Dual2<Vec3>> wout)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
-		OSL_INTEL_PRAGMA("omp simd simdlen(wout.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wout.width))
 		for(int index=0; index < wout.width; ++index)
 		{
 			const Matrix44 M = WM[index];
@@ -964,14 +1278,14 @@ avoidAliasingRobustMultVecMatrix (
 #endif
 			
 		
-			if (w.val() != 0) {
+			if (w.val() != 0.0f) {
 			   dout.x = a / w;
 			   dout.y = b / w;
 			   dout.z = c / w;
 			} else {
-			   dout.x = 0;
-			   dout.y = 0;
-			   dout.z = 0;
+			   dout.x = 0.0f;
+			   dout.y = 0.0f;
+			   dout.z = 0.0f;
 			}
 		
 			Dual2<Vec3> out;
@@ -992,9 +1306,7 @@ avoidAliasingRobustMultVecMatrix (
 		   //std::cout << "---->" << verify << "<-----" << std::endl;
 		}
 	}
-    
 }
-
 
 static OSL_INLINE void
 impl_transform_wvwmwv(
@@ -1005,10 +1317,9 @@ impl_transform_wvwmwv(
    avoidAliasingRobustMultVecMatrix (wM, wv, wresult);
 }
 
-
 // TODO: do we need this control of optimization level?  
 // Remove after verifying correct results
-OSL_INTEL_PRAGMA("intel optimization_level 2")
+OSL_INTEL_PRAGMA(intel optimization_level 2)
 
 inline void osl_transform_dvmdv(void *result, const Matrix44 &M, void* v_)
 {
@@ -1038,9 +1349,9 @@ impl_transformv_wvwmwv(
 	ConstWideAccessor<Matrix44> wM,
 	ConstWideAccessor<Vec3> wv)
 {
-   OSL_INTEL_PRAGMA("forceinline recursive")
+   OSL_INTEL_PRAGMA(forceinline recursive)
    {			   
-	   OSL_INTEL_PRAGMA("omp simd simdlen(wresult.width)")
+	   OSL_OMP_PRAGMA(omp simd simdlen(wresult.width))
 	   for(int i=0; i < wresult.width; ++i)
 	   {
 		   Matrix44 M = wM[i];
@@ -1077,9 +1388,9 @@ impl_transformv_wdvwmwdv(
 	ConstWideAccessor<Matrix44> wM,
 	ConstWideAccessor<Dual2<Vec3>> wv)
 {
-   OSL_INTEL_PRAGMA("forceinline recursive")
+   OSL_INTEL_PRAGMA(forceinline recursive)
    {		
-	   OSL_INTEL_PRAGMA("omp simd simdlen(wresult.width)")
+	   OSL_OMP_PRAGMA(omp simd simdlen(wresult.width))
 	   for(int i=0; i < wresult.width; ++i)
 	   {
 		   Dual2<Vec3> v = wv[i];
@@ -1100,28 +1411,50 @@ inline void osl_transformn_vmv(void *result, const Matrix44 &M, void* v_)
    M.inverse().transposed().multDirMatrix (v, VEC(result));
 }
 
-static OSL_INLINE void
+// flatten is workaround to enable inlining of non-inlined methods
+static OSL_INLINE OSL_CLANG_ATTRIBUTE(flatten) void
 impl_transformn_wvwmwv(
 	MaskedAccessor<Vec3> wresult,
 	ConstWideAccessor<Matrix44> wM,
 	ConstWideAccessor<Vec3> wv)
 {
-   OSL_INTEL_PRAGMA("forceinline recursive")
+   OSL_INTEL_PRAGMA(forceinline recursive)
    {		
-	   OSL_INTEL_PRAGMA("omp simd simdlen(wresult.width)")
-	   for(int i=0; i < wresult.width; ++i)
-	   {
-		   Vec3 v = wv[i];
-		   Matrix44 M = wM[i];
-		   Vec3 r;
-		   
-		   M.inverse().transposed().multDirMatrix (v, r);
-		   
-		   wresult[i] = r;
-	   }
+		int allAreAffine = 1;
+		OSL_OMP_PRAGMA(omp simd simdlen(wM.width))
+		for(int lane=0; lane < wM.width; ++lane) {
+			Matrix44 m = wM[lane];
+			if ((m.x[0][3] != 0.0f || m.x[1][3] != 0.0f || m.x[2][3] != 0.0f || m.x[3][3] != 1.0f)) {
+				allAreAffine = 0;
+			}
+		}
+
+		if (allAreAffine) {
+			OSL_OMP_PRAGMA(omp simd simdlen(wresult.width))
+			for(int i=0; i < wresult.width; ++i)
+			{
+				Vec3 v = wv[i];
+				Matrix44 M = wM[i];
+				Vec3 r;
+
+				inlinedTransposed(affineInvert(M)).multDirMatrix (v, r);
+
+				wresult[i] = r;
+			}
+		} else {
+			for(int i=0; i < wresult.width; ++i)
+			{
+				Vec3 v = wv[i];
+				Matrix44 M = wM[i];
+				Vec3 r;
+
+				M.inverse().transposed().multDirMatrix (v, r);
+
+				wresult[i] = r;
+			}
+		}
    }
 }
-
 
 static inline void
 osl_transformn_dvmdv(void *result, const Matrix44 &M, void* v_)
@@ -1130,40 +1463,61 @@ osl_transformn_dvmdv(void *result, const Matrix44 &M, void* v_)
    multDirMatrix (M.inverse().transposed(), v, DVEC(result));
 }
 
-static OSL_INLINE void
+// flatten is workaround to enable inlining of non-inlined methods
+static OSL_INLINE OSL_CLANG_ATTRIBUTE(flatten) void
 impl_transformn_wdvwmwdv(
 	MaskedAccessor<Dual2<Vec3>> wresult,
 	ConstWideAccessor<Matrix44> wM,
 	ConstWideAccessor<Dual2<Vec3>> wv)
 {
-   OSL_INTEL_PRAGMA("forceinline recursive")
+   OSL_INTEL_PRAGMA(forceinline recursive)
    {		
-	   OSL_INTEL_PRAGMA("omp simd simdlen(wresult.width)")
-	   for(int i=0; i < wresult.width; ++i)
-	   {
-		   Dual2<Vec3> v = wv[i];
-		   Matrix44 M = wM[i];
-		   Dual2<Vec3> r;
-		   
-		   multDirMatrix (M.inverse().transposed(), v, r);
-		   
+		int allAreAffine = 1;
+		OSL_OMP_PRAGMA(omp simd simdlen(wM.width))
+		for(int lane=0; lane < wM.width; ++lane) {
+			Matrix44 m = wM[lane];
+			if ((m.x[0][3] != 0.0f || m.x[1][3] != 0.0f || m.x[2][3] != 0.0f || m.x[3][3] != 1.0f)) {
+				allAreAffine = 0;
+			}
+		}
 	   
-		   wresult[i] = r;
-	   }
+		if (allAreAffine) {
+			OSL_OMP_PRAGMA(omp simd simdlen(wresult.width))
+			for(int lane=0; lane < wresult.width; ++lane) {
+			   Dual2<Vec3> v = wv[lane];
+			   Matrix44 M = wM[lane];
+			   Dual2<Vec3> r;
+
+			   multDirMatrix (inlinedTransposed(affineInvert(M)), v, r);
+
+
+			   wresult[lane] = r;
+			}
+		} else {
+			for(int lane=0; lane < wresult.width; ++lane) {
+			   Dual2<Vec3> v = wv[lane];
+			   Matrix44 M = wM[lane];
+			   Dual2<Vec3> r;
+
+			   multDirMatrix (M.inverse().transposed(), v, r);
+
+
+			   wresult[lane] = r;
+			}
+		}
    }   
 }
-
 
 OSL_SHADEOP void
 osl_transformv_w16vw16mw16v (void *r_, void *matrix_, void *s_)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<Vec3> wsource(s_);
 		ConstWideAccessor<Matrix44> wmatrix(matrix_);
 		WideAccessor<Vec3> wr(r_);
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 			Vec3 s = wsource[lane];
 			Matrix44 m = wmatrix[lane];
@@ -1179,13 +1533,13 @@ osl_transformv_w16vw16mw16v (void *r_, void *matrix_, void *s_)
 OSL_SHADEOP void
 osl_transformv_w16dvw16mw16dv (void *r_, void *matrix_, void *s_)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<Dual2<Vec3>> wsource(s_);
 		ConstWideAccessor<Matrix44> wmatrix(matrix_);
 		WideAccessor<Dual2<Vec3>> wr(r_);
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 			Dual2<Vec3> s = wsource[lane];
 			Matrix44 m = wmatrix[lane];
@@ -1325,7 +1679,7 @@ osl_wide_transform_triple (void *sgb_, void *Pin, int Pin_derivs,
         	ASSERT(0);
         }
     }
-    OSL_INTEL_PRAGMA("forceinline recursive")
+    OSL_INTEL_PRAGMA(forceinline recursive)
     {		
         // if Pin != Pout, we still need to copy inactive data over to Pout
         // Handle cleaning up any data lanes that did not succeed
@@ -1338,7 +1692,7 @@ osl_wide_transform_triple (void *sgb_, void *Pin, int Pin_derivs,
 			// we will invert our success mask
             Mask failed = succeeded.invert(mask);
 			MaskedAccessor<Vec3> outVec(Pout, failed);
-			OSL_INTEL_PRAGMA("omp simd simdlen(outVec.width)")
+			OSL_OMP_PRAGMA(omp simd simdlen(outVec.width))
 			for(int i=0; i< outVec.width; ++i)
 			{
 				outVec[i] = inVec[i];
@@ -1348,7 +1702,7 @@ osl_wide_transform_triple (void *sgb_, void *Pin, int Pin_derivs,
 				WideAccessor<Vec3> inDy(Pin, 2 /*derivIndex*/);
 				MaskedAccessor<Vec3> outDx(Pout, failed, 1 /*derivIndex*/);
 				MaskedAccessor<Vec3> outDy(Pout, failed, 2 /*derivIndex*/);
-				OSL_INTEL_PRAGMA("omp simd simdlen(outDx.width)")
+				OSL_OMP_PRAGMA(omp simd simdlen(outDx.width))
 				for(int i=0; i< outDx.width; ++i)
 				{
 					outDx[i] = inDx[i];
@@ -1360,7 +1714,7 @@ osl_wide_transform_triple (void *sgb_, void *Pin, int Pin_derivs,
 		if (Pout_derivs && !Pin_derivs) {
 			WideAccessor<Vec3> outDx(Pout, 1 /*derivIndex*/);
 			WideAccessor<Vec3> outDy(Pout, 2 /*derivIndex*/);
-			OSL_INTEL_PRAGMA("omp simd simdlen(outDx.width)")
+			OSL_OMP_PRAGMA(omp simd simdlen(outDx.width))
 			for(int i=0; i< outDx.width; ++i)
 			{	    	
 				outDx[i] = Vec3(0.0f, 0.0f, 0.0f);
@@ -1369,7 +1723,6 @@ osl_wide_transform_triple (void *sgb_, void *Pin, int Pin_derivs,
 		}
     }
 }
-
 
 OSL_SHADEOP int
 osl_transform_triple_nonlinear (void *sg_, void *Pin, int Pin_derivs,
@@ -1447,12 +1800,12 @@ osl_determinant_fm (void *m)
 OSL_SHADEOP void
 osl_determinant_w16fw16m(void *wr_, void * wm_)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<Matrix44> wm(wm_);
 		WideAccessor<float> wr(wr_);
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 			Matrix44 m = wm[lane];
 			float r = det4x4(m);

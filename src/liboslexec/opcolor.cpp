@@ -545,8 +545,8 @@ OSL_SHADEOP void osl_luminance_w16fw16v_batched(void *sgb, void *wout_, void *wc
 	WideAccessor<float> wR(wout_);
 
 	// calling a function below, don't bother vectorizing
-	//OSL_INTEL_PRAGMA("omp simd simdlen(wR.width)")
-	OSL_INTEL_PRAGMA("novector")
+	//OSL_OMP_PRAGMA(omp simd simdlen(wR.width))
+	OSL_INTEL_PRAGMA(novector)
 	for(int lane=0; lane < wR.width; ++lane) {
 	    Color3 c = wC[lane];
 
@@ -593,8 +593,8 @@ osl_prepend_color_from_w16v_batched (void *sgb, void *c_, const char *from)
 	WideAccessor<Color3> wR(c_);
 
 	// calling a function below, don't bother vectorizing
-	//OSL_INTEL_PRAGMA("omp simd simdlen(wR.width)")
-	OSL_INTEL_PRAGMA("novector")
+	//OSL_OMP_PRAGMA(omp simd simdlen(wR.width))
+	OSL_INTEL_PRAGMA(novector)
 	for(int lane=0; lane < wR.width; ++lane) {
 	    Color3 c = wR[lane];
 

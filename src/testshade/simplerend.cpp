@@ -170,7 +170,7 @@ BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &resu
 #if 0
     int is_uniform_xform = 1;
 
-	OSL_INTEL_PRAGMA("omp simd simdlen(SimdLaneCount)")								    
+    OSL_OMP_PRAGMA(omp simd simdlen(SimdLaneCount))
     for(int lane=0; lane < SimdLaneCount; ++lane) {
         if (uniform_xform != xform.get(lane))
             is_uniform_xform = 0;
@@ -191,7 +191,7 @@ BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &resu
 
 #if 0
     int numLanesMatch1st = 0;
-    OSL_INTEL_PRAGMA("simd reduction(+:numLanesMatch1st)  assert")
+    OSL_INTEL_PRAGMA(simd reduction(+:numLanesMatch1st)  assert)
 	for(int lane=0; lane < SimdLaneCount; ++lane) {
         int match = (uniform_xform == xform.get(lane)) ? 1 : 0;
         numLanesMatch1st += match;
@@ -200,7 +200,7 @@ BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &resu
     if (numLanesMatch1st == 8) {
 #elif 0
     int numLanesMatch1st = 0;
-    OSL_INTEL_PRAGMA("simd reduction(+:numLanesMatch1st) vectorlength(8) assert")
+    OSL_INTEL_PRAGMA(simd reduction(+:numLanesMatch1st) vectorlength(8) assert)
             for(int lane=0; lane < SimdLaneCount; ++lane) {
         numLanesMatch1st += (uniform_xform == xform.get(lane));
     }
@@ -214,7 +214,7 @@ BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &resu
 
 #endif
         const Matrix44 & transformFromShaderGlobals = *reinterpret_cast<const Matrix44*>(uniform_xform);
-	OSL_INTEL_PRAGMA("omp simd simdlen(SimdLaneCount)")								        
+    OSL_OMP_PRAGMA(omp simd simdlen(SimdLaneCount))
     for(int lane=0; lane < SimdLaneCount; ++lane) {
         result.set(lane,transformFromShaderGlobals);
     }
@@ -244,7 +244,7 @@ BatchedSimpleRenderer::get_matrix (
 #if 0
     // In general, one can't assume that the transformation is uniform
     const Matrix44 & uniformTransform = *reinterpret_cast<const Matrix44*>(uniform_xform);
-	OSL_INTEL_PRAGMA("omp simd simdlen(result.width)")								        
+    OSL_OMP_PRAGMA(omp simd simdlen(result.width))
     for(int lane=0; lane < result.width; ++lane) {
         if (__builtin_expect((uniform_xform == xform[lane]),1)) {
             result[lane] = uniformTransform;
@@ -258,7 +258,11 @@ BatchedSimpleRenderer::get_matrix (
     // use that fact
     const Matrix44 & uniformTransform = *reinterpret_cast<const Matrix44*>(uniform_xform);
 
-	OSL_INTEL_PRAGMA("omp simd simdlen(result.width)")								        
+	// Workaround clang omp when it cant perform a runtime pointer check
+	// to ensure no overlap in output variables
+	// But we can tell clang to assume its safe
+	OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(result.width))
+	OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(result.width))
     for(int lane=0; lane < result.width; ++lane) {
         result[lane] = uniformTransform;
     }
@@ -281,7 +285,12 @@ BatchedSimpleRenderer::get_matrix (
     if (found != m_sr.m_named_xforms.end()) {
         const Matrix44 & uniformTransform =  *(found->second);
         
-    	OSL_INTEL_PRAGMA("omp simd simdlen(wresult.width)")
+		// Workaround clang omp when it cant perform a runtime pointer check
+        // to ensure no overlap in output variables
+        // But we can tell clang to assume its safe
+    	OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(wresult.width))
+    	OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(wresult.width))
+
         for(int lane=0; lane < wresult.width; ++lane) {
             wresult[lane] = uniformTransform;
         }
@@ -299,7 +308,7 @@ Mask BatchedSimpleRenderer::get_matrix (
 	ConstWideAccessor<float> /*wtime*/)
 {
 	Mask succeeded(false);
-	OSL_INTEL_PRAGMA("ivdep")
+    OSL_OMP_PRAGMA(omp simd simdlen(wresult.width))
 	for(int lane=0; lane < wresult.width; ++lane) {
 
 		if (wresult.mask().is_on(lane)) {

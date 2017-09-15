@@ -153,4 +153,436 @@ simdFriendlyNormalize(const Vec3 &N)
     return Vec3 (N.x / l, N.y / l, N.z / l);
 }
 
+
+// flatten is workaround to enable inlining of non-inlined methods
+static OSL_INLINE OSL_CLANG_ATTRIBUTE(flatten) Matrix44
+affineInvert(const Matrix44 &m)
+{
+    //assert(__builtin_expect(m.x[0][3] == 0.0f && m.x[1][3] == 0.0f && m.x[2][3] == 0.0f && m.x[3][3] == 1.0f, 1))
+	Matrix44 s (m.x[1][1] * m.x[2][2] - m.x[2][1] * m.x[1][2],
+				m.x[2][1] * m.x[0][2] - m.x[0][1] * m.x[2][2],
+				m.x[0][1] * m.x[1][2] - m.x[1][1] * m.x[0][2],
+				0.0f,
+
+				m.x[2][0] * m.x[1][2] - m.x[1][0] * m.x[2][2],
+				m.x[0][0] * m.x[2][2] - m.x[2][0] * m.x[0][2],
+				m.x[1][0] * m.x[0][2] - m.x[0][0] * m.x[1][2],
+				0.0f,
+
+				m.x[1][0] * m.x[2][1] - m.x[2][0] * m.x[1][1],
+				m.x[2][0] * m.x[0][1] - m.x[0][0] * m.x[2][1],
+				m.x[0][0] * m.x[1][1] - m.x[1][0] * m.x[0][1],
+				0.0f,
+
+				0.0f,
+				0.0f,
+				0.0f,
+				1.0f);
+
+	float r = m.x[0][0] * s[0][0] + m.x[0][1] * s[1][0] + m.x[0][2] * s[2][0];
+	float abs_r = IMATH_INTERNAL_NAMESPACE::abs (r);
+
+
+	int may_have_divided_by_zero = 0;
+	if (__builtin_expect(abs_r < 1.0f, 0))
+	{
+		float mr = abs_r / Imath::limits<float>::smallest();
+		OSL_INTEL_PRAGMA(unroll)
+		for (int i = 0; i < 3; ++i)
+		{
+			OSL_INTEL_PRAGMA(unroll)
+			for (int j = 0; j < 3; ++j)
+			{
+				if (mr <= IMATH_INTERNAL_NAMESPACE::abs (s[i][j]))
+				{
+					may_have_divided_by_zero = 1;
+				}
+			}
+		}
+	}
+
+	OSL_INTEL_PRAGMA(unroll)
+	for (int i = 0; i < 3; ++i)
+	{
+		OSL_INTEL_PRAGMA(unroll)
+		for (int j = 0; j < 3; ++j)
+		{
+			s[i][j] /= r;
+		}
+	}
+
+	s[3][0] = -m.x[3][0] * s[0][0] - m.x[3][1] * s[1][0] - m.x[3][2] * s[2][0];
+	s[3][1] = -m.x[3][0] * s[0][1] - m.x[3][1] * s[1][1] - m.x[3][2] * s[2][1];
+	s[3][2] = -m.x[3][0] * s[0][2] - m.x[3][1] * s[1][2] - m.x[3][2] * s[2][2];
+
+	if (__builtin_expect(may_have_divided_by_zero == 1, 0))
+	{
+		s = Matrix44();
+	}
+	return s;
+}
+
+// In order to have inlinable Matrix44*float
+// Override with a more specific version than
+// template <class T>
+// inline Matrix44<T>
+// operator * (T a, const Matrix44<T> &v);
+
+OSL_INLINE Matrix44
+operator * (float a, const Matrix44 &v)
+{
+    return Matrix44 (v.x[0][0] * a,
+                     v.x[0][1] * a,
+                     v.x[0][2] * a,
+                     v.x[0][3] * a,
+                     v.x[1][0] * a,
+                     v.x[1][1] * a,
+                     v.x[1][2] * a,
+                     v.x[1][3] * a,
+                     v.x[2][0] * a,
+                     v.x[2][1] * a,
+                     v.x[2][2] * a,
+                     v.x[2][3] * a,
+                     v.x[3][0] * a,
+                     v.x[3][1] * a,
+                     v.x[3][2] * a,
+                     v.x[3][3] * a);
+}
+
+OSL_INLINE Matrix44
+inlinedTransposed (const Matrix44 &m)
+{
+    return Matrix44 (m.x[0][0],
+                     m.x[1][0],
+                     m.x[2][0],
+                     m.x[3][0],
+                     m.x[0][1],
+                     m.x[1][1],
+                     m.x[2][1],
+                     m.x[3][1],
+                     m.x[0][2],
+                     m.x[1][2],
+                     m.x[2][2],
+                     m.x[3][2],
+                     m.x[0][3],
+                     m.x[1][3],
+                     m.x[2][3],
+                     m.x[3][3]);
+}
+
+// Inlinable version to enable vectorization
+
+// Inlinable version to enable vectorization
+OSL_INLINE void
+inlinedMultMatrixMatrix (const Matrix44 &a,
+                       const Matrix44 &b,
+                       Matrix44 &c)
+{
+    register const float *  ap = &a.x[0][0];
+    register const float *  bp = &b.x[0][0];
+    register       float *  cp = &c.x[0][0];
+
+    register float a0, a1, a2, a3;
+
+    a0 = ap[0];
+    a1 = ap[1];
+    a2 = ap[2];
+    a3 = ap[3];
+
+    cp[0]  = a0 * bp[0]  + a1 * bp[4]  + a2 * bp[8]  + a3 * bp[12];
+    cp[1]  = a0 * bp[1]  + a1 * bp[5]  + a2 * bp[9]  + a3 * bp[13];
+    cp[2]  = a0 * bp[2]  + a1 * bp[6]  + a2 * bp[10] + a3 * bp[14];
+    cp[3]  = a0 * bp[3]  + a1 * bp[7]  + a2 * bp[11] + a3 * bp[15];
+
+    a0 = ap[4];
+    a1 = ap[5];
+    a2 = ap[6];
+    a3 = ap[7];
+
+    cp[4]  = a0 * bp[0]  + a1 * bp[4]  + a2 * bp[8]  + a3 * bp[12];
+    cp[5]  = a0 * bp[1]  + a1 * bp[5]  + a2 * bp[9]  + a3 * bp[13];
+    cp[6]  = a0 * bp[2]  + a1 * bp[6]  + a2 * bp[10] + a3 * bp[14];
+    cp[7]  = a0 * bp[3]  + a1 * bp[7]  + a2 * bp[11] + a3 * bp[15];
+
+    a0 = ap[8];
+    a1 = ap[9];
+    a2 = ap[10];
+    a3 = ap[11];
+
+    cp[8]  = a0 * bp[0]  + a1 * bp[4]  + a2 * bp[8]  + a3 * bp[12];
+    cp[9]  = a0 * bp[1]  + a1 * bp[5]  + a2 * bp[9]  + a3 * bp[13];
+    cp[10] = a0 * bp[2]  + a1 * bp[6]  + a2 * bp[10] + a3 * bp[14];
+    cp[11] = a0 * bp[3]  + a1 * bp[7]  + a2 * bp[11] + a3 * bp[15];
+
+    a0 = ap[12];
+    a1 = ap[13];
+    a2 = ap[14];
+    a3 = ap[15];
+
+    cp[12] = a0 * bp[0]  + a1 * bp[4]  + a2 * bp[8]  + a3 * bp[12];
+    cp[13] = a0 * bp[1]  + a1 * bp[5]  + a2 * bp[9]  + a3 * bp[13];
+    cp[14] = a0 * bp[2]  + a1 * bp[6]  + a2 * bp[10] + a3 * bp[14];
+    cp[15] = a0 * bp[3]  + a1 * bp[7]  + a2 * bp[11] + a3 * bp[15];
+}
+
+namespace fast {
+
+#if 0
+// Considering having functionally equivalent versions of Vec3, Color3, Matrix44
+// with slight modifications to inlining and implmentation to avoid aliasing and
+// improve likelyhood of proper privation of local variables within a SIMD loop
+///////////////////////////////////////////////////////////////////////////
+//
+// Copyright (c) 2004-2012, Industrial Light & Magic, a division of Lucas
+
+namespace Imath {
+
+template <class T>
+using Vec3  = ::Imath::Vec3<T>;
+
+
+template <class T>
+class Color3: public Vec3 <T>
+{
+  public:
+
+    //-------------
+    // Constructors
+    //-------------
+
+    OSL_INLINE Color3 ();			// no initialization
+    OSL_INLINE explicit Color3 (T a);	// (a a a)
+    OSL_INLINE Color3 (T a, T b, T c);	// (a b c)
+
+
+    //---------------------------------
+    // Copy constructors and assignment
+    //---------------------------------
+
+    OSL_INLINE Color3 (const Color3 &c);
+    template <class S> OSL_INLINE Color3 (const Vec3<S> &v);
+
+    OSL_INLINE const Color3 &	operator = (const Color3 &c);
+
+
+    //------------------------
+    // Component-wise addition
+    //------------------------
+
+    OSL_INLINE const Color3 &	operator += (const Color3 &c);
+    OSL_INLINE Color3		operator + (const Color3 &c) const;
+
+
+    //---------------------------
+    // Component-wise subtraction
+    //---------------------------
+
+    OSL_INLINE const Color3 &	operator -= (const Color3 &c);
+    OSL_INLINE Color3		operator - (const Color3 &c) const;
+
+
+    //------------------------------------
+    // Component-wise multiplication by -1
+    //------------------------------------
+
+    OSL_INLINE Color3		operator - () const;
+    OSL_INLINE const Color3 &	negate ();
+
+
+    //------------------------------
+    // Component-wise multiplication
+    //------------------------------
+
+    OSL_INLINE const Color3 &	operator *= (const Color3 &c);
+    OSL_INLINE const Color3 &	operator *= (T a);
+    OSL_INLINE Color3		operator * (const Color3 &c) const;
+    OSL_INLINE Color3		operator * (T a) const;
+
+
+    //------------------------
+    // Component-wise division
+    //------------------------
+
+    OSL_INLINE const Color3 &	operator /= (const Color3 &c);
+    OSL_INLINE const Color3 &	operator /= (T a);
+    OSL_INLINE Color3		operator / (const Color3 &c) const;
+    OSL_INLINE Color3		operator / (T a) const;
+};
+
+
+//-------------------------
+// Implementation of Color3
+//-------------------------
+
+template <class T>
+Color3<T>::Color3 (): Vec3 <T> ()
+{
+    // empty
+}
+
+template <class T>
+Color3<T>::Color3 (T a): Vec3 <T> (a)
+{
+    // empty
+}
+
+template <class T>
+Color3<T>::Color3 (T a, T b, T c): Vec3 <T> (a, b, c)
+{
+    // empty
+}
+
+template <class T>
+Color3<T>::Color3 (const Color3 &c): Vec3 <T> (c)
+{
+    // empty
+}
+
+template <class T>
+template <class S>
+Color3<T>::Color3 (const Vec3<S> &v): Vec3 <T> (v)
+{
+    //empty
+}
+
+template <class T>
+const Color3<T> &
+Color3<T>::operator = (const Color3 &c)
+{
+    //*((Vec3<T> *) this) = c;
+	Vec3<T>::operator=(c);
+    return *this;
+}
+
+template <class T>
+const Color3<T> &
+Color3<T>::operator += (const Color3 &c)
+{
+    //*((Vec3<T> *) this) += c;
+	Vec3<T>::operator+=(c);
+    return *this;
+}
+
+template <class T>
+Color3<T>
+Color3<T>::operator + (const Color3 &c) const
+{
+//    return Color3 (*(Vec3<T> *)this + (const Vec3<T> &)c);
+    return Color3 (Vec3<T>::operator + (c));
+	//return c;
+}
+
+template <class T>
+const Color3<T> &
+Color3<T>::operator -= (const Color3 &c)
+{
+    //*((Vec3<T> *) this) -= c;
+	Vec3<T>::operator-=(c);
+    return *this;
+}
+
+template <class T>
+Color3<T>
+Color3<T>::operator - (const Color3 &c) const
+{
+    //return Color3 (*(Vec3<T> *)this - (const Vec3<T> &)c);
+	return Color3 (Vec3<T>::operator-(c));
+}
+
+template <class T>
+Color3<T>
+Color3<T>::operator - () const
+{
+    //return Color3 (-(*(Vec3<T> *)this));
+	return Color3 (Vec3<T>::operator-());
+}
+
+template <class T>
+const Color3<T> &
+Color3<T>::negate ()
+{
+    //((Vec3<T> *) this)->negate();
+	Vec3<T>::negate();
+    return *this;
+}
+
+template <class T>
+const Color3<T> &
+Color3<T>::operator *= (const Color3 &c)
+{
+    //*((Vec3<T> *) this) *= c;
+	Vec3<T>::operator *= (c);
+    return *this;
+}
+
+template <class T>
+const Color3<T> &
+Color3<T>::operator *= (T a)
+{
+//    *((Vec3<T> *) this) *= a;
+	Vec3<T>::operator *= (a);
+    return *this;
+}
+
+template <class T>
+Color3<T>
+Color3<T>::operator * (const Color3 &c) const
+{
+    //return Color3 (*(Vec3<T> *)this * (const Vec3<T> &)c);
+	return Color3 (Vec3<T>::operator * (c));
+}
+
+template <class T>
+Color3<T>
+Color3<T>::operator * (T a) const
+{
+    //return Color3 (*(Vec3<T> *)this * a);
+	return Color3 (Vec3<T>::operator * (a));
+}
+
+template <class T>
+const Color3<T> &
+Color3<T>::operator /= (const Color3 &c)
+{
+    //*((Vec3<T> *) this) /= c;
+	Vec3<T>::operator /=(c);
+    return *this;
+}
+
+template <class T>
+const Color3<T> &
+Color3<T>::operator /= (T a)
+{
+//    *((Vec3<T> *) this) /= a;
+	Vec3<T>::operator /=(a);
+    return *this;
+}
+
+template <class T>
+Color3<T>
+Color3<T>::operator / (const Color3 &c) const
+{
+    //return Color3 (*(Vec3<T> *)this / (const Vec3<T> &)c);
+	return Color3 (Vec3<T>::operator / (c));
+}
+
+template <class T>
+Color3<T>
+Color3<T>::operator / (T a) const
+{
+    //return Color3 (*(Vec3<T> *)this / a);
+	return Color3 (Vec3<T>::operator / (a));
+}
+
+
+} // namespace Imath
+
+typedef Imath::Color3<float> Color3;
+
+#endif
+
+
+} // fast
+
+
 OSL_NAMESPACE_EXIT

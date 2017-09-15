@@ -1008,11 +1008,11 @@ LLVM_Util::make_jit_execengine (std::string *err)
     if (! m_llvm_exec)
         return NULL;
     
-    const llvm::DataLayout & data_layout = m_llvm_exec->getDataLayout();
+    //const llvm::DataLayout & data_layout = m_llvm_exec->getDataLayout();
     //OSL_DEV_ONLY(std::cout << "data_layout.getStringRepresentation()=" << data_layout.getStringRepresentation() << std::endl);
     		
     
-    TargetMachine * target_machine = m_llvm_exec->getTargetMachine();
+    OSL_DEV_ONLY(TargetMachine * target_machine = m_llvm_exec->getTargetMachine());
     //OSL_DEV_ONLY(std::cout << "target_machine.getTargetCPU()=" << target_machine->getTargetCPU().str() << std::endl);
     OSL_DEV_ONLY(std::cout << "target_machine.getTargetFeatureString ()=" << target_machine->getTargetFeatureString ().str() << std::endl);
 	//OSL_DEV_ONLY(std::cout << "target_machine.getTargetTriple ()=" << target_machine->getTargetTriple().str() << std::endl);
@@ -1078,7 +1078,7 @@ LLVM_Util::validate_struct_data_layout(llvm::Type *Ty, const std::vector<unsigne
 //	OSL_DEV_ONLY(	<< " hasPadding(" << layout->hasPadding() << ")" << std::endl);
 	
 	for(int index=0; index < number_of_elements; ++index) {
-		llvm::Type * et = structTy->getElementType(index);
+		//llvm::Type * et = structTy->getElementType(index);
 		
 		auto actual_offset = layout->getElementOffset(index);
 

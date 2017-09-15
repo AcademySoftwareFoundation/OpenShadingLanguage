@@ -31,6 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <type_traits>
 
 #include "dual_vec.h"
+#include "Imathx.h"
 
 OSL_NAMESPACE_ENTER
 
@@ -306,42 +307,12 @@ struct WideBuiltin
 	OSL_INLINE void
 	set_all(value_type value) 
 	{
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i = 0; i < WidthT; ++i)
 			{
 					data[i] = value;
-			}
-		}
-	}
-	
-	OSL_INLINE void 
-	blendin(WideMask<WidthT> mask, const WideBuiltin & other) 
-	{
-		OSL_INTEL_PRAGMA("forceinline recursive")
-		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
-			for(int i = 0; i < WidthT; ++i)
-			{
-				if (mask[i]) {
-					data[i] = other.get(i);
-				}
-			}
-		}
-	}
-
-	OSL_INLINE void 
-	blendin(WideMask<WidthT> mask, value_type value) 
-	{
-		OSL_INTEL_PRAGMA("forceinline recursive")
-		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
-			for(int i = 0; i < WidthT; ++i)
-			{
-				if (mask[i]) {
-					data[i] = value;
-				}
 			}
 		}
 	}
@@ -378,16 +349,15 @@ public:
 	OSL_INLINE explicit  
 	WideBuiltin(const value_type & uniformValue) 
 	{
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i = 0; i < WidthT; ++i)
 			{
 				data[i] = uniformValue;
 			}
 		}
 	}
-	
 	
 	
 	OSL_INLINE BuiltinT 
@@ -450,43 +420,6 @@ struct Wide<Vec4, WidthT>
 		z[index] = value.z;
 		w[index] = value.w;
 	}
-
-	OSL_INLINE void
-	blendin(WideMask<WidthT> mask, const Wide & other)
-	{
-		OSL_INTEL_PRAGMA("forceinline recursive")
-		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
-			for(int i = 0; i < WidthT; ++i)
-			{
-				if (mask[i]) {
-					x[i] = other.x.get(i);
-					y[i] = other.y.get(i);
-					z[i] = other.z.get(i);
-					w[i] = other.w.get(i);
-				}
-			}
-		}
-	}
-
-	OSL_INLINE void
-	blendin(WideMask<WidthT> mask, const value_type & value)
-	{
-		OSL_INTEL_PRAGMA("forceinline recursive")
-		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
-			for(int i = 0; i < WidthT; ++i)
-			{
-				if (mask[i]) {
-					x[i] = value.x;
-					y[i] = value.y;
-					z[i] = value.z;
-					w[i] = value.w;
-				}
-			}
-		}
-	}
-
 
 protected:
 	template<int HeadIndexT>
@@ -589,41 +522,6 @@ struct Wide<Vec3, WidthT>
 		z[index] = value.z;
 	}
 	
-	OSL_INLINE void 
-	blendin(WideMask<WidthT> mask, const Wide & other) 
-	{
-		OSL_INTEL_PRAGMA("forceinline recursive")
-		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
-			for(int i = 0; i < WidthT; ++i)
-			{
-				if (mask[i]) {
-					x[i] = other.x.get(i);
-					y[i] = other.y.get(i);
-					z[i] = other.z.get(i);
-				}
-			}
-		}
-	}
-	
-	OSL_INLINE void 
-	blendin(WideMask<WidthT> mask, const value_type & value) 
-	{
-		OSL_INTEL_PRAGMA("forceinline recursive")
-		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
-			for(int i = 0; i < WidthT; ++i)
-			{
-				if (mask[i]) {
-					x[i] = value.x;
-					y[i] = value.y;
-					z[i] = value.z;
-				}
-			}
-		}
-	}
-	
-	
 protected:
 	template<int HeadIndexT>
 	OSL_INLINE void 
@@ -714,39 +612,6 @@ struct Wide<Vec2, WidthT>
         y[index] = value.y;
     }
 
-    OSL_INLINE void
-    blendin(WideMask<WidthT> mask, const Wide & other)
-    {
-        OSL_INTEL_PRAGMA("forceinline recursive")
-        {
-            OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
-            for(int i = 0; i < WidthT; ++i)
-            {
-                if (mask[i]) {
-                    x[i] = other.x.get(i);
-                    y[i] = other.y.get(i);
-                }
-            }
-        }
-    }
-
-    OSL_INLINE void
-    blendin(WideMask<WidthT> mask, const value_type & value)
-    {
-        OSL_INTEL_PRAGMA("forceinline recursive")
-        {
-            OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
-            for(int i = 0; i < WidthT; ++i)
-            {
-                if (mask[i]) {
-                    x[i] = value.x;
-                    y[i] = value.y;
-                }
-            }
-        }
-    }
-
-
 protected:
     template<int HeadIndexT>
     OSL_INLINE void
@@ -830,40 +695,6 @@ struct Wide<Color3, WidthT>
         z[index] = value.z;
     }
 
-	OSL_INLINE void 
-	blendin(WideMask<WidthT> mask, const Wide & other) 
-	{
-		OSL_INTEL_PRAGMA("forceinline recursive")
-		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
-			for(int i = 0; i < WidthT; ++i)
-			{
-				if (mask[i]) {
-					x[i] = other.x.get(i);
-					y[i] = other.y.get(i);
-					z[i] = other.z.get(i);
-				}
-			}
-		}
-	}
-    
-	OSL_INLINE void 
-	blendin(WideMask<WidthT> mask, const value_type & value) 
-	{
-		OSL_INTEL_PRAGMA("forceinline recursive")
-		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
-			for(int i = 0; i < WidthT; ++i)
-			{
-				if (mask[i]) {
-					x[i] = value.x;
-					y[i] = value.y;
-					z[i] = value.z;
-				}
-			}
-		}
-	}
-	
 protected:
     template<int HeadIndexT>
     OSL_INLINE void
@@ -937,6 +768,102 @@ public:
 
 };
 
+
+#if 0
+// Considering having functionally equivalent versions of Vec3, Color3, Matrix44
+// with slight modifications to inlining and implmentation to avoid aliasing and
+// improve likelyhood of proper privation of local variables within a SIMD loop
+
+template <int WidthT>
+struct Wide<fast::Color3, WidthT>
+{
+	typedef fast::Color3 value_type;
+    static constexpr int width = WidthT;
+    float x[WidthT];
+    float y[WidthT];
+    float z[WidthT];
+
+    OSL_INLINE void
+    set(int index, const value_type & value)
+    {
+        x[index] = value.x;
+        y[index] = value.y;
+        z[index] = value.z;
+    }
+
+protected:
+    template<int HeadIndexT>
+    OSL_INLINE void
+    set(internal::int_sequence<HeadIndexT>, const value_type & value)
+    {
+        set(HeadIndexT, value);
+    }
+
+    template<int HeadIndexT, int... TailIndexListT, typename... Color3ListT>
+    OSL_INLINE void
+    set(internal::int_sequence<HeadIndexT, TailIndexListT...>, value_type headValue, Color3ListT... tailValues)
+    {
+        set(HeadIndexT, headValue);
+        set(internal::int_sequence<TailIndexListT...>(), tailValues...);
+        return;
+    }
+public:
+
+    OSL_INLINE Wide() = default;
+    Wide(const Wide &other) = delete;
+
+    template<typename... Color3ListT, typename = internal::enable_if_type<(sizeof...(Color3ListT) == WidthT)> >
+    explicit OSL_INLINE
+    Wide(const Color3ListT &...values)
+    {
+        typedef internal::make_int_sequence<sizeof...(Color3ListT)> int_seq_type;
+        set(int_seq_type(), values...);
+        return;
+    }
+
+
+    OSL_INLINE value_type
+    get(int index) const
+    {
+        return value_type(x[index], y[index], z[index]);
+    }
+
+    void dump(const char *name) const
+    {
+        if (name != nullptr) {
+            std::cout << name << " = ";
+        }
+        std::cout << "x{";
+        for(int i=0; i < WidthT; ++i)
+        {
+            std::cout << x[i];
+            if (i < (WidthT-1))
+                std::cout << ",";
+
+        }
+        std::cout << "}" << std::endl;
+        std::cout << "y{";
+        for(int i=0; i < WidthT; ++i)
+        {
+            std::cout << y[i];
+            if (i < (WidthT-1))
+                std::cout << ",";
+
+        }
+        std::cout << "}" << std::endl;
+        std::cout << "z{"	;
+        for(int i=0; i < WidthT; ++i)
+        {
+            std::cout << z[i];
+            if (i < (WidthT-1))
+                std::cout << ",";
+
+        }
+        std::cout << "}" << std::endl;
+    }
+};
+#endif
+
 template <int WidthT>
 struct Wide<Matrix44, WidthT>
 {	
@@ -965,67 +892,6 @@ struct Wide<Matrix44, WidthT>
 		x[3][3].set(index, value.x[3][3]);
 	}
 
-	OSL_INLINE void 
-	blendin(WideMask<WidthT> mask, const Wide & other) 
-	{
-		OSL_INTEL_PRAGMA("forceinline recursive")
-		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
-			for(int i = 0; i < WidthT; ++i)
-			{
-				if (mask[i]) {
-					x[0][0].set(i, other.x[0][0].get(i));
-					x[0][1].set(i, other.x[0][1].get(i));
-					x[0][2].set(i, other.x[0][2].get(i));
-					x[0][3].set(i, other.x[0][3].get(i));
-					x[1][0].set(i, other.x[1][0].get(i));
-					x[1][1].set(i, other.x[1][1].get(i));
-					x[1][2].set(i, other.x[1][2].get(i));
-					x[1][3].set(i, other.x[1][3].get(i));
-					x[2][0].set(i, other.x[2][0].get(i));
-					x[2][1].set(i, other.x[2][1].get(i));
-					x[2][2].set(i, other.x[2][2].get(i));
-					x[2][3].set(i, other.x[2][3].get(i));
-					x[3][0].set(i, other.x[3][0].get(i));
-					x[3][1].set(i, other.x[3][1].get(i));
-					x[3][2].set(i, other.x[3][2].get(i));
-					x[3][3].set(i, other.x[3][3].get(i));
-				}
-			}
-		}
-	}
-	
-	OSL_INLINE void 
-	blendin(WideMask<WidthT> mask, const value_type & value) 
-	{
-		OSL_INTEL_PRAGMA("forceinline recursive")
-		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
-			for(int i = 0; i < WidthT; ++i)
-			{
-				if (mask[i]) {
-					x[0][0].set(i, value.x[0][0]);
-					x[0][1].set(i, value.x[0][1]);
-					x[0][2].set(i, value.x[0][2]);
-					x[0][3].set(i, value.x[0][3]);
-					x[1][0].set(i, value.x[1][0]);
-					x[1][1].set(i, value.x[1][1]);
-					x[1][2].set(i, value.x[1][2]);
-					x[1][3].set(i, value.x[1][3]);
-					x[2][0].set(i, value.x[2][0]);
-					x[2][1].set(i, value.x[2][1]);
-					x[2][2].set(i, value.x[2][2]);
-					x[2][3].set(i, value.x[2][3]);
-					x[3][0].set(i, value.x[3][0]);
-					x[3][1].set(i, value.x[3][1]);
-					x[3][2].set(i, value.x[3][2]);
-					x[3][3].set(i, value.x[3][3]);
-				}
-			}
-		}
-	}
-	
-	
 	OSL_INLINE Matrix44 
 	get(int index) const 
 	{
@@ -1072,40 +938,6 @@ struct Wide<Dual2<float>, WidthT>
 		x[index] = value.val();
 		dx[index] = value.dx();
 		dy[index] = value.dy();
-	}
-	
-	OSL_INLINE void 
-	blendin(WideMask<WidthT> mask, const Wide & other) 
-	{
-		OSL_INTEL_PRAGMA("forceinline recursive")
-		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
-			for(int i = 0; i < WidthT; ++i)
-			{
-				if (mask[i]) {
-					x[i] = other.x.get(i);
-					dx[i] = other.dx.get(i);
-					dy[i] = other.dy.get(i);
-				}
-			}
-		}
-	}
-
-	OSL_INLINE void 
-	blendin(WideMask<WidthT> mask, const value_type & value) 
-	{
-		OSL_INTEL_PRAGMA("forceinline recursive")
-		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
-			for(int i = 0; i < WidthT; ++i)
-			{
-				if (mask[i]) {
-					x[i] = value.x;
-					dx[i] = value.dx;
-					dy[i] = value.dy;
-				}
-			}
-		}
 	}
 	
 protected:
@@ -1163,41 +995,6 @@ struct Wide<Dual2<Vec3>, WidthT>
 		dx.set(index, value.dx());
 		dy.set(index, value.dy());
 	}
-	
-	OSL_INLINE void 
-	blendin(WideMask<WidthT> mask, const Wide & other) 
-	{
-		OSL_INTEL_PRAGMA("forceinline recursive")
-		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
-			for(int i = 0; i < WidthT; ++i)
-			{
-				if (mask[i]) {
-					x.set(i, other.x.get(i);
-					dx.set(i, other.dx.get(i);
-					dy.set(i, other.dy.get(i);
-				}
-			}
-		}
-	}
-	
-	OSL_INLINE void 
-	blendin(WideMask<WidthT> mask, const value_type & value) 
-	{
-		OSL_INTEL_PRAGMA("forceinline recursive")
-		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
-			for(int i = 0; i < WidthT; ++i)
-			{
-				if (mask[i]) {
-					x.set(i, value.x;
-					dx.set(i, value.dx;
-					dy.set(i, value.dy;
-				}
-			}
-		}
-	}
-	
 	
 protected:
 	template<int HeadIndexT>
@@ -1259,9 +1056,9 @@ struct WideUniformProxy
 	OSL_INLINE const DataT & 
 	operator = (const DataT & value)  
 	{
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i = 0; i < WidthT; ++i) {
 				m_ref_wide_data.set(i, value);
 			}
@@ -1278,9 +1075,9 @@ template <typename DataT, int WidthT>
 OSL_INLINE void 
 make_uniform(Wide<DataT, WidthT> &wide_data, const DataT &value)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
-		OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")								
+		OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 		for(int i = 0; i < WidthT; ++i) {
 			wide_data.set(i, value);
 		}
@@ -1388,7 +1185,7 @@ unproxy(const ConstLaneProxy<DataT,WidthT> &proxy)
 template <typename DataT, int WidthT = SimdLaneCount>
 struct WideAccessor
 {
-	template <typename DataT, int WidthT>
+	template <typename OtherDataT, int OtherWidthT>
 	friend struct ConstWideAccessor;
 
 	static constexpr int width = WidthT; 
@@ -1510,7 +1307,8 @@ struct MaskedLaneProxy
 	OSL_INLINE const DataT &
 	operator = (const DataT & value)  
 	{
-		if (m_mask[m_index]) {
+		if (m_mask[m_index])
+		{
 			m_ref_wide_data.set(m_index, value);
 		}
 		return value;
@@ -1637,7 +1435,7 @@ struct MaskedUnboundedArrayLaneProxy
 	OSL_INLINE
 	MaskedUnboundedArrayLaneProxy(const MaskedUnboundedArrayLaneProxy &other)
 	: m_array_of_wide_data(other.m_array_of_wide_data)
-	, m_array_length(array_length)
+	, m_array_length(other.m_array_length)
 	, m_mask(other.m_mask)
 	, m_index(other.m_index)
 	{}
@@ -1888,6 +1686,17 @@ struct WideTraits<Color3> {
 	}
 };
 
+#if 0
+template <>
+struct WideTraits<fast::Color3> {
+	static bool matches(const TypeDesc &type_desc) {
+		return type_desc.basetype == TypeDesc::FLOAT &&
+		    type_desc.aggregate == TypeDesc::VEC3 &&
+			type_desc.vecsemantics == TypeDesc::COLOR;
+	}
+};
+#endif
+
 template <>
 struct WideTraits<Matrix33> {
 	static bool matches(const TypeDesc &type_desc) {
@@ -1945,105 +1754,118 @@ public:
 
 protected:
    
+   // C++11 doesn't support auto return types, so we must use
+   // template specialization to determine the return type of the
+   // masked accessor.  Once C++14 is baseline requirement, we could
+   // simplify this a little bit
+
+   template <typename DataT, bool IsArrayT, bool IsArrayUnboundedT>
+   struct AccessorFactory; // undefined
+
+   template <typename DataT>
+   struct AccessorFactory<DataT, false, true>
+   {
+	  typedef MaskedAccessor<DataT, WidthT> value_type;
+
+	  static OSL_INLINE bool
+	  matches(MaskedData &md)
+	  {
+		  return (md.m_type.arraylen == 0) &&
+				  WideTraits<DataT>::matches(md.m_type);
+	  }
+
+	  template<int DerivIndexT>
+	  static OSL_INLINE value_type
+	  build(MaskedData &md)
+	  {
+		  DASSERT(matches(md));
+	   	  return value_type(md.m_ptr, md.m_mask, DerivIndexT);
+	  }
+   };
+
+   template <typename DataT>
+   struct AccessorFactory<DataT, true /* IsArrayT */, false /* IsArrayUnboundedT */>
+   {
+	  typedef typename std::remove_all_extents<DataT>::type ElementType;
+	  typedef MaskedArrayAccessor<ElementType, std::extent<DataT>::value, WidthT> value_type;
+
+	  static OSL_INLINE bool
+	  matches(MaskedData &md)
+	  {
+		  return (md.m_type.arraylen == std::extent<DataT>::value) &&
+		  		  WideTraits<ElementType>::matches(md.m_type);
+	  }
+
+	  template<int DerivIndexT>
+	  static OSL_INLINE value_type
+	  build(MaskedData &md)
+	  {
+		  DASSERT(matches(md));
+		  return value_type(md.m_ptr, DerivIndexT, md.m_mask);
+	  }
+   };
+
+   template <typename DataT>
+   struct AccessorFactory<DataT, true/* IsArrayT */, true /* IsArrayUnboundedT */>
+   {
+	  typedef typename std::remove_all_extents<DataT>::type ElementType;
+	  typedef MaskedUnboundArrayAccessor<ElementType, WidthT> value_type;
+
+	  static OSL_INLINE bool
+	  matches(MaskedData &md)
+	  {
+		  return (md.m_type.arraylen != 0) &&
+				  WideTraits<ElementType>::matches(md.m_type);
+	  }
+
+	  template<int DerivIndexT>
+	  static OSL_INLINE value_type
+	  build(MaskedData &md)
+	  {
+		  DASSERT(matches(md));
+		  return value_type(md.m_ptr, DerivIndexT, md.m_type.arraylen, md.m_mask);
+	  }
+   };
    
    template<typename DataT>
-   OSL_INLINE bool 
-   is_array_unbounded_selector(std::false_type) {
-	   return (m_type.arraylen == std::extent<DataT>::value) && 
-			   WideTraits<DataT>::matches(m_type);
-   }
-
-   template<typename DataT>
-   OSL_INLINE bool 
-   is_array_unbounded_selector(std::true_type) {
-	   return (m_type.arraylen != 0) 
-			  && WideTraits<DataT>::matches(m_type);
-   }
-   
-   
-   template<typename DataT>
-   OSL_INLINE bool 
-   is_array_selector(std::false_type) {
-	   return (m_type.arraylen == 0) && 
-			   WideTraits<DataT>::matches(m_type);
-   }
-
-   template<typename DataT>
-   OSL_INLINE bool 
-   is_array_selector(std::true_type) {
-	   typedef typename std::remove_all_extents<DataT>::type ElementType;
-	   return is_array_unbounded_selector<ElementType>(std::integral_constant<bool, (std::extent<DataT>::value == 0)>());
-   }   
-  
-   template<typename DataT, int DerivIndexT>
-   OSL_INLINE MaskedAccessor<DataT, WidthT>
-   masked_impl(std::false_type /*is array*/) 
-   { 
-	   DASSERT(is<DataT>());
-	   return MaskedAccessor<DataT, WidthT>(m_ptr, m_mask, DerivIndexT);
-   }
-
-   template<typename DataT, int DerivIndexT>
-   OSL_INLINE MaskedUnboundArrayAccessor<typename std::remove_all_extents<DataT>::type, WidthT>
-   masked_array_impl(std::true_type /*is unbounded array*/) 
-   { 
-	   DASSERT(is<DataT>());
-	   return MaskedUnboundArrayAccessor<typename std::remove_all_extents<DataT>::type, WidthT>(m_ptr, DerivIndexT, m_type.arraylen, m_mask);
-   }
-
-   template<typename DataT, int DerivIndexT>
-   OSL_INLINE MaskedArrayAccessor<typename std::remove_all_extents<DataT>::type, std::extent<DataT>::value, WidthT>
-   masked_array_impl(std::false_type /*is unbounded array*/) 
-   { 
-	   DASSERT(is<DataT>());
-	   return MaskedArrayAccessor<typename std::remove_all_extents<DataT>::type, std::extent<DataT>::value, WidthT>(m_ptr, DerivIndexT, m_mask);
-   }
-   
-   template<typename DataT, int DerivIndexT>
-   OSL_INLINE decltype(std::declval<MaskedData<WidthT>>().masked_array_impl<DataT, DerivIndexT>(std::integral_constant<bool, (std::extent<DataT>::value == 0)>()))  
-   masked_impl(std::true_type /*is array*/) 
-   { 
-	   DASSERT(is<DataT>());
-	   return masked_array_impl<DataT, DerivIndexT>(std::integral_constant<bool, (std::extent<DataT>::value == 0)>());
-   }
-   
+   using Factory = AccessorFactory<DataT, std::is_array<DataT>::value, (std::extent<DataT>::value == 0)>;
 public:
    template<typename DataT>
    OSL_INLINE bool 
    is() {
-	   return is_array_selector<DataT>(std::is_array<DataT>::type());
+	   return Factory<DataT>::matches(*this);
    }
    
    template<typename DataT>
-   OSL_INLINE decltype(std::declval<MaskedData<WidthT>>().masked_impl<DataT, 0>(typename std::is_array<DataT>::type()))
+   OSL_INLINE typename Factory<DataT>::value_type
    masked() 
    { 
-	   return masked_impl<DataT, 0>(typename std::is_array<DataT>::type());
+	   return Factory<DataT>::template build<0 /*DerivIndexT*/>(*this);
    }
 
    
    template<typename DataT>
-   OSL_INLINE decltype(std::declval<MaskedData<WidthT>>().masked_impl<DataT, 1>(typename std::is_array<DataT>::type()))
+   OSL_INLINE typename Factory<DataT>::value_type
    maskedDx() 
    {
 	   DASSERT(has_derivs());
-	   return masked_impl<DataT, 1>(typename std::is_array<DataT>::type());
+	   return Factory<DataT>::template build<1 /*DerivIndexT*/>(*this);
    }
 
    template<typename DataT>
-   OSL_INLINE decltype(std::declval<MaskedData<WidthT>>().masked_impl<DataT, 2>(typename std::is_array<DataT>::type()))
+   OSL_INLINE typename Factory<DataT>::value_type
    maskedDy() 
    { 
 	   DASSERT(has_derivs());
-	   return masked_impl<DataT, 2>(typename std::is_array<DataT>::type());
+	   return Factory<DataT>::template build<2 /*DerivIndexT*/>(*this);
    }
    
    template<typename DataT>
-   OSL_INLINE decltype(std::declval<MaskedData<WidthT>>().masked_impl<DataT, 3>(typename std::is_array<DataT>::type()))
+   OSL_INLINE typename Factory<DataT>::value_type
    maskedDz() 
    { 
 	   DASSERT(has_derivs());
-	   return masked_impl<DataT, 3>(typename std::is_array<DataT>::type());
+	   return Factory<DataT>::template build<3 /*DerivIndexT*/>(*this);
    }   
 };
 
@@ -2206,136 +2028,147 @@ class DataRef
     TypeDesc m_type;
     bool m_has_derivs; 
 public:
-   DataRef() = delete;
-   
-   explicit OSL_INLINE
-   DataRef(TypeDesc type, bool has_derivs, void *ptr)
-   : m_ptr(ptr)
-   , m_type(type)
-   , m_has_derivs(has_derivs)
-   {}
-   
+	DataRef() = delete;
+
+	explicit OSL_INLINE
+	DataRef(TypeDesc type, bool has_derivs, void *ptr)
+	: m_ptr(ptr)
+	, m_type(type)
+	, m_has_derivs(has_derivs)
+	{}
+
 	// Must provide user defined copy constructor to 
 	// get compiler to be able to follow individual 
 	// data members through back to original object
 	// when fully inlined the proxy should disappear
-   OSL_INLINE DataRef(const DataRef &other)
-   : m_ptr(other.m_ptr)
-   , m_type(other.m_type)
-   , m_has_derivs(other.m_has_derivs)
-   {}
-    
-   OSL_INLINE void *ptr() const { return m_ptr; }
-   OSL_INLINE TypeDesc type() const { return m_type; }
-   OSL_INLINE bool has_derivs() const { return m_has_derivs; }
-   OSL_INLINE bool valid() const { return m_ptr != nullptr; }
+	OSL_INLINE DataRef(const DataRef &other)
+	: m_ptr(other.m_ptr)
+	, m_type(other.m_type)
+	, m_has_derivs(other.m_has_derivs)
+	{}
+
+	OSL_INLINE void *ptr() const { return m_ptr; }
+	OSL_INLINE TypeDesc type() const { return m_type; }
+	OSL_INLINE bool has_derivs() const { return m_has_derivs; }
+	OSL_INLINE bool valid() const { return m_ptr != nullptr; }
 
 protected:
    
-   // TODO: see if impl can be shared with MaskedData   
-   template<typename DataT>
-   OSL_INLINE bool 
-   is_array_unbounded_selector(std::false_type) {
-	   return (m_type.arraylen == std::extent<DataT>::value) && 
-			   WideTraits<DataT>::matches(m_type);
-   }
+   // C++11 doesn't support auto return types, so we must use
+   // template specialization to determine the return type of the
+   // Ref accessor.  Once C++14 is baseline requirement, we could
+   // simplify this a little bit
+	template <typename DataT, bool IsArrayT, bool IsArrayUnboundedT>
+	struct RefFactory; // undefined
+   
+	template <typename DataT>
+	struct RefFactory<DataT, false, true>
+	{
+		typedef RefProxy<DataT> value_type;
 
-   template<typename DataT>
-   OSL_INLINE bool 
-   is_array_unbounded_selector(std::true_type) {
-	   return (m_type.arraylen != 0) 
-			  && WideTraits<DataT>::matches(m_type);
-   }
-   
-   
-   template<typename DataT>
-   OSL_INLINE bool 
-   is_array_selector(std::false_type) {
-	   return (m_type.arraylen == 0) && 
-			   WideTraits<DataT>::matches(m_type);
-   }
+		static OSL_INLINE bool
+		matches(DataRef &dr)
+		{
+		  return ((dr.m_type.arraylen == 0) &&
+				   WideTraits<DataT>::matches(dr.m_type));
+		}
 
-   template<typename DataT>
-   OSL_INLINE bool 
-   is_array_selector(std::true_type) {
-	   typedef typename std::remove_all_extents<DataT>::type ElementType;
-	   return is_array_unbounded_selector<ElementType>(std::integral_constant<bool, (std::extent<DataT>::value == 0)>());
-   }   
-   
-   
-   template<typename DataT, int DerivIndexT>
-   OSL_INLINE RefProxy<DataT>
-   ref_impl(std::false_type /* is array */) 
-   { 
-	   DASSERT(is<DataT>());	   
-	   return RefProxy<DataT>(reinterpret_cast<DataT *>(m_ptr)[DerivIndexT]);
-   }
+		template<int DerivIndexT>
+		static OSL_INLINE value_type
+		build(DataRef &dr)
+		{
+		  DASSERT(matches(dr));
+		  return value_type(reinterpret_cast<DataT *>(dr.m_ptr)[DerivIndexT]);
+		}
+	};
 
-   template<typename DataT, int DerivIndexT>
-   OSL_INLINE RefArrayProxy<typename std::remove_all_extents<DataT>::type, std::extent<DataT>::value> 
-   ref_array_impl(std::false_type /* is array unbounded*/) 
-   { 
-	   DASSERT(is<DataT>());	   
-	   // NOTE: DataT is a fixed size array, so the array length is baked into it, 
-	   // thus the DerivIndex will step over the whole array, no need to multiply it
-	   return RefArrayProxy<typename std::remove_all_extents<DataT>::type, std::extent<DataT>::value>(reinterpret_cast<DataT *>(m_ptr)[DerivIndexT]);
-   }
+	template <typename DataT>
+	struct RefFactory<DataT, true /* IsArrayT */, false /* IsArrayUnboundedT */>
+	{
+		typedef typename std::remove_all_extents<DataT>::type ElementType;
+		typedef RefArrayProxy<ElementType, std::extent<DataT>::value> value_type;
 
-   template<typename DataT, int DerivIndexT>
-   OSL_INLINE RefUnboundedArrayProxy<typename std::remove_all_extents<DataT>::type> 
-   ref_array_impl(std::true_type /* is array unbounded*/) 
-   { 
-	   DASSERT(is<DataT>());
-	   typedef typename std::remove_all_extents<DataT>::type ElementType;
-	   return RefUnboundedArrayProxy<ElementType>(&(reinterpret_cast<ElementType *>(m_ptr)[DerivIndexT*m_type.arraylen]), m_type.arraylen);
-   }
-   
-   template<typename DataT, int DerivIndexT>
-   OSL_INLINE decltype(std::declval<DataRef>().ref_array_impl<DataT, DerivIndexT>(std::integral_constant<bool, (std::extent<DataT>::value == 0)>()))  
-   ref_impl(std::true_type/* is array */) 
-   { 
-	   DASSERT(is<DataT>());
-	   return ref_array_impl<DataT, DerivIndexT>(std::integral_constant<bool, (std::extent<DataT>::value == 0)>());
-   }
-   
+
+		static OSL_INLINE bool
+		matches(DataRef &dr)
+		{
+			return (dr.m_type.arraylen == std::extent<DataT>::value) &&
+				   WideTraits<ElementType>::matches(dr.m_type);
+		}
+
+		template<int DerivIndexT>
+		static OSL_INLINE value_type
+		build(DataRef &dr)
+		{
+		  DASSERT(matches(dr));
+		  return value_type(reinterpret_cast<DataT *>(dr.m_ptr)[DerivIndexT]);
+		}
+	};
+
+	template <typename DataT>
+	struct RefFactory<DataT, true/* IsArrayT */, true /* IsArrayUnboundedT */>
+	{
+		typedef typename std::remove_all_extents<DataT>::type ElementType;
+		typedef RefUnboundedArrayProxy<ElementType> value_type;
+
+		static OSL_INLINE bool
+		matches(DataRef &dr)
+		{
+			return (dr.m_type.arraylen != 0)
+						  && WideTraits<ElementType>::matches(dr.m_type);
+		}
+
+		template<int DerivIndexT>
+		static OSL_INLINE value_type
+		build(DataRef &dr)
+		{
+		  DASSERT(matches(dr));
+		  return value_type(&(reinterpret_cast<ElementType *>(dr.m_ptr)[DerivIndexT*dr.m_type.arraylen]), dr.m_type.arraylen);
+		}
+	};
+
+
+	template<typename DataT>
+	using Factory = RefFactory<DataT, std::is_array<DataT>::value, (std::extent<DataT>::value == 0)>;
+
 public:
-   template<typename DataT>
-   OSL_INLINE bool 
-   is() {
-	   return is_array_selector<DataT>(std::is_array<DataT>::type());
-   }
-   
-   template<typename DataT>
-   OSL_INLINE decltype(std::declval<DataRef>().ref_impl<DataT, 0>(typename std::is_array<DataT>::type()))
-   ref() 
-   { 
-	   return ref_impl<DataT, 0>(typename std::is_array<DataT>::type());
-   }
+	template<typename DataT>
+	OSL_INLINE bool
+	is() {
+		return Factory<DataT>::matches(*this);
+	}
 
-   
-   template<typename DataT>
-   OSL_INLINE decltype(std::declval<DataRef>().ref_impl<DataT, 1>(typename std::is_array<DataT>::type()))
-   refDx() 
-   {
-	   DASSERT(has_derivs());
-	   return ref_impl<DataT, 1>(typename std::is_array<DataT>::type());
-   }
+	template<typename DataT>
+	OSL_INLINE typename Factory<DataT>::value_type
+	ref()
+	{
+		return Factory<DataT>::template build<0 /*DerivIndexT*/>(*this);
+	}
 
-   template<typename DataT>
-   OSL_INLINE decltype(std::declval<DataRef>().ref_impl<DataT, 2>(typename std::is_array<DataT>::type()))
-   refDy() 
-   { 
-	   DASSERT(has_derivs());
-	   return ref_impl<DataT, 2>(typename std::is_array<DataT>::type());
-   }
-   
-   template<typename DataT>
-   OSL_INLINE decltype(std::declval<DataRef>().ref_impl<DataT, 3>(typename std::is_array<DataT>::type()))
-   refDz() 
-   { 
-	   DASSERT(has_derivs());
-	   return ref_impl<DataT, 3>(typename std::is_array<DataT>::type());
-   }   
+
+	template<typename DataT>
+	OSL_INLINE typename Factory<DataT>::value_type
+	refDx()
+	{
+		DASSERT(has_derivs());
+		return Factory<DataT>::template build<1 /*DerivIndexT*/>(*this);
+	}
+
+	template<typename DataT>
+	OSL_INLINE typename Factory<DataT>::value_type
+	refDy()
+	{
+		DASSERT(has_derivs());
+		return Factory<DataT>::template build<2 /*DerivIndexT*/>(*this);
+	}
+
+	template<typename DataT>
+	OSL_INLINE typename Factory<DataT>::value_type
+	refDz()
+	{
+		DASSERT(has_derivs());
+		return Factory<DataT>::template build<3 /*DerivIndexT*/>(*this);
+	}
 };
 
 class BatchedTextureOptionProvider

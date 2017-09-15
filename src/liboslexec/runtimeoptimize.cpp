@@ -1788,7 +1788,7 @@ RuntimeOptimizer::mark_outgoing_connections ()
     	// vectorization report "-qopt-report=5 -qopt-report-phase=vec"
     	// where autovectorizes fails (which is fine) but reports 
     	// an error (which is not).
-    	OSL_INTEL_PRAGMA("novector")    	
+    	OSL_INTEL_PRAGMA(novector)
         for (auto&& c : group()[lay]->m_connections)
             if (c.srclayer == layer()) {
                 inst()->symbol(c.src.param)->connected_down (true);

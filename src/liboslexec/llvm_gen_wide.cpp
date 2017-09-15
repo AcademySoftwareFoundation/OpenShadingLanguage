@@ -508,7 +508,7 @@ LLVMGEN (llvm_gen_printf)
                         }
                     } else {
                         ASSERT(false == op_is_uniform);
-                        delay_extraction_args.push_back(DelayedExtraction{call_args[0].size(), simpletype.basetype == TypeDesc::FLOAT, loaded});
+                        delay_extraction_args.push_back(DelayedExtraction{static_cast<int>(call_args[0].size()), simpletype.basetype == TypeDesc::FLOAT, loaded});
                         // Need to populate all lane's call arguments with a place holder
                         // that we can fill in later once we test the lane
                         for(int lane_index=0; lane_index < SimdLaneCount; ++lane_index) {
@@ -583,7 +583,7 @@ LLVMGEN (llvm_gen_printf)
                 call_args[lane_index][de.argument_slot] = scalar_val;
 
             }
-            llvm::Value *ret = rop.ll.call_function (opname.c_str(), &call_args[lane_index][0],
+            rop.ll.call_function (opname.c_str(), &call_args[lane_index][0],
                                                        (int)call_args[lane_index].size());
 
             if (after_block) {
@@ -2299,18 +2299,20 @@ LLVMGEN (llvm_gen_compare_op)
         // Trickery for mixed matrix/scalar comparisons -- compare
         // on-diagonal to the scalar, off-diagonal to zero
         if (A.typespec().is_matrix() && !B.typespec().is_matrix()) {
-            if ((i/4) != (i%4))
+            if ((i/4) != (i%4)) {
                 if (op_is_uniform)
                     b = rop.ll.constant (0.0f);
                 else
                     b = rop.ll.wide_constant (0.0f);
+            }
         }
         if (! A.typespec().is_matrix() && B.typespec().is_matrix()) {
-            if ((i/4) != (i%4))
+            if ((i/4) != (i%4)) {
                 if (op_is_uniform)
                     a = rop.ll.constant (0.0f);
                 else
                     a = rop.ll.wide_constant (0.0f);
+			}
         }
 
         // Perform the op

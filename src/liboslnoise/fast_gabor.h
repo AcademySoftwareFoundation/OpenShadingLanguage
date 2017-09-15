@@ -62,7 +62,7 @@ namespace fast {
 		{}
 
 		inline Matrix33 (const Imath::Matrix33<float> &a)
-		: parent(x)
+		: parent(a)
 		{}
 
 
@@ -407,11 +407,11 @@ namespace fast {
 		Dual2<Vec3> x_c = x_g - floor_x_g;
 		Dual2<float> sum = 0;
 
-OSL_INTEL_PRAGMA("nounroll_and_jam")
+OSL_INTEL_PRAGMA(nounroll_and_jam)
 		for (int k = -1; k <= 1; k++) {
-OSL_INTEL_PRAGMA("nounroll_and_jam")
+OSL_INTEL_PRAGMA(nounroll_and_jam)
 			for (int j = -1; j <= 1; j++) {
-OSL_INTEL_PRAGMA("nounroll_and_jam")
+OSL_INTEL_PRAGMA(nounroll_and_jam)
 				for (int i = -1; i <= 1; i++) {
 					Vec3 c (i,j,k);
 					Vec3 c_i = floor_x_g + c;
@@ -436,7 +436,7 @@ OSL_INTEL_PRAGMA("nounroll_and_jam")
 
 
 template<int AnisotropicT, typename FilterPolicyT, int WidthT>
-__attribute__((noinline)) void
+OSL_NOINLINE  void
 fast_gabor (
 		ConstWideAccessor<Dual2<Vec3>,WidthT> wP,
 		WideAccessor<Dual2<float>,WidthT> wResult,
@@ -444,7 +444,7 @@ fast_gabor (
 {
     DASSERT (opt);
 
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 
     	fast::GaborUniformParams gup(*opt);
@@ -452,7 +452,7 @@ fast_gabor (
     	// Complicated code caused compilation issues with icc17u2
     	// but verified fixed in icc17u4
 #if __INTEL_COMPILER >= 1700 && __INTEL_COMPILER_UPDATE >= 4
-		OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
+    	OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 #endif
 		for(int i=0; i< WidthT; ++i) {
 
@@ -477,7 +477,7 @@ fast_gabor (
 }
 
 template<int AnisotropicT, typename FilterPolicyT, int WidthT>
-__attribute__((noinline)) void
+OSL_NOINLINE  void
 fast_gabor3 (
 		ConstWideAccessor<Dual2<Vec3>, WidthT> wP,
 		WideAccessor<Dual2<Vec3>,WidthT> wResult,
@@ -485,7 +485,7 @@ fast_gabor3 (
 {
     DASSERT (opt);
 
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 
     	fast::GaborUniformParams gup(*opt);
@@ -493,7 +493,7 @@ fast_gabor3 (
     	// Complicated code caused compilation issues with icc17u2
     	// but verified fixed in icc17u4
 #if __INTEL_COMPILER >= 1700 && __INTEL_COMPILER_UPDATE >= 4
-		OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
+    	OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 #endif
 		for(int i=0; i< WidthT; ++i) {
 

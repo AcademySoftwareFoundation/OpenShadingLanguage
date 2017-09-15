@@ -55,20 +55,20 @@ namespace pvt {
 OSL_SHADEOP void
 osl_pow_w16fw16fw16f (void *r_, void *base_, void *exponent_)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
-		const Wide<float> &wbase = WFLOAT(base_);
-		const Wide<float> &wexponent = WFLOAT(exponent_);
-		Wide<float> &wr = WFLOAT(r_);
+		ConstWideAccessor<float> wbase(base_);
+		ConstWideAccessor<float> wexponent(exponent_);
+		WideAccessor<float> wr(r_);
 	
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")				
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
-			float base = wbase.get(lane);
-			float exponent = wexponent.get(lane);
+			float base = wbase[lane];
+			float exponent = wexponent[lane];
 			// TODO: perhaps a custom pow implementation to take
 			// advantage of the exponent being the same?
 			float r = powf(base,exponent);
-			wr.set(lane, r);
+			wr[lane] = r;
 		}
 	}	
 }
@@ -76,22 +76,22 @@ osl_pow_w16fw16fw16f (void *r_, void *base_, void *exponent_)
 OSL_SHADEOP void
 osl_pow_w16fw16fw16f_masked (void *r_, void *base_, void *exponent_, int mask_)
 {
-    OSL_INTEL_PRAGMA("forceinline recursive")
+    OSL_INTEL_PRAGMA(forceinline recursive)
     {
-        const Wide<float> &wbase = WFLOAT(base_);
-        const Wide<float> &wexponent = WFLOAT(exponent_);
+		ConstWideAccessor<float> wbase(base_);
+		ConstWideAccessor<float> wexponent(exponent_);
         const Mask mask(mask_);
-        Wide<float> &wr = WFLOAT(r_);
+        WideAccessor<float> wr(r_);
 
-        OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+        OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
         for(int lane=0; lane < wr.width; ++lane) {
             if (mask[lane]) {
-                float base = wbase.get(lane);
-                float exponent = wexponent.get(lane);
+                float base = wbase[lane];
+                float exponent = wexponent[lane];
                 // TODO: perhaps a custom pow implementation to take
                 // advantage of the exponent being the same?
                 float r = powf(base,exponent);
-                wr.set(lane, r);
+                wr[lane] = r;
             }
         }
     }
@@ -101,16 +101,16 @@ OSL_SHADEOP void
 osl_pow_w16vw16vw16f (void *r_, void *base_, void *exponent_)
 {
 	//std::cout << "Made it to osl_pow_w16vw16vw16f" << std::endl;
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
-		const Wide<Vec3> &wbase = WVEC(base_);
-		const Wide<float> &wexponent = WFLOAT(exponent_);
-		Wide<Vec3> &wr = WVEC(r_);
-	
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")				
+		ConstWideAccessor<Vec3> wbase(base_);
+		ConstWideAccessor<float> wexponent(exponent_);
+		WideAccessor<Vec3> wr(r_);
+
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
-			Vec3 base = wbase.get(lane);
-			float exponent = wexponent.get(lane);
+			Vec3 base = wbase[lane];
+			float exponent = wexponent[lane];
 			//std::cout << "lane[" << lane << "] base = " << base << " exp=" << exponent << std::endl;
 			Vec3 r;
 			// TODO: perhaps a custom pow implementation to take
@@ -118,7 +118,7 @@ osl_pow_w16vw16vw16f (void *r_, void *base_, void *exponent_)
 			r.x = powf(base.x,exponent);
 			r.y = powf(base.y,exponent);
 			r.z = powf(base.z,exponent);
-			wr.set(lane, r);
+			wr[lane] = r;
 		}
 	}	
 }
@@ -137,12 +137,12 @@ inline Vec3 calculatenormal(const Dual2<Vec3> &tmpP, bool flipHandedness)
 OSL_SHADEOP void
 osl_length_w16fw16v(void *r_, void *V_)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<Vec3> wV(V_);
 		WideAccessor<float> wr(r_);
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 			Vec3 V = wV[lane];
 		    float r = simdFriendlyLength(V);
@@ -154,12 +154,12 @@ osl_length_w16fw16v(void *r_, void *V_)
 OSL_SHADEOP void
 osl_length_w16fw16v_masked(void *r_, void *V_, int mask_value)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<Vec3> wV(V_);
 		MaskedAccessor<float> wr(r_, Mask(mask_value));
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 			Vec3 V = wV[lane];
 		    float r = simdFriendlyLength(V);
@@ -172,20 +172,20 @@ osl_length_w16fw16v_masked(void *r_, void *V_, int mask_value)
 OSL_SHADEOP void
 osl_area_w16(void *r_, void *DP_)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
-		const Wide<Dual2<Vec3>> &wDP = WDVEC(DP_);
+		ConstWideAccessor<Dual2<Vec3>> wDP(DP_);
 	    
-		Wide<float> &wr = WFLOAT(r_);
+		WideAccessor<float> wr(r_);
 	
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")		
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
-			Dual2<Vec3> DP = wDP.get(lane);
+			Dual2<Vec3> DP = wDP[lane];
 			
 		    Vec3 N = calculatenormal(DP, false);
 		    //float r = N.length();
 		    float r = simdFriendlyLength(N);
-			wr.set(lane, r);
+			wr[lane] = r;
 		}
 	}	
 }
@@ -193,15 +193,15 @@ osl_area_w16(void *r_, void *DP_)
 OSL_SHADEOP void
 osl_area_w16_masked(void *r_, void *DP_, unsigned int mask_value)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
-		const Wide<Dual2<Vec3>> &wDP = WDVEC(DP_);
+		ConstWideAccessor<Dual2<Vec3>> wDP(DP_);
 	    
 		MaskedAccessor<float> wr(r_, Mask(mask_value));
 	
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")		
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
-			Dual2<Vec3> DP = wDP.get(lane);
+			Dual2<Vec3> DP = wDP[lane];
 			
 		    Vec3 N = calculatenormal(DP, false);
 		    //float r = N.length();
@@ -214,12 +214,12 @@ osl_area_w16_masked(void *r_, void *DP_, unsigned int mask_value)
 OSL_SHADEOP void
 osl_normalize_w16vw16v(void *r_, void *V_)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<Vec3> wV(V_);
 		WideAccessor<Vec3> wr(r_);
 	
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")		
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 			Vec3 V = wV[lane];
 		    Vec3 N = simdFriendlyNormalize(V);
@@ -231,12 +231,12 @@ osl_normalize_w16vw16v(void *r_, void *V_)
 OSL_SHADEOP void
 osl_normalize_w16vw16v_masked(void *r_, void *V_, int mask_value)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<Vec3> wV(V_);
 		MaskedAccessor<Vec3> wr(r_, Mask(mask_value));
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 			Vec3 V = wV[lane];
 		    Vec3 N = simdFriendlyNormalize(V);
@@ -248,12 +248,12 @@ osl_normalize_w16vw16v_masked(void *r_, void *V_, int mask_value)
 OSL_SHADEOP void
 osl_normalize_w16dvw16dv(void *r_, void *V_)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<Dual2<Vec3>> wV(V_);
 		WideAccessor<Dual2<Vec3>> wr(r_);
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 			Dual2<Vec3> V = wV[lane];
 		    Dual2<Vec3> N = simdFriendlyNormalize(V);
@@ -268,13 +268,13 @@ osl_normalize_w16dvw16dv(void *r_, void *V_)
 OSL_SHADEOP void
 osl_cross_w16vw16vw16v (void *result_, void *a_, void *b_)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<Vec3> wA(a_);
 		ConstWideAccessor<Vec3> wB(b_);
 		WideAccessor<Vec3> wr(result_);
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 			Vec3 a = wA[lane];
 			Vec3 b = wB[lane];
@@ -288,13 +288,13 @@ osl_cross_w16vw16vw16v (void *result_, void *a_, void *b_)
 OSL_SHADEOP void
 osl_cross_w16vw16vw16v_masked (void *result_, void *a_, void *b_, int mask_value)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<Vec3> wA(a_);
 		ConstWideAccessor<Vec3> wB(b_);
 		MaskedAccessor<Vec3> wr(result_, Mask(mask_value));
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 			Vec3 a = wA[lane];
 			Vec3 b = wB[lane];
@@ -308,13 +308,13 @@ osl_cross_w16vw16vw16v_masked (void *result_, void *a_, void *b_, int mask_value
 OSL_SHADEOP void
 osl_cross_w16dvw16dvw16dv (void *result_, void *a_, void *b_)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<Dual2<Vec3>> wA(a_);
 		ConstWideAccessor<Dual2<Vec3>> wB(b_);
 		WideAccessor<Dual2<Vec3>> wr(result_);
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 			Dual2<Vec3> a = wA[lane];
 			Dual2<Vec3> b = wB[lane];
@@ -329,13 +329,13 @@ osl_cross_w16dvw16dvw16dv (void *result_, void *a_, void *b_)
 OSL_SHADEOP void
 osl_dot_w16fw16vw16v (void *result_, void *a_, void *b_)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<Vec3> wA(a_);
 		ConstWideAccessor<Vec3> wB(b_);
 		WideAccessor<float> wr(result_);
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 			Vec3 a = wA[lane];
 			Vec3 b = wB[lane];
@@ -349,13 +349,13 @@ osl_dot_w16fw16vw16v (void *result_, void *a_, void *b_)
 OSL_SHADEOP void
 osl_dot_w16dfw16dvw16dv (void *result_, void *a_, void *b_)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<Dual2<Vec3>> wA(a_);
 		ConstWideAccessor<Dual2<Vec3>> wB(b_);
 		WideAccessor<Dual2<float>> wr(result_);
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 			Dual2<Vec3> a = wA[lane];
 			Dual2<Vec3> b = wB[lane];
@@ -373,12 +373,12 @@ osl_acos_w16fw16f (void *result_, void *value_)
 #ifndef OSL_FAST_MATH
 	#error INCOMPLETE safe version incomplete
 #endif
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<float> wV(value_);
 		WideAccessor<float> wr(result_);
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 			float V = wV[lane];
 
@@ -394,16 +394,25 @@ osl_acos_w16dfw16df (void *result_, void *a_)
 #ifndef OSL_FAST_MATH
 	#error INCOMPLETE safe version incomplete
 #endif
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<Dual2<float>> wA(a_);
 		WideAccessor<Dual2<float>> wr(result_);
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 			Dual2<float> a = wA[lane];
 
+#ifdef __clang__
+			// acos is not vectorizing through clang
+			// https://llvm.org/docs/Vectorizers.html
+			// acos is not a supported function call
+			// so try different implementation
+			float arccosa = OIIO::fast_acos(a.val());
+#else
 			float arccosa = acos(a.val());
+#endif
+
 			float denom   = fabsf(a.val()) < 1.0f ? -1.0f / sqrtf(1.0f - a.val() * a.val()) : 0.0f;
 			Dual2<float> r(arccosa, denom * a.dx(), denom * a.dy());
 
@@ -419,13 +428,13 @@ inline float filter_width(float dx, float dy)
 
 OSL_SHADEOP void osl_filterwidth_w16fw16df(void *result_, void *x_)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<Dual2<float>> wX(x_);
 
 		WideAccessor<float> wr(result_);
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 		    Dual2<float> x = wX[lane];
 		    wr[lane] = filter_width(x.dx(), x.dy());
@@ -435,13 +444,13 @@ OSL_SHADEOP void osl_filterwidth_w16fw16df(void *result_, void *x_)
 
 OSL_SHADEOP void osl_filterwidth_w16vw16dv(void *out, void *x_)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<Dual2<Vec3>> wX(x_);
 
 		WideAccessor<Vec3> wr(out);
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 		    Dual2<Vec3> x = wX[lane];
 		    Vec3 r;
@@ -457,13 +466,13 @@ OSL_SHADEOP void osl_filterwidth_w16vw16dv(void *out, void *x_)
 OSL_SHADEOP void osl_calculatenormal_batched(void *out, void *sgb_, void *P_)
 {
 	ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		ConstWideAccessor<Dual2<Vec3>> wP(P_);
 		ConstWideAccessor<int> wFlipHandedness(sgb->varyingData().flipHandedness);
 		WideAccessor<Vec3> wr(out);
 
-		OSL_INTEL_PRAGMA("omp simd simdlen(wr.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 		    Dual2<Vec3> P = wP[lane];
 		    Vec3 N = calculatenormal(P, wFlipHandedness[lane]);

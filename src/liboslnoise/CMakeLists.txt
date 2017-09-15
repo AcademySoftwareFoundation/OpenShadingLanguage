@@ -15,6 +15,7 @@ SET ( liboslnoise_srcs
 	fast_simplexnoise3_16_float.cpp
 	fast_simplexnoise3_16_vec3.cpp
 	fast_simplexnoise4_16_vec3.cpp
+    fast_usimplexnoise1_16_vec3.cpp
 	fast_usimplexnoise3_16_float.cpp
 	fast_usimplexnoise3_16_vec3.cpp
 	fast_usimplexnoise4_16_vec3.cpp

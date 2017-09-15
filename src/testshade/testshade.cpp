@@ -456,7 +456,7 @@ set_profile (int argc, const char *argv[])
 }
 
 // HACK ALERT, added next line for debuggin, remove it
-static bool ignore_batched = false;
+//static bool ignore_batched = false;
 
 static void
 getargs (int argc, const char *argv[])
@@ -810,11 +810,11 @@ setup_varying_shaderglobals (ShaderGlobalsBatch & sgb, ShadingSystem *shadingsys
  
 // Had weird behavior if a ShaderGlobals and ShaderGlobalsBatch existed in the
 // same function stack, so broke them out into separate non-inlined helpers
-static __attribute__((noinline)) void
+static OSL_NOINLINE  void
 setup_output_images (ShadingSystem *shadingsys,
 					 ShaderGroupRef &shadergroup);
 
-static __attribute__((noinline)) void
+static OSL_NOINLINE  void
 setup_output_images_batched (ShadingSystem *shadingsys,
                      ShaderGroupRef &shadergroup);
 
@@ -1275,7 +1275,7 @@ test_group_attributes (ShaderGroup *group)
 
 
 
-void __attribute__((noinline))
+void OSL_NOINLINE
 shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save);
 
 void
@@ -1357,7 +1357,7 @@ shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
 }
 
 
-void __attribute((noinline))
+void OSL_NOINLINE
 batched_shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save);
 
 void

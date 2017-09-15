@@ -125,29 +125,33 @@ float simplexnoise4 (float x, float y, float z, float w, int seed=0,
 
 
 template<int WidthT>
-__attribute__((noinline)) void
+OSL_NOINLINE  void
 fast_simplexnoise3(WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp);
 
 template<int WidthT>
-__attribute__((noinline)) void
+OSL_NOINLINE  void
 fast_simplexnoise3(WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp);
 
 template<int WidthT>
-__attribute__((noinline)) void
+OSL_NOINLINE  void
 fast_simplexnoise4(WideAccessor<Vec3, WidthT> wresult,
                         ConstWideAccessor<Vec3, WidthT> wp,
                         ConstWideAccessor<float,WidthT> wt);
 
 template<int WidthT>
-__attribute__((noinline)) void
+OSL_NOINLINE  void
+fast_usimplexnoise1(WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<float, WidthT> wx);
+
+template<int WidthT>
+OSL_NOINLINE  void
 fast_usimplexnoise3(WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp);
 
 template<int WidthT>
-__attribute__((noinline)) void
+OSL_NOINLINE  void
 fast_usimplexnoise3(WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT>  wp);
 
 template<int WidthT>
-__attribute__((noinline)) void
+OSL_NOINLINE  void
 fast_usimplexnoise4 (WideAccessor<Vec3, WidthT> wresult,
 						ConstWideAccessor<Vec3, WidthT> wp,
 						ConstWideAccessor<float,WidthT> wt);
@@ -305,9 +309,9 @@ struct CellNoise {
 
 	template<int WidthT>
 	inline void operator() (WideAccessor<float, WidthT> wresult, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				const float x = wx[i];
 				float result;
@@ -335,9 +339,9 @@ struct CellNoise {
     
 	template<int WidthT>
 	inline void operator() (WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")										
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				const Vec3 p = wp[i];
 				float result;
@@ -364,9 +368,9 @@ struct CellNoise {
     
 	template<int WidthT>
 	inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<float,WidthT> wx) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				const float x = wx[i];
 				Vec3 result;
@@ -394,9 +398,9 @@ struct CellNoise {
     
 	template<int WidthT>
 	inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				const Vec3 p = wp[i];
 				Vec3 result;
@@ -420,9 +424,9 @@ struct CellNoise {
     inline void operator() (WideAccessor<Vec3, WidthT> wresult,
     					    ConstWideAccessor<Vec3, WidthT> wp,
 							ConstWideAccessor<float,WidthT> wt) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				const Vec3 p = wp[i];
 				const float t = wt[i];
@@ -2141,9 +2145,9 @@ struct Noise {
     
 	template<int WidthT>
 	inline void operator() (WideAccessor<float, WidthT> result, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				float x = wx[i];
 				float perlinResult;
@@ -2168,9 +2172,9 @@ struct Noise {
 
 	template<int WidthT>
 	inline void operator() (WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp[i];
 				float perlinResult;
@@ -2196,9 +2200,9 @@ struct Noise {
     
 	template<int WidthT>
 	inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				float x = wx[i];
 				Vec3 perlinResult;
@@ -2225,9 +2229,9 @@ struct Noise {
 
 	template<int WidthT>
 	inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp[i];
 				Vec3 perlinResult;
@@ -2251,9 +2255,9 @@ struct Noise {
     inline void operator() (WideAccessor<Vec3, WidthT> wresult,
 		                    ConstWideAccessor<Vec3, WidthT> wp,
 			                ConstWideAccessor<float,WidthT> wt) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp[i];
 				float t = wt[i];
@@ -2339,9 +2343,9 @@ struct SNoise {
 
     template<int WidthT>
 	inline void operator() (WideAccessor<float, WidthT> result, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				float x = wx[i];
 				float perlinResult;
@@ -2363,9 +2367,9 @@ struct SNoise {
     
     template<int WidthT>
 	inline void operator() (WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp[i];
 				float perlinResult;
@@ -2388,9 +2392,9 @@ struct SNoise {
 
     template<int WidthT>
 	inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				float x = wx[i];
 				Vec3 perlinResult;
@@ -2414,9 +2418,9 @@ struct SNoise {
 
     template<int WidthT>
 	inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp[i];
 				Vec3 perlinResult;
@@ -2436,9 +2440,9 @@ struct SNoise {
 	inline void operator() (WideAccessor<Vec3, WidthT> wresult,
                             ConstWideAccessor<Vec3, WidthT> wp,
                             ConstWideAccessor<float,WidthT> wt) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp[i];
 				float t = wt[i];
@@ -2790,10 +2794,10 @@ struct SimplexNoise {
     
     template<int WidthT>
     inline void operator() (WideAccessor<float, WidthT> wresult, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
 #ifndef OSL_VERIFY_SIMPLEX3  			
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 #endif
 			for(int i=0; i< WidthT; ++i) {
 				float x = wx[i];
@@ -2832,9 +2836,9 @@ struct SimplexNoise {
 
     template<int WidthT>
     inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				float x = wx[i];
 				//float result = simplexnoise3 (p.x, p.y, p.z);
@@ -2956,10 +2960,10 @@ struct USimplexNoise {
 
     template<int WidthT>
     inline void operator() (WideAccessor<float, WidthT> wresult, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
 #ifndef OSL_VERIFY_SIMPLEX3  
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 #endif
 			for(int i=0; i< WidthT; ++i) {
 				float x = wx[i];
@@ -2996,18 +3000,7 @@ struct USimplexNoise {
     
     template<int WidthT>
     inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
-		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
-			for(int i=0; i< WidthT; ++i) {
-				float x = wx[i];
-				
-				Vec3 result;
-				this->operator()(result,x);
-		        
-		        wresult[i] = result;
-			}
-		}
+		fast_usimplexnoise1 (wresult, wx);
     }    
 
     inline void operator() (Vec3 &result, float x, float y) const {

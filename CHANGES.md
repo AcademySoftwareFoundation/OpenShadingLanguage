@@ -4,15 +4,15 @@ Release 1.9 -- ?? 2017 (compared to 1.8)
 Dependency and standards changes:
 * **C++11 required**: OSL 1.9 requires a minimum standard of C++11. It
   should also build against C++14 and C++17.
-* **LLVM 3.9 / 4.0**: Support for LLVM 3.4 has already been removed, and
-  support for LLVM 3.5 will be removed as soon as we address some
-  performance issues with the JIT in 3.9+.
+* **LLVM 3.9 / 4.0 / 5.0**: Support has been added for LLVM 3.9, 4.0, and
+  5.0. Support has been removed for for LLVM 3.4. We expect to remove
+  support for LLVM 3.5 shortly.
 * **OpenImageIO 1.7+**: This release of OSL should build properly against
   OIIO 1.7 or newer. You may find that 1.6 is still ok, but we are not doing
   any work to ensure that.
 * **CMake >= 3.2.2**
 * **Boost >= 1.55**
-* **OpenEXR >= 2.0** (recommended: 2.2)
+* **OpenEXR/IlmBase >= 2.0** (recommended: 2.2)
 
 Language features:
 * New preprocessor symbols: OSL_VERSION_MAJOR, OSL_VERSION_MINOR,
@@ -90,6 +90,7 @@ Performance improvements:
   to find them within the executable. #732 (1.9.0)
 * The runtime cost of range checking array accesses has been reduced by
   about 50%. #739 (1.9.0)
+* Runtime optimization: Constant folding of `%` operation. #787 (1.9.1)
 
 Bug fixes and other improvements (internals):
 * Avoid division by 0 when computing derivatives in pointcloud_search.
@@ -187,6 +188,10 @@ Build & test system improvements and developer goodies:
 * Fix ilmbase linker warning with LINKSTATIC on Windows. #768 (1.9.0)
 * Fix osl_range_check not found error when USE_LLVM_BITCODE=OFF. #767 (1.9.0)
 * Windows fixes where BUILDSTATIC incorrectly set /MT flag. #769 (1.9.0)
+* Some preliminary work to make OSL safe to compile with C++17. (1.9.1)
+* C++11 modernization: use range-for loops in many places. #785 (1.9.1)
+* Make OSL build with clang 5.0 and against LLVM 5.0. #787 (1.9.1)
+* Removed support for building against LLVM 3.4. #792 (1.9.1)
 
 Documentation:
 * Fixed unclear explanation about structures with nested arrays. (1.9.0)

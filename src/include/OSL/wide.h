@@ -200,6 +200,18 @@ public:
     {
         m_value = 0;
     }
+
+    OSL_INLINE bool
+    operator == (const WideMask &other) const
+    {
+        return m_value == other.m_value;
+    }
+
+    OSL_INLINE bool
+    operator != (const WideMask &other) const
+    {
+        return m_value != other.m_value;
+    }
     
     OSL_INLINE WideMask & 
     operator &=(const WideMask &other)
@@ -1189,6 +1201,7 @@ struct WideAccessor
 	friend struct ConstWideAccessor;
 
 	static constexpr int width = WidthT; 
+	typedef DataT value_type;
 	
 	explicit OSL_INLINE
 	WideAccessor(void *ptr_wide_data, int derivIndex=0)
@@ -1211,6 +1224,8 @@ struct WideAccessor
 	{}	
 	
 	
+	OSL_INLINE Wide<DataT, WidthT> &  data() const { return m_ref_wide_data; }
+
 	typedef LaneProxy<DataT, WidthT> Proxy;
 	typedef ConstLaneProxy<DataT, WidthT> ConstProxy;
 	
@@ -1235,6 +1250,7 @@ template <typename DataT, int WidthT = SimdLaneCount>
 struct ConstWideAccessor
 {
 	static constexpr int width = WidthT; 
+	typedef DataT value_type;
 	
 	explicit OSL_INLINE
 	ConstWideAccessor(const void *ptr_wide_data, int derivIndex=0)
@@ -1265,6 +1281,8 @@ struct ConstWideAccessor
 	
 	typedef ConstLaneProxy<DataT, WidthT> ConstProxy;
 	
+    OSL_INLINE const Wide<DataT, WidthT> &  data() const { return m_ref_wide_data; }
+
 	OSL_INLINE ConstProxy const 
 	operator[](int index) const
 	{
@@ -1275,6 +1293,68 @@ private:
 	const Wide<DataT, WidthT> & m_ref_wide_data;
 };
 
+
+template <typename DataT>
+struct ConstUniformProxy
+{
+	explicit OSL_INLINE
+	ConstUniformProxy(const DataT & ref_uniform_data)
+	: m_ref_uniform_data(ref_uniform_data)
+	{}
+
+	// Must provide user defined copy constructor to
+	// get compiler to be able to follow individual
+	// data members through back to original object
+	// when fully inlined the proxy should disappear
+	OSL_INLINE
+	ConstUniformProxy(const ConstUniformProxy &other)
+	: m_ref_uniform_data(other.m_ref_uniform_data)
+	{}
+
+	OSL_INLINE
+	operator const DataT & () const
+	{
+		return m_ref_uniform_data;
+	}
+
+private:
+	const DataT & m_ref_uniform_data;
+};
+
+template <typename DataT, int WidthT = SimdLaneCount>
+struct ConstUniformAccessor
+{
+	static constexpr int width = WidthT;
+	typedef DataT value_type;
+
+	explicit OSL_INLINE
+	ConstUniformAccessor(const void *ptr_uniform_data, int derivIndex=0)
+	: m_ref_uniform_data(reinterpret_cast<const DataT *>(ptr_uniform_data)[derivIndex])
+	{}
+
+	// Must provide user defined copy constructor to
+	// get compiler to be able to follow individual
+	// data members through back to original object
+	// when fully inlined the proxy should disappear
+	OSL_INLINE
+	ConstUniformAccessor(const ConstUniformAccessor &other)
+	: m_ref_uniform_data(other.m_ref_uniform_data)
+	{}
+
+	OSL_INLINE const DataT & data() const { return m_ref_uniform_data; }
+
+
+	typedef ConstUniformProxy<DataT> ConstProxy;
+
+	OSL_INLINE ConstProxy const
+	operator[](int index) const
+	{
+		return ConstProxy(m_ref_uniform_data);
+	}
+
+private:
+	const DataT & m_ref_uniform_data;
+};
 
 
 template <typename DataT, int WidthT>
@@ -1343,6 +1423,15 @@ private:
 	const Mask &m_mask;
 	const int m_index;
 };
+
+template <typename DataT, int WidthT>
+DataT const
+unproxy(const MaskedLaneProxy<DataT,WidthT> &proxy)
+{
+	return proxy.operator DataT const ();
+}
+
+
 
 template <typename DataT, int ArrayLenT, int WidthT>
 struct MaskedArrayLaneProxy
@@ -1482,6 +1571,7 @@ template <typename DataT, int WidthT = SimdLaneCount>
 struct MaskedAccessor
 {
 	static constexpr int width = WidthT; 
+	typedef DataT value_type;
 	
 	explicit OSL_INLINE
 	MaskedAccessor(void *ptr_wide_data, Mask mask, int derivIndex=0)
@@ -1506,6 +1596,7 @@ struct MaskedAccessor
 	{}	
 	
 	
+    OSL_INLINE Wide<DataT, WidthT> &  data() const { return m_ref_wide_data; }
     OSL_INLINE Mask mask() const { return m_mask; }
 
     OSL_INLINE MaskedAccessor operator & (const Mask &mask) const

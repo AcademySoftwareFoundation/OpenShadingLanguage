@@ -2212,6 +2212,16 @@ BackendLLVMWide::groupdata_field_ptr (int fieldnum, TypeDesc type, bool is_unifo
     return result;
 }
 
+llvm::Value *
+BackendLLVMWide::temp_wide_matrix_ptr ()
+{
+	if (m_llvm_temp_wide_matrix_ptr == nullptr)
+	{
+		m_llvm_temp_wide_matrix_ptr = ll.op_alloca(ll.type_wide_matrix());
+	}
+    return m_llvm_temp_wide_matrix_ptr;
+}
+
 
 llvm::Value *
 BackendLLVMWide::layer_run_ref (int layer)

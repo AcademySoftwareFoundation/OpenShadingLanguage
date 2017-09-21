@@ -1847,19 +1847,13 @@ LLVMGEN (llvm_gen_construct_triple)
 #endif
 
 
-    bool op_is_uniform = rop.isSymbolUniform(X) && rop.isSymbolUniform(Y) && rop.isSymbolUniform(Z);
-    ASSERT(!using_space || rop.isSymbolUniform(Space));
+    bool space_is_uniform = rop.isSymbolUniform(Space);
+    bool op_is_uniform = rop.isSymbolUniform(X) && rop.isSymbolUniform(Y) && rop.isSymbolUniform(Z) && space_is_uniform;
 
     bool resultIsUniform = rop.isSymbolUniform(Result);
     ASSERT(op_is_uniform || !resultIsUniform);
 
 
-
-//    Symbol *s (rop.opargsym (op, i));
-//    if(rop.isSymbolUniform(*s) == false) {
-//    	// Non uniform, so add the "wide" prefix
-//    	name += ";
-//    }
 
     // First, copy the floats into the vector
     int dmax = Result.has_derivs() ? 3 : 1;
@@ -1887,39 +1881,72 @@ LLVMGEN (llvm_gen_construct_triple)
                 return true;  // no transformation necessary
         }
         TypeDesc::VECSEMANTICS vectype = TypeDesc::POINT;
-        if (op.opname() == "vector")
+        ustring triple_type("point");
+        if (op.opname() == "vector") {
             vectype = TypeDesc::VECTOR;
-        else if (op.opname() == "normal")
+            triple_type = ustring("vector");
+        } else if (op.opname() == "normal") {
             vectype = TypeDesc::NORMAL;
+            triple_type = ustring("normal");
+        }
 
         OSL_DEV_ONLY(std::cout << "llvm_gen_construct_triple Result.has_derivs()=" << Result.has_derivs() << std::endl);
-        // TODO: Handle non-uniform case below minding mask values
-        ASSERT(op_is_uniform);
-        ASSERT(rop.ll.is_masking_enabled() == false);
-        llvm::Value *args[9] = { rop.sg_void_ptr(),
-            rop.llvm_void_ptr(Result),
-            rop.ll.constant(Result.has_derivs()),
-            rop.llvm_void_ptr(Result),
-            rop.ll.constant(Result.has_derivs()),
-            rop.llvm_load_value(Space),
-            rop.ll.constant(Strings::common),
-            rop.ll.constant((int)vectype),
-            rop.ll.mask_as_int(rop.ll.current_mask())};
-        RendererServices *rend (rop.shadingsys().renderer());
-        if (rend->transform_points (NULL, from, to, 0.0f, NULL, NULL, 0, vectype)) {
-            // TODO: Handle non-uniform case below minding mask values
-            ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
 
-            // renderer potentially knows about a nonlinear transformation.
-            // Note that for the case of non-constant strings, passing empty
-            // from & to will make transform_points just tell us if ANY
-            // nonlinear transformations potentially are supported.
-            rop.ll.call_function ("osl_transform_triple_nonlinear", args, 8);
-        } else {
+
+        RendererServices *rend (rop.shadingsys().renderer());
+
+        ASSERT((false == rend->transform_points (NULL, Strings::_emptystring_, Strings::_emptystring_, 0.0f, NULL, NULL, 0, vectype)) && "incomplete");
+        // Didn't want to make RenderServices have to deal will all variants of from/to
+        // unless it is going to be used, yes it will have to be done though
+//        if (rend->transform_points (NULL, from, to, 0.0f, NULL, NULL, 0, vectype)) {
+//            // TODO: Handle non-uniform case below minding mask values
+//            ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
+//
+//            // renderer potentially knows about a nonlinear transformation.
+//            // Note that for the case of non-constant strings, passing empty
+//            // from & to will make transform_points just tell us if ANY
+//            // nonlinear transformations potentially are supported.
+//            rop.ll.call_function ("osl_transform_triple_nonlinear", args, 8);
+//        } else
+        llvm::Value * transform = rop.temp_wide_matrix_ptr();
+        llvm::Value *succeeded_as_int = nullptr;
+        {
+    		llvm::Value *args[5] = { rop.sg_void_ptr(),
+    			rop.ll.void_ptr(transform),
+				space_is_uniform ? rop.llvm_load_value(Space) : rop.llvm_void_ptr(Space),
+				rop.ll.constant(Strings::common),
+    			rop.ll.mask_as_int(rop.ll.current_mask())};
+    		// Dynamically build function name
+    		std::string func_name;
+    		func_name += "osl_build_transform_matrix_";
+    		// Ignore derivatives if uneeded or unsupplied
+    		func_name += arg_typecode(Space, false, space_is_uniform);
+    		func_name += "s"; // to is constant common space
+    		func_name += "_masked";
+
+    		succeeded_as_int = rop.ll.call_function (func_name.c_str(), args, std::extent<decltype(args)>::value);
+        }
+        {
+            llvm::Value *args[5] = {
+				rop.llvm_void_ptr(Result /* src */),
+				rop.llvm_void_ptr(Result /* dest */),
+    			rop.ll.void_ptr(transform),
+    			succeeded_as_int,
+                rop.ll.mask_as_int(rop.ll.current_mask())};
+
+            ASSERT(rop.isSymbolUniform(Result) == false && "unreachable case");
             // definitely not a nonlinear transformation
-            //rop.ll.call_function ("osl_transform_triple", args, 8);
-            ASSERT(rop.isSymbolUniform(Result) == false && "incomplete");
-            rop.ll.call_function ("osl_wide_transform_triple", args, 9);
+
+            // Dynamically build function name
+            std::string func_name;
+            func_name += "osl_transform_";
+            func_name += triple_type.c_str();
+            func_name += "_";
+            func_name += arg_typecode(Result, Result.has_derivs(), resultIsUniform);
+            func_name += arg_typecode(Result, Result.has_derivs(), resultIsUniform);
+            func_name += "_masked";
+
+            rop.ll.call_function (func_name.c_str(), args, std::extent<decltype(args)>::value);
         }
     }
 
@@ -2012,7 +2039,6 @@ LLVMGEN (llvm_gen_matrix)
             func_name += arg_typecode(From, false, rop.isSymbolUniform(From));
             func_name += "_batched";
 
-            // TODO: dynamically build width suffix
             rop.ll.call_function (func_name.c_str(), args, 3);
         }
     }
@@ -2076,22 +2102,23 @@ LLVMGEN (llvm_gen_transform)
     Symbol *To = rop.opargsym (op, (nargs == 3) ? 1 : 2);
     Symbol *P = rop.opargsym (op, (nargs == 3) ? 2 : 3);
 
-    ASSERT((From == NULL) || rop.isSymbolUniform(*From));
-    if (To->typespec().is_matrix()) {
-        // llvm_ops has the matrix version already implemented
-    	OSL_DEV_ONLY(std::cout << "generic matrix transform" << std::endl);
+    bool result_is_uniform = rop.isSymbolUniform(*Result);
+    bool to_is_uniform = rop.isSymbolUniform(*To);
+    bool P_is_uniform = rop.isSymbolUniform(*P);
+    bool from_is_uniform = (From == NULL) ? true : rop.isSymbolUniform(*From);
 
+    if (To->typespec().is_matrix()) {
+    	ASSERT(From == NULL);
+        // llvm_ops has the matrix version already implemented
         llvm_gen_generic (rop, opnum);
         return true;
     }
-    ASSERT(rop.isSymbolUniform(*To));
 
     // Named space versions from here on out.
-    ustring from, to;  // N.B.: initialize to empty strings
     if ((From == NULL || From->is_constant()) && To->is_constant()) {
         // We can know all the space names at this time
-        from = From ? *((ustring *)From->data()) : Strings::common;
-        to = *((ustring *)To->data());
+    	ustring from = From ? *((ustring *)From->data()) : Strings::common;
+    	ustring to = *((ustring *)To->data());
         ustring syn = rop.shadingsys().commonspace_synonym();
         if (from == syn)
             from = Strings::common;
@@ -2104,37 +2131,89 @@ LLVMGEN (llvm_gen_transform)
             return true;
         }
     }
-    OSL_DEV_ONLY(std::cout << "wide transform 'source space' = " << from << " 'dest space' = " << to << std::endl);
+    //OSL_DEV_ONLY(std::cout << "wide transform 'source space' = " << from << " 'dest space' = " << to << std::endl);
     TypeDesc::VECSEMANTICS vectype = TypeDesc::POINT;
-    if (op.opname() == "transformv")
+    // TODO: switch statement with static/extern strings to avoid lookup
+    ustring triple_type("point");
+    if (op.opname() == "transformv") {
         vectype = TypeDesc::VECTOR;
-    else if (op.opname() == "transformn")
+        triple_type = ustring("vector");
+    } else if (op.opname() == "transformn") {
         vectype = TypeDesc::NORMAL;
-    llvm::Value *args[9] = { rop.sg_void_ptr(),
-        rop.llvm_void_ptr(*P),
-        rop.ll.constant(P->has_derivs()),
-        rop.llvm_void_ptr(*Result),
-        rop.ll.constant(Result->has_derivs()),
-        rop.llvm_load_value(*From),
-        rop.llvm_load_value(*To),
-        rop.ll.constant((int)vectype),
-        rop.ll.mask_as_int(rop.ll.current_mask())};
+        triple_type = ustring("normal");
+    }
+
     RendererServices *rend (rop.shadingsys().renderer());
-    if (rend->transform_points (NULL, from, to, 0.0f, NULL, NULL, 0, vectype)) {
 
-        // TODO: Handle non-uniform case below minding mask values
-        ASSERT(rop.isSymbolUniform(*Result));
-        ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
+    ASSERT((false == rend->transform_points (NULL, Strings::_emptystring_, Strings::_emptystring_, 0.0f, NULL, NULL, 0, vectype)) && "incomplete");
+    // Didn't want to make RenderServices have to deal will all variants of from/to
+    // unless it is going to be used, yes it will have to be done though
+//    if (rend->transform_points (NULL, from, to, 0.0f, NULL, NULL, 0, vectype)) {
+//
+//        // TODO: Handle non-uniform case below minding mask values
+//        ASSERT(rop.isSymbolUniform(*Result));
+//        ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
+//
+//        // renderer potentially knows about a nonlinear transformation.
+//        // Note that for the case of non-constant strings, passing empty
+//        // from & to will make transform_points just tell us if ANY
+//        // nonlinear transformations potentially are supported.
+//        rop.ll.call_function ("osl_transform_triple_nonlinear", args, 8);
+//    } else
+    llvm::Value * transform = rop.temp_wide_matrix_ptr();
+    llvm::Value *succeeded_as_int = nullptr;
+    {
+    	ASSERT(From != NULL && "expect NULL was replaced by constant folding to a common_space");
+		llvm::Value *args[5] = { rop.sg_void_ptr(),
+			rop.ll.void_ptr(transform),
+			from_is_uniform ? rop.llvm_load_value(*From) : rop.llvm_void_ptr(*From),
+			to_is_uniform ? rop.llvm_load_value(*To) : rop.llvm_void_ptr(*To),
+			rop.ll.mask_as_int(rop.ll.current_mask())};
+		// Dynamically build function name
+		std::string func_name;
+		func_name += "osl_build_transform_matrix_";
+		// Ignore derivatives if uneeded or unsupplied
+		func_name += arg_typecode(*From, false, from_is_uniform);
+		func_name += arg_typecode(*To, false, to_is_uniform);
+		func_name += "_masked";
 
-        // renderer potentially knows about a nonlinear transformation.
-        // Note that for the case of non-constant strings, passing empty
-        // from & to will make transform_points just tell us if ANY
-        // nonlinear transformations potentially are supported.
-        rop.ll.call_function ("osl_transform_triple_nonlinear", args, 8);
-    } else {
-        ASSERT(rop.isSymbolUniform(*Result) == false && "incomplete");
+		succeeded_as_int = rop.ll.call_function (func_name.c_str(), args, std::extent<decltype(args)>::value);
+    }
+    {
+        llvm::Value *args[5] = {
+    		rop.llvm_void_ptr(*P),
+            rop.llvm_void_ptr(*Result),
+			rop.ll.void_ptr(transform),
+			succeeded_as_int,
+            rop.ll.mask_as_int(rop.ll.current_mask())};
+
+        ASSERT(rop.isSymbolUniform(*Result) == false && "unreachable case");
         // definitely not a nonlinear transformation
-        rop.ll.call_function ("osl_wide_transform_triple", args, 9);
+
+        // Dynamically build function name
+        std::string func_name;
+        func_name += "osl_transform_";
+        func_name += triple_type.c_str();
+        func_name += "_";
+        // Ignore derivatives if uneeded or unsupplied
+        bool has_derivs = (Result->has_derivs() && P->has_derivs());
+        func_name += arg_typecode(*P, has_derivs, P_is_uniform);
+        func_name += arg_typecode(*Result, has_derivs, result_is_uniform);
+        func_name += "_masked";
+
+        rop.ll.call_function (func_name.c_str(), args, std::extent<decltype(args)>::value);
+
+        // To reduce the number of combinations to support
+        // we take on the work of zero'ing out the derivatives here
+        // versus adding another version of the functions that just
+        // zeros them out.
+        // NOTE:  the original scalar version 0's out derivatives
+        // regardless of the success of the transformation
+        // however the operation mask should still be respected
+        if (Result->has_derivs() && !P->has_derivs()) {
+        	rop.llvm_zero_derivs (*Result);
+        }
+
     }
     return true;
 }

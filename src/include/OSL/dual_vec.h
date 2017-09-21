@@ -206,6 +206,13 @@ multDirMatrix (const Matrix44 &M, const Dual2<Vec3> &in, Dual2<Vec3> &out)
     M.multDirMatrix (in.dy(), out.dy());
 }
 
+// To be allow usage in templates, provide a Vec3 version
+OSL_INLINE OSL_CLANG_ATTRIBUTE(flatten) void
+multDirMatrix (const Matrix44 &M, const Vec3 &in, Vec3 &out)
+{
+    M.multDirMatrix (in, out);
+}
+
 
 
 

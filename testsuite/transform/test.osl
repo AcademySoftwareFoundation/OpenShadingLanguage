@@ -11,45 +11,180 @@ void all_transforms (point p, string to, int derivs)
     if (derivs)
         printf ("  derivs of transform(\"%s\", point(%g)): Dx = %g, Dy = %g\n", 
                 to, p, Dx(px), Dy(px));
+                
     vector vx = transform (to, (vector)p);
     printf (" transform(\"%s\", vector(%g)) = %.5g\n", to, p, vx);
     if (derivs)
         printf ("  derivs of transform(\"%s\", vector(%g)): Dx = %g, Dy = %g\n",
                 to, p, Dx(vx), Dy(vx));
+                
+    normal nx = transform(to, (normal)p);
     printf (" transform(\"%s\", normal(%g)) = %.5g\n", to,
-            p, transform(to, (normal)p));
+            p, nx);
+    if (derivs)
+        printf ("  derivs of transform(\"%s\", normal(%g)): Dx = %g, Dy = %g\n",
+                to, p, Dx(nx), Dy(nx));
 }
 
 
 
-void all_transforms (point p, string from, string to)
+void all_transforms (point p, string from, string to, int derivs)
 {
     printf ("\ntransform '%s' to '%s':\n", from, to);
+    if (derivs)
+        printf ("  p = %g, Dx(p) = %g, Dy(p) = %.5g\n", p, Dx(p), Dy(p));
+    point px = transform (from, to, (point)p);
     printf (" transform(\"%s\", \"%s\", point(%g)) = %.5g\n", from, to,
-            p, pretty(transform(from, to, (point)p)));
+            p, pretty(px));
+    if (derivs)
+        printf ("  derivs of transform(\"%s\", point(%g)): Dx = %g, Dy = %g\n", 
+                to, p, Dx(px), Dy(px));
+    vector vx = transform (from, to, (vector)p);                
     printf (" transform(\"%s\", \"%s\", vector(%g)) = %.5g\n", from, to,
-            p, pretty(transform(from, to, (vector)p)));
+            p, pretty(vx));
+    normal nx = transform(from, to, (normal)p);
     printf (" transform(\"%s\", \"%s\", normal(%g)) = %.5g\n", from, to,
-            p, pretty(transform(from, to, (normal)p)));
+            p, pretty(nx));
+
 }
 
 
 
-void do_test (point z, point p, int derivs)
+void do_test (point z, point p)
 {
     all_transforms (p, "shader", 1);
     all_transforms (z, "shader", 0);
 
-    all_transforms (p, "common", "shader");
-    all_transforms (z, "common", "shader");
+    all_transforms (p, "common", "shader", 0);
+    all_transforms (p, "common", "shader", 1);
+    
+    all_transforms (z, "common", "shader", 0);
+    all_transforms (z, "common", "shader", 1);
 
-    all_transforms (p, "shader", "common");
-    all_transforms (z, "shader", "common");
+    all_transforms (p, "shader", "common", 0);
+    all_transforms (p, "shader", "common", 1);
+    all_transforms (z, "shader", "common", 0);
+    all_transforms (z, "shader", "common", 1);
 
-    all_transforms (p, "shader", "object");
-    all_transforms (z, "shader", "object");
+    all_transforms (p, "shader", "object", 0);
+    all_transforms (p, "shader", "object", 1);
+    all_transforms (z, "shader", "object", 0);
+    all_transforms (z, "shader", "object", 1);
 }
 
+
+void do_varying_from_test (point z, point p)
+{
+    string from_space;
+    if (P[0] > 0.5)
+    {
+        from_space = "common";
+    } else {
+        from_space = "shader";
+    }
+
+    if (P[0] > 0.5)
+    {
+        all_transforms (p, from_space, "shader", 0);
+        all_transforms (p, from_space, "shader", 1);
+        all_transforms (z, from_space, "shader", 0);
+        all_transforms (z, from_space, "shader", 1);
+    } else {
+        all_transforms (p, from_space, "common", 0);
+        all_transforms (p, from_space, "common", 1);
+        all_transforms (z, from_space, "common", 0);
+        all_transforms (z, from_space, "common", 1);
+
+        all_transforms (p, from_space, "object", 0);
+        all_transforms (p, from_space, "object", 1);
+        all_transforms (z, from_space, "object", 0);
+        all_transforms (z, from_space, "object", 1);
+    }
+}
+
+void do_varying_to_test (point z, point p)
+{
+    string to_space;
+    if (P[0] > 0.5)
+    {
+        to_space = "common";
+    } else {
+        if (P[1] > 0.5)
+        {
+            to_space = "shader";
+        } else {
+            to_space = "object";
+        }
+    }
+
+    if (P[0] > 0.5)
+    {
+        all_transforms (p, "shader", to_space, 0);
+        all_transforms (p, "shader", to_space, 1);
+        all_transforms (z, "shader", to_space, 0);
+        all_transforms (z, "shader", to_space, 1);
+    } else {
+        if (P[1] > 0.5)
+        {
+            all_transforms (p, to_space, 1);
+            all_transforms (z, to_space, 0);
+        
+            all_transforms (p, "common", to_space, 0);
+            all_transforms (p, "common", to_space, 1);
+            all_transforms (z, "common", to_space, 0);
+            all_transforms (z, "common", to_space, 1);
+        } else {
+            all_transforms (p, "shader", to_space, 0);
+            all_transforms (p, "shader", to_space, 1);
+            all_transforms (z, "shader", to_space, 0); 
+            all_transforms (z, "shader", to_space, 1); 
+        }
+    }
+}
+
+void do_varying_from_varying_to_test (point z, point p)
+{
+    string from_space;
+    string to_space;
+    if (P[0] > 0.5)
+    {
+        from_space = "shader";
+        to_space = "common";
+    } else {
+        if (P[1] > 0.5)
+        {
+            from_space = "common";
+            to_space = "shader";
+        } else {
+            from_space = "shader";
+            to_space = "object";
+        }
+    }
+
+    if (P[0] > 0.5)
+    {
+        all_transforms (p, from_space, to_space, 0);
+        all_transforms (p, from_space, to_space, 1);
+        all_transforms (z, from_space, to_space, 0);
+        all_transforms (z, from_space, to_space, 1);
+    } else {
+        if (P[1] > 0.5)
+        {
+            all_transforms (p, to_space, 1);
+            all_transforms (z, to_space, 0);
+        
+            all_transforms (p, from_space, to_space, 0);
+            all_transforms (p, from_space, to_space, 1);
+            all_transforms (z, from_space, to_space, 0);
+            all_transforms (z, from_space, to_space, 1);
+        } else {
+            all_transforms (p, from_space, to_space, 0);
+            all_transforms (p, from_space, to_space, 1);
+            all_transforms (z, from_space, to_space, 0); 
+            all_transforms (z, from_space, to_space, 1); 
+        }
+    }
+}
 
 
 shader
@@ -57,9 +192,31 @@ test ()
 {
     point z = point (0, 0, 0);
     point p = point (1, 1.41421, 0);
-    do_test (z, p, 0);
-
-    printf ("\n\n varying:\n\n");
-    p += vector (u, v, 0);
-    do_test (z, p, 1);
+    do_test (z, p);
+    
+    printf ("\n\n varying triples:\n\n");
+    point invP = vector(1.0) - P;
+    do_test (P, invP);
+    
+    printf ("\n\n varying from space:\n\n");
+    do_varying_from_test(z, p);
+    
+    printf ("\n\n varying from space & triples:\n\n");
+    do_varying_from_test(P, invP);
+    
+    printf ("\n\n varying to space:\n\n");
+    do_varying_to_test(z, p);
+    printf ("\n\n varying to space & triples:\n\n");
+    do_varying_to_test(P, invP);
+    
+    printf ("\n\n varying from & to spaces:\n\n");
+    do_varying_from_varying_to_test(z, p);
+    printf ("\n\n varying from & to spaces & triples:\n\n");
+    do_varying_from_varying_to_test(P, invP);
+    
+    printf ("\n\n varying triple method2:\n\n");
+    point vp = p + vector (u, v, 0);
+    point invvp = vector(1.0) - vp;
+    do_test (vp, invvp);
+    
 }

@@ -768,6 +768,9 @@ BackendLLVMWide::build_llvm_init ()
     m_llvm_shaderglobals_ptr = ll.current_function_arg(0); //arg_it++;
     m_llvm_groupdata_ptr = ll.current_function_arg(1); //arg_it++;
 
+    // New function, reset temp matrix pointer
+    m_llvm_temp_wide_matrix_ptr = nullptr;
+
     // Set up a new IR builder
     llvm::BasicBlock *entry_bb = ll.new_basic_block (unique_name);
     ll.new_builder (entry_bb);
@@ -850,6 +853,9 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
     // Get shader globals and groupdata pointers
     m_llvm_shaderglobals_ptr = ll.current_function_arg(0); //arg_it++;
     m_llvm_groupdata_ptr = ll.current_function_arg(1); //arg_it++;
+
+    // New function, reset temp matrix pointer
+    m_llvm_temp_wide_matrix_ptr = nullptr;
 
     llvm::BasicBlock *entry_bb = ll.new_basic_block (unique_layer_name);
     m_exit_instance_block = NULL;

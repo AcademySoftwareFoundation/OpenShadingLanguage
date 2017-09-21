@@ -1,4 +1,3 @@
-Compiled test.osl -> test.oso
   point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
   vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
   normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
@@ -17,6 +16,573 @@ testing with spaces:
   point ("myspace", 1, 1, 0) = 1 2 0
   vector ("myspace", 1, 1, 0) = 1 2 0
   normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0, 1, 0.5) = 0.292893 0.707107 0.5
+  vector ("shader", 0, 1, 0.5) = -0.707107 0.707107 0.5
+  normal ("shader", 0, 1, 0.5) = -0.707107 0.707107 0.5
+  point ("object", 0, 1, 0.5) = -1 1 0.5
+  vector ("object", 0, 1, 0.5) = -1 0 0.5
+  normal ("object", 0, 1, 0.5) = -1 0 0.5
+  point ("myspace", 0, 1, 0.5) = 0 2 0.5
+  vector ("myspace", 0, 1, 0.5) = 0 2 0.5
+  normal ("myspace", 0, 1, 0.5) = 0 0.5 0.5
+
+testing with varying spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+
+testing varying triples with varying spaces:
+  point ("shader", 0, 1, 0.5) = 0.292893 0.707107 0.5
+  vector ("shader", 0, 1, 0.5) = -0.707107 0.707107 0.5
+  normal ("shader", 0, 1, 0.5) = -0.707107 0.707107 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.0666667, 1, 0.5) = 0.0666667 1 0.5
+  vector (0.0666667, 1, 0.5) = 0.0666667 1 0.5
+  normal (0.0666667, 1, 0.5) = 0.0666667 1 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.0666667, 1, 0.5) = 0.340034 0.754247 0.5
+  vector ("shader", 0.0666667, 1, 0.5) = -0.659966 0.754247 0.5
+  normal ("shader", 0.0666667, 1, 0.5) = -0.659966 0.754247 0.5
+  point ("object", 0.0666667, 1, 0.5) = -1 1.06667 0.5
+  vector ("object", 0.0666667, 1, 0.5) = -1 0.0666666 0.5
+  normal ("object", 0.0666667, 1, 0.5) = -1 0.0666666 0.5
+  point ("myspace", 0.0666667, 1, 0.5) = 0.0666667 2 0.5
+  vector ("myspace", 0.0666667, 1, 0.5) = 0.0666667 2 0.5
+  normal ("myspace", 0.0666667, 1, 0.5) = 0.0666667 0.5 0.5
+
+testing with varying spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+
+testing varying triples with varying spaces:
+  point ("shader", 0.0666667, 1, 0.5) = 0.340034 0.754247 0.5
+  vector ("shader", 0.0666667, 1, 0.5) = -0.659966 0.754247 0.5
+  normal ("shader", 0.0666667, 1, 0.5) = -0.659966 0.754247 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.133333, 1, 0.5) = 0.133333 1 0.5
+  vector (0.133333, 1, 0.5) = 0.133333 1 0.5
+  normal (0.133333, 1, 0.5) = 0.133333 1 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.133333, 1, 0.5) = 0.387174 0.801388 0.5
+  vector ("shader", 0.133333, 1, 0.5) = -0.612826 0.801388 0.5
+  normal ("shader", 0.133333, 1, 0.5) = -0.612826 0.801388 0.5
+  point ("object", 0.133333, 1, 0.5) = -1 1.13333 0.5
+  vector ("object", 0.133333, 1, 0.5) = -1 0.133333 0.5
+  normal ("object", 0.133333, 1, 0.5) = -1 0.133333 0.5
+  point ("myspace", 0.133333, 1, 0.5) = 0.133333 2 0.5
+  vector ("myspace", 0.133333, 1, 0.5) = 0.133333 2 0.5
+  normal ("myspace", 0.133333, 1, 0.5) = 0.133333 0.5 0.5
+
+testing with varying spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+
+testing varying triples with varying spaces:
+  point ("shader", 0.133333, 1, 0.5) = 0.387174 0.801388 0.5
+  vector ("shader", 0.133333, 1, 0.5) = -0.612826 0.801388 0.5
+  normal ("shader", 0.133333, 1, 0.5) = -0.612826 0.801388 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.2, 1, 0.5) = 0.2 1 0.5
+  vector (0.2, 1, 0.5) = 0.2 1 0.5
+  normal (0.2, 1, 0.5) = 0.2 1 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.2, 1, 0.5) = 0.434315 0.848528 0.5
+  vector ("shader", 0.2, 1, 0.5) = -0.565685 0.848528 0.5
+  normal ("shader", 0.2, 1, 0.5) = -0.565685 0.848528 0.5
+  point ("object", 0.2, 1, 0.5) = -1 1.2 0.5
+  vector ("object", 0.2, 1, 0.5) = -1 0.2 0.5
+  normal ("object", 0.2, 1, 0.5) = -1 0.2 0.5
+  point ("myspace", 0.2, 1, 0.5) = 0.2 2 0.5
+  vector ("myspace", 0.2, 1, 0.5) = 0.2 2 0.5
+  normal ("myspace", 0.2, 1, 0.5) = 0.2 0.5 0.5
+
+testing with varying spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+
+testing varying triples with varying spaces:
+  point ("shader", 0.2, 1, 0.5) = 0.434315 0.848528 0.5
+  vector ("shader", 0.2, 1, 0.5) = -0.565685 0.848528 0.5
+  normal ("shader", 0.2, 1, 0.5) = -0.565685 0.848528 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.266667, 1, 0.5) = 0.266667 1 0.5
+  vector (0.266667, 1, 0.5) = 0.266667 1 0.5
+  normal (0.266667, 1, 0.5) = 0.266667 1 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.266667, 1, 0.5) = 0.481455 0.895669 0.5
+  vector ("shader", 0.266667, 1, 0.5) = -0.518545 0.895669 0.5
+  normal ("shader", 0.266667, 1, 0.5) = -0.518545 0.895669 0.5
+  point ("object", 0.266667, 1, 0.5) = -1 1.26667 0.5
+  vector ("object", 0.266667, 1, 0.5) = -1 0.266667 0.5
+  normal ("object", 0.266667, 1, 0.5) = -1 0.266667 0.5
+  point ("myspace", 0.266667, 1, 0.5) = 0.266667 2 0.5
+  vector ("myspace", 0.266667, 1, 0.5) = 0.266667 2 0.5
+  normal ("myspace", 0.266667, 1, 0.5) = 0.266667 0.5 0.5
+
+testing with varying spaces:
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+
+testing varying triples with varying spaces:
+  point ("object", 0.266667, 1, 0.5) = -1 1.26667 0.5
+  vector ("object", 0.266667, 1, 0.5) = -1 0.266667 0.5
+  normal ("object", 0.266667, 1, 0.5) = -1 0.266667 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.333333, 1, 0.5) = 0.333333 1 0.5
+  vector (0.333333, 1, 0.5) = 0.333333 1 0.5
+  normal (0.333333, 1, 0.5) = 0.333333 1 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.333333, 1, 0.5) = 0.528596 0.942809 0.5
+  vector ("shader", 0.333333, 1, 0.5) = -0.471404 0.942809 0.5
+  normal ("shader", 0.333333, 1, 0.5) = -0.471405 0.942809 0.5
+  point ("object", 0.333333, 1, 0.5) = -1 1.33333 0.5
+  vector ("object", 0.333333, 1, 0.5) = -1 0.333333 0.5
+  normal ("object", 0.333333, 1, 0.5) = -1 0.333333 0.5
+  point ("myspace", 0.333333, 1, 0.5) = 0.333333 2 0.5
+  vector ("myspace", 0.333333, 1, 0.5) = 0.333333 2 0.5
+  normal ("myspace", 0.333333, 1, 0.5) = 0.333333 0.5 0.5
+
+testing with varying spaces:
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+
+testing varying triples with varying spaces:
+  point ("object", 0.333333, 1, 0.5) = -1 1.33333 0.5
+  vector ("object", 0.333333, 1, 0.5) = -1 0.333333 0.5
+  normal ("object", 0.333333, 1, 0.5) = -1 0.333333 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.4, 1, 0.5) = 0.4 1 0.5
+  vector (0.4, 1, 0.5) = 0.4 1 0.5
+  normal (0.4, 1, 0.5) = 0.4 1 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.4, 1, 0.5) = 0.575736 0.989949 0.5
+  vector ("shader", 0.4, 1, 0.5) = -0.424264 0.989949 0.5
+  normal ("shader", 0.4, 1, 0.5) = -0.424264 0.98995 0.5
+  point ("object", 0.4, 1, 0.5) = -1 1.4 0.5
+  vector ("object", 0.4, 1, 0.5) = -1 0.4 0.5
+  normal ("object", 0.4, 1, 0.5) = -1 0.4 0.5
+  point ("myspace", 0.4, 1, 0.5) = 0.4 2 0.5
+  vector ("myspace", 0.4, 1, 0.5) = 0.4 2 0.5
+  normal ("myspace", 0.4, 1, 0.5) = 0.4 0.5 0.5
+
+testing with varying spaces:
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+
+testing varying triples with varying spaces:
+  point ("object", 0.4, 1, 0.5) = -1 1.4 0.5
+  vector ("object", 0.4, 1, 0.5) = -1 0.4 0.5
+  normal ("object", 0.4, 1, 0.5) = -1 0.4 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.466667, 1, 0.5) = 0.466667 1 0.5
+  vector (0.466667, 1, 0.5) = 0.466667 1 0.5
+  normal (0.466667, 1, 0.5) = 0.466667 1 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.466667, 1, 0.5) = 0.622876 1.03709 0.5
+  vector ("shader", 0.466667, 1, 0.5) = -0.377124 1.03709 0.5
+  normal ("shader", 0.466667, 1, 0.5) = -0.377124 1.03709 0.5
+  point ("object", 0.466667, 1, 0.5) = -1 1.46667 0.5
+  vector ("object", 0.466667, 1, 0.5) = -1 0.466667 0.5
+  normal ("object", 0.466667, 1, 0.5) = -1 0.466667 0.5
+  point ("myspace", 0.466667, 1, 0.5) = 0.466667 2 0.5
+  vector ("myspace", 0.466667, 1, 0.5) = 0.466667 2 0.5
+  normal ("myspace", 0.466667, 1, 0.5) = 0.466667 0.5 0.5
+
+testing with varying spaces:
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+
+testing varying triples with varying spaces:
+  point ("object", 0.466667, 1, 0.5) = -1 1.46667 0.5
+  vector ("object", 0.466667, 1, 0.5) = -1 0.466667 0.5
+  normal ("object", 0.466667, 1, 0.5) = -1 0.466667 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.533333, 1, 0.5) = 0.533333 1 0.5
+  vector (0.533333, 1, 0.5) = 0.533333 1 0.5
+  normal (0.533333, 1, 0.5) = 0.533333 1 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.533333, 1, 0.5) = 0.670017 1.08423 0.5
+  vector ("shader", 0.533333, 1, 0.5) = -0.329983 1.08423 0.5
+  normal ("shader", 0.533333, 1, 0.5) = -0.329983 1.08423 0.5
+  point ("object", 0.533333, 1, 0.5) = -1 1.53333 0.5
+  vector ("object", 0.533333, 1, 0.5) = -1 0.533333 0.5
+  normal ("object", 0.533333, 1, 0.5) = -1 0.533333 0.5
+  point ("myspace", 0.533333, 1, 0.5) = 0.533333 2 0.5
+  vector ("myspace", 0.533333, 1, 0.5) = 0.533333 2 0.5
+  normal ("myspace", 0.533333, 1, 0.5) = 0.533333 0.5 0.5
+
+testing with varying spaces:
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+
+testing varying triples with varying spaces:
+  point ("object", 0.533333, 1, 0.5) = -1 1.53333 0.5
+  vector ("object", 0.533333, 1, 0.5) = -1 0.533333 0.5
+  normal ("object", 0.533333, 1, 0.5) = -1 0.533333 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.6, 1, 0.5) = 0.6 1 0.5
+  vector (0.6, 1, 0.5) = 0.6 1 0.5
+  normal (0.6, 1, 0.5) = 0.6 1 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.6, 1, 0.5) = 0.717157 1.13137 0.5
+  vector ("shader", 0.6, 1, 0.5) = -0.282843 1.13137 0.5
+  normal ("shader", 0.6, 1, 0.5) = -0.282843 1.13137 0.5
+  point ("object", 0.6, 1, 0.5) = -1 1.6 0.5
+  vector ("object", 0.6, 1, 0.5) = -1 0.6 0.5
+  normal ("object", 0.6, 1, 0.5) = -1 0.6 0.5
+  point ("myspace", 0.6, 1, 0.5) = 0.6 2 0.5
+  vector ("myspace", 0.6, 1, 0.5) = 0.6 2 0.5
+  normal ("myspace", 0.6, 1, 0.5) = 0.6 0.5 0.5
+
+testing with varying spaces:
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+
+testing varying triples with varying spaces:
+  point ("object", 0.6, 1, 0.5) = -1 1.6 0.5
+  vector ("object", 0.6, 1, 0.5) = -1 0.6 0.5
+  normal ("object", 0.6, 1, 0.5) = -1 0.6 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.666667, 1, 0.5) = 0.666667 1 0.5
+  vector (0.666667, 1, 0.5) = 0.666667 1 0.5
+  normal (0.666667, 1, 0.5) = 0.666667 1 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.666667, 1, 0.5) = 0.764298 1.17851 0.5
+  vector ("shader", 0.666667, 1, 0.5) = -0.235702 1.17851 0.5
+  normal ("shader", 0.666667, 1, 0.5) = -0.235702 1.17851 0.5
+  point ("object", 0.666667, 1, 0.5) = -1 1.66667 0.5
+  vector ("object", 0.666667, 1, 0.5) = -1 0.666667 0.5
+  normal ("object", 0.666667, 1, 0.5) = -1 0.666667 0.5
+  point ("myspace", 0.666667, 1, 0.5) = 0.666667 2 0.5
+  vector ("myspace", 0.666667, 1, 0.5) = 0.666667 2 0.5
+  normal ("myspace", 0.666667, 1, 0.5) = 0.666667 0.5 0.5
+
+testing with varying spaces:
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+
+testing varying triples with varying spaces:
+  point ("object", 0.666667, 1, 0.5) = -1 1.66667 0.5
+  vector ("object", 0.666667, 1, 0.5) = -1 0.666667 0.5
+  normal ("object", 0.666667, 1, 0.5) = -1 0.666667 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.733333, 1, 0.5) = 0.733333 1 0.5
+  vector (0.733333, 1, 0.5) = 0.733333 1 0.5
+  normal (0.733333, 1, 0.5) = 0.733333 1 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.733333, 1, 0.5) = 0.811438 1.22565 0.5
+  vector ("shader", 0.733333, 1, 0.5) = -0.188562 1.22565 0.5
+  normal ("shader", 0.733333, 1, 0.5) = -0.188562 1.22565 0.5
+  point ("object", 0.733333, 1, 0.5) = -1 1.73333 0.5
+  vector ("object", 0.733333, 1, 0.5) = -1 0.733333 0.5
+  normal ("object", 0.733333, 1, 0.5) = -1 0.733333 0.5
+  point ("myspace", 0.733333, 1, 0.5) = 0.733333 2 0.5
+  vector ("myspace", 0.733333, 1, 0.5) = 0.733333 2 0.5
+  normal ("myspace", 0.733333, 1, 0.5) = 0.733333 0.5 0.5
+
+testing with varying spaces:
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+
+testing varying triples with varying spaces:
+  point ("object", 0.733333, 1, 0.5) = -1 1.73333 0.5
+  vector ("object", 0.733333, 1, 0.5) = -1 0.733333 0.5
+  normal ("object", 0.733333, 1, 0.5) = -1 0.733333 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.8, 1, 0.5) = 0.8 1 0.5
+  vector (0.8, 1, 0.5) = 0.8 1 0.5
+  normal (0.8, 1, 0.5) = 0.8 1 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.8, 1, 0.5) = 0.858579 1.27279 0.5
+  vector ("shader", 0.8, 1, 0.5) = -0.141421 1.27279 0.5
+  normal ("shader", 0.8, 1, 0.5) = -0.141421 1.27279 0.5
+  point ("object", 0.8, 1, 0.5) = -1 1.8 0.5
+  vector ("object", 0.8, 1, 0.5) = -1 0.8 0.5
+  normal ("object", 0.8, 1, 0.5) = -1 0.8 0.5
+  point ("myspace", 0.8, 1, 0.5) = 0.8 2 0.5
+  vector ("myspace", 0.8, 1, 0.5) = 0.8 2 0.5
+  normal ("myspace", 0.8, 1, 0.5) = 0.8 0.5 0.5
+
+testing with varying spaces:
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with varying spaces:
+  point ("myspace", 0.8, 1, 0.5) = 0.8 2 0.5
+  vector ("myspace", 0.8, 1, 0.5) = 0.8 2 0.5
+  normal ("myspace", 0.8, 1, 0.5) = 0.8 0.5 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.866667, 1, 0.5) = 0.866667 1 0.5
+  vector (0.866667, 1, 0.5) = 0.866667 1 0.5
+  normal (0.866667, 1, 0.5) = 0.866667 1 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.866667, 1, 0.5) = 0.905719 1.31993 0.5
+  vector ("shader", 0.866667, 1, 0.5) = -0.0942809 1.31993 0.5
+  normal ("shader", 0.866667, 1, 0.5) = -0.0942809 1.31993 0.5
+  point ("object", 0.866667, 1, 0.5) = -1 1.86667 0.5
+  vector ("object", 0.866667, 1, 0.5) = -1 0.866667 0.5
+  normal ("object", 0.866667, 1, 0.5) = -1 0.866667 0.5
+  point ("myspace", 0.866667, 1, 0.5) = 0.866667 2 0.5
+  vector ("myspace", 0.866667, 1, 0.5) = 0.866667 2 0.5
+  normal ("myspace", 0.866667, 1, 0.5) = 0.866667 0.5 0.5
+
+testing with varying spaces:
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with varying spaces:
+  point ("myspace", 0.866667, 1, 0.5) = 0.866667 2 0.5
+  vector ("myspace", 0.866667, 1, 0.5) = 0.866667 2 0.5
+  normal ("myspace", 0.866667, 1, 0.5) = 0.866667 0.5 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.933333, 1, 0.5) = 0.933333 1 0.5
+  vector (0.933333, 1, 0.5) = 0.933333 1 0.5
+  normal (0.933333, 1, 0.5) = 0.933333 1 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.933333, 1, 0.5) = 0.95286 1.36707 0.5
+  vector ("shader", 0.933333, 1, 0.5) = -0.0471404 1.36707 0.5
+  normal ("shader", 0.933333, 1, 0.5) = -0.0471405 1.36707 0.5
+  point ("object", 0.933333, 1, 0.5) = -1 1.93333 0.5
+  vector ("object", 0.933333, 1, 0.5) = -1 0.933333 0.5
+  normal ("object", 0.933333, 1, 0.5) = -1 0.933333 0.5
+  point ("myspace", 0.933333, 1, 0.5) = 0.933333 2 0.5
+  vector ("myspace", 0.933333, 1, 0.5) = 0.933333 2 0.5
+  normal ("myspace", 0.933333, 1, 0.5) = 0.933333 0.5 0.5
+
+testing with varying spaces:
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with varying spaces:
+  point ("myspace", 0.933333, 1, 0.5) = 0.933333 2 0.5
+  vector ("myspace", 0.933333, 1, 0.5) = 0.933333 2 0.5
+  normal ("myspace", 0.933333, 1, 0.5) = 0.933333 0.5 0.5
   point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
   vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
   normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
@@ -35,6 +601,27 @@ testing with spaces:
   point ("myspace", 1, 1, 0) = 1 2 0
   vector ("myspace", 1, 1, 0) = 1 2 0
   normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 1, 1, 0.5) = 1 1.41421 0.5
+  vector ("shader", 1, 1, 0.5) = 0 1.41421 0.5
+  normal ("shader", 1, 1, 0.5) = 0 1.41421 0.5
+  point ("object", 1, 1, 0.5) = -1 2 0.5
+  vector ("object", 1, 1, 0.5) = -1 1 0.5
+  normal ("object", 1, 1, 0.5) = -1 1 0.5
+  point ("myspace", 1, 1, 0.5) = 1 2 0.5
+  vector ("myspace", 1, 1, 0.5) = 1 2 0.5
+  normal ("myspace", 1, 1, 0.5) = 1 0.5 0.5
+
+testing with varying spaces:
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with varying spaces:
+  point ("myspace", 1, 1, 0.5) = 1 2 0.5
+  vector ("myspace", 1, 1, 0.5) = 1 2 0.5
+  normal ("myspace", 1, 1, 0.5) = 1 0.5 0.5
   point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
   vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
   normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
@@ -53,6 +640,573 @@ testing with spaces:
   point ("myspace", 1, 1, 0) = 1 2 0
   vector ("myspace", 1, 1, 0) = 1 2 0
   normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0, 2, 0.5) = -0.414214 1.41421 0.5
+  vector ("shader", 0, 2, 0.5) = -1.41421 1.41421 0.5
+  normal ("shader", 0, 2, 0.5) = -1.41421 1.41421 0.5
+  point ("object", 0, 2, 0.5) = -2 1 0.5
+  vector ("object", 0, 2, 0.5) = -2 0 0.5
+  normal ("object", 0, 2, 0.5) = -2 0 0.5
+  point ("myspace", 0, 2, 0.5) = 0 4 0.5
+  vector ("myspace", 0, 2, 0.5) = 0 4 0.5
+  normal ("myspace", 0, 2, 0.5) = 0 1 0.5
+
+testing with varying spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+
+testing varying triples with varying spaces:
+  point ("shader", 0, 2, 0.5) = -0.414214 1.41421 0.5
+  vector ("shader", 0, 2, 0.5) = -1.41421 1.41421 0.5
+  normal ("shader", 0, 2, 0.5) = -1.41421 1.41421 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.0666667, 2, 0.5) = 0.0666667 2 0.5
+  vector (0.0666667, 2, 0.5) = 0.0666667 2 0.5
+  normal (0.0666667, 2, 0.5) = 0.0666667 2 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.0666667, 2, 0.5) = -0.367073 1.46135 0.5
+  vector ("shader", 0.0666667, 2, 0.5) = -1.36707 1.46135 0.5
+  normal ("shader", 0.0666667, 2, 0.5) = -1.36707 1.46135 0.5
+  point ("object", 0.0666667, 2, 0.5) = -2 1.06667 0.5
+  vector ("object", 0.0666667, 2, 0.5) = -2 0.0666666 0.5
+  normal ("object", 0.0666667, 2, 0.5) = -2 0.0666666 0.5
+  point ("myspace", 0.0666667, 2, 0.5) = 0.0666667 4 0.5
+  vector ("myspace", 0.0666667, 2, 0.5) = 0.0666667 4 0.5
+  normal ("myspace", 0.0666667, 2, 0.5) = 0.0666667 1 0.5
+
+testing with varying spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+
+testing varying triples with varying spaces:
+  point ("shader", 0.0666667, 2, 0.5) = -0.367073 1.46135 0.5
+  vector ("shader", 0.0666667, 2, 0.5) = -1.36707 1.46135 0.5
+  normal ("shader", 0.0666667, 2, 0.5) = -1.36707 1.46135 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.133333, 2, 0.5) = 0.133333 2 0.5
+  vector (0.133333, 2, 0.5) = 0.133333 2 0.5
+  normal (0.133333, 2, 0.5) = 0.133333 2 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.133333, 2, 0.5) = -0.319933 1.50849 0.5
+  vector ("shader", 0.133333, 2, 0.5) = -1.31993 1.50849 0.5
+  normal ("shader", 0.133333, 2, 0.5) = -1.31993 1.50849 0.5
+  point ("object", 0.133333, 2, 0.5) = -2 1.13333 0.5
+  vector ("object", 0.133333, 2, 0.5) = -2 0.133333 0.5
+  normal ("object", 0.133333, 2, 0.5) = -2 0.133333 0.5
+  point ("myspace", 0.133333, 2, 0.5) = 0.133333 4 0.5
+  vector ("myspace", 0.133333, 2, 0.5) = 0.133333 4 0.5
+  normal ("myspace", 0.133333, 2, 0.5) = 0.133333 1 0.5
+
+testing with varying spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+
+testing varying triples with varying spaces:
+  point ("shader", 0.133333, 2, 0.5) = -0.319933 1.50849 0.5
+  vector ("shader", 0.133333, 2, 0.5) = -1.31993 1.50849 0.5
+  normal ("shader", 0.133333, 2, 0.5) = -1.31993 1.50849 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.2, 2, 0.5) = 0.2 2 0.5
+  vector (0.2, 2, 0.5) = 0.2 2 0.5
+  normal (0.2, 2, 0.5) = 0.2 2 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.2, 2, 0.5) = -0.272792 1.55563 0.5
+  vector ("shader", 0.2, 2, 0.5) = -1.27279 1.55563 0.5
+  normal ("shader", 0.2, 2, 0.5) = -1.27279 1.55563 0.5
+  point ("object", 0.2, 2, 0.5) = -2 1.2 0.5
+  vector ("object", 0.2, 2, 0.5) = -2 0.2 0.5
+  normal ("object", 0.2, 2, 0.5) = -2 0.2 0.5
+  point ("myspace", 0.2, 2, 0.5) = 0.2 4 0.5
+  vector ("myspace", 0.2, 2, 0.5) = 0.2 4 0.5
+  normal ("myspace", 0.2, 2, 0.5) = 0.2 1 0.5
+
+testing with varying spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+
+testing varying triples with varying spaces:
+  point ("shader", 0.2, 2, 0.5) = -0.272792 1.55563 0.5
+  vector ("shader", 0.2, 2, 0.5) = -1.27279 1.55563 0.5
+  normal ("shader", 0.2, 2, 0.5) = -1.27279 1.55563 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.266667, 2, 0.5) = 0.266667 2 0.5
+  vector (0.266667, 2, 0.5) = 0.266667 2 0.5
+  normal (0.266667, 2, 0.5) = 0.266667 2 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.266667, 2, 0.5) = -0.225652 1.60278 0.5
+  vector ("shader", 0.266667, 2, 0.5) = -1.22565 1.60278 0.5
+  normal ("shader", 0.266667, 2, 0.5) = -1.22565 1.60278 0.5
+  point ("object", 0.266667, 2, 0.5) = -2 1.26667 0.5
+  vector ("object", 0.266667, 2, 0.5) = -2 0.266667 0.5
+  normal ("object", 0.266667, 2, 0.5) = -2 0.266667 0.5
+  point ("myspace", 0.266667, 2, 0.5) = 0.266667 4 0.5
+  vector ("myspace", 0.266667, 2, 0.5) = 0.266667 4 0.5
+  normal ("myspace", 0.266667, 2, 0.5) = 0.266667 1 0.5
+
+testing with varying spaces:
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+
+testing varying triples with varying spaces:
+  point ("object", 0.266667, 2, 0.5) = -2 1.26667 0.5
+  vector ("object", 0.266667, 2, 0.5) = -2 0.266667 0.5
+  normal ("object", 0.266667, 2, 0.5) = -2 0.266667 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.333333, 2, 0.5) = 0.333333 2 0.5
+  vector (0.333333, 2, 0.5) = 0.333333 2 0.5
+  normal (0.333333, 2, 0.5) = 0.333333 2 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.333333, 2, 0.5) = -0.178511 1.64992 0.5
+  vector ("shader", 0.333333, 2, 0.5) = -1.17851 1.64992 0.5
+  normal ("shader", 0.333333, 2, 0.5) = -1.17851 1.64992 0.5
+  point ("object", 0.333333, 2, 0.5) = -2 1.33333 0.5
+  vector ("object", 0.333333, 2, 0.5) = -2 0.333333 0.5
+  normal ("object", 0.333333, 2, 0.5) = -2 0.333333 0.5
+  point ("myspace", 0.333333, 2, 0.5) = 0.333333 4 0.5
+  vector ("myspace", 0.333333, 2, 0.5) = 0.333333 4 0.5
+  normal ("myspace", 0.333333, 2, 0.5) = 0.333333 1 0.5
+
+testing with varying spaces:
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+
+testing varying triples with varying spaces:
+  point ("object", 0.333333, 2, 0.5) = -2 1.33333 0.5
+  vector ("object", 0.333333, 2, 0.5) = -2 0.333333 0.5
+  normal ("object", 0.333333, 2, 0.5) = -2 0.333333 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.4, 2, 0.5) = 0.4 2 0.5
+  vector (0.4, 2, 0.5) = 0.4 2 0.5
+  normal (0.4, 2, 0.5) = 0.4 2 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.4, 2, 0.5) = -0.131371 1.69706 0.5
+  vector ("shader", 0.4, 2, 0.5) = -1.13137 1.69706 0.5
+  normal ("shader", 0.4, 2, 0.5) = -1.13137 1.69706 0.5
+  point ("object", 0.4, 2, 0.5) = -2 1.4 0.5
+  vector ("object", 0.4, 2, 0.5) = -2 0.4 0.5
+  normal ("object", 0.4, 2, 0.5) = -2 0.4 0.5
+  point ("myspace", 0.4, 2, 0.5) = 0.4 4 0.5
+  vector ("myspace", 0.4, 2, 0.5) = 0.4 4 0.5
+  normal ("myspace", 0.4, 2, 0.5) = 0.4 1 0.5
+
+testing with varying spaces:
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+
+testing varying triples with varying spaces:
+  point ("object", 0.4, 2, 0.5) = -2 1.4 0.5
+  vector ("object", 0.4, 2, 0.5) = -2 0.4 0.5
+  normal ("object", 0.4, 2, 0.5) = -2 0.4 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.466667, 2, 0.5) = 0.466667 2 0.5
+  vector (0.466667, 2, 0.5) = 0.466667 2 0.5
+  normal (0.466667, 2, 0.5) = 0.466667 2 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.466667, 2, 0.5) = -0.0842304 1.7442 0.5
+  vector ("shader", 0.466667, 2, 0.5) = -1.08423 1.7442 0.5
+  normal ("shader", 0.466667, 2, 0.5) = -1.08423 1.7442 0.5
+  point ("object", 0.466667, 2, 0.5) = -2 1.46667 0.5
+  vector ("object", 0.466667, 2, 0.5) = -2 0.466667 0.5
+  normal ("object", 0.466667, 2, 0.5) = -2 0.466667 0.5
+  point ("myspace", 0.466667, 2, 0.5) = 0.466667 4 0.5
+  vector ("myspace", 0.466667, 2, 0.5) = 0.466667 4 0.5
+  normal ("myspace", 0.466667, 2, 0.5) = 0.466667 1 0.5
+
+testing with varying spaces:
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+
+testing varying triples with varying spaces:
+  point ("object", 0.466667, 2, 0.5) = -2 1.46667 0.5
+  vector ("object", 0.466667, 2, 0.5) = -2 0.466667 0.5
+  normal ("object", 0.466667, 2, 0.5) = -2 0.466667 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.533333, 2, 0.5) = 0.533333 2 0.5
+  vector (0.533333, 2, 0.5) = 0.533333 2 0.5
+  normal (0.533333, 2, 0.5) = 0.533333 2 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.533333, 2, 0.5) = -0.0370899 1.79134 0.5
+  vector ("shader", 0.533333, 2, 0.5) = -1.03709 1.79134 0.5
+  normal ("shader", 0.533333, 2, 0.5) = -1.03709 1.79134 0.5
+  point ("object", 0.533333, 2, 0.5) = -2 1.53333 0.5
+  vector ("object", 0.533333, 2, 0.5) = -2 0.533333 0.5
+  normal ("object", 0.533333, 2, 0.5) = -2 0.533333 0.5
+  point ("myspace", 0.533333, 2, 0.5) = 0.533333 4 0.5
+  vector ("myspace", 0.533333, 2, 0.5) = 0.533333 4 0.5
+  normal ("myspace", 0.533333, 2, 0.5) = 0.533333 1 0.5
+
+testing with varying spaces:
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+
+testing varying triples with varying spaces:
+  point ("object", 0.533333, 2, 0.5) = -2 1.53333 0.5
+  vector ("object", 0.533333, 2, 0.5) = -2 0.533333 0.5
+  normal ("object", 0.533333, 2, 0.5) = -2 0.533333 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.6, 2, 0.5) = 0.6 2 0.5
+  vector (0.6, 2, 0.5) = 0.6 2 0.5
+  normal (0.6, 2, 0.5) = 0.6 2 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.6, 2, 0.5) = 0.0100505 1.83848 0.5
+  vector ("shader", 0.6, 2, 0.5) = -0.989949 1.83848 0.5
+  normal ("shader", 0.6, 2, 0.5) = -0.98995 1.83848 0.5
+  point ("object", 0.6, 2, 0.5) = -2 1.6 0.5
+  vector ("object", 0.6, 2, 0.5) = -2 0.6 0.5
+  normal ("object", 0.6, 2, 0.5) = -2 0.6 0.5
+  point ("myspace", 0.6, 2, 0.5) = 0.6 4 0.5
+  vector ("myspace", 0.6, 2, 0.5) = 0.6 4 0.5
+  normal ("myspace", 0.6, 2, 0.5) = 0.6 1 0.5
+
+testing with varying spaces:
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+
+testing varying triples with varying spaces:
+  point ("object", 0.6, 2, 0.5) = -2 1.6 0.5
+  vector ("object", 0.6, 2, 0.5) = -2 0.6 0.5
+  normal ("object", 0.6, 2, 0.5) = -2 0.6 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.666667, 2, 0.5) = 0.666667 2 0.5
+  vector (0.666667, 2, 0.5) = 0.666667 2 0.5
+  normal (0.666667, 2, 0.5) = 0.666667 2 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.666667, 2, 0.5) = 0.057191 1.88562 0.5
+  vector ("shader", 0.666667, 2, 0.5) = -0.942809 1.88562 0.5
+  normal ("shader", 0.666667, 2, 0.5) = -0.942809 1.88562 0.5
+  point ("object", 0.666667, 2, 0.5) = -2 1.66667 0.5
+  vector ("object", 0.666667, 2, 0.5) = -2 0.666667 0.5
+  normal ("object", 0.666667, 2, 0.5) = -2 0.666667 0.5
+  point ("myspace", 0.666667, 2, 0.5) = 0.666667 4 0.5
+  vector ("myspace", 0.666667, 2, 0.5) = 0.666667 4 0.5
+  normal ("myspace", 0.666667, 2, 0.5) = 0.666667 1 0.5
+
+testing with varying spaces:
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+
+testing varying triples with varying spaces:
+  point ("object", 0.666667, 2, 0.5) = -2 1.66667 0.5
+  vector ("object", 0.666667, 2, 0.5) = -2 0.666667 0.5
+  normal ("object", 0.666667, 2, 0.5) = -2 0.666667 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.733333, 2, 0.5) = 0.733333 2 0.5
+  vector (0.733333, 2, 0.5) = 0.733333 2 0.5
+  normal (0.733333, 2, 0.5) = 0.733333 2 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.733333, 2, 0.5) = 0.104331 1.93276 0.5
+  vector ("shader", 0.733333, 2, 0.5) = -0.895669 1.93276 0.5
+  normal ("shader", 0.733333, 2, 0.5) = -0.895669 1.93276 0.5
+  point ("object", 0.733333, 2, 0.5) = -2 1.73333 0.5
+  vector ("object", 0.733333, 2, 0.5) = -2 0.733333 0.5
+  normal ("object", 0.733333, 2, 0.5) = -2 0.733333 0.5
+  point ("myspace", 0.733333, 2, 0.5) = 0.733333 4 0.5
+  vector ("myspace", 0.733333, 2, 0.5) = 0.733333 4 0.5
+  normal ("myspace", 0.733333, 2, 0.5) = 0.733333 1 0.5
+
+testing with varying spaces:
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+
+testing varying triples with varying spaces:
+  point ("object", 0.733333, 2, 0.5) = -2 1.73333 0.5
+  vector ("object", 0.733333, 2, 0.5) = -2 0.733333 0.5
+  normal ("object", 0.733333, 2, 0.5) = -2 0.733333 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.8, 2, 0.5) = 0.8 2 0.5
+  vector (0.8, 2, 0.5) = 0.8 2 0.5
+  normal (0.8, 2, 0.5) = 0.8 2 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.8, 2, 0.5) = 0.151472 1.9799 0.5
+  vector ("shader", 0.8, 2, 0.5) = -0.848528 1.9799 0.5
+  normal ("shader", 0.8, 2, 0.5) = -0.848528 1.9799 0.5
+  point ("object", 0.8, 2, 0.5) = -2 1.8 0.5
+  vector ("object", 0.8, 2, 0.5) = -2 0.8 0.5
+  normal ("object", 0.8, 2, 0.5) = -2 0.8 0.5
+  point ("myspace", 0.8, 2, 0.5) = 0.8 4 0.5
+  vector ("myspace", 0.8, 2, 0.5) = 0.8 4 0.5
+  normal ("myspace", 0.8, 2, 0.5) = 0.8 1 0.5
+
+testing with varying spaces:
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with varying spaces:
+  point ("myspace", 0.8, 2, 0.5) = 0.8 4 0.5
+  vector ("myspace", 0.8, 2, 0.5) = 0.8 4 0.5
+  normal ("myspace", 0.8, 2, 0.5) = 0.8 1 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.866667, 2, 0.5) = 0.866667 2 0.5
+  vector (0.866667, 2, 0.5) = 0.866667 2 0.5
+  normal (0.866667, 2, 0.5) = 0.866667 2 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.866667, 2, 0.5) = 0.198612 2.02704 0.5
+  vector ("shader", 0.866667, 2, 0.5) = -0.801388 2.02704 0.5
+  normal ("shader", 0.866667, 2, 0.5) = -0.801388 2.02704 0.5
+  point ("object", 0.866667, 2, 0.5) = -2 1.86667 0.5
+  vector ("object", 0.866667, 2, 0.5) = -2 0.866667 0.5
+  normal ("object", 0.866667, 2, 0.5) = -2 0.866667 0.5
+  point ("myspace", 0.866667, 2, 0.5) = 0.866667 4 0.5
+  vector ("myspace", 0.866667, 2, 0.5) = 0.866667 4 0.5
+  normal ("myspace", 0.866667, 2, 0.5) = 0.866667 1 0.5
+
+testing with varying spaces:
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with varying spaces:
+  point ("myspace", 0.866667, 2, 0.5) = 0.866667 4 0.5
+  vector ("myspace", 0.866667, 2, 0.5) = 0.866667 4 0.5
+  normal ("myspace", 0.866667, 2, 0.5) = 0.866667 1 0.5
+  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+ varying:
+  point (0.933333, 2, 0.5) = 0.933333 2 0.5
+  vector (0.933333, 2, 0.5) = 0.933333 2 0.5
+  normal (0.933333, 2, 0.5) = 0.933333 2 0.5
+
+testing with spaces:
+  point ("shader", 1, 1, 0) = 1 1.41421 0
+  vector ("shader", 1, 1, 0) = 0 1.41421 0
+  normal ("shader", 1, 1, 0) = 0 1.41421 0
+  point ("object", 1, 1, 0) = -1 2 0
+  vector ("object", 1, 1, 0) = -1 1 0
+  normal ("object", 1, 1, 0) = -1 1 0
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 0.933333, 2, 0.5) = 0.245753 2.07418 0.5
+  vector ("shader", 0.933333, 2, 0.5) = -0.754247 2.07418 0.5
+  normal ("shader", 0.933333, 2, 0.5) = -0.754247 2.07418 0.5
+  point ("object", 0.933333, 2, 0.5) = -2 1.93333 0.5
+  vector ("object", 0.933333, 2, 0.5) = -2 0.933333 0.5
+  normal ("object", 0.933333, 2, 0.5) = -2 0.933333 0.5
+  point ("myspace", 0.933333, 2, 0.5) = 0.933333 4 0.5
+  vector ("myspace", 0.933333, 2, 0.5) = 0.933333 4 0.5
+  normal ("myspace", 0.933333, 2, 0.5) = 0.933333 1 0.5
+
+testing with varying spaces:
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with varying spaces:
+  point ("myspace", 0.933333, 2, 0.5) = 0.933333 4 0.5
+  vector ("myspace", 0.933333, 2, 0.5) = 0.933333 4 0.5
+  normal ("myspace", 0.933333, 2, 0.5) = 0.933333 1 0.5
   point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
   vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
   normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
@@ -71,4 +1225,25 @@ testing with spaces:
   point ("myspace", 1, 1, 0) = 1 2 0
   vector ("myspace", 1, 1, 0) = 1 2 0
   normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with uniform spaces:
+  point ("shader", 1, 2, 0.5) = 0.292893 2.12132 0.5
+  vector ("shader", 1, 2, 0.5) = -0.707107 2.12132 0.5
+  normal ("shader", 1, 2, 0.5) = -0.707107 2.12132 0.5
+  point ("object", 1, 2, 0.5) = -2 2 0.5
+  vector ("object", 1, 2, 0.5) = -2 1 0.5
+  normal ("object", 1, 2, 0.5) = -2 1 0.5
+  point ("myspace", 1, 2, 0.5) = 1 4 0.5
+  vector ("myspace", 1, 2, 0.5) = 1 4 0.5
+  normal ("myspace", 1, 2, 0.5) = 1 1 0.5
+
+testing with varying spaces:
+  point ("myspace", 1, 1, 0) = 1 2 0
+  vector ("myspace", 1, 1, 0) = 1 2 0
+  normal ("myspace", 1, 1, 0) = 1 0.5 0
+
+testing varying triples with varying spaces:
+  point ("myspace", 1, 2, 0.5) = 1 4 0.5
+  vector ("myspace", 1, 2, 0.5) = 1 4 0.5
+  normal ("myspace", 1, 2, 0.5) = 1 1 0.5
 

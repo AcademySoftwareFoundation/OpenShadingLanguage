@@ -219,6 +219,9 @@ LLVM_Util::total_jit_memory_held ()
 class LLVM_Util::MemoryManager : public LLVMMemoryManager {
 protected:
     LLVMMemoryManager *mm;  // the real one
+    // TODO: A.W. investigate why this using was added to avoid build issue
+    // could be related to LLVM 5.0 (test and invistigate)
+    using llvm::RuntimeDyld::MemoryManager::deregisterEHFrames;
 public:
 
 #if USE_OLD_JIT // llvm::JITMemoryManager

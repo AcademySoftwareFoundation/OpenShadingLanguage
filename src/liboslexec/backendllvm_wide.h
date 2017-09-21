@@ -322,6 +322,12 @@ public:
                                       TypeDesc type = TypeDesc::UNKNOWN,
 									  bool is_uniform=true);
 
+
+    /// Return a pointer to an WideMatrix that was previously alloca
+    /// on the stack, meant for generator to reuse as a temporary
+    llvm::Value *temp_wide_matrix_ptr();
+
+
     /// Return a ref to the bool where the "layer_run" flag is stored for
     /// the specified layer.
     llvm::Value *layer_run_ref (int layer);
@@ -468,6 +474,7 @@ private:
     std::map<const Symbol*,int> m_param_order_map;
     llvm::Value *m_llvm_shaderglobals_ptr;
     llvm::Value *m_llvm_groupdata_ptr;
+    llvm::Value *m_llvm_temp_wide_matrix_ptr; // gen_tranform wants to reuse alloca
     llvm::BasicBlock * m_exit_instance_block;  // exit point for the instance
     llvm::Type *m_llvm_type_sg;  // LLVM type of ShaderGlobals struct
     llvm::Type *m_llvm_type_groupdata;  // LLVM type of group data

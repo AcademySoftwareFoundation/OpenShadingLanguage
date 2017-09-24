@@ -3,15 +3,15 @@ set (public_docs osl-languagespec.pdf
                  markdeep.min.js
                  )
 
-install (FILES ${public_docs} DESTINATION doc COMPONENT documentation)
+install (FILES ${public_docs} DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT documentation)
 
 install ( FILES "${PROJECT_SOURCE_DIR}/LICENSE"
                 "${PROJECT_SOURCE_DIR}/INSTALL.md"
                 "${PROJECT_SOURCE_DIR}/CHANGES.md"
                 "${PROJECT_SOURCE_DIR}/README.md"
-          DESTINATION doc )
+          DESTINATION ${CMAKE_INSTALL_DOCDIR} )
 
 
 file (GLOB testshade_figures "Figures/testshade/*.jpg")
 install (FILES ${testshade_figures}
-         DESTINATION doc/Figures/testshade )
+         DESTINATION ${CMAKE_INSTALL_DOCDIR}/Figures/testshade )

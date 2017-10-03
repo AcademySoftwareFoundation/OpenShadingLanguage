@@ -1,6 +1,7 @@
-Release 1.8.11 -- 11 Sep 2017 (compared to 1.8.10)
+Release 1.8.11 -- 3 Oct 2017 (compared to 1.8.10)
 --------------------------------------------------
-* Builds properly against LLVM 5.0.
+* Builds properly against LLVM 5.0, and if compiled by clang 5.0.
+* Changes to test/CI with recent OIIO release.
 
 Release 1.8.10 -- 1 Jul 2017 (compared to 1.8.9)
 --------------------------------------------------

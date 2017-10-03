@@ -115,11 +115,16 @@ matrix:
       #- os: osx
       #  compiler: clang
       #  env: DEBUG=1 USE_CPP11=1 USE_CPP=11
-    # Test against the older release branch of OIIO (all the other tests
-    # are against OIIO master), and also use C++03.
+    # Test against the current release branch of OIIO (most of the other
+    # tests are against OIIO master).
       - os: linux
         compiler: gcc
-        env: OIIOBRANCH=release USE_CPP11=0
+        env: OIIOBRANCH=release USE_CPP11=1 USE_CPP=11
+    # Test against the previous release branch of OIIO, which may still be
+    # used, and also use C++03.
+      - os: linux
+        compiler: gcc
+        env: OIIOBRANCH=RB-1.7 USE_CPP11=0
       # Seems LLVM 3.4 has disappeared from Homebrew, so there's not an
       # easy way to test C++03 builds on OSX on TravisCI.
       #- os: osx

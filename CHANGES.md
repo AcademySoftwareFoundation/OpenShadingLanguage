@@ -1,3 +1,7 @@
+Release 1.8.12 -- ?? 2017 (compared to 1.8.11)
+--------------------------------------------------
+
+
 Release 1.8.11 -- 3 Oct 2017 (compared to 1.8.10)
 --------------------------------------------------
 * Builds properly against LLVM 5.0, and if compiled by clang 5.0.

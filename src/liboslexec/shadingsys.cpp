@@ -651,6 +651,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_range_checking(true),
       m_unknown_coordsys_error(true), m_connection_error(true),
       m_greedyjit(false), m_countlayerexecs(false),
+      m_relaxed_param_typecheck(false),
       m_max_warnings_per_thread(100),
       m_profile(0),
       m_optimize(2),
@@ -1094,6 +1095,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("unknown_coordsys_error", int, m_unknown_coordsys_error);
     ATTR_SET ("connection_error", int, m_connection_error);
     ATTR_SET ("greedyjit", int, m_greedyjit);
+    ATTR_SET ("relaxed_param_typecheck", int, m_relaxed_param_typecheck);
     ATTR_SET ("countlayerexecs", int, m_countlayerexecs);
     ATTR_SET ("max_warnings_per_thread", int, m_max_warnings_per_thread);
     ATTR_SET ("max_local_mem_KB", int, m_max_local_mem_KB);
@@ -1204,6 +1206,7 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("connection_error", int, m_connection_error);
     ATTR_DECODE ("greedyjit", int, m_greedyjit);
     ATTR_DECODE ("countlayerexecs", int, m_countlayerexecs);
+    ATTR_DECODE ("relaxed_param_typecheck", int, m_relaxed_param_typecheck);
     ATTR_DECODE ("max_warnings_per_thread", int, m_max_warnings_per_thread);
     ATTR_DECODE_STRING ("commonspace", m_commonspace_synonym);
     ATTR_DECODE_STRING ("colorspace", m_colorspace);

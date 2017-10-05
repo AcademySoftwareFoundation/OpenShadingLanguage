@@ -600,6 +600,7 @@ public:
     bool range_checking() const { return m_range_checking; }
     bool unknown_coordsys_error() const { return m_unknown_coordsys_error; }
     bool connection_error() const { return m_connection_error; }
+    bool relaxed_param_typecheck() const { return m_relaxed_param_typecheck; }
     int optimize () const { return m_optimize; }
     int llvm_optimize () const { return m_llvm_optimize; }
     int llvm_debug () const { return m_llvm_debug; }
@@ -770,6 +771,7 @@ private:
     bool m_connection_error;              ///< Error for ConnectShaders to fail?
     bool m_greedyjit;                     ///< JIT as much as we can?
     bool m_countlayerexecs;               ///< Count number of layer execs?
+    bool m_relaxed_param_typecheck;       ///< Allow parameters to be set from isomorphic types (same data layout)
     int m_max_warnings_per_thread;        ///< How many warnings to display per thread before giving up?
     int m_profile;                        ///< Level of profiling of shader execution
     int m_optimize;                       ///< Runtime optimization level

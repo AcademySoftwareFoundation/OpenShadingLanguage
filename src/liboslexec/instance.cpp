@@ -244,12 +244,13 @@ ShaderInstance::parameters (const ParamValueList &params)
                 // Relaxed rules just look to see that the types are isomorphic to each other (ie: same number of base values)
                 // Note that:
                 //   * basetypes must match exactly (int vs float vs string)
-                //   * paramtype cannot be unsized (we must know the concrete number of values)
-                //   * if valuetype is sized (or not an array) just check for the total number of entries
-                //   * if valuetype is unsized (shader writer is flexible about how many values come in) -- make sure we are a multiple of the target type
-                if (!(paramtype.basetype == valuetype.basetype && !paramtype.is_unsized_array() &&
-                            ((!valuetype.is_unsized_array() && paramtype.basevalues() == valuetype.basevalues()) ||
-                            (( valuetype.is_unsized_array() && paramtype.basevalues() % valuetype.aggregate == 0))))) {
+                //   * valuetype cannot be unsized (we must know the concrete number of values)
+                //   * if paramtype is sized (or not an array) just check for the total number of entries
+                //   * if paramtype is unsized (shader writer is flexible about how many values come in) -- make sure we are a multiple of the target type
+                if (!( valuetype.basetype == paramtype.basetype &&
+                      !valuetype.is_unsized_array() &&
+                      ((!paramtype.is_unsized_array() && valuetype.basevalues() == paramtype.basevalues()) ||
+                       ( paramtype.is_unsized_array() && valuetype.basevalues() % paramtype.aggregate == 0)) )) {
                     shadingsys().warning ("attempting to set parameter from incompatible type: %s (expected '%s', received '%s')",
                                           sm->name(), paramtype, valuetype);
                     continue;

@@ -848,7 +848,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
 
     // name          llvmgen              folder         simple     flags
     OP (aassign,     aassign,             aassign,       false,     0);
-    OP (abs,         generic,             abs,           true,      LLVM_INLINED);
+    OP (abs,         generic,             abs,           true,      0 /*LLVM_INLINED*/);
     OP (acos,        generic,             acos,          true,      0);
     OP (add,         add,                 add,           true,      0);
     OP (and,         andor,               and,           true,      0);
@@ -904,7 +904,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (expm1,       generic,             expm1,         true,      0);
     OP (fabs,        generic,             abs,           true,      0);
     OP (filterwidth, filterwidth,         deriv,         true,      0);
-    OP (floor,       generic,             floor,         true,      LLVM_INLINED);
+    OP (floor,       generic,             floor,         true,      0  /*LLVM_INLINED*/);
     OP (fmod,        modulus,             none,          true,      0);
     OP (for,         loop_op,             none,          false,     0);
     OP (format,      printf,              format,        true,      0);
@@ -970,12 +970,12 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (sin,         generic,             sin,           true,      0);
     OP (sincos,      sincos,              sincos,        false,     0);
     OP (sinh,        generic,             none,          true,      0);
-    OP (smoothstep,  generic,             none,          true,      LLVM_INLINED);
+    OP (smoothstep,  generic,             none,          true,      0 /*LLVM_INLINED*/);
     OP (snoise,      noise,               noise,         true,      0);
     OP (spline,      spline,              none,          true,      0);
     OP (splineinverse, spline,            none,          true,      0);
     OP (split,       split,               split,         false,     0);
-    OP (sqrt,        generic,             sqrt,          true,      LLVM_INLINED);
+    OP (sqrt,        generic,             sqrt,          true,      0 /*LLVM_INLINED*/);
     OP (startswith,  generic,             none,          true,      0);
     OP (step,        generic,             none,          true,      0);
     OP (stof,        generic,             stof,          true,      0);

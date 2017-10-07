@@ -27,25 +27,101 @@ void all_transforms (point p, string to, int derivs)
 }
 
 
+void uniform_matrix_transforms (point p)
+{
+    matrix m = matrix(1.0, 0.0, 0.0, 0.0, 
+                      0.0, 1.0, 0.0, 0.0,
+                      0.0, 0.0, 1.0, 0.0,
+                      10.0, 20.0, 30.0, 1.0);
+    printf ("\ntransform uniform matrix:\n");
+    point px = transform (m, (point)p);
+    printf (" transform(, point(%g)) = %.5g\n", 
+            p, pretty(px));
+
+    vector vx = transform (m, (vector)p);                
+    printf (" transform(, vector(%g)) = %.5g\n", 
+            p, pretty(vx));
+                           
+    normal nx = transform(m, (normal)p);
+    printf (" transform(, normal(%g)) = %.5g\n", 
+            p, pretty(nx));
+}
+
+
+void uniform_matrix_transforms_with_derivs (point p)
+{
+    matrix m = matrix(1.0, 0.0, 0.0, 0.0, 
+                      0.0, 1.0, 0.0, 0.0,
+                      0.0, 0.0, 1.0, 0.0,
+                      10.0, 20.0, 30.0, 1.0);
+    printf ("\ntransform uniform matrix:\n");
+    printf ("  p = %g, Dx(p) = %g, Dy(p) = %.5g\n", p, Dx(p), Dy(p));
+    point px = transform (m, (point)p);
+    printf (" transform(, point(%g)) = %.5g\n", 
+            p, pretty(px));
+    printf ("  derivs of transform(, point(%g)): Dx = %g, Dy = %g\n", 
+                p, Dx(px), Dy(px));
+
+    vector vx = transform (m, (vector)p);                
+    printf (" transform(, vector(%g)) = %.5g\n", 
+            p, pretty(vx));
+            
+    printf ("  derivs of transform(point(%g)): Dx = %g, Dy = %g\n", 
+            p, Dx(vx), Dy(vx));
+            
+    normal nx = transform(m, (normal)p);
+    printf (" transform(, normal(%g)) = %.5g\n", 
+            p, pretty(nx));
+
+    printf ("  derivs of transform(normal(%g)): Dx = %g, Dy = %g\n", 
+            p, Dx(nx), Dy(nx));
+}
 
 void all_transforms (point p, string from, string to, int derivs)
 {
-    printf ("\ntransform '%s' to '%s':\n", from, to);
-    if (derivs)
-        printf ("  p = %g, Dx(p) = %g, Dy(p) = %.5g\n", p, Dx(p), Dy(p));
-    point px = transform (from, to, (point)p);
-    printf (" transform(\"%s\", \"%s\", point(%g)) = %.5g\n", from, to,
-            p, pretty(px));
-    if (derivs)
-        printf ("  derivs of transform(\"%s\", point(%g)): Dx = %g, Dy = %g\n", 
-                to, p, Dx(px), Dy(px));
-    vector vx = transform (from, to, (vector)p);                
-    printf (" transform(\"%s\", \"%s\", vector(%g)) = %.5g\n", from, to,
-            p, pretty(vx));
-    normal nx = transform(from, to, (normal)p);
-    printf (" transform(\"%s\", \"%s\", normal(%g)) = %.5g\n", from, to,
-            p, pretty(nx));
-
+    {
+        printf ("\ntransform '%s' to '%s':\n", from, to);
+        if (derivs)
+            printf ("  p = %g, Dx(p) = %g, Dy(p) = %.5g\n", p, Dx(p), Dy(p));
+        point px = transform (from, to, (point)p);
+        printf (" transform(\"%s\", \"%s\", point(%g)) = %.5g\n", from, to,
+                p, pretty(px));
+        if (derivs)
+            printf ("  derivs of transform(\"%s\", point(%g)): Dx = %g, Dy = %g\n", 
+                    to, p, Dx(px), Dy(px));
+        vector vx = transform (from, to, (vector)p);                
+        printf (" transform(\"%s\", \"%s\", vector(%g)) = %.5g\n", from, to,
+                p, pretty(vx));
+        normal nx = transform(from, to, (normal)p);
+        printf (" transform(\"%s\", \"%s\", normal(%g)) = %.5g\n", from, to,
+                p, pretty(nx));
+    }
+    #if 0
+    // In progress development to correctly identify writes to function local
+    // variables as independent from the next call.  After inlining it creates
+    // a read/write dependency causing unnecessary masking, currently an 
+    // assert will fire on the matrix constructor
+    {
+        matrix m = matrix(from, to);
+        printf ("\ntransform '%s' to '%s':\n", from, to);
+        if (derivs)
+            printf ("  p = %g, Dx(p) = %g, Dy(p) = %.5g\n", p, Dx(p), Dy(p));
+        point px = transform (m, (point)p);
+        printf (" transform(\"%s\", \"%s\", point(%g)) = %.5g\n", from, to,
+                p, pretty(px));
+        if (derivs)
+            printf ("  derivs of transform(\"%s\", point(%g)): Dx = %g, Dy = %g\n", 
+                    to, p, Dx(px), Dy(px));
+        vector vx = transform (m, (vector)p);                
+        printf (" transform(\"%s\", \"%s\", vector(%g)) = %.5g\n", from, to,
+                p, pretty(vx));
+        normal nx = transform(m, (normal)p);
+        printf (" transform(\"%s\", \"%s\", normal(%g)) = %.5g\n", from, to,
+                p, pretty(nx));
+    }
+    #endif
+    
+    // TODO:  add test of uniform Matrix vs. varying triples
 }
 
 
@@ -186,20 +262,22 @@ void do_varying_from_varying_to_test (point z, point p)
     }
 }
 
-
 shader
 test ()
 {
     point z = point (0, 0, 0);
     point p = point (1, 1.41421, 0);
+
     do_test (z, p);
     
     printf ("\n\n varying triples:\n\n");
     point invP = vector(1.0) - P;
     do_test (P, invP);
-    
     printf ("\n\n varying from space:\n\n");
     do_varying_from_test(z, p);
+    
+    uniform_matrix_transforms (P);
+    uniform_matrix_transforms_with_derivs (P);
     
     printf ("\n\n varying from space & triples:\n\n");
     do_varying_from_test(P, invP);
@@ -218,5 +296,4 @@ test ()
     point vp = p + vector (u, v, 0);
     point invvp = vector(1.0) - vp;
     do_test (vp, invvp);
-    
 }

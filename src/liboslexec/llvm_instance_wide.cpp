@@ -44,7 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "../liboslcomp/oslcomp_pvt.h"
 #include "backendllvm_wide.h"
 
-// Create extrenal declarations for all built-in funcs we may call from LLVM
+// Create external declarations for all built-in funcs we may call from LLVM
 #define DECL(name,signature) extern "C" void name();
 #define WDECL(name,signature) extern "C" void name();
 #include "builtindecl.h"
@@ -1055,6 +1055,9 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
                 llvm_run_connected_layers (*srcsym, con.src.param);
                 // FIXME -- I'm not sure I understand this.  Isn't this
                 // unnecessary if we wrote to the parameter ourself?
+                // If connection is to a node not used in the next layer
+                // then it may not have been analyzed properly
+                // and more importantly can be skipped
                 llvm_assign_impl (*dstsym, *srcsym);
             }
         }

@@ -82,6 +82,7 @@ static std::vector<int> entrylayer_index;
 static std::vector<const ShaderSymbol *> entrylayer_symbols;
 static bool debug = false;
 static bool debug2 = false;
+static bool llvm_debug = false;
 static bool verbose = false;
 static bool runstats = false;
 static bool batched = false;
@@ -142,6 +143,7 @@ set_shadingsys_options ()
     if (shadingsys_options_set)
         return;
 
+    shadingsys->attribute ("llvm_debug", (llvm_debug ? 2 : 0));
     OSL_DEV_ONLY(shadingsys->attribute ("llvm_debug", 2));
 
     shadingsys->attribute ("debug", debug2 ? 2 : (debug ? 1 : 0));
@@ -470,6 +472,7 @@ getargs (int argc, const char *argv[])
                 "-t %d", &num_threads, "Render using N threads (default: auto-detect)",
                 "--debug", &debug, "Lots of debugging info",
                 "--debug2", &debug2, "Even more debugging info",
+                "--llvm_debug", &llvm_debug, "Turn on LLVM debugging info",
                 "--runstats", &runstats, "Print run statistics",
                 "--stats", &runstats, "",  // DEPRECATED 1.7
 			    // HACK ALERT, added next line for debuggin, remove it
@@ -1031,7 +1034,7 @@ setup_output_images_batched (ShadingSystem *shadingsys,
         // shader.
         const ShaderSymbol *sym = shadingsys->find_symbol (*shadergroup, outputvarnames[i]);
         if (!sym) {
-            std::cout << "Output symbol" << outputvars[i]
+            std::cout << "Output symbol " << outputvars[i]
                       << " not found, skipping.\n";
             continue;  // Skip if symbol isn't found
         }

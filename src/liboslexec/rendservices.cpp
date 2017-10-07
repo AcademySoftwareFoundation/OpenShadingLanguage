@@ -700,8 +700,13 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle * text
             }
             
             if (retVal) {
+            	// Per the OSL language specification
+            	// "The alpha channel (presumed to be the next channel following the channels returned by the texture() call)"
+            	// so despite the fact the alpha channel really is
+            	// we will always use +1 the final channel requested
+            	int alphaChannelIndex;
                 if (resultRef.is<Color3>()) {
-
+                	alphaChannelIndex = 3;
                     auto result= resultRef.masked<Color3>();
                     auto resultDs = resultRef.maskedDx<Color3>();
                     auto resultDt = resultRef.maskedDy<Color3>();
@@ -711,6 +716,7 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle * text
                         resultDt[i] = Color3(dresultdt_simd[0], dresultdt_simd[1], dresultdt_simd[2]);
 					}
                 } else if (resultRef.is<float>()) {
+                	alphaChannelIndex = 1;
                     auto result= resultRef.masked<float>();
                     auto resultDs = resultRef.maskedDx<float>();
                     auto resultDt = resultRef.maskedDy<float>();
@@ -722,12 +728,12 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle * text
             	}
                 if (alphaIsValid) {
 				    auto alpha = alphaRef.masked<float>();
-                    alpha[i] = result_simd[3];
+                    alpha[i] = result_simd[alphaChannelIndex];
                     if (alphaRef.has_derivs()) {
 						auto alphaDs = alphaRef.maskedDx<float>();
     					auto alphaDt = alphaRef.maskedDy<float>();
-                        alphaDs[i] = dresultds_simd[3];
-                        alphaDt[i] = dresultdt_simd[3];
+                        alphaDs[i] = dresultds_simd[alphaChannelIndex];
+                        alphaDt[i] = dresultdt_simd[alphaChannelIndex];
                     }
                 }
                 //std::cout << "s: " << s.get(i) << " t: " << t.get(i) << " color: " << resultColor << " " << wideResult.get(i) << std::endl;
@@ -804,8 +810,13 @@ BatchedRendererServices::texture (ConstWideAccessor<ustring> filename,
                                             has_derivs ? (float *)&dresultdt_simd : NULL);
 
             if (retVal) {
+            	// Per the OSL language specification
+            	// "The alpha channel (presumed to be the next channel following the channels returned by the texture() call)"
+            	// so despite the fact the alpha channel really is
+            	// we will always use +1 the final channel requested
+            	int alphaChannelIndex;
                 if (resultRef.is<Color3>()) {
-
+                	alphaChannelIndex = 3;
                     auto result= resultRef.masked<Color3>();
                     auto resultDs = resultRef.maskedDx<Color3>();
                     auto resultDt = resultRef.maskedDy<Color3>();
@@ -815,6 +826,7 @@ BatchedRendererServices::texture (ConstWideAccessor<ustring> filename,
                         resultDt[i] = Color3(dresultdt_simd[0], dresultdt_simd[1], dresultdt_simd[2]);
                     }
                 } else if (resultRef.is<float>()) {
+                	alphaChannelIndex = 1;
                     auto result= resultRef.masked<float>();
                     auto resultDs = resultRef.maskedDx<float>();
                     auto resultDt = resultRef.maskedDy<float>();
@@ -826,12 +838,12 @@ BatchedRendererServices::texture (ConstWideAccessor<ustring> filename,
                 }
                 if (alphaIsValid) {
                     auto alpha = alphaRef.masked<float>();
-                    alpha[i] = result_simd[3];
+                    alpha[i] = result_simd[alphaChannelIndex];
                     if (alphaRef.has_derivs()) {
                         auto alphaDs = alphaRef.maskedDx<float>();
                         auto alphaDt = alphaRef.maskedDy<float>();
-                        alphaDs[i] = dresultds_simd[3];
-                        alphaDt[i] = dresultdt_simd[3];
+                        alphaDs[i] = dresultds_simd[alphaChannelIndex];
+                        alphaDt[i] = dresultdt_simd[alphaChannelIndex];
                     }
                 }
                 //std::cout << "s: " << s.get(i) << " t: " << t.get(i) << " color: " << resultColor << " " << wideResult.get(i) << std::endl;

@@ -49,242 +49,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 OSL_NAMESPACE_ENTER
 
-namespace fast {
-
-// Considering having functionally equivalent versions of Vec3, Color3, Matrix44
-// with slight modifications to inlining and implmentation to avoid aliasing and
-// improve likelyhood of proper privation of local variables within a SIMD loop
-#if 0
-
-namespace Imath {
-template <class T> class Matrix44
-{
-  public:
-	OSL_INLINE Matrix44() {}
-	OSL_INLINE Matrix44(const Matrix44 &other);
-
-    //-------------------
-    // Access to elements
-    //-------------------
-
-    T           x00;
-    T           x01;
-    T           x02;
-    T           x03;
-
-    T           x10;
-    T           x11;
-    T           x12;
-    T           x13;
-
-    T           x20;
-    T           x21;
-    T           x22;
-    T           x23;
-
-    T           x30;
-    T           x31;
-    T           x32;
-    T           x33;
-
-    OSL_INLINE Matrix44 (T a, T b, T c, T d, T e, T f, T g, T h,
-              T i, T j, T k, T l, T m, T n, T o, T p);
-
-                                // a b c d
-                                // e f g h
-                                // i j k l
-                                // m n o p
-};
-
-template <class T>
-Matrix44<T>::Matrix44 (const Matrix44 &other)
-: x00(other.x00)
-, x01(other.x01)
-, x02(other.x02)
-, x03(other.x03)
-, x10(other.x10)
-, x11(other.x11)
-, x12(other.x12)
-, x13(other.x13)
-, x20(other.x20)
-, x21(other.x21)
-, x22(other.x22)
-, x23(other.x23)
-, x30(other.x30)
-, x31(other.x31)
-, x32(other.x32)
-, x33(other.x33)
-{}
-
-template <class T>
-Matrix44<T>::Matrix44 (T a, T b, T c, T d, T e, T f, T g, T h,
-                       T i, T j, T k, T l, T m, T n, T o, T p)
-: x00(a)
-, x01(b)
-, x02(c)
-, x03(d)
-, x10(e)
-, x11(f)
-, x12(g)
-, x13(h)
-, x20(i)
-, x21(j)
-, x22(k)
-, x23(l)
-, x30(m)
-, x31(n)
-, x32(o)
-, x33(p)
-{
-//    x[0][0] = a;
-//    x[0][1] = b;
-//    x[0][2] = c;
-//    x[0][3] = d;
-//    x[1][0] = e;
-//    x[1][1] = f;
-//    x[1][2] = g;
-//    x[1][3] = h;
-//    x[2][0] = i;
-//    x[2][1] = j;
-//    x[2][2] = k;
-//    x[2][3] = l;
-//    x[3][0] = m;
-//    x[3][1] = n;
-//    x[3][2] = o;
-//    x[3][3] = p;
-}
-} // namespace Imath
-
-typedef Imath::Matrix44<Float> Matrix44;
-#endif
-
-} // fast
-
-#if 0
-template <int WidthT>
-struct Wide<fast::Matrix44, WidthT>
-{
-	typedef fast::Matrix44 value_type;
-	static constexpr int width = WidthT;
-	//Wide<float, WidthT> x[4][4];
-	Wide<float, WidthT>           x00;
-	Wide<float, WidthT>           x01;
-	Wide<float, WidthT>           x02;
-	Wide<float, WidthT>           x03;
-
-	Wide<float, WidthT>           x10;
-	Wide<float, WidthT>           x11;
-	Wide<float, WidthT>           x12;
-	Wide<float, WidthT>           x13;
-
-	Wide<float, WidthT>           x20;
-	Wide<float, WidthT>           x21;
-	Wide<float, WidthT>           x22;
-	Wide<float, WidthT>           x23;
-
-	Wide<float, WidthT>           x30;
-	Wide<float, WidthT>           x31;
-	Wide<float, WidthT>           x32;
-	Wide<float, WidthT>           x33;
-
-	OSL_INLINE void
-	set(int index, const value_type & value)
-	{
-		x00.set(index, value.x00);
-		x01.set(index, value.x01);
-		x02.set(index, value.x02);
-		x03.set(index, value.x03);
-		x10.set(index, value.x10);
-		x11.set(index, value.x11);
-//		x12.set(index, value.x12);
-		//x13.set(index, value.x13);
-		x12.set(index, 0.0f);
-		x13.set(index, 0.0f);
-		//x20.set(index, value.x20);
-
-		x21.set(index, value.x21);
-		x22.set(index, value.x22);
-		x23.set(index, value.x23);
-		x30.set(index, value.x30);
-		x31.set(index, value.x31);
-		x32.set(index, value.x32);
-		x33.set(index, value.x33);
-	}
-
-	OSL_INLINE value_type
-	get(int index) const
-	{
-		return value_type(
-			x00.get(index), x01.get(index), x02.get(index), x03.get(index),
-			x10.get(index), x11.get(index), x12.get(index), x13.get(index),
-			x20.get(index), x21.get(index), x22.get(index), x23.get(index),
-			x30.get(index), x31.get(index), x32.get(index), x33.get(index));
-	}
-
-#if 0
-	OSL_INLINE void
-	set(int index, const value_type & value)
-	{
-		x[0][0].set(index, value.x00);
-		x[0][1].set(index, value.x01);
-		x[0][2].set(index, value.x02);
-		x[0][3].set(index, value.x03);
-		x[1][0].set(index, value.x10);
-		x[1][1].set(index, value.x11);
-		x[1][2].set(index, value.x12);
-		x[1][3].set(index, value.x13);
-		x[2][0].set(index, value.x20);
-		x[2][1].set(index, value.x21);
-		x[2][2].set(index, value.x22);
-		x[2][3].set(index, value.x23);
-		x[3][0].set(index, value.x30);
-		x[3][1].set(index, value.x31);
-		x[3][2].set(index, value.x32);
-		x[3][3].set(index, value.x33);
-	}
-
-	OSL_INLINE value_type
-	get(int index) const
-	{
-		return value_type(
-			x[0][0].get(index), x[0][1].get(index), x[0][2].get(index), x[0][3].get(index),
-			x[1][0].get(index), x[1][1].get(index), x[1][2].get(index), x[1][3].get(index),
-			x[2][0].get(index), x[2][1].get(index), x[2][2].get(index), x[2][3].get(index),
-			x[3][0].get(index), x[3][1].get(index), x[3][2].get(index), x[3][3].get(index));
-	}
-#endif
-	OSL_INLINE Wide() {}
-	Wide(const Wide &value) = delete;
-//	OSL_INLINE Wide(const Wide &value)
-//	: x00(value.x00),
-//	x01(value.x01),
-//	x02(value.x02),
-//	x03(value.x03),
-//	x10(value.x10),
-//	x11(value.x11),
-//	x12(value.x12),
-//	x13(value.x13),
-//	x20(value.x20),
-//	x21(value.x21),
-//	x22(value.x22),
-//	x23(value.x23),
-//	x30(value.x30),
-//	x31(value.x31),
-//	x32(value.x32),
-//	x33(value.x33)
-//	{}
-
-
-};
-
-template <>
-struct WideTraits<fast::Matrix44> {
-	static bool matches(const TypeDesc &type_desc) {
-		return type_desc.basetype == TypeDesc::FLOAT &&
-		    type_desc.aggregate == TypeDesc::MATRIX44; }
-};
-#endif
-
 namespace pvt {
 
 // Matrix ops
@@ -780,7 +544,6 @@ osl_prepend_matrix_from (void *sg, void *r, const char *from)
 // flatten is workaround to enable inlining of non-inlined methods
 template<typename ResultAccessorT, typename FromAccessorT, typename ToAccessorT>
 static OSL_INLINE OSL_CLANG_ATTRIBUTE(flatten) void
-//impl_wide_mat_multiply(WideAccessor<Matrix44> wresult, ConstWideAccessor<Matrix44> wfrom, ConstWideAccessor<Matrix44> wto)
 impl_wide_mat_multiply(ResultAccessorT wresult, FromAccessorT wfrom, ToAccessorT wto)
 {
 	static constexpr int width = wresult.width;
@@ -1136,70 +899,88 @@ inline void osl_transform_vmv(void *result, const Matrix44 &M, void* v_)
    robust_multVecMatrix (M, v, VEC(result));
 }
 
-// flatten is workaround to enable inlining of non-inlined methods
-template <typename SourceAccessorT>
-static OSL_INLINE OSL_CLANG_ATTRIBUTE(flatten) void
-avoidAliasingRobustMultVecMatrix(
-	ConstWideAccessor<Matrix44> wx,
-	SourceAccessorT wsrc,
-	MaskedAccessor<Vec3> wdst)
+OSL_INLINE void
+avoidAliasingRobustMultVecMatrix(const Matrix44 &M, const Vec3 &src, Vec3 &dst)
 {
-	OSL_INTEL_PRAGMA(forceinline recursive)
-	{
-		// Workaround clang omp loop analysis issue by using its native pragma
-		// Suspect a different implementation of Matrix44 with proper inlining,
-		// user defined copy constructor, and a POD compatible default constructor
-		// would solve the issue
-		OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(wdst.width))
-		OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(wdst.width))
-		for(int index=0; index < wdst.width; ++index)
-		{
-		   const Matrix44 x = wx[index];
-		   Imath::Vec3<float> src = wsrc[index];
-		   
-		   //std::cout << "----src>" << src << std::endl;
-		   
-		   Imath::Vec3<float> dst;	   
-	
-		   
-		   //robust_multVecMatrix(x, src, dst);
-		   
-			// Avoid alising issues when mixing data member access vs. 
-			// reinterpret casted array based access.
-			// Legally, compiler could assume no alaising because they are technically			
-			// different types.  As they actually over the same memory incorrect
-			// code generation can ensue
+	// Avoid aliasing issues when mixing data member access vs.
+	// reinterpret casted array based access.
+	// Legally, compiler could assume no alaising because they are technically
+	// different types.  As they actually over the same memory incorrect
+	// code generation can ensue
 #if 0
-		   float a = src[0] * x[0][0] + src[1] * x[1][0] + src[2] * x[2][0] + x[3][0];
-		    float b = src[0] * x[0][1] + src[1] * x[1][1] + src[2] * x[2][1] + x[3][1];
-		    float c = src[0] * x[0][2] + src[1] * x[1][2] + src[2] * x[2][2] + x[3][2];
-		    float w = src[0] * x[0][3] + src[1] * x[1][3] + src[2] * x[2][3] + x[3][3];
+   float a = src[0] * M[0][0] + src[1] * M[1][0] + src[2] * M[2][0] + M[3][0];
+    float b = src[0] * M[0][1] + src[1] * M[1][1] + src[2] * M[2][1] + M[3][1];
+    float c = src[0] * M[0][2] + src[1] * M[1][2] + src[2] * M[2][2] + M[3][2];
+    float w = src[0] * M[0][3] + src[1] * M[1][3] + src[2] * M[2][3] + M[3][3];
 #else
-			   float a = src.x * x[0][0] + src.y * x[1][0] + src.z * x[2][0] + x[3][0];
-			    float b = src.x * x[0][1] + src.y * x[1][1] + src.z * x[2][1] + x[3][1];
-			    float c = src.x * x[0][2] + src.y * x[1][2] + src.z * x[2][2] + x[3][2];
-			    float w = src.x * x[0][3] + src.y * x[1][3] + src.z * x[2][3] + x[3][3];
-		    
+	float a = src.x * M[0][0] + src.y * M[1][0] + src.z * M[2][0] + M[3][0];
+	float b = src.x * M[0][1] + src.y * M[1][1] + src.z * M[2][1] + M[3][1];
+	float c = src.x * M[0][2] + src.y * M[1][2] + src.z * M[2][2] + M[3][2];
+	float w = src.x * M[0][3] + src.y * M[1][3] + src.z * M[2][3] + M[3][3];
 #endif
 
-		    if (__builtin_expect(w != 0, 1)) {
-		       dst.x = a / w;
-		       dst.y = b / w;
-		       dst.z = c / w;
-		    } else {
-		       dst.x = 0;
-		       dst.y = 0;
-		       dst.z = 0;
-		    }		   
-	    
-		   //std::cout << "----dst>" << dst << std::endl;
-		   
-		   wdst[index] = dst;
-		   
-		   //Imath::Vec3<float> verify = wdst[index];
-		   //std::cout << "---->" << verify << "<-----" << std::endl;
-		}
-	}
+    if (__builtin_expect(w != 0, 1)) {
+       dst.x = a / w;
+       dst.y = b / w;
+       dst.z = c / w;
+    } else {
+       dst.x = 0;
+       dst.y = 0;
+       dst.z = 0;
+    }
+}
+
+OSL_INLINE void
+avoidAliasingRobustMultVecMatrix(const Matrix44 &M, const Dual2<Vec3> &src, Dual2<Vec3> &dst)
+{
+	// Avoid aliasing issues when mixing data member access vs.
+	// reinterpret casted array based access.
+	// Legally, compiler could assume no alaising because they are technically
+	// different types.  As they actually over the same memory incorrect
+	// code generation can ensue
+#if 0
+			for (int i = 0;  i < 3;  ++i)
+				din[i].set (in.val()[i], in.dx()[i], in.dy()[i]);
+
+			Dual2<float> a = din[0] * M[0][0] + din[1] * M[1][0] + din[2] * M[2][0] + M[3][0];
+			Dual2<float> b = din[0] * M[0][1] + din[1] * M[1][1] + din[2] * M[2][1] + M[3][1];
+			Dual2<float> c = din[0] * M[0][2] + din[1] * M[1][2] + din[2] * M[2][2] + M[3][2];
+			Dual2<float> w = din[0] * M[0][3] + din[1] * M[1][3] + din[2] * M[2][3] + M[3][3];
+#else
+			// Rearrange into a Vec3<Dual2<float> >
+			Imath::Vec3<Dual2<float> > din, dout;
+
+			din.x.set (src.val().x, src.dx().x, src.dy().x);
+			din.y.set (src.val().y, src.dx().y, src.dy().y);
+			din.z.set (src.val().z, src.dx().z, src.dy().z);
+
+			Dual2<float> a = din.x * M[0][0] + din.y * M[1][0] + din.z * M[2][0] + M[3][0];
+			Dual2<float> b = din.x * M[0][1] + din.y * M[1][1] + din.z * M[2][1] + M[3][1];
+			Dual2<float> c = din.x * M[0][2] + din.y * M[1][2] + din.z * M[2][2] + M[3][2];
+			Dual2<float> w = din.x * M[0][3] + din.y * M[1][3] + din.z * M[2][3] + M[3][3];
+#endif
+
+
+			if (w.val() != 0.0f) {
+			   dout.x = a / w;
+			   dout.y = b / w;
+			   dout.z = c / w;
+			} else {
+			   dout.x = 0.0f;
+			   dout.y = 0.0f;
+			   dout.z = 0.0f;
+			}
+
+			// Rearrange back into Dual2<Vec3>
+#if 0
+			out.set (Vec3 (dout[0].val(), dout[1].val(), dout[2].val()),
+					 Vec3 (dout[0].dx(),  dout[1].dx(),  dout[2].dx()),
+					 Vec3 (dout[0].dy(),  dout[1].dy(),  dout[2].dy()));
+#else
+			dst.set (Vec3 (dout.x.val(), dout.y.val(), dout.z.val()),
+					 Vec3 (dout.x.dx(),  dout.y.dx(),  dout.z.dx()),
+					 Vec3 (dout.x.dy(),  dout.y.dy(),  dout.z.dy()));
+#endif
 }
 
 OSL_INLINE void
@@ -1215,84 +996,6 @@ avoidAliasingMultDirMatrix (const Matrix44 &M, const Vec3 &src, Vec3 &dst)
     
 }
 
-/// Multiply a matrix times a vector with derivatives to obtain
-/// a transformed vector with derivatives.
-// flatten is workaround to enable inlining of non-inlined methods
-static OSL_INLINE OSL_CLANG_ATTRIBUTE(flatten) void
-avoidAliasingRobustMultVecMatrix (
-	ConstWideAccessor<Matrix44> WM,
-	ConstWideAccessor<Dual2<Vec3>> win,
-	MaskedAccessor<Dual2<Vec3>> wout)
-{
-	OSL_INTEL_PRAGMA(forceinline recursive)
-	{
-		OSL_OMP_PRAGMA(omp simd simdlen(wout.width))
-		for(int index=0; index < wout.width; ++index)
-		{
-			const Matrix44 M = WM[index];
-			const Dual2<Vec3> in = win[index];
-	
-			// Rearrange into a Vec3<Dual2<float> >
-			Imath::Vec3<Dual2<float> > din, dout;
-			
-			// Avoid alising issues when mixing data member access vs. 
-			// reinterpret casted array based access.
-			// Legally, compiler could assume no alaising because they are technically			
-			// different types.  As they actually over the same memory incorrect
-			// code generation can ensue
-#if 0
-			for (int i = 0;  i < 3;  ++i)
-				din[i].set (in.val()[i], in.dx()[i], in.dy()[i]);
-			
-			Dual2<float> a = din[0] * M[0][0] + din[1] * M[1][0] + din[2] * M[2][0] + M[3][0];
-			Dual2<float> b = din[0] * M[0][1] + din[1] * M[1][1] + din[2] * M[2][1] + M[3][1];
-			Dual2<float> c = din[0] * M[0][2] + din[1] * M[1][2] + din[2] * M[2][2] + M[3][2];
-			Dual2<float> w = din[0] * M[0][3] + din[1] * M[1][3] + din[2] * M[2][3] + M[3][3];
-#else
-			din.x.set (in.val().x, in.dx().x, in.dy().x);
-			din.y.set (in.val().y, in.dx().y, in.dy().y);
-			din.z.set (in.val().z, in.dx().z, in.dy().z);
-			
-			Dual2<float> a = din.x * M[0][0] + din.y * M[1][0] + din.z * M[2][0] + M[3][0];
-			Dual2<float> b = din.x * M[0][1] + din.y * M[1][1] + din.z * M[2][1] + M[3][1];
-			Dual2<float> c = din.x * M[0][2] + din.y * M[1][2] + din.z * M[2][2] + M[3][2];
-			Dual2<float> w = din.x * M[0][3] + din.y * M[1][3] + din.z * M[2][3] + M[3][3];
-#endif
-			
-		
-			if (w.val() != 0.0f) {
-			   dout.x = a / w;
-			   dout.y = b / w;
-			   dout.z = c / w;
-			} else {
-			   dout.x = 0.0f;
-			   dout.y = 0.0f;
-			   dout.z = 0.0f;
-			}
-		
-			Dual2<Vec3> out;
-			// Rearrange back into Dual2<Vec3>
-#if 0
-			out.set (Vec3 (dout[0].val(), dout[1].val(), dout[2].val()),
-					 Vec3 (dout[0].dx(),  dout[1].dx(),  dout[2].dx()),
-					 Vec3 (dout[0].dy(),  dout[1].dy(),  dout[2].dy()));
-#else
-			out.set (Vec3 (dout.x.val(), dout.y.val(), dout.z.val()),
-					 Vec3 (dout.x.dx(),  dout.y.dx(),  dout.z.dx()),
-					 Vec3 (dout.x.dy(),  dout.y.dy(),  dout.z.dy()));
-#endif
-			
-			wout[index] = out;
-		   
-		   //Imath::Vec3<float> verify = wdst[index];
-		   //std::cout << "---->" << verify << "<-----" << std::endl;
-		}
-	}
-}
-
-// TODO: do we need this control of optimization level?  
-// Remove after verifying correct results
-//OSL_INTEL_PRAGMA(intel optimization_level 2)
 
 inline void osl_transform_dvmdv(void *result, const Matrix44 &M, void* v_)
 {
@@ -1313,6 +1016,8 @@ inline void osl_transformv_dvmdv(void *result, const Matrix44 &M, void* v_)
    multDirMatrix (M, v, DVEC(result));
 }
 
+/// Multiply a matrix times a vector with derivatives to obtain
+/// a transformed vector with derivatives.
 inline void
 avoidAliasingMultDirMatrix (const Matrix44 &M, const Dual2<Vec3> &in, Dual2<Vec3> &out)
 {
@@ -1334,52 +1039,6 @@ osl_transformn_dvmdv(void *result, const Matrix44 &M, void* v_)
    const Dual2<Vec3> &v = DVEC(v_);
    multDirMatrix (M.inverse().transposed(), v, DVEC(result));
 }
-
-OSL_SHADEOP void
-osl_transformv_w16vw16mw16v (void *r_, void *matrix_, void *s_)
-{
-	OSL_INTEL_PRAGMA(forceinline recursive)
-	{
-		ConstWideAccessor<Vec3> wsource(s_);
-		ConstWideAccessor<Matrix44> wmatrix(matrix_);
-		WideAccessor<Vec3> wr(r_);
-
-		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
-		for(int lane=0; lane < wr.width; ++lane) {
-			Vec3 s = wsource[lane];
-			Matrix44 m = wmatrix[lane];
-			Vec3 r;
-
-			avoidAliasingMultDirMatrix (m, s, r);
-
-			wr[lane] = r;
-		}
-	}
-}
-
-OSL_SHADEOP void
-osl_transformv_w16dvw16mw16dv (void *r_, void *matrix_, void *s_)
-{
-	OSL_INTEL_PRAGMA(forceinline recursive)
-	{
-		ConstWideAccessor<Dual2<Vec3>> wsource(s_);
-		ConstWideAccessor<Matrix44> wmatrix(matrix_);
-		WideAccessor<Dual2<Vec3>> wr(r_);
-
-		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
-		for(int lane=0; lane < wr.width; ++lane) {
-			Dual2<Vec3> s = wsource[lane];
-			Matrix44 m = wmatrix[lane];
-			Dual2<Vec3> r;
-
-			avoidAliasingMultDirMatrix (m, s, r);
-
-			wr[lane] = r;
-		}
-	}
-}
-
-
 
 OSL_SHADEOP int
 osl_transform_triple (void *sg_, void *Pin, int Pin_derivs,
@@ -1586,7 +1245,7 @@ impl_copy_untransformed_lanes(
     }
 }
 
-template <typename InputAccessorT>
+template <typename InputAccessorT, typename MatrixAccessorT>
 static OSL_INLINE void
 impl_transform_point_masked(void *Pin,
                       void *Pout,
@@ -1595,54 +1254,81 @@ impl_transform_point_masked(void *Pin,
 	static constexpr int width = InputAccessorT::width;
 	typedef typename InputAccessorT::value_type data_type;
 
-    ConstWideAccessor<Matrix44, width> M(transform);
+	// ignore derivs because output doesn't need it
+	OSL_INTEL_PRAGMA(forceinline recursive)
+	{
+		Mask mask(mask_value);
+		Mask succeeded(mask_transform);
 
-    Mask succeeded(mask_transform);
-    Mask mask(mask_value);
+		InputAccessorT inPoints(Pin);
+		// only operate on active lanes
+		Mask activeMask = mask & succeeded;
 
-    // ignore derivs because output doesn't need it
-    InputAccessorT inPoint(Pin);
-    {
-        // only operate on active lanes
-        Mask activeMask = mask & succeeded;
+		MaskedAccessor<data_type, width> wresult(Pout, activeMask);
+		MatrixAccessorT wM(transform);
 
-    	// Transform with Point semantics
+		// Transform with Vector semantics
+		OSL_OMP_PRAGMA(omp simd simdlen(width))
+		for(int i=0; i < wresult.width; ++i)
+		{
+			Matrix44 m = wM[i];
+			data_type v = inPoints[i];
+			data_type r;
 
-        avoidAliasingRobustMultVecMatrix (M,
-        		                          inPoint,
-										  MaskedAccessor<data_type, width>(Pout, activeMask));
-    }
+			// Do to illegal aliasing in OpenEXR version
+			// we call our own flavor without aliasing
+			// robust_multVecMatrix(x, v, r);
+			avoidAliasingRobustMultVecMatrix(m, v, r);
 
-    //impl_copy_untransformed_lanes_vw16v(Pin, Pout, succeeded, mask);
-    impl_copy_untransformed_lanes(inPoint, Pout, succeeded, mask);
+			wresult[i] = r;
+		}
+
+		impl_copy_untransformed_lanes(inPoints, Pout, succeeded, mask);
+	}
 }
 
 OSL_SHADEOP void
-osl_transform_point_vw16v_masked (void *Pin,
+osl_transform_point_vw16vw16m_masked (void *Pin,
                       void *Pout,
 					  void * transform, unsigned int mask_transform, unsigned int mask_value)
 {
-	impl_transform_point_masked<ConstUniformAccessor<Vec3>> (Pin, Pout, transform, mask_transform, mask_value);
+	impl_transform_point_masked<ConstUniformAccessor<Vec3>, ConstWideAccessor<Matrix44>> (Pin, Pout, transform, mask_transform, mask_value);
 }
 
 OSL_SHADEOP void
-osl_transform_point_w16vw16v_masked (void *Pin,
+osl_transform_point_w16vw16vw16m_masked (void *Pin,
                       void *Pout,
 					  void * transform, unsigned int mask_transform, unsigned int mask_value)
 {
-	impl_transform_point_masked<ConstWideAccessor<Vec3>> (Pin, Pout, transform, mask_transform, mask_value);
+	impl_transform_point_masked<ConstWideAccessor<Vec3>, ConstWideAccessor<Matrix44>> (Pin, Pout, transform, mask_transform, mask_value);
 }
 
 OSL_SHADEOP void
-osl_transform_point_w16dvw16dv_masked (void *Pin,
+osl_transform_point_w16dvw16dvw16m_masked (void *Pin,
                       void *Pout,
 					  void * transform, unsigned int mask_transform, unsigned int mask_value)
 {
-	impl_transform_point_masked<ConstWideAccessor<Dual2<Vec3>>> (Pin, Pout, transform, mask_transform, mask_value);
+	impl_transform_point_masked<ConstWideAccessor<Dual2<Vec3>>, ConstWideAccessor<Matrix44>> (Pin, Pout, transform, mask_transform, mask_value);
+}
+
+OSL_SHADEOP void
+osl_transform_point_w16vw16vm_masked (void *Pin,
+                      void *Pout,
+					  void * transform, unsigned int mask_transform, unsigned int mask_value)
+{
+	impl_transform_point_masked<ConstWideAccessor<Vec3>, ConstUniformAccessor<Matrix44>> (Pin, Pout, transform, mask_transform, mask_value);
+}
+
+OSL_SHADEOP void
+osl_transform_point_w16dvw16dvm_masked (void *Pin,
+                      void *Pout,
+					  void * transform, unsigned int mask_transform, unsigned int mask_value)
+{
+	impl_transform_point_masked<ConstWideAccessor<Dual2<Vec3>>, ConstUniformAccessor<Matrix44>> (Pin, Pout, transform, mask_transform, mask_value);
 }
 
 
-template <typename InputAccessorT>
+template <typename InputAccessorT, typename MatrixAccessorT>
 static OSL_INLINE void
 impl_transform_vector_masked (void *Pin,
                       void *Pout,
@@ -1662,7 +1348,7 @@ impl_transform_vector_masked (void *Pin,
         Mask activeMask = mask & succeeded;
 
     	MaskedAccessor<data_type, width> wresult(Pout, activeMask);
-    	ConstWideAccessor<Matrix44, width> wM(transform);
+    	MatrixAccessorT wM(transform);
 
     	// Transform with Vector semantics
 		OSL_OMP_PRAGMA(omp simd simdlen(width))
@@ -1685,31 +1371,54 @@ impl_transform_vector_masked (void *Pin,
 }
 
 OSL_SHADEOP void
-osl_transform_vector_vw16v_masked(void *Pin,
+osl_transform_vector_vw16vw16m_masked(void *Pin,
                       void *Pout,
 					  void * transform, unsigned int mask_transform, unsigned int mask_value)
 {
-	impl_transform_vector_masked<ConstUniformAccessor<Vec3>> (Pin, Pout, transform, mask_transform, mask_value);
+	impl_transform_vector_masked<ConstUniformAccessor<Vec3>, ConstWideAccessor<Matrix44>>
+		(Pin, Pout, transform, mask_transform, mask_value);
 }
 
 OSL_SHADEOP void
-osl_transform_vector_w16vw16v_masked (void *Pin,
+osl_transform_vector_w16vw16vw16m_masked (void *Pin,
                       void *Pout,
 					  void * transform, unsigned int mask_transform, unsigned int mask_value)
 {
-	impl_transform_vector_masked<ConstWideAccessor<Vec3>> (Pin, Pout, transform, mask_transform, mask_value);
+	impl_transform_vector_masked<ConstWideAccessor<Vec3>, ConstWideAccessor<Matrix44>>
+		(Pin, Pout, transform, mask_transform, mask_value);
 }
 
 OSL_SHADEOP void
-osl_transform_vector_w16dvw16dv_masked(void *Pin,
+osl_transform_vector_w16dvw16dvw16m_masked(void *Pin,
                       void *Pout,
 					  void * transform, unsigned int mask_transform, unsigned int mask_value)
 {
-	impl_transform_vector_masked<ConstWideAccessor<Dual2<Vec3>>> (Pin, Pout, transform, mask_transform, mask_value);
+	impl_transform_vector_masked<ConstWideAccessor<Dual2<Vec3>>, ConstWideAccessor<Matrix44>>
+		(Pin, Pout, transform, mask_transform, mask_value);
 }
 
 
-template <typename InputAccessorT>
+OSL_SHADEOP void
+osl_transform_vector_w16vw16vm_masked (void *Pin,
+                      void *Pout,
+					  void * transform, unsigned int mask_transform, unsigned int mask_value)
+{
+	impl_transform_vector_masked<ConstWideAccessor<Vec3>, ConstUniformAccessor<Matrix44>>
+		(Pin, Pout, transform, mask_transform, mask_value);
+}
+
+
+OSL_SHADEOP void
+osl_transform_vector_w16dvw16dvm_masked(void *Pin,
+                      void *Pout,
+					  void * transform, unsigned int mask_transform, unsigned int mask_value)
+{
+	impl_transform_vector_masked<ConstWideAccessor<Dual2<Vec3>>, ConstUniformAccessor<Matrix44>>
+		(Pin, Pout, transform, mask_transform, mask_value);
+}
+
+
+template <typename InputAccessorT, typename MatrixAccessorT>
 static OSL_INLINE void
 impl_transform_normal_masked (void *Pin,
                       void *Pout,
@@ -1728,7 +1437,7 @@ impl_transform_normal_masked (void *Pin,
 
     	MaskedAccessor<data_type, width> wresult(Pout, activeMask);
     	InputAccessorT inPoints(Pin);
-    	ConstWideAccessor<Matrix44, width> wM(transform);
+    	MatrixAccessorT wM(transform);
 
     	// Transform with Normal semantics
 		int allAreAffine = 1;
@@ -1775,27 +1484,48 @@ impl_transform_normal_masked (void *Pin,
 }
 
 OSL_SHADEOP void
-osl_transform_normal_vw16v_masked (void *Pin,
+osl_transform_normal_vw16vw16m_masked (void *Pin,
                       void *Pout,
 					  void * transform, unsigned int mask_transform, unsigned int mask_value)
 {
-	impl_transform_normal_masked<ConstUniformAccessor<Vec3>> (Pin, Pout, transform, mask_transform, mask_value);
+	impl_transform_normal_masked<ConstUniformAccessor<Vec3>, ConstWideAccessor<Matrix44>> (Pin, Pout, transform, mask_transform, mask_value);
 }
 
 OSL_SHADEOP void
-osl_transform_normal_w16vw16v_masked (void *Pin,
+osl_transform_normal_w16vw16vw16m_masked (void *Pin,
                       void *Pout,
 					  void * transform, unsigned int mask_transform, unsigned int mask_value)
 {
-	impl_transform_normal_masked<ConstWideAccessor<Vec3>> (Pin, Pout, transform, mask_transform, mask_value);
+	impl_transform_normal_masked<ConstWideAccessor<Vec3>, ConstWideAccessor<Matrix44>> (Pin, Pout, transform, mask_transform, mask_value);
 }
 
 OSL_SHADEOP void
-osl_transform_normal_w16dvw16dv_masked (void *Pin,
+osl_transform_normal_w16dvw16dvw16m_masked (void *Pin,
                       void *Pout,
 					  void * transform, unsigned int mask_transform, unsigned int mask_value)
 {
-	impl_transform_normal_masked<ConstWideAccessor<Dual2<Vec3>>> (Pin, Pout, transform, mask_transform, mask_value);
+	impl_transform_normal_masked<ConstWideAccessor<Dual2<Vec3>>, ConstWideAccessor<Matrix44>> (Pin, Pout, transform, mask_transform, mask_value);
+}
+
+
+
+
+
+
+OSL_SHADEOP void
+osl_transform_normal_w16vw16vm_masked (void *Pin,
+                      void *Pout,
+					  void * transform, unsigned int mask_transform, unsigned int mask_value)
+{
+	impl_transform_normal_masked<ConstWideAccessor<Vec3>, ConstUniformAccessor<Matrix44>> (Pin, Pout, transform, mask_transform, mask_value);
+}
+
+OSL_SHADEOP void
+osl_transform_normal_w16dvw16dvm_masked (void *Pin,
+                      void *Pout,
+					  void * transform, unsigned int mask_transform, unsigned int mask_value)
+{
+	impl_transform_normal_masked<ConstWideAccessor<Dual2<Vec3>>, ConstUniformAccessor<Matrix44>> (Pin, Pout, transform, mask_transform, mask_value);
 }
 
 
@@ -1888,17 +1618,6 @@ osl_determinant_w16fw16m(void *wr_, void * wm_)
 		}
 	}
 }
-
-OSL_SHADEOP void
-osl_transform_w16vw16mw16v_masked(void *wresult_, const void * wM_, const void* wv_, unsigned int mask_value)
-{
-    MaskedAccessor<Vec3> wresult (wresult_, Mask(mask_value));
-    ConstWideAccessor<Matrix44> wM(wM_);
-	ConstWideAccessor<Vec3> wv(wv_);
-
-    avoidAliasingRobustMultVecMatrix (wM, wv, wresult);
-}
-
 
 } // namespace pvt
 OSL_NAMESPACE_EXIT

@@ -228,4 +228,71 @@ test ()
         printf ("  degrees (%g) = %g\n", a, degrees(a));
         printf ("  radians (%g) = %g\n", a, radians(a));
     }
+    
+    printf (" varying with float derivatives:\n");
+    {
+        float a = u;
+        float b = v;
+        float s, c;
+        sincos(a, s, c);
+        float d = cos(a);
+        printf ("  cos (%g) = %g Dx(%g) Dy(%g)\n", a, d, Dx(d), Dy(d));
+        d = sin(a);
+        printf ("  sin (%g) = %g Dx(%g) Dy(%g)\n", a, d, Dx(d), Dy(d));
+        printf ("  sincos (%g) = %g Dx(%g) Dy(%g) %g\n", a, s, Dx(s), Dy(s), c);
+        float s2, c2;
+        sincos(a, s2, c2);
+        printf ("  sincos (%g) = %g %g Dx(%g) Dy(%g) \n", a, s2, c2, Dx(c2), Dy(c2));
+        float s3, c3;
+        sincos(a, s3, c3);
+        printf ("  sincos (%g) = %g Dx(%g) Dy(%g) %g Dx(%g) Dy(%g) \n", a, s3, Dx(s3), Dy(s3), c3, Dx(c3), Dy(c3));
+        d = tan(a);
+        printf ("  tan (%g) = %g Dx(%g) Dy(%g)\n", a, d, Dx(d), Dy(d));
+        d = acos(a);
+        printf ("  acos (%g) = %g Dx(%g) Dy(%g)\n", a, d, Dx(d), Dy(d));
+        d = asin(a);
+        printf ("  asin (%g) = %g Dx(%g) Dy(%g)\n", a, d, Dx(d), Dy(d));
+        d = atan(a);
+        printf ("  atan (%g) = %g Dx(%g) Dy(%g)\n", a, d, Dx(d), Dy(d));
+        d = atan2(a,b);
+        printf ("  atan2 (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, d, Dx(d), Dy(d));
+        d = degrees(a);
+        printf ("  degrees (%g) = %g Dx(%g) Dy(%g)\n", a, d, Dx(d), Dy(d));
+        d = radians(a);
+        printf ("  radians (%g) = %g Dx(%g) Dy(%g)\n", a, d, Dx(d), Dy(d));
+    }
+    
+    printf (" varying with triple derivatives:\n");
+    {
+        color a = P;
+        color b = color(1.0) - P;
+        color s, c;
+        sincos(a, s, c);
+        color d = cos(a);
+        printf ("  cos (%g) = %g Dx(%g) Dy(%g)\n", a, d, Dx(d), Dy(d));
+        d = sin(a);
+        printf ("  sin (%g) = %g Dx(%g) Dy(%g)\n", a, d, Dx(d), Dy(d));
+        printf ("  sincos (%g) = %g Dx(%g) Dy(%g) %g\n", a, s, Dx(s), Dy(s), c);
+        color s2, c2;
+        sincos(a, s2, c2);
+        printf ("  sincos (%g) = %g %g Dx(%g) Dy(%g) \n", a, s2, c2, Dx(c2), Dy(c2));
+        color s3, c3;
+        sincos(a, s3, c3);
+        printf ("  sincos (%g) = %g Dx(%g) Dy(%g) %g Dx(%g) Dy(%g) \n", a, s3, Dx(s3), Dy(s3), c3, Dx(c3), Dy(c3));
+        d = tan(a);
+        printf ("  tan (%g) = %g Dx(%g) Dy(%g)\n", a, d, Dx(d), Dy(d));
+        d = acos(a);
+        printf ("  acos (%g) = %g Dx(%g) Dy(%g)\n", a, d, Dx(d), Dy(d));
+        d = asin(a);
+        printf ("  asin (%g) = %g Dx(%g) Dy(%g)\n", a, d, Dx(d), Dy(d));
+        d = atan(a);
+        printf ("  atan (%g) = %g Dx(%g) Dy(%g)\n", a, d, Dx(d), Dy(d));
+        d = atan2(a,b);
+        printf ("  atan2 (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, d, Dx(d), Dy(d));
+        d = degrees(a);
+        printf ("  degrees (%g) = %g Dx(%g) Dy(%g)\n", a, d, Dx(d), Dy(d));
+        d = radians(a);
+        printf ("  radians (%g) = %g Dx(%g) Dy(%g)\n", a, d, Dx(d), Dy(d));
+    }
+    
 }

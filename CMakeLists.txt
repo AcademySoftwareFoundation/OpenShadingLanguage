@@ -183,6 +183,9 @@ if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG)
     add_definitions ("-Wunknown-warning-option")
     add_definitions ("-Wunknown-pragmas")
     add_definitions ("-mavx512f")
+
+    # to use debugger 
+    #add_definitions ("-O0")
    
 endif ()
 
@@ -216,9 +219,10 @@ if (CMAKE_COMPILER_IS_INTEL)
 	add_definitions ("-prec-div")
 	#add_definitions ("-xAVX")
 	#add_definitions ("-xCORE-AVX2")
-	#add_definitions ("-xCORE-AVX512")	 
-	add_definitions ("-msse2")
-	add_definitions ("-axSSE4.2,AVX,CORE-AVX2,CORE-AVX512")
+	add_definitions ("-xCORE-AVX512")	 
+    #add_definitions ("-xSSE4.2")   
+	#add_definitions ("-msse2")
+	#add_definitions ("-axSSE4.2,AVX,CORE-AVX2,CORE-AVX512")
 	#add_definitions ("-axCORE-AVX512")
 	#add_definitions ("-fp-model consistent")	 
 	#add_definitions ("-xSSE4.2")
@@ -232,12 +236,19 @@ if (CMAKE_COMPILER_IS_INTEL)
 	#add_definitions ("-wd161")
 	#add_definitions ("-no-fma")
 	
-	add_definitions ("-O3")
-	add_definitions ("-ip")
-	add_definitions ("-debug inline-debug-info")
-	add_definitions ("-fno-omit-frame-pointer")
-	add_definitions ("-fno-math-errno")
-	add_definitions ("-restrict")
+	#add_definitions ("-O3")
+	#add_definitions ("-ip")
+	#add_definitions ("-debug inline-debug-info")
+	#add_definitions ("-fno-omit-frame-pointer")
+	#add_definitions ("-fno-math-errno")
+	#add_definitions ("-restrict")
+	
+    # to use debugger 
+    #add_definitions ("-O0")
+	
+    # If LLVM was built with ICC, might need to link in the Intel runtime C library (libirc.a) 
+    #set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lirc -lsvml")
+	
 endif ()
 ## enable RTTI
 ##   NOTE: LLVM builds without RTTI by default so beware
@@ -531,7 +542,7 @@ add_subdirectory (src/testshade)
 add_subdirectory (src/testrender)
 endif ()
 
-if (OSL_BUILD_PLUGINS)
+if (OSL_BUILD_PLUGINS AND NOT LLVM_STATIC)
 add_subdirectory (src/osl.imageio)
 endif ()
 

@@ -640,8 +640,9 @@ OSL_INLINE Dual2<float> fast_exp(const Dual2<float> &a)
 template<class T>
 OSL_INLINE Dual2<T> exp2 (const Dual2<T> &a)
 {
-    // FIXME: std::exp2 is only available in C++11
-    T exp2a = exp2f(float(a.val()));
+    // C++11 is required now, and std::exp2 is only available in C++11
+    //T exp2a = exp2f(float(a.val()));
+	T exp2a = std::exp2(T(a.val()));
     return Dual2<T> (exp2a, exp2a*T(M_LN2)*a.dx(), exp2a*T(M_LN2)*a.dy());
 }
 
@@ -673,8 +674,9 @@ OSL_INLINE Dual2<float> fast_expm1(const Dual2<float> &a)
 template<class T>
 OSL_INLINE Dual2<T> erf (const Dual2<T> &a)
 {
-    // FIXME: std::erf is only defined in C++11
-    T erfa = erff (float(a.val())); // float version!
+    // C++11 is required now, and std::erf is only defined in C++11
+    //T erfa = erff (float(a.val())); // float version!
+	T erfa = std::erf(a.val());
     T two_over_sqrt_pi = T(1.128379167095512573896158903);
     T derfadx = std::exp (-a.val() * a.val()) * two_over_sqrt_pi;
     return Dual2<T> (erfa, derfadx * a.dx(), derfadx * a.dy());

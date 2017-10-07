@@ -731,7 +731,7 @@ public:
 void 
 BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 {
-	OSL_DEV_ONLY(std::cout << "start discoverVaryingAndMaskingOfLayer of layer=" << layer() << std::endl);
+	OSL_DEV_ONLY(std::cout << "start discoverVaryingAndMaskingOfLayer of layer=" << layer() << " name \"" << inst()->layername() << "\"" << std::endl);
 	
 	const OpcodeVec & opcodes = inst()->ops();
 	int op_count = static_cast<int>(opcodes.size());
@@ -2444,6 +2444,8 @@ bool
 BackendLLVMWide::llvm_assign_impl (Symbol &Result, Symbol &Src,
                                     int arrayindex)
 {
+	OSL_DEV_ONLY(std::cout << "llvm_assign_impl arrayindex="<<arrayindex<<" Result(" << Result.name() << ") is_uniform=" << isSymbolUniform(Result) << std::endl);
+	OSL_DEV_ONLY(std::cout << "                              Src(" << Src.name() << ") is_uniform=" << isSymbolUniform(Src) << std::endl);
     ASSERT (! Result.typespec().is_structure());
     ASSERT (! Src.typespec().is_structure());
 

@@ -85,6 +85,13 @@ if (CMAKE_COMPILER_IS_INTEL)
 
 endif ()
 
+if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG)
+    # Uncomment next 2 lines to investigate failed explicit vectorization
+    add_definitions ("-Rpass=loop-vectorize")
+    add_definitions ("-Rpass-analysis=loop-vectorize")
+endif ()
+
+
 if (NOT CMAKE_COMPILER_IS_INTEL)
 	SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS" )
 endif ()
@@ -212,8 +219,8 @@ if (USE_LLVM_BITCODE)
 	# Only use clang build of .cpp to .s to get a starting point
 	# for vector types, it has fewer complications if we just author
 	# these helpers in LLVM assembly directly.
-    #LLVM_COMPILE ( llvm_ops.cpp liboslexec_srcs )
-    LLVM_COMPILE_ASM ( llvm_ops_wide.s liboslexec_srcs )
+    LLVM_COMPILE ( llvm_ops.cpp liboslexec_srcs )
+    #LLVM_COMPILE_ASM ( llvm_ops_wide.s liboslexec_srcs )
 else ()
     # With MSVC/Mingw, we don't compile llvm_ops.cpp to LLVM bitcode, due
     # to clang being unable to compile MSVC C++ header files at this time.

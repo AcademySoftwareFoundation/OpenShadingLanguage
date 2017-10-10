@@ -1046,6 +1046,61 @@ public:
 	}		
 };
 
+template <int WidthT>
+struct Wide<Dual2<Color3>, WidthT>
+{
+	typedef Dual2<Color3> value_type;
+	static constexpr int width = WidthT;
+	Wide<Color3> x;
+	Wide<Color3> dx;
+	Wide<Color3> dy;
+
+	OSL_INLINE void
+	set(int index, const value_type & value)
+	{
+		x.set(index, value.val());
+		dx.set(index, value.dx());
+		dy.set(index, value.dy());
+	}
+
+protected:
+	template<int HeadIndexT>
+	OSL_INLINE void
+	set(internal::int_sequence<HeadIndexT>, const value_type &value)
+	{
+		set(HeadIndexT, value);
+	}
+
+	template<int HeadIndexT, int... TailIndexListT, typename... ValueListT>
+	OSL_INLINE void
+	set(internal::int_sequence<HeadIndexT, TailIndexListT...>, value_type headValue, ValueListT... tailValues)
+	{
+		set(HeadIndexT, headValue);
+		set(internal::int_sequence<TailIndexListT...>(), tailValues...);
+		return;
+	}
+public:
+
+	OSL_INLINE Wide() = default;
+	Wide(const Wide &other) = delete;
+
+	template<typename... ValueListT, typename = internal::enable_if_type<(sizeof...(ValueListT) == WidthT)> >
+	explicit OSL_INLINE
+	Wide(const ValueListT &...values)
+	{
+		typedef internal::make_int_sequence<sizeof...(ValueListT)> int_seq_type;
+		set(int_seq_type(), values...);
+		return;
+	}
+
+
+	OSL_INLINE value_type
+	get(int index) const
+	{
+		return value_type(x.get(index), dx.get(index), dy.get(index));
+	}
+};
+
 
 template <typename DataT, int WidthT>
 struct WideUniformProxy

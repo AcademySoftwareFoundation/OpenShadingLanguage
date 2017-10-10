@@ -1,44 +1,46 @@
 shader
 test ()
 {
-    printf ("Test vector functions\n\n");
-    vector X = vector (1, 0, 0);
-    vector Y = vector (0, 1, 0);
-    vector XY = X + Y;
-    vector Zero = 0;
     {
-        vector V = vector (0, 1, 2);
-        printf ("  V = vector (%g) has components %g, %g, %g\n",
-                V, V[0], V[1], V[2]);
-        V[1] = 8;
-        printf ("  After V[1] = 8, V = (%g)\n", V);
-        V[2] = 0.5;
-        printf ("  After V[2] = 0.5, V = (%g)\n", V);
-        printf ("  dot ((%g), (%g)) = %g\n", V, V, dot(V,V));
-        printf ("  dot ((%g), (%g)) = %g\n", V, Y, dot(V,Y));
-        printf ("  cross ((%g), (%g)) = %g\n", X, Y, cross(X,Y));
-        printf ("  length (%g) = %g\n", Y, length(Y));
-        printf ("  length (%g) = %g\n", XY, length(XY));
-        printf ("  distance ((%g), (%g)) = %g\n", X, Y, distance(X,Y));
-        printf ("  distance ((%g), (%g)) = %g\n", X, XY, distance(X,XY));
-        printf ("  distance ((%g), (%g), (%g)) = %g\n",
-                X, Y, X, distance(X,Y,X));
-        printf ("  distance ((%g), (%g), (%g)) = %g\n",
-                X, Y, Y, distance(X,Y,Y));
-        point Q = point(0.5,0.5,0);
-        printf ("  distance ((%g), (%g), (%g)) = %g\n",
-                X, Y, Q, distance(X,Y,Q));
-        Q = point(0.5,0.5,0.5);
-        printf ("  distance ((%g), (%g), (%g)) = %g\n",
-                X, Y, Q, distance(X,Y,Q));
-        Q = point(2,1,0);
-        printf ("  distance ((%g), (%g), (%g)) = %g\n",
-                X, Y, Q, distance(X,Y,Q));
-        printf ("  normalize (%g) = %g\n", XY, normalize(XY));
-        printf ("  normalize (%g) = %g\n", V, normalize(V));
-        printf ("  normalize (%g) = %g\n", Zero, normalize(Zero));
+        printf ("Test vector functions\n\n");
+        vector X = vector (1, 0, 0);
+        vector Y = vector (0, 1, 0);
+        vector XY = X + Y;
+        vector Zero = 0;
+        {
+            vector V = vector (0, 1, 2);
+            printf ("  V = vector (%g) has components %g, %g, %g\n",
+                    V, V[0], V[1], V[2]);
+            V[1] = 8;
+            printf ("  After V[1] = 8, V = (%g)\n", V);
+            V[2] = 0.5;
+            printf ("  After V[2] = 0.5, V = (%g)\n", V);
+            printf ("  dot ((%g), (%g)) = %g\n", V, V, dot(V,V));
+            printf ("  dot ((%g), (%g)) = %g\n", V, Y, dot(V,Y));
+            printf ("  cross ((%g), (%g)) = %g\n", X, Y, cross(X,Y));
+            printf ("  length (%g) = %g\n", Y, length(Y));
+            printf ("  length (%g) = %g\n", XY, length(XY));
+            printf ("  distance ((%g), (%g)) = %g\n", X, Y, distance(X,Y));
+            printf ("  distance ((%g), (%g)) = %g\n", X, XY, distance(X,XY));
+            printf ("  distance ((%g), (%g), (%g)) = %g\n",
+                    X, Y, X, distance(X,Y,X));
+            printf ("  distance ((%g), (%g), (%g)) = %g\n",
+                    X, Y, Y, distance(X,Y,Y));
+            point Q = point(0.5,0.5,0);
+            printf ("  distance ((%g), (%g), (%g)) = %g\n",
+                    X, Y, Q, distance(X,Y,Q));
+            Q = point(0.5,0.5,0.5);
+            printf ("  distance ((%g), (%g), (%g)) = %g\n",
+                    X, Y, Q, distance(X,Y,Q));
+            Q = point(2,1,0);
+            printf ("  distance ((%g), (%g), (%g)) = %g\n",
+                    X, Y, Q, distance(X,Y,Q));
+            printf ("  normalize (%g) = %g\n", XY, normalize(XY));
+            printf ("  normalize (%g) = %g\n", V, normalize(V));
+            printf ("  normalize (%g) = %g\n", Zero, normalize(Zero));
+        }
+    
+        printf ("  rotate(%g, PI/2, (0,0,0), (0,0,1)) = %g\n", 
+                X, rotate (X, M_PI/2, point(0,0,0), point(0,0,1)));
     }
-
-    printf ("  rotate(%g, PI/2, (0,0,0), (0,0,1)) = %g\n", 
-            X, rotate (X, M_PI/2, point(0,0,0), point(0,0,1)));
 }

@@ -1788,7 +1788,7 @@ LLVMGEN (llvm_gen_construct_color)
         args[2] = rop.llvm_load_value (Space); // from
 
         ASSERT(false == rop.ll.is_masking_enabled());
-        std::string func_name("osl_prepend_color_from");
+        std::string func_name("osl_prepend_color_from_");
         func_name.append(arg_typecode(Result, false /*derivs*/, op_is_uniform));
         func_name.append("_batched");
 
@@ -2179,29 +2179,49 @@ LLVMGEN (llvm_gen_transform)
 
     }
     {
-        llvm::Value *args[] = {
-    		rop.llvm_void_ptr(*P),
-            rop.llvm_void_ptr(*Result),
-			rop.ll.void_ptr(transform),
-			succeeded_as_int,
-            rop.ll.mask_as_int(rop.ll.current_mask())};
+    	if (result_is_uniform)
+    	{
+    		ASSERT(to_is_uniform);
+    		ASSERT(P_is_uniform);
 
-        ASSERT(rop.isSymbolUniform(*Result) == false && "unreachable case");
-        // definitely not a nonlinear transformation
+			llvm::Value *args[] = {
+				rop.llvm_void_ptr(*Result),
+				rop.ll.void_ptr(transform),
+				rop.llvm_void_ptr(*P)};
 
-        // Dynamically build function name
-        std::string func_name;
-        func_name += "osl_transform_";
-        func_name += triple_type.c_str();
-        func_name += "_";
-        // Ignore derivatives if uneeded or unsupplied
-        bool has_derivs = (Result->has_derivs() && P->has_derivs());
-        func_name += arg_typecode(*P, has_derivs, P_is_uniform);
-        func_name += arg_typecode(*Result, has_derivs, result_is_uniform);
-        func_name += transform_arg_suffix;
-        func_name += "_masked";
+			// Dynamically build function name
+			std::string func_name = std::string("osl_") + op.opname().string() + "_";
+			// Ignore derivatives if uneeded or unsupplied
+			bool has_derivs = (Result->has_derivs() && P->has_derivs());
+			func_name += arg_typecode(*P, has_derivs, P_is_uniform);
+			func_name += transform_arg_suffix;
+			func_name += arg_typecode(*Result, has_derivs, result_is_uniform);
 
-        rop.ll.call_function (func_name.c_str(), args, std::extent<decltype(args)>::value);
+			rop.ll.call_function (func_name.c_str(), args, std::extent<decltype(args)>::value);
+    	} else {
+			llvm::Value *args[] = {
+				rop.llvm_void_ptr(*P),
+				rop.llvm_void_ptr(*Result),
+				rop.ll.void_ptr(transform),
+				succeeded_as_int,
+				rop.ll.mask_as_int(rop.ll.current_mask())};
+
+			// definitely not a nonlinear transformation
+
+			// Dynamically build function name
+			std::string func_name;
+			func_name += "osl_transform_";
+			func_name += triple_type.c_str();
+			func_name += "_";
+			// Ignore derivatives if uneeded or unsupplied
+			bool has_derivs = (Result->has_derivs() && P->has_derivs());
+			func_name += arg_typecode(*P, has_derivs, P_is_uniform);
+			func_name += arg_typecode(*Result, has_derivs, result_is_uniform);
+			func_name += transform_arg_suffix;
+			func_name += "_masked";
+
+			rop.ll.call_function (func_name.c_str(), args, std::extent<decltype(args)>::value);
+    	}
 
         // To reduce the number of combinations to support
         // we take on the work of zero'ing out the derivatives here

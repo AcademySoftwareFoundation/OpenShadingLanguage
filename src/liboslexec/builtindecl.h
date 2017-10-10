@@ -239,11 +239,16 @@ DECL (osl_pointcloud_write, "iXsXiXXX")
 DECL (osl_pointcloud_write_helper, "xXXXisLX")
 DECL (osl_blackbody_vf, "xXXf")
 DECL (osl_wavelength_color_vf, "xXXf")
+
 DECL (osl_luminance_fv, "xXXX")
 DECL (osl_luminance_dfdv, "xXXX")
 DECL (osl_luminance_fv_batched, "xXXX")
 DECL (osl_luminance_dfdv_batched, "xXXX")
+
+
+DECL (osl_luminance_w16fv_batched, "xXXX")
 DECL (osl_luminance_w16fw16v_batched, "xXXX")
+
 DECL (osl_prepend_color_from, "xXXs")
 DECL (osl_prepend_color_from_v_batched, "xXXs")
 DECL (osl_prepend_color_from_w16v_batched, "xXXs")

@@ -1420,10 +1420,6 @@ LLVMGEN (llvm_gen_compref)
 
 
     bool op_is_uniform = rop.isSymbolUniform(Result);
-    // TODO: we expect we will need to handle varying indices
-    // performance could be quite bad though so want to avoid if possible
-    ASSERT(rop.isSymbolUniform(Index));
-
 
     llvm::Value *c = rop.llvm_load_value(Index);
     if (rop.shadingsys().range_checking()) {
@@ -1445,19 +1441,47 @@ LLVMGEN (llvm_gen_compref)
         }
     }
 
-    for (int d = 0;  d < 3;  ++d) {  // deriv
-        llvm::Value *val = NULL;
-        if (Index.is_constant()) {
-            int i = *(int*)Index.data();
-            i = Imath::clamp (i, 0, 2);
-            val = rop.llvm_load_value (Val, d, i, TypeDesc::UNKNOWN, op_is_uniform);
-        } else {
-            // TODO: handle non constant index
-            val = rop.llvm_load_component_value (Val, d, c, op_is_uniform);
-        }
-        rop.llvm_store_value (val, Result, d);
-        if (! Result.has_derivs())  // skip the derivs if we don't need them
-            break;
+    if (rop.isSymbolUniform(Index)) {
+
+		for (int d = 0;  d < 3;  ++d) {  // deriv
+			llvm::Value *val = NULL;
+			if (Index.is_constant()) {
+				int i = *(int*)Index.data();
+				i = Imath::clamp (i, 0, 2);
+				val = rop.llvm_load_value (Val, d, i, TypeDesc::UNKNOWN, op_is_uniform);
+			} else {
+				// TODO: handle non constant index
+				val = rop.llvm_load_component_value (Val, d, c, op_is_uniform);
+			}
+			rop.llvm_store_value (val, Result, d);
+			if (! Result.has_derivs())  // skip the derivs if we don't need them
+				break;
+		}
+    } else {
+    	ASSERT(Index.is_constant() == false);
+    	ASSERT(op_is_uniform == false);
+
+    	// As the index is logically bound to 0, 1, or 2
+    	// instead of doing a gather (which we will assume to cost 16 loads)
+    	// We can just load all 3 components and blend them based on the index == 0, index == 1, index == 2
+    	llvm::Value *comp0Mask = rop.ll.op_eq(c, rop.ll.wide_constant(0));
+    	llvm::Value *comp1Mask = rop.ll.op_eq(c, rop.ll.wide_constant(1));
+    	// If index != 0 && index != 1, assume index == 2
+    	// Essentially free clamping
+
+		for (int d = 0;  d < 3;  ++d) {  // deriv
+			llvm::Value *val = NULL;
+
+			llvm::Value *valc0 = rop.llvm_load_value (Val, d, 0, TypeDesc::UNKNOWN, op_is_uniform);
+			llvm::Value *valc1 = rop.llvm_load_value (Val, d, 1, TypeDesc::UNKNOWN, op_is_uniform);
+			llvm::Value *valc2 = rop.llvm_load_value (Val, d, 2, TypeDesc::UNKNOWN, op_is_uniform);
+			llvm::Value *valc0_c2 = rop.ll.op_select(comp0Mask,valc0,valc2);
+			llvm::Value *valc0_c1_c2 = rop.ll.op_select(comp1Mask,valc1,valc0_c2);
+
+			rop.llvm_store_value (valc0_c1_c2, Result, d);
+			if (! Result.has_derivs())  // skip the derivs if we don't need them
+				break;
+		}
     }
     return true;
 }

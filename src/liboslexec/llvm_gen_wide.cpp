@@ -1498,7 +1498,6 @@ LLVMGEN (llvm_gen_compassign)
 
     // TODO:  Technically the index could be varying as well
     // Lets see if that is true in the wild before getting complicated
-    ASSERT(rop.isSymbolUniform(Index));
     bool op_is_uniform = rop.isSymbolUniform(Result);
 
     llvm::Value *c = rop.llvm_load_value(Index);
@@ -1520,17 +1519,51 @@ LLVMGEN (llvm_gen_compassign)
         }
     }
 
-    for (int d = 0;  d < 3;  ++d) {  // deriv
-        llvm::Value *val = rop.llvm_load_value (Val, d, 0, TypeDesc::TypeFloat, op_is_uniform);
-        if (Index.is_constant()) {
-            int i = *(int*)Index.data();
-            i = Imath::clamp (i, 0, 2);
-            rop.llvm_store_value (val, Result, d, i);
-        } else {
-            rop.llvm_store_component_value (val, Result, d, c);
-        }
-        if (! Result.has_derivs())  // skip the derivs if we don't need them
-            break;
+    if (rop.isSymbolUniform(Index)) {
+		for (int d = 0;  d < 3;  ++d) {  // deriv
+			llvm::Value *val = rop.llvm_load_value (Val, d, 0, TypeDesc::TypeFloat, op_is_uniform);
+			if (Index.is_constant()) {
+				int i = *(int*)Index.data();
+				i = Imath::clamp (i, 0, 2);
+				rop.llvm_store_value (val, Result, d, i);
+			} else {
+				rop.llvm_store_component_value (val, Result, d, c);
+			}
+			if (! Result.has_derivs())  // skip the derivs if we don't need them
+				break;
+		}
+    } else {
+    	ASSERT(Index.is_constant() == false);
+    	ASSERT(op_is_uniform == false);
+
+    	// As the index is logically bound to 0, 1, or 2
+    	// instead of doing a scatter
+    	// We can just load all 3 components and blend them based on the index == 0, index == 1, index == 2
+    	llvm::Value *comp0Mask = rop.ll.op_eq(c, rop.ll.wide_constant(0));
+    	llvm::Value *comp1Mask = rop.ll.op_eq(c, rop.ll.wide_constant(1));
+    	llvm::Value *comp2Mask = rop.ll.op_eq(c, rop.ll.wide_constant(2));
+    	// If index != 0 && index != 1, assume index == 2
+    	// Essentially free clamping
+
+		for (int d = 0;  d < 3;  ++d) {  // deriv
+
+			llvm::Value *val = rop.llvm_load_value (Val, d, 0, TypeDesc::TypeFloat, op_is_uniform);
+
+			llvm::Value *valc0 = rop.llvm_load_value (Result, d, 0, TypeDesc::UNKNOWN, op_is_uniform);
+			llvm::Value *valc1 = rop.llvm_load_value (Result, d, 1, TypeDesc::UNKNOWN, op_is_uniform);
+			llvm::Value *valc2 = rop.llvm_load_value (Result, d, 2, TypeDesc::UNKNOWN, op_is_uniform);
+
+			llvm::Value *resultc0 = rop.ll.op_select(comp0Mask,val,valc0);
+			llvm::Value *resultc1 = rop.ll.op_select(comp1Mask,val,valc1);
+			llvm::Value *resultc2 = rop.ll.op_select(comp2Mask,val,valc2);
+
+			rop.llvm_store_value (resultc0, Result, d, 0);
+			rop.llvm_store_value (resultc1, Result, d, 1);
+			rop.llvm_store_value (resultc2, Result, d, 2);
+
+			if (! Result.has_derivs())  // skip the derivs if we don't need them
+				break;
+		}
     }
     return true;
 }

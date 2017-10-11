@@ -1430,6 +1430,8 @@ LLVM_Util::new_basic_block (const std::string &name)
 llvm::BasicBlock *
 LLVM_Util::push_function (llvm::BasicBlock *after)
 {
+	OSL_DEV_ONLY(std::cout << "push_function" << std::endl);
+
     // As each nested function (that is inlined) will have different control flow,
     // as some lanes of nested function may return early, but that would not affect
     // the lanes of the calling function, we mush have a modified mask stack for each
@@ -1461,6 +1463,7 @@ LLVM_Util::inside_function() const
 void
 LLVM_Util::mask_off_returned_lanes()
 {
+	OSL_DEV_ONLY(std::cout << "mask_off_returned_lanes" << std::endl);
 	// TODO: FIX ME, the mask stored is from the scope with the return statement
 	// however that mask would wide as we exit conditional scopes
 	// so we must reapply the mask at each stage
@@ -1478,6 +1481,8 @@ LLVM_Util::mask_off_returned_lanes()
 void
 LLVM_Util::pop_function ()
 {
+	OSL_DEV_ONLY(std::cout << "pop_function" << std::endl);
+
     ASSERT (! m_return_block.empty());
     builder().SetInsertPoint (m_return_block.back());
     m_return_block.pop_back ();
@@ -2567,15 +2572,13 @@ LLVM_Util::clear_mask_break()
 void
 LLVM_Util::push_mask_return()
 {
+
+	OSL_DEV_ONLY(std::cout << "push_mask_return" << std::endl);
+
 	ASSERT(false == m_mask_stack.empty());
 
 	{
 		const MaskInfo & mi = m_mask_stack.back();
-		//copy_of_mi.negate = !copy_of_mi.negate;
-		//m_function_stack_of_return_masks.back().push_back(copy_of_mi);
-
-		//if (m_mask_levels_belong_to_branch > 0) {
-
 			// Because we are inside a conditional branch
 			// we can't let our local modified mask be directly used
 			// by other scopes, instead we must store the result
@@ -2602,8 +2605,6 @@ LLVM_Util::push_mask_return()
 			push_masking_enabled(false);
 			op_store(modifiedMask, loc_of_modified_mask);
 			pop_masking_enabled();
-//		}
-
 	}
 		
 	// Now modify the current mask to turn off all lanes

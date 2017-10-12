@@ -651,6 +651,7 @@ OSLCompilerImpl::compile_buffer (string_view sourcecode,
             m_output_filename = "<buffer>";
 
             std::ostringstream oso_output;
+            oso_output.imbue (std::locale::classic());  // force C locale
             ASSERT (m_osofile == NULL);
             m_osofile = &oso_output;
 

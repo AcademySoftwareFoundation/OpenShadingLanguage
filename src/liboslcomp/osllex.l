@@ -98,6 +98,7 @@ CPLUSCOMMENT    \/\/.*\n
 #include <string>
 
 #include <OpenImageIO/thread.h>
+#include <OpenImageIO/strutil.h>
 #include "oslcomp_pvt.h"
 
 using namespace OSL;
@@ -351,13 +352,26 @@ bool
 OSLCompilerImpl::osl_parse_buffer (const std::string &preprocessed_buffer)
 {
     // Thread safety with the lexer/parser
-    static OIIO::mutex oslcompiler_mutex;
-    OIIO::lock_guard lock (oslcompiler_mutex);
+    static std::mutex oslcompiler_mutex;
+    std::lock_guard<std::mutex> lock (oslcompiler_mutex);
+
+#ifndef OIIO_STRUTIL_HAS_STOF
+    // Force classic "C" locale for correct '.' decimal parsing.
+    // N.B. This is not safe in a multi-threaded program where another
+    // application thread is expecting the native locale to work properly.
+    // This is not necessary for versions of OIIO that have Strutil::stof,
+    // and we can remove it entirely when OIIO 1.9 is the minimum.
+    std::locale oldlocale = std::locale::global (std::locale::classic());
+#endif
+
     osl_switch_to_buffer (osl_scan_string (preprocessed_buffer.c_str()));
     oslcompiler = this;
     oslparse ();
     bool parseerr = error_encountered();
     osl_delete_buffer (YY_CURRENT_BUFFER);
+#ifndef OIIO_STRUTIL_HAS_STOF
+    std::locale::global (oldlocale);  // Restore the original locale.
+#endif
     return parseerr;
 }
 

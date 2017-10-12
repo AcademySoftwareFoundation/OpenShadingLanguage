@@ -237,6 +237,10 @@ input_file (int argc, const char *argv[])
 int
 main (int argc, char *argv[])
 {
+    // Globally force classic "C" locale, and turn off all formatting
+    // internationalization, for the entire oslinfo application.
+    std::locale::global (std::locale::classic());
+
     OIIO::Filesystem::convert_native_arguments (argc, (const char **)argv);
 
     OIIO::ArgParse ap (argc, (const char **)argv);

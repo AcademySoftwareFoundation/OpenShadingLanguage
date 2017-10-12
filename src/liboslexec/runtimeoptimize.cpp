@@ -807,6 +807,7 @@ OSOProcessorBase::const_value_as_string (const Symbol &A)
     TypeDesc type (A.typespec().simpletype());
     int n = type.numelements() * type.aggregate;
     std::ostringstream s;
+    s.imbue (std::locale::classic());  // force C locale
     if (type.basetype == TypeDesc::FLOAT) {
         for (int i = 0; i < n; ++i)
             s << (i ? "," : "") << ((const float *)A.data())[i];

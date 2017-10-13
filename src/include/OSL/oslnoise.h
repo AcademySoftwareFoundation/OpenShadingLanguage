@@ -2257,7 +2257,13 @@ struct Noise {
 			                ConstWideAccessor<float,WidthT> wt) const {
 		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+			#ifdef __AVX512F__
+			    OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+			#else
+				// remark #15547: simd loop was not vectorized: code size was too large for vectorization. Consider reducing the number of distinct variables use
+				// So don't mandate interleaved loop unrolling by forcing a simdlen wider than ISA
+				OSL_OMP_PRAGMA(omp simd)
+			#endif
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp[i];
 				float t = wt[i];
@@ -2442,7 +2448,13 @@ struct SNoise {
                             ConstWideAccessor<float,WidthT> wt) const {
 		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+			#ifdef __AVX512F__
+				OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+			#else
+				// remark #15547: simd loop was not vectorized: code size was too large for vectorization. Consider reducing the number of distinct variables use
+				// So don't mandate interleaved loop unrolling by forcing a simdlen wider than ISA
+				OSL_OMP_PRAGMA(omp simd)
+			#endif
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp[i];
 				float t = wt[i];

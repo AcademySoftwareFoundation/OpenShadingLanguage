@@ -2197,6 +2197,39 @@ DECLFOLDER(constfold_transform)
 
 
 
+DECLFOLDER(constfold_transformc)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    // Symbol &Result = *rop.opargsym (op, 0);
+    Symbol &From = *rop.opargsym (op, 1);
+    Symbol &To = *rop.opargsym (op, 2);
+    Symbol &C = *rop.opargsym (op, 3);
+
+    if (From.is_constant() && To.is_constant()) {
+        ustring from = From.get_string();
+        ustring to = To.get_string();
+        if (from == Strings::RGB)
+            from = Strings::rgb;
+        if (to == Strings::RGB)
+            to = Strings::rgb;
+        if (from == to) {
+            rop.turn_into_assign (op, rop.inst()->arg(op.firstarg()+3),
+                                  "transformc by identity");
+            return 1;
+        }
+        if (C.is_constant()) {
+            Color3 Cin (C.get_float(0), C.get_float(1), C.get_float(2));
+            Color3 result = rop.shadingcontext()->transformc (from, to, Cin);
+            rop.turn_into_assign (op, rop.add_constant(result),
+                                  "transformc => constant");
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
+
 DECLFOLDER(constfold_setmessage)
 {
     Opcode &op (rop.inst()->ops()[opnum]);

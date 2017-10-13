@@ -221,6 +221,7 @@ DECL (osl_transformv_vmv, "xXXX")
 DECL (osl_transformv_dvmdv, "xXXX")
 DECL (osl_transformn_vmv, "xXXX")
 DECL (osl_transformn_dvmdv, "xXXX")
+DECL (osl_transformc, "iXXiXiXX")
 
 DECL (osl_dict_find_iis, "iXiX")
 DECL (osl_dict_find_iss, "iXXX")

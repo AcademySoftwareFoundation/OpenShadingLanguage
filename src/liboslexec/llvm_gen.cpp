@@ -1596,6 +1596,26 @@ LLVMGEN (llvm_gen_transform)
 
 
 
+// transformc (string fromspace, string tospace, color p)
+LLVMGEN (llvm_gen_transformc)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    ASSERT (op.nargs() == 4);
+    Symbol *Result = rop.opargsym (op, 0);
+    Symbol *From = rop.opargsym (op, 1);
+    Symbol *To = rop.opargsym (op, 2);
+    Symbol *C = rop.opargsym (op, 3);
+
+    llvm::Value *args[] = { rop.sg_void_ptr(),
+        rop.llvm_void_ptr(*C), rop.ll.constant(C->has_derivs()),
+        rop.llvm_void_ptr(*Result), rop.ll.constant(Result->has_derivs()),
+        rop.llvm_load_value(*From), rop.llvm_load_value(*To) };
+    rop.ll.call_function ("osl_transformc", args);
+    return true;
+}
+
+
+
 // Derivs
 LLVMGEN (llvm_gen_DxDy)
 {

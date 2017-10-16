@@ -4,7 +4,6 @@ language: cpp
 sudo: false
 osx_image: xcode7.3
 dist: trusty
-env: OSL_SITE=travis
 
 
 # Add-ons: specify apt packages for Linux
@@ -56,6 +55,8 @@ install:
           export OPENEXR_HOME=$PWD/openexr-install ;
       fi
     - export OIIOMAKEFLAGS="$OIIOMAKEFLAGS -j2 DEBUG= USE_PYTHON=0 OIIO_BUILD_TESTS=0"
+    - export OPENIMAGEIO_SITE=travis
+    - export OSL_SITE=travis
     - src/build-scripts/build_openimageio.bash
     - export OPENIMAGEIOHOME=$PWD/OpenImageIO/dist/$OIIOPLATFORM
     - export DYLD_LIBRARY_PATH=$OPENIMAGEIOHOME/lib:$DYLD_LIBRARY_PATH

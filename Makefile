@@ -38,10 +38,10 @@ CMAKE ?= cmake
 ifndef OSL_SITE
     OSL_SITE := ${shell uname -n}
 endif
-ifneq (${shell echo ${OSL_SITE} | grep imageworks},)
+ifneq (${shell echo ${OSL_SITE} | grep imageworks.com},)
 include ${working_dir}/site/spi/Makefile-bits
 endif
-ifneq (${shell echo ${OSL_SITE} | grep pixar},)
+ifneq (${shell echo ${OSL_SITE} | grep pixar.com},)
 include ${working_dir}/site/pixar/Makefile-bits
 endif
 

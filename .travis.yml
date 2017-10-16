@@ -4,6 +4,7 @@ language: cpp
 sudo: false
 osx_image: xcode7.3
 dist: trusty
+env: OSL_SITE=travis
 
 
 # Add-ons: specify apt packages for Linux

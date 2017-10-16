@@ -246,7 +246,7 @@ ShaderInstance::parameters (const ParamValueList &params)
 
             if (master()->shadingsys().relaxed_param_typecheck()) {
                 // first handle cases where we actually need to modify the data (like setting a float parameter with an int)
-                if ((paramtype == TypeDesc::FLOAT || paramtype.is_vec3()) && valuetype == TypeDesc::INT) {
+                if ((paramtype == TypeDesc::FLOAT || paramtype.is_vec3()) && valuetype.basetype == TypeDesc::INT && valuetype.basevalues() == 1) {
                     int val = *static_cast<const int*>(p.data());
                     float conv = float(val);
                     if (val != int(conv))

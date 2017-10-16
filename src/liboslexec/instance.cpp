@@ -236,22 +236,42 @@ ShaderInstance::parameters (const ParamValueList &params)
             if (sm_typespec.is_structure())
                 continue;    // structs are just placeholders; skip
 
+            const void *data = p.data();
+            float tmpdata[3]; // used for inline conversions to float/float[3]
+
             // Check type of parameter and matching symbol. Note that the
             // compatible accounts for indefinite-length arrays.
-            TypeDesc paramtype = sm_typespec.simpletype();
-            TypeDesc valuetype = p.type();
+            TypeDesc paramtype = sm_typespec.simpletype();  // what the shader writer wants
+            TypeDesc valuetype = p.type();                  // what the data provided actually is
+
             if (master()->shadingsys().relaxed_param_typecheck()) {
+                // first handle cases where we actually need to modify the data (like setting a float parameter with an int)
+                if ((paramtype == TypeDesc::FLOAT || paramtype.is_vec3()) && valuetype == TypeDesc::INT) {
+                    int val = *static_cast<const int*>(p.data());
+                    float conv = float(val);
+                    if (val != int(conv))
+                        shadingsys().error ("attempting to set parameter from wrong type would change the value: %s (set %.9g from %d)",
+                            sm->name(), conv, val);
+                    tmpdata[0] = conv;
+                    data = tmpdata;
+                    valuetype = TypeDesc::FLOAT;
+                }
+
                 // Relaxed rules just look to see that the types are isomorphic to each other (ie: same number of base values)
                 // Note that:
                 //   * basetypes must match exactly (int vs float vs string)
                 //   * valuetype cannot be unsized (we must know the concrete number of values)
                 //   * if paramtype is sized (or not an array) just check for the total number of entries
                 //   * if paramtype is unsized (shader writer is flexible about how many values come in) -- make sure we are a multiple of the target type
+                //   * allow a single float setting a vec3 (or equivalent)
                 if (!( valuetype.basetype == paramtype.basetype &&
                       !valuetype.is_unsized_array() &&
                       ((!paramtype.is_unsized_array() && valuetype.basevalues() == paramtype.basevalues()) ||
-                       ( paramtype.is_unsized_array() && valuetype.basevalues() % paramtype.aggregate == 0)) )) {
-                    shadingsys().warning ("attempting to set parameter from incompatible type: %s (expected '%s', received '%s')",
+                       ( paramtype.is_unsized_array() && valuetype.basevalues() % paramtype.aggregate == 0) ||
+                       ( paramtype.is_vec3()          && valuetype == TypeDesc::FLOAT) ) )) {
+                    // We are being very relaxed in this mode, so if the user _still_ got it wrong
+                    // something more serious is at play and we should treat it as an error.
+                    shadingsys().error ("attempting to set parameter from incompatible type: %s (expected '%s', received '%s')",
                                           sm->name(), paramtype, valuetype);
                     continue;
                 }
@@ -275,8 +295,6 @@ ShaderInstance::parameters (const ParamValueList &params)
             DASSERT (so->dataoffset() == sm->dataoffset());
             so->dataoffset (sm->dataoffset());
 
-            const void *data = p.data();
-            float tmpdata[3];
             if (paramtype.is_vec3() && valuetype == TypeDesc::FLOAT) {
                 // Handle the special case of assigning a float for a triple
                 // by replicating it into local memory.

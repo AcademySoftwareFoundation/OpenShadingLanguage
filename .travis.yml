@@ -2,19 +2,13 @@
 
 language: cpp
 sudo: false
-#compiler:
-#    - clang
-#    - gcc
-#os:
-#    - linux
-#    - osx
 osx_image: xcode7.3
-dist: precise
+dist: trusty
 
 
 # Add-ons: specify apt packages for Linux
 addons:
-  apt: 
+  apt:
    sources:
       - boost-latest
       - ubuntu-toolchain-r-test
@@ -27,7 +21,6 @@ addons:
       - gcc-6
       - g++-6
       - libboost1.55-all-dev
-      - libtiff4-dev
       - llvm-3.4-dev
       - clang-3.4
 
@@ -124,7 +117,7 @@ matrix:
     # used, and also use C++03.
       - os: linux
         compiler: gcc
-        env: OIIOBRANCH=RB-1.7 USE_CPP11=0
+        env: OIIOBRANCH=RB-1.8 USE_CPP11=1
       # Seems LLVM 3.4 has disappeared from Homebrew, so there's not an
       # easy way to test C++03 builds on OSX on TravisCI.
       #- os: osx

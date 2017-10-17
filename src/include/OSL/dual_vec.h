@@ -40,13 +40,21 @@ template<typename T> struct Vec3FromScalar {};
 template<> struct Vec3FromScalar<float> { typedef Vec3 type; };
 template<> struct Vec3FromScalar<Dual2<float> > { typedef Dual2<Vec3> type; };
 
+/// Templated trick to be able to derive what type we use to represent
+/// a color, given a scalar, automatically using the right kind of Dual2.
+template<typename T> struct Color3FromScalar {};
+template<> struct Color3FromScalar<float> { typedef Color3 type; };
+template<> struct Color3FromScalar<Dual2<float> > { typedef Dual2<Color3> type; };
+
 /// Templated trick to be able to derive the scalar component type of
 /// a vector, whether a VecN or a Dual2<VecN>.
 template<typename T> struct ScalarFromVec {};
-template<> struct ScalarFromVec<Vec3> { typedef Float type; };
 template<> struct ScalarFromVec<Vec2> { typedef Float type; };
-template<> struct ScalarFromVec<Dual2<Vec3> > { typedef Dual2<Float> type; };
-template<> struct ScalarFromVec<Dual2<Vec2> > { typedef Dual2<Float> type; };
+template<> struct ScalarFromVec<Vec3> { typedef Float type; };
+template<> struct ScalarFromVec<Color3> { typedef Float type; };
+template<> struct ScalarFromVec<Dual2<Vec2>> { typedef Dual2<Float> type; };
+template<> struct ScalarFromVec<Dual2<Vec3>> { typedef Dual2<Float> type; };
+template<> struct ScalarFromVec<Dual2<Color3>> { typedef Dual2<Float> type; };
 
 
 
@@ -85,6 +93,25 @@ make_Vec3 (const Dual2<Float> &x, const Dual2<Float> &y)
                         Vec3 (x.dx(),  y.dx(),  0.0f),
                         Vec3 (x.dy(),  y.dy(),  0.0f));
 }
+
+
+
+/// A uniform way to assemble a Color3 from float and a Dual2<Color3>
+/// from Dual2<float>.
+inline Color3
+make_Color3 (float x, float y, float z)
+{
+    return Color3 (x, y, z);
+}
+
+inline Dual2<Color3>
+make_Color3 (const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z)
+{
+    return Dual2<Color3> (Color3 (x.val(), y.val(), z.val()),
+                          Color3 (x.dx(), y.dx(), z.dx()),
+                          Color3 (x.dy(), y.dy(), z.dy()));
+}
+
 
 
 
@@ -136,6 +163,35 @@ multMatrix (const Imath::Matrix33<T> &M, const Dual2<Imath::Vec3<S> > &src,
     Dual2<S> c = src0 * M[0][2] + src1 * M[1][2] + src2 * M[2][2];
     dst = make_Vec3 (a, b, c);
 }
+
+
+/// Multiply a row 3-vector (with derivatives) by a 3x3 matrix (no derivs).
+///
+template <class S, class T>
+inline Dual2<Imath::Vec3<S>>
+operator* (const Dual2<Imath::Vec3<S>> &src, const Imath::Matrix33<T> &M)
+{
+    Dual2<S> src0 = comp(src,0), src1 = comp(src,1), src2 = comp(src,2);
+    Dual2<S> a = src0 * M[0][0] + src1 * M[1][0] + src2 * M[2][0];
+    Dual2<S> b = src0 * M[0][1] + src1 * M[1][1] + src2 * M[2][1];
+    Dual2<S> c = src0 * M[0][2] + src1 * M[1][2] + src2 * M[2][2];
+    return make_Vec3 (a, b, c);
+}
+
+
+/// Multiply a row 3-vector (with derivatives) by a 3x3 matrix (no derivs).
+///
+template <class S, class T>
+inline Dual2<Imath::Color3<S>>
+operator* (const Dual2<Imath::Color3<S>> &src, const Imath::Matrix33<T> &M)
+{
+    Dual2<S> src0 = comp(src,0), src1 = comp(src,1), src2 = comp(src,2);
+    Dual2<S> a = src0 * M[0][0] + src1 * M[1][0] + src2 * M[2][0];
+    Dual2<S> b = src0 * M[0][1] + src1 * M[1][1] + src2 * M[2][1];
+    Dual2<S> c = src0 * M[0][2] + src1 * M[1][2] + src2 * M[2][2];
+    return make_Color3 (a, b, c);
+}
+
 
 inline void robust_multVecMatrix(const Matrix44& x, const Imath::Vec3<float>& src, Imath::Vec3<float>& dst)
 {
@@ -197,31 +253,6 @@ multDirMatrix (const Matrix44 &M, const Dual2<Vec3> &in, Dual2<Vec3> &out)
 }
 
 
-
-
-
-/// Templated trick to be able to derive what type we use to represent
-/// a color, given a scalar, automatically using the right kind of Dual2.
-template<typename T> struct Color3FromScalar {};
-template<> struct Color3FromScalar<float> { typedef Color3 type; };
-template<> struct Color3FromScalar<Dual2<float> > { typedef Dual2<Color3> type; };
-
-
-/// A uniform way to assemble a Color3 from float and a Dual2<Color3>
-/// from Dual2<float>.
-inline Color3
-make_Color3 (float x, float y, float z)
-{
-    return Color3 (x, y, z);
-}
-
-inline Dual2<Color3>
-make_Color3 (const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z)
-{
-    return Dual2<Color3> (Color3 (x.val(), y.val(), z.val()),
-                          Color3 (x.dx(), y.dx(), z.dx()),
-                          Color3 (x.dy(), y.dy(), z.dy()));
-}
 
 
 

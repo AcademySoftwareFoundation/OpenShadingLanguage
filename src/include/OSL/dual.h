@@ -233,6 +233,19 @@ inline Dual2<T> operator* (const Dual2<T> &a, const T &b)
 }
 
 
+/// Multiplication of dual by scalar in place.
+///
+template<class T>
+inline const Dual2<T>& operator*= (Dual2<T> &a, const T &b)
+{
+    a.val() *= b;
+    a.dx()  *= b;
+    a.dy()  *= b;
+    return a;
+}
+
+
+
 /// Multiplication of dual by scalar.
 ///
 template<class T>
@@ -330,20 +343,30 @@ inline bool operator>= (const Dual2<T> &a, const T &b) {
 
 
 // Eliminate the derivatives of a number
-template<class T> inline T removeDerivatives (const T x)         { return x;       }
+template<class T> inline T removeDerivatives (const T &x)        { return x;       }
 template<class T> inline T removeDerivatives (const Dual2<T> &x) { return x.val(); }
 
 // Get the x derivative (or 0 for a non-Dual)
-template<class T> inline T getXDerivative (const T x)         { return T(0);   }
+template<class T> inline T getXDerivative (const T &x)        { return T(0);   }
 template<class T> inline T getXDerivative (const Dual2<T> &x) { return x.dx(); }
 
 // Get the y derivative (or 0 for a non-Dual)
-template<class T> inline T getYDerivative (const T x)         { return T(0);   }
+template<class T> inline T getYDerivative (const T &x)        { return T(0);   }
 template<class T> inline T getYDerivative (const Dual2<T> &x) { return x.dy(); }
 
 // Simple templated "copy" function
 template <class T> inline void assignment(T &a, T &b)        { a = b;       }
 template <class T> inline void assignment(T &a, Dual2<T> &b) { a = b.val(); }
+
+// Templated value equality. For scalars, it's the same as regular ==.
+// For Dual2's, this only tests the value, not the derivatives. This solves
+// a pesky source of confusion about whether operator== of Duals ought to
+// return if just their value is equal or if the whole struct (including
+// derivs) are equal.
+template<class T> inline T equalVal (const T &x, const T &y) { return x == y; }
+template<class T> inline T equalVal (const Dual2<T> &x, const Dual2<T> &y) {
+    return x.val() == y.val();
+}
 
 
 
@@ -808,6 +831,24 @@ inline Dual2<T> smoothstep (const Dual2<T> &e0, const Dual2<T> &e1, const Dual2<
    }
    Dual2<T> t = (x - e0)/(e1-e0);
    return  (T(3) - T(2)*t)*t*t;
+}
+
+
+
+// floor(Dual) loses derivatives
+template<class T>
+inline float floor (const Dual2<T> &x)
+{
+    return std::floor(x.val());
+}
+
+
+// floor, cast to an int.
+template<class T>
+inline int
+ifloor (const Dual2<T> &x)
+{
+    return (int)floor(x);
 }
 
 

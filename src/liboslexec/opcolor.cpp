@@ -41,6 +41,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslexec_pvt.h"
 #include <OSL/dual.h>
+#include <OSL/dual_vec.h>
 #include <OSL/Imathx.h>
 
 #if defined(_MSC_VER) && _MSC_VER < 1800
@@ -57,110 +58,126 @@ namespace pvt {
 namespace {
 
 
-static Color3
-hsv_to_rgb (float h, float s, float v)
+template <typename COLOR3>
+static COLOR3
+hsv_to_rgb (const COLOR3& hsv)
 {
     // Reference for this technique: Foley & van Dam
+    using FLOAT = typename ScalarFromVec<COLOR3>::type;
+    FLOAT h = comp(hsv,0), s = comp(hsv,1), v = comp(hsv,2);
     if (s < 0.0001f) {
-      return Color3 (v, v, v);
+      return make_Color3 (v, v, v);
     } else {
-        h = 6.0f * (h - floorf(h));  // expand to [0..6)
-        int hi = (int) h;
-        float f = h - hi;
-        float p = v * (1.0f-s);
-        float q = v * (1.0f-s*f);
-        float t = v * (1.0f-s*(1.0f-f));
+        using std::floor;   // to pick up the float one
+        using OIIO::ifloor;
+        h = 6.0f * (h - floor(h));  // expand to [0..6)
+        int hi = ifloor(h);
+        FLOAT f = h - FLOAT(hi);
+        FLOAT p = v * (1.0f-s);
+        FLOAT q = v * (1.0f-s*f);
+        FLOAT t = v * (1.0f-s*(1.0f-f));
         switch (hi) {
-        case 0 : return Color3 (v, t, p);
-        case 1 : return Color3 (q, v, p);
-        case 2 : return Color3 (p, v, t);
-        case 3 : return Color3 (p, q, v);
-        case 4 : return Color3 (t, p, v);
-        default: return Color3 (v, p, q);
-	}
+        case 0 : return make_Color3 (v, t, p);
+        case 1 : return make_Color3 (q, v, p);
+        case 2 : return make_Color3 (p, v, t);
+        case 3 : return make_Color3 (p, q, v);
+        case 4 : return make_Color3 (t, p, v);
+        default: return make_Color3 (v, p, q);
+	    }
     }
 }
 
 
-static Color3
-rgb_to_hsv (const Color3& rgb)
+template <typename COLOR3>
+static COLOR3
+rgb_to_hsv (const COLOR3& rgb)
 {
     // See Foley & van Dam
-    float r = rgb[0], g = rgb[1], b = rgb[2];
-    float mincomp = std::min (r, std::min (g, b));
-    float maxcomp = std::max (r, std::max (g, b));
-    float delta = maxcomp - mincomp;  // chroma
-    float h, s, v;
+    using FLOAT = typename ScalarFromVec<COLOR3>::type;
+    FLOAT r = comp(rgb,0), g = comp(rgb,1), b = comp(rgb,2);
+    FLOAT mincomp = std::min (r, std::min (g, b));
+    FLOAT maxcomp = std::max (r, std::max (g, b));
+    FLOAT delta = maxcomp - mincomp;  // chroma
+    FLOAT h, s, v;
     v = maxcomp;
-    if (maxcomp > 0)
+    if (maxcomp > 0.0f)
         s = delta / maxcomp;
-    else s = 0;
-    if (s <= 0)
-        h = 0;
+    else s = 0.0f;
+    if (s <= 0.0f)
+        h = 0.0f;
     else {
         if      (r >= maxcomp) h = (g-b) / delta;
-        else if (g >= maxcomp) h = 2 + (b-r) / delta;
-        else                   h = 4 + (r-g) / delta;
-        h /= 6;
-        if (h < 0)
-            h += 1;
+        else if (g >= maxcomp) h = 2.0f + (b-r) / delta;
+        else                   h = 4.0f + (r-g) / delta;
+        h *= (1.0f/6.0f);
+        if (h < 0.0f)
+            h += 1.0f;
     }
-    return Color3 (h, s, v);
+    return make_Color3 (h, s, v);
 }
 
 
 
-static Color3
-hsl_to_rgb (float h, float s, float l)
+template <typename COLOR3>
+static COLOR3
+hsl_to_rgb (const COLOR3& hsl)
 {
+    using FLOAT = typename ScalarFromVec<COLOR3>::type;
+    FLOAT h = comp(hsl,0), s = comp(hsl,1), l = comp(hsl,2);
     // Easiest to convert hsl -> hsv, then hsv -> RGB (per Foley & van Dam)
-    float v = (l <= 0.5) ? (l * (1.0f + s)) : (l * (1.0f - s) + s);
+    FLOAT v = (l <= 0.5f) ? (l * (1.0f + s)) : (l * (1.0f - s) + s);
     if (v <= 0.0f) {
-        return Color3 (0.0f, 0.0f, 0.0f);
+        return make_Color3 (0.0f, 0.0f, 0.0f);
     } else {
-	float min = 2.0f * l - v;
-	s = (v - min) / v;
-	return hsv_to_rgb (h, s, v);
+        FLOAT min = 2.0f * l - v;
+        s = (v - min) / v;
+        return hsv_to_rgb (make_Color3(h, s, v));
     }
 }
 
 
 
-static Color3
-rgb_to_hsl (const Color3& rgb)
+template <typename COLOR3>
+static COLOR3
+rgb_to_hsl (const COLOR3& rgb)
 {
     // See Foley & van Dam
     // First convert rgb to hsv, then to hsl
-    float minval = std::min (rgb[0], std::min (rgb[1], rgb[2]));
-    Color3 hsv = rgb_to_hsv (rgb);
-    float maxval = hsv[2];   // v == maxval
-    float h = hsv[0], s, l = (minval+maxval) / 2;
-    if (minval == maxval)
-        s = 0;  // special 'achromatic' case, hue is 0
-    else if (l <= 0.5)
+    using FLOAT = typename ScalarFromVec<COLOR3>::type;
+    FLOAT minval = std::min (comp(rgb,0), std::min (comp(rgb,1), comp(rgb,2)));
+    COLOR3 hsv = rgb_to_hsv (rgb);
+    FLOAT maxval = comp(hsv,2);   // v == maxval
+    FLOAT h = comp(hsv,0), s, l = (minval+maxval) / 2.0f;
+    if (equalVal (minval, maxval))
+        s = 0.0f;  // special 'achromatic' case, hue is 0
+    else if (l <= 0.5f)
         s = (maxval - minval) / (maxval + minval);
     else
-        s = (maxval - minval) / (2 - maxval - minval);
-    return Color3 (h, s, l);
+        s = (maxval - minval) / (2.0f - maxval - minval);
+    return make_Color3 (h, s, l);
 }
 
 
 
-static Color3
-YIQ_to_rgb (float Y, float I, float Q)
+template <typename COLOR3>
+static COLOR3
+YIQ_to_rgb (const COLOR3& YIQ)
 {
-    return Color3 (Y + 0.9557f * I + 0.6199f * Q,
-                   Y - 0.2716f * I - 0.6469f * Q,
-                   Y - 1.1082f * I + 1.7051f * Q);
+    static const Matrix33 M (1.0000,  1.0000,  1.0000,
+                             0.9557, -0.2716, -1.1082,
+                             0.6199, -0.6469,  1.7051);
+    return YIQ * M;
 }
 
 
-static Color3
-rgb_to_YIQ (const Color3& rgb)
+template <typename COLOR3>
+static COLOR3
+rgb_to_YIQ (const COLOR3& rgb)
 {
-    return Color3 (dot (Color3(0.299,  0.587,  0.114), rgb),
-                   dot (Color3(0.596, -0.275, -0.321), rgb),
-                   dot (Color3(0.212, -0.523,  0.311), rgb));
+    static const Matrix33 M (0.299,  0.596,  0.212,
+                             0.587, -0.275, -0.523,
+                             0.114, -0.321,  0.311);
+    return rgb * M;
 }
 
 
@@ -178,14 +195,16 @@ XYZ_to_xyY (const Color3 &XYZ)
 #endif
 
 
-inline Color3
-xyY_to_XYZ (const Color3 &xyY)
+template <typename COLOR3>
+static COLOR3
+xyY_to_XYZ (const COLOR3 &xyY)
 {
-    float Y = xyY[2];
-    float Y_y = (xyY[1] > 1.0e-6 ? Y/xyY[1] : 0.0f);
-    float X = Y_y * xyY[0];
-    float Z = Y_y * (1.0f - xyY[0] - xyY[1]);
-    return Color3 (X, Y, Z);
+    using FLOAT = typename ScalarFromVec<COLOR3>::type;
+    FLOAT Y = comp(xyY,2);
+    FLOAT Y_y = (comp(xyY,1) > 1.0e-6f ? Y/comp(xyY,1) : 0.0f);
+    FLOAT X = Y_y * comp(xyY,0);
+    FLOAT Z = Y_y * (1.0f - comp(xyY,0) - comp(xyY,1));
+    return make_Color3 (X, Y, Z);
 }
 
 
@@ -534,6 +553,39 @@ ShadingContext::ocio_transform (ustring fromspace, ustring tospace,
 
 
 
+Dual2<Color3>
+ShadingContext::ocio_transform (ustring fromspace, ustring tospace,
+                                const Dual2<Color3>& C)
+{
+    Dual2<Color3> Cout;
+#if OIIO_HAS_COLORPROCESSOR
+    if (fromspace != m_last_colorproc_fromspace ||
+        tospace != m_last_colorproc_tospace) {
+        OIIO::ColorConfig& cc (shadingsys().m_colorconfig);
+        m_last_colorproc = cc.createColorProcessor (fromspace, tospace);
+    }
+    if (m_last_colorproc) {
+        // Use finite differencing to approximate the derivative. Make 3
+        // color values to convert.
+        const float eps = 0.001f;
+        Color3 CC[3] = { C.val(), C.val() + eps*C.dx(), C.val() + eps*C.dy() };
+        m_last_colorproc->apply ((float *)&CC, 3, 1, 3, sizeof(Color3), 0, 0);
+        Cout.set (CC[0],
+                  (CC[1] - CC[0]) * (1.0f / eps),
+                  (CC[2] - CC[0]) * (1.0f / eps));
+    }
+    else
+#endif
+    {
+        Cout = C;
+        error ("Unknown color space transformation \"%s\" -> \"%s\"",
+               fromspace, tospace);
+    }
+    return Cout;
+}
+
+
+
 Color3
 ShadingContext::to_rgb (ustring fromspace, const Color3& C)
 {
@@ -541,11 +593,11 @@ ShadingContext::to_rgb (ustring fromspace, const Color3& C)
          || fromspace == shadingsys().colorspace())
         return C;
     if (fromspace == Strings::hsv)
-        return hsv_to_rgb (C[0], C[1], C[2]);
+        return hsv_to_rgb (C);
     if (fromspace == Strings::hsl)
-        return hsl_to_rgb (C[0], C[1], C[2]);
+        return hsl_to_rgb (C);
     if (fromspace == Strings::YIQ)
-        return YIQ_to_rgb (C[0], C[1], C[2]);
+        return YIQ_to_rgb (C);
     if (fromspace == Strings::XYZ)
         return shadingsys().XYZ_to_RGB (C);
     if (fromspace == Strings::xyY)
@@ -588,11 +640,11 @@ ShadingContext::transformc (ustring fromspace, ustring tospace,
          || fromspace == shadingsys().colorspace())
         Crgb = C;
     else if (fromspace == Strings::hsv)
-        Crgb = hsv_to_rgb (C[0], C[1], C[2]);
+        Crgb = hsv_to_rgb (C);
     else if (fromspace == Strings::hsl)
-        Crgb = hsl_to_rgb (C[0], C[1], C[2]);
+        Crgb = hsl_to_rgb (C);
     else if (fromspace == Strings::YIQ)
-        Crgb = YIQ_to_rgb (C[0], C[1], C[2]);
+        Crgb = YIQ_to_rgb (C);
     else if (fromspace == Strings::XYZ)
         Crgb = shadingsys().XYZ_to_RGB (C);
     else if (fromspace == Strings::xyY)
@@ -602,6 +654,59 @@ ShadingContext::transformc (ustring fromspace, ustring tospace,
     }
 
     Color3 Cto;
+    if (use_colorconfig) {
+        // do things the ColorConfig way, so skip all these other clauses...
+    }
+    else if (tospace == Strings::RGB || tospace == Strings::rgb
+         || tospace == shadingsys().colorspace())
+        Cto = Crgb;
+    else if (tospace == Strings::hsv)
+        Cto = rgb_to_hsv (Crgb);
+    else if (tospace == Strings::hsl)
+        Cto = rgb_to_hsl (Crgb);
+    else if (tospace == Strings::YIQ)
+        Cto = rgb_to_YIQ (Crgb);
+    else if (tospace == Strings::XYZ)
+        Cto = shadingsys().RGB_to_XYZ (Crgb);
+    else if (tospace == Strings::xyY)
+        Cto = shadingsys().RGB_to_XYZ (xyY_to_XYZ (Crgb));
+    else {
+        use_colorconfig = true;
+    }
+
+    if (use_colorconfig) {
+        Cto = ocio_transform (fromspace, tospace, C);
+    }
+
+    return Cto;
+}
+
+
+
+Dual2<Color3>
+ShadingContext::transformc (ustring fromspace, ustring tospace,
+                            const Dual2<Color3>& C)
+{
+    bool use_colorconfig = false;
+    Dual2<Color3> Crgb;
+    if (fromspace == Strings::RGB || fromspace == Strings::rgb
+         || fromspace == shadingsys().colorspace())
+        Crgb = C;
+    else if (fromspace == Strings::hsv)
+        Crgb = hsv_to_rgb (C);
+    else if (fromspace == Strings::hsl)
+        Crgb = hsl_to_rgb (C);
+    else if (fromspace == Strings::YIQ)
+        Crgb = YIQ_to_rgb (C);
+    else if (fromspace == Strings::XYZ)
+        Crgb = shadingsys().XYZ_to_RGB (C);
+    else if (fromspace == Strings::xyY)
+        Crgb = shadingsys().XYZ_to_RGB (xyY_to_XYZ (C));
+    else {
+        use_colorconfig = true;
+    }
+
+    Dual2<Color3> Cto;
     if (use_colorconfig) {
         // do things the ColorConfig way, so skip all these other clauses...
     }
@@ -712,23 +817,22 @@ osl_transformc (void *sg_, void *Cin, int Cin_derivs,
     ShadingContext *ctx = (ShadingContext *)sg->context;
     ustring from = USTR(from_);
     ustring to = USTR(to_);
-    bool ok = true;
 
-    // FIXME: For now, ignore derivs (return 0 derivs). We may go back and
-    // fix this later. It seems relatively safe to assume that the results
-    // of a transformc call won't be used for texture coordinates. Let's
-    // hope.
-    Cin_derivs = false;
-
-    COL(Cout) = ctx->transformc (from, to, COL(Cin));
-
-    // If we wanted output derivs but didn't have input derivs, set the
-    // output derivs to 0.
-    if (Cout_derivs && !Cin_derivs) {
-        ((Color3 *)Cout)[1].setValue (0.0f, 0.0f, 0.0f);
-        ((Color3 *)Cout)[2].setValue (0.0f, 0.0f, 0.0f);
+    if (Cout_derivs) {
+        if (Cin_derivs) {
+            DCOL(Cout) = ctx->transformc (from, to, DCOL(Cin));
+            return true;
+        } else {
+            // We had output derivs, but not input. Zero the output
+            // derivs and fall through to the non-deriv case.
+            ((Color3 *)Cout)[1].setValue (0.0f, 0.0f, 0.0f);
+            ((Color3 *)Cout)[2].setValue (0.0f, 0.0f, 0.0f);
+        }
     }
-    return ok;
+
+    // No-derivs case
+    COL(Cout) = ctx->transformc (from, to, COL(Cin));
+    return true;
 }
 
 

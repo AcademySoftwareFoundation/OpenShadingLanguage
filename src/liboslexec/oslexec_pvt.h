@@ -54,6 +54,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/genclosure.h>
 #include <OSL/oslexec.h>
 #include <OSL/oslclosure.h>
+#include <OSL/dual.h>
+#include <OSL/dual_vec.h>
 #include "osl_pvt.h"
 #include "constantpool.h"
 
@@ -655,9 +657,11 @@ public:
 
     /// Convert an XYZ color to RGB in our preferred color space.
     Color3 XYZ_to_RGB (const Color3 &XYZ) { return XYZ * m_XYZ2RGB; }
+    Dual2<Vec3> XYZ_to_RGB (const Dual2<Vec3> &XYZ) { return XYZ * m_XYZ2RGB; }
     Color3 XYZ_to_RGB (float X, float Y, float Z) { return Color3(X,Y,Z) * m_XYZ2RGB; }
     /// Convert an RGB color in our preferred color space to XYZ.
     Color3 RGB_to_XYZ (const Color3 &RGB) { return RGB * m_RGB2XYZ; }
+    Dual2<Vec3> RGB_to_XYZ (const Dual2<Vec3> &RGB) { return RGB * m_RGB2XYZ; }
     Color3 RGB_to_XYZ (float R, float G, float B) { return Color3(R,G,B) * m_RGB2XYZ; }
 
     /// Return the luminance of an RGB color in the current color space.
@@ -1697,7 +1701,9 @@ public:
     Color3 to_rgb (ustring fromspace, const Color3& C);
     Color3 from_rgb (ustring fromspace, const Color3& C);
     Color3 transformc (ustring fromspace, ustring tospace, const Color3& C);
+    Dual2<Color3> transformc (ustring fromspace, ustring tospace, const Dual2<Color3>& C);
     Color3 ocio_transform (ustring fromspace, ustring tospace, const Color3& C);
+    Dual2<Color3> ocio_transform (ustring fromspace, ustring tospace, const Dual2<Color3>& C);
 
     PerThreadInfo *thread_info () const { return m_threadinfo; }
 

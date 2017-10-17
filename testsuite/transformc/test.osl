@@ -22,5 +22,10 @@ surface test ()
     test_ctransform ("XYZ", c);
     test_ctransform ("XYZ", uv);
     printf ("\n");
+
+    printf ("transformc (\"linear\",\"sRGB\",(%0.3f)) = %0.3f\n",
+            c, transformc("linear","sRGB",c));
+    printf ("transformc (\"sRGB\",\"linear\",(%0.3f)) = %0.3f\n",
+            c, transformc("sRGB","linear",c));
 }
 

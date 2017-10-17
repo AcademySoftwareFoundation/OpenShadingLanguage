@@ -83,6 +83,16 @@ dot (const Imath::Vec3<T> &a, const Imath::Vec3<T> &b)
 
 
 
+/// Dot product of colors is handy for color transformations
+template<class T>
+inline T
+dot (const Imath::Color3<T> &a, const Imath::Color3<T> &b)
+{
+    return a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+}
+
+
+
 /// Return the determinant of a 2x2 matrix.
 template <class T>
 inline

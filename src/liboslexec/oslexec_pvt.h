@@ -43,6 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/thread.h>
 #include <OpenImageIO/paramlist.h>
 #include <OpenImageIO/refcnt.h>
+#include <OpenImageIO/color.h>
 
 #ifdef USE_BOOST_REGEX
 # include <boost/regex.hpp>
@@ -652,10 +653,6 @@ public:
         return m_closure_registry.get_entry(id);
     }
 
-    /// Convert a color in the named space to RGB.
-    ///
-    Color3 to_rgb (ustring fromspace, float a, float b, float c);
-
     /// Convert an XYZ color to RGB in our preferred color space.
     Color3 XYZ_to_RGB (const Color3 &XYZ) { return XYZ * m_XYZ2RGB; }
     Color3 XYZ_to_RGB (float X, float Y, float Z) { return Color3(X,Y,Z) * m_XYZ2RGB; }
@@ -703,6 +700,9 @@ public:
     bool archive_shadergroup (ShaderGroup *group, string_view filename);
 
     void count_noise () { m_stat_noise_calls += 1; }
+
+    ustring colorspace () const { return m_colorspace; }
+    OIIO::ColorConfig& colorconfig () { return m_colorconfig; }
 
 private:
     void printstats () const;
@@ -824,6 +824,7 @@ private:
     Matrix33 m_RGB2XYZ;                   ///< RGB to XYZ conversion matrix
     Color3 m_luminance_scale;             ///< Scaling for RGB->luma
     std::vector<Color3> m_blackbody_table; ///< Precomputed blackbody table
+    OIIO::ColorConfig m_colorconfig;      ///< OIIO/OCIO color configuration
 
     // State
     bool m_in_group;                      ///< Are we specifying a group?
@@ -1691,6 +1692,13 @@ public:
                             int array_lookup, int index,
                             TypeDesc attr_type, void *attr_dest);
 
+    /// Convert a color in the named space to RGB.
+    ///
+    Color3 to_rgb (ustring fromspace, const Color3& C);
+    Color3 from_rgb (ustring fromspace, const Color3& C);
+    Color3 transformc (ustring fromspace, ustring tospace, const Color3& C);
+    Color3 ocio_transform (ustring fromspace, ustring tospace, const Color3& C);
+
     PerThreadInfo *thread_info () const { return m_threadinfo; }
 
     TextureSystem::Perthread *texture_thread_info () const {
@@ -1820,6 +1828,13 @@ private:
     static const int FAILED_ATTRIBS = 16;
     GetAttribQuery m_failed_attribs[FAILED_ATTRIBS];
     int m_next_failed_attrib;
+
+#if OIIO_HAS_COLORPROCESSOR
+    // 1-item cache for the last requested custom color conversion processor
+    OIIO::ColorProcessorHandle m_last_colorproc;
+    ustring m_last_colorproc_fromspace;
+    ustring m_last_colorproc_tospace;
+#endif
 
     // Buffering of error messages and printfs
     typedef std::pair<ErrorHandler::ErrCode, std::string> ErrorItem;

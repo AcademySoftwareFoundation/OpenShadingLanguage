@@ -108,6 +108,7 @@ public:
     int add_constant (int c) { return add_constant(TypeDesc::TypeInt, &c); }
     int add_constant (ustring s) { return add_constant(TypeDesc::TypeString, &s); }
     int add_constant (const Matrix44 &c) { return add_constant(TypeDesc::TypeMatrix, &c); }
+    int add_constant (const Color3 &c) { return add_constant(TypeDesc::TypeColor, &c); }
 
     /// Create a new temporary variable of the given type, return its index.
     int add_temp (const TypeSpec &type);

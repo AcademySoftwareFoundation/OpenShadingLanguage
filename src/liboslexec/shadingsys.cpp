@@ -950,6 +950,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (texture3d,   texture3d,           none,          true,      TEX);
     OP (trace,       trace,               none,          false,     SIDE);
     OP (transform,   transform,           transform,     true,      0);
+    OP (transformc,  transformc,          transformc,    true,      0);
     OP (transformn,  transform,           transform,     true,      0);
     OP (transformv,  transform,           transform,     true,      0);
     OP (transpose,   generic,             none,          true,      0);

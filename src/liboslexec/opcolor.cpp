@@ -41,6 +41,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslexec_pvt.h"
 #include <OSL/dual.h>
+#include <OSL/Imathx.h>
 
 #if defined(_MSC_VER) && _MSC_VER < 1800
 using OIIO::expm1;
@@ -48,6 +49,8 @@ using OIIO::cbrtf;
 #endif
 
 OSL_NAMESPACE_ENTER
+using pvt::ShadingSystemImpl;
+
 namespace pvt {
 
 
@@ -79,6 +82,33 @@ hsv_to_rgb (float h, float s, float v)
 }
 
 
+static Color3
+rgb_to_hsv (const Color3& rgb)
+{
+    // See Foley & van Dam
+    float r = rgb[0], g = rgb[1], b = rgb[2];
+    float mincomp = std::min (r, std::min (g, b));
+    float maxcomp = std::max (r, std::max (g, b));
+    float delta = maxcomp - mincomp;  // chroma
+    float h, s, v;
+    v = maxcomp;
+    if (maxcomp > 0)
+        s = delta / maxcomp;
+    else s = 0;
+    if (s <= 0)
+        h = 0;
+    else {
+        if      (r >= maxcomp) h = (g-b) / delta;
+        else if (g >= maxcomp) h = 2 + (b-r) / delta;
+        else                   h = 4 + (r-g) / delta;
+        h /= 6;
+        if (h < 0)
+            h += 1;
+    }
+    return Color3 (h, s, v);
+}
+
+
 
 static Color3
 hsl_to_rgb (float h, float s, float l)
@@ -97,12 +127,42 @@ hsl_to_rgb (float h, float s, float l)
 
 
 static Color3
+rgb_to_hsl (const Color3& rgb)
+{
+    // See Foley & van Dam
+    // First convert rgb to hsv, then to hsl
+    float minval = std::min (rgb[0], std::min (rgb[1], rgb[2]));
+    Color3 hsv = rgb_to_hsv (rgb);
+    float maxval = hsv[2];   // v == maxval
+    float h = hsv[0], s, l = (minval+maxval) / 2;
+    if (minval == maxval)
+        s = 0;  // special 'achromatic' case, hue is 0
+    else if (l <= 0.5)
+        s = (maxval - minval) / (maxval + minval);
+    else
+        s = (maxval - minval) / (2 - maxval - minval);
+    return Color3 (h, s, l);
+}
+
+
+
+static Color3
 YIQ_to_rgb (float Y, float I, float Q)
 {
     return Color3 (Y + 0.9557f * I + 0.6199f * Q,
                    Y - 0.2716f * I - 0.6469f * Q,
                    Y - 1.1082f * I + 1.7051f * Q);
 }
+
+
+static Color3
+rgb_to_YIQ (const Color3& rgb)
+{
+    return Color3 (dot (Color3(0.299,  0.587,  0.114), rgb),
+                   dot (Color3(0.596, -0.275, -0.321), rgb),
+                   dot (Color3(0.212, -0.523,  0.311), rgb));
+}
+
 
 
 #if 0
@@ -446,25 +506,127 @@ ShadingSystemImpl::set_colorspace (ustring colorspace)
     return false;
 }
 
+} // namespace pvt
+
 
 
 Color3
-ShadingSystemImpl::to_rgb (ustring fromspace, float a, float b, float c)
+ShadingContext::ocio_transform (ustring fromspace, ustring tospace,
+                                const Color3& C)
 {
-    if (fromspace == Strings::RGB || fromspace == Strings::rgb)
-        return Color3 (a, b, c);
+    Color3 Cout = C;
+#if OIIO_HAS_COLORPROCESSOR
+    if (fromspace != m_last_colorproc_fromspace ||
+        tospace != m_last_colorproc_tospace) {
+        OIIO::ColorConfig& cc (shadingsys().m_colorconfig);
+        m_last_colorproc = cc.createColorProcessor (fromspace, tospace);
+    }
+    if (m_last_colorproc)
+        m_last_colorproc->apply ((float *)&Cout);
+    else
+#endif
+    {
+        error ("Unknown color space transformation \"%s\" -> \"%s\"",
+               fromspace, tospace);
+    }
+    return Cout;
+}
+
+
+
+Color3
+ShadingContext::to_rgb (ustring fromspace, const Color3& C)
+{
+    if (fromspace == Strings::RGB || fromspace == Strings::rgb
+         || fromspace == shadingsys().colorspace())
+        return C;
     if (fromspace == Strings::hsv)
-        return hsv_to_rgb (a, b, c);
+        return hsv_to_rgb (C[0], C[1], C[2]);
     if (fromspace == Strings::hsl)
-        return hsl_to_rgb (a, b, c);
+        return hsl_to_rgb (C[0], C[1], C[2]);
     if (fromspace == Strings::YIQ)
-        return YIQ_to_rgb (a, b, c);
+        return YIQ_to_rgb (C[0], C[1], C[2]);
     if (fromspace == Strings::XYZ)
-        return XYZ_to_RGB (a, b, c);
+        return shadingsys().XYZ_to_RGB (C);
     if (fromspace == Strings::xyY)
-        return XYZ_to_RGB (xyY_to_XYZ (Color3(a,b,c)));
-    error ("Unknown color space \"%s\"", fromspace.c_str());
-    return Color3 (a, b, c);
+        return shadingsys().XYZ_to_RGB (xyY_to_XYZ (C));
+    else
+        return ocio_transform (fromspace, Strings::RGB, C);
+}
+
+
+
+Color3
+ShadingContext::from_rgb (ustring tospace, const Color3& C)
+{
+    if (tospace == Strings::RGB || tospace == Strings::rgb
+         || tospace == shadingsys().colorspace())
+        return C;
+    if (tospace == Strings::hsv)
+        return rgb_to_hsv (C);
+    if (tospace == Strings::hsl)
+        return rgb_to_hsl (C);
+    if (tospace == Strings::YIQ)
+        return rgb_to_YIQ (C);
+    if (tospace == Strings::XYZ)
+        return shadingsys().RGB_to_XYZ (C);
+    if (tospace == Strings::xyY)
+        return shadingsys().RGB_to_XYZ (xyY_to_XYZ (C));
+    else
+        return ocio_transform (Strings::RGB, tospace, C);
+}
+
+
+
+Color3
+ShadingContext::transformc (ustring fromspace, ustring tospace,
+                            const Color3& C)
+{
+    bool use_colorconfig = false;
+    Color3 Crgb;
+    if (fromspace == Strings::RGB || fromspace == Strings::rgb
+         || fromspace == shadingsys().colorspace())
+        Crgb = C;
+    else if (fromspace == Strings::hsv)
+        Crgb = hsv_to_rgb (C[0], C[1], C[2]);
+    else if (fromspace == Strings::hsl)
+        Crgb = hsl_to_rgb (C[0], C[1], C[2]);
+    else if (fromspace == Strings::YIQ)
+        Crgb = YIQ_to_rgb (C[0], C[1], C[2]);
+    else if (fromspace == Strings::XYZ)
+        Crgb = shadingsys().XYZ_to_RGB (C);
+    else if (fromspace == Strings::xyY)
+        Crgb = shadingsys().XYZ_to_RGB (xyY_to_XYZ (C));
+    else {
+        use_colorconfig = true;
+    }
+
+    Color3 Cto;
+    if (use_colorconfig) {
+        // do things the ColorConfig way, so skip all these other clauses...
+    }
+    else if (tospace == Strings::RGB || tospace == Strings::rgb
+         || tospace == shadingsys().colorspace())
+        Cto = Crgb;
+    else if (tospace == Strings::hsv)
+        Cto = rgb_to_hsv (Crgb);
+    else if (tospace == Strings::hsl)
+        Cto = rgb_to_hsl (Crgb);
+    else if (tospace == Strings::YIQ)
+        Cto = rgb_to_YIQ (Crgb);
+    else if (tospace == Strings::XYZ)
+        Cto = shadingsys().RGB_to_XYZ (Crgb);
+    else if (tospace == Strings::xyY)
+        Cto = shadingsys().RGB_to_XYZ (xyY_to_XYZ (Crgb));
+    else {
+        use_colorconfig = true;
+    }
+
+    if (use_colorconfig) {
+        Cto = ocio_transform (fromspace, tospace, C);
+    }
+
+    return Cto;
 }
 
 
@@ -536,10 +698,39 @@ OSL_SHADEOP void
 osl_prepend_color_from (void *sg, void *c_, const char *from)
 {
     ShadingContext *ctx (((ShaderGlobals *)sg)->context);
-    Color3 &c (*(Color3*)c_);
-    c = ctx->shadingsys().to_rgb (USTR(from), c[0], c[1], c[2]);
+    COL(c_) = ctx->to_rgb (USTR(from), COL(c_));
 }
 
 
-} // namespace pvt
+
+OSL_SHADEOP int
+osl_transformc (void *sg_, void *Cin, int Cin_derivs,
+                void *Cout, int Cout_derivs,
+                void *from_, void *to_)
+{
+    ShaderGlobals *sg = (ShaderGlobals *)sg_;
+    ShadingContext *ctx = (ShadingContext *)sg->context;
+    ustring from = USTR(from_);
+    ustring to = USTR(to_);
+    bool ok = true;
+
+    // FIXME: For now, ignore derivs (return 0 derivs). We may go back and
+    // fix this later. It seems relatively safe to assume that the results
+    // of a transformc call won't be used for texture coordinates. Let's
+    // hope.
+    Cin_derivs = false;
+
+    COL(Cout) = ctx->transformc (from, to, COL(Cin));
+
+    // If we wanted output derivs but didn't have input derivs, set the
+    // output derivs to 0.
+    if (Cout_derivs && !Cin_derivs) {
+        ((Color3 *)Cout)[1].setValue (0.0f, 0.0f, 0.0f);
+        ((Color3 *)Cout)[2].setValue (0.0f, 0.0f, 0.0f);
+    }
+    return ok;
+}
+
+
+
 OSL_NAMESPACE_EXIT

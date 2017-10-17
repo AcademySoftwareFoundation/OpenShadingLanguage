@@ -1,4 +1,6 @@
 Compiled test.osl -> test.oso
+ERROR: Unknown color space transformation "linear" -> "sRGB"
+ERROR: Unknown color space transformation "sRGB" -> "linear"
 rgb 0.500 1.000 0.000 = hsv 0.250 1.000 1.000
 hsv 0.250 1.000 1.000 = rgb 0.500 1.000 0.000
     residual = 0.000 0.000 0.000
@@ -24,9 +26,7 @@ rgb 0.000 0.000 0.500 = XYZ 0.090 0.036 0.475
 XYZ 0.090 0.036 0.475 = rgb 0.000 0.000 0.500
     residual = 0.000 0.000 0.000
 
-ERROR: Unknown color space transformation "linear" -> "sRGB"
 transformc ("linear","sRGB",(0.500 1.000 0.000)) = 0.500 1.000 0.000
-ERROR: Unknown color space transformation "sRGB" -> "linear"
 transformc ("sRGB","linear",(0.500 1.000 0.000)) = 0.500 1.000 0.000
 rgb 0.500 1.000 0.000 = hsv 0.250 1.000 1.000
 hsv 0.250 1.000 1.000 = rgb 0.500 1.000 0.000
@@ -109,3 +109,4 @@ XYZ 0.860 0.964 0.613 = rgb 1.000 1.000 0.500
 
 transformc ("linear","sRGB",(0.500 1.000 0.000)) = 0.500 1.000 0.000
 transformc ("sRGB","linear",(0.500 1.000 0.000)) = 0.500 1.000 0.000
+

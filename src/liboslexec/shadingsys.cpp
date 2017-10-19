@@ -2473,6 +2473,25 @@ ShadingSystemImpl::find_named_layer_in_group (ustring layername,
 }
 
 
+static string_view substr_from(string_view str, char c) {
+    size_t pos = str.find ('[');
+    return pos != string_view::npos ? str.substr(pos) : string_view();
+}
+
+static int parse_bracketed_int(string_view& str, int maxval) {
+    assert(!str.empty() && str.front() == '[');
+    int val;
+    string_view parsed = str.substr(1);
+    // Validate parsed integer within [0, maxval)
+    if (Strutil::parse_int (parsed, val, true) && val >= 0 && val < maxval) {
+        // Validate terminating ']'
+        if (!parsed.empty() && parsed.front() == ']') {
+            str = parsed;
+            return val;
+        }
+    }
+    return maxval - 1;
+}
 
 ConnectedParam
 ShadingSystemImpl::decode_connected_param (string_view connectionname,
@@ -2481,11 +2500,10 @@ ShadingSystemImpl::decode_connected_param (string_view connectionname,
     ConnectedParam c;  // initializes to "invalid"
 
     // Look for a bracket in the "parameter name"
-    size_t bracketpos = connectionname.find ('[');
-    const char *bracket = bracketpos == string_view::npos ? NULL
-                                   : connectionname.data()+bracketpos;
+    string_view bracket = substr_from (connectionname, '[');
+
     // Grab just the part of the param name up to the bracket
-    ustring param (connectionname, 0, bracketpos);
+    ustring param (connectionname, 0, connectionname.size()-bracket.size());
 
     // Search for the param with that name, fail if not found
     c.param = inst->findsymbol (param);
@@ -2514,36 +2532,34 @@ ShadingSystemImpl::decode_connected_param (string_view connectionname,
 
     c.type = sym->typespec();
 
-    if (bracket && c.type.is_array()) {
+    if (!bracket.empty() && c.type.is_array()) {
         // There was at least one set of brackets that appears to be
         // selecting an array element.
-        c.arrayindex = atoi (bracket+1);
-        if (c.arrayindex >= c.type.arraylength()) {
+        c.arrayindex = parse_bracketed_int (bracket, c.type.arraylength());
+        if (bracket.front() != ']') {
             error ("ConnectShaders: cannot request array element %s from a %s",
                    connectionname, c.type.c_str());
-            c.arrayindex = c.type.arraylength() - 1;  // clamp it
         }
         c.type.make_array (0);              // chop to the element type
-        bracket = strchr (bracket+1, '[');  // skip to next bracket
+        bracket = substr_from (bracket, '[');  // skip to next bracket
     }
 
-    if (bracket && ! c.type.is_closure() &&
+    if (!bracket.empty() && ! c.type.is_closure() &&
             c.type.aggregate() != TypeDesc::SCALAR) {
         // There was at least one set of brackets that appears to be
         // selecting a color/vector component.
-        c.channel = atoi (bracket+1);
-        if (c.channel >= (int)c.type.aggregate()) {
+        c.channel = parse_bracketed_int (bracket, c.type.aggregate());
+        if (bracket.front() != ']') {
             error ("ConnectShaders: cannot request component %s from a %s",
                    connectionname, c.type.c_str());
-            c.channel = (int)c.type.aggregate() - 1;  // clamp it
         }
         // chop to just the scalar part
         c.type = TypeSpec ((TypeDesc::BASETYPE)c.type.simpletype().basetype);
-        bracket = strchr (bracket+1, '[');     // skip to next bracket
+        bracket = substr_from (bracket, '[');  // skip to next bracket
     }
 
     // Deal with left over brackets
-    if (bracket) {
+    if (!bracket.empty()) {
         // Still a leftover bracket, no idea what to do about that
         error ("ConnectShaders: don't know how to connect '%s' when \"%s\" is a \"%s\"",
                connectionname, param.c_str(), c.type.c_str());

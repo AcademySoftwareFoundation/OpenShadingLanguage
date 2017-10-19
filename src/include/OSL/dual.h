@@ -363,8 +363,12 @@ template <class T> inline void assignment(T &a, Dual2<T> &b) { a = b.val(); }
 // a pesky source of confusion about whether operator== of Duals ought to
 // return if just their value is equal or if the whole struct (including
 // derivs) are equal.
-template<class T> inline T equalVal (const T &x, const T &y) { return x == y; }
-template<class T> inline T equalVal (const Dual2<T> &x, const Dual2<T> &y) {
+template<class T>
+inline constexpr bool equalVal (const T &x, const T &y) {
+    return x == y;
+}
+template<class T>
+inline constexpr bool equalVal (const Dual2<T> &x, const Dual2<T> &y) {
     return x.val() == y.val();
 }
 

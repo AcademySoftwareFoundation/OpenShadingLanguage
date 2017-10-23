@@ -1,0 +1,62 @@
+<!-- White/Red checkerboard with R, G, and B spheres  -->
+<World>
+   <Camera eye="0, 100, 300" look_at="0,0,0" fov="70" />
+
+    <!-- Splat single float into checkTex.Ca  -->
+    <!-- Write single float into checkTex.Cb[2]  -->
+    <!-- Swap checkTex.Cout[0] & checkTex.Cout[2] when writing to layer1.Cs -->
+   <ShaderGroup>
+      param float r 0;
+      param float g 1;
+      param float b 1;
+      shader constant constTex;
+
+      param float scale_s 20;
+      param float scale_t 20;
+      param color Ca 0 0 0;
+      param color Cb 0 0 0;
+      shader checkerboard checkTex;
+
+      shader matte layer1;
+      connect constTex.Cout[1] checkTex.Ca
+      connect constTex.Cout[2] checkTex.Cb[2]
+      connect checkTex.Cout[0] layer1.Cs[2];
+      connect checkTex.Cout[1] layer1.Cs[1];
+      connect checkTex.Cout[2] layer1.Cs[0];
+   </ShaderGroup>
+   <Quad corner="-200,0,0" edge_x="400,0,0" edge_y="0,400,0" /> <!-- Back -->
+   <Quad corner="-200,0,0" edge_x="0,0,400" edge_y="400,0,0" /> <!-- Botm -->
+
+
+   <ShaderGroup>
+      param float r 1;
+      param float g 0;
+      param float b 0;
+      shader constant tex;
+      shader matte layer1;
+      connect tex.Cout[0] layer1.Cs[0];
+   </ShaderGroup>
+   <Sphere center="-60,30,120"        radius="30" />
+   <ShaderGroup>
+      param float r 0;
+      param float g 1;
+      param float b 0;
+      shader constant tex;
+      shader matte layer1;
+      connect tex.Cout[1] layer1.Cs[1];
+   </ShaderGroup>
+   <Sphere center="  0,30,120"        radius="30" />
+   <ShaderGroup>
+      param float r 0;
+      param float g 0;
+      param float b 1;
+      shader constant tex;
+      shader matte layer1;
+      connect tex.Cout[2] layer1.Cs[2];
+   </ShaderGroup>
+   <Sphere center=" 60,30,120"        radius="30" />
+
+   <ShaderGroup>float power 160000; shader emitter layer1;</ShaderGroup>
+   <Sphere center="-120, 130, 250" radius="1" is_light="yes" /> <!--Lite -->
+   
+</World>

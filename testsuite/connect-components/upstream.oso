@@ -1,0 +1,36 @@
+OpenShadingLanguage 1.00
+# Compiled by oslc 1.10.0dev
+# options: 
+shader upstream
+oparam	float	f_out	-1		%read{2147483647,-1} %write{0,0}
+oparam	float	r_out	-1		%read{2147483647,-1} %write{1,1}
+oparam	float	g_out	-1		%read{2147483647,-1} %write{2,2}
+oparam	float	b_out	-1		%read{2147483647,-1} %write{3,3}
+oparam	color	C_out	-1 -1 -1		%read{2147483647,-1} %write{4,4}
+oparam	color	C2_out	-1 -1 -1		%read{2147483647,-1} %write{5,5}
+const	int	$const1	1		%read{0,0} %write{2147483647,-1}
+const	int	$const2	2		%read{1,1} %write{2147483647,-1}
+const	int	$const3	3		%read{2,2} %write{2147483647,-1}
+const	int	$const4	4		%read{3,3} %write{2147483647,-1}
+const	color	$const5	10 11 12		%read{4,4} %write{2147483647,-1}
+const	color	$const6	20 21 22		%read{5,5} %write{2147483647,-1}
+code ___main___
+# upstream.osl:10
+#     f_out = 1;
+	assign		f_out $const1 	%filename{"upstream.osl"} %line{10} %argrw{"wr"}
+# upstream.osl:11
+#     r_out = 2;
+	assign		r_out $const2 	%line{11} %argrw{"wr"}
+# upstream.osl:12
+#     g_out = 3;
+	assign		g_out $const3 	%line{12} %argrw{"wr"}
+# upstream.osl:13
+#     b_out = 4;
+	assign		b_out $const4 	%line{13} %argrw{"wr"}
+# upstream.osl:14
+#     C_out = color(10,11,12);
+	assign		C_out $const5 	%line{14} %argrw{"wr"}
+# upstream.osl:15
+#     C2_out = color(20,21,22);
+	assign		C2_out $const6 	%line{15} %argrw{"wr"}
+	end

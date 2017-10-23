@@ -1,0 +1,36 @@
+OpenShadingLanguage 1.00
+# Compiled by oslc 1.10.0dev
+# options: 
+shader downstream
+param	float	f_in	-1		%read{0,0} %write{2147483647,-1}
+param	float	f_comp_in	-1		%read{1,1} %write{2147483647,-1}
+param	color	C_in	-1 -1 -1		%read{2,2} %write{2147483647,-1}
+param	color	C_justr_in	-1 -1 -1		%read{3,3} %write{2147483647,-1}
+param	color	C_rgb_in	-1 -1 -1		%read{4,5} %write{2147483647,-1}
+param	color	C_rgb_separate_in	-1 -1 -1		%read{2147483647,-1} %write{2147483647,-1}
+const	string	$const1	"f_in = %g\n"		%read{0,0} %write{2147483647,-1}
+const	string	$const2	"f_comp_in = %g\n"		%read{1,1} %write{2147483647,-1}
+const	string	$const3	"C_in = %g\n"		%read{2,2} %write{2147483647,-1}
+const	string	$const4	"C_justr_in = %g\n"		%read{3,3} %write{2147483647,-1}
+const	string	$const5	"C_rgb_in = %g\n"		%read{4,4} %write{2147483647,-1}
+const	string	$const6	"C_rgb_separate_in = %g\n"		%read{5,5} %write{2147483647,-1}
+code ___main___
+# downstream.osl:10
+#     printf ("f_in = %g\n", f_in);
+	printf		$const1 f_in 	%filename{"downstream.osl"} %line{10} %argrw{"rr"}
+# downstream.osl:11
+#     printf ("f_comp_in = %g\n", f_comp_in);
+	printf		$const2 f_comp_in 	%line{11} %argrw{"rr"}
+# downstream.osl:12
+#     printf ("C_in = %g\n", C_in);
+	printf		$const3 C_in 	%line{12} %argrw{"rr"}
+# downstream.osl:13
+#     printf ("C_justr_in = %g\n", C_justr_in);
+	printf		$const4 C_justr_in 	%line{13} %argrw{"rr"}
+# downstream.osl:14
+#     printf ("C_rgb_in = %g\n", C_rgb_in);
+	printf		$const5 C_rgb_in 	%line{14} %argrw{"rr"}
+# downstream.osl:15
+#     printf ("C_rgb_separate_in = %g\n", C_rgb_in);
+	printf		$const6 C_rgb_in 	%line{15} %argrw{"rr"}
+	end

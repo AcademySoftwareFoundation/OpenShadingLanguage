@@ -1,0 +1,9 @@
+Compiled downstream.osl -> downstream.oso
+Compiled upstream.osl -> upstream.oso
+f_in = 1
+f_comp_in = 11
+C_in = 10 11 12
+C_justr_in = 2 -1 -1
+C_rgb_in = 2 3 4
+C_rgb_separate_in = 2 3 4
+

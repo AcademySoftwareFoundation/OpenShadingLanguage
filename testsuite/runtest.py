@@ -313,12 +313,9 @@ if (("TRAVIS" in os.environ and os.environ["TRAVIS"]) or
 
 # Force any local shaders to compile automatically, prepending the
 # compilation onto whatever else the individual run.py file requested.
-for testfile in glob.glob (os.path.join (test_source_dir, "*.osl")) :
-    shutil.copyfile (testfile, os.path.basename(testfile))
-for testfile in glob.glob (os.path.join (test_source_dir, "*.h")) :
-    shutil.copyfile (testfile, os.path.basename(testfile))
-for testfile in glob.glob (os.path.join (test_source_dir, "*.xml")) :
-    shutil.copyfile (testfile, os.path.basename(testfile))
+for filetype in [ "*.osl", "*.h", "*.oslgroup", "*.xml" ] :
+    for testfile in glob.glob (os.path.join (test_source_dir, filetype)) :
+        shutil.copyfile (testfile, os.path.basename(testfile))
 if compile_osl_files :
     compiles = ""
     oslfiles = glob.glob ("*.osl")

@@ -1,0 +1,16 @@
+shader downstream (
+    float f_in = -1,
+    float f_comp_in = -1,
+    color C_in = -1,
+    color C_justr_in = -1,
+    color C_rgb_in = -1,
+    color C_rgb_separate_in = -1
+  )
+{
+    printf ("f_in = %g\n", f_in);
+    printf ("f_comp_in = %g\n", f_comp_in);
+    printf ("C_in = %g\n", C_in);
+    printf ("C_justr_in = %g\n", C_justr_in);
+    printf ("C_rgb_in = %g\n", C_rgb_in);
+    printf ("C_rgb_separate_in = %g\n", C_rgb_in);
+}

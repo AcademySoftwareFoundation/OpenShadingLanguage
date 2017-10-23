@@ -1,0 +1,9 @@
+shader batched_test()
+{
+    printf ("This should print\n");
+    if (P[0] > 0.5) {
+        exit ();
+        printf ("This should NOT NOT NOT print\n");
+    }
+    printf ("This should print only when P[0] <= 0.5 and P[0]=%g\n", P[0]);
+}

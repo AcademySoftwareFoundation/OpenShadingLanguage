@@ -1,0 +1,13 @@
+shader test_vary3e(output float c = 0.0)
+{
+    c = 1.0;
+    // uniform conditional
+    if (raytype("camera")) {
+        c = 0.0;
+    } else {
+        return;
+    }
+    
+    c= 0.5;
+    
+}

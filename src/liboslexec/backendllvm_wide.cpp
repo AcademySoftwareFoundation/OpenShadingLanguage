@@ -25,6 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+//#define OSL_DEV
 #include <iterator>
 #include <type_traits>
 
@@ -55,6 +56,8 @@ static ustring op_getattribute("getattribute");
 static ustring op_getmatrix("getmatrix");
 static ustring op_getmessage("getmessage");
 static ustring op_if("if");
+static ustring op_return("return");
+static ustring op_exit("exit");
 static ustring op_transform("transform");
 static ustring op_transformv("transformv");
 static ustring op_transformn("transformn");
@@ -405,8 +408,6 @@ BackendLLVMWide::ShaderGlobalNameToIndex (ustring name, bool &is_uniform)
     return -1;
 }
 
-
-
 llvm::Value *
 BackendLLVMWide::llvm_global_symbol_ptr (ustring name, bool &is_uniform)
 {
@@ -461,7 +462,7 @@ BackendLLVMWide::getLLVMSymbolBase (const Symbol &sym)
 // Idea is the top_pos can be cached per instruction and later be used
 // to iterate over the stack of dependent symbols at for that instruction.
 // This should be much cheaper than keeping a unique list per instruction.
-// Nothing invalidates can iterator. 
+// Nothing invalidates an iterator.
 class DependencyTreeTracker
 {
 public:
@@ -512,6 +513,7 @@ private:
 	std::vector<Node> m_nodes;
 	Position m_top_of_stack;
 	int m_current_depth;
+
 public:
 	DependencyTreeTracker()
 	: m_top_of_stack(end_pos())
@@ -624,7 +626,7 @@ public:
 	OSL_INLINE Iterator 
 	end() const { return Iterator(*this, end_pos()); }
 	
-	OSL_INLINE void 
+	OSL_INLINE void
 	push(const Symbol * sym)
 	{
 		++m_current_depth;
@@ -641,9 +643,10 @@ public:
 	
 	OSL_INLINE const Symbol * 
 	top() const { return m_nodes[m_top_of_stack()].sym; }
-	
+
 	void pop()
 	{
+		ASSERT(m_current_depth > 0);
 		ASSERT(m_top_of_stack() != end_pos()());
 		m_top_of_stack = m_nodes[m_top_of_stack()].parent;
 		--m_current_depth;
@@ -726,7 +729,243 @@ public:
 	}
 };
 
+// Historically tracks stack of functions
+// The Position returned by top_pos changes and function scopes are pushed and popped.
+// However any given position is invariant as scopes change
+// Idea is the top_pos can be cached per instruction and later be used
+class FunctionTreeTracker
+{
+public:
+	// Simple wrapper to improve readability
+	class Position
+	{
+		int m_index;
 
+	public:
+		explicit OSL_INLINE Position(int node_index)
+		: m_index(node_index)
+		{}
+
+		OSL_INLINE Position()
+		{ /* uninitialzied */ }
+
+		Position(const Position &) = default;
+
+		OSL_INLINE int
+		operator()() const { return m_index; }
+
+		OSL_INLINE bool operator==(const Position & other) const {
+			return m_index == other.m_index;
+		}
+
+		OSL_INLINE bool operator!=(const Position & other) const {
+			return m_index != other.m_index;
+		}
+	};
+
+	static OSL_INLINE Position end_pos() { return Position(-1); }
+
+	enum Type {
+		TypeReturn,
+		TypeExit
+	};
+
+	struct EarlyOut
+	{
+		explicit OSL_INLINE EarlyOut(Type type_, DependencyTreeTracker::Position dtt_pos_)
+		: type(type_)
+		, dtt_pos(dtt_pos_)
+		{}
+
+		Type type;
+		DependencyTreeTracker::Position dtt_pos;
+	};
+private:
+
+	struct Node
+	{
+		explicit OSL_INLINE Node(Position parent_, const EarlyOut & earlyOut_)
+		: parent(parent_)
+		, earlyOut(earlyOut_)
+		{}
+
+		Position parent;
+		EarlyOut earlyOut;
+	};
+
+	std::vector<Node> m_nodes;
+	Position m_top_of_stack;
+	std::vector<Position> m_function_stack;
+
+public:
+	OSL_INLINE FunctionTreeTracker()
+	: m_top_of_stack(end_pos())
+	{
+		push_function_call();
+	}
+
+	FunctionTreeTracker(const DependencyTreeTracker&) = delete;
+
+
+	class Iterator {
+		Position m_pos;
+		const FunctionTreeTracker *m_ftt;
+
+		OSL_INLINE const Node & node() const { return  m_ftt->m_nodes[m_pos()]; }
+	public:
+
+		typedef const EarlyOut & value_type;
+		typedef int difference_type;
+		// read only data, no intention of giving a reference out
+		typedef const EarlyOut & reference;
+		typedef const EarlyOut * pointer;
+		typedef std::forward_iterator_tag iterator_category;
+
+		OSL_INLINE
+		Iterator()
+		: m_ftt(nullptr)
+		{}
+
+		OSL_INLINE explicit
+		Iterator(const FunctionTreeTracker &ftt, Position pos)
+		: m_pos(pos)
+		, m_ftt(&ftt)
+		{}
+
+		OSL_INLINE Position pos() const { return m_pos; };
+
+		OSL_INLINE Iterator &
+		operator ++()
+		{
+			// prefix operator
+			m_pos = node().parent;
+			return *this;
+		}
+
+		OSL_INLINE Iterator
+		operator ++(int)
+		{
+			// postfix operator
+			Iterator retVal(*this);
+			m_pos = node().parent;
+			return retVal;
+		}
+
+		OSL_INLINE const EarlyOut &
+		operator *() const
+		{
+			// Make sure we didn't try to access the end
+			ASSERT(m_pos() != end_pos()());
+			return node().earlyOut;
+		}
+
+		OSL_INLINE bool
+		operator==(const Iterator &other)
+		{
+			return m_pos() == other.m_pos();
+		}
+
+		OSL_INLINE bool
+		operator!=(const Iterator &other)
+		{
+			return m_pos() != other.m_pos();
+		}
+	};
+
+	// Validate that the Iterator meets the requirements of a std::forward_iterator_tag
+	static_assert(std::is_default_constructible<FunctionTreeTracker::Iterator>::value, "FunctionTreeTracker::Iterator must be default constructible");
+	static_assert(std::is_copy_constructible<FunctionTreeTracker::Iterator>::value, "FunctionTreeTracker::Iterator must be copy constructible");
+	static_assert(std::is_copy_assignable<FunctionTreeTracker::Iterator>::value, "FunctionTreeTracker::Iterator must be copy assignable");
+	static_assert(std::is_move_assignable<FunctionTreeTracker::Iterator>::value, "FunctionTreeTracker::Iterator must be move assignable");
+	static_assert(std::is_destructible<FunctionTreeTracker::Iterator>::value, "FunctionTreeTracker::Iterator must be destructible");
+	static_assert(std::is_same<decltype(std::declval<FunctionTreeTracker::Iterator>() == std::declval<FunctionTreeTracker::Iterator>()), bool>::value, "FunctionTreeTracker::Iterator must be equality comparable");
+	static_assert(std::is_same<typename std::iterator_traits<FunctionTreeTracker::Iterator>::value_type, const EarlyOut &>::value, "FunctionTreeTracker::Iterator must define type value_type");
+	static_assert(std::is_same<typename std::iterator_traits<FunctionTreeTracker::Iterator>::difference_type, int>::value, "FunctionTreeTracker::Iterator must define type difference_type");
+	static_assert(std::is_same<typename std::iterator_traits<FunctionTreeTracker::Iterator>::reference, const EarlyOut &>::value, "FunctionTreeTracker::Iterator must define type reference");
+	static_assert(std::is_same<typename std::iterator_traits<FunctionTreeTracker::Iterator>::pointer, const EarlyOut *>::value, "FunctionTreeTracker::Iterator must define type pointer");
+	static_assert(std::is_same<typename std::iterator_traits<FunctionTreeTracker::Iterator>::iterator_category, std::forward_iterator_tag>::value, "FunctionTreeTracker::Iterator must define type iterator_category");
+	static_assert(std::is_same<decltype(*std::declval<FunctionTreeTracker::Iterator>()), const EarlyOut &>::value, "FunctionTreeTracker::Iterator must implement reference operator *");
+	static_assert(std::is_same<decltype(++std::declval<FunctionTreeTracker::Iterator>()), FunctionTreeTracker::Iterator &>::value, "FunctionTreeTracker::Iterator must implement Iterator & operator ++");
+	static_assert(std::is_same<decltype((void)std::declval<FunctionTreeTracker::Iterator>()++), void>::value, "FunctionTreeTracker::Iterator must implement Iterator & operator ++ (int)");
+	static_assert(std::is_same<decltype(*std::declval<FunctionTreeTracker::Iterator>()++), const EarlyOut &>::value, "FunctionTreeTracker::Iterator must support *it++");
+
+	static_assert(std::is_same<decltype(std::declval<FunctionTreeTracker::Iterator>() != std::declval<FunctionTreeTracker::Iterator>()), bool>::value, "FunctionTreeTracker::Iterator must implement bool operator != (const Iterator &)");
+	static_assert(std::is_same<decltype(!(std::declval<FunctionTreeTracker::Iterator>() == std::declval<FunctionTreeTracker::Iterator>())), bool>::value, "FunctionTreeTracker::Iterator must implement bool operator == (const Iterator &)");
+
+	OSL_INLINE Iterator
+	begin() const { return Iterator(*this, top_pos()); }
+
+	OSL_INLINE Iterator
+	begin_at(Position pos) const { return Iterator(*this, pos); }
+
+	OSL_INLINE Iterator
+	end() const { return Iterator(*this, end_pos()); }
+
+	OSL_INLINE void
+	push_function_call()
+	{
+		OSL_DEV_ONLY(std::cout << "DependencyTreeTracker push_function_call" << std::endl);
+		m_function_stack.push_back(m_top_of_stack);
+	}
+
+	OSL_INLINE void
+	process_return(DependencyTreeTracker::Position dttPos)
+	{
+		OSL_DEV_ONLY(std::cout << "DependencyTreeTracker process_return" << std::endl);
+		Position parent(m_top_of_stack);
+		Node node(parent, EarlyOut(TypeReturn, dttPos));
+		m_top_of_stack = Position(static_cast<int>(m_nodes.size()));
+		m_nodes.push_back(node);
+	}
+
+	OSL_INLINE void
+	process_exit(DependencyTreeTracker::Position dttPos)
+	{
+		OSL_DEV_ONLY(std::cout << "DependencyTreeTracker process_exit" << std::endl);
+		Position parent(m_top_of_stack);
+		Node node(parent, EarlyOut(TypeExit, dttPos));
+		m_top_of_stack = Position(static_cast<int>(m_nodes.size()));
+		m_nodes.push_back(node);
+	}
+
+
+	OSL_INLINE Position
+	top_pos() const { return m_top_of_stack; }
+
+	OSL_INLINE bool has_early_out() const {
+		return m_top_of_stack != end_pos();
+	}
+
+	OSL_INLINE void pop_function_call()
+	{
+		OSL_DEV_ONLY(std::cout << "DependencyTreeTracker pop_function_call" << std::endl);
+
+		ASSERT(false == m_function_stack.empty());
+
+		// Because iterators are never invalidated, we can walk through a chain of early outs
+		// while actively modifying the stack
+		auto earlyOutIter = begin();
+		Position posAtStartOfFunc = m_function_stack.back();
+		m_function_stack.pop_back();
+
+		// popped all early outs back to the state at the when the function was pushed
+		m_top_of_stack = posAtStartOfFunc;
+
+		auto endOfEarlyOuts = begin_at(posAtStartOfFunc);
+
+		for (;earlyOutIter != endOfEarlyOuts; ++earlyOutIter) {
+			const EarlyOut & earlyOut = *earlyOutIter;
+			if (earlyOut.type == TypeExit)
+			{
+				// exits are sticky, we need to append the exit onto
+				// the calling function
+				// And since we already moved the top of the stack to the state the calling
+				// function was at, we can just
+				process_exit(earlyOut.dtt_pos);
+			}
+		}
+	}
+};
 
 void 
 BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
@@ -738,7 +977,6 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	ASSERT(m_requires_masking_by_layer_and_op_index.size() > layer());	
 	ASSERT(m_requires_masking_by_layer_and_op_index[layer()].empty());
 	m_requires_masking_by_layer_and_op_index[layer()].resize(op_count, false);
-
 	ASSERT(m_uniform_get_attribute_op_indices_by_layer.size() > layer());	
 	ASSERT(m_uniform_get_attribute_op_indices_by_layer[layer()].empty());
 	
@@ -793,6 +1031,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	std::unordered_map<const Symbol *, WriteChronology > potentiallyUnmaskedOpsBySymbol;
 	
 	DependencyTreeTracker stackOfSymbolsCurrentBlockDependsOn;
+	FunctionTreeTracker stackOfExecutionScopes;
 
 	// Track the eldest ancenstor that reads the results of a particular operation
 	// We will need to fix up that operations symbol dependencies to depend on any conditionals
@@ -811,6 +1050,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	
 	
 	std::vector<DependencyTreeTracker::Position> pos_in_dependent_sym_stack_by_op_index(opcodes.size(), DependencyTreeTracker::end_pos());
+	std::vector<FunctionTreeTracker::Position> pos_in_exec_scope_stack_by_op_index(opcodes.size(), FunctionTreeTracker::end_pos());
 	
 	std::vector<const Symbol *> loopControlFlowSymbolStack;
 
@@ -833,7 +1073,8 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					
 					auto commonAncestor = stackOfSymbolsCurrentBlockDependsOn.commonAncestorBetween(readAtPos, writeIter->pos_in_tree);
 					
-					if (commonAncestor == writeIter->pos_in_tree) {
+					if (commonAncestor == writeIter->pos_in_tree )
+					{
 						// if common ancestor is the write position, then no need to mask					
 						// otherwise we know masking will be needed for the instruction
 						continue;
@@ -858,7 +1099,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	discoverSymbolsBetween = [&](int beginop, int endop)->void
 	{		
 		OSL_DEV_ONLY(std::cout << "discoverSymbolsBetween [" << beginop << "-" << endop <<"]" << std::endl);
-		// NOTE: allowing a seperate writeMask is to handle condition blocks that are self modifying
+		// NOTE: allowing a separate writeMask is to handle condition blocks that are self modifying
 		for(int opIndex = beginop; opIndex < endop; ++opIndex)
 		{
 			Opcode & opcode = op(opIndex);
@@ -907,6 +1148,12 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
 				potentiallyUnmaskedOpsBySymbol[symbolWrittenTo].push_back(
 					WriteEvent{stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex});
+
+				// We would have to mask if a return was already encountered in
+				// the current function scope
+				if (stackOfExecutionScopes.has_early_out()) {
+					m_requires_masking_by_layer_and_op_index[layer()][opIndex] = true;
+				}
 			}
 			
 			// Add dependencies for operations that implicitly read global variables
@@ -1015,6 +1262,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 			// Add dependencies between symbols written to in this basic block
 			// to the set of symbols the code blocks where dependent upon to be executed
 			pos_in_dependent_sym_stack_by_op_index[opIndex] = stackOfSymbolsCurrentBlockDependsOn.top_pos();
+			pos_in_exec_scope_stack_by_op_index[opIndex] = stackOfExecutionScopes.top_pos();
 			
 			if (opcode.jump(0) >= 0)
 			{
@@ -1133,7 +1381,9 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					// Function call itself operates on the same symbol dependencies
 					// as the current block, there was no conditionals involved
 					OSL_DEV_ONLY(std::cout << " FUNCTION CALL BLOCK BEGIN" << std::endl);
+					stackOfExecutionScopes.push_function_call();
 					discoverSymbolsBetween(opIndex+1, opcode.jump(0));
+					stackOfExecutionScopes.pop_function_call();
 					OSL_DEV_ONLY(std::cout << " FUNCTION CALL BLOCK END" << std::endl);
 					
 				} else {
@@ -1141,8 +1391,86 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				}
 
 			}
+			if (opcode.opname() == Strings::op_return)
+			{
+				// All operations after this point will also depend on the conditional symbols
+				// involved in reaching the return statement.
+				// We can lock down the current depedencies to not be removed by
+				// scopes until the end of a function
+				// NOTE: currently could be overly conservative as I believe this
+				// will cause the else block to be locked after a then block with a return.
+				stackOfExecutionScopes.process_return(stackOfSymbolsCurrentBlockDependsOn.top_pos());
+
+
+				// TODO: put rest of code in a helper lambda to be called by return, exit, & break ops
+
+				// The return will need change the loop control flow which is dependent upon
+				// a conditional.  By making a circular dependency between the return operation
+				// and the conditionals value, any varying values in the conditional controlling
+				// the return should flow back to the loop control variable, which might need to
+				// be varying so allow lanes to terminate the loop independently
+				if(false == loopControlFlowSymbolStack.empty())
+				{
+					const Symbol * loopCondition = loopControlFlowSymbolStack.back();
+
+					// Now that last loop control condition should exist in our stack of symbols that
+					// the current block with depends upon, we only need to add dependencies to the loop control
+					// to conditionals inside the loop
+					ASSERT(std::find(stackOfSymbolsCurrentBlockDependsOn.begin(), stackOfSymbolsCurrentBlockDependsOn.end(), loopCondition) != stackOfSymbolsCurrentBlockDependsOn.end());
+					for(auto conditionIter = stackOfSymbolsCurrentBlockDependsOn.begin();
+						*conditionIter != loopCondition; ++conditionIter) {
+						const Symbol * conditionBreakDependsOn =  *conditionIter;
+						OSL_DEV_ONLY(std::cout << ">>>Loop Conditional " << loopCondition->name().c_str() << " needs to depend on conditional " << conditionBreakDependsOn->name().c_str() << std::endl);
+						symbolFeedForwardMap.insert(std::make_pair(conditionBreakDependsOn, loopCondition));
+					}
+
+					// Also update the usageInfo for the loop conditional to mark it as being written to
+					// by the break operation (which it would be in varying scenario)
+					potentiallyUnmaskedOpsBySymbol[loopCondition].push_back(
+						WriteEvent{stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex});
+				}
+
+			}
+			if (opcode.opname() == Strings::op_exit)
+			{
+				// All operations after this point will also depend on the conditional symbols
+				// involved in reaching the exit statement.
+				// We can lock down the current dependencies to not be removed by
+				// scopes until the end of a function
+				// TODO: currently could be overly conservative as I believe this
+				// will cause the else block to be locked after a then block with a return.
+				stackOfExecutionScopes.process_exit(stackOfSymbolsCurrentBlockDependsOn.top_pos());
+
+
+				// The exit will need change the loop control flow which is dependent upon
+				// a conditional.  By making a circular dependency between the exit operation
+				// and the conditionals value, any varying values in the conditional controlling
+				// the exit should flow back to the loop control variable, which might need to
+				// be varying so allow lanes to terminate the loop independently
+				if(false == loopControlFlowSymbolStack.empty())
+				{
+					const Symbol * loopCondition = loopControlFlowSymbolStack.back();
+
+					// Now that last loop control condition should exist in our stack of symbols that
+					// the current block with depends upon, we only need to add dependencies to the loop control
+					// to conditionals inside the loop
+					ASSERT(std::find(stackOfSymbolsCurrentBlockDependsOn.begin(), stackOfSymbolsCurrentBlockDependsOn.end(), loopCondition) != stackOfSymbolsCurrentBlockDependsOn.end());
+					for(auto conditionIter = stackOfSymbolsCurrentBlockDependsOn.begin();
+						*conditionIter != loopCondition; ++conditionIter) {
+						const Symbol * conditionBreakDependsOn =  *conditionIter;
+						OSL_DEV_ONLY(std::cout << ">>>Loop Conditional " << loopCondition->name().c_str() << " needs to depend on conditional " << conditionBreakDependsOn->name().c_str() << std::endl);
+						symbolFeedForwardMap.insert(std::make_pair(conditionBreakDependsOn, loopCondition));
+					}
+
+					// Also update the usageInfo for the loop conditional to mark it as being written to
+					// by the break operation (which it would be in varying scenario)
+					potentiallyUnmaskedOpsBySymbol[loopCondition].push_back(
+						WriteEvent{stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex});
+				}
+			}
 			if (opcode.opname() == Strings::op_break)
 			{
+
 				// The break will need change the loop control flow which is dependent upon
 				// a conditional.  By making a circular dependency between the break operation
 				// and the conditionals value, any varying values in the conditional controlling 
@@ -1153,7 +1481,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				
 				// Now that last loop control condition should exist in our stack of symbols that
 				// the current block with depends upon, we only need to add dependencies to the loop control
-				// to conditionas inside the loop
+				// to conditionals inside the loop
 				ASSERT(std::find(stackOfSymbolsCurrentBlockDependsOn.begin(), stackOfSymbolsCurrentBlockDependsOn.end(), loopCondition) != stackOfSymbolsCurrentBlockDependsOn.end());
 				for(auto conditionIter = stackOfSymbolsCurrentBlockDependsOn.begin();
 					*conditionIter != loopCondition; ++conditionIter) {
@@ -1163,7 +1491,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				}
 
 				// Also update the usageInfo for the loop conditional to mark it as being written to
-				// by the break operation (which it would be in varying scenario
+				// by the break operation (which it would be in varying scenario)
 				potentiallyUnmaskedOpsBySymbol[loopCondition].push_back(
 					WriteEvent{stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex});
 			}
@@ -1212,7 +1540,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	// of build_llvm_code calls coming from build_llvm_instance 
 	// And build_llvm_code is called indirectly throught llvm_assign_initial_value.
 	
-	// TODO: not sure the main scope should be at a deepr scoope than the init operations 
+	// TODO: not sure the main scope should be at a deeper scope than the init operations
 	// for symbols.  I think they should be fine
 	for (auto&& s : inst()->symbols()) {    	
 		// Skip constants -- we always inline scalar constants, and for
@@ -1294,29 +1622,64 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	for(int op_index=0; op_index < op_count; ++op_index) {
 		if (requires_masking_by_op_index[op_index]) {
 			OSL_DEV_ONLY(std::cout << "requires_masking_by_op_index " << op_index << std::endl);
-			auto beginDepIter = stackOfSymbolsCurrentBlockDependsOn.begin_at(pos_in_dependent_sym_stack_by_op_index[op_index]);						
-			auto endDepIter = stackOfSymbolsCurrentBlockDependsOn.begin_at(eldest_read_branch_by_op_index[op_index].pos);
-			
-			Opcode & opcode = op(op_index);
-			int argCount = opcode.nargs();			
-			for(int argIndex = 0; argIndex < argCount; ++argIndex) {
-				const Symbol * sym_possibly_written_to = opargsym (opcode, argIndex);
-				if (opcode.argwrite(argIndex)) {
-#ifdef OSL_DEV
-					std::cout << "Symbol written to " <<  sym_possibly_written_to->name().c_str() << std::endl;
-					std::cout << "beginDepIter " <<  beginDepIter.pos()() << std::endl;
-					std::cout << "endDepIter " <<  endDepIter.pos()() << std::endl;
-#endif
-					for(auto iter=beginDepIter;iter != endDepIter; ++iter) {
-						const Symbol * symMaskDependsOn = *iter;
-						// Skip self dependencies
-						if (sym_possibly_written_to != symMaskDependsOn) {
-							OSL_DEV_ONLY(std::cout << "Mapping " <<  symMaskDependsOn->name().c_str() << std::endl);
-							symbolFeedForwardMap.insert(std::make_pair(symMaskDependsOn, sym_possibly_written_to));
+			{
+				auto beginDepIter = stackOfSymbolsCurrentBlockDependsOn.begin_at(pos_in_dependent_sym_stack_by_op_index[op_index]);
+				auto endDepIter = stackOfSymbolsCurrentBlockDependsOn.begin_at(eldest_read_branch_by_op_index[op_index].pos);
+
+				Opcode & opcode = op(op_index);
+				int argCount = opcode.nargs();
+				for(int argIndex = 0; argIndex < argCount; ++argIndex) {
+					const Symbol * sym_possibly_written_to = opargsym (opcode, argIndex);
+					if (opcode.argwrite(argIndex)) {
+	#ifdef OSL_DEV
+						std::cout << "Symbol written to " <<  sym_possibly_written_to->name().c_str() << std::endl;
+						std::cout << "beginDepIter " <<  beginDepIter.pos()() << std::endl;
+						std::cout << "endDepIter " <<  endDepIter.pos()() << std::endl;
+	#endif
+						for(auto iter=beginDepIter;iter != endDepIter; ++iter) {
+							const Symbol * symMaskDependsOn = *iter;
+							// Skip self dependencies
+							if (sym_possibly_written_to != symMaskDependsOn) {
+								OSL_DEV_ONLY(std::cout << "Mapping " <<  symMaskDependsOn->name().c_str() << std::endl);
+								symbolFeedForwardMap.insert(std::make_pair(symMaskDependsOn, sym_possibly_written_to));
+							}
 						}
-					}					
+					}
 				}
-			}			
+			}
+
+			auto endOfEarlyOuts = stackOfExecutionScopes.end();
+			for (auto earlyOutIter = stackOfExecutionScopes.begin_at(pos_in_exec_scope_stack_by_op_index[op_index]);
+					earlyOutIter != endOfEarlyOuts; ++earlyOutIter)
+			{
+	#ifdef OSL_DEV
+				OSL_DEV_ONLY(std::cout << ">>>>affected_by_a_return op_index " << op_index << std::endl);
+	#endif
+				const auto & earlyOut = *earlyOutIter;
+				auto beginDepIter = stackOfSymbolsCurrentBlockDependsOn.begin_at(earlyOut.dtt_pos);
+				auto endDepIter = stackOfSymbolsCurrentBlockDependsOn.end();
+
+				Opcode & opcode = op(op_index);
+				int argCount = opcode.nargs();
+				for(int argIndex = 0; argIndex < argCount; ++argIndex) {
+					const Symbol * sym_possibly_written_to = opargsym (opcode, argIndex);
+					if (opcode.argwrite(argIndex)) {
+	#ifdef OSL_DEV
+						std::cout << "Symbol written to " <<  sym_possibly_written_to->name().c_str() << std::endl;
+						std::cout << "beginDepIter " <<  beginDepIter.pos()() << std::endl;
+						std::cout << "endDepIter " <<  endDepIter.pos()() << std::endl;
+	#endif
+						for(auto iter=beginDepIter;iter != endDepIter; ++iter) {
+							const Symbol * symMaskDependsOn = *iter;
+							// Skip self dependencies
+							if (sym_possibly_written_to != symMaskDependsOn) {
+								OSL_DEV_ONLY(std::cout << "Mapping " <<  symMaskDependsOn->name().c_str() << std::endl);
+								symbolFeedForwardMap.insert(std::make_pair(symMaskDependsOn, sym_possibly_written_to));
+							}
+						}
+					}
+				}
+			}
 		}
 	}	
 	OSL_DEV_ONLY(std::cout << "END FIXUP DEPENDENCIES FOR MASKED INSTRUCTIONS" << std::endl);
@@ -1375,9 +1738,42 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	// to varying before writing
 	FOREACH_PARAM (Symbol &s, inst()) {    	
 		if (s.symtype() == SymTypeOutputParam) {
-			recursivelyMarkNonUniform(&s);
+			// We should only have to do this for outputs that will be pulled by the
+			// renderer
+			if (s.renderer_output()) {
+				recursivelyMarkNonUniform(&s);
+			}
 		}    			
 	}
+
+	OSL_DEV_ONLY(std::cout << "connections to layer " << this->layer() << " begin" << std::endl);
+	// Check if any upstream connections are to varying symbols
+	// and mark the destination parameters in this layer as varying
+	// As we discovery goes in order of layers, any upstream symbols
+	// should already be discovered and uniformity marked correctly
+	{
+		ShaderInstance *child = inst();
+		int connection_count = child->nconnections();
+		for (int c = 0;  c < connection_count;  ++c) {
+			const Connection &con (child->connection (c));
+			ASSERT(con.srclayer < this->layer());
+
+			ShaderInstance *parent = group()[con.srclayer];
+
+			Symbol *srcsym (parent->symbol (con.src.param));
+			Symbol *dstsym (child->symbol (con.dst.param));
+			// Earlier layers should already be discovered and uniformity mapped to
+			// all symbols
+			// if source symbol is varying,
+			// then the dest must be made varying as well
+			if (isSymbolUniform(*srcsym) == false) {
+				OSL_DEV_ONLY(std::cout << "symbol " << srcsym->name().c_str() << " from layer " << con.srclayer << " is varying and connected to symbol " <<  dstsym->name().c_str() << std::endl);
+				recursivelyMarkNonUniform(dstsym);
+			}
+		}
+	}
+	OSL_DEV_ONLY(std::cout << "connections to layer " << this->layer() << " end" << std::endl);
+
 
 	OSL_DEV_ONLY(std::cout << "symbolsWrittenToByImplicitlyVaryingOps begin" << std::endl);
     for(const Symbol *s: symbolsWrittenToByImplicitlyVaryingOps) {
@@ -1385,6 +1781,8 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
         recursivelyMarkNonUniform(s);
     }
     OSL_DEV_ONLY(std::cout << "symbolsWrittenToByImplicitlyVaryingOps end" << std::endl);
+
+
 
 #ifdef OSL_DEV
     {
@@ -1441,16 +1839,9 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 	
 	auto iter = m_is_uniform_by_symbol.find(&sym);
 	if (iter == m_is_uniform_by_symbol.end()) 
-	{	// TODO:  Any symbols not involved in operations would be uniform
-		// unless they are an output, but I think not just an output of an invidual
-		// shader, but the output of the entire network
-		OSL_DEV_ONLY(std::cout << " undiscovered " << sym.name() << " initial isUniform=");
-		if (sym.symtype() == SymTypeOutputParam) {
-                //&& ! sym.lockgeom() && ! sym.typespec().is_closure()
-                //&& ! sym.connected() && ! sym.connected_down())
-			OSL_DEV_ONLY(std::cout << false << std::endl);
-			return false;
-		}
+	{
+		OSL_DEV_ONLY(std::cout << " undiscovered " << sym.name() << " isUniform=");
+		ASSERT(sym.renderer_output() == false);
 		OSL_DEV_ONLY(std::cout << true << std::endl);
 		return true;
 	}
@@ -1473,38 +1864,6 @@ BackendLLVMWide::getAttributesIsUniform(int opIndex)
 	const auto & uniform_get_attribute_op_indices = m_uniform_get_attribute_op_indices_by_layer[layer()];
 	return (uniform_get_attribute_op_indices.find(opIndex) != uniform_get_attribute_op_indices.end());
 }
-
-
-void 
-BackendLLVMWide::push_varying_loop_condition(Symbol *condition)
-{
-	// Self documenting that nullptr is expected and 
-	// indicates current loop scope is not varying
-	DASSERT(condition == nullptr || condition != nullptr);
-	m_generated_loops_condition_stack.push_back(condition);
-}
-
-Symbol * 
-BackendLLVMWide::varying_condition_of_innermost_loop() const
-{
-	ASSERT(false == m_generated_loops_condition_stack.empty());
-	return m_generated_loops_condition_stack.back();	
-}
-
-void 
-BackendLLVMWide::pop_varying_loop_condition()
-{
-	ASSERT(false == m_generated_loops_condition_stack.empty());
-	Symbol * varying_loop_condition = m_generated_loops_condition_stack.back();
-	m_generated_loops_condition_stack.pop_back();
-	if (nullptr != varying_loop_condition) {
-		// However many break statements executed,
-		// we are leaving the scope of the loop
-		// so we can go ahead and clear them out
-		ll.clear_mask_break();
-	}
-}
-
 
 llvm::Value *
 BackendLLVMWide::llvm_alloca (const TypeSpec &type, bool derivs, bool is_uniform, bool forceBool,
@@ -2038,7 +2397,6 @@ BackendLLVMWide::llvm_store_value (llvm::Value* new_val, llvm::Value* dst_ptr,
     if(ll.type_ptr(ll.llvm_typeof(new_val)) != ll.llvm_typeof(dst_ptr))
     {
     	std::cerr << " new_val type=";
-    	assert(0);
     	llvm::raw_os_ostream os_cerr(std::cout);
     	ll.llvm_typeof(new_val)->print(os_cerr);
     	std::cerr << " dest_ptr type=";

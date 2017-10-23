@@ -1,0 +1,33 @@
+float helper(float val)
+{
+    if (P[0] > 0.85) {
+        exit();
+    }
+    if (P[0] > 0.65)
+    {
+        return P[0];
+    }
+    return val;
+}
+
+
+shader test_vary8b(output color c = 0.0)
+{    
+    float r = 1.0;
+    int i = 0;
+    do
+    {
+        if (i > 1) {
+            if (P[0] > 0.5) 
+            {
+                r = helper(r);                
+            }
+            if (P[1] > 0.45) {
+                return;
+            }
+        }
+        ++i;
+    } while (i < 3);
+    c = color(r, float(i)/3, 0);
+}
+

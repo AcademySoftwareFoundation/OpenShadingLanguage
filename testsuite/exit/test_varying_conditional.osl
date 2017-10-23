@@ -1,0 +1,8 @@
+shader test_varying_conditional()
+{
+    printf ("This should print\n");
+    if (P[0] > 1.0/3.0) {        
+        return;
+    }
+    printf ("This should print when P[0] <= 1/3 and P[0]=%g\n", P[0]);
+}

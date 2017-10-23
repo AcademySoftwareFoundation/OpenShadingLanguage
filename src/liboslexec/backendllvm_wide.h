@@ -452,10 +452,6 @@ public:
             shadingsys().m_stat_tex_calls_as_handles += 1;
     }
 
-    void push_varying_loop_condition(Symbol *);
-    Symbol * varying_condition_of_innermost_loop() const;
-    void pop_varying_loop_condition();
-    
     LLVM_Util ll;
 
 private:

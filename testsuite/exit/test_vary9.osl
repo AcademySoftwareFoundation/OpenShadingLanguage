@@ -1,0 +1,15 @@
+shader test_vary9(output float c = 0.0)
+{
+    if (P[0] > 0.5) {
+        for(int i = 0 ; i < 10; ++i)
+        {
+            c+= 0.1;
+            if (i > 5) {
+                break;
+            }
+            if (i > 7) {
+                return;
+            }
+        }
+    }
+}

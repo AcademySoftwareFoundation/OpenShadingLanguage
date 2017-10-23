@@ -217,31 +217,50 @@ public:
 
     bool inside_function() const;
 
-    /// Apply any returned lanes to the current mask
-    void mask_off_returned_lanes();
-
     /// Pop basic return destination when exiting a function.  This includes
     /// resetting the IR insertion point to the block following the
     /// corresponding function call.
     void pop_function ();
     
+    void push_function_mask(llvm::Value * startMaskValue);
+    void pop_function_mask();
+
+    void push_masked_loop(llvm::Value* location_of_condition_mask);
+    bool is_innermost_loop_masked() const;
+    void pop_masked_loop();
+
+    void push_shader_instance(llvm::Value * startMaskValue);
+    void pop_shader_instance();
+
+    // number of masked exits operations built inside the shader instance
+    int masked_exit_count() const;
+    // number of masked return  operations inside the scope of the current function mask
+    int  masked_return_count() const;
+    // number of masked break  operations inside the scope of the current masked loop
+    int  masked_break_count() const;
+
     // Push a mask onto the mask stack, which actually will AND the existing
     // top mask with the new mask and store that off. The mask must be of 
     // type <16 x i1>
     void push_mask(llvm::Value *mask, bool negate = false, bool absolute = false);
-    void pop_if_mask();
-    void pop_loop_mask();
-    bool is_mask_stack_empty();
+    void pop_mask();
+    void apply_exit_to_mask_stack();
+    void apply_return_to_mask_stack();
+    void apply_break_to_mask_stack();
     
     llvm::Value * current_mask();
-    llvm::Value * apply_break_mask_to(llvm::Value *existing_mask);
-    
+    llvm::Value * apply_return_to(llvm::Value *existing_mask);
 
-    void push_mask_break();
-    void clear_mask_break();
 
-    void push_mask_return();
+    void op_masked_break();
+
+    void op_masked_exit();
+    void op_masked_return();
     
+    void push_masked_return_block(llvm::BasicBlock *test_return);
+    void pop_masked_return_block();
+    bool has_masked_return_block() const;
+    llvm::BasicBlock *masked_return_block() const;
 
     void push_masking_enabled(bool enable);
     bool is_masking_enabled() const { return (m_enable_masking_stack.empty() == false) && (m_enable_masking_stack.back() == true); } 
@@ -632,17 +651,30 @@ private:
     std::vector<llvm::BasicBlock *> m_return_block;     // stack for func call
     std::vector<llvm::BasicBlock *> m_loop_after_block; // stack for break
     std::vector<llvm::BasicBlock *> m_loop_step_block;  // stack for continue
+    // stack for masked returns to return to, maybe not the same the regular return block
+    // because there could have been other active data lanes in the function
+    // not traveling the masked conditional path which encounters a return
+    std::vector<llvm::BasicBlock *> m_masked_return_block_stack;
     struct MaskInfo
     {
     	llvm::Value * mask;
     	bool negate;
+    	int applied_return_mask_count;
     };
     std::vector<MaskInfo> m_mask_stack;  			// stack for masks that all stores should use when enabled
     std::vector<bool> m_enable_masking_stack;  			// stack for enabling stores to be masked
-    std::vector<MaskInfo> m_mask_break_stack;  		// stack for masks at the time a break statement executed
     // For each pushed function call, keep a slot for modified masks
     // to be stored from code blocks that might be branched over
     std::vector<llvm::Value *> m_alloca_for_modified_mask_stack;
+    std::vector<int> m_masked_return_count_stack;
+    int m_masked_exit_count;
+
+    struct LoopInfo
+    {
+    	llvm::Value *location_of_condition_mask;
+    	int break_count;
+    };
+    std::vector<LoopInfo> m_masked_loop_stack; // stack to track loop condition & break count
 
     llvm::Type *m_llvm_type_float;
     llvm::Type *m_llvm_type_double;

@@ -1,0 +1,35 @@
+#if 0
+shader test_vary8(output color c = 0.0)
+{    
+    float r = 1.0;
+    int i = 0;
+    do
+    {
+        if (P[0] > 0.5) 
+        {
+            r-=0.25;
+            return;
+        }
+        ++i;
+    } while (i < 3);
+    c = color(r, float(i)/3, 0);
+}
+#endif
+
+
+shader test_vary8(output color c = 0.0)
+{    
+    float r = 1.0;
+    int endIndex = int(P[0]*10);
+    int i = ;
+    do
+    {
+        if (P[0] > 0.5) 
+        {
+            r-=0.10;
+            //return;
+        }
+        ++i;
+    } while (i < endIndex);
+    c = color(r, float(i)/3, 0);
+}

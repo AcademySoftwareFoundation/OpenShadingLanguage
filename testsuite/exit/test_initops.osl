@@ -1,0 +1,17 @@
+
+float some_init_ops()
+{
+    exit();   
+    return 9.0;
+}
+
+shader test_initops(
+float s = some_init_ops() [[ int lockgeom=0 ]],
+output float outputVal = 0
+)
+{
+    printf ("This should print inputVal=%g\n",s);
+    outputVal = s;
+    exit ();
+    printf ("This should NOT NOT NOT print\n");
+}

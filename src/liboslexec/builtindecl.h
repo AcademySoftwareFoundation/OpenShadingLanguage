@@ -304,6 +304,7 @@ WDECL (osl_get_texture_options_batched, "XX");
 DECL (osl_get_noise_options, "XX");
 DECL (osl_get_trace_options, "XX");
 
+DECL (osl_raytype_name_batched, "iXX")
 WDECL (osl_wide_get_noise_options, "XX");
 
 // The following are defined inside llvm_ops.cpp. Only include these
@@ -449,6 +450,7 @@ WDECL (osl_smoothstep_w16dfw16fw16dfw16f, "xXXXX")
 
 #define WIDE_UNARY_F_OR_V_OP_IMPL(name)               \
     DECL (osl_ ## name ## _w16fw16f,  "xXX")          \
+    DECL (osl_ ## name ## _w16fw16f_masked,  "xXXi")          \
     DECL (osl_ ## name ## _w16vw16v,  "xXX")          \
 
 // TODO: add _masked variations and unit test to exercise them first
@@ -620,6 +622,7 @@ DECL (osl_filterwidth_fdf, "fX")
 DECL (osl_filterwidth_vdv, "xXX")
 DECL (osl_raytype_bit, "iXi")
 #endif
+DECL (osl_raytype_bit_batched, "iXi")
 DECL (osl_calculatenormal_batched, "xXXX")
 DECL (osl_filterwidth_w16fw16df, "xXX")
 DECL (osl_filterwidth_w16vw16dv, "xXX")

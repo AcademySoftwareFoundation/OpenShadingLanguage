@@ -1,0 +1,37 @@
+// NOTE: inlining optimizations will flatten out a function call with exit
+// needed a function with a return & exit to avoid flattening
+float helper2(float val)
+{
+    float r = val;
+    if (P[0] < 1.0/3.0) {        
+        return val;
+    }
+    if (P[0] > 2.0/3.0) {
+        exit();        
+    }
+    r = 0.5;
+    return r;
+}
+
+
+float helper(float val)
+{
+    float r2 = helper2(val);
+    if (P[0] > 1.0/6.0) 
+    {        
+        r2 += .25;
+    }
+    return r2;
+}
+
+shader test_vary7d(output color c = 0.0)
+{
+    //float in = c[0];
+    //float out = helper(in);
+    float in;
+    float out;
+    in = c[0];
+    out = helper(in);
+    c = color(out, out, out);
+}
+

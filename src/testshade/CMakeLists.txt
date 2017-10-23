@@ -1,5 +1,13 @@
 # The 'testshade' executable
 SET ( testshade_srcs testshade.cpp simplerend.cpp )
+
+# Clang-specific options
+if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG)
+    # Uncomment next 2 lines to investigate failed explicit vectorization
+    #add_definitions ("-Rpass=loop-vectorize")
+    #add_definitions ("-Rpass-analysis=loop-vectorize")
+endif ()
+
 ADD_EXECUTABLE ( testshade ${testshade_srcs} testshademain.cpp )
 TARGET_LINK_LIBRARIES ( testshade oslexec oslcomp oslquery ${OPENIMAGEIO_LIBRARIES} ${OPENEXR_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
 INSTALL ( TARGETS testshade RUNTIME DESTINATION bin )

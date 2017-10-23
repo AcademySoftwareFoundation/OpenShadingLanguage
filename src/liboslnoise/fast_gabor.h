@@ -35,8 +35,43 @@ namespace pvt {
 
 namespace fast {
 
+// Very fast random number generator based on [Borosh & Niederreiter 1983]
+// linear congruential generator.
+class fast_rng {
+public:
+    // seed based on the cell containing P
+	OSL_INLINE fast_rng (const Vec3 &p, int seed=0) {
+        // Use guts of cellnoise
+        unsigned int pi[4] = { unsigned(quick_floor(p[0])),
+                               unsigned(quick_floor(p[1])),
+                               unsigned(quick_floor(p[2])),
+                               unsigned(seed) };
+        m_seed = inthash<4>(pi);
+        if (! m_seed)
+            m_seed = 1;
+    }
+    // Return uniform on [0,1)
+    OSL_INLINE float operator() () {
+        return (m_seed *= 3039177861u) / float(UINT_MAX);
+    }
+    // Return poisson distribution with the given mean
+    OSL_INLINE int poisson (float mean) {
+        float g = expf (-mean);
+        unsigned int em = 0;
+        float t = (*this)();
+        while (t > g) {
+            ++em;
+            t *= (*this)();
+        }
+        return em;
+    }
+private:
+    unsigned int m_seed;
+};
+
+
 	template<typename T>
-	inline
+	OSL_INLINE
 	T max_val(T left, T right)
 	{
 		return (right > left)? right: left;
@@ -47,26 +82,26 @@ namespace fast {
 	public:
 		typedef Imath::Matrix33<float> parent;
 
-		inline Matrix33 (Imath::Uninitialized uninit)
+		OSL_INLINE Matrix33 (Imath::Uninitialized uninit)
 		: parent(uninit)
 		{}
 
-		inline Matrix33 ()
+		OSL_INLINE Matrix33 ()
 		: parent(1.0f, 0.0f, 0.0f,
 				                 0.0f, 1.0f, 0.0f,
 								 0.0f, 0.0f, 1.0f)
 		{}
 
-		inline Matrix33 (float a, float b, float c, float d, float e, float f, float g, float h, float i)
+		OSL_INLINE Matrix33 (float a, float b, float c, float d, float e, float f, float g, float h, float i)
 		: parent(a,b,c,d,e,f,g,h,i)
 		{}
 
-		inline Matrix33 (const Imath::Matrix33<float> &a)
+		OSL_INLINE Matrix33 (const Imath::Matrix33<float> &a)
 		: parent(a)
 		{}
 
 
-		inline
+		OSL_INLINE
 		Matrix33 (const float a[3][3])
 		: Imath::Matrix33<float>(
 			a[0][0], a[0][1], a[0][2],
@@ -76,7 +111,7 @@ namespace fast {
 
 
 
-		inline Matrix33 &
+		OSL_INLINE Matrix33 &
 		operator = (const Matrix33 &v)
 		{
 			parent::x[0][0] = v.x[0][0];
@@ -96,7 +131,7 @@ namespace fast {
 
 
 
-		inline Matrix33
+		OSL_INLINE Matrix33
 		operator * (const Matrix33 &v) const
 		{
 		    Matrix33 tmp(Imath::UNINITIALIZED);
@@ -136,7 +171,7 @@ namespace fast {
 	};
 
 
-	inline fast::Matrix33
+	OSL_INLINE fast::Matrix33
 	make_matrix33_cols (const Vec3 &a, const Vec3 &b, const Vec3 &c)
 	{
 	    return fast::Matrix33 (a[0], b[0], c[0],
@@ -153,7 +188,7 @@ namespace fast {
 		float sqrt_lambda_inv;
 		float radius, radius2, radius3, radius_inv;
 
-		GaborUniformParams (const NoiseParams &opt) :
+		OSL_INLINE GaborUniformParams (const NoiseParams &opt) :
 			omega(opt.direction),  // anisotropy orientation
 			bandwidth(Imath::clamp(opt.bandwidth,0.01f,100.0f))
 		{
@@ -187,7 +222,7 @@ namespace fast {
 		fast::Matrix33 local;
 		float det_filter;
 
-		GaborParams()
+		OSL_INLINE GaborParams()
 		:filter(Imath::UNINITIALIZED)
 		,local(Imath::UNINITIALIZED)
 		{}
@@ -195,7 +230,7 @@ namespace fast {
 
 
 	// set up the filter matrix
-	inline void
+	OSL_INLINE void
 	gabor_setup_filter (const Dual2<Vec3> &P, fast::GaborParams &gp)
 	{
 		// Make texture-space normal, tangent, bitangent
@@ -239,7 +274,7 @@ namespace fast {
 // Choose an omega and phi value for a particular gabor impulse,
 // based on the user-selected noise mode.
 	template<int AnisotropicT>
-	inline void
+	OSL_INLINE void
 	gabor_sample (const fast::GaborUniformParams &gup, const Vec3 &x_c, fast_rng &rng,
 				  Vec3 &omega, float &phi)
 	{
@@ -293,7 +328,7 @@ namespace fast {
 	// an equivalent # of times.  Here the sample function stripped down to just
 	// the rng() calls
 	template<int AnisotropicT>
-	inline void
+	OSL_INLINE void
 	gabor_no_sample (fast_rng &rng)
 	{
 		// section 3.3, solid random-phase gabor noise
@@ -311,7 +346,7 @@ namespace fast {
 	// cell whose corner is c_i.  x_c_i is vector from x (the point
 	// we are trying to evaluate noise at) and c_i.
 	template<int AnisotropicT, typename FilterPolicyT, bool PeriodicT>
-	inline
+	OSL_INLINE
 	Dual2<float>
 	gabor_cell (const fast::GaborUniformParams &gup, fast::GaborParams &gp, const Vec3 &c_i, const Dual2<Vec3> &x_c_i,
 				int seed = 0)
@@ -400,7 +435,7 @@ namespace fast {
 	// Sum the contributions of gabor impulses in all neighboring cells
 	// surrounding position x_g.
 	template<int AnisotropicT, typename FilterPolicyT, bool PeriodicT>
-	inline Dual2<float>
+	OSL_INLINE Dual2<float>
 	gabor_grid (const fast::GaborUniformParams &gup, fast::GaborParams &gp, const Dual2<Vec3> &x_g, int seed=0)
 	{
 		Vec3 floor_x_g (floor (x_g));  // Vec3 because floor has no derivs
@@ -424,7 +459,7 @@ OSL_INTEL_PRAGMA(nounroll_and_jam)
 	}
 
 	template<int AnisotropicT, typename FilterPolicyT, bool PeriodicT>
-	inline Dual2<float>
+	OSL_INLINE Dual2<float>
 	gabor_evaluate (const fast::GaborUniformParams &gup, fast::GaborParams &gp, const Dual2<Vec3> &x, int seed=0)
 	{
 		Dual2<Vec3> x_g = x * gup.radius_inv;
@@ -477,7 +512,7 @@ fast_gabor (
 }
 
 template<int AnisotropicT, typename FilterPolicyT, int WidthT>
-OSL_NOINLINE  void
+OSL_NOINLINE OSL_CLANG_ATTRIBUTE(flatten) void
 fast_gabor3 (
 		ConstWideAccessor<Dual2<Vec3>, WidthT> wP,
 		WideAccessor<Dual2<Vec3>,WidthT> wResult,
@@ -492,8 +527,14 @@ fast_gabor3 (
 
     	// Complicated code caused compilation issues with icc17u2
     	// but verified fixed in icc17u4
-#if __INTEL_COMPILER >= 1700 && __INTEL_COMPILER_UPDATE >= 4
-    	OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+#if (!defined(__INTEL_COMPILER)) || (__INTEL_COMPILER >= 1700 && __INTEL_COMPILER_UPDATE >= 4)
+		#ifdef __AVX512F__
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+		#else
+			// remark #15547: simd loop was not vectorized: code size was too large for vectorization. Consider reducing the number of distinct variables use
+			// So don't mandate interleaved loop unrolling by forcing a simdlen wider than ISA
+			OSL_OMP_PRAGMA(omp simd)
+		#endif
 #endif
 		for(int i=0; i< WidthT; ++i) {
 

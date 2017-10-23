@@ -569,7 +569,7 @@ BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym)
 
     if (partial_userdata_mask_was_pushed) {
 		ll.pop_masking_enabled();		
-    	ll.pop_if_mask();
+    	ll.pop_mask();
     }
     
     if (after_userdata_block) {
@@ -864,6 +864,9 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
     ll.new_builder (entry_bb);
 	ll.set_debug_info(/*unique_layer_name*/inst()->op(inst()->maincodebegin()).sourcefile().string());
     ll.set_debug_location(unique_layer_name, unique_layer_name, 0);
+	// TODO:  might want to start with fewer data lanes active based on how
+	// full batch is.
+    ll.push_shader_instance(ll.wide_constant_bool(true));
 	
     OSL_DEV_ONLY(std::cout << "Master Shadername = " << inst()->master()->shadername() << std::endl);
     OSL_DEV_ONLY(std::cout << "Master osofilename = " << inst()->master()->osofilename() << std::endl);
@@ -1075,6 +1078,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
                   << "/" << group().nlayers() << " after llvm  = " 
                   << ll.bitcode_string(ll.current_function()) << "\n";
 
+    ll.pop_shader_instance();
     ll.clear_debug_info();
     ll.end_builder();  // clear the builder
 

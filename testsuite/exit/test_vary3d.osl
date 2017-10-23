@@ -1,0 +1,14 @@
+shader test_vary3d(output float c = 0.0)
+{
+    c = 1.0;
+    
+    if (P[0] > 1.0/3.0) {
+        if (raytype("camera")) {
+            return;
+        }
+        c= 0.25;
+    }
+    
+    c= 0.5;
+    
+}

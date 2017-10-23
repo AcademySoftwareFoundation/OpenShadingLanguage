@@ -660,6 +660,23 @@ osl_##name##_w16fw16f (void *r_, void *val_)                        \
 		}                                                           \
 	}                                                               \
 }                                                                   \
+                                                                    \
+OSL_SHADEOP void                                                    \
+osl_##name##_w16fw16f_masked (void *r_, void *val_, int mask_value) \
+{                                                                   \
+	OSL_INTEL_PRAGMA(forceinline recursive)							\
+	{																\
+		ConstWideAccessor<float> wval(val_);						\
+		MaskedAccessor<float> wr(r_, Mask(mask_value));             \
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))                  \
+		for(int lane=0; lane < wr.width; ++lane) {                  \
+			float val = wval[lane];                                 \
+			float r = floatfunc(val);                               \
+			wr[lane] = r;                                           \
+		}                                                           \
+	}                                                               \
+}                                                                   \
+                                                                    \
 OSL_SHADEOP void                                                    \
 osl_##name##_w16vw16v (void *r_, void *val_)                        \
 {                                                                   \
@@ -1416,6 +1433,22 @@ osl_smoothstep_w16dfw16fw16dfw16f (void *r_, void *e0_, void *e1_, void *x_)
 	}
 }
 
+
+// Asked if the raytype includes a bit pattern.
+OSL_SHADEOP int
+osl_raytype_bit_batched (void *sgb_, int bit)
+{
+	ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
+    return (sgb->uniform().raytype & bit) != 0;
+}
+
+// Asked if the raytype is a name we can't know until mid-shader.
+OSL_SHADEOP int osl_raytype_name_batched (void *sgb_, void *name)
+{
+	ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
+    int bit = sgb->uniform().context->shadingsys().raytype_bit (USTR(name));
+    return (sgb->uniform().raytype & bit) != 0;
+}
 
 #endif
 

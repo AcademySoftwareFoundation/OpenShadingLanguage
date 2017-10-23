@@ -2532,7 +2532,11 @@ ShadingSystemImpl::decode_connected_param (string_view connectionname,
 
     c.type = sym->typespec();
 
-    if (!bracket.empty() && c.type.is_array()) {
+    // Early out redundant checks below
+    if (bracket.empty())
+        return c;
+
+    if (c.type.is_array()) {
         // There was at least one set of brackets that appears to be
         // selecting an array element.
         c.arrayindex = parse_bracketed_int (bracket, c.type.arraylength());

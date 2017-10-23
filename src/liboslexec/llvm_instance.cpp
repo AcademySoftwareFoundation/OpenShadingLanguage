@@ -29,6 +29,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 #include <iostream>
 #include <unordered_map>
+#include <unordered_set>
+#include <bitset>
 
 #include <OpenImageIO/timer.h>
 #include <OpenImageIO/sysutil.h>
@@ -365,12 +367,12 @@ BackendLLVM::llvm_type_closure_component_ptr ()
 
 
 void
-BackendLLVM::llvm_assign_initial_value (const Symbol& sym)
+BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
 {
     // Don't write over connections!  Connection values are written into
     // our layer when the earlier layer is run, as part of its code.  So
     // we just don't need to initialize it here at all.
-    if (sym.valuesource() == Symbol::ConnectedVal &&
+    if (!force && sym.valuesource() == Symbol::ConnectedVal &&
           !sym.typespec().is_closure_based())
         return;
     if (sym.typespec().is_closure_based() && sym.symtype() == SymTypeGlobal)
@@ -896,22 +898,66 @@ BackendLLVM::build_llvm_instance (bool groupentry)
     if (llvm_has_exit_instance_block())
         ll.op_branch (m_exit_instance_block); // also sets insert point
 
+    // Track all symbols who needed 'partial' initialization
+    std::unordered_set<Symbol*> initedsyms;
+
     // Transfer all of this layer's outputs into the downstream shader's
     // inputs.
     for (int layer = this->layer()+1;  layer < group().nlayers();  ++layer) {
         ShaderInstance *child = group()[layer];
-        for (int c = 0;  c < child->nconnections();  ++c) {
+        for (int c = 0, Nc = child->nconnections();  c < Nc;  ++c) {
             const Connection &con (child->connection (c));
             if (con.srclayer == this->layer()) {
-                ASSERT (con.src.arrayindex == -1 && con.src.channel == -1 &&
-                        con.dst.arrayindex == -1 && con.dst.channel == -1 &&
-                        "no support for individual element/channel connection");
+                ASSERT (con.src.arrayindex == -1 && con.dst.arrayindex == -1 &&
+                        "no support for individual array element connections");
+                // Validate unsupported connection vecSrc -> vecDst[j]
+                ASSERT ((con.dst.channel == -1 ||
+                         con.src.type.aggregate() == TypeDesc::SCALAR ||
+                         con.src.channel != -1) &&
+                        "no support for vector -> vector[i] connections");
+
                 Symbol *srcsym (inst()->symbol (con.src.param));
                 Symbol *dstsym (child->symbol (con.dst.param));
+
+                // Check remining connections to see if any channels of this
+                // aggregate need to be initialize.
+                if (con.dst.channel != -1 && initedsyms.count(dstsym) == 0) {
+                    initedsyms.insert(dstsym);
+                    std::bitset<32> inited(0); // Only need to be 16 (matrix4)
+                    assert(dstsym->typespec().aggregate() <= inited.size());
+                    unsigned ninit = dstsym->typespec().aggregate() - 1;
+                    for (int rc = c+1;  rc < Nc && ninit;  ++rc) {
+                        const Connection &next (child->connection (rc));
+                        if (next.srclayer == this->layer()) {
+                            // Allow redundant/overwriting connections, i.e:
+                            // 1.  connect layer.value[i] connect layer.value[j]
+                            // 2.  connect layer.value connect layer.value
+                            if (child->symbol (next.dst.param) == dstsym) {
+                                if (next.dst.channel != -1) {
+                                    assert(next.dst.channel < (int)inited.size());
+                                    if (!inited[next.dst.channel]) {
+                                        inited[next.dst.channel] = true;
+                                        --ninit;
+                                    }
+                                } else
+                                    ninit = 0;
+                            }
+                        }
+                    }
+                    if (ninit) {
+                        // FIXME: Init only components that are not connected
+                        llvm_assign_initial_value (*dstsym, true);
+                    }
+                }
+
+                // llvm_run_connected_layers tracks layers that have been run,
+                // so no need to do it here as well
                 llvm_run_connected_layers (*srcsym, con.src.param);
+
                 // FIXME -- I'm not sure I understand this.  Isn't this
                 // unnecessary if we wrote to the parameter ourself?
-                llvm_assign_impl (*dstsym, *srcsym);
+                llvm_assign_impl (*dstsym, *srcsym, -1,
+                                  con.src.channel, con.dst.channel);
             }
         }
     }

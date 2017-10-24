@@ -875,8 +875,8 @@ inline Dual<T,P> fast_exp(const Dual<T,P> &a)
 template<class T, int P>
 inline Dual<T,P> exp2 (const Dual<T,P> &a)
 {
-    // FIXME: std::exp2 is only available in C++11
-    T f = exp2f(float(a.val()));
+    using std::exp2;
+    T f = exp2(a.val());
     return dualfunc (a, f, f*T(M_LN2));
 }
 
@@ -892,8 +892,8 @@ inline Dual<T,P> fast_exp2(const Dual<T,P> &a)
 template<class T, int P>
 inline Dual<T,P> expm1 (const Dual<T,P> &a)
 {
-    // FIXME: std::expm1 is only available in C++11
-    T f  = expm1f(float(a.val())); // float version!
+    using std::expm1;
+    T f  = expm1(a.val());
     T df = std::exp  (a.val());
     return dualfunc (a, f, df);
 }
@@ -910,8 +910,8 @@ inline Dual<T,P> fast_expm1(const Dual<T,P> &a)
 template<class T, int P>
 inline Dual<T,P> erf (const Dual<T,P> &a)
 {
-    // FIXME: std::erf is only defined in C++11
-    T f = erff (float(a.val())); // float version!
+    using std::erf;
+    T f = erf (a.val());
     const T two_over_sqrt_pi = T(1.128379167095512573896158903);
     T df = std::exp (-a.val() * a.val()) * two_over_sqrt_pi;
     return dualfunc (a, f, df);
@@ -930,8 +930,8 @@ inline Dual<T,P> fast_erf(const Dual<T,P> &a)
 template<class T, int P>
 inline Dual<T,P> erfc (const Dual<T,P> &a)
 {
-    // FIXME: std::erfc is only defined in C++11
-    T f = erfcf (float(a.val())); // float version!
+    using std::erfc;
+    T f = erfc (a.val()); // float version!
     const T two_over_sqrt_pi = -T(1.128379167095512573896158903);
     T df = std::exp (-a.val() * a.val()) * two_over_sqrt_pi;
     return dualfunc (a, f, df);

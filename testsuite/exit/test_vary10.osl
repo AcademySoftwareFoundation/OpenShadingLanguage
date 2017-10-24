@@ -1,0 +1,11 @@
+shader test_vary10(output color c = 0.0)
+{
+    if (P[0] > 0.5) {
+        exit();
+        matrix m = matrix(P[0],0,0,0,
+                          0,P[0],0,0,
+                          0,0,P[0],0,
+                          0,0,0,1);
+        c+= transform(m,0.1);
+    }
+}

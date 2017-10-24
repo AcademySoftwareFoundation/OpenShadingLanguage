@@ -1071,24 +1071,47 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				// if generation of ca is older than current oldest ca for write instruction, record it
 				for (auto writeIter=write_chronology.begin(); writeIter != writeEnd; ++writeIter) {
 					
-					auto commonAncestor = stackOfSymbolsCurrentBlockDependsOn.commonAncestorBetween(readAtPos, writeIter->pos_in_tree);
-					
-					if (commonAncestor == writeIter->pos_in_tree )
 					{
-						// if common ancestor is the write position, then no need to mask					
-						// otherwise we know masking will be needed for the instruction
-						continue;
+						auto commonAncestor = stackOfSymbolsCurrentBlockDependsOn.commonAncestorBetween(readAtPos, writeIter->pos_in_tree);
+
+						if (commonAncestor != writeIter->pos_in_tree )
+						{
+							// if common ancestor is the write position, then no need to mask
+							// otherwise we know masking will be needed for the instruction
+							m_requires_masking_by_layer_and_op_index[layer()][writeIter->op_num] = true;
+
+							auto ancestor = stackOfSymbolsCurrentBlockDependsOn.begin_at(commonAncestor);
+
+							// eldest_read_branch is used to identify the end of the dependencies
+							// that must have symbolFeedForwardMap entries added to correctly
+							// propagate Wide values through the symbols.
+							auto & eldest_read_branch = eldest_read_branch_by_op_index[writeIter->op_num];
+							if(ancestor.depth() < eldest_read_branch.depth)
+							{
+								eldest_read_branch.depth = ancestor.depth();
+								eldest_read_branch.pos = ancestor.pos();
+							}
+						}
 					}
 					
-					m_requires_masking_by_layer_and_op_index[layer()][writeIter->op_num] = true;
-					
-					auto ancestor = stackOfSymbolsCurrentBlockDependsOn.begin_at(commonAncestor);
-					
-					auto & eldest_read_branch = eldest_read_branch_by_op_index[writeIter->op_num];
-					if(ancestor.depth() < eldest_read_branch.depth)
+					// Also check the stack of dependent symbols at each early out (return or exit) that the
+					// is applied to the current function
+					auto endOfEarlyOuts = stackOfExecutionScopes.end();
+					for (auto earlyOutIter = stackOfExecutionScopes.begin_at(pos_in_exec_scope_stack_by_op_index[writeIter->op_num]);
+							earlyOutIter != endOfEarlyOuts; ++earlyOutIter)
 					{
-						eldest_read_branch.depth = ancestor.depth();
-						eldest_read_branch.pos = ancestor.pos();
+						const auto & earlyOut = *earlyOutIter;
+
+						auto commonAncestor = stackOfSymbolsCurrentBlockDependsOn.commonAncestorBetween(readAtPos, earlyOut.dtt_pos);
+						if (commonAncestor != earlyOut.dtt_pos)
+						{
+							// if common ancestor is the early out position, then no need to mask
+							// otherwise we know masking will be needed for the instruction
+							m_requires_masking_by_layer_and_op_index[layer()][writeIter->op_num] = true;
+							// eldest_read_branch does NOT need to be updated here
+							// as we add symbolFeedForwardMap entries for all the dependencies
+							// of early outs later
+						}
 					}
 				}
 			}
@@ -1148,12 +1171,6 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
 				potentiallyUnmaskedOpsBySymbol[symbolWrittenTo].push_back(
 					WriteEvent{stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex});
-
-				// We would have to mask if a return was already encountered in
-				// the current function scope
-				if (stackOfExecutionScopes.has_early_out()) {
-					m_requires_masking_by_layer_and_op_index[layer()][opIndex] = true;
-				}
 			}
 			
 			// Add dependencies for operations that implicitly read global variables

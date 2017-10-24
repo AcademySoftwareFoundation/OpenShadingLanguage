@@ -21,6 +21,9 @@ rm sout.tif bout.tif ; oslc layer_a4.osl; oslc layer_b4.osl; testshade -t 1 -g 8
 
 rm sout.tif bout.tif ; oslc test_vary9.osl ; testshade -t 1 -g 8 2 test_vary9 -od uint8 -o c sout.tif ; testshade --batched -t 1 -g 8 2 test_vary9 -od uint8 -o c bout.tif ; idiff sout.tif bout.tif > idiff.9.log
 
+rm sout.tif bout.tif ; oslc test_vary10.osl ; testshade -t 1 -g 8 2 test_vary10 -od uint8 -o c sout.tif ; testshade --batched -t 1 -g 8 2 test_vary10 -od uint8 -o c bout.tif ; idiff sout.tif bout.tif > idiff.10.log
+
+
 echo idiff.3.log
 cat idiff.3.log
 echo idiff.3b.log
@@ -61,4 +64,6 @@ echo idiff.layer_a4b4.log
 cat idiff.layer_a4b4.log
 echo idiff.9.log
 cat idiff.9.log
+echo idiff.10.log
+cat idiff.10.log
 

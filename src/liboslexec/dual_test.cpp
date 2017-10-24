@@ -47,6 +47,75 @@ typedef Dual2<float> Dual2f;
 
 
 
+template<class T>
+T crazy (const T& x)
+{
+    using namespace std;
+    using namespace OSL;
+    return x * x * cos(x);
+}
+
+
+
+template<class T>
+T crazy (const T& x, const T& y)
+{
+    using namespace std;
+    using namespace OSL;
+    return x * y * exp(x+y);
+}
+
+
+
+// Compare 1D derivs with Duals to numerical differentiation. This sure
+// isn't comprehensive, but it tests the general scheme.
+void
+test_derivs1 () {
+    const float eps = 1e-3;
+    static float domain[] = { 0, 0.1, 0.25, 0.333333, 0.91 };
+    for (auto x : domain) {
+        float f = crazy(x);
+        float df_numeric = (crazy(x+eps) - crazy(x-eps)) / (2.0f*eps);
+        Dual<float> xd (x, 1.0f);
+        Dual<float> fd = crazy (xd);
+        std::cout << "crazy(" << x << ")=" << f << ", numeric derivs ~= "
+                 << df_numeric << ", Dual f = " << fd << "\n";
+
+        OIIO_CHECK_EQUAL_THRESH (f, fd.val(), eps);
+        OIIO_CHECK_EQUAL_THRESH (df_numeric, fd.dx(), eps);
+    }
+}
+
+
+
+// Compare 2D derivs with Duals to numerical differentiation. This sure
+// isn't comprehensive, but it tests the general scheme.
+void
+test_derivs2 () {
+    const float eps = 1e-3;
+    static float domain[] = { 0, 0.1, 0.25, 0.333333, 0.91 };
+    for (auto x : domain) {
+        for (auto y : domain) {
+            float f = crazy(x,y);
+            float df_dx_numeric = (crazy(x+eps,y) - crazy(x-eps,y)) / (2.0f*eps);
+            float df_dy_numeric = (crazy(x,y+eps) - crazy(x,y-eps)) / (2.0f*eps);
+            Dual<float,2> xd (x, 1.0f, 0.0f);
+            Dual<float,2> yd (y, 0.0f, 1.0f);
+            Dual<float,2> fd = crazy (xd, yd);
+            std::cout << "crazy(" << x << "," << y << ")=" << f
+                     << ", numeric derivs df/dx ~= "
+                     << df_dx_numeric << ", df/dy ~= " << df_dy_numeric
+                     << ", Dual f = " << fd << "\n";
+
+            OIIO_CHECK_EQUAL_THRESH (f, fd.val(), eps);
+            OIIO_CHECK_EQUAL_THRESH (df_dx_numeric, fd.dx(), eps);
+            OIIO_CHECK_EQUAL_THRESH (df_dy_numeric, fd.dy(), eps);
+        }
+    }
+}
+
+
+
 void
 test_metaprogramming ()
 {
@@ -73,6 +142,8 @@ test_metaprogramming ()
 int main(int argc, char *argv[])
 {
     test_metaprogramming ();
+    test_derivs1 ();
+    test_derivs2 ();
 
     // FIXME: Some day, expand to more exhaustive tests of Dual
 

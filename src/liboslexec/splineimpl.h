@@ -81,18 +81,6 @@ struct extractValueFromArray<OUTTYPE, INTYPE, false>
     }
 };
 
-inline Dual2<float> Clamp(Dual2<float> x, Dual2<float> minv, Dual2<float> maxv)
-{
-    return dual_clamp(x, minv, maxv);
-}
-
-inline float Clamp(float x, float minv, float maxv) {
-    if (x < minv) return minv;
-    else if (x > maxv) return maxv;
-    else return x;
-};
-
-
 
 
 struct SplineBasis {
@@ -110,7 +98,8 @@ void spline_evaluate(const SplineBasis *spline,
                      const KTYPE *knots,
                      int knot_count, int knot_arraylen)
 {
-    XTYPE x = Clamp(xval, XTYPE(0.0), XTYPE(1.0));
+    using OIIO::clamp;
+    XTYPE x = clamp(xval, XTYPE(0.0), XTYPE(1.0));
     int nsegs = ((knot_count - 4) / spline->basis_step) + 1;
     x = x*(float)nsegs;
     float seg_x = removeDerivatives(x);

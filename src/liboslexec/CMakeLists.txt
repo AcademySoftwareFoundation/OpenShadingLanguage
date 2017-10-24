@@ -160,6 +160,10 @@ if (OSL_BUILD_TESTS)
     target_link_libraries ( accum_test oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
     add_test (unit_accum "${CMAKE_BINARY_DIR}/src/liboslexec/accum_test")
 
+    add_executable (dual_test dual_test.cpp)
+    target_link_libraries ( dual_test ${OPENIMAGEIO_LIBRARIES} ${ILMBASE_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+    add_test (unit_dual "${CMAKE_BINARY_DIR}/src/liboslexec/dual_test")
+
     add_executable (llvmutil_test llvmutil_test.cpp)
     target_link_libraries ( llvmutil_test oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
     add_test (unit_llvmutil "${CMAKE_BINARY_DIR}/src/liboslexec/llvmutil_test")

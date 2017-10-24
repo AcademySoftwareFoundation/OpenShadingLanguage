@@ -796,7 +796,8 @@ private:
 	std::vector<Node> m_nodes;
 	Position m_top_of_stack;
 	std::vector<Position> m_function_stack;
-
+	std::vector<Position> m_before_if_block_stack;
+	std::vector<Position> m_after_if_block_stack;
 public:
 	OSL_INLINE FunctionTreeTracker()
 	: m_top_of_stack(end_pos())
@@ -906,6 +907,66 @@ public:
 	{
 		OSL_DEV_ONLY(std::cout << "DependencyTreeTracker push_function_call" << std::endl);
 		m_function_stack.push_back(m_top_of_stack);
+	}
+
+	OSL_INLINE void
+	push_if_block()
+	{
+		// hold onto the position that existed at the beginning of the if block
+		// because that is the set of early outs that the else block should
+		// use, any early outs coming from the if block should be ignored for the
+		// else block
+		m_before_if_block_stack.push_back(m_top_of_stack);
+	}
+
+	OSL_INLINE void
+	pop_if_block()
+	{
+		ASSERT(!m_before_if_block_stack.empty());
+		// we defer actually popping the stack until the else is
+		// popped, it is a package deal "if+else" always
+	}
+
+	OSL_INLINE void
+	push_else_block()
+	{
+		// Remember the current top pos, to restore and the end of the else block
+		m_after_if_block_stack.push_back(m_top_of_stack);
+
+		// Now use only the early outs that existed
+		// at the beginning of the if block, essentially ignoring any early outs
+		// processed inside the the if block
+		m_top_of_stack = m_before_if_block_stack.back();
+	}
+	OSL_INLINE void
+	pop_else_block()
+	{
+		Position pos_after_else = m_top_of_stack;
+
+		Position pos_after_if = m_after_if_block_stack.back();
+		m_after_if_block_stack.pop_back();
+
+		// Restore the early outs to the state after the if block
+		m_top_of_stack = pos_after_if;
+
+		// Add on any early outs processed inside the else block
+		Position pos_before_else =  m_before_if_block_stack.back();
+		m_before_if_block_stack.pop_back();
+
+		// NOTE: as we can only walk the tree upstream, the order
+		// of early outs will be reverse the original.
+		// The algorithm utilizes only the set of early outs and
+		// order should not matter.  If the algorithm changes
+		// this may need to be revisitted.
+		auto endIter = begin_at(pos_before_else);
+		for (auto iter=begin_at(pos_after_else); iter != endIter; ++iter) {
+			const EarlyOut &eo = *iter;
+			if (eo.type == TypeReturn) {
+				process_return(eo.dtt_pos);
+			} else {
+				process_exit(eo.dtt_pos);
+			}
+		}
 	}
 
 	OSL_INLINE void
@@ -1314,9 +1375,11 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				{
 					pushSymbolsCurentBlockDependsOn();
 					// Then block
+					stackOfExecutionScopes.push_if_block();
 					OSL_DEV_ONLY(std::cout << " THEN BLOCK BEGIN" << std::endl);
 					discoverSymbolsBetween(opIndex+1, opcode.jump(0));
 					OSL_DEV_ONLY(std::cout << " THEN BLOCK END" << std::endl);
+					stackOfExecutionScopes.pop_if_block();
 					popSymbolsCurentBlockDependsOn();
 					
 					// else block
@@ -1325,9 +1388,11 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					// its own unique position in the the dependency tree that we can
 					// tell is different from the then block
 					pushSymbolsCurentBlockDependsOn();
+					stackOfExecutionScopes.push_else_block();
 					OSL_DEV_ONLY(std::cout << " ELSE BLOCK BEGIN" << std::endl);
 					discoverSymbolsBetween(opcode.jump(0), opcode.jump(1));
 					OSL_DEV_ONLY(std::cout << " ELSE BLOCK END" << std::endl);
+					stackOfExecutionScopes.pop_else_block();
 					
 					popSymbolsCurentBlockDependsOn();
 					

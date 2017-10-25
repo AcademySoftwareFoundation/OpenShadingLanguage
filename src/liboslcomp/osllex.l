@@ -223,7 +223,7 @@ void preprocess (const char *yytext);
 
 
 {FLT}                   {
-                            yylval.f = atof (yytext);
+                            yylval.f = OIIO::Strutil::from_string<float>(yytext);
                             SETLINE;
                             return FLOAT_LITERAL;
                         }

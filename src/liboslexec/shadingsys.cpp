@@ -2482,10 +2482,9 @@ ShadingSystemImpl::decode_connected_param (string_view connectionname,
 
     // Look for a bracket in the "parameter name"
     size_t bracketpos = connectionname.find ('[');
-    const char *bracket = bracketpos == string_view::npos ? NULL
-                                   : connectionname.data()+bracketpos;
     // Grab just the part of the param name up to the bracket
     ustring param (connectionname, 0, bracketpos);
+    string_view cname_remaining = connectionname.substr (bracketpos);
 
     // Search for the param with that name, fail if not found
     c.param = inst->findsymbol (param);
@@ -2514,24 +2513,40 @@ ShadingSystemImpl::decode_connected_param (string_view connectionname,
 
     c.type = sym->typespec();
 
-    if (bracket && c.type.is_array()) {
+    if (! cname_remaining.empty() && c.type.is_array()) {
         // There was at least one set of brackets that appears to be
         // selecting an array element.
-        c.arrayindex = atoi (bracket+1);
+        int index = 0;
+        if (! (Strutil::parse_char (cname_remaining, '[') &&
+               Strutil::parse_int  (cname_remaining, index) &&
+               Strutil::parse_char (cname_remaining, ']'))) {
+            error ("ConnectShaders: malformed parameter \"%s\"", connectionname);
+            c.param = -1;  // mark as invalid
+            return c;
+        }
+        c.arrayindex = index;
         if (c.arrayindex >= c.type.arraylength()) {
             error ("ConnectShaders: cannot request array element %s from a %s",
                    connectionname, c.type.c_str());
             c.arrayindex = c.type.arraylength() - 1;  // clamp it
         }
         c.type.make_array (0);              // chop to the element type
-        bracket = strchr (bracket+1, '[');  // skip to next bracket
+        Strutil::skip_whitespace (cname_remaining); // skip to next bracket
     }
 
-    if (bracket && ! c.type.is_closure() &&
-            c.type.aggregate() != TypeDesc::SCALAR) {
+    if (! cname_remaining.empty() && cname_remaining.front() == '[' &&
+          ! c.type.is_closure() && c.type.aggregate() != TypeDesc::SCALAR) {
         // There was at least one set of brackets that appears to be
         // selecting a color/vector component.
-        c.channel = atoi (bracket+1);
+        int index = 0;
+        if (! (Strutil::parse_char (cname_remaining, '[') &&
+               Strutil::parse_int  (cname_remaining, index) &&
+               Strutil::parse_char (cname_remaining, ']'))) {
+            error ("ConnectShaders: malformed parameter \"%s\"", connectionname);
+            c.param = -1;  // mark as invalid
+            return c;
+        }
+        c.channel = index;
         if (c.channel >= (int)c.type.aggregate()) {
             error ("ConnectShaders: cannot request component %s from a %s",
                    connectionname, c.type.c_str());
@@ -2539,11 +2554,11 @@ ShadingSystemImpl::decode_connected_param (string_view connectionname,
         }
         // chop to just the scalar part
         c.type = TypeSpec ((TypeDesc::BASETYPE)c.type.simpletype().basetype);
-        bracket = strchr (bracket+1, '[');     // skip to next bracket
+        Strutil::skip_whitespace (cname_remaining);
     }
 
-    // Deal with left over brackets
-    if (bracket) {
+    // Deal with left over nonsense or unsupported param designations
+    if (! cname_remaining.empty()) {
         // Still a leftover bracket, no idea what to do about that
         error ("ConnectShaders: don't know how to connect '%s' when \"%s\" is a \"%s\"",
                connectionname, param.c_str(), c.type.c_str());

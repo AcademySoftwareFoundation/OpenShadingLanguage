@@ -372,10 +372,11 @@ Dictionary::dict_value (int nodeID, ustring attribname,
     }
     if (type.basetype == TypeDesc::INT) {
         r.valueoffset = (int) m_intdata.size();
+        string_view valstr (val);
         for (int i = 0;  i < n;  ++i) {
-            int v = (int) strtol (val, (char **)&val, 10);
-            while (isspace(*val) || *val == ',')
-                ++val;
+            int v;
+            OIIO::Strutil::parse_int (valstr, v);
+            OIIO::Strutil::parse_char (valstr, ',');
             m_intdata.push_back (v);
             ((int *)data)[i] = v;
         }
@@ -384,10 +385,11 @@ Dictionary::dict_value (int nodeID, ustring attribname,
     }
     if (type.basetype == TypeDesc::FLOAT) {
         r.valueoffset = (int) m_floatdata.size();
+        string_view valstr (val);
         for (int i = 0;  i < n;  ++i) {
-            float v = (float) strtod (val, (char **)&val);
-            while (isspace(*val) || *val == ',')
-                ++val;
+            float v;
+            OIIO::Strutil::parse_float (valstr, v);
+            OIIO::Strutil::parse_char (valstr, ',');
             m_floatdata.push_back (v);
             ((float *)data)[i] = v;
         }

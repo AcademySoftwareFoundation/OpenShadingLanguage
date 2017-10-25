@@ -1239,7 +1239,7 @@ DECLFOLDER(constfold_stoi)
     if (S.is_constant()) {
         ASSERT (S.typespec().is_string());
         ustring s = *(ustring *)S.data();
-        int cind = rop.add_constant ((int) strtol(s.c_str(), NULL, 10));
+        int cind = rop.add_constant (Strutil::from_string<int>(s));
         rop.turn_into_assign (op, cind, "const fold stoi");
         return 1;
     }
@@ -1256,7 +1256,7 @@ DECLFOLDER(constfold_stof)
     if (S.is_constant()) {
         ASSERT (S.typespec().is_string());
         ustring s = *(ustring *)S.data();
-        int cind = rop.add_constant ((float) strtod(s.c_str(), NULL));
+        int cind = rop.add_constant (Strutil::from_string<float>(s));
         rop.turn_into_assign (op, cind, "const fold stof");
         return 1;
     }

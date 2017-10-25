@@ -33,7 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec_pvt.h"
 #include "OSL/genclosure.h"
 #include "backendllvm_wide.h"
-// TODO:  remove is possible, having the here breaks original encapsulation
+// TODO:  remove if possible, having the here breaks original encapsulation
 #include <llvm/IR/Value.h>
 #include <llvm/IR/Type.h>
 #include <llvm/Support/raw_os_ostream.h>

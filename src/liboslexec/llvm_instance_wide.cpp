@@ -556,10 +556,17 @@ BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym)
                 ASSERT (init_val);
                 
                 if(isSymbolUniform(sym)) {
+                	ASSERT(!sym.renderer_output() && "All render outputs should be varying");
                     llvm_store_value (init_val, sym, 0, arrind, i);                	
                 } else {
 					llvm::Value * wide_init_val = ll.wide_constant(init_val);
+					if (sym.renderer_output()) {
+						ll.push_masking_enabled(true);
+					}
 					llvm_store_value (wide_init_val, sym, 0, arrind, i);
+					if (sym.renderer_output()) {
+						ll.pop_masking_enabled();
+					}
                 }
             }
         }

@@ -143,6 +143,13 @@ set_shadingsys_options ()
     if (shadingsys_options_set)
         return;
 
+    // If benchmarking it isn't necessary to clear the memory.
+    // however for unit tests and tracking down early exit issues
+    // we don't want the previous sample's group data masquerading as correct
+    // values for the next sample, who due to a bug, may not have correct control flow
+    // and not actually write to those values
+    shadingsys->attribute ("clearmemory", 1);
+
     shadingsys->attribute ("llvm_debug", (llvm_debug ? 2 : 0));
     OSL_DEV_ONLY(shadingsys->attribute ("llvm_debug", 2));
 

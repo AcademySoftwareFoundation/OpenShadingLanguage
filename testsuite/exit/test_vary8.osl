@@ -21,7 +21,7 @@ shader test_vary8(output color c = 0.0)
 {    
     float r = 1.0;
     int endIndex = int(P[0]*10);
-    int i = ;
+    int i = 0;
     do
     {
         if (P[0] > 0.5) 

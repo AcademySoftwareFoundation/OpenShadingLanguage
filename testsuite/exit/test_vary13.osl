@@ -1,0 +1,38 @@
+color init()
+{
+    return color(0.25);
+}
+
+color init2()
+{
+    return color(0.25);
+}
+
+color init3()
+{
+    if (P[0] > 0.75) {
+        exit();
+    }
+    return color(0.25);
+}
+
+shader test_vary13(color in = init(),
+    color in2 = init3(),
+    output color c = init2())
+{
+    float r = 1.0;
+    int i = 0;
+    c = in + in2;
+    for(; i < 3; ++i)
+    {
+    //printf("Iteration %d\n", i);
+        if (P[0] > 0.5) 
+        {
+            return;
+            //printf("P[0](%g) > 0.5\n", P[0]);
+        }
+    }
+    //printf("Iteration stopped at %d\n", i);
+    c += color(r, float(i)/3, 0);
+}
+

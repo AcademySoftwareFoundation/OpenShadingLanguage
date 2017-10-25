@@ -1,0 +1,17 @@
+color helper(color in) {
+    if (P[0] < 0.25) {
+        return color(1.0, 0.0, 1.0);
+    } 
+    matrix m = matrix(P[0],0,0,0,
+                      0,P[0],0,0,
+                      0,0,P[0],0,
+                      0,0,0,1);
+    in+= transform(m,0.1);
+    return in;
+}
+
+
+shader test_vary12(output color c = 0.0)
+{
+    c = helper(c);
+}

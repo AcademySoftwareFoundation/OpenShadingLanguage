@@ -1063,7 +1063,6 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	const Symbol sg_flipHandedness(Strings::flipHandedness, TypeSpec (), SymTypeGlobal);
 	const Symbol sg_raytype(Strings::raytype, TypeSpec (), SymTypeGlobal);
 
-	//const Symbol & sg_time = *findGlobalSymbol(Strings::time);
 	const Symbol sg_time(Strings::time, TypeSpec (), SymTypeGlobal);
 
 	// Initially let all symbols be uniform
@@ -1081,12 +1080,43 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	std::unordered_multimap<const Symbol * /* parent */ , const Symbol * /* dependent */> symbolFeedForwardMap;
 
 	
-	struct WriteEvent
+	class WriteEvent
 	{
-		DependencyTreeTracker::Position pos_in_tree;
-		int op_num;		
+
+		DependencyTreeTracker::Position m_pos_in_tree;
+		int m_op_num;
+		static constexpr int InitialAssignmentOp() { return -1; }
+	public:
+
+		WriteEvent(DependencyTreeTracker::Position pos_in_tree_, int op_num_)
+		: m_pos_in_tree(pos_in_tree_)
+		, m_op_num(op_num_)
+		{}
+
+		WriteEvent(DependencyTreeTracker::Position pos_in_tree_)
+		: m_pos_in_tree(pos_in_tree_)
+		, m_op_num(InitialAssignmentOp())
+		{}
+
+		OSL_INLINE DependencyTreeTracker::Position pos_in_tree() const
+		{
+			return m_pos_in_tree;
+		}
+
+		OSL_INLINE bool
+		is_initial_assignment() const
+		{
+			return m_op_num == InitialAssignmentOp();
+		}
+
+		OSL_INLINE int
+		op_num() const {
+			ASSERT(!is_initial_assignment());
+			return m_op_num;
+		}
 	};
-	
+
+
 	typedef std::vector<WriteEvent> WriteChronology;
 	
 	std::unordered_map<const Symbol *, WriteChronology > potentiallyUnmaskedOpsBySymbol;
@@ -1131,47 +1161,25 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				// Find common ancestor (ca) between the read position and the write pos
 				// if generation of ca is older than current oldest ca for write instruction, record it
 				for (auto writeIter=write_chronology.begin(); writeIter != writeEnd; ++writeIter) {
-					
+					auto commonAncestor = stackOfSymbolsCurrentBlockDependsOn.commonAncestorBetween(readAtPos, writeIter->pos_in_tree());
+
+					if (commonAncestor != writeIter->pos_in_tree() )
 					{
-						auto commonAncestor = stackOfSymbolsCurrentBlockDependsOn.commonAncestorBetween(readAtPos, writeIter->pos_in_tree);
+						// if common ancestor is the write position, then no need to mask
+						// otherwise we know masking will be needed for the instruction
+						m_requires_masking_by_layer_and_op_index[layer()][writeIter->op_num()] = true;
+						OSL_DEV_ONLY(std::cout << "read at lower depth m_requires_masking_by_layer_and_op_index[" << writeIter->op_num() << "]=true" << std::endl);
 
-						if (commonAncestor != writeIter->pos_in_tree )
+						auto ancestor = stackOfSymbolsCurrentBlockDependsOn.begin_at(commonAncestor);
+
+						// eldest_read_branch is used to identify the end of the dependencies
+						// that must have symbolFeedForwardMap entries added to correctly
+						// propagate Wide values through the symbols.
+						auto & eldest_read_branch = eldest_read_branch_by_op_index[writeIter->op_num()];
+						if(ancestor.depth() < eldest_read_branch.depth)
 						{
-							// if common ancestor is the write position, then no need to mask
-							// otherwise we know masking will be needed for the instruction
-							m_requires_masking_by_layer_and_op_index[layer()][writeIter->op_num] = true;
-
-							auto ancestor = stackOfSymbolsCurrentBlockDependsOn.begin_at(commonAncestor);
-
-							// eldest_read_branch is used to identify the end of the dependencies
-							// that must have symbolFeedForwardMap entries added to correctly
-							// propagate Wide values through the symbols.
-							auto & eldest_read_branch = eldest_read_branch_by_op_index[writeIter->op_num];
-							if(ancestor.depth() < eldest_read_branch.depth)
-							{
-								eldest_read_branch.depth = ancestor.depth();
-								eldest_read_branch.pos = ancestor.pos();
-							}
-						}
-					}
-					
-					// Also check the stack of dependent symbols at each early out (return or exit) that the
-					// is applied to the current function
-					auto endOfEarlyOuts = stackOfExecutionScopes.end();
-					for (auto earlyOutIter = stackOfExecutionScopes.begin_at(pos_in_exec_scope_stack_by_op_index[writeIter->op_num]);
-							earlyOutIter != endOfEarlyOuts; ++earlyOutIter)
-					{
-						const auto & earlyOut = *earlyOutIter;
-
-						auto commonAncestor = stackOfSymbolsCurrentBlockDependsOn.commonAncestorBetween(readAtPos, earlyOut.dtt_pos);
-						if (commonAncestor != earlyOut.dtt_pos)
-						{
-							// if common ancestor is the early out position, then no need to mask
-							// otherwise we know masking will be needed for the instruction
-							m_requires_masking_by_layer_and_op_index[layer()][writeIter->op_num] = true;
-							// eldest_read_branch does NOT need to be updated here
-							// as we add symbolFeedForwardMap entries for all the dependencies
-							// of early outs later
+							eldest_read_branch.depth = ancestor.depth();
+							eldest_read_branch.pos = ancestor.pos();
 						}
 					}
 				}
@@ -1179,6 +1187,57 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 		}
 	};
     
+	std::function<void(const Symbol *, int, FunctionTreeTracker::Position)> ensureWritesWithDifferentEarlyOutPathsAreMasked;
+
+	ensureWritesWithDifferentEarlyOutPathsAreMasked = [&](const Symbol *symbolToCheck, int op_index, FunctionTreeTracker::Position writtenAtPos)->void {
+
+		if (symbolToCheck->renderer_output()) {
+			// Any write to a render output must respect masking,
+			// also covers a scenario where render output is being initialized by a constant
+			// however an earlier init_ops has already exitted (meaning those lanes shouldn't get
+			// initialized.
+			OSL_DEV_ONLY(std::cout << "render output m_requires_masking_by_layer_and_op_index[" << op_index << "]=true" << std::endl);
+			m_requires_masking_by_layer_and_op_index[layer()][op_index] = true;
+		} else {
+
+			// Check if reading a Symbol that was written to from a different
+			// dependency lineage than we are reading, if so we need to mark it as requiring masking
+			auto lookup = potentiallyUnmaskedOpsBySymbol.find(symbolToCheck);
+			if(lookup != potentiallyUnmaskedOpsBySymbol.end()) {
+				auto & write_chronology = lookup->second;
+				if (!write_chronology.empty()) {
+					auto writeEnd = write_chronology.end();
+					// If any previous write to the symbol occurred with a different set of early outs
+					// Then the current write needs to be masked
+					for (auto writeIter=write_chronology.begin(); writeIter != writeEnd; ++writeIter) {
+
+						//TODO: this isn't a perfect way to compare sets, especially with the else block reversing order of early outs
+						// so think about it and implement it better
+						if (writeIter->is_initial_assignment()) {
+							// The initial assignment of all parameters happens before any instructions are generated?
+							// perhaps there is an ordering issue here for init_ops which could have early outs
+							// although not sure what that would do to execution, certainly returns in init_ops would
+							// bring us back to the stackOfExecutionScopes.end_pos()
+							if ( writtenAtPos != stackOfExecutionScopes.end_pos()) {
+								OSL_DEV_ONLY(std::cout << "early out m_requires_masking_by_layer_and_op_index[" << op_index << "]=true" << std::endl);
+								OSL_DEV_ONLY(std::cout << "stackOfExecutionScopes.end_pos()()=" << stackOfExecutionScopes.end_pos()() << " writtenAtPos()=" << writtenAtPos() << " symbolToCheck->name()=" << symbolToCheck->name().c_str() << std::endl);
+
+								m_requires_masking_by_layer_and_op_index[layer()][op_index] = true;
+							}
+						} else {
+							if ( pos_in_exec_scope_stack_by_op_index[writeIter->op_num()] != writtenAtPos) {
+								OSL_DEV_ONLY(std::cout << "early out m_requires_masking_by_layer_and_op_index[" << op_index << "]=true" << std::endl);
+								OSL_DEV_ONLY(std::cout << "pos_in_exec_scope_stack_by_op_index[writeIter->op_num()]=" << pos_in_exec_scope_stack_by_op_index[writeIter->op_num()]() << " writtenAtPos()=" << writtenAtPos() << " symbolToCheck->name()=" << symbolToCheck->name().c_str() << std::endl);
+
+								m_requires_masking_by_layer_and_op_index[layer()][op_index] = true;
+							}
+						}
+					}
+				}
+			}
+		}
+	};
+
 	std::function<void(int, int)> discoverSymbolsBetween;
 	discoverSymbolsBetween = [&](int beginop, int endop)->void
 	{		
@@ -1230,8 +1289,11 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 			
 			for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
 				const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
+
+				ensureWritesWithDifferentEarlyOutPathsAreMasked(symbolWrittenTo, opIndex, stackOfExecutionScopes.top_pos());
+
 				potentiallyUnmaskedOpsBySymbol[symbolWrittenTo].push_back(
-					WriteEvent{stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex});
+					WriteEvent(stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex));
 			}
 			
 			// Add dependencies for operations that implicitly read global variables
@@ -1509,7 +1571,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					// Also update the usageInfo for the loop conditional to mark it as being written to
 					// by the break operation (which it would be in varying scenario)
 					potentiallyUnmaskedOpsBySymbol[loopCondition].push_back(
-						WriteEvent{stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex});
+						WriteEvent(stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex));
 				}
 
 			}
@@ -1547,7 +1609,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					// Also update the usageInfo for the loop conditional to mark it as being written to
 					// by the break operation (which it would be in varying scenario)
 					potentiallyUnmaskedOpsBySymbol[loopCondition].push_back(
-						WriteEvent{stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex});
+						WriteEvent(stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex));
 				}
 			}
 			if (opcode.opname() == Strings::op_break)
@@ -1575,7 +1637,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				// Also update the usageInfo for the loop conditional to mark it as being written to
 				// by the break operation (which it would be in varying scenario)
 				potentiallyUnmaskedOpsBySymbol[loopCondition].push_back(
-					WriteEvent{stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex});
+					WriteEvent(stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex));
 			}
             if (opcode.opname() == Strings::op_getattribute)
             {
@@ -1620,7 +1682,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	
 	// NOTE:  The order symbols are discovered should match the flow
 	// of build_llvm_code calls coming from build_llvm_instance 
-	// And build_llvm_code is called indirectly throught llvm_assign_initial_value.
+	// And build_llvm_code is called indirectly through llvm_assign_initial_value.
 	
 	// TODO: not sure the main scope should be at a deeper scope than the init operations
 	// for symbols.  I think they should be fine
@@ -1670,6 +1732,25 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 		if (s.has_init_ops() && s.valuesource() == Symbol::DefaultVal) {
 			// Handle init ops.
 			discoverSymbolsBetween(s.initbegin(), s.initend());
+		} else {
+			// If no init ops exist, must be assigned an constant initial value
+			// we must track this write, not because it will need to be masked
+			// itself.  But because future writes might happen with a different
+			// set of early out which will cause them to masked.  This detection
+			// can only happen if we tracked the set of early outs during this
+			// initial assignment
+
+			// NOTE: as this is the initial assignment to a parameter
+			// there could be no other reads/write to deal with to the symbol
+			ASSERT(potentiallyUnmaskedOpsBySymbol.find(&s) == potentiallyUnmaskedOpsBySymbol.end());
+
+			potentiallyUnmaskedOpsBySymbol[&s].push_back(
+				WriteEvent(stackOfSymbolsCurrentBlockDependsOn.top_pos()));
+
+			// We would check for render outputs and mark it to be masked,
+			// but that requires an opindex, and we have no opindex for parameter assignments
+			// So we will explicitly check for render outputs at code generation
+			// and make their initial assignments masked
 		}
 	}    	
 	

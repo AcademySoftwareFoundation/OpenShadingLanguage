@@ -665,6 +665,22 @@ osl_prepend_matrix_from_w16ms_batched (void *sgb, void *wr, const char *from)
 }
 
 OSL_SHADEOP void
+osl_prepend_matrix_from_w16ms_masked (void *sgb, void *wr, const char *from, int mask_value)
+{
+	OSL_INTEL_PRAGMA(forceinline recursive)
+	{
+		Wide<Matrix44> wMfrom;
+		MaskedAccessor<Matrix44> from_matrix(wMfrom, Mask(mask_value));
+		/*Mask succeeded =*/
+        impl_get_uniform_from_matrix_batched ((ShaderGlobalsBatch *)sgb, from_matrix, from);
+
+        MaskedAccessor<Matrix44> wrm(wr, Mask(mask_value));
+
+		impl_wide_mat_multiply(wrm, from_matrix, wrm);
+	}
+}
+
+OSL_SHADEOP void
 osl_prepend_matrix_from_w16mw16s_batched (void *sgb_, void *wr, void * w_from_name)
 {
 	OSL_INTEL_PRAGMA(forceinline recursive)
@@ -683,6 +699,28 @@ osl_prepend_matrix_from_w16mw16s_batched (void *sgb_, void *wr, void * w_from_na
 		impl_wide_mat_multiply(wrm, from_matrix, wrm);
 	}
 }
+
+OSL_SHADEOP void
+osl_prepend_matrix_from_w16mw16s_masked (void *sgb_, void *wr, void * w_from_name, int mask_value)
+{
+	OSL_INTEL_PRAGMA(forceinline recursive)
+	{
+        ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
+        ShadingContext *ctx = (ShadingContext *)sgb->uniform().context;
+
+        ConstWideAccessor<ustring> wFromName(w_from_name);
+
+		Wide<Matrix44> wMfrom;
+		MaskedAccessor<Matrix44> from_matrix(wMfrom, Mask(mask_value));
+		/*Mask succeeded =*/
+        impl_get_varying_from_matrix_batched(sgb, ctx, wFromName, from_matrix);
+
+        MaskedAccessor<Matrix44> wrm(wr, Mask(mask_value));
+
+		impl_wide_mat_multiply(wrm, from_matrix, wrm);
+	}
+}
+
 
 
 
@@ -815,6 +853,14 @@ osl_get_from_to_matrix_w16mss_batched (void *sgb_, void *wr, const char *from, c
     return impl_get_uniform_from_to_matrix_batched(sgb, wrm, from, to).value();
 }
 
+OSL_SHADEOP int
+osl_get_from_to_matrix_w16mss_masked (void *sgb_, void *wr, const char *from, const char *to, int mask_value)
+{
+	ShaderGlobalsBatch * sgb = (ShaderGlobalsBatch *)sgb_;
+	MaskedAccessor<Matrix44> wrm(wr,Mask(mask_value));
+    return impl_get_uniform_from_to_matrix_batched(sgb, wrm, from, to).value();
+}
+
 
 OSL_SHADEOP int
 osl_get_from_to_matrix_w16msw16s_batched (void *sgb_, void *wr, const char *from, void * w_to_ptr)
@@ -838,7 +884,27 @@ osl_get_from_to_matrix_w16msw16s_batched (void *sgb_, void *wr, const char *from
 	}
 }
 
+OSL_SHADEOP int
+osl_get_from_to_matrix_w16msw16s_masked (void *sgb_, void *wr, const char *from, void * w_to_ptr, int mask_value)
+{
+	OSL_INTEL_PRAGMA(forceinline recursive)
+	{
+        ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
+        ShadingContext *ctx = (ShadingContext *)sgb->uniform().context;
+		Wide<Matrix44> wMfrom;
+		MaskedAccessor<Matrix44> from_matrix(wMfrom, Mask(mask_value));
+        Mask from_succeeded = impl_get_uniform_from_matrix_batched (sgb, from_matrix, from);
 
+        ConstWideAccessor<ustring> wToSpace(w_to_ptr);
+		Wide<Matrix44> wMto;
+		MaskedAccessor<Matrix44> to_matrix(wMto, from_succeeded);
+		Mask succeeded = impl_get_varying_to_matrix_batched(sgb, ctx, wToSpace, to_matrix);
+
+		MaskedAccessor<Matrix44> wrm(wr, succeeded);
+		impl_wide_mat_multiply(wrm, from_matrix, to_matrix);
+		return succeeded.value();
+	}
+}
 
 
 
@@ -867,6 +933,31 @@ osl_get_from_to_matrix_w16mw16ss_batched (void *sgb_, void *wr, void  *w_from_pt
 }
 
 OSL_SHADEOP int
+osl_get_from_to_matrix_w16mw16ss_masked (void *sgb_, void *wr, void  *w_from_ptr, const char * to, int mask_value)
+{
+	OSL_INTEL_PRAGMA(forceinline recursive)
+	{
+        ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
+        ShadingContext *ctx = (ShadingContext *)sgb->uniform().context;
+
+        ConstWideAccessor<ustring> wFromName(w_from_ptr);
+
+		Wide<Matrix44> wMto;
+		MaskedAccessor<Matrix44> to_matrix(wMto, Mask(mask_value));
+        Mask to_succeeded = impl_get_uniform_to_inverse_matrix_batched (sgb, to_matrix, to);
+
+		Wide<Matrix44> wMfrom;
+		MaskedAccessor<Matrix44> from_matrix(wMfrom, to_succeeded);
+        Mask succeeded = impl_get_varying_from_matrix_batched(sgb, ctx, wFromName, from_matrix);
+
+		MaskedAccessor<Matrix44> wrm(wr, succeeded);
+		impl_wide_mat_multiply(wrm, from_matrix, to_matrix);
+		return succeeded.value();
+	}
+}
+
+
+OSL_SHADEOP int
 osl_get_from_to_matrix_w16mw16sw16s_batched (void *sgb_, void *wr, void  *w_from_ptr, void * w_to_ptr)
 {
 	OSL_INTEL_PRAGMA(forceinline recursive)
@@ -890,6 +981,32 @@ osl_get_from_to_matrix_w16mw16sw16s_batched (void *sgb_, void *wr, void  *w_from
 		return succeeded.value();
 	}
 }
+
+OSL_SHADEOP int
+osl_get_from_to_matrix_w16mw16sw16s_masked (void *sgb_, void *wr, void  *w_from_ptr, void * w_to_ptr, int mask_value)
+{
+	OSL_INTEL_PRAGMA(forceinline recursive)
+	{
+        ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
+        ShadingContext *ctx = (ShadingContext *)sgb->uniform().context;
+
+        ConstWideAccessor<ustring> wFromName(w_from_ptr);
+
+		Wide<Matrix44> wMfrom;
+		MaskedAccessor<Matrix44> from_matrix(wMfrom, Mask(mask_value));
+        Mask from_succeeded = impl_get_varying_from_matrix_batched(sgb, ctx, wFromName, from_matrix);
+
+        ConstWideAccessor<ustring> wToSpace(w_to_ptr);
+		Wide<Matrix44> wMto;
+		MaskedAccessor<Matrix44> to_matrix(wMto, from_succeeded);
+		Mask succeeded = impl_get_varying_to_matrix_batched(sgb, ctx, wToSpace, to_matrix);
+
+		MaskedAccessor<Matrix44> wrm(wr, succeeded);
+		impl_wide_mat_multiply(wrm, from_matrix, to_matrix);
+		return succeeded.value();
+	}
+}
+
 
 // point = M * point
 inline void osl_transform_vmv(void *result, const Matrix44 &M, void* v_)

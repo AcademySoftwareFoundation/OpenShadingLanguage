@@ -37,6 +37,9 @@ rm sout.tif bout.tif ; oslc test_vary14c.osl ; testshade -t 1 -g 8 2 test_vary14
 
 rm sout.tif bout.tif ; oslc test_vary14d.osl ; testshade -t 1 -g 8 2 test_vary14d -od uint8 -o c sout.tif ; testshade --batched -t 1 -g 8 2 test_vary14d -od uint8 -o c bout.tif ; idiff sout.tif bout.tif > idiff.14d.log
 
+rm sout.tif bout.tif ; oslc test_vary15.osl ; testshade -t 1 -g 8 2 test_vary15 -o c sout.tif -o M sM.tif; testshade --batched -t 1 -g 8 2 test_vary15 -o c bout.tif -o M bM.tif ; idiff sout.tif bout.tif > idiff.15.log;  idiff sM.tif bM.tif >> idiff.15.log
+
+rm sout.tif bout.tif ; oslc test_vary15b.osl ; testshade -t 1 -g 8 2 test_vary15b -o c sout.tif -o M sM.tif; testshade --batched -t 1 -g 8 2 test_vary15b -o c bout.tif -o M bM.tif ; idiff sout.tif bout.tif > idiff.15b.log;  idiff sM.tif bM.tif >> idiff.15b.log
 
 echo idiff.3.log
 cat idiff.3.log
@@ -94,4 +97,8 @@ echo idiff.14c.log
 cat idiff.14c.log
 echo idiff.14d.log
 cat idiff.14d.log
+echo idiff.15.log
+cat idiff.15.log
+echo idiff.15b.log
+cat idiff.15b.log
 

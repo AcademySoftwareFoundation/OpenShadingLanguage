@@ -2020,16 +2020,15 @@ LLVMGEN (llvm_gen_matrix)
 
     bool op_is_uniform = rop.isSymbolUniform(Result);
 
-	// We are generating a matrix, not sure how that would ever require masking
-	// as the store should be at the same dependency scope as the local
-	// object being generated
-	ASSERT(false == rop.ll.is_masking_enabled());
+    // One known scenario to having masking enabled during a constructor is for
+    // render outputs, as they are always wide
+    ASSERT(rop.is_assigning_initial_values() || (false == rop.ll.is_masking_enabled()));
 
     if (using_two_spaces) {
     	// Implicit dependencies to shader globals
     	// mean the result needs to be varying
 		ASSERT(false == op_is_uniform);
-        llvm::Value *args[4];
+        llvm::Value *args[5];
         args[0] = rop.sg_void_ptr();  // shader globals
         args[1] = rop.llvm_void_ptr(Result);  // result
         Symbol& From = *rop.opargsym (op, 1);
@@ -2039,14 +2038,18 @@ LLVMGEN (llvm_gen_matrix)
 
         args[2] = from_is_uniform ? rop.llvm_load_value(From) : rop.llvm_void_ptr(From);
         args[3] = to_is_uniform ? rop.llvm_load_value(To): rop.llvm_void_ptr(To);
+        if (rop.ll.is_masking_enabled()) {
+        	args[4] = rop.ll.mask_as_int(rop.ll.current_mask());
+        }
+
         // Dynamically build width suffix
         std::string func_name("osl_get_from_to_matrix_");
         func_name += warg_typecode(&Result, false);
         func_name += arg_typecode(From, false, rop.isSymbolUniform(From));
         func_name += arg_typecode(To, false, rop.isSymbolUniform(To));
-        func_name += "_batched";
+        func_name += rop.ll.is_masking_enabled() ? "_masked" : "_batched";
 
-        rop.ll.call_function (func_name.c_str(), args, 4);
+        rop.ll.call_function (func_name.c_str(), args, rop.ll.is_masking_enabled() ? 5 : 4);
     } else {
         if (nfloats == 1) {
         	llvm::Value *zero;
@@ -2073,20 +2076,23 @@ LLVMGEN (llvm_gen_matrix)
         	// Implicit dependencies to shader globals
         	// mean the result needs to be varying
         	ASSERT(false == op_is_uniform);
-            llvm::Value *args[3];
+            llvm::Value *args[4];
             args[0] = rop.sg_void_ptr();  // shader globals
             args[1] = rop.llvm_void_ptr(Result);  // result
             Symbol& From = *rop.opargsym (op, 1);
             bool from_is_uniform = rop.isSymbolUniform(From);
             args[2] = from_is_uniform ? rop.llvm_load_value(From) : rop.llvm_void_ptr(From);
+            if (rop.ll.is_masking_enabled()) {
+            	args[3] = rop.ll.mask_as_int(rop.ll.current_mask());
+            }
 
             // Dynamically build width suffix
             std::string func_name("osl_prepend_matrix_from_");
             func_name += warg_typecode(&Result, false);
             func_name += arg_typecode(From, false, rop.isSymbolUniform(From));
-            func_name += "_batched";
+            func_name += rop.ll.is_masking_enabled() ? "_masked" : "_batched";
 
-            rop.ll.call_function (func_name.c_str(), args, 3);
+            rop.ll.call_function (func_name.c_str(), args, rop.ll.is_masking_enabled() ? 4 : 3);
         }
     }
     if (Result.has_derivs())

@@ -965,6 +965,8 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
     // Setup the symbols
     m_named_values.clear ();
     m_layers_already_run.clear ();
+
+    m_is_assigning_initial_values = true;
 	for (auto&& s : inst()->symbols()) {    	
         // Skip constants -- we always inline scalar constants, and for
         // array constants we will just use the pointers to the copy of
@@ -1026,6 +1028,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
         // Set initial value for params (may contain init ops)
         llvm_assign_initial_value (s);
     }
+    m_is_assigning_initial_values = false;
 
     // All the symbols are stack allocated now.
 

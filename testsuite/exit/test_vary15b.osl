@@ -1,0 +1,9 @@
+shader test_vary15b(
+    output matrix M = matrix("object", "world"),
+    output color c = color(0,0,0)
+)
+{
+    //printf("M=%g\n",M);
+    c += color(M[0][0],M[1][1],M[2][2]);
+}
+

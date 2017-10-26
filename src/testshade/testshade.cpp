@@ -1163,6 +1163,14 @@ batched_save_outputs (ShadingSystem *shadingsys, ShadingContext *ctx, ShaderGrou
         
         
         if (t.basetype == TypeDesc::FLOAT) {
+        	if (t.aggregate == TypeDesc::MATRIX44) {
+                ASSERT(outputimgs[i]->nchannels() == 16);
+				// If the variable we are outputting is float-based, set it
+				// directly in the output buffer.
+				auto batchResults = shadingsys->symbol_batch_accessor<Matrix44>(*ctx, out_symbol);
+				Matrix44 data = batchResults[batchIndex];
+				outputimgs[i]->setpixel (x, y, reinterpret_cast<const float *>(&data));
+        	}
         	if (t.aggregate == TypeDesc::VEC3) {        	
                 ASSERT(outputimgs[i]->nchannels() == 3);
 				// If the variable we are outputting is float-based, set it

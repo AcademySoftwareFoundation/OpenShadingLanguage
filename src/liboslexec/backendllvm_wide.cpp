@@ -119,7 +119,8 @@ BackendLLVMWide::BackendLLVMWide (ShadingSystemImpl &shadingsys,
       ll(llvm_debug()),
       m_stat_total_llvm_time(0), m_stat_llvm_setup_time(0),
       m_stat_llvm_irgen_time(0), m_stat_llvm_opt_time(0),
-      m_stat_llvm_jit_time(0)
+      m_stat_llvm_jit_time(0),
+	  m_is_assigning_initial_values(false)
 {
 #ifdef OSL_SPI
     // Temporary (I hope) check to diagnose an intermittent failure of

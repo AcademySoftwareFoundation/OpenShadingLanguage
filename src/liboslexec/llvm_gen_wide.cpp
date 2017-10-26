@@ -311,8 +311,6 @@ LLVMGEN (llvm_gen_nop)
 
 LLVMGEN (llvm_gen_useparam)
 {
-
-#if 1
     ASSERT (! rop.inst()->unused() &&
             "oops, thought this layer was unused, why do we call it?");
     OSL_DEV_ONLY(std::cout << ">>>>>>>>>>>>>>>>>>>>>llvm_gen_useparam <<<<<<<<<<<<<<<<<<<" << std::endl);
@@ -336,7 +334,6 @@ LLVMGEN (llvm_gen_useparam)
         }
     }
     return true;
-#endif
 }
 
 
@@ -2019,10 +2016,6 @@ LLVMGEN (llvm_gen_matrix)
     ASSERT (nargs == 2 || nargs == 3 || nargs == 17 || nargs == 18);
 
     bool op_is_uniform = rop.isSymbolUniform(Result);
-
-    // One known scenario to having masking enabled during a constructor is for
-    // render outputs, as they are always wide
-    ASSERT(rop.is_assigning_initial_values() || (false == rop.ll.is_masking_enabled()));
 
     if (using_two_spaces) {
     	// Implicit dependencies to shader globals

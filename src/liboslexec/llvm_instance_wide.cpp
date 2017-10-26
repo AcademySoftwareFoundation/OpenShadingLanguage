@@ -782,6 +782,11 @@ BackendLLVMWide::build_llvm_init ()
     llvm::BasicBlock *entry_bb = ll.new_basic_block (unique_name);
     ll.new_builder (entry_bb);
     
+    // Always allocate a temporary wide matrix to serve as middle man between
+    // from and to matrix spaces
+    // TODO: could detect if this will be needed or not and only allocate if needed
+    temp_wide_matrix_ptr();
+
 #if 0 /* helpful for debugging */
     if (llvm_debug()) {
         llvm_gen_debug_printf (Strutil::format("\n\n\n\nGROUP! %s",group().name()));
@@ -875,6 +880,11 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
 	// full batch is.
     ll.push_shader_instance(ll.wide_constant_bool(true));
 	
+    // Always allocate a temporary wide matrix to serve as middle man between
+    // from and to matrix spaces
+    // TODO: could detect if this will be needed or not and only allocate if needed
+    temp_wide_matrix_ptr();
+
     OSL_DEV_ONLY(std::cout << "Master Shadername = " << inst()->master()->shadername() << std::endl);
     OSL_DEV_ONLY(std::cout << "Master osofilename = " << inst()->master()->osofilename() << std::endl);
     OSL_DEV_ONLY(std::cout << "source of maincodebegin operation = " << inst()->op(inst()->maincodebegin()).sourcefile() << std::endl);
@@ -966,7 +976,6 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
     m_named_values.clear ();
     m_layers_already_run.clear ();
 
-    m_is_assigning_initial_values = true;
 	for (auto&& s : inst()->symbols()) {    	
         // Skip constants -- we always inline scalar constants, and for
         // array constants we will just use the pointers to the copy of
@@ -1028,7 +1037,6 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
         // Set initial value for params (may contain init ops)
         llvm_assign_initial_value (s);
     }
-    m_is_assigning_initial_values = false;
 
     // All the symbols are stack allocated now.
 

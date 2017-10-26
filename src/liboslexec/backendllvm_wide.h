@@ -454,7 +454,6 @@ public:
 
     LLVM_Util ll;
 
-    bool is_assigning_initial_values() const { return m_is_assigning_initial_values; }
 private:
     std::vector<int> m_layer_remap;     ///< Remapping of layer ordering
     std::set<int> m_layers_already_run; ///< List of layers run
@@ -485,9 +484,6 @@ private:
 	std::vector<std::unordered_set<int>> m_uniform_get_attribute_op_indices_by_layer;
 	std::vector<Symbol *> m_generated_loops_condition_stack;
 
-	// TODO:  Used for debugging some assumptions, not necessary
-	bool m_is_assigning_initial_values;
-    
     friend class ShadingSystemImpl;
 };
 

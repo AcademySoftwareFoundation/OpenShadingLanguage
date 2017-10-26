@@ -77,10 +77,22 @@ template <typename S >             Vec3  vnoise (S x);
 template <typename S, typename T>  Vec3  vnoise (S x, T y);
 
 // Cell noise on 1-4 dimensional domain, range [0,1].
+// cellnoise is constant within each unit cube (cell) on the domain, but
+// discontinuous at integer boundaries (and uncorrellated from cell to
+// cell).
 template <typename S >             float cellnoise (S x);
 template <typename S, typename T>  float cellnoise (S x, T y);
 template <typename S >             Vec3  vcellnoise (S x);
 template <typename S, typename T>  Vec3  vcellnoise (S x, T y);
+
+// Hash noise on 1-4 dimensional domain, range [0,1].
+// hashnoise is like cellnoise, but without the 'floor' -- in other words,
+// it's an uncorrellated hash that is different for every floating point
+// value.
+template <typename S >             float hashnoise (S x);
+template <typename S, typename T>  float hashnoise (S x, T y);
+template <typename S >             Vec3  vhashnoise (S x);
+template <typename S, typename T>  Vec3  vhashnoise (S x, T y);
 
 // FIXME -- eventually consider adding to the public API:
 //  * periodic varieties
@@ -152,21 +164,12 @@ inline float bits_to_01 (unsigned int bits) {
 }
 
 
-#if OIIO_VERSION < 10602
-// Circular bit rotate by k bits, for 4 values at once.
-OIIO_FORCEINLINE int4
-rotl32 (const int4& x, const unsigned int k) {
-    return (x<<k) | srl(x,32-k);
-}
-#else
-  using OIIO::simd::rotl32;
-#endif
-
 
 // Perform a bjmix (see OpenImageIO/hash.h) on 4 sets of values at once.
 OIIO_FORCEINLINE void
 bjmix (int4 &a, int4 &b, int4 &c)
 {
+    using OIIO::simd::rotl32;
     a -= c;  a ^= rotl32(c, 4);  c += b;
     b -= a;  b ^= rotl32(a, 6);  a += c;
     c -= b;  c ^= rotl32(b, 8);  b += a;
@@ -179,6 +182,7 @@ bjmix (int4 &a, int4 &b, int4 &c)
 OIIO_FORCEINLINE int4
 bjfinal (const int4& a_, const int4& b_, const int4& c_)
 {
+    using OIIO::simd::rotl32;
 	int4 a(a_), b(b_), c(c_);
     c ^= b; c -= rotl32(b,14);
     a ^= c; a -= rotl32(c,11);
@@ -436,6 +440,232 @@ private:
 
 
 
+inline int
+inthashi (int x)
+{
+    unsigned int i[1];
+    i[0] = (unsigned int)x;
+    return (int) inthash<1>(i);
+}
+
+inline int
+inthashf (float x)
+{
+    unsigned int i[1];
+    i[0] = OIIO::bit_cast<float,unsigned int>(x);
+    return (int) inthash<1>(i);
+}
+
+inline int
+inthashf (float x, float y)
+{
+    unsigned int i[2];
+    i[0] = OIIO::bit_cast<float,unsigned int>(x);
+    i[1] = OIIO::bit_cast<float,unsigned int>(y);
+    return (int) inthash<2>(i);
+}
+
+
+inline int
+inthashf (const float *x)
+{
+    unsigned int i[3];
+    i[0] = OIIO::bit_cast<float,unsigned int>(x[0]);
+    i[1] = OIIO::bit_cast<float,unsigned int>(x[1]);
+    i[2] = OIIO::bit_cast<float,unsigned int>(x[2]);
+    return (int) inthash<3>(i);
+}
+
+
+inline int
+inthashf (const float *x, float y)
+{
+    unsigned int i[4];
+    i[0] = OIIO::bit_cast<float,unsigned int>(x[0]);
+    i[1] = OIIO::bit_cast<float,unsigned int>(x[1]);
+    i[2] = OIIO::bit_cast<float,unsigned int>(x[2]);
+    i[3] = OIIO::bit_cast<float,unsigned int>(y);
+    return (int) inthash<4>(i);
+}
+
+
+
+struct HashNoise {
+    HashNoise () { }
+
+    inline void operator() (float &result, float x) const {
+        unsigned int iv[1];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (x);
+        hash1<1> (result, iv);
+    }
+
+    inline void operator() (float &result, float x, float y) const {
+        unsigned int iv[2];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (x);
+        iv[1] = OIIO::bit_cast<float,unsigned int> (y);
+        hash1<2> (result, iv);
+    }
+
+    inline void operator() (float &result, const Vec3 &p) const {
+        unsigned int iv[3];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (p.x);
+        iv[1] = OIIO::bit_cast<float,unsigned int> (p.y);
+        iv[2] = OIIO::bit_cast<float,unsigned int> (p.z);
+        hash1<3> (result, iv);
+    }
+
+    inline void operator() (float &result, const Vec3 &p, float t) const {
+        unsigned int iv[4];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (p.x);
+        iv[1] = OIIO::bit_cast<float,unsigned int> (p.y);
+        iv[2] = OIIO::bit_cast<float,unsigned int> (p.z);
+        iv[3] = OIIO::bit_cast<float,unsigned int> (t);
+        hash1<4> (result, iv);
+    }
+
+    inline void operator() (Vec3 &result, float x) const {
+        unsigned int iv[2];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (x);
+        hash3<2> (result, iv);
+    }
+
+    inline void operator() (Vec3 &result, float x, float y) const {
+        unsigned int iv[3];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (x);
+        iv[1] = OIIO::bit_cast<float,unsigned int> (y);
+        hash3<3> (result, iv);
+    }
+
+    inline void operator() (Vec3 &result, const Vec3 &p) const {
+        unsigned int iv[4];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (p.x);
+        iv[1] = OIIO::bit_cast<float,unsigned int> (p.y);
+        iv[2] = OIIO::bit_cast<float,unsigned int> (p.z);
+        hash3<4> (result, iv);
+    }
+
+    inline void operator() (Vec3 &result, const Vec3 &p, float t) const {
+        unsigned int iv[5];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (p.x);
+        iv[1] = OIIO::bit_cast<float,unsigned int> (p.y);
+        iv[2] = OIIO::bit_cast<float,unsigned int> (p.z);
+        iv[3] = OIIO::bit_cast<float,unsigned int> (t);
+        hash3<5> (result, iv);
+    }
+
+private:
+    template <int N>
+    inline void hash1 (float &result, const unsigned int k[N]) const {
+        result = bits_to_01(inthash<N>(k));
+    }
+
+    template <int N>
+    inline void hash3 (Vec3 &result, unsigned int k[N]) const {
+        k[N-1] = 0; result.x = bits_to_01 (inthash<N> (k));
+        k[N-1] = 1; result.y = bits_to_01 (inthash<N> (k));
+        k[N-1] = 2; result.z = bits_to_01 (inthash<N> (k));
+    }
+};
+
+
+
+struct PeriodicHashNoise {
+    PeriodicHashNoise () { }
+
+    inline void operator() (float &result, float x, float px) const {
+        unsigned int iv[1];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (wrap (x, px));
+        hash1<1> (result, iv);
+    }
+
+    inline void operator() (float &result, float x, float y,
+                            float px, float py) const {
+        unsigned int iv[2];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (wrap (x, px));
+        iv[1] = OIIO::bit_cast<float,unsigned int> (wrap (y, py));
+        hash1<2> (result, iv);
+    }
+
+    inline void operator() (float &result, const Vec3 &p,
+                            const Vec3 &pp) const {
+        unsigned int iv[3];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (wrap (p.x, pp.x));
+        iv[1] = OIIO::bit_cast<float,unsigned int> (wrap (p.y, pp.y));
+        iv[2] = OIIO::bit_cast<float,unsigned int> (wrap (p.z, pp.z));
+        hash1<3> (result, iv);
+    }
+
+    inline void operator() (float &result, const Vec3 &p, float t,
+                            const Vec3 &pp, float tt) const {
+        unsigned int iv[4];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (wrap (p.x, pp.x));
+        iv[1] = OIIO::bit_cast<float,unsigned int> (wrap (p.y, pp.y));
+        iv[2] = OIIO::bit_cast<float,unsigned int> (wrap (p.z, pp.z));
+        iv[3] = OIIO::bit_cast<float,unsigned int> (wrap (t, tt));
+        hash1<4> (result, iv);
+    }
+
+    inline void operator() (Vec3 &result, float x, float px) const {
+        unsigned int iv[2];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (wrap (x, px));
+        hash3<2> (result, iv);
+    }
+
+    inline void operator() (Vec3 &result, float x, float y,
+                            float px, float py) const {
+        unsigned int iv[3];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (wrap (x, px));
+        iv[1] = OIIO::bit_cast<float,unsigned int> (wrap (y, py));
+        hash3<3> (result, iv);
+    }
+
+    inline void operator() (Vec3 &result, const Vec3 &p, const Vec3 &pp) const {
+        unsigned int iv[4];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (wrap (p.x, pp.x));
+        iv[1] = OIIO::bit_cast<float,unsigned int> (wrap (p.y, pp.y));
+        iv[2] = OIIO::bit_cast<float,unsigned int> (wrap (p.z, pp.z));
+        hash3<4> (result, iv);
+    }
+
+    inline void operator() (Vec3 &result, const Vec3 &p, float t,
+                            const Vec3 &pp, float tt) const {
+        unsigned int iv[5];
+        iv[0] = OIIO::bit_cast<float,unsigned int> (wrap (p.x, pp.x));
+        iv[1] = OIIO::bit_cast<float,unsigned int> (wrap (p.y, pp.y));
+        iv[2] = OIIO::bit_cast<float,unsigned int> (wrap (p.z, pp.z));
+        iv[3] = OIIO::bit_cast<float,unsigned int> (wrap (t, tt));
+        hash3<5> (result, iv);
+    }
+
+private:
+    template <int N>
+    inline void hash1 (float &result, const unsigned int k[N]) const {
+        result = bits_to_01(inthash<N>(k));
+    }
+
+    template <int N>
+    inline void hash3 (Vec3 &result, unsigned int k[N]) const {
+        k[N-1] = 0; result.x = bits_to_01 (inthash<N> (k));
+        k[N-1] = 1; result.y = bits_to_01 (inthash<N> (k));
+        k[N-1] = 2; result.z = bits_to_01 (inthash<N> (k));
+    }
+
+    inline float wrap (float s, float period) const {
+        period = floorf (period);
+        if (period < 1.0f)
+            period = 1.0f;
+        return s - period * floorf (s / period);
+    }
+
+    inline Vec3 wrap (const Vec3 &s, const Vec3 &period) {
+        return Vec3 (wrap (s[0], period[0]),
+                     wrap (s[1], period[1]),
+                     wrap (s[2], period[2]));
+    }
+};
+
+
+
 
 // Define select(bool,truevalue,falsevalue) template that works for a
 // variety of types that we can use for both scalars and vectors. Because ?:
@@ -443,20 +673,20 @@ private:
 template <typename B, typename F>
 OIIO_FORCEINLINE F select (const B& b, const F& t, const F& f) { return b ? t : f; }
 
-template <> OIIO_FORCEINLINE int4 select (const mask4& b, const int4& t, const int4& f) {
+template <> OIIO_FORCEINLINE int4 select (const bool4& b, const int4& t, const int4& f) {
     return blend (f, t, b);
 }
 
-template <> OIIO_FORCEINLINE float4 select (const mask4& b, const float4& t, const float4& f) {
+template <> OIIO_FORCEINLINE float4 select (const bool4& b, const float4& t, const float4& f) {
     return blend (f, t, b);
 }
 
 template <> OIIO_FORCEINLINE float4 select (const int4& b, const float4& t, const float4& f) {
-    return blend (f, t, mask4(b));
+    return blend (f, t, bool4(b));
 }
 
 template <> OIIO_FORCEINLINE Dual2<float4>
-select (const mask4& b, const Dual2<float4>& t, const Dual2<float4>& f) {
+select (const bool4& b, const Dual2<float4>& t, const Dual2<float4>& f) {
     return Dual2<float4> (blend (f.val(), t.val(), b),
                           blend (f.dx(),  t.dx(),  b),
                           blend (f.dy(),  t.dy(),  b));
@@ -464,7 +694,7 @@ select (const mask4& b, const Dual2<float4>& t, const Dual2<float4>& f) {
 
 template <>
 OIIO_FORCEINLINE Dual2<float4> select (const int4& b, const Dual2<float4>& t, const Dual2<float4>& f) {
-    return select (mask4(b), t, f);
+    return select (bool4(b), t, f);
 }
 
 
@@ -479,7 +709,7 @@ OIIO_FORCEINLINE FLOAT negate_if (const FLOAT& val, const BOOL& b) {
 template<> OIIO_FORCEINLINE float4 negate_if (const float4& val, const int4& b) {
     // Special case negate_if for SIMD -- can do it with bit tricks, no branches
     int4 highbit (0x80000000);
-    return bitcast_to_float4 (bitcast_to_int4(val) ^ (blend0 (highbit, mask4(b))));
+    return bitcast_to_float4 (bitcast_to_int4(val) ^ (blend0 (highbit, bool4(b))));
 }
 
 // Special case negate_if for SIMD -- can do it with bit tricks, no branches
@@ -2629,6 +2859,7 @@ namespace oslnoise {
 DECLNOISE (snoise, SNoise)
 DECLNOISE (noise, Noise)
 DECLNOISE (cellnoise, CellNoise)
+DECLNOISE (hashnoise, HashNoise)
 
 #undef DECLNOISE
 

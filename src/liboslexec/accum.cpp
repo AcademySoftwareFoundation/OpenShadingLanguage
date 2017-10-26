@@ -26,8 +26,8 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "OSL/accum.h"
-#include "OSL/oslclosure.h"
+#include <OSL/accum.h>
+#include <OSL/oslclosure.h>
 #include "lpeparse.h"
 #include <OpenImageIO/dassert.h>
 
@@ -89,7 +89,7 @@ AccumAutomata::addRule(const char *pattern, int outidx, bool toalpha)
         delete e;
         return NULL;
     }
-    m_accumrules.push_back (AccumRule (outidx, toalpha));
+    m_accumrules.emplace_back(outidx, toalpha);
     // it is a list, so as long as we don't remove it from there, the pointer is valid
     void *rule = (void *)&(m_accumrules.back());
     m_rules.push_back (new lpexp::Rule (e, rule));

@@ -212,9 +212,7 @@ typespec
                 }
         | STRUCT IDENTIFIER
                 {
-                    // Prepend the shader name to make globally unique
-                    std::string mangled = current_shader_name + "_" + $2;
-                    current_typespec = TypeSpec (mangled.c_str(), 0);
+                    current_typespec = TypeSpec ($2, 0);
                     $$ = 0;
                 }
         ;

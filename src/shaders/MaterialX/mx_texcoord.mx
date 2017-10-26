@@ -1,0 +1,30 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_funcs.h"
+
+
+
+vector2 mk_coord (float u, float v)
+{
+    return vector2(u,v);
+}
+
+vector mk_coord (float u, float v)
+{
+    return vector(u,v,0);
+}
+
+
+
+shader mx_texcoord_TYPE_SUFFIX
+    [[ string help = " The 2D texture coordinates" ]]
+  (
+    output TYPE out = TYPE_ZERO
+  )
+{
+    out = mk_coord (u, v);
+}

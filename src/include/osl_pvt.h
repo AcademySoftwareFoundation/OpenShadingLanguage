@@ -28,9 +28,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-#include "OSL/oslconfig.h"
-
+#include <memory>
 #include <OpenImageIO/dassert.h>
+
+#include <OSL/oslconfig.h>
 
 
 OSL_NAMESPACE_ENTER
@@ -201,7 +202,7 @@ public:
 
     /// Return a reference to the structure list.
     ///
-    static std::vector<shared_ptr<StructSpec> > & struct_list ();
+    static std::vector<std::shared_ptr<StructSpec> > & struct_list ();
 
     /// Is this an array (either a simple array, or an array of structs)?
     ///
@@ -430,7 +431,7 @@ public:
     /// Append a new field (with type and name) to this struct.
     ///
     void add_field (const TypeSpec &type, ustring name) {
-        m_fields.push_back (FieldSpec (type, name));
+        m_fields.emplace_back(type, name);
     }
 
     /// The name of this struct (may not be unique across all scopes).
@@ -799,9 +800,9 @@ public:
     }
 
     void add_jump (int target) {
-        for (unsigned int i = 0;  i < max_jumps;  ++i)
-            if (m_jump[i] < 0) {
-                m_jump[i] = target;
+        for (int& j : m_jump)
+            if (j < 0) {
+                j = target;
                 return;
             }
     }

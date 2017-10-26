@@ -33,20 +33,19 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <cmath>
 
-#include <boost/thread.hpp>
-
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/imagebufalgo.h>
 #include <OpenImageIO/imagebufalgo_util.h>
 #include <OpenImageIO/argparse.h>
 #include <OpenImageIO/strutil.h>
+#include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/timer.h>
 
-#include "OSL/oslexec.h"
-#include "OSL/oslcomp.h"
-#include "OSL/oslquery.h"
+#include <OSL/oslexec.h>
+#include <OSL/oslcomp.h>
+#include <OSL/oslquery.h>
 #include "simplerend.h"
 using namespace OSL;
 using OIIO::TypeDesc;
@@ -79,6 +78,7 @@ static bool do_oslquery = false;
 static bool inbuffer = false;
 static bool use_shade_image = false;
 static bool userdata_isconnected = false;
+static bool print_outputs = false;
 static int xres = 1, yres = 1;
 static int num_threads = 0;
 static std::string groupname;
@@ -94,6 +94,7 @@ static std::string raytype = "camera";
 static int raytype_bit = 0;
 static bool raytype_opt = false;
 static std::string extraoptions;
+static std::string texoptions;
 static SimpleRenderer rend;  // RendererServices
 static OSL::Matrix44 Mshad;  // "shader" space to "common" space matrix
 static OSL::Matrix44 Mobj;   // "object" space to "common" space matrix
@@ -101,19 +102,17 @@ static ShaderGroupRef shadergroup;
 static std::string archivegroup;
 static int exprcount = 0;
 static bool shadingsys_options_set = false;
-static float sscale = 1, tscale = 1;
-static float soffset = 0, toffset = 0;
+static float uscale = 1, vscale = 1;
+static float uoffset = 0, voffset = 0;
 
 
 
 static void
 inject_params ()
 {
-    for (size_t p = 0;  p < params.size();  ++p) {
-        const ParamValue &pv (params[p]);
+    for (auto&& pv : params)
         shadingsys->Parameter (pv.name(), pv.type(), pv.data(),
                                pv.interp() == ParamValue::INTERP_CONSTANT);
-    }
 }
 
 
@@ -222,6 +221,17 @@ add_shader (int argc, const char *argv[])
         params.clear ();
     }
     return 0;
+}
+
+
+
+static void
+action_shaderdecl (int argc, const char *argv[])
+{
+    // `--shader shadername layername` is exactly equivalent to:
+    // `--layer layername` followed by naming the shader.
+    layername = argv[2];
+    add_shader (1, argv+1);
 }
 
 
@@ -377,6 +387,21 @@ action_param (int argc, const char *argv[])
         return;
     }
 
+    // String arrays are slightly tricky
+    if (type.basetype == TypeDesc::STRING && type.is_array()) {
+        std::vector<string_view> splitelements;
+        OIIO::Strutil::split (stringval, splitelements, ",", type.arraylen);
+        splitelements.resize (type.arraylen);
+        std::vector<ustring> strelements;
+        for (auto&& s : splitelements)
+            strelements.push_back (ustring(s));
+        params.push_back (ParamValue());
+        params.back().init (paramname, type, 1, &strelements[0]);
+        if (unlockgeom)
+            params.back().interp (ParamValue::INTERP_VERTEX);
+        return;
+    }
+
     // All remaining cases -- it's a string
     const char *s = stringval.c_str();
     params.push_back (ParamValue());
@@ -446,14 +471,19 @@ getargs (int argc, const char *argv[])
                 "-g %d %d", &xres, &yres, "Make an X x Y grid of shading points",
                 "-res %d %d", &xres, &yres, "", // synonym for -g
                 "--options %s", &extraoptions, "Set extra OSL options",
+                "--texoptions %s", &texoptions, "Set extra TextureSystem options",
                 "-o %L %L", &outputvars, &outputfiles,
                         "Output (variable, filename)",
-                "-od %s", &dataformatname, "Set the output data format to one of: "
+                "-d %s", &dataformatname, "Set the output data format to one of: "
                         "uint8, half, float",
+                "-od %s", &dataformatname, "", // old name
+                "--print", &print_outputs, "Print values of all -o outputs to console instead of saving images",
                 "--groupname %s", &groupname, "Set shader group name",
                 "--layer %s", &layername, "Set next layer name",
                 "--param %@ %s %s", &action_param, NULL, NULL,
                         "Add a parameter (args: name value) (options: type=%s, lockgeom=%d)",
+                "--shader %@ %s %s", &action_shaderdecl, NULL, NULL,
+                        "Declare a shader node (args: shader layername)",
                 "--connect %L %L %L %L",
                     &connections, &connections, &connections, &connections,
                     "Connect fromlayer fromoutput tolayer toinput",
@@ -480,8 +510,10 @@ getargs (int argc, const char *argv[])
                 "--shadeimage", &use_shade_image, "Use shade_image utility",
                 "--noshadeimage %!", &use_shade_image, "Don't use shade_image utility",
                 "--expr %@ %s", &specify_expr, NULL, "Specify an OSL expression to evaluate",
-                "--offsetst %f %f", &soffset, &toffset, "Offset s & t texture coordinates (default: 0 0)",
-                "--scalest %f %f", &sscale, &tscale, "Scale s & t texture lookups (default: 1, 1)",
+                "--offsetuv %f %f", &uoffset, &voffset, "Offset s & t texture coordinates (default: 0 0)",
+                "--offsetst %f %f", &uoffset, &voffset, "", // old name
+                "--scaleuv %f %f", &uscale, &vscale, "Scale s & t texture lookups (default: 1, 1)",
+                "--scalest %f %f", &uscale, &vscale, "", // old name
                 "--userdata_isconnected", &userdata_isconnected, "Consider lockgeom=0 to be isconnected()",
                 "-v", &verbose, "Verbose output",
                 NULL);
@@ -571,17 +603,17 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
     if (pixelcenters) {
         // Our patch is like an "image" with shading samples at the
         // centers of each pixel.
-        sg.u = sscale * (float)(x+0.5f) / xres + soffset;
-        sg.v = tscale * (float)(y+0.5f) / yres + toffset;
-        sg.dudx = sscale / xres;
-        sg.dvdy = tscale / yres;
+        sg.u = uscale * (float)(x+0.5f) / xres + uoffset;
+        sg.v = vscale * (float)(y+0.5f) / yres + voffset;
+        sg.dudx = uscale / xres;
+        sg.dvdy = vscale / yres;
     } else {
         // Our patch is like a Reyes grid of points, with the border
         // samples being exactly on u,v == 0 or 1.
-        sg.u = sscale * ((xres == 1) ? 0.5f : (float) x / (xres - 1)) + soffset;
-        sg.v = tscale * ((yres == 1) ? 0.5f : (float) y / (yres - 1)) + toffset;
-        sg.dudx = sscale / std::max (1, xres-1);
-        sg.dvdy = tscale / std::max (1, yres-1);
+        sg.u = uscale * ((xres == 1) ? 0.5f : (float) x / (xres - 1)) + uoffset;
+        sg.v = vscale * ((yres == 1) ? 0.5f : (float) y / (yres - 1)) + voffset;
+        sg.dudx = uscale / std::max (1, xres-1);
+        sg.dvdy = vscale / std::max (1, yres-1);
     }
 
     // Assume that position P is simply (u,v,1), that makes the patch lie
@@ -647,6 +679,8 @@ setup_output_images (ShadingSystem *shadingsys,
 
     if (extraoptions.size())
         shadingsys->attribute ("options", extraoptions);
+    if (texoptions.size())
+        shadingsys->texturesys()->attribute ("options", texoptions);
 
     ShadingContext *ctx = shadingsys->get_context ();
     // Because we can only call find_symbol or get_symbol on something that
@@ -677,7 +711,7 @@ setup_output_images (ShadingSystem *shadingsys,
     // For each output file specified on the command line...
     for (size_t i = 0;  i < outputfiles.size();  ++i) {
         // Make a ustring version of the output name, for fast manipulation
-        outputvarnames.push_back (ustring(outputvars[i]));
+        outputvarnames.emplace_back(outputvars[i]);
         // Start with a NULL ImageBuf pointer
         outputimgs.push_back (NULL);
 
@@ -742,6 +776,8 @@ setup_output_images (ShadingSystem *shadingsys,
 static void
 save_outputs (ShadingSystem *shadingsys, ShadingContext *ctx, int x, int y)
 {
+    if (print_outputs)
+        printf ("Pixel (%d, %d):\n", x, y);
     // For each output requested on the command line...
     for (size_t i = 0;  i < outputfiles.size();  ++i) {
         // Skip if we couldn't open the image or didn't match a known output
@@ -755,18 +791,30 @@ save_outputs (ShadingSystem *shadingsys, ShadingContext *ctx, int x, int y)
         if (!data)
             continue;  // Skip if symbol isn't found
 
+        int nchans = outputimgs[i]->nchannels();
         if (t.basetype == TypeDesc::FLOAT) {
             // If the variable we are outputting is float-based, set it
             // directly in the output buffer.
             outputimgs[i]->setpixel (x, y, (const float *)data);
+            if (print_outputs) {
+                printf ("  %s :", outputvarnames[i].c_str());
+                for (int c = 0; c < nchans; ++c)
+                    printf (" %g", ((const float *)data)[c]);
+                printf ("\n");
+            }
         } else if (t.basetype == TypeDesc::INT) {
             // We are outputting an integer variable, so we need to
             // convert it to floating point.
-            int nchans = outputimgs[i]->nchannels();
             float *pixel = (float *) alloca (nchans * sizeof(float));
             OIIO::convert_types (TypeDesc::BASETYPE(t.basetype), data,
                                  TypeDesc::FLOAT, pixel, nchans);
             outputimgs[i]->setpixel (x, y, &pixel[0]);
+            if (print_outputs) {
+                printf ("  %s :", outputvarnames[i].c_str());
+                for (int c = 0; c < nchans; ++c)
+                    printf (" %d", ((const int *)data)[c]);
+                printf ("\n");
+            }
         }
         // N.B. Drop any outputs that aren't float- or int-based
     }
@@ -1007,6 +1055,15 @@ test_shade (int argc, const char *argv[])
     // instances and their parameters for the group.
     getargs (argc, argv);
 
+    if (params.size()) {
+        std::cerr << "ERROR: Pending parameters without a shader:";
+        for (auto&& pv : params)
+            std::cerr << " " << pv.name();
+        std::cerr << "\n";
+        std::cerr << "Did you mistakenly put --param after the shader declaration?\n";
+        return EXIT_FAILURE;
+    }
+
     if (! shadergroup) {
         std::cerr << "ERROR: Invalid shader group. Exiting testshade.\n";
         return EXIT_FAILURE;
@@ -1081,7 +1138,7 @@ test_shade (int argc, const char *argv[])
         test_group_attributes (shadergroup.get());
 
     if (num_threads < 1)
-        num_threads = boost::thread::hardware_concurrency();
+        num_threads = OIIO::Sysutil::hardware_concurrency();
 
     double setuptime = timer.lap ();
 
@@ -1102,7 +1159,7 @@ test_shade (int argc, const char *argv[])
             shade_region (shadergroup.get(), roi, save);
 #else
             OIIO::ImageBufAlgo::parallel_image (
-                    boost::bind (shade_region, shadergroup.get(), _1, save),
+                    std::bind (shade_region, shadergroup.get(), std::placeholders::_1, save),
                     roi, num_threads);
 #endif
         }
@@ -1117,6 +1174,7 @@ test_shade (int argc, const char *argv[])
             }
         }
     }
+    double runtime = timer.lap();
 
     if (outputfiles.size() == 0)
         std::cout << "\n";
@@ -1124,7 +1182,26 @@ test_shade (int argc, const char *argv[])
     // Write the output images to disk
     for (size_t i = 0;  i < outputimgs.size();  ++i) {
         if (outputimgs[i]) {
-            outputimgs[i]->write (outputimgs[i]->name());
+            if (! print_outputs) {
+                std::string filename = outputimgs[i]->name();
+                // JPEG, GIF, and PNG images should be automatically saved
+                // as sRGB because they are almost certainly supposed to
+                // be displayed on web pages.
+                using namespace OIIO;
+                if (Strutil::iends_with (filename, ".jpg") ||
+                    Strutil::iends_with (filename, ".jpeg") ||
+                    Strutil::iends_with (filename, ".gif") ||
+                    Strutil::iends_with (filename, ".png")) {
+                    ImageBuf ccbuf;
+                    ImageBufAlgo::colorconvert (ccbuf, *outputimgs[i],
+                                                "linear", "sRGB", false,
+                                                "", "");
+                    ccbuf.set_write_format (outputimgs[i]->spec().format);
+                    ccbuf.write (filename);
+                } else {
+                    outputimgs[i]->write (filename);
+                }
+            }
             delete outputimgs[i];
             outputimgs[i] = NULL;
         }
@@ -1132,10 +1209,11 @@ test_shade (int argc, const char *argv[])
 
     // Print some debugging info
     if (debug || runstats || profile) {
-        double runtime = timer.lap();
+        double writetime = timer.lap();
         std::cout << "\n";
         std::cout << "Setup: " << OIIO::Strutil::timeintervalformat (setuptime,2) << "\n";
         std::cout << "Run  : " << OIIO::Strutil::timeintervalformat (runtime,2) << "\n";
+        std::cout << "Write: " << OIIO::Strutil::timeintervalformat (writetime,2) << "\n";
         std::cout << "\n";
         std::cout << shadingsys->getstats (5) << "\n";
         OIIO::TextureSystem *texturesys = shadingsys->texturesys();

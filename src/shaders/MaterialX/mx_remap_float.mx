@@ -1,0 +1,31 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_funcs.h"
+
+shader mx_remap_float_TYPE_SUFFIX
+    [[ string help = TYPE_STR" Increase or decrease remap of a float/color value using a linear slope multiplier." ]]
+  (
+    TYPE in = TYPE_DEFAULT_IN,
+    float inlow = 0,
+    float inhigh = 1,
+    float gamma  = 1,
+    float outlow = 0,
+    float outhigh = 1,
+    int doclamp = 0,
+    output TYPE out = TYPE_DEFAULT_OUT
+  )
+{
+    //remap from [inlow, inhigh] to [0,1]
+    out = remap(in, inlow, inhigh, 0, 1, 0);
+
+    //apply gamma
+    out = fgamma(out, gamma);
+
+    //remap from [0,1] to [outlow, outhigh]
+    out = remap(out, 0, 1, outlow, outhigh, doclamp); 
+
+}

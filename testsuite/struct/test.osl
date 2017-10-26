@@ -53,6 +53,13 @@ test (
     // Structure selection
     printf ("a == { %g, %i, [%g], %s }\n", a.f, a.i, a.p, a.s);
 
+    // Test struct construction
+    {
+        Astruct x = Astruct (M_PI*2, 21, point(1,2,3), "constructed");
+        printf ("\n");
+        printf ("constructed x == { %g, %i, [%g], %s }\n", x.f, x.i, x.p, x.s);
+    }
+
     // Make sure it came in ok as a param
     printf ("\n");
     printf ("struct param:  aparam == { %g, %i, [%g], %s }\n",

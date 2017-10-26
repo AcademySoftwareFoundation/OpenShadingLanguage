@@ -30,8 +30,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <iostream>
 
-#include <boost/foreach.hpp>
-
 #include "oslcomp_pvt.h"
 
 #include <OpenImageIO/dassert.h>
@@ -100,8 +98,7 @@ OSLCompilerImpl::insert_code (int opnum, const char *opname,
     // the jump addresses of other ops and the param init ranges.
     if (opnum < (int)m_ircode.size()-1) {
         // Adjust jump offsets
-        for (size_t n = 0;  n < m_ircode.size();  ++n) {
-            Opcode &c (m_ircode[n]);
+        for (auto& c : m_ircode) {
             for (int j = 0; j < (int)Opcode::max_jumps && c.jump(j) >= 0; ++j) {
                 if (c.jump(j) > opnum) {
                     c.jump(j) = c.jump(j) + 1;
@@ -110,7 +107,7 @@ OSLCompilerImpl::insert_code (int opnum, const char *opname,
             }
         }
         // Adjust param init ranges
-        BOOST_FOREACH (Symbol *s, symtab()) {
+        for (auto&& s : symtab()) {
             if (s->symtype() == SymTypeParam ||
                   s->symtype() == SymTypeOutputParam) {
                 if (s->initbegin() > opnum)
@@ -197,7 +194,7 @@ OSLCompilerImpl::add_struct_fields (StructSpec *structspec,
 Symbol *
 OSLCompilerImpl::make_constant (ustring val)
 {
-    BOOST_FOREACH (ConstantSymbol *sym, m_const_syms) {
+    for (auto&& sym : m_const_syms) {
         if (sym->typespec().is_string() && sym->strval() == val)
             return sym;
     }
@@ -215,7 +212,7 @@ Symbol *
 OSLCompilerImpl::make_constant (TypeDesc type, const void *val)
 {
     size_t typesize = type.size();
-    BOOST_FOREACH (ConstantSymbol *sym, m_const_syms) {
+    for (auto&& sym : m_const_syms) {
         if (sym->typespec().simpletype() == type &&
               ! memcmp(val, sym->data(), typesize))
             return sym;
@@ -234,7 +231,7 @@ OSLCompilerImpl::make_constant (TypeDesc type, const void *val)
 Symbol *
 OSLCompilerImpl::make_constant (int val)
 {
-    BOOST_FOREACH (ConstantSymbol *sym, m_const_syms) {
+    for (auto&& sym : m_const_syms) {
         if (sym->typespec().is_int() && sym->intval() == val)
             return sym;
     }
@@ -251,7 +248,7 @@ OSLCompilerImpl::make_constant (int val)
 Symbol *
 OSLCompilerImpl::make_constant (float val)
 {
-    BOOST_FOREACH (ConstantSymbol *sym, m_const_syms) {
+    for (auto&& sym : m_const_syms) {
         if (sym->typespec().is_float() && sym->floatval() == val)
             return sym;
     }
@@ -269,7 +266,7 @@ Symbol *
 OSLCompilerImpl::make_constant (TypeDesc type, float x, float y, float z)
 {
     Vec3 val (x, y, z);
-    BOOST_FOREACH (ConstantSymbol *sym, m_const_syms) {
+    for (auto&& sym : m_const_syms) {
         if (sym->typespec().simpletype() == type && sym->vecval() == val)
             return sym;
     }
@@ -354,7 +351,7 @@ ASTNode::codegen (Symbol *dest)
 void
 ASTNode::codegen_children ()
 {
-    BOOST_FOREACH (ref &c, m_children) {
+    for (auto&& c : m_children) {
         codegen_list (c);
     }
 }
@@ -534,11 +531,13 @@ ASTassign_expression::codegen (Symbol *dest)
         return dest;
     }
 
-    if (index)
+    if (index) {
         index->codegen_assign (operand);
-    else if (operand != dest)
+        dest = operand;  // so transitive assignment works for array refs
+    } else if (operand != dest) {
         emitcode (typespec().is_array() ? "arraycopy" : "assign",
                   dest, operand);
+    }
     return dest;
 }
 
@@ -622,8 +621,8 @@ ASTNode::codegen_assign_struct (StructSpec *structspec,
 
 
 bool
-ASTvariable_declaration::param_one_default_literal (const Symbol *sym,
-               ASTNode *init, std::string &out, const std::string &sep) const
+ASTNode::one_default_literal (const Symbol *sym, ASTNode *init,
+                              std::string &out, string_view sep) const
 {
     // FIXME -- this only works for single values or arrays made of
     // literals.  Needs to be seriously beefed up.
@@ -777,7 +776,7 @@ ASTvariable_declaration::param_default_literals (const Symbol *sym,
         // the node that defined its parameter (i.e., *this). Look in that
         // list for the initializer for this specific field.
         init = NULL;
-        BOOST_FOREACH (const NamedInit &n, m_struct_field_inits) {
+        for (auto&& n : m_struct_field_inits) {
             if (n.first == sym->name()) {
                 init = n.second;
                 break;
@@ -794,7 +793,7 @@ ASTvariable_declaration::param_default_literals (const Symbol *sym,
     for (int i = 0;  i==0 || init;  ++i, init = init->nextptr()) {
         if (i)
             out += separator;
-        completed &= param_one_default_literal (sym, init, out, separator);
+        completed &= one_default_literal (sym, init, out, separator);
         if (! compound || ! init)
             break;
     }
@@ -833,15 +832,14 @@ ASTvariable_declaration::codegen_initializer (ref init, Symbol *sym)
 
 
 void
-ASTvariable_declaration::codegen_initlist (ref init, TypeSpec type,
-                                           Symbol *sym)
+ASTNode::codegen_initlist (ref init, TypeSpec type, Symbol *sym)
 {
     // If we're doing this initialization for shader params for their
     // init ops, we need to take care to set the codegen method names
     // properly.
     bool paraminit = (m_compiler->codegen_method() != m_compiler->main_method_name() &&
-                      (m_sym->symtype() == SymTypeParam ||
-                       m_sym->symtype() == SymTypeOutputParam));
+                      (sym->symtype() == SymTypeParam ||
+                       sym->symtype() == SymTypeOutputParam));
 
     if (type.is_structure()) {
         // Special case -- structure : Recurse to handle each field
@@ -852,9 +850,13 @@ ASTvariable_declaration::codegen_initlist (ref init, TypeSpec type,
             ustring fieldname = ustring::format ("%s.%s", sym->mangled(),
                                                  field.name);
             Symbol *fieldsym = m_compiler->symtab().find_exact (fieldname);
-            std::string out;
-            if (paraminit && param_default_literals(fieldsym, init.get(), out))
-                continue;  // Skip if we had a static initalizer
+            if (paraminit) {
+                ASSERT (nodetype() == variable_declaration_node);
+                ASTvariable_declaration *v = (ASTvariable_declaration *)this;
+                std::string out;
+                if (v->param_default_literals(fieldsym, init.get(), out))
+                    continue;  // Skip if we had a static initalizer
+            }
             codegen_initlist (init, fieldsym->typespec(), fieldsym);
         }
         return;
@@ -956,17 +958,18 @@ ASTvariable_declaration::codegen_initlist (ref init, TypeSpec type,
 
 
 Symbol *
-ASTvariable_declaration::codegen_struct_initializers (ref init, Symbol *sym)
+ASTNode::codegen_struct_initializers (ref init, Symbol *sym,
+                                      bool is_constructor)
 {
     // If we're doing this initialization for shader params for their
     // init ops, we need to take care to set the codegen method names
     // properly.
     bool paraminit = (m_compiler->codegen_method() != m_compiler->main_method_name() &&
-                      (m_sym->symtype() == SymTypeParam ||
-                       m_sym->symtype() == SymTypeOutputParam));
+                      (sym->symtype() == SymTypeParam ||
+                       sym->symtype() == SymTypeOutputParam));
 
     ASSERT (sym->typespec().is_structure());
-    if (init->nodetype() != compound_initializer_node) {
+    if (init->nodetype() != compound_initializer_node && !is_constructor) {
         // Just one initializer, it's a whole struct of the right type.
         Symbol *initsym = init->codegen (sym);
         if (initsym != sym) {
@@ -979,7 +982,9 @@ ASTvariable_declaration::codegen_struct_initializers (ref init, Symbol *sym)
     }
 
     // General case -- per-field initializers
-    init = ((ASTcompound_initializer *)init.get())->initlist();
+    if (init->nodetype() == compound_initializer_node) {
+        init = ((ASTcompound_initializer *)init.get())->initlist();
+    }
     StructSpec *structspec (sym->typespec().structspec());
     for (int i = 0; init && i < structspec->numfields(); init = init->next(), ++i) {
         // Structure element -- assign to the i-th member field
@@ -997,7 +1002,9 @@ ASTvariable_declaration::codegen_struct_initializers (ref init, Symbol *sym)
             // For parameter initialization, don't really generate ops if it
             // can be statically initialized.
             std::string out;
-            if (param_default_literals (fieldsym, init.get(), out))
+            ASSERT (nodetype() == variable_declaration_node);
+            ASTvariable_declaration *v = (ASTvariable_declaration *)this;
+            if (v->param_default_literals (fieldsym, init.get(), out))
                 continue;
 
             // Delineate and remember the init ops for this field individually
@@ -1354,6 +1361,15 @@ ASTunary_expression::codegen (Symbol *dest)
 {
     // Code generation for unary expressions (-x, !x, etc.)
 
+    if (m_function_overload) {
+        // A little crazy, but we temporarily construct an ASTfunction_call
+        // in order to codegen this overloaded operator.
+        ustring funcname = ustring::format ("__operator__%s__", opword());
+        ASTfunction_call fc (m_compiler, funcname, expr().get(), m_function_overload);
+        fc.typecheck (typespec());
+        return dest = fc.codegen (dest);
+    }
+
     if (m_op == Not) {
         // Special case for logical ops
         return expr()->codegen_int (NULL, true /*boolify*/, true /*invert*/);
@@ -1390,6 +1406,27 @@ ASTunary_expression::codegen (Symbol *dest)
 Symbol *
 ASTbinary_expression::codegen (Symbol *dest)
 {
+    if (m_function_overload) {
+        // A little crazy, but we temporarily construct an ASTfunction_call
+        // in order to codegen this overloaded operator. Slightly tricky
+        // is that we need to concatenate our left and right arguments into
+        // an arg list.
+        ustring funcname = ustring::format ("__operator__%s__", opword());
+        if (left()->nextptr() || right()->nextptr()) {
+            error ("Overloaded %s cannot be passed arguments %s and %s",
+                   funcname, left()->nodetypename(), right()->nodetypename());
+            return dest;
+        }
+        ref args = left();
+        args->append (right().get());
+        ASTfunction_call fc (m_compiler, funcname, args.get(), m_function_overload);
+        fc.typecheck (typespec());
+        dest = fc.codegen (dest);
+        // now put things back the way we found them
+        left()->detach_next ();
+        return dest;
+    }
+
     // Special case for logic ops that short-circuit
     if (m_op == And || m_op == Or)
         return codegen_logic (dest);
@@ -1641,6 +1678,14 @@ ASTfunction_call::argwrite (int arg) const
 Symbol *
 ASTfunction_call::codegen (Symbol *dest)
 {
+    if (is_struct_ctr()) {
+        // Looks like function call, but is actually struct constructor
+        if (! dest)
+            dest = m_compiler->make_temporary (typespec());
+        codegen_struct_initializers (args(), dest, true /*is_constructor*/);
+        return dest;
+    }
+
     // Set up a return destination if not passed one (or not the right type)
     if (! typespec().is_void()) {
         if (dest == NULL || ! equivalent (dest->typespec(), typespec()))
@@ -1688,7 +1733,9 @@ ASTfunction_call::codegen (Symbol *dest)
                 // If the formal parameter is a struct, we also need to
                 // alias each of the fields
                 if (a->nodetype() == variable_ref_node ||
-                    a->nodetype() == function_call_node) {
+                    a->nodetype() == function_call_node ||
+                    a->nodetype() == binary_expression_node ||
+                    a->nodetype() == unary_expression_node) {
                     // Passed a variable that is a struct ; make the struct
                     // fields of the formal param alias to the struct fields
                     // of the actual param. Exact same logic if passed the

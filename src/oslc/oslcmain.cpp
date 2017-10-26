@@ -33,14 +33,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <vector>
 
-#include <boost/scoped_ptr.hpp>
-
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/thread.h>
 
-#include "OSL/oslcomp.h"
-#include "OSL/oslexec.h"
+#include <OSL/oslcomp.h>
+#include <OSL/oslexec.h>
 using namespace OSL;
 
 
@@ -64,36 +62,6 @@ usage ()
         "\t-d             Debug mode\n"
         "\t-E             Only preprocess the input and output to stdout\n"
         ;
-}
-
-
-
-// Guess the path for stdosl.h. Try ../shaders, if this is oslc, that's
-// where you'd expect it to be.
-static std::string
-stdoslpath ()
-{
-    std::string program = OIIO::Sysutil::this_program_path ();
-    if (program.size()) {
-        std::string path (program);  // our program
-        path = OIIO::Filesystem::parent_path(path);  // the bin dir of our program
-        path = OIIO::Filesystem::parent_path(path);  // now the parent dir
-        std::string savepath = path;
-        // We search two spots: ../../lib/osl/include, and ../shaders
-        path = savepath + "/lib/osl/include";
-        if (OIIO::Filesystem::exists (path)) {
-            path = path + "/stdosl.h";
-            if (OIIO::Filesystem::exists (path))
-                return path;
-        }
-        path = savepath + "/shaders";
-        if (OIIO::Filesystem::exists (path)) {
-            path = path + "/stdosl.h";
-            if (OIIO::Filesystem::exists (path))
-                return path;
-        }
-    }
-    return std::string();
 }
 
 
@@ -165,21 +133,21 @@ main (int argc, const char *argv[])
                  ! strcmp (argv[a], "-O") || ! strcmp (argv[a], "-O0") ||
                  ! strcmp (argv[a], "-O1") || ! strcmp (argv[a], "-O2")) {
             // Valid command-line argument
-            args.push_back (argv[a]);
+            args.emplace_back(argv[a]);
             quiet |= (strcmp (argv[a], "-q") == 0);
         }
         else if (! strcmp (argv[a], "-o") && a < argc-1) {
-            args.push_back (argv[a]);
+            args.emplace_back(argv[a]);
             ++a;
-            args.push_back (argv[a]);
+            args.emplace_back(argv[a]);
         }
         else if (argv[a][0] == '-' &&
                  (argv[a][1] == 'D' || argv[a][1] == 'U' || argv[a][1] == 'I')) {
-            args.push_back (argv[a]);
+            args.emplace_back(argv[a]);
         }
         else {
             OSLCompiler compiler (&default_oslc_error_handler);
-            bool ok = compiler.compile (argv[a], args, stdoslpath());
+            bool ok = compiler.compile (argv[a], args);
             if (ok) {
                 if (!quiet)
                     std::cout << "Compiled " << argv[a] << " -> " 

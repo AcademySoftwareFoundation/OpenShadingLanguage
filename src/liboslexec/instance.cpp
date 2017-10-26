@@ -31,8 +31,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdio>
 #include <algorithm>
 
-#include <boost/foreach.hpp>
-
 #include <OpenImageIO/dassert.h>
 #include <OpenImageIO/strutil.h>
 
@@ -191,15 +189,13 @@ ShaderInstance::param_storage (int index) const
 
 
 
-// Can a parameter with type 'a' be bound to a value of type b.
-// This is true when they are identical types, but also when 'a' is an
-// array of unspecified length, while b is an array of the same type, with
-// definite length.
-inline bool compatible (const TypeDesc& a, const TypeDesc& b)
+// Can a parameter with type 'a' be bound to a value of type b?
+// Requires matching types (and if arrays, matching lengths or for
+// a's length to be undetermined), or it's also ok to bind a single float to
+// a non-array triple. All triples are considered equivalent for this test.
+inline bool compatible_param (const TypeDesc& a, const TypeDesc& b)
 {
-    return a.basetype == b.basetype && a.aggregate == b.aggregate &&
-           a.vecsemantics == b.vecsemantics &&
-           (a.arraylen == b.arraylen || (a.arraylen == -1 && b.arraylen > 0));
+    return equivalent (a, b) || (a.is_vec3() && b == TypeDesc::FLOAT);
 }
 
 
@@ -222,7 +218,7 @@ ShaderInstance::parameters (const ParamValueList &params)
         m_instoverrides[i].dataoffset (sym->dataoffset());
     }
 
-    BOOST_FOREACH (const ParamValue &p, params) {
+    for (auto&& p : params) {
         if (p.name().size() == 0)
             continue;   // skip empty names
         int i = findparam (p.name());
@@ -240,11 +236,46 @@ ShaderInstance::parameters (const ParamValueList &params)
             if (sm_typespec.is_structure())
                 continue;    // structs are just placeholders; skip
 
+            const void *data = p.data();
+            float tmpdata[3]; // used for inline conversions to float/float[3]
+
             // Check type of parameter and matching symbol. Note that the
             // compatible accounts for indefinite-length arrays.
-            TypeDesc paramtype = sm_typespec.simpletype();
-            TypeDesc valuetype = p.type();
-            if (!compatible(paramtype, valuetype)) {
+            TypeDesc paramtype = sm_typespec.simpletype();  // what the shader writer wants
+            TypeDesc valuetype = p.type();                  // what the data provided actually is
+
+            if (master()->shadingsys().relaxed_param_typecheck()) {
+                // first handle cases where we actually need to modify the data (like setting a float parameter with an int)
+                if ((paramtype == TypeDesc::FLOAT || paramtype.is_vec3()) && valuetype.basetype == TypeDesc::INT && valuetype.basevalues() == 1) {
+                    int val = *static_cast<const int*>(p.data());
+                    float conv = float(val);
+                    if (val != int(conv))
+                        shadingsys().error ("attempting to set parameter from wrong type would change the value: %s (set %.9g from %d)",
+                            sm->name(), conv, val);
+                    tmpdata[0] = conv;
+                    data = tmpdata;
+                    valuetype = TypeDesc::FLOAT;
+                }
+
+                // Relaxed rules just look to see that the types are isomorphic to each other (ie: same number of base values)
+                // Note that:
+                //   * basetypes must match exactly (int vs float vs string)
+                //   * valuetype cannot be unsized (we must know the concrete number of values)
+                //   * if paramtype is sized (or not an array) just check for the total number of entries
+                //   * if paramtype is unsized (shader writer is flexible about how many values come in) -- make sure we are a multiple of the target type
+                //   * allow a single float setting a vec3 (or equivalent)
+                if (!( valuetype.basetype == paramtype.basetype &&
+                      !valuetype.is_unsized_array() &&
+                      ((!paramtype.is_unsized_array() && valuetype.basevalues() == paramtype.basevalues()) ||
+                       ( paramtype.is_unsized_array() && valuetype.basevalues() % paramtype.aggregate == 0) ||
+                       ( paramtype.is_vec3()          && valuetype == TypeDesc::FLOAT) ) )) {
+                    // We are being very relaxed in this mode, so if the user _still_ got it wrong
+                    // something more serious is at play and we should treat it as an error.
+                    shadingsys().error ("attempting to set parameter from incompatible type: %s (expected '%s', received '%s')",
+                                          sm->name(), paramtype, valuetype);
+                    continue;
+                }
+            } else if (!compatible_param(paramtype, valuetype)) {
                 shadingsys().warning ("attempting to set parameter with wrong type: %s (expected '%s', received '%s')",
                                       sm->name(), paramtype, valuetype);
                 continue;
@@ -263,6 +294,16 @@ ShaderInstance::parameters (const ParamValueList &params)
 
             DASSERT (so->dataoffset() == sm->dataoffset());
             so->dataoffset (sm->dataoffset());
+
+            if (paramtype.is_vec3() && valuetype == TypeDesc::FLOAT) {
+                // Handle the special case of assigning a float for a triple
+                // by replicating it into local memory.
+                tmpdata[0] = *(const float *)data;
+                tmpdata[1] = *(const float *)data;
+                tmpdata[2] = *(const float *)data;
+                data = &tmpdata;
+                valuetype = paramtype;
+            }
 
             if (paramtype.arraylen < 0) {
                 // An array of definite size was supplied to a parameter
@@ -303,7 +344,7 @@ ShaderInstance::parameters (const ParamValueList &params)
                 // clause of that test.
                 void *defaultdata = m_master->param_default_storage(i);
                 if (lockgeom &&
-                      memcmp (defaultdata, p.data(), valuetype.size()) == 0) {
+                      memcmp (defaultdata, data, valuetype.size()) == 0) {
                     // Must reset valuesource to default, in case the parameter
                     // was set already, and now is being changed back to default.
                     so->valuesource (Symbol::DefaultVal);
@@ -311,7 +352,7 @@ ShaderInstance::parameters (const ParamValueList &params)
             }
 
             // Copy the supplied data into place.
-            memcpy (param_storage(i), p.data(), valuetype.size());
+            memcpy (param_storage(i), data, valuetype.size());
         }
         else {
             shadingsys().warning ("attempting to set nonexistent parameter: %s", p.name());
@@ -390,7 +431,7 @@ ShaderInstance::add_connection (int srclayer, const ConnectedParam &srccon,
     }
 
     off_t oldmem = vectorbytes(m_connections);
-    m_connections.push_back (Connection (srclayer, srccon, dstcon));
+    m_connections.emplace_back(srclayer, srccon, dstcon);
 
     // adjust stats
     off_t mem = vectorbytes(m_connections) - oldmem;
@@ -409,7 +450,7 @@ ShaderInstance::evaluate_writes_globals_and_userdata_params ()
 {
     writes_globals (false);
     userdata_params (false);
-    BOOST_FOREACH (Symbol &s, symbols()) {
+    for (auto&& s : symbols()) {
         if (s.symtype() == SymTypeGlobal && s.everwritten())
             writes_globals (true);
         if ((s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam)
@@ -425,7 +466,7 @@ ShaderInstance::evaluate_writes_globals_and_userdata_params ()
     // the symbol overrides. This is very important to get instance merging
     // working correctly.
     int p = 0;
-    BOOST_FOREACH (SymOverrideInfo &s, m_instoverrides) {
+    for (auto&& s : m_instoverrides) {
         if (! s.lockgeom())
             userdata_params (true);
         ++p;
@@ -671,7 +712,7 @@ ShaderGroup::ShaderGroup (string_view name)
   : m_optimized(0), m_does_nothing(false),
     m_llvm_groupdata_size(0), m_num_entry_layers(0),
     m_llvm_compiled_version(NULL),
-    m_name(name), m_exec_repeat(1), m_raytype_queries(-1)
+    m_name(name), m_exec_repeat(1), m_raytype_queries(-1), m_raytypes_on(0), m_raytypes_off(0)
 {
     m_executions = 0;
     m_stat_total_shading_time_ticks = 0;
@@ -685,7 +726,7 @@ ShaderGroup::ShaderGroup (const ShaderGroup &g, string_view name)
     m_llvm_groupdata_size(0), m_num_entry_layers(g.m_num_entry_layers),
     m_llvm_compiled_version(NULL),
     m_layers(g.m_layers),
-    m_name(name), m_exec_repeat(1), m_raytype_queries(-1)
+    m_name(name), m_exec_repeat(1), m_raytype_queries(-1), m_raytypes_on(0), m_raytypes_off(0)
 {
     m_executions = 0;
     m_stat_total_shading_time_ticks = 0;

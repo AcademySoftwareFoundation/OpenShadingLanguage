@@ -34,6 +34,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 
 #include <OpenImageIO/imageio.h>
+#include <OpenImageIO/imagebuf.h>
+#include <OpenImageIO/imagebufalgo.h>
 #include <OpenImageIO/argparse.h>
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/timer.h>
@@ -45,10 +47,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # include <OpenImageIO/pugixml.hpp>
 #endif
 
-#include <boost/thread.hpp>
-#include <boost/ref.hpp>
-
-#include "OSL/oslexec.h"
+#include <OSL/oslexec.h>
 #include "simplerend.h"
 #include "raytracer.h"
 #include "background.h"
@@ -57,7 +56,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "util.h"
 
 
-using namespace OIIO;
 using namespace OSL;
 
 namespace { // anonymous namespace
@@ -236,6 +234,9 @@ void parse_scene() {
     }
     text.push_back(0); // make sure text ends with trailing 0
 
+#ifdef USING_OIIO_PUGI
+    namespace pugi = OIIO::pugi;
+#endif
     // build DOM tree
     pugi::xml_document doc;
     pugi::xml_parse_result parse_result = doc.load_file(scenefile.c_str());
@@ -585,6 +586,7 @@ void scanline_worker(Counter& counter, std::vector<Color3>& pixels) {
 } // anonymous namespace
 
 int main (int argc, const char *argv[]) {
+    using namespace OIIO;
     Timer timer;
 
     // Create a new shading system.  We pass it the RendererServices
@@ -634,7 +636,7 @@ int main (int argc, const char *argv[]) {
     // validate options
     if (aa < 1) aa = 1;
     if (num_threads < 1)
-        num_threads = boost::thread::hardware_concurrency();
+        num_threads = std::thread::hardware_concurrency();
 
     // prepare background importance table (if requested)
     if (backgroundResolution > 0 && backgroundShaderID >= 0) {
@@ -655,32 +657,43 @@ int main (int argc, const char *argv[]) {
 
     double setuptime = timer.lap ();
 
+    // Local memory for the pixels
     std::vector<Color3> pixels(xres * yres, Color3(0,0,0));
+    // Make an ImageBuf that wraps it ('pixels' still owns the memory)
+    ImageBuf pixelbuf (ImageSpec(xres, yres, 3, TypeDesc::FLOAT), pixels.data());
 
     // Create shared counter to iterate over one scanline at a time
     Counter scanline_counter(errhandler, yres, "Rendering");
     // launch a scanline worker for each thread
-    boost::thread_group workers;
+    OIIO::thread_group workers;
     for (int i = 0; i < num_threads; i++)
-        workers.add_thread(new boost::thread(scanline_worker, boost::ref(scanline_counter), boost::ref(pixels)));
+        workers.add_thread(new std::thread (scanline_worker, std::ref(scanline_counter), std::ref(pixels)));
     workers.join_all();
+    double runtime = timer.lap();
 
     // Write image to disk
-    ImageOutput* out = ImageOutput::create(imagefile);
-    ImageSpec spec(xres, yres, 3, TypeDesc::HALF);
-    if (out && out->open(imagefile, spec)) {
-        out->write_image(TypeDesc::TypeFloat, &pixels[0]);
-    } else {
-        errhandler.error("Unable to write output image");
+    if (Strutil::iends_with (imagefile, ".jpg") ||
+        Strutil::iends_with (imagefile, ".jpeg") ||
+        Strutil::iends_with (imagefile, ".gif") ||
+        Strutil::iends_with (imagefile, ".png")) {
+        // JPEG, GIF, and PNG images should be automatically saved as sRGB
+        // because they are almost certainly supposed to be displayed on web
+        // pages.
+        ImageBufAlgo::colorconvert (pixelbuf, pixelbuf,
+                                    "linear", "sRGB", false, "", "");
     }
-    delete out;
+    pixelbuf.set_write_format (TypeDesc::HALF);
+    if (! pixelbuf.write (imagefile))
+        errhandler.error ("Unable to write output image: %s",
+                          pixelbuf.geterror().c_str());
 
     // Print some debugging info
     if (debug1 || runstats || profile) {
-        double runtime = timer.lap();
+        double writetime = timer.lap();
         std::cout << "\n";
         std::cout << "Setup: " << OIIO::Strutil::timeintervalformat (setuptime,2) << "\n";
         std::cout << "Run  : " << OIIO::Strutil::timeintervalformat (runtime,2) << "\n";
+        std::cout << "Write: " << OIIO::Strutil::timeintervalformat (writetime,2) << "\n";
         std::cout << "\n";
         std::cout << shadingsys->getstats (5) << "\n";
         OIIO::TextureSystem *texturesys = shadingsys->texturesys();

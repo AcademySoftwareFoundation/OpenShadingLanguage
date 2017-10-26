@@ -46,7 +46,7 @@ Sony Pictures Imageworks terms, above.
 #include <OpenImageIO/timer.h>
 #include <OpenImageIO/filesystem.h>
 
-#include "OSL/oslquery.h"
+#include <OSL/oslquery.h>
 using namespace OSL;
 
 
@@ -147,11 +147,7 @@ print_metadata (const OSLQuery::Parameter &m)
 static void
 oslinfo (const std::string &name)
 {
-#if OIIO_VERSION >= 10608
     OIIO::Timer t (runstats ? OIIO::Timer::StartNow : OIIO::Timer::DontStartNow);
-#else
-    OIIO::Timer t (runstats);
-#endif
     OSLQuery g;
     g.open (name, searchpath);
     std::string e = g.geterror();

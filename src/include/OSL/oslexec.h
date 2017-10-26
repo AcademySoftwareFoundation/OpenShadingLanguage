@@ -28,10 +28,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
+#include <memory>
 
-#include "OSL/oslconfig.h"
-#include "OSL/shaderglobals.h"
-#include "OSL/rendererservices.h"
+#include <OSL/oslconfig.h>
+#include <OSL/shaderglobals.h>
+#include <OSL/rendererservices.h>
 
 #include <OpenImageIO/refcnt.h>
 #include <OpenImageIO/ustring.h>
@@ -41,7 +42,7 @@ OSL_NAMESPACE_ENTER
 
 class RendererServices;
 class ShaderGroup;
-typedef shared_ptr<ShaderGroup> ShaderGroupRef;
+typedef std::shared_ptr<ShaderGroup> ShaderGroupRef;
 struct ClosureParam;
 struct PerThreadInfo;
 class ShadingContext;
@@ -541,8 +542,8 @@ public:
     std::string getstats (int level=1) const;
 
     void register_closure (string_view name, int id, const ClosureParam *params,
-                           PrepareClosureFunc prepare, SetupClosureFunc setup,
-                           int alignment = 1);
+                           PrepareClosureFunc prepare, SetupClosureFunc setup);
+
     /// Query either by name or id an existing closure. If name is non
     /// NULL it will use it for the search, otherwise id would be used
     /// and the name will be placed in name if successful. Also return
@@ -556,15 +557,19 @@ public:
     /// data passed in via attribute("raytypes")).
     int raytype_bit (ustring name);
 
+    /// Configure the default raytypes to assume to be on (or off) at optimization
+    /// time for the given group. The raytypes_on gives a bitfield describing which
+    /// ray flags are known to be 1, and raytypes_off describes which ray flags are
+    /// known to be 0. Bits that are not set in either set of flags are not known
+    /// to the optimizer, and will be determined strictly at execution time.
+    void set_raytypes(ShaderGroup *group, int raytypes_on, int raytypes_off);
+
     /// Ensure that the group has been optimized and JITed.
     /// Ensure that the group has been optimized and JITed.
     void optimize_group (ShaderGroup *group);
 
-    /// Ensure that the group has been optimized and JITed. The raytypes_on
-    /// gives a bitfield describing which ray flags are known to be 1, and
-    /// raytypes_off describes which ray flags are known to be 0. Bits that
-    /// are not set in either set of flags are not known to the optimizer,
-    /// and will be determined strictly at execution time.
+    /// Ensure that the group has been optimized and JITed. This is a
+    /// convenience function that simply calls set_raytypes followed by optimize_group.
     void optimize_group (ShaderGroup *group, int raytypes_on,
                          int raytypes_off);
 

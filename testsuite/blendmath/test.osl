@@ -53,6 +53,11 @@ test ()
         t = 1.0;
         m = mix (b,c,t);
         printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
+        printf ("  smoothstep (%g, %g, %g) = %g\n", a, c, b, smoothstep (a,c,b));
+        printf ("  point smoothstep (%g, %g, %g) = %g\n", a, c, b,
+                smoothstep (point(a),point(c),point(b)));
+        printf ("  point/float smoothstep (%g, %g, %g) = %g\n", a, c, b,
+                smoothstep (point(a),point(c),b[0]));
     }
 
     printf (" varying:\n");
@@ -81,7 +86,7 @@ test ()
         t = 1.0;
         m = mix (b,c,t);
         printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
-        printf ("  smoothstep (%g, %g, %g) = %g\n", b, c, a, smoothstep (b,c,a));
+        printf ("  smoothstep (%g, %g, %g) = %g\n", a, c, b, smoothstep (a,c,b));
     }
 
     {
@@ -107,5 +112,6 @@ test ()
         t = 1.0;
         m = mix (b,c,t);
         printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
+        printf ("  smoothstep (%g, %g, %g) = %g\n", a, c, b, smoothstep (a,c,b));
     }
 }

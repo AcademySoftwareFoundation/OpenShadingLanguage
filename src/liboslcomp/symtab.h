@@ -30,8 +30,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <vector>
 #include <stack>
-
-#include <boost/unordered_map.hpp>
+#include <memory>
+#include <unordered_map>
 
 #include <OpenImageIO/typedesc.h>
 #include <OpenImageIO/ustring.h>
@@ -51,7 +51,7 @@ class ASTNode;  // forward declaration
 
 /// Handy typedef for a vector of pointers to StructSpec's.
 ///
-typedef std::vector<shared_ptr<StructSpec> > StructList;
+typedef std::vector<std::shared_ptr<StructSpec> > StructList;
 
 
 
@@ -202,7 +202,7 @@ private:
 ///
 class SymbolTable {
 public:
-    typedef boost::unordered_map<ustring, Symbol *,ustringHash> ScopeTable;
+    typedef std::unordered_map<ustring, Symbol *,ustringHash> ScopeTable;
     typedef std::vector<ScopeTable> ScopeTableStack;
     typedef SymbolPtrVec::iterator iterator;
     typedef SymbolPtrVec::const_iterator const_iterator;

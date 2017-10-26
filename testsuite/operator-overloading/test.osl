@@ -1,0 +1,62 @@
+struct vector4
+{
+    float x, y, z, w;
+};
+
+vector4 __operator__add__ (vector4 a, vector4 b) {
+    return vector4 (a.x+b.x, a.y+b.y, a.z+b.z, a.w+b.w);
+}
+
+vector4 __operator__sub__ (vector4 a, vector4 b) {
+    return vector4 (a.x-b.x, a.y-b.y, a.z-b.z, a.w-b.w);
+}
+
+vector4 __operator__mul__ (vector4 a, vector4 b) {
+    return vector4 (a.x*b.x, a.y*b.y, a.z*b.z, a.w*b.w);
+}
+
+vector4 __operator__div__ (vector4 a, vector4 b) {
+    return vector4 (a.x/b.x, a.y/b.y, a.z/b.z, a.w/b.w);
+}
+
+vector4 __operator__neg__ (vector4 a) {
+    return vector4 (-a.x, -a.y, -a.z, -a.w);
+}
+
+
+// Make a function to double check it's ok to pass the result of a
+// binary operator into a function argument
+vector4 add (vector4 a, vector4 b)
+{
+    return a+b;
+}
+
+
+
+shader test ()
+{
+    vector4 a = vector4 (.2, .3, .4, .5);
+    vector4 b = vector4 (1, 2, 3, 4);
+    printf ("a = %g %g %g %g\n", a.x, a.y, a.z, a.w);
+    printf ("b = %g %g %g %g\n", b.x, b.y, b.z, b.w);
+
+    vector4 c;
+    c = a + b;
+    printf ("a+b = %g %g %g %g\n", c.x, c.y, c.z, c.w);
+
+    c = a - b;
+    printf ("a-b = %g %g %g %g\n", c.x, c.y, c.z, c.w);
+
+    c = a * b;
+    printf ("a*b = %g %g %g %g\n", c.x, c.y, c.z, c.w);
+
+    c = a / b;
+    printf ("a/b = %g %g %g %g\n", c.x, c.y, c.z, c.w);
+
+    c = -a;
+    printf ("-a = %g %g %g %g\n", c.x, c.y, c.z, c.w);
+
+    // regression test: #762 fixed a bug where passing a struct-returning
+    // binary expression into a function argument would hit an asseriton.
+    c = add (c,c);
+}

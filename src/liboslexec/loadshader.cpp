@@ -34,8 +34,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec_pvt.h"
 #include "osoreader.h"
 
-#include <boost/algorithm/string.hpp>
-
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/dassert.h>
 #include <OpenImageIO/timer.h>
@@ -97,7 +95,7 @@ private:
     int m_oso_major, m_oso_minor;     ///< oso file format version
     int m_sym_default_index;          ///< Next sym default value to fill in
     bool m_errors;                    ///< Did we hit any errors?
-    typedef boost::unordered_map<ustring,int,ustringHash> UstringIntMap;
+    typedef std::unordered_map<ustring,int,ustringHash> UstringIntMap;
     UstringIntMap m_symmap;           ///< map sym name to index
 };
 
@@ -233,7 +231,7 @@ void
 OSOReaderToMaster::add_param_default (const char *def, size_t offset, const Symbol& sym)
 {
   if (sym.typespec().is_unsized_array() && offset >= m_master->m_sdefaults.size())
-      m_master->m_sdefaults.push_back(ustring(def));
+      m_master->m_sdefaults.emplace_back(def);
   else
       m_master->m_sdefaults[offset] = ustring(def);
 }
@@ -369,7 +367,7 @@ readuntil (std::string &source, const std::string &stop, bool do_trim=false)
     std::string r (source, 0, e);
     source.erase (0, e == source.npos ? e : e+1);
     if (do_trim)
-        boost::trim (r);
+        r = Strutil::strip (r); // trim whitespace
     return r;
 }
 
@@ -568,6 +566,8 @@ OSOReaderToMaster::instruction_end ()
 ShaderMaster::ref
 ShadingSystemImpl::loadshader (string_view cname)
 {
+    if (Strutil::ends_with (cname, ".oso"))
+        cname.remove_suffix (4);   // strip superfluous .oso
     if (! cname.size()) {
         error ("Attempt to load shader with empty name \"\".");
         return NULL;
@@ -593,7 +593,7 @@ ShadingSystemImpl::loadshader (string_view cname)
     }
     OIIO::Timer timer;
     bool ok = oso.parse_file (filename);
-    ShaderMaster::ref r = ok ? oso.master() : NULL;
+    ShaderMaster::ref r = ok ? oso.master() : nullptr;
     m_shader_masters[name] = r;
     double loadtime = timer();
     {
@@ -646,7 +646,7 @@ ShadingSystemImpl::LoadMemoryCompiledShader (string_view shadername,
     OSOReaderToMaster reader (*this);
     OIIO::Timer timer;
     bool ok = reader.parse_memory (buffer);
-    ShaderMaster::ref r = ok ? reader.master() : NULL;
+    ShaderMaster::ref r = ok ? reader.master() : nullptr;
     m_shader_masters[name] = r;
     double loadtime = timer();
     {

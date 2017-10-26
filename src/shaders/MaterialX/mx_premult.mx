@@ -1,0 +1,39 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_funcs.h"
+
+//
+// premult multiplies an RGB color by alpha(the extra alpha parameter
+// is ignored )
+//
+color premult (color in, float alpha)
+{
+    return in * alpha;
+}
+
+color2 premult (color2 in, float alpha)
+{
+    return color2 (in.r * in.a, in.a);
+}
+
+color4 premult (color4 in, float alpha)
+{
+    return color4 (in.rgb * in.a, in.a);
+}
+
+
+
+shader mx_premult_TYPE_SUFFIX
+    [[ string help = TYPE_STR" Multiply the R or RGB channels of the input by the Alpha channel of the input." ]]
+  (
+    TYPE in = TYPE_DEFAULT_IN,
+    float alpha = 1,
+    output TYPE out = TYPE_DEFAULT_OUT
+  )
+{
+    out = premult (in, alpha);
+}

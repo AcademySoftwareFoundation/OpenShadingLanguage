@@ -1,0 +1,22 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_funcs.h"
+
+shader mx_pack_TYPE_SUFFIX
+    [[ string help = "Pack the channels from two, three or four streams into the same number of channels of a \
+                      single stream of a specified compatible type;" ]]
+  (
+    float in1 = 0,
+    float in2 = 0,
+    float in3 = 0,
+    float in4 = 0,
+
+    output TYPE out = TYPE_ZERO
+  )
+{
+    out = pack (in1, in2, in3, in4);
+}

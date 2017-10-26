@@ -33,10 +33,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <set>
 #include <map>
 
-#include "OSL/oslcomp.h"
+#include <OSL/oslcomp.h>
 #include "ast.h"
 #include "symtab.h"
-#include "OSL/genclosure.h"
+#include <OSL/genclosure.h>
 
 
 extern int oslparse ();
@@ -99,12 +99,47 @@ public:
     ErrorHandler &errhandler () const { return *m_errhandler; }
 
     /// Error reporting
-    ///
-    void error (ustring filename, int line, const char *format, ...) const;
+    template<typename... Args>
+    void error (string_view filename, int line,
+                string_view format, const Args&... args) const
+    {
+        ASSERT (format.size());
+#if OIIO_VERSION >= 10804
+        std::string msg = OIIO::Strutil::format (format, args...);
+        if (filename.size())
+            m_errhandler->error ("%s:%d: error: %s", filename, line, msg);
+        else
+            m_errhandler->error ("error: %s", msg);
+#else /* Deprecate when the OIIO minimum is 1.8 */
+        std::string msg = OIIO::Strutil::format (format.c_str(), args...);
+        if (filename.size())
+            m_errhandler->error ("%s:%d: error: %s", filename.c_str(), line, msg.c_str());
+        else
+            m_errhandler->error ("error: %s", msg.c_str());
+#endif
+        m_err = true;
+    }
 
     /// Warning reporting
-    ///
-    void warning (ustring filename, int line, const char *format, ...) const;
+    template<typename... Args>
+    void warning (string_view filename, int line,
+                  string_view format, const Args&... args) const
+    {
+        ASSERT (format.size());
+#if OIIO_VERSION >= 10804
+        std::string msg = OIIO::Strutil::format (format, args...);
+        if (filename.size())
+            m_errhandler->warning ("%s:%d: warning: %s", filename, line, msg);
+        else
+            m_errhandler->warning ("warning: %s", msg);
+#else /* Deprecate when the OIIO minimum is 1.8 */
+        std::string msg = OIIO::Strutil::format (format.c_str(), args...);
+        if (filename.size())
+            m_errhandler->warning ("%s:%d: warning: %s", filename.c_str(), line, msg.c_str());
+        else
+            m_errhandler->warning ("warning: %s", msg.c_str());
+#endif
+    }
 
     /// Have we hit an error?
     ///
@@ -315,6 +350,13 @@ public:
 
     bool debug () const { return m_debug; }
 
+    /// As the compiler generates function declarations, we need to remember
+    /// them (with ref-counted pointers). They'll get freed automatically
+    /// when the compiler destructs.
+    void remember_function_decl (ASTfunction_declaration *f) {
+        m_func_decls.emplace_back (f);
+    }
+
 private:
     void initialize_globals ();
     void initialize_builtin_funcs ();
@@ -323,8 +365,15 @@ private:
     void write_oso_const_value (const ConstantSymbol *sym) const;
     void write_oso_symbol (const Symbol *sym);
     void write_oso_metadata (const ASTNode *metanode) const;
-    // void oso (const char *fmt, ...) const;
+
+#if OIIO_VERSION >= 10803
+    template<typename... Args>
+    inline void oso (string_view fmt, const Args&... args) const {
+        (*m_osofile) << OIIO::Strutil::format (fmt, args...);
+    }
+#else
     TINYFORMAT_WRAP_FORMAT (void, oso, const, , (*m_osofile), )
+#endif
 
     void track_variable_lifetimes () {
         track_variable_lifetimes (m_ircode, m_opargs, symtab().allsyms());
@@ -385,6 +434,7 @@ private:
     ErrorHandler *m_errhandler; ///< Error handler
     mutable bool m_err;       ///< Has an error occurred?
     SymbolTable m_symtab;     ///< Symbol table
+    std::vector<ASTNode::ref> m_func_decls; ///< Ref-counted function decls
     TypeSpec m_current_typespec;  ///< Currently-declared type
     bool m_current_output;        ///< Currently-declared output status
     bool m_verbose;           ///< Verbose mode
@@ -398,9 +448,8 @@ private:
     int m_next_const;         ///< Next const symbol index
     std::vector<ConstantSymbol *> m_const_syms;  ///< All consts we've made
     std::ostream *m_osofile;  ///< Open .oso stream for output
-    FILE *m_sourcefile;       ///< Open file handle for retrieve_source
+    std::string m_filecontents; ///< Contents of source file
     ustring m_last_sourcefile;///< Last filename for retrieve_source
-    int m_last_sourceline;    ///< Last line read for retrieve_source
     ustring m_codegenmethod;  ///< Current method we're generating code for
     std::stack<FunctionSymbol *> m_function_stack; ///< Stack of called funcs
     int m_total_nesting;      ///< total conditional nesting level (0 == none)

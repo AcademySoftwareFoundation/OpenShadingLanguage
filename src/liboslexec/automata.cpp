@@ -27,7 +27,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "automata.h"
-#include "OSL/optautomata.h"
+#include <OSL/optautomata.h>
 #include <algorithm>
 #include <cstdio>
 
@@ -545,7 +545,7 @@ StateSetRecord::ensureState(const IntSet &newstates, std::list<StateSetRecord::D
         getRulesFromSet(tstate, m_ndfautomata, newstates);
         m_key_to_dfstate[newkey] = tstate;
         // Add the discovery to the list so it will be explored
-        discovered.push_back(Discovery(tstate, newstates));
+        discovered.emplace_back(tstate, newstates);
         return tstate;
     }
 }

@@ -33,7 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// introducing dependencies to liboslexec (where the actual method
 /// is implemented)
 
-#include "OSL/oslquery.h"
+#include <OSL/oslquery.h>
 using namespace OSL;
 
 

@@ -26,8 +26,8 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "OSL/accum.h"
-#include "OSL/oslclosure.h"
+#include <OSL/accum.h>
+#include <OSL/oslclosure.h>
 
 using namespace OSL;
 
@@ -148,7 +148,7 @@ int main()
     // Create our fake testing AOV's
     std::vector<MyAov> aovs;
     for (int i = 0; i < naovs; ++i)
-        aovs.push_back (MyAov (test, i));
+        aovs.emplace_back(test, i);
 
     // Create the automata and add the rules
     AccumAutomata automata;

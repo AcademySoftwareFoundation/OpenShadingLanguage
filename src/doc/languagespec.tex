@@ -21,7 +21,7 @@
 \usepackage{xspace}
 %\usepackage{multicol}
 %\usepackage{color}
-\usepackage{html}
+\usepackage{hyperref}
 %\usepackage{version}
 \usepackage{makeidx}
 \usepackage[chapter]{algorithm}
@@ -43,31 +43,31 @@
 
 \def\langname{Open Shading Language\xspace}
 \def\product{{\sffamily Open Shading Language}\xspace}
-\def\versionnumber{1.7}
+\def\versionnumber{1.9}
 \def\productver{\product\ {\sffamily \versionnumber}\xspace}
 
 
-\title{ 
+\title{
 {\Huge{\bf \product}
-%\textregistered\ 
-{\bf\sffamily \versionnumber} \medskip \\ \huge 
+%\textregistered\
+{\bf\sffamily \versionnumber} \medskip \\ \huge
 Language Specification
-%\\ \large (CONFIDENTIAL --- draft in progress) 
+%\\ \large (CONFIDENTIAL --- draft in progress)
 } \bigskip }
 \author{
-\copyright\ Copyright 2009-2016 Sony Pictures Imageworks Inc., et al. All rights reserved.
+\copyright\ Copyright 2009-2017 Sony Pictures Imageworks Inc., et al. All rights reserved.
  \bigskip \\
 \vspace{1in} \\
 Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
-\date{{\large Date: 13 Oct, 2016 \\
-% (with corrections, 27 Sep 2016)
+\date{{\large Date: 30 Jun 2017 \\
+% (with corrections, 12 May 2017)
 }
 \bigskip
 \bigskip
 \bigskip
- \bigskip 
+\bigskip
 }
 
 
@@ -103,6 +103,7 @@ Editor: Larry Gritz \\
 \def\pnoise{{\cf pnoise()}\xspace}
 \def\psnoise{{\cf psnoise()}\xspace}
 \def\cellnoise{{\cf cellnoise()}\xspace}
+\def\hashnoise{{\cf hashnoise()}\xspace}
 \def\illuminance{{\cf illuminance}\xspace}
 \def\illuminate{{\cf illuminate}\xspace}
 
@@ -129,7 +130,7 @@ documentation are:
 
 \vspace*{0.2in}
 
-Copyright (c) 2009-2016 Sony Pictures Imageworks Inc., et al.
+Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
 All Rights Reserved.
 
 \vspace{0.5in}
@@ -339,27 +340,19 @@ find are different in OSL compared to other languages:
 
 \section*{Acknowledgments}
 
-The main developers of OSL are (in order of joining the project):
+The original designer and project leader of OSL is Larry Gritz. Other early
+developers of OSL are (in order of joining the project): Cliff Stein, Chris
+Kulla, Alejandro Conty, Jay Reynolds, Solomon Boulos, Adam Martinez, Brecht
+Van Lommel.
 
-\vspace*{0.2in}
-
-    Larry Gritz
-
-    Cliff Stein
-
-    Chris Kulla
-
-    Alejandro Conty
-
-    Jay Reynolds
-
-    Solomon Boulos
-
-    Adam Martinez
-
-    Brecht Van Lommel
-
-\vspace*{0.2in}
+Additionally, many others have contributed features, bug fixes, and other
+changes: Steve Agland, Shane Ambler, Martijn Berger, Farchad Bidgolirad,
+Nicholas Bishop, Stefan Büttner, Matthaus G. Chajdas, Thomas Dinges, Henri
+Fousse, Syoyo Fujita, Derek Haase, Sven-Hendrik Haase, John Haddon, Daniel
+Heckenberg, Ronan Keryell, Elvic Liang, Max Liani, Bastien Montagne, Erich
+Ocean, Mikko Ohtamaa, Alex Schworer, Sergey Sharybin, Stephan Steinbach,
+Esteban Tovagliari, Alexander von Knorring, Roman Zulak. (Listed
+alphabetically; if we've left anybody out, please let us know.)
 
 We cannot possibly express sufficient gratitude to the managers at Sony
 Pictures Imageworks who allowed this project to proceed, supported it
@@ -373,22 +366,22 @@ feedback.  Thank you, and we hope we've been responsive to your needs.
 
 OSL was not developed in isolation.  We owe a debt to the individuals
 and studios who patiently read early drafts of the language
-specification and gave us very helpful feedback and additional ideas.
-(I hope to mention them by name after we get permission of the people
-and studios involved.)
+specification and gave us very helpful feedback and additional ideas,
+and especially to those at other companies who have taken the risk of
+incorporating OSL into their products and pipelines.
 
-\bigskip 
+\bigskip
 The open source OSL implementation incorporates or depends upon several
 other open source packages:
 
 \begin{itemize}
 \item {\cf OpenImageIO} \copyright\ 2008 Larry Gritz et al.  
-{\cf http://openimageio.org}
+\url{http://openimageio.org}
 \item Ilmbase \copyright\ 2006, Industrial Light \& Magic.
-{\cf http://www.openexr.com}
-\item Boost \copyright\ various authors.  {\cf http://www.boost.org}
+\url{http://www.openexr.com}
+\item Boost \copyright\ various authors.  \url{http://www.boost.org}
 \item LLVM \copyright\ 2003-2010 University of Illinois at
-  Urbana-Champaign. {\cf http://llvm.org}
+  Urbana-Champaign. \url{http://llvm.org}
 \end{itemize}
 
 These other packages are all distributed under licenses that allow them
@@ -880,9 +873,21 @@ directives, including:
     #pragma once
 \end{code}
 
+\noindent Additionally, the following preprocessor symbols will already be
+defined by the compiler:
+
+\smallskip
+
+\begin{tabular}{p{1.5in} p{3.5in}}
+{\cf OSL_VERSION_MAJOR}   & Major version (e.g., 1) \\[0.5ex]
+{\cf OSL_VERSION_MINOR}   & Minor version (e.g., 9) \\[0.5ex]
+{\cf OSL_VERSION_PATCH}   & Patch version (e.g., 3) \\[0.5ex]
+{\cf OSL_VERSION}   & Combined version number = 10000*major + 100*minor + patch
+(e.g., 10903 for version 1.9.3)
+\end{tabular}
 
 
-\chapter{Gross syntax, shader types, parameters, functions}
+\chapter{Gross syntax, shader types, parameters}
 \label{chap:grosssyntax}
 
 The overall structure of a shader is as follows:
@@ -1332,48 +1337,6 @@ if a \qkw{degrees} variable is passed as the argument to {\cf cos}).
 
 
 \newpage
-\section{Functions}
-\label{sec:functions}
-\index{functions!declarations}
-
-You may define functions much like in C or C++.
-
-\begin{quote}
-\em
-return-type ~ function-name ~ {\rm\cf (} optional-parameters {\rm\cf )} \\
-\rm
-{\cf \{ } \\
-\em
-\spc statements
-
-{\cf \} }
-\end{quote}
-
-Parameters to functions are similar to shader parameters, except that
-they do not permit initializers.  A function call must pass values for
-all formal parameters.  Function parameters in \langname are all
-\emph{passed by reference}, and are read-only within the body of the
-function unless they are also designated as {\cf output} (in the same
-manner as output shader parameters).
-
-Like for shaders, statements inside functions may be actual executions
-(assignments, function call, etc.), local variable declarations (visible
-only from within the body of the function), or local function
-declarations (callable only from within the body of the function).
-
-The return type may be any simple data type, a {\cf struct}, or a {\cf
-  closure}.  Functions may not return arrays.  The return type may be
-{\cf void}, indicating that the function does not return a value (and
-should not contain a {\cf return} statement).  A {\cf return} statement
-inside the body of the function will halt execution of the function at
-that point, and designates the value that will be returned (if not a
-{\cf void} function).
-
-Functions may be \emph{overloaded}.  That is, multiple functions may be
-defined to have the same name, as long as they have differently-typed
-parameters, so that when the function is called the list of arguments
-can disambiguate which version of the function is desired.
-
 \section{Public methods}
 \label{sec:publicmethods}
 \indexapi{public}
@@ -1486,7 +1449,7 @@ operation & result & ~ \\
 {\ce ++} \inttype & \inttype & pre-increment by 1 \\[0.5ex]
 {\ce --} \inttype & \inttype & pre-decrement by 1 \\[0.5ex]
 {\cf {\bfseries -} int} & \inttype & unary negation \\[0.5ex]
-\verb|~| {\cf int} & \inttype & bitwise complement (1 and 0 bits flipped) \\[0.5ex]
+{\ce \textasciitilde} {\cf int} & \inttype & bitwise complement (1 and 0 bits flipped) \\[0.5ex]
 {\cf {\bfseries !} int} & \inttype & boolean `not' (1 if operand is zero, otherwise 0) \\[0.5ex]
 \hline
 {\cf int {\bfseries *} int} & \inttype & multiplication \\[0.5ex]
@@ -1515,7 +1478,7 @@ else 0 \\[0.5ex]
 \hline
 {\cf int {\bfseries \&} int} & \inttype & bitwise and \\[0.5ex]
 \hline
-{\cf int {\bfseries \verb|^|} int} & \inttype & bitwise exclusive or \\[0.5ex]
+{\cf int {\bfseries \textasciicircum} int} & \inttype & bitwise exclusive or \\[0.5ex]
 \hline
 {\cf int {\bfseries |} int} & \inttype & bitwise or \\[0.5ex]
 \hline
@@ -2064,35 +2027,56 @@ using the `dot' operator.  The syntax for declaring and using structures
 is similar to C or C++:
 
 \begin{code}
-    struct ray {                   // Define a structure type
-        point pos;
-        vector dir;
+    struct RGBA {                    // Define a structure type
+        color rgb;
+        float alpha;
     };
 
-    ray r;                         // Declare a structure
-    r.pos = point (1, 0, 0);       // Assign to one field
-    point p = r.pos;               // Read from a structure field
+    RGBA col;                        // Declare a structure
+    r.rgb = color (1, 0, 0);         // Assign to one field
+    color c = r.rgb;                 // Read from a structure field
+
+    RGBA b = { color(.1,.2,.3), 1 }; // Member-by-member initialization
 \end{code}
 
-It is permitted to have a structure field that is an array, as well as
-to have an array of structures.  But it is not permitted for one
-structure to have a field that is another structure.  For example:
+You can use ``constructor expressions'' for a your struct types much like
+you can construct built-in types like \color or \point:
+
+\vspace{10pt}
+\hspace{0.25in} \emph{struct\_name ( first\_member\_value, ... )}
+\vspace{10pt}
+
+\noindent For example,
+
+\begin{code}
+    RGBA c = RGBA(col,alpha);        // Constructor syntax
+
+    RGBA add (RGBA a, RGBA b)
+    {
+        return RGBA (a.rgb+b.rgb, a.a+b.a);   // return expression
+    }
+
+    // pass constructor expression as a parameter:
+    RGBA d = add (c, RGBA(color(.3,.4,.5), 0));
+\end{code}
+
+It is permitted to have a structure field that is an array, as well as to
+have an array of structures.  But it is not currently permitted to ``nest''
+arrays (that is, to have an array of structs which contain members that are
+arrays).
 
 \begin{code}
     struct A {
         color a;
-        float b[4];       // struct may contain an array
+        float b[4];       // Ok: struct may contain an array
     };
 
-    A d[5];               // Array of structures
-    color e = d[0].a;     // Field of one element of array of struct
-    d[2].b[4] = 0.25;     // Element of a field of a struct in an array
+    RGBA vals[4];         // Ok: Array of structures
+    vals[0].a = 0;
+
+    A d[5];               // NO: Array of structures that contain arrays
 \end{code}
 
-%\begin{annotate}
-%\QUESTION Is this restriction (no ``structure recursion'') acceptable?
-%It certainly makes the implementation of the language easier.
-%\end{annotate}
 
 \index{types|)}   % end of chapter
 
@@ -2364,7 +2348,7 @@ variable, then return the new value.
 
 \begin{tabbing}
 \hspace{0.25in} {\cf -} \emph{expr} \hspace{1in} \= (negation) \\
-\hspace{0.25in} \verb|~| \emph{expr} \> (bitwise complement) \\
+\hspace{0.25in} {\cf \textasciitilde} \emph{expr} \> (bitwise complement) \\
 \hspace{0.25in} \emph{expr} {\cf *} \emph{expr} \> (multiplication) \\
 \hspace{0.25in} \emph{expr} {\cf /} \emph{expr} \> (division) \\
 \hspace{0.25in} \emph{expr} {\cf +} \emph{expr} \> (addition) \\
@@ -2374,7 +2358,7 @@ variable, then return the new value.
 \hspace{0.25in} \emph{expr} {\cf >>} \emph{expr} \> (integer shift right) \\
 \hspace{0.25in} \emph{expr} {\cf \&} \emph{expr} \> (bitwise and) \\
 \hspace{0.25in} \emph{expr} {\cf |} \emph{expr} \> (bitwise or) \\
-\hspace{0.25in} \emph{expr} \verb|^| \emph{expr} \> (bitwise exclusive or) \\
+\hspace{0.25in} \emph{expr} {\cf \textasciicircum} \emph{expr} \> (bitwise exclusive or) \\
 \end{tabbing}
 
 The operators {\cf +}, {\cf -}, {\cf *}, {\cf /}, and the unary {\cf -}
@@ -2387,7 +2371,7 @@ multiplication and matrix multiplication by the inverse of another
 matrix.
 
 The integer and bit-wise operators {\cf \%}, {\cf <<}, {\cf >>},
-{\cf \&}, {\cf |}, {\cf \verb|^|}, and {\cf \verb|~|} may only be 
+{\cf \&}, {\cf |}, {\cf \textasciicircum}, and {\cf \textasciitilde} may only be 
 used with expressions of type \inttype.
 
 For details on which operators are allowed, please consult the operator
@@ -2607,7 +2591,10 @@ altogether, and the {\cf continue} statement skip to the end of the body
 and proceeds to the next iteration of the loop.
 
 \section{Functions}
-\label{sec:syntax:functions}
+\label{sec:functions}
+
+\subsection{Function calls}
+\label{sec:syntax:functioncalls}
 \index{function calls}
 
 Function calls are very similar to C and related programming languages:
@@ -2626,8 +2613,111 @@ will not be noticeably different from C-style ``pass by value''
 semantics, except if you pass the same variable as two separate
 arguments to a function that modifies an argument's value.
 
-Function definitions are described in detail in Section~\ref{sec:functions}.
 
+\subsection{Function definitions}
+\label{sec:syntax:functiondefinitions}
+\index{functions!definitions}
+
+You may define functions much like in C or C++.
+
+\begin{quote}
+\em
+return-type ~ function-name ~ {\rm\cf (} optional-parameters {\rm\cf )} \\
+\rm
+{\cf \{ } \\
+\em
+\spc statements
+
+{\cf \} }
+\end{quote}
+
+Parameters to functions are similar to shader parameters, except that
+they do not permit initializers.  A function call must pass values for
+all formal parameters.  Function parameters in \langname are all
+\emph{passed by reference}, and are read-only within the body of the
+function unless they are also designated as {\cf output} (in the same
+manner as output shader parameters).
+
+Like for shaders, statements inside functions may be actual executions
+(assignments, function call, etc.), local variable declarations (visible
+only from within the body of the function), or local function
+declarations (callable only from within the body of the function).
+
+The return type may be any simple data type, a {\cf struct}, or a {\cf
+  closure}.  Functions may not return arrays.  The return type may be
+{\cf void}, indicating that the function does not return a value (and
+should not contain a {\cf return} statement).  A {\cf return} statement
+inside the body of the function will halt execution of the function at
+that point, and designates the value that will be returned (if not a
+{\cf void} function).
+
+Functions may be \emph{overloaded}.  That is, multiple functions may be
+defined to have the same name, as long as they have differently-typed
+parameters, so that when the function is called the list of arguments
+can disambiguate which version of the function is desired.
+
+\subsection{Operator overloading}
+\label{sec:syntax:operatoroverloading}
+\index{operator overloading}
+
+\NEW  % 1.9
+OSL permits \emph{operator overloading}, which is the practice of providing
+a function that will be called when you use an operator like {\cf +} or
+{\cf *}. This is especially handy when you use {\cf struct} to define
+mathematical types and wish for the usual math operators to work with them.
+Here is a typical example, which also shows the special naming convention
+that allows operator overloading:
+
+\begin{code}
+    struct vector4 {
+        float x, y, z, w;
+    };
+
+    vector4 __operator__add__ (vector4 a, vector4 b) {
+        return vector4 (a.x+b.x, a.y+b.y, a.z+b.z, a.w+b.w);
+    }
+
+    shader test ()
+    {
+        vector4 a = vector4 (.2, .3, .4, .5);
+        vector4 b = vector4 (1, 2, 3, 4);
+
+        vector4 c = a + b;   // Will call __operator__add__(vector4,vector4)
+        printf ("a+b = %g %g %g %g\n", c.x, c.y, c.z, c.w);
+    }
+\end{code}
+
+\noindent The full list of these special function names is as follows (in
+order of decreasing operator precedence):
+
+\smallskip
+
+\begin{tabular}{ p{0.5in} p{2in} p{1.75in}}
+%op & overload function name & ~ \\
+%\hline
+{\cf \bfseries -} & {\cf __operator__neg__} & unary negation \\
+{\cf \bfseries \textasciitilde} & {\cf __operator__compl__} & unary bitwise complement \\
+{\cf \bfseries !} & {\cf __operator__not__} & unary boolean `not' \\[1.5ex]
+{\cf \bfseries *} & {\cf __operator__mul__} &  \\
+{\cf \bfseries /} & {\cf __operator__div__} &  \\
+{\cf \bfseries \%} & {\cf __operator__mod__} &  \\
+{\cf \bfseries +} & {\cf __operator__add__} &  \\
+{\cf \bfseries -} & {\cf __operator__sub__} &  \\[1.5ex]
+{\cf \bfseries <<} & {\cf __operator__shl__} & \\
+{\cf \bfseries >>} & {\cf __operator__shr__} & \\[1.5ex]
+{\cf \bfseries <} & {\cf __operator__lt__} &  \\
+{\cf \bfseries <=} & {\cf __operator__le__} &  \\
+{\cf \bfseries >} & {\cf __operator__gt__} &  \\
+{\cf \bfseries >=} & {\cf __operator__ge__} & \\
+{\cf \bfseries ==} & {\cf __operator__eq__} & \\
+{\cf \bfseries !=} & {\cf __operator__ne__} & \\[1.5ex]
+{\cf \bfseries \&} & {\cf __operator__bitand__} & \\
+{\cf \bfseries \textasciicircum} & {\cf __operator__xor__} & \\
+{\cf \bfseries |} & {\cf __operator__bitor__} & \\
+%{\cf \bfseries \&\&} & {\cf __operator__and__} & boolean and \\
+%{\cf \bfseries ||} & {\cf __operator__or__} & boolean or \\
+%\hline
+\end{tabular}
 
 
 \section{Global variables}
@@ -2975,6 +3065,28 @@ function returns
 \indexapi{mix()}
 The {\cf mix} function returns a linear blending :
 $ x*(1-\alpha) + y*(\alpha) $
+\apiend
+
+\apiitem{int {\ce isnan} (float x) \\
+int {\ce isinf} (float x) \\
+int {\ce isfinite} (float x)}
+\indexapi{isnan()} \indexapi{isinf()} \indexapi{isfinite()}
+The {\cf isnan()} function returns 1 if $x$ is a not-a-number (NaN)
+value, 0 otherwise.  The {\cf isinf()} function returns 1 if $x$ is an
+infinite (Inf or --Inf) value, 0 otherwise.  The {\cf isfinite()}
+function returns 1 if $x$ is an ordinary number (neither infinite nor
+NaN), 0 otherwise.  \apiend
+
+\apiitem{\emph{type} {\ce select} (\emph{type} x, \emph{type} y, \emph{type} cond) \\
+\emph{type} {\ce select} (\emph{type} x, \emph{type} y, float cond) \\
+\emph{type} {\ce select} (\emph{type} x, \emph{type} y, int cond)}
+\indexapi{mix()}
+The {\cf select} function returns {\cf x} if {\cf cond} is zero, or {\cf y}
+if {\cf cond} is nonzero. This is roughly equivalent to {\cf (cond ? y : x)},
+except that if {\cf cond} is a component-based type (such as {\cf color}),
+the selection happens on a component-by-component basis. It is presumed
+that the underlying implementation is not a true conditional and will not
+incur any branching penalty.
 \apiend
 
 \apiitem{int {\ce isnan} (float x) \\
@@ -3336,13 +3448,18 @@ and performs a linear
 interpolation between 0 and 1 when ${\mathit edge0} < x < {\mathit edge1}$.
 \apiend
 
-\apiitem{float {\ce smoothstep} (float edge0, float edge1, float x)}
+\apiitem{float {\ce smoothstep} (float edge0, float edge1, float x) \\
+\emph{type} {\ce smoothstep} (\emph{type} edge0, \emph{type} edge1, \emph{type} x)}
 \indexapi{smoothstep()}
 Returns 0 if $x \le {\mathit edge0}$, and 1 if $x \ge {\mathit edge1}$,
 and performs a smooth Hermite
 interpolation between 0 and 1 when ${\mathit edge0} < x < {\mathit edge1}$.
 This is useful in cases where you would want a thresholding function
 with a smooth transition.
+
+The \emph{type} may be any of of \float, \color, \point, \vector, or
+\normal.  For \color and \point-like types, the computations are
+performed component-by-component (separately for $x$, $y$, and $z$).
 \apiend
 
 \apiitem{float {\ce smooth_linearstep} (float edge0, float edge1, float x, float eps)}
@@ -3400,6 +3517,14 @@ one that doesn't take a name string).
 A discrete function that is constant on $[i,i+1)$ for all integers $i$
 (i.e., {\cf cellnoise(x) == cellnoise(floor(x))}), but has a different
 and uncorrelated value at every integer.  The range is $[0,1]$, its
+large-scale average is 0.5, and its values are evenly distributed over
+$[0,1]$.
+\apiend
+
+\apiitem{"hash"}
+\vspace{12pt}
+A function that returns a different, uncorrelated (but deterministic and
+repeatable) value at every real input coordinate.  The range is $[0,1]$, its
 large-scale average is 0.5, and its values are evenly distributed over
 $[0,1]$.
 \apiend
@@ -3544,29 +3669,31 @@ The old {\cf cellnoise(...coords...)} function is equivalent to
 {\cf noise("cell",...coords...)}.
 \apiend
 
-\begin{comment}   % couldn't find a use for this
-\apiitem{\emph{type} {\ce hash} (float u) \\
-\emph{type} {\ce hash} (float u, float v) \\
-\emph{type} {\ce hash} (point p) \\
-\emph{type} {\ce hash} (point p, float t) \\
-\emph{type} {\ce hash} (int i) \\
-\emph{type} {\ce hash} (string s)}
-\indexapi{hash()}
+\apiitem{\emph{type} {\ce hashnoise} (float u) \\
+\emph{type} {\ce hashnoise} (float u, float v) \\
+\emph{type} {\ce hashnoise} (point p) \\
+\emph{type} {\ce hashnoise} (point p, float t)}
+\indexapi{hashnoise()}
+\NEW % 1.9
 Returns a deterministic, repeatable \emph{hash} of the 1-, 2-, 3-, or
-4-D coordinates, integer, or string.  The return values will be evenly
+4-D coordinates.  The return values will be evenly
 distributed on $[0,1]$ and be completely repeatable when passed the same
 coordinates again, yet will be uncorrellated to hashes of any other
 positions (including nearby points).  This is like having a random value
 indexed spatially, but that will be repeatable from frame to frame of an
 animation (provided its input is \emph{precisely} identical).
-
-The return \emph{type} may be any of \float, \color, \point, \vector, or
-\normal, depending on the type of the variable the result is assigned to
-(or based on an explicit type cast).  For multi-component return types
-(e.g., \point), each component is an uncorrelated \float\ {\cf hash}
-function.
 \apiend
-\end{comment}
+
+\apiitem{int {\ce hash} (float u) \\
+int {\ce hash} (float u, float v) \\
+int {\ce hash} (point p) \\
+int {\ce hash} (point p, float t) \\
+int {\ce hash) (int i)}}
+\indexapi{hash()}
+\NEW % 1.9
+Returns a deterministic, repeatable integer \emph{hash} of the 1-, 2-, 3-,
+or 4-D coordinates.
+\apiend
 
 \apiitem{\emph{type} {\ce spline} (string basis, float x, \emph{type} $\mathtt{y}_0$, \emph{type} $\mathtt{y}_1$, ... \emph{type} $\mathtt{y}_{n-1}$)\\
 \emph{type} {\ce spline} (string basis, float x, \emph{type} y[]) \\
@@ -3994,7 +4121,6 @@ variable specified.  This allows for RGBA lookups in a single call to
 
 \apiitem{"errormessage", <stringvariable>}
 \vspace{12pt}
-\NEW  % 1.8
 If this option is supplied, any error messages generated by the texture
 system will be stored in the specified variable rather than issuing error
 calls to the renderer, thus leaving it up to the shader to handle any
@@ -4314,6 +4440,15 @@ Note that the named point cloud will be created, if it does not yet
 exist in memory, and that it will be initialized by reading a point
 cloud from disk, if there is one matching the name.
 
+Generally, the element type of the data arrays must match exactly the type
+of the point data attribute, or else you will get a runtime error. But there
+are two exceptions: (1) ``triple'' types (\color, \point, \vector, \normal)
+are considered interchangeable; and (2) it is legal to retrieve {\cf float}
+arrays (e.g., a point cloud attribute that is {\cf float[4]}) into a regular
+array of {\cf float}, and the results will simply be concatenated into the
+larger array (which must still be big enough, in total, to hold {\cf
+maxpoints} of the data type in the file).
+
 \noindent Example:
 
 \begin{code}
@@ -4347,10 +4482,20 @@ in the following example:
       int indices[10];
       int n = pointcloud_search ("particles.ptc", P, r, 10,
                                  "index", indices);
-      float temp[10];
+      float temp[10];         // presumed to be "float" attribute
+      float quaternions[40];  // presumed to be "float[4]" attribute
       int ok = pointcloud_get ("particles.ptc", indices, n,
-                               "temperature", temp);
+                               "temperature", temp,
+                               "quat", quaternions);
 \end{code}
+
+As with {\cf pointcloud_search}, the element type of the data array must
+either be equivalent to the point cloud attribute being retrieved, or else
+when retrieving {\cf float} arrays (e.g., a point cloud attribute
+that is {\cf float[4]}) into a regular array of {\cf float}, and the
+results will simply be concatenated into the larger array (which must
+still be big enough, in total, to hold {\cf maxpoints} of the data type
+in the file).
 \apiend
 
 
@@ -4782,6 +4927,7 @@ wish to make queryable.
 \hline
 {\bf Name} & {\bf Type} & {\bf Description} \\
 \hline
+{\cf "osl:version"}           & {\cf int}       & Major*10000 + Minor*100 + patch. \\
 {\cf "shader:shadername"}     & {\cf string}    & Name of the shader master. \\
 {\cf "shader:layername"}      & {\cf string}    & Name of the layer instance. \\
 {\cf "shader:groupname"}      & {\cf string}    & Name of the shader group. \\

@@ -1,19 +1,23 @@
-README for Open Shading Language
-================================
+<div align="center">
+  <img src="https://github.com/imageworks/OpenShadingLanguage/blob/master/src/doc/Figures/osl-short.png" width=256 height=128>
+</div>
+
+
+Open Shading Language
+=====================
 
 Build status:
 
 [![Build Status](https://travis-ci.org/imageworks/OpenShadingLanguage.svg?branch=master)](https://travis-ci.org/imageworks/OpenShadingLanguage)
 
-Table of contents
-------------------
+**Table of contents**
 
 * [Introduction](#introduction)
 * [How OSL is different](#how-osl-is-different)
 * [What OSL consists of](#what-osl-consists-of)
+* [Where OSL has been used](#where-osl-has-been-used)
 * [Building OSL](#building-osl)
-* [Current state of the project and road map](#current-state-of-the-project-and-road-map)
-* [Contacts](#contacts)
+* [Contacts, Links, and References](#contacts-links-and-references)
 * [Credits](#credits)
 
 
@@ -26,27 +30,28 @@ Open Shading Language (OSL) is a small but rich language for
 programmable shading in advanced renderers and other applications, ideal
 for describing materials, lights, displacement, and pattern generation.
 
-OSL was developed by Sony Pictures Imageworks for use in its in-house
-renderer used for feature film animation and visual effects. The
-language specification was developed with input by other visual effects
-and animation studios who also wish to use it.
+OSL was originally developed by Sony Pictures Imageworks for use in its in-
+house renderer used for feature film animation and visual effects, released
+as open source so it could be used by other visual effects and animation
+studios and rendering software vendors. Now it's the de facto standard
+shading language for VFX and animated features, used across the industry in
+many commercial and studio- proprietary renderers. Because of this, the work
+on OSL received an Academy Award for Technical Achievement in 2017.
 
-OSL is robust and production-proven, and was the exclusive shading
-system for work on big VFX films such as "Men in Black 3", "The Amazing
-Spider-Man," "Oz the Great and Powerful," and "Edge of Tomorrow," as
-well as animated features such as "Hotel Transylvania" and "Cloudy With
-a Chance of Meatballs 2", and many other films completed or currently in
-production.
+OSL is robust and production-proven, and has been used in films as diverse
+as "The Amazing Spider-Man," "Hotel Transylvania," "Edge of Tomorrow", "Ant
+Man", "Finding Dory," and many more. OSL support is in most leading
+renderers used for high-end VFX and animation work. For a full list of films
+and products, see the [filmography](#where-osl-has-been-used).
 
-The OSL code is distributed under the "New BSD" license (see the
-"LICENSE" file that comes with the distribution), and the documentation
-under the Creative Commons Attribution 3.0 Unported License
-(http://creativecommons.org/licenses/by/3.0/).  In short, you are free
-to use OSL in your own applications, whether they are free or
+The OSL code is distributed under the
+["New BSD" license](https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE),
+and the documentation under the [Creative Commons Attribution 3.0 Unported
+License](http://creativecommons.org/licenses/by/3.0/).  In short, you are
+free to use OSL in your own applications, whether they are free or
 commercial, open or proprietary, as well as to modify the OSL code and
-documentation as you desire, provided that you retain the original
-copyright notices as described in the license.
-
+documentation as you desire, provided that you retain the original copyright
+notices as described in the license.
 
 
 How OSL is different
@@ -215,87 +220,93 @@ The OSL open source distribution consists of the following components:
 
 
 
+Where OSL has been used
+-----------------------
+
+*This list only contains films or products whose OSL use is stated or can be
+inferred from public sources, or that we've been told is ok to list here. If
+an OSL-using project is missing and it's not a secret, just email the OSL
+project leader or submit a PR with edits to this file.*
+
+Renderers and other tools with OSL support (in approximate order of
+adding OSL support):
+* Sony Pictures Imageworks: in-house "Arnold" renderer
+* [Blender/Cycles](https://docs.blender.org/manual/en/dev/render/cycles/nodes/osl.html)
+* [Chaos Group: V-Ray](https://www.chaosgroup.com/)
+* [Pixar: PhotoRealistic RenderMan RIS](https://renderman.pixar.com)
+* [Isotropix: Clarisse](http://www.isotropix.com/clarisse)
+* [Autodesk Beast](http://www.autodesk.com/products/beast/overview)
+* [Appleseed](http://appleseedhq.net)
+* [Animal Logic: Glimpse renderer](https://www.fxguide.com/featured/a-glimpse-at-animal-logic/)
+* [Image Engine: Gaffer](http://www.gafferhq.org/) (for expressions and deformers)
+* [DNA Research: 3Delight](http://www.3delight.com/)
+* Ubisoft motion picture group's proprietary renderer
+* [Autodesk/SolidAngle: Arnold](https://www.solidangle.com/arnold/)
+
+Films using OSL (grouped by year of release date):
+* **(2012)**
+  Men in Black 3, The Amazing Spider-Man, Hotel Transylvania
+* **(2013)**
+  Oz the Great and Powerful, Smurfs 2, Cloudy With a Chance of Meatballs 2
+* **(2014)**
+  The Amazing Spider-Man 2, Blended, Edge of Tomorrow, 22 Jump Street,
+  Guardians of the Galaxy, Fury,
+  The Hunger Games: Mockingjay - Part 1, Exodus: Gods and Kings,
+  The Interview
+* **(2015)**
+  American Sniper,
+  Insurgent, Avengers Age of Ultron,
+  Ant Man, Pixels,
+  Mission Impossible: Rogue Nation,
+  Hotel Transylvania 2,
+  Bridge of Spies,
+  James Bond: Spectre,
+  The Hunger Games: Mockingjay - Part 2,
+  Concussion
+* **(2016)**
+  Allegiant,
+  Batman vs Superman: Dawn of Justice, The Huntsman,
+  Angry Birds Movie, Alice Through the Looking Glass,
+  Captain America: Civil War,
+  Finding Dory, Piper,
+  Independence Day: Resurgence,
+  Ghostbusters,
+  Star Trek Beyond,
+  Suicide Squad,
+  Kingsglaive: Final Fantasy XV,
+  Storks,
+  Miss Peregrine's Home for Peculiar Children, Assassin's Creed
+* **(2017) / upcoming**
+  Lego Batman,
+  The Great Wall,
+  A Cure for Wellness,
+  Logan,
+  Power Rangers,
+  Life,
+  Smurfs: The Lost Village,
+  The Fate of the Furious,
+  Alien Covenant,
+  Guardians of the Galaxy 2,
+  The Mummy,
+  Wonder Woman,
+  Cars 3,
+  Baby Driver,
+  Spider-Man: Homecoming,
+  Dunkirk,
+  The Emoji Movie,
+  Detroit,
+  ...
+
+
 Building OSL
 ------------
 
-Please see the "INSTALL" file in the OSL distribution for instructions
-for building the OSL source code.
+Please see the [INSTALL.md](INSTALL.md) file in the OSL distribution for
+instructions for building the OSL source code.
 
 
-
-Current state of the project and road map
------------------------------------------
-
-At Sony Pictures Imageworks, we are exclusively using OSL in our
-proprietary renderer, "Arnold." Completed productions that used OSL for
-shading have included:
-
-    Men in Black 3
-    The Amazing Spider-Man
-    Hotel Transylvania
-    Oz the Great and Powerful
-    Smurfs 2
-    Cloudy With a Chance of Meatballs 2
-    Amazing Spider-Man 2
-    Edge of Tomorrow
-    Blended
-    22 Jump Street
-    Guardians of the Galaxy
-    The Interview
-    Fury
-    American Sniper
-    Pixels
-    Hotel Transylvania 2
-    Concussion
-    Alice in Wonderland: Through the Looking Glass
-
-And more are currently in production. Our shader-writing team works
-entirely in OSL, all productions use OSL, and we've even removed all the
-code from the renderer that allows people to write the old-style "C"
-shaders.  At the time we removed the old shader facility, the OSL
-shaders were consistently outperforming their equivalent old compiled C
-shaders in the old system.
-
-In the longer term, there are a number of projects we hope to get to
-leading to a 2.x or 3.x cut of the language and library.  Among our
-long-term goals:
-
-* More documentation, in particular the "Integration Guide" that
-  documents all the public APIs of the OSL libraries that you use when
-  integrating into a renderer.  Currently, the source code to
-  "testrender" is the best/only example of how to integrate OSL into a
-  renderer.
-
-* Our set of sample shaders is quite anemic.  We will eventually have a
-  more extensive set of useful, production-quality shaders and utility
-  functions you can call from your shaders.
-
-* Currently "closure primitives" are implemented in C++ in the OSL
-  library or in the renderer, but we would like a future spec of the
-  language to allow new closure primitives to be implemented in OSL
-  itself.
-
-* Similarly, integrators are now implemented in the renderer, but we
-  want a future OSL release to allow new integrators to be implemented
-  in OSL itself.
-
-* We would like to implement alternate "back ends" that would allow
-  translation of OSL shaders (and shader networks) into code that can
-  run on GPUs or other exotic hardware (at least for the biggest subset
-  of OSL that can be expressed on such hardware).  This would, for
-  example, allow you to view close approximations to your OSL shaders in
-  realtime preview windows in a modeling system or lighting tool.
-
-We (the renderer development team at Sony Pictures Imageworks) probably
-can't do these all right away (in fact, probably can't do ALL of them in
-any time range).  But we hope that as an open source project, other
-users and developers will step up to help us explore more future
-development avenues for OSL than we would be able to do alone.
-
-
-
-Contacts
---------
+Contacts, Links, and References
+-------------------------------
 
 [OSL GitHub page](https://github.com/imageworks/OpenShadingLanguage)
 
@@ -317,45 +328,47 @@ sign [a Contributor License Agreement](http://opensource.imageworks.com/cla/).
 Credits
 -------
 
-The original designer and open source administrator of OSL is Larry Gritz.
-
-The main/early developers of OSL are (in order of joining the project):
-Larry Gritz, Cliff Stein, Chris Kulla, Alejandro Conty, Jay Reynolds,
-Solomon Boulos, Adam Martinez, Brecht Van Lommel.
+The original designer and project leader of OSL is Larry Gritz. Other early
+developers of OSL are (in order of joining the project): Cliff Stein, Chris
+Kulla, Alejandro Conty, Jay Reynolds, Solomon Boulos, Adam Martinez, Brecht
+Van Lommel.
 
 Additionally, many others have contributed features, bug fixes, and other
-small changes: Steve Agland, Shane Ambler, Martijn Berger, Nicholas Bishop,
-Matthaus G. Chajdas, Thomas Dinges, Henri Fousse, Syoyo Fujita, Derek Haase,
-Sven-Hendrik Haase, John Haddon, Daniel Heckenberg, Ronan Keryell, Max
-Liani, Bastien Montagne, Erich Ocean, Mikko Ohtamaa, Alex Schworer, Sergey
-Sharybin, Stephan Steinbach, Esteban Tovagliari, Alexander von Knorring.
-(Listed alphabetically; if we've left anybody out, please let us know.)
+changes: Steve Agland, Shane Ambler, Martijn Berger, Farchad Bidgolirad,
+Nicholas Bishop, Stefan Büttner, Matthaus G. Chajdas, Thomas Dinges, Henri
+Fousse, Syoyo Fujita, Derek Haase, Sven-Hendrik Haase, John Haddon, Daniel
+Heckenberg, Ronan Keryell, Elvic Liang, Max Liani, Bastien Montagne, Erich
+Ocean, Mikko Ohtamaa, Alex Schworer, Sergey Sharybin, Stephan Steinbach,
+Esteban Tovagliari, Alexander von Knorring, Roman Zulak. (Listed
+alphabetically; if we've left anybody out, please let us know.)
 
 We cannot possibly express sufficient gratitude to the managers at Sony
 Pictures Imageworks who allowed this project to proceed, supported it
 wholeheartedly, and permitted us to release the source, especially Rob
 Bredow, Brian Keeney, Barbara Ford, Rene Limberger, and Erik Strauss.
 
-Huge thanks also go to the crack shading team at SPI, and the brave
-lookdev TDs and CG supes willing to use OSL on their shows.  They served
-as our guinea pigs, inspiration, testers, and a fantastic source of
-feedback.  Thank you, and we hope we've been responsive to your needs.
+Huge thanks also go to the crack shading team at SPI, and the brave lookdev
+TDs and CG supes willing to use OSL on their shows.  They served as our
+guinea pigs, inspiration, testers, and a fantastic source of feedback. And
+of course, the many engineers, TDs, and artists elsewhere who incorporated
+OSL into their products and pipelines, especially the early risk-takers at
+Chaos Group, Double Negative, Pixar, DNA, Isotropix, and Animal Logic. Thank
+you, and we hope we've been responsive to your needs.
 
 OSL was not developed in isolation.  We owe a debt to the individuals
 and studios who patiently read early drafts of the language
-specification and gave us very helpful feedback and additional ideas.
-(I hope to mention them by name after we get permission of the people
-and studios involved.)
+specification and gave us very helpful feedback and additional ideas,
+as well as to the continuing contributions and feedback of its current
+developers and users at other VFX and animation studios.
 
-The OSL implementation incorporates or depends upon several other open
-source packages:
+The OSL implementation depends upon several other open source packages,
+all with compatible licenses:
 
-[OpenImageIO (c) Larry Gritz, et al](http://www.openimageio.org)
+* [OpenImageIO (c) Larry Gritz, et al](http://www.openimageio.org)
+* [Boost - various authors](http://www.boost.org)
+* [IlmBase (c) Industrial Light & Magic](http://www.openexr.com)
+* [LLVM Compiler Infrastructure](http://llvm.org)
 
-[Boost - various authors](http://www.boost.org)
-
-[IlmBase (c) Industrial Light & Magic](http://www.openexr.com)
-
-[LLVM Compiler Infrastructure](http://llvm.org)
-
-
+OSL's documentation incorporates parts of [Markdeep](https://casual-effects.com/markdeep/)
+(c) 2015-2016, Morgan McGuire, and [highlight.js](https://highlightjs.org/)
+(c) 2006, Ivan Sagalaev, both distributed under BSD licenses.

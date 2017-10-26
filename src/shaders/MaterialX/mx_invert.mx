@@ -1,0 +1,18 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_funcs.h"
+
+shader mx_invert_TYPE_SUFFIX
+    [[ string help = TYPE_STR" Subtract the incoming float/color/vector from amount in all channels," ]]
+  (
+    TYPE in = TYPE_DEFAULT_IN,
+    TYPE amount = TYPE_ONE,
+    output TYPE out = TYPE_DEFAULT_OUT
+  )
+{
+    out = amount - in;
+}

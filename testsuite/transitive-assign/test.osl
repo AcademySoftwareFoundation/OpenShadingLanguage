@@ -1,0 +1,14 @@
+shader test ()
+{
+    float x = 0, y = 0, z = 0;
+    x = y = z = 1;
+    printf ("x = %g\n", x);
+
+    float f[3] = { 0, 0, 0 };
+    f[0] = f[1] = f[2] = 4;
+    printf ("f[] = { %g, %g, %g }\n", f[0], f[1], f[2]);
+
+    color c[3] = { 0, 0, 0 };
+    c[0] = c[1] = c[2] = color(.1,.2,.3);
+    printf ("c[] = { %g, %g, %g }\n", c[0], c[1], c[2]);
+}

@@ -1,0 +1,20 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_funcs.h"
+
+shader mx_cellnoise3d_TYPE_SUFFIX
+    [[ string help = "3D cell noise in one channel" ]]
+  (
+    point position = transform ("object", P)
+        [[  string help = "input coordinate position (default: object space P)",
+            int lockgeom = 0 ]],
+
+    output TYPE out = TYPE_ZERO
+  )
+{
+    out = cellnoise (position);
+}

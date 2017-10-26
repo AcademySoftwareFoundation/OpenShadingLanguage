@@ -35,8 +35,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/strutil.h>
 namespace Strutil = OIIO::Strutil;
 
-#include <boost/foreach.hpp>
-
 
 OSL_NAMESPACE_ENTER
 
@@ -57,7 +55,7 @@ ASTNode::typecheck (TypeSpec expected)
 void
 ASTNode::typecheck_children (TypeSpec expected)
 {
-    BOOST_FOREACH (ref &c, m_children) {
+    for (auto&& c : m_children) {
         typecheck_list (c, expected);
     }
 }
@@ -141,8 +139,7 @@ ASTvariable_declaration::typecheck (TypeSpec expected)
 
 
 void
-ASTvariable_declaration::typecheck_initlist (ref init, TypeSpec type,
-                                             const char *name)
+ASTNode::typecheck_initlist (ref init, TypeSpec type, string_view name)
 {
     // Loop over a list of initializers (it's just 1 if not an array)...
     for (int i = 0;  init;  init = init->next(), ++i) {
@@ -172,8 +169,8 @@ ASTvariable_declaration::typecheck_initlist (ref init, TypeSpec type,
 
 
 TypeSpec
-ASTvariable_declaration::typecheck_struct_initializers (ref init, TypeSpec type,
-                                                        const char *name)
+ASTNode::typecheck_struct_initializers (ref init, TypeSpec type,
+                                        string_view name)
 {
     ASSERT (type.is_structure());
 
@@ -199,16 +196,12 @@ ASTvariable_declaration::typecheck_struct_initializers (ref init, TypeSpec type,
             // Initializer is itself a compound, it ought to be initializing
             // a field that is an array.
             ASTcompound_initializer *cinit = (ASTcompound_initializer *)init.get();
+            ustring fieldname = ustring::format ("%s.%s", name, field.name);
             if (field.type.is_array ()) {
-                ustring fieldname = ustring::format ("%s.%s", name,
-                                                     field.name.c_str());
-                typecheck_initlist (cinit->initlist(),
-                                    field.type, fieldname.c_str());
+                typecheck_initlist (cinit->initlist(), field.type, fieldname);
             } else if (field.type.is_structure()) {
-                ustring fieldname = ustring::format ("%s.%s", name,
-                                                     field.name.c_str());
                 typecheck_struct_initializers (cinit->initlist(), field.type,
-                                               fieldname.c_str());
+                                               fieldname);
             } else {
                 error ("Can't use '{...}' for a struct field that is not an array");
             }
@@ -227,7 +220,7 @@ ASTvariable_declaration::typecheck_struct_initializers (ref init, TypeSpec type,
         if (! assignable(field.type, init->typespec()))
             error ("Can't assign '%s' to '%s %s.%s'",
                    type_c_str(init->typespec()),
-                   type_c_str(field.type), name, field.name.c_str());
+                   type_c_str(field.type), name, field.name);
     }
     return type;
 }
@@ -511,6 +504,23 @@ ASTunary_expression::typecheck (TypeSpec expected)
 {
     typecheck_children (expected);
     TypeSpec t = expr()->typespec();
+
+    if (m_function_overload) {
+        // There was a function with the special name. See if the types
+        // match.
+        for (FunctionSymbol *f = m_function_overload; f; f = f->nextpoly()) {
+            const char *code = f->argcodes().c_str();
+            int advance;
+            TypeSpec returntype = m_compiler->type_from_code (code, &advance);
+            code += advance;
+            if (code[0] && check_simple_arg (t, code, true) && !code[0]) {
+                return m_typespec = returntype;
+            }
+        }
+        // No match, so forget about the potentially overloaded function
+        m_function_overload = nullptr;
+    }
+
     if (t.is_structure() || t.is_array()) {
         error ("Can't do '%s' to a %s.", opname(), type_c_str(t));
         return TypeSpec ();
@@ -567,6 +577,24 @@ ASTbinary_expression::typecheck (TypeSpec expected)
     typecheck_children (expected);
     TypeSpec l = left()->typespec();
     TypeSpec r = right()->typespec();
+
+    if (m_function_overload) {
+        // There was a function with the special name. See if the types
+        // match.
+        for (FunctionSymbol *f = m_function_overload; f; f = f->nextpoly()) {
+            const char *code = f->argcodes().c_str();
+            int advance;
+            TypeSpec returntype = m_compiler->type_from_code (code, &advance);
+            code += advance;
+            if (code[0] && check_simple_arg (l, code, true) &&
+                code[0] && check_simple_arg (r, code, true) &&
+                ! code[0]) {
+                return m_typespec = returntype;
+            }
+        }
+        // No match, so forget about the potentially overloaded function
+        m_function_overload = nullptr;
+    }
 
     // No binary ops work on structs or arrays
     if (l.is_structure() || r.is_structure() || l.is_array() || r.is_array()) {
@@ -807,6 +835,31 @@ ASTtype_constructor::typecheck (TypeSpec expected)
 
 
 bool
+ASTNode::check_simple_arg (const TypeSpec &argtype,
+                           const char * &formals, bool coerce)
+{
+    int advance;
+    TypeSpec formaltype = m_compiler->type_from_code (formals, &advance);
+    formals += advance;
+    // std::cerr << "\targ is " << argtype.string()
+    //           << ", formal is " << formaltype.string() << "\n";
+    if (argtype == formaltype)
+        return true;   // ok, move on to next arg
+    if (coerce && assignable (formaltype, argtype))
+        return true;
+    // Allow a fixed-length array match to a formal array with
+    // unspecified length, if the element types are the same.
+    if (formaltype.is_unsized_array() && argtype.is_sized_array() &&
+          formaltype.elementtype() == argtype.elementtype())
+        return true;
+
+    // anything that gets this far we don't consider a match
+    return false;
+}
+
+
+
+bool
 ASTNode::check_arglist (const char *funcname, ASTNode::ref arg,
                         const char *formals, bool coerce)
 {
@@ -818,7 +871,7 @@ ASTNode::check_arglist (const char *funcname, ASTNode::ref arg,
             return true;
         if (*formals == '.') {  // Special case for token/value pairs
             // FIXME -- require that the tokens be string literals
-            if (arg->typespec().is_string() && arg->next() != NULL) {
+            if (arg->typespec().is_string() && arg->next()) {
                 arg = arg->next();
                 continue;
             }
@@ -838,24 +891,10 @@ ASTNode::check_arglist (const char *funcname, ASTNode::ref arg,
             continue;  // match anything
         }
 
-        TypeSpec argtype = arg->typespec();
-        int advance;
-        TypeSpec formaltype = m_compiler->type_from_code (formals, &advance);
-        formals += advance;
-        // std::cerr << "\targ is " << argtype.string()
-        //           << ", formal is " << formaltype.string() << "\n";
-        if (argtype == formaltype)
-            continue;   // ok, move on to next arg
-        if (coerce && assignable (formaltype, argtype))
-            continue;
-        // Allow a fixed-length array match to a formal array with
-        // unspecified length, if the element types are the same.
-        if (formaltype.is_unsized_array() && argtype.is_sized_array() &&
-              formaltype.elementtype() == argtype.elementtype())
-            continue;
-
-        // anything that gets this far we don't consider a match
-        return false;
+        if (! check_simple_arg (arg->typespec(), formals, coerce))
+            return false;
+        // If check_simple_arg succeeded, it advanced formals, and we
+        // repeat for the next argument.
     }
     if (*formals && *formals != '*' && *formals != '.')
         return false;  // Non-*, non-... formals expected, no more actuals
@@ -1120,9 +1159,29 @@ ASTfunction_call::typecheck_builtin_specialcase ()
 
 
 TypeSpec
+ASTfunction_call::typecheck_struct_constructor ()
+{
+    StructSpec *structspec = m_sym->typespec().structspec();
+    ASSERT (structspec);
+    m_typespec = m_sym->typespec();
+    if (structspec->numfields() != (int)listlength(args())) {
+        error ("Constructor for '%s' has the wrong number of arguments (expected %d, got %d)",
+               structspec->name(), structspec->numfields(), listlength(args()));
+    }
+    return typecheck_struct_initializers (args(), m_typespec, "this");
+}
+
+
+
+TypeSpec
 ASTfunction_call::typecheck (TypeSpec expected)
 {
     typecheck_children ();
+
+    if (is_struct_ctr()) {
+        // Looks like function call, but is actually struct constructor
+        return typecheck_struct_constructor ();
+    }
 
     bool match = false;
 
@@ -1275,6 +1334,7 @@ static const char * builtin_func_args [] = {
     "getattribute", "is?", "is?[]", "iss?", "iss?[]",  "isi?", "isi?[]", "issi?", "issi?[]", "!rw", NULL,  // FIXME -- further checking?
     "getmessage", "is?", "is?[]", "iss?", "iss?[]", "!rw", NULL,
     "gettextureinfo", "iss?", "iss?[]", "!rw", NULL,  // FIXME -- further checking?
+    "hashnoise", NOISE_ARGS, NULL,
     "isconnected", "i?", NULL,
     "isconstant", "i?", NULL,
     "noise", GNOISE_ARGS, NOISE_ARGS, "!deriv", NULL,

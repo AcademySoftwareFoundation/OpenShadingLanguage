@@ -1,0 +1,4 @@
+Compiled test.osl -> test.oso
+Test versions:
+OK!
+

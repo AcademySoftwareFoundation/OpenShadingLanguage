@@ -7,5 +7,5 @@ command += oiiotool ("-pattern constant:color=.1,.1,.5 256x256 3 -text:size=50:x
 
 # Purposely only create two of the four UDIM textures
 
-command += testshade("-g 128 128 --center -scalest 2 2 -od uint8 -o Cout out.tif test")
+command += testshade("-g 128 128 --center -scaleuv 2 2 -od uint8 -o Cout out.tif test")
 outputs = [ "out.txt", "out.tif" ]

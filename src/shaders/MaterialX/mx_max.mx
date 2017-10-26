@@ -1,0 +1,18 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_funcs.h"
+
+shader mx_max_TYPE_SUFFIX
+    [[ string help = TYPE_STR"  Select the maximum among incoming values." ]]
+  (
+    TYPE in1 = TYPE_DEFAULT_IN,
+    TYPE in2 = TYPE_DEFAULT_IN,
+    output TYPE out = TYPE_DEFAULT_OUT
+  )
+{
+    out = max(in1, in2); 
+}

@@ -21,6 +21,18 @@ surface test ()
     test_ctransform ("YIQ", uv);
     test_ctransform ("XYZ", c);
     test_ctransform ("XYZ", uv);
+
+    printf ("transformc (\"linear\",\"sRGB\",(%0.3f)) = %0.3f\n",
+            c, transformc("linear","sRGB",c));
+    printf ("transformc (\"sRGB\",\"linear\",(%0.3f)) = %0.3f\n",
+            c, transformc("sRGB","linear",c));
+
+    color uv_YIQ = transformc("rgb","YIQ",uv);
+    printf ("transformc (\"rgb\",\"YIQ\",(%0.3f / %0.3f / %0.3f)) = %0.3f / %0.3f / %0.3f\n",
+            uv, Dx(uv), Dy(uv), uv_YIQ, Dx(uv_YIQ), Dy(uv_YIQ));
+    color uv_sRGB = transformc("rgb","sRGB",uv);
+    printf ("transformc (\"rgb\",\"sRGB\",(%0.3f / %0.3f / %0.3f)) = %0.3f / %0.3f / %0.3f\n",
+            uv, Dx(uv), Dy(uv), uv_sRGB, Dx(uv_sRGB), Dy(uv_sRGB));
     printf ("\n");
 }
 

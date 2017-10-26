@@ -28,8 +28,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-#include "export.h"
-#include "oslversion.h"
+#include <OSL/export.h>
+#include <OSL/oslversion.h>
 
 #include <vector>
 
@@ -50,8 +50,6 @@ namespace llvm {
   class PointerType;
   class Type;
   class Value;
-  template<bool preserveNames, typename T, typename Inserter> class IRBuilder;
-  template<bool preserveNames> class IRBuilderDefaultInserter;
   namespace legacy {
     class FunctionPassManager;
     class PassManager;
@@ -65,7 +63,6 @@ OSL_NAMESPACE_ENTER
 namespace pvt {   // OSL::pvt
 
 
-class OSL_Dummy_JITMemoryManager;
 
 
 
@@ -79,8 +76,6 @@ public:
     ~LLVM_Util ();
 
     struct PerThreadInfo;
-    typedef llvm::IRBuilder<true,llvm::ConstantFolder,
-                            llvm::IRBuilderDefaultInserter<true> > IRBuilder;
 
     /// Set debug level
     void debug (int d) { m_debug = d; }
@@ -126,6 +121,10 @@ public:
                                    const std::vector<llvm::Type*> &paramtypes,
                                    bool varargs=false);
 
+    /// Add a global mapping of a function to its callable address
+    /// explicitly instead of relying on dlsym.
+    void add_function_mapping (llvm::Function *func, void *addr);
+
     /// Set up a new current function that subsequent basic blocks will
     /// be added to.
     void current_function (llvm::Function *func) { m_current_function = func; }
@@ -144,14 +143,6 @@ public:
 
     /// End the current builder
     void end_builder ();
-
-    /// Return the current IR builder, create a new one (for the current
-    /// function) if necessary.
-    IRBuilder &builder () {
-        if (! m_builder)
-            new_builder ();
-        return *m_builder;
-    }
 
     /// Create a new JITing ExecutionEngine and make it the current one.
     /// Return a pointer to the new engine.  If err is not NULL, put any
@@ -183,7 +174,7 @@ public:
     void setup_optimization_passes (int optlevel);
 
     /// Run the optimization passes.
-    void do_optimize ();
+    void do_optimize (std::string *err = NULL);
 
     /// Retrieve a callable pointer to the JITed version of a function.
     /// This will JIT the function if it hasn't already done so. Be sure
@@ -498,20 +489,18 @@ public:
     static size_t total_jit_memory_held ();
 
 private:
-    /// Return a pointer to the JIT memory manager.
-    llvm::JITMemoryManager *jitmm () const {
-        return (llvm::JITMemoryManager *)m_llvm_jitmm;
-    }
+    class MemoryManager;
+    class IRBuilder;
 
     void SetupLLVM ();
-
+    IRBuilder& builder();
 
     int m_debug;
     PerThreadInfo *m_thread;
     llvm::LLVMContext *m_llvm_context;
     llvm::Module *m_llvm_module;
     IRBuilder *m_builder;
-    OSL_Dummy_JITMemoryManager *m_llvm_jitmm;
+    MemoryManager *m_llvm_jitmm;
     llvm::Function *m_current_function;
     llvm::legacy::PassManager *m_llvm_module_passes;
     llvm::legacy::FunctionPassManager *m_llvm_func_passes;

@@ -20,16 +20,10 @@ else ()
     ADD_LIBRARY ( oslcomp SHARED ${liboslcomp_srcs} )
 endif ()
 
-if (MSVC)
-	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
-	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-	# Enable PDB generation for Release build
-	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
-	set (CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /DEBUG")
-endif ()
+TARGET_LINK_LIBRARIES ( oslcomp ${OPENIMAGEIO_LIBRARIES} ${ILMBASE_LIBRARIES}
+                       ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
+                       ${CLANG_LIBRARIES} ${LLVM_LIBRARIES} ${LLVM_LDFLAGS}
+                       ${LLVM_SYSTEM_LIBRARIES})
 
-TARGET_LINK_LIBRARIES ( oslcomp ${OPENIMAGEIO_LIBRARY} ${ILMBASE_LIBRARIES}
-                       ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
-
-INSTALL ( TARGETS oslcomp RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib )
+install_targets (oslcomp)
 

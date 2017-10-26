@@ -33,7 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/argparse.h>
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/sysutil.h>
-#include "OSL/llvm_util.h"
+#include <OSL/llvm_util.h>
 
 
 typedef int (*IntFuncOfTwoInts)(int,int);

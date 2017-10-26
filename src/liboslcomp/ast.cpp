@@ -29,6 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <string>
 #include <sstream>
+#include <functional>
 
 #include "osl_pvt.h"
 #include "oslcomp_pvt.h"
@@ -36,6 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/dassert.h>
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/strutil.h>
+#include <OpenImageIO/atomic.h>
 namespace Strutil = OIIO::Strutil;
 
 OSL_NAMESPACE_ENTER
@@ -43,11 +45,43 @@ OSL_NAMESPACE_ENTER
 namespace pvt {   // OSL::pvt
 
 
+#ifndef NDEBUG
+// When in DEBUG mode, track the number of AST nodes of each type that
+// are allocated and remaining, and at program exit print a message about
+// any leaked nodes.
+namespace {
+std::atomic<int> node_counts[ASTNode::_last_node];
+std::atomic<int> node_counts_peak[ASTNode::_last_node];
+
+class ScopeExit {
+public:
+    typedef std::function<void()> Task;
+    explicit ScopeExit (Task&& task) : m_task(std::forward<Task>(task)) {}
+    ~ScopeExit () { m_task(); }
+private:
+    Task m_task;
+};
+
+ScopeExit print_node_counts ([](){
+    for (int i = 0; i < ASTNode::_last_node; ++i)
+        if (node_counts[i] > 0)
+            Strutil::printf ("ASTNode type %2d: %5d   (peak %5d)\n",
+                             i, node_counts[i], node_counts_peak[i]);
+});
+}
+#endif
+
+
+
 ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler) 
     : m_nodetype(nodetype), m_compiler(compiler),
       m_sourcefile(compiler->filename()),
       m_sourceline(compiler->lineno()), m_op(0), m_is_lvalue(false)
 {
+#ifndef NDEBUG
+    node_counts[nodetype] += 1;
+    node_counts_peak[nodetype] += 1;
+#endif
 }
 
 
@@ -59,6 +93,10 @@ ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
       m_sourceline(compiler->lineno()), m_op(op), m_is_lvalue(false)
 {
     addchild (a);
+#ifndef NDEBUG
+    node_counts[nodetype] += 1;
+    node_counts_peak[nodetype] += 1;
+#endif
 }
 
 
@@ -68,6 +106,10 @@ ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op)
       m_sourcefile(compiler->filename()),
       m_sourceline(compiler->lineno()), m_op(op), m_is_lvalue(false)
 {
+#ifndef NDEBUG
+    node_counts[nodetype] += 1;
+    node_counts_peak[nodetype] += 1;
+#endif
 }
 
 
@@ -80,6 +122,10 @@ ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
 {
     addchild (a);
     addchild (b);
+#ifndef NDEBUG
+    node_counts[nodetype] += 1;
+    node_counts_peak[nodetype] += 1;
+#endif
 }
 
 
@@ -93,6 +139,10 @@ ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
     addchild (a);
     addchild (b);
     addchild (c);
+#ifndef NDEBUG
+    node_counts[nodetype] += 1;
+    node_counts_peak[nodetype] += 1;
+#endif
 }
 
 
@@ -107,30 +157,45 @@ ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
     addchild (b);
     addchild (c);
     addchild (d);
+#ifndef NDEBUG
+    node_counts[nodetype] += 1;
+    node_counts_peak[nodetype] += 1;
+#endif
+}
+
+
+
+ASTNode::~ASTNode ()
+{
+#ifndef NDEBUG
+    node_counts[nodetype()] -= 1;
+#endif
 }
 
 
 
 void
-ASTNode::error (const char *format, ...)
+ASTNode::error_impl (string_view msg) const
 {
-    va_list ap;
-    va_start (ap, format);
-    std::string errmsg = format ? Strutil::vformat (format, ap) : "syntax error";
-    va_end (ap);
-    m_compiler->error (sourcefile(), sourceline(), "%s", errmsg.c_str());
+#if OIIO_VERSION >= 10803
+    m_compiler->error (sourcefile(), sourceline(), "%s", msg);
+#else
+    // DEPRECATED -- delete when minimum OIIO is at least 1.8
+    m_compiler->error (sourcefile(), sourceline(), "%s", msg.c_str());
+#endif
 }
 
 
 
 void
-ASTNode::warning (const char *format, ...)
+ASTNode::warning_impl (string_view msg) const
 {
-    va_list ap;
-    va_start (ap, format);
-    std::string errmsg = format ? Strutil::vformat (format, ap) : "unknown warning";
-    va_end (ap);
-    m_compiler->warning (sourcefile(), sourceline(), "%s", errmsg.c_str());
+#if OIIO_VERSION >= 10803
+    m_compiler->warning (sourcefile(), sourceline(), "%s", msg);
+#else
+    // DEPRECATED -- delete when minimum OIIO is at least 1.8
+    m_compiler->warning (sourcefile(), sourceline(), "%s", msg.c_str());
+#endif
 }
 
 
@@ -278,9 +343,9 @@ ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
 
 
 void
-ASTfunction_declaration::add_meta (ASTNode *meta)
+ASTfunction_declaration::add_meta (ref metaref)
 {
-    for (  ;  meta;  meta = meta->nextptr()) {
+    for (ASTNode *meta = metaref.get();  meta;  meta = meta->nextptr()) {
         ASSERT (meta->nodetype() == ASTNode::variable_declaration_node);
         const ASTvariable_declaration *metavar = static_cast<const ASTvariable_declaration *>(meta);
         Symbol *metasym = metavar->sym();
@@ -789,6 +854,18 @@ ASTassign_expression::opword () const
 
 
 
+ASTunary_expression::ASTunary_expression (OSLCompilerImpl *comp, int op,
+                                          ASTNode *expr)
+    : ASTNode (unary_expression_node, comp, op, expr)
+{
+    // Check for a user-overloaded function for this operator
+    Symbol *sym = comp->symtab().find (ustring::format ("__operator__%s__", opword()));
+    if (sym && sym->symtype() == SymTypeFunction)
+        m_function_overload = (FunctionSymbol *)sym;
+}
+
+
+
 const char *
 ASTunary_expression::childname (size_t i) const
 {
@@ -821,6 +898,22 @@ ASTunary_expression::opword () const
     case Not   : return "not";
     case Compl : return "compl";
     default: ASSERT (0 && "unknown unary expression");
+    }
+}
+
+
+
+ASTbinary_expression::ASTbinary_expression (OSLCompilerImpl *comp, Operator op,
+                                            ASTNode *left, ASTNode *right)
+    : ASTNode (binary_expression_node, comp, op, left, right)
+{
+    // Check for a user-overloaded function for this operator.
+    // Disallow a few ops from overloading.
+    if (op != And && op != Or) {
+        ustring funcname = ustring::format ("__operator__%s__", opword());
+        Symbol *sym = comp->symtab().find (funcname);
+        if (sym && sym->symtype() == SymTypeFunction)
+            m_function_overload = (FunctionSymbol *)sym;
     }
 }
 
@@ -920,18 +1013,22 @@ ASTtype_constructor::childname (size_t i) const
 
 
 ASTfunction_call::ASTfunction_call (OSLCompilerImpl *comp, ustring name,
-                                    ASTNode *args)
+                                    ASTNode *args, FunctionSymbol *funcsym)
     : ASTNode (function_call_node, comp, 0, args), m_name(name),
       m_argread(~1),      // Default - all args are read except the first
       m_argwrite(1),      // Default - first arg only is written by the op
       m_argtakesderivs(0) // Default - doesn't take derivs
 {
-    m_sym = comp->symtab().find (name);
+    // If we weren't passed a function symbol directly, look it up.
+    m_sym = funcsym ? funcsym : comp->symtab().find (name);
     if (! m_sym) {
         error ("function '%s' was not declared in this scope", name.c_str());
         // FIXME -- would be fun to troll through the symtab and try to
         // find the things that almost matched and offer suggestions.
         return;
+    }
+    if (is_struct_ctr()) {
+        return;  // It's a struct constructor
     }
     if (m_sym->symtype() != SymTypeFunction) {
         error ("'%s' is not a function", name.c_str());

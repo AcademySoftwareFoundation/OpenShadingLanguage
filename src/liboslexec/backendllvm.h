@@ -36,7 +36,7 @@ using namespace OSL;
 using namespace OSL::pvt;
 
 #include "runtimeoptimize.h"
-#include "OSL/llvm_util.h"
+#include <OSL/llvm_util.h>
 
 
 

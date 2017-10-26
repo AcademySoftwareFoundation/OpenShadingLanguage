@@ -1,0 +1,53 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_funcs.h"
+
+shader mx_image_TYPE_SUFFIX
+    [[ string help = "Texture lookup" ]]
+(
+    string file = ""
+        [[  string help = "Texture filename",
+            string widget = "filename" ]],
+
+    string layer = ""
+        [[  string help = "Subimage in texture file",
+            string widget = "filename" ]],
+
+    TYPE default_value = TYPE_ZERO
+        [[  string help = "Default value" ]],
+
+    vector2 texcoord = {u, v}
+        [[ string help = "Vector2 texture coordinates",
+           int lockgeom = 0 ]],
+
+    string uaddressmode = "periodic"
+        [[ string help = "Tiling mode along the u coordinate"]],
+
+    string vaddressmode = "periodic"
+        [[ string help = "Tiling mode along the v coordinate"]],
+
+    string framerange = "",
+
+    int frameoffset = 0,
+
+    string frameendaction = "black",
+
+     output TYPE out = TYPE_ZERO
+        [[  string help = "Output color" ]]
+  )
+{
+    color missingColor;
+    float missingAlpha;
+    setup_missing_color_alpha (default_value, missingColor, missingAlpha);
+
+    float alpha;
+    color rgb = texture(file, texcoord.x, texcoord.y,
+                        "alpha", alpha, "subimage", layer,
+                        "missingcolor", missingColor, "missingalpha", missingAlpha);
+
+    out = pack (rgb, alpha);
+}

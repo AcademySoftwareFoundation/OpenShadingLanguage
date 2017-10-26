@@ -62,12 +62,6 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
         MESSAGE (STATUS "LLVM_COMPILE cpp=${llvm_bc_cpp}")
     endif ()
     SET ( ${srclist} ${${srclist}} ${llvm_bc_cpp} )
-    if (OSL_NAMESPACE)
-        SET (LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS} "-DOSL_NAMESPACE=${OSL_NAMESPACE}")
-    endif ()
-    if (OPENIMAGEIO_NAMESPACE)
-        SET (LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS} "-DOPENIMAGEIO_NAMESPACE=${OPENIMAGEIO_NAMESPACE}")
-    endif ()
     get_property (CURRENT_DEFINITIONS DIRECTORY PROPERTY COMPILE_DEFINITIONS)
     if (VERBOSE)
         message (STATUS "Current #defines are ${CURRENT_DEFINITIONS}")
@@ -75,7 +69,7 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
     foreach (def ${CURRENT_DEFINITIONS})
         set (LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS} "-D${def}")
     endforeach()
-    set (LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS} ${OSL_SIMD_FLAGS} ${OSL_CSTD_FLAGS})
+    set (LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS} ${SIMD_COMPILE_FLAGS} ${CSTD_FLAGS})
 
     # Figure out what program we will use to make the bitcode.
     if (NOT LLVM_BC_GENERATOR)
@@ -133,8 +127,8 @@ else ()
           ${LLVM_COMPILE_FLAGS}
           "-I${CMAKE_CURRENT_SOURCE_DIR}"
           "-I${CMAKE_SOURCE_DIR}/src/include"
-          "-I${CMAKE_BINARY_DIR}/include/OSL"
-          "-I${OPENIMAGEIO_INCLUDES}"
+          "-I${CMAKE_BINARY_DIR}/include"
+          "-I${OPENIMAGEIO_INCLUDE_DIR}"
           "-I${ILMBASE_INCLUDE_DIR}"
           "-I${Boost_INCLUDE_DIRS}"
           -DOSL_COMPILING_TO_BITCODE=1
@@ -144,6 +138,7 @@ else ()
       COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash" ${llvm_bc} ${llvm_bc_cpp}
       MAIN_DEPENDENCY ${llvm_src}
       DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash"
+              ${exec_headers} ${PROJECT_PUBLIC_HEADERS}
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
 endif ()
 ENDMACRO ( )
@@ -174,24 +169,29 @@ endif ()
 
 TARGET_LINK_LIBRARIES ( oslexec
                         ${VISIBILITY_COMMAND} ${VISIBILITY_MAP_COMMAND}
-                        ${OPENIMAGEIO_LIBRARY} ${ILMBASE_LIBRARIES}
+                        ${OPENIMAGEIO_LIBRARIES} ${ILMBASE_LIBRARIES}
                         ${PUGIXML_LIBRARIES}
                         ${PARTIO_LIBRARIES} ${ZLIB_LIBRARIES}
                         ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
+                        ${CLANG_LIBRARIES}
                         ${LLVM_LIBRARY} ${LLVM_MCJIT_LIBRARY}
                         ${LLVM_LIBRARIES} ${LLVM_LDFLAGS}
-                        ${EXTRA_OSLEXEC_LIBRARIES})
-ADD_DEPENDENCIES (oslexec "${CMAKE_CURRENT_SOURCE_DIR}/liboslexec.map")
+                        ${LLVM_SYSTEM_LIBRARIES})
+ADD_DEPENDENCIES (oslexec "${CMAKE_SOURCE_DIR}/src/build-scripts/hidesymbols.map")
 
-INSTALL ( TARGETS oslexec RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib )
+install_targets (oslexec)
 
 # Unit tests
 if (OSL_BUILD_TESTS)
     add_executable (accum_test accum_test.cpp)
-    target_link_libraries ( accum_test oslexec oslcomp ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} ${EXTRA_OSLEXEC_LIBRARIES} )
+    target_link_libraries ( accum_test oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
     add_test (unit_accum "${CMAKE_BINARY_DIR}/src/liboslexec/accum_test")
 
+    add_executable (dual_test dual_test.cpp)
+    target_link_libraries ( dual_test ${OPENIMAGEIO_LIBRARIES} ${ILMBASE_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+    add_test (unit_dual "${CMAKE_BINARY_DIR}/src/liboslexec/dual_test")
+
     add_executable (llvmutil_test llvmutil_test.cpp)
-    target_link_libraries ( llvmutil_test oslexec oslcomp ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} ${EXTRA_OSLEXEC_LIBRARIES} )
+    target_link_libraries ( llvmutil_test oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
     add_test (unit_llvmutil "${CMAKE_BINARY_DIR}/src/liboslexec/llvmutil_test")
 endif ()

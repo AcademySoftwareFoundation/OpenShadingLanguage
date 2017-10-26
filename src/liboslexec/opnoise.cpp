@@ -44,7 +44,7 @@ namespace pvt {
 
 #if 0 // only when testing the statistics of perlin noise to normalize the range
 
-#include <boost/random.hpp>
+#include <random>
 
 void test_perlin(int d) {
     HashScalar h;
@@ -53,17 +53,17 @@ void test_perlin(int d) {
     float noise_avg = 0;
     float noise_avg2 = 0;
     float noise_stddev;
-    boost::mt19937 rndgen;
-    boost::uniform_01<boost::mt19937, float> rnd(rndgen);
+    std::mt19937 rndgen;
+    std::uniform_real_distribution<float> rnd (0.0f, 1.0f);
     printf("Running perlin-%d noise test ...\n", d);
     const int n = 100000000;
     const float r = 1024;
     for (int i = 0; i < n; i++) {
         float noise;
-        float nx = rnd(); nx = (2 * nx - 1) * r;
-        float ny = rnd(); ny = (2 * ny - 1) * r;
-        float nz = rnd(); nz = (2 * nz - 1) * r;
-        float nw = rnd(); nw = (2 * nw - 1) * r;
+        float nx = rnd(rndgen); nx = (2 * nx - 1) * r;
+        float ny = rnd(rndgen); ny = (2 * ny - 1) * r;
+        float nz = rnd(rndgen); nz = (2 * nz - 1) * r;
+        float nw = rnd(rndgen); nw = (2 * nw - 1) * r;
         switch (d) {
             case 1: perlin(noise, h, nx); break;
             case 2: perlin(noise, h, nx, ny); break;
@@ -278,6 +278,7 @@ OSL_SHADEOP void osl_ ##opname## _dvdvdf (char *name, char *r, char *x, char *y,
 
 
 NOISE_IMPL (cellnoise, CellNoise)
+NOISE_IMPL (hashnoise, HashNoise)
 NOISE_IMPL (noise, Noise)
 NOISE_IMPL_DERIV (noise, Noise)
 NOISE_IMPL (snoise, SNoise)
@@ -474,6 +475,7 @@ OSL_SHADEOP void osl_ ##opname## _dvdvdfvf (char *name, char *r, char *x, char *
 
 
 PNOISE_IMPL (pcellnoise, PeriodicCellNoise)
+PNOISE_IMPL (phashnoise, PeriodicHashNoise)
 PNOISE_IMPL (pnoise, PeriodicNoise)
 PNOISE_IMPL_DERIV (pnoise, PeriodicNoise)
 PNOISE_IMPL (psnoise, PeriodicSNoise)
@@ -697,6 +699,10 @@ struct GenericNoise {
             NullNoise noise; noise(result, s);
         } else if (name == Strings::unull) {
             UNullNoise noise; noise(result, s);
+        } else if (name == Strings::hash) {
+            HashNoise hashnoise;
+            hashnoise(result.val(), s.val());
+            result.clear_d();
         } else {
             ((ShadingContext *)sg->context)->error ("Unknown noise type \"%s\"", name.c_str());
         }
@@ -729,6 +735,10 @@ struct GenericNoise {
             NullNoise noise; noise(result, s, t);
         } else if (name == Strings::unull) {
             UNullNoise noise; noise(result, s, t);
+        } else if (name == Strings::hash) {
+            HashNoise hashnoise;
+            hashnoise(result.val(), s.val(), t.val());
+            result.clear_d();
         } else {
             ((ShadingContext *)sg->context)->error ("Unknown noise type \"%s\"", name.c_str());
         }
@@ -763,6 +773,10 @@ struct GenericPNoise {
         } else if (name == Strings::gabor) {
             GaborPNoise gnoise;
             gnoise (name, result, s, sp, sg, opt);
+        } else if (name == Strings::hash) {
+            PeriodicHashNoise hashnoise;
+            hashnoise(result.val(), s.val(), sp);
+            result.clear_d();
         } else {
             ((ShadingContext *)sg->context)->error ("Unknown noise type \"%s\"", name.c_str());
         }
@@ -786,6 +800,10 @@ struct GenericPNoise {
         } else if (name == Strings::gabor) {
             GaborPNoise gnoise;
             gnoise (name, result, s, t, sp, tp, sg, opt);
+        } else if (name == Strings::hash) {
+            PeriodicHashNoise hashnoise;
+            hashnoise(result.val(), s.val(), t.val(), sp, tp);
+            result.clear_d();
         } else {
             ((ShadingContext *)sg->context)->error ("Unknown noise type \"%s\"", name.c_str());
         }
@@ -854,6 +872,40 @@ osl_count_noise (void *sg_)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     sg->context->shadingsys().count_noise ();
+}
+
+
+
+OSL_SHADEOP int
+osl_hash_ii (int x)
+{
+    return inthashi (x);
+}
+
+OSL_SHADEOP int
+osl_hash_if (float x)
+{
+    return inthashf (x);
+}
+
+OSL_SHADEOP int
+osl_hash_iff (float x, float y)
+{
+    return inthashf (x, y);
+}
+
+
+OSL_SHADEOP int
+osl_hash_iv (float *x)
+{
+    return inthashf (x);
+}
+
+
+OSL_SHADEOP int
+osl_hash_ivf (float *x, float y)
+{
+    return inthashf (x, y);
 }
 
 

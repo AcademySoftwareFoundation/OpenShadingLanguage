@@ -46,10 +46,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // use these two symbols to differentiate these cases, when important).
 #if (__cplusplus >= 201402L)
 #  define OSL_CPLUSPLUS_VERSION  14
-#elif (__cplusplus >= 201103L)
+#elif (__cplusplus >= 201103L) || _MSC_VER >= 1900
 #  define OSL_CPLUSPLUS_VERSION  11
 #else
-#  define OSL_CPLUSPLUS_VERSION  3 /* presume C++03 */
+#  error "This version of OSL requires C++11"
 #endif
 
 // Symbol export defines
@@ -61,24 +61,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenEXR/ImathMatrix.h>
 
 // All the things we need from OpenImageIO
-#include <OpenImageIO/version.h>
+#include <OpenImageIO/oiioversion.h>
 #include <OpenImageIO/errorhandler.h>
 #include <OpenImageIO/texture.h>
 #include <OpenImageIO/typedesc.h>
 #include <OpenImageIO/ustring.h>
 #include <OpenImageIO/platform.h>
 
-// Sort out smart pointers
-#if OSL_CPLUSPLUS_VERSION >= 11
-# include <memory>
-#else /* FIXME(C++11): remove this after making C++11 the baseline */
-# include <boost/shared_ptr.hpp>
-#endif
-
 // Extensions to Imath
-#include "matrix22.h"
+#include <OSL/matrix22.h>
 
-#include "oslversion.h"
+#include <OSL/oslversion.h>
 
 OSL_NAMESPACE_ENTER
 
@@ -121,14 +114,6 @@ using OIIO::ustring;
 using OIIO::ustringHash;
 using OIIO::string_view;
 
-// Sort out smart pointers
-#if OSL_CPLUSPLUS_VERSION >= 11
-  using std::shared_ptr;
-  using std::weak_ptr;
-#else /* FIXME(C++11): remove this after making C++11 the baseline */
-  using boost::shared_ptr;
-  using boost::weak_ptr;
-#endif
 
 #ifndef __has_attribute
 #  define __has_attribute(x) 0

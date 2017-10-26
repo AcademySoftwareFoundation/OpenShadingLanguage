@@ -27,7 +27,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "lpeparse.h"
-#include "OSL/oslclosure.h"
+#include <OSL/oslclosure.h>
 #include <OpenImageIO/dassert.h>
 
 

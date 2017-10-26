@@ -27,8 +27,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <cmath>
-
-#include <boost/unordered_map.hpp>
+#include <unordered_map>
 
 #include <OpenImageIO/timer.h>
 #include <OpenImageIO/sysutil.h>
@@ -136,7 +135,7 @@ struct HelperFuncRecord {
         : argtypes(argtypes), function(function) {}
 };
 
-typedef boost::unordered_map<std::string,HelperFuncRecord> HelperFuncMap;
+typedef std::unordered_map<std::string,HelperFuncRecord> HelperFuncMap;
 HelperFuncMap llvm_helper_function_map;
 atomic_int llvm_helper_function_map_initialized (0);
 spin_mutex llvm_helper_function_map_mutex;
@@ -815,7 +814,7 @@ BackendLLVM::build_llvm_instance (bool groupentry)
     // Setup the symbols
     m_named_values.clear ();
     m_layers_already_run.clear ();
-    BOOST_FOREACH (Symbol &s, inst()->symbols()) {
+    for (auto&& s : inst()->symbols()) {
         // Skip constants -- we always inline scalar constants, and for
         // array constants we will just use the pointers to the copy of
         // the constant that belongs to the instance.
@@ -952,7 +951,7 @@ BackendLLVM::initialize_llvm_group ()
 
     for (HelperFuncMap::iterator i = llvm_helper_function_map.begin(),
          e = llvm_helper_function_map.end(); i != e; ++i) {
-        const char *funcname = i->first.c_str();
+        const std::string &funcname (i->first);
         bool varargs = false;
         const char *types = i->second.argtypes;
         int advance;
@@ -971,7 +970,8 @@ BackendLLVM::initialize_llvm_group ()
             }
             types += advance;
         }
-        ll.make_function (funcname, false, llvm_type(rettype), params, varargs);
+        llvm::Function *f = ll.make_function (funcname, false, llvm_type(rettype), params, varargs);
+        ll.add_function_mapping (f, (void *)i->second.function);
     }
 
     // Needed for closure setup
@@ -985,9 +985,21 @@ BackendLLVM::initialize_llvm_group ()
 
 
 
+static void empty_group_func (void*, void*)
+{
+}
+
+
+
 void
 BackendLLVM::run ()
 {
+    if (group().does_nothing()) {
+        group().llvm_compiled_init ((RunLLVMGroupFunc)empty_group_func);
+        group().llvm_compiled_version ((RunLLVMGroupFunc)empty_group_func);
+        return;
+    }
+
     // At this point, we already hold the lock for this group, by virtue
     // of ShadingSystemImpl::optimize_group.
     OIIO::Timer timer;

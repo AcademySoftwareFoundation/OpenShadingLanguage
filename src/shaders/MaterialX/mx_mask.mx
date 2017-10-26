@@ -1,0 +1,19 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_funcs.h"
+
+shader mx_mask_TYPE_SUFFIX
+    [[ string help = TYPE_STR" Take two color2 or two color4 inputs and use the built-in alpha \
+                     channel(s) to control the compositing of the fg and bg inputs: Bf  (alpha: bf)" ]]
+  (
+    TYPE fg = TYPE_DEFAULT_IN,
+    TYPE bg = TYPE_DEFAULT_IN,
+    output TYPE out = TYPE_DEFAULT_OUT
+  )
+{
+    out = bg * fg.a;
+}

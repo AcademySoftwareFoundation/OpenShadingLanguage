@@ -1,0 +1,36 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_funcs.h"
+
+shader mx_fractal3d_fa_TYPE_SUFFIX
+    [[ string help = "3D fractal noise"  ]]
+  (
+    point position = transform ("object", P)
+        [[  string help = "input coordinate position (default: object space P)",
+            int lockgeom = 0 ]],
+
+    float amplitude = 1
+        [[  string help = "center-to-peak amplitude of the noise" ]],
+
+    int octaves = 3
+        [[  string help = "number of summed octaves" ]],
+
+    float lacunarity = 2.0
+        [[  string help = "exponential scale between successive octaves" ]],
+
+    float diminish = 0.5
+        [[  string help = "rate at which amplitude is diminished per octave"]],
+
+    string noisetype = "snoise"
+        [[  string help = "type of noise" ]],
+        
+    output TYPE out = TYPE_ZERO
+  )
+{
+    TYPE f = fBm(position, octaves, lacunarity, diminish, noisetype);
+    out = f * amplitude;
+}

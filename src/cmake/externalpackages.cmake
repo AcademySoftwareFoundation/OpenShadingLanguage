@@ -5,6 +5,7 @@
 if (NOT VERBOSE)
     set (Bison_FIND_QUIETLY true)
     set (Boost_FIND_QUIETLY true)
+    set (Curses_FIND_QUIETLY true)
     set (Flex_FIND_QUIETLY true)
     set (LLVM_FIND_QUIETLY true)
     set (OpenEXR_FIND_QUIETLY true)
@@ -19,28 +20,6 @@ if (NOT VERBOSE)
 endif ()
 
 
-setup_path (THIRD_PARTY_TOOLS_HOME
-            "unknown"
-            "Location of third party libraries in the external project")
-
-# Add all third party tool directories to the include and library paths so
-# that they'll be correctly found by the various FIND_PACKAGE() invocations.
-if (THIRD_PARTY_TOOLS_HOME AND EXISTS "${THIRD_PARTY_TOOLS_HOME}")
-    set (CMAKE_INCLUDE_PATH "${THIRD_PARTY_TOOLS_HOME}/include" "${CMAKE_INCLUDE_PATH}")
-    # Detect third party tools which have been successfully built using the
-    # lock files which are placed there by the external project Makefile.
-    file (GLOB _external_dir_lockfiles "${THIRD_PARTY_TOOLS_HOME}/*.d")
-    foreach (_dir_lockfile ${_external_dir_lockfiles})
-        # Grab the tool directory_name.d
-        get_filename_component (_ext_dirname ${_dir_lockfile} NAME)
-        # Strip off the .d extension
-        string (REGEX REPLACE "\\.d$" "" _ext_dirname ${_ext_dirname})
-        set (CMAKE_INCLUDE_PATH "${THIRD_PARTY_TOOLS_HOME}/include/${_ext_dirname}" ${CMAKE_INCLUDE_PATH})
-        set (CMAKE_LIBRARY_PATH "${THIRD_PARTY_TOOLS_HOME}/lib/${_ext_dirname}" ${CMAKE_LIBRARY_PATH})
-    endforeach ()
-endif ()
-
-
 setup_string (SPECIAL_COMPILE_FLAGS ""
                "Custom compilation flags")
 if (SPECIAL_COMPILE_FLAGS)
@@ -52,24 +31,54 @@ endif ()
 ###########################################################################
 # IlmBase setup
 
-find_package (OpenEXR REQUIRED)
+find_package (OpenEXR 2.0 REQUIRED)
 #OpenEXR 2.2 still has problems with importing ImathInt64.h unqualified
 #thus need for ilmbase/OpenEXR
 include_directories ("${OPENEXR_INCLUDE_DIR}"
                      "${ILMBASE_INCLUDE_DIR}"
                      "${ILMBASE_INCLUDE_DIR}/OpenEXR")
 if (${OPENEXR_VERSION} VERSION_LESS 2.0.0)
-    # OpenEXR 1.x had weird #include dirctives, this is also necessary:
-    include_directories ("${OPENEXR_INCLUDE_DIR}/OpenEXR")
-else ()
-    add_definitions (-DUSE_OPENEXR_VERSION2=1)
+    message (FATAL_ERROR "OpenEXR/Ilmbase is too old")
 endif ()
 if (NOT OpenEXR_FIND_QUIETLY)
-    message (STATUS "ILMBASE_INCLUDE_DIR = ${ILMBASE_INCLUDE_DIR}")
-    message (STATUS "ILMBASE_LIBRARIES = ${ILMBASE_LIBRARIES}")
+    message (STATUS "OPENEXR_INCLUDE_DIR = ${OPENEXR_INCLUDE_DIR}")
+    message (STATUS "OPENEXR_LIBRARIES = ${OPENEXR_LIBRARIES}")
 endif ()
 
 # end IlmBase setup
+###########################################################################
+
+
+###########################################################################
+# OpenImageIO
+
+find_package (OpenImageIO 1.7 REQUIRED)
+include_directories ("${OPENIMAGEIO_INCLUDE_DIR}")
+link_directories ("${OPENIMAGEIO_LIBRARY_DIRS}")
+message (STATUS "Using OpenImageIO ${OPENIMAGEIO_VERSION}")
+
+# end OpenImageIO setup
+###########################################################################
+
+
+###########################################################################
+# LLVM library setup
+
+find_package (LLVM 3.5 REQUIRED)
+
+# ensure include directory is added (in case of non-standard locations
+include_directories (BEFORE SYSTEM "${LLVM_INCLUDES}")
+link_directories ("${LLVM_LIB_DIR}")
+# Extract and concatenate major & minor, remove wayward patches,
+# dots, and "svn" or other suffixes.
+string (REGEX REPLACE "([0-9]+)\\.([0-9]+).*" "\\1\\2" OSL_LLVM_VERSION ${LLVM_VERSION})
+add_definitions (-DOSL_LLVM_VERSION=${OSL_LLVM_VERSION})
+add_definitions (-DOSL_LLVM_FULL_VERSION="${LLVM_VERSION}")
+if (LLVM_NAMESPACE)
+    add_definitions ("-DLLVM_NAMESPACE=${LLVM_NAMESPACE}")
+endif ()
+
+# end LLVM library setup
 ###########################################################################
 
 
@@ -81,24 +90,60 @@ if (NOT Boost_FIND_QUIETLY)
 endif ()
 
 if (NOT DEFINED Boost_ADDITIONAL_VERSIONS)
-  set (Boost_ADDITIONAL_VERSIONS "1.60" "1.59" "1.58" "1.57" "1.56"
-                                 "1.55" "1.54" "1.53" "1.52" "1.51" "1.50"
-                                 "1.49" "1.48" "1.47" "1.46" "1.45" "1.44"
-                                 "1.43" "1.43.0" "1.42" "1.42.0")
+  set (Boost_ADDITIONAL_VERSIONS "1.63" "1.62" "1.61" "1.60"
+                                 "1.59" "1.58" "1.57" "1.56" "1.55")
 endif ()
 if (LINKSTATIC)
-    set (Boost_USE_STATIC_LIBS   ON)
+    set (Boost_USE_STATIC_LIBS ON)
 endif ()
 set (Boost_USE_MULTITHREADED ON)
+set (Boost_COMPONENTS system thread)
+if (NOT USE_STD_REGEX)
+    list (APPEND Boost_COMPONENTS regex)
+endif ()
+if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG OR
+    ${LLVM_VERSION} VERSION_LESS 3.6)
+    set (_CLANG_PREPROCESSOR_CAN_WORK ON)
+endif ()
+if (GCC_VERSION)
+    if (${GCC_VERSION} VERSION_LESS 4.9)
+        set (_CLANG_PREPROCESSOR_CAN_WORK ON)
+    endif ()
+endif ()
+if (${LLVM_VERSION} VERSION_LESS 3.9)
+    # Bug in old LLVM creates some linkage problems we've seen involving
+    # some singleton globals that are duplicated when we include both
+    # the clang libs we need for the preprocessing as well as certain
+    # LLVM support libraries we also need, triggering assertions.
+    # See this for description of the issue:
+    # http://lists.llvm.org/pipermail/llvm-commits/Week-of-Mon-20140203/203968.html
+    # Sweep under the rug by falling back to boost wave when using older
+    # LLVM (it seems fixed and no longer triggers for 3.9+).
+    set (_CLANG_PREPROCESSOR_CAN_WORK OFF)
+endif ()
+if (USE_BOOST_WAVE OR (NOT CLANG_LIBRARIES)
+    OR (NOT _CLANG_PREPROCESSOR_CAN_WORK))
+    # N.B. Using clang for preprocessing seems to work when using clang,
+    # or gcc 4.8.x, or LLVM <= 3.5. When those conditions aren't met,
+    # fall back on Boost Wave. We'll lift this restriction as soon as we
+    # fix whatever is broken.
+    list (APPEND Boost_COMPONENTS filesystem wave)
+    add_definitions (-DUSE_BOOST_WAVE=1)
+    message (STATUS "Using Boost Wave for preprocessing")
+else ()
+    message (STATUS "Using clang internals for preprocessing")
+endif ()
 if (BOOST_CUSTOM)
     set (Boost_FOUND true)
-    # N.B. For a custom version, the caller had better set up the variables
-    # Boost_VERSION, Boost_INCLUDE_DIRS, Boost_LIBRARY_DIRS, Boost_LIBRARIES.
 else ()
-    set (Boost_COMPONENTS filesystem regex system thread wave)
-    find_package (Boost 1.42 REQUIRED
-                  COMPONENTS ${Boost_COMPONENTS}
-                 )
+    find_package (Boost 1.55 REQUIRED
+                  COMPONENTS ${Boost_COMPONENTS})
+endif ()
+
+# Needed for static boost libraries on Windows
+if (WIN32 AND Boost_USE_STATIC_LIBS)
+    add_definitions ("-DBOOST_ALL_NO_LIB")
+    add_definitions ("-DBOOST_THREAD_USE_LIB")
 endif ()
 
 # On Linux, Boost 1.55 and higher seems to need to link against -lrt
@@ -136,7 +181,7 @@ if (USE_PARTIO)
     endif ()
 endif (USE_PARTIO)
 
-# end GL Extension Wrangler library setup
+# end Partio setup
 ###########################################################################
 
 
@@ -149,102 +194,7 @@ if (USE_EXTERNAL_PUGIXML)
     # insert include path to pugixml first, to ensure that the external
     # pugixml is found, and not the one in OIIO's include directory.
     include_directories (BEFORE "${PUGIXML_INCLUDE_DIR}")
+    add_definitions ("-DUSE_EXTERNAL_PUGIXML")
 endif()
 # end Pugixml setup
-###########################################################################
-
-
-###########################################################################
-# LLVM library setup
-
-# try to find llvm-config, with a specific version if specified
-if(LLVM_DIRECTORY)
-  FIND_PROGRAM(LLVM_CONFIG llvm-config-${LLVM_VERSION} HINTS "${LLVM_DIRECTORY}/bin" NO_DEFAULT_PATH)
-  if(NOT LLVM_CONFIG)
-    FIND_PROGRAM(LLVM_CONFIG llvm-config HINTS "${LLVM_DIRECTORY}/bin" NO_DEFAULT_PATH)
-  endif()
-else()
-  FIND_PROGRAM(LLVM_CONFIG llvm-config-${LLVM_VERSION})
-  if(NOT LLVM_CONFIG)
-    FIND_PROGRAM(LLVM_CONFIG llvm-config)
-  endif()
-endif()
-
-if(NOT LLVM_DIRECTORY OR EXISTS ${LLVM_CONFIG})
-  execute_process (COMMAND ${LLVM_CONFIG} --version
-       OUTPUT_VARIABLE LLVM_VERSION
-       OUTPUT_STRIP_TRAILING_WHITESPACE)
-  execute_process (COMMAND ${LLVM_CONFIG} --prefix
-       OUTPUT_VARIABLE LLVM_DIRECTORY
-       OUTPUT_STRIP_TRAILING_WHITESPACE)
-  execute_process (COMMAND ${LLVM_CONFIG} --libdir
-       OUTPUT_VARIABLE LLVM_LIB_DIR
-       OUTPUT_STRIP_TRAILING_WHITESPACE)
-  execute_process (COMMAND ${LLVM_CONFIG} --includedir
-       OUTPUT_VARIABLE LLVM_INCLUDES
-       OUTPUT_STRIP_TRAILING_WHITESPACE)
-endif()
-
-if (LLVM_VERSION VERSION_GREATER 3.4.9 AND (NOT USE_CPP11 AND NOT USE_CPP14))
-    message (FATAL_ERROR "LLVM ${LLVM_VERSION} requires C++11. You must build with USE_CPP11=1 or USE_CPP14=1.")
-endif ()
-
-find_library ( LLVM_LIBRARY
-               NAMES LLVM-${LLVM_VERSION}
-               PATHS ${LLVM_LIB_DIR})
-find_library ( LLVM_MCJIT_LIBRARY
-               NAMES LLVMMCJIT
-               PATHS ${LLVM_LIB_DIR})
-execute_process (COMMAND ${LLVM_CONFIG} --ldflags
-                 OUTPUT_VARIABLE LLVM_LDFLAGS
-                 OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-# if (NOT LLVM_LIBRARY)
-#     execute_process (COMMAND ${LLVM_CONFIG} --libfiles engine
-#                      OUTPUT_VARIABLE LLVM_LIBRARIES
-#                      OUTPUT_STRIP_TRAILING_WHITESPACE)
-# endif ()
-
-if (NOT LLVM_FIND_QUIETLY)
-    message (STATUS "LLVM version  = ${LLVM_VERSION}")
-    message (STATUS "LLVM dir      = ${LLVM_DIRECTORY}")
-    message (STATUS "LLVM includes = ${LLVM_INCLUDES}")
-    message (STATUS "LLVM library  = ${LLVM_LIBRARY}")
-    message (STATUS "LLVM MCJIT library  = ${LLVM_MCJIT_LIBRARY}")
-    message (STATUS "LLVM lib dir  = ${LLVM_LIB_DIR}")
-    message (STATUS "LLVM libraries = ${LLVM_LIBRARIES}")
-endif ()
-
-# shared llvm library may not be available, this is not an error if we use LLVM_STATIC.
-if ((LLVM_LIBRARY OR LLVM_STATIC) AND LLVM_INCLUDES AND LLVM_DIRECTORY AND LLVM_LIB_DIR)
-  # ensure include directory is added (in case of non-standard locations
-  include_directories (BEFORE "${LLVM_INCLUDES}")
-  if (NOT OSL_LLVM_VERSION)
-      # Extract and concatenate major & minor, remove wayward patches,
-      # dots, and "svn" or other suffixes.
-      string (REGEX REPLACE "([0-9]+)\\.([0-9]+).*" "\\1\\2" OSL_LLVM_VERSION ${LLVM_VERSION})
-  endif ()
-  add_definitions ("-DOSL_LLVM_VERSION=${OSL_LLVM_VERSION}")
-  if (LLVM_STATIC)
-    # if static LLVM libraries were requested, use llvm-config to generate
-    # the list of what libraries we need, and substitute that in the right
-    # way for LLVM_LIBRARY.
-    execute_process (COMMAND ${LLVM_CONFIG} --libfiles
-                     OUTPUT_VARIABLE LLVM_LIBRARY
-                     OUTPUT_STRIP_TRAILING_WHITESPACE)
-    string (REPLACE " " ";" LLVM_LIBRARY ${LLVM_LIBRARY})
-  endif ()
-  if (NOT LLVM_FIND_QUIETLY)
-      message (STATUS "LLVM OSL_LLVM_VERSION = ${OSL_LLVM_VERSION}")
-      message (STATUS "LLVM library  = ${LLVM_LIBRARY}")
-  endif ()
-
-  if (NOT LLVM_LIBRARY)
-    message (FATAL_ERROR "LLVM library not found.")
-  endif()
-else ()
-  message (FATAL_ERROR "LLVM not found.")
-endif ()
-
-# end LLVM library setup
 ###########################################################################

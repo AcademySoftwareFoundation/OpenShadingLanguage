@@ -2,37 +2,26 @@
 
 language: cpp
 sudo: false
-compiler:
-    - clang
-    - gcc
-os:
-    - linux
-    - osx
-osx_image: xcode6.4
-dist: precise
+osx_image: xcode7.3
+dist: trusty
 
-env:
-    matrix:
-      - USE_CPP11=1
-      - DEBUG=1
 
 # Add-ons: specify apt packages for Linux
 addons:
-  apt: 
+  apt:
    sources:
       - boost-latest
       - ubuntu-toolchain-r-test
+      - george-edison55-precise-backports
    packages:
-      - gcc-4.8
+      - cmake
+      - cmake-data
       - g++-4.8
-      - gcc-5
       - g++-5
-      - gcc-6
       - g++-6
+      - g++-7
       - libboost1.55-all-dev
       - libtiff4-dev
-      - llvm-3.4-dev
-      - clang-3.4
 
 cache:
     ccache: true
@@ -47,7 +36,7 @@ before_install:
           sysctl machdep.cpu.features ;
       elif [ $TRAVIS_OS_NAME == linux ] ; then
           export PLATFORM=linux64 ;
-          cat /proc/cpuinfo ;
+          cat /proc/cpuinfo | head -26 ;
       fi
     - export OIIOPLATFORM=$PLATFORM
     - if [ "$DEBUG" == 1 ] ; then export PLATFORM=${PLATFORM}.debug ; fi
@@ -57,20 +46,33 @@ install:
     - if [ "$CXX" == "g++" ]; then export CXX="g++-${WHICHGCC}" ; fi
     - export USE_CCACHE=1
     - export CCACHE_CPP2=1
+    # Temporary fix: Use LG's private openexr branch, until the
+    # fixes are merged into the OpenEXR project that will address
+    # the warnings for gcc7 and C++17 compatibility.
+    -   export EXRREPO=https://github.com/lgritz/openexr.git ;
+    -   export EXRBRANCH=lg-cpp11 ;
     - if [ $TRAVIS_OS_NAME == osx ] ; then
           src/build-scripts/install_homebrew_deps.bash ;
-          export LLVM_DIRECTORY=/usr/local/Cellar/llvm34/3.4.2/lib/llvm-3.4 ;
       elif [ $TRAVIS_OS_NAME == linux ] ; then
           CXX="ccache $CXX" CCACHE_CPP2=1 src/build-scripts/build_openexr.bash ;
           export ILMBASE_HOME=$PWD/openexr-install ;
           export OPENEXR_HOME=$PWD/openexr-install ;
+          if [ "$LLVM_VERSION" == "" ]; then export LLVM_VERSION="3.9.0" ; fi ;
+          wget http://releases.llvm.org/${LLVM_VERSION}/clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-14.04.tar.xz ;
+          tar xf clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-14.04.tar.xz ;
+          rm -f clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-14.04.tar.xz ;
+          mv clang+llvm* llvm-install ;
+          export LLVM_DIRECTORY=$PWD/llvm-install ;
       fi
-    - export OIIOMAKEFLAGS="$OIIOMAKEFLAGS -j2 DEBUG= "
+    - export OIIOMAKEFLAGS="$OIIOMAKEFLAGS -j2 DEBUG= USE_PYTHON=0 OIIO_BUILD_TESTS=0"
+    - export OPENIMAGEIO_SITE=travis
+    - export OSL_SITE=travis
     - src/build-scripts/build_openimageio.bash
     - export OPENIMAGEIOHOME=$PWD/OpenImageIO/dist/$OIIOPLATFORM
+    - export PATH=$OPENIMAGEIOHOME/bin:$PATH
     - export DYLD_LIBRARY_PATH=$OPENIMAGEIOHOME/lib:$DYLD_LIBRARY_PATH
     - export LD_LIBRARY_PATH=$OPENIMAGEIOHOME/lib:$LD_LIBRARY_PATH
-    - export PATH=$OPENIMAGEIOHOME/bin:$PATH
+    - export PYTHONPATH=$OPENIMAGEIOHOME/python:$PYTHONPATH
     - if [ $TRAVIS_OS_NAME == linux ] ; then
           export BUILD_FLAGS="$BUILD_FLAGS LLVM_STATIC=1" ;
           export TEST_FLAGS="-E broken\|render-cornell\|render-oren-nayar\|render-veachmis\|render-ward" ;
@@ -82,10 +84,9 @@ install:
 script:
     - make VERBOSE=1 $BUILD_FLAGS cmakesetup
     - make -j2 $BUILD_FLAGS
+    - export LSAN_OPTIONS=suppressions=$PWD/src/build-scripts/nosanitize.txt
     - export OSLHOME=$PWD/dist/$PLATFORM
-    - export DYLD_LIBRARY_PATH=$OSLHOME/lib:$DYLD_LIBRARY_PATH 
-    - export LD_LIBRARY_PATH=$OSLHOME/lib:$LD_LIBRARY_PATH
-    - export PYTHONPATH=$OSLHOME/python:$OPENIMAGEIOHOME/python:$PYTHONPATH
+    - export OIIO_LIBRARY_PATH=$OSLHOME/lib:${OIIO_LIBRARY_PATH}
     - make $BUILD_FLAGS test
 
 
@@ -103,42 +104,38 @@ branches:
 
 matrix:
     fast_finish: true
-    exclude:
-      - os: osx
-        compiler: gcc
-      - os: linux
-        compiler: clang
     include:
-    # Make sure we can still build C++03, both platforms
+      # Build with C++11, default compiler, optimized build, against OIIO master
       - os: linux
         compiler: gcc
-        env: USE_CPP11=0
       - os: osx
         compiler: clang
-        env: USE_CPP11=0
     # Test against the older release branch of OIIO (all the other tests
-    # are against OIIO master)
+    # are against OIIO master).
       - os: linux
         compiler: gcc
-        env: OIIOBRANCH=release USE_CPP11=1
-      - os: osx
-        compiler: clang
-        env: OIIOBRANCH=release USE_CPP11=1
-    # Linux only: test gcc 6 (catch new warnings hot off the presses) and
-    # also use a higher SIMD level, avx and f16c, to make sure all is well.
-    # TravisCI's OSX images don't yet support avx/f16c, so we only do this
-    # on Linux for now, but eventually we'll want to separate these concerns
-    # into separate tests.
+        env: OIIOBRANCH=release
+    # Test gcc 5, also against higher SSE level
+      - os: linux
+        compiler: gcc
+        env: WHICHGCC=5 USE_SIMD=sse4.2
+    # Test gcc6, and highest SIMD level supported by Travis.
       - os: linux
         compiler: gcc
         env: WHICHGCC=6 USE_SIMD=avx,f16c
-    # Linux only: test gcc 5
+    # Linux only: test gcc 7, also test C++14
       - os: linux
         compiler: gcc
-        env: WHICHGCC=5
-    # One more, just for the heck of it, turn all SIMD off.  I guess this
-    # should/could be both platforms, but in the interest of making the
-    # tests go faster, don't bother doing it on OSX.
+        env: WHICHGCC=7 USE_CPP=14
+    # Build with C++11, DEBUG build, against OIIO master
+      - os: linux
+        compiler: gcc
+        env: DEBUG=1
+    # Test against older LLVM
+      - os: linux
+        compiler: gcc
+        env: LLVM_VERSION=3.5.2
+    # One more, just for the heck of it, turn all SIMD off.
       - os: linux
         compiler: gcc
         env: USE_SIMD=0

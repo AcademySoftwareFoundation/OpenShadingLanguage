@@ -35,46 +35,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/dassert.h>
 namespace Strutil = OIIO::Strutil;
 
-#include <boost/foreach.hpp>
-
 
 OSL_NAMESPACE_ENTER
 
 namespace pvt {   // OSL::pvt
-
-
-std::string
-TypeSpec::string () const
-{
-    std::string str;
-    if (is_closure() || is_closure_array()) {
-        str += "closure color";
-        if (is_unsized_array())
-            str += "[]";
-        else if (arraylength() > 0)
-            str += Strutil::format ("[%d]", arraylength());
-    }
-    else if (structure() > 0) {
-        str += Strutil::format ("struct %d", structure());
-        if (is_unsized_array())
-            str += "[]";
-        else if (arraylength() > 0)
-            str += Strutil::format ("[%d]", arraylength());
-    } else {
-        str += simpletype().c_str();
-    }
-    return str;
-}
-
-
-
-const char *
-TypeSpec::c_str () const
-{
-    ustring s (this->string());
-    return s.c_str ();
-}
-
 
 
 std::string
@@ -322,8 +286,8 @@ SymbolTable::pop ()
 void
 SymbolTable::delete_syms ()
 {
-    for (SymbolPtrVec::iterator i = m_allsyms.begin(); i != m_allsyms.end(); ++i)
-        delete (*i);
+    for (auto& sym : m_allsyms)
+        delete sym;
     m_allsyms.clear ();
     TypeSpec::struct_list().clear ();
 }
@@ -337,7 +301,7 @@ SymbolTable::print ()
     if (TypeSpec::struct_list().size()) {
         std::cout << "Structure table:\n";
         int structid = 1;
-        BOOST_FOREACH (shared_ptr<StructSpec> &s, TypeSpec::struct_list()) {
+        for (auto&& s : TypeSpec::struct_list()) {
             if (! s)
                 continue;
             std::cout << "    " << structid << ": struct " << s->mangled();
@@ -356,7 +320,7 @@ SymbolTable::print ()
     }
 
     std::cout << "Symbol table:\n";
-    BOOST_FOREACH (const Symbol *s, m_allsyms) {
+    for (auto&& s : m_allsyms) {
         if (s->is_structure())
             continue;
         std::cout << "\t" << s->mangled() << " : ";

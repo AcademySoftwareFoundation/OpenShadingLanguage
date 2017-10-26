@@ -32,22 +32,30 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <stack>
 #include <map>
+#include <memory>
 #include <list>
 #include <set>
+#include <unordered_map>
 
-#include <boost/regex_fwd.hpp>
-#include <boost/unordered_map.hpp>
-#include <boost/intrusive_ptr.hpp>
 #include <boost/thread/tss.hpp>   /* for thread_specific_ptr */
 
 #include <OpenImageIO/ustring.h>
 #include <OpenImageIO/thread.h>
 #include <OpenImageIO/paramlist.h>
 #include <OpenImageIO/refcnt.h>
+#include <OpenImageIO/color.h>
 
-#include "OSL/genclosure.h"
-#include "OSL/oslexec.h"
-#include "OSL/oslclosure.h"
+#ifdef USE_BOOST_REGEX
+# include <boost/regex.hpp>
+#else
+# include <regex>
+#endif
+
+#include <OSL/genclosure.h>
+#include <OSL/oslexec.h>
+#include <OSL/oslclosure.h>
+#include <OSL/dual.h>
+#include <OSL/dual_vec.h>
 #include "osl_pvt.h"
 #include "constantpool.h"
 
@@ -68,6 +76,19 @@ namespace Strutil = OIIO::Strutil;
 
 
 OSL_NAMESPACE_ENTER
+
+
+#ifdef USE_BOOST_REGEX
+  using boost::regex;
+  using boost::regex_search;
+  using boost::regex_match;
+  using boost::match_results;
+#else
+  using std::regex;
+  using std::regex_search;
+  using std::regex_match;
+  using std::match_results;
+#endif
 
 
 
@@ -98,6 +119,7 @@ namespace Strings {
     extern ustring interp, closest, linear, cubic, smartcubic;
     extern ustring perlin, uperlin, noise, snoise, pnoise, psnoise;
     extern ustring cell, cellnoise, pcellnoise;
+    extern ustring hash, hashnoise, phashnoise;
     extern ustring genericnoise, genericpnoise, gabor, gabornoise, gaborpnoise;
     extern ustring simplex, usimplex, simplexnoise, usimplexnoise;
     extern ustring anisotropic, direction, do_filter, bandwidth, impulses;
@@ -120,7 +142,7 @@ namespace pvt {
 // forward definitions
 class ShadingSystemImpl;
 class ShaderInstance;
-typedef shared_ptr<ShaderInstance> ShaderInstanceRef;
+typedef std::shared_ptr<ShaderInstance> ShaderInstanceRef;
 class Dictionary;
 class RuntimeOptimizer;
 class BackendLLVM;
@@ -151,7 +173,7 @@ struct OpDescriptor {
         : name(n), llvmgen(ll), folder(fold), simple_assign(simple), flags(flags)
     {}
 
-    enum FlagValues { None=0, Tex=1 };
+    enum FlagValues { None=0, Tex=1, SideEffects=2 };
 };
 
 
@@ -208,8 +230,9 @@ struct AttributeNeeded {
     }
 };
 
-// Prefix for OSL shade up declarations, so LLVM can find them
-#define OSL_SHADEOP extern "C" OSL_LLVM_EXPORT
+// Prefix for OSL shade op declarations. Make them local visibility, but
+// "C" linkage (no C++ name mangling).
+#define OSL_SHADEOP extern "C" OSL_DLL_LOCAL
 
 
 // Handy re-casting macros
@@ -337,7 +360,7 @@ inline void stlfree (T &v)
 /// individual instances of the shader.
 class ShaderMaster : public RefCnt {
 public:
-    typedef boost::intrusive_ptr<ShaderMaster> ref;
+    typedef OIIO::intrusive_ptr<ShaderMaster> ref;
     ShaderMaster (ShadingSystemImpl &shadingsys) : m_shadingsys(shadingsys) { }
     ~ShaderMaster ();
 
@@ -428,16 +451,13 @@ public:
         std::vector<ClosureParam> params;
         // the needed size for the structure
         int                       struct_size;
-        // the needed alignment of the structure
-        int                       alignment;
         // Creation callbacks
         PrepareClosureFunc        prepare;
         SetupClosureFunc          setup;
     };
 
     void register_closure (string_view name, int id, const ClosureParam *params,
-                           PrepareClosureFunc prepare, SetupClosureFunc setup,
-                           int alignment = 1);
+                           PrepareClosureFunc prepare, SetupClosureFunc setup);
 
     const ClosureEntry *get_entry (ustring name) const;
     const ClosureEntry *get_entry (int id) const {
@@ -501,7 +521,32 @@ public:
                       TypeDesc type, const void *val);
 
     // Internal error, warning, info, and message reporting routines that
-    // take printf-like arguments.  Based on Tinyformat.
+    // take printf-like arguments.
+#if OIIO_VERSION >= 10803
+    template<typename T1, typename... Args>
+    inline void error (string_view fmt, const T1& v1, const Args&... args) const {
+        error (Strutil::format (fmt, v1, args...));
+    }
+    void error (const std::string &message) const;
+
+    template<typename T1, typename... Args>
+    inline void warning (string_view fmt, const T1& v1, const Args&... args) const {
+        warning (Strutil::format (fmt, v1, args...));
+    }
+    void warning (const std::string &message) const;
+
+    template<typename T1, typename... Args>
+    inline void info (string_view fmt, const T1& v1, const Args&... args) const {
+        info (Strutil::format (fmt, v1, args...));
+    }
+    void info (const std::string &message) const;
+
+    template<typename T1, typename... Args>
+    inline void message (string_view fmt, const T1& v1, const Args&... args) const {
+        message (Strutil::format (fmt, v1, args...));
+    }
+    void message (const std::string &message) const;
+#else
     TINYFORMAT_WRAP_FORMAT (void, error, const,
                             std::ostringstream msg;, msg, error(msg.str());)
     TINYFORMAT_WRAP_FORMAT (void, warning, const,
@@ -510,13 +555,11 @@ public:
                             std::ostringstream msg;, msg, info(msg.str());)
     TINYFORMAT_WRAP_FORMAT (void, message, const,
                             std::ostringstream msg;, msg, message(msg.str());)
-
-    /// Error reporting routines that take a pre-formatted string only.
-    ///
     void error (const std::string &message) const;
     void warning (const std::string &message) const;
     void info (const std::string &message) const;
     void message (const std::string &message) const;
+#endif
 
     std::string getstats (int level=1) const;
 
@@ -560,6 +603,7 @@ public:
     bool range_checking() const { return m_range_checking; }
     bool unknown_coordsys_error() const { return m_unknown_coordsys_error; }
     bool connection_error() const { return m_connection_error; }
+    bool relaxed_param_typecheck() const { return m_relaxed_param_typecheck; }
     int optimize () const { return m_optimize; }
     int llvm_optimize () const { return m_llvm_optimize; }
     int llvm_debug () const { return m_llvm_debug; }
@@ -589,8 +633,7 @@ public:
     /// The group is set and won't be changed again; take advantage of
     /// this by optimizing the code knowing all our instance parameters
     /// (at least the ones that can't be overridden by the geometry).
-    void optimize_group (ShaderGroup &group,
-                         int raytypes_on=0, int raytypes_off=0);
+    void optimize_group (ShaderGroup &group);
 
     /// After doing all optimization and code JIT, we can clean up by
     /// deleting the instances' code and arguments, and paring their
@@ -602,8 +645,7 @@ public:
     ustring *alloc_string_constants (size_t n) { return m_string_pool.alloc (n); }
 
     void register_closure (string_view name, int id, const ClosureParam *params,
-                           PrepareClosureFunc prepare, SetupClosureFunc setup,
-                           int alignment = 1);
+                           PrepareClosureFunc prepare, SetupClosureFunc setup);
     bool query_closure (const char **name, int *id,
                         const ClosureParam **params);
     const ClosureRegistry::ClosureEntry *find_closure(ustring name) const {
@@ -613,15 +655,13 @@ public:
         return m_closure_registry.get_entry(id);
     }
 
-    /// Convert a color in the named space to RGB.
-    ///
-    Color3 to_rgb (ustring fromspace, float a, float b, float c);
-
     /// Convert an XYZ color to RGB in our preferred color space.
     Color3 XYZ_to_RGB (const Color3 &XYZ) { return XYZ * m_XYZ2RGB; }
+    Dual2<Vec3> XYZ_to_RGB (const Dual2<Vec3> &XYZ) { return XYZ * m_XYZ2RGB; }
     Color3 XYZ_to_RGB (float X, float Y, float Z) { return Color3(X,Y,Z) * m_XYZ2RGB; }
     /// Convert an RGB color in our preferred color space to XYZ.
     Color3 RGB_to_XYZ (const Color3 &RGB) { return RGB * m_RGB2XYZ; }
+    Dual2<Vec3> RGB_to_XYZ (const Dual2<Vec3> &RGB) { return RGB * m_RGB2XYZ; }
     Color3 RGB_to_XYZ (float R, float G, float B) { return Color3(R,G,B) * m_RGB2XYZ; }
 
     /// Return the luminance of an RGB color in the current color space.
@@ -638,7 +678,7 @@ public:
 
     void optimize_all_groups (int nthreads=0, int mythread=0, int totalthreads=1);
 
-    typedef boost::unordered_map<ustring,OpDescriptor,ustringHash> OpDescriptorMap;
+    typedef std::unordered_map<ustring,OpDescriptor,ustringHash> OpDescriptorMap;
 
     /// Look up OpDescriptor for the named op, return NULL for unknown op.
     ///
@@ -664,6 +704,9 @@ public:
     bool archive_shadergroup (ShaderGroup *group, string_view filename);
 
     void count_noise () { m_stat_noise_calls += 1; }
+
+    ustring colorspace () const { return m_colorspace; }
+    OIIO::ColorConfig& colorconfig () { return m_colorconfig; }
 
 private:
     void printstats () const;
@@ -732,6 +775,7 @@ private:
     bool m_connection_error;              ///< Error for ConnectShaders to fail?
     bool m_greedyjit;                     ///< JIT as much as we can?
     bool m_countlayerexecs;               ///< Count number of layer execs?
+    bool m_relaxed_param_typecheck;       ///< Allow parameters to be set from isomorphic types (same data layout)
     int m_max_warnings_per_thread;        ///< How many warnings to display per thread before giving up?
     int m_profile;                        ///< Level of profiling of shader execution
     int m_optimize;                       ///< Runtime optimization level
@@ -784,6 +828,7 @@ private:
     Matrix33 m_RGB2XYZ;                   ///< RGB to XYZ conversion matrix
     Color3 m_luminance_scale;             ///< Scaling for RGB->luma
     std::vector<Color3> m_blackbody_table; ///< Precomputed blackbody table
+    OIIO::ColorConfig m_colorconfig;      ///< OIIO/OCIO color configuration
 
     // State
     bool m_in_group;                      ///< Are we specifying a group?
@@ -857,7 +902,7 @@ private:
 
     mutable spin_mutex m_stat_mutex;     ///< Mutex for non-atomic stats
     ClosureRegistry m_closure_registry;
-    std::vector<weak_ptr<ShaderGroup> > m_all_shader_groups;
+    std::vector<std::weak_ptr<ShaderGroup> > m_all_shader_groups;
     mutable spin_mutex m_all_shader_groups_mutex;
     atomic_int m_groups_to_compile_count;
     atomic_int m_threads_currently_compiling;
@@ -934,10 +979,10 @@ typedef std::vector<Connection> ConnectionVec;
 ///        FOREACH_PARAM (Symbol &s, inst) { ... stuff with s... }
 ///
 #define FOREACH_PARAM(symboldecl,inst) \
-    BOOST_FOREACH (symboldecl, param_range(inst))
+    for (symboldecl : param_range(inst))
 
 #define FOREACH_SYM(symboldecl,inst) \
-    BOOST_FOREACH (symboldecl, sym_range(inst))
+    for (symboldecl : sym_range(inst))
 
 
 
@@ -1093,37 +1138,49 @@ public:
     int firstparam () const { return m_firstparam; }
     int lastparam () const { return m_lastparam; }
 
-    /// Return a begin/end Symbol* pair for the set of param symbols
-    /// that is suitable to pass as a range for BOOST_FOREACH.
-    friend std::pair<Symbol *,Symbol *> param_range (ShaderInstance *i) {
+    // Range type suitable for use with "range for"
+    template<typename T>   // T should be Symbol or const Symbol
+    struct SymRange {
+        SymRange () : m_begin(nullptr), m_end(nullptr) {}
+        SymRange (T *a, T *b) : m_begin(a), m_end(b) {}
+        T *begin () const { return m_begin; }
+        T *end () const { return m_end; }
+    private:
+        T* m_begin;
+        T* m_end;
+    };
+
+    /// Return a SymRange for the set of param symbols that is suitable to
+    /// pass as a "range for".
+    friend SymRange<Symbol> param_range (ShaderInstance *i) {
         if (i->m_instsymbols.size() == 0 || i->firstparam() == i->lastparam())
-            return std::pair<Symbol*,Symbol*> ((Symbol*)NULL, (Symbol*)NULL);
+            return SymRange<Symbol> ();
         else
-            return std::pair<Symbol*,Symbol*> (&i->m_instsymbols[0] + i->firstparam(),
-                                               &i->m_instsymbols[0] + i->lastparam());
+            return SymRange<Symbol> (&i->m_instsymbols[0] + i->firstparam(),
+                                     &i->m_instsymbols[0] + i->lastparam());
     }
 
-    friend std::pair<const Symbol *,const Symbol *> param_range (const ShaderInstance *i) {
+    friend SymRange<const Symbol> param_range (const ShaderInstance *i) {
         if (i->m_instsymbols.size() == 0 || i->firstparam() == i->lastparam())
-            return std::pair<const Symbol*,const Symbol*> ((const Symbol*)NULL, (const Symbol*)NULL);
+            return SymRange<const Symbol> ();
         else
-            return std::pair<const Symbol*,const Symbol*> (&i->m_instsymbols[0] + i->firstparam(),
-                                                           &i->m_instsymbols[0] + i->lastparam());
+            return SymRange<const Symbol> (&i->m_instsymbols[0] + i->firstparam(),
+                                           &i->m_instsymbols[0] + i->lastparam());
     }
 
-    friend std::pair<Symbol *,Symbol *> sym_range (ShaderInstance *i) {
+    friend SymRange<Symbol> sym_range (ShaderInstance *i) {
         if (i->m_instsymbols.size() == 0)
-            return std::pair<Symbol*,Symbol*> ((Symbol*)NULL, (Symbol*)NULL);
+            return SymRange<Symbol> ();
         else
-            return std::pair<Symbol*,Symbol*> (&i->m_instsymbols[0],
-                                               &i->m_instsymbols[0] + i->m_instsymbols.size());
+            return SymRange<Symbol> (&i->m_instsymbols[0],
+                                     &i->m_instsymbols[0] + i->m_instsymbols.size());
     }
-    friend std::pair<const Symbol *,const Symbol *> sym_range (const ShaderInstance *i) {
+    friend SymRange<const Symbol> sym_range (const ShaderInstance *i) {
         if (i->m_instsymbols.size() == 0)
-            return std::pair<const Symbol*,const Symbol*> ((const Symbol*)NULL, (const Symbol*)NULL);
+            return SymRange<const Symbol> ();
         else
-            return std::pair<const Symbol*,const Symbol*> (&i->m_instsymbols[0],
-                                               &i->m_instsymbols[0] + i->m_instsymbols.size());
+            return SymRange<const Symbol> (&i->m_instsymbols[0],
+                                           &i->m_instsymbols[0] + i->m_instsymbols.size());
     }
 
     int Psym () const { return m_Psym; }
@@ -1249,63 +1306,66 @@ template<int BlockSize>
 class SimplePool {
 public:
     SimplePool() {
-        m_blocks.push_back(new char[BlockSize]);
+        // pool must have at least one block available to avoid special cases
+        m_blocks.emplace_back(new char[BlockSize]);
         m_block_offset = BlockSize;
         m_current_block = 0;
     }
 
-    ~SimplePool() {
-        for (size_t i =0; i < m_blocks.size(); ++i)
-            delete [] m_blocks[i];
-    }
+    ~SimplePool() {}
 
     char * alloc(size_t size, size_t alignment=1) {
         // Alignment must be power of two
         DASSERT ((alignment & (alignment - 1)) == 0);
-        // Fail if beyond allocation limits (we make sure there's enough space
-        // for alignment padding here as well).
-        if (size + alignment - 1 > BlockSize)
-            return NULL;
+
+        // Assume sizes are never larger than the configured BlockSize
+        DASSERT(size + alignment - 1 <= BlockSize);
+
         // Fix up alignment
-        size_t alignment_offset = alignment_offset_calc(alignment);
-        if (size + alignment_offset <= m_block_offset) {
-            // Enough space in current block
-            m_block_offset -= size + alignment_offset;
-        } else {
-            // Need to allocate a new block
+        m_block_offset += alignment_offset_calc(m_blocks[m_current_block].get() + m_block_offset, alignment);
+
+        // Do we have at least 'size' bytes available in our current block?
+        if (m_block_offset + size > BlockSize) {
+            // the current block doesn't have enough room, make a new block
             m_current_block++;
-            m_block_offset = BlockSize - size;
             if (m_blocks.size() == m_current_block)
-                m_blocks.push_back(new char[BlockSize]);
-            alignment_offset = alignment_offset_calc(alignment);
-            DASSERT (m_block_offset >= alignment_offset);
-            m_block_offset -= alignment_offset;
+                m_blocks.emplace_back(new char[BlockSize]);
+            m_block_offset = alignment_offset_calc(m_blocks[m_current_block].get(), alignment);
         }
-        return m_blocks[m_current_block] + m_block_offset;
+        char* ptr = m_blocks[m_current_block].get() + m_block_offset;
+        DASSERT(reinterpret_cast<uintptr_t>(ptr) % alignment == 0);
+        m_block_offset += size;
+        return ptr;
     }
 
-    void clear () { m_current_block = 0; m_block_offset = BlockSize; }
+    void clear () {
+        m_current_block = 0;
+        m_block_offset = 0;
+    }
 
 private:
-    inline size_t alignment_offset_calc(size_t alignment) {
-        return (((uintptr_t)m_blocks[m_current_block] + m_block_offset) & (alignment - 1));
+    static inline size_t alignment_offset_calc(void* ptr, size_t alignment) {
+        uintptr_t ptrbits = reinterpret_cast<uintptr_t>(ptr);
+        uintptr_t offset = ((ptrbits + alignment - 1) & -alignment) - ptrbits;
+        DASSERT((ptrbits + offset) % alignment == 0);
+        return offset;
     }
 
-    std::vector<char *> m_blocks;
-    size_t              m_current_block;
-    size_t              m_block_offset;
+    std::vector<std::unique_ptr<char[]>> m_blocks; ///< Hold blocks of BlockSize bytes
+    size_t  m_current_block;    ///< Index into the m_blocks array
+    size_t  m_block_offset;     ///< Offset from the start of the current block
 };
 
 /// Represents a single message for use by getmessage and setmessage opcodes
 ///
 struct Message {
     Message(ustring name, const TypeDesc& type, int layeridx, ustring sourcefile, int sourceline, Message* next) :
-       name(name), data(NULL), type(type), layeridx(layeridx), sourcefile(sourcefile), sourceline(sourceline), next(next) {}
+       name(name), data(nullptr), type(type), layeridx(layeridx), sourcefile(sourcefile), sourceline(sourceline), next(next) {}
 
     /// Some messages don't have data because getmessage() was called before setmessage
     /// (which is flagged as an error to avoid ambiguities caused by execution order)
     ///
-    bool has_data() const { return data != NULL; }
+    bool has_data() const { return data != nullptr; }
 
     ustring name;           ///< name of this message
     char* data;             ///< actual data of the message (will never change once the message is created)
@@ -1319,7 +1379,7 @@ struct Message {
 /// Represents the list of messages set by a given shader using setmessage and getmessage
 ///
 struct MessageList {
-     MessageList() : list_head(NULL), message_data() {}
+     MessageList() : list_head(nullptr), message_data() {}
 
      void clear() {
          list_head = NULL;
@@ -1330,11 +1390,11 @@ struct MessageList {
         for (const Message* m = list_head; m != NULL; m = m->next)
             if (m->name == name)
                 return m; // name matches
-        return NULL; // not found
+        return nullptr; // not found
     }
 
     void add(ustring name, void* data, const TypeDesc& type, int layeridx, ustring sourcefile, int sourceline) {
-        list_head = new (message_data.alloc(sizeof(Message))) Message(name, type, layeridx, sourcefile, sourceline, list_head);
+        list_head = new (message_data.alloc(sizeof(Message), alignof(Message))) Message(name, type, layeridx, sourcefile, sourceline, list_head);
         if (data) {
             list_head->data = message_data.alloc(type.size());
             memcpy(list_head->data, data, type.size());
@@ -1470,6 +1530,15 @@ public:
 
     int raytype_queries () const { return m_raytype_queries; }
 
+    /// Optionally set which ray types are known to be on or off (0 means
+    /// not known at optimize time).
+    void set_raytypes (int raytypes_on, int raytypes_off) {
+        m_raytypes_on  = raytypes_on;
+        m_raytypes_off = raytypes_off;
+    }
+    int raytypes_on ()  const { return m_raytypes_on; }
+    int raytypes_off () const { return m_raytypes_off; }
+
 private:
     // Put all the things that are read-only (after optimization) and
     // needed on every shade execution at the front of the struct, as much
@@ -1486,6 +1555,8 @@ private:
     ustring m_name;
     int m_exec_repeat;               ///< How many times to execute group
     int m_raytype_queries;           ///< Bitmask of raytypes queried
+    int m_raytypes_on;               ///< Bitmask of raytypes we assume to be on
+    int m_raytypes_off;              ///< Bitmask of raytypes we assume to be off
     mutable mutex m_mutex;           ///< Thread-safe optimization
     std::vector<ustring> m_textures_needed;
     std::vector<ustring> m_closures_needed;
@@ -1543,17 +1614,15 @@ public:
 
     ClosureComponent * closure_component_allot(int id, size_t prim_size, const Color3 &w) {
         // Allocate the component and the mul back to back
-        size_t needed = sizeof(ClosureComponent) + (prim_size >= 4 ? prim_size - 4 : 0);
-        int alignment = m_shadingsys.find_closure(id)->alignment;
-        size_t alignment_offset = closure_alignment_offset_calc(alignment);
-        ClosureComponent *comp = (ClosureComponent *) (m_closure_pool.alloc(needed + alignment_offset, alignment) + alignment_offset);
+        size_t needed = sizeof(ClosureComponent) - sizeof(void*) + prim_size;
+        ClosureComponent *comp = (ClosureComponent *) m_closure_pool.alloc(needed, alignof(ClosureComponent));
         comp->id = id;
         comp->w = w;
         return comp;
     }
 
     ClosureMul *closure_mul_allot (const Color3 &w, const ClosureColor *c) {
-        ClosureMul *mul = (ClosureMul *) m_closure_pool.alloc(sizeof(ClosureMul));
+        ClosureMul *mul = (ClosureMul *) m_closure_pool.alloc(sizeof(ClosureMul), alignof(ClosureMul));
         mul->id = ClosureColor::MUL;
         mul->weight = w;
         mul->closure = c;
@@ -1561,7 +1630,7 @@ public:
     }
 
     ClosureMul *closure_mul_allot (float w, const ClosureColor *c) {
-        ClosureMul *mul = (ClosureMul *) m_closure_pool.alloc(sizeof(ClosureMul));
+        ClosureMul *mul = (ClosureMul *) m_closure_pool.alloc(sizeof(ClosureMul), alignof(ClosureMul));
         mul->id = ClosureColor::MUL;
         mul->weight.setValue (w,w,w);
         mul->closure = c;
@@ -1569,7 +1638,7 @@ public:
     }
 
     ClosureAdd *closure_add_allot (const ClosureColor *a, const ClosureColor *b) {
-        ClosureAdd *add = (ClosureAdd *) m_closure_pool.alloc(sizeof(ClosureAdd));
+        ClosureAdd *add = (ClosureAdd *) m_closure_pool.alloc(sizeof(ClosureAdd), alignof(ClosureAdd));
         add->id = ClosureColor::ADD;
         add->closureA = a;
         add->closureB = b;
@@ -1593,7 +1662,7 @@ public:
     /// Return a reference to a compiled regular expression for the
     /// given string, being careful to cache already-created ones so we
     /// aren't constantly compiling new ones.
-    const boost::regex & find_regex (ustring r);
+    const regex & find_regex (ustring r);
 
     /// Return a pointer to the shading group for this context.
     ///
@@ -1626,6 +1695,15 @@ public:
                             ustring obj_name, ustring attr_name,
                             int array_lookup, int index,
                             TypeDesc attr_type, void *attr_dest);
+
+    /// Convert a color in the named space to RGB.
+    ///
+    Color3 to_rgb (ustring fromspace, const Color3& C);
+    Color3 from_rgb (ustring fromspace, const Color3& C);
+    Color3 transformc (ustring fromspace, ustring tospace, const Color3& C);
+    Dual2<Color3> transformc (ustring fromspace, ustring tospace, const Dual2<Color3>& C);
+    Color3 ocio_transform (ustring fromspace, ustring tospace, const Color3& C);
+    Dual2<Color3> ocio_transform (ustring fromspace, ustring tospace, const Dual2<Color3>& C);
 
     PerThreadInfo *thread_info () const { return m_threadinfo; }
 
@@ -1682,6 +1760,27 @@ public:
     // Process all the recorded errors, warnings, printfs
     void process_errors () const;
 
+#if OIIO_VERSION >= 10803
+    template<typename... Args>
+    inline void error (string_view fmt, const Args&... args) const {
+        record_error(ErrorHandler::EH_ERROR, Strutil::format (fmt, args...));
+    }
+
+    template<typename... Args>
+    inline void warning (string_view fmt, const Args&... args) const {
+        record_error(ErrorHandler::EH_WARNING, Strutil::format (fmt, args...));
+    }
+
+    template<typename... Args>
+    inline void info (string_view fmt, const Args&... args) const {
+        record_error(ErrorHandler::EH_INFO, Strutil::format (fmt, args...));
+    }
+
+    template<typename... Args>
+    inline void message (string_view fmt, const Args&... args) const {
+        record_error(ErrorHandler::EH_MESSAGE, Strutil::format (fmt, args...));
+    }
+#else
     TINYFORMAT_WRAP_FORMAT (void, error, const,
                             std::ostringstream msg;, msg,
                             record_error(ErrorHandler::EH_ERROR, msg.str());)
@@ -1694,6 +1793,7 @@ public:
     TINYFORMAT_WRAP_FORMAT (void, message, const,
                             std::ostringstream msg;, msg,
                             record_error(ErrorHandler::EH_MESSAGE, msg.str());)
+#endif
 
 private:
 
@@ -1705,7 +1805,7 @@ private:
     mutable TextureSystem::Perthread *m_texture_thread_info; ///< Ptr to texture thread info
     ShaderGroup *m_group;               ///< Ptr to shader group
     std::vector<char> m_heap;           ///< Heap memory
-    typedef boost::unordered_map<ustring, boost::regex*, ustringHash> RegexMap;
+    typedef std::unordered_map<ustring, std::unique_ptr<regex>, ustringHash> RegexMap;
     RegexMap m_regex_map;               ///< Compiled regex's
     MessageList m_messages;             ///< Message blackboard
     int m_max_warnings;                 ///< To avoid processing too many warnings
@@ -1718,7 +1818,7 @@ private:
     RendererServices::TraceOpt m_traceopt; ///< trace call options
 
     SimplePool<20 * 1024> m_closure_pool;
-    SimplePool<64*1024> m_scratch_pool;
+    SimplePool<64 * 1024> m_scratch_pool;
 
     Dictionary *m_dictionary;
 
@@ -1734,6 +1834,13 @@ private:
     static const int FAILED_ATTRIBS = 16;
     GetAttribQuery m_failed_attribs[FAILED_ATTRIBS];
     int m_next_failed_attrib;
+
+#if OIIO_HAS_COLORPROCESSOR
+    // 1-item cache for the last requested custom color conversion processor
+    OIIO::ColorProcessorHandle m_last_colorproc;
+    ustring m_last_colorproc_fromspace;
+    ustring m_last_colorproc_tospace;
+#endif
 
     // Buffering of error messages and printfs
     typedef std::pair<ErrorHandler::ErrCode, std::string> ErrorItem;
@@ -1858,6 +1965,9 @@ public:
 
     /// Is the symbol a constant whose value is 1?
     static bool is_one (const Symbol &A);
+
+    /// Is the symbol a constant whose value is nonzero in all components?
+    static bool is_nonzero (const Symbol &A);
 
     /// For debugging, express A's constant value as a string.
     static std::string const_value_as_string (const Symbol &A);

@@ -1,0 +1,8 @@
+shader
+test ()
+{
+    printf ("hash(u=%g) = %d\n",       u,   hash(u));
+    printf ("hash(u=%g, v=%g) = %d\n", u,v, hash(u,v));
+    printf ("hash(p=%g) = %d\n",       P,   hash(P));
+    printf ("hash(p=%g, t=%g) = %d\n", P,v, hash(P,v));
+}

@@ -303,7 +303,7 @@ action_param (int argc, const char *argv[])
         else if (OIIO::Strutil::istarts_with(splits[0],"type="))
             type.fromstring (splits[0].c_str()+5);
         else if (OIIO::Strutil::istarts_with(splits[0],"lockgeom="))
-            unlockgeom = (strtol (splits[0].c_str()+9, NULL, 10) == 0);
+            unlockgeom = (OIIO::Strutil::from_string<int> (splits[0]) == 0);
     }
 
     // If it is or might be a matrix, look for 16 comma-separated floats
@@ -313,8 +313,7 @@ action_param (int argc, const char *argv[])
                    &f[0], &f[1], &f[2], &f[3],
                    &f[4], &f[5], &f[6], &f[7], &f[8], &f[9], &f[10], &f[11],
                    &f[12], &f[13], &f[14], &f[15]) == 16) {
-        params.push_back (ParamValue());
-        params.back().init (paramname, TypeDesc::TypeMatrix, 1, f);
+        params.emplace_back (paramname, TypeDesc::TypeMatrix, 1, f);
         if (unlockgeom)
             params.back().interp (ParamValue::INTERP_VERTEX);
         return;
@@ -324,37 +323,28 @@ action_param (int argc, const char *argv[])
         && sscanf (stringval.c_str(), "%g, %g, %g", &f[0], &f[1], &f[2]) == 3) {
         if (type == TypeDesc::UNKNOWN)
             type = TypeDesc::TypeVector;
-        params.push_back (ParamValue());
-        params.back().init (paramname, type, 1, f);
+        params.emplace_back (paramname, type, 1, f);
         if (unlockgeom)
             params.back().interp (ParamValue::INTERP_VERTEX);
         return;
     }
     // If it is or might be an int, look for an int that takes up the whole
     // string.
-    if ((type == TypeDesc::UNKNOWN || type == TypeDesc::TypeInt)) {
-        char *endptr = NULL;
-        int ival = strtol(stringval.c_str(),&endptr,10);
-        if (endptr && *endptr == 0) {
-            params.push_back (ParamValue());
-            params.back().init (paramname, TypeDesc::TypeInt, 1, &ival);
-            if (unlockgeom)
-                params.back().interp (ParamValue::INTERP_VERTEX);
-            return;
-        }
+    if ((type == TypeDesc::UNKNOWN || type == TypeDesc::TypeInt)
+          && OIIO::Strutil::string_is<int>(stringval)) {
+        params.emplace_back (paramname, OIIO::Strutil::from_string<int>(stringval));
+        if (unlockgeom)
+            params.back().interp (ParamValue::INTERP_VERTEX);
+        return;
     }
     // If it is or might be an float, look for a float that takes up the
     // whole string.
-    if ((type == TypeDesc::UNKNOWN || type == TypeDesc::TypeFloat)) {
-        char *endptr = NULL;
-        float fval = (float) strtod(stringval.c_str(),&endptr);
-        if (endptr && *endptr == 0) {
-            params.push_back (ParamValue());
-            params.back().init (paramname, TypeDesc::TypeFloat, 1, &fval);
-            if (unlockgeom)
-                params.back().interp (ParamValue::INTERP_VERTEX);
-            return;
-        }
+    if ((type == TypeDesc::UNKNOWN || type == TypeDesc::TypeFloat)
+          && OIIO::Strutil::string_is<float>(stringval)) {
+        params.emplace_back (paramname, OIIO::Strutil::from_string<float>(stringval));
+        if (unlockgeom)
+            params.back().interp (ParamValue::INTERP_VERTEX);
+        return;
     }
 
     // Catch-all for float types and arrays
@@ -365,8 +355,7 @@ action_param (int argc, const char *argv[])
             OIIO::Strutil::parse_float (stringval, vals[i]);
             OIIO::Strutil::parse_char (stringval, ',');
         }
-        params.push_back (ParamValue());
-        params.back().init (paramname, type, 1, &vals[0]);
+        params.emplace_back (paramname, type, 1, &vals[0]);
         if (unlockgeom)
             params.back().interp (ParamValue::INTERP_VERTEX);
         return;
@@ -380,8 +369,7 @@ action_param (int argc, const char *argv[])
             OIIO::Strutil::parse_int (stringval, vals[i]);
             OIIO::Strutil::parse_char (stringval, ',');
         }
-        params.push_back (ParamValue());
-        params.back().init (paramname, type, 1, &vals[0]);
+        params.emplace_back (paramname, type, 1, &vals[0]);
         if (unlockgeom)
             params.back().interp (ParamValue::INTERP_VERTEX);
         return;
@@ -395,8 +383,7 @@ action_param (int argc, const char *argv[])
         std::vector<ustring> strelements;
         for (auto&& s : splitelements)
             strelements.push_back (ustring(s));
-        params.push_back (ParamValue());
-        params.back().init (paramname, type, 1, &strelements[0]);
+        params.emplace_back (paramname, type, 1, &strelements[0]);
         if (unlockgeom)
             params.back().interp (ParamValue::INTERP_VERTEX);
         return;
@@ -404,8 +391,7 @@ action_param (int argc, const char *argv[])
 
     // All remaining cases -- it's a string
     const char *s = stringval.c_str();
-    params.push_back (ParamValue());
-    params.back().init (paramname, TypeDesc::TypeString, 1, &s);
+    params.emplace_back (paramname, TypeDesc::TypeString, 1, &s);
     if (unlockgeom)
         params.back().interp (ParamValue::INTERP_VERTEX);
 }

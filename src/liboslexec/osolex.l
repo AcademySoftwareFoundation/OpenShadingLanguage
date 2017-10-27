@@ -194,13 +194,13 @@ using namespace OSL::pvt;
 
  /* Literal values */
 {INTEGER}               {
-                            yylval.i = atoi (yytext);
+                            yylval.i = OIIO::Strutil::from_string<int>(yytext);
                             // std::cerr << "lex int " << yylval.i << "\n";
                             return INT_LITERAL;
                         }
 
 {FLT}                   {
-                            yylval.f = atof (yytext);
+                            yylval.f = OIIO::Strutil::from_string<float>(yytext);
                             // std::cerr << "lex float " << yylval.f << "\n";
                             return FLOAT_LITERAL;
                         }

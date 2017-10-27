@@ -152,22 +152,14 @@ void getargs(int argc, const char *argv[])
         errhandler.verbosity (ErrorHandler::VERBOSE);
 }
 
-Vec3 strtovec(const char* str) {
+Vec3 strtovec(string_view str) {
     Vec3 v(0, 0, 0);
-    sscanf(str, " %f , %f , %f", &v.x, &v.y, &v.z);
+    OIIO::Strutil::parse_float (str, v[0]);
+    OIIO::Strutil::parse_char (str, ',');
+    OIIO::Strutil::parse_float (str, v[1]);
+    OIIO::Strutil::parse_char (str, ',');
+    OIIO::Strutil::parse_float (str, v[2]);
     return v;
-}
-
-int strtoint(const char* str) {
-    int i = 0;
-    sscanf(str, " %d", &i);
-    return i;
-}
-
-float strtoflt(const char* str) {
-    float f = 0;
-    sscanf(str, " %f", &f);
-    return f;
 }
 
 bool strtobool(const char* str) {
@@ -281,7 +273,7 @@ void parse_scene() {
             if (dir_attr) dir = strtovec(dir_attr.value()); else
             if ( at_attr) dir = strtovec( at_attr.value()) - eye;
             if ( up_attr)  up = strtovec( up_attr.value());
-            if (fov_attr) fov = strtoflt(fov_attr.value());
+            if (fov_attr) fov = OIIO::Strutil::from_string<float>(fov_attr.value());
 
             // create actual camera
             camera = Camera(eye, dir, up, fov, xres, yres);
@@ -291,7 +283,7 @@ void parse_scene() {
             pugi::xml_attribute radius_attr = node.attribute("radius");
             if (center_attr && radius_attr) {
                 Vec3  center = strtovec(center_attr.value());
-                float radius = strtoflt(radius_attr.value());
+                float radius = OIIO::Strutil::from_string<float>(radius_attr.value());
                 if (radius > 0) {
                     pugi::xml_attribute light_attr = node.attribute("is_light");
                     bool is_light = light_attr ? strtobool(light_attr.value()) : false;
@@ -314,7 +306,7 @@ void parse_scene() {
         } else if (strcmp(node.name(), "Background") == 0) {
             pugi::xml_attribute res_attr = node.attribute("resolution");
             if (res_attr)
-                backgroundResolution = strtoint(res_attr.value());
+                backgroundResolution = OIIO::Strutil::from_string<int>(res_attr.value());
             backgroundShaderID = int(shaders.size()) - 1;
         } else if (strcmp(node.name(), "ShaderGroup") == 0) {
             ShaderGroupRef group;

@@ -105,13 +105,13 @@ osl_endswith_iss (const char *s_, const char *substr_)
 OSL_SHADEOP int
 osl_stoi_is (const char *str)
 {
-    return str ? strtol(str, NULL, 10) : 0;
+    return str ? Strutil::from_string<int>(str) : 0;
 }
 
 OSL_SHADEOP float
 osl_stof_fs (const char *str)
 {
-    return str ? (float)strtod(str, NULL) : 0.0f;
+    return str ? Strutil::from_string<float>(str) : 0.0f;
 }
 
 OSL_SHADEOP const char *

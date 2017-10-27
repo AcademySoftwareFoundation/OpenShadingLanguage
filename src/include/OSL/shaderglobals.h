@@ -445,8 +445,8 @@ struct alignas(64) ShaderGlobalsBatch
 	isFull() const
 	{
 		// Force not full batches to see impact of low batch utilization
-		return (m_size == maxSize/2);
-		//return (m_size == maxSize);
+		//return (m_size == maxSize/2);
+		return (m_size == maxSize);
 	}
 
 	OSL_INLINE bool 

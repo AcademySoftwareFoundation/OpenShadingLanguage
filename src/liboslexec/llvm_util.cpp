@@ -2547,21 +2547,29 @@ LLVM_Util::push_mask(llvm::Value *mask, bool negate, bool absolute)
 }
 
 
+llvm::Value *
+LLVM_Util::shader_mask()
+{
+	llvm::Value * loc_of_shader_mask = m_alloca_for_modified_mask_stack.front();
+	return op_load(loc_of_shader_mask);
+}
+
 void
 LLVM_Util::apply_exit_to_mask_stack()
 {
 	ASSERT (false == m_mask_stack.empty());
+	ASSERT(false == m_alloca_for_modified_mask_stack.empty());
 
 
-	llvm::Value * loc_of_exit_mask = m_alloca_for_modified_mask_stack.front();
-	llvm::Value * exit_mask = op_load(loc_of_exit_mask);
+	llvm::Value * loc_of_shader_mask = m_alloca_for_modified_mask_stack.front();
+	llvm::Value * shader_mask = op_load(loc_of_shader_mask);
 
 	llvm::Value * loc_of_function_mask = m_alloca_for_modified_mask_stack.back();
 	llvm::Value * function_mask = op_load(loc_of_function_mask);
 
 	// For any inactive lanes of the exit mask
 	// set the function_mask to 0.
-	llvm::Value * modified_function_mask = builder().CreateSelect(exit_mask, function_mask, exit_mask);
+	llvm::Value * modified_function_mask = builder().CreateSelect(shader_mask, function_mask, shader_mask);
 
 	push_masking_enabled(false);
 	op_store(modified_function_mask, loc_of_function_mask);
@@ -2725,20 +2733,20 @@ LLVM_Util::op_masked_exit()
 	// use
 	ASSERT(false == m_alloca_for_modified_mask_stack.empty());
 	{
-		llvm::Value * loc_of_exit_mask = m_alloca_for_modified_mask_stack.front();
-		llvm::Value * exit_mask = op_load(loc_of_exit_mask);
+		llvm::Value * loc_of_shader_mask = m_alloca_for_modified_mask_stack.front();
+		llvm::Value * shader_mask = op_load(loc_of_shader_mask);
 
 		llvm::Value * modifiedMask;
 		// For any active lanes of the mask we are returning from
 		// set the shader scope mask to 0.
 		if (mi.negate) {
-			modifiedMask = builder().CreateSelect(exit_from_mask, exit_mask, exit_from_mask);
+			modifiedMask = builder().CreateSelect(exit_from_mask, shader_mask, exit_from_mask);
 		} else {
-			modifiedMask = builder().CreateSelect(exit_from_mask, wide_constant_bool(false), exit_mask);
+			modifiedMask = builder().CreateSelect(exit_from_mask, wide_constant_bool(false), shader_mask);
 		}
 
 		push_masking_enabled(false);
-		op_store(modifiedMask, loc_of_exit_mask);
+		op_store(modifiedMask, loc_of_shader_mask);
 		pop_masking_enabled();
 	}
 
@@ -2768,7 +2776,7 @@ LLVM_Util::op_masked_exit()
 	// of the calling function when the current function is popped
 	++m_masked_exit_count;
 
-	// Bumping the masked return count will cause the return mask(which is a subset of the exit_mask)
+	// Bumping the masked return count will cause the return mask(which is a subset of the shader_mask)
 	// to be applied to the mask stack when leaving if/else block
 	ASSERT(!m_masked_return_count_stack.empty());
 	m_masked_return_count_stack.back()++;

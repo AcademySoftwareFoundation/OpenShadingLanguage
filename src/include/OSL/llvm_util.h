@@ -251,6 +251,9 @@ public:
     llvm::Value * current_mask();
     llvm::Value * apply_return_to(llvm::Value *existing_mask);
 
+    // Shader level mask, should incorporate the batch size
+    // and any exits processed up to this point
+    llvm::Value * shader_mask();
 
     void op_masked_break();
 

@@ -219,9 +219,14 @@ BackendLLVMWide::llvm_call_layer (int layer, bool unconditional)
     // if it's run unconditionally.
     // The code in the parent layer itself will set its 'executed' flag.
 
-    llvm::Value *args[2];
+    llvm::Value *args[3];
     args[0] = sg_ptr ();
     args[1] = groupdata_ptr ();
+    // As multiple lanes may pull parameters at different points
+    // we will be conservative and use the shader level mask vs. the current mask
+    // TODO: if we can prove this conditional scoope is the only user of the lower layer, we could
+    // use the current mask.
+    args[2] = ll.mask_as_int(ll.shader_mask());
 
     ShaderInstance *parent = group()[layer];
     llvm::Value *trueval = ll.constant_bool(true);
@@ -239,7 +244,7 @@ BackendLLVMWide::llvm_call_layer (int layer, bool unconditional)
     std::string name = Strutil::format ("wide_%s_%d", parent->layername().c_str(),
                                         parent->id());
     // Mark the call as a fast call
-    llvm::Value *funccall = ll.call_function (name.c_str(), args, 2);
+    llvm::Value *funccall = ll.call_function (name.c_str(), args, 3);
     if (!parent->entry_layer())
         ll.mark_fast_func_call (funccall);
 

@@ -133,6 +133,7 @@ void print_closure (std::ostream &out, const ClosureColor *closure, ShadingSyste
 /// Signature of the function that LLVM generates to run the shader
 /// group.
 typedef void (*RunLLVMGroupFunc)(void* /* shader globals */, void*);
+typedef void (*RunLLVMGroupFuncWide)(void* /* shader globals */, void*, int run_mask_value);
 
 /// Signature of a constant-folding method
 typedef int (*OpFolder) (RuntimeOptimizer &rop, int opnum);
@@ -1475,23 +1476,23 @@ public:
     }
 
     // Hold onto wide versions of llvm functions side by side with scalar
-    RunLLVMGroupFunc llvm_compiled_wide_version() const {
+    RunLLVMGroupFuncWide llvm_compiled_wide_version() const {
         return m_llvm_compiled_wide_version;
     }
-    void llvm_compiled_wide_version (RunLLVMGroupFunc func) {
+    void llvm_compiled_wide_version (RunLLVMGroupFuncWide func) {
         m_llvm_compiled_wide_version = func;
     }
-    RunLLVMGroupFunc llvm_compiled_wide_init() const {
+    RunLLVMGroupFuncWide llvm_compiled_wide_init() const {
         return m_llvm_compiled_wide_init;
     }
-    void llvm_compiled_wide_init (RunLLVMGroupFunc func) {
+    void llvm_compiled_wide_init (RunLLVMGroupFuncWide func) {
         m_llvm_compiled_wide_init = func;
     }
-    RunLLVMGroupFunc llvm_compiled_wide_layer (int layer) const {
+    RunLLVMGroupFuncWide llvm_compiled_wide_layer (int layer) const {
         return layer < (int)m_llvm_compiled_wide_layers.size()
                             ? m_llvm_compiled_wide_layers[layer] : NULL;
     }
-    void llvm_compiled_wide_layer (int layer, RunLLVMGroupFunc func) {
+    void llvm_compiled_wide_layer (int layer, RunLLVMGroupFuncWide func) {
         m_llvm_compiled_wide_layers.resize ((size_t)nlayers(), NULL);
         if (layer < nlayers())
             m_llvm_compiled_wide_layers[layer] = func;
@@ -1576,9 +1577,9 @@ private:
     RunLLVMGroupFunc m_llvm_compiled_init;
     std::vector<RunLLVMGroupFunc> m_llvm_compiled_layers;
     
-    RunLLVMGroupFunc m_llvm_compiled_wide_version;
-    RunLLVMGroupFunc m_llvm_compiled_wide_init;
-    std::vector<RunLLVMGroupFunc> m_llvm_compiled_wide_layers;
+    RunLLVMGroupFuncWide m_llvm_compiled_wide_version;
+    RunLLVMGroupFuncWide m_llvm_compiled_wide_init;
+    std::vector<RunLLVMGroupFuncWide> m_llvm_compiled_wide_layers;
     
     std::vector<ShaderInstanceRef> m_layers;
     ustring m_name;

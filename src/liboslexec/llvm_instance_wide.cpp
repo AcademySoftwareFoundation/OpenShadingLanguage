@@ -769,11 +769,15 @@ BackendLLVMWide::build_llvm_init ()
     ll.current_function (
            ll.make_function (unique_name, false,
                              ll.type_void(), // return type
-                             llvm_type_sg_ptr(), llvm_type_groupdata_ptr()));
+                             llvm_type_sg_ptr(),
+							 llvm_type_groupdata_ptr(),
+							 ll.type_int()));
 
     // Get shader globals and groupdata pointers
     m_llvm_shaderglobals_ptr = ll.current_function_arg(0); //arg_it++;
     m_llvm_groupdata_ptr = ll.current_function_arg(1); //arg_it++;
+    // TODO: do we need to utilize the shader mask in the init function?
+    //llvm::Value * llvm_initial_shader_mask_value = ll.current_function_arg(2); //arg_it++;
 
     // New function, reset temp matrix pointer
     m_llvm_temp_wide_matrix_ptr = nullptr;
@@ -860,11 +864,14 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
            ll.make_function (unique_layer_name,
                              !is_entry_layer, // fastcall for non-entry layer functions
                              ll.type_void(), // return type
-                             llvm_type_sg_ptr(), llvm_type_groupdata_ptr()));
+                             llvm_type_sg_ptr(),
+							 llvm_type_groupdata_ptr(),
+							 ll.type_int()));
     
     // Get shader globals and groupdata pointers
     m_llvm_shaderglobals_ptr = ll.current_function_arg(0); //arg_it++;
     m_llvm_groupdata_ptr = ll.current_function_arg(1); //arg_it++;
+    llvm::Value *llvm_initial_shader_mask_value = ll.current_function_arg(2); //arg_it++;
 
     // New function, reset temp matrix pointer
     m_llvm_temp_wide_matrix_ptr = nullptr;
@@ -876,9 +883,9 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
     ll.new_builder (entry_bb);
 	ll.set_debug_info(/*unique_layer_name*/inst()->op(inst()->maincodebegin()).sourcefile().string());
     ll.set_debug_location(unique_layer_name, unique_layer_name, 0);
-	// TODO:  might want to start with fewer data lanes active based on how
-	// full batch is.
-    ll.push_shader_instance(ll.wide_constant_bool(true));
+
+	// Start with fewer data lanes active based on how full batch is.
+    ll.push_shader_instance(ll.int_as_mask(llvm_initial_shader_mask_value));
 	
     // Always allocate a temporary wide matrix to serve as middle man between
     // from and to matrix spaces
@@ -1383,11 +1390,11 @@ BackendLLVMWide::run ()
 
     // Force the JIT to happen now and retrieve the JITed function pointers
     // for the initialization and all public entry points.
-    group().llvm_compiled_wide_init ((RunLLVMGroupFunc) ll.getPointerToFunction(init_func));
+    group().llvm_compiled_wide_init ((RunLLVMGroupFuncWide) ll.getPointerToFunction(init_func));
     for (int layer = 0; layer < nlayers; ++layer) {
         llvm::Function* f = funcs[layer];
         if (f && group().is_entry_layer (layer))
-            group().llvm_compiled_wide_layer (layer, (RunLLVMGroupFunc) ll.getPointerToFunction(f));
+            group().llvm_compiled_wide_layer (layer, (RunLLVMGroupFuncWide) ll.getPointerToFunction(f));
     }
     if (group().num_entry_layers())
         group().llvm_compiled_wide_version (NULL);

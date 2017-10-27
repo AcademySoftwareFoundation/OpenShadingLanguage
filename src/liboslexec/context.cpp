@@ -298,10 +298,17 @@ ShadingContext::execute_batch_init (ShaderGroup &sgroup, ShaderGlobalsBatch &sgb
     	sgb.uniform().renderer = renderer();
         // TODO: consider removing Ci from batched shader globals
     	sgb.uniform().Ci = NULL;
-        RunLLVMGroupFunc run_func = sgroup.llvm_compiled_wide_init();
+    	RunLLVMGroupFuncWide run_func = sgroup.llvm_compiled_wide_init();
         DASSERT (run_func);
         DASSERT (sgroup.llvm_groupdata_wide_size() <= m_heap.size());
-        run_func (&sgb, &m_heap[0]);
+
+        Mask run_mask(false);
+        for(int ri=0; ri < sgb.size(); ++ri)
+        {
+        	run_mask.set_on(ri);
+        }
+
+        run_func (&sgb, &m_heap[0], run_mask.value());
     }
 
     if (profile)
@@ -324,14 +331,20 @@ ShadingContext::execute_batch_layer (ShaderGlobalsBatch &sgb, int layernumber)
 
     size_t prev_end_of_errors = m_buffered_errors.size();
     
-    RunLLVMGroupFunc run_func = group()->llvm_compiled_wide_layer (layernumber);
+    RunLLVMGroupFuncWide run_func = group()->llvm_compiled_wide_layer (layernumber);
     if (! run_func)
         return false;
 
     ASSERT(pvt::is_aligned<64>(&sgb));    
     ASSERT(pvt::is_aligned<64>(&m_heap[0]));    
     
-    run_func (&sgb, &m_heap[0]);
+    Mask run_mask(false);
+    for(int ri=0; ri < sgb.size(); ++ri)
+    {
+    	run_mask.set_on(ri);
+    }
+
+    run_func (&sgb, &m_heap[0], run_mask.value());
 
     if (profile)
         m_ticks += timer.ticks();

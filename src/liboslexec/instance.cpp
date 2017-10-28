@@ -805,6 +805,7 @@ std::string
 ShaderGroup::serialize () const
 {
     std::ostringstream out;
+    out.imbue (std::locale::classic());  // force C locale
     out.precision (9);
     lock_guard lock (m_mutex);
     for (int i = 0, nl = nlayers(); i < nl; ++i) {

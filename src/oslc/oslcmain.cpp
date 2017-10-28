@@ -112,6 +112,10 @@ static OSLC_ErrorHandler default_oslc_error_handler;
 int
 main (int argc, const char *argv[])
 {
+    // Globally force classic "C" locale, and turn off all formatting
+    // internationalization, for the entire oslc application.
+    std::locale::global (std::locale::classic());
+
     OIIO::Filesystem::convert_native_arguments (argc, (const char **)argv);
 
     std::vector<std::string> args;

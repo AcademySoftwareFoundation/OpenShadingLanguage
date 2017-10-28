@@ -1596,6 +1596,7 @@ ShadingSystemImpl::getstats (int level) const
     if (level <= 0)
         return "";
     std::ostringstream out;
+    out.imbue (std::locale::classic());  // force C locale
     out << "OSL ShadingSystem statistics (" << (void*)this;
     out << ") ver " << OSL_LIBRARY_VERSION_STRING
         << ", LLVM " << OSL_LLVM_FULL_VERSION << "\n";

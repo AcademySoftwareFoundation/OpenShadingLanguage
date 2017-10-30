@@ -295,6 +295,10 @@ Films using OSL (grouped by year of release date):
   Dunkirk,
   The Emoji Movie,
   Detroit,
+  Kingsman: The Golden Circle,
+  Lega Ninjago Movie,
+  Blade Runner 2049,
+  Geostorm,
   ...
 
 

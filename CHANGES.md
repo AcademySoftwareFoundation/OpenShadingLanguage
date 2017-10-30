@@ -1,3 +1,7 @@
+Release 1.8.13 -- ?? (compared to 1.8.12)
+--------------------------------------------------
+
+
 Release 1.8.12 -- 1 Nov 2017 (compared to 1.8.11)
 --------------------------------------------------
 * Improve type checking error messages with structs. #761

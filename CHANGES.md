@@ -1,4 +1,4 @@
-Release 1.9 -- ?? 2017 (compared to 1.8)
+Release 1.9 -- 30 November 2017 (compared to 1.8)
 --------------------------------------------------
 
 Dependency and standards changes:

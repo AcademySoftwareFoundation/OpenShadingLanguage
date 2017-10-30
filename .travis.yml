@@ -17,7 +17,6 @@ addons:
       - cmake
       - cmake-data
       - g++-4.8
-      - g++-5
       - g++-6
       - g++-7
       - libboost1.55-all-dev
@@ -111,34 +110,31 @@ matrix:
       - os: osx
         compiler: clang
     # Test against the older release branch of OIIO (all the other tests
-    # are against OIIO master).
+    # are against OIIO master). Test against a higher SSE level.
       - os: linux
         compiler: gcc
-        env: OIIOBRANCH=release
+        env: OIIOBRANCH=release USE_SIMD=sse4.2
     # Test gcc 5, also against higher SSE level
+    #  - os: linux
+    #    compiler: gcc
+    #    env: WHICHGCC=5 USE_SIMD=sse4.2
+    # Test gcc6, and highest SIMD level supported by Travis, and newer LLVM
       - os: linux
         compiler: gcc
-        env: WHICHGCC=5 USE_SIMD=sse4.2
-    # Test gcc6, and highest SIMD level supported by Travis.
+        env: WHICHGCC=6 USE_SIMD=avx,f16c LLVM_VERSION=4.0.1
+    # Linux only: test gcc 7, also test C++14 and even newer LLVM
       - os: linux
         compiler: gcc
-        env: WHICHGCC=6 USE_SIMD=avx,f16c
-    # Linux only: test gcc 7, also test C++14
-      - os: linux
-        compiler: gcc
-        env: WHICHGCC=7 USE_CPP=14
+        env: WHICHGCC=7 USE_CPP=14 LLVM_VERSION=5.0.0
     # Build with C++11, DEBUG build, against OIIO master
       - os: linux
         compiler: gcc
         env: DEBUG=1
-    # Test against older LLVM
+    # One more, just for the heck of it, turn all SIMD off, and also test
+    # against the oldest LLVM we still support.
       - os: linux
         compiler: gcc
-        env: LLVM_VERSION=3.5.2
-    # One more, just for the heck of it, turn all SIMD off.
-      - os: linux
-        compiler: gcc
-        env: USE_SIMD=0
+        env: USE_SIMD=0 LLVM_VERSION=3.5.2
 
 notifications:
     email:

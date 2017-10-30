@@ -4,9 +4,8 @@ Release 1.9 -- ?? 2017 (compared to 1.8)
 Dependency and standards changes:
 * **C++11 required**: OSL 1.9 requires a minimum standard of C++11. It
   should also build against C++14 and C++17.
-* **LLVM 3.9 / 4.0 / 5.0**: Support has been added for LLVM 3.9, 4.0, and
-  5.0. Support has been removed for for LLVM 3.4. We expect to remove
-  support for LLVM 3.5 shortly.
+* **LLVM 3.5 / 3.9 / 4.0 / 5.0**: Support has been added for LLVM 3.9, 4.0, and
+  5.0. Support has been removed for for LLVM 3.4.
 * **OpenImageIO 1.7+**: This release of OSL should build properly against
   OIIO 1.7 or newer. You may find that 1.6 is still ok, but we are not doing
   any work to ensure that.
@@ -55,6 +54,10 @@ Standard library additions/changes:
   #775 (1.9.0/1.8.10)
 * `int hash (...)` has been extended to take arguments that are int, float,
   2 floats, point, or point+float. #775 (1.9.0/1.8.10)
+* `transformc()` can now perform any color transformations understood by
+  OpenColorIO (assuming OCIO support was enabled when OSL was build, and that
+  a valid OCIO configuration is found at runtime). #796 (1.9.1) Also,
+  `transformc()` now fully supports derivatives in all cases. #798 (1.9.1)
 
 Contributed shader library changes:
 * New headers: color2.h, color4.h, vector2.h, vector4.h. Technically these
@@ -75,12 +78,27 @@ API changes, new options, new ShadingSystem features (for renderer writers):
       pass one kind of triple when a different kind of triple was the
       declared parameter type. In this respect, the rules now more closely
       resample what we always allowed for `ConnectShaders`. #750 (1.9.0)
-* ShadingSystem attribute additions/changes:
+    * More optional `Parameter()` type checking relaxation: if the
+      ShadingSystem attribute `"relaxed_param_typecheck"` is nonzero, an
+      array of floats may be passed for float aggregates (e.g. color) or
+      arrays of float aggregates, as long as the total number of floats
+      matches. For example, with this attribute turned on, a `float[3]`
+      may be passed as a parameter that expected a `vector`. Also, an `int`
+      may be passed to a `float` parameter, and an `int[1]` may be passed
+      to an `int` parameter. #794,#797 (1.9.1)
+    * A new, optional, slightly relaxed policy for type checking what is
+      passed via `Parameter()`
     * `Shader()` will now accept the name of the shader as if it were the
       filename, with trailing `.oso`, and it will be automatically stripped
       off. #741 (1.9.0)
     * `convert_value()` now allows conversions between `float[3]` and triple
       values. #754 (1.9.0)
+* ShadingSystem attribute additions/changes:
+    * `"relaxed_param_typecheck"` (default=0) enables more relaxed type
+      checking of `Parameter()` calls: arrays of float may be passed to
+      parameters expecting a float-aggregate or array thereof, and an `int`
+      may be passed to a parameter expecting a `float`, and an `int[1]` may
+      be passed to an `int` parameter. #794,#797 (1.9.1)
 * Shader group attribute additions/changes:
 * RendererServices:
 
@@ -140,8 +158,13 @@ Bug fixes and other improvements (internals):
   #774 (1.9.0)
 * The standard OSL library function fprintf() was not properly implemented.
   #780 (1.9.1)
+* Fix subtle bugs related to our ignorance of "locales" -- we now are very
+  careful when parsing `.osl` source (and other places) to be always use
+  the `'.'` (dot) character as decimal separator in floating point number,
+  even when running on a computer system configured to use a foreign locale
+  where the comma is traditionally used as the decimal separator. #795 (1.9.1)
 
-Build & test system improvements and developer goodies:
+Build & test system improvements:
 * C++11 is the new language baseline. #704, #707
 * Many uses of Boost have been switched to use C++11 features, including
   prior uses of boost::shared_ptr, bind, ref, unordered_map, unordered_set
@@ -192,11 +215,36 @@ Build & test system improvements and developer goodies:
 * C++11 modernization: use range-for loops in many places. #785 (1.9.1)
 * Make OSL build with clang 5.0 and against LLVM 5.0. #787 (1.9.1)
 * Removed support for building against LLVM 3.4. #792 (1.9.1)
+* Use GNUInstallDirs to simplify build scripts and more properly conform to
+  widely established standards for layout of installation directory files.
+  #788 (1.9.1)
+* Improved proper rebuilding of the LLVM bitcode for llvm_ops.cpp when only
+  certain headers change. #802 (1.9.1)
+
+Developer goodies:
+* The `dual.h` implementation has been completely overhauled. The primary
+  implementation of dual arithmetic is now the template `Dual<T,PARTIALS>`
+  where `PARTIALS` lets it specialize on the number of partial derivatives.
+  This lets you use the `Dual` templates for automatic differentiation of
+  of ordinary 1D functions (e.g., `Dual<float,1>`) or 3D volumetric
+  computations (e.g., `Dual<float,3>`). Most of OSL internals use automatic
+  differentiation on 2 dimenstions (`Dual<float,2>` a.k.a. `Dual2<float>`),
+  but this change makes `dual.h` a lot more useful outside of OSL.
+  #803 (1.9.1)
 
 Documentation:
 * Fixed unclear explanation about structures with nested arrays. (1.9.0)
 * Full testshade docs in `doc/testshade.md.html` (1.9.0)
 
+
+Release 1.8.12 -- 1 Nov 2017 (compared to 1.8.11)
+--------------------------------------------------
+* Improve type checking error messages with structs. #761
+
+Release 1.8.11 -- 3 Oct 2017 (compared to 1.8.10)
+--------------------------------------------------
+* Builds properly against LLVM 5.0, and if compiled by clang 5.0.
+* Changes to test/CI with recent OIIO release.
 
 Release 1.8.10 -- 1 Jul 2017 (compared to 1.8.9)
 --------------------------------------------------

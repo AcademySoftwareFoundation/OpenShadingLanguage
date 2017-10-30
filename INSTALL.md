@@ -6,11 +6,12 @@ OSL currently compiles and runs cleanly on Linux, Mac OS X, and Windows.
 Dependencies
 ------------
 
-OSL requires the following dependencies or tools:
+OSL requires the following dependencies or tools.
+NEW or CHANGED dependencies since the last major release are **bold**.
 
-* Build system: [CMake](https://cmake.org/) 3.2.2 or newer
+* Build system: **[CMake](https://cmake.org/) 3.2.2 or newer**
 
-* A suitable C++11 compiler to build OSL itself, which may be any of:
+* A suitable **C++11** compiler to build OSL itself, which may be any of:
    - GCC 4.8.5 or newer
    - Clang 3.4 or newer
    - Microsoft Visual Studio 2015 or newer
@@ -19,7 +20,7 @@ OSL requires the following dependencies or tools:
   OSL should compile also properly with C++14 or C++17, but they are not
   required.
 
-* [OpenImageIO](http://openimageio.org) 1.7 or newer
+* **[OpenImageIO](http://openimageio.org) 1.7 or newer**
 
     OSL uses OIIO both for its texture mapping functionality as well as
     numerous utility classes.  If you are integrating OSL into an existing
@@ -38,9 +39,7 @@ OSL requires the following dependencies or tools:
     DYLD_LIBRARY_PATH on OS X) and then OSL's build scripts will be able
     to find it.
 
-* [LLVM](http://www.llvm.org) 3.5, 3.9, 4.0, or 5.0
-
-   It's possible that other versions will work, but we are not testing them.
+* **[LLVM](http://www.llvm.org) 3.5, 3.9, 4.0, or 5.0**
 
    Optionally, if Clang libraries are installed alongside LLVM, OSL will
    in most circumstances use Clang's internals for C-style preprocessing of
@@ -48,7 +47,7 @@ OSL requires the following dependencies or tools:
    platforms, that requires that Boost has been built in C++11 mode).
 
 * [Boost](www.boost.org) 1.55 or newer.
-* [Ilmbase/OpenEXR](http://openexr.com/downloads.html) 2.0 or newer
+* **[Ilmbase/OpenEXR](http://openexr.com/downloads.html) 2.0 or newer**
 * [Flex](https://github.com/westes/flex) and
   [GNU Bison](https://www.gnu.org/software/bison/)
 * [PugiXML](http://pugixml.org/)

@@ -319,13 +319,8 @@ OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
 
     inst.createFileManager();
     inst.createSourceManager(inst.getFileManager());
-#if OSL_LLVM_VERSION <= 35
-    clang::FrontendInputFile inputFile(mbuf.release(), clang::IK_None);
-    inst.InitializeSourceManager(inputFile);
-#else
     clang::SourceManager &sm = inst.getSourceManager();
     sm.setMainFileID (sm.createFileID(std::move(mbuf), clang::SrcMgr::C_User));
-#endif
 
     inst.getPreprocessorOutputOpts().ShowCPP = 1;
     inst.getPreprocessorOutputOpts().ShowMacros = 0;

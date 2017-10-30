@@ -64,7 +64,7 @@ message (STATUS "Using OpenImageIO ${OPENIMAGEIO_VERSION}")
 ###########################################################################
 # LLVM library setup
 
-find_package (LLVM 3.5 REQUIRED)
+find_package (LLVM 3.9 REQUIRED)
 
 # ensure include directory is added (in case of non-standard locations
 include_directories (BEFORE SYSTEM "${LLVM_INCLUDES}")
@@ -109,17 +109,6 @@ if (GCC_VERSION)
     if (${GCC_VERSION} VERSION_LESS 4.9)
         set (_CLANG_PREPROCESSOR_CAN_WORK ON)
     endif ()
-endif ()
-if (${LLVM_VERSION} VERSION_LESS 3.9)
-    # Bug in old LLVM creates some linkage problems we've seen involving
-    # some singleton globals that are duplicated when we include both
-    # the clang libs we need for the preprocessing as well as certain
-    # LLVM support libraries we also need, triggering assertions.
-    # See this for description of the issue:
-    # http://lists.llvm.org/pipermail/llvm-commits/Week-of-Mon-20140203/203968.html
-    # Sweep under the rug by falling back to boost wave when using older
-    # LLVM (it seems fixed and no longer triggers for 3.9+).
-    set (_CLANG_PREPROCESSOR_CAN_WORK OFF)
 endif ()
 if (USE_BOOST_WAVE OR (NOT CLANG_LIBRARIES)
     OR (NOT _CLANG_PREPROCESSOR_CAN_WORK))

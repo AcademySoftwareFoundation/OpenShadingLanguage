@@ -1,3 +1,36 @@
+Release 1.10? -- ?? 2018? (compared to 1.9)
+--------------------------------------------------
+Dependency and standards changes:
+* LLVM 3.5 / 3.9 / 4.0 / 5.0: Support has been added for LLVM 3.9, 4.0, and
+  5.0.
+* **OpenImageIO 1.8+**: This release of OSL should build properly against
+  OIIO 1.8 or newer. You may find that 1.7 is still ok, but we are not doing
+  any work to ensure that.
+
+Language features:
+
+Standard library additions/changes:
+
+Contributed shader library changes:
+
+API changes, new options, new ShadingSystem features (for renderer writers):
+* ShadingSystem API changes:
+* ShadingSystem attribute additions/changes:
+* Shader group attribute additions/changes:
+* RendererServices:
+
+Performance improvements:
+
+Bug fixes and other improvements (internals):
+
+Build & test system improvements:
+
+Developer goodies:
+
+Documentation:
+
+
+
 Release 1.9 -- ?? 2017 (compared to 1.8)
 --------------------------------------------------
 

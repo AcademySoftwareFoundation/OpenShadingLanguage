@@ -399,7 +399,7 @@ BackendLLVMWide::llvm_type_closure_component_ptr ()
 
 
 void
-BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym)
+BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym, llvm::Value * llvm_initial_shader_mask_value)
 {
     // Don't write over connections!  Connection values are written into
     // our layer when the earlier layer is run, as part of its code.  So
@@ -489,6 +489,7 @@ BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym)
         args.push_back (ll.constant (sym.derivsize()*SimdLaneCount));
         args.push_back (ll.void_ptr (userdata_initialized_ref(userdata_index)));
         args.push_back (ll.constant (userdata_index));
+        args.push_back (llvm_initial_shader_mask_value);
         llvm::Value *got_userdata =
             ll.call_function ("osl_bind_interpolated_param_wide",
                               &args[0], args.size());
@@ -885,7 +886,8 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
     ll.set_debug_location(unique_layer_name, unique_layer_name, 0);
 
 	// Start with fewer data lanes active based on how full batch is.
-    ll.push_shader_instance(ll.int_as_mask(llvm_initial_shader_mask_value));
+    llvm::Value * initial_shader_mask = ll.int_as_mask(llvm_initial_shader_mask_value);
+    ll.push_shader_instance(initial_shader_mask);
 	
     // Always allocate a temporary wide matrix to serve as middle man between
     // from and to matrix spaces
@@ -1006,7 +1008,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
              s.typespec().is_string_based() || 
              ((s.symtype() == SymTypeLocal || s.symtype() == SymTypeTemp)
               && shadingsys().debug_uninit())))
-            llvm_assign_initial_value (s);
+            llvm_assign_initial_value (s, llvm_initial_shader_mask_value);
         // If debugnan is turned on, globals check that their values are ok
         if (s.symtype() == SymTypeGlobal && shadingsys().debug_nan()) {
             TypeDesc t = s.typespec().simpletype();
@@ -1042,7 +1044,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
                 && shadingsys().lazy_userdata())
             continue;
         // Set initial value for params (may contain init ops)
-        llvm_assign_initial_value (s);
+        llvm_assign_initial_value (s, llvm_initial_shader_mask_value);
     }
 
     // All the symbols are stack allocated now.

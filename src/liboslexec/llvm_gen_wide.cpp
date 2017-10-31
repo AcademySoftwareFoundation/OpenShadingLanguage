@@ -335,7 +335,7 @@ LLVMGEN (llvm_gen_useparam)
                 && ! sym.lockgeom() && ! sym.typespec().is_closure()
                 && ! sym.connected() && ! sym.connected_down()
                 && rop.shadingsys().lazy_userdata()) {
-            rop.llvm_assign_initial_value (sym);
+            rop.llvm_assign_initial_value (sym, rop.ll.mask_as_int(rop.ll.current_mask()));
         }
     }
     return true;

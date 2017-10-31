@@ -3593,7 +3593,7 @@ osl_bind_interpolated_param_wide (void *sgb_, const void *name, long long type,
                              int userdata_has_derivs, void *userdata_data,
                              int symbol_has_derivs, void *symbol_data,
                              int symbol_data_size,
-                             unsigned int *userdata_initialized, int userdata_index)
+                             unsigned int *userdata_initialized, int userdata_index, int mask_value)
 {
     // Top bit indicate if we have checked for user data yet or not
     // the bottom half is a mask of which lanes successfully retrieved 
@@ -3602,7 +3602,7 @@ osl_bind_interpolated_param_wide (void *sgb_, const void *name, long long type,
     if (status == 0) {
         // First time retrieving this userdata
         ShaderGlobalsBatch *sgb   = reinterpret_cast<ShaderGlobalsBatch *>(sgb_);  
-        MaskedDataRef userDest(TYPEDESC(type), userdata_has_derivs, Mask(true), userdata_data);
+        MaskedDataRef userDest(TYPEDESC(type), userdata_has_derivs, Mask(mask_value), userdata_data);
         Mask foundUserData = sgb->uniform().renderer->batched()->get_userdata (USTR(name),
                                               
         // printf ("Binding %s %s : index %d, ok = %d\n", name,

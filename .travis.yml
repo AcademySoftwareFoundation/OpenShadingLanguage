@@ -14,13 +14,13 @@ addons:
       - ubuntu-toolchain-r-test
       - george-edison55-precise-backports
    packages:
-      - cmake
-      - cmake-data
+      #- cmake
+      #- cmake-data
       - g++-4.8
       - g++-6
       - g++-7
       - libboost1.55-all-dev
-      - libtiff4-dev
+      #- libtiff4-dev
 
 cache:
     ccache: true
@@ -56,12 +56,16 @@ install:
           CXX="ccache $CXX" CCACHE_CPP2=1 src/build-scripts/build_openexr.bash ;
           export ILMBASE_HOME=$PWD/openexr-install ;
           export OPENEXR_HOME=$PWD/openexr-install ;
-          if [ "$LLVM_VERSION" == "" ]; then export LLVM_VERSION="3.9.0" ; fi ;
-          wget http://releases.llvm.org/${LLVM_VERSION}/clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-14.04.tar.xz ;
-          tar xf clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-14.04.tar.xz ;
-          rm -f clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-14.04.tar.xz ;
+          if [ "$LLVM_VERSION" == "" ]; then export LLVM_VERSION="error3.9.0" ; fi ;
+          if [ "$LLVM_VERSION" == "5.0.0" ]; then export LLVMTAR=clang+llvm-${LLVM_VERSION}-linux-x86_64-ubuntu14.04.tar.xz ; else export LLVMTAR=clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-14.04.tar.xz ; fi;
+          echo LLVMTAR = $LLVMTAR ;
+          wget http://releases-origin.llvm.org/${LLVM_VERSION}/${LLVMTAR} ;
+          tar xf $LLVMTAR ;
+          rm -f $LLVMTAR ;
+          echo "Installed ${LLVM_VERSION}" ;
           mv clang+llvm* llvm-install ;
           export LLVM_DIRECTORY=$PWD/llvm-install ;
+          ls -a $LLVM_DIRECTORY ;
       fi
     - export OIIOMAKEFLAGS="$OIIOMAKEFLAGS -j2 DEBUG= USE_PYTHON=0 OIIO_BUILD_TESTS=0"
     - export OPENIMAGEIO_SITE=travis
@@ -107,13 +111,14 @@ matrix:
       # Build with C++11, default compiler, optimized build, against OIIO master
       - os: linux
         compiler: gcc
+        env: WHICHGCC=4.8 LLVM_VERSION=3.9.0
       - os: osx
         compiler: clang
     # Test against the older release branch of OIIO (all the other tests
     # are against OIIO master). Test against a higher SSE level.
       - os: linux
         compiler: gcc
-        env: OIIOBRANCH=release USE_SIMD=sse4.2
+        env: OIIOBRANCH=release USE_SIMD=sse4.2 LLVM_VERSION=3.9.0
     # Test gcc 5, also against higher SSE level
     #  - os: linux
     #    compiler: gcc
@@ -121,7 +126,7 @@ matrix:
     # Test gcc6, and highest SIMD level supported by Travis, and newer LLVM
       - os: linux
         compiler: gcc
-        env: WHICHGCC=6 USE_SIMD=avx,f16c LLVM_VERSION=4.0.1
+        env: WHICHGCC=6 USE_SIMD=avx,f16c LLVM_VERSION=4.0.0
     # Linux only: test gcc 7, also test C++14 and even newer LLVM
       - os: linux
         compiler: gcc
@@ -129,7 +134,7 @@ matrix:
     # Build with C++11, DEBUG build, against OIIO master
       - os: linux
         compiler: gcc
-        env: DEBUG=1
+        env: DEBUG=1 LLVM_VERSION=3.9.0
     # One more, just for the heck of it, turn all SIMD off, and also test
     # against the oldest LLVM we still support.
       - os: linux

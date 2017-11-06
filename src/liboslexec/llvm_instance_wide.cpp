@@ -273,9 +273,12 @@ BackendLLVMWide::llvm_type_groupdata ()
     if (llvm_debug() >= 2)
         std::cout << "  layers run flags: " << m_num_used_layers
                   << " at offset " << offset << "\n";
-    int sz = (m_num_used_layers + 3) & (~3);  // Round up to 32 bit boundary
-    fields.push_back (ll.type_array (ll.type_bool(), sz));
-    offset += sz * sizeof(bool);
+    // The next item in the data structure has 64 byte alignment, so we need to move our offset to a 64 byte alignment
+    // Round up to a 64 bit boundary
+    int sz = 16*((m_num_used_layers + 15)/16);
+    ASSERT(sz*sizeof(int)%16 == 0);
+    fields.push_back (ll.type_array (ll.type_int(), sz));
+    offset += sz * sizeof(int);
     ++order;
 
     // Now add the array that tells which userdata have been initialized,
@@ -801,7 +804,9 @@ BackendLLVMWide::build_llvm_init ()
 
     // Group init clears all the "layer_run" and "userdata_initialized" flags.
     if (m_num_used_layers > 1) {
-        int sz = (m_num_used_layers + 3) & (~3);  // round up to 32 bits
+        // Round up to a 64 bit boundary
+        int sz = 16*((m_num_used_layers + 15)/16)*sizeof(int);
+
         ll.op_memset (ll.void_ptr(layer_run_ref(0)), 0, sz, 4 /*align*/);
     }
     int num_userdata = (int) group().m_userdata_names.size();
@@ -900,6 +905,12 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
 	
 
     llvm::Value *layerfield = layer_run_ref(layer_remap(layer()));
+
+    llvm::Value *previously_executed_value = nullptr;
+    if (! group().is_last_layer(layer())) {
+    	previously_executed_value = ll.op_load (layerfield);
+    }
+
     if (is_entry_layer && ! group().is_last_layer(layer())) {
         // For entry layers, we need an extra check to see if it already
         // ran. If it has, do an early return. Otherwise, set the 'ran' flag
@@ -907,10 +918,13 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
         if (shadingsys().llvm_debug_layers())
             llvm_gen_debug_printf (Strutil::format("checking for already-run layer %d %s %s",
                                    this->layer(), inst()->layername(), inst()->shadername()));
-        llvm::Value *executed = ll.op_eq (ll.op_load (layerfield), ll.constant_bool(true));
+        llvm::Value *previously_executed = ll.int_as_mask(previously_executed_value);
+        llvm::Value *required_lanes_executed = ll.op_select(initial_shader_mask, previously_executed, ll.wide_constant_bool(false));
+        llvm::Value *all_required_lanes_already_executed = ll.op_eq(initial_shader_mask, required_lanes_executed);
+
         llvm::BasicBlock *then_block = ll.new_basic_block();
         llvm::BasicBlock *after_block = ll.new_basic_block();
-        ll.op_branch (executed, then_block, after_block);
+        ll.op_branch (all_required_lanes_already_executed, then_block, after_block);
         // insert point is now then_block
         // we've already executed, so return early
         if (shadingsys().llvm_debug_layers())
@@ -925,7 +939,11 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
                                this->layer(), inst()->layername(), inst()->shadername()));
     // Mark this layer as executed
     if (! group().is_last_layer(layer())) {
-        ll.op_store (ll.constant_bool(true), layerfield);
+    	// Caller may only be asking for a subset of the lanes to be executed
+    	// We don't want to loose track of lanes we have already executed, so
+    	// we will OR together previously & requested executed
+    	llvm::Value *combined_executed = ll.op_or(previously_executed_value, llvm_initial_shader_mask_value);
+        ll.op_store (combined_executed, layerfield);
         if (shadingsys().countlayerexecs())
             ll.call_function ("osl_incr_layers_executed", sg_void_ptr());
     }

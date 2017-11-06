@@ -222,24 +222,26 @@ BackendLLVMWide::llvm_call_layer (int layer, bool unconditional)
     llvm::Value *args[3];
     args[0] = sg_ptr ();
     args[1] = groupdata_ptr ();
-    // As multiple lanes may pull parameters at different points
-    // we will be conservative and use the shader level mask vs. the current mask
-    // TODO: if we can prove this conditional scoope is the only user of the lower layer, we could
-    // use the current mask.
-    args[2] = ll.mask_as_int(ll.shader_mask());
 
     ShaderInstance *parent = group()[layer];
     llvm::Value *trueval = ll.constant_bool(true);
     llvm::Value *layerfield = layer_run_ref(layer_remap(layer));
     llvm::BasicBlock *then_block = NULL, *after_block = NULL;
+    llvm::Value *lanes_requiring_execution_value = nullptr;
     if (! unconditional) {
-        llvm::Value *executed = ll.op_load (layerfield);
-        executed = ll.op_ne (executed, trueval);
+        llvm::Value *previously_executed = ll.int_as_mask(ll.op_load (layerfield));
+        llvm::Value *lanes_requiring_execution = lanes_requiring_execution = ll.op_select(previously_executed, ll.wide_constant_bool(false), ll.current_mask());
+        lanes_requiring_execution_value = ll.mask_as_int(lanes_requiring_execution);
+        llvm::Value *execution_required = ll.op_ne(lanes_requiring_execution_value, ll.constant(0));
         then_block = ll.new_basic_block (std::string("then layer ").append(std::to_string(layer)));
         after_block = ll.new_basic_block (std::string("after layer ").append(std::to_string(layer)));
-        ll.op_branch (executed, then_block, after_block);
+        ll.op_branch (execution_required, then_block, after_block);
         // insert point is now then_block
+    } else {
+    	lanes_requiring_execution_value = ll.int_as_mask(ll.shader_mask());
     }
+
+    args[2] = lanes_requiring_execution_value;
 
     std::string name = Strutil::format ("wide_%s_%d", parent->layername().c_str(),
                                         parent->id());

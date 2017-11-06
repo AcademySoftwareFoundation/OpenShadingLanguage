@@ -238,7 +238,7 @@ BackendLLVMWide::llvm_call_layer (int layer, bool unconditional)
         ll.op_branch (execution_required, then_block, after_block);
         // insert point is now then_block
     } else {
-    	lanes_requiring_execution_value = ll.int_as_mask(ll.shader_mask());
+    	lanes_requiring_execution_value = ll.mask_as_int(ll.shader_mask());
     }
 
     args[2] = lanes_requiring_execution_value;

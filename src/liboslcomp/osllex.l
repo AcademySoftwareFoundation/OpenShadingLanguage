@@ -119,6 +119,12 @@ using namespace OSL::pvt;
 #endif
 #endif
 
+// flex itself will generate fatal warnings about signed vs unsigned.
+// Bypass that nonsense.
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ >= 7
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#endif
+
 void preprocess (const char *yytext);
 
 // Macro that sets the yylloc line variables to the current parse line.

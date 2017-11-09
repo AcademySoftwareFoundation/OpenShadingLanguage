@@ -2705,7 +2705,8 @@ LLVMGEN (llvm_gen_generic)
         ASSERT (Result.has_derivs() && any_deriv_args);
         rop.llvm_call_function (name.c_str(),
                                 (args.size())? &(args[0]): NULL, op.nargs(),
-                                /*deriv_ptrs*/ true, uniformFormOfFunction);
+                                /*deriv_ptrs*/ true, uniformFormOfFunction, false /*functionIsLlvmInlined*/,
+                                true /*ptrToReturnStructIs1stArg*/);
     }
 
     OSL_DEV_ONLY(std::cout << std::endl);

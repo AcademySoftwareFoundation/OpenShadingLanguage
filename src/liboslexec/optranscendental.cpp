@@ -109,6 +109,23 @@ osl_##name##_w16dfw16df (void *r_, void *val_)                      \
 }                                                                   \
                                                                     \
 OSL_SHADEOP void                                                    \
+osl_##name##_w16dfw16df_masked (void *r_, void *val_, int mask_value) \
+{                                                                   \
+	OSL_INTEL_PRAGMA(forceinline recursive)							\
+	{																\
+		ConstWideAccessor<Dual2<float>> wval(val_);					\
+		MaskedAccessor<Dual2<float>> wr(r_, Mask(mask_value));		\
+		OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(wr.width)) \
+		OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(wr.width)) \
+		for(int lane=0; lane < wr.width; ++lane) {                  \
+			Dual2<float> val = wval[lane];                          \
+			Dual2<float> r = dualfunc(val);                         \
+			wr[lane] = r;                                           \
+		}                                                           \
+	}                                                               \
+}                                                                   \
+                                                                    \
+OSL_SHADEOP void                                                    \
 osl_##name##_w16vw16v (void *r_, void *val_)                        \
 {                                                                   \
 	OSL_INTEL_PRAGMA(forceinline recursive)							\
@@ -209,7 +226,25 @@ osl_##name##_w16dfw16dfw16df (void *r_, void *a_, void *b_)         \
 		}                                                           \
 	}                                                               \
 }                                                                   \
-                                                                    \
+	                                                                \
+OSL_SHADEOP void                                                    \
+osl_##name##_w16dfw16dfw16df_masked (void *r_, void *a_, void *b_, int mask_value)         \
+{                                                                   \
+	OSL_INTEL_PRAGMA(forceinline recursive)							\
+	{																\
+		ConstWideAccessor<Dual2<float>> wa(a_);					    \
+		ConstWideAccessor<Dual2<float>> wb(b_);					    \
+		MaskedAccessor<Dual2<float>> wr(r_, Mask(mask_value));		\
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))                  \
+		for(int lane=0; lane < wr.width; ++lane) {                  \
+			Dual2<float> a = wa[lane];                              \
+			Dual2<float> b = wb[lane];                              \
+			Dual2<float> r = dualfunc(a,b);                         \
+			wr[lane] = r;                                           \
+		}                                                           \
+	}                                                               \
+}                                                                   \
+	                                                                \
 OSL_SHADEOP void                                                    \
 osl_##name##_w16dfw16fw16df (void *r_, void *a_, void *b_)          \
 {                                                                   \
@@ -236,6 +271,24 @@ osl_##name##_w16dfw16dfw16f (void *r_, void *a_, void *b_)          \
 		ConstWideAccessor<Dual2<float>> wa(a_);					    \
 		ConstWideAccessor<float> wb(b_);					        \
 		WideAccessor<Dual2<float>> wr(r_);							\
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))                  \
+		for(int lane=0; lane < wr.width; ++lane) {                  \
+			Dual2<float> a = wa[lane];                              \
+			float b = wb[lane];                                     \
+			Dual2<float> r = dualfunc(a,Dual2<float>(b));           \
+			wr[lane] = r;                                           \
+		}                                                           \
+	}                                                               \
+}                                                                   \
+                                                                    \
+OSL_SHADEOP void                                                    \
+osl_##name##_w16dfw16dfw16f_masked (void *r_, void *a_, void *b_, int mask_value)          \
+{                                                                   \
+	OSL_INTEL_PRAGMA(forceinline recursive)							\
+	{																\
+		ConstWideAccessor<Dual2<float>> wa(a_);					    \
+		ConstWideAccessor<float> wb(b_);					        \
+		MaskedAccessor<Dual2<float>> wr(r_, Mask(mask_value));		\
 		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))                  \
 		for(int lane=0; lane < wr.width; ++lane) {                  \
 			Dual2<float> a = wa[lane];                              \
@@ -476,6 +529,25 @@ osl_##name##_w16fw16fw16f (void *r_, void *a_, void *b_)            \
 		}                                                           \
 	}                                                               \
 }      																\
+                                                                    \
+OSL_SHADEOP void                                                    \
+osl_##name##_w16fw16fw16f_masked (void *r_, void *a_, void *b_, int mask_value)     \
+{                                                                   \
+	OSL_INTEL_PRAGMA(forceinline recursive)							\
+	{																\
+		ConstWideAccessor<float> wa(a_);						    \
+		ConstWideAccessor<float> wb(b_);						    \
+		MaskedAccessor<float> wr(r_, Mask(mask_value));             \
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))                  \
+		for(int lane=0; lane < wr.width; ++lane) {                  \
+			float a = wa[lane];                                     \
+			float b = wb[lane];                                     \
+			float r = floatfunc(a,b);                               \
+			wr[lane] = r;                                           \
+		}                                                           \
+	}                                                               \
+}      																\
+                                                                    \
 OSL_SHADEOP void                                                    \
 osl_##name##_w16vw16vw16v (void *r_, void *a_, void *b_)            \
 {                                                                   \
@@ -484,6 +556,26 @@ osl_##name##_w16vw16vw16v (void *r_, void *a_, void *b_)            \
 		ConstWideAccessor<Vec3> wa(a_);						        \
 		ConstWideAccessor<Vec3> wb(b_);						        \
 		WideAccessor<Vec3> wr(r_);								    \
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))                  \
+		for(int lane=0; lane < wr.width; ++lane) {                  \
+			Vec3 a = wa[lane];                                      \
+			Vec3 b = wb[lane];                                      \
+			Vec3 r (floatfunc(a.x, b.x),                            \
+					floatfunc(a.y, b.y),                            \
+				    floatfunc(a.z, b.z));                           \
+			wr[lane] = r;                                           \
+		}                                                           \
+	}                                                               \
+}                                                                   \
+	                                                                \
+OSL_SHADEOP void                                                    \
+osl_##name##_w16vw16vw16v_masked (void *r_, void *a_, void *b_, int mask_value) \
+{                                                                   \
+	OSL_INTEL_PRAGMA(forceinline recursive)							\
+	{																\
+		ConstWideAccessor<Vec3> wa(a_);						        \
+		ConstWideAccessor<Vec3> wb(b_);						        \
+		MaskedAccessor<Vec3> wr(r_, Mask(mask_value));				\
 		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))                  \
 		for(int lane=0; lane < wr.width; ++lane) {                  \
 			Vec3 a = wa[lane];                                      \
@@ -972,6 +1064,40 @@ osl_length_w16fw16v_masked(void *r_, void *V_, int mask_value)
 	}
 }
 
+OSL_SHADEOP void
+osl_length_w16dfw16dv(void *r_, void *V_)
+{
+	OSL_INTEL_PRAGMA(forceinline recursive)
+	{
+		ConstWideAccessor<Dual2<Vec3>> wV(V_);
+		WideAccessor<Dual2<float>> wr(r_);
+
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
+		for(int lane=0; lane < wr.width; ++lane) {
+			Dual2<Vec3> V = wV[lane];
+			Dual2<float> r = length(V);
+			wr[lane] = r;
+		}
+	}
+}
+
+OSL_SHADEOP void
+osl_length_w16dfw16dv_masked(void *r_, void *V_, int mask_value)
+{
+	OSL_INTEL_PRAGMA(forceinline recursive)
+	{
+		ConstWideAccessor<Dual2<Vec3>> wV(V_);
+		MaskedAccessor<Dual2<float>> wr(r_, Mask(mask_value));
+
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
+		for(int lane=0; lane < wr.width; ++lane) {
+			Dual2<Vec3> V = wV[lane];
+			Dual2<float> r = length(V);
+			wr[lane] = r;
+		}
+	}
+}
+
 
 OSL_SHADEOP void
 osl_area_w16(void *r_, void *DP_)
@@ -1014,6 +1140,102 @@ osl_area_w16_masked(void *r_, void *DP_, unsigned int mask_value)
 		}
 	}	
 }
+
+
+OSL_SHADEOP void
+osl_distance_w16fw16vw16v(void *r_, void *a_, void *b_)
+{
+
+	OSL_INTEL_PRAGMA(forceinline recursive)
+	{
+		ConstWideAccessor<Vec3> wA(a_);
+		ConstWideAccessor<Vec3> wB(b_);
+		WideAccessor<float> wr(r_);
+
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
+		for(int lane=0; lane < wr.width; ++lane) {
+			Vec3 a = wA[lane];
+			Vec3 b = wB[lane];
+
+			// TODO: couldn't we just (b-a).length()?
+		   float x = a[0] - b[0];
+		   float y = a[1] - b[1];
+		   float z = a[2] - b[2];
+		   float r = sqrtf (x*x + y*y + z*z);
+		   wr[lane] = r;
+		}
+	}
+}
+
+OSL_SHADEOP void
+osl_distance_w16fw16vw16v_masked(void *r_, void *a_, void *b_, int mask_value)
+{
+
+	OSL_INTEL_PRAGMA(forceinline recursive)
+	{
+		ConstWideAccessor<Vec3> wA(a_);
+		ConstWideAccessor<Vec3> wB(b_);
+		MaskedAccessor<float> wr(r_, Mask(mask_value));
+
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
+		for(int lane=0; lane < wr.width; ++lane) {
+			Vec3 a = wA[lane];
+			Vec3 b = wB[lane];
+
+			// TODO: couldn't we just (b-a).length()?
+		   float x = a[0] - b[0];
+		   float y = a[1] - b[1];
+		   float z = a[2] - b[2];
+		   float r = sqrtf (x*x + y*y + z*z);
+		   wr[lane] = r;
+		}
+	}
+}
+
+OSL_SHADEOP void
+osl_distance_w16dfw16dvw16dv(void *r_, void *a_, void *b_)
+{
+
+	OSL_INTEL_PRAGMA(forceinline recursive)
+	{
+		ConstWideAccessor<Dual2<Vec3>> wA(a_);
+		ConstWideAccessor<Dual2<Vec3>> wB(b_);
+		WideAccessor<Dual2<float>> wr(r_);
+
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
+		for(int lane=0; lane < wr.width; ++lane) {
+			Dual2<Vec3> a = wA[lane];
+			Dual2<Vec3> b = wB[lane];
+
+		    Dual2<float> r = distance(a,b);
+		    wr[lane] = r;
+		}
+	}
+}
+
+OSL_SHADEOP void
+osl_distance_w16dfw16dvw16dv_masked(void *r_, void *a_, void *b_, int mask_value)
+{
+
+	OSL_INTEL_PRAGMA(forceinline recursive)
+	{
+		ConstWideAccessor<Dual2<Vec3>> wA(a_);
+		ConstWideAccessor<Dual2<Vec3>> wB(b_);
+		MaskedAccessor<Dual2<float>> wr(r_, Mask(mask_value));
+
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
+		for(int lane=0; lane < wr.width; ++lane) {
+			Dual2<Vec3> a = wA[lane];
+			Dual2<Vec3> b = wB[lane];
+
+		    Dual2<float> r = distance(a,b);
+		    wr[lane] = r;
+		}
+	}
+}
+
+
+
 
 OSL_SHADEOP void
 osl_normalize_w16vw16v(void *r_, void *V_)
@@ -1066,6 +1288,22 @@ osl_normalize_w16dvw16dv(void *r_, void *V_)
 	}
 }
 
+OSL_SHADEOP void
+osl_normalize_w16dvw16dv_masked(void *r_, void *V_, int mask_value)
+{
+	OSL_INTEL_PRAGMA(forceinline recursive)
+	{
+		ConstWideAccessor<Dual2<Vec3>> wV(V_);
+		MaskedAccessor<Dual2<Vec3>> wr(r_, Mask(mask_value));
+
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
+		for(int lane=0; lane < wr.width; ++lane) {
+			Dual2<Vec3> V = wV[lane];
+		    Dual2<Vec3> N = simdFriendlyNormalize(V);
+			wr[lane] = N;
+		}
+	}
+}
 
 
 
@@ -1129,6 +1367,25 @@ osl_cross_w16dvw16dvw16dv (void *result_, void *a_, void *b_)
 	}
 }
 
+OSL_SHADEOP void
+osl_cross_w16dvw16dvw16dv_masked (void *result_, void *a_, void *b_, int mask_value)
+{
+	OSL_INTEL_PRAGMA(forceinline recursive)
+	{
+		ConstWideAccessor<Dual2<Vec3>> wA(a_);
+		ConstWideAccessor<Dual2<Vec3>> wB(b_);
+		MaskedAccessor<Dual2<Vec3>> wr(result_, Mask(mask_value));
+
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
+		for(int lane=0; lane < wr.width; ++lane) {
+			Dual2<Vec3> a = wA[lane];
+			Dual2<Vec3> b = wB[lane];
+
+			Dual2<Vec3> r = cross(a,b);
+			wr[lane] = r;
+		}
+	}
+}
 
 OSL_SHADEOP void
 osl_dot_w16fw16vw16v (void *result_, void *a_, void *b_)
@@ -1294,6 +1551,26 @@ osl_smoothstep_w16fw16fw16fw16f (void *r_, void *e0_, void *e1_, void *x_)
 }
 
 OSL_SHADEOP void
+osl_smoothstep_w16fw16fw16fw16f_masked (void *r_, void *e0_, void *e1_, void *x_, int mask_value)
+{
+	OSL_INTEL_PRAGMA(forceinline recursive)
+	{
+		ConstWideAccessor<float> we0(e0_);
+		ConstWideAccessor<float> we1(e1_);
+		ConstWideAccessor<float> wx(x_);
+		MaskedAccessor<float> wr(r_, Mask(mask_value));
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
+		for(int lane=0; lane < wr.width; ++lane) {
+			float e0 = we0[lane];
+			float e1 = we1[lane];
+			float x = wx[lane];
+			float r = smoothstep(e0, e1, x);
+			wr[lane] = r;
+		}
+	}
+}
+
+OSL_SHADEOP void
 osl_smoothstep_w16dfw16dfw16dfw16df (void *r_, void *e0_, void *e1_, void *x_)
 {
 	OSL_INTEL_PRAGMA(forceinline recursive)
@@ -1302,6 +1579,26 @@ osl_smoothstep_w16dfw16dfw16dfw16df (void *r_, void *e0_, void *e1_, void *x_)
 		ConstWideAccessor<Dual2<float>> we1(e1_);
 		ConstWideAccessor<Dual2<float>> wx(x_);
 		WideAccessor<Dual2<float>> wr(r_);
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
+		for(int lane=0; lane < wr.width; ++lane) {
+			Dual2<float> e0 = we0[lane];
+			Dual2<float> e1 = we1[lane];
+			Dual2<float> x = wx[lane];
+			Dual2<float> r = smoothstep(e0, e1, x);
+			wr[lane] = r;
+		}
+	}
+}
+
+OSL_SHADEOP void
+osl_smoothstep_w16dfw16dfw16dfw16df_masked (void *r_, void *e0_, void *e1_, void *x_, int mask_value)
+{
+	OSL_INTEL_PRAGMA(forceinline recursive)
+	{
+		ConstWideAccessor<Dual2<float>> we0(e0_);
+		ConstWideAccessor<Dual2<float>> we1(e1_);
+		ConstWideAccessor<Dual2<float>> wx(x_);
+		MaskedAccessor<Dual2<float>> wr(r_, Mask(mask_value));
 		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 			Dual2<float> e0 = we0[lane];
@@ -1334,6 +1631,26 @@ osl_smoothstep_w16dfw16fw16dfw16df (void *r_, void *e0_, void *e1_, void *x_)
 }
 
 OSL_SHADEOP void
+osl_smoothstep_w16dfw16fw16dfw16df_masked (void *r_, void *e0_, void *e1_, void *x_, int mask_value)
+{
+	OSL_INTEL_PRAGMA(forceinline recursive)
+	{
+		ConstWideAccessor<float> we0(e0_);
+		ConstWideAccessor<Dual2<float>> we1(e1_);
+		ConstWideAccessor<Dual2<float>> wx(x_);
+		MaskedAccessor<Dual2<float>> wr(r_, Mask(mask_value));
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
+		for(int lane=0; lane < wr.width; ++lane) {
+			float e0 = we0[lane];
+			Dual2<float> e1 = we1[lane];
+			Dual2<float> x = wx[lane];
+			Dual2<float> r = smoothstep(Dual2<float>(e0), e1, x);
+			wr[lane] = r;
+		}
+	}
+}
+
+OSL_SHADEOP void
 osl_smoothstep_w16dfw16dfw16fw16df (void *r_, void *e0_, void *e1_, void *x_)
 {
 	OSL_INTEL_PRAGMA(forceinline recursive)
@@ -1354,6 +1671,27 @@ osl_smoothstep_w16dfw16dfw16fw16df (void *r_, void *e0_, void *e1_, void *x_)
 }
 
 OSL_SHADEOP void
+osl_smoothstep_w16dfw16dfw16fw16df_masked (void *r_, void *e0_, void *e1_, void *x_, int mask_value)
+{
+	OSL_INTEL_PRAGMA(forceinline recursive)
+	{
+		ConstWideAccessor<Dual2<float>> we0(e0_);
+		ConstWideAccessor<float> we1(e1_);
+		ConstWideAccessor<Dual2<float>> wx(x_);
+		MaskedAccessor<Dual2<float>> wr(r_, Mask(mask_value));
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
+		for(int lane=0; lane < wr.width; ++lane) {
+			Dual2<float> e0 = we0[lane];
+			float e1 = we1[lane];
+			Dual2<float> x = wx[lane];
+			Dual2<float> r = smoothstep(e0, Dual2<float>(e1), x);
+			wr[lane] = r;
+		}
+	}
+}
+
+
+OSL_SHADEOP void
 osl_smoothstep_w16dfw16dfw16dfw16f (void *r_, void *e0_, void *e1_, void *x_)
 {
 	OSL_INTEL_PRAGMA(forceinline recursive)
@@ -1362,6 +1700,26 @@ osl_smoothstep_w16dfw16dfw16dfw16f (void *r_, void *e0_, void *e1_, void *x_)
 		ConstWideAccessor<Dual2<float>> we1(e1_);
 		ConstWideAccessor<float> wx(x_);
 		WideAccessor<Dual2<float>> wr(r_);
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
+		for(int lane=0; lane < wr.width; ++lane) {
+			Dual2<float> e0 = we0[lane];
+			Dual2<float> e1 = we1[lane];
+			float x = wx[lane];
+			Dual2<float> r = smoothstep(e0, e1, Dual2<float>(x));
+			wr[lane] = r;
+		}
+	}
+}
+
+OSL_SHADEOP void
+osl_smoothstep_w16dfw16dfw16dfw16f_masked (void *r_, void *e0_, void *e1_, void *x_, int mask_value)
+{
+	OSL_INTEL_PRAGMA(forceinline recursive)
+	{
+		ConstWideAccessor<Dual2<float>> we0(e0_);
+		ConstWideAccessor<Dual2<float>> we1(e1_);
+		ConstWideAccessor<float> wx(x_);
+		MaskedAccessor<Dual2<float>> wr(r_, Mask(mask_value));
 		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
 		for(int lane=0; lane < wr.width; ++lane) {
 			Dual2<float> e0 = we0[lane];
@@ -1394,6 +1752,26 @@ osl_smoothstep_w16dfw16fw16fw16df (void *r_, void *e0_, void *e1_, void *x_)
 }
 
 OSL_SHADEOP void
+osl_smoothstep_w16dfw16fw16fw16df_masked (void *r_, void *e0_, void *e1_, void *x_, int mask_value)
+{
+	OSL_INTEL_PRAGMA(forceinline recursive)
+	{
+		ConstWideAccessor<float> we0(e0_);
+		ConstWideAccessor<float> we1(e1_);
+		ConstWideAccessor<Dual2<float>> wx(x_);
+		MaskedAccessor<Dual2<float>> wr(r_, Mask(mask_value));
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
+		for(int lane=0; lane < wr.width; ++lane) {
+			float e0 = we0[lane];
+			float e1 = we1[lane];
+			Dual2<float> x = wx[lane];
+			Dual2<float> r = smoothstep(Dual2<float>(e0), Dual2<float>(e1), x);
+			wr[lane] = r;
+		}
+	}
+}
+
+OSL_SHADEOP void
 osl_smoothstep_w16dfw16dfw16fw16f (void *r_, void *e0_, void *e1_, void *x_)
 {
 	OSL_INTEL_PRAGMA(forceinline recursive)
@@ -1412,6 +1790,27 @@ osl_smoothstep_w16dfw16dfw16fw16f (void *r_, void *e0_, void *e1_, void *x_)
 		}
 	}
 }
+
+OSL_SHADEOP void
+osl_smoothstep_w16dfw16dfw16fw16f_masked (void *r_, void *e0_, void *e1_, void *x_, int mask_value)
+{
+	OSL_INTEL_PRAGMA(forceinline recursive)
+	{
+		ConstWideAccessor<Dual2<float>> we0(e0_);
+		ConstWideAccessor<float> we1(e1_);
+		ConstWideAccessor<float> wx(x_);
+		MaskedAccessor<Dual2<float>> wr(r_, Mask(mask_value));
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
+		for(int lane=0; lane < wr.width; ++lane) {
+			Dual2<float> e0 = we0[lane];
+			float e1 = we1[lane];
+			float x = wx[lane];
+			Dual2<float> r = smoothstep(e0, Dual2<float>(e1), Dual2<float>(x));
+			wr[lane] = r;
+		}
+	}
+}
+
 
 OSL_SHADEOP void
 osl_smoothstep_w16dfw16fw16dfw16f (void *r_, void *e0_, void *e1_, void *x_)
@@ -1433,6 +1832,25 @@ osl_smoothstep_w16dfw16fw16dfw16f (void *r_, void *e0_, void *e1_, void *x_)
 	}
 }
 
+OSL_SHADEOP void
+osl_smoothstep_w16dfw16fw16dfw16f_masked (void *r_, void *e0_, void *e1_, void *x_, int mask_value)
+{
+	OSL_INTEL_PRAGMA(forceinline recursive)
+	{
+		ConstWideAccessor<float> we0(e0_);
+		ConstWideAccessor<Dual2<float>> we1(e1_);
+		ConstWideAccessor<float> wx(x_);
+		MaskedAccessor<Dual2<float>> wr(r_, Mask(mask_value));
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
+		for(int lane=0; lane < wr.width; ++lane) {
+			float e0 = we0[lane];
+			Dual2<float> e1 = we1[lane];
+			float x = wx[lane];
+			Dual2<float> r = smoothstep(Dual2<float>(e0), e1, Dual2<float>(x));
+			wr[lane] = r;
+		}
+	}
+}
 
 // Asked if the raytype includes a bit pattern.
 OSL_SHADEOP int

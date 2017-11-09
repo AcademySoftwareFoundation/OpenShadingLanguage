@@ -43,4 +43,93 @@ test ()
         printf ("  rotate(%g, PI/2, (0,0,0), (0,0,1)) = %g\n", 
                 X, rotate (X, M_PI/2, point(0,0,0), point(0,0,1)));
     }
+    
+   {
+        printf ("varying Test vector functions\n\n");
+        vector X = vector (1, 0, 0) + P[0];
+        vector Y = vector (0, 1, 0) + P[1];
+        vector XY = X + Y;
+        vector Zero = 0;
+        {
+            vector V = vector (u, v, u+v);
+            printf ("  V = vector (%g) has components %g, %g, %g\n",
+                    V, V[0], V[1], V[2]);
+            V[1] = u;
+            printf ("  After V[1] = u, V = (%g)\n", V);
+            V[2] = 0.5;
+            printf ("  After V[2] = 0.5, V = (%g)\n", V);
+            printf ("  dot ((%g), (%g)) = %g\n", V, V, dot(V,V));
+            printf ("  dot ((%g), (%g)) = %g\n", V, Y, dot(V,Y));
+            printf ("  cross ((%g), (%g)) = %g\n", X, Y, cross(X,Y));
+            printf ("  length (%g) = %g\n", Y, length(Y));
+            printf ("  length (%g) = %g\n", XY, length(XY));
+            printf ("  distance ((%g), (%g)) = %g\n", X, Y, distance(X,Y));
+            printf ("  distance ((%g), (%g)) = %g\n", X, XY, distance(X,XY));
+            printf ("  distance ((%g), (%g), (%g)) = %g\n",
+                    X, Y, X, distance(X,Y,X));
+            printf ("  distance ((%g), (%g), (%g)) = %g\n",
+                    X, Y, Y, distance(X,Y,Y));
+                    
+            point Q = point(0.5,0.5,0);
+            printf ("  distance ((%g), (%g), (%g)) = %g\n",
+                    X, Y, Q, distance(X,Y,Q));
+            Q = point(0.5,0.5,0.5);
+            printf ("  distance ((%g), (%g), (%g)) = %g\n",
+                    X, Y, Q, distance(X,Y,Q));
+            Q = point(2,1,0);
+            printf ("  distance ((%g), (%g), (%g)) = %g\n",
+                    X, Y, Q, distance(X,Y,Q));
+            printf ("  normalize (%g) = %g\n", XY, normalize(XY));
+            printf ("  normalize (%g) = %g\n", V, normalize(V));
+            printf ("  normalize (%g) = %g\n", Zero, normalize(Zero));
+        }
+    
+        printf ("  rotate(%g, PI/2, (0,0,0), (0,0,1)) = %g\n", 
+                X, rotate (X, M_PI/2, point(0,0,0), point(0,0,1)));
+    }    
+    
+   int cond = P[0] > 0.5;
+   {
+        printf ("varying masked Test vector functions\n\n");
+        vector X = cond ? vector (1, 0, 0) + P[0] : P[0];
+        vector Y = cond ? vector (0, 1, 0) + P[1] : P[1];
+        vector XY = cond ? X + Y : 0;
+        vector Zero = 0;
+        {
+            vector V = cond ? vector (u, v, u+v) : P[0];
+            printf ("  V = vector (%g) has components %g, %g, %g\n",
+                    V, V[0], V[1], V[2]);
+            V[1] = cond ? u : 0;
+            printf ("  After V[1] = u, V = (%g)\n", V);
+            V[2] = cond ? 0.5 : 0;
+            printf ("  After V[2] = 0.5, V = (%g)\n", V);
+            printf ("  dot ((%g), (%g)) = %g\n", V, V, cond ? dot(V,V) : P[0]);
+            printf ("  dot ((%g), (%g)) = %g\n", V, Y, cond ? dot(V,Y) : P[0]);
+            printf ("  cross ((%g), (%g)) = %g\n", X, Y, cond ? cross(X,Y) : P[0]);
+            printf ("  length (%g) = %g\n", Y, cond ? length(Y) : P[0]);
+            printf ("  length (%g) = %g\n", XY, cond ? length(XY) : P[0]);
+            printf ("  distance ((%g), (%g)) = %g\n", X, Y, cond ? distance(X,Y) : P[0]);
+            printf ("  distance ((%g), (%g)) = %g\n", X, XY, cond ? distance(X,XY) : P[0]);
+            printf ("  distance ((%g), (%g), (%g)) = %g\n",
+                    X, Y, X, cond ? distance(X,Y,X) : P[0]);
+            printf ("  distance ((%g), (%g), (%g)) = %g\n",
+                    X, Y, Y, cond ? distance(X,Y,Y) : P[0]);
+                    
+            point Q = point(0.5,0.5,0);
+            printf ("  distance ((%g), (%g), (%g)) = %g\n",
+                    X, Y, Q, cond ? distance(X,Y,Q) : P[0]);
+            Q = point(0.5,0.5,0.5);
+            printf ("  distance ((%g), (%g), (%g)) = %g\n",
+                    X, Y, Q, cond ? distance(X,Y,Q) : P[0]);
+            Q = point(2,1,0);
+            printf ("  distance ((%g), (%g), (%g)) = %g\n",
+                    X, Y, Q, cond ? distance(X,Y,Q) : P[0]);
+            printf ("  normalize (%g) = %g\n", XY, cond ? normalize(XY) : P[0]);
+            printf ("  normalize (%g) = %g\n", V, cond ? normalize(V) : P[0]);
+            printf ("  normalize (%g) = %g\n", Zero, cond ? normalize(Zero) : P[0]);
+        }
+    
+        printf ("  rotate(%g, PI/2, (0,0,0), (0,0,1)) = %g\n", 
+                X, rotate (X, M_PI/2, point(0,0,0), point(0,0,1)));
+    }        
 }

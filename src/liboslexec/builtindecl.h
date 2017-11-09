@@ -428,18 +428,27 @@ WDECL (osl_sincos_w16dvw16vw16dv, "xXXX")
 WDECL (osl_sincos_w16dvw16dvw16dv, "xXXX")
 
 WDECL (osl_smoothstep_w16fw16fw16fw16f, "xXXXX")
+WDECL (osl_smoothstep_w16fw16fw16fw16f_masked, "xXXXXi")
 WDECL (osl_smoothstep_w16dfw16dfw16dfw16df, "xXXXX")
+WDECL (osl_smoothstep_w16dfw16dfw16dfw16df_masked, "xXXXXi")
 WDECL (osl_smoothstep_w16dfw16fw16dfw16df, "xXXXX")
+WDECL (osl_smoothstep_w16dfw16fw16dfw16df_masked, "xXXXXi")
 WDECL (osl_smoothstep_w16dfw16dfw16fw16df, "xXXXX")
+WDECL (osl_smoothstep_w16dfw16dfw16fw16df_masked, "xXXXXi")
 WDECL (osl_smoothstep_w16dfw16dfw16dfw16f, "xXXXX")
+WDECL (osl_smoothstep_w16dfw16dfw16dfw16f_masked, "xXXXXi")
 WDECL (osl_smoothstep_w16dfw16fw16fw16df, "xXXXX")
+WDECL (osl_smoothstep_w16dfw16fw16fw16df_masked, "xXXXXi")
 WDECL (osl_smoothstep_w16dfw16dfw16fw16f, "xXXXX")
+WDECL (osl_smoothstep_w16dfw16dfw16fw16f_masked, "xXXXXi")
 WDECL (osl_smoothstep_w16dfw16fw16dfw16f, "xXXXX")
+WDECL (osl_smoothstep_w16dfw16fw16dfw16f_masked, "xXXXXi")
 
 #define WIDE_UNARY_OP_IMPL(name)                   \
     DECL (osl_ ## name ## _w16fw16f,  "xXX")	\
     DECL (osl_ ## name ## _w16fw16f_masked,  "xXXi")	\
     DECL (osl_ ## name ## _w16dfw16df, "xXX")            \
+    DECL (osl_ ## name ## _w16dfw16df_masked, "xXXi")            \
     DECL (osl_ ## name ## _w16vw16v,  "xXX")             \
     DECL (osl_ ## name ## _w16dvw16dv, "xXX")
 
@@ -460,8 +469,10 @@ WDECL (osl_smoothstep_w16dfw16fw16dfw16f, "xXXXX")
     DECL (osl_ ## name ## _w16fw16fw16f,    "xXXX")          \
     DECL (osl_ ## name ## _w16fw16fw16f_masked,    "xXXXi")          \
     DECL (osl_ ## name ## _w16dfw16dfw16df, "xXXX")         \
+    DECL (osl_ ## name ## _w16dfw16dfw16df_masked, "xXXXi")         \
     DECL (osl_ ## name ## _w16dfw16fw16df,  "xXXX")         \
     DECL (osl_ ## name ## _w16dfw16dfw16f,  "xXXX")         \
+    DECL (osl_ ## name ## _w16dfw16dfw16f_masked,  "xXXXi")         \
     DECL (osl_ ## name ## _w16vw16vw16v,    "xXXX")         \
     DECL (osl_ ## name ## _w16dvw16dvw16dv, "xXXX")         \
     DECL (osl_ ## name ## _w16dvw16vw16dv,  "xXXX")         \
@@ -479,7 +490,9 @@ WDECL (osl_smoothstep_w16dfw16fw16dfw16f, "xXXXX")
 
 #define WIDE_BINARY_F_OR_V_OP_IMPL(name)                   \
     DECL (osl_ ## name ## _w16fw16fw16f,    "xXXX")        \
-    DECL (osl_ ## name ## _w16vw16vw16v,    "xXXX")
+    DECL (osl_ ## name ## _w16fw16fw16f_masked,    "xXXXi")\
+    DECL (osl_ ## name ## _w16vw16vw16v,    "xXXX")        \
+    DECL (osl_ ## name ## _w16vw16vw16v_masked,    "xXXXi")
 
 
 WIDE_UNARY_OP_IMPL(sin)
@@ -527,15 +540,24 @@ WIDE_BINARY_OP_IMPL(fmod)
 
 WDECL (osl_area_w16, "xXX")
 WDECL (osl_area_w16_masked, "xXXi")
+WDECL (osl_distance_w16fw16vw16v, "xXXX")
+WDECL (osl_distance_w16fw16vw16v_masked, "xXXXi")
+WDECL (osl_distance_w16dfw16dvw16dv, "xXXX")
+WDECL (osl_distance_w16dfw16dvw16dv_masked, "xXXXi")
+
 WDECL (osl_normalize_w16vw16v, "xXX")
 WDECL (osl_normalize_w16vw16v_masked, "xXXi")
 WDECL (osl_normalize_w16dvw16dv, "xXX")
+WDECL (osl_normalize_w16dvw16dv_masked, "xXXi")
 WDECL (osl_cross_w16vw16vw16v, "xXXX")
 WDECL (osl_cross_w16vw16vw16v_masked, "xXXXi")
 WDECL (osl_cross_w16dvw16dvw16dv, "xXXX")
+WDECL (osl_cross_w16dvw16dvw16dv_masked, "xXXXi")
 
 WDECL (osl_length_w16fw16v, "xXX")
 WDECL (osl_length_w16fw16v_masked, "xXXi")
+WDECL (osl_length_w16dfw16dv, "xXX")
+WDECL (osl_length_w16dfw16dv_masked, "xXXi")
 WDECL (osl_dot_w16fw16vw16v, "xXXX")
 WDECL (osl_dot_w16fw16vw16v_masked, "xXXXi")
 WDECL (osl_dot_w16dfw16dvw16dv, "xXXX")

@@ -136,10 +136,10 @@ matrix:
         compiler: gcc
         env: DEBUG=1 LLVM_VERSION=3.9.0
     # One more, just for the heck of it, turn all SIMD off, and also test
-    # against the oldest LLVM we still support.
+    # against the oldest LLVM we still support and the oldest OIIO.
       - os: linux
         compiler: gcc
-        env: USE_SIMD=0 LLVM_VERSION=3.5.2
+        env: USE_SIMD=0 LLVM_VERSION=3.5.2 OIIOBRANCH=RB-1.7
 
 notifications:
     email:

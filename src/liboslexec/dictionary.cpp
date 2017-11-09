@@ -36,23 +36,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/dassert.h>
 #include <OpenImageIO/strutil.h>
 
-#ifdef USE_EXTERNAL_PUGIXML
 # include <pugixml.hpp>
-#else
-# include <OpenImageIO/pugixml.hpp>
-#endif
 
 #include "oslexec_pvt.h"
 
 OSL_NAMESPACE_ENTER
 
 namespace pvt {   // OSL::pvt
-
-
-#ifndef USE_EXTERNAL_PUGIXML
-namespace pugi = OIIO::pugi;
-#endif
-
 
 
 // Helper class to manage the dictionaries.

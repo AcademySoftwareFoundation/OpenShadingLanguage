@@ -41,10 +41,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/timer.h>
 #include <OpenImageIO/thread.h>
 
-#ifdef USE_EXTERNAL_PUGIXML
-# include <pugixml.hpp>
-#else
-# include <OpenImageIO/pugixml.hpp>
+#include <pugixml.hpp>
+
+#ifdef USING_OIIO_PUGI
+namespace pugi = OIIO::pugi;
 #endif
 
 #include <OSL/oslexec.h>
@@ -226,9 +226,6 @@ void parse_scene() {
     }
     text.push_back(0); // make sure text ends with trailing 0
 
-#ifdef USING_OIIO_PUGI
-    namespace pugi = OIIO::pugi;
-#endif
     // build DOM tree
     pugi::xml_document doc;
     pugi::xml_parse_result parse_result = doc.load_file(scenefile.c_str());

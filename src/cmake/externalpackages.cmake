@@ -186,15 +186,9 @@ endif (USE_PARTIO)
 
 
 ###########################################################################
-# Pugixml setup.  Normally we just use the version bundled with oiio, but
-# some linux distros are quite particular about having separate packages so we
-# allow this to be overridden to use the distro-provided package if desired.
-if (USE_EXTERNAL_PUGIXML)
-    find_package (PugiXML REQUIRED)
-    # insert include path to pugixml first, to ensure that the external
-    # pugixml is found, and not the one in OIIO's include directory.
-    include_directories (BEFORE "${PUGIXML_INCLUDE_DIR}")
-    add_definitions ("-DUSE_EXTERNAL_PUGIXML")
-endif()
+# Pugixml setup.  Prefer a system install, but note that FindPugiXML.cmake
+# will look in the OIIO distribution if it's not found on the system.
+find_package (PugiXML REQUIRED)
+include_directories (BEFORE "${PUGIXML_INCLUDE_DIR}")
 # end Pugixml setup
 ###########################################################################

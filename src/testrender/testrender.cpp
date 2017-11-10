@@ -41,7 +41,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/timer.h>
 #include <OpenImageIO/thread.h>
 
-# include <pugixml.hpp>
+#include <pugixml.hpp>
+
+#ifdef USING_OIIO_PUGI
+namespace pugi = OIIO::pugi;
+#endif
 
 #include <OSL/oslexec.h>
 #include "simplerend.h"

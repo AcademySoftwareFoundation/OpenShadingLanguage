@@ -145,10 +145,6 @@ ifneq (${OSL_BUILD_TESTS},)
 MY_CMAKE_FLAGS += -DOSL_BUILD_TESTS:BOOL=${OSL_BUILD_TESTS}
 endif
 
-ifneq (${USE_EXTERNAL_PUGIXML},)
-MY_CMAKE_FLAGS += -DUSE_EXTERNAL_PUGIXML:BOOL=${USE_EXTERNAL_PUGIXML} -DPUGIXML_HOME=${PUGIXML_HOME}
-endif
-
 ifdef DEBUG
 MY_CMAKE_FLAGS += -DCMAKE_BUILD_TYPE:STRING=Debug
 endif
@@ -370,7 +366,6 @@ help:
 	@echo "      OPENEXR_HOME=path        Custom OpenEXR installation"
 	@echo "      ILMBASE_HOME=path        Custom Ilmbase installation"
 	@echo "      PARTIO_HOME=             Use Partio from the given location"
-	@echo "      USE_EXTERNAL_PUGIXML=1   Use the system PugiXML, not the one in OIIO"
 	@echo "  LLVM-related options:"
 	@echo "      LLVM_VERSION=4.0         Specify which LLVM version to use"
 	@echo "      LLVM_DIRECTORY=xx        Specify where LLVM lives"

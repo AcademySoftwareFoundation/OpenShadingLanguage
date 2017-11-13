@@ -131,4 +131,12 @@ using OIIO::string_view;
 #  define OSL_DEPRECATED(msg)
 #endif
 
+/// Work around bug in GCC with mixed __attribute__ and alignas parsing
+/// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=69585
+#ifdef __GNUC__
+#  define OSL_ALIGNAS(size) __attribute__((aligned(size)))
+#else
+#  define OSL_ALIGNAS(size) alignas(size)
+#endif
+
 OSL_NAMESPACE_EXIT

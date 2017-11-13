@@ -114,29 +114,26 @@ struct OSLEXECPUBLIC ClosureColor {
 
 /// ClosureComponent is a subclass of ClosureColor that holds the ID and
 /// parameter data for a single primitive closure component (such as
-/// diffuse, translucent, etc.).  The declaration leaves 4 bytes for
-/// parameter data (mem), but it's expected that the structure be
-/// allocated with enough space to house all the parameter data for
-/// whatever type of custom primitive component it actually is.
-struct OSLEXECPUBLIC ClosureComponent : public ClosureColor
+/// diffuse, translucent, etc.).
+///
+/// ClosureComponent itself takes up 16 bytes, and its allocation will be
+/// scaled to add parameters after the end of the struct. Alignment is
+/// set to 16 bytes so that 64 bit pointers and 128 bit SSE types in user
+/// structs have the required alignment.
+struct OSLEXECPUBLIC OSL_ALIGNAS(16) ClosureComponent : public ClosureColor
 {
     Vec3 w;                     ///< Weight of this component
-    alignas(void*) char mem[8]; ///< Memory for the primitive, 8 is the minimum, allocation will be
-                                ///  scaled to requirements of the registered closure struct.
-                                ///  Alignment is forced to a void* to match likely alignement requirements
-                                ///  of the user's structs.
 
     /// Handy method for getting the parameter memory as a void*.
-    ///
-    void *data () { return &mem; }
-    const void *data () const { return &mem; }
+    void *data () { return (char*)(this + 1); }
+    const void *data () const { return (const char*)(this + 1); }
 
     /// Handy methods for extracting the underlying parameters as a struct
     template <typename T>
-    const T* as() const { return reinterpret_cast<const T*>(mem); }
+    const T* as() const { return reinterpret_cast<const T*>(data()); }
 
     template <typename T>
-    T* as() { return reinterpret_cast<const T*>(mem); }
+    T* as() { return reinterpret_cast<const T*>(data()); }
 };
 
 

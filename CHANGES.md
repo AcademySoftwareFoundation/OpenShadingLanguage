@@ -1,3 +1,11 @@
+Fixes for 1.9.2RC1 versus 1.9.1beta:
+---------------------
+* Fix gcc7 warnings about signed vs unsigned compares. #807 (1.9.2)
+* Fix broken support for OIIO 1.7. #808 (1.9.2)
+* Simplify the build logic for finding PugiXML and prefer a system install
+  when found, rather than looking to OIIO to supply it. #809 (1.9.2)
+* Travis tweaks to speed up build of whole matrix.
+
 Release 1.9 -- 30 November 2017 (compared to 1.8)
 --------------------------------------------------
 
@@ -220,6 +228,9 @@ Build & test system improvements:
   #788 (1.9.1)
 * Improved proper rebuilding of the LLVM bitcode for llvm_ops.cpp when only
   certain headers change. #802 (1.9.1)
+* Fix gcc7 warnings about signed vs unsigned compares. #807 (1.9.2)
+* Simplify the build logic for finding PugiXML and prefer a system install
+  when found, rather than looking to OIIO to supply it. #809 (1.9.2)
 
 Developer goodies:
 * The `dual.h` implementation has been completely overhauled. The primary

@@ -34,13 +34,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/oslconfig.h>
 #include <OSL/llvm_util.h>
 
-#if OSL_LLVM_VERSION < 35 || OSL_CPLUSPLUS_VERSION < 11
-#error "C++11 and LLVM >= 3.5 are required"
+#if OSL_LLVM_VERSION < 39
+#error "LLVM minimum version required for OSL is 3.9"
 #endif
-
-// Use MCJIT for LLVM 3.6 and beyind, old JIT for earlier
-#define USE_MCJIT   (OSL_LLVM_VERSION >= 36)
-#define USE_OLD_JIT (OSL_LLVM_VERSION <  36)
 
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DerivedTypes.h>
@@ -65,13 +61,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm/Support/ManagedStatic.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/ExecutionEngine/GenericValue.h>
-#if USE_MCJIT
-#  include <llvm/ExecutionEngine/MCJIT.h>
-#endif
-#if USE_OLD_JIT
-#  include <llvm/ExecutionEngine/JIT.h>
-#  include <llvm/ExecutionEngine/JITMemoryManager.h>
-#endif
+#include <llvm/ExecutionEngine/MCJIT.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/PrettyStackTrace.h>
@@ -81,22 +71,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/UnifyFunctionExitNodes.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
-#if OSL_LLVM_VERSION >= 36
-#  include <llvm/ExecutionEngine/SectionMemoryManager.h>
-#endif
-#if OSL_LLVM_VERSION >= 39
-#  include <llvm/Transforms/Scalar/GVN.h>
-#endif
+#include <llvm/ExecutionEngine/SectionMemoryManager.h>
+#include <llvm/Transforms/Scalar/GVN.h>
 
 OSL_NAMESPACE_ENTER
 
 namespace pvt {
 
-#if USE_OLD_JIT
-    typedef llvm::JITMemoryManager LLVMMemoryManager;
-#else
-    typedef llvm::SectionMemoryManager LLVMMemoryManager;
-#endif
+typedef llvm::SectionMemoryManager LLVMMemoryManager;
 
 #if OSL_LLVM_VERSION < 40
     typedef std::error_code LLVMErr;
@@ -147,15 +129,6 @@ LLVM_Util::total_jit_memory_held ()
 {
     size_t jitmem = 0;
     OIIO::spin_lock lock (llvm_global_mutex);
-#if USE_OLD_JIT
-    for (size_t i = 0;  i < jitmm_hold.size();  ++i) {
-        LLVMMemoryManager *mm = jitmm_hold[i].get();
-        if (mm)
-            jitmem += mm->GetDefaultCodeSlabSize() * mm->GetNumCodeSlabs()
-                    + mm->GetDefaultDataSlabSize() * mm->GetNumDataSlabs()
-                    + mm->GetDefaultStubSlabSize() * mm->GetNumStubSlabs();
-    }
-#endif
     return jitmem;
 }
 
@@ -169,69 +142,12 @@ protected:
     LLVMMemoryManager *mm;  // the real one
 public:
 
-#if USE_OLD_JIT // llvm::JITMemoryManager
-    MemoryManager(LLVMMemoryManager *realmm) : mm(realmm) { HasGOT = realmm->isManagingGOT(); }
-
-    virtual void setMemoryWritable() { mm->setMemoryWritable(); }
-    virtual void setMemoryExecutable() { mm->setMemoryExecutable(); }
-    virtual void setPoisonMemory(bool poison) { mm->setPoisonMemory(poison); }
-    virtual void AllocateGOT() { ASSERT(HasGOT == false); ASSERT(HasGOT == mm->isManagingGOT()); mm->AllocateGOT(); HasGOT = true; ASSERT(HasGOT == mm->isManagingGOT()); }
-    virtual uint8_t *getGOTBase() const { return mm->getGOTBase(); }
-    virtual uint8_t *startFunctionBody(const llvm::Function *F,
-                                       uintptr_t &ActualSize) {
-        return mm->startFunctionBody (F, ActualSize);
-    }
-    virtual uint8_t *allocateStub(const llvm::GlobalValue* F, unsigned StubSize,
-                                  unsigned Alignment) {
-        return mm->allocateStub (F, StubSize, Alignment);
-    }
-    virtual void endFunctionBody(const llvm::Function *F,
-                                 uint8_t *FunctionStart, uint8_t *FunctionEnd) {
-        mm->endFunctionBody (F, FunctionStart, FunctionEnd);
-    }
-    virtual uint8_t *allocateSpace(intptr_t Size, unsigned Alignment) {
-        return mm->allocateSpace (Size, Alignment);
-    }
-    virtual uint8_t *allocateGlobal(uintptr_t Size, unsigned Alignment) {
-        return mm->allocateGlobal (Size, Alignment);
-    }
-    virtual void deallocateFunctionBody(void *Body) {
-        // DON'T DEALLOCATE mm->deallocateFunctionBody (Body);
-    }
-    virtual bool CheckInvariants(std::string &s) {
-        return mm->CheckInvariants(s);
-    }
-    virtual size_t GetDefaultCodeSlabSize() {
-        return mm->GetDefaultCodeSlabSize();
-    }
-    virtual size_t GetDefaultDataSlabSize() {
-        return mm->GetDefaultDataSlabSize();
-    }
-    virtual size_t GetDefaultStubSlabSize() {
-        return mm->GetDefaultStubSlabSize();
-    }
-    virtual unsigned GetNumCodeSlabs() { return mm->GetNumCodeSlabs(); }
-    virtual unsigned GetNumDataSlabs() { return mm->GetNumDataSlabs(); }
-    virtual unsigned GetNumStubSlabs() { return mm->GetNumStubSlabs(); }
-
-    virtual void notifyObjectLoaded(llvm::ExecutionEngine *EE, const llvm::ObjectImage *oi) {
-        mm->notifyObjectLoaded (EE, oi);
-    }
-
-#else // MCJITMemoryManager
-
     MemoryManager(LLVMMemoryManager *realmm) : mm(realmm) {}
     
     virtual void notifyObjectLoaded(llvm::ExecutionEngine *EE, const llvm::object::ObjectFile &oi) {
         mm->notifyObjectLoaded (EE, oi);
     }
 
-#if OSL_LLVM_VERSION <= 37
-  virtual void reserveAllocationSpace(
-    uintptr_t CodeSize, uintptr_t DataSizeRO, uintptr_t DataSizeRW) {
-        return mm->reserveAllocationSpace(CodeSize, DataSizeRO, DataSizeRW);
-}
-#else
     virtual void reserveAllocationSpace(uintptr_t CodeSize, uint32_t CodeAlign,
                                         uintptr_t RODataSize,
                                         uint32_t RODataAlign,
@@ -239,7 +155,6 @@ public:
                                         uint32_t RWDataAlign) {
         return mm->reserveAllocationSpace(CodeSize, CodeAlign, RODataSize, RODataAlign, RWDataSize, RWDataAlign);
     }
-#endif
 
     virtual bool needsToReserveAllocationSpace() {
         return mm->needsToReserveAllocationSpace();
@@ -248,8 +163,6 @@ public:
     virtual void invalidateInstructionCache() {
         mm->invalidateInstructionCache();
     }
-    
-#endif
 
     // Common
     virtual ~MemoryManager() {}
@@ -289,15 +202,6 @@ public:
 
 
 
-#if OSL_LLVM_VERSION <= 38
-class LLVM_Util::IRBuilder : public llvm::IRBuilder<true,llvm::ConstantFolder,
-                                        llvm::IRBuilderDefaultInserter<true> > {
-    typedef llvm::IRBuilder<true, llvm::ConstantFolder,
-                                  llvm::IRBuilderDefaultInserter<true> > Base;
-public:
-    IRBuilder(llvm::BasicBlock *TheBB) : Base(TheBB) {}
-};
-#else
 class LLVM_Util::IRBuilder : public llvm::IRBuilder<llvm::ConstantFolder,
                                                llvm::IRBuilderDefaultInserter> {
     typedef llvm::IRBuilder<llvm::ConstantFolder,
@@ -305,7 +209,6 @@ class LLVM_Util::IRBuilder : public llvm::IRBuilder<llvm::ConstantFolder,
 public:
     IRBuilder(llvm::BasicBlock *TheBB) : Base(TheBB) {}
 };
-#endif
 
 
 
@@ -327,20 +230,12 @@ LLVM_Util::LLVM_Util (int debuglevel)
             m_thread->llvm_context = new llvm::LLVMContext();
 
         if (! m_thread->llvm_jitmm) {
-#if USE_OLD_JIT
-            m_thread->llvm_jitmm = llvm::JITMemoryManager::CreateDefaultMemManager();
-#else
             m_thread->llvm_jitmm = new LLVMMemoryManager;
-#endif
             ASSERT (m_thread->llvm_jitmm);
             jitmm_hold.push_back (std::shared_ptr<LLVMMemoryManager>(m_thread->llvm_jitmm));
         }
-#if USE_OLD_JIT
-        m_llvm_jitmm = new MemoryManager(m_thread->llvm_jitmm);
-#else
         // Hold the REAL manager and use it as an argument later
         m_llvm_jitmm = reinterpret_cast<MemoryManager*>(m_thread->llvm_jitmm);
-#endif
     }
 
     m_llvm_context = m_thread->llvm_context;
@@ -396,30 +291,16 @@ LLVM_Util::SetupLLVM ()
     // Some global LLVM initialization for the first thread that
     // gets here.
 
-#if USE_MCJIT
     LLVMInitializeNativeTarget();
     LLVMInitializeNativeDisassembler();
     LLVMInitializeNativeAsmPrinter();
     LLVMInitializeNativeAsmParser();
     LLVMLinkInMCJIT();
-#else
-    llvm::InitializeNativeTarget();
-#endif
 
     if (debug()) {
-#if OSL_LLVM_VERSION <= 36
-# define OSL_TGT_DEF(t) t->
-        for (llvm::TargetRegistry::iterator t = llvm::TargetRegistry::begin();
-             t != llvm::TargetRegistry::end();  ++t)
-#else
-# define OSL_TGT_DEF(t) t.
         for (auto t : llvm::TargetRegistry::targets())
-#endif
-        {
-            std::cout << "Target: '" << OSL_TGT_DEF(t)getName() << "' "
-                      << OSL_TGT_DEF(t)getShortDescription() << "\n";
-        }
-#undef OSL_TGT_DEF
+            std::cout << "Target: '" << t.getName() << "' "
+                      << t.getShortDescription() << "\n";
         std::cout << "\n";
     }
 
@@ -466,25 +347,6 @@ LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
     if (err)
         err->clear();
 
-#if OSL_LLVM_VERSION <= 35 /* Old JIT vvvvvvvvvvvvvvvvvvvvvvvvvvvv */
-    llvm::MemoryBuffer* buf =
-        llvm::MemoryBuffer::getMemBuffer (llvm::StringRef(bitcode, size), name);
-
-    // Create a lazily deserialized IR module
-    // This can only be done for old JIT
-    llvm::Module *m = llvm::getLazyBitcodeModule (buf, context()).get();
-    // don't delete buf, the module has taken ownership of it
-
-#if 0
-    // Debugging: print all functions in the module
-    for (llvm::Module::iterator i = m->begin(); i != m->end(); ++i)
-        std::cout << "  found " << i->getName().data() << "\n";
-#endif
-    return m;
-#endif /* End of LLVM <= 3.5 Old JIT section ^^^^^^^^^^^^^^^^^^^^^ */
-
-
-#if OSL_LLVM_VERSION >= 36  /* MCJIT vvvvvvvvvvvvvvvvvvvvvvvvvvvvv */
 # if OSL_LLVM_VERSION >= 40
     typedef llvm::Expected<std::unique_ptr<llvm::Module> > ErrorOrModule;
 # else
@@ -534,8 +396,6 @@ LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
         std::cout << "  found " << i->getName().data() << "\n";
 # endif
     return m;
-
-#endif /* MCJIT ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ */
 }
 
 
@@ -574,24 +434,14 @@ LLVM_Util::make_jit_execengine (std::string *err)
     execengine (NULL);   // delete and clear any existing engine
     if (err)
         err->clear ();
-# if OSL_LLVM_VERSION >= 36
     llvm::EngineBuilder engine_builder ((std::unique_ptr<llvm::Module>(module())));
-# else /* < 36: */
-    llvm::EngineBuilder engine_builder (module());
-# endif
 
     engine_builder.setEngineKind (llvm::EngineKind::JIT);
     engine_builder.setErrorStr (err);
 
-#if USE_OLD_JIT
-    engine_builder.setJITMemoryManager (m_llvm_jitmm);
-    // N.B. createJIT will take ownership of the the JITMemoryManager!
-    engine_builder.setUseMCJIT (0);
-#else
     // We are actually holding a LLVMMemoryManager
     engine_builder.setMCJITMemoryManager (std::unique_ptr<llvm::RTDyldMemoryManager>
         (new MemoryManager(reinterpret_cast<LLVMMemoryManager*>(m_llvm_jitmm))));
-#endif /* USE_OLD_JIT */
 
     engine_builder.setOptLevel (llvm::CodeGenOpt::Default);
 
@@ -623,8 +473,7 @@ LLVM_Util::getPointerToFunction (llvm::Function *func)
 {
     DASSERT (func && "passed NULL to getPointerToFunction");
     llvm::ExecutionEngine *exec = execengine();
-    if (USE_MCJIT)
-        exec->finalizeObject ();
+    exec->finalizeObject ();
     void *f = exec->getPointerToFunction (func);
     ASSERT (f && "could not getPointerToFunction");
     return f;
@@ -648,38 +497,12 @@ LLVM_Util::setup_optimization_passes (int optlevel)
 
     // Construct the per-function passes and module-wide (interprocedural
     // optimization) passes.
-    //
-    // LLVM keeps changing names and call sequence. This part is easier to
-    // understand if we explicitly break it into individual LLVM versions.
-#if OSL_LLVM_VERSION >= 37
 
     m_llvm_func_passes = new llvm::legacy::FunctionPassManager(module());
     llvm::legacy::FunctionPassManager &fpm = (*m_llvm_func_passes);
 
     m_llvm_module_passes = new llvm::legacy::PassManager;
     llvm::legacy::PassManager &mpm = (*m_llvm_module_passes);
-
-#elif OSL_LLVM_VERSION >= 36
-
-    m_llvm_func_passes = new llvm::legacy::FunctionPassManager(module());
-    llvm::legacy::FunctionPassManager &fpm (*m_llvm_func_passes);
-    fpm.add (new llvm::DataLayoutPass());
-
-    m_llvm_module_passes = new llvm::legacy::PassManager;
-    llvm::legacy::PassManager &mpm (*m_llvm_module_passes);
-    mpm.add (new llvm::DataLayoutPass());
-
-#elif OSL_LLVM_VERSION == 35
-
-    m_llvm_func_passes = new llvm::legacy::FunctionPassManager(module());
-    llvm::legacy::FunctionPassManager &fpm (*m_llvm_func_passes);
-    fpm.add (new llvm::DataLayoutPass(module()));
-
-    m_llvm_module_passes = new llvm::legacy::PassManager;
-    llvm::legacy::PassManager &mpm (*m_llvm_module_passes);
-    mpm.add (new llvm::DataLayoutPass(module()));
-
-#endif
 
     if (optlevel >= 1 && optlevel <= 3) {
         // For LLVM 3.0 and higher, llvm_optimize 1-3 means to use the
@@ -700,10 +523,7 @@ LLVM_Util::setup_optimization_passes (int optlevel)
         mpm.add (llvm::createCFGSimplificationPass());
         // Change memory references to registers
         //  mpm.add (llvm::createPromoteMemoryToRegisterPass());
-#if OSL_LLVM_VERSION <= 36
-        // Is there a replacement for this in newer LLVM?
-        mpm.add (llvm::createScalarReplAggregatesPass());
-#endif
+
         // Combine instructions where possible -- peephole opts & bit-twiddling
         mpm.add (llvm::createInstructionCombiningPass());
         // Inline small functions
@@ -734,7 +554,7 @@ LLVM_Util::do_optimize (std::string *out_err)
 {
     ASSERT(m_llvm_module && "No module to optimize!");
 
-#if OSL_LLVM_VERSION > 35 && !defined(OSL_FORCE_BITCODE_PARSE)
+#if !defined(OSL_FORCE_BITCODE_PARSE)
     LLVMErr err = m_llvm_module->materializeAll();
     if (error_string(std::move(err), out_err))
         return;
@@ -874,11 +694,7 @@ LLVM_Util::current_function_arg (int a)
     llvm::Function::arg_iterator arg_it = current_function()->arg_begin();
     for (int i = 0;  i < a;  ++i)
         ++arg_it;
-#if OSL_LLVM_VERSION <= 36
-    return arg_it;
-#else
     return &(*arg_it);
-#endif
 }
 
 
@@ -1340,16 +1156,10 @@ LLVM_Util::op_memset (llvm::Value *ptr, int val, llvm::Value *len, int align)
                                                     llvm::APInt(8, val));
     // Non-volatile (allow optimizer to move it around as it wishes
     // and even remove it if it can prove it's useless)
-#if OSL_LLVM_VERSION <= 36
-    builder().CreateCall5 (func, ptr, fill_val, len, constant(align),
-                           constant_bool(false));
-#else
     llvm::Value *args[5] = {
         ptr, fill_val, len, constant(align), constant_bool(false)
     };
     builder().CreateCall (func, llvm::ArrayRef<llvm::Value*>(args, 5));
-
-#endif
 }
 
 
@@ -1371,15 +1181,10 @@ LLVM_Util::op_memcpy (llvm::Value *dst, llvm::Value *src, int len, int align)
 
     // Non-volatile (allow optimizer to move it around as it wishes
     // and even remove it if it can prove it's useless)
-#if OSL_LLVM_VERSION <= 36
-    builder().CreateCall5 (func, dst, src,
-                           constant(len), constant(align), constant_bool(false));
-#else
     llvm::Value *args[5] = {
         dst, src, constant(len), constant(align), constant_bool(false)
     };
     builder().CreateCall (func, llvm::ArrayRef<llvm::Value*>(args, 5));
-#endif
 }
 
 
@@ -1419,11 +1224,7 @@ LLVM_Util::GEP (llvm::Value *ptr, int elem)
 llvm::Value *
 LLVM_Util::GEP (llvm::Value *ptr, int elem1, int elem2)
 {
-#if OSL_LLVM_VERSION <= 36
-    return builder().CreateConstGEP2_32 (ptr, elem1, elem2);
-#else
     return builder().CreateConstGEP2_32 (nullptr, ptr, elem1, elem2);
-#endif
 }
 
 
@@ -1674,19 +1475,11 @@ LLVM_Util::op_le (llvm::Value *a, llvm::Value *b, bool ordered)
 void
 LLVM_Util::write_bitcode_file (const char *filename, std::string *err)
 {
-#if OSL_LLVM_VERSION >= 36
     std::error_code local_error;
     llvm::raw_fd_ostream out (filename, local_error, llvm::sys::fs::F_None);
-#else
-    std::string local_error;
-    llvm::raw_fd_ostream out (filename, err ? *err : local_error, llvm::sys::fs::F_None);
-#endif
     llvm::WriteBitcodeToFile (module(), out);
-
-#if OSL_LLVM_VERSION >= 36
     if (err && local_error)
         *err = local_error.message ();
-#endif
 }
 
 

@@ -60,7 +60,7 @@ install:
           CXX="ccache $CXX" CCACHE_CPP2=1 src/build-scripts/build_openexr.bash ;
           export ILMBASE_HOME=$PWD/openexr-install ;
           export OPENEXR_HOME=$PWD/openexr-install ;
-          if [ "$LLVM_VERSION" == "" ]; then export LLVM_VERSION="error3.9.0" ; fi ;
+          if [ "$LLVM_VERSION" == "" ]; then export LLVM_VERSION="error" ; fi ;
           if [ "$LLVM_VERSION" == "5.0.0" ]; then export LLVMTAR=clang+llvm-${LLVM_VERSION}-linux-x86_64-ubuntu14.04.tar.xz ; else export LLVMTAR=clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-14.04.tar.xz ; fi;
           echo LLVMTAR = $LLVMTAR ;
           wget http://releases-origin.llvm.org/${LLVM_VERSION}/${LLVMTAR} ;
@@ -112,7 +112,8 @@ branches:
 matrix:
     fast_finish: true
     include:
-      # Build with C++11, default compiler, optimized build, against OIIO master
+      # Build with C++11, default compiler, optimized build, against OIIO
+      # master, and LLVM 4.0.
       - os: linux
         compiler: gcc
         addons:
@@ -128,11 +129,11 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: LLVM_VERSION=3.9.0
+        env: WHICHGCC=4.8 LLVM_VERSION=4.0.0
       - os: osx
         compiler: clang
     # Test against the older release branch of OIIO (all the other tests
-    # are against OIIO master). Test against a higher SSE level.
+    # are against OIIO master). Simultaneously, test a higher SIMD level.
       - os: linux
         compiler: gcc
         addons:
@@ -148,7 +149,7 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: OIIOBRANCH=release USE_SIMD=sse4.2 LLVM_VERSION=3.9.0
+        env: OIIOBRANCH=release USE_SIMD=sse4.2 LLVM_VERSION=4.0.0
     # Test gcc6, and highest SIMD level supported by Travis, and newer LLVM
       - os: linux
         compiler: gcc
@@ -165,7 +166,7 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: WHICHGCC=6 USE_SIMD=avx,f16c LLVM_VERSION=4.0.0
+        env: WHICHGCC=6 USE_SIMD=avx,f16c LLVM_VERSION=5.0.0
     # Linux only: test gcc 7, also test C++14 and even newer LLVM
       - os: linux
         compiler: gcc
@@ -217,7 +218,7 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: USE_SIMD=0 LLVM_VERSION=3.5.2 OIIOBRANCH=RB-1.7
+        env: USE_SIMD=0 LLVM_VERSION=3.9.1 OIIOBRANCH=RB-1.7
 
 notifications:
     email:

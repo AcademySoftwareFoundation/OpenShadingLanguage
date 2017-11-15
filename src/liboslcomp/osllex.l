@@ -140,7 +140,7 @@ void preprocess (const char *yytext);
   ************************************************/
 
  /* preprocessor symbols */
-{CPP}	 	        {  preprocess (yytext); SETLINE; }
+{CPP}                   {  preprocess (yytext); SETLINE; }
 
  /* Comments */
 {CPLUSCOMMENT}          {  oslcompiler->incr_lineno(); /* skip it */
@@ -148,32 +148,32 @@ void preprocess (const char *yytext);
                         }
 
  /* keywords */
-"break"			{  SETLINE;  return (yylval.i=BREAK); }
-"closure"		{  SETLINE;  return (yylval.i=CLOSURE); }
-"color"			{  SETLINE;  return (yylval.i=COLORTYPE); }
-"continue"		{  SETLINE;  return (yylval.i=CONTINUE); }
-"do"		        {  SETLINE;  return (yylval.i=DO); }
-"else"			{  SETLINE;  return (yylval.i=ELSE); }
-"float"			{  SETLINE;  return (yylval.i=FLOATTYPE); }
-"for"			{  SETLINE;  return (yylval.i=FOR); }
-"if"			{  SETLINE;  return (yylval.i=IF_TOKEN); }
-"illuminance"	        {  SETLINE;  return (yylval.i=ILLUMINANCE); }
-"illuminate"	        {  SETLINE;  return (yylval.i=ILLUMINATE); }
-"int"		        {  SETLINE;  return (yylval.i=INTTYPE); }
-"matrix"		{  SETLINE;  return (yylval.i=MATRIXTYPE); }
-"normal"		{  SETLINE;  return (yylval.i=NORMALTYPE); }
+"break"                 {  SETLINE;  return (yylval.i=BREAK); }
+"closure"               {  SETLINE;  return (yylval.i=CLOSURE); }
+"color"                 {  SETLINE;  return (yylval.i=COLORTYPE); }
+"continue"              {  SETLINE;  return (yylval.i=CONTINUE); }
+"do"                    {  SETLINE;  return (yylval.i=DO); }
+"else"                  {  SETLINE;  return (yylval.i=ELSE); }
+"float"                 {  SETLINE;  return (yylval.i=FLOATTYPE); }
+"for"                   {  SETLINE;  return (yylval.i=FOR); }
+"if"                    {  SETLINE;  return (yylval.i=IF_TOKEN); }
+"illuminance"           {  SETLINE;  return (yylval.i=ILLUMINANCE); }
+"illuminate"            {  SETLINE;  return (yylval.i=ILLUMINATE); }
+"int"                   {  SETLINE;  return (yylval.i=INTTYPE); }
+"matrix"                {  SETLINE;  return (yylval.i=MATRIXTYPE); }
+"normal"                {  SETLINE;  return (yylval.i=NORMALTYPE); }
 "output"                {  SETLINE;  return (yylval.i=OUTPUT); }
-"point"			{  SETLINE;  return (yylval.i=POINTTYPE); }
-"public"		{  SETLINE;  return (yylval.i=PUBLIC); }
-"return"		{  SETLINE;  return (yylval.i=RETURN); }
-"string"		{  SETLINE;  return (yylval.i=STRINGTYPE); }
-"struct"		{  SETLINE;  return (yylval.i=STRUCT); }
-"vector"		{  SETLINE;  return (yylval.i=VECTORTYPE); }
-"void"			{  SETLINE;  return (yylval.i=VOIDTYPE); }
-"while"			{  SETLINE;  return (yylval.i=WHILE); }
-"or"			{  SETLINE;  return (yylval.i=OR_OP); }
-"and"			{  SETLINE;  return (yylval.i=AND_OP); }
-"not"			{  SETLINE;  return (yylval.i=NOT_OP); }
+"point"                 {  SETLINE;  return (yylval.i=POINTTYPE); }
+"public"                {  SETLINE;  return (yylval.i=PUBLIC); }
+"return"                {  SETLINE;  return (yylval.i=RETURN); }
+"string"                {  SETLINE;  return (yylval.i=STRINGTYPE); }
+"struct"                {  SETLINE;  return (yylval.i=STRUCT); }
+"vector"                {  SETLINE;  return (yylval.i=VECTORTYPE); }
+"void"                  {  SETLINE;  return (yylval.i=VOIDTYPE); }
+"while"                 {  SETLINE;  return (yylval.i=WHILE); }
+"or"                    {  SETLINE;  return (yylval.i=OR_OP); }
+"and"                   {  SETLINE;  return (yylval.i=AND_OP); }
+"not"                   {  SETLINE;  return (yylval.i=NOT_OP); }
 
  /* reserved words */
 "bool"|"case"|"char"|"class"|"const"|"default"|"double" |    \
@@ -191,7 +191,7 @@ void preprocess (const char *yytext);
 
 
  /* Identifiers */
-{IDENT}	                {
+{IDENT}                 {
                             yylval.s = ustring(yytext).c_str();
                             SETLINE;
                             return IDENTIFIER;
@@ -247,23 +247,23 @@ void preprocess (const char *yytext);
   * catch-all rule, but we need to define the two-character operators
   * so they are not lexed as '+' and '=' separately, for example.
   */
-"+="			{  SETLINE;  return (yylval.i=ADD_ASSIGN); }
-"-="			{  SETLINE;  return (yylval.i=SUB_ASSIGN); }
-"*="			{  SETLINE;  return (yylval.i=MUL_ASSIGN); }
-"/="			{  SETLINE;  return (yylval.i=DIV_ASSIGN); }
-"&="			{  SETLINE;  return (yylval.i=BIT_AND_ASSIGN); }
-"|="			{  SETLINE;  return (yylval.i=BIT_OR_ASSIGN); }
-"^="			{  SETLINE;  return (yylval.i=XOR_ASSIGN); }
-"<<="			{  SETLINE;  return (yylval.i=SHL_ASSIGN); }
-">>="			{  SETLINE;  return (yylval.i=SHR_ASSIGN); }
-"<<"			{  SETLINE;  return (yylval.i=SHL_OP); }
-">>"			{  SETLINE;  return (yylval.i=SHR_OP); }
-"&&"			{  SETLINE;  return (yylval.i=AND_OP); }
-"||"			{  SETLINE;  return (yylval.i=OR_OP); }
-"<="			{  SETLINE;  return (yylval.i=LE_OP); }
-">="			{  SETLINE;  return (yylval.i=GE_OP); }
-"=="			{  SETLINE;  return (yylval.i=EQ_OP); }
-"!="			{  SETLINE;  return (yylval.i=NE_OP); }
+"+="                    {  SETLINE;  return (yylval.i=ADD_ASSIGN); }
+"-="                    {  SETLINE;  return (yylval.i=SUB_ASSIGN); }
+"*="                    {  SETLINE;  return (yylval.i=MUL_ASSIGN); }
+"/="                    {  SETLINE;  return (yylval.i=DIV_ASSIGN); }
+"&="                    {  SETLINE;  return (yylval.i=BIT_AND_ASSIGN); }
+"|="                    {  SETLINE;  return (yylval.i=BIT_OR_ASSIGN); }
+"^="                    {  SETLINE;  return (yylval.i=XOR_ASSIGN); }
+"<<="                   {  SETLINE;  return (yylval.i=SHL_ASSIGN); }
+">>="                   {  SETLINE;  return (yylval.i=SHR_ASSIGN); }
+"<<"                    {  SETLINE;  return (yylval.i=SHL_OP); }
+">>"                    {  SETLINE;  return (yylval.i=SHR_OP); }
+"&&"                    {  SETLINE;  return (yylval.i=AND_OP); }
+"||"                    {  SETLINE;  return (yylval.i=OR_OP); }
+"<="                    {  SETLINE;  return (yylval.i=LE_OP); }
+">="                    {  SETLINE;  return (yylval.i=GE_OP); }
+"=="                    {  SETLINE;  return (yylval.i=EQ_OP); }
+"!="                    {  SETLINE;  return (yylval.i=NE_OP); }
 "++"                    {  SETLINE;  return (yylval.i=INCREMENT); }
 "--"                    {  SETLINE;  return (yylval.i=DECREMENT); }
 
@@ -271,17 +271,17 @@ void preprocess (const char *yytext);
 "[["                    {  SETLINE;  return (yylval.i=METADATA_BEGIN); }
 
  /* End of line */
-"\\\n"			|
-[\n]			{  oslcompiler->incr_lineno();
+"\\\n"                  |
+[\n]                    {  oslcompiler->incr_lineno();
                            SETLINE;
                         }
 
  /* Ignore whitespace */
-{WHITE} 		{  }
+{WHITE}                 {  }
 
  /* catch-all rule for any other single characters */
-!			{  SETLINE;  return (yylval.i = NOT_OP); }
-.			{  SETLINE;  return (yylval.i = *yytext); }
+!                       {  SETLINE;  return (yylval.i = NOT_OP); }
+.                       {  SETLINE;  return (yylval.i = *yytext); }
 
 %%
 

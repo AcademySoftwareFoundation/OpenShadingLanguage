@@ -946,9 +946,17 @@ ASTfunction_call::mark_optional_output (int firstopt, const char **tags)
        ASTNode *s = argvec[a].get();
        bool isoutput = false;
        // compare against output tags
-       if (s->typespec().is_string() && s->nodetype() == ASTNode::literal_node) {
-           for (const char **tag = tags; *tag && !isoutput; ++tag)
-               isoutput = isoutput || mark_all || (! strcmp (((ASTliteral *)s)->strval(), *tag));
+       if (s->typespec().is_string()) {
+           if (s->nodetype() == ASTNode::literal_node) {
+               // If the token is a string literal, see if it's one of the
+               // ones designated as an output slot.
+               for (const char **tag = tags; *tag && !isoutput; ++tag)
+                   isoutput = isoutput || mark_all || (! strcmp (((ASTliteral *)s)->strval(), *tag));
+           } else {
+               // If the token is not a literal, we don't know what it'll
+               // be at runtime, so mark it conservatively as possible output.
+               isoutput = true;
+           }
        }
        if (isoutput) {
            // writes to the next arg!

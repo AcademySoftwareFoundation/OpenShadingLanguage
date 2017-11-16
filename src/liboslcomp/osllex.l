@@ -181,10 +181,10 @@ void preprocess (const char *yytext);
 "protected"|"short"|"signed"|"sizeof"|"static"|"struct" |    \
 "switch"|"template"|"this"|"true"|"typedef"|"uniform" |      \
 "union"|"unsigned"|"varying"|"virtual" {
-                            fprintf (stderr, "Error: \"%s\", line %d:\n"
-                                     "\t'%s' is a reserved word\n",
-                                     oslcompiler->filename().c_str(),
-                                     oslcompiler->lineno(), yytext);
+                            oslcompiler->error (oslcompiler->filename(),
+                                                oslcompiler->lineno(),
+                                                "'%s' is a reserved word",
+                                                yytext);
                             SETLINE;
                             return (yylval.i=RESERVED);
                         }
@@ -296,28 +296,30 @@ preprocess (const char *yytext)
     while (*p == ' ' || *p == '\t')
         p++;
     if (*p != '#') {
-	fprintf (stderr, "Possible bug in shader preprocess\n");
+        oslcompiler->error (oslcompiler->filename(), oslcompiler->lineno(),
+                            "Possible bug in shader preprocess");
         SETLINE;
-	return;
+        return;
     }
     p++;
     while (*p == ' ' || *p == '\t')
         p++;
     if (! strncmp (p, "pragma", 6)) {
-	// pragma
-	fprintf (stderr, "Unknown pragma '%s'\n", p);
+        // pragma
+        oslcompiler->error (oslcompiler->filename(), oslcompiler->lineno(),
+                            "Unknown pragma '%s'", p);
         oslcompiler->incr_lineno();  // the pragma ends with an EOLN
     } else {  /* probably the line number and filename */
         if (! strncmp (p, "line", 4))
             p += 4;
         int line = atoi (p);
         if (line > 0) {
-	    const char *f = strchr (yytext, '\"');
-	    if (f) {
+            const char *f = strchr (yytext, '\"');
+            if (f) {
                 ++f;  // increment to past the quote
-	        int len = 0;  // count of chars within quotes
-	        while (f[len] && f[len] != '\"')
-		    ++len;
+                int len = 0;  // count of chars within quotes
+                while (f[len] && f[len] != '\"')
+                    ++len;
                 std::string filename (f, len);
                 // Make it relative to the working directory, so error output
                 // isn't hugely cluttered (and also to make Boost::wave's
@@ -328,7 +330,7 @@ preprocess (const char *yytext)
                         (filename[0] == '/' || filename[0] == '\\'))
                         filename.erase (0, 1);
                 }
-	        oslcompiler->filename (ustring (filename));
+                oslcompiler->filename (ustring (filename));
                 // Spooky workaround for Boost Wave bug: force_include
                 // is broken and doesn't give us the right lines/files, so
                 // instead we forcefully insert a '#include "stdosl.h"' into
@@ -339,10 +341,9 @@ preprocess (const char *yytext)
                     --line;
             }
             oslcompiler->lineno (line);
-	} else {
-            fprintf (stderr, "Error: \"%s\", line %d:\n"
-                     "\tUnrecognized preprocessor command: #%s\n",
-                     oslcompiler->filename().c_str(), oslcompiler->lineno(), p);
+        } else {
+            oslcompiler->error (oslcompiler->filename(), oslcompiler->lineno(),
+                                "Unrecognized preprocessor command: #%s", p);
         }
     }
     SETLINE;

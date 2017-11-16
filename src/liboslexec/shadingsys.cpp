@@ -677,6 +677,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_no_noise(false),
       m_no_pointcloud(false),
       m_force_derivs(false),
+      m_allow_shader_replacement(false),
       m_exec_repeat(1),
       m_in_group (false),
       m_stat_opt_locking_time(0), m_stat_specialization_time(0),
@@ -1105,6 +1106,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("no_noise", int, m_no_noise);
     ATTR_SET ("no_pointcloud", int, m_no_pointcloud);
     ATTR_SET ("force_derivs", int, m_force_derivs);
+    ATTR_SET ("allow_shader_replacement", int, m_allow_shader_replacement);
     ATTR_SET ("exec_repeat", int, m_exec_repeat);
     ATTR_SET_STRING ("commonspace", m_commonspace_synonym);
     ATTR_SET_STRING ("debug_groupname", m_debug_groupname);
@@ -1223,6 +1225,7 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("no_noise", int, m_no_noise);
     ATTR_DECODE ("no_pointcloud", int, m_no_pointcloud);
     ATTR_DECODE ("force_derivs", int, m_force_derivs);
+    ATTR_DECODE ("allow_shader_replacement", int, m_allow_shader_replacement);
     ATTR_DECODE ("exec_repeat", int, m_exec_repeat);
 
     ATTR_DECODE ("stat:masters", int, m_stat_shaders_loaded);
@@ -1648,6 +1651,7 @@ ShadingSystemImpl::getstats (int level) const
     INTOPT (no_noise);
     INTOPT (no_pointcloud);
     INTOPT (force_derivs);
+    INTOPT (allow_shader_replacement);
     INTOPT (exec_repeat);
     STROPT (debug_groupname);
     STROPT (debug_layername);

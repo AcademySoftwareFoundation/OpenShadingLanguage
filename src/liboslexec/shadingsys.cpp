@@ -1600,8 +1600,8 @@ ShadingSystemImpl::getstats (int level) const
     out << "OSL ShadingSystem statistics (" << (void*)this;
     out << ") ver " << OSL_LIBRARY_VERSION_STRING
         << ", LLVM " << OSL_LLVM_FULL_VERSION << "\n";
-    if (m_stat_shaders_requested == 0) {
-        out << "  No shaders requested\n";
+    if (m_stat_shaders_requested == 0 && m_stat_shaders_loaded == 0) {
+        out << "  No shaders requested or loaded\n";
         return out.str();
     }
 

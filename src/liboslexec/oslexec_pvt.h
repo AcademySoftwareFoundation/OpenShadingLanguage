@@ -620,6 +620,7 @@ public:
     bool no_noise() const { return m_no_noise; }
     bool no_pointcloud() const { return m_no_pointcloud; }
     bool force_derivs() const { return m_force_derivs; }
+    bool allow_shader_replacement() const { return m_allow_shader_replacement; }
     ustring commonspace_synonym () const { return m_commonspace_synonym; }
 
     ustring debug_groupname() const { return m_debug_groupname; }
@@ -819,6 +820,7 @@ private:
     bool m_no_noise;                      ///< Substitute trivial noise calls
     bool m_no_pointcloud;                 ///< Substitute trivial pointcloud calls
     bool m_force_derivs;                  ///< Force derivs on everything
+    bool m_allow_shader_replacement;      ///< Allow shader masters to replace
     int m_exec_repeat;                    ///< How many times to execute group
 
     // Derived/cached calculations from options:

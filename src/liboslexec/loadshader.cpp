@@ -636,9 +636,9 @@ ShadingSystemImpl::LoadMemoryCompiledShader (string_view shadername,
     ustring name (shadername);
     lock_guard guard (m_mutex);  // Thread safety
     ShaderNameMap::const_iterator found = m_shader_masters.find (name);
-    if (found != m_shader_masters.end()) {
+    if (found != m_shader_masters.end() && ! allow_shader_replacement()) {
         if (debug())
-            info ("Preload shader %s already exists in shader_masters", name.c_str());
+            info ("Preload shader %s already exists in shader_masters", name);
         return false;
     }
 

@@ -128,6 +128,8 @@ public:
     ///                              means a param CANNOT be overridden by
     ///                              interpolated geometric parameters.
     ///    int countlayerexecs    Add extra code to count total layers run.
+    ///    int allow_shader_replacement Allow shader to be specified more than
+    ///                              once, replacing former definition.
     ///    string archive_groupname  Name of a group to pickle and archive.
     ///    string archive_filename   Name of file to save the group archive.
     /// 3. Attributes that that are intended for developers debugging

@@ -1616,7 +1616,7 @@ public:
 
     ClosureComponent * closure_component_allot(int id, size_t prim_size, const Color3 &w) {
         // Allocate the component and the mul back to back
-        size_t needed = sizeof(ClosureComponent) - sizeof(void*) + prim_size;
+        size_t needed = sizeof(ClosureComponent) + prim_size;
         ClosureComponent *comp = (ClosureComponent *) m_closure_pool.alloc(needed, alignof(ClosureComponent));
         comp->id = id;
         comp->w = w;
@@ -1847,14 +1847,6 @@ private:
     // Buffering of error messages and printfs
     typedef std::pair<ErrorHandler::ErrCode, std::string> ErrorItem;
     mutable std::vector<ErrorItem> m_buffered_errors;
-
-    // Calculate offset needed to align ClosureComponent's mem to a given alignment.
-    inline size_t closure_alignment_offset_calc(size_t alignment) {
-        return alignment == 1
-            ? 0
-            : alignment - (reckless_offsetof(ClosureComponent, mem) & (alignment - 1));
-    }
-
 };
 
 

@@ -6,6 +6,8 @@
 # PUGIXML_LIBRARIES - library to link against
 # PUGIXML_FOUND - true if pugixml was found.
 
+unset (PUGIXML_LIBRARY CACHE)
+unset (PUGIXML_INCLUDE_DIR CACHE)
 find_path (PUGIXML_INCLUDE_DIR
            NAMES pugixml.hpp
            PATHS ${PUGIXML_HOME}/include

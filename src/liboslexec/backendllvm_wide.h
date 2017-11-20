@@ -163,6 +163,7 @@ public:
     bool isSymbolUniform(const Symbol& sym);
     bool requiresMasking(int opIndex);
     bool getAttributesIsUniform(int opIndex);
+    bool loopHasContinue(int opIndex);
 
     /// Return an llvm::Value* that is either a scalar and derivs is
     /// false, or a pointer to sym's values (if sym is an aggreate or
@@ -452,6 +453,8 @@ public:
             shadingsys().m_stat_tex_calls_as_handles += 1;
     }
 
+    void llvm_print_mask (const char *title, llvm::Value *mask=nullptr);
+
     LLVM_Util ll;
 
 private:
@@ -482,7 +485,7 @@ private:
 	std::unordered_map<const Symbol *, bool> m_is_uniform_by_symbol;
 	std::vector<std::vector<bool>> m_requires_masking_by_layer_and_op_index;
 	std::vector<std::unordered_set<int>> m_uniform_get_attribute_op_indices_by_layer;
-	std::vector<Symbol *> m_generated_loops_condition_stack;
+	std::vector<std::unordered_set<int>> m_loops_with_continue_op_indices_by_layer;
 
     friend class ShadingSystemImpl;
 };

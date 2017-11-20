@@ -26,6 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 //#define OSL_DEV
+//#define __OSL_TRACE_MASKS
 #include <cmath>
 
 #include <OpenImageIO/fmath.h>
@@ -230,7 +231,7 @@ BackendLLVMWide::llvm_call_layer (int layer, bool unconditional)
     llvm::Value *lanes_requiring_execution_value = nullptr;
     if (! unconditional) {
         llvm::Value *previously_executed = ll.int_as_mask(ll.op_load (layerfield));
-        llvm::Value *lanes_requiring_execution = lanes_requiring_execution = ll.op_select(previously_executed, ll.wide_constant_bool(false), ll.current_mask());
+        llvm::Value *lanes_requiring_execution = ll.op_select(previously_executed, ll.wide_constant_bool(false), ll.current_mask());
         lanes_requiring_execution_value = ll.mask_as_int(lanes_requiring_execution);
         llvm::Value *execution_required = ll.op_ne(lanes_requiring_execution_value, ll.constant(0));
         then_block = ll.new_basic_block (std::string("then layer ").append(std::to_string(layer)));
@@ -1321,8 +1322,6 @@ LLVMGEN (llvm_gen_bitwise_binary_op)
     else if (op.opname() == op_shl)
         r = rop.ll.op_shl (a, b);
     else if (op.opname() == op_shr)
-        // TODO:  switching back to non-wide to figure out uniform vs. varying data
-        //r = rop.ll.wide_op_shr (a, b);
         r = rop.ll.op_shr (a, b);
     else
         return false;
@@ -1368,13 +1367,9 @@ LLVMGEN (llvm_gen_unary_op)
             // if our op type doesn't match result, convert
             if (dst_float && !src_float) {
                 // Op was int, but we need to store float
-                // TODO:  switching back to non-wide to figure out uniform vs. varying data
-//                result = rop.ll.wide_op_int_to_float (result);
                 result = rop.ll.op_int_to_float (result);
             } else if (!dst_float && src_float) {
                 // Op was float, but we need to store int
-                // TODO:  switching back to non-wide to figure out uniform vs. varying data
-//                result = rop.ll.wide_op_float_to_int (result);
                 result = rop.ll.op_float_to_int (result);
             } // otherwise just fine
             rop.storeLLVMValue (result, dst, i, 0);
@@ -1612,9 +1607,6 @@ LLVMGEN (llvm_gen_mxcompref)
         int comp = 4 * r + c;
         val = rop.llvm_load_value (M, 0, comp);
     } else {
-        // TODO:  switching back to non-wide to figure out uniform vs. varying data
-//        llvm::Value *comp = rop.ll.wide_op_mul (row, rop.ll.wide_constant(4));
-//        comp = rop.ll.wide_op_add (comp, col);
         llvm::Value *comp = rop.ll.op_mul (row, rop.ll.constant(4));
         comp = rop.ll.op_add (comp, col);
         val = rop.llvm_load_component_value (M, 0, comp);
@@ -1690,8 +1682,6 @@ LLVMGEN (llvm_gen_arraylength)
 
     int len = A.typespec().is_unsized_array() ? A.initializers()
                                               : A.typespec().arraylength();
-    // TODO:  switching back to non-wide to figure out uniform vs. varying data
-    //rop.llvm_store_value (rop.ll.wide_constant(len), Result);
     rop.llvm_store_value (rop.ll.constant(len), Result);
     return true;
 }
@@ -2634,8 +2624,6 @@ LLVMGEN (llvm_gen_generic)
             op.opname() == op_sign)
             any_deriv_args = false;
 
-    // TODO:  switching back to non-wide to figure out uniform vs. varying data
-    //std::string name = std::string("osl_wide_") + op.opname().string() + "_";
     std::string name = std::string("osl_") + op.opname().string() + "_";
 
 
@@ -2776,9 +2764,6 @@ LLVMGEN (llvm_gen_andor)
         //     %2 = and i1 %1, %not.
         //     %3 = zext i1 %2 to i32
         //   ret i32 %3
-        // TODO:  switching back to non-wide to figure out uniform vs. varying data
-        //llvm::Value* b_ne_0 = rop.ll.op_ne (b_val, rop.ll.wide_constant(0));
-        //llvm::Value* a_ne_0 = rop.ll.op_ne (a_val, rop.ll.wide_constant(0));
         llvm::Value* b_ne_0 = rop.ll.op_ne (b_val, rop.ll.constant(0));
         llvm::Value* a_ne_0 = rop.ll.op_ne (a_val, rop.ll.constant(0));
         llvm::Value* both_ne_0 = rop.ll.op_and  (b_ne_0, a_ne_0);
@@ -2789,8 +2774,6 @@ LLVMGEN (llvm_gen_andor)
         // %2 = icmp ne i32 %1, 0
         // %3 = zext i1 %2 to i32
         llvm::Value* or_ab = rop.ll.op_or(a_val, b_val);
-        // TODO:  switching back to non-wide to figure out uniform vs. varying data
-        //llvm::Value* or_ab_ne_0 = rop.ll.op_ne (or_ab, rop.ll.wide_constant(0));
         llvm::Value* or_ab_ne_0 = rop.ll.op_ne (or_ab, rop.ll.constant(0));
         i1_res = or_ab_ne_0;
     }
@@ -2810,6 +2793,8 @@ LLVMGEN (llvm_gen_andor)
 }
 
 
+
+
 LLVMGEN (llvm_gen_if)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
@@ -2818,23 +2803,32 @@ LLVMGEN (llvm_gen_if)
     const char * cond_name = cond.name().c_str();
     bool op_is_uniform = rop.isSymbolUniform(cond);
 
+    bool elseBlockRequired = op.jump(0) != op.jump(1);
+
+	int beforeThenElseReturnCount = rop.ll.masked_return_count();
+    int beforeThenElseBreakCount = rop.ll.masked_break_count();
+    int beforeThenElseContinueCount = rop.ll.masked_continue_count();
+
     if (op_is_uniform) {
         // Load the condition variable and figure out if it's nonzero
         llvm::Value* cond_val = rop.llvm_test_nonzero (cond);
 
         // Branch on the condition, to our blocks
         llvm::BasicBlock* then_block = rop.ll.new_basic_block (std::string("then (uniform)") + cond_name);
-        llvm::BasicBlock* else_block = rop.ll.new_basic_block (std::string("else (uniform)") + cond_name);
-        llvm::BasicBlock* after_block = rop.ll.new_basic_block (std::string("after (uniform)") + cond_name);
-        rop.ll.op_branch (cond_val, then_block, else_block);
+        llvm::BasicBlock* else_block = elseBlockRequired ?
+        		                       rop.ll.new_basic_block (std::string("else (uniform)") + cond_name) :
+									   nullptr;
+        llvm::BasicBlock* after_block = rop.ll.new_basic_block (std::string("after_if (uniform)") + cond_name);
+        rop.ll.op_branch (cond_val, then_block, elseBlockRequired ? else_block : after_block);
 
         // Then block
         rop.build_llvm_code (opnum+1, op.jump(0), then_block);
         rop.ll.op_branch (after_block); // insert point is now after_block
-
-        // Else block
-        rop.build_llvm_code (op.jump(0), op.jump(1), else_block);
-        rop.ll.op_branch (after_block);  // insert point is now after_block
+		if (elseBlockRequired) {
+	        // Else block
+	        rop.build_llvm_code (op.jump(0), op.jump(1), else_block);
+	        rop.ll.op_branch (after_block);  // insert point is now after_block
+		}
 
         // NOTE: if a return or exit is encounter inside a uniform
         // conditional block, then it will branch to the last
@@ -2842,12 +2836,17 @@ LLVMGEN (llvm_gen_if)
         // or if there is none, operate in a scalar fashion
         // branching to the return_block() or exit_instance()
     } else {
+
         llvm::Value* mask = rop.llvm_load_value (cond, /*deriv*/ 0, /*component*/ 0, /*cast*/ TypeDesc::UNKNOWN, /*op_is_uniform*/ false);
         if (mask->getType() != rop.ll.type_wide_bool()) {
             ASSERT(mask->getType() == rop.ll.type_wide_int());
             mask = rop.ll.op_int_to_bool(mask);
         }
         ASSERT(mask->getType() == rop.ll.type_wide_bool());
+#ifdef __OSL_TRACE_MASKS
+        rop.llvm_print_mask("if",mask);
+#endif
+        rop.ll.push_mask(mask);
 
         // TODO:  Add heuristic to control if we can avoid testing
         // for any lanes active and just execute masked.
@@ -2855,13 +2854,8 @@ LLVMGEN (llvm_gen_if)
         // contain a call to a lower level, those must not be executed
         // if the mask is all off
 
-        bool elseBlockRequired = op.jump(0) != op.jump(1);
-		int beforeThenElseReturnCount = rop.ll.masked_return_count();
-        int beforeThenElseBreakCount = rop.ll.masked_break_count();
-
-		llvm::Value* anyOn;
-		llvm::Value* anyOff;
-		rop.ll.test_if_mask_has_any_on_or_off(mask, anyOn, anyOff);
+        // We use the combined mask stack + the if condition's mask we aready pushed
+		llvm::Value* anyThenLanesActive = rop.ll.test_if_mask_is_non_zero(rop.ll.current_mask());
 
 		// Branch on the condition, to our blocks
 		llvm::BasicBlock* then_block = rop.ll.new_basic_block (std::string("then (varying)") + cond_name);
@@ -2873,11 +2867,14 @@ LLVMGEN (llvm_gen_if)
 
 		// Then block
 		// Perhaps mask should be parameter to build_llvm_code?
-		rop.ll.op_branch (anyOn, then_block, elseBlockRequired ? test_else_block : after_block);
+		rop.ll.op_branch (anyThenLanesActive, then_block, elseBlockRequired ? test_else_block : after_block);
 
 		rop.ll.set_insert_point (then_block);
-		rop.ll.push_mask(mask);
+		//rop.ll.push_mask(mask); // we pushed this mask before the then block so we can test for 0 active lanes
 		rop.ll.push_masked_return_block(elseBlockRequired ? test_else_block : after_block);
+#ifdef __OSL_TRACE_MASKS
+        rop.llvm_print_mask("then");
+#endif
 		rop.build_llvm_code (opnum+1, op.jump(0), then_block);
 		rop.ll.pop_masked_return_block();
 		rop.ll.pop_mask();
@@ -2886,63 +2883,84 @@ LLVMGEN (llvm_gen_if)
 		if (elseBlockRequired) {
 			// Else block
 			// insertion point should be test_else_block
-			rop.ll.op_branch (anyOff, else_block, after_block);
-			rop.ll.set_insert_point (else_block);
 			rop.ll.push_mask(mask, true /* negate */);
+            llvm::Value* anyElseLanesActive = rop.ll.test_if_mask_is_non_zero(rop.ll.current_mask());
+
+			rop.ll.op_branch (anyElseLanesActive, else_block, after_block);
+			rop.ll.set_insert_point (else_block);
 			rop.ll.push_masked_return_block(after_block);
+#ifdef __OSL_TRACE_MASKS
+            rop.llvm_print_mask("else");
+#endif
 			rop.build_llvm_code (op.jump(0), op.jump(1), else_block);
 			rop.ll.pop_masked_return_block();
 			rop.ll.pop_mask();
 			rop.ll.op_branch (after_block);
 		}
-
-		bool requiresTestForActiveLanes = false;
-		if (rop.ll.masked_break_count() > beforeThenElseBreakCount) {
-			// Inside the 'then' or 'else' blocks a return may have been executed
-			// we need to update the current mask to reflect the disabled lanes
-			// We needed to wait until were were in the after block so the produced
-			// mask is available to subsequent instructions
-			rop.ll.apply_break_to_mask_stack();
-			requiresTestForActiveLanes = true;
-		}
-		if (rop.ll.masked_return_count() > beforeThenElseReturnCount) {
-			// Inside the 'then' or 'else' blocks a return may have been executed
-			// we need to update the current mask to reflect the disabled lanes
-			// We needed to wait until were were in the after block so the produced
-			// mask is available to subsequent instructions
-			rop.ll.apply_return_to_mask_stack();
-			requiresTestForActiveLanes = true;
-		}
-		if (requiresTestForActiveLanes) {
-
-			// through a combination of the break or return mask and any lanes conditionally
-			// masked off, all lanes could be 0 at this point and we wouldn't
-			// want to call down to any layers at this point
-
-			// NOTE: testing the return/exit masks themselves is not sufficient
-			// as some lanes may be disabled by the conditional mask stack
-
-			// TODO: do we want a test routine that can handle negated masks?
-			llvm::Value* anyLanesActive = rop.ll.test_if_mask_is_non_zero(rop.ll.current_mask());
-
-			llvm::BasicBlock * nextMaskScope;
-			if (rop.ll.has_masked_return_block()) {
-				nextMaskScope = rop.ll.masked_return_block();
-			} else {
-				nextMaskScope = rop.ll.inside_function() ?
-								rop.ll.return_block() :
-								rop.llvm_exit_instance_block();
-			}
-	        llvm::BasicBlock* after_applying_return_block = rop.ll.new_basic_block (std::string("after_if_applied_return_mask (varying)") + cond_name);
-
-			rop.ll.op_branch (anyLanesActive, after_applying_return_block, nextMaskScope);
-		}
     }
+
+	bool requiresTestForActiveLanes = false;
+	if (rop.ll.masked_continue_count() > beforeThenElseContinueCount) {
+		// Inside the 'then' or 'else' blocks a continue may have been executed
+		// we need to update the current mask to reflect the disabled lanes
+		// We needed to wait until were were in the after block so the produced
+		// mask is available to subsequent instructions
+		rop.ll.apply_continue_to_mask_stack();
+		requiresTestForActiveLanes = true;
+#ifdef __OSL_TRACE_MASKS
+		rop.llvm_print_mask("continue applied");
+#endif
+	}
+	if (rop.ll.masked_break_count() > beforeThenElseBreakCount) {
+		// Inside the 'then' or 'else' blocks a return may have been executed
+		// we need to update the current mask to reflect the disabled lanes
+		// We needed to wait until were were in the after block so the produced
+		// mask is available to subsequent instructions
+		rop.ll.apply_break_to_mask_stack();
+		requiresTestForActiveLanes = true;
+#ifdef __OSL_TRACE_MASKS
+		rop.llvm_print_mask("break applied");
+#endif
+	}
+	if (rop.ll.masked_return_count() > beforeThenElseReturnCount) {
+		// Inside the 'then' or 'else' blocks a return may have been executed
+		// we need to update the current mask to reflect the disabled lanes
+		// We needed to wait until were were in the after block so the produced
+		// mask is available to subsequent instructions
+		rop.ll.apply_return_to_mask_stack();
+		requiresTestForActiveLanes = true;
+#ifdef __OSL_TRACE_MASKS
+		rop.llvm_print_mask("return applied");
+#endif
+	}
+	if (requiresTestForActiveLanes) {
+
+		// through a combination of the break or return mask and any lanes conditionally
+		// masked off, all lanes could be 0 at this point and we wouldn't
+		// want to call down to any layers at this point
+
+		// NOTE: testing the return/exit masks themselves is not sufficient
+		// as some lanes may be disabled by the conditional mask stack
+
+		// TODO: do we want a test routine that can handle negated masks?
+		llvm::Value* anyLanesActive = rop.ll.test_if_mask_is_non_zero(rop.ll.current_mask());
+
+		llvm::BasicBlock * nextMaskScope;
+		if (rop.ll.has_masked_return_block()) {
+			nextMaskScope = rop.ll.masked_return_block();
+		} else {
+			nextMaskScope = rop.ll.inside_function() ?
+							rop.ll.return_block() :
+							rop.llvm_exit_instance_block();
+		}
+		llvm::BasicBlock* after_applying_return_block = rop.ll.new_basic_block (std::string("after_if_applied_return_mask (varying)") + cond_name);
+
+		rop.ll.op_branch (anyLanesActive, after_applying_return_block, nextMaskScope);
+	}
 
     // Continue on with the previous flow
     return true;
 }
-
 
 
 LLVMGEN (llvm_gen_loop_op)
@@ -2968,7 +2986,7 @@ LLVMGEN (llvm_gen_loop_op)
         // and since the "break" op has no symbol for us to check for
         // uniformity, it can check the current masked loop condition location
         // to see if it is null or not (uniform vs. varying)
-        rop.ll.push_masked_loop(nullptr);
+        rop.ll.push_masked_loop(nullptr, nullptr);
 
         // Initialization (will be empty except for "for" loops)
         rop.build_llvm_code (opnum+1, op.jump(0));
@@ -3000,21 +3018,32 @@ LLVMGEN (llvm_gen_loop_op)
     	OSL_DEV_ONLY(std::cout << "llvm_gen_loop_op VARYING based on " << cond.name().c_str() << std::endl);
 
         // Branch on the condition, to our blocks
-        llvm::BasicBlock* cond_block = rop.ll.new_basic_block (std::string("cond (varying)") + cond_name);
-        llvm::BasicBlock* body_block = rop.ll.new_basic_block (std::string("body (varying)") + cond_name);
-        llvm::BasicBlock* step_block = rop.ll.new_basic_block (std::string("step (varying)") + cond_name);
-        llvm::BasicBlock* after_block = rop.ll.new_basic_block (std::string("after_loop (varying)") + cond_name);
+        llvm::BasicBlock* cond_block;
+        llvm::BasicBlock* body_block;
+        // Improve readability of generated IR by creating basic blocks in the order they
+        // will be processed
+        if (op.opname() == op_dowhile) {
+        	body_block = rop.ll.new_basic_block (std::string("body (varying):") + cond_name);
+        	cond_block = rop.ll.new_basic_block (std::string("cond (varying):") + cond_name);
+        } else {
+        	cond_block = rop.ll.new_basic_block (std::string("cond (varying):") + cond_name);
+        	body_block = rop.ll.new_basic_block (std::string("body (varying):") + cond_name);
+        }
+        llvm::BasicBlock* step_block = rop.ll.new_basic_block (std::string("step (varying):") + cond_name);
+        llvm::BasicBlock* after_block = rop.ll.new_basic_block (std::string("after_loop (varying):") + cond_name);
 
 		int return_count_before_loop = rop.ll.masked_return_count();
 
         // Save the step and after block pointers for possible break/continue
         rop.ll.push_loop (step_block, after_block);
-        rop.ll.push_masked_loop(rop.llvm_get_pointer (cond));
+
+        bool loopHasContinue = rop.loopHasContinue(opnum);
+
+        llvm::Value * loc_of_continue_mask = loopHasContinue ? rop.ll.op_alloca(rop.ll.type_wide_bool(), 1, std::string("continue mask:") + cond_name) : nullptr;
+        rop.ll.push_masked_loop(rop.llvm_get_pointer (cond), loc_of_continue_mask);
 
         // Initialization (will be empty except for "for" loops)
         rop.build_llvm_code (opnum+1, op.jump(0));
-
-		rop.ll.push_masked_return_block(after_block);
 
         // Store current top of the mask stack (or all 1's) as the current mask value
         // as we enter the loop
@@ -3022,6 +3051,12 @@ LLVMGEN (llvm_gen_loop_op)
         rop.ll.push_masking_enabled(false);
         rop.llvm_store_value (initial_mask, cond, /*deriv*/ 0, /*component*/ 0);
         rop.ll.pop_masking_enabled();
+
+    	// If all lanes inside the loop become inactive,
+    	// jump to the step as it may have been cause by a continue.
+    	// If no continue is possible, then we can just jump to the
+    	// after_block when all lanes become inactive
+		rop.ll.push_masked_return_block(loopHasContinue ? step_block : after_block);
 
         // For "do-while", we go straight to the body of the loop, but for
         // "for" or "while", we test the condition next.
@@ -3032,17 +3067,64 @@ LLVMGEN (llvm_gen_loop_op)
             ASSERT(pre_condition_mask->getType() == rop.ll.type_wide_bool());
 
             rop.ll.push_mask(pre_condition_mask, false /* negate */, true /* absolute */);
+#ifdef __OSL_TRACE_MASKS
+			rop.llvm_print_mask("pre_condition_mask");
+#endif
+
             // Body of loop
+            // We need to zero out the continue mask at the top loop body, as the previous
+            // iteration could have set continue.
+            // TODO, move allocation of continue mask inside the loop body to minimize its
+            // scope, although it is still a loop resource perhaps we can delay
+            // setting it until now
+            if (loopHasContinue) {
+				rop.ll.push_masking_enabled(false);
+				rop.ll.op_store(rop.ll.wide_constant_bool(false), loc_of_continue_mask);
+				rop.ll.pop_masking_enabled();
+            }
+
             rop.build_llvm_code (op.jump(1), op.jump(2), body_block);
             rop.ll.op_branch (step_block);
 
             // Step
-            // The step shares the same mask as the body
-            rop.build_llvm_code (op.jump(2), op.jump(3), step_block);
+            // The step shares the same mask as the body, unless a continue was called
+			if (rop.ll.masked_continue_count() > 0) {
+				//std::cout << "(rop.ll.masked_continue_count() > 0) == true\n";
+				// Get rid of any modified mask that had the continue mask applied to it
+				rop.ll.pop_mask();
+				// Restore the condition mask for the step to execute with
+				llvm::Value * pre_step_mask = pre_condition_mask;
+				// We are trying to reuse the conditional loaded before the body
+				// executes, however a 'break' would have written to that conditional mask
+				// In that case, we need to reload the mask
+				if (rop.ll.masked_break_count() > 0)
+				{
+					pre_step_mask = rop.llvm_load_value (cond, /*deriv*/ 0, /*component*/ 0, /*cast*/ TypeDesc::UNKNOWN, /*op_is_uniform*/ false);
+					// The break could have caused all lanes to be 0,
+					// If there was no continue that would have jumped to the after block already.
+					// But we are here because perhaps some lanes were 0 because of the continue.
+					// Reloading the condition variable will not contain any continued lanes.
+					// So we can test it to see if any lanes are active. If not,
+					// we don't want to execute the condition block as it might contain function calls
+					// or use param which calls down to subsequent layers.
+					// So we will test to see if any lanes are active
+					llvm::Value* anyLanesActive = rop.ll.test_if_mask_is_non_zero(pre_step_mask);
+					llvm::BasicBlock* some_lanes_active_after_continue_break = rop.ll.new_basic_block (std::string("some_lanes_active_after_continue_break (varying)") + cond_name);
+
+					rop.ll.op_branch (anyLanesActive, some_lanes_active_after_continue_break, after_block);
+				}
+	            rop.ll.push_mask(pre_step_mask, false /* negate */, true /* absolute */);
+#ifdef __OSL_TRACE_MASKS
+	            rop.llvm_print_mask("pre_step_mask");
+#endif
+			}
+			ASSERT(op.jump(2) == op.jump(3));
+			// why bother building empty step
+			//rop.build_llvm_code (op.jump(2), op.jump(3), step_block);
             rop.ll.op_branch (cond_block);
 
             // Load the condition variable and figure out if it's nonzero
-            // The step shares the same mask as the body & step
+            // The step shares the same mask as the step
             rop.build_llvm_code (op.jump(0), op.jump(1), cond_block);
             rop.ll.pop_mask();
             llvm::Value* post_condition_mask = rop.llvm_load_value (cond, /*deriv*/ 0, /*component*/ 0, /*cast*/ TypeDesc::UNKNOWN, /*op_is_uniform*/ false);
@@ -3050,6 +3132,7 @@ LLVMGEN (llvm_gen_loop_op)
             // executed, we need to mask out those lanes from the conditional symbol
             // because the step function would have executed with those lanes off
             // causing an endless loop
+            // No need to handle break here, if encountered, it was immediately applied to the condition mask
 			if (rop.ll.masked_return_count() > return_count_before_loop) {
 				post_condition_mask = rop.ll.apply_return_to(post_condition_mask);
                 rop.llvm_store_value (post_condition_mask, cond, /*deriv*/ 0, /*component*/ 0);
@@ -3062,8 +3145,8 @@ LLVMGEN (llvm_gen_loop_op)
             rop.ll.op_branch (cond_val, body_block, after_block);
 
         } else {
-            rop.ll.op_branch (cond_block);
 
+            rop.ll.op_branch (cond_block);
 
             // Load the condition variable and figure out if it's nonzero
             llvm::Value* pre_condition_mask = rop.llvm_load_value (cond, /*deriv*/ 0, /*component*/ 0, /*cast*/ TypeDesc::UNKNOWN, /*op_is_uniform*/ false);
@@ -3073,7 +3156,8 @@ LLVMGEN (llvm_gen_loop_op)
             rop.ll.pop_mask();
             llvm::Value* post_condition_mask = rop.llvm_load_value (cond, /*deriv*/ 0, /*component*/ 0, /*cast*/ TypeDesc::UNKNOWN, /*op_is_uniform*/ false);
 
-
+			// The condition was initializedwith the current_mask before the loop
+            // and considered an absolute value, therefore should be OK to test directly
             llvm::Value* cond_val = rop.ll.test_if_mask_is_non_zero(post_condition_mask);
 
             // Jump to either LoopBody or AfterLoop
@@ -3081,12 +3165,42 @@ LLVMGEN (llvm_gen_loop_op)
 
             // Body of loop
             rop.ll.push_mask(post_condition_mask, false /* negate */, true /* absolute */);
+            // We need to zero out the continue mask at the top loop body, as the previous
+            // iteration could have set continue, alternatively we could zero at the end
+            // of the loop body so its ready for the next iteration, perhaps as part
+            // of the step, but if we know we will need it simplest to do at top of loop body
+            // TODO, move allocation of continue mask inside the loop body to minimize its
+            // scope, although it is still a loop resource perhaps we can delay
+            // setting it until now
+            if (loopHasContinue) {
+				rop.ll.push_masking_enabled(false);
+				rop.ll.op_store(rop.ll.wide_constant_bool(false), loc_of_continue_mask);
+				rop.ll.pop_masking_enabled();
+            }
             rop.build_llvm_code (op.jump(1), op.jump(2), body_block);
 
             rop.ll.op_branch (step_block);
 
             // Step
-            // The step shares the same mask as the body
+            // The step shares the same mask as the body, unless a continue was called
+			if (rop.ll.masked_continue_count() > 0) {
+				//std::cout << "(rop.ll.masked_continue_count() > 0) == true\n";
+				// Get rid of any modified mask that had the continue mask applied to it
+				rop.ll.pop_mask();
+				// Restore the condition mask for the step to execute with
+				llvm::Value * pre_step_mask = post_condition_mask;
+				// We are trying to reuse the conditional loaded before the body
+				// executes, however a 'break' would have written to that conditional mask
+				// In that case, we need to reload the mask
+				if (rop.ll.masked_break_count() > 0)
+				{
+					pre_step_mask = rop.llvm_load_value (cond, /*deriv*/ 0, /*component*/ 0, /*cast*/ TypeDesc::UNKNOWN, /*op_is_uniform*/ false);
+				}
+	            rop.ll.push_mask(pre_step_mask, false /* negate */, true /* absolute */);
+#ifdef __OSL_TRACE_MASKS
+	            rop.llvm_print_mask("pre_step_mask");
+#endif
+			}
             rop.build_llvm_code (op.jump(2), op.jump(3), step_block);
             rop.ll.pop_mask();
 
@@ -3094,6 +3208,7 @@ LLVMGEN (llvm_gen_loop_op)
             // executed, we need to mask out those lanes from the conditional symbol
             // because the step function would have executed with those lanes off
             // causing an endless loop
+            // No need to handle break here, if encountered, it was immediately applied to the condition mask
 			if (rop.ll.masked_return_count() > return_count_before_loop) {
 				// We are trying to reuse the conditional loaded before the body
 				// executes, however a 'break' would have written to that conditional mask
@@ -3112,6 +3227,7 @@ LLVMGEN (llvm_gen_loop_op)
 
         // Continue on with the previous flow
         rop.ll.set_insert_point (after_block);
+
 		rop.ll.pop_masked_return_block();
 
 		if (rop.ll.masked_return_count() > return_count_before_loop) {
@@ -3170,20 +3286,36 @@ LLVMGEN (llvm_gen_loopmod_op)
         rop.ll.set_insert_point (next_block);
     } else {
 
-        ASSERT(op.opname() == op_break && "INCOMPLETE:  haven't coded 'continue'");
+        if (op.opname() == op_break) {
 
-        // Inside a varying loop, can not only branch
-        // must mask off additional lanes for remainder of loop
-        // We can just take the absolute mask that is executing the 'break'
-        // instruction and store an absolute modified mask to the
-        // condition variable (which the conditional block of the loop
-        // will hopefully pickup and use)
-        // Trick is we then will need to pop and push a different mask
-        // back on the stack for the remainder of the loop body.
-        rop.ll.op_masked_break();
-        // But there may still be more instructions in the body after the break
-        // Rely on front end dead code elimination to remove any instructions
-        // after a break.
+			// Inside a varying loop, can not only branch
+			// must mask off additional lanes for remainder of loop
+			// We can just take the absolute mask that is executing the 'break'
+			// instruction and store an absolute modified mask to the
+			// condition variable (which the conditional block of the loop
+			// will hopefully pickup and use)
+			// Trick is we then will need to pop and push a different mask
+			// back on the stack for the remainder of the loop body.
+			rop.ll.op_masked_break();
+			// But there may still be more instructions in the body after the break
+			// Rely on front end dead code elimination to remove any instructions
+			// after a break.
+        } else {
+        	ASSERT(op.opname() == op_continue);
+			// Inside a varying loop, can not only branch
+			// must mask off additional lanes for remainder of loop
+			// We can just take the absolute mask that is executing the 'break'
+			// instruction and store an absolute modified mask to the
+			// condition variable (which the conditional block of the loop
+			// will hopefully pickup and use)
+			// Trick is we then will need to pop and push a different mask
+			// back on the stack for the remainder of the loop body.
+			rop.ll.op_masked_continue();
+			// But there may still be more instructions in the body after the break
+			// Rely on front end dead code elimination to remove any instructions
+			// after a break.
+
+        }
     }
 
     return true;
@@ -3350,7 +3482,7 @@ llvm_gen_texture_options (BackendLLVMWide &rop, int opnum,
                 // If not already done, allocate enough storage for the
                 // missingcolor value (4 floats), and call the special
                 // function that points the TextureOpt.missingcolor to it.
-                missingcolor = rop.ll.op_alloca(rop.ll.type_float(), 4);
+                missingcolor = rop.ll.op_alloca(rop.ll.type_float(), 4, "float missingcolor[4]");
                 rop.ll.call_function ("osl_texture_set_missingcolor_arena",
                                       opt, rop.ll.void_ptr(missingcolor));
             }
@@ -3363,7 +3495,7 @@ llvm_gen_texture_options (BackendLLVMWide &rop, int opnum,
                 // If not already done, allocate enough storage for the
                 // missingcolor value (4 floats), and call the special
                 // function that points the TextureOpt.missingcolor to it.
-                missingcolor = rop.ll.op_alloca(rop.ll.type_float(), 4);
+                missingcolor = rop.ll.op_alloca(rop.ll.type_float(), 4, "float missingcolor[4]");
                 rop.ll.call_function ("osl_texture_set_missingcolor_arena",
                                       opt, missingcolor);
             }
@@ -3502,7 +3634,7 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
                     continue;                                           \
                 if (code >= 0) {                                        \
                     llvm::Value *val = rop.ll.constant (code);          \
-                    llvm::Value* codePtr = rop.ll.op_alloca(rop.ll.type_int()); \
+                    llvm::Value* codePtr = rop.ll.op_alloca(rop.ll.type_int(), 1, std::string("codePtr ") + std::to_string(code)); \
                     rop.ll.op_store(val, codePtr);                      \
                     options.add(BatchedTextureOptionProvider::index, rop.ll.void_ptr(codePtr), BatchedTextureOptionProvider::INT, valIsVarying);  \
                 }                                                       \
@@ -3525,7 +3657,7 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
             if (Val.is_constant()) {
                 int mode = TextureOpt::decode_wrapmode (*(ustring *)Val.data());
                 llvm::Value *val = rop.ll.constant (mode);
-                llvm::Value* codePtr = rop.ll.op_alloca(rop.ll.type_int());
+                llvm::Value* codePtr = rop.ll.op_alloca(rop.ll.type_int(), 1, std::string("codePtr wrap"));
                 rop.ll.op_store(val, codePtr);
                 options.add(BatchedTextureOptionProvider::SWRAP, rop.ll.void_ptr(codePtr), BatchedTextureOptionProvider::INT, valIsVarying);
                 options.add(BatchedTextureOptionProvider::TWRAP, rop.ll.void_ptr(codePtr), BatchedTextureOptionProvider::INT, valIsVarying);
@@ -3597,7 +3729,7 @@ llvm::Value* llvm_pack_texture_options(BackendLLVMWide &rop, int opnum,
                              sizeof(options.typeMask) +
                              sizeof(BatchedTextureOptionProvider::Mask) + //
                              numVal * sizeof(void*);
-        llvm::Value* optionPack =  rop.ll.op_alloca(rop.ll.type_int(), numBytes/sizeof(int));
+        llvm::Value* optionPack =  rop.ll.op_alloca(rop.ll.type_int(), numBytes/sizeof(int), "optionPack");
         int offset = 0;
         llvm::Value* activeMaskPtr = rop.ll.GEP(optionPack, offset++);
         llvm::Value* activeMaskVal = rop.ll.constant((int)options.activeMask.value());
@@ -3837,7 +3969,7 @@ LLVMGEN (llvm_gen_texture3d)
         } else {
             // zero for dPdz, for now
             llvm::Value *fzero = rop.ll.constant (0.0f);
-            llvm::Value *vzero = rop.ll.op_alloca (rop.ll.type_triple());
+            llvm::Value *vzero = rop.ll.op_alloca (rop.ll.type_triple(), 1, "vzero");
             for (int i = 0;  i < 3;  ++i)
                 rop.ll.op_store (fzero, rop.ll.GEP (vzero, 0, i));
             args.push_back (rop.ll.void_ptr(vzero));
@@ -5081,9 +5213,9 @@ LLVMGEN (llvm_gen_pointcloud_write)
     int nattrs = (op.nargs() - 3) / 2;
 
     // Generate local space for the names/types/values arrays
-    llvm::Value *names = rop.ll.op_alloca (rop.ll.type_string(), nattrs);
-    llvm::Value *types = rop.ll.op_alloca (rop.ll.type_typedesc(), nattrs);
-    llvm::Value *values = rop.ll.op_alloca (rop.ll.type_void_ptr(), nattrs);
+    llvm::Value *names = rop.ll.op_alloca (rop.ll.type_string(), nattrs, "pointcloud_write names");
+    llvm::Value *types = rop.ll.op_alloca (rop.ll.type_typedesc(), nattrs, "pointcloud_write types");
+    llvm::Value *values = rop.ll.op_alloca (rop.ll.type_void_ptr(), nattrs, "pointcloud_write values");
 
     // Fill in the arrays with the params, use helper function because
     // it's a pain to offset things into the array ourselves.

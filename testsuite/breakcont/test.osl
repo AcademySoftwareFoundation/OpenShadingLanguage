@@ -1,35 +1,425 @@
-shader test ()
+int func_print_and_return(int i) {
+    printf("func_print_and_return %d\n", i);
+    return i;
+}
+
+void func_return_after_continue(int count) 
 {
-    printf ("Testing break: (should never let i get beyond 3)\n");
-    for (int i = 0;  i < 10; ++i) {
+    int i = 0;
+    for (;  i < count; ++i) {
+        printf ("bc  i = %d\n", i);
+        if (i == 1)
+            continue;
+        printf ("dogfood\n");
+        printf ("ac  i = %d\n", i);
+        if (i > 3)
+            return;
+    }
+    printf ("the return probably should skip this, final i = %d\n", i);    
+}
+
+void func_return_after_continue_dowhile(int count) 
+{
+    int i = 0;
+    do {
+        printf ("bc  i = %d\n", i);
+        if (i == 1)
+            continue;
+        printf ("dogfood\n");
+        printf ("ac  i = %d\n", i);
+        if (i > 3)
+            return;
+    } while (++i < count);
+    printf ("the return probably should skip this, final i = %d\n", i);    
+}
+
+
+void func_return_after_break_continue(int count) 
+{
+    printf ("func_return_after_break_continue count = %d\n", count);    
+    int i = 0;
+    for (;  i < count/2; ++i) {
+        printf ("bc  i = %d\n", i);
+        if (i == 1)
+            continue;
+        printf ("dogfood\n");
+        printf ("ac  i = %d\n", i);
         if (i > 3)
             break;
-        printf ("  i = %d\n", i);
     }
-
-
-    printf ("\nTesting continue:\n");
-    for (int i = 0;  i < 10;  ++i) {
-        printf ("  i = %d\n", i);
-        if (i > 3)
+    for (i = count/2;  i < count; ++i) {
+        printf ("bc2  i = %d\n", i);
+        if (i == ((count/2) + 1))
             continue;
-        printf ("  should only print this if i <= 3.\n");
+        printf ("dogfood2\n");
+        printf ("ac2  i = %d\n", i);
+        if (i > (count/2) + 2)
+            return;
     }
+    printf ("the return probably should skip this when count > 6, final i = %d\n", i);    
+}
 
 
-    printf ("\nTesting nested break/continue:\n");
-    for (int j = 0;  j < 10;  ++j) {
-        printf ("start of outer, j=%d\n", j);
+
+void func_return_after_break_continue_dowhile(int count) 
+{
+    printf ("func_return_after_break_continue count = %d\n", count);    
+    int i = 0;
+    do {
+        printf ("bc  i = %d\n", i);
+        if (i == 1)
+            continue;
+        printf ("dogfood\n");
+        printf ("ac  i = %d\n", i);
+        if (i > 3)
+            break;
+    } while (++i < count/2);
+    i = count/2;
+    do {
+        printf ("bc2  i = %d\n", i);
+        if (i == ((count/2) + 1))
+            continue;
+        printf ("dogfood2\n");
+        printf ("ac2  i = %d\n", i);
+        if (i > (count/2) + 2)
+            return;
+    } while (++i < count);
+    printf ("the return probably should skip this when count > 6, final i = %d\n", i);    
+}
+
+shader test ()
+{
+    int varyingStart = int(P[0]*5);
+    int count = varyingStart + int(P[0]*5);
+    
+    printf ("Testing uniform loop control\n");
+    { 
+        printf ("Testing break: (should never let i get beyond 3)\n");
         for (int i = 0;  i < 10; ++i) {
+            if (i > 3)
+                break;
+            printf ("  i = %d\n", i);
+        }
+    
+    
+        printf ("\nTesting continue:\n");
+        for (int i = 0;  i < 10;  ++i) {
+            printf ("  i = %d\n", i);
+            if (i > 3)
+                continue;
+            printf ("  should only print this if i <= 3.\n");
+        }
+    
+    
+        printf ("\nTesting nested break/continue:\n");
+        for (int j = 0;  j < 10;  ++j) {
+            printf ("start of outer, j=%d\n", j);
+            for (int i = 0;  i < 10; ++i) {
+                if (i == 1)
+                    continue;
+                printf ("  i = %d\n", i);
+                if (i > 3)
+                    break;
+            }
+            if (j > 2)
+                break;
+        }
+    }
+    
+    printf ("Testing varying loop control\n");
+    {
+    
+        printf ("\nTesting continue:\n");
+        
+        {   // See if uniform loop control gets promoted to varying because of continue 
+            int i = 0;
+            printf ("\nTesting continue:\n");
+            for (;  i < 10;  ++i) {
+                printf ("  i = %d\n", i);
+                if (i > int(P[0]*5))
+                    continue;
+                printf ("  should only print this if i <= %d.\n", int(P[0]*5));
+            }
+            printf ("  final i = %d, should be 10\n", i);
+        }
+           
+        printf ("Testing break: (should never let i get beyond 3)\n");
+        for (int i = 0;  i < count; ++i) {
+            if (i > 3)
+                break;
+            printf ("  i = %d\n", i);
+        }
+    
+    
+        printf ("\nTesting continue as early out:\n");
+        for (int i = 0;  i < count;  ++i) {
+            printf ("  i = %d\n", i);
+            if (i > 3)
+                continue;
+            printf ("  should only print this if i <= 3.\n");
+        }
+    
+        printf ("\nTesting continue to skip single iteration:\n");
+        {
+            for (int i = 0;  i < count; ++i, printf("%d\n", i)) {
+                if (i == 1)
+                    continue;
+                printf ("  i = %d\n", i);
+            }
+        }
+        
+        printf ("\nTesting nested continue:\n");
+        for (int j = 0;  j < count;  ++j) 
+        {
+            printf ("start of outer, j=%d\n", j);
+            for (int i = 0;  i < count; ++i, printf("%d\n", i)) {
+                if (i == 1)
+                    continue;
+                printf ("  i = %d\n", i);
+            }
+        }  
+        
+        printf ("\nTesting break after continue:\n");
+        for (int i = 0;  i < count; ++i) {
+            printf ("bc  i = %d\n", i);
             if (i == 1)
                 continue;
-            printf ("  i = %d\n", i);
+            printf ("dogfood\n");
+            printf ("ac  i = %d\n", i);
             if (i > 3)
                 break;
         }
-        if (j > 2)
-            break;
-    }
+        
+        func_return_after_continue(count);
+        func_return_after_break_continue(count);
+        
+        printf ("\nTesting nested break/continue:\n");
+        for (int j = 0;  j < count;  ++j) 
+        {
+            printf ("start of outer, j=%d\n", j);
+            for (int i = 0;  i < count; ++i, printf("%d\n", i)) {
+                if (i == 1)
+                    continue;
+                printf ("  i = %d\n", i);
+                if (i > 3)
+                    break;
+            }
+        }        
 
+        printf ("\nTesting nested break2/continue:\n");
+        for (int j = 0;  j < count;  ++j) 
+        {
+            printf ("start of outer, j=%d\n", j);
+            for (int i = 0;  i < count; ++i, printf("%d\n", i)) {
+                if (i == 1)
+                    continue;
+                printf ("  i = %d\n", i);
+                if (i > 3)
+                    break;
+            }
+            if (j > 2)
+                break;
+        }
+        
+        printf ("\nTesting promotion of uniform to varying for remeinder of loop after continue:\n");
+        {
+            int k = 0;
+            for (int j = 0;  j < count;  ++j) 
+            {
+                for (int i = varyingStart;  i < count; ++i) {
+                    if (i == 3)
+                        continue;
+                    ++k;
+                }
+            }
+            printf ("k=%d\n", k);
+        }        
+        {
+            int k = 0;
+            for (int j = 0;  j < 10;  ++j) 
+            {
+                for (int i = 0;  i < 10; ++i) {
+                    if (i == varyingStart)
+                        continue;
+                    for (int x = 0;  x < 10; ++x) {
+                        ++k;
+                    }
+                }
+            }
+            printf ("k=%d\n", k);
+        }        
+                
+    }
+    
+    printf ("Testing uniform do/while control\n");
+    { 
+        printf ("Testing break: (should never let i get beyond 3)\n");
+        {
+            int i = 0;
+            do  {
+                if (i > 3)
+                    break;
+                printf ("  i = %d\n", i);
+                ++i;
+            } while (i < 10);
+        }
+    
+    
+        printf ("\nTesting continue:\n");
+        {
+            int i = 0;
+            do  {
+                printf ("  i = %d\n", i);
+                if (i > 3)
+                    continue;
+                printf ("  should only print this if i <= 3.\n");
+            } while (++i < 10);
+        }
+    
+    
+        printf ("\nTesting nested break/continue:\n");
+        {
+            int j = 0;
+            do  {
+                printf ("start of outer, j=%d\n", j);
+                int i = 0;
+                do  {
+                    if (i == 1)
+                        continue;
+                    printf ("  i = %d\n", i);
+                    if (i > 3)
+                        break;
+                } while (++i < 10);
+                if (j > 2)
+                    break;
+            } while (++j < 10);
+        }
+            
+    }    
+    
+    printf ("Testing varying do/while control\n");
+    {
+        printf ("\nTesting continue:\n");
+        
+        {   // See if uniform loop control gets promoted to varying because of continue 
+            int i = 0;
+            printf ("\nTesting continue:\n");
+            do {
+                printf ("  i = %d\n", i);
+                if (i > int(P[0]*5))
+                    continue;
+                printf ("  should only print this if i <= %d.\n", int(P[0]*5));
+            } while (++i < 10);
+            printf ("  final i = %d, should be 10\n", i);
+        }
+        {
+            int i = 0;
+            //printf ("Testing break: (should never let i get beyond 3)\n");
+            do {
+                if (i > 3)
+                    break;
+                printf ("  i = %d\n", i);
+            } while (++i < count);
+        }
+    
+        printf ("\nTesting continue as early out:\n");
+        {
+            int i = 0;
+            printf ("Testing break: (should never let i get beyond 3)\n");
+            do {
+                printf ("  i = %d\n", i);
+                if (i > 3)
+                    continue;
+                printf ("  should only print this if i <= 3.\n");
+            } while (++i < count);
+        }
+    
+        printf ("\nTesting continue to skip single iteration:\n");
+        {
+            int i = 0;
+            do {
+                if (i == 1)
+                    continue;
+                printf ("  i = %d\n", i);
+            } while (func_print_and_return(++i) < count);
+        } 
+        
+        printf ("\nTesting nested continue:\n");
+        {
+            for (int j = 0;  j < count;  ++j) 
+            {
+                printf ("start of outer, j=%d\n", j);
+                int i = 0;
+                do {
+                    if (i == 1)
+                        continue;
+                    printf ("  i = %d\n", i);
+                }  while (func_print_and_return(++i) < count);
+            }
+        }  
+        {
+            int j = 0;
+            do {
+                printf ("start of outer, j=%d\n", j);
+                int i = 0;
+                do {
+                    if (i == 1)
+                        continue;
+                    printf ("  i = %d\n", i);
+                }  while (func_print_and_return(++i) < count);
+            } while (++j < count);
+        }
+          
+        printf ("\nTesting break after continue:\n");
+        int i = 0;
+        do {
+            printf ("bc  i = %d\n", i);
+            if (i == 1)
+                continue;
+            printf ("dogfood\n");
+            printf ("ac  i = %d\n", i);
+            if (i > 3)
+                break;
+        }  while (++i < count);
+        
+        func_return_after_continue_dowhile(count);
+        func_return_after_break_continue_dowhile(count);
+        
+        printf ("\nTesting nested break/continue:\n");
+        {
+            int j = 0;
+            do { 
+                printf ("start of outer, j=%d\n", j);
+                int i = 0;
+                do { 
+                    if (i == 1)
+                        continue;
+                    printf ("  i = %d\n", i);
+                    if (i > 3)
+                        break;
+                }  while (func_print_and_return(++i) < count);
+            } while (++j < count);
+        }   
+
+        printf ("\nTesting nested break2/continue:\n");
+        
+        {
+            int j = 0;
+            do {
+                printf ("start of outer, j=%d\n", j);
+                int i = 0;
+                do {
+                  
+                    if (i == 1)
+                        continue;
+                    printf ("  i = %d\n", i);
+                    if (i > 3)
+                        break;
+                } while (func_print_and_return(++i) < count);
+                if (j > 2)
+                    break;
+            } while(++j < count);
+        }
+    }    
 }
 

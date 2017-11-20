@@ -25,6 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
 //#define OSL_DEV
 #include <iterator>
 #include <type_traits>
@@ -957,7 +958,7 @@ public:
 		// of early outs will be reverse the original.
 		// The algorithm utilizes only the set of early outs and
 		// order should not matter.  If the algorithm changes
-		// this may need to be revisitted.
+		// this may need to be revisited.
 		auto endIter = begin_at(pos_before_else);
 		for (auto iter=begin_at(pos_after_else); iter != endIter; ++iter) {
 			const EarlyOut &eo = *iter;
@@ -1041,6 +1042,9 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	ASSERT(m_uniform_get_attribute_op_indices_by_layer.size() > layer());	
 	ASSERT(m_uniform_get_attribute_op_indices_by_layer[layer()].empty());
 	
+	ASSERT(m_loops_with_continue_op_indices_by_layer.size() > layer());
+	ASSERT(m_loops_with_continue_op_indices_by_layer[layer()].empty());
+
 
 	std::function<const Symbol * (ustring)> findGlobalSymbol;
 	findGlobalSymbol = [&](ustring symbolname)->const Symbol * {
@@ -1143,6 +1147,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	std::vector<DependencyTreeTracker::Position> pos_in_dependent_sym_stack_by_op_index(opcodes.size(), DependencyTreeTracker::end_pos());
 	std::vector<FunctionTreeTracker::Position> pos_in_exec_scope_stack_by_op_index(opcodes.size(), FunctionTreeTracker::end_pos());
 	
+	std::vector<int> loopControlFlowOpIndiceStack;
 	std::vector<const Symbol *> loopControlFlowSymbolStack;
 
     std::vector<const Symbol *> symbolsWrittenToByImplicitlyVaryingOps;
@@ -1168,7 +1173,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 						// if common ancestor is the write position, then no need to mask
 						// otherwise we know masking will be needed for the instruction
 						m_requires_masking_by_layer_and_op_index[layer()][writeIter->op_num()] = true;
-						OSL_DEV_ONLY(std::cout << "read at lower depth m_requires_masking_by_layer_and_op_index[" << writeIter->op_num() << "]=true" << std::endl);
+						OSL_DEV_ONLY(std::cout << "read at shallower depth m_requires_masking_by_layer_and_op_index[" << writeIter->op_num() << "]=true" << std::endl);
 
 						auto ancestor = stackOfSymbolsCurrentBlockDependsOn.begin_at(commonAncestor);
 
@@ -1476,6 +1481,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					// Only coding for a single conditional variable
 					ASSERT(symbolsRead == 1);
 					loopControlFlowSymbolStack.push_back(symbolsReadByOp[0]);
+					loopControlFlowOpIndiceStack.push_back(opIndex);
 					
 					
 					// Body block
@@ -1518,6 +1524,8 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					popSymbolsCurentBlockDependsOn();
 					ASSERT(loopControlFlowSymbolStack.back() == symbolsReadByOp[0]);
 					loopControlFlowSymbolStack.pop_back();
+					ASSERT(loopControlFlowOpIndiceStack.back() == opIndex);
+					loopControlFlowOpIndiceStack.pop_back();
 
 					
 				} else if (opcode.opname() == Strings::op_functioncall)
@@ -1535,18 +1543,39 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				}
 
 			}
+
+			std::function<void(void)> addCurrentDependenciesToLoopControlFlow;
+			addCurrentDependenciesToLoopControlFlow = [&](void)->void {
+				// Need change the loop control flow which is dependent upon
+				// a conditional.  By making a circular dependency between the this
+				// [return|exit|break|continue] operationand the conditionals value,
+				// any varying values in the conditional controlling
+				// the continue should flow back to the loop control variable, which might need to
+				// be varying so allow lanes to terminate the loop independently
+				ASSERT(false == loopControlFlowSymbolStack.empty());
+				const Symbol * loopCondition = loopControlFlowSymbolStack.back();
+
+				// Now that last loop control condition should exist in our stack of symbols that
+				// the current block with depends upon, we only need to add dependencies to the loop control
+				// to conditionals inside the loop
+				ASSERT(std::find(stackOfSymbolsCurrentBlockDependsOn.begin(), stackOfSymbolsCurrentBlockDependsOn.end(), loopCondition) != stackOfSymbolsCurrentBlockDependsOn.end());
+				for(auto conditionIter = stackOfSymbolsCurrentBlockDependsOn.begin();
+					*conditionIter != loopCondition; ++conditionIter) {
+					const Symbol * conditionContinueDependsOn =  *conditionIter;
+					OSL_DEV_ONLY(std::cout << ">>>Loop Conditional " << loopCondition->name().c_str() << " needs to depend on conditional " << conditionContinueDependsOn->name().c_str() << std::endl);
+					symbolFeedForwardMap.insert(std::make_pair(conditionContinueDependsOn, loopCondition));
+				}
+			};
+
 			if (opcode.opname() == Strings::op_return)
 			{
 				// All operations after this point will also depend on the conditional symbols
 				// involved in reaching the return statement.
-				// We can lock down the current depedencies to not be removed by
+				// We can lock down the current dependencies to not be removed by
 				// scopes until the end of a function
 				// NOTE: currently could be overly conservative as I believe this
 				// will cause the else block to be locked after a then block with a return.
 				stackOfExecutionScopes.process_return(stackOfSymbolsCurrentBlockDependsOn.top_pos());
-
-
-				// TODO: put rest of code in a helper lambda to be called by return, exit, & break ops
 
 				// The return will need change the loop control flow which is dependent upon
 				// a conditional.  By making a circular dependency between the return operation
@@ -1555,25 +1584,8 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				// be varying so allow lanes to terminate the loop independently
 				if(false == loopControlFlowSymbolStack.empty())
 				{
-					const Symbol * loopCondition = loopControlFlowSymbolStack.back();
-
-					// Now that last loop control condition should exist in our stack of symbols that
-					// the current block with depends upon, we only need to add dependencies to the loop control
-					// to conditionals inside the loop
-					ASSERT(std::find(stackOfSymbolsCurrentBlockDependsOn.begin(), stackOfSymbolsCurrentBlockDependsOn.end(), loopCondition) != stackOfSymbolsCurrentBlockDependsOn.end());
-					for(auto conditionIter = stackOfSymbolsCurrentBlockDependsOn.begin();
-						*conditionIter != loopCondition; ++conditionIter) {
-						const Symbol * conditionBreakDependsOn =  *conditionIter;
-						OSL_DEV_ONLY(std::cout << ">>>Loop Conditional " << loopCondition->name().c_str() << " needs to depend on conditional " << conditionBreakDependsOn->name().c_str() << std::endl);
-						symbolFeedForwardMap.insert(std::make_pair(conditionBreakDependsOn, loopCondition));
-					}
-
-					// Also update the usageInfo for the loop conditional to mark it as being written to
-					// by the break operation (which it would be in varying scenario)
-					potentiallyUnmaskedOpsBySymbol[loopCondition].push_back(
-						WriteEvent(stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex));
+					addCurrentDependenciesToLoopControlFlow();
 				}
-
 			}
 			if (opcode.opname() == Strings::op_exit)
 			{
@@ -1581,10 +1593,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				// involved in reaching the exit statement.
 				// We can lock down the current dependencies to not be removed by
 				// scopes until the end of a function
-				// TODO: currently could be overly conservative as I believe this
-				// will cause the else block to be locked after a then block with a return.
 				stackOfExecutionScopes.process_exit(stackOfSymbolsCurrentBlockDependsOn.top_pos());
-
 
 				// The exit will need change the loop control flow which is dependent upon
 				// a conditional.  By making a circular dependency between the exit operation
@@ -1593,51 +1602,38 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 				// be varying so allow lanes to terminate the loop independently
 				if(false == loopControlFlowSymbolStack.empty())
 				{
-					const Symbol * loopCondition = loopControlFlowSymbolStack.back();
-
-					// Now that last loop control condition should exist in our stack of symbols that
-					// the current block with depends upon, we only need to add dependencies to the loop control
-					// to conditionals inside the loop
-					ASSERT(std::find(stackOfSymbolsCurrentBlockDependsOn.begin(), stackOfSymbolsCurrentBlockDependsOn.end(), loopCondition) != stackOfSymbolsCurrentBlockDependsOn.end());
-					for(auto conditionIter = stackOfSymbolsCurrentBlockDependsOn.begin();
-						*conditionIter != loopCondition; ++conditionIter) {
-						const Symbol * conditionBreakDependsOn =  *conditionIter;
-						OSL_DEV_ONLY(std::cout << ">>>Loop Conditional " << loopCondition->name().c_str() << " needs to depend on conditional " << conditionBreakDependsOn->name().c_str() << std::endl);
-						symbolFeedForwardMap.insert(std::make_pair(conditionBreakDependsOn, loopCondition));
-					}
-
-					// Also update the usageInfo for the loop conditional to mark it as being written to
-					// by the break operation (which it would be in varying scenario)
-					potentiallyUnmaskedOpsBySymbol[loopCondition].push_back(
-						WriteEvent(stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex));
+					addCurrentDependenciesToLoopControlFlow();
 				}
 			}
 			if (opcode.opname() == Strings::op_break)
 			{
+				// All operations in the loop after this point will also depend on
+				// the conditional symbols involved in reaching the exit statement.
+				// This is automatically handled by the FIXUP DEPENDENCIES FOR MASKED INSTRUCTIONS
+				// as long as we correctly identified masked instructions, the fixup will
+				// hookup dependencies of the conditional stack to that instruction which will
+				// allow it to become varying if any of the loop conditionals are varying,
+				// and by calling addCurrentDependenciesToLoopControlFlow, if the break was varying
+				// so will the loop control
+				addCurrentDependenciesToLoopControlFlow();
+			}
+			if (opcode.opname() == Strings::op_continue)
+			{
+				// Track which loops have continue, to minimize code generation which will
+				// need to allocate a slot to store the continue mask
+				ASSERT(!loopControlFlowOpIndiceStack.empty());
+				int loopOpIndex = loopControlFlowOpIndiceStack.back();
+				m_loops_with_continue_op_indices_by_layer[layer()].insert(loopOpIndex);
 
-				// The break will need change the loop control flow which is dependent upon
-				// a conditional.  By making a circular dependency between the break operation
-				// and the conditionals value, any varying values in the conditional controlling 
-				// the break should flow back to the loop control variable, which might need to
-				// be varying so allow lanes to terminate the loop independently
-				ASSERT(false == loopControlFlowSymbolStack.empty());
-				const Symbol * loopCondition = loopControlFlowSymbolStack.back();
-				
-				// Now that last loop control condition should exist in our stack of symbols that
-				// the current block with depends upon, we only need to add dependencies to the loop control
-				// to conditionals inside the loop
-				ASSERT(std::find(stackOfSymbolsCurrentBlockDependsOn.begin(), stackOfSymbolsCurrentBlockDependsOn.end(), loopCondition) != stackOfSymbolsCurrentBlockDependsOn.end());
-				for(auto conditionIter = stackOfSymbolsCurrentBlockDependsOn.begin();
-					*conditionIter != loopCondition; ++conditionIter) {
-					const Symbol * conditionBreakDependsOn =  *conditionIter;
-					OSL_DEV_ONLY(std::cout << ">>>Loop Conditional " << loopCondition->name().c_str() << " needs to depend on conditional " << conditionBreakDependsOn->name().c_str() << std::endl);
-					symbolFeedForwardMap.insert(std::make_pair(conditionBreakDependsOn, loopCondition));
-				}
-
-				// Also update the usageInfo for the loop conditional to mark it as being written to
-				// by the break operation (which it would be in varying scenario)
-				potentiallyUnmaskedOpsBySymbol[loopCondition].push_back(
-					WriteEvent(stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex));
+				// All operations in the loop after this point will also depend on
+				// the conditional symbols involved in reaching the exit statement.
+				// This is automatically handled by the FIXUP DEPENDENCIES FOR MASKED INSTRUCTIONS
+				// as long as we correctly identified masked instructions, the fixup will
+				// hookup dependencies of the conditional stack to that instruction which will
+				// allow it to become varying if any of the loop conditionals are varying,
+				// and by calling addCurrentDependenciesToLoopControlFlow, if the continue was varying
+				// so will the loop control
+				addCurrentDependenciesToLoopControlFlow();
 			}
             if (opcode.opname() == Strings::op_getattribute)
             {
@@ -1992,6 +1988,20 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 		std::cout << std::flush;		
 		std::cout << "done m_uniform_get_attribute_op_indices_by_layer" << std::endl;
 	}
+
+	{
+		std::cout << "Emit m_loops_with_continue_op_indices_by_layer" << std::endl;
+		const auto & loops_with_continue_op_indices = m_loops_with_continue_op_indices_by_layer[layer()];
+
+		for(int opIndex: loops_with_continue_op_indices)
+		{
+			Opcode & opcode = op(opIndex);
+			std::cout << "---> inst#" << opIndex << " op=" << opcode.opname() << " is loop with continue" << std::endl;
+		}
+		std::cout << std::flush;
+		std::cout << "done m_loops_with_continue_op_indices_by_layer" << std::endl;
+	}
+
 #endif
 }
 	
@@ -2026,6 +2036,13 @@ BackendLLVMWide::getAttributesIsUniform(int opIndex)
 {
 	const auto & uniform_get_attribute_op_indices = m_uniform_get_attribute_op_indices_by_layer[layer()];
 	return (uniform_get_attribute_op_indices.find(opIndex) != uniform_get_attribute_op_indices.end());
+}
+
+bool
+BackendLLVMWide::loopHasContinue(int opIndex)
+{
+	const auto & loops_with_continue_op_indices = m_loops_with_continue_op_indices_by_layer[layer()];
+	return (loops_with_continue_op_indices.find(opIndex) != loops_with_continue_op_indices.end());
 }
 
 llvm::Value *
@@ -2207,9 +2224,6 @@ BackendLLVMWide::llvm_load_value (const Symbol& sym, int deriv,
         	}
         }
         if (sym.typespec().is_string()) {
-			// TODO:  NOT SURE WHAT TO DO WITH VARYING STRING
-            //return ll.wide_constant (*(ustring *)sym.data());
-            //ASSERT(op_is_uniform);
             if (op_is_uniform) {
                 return ll.constant (*(ustring *)sym.data());
             } else {
@@ -2279,7 +2293,7 @@ BackendLLVMWide::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
 	
 	if (!op_is_uniform) { 
     	// TODO:  remove this assert once we have confirmed correct handling off all the
-    	// different data types.  Using assert as a checklist to verify what we have 
+    	// different data types.  Using ASSERT as a checklist to verify what we have
     	// handled so far during development
     	ASSERT(cast == TypeDesc::UNKNOWN || 
     		   cast == TypeDesc::TypeColor || 
@@ -3082,7 +3096,20 @@ BackendLLVMWide::llvm_assign_impl (Symbol &Result, Symbol &Src,
 }
 
 
+void
+BackendLLVMWide::llvm_print_mask (const char *title, llvm::Value *mask)
+{
+    std::vector<llvm::Value*> call_args;
+    llvm::Value *mask_value = ll.mask_as_int((mask == nullptr) ? ll.current_mask() : mask);
 
+    call_args.push_back(sg_void_ptr());
+    call_args.push_back(ll.constant(int(Mask(true).value())));
+    call_args.push_back(ll.constant("current_mask[%s]=%d\n"));
+    call_args.push_back(ll.constant(title));
+    call_args.push_back(mask_value);
+
+    ll.call_function ("osl_printf_batched", &call_args[0], (int)call_args.size());
+}
 
 }; // namespace pvt
 OSL_NAMESPACE_EXIT

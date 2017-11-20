@@ -175,7 +175,7 @@ NOISE_IMPL(noise)
 
 WDECL (osl_printf_batched, "xXis*")
 WDECL (osl_warning_batched, "xXis*")
-WDECL (osl_error_batched, "xXs*")
+WDECL (osl_error_batched, "xXis*")
 WDECL (osl_get_attribute_batched, "iXiXXiiXXi")
 WDECL (osl_get_attribute_batched_uniform, "iXiXXiiXX")
 WDECL (osl_get_textureinfo_batched, "iXXXXXi")

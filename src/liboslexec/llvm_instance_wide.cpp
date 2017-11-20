@@ -860,7 +860,6 @@ extern bool llvm_gen_getattribute(BackendLLVMWide &rop, int opnum);
 llvm::Function*
 BackendLLVMWide::build_llvm_instance (bool groupentry)
 {
-	ASSERT(m_generated_loops_condition_stack.empty());
     // Make a layer function: void layer_func(ShaderGlobals*, GroupData*)
     // Note that the GroupData* is passed as a void*.
     std::string unique_layer_name = Strutil::format ("wide_%s_%d", inst()->layername(), inst()->id());
@@ -1127,8 +1126,6 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
     ll.clear_debug_info();
     ll.end_builder();  // clear the builder
 
-	ASSERT(m_generated_loops_condition_stack.empty());
-    
     return ll.current_function();
 }
 
@@ -1340,6 +1337,7 @@ BackendLLVMWide::run ()
     // We need to discover uniformity and masking requirements of our layers before generating code
     m_requires_masking_by_layer_and_op_index.resize(nlayers);
     m_uniform_get_attribute_op_indices_by_layer.resize(nlayers);
+    m_loops_with_continue_op_indices_by_layer.resize(nlayers);
     for (int layer = 0; layer < nlayers; ++layer) {
         set_inst (layer);
         if (m_layer_remap[layer] != -1) {

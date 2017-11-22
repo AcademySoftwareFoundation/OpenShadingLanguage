@@ -1,6 +1,16 @@
 Release 1.9 -- 30 November 2017 (compared to 1.8)
 --------------------------------------------------
 
+**Fixes for 1.9.3RC2**
+* Fix param analysis bug for texture or pointcloud functions with optional
+  token/value parameters where the token name wasn't a string literal -- it
+  could fail to recognize that certain parameters would be written to by the
+  call. #812 (1.9.3)
+* ShadingSystem statistics are now printed if any shaders were
+  declared/loaded, even if no shaders were executed. #815 (1.9.3)
+* Fixed `ClosureComponent` to work with SSE alignment requirements. #810
+  (1.9.3)
+
 Dependency and standards changes:
 * **C++11 required**: OSL 1.9 requires a minimum standard of C++11. It
   should also build against C++14 and C++17.
@@ -99,8 +109,8 @@ API changes, new options, new ShadingSystem features (for renderer writers):
       parameters expecting a float-aggregate or array thereof, and an `int`
       may be passed to a parameter expecting a `float`, and an `int[1]` may
       be passed to an `int` parameter. #794,#797 (1.9.1)
-* Shader group attribute additions/changes:
-* RendererServices:
+* Fixed `ClosureComponent` to work with SSE alignment requirements. #810
+  (1.9.3)
 
 Performance improvements:
 * Shader JIT time is improved by about 10% as a result of pre-declaring
@@ -163,6 +173,12 @@ Bug fixes and other improvements (internals):
   the `'.'` (dot) character as decimal separator in floating point number,
   even when running on a computer system configured to use a foreign locale
   where the comma is traditionally used as the decimal separator. #795 (1.9.1)
+* Fix param analysis bug for texture or pointcloud functions with optional
+  token/value parameters where the token name wasn't a string literal -- it
+  could fail to recognize that certain parameters would be written to by the
+  call. #812 (1.9.3)
+* ShadingSystem statistics are now printed if any shaders were
+  declared/loaded, even if no shaders were executed. #815 (1.9.3)
 
 Build & test system improvements:
 * C++11 is the new language baseline. #704, #707

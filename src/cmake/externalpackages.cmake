@@ -68,6 +68,7 @@ find_package (LLVM 3.9 REQUIRED)
 
 # ensure include directory is added (in case of non-standard locations
 include_directories (BEFORE SYSTEM "${LLVM_INCLUDES}")
+include_directories (BEFORE SYSTEM "${CLANG_INCLUDES}")
 link_directories ("${LLVM_LIB_DIR}")
 # Extract and concatenate major & minor, remove wayward patches,
 # dots, and "svn" or other suffixes.
@@ -109,6 +110,9 @@ if (GCC_VERSION)
     if (${GCC_VERSION} VERSION_LESS 4.9)
         set (_CLANG_PREPROCESSOR_CAN_WORK ON)
     endif ()
+endif ()
+if (MSVC)
+    set (_CLANG_PREPROCESSOR_CAN_WORK ON)
 endif ()
 if (USE_BOOST_WAVE OR (NOT CLANG_LIBRARIES)
     OR (NOT _CLANG_PREPROCESSOR_CAN_WORK))

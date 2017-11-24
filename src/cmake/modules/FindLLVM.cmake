@@ -52,6 +52,7 @@ if (NOT ${LLVM_VERSION} VERSION_LESS 3.8)
     execute_process (COMMAND ${LLVM_CONFIG} --system-libs
                      OUTPUT_VARIABLE LLVM_SYSTEM_LIBRARIES
                      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    string(REPLACE " " ";" LLVM_SYSTEM_LIBRARIES ${LLVM_SYSTEM_LIBRARIES})
 else ()
     # Older LLVM did not have llvm-config --system-libs, but we know that
     # on Linux, we'll need curses.
@@ -74,7 +75,7 @@ foreach (COMPONENT clangFrontend clangDriver clangSerialization
                    clangEdit clangLex)
     find_library ( _CLANG_${COMPONENT}_LIBRARY
                   NAMES ${COMPONENT}
-                  PATHS ${LLVM_LIB_DIR})
+                  PATHS ${LLVM_LIB_DIR} ${CLANG_LIB_DIR})
     if (_CLANG_${COMPONENT}_LIBRARY)
         list (APPEND CLANG_LIBRARIES ${_CLANG_${COMPONENT}_LIBRARY})
     endif ()

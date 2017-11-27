@@ -1314,6 +1314,13 @@ public:
         m_current_block = 0;
     }
 
+    // avoid 'attempting to reference a deleted function' of std::unique_ptr<char>s
+    // in reference to those member variables of ShadingContext
+    SimplePool(const SimplePool &) = delete;
+    SimplePool(SimplePool &&) = delete;
+    SimplePool &operator=(const SimplePool &) = delete;
+    SimplePool &&operator=(SimplePool &&) = delete;
+
     ~SimplePool() {}
 
     char * alloc(size_t size, size_t alignment=1) {

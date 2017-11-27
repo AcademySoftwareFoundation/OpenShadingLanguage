@@ -61,7 +61,7 @@ public:
 
     /// Default ctr leaves everything uninitialized
     ///
-    constexpr Dual () { }
+    OIIO_CONSTEXPR14 Dual () { }
 
     /// Construct a Dual from just a real value (derivs set to 0)
     ///

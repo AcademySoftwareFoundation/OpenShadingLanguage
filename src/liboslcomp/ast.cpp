@@ -30,6 +30,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <sstream>
 #include <functional>
+#ifndef NDEBUG
+#include <atomic>
+#endif
 
 #include "osl_pvt.h"
 #include "oslcomp_pvt.h"
@@ -65,8 +68,13 @@ private:
 ScopeExit print_node_counts ([](){
     for (int i = 0; i < ASTNode::_last_node; ++i)
         if (node_counts[i] > 0)
+#if OIIO_VERSION >= (10000 * 1 + 100 * 8)
             Strutil::printf ("ASTNode type %2d: %5d   (peak %5d)\n",
                              i, node_counts[i], node_counts_peak[i]);
+#else
+            printf("ASTNode type %2d: %5d   (peak %5d)\n",
+                             i, node_counts[i], node_counts_peak[i]);
+#endif
 });
 }
 #endif

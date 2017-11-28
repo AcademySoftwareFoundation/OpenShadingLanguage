@@ -218,7 +218,7 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: USE_SIMD=0 LLVM_VERSION=3.9.1 OIIOBRANCH=RB-1.7
+        env: USE_SIMD=0 LLVM_VERSION=3.9.1 OIIOBRANCH=RB-1.8
 
 notifications:
     email:

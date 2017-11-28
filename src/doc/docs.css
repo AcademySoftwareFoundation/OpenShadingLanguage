@@ -1,0 +1,36 @@
+/* Custom stylesheet.
+ * Bits copied from many sources, including those that come with Markdeep.
+ */
+
+body {
+    max-width: 50em;
+    /*font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;*/
+    text-align: left;
+    margin: 1.5em;
+    padding: 0 1em;
+}
+
+/* if screen is wide enough, put table of contents on the right side */
+@media screen and (min-width: 64em) {
+    .md .longTOC, .md .mediumTOC, .md .shortTOC {
+    position: fixed;
+        max-width: 20em;
+    left: 54em;
+        display:block;
+    }
+}
+
+/* for narrow screens or print, hide table of contents */
+@media screen and (max-width: 64em) {
+    .md .longTOC, .md .mediumTOC, .md .shortTOC { display: none; }
+}
+
+@media print {
+    .md .longTOC, .md .mediumTOC, .md .shortTOC { display: none; }
+    body { max-width: 100%; }
+}
+
+/* For printed docs, put page breaks before chapters */
+@media print {
+    h1, .nonumberh1 { page-break-before: always }
+}

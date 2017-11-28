@@ -1,6 +1,7 @@
 set (public_docs osl-languagespec.pdf
                  testshade.md.html
                  markdeep.min.js
+                 docs.css
                  )
 
 install (FILES ${public_docs} DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT documentation)

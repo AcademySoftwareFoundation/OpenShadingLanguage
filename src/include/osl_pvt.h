@@ -699,21 +699,21 @@ public:
     bool is_temp () const { return symtype() == SymTypeTemp; }
 
     // Retrieve the const float value (will ASSERT if not a const float!)
-    float get_float (int index = 0) {
+    float get_float (int index = 0) const {
         ASSERT (data() && typespec().is_float_based());
         return ((const float *)data())[index];
     }
 
     // Retrieve the const int value (will ASSERT if not a const int!)
-    int get_int (int index = 0) {
+    int get_int (int index = 0) const {
         ASSERT (data() && typespec().is_int_based());
         return ((const int *)data())[index];
     }
 
     // Retrieve the const string value (will ASSERT if not a const string!)
-    ustring get_string () {
+    ustring get_string (int index = 0) const {
         ASSERT (data() && typespec().is_string());
-        return ((const ustring *)data())[0];
+        return ((const ustring *)data())[index];
     }
 
     /// Stream output

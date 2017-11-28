@@ -61,12 +61,12 @@ public:
     struct Parameter {
         ustring name;                    ///< name
         TypeDesc type;                   ///< data type
-        bool isoutput;                   ///< is it an output param?
-        bool validdefault;               ///< false if there's no default val
-        bool varlenarray;                ///< is it a varying-length array?
-        bool isstruct;                   ///< is it a structure?
-        bool isclosure;                  ///< is it a closure?
-        void *data;                      ///< pointer to data
+        bool isoutput = false;           ///< is it an output param?
+        bool validdefault = false;       ///< false if there's no default val
+        bool varlenarray = false;        ///< is it a varying-length array?
+        bool isstruct = false;           ///< is it a structure?
+        bool isclosure = false;          ///< is it a closure?
+        void *data = nullptr;            ///< pointer to data
         std::vector<int> idefault;       ///< default int values
         std::vector<float> fdefault;     ///< default float values
         std::vector<ustring> sdefault;   ///< default string values
@@ -75,10 +75,10 @@ public:
         std::vector<ustring> fields;     ///< Names of this struct's fields
         ustring structname;              ///< Name of the struct
         std::vector<Parameter> metadata; ///< Meta-data about the param
-        Parameter ()
-            : isoutput(false), validdefault(false), varlenarray(false),
-              isstruct(false), isclosure(false), data(NULL)
-        { }
+
+        Parameter () {}
+        Parameter (const Parameter& src);
+        Parameter (Parameter&& src);
     };
 
     OSLQuery ();

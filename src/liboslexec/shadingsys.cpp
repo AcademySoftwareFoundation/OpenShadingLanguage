@@ -3102,6 +3102,19 @@ OSL::OSLQuery::init (const ShaderGroup *group, int layernum)
             p.fdefault.clear();
             p.sdefault.clear();
             p.spacename.clear();
+            int n = int (p.type.numelements() * p.type.aggregate);
+            if (p.type.basetype == TypeDesc::INT) {
+                for (int i = 0; i < n; ++i)
+                    p.idefault.push_back (sym->get_int(i));
+            }
+            if (p.type.basetype == TypeDesc::FLOAT) {
+                for (int i = 0; i < n; ++i)
+                    p.fdefault.push_back (sym->get_float(i));
+            }
+            if (p.type.basetype == TypeDesc::STRING) {
+                for (int i = 0; i < n; ++i)
+                    p.sdefault.push_back (sym->get_string(i));
+            }
             p.fields.clear();  // don't bother filling this out
             if (StructSpec *ss = ts.structspec()) {
                 p.structname = ss->name().string();

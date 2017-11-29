@@ -1,0 +1,18 @@
+shader
+test (string texturename = "../common/textures/mandrill.tif",
+      float swirl = 16,
+      output color Cout = 0)
+{
+    int aniso = (u >= v) ? 2 : 256;
+
+    float s1 = -1 + 2*u;
+    float t1 = -1 + 2*v;
+
+    float r = hypot (s1, t1);
+
+    float s1Rot = s1*cos(swirl*r) - t1*sin(swirl*r);
+    float t1Rot = s1*sin(swirl*r) + t1*cos(swirl*r);
+    Cout = (color) texture(texturename, s1Rot, t1Rot,
+                           "wrap", "periodic",
+                           "anisotropic", aniso);
+}

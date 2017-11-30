@@ -129,6 +129,10 @@ ifneq (${BOOST_HOME},)
 MY_CMAKE_FLAGS += -DBOOST_ROOT:STRING=${BOOST_HOME}
 endif
 
+ifneq (${USE_QT},)
+MY_CMAKE_FLAGS += -DUSE_QT:BOOL=${USE_QT}
+endif
+
 ifneq (${STOP_ON_WARNING},)
 MY_CMAKE_FLAGS += -DSTOP_ON_WARNING:BOOL=${STOP_ON_WARNING}
 endif
@@ -365,7 +369,8 @@ help:
 	@echo "      BOOST_HOME=path          Custom Boost installation"
 	@echo "      OPENEXR_HOME=path        Custom OpenEXR installation"
 	@echo "      ILMBASE_HOME=path        Custom Ilmbase installation"
-	@echo "      PARTIO_HOME=             Use Partio from the given location"
+	@echo "      PARTIO_HOME=path         Use Partio from the given location"
+	@echo "      USE_QT=0                 Skip anything that needs Qt"
 	@echo "  LLVM-related options:"
 	@echo "      LLVM_VERSION=4.0         Specify which LLVM version to use"
 	@echo "      LLVM_DIRECTORY=xx        Specify where LLVM lives"

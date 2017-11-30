@@ -1,5 +1,6 @@
 set (public_docs osl-languagespec.pdf
                  testshade.md.html
+                 osltoy.md.html
                  markdeep.min.js
                  docs.css
                  )
@@ -16,3 +17,7 @@ install ( FILES "${PROJECT_SOURCE_DIR}/LICENSE"
 file (GLOB testshade_figures "Figures/testshade/*.jpg")
 install (FILES ${testshade_figures}
          DESTINATION ${CMAKE_INSTALL_DOCDIR}/Figures/testshade )
+
+file (GLOB osltoy_figures "Figures/osltoy/*.jpg")
+install (FILES ${osltoy_figures}
+         DESTINATION ${CMAKE_INSTALL_DOCDIR}/Figures/osltoy )

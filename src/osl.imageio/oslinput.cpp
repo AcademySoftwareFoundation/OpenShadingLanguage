@@ -39,7 +39,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/thread.h>
-#include <OpenImageIO/imagebuf.h>
+#include <OpenImageIO/imagebufalgo.h>
 
 #include <OSL/oslexec.h>
 #include <OSL/oslcomp.h>

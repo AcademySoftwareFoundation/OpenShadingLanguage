@@ -1,0 +1,243 @@
+                **osltoy**
+          revision date: 30 Nov 2017
+
+
+
+
+_osltoy_ basics
+==================================================
+
+`osltoy` is an interactive editor and realtime visualizer for OSL shaders.
+It is inspired by [Shadertoy](https://www.shadertoy.com/) by Inigo Quilez.
+But it uses a real VFX shading language!
+
+![osltoy](Figures/osltoy/osltoy-fbm.jpg width="400px")
+
+The basic functionaity of `osltoy` is:
+
+* Allow you to edit OSL shader source code.
+* Live and continuous rendering of an "image" that is the result of running
+  your shader on each pixel of the image (pixel color is taken from the
+  shader's parameter `output color Cout`.)
+
+
+## Command line
+
+Launch `osltoy` from the command line:
+
+`osltoy` [*options*]
+
+Additional command line arguments:
+
+`--help`
+:   Print command line options and other help.
+
+`-v`
+: Verbose mode. (Doesn't really do anything currently.)
+
+`--res` *xres* *yres* &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+: Specifies the resolution of the render window (default: 512 x 512).
+
+`--threads` *n*
+: Specifies the number of simultaneous threads to use for shading. If not
+  specified, it will use all your hardware cores.
+
+*filename.osl*
+: If one or more filenames of shader source code are specified, they will
+  be loaded into editor tabs upon startup.
+
+
+## osltoy Basics
+
+First, let's launch `osltoy`:
+
+```
+$ osltoy
+```
+
+![ ](Figures/osltoy/osltoy-start.jpg  width="400px")
+This will start up a new `osltoy` session.
+On the right half of the GUI is a code editor window. Below the code editor
+is an area that will show you any compilation errors. The left half of the
+GUI will display the results of the shader (a checkerboard if no shader
+has been compiled yet). Below that is an area that will hold widgets to
+allow adjustment of shader parameter values.
+
+At the very bottom of the app window is a status bar showing time, frames
+per second, and other status messages. At the very top of the app window
+(or, on MacOS, at the top of the screen) is a menu bar with the usual set of
+common operations.
+
+### Loading and saving shaders
+
+You can load a shader one of three ways:
+
+1. Specify the filename of an existing shader when you launch the app:
+   ```
+   osltoy test.osl
+   ```
+
+2. From a blank window, load an existing shader by selecting the menu
+   bar choice `File` --> `Open`, or hitting the hotkey `Ctrl-O` (on MacOS,
+   ⌘`-O`). This will present a file selection dialog.
+
+3. Just start typing in the editor window.
+
+You can save the edited shader with the menu bar `File` --> `Save`
+or the hotkey `Ctrl-S` (⌘`-S` on MacOS). If the file does not yet
+have a name, you will be presented with a file save dialog (as you will
+if you use `File` --> `Save As`).
+
+!!! Note
+    Every time we talk about a `Ctrl-`*key* combination, if you are on MacOS
+    (OSX), that hotkey will be ⌘`-`*key*. This document won't awkwardly
+    repeat this clarification for every command.
+
+### Compiling shaders
+
+When you have loaded or edited your OSL source code, you can compile the
+shader with menu `Tools` --> `Recompile shaders`, or by clicking the
+`Recompile` button below the source code editor widget, or by using the
+hotkey `Ctrl-R`.
+
+!!! Warning
+    `osltoy` won't compile a buffer that doesn't have a filename ending in
+    `.osl`, and if you started with a blank window, it won't have a name at
+    all until you save the first time.
+
+In the compilation status window below the editor, you will either see
+an `Ok` message if the compiler succeeded, or the error output from the
+compiler, as illustrated here:
+
+![Compilation error display.](Figures/osltoy/osltoy-error.jpg  width="512px")
+
+
+!!! Warning
+    `osltoy` appears to let you load or create multiple shaders, appearing
+    in a tabbed editor. We'll get this working eventually (so you can edit
+    whole shader groups and all the shaders that are in them), but currently
+    only the shader in the first tab will be compiled and executed, so don't
+    get confused by the non-functional parts of the interface.
+
+
+### Executing shaders and interactive changes
+
+Once you compile the shader successfully, it will execute and display the
+results of shading a rectangle.
+
+![osltoy has executed the shader](Figures/osltoy/osltoy-fbm.jpg)
+
+As soon as you recompile, the shader will be executed as quickly as possible
+and displayed as an image on the left, with shader parameter adjustment
+widgets below it.
+
+Evey time you change a parameter value through its widget, the shader will
+automatically recompile and re-execute. If you edit the text of the shader,
+clicking the `Recompile` button or using the hotkey `Ctrl-R` will recompile
+and re-execute the shader.
+
+
+Rules of the game
+==================
+
+## Shader inputs and state
+
+The shader is executed on every pixel of an image (defaulting to a 512x512
+square, but you can change the resolution via a command line flag).
+
+The `float u` and `v` global variables vary from 0 to 1 along the rectangle.
+
+The `point P` global variable will be set to `(x,y,0)`, where `x` is the pixel
+horizontal coordinate (0 to xres-1 as it goes from left to right) and `y`
+is the pixel vertical coordinate (0 to yres-1 as it goes from top to bottom
+of the image).
+
+The `float time` global variable contains the time (in seconds) since the
+last time the shader was recompiled. Making your shader change its behavior
+based on the `time` variable will make an animated shader.
+
+## Shader outputs
+
+The color displayed is taken from the shader output parameter that is
+declared like this:
+
+```
+    output color Cout = 0
+```
+
+Whatever you place in that output will be the color displayed at each pixel
+of the output image.
+
+!!! Note
+    Your shader does not need to set `Ci` or deal with closures. The
+    `osltoy` app is just for exploring pattern generation, not illumination.
+    It doesn't actually have any notion of 3D geometry or lights.
+
+
+## Shader execution
+
+If your shader does not reference the `time` variable in any way, it will
+only be executed once each time it recompiles. But if `time` appears in your
+shader, it will execute repeatedly, as quickly as possible, until you exit
+or recompile.
+
+Shader execution will by default use enough threads to keep all your cores
+busy. The command line option `--threads` can be used to limit the number
+of cores (or to "over-thread").
+
+
+Caveats, limitations, and broken stuff
+========================
+
+These are current limitations or breakages that we will fix over time.
+
+* The GUI seems to let you open multiple editor tabs, but currently, the
+  only one that will compile and execute is the *first* (farthest to the left
+  tab that was loaded or saved under a name that ends in `".osl"`.
+
+* We intend to add "Pause" and "Reset" buttons to control time.
+
+* I tried to make the parameter adjustment widgets be clever about how
+  quickly to modify the values, depending on their range. But I don't have
+  it quite right. It's still being refined.
+
+* There isn't yet have a way to get the shader itself to get information about
+  external events such as mouse clicks or key presses, but that would be
+  fun.
+
+* There isn't yet a way for the shader to have *state* that can be computed,
+  stored, then re-read when the shader executes on the next frame.
+
+
+Things to try
+=============
+
+* Try this:
+
+  `  osltoy ` *osl_install_directory*`/shaders/mandelbrot.osl`
+
+* Use the global `time` variable to make animated patterns.
+
+* Explore noise functions and other pattern generation interactively.
+
+* Explore (by keeping an eye on the "FPS" reading at the bottom) what shader
+  operations are fast and what is slow.
+
+* Don't forget that `texture()` calls work as expected in shadertoy!
+
+* `osltoy` is a great tool for leaning or *teaching* OSL.
+
+* The actual "geometry" is just a rectangle, but like with Shadertoy,
+  you can make patterns that *look like* by implementing a simple ray tracer
+  in the shader itself, or using other clever tricks.
+
+* Look at the many examples on [Shadertoy](https://www.shadertoy.com/)
+  for inspiration!
+
+* Make crazy stuff and post the shaders to the `osl-dev` mail list!
+
+
+
+<!-- Markdeep: --><style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style><script src="markdeep.min.js"></script><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+<link rel="stylesheet" href="docs.css?">
+

@@ -15,6 +15,7 @@ if (NOT VERBOSE)
     set (PugiXML_FIND_QUIETLY TRUE)
     set (PythonInterp_FIND_QUIETLY true)
     set (PythonLibs_FIND_QUIETLY true)
+    set (Qt5_FIND_QUIETLY true)
     set (Threads_FIND_QUIETLY true)
     set (ZLIB_FIND_QUIETLY true)
 endif ()
@@ -180,4 +181,30 @@ endif (USE_PARTIO)
 find_package (PugiXML REQUIRED)
 include_directories (BEFORE "${PUGIXML_INCLUDE_DIR}")
 # end Pugixml setup
+###########################################################################
+
+
+###########################################################################
+# Qt setup
+
+if (USE_QT)
+    set (qt5_modules Core Gui Widgets)
+    # if (USE_OPENGL)
+    #     list (APPEND qt5_modules OpenGL)
+    # endif ()
+    find_package (Qt5 COMPONENTS ${qt5_modules})
+endif ()
+if (USE_QT AND Qt5_FOUND)
+    if (NOT Qt5_FIND_QUIETLY)
+        message (STATUS "Qt5_FOUND=${Qt5_FOUND}")
+    endif ()
+else ()
+    message (STATUS "No Qt5 -- skipping components that need Qt5.")
+    if (USE_QT AND NOT Qt5_FOUND AND APPLE)
+        message (STATUS "If you think you installed qt5 with Homebrew and it still doesn't work,")
+        message (STATUS "try:   export PATH=/usr/local/opt/qt5/bin:$PATH")
+    endif ()
+endif ()
+
+# end Qt setup
 ###########################################################################

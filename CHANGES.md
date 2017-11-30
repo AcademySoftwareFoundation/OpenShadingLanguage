@@ -1,12 +1,5 @@
-Release 1.9 -- 30 November 2017 (compared to 1.8)
+Release 1.9 -- 1 December 2017 (compared to 1.8)
 --------------------------------------------------
-
-**Fixes for 1.9.4RC3**
-* MSVS 2015 x64 compilation fixes. #820 (1.9.4)
-* Fix debug compile against OIIO 1.7. #822 (1.9.4)
-* Minor OSLQuery implementatino improvements: add move/copy constructors
-  for OSLQuery::Parameter, make the ShadingSystem side of OSLQuery correctly
-  report default parameter values. #821 (1.9.4)
 
 Dependency and standards changes:
 * **C++11 required**: OSL 1.9 requires a minimum standard of C++11. It
@@ -176,6 +169,9 @@ Bug fixes and other improvements (internals):
   call. #812 (1.9.3)
 * ShadingSystem statistics are now printed if any shaders were
   declared/loaded, even if no shaders were executed. #815 (1.9.3)
+* Minor OSLQuery implementation improvements: add move/copy constructors
+  for OSLQuery::Parameter, make the ShadingSystem side of OSLQuery correctly
+  report default parameter values. #821 (1.9.4)
 
 Build & test system improvements:
 * C++11 is the new language baseline. #704, #707
@@ -236,6 +232,8 @@ Build & test system improvements:
 * Fix gcc7 warnings about signed vs unsigned compares. #807 (1.9.2)
 * Simplify the build logic for finding PugiXML and prefer a system install
   when found, rather than looking to OIIO to supply it. #809 (1.9.2)
+* MSVS 2015 x64 compilation fixes. #820 (1.9.4)
+* Fix debug compile against OIIO 1.7. #822 (1.9.4)
 
 Developer goodies:
 * The `dual.h` implementation has been completely overhauled. The primary

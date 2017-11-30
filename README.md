@@ -299,6 +299,8 @@ Films using OSL (grouped by year of release date):
   Lega Ninjago Movie,
   Blade Runner 2049,
   Geostorm,
+  Coco,
+  Justice League,
   ...
 
 

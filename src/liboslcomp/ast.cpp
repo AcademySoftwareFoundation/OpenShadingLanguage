@@ -73,7 +73,7 @@ ScopeExit print_node_counts ([](){
                              i, node_counts[i], node_counts_peak[i]);
 #else
             printf("ASTNode type %2d: %5d   (peak %5d)\n",
-                             i, node_counts[i], node_counts_peak[i]);
+                             i, node_counts[i].load(), node_counts_peak[i].load());
 #endif
 });
 }

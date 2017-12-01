@@ -79,6 +79,8 @@ public:
         Parameter () {}
         Parameter (const Parameter& src);
         Parameter (Parameter&& src);
+        const Parameter& operator= (const Parameter &);
+        const Parameter& operator= (Parameter &&);
     };
 
     OSLQuery ();

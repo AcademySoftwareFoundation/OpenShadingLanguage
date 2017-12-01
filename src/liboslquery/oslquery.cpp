@@ -305,6 +305,62 @@ OSLQuery::Parameter::Parameter (Parameter&& src)
 
 
 
+const OSLQuery::Parameter&
+OSLQuery::Parameter::operator= (const Parameter& src)
+{
+    name = src.name;
+    type = src.type;
+    isoutput = src.isoutput;
+    validdefault = src.validdefault;
+    varlenarray = src.varlenarray;
+    isstruct = src.isstruct;
+    isclosure = src.isclosure;
+    idefault = src.idefault;
+    fdefault = src.fdefault;
+    sdefault = src.sdefault;
+    spacename = src.spacename;
+    fields = src.fields;
+    structname = src.structname;
+    metadata = src.metadata;
+    if (type.basetype == TypeDesc::INT)
+        data = idefault.data();
+    else if (type.basetype == TypeDesc::FLOAT)
+        data = fdefault.data();
+    else if (type.basetype == TypeDesc::STRING)
+        data = sdefault.data();
+    return *this;
+}
+
+
+
+const OSLQuery::Parameter&
+OSLQuery::Parameter::operator= (Parameter&& src)
+{
+    name = src.name;
+    type = src.type;
+    isoutput = src.isoutput;
+    validdefault = src.validdefault;
+    varlenarray = src.varlenarray;
+    isstruct = src.isstruct;
+    isclosure = src.isclosure;
+    idefault = std::move(src.idefault);
+    fdefault = std::move(src.fdefault);
+    sdefault = std::move(src.sdefault);
+    spacename = src.spacename;
+    fields = src.fields;
+    structname = src.structname;
+    metadata = std::move(src.metadata);
+    if (type.basetype == TypeDesc::INT)
+        data = idefault.data();
+    else if (type.basetype == TypeDesc::FLOAT)
+        data = fdefault.data();
+    else if (type.basetype == TypeDesc::STRING)
+        data = sdefault.data();
+    return *this;
+}
+
+
+
 OSLQuery::OSLQuery ()
 {
 }

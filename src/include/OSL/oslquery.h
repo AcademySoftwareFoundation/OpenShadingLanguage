@@ -79,6 +79,10 @@ public:
         Parameter () {}
         Parameter (const Parameter& src);
         Parameter (Parameter&& src);
+        // because a move constructor is defined, assignment operators will be implicitly deleted
+        // which is a problem for use in std::vectors
+        Parameter &operator=(const Parameter &) = default;
+        Parameter &operator=(Parameter &&) = default;
     };
 
     OSLQuery ();

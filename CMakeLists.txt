@@ -93,6 +93,7 @@ set (PUGIXML_HOME "" CACHE STRING "Hint about where to find external PugiXML lib
 option (USE_FAST_MATH "Use fast math approximations (if no, then use system math library)" ON)
 option (OSL_BUILD_PLUGINS "Bool OSL plugins, for example OIIO plugin" ON)
 option (USE_BOOST_WAVE "Use Boost Wave for C preprocessor (alternative is to use clang)" OFF)
+option (USE_QT "Include Qt support" ON)
 
 
 # set (USE_OIIO_STATIC ON CACHE BOOL "If OIIO is built static")
@@ -157,6 +158,10 @@ endif ()
 
 if (OSL_BUILD_PLUGINS)
 add_subdirectory (src/osl.imageio)
+endif ()
+
+if (USE_QT AND Qt5_FOUND)
+add_subdirectory (src/osltoy)
 endif ()
 
 add_subdirectory (src/shaders)

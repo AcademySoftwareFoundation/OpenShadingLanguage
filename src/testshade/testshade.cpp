@@ -1186,9 +1186,8 @@ test_shade (int argc, const char *argv[])
 #if 0
             shade_region (shadergroup.get(), roi, save);
 #else
-            OIIO::ImageBufAlgo::parallel_image (
-                    std::bind (shade_region, shadergroup.get(), std::placeholders::_1, save),
-                    roi, num_threads);
+            OIIO::ImageBufAlgo::parallel_image (roi, num_threads,
+                    std::bind (shade_region, shadergroup.get(), std::placeholders::_1, save));
 #endif
         }
 

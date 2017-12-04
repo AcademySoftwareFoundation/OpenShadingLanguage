@@ -37,6 +37,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/refcnt.h>
 #include <OpenImageIO/ustring.h>
 #include <OpenImageIO/array_view.h>
+#if OPENIMAGEIO_VERSION <= 10902
+#include <OpenImageIO/imagebufalgo_util.h>
+#endif
 
 OSL_NAMESPACE_ENTER
 
@@ -623,9 +626,9 @@ private:
 
 
 
-#ifdef OPENIMAGEIO_IMAGEBUF_H
+#ifdef OPENIMAGEIO_IMAGEBUFALGO_H
 // To keep from polluting all OSL clients with ImageBuf & ROI, only expose
-// the following declarations if they have included OpenImageIO/imagebuf.h.
+// the following declarations if they have included OpenImageIO/imagebufalgo.h.
 
 // enum describing where shades are located for shade_image().
 enum ShadeImageLocations {
@@ -658,7 +661,8 @@ bool shade_image (ShadingSystem &shadingsys, ShaderGroup &group,
                   const ShaderGlobals *defaultsg,
                   OIIO::ImageBuf &buf, OIIO::array_view<ustring> outputs,
                   ShadeImageLocations shadelocations = ShadePixelCenters,
-                  OIIO::ROI roi = OIIO::ROI(), int nthreads = 0);
+                  OIIO::ROI roi = OIIO::ROI(),
+                  OIIO::ImageBufAlgo::parallel_image_options popt = 0);
 
 #endif
 

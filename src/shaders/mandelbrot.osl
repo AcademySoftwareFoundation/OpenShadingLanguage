@@ -1,0 +1,61 @@
+/////////////////////////////////////////////////////////////////////////////
+// Copyright (c) 2017 Sony Pictures Imageworks Inc., et al.
+// BSD licensed, see https://github.com/imageworks/OpenShadingLanguage
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+// Example Mandelbrot (or Julia set) shader for OSL.
+
+
+surface mandelbrot (
+    point center = point (0,0,0)
+                [[ string help = "Center point where uv=(0.5,0.5)" ]],
+    float scale = 2
+                [[ string help = "Scale of mapping from uv to complex space",
+                   float min = 1e-6, float max = 10 ]],
+    int iters = 100
+                [[ string help = "Maximum iterations",
+                   int min = 1, int max = 1000000 ]],
+    int julia = 0
+                [[ string help = "If nonzero, compute Julia set" ]],
+    point P_julia = point(0,0,0)
+                [[ string help = "If julia is nonzero, this is the Julia offset" ]],
+    color colormap[] = { color(0,0,0.01), color(0,0,0.01),
+                         color(0,0,0.5), color(0.75,0.25,0), color(0.95,0.95,0),
+                         color(1), color(1) }
+                [[ string help = "Color map for visualizing result" ]],
+    output float fout = 0
+                [[ string help = "Output: number of iterations" ]],
+    output color Cout = 0
+                [[ string help = "Output: color mapped result" ]]
+    )
+{
+    // For simplicity, represent complex coordinates as OSL 'point', and
+    // just ignore the z component.
+    point cent = center;
+    point c = scale * point(2*(u-0.5), 2*((1-v)-0.5), 0) + cent;
+    point z = c;
+    point iota = point (1, 2, 0);
+    int i;
+    for (i = 1; i < iters && dot(z,z) < 4.0; ++i) {
+        // The Mandelbrot/Julia formula is z_new = z^2 + c
+        // Since z = z0 + z1*i  (i being the complex sqrt(-1) in this case)
+        //   znew = (z0 + z1 i)^2 = z0^2 + 2*z1*z1*i - z1^2
+        // For Mandelbrot, c = the starting point, for Julia, c is a fixed
+        // point.
+        float x = z[0], y = z[1];
+        if (julia) {
+            z = point (x*x - y*y, 2*x*y, 0) + P_julia;
+        } else {
+            z = point (x*x - y*y, 2*x*y, 0) + c;
+        }
+    }
+    if (i < iters) {
+        fout = i;
+        float f = pow(float(i)/iters, 1/log10(float(iters)));
+        Cout = (color)spline ("linear", f, colormap);
+    } else {
+        Cout = 0;
+    }
+}

@@ -26,13 +26,6 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <vector>
-#include <string>
-#include <cstdio>
-#include <fstream>
-#include <cstdlib>
-#include <functional>
-
 #include <OpenImageIO/dassert.h>
 #include <OpenImageIO/thread.h>
 #include <OpenImageIO/imagebuf.h>
@@ -51,16 +44,18 @@ using namespace OSL::pvt;
 OSL_NAMESPACE_ENTER
 
 
+
 bool
 shade_image (ShadingSystem &shadingsys, ShaderGroup &group,
              const ShaderGlobals *defaultsg,
              OIIO::ImageBuf &buf, OIIO::array_view<ustring> outputs,
              ShadeImageLocations shadelocations,
-             OIIO::ROI roi, int nthreads)
+             OIIO::ROI roi, OIIO::ImageBufAlgo::parallel_image_options popt)
 {
+    using namespace OIIO;
+    using namespace ImageBufAlgo;
     if (! roi.defined())
         roi = buf.roi();
-    // std::cout << "shade_image " << roi << "\n";
     if (buf.spec().format != TypeDesc::FLOAT) {
         buf.error ("Cannot OSL::shade_image() into a %f buffer, float is required",
                    buf.spec().format);
@@ -68,18 +63,7 @@ shade_image (ShadingSystem &shadingsys, ShaderGroup &group,
     }
     shadingsys.optimize_group (&group);
 
-    if (nthreads != 1 && roi.npixels() >= 64*64) {
-        // Parallelize
-        OIIO::ImageBufAlgo::parallel_image (
-            std::bind (shade_image, std::ref(shadingsys),
-                         std::ref(group), defaultsg,
-                         std::ref(buf), outputs, shadelocations,
-                         std::placeholders::_1 /*roi*/, 1 /*nthreads*/),
-            roi, nthreads);
-        return true;
-    }
-
-    // Serial case
+    parallel_image (roi, popt, [&](OIIO::ROI roi){
 
     // Optional: high-performance apps may request this thread-specific
     // pointer in order to save a bit of time on each shade.  Just like
@@ -213,6 +197,7 @@ shade_image (ShadingSystem &shadingsys, ShaderGroup &group,
     // destroy it when done with it.
     shadingsys.destroy_thread_info (thread_info);
 
+    });   // end of parallel_image
     return true;
 }
 

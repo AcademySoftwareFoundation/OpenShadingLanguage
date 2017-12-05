@@ -5,15 +5,25 @@ Dependency and standards changes:
 * **OpenImageIO 1.8+**: This release of OSL should build properly against
   OIIO 1.8 or newer. Support has been dropped for OIIO 1.7.
 
+New tools:
+* **osltoy** : GUI tool for interactive shader editing and pattern
+  visualization (somewhat in the style of [Shadertoy](http://shadertoy.com).
+  #827 (1.10.0)
+
 Language features:
 
 Standard library additions/changes:
 
 Contributed shader library changes:
+* mandelbrot.osl: computes Mandelbrot and Julia images. #827 (1.10.0)
 
 API changes, new options, new ShadingSystem features (for renderer writers):
 * ShadingSystem API changes:
 * ShadingSystem attribute additions/changes:
+    * New "allow_shader_replacement" (int) attribute, when nonzero, allows
+      shaders to be specified more than once, replacing their former
+      definitions. The default, 0, considers that an error, as it always
+      has. #816 (1.10.0).
 * Shader group attribute additions/changes:
 * RendererServices:
 
@@ -26,17 +36,17 @@ Build & test system improvements:
 Developer goodies:
 
 Documentation:
+* `osltoy` documentations in `doc/osltoy.md.html` (1.10.0).
 
 
-
-Release 1.9 -- ?? 2017 (compared to 1.8)
+Release 1.9 -- 4 December 2017 (compared to 1.8)
 --------------------------------------------------
 
 Dependency and standards changes:
 * **C++11 required**: OSL 1.9 requires a minimum standard of C++11. It
   should also build against C++14 and C++17.
-* **LLVM 3.5 / 3.9 / 4.0 / 5.0**: Support has been added for LLVM 3.9, 4.0, and
-  5.0. Support has been removed for for LLVM 3.4.
+* **LLVM 3.5 / 3.9 / 4.0 / 5.0**: Support has been added for LLVM 3.9, 4.0,
+  and 5.0. Support has been removed for for LLVM 3.4.
 * **OpenImageIO 1.7+**: This release of OSL should build properly against
   OIIO 1.7 or newer. You may find that 1.6 is still ok, but we are not doing
   any work to ensure that.
@@ -49,10 +59,10 @@ Language features:
   OSL_VERSION_PATCH, and OSL_VERSION (e.g. 10900 for 1.9.0) reveal the
   OSL release at shader compile time. #747 (1.9.0)
 * Structure constructors: If you have a struct `S` comprising fields with
-  types T1, T2, ..., you may now have an expression `S(T1 v2,T2 v2,...)` that
-  constructs and returns an `S` with those field values, much in the same
-  way that you can say `color(a,b,c)` to construct a color out of components
-  a, b, c.  #751 (1.9.0)
+  types T1, T2, ..., you may now have an expression `S(T1 v2, T2 v2,...)`
+  that constructs and returns an `S` with those field values, much in the
+  same way that you can say `color(a,b,c)` to construct a color out of
+  components a, b, c.  #751 (1.9.0)
 * User-defined operator overloading: If you make a new (struct) type, it
   is possible to define overloaded operators, like this:
 
@@ -130,8 +140,8 @@ API changes, new options, new ShadingSystem features (for renderer writers):
       parameters expecting a float-aggregate or array thereof, and an `int`
       may be passed to a parameter expecting a `float`, and an `int[1]` may
       be passed to an `int` parameter. #794,#797 (1.9.1)
-* Shader group attribute additions/changes:
-* RendererServices:
+* Fixed `ClosureComponent` to work with SSE alignment requirements. #810
+  (1.9.3)
 
 Performance improvements:
 * Shader JIT time is improved by about 10% as a result of pre-declaring
@@ -194,6 +204,15 @@ Bug fixes and other improvements (internals):
   the `'.'` (dot) character as decimal separator in floating point number,
   even when running on a computer system configured to use a foreign locale
   where the comma is traditionally used as the decimal separator. #795 (1.9.1)
+* Fix param analysis bug for texture or pointcloud functions with optional
+  token/value parameters where the token name wasn't a string literal -- it
+  could fail to recognize that certain parameters would be written to by the
+  call. #812 (1.9.3)
+* ShadingSystem statistics are now printed if any shaders were
+  declared/loaded, even if no shaders were executed. #815 (1.9.3)
+* Minor OSLQuery implementation improvements: add move/copy constructors
+  for OSLQuery::Parameter, make the ShadingSystem side of OSLQuery correctly
+  report default parameter values. #821 (1.9.4)
 
 Build & test system improvements:
 * C++11 is the new language baseline. #704, #707
@@ -251,6 +270,11 @@ Build & test system improvements:
   #788 (1.9.1)
 * Improved proper rebuilding of the LLVM bitcode for llvm_ops.cpp when only
   certain headers change. #802 (1.9.1)
+* Fix gcc7 warnings about signed vs unsigned compares. #807 (1.9.2)
+* Simplify the build logic for finding PugiXML and prefer a system install
+  when found, rather than looking to OIIO to supply it. #809 (1.9.2)
+* MSVS 2015 x64 compilation fixes. #820 (1.9.4)
+* Fix debug compile against OIIO 1.7. #822 (1.9.4)
 
 Developer goodies:
 * The `dual.h` implementation has been completely overhauled. The primary
@@ -266,6 +290,8 @@ Developer goodies:
 Documentation:
 * Fixed unclear explanation about structures with nested arrays. (1.9.0)
 * Full testshade docs in `doc/testshade.md.html` (1.9.0)
+
+
 
 
 Release 1.8.12 -- 1 Nov 2017 (compared to 1.8.11)
@@ -436,10 +462,6 @@ API changes, new options, new ShadingSystem features (for renderer writers):
       not intended for users.) #667 (1.8.2)
     * Attribute "llvm_debug_ops" adds a printf before running each op.
       This is mostly for debugging OSL itself, not for users. (1.8.3)
-
-<!--* Shader group attribute additions/changes:
-* RendererServices:
--->
 
 Performance improvements:
 * New runtime optimization: better at understanding the initial values of

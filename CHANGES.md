@@ -1,11 +1,11 @@
-Release 1.9 -- 1 December 2017 (compared to 1.8)
+Release 1.9 -- 4 December 2017 (compared to 1.8)
 --------------------------------------------------
 
 Dependency and standards changes:
 * **C++11 required**: OSL 1.9 requires a minimum standard of C++11. It
   should also build against C++14 and C++17.
-* **LLVM 3.5 / 3.9 / 4.0 / 5.0**: Support has been added for LLVM 3.9, 4.0, and
-  5.0. Support has been removed for for LLVM 3.4.
+* **LLVM 3.5 / 3.9 / 4.0 / 5.0**: Support has been added for LLVM 3.9, 4.0,
+  and 5.0. Support has been removed for for LLVM 3.4.
 * **OpenImageIO 1.7+**: This release of OSL should build properly against
   OIIO 1.7 or newer. You may find that 1.6 is still ok, but we are not doing
   any work to ensure that.
@@ -18,10 +18,10 @@ Language features:
   OSL_VERSION_PATCH, and OSL_VERSION (e.g. 10900 for 1.9.0) reveal the
   OSL release at shader compile time. #747 (1.9.0)
 * Structure constructors: If you have a struct `S` comprising fields with
-  types T1, T2, ..., you may now have an expression `S(T1 v2,T2 v2,...)` that
-  constructs and returns an `S` with those field values, much in the same
-  way that you can say `color(a,b,c)` to construct a color out of components
-  a, b, c.  #751 (1.9.0)
+  types T1, T2, ..., you may now have an expression `S(T1 v2, T2 v2,...)`
+  that constructs and returns an `S` with those field values, much in the
+  same way that you can say `color(a,b,c)` to construct a color out of
+  components a, b, c.  #751 (1.9.0)
 * User-defined operator overloading: If you make a new (struct) type, it
   is possible to define overloaded operators, like this:
 

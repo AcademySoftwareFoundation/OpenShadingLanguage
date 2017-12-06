@@ -259,7 +259,7 @@ osl_texture (void *sg_, const char *name, void *handle,
     // and ensure that they're being put in aligned memory.
     OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd;
     bool ok = sg->renderer->texture (USTR(name),
-                                     (TextureSystem::TextureHandle *)handle, NULL,
+                                     (TextureSystem::TextureHandle *)handle, sg->context->texture_thread_info(),
                                      *opt, sg, s, t, dsdx, dtdx, dsdy, dtdy, 4,
                                      (float *)&result_simd,
                                      derivs ? (float *)&dresultds_simd : NULL,
@@ -313,7 +313,7 @@ osl_texture3d (void *sg_, const char *name, void *handle,
     // and ensure that they're being put in aligned memory.
     OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd, dresultdr_simd;
     bool ok = sg->renderer->texture3d (USTR(name),
-                                       (TextureSystem::TextureHandle *)handle, NULL,
+                                       (TextureSystem::TextureHandle *)handle, sg->context->texture_thread_info(),
                                        *opt, sg, P, dPdx, dPdy, dPdz,
                                        4, (float *)&result_simd,
                                        derivs ? (float *)&dresultds_simd : NULL,
@@ -371,7 +371,7 @@ osl_environment (void *sg_, const char *name, void *handle,
     OIIO::simd::float4 local_result;
     bool ok = sg->renderer->environment (USTR(name),
                                          (TextureSystem::TextureHandle *)handle,
-                                         NULL, *opt, sg, R, dRdx, dRdy, 4,
+                                         sg->context->texture_thread_info(), *opt, sg, R, dRdx, dRdy, 4,
                                          (float *)&local_result, NULL, NULL,
                                          errormessage);
 

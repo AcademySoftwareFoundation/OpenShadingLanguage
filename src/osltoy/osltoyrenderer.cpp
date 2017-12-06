@@ -22,7 +22,7 @@ static ustring u_mouse("mouse");
 static constexpr TypeDesc TypeFloatArray2 (TypeDesc::FLOAT, 2);
 static constexpr TypeDesc TypeFloatArray4 (TypeDesc::FLOAT, 4);
 static constexpr TypeDesc TypeIntArray2 (TypeDesc::INT, 2);
-
+static constexpr TypeDesc TypeIntArray4 (TypeDesc::INT, 4);
 
 
 
@@ -38,6 +38,7 @@ OSLToyRenderer::OSLToyRenderer ()
     Matrix44 M;  M.makeIdentity();
     camera_params (M, u_perspective, 90.0f,
                    0.1f, 1000.0f, 256, 256);
+    shutter (0.0f, 1.0f/48, 0);
 
     // Set up getters
     m_attr_getters[ustring("osl:version")] = &OSLToyRenderer::get_osl_version;
@@ -52,6 +53,7 @@ OSLToyRenderer::OSLToyRenderer ()
     m_attr_getters[ustring("camera:shutter")] = &OSLToyRenderer::get_camera_shutter;
     m_attr_getters[ustring("camera:shutter_open")] = &OSLToyRenderer::get_camera_shutter_open;
     m_attr_getters[ustring("camera:shutter_close")] = &OSLToyRenderer::get_camera_shutter_close;
+    m_attr_getters[ustring("camera:frame")] = &OSLToyRenderer::get_camera_frame;
 
     // Set up default shaderglobals
     ShaderGlobals &sg (m_shaderglobals_template);
@@ -133,7 +135,6 @@ OSLToyRenderer::camera_params (const Matrix44 &world_to_camera,
     m_pixelaspect = 1.0f; // hard-coded
     m_hither = hither;
     m_yon = yon;
-    m_shutter[0] = 0.0f; m_shutter[1] = 1.0f;  // hard-coded
     float frame_aspect = float(xres)/float(yres) * m_pixelaspect;
     m_screen_window[0] = -frame_aspect;
     m_screen_window[1] = -1.0f;
@@ -141,6 +142,16 @@ OSLToyRenderer::camera_params (const Matrix44 &world_to_camera,
     m_screen_window[3] =  1.0f;
     m_xres = xres;
     m_yres = yres;
+}
+
+
+
+void
+OSLToyRenderer::shutter (float open, float close, int framenumber)
+{
+    m_shutter[0] = open;
+    m_shutter[1] = close;
+    m_frame = framenumber;
 }
 
 
@@ -271,6 +282,25 @@ OSLToyRenderer::get_array_attribute (ShaderGlobals *sg, bool derivatives, ustrin
                                      TypeDesc type, ustring name,
                                      int index, void *val)
 {
+    if (OIIO::Strutil::starts_with (name, "renderer:")) {
+        if (name == "renderer:name" && type == OIIO::TypeString) {
+            *(ustring *)val = ustring("OSL testrender");
+            return true;
+        }
+        if (name == "renderer:version" && type == TypeIntArray4) {
+            int *ival = (int *)val;
+            ival[0] = OSL_VERSION_MAJOR;
+            ival[1] = OSL_VERSION_MINOR;
+            ival[2] = OSL_VERSION_PATCH;
+            ival[3] = 0;
+            return true;
+        }
+        if (name == "renderer:versionstring" && type == OIIO::TypeString) {
+            *(ustring *)val = ustring(OSL_LIBRARY_VERSION_STRING);
+            return true;
+        }
+    }
+
     AttrGetterMap::const_iterator g = m_attr_getters.find (name);
     if (g != m_attr_getters.end()) {
         AttrGetter getter = g->second;
@@ -511,6 +541,18 @@ OSLToyRenderer::get_camera_screen_window (ShaderGlobals* /*sg*/, bool derivs, us
         ((float *)val)[3] = m_screen_window[3];
         if (derivs)
             memset ((char *)val+type.size(), 0, 2*type.size());
+        return true;
+    }
+    return false;
+}
+
+
+bool
+OSLToyRenderer::get_camera_frame (ShaderGlobals *sg, bool derivs, ustring object,
+                                  TypeDesc type, ustring name, void *val)
+{
+    if (type == TypeDesc::TypeInt) {
+        ((int *)val)[0] = m_frame;
         return true;
     }
     return false;

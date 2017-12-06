@@ -109,18 +109,22 @@ public:
     ShadingSystem *shadingsys = nullptr;
     OIIO::ParamValueList options;
 
+    void shutter (float open, float close, int framenumber);
+
 protected:
     // Camera parameters
     Matrix44 m_world_to_camera;
-    ustring m_projection;
-    float m_fov, m_pixelaspect, m_hither, m_yon;
-    float m_shutter[2];
-    float m_screen_window[4];
+    ustring m_projection {"perspective"};
+    float m_fov {90}, m_pixelaspect {1.0};
+    float m_hither {1e-6}, m_yon {1e6};
+    float m_shutter[2] { 0.0f, 1.0f };
+    float m_screen_window[4] { -1, 1, -1, 1 };
     int m_xres, m_yres;
     std::vector<ShaderGroupRef> m_shaders;
     std::vector<ustring> m_outputvars;
     std::vector<std::shared_ptr<OIIO::ImageBuf>> m_outputbufs;
     std::unique_ptr<OIIO::ErrorHandler> m_errhandler { new OIIO::ErrorHandler };
+    int m_frame = 0;
 
     // Named transforms
     typedef std::map <ustring, std::shared_ptr<Transformation> > TransformMap;
@@ -161,6 +165,8 @@ protected:
     bool get_camera_shutter_close (ShaderGlobals *sg, bool derivs, ustring object,
                          TypeDesc type, ustring name, void *val);
     bool get_camera_screen_window (ShaderGlobals *sg, bool derivs, ustring object,
+                         TypeDesc type, ustring name, void *val);
+    bool get_camera_frame (ShaderGlobals *sg, bool derivs, ustring object,
                          TypeDesc type, ustring name, void *val);
 
 };

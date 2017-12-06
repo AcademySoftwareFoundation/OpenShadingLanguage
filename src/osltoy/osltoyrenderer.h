@@ -37,6 +37,8 @@ public:
 
     void set_resolution (int x, int y) { m_xres = x; m_yres = y; }
 
+    void shutter (float open, float close, int framenumber);
+
     void set_time (float t) { m_shaderglobals_template.time = t; }
 
     void set_mouse (int x, int y) { m_mouse_x = x; m_mouse_y = y; }
@@ -88,12 +90,14 @@ private:
 
     // Camera parameters
     Matrix44 m_world_to_camera;
-    ustring m_projection;
-    float m_fov, m_pixelaspect, m_hither, m_yon;
-    float m_shutter[2];
-    float m_screen_window[4];
+    ustring m_projection {"perspective"};
+    float m_fov {90}, m_pixelaspect {1.0};
+    float m_hither {1e-6}, m_yon {1e6};
+    float m_shutter[2] { 0.0f, 1.0f };
+    float m_screen_window[4] { -1, 1, -1, 1 };
     int m_xres, m_yres;
     int m_mouse_x = -1, m_mouse_y = -1;
+    int m_frame = 0;
 
     // Named transforms
     typedef std::map <ustring, std::shared_ptr<Transformation> > TransformMap;
@@ -134,6 +138,8 @@ private:
     bool get_camera_shutter_close (ShaderGlobals *sg, bool derivs, ustring object,
                          TypeDesc type, ustring name, void *val);
     bool get_camera_screen_window (ShaderGlobals *sg, bool derivs, ustring object,
+                         TypeDesc type, ustring name, void *val);
+    bool get_camera_frame (ShaderGlobals *sg, bool derivs, ustring object,
                          TypeDesc type, ustring name, void *val);
 
 };

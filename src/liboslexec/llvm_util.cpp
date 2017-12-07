@@ -61,6 +61,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm/Support/ManagedStatic.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/ExecutionEngine/GenericValue.h>
+#include <llvm/ExecutionEngine/JITEventListener.h>
 #include <llvm/ExecutionEngine/MCJIT.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/TargetSelect.h>
@@ -448,6 +449,17 @@ LLVM_Util::make_jit_execengine (std::string *err)
     m_llvm_exec = engine_builder.create();
     if (! m_llvm_exec)
         return NULL;
+
+    // These magic lines will make it so that enough symbol information
+    // is injected so that running vtune will kinda tell you which shaders
+    // you're in, and sometimes which function (only for functions that don't
+    // get inlined. There doesn't seem to be any perf hit from this, either
+    // in code quality or JIT time. It is only enabled, however, if your copy
+    // of LLVM was build with -DLLVM_USE_INTEL_JITEVENTS=ON, otherwise
+    // createIntelJITEventListener() is a stub that just returns nullptr.
+    auto vtuneProfiler = llvm::JITEventListener::createIntelJITEventListener();
+    if (vtuneProfiler)
+        m_llvm_exec->RegisterJITEventListener (vtuneProfiler);
 
     // Force it to JIT as soon as we ask it for the code pointer,
     // don't take any chances that it might JIT lazily, since we

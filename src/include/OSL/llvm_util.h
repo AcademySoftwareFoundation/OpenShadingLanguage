@@ -474,7 +474,10 @@ public:
     /// file.  If err is not NULL, errors will be deposited there.
     void write_bitcode_file (const char *filename, std::string *err=NULL);
 
-    /// Convert a function's bitcode to a string.
+    /// Convert a whole module's bitcode to a string.
+    std::string bitcode_string (llvm::Module *module);
+
+    /// Convert one function's bitcode to a string.
     std::string bitcode_string (llvm::Function *func);
 
     /// Delete the IR for the body of the given function to reclaim its

@@ -27,6 +27,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <cmath>
+#include <iostream>
 #include <unordered_map>
 
 #include <OpenImageIO/timer.h>
@@ -761,8 +762,7 @@ BackendLLVM::build_llvm_instance (bool groupentry)
 {
     // Make a layer function: void layer_func(ShaderGlobals*, GroupData*)
     // Note that the GroupData* is passed as a void*.
-    std::string unique_layer_name = Strutil::format ("%s_%d", inst()->layername(), inst()->id());
-
+    std::string unique_layer_name = layer_function_name();
     bool is_entry_layer = group().is_entry_layer(layer());
     ll.current_function (
            ll.make_function (unique_layer_name,
@@ -1103,6 +1103,20 @@ BackendLLVM::run ()
     }
     ll.internalize_module_functions ("osl_", external_function_names, entry_function_names);
 
+    // Debug code to dump the pre-optimized bitcode to a file
+    if (llvm_debug() >= 2 || shadingsys().llvm_output_bitcode()) {
+        std::string name = Strutil::format ("%s_%s_%d.bc", group().name(),
+                                            inst()->layername(), inst()->id());
+        ll.write_bitcode_file (name.c_str());
+        name = Strutil::format ("%s_%s_%d.ll", group().name(),
+                                inst()->layername(), inst()->id());
+        std::ofstream out (name, std::ios_base::out | std::ios_base::trunc);
+        if (out.good()) {
+            out << ll.bitcode_string (ll.module());
+            out.close ();
+        }
+    }
+
     // Optimize the LLVM IR unless it's a do-nothing group.
     if (! group().does_nothing())
         ll.do_optimize();
@@ -1116,11 +1130,18 @@ BackendLLVM::run ()
         std::cout.flush();
     }
 
-    // Debug code to dump the resulting bitcode to a file
-    if (llvm_debug() >= 2) {
-        std::string name = Strutil::format ("%s_%d.bc", inst()->layername(),
-                                            inst()->id());
+    // Debug code to dump the post-optimized bitcode to a file
+    if (llvm_debug() >= 2 || shadingsys().llvm_output_bitcode()) {
+        std::string name = Strutil::format ("%s_%s_%d_opt.bc", group().name(),
+                                            inst()->layername(), inst()->id());
         ll.write_bitcode_file (name.c_str());
+        name = Strutil::format ("%s_%s_%d_opt.ll", group().name(),
+                                inst()->layername(), inst()->id());
+        std::ofstream out (name, std::ios_base::out | std::ios_base::trunc);
+        if (out.good()) {
+            out << ll.bitcode_string (ll.module());
+            out.close ();
+        }
     }
 
     // Force the JIT to happen now and retrieve the JITed function pointers

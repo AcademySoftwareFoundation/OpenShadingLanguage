@@ -13,12 +13,12 @@ shader expr_0 (
 ---
 Shader group:
 ---
-shader expr_0  ;
+shader expr_0 expr_0_0 ;
 
 ---
 
 Shader group "" layers are:
-    
+    expr_0_0
 
 
 Output result to out.tif

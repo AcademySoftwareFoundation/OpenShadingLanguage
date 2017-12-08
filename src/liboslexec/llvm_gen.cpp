@@ -157,10 +157,8 @@ BackendLLVM::llvm_call_layer (int layer, bool unconditional)
         // insert point is now then_block
     }
 
-    std::string name = Strutil::format ("%s_%d", parent->layername().c_str(),
-                                        parent->id());
     // Mark the call as a fast call
-    llvm::Value *funccall = ll.call_function (name.c_str(), args, 2);
+    llvm::Value *funccall = ll.call_function (layer_function_name(group(), *parent).c_str(), args, 2);
     if (!parent->entry_layer())
         ll.mark_fast_func_call (funccall);
 

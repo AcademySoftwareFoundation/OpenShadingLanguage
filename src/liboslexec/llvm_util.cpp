@@ -1495,6 +1495,30 @@ LLVM_Util::bitcode_string (llvm::Function *func)
 
 
 
+std::string
+LLVM_Util::bitcode_string (llvm::Module *module)
+{
+    std::string s;
+    llvm::raw_string_ostream stream (s);
+
+#if OSL_LLVM_VERSION < 40
+    for (llvm::Module::iterator iter = module->begin(); iter != module->end(); iter++) {
+        llvm::Function *funcptr = static_cast<llvm::Function*>(iter);
+        stream << (*funcptr);
+        stream << "\n";
+    }
+#else
+    for (const llvm::Function& func : module->getFunctionList()) {
+        stream << func;
+        stream << "\n";
+    }
+#endif
+
+    return stream.str();
+}
+
+
+
 void
 LLVM_Util::delete_func_body (llvm::Function *func)
 {

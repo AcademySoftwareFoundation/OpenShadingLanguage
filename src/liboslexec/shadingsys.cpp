@@ -669,6 +669,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_llvm_optimize(0),
       m_debug(0), m_llvm_debug(0),
       m_llvm_debug_layers(0), m_llvm_debug_ops(0),
+      m_llvm_output_bitcode(0),
       m_commonspace_synonym("world"),
       m_colorspace("Rec709"),
       m_max_local_mem_KB(2048),
@@ -1092,6 +1093,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("llvm_debug", int, m_llvm_debug);
     ATTR_SET ("llvm_debug_layers", int, m_llvm_debug_layers);
     ATTR_SET ("llvm_debug_ops", int, m_llvm_debug_ops);
+    ATTR_SET ("llvm_output_bitcode", int, m_llvm_output_bitcode);
     ATTR_SET ("strict_messages", int, m_strict_messages);
     ATTR_SET ("range_checking", int, m_range_checking);
     ATTR_SET ("unknown_coordsys_error", int, m_unknown_coordsys_error);
@@ -1203,6 +1205,7 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("llvm_debug", int, m_llvm_debug);
     ATTR_DECODE ("llvm_debug_layers", int, m_llvm_debug_layers);
     ATTR_DECODE ("llvm_debug_ops", int, m_llvm_debug_ops);
+    ATTR_DECODE ("llvm_output_bitcode", int, m_llvm_output_bitcode);
     ATTR_DECODE ("strict_messages", int, m_strict_messages);
     ATTR_DECODE ("range_checking", int, m_range_checking);
     ATTR_DECODE ("unknown_coordsys_error", int, m_unknown_coordsys_error);
@@ -1619,6 +1622,7 @@ ShadingSystemImpl::getstats (int level) const
     INTOPT (llvm_debug);
     BOOLOPT (llvm_debug_layers);
     BOOLOPT (llvm_debug_ops);
+    BOOLOPT (llvm_output_bitcode);
     BOOLOPT (lazylayers);
     BOOLOPT (lazyglobals);
     BOOLOPT (lazyunconnected);
@@ -1955,6 +1959,14 @@ ShadingSystemImpl::Shader (string_view shaderusage,
     if (use == ShadUseUnknown) {
         error ("Unknown shader usage \"%s\"", shaderusage);
         return false;
+    }
+
+    // If a layer name was not supplied, make one up.
+    std::string local_layername;
+    if (layername.empty()) {
+        local_layername = OIIO::Strutil::format ("%s_%d", master->shadername(),
+                                                 m_curgroup->nlayers());
+        layername = string_view (local_layername);
     }
 
     ShaderInstanceRef instance (new ShaderInstance (master, layername));

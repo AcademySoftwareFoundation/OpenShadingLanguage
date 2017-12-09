@@ -244,8 +244,9 @@ public:
                           float dsdy, float dtdy, int nchannels,
                           float *result, float *dresultds, float *dresultdt,
                           ustring *errormessage);
-    // Deprecated version, with no errormessage parameter. This will
+    // DEPRECATED(1.8) version, with no errormessage parameter. This will
     // eventually disappear.
+    OSL_DEPRECATED ("Deprecated since 1.8, use the version with an errormessage parameter.")
     virtual bool texture (ustring filename, TextureHandle *texture_handle,
                           TexturePerthread *texture_thread_info,
                           TextureOpt &options, ShaderGlobals *sg,
@@ -286,8 +287,9 @@ public:
                             float *result, float *dresultds,
                             float *dresultdt, float *dresultdr,
                             ustring *errormessage);
-    // Deprecated version, with no errormessage parameter. This will
+    // DEPRECATED(1.8) version, with no errormessage parameter. This will
     // eventually disappear.
+    OSL_DEPRECATED ("Deprecated since 1.8, use the version with an errormessage parameter.")
     virtual bool texture3d (ustring filename, TextureHandle *texture_handle,
                             TexturePerthread *texture_thread_info,
                             TextureOpt &options, ShaderGlobals *sg,
@@ -325,8 +327,9 @@ public:
                               int nchannels, float *result,
                               float *dresultds, float *dresultdt,
                               ustring *errormessage);
-    // Deprecated version, with no errormessage parameter. This will
+    // DEPRECATED(1.8) version, with no errormessage parameter. This will
     // eventually disappear.
+    OSL_DEPRECATED ("Deprecated since 1.8, use the version with an errormessage parameter.")
     virtual bool environment (ustring filename, TextureHandle *texture_handle,
                               TexturePerthread *texture_thread_info,
                               TextureOpt &options, ShaderGlobals *sg,

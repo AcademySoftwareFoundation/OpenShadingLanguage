@@ -456,9 +456,6 @@ public:
     /// setup, don't actually run the shader.
     bool execute (ShadingContext *ctx, ShaderGroup &group,
                   ShaderGlobals &globals, bool run=true);
-    OSL_DEPRECATED("Deprecated since 1.6, pass context pointer, not reference.")
-    bool execute (ShadingContext &ctx, ShaderGroup &group,
-                  ShaderGlobals &globals, bool run=true);
 
     /// Bind a shader group and globals to the context, in preparation to
     /// execute, including optimization and JIT of the group (if it has not

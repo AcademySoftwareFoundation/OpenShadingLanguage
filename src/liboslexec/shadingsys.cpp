@@ -238,15 +238,6 @@ ShadingSystem::execute (ShadingContext *ctx, ShaderGroup &group,
 
 
 bool
-ShadingSystem::execute (ShadingContext &ctx, ShaderGroup &group,
-                        ShaderGlobals &globals, bool run)
-{
-    return m_impl->execute (&ctx, group, globals, run);
-}
-
-
-
-bool
 ShadingSystem::execute_init (ShadingContext &ctx, ShaderGroup &group,
                              ShaderGlobals &globals, bool run)
 {

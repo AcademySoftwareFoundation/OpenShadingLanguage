@@ -184,7 +184,7 @@ RendererServices::texture (ustring filename, TextureHandle *texture_handle,
 
 
 
-// Deprecated version
+// Deprecated version (1.8)
 bool
 RendererServices::texture (ustring filename, TextureHandle *texture_handle,
                            TexturePerthread *texture_thread_info,
@@ -256,7 +256,7 @@ RendererServices::texture3d (ustring filename, TextureHandle *texture_handle,
 
 
 
-// Deprecated version
+// Deprecated version (1.8)
 bool
 RendererServices::texture3d (ustring filename, TextureHandle *texture_handle,
                              TexturePerthread *texture_thread_info,
@@ -327,7 +327,7 @@ RendererServices::environment (ustring filename, TextureHandle *texture_handle,
 
 
 
-// Deprecated version
+// Deprecated version (1.8)
 bool
 RendererServices::environment (ustring filename, TextureHandle *texture_handle,
                                TexturePerthread *texture_thread_info,

@@ -1554,20 +1554,20 @@ private:
     // Put all the things that are read-only (after optimization) and
     // needed on every shade execution at the front of the struct, as much
     // together on one cache line as possible.
-    volatile int m_optimized;        ///< Is it already optimized?
-    bool m_does_nothing;             ///< Is the shading group just func() { return; }
-    size_t m_llvm_groupdata_size;    ///< Heap size needed for its groupdata
+    volatile int m_optimized = 0;    ///< Is it already optimized?
+    bool m_does_nothing = false;     ///< Is the shading group just func() { return; }
+    size_t m_llvm_groupdata_size = 0;///< Heap size needed for its groupdata
     int m_id;                        ///< Unique ID for the group
-    int m_num_entry_layers;          ///< Number of marked entry layers
-    RunLLVMGroupFunc m_llvm_compiled_version;
-    RunLLVMGroupFunc m_llvm_compiled_init;
+    int m_num_entry_layers = 0;      ///< Number of marked entry layers
+    RunLLVMGroupFunc m_llvm_compiled_version = nullptr;
+    RunLLVMGroupFunc m_llvm_compiled_init = nullptr;
     std::vector<RunLLVMGroupFunc> m_llvm_compiled_layers;
     std::vector<ShaderInstanceRef> m_layers;
     ustring m_name;
-    int m_exec_repeat;               ///< How many times to execute group
-    int m_raytype_queries;           ///< Bitmask of raytypes queried
-    int m_raytypes_on;               ///< Bitmask of raytypes we assume to be on
-    int m_raytypes_off;              ///< Bitmask of raytypes we assume to be off
+    int m_exec_repeat = 1;           ///< How many times to execute group
+    int m_raytype_queries = -1;      ///< Bitmask of raytypes queried
+    int m_raytypes_on = 0;           ///< Bitmask of raytypes we assume to be on
+    int m_raytypes_off = 0;          ///< Bitmask of raytypes we assume to be off
     mutable mutex m_mutex;           ///< Thread-safe optimization
     std::vector<ustring> m_textures_needed;
     std::vector<ustring> m_closures_needed;
@@ -1582,8 +1582,8 @@ private:
     bool m_unknown_textures_needed;
     bool m_unknown_closures_needed;
     bool m_unknown_attributes_needed;
-    atomic_ll m_executions;          ///< Number of times the group executed
-    atomic_ll m_stat_total_shading_time_ticks; ///< Total shading time (ticks)
+    atomic_ll m_executions {0};       ///< Number of times the group executed
+    atomic_ll m_stat_total_shading_time_ticks {0}; ///< Total shading time (ticks)
 
     friend class OSL::pvt::ShadingSystemImpl;
     friend class OSL::pvt::BackendLLVM;

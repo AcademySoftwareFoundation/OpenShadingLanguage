@@ -1489,9 +1489,11 @@ LLVM_Util::write_bitcode_file (const char *filename, std::string *err)
 {
     std::error_code local_error;
     llvm::raw_fd_ostream out (filename, local_error, llvm::sys::fs::F_None);
-    llvm::WriteBitcodeToFile (module(), out);
-    if (err && local_error)
-        *err = local_error.message ();
+    if (! out.has_error()) {
+        llvm::WriteBitcodeToFile (module(), out);
+        if (err && local_error)
+            *err = local_error.message ();
+    }
 }
 
 

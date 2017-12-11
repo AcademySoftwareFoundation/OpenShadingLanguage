@@ -721,28 +721,23 @@ ShaderInstance::mergeable (const ShaderInstance &b, const ShaderGroup &g) const
 
 
 ShaderGroup::ShaderGroup (string_view name)
-  : m_optimized(0), m_does_nothing(false),
-    m_llvm_groupdata_size(0), m_num_entry_layers(0),
-    m_llvm_compiled_version(NULL),
-    m_name(name), m_exec_repeat(1), m_raytype_queries(-1), m_raytypes_on(0), m_raytypes_off(0)
 {
-    m_executions = 0;
-    m_stat_total_shading_time_ticks = 0;
     m_id = ++(*(atomic_int *)&next_id);
+    if (name.size()) {
+        m_name = name;
+    } else {
+        // No name -- make one up using the unique
+        m_name = ustring::format ("unnamed_group_%d", m_id);
+    }
 }
 
 
 
 ShaderGroup::ShaderGroup (const ShaderGroup &g, string_view name)
-  : m_optimized(0), m_does_nothing(false),
-    m_llvm_groupdata_size(0), m_num_entry_layers(g.m_num_entry_layers),
-    m_llvm_compiled_version(NULL),
-    m_layers(g.m_layers),
-    m_name(name), m_exec_repeat(1), m_raytype_queries(-1), m_raytypes_on(0), m_raytypes_off(0)
+    : ShaderGroup(name)  // delegate most of the work
 {
-    m_executions = 0;
-    m_stat_total_shading_time_ticks = 0;
-    m_id = ++(*(atomic_int *)&next_id);
+    m_num_entry_layers = g.m_num_entry_layers;
+    m_layers = g.m_layers;
 }
 
 

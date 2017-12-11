@@ -1105,15 +1105,17 @@ BackendLLVM::run ()
 
     // Debug code to dump the pre-optimized bitcode to a file
     if (llvm_debug() >= 2 || shadingsys().llvm_output_bitcode()) {
-        std::string name = Strutil::format ("%s_%s_%d.bc", group().name(),
-                                            inst()->layername(), inst()->id());
-        ll.write_bitcode_file (name.c_str());
-        name = Strutil::format ("%s_%s_%d.ll", group().name(),
-                                inst()->layername(), inst()->id());
+        // Make a safe group name that doesn't have "/" in it! Also beware
+        // filename length limits.
+        std::string safegroup = Strutil::replace (group().name(), "/", ".", true);
+        if (safegroup.size() > 235)
+            safegroup = Strutil::format ("TRUNC_%s_%d", safegroup.substr(safegroup.size()-235), group().id());
+        std::string name = Strutil::format ("%s.ll", safegroup);
         std::ofstream out (name, std::ios_base::out | std::ios_base::trunc);
         if (out.good()) {
             out << ll.bitcode_string (ll.module());
-            out.close ();
+        } else {
+            shadingcontext()->error ("Could not write to '%s'", name);
         }
     }
 
@@ -1132,15 +1134,17 @@ BackendLLVM::run ()
 
     // Debug code to dump the post-optimized bitcode to a file
     if (llvm_debug() >= 2 || shadingsys().llvm_output_bitcode()) {
-        std::string name = Strutil::format ("%s_%s_%d_opt.bc", group().name(),
-                                            inst()->layername(), inst()->id());
-        ll.write_bitcode_file (name.c_str());
-        name = Strutil::format ("%s_%s_%d_opt.ll", group().name(),
-                                inst()->layername(), inst()->id());
+        // Make a safe group name that doesn't have "/" in it! Also beware
+        // filename length limits.
+        std::string safegroup = Strutil::replace (group().name(), "/", ".", true);
+        if (safegroup.size() > 235)
+            safegroup = Strutil::format ("TRUNC_%s_%d", safegroup.substr(safegroup.size()-235), group().id());
+        std::string name = Strutil::format ("%s_opt.ll", safegroup);
         std::ofstream out (name, std::ios_base::out | std::ios_base::trunc);
         if (out.good()) {
             out << ll.bitcode_string (ll.module());
-            out.close ();
+        } else {
+            shadingcontext()->error ("Could not write to '%s'", name);
         }
     }
 

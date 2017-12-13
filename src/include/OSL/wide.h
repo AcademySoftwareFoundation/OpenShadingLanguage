@@ -1413,6 +1413,79 @@ private:
 
 
 template <typename DataT, int WidthT>
+struct ConstWideUnboundedArrayLaneProxy
+{
+	explicit OSL_INLINE
+	ConstWideUnboundedArrayLaneProxy(const Wide<DataT, WidthT> * array_of_wide_data, int array_length, int index)
+	: m_array_of_wide_data(array_of_wide_data)
+	, m_array_length(array_length)
+	, m_index(index)
+	{}
+
+	// Must provide user defined copy constructor to
+	// get compiler to be able to follow individual
+	// data members through back to original object
+	// when fully inlined the proxy should disappear
+	OSL_INLINE
+	ConstWideUnboundedArrayLaneProxy(const ConstWideUnboundedArrayLaneProxy &other)
+	: m_array_of_wide_data(other.m_array_of_wide_data)
+	, m_array_length(other.m_array_length)
+	, m_index(other.m_index)
+	{}
+
+	OSL_INLINE int
+	length() const { return m_array_length; }
+
+	OSL_INLINE ConstLaneProxy<DataT, WidthT>
+	operator[](int array_index) const
+	{
+		DASSERT(array_index < m_array_length);
+		return ConstLaneProxy<DataT, WidthT>(m_array_of_wide_data[array_index], m_index);
+	}
+
+private:
+	const Wide<DataT, WidthT> * m_array_of_wide_data;
+	int m_array_length;
+	const int m_index;
+};
+
+template <typename DataT, int WidthT = SimdLaneCount>
+struct ConstWideUnboundArrayAccessor
+{
+	static constexpr int width = WidthT;
+
+	explicit OSL_INLINE
+	ConstWideUnboundArrayAccessor(const void *ptr_wide_data, int array_length)
+	: m_array_of_wide_data(reinterpret_cast<const Wide<DataT, WidthT> *>(ptr_wide_data))
+	, m_array_length(array_length)
+	{}
+
+	// Must provide user defined copy constructor to
+	// get compiler to be able to follow individual
+	// data members through back to original object
+	// when fully inlined the proxy should disappear
+	OSL_INLINE
+	ConstWideUnboundArrayAccessor(const ConstWideUnboundArrayAccessor &other)
+	: m_array_of_wide_data(other.m_array_of_wide_data)
+	, m_array_length(other.m_array_length)
+	{}
+
+
+	typedef ConstWideUnboundedArrayLaneProxy<DataT, WidthT> Proxy;
+
+	OSL_INLINE Proxy const
+	operator[](int index) const
+	{
+		return Proxy(m_array_of_wide_data, m_array_length, index);
+	}
+
+private:
+	const Wide<DataT, WidthT> * m_array_of_wide_data;
+	int m_array_length;
+};
+
+
+template <typename DataT, int WidthT>
 struct MaskedLaneProxy
 {
 	explicit OSL_INLINE 

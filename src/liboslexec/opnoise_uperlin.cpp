@@ -97,6 +97,7 @@ void test_perlin(int d) {
 NOISE_IMPL (snoise, SNoise)
 NOISE_WIMPL (snoise, SNoise, __OSL_SIMD_LANE_COUNT)
 NOISE_IMPL_DERIV (snoise, SNoise)
+NOISE_WIMPL_DERIV (snoise, SNoise, __OSL_SIMD_LANE_COUNT)
 
 
 } // namespace pvt

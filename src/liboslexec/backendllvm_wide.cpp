@@ -27,6 +27,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 //#define OSL_DEV
+
 #include <iterator>
 #include <type_traits>
 
@@ -53,6 +54,7 @@ static ustring op_break("break");
 static ustring op_calculatenormal("calculatenormal");
 static ustring op_continue("continue");
 static ustring op_functioncall("functioncall");
+static ustring op_functioncall_nr("functioncall_nr");
 static ustring op_getattribute("getattribute");
 static ustring op_getmatrix("getmatrix");
 static ustring op_getmessage("getmessage");
@@ -151,6 +153,12 @@ BackendLLVMWide::llvm_debug() const
     return shadingsys().llvm_debug();
 }
 
+
+int
+BackendLLVMWide::llvm_debug_info() const
+{
+    return shadingsys().llvm_debug_info();
+}
 
 
 void
@@ -1538,6 +1546,13 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					stackOfExecutionScopes.pop_function_call();
 					OSL_DEV_ONLY(std::cout << " FUNCTION CALL BLOCK END" << std::endl);
 					
+				} else if (opcode.opname() == Strings::op_functioncall_nr)
+				{
+					// Function call itself operates on the same symbol dependencies
+					// as the current block, there was no conditionals involved
+					OSL_DEV_ONLY(std::cout << " FUNCTION CALL NO RETURN BLOCK BEGIN" << std::endl);
+					discoverSymbolsBetween(opIndex+1, opcode.jump(0));
+					OSL_DEV_ONLY(std::cout << " FUNCTION CALL NO RETURN BLOCK END" << std::endl);
 				} else {
 					ASSERT(0 && "Unhandled OSL instruction which contains jumps, note this uniform detection code needs to walk the code blocks identical to build_llvm_code");
 				}
@@ -1942,7 +1957,6 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
     OSL_DEV_ONLY(std::cout << "symbolsWrittenToByImplicitlyVaryingOps end" << std::endl);
 
 
-
 #ifdef OSL_DEV
     {
 		std::cout << "Emit m_is_uniform_by_symbol" << std::endl;			
@@ -2295,23 +2309,25 @@ BackendLLVMWide::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
     	// TODO:  remove this assert once we have confirmed correct handling off all the
     	// different data types.  Using ASSERT as a checklist to verify what we have
     	// handled so far during development
-    	ASSERT(cast == TypeDesc::UNKNOWN || 
-    		   cast == TypeDesc::TypeColor || 
-    		   cast == TypeDesc::TypeVector || 
-    		   cast == TypeDesc::TypePoint || 
-    		   cast == TypeDesc::TypeNormal || 
-    		   cast == TypeDesc::TypeFloat || 
+    	ASSERT(cast == TypeDesc::UNKNOWN ||
+    		   cast == TypeDesc::TypeColor ||
+    		   cast == TypeDesc::TypeVector ||
+    		   cast == TypeDesc::TypePoint ||
+    		   cast == TypeDesc::TypeNormal ||
+    		   cast == TypeDesc::TypeFloat ||
     		   cast == TypeDesc::TypeInt ||
+			   cast == TypeDesc::TypeString ||
     		   cast == TypeDesc::TypeMatrix);
     	
-    	if ((ll.llvm_typeof(result) ==  ll.type_float()) ||
+    	if ((ll.llvm_typeof(result) ==  ll.type_bool()) ||
+    		(ll.llvm_typeof(result) ==  ll.type_float()) ||
 			(ll.llvm_typeof(result) ==  ll.type_triple()) ||
 			(ll.llvm_typeof(result) ==  ll.type_int()) ||
 			(ll.llvm_typeof(result) ==  (llvm::Type*)ll.type_string()) ||
 			(ll.llvm_typeof(result) ==  ll.type_matrix())) {
             result = ll.widen_value(result);
         } else {
-#if 0
+#if OSL_DEV
         	if (!((ll.llvm_typeof(result) ==  ll.type_wide_float()) ||
          		   (ll.llvm_typeof(result) ==  ll.type_wide_int()) ||
                    (ll.llvm_typeof(result) ==  ll.type_wide_matrix()) ||
@@ -2574,10 +2590,15 @@ BackendLLVMWide::llvm_store_value (llvm::Value* new_val, llvm::Value* dst_ptr,
     if(ll.type_ptr(ll.llvm_typeof(new_val)) != ll.llvm_typeof(dst_ptr))
     {
     	std::cerr << " new_val type=";
-    	llvm::raw_os_ostream os_cerr(std::cout);
-    	ll.llvm_typeof(new_val)->print(os_cerr);
+    	{
+    		llvm::raw_os_ostream os_cerr(std::cerr);
+    		ll.llvm_typeof(new_val)->print(os_cerr);
+    	}
     	std::cerr << " dest_ptr type=";
-    	ll.llvm_typeof(dst_ptr)->print(os_cerr);
+    	{
+    		llvm::raw_os_ostream os_cerr(std::cerr);
+    		ll.llvm_typeof(dst_ptr)->print(os_cerr);
+    	}
     	std::cerr << std::endl;
     }
     ASSERT(ll.type_ptr(ll.llvm_typeof(new_val)) == ll.llvm_typeof(dst_ptr));
@@ -3073,7 +3094,24 @@ BackendLLVMWide::llvm_assign_impl (Symbol &Result, Symbol &Src,
 			if (!src_val)
 				return false;
 			
-			llvm_store_value (src_val, Result, 0, arrind, i);
+		    // Although we try to use llvm bool (i1) for comparison results
+		    // sometimes we could not force the data type to be an bool and it remains
+		    // an int, for those cases we will need to convert the boolean to int
+			llvm::Type * srcType = ll.llvm_typeof(src_val);
+			llvm::Type * resultType = ll.llvm_typeof(llvm_get_pointer(Result));
+			if ((    (srcType == reinterpret_cast<llvm::Type *>(ll.type_wide_bool()))
+				  && (resultType == reinterpret_cast<llvm::Type *>(ll.type_wide_int_ptr()))
+				) || (
+					 (srcType == reinterpret_cast<llvm::Type *>(ll.type_bool()))
+				  && (resultType == reinterpret_cast<llvm::Type *>(ll.type_int_ptr())))
+				) {
+				llvm::Value* integer_val = ll.op_bool_to_int (src_val);
+				// TODO: should llvm_store_value handle this internally,
+				// To make sure we don't miss any scenarios
+				llvm_store_value (integer_val, Result, 0, arrind, i);
+			} else {
+				llvm_store_value (src_val, Result, 0, arrind, i);
+			}
 		}
 	
 		// Handle derivatives

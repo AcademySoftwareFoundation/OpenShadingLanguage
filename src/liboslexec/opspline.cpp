@@ -152,6 +152,40 @@ OSL_SHADEOP void  osl_spline_w16fw16ff(void *wout_, const char *spline_, void *w
 	}
 }
 
+OSL_SHADEOP void  osl_spline_w16fw16fw16f(void *wout_, const char *spline_, void *wx_,
+										  void *wknots_, int knot_count, int knot_arraylen)
+{
+	const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
+	ConstWideAccessor<float> wX(wx_);
+
+	WideAccessor<float> wR(wout_);
+
+	ConstWideUnboundArrayAccessor<float> wKnots(wknots_, knot_count);
+
+	// calling a function below, don't bother vectorizing
+	//OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
+	OSL_INTEL_PRAGMA(novector)
+	for(int lane=0; lane < wR.width; ++lane) {
+	    float x = wX[lane];
+	    auto knotsArrayProxy = wKnots[lane];
+
+	    // Existing spline evaluate is expecting a float array
+	    // in development version will be templatized.
+	    // For now we will extract the knots out to a linear array
+	    float knots[knot_count];
+	    for(int k=0; k< knot_count; ++k) {
+	    	knots[k] = knotsArrayProxy[k];
+	    }
+
+	    // TODO: investigate removing this function call to enable SIMD
+	    float result;
+	    Spline::spline_evaluate<float, float, float, float, false>
+	       (spline, result, x, knots, knot_count, knot_arraylen);
+
+	    wR[lane] = result;
+	}
+}
+
 OSL_SHADEOP void  osl_spline_dfdfdf(void *out, const char *spline_, void *x, 
                                     float *knots, int knot_count, int knot_arraylen)
 {
@@ -159,6 +193,41 @@ OSL_SHADEOP void  osl_spline_dfdfdf(void *out, const char *spline_, void *x,
    Spline::spline_evaluate<Dual2<float>, Dual2<float>, Dual2<float>, float, true>
       (spline, DFLOAT(out), DFLOAT(x), knots, knot_count, knot_arraylen);
 }
+
+OSL_SHADEOP void  osl_spline_w16dfw16dfw16df(void *wout_, const char *spline_, void *wx_,
+										  void *wknots_, int knot_count, int knot_arraylen)
+{
+	const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
+	ConstWideAccessor<Dual2<float>> wX(wx_);
+
+	WideAccessor<Dual2<float>> wR(wout_);
+
+	ConstWideUnboundArrayAccessor<float> wKnots(wknots_, knot_count);
+
+	// calling a function below, don't bother vectorizing
+	//OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
+	OSL_INTEL_PRAGMA(novector)
+	for(int lane=0; lane < wR.width; ++lane) {
+		Dual2<float> x = wX[lane];
+	    auto knotsArrayProxy = wKnots[lane];
+
+	    // Existing spline evaluate is expecting a float array
+	    // in development version will be templatized.
+	    // For now we will extract the knots out to a linear array
+	    float knots[knot_count];
+	    for(int k=0; k< knot_count; ++k) {
+	    	knots[k] = knotsArrayProxy[k];
+	    }
+
+	    // TODO: investigate removing this function call to enable SIMD
+	    Dual2<float> result;
+	    Spline::spline_evaluate<Dual2<float>, Dual2<float>, Dual2<float>, float, true>
+	          (spline, result, x, knots, knot_count, knot_arraylen);
+
+	    wR[lane] = result;
+	}
+}
+
 
 OSL_SHADEOP void  osl_spline_dffdf(void *out, const char *spline_, void *x, 
                                    float *knots, int knot_count, int knot_arraylen)

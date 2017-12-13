@@ -53,6 +53,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define NOISE_WIMPL(name, LANE_COUNT)                           \
 	NOISE_WIMPL_INDIRECT(name, LANE_COUNT)
 
+
+#define NOISE_DERIV_WIMPL_INDIRECT(name, LANE_COUNT)                     \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## dfw ##LANE_COUNT## dv,   "xXX")          \
+
+#define NOISE_DERIV_WIMPL(name, LANE_COUNT)                           \
+	NOISE_DERIV_WIMPL_INDIRECT(name, LANE_COUNT)
+
+
 #define GENERIC_NOISE_DERIV_WIMPL_INDIRECT(name, LANE_COUNT)             \
     WDECL (osl_ ## name ## _w ##LANE_COUNT## dfw ##LANE_COUNT## dv,   "xsXXXX")   \
     WDECL (osl_ ## name ## _w ##LANE_COUNT## dvw ##LANE_COUNT## dvw ##LANE_COUNT## df,   "xsXXXXX")
@@ -169,47 +177,60 @@ DECL (osl_warning, "xXs*")
 DECL (osl_split, "isXsii")
 DECL (osl_incr_layers_executed, "xX")
 
-NOISE_IMPL(cellnoise)
-//NOISE_DERIV_IMPL(cellnoise)
-NOISE_IMPL(noise)
-
 WDECL (osl_printf_batched, "xXis*")
 WDECL (osl_warning_batched, "xXis*")
 WDECL (osl_error_batched, "xXis*")
 WDECL (osl_get_attribute_batched, "iXiXXiiXXi")
+WDECL (osl_get_attribute_w16attr_name_batched, "iXiXXiiXXi")
 WDECL (osl_get_attribute_batched_uniform, "iXiXXiiXX")
 WDECL (osl_get_textureinfo_batched, "iXXXXXi")
 WDECL (osl_get_textureinfo_batched_uniform, "iXXXXXX")
 WDECL (osl_texture_batched, "iXXXXXXXXXiXiXiXi")
 WDECL (osl_texture_batched_uniform, "iXXXXXXXXXXiXiXiXi")
+
+NOISE_IMPL(cellnoise)
 NOISE_WIMPL(cellnoise, __OSL_SIMD_LANE_COUNT)
+//NOISE_DERIV_IMPL(cellnoise)
+
+NOISE_IMPL(noise)
+NOISE_DERIV_IMPL(noise)
 NOISE_WIMPL(noise, __OSL_SIMD_LANE_COUNT)
+NOISE_DERIV_WIMPL(noise, __OSL_SIMD_LANE_COUNT)
+
+NOISE_IMPL(snoise)
 NOISE_WIMPL(snoise, __OSL_SIMD_LANE_COUNT)
+NOISE_DERIV_IMPL(snoise)
+NOISE_DERIV_WIMPL(snoise, __OSL_SIMD_LANE_COUNT)
+
+NOISE_IMPL(simplexnoise)
 NOISE_WIMPL(simplexnoise, __OSL_SIMD_LANE_COUNT)
+NOISE_DERIV_IMPL(simplexnoise)
+
+NOISE_IMPL(usimplexnoise)
 NOISE_WIMPL(usimplexnoise, __OSL_SIMD_LANE_COUNT)
+NOISE_DERIV_IMPL(usimplexnoise)
+
+GENERIC_NOISE_DERIV_IMPL(gabornoise)
 GENERIC_NOISE_DERIV_WIMPL(gabornoise, __OSL_SIMD_LANE_COUNT)
 
-NOISE_DERIV_IMPL(noise)
-NOISE_IMPL(snoise)
-NOISE_DERIV_IMPL(snoise)
-NOISE_IMPL(simplexnoise)
-NOISE_DERIV_IMPL(simplexnoise)
-NOISE_IMPL(usimplexnoise)
-NOISE_DERIV_IMPL(usimplexnoise)
-GENERIC_NOISE_DERIV_IMPL(gabornoise)
 GENERIC_NOISE_DERIV_IMPL(genericnoise)
 NOISE_IMPL(nullnoise)
 NOISE_DERIV_IMPL(nullnoise)
+
 NOISE_IMPL(unullnoise)
 NOISE_DERIV_IMPL(unullnoise)
 PNOISE_IMPL(pcellnoise)
+
 //PNOISE_DERIV_IMPL(pcellnoise)
 PNOISE_IMPL(pnoise)
 PNOISE_DERIV_IMPL(pnoise)
+
 PNOISE_IMPL(psnoise)
 PNOISE_DERIV_IMPL(psnoise)
+
 GENERIC_PNOISE_DERIV_IMPL(gaborpnoise)
 GENERIC_PNOISE_DERIV_IMPL(genericpnoise)
+
 DECL (osl_noiseparams_set_anisotropic, "xXi")
 DECL (osl_noiseparams_set_do_filter, "xXi")
 DECL (osl_noiseparams_set_direction, "xXv")
@@ -220,7 +241,9 @@ DECL (osl_count_noise, "xX")
 DECL (osl_spline_fff, "xXXXXii")
 DECL (osl_spline_w16fff, "xXXXXii")
 DECL (osl_spline_w16fw16ff, "xXXXXii")
+DECL (osl_spline_w16fw16fw16f, "xXXXXii")
 DECL (osl_spline_dfdfdf, "xXXXXii")
+DECL (osl_spline_w16dfw16dfw16df, "xXXXXii")
 DECL (osl_spline_dfdff, "xXXXXii")
 DECL (osl_spline_dffdf, "xXXXXii")
 DECL (osl_spline_vfv, "xXXXXii")
@@ -450,6 +473,7 @@ WDECL (osl_smoothstep_w16dfw16fw16dfw16f_masked, "xXXXXi")
     DECL (osl_ ## name ## _w16dfw16df, "xXX")            \
     DECL (osl_ ## name ## _w16dfw16df_masked, "xXXi")            \
     DECL (osl_ ## name ## _w16vw16v,  "xXX")             \
+    DECL (osl_ ## name ## _w16vw16v_masked,  "xXXi")             \
     DECL (osl_ ## name ## _w16dvw16dv, "xXX")
 
 
@@ -474,6 +498,7 @@ WDECL (osl_smoothstep_w16dfw16fw16dfw16f_masked, "xXXXXi")
     DECL (osl_ ## name ## _w16dfw16dfw16f,  "xXXX")         \
     DECL (osl_ ## name ## _w16dfw16dfw16f_masked,  "xXXXi")         \
     DECL (osl_ ## name ## _w16vw16vw16v,    "xXXX")         \
+    DECL (osl_ ## name ## _w16vw16vw16v_masked,    "xXXXi")         \
     DECL (osl_ ## name ## _w16dvw16dvw16dv, "xXXX")         \
     DECL (osl_ ## name ## _w16dvw16vw16dv,  "xXXX")         \
     DECL (osl_ ## name ## _w16dvw16dvw16v,  "xXXX")

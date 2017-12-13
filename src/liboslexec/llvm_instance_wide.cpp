@@ -26,6 +26,8 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+//#define OSL_DEV
+
 #include <cmath>
 #include <cstddef>
 #include <unordered_set>
@@ -133,6 +135,8 @@ static ustring op_compassign("compassign");
 static ustring op_aref("aref");
 static ustring op_compref("compref");
 static ustring op_useparam("useparam");
+static ustring unkown_shader_group_name("<Unkown Shader Group Name>");
+
 
 
 struct HelperFuncRecord {
@@ -733,7 +737,9 @@ BackendLLVMWide::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
             	std::cout << " with MASKING";
             std::cout << std::endl;
 #endif
-            ll.set_debug_location(op.sourcefile().string(), op.method().string(), op.sourceline());
+            if (ll.debug_is_enabled()) {
+                ll.debug_set_location(op.sourcefile(), op.sourceline());
+            }
             ll.push_masking_enabled(requiresMasking(opnum));
             bool ok = (*opd->llvmgenwide) (*this, opnum);
             ll.pop_masking_enabled();
@@ -776,6 +782,13 @@ BackendLLVMWide::build_llvm_init ()
                              llvm_type_sg_ptr(),
 							 llvm_type_groupdata_ptr(),
 							 ll.type_int()));
+
+    if (ll.debug_is_enabled())
+    {
+        ustring file_name = group()[0]->op(group()[0]->maincodebegin()).sourcefile();
+        unsigned int method_line = 0;
+        ll.debug_push_function(unique_name, file_name, method_line);
+    }
 
     // Get shader globals and groupdata pointers
     m_llvm_shaderglobals_ptr = ll.current_function_arg(0); //arg_it++;
@@ -847,6 +860,12 @@ BackendLLVMWide::build_llvm_init ()
                   << " after llvm  = " 
                   << ll.bitcode_string(ll.current_function()) << "\n";
 
+    if (ll.debug_is_enabled()) {
+        ll.debug_pop_function();
+        // We have to finalize debug info before jit happens
+        ll.debug_finalize();
+    }
+
     ll.end_builder();  // clear the builder
 
     return ll.current_function();
@@ -873,6 +892,15 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
 							 llvm_type_groupdata_ptr(),
 							 ll.type_int()));
     
+    if (ll.debug_is_enabled())
+    {
+    	ustring file_name = inst()->op(inst()->maincodebegin()).sourcefile();
+
+    	unsigned int method_line = inst()->op(inst()->maincodebegin()).sourceline();
+    	ll.debug_push_function(unique_layer_name, file_name, method_line);
+    }
+
+
     // Get shader globals and groupdata pointers
     m_llvm_shaderglobals_ptr = ll.current_function_arg(0); //arg_it++;
     m_llvm_groupdata_ptr = ll.current_function_arg(1); //arg_it++;
@@ -886,8 +914,6 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
 
     // Set up a new IR builder
     ll.new_builder (entry_bb);
-	ll.set_debug_info(/*unique_layer_name*/inst()->op(inst()->maincodebegin()).sourcefile().string());
-    ll.set_debug_location(unique_layer_name, unique_layer_name, 0);
 
 	// Start with fewer data lanes active based on how full batch is.
     llvm::Value * initial_shader_mask = ll.int_as_mask(llvm_initial_shader_mask_value);
@@ -1100,6 +1126,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
                 Symbol *srcsym (inst()->symbol (con.src.param));
                 Symbol *dstsym (child->symbol (con.dst.param));
                 llvm_run_connected_layers (*srcsym, con.src.param);
+                OSL_DEV_ONLY(std::cout << "Copy connected data from " << srcsym->name().c_str() << "(" << srcsym->typespec() << ") to " << dstsym->name().c_str() << "(" << dstsym->typespec() << ")" << std::endl);
                 // FIXME -- I'm not sure I understand this.  Isn't this
                 // unnecessary if we wrote to the parameter ourself?
                 // If connection is to a node not used in the next layer
@@ -1122,10 +1149,17 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
                   << "/" << group().nlayers() << " after llvm  = " 
                   << ll.bitcode_string(ll.current_function()) << "\n";
 
+    if (ll.debug_is_enabled()) {
+        ll.debug_pop_function();
+    }
     ll.pop_shader_instance();
-    ll.clear_debug_info();
+    if (ll.debug_is_enabled()) {
+        // We have to finalize debug info before jit happens
+        ll.debug_finalize();
+    }
     ll.end_builder();  // clear the builder
 
+    if (llvm_debug()) std::cout << ll.module_string() << "\n";
     return ll.current_function();
 }
 
@@ -1193,6 +1227,12 @@ BackendLLVMWide::initialize_llvm_group ()
     params[2] = (llvm::Type *) ll.type_char_ptr();
     m_llvm_type_prepare_closure_func = ll.type_function_ptr (ll.type_void(), params);
     m_llvm_type_setup_closure_func = m_llvm_type_prepare_closure_func;
+
+    if (ll.debug_is_enabled()) {
+        const char * compile_unit_name = m_group.m_name.empty() ? unkown_shader_group_name.c_str() : m_group.m_name.c_str();
+
+        ll.debug_setup_compilation_unit(compile_unit_name);
+    }
 }
 
 static void empty_group_func (void*, void*)
@@ -1232,7 +1272,9 @@ BackendLLVMWide::run ()
         shadingcontext()->error ("ParseBitcodeFile returned '%s'\n", err.c_str());
     ASSERT (ll.module());
 #endif
-    ll.enable_debug_info();
+    if (llvm_debug_info()) {
+        ll.debug_enable_info();
+    }
 
     // Create the ExecutionEngine
     if (! ll.make_jit_execengine (&err)) {

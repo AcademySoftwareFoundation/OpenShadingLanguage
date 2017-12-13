@@ -40,6 +40,12 @@ namespace llvm = LLVM_NAMESPACE;
 namespace llvm {
   class BasicBlock;
   class ConstantFolder;
+  class DIBuilder;
+  class DICompileUnit;
+  class DIFile;
+  class DILocation;
+  class DIScope;
+  class DISubprogram;
   class ExecutionEngine;
   class Function;
   class FunctionType;
@@ -48,10 +54,10 @@ namespace llvm {
   class LLVMContext;
   class Module;
   class PointerType;
+  class DISubroutineType;
   class Type;
   class Value;
   class VectorType;
-  class DIBuilder;
   
   namespace legacy {
     class FunctionPassManager;
@@ -64,7 +70,7 @@ namespace llvm {
 OSL_NAMESPACE_ENTER
 
 namespace pvt {   // OSL::pvt
-
+class ShaderInstance;
 
 
 
@@ -108,10 +114,19 @@ public:
                                        const std::string &name=std::string(),
                                        std::string *err=NULL);
 
-    void enable_debug_info();
-    void set_debug_info(const std::string &function_name);
-    void set_debug_location(const std::string &source_file_name, const std::string & method_name, int sourceline);
-    void clear_debug_info();
+    void debug_enable_info();
+    bool debug_is_enabled() const;
+    void debug_setup_compilation_unit(const char * compile_unit_name);
+    void debug_push_function(const std::string & function_name,
+    	                     OIIO::ustring file_name,
+    	                     unsigned int method_line);
+    void debug_pop_function();
+    void debug_push_inlined_function(OIIO::ustring function_name,
+    	                     OIIO::ustring file_name,
+    	                     unsigned int method_line);
+    void debug_pop_inlined_function();
+    void debug_set_location(OIIO::ustring source_file_name, int sourceline);
+    void debug_finalize();
     
     
     /// Create a new function (that will later be populated with
@@ -695,6 +710,8 @@ public:
 
     /// Convert a function's bitcode to a string.
     std::string bitcode_string (llvm::Function *func);
+    /// Convert a module's bitcode to a string.
+    std::string module_string ();
 
     /// Delete the IR for the body of the given function to reclaim its
     /// memory (only helpful if we know we won't use it again).
@@ -718,7 +735,6 @@ private:
     PerThreadInfo *m_thread;
     llvm::LLVMContext *m_llvm_context;
     llvm::Module *m_llvm_module;
-    llvm::DIBuilder* m_llvm_debug_builder; 
     IRBuilder *m_builder;
     MemoryManager *m_llvm_jitmm;
     llvm::Function *m_current_function;
@@ -743,6 +759,7 @@ private:
     // For each pushed function call, keep a slot for modified masks
     // to be stored from code blocks that might be branched over
     std::vector<llvm::Value *> m_alloca_for_modified_mask_stack;
+
     std::vector<int> m_masked_return_count_stack;
     int m_masked_exit_count;
 
@@ -792,6 +809,23 @@ private:
 
     bool m_supports_masked_stores;
     bool m_supports_native_bit_masks;
+
+
+    // Debug Info
+    llvm::DIFile * getOrCreateDebugFileFor(const std::string &file_name);
+    llvm::DIScope * getCurrentDebugScope() const;
+    llvm::DILocation *getCurrentInliningSite() const;
+
+
+    llvm::DIBuilder* m_llvm_debug_builder;
+    llvm::DICompileUnit *mDebugCU;
+    std::vector<llvm::DIScope *> mLexicalBlocks;
+
+    typedef std::unordered_map<std::string, llvm::DIFile *> FileByNameType;
+    FileByNameType mDebugFileByName;
+    std::vector<llvm::DILocation *> mInliningSites;
+    llvm::DISubroutineType * mSubTypeForInlinedFunction;
+
 };
 
 

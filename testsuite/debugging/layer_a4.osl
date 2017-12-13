@@ -1,0 +1,12 @@
+shader a4 (float Kd = 0.5,
+          output float f_out = 0,
+          output color c_out = 0
+    )
+{
+    f_out = Kd*P[0];
+    if (P[0] > 0.25) {
+        c_out = color (f_out/2, 1, 1);
+    }
+    
+    printf ("a: f_out = %g, c_out = %g\n", f_out, c_out);
+}

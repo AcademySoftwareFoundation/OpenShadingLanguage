@@ -144,7 +144,7 @@ osl_mul_mff (void *r, float a, float b)
 }
 
 OSL_SHADEOP void
-osl_mul_w16mw16fw16f(void * __restrict__ wr_, void * __restrict__ wa_, void * __restrict__ wb_)
+osl_mul_w16mw16fw16f(void * /*__restrict__*/ wr_, void * /*__restrict__*/ wa_, void * /*__restrict__*/ wb_)
 {
 	OSL_INTEL_PRAGMA(forceinline recursive)
 	{

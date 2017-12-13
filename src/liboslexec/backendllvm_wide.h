@@ -66,6 +66,9 @@ public:
     /// What LLVM debug level are we at?
     int llvm_debug() const;
 
+    /// Are we generating LLVM debug info?
+    int llvm_debug_info() const;
+
     /// Set up a bunch of static things we'll need for the whole group.
     ///
     void initialize_llvm_group ();

@@ -144,6 +144,25 @@ osl_##name##_w16vw16v (void *r_, void *val_)                        \
 	}                                                               \
 }                                                                   \
                                                                     \
+OSL_SHADEOP void                                                    \
+osl_##name##_w16vw16v_masked (void *r_, void *val_, int mask_value)                        \
+{                                                                   \
+	OSL_INTEL_PRAGMA(forceinline recursive)							\
+	{																\
+		ConstWideAccessor<Vec3> wval(val_);						    \
+		MaskedAccessor<Vec3> wr(r_, Mask(mask_value));								    \
+		OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(wr.width)) \
+		OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(wr.width)) \
+		for(int lane=0; lane < wr.width; ++lane) {                  \
+			Vec3 val = wval[lane];                                  \
+			Vec3 r (floatfunc(val.x),                               \
+					floatfunc(val.y),                               \
+				    floatfunc(val.z));                              \
+			wr[lane] = r;                                           \
+		}                                                           \
+	}                                                               \
+}                                                                   \
+                                                                    \
 OSL_SHADEOP void                       \
 osl_##name##_w16dvw16dv (void *r_, void *val_)                      \
 {                                                                   \
@@ -307,6 +326,26 @@ osl_##name##_w16vw16vw16v (void *r_, void *a_, void *b_)            \
 		ConstWideAccessor<Vec3> wa(a_);						        \
 		ConstWideAccessor<Vec3> wb(b_);						        \
 		WideAccessor<Vec3> wr(r_);								    \
+		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))                  \
+		for(int lane=0; lane < wr.width; ++lane) {                  \
+			Vec3 a = wa[lane];                                      \
+			Vec3 b = wb[lane];                                      \
+			Vec3 r (floatfunc(a.x, b.x),                            \
+					floatfunc(a.y, b.y),                            \
+				    floatfunc(a.z, b.z));                           \
+			wr[lane] = r;                                           \
+		}                                                           \
+	}                                                               \
+}                                                                   \
+                                                                    \
+OSL_SHADEOP void                                                    \
+osl_##name##_w16vw16vw16v_masked (void *r_, void *a_, void *b_, int mask_value)            \
+{                                                                   \
+	OSL_INTEL_PRAGMA(forceinline recursive)							\
+	{																\
+		ConstWideAccessor<Vec3> wa(a_);						        \
+		ConstWideAccessor<Vec3> wb(b_);						        \
+		MaskedAccessor<Vec3> wr(r_, Mask(mask_value));				\
 		OSL_OMP_PRAGMA(omp simd simdlen(wr.width))                  \
 		for(int lane=0; lane < wr.width; ++lane) {                  \
 			Vec3 a = wa[lane];                                      \

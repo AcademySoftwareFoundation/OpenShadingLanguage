@@ -1460,7 +1460,29 @@ inline void perlin (Dual2<float> &result, const H &hash,
 }
 
 
+template <typename H>
+inline void perlin_scalar (Dual2<float> &result, const H &hash,
+                    const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z)
+{
 
+    // Non-SIMD case
+    int X; Dual2<float> fx = floorfrac(x, &X);
+    int Y; Dual2<float> fy = floorfrac(y, &Y);
+    int Z; Dual2<float> fz = floorfrac(z, &Z);
+    Dual2<float> u = fade(fx);
+    Dual2<float> v = fade(fy);
+    Dual2<float> w = fade(fz);
+    result = OIIO::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz     ),
+                            grad (hash (X+1, Y  , Z  ), fx-1.0f, fy     , fz     ),
+                            grad (hash (X  , Y+1, Z  ), fx     , fy-1.0f, fz     ),
+                            grad (hash (X+1, Y+1, Z  ), fx-1.0f, fy-1.0f, fz     ),
+                            grad (hash (X  , Y  , Z+1), fx     , fy     , fz-1.0f),
+                            grad (hash (X+1, Y  , Z+1), fx-1.0f, fy     , fz-1.0f),
+                            grad (hash (X  , Y+1, Z+1), fx     , fy-1.0f, fz-1.0f),
+                            grad (hash (X+1, Y+1, Z+1), fx-1.0f, fy-1.0f, fz-1.0f),
+                            u, v, w);
+    result = scale3 (result);
+}
 
 template <typename H>
 inline void perlin (Dual2<float> &result, const H &hash,
@@ -2151,6 +2173,8 @@ struct Noise {
 			for(int i=0; i< WidthT; ++i) {
 				float x = wx[i];
 				float perlinResult;
+				// perlin(float, hash, float) isn't based on OIIO_SIMD
+				// so no need for a seperate perlin_scalar
 				this->operator()(perlinResult,x);
 				result[i] = perlinResult;
 			}
@@ -2298,6 +2322,26 @@ struct Noise {
         perlin(result, h, px, py, pz);
         result = 0.5f * (result + 1.0f);
     }
+
+	template<int WidthT>
+	inline void operator() (WideAccessor<Dual2<float>, WidthT> wresult, ConstWideAccessor<Dual2<Vec3>, WidthT> wp) const {
+		OSL_INTEL_PRAGMA(forceinline recursive)
+		{
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+			for(int i=0; i< WidthT; ++i) {
+				Dual2<Vec3> p = wp[i];
+		        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+		        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+		        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+				Dual2<float> perlinResult;
+				HashScalar h;
+				perlin_scalar(perlinResult, h, px, py, pz);
+				Dual2<float> scaledResult = 0.5f * (perlinResult + 1.0f);
+				wresult[i] = scaledResult;
+			}
+		}
+	}
+
 
     inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
         HashScalar h;        
@@ -2487,6 +2531,24 @@ struct SNoise {
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
         perlin(result, h, px, py, pz);
     }
+
+	template<int WidthT>
+	inline void operator() (WideAccessor<Dual2<float>, WidthT> wresult, ConstWideAccessor<Dual2<Vec3>, WidthT> wp) const {
+		OSL_INTEL_PRAGMA(forceinline recursive)
+		{
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+			for(int i=0; i< WidthT; ++i) {
+				Dual2<Vec3> p = wp[i];
+		        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+		        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+		        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+				Dual2<float> perlinResult;
+				HashScalar h;
+				perlin_scalar(perlinResult, h, px, py, pz);
+				wresult[i] = perlinResult;
+			}
+		}
+	}
 
     inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
         HashScalar h;

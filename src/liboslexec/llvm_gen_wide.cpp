@@ -25,8 +25,10 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
 //#define OSL_DEV
 //#define __OSL_TRACE_MASKS
+
 #include <cmath>
 
 #include <OpenImageIO/fmath.h>
@@ -2715,9 +2717,9 @@ LLVMGEN (llvm_gen_sincos)
 
     bool op_is_uniform = rop.isSymbolUniform(Theta);
 
-    ASSERT(op_is_uniform || (!rop.isSymbolUniform(Sin_out) && !rop.isSymbolUniform(Sin_out)));
+    ASSERT(op_is_uniform || (!rop.isSymbolUniform(Sin_out) && !rop.isSymbolUniform(Cos_out)));
     // Handle broadcasting results to wide results
-    ASSERT((!op_is_uniform || (rop.isSymbolUniform(Sin_out) && rop.isSymbolUniform(Sin_out))) && "incomplete");
+    ASSERT((!op_is_uniform || (rop.isSymbolUniform(Sin_out) && rop.isSymbolUniform(Cos_out))) && "incomplete");
 
     std::string func_name = std::string("osl_sincos_");
     func_name += arg_typecode(Theta, result_derivs  && theta_deriv, op_is_uniform);
@@ -2785,6 +2787,8 @@ LLVMGEN (llvm_gen_andor)
 	if ((resultType == reinterpret_cast<llvm::Type *>(rop.ll.type_wide_int_ptr())) ||
 		(resultType == reinterpret_cast<llvm::Type *>(rop.ll.type_int_ptr()))) {
 		llvm::Value* final_result = rop.ll.op_bool_to_int (i1_res);
+		// TODO: should llvm_store_value handle this internally,
+		// To make sure we don't miss any scenarios
 		rop.llvm_store_value(final_result, result, 0, 0);
 	} else {
 		rop.llvm_store_value(i1_res, result, 0, 0);
@@ -4455,6 +4459,16 @@ LLVMGEN (llvm_gen_getattribute)
     // from the callback
     bool result_is_uniform = rop.isSymbolUniform(Result);
     bool destination_is_uniform = rop.isSymbolUniform(Destination);
+    bool attribute_is_uniform = rop.isSymbolUniform(Attribute);
+
+    ASSERT((!array_lookup || rop.isSymbolUniform(Index)) && "incomplete");
+    ASSERT((!object_lookup || rop.isSymbolUniform(ObjectName)) && "incomplete");
+//    if (false == rop.isSymbolUniform(Attribute))
+//    {
+//    	std::cout << "getattribute Varying Attribute :" << Attribute.name().c_str() << std::endl;
+//    }
+
+    //ASSERT(rop.isSymbolUniform(Attribute) && "incomplete");
 
 
     bool op_is_uniform = rop.getAttributesIsUniform(opnum);
@@ -4472,14 +4486,16 @@ LLVMGEN (llvm_gen_getattribute)
         args.push_back (rop.ll.constant ((int)Destination.has_derivs()));
         args.push_back (object_lookup ? rop.llvm_load_value (ObjectName) :
                                         rop.ll.constant (ustring()));
-        args.push_back (rop.llvm_load_value (Attribute));
+        args.push_back (attribute_is_uniform ? rop.llvm_load_value (Attribute) : rop.llvm_void_ptr(Attribute) );
         args.push_back (rop.ll.constant ((int)array_lookup));
         args.push_back (array_lookup ? rop.llvm_load_value (Index) : rop.ll.constant((int)0)); // Never load a symbol that is invalid
         args.push_back (rop.ll.constant_ptr ((void *) dest_type));
         args.push_back (rop.llvm_void_ptr (Destination));
         args.push_back (rop.ll.mask_as_int(rop.ll.current_mask()));
 
-        llvm::Value *r = rop.ll.call_function ("osl_get_attribute_batched", &args[0], args.size());
+        const char * func_name = attribute_is_uniform ? "osl_get_attribute_batched"
+        		                                      : "osl_get_attribute_w16attr_name_batched";
+        llvm::Value *r = rop.ll.call_function (func_name, &args[0], args.size());
         rop.llvm_conversion_store_masked_status(r, Result);
     } else {
         ASSERT((!object_lookup || rop.isSymbolUniform(ObjectName)) && rop.isSymbolUniform(Attribute));
@@ -5499,18 +5515,34 @@ LLVMGEN (llvm_gen_isconstant)
 
 LLVMGEN (llvm_gen_functioncall)
 {
+	//std::cout << "llvm_gen_functioncall" << std::endl;
     Opcode &op (rop.inst()->ops()[opnum]);
     ASSERT (op.nargs() == 1);
+
+    Symbol &functionNameSymbol(*rop.opargsym (op, 0));
+    ASSERT(functionNameSymbol.is_constant());
+    ASSERT(functionNameSymbol.typespec().is_string());
+    ustring functionName = *(ustring *)functionNameSymbol.data();
 
     int exit_count_before_functioncall = rop.ll.masked_exit_count();
     rop.ll.push_function_mask(rop.ll.current_mask());
     llvm::BasicBlock* after_block = rop.ll.push_function ();
+    unsigned int op_num_function_starts_at = opnum+1;
+    unsigned int op_num_function_ends_at = op.jump(0);
+    if (rop.ll.debug_is_enabled()) {
+       	ustring file_name = rop.inst()->op(op_num_function_starts_at).sourcefile();
+       	unsigned int method_line = rop.inst()->op(op_num_function_starts_at).sourceline();
+       	rop.ll.debug_push_inlined_function(functionName, file_name, method_line);
+    }
 
     // Generate the code for the body of the function
-    rop.build_llvm_code (opnum+1, op.jump(0));
+    rop.build_llvm_code (op_num_function_starts_at, op_num_function_ends_at);
     rop.ll.op_branch (after_block);
 
     // Continue on with the previous flow
+    if (rop.ll.debug_is_enabled()) {
+        rop.ll.debug_pop_inlined_function();
+    }
     rop.ll.pop_function ();
     rop.ll.pop_function_mask();
 
@@ -5525,6 +5557,35 @@ LLVMGEN (llvm_gen_functioncall)
 }
 
 
+LLVMGEN (llvm_gen_functioncall_nr)
+{
+    OSL_DEV_ONLY(std::cout << "llvm_gen_functioncall_nr" << std::endl);
+    ASSERT(rop.ll.debug_is_enabled()  && "no return version should only exist when debug is enabled");
+    Opcode &op (rop.inst()->ops()[opnum]);
+    ASSERT (op.nargs() == 1);
+
+    Symbol &functionNameSymbol(*rop.opargsym (op, 0));
+    ASSERT(functionNameSymbol.is_constant());
+    ASSERT(functionNameSymbol.typespec().is_string());
+    ustring functionName = *(ustring *)functionNameSymbol.data();
+
+    unsigned int op_num_function_starts_at = opnum+1;
+    unsigned int op_num_function_ends_at = op.jump(0);
+    ASSERT(op.farthest_jump() == op_num_function_ends_at && "As we are not doing any branching, we should ensure that the inlined function truly ends at the farthest jump");
+    {
+       	ustring file_name = rop.inst()->op(op_num_function_starts_at).sourcefile();
+       	unsigned int method_line = rop.inst()->op(op_num_function_starts_at).sourceline();
+       	rop.ll.debug_push_inlined_function(functionName, file_name, method_line);
+    }
+
+    // Generate the code for the body of the function
+    rop.build_llvm_code (op_num_function_starts_at, op_num_function_ends_at);
+
+    // Continue on with the previous flow
+    rop.ll.debug_pop_inlined_function();
+
+    return true;
+}
 
 LLVMGEN (llvm_gen_return)
 {

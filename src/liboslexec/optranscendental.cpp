@@ -60,7 +60,7 @@ namespace pvt {
 
 #define MAKE_WIDE_UNARY_PERCOMPONENT_OP(name,floatfunc,dualfunc)         \
 OSL_SHADEOP void                                                    \
-osl_##name##_w16fw16f (void * /*__restrict__*/ r_, void * /*__restrict__*/ val_)                        \
+osl_##name##_w16fw16f (void * /*OSL_RESTRICT*/ r_, void * /*OSL_RESTRICT*/ val_)                        \
 {                                                                   \
 	OSL_INTEL_PRAGMA(forceinline recursive)							\
 	{																\
@@ -76,7 +76,7 @@ osl_##name##_w16fw16f (void * /*__restrict__*/ r_, void * /*__restrict__*/ val_)
 }                                                                   \
                                                                     \
 OSL_SHADEOP void                                                    \
-osl_##name##_w16fw16f_masked (void * /*__restrict__*/ r_, void * /*__restrict__*/ val_, int mask_value) \
+osl_##name##_w16fw16f_masked (void * /*OSL_RESTRICT*/ r_, void * /*OSL_RESTRICT*/ val_, int mask_value) \
 {                                                                   \
 	OSL_INTEL_PRAGMA(forceinline recursive)							\
 	{																\

@@ -1272,12 +1272,8 @@ BackendLLVMWide::run ()
         shadingcontext()->error ("ParseBitcodeFile returned '%s'\n", err.c_str());
     ASSERT (ll.module());
 #endif
-    if (llvm_debug_info()) {
-        ll.debug_enable_info();
-    }
-
     // Create the ExecutionEngine
-    if (! ll.make_jit_execengine (&err)) {
+    if (! ll.make_jit_execengine (&err, shadingsys().llvm_debugging_symbols(), shadingsys().llvm_profiling_events())) {
         shadingcontext()->error ("Failed to create engine: %s\n", err.c_str());
         ASSERT (0);
         return;

@@ -712,7 +712,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_llvm_optimize(0),
       m_debug(0), m_llvm_debug(0),
       m_llvm_debug_layers(0), m_llvm_debug_ops(0),
-      m_llvm_debug_info(0),
+      m_llvm_debugging_symbols(0),
+      m_llvm_profiling_events(0),
       m_commonspace_synonym("world"),
       m_colorspace("Rec709"),
       m_max_local_mem_KB(2048),
@@ -811,10 +812,15 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     if (llvm_debug_env && *llvm_debug_env)
         m_llvm_debug = atoi(llvm_debug_env);
 
-    // Alternate way of generating LLVM debug info (temporary/experimental)
-    const char *llvm_debug_info_env = getenv ("OSL_LLVM_DEBUG_INFO");
-    if (llvm_debug_info_env && *llvm_debug_info_env)
-        m_llvm_debug_info = atoi(llvm_debug_info_env);
+    // Alternate way of generating LLVM debugging symbols (temporary/experimental)
+    const char *llvm_debugging_symbols_env = getenv ("OSL_LLVM_DEBUGGING_SYMBOLS");
+    if (llvm_debugging_symbols_env && *llvm_debugging_symbols_env)
+        m_llvm_debugging_symbols = atoi(llvm_debugging_symbols_env);
+
+    // Alternate way of generating LLVM profiling events (temporary/experimental)
+    const char *llvm_profiling_events_env = getenv ("OSL_LLVM_PROFILING_EVENTS");
+    if (llvm_profiling_events_env && *llvm_profiling_events_env)
+        m_llvm_profiling_events = atoi(llvm_profiling_events_env);
 
     // Initialize a default set of raytype names.  A particular renderer
     // can override this, add custom names, or change the bits around,
@@ -1154,7 +1160,8 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("llvm_debug", int, m_llvm_debug);
     ATTR_SET ("llvm_debug_layers", int, m_llvm_debug_layers);
     ATTR_SET ("llvm_debug_ops", int, m_llvm_debug_ops);
-    ATTR_SET ("llvm_debug_info", int, m_llvm_debug_info);
+    ATTR_SET ("llvm_debugging_symbols", int, m_llvm_debugging_symbols);
+    ATTR_SET ("llvm_profiling_events", int, m_llvm_profiling_events);
     ATTR_SET ("strict_messages", int, m_strict_messages);
     ATTR_SET ("range_checking", int, m_range_checking);
     ATTR_SET ("unknown_coordsys_error", int, m_unknown_coordsys_error);
@@ -1264,7 +1271,8 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("llvm_debug", int, m_llvm_debug);
     ATTR_DECODE ("llvm_debug_layers", int, m_llvm_debug_layers);
     ATTR_DECODE ("llvm_debug_ops", int, m_llvm_debug_ops);
-    ATTR_DECODE ("llvm_debug_info", int, m_llvm_debug_info);
+    ATTR_DECODE ("llvm_debugging_symbols", int, m_llvm_debugging_symbols);
+    ATTR_DECODE ("llvm_profiling_events", int, m_llvm_profiling_events);
     ATTR_DECODE ("strict_messages", int, m_strict_messages);
     ATTR_DECODE ("range_checking", int, m_range_checking);
     ATTR_DECODE ("unknown_coordsys_error", int, m_unknown_coordsys_error);

@@ -114,7 +114,6 @@ public:
                                        const std::string &name=std::string(),
                                        std::string *err=NULL);
 
-    void debug_enable_info();
     bool debug_is_enabled() const;
     void debug_setup_compilation_unit(const char * compile_unit_name);
     void debug_push_function(const std::string & function_name,
@@ -179,7 +178,7 @@ public:
     /// Create a new JITing ExecutionEngine and make it the current one.
     /// Return a pointer to the new engine.  If err is not NULL, put any
     /// errors there.
-    llvm::ExecutionEngine *make_jit_execengine (std::string *err=NULL);
+    llvm::ExecutionEngine *make_jit_execengine (std::string *err=NULL, bool debugging_symbols=false, bool profiling_events=false);
 
     void dump_struct_data_layout(llvm::Type *Ty);
     void validate_struct_data_layout(llvm::Type *Ty, const std::vector<unsigned int> & expected_offset_by_index);

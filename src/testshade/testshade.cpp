@@ -153,8 +153,11 @@ set_shadingsys_options ()
     shadingsys->attribute ("llvm_debug", (llvm_debug ? 2 : 0));
     OSL_DEV_ONLY(shadingsys->attribute ("llvm_debug", 2));
 
-    // Always generate llvm debug info
-    shadingsys->attribute ("llvm_debug_info", 1);
+    // Always generate llvm debugging info
+    shadingsys->attribute ("llvm_debugging_symbols", 1);
+
+    // Always emit llvm Intel profiling events
+    shadingsys->attribute ("llvm_profiling_events", 1);
 
     shadingsys->attribute ("debug", debug2 ? 2 : (debug ? 1 : 0));
     shadingsys->attribute ("compile_report", debug|debug2);

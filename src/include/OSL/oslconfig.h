@@ -119,6 +119,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 	#endif
 #endif
 
+#ifndef OSL_RESTRICT
+    #if defined(__INTEL_COMPILER)
+        #define OSL_RESTRICT __restrict
+    #else
+        #define OSL_RESTRICT
+    #endif
+#endif
+
+
 // Symbol export defines
 #include "export.h"
 

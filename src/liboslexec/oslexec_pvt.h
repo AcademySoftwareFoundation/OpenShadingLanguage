@@ -602,7 +602,8 @@ public:
     int llvm_debug () const { return m_llvm_debug; }
     int llvm_debug_layers () const { return m_llvm_debug_layers; }
     int llvm_debug_ops () const { return m_llvm_debug_ops; }
-    int llvm_debug_info () const { return m_llvm_debug_info; }
+    int llvm_debugging_symbols () const { return m_llvm_debugging_symbols; }
+    int llvm_profiling_events () const { return m_llvm_profiling_events; }
     bool fold_getattribute () const { return m_opt_fold_getattribute; }
     bool opt_texture_handle () const { return m_opt_texture_handle; }
     int opt_passes() const { return m_opt_passes; }
@@ -804,8 +805,8 @@ private:
     int m_llvm_debug;                     ///< More LLVM debugging output
     int m_llvm_debug_layers;              ///< Add layer enter/exit printfs
     int m_llvm_debug_ops;                 ///< Add printfs to every op
-    int m_llvm_debug_info;                ///< Generate debug info during JIT
-
+    int m_llvm_debugging_symbols;         ///< Generate GDB compatible debug info during JIT
+    int m_llvm_profiling_events;          ///< Emit Intel profiling events during JIT
     ustring m_debug_groupname;            ///< Name of sole group to debug
     ustring m_debug_layername;            ///< Name of sole layer to debug
     ustring m_opt_layername;              ///< Name of sole layer to optimize

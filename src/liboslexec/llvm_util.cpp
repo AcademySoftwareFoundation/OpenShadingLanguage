@@ -500,33 +500,6 @@ LLVM_Util::new_module (const char *id)
     return new llvm::Module(id, context());
 }
 
-void 
-LLVM_Util::debug_enable_info() {
-    ASSERT(!debug_is_enabled());
-    ASSERT(m_llvm_module != nullptr);
-    OSL_DEV_ONLY(std::cout << "debug_enable_info"<< std::endl);
-
-	module()->addModuleFlag(llvm::Module::Error, "Debug Info Version",
-			llvm::DEBUG_METADATA_VERSION);
-
-	unsigned int modulesDebugInfoVersion = 0;
-	if (auto *Val = llvm::mdconst::dyn_extract_or_null < llvm::ConstantInt
-			> (module()->getModuleFlag("Debug Info Version"))) {
-		modulesDebugInfoVersion = Val->getZExtValue();
-	}
-
-    ASSERT(m_llvm_debug_builder == nullptr && "Only handle creating the debug builder once");
-    m_llvm_debug_builder = new llvm::DIBuilder(*m_llvm_module);
-
-    llvm::SmallVector<llvm::Metadata *, 8> EltTys;
-    mSubTypeForInlinedFunction = m_llvm_debug_builder->createSubroutineType(
-                    m_llvm_debug_builder->getOrCreateTypeArray(EltTys));
-
-//	OSL_DEV_ONLY(std::cout)
-//	OSL_DEV_ONLY(		<< "------------------>enable_debug_info<-----------------------------module flag['Debug Info Version']= ")
-//	OSL_DEV_ONLY(		<< modulesDebugInfoVersion << std::endl);
-}
-
 bool
 LLVM_Util::debug_is_enabled() const
 {
@@ -1071,8 +1044,11 @@ LLVM_Util::end_builder ()
 
 
 llvm::ExecutionEngine *
-LLVM_Util::make_jit_execengine (std::string *err)
+LLVM_Util::make_jit_execengine (std::string *err, bool debugging_symbols, bool profiling_events)
 {
+
+    OSL_DEV_ONLY(std::cout << "LLVM_Util::make_jit_execengine" << std::endl);
+
     execengine (NULL);   // delete and clear any existing engine
     if (err)
         err->clear ();
@@ -1099,9 +1075,9 @@ LLVM_Util::make_jit_execengine (std::string *err)
 #endif /* USE_OLD_JIT */
 
     
+    //engine_builder.setOptLevel (llvm::CodeGenOpt::None);
     //engine_builder.setOptLevel (llvm::CodeGenOpt::Default);
     engine_builder.setOptLevel (llvm::CodeGenOpt::Aggressive);
-    //engine_builder.setOptLevel (llvm::CodeGenOpt::None);
     
 
     const char * oslDumpAsmString = std::getenv("OSL_DUMP_ASM");
@@ -1317,17 +1293,42 @@ LLVM_Util::make_jit_execengine (std::string *err)
     OSL_DEV_ONLY(std::cout << "target_machine.getTargetFeatureString ()=" << target_machine->getTargetFeatureString ().str() << std::endl);
 	//OSL_DEV_ONLY(std::cout << "target_machine.getTargetTriple ()=" << target_machine->getTargetTriple().str() << std::endl);
 
-    if (debug_is_enabled()) {
+    if (debugging_symbols) {
+        ASSERT(m_llvm_module != nullptr);
+        OSL_DEV_ONLY(std::cout << "debugging symbols"<< std::endl);
+
+        module()->addModuleFlag(llvm::Module::Error, "Debug Info Version",
+                llvm::DEBUG_METADATA_VERSION);
+
+        unsigned int modulesDebugInfoVersion = 0;
+        if (auto *Val = llvm::mdconst::dyn_extract_or_null < llvm::ConstantInt
+                > (module()->getModuleFlag("Debug Info Version"))) {
+            modulesDebugInfoVersion = Val->getZExtValue();
+        }
+
+        ASSERT(m_llvm_debug_builder == nullptr && "Only handle creating the debug builder once");
+        m_llvm_debug_builder = new llvm::DIBuilder(*m_llvm_module);
+
+        llvm::SmallVector<llvm::Metadata *, 8> EltTys;
+        mSubTypeForInlinedFunction = m_llvm_debug_builder->createSubroutineType(
+                        m_llvm_debug_builder->getOrCreateTypeArray(EltTys));
+
+        //  OSL_DEV_ONLY(std::cout)
+        //  OSL_DEV_ONLY(       << "------------------>enable_debug_info<-----------------------------module flag['Debug Info Version']= ")
+        //  OSL_DEV_ONLY(       << modulesDebugInfoVersion << std::endl);
+
         llvm::JITEventListener* gdbListener = llvm::JITEventListener::createGDBRegistrationListener();
         assert (gdbListener != NULL);
         m_llvm_exec->RegisterJITEventListener(gdbListener);
     }
 
-    // TODO:  Create better VTune listener that can handle inline fuctions
-    //        https://software.intel.com/en-us/node/544211
-    llvm::JITEventListener* vtuneProfiler = llvm::JITEventListener::createIntelJITEventListener();
-    assert (vtuneProfiler != NULL);
-    m_llvm_exec->RegisterJITEventListener(vtuneProfiler);
+    if (profiling_events) {
+        // TODO:  Create better VTune listener that can handle inline fuctions
+        //        https://software.intel.com/en-us/node/544211
+        llvm::JITEventListener* vtuneProfiler = llvm::JITEventListener::createIntelJITEventListener();
+        assert (vtuneProfiler != NULL);
+        m_llvm_exec->RegisterJITEventListener(vtuneProfiler);
+    }
 
     // Force it to JIT as soon as we ask it for the code pointer,
     // don't take any chances that it might JIT lazily, since we

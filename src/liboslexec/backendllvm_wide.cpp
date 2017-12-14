@@ -154,13 +154,6 @@ BackendLLVMWide::llvm_debug() const
 }
 
 
-int
-BackendLLVMWide::llvm_debug_info() const
-{
-    return shadingsys().llvm_debug_info();
-}
-
-
 void
 BackendLLVMWide::set_inst (int layer)
 {

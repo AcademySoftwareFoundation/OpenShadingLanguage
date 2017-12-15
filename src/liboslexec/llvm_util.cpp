@@ -132,7 +132,6 @@ namespace pvt {
 namespace {
 static OIIO::spin_mutex llvm_global_mutex;
 static bool setup_done = false;
-static boost::thread_specific_ptr<LLVM_Util::PerThreadInfo> perthread_infos;
 static std::vector<std::shared_ptr<LLVMMemoryManager> > jitmm_hold;
 
 };
@@ -143,28 +142,39 @@ static std::vector<std::shared_ptr<LLVMMemoryManager> > jitmm_hold;
 // We hold certain things (LLVM context and custom JIT memory manager)
 // per thread and retained across LLVM_Util invocations.  We are
 // intentionally "leaking" them.
-struct LLVM_Util::PerThreadInfo {
-    PerThreadInfo () : llvm_context(NULL), llvm_jitmm(NULL) {}
-    ~PerThreadInfo () {
+struct LLVM_Util::PerThreadInfo::Impl {
+    Impl () : llvm_context(NULL), llvm_jitmm(NULL) {}
+    ~Impl () {
         delete llvm_context;
         // N.B. Do NOT delete the jitmm -- another thread may need the
         // code! Don't worry, we stashed a pointer in jitmm_hold.
-    }
-    static void destroy (PerThreadInfo *threadinfo) { delete threadinfo; }
-    static PerThreadInfo *get () {
-        PerThreadInfo *p = perthread_infos.get ();
-        if (! p) {
-            p = new PerThreadInfo();
-            perthread_infos.reset (p);
-        }
-        return p;
+        // TODO: look into alternative way to manage lifetime of JIT'd code.
+        // Once the last ShadingSystem is destructed we could free this llvm_jitmm memory?
     }
 
     llvm::LLVMContext *llvm_context;
     LLVMMemoryManager *llvm_jitmm;
 };
 
+LLVM_Util::PerThreadInfo::PerThreadInfo()
+: m_thread_info(nullptr)
+{}
 
+LLVM_Util::PerThreadInfo::~PerThreadInfo()
+{
+    // Make sure destructor to PerThreadInfoImpl is only called here
+    // where we know the definition of the owned PerThreadInfoImpl;
+    delete m_thread_info;
+}
+
+LLVM_Util::PerThreadInfo::Impl *
+LLVM_Util::PerThreadInfo::get() const
+{
+    if (nullptr == m_thread_info) {
+        m_thread_info = new Impl();
+    }
+    return m_thread_info;
+}
 
 
 size_t
@@ -337,8 +347,8 @@ public:
 
 
 
-LLVM_Util::LLVM_Util (int debuglevel)
-    : m_debug(debuglevel), m_thread(NULL),
+LLVM_Util::LLVM_Util (int debuglevel, const LLVM_Util::PerThreadInfo &per_thread_info)
+    : m_debug(debuglevel), m_thread(nullptr),
       m_llvm_context(NULL), m_llvm_module(NULL),
       m_builder(NULL), m_llvm_jitmm(NULL),
       m_current_function(NULL),
@@ -350,9 +360,8 @@ LLVM_Util::LLVM_Util (int debuglevel)
       mSubTypeForInlinedFunction(nullptr)
 {
     SetupLLVM ();
-    m_thread = PerThreadInfo::get();
+    m_thread = per_thread_info.get();
     ASSERT (m_thread);
-
     {
         OIIO::spin_lock lock (llvm_global_mutex);
         if (! m_thread->llvm_context)

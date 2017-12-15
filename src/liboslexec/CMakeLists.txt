@@ -91,6 +91,8 @@ if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG)
     add_definitions ("-Rpass-analysis=loop-vectorize")
 endif ()
 
+# NOTE: your renderer/texture system may not like always texturing 4 channels
+add_definitions ("-DOSL_ALWAYS_TEXTURE_4_CHANNELS")
 
 if (NOT CMAKE_COMPILER_IS_INTEL)
 	SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS" )

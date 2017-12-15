@@ -46,6 +46,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/refcnt.h>
 
 #include "OSL/genclosure.h"
+#include "OSL/llvm_util.h"
 #include "OSL/oslexec.h"
 #include "OSL/oslclosure.h"
 #include "osl_pvt.h"
@@ -79,6 +80,7 @@ struct PerThreadInfo
     ShadingContext *pop_context ();  ///< Get the pool top and then pop
 
     std::stack<ShadingContext *> context_pool;
+    LLVM_Util::PerThreadInfo llvm_thread_info;
 };
 
 
@@ -1774,6 +1776,10 @@ public:
 
     void texture_thread_info (TextureSystem::Perthread *t) {
         m_texture_thread_info = t;
+    }
+
+    const LLVM_Util::PerThreadInfo &llvm_thread_info () const {
+        return thread_info()->llvm_thread_info;
     }
 
     TextureOpt *texture_options_ptr () { return &m_textureopt; }

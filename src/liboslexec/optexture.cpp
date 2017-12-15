@@ -271,7 +271,12 @@ osl_texture (void *sg_, const char *name, void *handle,
     OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd;
     bool ok = sg->renderer->texture (USTR(name),
                                      (TextureSystem::TextureHandle *)handle, NULL,
-                                     *opt, sg, s, t, dsdx, dtdx, dsdy, dtdy, 4,
+                                     *opt, sg, s, t, dsdx, dtdx, dsdy, dtdy,
+#ifdef OSL_ALWAYS_TEXTURE_4_CHANNELS
+                                      4,
+#else
+                                      chans + (alpha ? 1 : 0),
+#endif
                                      (float *)&result_simd,
                                      derivs ? (float *)&dresultds_simd : NULL,
                                      derivs ? (float *)&dresultdt_simd : NULL,

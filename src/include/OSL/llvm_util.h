@@ -81,10 +81,21 @@ class ShaderInstance;
 /// tied to OSL internals at all.
 class OSLEXECPUBLIC LLVM_Util {
 public:
-    LLVM_Util (int debuglevel=0);
+    struct PerThreadInfo
+    {
+        PerThreadInfo();
+        ~PerThreadInfo();
+
+    private:
+        friend class LLVM_Util;
+        struct Impl;
+        mutable Impl * m_thread_info;
+        Impl * get() const;
+    };
+
+    LLVM_Util (int debuglevel=0, const LLVM_Util::PerThreadInfo &per_thread_info = LLVM_Util::PerThreadInfo());
     ~LLVM_Util ();
 
-    struct PerThreadInfo;
 
     /// Set debug level
     void debug (int d) { m_debug = d; }
@@ -731,7 +742,7 @@ private:
     IRBuilder& builder();
 
     int m_debug;
-    PerThreadInfo *m_thread;
+    PerThreadInfo::Impl *m_thread;
     llvm::LLVMContext *m_llvm_context;
     llvm::Module *m_llvm_module;
     IRBuilder *m_builder;

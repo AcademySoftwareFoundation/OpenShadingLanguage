@@ -87,7 +87,7 @@ check_cwd (ShadingSystemImpl &shadingsys)
 BackendLLVM::BackendLLVM (ShadingSystemImpl &shadingsys,
                           ShaderGroup &group, ShadingContext *ctx)
     : OSOProcessorBase (shadingsys, group, ctx),
-      ll(llvm_debug()),
+      ll(llvm_debug(), ctx->llvm_thread_info()),
       m_stat_total_llvm_time(0), m_stat_llvm_setup_time(0),
       m_stat_llvm_irgen_time(0), m_stat_llvm_opt_time(0),
       m_stat_llvm_jit_time(0)

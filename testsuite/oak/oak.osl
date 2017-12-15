@@ -1,0 +1,142 @@
+// for the original renderman shader, check http://www.larrygritz.com/arman/materials.html  
+// adapted from larry gritz advanced renderman patterns.h  
+// Credit: Michel @ Small Blender Things
+float smoothpulse (float e0, float e1, float e2, float e3, float x)  
+{  
+    return smoothstep(e0,e1,x) - smoothstep(e2,e3,x);  
+}  
+  
+/* A pulse train of smoothsteps: a signal that repeats with a given 
+ * period, and is 0 when 0 <= mod(x/period,1) < edge, and 1 when 
+ * mod(x/period,1) > edge.   
+ */  
+float smoothpulsetrain (float e0, float e1, float e2, float e3, float period, float x)  
+{  
+    return smoothpulse (e0, e1, e2, e3, mod(x,period));  
+}  
+  
+// adapted from larry gritz advanced renderman noises.h  
+/* fractional Brownian motion 
+ * Inputs:  
+ *    p              position 
+ *    octaves        max # of octaves to calculate 
+ *    lacunarity     frequency spacing between successive octaves 
+ *    gain           scaling factor between successive octaves 
+ */  
+  
+/* A vector-valued antialiased fBm. */  
+vector vfBm (point p, float octaves, float lacunarity, float gain)  
+{  
+    float amp = 1;  
+    point pp = p;  
+    vector sum = 0;  
+    float i;  
+  
+    for (i = 0;  i < octaves;  i += 1) {  
+        vector d = snoise(pp);  
+        sum += amp * d;  
+        amp *= gain;    
+        pp *= lacunarity;    
+    }  
+    return sum;  
+}  
+  
+// adapted from larry gritz oak.sl and oak.h  
+// original comments between /* ... */  
+// my comments start with //  
+// note that I dropped the whole filterwidth stuff, partly   
+// because I don't think it necessary in Blender Cycles, partly  
+// because the derivatives and area() function doesn't seem to work (yet)  
+// all specialized snoise defines are replaced by snoise() function calls  
+float oaktexture (point Pshad,  
+                  float dPshad,  
+                  float ringfreq,   
+                  float ringunevenness,   
+                  float grainfreq,  
+                  float ringnoise,   
+                  float ringnoisefreq,  
+                  float trunkwobble,   
+                  float trunkwobblefreq,  
+                  float angularwobble,  
+                  float angularwobblefreq,  
+                  float ringy,   
+                  float grainy)  
+{  
+    /* We shade based on Pshad, but we add several layers of warping: */  
+    /* Some general warping of the domain */  
+    vector offset = vfBm(Pshad*ringnoisefreq, 2, 4, 0.5);  
+      
+    point Pring = Pshad + ringnoise*offset;  
+    /* The trunk isn't totally steady xy as you go up in z */  
+    vector d = snoise(Pshad[2]*trunkwobblefreq) ;  
+    Pring += trunkwobble * d * vector(1,1,0);  
+  
+    /* Calculate the radius from the center. */  
+    float r = hypot(Pring[0], Pring[1]) * ringfreq;  
+    /* Add some noise around the trunk */  
+    r += angularwobble * smoothstep(0,5,r)  
+    * snoise (angularwobblefreq*(Pring)*vector(1,1,0.1));  
+  
+    /* Now add some noise so all rings are not equal width */  
+    r += ringunevenness*snoise(r);  
+  
+    float inring = smoothpulsetrain (.1, .55, .7, .95, 1, r);  
+  
+    point Pgrain = Pshad*grainfreq*vector(1,1,.05);  
+    float dPgrain = dPshad; //dropped filterwidthp(Pgrain);  
+    float grain = 0;  
+    float i, amp=1;  
+    for (i = 0;  i < 2;  i += 1) {  
+        float grain1valid = 1-smoothstep(.2,.6,dPgrain);  
+        if (grain1valid > 0) {  
+            float g = grain1valid * snoise (Pgrain);  
+            g *= (0.3 + 0.7*inring);  
+            g = pow(clamp(0.8 - (g),0,1),2);  
+            g = grainy * smoothstep (0.5, 1, g);  
+            if (i == 0)  
+                inring *= (1-0.4*grain1valid);  
+            grain = max (grain, g);  
+        }  
+        Pgrain *= 2;  
+        dPgrain *= 2;  
+        amp *= 0.5;  
+    }  
+  
+    return mix (inring*ringy, 1, grain);  
+}  
+  
+// larry gritz' original shader was a closure but this shader  
+// provides different outputs that you can plug into your own  
+// closures/shaders  
+surface oak(   
+    point Pos = P,  
+    float Sharpness = 0.01, // sharpness of the grain. hand tweaked because we lack derivatives.  
+    float ringfreq = 8,   
+    float ringunevenness = 0.5,  
+    float ringnoise = 0.02,   
+    float ringnoisefreq = 1,  
+    float grainfreq = 25,  
+    float trunkwobble = 0.15,   
+    float trunkwobblefreq = 0.025,  
+    float angularwobble = 1,   
+    float angularwobblefreq = 1.5,  
+    color Clightwood = color(.5, .2, .067),  
+    color Cdarkwood = color(0.15, 0.077, 0.028),  
+    float ringy = 1,   
+    float grainy = 1,  
+    output color Color = 0,  
+    output float Spec = 0.1,  
+    output float Roughness = 0.1,  
+    output float Disp = 0  
+    )  
+{  
+    point Pshad = transform ("object", Pos);
+    float wood = oaktexture (Pshad, Sharpness, ringfreq, ringunevenness, grainfreq,
+         ringnoise, ringnoisefreq, trunkwobble, trunkwobblefreq,  
+         angularwobble, angularwobblefreq, ringy, grainy);  
+      
+    Color = mix (Clightwood, Cdarkwood, wood);  
+    Disp = -wood;  // lightwood = 0, darkwood is deeper/lower = -1  
+    Spec = 0.1*(1-0.5*wood); // darkwood is less specular  
+    Roughness = 0.1+0.1*wood; // and rougher  
+}  

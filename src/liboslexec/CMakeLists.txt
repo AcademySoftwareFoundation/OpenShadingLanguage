@@ -49,6 +49,7 @@ LIST(APPEND liboslexec_srcs
    ../liboslnoise/fast_simplexnoise3_16_float.cpp
    ../liboslnoise/fast_simplexnoise3_16_vec3.cpp
    ../liboslnoise/fast_simplexnoise4_16_vec3.cpp
+   ../liboslnoise/fast_usimplexnoise1_16_vec3.cpp
    ../liboslnoise/fast_usimplexnoise3_16_float.cpp
    ../liboslnoise/fast_usimplexnoise3_16_vec3.cpp
    ../liboslnoise/fast_usimplexnoise4_16_vec3.cpp
@@ -70,16 +71,33 @@ FILE ( GLOB compiler_headers "../liboslcomp/*.h" )
 FLEX_BISON ( osolex.l osogram.y oso liboslexec_srcs exec_headers )
 FLEX_BISON ( ../liboslcomp/osllex.l ../liboslcomp/oslgram.y osl liboslexec_srcs compiler_headers )
 
-#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS" )
-SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -qopt-report=5 -qopt-report-phase=vec -fp-model precise" )
-#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -no-fma -fp-model precise" )
-#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS" )
-#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -mavx" )
-#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -xCORE-AVX2 -mCG_gathers_autogen_ctrl=0" )
-#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -xCORE-AVX2 -prec-div" )
-#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -xCORE-AVX512" )
-#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -fp-model consistent -qopt-report=5 -qopt-report-phase=vec -qoverride-limits" )
-#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -qopt-report=5 -qopt-report-phase=vec -qoverride-limits" )
+if (CMAKE_COMPILER_IS_INTEL)
+	#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS" )
+	SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -qopt-report=5 -qopt-report-phase=vec -fp-model precise" )
+	#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -no-fma -fp-model precise" )
+	#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS" )
+	#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -mavx" )
+	#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -xCORE-AVX2 -mCG_gathers_autogen_ctrl=0" )
+	#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -xCORE-AVX2 -prec-div" )
+	#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -xCORE-AVX512" )
+	#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -fp-model consistent -qopt-report=5 -qopt-report-phase=vec -qoverride-limits" )
+	#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -qopt-report=5 -qopt-report-phase=vec -qoverride-limits" )
+
+endif ()
+
+if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG)
+    # Uncomment next 2 lines to investigate failed explicit vectorization
+    add_definitions ("-Rpass=loop-vectorize")
+    add_definitions ("-Rpass-analysis=loop-vectorize")
+endif ()
+
+# NOTE: your renderer/texture system may not like always texturing 4 channels
+add_definitions ("-DOSL_ALWAYS_TEXTURE_4_CHANNELS")
+
+if (NOT CMAKE_COMPILER_IS_INTEL)
+	SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS" )
+endif ()
+
 
 MACRO ( LLVM_COMPILE llvm_src srclist )
     GET_FILENAME_COMPONENT ( llvmsrc_we ${llvm_src} NAME_WE )
@@ -203,8 +221,8 @@ if (USE_LLVM_BITCODE)
 	# Only use clang build of .cpp to .s to get a starting point
 	# for vector types, it has fewer complications if we just author
 	# these helpers in LLVM assembly directly.
-    #LLVM_COMPILE ( llvm_ops.cpp liboslexec_srcs )
-    LLVM_COMPILE_ASM ( llvm_ops_wide.s liboslexec_srcs )
+    LLVM_COMPILE ( llvm_ops.cpp liboslexec_srcs )
+    #LLVM_COMPILE_ASM ( llvm_ops_wide.s liboslexec_srcs )
 else ()
     # With MSVC/Mingw, we don't compile llvm_ops.cpp to LLVM bitcode, due
     # to clang being unable to compile MSVC C++ header files at this time.

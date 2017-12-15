@@ -712,6 +712,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_llvm_optimize(0),
       m_debug(0), m_llvm_debug(0),
       m_llvm_debug_layers(0), m_llvm_debug_ops(0),
+      m_llvm_debugging_symbols(0),
+      m_llvm_profiling_events(0),
       m_commonspace_synonym("world"),
       m_colorspace("Rec709"),
       m_max_local_mem_KB(2048),
@@ -810,6 +812,16 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     if (llvm_debug_env && *llvm_debug_env)
         m_llvm_debug = atoi(llvm_debug_env);
 
+    // Alternate way of generating LLVM debugging symbols (temporary/experimental)
+    const char *llvm_debugging_symbols_env = getenv ("OSL_LLVM_DEBUGGING_SYMBOLS");
+    if (llvm_debugging_symbols_env && *llvm_debugging_symbols_env)
+        m_llvm_debugging_symbols = atoi(llvm_debugging_symbols_env);
+
+    // Alternate way of generating LLVM profiling events (temporary/experimental)
+    const char *llvm_profiling_events_env = getenv ("OSL_LLVM_PROFILING_EVENTS");
+    if (llvm_profiling_events_env && *llvm_profiling_events_env)
+        m_llvm_profiling_events = atoi(llvm_profiling_events_env);
+
     // Initialize a default set of raytype names.  A particular renderer
     // can override this, add custom names, or change the bits around,
     // if this default ordering is not to its liking.
@@ -848,7 +860,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
 
     // name          llvmgen              folder         simple     flags
     OP (aassign,     aassign,             aassign,       false,     0);
-    OP (abs,         generic,             abs,           true,      LLVM_INLINED);
+    OP (abs,         generic,             abs,           true,      0 /*LLVM_INLINED*/);
     OP (acos,        generic,             acos,          true,      0);
     OP (add,         add,                 add,           true,      0);
     OP (and,         andor,               and,           true,      0);
@@ -904,11 +916,12 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (expm1,       generic,             expm1,         true,      0);
     OP (fabs,        generic,             abs,           true,      0);
     OP (filterwidth, filterwidth,         deriv,         true,      0);
-    OP (floor,       generic,             floor,         true,      LLVM_INLINED);
+    OP (floor,       generic,             floor,         true,      0  /*LLVM_INLINED*/);
     OP (fmod,        modulus,             none,          true,      0);
     OP (for,         loop_op,             none,          false,     0);
     OP (format,      printf,              format,        true,      0);
     OP (functioncall, functioncall,       functioncall,  false,     0);
+    OP (functioncall_nr,functioncall_nr,  none,          false,     0);
     OP (ge,          compare_op,          ge,            true,      0);
     OP (getattribute, getattribute,       getattribute,  false,     0);
     OP (getchar,      generic,            getchar,       true,      0);
@@ -970,12 +983,12 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (sin,         generic,             sin,           true,      0);
     OP (sincos,      sincos,              sincos,        false,     0);
     OP (sinh,        generic,             none,          true,      0);
-    OP (smoothstep,  generic,             none,          true,      LLVM_INLINED);
+    OP (smoothstep,  generic,             none,          true,      0 /*LLVM_INLINED*/);
     OP (snoise,      noise,               noise,         true,      0);
     OP (spline,      spline,              none,          true,      0);
     OP (splineinverse, spline,            none,          true,      0);
     OP (split,       split,               split,         false,     0);
-    OP (sqrt,        generic,             sqrt,          true,      LLVM_INLINED);
+    OP (sqrt,        generic,             sqrt,          true,      0 /*LLVM_INLINED*/);
     OP (startswith,  generic,             none,          true,      0);
     OP (step,        generic,             none,          true,      0);
     OP (stof,        generic,             stof,          true,      0);
@@ -1147,6 +1160,8 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("llvm_debug", int, m_llvm_debug);
     ATTR_SET ("llvm_debug_layers", int, m_llvm_debug_layers);
     ATTR_SET ("llvm_debug_ops", int, m_llvm_debug_ops);
+    ATTR_SET ("llvm_debugging_symbols", int, m_llvm_debugging_symbols);
+    ATTR_SET ("llvm_profiling_events", int, m_llvm_profiling_events);
     ATTR_SET ("strict_messages", int, m_strict_messages);
     ATTR_SET ("range_checking", int, m_range_checking);
     ATTR_SET ("unknown_coordsys_error", int, m_unknown_coordsys_error);
@@ -1256,6 +1271,8 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("llvm_debug", int, m_llvm_debug);
     ATTR_DECODE ("llvm_debug_layers", int, m_llvm_debug_layers);
     ATTR_DECODE ("llvm_debug_ops", int, m_llvm_debug_ops);
+    ATTR_DECODE ("llvm_debugging_symbols", int, m_llvm_debugging_symbols);
+    ATTR_DECODE ("llvm_profiling_events", int, m_llvm_profiling_events);
     ATTR_DECODE ("strict_messages", int, m_strict_messages);
     ATTR_DECODE ("range_checking", int, m_range_checking);
     ATTR_DECODE ("unknown_coordsys_error", int, m_unknown_coordsys_error);
@@ -2637,6 +2654,7 @@ ShadingSystemImpl::raytype_bit (ustring name)
 
 
 
+
 bool
 ShadingSystemImpl::is_renderer_output (ustring layername, ustring paramname,
                                        ShaderGroup *group) const
@@ -3499,23 +3517,8 @@ OSL_SHADEOP int osl_get_attribute_batched(void *sgb_,
                                            int mask_)
 {
     Mask mask(mask_);
-#if 0 // hacker test code
-	printf("input mask(%d)\n", mask.value());
-	ShaderGlobalsBatch *sgb   = reinterpret_cast<ShaderGlobalsBatch *>(sgb_);
-	Mask status(false);
-	for(int i =0; i < SimdLaneCount;++i) {
-		std::cout<< "sgb->varyingData().P.get(i).x=" << (sgb->varyingData().P.get(i).x) << std::endl;
-		if (sgb->varyingData().P.get(i).x > 0.3f && sgb->varyingData().P.get(i).x < 0.7f)
-			status.set_on(i);
-	}
-	printf("output mask(%d)\n", status.value());
-	return status.value();
-	//return Mask(true).value();
-#else
-    // TODO: LLVM could check this before calling this function
-    if (mask.all_off()) {
-        return 0;
-    }
+    ASSERT(mask.any_on());
+
     ShaderGlobalsBatch *sgb   = reinterpret_cast<ShaderGlobalsBatch *>(sgb_);
     const ustring &obj_name  = USTR(obj_name_);
     const ustring &attr_name = USTR(attr_name_);
@@ -3527,8 +3530,60 @@ OSL_SHADEOP int osl_get_attribute_batched(void *sgb_,
                                                        wide_attr_dest, mask);
     
     return retVal.value();
-#endif
 }
+
+OSL_SHADEOP int osl_get_attribute_w16attr_name_batched(void *sgb_,
+                                           int   dest_derivs,
+                                           void *obj_name_,
+                                           void *wattr_name_,
+                                           int   array_lookup,
+                                           int   index,
+                                           const void *attr_type,
+                                           void *wide_attr_dest,
+                                           int mask_)
+{
+    Mask mask(mask_);
+    ASSERT(mask.any_on());
+
+    ShaderGlobalsBatch *sgb   = reinterpret_cast<ShaderGlobalsBatch *>(sgb_);
+    const ustring &obj_name  = USTR(obj_name_);
+    ConstWideAccessor<ustring> wAttrName(wattr_name_);
+
+
+    Mask retVal(false);
+
+    // We have a varying attribute name.
+    // Lets find all the lanes with the same values and
+    // make a call for each unique attr_name
+    Mask uninspectedMask(mask);
+    for(int inspectLane=0; inspectLane < mask.width; ++inspectLane)
+    {
+    	if (uninspectedMask[inspectLane]) {
+    		const ustring attr_name = wAttrName[inspectLane];
+    		// Identify any remaining lanes that might have the same attribute name
+    		Mask lanesWithSameAttrName(false);
+    		lanesWithSameAttrName.set_on(inspectLane);
+    		for (int otherLane = inspectLane+1; otherLane < mask.width; ++otherLane)
+    		{
+    			const ustring otherAttrName = wAttrName[otherLane];
+    			if (uninspectedMask[otherLane] && attr_name == otherAttrName) {
+    				lanesWithSameAttrName.set_on(otherLane);
+    			}
+    		}
+
+    	    Mask lanesPopulated = sgb->uniform().context->osl_get_attribute_batched (sgb, sgb->uniform().objdata,
+    	                                                       dest_derivs, obj_name, attr_name,
+    	                                                       array_lookup, index,
+    	                                                       *(const TypeDesc *)attr_type,
+    	                                                       wide_attr_dest, lanesWithSameAttrName);
+    		uninspectedMask &= ~lanesWithSameAttrName;
+    		retVal |= lanesPopulated;
+    	}
+    }
+
+    return retVal.value();
+}
+
 
 
 OSL_SHADEOP bool osl_get_attribute_batched_uniform(void *sgb_,
@@ -3592,7 +3647,7 @@ osl_bind_interpolated_param_wide (void *sgb_, const void *name, long long type,
                              int userdata_has_derivs, void *userdata_data,
                              int symbol_has_derivs, void *symbol_data,
                              int symbol_data_size,
-                             unsigned int *userdata_initialized, int userdata_index)
+                             unsigned int *userdata_initialized, int userdata_index, int mask_value)
 {
     // Top bit indicate if we have checked for user data yet or not
     // the bottom half is a mask of which lanes successfully retrieved 
@@ -3601,7 +3656,7 @@ osl_bind_interpolated_param_wide (void *sgb_, const void *name, long long type,
     if (status == 0) {
         // First time retrieving this userdata
         ShaderGlobalsBatch *sgb   = reinterpret_cast<ShaderGlobalsBatch *>(sgb_);  
-        MaskedDataRef userDest(TYPEDESC(type), userdata_has_derivs, Mask(true), userdata_data);
+        MaskedDataRef userDest(TYPEDESC(type), userdata_has_derivs, Mask(mask_value), userdata_data);
         Mask foundUserData = sgb->uniform().renderer->batched()->get_userdata (USTR(name),
                                               
         // printf ("Binding %s %s : index %d, ok = %d\n", name,

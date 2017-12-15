@@ -49,29 +49,33 @@ namespace pvt {
 
 
 template<int WidthT>
-__attribute__((noinline)) void
+OSL_NOINLINE  void
 fast_simplexnoise3(WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp);
 
 template<int WidthT>
-__attribute__((noinline)) void
+OSL_NOINLINE  void
 fast_simplexnoise3(WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp);
 
 template<int WidthT>
-__attribute__((noinline)) void
+OSL_NOINLINE  void
 fast_simplexnoise4(WideAccessor<Vec3, WidthT> wresult,
                         ConstWideAccessor<Vec3, WidthT> wp,
                         ConstWideAccessor<float,WidthT> wt);
 
 template<int WidthT>
-__attribute__((noinline)) void
+OSL_NOINLINE  void
+fast_usimplexnoise1(WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<float, WidthT> wx);
+
+template<int WidthT>
+OSL_NOINLINE  void
 fast_usimplexnoise3(WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp);
 
 template<int WidthT>
-__attribute__((noinline)) void
+OSL_NOINLINE  void
 fast_usimplexnoise3(WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp);
 
 template<int WidthT>
-__attribute__((noinline)) void
+OSL_NOINLINE  void
 fast_usimplexnoise4(WideAccessor<Vec3, WidthT> wresult,
                         ConstWideAccessor<Vec3, WidthT> wp,
                         ConstWideAccessor<float,WidthT> wt);
@@ -560,6 +564,17 @@ struct fast {
 	
 	
 	template<int seedT>
+	static inline float
+	grad1 (int i)
+	{
+	    int h = scramble (i, seedT);
+	    float g = 1.0f + (h & 7);   // Gradient value is one of 1.0, 2.0, ..., 8.0
+	    if (h & 8)
+	        g = -g;   // Make half of the gradients negative
+	    return g;
+	}
+
+	template<int seedT>
 	static inline const Vec3 
 	grad3 (int i, int j, int k)
 	{
@@ -577,6 +592,42 @@ struct fast {
 
 	    // return fast_grad4lut[h & 31];
 	    return fast_grad4lut_wide.get(h & 31);
+	}
+
+	// 1D simplex noise with derivative.
+	// If the last argument is not null, the analytic derivative
+	// is also calculated.
+	template<int seedT>
+	static inline float
+	simplexnoise1 (float x)
+	{
+	    int i0 = quick_floor(x);
+	    int i1 = i0 + 1;
+	    float x0 = x - i0;
+	    float x1 = x0 - 1.0f;
+
+	    float x20 = x0*x0;
+	    float t0 = 1.0f - x20;
+	    //  if(t0 < 0.0f) t0 = 0.0f; // Never happens for 1D: x0<=1 always
+	    float t20 = t0 * t0;
+	    float t40 = t20 * t20;
+	    float gx0 = grad1<seedT> (i0);
+	    float n0 = t40 * gx0 * x0;
+
+	    float x21 = x1*x1;
+	    float t1 = 1.0f - x21;
+	    //  if(t1 < 0.0f) t1 = 0.0f; // Never happens for 1D: |x1|<=1 always
+	    float t21 = t1 * t1;
+	    float t41 = t21 * t21;
+	    float gx1 = grad1<seedT> (i1);
+	    float n1 = t41 * gx1 * x1;
+
+	    // Sum up and scale the result.  The scale is empirical, to make it
+	    // cover [-1,1], and to make it approximately match the range of our
+	    // Perlin noise implementation.
+	    const float scale = 0.36f;
+
+	    return scale * (n0 + n1);
 	}
 
 	// 3D simplex noise with derivatives.
@@ -910,13 +961,17 @@ struct fast {
 
 
 template<int WidthT>
-__attribute__((noinline)) void
+void
 fast_simplexnoise3(WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 #ifndef OSL_VERIFY_SIMPLEX3  			
-		OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
+		// Workaround clang omp when it cant perform a runtime pointer check
+        // to ensure no overlap in output variables
+        // But we can tell clang to assume its safe
+		OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(WidthT))
+		OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(WidthT))
 #endif
 		for(int i=0; i< WidthT; ++i) {
 			Vec3 p = wp[i];
@@ -929,13 +984,17 @@ fast_simplexnoise3(WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, 
 }
     
 template<int WidthT>
-__attribute__((noinline)) void
+void
 fast_simplexnoise3(WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 #ifndef OSL_VERIFY_SIMPLEX3  			
-		OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
+		// Workaround clang omp when it cant perform a runtime pointer check
+        // to ensure no overlap in output variables
+        // But we can tell clang to assume its safe
+		OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(WidthT))
+		OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(WidthT))
 #endif
 		for(int i=0; i< WidthT; ++i) {
 			Vec3 p = wp[i];
@@ -952,15 +1011,19 @@ fast_simplexnoise3(WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, W
 
 
 template<int WidthT>
-__attribute__((noinline)) void
+void
 fast_simplexnoise4(WideAccessor<Vec3, WidthT> wresult,
                         ConstWideAccessor<Vec3, WidthT> wp,
                         ConstWideAccessor<float,WidthT> wt)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 #ifndef OSL_VERIFY_SIMPLEX3
-		OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
+		// Workaround clang omp when it cant perform a runtime pointer check
+        // to ensure no overlap in output variables
+        // But we can tell clang to assume its safe
+		OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(WidthT))
+		OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(WidthT))
 #endif
 		for(int i=0; i< WidthT; ++i) {
 			Vec3 p = wp[i];
@@ -978,15 +1041,43 @@ fast_simplexnoise4(WideAccessor<Vec3, WidthT> wresult,
 
 
 // USimplex
+template<int WidthT>
+void
+fast_usimplexnoise1(WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<float, WidthT> wx)
+{
+	OSL_INTEL_PRAGMA(forceinline recursive)
+	{
+		// Workaround clang omp when it cant perform a runtime pointer check
+        // to ensure no overlap in output variables
+        // But we can tell clang to assume its safe
+		OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(WidthT))
+		OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(WidthT))
+
+		for(int i=0; i< WidthT; ++i) {
+			float x = wx[i];
+
+			Vec3 result;
+			result.x = 0.5f * (fast::simplexnoise1<0/* seed */>(x) + 1.0f);
+			result.y = 0.5f * (fast::simplexnoise1<1/* seed */>(x) + 1.0f);
+			result.z = 0.5f * (fast::simplexnoise1<2/* seed */>(x) + 1.0f);
+			wresult[i] = result;
+		}
+	}
+}
+
 
 template<int WidthT>
-__attribute__((noinline)) void
+void
 fast_usimplexnoise3(WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 #ifndef OSL_VERIFY_SIMPLEX3  
-		OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
+		// Workaround clang omp when it cant perform a runtime pointer check
+        // to ensure no overlap in output variables
+        // But we can tell clang to assume its safe
+		OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(WidthT))
+		OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(WidthT))
 #endif
 		for(int i=0; i< WidthT; ++i) {
 			Vec3 p = wp[i];
@@ -1001,13 +1092,17 @@ fast_usimplexnoise3(WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3,
     
     
 template<int WidthT>
-__attribute__((noinline)) void
+void
 fast_usimplexnoise3(WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT>  wp)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 #ifndef OSL_VERIFY_SIMPLEX3  
-		OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
+		// Workaround clang omp when it cant perform a runtime pointer check
+        // to ensure no overlap in output variables
+        // But we can tell clang to assume its safe
+		OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(WidthT))
+		OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(WidthT))
 #endif
 		for(int i=0; i< WidthT; ++i) {
 			Vec3 p = wp[i];
@@ -1024,16 +1119,20 @@ fast_usimplexnoise3(WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, 
 
 
 template<int WidthT>
-__attribute__((noinline)) void
+void
 fast_usimplexnoise4 (WideAccessor<Vec3, WidthT> wresult,
 						ConstWideAccessor<Vec3, WidthT> wp,
 						ConstWideAccessor<float,WidthT> wt)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
-	#ifndef OSL_VERIFY_SIMPLEX3
-		OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
-	#endif
+#ifndef OSL_VERIFY_SIMPLEX3
+		// Workaround clang omp when it cant perform a runtime pointer check
+        // to ensure no overlap in output variables
+        // But we can tell clang to assume its safe
+		OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(WidthT))
+		OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(WidthT))
+#endif
 		for(int i=0; i< WidthT; ++i) {
 			Vec3 p = wp[i];
 			float t = wt[i];

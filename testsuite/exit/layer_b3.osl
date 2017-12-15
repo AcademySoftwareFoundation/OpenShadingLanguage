@@ -1,0 +1,19 @@
+shader b3 (float f_in = 41,
+          color c_in = 42,
+          output color c_outb = 0
+    )
+{    
+    // All lanes should return, so the upstream layers should never be executedl
+    if(P[0] < .75) {
+        if (P[0] > -100000) {
+            return;
+        }   
+        c_outb = color(f_in);
+        //printf ("b: f_in = %g, c_in = %g\n", f_in, c_in);
+        //exit();
+        c_outb = c_in;
+    } else 
+    {
+        c_outb = color(0,0,1);
+    }
+}

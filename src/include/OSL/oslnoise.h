@@ -125,29 +125,33 @@ float simplexnoise4 (float x, float y, float z, float w, int seed=0,
 
 
 template<int WidthT>
-__attribute__((noinline)) void
+OSL_NOINLINE  void
 fast_simplexnoise3(WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp);
 
 template<int WidthT>
-__attribute__((noinline)) void
+OSL_NOINLINE  void
 fast_simplexnoise3(WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp);
 
 template<int WidthT>
-__attribute__((noinline)) void
+OSL_NOINLINE  void
 fast_simplexnoise4(WideAccessor<Vec3, WidthT> wresult,
                         ConstWideAccessor<Vec3, WidthT> wp,
                         ConstWideAccessor<float,WidthT> wt);
 
 template<int WidthT>
-__attribute__((noinline)) void
+OSL_NOINLINE  void
+fast_usimplexnoise1(WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<float, WidthT> wx);
+
+template<int WidthT>
+OSL_NOINLINE  void
 fast_usimplexnoise3(WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp);
 
 template<int WidthT>
-__attribute__((noinline)) void
+OSL_NOINLINE  void
 fast_usimplexnoise3(WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT>  wp);
 
 template<int WidthT>
-__attribute__((noinline)) void
+OSL_NOINLINE  void
 fast_usimplexnoise4 (WideAccessor<Vec3, WidthT> wresult,
 						ConstWideAccessor<Vec3, WidthT> wp,
 						ConstWideAccessor<float,WidthT> wt);
@@ -305,9 +309,9 @@ struct CellNoise {
 
 	template<int WidthT>
 	inline void operator() (WideAccessor<float, WidthT> wresult, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				const float x = wx[i];
 				float result;
@@ -335,9 +339,9 @@ struct CellNoise {
     
 	template<int WidthT>
 	inline void operator() (WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")										
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				const Vec3 p = wp[i];
 				float result;
@@ -364,9 +368,9 @@ struct CellNoise {
     
 	template<int WidthT>
 	inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<float,WidthT> wx) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				const float x = wx[i];
 				Vec3 result;
@@ -394,9 +398,9 @@ struct CellNoise {
     
 	template<int WidthT>
 	inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				const Vec3 p = wp[i];
 				Vec3 result;
@@ -420,9 +424,9 @@ struct CellNoise {
     inline void operator() (WideAccessor<Vec3, WidthT> wresult,
     					    ConstWideAccessor<Vec3, WidthT> wp,
 							ConstWideAccessor<float,WidthT> wt) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				const Vec3 p = wp[i];
 				const float t = wt[i];
@@ -1456,7 +1460,29 @@ inline void perlin (Dual2<float> &result, const H &hash,
 }
 
 
+template <typename H>
+inline void perlin_scalar (Dual2<float> &result, const H &hash,
+                    const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z)
+{
 
+    // Non-SIMD case
+    int X; Dual2<float> fx = floorfrac(x, &X);
+    int Y; Dual2<float> fy = floorfrac(y, &Y);
+    int Z; Dual2<float> fz = floorfrac(z, &Z);
+    Dual2<float> u = fade(fx);
+    Dual2<float> v = fade(fy);
+    Dual2<float> w = fade(fz);
+    result = OIIO::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz     ),
+                            grad (hash (X+1, Y  , Z  ), fx-1.0f, fy     , fz     ),
+                            grad (hash (X  , Y+1, Z  ), fx     , fy-1.0f, fz     ),
+                            grad (hash (X+1, Y+1, Z  ), fx-1.0f, fy-1.0f, fz     ),
+                            grad (hash (X  , Y  , Z+1), fx     , fy     , fz-1.0f),
+                            grad (hash (X+1, Y  , Z+1), fx-1.0f, fy     , fz-1.0f),
+                            grad (hash (X  , Y+1, Z+1), fx     , fy-1.0f, fz-1.0f),
+                            grad (hash (X+1, Y+1, Z+1), fx-1.0f, fy-1.0f, fz-1.0f),
+                            u, v, w);
+    result = scale3 (result);
+}
 
 template <typename H>
 inline void perlin (Dual2<float> &result, const H &hash,
@@ -2141,12 +2167,14 @@ struct Noise {
     
 	template<int WidthT>
 	inline void operator() (WideAccessor<float, WidthT> result, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				float x = wx[i];
 				float perlinResult;
+				// perlin(float, hash, float) isn't based on OIIO_SIMD
+				// so no need for a seperate perlin_scalar
 				this->operator()(perlinResult,x);
 				result[i] = perlinResult;
 			}
@@ -2168,9 +2196,9 @@ struct Noise {
 
 	template<int WidthT>
 	inline void operator() (WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp[i];
 				float perlinResult;
@@ -2196,9 +2224,9 @@ struct Noise {
     
 	template<int WidthT>
 	inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				float x = wx[i];
 				Vec3 perlinResult;
@@ -2225,9 +2253,9 @@ struct Noise {
 
 	template<int WidthT>
 	inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp[i];
 				Vec3 perlinResult;
@@ -2251,9 +2279,15 @@ struct Noise {
     inline void operator() (WideAccessor<Vec3, WidthT> wresult,
 		                    ConstWideAccessor<Vec3, WidthT> wp,
 			                ConstWideAccessor<float,WidthT> wt) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
+			#ifdef __AVX512F__
+			    OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+			#else
+				// remark #15547: simd loop was not vectorized: code size was too large for vectorization. Consider reducing the number of distinct variables use
+				// So don't mandate interleaved loop unrolling by forcing a simdlen wider than ISA
+				OSL_OMP_PRAGMA(omp simd)
+			#endif
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp[i];
 				float t = wt[i];
@@ -2288,6 +2322,26 @@ struct Noise {
         perlin(result, h, px, py, pz);
         result = 0.5f * (result + 1.0f);
     }
+
+	template<int WidthT>
+	inline void operator() (WideAccessor<Dual2<float>, WidthT> wresult, ConstWideAccessor<Dual2<Vec3>, WidthT> wp) const {
+		OSL_INTEL_PRAGMA(forceinline recursive)
+		{
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+			for(int i=0; i< WidthT; ++i) {
+				Dual2<Vec3> p = wp[i];
+		        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+		        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+		        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+				Dual2<float> perlinResult;
+				HashScalar h;
+				perlin_scalar(perlinResult, h, px, py, pz);
+				Dual2<float> scaledResult = 0.5f * (perlinResult + 1.0f);
+				wresult[i] = scaledResult;
+			}
+		}
+	}
+
 
     inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
         HashScalar h;        
@@ -2339,9 +2393,9 @@ struct SNoise {
 
     template<int WidthT>
 	inline void operator() (WideAccessor<float, WidthT> result, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				float x = wx[i];
 				float perlinResult;
@@ -2363,9 +2417,9 @@ struct SNoise {
     
     template<int WidthT>
 	inline void operator() (WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp[i];
 				float perlinResult;
@@ -2388,9 +2442,9 @@ struct SNoise {
 
     template<int WidthT>
 	inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				float x = wx[i];
 				Vec3 perlinResult;
@@ -2414,9 +2468,9 @@ struct SNoise {
 
     template<int WidthT>
 	inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp[i];
 				Vec3 perlinResult;
@@ -2436,9 +2490,15 @@ struct SNoise {
 	inline void operator() (WideAccessor<Vec3, WidthT> wresult,
                             ConstWideAccessor<Vec3, WidthT> wp,
                             ConstWideAccessor<float,WidthT> wt) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")
+			#ifdef __AVX512F__
+				OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+			#else
+				// remark #15547: simd loop was not vectorized: code size was too large for vectorization. Consider reducing the number of distinct variables use
+				// So don't mandate interleaved loop unrolling by forcing a simdlen wider than ISA
+				OSL_OMP_PRAGMA(omp simd)
+			#endif
 			for(int i=0; i< WidthT; ++i) {
 				Vec3 p = wp[i];
 				float t = wt[i];
@@ -2471,6 +2531,24 @@ struct SNoise {
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
         perlin(result, h, px, py, pz);
     }
+
+	template<int WidthT>
+	inline void operator() (WideAccessor<Dual2<float>, WidthT> wresult, ConstWideAccessor<Dual2<Vec3>, WidthT> wp) const {
+		OSL_INTEL_PRAGMA(forceinline recursive)
+		{
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+			for(int i=0; i< WidthT; ++i) {
+				Dual2<Vec3> p = wp[i];
+		        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+		        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+		        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+				Dual2<float> perlinResult;
+				HashScalar h;
+				perlin_scalar(perlinResult, h, px, py, pz);
+				wresult[i] = perlinResult;
+			}
+		}
+	}
 
     inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
         HashScalar h;
@@ -2790,10 +2868,10 @@ struct SimplexNoise {
     
     template<int WidthT>
     inline void operator() (WideAccessor<float, WidthT> wresult, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
 #ifndef OSL_VERIFY_SIMPLEX3  			
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 #endif
 			for(int i=0; i< WidthT; ++i) {
 				float x = wx[i];
@@ -2832,9 +2910,9 @@ struct SimplexNoise {
 
     template<int WidthT>
     inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				float x = wx[i];
 				//float result = simplexnoise3 (p.x, p.y, p.z);
@@ -2956,10 +3034,10 @@ struct USimplexNoise {
 
     template<int WidthT>
     inline void operator() (WideAccessor<float, WidthT> wresult, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
+		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
 #ifndef OSL_VERIFY_SIMPLEX3  
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
+			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
 #endif
 			for(int i=0; i< WidthT; ++i) {
 				float x = wx[i];
@@ -2996,18 +3074,7 @@ struct USimplexNoise {
     
     template<int WidthT>
     inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA("forceinline recursive")
-		{
-			OSL_INTEL_PRAGMA("omp simd simdlen(WidthT)")					
-			for(int i=0; i< WidthT; ++i) {
-				float x = wx[i];
-				
-				Vec3 result;
-				this->operator()(result,x);
-		        
-		        wresult[i] = result;
-			}
-		}
+		fast_usimplexnoise1 (wresult, wx);
     }    
 
     inline void operator() (Vec3 &result, float x, float y) const {

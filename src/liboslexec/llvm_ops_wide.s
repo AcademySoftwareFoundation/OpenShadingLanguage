@@ -8644,42 +8644,42 @@ declare void @llvm.masked.store.v16f32.p0v16f32 (<16 x float>, <16 x float>*, i3
 declare <16 x float> @llvm.sqrt.v16f32(<16 x float>)
 
 ; Function Attrs: nounwind readnone uwtable
-define <16 x float> @osl_sqrt_w16fw16f(<16 x float>) alwaysinline #3 {
-  %2 = fcmp ult <16 x float> %0, <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>
-  %3 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %0)
-  %"$result" = alloca <16 x float>
-  store <16 x float> %3, <16 x float>* %"$result"     
-  call void @llvm.masked.store.v16f32.p0v16f32 (<16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <16 x float>* %"$result", i32 64,  <16 x i1> %2 )
-  %4 = load <16 x float>, <16 x float>* %"$result"
-  ret <16 x float> %4
-}
+;define <16 x float> @osl_sqrt_w16fw16f(<16 x float>) alwaysinline #3 {
+;  %2 = fcmp ult <16 x float> %0, <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>
+;  %3 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %0)
+;  %"$result" = alloca <16 x float>
+;  store <16 x float> %3, <16 x float>* %"$result"
+;  call void @llvm.masked.store.v16f32.p0v16f32 (<16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <16 x float>* %"$result", i32 64,  <16 x i1> %2 )
+;  %4 = load <16 x float>, <16 x float>* %"$result"
+;  ret <16 x float> %4
+;}
 
-define void @osl_sqrt_w16vw16v(i8* sret %r_ptr, i8* readonly %p_ptr) alwaysinline {
-  %ps_ptr = bitcast i8* %p_ptr to %"WideVec3"*
-  %p_x = getelementptr inbounds %"WideVec3", %"WideVec3"* %ps_ptr, i32 0, i32 0, i32 0
-  %p_y = getelementptr inbounds %"WideVec3", %"WideVec3"* %ps_ptr, i32 0, i32 0, i32 1
-  %p_z = getelementptr inbounds %"WideVec3", %"WideVec3"* %ps_ptr, i32 0, i32 0, i32 2
-  %x = load <16 x float>, <16 x float>* %p_x, align 64
-  %y = load <16 x float>, <16 x float>* %p_y, align 64
-  %z = load <16 x float>, <16 x float>* %p_z, align 64
-  %x_less_than_0 = fcmp ult <16 x float> %x, <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>
-  %y_less_than_0 = fcmp ult <16 x float> %y, <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>
-  %z_less_than_0 = fcmp ult <16 x float> %z, <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>
-  %x_unsafe_sqrt = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %x)
-  %y_unsafe_sqrt = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %y)
-  %z_unsafe_sqrt = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %z)
-  %x_safe_sqrt = select <16 x i1> %x_less_than_0, <16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <16 x float> %x_unsafe_sqrt
-  %y_safe_sqrt = select <16 x i1> %y_less_than_0, <16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <16 x float> %y_unsafe_sqrt
-  %z_safe_sqrt = select <16 x i1> %z_less_than_0, <16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <16 x float> %z_unsafe_sqrt
-  %rs_ptr = bitcast i8* %r_ptr to %"WideVec3"*
-  %r_x = getelementptr inbounds %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 0
-  %r_y = getelementptr inbounds %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 1
-  %r_z = getelementptr inbounds %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 2
-  store <16 x float> %x_safe_sqrt, <16 x float>* %r_x
-  store <16 x float> %y_safe_sqrt, <16 x float>* %r_y
-  store <16 x float> %z_safe_sqrt, <16 x float>* %r_z
-  ret void
-}
+;define void @osl_sqrt_w16vw16v(i8* sret %r_ptr, i8* readonly %p_ptr) alwaysinline {
+;  %ps_ptr = bitcast i8* %p_ptr to %"WideVec3"*
+;  %p_x = getelementptr inbounds %"WideVec3", %"WideVec3"* %ps_ptr, i32 0, i32 0, i32 0
+;  %p_y = getelementptr inbounds %"WideVec3", %"WideVec3"* %ps_ptr, i32 0, i32 0, i32 1
+;  %p_z = getelementptr inbounds %"WideVec3", %"WideVec3"* %ps_ptr, i32 0, i32 0, i32 2
+;  %x = load <16 x float>, <16 x float>* %p_x, align 64
+;  %y = load <16 x float>, <16 x float>* %p_y, align 64
+;  %z = load <16 x float>, <16 x float>* %p_z, align 64
+;  %x_less_than_0 = fcmp ult <16 x float> %x, <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>
+;  %y_less_than_0 = fcmp ult <16 x float> %y, <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>
+;  %z_less_than_0 = fcmp ult <16 x float> %z, <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>
+;  %x_unsafe_sqrt = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %x)
+;  %y_unsafe_sqrt = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %y)
+;  %z_unsafe_sqrt = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %z)
+;  %x_safe_sqrt = select <16 x i1> %x_less_than_0, <16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <16 x float> %x_unsafe_sqrt
+;  %y_safe_sqrt = select <16 x i1> %y_less_than_0, <16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <16 x float> %y_unsafe_sqrt
+;  %z_safe_sqrt = select <16 x i1> %z_less_than_0, <16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <16 x float> %z_unsafe_sqrt
+;  %rs_ptr = bitcast i8* %r_ptr to %"WideVec3"*
+;  %r_x = getelementptr inbounds %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 0
+;  %r_y = getelementptr inbounds %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 1;
+;  %r_z = getelementptr inbounds %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 2
+;  store <16 x float> %x_safe_sqrt, <16 x float>* %r_x
+;  store <16 x float> %y_safe_sqrt, <16 x float>* %r_y
+;  store <16 x float> %z_safe_sqrt, <16 x float>* %r_z
+;  ret void
+;}
 
 
 ; Function Attrs: nounwind uwtable
@@ -9213,25 +9213,25 @@ define float @osl_floor_ff(float) local_unnamed_addr #3 {
 }
 
 ; Function Attrs: nounwind readnone uwtable
-define <16 x float> @osl_floor_w16fw16f(<16 x float> ) alwaysinline #3 {
-
-  %2 = tail call <16 x float> @llvm.floor.v16f32(<16 x float> %0)
-  ret  <16 x float>  %2
-}
-
-; Function Attrs: nounwind readnone uwtable
-define <8 x float> @osl_floor_w8fw8f(<8 x float> ) alwaysinline #3 {
-
-  %2 = tail call <8 x float> @llvm.floor.v8f32(<8 x float> %0)
-  ret  <8 x float>  %2
-}
+;define <16 x float> @osl_floor_w16fw16f(<16 x float> ) alwaysinline #3 {
+;
+ ; %2 = tail call <16 x float> @llvm.floor.v16f32(<16 x float> %0)
+;  ret  <16 x float>  %2
+;}
 
 ; Function Attrs: nounwind readnone uwtable
-define <4 x float> @osl_floor_w4fw4f(<4 x float> ) alwaysinline #3 {
+;define <8 x float> @osl_floor_w8fw8f(<8 x float> ) alwaysinline #3 {
+;
+;  %2 = tail call <8 x float> @llvm.floor.v8f32(<8 x float> %0)
+;  ret  <8 x float>  %2
+;}
 
-  %2 = tail call <4 x float> @llvm.floor.v4f32(<4 x float> %0)
-  ret  <4 x float>  %2
-}
+; Function Attrs: nounwind readnone uwtable
+;define <4 x float> @osl_floor_w4fw4f(<4 x float> ) alwaysinline #3 {
+;
+;  %2 = tail call <4 x float> @llvm.floor.v4f32(<4 x float> %0)
+;  ret  <4 x float>  %2
+;}
 
 
 
@@ -9403,33 +9403,33 @@ define void @osl_sign_vv(i8* nocapture, i8* nocapture readonly) local_unnamed_ad
   ret void
 }
 
-declare <16 x float> @llvm.copysign.v16f32(<16 x float>, <16 x float>)
+;declare <16 x float> @llvm.copysign.v16f32(<16 x float>, <16 x float>)
 
-define <16 x float> @osl_sign_w16fw16f(<16 x float> %v) alwaysinline {
-  %sign_of_v = tail call <16 x float> @llvm.copysign.v16f32(<16 x float><float 1.000000e+00, float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00>, <16 x float> %v)
-  ret <16 x float> %sign_of_v
-}
+;define <16 x float> @osl_sign_w16fw16f(<16 x float> %v) alwaysinline {
+;  %sign_of_v = tail call <16 x float> @llvm.copysign.v16f32(<16 x float><float 1.000000e+00, float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00>, <16 x float> %v)
+;  ret <16 x float> %sign_of_v
+;}
 
-define void @osl_sign_w16vw16v(i8* sret %r_ptr, i8* readonly %p_ptr) alwaysinline {
-  %ps_ptr = bitcast i8* %p_ptr to %"WideVec3"*
-  %p_x = getelementptr inbounds %"WideVec3", %"WideVec3"* %ps_ptr, i32 0, i32 0, i32 0
-  %p_y = getelementptr inbounds %"WideVec3", %"WideVec3"* %ps_ptr, i32 0, i32 0, i32 1
-  %p_z = getelementptr inbounds %"WideVec3", %"WideVec3"* %ps_ptr, i32 0, i32 0, i32 2
-  %x = load <16 x float>, <16 x float>* %p_x, align 64
-  %y = load <16 x float>, <16 x float>* %p_y, align 64
-  %z = load <16 x float>, <16 x float>* %p_z, align 64 
-  %sign_of_x = tail call <16 x float> @llvm.copysign.v16f32(<16 x float><float 1.000000e+00, float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00>, <16 x float> %x)
-  %sign_of_y = tail call <16 x float> @llvm.copysign.v16f32(<16 x float><float 1.000000e+00, float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00>, <16 x float> %y)
-  %sign_of_z = tail call <16 x float> @llvm.copysign.v16f32(<16 x float><float 1.000000e+00, float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00>, <16 x float> %z)
-  %rs_ptr = bitcast i8* %r_ptr to %"WideVec3"*
-  %r_x = getelementptr inbounds %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 0
-  %r_y = getelementptr inbounds %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 1
-  %r_z = getelementptr inbounds %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 2
-  store <16 x float> %sign_of_x, <16 x float>* %r_x     
-  store <16 x float> %sign_of_y, <16 x float>* %r_y     
-  store <16 x float> %sign_of_z, <16 x float>* %r_z     
-  ret void
-}
+;define void @osl_sign_w16vw16v(i8* sret %r_ptr, i8* readonly %p_ptr) alwaysinline {
+  ;%ps_ptr = bitcast i8* %p_ptr to %"WideVec3"*
+  ;%p_x = getelementptr inbounds %"WideVec3", %"WideVec3"* %ps_ptr, i32 0, i32 0, i32 0
+  ;%p_y = getelementptr inbounds %"WideVec3", %"WideVec3"* %ps_ptr, i32 0, i32 0, i32 1
+  ;%p_z = getelementptr inbounds %"WideVec3", %"WideVec3"* %ps_ptr, i32 0, i32 0, i32 2
+  ;%x = load <16 x float>, <16 x float>* %p_x, align 64
+  ;%y = load <16 x float>, <16 x float>* %p_y, align 64
+  ;%z = load <16 x float>, <16 x float>* %p_z, align 64
+  ;%sign_of_x = tail call <16 x float> @llvm.copysign.v16f32(<16 x float><float 1.000000e+00, float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00>, <16 x float> %x)
+  ;%sign_of_y = tail call <16 x float> @llvm.copysign.v16f32(<16 x float><float 1.000000e+00, float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00>, <16 x float> %y)
+  ;%sign_of_z = tail call <16 x float> @llvm.copysign.v16f32(<16 x float><float 1.000000e+00, float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00,float 1.000000e+00>, <16 x float> %z)
+  ;%rs_ptr = bitcast i8* %r_ptr to %"WideVec3"*
+  ;%r_x = getelementptr inbounds %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 0
+  ;%r_y = getelementptr inbounds %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 1
+  ;%r_z = getelementptr inbounds %"WideVec3", %"WideVec3"* %rs_ptr, i32 0, i32 0, i32 2
+  ;store <16 x float> %sign_of_x, <16 x float>* %r_x
+  ;store <16 x float> %sign_of_y, <16 x float>* %r_y
+  ;store <16 x float> %sign_of_z, <16 x float>* %r_z
+  ;ret void
+;}
 
 ; Function Attrs: norecurse nounwind readnone uwtable
 define float @osl_step_fff(float, float) local_unnamed_addr #6 {
@@ -9519,26 +9519,26 @@ define float @osl_abs_ff(float) local_unnamed_addr #3 {
 }
 
 
-declare <4 x float> @llvm.fabs.v4f32(<4 x float>)
+;declare <4 x float> @llvm.fabs.v4f32(<4 x float>)
 
-define <4 x float> @osl_abs_w4fw4f(<4 x float> %a) alwaysinline #3 {
-  %r = call <4 x float> @llvm.fabs.v4f32(<4 x float> %a)
-  ret <4 x float> %r
-}
+;define <4 x float> @osl_abs_w4fw4f(<4 x float> %a) alwaysinline #3 {
+;  %r = call <4 x float> @llvm.fabs.v4f32(<4 x float> %a)
+;  ret <4 x float> %r
+;}
 
-declare <8 x float> @llvm.fabs.v8f32(<8 x float>) 
+;declare <8 x float> @llvm.fabs.v8f32(<8 x float>)
 
-define <8 x float> @osl_abs_w8fw8f(<8 x float> %a) alwaysinline #3 {
-  %r = call <8 x float> @llvm.fabs.v8f32(<8 x float> %a)
-  ret <8 x float> %r
-}
+;define <8 x float> @osl_abs_w8fw8f(<8 x float> %a) alwaysinline #3 {
+;  %r = call <8 x float> @llvm.fabs.v8f32(<8 x float> %a)
+;  ret <8 x float> %r
+;}
 
-declare <16 x float> @llvm.fabs.v16f32(<16 x float>)
+;declare <16 x float> @llvm.fabs.v16f32(<16 x float>)
 
-define <16 x float> @osl_abs_w16fw16f(<16 x float> %a) alwaysinline  #3 {
-  %r = call <16 x float> @llvm.fabs.v16f32(<16 x float> %a)
-  ret <16 x float> %r
-}
+;define <16 x float> @osl_abs_w16fw16f(<16 x float> %a) alwaysinline  #3 {
+;  %r = call <16 x float> @llvm.fabs.v16f32(<16 x float> %a)
+;  ret <16 x float> %r
+;}
 
 define void @osl_abs_w16dfw16df(i8* nonnull sret %r_ptr, i8* nonnull %v_ptr) alwaysinline  {
   %wv_ptr = bitcast i8* %v_ptr to <16 x float>*
@@ -10431,12 +10431,12 @@ define float @osl_safe_div_fff(float, float) local_unnamed_addr #6 {
 }
 
 ; Function Attrs: norecurse nounwind readnone uwtable
-define <16 x float> @osl_safe_div_w16fw16fw16f(<16 x float>, <16 x float>) alwaysinline #6 {
-  %3 = fcmp une <16 x float> %1, zeroinitializer
-  %4 = fdiv <16 x float> %0, %1
-  %5 = select <16 x i1> %3, <16 x float> %4, <16 x float> zeroinitializer
-  ret <16 x float> %5
-}
+;define <16 x float> @osl_safe_div_w16fw16fw16f(<16 x float>, <16 x float>) alwaysinline #6 {
+;  %3 = fcmp une <16 x float> %1, zeroinitializer
+; %4 = fdiv <16 x float> %0, %1
+;  %5 = select <16 x i1> %3, <16 x float> %4, <16 x float> zeroinitializer
+;  ret <16 x float> %5
+;}
 
 ; Function Attrs: norecurse nounwind readnone uwtable
 define i32 @osl_safe_div_iii(i32, i32) local_unnamed_addr #6 {
@@ -10502,24 +10502,24 @@ define float @osl_smoothstep_ffff(float, float, float) local_unnamed_addr #6 {
 ;}
 
 ; Function Attrs: norecurse nounwind readnone uwtable
-define <16 x float> @osl_smoothstep_w16fw16fw16fw16f(<16 x float>, <16 x float>, <16 x float>) alwaysinline #6 {
-  %4 = fcmp ult <16 x float> %2, %0
-  %5 = fcmp ugt <16 x float> %2, %1
-  %not. = xor <16 x i1> %4, <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
-  %6 = and <16 x i1> %5, %not.
-  %7 = select <16 x i1> %6, <16 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, <16 x float> zeroinitializer
-  %8 = or <16 x i1> %4, %5
-  %9 = fsub <16 x float> %2, %0
-  %10 = fsub <16 x float> %1, %0
-  %11 = fdiv <16 x float> %9, %10
-  %12 = fmul <16 x float> %11, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
-  %13 = fsub <16 x float> <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>, %12
-  %14 = fmul <16 x float> %11, %11
-  %15 = fmul <16 x float> %14, %13
-  %16 = select <16 x i1> %8, <16 x float> %7, <16 x float> %15
-  
-  ret <16 x float> %16
-}
+;define <16 x float> @osl_smoothstep_w16fw16fw16fw16f(<16 x float>, <16 x float>, <16 x float>) alwaysinline #6 {
+;  %4 = fcmp ult <16 x float> %2, %0
+;  %5 = fcmp ugt <16 x float> %2, %1
+;  %not. = xor <16 x i1> %4, <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+;  %6 = and <16 x i1> %5, %not.
+;  %7 = select <16 x i1> %6, <16 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, <16 x float> zeroinitializer
+;  %8 = or <16 x i1> %4, %5
+;  %9 = fsub <16 x float> %2, %0
+;  %10 = fsub <16 x float> %1, %0
+;  %11 = fdiv <16 x float> %9, %10
+;  %12 = fmul <16 x float> %11, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+;  %13 = fsub <16 x float> <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>, %12
+;  %14 = fmul <16 x float> %11, %11
+;  %15 = fmul <16 x float> %14, %13
+;  %16 = select <16 x i1> %8, <16 x float> %7, <16 x float> %15
+;
+;  ret <16 x float> %16
+;}
 
 ; Function Attrs: nounwind uwtable
 define void @osl_smoothstep_dfffdf(i8* nocapture, float, float, i8* nocapture readonly) local_unnamed_addr #4 {

@@ -26,6 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+//#define OSL_DEV
 
 #include <memory>
 #include <OpenImageIO/thread.h>
@@ -35,6 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OSL/oslconfig.h"
 #include "OSL/llvm_util.h"
 #include "OSL/wide.h"
+#include "oslexec_pvt.h"
 
 #if OSL_LLVM_VERSION < 34
 #error "LLVM minimum version required for OSL is 3.4"
@@ -51,6 +53,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm/CodeGen/CommandFlags.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DebugInfo.h>
+#include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/Instructions.h>
@@ -66,6 +69,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #  include <llvm/Linker.h>
 #endif
 #include <llvm/Support/ErrorOr.h>
+#include <llvm/Support/raw_os_ostream.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Support/TargetRegistry.h>
 
@@ -128,38 +132,7 @@ namespace pvt {
 namespace {
 static OIIO::spin_mutex llvm_global_mutex;
 static bool setup_done = false;
-static boost::thread_specific_ptr<LLVM_Util::PerThreadInfo> perthread_infos;
 static std::vector<std::shared_ptr<LLVMMemoryManager> > jitmm_hold;
-
-static struct DebugInfo {
-	llvm::DICompileUnit *TheCU;
-	llvm::DIType *DblTy;
-	std::vector<llvm::DIScope *> LexicalBlocks;
-
-	typedef std::unordered_map<std::string, llvm::DISubprogram *> ScopeByNameType;
-	ScopeByNameType ScopeByName;
-	
-	typedef std::unordered_map<std::string, llvm::DIFile *> FileByNameType;
-	FileByNameType FileByName;
-	
-	
-	//void emitLocation(ExprAST *AST);
-	//llvm::DIType *getDoubleTy();
-} TheDebugInfo;
-
-llvm::DIFile * getFileFor(llvm::DIBuilder* diBuilder, const std::string &file_name) {
-	auto iter = TheDebugInfo.FileByName.find(file_name);
-	if(iter == TheDebugInfo.FileByName.end()) {
-		//OSL_DEV_ONLY(std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>CREATING FILE<<<<<<<<<<<<<<<<<<<<<<<<< " << file_name << std::endl);
-		llvm::DIFile *file = diBuilder->createFile(
-				//TheDebugInfo.TheCU->getFilename(), TheDebugInfo.TheCU->getDirectory());
-				file_name, ".\\");
-		//llvm::DIScope *FContext = Unit;
-		TheDebugInfo.FileByName.insert(std::make_pair(file_name,file));
-		return file;
-	}
-	return iter->second;
-}
 
 };
 
@@ -169,28 +142,39 @@ llvm::DIFile * getFileFor(llvm::DIBuilder* diBuilder, const std::string &file_na
 // We hold certain things (LLVM context and custom JIT memory manager)
 // per thread and retained across LLVM_Util invocations.  We are
 // intentionally "leaking" them.
-struct LLVM_Util::PerThreadInfo {
-    PerThreadInfo () : llvm_context(NULL), llvm_jitmm(NULL) {}
-    ~PerThreadInfo () {
+struct LLVM_Util::PerThreadInfo::Impl {
+    Impl () : llvm_context(NULL), llvm_jitmm(NULL) {}
+    ~Impl () {
         delete llvm_context;
         // N.B. Do NOT delete the jitmm -- another thread may need the
         // code! Don't worry, we stashed a pointer in jitmm_hold.
-    }
-    static void destroy (PerThreadInfo *threadinfo) { delete threadinfo; }
-    static PerThreadInfo *get () {
-        PerThreadInfo *p = perthread_infos.get ();
-        if (! p) {
-            p = new PerThreadInfo();
-            perthread_infos.reset (p);
-        }
-        return p;
+        // TODO: look into alternative way to manage lifetime of JIT'd code.
+        // Once the last ShadingSystem is destructed we could free this llvm_jitmm memory?
     }
 
     llvm::LLVMContext *llvm_context;
     LLVMMemoryManager *llvm_jitmm;
 };
 
+LLVM_Util::PerThreadInfo::PerThreadInfo()
+: m_thread_info(nullptr)
+{}
 
+LLVM_Util::PerThreadInfo::~PerThreadInfo()
+{
+    // Make sure destructor to PerThreadInfoImpl is only called here
+    // where we know the definition of the owned PerThreadInfoImpl;
+    delete m_thread_info;
+}
+
+LLVM_Util::PerThreadInfo::Impl *
+LLVM_Util::PerThreadInfo::get() const
+{
+    if (nullptr == m_thread_info) {
+        m_thread_info = new Impl();
+    }
+    return m_thread_info;
+}
 
 
 size_t
@@ -218,6 +202,9 @@ LLVM_Util::total_jit_memory_held ()
 class LLVM_Util::MemoryManager : public LLVMMemoryManager {
 protected:
     LLVMMemoryManager *mm;  // the real one
+    // TODO: A.W. investigate why this using was added to avoid build issue
+    // could be related to LLVM 5.0 (test and invistigate)
+    using llvm::RuntimeDyld::MemoryManager::deregisterEHFrames;
 public:
 
 #if USE_OLD_JIT // llvm::JITMemoryManager
@@ -323,7 +310,12 @@ public:
         mm->registerEHFrames (Addr, LoadAddr, Size);
     }
     virtual void deregisterEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) {
+#if OSL_LLVM_VERSION < 50
         mm->deregisterEHFrames(Addr, LoadAddr, Size);
+#else
+        // TODO: verify this is correct
+        mm->deregisterEHFrames();
+#endif
     }
     virtual uint64_t getSymbolAddress(const std::string &Name) {
         return mm->getSymbolAddress (Name);
@@ -355,19 +347,21 @@ public:
 
 
 
-LLVM_Util::LLVM_Util (int debuglevel)
-    : m_debug(debuglevel), m_thread(NULL),
+LLVM_Util::LLVM_Util (int debuglevel, const LLVM_Util::PerThreadInfo &per_thread_info)
+    : m_debug(debuglevel), m_thread(nullptr),
       m_llvm_context(NULL), m_llvm_module(NULL),
-      m_llvm_debug_builder(NULL),
       m_builder(NULL), m_llvm_jitmm(NULL),
       m_current_function(NULL),
       m_llvm_module_passes(NULL), m_llvm_func_passes(NULL),
-      m_llvm_exec(NULL)
+      m_llvm_exec(NULL),
+      m_masked_exit_count(0),
+      m_llvm_debug_builder(nullptr),
+      mDebugCU(nullptr),
+      mSubTypeForInlinedFunction(nullptr)
 {
     SetupLLVM ();
-    m_thread = PerThreadInfo::get();
+    m_thread = per_thread_info.get();
     ASSERT (m_thread);
-
     {
         OIIO::spin_lock lock (llvm_global_mutex);
         if (! m_thread->llvm_context)
@@ -454,6 +448,7 @@ LLVM_Util::~LLVM_Util ()
     delete m_llvm_module_passes;
     delete m_llvm_func_passes;
     delete m_builder;
+    delete m_llvm_debug_builder;
     module (NULL);
     // DO NOT delete m_llvm_jitmm;  // just the dummy wrapper around the real MM
 }
@@ -514,117 +509,291 @@ LLVM_Util::new_module (const char *id)
     return new llvm::Module(id, context());
 }
 
-void 
-LLVM_Util::enable_debug_info() {
-	module()->addModuleFlag(llvm::Module::Error, "Debug Info Version",
-			llvm::DEBUG_METADATA_VERSION);
-
-	unsigned int modulesDebugInfoVersion = 0;
-	if (auto *Val = llvm::mdconst::dyn_extract_or_null < llvm::ConstantInt
-			> (module()->getModuleFlag("Debug Info Version"))) {
-		modulesDebugInfoVersion = Val->getZExtValue();
-	}
-
-//	OSL_DEV_ONLY(std::cout)
-//	OSL_DEV_ONLY(		<< "------------------>enable_debug_info<-----------------------------module flag['Debug Info Version']= ")
-//	OSL_DEV_ONLY(		<< modulesDebugInfoVersion << std::endl);
+bool
+LLVM_Util::debug_is_enabled() const
+{
+    return m_llvm_debug_builder != nullptr;
 }
 
-void 
-LLVM_Util::set_debug_info(const std::string &function_name) {
 
-	m_llvm_debug_builder = (new llvm::DIBuilder(*m_llvm_module));
+void
+LLVM_Util::debug_setup_compilation_unit(const char * compile_unit_name) {
+    ASSERT(debug_is_enabled());
+    ASSERT(mDebugCU == nullptr);
 
-	TheDebugInfo.TheCU = m_llvm_debug_builder->createCompileUnit(
-			llvm::dwarf::DW_LANG_C, 
+    OSL_DEV_ONLY(std::cout << "debug_setup_compilation_unit"<< std::endl);
+
+
+	mDebugCU = m_llvm_debug_builder->createCompileUnit(
+			/*llvm::dwarf::DW_LANG_C*/
+			llvm::dwarf::DW_LANG_C_plus_plus
+			,
 # if OSL_LLVM_VERSION >= 40
-			m_llvm_debug_builder->createFile("JIT", // filename
+			m_llvm_debug_builder->createFile(compile_unit_name, // filename
 					"." // directory
 					),
-#else			
-			"JIT", // filename
+#else
+					compile_unit_name, // filename
 			".", // directory
 #endif
 			"OSLv1.9", // Identify the producer of debugging information and code. Usually this is a compiler version string.
-			0, // Identify the producer of debugging information and code. Usually this is a compiler version string.
+			true /*false*/ , // isOptimized
 			"", // This string lists command line options. This string is directly embedded in debug info output which may be used by a tool analyzing generated debugging information.
-			1900); // This indicates runtime version for languages like Objective-C
-	
-	llvm::DIFile * file = getFileFor(m_llvm_debug_builder, function_name); 
-	
-			unsigned int method_line = 0;
-				unsigned int method_scope_line = 0;
-				
-				
-				static llvm::DISubroutineType *subType;
-				{
-					llvm::SmallVector<llvm::Metadata *, 8> EltTys;
-					//llvm::DIType *DblTy = KSTheDebugInfo.getDoubleTy();
-					llvm::DIType *debug_double_type = m_llvm_debug_builder->createBasicType(
-# if OSL_LLVM_VERSION >= 40
-							"double", 64, llvm::dwarf::DW_ATE_float);
-#else
-					"double", 64, 64, llvm::dwarf::DW_ATE_float);
-#endif
-			#if 0
-					// Add the result type.
-					EltTys.push_back(DblTy);
+			1900, // This indicates runtime version for languages like Objective-C
+			StringRef(), // SplitName = he name of the file that we'll split debug info out into.
+			DICompileUnit::DebugEmissionKind::FullDebug, // DICompileUnit::DebugEmissionKind
+			0, // The DWOId if this is a split skeleton compile unit.
+			false /*true*/, // SplitDebugInlining = Whether to emit inline debug info.
+			true // DebugInfoForProfiling (default=false) = Whether to emit extra debug info for profile collection.
+			);
 
-					for (unsigned i = 0, e = NumArgs; i != e; ++i)
-					EltTys.push_back(DblTy);
-			#endif
-					EltTys.push_back(debug_double_type);
-					EltTys.push_back(debug_double_type);
 
-					subType = m_llvm_debug_builder->createSubroutineType(
-							m_llvm_debug_builder->getOrCreateTypeArray(EltTys));
-				}
-
-				llvm::DISubprogram *function = m_llvm_debug_builder->createFunction(file,
-						function_name, llvm::StringRef(), file, method_line, subType,
-						false /*isLocalToUnit*/, true /*bool isDefinition*/, method_scope_line,
-						llvm::DINode::FlagPrototyped, false);		
-				
-		current_function()->setSubprogram(function);							
-	
-	
+	OSL_DEV_ONLY(std::cout << "created debug module for " << compile_unit_name << std::endl);
 }
 
-void 
-LLVM_Util::set_debug_location(const std::string &source_file_name, const std::string & method_name, int sourceline)
+void
+LLVM_Util::debug_push_function(
+	const std::string & function_name,
+	OIIO::ustring file_name,
+	unsigned int method_line)
 {
-		
-	llvm::DISubprogram *sp = current_function()->getSubprogram();
-	ASSERT(sp != NULL);
-	
-	
-	const llvm::DebugLoc & current_debug_location = m_builder->getCurrentDebugLocation();
-	bool newDebugLocation = true;
-	if (current_debug_location)
-	{
-		if(sourceline == current_debug_location.getLine()) {		
-			newDebugLocation = false;
-		}
-	} 
-	
-	if (newDebugLocation)
-	{
-		//OSL_DEV_ONLY(std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>newDebugLocation<<<<<<<<<<<<<<<<<<<<<<<<< " << sourceline << std::endl);
-		llvm::DebugLoc debug_location =
-				llvm::DebugLoc::get(static_cast<unsigned int>(sourceline),
-						static_cast<unsigned int>(0), /* column? */
-						sp);
-		m_builder->SetCurrentDebugLocation(debug_location);
-	}
+    ASSERT(debug_is_enabled());
+#ifdef OSL_DEV
+	std::cout << "debug_push_function function_name="<< function_name.c_str()
+			  << " file_name=" << file_name.c_str()
+			  << " method_line=" << method_line << std::endl;
+#endif
+
+    llvm::DIFile * file = getOrCreateDebugFileFor(file_name.c_str());
+    const unsigned int method_scope_line = 0;
+
+    // Rather than use dummy function parameters, we'll just reuse
+    // the inlined subroutine type of void func(void).
+    // TODO:  Added DIType * for ShaderGlobalsBatch  And Groupdata to be
+    // passed into this function so proper function type can be created.
+#if 0
+    llvm::DISubroutineType *subType;
+    {
+        llvm::SmallVector<llvm::Metadata *, 8> EltTys;
+        //llvm::DIType *DblTy = KSTheDebugInfo.getDoubleTy();
+        llvm::DIType *debug_double_type = m_llvm_debug_builder->createBasicType(
+# if OSL_LLVM_VERSION >= 40
+                "double", 64, llvm::dwarf::DW_ATE_float);
+#else
+                "double",
+                64, 64, llvm::dwarf::DW_ATE_float);
+#endif
+        EltTys.push_back(debug_double_type);
+        EltTys.push_back(debug_double_type);
+
+        subType = m_llvm_debug_builder->createSubroutineType(
+                m_llvm_debug_builder->getOrCreateTypeArray(EltTys));
+    }
+#endif
+
+    ASSERT(file);
+    llvm::DISubprogram *function = m_llvm_debug_builder->createFunction(
+            file, // Scope
+            function_name.c_str(),  // Name
+            /*function_name.c_str()*/ llvm::StringRef(), // Linkage Name
+            file, // File
+            method_line, // Line Number
+            mSubTypeForInlinedFunction, // subroutine type
+            false, // isLocalToUnit
+            true,  // isDefinition
+            method_scope_line,  // Scope Line
+            llvm::DINode::FlagPrototyped, // Flags
+            false // isOptimized
+            );
+
+    ASSERT(mLexicalBlocks.empty());
+	current_function()->setSubprogram(function);
+    mLexicalBlocks.push_back(function);
 }
+
+
+void
+LLVM_Util::debug_push_inlined_function(
+	OIIO::ustring function_name,
+	OIIO::ustring file_name,
+	unsigned int method_line)
+{
+#ifdef OSL_DEV
+    std::cout << "debug_push_inlined_function function_name="<< function_name.c_str()
+              << " file_name=" << file_name.c_str()
+              << " method_line=" << method_line << std::endl;
+#endif
+
+    ASSERT(debug_is_enabled());
+    ASSERT(m_builder->getCurrentDebugLocation().get() != NULL);
+    mInliningSites.push_back(m_builder->getCurrentDebugLocation().get());
+
+    llvm::DIFile * file = getOrCreateDebugFileFor(file_name.c_str());
+    unsigned int method_scope_line = 0;
+
+    ASSERT(getCurrentDebugScope());
+
+    llvm::DISubprogram *function = nullptr;
+    function = m_llvm_debug_builder->createFunction(
+        getCurrentDebugScope(), // Scope
+        function_name.c_str(),  // Name
+        /*function_name.c_str()*/llvm::StringRef(), // Linkage Name
+        file, // File
+        method_line, // Line Number
+        mSubTypeForInlinedFunction, // subroutine type
+        true, // isLocalToUnit
+        true, // isDefinition
+        method_scope_line, // Scope Line
+        llvm::DINode::FlagPrototyped | llvm::DINode::FlagNoReturn, // Flags
+        true /*false*/ //isOptimized
+        );
+
+    mLexicalBlocks.push_back(function);
+}
+
+void
+LLVM_Util::debug_pop_inlined_function()
+{
+	OSL_DEV_ONLY(std::cout << "debug_pop_inlined_function"<< std::endl);
+    ASSERT(debug_is_enabled());
+
+	ASSERT(!mLexicalBlocks.empty());
+
+	llvm::DIScope *scope = mLexicalBlocks.back();
+    auto *existingLbf = dyn_cast<llvm::DILexicalBlockFile>(scope);
+    if (existingLbf) {
+        // Allow nesting of exactly one DILexicalBlockFile
+        // Unwrap it to a function
+        scope = existingLbf->getScope();
+        OSL_DEV_ONLY(std::cout << "DILexicalBlockFile popped"<< std::endl);
+    }
+
+    auto *function = dyn_cast<llvm::DISubprogram>(scope);
+	ASSERT(function);
+	mLexicalBlocks.pop_back();
+
+	m_llvm_debug_builder->finalizeSubprogram(function);
+
+	// Return debug location to where the function was inlined from
+	// Necessary to avoid unnecessarily creating DILexicalBlockFile
+	// if the source file changed
+    llvm::DILocation *location_inlined_at = mInliningSites.back();
+    m_builder->SetCurrentDebugLocation(llvm::DebugLoc(location_inlined_at));
+    mInliningSites.pop_back();
+
+
+}
+
+void
+LLVM_Util::debug_pop_function()
+{
+    OSL_DEV_ONLY(std::cout << "debug_pop_function"<< std::endl);
+    ASSERT(debug_is_enabled());
+
+    llvm::DIScope *scope = mLexicalBlocks.back();
+    auto *existingLbf = dyn_cast<llvm::DILexicalBlockFile>(scope);
+    if (existingLbf) {
+        // Allow nesting of exactly one DILexicalBlockFile
+        // Unwrap it to a function
+        scope = existingLbf->getScope();
+        OSL_DEV_ONLY(std::cout << "DILexicalBlockFile popped"<< std::endl);
+    }
+
+    auto *function = dyn_cast<llvm::DISubprogram>(scope);
+    ASSERT(function);
+
+    m_llvm_debug_builder->finalizeSubprogram(function);
+
+	mLexicalBlocks.pop_back();
+    ASSERT(mLexicalBlocks.empty());
+
+    if (m_builder->getCurrentDebugLocation().get() != nullptr) {
+        m_builder->SetCurrentDebugLocation(llvm::DebugLoc());
+    }
+}
+
+void
+LLVM_Util::debug_set_location(ustring source_file_name, int sourceline)
+{
+    OSL_DEV_ONLY(std::cout << "LLVM_Util::debug_set_location:" << source_file_name.c_str() << "(" << sourceline << ")" << std::endl);
+    ASSERT(debug_is_enabled());
+
+    llvm::DIScope *sp = getCurrentDebugScope();
+    llvm::DILocation *inlineSite = getCurrentInliningSite();
+    ASSERT(sp != nullptr);
+
+    // If the file changed on us (due to an #include or inlined function that we missed) update the scope
+    // As we do model inlined functions, don't expect this code path to be taken
+    // unless support for the functioncall_nr has been disabled.
+    if(sp->getFilename().compare(StringRef(source_file_name.c_str())))
+    {
+        llvm::DIFile * file = getOrCreateDebugFileFor(source_file_name.c_str());
+
+        // Don't nest DILexicalBlockFile's (don't allow DILexicalBlockFile's
+        // to be a parent to another DILexicalBlockFile's).
+        // Instead make the parent of the new DILexicalBlockFile
+        // the same as the existing DILexicalBlockFile's parent.
+        auto *existingLbf = dyn_cast<llvm::DILexicalBlockFile>(sp);
+        bool requiresNewLBF = true;
+        llvm::DIScope *parentScope;
+        if (existingLbf) {
+            parentScope = existingLbf->getScope();
+            // Only allow a single LBF, check for any logic bugs here
+            ASSERT(!dyn_cast<llvm::DILexicalBlockFile>(parentScope));
+            // If the parent scope has the same filename, no need to create a LBF
+            // we can directly use the parentScope
+            if (!parentScope->getFilename().compare(StringRef(source_file_name.c_str())))
+            {
+                // The parent scope has the same file name, we can just use it directly
+                sp = parentScope;
+                requiresNewLBF = false;
+            }
+        } else {
+            parentScope = sp;
+        }
+        if (requiresNewLBF) {
+            ASSERT(parentScope != nullptr);
+            llvm::DILexicalBlockFile *lbf = m_llvm_debug_builder->createLexicalBlockFile(parentScope, file);
+            OSL_DEV_ONLY(std::cout << "createLexicalBlockFile" << std::endl);
+            sp = lbf;
+        }
+
+        // Swap out the current scope for a scope to the correct file
+        mLexicalBlocks.pop_back();
+        mLexicalBlocks.push_back(sp);
+    }
+    ASSERT(sp != NULL);
+
+
+    const llvm::DebugLoc & current_debug_location = m_builder->getCurrentDebugLocation();
+    bool newDebugLocation = true;
+    if (current_debug_location)
+    {
+        if(sourceline == current_debug_location.getLine() &&
+           sp == current_debug_location.getScope() &&
+           inlineSite == current_debug_location.getInlinedAt () ) {
+            newDebugLocation = false;
+        }
+    }
+
+    if (newDebugLocation)
+    {
+        llvm::DebugLoc debug_location =
+                llvm::DebugLoc::get(static_cast<unsigned int>(sourceline),
+                        static_cast<unsigned int>(0), /* column?  we don't know it, may be worth tracking through osl->oso*/
+                        sp,
+                        inlineSite);
+        m_builder->SetCurrentDebugLocation(debug_location);
+    }
+}
+
 
 void 
-LLVM_Util::clear_debug_info() {
-	OSL_DEV_ONLY(std::cout << "LLVM_Util::clear_debug_info" << std::endl);
-	m_builder->SetCurrentDebugLocation(llvm::DebugLoc());
-	m_llvm_debug_builder->finalize();
+LLVM_Util::debug_finalize() {
+    OSL_DEV_ONLY(std::cout << "LLVM_Util::debug_finalize" << std::endl);
+    ASSERT(debug_is_enabled());
+    m_llvm_debug_builder->finalize();
 }
-
 
 
 
@@ -739,12 +908,128 @@ LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
 
 
 void
+LLVM_Util::push_function_mask(llvm::Value * startMaskValue)
+{
+	// TODO:  refactor combining 	m_alloca_for_modified_mask_stack & m_masked_return_count_stack
+	// into a single stack of FunctionInfo, and change "modified mask" to "function mask"
+	// while at it change "exit mask" to "shader mask"
+
+	// As each nested function (that is inlined) will have different control flow,
+	// as some lanes of nested function may return early, but that would not affect
+	// the lanes of the calling function, we mush have a modified mask stack for each
+	// function
+    m_alloca_for_modified_mask_stack.push_back(op_alloca(type_wide_bool(), 1, "modified_mask"));
+	llvm::Value * loc_of_modified_mask = m_alloca_for_modified_mask_stack.back();
+	push_masking_enabled(false);
+	op_store(startMaskValue, loc_of_modified_mask);
+	pop_masking_enabled();
+
+	m_masked_return_count_stack.push_back(0);
+
+	// Give the new function its own mask so that it may be swapped out
+	// to mask out lanes that have returned early,
+	// and we can just pop that mask off when the function exits
+	push_mask(startMaskValue,  /*negate=*/ false, /*absolute = */ true);
+}
+
+int
+LLVM_Util::masked_return_count() const
+{
+	ASSERT(!m_masked_return_count_stack.empty());
+	return m_masked_return_count_stack.back();
+}
+
+int
+LLVM_Util::masked_exit_count() const
+{
+	OSL_DEV_ONLY(std::cout << "masked_exit_count = " << m_masked_exit_count << std::endl);
+
+	return m_masked_exit_count;
+}
+
+void
+LLVM_Util::pop_function_mask()
+{
+	pop_mask();
+
+	ASSERT(!m_alloca_for_modified_mask_stack.empty());
+	m_alloca_for_modified_mask_stack.pop_back();
+
+	ASSERT(!m_masked_return_count_stack.empty());
+	m_masked_return_count_stack.pop_back();
+}
+
+void
+LLVM_Util::push_masked_loop(llvm::Value* location_of_condition_mask, llvm::Value* location_of_continue_mask)
+{
+	// As each nested loop will have different control flow,
+	// as some lanes of nested function may 'break' out early, but that would not affect
+	// the lanes outside the loop, and we could have nested loops,
+	// we mush have a break count for each loop
+	m_masked_loop_stack.push_back(LoopInfo{location_of_condition_mask, location_of_continue_mask, 0, 0});
+}
+
+bool
+LLVM_Util::is_innermost_loop_masked() const
+{
+	if(m_masked_loop_stack.empty())
+		return false;
+	return (m_masked_loop_stack.back().location_of_condition_mask != nullptr);
+}
+
+int
+LLVM_Util::masked_break_count() const
+{
+	if(m_masked_loop_stack.empty()) {
+		return 0;
+	} else {
+		return m_masked_loop_stack.back().break_count;
+	}
+}
+
+int
+LLVM_Util::masked_continue_count() const
+{
+	if(m_masked_loop_stack.empty()) {
+		return 0;
+	} else {
+		return m_masked_loop_stack.back().continue_count;
+	}
+}
+
+
+void
+LLVM_Util::pop_masked_loop()
+{
+	m_masked_loop_stack.pop_back();
+}
+
+
+
+void
+LLVM_Util::push_shader_instance(llvm::Value * startMaskValue)
+{
+	push_function_mask(startMaskValue);
+}
+
+void
+LLVM_Util::pop_shader_instance()
+{
+	m_masked_exit_count = 0;
+	pop_function_mask();
+}
+
+void
 LLVM_Util::new_builder (llvm::BasicBlock *block)
 {
     end_builder();
     if (! block)
         block = new_basic_block ();
     m_builder = new IRBuilder (block);
+
+    ASSERT(m_masked_exit_count == 0);
+	ASSERT(m_alloca_for_modified_mask_stack.empty());
+	ASSERT(m_mask_stack.empty());
 }
 
 
@@ -761,15 +1046,18 @@ LLVM_Util::builder () {
 void
 LLVM_Util::end_builder ()
 {
-    delete m_builder;
-    m_builder = NULL;
+	delete m_builder;
+	m_builder = nullptr;
 }
 
 
 
 llvm::ExecutionEngine *
-LLVM_Util::make_jit_execengine (std::string *err)
+LLVM_Util::make_jit_execengine (std::string *err, bool debugging_symbols, bool profiling_events)
 {
+
+    OSL_DEV_ONLY(std::cout << "LLVM_Util::make_jit_execengine" << std::endl);
+
     execengine (NULL);   // delete and clear any existing engine
     if (err)
         err->clear ();
@@ -796,6 +1084,7 @@ LLVM_Util::make_jit_execengine (std::string *err)
 #endif /* USE_OLD_JIT */
 
     
+    //engine_builder.setOptLevel (llvm::CodeGenOpt::None);
     //engine_builder.setOptLevel (llvm::CodeGenOpt::Default);
     engine_builder.setOptLevel (llvm::CodeGenOpt::Aggressive);
     
@@ -805,7 +1094,6 @@ LLVM_Util::make_jit_execengine (std::string *err)
 
 #if 1
     llvm::TargetOptions options;
-    options.LessPreciseFPMADOption = true;
     options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
     options.UnsafeFPMath = true;
 
@@ -832,6 +1120,8 @@ LLVM_Util::make_jit_execengine (std::string *err)
     options.RelaxELFRelocations = false;    
     #endif    
     
+    //options.DebuggerTuning = llvm::DebuggerKind::GDB;
+
     if (dumpAsm) {
         options.PrintMachineCode = true;
     }
@@ -930,6 +1220,9 @@ LLVM_Util::make_jit_execengine (std::string *err)
     
     llvm::StringMap< bool > cpuFeatures;
     if (llvm::sys::getHostCPUFeatures(cpuFeatures)) {
+		m_supports_masked_stores = false;
+		m_supports_native_bit_masks = false;
+
     	OSL_DEV_ONLY(std::cout << std::endl<< "llvm::sys::getHostCPUFeatures()>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl);
 		std::vector<std::string> attrvec;
 		for (auto &cpuFeature : cpuFeatures) 
@@ -942,13 +1235,17 @@ LLVM_Util::make_jit_execengine (std::string *err)
 				if (!disableFMA || std::string("fma") != cpuFeature.first().str()) {
 					attrvec.push_back(enabled + cpuFeature.first().str());
 				}
+
+				if(cpuFeature.first().str().find("512") != std::string::npos) {
+					m_supports_masked_stores = true;
+					m_supports_native_bit_masks = true;
+				}
 			}
 		}
 		//The particular format of the names are target dependent, and suitable for passing as -mattr to the target which matches the host.
 	//    const char *mattr[] = {"avx"};
 	//    std::vector<std::string> attrvec (mattr, mattr+1);
 
-		m_supports_masked_stores = false;
 		
 		// TODO: consider extending adding all CPU features for different target platforms
 		// and also intersecting with supported features vs. blindly adding them
@@ -969,6 +1266,7 @@ LLVM_Util::make_jit_execengine (std::string *err)
 			break;		
 		case TargetISA_AVX512:
 			m_supports_masked_stores = true;
+			m_supports_native_bit_masks = true;
 			attrvec.push_back("+avx512f");
 			attrvec.push_back("+avx512dq");
 			attrvec.push_back("+avx512bw");
@@ -995,20 +1293,52 @@ LLVM_Util::make_jit_execengine (std::string *err)
     if (! m_llvm_exec)
         return NULL;
     
-    const llvm::DataLayout & data_layout = m_llvm_exec->getDataLayout();
+    //const llvm::DataLayout & data_layout = m_llvm_exec->getDataLayout();
     //OSL_DEV_ONLY(std::cout << "data_layout.getStringRepresentation()=" << data_layout.getStringRepresentation() << std::endl);
     		
     
-    TargetMachine * target_machine = m_llvm_exec->getTargetMachine();
+    OSL_DEV_ONLY(TargetMachine * target_machine = m_llvm_exec->getTargetMachine());
     //OSL_DEV_ONLY(std::cout << "target_machine.getTargetCPU()=" << target_machine->getTargetCPU().str() << std::endl);
     OSL_DEV_ONLY(std::cout << "target_machine.getTargetFeatureString ()=" << target_machine->getTargetFeatureString ().str() << std::endl);
 	//OSL_DEV_ONLY(std::cout << "target_machine.getTargetTriple ()=" << target_machine->getTargetTriple().str() << std::endl);
-    
 
-    llvm::JITEventListener* vtuneProfiler = llvm::JITEventListener::createIntelJITEventListener();
-    assert (vtuneProfiler != NULL);
-    m_llvm_exec->RegisterJITEventListener(vtuneProfiler);
-      
+    if (debugging_symbols) {
+        ASSERT(m_llvm_module != nullptr);
+        OSL_DEV_ONLY(std::cout << "debugging symbols"<< std::endl);
+
+        module()->addModuleFlag(llvm::Module::Error, "Debug Info Version",
+                llvm::DEBUG_METADATA_VERSION);
+
+        unsigned int modulesDebugInfoVersion = 0;
+        if (auto *Val = llvm::mdconst::dyn_extract_or_null < llvm::ConstantInt
+                > (module()->getModuleFlag("Debug Info Version"))) {
+            modulesDebugInfoVersion = Val->getZExtValue();
+        }
+
+        ASSERT(m_llvm_debug_builder == nullptr && "Only handle creating the debug builder once");
+        m_llvm_debug_builder = new llvm::DIBuilder(*m_llvm_module);
+
+        llvm::SmallVector<llvm::Metadata *, 8> EltTys;
+        mSubTypeForInlinedFunction = m_llvm_debug_builder->createSubroutineType(
+                        m_llvm_debug_builder->getOrCreateTypeArray(EltTys));
+
+        //  OSL_DEV_ONLY(std::cout)
+        //  OSL_DEV_ONLY(       << "------------------>enable_debug_info<-----------------------------module flag['Debug Info Version']= ")
+        //  OSL_DEV_ONLY(       << modulesDebugInfoVersion << std::endl);
+
+        llvm::JITEventListener* gdbListener = llvm::JITEventListener::createGDBRegistrationListener();
+        assert (gdbListener != NULL);
+        m_llvm_exec->RegisterJITEventListener(gdbListener);
+    }
+
+    if (profiling_events) {
+        // TODO:  Create better VTune listener that can handle inline fuctions
+        //        https://software.intel.com/en-us/node/544211
+        llvm::JITEventListener* vtuneProfiler = llvm::JITEventListener::createIntelJITEventListener();
+        assert (vtuneProfiler != NULL);
+        m_llvm_exec->RegisterJITEventListener(vtuneProfiler);
+    }
+
     // Force it to JIT as soon as we ask it for the code pointer,
     // don't take any chances that it might JIT lazily, since we
     // will be stealing the JIT code memory from under its nose and
@@ -1037,8 +1367,11 @@ LLVM_Util::dump_struct_data_layout(llvm::Type *Ty)
 	for(int index=0; index < number_of_elements; ++index) {
 		llvm::Type * et = structTy->getElementType(index);
 		std::cout << "   element[" << index << "] offset in bytes = " << layout->getElementOffset(index) << 
-				" type is "; 
-				et->dump();
+				" type is ";
+		{
+			llvm::raw_os_ostream os_cout(std::cout);
+			et->print(os_cout);
+		}
 		std::cout << std::endl;
 	}
 		
@@ -1062,7 +1395,7 @@ LLVM_Util::validate_struct_data_layout(llvm::Type *Ty, const std::vector<unsigne
 //	OSL_DEV_ONLY(	<< " hasPadding(" << layout->hasPadding() << ")" << std::endl);
 	
 	for(int index=0; index < number_of_elements; ++index) {
-		llvm::Type * et = structTy->getElementType(index);
+		//llvm::Type * et = structTy->getElementType(index);
 		
 		auto actual_offset = layout->getElementOffset(index);
 
@@ -1072,7 +1405,10 @@ LLVM_Util::validate_struct_data_layout(llvm::Type *Ty, const std::vector<unsigne
 		
 //		OSL_DEV_ONLY(std::cout << "   element[" << index << "] offset in bytes = " << actual_offset << " expect offset = " << expected_offset_by_index[index] <<)
 //		OSL_DEV_ONLY(		" type is ");
-//		OSL_DEV_ONLY(		et->dump());
+//		{
+//			llvm::raw_os_ostream os_cout(std::cout);
+//			OSL_DEV_ONLY(		et->print(os_cout));
+//		}
 				
 				
 		ASSERT(expected_offset_by_index[index] == actual_offset);
@@ -1307,7 +1643,7 @@ LLVM_Util::internalize_module_functions (const std::string &prefix,
 }
 
 
-
+#if OSL_LLVM_VERSION < 50
 llvm::Function *
 LLVM_Util::make_function (const std::string &name, bool fastcall,
                           llvm::Type *rettype,
@@ -1319,11 +1655,45 @@ LLVM_Util::make_function (const std::string &name, bool fastcall,
     llvm::Function *func = llvm::cast<llvm::Function>(
         module()->getOrInsertFunction (name, rettype,
                                        arg1, arg2, arg3, arg4, NULL));
+
+    if (fastcall)
+        func->setCallingConv(llvm::CallingConv::Fast);
+    return func;
+}
+#else
+llvm::Function *
+LLVM_Util::make_function (const std::string &name, bool fastcall,
+                          llvm::Type *rettype,
+                          llvm::Type *arg1,
+                          llvm::Type *arg2)
+{
+    llvm::Function *func = llvm::cast<llvm::Function>(
+    // TODO: verify this is correct for LLVM 5.0
+    module()->getOrInsertFunction (name, rettype,
+                                   arg1, arg2));
+
     if (fastcall)
         func->setCallingConv(llvm::CallingConv::Fast);
     return func;
 }
 
+llvm::Function *
+LLVM_Util::make_function (const std::string &name, bool fastcall,
+                          llvm::Type *rettype,
+                          llvm::Type *arg1,
+                          llvm::Type *arg2,
+						  llvm::Type *arg3)
+{
+    llvm::Function *func = llvm::cast<llvm::Function>(
+    // TODO: verify this is correct for LLVM 5.0
+    module()->getOrInsertFunction (name, rettype,
+                                   arg1, arg2, arg3));
+
+    if (fastcall)
+        func->setCallingConv(llvm::CallingConv::Fast);
+    return func;
+}
+#endif
 
 
 llvm::Function *
@@ -1374,20 +1744,7 @@ LLVM_Util::new_basic_block (const std::string &name)
 llvm::BasicBlock *
 LLVM_Util::push_function (llvm::BasicBlock *after)
 {
-    // As each nested function (that is inlined) will have different control flow,
-    // as some lanes of nested function may return early, but that would not affect
-    // the lanes of the calling function, we mush have a modified mask stack for each
-    // function
-    m_alloca_for_modified_mask_stack.push_back(op_alloca(type_wide_bool(), 1, "modified_mask"));
-	llvm::Value * loc_of_modified_mask = m_alloca_for_modified_mask_stack.back();
-	push_masking_enabled(false);
-	op_store(current_mask(), loc_of_modified_mask);
-	pop_masking_enabled();
-
-	// Give the new function its own mask so that it may be swapped out
-	// to mask out lanes that have returned early,
-	// and we can just pop that mask off when the function exits
-	push_mask(current_mask(),  /*negate=*/ false, /*absolute = */ true);
+	OSL_DEV_ONLY(std::cout << "push_function" << std::endl);
 
     if (! after)
         after = new_basic_block ("after_function");
@@ -1403,36 +1760,42 @@ LLVM_Util::inside_function() const
 }
 
 void
-LLVM_Util::mask_off_returned_lanes()
-{
-	// TODO: FIX ME, the mask stored is from the scope with the return statement
-	// however that mask would wide as we exit conditional scopes
-	// so we must reapply the mask at each stage
-
-	ASSERT(false == m_alloca_for_modified_mask_stack.empty());
-	llvm::Value * loc_of_return_mask = m_alloca_for_modified_mask_stack.back();
-	llvm::Value * rs_mask = op_load(loc_of_return_mask);
-
-	ASSERT(!m_mask_stack.empty());
-	auto & mi = m_mask_stack.back();
-	mi.mask = rs_mask;
-	mi.negate = false;
-}
-
-void
 LLVM_Util::pop_function ()
 {
+	OSL_DEV_ONLY(std::cout << "pop_function" << std::endl);
+
     ASSERT (! m_return_block.empty());
     builder().SetInsertPoint (m_return_block.back());
     m_return_block.pop_back ();
-
-	ASSERT(!m_mask_stack.empty());
-	pop_if_mask();
-
-	ASSERT(!m_alloca_for_modified_mask_stack.empty());
-	m_alloca_for_modified_mask_stack.pop_back();
 }
 
+
+void LLVM_Util::push_masked_return_block(llvm::BasicBlock *test_return)
+{
+	OSL_DEV_ONLY(std::cout << "push_masked_return_block" << std::endl);
+
+	m_masked_return_block_stack.push_back (test_return);
+}
+
+void LLVM_Util::pop_masked_return_block()
+{
+	OSL_DEV_ONLY(std::cout << "pop_masked_return_block" << std::endl);
+	ASSERT(!m_masked_return_block_stack.empty());
+	m_masked_return_block_stack.pop_back();
+}
+
+bool
+LLVM_Util::has_masked_return_block() const
+{
+    return (! m_masked_return_block_stack.empty());
+}
+
+llvm::BasicBlock *
+LLVM_Util::masked_return_block() const
+{
+    ASSERT (! m_masked_return_block_stack.empty());
+    return m_masked_return_block_stack.back();
+}
 
 
 llvm::BasicBlock *
@@ -1740,6 +2103,7 @@ LLVM_Util::mask_as_int(llvm::Value *mask)
 
     llvm::Value* result;
     llvm::Type * int_reinterpret_cast_vector_type;
+#if 0
     switch(m_vector_width)
     {
     case 4:
@@ -1778,7 +2142,10 @@ LLVM_Util::mask_as_int(llvm::Value *mask)
     	result = builder().CreateBitCast (mask, int_reinterpret_cast_vector_type);
     	break;
     }
-
+#else
+	int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);
+	result = builder().CreateBitCast (mask, int_reinterpret_cast_vector_type);
+#endif
     
 
     return builder().CreateZExt(result, (llvm::Type *) llvm::Type::getInt32Ty (*m_llvm_context));
@@ -1790,6 +2157,7 @@ LLVM_Util::int_as_mask(llvm::Value *value)
     ASSERT(value->getType() == type_int());
 
     llvm::Value* result;
+#if 0
     switch(m_vector_width)
     {
     case 4:
@@ -1841,6 +2209,37 @@ LLVM_Util::int_as_mask(llvm::Value *value)
         result = builder().CreateBitCast (intMask, type_wide_bool());
     	break;
     }
+    }
+#endif
+
+    if (m_supports_native_bit_masks) {
+
+    	// We can just reinterpret cast a 16 bit integer to a 16 bit mask
+    	// and all types are happy
+    	llvm::Type * intMaskType = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);
+		llvm::Value* intMask = builder().CreateTrunc(value, intMaskType);
+
+		result = builder().CreateBitCast (intMask, type_wide_bool());
+    } else
+    {
+    	// Since we know vectorized comparisons for AVX&AVX2 end up setting 8 32 bit integers
+    	// to 0xFFFFFFFF or 0x00000000,
+    	// We need to do more than a simple cast to an int.
+
+        // Broadcast out the int32 mask to all data lanes
+        llvm::Value * wide_int_mask = widen_value(value);
+
+        // Create a filter for each lane to 0 out the other lane's bits
+        std::vector<Constant *> lane_masks(m_vector_width);
+		for (int lane_index = 0; lane_index < m_vector_width; ++lane_index) {
+		   lane_masks[lane_index] = ConstantInt::get(type_int(), (1<<lane_index));
+		}
+		llvm::Value * lane_filter = ConstantVector::get(lane_masks);
+
+		// Bitwise AND the wide_mask and the lane filter
+        llvm::Value * filtered_mask = op_and(wide_int_mask, lane_filter);
+
+	    result = op_ne(filtered_mask, wide_constant(0));
     }
 
     ASSERT(result->getType() == type_wide_bool());
@@ -1922,6 +2321,7 @@ LLVM_Util::test_if_mask_has_any_on_or_off(llvm::Value *mask, llvm::Value* & any_
 		break;
 	case 16:
 		{
+
 			allOffConstant = constant16(0);
 			allOnConstant = constant16(0xFFFF);
 
@@ -2145,6 +2545,7 @@ LLVM_Util::mark_structure_return_value(llvm::Value *funccall)
 {
     llvm::CallInst* call = llvm::cast<llvm::CallInst>(funccall);
     
+#if OSL_LLVM_VERSION < 50
     auto attrs = llvm::AttributeSet::get(
     		call->getContext(),
         llvm::AttributeSet::FunctionIndex,
@@ -2154,6 +2555,12 @@ LLVM_Util::mark_structure_return_value(llvm::Value *funccall)
 
     attrs = attrs.addAttribute(call->getContext(), 1,
                                llvm::Attribute::StructRet);
+#else
+    // TODO: verify this is correct for LLVM 5.0
+    AttributeList attrs = llvm::AttributeList::get(call->getContext(), llvm::AttributeList::FunctionIndex, llvm::Attribute::NoUnwind);
+    attrs.addAttribute(call->getContext(), llvm::AttributeList::ReturnIndex, llvm::Attribute::StructRet);
+#endif
+
 
     call->setAttributes(attrs);
 }
@@ -2304,13 +2711,15 @@ LLVM_Util::push_mask(llvm::Value *mask, bool negate, bool absolute)
 {	
 	ASSERT(mask->getType() == type_wide_bool());
 	if(m_mask_stack.empty()) {
-		m_mask_stack.push_back(MaskInfo{mask, negate});
+		m_mask_stack.push_back(MaskInfo{mask, negate, 0});
 	} else {
 		
 		MaskInfo & mi = m_mask_stack.back();
 		llvm::Value *prev_mask = mi.mask;
 		bool prev_negate = mi.negate;
-	
+
+		int applied_return_mask_count = absolute? 0 : mi.applied_return_mask_count;
+
 		if (false == prev_negate) {
 			if (false == negate)
 			{
@@ -2320,11 +2729,11 @@ LLVM_Util::push_mask(llvm::Value *mask, bool negate, bool absolute)
 				} else {
 					blended_mask = builder().CreateSelect(prev_mask, mask, prev_mask);
 				}
-				m_mask_stack.push_back(MaskInfo{blended_mask, false});
+				m_mask_stack.push_back(MaskInfo{blended_mask, false, applied_return_mask_count});
 			} else {				
 				ASSERT(false == absolute);
 				llvm::Value *blended_mask = builder().CreateSelect(mask, wide_constant_bool(false), prev_mask);
-				m_mask_stack.push_back(MaskInfo{blended_mask, false});			
+				m_mask_stack.push_back(MaskInfo{blended_mask, false, applied_return_mask_count});
 			}
 		} else {
 			if (false == negate)
@@ -2335,188 +2744,345 @@ LLVM_Util::push_mask(llvm::Value *mask, bool negate, bool absolute)
 				} else {
 					blended_mask = builder().CreateSelect(prev_mask, wide_constant_bool(false), mask);
 				}
-				m_mask_stack.push_back(MaskInfo{blended_mask, false});
+				m_mask_stack.push_back(MaskInfo{blended_mask, false, applied_return_mask_count});
 			} else {
 				ASSERT(false == absolute);
 				llvm::Value *blended_mask = builder().CreateSelect(prev_mask, prev_mask, mask);
-				m_mask_stack.push_back(MaskInfo{blended_mask, true});			
+				m_mask_stack.push_back(MaskInfo{blended_mask, true, applied_return_mask_count});
 			}			
 		}
 	}
 }
 
 
-void
-LLVM_Util::pop_if_mask()
+llvm::Value *
+LLVM_Util::shader_mask()
 {
-	ASSERT(false == m_mask_stack.empty());
-	
-	m_mask_stack.pop_back();
+	llvm::Value * loc_of_shader_mask = m_alloca_for_modified_mask_stack.front();
+	return op_load(loc_of_shader_mask);
+}
 
-	// Does outter scope have a mask
-	if (false == m_mask_stack.empty()) {
-		// TODO:  investigate break and return interacting
-#if 1
-		// Apply the break mask to the outter scope's mask
-		if (false ==  m_mask_break_stack.empty())
-		{
-			ASSERT(0 && "unexpected2");
-			auto & mi = m_mask_stack.back();
-			llvm::Value * existing_mask = mi.mask;
+void
+LLVM_Util::apply_exit_to_mask_stack()
+{
+	ASSERT (false == m_mask_stack.empty());
+	ASSERT(false == m_alloca_for_modified_mask_stack.empty());
 
-			const auto & bsi = m_mask_break_stack.back();
-			if (bsi.negate) {
-				if(mi.negate) {
-					mi.mask = builder().CreateSelect(bsi.mask, bsi.mask, existing_mask);
-				} else {
-					mi.mask = builder().CreateSelect(bsi.mask, wide_constant_bool(false), existing_mask);
-				}
-			} else {
-				if(mi.negate) {
-					mi.mask = builder().CreateSelect(bsi.mask, existing_mask, wide_constant_bool(true));
-				} else {
-					mi.mask = builder().CreateSelect(bsi.mask, existing_mask, bsi.mask);
-				}
-			}
+
+	llvm::Value * loc_of_shader_mask = m_alloca_for_modified_mask_stack.front();
+	llvm::Value * shader_mask = op_load(loc_of_shader_mask);
+
+	llvm::Value * loc_of_function_mask = m_alloca_for_modified_mask_stack.back();
+	llvm::Value * function_mask = op_load(loc_of_function_mask);
+
+	// For any inactive lanes of the exit mask
+	// set the function_mask to 0.
+	llvm::Value * modified_function_mask = builder().CreateSelect(shader_mask, function_mask, shader_mask);
+
+	push_masking_enabled(false);
+	op_store(modified_function_mask, loc_of_function_mask);
+	pop_masking_enabled();
+
+	// Apply the modified_function_mask to the current conditional mask stack
+	// By bumping the return count, the modified_return_mask will get applied
+	// to the conditional mask stack as it unwinds.
+	++m_masked_return_count_stack.back();
+
+	// We could just call apply_return_to_mask_stack(), but will repeat the work
+	// here to take advantage of the already loaded return mask
+	auto & mi = m_mask_stack.back();
+
+	int masked_return_count = m_masked_return_count_stack.back();
+	ASSERT(masked_return_count > mi.applied_return_mask_count);
+	llvm::Value * existing_mask = mi.mask;
+
+	ASSERT(false == m_alloca_for_modified_mask_stack.empty());
+	if(mi.negate) {
+		mi.mask = builder().CreateSelect(modified_function_mask, existing_mask, wide_constant_bool(true));
+	} else {
+		mi.mask = builder().CreateSelect(modified_function_mask, existing_mask, modified_function_mask);
+	}
+	mi.applied_return_mask_count = masked_return_count;
+}
+
+void
+LLVM_Util::apply_return_to_mask_stack()
+{
+	ASSERT (false == m_mask_stack.empty());
+
+	auto & mi = m_mask_stack.back();
+	int masked_return_count = m_masked_return_count_stack.back();
+	// TODO: might be impossible for this conditional to be false, could change to assert
+	// or remove applied_return_mask_count entirely
+	if (masked_return_count > mi.applied_return_mask_count) {
+		llvm::Value * existing_mask = mi.mask;
+
+		ASSERT(false == m_alloca_for_modified_mask_stack.empty());
+		llvm::Value * loc_of_return_mask = m_alloca_for_modified_mask_stack.back();
+		llvm::Value * rs_mask = op_load(loc_of_return_mask);
+		if(mi.negate) {
+			mi.mask = builder().CreateSelect(rs_mask, existing_mask, wide_constant_bool(true));
+		} else {
+			mi.mask = builder().CreateSelect(rs_mask, existing_mask, rs_mask);
 		}
-#endif
+		mi.applied_return_mask_count = masked_return_count;
+	}
+	
+}
+
+void
+LLVM_Util::apply_break_to_mask_stack()
+{
+	ASSERT (false == m_mask_stack.empty());
+
+	auto & mi = m_mask_stack.back();
+
+	llvm::Value * existing_mask = mi.mask;
+
+	// TODO: do we need to track if a break was applied or not?
+	ASSERT(false == m_masked_loop_stack.empty());
+	llvm::Value * loc_of_cond_mask = m_masked_loop_stack.back().location_of_condition_mask;
+	llvm::Value * cond_mask = op_load(loc_of_cond_mask);
+	if(mi.negate) {
+		mi.mask = builder().CreateSelect(cond_mask, existing_mask, wide_constant_bool(true));
+	} else {
+		mi.mask = builder().CreateSelect(cond_mask, existing_mask, cond_mask);
 	}
 }
 
 void
-LLVM_Util::pop_loop_mask()
+LLVM_Util::apply_continue_to_mask_stack()
+{
+	ASSERT (false == m_mask_stack.empty());
+
+	auto & mi = m_mask_stack.back();
+
+	llvm::Value * existing_mask = mi.mask;
+
+	// TODO: do we need to track if a break was applied or not?
+	ASSERT(false == m_masked_loop_stack.empty());
+	llvm::Value * loc_of_continue_mask = m_masked_loop_stack.back().location_of_continue_mask;
+	llvm::Value * continue_mask = op_load(loc_of_continue_mask);
+	if(mi.negate) {
+		mi.mask = builder().CreateSelect(continue_mask, wide_constant_bool(true), existing_mask);
+	} else {
+		mi.mask = builder().CreateSelect(continue_mask, wide_constant_bool(false), existing_mask);
+	}
+}
+
+llvm::Value *
+LLVM_Util::apply_return_to(llvm::Value *existing_mask)
+{
+	// caller should have checked masked_return_count() beforehand
+	ASSERT (m_masked_return_count_stack.back() > 0);
+	ASSERT(false == m_alloca_for_modified_mask_stack.empty());
+
+	llvm::Value * loc_of_return_mask = m_alloca_for_modified_mask_stack.back();
+	llvm::Value * rs_mask = op_load(loc_of_return_mask);
+	llvm::Value *result = builder().CreateSelect(rs_mask, existing_mask, rs_mask);
+	return result;
+}
+
+
+void
+LLVM_Util::pop_mask()
 {
 	ASSERT(false == m_mask_stack.empty());
+
 	m_mask_stack.pop_back();
 }
 
 llvm::Value *
 LLVM_Util::current_mask()
 {
-	if(m_mask_stack.empty()) {
-		return wide_constant_bool(true);
-	} else {
-		auto & mi = m_mask_stack.back();
-		if (mi.negate) {
-			llvm::Value *negated_mask = builder().CreateSelect(mi.mask, wide_constant_bool(false), wide_constant_bool(true));
-			return negated_mask;
-		} else {
-			return mi.mask;
-		}
-	}
-}
-
-llvm::Value *
-LLVM_Util::apply_break_mask_to(llvm::Value *existing_mask)
-{
-	if(m_mask_break_stack.empty()) {
-		return existing_mask;
-	} else {
-		auto & bsi = m_mask_break_stack.back();
-		if (bsi.negate) {
-			llvm::Value *result = builder().CreateSelect(bsi.mask, wide_constant_bool(false), existing_mask);
-			return result;
-		} else {
-			llvm::Value *result = builder().CreateSelect(bsi.mask, existing_mask, bsi.mask);
-			return result;
-		}
-	}
-}
-
-
-bool 
-LLVM_Util::is_mask_stack_empty()
-{
-	return m_mask_stack.empty();
-}
-
-
-void
-LLVM_Util::push_mask_break()
-{
-	ASSERT(false == m_mask_stack.empty());
-
-	// TODO: determine if we need a stack or just the latest break
-	{
-		ASSERT(!m_mask_stack.empty());
-		MaskInfo copy_of_mi = m_mask_stack.back();
-		copy_of_mi.negate = !copy_of_mi.negate;
-		m_mask_break_stack.push_back(copy_of_mi);
-	}
-		
-	// Now modify the current mask to turn off all lanes
-	// because the only active lanes just hit a break statement
-	// so all future instructions should execute against an empty mask
-	// NOTE: this is technically unreachable code, ideally front end
-	// optimizations would get rid of it before hand
-	// at this point don't want to introduce complexity of trying to
-	// skip instructions
+	ASSERT(!m_mask_stack.empty());
 	auto & mi = m_mask_stack.back();
-	mi.mask = wide_constant_bool(false);
-	// NOTE: if there are no other instructions, then this mask will just not
-	// get used/generated (we think)
+	if (mi.negate) {
+		llvm::Value *negated_mask = builder().CreateSelect(mi.mask, wide_constant_bool(false), wide_constant_bool(true));
+		return negated_mask;
+	} else {
+		return mi.mask;
+	}
 }
 
 void
-LLVM_Util::clear_mask_break()
+LLVM_Util::op_masked_break()
 {
-	m_mask_break_stack.clear();
-}
+	OSL_DEV_ONLY(std::cout << "op_masked_break" << std::endl);
 
-
-void
-LLVM_Util::push_mask_return()
-{
 	ASSERT(false == m_mask_stack.empty());
 
-	{
-		const MaskInfo & mi = m_mask_stack.back();
-		//copy_of_mi.negate = !copy_of_mi.negate;
-		//m_function_stack_of_return_masks.back().push_back(copy_of_mi);
+	const MaskInfo & mi = m_mask_stack.back();
+	// Because we are inside a conditional branch
+	// we can't let our local modified mask be directly used
+	// by other scopes, instead we must store the result
+	// of to the stack for the outer scope to pickup and
+	// use
+	ASSERT(!m_masked_loop_stack.empty());
+	LoopInfo & loop = m_masked_loop_stack.back();
+	llvm::Value * loc_of_cond_mask = loop.location_of_condition_mask;
 
-		//if (m_mask_levels_belong_to_branch > 0) {
+	llvm::Value * cond_mask = op_load(loc_of_cond_mask);
 
-			// Because we are inside a conditional branch
-			// we can't let our local modified mask be directly used
-			// by other scopes, instead we must store the result
-			// of to the stack for the outer scope to pickup and
-			// use
-			ASSERT(false == m_alloca_for_modified_mask_stack.empty());
-			llvm::Value * loc_of_modified_mask = m_alloca_for_modified_mask_stack.back();
-			// TODO: could possibly avoid the loading once, by pulling the previous
-			// stack location, but after that we will need to load it
-			llvm::Value * after_if_mask = op_load(loc_of_modified_mask);
+	llvm::Value * break_from_mask = mi.mask;
+	llvm::Value * new_cond_mask;
 
-
-			llvm::Value * return_from_mask = mi.mask;
-			llvm::Value * modifiedMask;
-
-			// For any active lanes of the mask we are returning from
-			// set the after_if_mask to 0.
-			if (mi.negate) {
-				modifiedMask = builder().CreateSelect(return_from_mask, after_if_mask, return_from_mask);
-			} else {
-				modifiedMask = builder().CreateSelect(return_from_mask, wide_constant_bool(false), after_if_mask);
-			}
-
-			push_masking_enabled(false);
-			op_store(modifiedMask, loc_of_modified_mask);
-			pop_masking_enabled();
-//		}
-
+	// For any active lanes of the mask we are returning from
+	// set the after_if_mask to 0.
+	if (mi.negate) {
+		new_cond_mask = builder().CreateSelect(break_from_mask, cond_mask, break_from_mask);
+	} else {
+		new_cond_mask = builder().CreateSelect(break_from_mask, wide_constant_bool(false), cond_mask);
 	}
-		
-	// Now modify the current mask to turn off all lanes
-	// because the only active lanes just hit a break statement
-	// so all future instructions should execute against an empty mask
-	// NOTE: this is technically unreachable code, ideally front end
-	// optimizations would get rid of it before hand
-	// at this point don't want to introduce complexity of trying to
-	// skip instructions
-	//auto & mi = m_mask_stack.back();
-	//mi.mask = wide_constant_bool(false);
-	// NOTE: if there are no other instructions, then this mask will just not
-	// get used/generated (we think)
+
+	push_masking_enabled(false);
+	op_store(new_cond_mask, loc_of_cond_mask);
+	pop_masking_enabled();
+
+	// Track that a break was called in the current masked loop
+	loop.break_count++;
+}
+
+void
+LLVM_Util::op_masked_continue()
+{
+	OSL_DEV_ONLY(std::cout << "op_masked_break" << std::endl);
+
+	ASSERT(false == m_mask_stack.empty());
+
+	const MaskInfo & mi = m_mask_stack.back();
+	// Because we are inside a conditional branch
+	// we can't let our local modified mask be directly used
+	// by other scopes, instead we must store the result
+	// of to the stack for the outer scope to pickup and
+	// use
+	ASSERT(!m_masked_loop_stack.empty());
+	LoopInfo & loop = m_masked_loop_stack.back();
+	llvm::Value * loc_of_continue_mask = loop.location_of_continue_mask;
+
+	llvm::Value * continue_mask = op_load(loc_of_continue_mask);
+
+	llvm::Value * continue_from_mask = mi.mask;
+	llvm::Value * new_abs_continue_mask;
+
+	// For any active lanes of the mask we are returning from
+	// set the after_if_mask to 0.
+	if (mi.negate) {
+		new_abs_continue_mask = builder().CreateSelect(continue_from_mask, continue_mask, this->wide_constant_bool(true));
+	} else {
+		new_abs_continue_mask = builder().CreateSelect(continue_from_mask, continue_from_mask, continue_mask);
+	}
+
+	push_masking_enabled(false);
+	op_store(new_abs_continue_mask, loc_of_continue_mask);
+	pop_masking_enabled();
+
+	// Track that a break was called in the current masked loop
+	loop.continue_count++;
+}
+
+void
+LLVM_Util::op_masked_exit()
+{
+	OSL_DEV_ONLY(std::cout << "push_mask_exit" << std::endl);
+
+	ASSERT(false == m_mask_stack.empty());
+
+	const MaskInfo & mi = m_mask_stack.back();
+	llvm::Value * exit_from_mask = mi.mask;
+
+	// Because we are inside a conditional branch
+	// we can't let our local modified mask be directly used
+	// by other scopes, instead we must store the result
+	// of to the stack for the outer scope to pickup and
+	// use
+	ASSERT(false == m_alloca_for_modified_mask_stack.empty());
+	{
+		llvm::Value * loc_of_shader_mask = m_alloca_for_modified_mask_stack.front();
+		llvm::Value * shader_mask = op_load(loc_of_shader_mask);
+
+		llvm::Value * modifiedMask;
+		// For any active lanes of the mask we are returning from
+		// set the shader scope mask to 0.
+		if (mi.negate) {
+			modifiedMask = builder().CreateSelect(exit_from_mask, shader_mask, exit_from_mask);
+		} else {
+			modifiedMask = builder().CreateSelect(exit_from_mask, wide_constant_bool(false), shader_mask);
+		}
+
+		push_masking_enabled(false);
+		op_store(modifiedMask, loc_of_shader_mask);
+		pop_masking_enabled();
+	}
+
+	// Are we inside a function scope, then we will need to modify its active lane mask
+	// functions higher up in the stack will apply the current exit mask when functions are popped
+	if (m_alloca_for_modified_mask_stack.size() > 1) {
+		llvm::Value * loc_of_function_mask = m_alloca_for_modified_mask_stack.back();
+		llvm::Value * function_mask = op_load(loc_of_function_mask);
+
+
+		llvm::Value * modifiedMask;
+
+		// For any active lanes of the mask we are returning from
+		// set the after_if_mask to 0.
+		if (mi.negate) {
+			modifiedMask = builder().CreateSelect(exit_from_mask, function_mask, exit_from_mask);
+		} else {
+			modifiedMask = builder().CreateSelect(exit_from_mask, wide_constant_bool(false), function_mask);
+		}
+
+		push_masking_enabled(false);
+		op_store(modifiedMask, loc_of_function_mask);
+		pop_masking_enabled();
+	}
+
+	// Bumping the masked exit count will cause the exit mask to be applied to the return mask
+	// of the calling function when the current function is popped
+	++m_masked_exit_count;
+
+	// Bumping the masked return count will cause the return mask(which is a subset of the shader_mask)
+	// to be applied to the mask stack when leaving if/else block
+	ASSERT(!m_masked_return_count_stack.empty());
+	m_masked_return_count_stack.back()++;
+}
+
+void
+LLVM_Util::op_masked_return()
+{
+	OSL_DEV_ONLY(std::cout << "push_mask_return" << std::endl);
+
+	ASSERT(false == m_mask_stack.empty());
+
+	const MaskInfo & mi = m_mask_stack.back();
+	// Because we are inside a conditional branch
+	// we can't let our local modified mask be directly used
+	// by other scopes, instead we must store the result
+	// of to the stack for the outer scope to pickup and
+	// use
+	ASSERT(false == m_alloca_for_modified_mask_stack.empty());
+	llvm::Value * loc_of_function_mask = m_alloca_for_modified_mask_stack.back();
+	llvm::Value * function_mask = op_load(loc_of_function_mask);
+
+
+	llvm::Value * return_from_mask = mi.mask;
+	llvm::Value * modifiedMask;
+
+	// For any active lanes of the mask we are returning from
+	// set the function scope mask to 0.
+	if (mi.negate) {
+		modifiedMask = builder().CreateSelect(return_from_mask, function_mask, return_from_mask);
+	} else {
+		modifiedMask = builder().CreateSelect(return_from_mask, wide_constant_bool(false), function_mask);
+	}
+
+	push_masking_enabled(false);
+	op_store(modifiedMask, loc_of_function_mask);
+	pop_masking_enabled();
+
+	ASSERT(!m_masked_return_count_stack.empty());
+	m_masked_return_count_stack.back()++;
+
 }
 
 
@@ -2952,7 +3518,14 @@ LLVM_Util::bitcode_string (llvm::Function *func)
     return stream.str();
 }
 
-
+std::string
+LLVM_Util::module_string ()
+{
+   std::string s;
+   llvm::raw_string_ostream stream (s);
+   m_llvm_module->print(stream,nullptr);
+   return s;
+}
 
 void
 LLVM_Util::delete_func_body (llvm::Function *func)
@@ -2977,6 +3550,41 @@ LLVM_Util::func_name (llvm::Function *func)
     return func->getName().str();
 }
 
+llvm::DIFile *
+LLVM_Util::getOrCreateDebugFileFor(const std::string &file_name) {
+    auto iter = mDebugFileByName.find(file_name);
+    if(iter == mDebugFileByName.end()) {
+        //OSL_DEV_ONLY(std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>CREATING FILE<<<<<<<<<<<<<<<<<<<<<<<<< " << file_name << std::endl);
+        ASSERT(m_llvm_debug_builder != nullptr);
+        llvm::DIFile *file = m_llvm_debug_builder->createFile(
+                file_name, ".\\");
+        mDebugFileByName.insert(std::make_pair(file_name,file));
+        return file;
+    }
+    return iter->second;
+}
+
+llvm::DIScope *
+LLVM_Util::getCurrentDebugScope() const
+{
+    ASSERT(mDebugCU != nullptr);
+
+    if (mLexicalBlocks.empty()) {
+        return mDebugCU;
+    } else {
+        return mLexicalBlocks.back();
+    }
+}
+
+llvm::DILocation *
+LLVM_Util::getCurrentInliningSite() const
+{
+    if (mInliningSites.empty()) {
+        return nullptr;
+    } else {
+        return mInliningSites.back();
+    }
+}
 
 }; // namespace pvt
 OSL_NAMESPACE_EXIT

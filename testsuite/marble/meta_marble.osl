@@ -1,0 +1,24 @@
+ shader meta_marble (color Cin = .5,
+               float freq = 1.0,
+               output color Cout = 0)
+{
+    float sum = 0;
+    float freqVal = freq;
+
+	matrix M;
+	if (getmatrix("common","object",M) == 0)
+	{
+		M = matrix(5.0);
+	}
+	
+    point Pshad = P;
+    if (P[0] > 0.5) {  
+    	Pshad = transform (M, P);
+	}
+    for (int i = 0; i < 6; i++)
+    {
+        sum = sum + 1/freqVal * abs(.5 - noise( 4 * freqVal * Pshad)) ;
+        freqVal = 2 * freqVal;
+    }
+    Cout = Cin * sum;
+}

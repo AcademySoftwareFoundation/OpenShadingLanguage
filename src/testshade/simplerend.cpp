@@ -26,6 +26,9 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifdef __OSL_DEBUG_MISSING_USER_DATA
+	#include <unordered_set>
+#endif
 
 #include "OSL/oslexec.h"
 #include "OSL/genclosure.h"
@@ -167,7 +170,7 @@ BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &resu
 #if 0
     int is_uniform_xform = 1;
 
-	OSL_INTEL_PRAGMA("omp simd simdlen(SimdLaneCount)")								    
+    OSL_OMP_PRAGMA(omp simd simdlen(SimdLaneCount))
     for(int lane=0; lane < SimdLaneCount; ++lane) {
         if (uniform_xform != xform.get(lane))
             is_uniform_xform = 0;
@@ -188,7 +191,7 @@ BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &resu
 
 #if 0
     int numLanesMatch1st = 0;
-    OSL_INTEL_PRAGMA("simd reduction(+:numLanesMatch1st)  assert")
+    OSL_INTEL_PRAGMA(simd reduction(+:numLanesMatch1st)  assert)
 	for(int lane=0; lane < SimdLaneCount; ++lane) {
         int match = (uniform_xform == xform.get(lane)) ? 1 : 0;
         numLanesMatch1st += match;
@@ -197,7 +200,7 @@ BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &resu
     if (numLanesMatch1st == 8) {
 #elif 0
     int numLanesMatch1st = 0;
-    OSL_INTEL_PRAGMA("simd reduction(+:numLanesMatch1st) vectorlength(8) assert")
+    OSL_INTEL_PRAGMA(simd reduction(+:numLanesMatch1st) vectorlength(8) assert)
             for(int lane=0; lane < SimdLaneCount; ++lane) {
         numLanesMatch1st += (uniform_xform == xform.get(lane));
     }
@@ -211,7 +214,7 @@ BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &resu
 
 #endif
         const Matrix44 & transformFromShaderGlobals = *reinterpret_cast<const Matrix44*>(uniform_xform);
-	OSL_INTEL_PRAGMA("omp simd simdlen(SimdLaneCount)")								        
+    OSL_OMP_PRAGMA(omp simd simdlen(SimdLaneCount))
     for(int lane=0; lane < SimdLaneCount; ++lane) {
         result.set(lane,transformFromShaderGlobals);
     }
@@ -228,27 +231,26 @@ return true;
 Mask
 BatchedSimpleRenderer::get_matrix (
 	ShaderGlobalsBatch *sgb, 
-	Wide<Matrix44> &result,
-    const Wide<TransformationPtr> & xform, 
-    const Wide<float> &time, 
-    WeakMask /*weak_mask*/)
+	MaskedAccessor<Matrix44> result,
+    ConstWideAccessor<TransformationPtr> xform,
+    ConstWideAccessor<float> time)
 {
     // SimpleRenderer doesn't understand motion blur and transformations
     // are just simple 4x4 matrices.
     //result = *reinterpret_cast<const Matrix44*>(xform);
 
-    TransformationPtr uniform_xform = xform.get(0);
+    TransformationPtr uniform_xform = xform[0];
 
 #if 0
     // In general, one can't assume that the transformation is uniform
     const Matrix44 & uniformTransform = *reinterpret_cast<const Matrix44*>(uniform_xform);
-	OSL_INTEL_PRAGMA("omp simd simdlen(result.width)")								        
+    OSL_OMP_PRAGMA(omp simd simdlen(result.width))
     for(int lane=0; lane < result.width; ++lane) {
-        if (__builtin_expect((uniform_xform == xform.get(lane)),1)) {
-            result.set(lane,uniformTransform);
+        if (__builtin_expect((uniform_xform == xform[lane]),1)) {
+            result[lane] = uniformTransform;
         } else {
             const Matrix44 & transformFromShaderGlobals = *reinterpret_cast<const Matrix44*>(xform.get(lane));
-            result.set(lane,transformFromShaderGlobals);
+            result[lane] = transformFromShaderGlobals;
         }
     }
 #else
@@ -256,9 +258,13 @@ BatchedSimpleRenderer::get_matrix (
     // use that fact
     const Matrix44 & uniformTransform = *reinterpret_cast<const Matrix44*>(uniform_xform);
 
-	OSL_INTEL_PRAGMA("omp simd simdlen(result.width)")								        
+	// Workaround clang omp when it cant perform a runtime pointer check
+	// to ensure no overlap in output variables
+	// But we can tell clang to assume its safe
+	OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(result.width))
+	OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(result.width))
     for(int lane=0; lane < result.width; ++lane) {
-        result.set(lane,uniformTransform);
+        result[lane] = uniformTransform;
     }
 
 #endif
@@ -269,16 +275,24 @@ BatchedSimpleRenderer::get_matrix (
 
 #endif
 Mask
-BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
-        ustring from, const Wide<float> &/*time*/, WeakMask /*weak_mask*/)
+BatchedSimpleRenderer::get_matrix (
+	ShaderGlobalsBatch * /*sgb*/,
+	MaskedAccessor<Matrix44> wresult,
+	ustring from,
+	ConstWideAccessor<float> /*wtime*/)
 {
     auto found = m_sr.m_named_xforms.find (from);
     if (found != m_sr.m_named_xforms.end()) {
         const Matrix44 & uniformTransform =  *(found->second);
         
-    	OSL_INTEL_PRAGMA("omp simd simdlen(result.width)")								        
-        for(int lane=0; lane < result.width; ++lane) {
-            result.set(lane,uniformTransform);
+		// Workaround clang omp when it cant perform a runtime pointer check
+        // to ensure no overlap in output variables
+        // But we can tell clang to assume its safe
+    	OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(wresult.width))
+    	OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(wresult.width))
+
+        for(int lane=0; lane < wresult.width; ++lane) {
+            wresult[lane] = uniformTransform;
         }
         
         return Mask(true);
@@ -287,6 +301,29 @@ BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &resu
     }
 }
 
+Mask BatchedSimpleRenderer::get_matrix (
+	ShaderGlobalsBatch * /*sgb*/,
+	MaskedAccessor<Matrix44> wresult,
+	ConstWideAccessor<ustring> wfrom,
+	ConstWideAccessor<float> /*wtime*/)
+{
+	Mask succeeded(false);
+    OSL_OMP_PRAGMA(omp simd simdlen(wresult.width))
+	for(int lane=0; lane < wresult.width; ++lane) {
+
+		if (wresult.mask().is_on(lane)) {
+
+			ustring from = wfrom[lane];
+			auto found = m_sr.m_named_xforms.find (from);
+			if (found != m_sr.m_named_xforms.end()) {
+				const Matrix44 & transform =  *(found->second);
+				wresult[lane] = transform;
+				succeeded.set_on(lane);
+			}
+		}
+	}
+	return succeeded;
+}
 
 
 bool
@@ -595,7 +632,7 @@ BatchedSimpleRenderer::get_userdata (ustring name,
 			// this check is just to show how you could do it if you
 			// wanted to skip executing right hand side of assignment
 			if(out[i].is_on()) {
-				out[i] = sgb->varying(i).u();
+                out[i] = sgb->varying(i).u();
 			}
 		}
         if (val.has_derivs()) {
@@ -630,6 +667,13 @@ BatchedSimpleRenderer::get_userdata (ustring name,
         return val.mask();
     }
 
+#ifdef __OSL_DEBUG_MISSING_USER_DATA
+    static std::unordered_set<ustring> missingUserData;
+    if (missingUserData.find(name) == missingUserData.end()) {
+        std::cout << "Missing user data for " << name << std::endl;
+        missingUserData.insert(name);
+    }
+#endif
     
     return Mask(false);
 }
@@ -925,6 +969,7 @@ SimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type,
 
     if (name == u_s && val.is<float>()) {
         val.ref<float>() = sg->u;
+
         if (val.has_derivs()) {
             val.refDx<float>() = sg->dudx;
             val.refDy<float>() = sg->dudy;

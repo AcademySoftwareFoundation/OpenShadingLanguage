@@ -1,0 +1,26 @@
+shader b4 (float f_in = 41,
+          color c_in = 42,
+          output color c_outb = 0
+    )
+{    
+    int count = 1 + int(P[0]*8);
+    
+    if (P[1] > 0.4)
+    {
+        for (int i = 0; i < count; ++i)
+        {
+            c_outb = color(i/8.0,i/8.0,i/8.0);
+            printf ("i: %d c:%g\n", i, c_outb);
+        
+            if (i > 4) {
+                if (P[0] > -1000) {
+                    return;
+                }
+            }
+        }   
+        c_outb = color(f_in);
+        //printf ("b: f_in = %g, c_in = %g\n", f_in, c_in);
+        //exit();
+        c_outb = c_in;
+    }
+}

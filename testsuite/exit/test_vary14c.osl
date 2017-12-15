@@ -1,0 +1,15 @@
+color init()
+{
+    if (P[0] > 0.75) {
+        exit();
+    }
+    return color(0,1,0);
+}
+
+shader test_vary14c(
+    output color c = color(1,0,0),
+    color in = init())
+{
+    c += in;
+}
+

@@ -1,0 +1,39 @@
+shader compref_test ()
+{
+    vector V = vector(0,1,2);
+
+    printf ("constant index:\n");
+    printf (" reading:\n");
+    printf ("  V[0] = %g\n", V[0]);
+    printf ("  V[1] = %g\n", V[1]);
+    printf ("  V[2] = %g\n", V[2]);
+    printf ("  V[10] = %g\n", V[10]);
+    printf (" writing out of bounds with constant, gets clamped:\n");
+    V[10] = 42;
+    printf ("  V[10] = %g\n", V[10]);
+    
+    printf ("variable index:\n");
+    printf (" reading:\n");
+    // Don't read out of range with variable 
+    // component index, as they are not clamped, undefined output
+    for (int i = 0;  i < 3;  ++i) {
+        printf ("  V[%d] = %g\n", i, V[i]);
+    }
+    printf (" writing:\n");
+    for (int i = 0;  i < 3;  ++i) {
+        V[i] = 84 + i;
+    }
+    for (int i = 0;  i < 3;  ++i) {
+        printf ("  V[%d] = %g\n", i, V[i]);
+    }
+
+    printf ("varying index:\n");
+    int vi = int(clamp(3*P[0], 0, 2));
+    printf ("  V[%d] = %g\n", vi, V[vi]);
+    printf (" writing V[%d]=50:\n", vi);
+    V[vi] = 50;
+    printf ("  V[0] = %g\n", V[0]);
+    printf ("  V[1] = %g\n", V[1]);
+    printf ("  V[2] = %g\n", V[2]);
+    
+}

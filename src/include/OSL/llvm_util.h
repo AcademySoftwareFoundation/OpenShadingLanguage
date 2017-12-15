@@ -40,6 +40,12 @@ namespace llvm = LLVM_NAMESPACE;
 namespace llvm {
   class BasicBlock;
   class ConstantFolder;
+  class DIBuilder;
+  class DICompileUnit;
+  class DIFile;
+  class DILocation;
+  class DIScope;
+  class DISubprogram;
   class ExecutionEngine;
   class Function;
   class FunctionType;
@@ -48,10 +54,10 @@ namespace llvm {
   class LLVMContext;
   class Module;
   class PointerType;
+  class DISubroutineType;
   class Type;
   class Value;
   class VectorType;
-  class DIBuilder;
   
   namespace legacy {
     class FunctionPassManager;
@@ -64,7 +70,7 @@ namespace llvm {
 OSL_NAMESPACE_ENTER
 
 namespace pvt {   // OSL::pvt
-
+class ShaderInstance;
 
 
 
@@ -75,10 +81,21 @@ namespace pvt {   // OSL::pvt
 /// tied to OSL internals at all.
 class OSLEXECPUBLIC LLVM_Util {
 public:
-    LLVM_Util (int debuglevel=0);
+    struct PerThreadInfo
+    {
+        PerThreadInfo();
+        ~PerThreadInfo();
+
+    private:
+        friend class LLVM_Util;
+        struct Impl;
+        mutable Impl * m_thread_info;
+        Impl * get() const;
+    };
+
+    LLVM_Util (int debuglevel=0, const LLVM_Util::PerThreadInfo &per_thread_info = LLVM_Util::PerThreadInfo());
     ~LLVM_Util ();
 
-    struct PerThreadInfo;
 
     /// Set debug level
     void debug (int d) { m_debug = d; }
@@ -108,20 +125,40 @@ public:
                                        const std::string &name=std::string(),
                                        std::string *err=NULL);
 
-    void enable_debug_info();
-    void set_debug_info(const std::string &function_name);
-    void set_debug_location(const std::string &source_file_name, const std::string & method_name, int sourceline);
-    void clear_debug_info();
+    bool debug_is_enabled() const;
+    void debug_setup_compilation_unit(const char * compile_unit_name);
+    void debug_push_function(const std::string & function_name,
+    	                     OIIO::ustring file_name,
+    	                     unsigned int method_line);
+    void debug_pop_function();
+    void debug_push_inlined_function(OIIO::ustring function_name,
+    	                     OIIO::ustring file_name,
+    	                     unsigned int method_line);
+    void debug_pop_inlined_function();
+    void debug_set_location(OIIO::ustring source_file_name, int sourceline);
+    void debug_finalize();
     
     
     /// Create a new function (that will later be populated with
     /// instructions) with up to 4 args.
+#if OSL_LLVM_VERSION < 50
     llvm::Function *make_function (const std::string &name, bool fastcall,
                                    llvm::Type *rettype,
                                    llvm::Type *arg1=NULL,
                                    llvm::Type *arg2=NULL,
                                    llvm::Type *arg3=NULL,
                                    llvm::Type *arg4=NULL);
+#else
+    llvm::Function *make_function (const std::string &name, bool fastcall,
+                                   llvm::Type *rettype,
+                                   llvm::Type *arg1,
+                                   llvm::Type *arg2);
+    llvm::Function *make_function (const std::string &name, bool fastcall,
+                                   llvm::Type *rettype,
+                                   llvm::Type *arg1,
+                                   llvm::Type *arg2,
+    							   llvm::Type *arg3);
+#endif
 
     /// Create a new function (that will later be populated with
     /// instructions) with a vector of args.
@@ -152,7 +189,7 @@ public:
     /// Create a new JITing ExecutionEngine and make it the current one.
     /// Return a pointer to the new engine.  If err is not NULL, put any
     /// errors there.
-    llvm::ExecutionEngine *make_jit_execengine (std::string *err=NULL);
+    llvm::ExecutionEngine *make_jit_execengine (std::string *err=NULL, bool debugging_symbols=false, bool profiling_events=false);
 
     void dump_struct_data_layout(llvm::Type *Ty);
     void validate_struct_data_layout(llvm::Type *Ty, const std::vector<unsigned int> & expected_offset_by_index);
@@ -205,31 +242,127 @@ public:
 
     bool inside_function() const;
 
-    /// Apply any returned lanes to the current mask
-    void mask_off_returned_lanes();
-
     /// Pop basic return destination when exiting a function.  This includes
     /// resetting the IR insertion point to the block following the
     /// corresponding function call.
     void pop_function ();
     
+
+    /// Overview of masking strategy
+    ///
+    /// For if/then based on a conditional, the result of the conditional is
+    /// conditionals written to a symbol that is a wide boolean.  To handle
+    /// nested we will keep a stack of conditional masks.  When a new
+    /// conditional mask is pushed, it is combined with the previous mask on
+    /// the top of the stack.  It is the top of the mask stack that is used
+    /// as the mask for any instructions requiring masking.  When a conditional
+    /// scope is exited, we just pop the top of the conditional mask stack.
+    ///
+    /// Loops are handled by pushing their conditional result onto the
+    /// conditional mask stack, and popping it back off at the end of the loop
+    ///
+    /// Handling of early outs (exit, return, break, continue) is done by
+    /// storing a mask representing the lanes which are going to be
+    /// deactivated (or continue executing) to an allocated location the stack.
+    /// We actually have to store these early out masks, so that we can apply
+    /// it to the conditional mask stack.  As that stack unwinds, any early out
+    /// masks are applied to the top of the conditional mask stack.  As there
+    /// are different types of early outs that apply to different control flow
+    /// scopes and multiple types can be present at the same time for different
+    /// data lanes, we must store these early out masks at separate locations
+    /// on the stack.
+    ///
+    /// To handle 'exit', we allocate a 'shader mask' that is initially
+    /// populated with a startMaskValue representing the active lanes in a
+    /// shader global batch.  For example perhaps only 7 of 16 data lanes are
+    /// populated, the startMaskValue would store that value and push it onto
+    /// the conditional mask stack.  We require a location on the stack for
+    /// this 'shader mask' in order for an 'exit' statement to modify it and
+    /// cause a subset of the lanes to be deactivated.  If an exit was
+    /// processed, the 'shader mask' is where it will be stored and pulled from
+    /// when applying to the unwinding conditional mask stack.
+    ///
+    /// To handle 'return', we allocate a 'function mask' that is initially
+    /// populated with a startMaskValue representing the active lanes when an
+    /// inlined function was called.  This startMaskValue should just be
+    /// value at the top of the conditional mask stack.  As function calls
+    /// can be nested, we maintain a stack of function masks.  We require a
+    /// location on the stack for each 'function mask' in order for a 'return'
+    /// statement to modify it and cause a subset of the lanes to be
+    /// deactivated.  If an return was processed, the 'return mask' is where
+    /// it will be stored and pulled from when applying to the unwinding conditional mask stack.
+    /// When a function scope is exited, the function mask is popped so any
+    /// return's processed would apply to the outer function mask vs. the
+    /// one just exited.
+    ///
+    /// To handle 'break', we use the condition symbol's location on the stack
+    /// to directly disable data lanes for the loop execution.  As we already
+    /// had a location to store the conditional symbol's mask, no need to
+    /// allocate or store a separate one.  However code will need to reload
+    /// the condition's value when a break 'could have been' called vs.
+    /// relying on a conditional result already in a register.
+    ///
+    /// To handle 'continue', we allocate a 'continue mask' that is initially
+    /// populated with a 0 representing the deactived lanes by 'continue'
+    /// operations. We require a location on the stack for each 'continue mask'
+    /// in order for a 'continue' statement to modify it and cause a subset of
+    /// the lanes to be deactivated.  If an continue was processed, the
+    /// 'continue mask' is where it will be stored and pulled from when
+    /// applying to the unwinding conditional mask stack.
+    /// When a loop's scope is exited, the continue mask is popped so it
+    /// would't be applied to an outer loop
+    ///
+    /// The logic of when and how to actually apply these masks is handled
+    /// by the caller, tracking/storing the different stacks and masks is
+    /// handled here.  And queries exist to see how many early outs operations
+    /// have been processed, these counts can be used by the caller to determine
+    /// which to generate code to apply each of them
+    void push_function_mask(llvm::Value * startMaskValue);
+    void pop_function_mask();
+
+    void push_masked_loop(llvm::Value* location_of_condition_mask, llvm::Value* location_of_continue_mask);
+    bool is_innermost_loop_masked() const;
+    void pop_masked_loop();
+
+    void push_shader_instance(llvm::Value * startMaskValue);
+    void pop_shader_instance();
+
+    // number of masked exits operations built inside the shader instance
+    int masked_exit_count() const;
+    // number of masked return operations inside the scope of the current function mask
+    int  masked_return_count() const;
+    // number of masked break operations inside the scope of the current masked loop
+    int  masked_break_count() const;
+    // number of masked continue operations inside the scope of the current masked loop
+    int  masked_continue_count() const;
+
     // Push a mask onto the mask stack, which actually will AND the existing
     // top mask with the new mask and store that off. The mask must be of 
     // type <16 x i1>
     void push_mask(llvm::Value *mask, bool negate = false, bool absolute = false);
-    void pop_if_mask();
-    void pop_loop_mask();
-    bool is_mask_stack_empty();
+    void pop_mask();
+    void apply_exit_to_mask_stack();
+    void apply_return_to_mask_stack();
+    void apply_break_to_mask_stack();
+    void apply_continue_to_mask_stack();
     
     llvm::Value * current_mask();
-    llvm::Value * apply_break_mask_to(llvm::Value *existing_mask);
-    
+    llvm::Value * apply_return_to(llvm::Value *existing_mask);
 
-    void push_mask_break();
-    void clear_mask_break();
+    // Shader level mask, should incorporate the batch size
+    // and any exits processed up to this point
+    llvm::Value * shader_mask();
 
-    void push_mask_return();
+    void op_masked_break();
+    void op_masked_continue();
+
+    void op_masked_exit();
+    void op_masked_return();
     
+    void push_masked_return_block(llvm::BasicBlock *test_return);
+    void pop_masked_return_block();
+    bool has_masked_return_block() const;
+    llvm::BasicBlock *masked_return_block() const;
 
     void push_masking_enabled(bool enable);
     bool is_masking_enabled() const { return (m_enable_masking_stack.empty() == false) && (m_enable_masking_stack.back() == true); } 
@@ -587,6 +720,8 @@ public:
 
     /// Convert a function's bitcode to a string.
     std::string bitcode_string (llvm::Function *func);
+    /// Convert a module's bitcode to a string.
+    std::string module_string ();
 
     /// Delete the IR for the body of the given function to reclaim its
     /// memory (only helpful if we know we won't use it again).
@@ -607,10 +742,9 @@ private:
     IRBuilder& builder();
 
     int m_debug;
-    PerThreadInfo *m_thread;
+    PerThreadInfo::Impl *m_thread;
     llvm::LLVMContext *m_llvm_context;
     llvm::Module *m_llvm_module;
-    llvm::DIBuilder* m_llvm_debug_builder; 
     IRBuilder *m_builder;
     MemoryManager *m_llvm_jitmm;
     llvm::Function *m_current_function;
@@ -620,17 +754,33 @@ private:
     std::vector<llvm::BasicBlock *> m_return_block;     // stack for func call
     std::vector<llvm::BasicBlock *> m_loop_after_block; // stack for break
     std::vector<llvm::BasicBlock *> m_loop_step_block;  // stack for continue
+    // stack for masked returns to return to, maybe not the same the regular return block
+    // because there could have been other active data lanes in the function
+    // not traveling the masked conditional path which encounters a return
+    std::vector<llvm::BasicBlock *> m_masked_return_block_stack;
     struct MaskInfo
     {
     	llvm::Value * mask;
     	bool negate;
+    	int applied_return_mask_count;
     };
     std::vector<MaskInfo> m_mask_stack;  			// stack for masks that all stores should use when enabled
     std::vector<bool> m_enable_masking_stack;  			// stack for enabling stores to be masked
-    std::vector<MaskInfo> m_mask_break_stack;  		// stack for masks at the time a break statement executed
     // For each pushed function call, keep a slot for modified masks
     // to be stored from code blocks that might be branched over
     std::vector<llvm::Value *> m_alloca_for_modified_mask_stack;
+
+    std::vector<int> m_masked_return_count_stack;
+    int m_masked_exit_count;
+
+    struct LoopInfo
+    {
+    	llvm::Value *location_of_condition_mask;
+    	llvm::Value *location_of_continue_mask;
+    	int break_count;
+    	int continue_count;
+    };
+    std::vector<LoopInfo> m_masked_loop_stack; // stack to track loop condition & break count
 
     llvm::Type *m_llvm_type_float;
     llvm::Type *m_llvm_type_double;
@@ -668,6 +818,24 @@ private:
     llvm::PointerType * m_llvm_type_wide_float_ptr;
 
     bool m_supports_masked_stores;
+    bool m_supports_native_bit_masks;
+
+
+    // Debug Info
+    llvm::DIFile * getOrCreateDebugFileFor(const std::string &file_name);
+    llvm::DIScope * getCurrentDebugScope() const;
+    llvm::DILocation *getCurrentInliningSite() const;
+
+
+    llvm::DIBuilder* m_llvm_debug_builder;
+    llvm::DICompileUnit *mDebugCU;
+    std::vector<llvm::DIScope *> mLexicalBlocks;
+
+    typedef std::unordered_map<std::string, llvm::DIFile *> FileByNameType;
+    FileByNameType mDebugFileByName;
+    std::vector<llvm::DILocation *> mInliningSites;
+    llvm::DISubroutineType * mSubTypeForInlinedFunction;
+
 };
 
 

@@ -1,0 +1,23 @@
+color init()
+{
+return color(0);
+}
+
+shader test_vary7(output color c = 0.0)
+//shader test_vary7(output color c = init())
+{
+    float r = 1.0;
+    int i = 0;
+    for(; i < 3; ++i)
+    {
+    //printf("Iteration %d\n", i);
+        if (P[0] > 0.5) 
+        {
+            return;
+            //printf("P[0](%g) > 0.5\n", P[0]);
+        }
+    }
+    //printf("Iteration stopped at %d\n", i);
+    c = color(r, float(i)/3, 0);
+}
+

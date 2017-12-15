@@ -466,20 +466,16 @@ public:
     /// Get the 4x4 matrix that transforms by the specified
     /// transformation at the given time.  Return true if ok, false
     /// on error.
-#if 0
-    virtual bool get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
-                             TransformationPtr xform, float time) = 0;
-#endif
-    virtual Mask get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
-            const Wide<TransformationPtr> & xform, const Wide<float> &time, WeakMask weak_mask) = 0;    
+    virtual Mask get_matrix (ShaderGlobalsBatch *sgb, MaskedAccessor<Matrix44> result,
+            ConstWideAccessor<TransformationPtr> xform, ConstWideAccessor<float> time) = 0;
 
     /// Get the 4x4 matrix that transforms by the specified
     /// transformation at the given time.  Return true if ok, false on
     /// error.  The default implementation is to use get_matrix and
     /// invert it, but a particular renderer may have a better technique
     /// and overload the implementation.
-    virtual Mask get_inverse_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
-            const Wide<TransformationPtr> & xform, const Wide<float> &time, WeakMask weak_mask);    
+    virtual Mask get_inverse_matrix (ShaderGlobalsBatch *sgb, MaskedAccessor<Matrix44> result,
+    		ConstWideAccessor<TransformationPtr> xform, ConstWideAccessor<float> time);
 										  
 
     /// Get the 4x4 matrix that transforms by the specified
@@ -501,16 +497,20 @@ public:
     /// Get the 4x4 matrix that transforms points from the named
     /// 'from' coordinate system to "common" space at the given time.
     /// Returns true if ok, false if the named matrix is not known.
-    virtual Mask get_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
-                             ustring from, const Wide<float> &time, WeakMask weak_mask) = 0;
+    virtual Mask get_matrix (ShaderGlobalsBatch *sgb, MaskedAccessor<Matrix44> result,
+                             ustring from, ConstWideAccessor<float> time) = 0;
+    virtual Mask get_matrix (ShaderGlobalsBatch *sgb, MaskedAccessor<Matrix44> result,
+    						 ConstWideAccessor<ustring> from, ConstWideAccessor<float> time) = 0;
 
     /// Get the 4x4 matrix that transforms points from "common" space to
     /// the named 'to' coordinate system to at the given time.  The
     /// default implementation is to use get_matrix and invert it, but a
     /// particular renderer may have a better technique and overload the
     /// implementation.
-    virtual Mask get_inverse_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
-                                     ustring to, const Wide<float> &time, WeakMask weak_mask);
+    virtual Mask get_inverse_matrix (ShaderGlobalsBatch *sgb, MaskedAccessor<Matrix44> result,
+                                     ustring to, ConstWideAccessor<float> time);
+    virtual Mask get_inverse_matrix (ShaderGlobalsBatch *sgb, MaskedAccessor<Matrix44> result,
+    								 ConstWideAccessor<ustring> to, ConstWideAccessor<float> time);
 
     /// Get the 4x4 matrix that transforms 'from' to "common" space.
     /// Since there is no time value passed, return false if the
@@ -778,7 +778,7 @@ public:
     /// being called speculatively by the runtime optimizer, and it doesn't
     /// know which object the shader will be run on.
     virtual Mask get_texture_info (ShaderGlobalsBatch *sgb,
-                                   const Wide<ustring>& filename,
+                                   ConstWideAccessor<ustring> filename,
                                    // We do not need to support texture handle for varying data.
                                    int subimage,
                                    ustring dataname,

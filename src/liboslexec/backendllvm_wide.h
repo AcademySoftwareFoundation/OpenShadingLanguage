@@ -86,7 +86,7 @@ public:
 
     typedef std::map<std::string, llvm::Value*> AllocationMap;
 
-    void llvm_assign_initial_value (const Symbol& sym);
+    void llvm_assign_initial_value (const Symbol& sym, llvm::Value * llvm_initial_shader_mask_value);
     llvm::LLVMContext &llvm_context () const { return ll.context(); }
     AllocationMap &named_values () { return m_named_values; }
 
@@ -163,6 +163,7 @@ public:
     bool isSymbolUniform(const Symbol& sym);
     bool requiresMasking(int opIndex);
     bool getAttributesIsUniform(int opIndex);
+    bool loopHasContinue(int opIndex);
 
     /// Return an llvm::Value* that is either a scalar and derivs is
     /// false, or a pointer to sym's values (if sym is an aggreate or
@@ -322,6 +323,12 @@ public:
                                       TypeDesc type = TypeDesc::UNKNOWN,
 									  bool is_uniform=true);
 
+
+    /// Return a pointer to an WideMatrix that was previously alloca
+    /// on the stack, meant for generator to reuse as a temporary
+    llvm::Value *temp_wide_matrix_ptr();
+
+
     /// Return a ref to the bool where the "layer_run" flag is stored for
     /// the specified layer.
     llvm::Value *layer_run_ref (int layer);
@@ -446,10 +453,8 @@ public:
             shadingsys().m_stat_tex_calls_as_handles += 1;
     }
 
-    void push_varying_loop_condition(Symbol *);
-    Symbol * varying_condition_of_innermost_loop() const;
-    void pop_varying_loop_condition();
-    
+    void llvm_print_mask (const char *title, llvm::Value *mask=nullptr);
+
     LLVM_Util ll;
 
 private:
@@ -468,6 +473,7 @@ private:
     std::map<const Symbol*,int> m_param_order_map;
     llvm::Value *m_llvm_shaderglobals_ptr;
     llvm::Value *m_llvm_groupdata_ptr;
+    llvm::Value *m_llvm_temp_wide_matrix_ptr; // gen_tranform wants to reuse alloca
     llvm::BasicBlock * m_exit_instance_block;  // exit point for the instance
     llvm::Type *m_llvm_type_sg;  // LLVM type of ShaderGlobals struct
     llvm::Type *m_llvm_type_groupdata;  // LLVM type of group data
@@ -479,8 +485,8 @@ private:
 	std::unordered_map<const Symbol *, bool> m_is_uniform_by_symbol;
 	std::vector<std::vector<bool>> m_requires_masking_by_layer_and_op_index;
 	std::vector<std::unordered_set<int>> m_uniform_get_attribute_op_indices_by_layer;
-	std::vector<Symbol *> m_generated_loops_condition_stack;
-    
+	std::vector<std::unordered_set<int>> m_loops_with_continue_op_indices_by_layer;
+
     friend class ShadingSystemImpl;
 };
 

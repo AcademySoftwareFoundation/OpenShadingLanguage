@@ -31,6 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdio>
 
 #include "oslexec_pvt.h"
+#include <OSL/Imathx.h>
+
 using namespace OSL;
 using namespace OSL::pvt;
 
@@ -436,119 +438,52 @@ BatchedRendererServices::BatchedRendererServices (TextureSystem *texsys)
     }
 }
 
-OSL_INLINE static Matrix44 affineInvert(const Matrix44 &m)
+
+OSL_INLINE static void invert_wide_matrix(MaskedAccessor<Matrix44> result, ConstWideAccessor<Matrix44> wmatrix)
 {
-    //assert(__builtin_expect(m.x[0][3] == 0.0f && m.x[1][3] == 0.0f && m.x[2][3] == 0.0f && m.x[3][3] == 1.0f, 1))
-	Matrix44 s (m.x[1][1] * m.x[2][2] - m.x[2][1] * m.x[1][2],
-				m.x[2][1] * m.x[0][2] - m.x[0][1] * m.x[2][2],
-				m.x[0][1] * m.x[1][2] - m.x[1][1] * m.x[0][2],
-				0.0f,
-
-				m.x[2][0] * m.x[1][2] - m.x[1][0] * m.x[2][2],
-				m.x[0][0] * m.x[2][2] - m.x[2][0] * m.x[0][2],
-				m.x[1][0] * m.x[0][2] - m.x[0][0] * m.x[1][2],
-				0.0f,
-
-				m.x[1][0] * m.x[2][1] - m.x[2][0] * m.x[1][1],
-				m.x[2][0] * m.x[0][1] - m.x[0][0] * m.x[2][1],
-				m.x[0][0] * m.x[1][1] - m.x[1][0] * m.x[0][1],
-				0.0f,
-
-				0.0f,
-				0.0f,
-				0.0f,
-				1.0f);
-
-	float r = m.x[0][0] * s[0][0] + m.x[0][1] * s[1][0] + m.x[0][2] * s[2][0];
-	float abs_r = IMATH_INTERNAL_NAMESPACE::abs (r);
-
-
-	int may_have_divided_by_zero = 0;
-	if (__builtin_expect(abs_r < 1.0f, 0))
-	{
-		float mr = abs_r / Imath::limits<float>::smallest();
-		OSL_INTEL_PRAGMA("unroll")
-		for (int i = 0; i < 3; ++i)
-		{
-			OSL_INTEL_PRAGMA("unroll")
-			for (int j = 0; j < 3; ++j)
-			{
-				if (mr <= IMATH_INTERNAL_NAMESPACE::abs (s[i][j]))
-				{
-					may_have_divided_by_zero = 1;
-				}
-			}
-		}
-	}
-	
-	OSL_INTEL_PRAGMA("unroll")
-	for (int i = 0; i < 3; ++i)
-	{
-		OSL_INTEL_PRAGMA("unroll")
-		for (int j = 0; j < 3; ++j)
-		{
-			s[i][j] /= r;
-		}
-	}
-
-	s[3][0] = -m.x[3][0] * s[0][0] - m.x[3][1] * s[1][0] - m.x[3][2] * s[2][0];
-	s[3][1] = -m.x[3][0] * s[0][1] - m.x[3][1] * s[1][1] - m.x[3][2] * s[2][1];
-	s[3][2] = -m.x[3][0] * s[0][2] - m.x[3][1] * s[1][2] - m.x[3][2] * s[2][2];
-	
-	if (__builtin_expect(may_have_divided_by_zero == 1, 0))
-	{
-		s = Matrix44();
-	}
-	return s;
-}
- 
-
-OSL_INLINE static void invert_wide_matrix(Wide<Matrix44> &result, const Wide<Matrix44> &wmatrix, WeakMask mask)
-{
-	// TODO: As we don't expect failure, not sure it is worth overhead to skip this work
-	if (mask.any_on()) {
+	if (result.mask().any_on()) {
 		int allAreAffine = 1;
-		OSL_INTEL_PRAGMA("omp simd simdlen(wmatrix.width)")
+		OSL_OMP_PRAGMA(omp simd simdlen(wmatrix.width))
 		for(int lane=0; lane < wmatrix.width; ++lane) {
-			Matrix44 m = wmatrix.get(lane);        
-			if (mask.is_on(lane) && 
+			Matrix44 m = wmatrix[lane];
+			if (result.mask().is_on(lane) &&
 			    (m.x[0][3] != 0.0f || m.x[1][3] != 0.0f || m.x[2][3] != 0.0f || m.x[3][3] != 1.0f)) {
 				allAreAffine = 0;
 			}
 		}
 		
 		if (allAreAffine) {
-			OSL_INTEL_PRAGMA("omp simd simdlen(wmatrix.width)")
+			OSL_INTEL_PRAGMA(omp simd simdlen(wmatrix.width))
 			for(int lane=0; lane < wmatrix.width; ++lane) {    
-				Matrix44 m = wmatrix.get(lane);        
+				Matrix44 m = wmatrix[lane];
 				//bool ok = get_matrix (sgb, r, xform.get(lane), time.get(lane));
 				//r.invert();
-				Matrix44 r = affineInvert(m);
-				result.set(lane, r);        
+				Matrix44 r = OSL::affineInvert(m);
+				result[lane] = r;
 			}
 		} else
 		{
 			// Scalar code for non affine matrix (well at least 1 lane isn't)
 			for(int lane=0; lane < SimdLaneCount; ++lane) {
-				if (mask.is_on(lane)) {
-					Matrix44 r = wmatrix.get(lane);
+				if (result.mask().is_on(lane)) {
+					Matrix44 r = wmatrix[lane];
 					r.invert();
-					result.set(lane, r);
+					result[lane] = r;
 				}
 			}			
 		}
 	}
 }
+
 Mask
-BatchedRendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb, Wide<Matrix44> &result,
-                                      const Wide<TransformationPtr> & xform, const Wide<float> &time,
-                                      WeakMask weak_mask)
+BatchedRendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb, MaskedAccessor<Matrix44> result,
+		ConstWideAccessor<TransformationPtr> xform, ConstWideAccessor<float> time)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		Wide<Matrix44> wmatrix;
-		Mask succeeded = get_matrix (sgb, wmatrix, xform, time, weak_mask);
-		invert_wide_matrix(result, wmatrix, succeeded&weak_mask);
+		Mask succeeded = get_matrix (sgb, MaskedAccessor<Matrix44>(wmatrix, result.mask()), xform, time);
+		invert_wide_matrix(result&succeeded, wmatrix);
 	    return succeeded;	
 	}
 }
@@ -567,16 +502,29 @@ BatchedRendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &
 
 
 Mask
-BatchedRendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb,  Wide<Matrix44> &result,
-                                      ustring to, const Wide<float> &time, WeakMask weak_mask)
+BatchedRendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb,  MaskedAccessor<Matrix44> result,
+                                      ustring to, ConstWideAccessor<float> time)
 {
-	OSL_INTEL_PRAGMA("forceinline recursive")
+	OSL_INTEL_PRAGMA(forceinline recursive)
 	{
 		Wide<Matrix44> wmatrix;
-		Mask succeeded = get_matrix (sgb, wmatrix, to, time, weak_mask);
-		invert_wide_matrix(result, wmatrix, succeeded&weak_mask);
+		Mask succeeded = get_matrix (sgb, MaskedAccessor<Matrix44>(wmatrix, result.mask()), to, time);
+		invert_wide_matrix(result&succeeded, wmatrix);
 	    return succeeded;
 	}    
+}
+
+Mask
+BatchedRendererServices::get_inverse_matrix (ShaderGlobalsBatch *sgb,  MaskedAccessor<Matrix44> result,
+		ConstWideAccessor<ustring> to, ConstWideAccessor<float> time)
+{
+	OSL_INTEL_PRAGMA(forceinline recursive)
+	{
+		Wide<Matrix44> wmatrix;
+		Mask succeeded = get_matrix (sgb, MaskedAccessor<Matrix44>(wmatrix,result.mask()), to, time);
+		invert_wide_matrix(result& succeeded, wmatrix);
+	    return succeeded;
+	}
 }
 
 
@@ -599,7 +547,7 @@ BatchedRendererServices::texturesys () const
 
 Mask
 BatchedRendererServices::get_texture_info (ShaderGlobalsBatch *sgb,
-                                           const Wide<ustring>& filename,
+										   ConstWideAccessor<ustring> filename,
                                            int subimage,
                                            ustring dataname,
                                            MaskedDataRef val)
@@ -612,7 +560,7 @@ BatchedRendererServices::get_texture_info (ShaderGlobalsBatch *sgb,
         for (int l = 0; l < out.width; ++l) {                                                   \
         	if(val.mask()[l]) {                                                                 \
 				data_type data;                                                                 \
-				bool status = texturesys()->get_texture_info (filename.get(l), subimage,        \
+				bool status = texturesys()->get_texture_info (filename[l], subimage,        \
 															  dataname, val.type(), &data);     \
 															  success.set(l, status);           \
 				if (status) {                                                                   \
@@ -636,7 +584,7 @@ BatchedRendererServices::get_texture_info (ShaderGlobalsBatch *sgb,
         	if(val.mask()[l]) {                                                                 \
 				auto arrayData = out[l];                                                        \
 				data_type data[arrayData.length()];                                             \
-				bool status = texturesys()->get_texture_info (filename.get(l), subimage,        \
+				bool status = texturesys()->get_texture_info (filename[l], subimage,        \
 															  dataname, val.type(), data);      \
 				success.set(l, status);                                                         \
 				if (status) {                                                                   \
@@ -752,8 +700,13 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle * text
             }
             
             if (retVal) {
+            	// Per the OSL language specification
+            	// "The alpha channel (presumed to be the next channel following the channels returned by the texture() call)"
+            	// so despite the fact the alpha channel really is
+            	// we will always use +1 the final channel requested
+            	int alphaChannelIndex;
                 if (resultRef.is<Color3>()) {
-
+                	alphaChannelIndex = 3;
                     auto result= resultRef.masked<Color3>();
                     auto resultDs = resultRef.maskedDx<Color3>();
                     auto resultDt = resultRef.maskedDy<Color3>();
@@ -763,6 +716,7 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle * text
                         resultDt[i] = Color3(dresultdt_simd[0], dresultdt_simd[1], dresultdt_simd[2]);
 					}
                 } else if (resultRef.is<float>()) {
+                	alphaChannelIndex = 1;
                     auto result= resultRef.masked<float>();
                     auto resultDs = resultRef.maskedDx<float>();
                     auto resultDt = resultRef.maskedDy<float>();
@@ -774,12 +728,12 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle * text
             	}
                 if (alphaIsValid) {
 				    auto alpha = alphaRef.masked<float>();
-                    alpha[i] = result_simd[3];
+                    alpha[i] = result_simd[alphaChannelIndex];
                     if (alphaRef.has_derivs()) {
 						auto alphaDs = alphaRef.maskedDx<float>();
     					auto alphaDt = alphaRef.maskedDy<float>();
-                        alphaDs[i] = dresultds_simd[3];
-                        alphaDt[i] = dresultdt_simd[3];
+                        alphaDs[i] = dresultds_simd[alphaChannelIndex];
+                        alphaDt[i] = dresultdt_simd[alphaChannelIndex];
                     }
                 }
                 //std::cout << "s: " << s.get(i) << " t: " << t.get(i) << " color: " << resultColor << " " << wideResult.get(i) << std::endl;
@@ -856,8 +810,13 @@ BatchedRendererServices::texture (ConstWideAccessor<ustring> filename,
                                             has_derivs ? (float *)&dresultdt_simd : NULL);
 
             if (retVal) {
+            	// Per the OSL language specification
+            	// "The alpha channel (presumed to be the next channel following the channels returned by the texture() call)"
+            	// so despite the fact the alpha channel really is
+            	// we will always use +1 the final channel requested
+            	int alphaChannelIndex;
                 if (resultRef.is<Color3>()) {
-
+                	alphaChannelIndex = 3;
                     auto result= resultRef.masked<Color3>();
                     auto resultDs = resultRef.maskedDx<Color3>();
                     auto resultDt = resultRef.maskedDy<Color3>();
@@ -867,6 +826,7 @@ BatchedRendererServices::texture (ConstWideAccessor<ustring> filename,
                         resultDt[i] = Color3(dresultdt_simd[0], dresultdt_simd[1], dresultdt_simd[2]);
                     }
                 } else if (resultRef.is<float>()) {
+                	alphaChannelIndex = 1;
                     auto result= resultRef.masked<float>();
                     auto resultDs = resultRef.maskedDx<float>();
                     auto resultDt = resultRef.maskedDy<float>();
@@ -878,12 +838,12 @@ BatchedRendererServices::texture (ConstWideAccessor<ustring> filename,
                 }
                 if (alphaIsValid) {
                     auto alpha = alphaRef.masked<float>();
-                    alpha[i] = result_simd[3];
+                    alpha[i] = result_simd[alphaChannelIndex];
                     if (alphaRef.has_derivs()) {
                         auto alphaDs = alphaRef.maskedDx<float>();
                         auto alphaDt = alphaRef.maskedDy<float>();
-                        alphaDs[i] = dresultds_simd[3];
-                        alphaDt[i] = dresultdt_simd[3];
+                        alphaDs[i] = dresultds_simd[alphaChannelIndex];
+                        alphaDt[i] = dresultdt_simd[alphaChannelIndex];
                     }
                 }
                 //std::cout << "s: " << s.get(i) << " t: " << t.get(i) << " color: " << resultColor << " " << wideResult.get(i) << std::endl;

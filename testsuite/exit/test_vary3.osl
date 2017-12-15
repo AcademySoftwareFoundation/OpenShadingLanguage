@@ -1,0 +1,7 @@
+shader test_vary3(output float c = 0.0)
+{
+    c = 1.0;
+    return;
+    c= 0.5;
+    
+}

@@ -44,6 +44,8 @@ test ()
         printf ("  max (%g, %g) = %g\n", a, b, max (a,b));
         printf ("  max (%g, %g) = %g\n", b, c, max (b,c));
         printf ("  max (%g, %g) = %g\n", c, a, max (c,a));
+        printf ("  step (%g, %g) = %g\n", b, a, step (b,a));
+        printf ("  step (%g, %g) = %g\n", b, c, step (b,c));
         vector t = 0.0;
         vector m = mix (b,c,t);
         printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
@@ -84,6 +86,7 @@ test ()
         printf ("  smoothstep (%g, %g, %g) = %g\n", b, c, a, smoothstep (b,c,a));
     }
 
+    printf (" varying triples:\n");
     {
         color a = u;
         color b = v;
@@ -98,6 +101,8 @@ test ()
         printf ("  max (%g, %g) = %g\n", a, b, max (a,b));
         printf ("  max (%g, %g) = %g\n", b, c, max (b,c));
         printf ("  max (%g, %g) = %g\n", c, a, max (c,a));
+        printf ("  step (%g, %g) = %g\n", b, a, step (b,a));
+        printf ("  step (%g, %g) = %g\n", b, c, step (b,c));
         float t = 0.0;
         color m = mix (b,c,t);
         printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
@@ -107,5 +112,247 @@ test ()
         t = 1.0;
         m = mix (b,c,t);
         printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
+    }
+    
+    printf (" varying float derivatives:\n");
+    {
+        float a = u;
+        float b = v;
+        float c = u+v;
+        float d = clamp (a,b,c);
+        printf ("  clamp (%g, %g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, d, Dx(d), Dy(d));
+        d = clamp (b,a,c);
+        printf ("  clamp (%g, %g, %g) = %g Dx(%g) Dy(%g)\n", b, a, c, d, Dx(d), Dy(d));
+        d = clamp (c,a,b);
+        printf ("  clamp (%g, %g, %g) = %g Dx(%g) Dy(%g)\n", c, a, b, d, Dx(d), Dy(d));
+        d = clamp (a,c,b);
+        printf ("  clamp (%g, %g, %g) = %g Dx(%g) Dy(%g)\n", a, c, b, d, Dx(d), Dy(d));
+        d = min (a,b);
+        printf ("  min (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, d, Dx(d), Dy(d));
+        d = min (b,c);
+        printf ("  min (%g, %g) = %g Dx(%g) Dy(%g)\n", b, c, d, Dx(d), Dy(d));
+        d = min (c,a);
+        printf ("  min (%g, %g) = %g Dx(%g) Dy(%g)\n", c, a, d, Dx(d), Dy(d));
+        d = max (a,b);
+        printf ("  max (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, d, Dx(d), Dy(d));
+        d = max (b,c);
+        printf ("  max (%g, %g) = %g Dx(%g) Dy(%g)\n", b, c, d, Dx(d), Dy(d));
+        d = max (c,a);
+        printf ("  max (%g, %g) = %g Dx(%g) Dy(%g)\n", c, a, d, Dx(d), Dy(d));
+        d = step (b,a);
+        printf ("  step (%g, %g) = %g Dx(%g) Dy(%g)\n", b, a, d, Dx(d), Dy(d));
+        d = step (b,c);
+        printf ("  step (%g, %g) = %g Dx(%g) Dy(%g)\n", b, c, d, Dx(d), Dy(d));
+        float t = 0.0;
+        float m = mix (b,c,t);
+        printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
+        t = 0.25;
+        m = mix (b,c,t);
+        printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
+        t = 1.0;
+        m = mix (b,c,t);
+        printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
+        d = smoothstep (b,c,a);
+        printf ("  smoothstep (%g, %g, %g) = %g Dx(%g) Dy(%g)\n", b, c, a, d, Dx(d), Dy(d));
+        float not_deriv = 0.5;
+        d = smoothstep (not_deriv,c,a);
+        printf ("  smoothstep (%g, %g, %g) = %g Dx(%g) Dy(%g)\n", not_deriv, c, a, d, Dx(d), Dy(d));
+        d = smoothstep (b,not_deriv,a);
+        printf ("  smoothstep (%g, %g, %g) = %g Dx(%g) Dy(%g)\n", b, not_deriv, a, d, Dx(d), Dy(d));
+        d = smoothstep (b,c,not_deriv);
+        printf ("  smoothstep (%g, %g, %g) = %g Dx(%g) Dy(%g)\n", b, not_deriv, a, d, Dx(d), Dy(d));
+        float not_deriv2 = 0.75;
+        d = smoothstep (not_deriv,not_deriv2,a);
+        printf ("  smoothstep (%g, %g, %g) = %g Dx(%g) Dy(%g)\n", not_deriv, not_deriv2, a, d, Dx(d), Dy(d));
+        d = smoothstep (b,not_deriv,not_deriv2);
+        printf ("  smoothstep (%g, %g, %g) = %g Dx(%g) Dy(%g)\n", b,not_deriv, not_deriv2, d, Dx(d), Dy(d));
+        d = smoothstep (not_deriv,c,not_deriv2);
+        printf ("  smoothstep (%g, %g, %g) = %g Dx(%g) Dy(%g)\n", not_deriv, c, not_deriv2, d, Dx(d), Dy(d));
+    }
+    
+    printf (" varying triple derivatives:\n");
+    {
+        color a = P;
+        color b = P*1.5;
+        color c = P*3;
+        color d = clamp (a,b,c);
+        printf ("  clamp (%g, %g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, d, Dx(d), Dy(d));
+        d = clamp (b,a,c);
+        printf ("  clamp (%g, %g, %g) = %g\n", b, a, c, clamp (b,a,c));
+        d = clamp (c,a,b);
+        printf ("  clamp (%g, %g, %g) = %g\n", c, a, b, clamp (c,a,b));
+        d = clamp (a,c,b);
+        printf ("  clamp (%g, %g, %g) = %g\n", a, c, b, clamp (a,c,b));
+        d = min (a,b);
+        printf ("  min (%g, %g) = %g\n", a, b, min (a,b));
+        d = min (b,c);
+        printf ("  min (%g, %g) = %g\n", b, c, min (b,c));
+        d = min (c,a);
+        printf ("  min (%g, %g) = %g\n", c, a, min (c,a));
+        d = max (a,b);
+        printf ("  max (%g, %g) = %g\n", a, b, max (a,b));
+        d = max (b,c);
+        printf ("  max (%g, %g) = %g\n", b, c, max (b,c));
+        d = max (c,a);
+        printf ("  max (%g, %g) = %g\n", c, a, max (c,a));
+        float t = 0.0;
+        color m = mix (b,c,t);
+        printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
+        t = 0.25;
+        m = mix (b,c,t);
+        printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
+        t = 1.0;
+        m = mix (b,c,t);
+        printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
+    }
+    
+    int cond = (P[0] > 0.5);
+    {
+        printf (" varying masked:\n");
+        {
+            float a = u;
+            float b = v;
+            float c = u+v;
+            printf ("  clamp (%g, %g, %g) = %g\n", a, b, c, cond ? clamp (a,b,c) : P[0]);
+            printf ("  clamp (%g, %g, %g) = %g\n", b, a, c, cond ? clamp (b,a,c) : P[0]);
+            printf ("  clamp (%g, %g, %g) = %g\n", c, a, b, cond ? clamp (c,a,b) : P[0]);
+            printf ("  clamp (%g, %g, %g) = %g\n", a, c, b, cond ? clamp (a,c,b) : P[0]);
+            printf ("  min (%g, %g) = %g\n", a, b, cond ? min (a,b) : P[0]);
+            printf ("  min (%g, %g) = %g\n", b, c, cond ? min (b,c) : P[0]);
+            printf ("  min (%g, %g) = %g\n", c, a, cond ? min (c,a) : P[0]);
+            printf ("  max (%g, %g) = %g\n", a, b, cond ? max (a,b) : P[0]);
+            printf ("  max (%g, %g) = %g\n", b, c, cond ? max (b,c) : P[0]);
+            printf ("  max (%g, %g) = %g\n", c, a, cond ? max (c,a) : P[0]);
+            printf ("  step (%g, %g) = %g\n", b, a, cond ? step (b,a) : P[0]);
+            printf ("  step (%g, %g) = %g\n", b, c, cond ? step (b,c) : P[0]);
+            float t = 0.0;
+            float m = cond ? mix (b,c,t) : P[0];
+            printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
+            t = 0.25;
+            m = cond ? mix (b,c,t) : P[0];
+            printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
+            t = 1.0;
+            m = cond ? mix (b,c,t) : P[0];
+            printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
+            printf ("  smoothstep (%g, %g, %g) = %g\n", b, c, a, cond ? smoothstep (b,c,a) : P[0]);
+        }
+    
+        printf (" varying triples masked:\n");
+        {
+            color a = u;
+            color b = v;
+            color c = u+v;
+            printf ("  clamp (%g, %g, %g) = %g\n", a, b, c, cond ? clamp (a,b,c) : P);
+            printf ("  clamp (%g, %g, %g) = %g\n", b, a, c, cond ? clamp (b,a,c) : P);
+            printf ("  clamp (%g, %g, %g) = %g\n", c, a, b, cond ? clamp (c,a,b) : P);
+            printf ("  clamp (%g, %g, %g) = %g\n", a, c, b, cond ? clamp (a,c,b) : P);
+            printf ("  min (%g, %g) = %g\n", a, b, cond ? min (a,b) : P);
+            printf ("  min (%g, %g) = %g\n", b, c, cond ? min (b,c) : P);
+            printf ("  min (%g, %g) = %g\n", c, a, cond ? min (c,a) : P);
+            printf ("  max (%g, %g) = %g\n", a, b, cond ? max (a,b) : P);
+            printf ("  max (%g, %g) = %g\n", b, c, cond ? max (b,c) : P);
+            printf ("  max (%g, %g) = %g\n", c, a, cond ? max (c,a) : P);
+            printf ("  step (%g, %g) = %g\n", b, a, cond ? step (b,a) : P);
+            printf ("  step (%g, %g) = %g\n", b, c, cond ? step (b,c) : P);
+            float t = 0.0;
+            color m = cond ? mix (b,c,t) : P;
+            printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
+            t = 0.25;
+            m = cond ? mix (b,c,t) : P;
+            printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
+            t = 1.0;
+            m = cond ? mix (b,c,t) : P;
+            printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
+        }
+        printf (" varying float derivatives masked:\n");
+        {
+            float a = u;
+            float b = v;
+            float c = u+v;
+            float d = cond ? clamp (a,b,c) : P[0];
+            printf ("  clamp (%g, %g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, d, Dx(d), Dy(d));
+            d = cond ? clamp (b,a,c) : P[0];
+            printf ("  clamp (%g, %g, %g) = %g Dx(%g) Dy(%g)\n", b, a, c, d, Dx(d), Dy(d));
+            d = cond ? clamp (c,a,b) : P[0];
+            printf ("  clamp (%g, %g, %g) = %g Dx(%g) Dy(%g)\n", c, a, b, d, Dx(d), Dy(d));
+            d = cond ? clamp (a,c,b) : P[0];
+            printf ("  clamp (%g, %g, %g) = %g Dx(%g) Dy(%g)\n", a, c, b, d, Dx(d), Dy(d));
+            d = cond ? min (a,b) : P[0];
+            printf ("  min (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, d, Dx(d), Dy(d));
+            d = cond ? min (b,c) : P[0];
+            printf ("  min (%g, %g) = %g Dx(%g) Dy(%g)\n", b, c, d, Dx(d), Dy(d));
+            d = cond ? min (c,a) : P[0];
+            printf ("  min (%g, %g) = %g Dx(%g) Dy(%g)\n", c, a, d, Dx(d), Dy(d));
+            d = cond ? max (a,b) : P[0];
+            printf ("  max (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, d, Dx(d), Dy(d));
+            d = cond ? max (b,c) : P[0];
+            printf ("  max (%g, %g) = %g Dx(%g) Dy(%g)\n", b, c, d, Dx(d), Dy(d));
+            d = cond ? max (c,a) : P[0];
+            printf ("  max (%g, %g) = %g Dx(%g) Dy(%g)\n", c, a, d, Dx(d), Dy(d));
+            d = cond ? step (b,a) : P[0];
+            printf ("  step (%g, %g) = %g Dx(%g) Dy(%g)\n", b, a, d, Dx(d), Dy(d));
+            d = cond ? step (b,c) : P[0];
+            printf ("  step (%g, %g) = %g Dx(%g) Dy(%g)\n", b, c, d, Dx(d), Dy(d));
+            float t = 0.0;
+            float m = cond ? mix (b,c,t) : P[0];
+            printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
+            t = 0.25;
+            m = cond ? mix (b,c,t) : P[0];
+            printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
+            t = 1.0;
+            m = cond ? mix (b,c,t) : P[0];
+            printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
+            d = cond ? smoothstep (b,c,a) : P[0];
+            printf ("  smoothstep (%g, %g, %g) = %g Dx(%g) Dy(%g)\n", b, c, a, d, Dx(d), Dy(d));
+            float not_deriv = 0.5;
+            d = cond ? smoothstep (not_deriv,c,a) : P[0];
+            printf ("  smoothstep (%g, %g, %g) = %g Dx(%g) Dy(%g)\n", not_deriv, c, a, d, Dx(d), Dy(d));
+            d = cond ? smoothstep (b,not_deriv,a) : P[0];
+            printf ("  smoothstep (%g, %g, %g) = %g Dx(%g) Dy(%g)\n", b, not_deriv, a, d, Dx(d), Dy(d));
+            d = cond ? smoothstep (b,c,not_deriv) : P[0];
+            printf ("  smoothstep (%g, %g, %g) = %g Dx(%g) Dy(%g)\n", b, not_deriv, a, d, Dx(d), Dy(d));
+            float not_deriv2 = 0.75;
+            d = cond ? smoothstep (not_deriv,not_deriv2,a) : P[0];
+            printf ("  smoothstep (%g, %g, %g) = %g Dx(%g) Dy(%g)\n", not_deriv, not_deriv2, a, d, Dx(d), Dy(d));
+            d = cond ? smoothstep (b,not_deriv,not_deriv2) : P[0];
+            printf ("  smoothstep (%g, %g, %g) = %g Dx(%g) Dy(%g)\n", b,not_deriv, not_deriv2, d, Dx(d), Dy(d));
+            d = cond ? smoothstep (not_deriv,c,not_deriv2) : P[0];
+            printf ("  smoothstep (%g, %g, %g) = %g Dx(%g) Dy(%g)\n", not_deriv, c, not_deriv2, d, Dx(d), Dy(d));
+        }
+        printf (" varying triple derivatives masked:\n");
+        {
+            color a = P;
+            color b = P*1.5;
+            color c = P*3;
+            color d = cond ? clamp (a,b,c) : P;
+            printf ("  clamp (%g, %g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, d, Dx(d), Dy(d));
+            d = cond ? clamp (b,a,c) : P;
+            printf ("  clamp (%g, %g, %g) = %g\n", b, a, c, clamp (b,a,c));
+            d = cond ? clamp (c,a,b) : P;
+            printf ("  clamp (%g, %g, %g) = %g\n", c, a, b, clamp (c,a,b));
+            d = cond ? clamp (a,c,b) : P;
+            printf ("  clamp (%g, %g, %g) = %g\n", a, c, b, clamp (a,c,b));
+            d = cond ? min (a,b) : P;
+            printf ("  min (%g, %g) = %g\n", a, b, min (a,b));
+            d = cond ? min (b,c) : P;
+            printf ("  min (%g, %g) = %g\n", b, c, min (b,c));
+            d = cond ? min (c,a) : P;
+            printf ("  min (%g, %g) = %g\n", c, a, min (c,a));
+            d = cond ? max (a,b) : P;
+            printf ("  max (%g, %g) = %g\n", a, b, max (a,b));
+            d = cond ? max (b,c) : P;
+            printf ("  max (%g, %g) = %g\n", b, c, max (b,c));
+            d = cond ? max (c,a) : P;
+            printf ("  max (%g, %g) = %g\n", c, a, max (c,a));
+            float t = 0.0;
+            color m = cond ? mix (b,c,t) : P;
+            printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
+            t = 0.25;
+            m = cond ? mix (b,c,t) : P;
+            printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
+            t = 1.0;
+            m = cond ? mix (b,c,t) : P;
+            printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
+        }
     }
 }

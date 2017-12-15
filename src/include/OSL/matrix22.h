@@ -393,10 +393,10 @@ Matrix22<T>::Matrix22 (T a, T b, T c, T d)
 template <class T>
 inline
 Matrix22<T>::Matrix22 (const Matrix22 &v)
-: x{v.x[0][0],
-	v.x[0][1],
-	v.x[1][0],
-	v.x[1][1]}
+: x{{v.x[0][0],
+	 v.x[0][1]},
+	{v.x[1][0],
+	 v.x[1][1]}}
 {
     //memcpy (x, v.x, sizeof (x));
 }
@@ -703,14 +703,14 @@ Matrix22<T>::operator * (const Matrix22<T> &v) const
 #if 0
     Matrix22 tmp (T (0));
     
-	OSL_INTEL_PRAGMA("unroll")
-	OSL_INTEL_PRAGMA("novector")
+	OSL_INTEL_PRAGMA(unroll)
+	OSL_INTEL_PRAGMA(novector)
     for (int i = 0; i < 2; i++)
-		OSL_INTEL_PRAGMA("unroll")
-		OSL_INTEL_PRAGMA("novector")
+		OSL_INTEL_PRAGMA(unroll)
+		OSL_INTEL_PRAGMA(novector)
         for (int j = 0; j < 2; j++)
-			OSL_INTEL_PRAGMA("unroll")
-			OSL_INTEL_PRAGMA("novector")
+			OSL_INTEL_PRAGMA(unroll)
+			OSL_INTEL_PRAGMA(novector)
             for (int k = 0; k < 2; k++)
                 tmp.x[i][j] += x[i][k] * v.x[k][j];
 #else
@@ -847,10 +847,10 @@ Matrix22<T>::inverse (bool singExc) const throw (Iex::MathExc)
     {
         T mr = Imath::abs (r) / Imath::limits<T>::smallest();
 
-		OSL_INTEL_PRAGMA("unroll")
+		OSL_INTEL_PRAGMA(unroll)
         for (int i = 0; i < 2; ++i)
         {
-			OSL_INTEL_PRAGMA("unroll")
+			OSL_INTEL_PRAGMA(unroll)
             for (int j = 0; j < 2; ++j)
             {
                 if (mr > Imath::abs (s[i][j]))

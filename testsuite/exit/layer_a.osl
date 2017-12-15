@@ -1,0 +1,9 @@
+shader a (float Kd = 0.5,
+          output float f_out = 0,
+          output color c_out = 0
+    )
+{
+    f_out = Kd*P[0];
+    c_out = color (Kd/2, 1, 1);
+    printf ("a: f_out = %g, c_out = %g\n", f_out, c_out);
+}

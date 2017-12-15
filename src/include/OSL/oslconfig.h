@@ -52,20 +52,81 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #  error "This version of OSL requires C++11"
 #endif
 
-#if __INTEL_COMPILER >= 1100
-        #define OSL_INTEL_PRAGMA(aQuotedPragma) _Pragma(aQuotedPragma)
+#ifndef OSL_DEBUG
+    #ifdef NDEBUG
+        #define OSL_DEBUG 0
+    #else
+        #ifdef _DEBUG
+            #define OSL_DEBUG _DEBUG
+        #else
+            #define OSL_DEBUG 0
+        #endif
+    #endif
+#endif // OSL_DEBUG
+
+#if defined(_MSC_VER)
+	#define OSL_PRAGMA(aUnQuotedPragma) __pragma(aUnQuotedPragma)
 #else
-        #define OSL_INTEL_PRAGMA(aQuotedPragma)
+	#define OSL_PRAGMA(aUnQuotedPragma) _Pragma(#aUnQuotedPragma)
+#endif
+
+#if __INTEL_COMPILER >= 1100
+	#define OSL_INTEL_PRAGMA(aUnQuotedPragma) OSL_PRAGMA(aUnQuotedPragma)
+#else
+	#define OSL_INTEL_PRAGMA(aUnQuotedPragma)
+#endif
+
+#ifdef __clang__
+	#define OSL_CLANG_PRAGMA(aUnQuotedPragma) OSL_PRAGMA(aUnQuotedPragma)
+	#define OSL_CLANG_ATTRIBUTE(value) __attribute__((value))
+#else
+	#define OSL_CLANG_PRAGMA(aUnQuotedPragma)
+	#define OSL_CLANG_ATTRIBUTE(value)
+#endif
+
+#ifdef OSL_OPENMP_SIMD
+	#define OSL_OMP_PRAGMA(aUnQuotedPragma) OSL_PRAGMA(aUnQuotedPragma)
+	#ifdef __clang__
+		#define OSL_OMP_AND_CLANG_PRAGMA(aUnQuotedPragma) OSL_PRAGMA(aUnQuotedPragma)
+		#define OSL_OMP_NOT_CLANG_PRAGMA(aUnQuotedPragma)
+#else
+		#define OSL_OMP_AND_CLANG_PRAGMA(aUnQuotedPragma)
+		#define OSL_OMP_NOT_CLANG_PRAGMA(aUnQuotedPragma) OSL_PRAGMA(aUnQuotedPragma)
+	#endif
+#else
+	#define OSL_OMP_PRAGMA(aUnQuotedPragma)
+	#define OSL_OMP_AND_CLANG_PRAGMA(aUnQuotedPragma)
+	#define OSL_OMP_NOT_CLANG_PRAGMA(aUnQuotedPragma)
 #endif
 
 #ifndef OSL_INLINE
-	#if __INTEL_COMPILER >= 1100 || (defined(_WIN32) || defined(_WIN64))
-		#define OSL_INLINE __forceinline
+	#if OSL_DEBUG
+		#define OSL_INLINE inline
 	#else
-		//#define OSL_INLINE inline
-		#define OSL_INLINE inline __attribute__((always_inline))
+		#if __INTEL_COMPILER >= 1100 || (defined(_WIN32) || defined(_WIN64))
+			#define OSL_INLINE __forceinline
+		#else
+			#define OSL_INLINE inline __attribute__((always_inline))
+		#endif
 	#endif
 #endif
+
+#ifndef OSL_NOINLINE
+	#if (defined(_WIN32) || defined(_WIN64))
+		#define OSL_NOINLINE __declspec(noinline)
+	#else
+		#define OSL_NOINLINE __attribute__((noinline))
+	#endif
+#endif
+
+#ifndef OSL_RESTRICT
+    #if defined(__INTEL_COMPILER)
+        #define OSL_RESTRICT __restrict
+    #else
+        #define OSL_RESTRICT
+    #endif
+#endif
+
 
 // Symbol export defines
 #include "export.h"
@@ -155,5 +216,4 @@ using OIIO::string_view;
 	#define OSL_DEV_ONLY(STUFF)
 #endif
 
-  
 OSL_NAMESPACE_EXIT

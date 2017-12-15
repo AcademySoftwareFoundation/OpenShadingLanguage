@@ -2851,9 +2851,14 @@ DECLFOLDER(constfold_functioncall)
     } else if (! has_return) {
         // The function is just a straight-up execution, no return
         // statement, so kill the "function" op.
-        rop.turn_into_nop (op, "'function' not necessary");
+        if (rop.keep_no_return_function_calls()) {
+            rop.turn_into_functioncall_nr (op, "'functioncall' transmuted to 'no return' version");
+        } else {
+            rop.turn_into_nop (op, "'function' not necessary");
+        }
         ++changed;
     }
+
 
     return changed;
 }

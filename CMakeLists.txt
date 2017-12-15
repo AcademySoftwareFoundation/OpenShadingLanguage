@@ -132,6 +132,10 @@ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
         # app that also embeds LLVM.
         set (VISIBILITY_MAP_COMMAND "-Wl,--version-script=${PROJECT_SOURCE_DIR}/src/liboslexec/liboslexec.map")
     endif ()
+    
+    # If LLVM was built with ICC, might need to link in the Intel runtime C library (libirc.a) 
+    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lirc -lsvml")
+     
 endif ()
 
 # Clang-specific options
@@ -162,6 +166,31 @@ if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG)
         # Don't warn about using unknown preprocessor symbols in #if'set
         add_definitions ("-Wno-expansion-to-defined")
     endif ()
+    
+    add_definitions ("-fopenmp")
+    add_definitions ("-DOSL_OPENMP_SIMD")
+    # enable workaround for mishandling of openmp simd directive
+    add_definitions ("-DOSL_CLANG_VECTORIZE")    
+    # -Rpass=loop-vectorize -Rpass-analysis=loop-vectorize
+    # Uncomment next 2 lines to investigate failed explicit vectorization
+    add_definitions ("-Rpass=loop-vectorize")
+    add_definitions ("-Rpass-analysis=loop-vectorize")
+     
+    if (NOT DEBUGMODE)
+        add_definitions ("-O3")
+        add_definitions ("-ffast-math")
+    endif ()
+    add_definitions ("-Wunknown-warning-option")
+    add_definitions ("-Wunknown-pragmas")
+    #add_definitions ("-mavx512f")
+    #add_definitions ("-mavx2")
+    #add_definitions ("-march=skylake-avx512")
+    add_definitions ("-march=native")
+    
+
+    # to use debugger 
+    #add_definitions ("-O0")
+   
 endif ()
 
 
@@ -185,16 +214,20 @@ if (CMAKE_COMPILER_IS_INTEL)
 	add_definitions ("-wd1011")
 	add_definitions ("-wd873")
 	add_definitions ("-qopenmp-simd")
+    add_definitions ("-DOSL_OPENMP_SIMD")
+	
 	#add_definitions ("-axSSE3,SSE")
 	#add_definitions ("-msse2")
 	#add_definitions ("-axAVX,CORE-AVX2,CORE-AVX512")
 	#add_definitions ("-axAVX,CORE-AVX2,CORE-AVX512")
 	add_definitions ("-prec-div")
+    #add_definitions ("-xSSE4.2")   
 	#add_definitions ("-xAVX")
 	#add_definitions ("-xCORE-AVX2")
-	#add_definitions ("-xCORE-AVX512")	 
-	add_definitions ("-msse2")
-	add_definitions ("-axSSE4.2,AVX,CORE-AVX2,CORE-AVX512")
+	add_definitions ("-xCORE-AVX512")	 
+	#add_definitions ("-msse2")
+	#add_definitions ("-axSSE4.2,AVX,CORE-AVX2,CORE-AVX512")
+	#add_definitions ("-axCORE-AVX512")
 	#add_definitions ("-fp-model consistent")	 
 	#add_definitions ("-xSSE4.2")
 	#add_definitions ("-no-vec")
@@ -207,15 +240,19 @@ if (CMAKE_COMPILER_IS_INTEL)
 	#add_definitions ("-wd161")
 	#add_definitions ("-no-fma")
 	
-	add_definitions ("-O3")
-	add_definitions ("-ip")
-	add_definitions ("-debug inline-debug-info")
-	add_definitions ("-fno-emit-frame-pointer")
-	add_definitions ("-fno-math-errno")
-	add_definitions ("-restrict")
-	add_definitions ("-fPIC")
+	#add_definitions ("-O3")
+	#add_definitions ("-ip")
+	#add_definitions ("-debug inline-debug-info")
+	#add_definitions ("-fno-omit-frame-pointer")
+	#add_definitions ("-fno-math-errno")
+	#add_definitions ("-restrict")
 	
-
+    # to use debugger 
+    #add_definitions ("-O0")
+	
+    # If LLVM was built with ICC, might need to link in the Intel runtime C library (libirc.a) 
+    #set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lirc -lsvml")
+	
 endif ()
 ## enable RTTI
 ##   NOTE: LLVM builds without RTTI by default so beware
@@ -338,6 +375,9 @@ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPL
         # C++ >= 11 doesn't like 'register' keyword, which is in Qt headers
         add_definitions ("-Wno-deprecated-register")
     endif ()
+    # had issue getting USE_fPIC set when CACHE is off, 
+    # so forcing it here
+    add_definitions ("-fPIC")    
 endif ()
 
 if (USE_LIBCPLUSPLUS AND CMAKE_COMPILER_IS_CLANG)
@@ -506,7 +546,7 @@ add_subdirectory (src/testshade)
 add_subdirectory (src/testrender)
 endif ()
 
-if (OSL_BUILD_PLUGINS)
+if (OSL_BUILD_PLUGINS AND NOT LLVM_STATIC)
 add_subdirectory (src/osl.imageio)
 endif ()
 

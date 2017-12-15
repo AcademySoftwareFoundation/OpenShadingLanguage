@@ -26,6 +26,8 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+//#define OSL_DEV
+
 #include <cmath>
 #include <cstddef>
 #include <unordered_set>
@@ -44,7 +46,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "../liboslcomp/oslcomp_pvt.h"
 #include "backendllvm_wide.h"
 
-// Create extrenal declarations for all built-in funcs we may call from LLVM
+// Create external declarations for all built-in funcs we may call from LLVM
 #define DECL(name,signature) extern "C" void name();
 #define WDECL(name,signature) extern "C" void name();
 #include "builtindecl.h"
@@ -133,6 +135,8 @@ static ustring op_compassign("compassign");
 static ustring op_aref("aref");
 static ustring op_compref("compref");
 static ustring op_useparam("useparam");
+static ustring unkown_shader_group_name("<Unkown Shader Group Name>");
+
 
 
 struct HelperFuncRecord {
@@ -194,7 +198,7 @@ BackendLLVMWide::llvm_type_sg ()
         return m_llvm_type_sg;
 
     
-    int offset_to_varying_p = offsetof(ShaderGlobalsBatch, m_varying);
+    OSL_DEV_ONLY(int offset_to_varying_p = offsetof(ShaderGlobalsBatch, m_varying));
     OSL_DEV_ONLY(std::cout << ">>>>>>>>>>>>>> ShaderGlobalsBatch::m_varying = " << offset_to_varying_p << std::endl);
     
     // Derivs look like arrays of 3 values
@@ -273,9 +277,12 @@ BackendLLVMWide::llvm_type_groupdata ()
     if (llvm_debug() >= 2)
         std::cout << "  layers run flags: " << m_num_used_layers
                   << " at offset " << offset << "\n";
-    int sz = (m_num_used_layers + 3) & (~3);  // Round up to 32 bit boundary
-    fields.push_back (ll.type_array (ll.type_bool(), sz));
-    offset += sz * sizeof(bool);
+    // The next item in the data structure has 64 byte alignment, so we need to move our offset to a 64 byte alignment
+    // Round up to a 64 bit boundary
+    int sz = 16*((m_num_used_layers + 15)/16);
+    ASSERT(sz*sizeof(int)%16 == 0);
+    fields.push_back (ll.type_array (ll.type_int(), sz));
+    offset += sz * sizeof(int);
     ++order;
 
     // Now add the array that tells which userdata have been initialized,
@@ -399,7 +406,7 @@ BackendLLVMWide::llvm_type_closure_component_ptr ()
 
 
 void
-BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym)
+BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym, llvm::Value * llvm_initial_shader_mask_value)
 {
     // Don't write over connections!  Connection values are written into
     // our layer when the earlier layer is run, as part of its code.  So
@@ -489,6 +496,7 @@ BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym)
         args.push_back (ll.constant (sym.derivsize()*SimdLaneCount));
         args.push_back (ll.void_ptr (userdata_initialized_ref(userdata_index)));
         args.push_back (ll.constant (userdata_index));
+        args.push_back (llvm_initial_shader_mask_value);
         llvm::Value *got_userdata =
             ll.call_function ("osl_bind_interpolated_param_wide",
                               &args[0], args.size());
@@ -556,10 +564,17 @@ BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym)
                 ASSERT (init_val);
                 
                 if(isSymbolUniform(sym)) {
+                	ASSERT(!sym.renderer_output() && "All render outputs should be varying");
                     llvm_store_value (init_val, sym, 0, arrind, i);                	
                 } else {
 					llvm::Value * wide_init_val = ll.wide_constant(init_val);
+					if (sym.renderer_output()) {
+						ll.push_masking_enabled(true);
+					}
 					llvm_store_value (wide_init_val, sym, 0, arrind, i);
+					if (sym.renderer_output()) {
+						ll.pop_masking_enabled();
+					}
                 }
             }
         }
@@ -569,7 +584,7 @@ BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym)
 
     if (partial_userdata_mask_was_pushed) {
 		ll.pop_masking_enabled();		
-    	ll.pop_if_mask();
+    	ll.pop_mask();
     }
     
     if (after_userdata_block) {
@@ -722,7 +737,9 @@ BackendLLVMWide::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
             	std::cout << " with MASKING";
             std::cout << std::endl;
 #endif
-            ll.set_debug_location(op.sourcefile().string(), op.method().string(), op.sourceline());
+            if (ll.debug_is_enabled()) {
+                ll.debug_set_location(op.sourcefile(), op.sourceline());
+            }
             ll.push_masking_enabled(requiresMasking(opnum));
             bool ok = (*opd->llvmgenwide) (*this, opnum);
             ll.pop_masking_enabled();
@@ -762,16 +779,35 @@ BackendLLVMWide::build_llvm_init ()
     ll.current_function (
            ll.make_function (unique_name, false,
                              ll.type_void(), // return type
-                             llvm_type_sg_ptr(), llvm_type_groupdata_ptr()));
+                             llvm_type_sg_ptr(),
+							 llvm_type_groupdata_ptr(),
+							 ll.type_int()));
+
+    if (ll.debug_is_enabled())
+    {
+        ustring file_name = group()[0]->op(group()[0]->maincodebegin()).sourcefile();
+        unsigned int method_line = 0;
+        ll.debug_push_function(unique_name, file_name, method_line);
+    }
 
     // Get shader globals and groupdata pointers
     m_llvm_shaderglobals_ptr = ll.current_function_arg(0); //arg_it++;
     m_llvm_groupdata_ptr = ll.current_function_arg(1); //arg_it++;
+    // TODO: do we need to utilize the shader mask in the init function?
+    //llvm::Value * llvm_initial_shader_mask_value = ll.current_function_arg(2); //arg_it++;
+
+    // New function, reset temp matrix pointer
+    m_llvm_temp_wide_matrix_ptr = nullptr;
 
     // Set up a new IR builder
     llvm::BasicBlock *entry_bb = ll.new_basic_block (unique_name);
     ll.new_builder (entry_bb);
     
+    // Always allocate a temporary wide matrix to serve as middle man between
+    // from and to matrix spaces
+    // TODO: could detect if this will be needed or not and only allocate if needed
+    temp_wide_matrix_ptr();
+
 #if 0 /* helpful for debugging */
     if (llvm_debug()) {
         llvm_gen_debug_printf (Strutil::format("\n\n\n\nGROUP! %s",group().name()));
@@ -781,7 +817,9 @@ BackendLLVMWide::build_llvm_init ()
 
     // Group init clears all the "layer_run" and "userdata_initialized" flags.
     if (m_num_used_layers > 1) {
-        int sz = (m_num_used_layers + 3) & (~3);  // round up to 32 bits
+        // Round up to a 64 bit boundary
+        int sz = 16*((m_num_used_layers + 15)/16)*sizeof(int);
+
         ll.op_memset (ll.void_ptr(layer_run_ref(0)), 0, sz, 4 /*align*/);
     }
     int num_userdata = (int) group().m_userdata_names.size();
@@ -822,6 +860,12 @@ BackendLLVMWide::build_llvm_init ()
                   << " after llvm  = " 
                   << ll.bitcode_string(ll.current_function()) << "\n";
 
+    if (ll.debug_is_enabled()) {
+        ll.debug_pop_function();
+        // We have to finalize debug info before jit happens
+        ll.debug_finalize();
+    }
+
     ll.end_builder();  // clear the builder
 
     return ll.current_function();
@@ -835,7 +879,6 @@ extern bool llvm_gen_getattribute(BackendLLVMWide &rop, int opnum);
 llvm::Function*
 BackendLLVMWide::build_llvm_instance (bool groupentry)
 {
-	ASSERT(m_generated_loops_condition_stack.empty());
     // Make a layer function: void layer_func(ShaderGlobals*, GroupData*)
     // Note that the GroupData* is passed as a void*.
     std::string unique_layer_name = Strutil::format ("wide_%s_%d", inst()->layername(), inst()->id());
@@ -845,26 +888,54 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
            ll.make_function (unique_layer_name,
                              !is_entry_layer, // fastcall for non-entry layer functions
                              ll.type_void(), // return type
-                             llvm_type_sg_ptr(), llvm_type_groupdata_ptr()));
+                             llvm_type_sg_ptr(),
+							 llvm_type_groupdata_ptr(),
+							 ll.type_int()));
     
+    if (ll.debug_is_enabled())
+    {
+    	ustring file_name = inst()->op(inst()->maincodebegin()).sourcefile();
+
+    	unsigned int method_line = inst()->op(inst()->maincodebegin()).sourceline();
+    	ll.debug_push_function(unique_layer_name, file_name, method_line);
+    }
+
+
     // Get shader globals and groupdata pointers
     m_llvm_shaderglobals_ptr = ll.current_function_arg(0); //arg_it++;
     m_llvm_groupdata_ptr = ll.current_function_arg(1); //arg_it++;
+    llvm::Value *llvm_initial_shader_mask_value = ll.current_function_arg(2); //arg_it++;
+
+    // New function, reset temp matrix pointer
+    m_llvm_temp_wide_matrix_ptr = nullptr;
 
     llvm::BasicBlock *entry_bb = ll.new_basic_block (unique_layer_name);
     m_exit_instance_block = NULL;
 
     // Set up a new IR builder
     ll.new_builder (entry_bb);
-	ll.set_debug_info(/*unique_layer_name*/inst()->op(inst()->maincodebegin()).sourcefile().string());
-    ll.set_debug_location(unique_layer_name, unique_layer_name, 0);
+
+	// Start with fewer data lanes active based on how full batch is.
+    llvm::Value * initial_shader_mask = ll.int_as_mask(llvm_initial_shader_mask_value);
+    ll.push_shader_instance(initial_shader_mask);
 	
+    // Always allocate a temporary wide matrix to serve as middle man between
+    // from and to matrix spaces
+    // TODO: could detect if this will be needed or not and only allocate if needed
+    temp_wide_matrix_ptr();
+
     OSL_DEV_ONLY(std::cout << "Master Shadername = " << inst()->master()->shadername() << std::endl);
     OSL_DEV_ONLY(std::cout << "Master osofilename = " << inst()->master()->osofilename() << std::endl);
     OSL_DEV_ONLY(std::cout << "source of maincodebegin operation = " << inst()->op(inst()->maincodebegin()).sourcefile() << std::endl);
 	
 
     llvm::Value *layerfield = layer_run_ref(layer_remap(layer()));
+
+    llvm::Value *previously_executed_value = nullptr;
+    if (! group().is_last_layer(layer())) {
+    	previously_executed_value = ll.op_load (layerfield);
+    }
+
     if (is_entry_layer && ! group().is_last_layer(layer())) {
         // For entry layers, we need an extra check to see if it already
         // ran. If it has, do an early return. Otherwise, set the 'ran' flag
@@ -872,10 +943,13 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
         if (shadingsys().llvm_debug_layers())
             llvm_gen_debug_printf (Strutil::format("checking for already-run layer %d %s %s",
                                    this->layer(), inst()->layername(), inst()->shadername()));
-        llvm::Value *executed = ll.op_eq (ll.op_load (layerfield), ll.constant_bool(true));
+        llvm::Value *previously_executed = ll.int_as_mask(previously_executed_value);
+        llvm::Value *required_lanes_executed = ll.op_select(initial_shader_mask, previously_executed, ll.wide_constant_bool(false));
+        llvm::Value *all_required_lanes_already_executed = ll.op_eq(initial_shader_mask, required_lanes_executed);
+
         llvm::BasicBlock *then_block = ll.new_basic_block();
         llvm::BasicBlock *after_block = ll.new_basic_block();
-        ll.op_branch (executed, then_block, after_block);
+        ll.op_branch (all_required_lanes_already_executed, then_block, after_block);
         // insert point is now then_block
         // we've already executed, so return early
         if (shadingsys().llvm_debug_layers())
@@ -890,7 +964,11 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
                                this->layer(), inst()->layername(), inst()->shadername()));
     // Mark this layer as executed
     if (! group().is_last_layer(layer())) {
-        ll.op_store (ll.constant_bool(true), layerfield);
+    	// Caller may only be asking for a subset of the lanes to be executed
+    	// We don't want to loose track of lanes we have already executed, so
+    	// we will OR together previously & requested executed
+    	llvm::Value *combined_executed = ll.op_or(previously_executed_value, llvm_initial_shader_mask_value);
+        ll.op_store (combined_executed, layerfield);
         if (shadingsys().countlayerexecs())
             ll.call_function ("osl_incr_layers_executed", sg_void_ptr());
     }
@@ -949,6 +1027,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
     // Setup the symbols
     m_named_values.clear ();
     m_layers_already_run.clear ();
+
 	for (auto&& s : inst()->symbols()) {    	
         // Skip constants -- we always inline scalar constants, and for
         // array constants we will just use the pointers to the copy of
@@ -972,7 +1051,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
              s.typespec().is_string_based() || 
              ((s.symtype() == SymTypeLocal || s.symtype() == SymTypeTemp)
               && shadingsys().debug_uninit())))
-            llvm_assign_initial_value (s);
+            llvm_assign_initial_value (s, llvm_initial_shader_mask_value);
         // If debugnan is turned on, globals check that their values are ok
         if (s.symtype() == SymTypeGlobal && shadingsys().debug_nan()) {
             TypeDesc t = s.typespec().simpletype();
@@ -1008,7 +1087,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
                 && shadingsys().lazy_userdata())
             continue;
         // Set initial value for params (may contain init ops)
-        llvm_assign_initial_value (s);
+        llvm_assign_initial_value (s, llvm_initial_shader_mask_value);
     }
 
     // All the symbols are stack allocated now.
@@ -1047,8 +1126,12 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
                 Symbol *srcsym (inst()->symbol (con.src.param));
                 Symbol *dstsym (child->symbol (con.dst.param));
                 llvm_run_connected_layers (*srcsym, con.src.param);
+                OSL_DEV_ONLY(std::cout << "Copy connected data from " << srcsym->name().c_str() << "(" << srcsym->typespec() << ") to " << dstsym->name().c_str() << "(" << dstsym->typespec() << ")" << std::endl);
                 // FIXME -- I'm not sure I understand this.  Isn't this
                 // unnecessary if we wrote to the parameter ourself?
+                // If connection is to a node not used in the next layer
+                // then it may not have been analyzed properly
+                // and more importantly can be skipped
                 llvm_assign_impl (*dstsym, *srcsym);
             }
         }
@@ -1066,11 +1149,17 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
                   << "/" << group().nlayers() << " after llvm  = " 
                   << ll.bitcode_string(ll.current_function()) << "\n";
 
-    ll.clear_debug_info();
+    if (ll.debug_is_enabled()) {
+        ll.debug_pop_function();
+    }
+    ll.pop_shader_instance();
+    if (ll.debug_is_enabled()) {
+        // We have to finalize debug info before jit happens
+        ll.debug_finalize();
+    }
     ll.end_builder();  // clear the builder
 
-	ASSERT(m_generated_loops_condition_stack.empty());
-    
+    if (llvm_debug()) std::cout << ll.module_string() << "\n";
     return ll.current_function();
 }
 
@@ -1138,6 +1227,12 @@ BackendLLVMWide::initialize_llvm_group ()
     params[2] = (llvm::Type *) ll.type_char_ptr();
     m_llvm_type_prepare_closure_func = ll.type_function_ptr (ll.type_void(), params);
     m_llvm_type_setup_closure_func = m_llvm_type_prepare_closure_func;
+
+    if (ll.debug_is_enabled()) {
+        const char * compile_unit_name = m_group.m_name.empty() ? unkown_shader_group_name.c_str() : m_group.m_name.c_str();
+
+        ll.debug_setup_compilation_unit(compile_unit_name);
+    }
 }
 
 static void empty_group_func (void*, void*)
@@ -1177,10 +1272,8 @@ BackendLLVMWide::run ()
         shadingcontext()->error ("ParseBitcodeFile returned '%s'\n", err.c_str());
     ASSERT (ll.module());
 #endif
-    ll.enable_debug_info();
-
     // Create the ExecutionEngine
-    if (! ll.make_jit_execengine (&err)) {
+    if (! ll.make_jit_execengine (&err, shadingsys().llvm_debugging_symbols(), shadingsys().llvm_profiling_events())) {
         shadingcontext()->error ("Failed to create engine: %s\n", err.c_str());
         ASSERT (0);
         return;
@@ -1282,6 +1375,7 @@ BackendLLVMWide::run ()
     // We need to discover uniformity and masking requirements of our layers before generating code
     m_requires_masking_by_layer_and_op_index.resize(nlayers);
     m_uniform_get_attribute_op_indices_by_layer.resize(nlayers);
+    m_loops_with_continue_op_indices_by_layer.resize(nlayers);
     for (int layer = 0; layer < nlayers; ++layer) {
         set_inst (layer);
         if (m_layer_remap[layer] != -1) {
@@ -1352,11 +1446,11 @@ BackendLLVMWide::run ()
 
     // Force the JIT to happen now and retrieve the JITed function pointers
     // for the initialization and all public entry points.
-    group().llvm_compiled_wide_init ((RunLLVMGroupFunc) ll.getPointerToFunction(init_func));
+    group().llvm_compiled_wide_init ((RunLLVMGroupFuncWide) ll.getPointerToFunction(init_func));
     for (int layer = 0; layer < nlayers; ++layer) {
         llvm::Function* f = funcs[layer];
         if (f && group().is_entry_layer (layer))
-            group().llvm_compiled_wide_layer (layer, (RunLLVMGroupFunc) ll.getPointerToFunction(f));
+            group().llvm_compiled_wide_layer (layer, (RunLLVMGroupFuncWide) ll.getPointerToFunction(f));
     }
     if (group().num_entry_layers())
         group().llvm_compiled_wide_version (NULL);

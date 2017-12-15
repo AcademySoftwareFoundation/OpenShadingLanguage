@@ -1,0 +1,12 @@
+float helper(float val)
+{
+    if (P[0] > 1.0/3.0) {        
+        return val;
+    }
+    return 1.0;
+}
+
+shader test_vary4(output float c = 0.0)
+{
+    c = helper(c);
+}

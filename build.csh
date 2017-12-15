@@ -21,6 +21,7 @@ setenv LDFLAGS "-L/nfs/pdx/home/amwells/Pixar/boost/lib $LDFLAGS"
 #setenv CXXFLAGS "-std=c++11 -I/nfs/pdx/home/amwells/Pixar/boost/include -I/usr/include/c++/4.8.2 -Wno-sign-compare -Wno-unused-local-typedefs"
 #setenv CXXFLAGS "-std=c++11 -I/nfs/pdx/home/amwells/Pixar/boost/include -Wno-sign-compare -Wno-unused-local-typedefs"
 setenv SPECIAL_COMPILE_FLAGS "-Wno-sign-compare -Wno-unused-local-typedefs -Werror=unknown-pragmas"
+setenv MYID icc17u4
 
 #Couldn't figure out how to pass these in externally and had to embedd the following compilation flags into src/liboslexec/CMakeLists.txt
 #setenv LLVM_COMPILE_FLAGS "-I/usr/include/c++/4.8.2 -I/usr/include/c++/4.8.2/x86_64-redhat-linux"
@@ -47,8 +48,8 @@ make profile VERBOSE=1 USE_CCACHE=0 LLVM_VERSION=4.0.0 BOOST_HOME=/nfs/pdx/home/
 
 # after  building add 
 source /opt/intel/compilers_and_libraries_2017.4.196/linux/bin/compilervars.csh intel64
-setenv PATH /data/awells-np/OSL_Dev/BatchedOSL/dist/linux64.profile/bin:$PATH
-setenv LD_LIBRARY_PATH /data/awells-np/OSL_Dev/BatchedOSL/dist/linux64.profile/lib:$LD_LIBRARY_PATH
+setenv PATH /data/awells-np/OSL_Dev/BatchedOSL/dist/linux64.profile.icc17u4/bin:$PATH
+setenv LD_LIBRARY_PATH /data/awells-np/OSL_Dev/BatchedOSL/dist/linux64.profile.icc17u4/lib:$LD_LIBRARY_PATH
 setenv LD_LIBRARY_PATH ~/Pixar/boost/lib/:$LD_LIBRARY_PATH
 setenv LD_LIBRARY_PATH ~/Pixar/OSL/install/lib/:$LD_LIBRARY_PATH
 

@@ -421,9 +421,11 @@ struct alignas(64) ShaderGlobalsBatch
 	OSL_INLINE VaryingProxyType 
 	varying() { return VaryingProxyType(m_varying, m_size); }
 	
-	// TODO: consider removing/demoting the ASSERT with a debug only option
+	// The ASSERT isn't valid as values can be read in a masked operation
+	// So we expect data to be pulled outside the size, but masked off
+	// by the caller.
 	OSL_INLINE VaryingProxyType 
-	varying(int batchIndex) { ASSERT(batchIndex < m_size); return VaryingProxyType(m_varying, batchIndex); }
+	varying(int batchIndex) { /*ASSERT(batchIndex < m_size)*/; return VaryingProxyType(m_varying, batchIndex); }
 	
 	typedef VaryingShaderGlobals<maxSize> VaryingData;
 	
@@ -442,6 +444,8 @@ struct alignas(64) ShaderGlobalsBatch
 	OSL_INLINE bool 
 	isFull() const
 	{
+		// Force not full batches to see impact of low batch utilization
+		//return (m_size == maxSize/2);
 		return (m_size == maxSize);
 	}
 

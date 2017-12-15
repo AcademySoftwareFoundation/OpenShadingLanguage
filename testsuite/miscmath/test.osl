@@ -73,7 +73,7 @@ test ()
         printf ("  mod (%g, %g) = %g\n", a, b, mod(a, b));
     }
 
-    printf (" varying:\n");
+    printf (" varying float:\n");
     {
         float a = u;
         float b = 1.5*u;
@@ -88,7 +88,7 @@ test ()
         printf ("  fmod (%g, %g) = %g\n", a, b, fmod(a, b));
         printf ("  mod (%g, %g) = %g\n", a, b, mod(a, b));
     }
-
+    printf (" varying triples:\n");
     {
         color a = u;
         color b = 1.5*u;
@@ -103,4 +103,71 @@ test ()
         printf ("  fmod (%g, %g) = %g\n", a, b, fmod(a, b));
         printf ("  mod (%g, %g) = %g\n", a, b, mod(a, b));
     }
+    printf (" varying int:\n");
+    {
+        int a = int(u);
+        int b = int(1.5*u);
+        printf ("  fabs (%d) = %d\n", a, fabs(a));
+        printf ("  floor (%d) = %g\n", a, floor(a));
+        printf ("  ceil (%d) = %g\n", a, ceil(a));
+        printf ("  trunc (%d) = %g\n", a, trunc(a));
+        printf ("  round (%d) = %g\n", a, round(a));
+        printf ("  sign (%d) = %g\n", a, sign(a));
+        printf ("  sqrt (%d) = %g\n", a, sqrt(a));
+        printf ("  inversesqrt (%d) = %g\n", a, inversesqrt(a));
+        printf ("  fmod (%d, %d) = %g\n", a, b, fmod(a, b));
+        printf ("  mod (%d, %d) = %d\n", a, b, mod(a, b));
+    }
+    printf (" varying float derivatives:\n");
+    {
+        float a = P[0];
+        float b = 1.5*P[1];
+        float c = fabs(a);
+        printf ("  fabs (%g) = %g, Dx(%g), Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = floor(a);
+        printf ("  floor (%g) = %g, Dx(%g), Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = ceil(a);
+        printf ("  ceil (%g) = %g, Dx(%g), Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = trunc(a);
+        printf ("  trunc (%g) = %g, Dx(%g), Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = round(a);
+        printf ("  round (%g) = %g, Dx(%g), Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = sign(a);
+        printf ("  sign (%g) = %g, Dx(%g), Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = sqrt(a);
+        printf ("  sqrt (%g) = %g, Dx(%g), Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = inversesqrt(a);
+        printf ("  inversesqrt (%g) = %g, Dx(%g), Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = fmod(a,b);
+        printf ("  fmod (%g, %g) = %g, Dx(%g), Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        c = mod(a,b);
+        printf ("  mod (%g, %g) = %g, Dx(%g), Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+    }
+    
+    printf (" varying triples derivatives:\n");
+    {
+        color a = P;
+        color b = 1.5*P;
+        
+        color c = fabs(a);
+        printf ("  fabs (%g) = %g, Dx(%g), Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = floor(a);
+        printf ("  floor (%g) = %g, Dx(%g), Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = ceil(a);
+        printf ("  ceil (%g) = %g, Dx(%g), Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = trunc(a);
+        printf ("  trunc (%g) = %g, Dx(%g), Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = round(a);
+        printf ("  round (%g) = %g, Dx(%g), Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = sign(a);
+        printf ("  sign (%g) = %g, Dx(%g), Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = sqrt(a);
+        printf ("  sqrt (%g) = %g, Dx(%g), Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = inversesqrt(a);
+        printf ("  inversesqrt (%g) = %g, Dx(%g), Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = fmod(a,b);
+        printf ("  fmod (%g, %g) = %g, Dx(%g), Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        c = mod(a,b);
+        printf ("  mod (%g, %g) = %g, Dx(%g), Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+    }    
 }

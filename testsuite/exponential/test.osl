@@ -60,8 +60,8 @@ test ()
         b = 1.0;
         printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
     }
-
     { 
+        // test triple vs float
         vector a = M_E;
         float b = 27.0;
         printf ("  log (%g) = %g\n", a, log(a));
@@ -105,7 +105,6 @@ test ()
         b = 0.0;
         printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
     }
-
     {
         // test triple vs triple
         vector a = 2.0;
@@ -133,7 +132,7 @@ test ()
         float b = 27.0;
         printf ("  log (%g) = %g\n", a, log(a));
         printf ("  log (%g, %g) = %g\n", a, b, log(a,b));
-        printf ("  log2 (%g) = %g\n", a, log2 (a));
+        printf ("  log2 (%g) = %g\n", a, log2(a));
         printf ("  log10 (%g) = %g\n", a, log10(a));
         printf ("  logb (%g) = %g\n", a, logb(a));
         printf ("  exp (%g) = %g\n", a, exp(a));
@@ -141,11 +140,57 @@ test ()
         printf ("  expm1 (%g) = %g\n", a, expm1(a));
         printf ("  erf (%g) = %g\n", a, erf(a));
         printf ("  erfc (%g) = %g\n", a, erfc(a));
-        b = 1.5;
+        a = v*M_E;
+        printf ("  log (%g) = %g\n", a, log(a));
+        printf ("  log (%g, %g) = %g\n", a, b, log(a,b));
+        printf ("  log2 (%g) = %g\n", a, log2(a));
+        printf ("  log10 (%g) = %g\n", a, log10(a));
+        printf ("  logb (%g) = %g\n", a, logb(a));
+        printf ("  exp (%g) = %g\n", a, exp(a));
+        printf ("  exp2 (%g) = %g\n", a, exp2(a));
+        printf ("  expm1 (%g) = %g\n", a, expm1(a));
+        printf ("  erf (%g) = %g\n", a, erf(a));
+        printf ("  erfc (%g) = %g\n", a, erfc(a));
+        b = u*2.0;
+        a = v*2.0;
+        printf ("  log (%g, %g) = %g\n", a, b, log(a,b));
+        b = a*10.0;
+        a = v*10.0;
+        printf ("  log (%g, %g) = %g\n", a, b, log(a,b));
+        a = u*2.0;
+        b = v*1.5;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        a = u*-2.0;
+        b = v*1.5;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        b = u*0.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        b = v*3.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        // catch some weird corner cases
+        a = u*0.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        b = v*-3.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        b = u*0.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        a = v*2.2;
+        b = v*2;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        a = u*-2.2;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        a = v*1e20;
+        printf ("  pow (%g, %g) = %g     [should be clamped, not inf!]\n",
+                a, b, pow(a,b));
+        a = u*2.5;
+        b = v*1.0;
         printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
     }
-    {
-        color a = u;
+
+    { 
+        // test varying triple vs float
+        vector vv = vector(0,u,v);
+        vector a = vv;
         float b = 27.0;
         printf ("  log (%g) = %g\n", a, log(a));
         printf ("  log (%g, %g) = %g\n", a, b, log(a,b));
@@ -155,7 +200,249 @@ test ()
         printf ("  exp (%g) = %g\n", a, exp(a));
         printf ("  exp2 (%g) = %g\n", a, exp2(a));
         printf ("  expm1 (%g) = %g\n", a, expm1(a));
+        a = 10.0*(P[0],u,v);
+        printf ("  log (%g) = %g\n", a, log(a));
+        printf ("  log (%g, %g) = %g\n", a, b, log(a,b));
+        printf ("  log2 (%g) = %g\n", a, log2(a));
+        printf ("  log10 (%g) = %g\n", a, log10(a));
+        printf ("  logb (%g) = %g\n", a, logb(a));
+        printf ("  exp (%g) = %g\n", a, exp(a));
+        printf ("  exp2 (%g) = %g\n", a, exp2(a));
+        printf ("  expm1 (%g) = %g\n", a, expm1(a));
+        a = vv*2.0;
+        b = 2.0;
+        printf ("  log (%g, %g) = %g\n", a, b, log(a,b));
+        a = vv*10.0;
+        b = 10.0;
+        printf ("  log (%g, %g) = %g\n", a, b, log(a,b));
+        a = vv*2.0;
         b = 1.5;
         printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        a = vv*-2.0;
+        b = 1.5;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        b = 0.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        b = 3.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        // catch some weird corner cases
+        vv*a = 0.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        b = -3.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        b = 0.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
     }
+
+    {
+        // test varying triple vs triple
+        vector vv1 = vector(P[0],u,v);
+        vector vv2 = vector(u+v,P[1],P[2]);
+        vector a = vv1*2.0;
+        vector b = vv2*1.5;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        a = vv1*-2.0;
+        b = vv2*1.5;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        b = vv2*0.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        b = vv2*3.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        // catch some weird corner cases
+        a = vv1*0.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        b = vv2*-3.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+        b = vv2*0.0;
+        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
+    }    
+   
+    printf (" varying derivatives for float:\n");
+    {
+        float a = P[0];
+        float b = 27.0;
+        float c = log(a);
+        printf ("  log (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = log(a,b);
+        printf ("  log (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        c = log2(a);
+        printf ("  log2 (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = log10(a);
+        printf ("  log10 (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = logb(a);
+        printf ("  logb (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = exp(a);
+        printf ("  exp (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = exp2(a);
+        printf ("  exp2 (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = expm1(a);
+        printf ("  expm1 (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = erf(a);
+        printf ("  erf (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = erfc(a);
+        printf ("  erfc (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        a = v*M_E;
+        c = log(a);
+        printf ("  log (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = log(a,b);
+        printf ("  log (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        c = log2(a);
+        printf ("  log2 (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = log10(a);
+        printf ("  log10 (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = logb(a);
+        printf ("  logb (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = exp(a);
+        printf ("  exp (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = exp2(a);
+        printf ("  exp2 (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = expm1(a);
+        printf ("  expm1 (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = erf(a);
+        printf ("  erf (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = erfc(a);
+        printf ("  erfc (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        b = u*2.0;
+        a = v*2.0;
+        c = log(a,b);
+        printf ("  log (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        b = a*10.0;
+        a = v*10.0;
+        c = log(a,b);
+        printf ("  log (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        a = u*2.0;
+        b = v*1.5;
+        c = pow(a,b);
+        printf ("  pow (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        a = u*-2.0;
+        b = v*1.5;
+        c = pow(a,b);
+        printf ("  pow (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        b = u*0.0;
+        c = pow(a,b);
+        printf ("  pow (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        b = v*3.0;
+        c = pow(a,b);
+        printf ("  pow (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        // catch some weird corner cases
+        a = u*0.0;
+        c = pow(a,b);
+        printf ("  pow (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        b = v*-3.0;
+        c = pow(a,b);
+        printf ("  pow (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        b = u*0.0;
+        c = pow(a,b);
+        printf ("  pow (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        a = v*2.2;
+        b = v*2;
+        c = pow(a,b);
+        printf ("  pow (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        a = u*-2.2;
+        c = pow(a,b);
+        printf ("  pow (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        a = v*1e20;
+        c = pow(a,b);
+        printf ("  pow (%g, %g) = %g  Dx(%g) Dy(%g) [should be clamped, not inf!]\n",
+                a, b, c, Dx(c), Dy(c));
+        a = u*2.5;
+        b = v*1.0;
+        c = pow(a,b);
+        printf ("  pow (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+    }   
+    
+    { 
+        printf (" varying derivatives triple vs float:\n");
+    
+        vector vv = vector(0,u,v);
+        vector a = vv;
+        float b = 27.0;
+        vector c = log(a);
+        printf ("  log (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = log(a,b);
+        printf ("  log (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        c = log2(a);
+        printf ("  log2 (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = log10(a);
+        printf ("  log10 (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = logb(a);
+        printf ("  logb (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c =  exp(a);
+        printf ("  exp (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = exp2(a);
+        printf ("  exp2 (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = expm1(a);
+        printf ("  expm1 (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        a = 10.0*(P[0],u,v);
+        c = log(a);
+        printf ("  log (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = log(a,b);
+        printf ("  log (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        c = log2(a);
+        printf ("  log2 (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c =  log10(a);
+        printf ("  log10 (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = logb(a);
+        printf ("  logb (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = exp(a);
+        printf ("  exp (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = exp2(a);
+        printf ("  exp2 (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        c = expm1(a);
+        printf ("  expm1 (%g) = %g Dx(%g) Dy(%g)\n", a, c, Dx(c), Dy(c));
+        a = vv*2.0;
+        b = 2.0;
+        c = log(a,b);
+        printf ("  log (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        a = vv*10.0;
+        b = 10.0;
+        c = log(a,b);
+        printf ("  log (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        a = vv*2.0;
+        b = 1.5;
+        c = pow(a,b);
+        printf ("  pow (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        a = vv*-2.0;
+        b = 1.5;
+        c = pow(a,b);
+        printf ("  pow (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        b = 0.0;
+        c = pow(a,b);
+        printf ("  pow (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        b = 3.0;
+        c = pow(a,b);
+        printf ("  pow (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        // catch some weird corner cases
+        vv*a = 0.0;
+        c = pow(a,b);
+        printf ("  pow (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        b = -3.0;
+        c = pow(a,b);
+        printf ("  pow (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        b = 0.0;
+        c = pow(a,b);
+        printf ("  pow (%g, %g) = %g Dx(%g) Dy(%g)\n", a, b, c, Dx(c), Dy(c));
+        
+        // vector derivative and float derivate binary ops
+        a = vv*2.0;
+        float db = 1.5*u;
+        c = pow(a,db);
+        printf ("  pow (%g, %g) = %g Dx(%g) Dy(%g)\n", a, db, c, Dx(c), Dy(c));
+        a = vv*-2.0;
+        db = 1.5*u;
+        c = pow(a,db);
+        printf ("  pow (%g, %g) = %g Dx(%g) Dy(%g)\n", a, db, c, Dx(c), Dy(c));
+
+        // vector no derivative and float derivate binary ops
+        vector no_deriv_vec = M_E;
+        db = 1.5*u;
+        c = pow(no_deriv_vec,db);
+        printf ("  pow (%g, %g) = %g Dx(%g) Dy(%g)\n", no_deriv_vec, db, c, Dx(c), Dy(c));
+        no_deriv_vec = M_E*-2.0;
+        db = 1.5*u;
+        c = pow(no_deriv_vec,db);
+        printf ("  pow (%g, %g) = %g Dx(%g) Dy(%g)\n", no_deriv_vec, db, c, Dx(c), Dy(c));
+        
+    }
+    
 }

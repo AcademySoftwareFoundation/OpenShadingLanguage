@@ -1,0 +1,12 @@
+#ifndef M_PI
+#define M_PI 3.14159265358979
+#endif
+
+
+shader
+test_cosh(output color rgb = 0)
+{
+    float theta = P[0] + P[1];
+    float res = cosh(theta);
+    rgb = color(res);
+}

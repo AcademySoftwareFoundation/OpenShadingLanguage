@@ -1,0 +1,13 @@
+shader test_vary3f(output float c = 0.0)
+{
+    c = 1.0;
+    // varying conditional
+    if (P[0] > 1.0/3.0) {
+         c = 0.0;
+    } else {
+        return;
+    }
+    
+    c= 0.5;
+    
+}

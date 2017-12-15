@@ -4,369 +4,740 @@
 shader
 test ()
 {
-    printf ("Test derivatives\n\n");
-
-    printf ("u = %.4g, Dx(u) = %.4g, Dy(u) = %.4g\n", u, Dx(u), Dy(u));
-    printf ("v = %.4g, Dx(v) = %.4g, Dy(v) = %.4g\n", v, Dx(v), Dy(v));
-    printf ("P = %.4g, Dx(P) = %.4g, Dy(P) = %.4g\n", P, Dx(P), Dy(P));
+    {
+        printf ("Test derivatives\n\n");
     
-    {
-        float a = u;
-        printf ("\n");
-        printf ("Assign: a = u; a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        printf ("u = %.4g, Dx(u) = %.4g, Dy(u) = %.4g\n", u, Dx(u), Dy(u));
+        printf ("v = %.4g, Dx(v) = %.4g, Dy(v) = %.4g\n", v, Dx(v), Dy(v));
+        printf ("P = %.4g, Dx(P) = %.4g, Dy(P) = %.4g\n", P, Dx(P), Dy(P));
+        
+        {
+            float a = u;
+            printf ("\n");
+            printf ("Assign: a = u; a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = u+v;
+            printf ("\n");
+            printf ("Add: a = u+v; a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+            a = u+0.5;
+            printf ("Add constant: a = u+0.5; a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = u-v;
+            printf ("\n");
+            printf ("Sub: a = u-v; a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+            a = u-0.5;
+            printf ("Sub constant: a = u-0.5; a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = -u;
+            printf ("\n");
+            printf ("Negate: a = -u; a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = u*v;
+            printf ("\n");
+            printf ("Mul: a = u*v; a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = u/(v+1);
+            printf ("\n");
+            printf ("Div: a = u/(v+1); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cos(u);
+            printf ("\n");
+            printf ("cos: a = cos(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = sin(u);
+            printf ("\n");
+            printf ("sin: a = sin(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = tan(u);
+            printf ("\n");
+            printf ("tan: a = tan(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cosh(u);
+            printf ("\n");
+            printf ("cosh: a = cosh(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = sinh(u);
+            printf ("\n");
+            printf ("sinh: a = sinh(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = tanh(u);
+            printf ("\n");
+            printf ("tanh: a = tanh(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = acos(u);
+            printf ("\n");
+            printf ("acos: a = acos(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = asin(u);
+            printf ("\n");
+            printf ("asin: a = asin(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = atan(u);
+            printf ("\n");
+            printf ("atan: a = atan(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = atan2(u,v);
+            printf ("\n");
+            printf ("atan2: a = atan2(u,v) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+    
+        {
+            float a = degrees(u);
+            printf ("\n");
+            printf ("degrees: a = degrees(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = radians(u);
+            printf ("\n");
+            printf ("radians: a = radians(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = log(u);
+            printf ("\n");
+            printf ("log: a = log(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = log2(u);
+            printf ("\n");
+            printf ("log2: a = log2(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = log10(u);
+            printf ("\n");
+            printf ("log10: a = log10(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = exp(u);
+            printf ("\n");
+            printf ("exp: a = exp(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = exp2(u);
+            printf ("\n");
+            printf ("exp2: a = exp2(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = expm1(u);
+            printf ("\n");
+            printf ("expm1: a = expm1(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = erf(u);
+            printf ("\n");
+            printf ("erf: a = erf(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = erfc(u);
+            printf ("\n");
+            printf ("erfc: a = erfc(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = sqrt(u);
+            printf ("\n");
+            printf ("sqrt: a = sqrt(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = inversesqrt(u);
+            printf ("\n");
+            printf ("inversesqrt: a = inversesqrt(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = pow(u,3);
+            printf ("\n");
+            printf ("pow: a = pow(u, 3); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = pow(u,v);
+            printf ("\n");
+            printf ("pow: a = pow(u, v) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = log(u,10);
+            printf ("\n");
+            printf ("log: a = log(u,10); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = log(u,v);
+            printf ("\n");
+            printf ("log: a = log(u,v) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = clamp(sin(u),u,v);
+            printf ("\n");
+            printf ("clamp: a = clamp(sin(u),u,v) is clamp(%.4g,%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    sin(u), u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = min(u,v);
+            printf ("\n");
+            printf ("min: a = min(u,v) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = max(u,v);
+            printf ("\n");
+            printf ("max: a = max(u,v) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = mix(u,v,sin(u));
+            printf ("\n");
+            printf ("mix: a = mix(u,v,sin(u)) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = hypot(u,v);
+            printf ("\n");
+            printf ("hypot: a = hypot(u,v) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = hypot(u,v,3);
+            printf ("\n");
+            printf ("hypot: a = hypot(u,v,3) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = smoothstep(v,3,u);
+            printf ("\n");
+            printf ("smoothstep: a = smoothstep(v,3,u) = (smoothstep(%.4g,3,%.4g)); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    v, u, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            // Test component reference
+            float a = P[0], b = P[1];
+            printf ("\n");
+            printf ("comp ref: P = %.4g, Dx(P) = %.4g, Dy(P) = %.4g\n", P, Dx(P), Dy(P));
+            printf ("  P[0] = %.4g, Dx(P[0]) = %.4g, Dy(P[0]) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+            printf ("  P[1] = %.4g, Dx(P[1]) = %.4g, Dy(P[1]) = %.4g\n",
+                    b, Dx(b), Dy(b));
+        }
+    
+        {
+           vector a = vector(u+v, -u-v, u+v);
+           vector b = vector(u+v,  u+v, u+v);
+           float d = dot(a, b);
+           printf ("\n");
+           printf ("dot product: d = dot(%.4g, %.4g) = %.4g  Dx(d) = %.4g  Dy(d) = %.4g\n",
+                 a, b, d, Dx(d), Dy(d));
+        }
+    
+        {
+           vector a = vector(u+v, -u-v, u+v);
+           vector b = vector(u+v,  u+v, u+v);
+           vector c = cross(a, b);
+           printf ("\n");
+           printf ("cross product: c = cross(%.4g, %.4g) = %.4g  Dx(c) = %.4g  Dy(c) = %.4g\n",
+                 a, b, c, Dx(c), Dy(c));
+        }
+    
+        {
+            // Test component reference
+            color C = 0;
+            C[0] = u;
+            C[1] = v;
+            printf ("\n");
+            printf ("comp assign: C[0]=u, C[1]=v: now C = %.4g, Dx(C) = %.4g, Dy(C) = %.4g\n", C, Dx(C), Dy(C));
+        }
+    
+        {
+           vector a = vector(u+v, u-v, u+v);
+           vector n = normalize(a);
+           printf ("\n");
+           printf ("normalize: n = normalize(%.4g) = %.4g  Dx(n) = %.4g  Dy(n) = %.4g\n",
+                 a, n, Dx(n), Dy(n));
+        }
+    
+        {
+           vector a = vector(u+v, u-v, u+v);
+           float l = length(a);
+           printf ("\n");
+           printf ("length: l = length(%.4g) = %.4g  Dx(l) = %.4g  Dy(l) = %.4g\n",
+                 a, l, Dx(l), Dy(l));
+        }
+    
+        {
+           vector a = vector(u+v, -u-v, u+v);
+           vector b = vector(u+v,  u+v, u+v);
+           float d = distance(a, b);
+           printf ("\n");
+           printf ("distance: d = distance(%.4g, %.4g) = %.4g  Dx(d) = %.4g  Dy(d) = %.4g\n",
+                 a, b, d, Dx(d), Dy(d));
+        }
+    
+        {
+            // Test triple construction
+            color C = color (u, v, 0);
+            printf ("\nTriple construction:\n");
+            printf ("  color(u,v,0) = %.4g, Dx = %.4g, Dy = %.4g\n", C, Dx(C), Dy(C));
+            point p;
+            p = point (u,v,0);
+            printf ("  point (%.4g,%.4g,0) = %.4g, Dx = %.4g, Dy = %.4g\n",
+                    u, v, pretty(p), pretty(Dx(p)), pretty(Dy(p)));
+            p = point ("shader",u,v,0);
+            printf ("  point (\"shader\",%.4g,%.4g,0) = %.4g, Dx = %.4g, Dy = %.4g\n",
+                    u, v, pretty(p), pretty(Dx(p)), pretty(Dy(p)));
+            vector V = vector ("shader",u,v,0);
+            printf ("  vector (\"shader\",%.4g,%.4g,0) = %.4g, Dx = %.4g, Dy = %.4g\n",
+                    u, v, pretty(V), pretty(Dx(V)), pretty(Dy(V)));
+        }
     }
-
+    int cond = P[0] > 0.5;
     {
-        float a = u+v;
-        printf ("\n");
-        printf ("Add: a = u+v; a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-        a = u+0.5;
-        printf ("Add constant: a = u+0.5; a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = u-v;
-        printf ("\n");
-        printf ("Sub: a = u-v; a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-        a = u-0.5;
-        printf ("Sub constant: a = u-0.5; a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = -u;
-        printf ("\n");
-        printf ("Negate: a = -u; a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = u*v;
-        printf ("\n");
-        printf ("Mul: a = u*v; a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = u/(v+1);
-        printf ("\n");
-        printf ("Div: a = u/(v+1); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = cos(u);
-        printf ("\n");
-        printf ("cos: a = cos(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = sin(u);
-        printf ("\n");
-        printf ("sin: a = sin(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = tan(u);
-        printf ("\n");
-        printf ("tan: a = tan(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = cosh(u);
-        printf ("\n");
-        printf ("cosh: a = cosh(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = sinh(u);
-        printf ("\n");
-        printf ("sinh: a = sinh(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = tanh(u);
-        printf ("\n");
-        printf ("tanh: a = tanh(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = acos(u);
-        printf ("\n");
-        printf ("acos: a = acos(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = asin(u);
-        printf ("\n");
-        printf ("asin: a = asin(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = atan(u);
-        printf ("\n");
-        printf ("atan: a = atan(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = atan2(u,v);
-        printf ("\n");
-        printf ("atan2: a = atan2(u,v) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-
-    {
-        float a = degrees(u);
-        printf ("\n");
-        printf ("degrees: a = degrees(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = radians(u);
-        printf ("\n");
-        printf ("radians: a = radians(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = log(u);
-        printf ("\n");
-        printf ("log: a = log(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = log2(u);
-        printf ("\n");
-        printf ("log2: a = log2(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = log10(u);
-        printf ("\n");
-        printf ("log10: a = log10(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = exp(u);
-        printf ("\n");
-        printf ("exp: a = exp(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = exp2(u);
-        printf ("\n");
-        printf ("exp2: a = exp2(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = expm1(u);
-        printf ("\n");
-        printf ("expm1: a = expm1(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = erf(u);
-        printf ("\n");
-        printf ("erf: a = erf(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = erfc(u);
-        printf ("\n");
-        printf ("erfc: a = erfc(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = sqrt(u);
-        printf ("\n");
-        printf ("sqrt: a = sqrt(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = inversesqrt(u);
-        printf ("\n");
-        printf ("inversesqrt: a = inversesqrt(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = pow(u,3);
-        printf ("\n");
-        printf ("pow: a = pow(u, 3); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = pow(u,v);
-        printf ("\n");
-        printf ("pow: a = pow(u, v) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = log(u,10);
-        printf ("\n");
-        printf ("log: a = log(u,10); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = log(u,v);
-        printf ("\n");
-        printf ("log: a = log(u,v) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = clamp(sin(u),u,v);
-        printf ("\n");
-        printf ("clamp: a = clamp(sin(u),u,v) is clamp(%.4g,%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                sin(u), u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = min(u,v);
-        printf ("\n");
-        printf ("min: a = min(u,v) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = max(u,v);
-        printf ("\n");
-        printf ("max: a = max(u,v) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = mix(u,v,sin(u));
-        printf ("\n");
-        printf ("mix: a = mix(u,v,sin(u)) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = hypot(u,v);
-        printf ("\n");
-        printf ("hypot: a = hypot(u,v) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = hypot(u,v,3);
-        printf ("\n");
-        printf ("hypot: a = hypot(u,v,3) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        float a = smoothstep(v,3,u);
-        printf ("\n");
-        printf ("smoothstep: a = smoothstep(v,3,u) = (smoothstep(%.4g,3,%.4g)); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
-                v, u, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-    }
-
-    {
-        // Test component reference
-        float a = P[0], b = P[1];
-        printf ("\n");
-        printf ("comp ref: P = %.4g, Dx(P) = %.4g, Dy(P) = %.4g\n", P, Dx(P), Dy(P));
-        printf ("  P[0] = %.4g, Dx(P[0]) = %.4g, Dy(P[0]) = %.4g\n",
-                pretty(a), pretty(Dx(a)), pretty(Dy(a)));
-        printf ("  P[1] = %.4g, Dx(P[1]) = %.4g, Dy(P[1]) = %.4g\n",
-                b, Dx(b), Dy(b));
-    }
-
-    {
-       vector a = vector(u+v, -u-v, u+v);
-       vector b = vector(u+v,  u+v, u+v);
-       float d = dot(a, b);
-       printf ("\n");
-       printf ("dot product: d = dot(%.4g, %.4g) = %.4g  Dx(d) = %.4g  Dy(d) = %.4g\n",
-             a, b, d, Dx(d), Dy(d));
-    }
-
-    {
-       vector a = vector(u+v, -u-v, u+v);
-       vector b = vector(u+v,  u+v, u+v);
-       vector c = cross(a, b);
-       printf ("\n");
-       printf ("cross product: c = cross(%.4g, %.4g) = %.4g  Dx(c) = %.4g  Dy(c) = %.4g\n",
-             a, b, c, Dx(c), Dy(c));
-    }
-
-    {
-        // Test component reference
-        color C = 0;
-        C[0] = u;
-        C[1] = v;
-        printf ("\n");
-        printf ("comp assign: C[0]=u, C[1]=v: now C = %.4g, Dx(C) = %.4g, Dy(C) = %.4g\n", C, Dx(C), Dy(C));
-    }
-
-    {
-       vector a = vector(u+v, u-v, u+v);
-       vector n = normalize(a);
-       printf ("\n");
-       printf ("normalize: n = normalize(%.4g) = %.4g  Dx(n) = %.4g  Dy(n) = %.4g\n",
-             a, n, Dx(n), Dy(n));
-    }
-
-    {
-       vector a = vector(u+v, u-v, u+v);
-       float l = length(a);
-       printf ("\n");
-       printf ("length: l = length(%.4g) = %.4g  Dx(l) = %.4g  Dy(l) = %.4g\n",
-             a, l, Dx(l), Dy(l));
-    }
-
-    {
-       vector a = vector(u+v, -u-v, u+v);
-       vector b = vector(u+v,  u+v, u+v);
-       float d = distance(a, b);
-       printf ("\n");
-       printf ("distance: d = distance(%.4g, %.4g) = %.4g  Dx(d) = %.4g  Dy(d) = %.4g\n",
-             a, b, d, Dx(d), Dy(d));
-    }
-
-    {
-        // Test triple construction
-        color C = color (u, v, 0);
-        printf ("\nTriple construction:\n");
-        printf ("  color(u,v,0) = %.4g, Dx = %.4g, Dy = %.4g\n", C, Dx(C), Dy(C));
-        point p;
-        p = point (u,v,0);
-        printf ("  point (%.4g,%.4g,0) = %.4g, Dx = %.4g, Dy = %.4g\n",
-                u, v, pretty(p), pretty(Dx(p)), pretty(Dy(p)));
-        p = point ("shader",u,v,0);
-        printf ("  point (\"shader\",%.4g,%.4g,0) = %.4g, Dx = %.4g, Dy = %.4g\n",
-                u, v, pretty(p), pretty(Dx(p)), pretty(Dy(p)));
-        vector V = vector ("shader",u,v,0);
-        printf ("  vector (\"shader\",%.4g,%.4g,0) = %.4g, Dx = %.4g, Dy = %.4g\n",
-                u, v, pretty(V), pretty(Dx(V)), pretty(Dy(V)));
+        printf ("Test masked derivatives\n\n");
+    
+        printf ("u = %.4g, Dx(u) = %.4g, Dy(u) = %.4g\n", u, cond ? Dx(u) : 0, cond ? Dy(u) : 0);
+        printf ("v = %.4g, Dx(v) = %.4g, Dy(v) = %.4g\n", v, cond ? Dx(v) : 0, cond ? Dy(v) : 0);
+        printf ("P = %.4g, Dx(P) = %.4g, Dy(P) = %.4g\n", P, cond ? Dx(P) : 0, cond ? Dy(P) : 0);
+        
+        {
+            float a = cond ? u : 0;
+            printf ("\n");
+            printf ("Assign: a = u; a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? u+v : 0;
+            printf ("\n");
+            printf ("Add: a = u+v; a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+            a = u+0.5;
+            printf ("Add constant: a = u+0.5; a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? u-v : 0;
+            printf ("\n");
+            printf ("Sub: a = u-v; a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+            a = u-0.5;
+            printf ("Sub constant: a = u-0.5; a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? -u : 0;
+            printf ("\n");
+            printf ("Negate: a = -u; a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? u*v : 0;
+            printf ("\n");
+            printf ("Mul: a = u*v; a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? u/(v+1) : 0;
+            printf ("\n");
+            printf ("Div: a = u/(v+1); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? cos(u) : 0;
+            printf ("\n");
+            printf ("cos: a = cos(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? sin(u) : 0;
+            printf ("\n");
+            printf ("sin: a = sin(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? tan(u) : 0;
+            printf ("\n");
+            printf ("tan: a = tan(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? cosh(u) : 0;
+            printf ("\n");
+            printf ("cosh: a = cosh(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? sinh(u) : 0;
+            printf ("\n");
+            printf ("sinh: a = sinh(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? tanh(u) : 0;
+            printf ("\n");
+            printf ("tanh: a = tanh(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? acos(u) : 0;
+            printf ("\n");
+            printf ("acos: a = acos(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? asin(u) : 0;
+            printf ("\n");
+            printf ("asin: a = asin(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? atan(u) : 0;
+            printf ("\n");
+            printf ("atan: a = atan(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? atan2(u,v) : 0;
+            printf ("\n");
+            printf ("atan2: a = atan2(u,v) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+    
+        {
+            float a = cond ? degrees(u) : 0;
+            printf ("\n");
+            printf ("degrees: a = degrees(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? radians(u) : 0;
+            printf ("\n");
+            printf ("radians: a = radians(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? log(u) : 0;
+            printf ("\n");
+            printf ("log: a = log(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? log2(u) : 0;
+            printf ("\n");
+            printf ("log2: a = log2(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? log10(u) : 0;
+            printf ("\n");
+            printf ("log10: a = log10(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? exp(u) : 0;
+            printf ("\n");
+            printf ("exp: a = exp(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? exp2(u) : 0;
+            printf ("\n");
+            printf ("exp2: a = exp2(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? expm1(u) : 0;
+            printf ("\n");
+            printf ("expm1: a = expm1(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? erf(u) : 0;
+            printf ("\n");
+            printf ("erf: a = erf(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? erfc(u) : 0;
+            printf ("\n");
+            printf ("erfc: a = erfc(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? sqrt(u) : 0;
+            printf ("\n");
+            printf ("sqrt: a = sqrt(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? inversesqrt(u) : 0;
+            printf ("\n");
+            printf ("inversesqrt: a = inversesqrt(u); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? pow(u,3) : 0;
+            printf ("\n");
+            printf ("pow: a = pow(u, 3); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? pow(u,v) : 0;
+            printf ("\n");
+            printf ("pow: a = pow(u, v) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? log(u,10) : 0;
+            printf ("\n");
+            printf ("log: a = log(u,10); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? log(u,v) : 0;
+            printf ("\n");
+            printf ("log: a = log(u,v) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? clamp(sin(u),u,v) : 0;
+            printf ("\n");
+            printf ("clamp: a = clamp(sin(u),u,v) is clamp(%.4g,%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    sin(u), u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? min(u,v) : 0;
+            printf ("\n");
+            printf ("min: a = min(u,v) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? max(u,v) : 0;
+            printf ("\n");
+            printf ("max: a = max(u,v) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? mix(u,v,cond ? sin(u) : 0) : 0;
+            printf ("\n");
+            printf ("mix: a = mix(u,v,sin(u)) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? hypot(u,v) : 0;
+            printf ("\n");
+            printf ("hypot: a = hypot(u,v) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? hypot(u,v,3) : 0;
+            printf ("\n");
+            printf ("hypot: a = hypot(u,v,3) at (%.4g,%.4g); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    u, v, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            float a = cond ? smoothstep(v,3,u) : 0;
+            printf ("\n");
+            printf ("smoothstep: a = smoothstep(v,3,u) = (smoothstep(%.4g,3,%.4g)); a = %.4g, Dx(a) = %.4g, Dy(a) = %.4g\n",
+                    v, u, pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+        }
+    
+        {
+            // Test component reference
+            float a = cond ? P[0] : 0;
+            float b = cond ? P[1] : 0;
+            printf ("\n");
+            printf ("comp ref: P = %.4g, Dx(P) = %.4g, Dy(P) = %.4g\n", P, Dx(P), Dy(P));
+            printf ("  P[0] = %.4g, Dx(P[0]) = %.4g, Dy(P[0]) = %.4g\n",
+                    pretty(a), pretty(Dx(a)), pretty(Dy(a)));
+            printf ("  P[1] = %.4g, Dx(P[1]) = %.4g, Dy(P[1]) = %.4g\n",
+                    b, Dx(b), Dy(b));
+        }
+    
+        {
+           vector a = vector(u+v, -u-v, u+v);
+           vector b = vector(u+v,  u+v, u+v);
+           float d = cond ? dot(a, b) : 0;
+           printf ("\n");
+           printf ("dot product: d = dot(%.4g, %.4g) = %.4g  Dx(d) = %.4g  Dy(d) = %.4g\n",
+                 a, b, d, Dx(d), Dy(d));
+        }
+    
+        {
+           vector a = vector(u+v, -u-v, u+v);
+           vector b = vector(u+v,  u+v, u+v);
+           vector c = cond ? cross(a, b) : 0;
+           printf ("\n");
+           printf ("cross product: c = cross(%.4g, %.4g) = %.4g  Dx(c) = %.4g  Dy(c) = %.4g\n",
+                 a, b, c, Dx(c), Dy(c));
+        }
+    
+        {
+            // Test component reference
+            color C = 0;
+            C[0] = cond ? u : 0;
+            C[1] = cond ? v : 0;
+            printf ("\n");
+            printf ("comp assign: C[0]=u, C[1]=v: now C = %.4g, Dx(C) = %.4g, Dy(C) = %.4g\n", C, Dx(C), Dy(C));
+        }
+    
+        {
+           vector a = vector(u+v, u-v, u+v);
+           vector n = cond ? normalize(a) : 0;
+           printf ("\n");
+           printf ("normalize: n = normalize(%.4g) = %.4g  Dx(n) = %.4g  Dy(n) = %.4g\n",
+                 a, n, Dx(n), Dy(n));
+        }
+    
+        {
+           vector a = vector(u+v, u-v, u+v);
+           float l = cond ? length(a) : 0;
+           printf ("\n");
+           printf ("length: l = length(%.4g) = %.4g  Dx(l) = %.4g  Dy(l) = %.4g\n",
+                 a, l, Dx(l), Dy(l));
+        }
+    
+        {
+           vector a = vector(u+v, -u-v, u+v);
+           vector b = vector(u+v,  u+v, u+v);
+           float d = cond ? distance(a, b) : 0;
+           printf ("\n");
+           printf ("distance: d = distance(%.4g, %.4g) = %.4g  Dx(d) = %.4g  Dy(d) = %.4g\n",
+                 a, b, d, Dx(d), Dy(d));
+        }
+    
+        {
+            // Test triple construction
+            color C = cond ? color (u, v, 0) : 0;
+            printf ("\nTriple construction:\n");
+            printf ("  color(u,v,0) = %.4g, Dx = %.4g, Dy = %.4g\n", C, Dx(C), Dy(C));
+            point p;
+            p = cond ? point (u,v,0) : 0;
+            printf ("  point (%.4g,%.4g,0) = %.4g, Dx = %.4g, Dy = %.4g\n",
+                    u, v, pretty(p), pretty(Dx(p)), pretty(Dy(p)));
+            p = cond ? point ("shader",u,v,0) : 0;
+            printf ("  point (\"shader\",%.4g,%.4g,0) = %.4g, Dx = %.4g, Dy = %.4g\n",
+                    u, v, pretty(p), pretty(Dx(p)), pretty(Dy(p)));
+            vector V = cond ? vector ("shader",u,v,0) : 0;
+            printf ("  vector (\"shader\",%.4g,%.4g,0) = %.4g, Dx = %.4g, Dy = %.4g\n",
+                    u, v, pretty(V), pretty(Dx(V)), pretty(Dy(V)));
+        }
     }
 }

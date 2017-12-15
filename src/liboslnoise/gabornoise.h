@@ -217,7 +217,7 @@ struct EnabledFilterPolicy
 
 // Foward declaration, implementation is in fast_gabor.h
 template<int AnisotropicT, typename FilterPolicyT, int WidthT>
-__attribute__((noinline)) void
+OSL_NOINLINE void
 fast_gabor (
 		ConstWideAccessor<Dual2<Vec3>,WidthT> wP,
 		WideAccessor<Dual2<float>,WidthT> wResult,
@@ -225,7 +225,7 @@ fast_gabor (
 
 // Foward declaration, implementation is in fast_gabor.h
 template<int AnisotropicT, typename FilterPolicyT, int WidthT>
-__attribute__((noinline)) void
+OSL_NOINLINE  void
 fast_gabor3 (
 		ConstWideAccessor<Dual2<Vec3>, WidthT> wP,
 		WideAccessor<Dual2<Vec3>,WidthT> wResult,

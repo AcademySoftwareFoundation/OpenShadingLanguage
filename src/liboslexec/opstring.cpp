@@ -195,6 +195,9 @@ osl_printf_batched (ShaderGlobalsBatch *sgb, unsigned int mask_value, const char
     va_start (args, format_str);
     
     Mask mask(mask_value);
+    // Not strictly necessary, but using to ensure "current" logic that conditionals should skip
+    // any code block with no active lanes, this could be changed in future
+    ASSERT(mask.any_on());
 #if 0
     // Make super sure we know we are excuting LLVM-generated code!
     std::string newfmt = std::string("llvm: ") + format_str;
@@ -218,13 +221,19 @@ osl_error (ShaderGlobals *sg, const char* format_str, ...)
 }
 
 OSL_SHADEOP void
-osl_error_batched (ShaderGlobalsBatch *sgb, const char* format_str, ...)
+osl_error_batched (ShaderGlobalsBatch *sgb, unsigned int mask_value, const char* format_str, ...)
 {
     va_list args;
     va_start (args, format_str);
+
+    Mask mask(mask_value);
+    // Not strictly necessary, but using to ensure "current" logic that conditionals should skip
+    // any code block with no active lanes, this could be changed in future
+    ASSERT(mask.any_on());
+
     std::string s = Strutil::vformat (format_str, args);
     va_end (args);
-    sgb->uniform().context->error ("%s", s);
+    sgb->uniform().context->error (mask, "%s", s);
 }
 
 OSL_SHADEOP void
@@ -247,15 +256,18 @@ osl_warning_batched (ShaderGlobalsBatch *sgb, unsigned int mask_value, const cha
         va_start (args, format_str);
 
         Mask mask(mask_value);
+        // Not strictly necessary, but using to ensure "current" logic that conditionals should skip
+        // any code block with no active lanes, this could be changed in future
+        ASSERT(mask.any_on());
 
 #if 0
-        // Make super sure we know we are excuting LLVM-generated code!
-        std::string newfmt = std::string("llvm: ") + format_str;
-        format_str = newfmt.c_str();
+		// Make super sure we know we are excuting LLVM-generated code!
+		std::string newfmt = std::string("llvm: ") + format_str;
+		format_str = newfmt.c_str();
 #endif
-        std::string s = Strutil::vformat (format_str, args);
-        va_end (args);
-        sgb->uniform().context->warning(mask, "%s", s);
+		std::string s = Strutil::vformat (format_str, args);
+		va_end (args);
+		sgb->uniform().context->warning(mask, "%s", s);
     }
 }
 

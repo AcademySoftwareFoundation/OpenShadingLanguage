@@ -1,0 +1,18 @@
+float helper2(float val)
+{
+    float r = val;
+    if (P[0] < 1.0/3.0) {        
+        //return val;
+        exit();
+    }
+    r = 0.5;
+    return r;
+}
+
+shader test_vary7c(output color c = 1.0)
+{
+    float in = c[0];
+    float out = helper2(in);
+    c = color(in, out, in+out);
+}
+

@@ -52,13 +52,13 @@ template<> struct ScalarFromVec<Dual2<Vec2> > { typedef Dual2<Float> type; };
 
 /// A uniform way to assemble a Vec3 from float and a Dual2<Vec3>
 /// from Dual2<float>.
-inline Vec3
+OSL_INLINE Vec3
 make_Vec3 (float x, float y, float z)
 {
     return Vec3 (x, y, z);
 }
 
-inline Dual2<Vec3>
+OSL_INLINE Dual2<Vec3>
 make_Vec3 (const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z)
 {
     return Dual2<Vec3> (Vec3 (x.val(), y.val(), z.val()),
@@ -69,7 +69,7 @@ make_Vec3 (const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z)
 
 /// Make a Dual2<Vec3> from a single Dual2<Float> x coordinate, and 0
 /// for the other components.
-inline Dual2<Vec3>
+OSL_INLINE Dual2<Vec3>
 make_Vec3 (const Dual2<Float> &x)
 {
     return Dual2<Vec3> (Vec3 (x.val(), 0.0f, 0.0f),
@@ -78,7 +78,7 @@ make_Vec3 (const Dual2<Float> &x)
 }
 
 
-inline Dual2<Vec3>
+OSL_INLINE Dual2<Vec3>
 make_Vec3 (const Dual2<Float> &x, const Dual2<Float> &y)
 {
     return Dual2<Vec3> (Vec3 (x.val(), y.val(), 0.0f),
@@ -91,13 +91,13 @@ make_Vec3 (const Dual2<Float> &x, const Dual2<Float> &y)
 
 /// A uniform way to assemble a Vec2 from float and a Dual2<Vec2>
 /// from Dual2<float>.
-inline Vec2
+OSL_INLINE Vec2
 make_Vec2 (float x, float y)
 {
     return Vec2 (x, y);
 }
 
-inline Dual2<Vec2>
+OSL_INLINE Dual2<Vec2>
 make_Vec2 (const Dual2<float> &x, const Dual2<float> &y)
 {
     return Dual2<Vec2> (Vec2 (x.val(), y.val()),
@@ -108,14 +108,14 @@ make_Vec2 (const Dual2<float> &x, const Dual2<float> &y)
 
 
 /// A uniform way to extract a single component from a Vec3 or Dual2<Vec3>
-inline float
+OSL_INLINE float
 comp (const Vec3 &v, int c)
 {
     return v[c];
 }
 
 
-inline Dual2<float>
+OSL_INLINE Dual2<float>
 comp (const Dual2<Vec3> &v, int c)
 {
     return Dual2<float> (v.val()[c], v.dx()[c], v.dy()[c]);
@@ -126,23 +126,32 @@ comp (const Dual2<Vec3> &v, int c)
 /// Multiply a 3x3 matrix by a 3-vector, with derivs.
 ///
 template <class S, class T>
-inline void
+OSL_INLINE void
 multMatrix (const Imath::Matrix33<T> &M, const Dual2<Imath::Vec3<S> > &src,
             Dual2<Imath::Vec3<S> > &dst)
 {
-    Dual2<float> src0 = comp(src,0), src1 = comp(src,1), src2 = comp(src,2);
+	// Avoid aliasing issues
+    //Dual2<float> src0 = comp(src,0), src1 = comp(src,1), src2 = comp(src,2);
+	Dual2<float> src0(src.val().x, src.dx().x, src.dy().x);
+	Dual2<float> src1(src.val().y, src.dx().y, src.dy().y);
+	Dual2<float> src2(src.val().z, src.dx().z, src.dy().z);
     Dual2<S> a = src0 * M[0][0] + src1 * M[1][0] + src2 * M[2][0];
     Dual2<S> b = src0 * M[0][1] + src1 * M[1][1] + src2 * M[2][1];
     Dual2<S> c = src0 * M[0][2] + src1 * M[1][2] + src2 * M[2][2];
     dst = make_Vec3 (a, b, c);
 }
 
-inline void robust_multVecMatrix(const Matrix44& x, const Imath::Vec3<float>& src, Imath::Vec3<float>& dst)
+OSL_INLINE void robust_multVecMatrix(const Matrix44& x, const Imath::Vec3<float>& src, Imath::Vec3<float>& dst)
 {
-   float a = src[0] * x[0][0] + src[1] * x[1][0] + src[2] * x[2][0] + x[3][0];
-   float b = src[0] * x[0][1] + src[1] * x[1][1] + src[2] * x[2][1] + x[3][1];
-   float c = src[0] * x[0][2] + src[1] * x[1][2] + src[2] * x[2][2] + x[3][2];
-   float w = src[0] * x[0][3] + src[1] * x[1][3] + src[2] * x[2][3] + x[3][3];
+	// Avoid aliasing issues
+//   float a = src[0] * x[0][0] + src[1] * x[1][0] + src[2] * x[2][0] + x[3][0];
+//   float b = src[0] * x[0][1] + src[1] * x[1][1] + src[2] * x[2][1] + x[3][1];
+//   float c = src[0] * x[0][2] + src[1] * x[1][2] + src[2] * x[2][2] + x[3][2];
+//   float w = src[0] * x[0][3] + src[1] * x[1][3] + src[2] * x[2][3] + x[3][3];
+   float a = src.x * x[0][0] + src.y * x[1][0] + src.z * x[2][0] + x[3][0];
+   float b = src.x * x[0][1] + src.y * x[1][1] + src.z * x[2][1] + x[3][1];
+   float c = src.x * x[0][2] + src.y * x[1][2] + src.z * x[2][2] + x[3][2];
+   float w = src.x * x[0][3] + src.y * x[1][3] + src.z * x[2][3] + x[3][3];
 
    if (w != 0) {
       dst.x = a / w;
@@ -157,7 +166,7 @@ inline void robust_multVecMatrix(const Matrix44& x, const Imath::Vec3<float>& sr
 
 /// Multiply a matrix times a vector with derivatives to obtain
 /// a transformed vector with derivatives.
-inline void
+OSL_INLINE void
 robust_multVecMatrix (const Matrix44 &M, const Dual2<Vec3> &in, Dual2<Vec3> &out)
 {
     // Rearrange into a Vec3<Dual2<float> >
@@ -188,12 +197,20 @@ robust_multVecMatrix (const Matrix44 &M, const Dual2<Vec3> &in, Dual2<Vec3> &out
 
 /// Multiply a matrix times a direction with derivatives to obtain
 /// a transformed direction with derivatives.
-inline void
+// flatten is workaround to enable inlining of non-inlined methods
+OSL_INLINE OSL_CLANG_ATTRIBUTE(flatten) void
 multDirMatrix (const Matrix44 &M, const Dual2<Vec3> &in, Dual2<Vec3> &out)
 {
     M.multDirMatrix (in.val(), out.val());
     M.multDirMatrix (in.dx(), out.dx());
     M.multDirMatrix (in.dy(), out.dy());
+}
+
+// To be allow usage in templates, provide a Vec3 version
+OSL_INLINE OSL_CLANG_ATTRIBUTE(flatten) void
+multDirMatrix (const Matrix44 &M, const Vec3 &in, Vec3 &out)
+{
+    M.multDirMatrix (in, out);
 }
 
 
@@ -209,13 +226,13 @@ template<> struct Color3FromScalar<Dual2<float> > { typedef Dual2<Color3> type; 
 
 /// A uniform way to assemble a Color3 from float and a Dual2<Color3>
 /// from Dual2<float>.
-inline Color3
+OSL_INLINE Color3
 make_Color3 (float x, float y, float z)
 {
     return Color3 (x, y, z);
 }
 
-inline Dual2<Color3>
+OSL_INLINE Dual2<Color3>
 make_Color3 (const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z)
 {
     return Dual2<Color3> (Color3 (x.val(), y.val(), z.val()),
@@ -227,31 +244,31 @@ make_Color3 (const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z
 
 /// Various operator* permuations between Dual2<float> and Dual2<Vec3> 
 // datatypes.
-inline Dual2<Vec3> 
+OSL_INLINE Dual2<Vec3>
 operator* (float a, const Dual2<Vec3> &b)
 {
     return Dual2<Vec3>(a*b.val(), a*b.dx(), a*b.dy());
 }
 
-inline Dual2<Vec3> 
+OSL_INLINE Dual2<Vec3>
 operator* (const Dual2<Vec3> &a, float b)
 {
     return Dual2<Vec3>(a.val()*b, a.dx()*b, a.dy()*b);
 }
 
-inline Dual2<Vec3> 
+OSL_INLINE Dual2<Vec3>
 operator* (const Vec3 &a, const Dual2<float> &b)
 {
     return Dual2<Vec3>(a*b.val(), a*b.dx(), a*b.dy());
 }
 
-inline Dual2<Vec3>
+OSL_INLINE Dual2<Vec3>
 operator* (const Dual2<float> &b, const Vec3 &a)
 {
     return Dual2<Vec3>(a*b.val(), a*b.dx(), a*b.dy());
 }
 
-inline Dual2<Vec3>
+OSL_INLINE Dual2<Vec3>
 operator* (const Dual2<Vec3> &a, const Dual2<float> &b)
 {
     return Dual2<Vec3>(a.val()*b.val(), 
@@ -259,7 +276,7 @@ operator* (const Dual2<Vec3> &a, const Dual2<float> &b)
                        a.val()*b.dy() + a.dy()*b.val());
 }
 
-inline Dual2<Vec3> 
+OSL_INLINE Dual2<Vec3>
 operator* (const Dual2<float> &b, const Dual2<Vec3> &a)
 {
     return Dual2<Vec3>(a.val()*b.val(), 
@@ -268,7 +285,7 @@ operator* (const Dual2<float> &b, const Dual2<Vec3> &a)
 }
 
 
-inline Dual2<float>
+OSL_INLINE Dual2<float>
 dot (const Dual2<Vec3> &a, const Dual2<Vec3> &b)
 {
     Dual2<float> ax (a.val().x, a.dx().x, a.dy().x);
@@ -282,7 +299,7 @@ dot (const Dual2<Vec3> &a, const Dual2<Vec3> &b)
 
 
 
-inline Dual2<float>
+OSL_INLINE Dual2<float>
 dot (const Dual2<Vec3> &a, const Vec3 &b)
 {
     Dual2<float> ax (a.val().x, a.dx().x, a.dy().x);
@@ -293,7 +310,7 @@ dot (const Dual2<Vec3> &a, const Vec3 &b)
 
 
 
-inline Dual2<float>
+OSL_INLINE Dual2<float>
 dot (const Vec3 &a, const Dual2<Vec3> &b)
 {
     Dual2<float> bx (b.val().x, b.dx().x, b.dy().x);
@@ -304,7 +321,7 @@ dot (const Vec3 &a, const Dual2<Vec3> &b)
 
 
 
-inline Dual2<float>
+OSL_INLINE Dual2<float>
 dot (const Dual2<Vec2> &a, const Dual2<Vec2> &b)
 {
     Dual2<float> ax (a.val().x, a.dx().x, a.dy().x);
@@ -316,7 +333,7 @@ dot (const Dual2<Vec2> &a, const Dual2<Vec2> &b)
 
 
 
-inline Dual2<float>
+OSL_INLINE Dual2<float>
 dot (const Dual2<Vec2> &a, const Vec2 &b)
 {
     Dual2<float> ax (a.val().x, a.dx().x, a.dy().x);
@@ -326,7 +343,7 @@ dot (const Dual2<Vec2> &a, const Vec2 &b)
 
 
 
-inline Dual2<float>
+OSL_INLINE Dual2<float>
 dot (const Vec2 &a, const Dual2<Vec2> &b)
 {
     Dual2<float> bx (b.val().x, b.dx().x, b.dy().x);
@@ -336,7 +353,7 @@ dot (const Vec2 &a, const Dual2<Vec2> &b)
 
 
 
-inline Dual2<Vec3>
+OSL_INLINE Dual2<Vec3>
 cross (const Dual2<Vec3> &a, const Dual2<Vec3> &b)
 {
     Dual2<float> ax (a.val().x, a.dx().x, a.dy().x);
@@ -357,7 +374,7 @@ cross (const Dual2<Vec3> &a, const Dual2<Vec3> &b)
 
 
 
-inline Dual2<float>
+OSL_INLINE Dual2<float>
 length (const Dual2<Vec3> &a)
 {
     Dual2<float> ax (a.val().x, a.dx().x, a.dy().x);
@@ -368,7 +385,7 @@ length (const Dual2<Vec3> &a)
 
 
 
-inline Dual2<Vec3>
+OSL_INLINE Dual2<Vec3>
 normalize (const Dual2<Vec3> &a)
 {
     if (a.val().x == 0 && a.val().y == 0 && a.val().z == 0) {
@@ -391,7 +408,7 @@ normalize (const Dual2<Vec3> &a)
 
 
 
-inline Dual2<float>
+OSL_INLINE Dual2<float>
 distance (const Dual2<Vec3> &a, const Dual2<Vec3> &b)
 {
     return length (a - b);

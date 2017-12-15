@@ -52,6 +52,7 @@ static ustring u_nop    ("nop"),
                u_while  ("while"),
                u_dowhile("dowhile"),
                u_functioncall ("functioncall"),
+               u_functioncall_nr("functioncall_nr"),
                u_break ("break"),
                u_continue ("continue"),
                u_return ("return"),
@@ -119,6 +120,7 @@ RuntimeOptimizer::RuntimeOptimizer (ShadingSystemImpl &shadingsys,
       m_opt_assign(shadingsys.m_opt_assign),
       m_opt_mix(shadingsys.m_opt_mix),
       m_opt_middleman(shadingsys.m_opt_middleman),
+      m_keep_no_return_function_calls(shadingsys.m_llvm_debugging_symbols),
       m_pass(0),
       m_next_newconst(0), m_next_newtemp(0),
       m_stat_opt_locking_time(0), m_stat_specialization_time(0),
@@ -489,6 +491,21 @@ RuntimeOptimizer::turn_into_nop (int begin, int end, string_view why)
     if (debug() > 1 && changed)
         debug_turn_into (inst()->ops()[begin], end-begin, "nop", -1, -1, -1, why);
     return changed;
+}
+
+// Turn the op into a no-op functioncall
+// We keep want to keep the jumps indices so we can correctly
+// model an inlined function call for the debugger
+int
+RuntimeOptimizer::turn_into_functioncall_nr (Opcode &op, string_view why)
+{
+    if (op.opname() == u_functioncall) {
+        if (debug() > 1)
+            debug_turn_into (op, 1, "functioncall_nr", -1, -1, -1, why);
+        op.transmute_opname (u_functioncall_nr);
+        return 1;
+    }
+    return 0;
 }
 
 
@@ -1066,6 +1083,11 @@ OSOProcessorBase::find_basic_blocks ()
 
     for (size_t opnum = 0;  opnum < code.size();  ++opnum) {
         Opcode &op (code[opnum]);
+        if (op.opname() == u_functioncall_nr)
+        {   // Treat the 'no return' function call as if it were a nop.
+            // we use later to generate correct inline debug information.
+            continue;
+        }
         // Anyplace that's the target of a jump instruction starts a basic block
         for (int j = 0;  j < (int)Opcode::max_jumps;  ++j) {
             if (op.jump(j) >= 0)
@@ -1218,7 +1240,7 @@ RuntimeOptimizer::simple_sym_assign (int sym, int opnum)
         FastIntMap::iterator i = m_stale_syms.find(sym);
         if (i != m_stale_syms.end()) {
             Opcode &uselessop (inst()->ops()[i->second]);
-            if (uselessop.opname() != u_nop)
+            if (uselessop.opname() != u_nop && uselessop.opname() != u_functioncall_nr)
                 turn_into_nop (uselessop,
                            debug() > 1 ? Strutil::format("remove stale value assignment to %s, reassigned on op %d",
                                                          opargsym(uselessop,0)->name(), opnum).c_str() : "");
@@ -1574,7 +1596,7 @@ RuntimeOptimizer::next_block_instruction (int opnum)
 {
     int end = (int)inst()->ops().size();
     for (int n = opnum+1; n < end && m_bblockids[n] == m_bblockids[opnum]; ++n)
-        if (inst()->ops()[n].opname() != u_nop)
+        if (inst()->ops()[n].opname() != u_nop && inst()->ops()[n].opname() != u_functioncall_nr)
             return n;   // Found it!
     return 0;   // End of ops or end of basic block
 }
@@ -1788,7 +1810,7 @@ RuntimeOptimizer::mark_outgoing_connections ()
     	// vectorization report "-qopt-report=5 -qopt-report-phase=vec"
     	// where autovectorizes fails (which is fine) but reports 
     	// an error (which is not).
-    	OSL_INTEL_PRAGMA("novector")    	
+    	OSL_INTEL_PRAGMA(novector)
         for (auto&& c : group()[lay]->m_connections)
             if (c.srclayer == layer()) {
                 inst()->symbol(c.src.param)->connected_down (true);
@@ -2121,7 +2143,7 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop,
             }
         }
         // Nothing below here to do for no-ops, take early out.
-        if (op->opname() == u_nop)
+        if (op->opname() == u_nop || op->opname() == u_functioncall_nr)
             continue;
         // De-alias the readable args to the op and figure out if
         // there are any constants involved.
@@ -2172,7 +2194,7 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop,
             break;
         // Peephole optimization involving pair of instructions (the second
         // instruction will be in the same basic block.
-        if (optimize() >= 2 && m_opt_peephole && op->opname() != u_nop) {
+        if (optimize() >= 2 && m_opt_peephole && op->opname() != u_nop && op->opname() != u_functioncall_nr) {
             // Find the next instruction in the same basic block
             int op2num = next_block_instruction (opnum);
             if (op2num) {

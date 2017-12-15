@@ -112,6 +112,52 @@ test ()
               n1/n2, sin2/sin1);
 
     }
+    
+    printf ("Masked Varying:\n");
+    if (P[0] > 0.5) 
     {
+        float x = u;
+        float y = v;
+        float z = u+v;
+
+        printf ("   hypot (%g, %g) = %g\n", x, y, hypot(x,y));
+        printf ("   hypot (%g, %g, %g) = %g\n", x, y, z, hypot(x,y,z));
+        vector vI = vector(u,-2,0);
+        vI = normalize(vI);
+        vector vN = vector(v, 1, 0);
+        vN = normalize(vN);
+        printf ("   reflect (%g, %g) =  %g\n", vI, vN, pretty(reflect (vI, vN)));
+
+        float n1 = 1.0;
+        float n2 = 1.33;
+        float eta = n1/n2;
+        vI = vector(u+0.5, v-0.5, -1.0);
+        vN = vector(0,0,1);
+        vI = normalize(vI);
+        vector rR = refract(vI, vN, eta);
+        printf ("   refract (%g, %g, %g) =  %g\n", vI, vN, eta, rR);
+        float cos_incid_angle = dot(vI,vN);
+        float cos_refr_angle  = dot(rR, -vN);
+        float sin1 = sqrt(1.0 - cos_incid_angle*cos_incid_angle);
+        float sin2 = sqrt(1.0 - cos_refr_angle*cos_refr_angle);
+        //  n1/n2 = sin(theta2)/sin(theta1);
+        printf("   --> verify refract():  %g/%g = sin(%g)/sin(%g) => %g ?= %g\n",
+              n1,n2,degrees(asin(sin2)),degrees(asin(sin1)),
+              n1/n2, sin2/sin1);
+        float Kr, Kt;
+        vector fR, fT;
+        fresnel(vI, vN, eta, Kr, Kt, fR, fT);
+        printf ("   fresnel() -> Kr= %g  Kt = %g  R = %g  T = %g\n", Kr, Kt,
+                pretty(fR), pretty(fT)); 
+        cos_incid_angle = dot(vI,vN);
+        cos_refr_angle  = dot(fT, -vN);
+        sin1 = sqrt(1.0 - cos_incid_angle*cos_incid_angle);
+        sin2 = sqrt(1.0 - cos_refr_angle*cos_refr_angle);
+        //  n1/n2 = sin(theta2)/sin(theta1);
+        printf("   --> verify fresnel():  %g/%g = sin(%g)/sin(%g) => %g ?= %g\n",
+              n1,n2,degrees(asin(sin2)),degrees(asin(sin1)),
+              n1/n2, sin2/sin1);
+
     }
+    
 }

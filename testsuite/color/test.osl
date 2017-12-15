@@ -58,4 +58,17 @@ test (color cparam = color (.1, .7, .2),
     printf ("  luminance(%g) = %g\n", c, luminance(c));
     c = 0.5;
     printf ("  luminance(%g) = %g\n", c, luminance(c));
+    
+    // varying result
+    float wl = luminance(c);
+    wl += P[0]; // make wl varying by adding a varying value to it
+    printf ("  P[0] + luminance(%g) = %g\n", c, wl);
+    
+    // varying 
+    printf ("  luminance(%g) = %g\n", P[0], luminance(P[0]));
+    
+    // varying differential
+    float dl = luminance(P);
+    printf ("  luminance(%g) = %g  Dx(%g) Dy(%g) \n", P, dl, Dx(dl), Dy(dl));
+            
 }

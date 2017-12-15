@@ -46,6 +46,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/refcnt.h>
 
 #include "OSL/genclosure.h"
+#include "OSL/llvm_util.h"
 #include "OSL/oslexec.h"
 #include "OSL/oslclosure.h"
 #include "osl_pvt.h"
@@ -79,6 +80,7 @@ struct PerThreadInfo
     ShadingContext *pop_context ();  ///< Get the pool top and then pop
 
     std::stack<ShadingContext *> context_pool;
+    LLVM_Util::PerThreadInfo llvm_thread_info;
 };
 
 
@@ -133,6 +135,7 @@ void print_closure (std::ostream &out, const ClosureColor *closure, ShadingSyste
 /// Signature of the function that LLVM generates to run the shader
 /// group.
 typedef void (*RunLLVMGroupFunc)(void* /* shader globals */, void*);
+typedef void (*RunLLVMGroupFuncWide)(void* /* shader globals */, void*, int run_mask_value);
 
 /// Signature of a constant-folding method
 typedef int (*OpFolder) (RuntimeOptimizer &rop, int opnum);
@@ -601,6 +604,8 @@ public:
     int llvm_debug () const { return m_llvm_debug; }
     int llvm_debug_layers () const { return m_llvm_debug_layers; }
     int llvm_debug_ops () const { return m_llvm_debug_ops; }
+    int llvm_debugging_symbols () const { return m_llvm_debugging_symbols; }
+    int llvm_profiling_events () const { return m_llvm_profiling_events; }
     bool fold_getattribute () const { return m_opt_fold_getattribute; }
     bool opt_texture_handle () const { return m_opt_texture_handle; }
     int opt_passes() const { return m_opt_passes; }
@@ -802,6 +807,8 @@ private:
     int m_llvm_debug;                     ///< More LLVM debugging output
     int m_llvm_debug_layers;              ///< Add layer enter/exit printfs
     int m_llvm_debug_ops;                 ///< Add printfs to every op
+    int m_llvm_debugging_symbols;         ///< Generate GDB compatible debug info during JIT
+    int m_llvm_profiling_events;          ///< Emit Intel profiling events during JIT
     ustring m_debug_groupname;            ///< Name of sole group to debug
     ustring m_debug_layername;            ///< Name of sole layer to debug
     ustring m_opt_layername;              ///< Name of sole layer to optimize
@@ -1475,23 +1482,23 @@ public:
     }
 
     // Hold onto wide versions of llvm functions side by side with scalar
-    RunLLVMGroupFunc llvm_compiled_wide_version() const {
+    RunLLVMGroupFuncWide llvm_compiled_wide_version() const {
         return m_llvm_compiled_wide_version;
     }
-    void llvm_compiled_wide_version (RunLLVMGroupFunc func) {
+    void llvm_compiled_wide_version (RunLLVMGroupFuncWide func) {
         m_llvm_compiled_wide_version = func;
     }
-    RunLLVMGroupFunc llvm_compiled_wide_init() const {
+    RunLLVMGroupFuncWide llvm_compiled_wide_init() const {
         return m_llvm_compiled_wide_init;
     }
-    void llvm_compiled_wide_init (RunLLVMGroupFunc func) {
+    void llvm_compiled_wide_init (RunLLVMGroupFuncWide func) {
         m_llvm_compiled_wide_init = func;
     }
-    RunLLVMGroupFunc llvm_compiled_wide_layer (int layer) const {
+    RunLLVMGroupFuncWide llvm_compiled_wide_layer (int layer) const {
         return layer < (int)m_llvm_compiled_wide_layers.size()
                             ? m_llvm_compiled_wide_layers[layer] : NULL;
     }
-    void llvm_compiled_wide_layer (int layer, RunLLVMGroupFunc func) {
+    void llvm_compiled_wide_layer (int layer, RunLLVMGroupFuncWide func) {
         m_llvm_compiled_wide_layers.resize ((size_t)nlayers(), NULL);
         if (layer < nlayers())
             m_llvm_compiled_wide_layers[layer] = func;
@@ -1576,9 +1583,9 @@ private:
     RunLLVMGroupFunc m_llvm_compiled_init;
     std::vector<RunLLVMGroupFunc> m_llvm_compiled_layers;
     
-    RunLLVMGroupFunc m_llvm_compiled_wide_version;
-    RunLLVMGroupFunc m_llvm_compiled_wide_init;
-    std::vector<RunLLVMGroupFunc> m_llvm_compiled_wide_layers;
+    RunLLVMGroupFuncWide m_llvm_compiled_wide_version;
+    RunLLVMGroupFuncWide m_llvm_compiled_wide_init;
+    std::vector<RunLLVMGroupFuncWide> m_llvm_compiled_wide_layers;
     
     std::vector<ShaderInstanceRef> m_layers;
     ustring m_name;
@@ -1769,6 +1776,10 @@ public:
 
     void texture_thread_info (TextureSystem::Perthread *t) {
         m_texture_thread_info = t;
+    }
+
+    const LLVM_Util::PerThreadInfo &llvm_thread_info () const {
+        return thread_info()->llvm_thread_info;
     }
 
     TextureOpt *texture_options_ptr () { return &m_textureopt; }

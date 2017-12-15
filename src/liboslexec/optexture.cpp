@@ -271,7 +271,12 @@ osl_texture (void *sg_, const char *name, void *handle,
     OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd;
     bool ok = sg->renderer->texture (USTR(name),
                                      (TextureSystem::TextureHandle *)handle, NULL,
-                                     *opt, sg, s, t, dsdx, dtdx, dsdy, dtdy, 4,
+                                     *opt, sg, s, t, dsdx, dtdx, dsdy, dtdy,
+#ifdef OSL_ALWAYS_TEXTURE_4_CHANNELS
+                                      4,
+#else
+                                      chans + (alpha ? 1 : 0),
+#endif
                                      (float *)&result_simd,
                                      derivs ? (float *)&dresultds_simd : NULL,
                                      derivs ? (float *)&dresultdt_simd : NULL,
@@ -301,7 +306,7 @@ osl_texture (void *sg_, const char *name, void *handle,
     return ok;
 }
 
-void transformWideTextureGradients(BatchedTextureOutputs& outputs,
+OSL_NOINLINE  void transformWideTextureGradients(BatchedTextureOutputs& outputs,
                                    ConstWideAccessor<float> dsdx, ConstWideAccessor<float> dsdy,
                                    ConstWideAccessor<float> dtdx, ConstWideAccessor<float> dtdy)
 {
@@ -311,14 +316,21 @@ void transformWideTextureGradients(BatchedTextureOutputs& outputs,
     ASSERT(has_derivs);
 
     if (resultRef.is<float>()) {
-        OSL_INTEL_PRAGMA("forceinline recursive")
+        OSL_INTEL_PRAGMA(forceinline recursive)
         {
             auto drds = resultRef.maskedDx<float>();
             auto drdt = resultRef.maskedDy<float>();
-            OSL_INTEL_PRAGMA("omp simd simdlen(resultRef.width)")
+			// Workaround clang omp when it can perform a runtime pointer check
+			// to ensure no overlap in output variables
+			// But we can tell clang to assume its safe
+    		OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(resultRef.width))
+    		OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(resultRef.width))
+
             for (int i = 0; i < resultRef.width; ++i) {
-                float drdx = drds[i] * dsdx[i] +  drdt[i] * dtdx[i];
-                float drdy = drds[i] * dsdy[i] +  drdt[i] * dtdy[i];
+				float drdsVal = drds[i];
+            	float drdtVal = drdt[i];
+                float drdx = drdsVal * dsdx[i] +  drdtVal * dtdx[i];
+                float drdy = drdsVal * dsdy[i] +  drdtVal * dtdy[i];
                 drds[i] = drdx;
                 drdt[i] = drdy;
             }
@@ -327,14 +339,18 @@ void transformWideTextureGradients(BatchedTextureOutputs& outputs,
     else {
         // keep assert out of inlined code
         ASSERT(resultRef.is<Color3>());
-        OSL_INTEL_PRAGMA("forceinline recursive")
+        OSL_INTEL_PRAGMA(forceinline recursive)
         {
             auto widedrds = resultRef.maskedDx<Color3>();
             auto widedrdt = resultRef.maskedDy<Color3>();
-            OSL_INTEL_PRAGMA("omp simd simdlen(resultRef.width)")
+			// Workaround clang omp when it cant perform a runtime pointer check
+			// to ensure no overlap in output variables
+			// But we can tell clang to assume its safe
+    		OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(resultRef.width))
+    		OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(resultRef.width))
             for (int i = 0; i < resultRef.width; ++i) {
-                Color3 drdsColor = widedrds[i];
-                Color3 drdtColor = widedrdt[i];
+            	Color3 drdsColor = widedrds[i];
+            	Color3 drdtColor = widedrdt[i];
 
                 widedrds[i] = drdsColor * dsdx[i] +  drdtColor * dtdx[i];
                 widedrdt[i] = drdsColor * dsdy[i] +  drdtColor * dtdy[i];
@@ -343,14 +359,20 @@ void transformWideTextureGradients(BatchedTextureOutputs& outputs,
     }
 
     MaskedDataRef alphaRef = outputs.alpha();
-    OSL_INTEL_PRAGMA("forceinline recursive")
+    OSL_INTEL_PRAGMA(forceinline recursive)
     if (alphaRef.valid() && alphaRef.has_derivs()) {
         auto dads = alphaRef.maskedDx<float>();
         auto dadt = alphaRef.maskedDy<float>();
-        OSL_INTEL_PRAGMA("omp simd simdlen(alphaRef.width)")
+		// Workaround clang omp when it cant perform a runtime pointer check
+        // to ensure no overlap in output variables
+        // But we can tell clang to assume its safe
+		OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(alphaRef.width))
+		OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(alphaRef.width))
         for (int i = 0; i < alphaRef.width; ++i) {
-            float dadx = dads[i] * dsdx[i] +  dadt[i] * dtdx[i];
-            float dady = dads[i] * dsdy[i] +  dadt[i] * dtdy[i];
+        	float dadsVal = dads[i];
+        	float dadtVal = dadt[i];
+            float dadx = dadsVal * dsdx[i] +  dadtVal * dtdx[i];
+            float dady = dadsVal * dsdy[i] +  dadtVal * dtdy[i];
             dads[i] = dadx;
             dadt[i] = dady;
         }
@@ -398,10 +420,10 @@ osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
                                       ConstWideAccessor<float>(dsdy), ConstWideAccessor<float>(dtdy));
     }
 
-    OSL_INTEL_PRAGMA("forceinline recursive")
+    OSL_INTEL_PRAGMA(forceinline recursive)
     if (outputs.errormessage().valid()) {
         auto err = outputs.errormessage().masked<ustring>();
-        OSL_INTEL_PRAGMA("omp simd simdlen(err.width)")
+        OSL_OMP_PRAGMA(omp simd simdlen(err.width))
         for (int i = 0; i < err.width; ++i) {
             if (retVal[i]) {
                 err[i] = Strings::_emptystring_;
@@ -452,10 +474,10 @@ osl_texture_batched (void *sgb_, void *name,
                                       ConstWideAccessor<float>(dsdy), ConstWideAccessor<float>(dtdy));
     }
 
-    OSL_INTEL_PRAGMA("forceinline recursive")
+    OSL_INTEL_PRAGMA(forceinline recursive)
     if (outputs.errormessage().valid()) {
         auto err = outputs.errormessage().masked<ustring>();
-        OSL_INTEL_PRAGMA("omp simd simdlen(err.width)")
+        OSL_OMP_PRAGMA(omp simd simdlen(err.width))
         for (int i = 0; i < err.width; ++i) {
             if (retVal[i]) {
                 err[i] = Strings::_emptystring_;
@@ -635,7 +657,7 @@ osl_get_textureinfo_batched (void *sgb_, void* name,
 
     MaskedDataRef dest(*(const TypeDesc *)attr_type, false, mask, wide_attr_dest);
 
-    Mask retVal = sgb->uniform().renderer->batched()->get_texture_info(sgb, WUSTR(name),
+    Mask retVal = sgb->uniform().renderer->batched()->get_texture_info(sgb, ConstWideAccessor<ustring>(name),
                                                                        0 /*FIXME-ptex*/,
                                                                        USTR(dataname), dest);
     return retVal.value();

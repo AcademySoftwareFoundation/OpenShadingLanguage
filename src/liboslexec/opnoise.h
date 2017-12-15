@@ -189,6 +189,17 @@ OSL_SHADEOP void osl_ ##opname## _dvvdf (char *r, char *x, char *y) {   \
     impl (DVEC(r), Dual2<Vec3>(VEC(x)), DFLOAT(y));                     \
 }
 
+#define NOISE_WIMPL_DERIV_INDIRECT(opname,implname,LANE_COUNT)          \
+OSL_SHADEOP void osl_ ##opname## _w ##LANE_COUNT## dfw ##LANE_COUNT## dv (char *r, char *x) {             \
+    implname impl;                                                      \
+    impl (WideAccessor<Dual2<float>,LANE_COUNT>(r), ConstWideAccessor<Dual2<Vec3>,LANE_COUNT>(x));    \
+}                                                                       \
+                                                                        \
+
+
+#define NOISE_WIMPL_DERIV(opname,implname,LANE_COUNT)                         \
+		NOISE_WIMPL_DERIV_INDIRECT(opname,implname,LANE_COUNT)
+
 
 
 

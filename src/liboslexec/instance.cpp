@@ -93,7 +93,10 @@ ShaderInstance::~ShaderInstance ()
 {
     shadingsys().m_stat_instances -= 1;
 
-    ASSERT (m_instops.size() == 0 && m_instargs.size() == 0);
+    // TODO:  Why is this ASSERT commented out?
+    // Although not sure who/where m_instops would get cleared
+    // ASSERT (m_instops.size() == 0 && m_instargs.size() == 0);
+
     ShadingSystemImpl &ss (shadingsys());
     off_t symmem = vectorbytes (m_instsymbols) + vectorbytes(m_instoverrides);
     off_t parammem = vectorbytes (m_iparams)

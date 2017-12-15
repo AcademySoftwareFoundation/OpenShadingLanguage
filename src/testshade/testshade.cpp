@@ -82,6 +82,7 @@ static std::vector<int> entrylayer_index;
 static std::vector<const ShaderSymbol *> entrylayer_symbols;
 static bool debug = false;
 static bool debug2 = false;
+static bool llvm_debug = false;
 static bool verbose = false;
 static bool runstats = false;
 static bool batched = false;
@@ -141,7 +142,23 @@ set_shadingsys_options ()
 {
     if (shadingsys_options_set)
         return;
-    shadingsys->attribute ("llvm_debug", 2);
+
+    // If benchmarking it isn't necessary to clear the memory.
+    // however for unit tests and tracking down early exit issues
+    // we don't want the previous sample's group data masquerading as correct
+    // values for the next sample, who due to a bug, may not have correct control flow
+    // and not actually write to those values
+    shadingsys->attribute ("clearmemory", 1);
+
+    shadingsys->attribute ("llvm_debug", (llvm_debug ? 2 : 0));
+    OSL_DEV_ONLY(shadingsys->attribute ("llvm_debug", 2));
+
+    // Always generate llvm debugging info
+    shadingsys->attribute ("llvm_debugging_symbols", 1);
+
+    // Always emit llvm Intel profiling events
+    shadingsys->attribute ("llvm_profiling_events", 1);
+
     shadingsys->attribute ("debug", debug2 ? 2 : (debug ? 1 : 0));
     shadingsys->attribute ("compile_report", debug|debug2);
     int opt = 2;  // default
@@ -235,7 +252,7 @@ add_shader (int argc, const char *argv[])
 {
     ASSERT (argc == 1);
     string_view shadername (argv[0]);
-    std::cout << "SHADER NAME=" << shadername << std::endl;
+    OSL_DEV_ONLY(std::cout << "SHADER NAME=" << shadername << std::endl);
 
     set_shadingsys_options ();
 
@@ -453,7 +470,8 @@ set_profile (int argc, const char *argv[])
     shadingsys->attribute ("profile", profile);
 }
 
-
+// HACK ALERT, added next line for debuggin, remove it
+//static bool ignore_batched = false;
 
 static void
 getargs (int argc, const char *argv[])
@@ -467,9 +485,11 @@ getargs (int argc, const char *argv[])
                 "-t %d", &num_threads, "Render using N threads (default: auto-detect)",
                 "--debug", &debug, "Lots of debugging info",
                 "--debug2", &debug2, "Even more debugging info",
+                "--llvm_debug", &llvm_debug, "Turn on LLVM debugging info",
                 "--runstats", &runstats, "Print run statistics",
                 "--stats", &runstats, "",  // DEPRECATED 1.7
-                "--batched", &batched, "Submit batches to ShadingSystem",                  
+			    // HACK ALERT, added next line for debuggin, remove it
+                "--batched", &batched, "Submit batches to ShadingSystem",
                 "--alternate_batched", &alternate_batched, "At the end of each iteration, toggle batched flag (allows testing batched & scalar in the same run)",                  
                 "--vary_pdxdy", &vary_Pdxdy, "populate Dx(P) & Dy(P) with varying values (vs. uniform)",                  
                 "--vary_udxdy", &vary_Udxdy, "populate Dx(U) & Dy(U) with varying values (vs. uniform)",                  
@@ -806,11 +826,11 @@ setup_varying_shaderglobals (ShaderGlobalsBatch & sgb, ShadingSystem *shadingsys
  
 // Had weird behavior if a ShaderGlobals and ShaderGlobalsBatch existed in the
 // same function stack, so broke them out into separate non-inlined helpers
-static __attribute__((noinline)) void
+static OSL_NOINLINE  void
 setup_output_images (ShadingSystem *shadingsys,
 					 ShaderGroupRef &shadergroup);
 
-static __attribute__((noinline)) void
+static OSL_NOINLINE  void
 setup_output_images_batched (ShadingSystem *shadingsys,
                      ShaderGroupRef &shadergroup);
 
@@ -1027,7 +1047,7 @@ setup_output_images_batched (ShadingSystem *shadingsys,
         // shader.
         const ShaderSymbol *sym = shadingsys->find_symbol (*shadergroup, outputvarnames[i]);
         if (!sym) {
-            std::cout << "Output symbol" << outputvars[i]
+            std::cout << "Output symbol " << outputvars[i]
                       << " not found, skipping.\n";
             continue;  // Skip if symbol isn't found
         }
@@ -1149,6 +1169,14 @@ batched_save_outputs (ShadingSystem *shadingsys, ShadingContext *ctx, ShaderGrou
         
         
         if (t.basetype == TypeDesc::FLOAT) {
+        	if (t.aggregate == TypeDesc::MATRIX44) {
+                ASSERT(outputimgs[i]->nchannels() == 16);
+				// If the variable we are outputting is float-based, set it
+				// directly in the output buffer.
+				auto batchResults = shadingsys->symbol_batch_accessor<Matrix44>(*ctx, out_symbol);
+				Matrix44 data = batchResults[batchIndex];
+				outputimgs[i]->setpixel (x, y, reinterpret_cast<const float *>(&data));
+        	}
         	if (t.aggregate == TypeDesc::VEC3) {        	
                 ASSERT(outputimgs[i]->nchannels() == 3);
 				// If the variable we are outputting is float-based, set it
@@ -1271,7 +1299,7 @@ test_group_attributes (ShaderGroup *group)
 
 
 
-void __attribute__((noinline))
+void OSL_NOINLINE
 shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save);
 
 void
@@ -1353,7 +1381,7 @@ shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
 }
 
 
-void __attribute((noinline))
+void OSL_NOINLINE
 batched_shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save);
 
 void
@@ -1613,7 +1641,7 @@ test_shade (int argc, const char *argv[])
     	// fewer threads.  This can lead to oversubscription.
         num_threads = OIIO::Sysutil::hardware_concurrency();
     }
-    std::cout << "num_threads = " << num_threads << std::endl;
+    OSL_DEV_ONLY(std::cout << "num_threads = " << num_threads << std::endl);
 
     // We need to set the global attribute so any helper functions
     // respect our thread count, especially if we wanted only 1

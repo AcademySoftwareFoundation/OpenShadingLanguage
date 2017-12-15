@@ -174,7 +174,7 @@ ShadingContext::execute_cleanup ()
     }
 
     // Process any queued up error messages, warnings, printfs from shaders
- //   process_errors ();
+    process_errors ();
 
     if (shadingsys().m_profile) {
         record_runtime_stats ();   // Transfer runtime stats to the shadingsys
@@ -298,10 +298,19 @@ ShadingContext::execute_batch_init (ShaderGroup &sgroup, ShaderGlobalsBatch &sgb
     	sgb.uniform().renderer = renderer();
         // TODO: consider removing Ci from batched shader globals
     	sgb.uniform().Ci = NULL;
-        RunLLVMGroupFunc run_func = sgroup.llvm_compiled_wide_init();
+    	RunLLVMGroupFuncWide run_func = sgroup.llvm_compiled_wide_init();
         DASSERT (run_func);
         DASSERT (sgroup.llvm_groupdata_wide_size() <= m_heap.size());
-        run_func (&sgb, &m_heap[0]);
+
+        if(sgb.size() > 0) {
+			Mask run_mask(false);
+			for(int ri=0; ri < sgb.size(); ++ri)
+			{
+				run_mask.set_on(ri);
+			}
+
+			run_func (&sgb, &m_heap[0], run_mask.value());
+        }
     }
 
     if (profile)
@@ -324,14 +333,22 @@ ShadingContext::execute_batch_layer (ShaderGlobalsBatch &sgb, int layernumber)
 
     size_t prev_end_of_errors = m_buffered_errors.size();
     
-    RunLLVMGroupFunc run_func = group()->llvm_compiled_wide_layer (layernumber);
+    RunLLVMGroupFuncWide run_func = group()->llvm_compiled_wide_layer (layernumber);
     if (! run_func)
         return false;
 
     ASSERT(pvt::is_aligned<64>(&sgb));    
     ASSERT(pvt::is_aligned<64>(&m_heap[0]));    
     
-    run_func (&sgb, &m_heap[0]);
+    if (sgb.size() > 0) {
+		Mask run_mask(false);
+		for(int ri=0; ri < sgb.size(); ++ri)
+		{
+			run_mask.set_on(ri);
+		}
+
+		run_func (&sgb, &m_heap[0], run_mask.value());
+    }
 
     if (profile)
         m_ticks += timer.ticks();
@@ -447,51 +464,72 @@ ShadingContext::process_errors () const
     // Use a mutex to make sure output from different threads stays
     // together, at least for one shader invocation, rather than being
     // interleaved with other threads.
+    // Usefull even if if not buffering to avoid printfs from interleaving
+    // single line errors
     lock_guard lock (buffered_errors_mutex);
 
-    int boundaryIndex = 0;
-    int errorIndex=0;
-    do {
-    	// We need to process all errors belonging to the same batch before moving on
-    	// to the next to get the output order correct.
-    	ErrorBatch error_batch;
-		if (boundaryIndex < m_buffered_error_batches.size()) {
-			error_batch = m_buffered_error_batches[boundaryIndex++];
-		} else {
-			error_batch.startAt = nerrors;
-			error_batch.endBefore = nerrors;
-		}
-		//TODO: Change to DASSERT
-		ASSERT(error_batch.startAt >= errorIndex);
-		ASSERT(error_batch.endBefore >= errorIndex);
-		ASSERT(error_batch.endBefore >= error_batch.startAt);
-		
-		// Process non-batched errors up to the start of the batch
-		// A mask will all lanes off is how non-batch errors got recorded, just print them out once
-		
-		#pragma noinline
-		process_errors_helper(shadingsys(), m_buffered_errors, errorIndex, error_batch.startAt, 
-			[=](Mask mask)->bool 
-			{ 
+    if (false == m_execution_is_batched) {
+		// A mask will all lanes on is how non-batch errors got recorded,
+    	// just print them out once, can essentially ignore the mask
+		OSL_INTEL_PRAGMA(noinline)
+		process_errors_helper(shadingsys(), m_buffered_errors, 0, nerrors,
+			[=](Mask mask)->bool
+			{
 				//TODO: Change to DASSERT
 				ASSERT(mask.all_on());
 				return true;
 			});
-		errorIndex = error_batch.startAt;
-		
-		// the printf call always sends a valid mask over, it could be 0x0000 to 0xFFFF
+    } else {
 
-		// Now for batched, emit each data lane separately and in the correct order
-		for(int lane_mask=0; lane_mask < Mask::width; ++lane_mask) {
-			#pragma noinline
-			process_errors_helper(shadingsys(), m_buffered_errors, errorIndex, error_batch.endBefore, 
-			    [=](Mask mask)->bool { return mask.is_on(lane_mask);} );    	
-		}
-		errorIndex = error_batch.endBefore;
-	} while (errorIndex < nerrors);
+		int boundaryIndex = 0;
+		int errorIndex=0;
+		do {
+
+			// We need to process all errors belonging to the same batch before moving on
+			// to the next to get the output order correct.
+			ErrorBatch error_batch;
+			if (boundaryIndex < m_buffered_error_batches.size()) {
+				error_batch = m_buffered_error_batches[boundaryIndex++];
+			} else {
+				// No further batches are explicitly defined,
+				// We we must not be buffering, so process the errors as batch
+				// otherwise process as unbatched (so no need to print once per
+				// data lane
+				error_batch.startAt = 0;
+				error_batch.endBefore = nerrors;
+			}
+			//TODO: Change to DASSERT
+			ASSERT(error_batch.startAt == errorIndex);
+			ASSERT(error_batch.endBefore >= errorIndex);
+			ASSERT(error_batch.endBefore >= error_batch.startAt);
+
+			// Process non-batched errors up to the start of the batch
+
+			OSL_INTEL_PRAGMA(noinline)
+			process_errors_helper(shadingsys(), m_buffered_errors, errorIndex, error_batch.startAt,
+				[=](Mask mask)->bool
+				{
+					//TODO: Change to DASSERT
+					ASSERT(mask.all_on());
+					return true;
+				});
+			errorIndex = error_batch.startAt;
+
+			// the printf call always sends a valid mask over, it could be 0x0000 to 0xFFFF
+
+			// Now for batched, process each data lane separately and in the correct order
+			for(int lane_mask=0; lane_mask < Mask::width; ++lane_mask) {
+				OSL_INTEL_PRAGMA(noinline)
+				process_errors_helper(shadingsys(), m_buffered_errors, errorIndex, error_batch.endBefore,
+					[=](Mask mask)->bool { return mask.is_on(lane_mask);} );
+			}
+			errorIndex = error_batch.endBefore;
+		} while (errorIndex < nerrors);
+		
+	    m_buffered_error_batches.clear();
+    }
     
     m_buffered_errors.clear();
-    m_buffered_error_batches.clear();
 }
 
 

@@ -3695,6 +3695,16 @@ LLVMGEN (llvm_gen_functioncall)
     return true;
 }
 
+LLVMGEN (llvm_gen_functioncall_nr)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    ASSERT (op.nargs() == 1);
+
+    // Generate the code for the body of the function
+    rop.build_llvm_code (opnum+1, op.jump(0));
+
+    return true;
+}
 
 
 LLVMGEN (llvm_gen_return)

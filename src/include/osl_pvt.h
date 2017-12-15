@@ -918,6 +918,13 @@ public:
             std::equal(&a.m_jump[0], &a.m_jump[max_jumps], &b.m_jump[0]);
     }
 
+    /// Runtime optimizer may have case to transmute an op to a
+    /// different form.  Only opname is changed.
+    void transmute_opname (ustring opname)
+    {
+    	m_op = opname;
+    }
+
 private:
     ustring m_op;                   ///< Name of opcode
     int m_firstarg;                 ///< Index of first argument

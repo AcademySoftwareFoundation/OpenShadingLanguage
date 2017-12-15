@@ -41,6 +41,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslexec_pvt.h"
 #include "OSL/dual.h"
+#include "OSL/dual_vec.h"
 
 #if defined(_MSC_VER) && _MSC_VER < 1800
 using OIIO::expm1;
@@ -536,6 +537,27 @@ OSL_SHADEOP void osl_luminance_fv_batched(void *sgb, void *out, void *c)
     ((float *)out)[0] = ctx->shadingsys().luminance (((const Color3 *)c)[0]);
 }
 
+OSL_SHADEOP void osl_luminance_w16fv_batched(void *sgb, void *wout_, void *wc_)
+{
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
+
+	ConstUniformAccessor<Color3> wC(wc_);
+
+	WideAccessor<float> wR(wout_);
+
+	// calling a function below, don't bother vectorizing
+	//OSL_OMP_PRAGMA(omp simd simdlen(wR.width))
+	OSL_INTEL_PRAGMA(novector)
+	for(int lane=0; lane < wR.width; ++lane) {
+	    Color3 c = wC[lane];
+
+	    // TODO: investigate removing this function call to enable SIMD
+	    float R = ctx->shadingsys().luminance (c);
+
+	    wR[lane] = R;
+	}
+}
+
 OSL_SHADEOP void osl_luminance_w16fw16v_batched(void *sgb, void *wout_, void *wc_)
 {
     ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
@@ -545,8 +567,8 @@ OSL_SHADEOP void osl_luminance_w16fw16v_batched(void *sgb, void *wout_, void *wc
 	WideAccessor<float> wR(wout_);
 
 	// calling a function below, don't bother vectorizing
-	//OSL_INTEL_PRAGMA("omp simd simdlen(wR.width)")
-	OSL_INTEL_PRAGMA("novector")
+	//OSL_OMP_PRAGMA(omp simd simdlen(wR.width))
+	OSL_INTEL_PRAGMA(novector)
 	for(int lane=0; lane < wR.width; ++lane) {
 	    Color3 c = wC[lane];
 
@@ -566,6 +588,30 @@ OSL_SHADEOP void osl_luminance_dfdv_batched(void *sgb, void *out, void *c)
     ((float *)out)[1] = ctx->shadingsys().luminance (((const Color3 *)c)[1]);
     ((float *)out)[2] = ctx->shadingsys().luminance (((const Color3 *)c)[2]);
 }
+
+OSL_SHADEOP void osl_luminance_w16dfw16dv_batched(void *sgb, void *wout_, void *wc_)
+{
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
+
+	ConstWideAccessor<Dual2<Color3> > wC(wc_);
+
+	WideAccessor<Dual2<float>> wR(wout_);
+
+	// calling a function below, don't bother vectorizing
+	//OSL_OMP_PRAGMA(omp simd simdlen(wR.width))
+	OSL_INTEL_PRAGMA(novector)
+	for(int lane=0; lane < wR.width; ++lane) {
+		Dual2<Color3> c = wC[lane];
+
+	    // TODO: investigate removing this function call to enable SIMD
+		Dual2<float> R(ctx->shadingsys().luminance (c.val()),
+				       ctx->shadingsys().luminance (c.dx()),
+					   ctx->shadingsys().luminance (c.dy()));
+
+	    wR[lane] = R;
+	}
+}
+
 
 
 
@@ -593,8 +639,8 @@ osl_prepend_color_from_w16v_batched (void *sgb, void *c_, const char *from)
 	WideAccessor<Color3> wR(c_);
 
 	// calling a function below, don't bother vectorizing
-	//OSL_INTEL_PRAGMA("omp simd simdlen(wR.width)")
-	OSL_INTEL_PRAGMA("novector")
+	//OSL_OMP_PRAGMA(omp simd simdlen(wR.width))
+	OSL_INTEL_PRAGMA(novector)
 	for(int lane=0; lane < wR.width; ++lane) {
 	    Color3 c = wR[lane];
 

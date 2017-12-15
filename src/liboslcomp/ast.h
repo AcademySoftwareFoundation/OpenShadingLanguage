@@ -364,7 +364,8 @@ protected:
     // It's in the ASTNode base class because it's used from mutiple
     // subclasses.
     Symbol *codegen_struct_initializers (ref init, Symbol *sym,
-                                         bool is_constructor=false);
+                                         bool is_constructor=false,
+                                         Symbol *arrayindex = nullptr);
 
     // Codegen an array assignemnt: lval[index] = src
     // If no index is provided the constant i is used.

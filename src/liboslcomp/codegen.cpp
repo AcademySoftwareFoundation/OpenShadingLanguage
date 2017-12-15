@@ -976,20 +976,28 @@ ASTNode::codegen_initlist (ref init, TypeSpec type, Symbol *sym)
         }
     }
     else if (type.is_structure_array()) {
-        // Remove the array flag
-        TypeSpec elemtype = sym->typespec();
-        elemtype.make_array(0);
-        // Make a temporary to construct into
-        Symbol* tmp = m_compiler->make_temporary(elemtype);
-        StructSpec *structspec = sym->typespec().structspec();
-        ustring dstelem(sym->mangled());
         for (int i = 0; init && i < type.arraylength(); ++i) {
-            // Construct into the temporary
-            Symbol *ctmp = codegen_struct_initializers (init, tmp);
-            // Copy the temporary into the proper indexed element
-            codegen_assign_struct (structspec, dstelem, ustring(ctmp->mangled()),
-                                   m_compiler->make_constant(i), false, 0,
-                                   false);
+            ASTNode* expr = init.get();
+            bool ctor = false;
+            Symbol* dest = sym;
+            switch (expr->nodetype()) {
+                case function_call_node: {
+                    ASTfunction_call* fcall = static_cast<ASTfunction_call*>(expr);
+                    if ((ctor = fcall->is_struct_ctr())) {
+                        expr = fcall->args().get();
+                        ASSERT (expr != nullptr);
+                    }
+                }
+                    break;
+                case compound_initializer_node:
+                    ctor = static_cast<ASTcompound_initializer*>(expr)->canconstruct();
+                    break;
+                default:
+                    break;
+            }
+            codegen_struct_initializers (expr, dest, ctor,
+                                         m_compiler->make_constant(i));
+
             init = init->next();
         }
         if (paraminit)
@@ -1032,7 +1040,7 @@ ASTNode::codegen_initlist (ref init, TypeSpec type, Symbol *sym)
 
 Symbol *
 ASTNode::codegen_struct_initializers (ref init, Symbol *sym,
-                                      bool is_constructor)
+                                      bool is_constructor, Symbol *arrayindex)
 {
     // If we're doing this initialization for shader params for their
     // init ops, we need to take care to set the codegen method names
@@ -1041,15 +1049,15 @@ ASTNode::codegen_struct_initializers (ref init, Symbol *sym,
                       (sym->symtype() == SymTypeParam ||
                        sym->symtype() == SymTypeOutputParam));
 
-    ASSERT (sym->typespec().is_structure());
+    ASSERT (sym->typespec().is_structure_based());
     if (init->nodetype() != compound_initializer_node && !is_constructor) {
         // Just one initializer, it's a whole struct of the right type.
         Symbol *initsym = init->codegen (sym);
         if (initsym != sym) {
             StructSpec *structspec (sym->typespec().structspec());
             codegen_assign_struct (structspec, ustring(sym->mangled()),
-                                   ustring(initsym->mangled()), NULL, true, 0,
-                                   paraminit);
+                                   ustring(initsym->mangled()), arrayindex,
+                                   true, 0, paraminit);
         }
         return sym;
     }
@@ -1065,9 +1073,13 @@ ASTNode::codegen_struct_initializers (ref init, Symbol *sym,
         ustring fieldname = ustring::format ("%s.%s", sym->mangled().c_str(),
                                              field.name.c_str());
         Symbol *fieldsym = m_compiler->symtab().find_exact (fieldname);
-        if (fieldsym->typespec().is_structure()) {
+        if (fieldsym->typespec().is_structure_based() &&
+            (init->nodetype() == type_constructor_node ||
+             init->nodetype() == compound_initializer_node)) {
+            bool ctor = init->nodetype() == type_constructor_node ? true :
+              static_cast<ASTcompound_initializer*>(init.get())->canconstruct();
             // The field is itself a nested struct, so recurse
-            codegen_struct_initializers (init, fieldsym);
+            codegen_struct_initializers (init, fieldsym, ctor, arrayindex);
             continue;
         }
 
@@ -1090,11 +1102,22 @@ ASTNode::codegen_struct_initializers (ref init, Symbol *sym,
             // Initialize the field with a compound initializer
             codegen_initlist (((ASTcompound_initializer *)init.get())->initlist(),
                               field.type, fieldsym);
-        } else {
+        } else if (init->nodetype() == function_call_node &&
+                   static_cast<ASTfunction_call*>(init.get())->is_struct_ctr()) {
+            codegen_struct_initializers (static_cast<ASTfunction_call*>(init.get())->args(),
+                                         fieldsym, true, arrayindex);
+        }
+        else {
             // Initialize the field with a scalar initializer
             Symbol *dest = init->codegen (fieldsym);
-            if (dest != fieldsym)
-                emitcode ("assign", fieldsym, dest);
+            if (dest != fieldsym) {
+                if (!arrayindex)
+                    emitcode ("assign", fieldsym, dest);
+                else {
+                    dest = codegen_aassign (fieldsym->typespec().elementtype(),
+                                            dest, fieldsym, arrayindex);
+                }
+            }
         }
 
         if (paraminit)

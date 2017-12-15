@@ -33,6 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #undef BTYPE
 #endif
 
+using namespace std;
 OSL_NAMESPACE_ENTER
 
 namespace pvt {
@@ -110,11 +111,11 @@ void spline_evaluate(const SplineBasis *spline,
                      const KTYPE *knots,
                      int knot_count, int knot_arraylen)
 {
-    XTYPE x = Clamp(xval, XTYPE(0.0), XTYPE(1.0));
-    int nsegs = ((knot_count - 4) / spline->basis_step) + 1;
-    x = x*(float)nsegs;
+    XTYPE x = Clamp(xval, XTYPE(0.0), XTYPE(1.0)); //SM: x should lie between 0 and 1
+    int nsegs = ((knot_count - 4) / spline->basis_step) + 1; //SM: Why 4
+    x = x*(float)nsegs; //SM: Depends on knot count and basis_step
     float seg_x = removeDerivatives(x);
-    int segnum = (int)seg_x;
+    int segnum = (int)seg_x; //SM: x without derivatives
     if (segnum < 0)
         segnum = 0;
     if (segnum > (nsegs-1))
@@ -122,7 +123,7 @@ void spline_evaluate(const SplineBasis *spline,
 
     if (spline->basis_name == u_constant) {
         // Special case for "constant" basis
-        RTYPE P = removeDerivatives (knots[segnum+1]);
+        RTYPE P = removeDerivatives (knots[segnum+1]); //SM: Where is this defined?
         assignment (result, P);
         return;
     }
@@ -131,12 +132,15 @@ void spline_evaluate(const SplineBasis *spline,
     x = x - float(segnum);
     int s = segnum*spline->basis_step;
 
+  //  printf("knot_count::%d\tnsegs::%d\ts::%d\tsegnum::%d\n", knot_count, nsegs, s, segnum);
+
     // create a functor so we can cleanly(!) extract
     // the knot elements
     extractValueFromArray<CTYPE, KTYPE, knot_derivs> myExtract;
-    CTYPE P[4];
+    CTYPE P[4]; //SM: contains knot elements
     for (int k = 0; k < 4; k++) {
         P[k] = myExtract(knots, knot_arraylen, s + k);
+       // printf("Calculating P[%d]\n",k );
     }
 
     CTYPE tk[4];
@@ -145,6 +149,8 @@ void spline_evaluate(const SplineBasis *spline,
                 spline->basis[k][1] * P[1] +
                 spline->basis[k][2] * P[2] + 
                 spline->basis[k][3] * P[3];
+        //std::cout<<"CTYPE tk[4]"<<std::endl;
+     //  printf("Calculating tk[%d]\n",k );
     }
 
     RTYPE tresult;

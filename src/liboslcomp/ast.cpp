@@ -628,6 +628,8 @@ ASTstructselect::find_fieldsym (int &structid, int &fieldid)
 {
     if (! lvalue()->typespec().is_structure() &&
         ! lvalue()->typespec().is_structure_array()) {
+        error ("type '%s' does not have a member '%s'",
+               type_c_str(lvalue()->typespec()), m_field);
         return NULL;
     }
 

@@ -588,7 +588,28 @@ public:
 
 
 
-class ASTstructselect : public ASTNode
+class ASTfieldselect : public ASTNode
+{
+protected:
+    ASTfieldselect (NodeType type, OSLCompilerImpl *comp, ASTNode *expr,
+                    ustring field) :
+        ASTNode(type, comp, Nothing, expr), m_field(field) {}
+
+    ustring m_field;          ///< Name of the field
+    ustring m_fullname;       ///< Full name of variable and field
+
+public:
+    static ASTfieldselect* create (OSLCompilerImpl *comp, ASTNode *expr,
+                                   ustring field);
+
+    ustring field () const { return m_field; }
+    ustring fullname () const { return m_fullname; }
+    ref lvalue () const { return child (0); }
+};
+
+
+
+class ASTstructselect : public ASTfieldselect
 {
 public:
     ASTstructselect (OSLCompilerImpl *comp, ASTNode *expr, ustring field);
@@ -602,9 +623,7 @@ public:
     /// field.
     void codegen_assign (Symbol *dest, Symbol *src);
 
-    ref lvalue () const { return child (0); }
-    ustring field () const { return m_field; }
-    ustring fieldname () const { return m_fieldname; }
+    ustring fieldname () const { return fullname(); }
     Symbol *fieldsym () const { return m_fieldsym; }
 
 private:
@@ -613,10 +632,8 @@ private:
                                  TypeSpec &structtype);
     Symbol *codegen_index ();
 
-    ustring m_field;         ///< Name of the field
     int m_structid;          ///< index of the structure
     int m_fieldid;           ///< index of the field within the structure
-    ustring m_fieldname;     ///< Name of the field variable
     Symbol *m_fieldsym;      ///< Symbol of the field variable
 };
 

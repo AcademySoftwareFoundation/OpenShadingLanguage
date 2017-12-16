@@ -694,12 +694,12 @@ ASTindex::childname (size_t i) const
 
 ASTstructselect::ASTstructselect (OSLCompilerImpl *comp, ASTNode *expr,
                                   ustring field)
-    : ASTNode (structselect_node, comp, 0, expr), m_field(field),
+    : ASTfieldselect (structselect_node, comp, expr, field),
       m_structid(-1), m_fieldid(-1), m_fieldsym(NULL)
 {
     m_fieldsym = find_fieldsym (m_structid, m_fieldid);
     if (m_fieldsym) {
-        m_fieldname = m_fieldsym->name();
+        m_fullname = m_fieldsym->name();
         m_typespec = m_fieldsym->typespec();
     }
 }
@@ -712,12 +712,7 @@ ASTstructselect::ASTstructselect (OSLCompilerImpl *comp, ASTNode *expr,
 Symbol *
 ASTstructselect::find_fieldsym (int &structid, int &fieldid)
 {
-    if (! lvalue()->typespec().is_structure() &&
-        ! lvalue()->typespec().is_structure_array()) {
-        error ("type '%s' does not have a member '%s'",
-               type_c_str(lvalue()->typespec()), m_field);
-        return NULL;
-    }
+    ASSERT (lvalue()->typespec().is_structure_based());
 
     ustring structsymname;
     TypeSpec structtype;
@@ -763,8 +758,7 @@ ASTstructselect::find_structsym (ASTNode *structnode, ustring &structname,
     // or array of structs) down to a symbol that represents the
     // particular field.  In the process, we set structname and its
     // type structtype.
-    ASSERT (structnode->typespec().is_structure() ||
-            structnode->typespec().is_structure_array());
+    ASSERT (structnode->typespec().is_structure_based());
     if (structnode->nodetype() == variable_ref_node) {
         // The structnode is a top-level struct variable
         ASTvariable_ref *var = (ASTvariable_ref *) structnode;
@@ -809,6 +803,21 @@ ASTstructselect::print (std::ostream &out, int indentlevel) const
     out << "select " << field() << "\n";
 }
 
+
+
+ASTfieldselect* ASTfieldselect::create (OSLCompilerImpl *comp, ASTNode *expr,
+                                        ustring field) {
+    if (expr->typespec().is_structure_based())
+        return new ASTstructselect (comp, expr, field);
+
+    comp->error (comp->filename(), comp->lineno(),
+                 "type '%s' does not have a member '%s'",
+                 comp->type_c_str(expr->typespec()), field);
+
+    // Don't leak expr node
+    delete expr;
+    return nullptr;
+}
 
 
 const char *

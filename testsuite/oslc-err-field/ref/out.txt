@@ -1,3 +1,6 @@
-test.osl:8: error: type 'color' does not have a member 'nope'
-test.osl:11: error: struct type 'custom' does not have a member 'bad'
+test.osl:11: error: type 'color' does not have a member 'invalid'
+test.osl:12: error: type 'color' does not have a member 'nope'
+test.osl:15: error: struct type 'custom' does not have a member 'bad'
+test.osl:18: error: type 'color' does not have a member 'sinvalid'
+test.osl:19: error: type 'color' does not have a member 'error'
 FAILED test.osl

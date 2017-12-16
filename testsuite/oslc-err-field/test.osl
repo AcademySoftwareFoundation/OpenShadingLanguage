@@ -1,12 +1,20 @@
 // Test invalid field selections in function calls
 
 struct custom { float field; };
+struct A { color valid; };
+struct B { A a; };
+struct C { B b; };
 
 shader test ()
 {
     color c = color(4,3,2);
+    c.invalid = 45;
     printf("c.nope: %g\n", c.nope);
 
     custom cc = { 1 };
     printf("cc.bad: %g\n", cc.bad);
+
+    C nested;
+    nested.b.a.valid.sinvalid = color(1);
+    printf("nested.b.a.valid.error: %g\n", nested.b.a.valid.error);
 }

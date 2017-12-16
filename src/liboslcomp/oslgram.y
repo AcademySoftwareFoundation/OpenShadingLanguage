@@ -780,7 +780,7 @@ id_or_field
                 }
         | variable_lvalue '.' IDENTIFIER
                 {
-                    $$ = new ASTstructselect (oslcompiler, $1, ustring($3));
+                    $$ = ASTfieldselect::create (oslcompiler, $1, ustring($3));
                 }
         ;
 

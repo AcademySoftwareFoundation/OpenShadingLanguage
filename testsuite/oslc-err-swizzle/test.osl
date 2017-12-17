@@ -1,0 +1,10 @@
+// Error on invalid swizzle operations
+
+shader test ()
+{
+    color c;
+
+    c.rg0 = color(1);
+    c.01r = color(1);
+    // c.0;
+}

@@ -865,9 +865,9 @@ ASTswizzle::print (std::ostream &out, int indentlevel) const
 
 
 ASTNode* ASTfieldselect::create (OSLCompilerImpl *comp, ASTNode *expr,
-                                 ustring field)
+                                 ustring field, bool swizzle)
 {
-    if (expr->typespec().is_structure_based())
+    if (!swizzle && expr->typespec().is_structure_based())
         return new ASTstructselect (comp, expr, field);
 
     const TypeSpec &type = expr->nodetype() != structselect_node ? expr->typespec() :
@@ -883,6 +883,8 @@ ASTNode* ASTfieldselect::create (OSLCompilerImpl *comp, ASTNode *expr,
         int indexes[3];
         switch (ASTswizzle::indices (field, indexes, 3, true)) {
             case 1: {
+                // c.0 && c.1 not allowed
+                ASSERT (indexes[0] >= 0);
                 if (!index)
                     return new ASTindex (comp, expr, new ASTliteral (comp, indexes[0]));
                 index->extend(new ASTliteral (comp, indexes[0]));
@@ -890,6 +892,7 @@ ASTNode* ASTfieldselect::create (OSLCompilerImpl *comp, ASTNode *expr,
             }
 
             case 3: {
+                bool allconst = true;
                 // Don't leak soon to be unused expr node
                 std::unique_ptr<ASTNode> cleanup(index);
                 ASTNode* index0 = nullptr;
@@ -901,6 +904,7 @@ ASTNode* ASTfieldselect::create (OSLCompilerImpl *comp, ASTNode *expr,
                 ASTNode *args[3];
                 for (int i = 0; i < 3; ++i) {
                     if (indexes[i] >= 0) {
+                        allconst = false;
                         args[i] = new ASTliteral (comp, indexes[i]);
                         if (i == 0 && index) {
                             // Re-use expr by extending the ASTindex.
@@ -918,6 +922,14 @@ ASTNode* ASTfieldselect::create (OSLCompilerImpl *comp, ASTNode *expr,
                 }
                 args[0]->append (args[1]);
                 args[1]->append (args[2]);
+
+                if (allconst) {
+                    // return a type constructor instead of a swizzle
+                    ASSERT (!cleanup);
+                    // initial expression will be unused
+                    cleanup.reset (expr);
+                    return new ASTtype_constructor (comp, type, args[0]);
+                }
                 return new ASTswizzle (comp, args[0], field);
             }
 

@@ -606,7 +606,8 @@ protected:
     ustring m_fullname;       ///< Full name of variable and field
 
 public:
-    static ASTNode* create (OSLCompilerImpl *comp, ASTNode *expr, ustring field);
+    static ASTNode* create (OSLCompilerImpl *comp, ASTNode *expr, ustring field,
+                            bool swizzle = false);
 
     ustring field () const { return m_field; }
     ustring fullname () const { return m_fullname; }

@@ -6,6 +6,8 @@ c.r00: 1 0 0
 c.g01: 2 0 1
 c.b11: 3 1 1
 c.bg1: 3 2 1
+c.01g: 0 1 2
+c.101: 1 0 1
 c.rgb = c.brg: 3 1 2
 c.rgb = c.brg: 2 3 1
 c.rgb = c.brg: 1 2 3

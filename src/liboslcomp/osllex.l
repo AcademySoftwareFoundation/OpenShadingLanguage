@@ -80,6 +80,11 @@ STR     \"(\\.|[^\\"\n])*\"
         /* " This extra quote fixes emacs syntax highlighting on this file */
  /* Identifier: alphanumeric, may contain digits after the first character */
 IDENT           ({ALPHA}|[_])({ALPHA}|{DIGIT}|[_])*
+ /* Swizzle that starts with a constant value
+    Needs to include the . selector to take precedence over FLT */
+SWIZZLE         (\.[01][01rgbxyz]{2})
+
+
  /* C preprocessor (cpp) directives */
 CPP             ^[ \t]*#.*\n
 CPLUSCOMMENT    \/\/.*\n
@@ -195,6 +200,11 @@ void preprocess (const char *yytext);
                             yylval.s = ustring(yytext).c_str();
                             SETLINE;
                             return IDENTIFIER;
+                        }
+{SWIZZLE}               {
+                            yylval.s = ustring(yytext+1).c_str();
+                            SETLINE;
+                            return SWIZZLE_IDENTIFIER;
                         }
 
  /* Literal values */

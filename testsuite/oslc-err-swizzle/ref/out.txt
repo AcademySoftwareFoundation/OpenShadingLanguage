@@ -1,0 +1,3 @@
+test.osl:7: error: Can't assign via = to something that isn't an lvalue
+test.osl:8: error: Can't assign via = to something that isn't an lvalue
+FAILED test.osl

@@ -4,6 +4,10 @@
 
 shader swizzle ()
 {
+    // Make sure floats don't generate a swizzle operation.
+    float noswizzle = 1.101;
+    noswizzle = 1.001;
+
     color c = color(1,2,3);
     printf("c: %g\n", c);
 
@@ -19,6 +23,8 @@ shader swizzle ()
     printf("c.g01: %g\n", c.g01);
     printf("c.b11: %g\n", c.b11);
     printf("c.bg1: %g\n", c.bg1);
+    printf("c.01g: %g\n", c.01g);
+    printf("c.101: %g\n", c.101);
 
     c = c.brg;
     printf("c.rgb = c.brg: %g\n", c);

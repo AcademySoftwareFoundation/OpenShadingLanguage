@@ -83,7 +83,7 @@ static std::stack<TypeSpec> typespec_stack; // just for function_declaration
 
 
 // Define the terminal symbols.
-%token <s> IDENTIFIER STRING_LITERAL
+%token <s> IDENTIFIER STRING_LITERAL SWIZZLE_IDENTIFIER
 %token <i> INT_LITERAL
 %token <f> FLOAT_LITERAL
 %token <i> COLORTYPE FLOATTYPE INTTYPE MATRIXTYPE 
@@ -777,6 +777,10 @@ id_or_field
         : IDENTIFIER 
                 {
                     $$ = new ASTvariable_ref (oslcompiler, ustring($1));
+                }
+        | variable_lvalue SWIZZLE_IDENTIFIER
+                {
+                    $$ = ASTfieldselect::create (oslcompiler, $1, ustring($2));
                 }
         | variable_lvalue '.' IDENTIFIER
                 {

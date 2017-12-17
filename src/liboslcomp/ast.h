@@ -62,7 +62,7 @@ public:
         unknown_node, shader_declaration_node, function_declaration_node,
         variable_declaration_node, compound_initializer_node,
         variable_ref_node, preincdec_node, postincdec_node,
-        index_node, structselect_node,
+        index_node, structselect_node, swizzle_node,
         conditional_statement_node,
         loop_statement_node, loopmod_statement_node, return_statement_node,
         binary_expression_node, unary_expression_node,
@@ -641,6 +641,34 @@ private:
     int m_structid;          ///< index of the structure
     int m_fieldid;           ///< index of the field within the structure
     Symbol *m_fieldsym;      ///< Symbol of the field variable
+};
+
+
+
+class ASTswizzle : public ASTfieldselect
+{
+public:
+    ASTswizzle (OSLCompilerImpl *comp, ASTNode *expr, ustring field);
+
+    const char *nodetypename () const { return "swizzle"; }
+    const char *childname (size_t i) const;
+    void print (std::ostream &out, int indentlevel=0) const;
+    TypeSpec typecheck (TypeSpec expected);
+    Symbol *codegen (Symbol *dest = NULL);
+
+    /// Get component indeces for a swizzle string.
+    /// consts allows '0' & '1' to be included in the string.
+    static size_t indices (ustring components, int *indexes, size_t N, bool consts);
+
+    /// Offset if the component index is really a constant ('0' or '1').
+    enum { const_offset = -2 };
+
+    /// Special code generation of assignment of src to proper components.
+    Symbol* codegen_assign (Symbol *src);
+
+    size_t indices (int *indexes, size_t N, bool consts) const {
+        return indices (m_field, indexes, N, consts);
+    }
 };
 
 

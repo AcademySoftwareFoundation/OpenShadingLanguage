@@ -226,6 +226,22 @@ ASTindex::typecheck (TypeSpec expected)
 
 
 TypeSpec
+ASTswizzle::typecheck (TypeSpec expected)
+{
+    typecheck_children ();
+
+    // Can't be an lvalue if any of the args are constant floats.
+    for (ref arg = child(0); arg; arg = arg->next()) {
+        if (!(m_is_lvalue = arg->is_lvalue()))
+            break;
+    }
+
+    return m_typespec;
+}
+
+
+
+TypeSpec
 ASTstructselect::typecheck (TypeSpec expected)
 {
     // The ctr already figured out if this was a valid structure selection

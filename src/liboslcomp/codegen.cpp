@@ -488,6 +488,8 @@ ASTassign_expression::codegen (Symbol *dest)
         // Assigning to an individual component or array element
         index = (ASTindex *) var().get();
         dest = NULL;
+    } else if (var()->nodetype() == swizzle_node) {
+        return static_cast<ASTswizzle*>(var().get())->codegen_assign(expr()->codegen (dest));
     } else if (var()->nodetype() == structselect_node) {
         dest = var()->codegen();
     } else {
@@ -1290,6 +1292,78 @@ ASTindex::codegen_assign (Symbol *src, Symbol *ind,
     } else {
         ASSERT (0);
     }
+}
+
+
+
+Symbol *
+ASTswizzle::codegen (Symbol *dest)
+{
+    // General case, construct a new triple with the swizzle indexes.
+
+    if (dest == nullptr || ! equivalent (dest->typespec(), typespec()))
+        dest = m_compiler->make_temporary (typespec());
+
+    Symbol *syms[4] = { dest };
+
+    int nsym = 1;
+	for (ref arg = child(0); arg && nsym < 4; ++nsym, arg = arg->next()) {
+        syms[nsym] = arg->codegen();
+	}
+	ASSERT (nsym == 4);
+
+    // emit the constructor call
+    emitcode (typespec().string().c_str(), nsym, syms);
+    return dest;
+}
+
+
+
+Symbol *
+ASTswizzle::codegen_assign (Symbol *src)
+{
+    // Swizzle assignment.
+
+    if (!m_is_lvalue) {
+        error ("Cannot assign to constant swizzle");
+        return nullptr;
+    }
+
+    // First child is an index, which holds the lvalue (this) to store to.
+    ASTindex* index = static_cast<ASTindex*>(child(0));
+    Symbol *syms[4] = { index->lvalue().get()->codegen() };
+
+    int nsym = 0;
+    if (src->typespec().is_triple()) {
+        int idxs[3];
+        if (indices(idxs, 3, false /*can't assign to constants*/) != 3) {
+            error ("Trying to assign to invalid swizzle");
+            return nullptr;
+        }
+        // Iterate all of the indexes
+        for (; index && nsym < 3; ++nsym, index = static_cast<ASTindex*>(index->nextptr())) {
+            // tmp[I] = src[N]
+            ASSERT (index->nodetype() == index_node);
+            Symbol* sym = m_compiler->make_temporary (TypeDesc::TypeFloat);
+            emitcode ("compref", sym, src, m_compiler->make_constant (nsym));
+
+            // sym[0] is taken, so assign to syms[i+1]
+            ASSERT (idxs[nsym]+1 < int(sizeof(syms)/sizeof(syms[0])));
+            syms[idxs[nsym]+1] = sym;
+        }
+    } else {
+        // Same assignment to all components
+        for (int n = m_typespec.aggregate(); nsym < n; ++nsym)
+            syms[nsym] = src;
+    }
+
+    ASSERT (nsym == 3);
+
+    // emit the constructor call
+    emitcode (typespec().string().c_str(), nsym+1, syms);
+
+    // so transitive assignment will work
+    return syms[0];
 }
 
 

@@ -805,6 +805,65 @@ ASTstructselect::print (std::ostream &out, int indentlevel) const
 
 
 
+ASTswizzle::ASTswizzle (OSLCompilerImpl *comp, ASTNode *expr, ustring field) :
+ASTfieldselect(swizzle_node, comp, expr, field)
+{
+    if (field.size() == 1) m_typespec = TypeDesc::TypeFloat;
+    else m_typespec = TypeDesc::TypeVector;
+}
+
+
+
+size_t ASTswizzle::indices (ustring components, int *indexes, size_t N, bool consts)
+{
+    size_t i = 0;
+    do {
+        switch (components[i]) {
+            case 'r':
+            case 'x':  indexes[i] = 0; break;
+            case 'g':
+            case 'y':  indexes[i] = 1; break;
+            case 'b':
+            case 'z':  indexes[i] = 2; break;
+
+            case '0':
+                if (!consts)
+                    return 0;
+                indexes[i] = const_offset;
+                break;
+            case '1':
+                if (!consts)
+                    return 0;
+                indexes[i] = const_offset + 1;
+                break;
+
+            case '\0': return i;
+
+            default:  return 0;
+        }
+    } while (++i < N);
+
+    return i;
+}
+
+
+
+const char *
+ASTswizzle::childname (size_t i) const
+{
+    return type_c_str(m_typespec);
+}
+
+
+void
+ASTswizzle::print (std::ostream &out, int indentlevel) const
+{
+    ASTNode::print (out, indentlevel);
+    indent (out, indentlevel+1);
+    out << "components " << field() << "\n";
+}
+
+
 ASTNode* ASTfieldselect::create (OSLCompilerImpl *comp, ASTNode *expr,
                                  ustring field)
 {
@@ -814,25 +873,55 @@ ASTNode* ASTfieldselect::create (OSLCompilerImpl *comp, ASTNode *expr,
     const TypeSpec &type = expr->nodetype() != structselect_node ? expr->typespec() :
                            static_cast<ASTstructselect*>(expr)->fieldsym()->typespec();
 
-    if (type.aggregate() == TypeDesc::VEC3) {
-        int component = -1;
-        switch (field[0]) {
-            case 'r': component = 0; break;
-            case 'g': component = 1; break;
-            case 'b': component = 2; break;
+    if (type.aggregate() == TypeDesc::VEC3 && field.size() <= 3) {
+        // Early out swizle to native component ordering.
+        if (field == "rgb" || field == "xyz")
+            return expr;
 
-            case 'x': component = 0; break;
-            case 'y': component = 1; break;
-            case 'z': component = 2; break;
+        ASTindex* index = expr->nodetype() != index_node ? nullptr : static_cast<ASTindex*>(expr);
 
-            default:  break;
-        }
-        if (component != -1) {
-            if (expr->nodetype() == index_node) {
-                static_cast<ASTindex*>(expr)->extend(new ASTliteral (comp, component));
-                return expr;
+        int indexes[3];
+        switch (ASTswizzle::indices (field, indexes, 3, true)) {
+            case 1: {
+                if (!index)
+                    return new ASTindex (comp, expr, new ASTliteral (comp, indexes[0]));
+                index->extend(new ASTliteral (comp, indexes[0]));
+                return index;
             }
-            return new ASTindex (comp, expr, new ASTliteral (comp, component));
+
+            case 3: {
+                // Don't leak soon to be unused expr node
+                std::unique_ptr<ASTNode> cleanup(index);
+                ASTNode* index0 = nullptr;
+                if (index) {
+                    index0 = index->index().get();
+                    expr = index->lvalue().get();
+                }
+
+                ASTNode *args[3];
+                for (int i = 0; i < 3; ++i) {
+                    if (indexes[i] >= 0) {
+                        args[i] = new ASTliteral (comp, indexes[i]);
+                        if (i == 0 && index) {
+                            // Re-use expr by extending the ASTindex.
+                            index->extend (args[i]);
+                            args[0] = cleanup.release ();
+                        } else {
+                            args[i] = !index0 ? new ASTindex (comp, expr, args[i]) :
+                                     new ASTindex (comp, expr, index0, args[i]);
+                         }
+                    } else {
+                        float cval = indexes[i] - ASTswizzle::const_offset;
+                        ASSERT ((cval==0) || (cval==1));
+                        args[i] = new ASTliteral (comp, cval);
+                    }
+                }
+                args[0]->append (args[1]);
+                args[1]->append (args[2]);
+                return new ASTswizzle (comp, args[0], field);
+            }
+
+            default: break;
         }
     }
 

@@ -4,7 +4,44 @@
 
 shader swizzle ()
 {
-    color c = color(4,3,2);
+    color c = color(1,2,3);
+    printf("c: %g\n", c);
+
+    // transitive
+    // 1,2,3 -> 2,3,1 -> 3,1,2
+    c.brg = c.grb = c.bgr;
+    printf("c.brg = c.grb = c.bgr: %g\n", c);
+
+    c.rgb = c.gbr;
+    printf("c.rgb = c.gbr: %g\n", c);
+
+    printf("c.r00: %g\n", c.r00);
+    printf("c.g01: %g\n", c.g01);
+    printf("c.b11: %g\n", c.b11);
+    printf("c.bg1: %g\n", c.bg1);
+
+    c = c.brg;
+    printf("c.rgb = c.brg: %g\n", c);
+
+    c = c.brg;
+    printf("c.rgb = c.brg: %g\n", c);
+
+    c = c.brg;
+    printf("c.rgb = c.brg: %g\n", c);
+
+	c.rgb = c.bgr;
+    printf("c.rgb = c.bgr: %g\n", c);
+
+    c.bgr = c.bgr;
+    printf("c.bgr = c.bgr: %g\n", c);
+
+    c.grb = c.bgr;
+    printf("c.grb = c.bgr: %g\n", c);
+
+    printf("c.ggr + c.rgr: %g\n", c.ggr + c.rgr);
+
+    c.gbr = c.ggr + c.rgr;
+
     printf("c.r: %g\n", c.r);
     printf("c.g: %g\n", c.g);
     printf("c.b: %g\n", c.b);
@@ -26,4 +63,19 @@ shader swizzle ()
         printf("c4[%d].%s: %g\n", i, i ? "b" : "g", i ? c4[i].rgb.b : c4[i].rgb.g);
         printf("c4[%d].%s: %g\n", i, i ? "g" : "b", i ? c4[i].rgb.g : c4[i].rgb.b);
     }
+
+    printf("c.rrr: %g\n", c.rrr);
+    printf("c.rgb: %g\n", c.rgb);
+    printf("c.rbg: %g\n", c.rbg);
+    printf("c.ggg: %g\n", c.ggg);
+    printf("c.grb: %g\n", c.grb);
+    printf("c.gbr: %g\n", c.gbr);
+    printf("c.bbb: %g\n", c.bbb);
+    printf("c.brg: %g\n", c.brg);
+    printf("c.ggr: %g\n", c.ggr);
+
+    printf("ca[0].brg: %g\n", ca[0].brg);
+
+    c.rgb = 1;
+    printf("c.rgb = 1: %g\n", c);
 }

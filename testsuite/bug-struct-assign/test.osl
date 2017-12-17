@@ -1,0 +1,19 @@
+// Assignemnt to indexed struct element currently broken
+
+struct custom {
+    color rgb;
+};
+
+shader test ()
+{
+    custom c[2];
+    c[0].rgb = color(1,2,3);
+
+    // Broken:
+    c[0].rgb[0] = -c[0].rgb[0];
+
+    // Works:
+    c[1].rgb = color(-c[0].rgb[0], c[0].rgb[1], c[0].rgb[2]);
+
+    printf("(%g)  == (%g)\n", c[0].rgb, c[1].rgb);
+}

@@ -239,6 +239,7 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             blackbody blendmath breakcont
             bug-array-heapoffsets
             bug-locallifetime bug-outputinit bug-param-duplicate bug-peep
+            bug-struct-assign
             cellnoise closure closure-array color comparison
             compile-buffer
             component-range const-array-params const-array-fill

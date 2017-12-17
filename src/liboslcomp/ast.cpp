@@ -805,10 +805,36 @@ ASTstructselect::print (std::ostream &out, int indentlevel) const
 
 
 
-ASTfieldselect* ASTfieldselect::create (OSLCompilerImpl *comp, ASTNode *expr,
-                                        ustring field) {
+ASTNode* ASTfieldselect::create (OSLCompilerImpl *comp, ASTNode *expr,
+                                 ustring field)
+{
     if (expr->typespec().is_structure_based())
         return new ASTstructselect (comp, expr, field);
+
+    const TypeSpec &type = expr->nodetype() != structselect_node ? expr->typespec() :
+                           static_cast<ASTstructselect*>(expr)->fieldsym()->typespec();
+
+    if (type.aggregate() == TypeDesc::VEC3) {
+        int component = -1;
+        switch (field[0]) {
+            case 'r': component = 0; break;
+            case 'g': component = 1; break;
+            case 'b': component = 2; break;
+
+            case 'x': component = 0; break;
+            case 'y': component = 1; break;
+            case 'z': component = 2; break;
+
+            default:  break;
+        }
+        if (component != -1) {
+            if (expr->nodetype() == index_node) {
+                static_cast<ASTindex*>(expr)->extend(new ASTliteral (comp, component));
+                return expr;
+            }
+            return new ASTindex (comp, expr, new ASTliteral (comp, component));
+        }
+    }
 
     comp->error (comp->filename(), comp->lineno(),
                  "type '%s' does not have a member '%s'",

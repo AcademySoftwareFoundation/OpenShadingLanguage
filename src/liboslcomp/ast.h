@@ -580,6 +580,13 @@ public:
                                             ustring destname, ustring srcname,
                                             Symbol *index);
 
+    /// Add another index: obj[current][extended]
+    ///
+    void extend (ASTNode *ext) {
+        ASSERT (nchildren() < 4);
+        m_children.emplace_back(ext);
+    }
+
     ref lvalue () const { return child (0); }
     ref index () const { return child (1); }
     ref index2 () const { return child (2); }
@@ -599,8 +606,7 @@ protected:
     ustring m_fullname;       ///< Full name of variable and field
 
 public:
-    static ASTfieldselect* create (OSLCompilerImpl *comp, ASTNode *expr,
-                                   ustring field);
+    static ASTNode* create (OSLCompilerImpl *comp, ASTNode *expr, ustring field);
 
     ustring field () const { return m_field; }
     ustring fullname () const { return m_fullname; }

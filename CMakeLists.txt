@@ -296,6 +296,7 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             struct-isomorphic-overload struct-layers
             struct-operator-overload struct-return struct-with-array
             struct-nested struct-nested-assign struct-nested-deep
+            swizzle
             ternary
             testshade-expr
             texture-alpha texture-blur texture-connected-options

@@ -1,0 +1,15 @@
+Compiled swizzle.osl -> swizzle.oso
+c.r: 4
+c.g: 3
+c.b: 2
+v0.x: 6
+v0.y: 7
+v0.z: 8
+v0.z->x: 6
+c4[0].r: 1
+c4[0].g: 2
+c4[0].b: 3
+c4[1].r: -1
+c4[1].b: -3
+c4[1].g: -2
+

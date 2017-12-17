@@ -1,0 +1,29 @@
+// Test swizzle statements
+
+#include "color4.h"
+
+shader swizzle ()
+{
+    color c = color(4,3,2);
+    printf("c.r: %g\n", c.r);
+    printf("c.g: %g\n", c.g);
+    printf("c.b: %g\n", c.b);
+
+    vector v0 = vector(6,7,8);
+    printf("v0.x: %g\n", v0.x);
+    printf("v0.y: %g\n", v0.y);
+    printf("v0.z: %g\n", v0.z);
+    v0.z = v0.x;
+    printf("v0.z->x: %g\n", v0.r);
+
+    color  ca[2] = { color(-1,2,3), color(1,-2,-3) };
+    color4 c4[2]; // FIXME: = { color4(color(1,2,3),4), color4(color(-1,-2,-3),-4) };
+
+    for (int i = 0; i < 2; ++i) {
+        ca[i].r = -ca[i].r;
+        c4[i].rgb = color(ca[i].x, ca[i].y, ca[i].z);
+        printf("c4[%d].r: %g\n", i, c4[i].rgb.r);
+        printf("c4[%d].%s: %g\n", i, i ? "b" : "g", i ? c4[i].rgb.b : c4[i].rgb.g);
+        printf("c4[%d].%s: %g\n", i, i ? "g" : "b", i ? c4[i].rgb.g : c4[i].rgb.b);
+    }
+}

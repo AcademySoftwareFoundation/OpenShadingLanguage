@@ -52,6 +52,11 @@ failthresh = 0.004
 hardfail = 0.01
 failpercent = 0.02
 
+# Fail on stage1 : oslc
+failstage1 = 1
+# Fail on stage2 : diff / ref comaprison
+failstage2 = 2
+
 image_extensions = [ ".tif", ".tx", ".exr", ".jpg", ".png", ".rla",
                      ".dpx", ".iff", ".psd" ]
 
@@ -232,7 +237,7 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
 
     for sub_command in command.split(splitsymbol):
         cmdret = subprocess.call (sub_command, shell=True, env=test_environ)
-        if cmdret != 0 and failureok == 0 :
+        if cmdret != 0 and failureok != failstage1 :
             print "#### Error: this command failed: ", sub_command
             print "FAIL"
             return (1)
@@ -257,7 +262,8 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
             else :
                 # anything else
                 cmpresult = 0 if filecmp.cmp (out, testfile) else 1
-            if cmpresult == 0 :
+            # cmpresult should be 0 (no error), unless expected to fail the diff
+            if cmpresult == 0 if failureok != failstage2 else cmpresult != 0:
                 ok = 1
                 break      # we're done
 

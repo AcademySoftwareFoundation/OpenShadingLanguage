@@ -85,7 +85,7 @@ ShadingContext::execute_init (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
     if (sgroup.nlayers()) {
         sgroup.start_running ();
         if (! sgroup.jitted()) {
-            shadingsys().jit_group (sgroup);
+            shadingsys().jit_group (sgroup, m_threadinfo);
             if (shadingsys().m_greedyjit && shadingsys().m_groups_to_compile_count) {
                 // If we are greedily JITing, optimize/JIT everything now
                 shadingsys().jit_all_groups ();
@@ -242,7 +242,7 @@ ShadingContext::execute_batch_init (ShaderGroup &sgroup, ShaderGlobalsBatch &sgb
     if (sgroup.nlayers()) {
         sgroup.start_running ();
         if (! sgroup.batch_jitted()) {
-            shadingsys().batched_jit_group (sgroup);
+            shadingsys().batched_jit_group (sgroup, m_threadinfo);
             if (shadingsys().m_greedyjit && shadingsys().m_groups_to_compile_count) {
                 // If we are greedily JITing, optimize/JIT everything now
                 shadingsys().batched_jit_all_groups ();

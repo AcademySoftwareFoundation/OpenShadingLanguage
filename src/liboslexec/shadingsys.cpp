@@ -2718,7 +2718,7 @@ ShadingSystemImpl::group_post_jit_cleanup (ShaderGroup &group)
 
 void
 ShadingSystemImpl::optimize_group (ShaderGroup &group,
-                                   int raytypes_on, int raytypes_off)
+                                   int raytypes_on, int raytypes_off, PerThreadInfo *threadinfo)
 {
     if (group.optimized())
         return;    // already optimized
@@ -2754,7 +2754,7 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group,
     
     double locking_time = timer();
 
-    ShadingContext *ctx = get_context ();
+    ShadingContext *ctx = get_context (threadinfo);
     RuntimeOptimizer rop (*this, group, ctx);
     rop.set_raytypes (raytypes_on, raytypes_off);
     rop.run ();
@@ -2794,13 +2794,16 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group,
 }
 
 void
-ShadingSystemImpl::jit_group (ShaderGroup &group)
+ShadingSystemImpl::jit_group (ShaderGroup &group, PerThreadInfo *threadinfo)
 {
     if (group.jitted())
         return;    // already optimized
     
     if (!group.optimized())
-        optimize_group (group);
+        optimize_group (group,
+                        0, // raytypes_on
+                        0, // raytypes_off
+                        threadinfo);
 
     OIIO::Timer timer;
     // TODO: we could have separate mutexes for jit vs. batched_jit
@@ -2817,7 +2820,7 @@ ShadingSystemImpl::jit_group (ShaderGroup &group)
         return;
     }
 	
-    ShadingContext *ctx = get_context ();
+    ShadingContext *ctx = get_context (threadinfo);
     BackendLLVM lljitter (*this, group, ctx);
     lljitter.run ();
 
@@ -2846,13 +2849,16 @@ ShadingSystemImpl::jit_group (ShaderGroup &group)
 }
 
 void
-ShadingSystemImpl::batched_jit_group (ShaderGroup &group)
+ShadingSystemImpl::batched_jit_group (ShaderGroup &group, PerThreadInfo *threadinfo)
 {    
     if (group.batch_jitted())
         return;    // already optimized
     
     if (!group.optimized())
-        optimize_group (group);
+        optimize_group (group,
+                        0, // raytypes_on
+                        0, // raytypes_off
+                        threadinfo);
 
     OIIO::Timer timer;
     // TODO: we could have separate mutexes for jit vs. batched_jit
@@ -2869,7 +2875,7 @@ ShadingSystemImpl::batched_jit_group (ShaderGroup &group)
         return;
     }
 	
-    ShadingContext *ctx = get_context ();
+    ShadingContext *ctx = get_context (threadinfo);
     BackendLLVMWide lljitter (*this, group, ctx);
     lljitter.run ();
 

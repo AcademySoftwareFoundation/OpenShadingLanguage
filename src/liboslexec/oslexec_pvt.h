@@ -631,13 +631,13 @@ public:
     /// this by optimizing the code knowing all our instance parameters
     /// (at least the ones that can't be overridden by the geometry).
     void optimize_group (ShaderGroup &group,
-                         int raytypes_on=0, int raytypes_off=0);
+                         int raytypes_on=0, int raytypes_off=0, PerThreadInfo *threadinfo = NULL);
     
     /// Ensure that the group has been JITed.
-    void jit_group (ShaderGroup &group);
+    void jit_group (ShaderGroup &group, PerThreadInfo *threadinfo = NULL);
 
     /// Ensure that the group has been JITed.
-    void batched_jit_group (ShaderGroup &group);
+    void batched_jit_group (ShaderGroup &group, PerThreadInfo *threadinfo = NULL);
     
 
     /// After doing all optimization and code JIT, we can clean up by

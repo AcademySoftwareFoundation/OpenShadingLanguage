@@ -87,8 +87,13 @@ public:
     virtual bool get_attribute_uniform (ShaderGlobalsBatch *sgb, ustring object,
                                 ustring name, DataRef val);
     
-    virtual Mask get_userdata (ustring name, 
+#ifdef OSL_EXPERIMENTAL_BIND_USER_DATA_WITH_LAYERNAME
+    virtual Mask get_userdata (ustring name, ustring layername,
     						   ShaderGlobalsBatch *sgb, MaskedDataRef val);
+#else
+    virtual Mask get_userdata (ustring name, 
+                               ShaderGlobalsBatch *sgb, MaskedDataRef val);
+#endif
 
 private:
 	SimpleRenderer &m_sr;
@@ -130,8 +135,13 @@ public:
     
     virtual bool get_attribute (ShaderGlobals *sg, bool derivatives, ustring object,
                                 TypeDesc type, ustring name, void *val);
+#ifdef OSL_EXPERIMENTAL_BIND_USER_DATA_WITH_LAYERNAME
+    virtual bool get_userdata (bool derivatives, ustring name, ustring layername, TypeDesc type,
+                               ShaderGlobals *sg, void *val);
+#else
     virtual bool get_userdata (bool derivatives, ustring name, TypeDesc type, 
                                ShaderGlobals *sg, void *val);
+#endif
     // Super simple camera and display parameters.  Many options not
     // available, no motion blur, etc.
     void camera_params (const Matrix44 &world_to_camera, ustring projection,

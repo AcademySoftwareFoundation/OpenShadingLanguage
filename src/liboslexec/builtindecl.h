@@ -322,8 +322,13 @@ DECL (osl_range_check, "iiiXXXiXiXX")
 DECL (osl_naninf_check, "xiXiXXiXiiX")
 DECL (osl_uninit_check, "xLXXXiXiXXiXiXii")
 DECL (osl_get_attribute, "iXiXXiiXX")
+#ifdef OSL_EXPERIMENTAL_BIND_USER_DATA_WITH_LAYERNAME
+DECL (osl_bind_interpolated_param, "iXXXLiXiXiXi")
+WDECL (osl_bind_interpolated_param_wide, "iXXXLiXiXiXii")
+#else
 DECL (osl_bind_interpolated_param, "iXXLiXiXiXi")
 WDECL (osl_bind_interpolated_param_wide, "iXXLiXiXiXii")
+#endif
 DECL (osl_get_texture_options, "XX");
 WDECL (osl_get_texture_options_batched, "XX");
 DECL (osl_get_noise_options, "XX");

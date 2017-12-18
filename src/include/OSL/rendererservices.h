@@ -196,8 +196,14 @@ public:
     /// 'val'. If derivatives is true, the derivatives should be written into val
     /// as well. Return false if no user-data with the given name and type was
     /// found.
+#ifdef OSL_EXPERIMENTAL_BIND_USER_DATA_WITH_LAYERNAME
+    virtual bool get_userdata (bool derivatives, ustring name, ustring layername,
+                               TypeDesc type,
+                               ShaderGlobals *sg, void *val) = 0;
+#else
     virtual bool get_userdata (bool derivatives, ustring name, TypeDesc type,
                                ShaderGlobals *sg, void *val) = 0;
+#endif
 
     /// Given the name of a texture, return an opaque handle that can be
     /// used with texture calls to avoid the name lookups.
@@ -604,8 +610,13 @@ public:
     /// as well. It is assumed the results are varying and returns Mask 
     // with its bit set to off if no user-data with the given name and type was
     /// found.
+#ifdef OSL_EXPERIMENTAL_BIND_USER_DATA_WITH_LAYERNAME
+    virtual Mask get_userdata (ustring name, ustring layername,
+                               ShaderGlobalsBatch *sgb, MaskedDataRef val) = 0;
+#else
     virtual Mask get_userdata (ustring name, 
     						   ShaderGlobalsBatch *sgb, MaskedDataRef val) = 0;
+#endif
 
 #if 0
     

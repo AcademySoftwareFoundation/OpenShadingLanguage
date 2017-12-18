@@ -350,7 +350,11 @@ SimpleRenderer::get_array_attribute (ShaderGlobals *sg, bool derivatives, ustrin
     // If no named attribute was found, allow userdata to bind to the
     // attribute request.
     if (object.empty() && index == -1)
+#ifdef OSL_EXPERIMENTAL_BIND_USER_DATA_WITH_LAYERNAME
+        return get_userdata (derivatives, name, ustring(), type, sg, val);
+#else
         return get_userdata (derivatives, name, type, sg, val);
+#endif
 
     return false;
 }
@@ -367,9 +371,15 @@ SimpleRenderer::get_attribute (ShaderGlobals *sg, bool derivatives, ustring obje
 
 
 
+#ifdef OSL_EXPERIMENTAL_BIND_USER_DATA_WITH_LAYERNAME
+bool
+SimpleRenderer::get_userdata (bool derivatives, ustring name, ustring layername, TypeDesc type,
+                              ShaderGlobals *sg, void *val)
+#else
 bool
 SimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type,
                               ShaderGlobals *sg, void *val)
+#endif
 {
     // Just to illustrate how this works, respect s and t userdata, filled
     // in with the uv coordinates.  In a real renderer, it would probably

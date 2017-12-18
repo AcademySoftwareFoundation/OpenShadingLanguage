@@ -257,6 +257,8 @@ public:
     }
 
 #else // MCJITMemoryManager
+    // Don't hide the notifyObjectLoaded method from RuntimeDyld::MemoryManager.
+    using llvm::RuntimeDyld::MemoryManager::notifyObjectLoaded;
 
     MemoryManager(LLVMMemoryManager *realmm) : mm(realmm) {}
     

@@ -881,17 +881,6 @@ public:
     }
 
 private:
-    /// Typecheck all polymorphic versions, return UNKNOWN if no match was
-    /// found, or a real type if there was a match.  Also, upon matching,
-    /// re-jigger m_sym to point to the specific polymorphic match.
-    /// Allow arguments to be coerced (e.g., substituting a vector where
-    /// a point was expected, or a float where a color was expected) only
-    /// if coerceargs is true.  For return values, allow spatial triples to
-    /// mutually match if 'equivreturn' is true, and allow any coercive
-    /// return type if 'expected' is TypeSpec() (i.e., unknown).
-    TypeSpec typecheck_all_poly (TypeSpec expected, bool coerceargs,
-                                 bool equivreturn);
-
     /// Handle all the special cases for built-ins.  This includes
     /// irregular patterns of which args are read vs written, special
     /// checks for printf- and texture-like, etc.

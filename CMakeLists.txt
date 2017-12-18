@@ -248,6 +248,7 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             error-dupes exit exponential
             fprintf
             function-earlyreturn function-simple function-outputelem
+            function-overloads
             geomath getattribute-camera getattribute-shader
             getsymbol-nonheap gettextureinfo
             group-outputs groupstring
@@ -266,8 +267,8 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             operator-overloading
             oslc-comma oslc-D
             oslc-err-arrayindex oslc-err-closuremul oslc-err-field
-            oslc-err-format oslc-err-funcredef oslc-err-intoverflow
-            oslc-err-noreturn oslc-err-notfunc
+            oslc-err-format oslc-err-funcoverload oslc-err-funcredef
+            oslc-err-intoverflow oslc-err-noreturn oslc-err-notfunc
             oslc-err-outputparamvararray oslc-err-paramdefault
             oslc-err-struct-array-init oslc-err-struct-ctr
             oslc-err-struct-dup

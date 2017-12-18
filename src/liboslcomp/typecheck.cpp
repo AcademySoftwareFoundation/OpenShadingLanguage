@@ -904,30 +904,6 @@ ASTNode::check_arglist (const char *funcname, ASTNode::ref arg,
 
 
 
-TypeSpec
-ASTfunction_call::typecheck_all_poly (TypeSpec expected, bool coerceargs,
-                                      bool equivreturn)
-{
-    for (FunctionSymbol *poly = func();  poly;  poly = poly->nextpoly()) {
-        const char *code = poly->argcodes().c_str();
-        int advance;
-        TypeSpec returntype = m_compiler->type_from_code (code, &advance);
-        code += advance;
-        if (check_arglist (m_name.c_str(), args(), code, coerceargs)) {
-            // Return types also must match if not coercible
-            if (expected == returntype ||
-                (equivreturn && equivalent(expected,returntype)) ||
-                expected == TypeSpec()) {
-                m_sym = poly;
-                return returntype;
-            }
-        }
-    }
-    return TypeSpec();
-}
-
-
-
 void
 ASTfunction_call::mark_optional_output (int firstopt, const char **tags)
 {
@@ -1180,6 +1156,259 @@ ASTfunction_call::typecheck_struct_constructor ()
 }
 
 
+/// <doc CandidateFunctions>
+///
+/// Score a set of polymorphic functions based on arguments & return type.
+///
+/// When choosing which varaint to use precedence is given to arguments and the
+/// return type is used as a possible tie breaker in case of any ambiguity.
+/// The highest score for an argument is given when it is an exact match.
+///
+class CandidateFunctions {
+    enum {
+        kExactMatch     = 100,
+        kIntegralToFP   = 77,
+        kArrayMatch     = 44,
+        kCoercable      = 23,
+        kMatchAnything  = 1,
+        kNoMatch        = 0,
+
+        // Additional named rules
+        kFPToIntegral   = 60,          // = kIntegralToFP to match c++
+    };
+    struct Candidate {
+        FunctionSymbol* sym;
+        TypeSpec rtype;
+        int ascore;
+        int rscore;
+
+        Candidate(FunctionSymbol *s, TypeSpec rt, int as, int rs) :
+            sym(s), rtype(rt), ascore(as), rscore(rs) {}
+
+        string_view name() const { return sym->name(); }
+    };
+    typedef std::vector<Candidate> Candidates;
+
+    OSLCompilerImpl* m_compiler;
+    Candidates m_candidates;
+    std::set<ustring> m_scored;
+    TypeSpec m_rval;
+    ASTNode::ref m_args;
+    size_t m_nargs;
+
+    const char* scoreWildcard(int& argscore, size_t& fargs, const char* args) const {
+        while (fargs < m_nargs) {
+            argscore += kMatchAnything;
+            ++fargs;
+        }
+        return args + 1;
+    }
+
+    static int scoreType(TypeSpec expected, TypeSpec actual) {
+        if (expected == actual)
+            return kExactMatch;
+
+        if (!actual.is_closure() && actual.is_scalarnum() &&
+            !expected.is_closure() && expected.is_scalarnum())
+            return expected.is_int() ? kFPToIntegral : kIntegralToFP;
+
+        if (expected.is_unsized_array() && actual.is_sized_array() &&
+            expected.elementtype() == actual.elementtype()) {
+            // Allow a fixed-length array match to a formal array with
+            // unspecified length, if the element types are the same.
+            return kArrayMatch;
+        }
+
+        if (assignable (expected, actual))
+            return kCoercable;
+
+        return kNoMatch;
+    }
+
+    int addCandidate(FunctionSymbol* func) {
+        // Early out if this declaration has already been scored
+        if (m_scored.count(func->argcodes()))
+            return kNoMatch;
+        m_scored.insert(func->argcodes());
+
+        int advance;
+        const char *formals = func->argcodes().c_str();
+        TypeSpec rtype = m_compiler->type_from_code (formals, &advance);
+        formals += advance;
+
+        int argscore = 0;
+        size_t fargs = 0;
+        for (ASTNode::ref arg = m_args; *formals && arg; ++fargs, arg = arg->next()) {
+            switch (*formals) {
+                case '*':  // Will match anything left
+                    formals = scoreWildcard(argscore, fargs, formals);
+                    ASSERT (*formals == 0);
+                    continue;
+
+                case '.':  // Token/value pairs
+                    if (arg->typespec().is_string() && arg->next()) {
+                        formals = scoreWildcard(argscore, fargs, formals);
+                        ASSERT (*formals == 0);
+                        continue;
+                    }
+                    return kNoMatch;
+
+                case '?':
+                    if (formals[1] == '[' && formals[2] == ']') {
+                        // Any array
+                        formals += 3;
+                        if (!arg->typespec().is_array())
+                            return kNoMatch; // wanted an array, didn't get one
+                        argscore += kMatchAnything;
+                    } else if (!arg->typespec().is_array()) {
+                        formals += 1;       // match anything
+                        argscore += kMatchAnything;
+                    } else
+                        return kNoMatch;    // wanted any scalar, got an array
+                    continue;
+
+                default:
+                    break;
+            }
+            // To many arguments for the function, done without a match.
+            if (fargs >= m_nargs)
+                return kNoMatch;
+
+            TypeSpec formaltype = m_compiler->type_from_code (formals, &advance);
+            formals += advance;
+
+            int score = scoreType(formaltype, arg->typespec());
+            if (score == kNoMatch)
+                return kNoMatch;
+
+            argscore += score;
+        }
+
+        // Check any remaining arguments
+        switch (*formals) {
+            case '*':
+            case '.':
+                // Skip over the unused optional args
+                ++formals;
+                ++fargs;
+            case '\0':
+                if (fargs < m_nargs)
+                    return kNoMatch;
+                break;
+
+            default:
+                // TODO: Scoring default function arguments would go here
+                // Curently an unused formal argument, so no match at all.
+                return kNoMatch;
+        }
+        ASSERT (*formals == 0);
+
+        int highscore = m_candidates.empty() ? 0 : m_candidates.front().ascore;
+        if (argscore < highscore)
+            return kNoMatch;
+
+        // clear any prior ambiguous matches
+        if (argscore != highscore)
+            m_candidates.clear();
+
+        // append the latest high scoring function
+        m_candidates.emplace_back(func, rtype, argscore,
+                                  scoreType(m_rval, rtype));
+
+        return argscore;
+    }
+
+public:
+    CandidateFunctions(OSLCompilerImpl* compiler, TypeSpec rval, ASTNode::ref args, FunctionSymbol* func) :
+        m_compiler(compiler), m_rval(rval), m_args(args), m_nargs(0) {
+
+        //std::cerr << "Matching " << func->name() << " formals='" << (rval.simpletype().basetype != TypeDesc::UNKNOWN ?  compiler->code_from_type (rval) : " ");
+        for (ASTNode::ref arg = m_args; arg; arg = arg->next()) {
+            //std::cerr << compiler->code_from_type (arg->typespec());
+            ++m_nargs;
+        }
+        //std::cerr << "'\n";
+
+        while (func) {
+            //int score =
+            addCandidate(func);
+            //std::cerr << '\t' << func->name() << " formals='" << func->argcodes().c_str() << "'  " << score << ", " << (score ? m_candidates.back().rscore : 0) << "\n";
+            func = func->nextpoly();
+        }
+    }
+
+    void reportError(ASTNode* caller,
+                     std::string name = "", bool showArgs = true,
+                     bool candidateMsg = true,
+                     const char* msg = "No matching function call to") const {
+        if (showArgs) {
+            name += " (";
+            const char *comma = "";
+            for (ASTNode::ref arg = m_args; arg; arg = arg->next()) {
+                name += comma;
+                name += arg->typespec().string();
+                comma = ", ";
+            }
+            name += ")";
+        }
+
+        caller->error ("%s '%s'", msg, name);
+        if (candidateMsg)
+            m_compiler->errhandler().message("  Candidates are:\n");
+    }
+
+    void reportAmbiguity(FunctionSymbol* sym) const {
+        int advance;
+        const char *formals = sym->argcodes().c_str();
+        TypeSpec returntype = m_compiler->type_from_code (formals, &advance);
+        formals += advance;
+
+        auto& errh =  m_compiler->errhandler();
+        errh.message("    ");
+
+        if (ASTNode* decl = sym->node())
+            errh.message("%s:%d\t", decl->sourcefile(), decl->sourceline());
+
+        errh.message("%s %s (%s)\n", m_compiler->type_c_str(returntype),
+                     sym->name(),
+                     m_compiler->typelist_from_code(formals).c_str());
+    }
+
+    std::pair<FunctionSymbol*, TypeSpec> best(ASTNode* caller, bool strict = 0) {
+        switch (m_candidates.size()) {
+            case 0:  return { nullptr, TypeSpec() };
+            case 1:  return { m_candidates[0].sym, m_candidates[0].rtype };
+            default: break;
+        }
+
+        int ambiguity = 0;
+        std::pair<const Candidate*, int> c = { nullptr, -1 };
+        for (auto& candidate : m_candidates) {
+            // re-score based on matching return value
+            if (candidate.rscore > c.second)
+                c = std::make_pair(&candidate, candidate.rscore);
+            else if (candidate.rscore == c.second)
+                ambiguity = candidate.rscore;
+        }
+
+        if (ambiguity || strict) {
+            ASSERT (caller);
+            reportError(caller, m_candidates[0].name(), false,
+                        !m_candidates.empty(), "Ambiguous call to");
+            for (auto& candidate : m_candidates) {
+                if (candidate.rscore >= ambiguity)
+                    reportAmbiguity(candidate.sym);
+            }
+        }
+
+        ASSERT (c.first);
+        return {c.first->sym, c.first->rtype};
+    }
+
+    bool empty() const { return m_candidates.empty(); }
+};
+
+
 
 TypeSpec
 ASTfunction_call::typecheck (TypeSpec expected)
@@ -1191,47 +1420,13 @@ ASTfunction_call::typecheck (TypeSpec expected)
         return typecheck_struct_constructor ();
     }
 
-    bool match = false;
+    // Save the currently choosen symbol for error reporting later
+    FunctionSymbol* poly = func();
 
-    // Look for an exact match, including expected return type
-    m_typespec = typecheck_all_poly (expected, false, false);
-    if (m_typespec != TypeSpec())
-        match = true;
+    CandidateFunctions candidates(m_compiler, expected, args(), poly);
+    std::tie(m_sym, m_typespec) = candidates.best(this);
 
-    // Now look for an exact match for arguments, but equivalent return type
-    m_typespec = typecheck_all_poly (expected, false, true);
-    if (m_typespec != TypeSpec())
-        match = true;
-
-    // Now look for an exact match on args, but any return type
-    if (! match && expected != TypeSpec()) {
-        m_typespec = typecheck_all_poly (TypeSpec(), false, false);
-        if (m_typespec != TypeSpec())
-            match = true;
-    }
-
-    // Now look for a coercible match of args, exact march on return type
-    if (! match) {
-        m_typespec = typecheck_all_poly (expected, true, false);
-        if (m_typespec != TypeSpec())
-            match = true;
-    }
-
-    // Now look for a coercible match of args, equivalent march on return type
-    if (! match) {
-        m_typespec = typecheck_all_poly (expected, true, true);
-        if (m_typespec != TypeSpec())
-            match = true;
-    }
-
-    // All that failed, try for a coercible match on everything
-    if (! match && expected != TypeSpec()) {
-        m_typespec = typecheck_all_poly (TypeSpec(), true, false);
-        if (m_typespec != TypeSpec())
-            match = true;
-    }
-
-    if (match) {
+    if (m_sym != nullptr) {
         if (is_user_function()) {
             if (func()->number_of_returns() == 0 &&
                 ! func()->typespec().is_void()) {
@@ -1245,35 +1440,19 @@ ASTfunction_call::typecheck (TypeSpec expected)
         return m_typespec;
     }
 
+    // Ambiguity has already been reported.
+    if (!candidates.empty())
+        return TypeSpec();
+
     // Couldn't find any way to match any polymorphic version of the
     // function that we know about.  OK, at least try for helpful error
     // message.
-    std::string choices ("");
-    for (FunctionSymbol *poly = func();  poly;  poly = poly->nextpoly()) {
-        const char *code = poly->argcodes().c_str();
-        int advance;
-        TypeSpec returntype = m_compiler->type_from_code (code, &advance);
-        code += advance;
-        if (choices.length())
-            choices += "\n";
-        choices += Strutil::format ("\t%s %s (%s)",
-                              type_c_str(returntype), m_name.c_str(),
-                              m_compiler->typelist_from_code(code).c_str());
+    candidates.reportError(this, m_name.string(), true, poly != nullptr);
+    while (poly) {
+        candidates.reportAmbiguity(poly);
+        poly = poly->nextpoly();
     }
 
-    std::string actualargs;
-    for (ASTNode::ref arg = args();  arg;  arg = arg->next()) {
-        if (actualargs.length())
-            actualargs += ", ";
-        actualargs += arg->typespec().string();
-    }
-
-    if (choices.size())
-        error ("No matching function call to '%s (%s)'\n    Candidates are:\n%s",
-               m_name.c_str(), actualargs.c_str(), choices.c_str());
-    else
-        error ("No matching function call to '%s (%s)'",
-               m_name.c_str(), actualargs.c_str());
     return TypeSpec();
 }
 

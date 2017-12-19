@@ -1,0 +1,12 @@
+// Test invalid field selections in function calls
+
+struct custom { float field; };
+
+shader test ()
+{
+    color c = color(4,3,2);
+    printf("c.nope: %g\n", c.nope);
+
+    custom cc = { 1 };
+    printf("cc.bad: %g\n", cc.bad);
+}

@@ -834,14 +834,19 @@ Symbol*
 ASTNode::codegen_aassign (TypeSpec elemtype, Symbol *src, Symbol *lval,
                           Symbol* ind, int i)
 {
-    if (! equivalent (elemtype, src->typespec())) {
-        // Only allow A[ind] = x if the type of x is
-        // equivalent to that of A's elements.  You can't,
-        // for example, do floatarray[ind] = int.  So we
-        // convert through a temp.
-        Symbol *tmp = m_compiler->make_temporary (elemtype);
-        emitcode ("assign", tmp, src);
-        src = tmp;
+    const TypeSpec& srctype = src->typespec();
+    if (! equivalent (elemtype, srctype)) {
+        // Allow floatarray[ind] = int or intarray[ind] = float, but otherwise
+        // A[ind] = x is only allowed if the type of x is equivalent to that of
+        // A's elements.
+        // You can't for example, do colorarray[ind] = int.
+        if (elemtype.is_closure() || !elemtype.is_scalarnum() ||
+            srctype.is_closure() || !srctype.is_scalarnum()) {
+            //  Convert through a temp.
+            Symbol *tmp = m_compiler->make_temporary (elemtype);
+            emitcode ("assign", tmp, src);
+            src = tmp;
+        }
     }
 
     if (!ind)

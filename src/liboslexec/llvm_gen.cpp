@@ -1336,9 +1336,24 @@ LLVMGEN (llvm_gen_aassign)
     }
 
     int num_components = Result.typespec().simpletype().aggregate;
+
+    // Allow float <=> int casting
+    TypeDesc cast;
+    if (num_components == 1 && !Result.typespec().is_closure() && !Src.typespec().is_closure() &&
+        (Result.typespec().is_int_based() ||  Result.typespec().is_float_based()) &&
+        (Src.typespec().is_int_based() ||  Src.typespec().is_float_based())) {
+        cast = Result.typespec().simpletype();
+        cast.arraylen = 0;
+    } else {
+        // Try to warn before llvm_fatal_error is called which provides little
+        // context as to what went wrong.
+        ASSERT (Result.typespec().simpletype().basetype ==
+                Src.typespec().simpletype().basetype);
+    }
+
     for (int d = 0;  d <= 2;  ++d) {
         for (int c = 0;  c < num_components;  ++c) {
-            llvm::Value *val = rop.loadLLVMValue (Src, c, d);
+            llvm::Value *val = rop.loadLLVMValue (Src, c, d, cast);
             rop.llvm_store_value (val, Result, d, index, c);
         }
         if (! Result.has_derivs())

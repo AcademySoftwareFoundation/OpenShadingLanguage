@@ -1,0 +1,4 @@
+Compiled test.osl -> test.oso
+f[0]: 2.000000
+n.fa[0]: 4.000000
+

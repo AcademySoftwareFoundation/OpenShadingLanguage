@@ -366,6 +366,13 @@ protected:
     Symbol *codegen_struct_initializers (ref init, Symbol *sym,
                                          bool is_constructor=false);
 
+    // Codegen an array assignemnt: lval[index] = src
+    // If no index is provided the constant i is used.
+    // Will return either src or a temporary that was codegened.
+	Symbol*
+	codegen_aassign (TypeSpec elemtype, Symbol *src, Symbol *lval,
+                     Symbol* index, int i = 0);
+
     // Helper for param_default_literals: generate the string that gives
     // the initialization of the literal value (and/or the default, if
     // init==NULL) and append it to 'out'.  Return whether the full

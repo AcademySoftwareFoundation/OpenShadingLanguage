@@ -829,7 +829,7 @@ private:
     llvm::DIScope * getCurrentDebugScope() const;
     llvm::DILocation *getCurrentInliningSite() const;
 
-
+    llvm::JITEventListener* mGdbListener;
     llvm::DIBuilder* m_llvm_debug_builder;
     llvm::DICompileUnit *mDebugCU;
     std::vector<llvm::DIScope *> mLexicalBlocks;

@@ -358,6 +358,7 @@ LLVM_Util::LLVM_Util (int debuglevel, const LLVM_Util::PerThreadInfo &per_thread
       m_llvm_exec(NULL),
       m_masked_exit_count(0),
       mVTuneNotifier(nullptr),
+      mGdbListener(nullptr),
       m_llvm_debug_builder(nullptr),
       mDebugCU(nullptr),
       mSubTypeForInlinedFunction(nullptr)
@@ -1329,9 +1330,9 @@ LLVM_Util::make_jit_execengine (std::string *err, bool debugging_symbols, bool p
         //  OSL_DEV_ONLY(       << "------------------>enable_debug_info<-----------------------------module flag['Debug Info Version']= ")
         //  OSL_DEV_ONLY(       << modulesDebugInfoVersion << std::endl);
 
-        llvm::JITEventListener* gdbListener = llvm::JITEventListener::createGDBRegistrationListener();
-        assert (gdbListener != NULL);
-        m_llvm_exec->RegisterJITEventListener(gdbListener);
+        mGdbListener = llvm::JITEventListener::createGDBRegistrationListener();
+        assert (mGdbListener != NULL);
+        m_llvm_exec->RegisterJITEventListener(mGdbListener);
     }
 
     if (profiling_events) {
@@ -1432,7 +1433,14 @@ LLVM_Util::execengine (llvm::ExecutionEngine *exec)
     if (nullptr != m_llvm_exec) {
         if (nullptr != mVTuneNotifier) {
             m_llvm_exec->UnregisterJITEventListener(mVTuneNotifier);
+            delete mVTuneNotifier;
             mVTuneNotifier = nullptr;
+        }
+        if (nullptr != mGdbListener) {
+            m_llvm_exec->UnregisterJITEventListener(mGdbListener);
+            // DO NOT delete the GDB listener, as it is a static object
+            // delete mGdbListener;
+            mGdbListener = nullptr;
         }
         delete m_llvm_exec;
     }

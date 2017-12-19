@@ -357,6 +357,7 @@ LLVM_Util::LLVM_Util (int debuglevel, const LLVM_Util::PerThreadInfo &per_thread
       m_llvm_module_passes(NULL), m_llvm_func_passes(NULL),
       m_llvm_exec(NULL),
       m_masked_exit_count(0),
+      mVTuneNotifier(nullptr),
       m_llvm_debug_builder(nullptr),
       mDebugCU(nullptr),
       mSubTypeForInlinedFunction(nullptr)
@@ -1336,9 +1337,9 @@ LLVM_Util::make_jit_execengine (std::string *err, bool debugging_symbols, bool p
     if (profiling_events) {
         // TODO:  Create better VTune listener that can handle inline fuctions
         //        https://software.intel.com/en-us/node/544211
-        llvm::JITEventListener* vtuneProfiler = llvm::JITEventListener::createIntelJITEventListener();
-        assert (vtuneProfiler != NULL);
-        m_llvm_exec->RegisterJITEventListener(vtuneProfiler);
+        mVTuneNotifier = llvm::JITEventListener::createIntelJITEventListener();
+        assert (mVTuneNotifier != NULL);
+        m_llvm_exec->RegisterJITEventListener(mVTuneNotifier);
     }
 
     // Force it to JIT as soon as we ask it for the code pointer,
@@ -1428,7 +1429,13 @@ LLVM_Util::validate_struct_data_layout(llvm::Type *Ty, const std::vector<unsigne
 void
 LLVM_Util::execengine (llvm::ExecutionEngine *exec)
 {
-    delete m_llvm_exec;
+    if (nullptr != m_llvm_exec) {
+        if (nullptr != mVTuneNotifier) {
+            m_llvm_exec->UnregisterJITEventListener(mVTuneNotifier);
+            mVTuneNotifier = nullptr;
+        }
+        delete m_llvm_exec;
+    }
     m_llvm_exec = exec;
 }
 

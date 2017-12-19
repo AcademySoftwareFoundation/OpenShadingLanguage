@@ -49,6 +49,7 @@ namespace llvm {
   class ExecutionEngine;
   class Function;
   class FunctionType;
+  class JITEventListener;
   class JITMemoryManager;
   class Linker;
   class LLVMContext;
@@ -820,6 +821,8 @@ private:
     bool m_supports_masked_stores;
     bool m_supports_native_bit_masks;
 
+    // Profiling Info
+    llvm::JITEventListener* mVTuneNotifier;
 
     // Debug Info
     llvm::DIFile * getOrCreateDebugFileFor(const std::string &file_name);

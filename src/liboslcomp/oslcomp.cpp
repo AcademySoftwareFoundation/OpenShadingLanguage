@@ -204,8 +204,10 @@ OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
         context_type ctx (instring.begin(), instring.end(), filename.c_str());
 
         // Turn on support of variadic macros, e.g. #define FOO(...) __VA_ARGS__
+        // Turn off whitespace insertion.
         boost::wave::language_support lang = boost::wave::language_support (
-                ctx.get_language() | boost::wave::support_option_variadics);
+                (ctx.get_language() | boost::wave::support_option_variadics)
+                & ~boost::wave::language_support::support_option_insert_whitespace);
         ctx.set_language (lang);
 
         ctx.add_macro_definition (OIIO::Strutil::format("OSL_VERSION_MAJOR=%d",

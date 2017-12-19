@@ -260,7 +260,7 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             pnoise pnoise-cell pnoise-gabor pnoise-perlin pnoise-uperlin
             operator-overloading
             oslc-comma oslc-D
-            oslc-err-arrayindex oslc-err-closuremul
+            oslc-err-arrayindex oslc-err-closuremul oslc-err-field
             oslc-err-format oslc-err-intoverflow
             oslc-err-noreturn oslc-err-notfunc
             oslc-err-outputparamvararray oslc-err-paramdefault

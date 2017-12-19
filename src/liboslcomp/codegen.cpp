@@ -1873,10 +1873,13 @@ ASTfunction_call::codegen_arg (SymbolPtrVec &argdest, SymbolPtrVec &index1,
                    form->typespec().c_str());
         }
     }
-    argdest.push_back (thisarg);
-    index1.push_back (ind1);
-    index2.push_back (ind2);
-    index3.push_back (ind3);
+    if (thisarg) {
+        argdest.push_back (thisarg);
+        index1.push_back (ind1);
+        index2.push_back (ind2);
+        index3.push_back (ind3);
+    } else
+        arg->error("Invalid argument to function");
 }
 
 

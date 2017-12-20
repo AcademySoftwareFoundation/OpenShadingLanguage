@@ -214,6 +214,8 @@ ASTNode::typecheck_struct_initializers (ref init, TypeSpec type,
             continue;
         }
 
+        init->typecheck(field.type);
+
         // Ok to assign a literal 0 to a closure to initialize it.
         if (field.type.is_closure() && ! init->typespec().is_closure() &&
             (init->typespec().is_float() || init->typespec().is_int()) &&
@@ -849,8 +851,6 @@ ASTtype_constructor::typecheck (TypeSpec expected, bool report)
 
 
 class ASTcompound_initializer::TypeAdjuster {
-	enum { must_init_all = 1 << 1 }; /// All fields/elements must be inited
-
     // Only adjust the types on success of root initializer
     // Oh for an llvm::SmallVector here!
     std::vector<std::tuple<ASTcompound_initializer*, TypeSpec, bool>> m_adjust;
@@ -1137,6 +1137,14 @@ ASTNode::check_arglist (const char *funcname, ASTNode::ref arg,
             continue;  // match anything
         }
 
+        if (arg->nodetype() == compound_initializer_node) {
+            int advance;
+            TypeSpec formaltype = m_compiler->type_from_code (formals, &advance);
+            //formals += advance;
+            ((ASTcompound_initializer*)arg.get())->typecheck (formaltype,
+                                        ASTcompound_initializer::must_init_all);
+        }
+
         if (! check_simple_arg (arg->typespec(), formals, coerce))
             return false;
         // If check_simple_arg succeeded, it advanced formals, and we
@@ -1400,6 +1408,7 @@ ASTfunction_call::typecheck_struct_constructor ()
     ASSERT (structspec);
     m_typespec = m_sym->typespec();
     if (structspec->numfields() != (int)listlength(args())) {
+        // Support a single argument which is an init-list of proper type?
         error ("Constructor for '%s' has the wrong number of arguments (expected %d, got %d)",
                structspec->name(), structspec->numfields(), listlength(args()));
     }
@@ -1904,11 +1913,17 @@ public:
 TypeSpec
 ASTfunction_call::typecheck (TypeSpec expected)
 {
-    typecheck_children ();
-
     if (is_struct_ctr()) {
         // Looks like function call, but is actually struct constructor
         return typecheck_struct_constructor ();
+    }
+
+    // Instead of typecheck_children, typecheck all arguments except for
+    // initializer lists, who will be checked against each overload's formal
+    // specification or each field's known type if is_struct_ctr.
+    for (ref arg = args(); arg; arg = arg->next()) {
+        if (arg->nodetype() != compound_initializer_node)
+            typecheck_list (arg, expected);
     }
 
     // Save the currently choosen symbol for error reporting later

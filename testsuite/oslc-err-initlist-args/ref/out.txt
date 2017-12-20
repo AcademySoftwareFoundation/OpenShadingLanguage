@@ -1,0 +1,17 @@
+test.osl:43: error: No matching function call to 'failifnota (unknown)'
+  Candidates are:
+    test.osl:16	void failifnota (struct acolor)
+test.osl:44: error: No matching function call to 'failifnota (unknown)'
+  Candidates are:
+    test.osl:16	void failifnota (struct acolor)
+test.osl:53: error: Ambiguous call to 'ddd (unknown, int)'
+  Candidates are:
+    test.osl:33	void ddd (struct B, int)
+    test.osl:32	void ddd (struct A, int)
+test.osl:54: error: Ambiguous call to 'noise (unknown)'
+  Candidates are:
+    test.osl:35	float noise (struct A)
+    float noise (point)
+    color noise (point)
+    vector noise (point)
+FAILED test.osl

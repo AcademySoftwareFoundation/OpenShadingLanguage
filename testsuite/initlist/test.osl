@@ -105,7 +105,7 @@ shader test( // FIXME: custcolor4 cina[2] = {{color(1),1}, {color(1),1}},
     printf ("ns2 = {(%g) (%g %g)}\n", ns2.n1.c3, ns2.c4.rgb, ns2.c4.a);
 
     int i = -4;
-    nested2 ns4[4] = { { {{5,6,7}},    {{-1,-2,-3}, i--} },
+    nested2 ns4[4] = { { {{5,6,7}},    custcolor4({-1,-2,-3}, i--) },
                        { {{1,2,3}},    {{-5,-6,-7}, --i} },
                        { {{11,12,13}}, {{-10,-20,-30},-40} },
                        { {{7}},        custcolor4(color(-5,-15,-20),-25) }  };
@@ -119,4 +119,12 @@ shader test( // FIXME: custcolor4 cina[2] = {{color(1),1}, {color(1),1}},
         printf("ar: {%g, {%g}}\n", ar.a, ar.rgb);
         printf("br: {{%g}, %g}\n", br.rgb, br.a);
     }
+
+    acolor ac[4] = { {1, {2,3,4}}, acolor(5, {6,7,8}), acolorvalue(),
+                     acolorcopy({1, {1, 6, 1}}) };
+    for (int i = 0; i < 4; ++i)
+        printf ("ac[%d] = {(%g %g)}\n", i, ac[i].rgb, ac[i].a);
+
+    acolor cc = acolorcopy({10, {11,12,13}});
+    printf("AC: ({%g})\n", cc.rgb);
 }

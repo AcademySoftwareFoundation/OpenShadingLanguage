@@ -1,0 +1,56 @@
+
+struct acolor {
+    float a;
+    color rgb;
+};
+
+struct bcolor {
+    color rgb;
+    float a;
+};
+
+void colorvalue(acolor a) {}
+
+void colorvalue(bcolor b) {}
+
+void failifnota(acolor a) {}
+
+
+// No float a, b, c; ???
+struct A { float a; float b; float c; };
+struct B { float a; float b; float c; };
+
+void aaa(A a, float b)  { printf("A.1\n"); }
+void aaa(B b, int c)    { printf("B.1\n"); }
+
+void bbb(B b, int c)    { printf("B.2\n"); }
+void bbb(A a, float b)  { printf("A.2\n"); }
+
+void ccc(A a, int b)    { printf("A.3\n"); }
+void ccc(B b, float c)  { printf("B.3\n"); }
+
+void ddd(A a, int b)    { printf("A.4\n"); }
+void ddd(B b, int c)    { printf("B.4\n"); }
+
+float noise(A a)        { return 1; }
+
+shader test()
+{
+    colorvalue({ 1, {2,3,4} }); // ok
+	colorvalue({ {6,7,8}, 5 }); // ok
+
+	failifnota({ 1, {2,3,4} }); // ok
+    failifnota({6,7,8});        // fail
+    failifnota({ {6,7,8}, 5 }); // fail
+
+    aaa({1,2,3}, 1);
+    aaa({1,2,3}, 1.0);
+    bbb({1,2,3}, 1);
+    bbb({1,2,3}, 1.0);
+    ccc({1,2,3}, 1);
+    ccc({1,2,3}, 1.0);
+
+    ddd({1,2,3}, 1);
+    noise({1,2,3});
+}
+

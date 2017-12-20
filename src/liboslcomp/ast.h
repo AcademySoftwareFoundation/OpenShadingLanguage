@@ -756,8 +756,18 @@ public:
     bool canconstruct() const { return m_ctor; }
     void canconstruct(bool b) { m_ctor = b; }
 
+    // It is legal to have an incomplete initializer list in some contexts:
+    //   struct custom { float x, y, z, w };
+    //   custom c = { 0, 1 };
+    //   color c[3] = { {1}, {2} };
+    //
+    // Others (function calls) should initialize all elements to avoid ambiguity
+    //   color subproc(color a, color b)
+    //   subproc({0, 1}, {2, 3}) -> error, otherwise there may be subtle changes
+    //                              in behaviour if overloads added later.
     enum Strictness {
         typecheck_errors = 1,       /// Report errors in typecheck calls
+        must_init_all    = 1 << 1,  /// All fields/elements must be inited
     };
 
     TypeSpec typecheck (TypeSpec expected, Strictness mode);

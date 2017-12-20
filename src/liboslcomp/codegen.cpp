@@ -1826,6 +1826,7 @@ ASTfunction_call::codegen (Symbol *dest)
                 // alias each of the fields
                 if (a->nodetype() == variable_ref_node ||
                     a->nodetype() == function_call_node ||
+                    a->nodetype() == compound_initializer_node ||
                     a->nodetype() == binary_expression_node ||
                     a->nodetype() == unary_expression_node) {
                     // Passed a variable that is a struct ; make the struct

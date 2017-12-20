@@ -927,7 +927,9 @@ function_args_opt
 
 function_args
         : expression
+        | compound_initializer
         | function_args ',' expression     { $$ = concat ($1, $3); }
+        | function_args ',' compound_initializer     { $$ = concat ($1, $3); }
         ;
 
 assign_expression

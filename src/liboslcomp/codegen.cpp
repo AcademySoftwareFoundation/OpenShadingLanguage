@@ -463,8 +463,14 @@ ASTreturn_statement::codegen (Symbol *dest)
 Symbol *
 ASTcompound_initializer::codegen (Symbol *sym)
 {
-	if (canconstruct())
+    if (canconstruct())
         return ASTtype_constructor::codegen(sym);
+
+    if (m_typespec.is_structure_based()) {
+        if (!sym)
+            sym = m_compiler->make_temporary (m_typespec);
+        return codegen_struct_initializers (initlist(), sym, true /*is_constructor*/);
+    }
 
 	ASSERT(0 && "compound codegen");
     return NULL;

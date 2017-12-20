@@ -692,6 +692,10 @@ return_statement
                 {
                     $$ = new ASTreturn_statement (oslcompiler, $2);
                 }
+        | RETURN compound_initializer ';'
+                {
+                    $$ = new ASTreturn_statement (oslcompiler, $2);
+                }
         ;
 
 for_init_statement

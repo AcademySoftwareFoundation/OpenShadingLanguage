@@ -1,0 +1,22 @@
+
+struct acolor {
+    float a;
+    color rgb;
+};
+
+struct bcolor {
+    color rgb;
+    float a;
+};
+
+bcolor okreturn()  { return { 1 }; }
+bcolor badreturn() { return { 1, {1,2,3} }; }
+bcolor badreturn() { return acolor(1,2); }
+
+// This seems like it might be useful?
+bcolor badreturn() { return {}; }
+
+shader test()
+{
+}
+

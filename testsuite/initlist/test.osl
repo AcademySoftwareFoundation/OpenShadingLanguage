@@ -10,6 +10,10 @@ custcolor4 __operator__neg__(custcolor4 a)
     return custcolor4(-a.rgb, -a.a);
 }
 
+custcolor4 color4value() {
+    return { {.1, .2, .3}, .4 };
+}
+
 struct nested {
     custcolor4 c4;
     color  ca[3];
@@ -23,6 +27,33 @@ struct nested2 {
     nested1 n1;
     custcolor4  c4;
 };
+
+struct acolor {
+    float a;
+    color rgb;
+};
+
+acolor acolorvalue() {
+    return { 22, {23,33,43} };
+}
+
+acolor acolorcopy(acolor a) {
+    return a;
+}
+
+struct bcolor {
+    color rgb;
+    float a;
+};
+
+acolor colorvalue() {
+    return { 1, {2,3,4} };
+}
+
+bcolor colorvalue() {
+    return { {6,7,8}, 5 };
+}
+
 
 shader test( // FIXME: custcolor4 cina[2] = {{color(1),1}, {color(1),1}},
              vector vin = { 1, 2, 3 },
@@ -46,8 +77,9 @@ shader test( // FIXME: custcolor4 cina[2] = {{color(1),1}, {color(1),1}},
     printf("normal: (%g)\n", n0);
     printf("vector: (%g)\n", v0);
 
-    color carray[7] = { {1}, {2}, {3}, {4,0,0}, {0,5,0}, {0,0,6}, {7,8,9} };
-    for (int i = 0; i < 7; ++i)
+    color carray[9] = { {1}, {2}, {3}, {4,0,0}, {0,5,0}, {0,0,6}, {7,8,9},
+                        color(10,11,12), 2 };
+    for (int i = 0; i < 9; ++i)
         printf ("carray[%d] = (%g)\n", i, carray[i]);
 
     custcolor4 c4ctors[4] = { custcolor4(1,2), custcolor4(3,4),
@@ -55,9 +87,9 @@ shader test( // FIXME: custcolor4 cina[2] = {{color(1),1}, {color(1),1}},
     for (int i = 0; i < 4; ++i)
         printf("c4ctors[%d]: (%g %g)\n", i, c4ctors[i].rgb, c4ctors[i].a);
 
-    custcolor4 carray4[3] = { {color(8), carray[2][0]}, {color(10), 10.5},
-                              {{80,81,82}, carray[6][2]} };
-    for (int i = 0; i < 3; ++i)
+    custcolor4 carray4[4] = { {color(8), carray[2][0]}, {color(10), 10.5},
+                              {{80,81,82}, carray[6][2]}, color4value() };
+    for (int i = 0; i < 4; ++i)
         printf ("carray4[%d] = (%g %g)\n", i, carray4[i].rgb, carray4[i].a);
 
     float a = 1, b = 4;
@@ -79,4 +111,12 @@ shader test( // FIXME: custcolor4 cina[2] = {{color(1),1}, {color(1),1}},
                        { {{7}},        custcolor4(color(-5,-15,-20),-25) }  };
     for (int i = 0; i < 4; ++i)
         printf ("ns4[%d] = {(%g) (%g %g)}\n", i, ns4[i].n1.c3, ns4[i].c4.rgb, ns4[i].c4.a);
+
+    {
+        acolor ar = colorvalue();
+        bcolor br = colorvalue();
+
+        printf("ar: {%g, {%g}}\n", ar.a, ar.rgb);
+        printf("br: {{%g}, %g}\n", br.rgb, br.a);
+    }
 }

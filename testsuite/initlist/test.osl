@@ -5,6 +5,11 @@ struct custcolor4
     float a;
 };
 
+custcolor4 __operator__neg__(custcolor4 a)
+{
+    return custcolor4(-a.rgb, -a.a);
+}
+
 struct nested {
     custcolor4 c4;
     color  ca[3];
@@ -44,6 +49,11 @@ shader test( // FIXME: custcolor4 cina[2] = {{color(1),1}, {color(1),1}},
     color carray[7] = { {1}, {2}, {3}, {4,0,0}, {0,5,0}, {0,0,6}, {7,8,9} };
     for (int i = 0; i < 7; ++i)
         printf ("carray[%d] = (%g)\n", i, carray[i]);
+
+    custcolor4 c4ctors[4] = { custcolor4(1,2), custcolor4(3,4),
+                              custcolor4(color(5,6,7), 8), -custcolor4(-2,-1) };
+    for (int i = 0; i < 4; ++i)
+        printf("c4ctors[%d]: (%g %g)\n", i, c4ctors[i].rgb, c4ctors[i].a);
 
     custcolor4 carray4[3] = { {color(8), carray[2][0]}, {color(10), 10.5},
                               {{80,81,82}, carray[6][2]} };

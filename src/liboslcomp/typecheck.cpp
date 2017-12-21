@@ -783,7 +783,7 @@ ASTtypecast_expression::typecheck (TypeSpec expected)
 
 
 TypeSpec
-ASTtype_constructor::typecheck (TypeSpec expected)
+ASTtype_constructor::typecheck (TypeSpec expected, bool report)
 {
     // Hijack the usual function arg-checking routines.
     // So we have a set of valid patterns for each type constructor:
@@ -797,23 +797,24 @@ ASTtype_constructor::typecheck (TypeSpec expected)
     // Select the pattern for the type of constructor we are...
     const char **patterns = NULL;
     TypeSpec argexpected;  // default to unknown
-    if (typespec().is_float()) {
+    if (expected.is_float()) {
         patterns = float_patterns;
-    } else if (typespec().is_triple()) {
+    } else if (expected.is_triple()) {
         patterns = triple_patterns;
         // For triples, the constructor that takes just one argument is often
         // is used as a typecast, i.e. (vector)foo <==> vector(foo)
         // So pass on the expected type so it can resolve polymorphism in
         // the expected way.
         if (listlength(args()) == 1)
-            argexpected = m_typespec;
-    } else if (typespec().is_matrix()) {
+            argexpected = expected;
+    } else if (expected.is_matrix()) {
         patterns = matrix_patterns;
-    } else if (typespec().is_int()) {
+    } else if (expected.is_int()) {
         patterns = int_patterns;
     } else {
-        error ("Cannot construct type '%s'", type_c_str(typespec()));
-        return m_typespec;
+        if (report)
+            error ("Cannot construct type '%s'", type_c_str(expected));
+        return TypeSpec();
     }
 
     typecheck_children (argexpected);
@@ -824,25 +825,230 @@ ASTtype_constructor::typecheck (TypeSpec expected)
         bool coerce = co;
         for (const char **pat = patterns;  *pat;  ++pat) {
             const char *code = *pat;
-            if (check_arglist (type_c_str(typespec()), args(), code + 1, coerce))
-                return m_typespec;
+            if (check_arglist (type_c_str(expected), args(), code + 1, coerce))
+                return expected;
         }
     }
 
     // If we made it this far, no match could be found.
-    std::string err = Strutil::format ("Cannot construct %s (",
-                                       type_c_str(typespec()));
-    for (ref a = args();  a;  a = a->next()) {
-        err += a->typespec().string();
-        if (a->next())
-            err += ", ";
+    if (report) {
+        std::string err = Strutil::format ("Cannot construct %s (",
+                                           type_c_str(expected));
+        for (ref a = args();  a;  a = a->next()) {
+            err += a->typespec().string();
+            if (a->next())
+                err += ", ";
+        }
+        err += ")";
+        error ("%s", err.c_str());
+        // FIXME -- it might be nice here to enumerate for the user all the
+        // valid combinations.
     }
-    err += ")";
-    error ("%s", err.c_str());
-    // FIXME -- it might be nice here to enumerate for the user all the
-    // valid combinations.
-    return m_typespec;
+    return TypeSpec();
 }
+
+
+class ASTcompound_initializer::TypeAdjuster {
+	enum { must_init_all = 1 << 1 }; /// All fields/elements must be inited
+
+    // Only adjust the types on success of root initializer
+    // Oh for an llvm::SmallVector here!
+    std::vector<std::tuple<ASTcompound_initializer*, TypeSpec, bool>> m_adjust;
+    OSLCompilerImpl* m_compiler;
+    const Strictness m_mode;
+    bool m_success;
+
+    void mark_type(ASTcompound_initializer* i, TypeSpec t, bool c = false) {
+        m_adjust.emplace_back(i, t, c);
+    }
+
+    // Should errors be reported?
+    bool errors() const { return m_mode & typecheck_errors; }
+
+    bool validate_size(int expected, int actual) const {
+        if (expected > actual)
+            return false;
+        return m_mode & must_init_all ? (expected == actual) : true;
+    }
+
+    ASTcompound_initializer*
+    next_initlist(ASTNode *node, const TypeSpec& expected, int& nelem) const {
+        // Finished if already errored and not reporting them.
+        // Otherwise keep checking to report as many errors as possible
+        if (m_success || errors()) {
+            for (node = node->nextptr(); node; node = node->nextptr()) {
+                ++nelem;
+                if (node->nodetype() == compound_initializer_node)
+                    return static_cast<ASTcompound_initializer*>(node);
+                node->typecheck(expected);
+            }
+        }
+        return nullptr;
+    }
+
+    // Typecheck node, reporting an error.
+    // Returns whether to continue iteration (not whether typecheck errored).
+    bool
+    typecheck (ref node, TypeSpec expected, const StructSpec* spec = nullptr,
+               const StructSpec::FieldSpec* field = nullptr) {
+        if ( node->typecheck (expected) != expected &&
+             // Alllow assignment with comparable type
+             ! assignable(expected, node->typespec()) &&
+             // Alllow closure assignments to '0'
+             ! (expected.is_closure() &&
+                ! node->typespec().is_closure() &&
+                  node->typespec().is_int_or_float() &&
+                  node->nodetype() == literal_node &&
+                ((ASTliteral *)node.get())->floatval() == 0.0f) ) {
+
+            m_success = false;
+            if (!errors())
+                return false;
+
+            ASSERT (!spec || field);
+            node->error ("Can't assign '%s' to '%s%s'",
+                         m_compiler->type_c_str(node->typespec()),
+                         m_compiler->type_c_str(expected),
+                         !spec ? "" :
+                         Strutil::format(" %s.%s", spec->name(), field->name));
+        }
+        return true;
+    }
+
+public:
+    TypeAdjuster(OSLCompilerImpl* c, Strictness m = typecheck_errors) :
+        m_compiler(c), m_mode(m), m_success(true) {}
+
+    ~TypeAdjuster () {
+        // Commit infered types of all ASTcompound_initializers scanned.
+        if (m_success) {
+            for (auto&& initer : m_adjust) {
+                std::get<0>(initer)->m_typespec = std::get<1>(initer);
+                std::get<0>(initer)->m_ctor = std::get<2>(initer);
+            }
+        }
+    }
+
+    // Adjust the type of an ASTcompound_initializer to the given type
+    void
+    typecheck_init(ASTcompound_initializer* cinit, const TypeSpec& to) {
+        // Handle the ASTcompound_initializer as a constructor of type to
+
+        if (!cinit->nchildren()) {
+            // Init all error's on
+            if (m_mode & must_init_all) {
+                m_success = false;
+                if (errors()) {
+                    cinit->error ("Empty initializer list not allowed to"
+                                  "represent '%' here", cinit->type_c_str(to));
+                }
+            }
+            return;
+        }
+
+        if (cinit->ASTtype_constructor::typecheck(to, errors()) == to)
+            mark_type(cinit, to, true);
+        else
+            m_success = false;
+    }
+
+    // Adjust the type for every element of an array
+    void
+    typecheck_array(ASTcompound_initializer* init, TypeSpec expected) {
+        ASSERT (expected.is_array());
+        // Every element of the array is the same type
+        TypeSpec elemtype = expected.elementtype();
+
+        int nelem = 0;
+        ASTcompound_initializer* cinit = init;
+
+        if (init->initlist()->nodetype() != compound_initializer_node) {
+            if (! typecheck(init->initlist(), elemtype))
+                return;
+
+            cinit = next_initlist(init->initlist().get(), elemtype, nelem);
+        } else {
+            // Remove the outer brackets:
+            //  type a[3] = { {0}, {1}, {2} };
+            cinit = static_cast<ASTcompound_initializer*>(cinit->initlist().get());
+            ASSERT (!cinit || cinit->nodetype() == compound_initializer_node);
+        }
+
+        if (!elemtype.is_structure()) {
+            while (cinit) {
+                typecheck_init(cinit, elemtype);
+                cinit = next_initlist(cinit, elemtype, nelem);
+            }
+        } else {
+            // Every element of the array is the same StructSpec
+            while (cinit) {
+                typecheck_fields(cinit, cinit->initlist(), elemtype);
+                cinit = next_initlist(cinit, elemtype, nelem);
+            }
+        }
+
+        // Match the number of elements unless expected is unsized.
+        if (m_success && (expected.is_unsized_array() ||
+                          validate_size(nelem, expected.arraylength()))) {
+            mark_type(init, expected);
+            return;
+        }
+
+        m_success = false;
+        if (errors()) {
+            init->error ("Too %s initializers for a '%s'",
+                         nelem < expected.arraylength() ? "few" : "many",
+                         init->type_c_str(expected));
+        }
+    }
+
+    // Adjust the type for every field that has an initializer list
+    void
+    typecheck_fields(ASTNode* parent, ref arg, TypeSpec expected) {
+        ASSERT (expected.is_structure_based());
+        StructSpec* structspec = expected.structspec();
+        int ninits = 0, nfields = structspec->numfields();
+        while (arg && ninits < nfields) {
+            const auto& field = structspec->field(ninits++);
+            const auto& ftype = field.type;
+            if (arg->nodetype() == compound_initializer_node) {
+                // Typecheck the nested initializer list
+                auto cinit = static_cast<ASTcompound_initializer*>(arg.get());
+                if (!field.type.is_array()) {
+                    if (!field.type.is_structure())
+                        typecheck_init(cinit, field.type);
+                    else if (cinit->initlist())
+                        typecheck_fields(cinit, cinit->initlist().get(), ftype);
+                    else if (m_mode & must_init_all)
+                        m_success = false; // empty init list not allowd
+                } else
+                    typecheck_array(cinit, ftype);
+
+                // Just leave if not reporting errors
+                if (!m_success && !errors())
+                    return;
+
+            } else if (! typecheck(arg, ftype, structspec, &field))
+                return;
+
+            arg = arg->next();
+        }
+
+        // Can't have left over args, would mean ninits > nfields
+        if (m_success && !arg && validate_size(ninits, nfields)) {
+            if (parent->nodetype() == compound_initializer_node)
+                mark_type(static_cast<ASTcompound_initializer*>(parent), expected);
+            return;
+        }
+
+        m_success = false;
+        if (errors() && (arg || nfields > ninits)) {
+            parent->error ("Too %s initializers for struct '%s'",
+                           ninits < nfields ? "few" : "many",
+                           structspec->name());
+        }
+    }
+};
 
 
 
@@ -856,251 +1062,18 @@ ASTcompound_initializer::typecheck (TypeSpec expected, Strictness mode)
         return m_typespec;
     }
 
-    class TypeAdjuster {
-        enum { must_init_all = 1 << 1 }; /// All fields/elements must be inited
-
-        // Only adjust the types on success of root initializer
-        // Oh for an llvm::SmallVector here!
-        std::vector<std::tuple<ASTcompound_initializer*, TypeSpec, bool>> m_adjust;
-        const Strictness m_mode;
-        bool m_success;
-
-
-        void mark_type(ASTcompound_initializer* i, TypeSpec t, bool c = false) {
-            m_adjust.emplace_back(i, t, c);
-        }
-
-        bool errors() const { return m_mode & typecheck_errors; }
-
-        bool validate_size(int expected, int actual) const {
-            if (expected > actual)
-                return false;
-            return m_mode & must_init_all ? (expected == actual) : true;
-        }
-
-        ASTcompound_initializer*
-        next_initlist(ASTNode *node, const TypeSpec& expected, int& nelem) const {
-            // Finished if already errored and not reporting them.
-            // Otherwise keep checking to report as many errors as possible
-            if (m_success || errors()) {
-                for (node = node->nextptr(); node; node = node->nextptr()) {
-                    ++nelem;
-                    if (node->nodetype() == compound_initializer_node)
-                        return static_cast<ASTcompound_initializer*>(node);
-                    node->typecheck(expected);
-                }
-            }
-            return nullptr;
-        }
-
-    public:
-        TypeAdjuster(Strictness m) : m_mode(m), m_success(true) {}
-
-        ~TypeAdjuster() {
-            // Commit all ASTcompound_initializer types now.
-            if (m_success) {
-                for (auto&& initer : m_adjust) {
-                    std::get<0>(initer)->m_typespec = std::get<1>(initer);
-                    std::get<0>(initer)->m_ctor = std::get<2>(initer);
-                }
-            }
-        }
-
-        // Adjust the type of an ASTcompound_initializer to the given type
-        void
-        basic_type(ASTcompound_initializer* cinit, const TypeSpec& to) {
-            // Handle nested initializer lists
-            // vector4 V = { {1}, {2}, {{3,4,5}, 6} };
-
-            if (!cinit->nchildren()) {
-                // Init all error's on
-                if (m_mode & must_init_all) {
-                    m_success = false;
-                    if (errors()) {
-                        cinit->error ("Empty initializer list not allowed to"
-                                      "represent '%' here", cinit->type_c_str(to));
-                    }
-                }
-                return;
-            }
-
-            // Count the number of arguments.
-            int a = 0;
-            for (ref c = cinit->child(0); c; c = c->next()) {
-                switch (c->nodetype()) {
-                    case function_call_node:
-                    case binary_expression_node:
-                        if (c->typecheck().is_numeric())
-                            break;
-
-                    default:
-                        m_success = false;
-                        return;
-
-                    case literal_node:
-                    case variable_ref_node:
-                    case index_node:
-                        break;
-                }
-                ++a;
-            }
-            
-            // Allow contruction by single element, or in case of triple
-            // an additional element (the space string). Let typechecking sort
-            // out any errors from mismatch/uncoercable types.
-            if (a == 1 || a == to.aggregate() || (to.is_triple() && a == 4)) {
-                mark_type(cinit, to, true);
-                return;
-            }
-
-            m_success = false;
-            if (errors())
-                cinit->error ("Cannot construct type '%s'", cinit->type_c_str(to));
-        }
-
-        // Adjust the type for every element of an array
-        void
-        array(ASTcompound_initializer* init, TypeSpec expected) {
-            ASSERT (expected.is_array());
-            // Every element of the array is the same type
-            TypeSpec elemtype = expected.elementtype();
-
-            int nelem = 0;
-            ASTcompound_initializer* cinit = init;
-
-            if (init->initlist()->nodetype() != compound_initializer_node) {
-                if (elemtype.is_closure() || elemtype.is_scalarnum()) {
-                    // Array of scalars, init must be terminal list
-                    for (ref c = init->child(0); c; c = c->next(), ++nelem) {
-                        if ( c->typecheck (elemtype) != elemtype &&
-                             // Alllow assignment with comparable type
-                             ! assignable(elemtype, c->typespec()) &&
-                             // Alllow closure assignments to '0'
-                             ! (elemtype.is_closure() &&
-                                ! c->typespec().is_closure() &&
-                                  c->typespec().is_int_or_float() &&
-                                  c->nodetype() == literal_node &&
-                                ((ASTliteral *)c.get())->floatval() == 0.0f) ) {
-
-                            m_success = false;
-                            if (!errors())
-                                return;
-
-                            c->error ("Can't assign '%s' to '%s'",
-                                      init->type_c_str(c->typespec()),
-                                      init->type_c_str(elemtype));
-                        }
-                    }
-                    cinit = nullptr;
-                } else {
-                    // Skip over possible first literal filling a vector:
-                    //    vector v[] = { 1, {1,2,3} }; // ok
-                    //    struct s[] = { 1, {1,2,3} }; // illegal
-                    if (elemtype.is_structure()) {
-                        m_success = false;
-                        if (!errors())
-                            return;
-
-                        init->error ("Can't assign '%s' to struct '%s'",
-                                      init->type_c_str(init->typespec()),
-                                      elemtype.structspec()->name());
-                    }
-                    init->initlist()->typecheck (elemtype);
-                    cinit = next_initlist(init->initlist().get(), elemtype, nelem);
-                }
-            } else {
-                // Remove the outer brackets:
-                //  type a[3] = { {0}, {1}, {2} };
-                cinit = static_cast<ASTcompound_initializer*>(cinit->initlist().get());
-                ASSERT (!cinit || cinit->nodetype() == compound_initializer_node);
-            }
-
-            if (!elemtype.is_structure()) {
-                while (cinit) {
-                    basic_type(cinit, elemtype);
-                    cinit = next_initlist(cinit, elemtype, nelem);
-                }
-            } else {
-                // Every element of the array is the same StructSpec
-                while (cinit) {
-                    fields(cinit, elemtype);
-                    cinit = next_initlist(cinit, elemtype, nelem);
-                }
-            }
-
-            // Match the number of elements unless expected is unsized.
-            if (m_success && (expected.is_unsized_array() ||
-                              validate_size(nelem, expected.arraylength()))) {
-                mark_type(init, expected);
-                return;
-            }
-
-            m_success = false;
-            if (errors()) {
-                init->error ("Too %s initializers for a '%s'",
-                             nelem < expected.arraylength() ? "few" : "many",
-                             init->type_c_str(expected));
-            }
-        }
-
-        // Adjust the type for every field that has an initializer list
-        void
-        fields(ASTcompound_initializer* cinit, TypeSpec expected) {
-            ASSERT (expected.is_structure_based());
-            StructSpec* structspec = expected.structspec();
-            ASTNode* arg = cinit->initlist().get();
-            int ninits = 0, nfields = structspec->numfields();
-            while (arg && ninits < nfields) {
-                const TypeSpec& ftype = structspec->field(ninits++).type;
-                if (arg->nodetype() == compound_initializer_node) {
-                    // Typecheck the nested initializer list
-                    auto cinit = static_cast<ASTcompound_initializer*>(arg);
-                    if (!ftype.is_array()) {
-                        if (!ftype.is_structure())
-                            basic_type(cinit, ftype);
-                        else if (cinit->initlist())
-                            fields(cinit, ftype);
-                        else if (m_mode & must_init_all)
-                            m_success = false; // empty init list not allowd
-                    } else
-                        array(cinit, ftype);
-
-                    // Just leave if not reporting errors
-                    if (!m_success && !errors())
-                        return;
-
-                } else
-                    arg->typecheck(ftype);
-
-                arg = arg->nextptr();
-            }
-
-            // Can't have left over args, would mean ninits > nfields
-            if (m_success && !arg && validate_size(ninits, nfields)) {
-                mark_type(cinit, expected);
-                return;
-            }
-
-            m_success = false;
-            if (errors()) {
-                cinit->error ("Too %s initializers for struct '%s'",
-                              ninits < nfields ? "few" : "many",
-                              structspec->name());
-            }
-        }
-    };
-
-    // Scope to finalize/bind initializer list types before return m_typespec
+    // Scoped so ~TypeAdjuster() will bind m_typespec before return m_typespec
     {
-        TypeAdjuster ta(mode);
+        TypeAdjuster ta(m_compiler, mode);
         if (!expected.is_array()) {
             if (expected.is_structure())
-                ta.fields(this, expected);
+                ta.typecheck_fields(this, initlist(), expected);
             else
-                ta.basic_type(this, expected);
+                ta.typecheck_init(this, expected);
         } else
-            ta.array(this, expected);
+            ta.typecheck_array(this, expected);
     }
+
 
     return m_typespec;
 }

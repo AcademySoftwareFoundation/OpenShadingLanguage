@@ -727,10 +727,17 @@ public:
 
     const char *nodetypename () const { return "type_constructor"; }
     const char *childname (size_t i) const;
-    TypeSpec typecheck (TypeSpec expected);
     Symbol *codegen (Symbol *dest = NULL);
 
     ref args () const { return child (0); }
+
+    // Typecheck construction of expected against args()
+    TypeSpec typecheck (TypeSpec expected, bool error);
+
+    // Typecheck construction of m_typespec against args()
+    TypeSpec typecheck (TypeSpec expected) {
+        return typecheck (m_typespec, true);
+    }
 };
 
 
@@ -757,6 +764,9 @@ public:
     TypeSpec typecheck (TypeSpec expected) {
         return typecheck(expected, typecheck_errors);
     }
+
+    // Helper for typechecking an initlist or structure.
+    class TypeAdjuster;
 };
 
 

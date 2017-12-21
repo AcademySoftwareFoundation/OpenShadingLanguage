@@ -256,7 +256,7 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             getsymbol-nonheap gettextureinfo
             group-outputs groupstring
             hash hashnoise hex hyperb
-            ieee_fp if incdec initops intbits isconnected isconstant
+            ieee_fp if incdec initlist initops intbits isconnected isconstant
             layers layers-Ciassign layers-entry layers-lazy
             layers-nonlazycopy layers-repeatedoutputs
             linearstep

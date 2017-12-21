@@ -714,8 +714,29 @@ public:
 
 
 
-class ASTcompound_initializer : public ASTNode
+class ASTtype_constructor : public ASTNode
 {
+protected:
+    ASTtype_constructor (NodeType n, OSLCompilerImpl *c, TypeSpec t, ASTNode *a)
+        : ASTNode (n, c, Nothing, a) { m_typespec = t; }
+
+public:
+    ASTtype_constructor (OSLCompilerImpl *comp, TypeSpec typespec,
+                         ASTNode *args)
+        : ASTtype_constructor (type_constructor_node, comp, typespec, args) {}
+
+    const char *nodetypename () const { return "type_constructor"; }
+    const char *childname (size_t i) const;
+    TypeSpec typecheck (TypeSpec expected);
+    Symbol *codegen (Symbol *dest = NULL);
+
+    ref args () const { return child (0); }
+};
+
+
+class ASTcompound_initializer : public ASTtype_constructor
+{
+    bool m_ctor;
 public:
     ASTcompound_initializer (OSLCompilerImpl *comp, ASTNode *exprlist);
     const char *nodetypename () const { return "compound_initializer"; }
@@ -723,6 +744,19 @@ public:
     Symbol *codegen (Symbol *dest = NULL);
 
     ref initlist () const { return child (0); }
+
+    bool canconstruct() const { return m_ctor; }
+    void canconstruct(bool b) { m_ctor = b; }
+
+    enum Strictness {
+        typecheck_errors = 1,       /// Report errors in typecheck calls
+    };
+
+    TypeSpec typecheck (TypeSpec expected, Strictness mode);
+
+    TypeSpec typecheck (TypeSpec expected) {
+        return typecheck(expected, typecheck_errors);
+    }
 };
 
 
@@ -843,26 +877,6 @@ public:
     Symbol *codegen (Symbol *dest = NULL);
 
     ref expr () const { return child (0); }
-};
-
-
-
-class ASTtype_constructor : public ASTNode
-{
-public:
-    ASTtype_constructor (OSLCompilerImpl *comp, TypeSpec typespec,
-                         ASTNode *args)
-        : ASTNode (type_constructor_node, comp, 0, args)
-    {
-        m_typespec = typespec;
-    }
-
-    const char *nodetypename () const { return "type_constructor"; }
-    const char *childname (size_t i) const;
-    TypeSpec typecheck (TypeSpec expected);
-    Symbol *codegen (Symbol *dest = NULL);
-
-    ref args () const { return child (0); }
 };
 
 

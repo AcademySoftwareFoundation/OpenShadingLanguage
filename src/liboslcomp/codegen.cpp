@@ -461,9 +461,12 @@ ASTreturn_statement::codegen (Symbol *dest)
 
 
 Symbol *
-ASTcompound_initializer::codegen (Symbol *dest)
+ASTcompound_initializer::codegen (Symbol *sym)
 {
-    ASSERT(0 && "compound codegen");
+	if (canconstruct())
+        return ASTtype_constructor::codegen(sym);
+
+	ASSERT(0 && "compound codegen");
     return NULL;
 }
 
@@ -661,7 +664,9 @@ ASTNode::one_default_literal (const Symbol *sym, ASTNode *init,
             float f = lit->floatval();
             out += Strutil::format ("%.8g%s%.8g%s%.8g", f, sep, f, sep, f);
         } else if (init && init->typespec() == type &&
-                   init->nodetype() == ASTNode::type_constructor_node) {
+                   (init->nodetype() == ASTNode::type_constructor_node ||
+                   (init->nodetype() == ASTNode::compound_initializer_node &&
+                   static_cast<ASTcompound_initializer*>(init)->canconstruct()))) {
             ASTtype_constructor *ctr = (ASTtype_constructor *) init;
             ASTNode::ref val = ctr->args();
             float f[3];
@@ -786,7 +791,9 @@ ASTvariable_declaration::param_default_literals (const Symbol *sym,
 
     bool compound = (init && init->nodetype() == compound_initializer_node);
     if (compound) {
-        init = ((ASTcompound_initializer *)init)->initlist().get();
+        compound = !static_cast<ASTcompound_initializer*>(init)->canconstruct();
+        if (compound)
+            init = ((ASTcompound_initializer *)init)->initlist().get();
     }
 
     bool completed = true;  // have we output the full initialization?
@@ -823,8 +830,29 @@ ASTvariable_declaration::codegen_initializer (ref init, Symbol *sym)
         init = ((ASTcompound_initializer *)init.get())->initlist();
         codegen_initlist (init, typespec(), sym);
     } else {
-        if (init->nodetype() == compound_initializer_node)
-            init = ((ASTcompound_initializer *)init.get())->initlist();
+        if (init->nodetype() == compound_initializer_node) {
+            ASTcompound_initializer* cinit = static_cast<ASTcompound_initializer*>(init.get());
+            init = cinit->initlist();
+            if (cinit->canconstruct()) {
+                bool paraminit = (m_compiler->codegen_method() != m_compiler->main_method_name() &&
+                                  (m_sym->symtype() == SymTypeParam ||
+                                   m_sym->symtype() == SymTypeOutputParam));
+                if (paraminit) {
+                    // For parameter initialization, don't really generate ops if it
+                    // can be statically initialized.
+                    m_compiler->codegen_method (sym->name());
+                    sym->initbegin (m_compiler->next_op_label ());
+                }
+
+                Symbol* dest = cinit->codegen(sym);
+                if (dest != sym)
+                    emitcode ("assign", sym, dest);
+
+                if (paraminit)
+                    sym->initend (m_compiler->next_op_label ());
+                return;
+            }
+        }
         codegen_initlist (init, m_typespec, m_sym);
     }
 }
@@ -890,6 +918,12 @@ ASTNode::codegen_initlist (ref init, TypeSpec type, Symbol *sym)
     }
 
     if (paraminit) {
+        // Warn early about struct array paramters.
+        // Handling this will likely need changes to oso format.
+        if (type.is_structure_array()) {
+            error ("array of struct are not allowed as parameters");
+            return;
+        }
         // For parameter initialization, don't really generate ops if it
         // can be statically initialized.
         m_compiler->codegen_method (sym->name());
@@ -941,10 +975,31 @@ ASTNode::codegen_initlist (ref init, TypeSpec type, Symbol *sym)
             return;
         }
     }
+    else if (type.is_structure_array()) {
+        // Remove the array flag
+        TypeSpec elemtype = sym->typespec();
+        elemtype.make_array(0);
+        // Make a temporary to construct into
+        Symbol* tmp = m_compiler->make_temporary(elemtype);
+        StructSpec *structspec = sym->typespec().structspec();
+        ustring dstelem(sym->mangled());
+        for (int i = 0; init && i < type.arraylength(); ++i) {
+            // Construct into the temporary
+            Symbol *ctmp = codegen_struct_initializers (init, tmp);
+            // Copy the temporary into the proper indexed element
+            codegen_assign_struct (structspec, dstelem, ustring(ctmp->mangled()),
+                                   m_compiler->make_constant(i), false, 0,
+                                   false);
+            init = init->next();
+        }
+        if (paraminit)
+            sym->initend (m_compiler->next_op_label ());
+        return;
+    }
+    else if (init->nodetype() == compound_initializer_node)
+        init = ((ASTcompound_initializer *)init.get())->initlist();
 
     // Loop over a list of initializers (it's just 1 if not an array)...
-    if (init->nodetype() == compound_initializer_node)
-        init = ((ASTcompound_initializer *)init.get())->initlist();
     for (int i = 0;  init;  init = init->next(), ++i) {
         if (sym->typespec().is_structure() &&
                 init->nodetype() == compound_initializer_node) {
@@ -1000,7 +1055,7 @@ ASTNode::codegen_struct_initializers (ref init, Symbol *sym,
     }
 
     // General case -- per-field initializers
-    if (init->nodetype() == compound_initializer_node) {
+    if (!is_constructor && init->nodetype() == compound_initializer_node) {
         init = ((ASTcompound_initializer *)init.get())->initlist();
     }
     StructSpec *structspec (sym->typespec().structspec());
@@ -1030,7 +1085,8 @@ ASTNode::codegen_struct_initializers (ref init, Symbol *sym,
             fieldsym->initbegin (m_compiler->next_op_label ());
         }
 
-        if (init->nodetype() == compound_initializer_node) {
+        if (init->nodetype() == compound_initializer_node &&
+            !((ASTcompound_initializer *)init.get())->canconstruct()) {
             // Initialize the field with a compound initializer
             codegen_initlist (((ASTcompound_initializer *)init.get())->initlist(),
                               field.type, fieldsym);

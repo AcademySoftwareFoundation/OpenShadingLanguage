@@ -157,6 +157,9 @@ ASTNode::typecheck_initlist (ref init, TypeSpec type, string_view name)
             ((ASTliteral *)init.get())->floatval() == 0.0f) {
             continue;  // it's ok
         }
+        // Allow struct s = { ... }; vector v = { ... };
+        if (type.is_structure_based() || (!type.is_closure() && type.is_triple()))
+            continue;
         if (! type.is_array() && i > 0)
             error ("Can't assign array initializers to non-array %s %s",
                    type_c_str(type), name);
@@ -202,8 +205,11 @@ ASTNode::typecheck_struct_initializers (ref init, TypeSpec type,
             } else if (field.type.is_structure()) {
                 typecheck_struct_initializers (cinit->initlist(), field.type,
                                                fieldname);
-            } else {
-                error ("Can't use '{...}' for a struct field that is not an array");
+            } else if (cinit->typecheck(field.type) != field.type) {
+                // Is this message still neccessary? typecheck above should have
+                // reported a more specific message.
+                error ("Can't use '{...}' for a struct field that is not an "
+                       "array, vector, or constructable");
             }
             continue;
         }
@@ -835,6 +841,267 @@ ASTtype_constructor::typecheck (TypeSpec expected)
     error ("%s", err.c_str());
     // FIXME -- it might be nice here to enumerate for the user all the
     // valid combinations.
+    return m_typespec;
+}
+
+
+
+TypeSpec
+ASTcompound_initializer::typecheck (TypeSpec expected, Strictness mode)
+{
+    if (m_ctor || m_typespec.is_structure_based() ||
+        m_typespec.simpletype().basetype != TypeDesc::UNKNOWN ) {
+        if (m_typespec != expected)
+            error ("Cannot construct type '%s'", type_c_str(expected));
+        return m_typespec;
+    }
+
+    class TypeAdjuster {
+        enum { must_init_all = 1 << 1 }; /// All fields/elements must be inited
+
+        // Only adjust the types on success of root initializer
+        // Oh for an llvm::SmallVector here!
+        std::vector<std::tuple<ASTcompound_initializer*, TypeSpec, bool>> m_adjust;
+        const Strictness m_mode;
+        bool m_success;
+
+
+        void mark_type(ASTcompound_initializer* i, TypeSpec t, bool c = false) {
+            m_adjust.emplace_back(i, t, c);
+        }
+
+        bool errors() const { return m_mode & typecheck_errors; }
+
+        bool validate_size(int expected, int actual) const {
+            if (expected > actual)
+                return false;
+            return m_mode & must_init_all ? (expected == actual) : true;
+        }
+
+        ASTcompound_initializer*
+        next_initlist(ASTNode *node, const TypeSpec& expected, int& nelem) const {
+            // Finished if already errored and not reporting them.
+            // Otherwise keep checking to report as many errors as possible
+            if (m_success || errors()) {
+                for (node = node->nextptr(); node; node = node->nextptr()) {
+                    ++nelem;
+                    if (node->nodetype() == compound_initializer_node)
+                        return static_cast<ASTcompound_initializer*>(node);
+                    node->typecheck(expected);
+                }
+            }
+            return nullptr;
+        }
+
+    public:
+        TypeAdjuster(Strictness m) : m_mode(m), m_success(true) {}
+
+        ~TypeAdjuster() {
+            // Commit all ASTcompound_initializer types now.
+            if (m_success) {
+                for (auto&& initer : m_adjust) {
+                    std::get<0>(initer)->m_typespec = std::get<1>(initer);
+                    std::get<0>(initer)->m_ctor = std::get<2>(initer);
+                }
+            }
+        }
+
+        // Adjust the type of an ASTcompound_initializer to the given type
+        void
+        basic_type(ASTcompound_initializer* cinit, const TypeSpec& to) {
+            // Handle nested initializer lists
+            // vector4 V = { {1}, {2}, {{3,4,5}, 6} };
+
+            if (!cinit->nchildren()) {
+                // Init all error's on
+                if (m_mode & must_init_all) {
+                    m_success = false;
+                    if (errors()) {
+                        cinit->error ("Empty initializer list not allowed to"
+                                      "represent '%' here", cinit->type_c_str(to));
+                    }
+                }
+                return;
+            }
+
+            // Count the number of arguments.
+            int a = 0;
+            for (ref c = cinit->child(0); c; c = c->next()) {
+                switch (c->nodetype()) {
+                    case function_call_node:
+                    case binary_expression_node:
+                        if (c->typecheck().is_numeric())
+                            break;
+
+                    default:
+                        m_success = false;
+                        return;
+
+                    case literal_node:
+                    case variable_ref_node:
+                    case index_node:
+                        break;
+                }
+                ++a;
+            }
+            
+            // Allow contruction by single element, or in case of triple
+            // an additional element (the space string). Let typechecking sort
+            // out any errors from mismatch/uncoercable types.
+            if (a == 1 || a == to.aggregate() || (to.is_triple() && a == 4)) {
+                mark_type(cinit, to, true);
+                return;
+            }
+
+            m_success = false;
+            if (errors())
+                cinit->error ("Cannot construct type '%s'", cinit->type_c_str(to));
+        }
+
+        // Adjust the type for every element of an array
+        void
+        array(ASTcompound_initializer* init, TypeSpec expected) {
+            ASSERT (expected.is_array());
+            // Every element of the array is the same type
+            TypeSpec elemtype = expected.elementtype();
+
+            int nelem = 0;
+            ASTcompound_initializer* cinit = init;
+
+            if (init->initlist()->nodetype() != compound_initializer_node) {
+                if (elemtype.is_closure() || elemtype.is_scalarnum()) {
+                    // Array of scalars, init must be terminal list
+                    for (ref c = init->child(0); c; c = c->next(), ++nelem) {
+                        if ( c->typecheck (elemtype) != elemtype &&
+                             // Alllow assignment with comparable type
+                             ! assignable(elemtype, c->typespec()) &&
+                             // Alllow closure assignments to '0'
+                             ! (elemtype.is_closure() &&
+                                ! c->typespec().is_closure() &&
+                                  c->typespec().is_int_or_float() &&
+                                  c->nodetype() == literal_node &&
+                                ((ASTliteral *)c.get())->floatval() == 0.0f) ) {
+
+                            m_success = false;
+                            if (!errors())
+                                return;
+
+                            c->error ("Can't assign '%s' to '%s'",
+                                      init->type_c_str(c->typespec()),
+                                      init->type_c_str(elemtype));
+                        }
+                    }
+                    cinit = nullptr;
+                } else {
+                    // Skip over possible first literal filling a vector:
+                    //    vector v[] = { 1, {1,2,3} }; // ok
+                    //    struct s[] = { 1, {1,2,3} }; // illegal
+                    if (elemtype.is_structure()) {
+                        m_success = false;
+                        if (!errors())
+                            return;
+
+                        init->error ("Can't assign '%s' to struct '%s'",
+                                      init->type_c_str(init->typespec()),
+                                      elemtype.structspec()->name());
+                    }
+                    init->initlist()->typecheck (elemtype);
+                    cinit = next_initlist(init->initlist().get(), elemtype, nelem);
+                }
+            } else {
+                // Remove the outer brackets:
+                //  type a[3] = { {0}, {1}, {2} };
+                cinit = static_cast<ASTcompound_initializer*>(cinit->initlist().get());
+                ASSERT (!cinit || cinit->nodetype() == compound_initializer_node);
+            }
+
+            if (!elemtype.is_structure()) {
+                while (cinit) {
+                    basic_type(cinit, elemtype);
+                    cinit = next_initlist(cinit, elemtype, nelem);
+                }
+            } else {
+                // Every element of the array is the same StructSpec
+                while (cinit) {
+                    fields(cinit, elemtype);
+                    cinit = next_initlist(cinit, elemtype, nelem);
+                }
+            }
+
+            // Match the number of elements unless expected is unsized.
+            if (m_success && (expected.is_unsized_array() ||
+                              validate_size(nelem, expected.arraylength()))) {
+                mark_type(init, expected);
+                return;
+            }
+
+            m_success = false;
+            if (errors()) {
+                init->error ("Too %s initializers for a '%s'",
+                             nelem < expected.arraylength() ? "few" : "many",
+                             init->type_c_str(expected));
+            }
+        }
+
+        // Adjust the type for every field that has an initializer list
+        void
+        fields(ASTcompound_initializer* cinit, TypeSpec expected) {
+            ASSERT (expected.is_structure_based());
+            StructSpec* structspec = expected.structspec();
+            ASTNode* arg = cinit->initlist().get();
+            int ninits = 0, nfields = structspec->numfields();
+            while (arg && ninits < nfields) {
+                const TypeSpec& ftype = structspec->field(ninits++).type;
+                if (arg->nodetype() == compound_initializer_node) {
+                    // Typecheck the nested initializer list
+                    auto cinit = static_cast<ASTcompound_initializer*>(arg);
+                    if (!ftype.is_array()) {
+                        if (!ftype.is_structure())
+                            basic_type(cinit, ftype);
+                        else if (cinit->initlist())
+                            fields(cinit, ftype);
+                        else if (m_mode & must_init_all)
+                            m_success = false; // empty init list not allowd
+                    } else
+                        array(cinit, ftype);
+
+                    // Just leave if not reporting errors
+                    if (!m_success && !errors())
+                        return;
+
+                } else
+                    arg->typecheck(ftype);
+
+                arg = arg->nextptr();
+            }
+
+            // Can't have left over args, would mean ninits > nfields
+            if (m_success && !arg && validate_size(ninits, nfields)) {
+                mark_type(cinit, expected);
+                return;
+            }
+
+            m_success = false;
+            if (errors()) {
+                cinit->error ("Too %s initializers for struct '%s'",
+                              ninits < nfields ? "few" : "many",
+                              structspec->name());
+            }
+        }
+    };
+
+    // Scope to finalize/bind initializer list types before return m_typespec
+    {
+        TypeAdjuster ta(mode);
+        if (!expected.is_array()) {
+            if (expected.is_structure())
+                ta.fields(this, expected);
+            else
+                ta.basic_type(this, expected);
+        } else
+            ta.array(this, expected);
+    }
+
     return m_typespec;
 }
 

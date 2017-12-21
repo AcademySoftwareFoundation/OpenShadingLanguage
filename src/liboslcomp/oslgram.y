@@ -260,10 +260,12 @@ formal_param
                 {
                     // Grab the current declaration type, modify it to be array
                     TypeSpec t = oslcompiler->current_typespec();
-                    if (! t.is_structure())
+                    if (! t.is_structure() && ! t.is_triple() && ! t.is_matrix())
                         oslcompiler->error (oslcompiler->filename(),
                                             oslcompiler->lineno(),
-                                            "Can't use '= {...}' initializer except with arrays or struct (%s)", $3);
+                                            "Can't use '= {...}' initializer "
+                                            "except with arrays, structs, vectors, "
+                                            "or matrix (%s)", $3);
                     ASTvariable_declaration *var;
                     var = new ASTvariable_declaration (oslcompiler, t,
                                             ustring($3), $4 /*init*/,
@@ -455,10 +457,12 @@ def_expression
         | IDENTIFIER initializer_list
                 {
                     TypeSpec t = oslcompiler->current_typespec();
-                    if (! t.is_structure())
+                    if (! t.is_structure() && ! t.is_triple() && ! t.is_matrix())
                         oslcompiler->error (oslcompiler->filename(),
                                             oslcompiler->lineno(),
-                                            "Can't use '= {...}' initializer except with arrays or struct (%s)", $1);
+                                            "Can't use '= {...}' initializer "
+                                            "except with arrays, struct, vectors, "
+                                            "or matrix (%s)", $1);
                     $$ = new ASTvariable_declaration (oslcompiler, t,
                                  ustring($1), $2, false, false, false,
                                  true /* initializer list */);

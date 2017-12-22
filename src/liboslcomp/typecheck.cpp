@@ -113,13 +113,6 @@ ASTvariable_declaration::typecheck (TypeSpec expected)
         init = ((ASTcompound_initializer *)init.get())->initlist();
     }
 
-    if (m_typespec.is_structure()) {
-        // struct initialization handled separately
-        return typecheck_struct_initializers (init, m_typespec, m_name.c_str());
-    }
-
-    typecheck_initlist (init, m_typespec, m_name.c_str());
-
     // Warning to catch confusing comma operator in variable initializers.
     // One place this comes up is when somebody forgets the proper syntax
     // for constructors, for example
@@ -134,103 +127,6 @@ ASTvariable_declaration::typecheck (TypeSpec expected)
     }
 
     return m_typespec;
-}
-
-
-
-void
-ASTNode::typecheck_initlist (ref init, TypeSpec type, string_view name)
-{
-    // Loop over a list of initializers (it's just 1 if not an array)...
-    for (int i = 0;  init;  init = init->next(), ++i) {
-        // Check for too many initializers for an array
-        if (type.is_array() && !type.is_unsized_array() && i >= type.arraylength()) {
-            error ("Too many initializers for a '%s'", type_c_str(type));
-            break;
-        }
-        // Special case: ok to assign a literal 0 to a closure to
-        // initialize it.
-        if ((type.is_closure() || type.is_closure_array()) &&
-              ! init->typespec().is_closure() &&
-              init->typespec().is_int_or_float() &&
-              init->nodetype() == literal_node &&
-            ((ASTliteral *)init.get())->floatval() == 0.0f) {
-            continue;  // it's ok
-        }
-        // Allow struct s = { ... }; vector v = { ... };
-        if (type.is_structure_based() || (!type.is_closure() && type.is_triple()))
-            continue;
-        if (! type.is_array() && i > 0)
-            error ("Can't assign array initializers to non-array %s %s",
-                   type_c_str(type), name);
-        if (! assignable(type.elementtype(), init->typespec()))
-            error ("Can't assign '%s' to %s %s", type_c_str(init->typespec()),
-                   type_c_str(type), name);
-    }
-}
-
-
-
-TypeSpec
-ASTNode::typecheck_struct_initializers (ref init, TypeSpec type,
-                                        string_view name)
-{
-    ASSERT (type.is_structure());
-
-    if (! init->next() && init->typespec() == type) {
-        // Special case: just one initializer, it's a whole struct of
-        // the right type.
-        return type;
-    }
-
-    // General case -- per-field initializers
-
-    const StructSpec *structspec (type.structspec());
-    int numfields = (int)structspec->numfields();
-    for (int i = 0;  init;  init = init->next(), ++i) {
-        if (i >= numfields) {
-            error ("Too many initializers for '%s %s'",
-                   type_c_str(type), name);
-            break;
-        }
-        const StructSpec::FieldSpec &field (structspec->field(i));
-
-        if (init->nodetype() == compound_initializer_node) {
-            // Initializer is itself a compound, it ought to be initializing
-            // a field that is an array.
-            ASTcompound_initializer *cinit = (ASTcompound_initializer *)init.get();
-            ustring fieldname = ustring::format ("%s.%s", name, field.name);
-            if (field.type.is_array ()) {
-                typecheck_initlist (cinit->initlist(), field.type, fieldname);
-            } else if (field.type.is_structure()) {
-                typecheck_struct_initializers (cinit->initlist(), field.type,
-                                               fieldname);
-            } else if (cinit->typecheck(field.type) != field.type) {
-                // Is this message still neccessary? typecheck above should have
-                // reported a more specific message.
-                error ("Can't use '{...}' for a struct field that is not an "
-                       "array, vector, or constructable");
-            }
-            continue;
-        }
-
-        init->typecheck(field.type);
-
-        // Ok to assign a literal 0 to a closure to initialize it.
-        if (field.type.is_closure() && ! init->typespec().is_closure() &&
-            (init->typespec().is_float() || init->typespec().is_int()) &&
-            init->nodetype() == literal_node &&
-            ((ASTliteral *)init.get())->floatval() == 0.0f) {
-            continue;  // it's ok
-        }
-
-        // Normal initializer, normal field.
-        if (! assignable(field.type, init->typespec()))
-            error ("Can't assign '%s' to '%s %s.%s'",
-                   type_c_str(init->typespec()),
-                   type_c_str(field.type), name, field.name);
-    }
-    return type;
 }
 
 
@@ -1412,7 +1308,10 @@ ASTfunction_call::typecheck_struct_constructor ()
         error ("Constructor for '%s' has the wrong number of arguments (expected %d, got %d)",
                structspec->name(), structspec->numfields(), listlength(args()));
     }
-    return typecheck_struct_initializers (args(), m_typespec, "this");
+
+    ASTcompound_initializer::TypeAdjuster(m_compiler)
+        .typecheck_fields(this, args().get(), m_typespec);
+    return m_typespec;
 }
 
 

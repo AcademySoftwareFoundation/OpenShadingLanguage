@@ -346,19 +346,9 @@ protected:
                                 bool copywholearrays, int intindex,
                                 bool paraminit);
 
-    // Helper: type check an initializer list -- either a single item to
-    // a scalar, or a list to an array.
-    void typecheck_initlist (ref init, TypeSpec type, string_view name);
-
     // Helper: generate code for an initializer list -- either a single
     // item to a scalar, or a list to an array.
     void codegen_initlist (ref init, TypeSpec type, Symbol *sym);
-
-    // Special type checking for structure member initializers.
-    // It's in the ASTNode base class because it's used from mutiple
-    // subclasses.
-    TypeSpec typecheck_struct_initializers (ref init, TypeSpec type,
-                                            string_view name);
 
     // Special code generation for structure initializers.
     // It's in the ASTNode base class because it's used from mutiple

@@ -347,20 +347,8 @@ struct_declaration
         : STRUCT IDENTIFIER '{' 
                 {
                     ustring name ($2);
-                    Symbol *s = oslcompiler->symtab().clash (name);
-                    if (s) {
-                        oslcompiler->error (oslcompiler->filename(), 
-                                            oslcompiler->lineno(), 
-                                            "\"%s\" already declared in this scope",
-                                            name.c_str());
-                        // FIXME -- print the file and line of the other definition
-                    }
-                    if (name[0] == '_' && name[1] == '_' && name[2] == '_') {
-                        oslcompiler->error (oslcompiler->filename(), 
-                            oslcompiler->lineno(),
-                            "\"%s\" : sorry, can't start with three underscores",
-                            name.c_str());
-                    }
+                    ASTnamed_symbol::validate (name, oslcompiler,
+                                               ASTnamed_symbol::check_clashes);
                     oslcompiler->symtab().new_struct (name);
                 }
           field_declarations '}' ';'
@@ -387,6 +375,7 @@ typed_field
         : IDENTIFIER
                 {
                     ustring name ($1);
+                    ASTnamed_symbol::check_reserved (name, oslcompiler);
                     TypeSpec t = oslcompiler->current_typespec();
                     StructSpec *s = oslcompiler->symtab().current_struct();
                     if (s->lookup_field (name) >= 0)
@@ -402,6 +391,7 @@ typed_field
                 {
                     // Grab the current declaration type, modify it to be array
                     ustring name ($1);
+                    ASTnamed_symbol::check_reserved (name, oslcompiler);
                     TypeSpec t = oslcompiler->current_typespec();
                     t.make_array ($2);
                     if (t.arraylength() < 1)

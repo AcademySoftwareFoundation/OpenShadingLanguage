@@ -1,0 +1,14 @@
+test.osl:8: error: function 'reusename' can't be used as a variable
+test.osl:9: error: function 'globalfunc' can't be used as a variable
+test.osl:12: error: 'reusename' already declared in this scope
+		previous declaration was at test.osl:7
+test.osl:16: error: 'parm0' already declared in this scope
+		previous declaration was at test.osl:15
+test.osl:19: error: '___parm' : sorry, can't start with three underscores
+test.osl:19: error: '___meta' : sorry, can't start with three underscores
+test.osl:20: error: '___vartoo' : sorry, can't start with three underscores
+test.osl:21: error: '___threeunderscores' : sorry, can't start with three underscores
+test.osl:23: error: '___invalid' : sorry, can't start with three underscores
+test.osl:24: error: '___invalidfield' : sorry, can't start with three underscores
+test.osl:25: error: '___invalidarray' : sorry, can't start with three underscores
+FAILED test.osl

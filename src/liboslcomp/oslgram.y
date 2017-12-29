@@ -353,6 +353,7 @@ struct_declaration
                 }
           field_declarations '}' ';'
                 {
+                    oslcompiler->symtab().end_struct ();
                     $$ = 0;
                 }
         ;

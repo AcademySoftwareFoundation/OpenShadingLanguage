@@ -237,9 +237,17 @@ SymbolTable::insert (Symbol *sym)
 int
 SymbolTable::new_struct (ustring name)
 {
-    int structid = TypeSpec::new_struct (new StructSpec (name, scopeid()));
-    insert (new Symbol (name, TypeSpec ("",structid), SymTypeType));
-    return structid;
+    m_structid = TypeSpec::new_struct (new StructSpec (name, scopeid()));
+    insert (new Symbol (name, TypeSpec ("", m_structid), SymTypeType));
+    return m_structid;
+}
+
+
+
+void
+SymbolTable::end_struct ()
+{
+    m_structid = 0;
 }
 
 
@@ -247,7 +255,7 @@ SymbolTable::new_struct (ustring name)
 StructSpec *
 SymbolTable::current_struct ()
 {
-    return TypeSpec::struct_list().back().get();
+    return m_structid ? TypeSpec::struct_list().back().get() : nullptr;
 }
 
 

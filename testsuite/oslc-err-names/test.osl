@@ -25,6 +25,24 @@ struct ___invalid {
     float ___invalidarray[3];
 };
 
-shader test ()
+struct sthis {
+    float this;
+};
+
+struct A { float f; };
+
+void this(float this) {
+    this;
+    this.obj;
+    float this;
+    float this[5];
+
+    float this = 5;
+    float this[2] = { 1, 1 };
+    A this = { 5 };
+}
+
+shader test (output int this = 5)
 {
 }
+

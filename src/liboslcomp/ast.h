@@ -423,7 +423,7 @@ public:
     };
 
     /// Validate that m_name is a legal name.
-    static void check_reserved (ustring name, OSLCompilerImpl *comp);
+    static bool check_reserved (ustring name, OSLCompilerImpl *comp);
 
     /// Validate that m_name is a legal name, and doesn't conflict with rules
     /// given in vflags allowing duplicate symbol if its SymType matches allowed.
@@ -431,8 +431,8 @@ public:
                              Validation vflags, int allowed = -1);
 
 protected:
-    void check_reserved () {
-        ASTnamed_symbol::check_reserved (m_name, m_compiler);
+    bool check_reserved () {
+        return ASTnamed_symbol::check_reserved (m_name, m_compiler);
     }
 
     Symbol* validate (Validation vflags, int allowed = -1) {

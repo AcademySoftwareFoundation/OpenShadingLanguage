@@ -324,14 +324,20 @@ ASTnamed_symbol::ASTnamed_symbol (NodeType node_type, OSLCompilerImpl *comp,
 
 
 
-void
+bool
 ASTnamed_symbol::check_reserved (ustring name, OSLCompilerImpl *comp)
 {
     if (Strutil::starts_with(name, "___")) {
         comp->error (comp->filename(), comp->lineno(),
                      "'%s' : sorry, can't start with three underscores",
                      name);
+        return false;
+    } else if (name == "this") {
+        comp->error (comp->filename(), comp->lineno(),
+                     "'this' not allowed in this context");
+        return false;
     }
+    return true;
 }
 
 
@@ -597,6 +603,9 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
       m_isparam(isparam), m_isoutput(isoutput), m_ismetadata(ismeta),
       m_initlist(initlist)
 {
+    if (! check_reserved ())
+        return;
+
     if (m_initlist && init) {
         // Typecheck the init list early.
         ASSERT (init->nodetype() == compound_initializer_node);
@@ -606,8 +615,6 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
     m_typespec = type;
     if (! m_ismetadata)
         validate (warn_function_clash);
-    else
-        check_reserved ();
 
     SymType symtype = isparam ? (isoutput ? SymTypeOutputParam : SymTypeParam)
                               : SymTypeLocal;

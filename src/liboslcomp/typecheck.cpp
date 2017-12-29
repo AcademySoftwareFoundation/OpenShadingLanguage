@@ -1448,6 +1448,7 @@ class CandidateFunctions {
     size_t m_nargs;
     FunctionSymbol* m_called; // Function called by name (can be NULL!)
     bool m_had_initlist;
+    const bool m_method_call;
 
     const char* scoreWildcard(int& argscore, size_t& fargs, const char* args) const {
         while (fargs < m_nargs) {
@@ -1564,6 +1565,9 @@ class CandidateFunctions {
             int score = scoreType(formaltype, argtype);
             if (score == kNoMatch)
                 return kNoMatch;
+            // Implicit this cannot be coerced
+            if (score != kExactMatch && m_method_call && fargs == 0)
+                return kNoMatch;
 
             argscore += score;
         }
@@ -1607,10 +1611,9 @@ class CandidateFunctions {
 
 public:
     CandidateFunctions(OSLCompilerImpl* compiler, TypeSpec rval,
-                       ASTNode::ref args, FunctionSymbol* func)
+                       ASTNode::ref args, FunctionSymbol* func, bool methcall)
         : m_compiler(compiler), m_rval(rval), m_args(args), m_nargs(0),
-          m_called(func), m_had_initlist(false) {
-
+          m_called(func), m_had_initlist(false), m_method_call(methcall) {
         //std::cerr << "Matching " << func->name() << " formals='" << (rval.simpletype().basetype != TypeDesc::UNKNOWN ?  compiler->code_from_type (rval) : " ");
         for (ASTNode::ref arg = m_args; arg; arg = arg->next()) {
             //std::cerr << compiler->code_from_type (arg->typespec());
@@ -1943,13 +1946,14 @@ ASTfunction_call::typecheck (TypeSpec expected)
     // Save the currently choosen symbol for error reporting later
     FunctionSymbol* poly = func();
 
-    CandidateFunctions candidates(m_compiler, expected, args(), poly);
+    CandidateFunctions candidates(m_compiler, expected, args(), poly, m_method);
     std::tie(m_sym, m_typespec) = candidates.best(this, m_name);
 
     // Check resolution against prior versions of OSL.
-    // Skip the check if any arguments used initializer list syntax.
+    // Skip the check if any arguments used method or initializer list syntax.
     static const char* OSL_LEGACY = ::getenv("OSL_LEGACY_FUNCTION_RESOLUTION");
-    if (!candidates.hadinitlist() && OSL_LEGACY && strcmp(OSL_LEGACY, "0")) {
+    if (!m_method && !candidates.hadinitlist() &&
+        OSL_LEGACY && strcmp(OSL_LEGACY, "0")) {
         auto* legacy = LegacyOverload(m_compiler, this, poly,
                                    &ASTfunction_call::check_arglist)(expected);
         if (m_sym != legacy) {

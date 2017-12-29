@@ -416,6 +416,7 @@ public:
         err_must_exist  = 0,  ///< Error when the named Symbol does not exist.
         check_clashes   = 1,  ///< If named Symbol exists error as a clash.
         warn_shadow     = 2,  ///< Warn if name shadows a known function.
+        allow_this      = 4,  ///< Allow m_name to be 'this'
 
         /// Convenient aliases of validation schemes.
         warn_function_exists = err_must_exist | warn_shadow,
@@ -423,19 +424,20 @@ public:
     };
 
     /// Validate that m_name is a legal name.
-    static bool check_reserved (ustring name, OSLCompilerImpl *comp);
+    static bool check_reserved (ustring name, OSLCompilerImpl *comp,
+                                int allowThis = 0);
 
     /// Validate that m_name is a legal name, and doesn't conflict with rules
     /// given in vflags allowing duplicate symbol if its SymType matches allowed.
     static Symbol* validate (ustring name, OSLCompilerImpl *comp,
-                             Validation vflags, int allowed = -1);
+                             int vflags, int allowed = -1);
 
 protected:
     bool check_reserved () {
         return ASTnamed_symbol::check_reserved (m_name, m_compiler);
     }
 
-    Symbol* validate (Validation vflags, int allowed = -1) {
+    Symbol* validate (int vflags, int allowed = -1) {
         return validate (m_name, m_compiler, vflags, allowed);
     }
 
@@ -504,7 +506,11 @@ public:
     ASTvariable_declaration (OSLCompilerImpl *comp, const TypeSpec &type,
                              ustring name, ASTNode *init, bool isparam=false,
                              bool ismeta=false, bool isoutput=false,
-                             bool initlist=false);
+                             bool initlist=false, bool isthis=false);
+
+    ASTvariable_declaration (OSLCompilerImpl *comp, const TypeSpec &type,
+                             ASTNode *args);
+
     const char *nodetypename () const;
     const char *childname (size_t i) const;
     void print (std::ostream &out, int indentlevel=0) const;
@@ -551,7 +557,7 @@ private:
 class ASTvariable_ref : public ASTnamed_symbol
 {
 public:
-    ASTvariable_ref (OSLCompilerImpl *comp, ustring name);
+    ASTvariable_ref (OSLCompilerImpl *comp, ustring name, bool allowthis);
     const char *nodetypename () const { return "variable_ref"; }
     const char *childname (size_t i) const { return ""; } // no children
     void print (std::ostream &out, int indentlevel=0) const;
@@ -954,6 +960,8 @@ public:
         return (ASTfunction_declaration *) func()->node();
     }
 
+    void method_from_function(ASTNode* thisRef);
+
 private:
     /// Handle all the special cases for built-ins.  This includes
     /// irregular patterns of which args are read vs written, special
@@ -1027,10 +1035,13 @@ private:
                                  ustring formal, ustring actual,
                                  Symbol *arrayindex = NULL);
 
+protected:
+
     FunctionSymbol *m_poly;         ///< The specific polymorphic variant
     unsigned int m_argread;         ///< Bit field - which args are read
     unsigned int m_argwrite;        ///< Bit field - which args are written
     unsigned int m_argtakesderivs;  ///< Bit field - which args take derivs
+    bool m_method;
 };
 
 

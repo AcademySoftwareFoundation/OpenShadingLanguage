@@ -1,0 +1,15 @@
+// Test that method invocation is not allowed with a coerced type
+
+int testmethod(color c) {
+    return 5;
+}
+
+shader
+test ()
+{
+    color c;
+    c.testmethod();
+
+    vector v0;
+    v0.testmethod();
+}

@@ -250,8 +250,8 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             draw_string
             error-dupes exit exponential
             fprintf
-            function-earlyreturn function-simple function-outputelem
-            function-overloads function-redef
+            function-earlyreturn function-method function-simple
+            function-outputelem function-overloads function-redef
             geomath getattribute-camera getattribute-shader
             getsymbol-nonheap gettextureinfo
             group-outputs groupstring
@@ -273,7 +273,7 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             oslc-err-format oslc-err-funcoverload
             oslc-err-intoverflow
             oslc-err-initlist-args oslc-err-initlist-return
-            oslc-err-names oslc-err-noreturn oslc-err-notfunc
+            oslc-err-method oslc-err-names oslc-err-noreturn oslc-err-notfunc
             oslc-err-outputparamvararray oslc-err-paramdefault
             oslc-err-struct-array-init oslc-err-struct-ctr
             oslc-err-struct-dup oslc-err-struct-print

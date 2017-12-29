@@ -1,0 +1,26 @@
+struct emethod {
+    float f;
+
+    color test(int i) {
+        printf("emethod::test: (%g) (%d)\n", this.f, i);
+        return color(4,5,6);
+    }
+    float test2(int i) {
+        color c = this.test((int)(f + i*2));
+        return c[0];
+    }
+
+    emethod testchain(float f) {
+        this.f -= f;
+        printf("emethod::testchain: %g\n", this.f);
+        return this;
+    }
+};
+
+shader test ()
+{
+    emethod e = { 42 };
+    e.test(2);
+    e.test2(2);
+    emethod(2+4+8+16).testchain(2).testchain(4).testchain(8).testchain(16);
+}

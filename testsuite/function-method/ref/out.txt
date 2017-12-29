@@ -1,0 +1,9 @@
+test.osl:12: warning: argument "f" shadows a field with the same name
+Compiled test.osl -> test.oso
+emethod::test: (42) (2)
+emethod::test: (42) (46)
+emethod::testchain: 40
+emethod::testchain: 36
+emethod::testchain: 28
+emethod::testchain: 12
+

@@ -64,6 +64,7 @@ TypeDesc osllextype (int lex);
 OSL_NAMESPACE_EXIT
 
 static std::stack<TypeSpec> typespec_stack; // just for function_declaration
+bool allowthis;
 
 %}
 
@@ -102,7 +103,7 @@ static std::stack<TypeSpec> typespec_stack; // just for function_declaration
 %type <n> function_declaration
 %type <n> function_body_or_just_decl
 %type <n> struct_declaration
-%type <i> field_declarations field_declaration
+%type <n> field_declarations field_declaration
 %type <n> typed_field_list typed_field
 %type <n> variable_declaration def_expressions def_expression
 %type <n> initializer_opt initializer initializer_list_opt initializer_list 
@@ -324,22 +325,43 @@ function_body_or_just_decl
         ;
 
 function_declaration
-        : typespec IDENTIFIER 
+        : typespec IDENTIFIER
                 {
                     oslcompiler->symtab().push ();  // new scope
                     typespec_stack.push (oslcompiler->current_typespec());
+
+                    if (StructSpec *s = oslcompiler->symtab().current_struct()) {
+                        ustring name ($2);
+                        if (s->lookup_field (name) >= 0) {
+                            oslcompiler->error (oslcompiler->filename(),
+                                                oslcompiler->lineno(),
+                                                "Field \"%s\" already exists in struct \"%s\"",
+                                                name.c_str(), s->name().c_str());
+                        }
+                    }
                 }
-          '(' formal_params_opt ')' metadata_block_opt function_body_or_just_decl
+          '(' formal_params_opt ')' metadata_block_opt
                 {
+                    if (StructSpec *s = oslcompiler->symtab().current_struct()) {
+                        allowthis = true;
+                        TypeSpec t(s->name().c_str(), 0);
+                        auto* args = new ASTvariable_declaration(oslcompiler, t,
+                                                                 $5);
+                        $<n>$ = args;
+                    } else
+                        $<n>$ = $5;
+                }
+          function_body_or_just_decl
+                {
+                    allowthis = false;
                     oslcompiler->symtab().pop ();  // restore scope
                     ASTfunction_declaration *f;
                     f = new ASTfunction_declaration (oslcompiler,
                                                      typespec_stack.top(),
-                                                     ustring($2), $5, $8, NULL);
+                                                     ustring($2), $<n>8, $9, $7);
                     oslcompiler->remember_function_decl (f);
-                    f->add_meta ($7);
-                    $$ = f;
                     typespec_stack.pop ();
+                    $$ = f;
                 }
         ;
 
@@ -360,11 +382,12 @@ struct_declaration
 
 field_declarations
         : field_declaration
-        | field_declarations field_declaration 
+        | field_declarations field_declaration
         ;
 
 field_declaration
-        : typespec typed_field_list ';'
+        : typespec typed_field_list ';' { $$ = 0; }
+        | function_declaration
         ;
 
 typed_field_list
@@ -767,11 +790,26 @@ variable_lvalue
 id_or_field
         : IDENTIFIER 
                 {
-                    $$ = new ASTvariable_ref (oslcompiler, ustring($1));
+                    $$ = new ASTvariable_ref (oslcompiler, ustring($1), allowthis);
                 }
         | variable_lvalue '.' IDENTIFIER
                 {
                     $$ = new ASTstructselect (oslcompiler, $1, ustring($3));
+                }
+        | variable_lvalue '.' function_call
+                {
+                    static_cast<ASTfunction_call*>($3)->method_from_function($1);
+                    $$ = $3;
+                }
+        | function_call '.' function_call
+                {
+                    static_cast<ASTfunction_call*>($3)->method_from_function($1);
+                    $$ = $3;
+                }
+        | type_constructor '.' function_call
+                {
+                    static_cast<ASTfunction_call*>($3)->method_from_function($1);
+                    $$ = $3;
                 }
         ;
 

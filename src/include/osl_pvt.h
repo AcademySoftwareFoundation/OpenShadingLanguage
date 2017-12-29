@@ -558,6 +558,10 @@ public:
         m_alias = other;
     }
 
+    /// Get a reference to whatever this symbol aliases.
+    ///
+    const Symbol* alias () const { return m_alias; }
+
     /// Return a string representation ("param", "global", etc.) of the
     /// SymType s.
     static const char *symtype_shortname (SymType s);

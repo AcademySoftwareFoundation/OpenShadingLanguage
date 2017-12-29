@@ -97,7 +97,7 @@ static ASTNode::ref implicit_this;
 // Define the nonterminals 
 %type <n> shader_file 
 %type <n> global_declarations_opt global_declarations global_declaration
-%type <n> shader_or_function_declaration
+%type <n> shader_or_function_declaration method_declaration
 %type <n> formal_params_opt formal_params formal_param
 %type <n> metadata_block_opt metadata metadatum
 %type <n> function_declaration
@@ -166,6 +166,7 @@ global_declarations
 global_declaration
         : shader_or_function_declaration    { $$ = 0; }
         | struct_declaration                { $$ = 0; }
+        | method_declaration                { $$ = 0; }
         ;
 
 shader_or_function_declaration
@@ -173,14 +174,13 @@ shader_or_function_declaration
                 {
                     if ($1 == ShadTypeUnknown) {
                         // It's a function declaration, not a shader
+                        ASSERT (! typespec_stack.empty ());
                         oslcompiler->symtab().push ();  // new scope
-                        typespec_stack.push (oslcompiler->current_typespec());
                     }
                 }
           metadata_block_opt '(' 
                 {
-                    if ($1 != ShadTypeUnknown)
-                        oslcompiler->declaring_shader_formals (true);
+                    oslcompiler->declaring_shader_formals ($1 != ShadTypeUnknown);
                 }
           formal_params_opt ')'
                 {
@@ -217,6 +217,49 @@ shader_or_function_declaration
                             oslcompiler->shader ($$);
                         }
                     }
+                }
+        ;
+
+method_declaration
+        : typespec_or_shadertype typespec ':' ':' IDENTIFIER
+                {
+                    // It's a method declaration, not a shader
+                    if ($1 != ShadTypeUnknown || typespec_stack.empty() ||
+                        (! oslcompiler->current_typespec().is_structure() &&
+                         ! oslcompiler->current_typespec().is_triple())) {
+                        oslcompiler->error (oslcompiler->filename(),
+                                            oslcompiler->lineno(),
+                                            "Cannot declare a method for this type");
+                    }
+
+                    oslcompiler->symtab().push ();  // new scope
+                    typespec_stack.push (oslcompiler->current_typespec());
+                }
+                '(' formal_params_opt ')' metadata_block_opt
+                {
+                    implicit_this = new ASTvariable_declaration(oslcompiler,
+                                                         typespec_stack.top(),
+                                                         $8);
+                    typespec_stack.pop ();
+                    $<n>$ = implicit_this.get();
+                }
+                function_body_or_just_decl
+                {
+                    // Method declaration
+                    ASSERT ($1 == ShadTypeUnknown);
+                    oslcompiler->symtab().pop ();  // restore scope
+                    ASTfunction_declaration *f;
+                    f = new ASTfunction_declaration (oslcompiler,
+                                                     typespec_stack.top(),
+                                                     ustring($5),
+                                                     $<n>11 /*arguments*/,
+                                                     $12 /*statements*/,
+                                                     $10 /*meta*/);
+                    implicit_this = nullptr;
+                    typespec_stack.pop ();
+                    oslcompiler->remember_function_decl (f);
+                    f->sourceline (@2.first_line);
+                    $$ = f;
                 }
         ;
 
@@ -586,12 +629,14 @@ typespec_or_shadertype
         : simple_typename
                 {
                     oslcompiler->current_typespec (TypeSpec (osllextype ($1)));
-                    $$ = 0;
+                    typespec_stack.push (oslcompiler->current_typespec ());
+                    $$ = ShadTypeUnknown;
                 }
         | CLOSURE simple_typename
                 {
                     oslcompiler->current_typespec (TypeSpec (osllextype ($2), true));
-                    $$ = 0;
+                    typespec_stack.push (oslcompiler->current_typespec ());
+                    $$ = ShadTypeUnknown;
                 }
         | IDENTIFIER /* struct name or shader type name */
                 {
@@ -606,9 +651,10 @@ typespec_or_shadertype
                         $$ = ShadTypeVolume;
                     else {
                         Symbol *s = oslcompiler->symtab().find (name);
-                        if (s && s->is_structure())
+                        if (s && s->is_structure()) {
                             oslcompiler->current_typespec (TypeSpec ("", s->typespec().structure()));
-                        else {
+                            typespec_stack.push (oslcompiler->current_typespec ());
+                        } else {
                             oslcompiler->current_typespec (TypeSpec (TypeDesc::UNKNOWN));
                             oslcompiler->error (oslcompiler->filename(),
                                                 oslcompiler->lineno(),

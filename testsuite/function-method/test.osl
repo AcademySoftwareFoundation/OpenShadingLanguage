@@ -1,6 +1,3 @@
-void unshadowed(int i) { printf("unshadowed %d\n", i); }
-void unshadowed() { printf("unshadowed *\n"); }
-
 struct emethod {
     float f;
 
@@ -23,17 +20,53 @@ struct emethod {
         printf("emethod::shadowed: (%g) (%g)\n", this.f, f);
     }
 
-    float shadowed2(float ff) {
-        float f = 32.4;
-        f -= 10;
-        printf("emethod::shadowed2: %g %g %g\n", this.f, f, ff);
-        shadowed(ff);
-        unshadowed(5);
-        unshadowed();
-        return f;
-    }
+    vector predecl(float ff);
 };
 
+vector emethod::predecl(float ff) {
+    f -= ff;
+	printf("emethod::predecl: (%g) (%g) (%g)\n", this.f, f, ff);
+    return vector(6,7,8);
+}
+
+void unshadowed(int i) { printf("unshadowed %d\n", i); }
+void unshadowed() { printf("unshadowed *\n"); }
+
+float emethod::shadowed2(float ff) {
+    float f = 32.4;
+    f -= 10;
+    printf("emethod::shadowed2: %g %g %g\n", this.f, f, ff);
+    shadowed(ff);
+    unshadowed(5);
+    unshadowed();
+    return f;
+}
+
+float color::custom_method3(color c, color b) [[ string description = "MB" ]]  {
+    this[0] += 100;
+    printf("custom_method3: %g\n", this);
+    return this[1] + 32.0;
+}
+
+color custom_method0(color c) {
+    printf("custom_method0(c{%g})\n", c);
+    return c;
+}
+
+vector custom_method0(vector v) {
+    printf("custom_method0(v{%g})\n", v);
+    return v;
+}
+
+color custom_method1(color c, color b) {
+    printf("custom_method1(c{%g}, c{%g})\n", c, b);
+    return c + b;
+}
+
+vector custom_method1(vector v, float b) {
+    printf("custom_method1(v{%g}, f%g)\n", v, b);
+    return v + vector(b);
+}
 
 shader test ()
 {
@@ -41,7 +74,23 @@ shader test ()
     e.test(2);
     e.test2(2);
     emethod(2+4+8+16).testchain(2).testchain(4).testchain(8).testchain(16);
-    e.f -= 2;
+    e.predecl(2.0);
     e.shadowed(3.14);
     e.shadowed2(6.28);
+
+    color  c = 1;
+    vector vo = 2;
+
+    c.custom_method0();
+    vo.custom_method0();
+
+    printf("c.custom_method1 = %g\n", c.custom_method1(color(3)));
+
+    vo = vo.custom_method1(2.0);
+    printf("vo = %g\n", vo);
+
+    color c1 = color(1,2,3);
+    printf("c1.custom_method3: %g (%g)\n", c1.custom_method3(c,c), c1);
+
+    custom_method3(c,c,c);
 }

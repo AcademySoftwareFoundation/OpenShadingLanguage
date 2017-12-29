@@ -1,2 +1,21 @@
-test.osl:1: warning: Function 'point abs (point)' declared twice in the same scope
-Compiled test.osl -> test.oso
+test.osl:1: error: Function 'point abs (point)' redefined in the same scope
+  Previous definitions:
+    stdosl.h:125
+test.osl:11: error: Function 'int redclfunc (int)' redefined in the same scope
+  Previous definitions:
+    test.osl:10
+test.osl:23: error: Function 'int redclfunc (int)' redefined in the same scope
+  Previous definitions:
+    test.osl:11
+    test.osl:10
+test.osl:27: error: Function 'string concat (string, string)' redefined in the same scope
+  Previous definitions:
+    built-in
+test.osl:28: error: Function 'string concat (string, string)' redefined in the same scope
+  Previous definitions:
+    test.osl:27
+    built-in
+test.osl:31: error: Function 'void redclfunc ()' redefined in the same scope
+  Previous definitions:
+    test.osl:30
+FAILED test.osl

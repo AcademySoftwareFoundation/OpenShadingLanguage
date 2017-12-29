@@ -385,12 +385,31 @@ ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
 
     // Allow multiple function declarations, but only if they aren't the
     // same polymorphic type in the same scope.
-    int current_scope = oslcompiler->symtab().scopeid();
-    for (FunctionSymbol *f = reinterpret_cast<FunctionSymbol *>(existing_syms);
-         f; f = f->nextpoly()) {
-        if (f->argcodes() == argcodes && f->scope() == current_scope) {
-            warning ("Function '%s %s (%s)' declared twice in the same scope",
-                   type, name, list_to_types_string(form));
+    if (stmts) {
+        ErrorHandler* EH = nullptr;
+        int current_scope = oslcompiler->symtab().scopeid();
+        for (FunctionSymbol *f = static_cast<FunctionSymbol *>(existing_syms);
+             f; f = f->nextpoly()) {
+            if (f->argcodes() == argcodes && f->scope() == current_scope) {
+                // If the argcodes match, only one should have statements.
+                // If there is no ASTNode for the poly, must be a builtin, and
+                // has 'implicit' statements.
+                auto other = static_cast<ASTfunction_declaration*>(f->node());
+                if (!other || (other->statements() || other->is_builtin())) {
+                    if (!EH) {
+                        EH = &m_compiler->errhandler();
+                        error ("Function '%s %s (%s)' redefined in the same scope\n"
+                               "  Previous definitions:",
+                               type, name, list_to_types_string(form));
+                    }
+                    if (other) {
+                        EH->message("    %s:%d\n",
+                                    OIIO::Filesystem::filename(other->sourcefile().string()),
+                                    other->sourceline());
+                    } else
+                        EH->message("    built-in\n");
+                }
+            }
         }
     }
 

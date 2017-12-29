@@ -1,3 +1,6 @@
+void unshadowed(int i) { printf("unshadowed %d\n", i); }
+void unshadowed() { printf("unshadowed *\n"); }
+
 struct emethod {
     float f;
 
@@ -15,7 +18,22 @@ struct emethod {
         printf("emethod::testchain: %g\n", this.f);
         return this;
     }
+
+    void shadowed(float f) {
+        printf("emethod::shadowed: (%g) (%g)\n", this.f, f);
+    }
+
+    float shadowed2(float ff) {
+        float f = 32.4;
+        f -= 10;
+        printf("emethod::shadowed2: %g %g %g\n", this.f, f, ff);
+        shadowed(ff);
+        unshadowed(5);
+        unshadowed();
+        return f;
+    }
 };
+
 
 shader test ()
 {
@@ -23,4 +41,7 @@ shader test ()
     e.test(2);
     e.test2(2);
     emethod(2+4+8+16).testchain(2).testchain(4).testchain(8).testchain(16);
+    e.f -= 2;
+    e.shadowed(3.14);
+    e.shadowed2(6.28);
 }

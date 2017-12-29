@@ -64,7 +64,7 @@ TypeDesc osllextype (int lex);
 OSL_NAMESPACE_EXIT
 
 static std::stack<TypeSpec> typespec_stack; // just for function_declaration
-bool allowthis;
+static ASTNode::ref implicit_this;
 
 %}
 
@@ -343,22 +343,21 @@ function_declaration
           '(' formal_params_opt ')' metadata_block_opt
                 {
                     if (StructSpec *s = oslcompiler->symtab().current_struct()) {
-                        allowthis = true;
                         TypeSpec t(s->name().c_str(), 0);
-                        auto* args = new ASTvariable_declaration(oslcompiler, t,
-                                                                 $5);
-                        $<n>$ = args;
+                        implicit_this = new ASTvariable_declaration(oslcompiler, t,
+                                                                    $5);
+                        $<n>$ = implicit_this.get();
                     } else
                         $<n>$ = $5;
                 }
           function_body_or_just_decl
                 {
-                    allowthis = false;
                     oslcompiler->symtab().pop ();  // restore scope
                     ASTfunction_declaration *f;
                     f = new ASTfunction_declaration (oslcompiler,
                                                      typespec_stack.top(),
                                                      ustring($2), $<n>8, $9, $7);
+                    implicit_this = nullptr;
                     oslcompiler->remember_function_decl (f);
                     typespec_stack.pop ();
                     $$ = f;
@@ -790,7 +789,7 @@ variable_lvalue
 id_or_field
         : IDENTIFIER 
                 {
-                    $$ = new ASTvariable_ref (oslcompiler, ustring($1), allowthis);
+                    $$ = new ASTvariable_ref (oslcompiler, ustring($1), implicit_this);
                 }
         | variable_lvalue '.' IDENTIFIER
                 {
@@ -945,7 +944,8 @@ type_constructor
 function_call
         : IDENTIFIER '(' function_args_opt ')'
                 {
-                    $$ = new ASTfunction_call (oslcompiler, ustring($1), $3);
+                    $$ = new ASTfunction_call (oslcompiler, ustring($1), $3,
+                                               nullptr, implicit_this.get());
                 }
         ;
 

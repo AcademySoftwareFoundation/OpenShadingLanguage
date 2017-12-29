@@ -1256,7 +1256,8 @@ ASTtype_constructor::childname (size_t i) const
 
 
 ASTfunction_call::ASTfunction_call (OSLCompilerImpl *comp, ustring name,
-                                    ASTNode *args, FunctionSymbol *funcsym)
+                                    ASTNode *args, FunctionSymbol *funcsym,
+                                    ASTNode* implicit_this)
     : ASTnamed_symbol (function_call_node, comp, name, args),
       m_poly(funcsym),     // Default - resolved symbol or null
       m_argread(~1),       // Default - all args are read except the first
@@ -1272,6 +1273,16 @@ ASTfunction_call::ASTfunction_call (OSLCompilerImpl *comp, ustring name,
         m_sym = nullptr;
         return;
     }
+    if (implicit_this && m_sym->node()) {
+        int advance;
+        const char* form = static_cast<FunctionSymbol*>(m_sym)->argcodes().c_str();
+        /*TypeSpec rval = */ comp->type_from_code(form, &advance);
+        form += advance;
+        if (*form && comp->type_from_code(form) == implicit_this->typespec()) {
+            method_from_function(new ASTvariable_ref(m_compiler,
+                                                     ustring("this"), true));
+        }
+    }
 }
 
 
@@ -1279,7 +1290,12 @@ ASTfunction_call::ASTfunction_call (OSLCompilerImpl *comp, ustring name,
 void
 ASTfunction_call::method_from_function (ASTNode* thisRef)
 {
-    ASSERT (m_method == false);
+    // Only do this once!
+    if (m_method) {
+        delete thisRef;
+        return;
+    }
+
     ASSERT (m_children.size() == 1);
     m_method = true;
     if (m_children[0])

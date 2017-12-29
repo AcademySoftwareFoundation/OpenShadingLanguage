@@ -934,7 +934,8 @@ class ASTfunction_call : public ASTnamed_symbol
 {
 public:
     ASTfunction_call (OSLCompilerImpl *comp, ustring name, ASTNode *args,
-                      FunctionSymbol *funcsym = nullptr);
+                      FunctionSymbol *funcsym = nullptr,
+                      ASTNode* implicit_this = nullptr);
     const char *nodetypename () const { return "function_call"; }
     const char *childname (size_t i) const;
     const char *opname () const;

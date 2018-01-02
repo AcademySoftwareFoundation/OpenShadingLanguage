@@ -1,6 +1,8 @@
-Release 1.9.6 -- ?? TBD  (compared to 1.9.5)
---------------------------------------------
-
+Release 1.9.6 -- 1 Jan 2018 (compared to 1.9.5)
+-----------------------------------------------
+* Fix oslc crash with invalid field selection syntax. #835
+* Certain texture calls were inadvertently not passing in thread data,
+  forcing the texture system to look it up again redundantly. #829
 
 
 Release 1.9 -- 4 December 2017 (compared to 1.8)

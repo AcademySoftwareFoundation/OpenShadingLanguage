@@ -1,3 +1,7 @@
+Release 1.9.7 -- 1 Feb 2018 (compared to 1.9.6)
+-----------------------------------------------
+
+
 Release 1.9.6 -- 1 Jan 2018 (compared to 1.9.5)
 -----------------------------------------------
 * Fix oslc crash with invalid field selection syntax. #835

@@ -202,127 +202,139 @@ LLVM_Util::total_jit_memory_held ()
 class LLVM_Util::MemoryManager : public LLVMMemoryManager {
 protected:
     LLVMMemoryManager *mm;  // the real one
-    // TODO: A.W. investigate why this using was added to avoid build issue
-    // could be related to LLVM 5.0 (test and invistigate)
-    using llvm::RuntimeDyld::MemoryManager::deregisterEHFrames;
 public:
 
 #if USE_OLD_JIT // llvm::JITMemoryManager
     MemoryManager(LLVMMemoryManager *realmm) : mm(realmm) { HasGOT = realmm->isManagingGOT(); }
 
-    virtual void setMemoryWritable() { mm->setMemoryWritable(); }
-    virtual void setMemoryExecutable() { mm->setMemoryExecutable(); }
-    virtual void setPoisonMemory(bool poison) { mm->setPoisonMemory(poison); }
-    virtual void AllocateGOT() { ASSERT(HasGOT == false); ASSERT(HasGOT == mm->isManagingGOT()); mm->AllocateGOT(); HasGOT = true; ASSERT(HasGOT == mm->isManagingGOT()); }
-    virtual uint8_t *getGOTBase() const { return mm->getGOTBase(); }
-    virtual uint8_t *startFunctionBody(const llvm::Function *F,
-                                       uintptr_t &ActualSize) {
+    void setMemoryWritable() override { mm->setMemoryWritable(); }
+    void setMemoryExecutable() override { mm->setMemoryExecutable(); }
+    void setPoisonMemory(bool poison) override { mm->setPoisonMemory(poison); }
+    void AllocateGOT() override { ASSERT(HasGOT == false); ASSERT(HasGOT == mm->isManagingGOT()); mm->AllocateGOT(); HasGOT = true; ASSERT(HasGOT == mm->isManagingGOT()); }
+    uint8_t *getGOTBase() override const { return mm->getGOTBase(); }
+    uint8_t *startFunctionBody(const llvm::Function *F,
+                                       uintptr_t &ActualSize) override {
         return mm->startFunctionBody (F, ActualSize);
     }
-    virtual uint8_t *allocateStub(const llvm::GlobalValue* F, unsigned StubSize,
-                                  unsigned Alignment) {
+    uint8_t *allocateStub(const llvm::GlobalValue* F, unsigned StubSize,
+                                  unsigned Alignment) override {
         return mm->allocateStub (F, StubSize, Alignment);
     }
-    virtual void endFunctionBody(const llvm::Function *F,
-                                 uint8_t *FunctionStart, uint8_t *FunctionEnd) {
+    void endFunctionBody(const llvm::Function *F,
+                                 uint8_t *FunctionStart, uint8_t *FunctionEnd) override {
         mm->endFunctionBody (F, FunctionStart, FunctionEnd);
     }
-    virtual uint8_t *allocateSpace(intptr_t Size, unsigned Alignment) {
+    uint8_t *allocateSpace(intptr_t Size, unsigned Alignment) override {
         return mm->allocateSpace (Size, Alignment);
     }
-    virtual uint8_t *allocateGlobal(uintptr_t Size, unsigned Alignment) {
+    uint8_t *allocateGlobal(uintptr_t Size, unsigned Alignment) override {
         return mm->allocateGlobal (Size, Alignment);
     }
-    virtual void deallocateFunctionBody(void *Body) {
+    void deallocateFunctionBody(void *Body) override {
         // DON'T DEALLOCATE mm->deallocateFunctionBody (Body);
     }
-    virtual bool CheckInvariants(std::string &s) {
+    bool CheckInvariants(std::string &s) override {
         return mm->CheckInvariants(s);
     }
-    virtual size_t GetDefaultCodeSlabSize() {
+    size_t GetDefaultCodeSlabSize() override {
         return mm->GetDefaultCodeSlabSize();
     }
-    virtual size_t GetDefaultDataSlabSize() {
+    size_t GetDefaultDataSlabSize() override {
         return mm->GetDefaultDataSlabSize();
     }
-    virtual size_t GetDefaultStubSlabSize() {
+    size_t GetDefaultStubSlabSize() override {
         return mm->GetDefaultStubSlabSize();
     }
-    virtual unsigned GetNumCodeSlabs() { return mm->GetNumCodeSlabs(); }
-    virtual unsigned GetNumDataSlabs() { return mm->GetNumDataSlabs(); }
-    virtual unsigned GetNumStubSlabs() { return mm->GetNumStubSlabs(); }
+    unsigned GetNumCodeSlabs() override { return mm->GetNumCodeSlabs(); }
+    unsigned GetNumDataSlabs() override { return mm->GetNumDataSlabs(); }
+    unsigned GetNumStubSlabs() override { return mm->GetNumStubSlabs(); }
 
-    virtual void notifyObjectLoaded(llvm::ExecutionEngine *EE, const llvm::ObjectImage *oi) {
+    void notifyObjectLoaded(llvm::ExecutionEngine *EE, const llvm::ObjectImage *oi) override {
         mm->notifyObjectLoaded (EE, oi);
     }
 
 #else // MCJITMemoryManager
-    // Don't hide the notifyObjectLoaded method from RuntimeDyld::MemoryManager.
-    using llvm::RuntimeDyld::MemoryManager::notifyObjectLoaded;
 
     MemoryManager(LLVMMemoryManager *realmm) : mm(realmm) {}
-    
-    virtual void notifyObjectLoaded(llvm::ExecutionEngine *EE, const llvm::object::ObjectFile &oi) {
+
+    void notifyObjectLoaded(llvm::ExecutionEngine *EE, const llvm::object::ObjectFile &oi) override {
         mm->notifyObjectLoaded (EE, oi);
     }
 
+    void notifyObjectLoaded (RuntimeDyld &RTDyld, const object::ObjectFile &Obj) override {
+        mm->notifyObjectLoaded(RTDyld, Obj);
+    }
+
 #if OSL_LLVM_VERSION <= 37
-  virtual void reserveAllocationSpace(
-    uintptr_t CodeSize, uintptr_t DataSizeRO, uintptr_t DataSizeRW) {
+    void reserveAllocationSpace(uintptr_t CodeSize, uintptr_t DataSizeRO, uintptr_t DataSizeRW) override {
         return mm->reserveAllocationSpace(CodeSize, DataSizeRO, DataSizeRW);
-}
+    }
 #else
-    virtual void reserveAllocationSpace(uintptr_t CodeSize, uint32_t CodeAlign,
+    void reserveAllocationSpace(uintptr_t CodeSize, uint32_t CodeAlign,
                                         uintptr_t RODataSize,
                                         uint32_t RODataAlign,
                                         uintptr_t RWDataSize,
-                                        uint32_t RWDataAlign) {
+                                        uint32_t RWDataAlign) override {
         return mm->reserveAllocationSpace(CodeSize, CodeAlign, RODataSize, RODataAlign, RWDataSize, RWDataAlign);
     }
 #endif
 
-    virtual bool needsToReserveAllocationSpace() {
+    bool needsToReserveAllocationSpace() override {
         return mm->needsToReserveAllocationSpace();
     }
 
-    virtual void invalidateInstructionCache() {
+    void invalidateInstructionCache() override {
         mm->invalidateInstructionCache();
     }
     
+    JITSymbol findSymbol(const std::string &Name) override {
+        return mm->findSymbol(Name);
+    }
+
+    uint64_t getSymbolAddressInLogicalDylib (const std::string &Name) override {
+        return mm->getSymbolAddressInLogicalDylib(Name);
+    }
+
+    JITSymbol findSymbolInLogicalDylib (const std::string &Name) override {
+        return mm->findSymbolInLogicalDylib(Name);
+    }
 #endif
 
     // Common
     virtual ~MemoryManager() {}
 
-    virtual void *getPointerToNamedFunction(const std::string &Name,
-                                            bool AbortOnFailure = true) {
+    void *getPointerToNamedFunction(const std::string &Name,
+                                    bool AbortOnFailure = true) override {
         return mm->getPointerToNamedFunction (Name, AbortOnFailure);
     }
-    virtual uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment,
-                             unsigned SectionID, llvm::StringRef SectionName) {
+    uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment,
+                                 unsigned SectionID, llvm::StringRef SectionName) override {
         return mm->allocateCodeSection(Size, Alignment, SectionID, SectionName);
     }
-    virtual uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment,
-                             unsigned SectionID, llvm::StringRef SectionName,
-                             bool IsReadOnly) {
+    uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment,
+                                 unsigned SectionID, llvm::StringRef SectionName,
+                                 bool IsReadOnly) override {
         return mm->allocateDataSection(Size, Alignment, SectionID,
                                        SectionName, IsReadOnly);
     }
-    virtual void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) {
+    void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) override {
         mm->registerEHFrames (Addr, LoadAddr, Size);
     }
-    virtual void deregisterEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) {
-#if OSL_LLVM_VERSION < 50
-        mm->deregisterEHFrames(Addr, LoadAddr, Size);
-#else
-        // TODO: verify this is correct
-        mm->deregisterEHFrames();
-#endif
-    }
-    virtual uint64_t getSymbolAddress(const std::string &Name) {
+    #if OSL_LLVM_VERSION < 50
+        void deregisterEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) override {
+            mm->deregisterEHFrames(Addr, LoadAddr, Size);
+        }
+    #else
+        void deregisterEHFrames() override {
+            mm->deregisterEHFrames();
+        }
+    #endif
+
+    uint64_t getSymbolAddress(const std::string &Name) override {
         return mm->getSymbolAddress (Name);
     }
-    virtual bool finalizeMemory(std::string *ErrMsg = 0) {
+
+    bool finalizeMemory(std::string *ErrMsg = 0) override {
         return mm->finalizeMemory (ErrMsg);
     }
 };
@@ -551,7 +563,6 @@ LLVM_Util::debug_setup_compilation_unit(const char * compile_unit_name) {
 			true // DebugInfoForProfiling (default=false) = Whether to emit extra debug info for profile collection.
 			);
 
-
 	OSL_DEV_ONLY(std::cout << "created debug module for " << compile_unit_name << std::endl);
 }
 
@@ -629,6 +640,7 @@ LLVM_Util::debug_push_inlined_function(
 #endif
 
     ASSERT(debug_is_enabled());
+    ASSERT(m_builder);
     ASSERT(m_builder->getCurrentDebugLocation().get() != NULL);
     mInliningSites.push_back(m_builder->getCurrentDebugLocation().get());
 
@@ -639,8 +651,9 @@ LLVM_Util::debug_push_inlined_function(
 
     llvm::DISubprogram *function = nullptr;
     function = m_llvm_debug_builder->createFunction(
-        getCurrentDebugScope(), // Scope
+        file, // Scope
         function_name.c_str(),  // Name
+        // We are inlined function so not sure supplying a linkage name makes sense
         /*function_name.c_str()*/llvm::StringRef(), // Linkage Name
         file, // File
         method_line, // Line Number
@@ -682,6 +695,8 @@ LLVM_Util::debug_pop_inlined_function()
 	// Necessary to avoid unnecessarily creating DILexicalBlockFile
 	// if the source file changed
     llvm::DILocation *location_inlined_at = mInliningSites.back();
+    ASSERT(location_inlined_at);
+    ASSERT(m_builder);
     m_builder->SetCurrentDebugLocation(llvm::DebugLoc(location_inlined_at));
     mInliningSites.pop_back();
 
@@ -694,6 +709,7 @@ LLVM_Util::debug_pop_function()
     OSL_DEV_ONLY(std::cout << "debug_pop_function"<< std::endl);
     ASSERT(debug_is_enabled());
 
+    ASSERT(!mLexicalBlocks.empty());
     llvm::DIScope *scope = mLexicalBlocks.back();
     auto *existingLbf = dyn_cast<llvm::DILexicalBlockFile>(scope);
     if (existingLbf) {
@@ -706,14 +722,20 @@ LLVM_Util::debug_pop_function()
     auto *function = dyn_cast<llvm::DISubprogram>(scope);
     ASSERT(function);
 
-    m_llvm_debug_builder->finalizeSubprogram(function);
-
-	mLexicalBlocks.pop_back();
+    mLexicalBlocks.pop_back();
     ASSERT(mLexicalBlocks.empty());
 
-    if (m_builder->getCurrentDebugLocation().get() != nullptr) {
-        m_builder->SetCurrentDebugLocation(llvm::DebugLoc());
-    }
+    // Make sure our current debug location isn't pointing at a subprogram
+    // that has been finalized, point it back to the compilation unit
+    ASSERT(m_builder);
+    ASSERT(m_builder->getCurrentDebugLocation().get() != nullptr);
+    m_builder->SetCurrentDebugLocation(llvm::DebugLoc::get(static_cast<unsigned int>(0),
+                static_cast<unsigned int>(0), /* column?  we don't know it, may be worth tracking through osl->oso*/
+                getCurrentDebugScope()));
+
+    m_llvm_debug_builder->finalizeSubprogram(function);
+
+
 }
 
 void
@@ -769,6 +791,7 @@ LLVM_Util::debug_set_location(ustring source_file_name, int sourceline)
     ASSERT(sp != NULL);
 
 
+    ASSERT(m_builder);
     const llvm::DebugLoc & current_debug_location = m_builder->getCurrentDebugLocation();
     bool newDebugLocation = true;
     if (current_debug_location)
@@ -790,16 +813,6 @@ LLVM_Util::debug_set_location(ustring source_file_name, int sourceline)
         m_builder->SetCurrentDebugLocation(debug_location);
     }
 }
-
-
-void 
-LLVM_Util::debug_finalize() {
-    OSL_DEV_ONLY(std::cout << "LLVM_Util::debug_finalize" << std::endl);
-    ASSERT(debug_is_enabled());
-    m_llvm_debug_builder->finalize();
-}
-
-
 
 #if OSL_LLVM_VERSION >= 35
 #if OSL_LLVM_VERSION < 40
@@ -1030,6 +1043,12 @@ LLVM_Util::new_builder (llvm::BasicBlock *block)
     if (! block)
         block = new_basic_block ();
     m_builder = new IRBuilder (block);
+    if (this->debug_is_enabled()) {
+        ASSERT(getCurrentDebugScope());
+        m_builder->SetCurrentDebugLocation(llvm::DebugLoc::get(static_cast<unsigned int>(0),
+                static_cast<unsigned int>(0), /* column?  we don't know it, may be worth tracking through osl->oso*/
+                getCurrentDebugScope()));
+    }
 
     ASSERT(m_masked_exit_count == 0);
 	ASSERT(m_alloca_for_modified_mask_stack.empty());
@@ -1043,6 +1062,7 @@ LLVM_Util::IRBuilder &
 LLVM_Util::builder () {
     if (! m_builder)
         new_builder ();
+    ASSERT(m_builder);
     return *m_builder;
 }
 
@@ -1050,8 +1070,10 @@ LLVM_Util::builder () {
 void
 LLVM_Util::end_builder ()
 {
-	delete m_builder;
-	m_builder = nullptr;
+    if (m_builder) {
+        delete m_builder;
+        m_builder = nullptr;
+    }
 }
 
 
@@ -1439,6 +1461,7 @@ LLVM_Util::execengine (llvm::ExecutionEngine *exec)
         if (nullptr != mGdbListener) {
             m_llvm_exec->UnregisterJITEventListener(mGdbListener);
             // DO NOT delete the GDB listener, as it is a static object
+            // with a mutex internally for thread safety
             // delete mGdbListener;
             mGdbListener = nullptr;
         }
@@ -1453,6 +1476,12 @@ void *
 LLVM_Util::getPointerToFunction (llvm::Function *func)
 {
     DASSERT (func && "passed NULL to getPointerToFunction");
+
+    if (debug_is_enabled()) {
+        // We have to finalize debug info before jit happens
+        m_llvm_debug_builder->finalize();
+    }
+
     llvm::ExecutionEngine *exec = execengine();
     if (USE_MCJIT)
         exec->finalizeObject ();

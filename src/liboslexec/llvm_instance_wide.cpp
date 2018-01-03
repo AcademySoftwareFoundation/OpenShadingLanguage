@@ -865,8 +865,6 @@ BackendLLVMWide::build_llvm_init ()
 
     if (ll.debug_is_enabled()) {
         ll.debug_pop_function();
-        // We have to finalize debug info before jit happens
-        ll.debug_finalize();
     }
 
     ll.end_builder();  // clear the builder
@@ -1156,10 +1154,6 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
         ll.debug_pop_function();
     }
     ll.pop_shader_instance();
-    if (ll.debug_is_enabled()) {
-        // We have to finalize debug info before jit happens
-        ll.debug_finalize();
-    }
     ll.end_builder();  // clear the builder
 
     if (llvm_debug()) std::cout << ll.module_string() << "\n";
@@ -1171,6 +1165,12 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
 void
 BackendLLVMWide::initialize_llvm_group ()
 {
+    if (ll.debug_is_enabled()) {
+        const char * compile_unit_name = m_group.m_name.empty() ? unkown_shader_group_name.c_str() : m_group.m_name.c_str();
+
+        ll.debug_setup_compilation_unit(compile_unit_name);
+    }
+
     ll.setup_optimization_passes (shadingsys().llvm_optimize());
 
     // Clear the shaderglobals and groupdata types -- they will be
@@ -1231,11 +1231,6 @@ BackendLLVMWide::initialize_llvm_group ()
     m_llvm_type_prepare_closure_func = ll.type_function_ptr (ll.type_void(), params);
     m_llvm_type_setup_closure_func = m_llvm_type_prepare_closure_func;
 
-    if (ll.debug_is_enabled()) {
-        const char * compile_unit_name = m_group.m_name.empty() ? unkown_shader_group_name.c_str() : m_group.m_name.c_str();
-
-        ll.debug_setup_compilation_unit(compile_unit_name);
-    }
 }
 
 static void empty_group_func (void*, void*)

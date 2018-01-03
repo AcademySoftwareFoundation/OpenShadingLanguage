@@ -137,7 +137,6 @@ public:
     	                     unsigned int method_line);
     void debug_pop_inlined_function();
     void debug_set_location(OIIO::ustring source_file_name, int sourceline);
-    void debug_finalize();
     
     
     /// Create a new function (that will later be populated with

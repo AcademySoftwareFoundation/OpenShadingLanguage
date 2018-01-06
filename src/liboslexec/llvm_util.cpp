@@ -38,6 +38,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OSL/wide.h"
 #include "oslexec_pvt.h"
 
+#ifndef OSL_LLVM_VERSION
+    #error Must define an OSL_LLVM_VERSION
+#endif
+
 #if OSL_LLVM_VERSION < 34
 #error "LLVM minimum version required for OSL is 3.4"
 #endif
@@ -271,10 +275,8 @@ public:
     }
 #else
     void reserveAllocationSpace(uintptr_t CodeSize, uint32_t CodeAlign,
-                                        uintptr_t RODataSize,
-                                        uint32_t RODataAlign,
-                                        uintptr_t RWDataSize,
-                                        uint32_t RWDataAlign) override {
+                                uintptr_t RODataSize, uint32_t RODataAlign,
+                                uintptr_t RWDataSize, uint32_t RWDataAlign) override {
         return mm->reserveAllocationSpace(CodeSize, CodeAlign, RODataSize, RODataAlign, RWDataSize, RWDataAlign);
     }
 #endif
@@ -304,7 +306,7 @@ public:
     virtual ~MemoryManager() {}
 
     void *getPointerToNamedFunction(const std::string &Name,
-                                    bool AbortOnFailure = true) override {
+                                    bool AbortOnFailure) override {
         return mm->getPointerToNamedFunction (Name, AbortOnFailure);
     }
     uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment,
@@ -334,7 +336,7 @@ public:
         return mm->getSymbolAddress (Name);
     }
 
-    bool finalizeMemory(std::string *ErrMsg = 0) override {
+    bool finalizeMemory(std::string *ErrMsg) override {
         return mm->finalizeMemory (ErrMsg);
     }
 };
@@ -557,7 +559,7 @@ LLVM_Util::debug_setup_compilation_unit(const char * compile_unit_name) {
 			"", // This string lists command line options. This string is directly embedded in debug info output which may be used by a tool analyzing generated debugging information.
 			1900, // This indicates runtime version for languages like Objective-C
 			StringRef(), // SplitName = he name of the file that we'll split debug info out into.
-			DICompileUnit::DebugEmissionKind::FullDebug, // DICompileUnit::DebugEmissionKind
+			DICompileUnit::DebugEmissionKind::LineTablesOnly, // DICompileUnit::DebugEmissionKind
 			0, // The DWOId if this is a split skeleton compile unit.
 			false /*true*/, // SplitDebugInlining = Whether to emit inline debug info.
 			true // DebugInfoForProfiling (default=false) = Whether to emit extra debug info for profile collection.
@@ -608,7 +610,7 @@ LLVM_Util::debug_push_function(
 
     ASSERT(file);
     llvm::DISubprogram *function = m_llvm_debug_builder->createFunction(
-            file, // Scope
+            mDebugCU, // Scope
             function_name.c_str(),  // Name
             /*function_name.c_str()*/ llvm::StringRef(), // Linkage Name
             file, // File
@@ -651,7 +653,7 @@ LLVM_Util::debug_push_inlined_function(
 
     llvm::DISubprogram *function = nullptr;
     function = m_llvm_debug_builder->createFunction(
-        file, // Scope
+        mDebugCU, // Scope
         function_name.c_str(),  // Name
         // We are inlined function so not sure supplying a linkage name makes sense
         /*function_name.c_str()*/llvm::StringRef(), // Linkage Name
@@ -1141,7 +1143,7 @@ LLVM_Util::make_jit_execengine (std::string *err, bool debugging_symbols, bool p
     bool use_soft_float_abi = false;
     options.FloatABIType =
         use_soft_float_abi ? llvm::FloatABI::Soft : llvm::FloatABI::Hard;
-    #if LLVM_VERSION >= 39
+    #if OSL_LLVM_VERSION >= 39
     // Not supported by older linkers
     options.RelaxELFRelocations = false;    
     #endif    
@@ -1485,6 +1487,7 @@ LLVM_Util::getPointerToFunction (llvm::Function *func)
     llvm::ExecutionEngine *exec = execengine();
     if (USE_MCJIT)
         exec->finalizeObject ();
+
     void *f = exec->getPointerToFunction (func);
     ASSERT (f && "could not getPointerToFunction");
     return f;

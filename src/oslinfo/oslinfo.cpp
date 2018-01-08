@@ -36,7 +36,17 @@ and was distributed under BSD licensing terms identical to the
 Sony Pictures Imageworks terms, above.
 */
 
-
+/// <doc... oslinfo_source>
+///
+/// Example program using OSLQuery
+/// ==============================
+///
+/// This is the full text of `oslinfo`, a command-line utility that
+/// for any shader, will print out its parameters (name, type, default
+/// values, and metadata).
+///
+/// ~~~~
+/// <script type="preformatted">
 #include <iostream>
 #include <string>
 #include <cstring>
@@ -58,6 +68,7 @@ static std::string oneparam;
 
 
 
+// Print the default values for a paarameter built out of integers.
 static void
 print_default_string_vals (const OSLQuery::Parameter *p, bool verbose)
 {
@@ -78,6 +89,8 @@ print_default_string_vals (const OSLQuery::Parameter *p, bool verbose)
 
 
 
+// Print the default values for a paarameter built out of floats (including
+// color, point, etc., or arrays thereof).
 static void
 print_default_int_vals (const OSLQuery::Parameter *p, bool verbose)
 {
@@ -102,6 +115,7 @@ print_default_int_vals (const OSLQuery::Parameter *p, bool verbose)
 
 
 
+// Print the default values for a paarameter built out of strings.
 static void
 print_default_float_vals (const OSLQuery::Parameter *p, bool verbose)
 {
@@ -128,6 +142,7 @@ print_default_float_vals (const OSLQuery::Parameter *p, bool verbose)
 
 
 
+// Print all the metadata for a parameter.
 static void
 print_metadata (const OSLQuery::Parameter &m)
 {
@@ -264,3 +279,7 @@ main (int argc, char *argv[])
     }
     return EXIT_SUCCESS;
 }
+
+/// </script>
+/// ~~~~
+

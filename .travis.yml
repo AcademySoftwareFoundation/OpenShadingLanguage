@@ -63,7 +63,7 @@ install:
           if [ "$LLVM_VERSION" == "" ]; then export LLVM_VERSION="error3.9.0" ; fi ;
           if [ "$LLVM_VERSION" == "5.0.0" ]; then export LLVMTAR=clang+llvm-${LLVM_VERSION}-linux-x86_64-ubuntu14.04.tar.xz ; else export LLVMTAR=clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-14.04.tar.xz ; fi;
           echo LLVMTAR = $LLVMTAR ;
-          wget http://releases-origin.llvm.org/${LLVM_VERSION}/${LLVMTAR} ;
+          wget http://releases.llvm.org/${LLVM_VERSION}/${LLVMTAR} ;
           tar xf $LLVMTAR ;
           rm -f $LLVMTAR ;
           echo "Installed ${LLVM_VERSION}" ;

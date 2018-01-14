@@ -118,13 +118,17 @@ main (int argc, const char *argv[])
 
     OIIO::Filesystem::convert_native_arguments (argc, (const char **)argv);
 
-    std::vector<std::string> args;
-    bool quiet = false;
+
     if (argc <= 1) {
         usage ();
         return EXIT_SUCCESS;
     }
 
+    std::vector<std::string> args;
+    bool quiet = false;
+    std::string shader_path;
+
+    // Parse arguments from command line
     for (int a = 1;  a < argc;  ++a) {
         if (! strcmp (argv[a], "--help") | ! strcmp (argv[a], "-h")) {
             usage ();
@@ -141,6 +145,7 @@ main (int argc, const char *argv[])
             quiet |= (strcmp (argv[a], "-q") == 0);
         }
         else if (! strcmp (argv[a], "-o") && a < argc-1) {
+            // Output filepath
             args.emplace_back(argv[a]);
             ++a;
             args.emplace_back(argv[a]);
@@ -150,17 +155,26 @@ main (int argc, const char *argv[])
             args.emplace_back(argv[a]);
         }
         else {
-            OSLCompiler compiler (&default_oslc_error_handler);
-            bool ok = compiler.compile (argv[a], args);
-            if (ok) {
-                if (!quiet)
-                    std::cout << "Compiled " << argv[a] << " -> " 
-                              << compiler.output_filename() << "\n";
-            } else {
-                std::cout << "FAILED " << argv[a] << "\n";
-                return EXIT_FAILURE;
-            }
+            // Shader to compile
+            shader_path = argv[a];
         }
+    }
+
+    if (shader_path.empty ()) {
+        std::cout << "ERROR: Missing shader path" << "\n\n";
+        usage ();
+        return EXIT_FAILURE;
+    }
+
+    OSLCompiler compiler (&default_oslc_error_handler);
+    bool ok = compiler.compile (shader_path, args);
+    if (ok) {
+        if (!quiet)
+            std::cout << "Compiled " << shader_path << " -> " << compiler.output_filename() << "\n";
+    }
+    else {
+        std::cout << "FAILED " << shader_path << "\n";
+        return EXIT_FAILURE;
     }
 
     return EXIT_SUCCESS;

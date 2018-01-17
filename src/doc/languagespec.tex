@@ -52,17 +52,16 @@
 %\textregistered\
 {\bf\sffamily \versionnumber} \medskip \\ \huge
 Language Specification
-%\\ \large (CONFIDENTIAL --- draft in progress)
 } \bigskip }
 \author{
-\copyright\ Copyright 2009-2017 Sony Pictures Imageworks Inc., et al. All rights reserved.
+\copyright\ Copyright 2009-2018 Sony Pictures Imageworks Inc., et al. All rights reserved.
  \bigskip \\
 \vspace{1in} \\
 Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
 \date{{\large Date: 30 Jun 2017 \\
-% (with corrections, 12 May 2017)
+ (with corrections, 17 Jan 2018)
 }
 \bigskip
 \bigskip
@@ -2653,8 +2652,13 @@ that point, and designates the value that will be returned (if not a
 
 Functions may be \emph{overloaded}.  That is, multiple functions may be
 defined to have the same name, as long as they have differently-typed
-parameters, so that when the function is called the list of arguments
-can disambiguate which version of the function is desired.
+parameters, so that when the function is called the list of arguments can
+select which version of the function is desired. When there are multiple
+potential matches, function versions whose argument types match exactly are
+favored, followed by those that match with type coercion (for example,
+passing an {\cf int} when the function expects a {\cf float}, or passing a
+{\cf float} when the function expects a \color), and finally by trying to
+match the return value to the type of variable the result is assigned to.
 
 \subsection{Operator overloading}
 \label{sec:syntax:operatoroverloading}

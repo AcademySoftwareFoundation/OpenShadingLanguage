@@ -1,0 +1,120 @@
+
+#ifdef ORDER_1
+  #include "a_fcn.h"
+  #include "b_nci.h"
+  #include "c_vpi.h"
+
+  #include "a_ivp.h"
+  #include "b_vpf.h"
+  #include "c_cnf.h"
+#else
+  #include "a_ivp.h"
+  #include "b_vpf.h"
+  #include "c_cnf.h"
+
+  #include "a_fcn.h"
+  #include "b_nci.h"
+  #include "c_vpi.h"
+#endif
+
+int intval() { return 0; }
+float floatval() { return 0.0; }
+
+
+normal testD(normal a, float b, float c) {
+    printf("testD normal\n");
+    return normal(0);
+}
+color testD(color a, float b, float c) {
+    printf("testD color\n");
+    return color(1);
+}
+vector testD(vector a, float b, float c) {
+    printf("testD vector\n");
+    return vector(2);
+}
+point testD(point a, float b, float c) {
+    printf("testD point\n");
+    return point(3);
+}
+int testD(int a, float b, float c) {
+    printf("testD int\n");
+    return 4;
+}
+float testD(float a, float b, float c) {
+    printf("testD float\n");
+    return 5;
+}
+
+// This would break C++
+int testD(int a, int b, float c) {
+    printf("testD int2\n");
+    return 4;
+}
+
+int testE(int a, float b, color s) {
+    printf("testE color\n");
+    return 4;
+}
+int testE(float a, int b, vector v) {
+    printf("testE vector\n");
+    return 4;
+}
+
+shader test ()
+{
+  {
+      testA(intval(), 1.0, 1.0);
+      testB(intval(), 1.0, 1.0);
+      testC(intval(), 1.0, 1.0);
+      testD(intval(), 1.0, 1.0);
+      testA(intval(), 1, 1);
+      testB(intval(), 1, 1);
+      testC(intval(), 1, 1);
+      testD(intval(), 1, 1);
+      printf("\n");
+  }
+
+  {
+      testA(floatval(), 1.0, 1.0);
+      testB(floatval(), 1.0, 1.0);
+      testC(floatval(), 1.0, 1.0);
+      testD(floatval(), 1.0, 1.0);
+      testA(floatval(), 1, 1);
+      testB(floatval(), 1, 1);
+      testC(floatval(), 1, 1);
+      testD(floatval(), 1, 1);
+      printf("\n");
+  }
+
+  {
+    vector v0 = testD(intval(), 1.0, 1.0);
+    vector v1 = testD(intval(), 1, 1);
+    vector v2 = testD(floatval(), 1, 1);
+    vector v3 = testD(vector(0), 1, 1);
+    point  p0 = testD(intval(), 1.0, 1.0);
+    point  p1 = testD(intval(), 1, 1);
+    point  p2 = testD(floatval(), 1, 1);
+    point  p3 = testD(point(0), 1, 1);
+    color  c0 = testD(intval(), 1.0, 1.0);
+    color  c1 = testD(intval(), 1, 1);
+    color  c2 = testD(floatval(), 1, 1);
+    color  c3 = testD(color(0), 1, 1);
+    normal n0 = testD(intval(), 1.0, 1.0);
+    normal n1 = testD(intval(), 1, 1);
+    normal n2 = testD(floatval(), 1, 1);
+    normal n3 = testD(normal(0), 1, 1);
+    int    i0 = testD(intval(), 1.0, 1.0);
+    int    i1 = testD(intval(), 1, 1);
+    int    i2 = (int) testD(floatval(), 1, 1);
+    float  f0 = testD(intval(), 1.0, 1.0);
+    float  f1 = testD(intval(), 1, 1);
+    float  f2 = testD(floatval(), 1, 1);
+    printf("\n");
+  }
+  {
+    testE(1.0, 1, color(0));
+    testE(1, 1.0, vector(0));
+    printf("\n");
+  }
+}

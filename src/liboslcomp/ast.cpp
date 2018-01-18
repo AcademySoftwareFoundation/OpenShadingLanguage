@@ -251,6 +251,45 @@ ASTNode::type_c_str (const TypeSpec &type) const
 
 
 
+void
+ASTNode::list_to_vec (const ref &A, std::vector<ref> &vec)
+{
+    vec.clear ();
+    for (ref node = A; node; node = node->next())
+        vec.push_back (node);
+}
+
+
+
+ASTNode::ref
+ASTNode::vec_to_list (std::vector<ref> &vec)
+{
+    if (vec.size()) {
+        for (size_t i = 0;  i < vec.size()-1;  ++i)
+            vec[i]->m_next = vec[i+1];
+        vec[vec.size()-1]->m_next = NULL;
+        return vec[0];
+    } else {
+        return ref();
+    }
+}
+
+
+
+std::string
+ASTNode::list_to_types_string (const ASTNode *node)
+{
+    std::ostringstream result;
+    for (int i = 0; node; node = node->nextptr(), ++i) {
+        if (i)
+            result << ", ";
+        result << node->typespec();
+    }
+    return result.str();
+}
+
+
+
 ASTshader_declaration::ASTshader_declaration (OSLCompilerImpl *comp,
                                 int stype, ustring name, ASTNode *form,
                                 ASTNode *stmts, ASTNode *meta)
@@ -304,29 +343,31 @@ ASTshader_declaration::shadertypename () const
 
 ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
                              TypeSpec type, ustring name,
-                             ASTNode *form, ASTNode *stmts, ASTNode *meta)
+                             ASTNode *form, ASTNode *stmts, ASTNode *meta,
+                             int sourceline_start)
     : ASTNode (function_declaration_node, comp, 0, meta, form, stmts),
       m_name(name), m_sym(NULL), m_is_builtin(false)
 {
-    m_typespec = type;
-    Symbol *f = comp->symtab().clash (name);
-    if (f && f->symtype() != SymTypeFunction) {
-        error ("\"%s\" already declared in this scope as a ", name.c_str(),
-               f->typespec().string().c_str());
+    // Some trickery -- the compiler's idea of the "current" source line
+    // is the END of the function body, so if a hint was passed about the
+    // start of the declaration, substitute that.
+    if (sourceline_start >= 0)
+        m_sourceline = sourceline_start;
+
+    if (Strutil::starts_with (name, "___"))
+        error ("\"%s\" : sorry, can't start with three underscores", name);
+
+    // Get a pointer to the first of the existing symbols of that name.
+    Symbol *existing_syms = comp->symtab().clash (name);
+    if (existing_syms && existing_syms->symtype() != SymTypeFunction) {
+        error ("\"%s\" already declared in this scope as a %s",
+               name, existing_syms->typespec());
         // FIXME -- print the file and line of the other definition
-        f = NULL;
+        existing_syms = NULL;
     }
 
-    // FIXME -- allow multiple function declarations, but only if they
-    // aren't the same polymorphic type.
-
-    if (name[0] == '_' && name[1] == '_' && name[2] == '_') {
-        error ("\"%s\" : sorry, can't start with three underscores",
-               name.c_str());
-    }
-
-    m_sym = new FunctionSymbol (name, type, this);
-    func()->nextpoly ((FunctionSymbol *)f);
+    // Build up the argument signature for this declared function
+    m_typespec = type;
     std::string argcodes = oslcompiler->code_from_type (m_typespec);
     for (ASTNode *arg = form;  arg;  arg = arg->nextptr()) {
         const TypeSpec &t (arg->typespec());
@@ -341,6 +382,22 @@ ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
             v->error ("function parameter '%s' may not have a default initializer.",
                       v->name().c_str());
     }
+
+    // Allow multiple function declarations, but only if they aren't the
+    // same polymorphic type in the same scope.
+    int current_scope = oslcompiler->symtab().scopeid();
+    for (FunctionSymbol *f = reinterpret_cast<FunctionSymbol *>(existing_syms);
+         f; f = f->nextpoly()) {
+        if (f->argcodes() == argcodes && f->scope() == current_scope) {
+            warning ("Function '%s %s (%s)' declared twice in the same scope",
+                   type, name, list_to_types_string(form));
+        }
+    }
+
+
+    m_sym = new FunctionSymbol (name, type, this);
+    func()->nextpoly ((FunctionSymbol *)existing_syms);
+
     func()->argcodes (ustring (argcodes));
     oslcompiler->symtab().insert (m_sym);
 

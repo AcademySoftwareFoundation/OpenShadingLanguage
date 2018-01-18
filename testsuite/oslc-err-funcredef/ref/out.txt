@@ -1,0 +1,2 @@
+test.osl:1: warning: Function 'point abs (point)' declared twice in the same scope
+Compiled test.osl -> test.oso

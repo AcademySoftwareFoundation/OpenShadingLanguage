@@ -194,11 +194,12 @@ shader_or_function_declaration
                         f = new ASTfunction_declaration (oslcompiler,
                                                          typespec_stack.top(),
                                                          ustring($2), $7 /*formals*/,
-                                                         $11 /*statements*/);
+                                                         $11 /*statements*/,
+                                                         NULL /*metadata*/,
+                                                         @2.first_line);
                         oslcompiler->remember_function_decl (f);
                         f->add_meta (concat($4, $10));
                         $$ = f;
-                        $$->sourceline (@2.first_line);
                         typespec_stack.pop ();
                     } else {
                         // Shader declaration

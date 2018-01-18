@@ -181,18 +181,6 @@ color2 clamp(color2 c, float minval, float maxval)
     return clamp(c, color2(minval, minval), color2(maxval, maxval));
 }
 
-color2 pow(color2 base, color2 power)
-{
-    return color2(pow(base.r, power.r),
-                  pow(base.a, power.a));
-}
-
-color2 pow(color2 base, float power)
-{
-    return color2(pow(base.r, power),
-                  pow(base.a, power));
-}
-
 color2 max(color2 a, color2 b)
 {
     return color2(max(a.r, b.r),

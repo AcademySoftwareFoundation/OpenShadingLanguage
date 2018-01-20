@@ -248,7 +248,6 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             error-dupes exit exponential
             fprintf
             function-earlyreturn function-simple function-outputelem
-            function-overloads
             geomath getattribute-camera getattribute-shader
             getsymbol-nonheap gettextureinfo
             group-outputs groupstring

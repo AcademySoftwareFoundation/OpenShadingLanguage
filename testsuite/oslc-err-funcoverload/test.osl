@@ -1,0 +1,11 @@
+
+void funca(int a) {}
+void funca(int a, int b) {}
+
+
+shader test()
+{
+    funca();
+    funca(1,2,3);
+}
+

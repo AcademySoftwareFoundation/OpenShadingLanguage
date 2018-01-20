@@ -1017,26 +1017,26 @@ class CandidateFunctions {
                 ++fargs;
             case '\0':
                 if (fargs < m_nargs)
-                    return 0;
+                    return kNoMatch;
                 break;
 
             default:
                 // TODO: Scoring default function arguments would go here
                 // Curently an unused formal argument, so no match at all.
-                return 0;
+                return kNoMatch;
         }
         ASSERT (*formals == 0);
 
         int highscore = m_candidates.empty() ? 0 : m_candidates.front().ascore;
         if (argscore < highscore)
-            return 0;
+            return kNoMatch;
 
         
         if (argscore == highscore) {
             // Check for duplicate declarations
             for (auto& candidate : m_candidates) {
                 if (candidate.sym->argcodes() == func->argcodes())
-                    return 0;
+                    return kNoMatch;
             }
         } else  // clear any prior ambiguous matches
             m_candidates.clear();
@@ -1392,6 +1392,9 @@ ASTfunction_call::typecheck (TypeSpec expected)
         return typecheck_struct_constructor ();
     }
 
+    // Save the current symbol to maybe report an error later.
+    FunctionSymbol *poly = func();
+
     CandidateFunctions candidates(m_compiler, expected, args(), func());
     std::tie(m_sym, m_typespec) = candidates.best(this);
 
@@ -1418,8 +1421,10 @@ ASTfunction_call::typecheck (TypeSpec expected)
     // message.
 	candidates.reportError(this, m_name);
 
-    for (FunctionSymbol *poly = func();  poly;  poly = poly->nextpoly())
+    while (poly) {
         candidates.reportAmbiguity(poly);
+        poly = poly->nextpoly();
+    }
 
     return TypeSpec();
 }

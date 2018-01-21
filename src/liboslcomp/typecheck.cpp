@@ -1429,6 +1429,104 @@ public:
 };
 
 
+///
+/// Check how a polymorphic function variant was chosen in prior versions.
+/// Check is performed based on the env variable OSL_LEGACY_FUNCTION_RESOLUTION
+///
+/// OSL_LEGACY_FUNCTION_RESOLUTION      // check resolution matches old behavior
+/// OSL_LEGACY_FUNCTION_RESOLUTION=0    // no checking
+/// OSL_LEGACY_FUNCTION_RESOLUTION=err  // check and error on mismatch
+/// OSL_LEGACY_FUNCTION_RESOLUTION=use  // check and use prior on mismatch
+class LegacyOverload
+{
+    OSLCompilerImpl* m_compiler;
+    ASTfunction_call* m_func;
+    FunctionSymbol* m_root;
+    bool (ASTNode::*m_check_arglist) (const char *funcname, ASTNode::ref arg,
+                                    const char *formals, bool coerce);
+
+    std::pair<FunctionSymbol*,TypeSpec>
+    typecheck_polys (TypeSpec expected, bool coerceargs, bool equivreturn)
+    {
+        const char* name = m_func->func()->name().c_str();
+        for (FunctionSymbol* poly = m_root; poly; poly = poly->nextpoly()) {
+            const char *code = poly->argcodes().c_str();
+            int advance;
+            TypeSpec returntype = m_compiler->type_from_code (code, &advance);
+            code += advance;
+            if ((m_func->*m_check_arglist) (name, m_func->args(), code, coerceargs)) {
+                // Return types also must match if not coercible
+                if (expected == returntype ||
+                    (equivreturn && equivalent(expected, returntype)) ||
+                    expected == TypeSpec()) {
+                    return { poly, returntype };
+                }
+            }
+        }
+        return { nullptr, TypeSpec() };
+    }
+
+public:
+
+    LegacyOverload ( OSLCompilerImpl* comp, ASTfunction_call* func,
+                     FunctionSymbol* root,
+                     bool (ASTNode::*checkfunc) (const char *funcname,
+                                                 ASTNode::ref arg,
+                                                 const char *formals,
+                                                 bool coerce))
+        : m_compiler(comp), m_func(func), m_root(root), m_check_arglist(checkfunc) {
+    }
+
+    FunctionSymbol*
+    operator () (TypeSpec expected)
+    {
+        bool match = false;
+        TypeSpec typespec;
+        FunctionSymbol* sym;
+
+        // Look for an exact match, including expected return type
+        std::tie(sym, typespec) = typecheck_polys (expected, false, false);
+        if (typespec != TypeSpec())
+            match = true;
+
+        // Now look for an exact match for arguments, but equivalent return type
+        std::tie(sym, typespec) = typecheck_polys (expected, false, true);
+        if (typespec != TypeSpec())
+            match = true;
+
+        // Now look for an exact match on args, but any return type
+        if (! match && expected != TypeSpec()) {
+            std::tie(sym, typespec) = typecheck_polys (TypeSpec(), false, false);
+            if (typespec != TypeSpec())
+                match = true;
+        }
+
+        // Now look for a coercible match of args, exact march on return type
+        if (! match) {
+            std::tie(sym, typespec) = typecheck_polys (expected, true, false);
+            if (typespec != TypeSpec())
+                match = true;
+        }
+
+        // Now look for a coercible match of args, equivalent march on return type
+        if (! match) {
+            std::tie(sym, typespec) = typecheck_polys (expected, true, true);
+            if (typespec != TypeSpec())
+                match = true;
+        }
+
+        // All that failed, try for a coercible match on everything
+        if (! match && expected != TypeSpec()) {
+            std::tie(sym, typespec) = typecheck_polys (TypeSpec(), true, false);
+            if (typespec != TypeSpec())
+                match = true;
+        }
+
+        return match ? sym : nullptr;
+    }
+};
+
+
 
 TypeSpec
 ASTfunction_call::typecheck (TypeSpec expected)
@@ -1445,6 +1543,28 @@ ASTfunction_call::typecheck (TypeSpec expected)
 
     CandidateFunctions candidates(m_compiler, expected, args(), poly);
     std::tie(m_sym, m_typespec) = candidates.best(this);
+
+    // Check resolution against prior versions of OSL
+    static const char* OSL_LEGACY = ::getenv("OSL_LEGACY_FUNCTION_RESOLUTION");
+    if (OSL_LEGACY && strcmp(OSL_LEGACY, "0")) {
+        auto* legacy = LegacyOverload(m_compiler, this, poly,
+                                   &ASTfunction_call::check_arglist)(expected);
+        if (m_sym != legacy) {
+            strcasecmp(OSL_LEGACY, "err") == 0
+                ? error("overload chosen differs from OSL 1.9")
+                : warning("overload chosen differs from OSL 1.9");
+
+            m_compiler->errhandler().message ("  Current overload is ");
+            !m_sym ? m_compiler->errhandler().message("<none>")
+                   : candidates.reportAmbiguity(static_cast<FunctionSymbol*>(m_sym));
+            m_compiler->errhandler().message ("  Prior overload was ");
+            !legacy ? m_compiler->errhandler().message("<none>")
+                       : candidates.reportAmbiguity(legacy);
+        
+            if (strcasecmp(OSL_LEGACY, "use") == 0)
+                m_sym = legacy;
+        }
+    }
 
     if (m_sym != nullptr) {
         if (is_user_function()) {

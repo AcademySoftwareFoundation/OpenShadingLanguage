@@ -1163,6 +1163,11 @@ ASTfunction_call::typecheck_struct_constructor ()
 /// When choosing which varaint to use precedence is given to arguments and the
 /// return type is used as a possible tie breaker in case of any ambiguity.
 /// The highest score for an argument is given when it is an exact match.
+/// If the argument needs to be coerced into a type OSL will prefer going
+/// from any triple-types to any other triple-type before promotion of a
+/// float to a triple.  When converting one triple to another triple, OSL will
+/// prefer to coerce from one of the spatial triples (vector/point/normal) to
+/// another spatial triple before coercion from a spatial triple to color.
 ///
 /// Float to int coercion is scored, but is currently a synmonym for kNoMatch
 /// as the spec does not allow implicit float to int conversion.
@@ -1177,7 +1182,9 @@ class CandidateFunctions {
         kNoMatch        = 0,
 
         // Additional named rules
-        kFPToIntegral   = kNoMatch,    // = kIntegralToFP to match c++
+        kFPToIntegral   = kNoMatch,       // = kIntegralToFP to match c++
+        kSpatialCoerce  = kCoercable + 9, // prefer vector/point/normal conversion over color
+        kTripleCoerce   = kCoercable + 4, // prefer triple conversion over float promotion
     };
     struct Candidate {
         FunctionSymbol* sym;
@@ -1222,8 +1229,17 @@ class CandidateFunctions {
             return kArrayMatch;
         }
 
-        if (assignable (expected, actual))
+        if (assignable (expected, actual)) {
+            // Prefer conversion between spatial types
+            if (actual.is_vectriple_based() && expected.is_vectriple_based())
+                return kSpatialCoerce;
+            // Prefer conversion between triple types
+            if (!actual.is_closure() && actual.is_triple() &&
+                !expected.is_closure() && expected.is_triple())
+                return kTripleCoerce;
+            // Everything else
             return kCoercable;
+        }
 
         return kNoMatch;
     }

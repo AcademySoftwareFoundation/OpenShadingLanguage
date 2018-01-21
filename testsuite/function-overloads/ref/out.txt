@@ -42,6 +42,7 @@ testD float
 
 testE color
 testE vector
+testE vector
 
 funcb.color
 funcb.float

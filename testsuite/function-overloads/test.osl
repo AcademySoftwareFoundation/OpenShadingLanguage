@@ -120,6 +120,7 @@ shader test ()
   {
     testE(1, 1, color(0));
     testE(1, 1, vector(0));
+    testE(1, 1, point(0));
     printf("\n");
   }
 

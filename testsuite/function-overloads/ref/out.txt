@@ -43,4 +43,7 @@ testD float
 testE color
 testE vector
 
+funcb.color
+funcb.float
+funcb.int
 

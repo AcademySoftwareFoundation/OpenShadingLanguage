@@ -1384,17 +1384,18 @@ public:
             default: break;
         }
 
-        int ambiguity = 0;
+        int ambiguity = -1;
         std::pair<const Candidate*, int> c = { nullptr, -1 };
         for (auto& candidate : m_candidates) {
             // re-score based on matching return value
-            if (candidate.rscore > c.second)
+            if (candidate.rscore > c.second) {
+                ambiguity = -1; // higher score, no longer ambiguous
                 c = std::make_pair(&candidate, candidate.rscore);
-            else if (candidate.rscore == c.second)
+            } else if (candidate.rscore == c.second)
                 ambiguity = candidate.rscore;
         }
 
-        if (ambiguity || strict) {
+        if ((ambiguity != -1) || strict) {
             ASSERT (caller);
             reportError(caller, m_candidates[0].name(), false,
                         !m_candidates.empty(), "Ambiguous call to");

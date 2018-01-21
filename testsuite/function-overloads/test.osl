@@ -61,6 +61,10 @@ int testE(float a, int b, vector v) {
     return 4;
 }
 
+int   funcb() { printf("funcb.int\n");   return 1; }
+float funcb() { printf("funcb.float\n"); return 2; }
+color funcb() { printf("funcb.color\n"); return 3; }
+
 shader test ()
 {
   {
@@ -117,5 +121,11 @@ shader test ()
     testE(1, 1, color(0));
     testE(1, 1, vector(0));
     printf("\n");
+  }
+
+  {
+    (color) funcb();
+    (float) funcb();
+    (int) funcb();
   }
 }

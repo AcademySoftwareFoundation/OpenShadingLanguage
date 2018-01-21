@@ -6,4 +6,12 @@ test.osl:9: error: No matching function call to 'funca (int, int, int)'
   Candidates are:
     test.osl:3	void funca (int, int)
     test.osl:2	void funca (int)
+test.osl:10: error: No matching function call to 'funca (float, int)'
+  Candidates are:
+    test.osl:3	void funca (int, int)
+    test.osl:2	void funca (int)
+test.osl:11: error: No matching function call to 'funca (int, float)'
+  Candidates are:
+    test.osl:3	void funca (int, int)
+    test.osl:2	void funca (int)
 FAILED test.osl

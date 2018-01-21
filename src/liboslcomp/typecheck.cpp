@@ -1164,6 +1164,9 @@ ASTfunction_call::typecheck_struct_constructor ()
 /// return type is used as a possible tie breaker in case of any ambiguity.
 /// The highest score for an argument is given when it is an exact match.
 ///
+/// Float to int coercion is scored, but is currently a synmonym for kNoMatch
+/// as the spec does not allow implicit float to int conversion.
+///
 class CandidateFunctions {
     enum {
         kExactMatch     = 100,
@@ -1174,7 +1177,7 @@ class CandidateFunctions {
         kNoMatch        = 0,
 
         // Additional named rules
-        kFPToIntegral   = 60,          // = kIntegralToFP to match c++
+        kFPToIntegral   = kNoMatch,    // = kIntegralToFP to match c++
     };
     struct Candidate {
         FunctionSymbol* sym;

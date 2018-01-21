@@ -112,9 +112,10 @@ shader test ()
     float  f2 = testD(floatval(), 1, 1);
     printf("\n");
   }
+
   {
-    testE(1.0, 1, color(0));
-    testE(1, 1.0, vector(0));
+    testE(1, 1, color(0));
+    testE(1, 1, vector(0));
     printf("\n");
   }
 }

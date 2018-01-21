@@ -5,7 +5,9 @@ void funca(int a, int b) {}
 
 shader test()
 {
-    funca();
-    funca(1,2,3);
+    funca();        // fail too few arguments
+    funca(1, 2, 3); // fail too many arguments
+    funca(1.0, 2);  // fail float -> int
+    funca(1, 2.0);  // fail float -> int
 }
 

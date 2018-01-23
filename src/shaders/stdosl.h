@@ -96,8 +96,17 @@ PERCOMP2 (atan2)
 PERCOMP1 (cosh)
 PERCOMP1 (sinh)
 PERCOMP1 (tanh)
-PERCOMP2F (pow)
-PERCOMP2 (pow)
+
+normal pow (normal x, normal y) BUILTIN;
+vector pow (vector x, vector y) BUILTIN;
+point  pow (point x, point y) BUILTIN;
+color  pow (color x, color y) BUILTIN;
+normal pow (normal x, float y) BUILTIN;
+vector pow (vector x, float y) BUILTIN;
+point  pow (point x, float y) BUILTIN;
+color  pow (color x, float y) BUILTIN;
+float  pow (float x, float y) BUILTIN;
+
 PERCOMP1 (exp)
 PERCOMP1 (exp2)
 PERCOMP1 (expm1)
@@ -122,8 +131,17 @@ PERCOMP1 (floor)
 PERCOMP1 (ceil)
 PERCOMP1 (round)
 PERCOMP1 (trunc)
-PERCOMP2 (fmod)
-PERCOMP2F (fmod)
+
+normal fmod (normal x, normal y) BUILTIN;
+vector fmod (vector x, vector y) BUILTIN;
+point  fmod (point x, point y) BUILTIN;
+color  fmod (color x, color y) BUILTIN;
+normal fmod (normal x, float y) BUILTIN;
+vector fmod (vector x, float y) BUILTIN;
+point  fmod (point x, float y) BUILTIN;
+color  fmod (color x, float y) BUILTIN;
+float  fmod (float x, float y) BUILTIN;
+
 int    mod (int    a, int    b) { return a - b*(int)floor(a/b); }
 point  mod (point  a, point  b) { return a - b*floor(a/b); }
 vector mod (vector a, vector b) { return a - b*floor(a/b); }

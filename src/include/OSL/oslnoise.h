@@ -123,12 +123,19 @@ typedef void (*NoiseGenericFunc)(int outdim, float *out, bool derivs,
 typedef void (*NoiseImplFunc)(float *out, const float *in,
                               const float *period, NoiseParams *params);
 
+OSLNOISEPUBLIC
 float simplexnoise1 (float x, int seed=0, float *dnoise_dx=NULL);
+
+OSLNOISEPUBLIC
 float simplexnoise2 (float x, float y, int seed=0,
                      float *dnoise_dx=NULL, float *dnoise_dy=NULL);
+
+OSLNOISEPUBLIC
 float simplexnoise3 (float x, float y, float z, int seed=0,
                      float *dnoise_dx=NULL, float *dnoise_dy=NULL,
                      float *dnoise_dz=NULL);
+
+OSLNOISEPUBLIC
 float simplexnoise4 (float x, float y, float z, float w, int seed=0,
                      float *dnoise_dx=NULL, float *dnoise_dy=NULL,
                      float *dnoise_dz=NULL, float *dnoise_dw=NULL);
@@ -2794,25 +2801,47 @@ struct USimplexNoise {
 
 
 
+OSLNOISEPUBLIC
 Dual2<float> gabor (const Dual2<Vec3> &P, const NoiseParams *opt);
+
+OSLNOISEPUBLIC
 Dual2<float> gabor (const Dual2<float> &x, const Dual2<float> &y,
                     const NoiseParams *opt);
+
+OSLNOISEPUBLIC
 Dual2<float> gabor (const Dual2<float> &x, const NoiseParams *opt);
+
+OSLNOISEPUBLIC
 Dual2<Vec3> gabor3 (const Dual2<Vec3> &P, const NoiseParams *opt);
+
+OSLNOISEPUBLIC
 Dual2<Vec3> gabor3 (const Dual2<float> &x, const Dual2<float> &y,
                     const NoiseParams *opt);
+
+OSLNOISEPUBLIC
 Dual2<Vec3> gabor3 (const Dual2<float> &x, const NoiseParams *opt);
+
+OSLNOISEPUBLIC
 Dual2<float> pgabor (const Dual2<Vec3> &P, const Vec3 &Pperiod,
                      const NoiseParams *opt);
+
+OSLNOISEPUBLIC
 Dual2<float> pgabor (const Dual2<float> &x, const Dual2<float> &y,
                      float xperiod, float yperiod, const NoiseParams *opt);
+
+OSLNOISEPUBLIC
 Dual2<float> pgabor (const Dual2<float> &x, float xperiod,
                      const NoiseParams *opt);
 
+OSLNOISEPUBLIC
 Dual2<Vec3> pgabor3 (const Dual2<Vec3> &P, const Vec3 &Pperiod,
                      const NoiseParams *opt);
+
+OSLNOISEPUBLIC
 Dual2<Vec3> pgabor3 (const Dual2<float> &x, const Dual2<float> &y,
                      float xperiod, float yperiod, const NoiseParams *opt);
+
+OSLNOISEPUBLIC
 Dual2<Vec3> pgabor3 (const Dual2<float> &x, float xperiod,
                      const NoiseParams *opt);
 

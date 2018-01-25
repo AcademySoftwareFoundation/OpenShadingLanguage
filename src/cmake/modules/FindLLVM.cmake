@@ -52,6 +52,7 @@ if (NOT ${LLVM_VERSION} VERSION_LESS 3.8)
     execute_process (COMMAND ${LLVM_CONFIG} --system-libs
                      OUTPUT_VARIABLE LLVM_SYSTEM_LIBRARIES
                      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    string (REPLACE " " ";" LLVM_SYSTEM_LIBRARIES "${LLVM_SYSTEM_LIBRARIES}")
 else ()
     # Older LLVM did not have llvm-config --system-libs, but we know that
     # on Linux, we'll need curses.

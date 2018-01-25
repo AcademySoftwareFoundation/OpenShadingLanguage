@@ -372,7 +372,6 @@ LLVM_Util::LLVM_Util (int debuglevel, const LLVM_Util::PerThreadInfo &per_thread
       m_llvm_exec(NULL),
       m_masked_exit_count(0),
       mVTuneNotifier(nullptr),
-      mGdbListener(nullptr),
       m_llvm_debug_builder(nullptr),
       mDebugCU(nullptr),
       mSubTypeForInlinedFunction(nullptr)
@@ -731,7 +730,7 @@ LLVM_Util::debug_pop_function()
     // that has been finalized, point it back to the compilation unit
     ASSERT(m_builder);
     ASSERT(m_builder->getCurrentDebugLocation().get() != nullptr);
-    m_builder->SetCurrentDebugLocation(llvm::DebugLoc::get(static_cast<unsigned int>(0),
+    m_builder->SetCurrentDebugLocation(llvm::DebugLoc::get(static_cast<unsigned int>(1),
                 static_cast<unsigned int>(0), /* column?  we don't know it, may be worth tracking through osl->oso*/
                 getCurrentDebugScope()));
 
@@ -745,6 +744,7 @@ LLVM_Util::debug_set_location(ustring source_file_name, int sourceline)
 {
     OSL_DEV_ONLY(std::cout << "LLVM_Util::debug_set_location:" << source_file_name.c_str() << "(" << sourceline << ")" << std::endl);
     ASSERT(debug_is_enabled());
+    ASSERT(sourceline > 0 && "GDB doesn't like 0 because its a nonsensical as a line number");
 
     llvm::DIScope *sp = getCurrentDebugScope();
     llvm::DILocation *inlineSite = getCurrentInliningSite();
@@ -1047,7 +1047,7 @@ LLVM_Util::new_builder (llvm::BasicBlock *block)
     m_builder = new IRBuilder (block);
     if (this->debug_is_enabled()) {
         ASSERT(getCurrentDebugScope());
-        m_builder->SetCurrentDebugLocation(llvm::DebugLoc::get(static_cast<unsigned int>(0),
+        m_builder->SetCurrentDebugLocation(llvm::DebugLoc::get(static_cast<unsigned int>(1),
                 static_cast<unsigned int>(0), /* column?  we don't know it, may be worth tracking through osl->oso*/
                 getCurrentDebugScope()));
     }
@@ -1330,6 +1330,13 @@ LLVM_Util::make_jit_execengine (std::string *err, bool debugging_symbols, bool p
     OSL_DEV_ONLY(std::cout << "target_machine.getTargetFeatureString ()=" << target_machine->getTargetFeatureString ().str() << std::endl);
 	//OSL_DEV_ONLY(std::cout << "target_machine.getTargetTriple ()=" << target_machine->getTargetTriple().str() << std::endl);
 
+#if USE_MCJIT
+    // For unknown reasons the MCJIT when constructed registers the GDB listener (which is static)
+    // The following is an attempt to unregister it, and pretend it was never registered in the 1st place
+    // The underlying GDBRegistrationListener is static, so we are leaking it
+    m_llvm_exec->UnregisterJITEventListener(llvm::JITEventListener::createGDBRegistrationListener());
+#endif
+
     if (debugging_symbols) {
         ASSERT(m_llvm_module != nullptr);
         OSL_DEV_ONLY(std::cout << "debugging symbols"<< std::endl);
@@ -1354,9 +1361,8 @@ LLVM_Util::make_jit_execengine (std::string *err, bool debugging_symbols, bool p
         //  OSL_DEV_ONLY(       << "------------------>enable_debug_info<-----------------------------module flag['Debug Info Version']= ")
         //  OSL_DEV_ONLY(       << modulesDebugInfoVersion << std::endl);
 
-        mGdbListener = llvm::JITEventListener::createGDBRegistrationListener();
-        assert (mGdbListener != NULL);
-        m_llvm_exec->RegisterJITEventListener(mGdbListener);
+        // The underlying GDBRegistrationListener is static, so we are leaking it
+        m_llvm_exec->RegisterJITEventListener(llvm::JITEventListener::createGDBRegistrationListener());
     }
 
     if (profiling_events) {
@@ -1456,16 +1462,24 @@ LLVM_Util::execengine (llvm::ExecutionEngine *exec)
 {
     if (nullptr != m_llvm_exec) {
         if (nullptr != mVTuneNotifier) {
+            // We explicitly remove the VTune listener, so it can't be notified of the object's release.
+            // As we are holding onto the memory backing the object, this should be fine.
+            // It is necessary because a profiler could try and lookup info from an object that otherwise
+            // would have been unregistered.
             m_llvm_exec->UnregisterJITEventListener(mVTuneNotifier);
+
             delete mVTuneNotifier;
             mVTuneNotifier = nullptr;
         }
-        if (nullptr != mGdbListener) {
-            m_llvm_exec->UnregisterJITEventListener(mGdbListener);
-            // DO NOT delete the GDB listener, as it is a static object
-            // with a mutex internally for thread safety
-            // delete mGdbListener;
-            mGdbListener = nullptr;
+
+        if (debug_is_enabled()) {
+            // We explicitly remove the GDB listener, so it can't be notified of the object's release.
+            // As we are holding onto the memory backing the object, this should be fine.
+            // It is necessary because a debugger could try and lookup info from an object that otherwise
+            // would have been unregistered.
+
+            // The GDB listener is a static object, we really aren't creating one here
+            m_llvm_exec->UnregisterJITEventListener(llvm::JITEventListener::createGDBRegistrationListener());
         }
         delete m_llvm_exec;
     }

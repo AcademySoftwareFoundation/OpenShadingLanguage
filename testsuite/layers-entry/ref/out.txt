@@ -1,6 +1,5 @@
 Compiled node.osl -> node.oso
-
-
+---
 default execution:
 Connect B.out to E.in
 Connect E.out to F.in
@@ -28,8 +27,7 @@ Running layer B:
 (node E) exit layer 4 E node
   layer G, in = 9, out = 16
 (node G) exit layer 6 G node
-
-
+---
 explicit execution by layer (BFE):
 Connect B.out to E.in
 Connect E.out to F.in
@@ -55,8 +53,7 @@ Running layer E:
 (node F) exit layer 5 F node
 (node E) checking for already-run layer 4 E node
 (node E)   taking early exit, already executed layer 4 E node
-
-
+---
 explicit execution by output (E.out):
 Connect B.out to E.in
 Connect E.out to F.in

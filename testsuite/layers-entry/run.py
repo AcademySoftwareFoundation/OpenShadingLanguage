@@ -61,20 +61,22 @@ groupsetup = ("-layer A -param name A -param id 1 -param in 1.0 -param set_Ci 1 
               "--options llvm_debug_layers=1,lazyglobals=0 "
               )
 
-command += "echo '\n' >> out.txt 2>&1 ; \n"
-command += "echo 'default execution:' >> out.txt 2>&1 ; \n"
+def echoCmd(msg) :
+    if (platform.system () == 'Windows'):
+        return 'echo %s>> out.txt 2>&1 ;\n' % (msg)
+    return 'echo "%s" >> out.txt 2>&1 ;\n' % (msg)
+
+command += echoCmd('---') + echoCmd('default execution:')
 command += testshade(groupsetup +
                      "-groupoutputs -o D.out out.exr ")
 
-command += "echo '\n' >> out.txt 2>&1 ; \n"
-command += "echo 'explicit execution by layer (BFE):' >> out.txt 2>&1 ; \n"
+command += echoCmd('---') + echoCmd('explicit execution by layer (BFE):')
 command += testshade(groupsetup +
                      "-O2 -groupoutputs -o D.out out.exr " +
                      "-entry B -entry F -entry E "
                      )
 
-command += "echo '\n' >> out.txt 2>&1 ; \n"
-command += "echo 'explicit execution by output (E.out):' >> out.txt 2>&1 ; \n"
+command += echoCmd('---') + echoCmd('explicit execution by output (E.out):')
 command += testshade(groupsetup +
                      "-O2 -groupoutputs -o D.out out.exr " +
                      "-entry B -entry F -entry E --entryoutput E.out "

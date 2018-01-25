@@ -69,10 +69,11 @@ if platform.system() == 'Windows' :
         shutil.copytree (os.path.join (test_source_dir, "ref"), "./ref")
     if os.path.exists (os.path.join (test_source_dir, "src")) and not os.path.exists("./src") :
         shutil.copytree (os.path.join (test_source_dir, "src"), "./src")
-    # if not os.path.exists("../data") :
-    #     shutil.copytree ("../../../testsuite/data", "..")
-    # if not os.path.exists("../common") :
-    #     shutil.copytree ("../../../testsuite/common", "..")
+    if not os.path.exists(os.path.abspath("data")) :
+        shutil.copytree (test_source_dir, os.path.abspath("data"))
+    if not os.path.exists(os.path.abspath("../common")) :
+        shutil.copytree (os.path.abspath("../../../../testsuite/common"),
+                         os.path.abspath("../common"))
 else :
     if not os.path.exists("./ref") :
         os.symlink (os.path.join (test_source_dir, "ref"), "./ref")
@@ -119,14 +120,12 @@ def text_diff (fromfile, tofile, diff_file=None):
 
 
 def osl_app (app):
-    # when we use Visual Studio, built applications are stored
-    # in the app/$(OutDir)/ directory, e.g., Release or Debug.
-    # In that case the special token "$<CONFIGURATION>" which is replaced by
-    # the actual configuration if one is specified. "$<CONFIGURATION>" works
-    # because on Windows it is a forbidden filename due to the "<>" chars.
+    apath = os.path.join(path, "src", app)
     if (platform.system () == 'Windows'):
-        return app + "/$<CONFIGURATION>/" + app + " "
-    return path + "/src/" + app + "/" + app + " "
+        # when we use Visual Studio, built applications are stored
+        # in the app/$(OutDir)/ directory, e.g., Release or Debug.
+        apath = os.path.join(apath, options.devenv_config)
+    return os.path.join(apath, app) + " "
 
 
 def oiio_relpath (path, start=os.curdir):
@@ -212,14 +211,6 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
 
     if options.path != "" :
         sys.path = [options.path] + sys.path
-    print "command = " + command
-
-    if (platform.system () == 'Windows'):
-        # Replace the /$<CONFIGURATION>/ component added in oiio_app
-        oiio_app_replace_str = "/"
-        if options.devenv_config != "":
-            oiio_app_replace_str = '/' + options.devenv_config + '/'
-        command = command.replace ("/$<CONFIGURATION>/", oiio_app_replace_str)
 
     test_environ = None
     if (platform.system () == 'Windows') and (options.solution_path != "") and \
@@ -230,7 +221,10 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
             libOIIO_path = libOIIO_path + '\\' + options.devenv_config
         test_environ["PATH"] = libOIIO_path + ';' + test_environ["PATH"]
 
+    print "command = " + command
     for sub_command in command.split(splitsymbol):
+        sub_command = sub_command.lstrip().rstrip()
+        #print "running = " + sub_command
         cmdret = subprocess.call (sub_command, shell=True, env=test_environ)
         if cmdret != 0 and failureok == 0 :
             print "#### Error: this command failed: ", sub_command

@@ -1015,6 +1015,13 @@ shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
 }
 
 
+static void synchio() {
+    // Synch all writes to stdout & stderr now (mostly for Windows)
+    std::cout.flush();
+    std::cerr.flush();
+    fflush(stdout);
+    fflush(stderr);
+}
 
 extern "C" OSL_DLL_EXPORT int
 test_shade (int argc, const char *argv[])
@@ -1106,6 +1113,7 @@ test_shade (int argc, const char *argv[])
                       << connections[i] << "." << connections[i+1]
                       << " to " << connections[i+2] << "." << connections[i+3]
                       << "\n";
+            synchio();
             shadingsys->ConnectShaders (connections[i].c_str(),
                                         connections[i+1].c_str(),
                                         connections[i+2].c_str(),
@@ -1167,6 +1175,8 @@ test_shade (int argc, const char *argv[])
 
     if (num_threads < 1)
         num_threads = OIIO::Sysutil::hardware_concurrency();
+
+    synchio();
 
     double setuptime = timer.lap ();
 

@@ -2,6 +2,6 @@ ERROR: No .oso file could be found for shader "foo"
 ERROR: Could not find shader "foo"
 ERROR: No .oso file could be found for shader "bar"
 ERROR: Could not find shader "bar"
-ERROR: ConnectShaders: source layer "lay1" not found
 Connect lay1.x to lay2.y
+ERROR: ConnectShaders: source layer "lay1" not found
 

@@ -1,0 +1,166 @@
+clone_depth: 10
+
+branches:
+  only:
+    - appveyor
+    - master
+
+skip_tags: true
+
+build:
+  parallel: true
+  verbosity: detailed
+
+platform:
+  - x64
+  # - x86
+
+configuration:
+  #- Debug
+  - Release
+
+environment:
+  matrix:
+  - TOOLSET: msvc14
+
+os:
+  - Visual Studio 2015
+
+cache:
+  - C:\projects\OSLdeps
+
+before_build:
+- ps: |
+    Write-Output "Configuration: $env:CONFIGURATION"
+    Write-Output "Platform: $env:PLATFORM"
+    Get-ChildItem Env:
+
+    $DWN_DIR = "C:\projects\OSLdownloads"
+    $DEP_DIR = "C:\projects\OSLdeps"
+    $BOOST_ROOT = "C:\Libraries\boost_1_63_0"
+    $PYTHON_DIR = "C:\Python27"
+    $LLVM_DIR = "C:\Libraries\llvm-4.0.0"
+    $LLVM_DIR = "$DEP_DIR"
+    $env:Path += ";$DEP_DIR\lib;$DEP_DIR\bin"
+    $env:APPVEYOR_SAVE_CACHE_ON_ERROR = true
+    $OSL_INT_DIR = "build\windows$env:PLATFORM"
+
+    # Choose the VisualStudio generator
+    $GENERATOR = switch ($env:TOOLSET)
+    {
+        "msvc14" {"Visual Studio 14 2015"}
+        "msvc12" {"Visual Studio 12 2013"}
+        "msvc11" {"Visual Studio 11 2012"}
+        "msvc10" {"Visual Studio 10 2010"}
+    }
+
+    # Final setup based on 64 or 32 bit
+    if ($env:PLATFORM -eq "x64") {
+        $GENERATOR = "$GENERATOR Win64"
+        $PYTHON_DIR = "$PYTHON_DIR-x64"
+        $BOOST_LIBRARYDIR = "$BOOST_ROOT\lib64-msvc-14.0"
+    } else {
+        $BOOST_LIBRARYDIR = "$BOOST_ROOT\lib32-msvc-14.0"
+    }
+
+    # If the dependency directory exists/cached, use it
+    if(!(Test-Path -Path $DEP_DIR )){
+        md $DWN_DIR -Force | Out-Null;
+        md $DEP_DIR -Force | Out-Null; cd $DEP_DIR
+        md $DEP_DIR\include -Force | Out-Null; cd $DEP_DIR
+        md $DEP_DIR\lib -Force | Out-Null; cd $DEP_DIR
+
+        cd $DWN_DIR
+        nuget install libtiff-$env:TOOLSET-$env:PLATFORM-master -Version 4.0.6.85 -Source https://ci.appveyor.com/nuget/libtiff-i3h8tqqy7o7b
+        mv .\libtiff*\*.h $DEP_DIR\include\
+        mv .\libtiff*\*.lib $DEP_DIR\lib\
+        mv .\libtiff*\*.dll $DEP_DIR\lib\
+
+        nuget install libpng-$env:TOOLSET-$env:PLATFORM-master -Version 1.6.18.44 -Source https://ci.appveyor.com/nuget/libpng-7hwq4pmmrc48
+        mv .\libpng*\*.h $DEP_DIR\include\
+        mv .\libpng*\*.lib $DEP_DIR\lib\
+        mv .\libpng*\*.dll $DEP_DIR\lib\
+
+        nuget install libjpeg-$env:TOOLSET-$env:PLATFORM-master -Version 1.4.80.21 -Source https://ci.appveyor.com/nuget/libjpegturbo-o6k4js4y7pjw
+        mv .\libjpeg*\*.h $DEP_DIR\include\
+        mv .\libjpeg*\*.lib $DEP_DIR\lib\
+        mv .\libjpeg*\*.dll $DEP_DIR\lib\
+
+        nuget install freetype
+        mv .\freetype.2.8.0.1\build\native\include\* $DEP_DIR\include\
+        mv .\freetype.2.8.0.1\build\native\lib\$env:PLATFORM\v140\dynamic\Release\*.lib $DEP_DIR\lib\
+        mv .\freetype.redist.2.8.0.1\build\native\bin\$env:PLATFORM\v140\dynamic\Release\*.lib $DEP_DIR\lib\
+
+        # ZLib
+        cd $DWN_DIR
+        Start-FileDownload https://github.com/madler/zlib/archive/v1.2.8.tar.gz
+        tar -xzf v1.2.8.tar.gz; cd zlib-1.2.8; md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
+        cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$DEP_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR"
+        cmake --build . --config $env:CONFIGURATION --target INSTALL
+
+        # IlmBase
+        cd $DWN_DIR
+        Start-FileDownload http://download.savannah.nongnu.org/releases/openexr/ilmbase-2.2.1.tar.gz
+        tar -xzf ilmbase-2.2.1.tar.gz ; cd ilmbase* ; md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
+        cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$DEP_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR"
+        cmake --build . --config $env:CONFIGURATION --target INSTALL
+
+        # OpenEXR
+        cd $DWN_DIR
+        Start-FileDownload http://download.savannah.nongnu.org/releases/openexr/openexr-2.2.1.tar.gz
+        tar -xzf openexr-2.2.1.tar.gz ; cd openexr* ; md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
+        cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$DEP_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DILMBASE_PACKAGE_PREFIX="$DEP_DIR"
+        cmake --build . --config $env:CONFIGURATION --target INSTALL
+
+        # OpenImageIO
+        cd $DWN_DIR
+        Start-FileDownload https://github.com/OpenImageIO/oiio/archive/Release-1.8.7.zip
+        unzip Release-1.8.7.zip; cd .\oiio-Release*\; md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
+        cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$DEP_DIR;$BOOST_ROOT" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DFREETYPE_DIR="$DEP_DIR" -DBOOST_LIBRARYDIR="$BOOST_LIBRARYDIR" -DUSE_PYTHON=OFF -DOIIO_BUILD_TESTS=OFF -DUSE_NUKE=OFF
+        cmake --build . --config $env:CONFIGURATION --target INSTALL
+
+        # LLVM
+        cd $DWN_DIR
+        git clone --depth 10 --branch release_40 https://github.com/llvm-mirror/llvm.git
+        cd llvm; md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
+        cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$DEP_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DLLVM_TARGETS_TO_BUILD="X86"
+        cmake --build . --config $env:CONFIGURATION --target INSTALL
+
+        cd $env:APPVEYOR_BUILD_FOLDER
+    }
+
+    # Always do this
+    cinst winflexbison
+
+
+build_script:
+- ps: |
+    # Build OSL
+    md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
+    cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$DEP_DIR;$BOOST_ROOT;$LLVM_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DLLVM_DIRECTORY="$LLVM_DIR" -DLLVM_STATIC=ON -DOPENIMAGEIOHOME="$DEP_DIR" -DBOOST_LIBRARYDIR="$BOOST_LIBRARYDIR" -DFLEX_EXECUTABLE="C:\ProgramData\chocolatey\lib\winflexbison\tools\win_flex.exe" -DBISON_EXECUTABLE="C:\ProgramData\chocolatey\lib\winflexbison\tools\win_bison.exe" -DUSE_QT=OFF -DBUILDSTATIC=OFF -DLINKSTATIC=OFF
+
+    # OSL's CMake should probably be handling Windows config better...
+    $OSL_BUILD_DIR = "$env:APPVEYOR_BUILD_FOLDER\$OSL_INT_DIR"
+    $env:Path += ";$BOOST_LIBRARYDIR"
+    $env:OSLHOME = "$env:APPVEYOR_BUILD_FOLDER\src"
+    $env:OPENIMAGEIOHOME = "$DEP_DIR"
+    $env:OIIO_LIBRARY_PATH = "$OSL_BUILD_DIR\src\osl.imageio\$env:CONFIGURATION"
+    $env:Path += ";$OSL_BUILD_DIR\src\oslc\$env:CONFIGURATION"
+    $env:Path += ";$OSL_BUILD_DIR\src\oslinfo\$env:CONFIGURATION"
+    $env:Path += ";$OSL_BUILD_DIR\src\liboslcomp\$env:CONFIGURATION"
+    $env:Path += ";$OSL_BUILD_DIR\src\liboslexec\$env:CONFIGURATION"
+    $env:Path += ";$OSL_BUILD_DIR\src\liboslnoise\$env:CONFIGURATION"
+    $env:Path += ";$OSL_BUILD_DIR\src\liboslquery\$env:CONFIGURATION"
+
+    cmake --build . --config $env:CONFIGURATION
+
+    # Test OSL
+    ctest -C $env:CONFIGURATION -E "texture-udim"
+
+
+#init:
+#- ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+
+#on_failure:
+#- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+

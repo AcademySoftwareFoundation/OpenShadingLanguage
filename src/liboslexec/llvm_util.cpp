@@ -650,6 +650,7 @@ LLVM_Util::debug_push_inlined_function(
 
     ASSERT(getCurrentDebugScope());
 
+    llvm::DINode::DIFlags fnFlags = (llvm::DINode::DIFlags)(llvm::DINode::FlagPrototyped | llvm::DINode::FlagNoReturn);
     llvm::DISubprogram *function = nullptr;
     function = m_llvm_debug_builder->createFunction(
         mDebugCU, // Scope
@@ -662,7 +663,7 @@ LLVM_Util::debug_push_inlined_function(
         true, // isLocalToUnit
         true, // isDefinition
         method_scope_line, // Scope Line
-        llvm::DINode::FlagPrototyped | llvm::DINode::FlagNoReturn, // Flags
+        fnFlags, // Flags
         true /*false*/ //isOptimized
         );
 

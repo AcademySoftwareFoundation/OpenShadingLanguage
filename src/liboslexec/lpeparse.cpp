@@ -106,7 +106,7 @@ Parser::buildStop(LPexp *etype, LPexp *scatter, const std::list<LPexp*> &custom)
 LPexp *
 Parser::parseSymbol()
 {
-    bool iscustom;
+    bool iscustom = false;
     ustring sym = parseRawSymbol(iscustom);
     if (m_ingroup) {
         if (sym == udot)

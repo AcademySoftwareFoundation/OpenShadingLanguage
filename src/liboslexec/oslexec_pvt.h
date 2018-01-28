@@ -950,6 +950,9 @@ struct ConnectedParam {
     bool is_complete () const {
         return arrayindex == -1 && channel == -1;
     }
+
+    // Debug output of ConnectedParam
+    std::string str (const ShaderInstance *inst);
 };
 
 
@@ -971,6 +974,9 @@ struct Connection {
     bool operator!= (const Connection &c) const {
         return srclayer != c.srclayer || src != c.src || dst != c.dst;
     }
+
+    // Debug output of ConnectedParam
+    std::string str (const ShaderGroup &group, const ShaderInstance *dstinst);
 };
 
 

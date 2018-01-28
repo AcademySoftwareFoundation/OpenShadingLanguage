@@ -975,6 +975,9 @@ struct Connection {
         return srclayer != c.srclayer || src != c.src || dst != c.dst;
     }
 
+    // Does the connection fully join the source and destination.
+    bool is_complete () const { return src.is_complete() && dst.is_complete(); }
+
     // Debug output of ConnectedParam
     std::string str (const ShaderGroup &group, const ShaderInstance *dstinst);
 };

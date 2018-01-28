@@ -921,12 +921,14 @@ RuntimeOptimizer::simplify_params ()
             // It's connected to an earlier layer.  If the output var of
             // the upstream shader is effectively constant or a global,
             // then so is this variable.
-            turn_into_nop (s->initbegin(), s->initend(),
-                           "connected value doesn't need init ops");
             for (auto&& c : inst()->connections()) {
-                if (c.dst.param == i) {
+                if (c.dst.param == i && c.is_complete()) {
+                    // The connection means the init ops won't be needed,
+                    // so get rid of them.
+                    turn_into_nop (s->initbegin(), s->initend(),
+                                   "connected value doesn't need init ops");
                     // srcsym is the earlier group's output param, which
-                    // is connected as the input to the param we're
+                    // is fully connected as the input to the param we're
                     // examining.
                     ShaderInstance *uplayer = group()[c.srclayer];
                     Symbol *srcsym = uplayer->symbol(c.src.param);
@@ -938,8 +940,7 @@ RuntimeOptimizer::simplify_params ()
                     // If so, make sure the global is in this instance's
                     // symbol table, and alias the parameter to it.
                     ustringmap_t &g (m_params_holding_globals[c.srclayer]);
-                    ustringmap_t::const_iterator f;
-                    f = g.find (srcsym->name());
+                    auto f = g.find (srcsym->name());
                     if (f != g.end()) {
                         if (debug() > 1)
                             debug_opt ("Remapping %s.%s because it's connected to "
@@ -972,6 +973,20 @@ RuntimeOptimizer::simplify_params ()
                     }
                 }
             }
+            // FIXME / N.B.: We only optimize "fully complete" connections,
+            // not those involving individual components or array elements
+            // of the connected parameters, because we sure don't track the
+            // constness or aliasing of individual components/element, only
+            // whole variables. But there are two cases where the logic
+            // above fails to fully exploit the connection propagating a
+            // constant value. (a) Partial-to-whole connections, for example
+            // connecting one component of an upstream triple output to a
+            // downstream float input, should propagate the constant, but we
+            // currently neglect this case. (b) If *multiple* conections
+            // combine to fully propagate values, for example if someone was
+            // foolish enough to connect R, G, and B components of color
+            // parameters *separately*, we sure don't notice that and treat
+            // it as a full connection of the color.
         }
     }
 }

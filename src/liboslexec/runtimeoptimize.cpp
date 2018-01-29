@@ -922,11 +922,16 @@ RuntimeOptimizer::simplify_params ()
             // the upstream shader is effectively constant or a global,
             // then so is this variable.
             for (auto&& c : inst()->connections()) {
-                if (c.dst.param == i && c.is_complete()) {
-                    // The connection means the init ops won't be needed,
-                    // so get rid of them.
+                if (c.dst.param != i)
+                    continue;
+                if (c.dst.is_complete()) {
+                    /// All components are being set through either
+                    /// float->triple or triple->triple
+                    /// Get rid of the un-needed init ops.
                     turn_into_nop (s->initbegin(), s->initend(),
                                    "connected value doesn't need init ops");
+                }
+                if (c.is_complete()) {
                     // srcsym is the earlier group's output param, which
                     // is fully connected as the input to the param we're
                     // examining.

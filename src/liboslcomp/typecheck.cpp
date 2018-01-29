@@ -1160,14 +1160,23 @@ ASTfunction_call::typecheck_struct_constructor ()
 ///
 /// Score a set of polymorphic functions based on arguments & return type.
 ///
-/// When choosing which varaint to use precedence is given to arguments and the
-/// return type is used as a possible tie breaker in case of any ambiguity.
-/// The highest score for an argument is given when it is an exact match.
-/// If the argument needs to be coerced into a type OSL will prefer going
-/// from any triple-types to any other triple-type before promotion of a
-/// float to a triple.  When converting one triple to another triple, OSL will
-/// prefer to coerce from one of the spatial triples (vector/point/normal) to
-/// another spatial triple before coercion from a spatial triple to color.
+/// The idea is that every function with the same name (visible from the scope)
+/// is evaluated and 'scored' against the actual arguments.
+///
+/// An exact match of all arguments will have the highest score and be chosen.
+/// If there is no exact match, then each possible overload is given a score
+/// based on the number and type of substitutions or coercions they require.
+///
+/// Different types of coercions having different costs so that: int to float is
+/// scored relatively high, beating out all other coercions; spatial-triple
+/// to spatial-triple is a closer match than spatial-triple to color;
+/// and triple to triple is a closer match than float to triple.
+///
+/// If a single choice has a best score, it wins.
+/// If there is a tie (and only then), the return type is considered in the score.
+/// If there is still not a single winner using the return type, it is considered
+/// an error whose message will show all the high scoring possibilities that
+/// cannot be dis-ambiguated.
 ///
 /// Float to int coercion is scored, but is currently a synmonym for kNoMatch
 /// as the spec does not allow implicit float to int conversion.

@@ -779,9 +779,6 @@ ASTtypecast_expression::typecheck (TypeSpec expected)
 TypeSpec
 ASTtype_constructor::typecheck (TypeSpec expected)
 {
-    // FIXME - closures
-    typecheck_children ();
-
     // Hijack the usual function arg-checking routines.
     // So we have a set of valid patterns for each type constructor:
     static const char *float_patterns[] = { "ff", "fi", NULL };
@@ -793,18 +790,27 @@ ASTtype_constructor::typecheck (TypeSpec expected)
     static const char *int_patterns[] = { "if", "ii", NULL };
     // Select the pattern for the type of constructor we are...
     const char **patterns = NULL;
-    if (typespec().is_float())
+    TypeSpec argexpected;  // default to unknown
+    if (typespec().is_float()) {
         patterns = float_patterns;
-    else if (typespec().is_triple())
+    } else if (typespec().is_triple()) {
         patterns = triple_patterns;
-    else if (typespec().is_matrix())
+        // For triples, the constructor that takes just one argument is often
+        // is used as a typecast, i.e. (vector)foo <==> vector(foo)
+        // So pass on the expected type so it can resolve polymorphism in
+        // the expected way.
+        if (listlength(args()) == 1)
+            argexpected = m_typespec;
+    } else if (typespec().is_matrix()) {
         patterns = matrix_patterns;
-    else if (typespec().is_int())
+    } else if (typespec().is_int()) {
         patterns = int_patterns;
-    if (! patterns) {
+    } else {
         error ("Cannot construct type '%s'", type_c_str(typespec()));
         return m_typespec;
     }
+
+    typecheck_children (argexpected);
 
     // Try to get a match, first without type coercion of the arguments,
     // then with coercion.

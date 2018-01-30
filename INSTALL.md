@@ -79,6 +79,11 @@ Here are the steps to check out, build, and test the OSL distribution:
    options, and note that 'make nuke' will blow everything away for the
    freshest possible compile.
 
+   NOTE: If the build breaks due to compiler warnings which have been
+   elevated to errors, you can try "make clean" followed by
+   "make STOP_ON_WARNING=0", that create a build that will only stop for
+   full errors, not warnings.
+
 3. After compilation, you'll end up with a full OSL distribution in
    dist/ARCH, where ARCH is the architecture you are building on, one of
    "linux", "linux64", "macosx", "windows", or "windows64".
@@ -92,7 +97,7 @@ Here are the steps to check out, build, and test the OSL distribution:
    of those files to appropriate directories.  Public include files
    (those needed when building applications that incorporate OSL)
    can be found in "dist/ARCH/include", and documentation can be found
-   in "dist/ARCH/doc".
+   in "dist/ARCH/share/doc".
 
 5. After building (and setting your library path), you can run the
    test suite with:

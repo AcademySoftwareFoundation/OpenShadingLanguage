@@ -283,7 +283,7 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             printf-whole-array
             raytype raytype-specialized reparam
             render-background render-bumptest
-            render-components render-cornell render-furnace-diffuse
+            render-cornell render-furnace-diffuse
             render-microfacet render-oren-nayar render-veachmis render-ward
             select shortcircuit spline splineinverse
             spline-boundarybug spline-derivbug

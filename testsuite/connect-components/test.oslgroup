@@ -6,7 +6,10 @@ connect upstream.C_out[1] downstream.f_comp_in;
 connect upstream.r_out downstream.C_rgb_in[0];
 connect upstream.g_out downstream.C_rgb_in[1];
 connect upstream.b_out downstream.C_rgb_in[2];
-connect upstream.r_out downstream.C_justr_in[0];
-connect upstream.C_out[0] downstream.C_rgb_separate_in[0];
+connect upstream.C_out[0] downstream.C_rgb_separate_in[2];
 connect upstream.C_out[1] downstream.C_rgb_separate_in[1];
-connect upstream.C_out[2] downstream.C_rgb_separate_in[2];
+connect upstream.C_out[2] downstream.C_rgb_separate_in[0];
+connect upstream.r_out downstream.C_justr_in[0];
+connect upstream.g_out downstream.C_justg_in[1];
+connect upstream.b_out downstream.C_justb_in[2];
+connect upstream.r_out downstream.C_f_to_rgb_in

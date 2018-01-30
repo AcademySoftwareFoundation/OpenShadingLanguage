@@ -321,6 +321,19 @@ preprocess (const char *yytext)
                 while (f[len] && f[len] != '\"')
                     ++len;
                 std::string filename (f, len);
+#if defined(_WIN32) && defined(USE_BOOST_WAVE) && (USE_BOOST_WAVE != 0)
+                // Assuming boost is the culprit and escaping Windows path
+                // separators incorrectly which clang's preprocessor won't do.
+                // Should this just be for Windows CI builds?
+                auto replace_all = [](std::string& str, const std::string& from, const std::string& to) {
+                    size_t start = 0;
+                    while((start = str.find(from, start)) != std::string::npos) {
+                        str.replace(start, from.size(), to);
+                        start += to.size();
+                    }
+                };
+                replace_all( filename, "\\\\", "\\");
+#endif
                 // Make it relative to the working directory, so error output
                 // isn't hugely cluttered (and also to make Boost::wave's
                 // error output match the standard cpp.

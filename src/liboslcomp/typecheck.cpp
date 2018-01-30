@@ -1003,6 +1003,11 @@ ASTfunction_call::typecheck_printf_args (const char *format, ASTNode *arg)
                        m_name.c_str());
                 return false;
             }
+            if (arg->typespec().is_structure_based()) {
+                error ("struct '%s' is not a valid argument",
+                       arg->typespec().structspec()->name());
+                return false;
+            }
 
             std::string ourformat (oldfmt, format);  // straddle the format
             // Doctor it to fix mismatches between format and data

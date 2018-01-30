@@ -1,20 +1,5 @@
 #include "mystruct.h"
 
-void status (float variable, string name)
-{
-    printf ("%s connected: %d  (value=%g)\n",
-            name, isconnected(variable), variable);
-}
-
-
-void status (MyStruct variable, string name)
-{
-    printf ("%s connected: %d  (value=%g)\n",
-            name, isconnected(variable), variable);
-    status (variable.x, concat(name, ".x"));
-}
-
-
 shader upstream (output float out = 0,
                  output float notout = 0,
                  output MyStruct struct1 = {0,0},

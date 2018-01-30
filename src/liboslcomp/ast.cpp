@@ -1082,14 +1082,14 @@ ASTtype_constructor::childname (size_t i) const
 ASTfunction_call::ASTfunction_call (OSLCompilerImpl *comp, ustring name,
                                     ASTNode *args, FunctionSymbol *funcsym)
     : ASTNode (function_call_node, comp, 0, args), m_name(name),
+      m_sym(funcsym ? funcsym : comp->symtab().find (name)), // Look it up.
+      m_poly(funcsym),    // Default - resolved symbol or null
       m_argread(~1),      // Default - all args are read except the first
       m_argwrite(1),      // Default - first arg only is written by the op
       m_argtakesderivs(0) // Default - doesn't take derivs
 {
-    // If we weren't passed a function symbol directly, look it up.
-    m_sym = funcsym ? funcsym : comp->symtab().find (name);
     if (! m_sym) {
-        error ("function '%s' was not declared in this scope", name.c_str());
+        error ("function '%s' was not declared in this scope", name);
         // FIXME -- would be fun to troll through the symtab and try to
         // find the things that almost matched and offer suggestions.
         return;

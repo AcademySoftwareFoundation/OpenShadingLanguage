@@ -1,0 +1,17 @@
+struct testStruct{
+   color c;
+   int i;
+   float f;
+};
+
+
+shader
+test (
+    testStruct input = {0, 0, 0},
+    output testStruct out = input
+)
+{
+    printf("testStruct: %g\n", testStruct.c);
+    printf("testStruct: %g\n", testStruct);
+    printf("testStruct: %d\n", testStruct);
+}

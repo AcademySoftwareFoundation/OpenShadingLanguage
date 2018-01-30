@@ -323,6 +323,8 @@ LLVMGEN (llvm_gen_printf)
             std::string ourformat (oldfmt, format);  // straddle the format
             // Doctor it to fix mismatches between format and data
             Symbol& sym (*rop.opargsym (op, arg));
+            ASSERT (! sym.typespec().is_structure_based());
+
             TypeDesc simpletype (sym.typespec().simpletype());
             int num_elements = simpletype.numelements();
             int num_components = simpletype.aggregate;

@@ -1531,6 +1531,11 @@ test_shade (int argc, const char *argv[])
     // locked (i.e. no per-geometry override):
     shadingsys->attribute("lockgeom", 1);
 
+    // Normally want to buffer output so it shows up in same
+    // order as non-batched operation, but for debugging can
+    // be useful to see immediately
+    shadingsys->attribute("buffer_printf", 1);
+
     // Now we declare our shader.
     // 
     // Each material in the scene is comprised of a "shader group."

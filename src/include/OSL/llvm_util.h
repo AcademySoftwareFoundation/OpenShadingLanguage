@@ -561,9 +561,13 @@ public:
     llvm::Value *offset_ptr (llvm::Value *ptr, int offset,
                              llvm::Type *ptrtype=NULL);
 
+    void assume_ptr_is_aligned(llvm::Value *ptr, unsigned alignment);
+
     /// Generate an alloca instruction to allocate space for n copies of the
     /// given llvm type, and return its pointer.
     llvm::Value *op_alloca (llvm::Type *llvmtype, int n=1,
+                            const std::string &name=std::string());
+    llvm::Value *op_alloca_aligned(unsigned alignment, llvm::Type *llvmtype, int n=1,
                             const std::string &name=std::string());
     llvm::Value *op_alloca (llvm::PointerType *llvmtype, int n=1,
                             const std::string &name=std::string()) {
@@ -702,6 +706,13 @@ public:
 
     /// Extracts a scalar value from a vector type
     llvm::Value *op_extract(llvm::Value *a, int index);
+    llvm::Value *op_extract(llvm::Value *a, llvm::Value * index);
+
+    llvm::Value * op_1st_active_lane_of(llvm::Value * mask);
+    llvm::Value * op_lanes_that_match_masked(
+        llvm::Value * scalar_value,
+        llvm::Value * wide_value,
+        llvm::Value * mask);
 
     // Comparison ops.  It auto-detects the type (int vs float).
     // ordered only applies to float comparisons -- ordered means the

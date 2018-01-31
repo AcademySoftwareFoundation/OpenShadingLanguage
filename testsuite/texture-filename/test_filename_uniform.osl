@@ -1,0 +1,7 @@
+shader
+test_filename_uniform (output color Cout = 0)
+{    
+    color C = (color) texture ("../common/textures/mandrill.tif", u, v);
+    color C2 = (color) texture ("../common/textures/reverse_mandrill.tif", u, v);
+    Cout = mix(C, C2, 0.5);
+}

@@ -249,6 +249,52 @@ BackendLLVMWide::llvm_type_sg ()
 }
 
 
+#ifdef OSL_EXPERIMENTAL_BATCHED_TEXTURE
+llvm::Type *
+BackendLLVMWide::llvm_type_batched_texture_options ()
+{
+    // Create a type that defines the BatchedTextureOptions for LLVM IR.  This
+    // absolutely MUST exactly match the BatchedTextureOptions struct in batched_texture.h.
+    if (m_llvm_type_batched_texture_options)
+        return m_llvm_type_batched_texture_options;
+
+
+    //OSL_DEV_ONLY(int offset_to_varying_sblur = offsetof(BatchedTextureOptions, varying));
+    //OSL_DEV_ONLY(std::cout << ">>>>>>>>>>>>>> BatchedTextureOptions::varying = " << offset_to_varying_sblur << std::endl);
+
+    llvm::Type *vp = (llvm::Type *)ll.type_void_ptr();
+
+    std::vector<llvm::Type*> sg_types;
+
+    // Varying values of the batch
+    sg_types.push_back (ll.type_wide_float());   // sblur
+    sg_types.push_back (ll.type_wide_float());   // tblur
+    sg_types.push_back (ll.type_wide_float());   // rblur
+    sg_types.push_back (ll.type_wide_float());   // swidth
+    sg_types.push_back (ll.type_wide_float());   // twidth
+    sg_types.push_back (ll.type_wide_float());   // rwidth
+
+    // Uniform values of the batch
+    sg_types.push_back (ll.type_int());     // firstchannel
+    sg_types.push_back (ll.type_int());     // subimage
+    sg_types.push_back(vp);                 // subimagename
+    sg_types.push_back (ll.type_int());     // swrap
+    sg_types.push_back (ll.type_int());     // twrap
+    sg_types.push_back (ll.type_int());     // rwrap
+    sg_types.push_back (ll.type_int());     // mipmode
+    sg_types.push_back (ll.type_int());     // interpmode
+    sg_types.push_back (ll.type_int());     // anisotropic
+    sg_types.push_back (ll.type_int());     // conservative_filter
+    sg_types.push_back (ll.type_float());     // fill
+    sg_types.push_back (ll.type_ptr(ll.type_float()));     // missingcolor
+
+    // Private internal data
+    sg_types.push_back (ll.type_int());     // envlayout
+
+    return m_llvm_type_batched_texture_options = ll.type_struct (sg_types, "BatchedTextureOptions", false /*is_packed*/);
+}
+#endif
+
 
 llvm::Type *
 BackendLLVMWide::llvm_type_sg_ptr ()
@@ -801,15 +847,26 @@ BackendLLVMWide::build_llvm_init ()
 
     // New function, reset temp matrix pointer
     m_llvm_temp_wide_matrix_ptr = nullptr;
+#ifdef OSL_EXPERIMENTAL_BATCHED_TEXTURE
+    m_llvm_temp_batched_texture_options_ptr = nullptr;
+#endif
 
     // Set up a new IR builder
     llvm::BasicBlock *entry_bb = ll.new_basic_block (unique_name);
     ll.new_builder (entry_bb);
     
+    ll.assume_ptr_is_aligned(m_llvm_shaderglobals_ptr, 64);
+    ll.assume_ptr_is_aligned(m_llvm_groupdata_ptr, 64);
+
     // Always allocate a temporary wide matrix to serve as middle man between
     // from and to matrix spaces
-    // TODO: could detect if this will be needed or not and only allocate if needed
+    // TODO: could detect if this will be needed or not and only allocate if needed,
+    // as its a reusued stack variable, we can't do it lazily because it maybe allocated
+    // inside a code block out of order with its actual usage(?)
     temp_wide_matrix_ptr();
+#ifdef OSL_EXPERIMENTAL_BATCHED_TEXTURE
+    temp_batched_texture_options_ptr();
+#endif
 
 #if 0 /* helpful for debugging */
     if (llvm_debug()) {
@@ -909,6 +966,9 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
 
     // New function, reset temp matrix pointer
     m_llvm_temp_wide_matrix_ptr = nullptr;
+#ifdef OSL_EXPERIMENTAL_BATCHED_TEXTURE
+    m_llvm_temp_batched_texture_options_ptr = nullptr;
+#endif
 
     llvm::BasicBlock *entry_bb = ll.new_basic_block (unique_layer_name);
     m_exit_instance_block = NULL;
@@ -916,14 +976,22 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
     // Set up a new IR builder
     ll.new_builder (entry_bb);
 
+    ll.assume_ptr_is_aligned(m_llvm_shaderglobals_ptr, 64);
+    ll.assume_ptr_is_aligned(m_llvm_groupdata_ptr, 64);
+
 	// Start with fewer data lanes active based on how full batch is.
     llvm::Value * initial_shader_mask = ll.int_as_mask(llvm_initial_shader_mask_value);
     ll.push_shader_instance(initial_shader_mask);
 	
     // Always allocate a temporary wide matrix to serve as middle man between
     // from and to matrix spaces
-    // TODO: could detect if this will be needed or not and only allocate if needed
+    // TODO: could detect if this will be needed or not and only allocate if needed,
+    // as its a reusued stack variable, we can't do it lazily because it maybe allocated
+    // inside a code block out of order with its actual usage(?)
     temp_wide_matrix_ptr();
+#ifdef OSL_EXPERIMENTAL_BATCHED_TEXTURE
+    temp_batched_texture_options_ptr();
+#endif
 
     OSL_DEV_ONLY(std::cout << "Master Shadername = " << inst()->master()->shadername() << std::endl);
     OSL_DEV_ONLY(std::cout << "Master osofilename = " << inst()->master()->osofilename() << std::endl);
@@ -1178,6 +1246,9 @@ BackendLLVMWide::initialize_llvm_group ()
     m_llvm_type_sg = NULL;
     m_llvm_type_groupdata = NULL;
     m_llvm_type_closure_component = NULL;
+#ifdef OSL_EXPERIMENTAL_BATCHED_TEXTURE
+    m_llvm_type_batched_texture_options = NULL;
+#endif
 
     initialize_llvm_helper_function_map();
     ll.InstallLazyFunctionCreator (helper_function_lookup);
@@ -1317,59 +1388,97 @@ BackendLLVMWide::run ()
 
     std::cout << std::endl << std::endl << "llvm's data layout of ShaderGlobalBatch" << std::endl;
     ll.dump_struct_data_layout(m_llvm_type_sg);
-#endif
-    
-    std::vector<unsigned int> offset_by_index;
-    
-    auto uniform_offset = offsetof(ShaderGlobalsBatch,m_uniform);
-    auto varying_offset = offsetof(ShaderGlobalsBatch,m_varying);
-    offset_by_index.push_back(uniform_offset + offsetof(UniformShaderGlobals,renderstate));
-    offset_by_index.push_back(uniform_offset + offsetof(UniformShaderGlobals,tracedata));
-    offset_by_index.push_back(uniform_offset + offsetof(UniformShaderGlobals,objdata));
-    offset_by_index.push_back(uniform_offset + offsetof(UniformShaderGlobals,context));
-    offset_by_index.push_back(uniform_offset + offsetof(UniformShaderGlobals,renderer));
-    offset_by_index.push_back(uniform_offset + offsetof(UniformShaderGlobals,Ci));
-    offset_by_index.push_back(uniform_offset + offsetof(UniformShaderGlobals,raytype));
-    offset_by_index.push_back(uniform_offset + offsetof(UniformShaderGlobals,pad0));
-    offset_by_index.push_back(uniform_offset + offsetof(UniformShaderGlobals,pad1));
-    offset_by_index.push_back(uniform_offset + offsetof(UniformShaderGlobals,pad2));
-    
-    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,P));
-    // Triple type in LLVM, so next 2 are included in it
-//    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dPdx));
-//    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dPdy));
-    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dPdz));
-    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,I));
-    // Triple type in LLVM, so next 2 are included in it
-//    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dIdx));
-//    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dIdy));
-    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,N));
-    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,Ng));
-    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,u));
-    // Triple type in LLVM, so next 2 are included in it
-//    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dudx));
-//    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dudy));
-    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,v));
-    // Triple type in LLVM, so next 2 are included in it
-//    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dvdx));
-//    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dvdy));
-    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dPdu));
-    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dPdv));
-    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,time));
-    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dtime));
-    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dPdtime));
-    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,Ps));
-    // Triple type in LLVM, so next 2 are included in it
-//    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dPsdx));
-//    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dPsdy));
-    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,object2common));
-    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,shader2common));
-    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,surfacearea));
-    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,flipHandedness));
-    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,backfacing));
-    
-    ll.validate_struct_data_layout(m_llvm_type_sg, offset_by_index);
 
+#endif
+    {
+        std::vector<unsigned int> offset_by_index;
+
+        auto uniform_offset = offsetof(ShaderGlobalsBatch,m_uniform);
+        auto varying_offset = offsetof(ShaderGlobalsBatch,m_varying);
+        offset_by_index.push_back(uniform_offset + offsetof(UniformShaderGlobals,renderstate));
+        offset_by_index.push_back(uniform_offset + offsetof(UniformShaderGlobals,tracedata));
+        offset_by_index.push_back(uniform_offset + offsetof(UniformShaderGlobals,objdata));
+        offset_by_index.push_back(uniform_offset + offsetof(UniformShaderGlobals,context));
+        offset_by_index.push_back(uniform_offset + offsetof(UniformShaderGlobals,renderer));
+        offset_by_index.push_back(uniform_offset + offsetof(UniformShaderGlobals,Ci));
+        offset_by_index.push_back(uniform_offset + offsetof(UniformShaderGlobals,raytype));
+        offset_by_index.push_back(uniform_offset + offsetof(UniformShaderGlobals,pad0));
+        offset_by_index.push_back(uniform_offset + offsetof(UniformShaderGlobals,pad1));
+        offset_by_index.push_back(uniform_offset + offsetof(UniformShaderGlobals,pad2));
+
+        offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,P));
+        // Triple type in LLVM, so next 2 are included in it
+    //    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dPdx));
+    //    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dPdy));
+        offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dPdz));
+        offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,I));
+        // Triple type in LLVM, so next 2 are included in it
+    //    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dIdx));
+    //    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dIdy));
+        offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,N));
+        offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,Ng));
+        offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,u));
+        // Triple type in LLVM, so next 2 are included in it
+    //    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dudx));
+    //    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dudy));
+        offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,v));
+        // Triple type in LLVM, so next 2 are included in it
+    //    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dvdx));
+    //    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dvdy));
+        offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dPdu));
+        offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dPdv));
+        offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,time));
+        offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dtime));
+        offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dPdtime));
+        offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,Ps));
+        // Triple type in LLVM, so next 2 are included in it
+    //    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dPsdx));
+    //    offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,dPsdy));
+        offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,object2common));
+        offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,shader2common));
+        offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,surfacearea));
+        offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,flipHandedness));
+        offset_by_index.push_back(varying_offset + offsetof(VaryingShaderGlobals<SimdLaneCount>,backfacing));
+
+        ll.validate_struct_data_layout(m_llvm_type_sg, offset_by_index);
+    }
+
+#ifdef OSL_EXPERIMENTAL_BATCHED_TEXTURE
+#if 0 && defined(OSL_DEV)
+    std::cout << std::endl << std::endl << "llvm's data layout of BatchedTextureOptions" << std::endl;
+    ll.dump_struct_data_layout(llvm_type_batched_texture_options());
+#endif
+
+    {
+        std::vector<unsigned int> offset_by_index;
+
+        auto uniform_offset = offsetof(BatchedTextureOptions,uniform);
+        auto varying_offset = offsetof(BatchedTextureOptions,varying);
+        offset_by_index.push_back(varying_offset + offsetof(VaryingTextureOptions<SimdLaneCount>, sblur));
+        offset_by_index.push_back(varying_offset + offsetof(VaryingTextureOptions<SimdLaneCount>, tblur));
+        offset_by_index.push_back(varying_offset + offsetof(VaryingTextureOptions<SimdLaneCount>, rblur));
+        offset_by_index.push_back(varying_offset + offsetof(VaryingTextureOptions<SimdLaneCount>, swidth));
+        offset_by_index.push_back(varying_offset + offsetof(VaryingTextureOptions<SimdLaneCount>, twidth));
+        offset_by_index.push_back(varying_offset + offsetof(VaryingTextureOptions<SimdLaneCount>, rwidth));
+        offset_by_index.push_back(uniform_offset + offsetof(UniformTextureOptions, firstchannel));
+        offset_by_index.push_back(uniform_offset + offsetof(UniformTextureOptions, subimage));
+        offset_by_index.push_back(uniform_offset + offsetof(UniformTextureOptions, subimagename));
+        offset_by_index.push_back(uniform_offset + offsetof(UniformTextureOptions, swrap));
+        offset_by_index.push_back(uniform_offset + offsetof(UniformTextureOptions, twrap));
+        offset_by_index.push_back(uniform_offset + offsetof(UniformTextureOptions, rwrap));
+        offset_by_index.push_back(uniform_offset + offsetof(UniformTextureOptions, mipmode));
+        offset_by_index.push_back(uniform_offset + offsetof(UniformTextureOptions, interpmode));
+        offset_by_index.push_back(uniform_offset + offsetof(UniformTextureOptions, anisotropic));
+        offset_by_index.push_back(uniform_offset + offsetof(UniformTextureOptions, conservative_filter));
+        offset_by_index.push_back(uniform_offset + offsetof(UniformTextureOptions, fill));
+        offset_by_index.push_back(uniform_offset + offsetof(UniformTextureOptions, missingcolor));
+        offset_by_index.push_back(offsetof(BatchedTextureOptions, private_envlayout));
+
+        ll.validate_struct_data_layout(m_llvm_type_batched_texture_options, offset_by_index);
+    }
+#endif
+
+    
     // We need to discover uniformity and masking requirements of our layers before generating code
     m_requires_masking_by_layer_and_op_index.resize(nlayers);
     m_uniform_get_attribute_op_indices_by_layer.resize(nlayers);

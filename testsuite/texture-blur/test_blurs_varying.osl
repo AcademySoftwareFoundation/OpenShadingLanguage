@@ -1,0 +1,10 @@
+shader
+test_blurs_varying (string filename = "../common/textures/mandrill.tif",
+      output color Cout = 0)
+{
+    float b = pow (u/2, 2.0);
+    float tb = 1.0 - pow (u/2, 2.0);
+    float sb = pow (u/2, 2.0)/2;
+    
+    Cout = (color) texture (filename, u, v, "blur", b, "tblur", tb, "sblur", sb);
+}

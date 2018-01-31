@@ -30,6 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #include "oslconfig.h"
+#include "batched_texture.h"
 
 #include <OpenImageIO/ustring.h>
 
@@ -663,6 +664,15 @@ public:
     ///
     /// Batch uniform version is called when filename is uniform, but everything else
     /// could be varying
+#ifdef OSL_EXPERIMENTAL_BATCHED_TEXTURE
+    virtual Mask texture(ustring filename, TextureHandle *texture_handle,
+                                  TexturePerthread *texture_thread_info,
+                                  const BatchedTextureOptions &options, ShaderGlobalsBatch *sgb,
+                                  ConstWideAccessor<float> s, ConstWideAccessor<float> t,
+                                  ConstWideAccessor<float> dsdx, ConstWideAccessor<float> dtdx,
+                                  ConstWideAccessor<float> dsdy, ConstWideAccessor<float> dtdy,
+                                  BatchedTextureOutputs& outputs);
+#else
     virtual Mask texture_uniform (ustring filename, TextureHandle *texture_handle,
                                   TexturePerthread *texture_thread_info,
                                   BatchedTextureOptionProvider & options, ShaderGlobalsBatch *sgb,
@@ -679,16 +689,10 @@ public:
                           ConstWideAccessor<float> dsdx, ConstWideAccessor<float> dtdx,
                           ConstWideAccessor<float> dsdy, ConstWideAccessor<float> dtdy,
                           BatchedTextureOutputs& outputs);
-#if 0
-    // Deprecated version, with no errormessage parameter. This will
-    // eventually disappear.
-    virtual bool texture (ustring filename, TextureHandle *texture_handle,
-                          TexturePerthread *texture_thread_info,
-                          TextureOpt &options, ShaderGlobals *sg,
-                          float s, float t, float dsdx, float dtdx,
-                          float dsdy, float dtdy, int nchannels,
-                          float *result, float *dresultds, float *dresultdt);
+#endif
 
+
+#if 0
     /// Filtered 3D texture lookup for a single point.
     ///
     /// P is the volumetric texture coordinate; dPd{x,y,z} are the
@@ -722,15 +726,6 @@ public:
                             float *result, float *dresultds,
                             float *dresultdt, float *dresultdr,
                             ustring *errormessage);
-    // Deprecated version, with no errormessage parameter. This will
-    // eventually disappear.
-    virtual bool texture3d (ustring filename, TextureHandle *texture_handle,
-                            TexturePerthread *texture_thread_info,
-                            TextureOpt &options, ShaderGlobals *sg,
-                            const Vec3 &P, const Vec3 &dPdx, const Vec3 &dPdy,
-                            const Vec3 &dPdz, int nchannels,
-                            float *result, float *dresultds,
-                            float *dresultdt, float *dresultdr);
 
     /// Filtered environment lookup for a single point.
     ///
@@ -761,15 +756,6 @@ public:
                               int nchannels, float *result,
                               float *dresultds, float *dresultdt,
                               ustring *errormessage);
-    // Deprecated version, with no errormessage parameter. This will
-    // eventually disappear.
-    virtual bool environment (ustring filename, TextureHandle *texture_handle,
-                              TexturePerthread *texture_thread_info,
-                              TextureOpt &options, ShaderGlobals *sg,
-                              const Vec3 &R, const Vec3 &dRdx, const Vec3 &dRdy,
-                              int nchannels, float *result,
-                              float *dresultds, float *dresultdt);
-
 #endif
 
     /// Get information about the given texture.  Return true if found

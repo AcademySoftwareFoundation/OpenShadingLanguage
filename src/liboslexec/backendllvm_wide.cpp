@@ -2766,10 +2766,22 @@ BackendLLVMWide::temp_wide_matrix_ptr ()
 {
 	if (m_llvm_temp_wide_matrix_ptr == nullptr)
 	{
-		m_llvm_temp_wide_matrix_ptr = ll.op_alloca(ll.type_wide_matrix());
+		m_llvm_temp_wide_matrix_ptr = ll.op_alloca_aligned(64, ll.type_wide_matrix());
 	}
     return m_llvm_temp_wide_matrix_ptr;
 }
+
+#ifdef OSL_EXPERIMENTAL_BATCHED_TEXTURE
+llvm::Value *
+BackendLLVMWide::temp_batched_texture_options_ptr ()
+{
+    if (m_llvm_temp_batched_texture_options_ptr == nullptr)
+    {
+        m_llvm_temp_batched_texture_options_ptr = ll.op_alloca_aligned(64, llvm_type_batched_texture_options());
+    }
+    return m_llvm_temp_batched_texture_options_ptr;
+}
+#endif
 
 
 llvm::Value *

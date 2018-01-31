@@ -1418,12 +1418,12 @@ LLVM_Util::validate_struct_data_layout(llvm::Type *Ty, const std::vector<unsigne
 
 
 	const StructLayout * layout = data_layout.getStructLayout (structTy);
-//	OSL_DEV_ONLY(std::cout << "dump_struct_data_layout: getSizeInBytes(" << layout->getSizeInBytes() << ") ")
-//	OSL_DEV_ONLY(	<< " getAlignment(" << layout->getAlignment() << ")")
-//	OSL_DEV_ONLY(	<< " hasPadding(" << layout->hasPadding() << ")" << std::endl);
+	OSL_DEV_ONLY(std::cout << "dump_struct_data_layout: getSizeInBytes(" << layout->getSizeInBytes() << ") ")
+	OSL_DEV_ONLY(	<< " getAlignment(" << layout->getAlignment() << ")")
+	OSL_DEV_ONLY(	<< " hasPadding(" << layout->hasPadding() << ")" << std::endl);
 	
 	for(int index=0; index < number_of_elements; ++index) {
-		//llvm::Type * et = structTy->getElementType(index);
+	    OSL_DEV_ONLY(llvm::Type * et = structTy->getElementType(index));
 		
 		auto actual_offset = layout->getElementOffset(index);
 
@@ -1431,16 +1431,16 @@ LLVM_Util::validate_struct_data_layout(llvm::Type *Ty, const std::vector<unsigne
 		
 
 		
-//		OSL_DEV_ONLY(std::cout << "   element[" << index << "] offset in bytes = " << actual_offset << " expect offset = " << expected_offset_by_index[index] <<)
-//		OSL_DEV_ONLY(		" type is ");
-//		{
-//			llvm::raw_os_ostream os_cout(std::cout);
-//			OSL_DEV_ONLY(		et->print(os_cout));
-//		}
+		OSL_DEV_ONLY(std::cout << "   element[" << index << "] offset in bytes = " << actual_offset << " expect offset = " << expected_offset_by_index[index] <<)
+		OSL_DEV_ONLY(		" type is ");
+		{
+			llvm::raw_os_ostream os_cout(std::cout);
+			OSL_DEV_ONLY(		et->print(os_cout));
+		}
 				
 				
 		ASSERT(expected_offset_by_index[index] == actual_offset);
-//		OSL_DEV_ONLY(std::cout << std::endl);
+		OSL_DEV_ONLY(std::cout << std::endl);
 	}		
 	if (expected_offset_by_index.size() != number_of_elements)
 	{
@@ -1448,7 +1448,6 @@ LLVM_Util::validate_struct_data_layout(llvm::Type *Ty, const std::vector<unsigne
 		ASSERT(expected_offset_by_index.size() == number_of_elements);
 	}
 }
-
 
 
 void
@@ -2397,6 +2396,50 @@ LLVM_Util::test_mask_lane(llvm::Value *mask, int lane_index)
 
 
 llvm::Value *
+LLVM_Util::op_1st_active_lane_of(llvm::Value * mask)
+{
+    ASSERT(mask->getType() == type_wide_bool());
+    // Assumes mask is not empty
+
+    ASSERT(m_vector_width == 16); // may be incomplete for other widths
+
+    // Count trailing zeros, least significant
+    llvm::Type * int16_type = (llvm::Type *) llvm::Type::getInt16Ty(context());
+    llvm::Type* types[] = {
+            int16_type
+    };
+    llvm::Function* func_cttz = llvm::Intrinsic::getDeclaration (module(),
+        llvm::Intrinsic::cttz,
+        llvm::ArrayRef<llvm::Type *>(types, sizeof(types)/sizeof(llvm::Type*)));
+
+
+    llvm::Value * int16_mask = builder().CreateBitCast (mask, int16_type);
+    llvm::Value *args[2] = {
+            int16_mask,
+            constant_bool(true)
+    };
+
+    llvm::Value * firstNonZeroIndex = builder().CreateCall (func_cttz, llvm::ArrayRef<llvm::Value*>(args, 2));
+    return firstNonZeroIndex;
+}
+
+llvm::Value *
+LLVM_Util::op_lanes_that_match_masked(
+    llvm::Value * scalar_value,
+    llvm::Value * wide_value,
+    llvm::Value * mask
+    )
+{
+    ASSERT(scalar_value->getType()->isVectorTy() == false);
+    ASSERT(wide_value->getType()->isVectorTy() == true);
+
+    llvm::Value * uniformWideValue = widen_value(scalar_value);
+    llvm::Value * lanes_matching = op_eq(uniformWideValue, wide_value);
+    llvm::Value * masked_lanes_matching = op_and(lanes_matching, mask);
+    return masked_lanes_matching;
+}
+
+llvm::Value *
 LLVM_Util::widen_value (llvm::Value *val)
 {
     return builder().CreateVectorSplat(m_vector_width, val);
@@ -2546,6 +2589,14 @@ LLVM_Util::offset_ptr (llvm::Value *ptr, int offset, llvm::Type *ptrtype)
     return ptr;
 }
 
+void
+LLVM_Util::assume_ptr_is_aligned(llvm::Value *ptr, unsigned alignment)
+{
+    const llvm::DataLayout & data_layout = m_llvm_exec->getDataLayout();
+
+    builder().CreateAlignmentAssumption(data_layout, ptr, alignment);
+}
+
 
 
 llvm::Value *
@@ -2555,6 +2606,15 @@ LLVM_Util::op_alloca (llvm::Type *llvmtype, int n, const std::string &name)
     return builder().CreateAlloca (llvmtype, numalloc, name);
 }
 
+
+llvm::Value *
+LLVM_Util::op_alloca_aligned (unsigned alignment, llvm::Type *llvmtype, int n, const std::string &name)
+{
+    llvm::ConstantInt* numalloc = (llvm::ConstantInt*)constant(n);
+    llvm::AllocaInst * inst = builder().CreateAlloca (llvmtype, numalloc, name);
+    inst->setAlignment(alignment);
+    return inst;
+}
 
 
 llvm::Value *
@@ -3456,6 +3516,13 @@ LLVM_Util::op_extract (llvm::Value *a, int index)
 {
     return builder().CreateExtractElement (a, index);
 }
+
+llvm::Value *
+LLVM_Util::op_extract (llvm::Value *a, llvm::Value *index)
+{
+    return builder().CreateExtractElement (a, index);
+}
+
 
 llvm::Value *
 LLVM_Util::op_eq (llvm::Value *a, llvm::Value *b, bool ordered)

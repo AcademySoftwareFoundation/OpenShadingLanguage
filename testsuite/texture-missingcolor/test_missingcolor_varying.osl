@@ -1,0 +1,6 @@
+shader
+test_missingcolor_varying (string filename = "missing.tx",
+      output color Cout = 0)
+{
+    Cout = (color) texture (filename, u, v, "missingcolor", color(1,P[0],P[1]));
+}

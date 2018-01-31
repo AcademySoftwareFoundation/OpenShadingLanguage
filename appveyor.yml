@@ -1,9 +1,13 @@
 clone_depth: 10
+version: '{branch}-{build}'
 
 branches:
   only:
-    - appveyor
     - master
+    - release
+    - appveyor
+    - /RB-/
+    - /lg-/
 
 skip_tags: true
 
@@ -155,7 +159,7 @@ build_script:
     cmake --build . --config $env:CONFIGURATION
 
     # Test OSL
-    ctest -C $env:CONFIGURATION -E "texture-udim"
+    ctest -C $env:CONFIGURATION --output-on-failure -E "texture-udim"
 
 
 #init:

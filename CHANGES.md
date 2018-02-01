@@ -9,34 +9,87 @@ New tools:
 * **osltoy** : GUI tool for interactive shader editing and pattern
   visualization (somewhat in the style of [Shadertoy](http://shadertoy.com).
   #827 (1.10.0)
+* **docdeep** : This Python script (in src/build-scripts/docdeep.py) is an
+  experimental tool to scrape comments from code and turn them into
+  beautiful Markdeep documentation. (A little like a VERY poor man's
+  Doxygen, but markdeep!) Experimental, caveat emptor. #842 (1.10.0)
 
-Language features:
+OSL Language and oslc compiler:
+* osl now warns when it detects duplicate declarations of functions with
+  the exact same argument list, in the same scope. #746
+* Fix oslc crash with invalid field selection syntax. #835 (1.10.0/1.9.6)
+* oslc fix to properly handle command line arguments if the shader file is
+  not the last argument on the command line. #841 (1.10.0/1.9.7)
+* oslc: when using boost.wave for preprocessing, fix whitespace insertion
+  #840 and windows path separators #849. #841 (1.10.0/1.9.7)
+* oslc: Fix bug/undefined behavior when trying to format/printf a struct.
+  #849 #841 (1.10.0/1.9.7)
 
-Standard library additions/changes:
+
+OSL Standard library:
 
 Contributed shader library changes:
 * mandelbrot.osl: computes Mandelbrot and Julia images. #827 (1.10.0)
 
 API changes, new options, new ShadingSystem features (for renderer writers):
-* ShadingSystem API changes:
-* ShadingSystem attribute additions/changes:
+* ShadingSystem API:
+    * An older version of ShadingSystem::execute, which had been marked
+      as deprecated since OSL 1.6, has been fully removed. #832 (1.10.0)
+* ShadingSystem attributes:
     * New "allow_shader_replacement" (int) attribute, when nonzero, allows
       shaders to be specified more than once, replacing their former
       definitions. The default, 0, considers that an error, as it always
       has. #816 (1.10.0).
-* Shader group attribute additions/changes:
-* RendererServices:
+    * New developer option "llvm_output_bitcode" dumps the bitcode for each
+      group, even if other debug options aren't turned on, and also any
+      dumped bitcode will save as text as well as binary. #831 (1.10.0)
+* Shader group attributes:
+* RendererServices API:
+    * Older versions of RendererServices texture functions, the old ones
+      with no errormessage parameter, which were documented as deprecated
+      since 1.8, are now marked OSL_DEPRECATED. #832 (1.10.0)
+* Miscellaneous:
+    * liboslnoise: Properly hide/export symbols. #849 (1.10.0/1.9.7)
 
 Performance improvements:
 
 Bug fixes and other improvements (internals):
+* The context's texture_thread_info is now properly passed to the
+  RenderServices callbacks instead of passing NULL. (1.10.0)
+* Symbols are enbled in the JIT, allowing Intel Vtune profiler to correctly
+  report which JITed OSL code is being executed. #830 (1.10.0)
 
 Build & test system improvements:
+* Appveyor CI testing for Windows. #849 (1.10.0/1.9.7)
+* Our new policy is to disable STOP_ON_WARNING for release branches, to
+  minimize build breaks for users when a new compiler warning is hit. We
+  still enable it in development/master branches as well as any CI build
+  in any branch. #850 (1.10.0/1.9.7)
 
 Developer goodies:
 
 Documentation:
 * `osltoy` documentations in `doc/osltoy.md.html` (1.10.0).
+
+
+Release 1.9.7 -- 1 Feb 2018 (compared to 1.9.6)
+-----------------------------------------------
+* oslc fix to properly handle command line arguments if the shader file is
+  not the last argument on the command line. #841
+* oslc: when using boost.wave for preprocessing, fix whitespace insertion
+  #840 and windows path separators #849.
+* oslc: Fix bug/undefined behavior when trying to format/printf a struct.
+  #849
+* liboslnoise: Fix symbol export/hiding. #849
+* Misc build issue cleanup on Windows. #849
+* For release branches, we no longer have builds consider every compiler
+  warning to be an error (except in master or for CI builds).
+
+Release 1.9.6 -- 1 Jan 2018 (compared to 1.9.5)
+-----------------------------------------------
+* Fix oslc crash with invalid field selection syntax. #835
+* Certain texture calls were inadvertently not passing in thread data,
+  forcing the texture system to look it up again redundantly. #829
 
 
 Release 1.9 -- 4 December 2017 (compared to 1.8)

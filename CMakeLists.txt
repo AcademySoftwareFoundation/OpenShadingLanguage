@@ -241,7 +241,9 @@ TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
             bug-locallifetime bug-outputinit bug-param-duplicate bug-peep
             cellnoise closure closure-array color comparison
             compile-buffer
-            component-range const-array-params const-array-fill
+            component-range
+            connect-components
+            const-array-params const-array-fill
             debugnan debug-uninit
             derivs derivs-muldiv-clobber
             draw_string

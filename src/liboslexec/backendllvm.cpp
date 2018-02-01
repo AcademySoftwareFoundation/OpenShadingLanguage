@@ -767,7 +767,7 @@ BackendLLVM::llvm_test_nonzero (Symbol &val, bool test_derivs)
 
 bool
 BackendLLVM::llvm_assign_impl (Symbol &Result, Symbol &Src,
-                                    int arrayindex)
+                                    int arrayindex, int srccomp, int dstcomp)
 {
     ASSERT (! Result.typespec().is_structure());
     ASSERT (! Src.typespec().is_structure());
@@ -825,29 +825,69 @@ BackendLLVM::llvm_assign_impl (Symbol &Result, Symbol &Src,
     // Remember that llvm_load_value will automatically convert scalar->triple.
     TypeDesc rt = Result.typespec().simpletype();
     TypeDesc basetype = TypeDesc::BASETYPE(rt.basetype);
-    int num_components = rt.aggregate;
-    for (int i = 0; i < num_components; ++i) {
+    const int num_components = rt.aggregate;
+    const bool singlechan = (srccomp != -1) || (dstcomp != -1);
+    if (!singlechan) {
+        for (int i = 0; i < num_components; ++i) {
+            llvm::Value* src_val = Src.is_constant()
+                ? llvm_load_constant_value (Src, arrayindex, i, basetype)
+                : llvm_load_value (Src, 0, arrind, i, basetype);
+            if (!src_val)
+                return false;
+            llvm_store_value (src_val, Result, 0, arrind, i);
+        }
+    } else {
+        // connect individual component of an aggregate type
+        // set srccomp to 0 for case when src is actually a float
+        if (srccomp == -1) srccomp = 0;
         llvm::Value* src_val = Src.is_constant()
-            ? llvm_load_constant_value (Src, arrayindex, i, basetype)
-            : llvm_load_value (Src, 0, arrind, i, basetype);
+            ? llvm_load_constant_value (Src, arrayindex, srccomp, basetype)
+            : llvm_load_value (Src, 0, arrind, srccomp, basetype);
         if (!src_val)
             return false;
-        llvm_store_value (src_val, Result, 0, arrind, i);
+        // write source float into all compnents when dstcomp == -1, otherwise
+        // the single element requested.
+        if (dstcomp == -1) {
+            for (int i = 0; i < num_components; ++i)
+                llvm_store_value (src_val, Result, 0, arrind, i);
+        } else
+            llvm_store_value (src_val, Result, 0, arrind, dstcomp);
     }
 
     // Handle derivatives
     if (Result.has_derivs()) {
         if (Src.has_derivs()) {
             // src and result both have derivs -- copy them
-            for (int d = 1;  d <= 2;  ++d) {
-                for (int i = 0; i < num_components; ++i) {
-                    llvm::Value* val = llvm_load_value (Src, d, arrind, i);
-                    llvm_store_value (val, Result, d, arrind, i);
+            if (!singlechan) {
+                for (int d = 1;  d <= 2;  ++d) {
+                    for (int i = 0; i < num_components; ++i) {
+                        llvm::Value* val = llvm_load_value (Src, d, arrind, i);
+                        llvm_store_value (val, Result, d, arrind, i);
+                    }
+                }
+            } else {
+                for (int d = 1;  d <= 2;  ++d) {
+                    llvm::Value* val = llvm_load_value (Src, d, arrind, srccomp);
+                    if (dstcomp == -1) {
+                        for (int i = 0; i < num_components; ++i)
+                            llvm_store_value (val, Result, d, arrind, i);
+                    }
+                    else
+                        llvm_store_value (val, Result, d, arrind, dstcomp);
                 }
             }
         } else {
             // Result wants derivs but src didn't have them -- zero them
-            llvm_zero_derivs (Result);
+            if (dstcomp != -1) {
+                // memset the single deriv component's to zero
+                if (Result.has_derivs() && Result.typespec().elementtype().is_floatbased()) {
+                    // dx
+                    ll.op_memset (ll.GEP(llvm_void_ptr(Result,1), dstcomp), 0, 1, rt.basesize());
+                    // dy
+                    ll.op_memset (ll.GEP(llvm_void_ptr(Result,2), dstcomp), 0, 1, rt.basesize());
+                }
+            } else
+                llvm_zero_derivs (Result);
         }
     }
     return true;

@@ -544,6 +544,27 @@ ShaderInstance::copy_code_from_master (ShaderGroup &group)
 
 
 
+std::string
+ConnectedParam::str (const ShaderInstance *inst)
+{
+    const Symbol *s = inst->symbol(param);
+    return Strutil::format ("%s%s%s (%s)", s->name(),
+                            arrayindex >= 0 ? Strutil::format("[%d]", arrayindex) : std::string(),
+                            channel >= 0 ? Strutil::format("[%d]", channel) : std::string(),
+                            type);
+}
+
+
+
+std::string
+Connection::str (const ShaderGroup &group, const ShaderInstance *dstinst)
+{
+    return Strutil::format ("%s -> %s", src.str (group[srclayer]),
+                            dst.str (dstinst));
+}
+
+
+
 // Are the two vectors equivalent(a[i],b[i]) in each of their members?
 template<class T>
 inline bool

@@ -1,0 +1,16 @@
+shader upstream (
+    output float f_out = -1,
+    output float r_out = -1,
+    output float g_out = -1,
+    output float b_out = -1,
+    output color C_out = -1,
+    output color C2_out = -1
+  )
+{
+    f_out = 1;
+    r_out = 2;
+    g_out = 3;
+    b_out = 4;
+    C_out = color(10,11,12);
+    C2_out = color(20,21,22);
+}

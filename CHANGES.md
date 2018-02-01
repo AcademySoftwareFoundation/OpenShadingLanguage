@@ -1,6 +1,15 @@
 Release 1.9.7 -- 1 Feb 2018 (compared to 1.9.6)
 -----------------------------------------------
-
+* oslc fix to properly handle command line arguments if the shader file is
+  not the last argument on the command line. #841
+* oslc: when using boost.wave for preprocessing, fix whitespace insertion
+  #840 and windows path separators #849.
+* oslc: Fix bug/undefined behavior when trying to format/printf a struct.
+  #849
+* liboslnoise: Fix symbol export/hiding. #849
+* Misc build issue cleanup on Windows. #849
+* For release branches, we no longer have builds consider every compiler
+  warning to be an error (except in master or for CI builds).
 
 Release 1.9.6 -- 1 Jan 2018 (compared to 1.9.5)
 -----------------------------------------------

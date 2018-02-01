@@ -341,12 +341,13 @@ Van Lommel.
 
 Additionally, many others have contributed features, bug fixes, and other
 changes: Steve Agland, Shane Ambler, Martijn Berger, Farchad Bidgolirad,
-Nicholas Bishop, Stefan Büttner, Matthaus G. Chajdas, Thomas Dinges, Henri
-Fousse, Syoyo Fujita, Derek Haase, Sven-Hendrik Haase, John Haddon, Daniel
-Heckenberg, Ronan Keryell, Elvic Liang, Max Liani, Bastien Montagne, Erich
-Ocean, Mikko Ohtamaa, Alex Schworer, Sergey Sharybin, Stephan Steinbach,
-Esteban Tovagliari, Alexander von Knorring, Roman Zulak. (Listed
-alphabetically; if we've left anybody out, please let us know.)
+Nicholas Bishop, Stefan Büttner, Matthaus G. Chajdas, Thomas Dinges, Mark
+Final, Henri Fousse, Syoyo Fujita, Derek Haase, Sven-Hendrik Haase, John
+Haddon, Daniel Heckenberg, Ronan Keryell, Elvic Liang, Max Liani, Bastien
+Montagne, Alexis Oblet, Erich Ocean, Mikko Ohtamaa, Alex Schworer, Jonathan
+Scruggs, Sergey Sharybin, Stephan Steinbach, Esteban Tovagliari, Alexander
+von Knorring, Roman Zulak. (Listed alphabetically; if we've left anybody
+out, please let us know.)
 
 We cannot possibly express sufficient gratitude to the managers at Sony
 Pictures Imageworks who allowed this project to proceed, supported it

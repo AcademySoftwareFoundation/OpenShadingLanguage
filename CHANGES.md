@@ -1,3 +1,6 @@
+Release 1.9.8 -- 1 Mar 2018 (compared to 1.9.7)
+-----------------------------------------------
+
 Release 1.9.7 -- 1 Feb 2018 (compared to 1.9.6)
 -----------------------------------------------
 * oslc fix to properly handle command line arguments if the shader file is

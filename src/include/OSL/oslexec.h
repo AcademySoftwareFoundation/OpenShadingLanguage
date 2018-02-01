@@ -406,7 +406,18 @@ public:
                  string_view shadername = string_view(),
                  string_view layername = string_view());
 
-    /// Connect two shaders within the current group
+    /// Connect two shaders within the current group. The source layer must
+    /// be *upstream* of down destination layer (i.e. source must be
+    /// declared earlier within the shader group). The named parameters must
+    /// be of compatible type -- float to float, color to color, array to
+    /// array of the same length and element type, etc. In general, it is
+    /// permissible to connect type A to type B if and only if it is allowed
+    /// within OSL to assign an A to a B (i.e., if `A = B` is legal). So any
+    /// "triple" may be connected to any other triple, and a float output
+    /// may be connected to a triple input (but not the other way around).
+    /// It is permitted to connect a single component of an aggregate to a
+    /// float and vice versa, for example,
+    ///   `ConnectShaders ("lay1", "mycolorout[2]", "lay2", "myfloatinput")`
     ///
     bool ConnectShaders (string_view srclayer, string_view srcparam,
                          string_view dstlayer, string_view dstparam);

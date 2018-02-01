@@ -25,7 +25,6 @@ OSL Language and oslc compiler:
 * oslc: Fix bug/undefined behavior when trying to format/printf a struct.
   #849 #841 (1.10.0/1.9.7)
 
-
 OSL Standard library:
 
 Contributed shader library changes:
@@ -33,6 +32,8 @@ Contributed shader library changes:
 
 API changes, new options, new ShadingSystem features (for renderer writers):
 * ShadingSystem API:
+    * It is now permitted to ConnectShaders a single component of a
+      color/point/vector/normal to a float and vice versa. #801 (1.10.0)
     * An older version of ShadingSystem::execute, which had been marked
       as deprecated since OSL 1.6, has been fully removed. #832 (1.10.0)
 * ShadingSystem attributes:

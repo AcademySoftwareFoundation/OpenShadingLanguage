@@ -14,9 +14,10 @@ test.osl:14: error: No matching function call to 'funca (int, float)'
   Candidates are:
     test.osl:3	void funca (int, int)
     test.osl:2	void funca (int)
-test.osl:15: error: Ambiguous call to 'funcb'
-  Candidates are:
-    test.osl:7	color funcb ()
+test.osl:15: warning: Ambiguous call to 'funcb ()'
+  Chosen function is:
     test.osl:6	float funcb ()
+  Other candidates are:
     test.osl:5	int funcb ()
+    test.osl:7	color funcb ()
 FAILED test.osl

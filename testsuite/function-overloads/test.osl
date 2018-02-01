@@ -65,6 +65,48 @@ int   funcb() { printf("funcb.int\n");   return 1; }
 float funcb() { printf("funcb.float\n"); return 2; }
 color funcb() { printf("funcb.color\n"); return 3; }
 
+int    freturn() { printf("freturn.int\n"); return 1; }
+point  freturn() { printf("freturn.point\n"); return 1; }
+string freturn() { printf("freturn.string\n"); return ""; }
+float  freturn() { printf("freturn.float\n"); return 1; }
+color  freturn() { printf("freturn.color\n"); return 1; }
+vector freturn() { printf("freturn.vector\n"); return 1; }
+normal freturn() { printf("freturn.normal\n"); return 1; }
+matrix freturn() { printf("freturn.matrix\n"); return 1; }
+
+color  ireturn() { printf("ireturn.color\n"); return 1; }
+point  ireturn() { printf("ireturn.point\n"); return 1; }
+string ireturn() { printf("ireturn.string\n"); return ""; }
+int    ireturn() { printf("ireturn.int\n"); return 1; }
+vector ireturn() { printf("ireturn.vector\n"); return 1; }
+normal ireturn() { printf("ireturn.normal\n"); return 1; }
+matrix ireturn() { printf("ireturn.matrix\n"); return 1; }
+
+vector creturn() { printf("creturn.vector\n"); return 1; }
+normal creturn() { printf("creturn.normal\n"); return 1; }
+point  creturn() { printf("creturn.point\n"); return 1; }
+color  creturn() { printf("creturn.color\n"); return 1; }
+string creturn() { printf("creturn.string\n"); return ""; }
+matrix creturn() { printf("creturn.matrix\n"); return 1; }
+
+point  vreturn() { printf("vreturn.point\n"); return 1; }
+vector vreturn() { printf("vreturn.vector\n"); return 1; }
+matrix vreturn() { printf("vreturn.matrix\n"); return 1; }
+normal vreturn() { printf("vreturn.normal\n"); return 1; }
+string vreturn() { printf("vreturn.string\n"); return ""; }
+
+string preturn() { printf("preturn.string\n"); return ""; }
+normal preturn() { printf("preturn.normal\n"); return 1; }
+matrix preturn() { printf("preturn.matrix\n"); return 1; }
+point  preturn() { printf("preturn.point\n"); return 1; }
+
+matrix nreturn() { printf("nreturn.matrix\n"); return 1; }
+normal nreturn() { printf("nreturn.normal\n"); return 1; }
+string nreturn() { printf("nreturn.string\n"); return ""; }
+
+matrix mreturn() { printf("mreturn.matrix\n"); return 1; }
+string mreturn() { printf("mreturn.string\n"); return ""; }
+
 shader test ()
 {
   {
@@ -128,5 +170,17 @@ shader test ()
     (color) funcb();
     (float) funcb();
     (int) funcb();
+    printf("\n");
+  }
+
+  {
+    freturn();
+    ireturn();
+    creturn();
+    vreturn();
+    preturn();
+    nreturn();
+    mreturn();
+    printf("\n");
   }
 }

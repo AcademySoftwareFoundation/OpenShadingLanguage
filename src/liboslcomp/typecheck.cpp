@@ -1180,9 +1180,11 @@ ASTfunction_call::typecheck_struct_constructor ()
 ///
 /// If a single choice has a best score, it wins.
 /// If there is a tie (and only then), the return type is considered in the score.
-/// If there is still not a single winner using the return type, it is considered
-/// an error whose message will show all the high scoring possibilities that
-/// cannot be dis-ambiguated.
+/// If there is still not a single winner then a function is chosen by ranking
+/// the possible return types, using the following precedence:
+///   float, int, color, vector, point, normal, matrix, string
+/// A warning is shown, printing which was function chosen and the list of all
+/// that were considered ambiguous.
 ///
 /// Float to int coercion is scored, but is currently a synmonym for kNoMatch
 /// as the spec does not allow implicit float to int conversion.
@@ -1220,6 +1222,8 @@ class CandidateFunctions {
     TypeSpec m_rval;
     ASTNode::ref m_args;
     size_t m_nargs;
+
+    FunctionSymbol* m_called; // Function called by name (can be NULL!)
 
     const char* scoreWildcard(int& argscore, size_t& fargs, const char* args) const {
         while (fargs < m_nargs) {
@@ -1352,9 +1356,15 @@ class CandidateFunctions {
         return argscore;
     }
 
+    void candidateHeader(const char* msg) const {
+        m_compiler->errhandler().message("  %s:\n", msg);
+    }
+
 public:
-    CandidateFunctions(OSLCompilerImpl* compiler, TypeSpec rval, ASTNode::ref args, FunctionSymbol* func) :
-        m_compiler(compiler), m_rval(rval), m_args(args), m_nargs(0) {
+    CandidateFunctions(OSLCompilerImpl* compiler, TypeSpec rval, ASTNode::ref args,
+                       FunctionSymbol* func) :
+        m_compiler(compiler), m_rval(rval), m_args(args), m_nargs(0),
+        m_called(func) {
 
         //std::cerr << "Matching " << func->name() << " formals='" << (rval.simpletype().basetype != TypeDesc::UNKNOWN ?  compiler->code_from_type (rval) : " ");
         for (ASTNode::ref arg = m_args; arg; arg = arg->next()) {
@@ -1371,27 +1381,28 @@ public:
         }
     }
 
-    void reportError(ASTNode* caller,
-                     std::string name = "", bool showArgs = true,
-                     bool candidateMsg = true,
-                     const char* msg = "No matching function call to") const {
+    void reportAmbiguity(ASTNode* caller, const ustring& funcname,
+                         bool candidateMsg = true,
+                         const char* msg = "No matching function call to",
+                         bool asWarning = true, bool showArgs = true) const {
+        std::string argstr = funcname.string();
         if (showArgs) {
-            name += " (";
+            argstr += " (";
             const char *comma = "";
             for (ASTNode::ref arg = m_args; arg; arg = arg->next()) {
-                name += comma;
-                name += arg->typespec().string();
+                argstr += comma;
+                argstr += arg->typespec().string();
                 comma = ", ";
             }
-            name += ")";
+            argstr += ")";
         }
-
-        caller->error ("%s '%s'", msg, name);
+        asWarning ? caller->warning ("%s '%s'", msg, argstr)
+                  : caller->error ("%s '%s'", msg, argstr);
         if (candidateMsg)
-            m_compiler->errhandler().message("  Candidates are:\n");
+            candidateHeader("Candidates are");
     }
 
-    void reportAmbiguity(FunctionSymbol* sym) const {
+    void reportFunction(FunctionSymbol* sym) const {
         int advance;
         const char *formals = sym->argcodes().c_str();
         TypeSpec returntype = m_compiler->type_from_code (formals, &advance);
@@ -1408,10 +1419,25 @@ public:
                      m_compiler->typelist_from_code(formals).c_str());
     }
 
-    std::pair<FunctionSymbol*, TypeSpec> best(ASTNode* caller, bool strict = 0) {
+    std::pair<FunctionSymbol*, TypeSpec>
+    best(ASTNode* caller, const ustring& funcname) {
         switch (m_candidates.size()) {
-            case 0:  return { nullptr, TypeSpec() };
-            case 1:  return { m_candidates[0].sym, m_candidates[0].rtype };
+            case 0:
+                // Nothing at all, Error
+                // If m_called is 0, then user tried to call an undefined func.
+                // Might be nice to fuzzy match funcname against m_compiler->symtab()
+                reportAmbiguity(caller, funcname,
+                                m_called != nullptr /*Candidate Msg?*/,
+                                "No matching function call to",
+                                false /*As warning*/);
+                for (FunctionSymbol* f = m_called; f; f = f->nextpoly())
+                    reportFunction(f);
+
+                return { nullptr, TypeSpec() };
+
+            case 1: // Success
+                return { m_candidates[0].sym, m_candidates[0].rtype };
+
             default: break;
         }
 
@@ -1426,17 +1452,64 @@ public:
                 ambiguity = candidate.rscore;
         }
 
-        if ((ambiguity != -1) || strict) {
+        ASSERT (c.first && c.first->sym);
+
+        if (ambiguity != -1) {
             ASSERT (caller);
-            reportError(caller, m_candidates[0].name(), false,
-                        !m_candidates.empty(), "Ambiguous call to");
+            if (true /*m_rval.simpletype().is_unknown()*/) {
+                // Ambiguity because the return type desired is unknown
+                //   float noise(point p)
+                //   color noise(point p);
+                //   float mix(color a, color b, float mx);
+                //   color mix(color a, color b, color mx);
+                //   mix(c0, c1, noise(P));
+
+                // Sort m_candidates, so the ranking code can be much more
+                // legible, and ambiguities will be reported in order they
+                // would be chosen.
+                std::sort(m_candidates.begin(), m_candidates.end(),
+                    [](const Candidate& a, const Candidate& b) -> bool {
+                        auto rank = [](const TypeSpec& s) -> int {
+                            if (s == TypeDesc::TypeFloat)
+                                return 0;
+                            if (s == TypeDesc::TypeInt)
+                                return 1;
+                            if (s == TypeDesc::TypeColor)
+                                return 2;
+                            if (s == TypeDesc::TypeVector)
+                                return 3;
+                            if (s == TypeDesc::TypePoint)
+                                return 4;
+                            if (s == TypeDesc::TypeNormal)
+                                return 5;
+                            if (s == TypeDesc::TypeMatrix)
+                                return 6;
+                            if (s == TypeDesc::TypeString)
+                                return 7;
+                            ASSERT (0 && "Unreachable");
+                            return std::numeric_limits<int>::max();
+                        };
+                        return rank(a.rtype.simpletype())
+                                 < rank(b.rtype.simpletype());
+                    });
+
+                // New choice is now front of the list
+                c = std::make_pair(&m_candidates.front(),
+                                   m_candidates.front().rscore);
+            }
+
+            reportAmbiguity(caller, funcname, false, "Ambiguous call to");
+
+            candidateHeader("Chosen function is");
+            reportFunction(c.first->sym);
+
+            candidateHeader("Other candidates are");
             for (auto& candidate : m_candidates) {
-                if (candidate.rscore >= ambiguity)
-                    reportAmbiguity(candidate.sym);
+                if (candidate.sym != c.first->sym)
+                    reportFunction(candidate.sym);
             }
         }
 
-        ASSERT (c.first);
         return {c.first->sym, c.first->rtype};
     }
 
@@ -1557,7 +1630,7 @@ ASTfunction_call::typecheck (TypeSpec expected)
     FunctionSymbol* poly = func();
 
     CandidateFunctions candidates(m_compiler, expected, args(), poly);
-    std::tie(m_sym, m_typespec) = candidates.best(this);
+    std::tie(m_sym, m_typespec) = candidates.best(this, m_name);
 
     // Check resolution against prior versions of OSL
     static const char* OSL_LEGACY = ::getenv("OSL_LEGACY_FUNCTION_RESOLUTION");
@@ -1571,10 +1644,10 @@ ASTfunction_call::typecheck (TypeSpec expected)
 
             m_compiler->errhandler().message ("  Current overload is ");
             !m_sym ? m_compiler->errhandler().message("<none>")
-                   : candidates.reportAmbiguity(static_cast<FunctionSymbol*>(m_sym));
+                   : candidates.reportFunction(static_cast<FunctionSymbol*>(m_sym));
             m_compiler->errhandler().message ("  Prior overload was ");
             !legacy ? m_compiler->errhandler().message("<none>")
-                       : candidates.reportAmbiguity(legacy);
+                       : candidates.reportFunction(legacy);
         
             if (strcasecmp(OSL_LEGACY, "use") == 0)
                 m_sym = legacy;
@@ -1593,19 +1666,6 @@ ASTfunction_call::typecheck (TypeSpec expected)
             typecheck_builtin_specialcase ();
         }
         return m_typespec;
-    }
-
-    // Ambiguity has already been reported.
-    if (!candidates.empty())
-        return TypeSpec();
-
-    // Couldn't find any way to match any polymorphic version of the
-    // function that we know about.  OK, at least try for helpful error
-    // message.
-    candidates.reportError(this, m_name.string(), true, poly != nullptr);
-    while (poly) {
-        candidates.reportAmbiguity(poly);
-        poly = poly->nextpoly();
     }
 
     return TypeSpec();

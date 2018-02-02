@@ -60,7 +60,6 @@ static ustring op_getmatrix("getmatrix");
 static ustring op_getmessage("getmessage");
 static ustring op_if("if");
 static ustring op_return("return");
-static ustring op_exit("exit");
 static ustring op_transform("transform");
 static ustring op_transformv("transformv");
 static ustring op_transformn("transformn");
@@ -478,9 +477,7 @@ public:
 		: m_index(node_index)
 		{}
 
-		OSL_INLINE Position()
-		{}
-		
+		Position() = default;
 		Position(const Position &) = default;	
 		
 		OSL_INLINE int 

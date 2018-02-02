@@ -228,7 +228,6 @@ BackendLLVMWide::llvm_call_layer (int layer, bool unconditional)
     args[1] = groupdata_ptr ();
 
     ShaderInstance *parent = group()[layer];
-    llvm::Value *trueval = ll.constant_bool(true);
     llvm::Value *layerfield = layer_run_ref(layer_remap(layer));
     llvm::BasicBlock *then_block = NULL, *after_block = NULL;
     llvm::Value *lanes_requiring_execution_value = nullptr;
@@ -1473,8 +1472,6 @@ LLVMGEN (llvm_gen_compref)
     	// Essentially free clamping
 
 		for (int d = 0;  d < 3;  ++d) {  // deriv
-			llvm::Value *val = NULL;
-
 			llvm::Value *valc0 = rop.llvm_load_value (Val, d, 0, TypeDesc::UNKNOWN, op_is_uniform);
 			llvm::Value *valc1 = rop.llvm_load_value (Val, d, 1, TypeDesc::UNKNOWN, op_is_uniform);
 			llvm::Value *valc2 = rop.llvm_load_value (Val, d, 2, TypeDesc::UNKNOWN, op_is_uniform);

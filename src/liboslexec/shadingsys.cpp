@@ -676,7 +676,7 @@ ustring color("color"), point("point"), vector("vector"), normal("normal");
 ustring matrix("matrix");
 ustring unknown ("unknown");
 ustring _emptystring_ ("");
-};
+}; // namespace Strings
 
 
 

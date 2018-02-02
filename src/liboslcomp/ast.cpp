@@ -398,9 +398,9 @@ ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
                 if (!other || (other->statements() || other->is_builtin())) {
                     if (!EH) {
                         EH = &m_compiler->errhandler();
-                        error ("Function '%s %s (%s)' redefined in the same scope\n"
-                               "  Previous definitions:",
-                               type, name, list_to_types_string(form));
+                        warning ("Function '%s %s (%s)' redefined in the same scope\n"
+                                 "  Previous definitions:",
+                                 type, name, list_to_types_string(form));
                     }
                     if (other) {
                         EH->message("    %s:%d\n",

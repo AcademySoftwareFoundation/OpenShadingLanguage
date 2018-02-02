@@ -1,7 +1,7 @@
 point abs (point p)
 {
     printf ("Alternate abs!\n");
-    return point (abs(p[0]), abs(p[1]), abs(p[2]));
+    return abs(p); // Should call original, not recurse
 }
 
 

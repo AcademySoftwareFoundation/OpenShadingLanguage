@@ -249,7 +249,6 @@ BackendLLVMWide::llvm_type_sg ()
 }
 
 
-#ifdef OSL_EXPERIMENTAL_BATCHED_TEXTURE
 llvm::Type *
 BackendLLVMWide::llvm_type_batched_texture_options ()
 {
@@ -293,7 +292,6 @@ BackendLLVMWide::llvm_type_batched_texture_options ()
 
     return m_llvm_type_batched_texture_options = ll.type_struct (sg_types, "BatchedTextureOptions", false /*is_packed*/);
 }
-#endif
 
 
 llvm::Type *
@@ -847,9 +845,7 @@ BackendLLVMWide::build_llvm_init ()
 
     // New function, reset temp matrix pointer
     m_llvm_temp_wide_matrix_ptr = nullptr;
-#ifdef OSL_EXPERIMENTAL_BATCHED_TEXTURE
     m_llvm_temp_batched_texture_options_ptr = nullptr;
-#endif
 
     // Set up a new IR builder
     llvm::BasicBlock *entry_bb = ll.new_basic_block (unique_name);
@@ -864,9 +860,7 @@ BackendLLVMWide::build_llvm_init ()
     // as its a reusued stack variable, we can't do it lazily because it maybe allocated
     // inside a code block out of order with its actual usage(?)
     temp_wide_matrix_ptr();
-#ifdef OSL_EXPERIMENTAL_BATCHED_TEXTURE
     temp_batched_texture_options_ptr();
-#endif
 
 #if 0 /* helpful for debugging */
     if (llvm_debug()) {
@@ -966,9 +960,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
 
     // New function, reset temp matrix pointer
     m_llvm_temp_wide_matrix_ptr = nullptr;
-#ifdef OSL_EXPERIMENTAL_BATCHED_TEXTURE
     m_llvm_temp_batched_texture_options_ptr = nullptr;
-#endif
 
     llvm::BasicBlock *entry_bb = ll.new_basic_block (unique_layer_name);
     m_exit_instance_block = NULL;
@@ -989,9 +981,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
     // as its a reusued stack variable, we can't do it lazily because it maybe allocated
     // inside a code block out of order with its actual usage(?)
     temp_wide_matrix_ptr();
-#ifdef OSL_EXPERIMENTAL_BATCHED_TEXTURE
     temp_batched_texture_options_ptr();
-#endif
 
     OSL_DEV_ONLY(std::cout << "Master Shadername = " << inst()->master()->shadername() << std::endl);
     OSL_DEV_ONLY(std::cout << "Master osofilename = " << inst()->master()->osofilename() << std::endl);
@@ -1246,9 +1236,7 @@ BackendLLVMWide::initialize_llvm_group ()
     m_llvm_type_sg = NULL;
     m_llvm_type_groupdata = NULL;
     m_llvm_type_closure_component = NULL;
-#ifdef OSL_EXPERIMENTAL_BATCHED_TEXTURE
     m_llvm_type_batched_texture_options = NULL;
-#endif
 
     initialize_llvm_helper_function_map();
     ll.InstallLazyFunctionCreator (helper_function_lookup);
@@ -1443,7 +1431,6 @@ BackendLLVMWide::run ()
         ll.validate_struct_data_layout(m_llvm_type_sg, offset_by_index);
     }
 
-#ifdef OSL_EXPERIMENTAL_BATCHED_TEXTURE
 #if 0 && defined(OSL_DEV)
     std::cout << std::endl << std::endl << "llvm's data layout of BatchedTextureOptions" << std::endl;
     ll.dump_struct_data_layout(llvm_type_batched_texture_options());
@@ -1476,7 +1463,6 @@ BackendLLVMWide::run ()
 
         ll.validate_struct_data_layout(m_llvm_type_batched_texture_options, offset_by_index);
     }
-#endif
 
     
     // We need to discover uniformity and masking requirements of our layers before generating code

@@ -662,9 +662,6 @@ public:
     /// be stored there, leaving it up to the caller/shader to handle the
     /// error.
     ///
-    /// Batch uniform version is called when filename is uniform, but everything else
-    /// could be varying
-#ifdef OSL_EXPERIMENTAL_BATCHED_TEXTURE
     virtual Mask texture(ustring filename, TextureHandle *texture_handle,
                                   TexturePerthread *texture_thread_info,
                                   const BatchedTextureOptions &options, ShaderGlobalsBatch *sgb,
@@ -672,24 +669,6 @@ public:
                                   ConstWideAccessor<float> dsdx, ConstWideAccessor<float> dtdx,
                                   ConstWideAccessor<float> dsdy, ConstWideAccessor<float> dtdy,
                                   BatchedTextureOutputs& outputs);
-#else
-    virtual Mask texture_uniform (ustring filename, TextureHandle *texture_handle,
-                                  TexturePerthread *texture_thread_info,
-                                  BatchedTextureOptionProvider & options, ShaderGlobalsBatch *sgb,
-                                  ConstWideAccessor<float> s, ConstWideAccessor<float> t,
-                                  ConstWideAccessor<float> dsdx, ConstWideAccessor<float> dtdx,
-                                  ConstWideAccessor<float> dsdy, ConstWideAccessor<float> dtdy,
-                                  BatchedTextureOutputs& outputs);
-
-    /// Batch version where filename is varying also
-    virtual Mask texture (ConstWideAccessor<ustring> filename,
-                          TexturePerthread *texture_thread_info,
-                          BatchedTextureOptionProvider & options, ShaderGlobalsBatch *sgb,
-                          ConstWideAccessor<float> s, ConstWideAccessor<float> t,
-                          ConstWideAccessor<float> dsdx, ConstWideAccessor<float> dtdx,
-                          ConstWideAccessor<float> dsdy, ConstWideAccessor<float> dtdy,
-                          BatchedTextureOutputs& outputs);
-#endif
 
 
 #if 0

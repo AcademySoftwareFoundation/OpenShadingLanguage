@@ -52,7 +52,6 @@ endif ()
 
 # NOTE: experimental features may be removed before pushing upstream
 #add_definitions ("-DOSL_EXPERIMENTAL_BIND_USER_DATA_WITH_LAYERNAME")
-add_definitions ("-DOSL_EXPERIMENTAL_BATCHED_TEXTURE")
 
 
 option (CMAKE_USE_FOLDERS "Use the FOLDER target property to organize targets into folders." ON)

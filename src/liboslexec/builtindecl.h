@@ -185,14 +185,9 @@ WDECL (osl_get_attribute_w16attr_name_batched, "iXiXXiiXXi")
 WDECL (osl_get_attribute_batched_uniform, "iXiXXiiXX")
 WDECL (osl_get_textureinfo_batched, "iXXXXXi")
 WDECL (osl_get_textureinfo_batched_uniform, "iXXXXXX")
-#ifdef OSL_EXPERIMENTAL_BATCHED_TEXTURE
 WDECL (osl_texture_batched, "iXXXXXXXXXXiXiXiXi")
 WDECL (osl_texture_decode_wrapmode, "iX");
 WDECL (osl_texture_decode_interpmode, "iX");
-#else
-WDECL (osl_texture_batched, "iXXXXXXXXXiXiXiXi")
-WDECL (osl_texture_batched_uniform, "iXXXXXXXXXXiXiXiXi")
-#endif
 
 NOISE_IMPL(cellnoise)
 NOISE_WIMPL(cellnoise, __OSL_SIMD_LANE_COUNT)

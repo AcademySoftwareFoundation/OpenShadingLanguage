@@ -2768,7 +2768,7 @@ BackendLLVMWide::temp_wide_matrix_ptr ()
     return m_llvm_temp_wide_matrix_ptr;
 }
 
-#ifdef OSL_EXPERIMENTAL_BATCHED_TEXTURE
+
 llvm::Value *
 BackendLLVMWide::temp_batched_texture_options_ptr ()
 {
@@ -2778,7 +2778,6 @@ BackendLLVMWide::temp_batched_texture_options_ptr ()
     }
     return m_llvm_temp_batched_texture_options_ptr;
 }
-#endif
 
 
 llvm::Value *

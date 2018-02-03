@@ -141,6 +141,48 @@ public:
 #endif
     }
 
+    /// Info reporting
+    template<typename... Args>
+    void info (string_view filename, int line,
+                  string_view format, const Args&... args) const
+    {
+        ASSERT (format.size());
+#if OIIO_VERSION >= 10804
+        std::string msg = OIIO::Strutil::format (format, args...);
+        if (filename.size())
+            m_errhandler->info ("%s:%d: info: %s", filename, line, msg);
+        else
+            m_errhandler->info ("info: %s", msg);
+#else /* Deprecate when the OIIO minimum is 1.8 */
+        std::string msg = OIIO::Strutil::format (format.c_str(), args...);
+        if (filename.size())
+            m_errhandler->info ("%s:%d: info: %s", filename.c_str(), line, msg.c_str());
+        else
+            m_errhandler->info ("info: %s", msg.c_str());
+#endif
+    }
+
+    /// message reporting
+    template<typename... Args>
+    void message (string_view filename, int line,
+                  string_view format, const Args&... args) const
+    {
+        ASSERT (format.size());
+#if OIIO_VERSION >= 10804
+        std::string msg = OIIO::Strutil::format (format, args...);
+        if (filename.size())
+            m_errhandler->message ("%s:%d: %s", filename, line, msg);
+        else
+            m_errhandler->message ("%s", msg);
+#else /* Deprecate when the OIIO minimum is 1.8 */
+        std::string msg = OIIO::Strutil::format (format.c_str(), args...);
+        if (filename.size())
+            m_errhandler->message ("%s:%d: %s", filename.c_str(), line, msg.c_str());
+        else
+            m_errhandler->message ("%s", msg.c_str());
+#endif
+    }
+
     /// Have we hit an error?
     ///
     bool error_encountered () const { return m_err; }

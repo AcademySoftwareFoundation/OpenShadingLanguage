@@ -205,6 +205,30 @@ public:
 #endif
     }
 
+    /// info reporting
+    template<typename... Args>
+    void info (string_view format, const Args&... args) const
+    {
+        DASSERT (format.size());
+#if OIIO_VERSION >= 10803
+        info_impl (OIIO::Strutil::format (format, args...));
+#else /* DEPRECATE when OIIO minimum is at least 1.8 */
+        info_impl (OIIO::Strutil::format (format.c_str(), args...));
+#endif
+    }
+
+    /// message reporting
+    template<typename... Args>
+    void message (string_view format, const Args&... args) const
+    {
+        DASSERT (format.size());
+#if OIIO_VERSION >= 10803
+        message_impl (OIIO::Strutil::format (format, args...));
+#else /* DEPRECATE when OIIO minimum is at least 1.8 */
+        message_impl (OIIO::Strutil::format (format.c_str(), args...));
+#endif
+    }
+
     bool is_lvalue () const { return m_is_lvalue; }
 
     /// Return a reference-counted pointer to the next node in the sequence.
@@ -367,6 +391,8 @@ protected:
 
     void error_impl (string_view msg) const;
     void warning_impl (string_view msg) const;
+    void info_impl (string_view msg) const;
+    void message_impl (string_view msg) const;
 
 protected:
     NodeType m_nodetype;          ///< Type of node this is

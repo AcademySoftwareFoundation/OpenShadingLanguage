@@ -48,10 +48,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // Create external declarations for all built-in funcs we may call from LLVM
 #define DECL(name,signature) extern "C" void name();
-#define WDECL(name,signature) extern "C" void name();
 #include "builtindecl.h"
+#include "builtindecl_wide.h"
 #undef DECL
-#undef WDECL
 
 
 /*
@@ -165,12 +164,9 @@ initialize_llvm_helper_function_map ()
 #define DECL(name,signature) \
     llvm_helper_function_map[#name] = HelperFuncRecord(signature,name); \
     external_function_names.push_back (#name);
-#define WDECL(name,signature) \
-    llvm_helper_function_map[#name] = HelperFuncRecord(signature,name); \
-    external_function_names.push_back (#name);
 #include "builtindecl.h"
+#include "builtindecl_wide.h"
 #undef DECL
-#undef WDECL
 
     llvm_helper_function_map_initialized = 1;
 }

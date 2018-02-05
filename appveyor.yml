@@ -1,6 +1,9 @@
 clone_depth: 10
 version: '{branch}-{build}'
 
+# Disable Appveyor's test discovery which is not used
+test: off
+
 branches:
   only:
     - master
@@ -74,9 +77,11 @@ before_build:
         $BOOST_LIBRARYDIR = "$BOOST_ROOT\lib32-msvc-14.0"
     }
 
+    # Always create the download directory
+    md $DWN_DIR -Force | Out-Null;
+
     # If the dependency directory exists/cached, use it
     if(!(Test-Path -Path $DEP_DIR )){
-        md $DWN_DIR -Force | Out-Null;
         md $DEP_DIR -Force | Out-Null; cd $DEP_DIR
         md $DEP_DIR\include -Force | Out-Null; cd $DEP_DIR
         md $DEP_DIR\lib -Force | Out-Null; cd $DEP_DIR
@@ -148,7 +153,7 @@ build_script:
     # Build OSL
     cd $env:APPVEYOR_BUILD_FOLDER
     md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
-    cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$env:OPENIMAGEIOHOME;$DEP_DIR;$BOOST_ROOT;$LLVM_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DLLVM_DIRECTORY="$LLVM_DIR" -DLLVM_STATIC=ON -DOPENIMAGEIOHOME="$DEP_DIR" -DBOOST_LIBRARYDIR="$BOOST_LIBRARYDIR" -DFLEX_EXECUTABLE="C:\ProgramData\chocolatey\lib\winflexbison\tools\win_flex.exe" -DBISON_EXECUTABLE="C:\ProgramData\chocolatey\lib\winflexbison\tools\win_bison.exe" -DUSE_QT=OFF -DBUILDSTATIC=OFF -DLINKSTATIC=OFF
+    cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$env:OPENIMAGEIOHOME;$DEP_DIR;$BOOST_ROOT;$LLVM_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DLLVM_DIRECTORY="$LLVM_DIR" -DLLVM_STATIC=ON -DOPENIMAGEIOHOME="$env:OPENIMAGEIOHOME" -DBOOST_LIBRARYDIR="$BOOST_LIBRARYDIR" -DFLEX_EXECUTABLE="C:\ProgramData\chocolatey\lib\winflexbison\tools\win_flex.exe" -DBISON_EXECUTABLE="C:\ProgramData\chocolatey\lib\winflexbison\tools\win_bison.exe" -DUSE_QT=OFF -DBUILDSTATIC=OFF -DLINKSTATIC=OFF
 
     # OSL's CMake should probably be handling Windows config better...
     $OSL_BUILD_DIR = "$env:APPVEYOR_BUILD_FOLDER\$OSL_INT_DIR"

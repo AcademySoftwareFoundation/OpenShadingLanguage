@@ -390,7 +390,7 @@ ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
         int current_scope = oslcompiler->symtab().scopeid();
         for (FunctionSymbol *f = static_cast<FunctionSymbol *>(existing_syms);
              f; f = f->nextpoly()) {
-            if (f->argcodes() == argcodes && f->scope() == current_scope) {
+            if (f->scope() == current_scope && f->argcodes() == argcodes) {
                 // If the argcodes match, only one should have statements.
                 // If there is no ASTNode for the poly, must be a builtin, and
                 // has 'implicit' statements.

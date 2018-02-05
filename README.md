@@ -9,6 +9,7 @@ Open Shading Language
 Build status:
 
 [![Build Status](https://travis-ci.org/imageworks/OpenShadingLanguage.svg?branch=master)](https://travis-ci.org/imageworks/OpenShadingLanguage)
+[![Appveyor status](https://ci.appveyor.com/api/projects/status/github/imageworks/openshadinglanguage?svg=true&branch=master)](https://ci.appveyor.com/project/lgritz/openshadinglanguage)
 
 **Table of contents**
 

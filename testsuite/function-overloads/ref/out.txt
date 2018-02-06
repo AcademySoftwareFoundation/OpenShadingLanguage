@@ -1,0 +1,115 @@
+test.osl:177: warning: Ambiguous call to 'freturn ()'
+  Chosen function is:
+    test.osl:71	float freturn ()
+  Other candidates are:
+    test.osl:68	int freturn ()
+    test.osl:72	color freturn ()
+    test.osl:73	vector freturn ()
+    test.osl:69	point freturn ()
+    test.osl:74	normal freturn ()
+    test.osl:75	matrix freturn ()
+    test.osl:70	string freturn ()
+test.osl:178: warning: Ambiguous call to 'ireturn ()'
+  Chosen function is:
+    test.osl:80	int ireturn ()
+  Other candidates are:
+    test.osl:77	color ireturn ()
+    test.osl:81	vector ireturn ()
+    test.osl:78	point ireturn ()
+    test.osl:82	normal ireturn ()
+    test.osl:83	matrix ireturn ()
+    test.osl:79	string ireturn ()
+test.osl:179: warning: Ambiguous call to 'creturn ()'
+  Chosen function is:
+    test.osl:88	color creturn ()
+  Other candidates are:
+    test.osl:85	vector creturn ()
+    test.osl:87	point creturn ()
+    test.osl:86	normal creturn ()
+    test.osl:90	matrix creturn ()
+    test.osl:89	string creturn ()
+test.osl:180: warning: Ambiguous call to 'vreturn ()'
+  Chosen function is:
+    test.osl:93	vector vreturn ()
+  Other candidates are:
+    test.osl:92	point vreturn ()
+    test.osl:95	normal vreturn ()
+    test.osl:94	matrix vreturn ()
+    test.osl:96	string vreturn ()
+test.osl:181: warning: Ambiguous call to 'preturn ()'
+  Chosen function is:
+    test.osl:101	point preturn ()
+  Other candidates are:
+    test.osl:99	normal preturn ()
+    test.osl:100	matrix preturn ()
+    test.osl:98	string preturn ()
+test.osl:182: warning: Ambiguous call to 'nreturn ()'
+  Chosen function is:
+    test.osl:104	normal nreturn ()
+  Other candidates are:
+    test.osl:103	matrix nreturn ()
+    test.osl:105	string nreturn ()
+test.osl:183: warning: Ambiguous call to 'mreturn ()'
+  Chosen function is:
+    test.osl:107	matrix mreturn ()
+  Other candidates are:
+    test.osl:108	string mreturn ()
+Compiled test.osl -> test.oso
+testA int
+testB int
+testC int
+testD int
+testA int
+testB int
+testC int
+testD int2
+
+testA float
+testB float
+testC float
+testD float
+testA float
+testB float
+testC float
+testD float
+
+testD int
+testD int2
+testD float
+testD vector
+testD int
+testD int2
+testD float
+testD point
+testD int
+testD int2
+testD float
+testD color
+testD int
+testD int2
+testD float
+testD normal
+testD int
+testD int2
+testD float
+testD int
+testD int2
+testD float
+
+testE color
+testE vector
+testE vector
+
+funcb.color
+funcb.float
+funcb.int
+
+freturn.float
+ireturn.int
+creturn.color
+vreturn.vector
+preturn.point
+nreturn.normal
+mreturn.matrix
+
+

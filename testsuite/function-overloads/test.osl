@@ -1,0 +1,186 @@
+
+#ifdef ORDER_1
+  #include "a_fcn.h"
+  #include "b_nci.h"
+  #include "c_vpi.h"
+
+  #include "a_ivp.h"
+  #include "b_vpf.h"
+  #include "c_cnf.h"
+#else
+  #include "a_ivp.h"
+  #include "b_vpf.h"
+  #include "c_cnf.h"
+
+  #include "a_fcn.h"
+  #include "b_nci.h"
+  #include "c_vpi.h"
+#endif
+
+int intval() { return 0; }
+float floatval() { return 0.0; }
+
+
+normal testD(normal a, float b, float c) {
+    printf("testD normal\n");
+    return normal(0);
+}
+color testD(color a, float b, float c) {
+    printf("testD color\n");
+    return color(1);
+}
+vector testD(vector a, float b, float c) {
+    printf("testD vector\n");
+    return vector(2);
+}
+point testD(point a, float b, float c) {
+    printf("testD point\n");
+    return point(3);
+}
+int testD(int a, float b, float c) {
+    printf("testD int\n");
+    return 4;
+}
+float testD(float a, float b, float c) {
+    printf("testD float\n");
+    return 5;
+}
+
+// This would break C++
+int testD(int a, int b, float c) {
+    printf("testD int2\n");
+    return 4;
+}
+
+int testE(int a, float b, color s) {
+    printf("testE color\n");
+    return 4;
+}
+int testE(float a, int b, vector v) {
+    printf("testE vector\n");
+    return 4;
+}
+
+int   funcb() { printf("funcb.int\n");   return 1; }
+float funcb() { printf("funcb.float\n"); return 2; }
+color funcb() { printf("funcb.color\n"); return 3; }
+
+int    freturn() { printf("freturn.int\n"); return 1; }
+point  freturn() { printf("freturn.point\n"); return 1; }
+string freturn() { printf("freturn.string\n"); return ""; }
+float  freturn() { printf("freturn.float\n"); return 1; }
+color  freturn() { printf("freturn.color\n"); return 1; }
+vector freturn() { printf("freturn.vector\n"); return 1; }
+normal freturn() { printf("freturn.normal\n"); return 1; }
+matrix freturn() { printf("freturn.matrix\n"); return 1; }
+
+color  ireturn() { printf("ireturn.color\n"); return 1; }
+point  ireturn() { printf("ireturn.point\n"); return 1; }
+string ireturn() { printf("ireturn.string\n"); return ""; }
+int    ireturn() { printf("ireturn.int\n"); return 1; }
+vector ireturn() { printf("ireturn.vector\n"); return 1; }
+normal ireturn() { printf("ireturn.normal\n"); return 1; }
+matrix ireturn() { printf("ireturn.matrix\n"); return 1; }
+
+vector creturn() { printf("creturn.vector\n"); return 1; }
+normal creturn() { printf("creturn.normal\n"); return 1; }
+point  creturn() { printf("creturn.point\n"); return 1; }
+color  creturn() { printf("creturn.color\n"); return 1; }
+string creturn() { printf("creturn.string\n"); return ""; }
+matrix creturn() { printf("creturn.matrix\n"); return 1; }
+
+point  vreturn() { printf("vreturn.point\n"); return 1; }
+vector vreturn() { printf("vreturn.vector\n"); return 1; }
+matrix vreturn() { printf("vreturn.matrix\n"); return 1; }
+normal vreturn() { printf("vreturn.normal\n"); return 1; }
+string vreturn() { printf("vreturn.string\n"); return ""; }
+
+string preturn() { printf("preturn.string\n"); return ""; }
+normal preturn() { printf("preturn.normal\n"); return 1; }
+matrix preturn() { printf("preturn.matrix\n"); return 1; }
+point  preturn() { printf("preturn.point\n"); return 1; }
+
+matrix nreturn() { printf("nreturn.matrix\n"); return 1; }
+normal nreturn() { printf("nreturn.normal\n"); return 1; }
+string nreturn() { printf("nreturn.string\n"); return ""; }
+
+matrix mreturn() { printf("mreturn.matrix\n"); return 1; }
+string mreturn() { printf("mreturn.string\n"); return ""; }
+
+shader test ()
+{
+  {
+      testA(intval(), 1.0, 1.0);
+      testB(intval(), 1.0, 1.0);
+      testC(intval(), 1.0, 1.0);
+      testD(intval(), 1.0, 1.0);
+      testA(intval(), 1, 1);
+      testB(intval(), 1, 1);
+      testC(intval(), 1, 1);
+      testD(intval(), 1, 1);
+      printf("\n");
+  }
+
+  {
+      testA(floatval(), 1.0, 1.0);
+      testB(floatval(), 1.0, 1.0);
+      testC(floatval(), 1.0, 1.0);
+      testD(floatval(), 1.0, 1.0);
+      testA(floatval(), 1, 1);
+      testB(floatval(), 1, 1);
+      testC(floatval(), 1, 1);
+      testD(floatval(), 1, 1);
+      printf("\n");
+  }
+
+  {
+    vector v0 = testD(intval(), 1.0, 1.0);
+    vector v1 = testD(intval(), 1, 1);
+    vector v2 = testD(floatval(), 1, 1);
+    vector v3 = testD(vector(0), 1, 1);
+    point  p0 = testD(intval(), 1.0, 1.0);
+    point  p1 = testD(intval(), 1, 1);
+    point  p2 = testD(floatval(), 1, 1);
+    point  p3 = testD(point(0), 1, 1);
+    color  c0 = testD(intval(), 1.0, 1.0);
+    color  c1 = testD(intval(), 1, 1);
+    color  c2 = testD(floatval(), 1, 1);
+    color  c3 = testD(color(0), 1, 1);
+    normal n0 = testD(intval(), 1.0, 1.0);
+    normal n1 = testD(intval(), 1, 1);
+    normal n2 = testD(floatval(), 1, 1);
+    normal n3 = testD(normal(0), 1, 1);
+    int    i0 = testD(intval(), 1.0, 1.0);
+    int    i1 = testD(intval(), 1, 1);
+    int    i2 = (int) testD(floatval(), 1, 1);
+    float  f0 = testD(intval(), 1.0, 1.0);
+    float  f1 = testD(intval(), 1, 1);
+    float  f2 = testD(floatval(), 1, 1);
+    printf("\n");
+  }
+
+  {
+    testE(1, 1, color(0));
+    testE(1, 1, vector(0));
+    testE(1, 1, point(0));
+    printf("\n");
+  }
+
+  {
+    (color) funcb();
+    (float) funcb();
+    (int) funcb();
+    printf("\n");
+  }
+
+  {
+    freturn();
+    ireturn();
+    creturn();
+    vreturn();
+    preturn();
+    nreturn();
+    mreturn();
+    printf("\n");
+  }
+}

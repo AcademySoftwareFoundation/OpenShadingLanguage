@@ -1,0 +1,19 @@
+
+void funca(int a) {}
+void funca(int a, int b) {}
+
+int funcb() { return 1; }
+float funcb() { return 2; }
+color funcb() { return 3; }
+
+shader test()
+{
+    funca();        // fail too few arguments
+    funca(1, 2, 3); // fail too many arguments
+    funca(1.0, 2);  // fail float -> int
+    funca(1, 2.0);  // fail float -> int
+    funcb();        // fail unresolvable ambiguity
+
+    (int) funcb();  // ok
+}
+

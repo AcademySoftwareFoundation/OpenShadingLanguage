@@ -1,6 +1,9 @@
 clone_depth: 10
 version: '{branch}-{build}'
 
+# Disable Appveyor's test discovery which is not used
+test: off
+
 branches:
   only:
     - master
@@ -31,13 +34,17 @@ os:
   - Visual Studio 2015
 
 cache:
-  - C:\projects\OSLdeps
+  - C:\projects\OSLdeps -> appveyor.yml
+  # The -> means that the cache dir is discarded if appveyor.yml has changed
 
 before_build:
 - ps: |
+    $OSL_INSTALL_BEGIN=Get-Date
     Write-Output "Configuration: $env:CONFIGURATION"
     Write-Output "Platform: $env:PLATFORM"
     Get-ChildItem Env:
+
+    [Array]$OSL_BUILD_FLAGS = "--", "/nologo", "/verbosity:minimal";
 
     $DWN_DIR = "C:\projects\OSLdownloads"
     $DEP_DIR = "C:\projects\OSLdeps"
@@ -46,8 +53,11 @@ before_build:
     $LLVM_DIR = "C:\Libraries\llvm-4.0.0"
     $LLVM_DIR = "$DEP_DIR"
     $env:Path += ";$DEP_DIR\lib;$DEP_DIR\bin"
-    $env:APPVEYOR_SAVE_CACHE_ON_ERROR = true
     $OSL_INT_DIR = "build\windows$env:PLATFORM"
+
+    # RDP into the build-bot to try some stuff out
+    # iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+    # $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
     # Choose the VisualStudio generator
     $GENERATOR = switch ($env:TOOLSET)
@@ -67,9 +77,11 @@ before_build:
         $BOOST_LIBRARYDIR = "$BOOST_ROOT\lib32-msvc-14.0"
     }
 
+    # Always create the download directory
+    md $DWN_DIR -Force | Out-Null;
+
     # If the dependency directory exists/cached, use it
     if(!(Test-Path -Path $DEP_DIR )){
-        md $DWN_DIR -Force | Out-Null;
         md $DEP_DIR -Force | Out-Null; cd $DEP_DIR
         md $DEP_DIR\include -Force | Out-Null; cd $DEP_DIR
         md $DEP_DIR\lib -Force | Out-Null; cd $DEP_DIR
@@ -92,45 +104,36 @@ before_build:
 
         nuget install freetype
         mv .\freetype.2.8.0.1\build\native\include\* $DEP_DIR\include\
-        mv .\freetype.2.8.0.1\build\native\lib\$env:PLATFORM\v140\dynamic\Release\*.lib $DEP_DIR\lib\
-        mv .\freetype.redist.2.8.0.1\build\native\bin\$env:PLATFORM\v140\dynamic\Release\*.lib $DEP_DIR\lib\
+        mv .\freetype.2.8.0.1\build\native\lib\$env:PLATFORM\v140\dynamic\$env:CONFIGURATION\*.lib $DEP_DIR\lib\
+        mv .\freetype.redist.2.8.0.1\build\native\bin\$env:PLATFORM\v140\dynamic\$env:CONFIGURATION\*.dll $DEP_DIR\lib\
 
         # ZLib
         cd $DWN_DIR
         Start-FileDownload https://github.com/madler/zlib/archive/v1.2.8.tar.gz
         tar -xzf v1.2.8.tar.gz; cd zlib-1.2.8; md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
         cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$DEP_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR"
-        cmake --build . --config $env:CONFIGURATION --target INSTALL
+        cmake --build . --config $env:CONFIGURATION --target INSTALL $OSL_BUILD_FLAGS
 
         # IlmBase
         cd $DWN_DIR
         Start-FileDownload http://download.savannah.nongnu.org/releases/openexr/ilmbase-2.2.1.tar.gz
         tar -xzf ilmbase-2.2.1.tar.gz ; cd ilmbase* ; md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
-        cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$DEP_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR"
-        cmake --build . --config $env:CONFIGURATION --target INSTALL
+        cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$DEP_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DCMAKE_CXX_FLAGS=" /W1 /EHsc /DWIN32=1 "
+        cmake --build . --config $env:CONFIGURATION --target INSTALL $OSL_BUILD_FLAGS
 
         # OpenEXR
         cd $DWN_DIR
         Start-FileDownload http://download.savannah.nongnu.org/releases/openexr/openexr-2.2.1.tar.gz
         tar -xzf openexr-2.2.1.tar.gz ; cd openexr* ; md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
-        cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$DEP_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DILMBASE_PACKAGE_PREFIX="$DEP_DIR"
-        cmake --build . --config $env:CONFIGURATION --target INSTALL
-
-        # OpenImageIO
-        cd $DWN_DIR
-        Start-FileDownload https://github.com/OpenImageIO/oiio/archive/Release-1.8.7.zip
-        unzip Release-1.8.7.zip; cd .\oiio-Release*\; md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
-        cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$DEP_DIR;$BOOST_ROOT" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DFREETYPE_DIR="$DEP_DIR" -DBOOST_LIBRARYDIR="$BOOST_LIBRARYDIR" -DUSE_PYTHON=OFF -DOIIO_BUILD_TESTS=OFF -DUSE_NUKE=OFF
-        cmake --build . --config $env:CONFIGURATION --target INSTALL
+        cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$DEP_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DILMBASE_PACKAGE_PREFIX="$DEP_DIR" -DCMAKE_CXX_FLAGS=" /W1 /EHsc /DWIN32=1 "
+        cmake --build . --config $env:CONFIGURATION --target INSTALL $OSL_BUILD_FLAGS
 
         # LLVM
         cd $DWN_DIR
         git clone --depth 10 --branch release_40 https://github.com/llvm-mirror/llvm.git
         cd llvm; md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
         cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$DEP_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DLLVM_TARGETS_TO_BUILD="X86"
-        cmake --build . --config $env:CONFIGURATION --target INSTALL
-
-        cd $env:APPVEYOR_BUILD_FOLDER
+        cmake --build . --config $env:CONFIGURATION --target INSTALL $OSL_BUILD_FLAGS
     }
 
     # Always do this
@@ -139,15 +142,24 @@ before_build:
 
 build_script:
 - ps: |
+    # OpenImageIO
+    $env:OPENIMAGEIOHOME = "C:\projects\oiio"
+    $env:FREETYPE_DIR = "$DEP_DIR"
+    $FREETYPE_LIBRARY = "$DEP_DIR\lib\freetype28.lib"
+    cd $DWN_DIR
+    git clone --depth 10 https://github.com/OpenImageIO/oiio.git oiiosrc
+    cd .\oiiosrc; md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
+    cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_INSTALL_PREFIX="$env:OPENIMAGEIOHOME" -DCMAKE_PREFIX_PATH="$DEP_DIR;$BOOST_ROOT" -DBOOST_LIBRARYDIR="$BOOST_LIBRARYDIR" -DFREETYPE_LIBRARY="$FREETYPE_LIBRARY" -DUSE_PYTHON=OFF -DOIIO_BUILD_TESTS=OFF -DUSE_NUKE=OFF
+    cmake --build . --config $env:CONFIGURATION --target INSTALL $OSL_BUILD_FLAGS
+
     # Build OSL
+    cd $env:APPVEYOR_BUILD_FOLDER
     md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
-    cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$DEP_DIR;$BOOST_ROOT;$LLVM_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DLLVM_DIRECTORY="$LLVM_DIR" -DLLVM_STATIC=ON -DOPENIMAGEIOHOME="$DEP_DIR" -DBOOST_LIBRARYDIR="$BOOST_LIBRARYDIR" -DFLEX_EXECUTABLE="C:\ProgramData\chocolatey\lib\winflexbison\tools\win_flex.exe" -DBISON_EXECUTABLE="C:\ProgramData\chocolatey\lib\winflexbison\tools\win_bison.exe" -DUSE_QT=OFF -DBUILDSTATIC=OFF -DLINKSTATIC=OFF
+    cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$env:OPENIMAGEIOHOME;$DEP_DIR;$BOOST_ROOT;$LLVM_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DLLVM_DIRECTORY="$LLVM_DIR" -DLLVM_STATIC=ON -DOPENIMAGEIOHOME="$env:OPENIMAGEIOHOME" -DBOOST_LIBRARYDIR="$BOOST_LIBRARYDIR" -DFLEX_EXECUTABLE="C:\ProgramData\chocolatey\lib\winflexbison\tools\win_flex.exe" -DBISON_EXECUTABLE="C:\ProgramData\chocolatey\lib\winflexbison\tools\win_bison.exe" -DUSE_QT=OFF -DBUILDSTATIC=OFF -DLINKSTATIC=OFF
 
     # OSL's CMake should probably be handling Windows config better...
     $OSL_BUILD_DIR = "$env:APPVEYOR_BUILD_FOLDER\$OSL_INT_DIR"
-    $env:Path += ";$BOOST_LIBRARYDIR"
     $env:OSLHOME = "$env:APPVEYOR_BUILD_FOLDER\src"
-    $env:OPENIMAGEIOHOME = "$DEP_DIR"
     $env:OIIO_LIBRARY_PATH = "$OSL_BUILD_DIR\src\osl.imageio\$env:CONFIGURATION"
     $env:Path += ";$OSL_BUILD_DIR\src\oslc\$env:CONFIGURATION"
     $env:Path += ";$OSL_BUILD_DIR\src\oslinfo\$env:CONFIGURATION"
@@ -155,11 +167,22 @@ build_script:
     $env:Path += ";$OSL_BUILD_DIR\src\liboslexec\$env:CONFIGURATION"
     $env:Path += ";$OSL_BUILD_DIR\src\liboslnoise\$env:CONFIGURATION"
     $env:Path += ";$OSL_BUILD_DIR\src\liboslquery\$env:CONFIGURATION"
+    $env:Path += ";$env:OPENIMAGEIOHOME\lib;$env:OPENIMAGEIOHOME\bin"
+    $env:Path += ";$BOOST_LIBRARYDIR"
 
-    cmake --build . --config $env:CONFIGURATION
+    cmake --build . --config $env:CONFIGURATION $OSL_BUILD_FLAGS
 
-    # Test OSL
-    ctest -C $env:CONFIGURATION --output-on-failure -E "texture-udim"
+    $OSL_BUILD_END=Get-Date
+    if(($OSL_BUILD_END-$OSL_INSTALL_BEGIN).TotalMinutes -gt 50) {
+        # Change to appveyor.yml means the cache needs to be rebuilt leaving
+        # us with not enough time to run the tests.
+        echo "OSL tests skipped in favor of uploading dependency cache"
+        # Echo to build log and Appveyors message page
+        Add-AppveyorMessage -Message "OSL tests skipped in favor of uploading dependency cache" -Category Warning
+    } else {
+        # Test OSL
+        ctest -C $env:CONFIGURATION --output-on-failure
+    }
 
 
 #init:

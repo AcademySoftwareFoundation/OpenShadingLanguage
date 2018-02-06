@@ -209,6 +209,32 @@ ASTNode::warning_impl (string_view msg) const
 
 
 void
+ASTNode::info_impl (string_view msg) const
+{
+#if OIIO_VERSION >= 10803
+    m_compiler->info (sourcefile(), sourceline(), "%s", msg);
+#else
+    // DEPRECATED -- delete when minimum OIIO is at least 1.8
+    m_compiler->info (sourcefile(), sourceline(), "%s", msg.c_str());
+#endif
+}
+
+
+
+void
+ASTNode::message_impl (string_view msg) const
+{
+#if OIIO_VERSION >= 10803
+    m_compiler->message (sourcefile(), sourceline(), "%s", msg);
+#else
+    // DEPRECATED -- delete when minimum OIIO is at least 1.8
+    m_compiler->message (sourcefile(), sourceline(), "%s", msg.c_str());
+#endif
+}
+
+
+
+void
 ASTNode::print (std::ostream &out, int indentlevel) const
 {
     indent (out, indentlevel);

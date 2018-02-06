@@ -1,6 +1,9 @@
 clone_depth: 10
 version: '{branch}-{build}'
 
+# Disable Appveyor's test discovery which is not used
+test: off
+
 branches:
   only:
     - master
@@ -74,9 +77,11 @@ before_build:
         $BOOST_LIBRARYDIR = "$BOOST_ROOT\lib32-msvc-14.0"
     }
 
+    # Always create the download directory
+    md $DWN_DIR -Force | Out-Null;
+
     # If the dependency directory exists/cached, use it
     if(!(Test-Path -Path $DEP_DIR )){
-        md $DWN_DIR -Force | Out-Null;
         md $DEP_DIR -Force | Out-Null; cd $DEP_DIR
         md $DEP_DIR\include -Force | Out-Null; cd $DEP_DIR
         md $DEP_DIR\lib -Force | Out-Null; cd $DEP_DIR
@@ -99,8 +104,8 @@ before_build:
 
         nuget install freetype
         mv .\freetype.2.8.0.1\build\native\include\* $DEP_DIR\include\
-        mv .\freetype.2.8.0.1\build\native\lib\$env:PLATFORM\v140\dynamic\Release\*.lib $DEP_DIR\lib\
-        mv .\freetype.redist.2.8.0.1\build\native\bin\$env:PLATFORM\v140\dynamic\Release\*.lib $DEP_DIR\lib\
+        mv .\freetype.2.8.0.1\build\native\lib\$env:PLATFORM\v140\dynamic\$env:CONFIGURATION\*.lib $DEP_DIR\lib\
+        mv .\freetype.redist.2.8.0.1\build\native\bin\$env:PLATFORM\v140\dynamic\$env:CONFIGURATION\*.dll $DEP_DIR\lib\
 
         # ZLib
         cd $DWN_DIR
@@ -139,16 +144,18 @@ build_script:
 - ps: |
     # OpenImageIO
     $env:OPENIMAGEIOHOME = "C:\projects\oiio"
+    $env:FREETYPE_DIR = "$DEP_DIR"
+    $FREETYPE_LIBRARY = "$DEP_DIR\lib\freetype28.lib"
     cd $DWN_DIR
     git clone --depth 10 https://github.com/OpenImageIO/oiio.git oiiosrc
     cd .\oiiosrc; md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
-    cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_INSTALL_PREFIX="$env:OPENIMAGEIOHOME" -DCMAKE_PREFIX_PATH="$DEP_DIR;$BOOST_ROOT" -DFREETYPE_DIR="$DEP_DIR" -DBOOST_LIBRARYDIR="$BOOST_LIBRARYDIR" -DUSE_PYTHON=OFF -DOIIO_BUILD_TESTS=OFF -DUSE_NUKE=OFF
+    cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_INSTALL_PREFIX="$env:OPENIMAGEIOHOME" -DCMAKE_PREFIX_PATH="$DEP_DIR;$BOOST_ROOT" -DBOOST_LIBRARYDIR="$BOOST_LIBRARYDIR" -DFREETYPE_LIBRARY="$FREETYPE_LIBRARY" -DUSE_PYTHON=OFF -DOIIO_BUILD_TESTS=OFF -DUSE_NUKE=OFF
     cmake --build . --config $env:CONFIGURATION --target INSTALL $OSL_BUILD_FLAGS
 
     # Build OSL
     cd $env:APPVEYOR_BUILD_FOLDER
     md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
-    cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$env:OPENIMAGEIOHOME;$DEP_DIR;$BOOST_ROOT;$LLVM_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DLLVM_DIRECTORY="$LLVM_DIR" -DLLVM_STATIC=ON -DOPENIMAGEIOHOME="$DEP_DIR" -DBOOST_LIBRARYDIR="$BOOST_LIBRARYDIR" -DFLEX_EXECUTABLE="C:\ProgramData\chocolatey\lib\winflexbison\tools\win_flex.exe" -DBISON_EXECUTABLE="C:\ProgramData\chocolatey\lib\winflexbison\tools\win_bison.exe" -DUSE_QT=OFF -DBUILDSTATIC=OFF -DLINKSTATIC=OFF
+    cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$env:OPENIMAGEIOHOME;$DEP_DIR;$BOOST_ROOT;$LLVM_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DLLVM_DIRECTORY="$LLVM_DIR" -DLLVM_STATIC=ON -DOPENIMAGEIOHOME="$env:OPENIMAGEIOHOME" -DBOOST_LIBRARYDIR="$BOOST_LIBRARYDIR" -DFLEX_EXECUTABLE="C:\ProgramData\chocolatey\lib\winflexbison\tools\win_flex.exe" -DBISON_EXECUTABLE="C:\ProgramData\chocolatey\lib\winflexbison\tools\win_bison.exe" -DUSE_QT=OFF -DBUILDSTATIC=OFF -DLINKSTATIC=OFF
 
     # OSL's CMake should probably be handling Windows config better...
     $OSL_BUILD_DIR = "$env:APPVEYOR_BUILD_FOLDER\$OSL_INT_DIR"
@@ -174,7 +181,7 @@ build_script:
         Add-AppveyorMessage -Message "OSL tests skipped in favor of uploading dependency cache" -Category Warning
     } else {
         # Test OSL
-        ctest -C $env:CONFIGURATION --output-on-failure -E "texture-udim"
+        ctest -C $env:CONFIGURATION --output-on-failure
     }
 
 

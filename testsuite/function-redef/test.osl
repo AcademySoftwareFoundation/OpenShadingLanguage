@@ -1,0 +1,41 @@
+point abs (point p)
+{
+    printf ("Alternate abs!\n");
+    return abs(p); // Should call original, not recurse
+}
+
+
+int redclfunc (int f); // ok
+int redclfunc (int f); // ok
+int redclfunc (int f) { return 0; }  // ok
+int redclfunc (int f) { return 1; }  // fail
+
+void subroutineA() {
+    printf ("subroutineA.redclfunc = %d\n", redclfunc(32));
+}
+
+void subroutineB() {
+    int redclfunc (int f) { return 64; } // ok
+    printf ("subroutineB.redclfunc = %d\n", redclfunc(32));
+}
+
+int redclfunc (int f); // ok
+int redclfunc (int f) { return 2; }  // fail
+
+float redclfunc (float f) { return 0.0; } // ok
+
+string concat (string a, string b) { return "A"; }  // fail
+string concat (string a, string b) { return "B"; }  // fail
+
+void redclfunc () { int a = 10; }
+void redclfunc () { int a = 10; }
+
+shader test()
+{
+    printf ("abs(P)= %g\n", abs(P));
+    subroutineA();
+    subroutineB();
+    printf ("redclfunc = %d\n", redclfunc(32));
+    printf ("concat = '%s'\n", concat("a", "b"));
+}
+

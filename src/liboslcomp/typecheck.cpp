@@ -1491,7 +1491,6 @@ public:
                                 return 6;
                             if (s == TypeDesc::TypeString)
                                 return 7;
-                            ASSERT (0 && "Unreachable");
                             return std::numeric_limits<int>::max();
                         };
                         return rank(a.rtype.simpletype())

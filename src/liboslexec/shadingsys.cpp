@@ -2067,6 +2067,16 @@ ShadingSystemImpl::ConnectShaders (string_view srclayer, string_view srcparam,
         return false;
     }
 
+    const Symbol *dstsym = dstinst->mastersymbol(dstcon.param);
+    ASSERT (dstsym);
+    if (dstsym && !dstsym->allowconnect()) {
+        std::string name = dstlayer.size() ? Strutil::format("%s.%s", dstlayer, dstparam)
+                                           : std::string(dstparam);
+        error ("ConnectShaders: cannot connect to %s because it has metadata allowconnect=0",
+               name);
+        return false;
+    }
+
     dstinst->add_connection (srcinstindex, srccon, dstcon);
     dstinst->instoverride(dstcon.param)->valuesource (Symbol::ConnectedVal);
     srcinst->instoverride(srccon.param)->connected_down (true);

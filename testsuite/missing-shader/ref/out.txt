@@ -4,4 +4,3 @@ ERROR: No .oso file could be found for shader "bar"
 ERROR: Could not find shader "bar"
 Connect lay1.x to lay2.y
 ERROR: ConnectShaders: source layer "lay1" not found
-

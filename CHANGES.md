@@ -24,6 +24,9 @@ OSL Language and oslc compiler:
   #840 and windows path separators #849. #841 (1.10.0/1.9.7)
 * oslc: Fix bug/undefined behavior when trying to format/printf a struct.
   #849 #841 (1.10.0/1.9.7)
+* A shader input parameter marked with metadata `[[ int allowconnect = 0 ]]`
+  will disallow runtime connections via `ConnectShaders()`, resulting in an
+  error. (1.10.0)
 
 OSL Standard library:
 

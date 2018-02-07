@@ -476,7 +476,8 @@ public:
           m_symtype(symtype),
           m_has_derivs(false), m_const_initializer(false),
           m_connected_down(false),
-          m_initialized(false), m_lockgeom(false), m_renderer_output(false),
+          m_initialized(false), m_lockgeom(false), m_allowconnect(true),
+          m_renderer_output(false),
           m_valuesource(DefaultVal), m_free_data(false),
           m_fieldid(-1), m_layer(-1),
           m_scope(0), m_dataoffset(-1), m_initializers(0),
@@ -686,6 +687,9 @@ public:
     bool lockgeom () const { return m_lockgeom; }
     void lockgeom (bool lock) { m_lockgeom = lock; }
 
+    bool allowconnect () const { return m_allowconnect; }
+    void allowconnect (bool val) { m_allowconnect = val; }
+
     int  arraylen () const { return m_typespec.arraylength(); }
     void arraylen (int len) {
         m_typespec.make_array(len);
@@ -731,6 +735,7 @@ protected:
     unsigned m_connected_down:1;///< Connected to a later/downtream layer
     unsigned m_initialized:1;   ///< If a param, has it been initialized?
     unsigned m_lockgeom:1;      ///< Is the param not overridden by geom?
+    unsigned m_allowconnect:1;  ///< Is the param not overridden by geom?
     unsigned m_renderer_output:1; ///< Is this sym a renderer output?
     char m_valuesource;         ///< Where did the value come from?
     bool m_free_data;           ///< Free m_data upon destruction?

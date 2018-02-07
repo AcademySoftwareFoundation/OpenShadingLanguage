@@ -450,10 +450,11 @@ OSOReaderToMaster::hint (string_view hintstring)
     }
     if (extract_prefix (h, "%meta{") && m_master->m_symbols.size()) {
         Symbol &sym (m_master->m_symbols.back());
-        int lockval = -1;
-        int ok = sscanf (h.c_str(), " int , lockgeom , %d", &lockval);
-        if (ok)
-            sym.lockgeom (lockval);
+        int ival = -1;
+        if (sscanf (h.c_str(), " int , lockgeom , %d", &ival))
+            sym.lockgeom (ival);
+        else if (sscanf (h.c_str(), " int , allowconnect , %d", &ival))
+            sym.allowconnect (ival);
     }
 }
 

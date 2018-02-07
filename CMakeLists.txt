@@ -235,7 +235,8 @@ endmacro ()
 if (OSL_BUILD_TESTS)
 # List all the individual testsuite tests here, except those that need
 # special installed tests.
-TESTSUITE ( and-or-not-synonyms aastep arithmetic array array-derivs array-range
+TESTSUITE ( aastep allowconnect-err and-or-not-synonyms
+            arithmetic array array-derivs array-range
             blackbody blendmath breakcont
             bug-array-heapoffsets
             bug-locallifetime bug-outputinit bug-param-duplicate bug-peep

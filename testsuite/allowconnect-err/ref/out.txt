@@ -1,0 +1,4 @@
+Compiled a.osl -> a.oso
+Compiled b.osl -> b.oso
+Connect alayer.f_out to blayer.f_in
+ERROR: ConnectShaders: cannot connect to blayer.f_in because it has metadata allowconnect=0

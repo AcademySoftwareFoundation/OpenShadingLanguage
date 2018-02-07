@@ -1114,10 +1114,13 @@ test_shade (int argc, const char *argv[])
                       << " to " << connections[i+2] << "." << connections[i+3]
                       << "\n";
             synchio();
-            shadingsys->ConnectShaders (connections[i].c_str(),
-                                        connections[i+1].c_str(),
-                                        connections[i+2].c_str(),
-                                        connections[i+3].c_str());
+            bool ok = shadingsys->ConnectShaders (connections[i].c_str(),
+                                                  connections[i+1].c_str(),
+                                                  connections[i+2].c_str(),
+                                                  connections[i+3].c_str());
+            if (!ok) {
+                return EXIT_FAILURE;
+            }
         }
     }
 

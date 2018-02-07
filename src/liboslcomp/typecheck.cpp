@@ -1491,7 +1491,6 @@ public:
                                 return 6;
                             if (s == TypeDesc::TypeString)
                                 return 7;
-                            ASSERT (0 && "Unreachable");
                             return std::numeric_limits<int>::max();
                         };
                         return rank(a.rtype.simpletype())
@@ -1643,7 +1642,7 @@ ASTfunction_call::typecheck (TypeSpec expected)
         auto* legacy = LegacyOverload(m_compiler, this, poly,
                                    &ASTfunction_call::check_arglist)(expected);
         if (m_sym != legacy) {
-            strcasecmp(OSL_LEGACY, "err") == 0
+            Strutil::iequals(OSL_LEGACY, "err")
                 ? error("overload chosen differs from OSL 1.9")
                 : warning("overload chosen differs from OSL 1.9");
 
@@ -1653,8 +1652,8 @@ ASTfunction_call::typecheck (TypeSpec expected)
             m_compiler->errhandler().message ("  Prior overload was ");
             !legacy ? m_compiler->errhandler().message("<none>")
                        : candidates.reportFunction(legacy);
-        
-            if (strcasecmp(OSL_LEGACY, "use") == 0)
+
+            if (Strutil::iequals(OSL_LEGACY, "use"))
                 m_sym = legacy;
         }
     }

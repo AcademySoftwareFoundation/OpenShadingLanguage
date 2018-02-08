@@ -300,7 +300,8 @@ protected:
     /// Type check a list (whose head is given by 'arg' against the list
     /// of expected types given in encoded form by 'formals'.
     bool check_arglist (const char *funcname, ref arg,
-                        const char *formals, bool coerce=false);
+                        const char *formals, bool coerce=false,
+                        bool bind = true);
 
     /// Follow a list of nodes, generating code for each in turn, and return
     /// the Symbol* for the last thing generated.
@@ -723,11 +724,13 @@ public:
     ref args () const { return child (0); }
 
     // Typecheck construction of expected against args()
-    TypeSpec typecheck (TypeSpec expected, bool error);
+    // Optionally ignoring errors and binding any init-list arguments to the
+    // required type.
+    TypeSpec typecheck (TypeSpec expected, bool error, bool bind = true);
 
     // Typecheck construction of m_typespec against args()
     TypeSpec typecheck (TypeSpec expected) {
-        return typecheck (m_typespec, true);
+        return typecheck (m_typespec, true, true);
     }
 };
 
@@ -735,6 +738,9 @@ public:
 class ASTcompound_initializer : public ASTtype_constructor
 {
     bool m_ctor;
+
+    TypeSpec typecheck (TypeSpec expected, unsigned mode);
+
 public:
     ASTcompound_initializer (OSLCompilerImpl *comp, ASTNode *exprlist);
     const char *nodetypename () const { return "compound_initializer"; }
@@ -746,24 +752,8 @@ public:
     bool canconstruct() const { return m_ctor; }
     void canconstruct(bool b) { m_ctor = b; }
 
-    // It is legal to have an incomplete initializer list in some contexts:
-    //   struct custom { float x, y, z, w };
-    //   custom c = { 0, 1 };
-    //   color c[3] = { {1}, {2} };
-    //
-    // Others (function calls) should initialize all elements to avoid ambiguity
-    //   color subproc(color a, color b)
-    //   subproc({0, 1}, {2, 3}) -> error, otherwise there may be subtle changes
-    //                              in behaviour if overloads added later.
-    enum Strictness {
-        typecheck_errors = 1,       /// Report errors in typecheck calls
-        must_init_all    = 1 << 1,  /// All fields/elements must be inited
-    };
-
-    TypeSpec typecheck (TypeSpec expected, Strictness mode);
-
     TypeSpec typecheck (TypeSpec expected) {
-        return typecheck(expected, typecheck_errors);
+        return typecheck(expected, 0);
     }
 
     // Helper for typechecking an initlist or structure.

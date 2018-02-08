@@ -681,7 +681,7 @@ ASTtypecast_expression::typecheck (TypeSpec expected)
 
 
 TypeSpec
-ASTtype_constructor::typecheck (TypeSpec expected, bool report)
+ASTtype_constructor::typecheck (TypeSpec expected, bool report, bool bind)
 {
     // Hijack the usual function arg-checking routines.
     // So we have a set of valid patterns for each type constructor:
@@ -723,7 +723,8 @@ ASTtype_constructor::typecheck (TypeSpec expected, bool report)
         bool coerce = co;
         for (const char **pat = patterns;  *pat;  ++pat) {
             const char *code = *pat;
-            if (check_arglist (type_c_str(expected), args(), code + 1, coerce))
+            if (check_arglist (type_c_str(expected), args(), code + 1, coerce,
+                               bind))
                 return expected;
         }
     }
@@ -747,73 +748,26 @@ ASTtype_constructor::typecheck (TypeSpec expected, bool report)
 
 
 class ASTcompound_initializer::TypeAdjuster {
-    // Only adjust the types on success of root initializer
-    // Oh for an llvm::SmallVector here!
-    std::vector<std::tuple<ASTcompound_initializer*, TypeSpec, bool>> m_adjust;
-    OSLCompilerImpl* m_compiler;
-    const Strictness m_mode;
-    bool m_success;
-
-    void mark_type(ASTcompound_initializer* i, TypeSpec t, bool c = false) {
-        m_adjust.emplace_back(i, t, c);
-    }
-
-    // Should errors be reported?
-    bool errors() const { return m_mode & typecheck_errors; }
-
-    bool validate_size(int expected, int actual) const {
-        if (expected > actual)
-            return false;
-        return m_mode & must_init_all ? (expected == actual) : true;
-    }
-
-    ASTcompound_initializer*
-    next_initlist(ASTNode *node, const TypeSpec& expected, int& nelem) const {
-        // Finished if already errored and not reporting them.
-        // Otherwise keep checking to report as many errors as possible
-        if (m_success || errors()) {
-            for (node = node->nextptr(); node; node = node->nextptr()) {
-                ++nelem;
-                if (node->nodetype() == compound_initializer_node)
-                    return static_cast<ASTcompound_initializer*>(node);
-                node->typecheck(expected);
-            }
-        }
-        return nullptr;
-    }
-
-    // Typecheck node, reporting an error.
-    // Returns whether to continue iteration (not whether typecheck errored).
-    bool
-    typecheck (ref node, TypeSpec expected, const StructSpec* spec = nullptr,
-               const StructSpec::FieldSpec* field = nullptr) {
-        if ( node->typecheck (expected) != expected &&
-             // Alllow assignment with comparable type
-             ! assignable(expected, node->typespec()) &&
-             // Alllow closure assignments to '0'
-             ! (expected.is_closure() &&
-                ! node->typespec().is_closure() &&
-                  node->typespec().is_int_or_float() &&
-                  node->nodetype() == literal_node &&
-                ((ASTliteral *)node.get())->floatval() == 0.0f) ) {
-
-            m_success = false;
-            if (!errors())
-                return false;
-
-            ASSERT (!spec || field);
-            node->error ("Can't assign '%s' to '%s%s'",
-                         m_compiler->type_c_str(node->typespec()),
-                         m_compiler->type_c_str(expected),
-                         !spec ? "" :
-                         Strutil::format(" %s.%s", spec->name(), field->name));
-        }
-        return true;
-    }
-
 public:
-    TypeAdjuster(OSLCompilerImpl* c, Strictness m = typecheck_errors) :
-        m_compiler(c), m_mode(m), m_success(true) {}
+    // It is legal to have an incomplete initializer list in some contexts:
+    //   struct custom { float x, y, z, w };
+    //   custom c = { 0, 1 };
+    //   color c[3] = { {1}, {2} };
+    //
+    // Others (function calls) should initialize all elements to avoid ambiguity
+    //   color subproc(color a, color b)
+    //   subproc({0, 1}, {2, 3}) -> error, otherwise there may be subtle changes
+    //                              in behaviour if overloads added later.
+    enum Strictness {
+        default_flags    = 0,
+        no_errors        = 1,       /// Don't report errors in typecheck calls
+        must_init_all    = 1 << 1,  /// All fields/elements must be inited
+        function_arg     = no_errors | must_init_all
+    };
+
+    TypeAdjuster(OSLCompilerImpl* c, unsigned m = default_flags) :
+        m_compiler(c), m_mode(Strictness(m)), m_success(true),
+        m_debug_successful(false) {}
 
     ~TypeAdjuster () {
         // Commit infered types of all ASTcompound_initializers scanned.
@@ -842,7 +796,7 @@ public:
             return;
         }
 
-        if (cinit->ASTtype_constructor::typecheck(to, errors()) == to)
+        if (cinit->ASTtype_constructor::typecheck(to, errors(), false) == to)
             mark_type(cinit, to, true);
         else
             m_success = false;
@@ -944,12 +898,109 @@ public:
                            structspec->name());
         }
     }
+
+    TypeSpec typecheck(ASTcompound_initializer* ilist, TypeSpec expected) {
+        if (!expected.is_array()) {
+            if (expected.is_structure())
+                typecheck_fields(ilist, ilist->initlist(), expected);
+            else
+                typecheck_init(ilist, expected);
+        } else
+            typecheck_array(ilist, expected);
+    
+        return m_success ? (std::get<1>(m_adjust.back()))
+                         : TypeSpec(TypeDesc::NONE);
+    }
+
+    // Turn off the automatic binding on destruction
+    TypeSpec nobind() {
+        ASSERT (!m_success || m_adjust.size());
+        // If succeeded, root type is at end of m_adjust
+        bool val = m_success;
+        m_debug_successful = m_success;
+        m_success = false; // Turn off the binding in destructor
+        return val ? (std::get<1>(m_adjust.back())) : TypeSpec(TypeDesc::NONE);
+    }
+
+    // Turn automatic binding back on.
+    void bind() {
+        ASSERT (m_debug_successful);
+        m_success = true;
+    }
+
+    bool success() const { return m_success; }
+
+private:
+    // Only adjust the types on success of root initializer
+    // Oh for an llvm::SmallVector here!
+    std::vector<std::tuple<ASTcompound_initializer*, TypeSpec, bool>> m_adjust;
+    OSLCompilerImpl* m_compiler;
+    const Strictness m_mode;
+    bool m_success;
+    bool m_debug_successful; // Only for nobind() & bind() cycle assertion.
+
+    void mark_type(ASTcompound_initializer* i, TypeSpec t, bool c = false) {
+        m_adjust.emplace_back(i, t, c);
+    }
+
+    // Should errors be reported?
+    bool errors() const { return !(m_mode & no_errors); }
+
+    bool validate_size(int expected, int actual) const {
+        if (expected > actual)
+            return false;
+        return m_mode & must_init_all ? (expected == actual) : true;
+    }
+
+    ASTcompound_initializer*
+    next_initlist(ASTNode *node, const TypeSpec& expected, int& nelem) const {
+        // Finished if already errored and not reporting them.
+        // Otherwise keep checking to report as many errors as possible
+        if (m_success || errors()) {
+            for (node = node->nextptr(); node; node = node->nextptr()) {
+                ++nelem;
+                if (node->nodetype() == compound_initializer_node)
+                    return static_cast<ASTcompound_initializer*>(node);
+                node->typecheck(expected);
+            }
+        }
+        return nullptr;
+    }
+
+    // Typecheck node, reporting an error.
+    // Returns whether to continue iteration (not whether typecheck errored).
+    bool
+    typecheck (ref node, TypeSpec expected, const StructSpec* spec = nullptr,
+               const StructSpec::FieldSpec* field = nullptr) {
+        if ( node->typecheck (expected) != expected &&
+             // Alllow assignment with comparable type
+             ! assignable(expected, node->typespec()) &&
+             // Alllow closure assignments to '0'
+             ! (expected.is_closure() &&
+                ! node->typespec().is_closure() &&
+                  node->typespec().is_int_or_float() &&
+                  node->nodetype() == literal_node &&
+                ((ASTliteral *)node.get())->floatval() == 0.0f) ) {
+
+            m_success = false;
+            if (!errors())
+                return false;
+
+            ASSERT (!spec || field);
+            node->error ("Can't assign '%s' to '%s%s'",
+                         m_compiler->type_c_str(node->typespec()),
+                         m_compiler->type_c_str(expected),
+                         !spec ? "" :
+                         Strutil::format(" %s.%s", spec->name(), field->name));
+        }
+        return true;
+    }
 };
 
 
 
 TypeSpec
-ASTcompound_initializer::typecheck (TypeSpec expected, Strictness mode)
+ASTcompound_initializer::typecheck (TypeSpec expected, unsigned mode)
 {
     if (m_ctor || m_typespec.is_structure_based() ||
         m_typespec.simpletype().basetype != TypeDesc::UNKNOWN ) {
@@ -960,16 +1011,8 @@ ASTcompound_initializer::typecheck (TypeSpec expected, Strictness mode)
 
     // Scoped so ~TypeAdjuster() will bind m_typespec before return m_typespec
     {
-        TypeAdjuster ta(m_compiler, mode);
-        if (!expected.is_array()) {
-            if (expected.is_structure())
-                ta.typecheck_fields(this, initlist(), expected);
-            else
-                ta.typecheck_init(this, expected);
-        } else
-            ta.typecheck_array(this, expected);
+        TypeAdjuster(m_compiler, mode).typecheck(this, expected);
     }
-
 
     return m_typespec;
 }
@@ -1003,7 +1046,7 @@ ASTNode::check_simple_arg (const TypeSpec &argtype,
 
 bool
 ASTNode::check_arglist (const char *funcname, ASTNode::ref arg,
-                        const char *formals, bool coerce)
+                        const char *formals, bool coerce, bool bind)
 {
     // std::cerr << "ca " << funcname << " formals='" << formals << "\n";
     for ( ;  arg;  arg = arg->next()) {
@@ -1033,15 +1076,30 @@ ASTNode::check_arglist (const char *funcname, ASTNode::ref arg,
             continue;  // match anything
         }
 
+        TypeSpec formaltype;
         if (arg->nodetype() == compound_initializer_node) {
             int advance;
+            // Get the TypeSpec from the argument string.
             TypeSpec formaltype = m_compiler->type_from_code (formals, &advance);
-            //formals += advance;
-            ((ASTcompound_initializer*)arg.get())->typecheck (formaltype,
-                                        ASTcompound_initializer::must_init_all);
-        }
 
-        if (! check_simple_arg (arg->typespec(), formals, coerce))
+            // See if the initlist can be used to construct a formaltype.
+            ASTcompound_initializer::TypeAdjuster ta(
+                m_compiler, ASTcompound_initializer::TypeAdjuster::no_errors);
+
+            TypeSpec itype = ta.typecheck(
+                static_cast<ASTcompound_initializer*>(arg.get()), formaltype);
+
+            ASSERT (!ta.success() || (formaltype == itype));
+
+            // ~TypeAdjuster will set the proper type for the list on success.
+            // This will overwrite the prior binding simillar to how legacy
+            // function ambiguity resolution took the last definition.
+            if (!bind)
+                ta.nobind();
+        } else
+            formaltype = arg->typespec();
+
+        if (! check_simple_arg (formaltype, formals, coerce))
             return false;
         // If check_simple_arg succeeded, it advanced formals, and we
         // repeat for the next argument.
@@ -1360,9 +1418,15 @@ class CandidateFunctions {
         kSpatialCoerce  = kCoercable + 9, // prefer vector/point/normal conversion over color
         kTripleCoerce   = kCoercable + 4, // prefer triple conversion over float promotion
     };
+
+    typedef std::vector<std::pair<ASTcompound_initializer*,
+                                  ASTcompound_initializer::TypeAdjuster>>
+        InitBindings;
+
     struct Candidate {
         FunctionSymbol* sym;
         TypeSpec rtype;
+        InitBindings bindings;
         int ascore;
         int rscore;
 
@@ -1379,8 +1443,8 @@ class CandidateFunctions {
     TypeSpec m_rval;
     ASTNode::ref m_args;
     size_t m_nargs;
-
     FunctionSymbol* m_called; // Function called by name (can be NULL!)
+    bool m_had_initlist;
 
     const char* scoreWildcard(int& argscore, size_t& fargs, const char* args) const {
         while (fargs < m_nargs) {
@@ -1431,6 +1495,7 @@ class CandidateFunctions {
         TypeSpec rtype = m_compiler->type_from_code (formals, &advance);
         formals += advance;
 
+        InitBindings bindings;
         int argscore = 0;
         size_t fargs = 0;
         for (ASTNode::ref arg = m_args; *formals && arg; ++fargs, arg = arg->next()) {
@@ -1469,10 +1534,31 @@ class CandidateFunctions {
             if (fargs >= m_nargs)
                 return kNoMatch;
 
+            TypeSpec argtype;
             TypeSpec formaltype = m_compiler->type_from_code (formals, &advance);
             formals += advance;
 
-            int score = scoreType(formaltype, arg->typespec());
+            if (arg->nodetype() == ASTNode::compound_initializer_node) {
+                m_had_initlist = true;
+                auto ilist = static_cast<ASTcompound_initializer*>(arg.get());
+                bindings.emplace_back(ilist, ASTcompound_initializer::TypeAdjuster
+                                        (m_compiler,
+                                         ASTcompound_initializer::TypeAdjuster::function_arg));
+
+                // Typecheck the init list can construct the formal type.
+                bindings.back().second.typecheck(ilist, formaltype);
+
+                // Don't bind the type yet, that only occurs when the final
+                // candidate is chosen.
+                argtype = bindings.back().second.nobind();
+
+                // Couldn't create the formaltype from this list...no match.
+                if (argtype.simpletype().basetype == TypeDesc::NONE)
+                    return kNoMatch;
+            } else
+                argtype = arg->typespec();
+
+            int score = scoreType(formaltype, argtype);
             if (score == kNoMatch)
                 return kNoMatch;
 
@@ -1510,6 +1596,9 @@ class CandidateFunctions {
         m_candidates.emplace_back(func, rtype, argscore,
                                   scoreType(m_rval, rtype));
 
+        // save the initializer list types
+        m_candidates.back().bindings.swap(bindings);
+
         return argscore;
     }
 
@@ -1521,7 +1610,7 @@ public:
     CandidateFunctions(OSLCompilerImpl* compiler, TypeSpec rval, ASTNode::ref args,
                        FunctionSymbol* func) :
         m_compiler(compiler), m_rval(rval), m_args(args), m_nargs(0),
-        m_called(func) {
+        m_called(func), m_had_initlist(false) {
 
         //std::cerr << "Matching " << func->name() << " formals='" << (rval.simpletype().basetype != TypeDesc::UNKNOWN ?  compiler->code_from_type (rval) : " ");
         for (ASTNode::ref arg = m_args; arg; arg = arg->next()) {
@@ -1580,6 +1669,13 @@ public:
     best(ASTNode* caller, const ustring& funcname) {
         ASSERT (caller);  // Assertion that passed ASTNode::ref was not empty
 
+        // When successful, bind all the initializer list types.
+        auto best = [](Candidate* c) -> std::pair<FunctionSymbol*, TypeSpec> {
+            for (auto&& t : c->bindings)
+                t.second.bind();
+            return {c->sym, c->rtype };
+        };
+
         switch (m_candidates.size()) {
             case 0:
                 // Nothing at all, Error
@@ -1595,13 +1691,13 @@ public:
                 return { nullptr, TypeSpec() };
 
             case 1: // Success
-                return { m_candidates[0].sym, m_candidates[0].rtype };
+                return best(&m_candidates[0]);
 
             default: break;
         }
 
         int ambiguity = -1;
-        std::pair<const Candidate*, int> c = { nullptr, -1 };
+        std::pair<Candidate*, int> c = { nullptr, -1 };
         for (auto& candidate : m_candidates) {
             // re-score based on matching return value
             if (candidate.rscore > c.second) {
@@ -1703,10 +1799,13 @@ public:
             }
         }
 
-        return {c.first->sym, c.first->rtype};
+        return best(c.first);
     }
 
     bool empty() const { return m_candidates.empty(); }
+
+    // Remove when LegacyOverload checking is removed.
+    bool hadinitlist() const { return m_had_initlist; }
 };
 
 
@@ -1724,7 +1823,7 @@ class LegacyOverload
     ASTfunction_call* m_func;
     FunctionSymbol* m_root;
     bool (ASTNode::*m_check_arglist) (const char *funcname, ASTNode::ref arg,
-                                    const char *formals, bool coerce);
+                                      const char *frmls, bool coerce, bool bnd);
 
     std::pair<FunctionSymbol*,TypeSpec>
     typecheck_polys (TypeSpec expected, bool coerceargs, bool equivreturn)
@@ -1735,7 +1834,8 @@ class LegacyOverload
             int advance;
             TypeSpec returntype = m_compiler->type_from_code (code, &advance);
             code += advance;
-            if ((m_func->*m_check_arglist) (name, m_func->args(), code, coerceargs)) {
+            if ((m_func->*m_check_arglist) (name, m_func->args(), code,
+                                            coerceargs, false)) {
                 // Return types also must match if not coercible
                 if (expected == returntype ||
                     (equivreturn && equivalent(expected, returntype)) ||
@@ -1754,7 +1854,7 @@ public:
                      bool (ASTNode::*checkfunc) (const char *funcname,
                                                  ASTNode::ref arg,
                                                  const char *formals,
-                                                 bool coerce))
+                                                 bool coerce, bool bind))
         : m_compiler(comp), m_func(func), m_root(root), m_check_arglist(checkfunc) {
     }
 
@@ -1831,9 +1931,10 @@ ASTfunction_call::typecheck (TypeSpec expected)
     CandidateFunctions candidates(m_compiler, expected, args(), poly);
     std::tie(m_sym, m_typespec) = candidates.best(this, m_name);
 
-    // Check resolution against prior versions of OSL
+    // Check resolution against prior versions of OSL.
+    // Skip the check if any arguments used initializer list syntax.
     static const char* OSL_LEGACY = ::getenv("OSL_LEGACY_FUNCTION_RESOLUTION");
-    if (OSL_LEGACY && strcmp(OSL_LEGACY, "0")) {
+    if (candidates.hadinitlist() && OSL_LEGACY && strcmp(OSL_LEGACY, "0")) {
         auto* legacy = LegacyOverload(m_compiler, this, poly,
                                    &ASTfunction_call::check_arglist)(expected);
         if (m_sym != legacy) {

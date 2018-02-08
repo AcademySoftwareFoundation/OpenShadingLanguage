@@ -65,47 +65,85 @@ int   funcb() { printf("funcb.int\n");   return 1; }
 float funcb() { printf("funcb.float\n"); return 2; }
 color funcb() { printf("funcb.color\n"); return 3; }
 
+struct A { float a; };
+
 int    freturn() { printf("freturn.int\n"); return 1; }
 point  freturn() { printf("freturn.point\n"); return 1; }
 string freturn() { printf("freturn.string\n"); return ""; }
 float  freturn() { printf("freturn.float\n"); return 1; }
 color  freturn() { printf("freturn.color\n"); return 1; }
+closure color  freturn() { printf("freturn.ccolor\n"); return diffuse(N); }
 vector freturn() { printf("freturn.vector\n"); return 1; }
 normal freturn() { printf("freturn.normal\n"); return 1; }
 matrix freturn() { printf("freturn.matrix\n"); return 1; }
+void   freturn() { printf("freturn.void\n"); }
+A freturn() { printf("freturn.struct\n"); A a; return a; }
 
+A ireturn() { printf("ireturn.struct\n"); A a; return a; }
+closure color  ireturn() { printf("ireturn.ccolor\n"); return diffuse(N); }
 color  ireturn() { printf("ireturn.color\n"); return 1; }
 point  ireturn() { printf("ireturn.point\n"); return 1; }
 string ireturn() { printf("ireturn.string\n"); return ""; }
 int    ireturn() { printf("ireturn.int\n"); return 1; }
 vector ireturn() { printf("ireturn.vector\n"); return 1; }
 normal ireturn() { printf("ireturn.normal\n"); return 1; }
+void   ireturn() { printf("ireturn.void\n"); }
 matrix ireturn() { printf("ireturn.matrix\n"); return 1; }
 
 vector creturn() { printf("creturn.vector\n"); return 1; }
 normal creturn() { printf("creturn.normal\n"); return 1; }
+void   creturn() { printf("creturn.void\n"); }
+A creturn() { printf("creturn.struct\n"); A a; return a; }
 point  creturn() { printf("creturn.point\n"); return 1; }
 color  creturn() { printf("creturn.color\n"); return 1; }
 string creturn() { printf("creturn.string\n"); return ""; }
 matrix creturn() { printf("creturn.matrix\n"); return 1; }
+closure color  creturn() { printf("creturn.ccolor\n"); return diffuse(N); }
 
 point  vreturn() { printf("vreturn.point\n"); return 1; }
+closure color  vreturn() { printf("vreturn.ccolor\n"); return diffuse(N); }
 vector vreturn() { printf("vreturn.vector\n"); return 1; }
 matrix vreturn() { printf("vreturn.matrix\n"); return 1; }
+A vreturn() { printf("vreturn.struct\n"); A a; return a; }
+void   vreturn() { printf("vreturn.void\n"); }
 normal vreturn() { printf("vreturn.normal\n"); return 1; }
 string vreturn() { printf("vreturn.string\n"); return ""; }
 
 string preturn() { printf("preturn.string\n"); return ""; }
+void   preturn() { printf("preturn.void\n"); }
 normal preturn() { printf("preturn.normal\n"); return 1; }
+closure color  preturn() { printf("preturn.ccolor\n"); return diffuse(N); }
 matrix preturn() { printf("preturn.matrix\n"); return 1; }
+A preturn() { printf("preturn.struct\n"); A a; return a; }
 point  preturn() { printf("preturn.point\n"); return 1; }
 
 matrix nreturn() { printf("nreturn.matrix\n"); return 1; }
+A nreturn() { printf("nreturn.struct\n"); A a; return a; }
 normal nreturn() { printf("nreturn.normal\n"); return 1; }
 string nreturn() { printf("nreturn.string\n"); return ""; }
+closure color  nreturn() { printf("nreturn.ccolor\n"); return diffuse(N); }
+void   nreturn() { printf("nreturn.void\n"); }
 
+void   mreturn() { printf("mreturn.void\n"); }
+closure color  mreturn() { printf("mreturn.ccolor\n"); return diffuse(N); }
+A mreturn() { printf("mreturn.struct\n"); A a; return a; }
 matrix mreturn() { printf("mreturn.matrix\n"); return 1; }
 string mreturn() { printf("mreturn.string\n"); return ""; }
+
+A strreturn() { printf("strreturn.struct\n"); A a; return a; }
+closure color  strreturn() { printf("strreturn.ccolor\n"); return diffuse(N); }
+void   strreturn() { printf("strreturn.void\n"); }
+string strreturn() { printf("strreturn.string\n"); return ""; }
+
+closure color  ccreturn() { printf("ccreturn.ccolor\n"); return diffuse(N); }
+void   ccreturn() { printf("ccreturn.void\n"); }
+A ccreturn() { printf("ccreturn.struct\n"); A a; return a; }
+
+A structreturn() { printf("structreturn.struct\n"); A a; return a; }
+void structreturn() { printf("structreturn.void\n"); }
+
+void structreturn1() { printf("structreturn1.void\n"); }
+A structreturn1() { printf("structreturn1.struct\n"); A a; return a; }
 
 shader test ()
 {
@@ -181,6 +219,10 @@ shader test ()
     preturn();
     nreturn();
     mreturn();
+    strreturn();
+    ccreturn();
+    structreturn();
+    structreturn1();
     printf("\n");
   }
 }

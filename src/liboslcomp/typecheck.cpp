@@ -1640,7 +1640,11 @@ public:
             const char *comma = "";
             for (ASTNode::ref arg = m_args; arg; arg = arg->next()) {
                 argstr += comma;
-                argstr += arg->typespec().string();
+                if (arg->typespec().simpletype().is_unknown() &&
+                    arg->nodetype() == ASTNode::compound_initializer_node) {
+                    argstr += "initializer-list";
+                } else
+                    argstr += arg->typespec().string();
                 comma = ", ";
             }
             argstr += ")";

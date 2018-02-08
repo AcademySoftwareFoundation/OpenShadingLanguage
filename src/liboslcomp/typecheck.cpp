@@ -908,24 +908,27 @@ public:
         } else
             typecheck_array(ilist, expected);
     
-        return m_success ? (std::get<1>(m_adjust.back()))
-                         : TypeSpec(TypeDesc::NONE);
+        return type();
     }
 
     // Turn off the automatic binding on destruction
     TypeSpec nobind() {
         ASSERT (!m_success || m_adjust.size());
-        // If succeeded, root type is at end of m_adjust
-        bool val = m_success;
         m_debug_successful = m_success;
         m_success = false; // Turn off the binding in destructor
-        return val ? (std::get<1>(m_adjust.back())) : TypeSpec(TypeDesc::NONE);
+        return type();
     }
 
     // Turn automatic binding back on.
     void bind() {
-        ASSERT (m_debug_successful);
+        ASSERT (m_success || m_debug_successful);
         m_success = true;
+    }
+
+    TypeSpec type() const {
+        // If succeeded, root type is at end of m_adjust
+        return (m_success || m_debug_successful) ? std::get<1>(m_adjust.back())
+                                                 : TypeSpec(TypeDesc::NONE);
     }
 
     bool success() const { return m_success; }
@@ -1782,6 +1785,29 @@ public:
             }
 
             bool warn = userstructs < 2;
+
+            // Also force an error for ambiguous init-lists.
+            if (warn && m_had_initlist) {
+                const InitBindings* bindings = nullptr;
+                for (auto& candidate : m_candidates) {
+                    // If no bindings, nothing to compare against.
+                    if (!bindings) {
+                        bindings = &candidate.bindings;
+                        continue;
+                    }
+                    // Number of bindings should match, otherwise score shouldn't
+                    ASSERT (candidate.bindings.size() == bindings->size());
+                    for (auto a = bindings->cbegin(),
+                              b = candidate.bindings.cbegin(),
+                              e = bindings->cend(); a != e; ++a, ++b) {
+                        if (a->second.type() != b->second.type()) {
+                            warn = false;
+                            break;
+                        }
+                    }
+                }
+            }
+
             reportAmbiguity(caller, funcname, !warn /* "Candidates are" msg*/,
                             "Ambiguous call to", warn /* As warning */);
             if (warn) {

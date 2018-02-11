@@ -24,9 +24,19 @@ OSL Language and oslc compiler:
   #840 and windows path separators #849. #841 (1.10.0/1.9.7)
 * oslc: Fix bug/undefined behavior when trying to format/printf a struct.
   #849 #841 (1.10.0/1.9.7)
+* New rules for how polymorphic function variants are chosen: Matches are
+  now ranked in an objective way that no longer depends on declaration
+  order. Type coercions are preferred in the following order of descending
+  score: exact match, int -> float, float -> triple, spatial triple ->
+  spatial triple, any triple -> triple. If there is a tie for passed
+  arguments, return types will break the tie. If there is still a tie or
+  truly ambiguous case, a warning will be printed explaining the choices and
+  which was chosen. #844 (1.10.0)
+* It is now a warning to define the same function twice in the same scope.
+  #853 (1.10.0)
 * A shader input parameter marked with metadata `[[ int allowconnect = 0 ]]`
   will disallow runtime connections via `ConnectShaders()`, resulting in an
-  error. (1.10.0)
+  error. #857 (1.10.0)
 
 OSL Standard library:
 
@@ -62,9 +72,11 @@ Bug fixes and other improvements (internals):
   RenderServices callbacks instead of passing NULL. (1.10.0)
 * Symbols are enbled in the JIT, allowing Intel Vtune profiler to correctly
   report which JITed OSL code is being executed. #830 (1.10.0)
+* AstNode and OSLCompilerImpl -- add info() and message() methods to
+  complement the existing error and warning. #854 (1.10.0)
 
 Build & test system improvements:
-* Appveyor CI testing for Windows. #849 (1.10.0/1.9.7)
+* Appveyor CI testing for Windows. #849,852,855 (1.10.0/1.9.7)
 * Our new policy is to disable STOP_ON_WARNING for release branches, to
   minimize build breaks for users when a new compiler warning is hit. We
   still enable it in development/master branches as well as any CI build

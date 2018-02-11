@@ -104,19 +104,11 @@ public:
                 string_view format, const Args&... args) const
     {
         ASSERT (format.size());
-#if OIIO_VERSION >= 10804
         std::string msg = OIIO::Strutil::format (format, args...);
         if (filename.size())
             m_errhandler->error ("%s:%d: error: %s", filename, line, msg);
         else
             m_errhandler->error ("error: %s", msg);
-#else /* Deprecate when the OIIO minimum is 1.8 */
-        std::string msg = OIIO::Strutil::format (format.c_str(), args...);
-        if (filename.size())
-            m_errhandler->error ("%s:%d: error: %s", filename.c_str(), line, msg.c_str());
-        else
-            m_errhandler->error ("error: %s", msg.c_str());
-#endif
         m_err = true;
     }
 
@@ -126,19 +118,11 @@ public:
                   string_view format, const Args&... args) const
     {
         ASSERT (format.size());
-#if OIIO_VERSION >= 10804
         std::string msg = OIIO::Strutil::format (format, args...);
         if (filename.size())
             m_errhandler->warning ("%s:%d: warning: %s", filename, line, msg);
         else
             m_errhandler->warning ("warning: %s", msg);
-#else /* Deprecate when the OIIO minimum is 1.8 */
-        std::string msg = OIIO::Strutil::format (format.c_str(), args...);
-        if (filename.size())
-            m_errhandler->warning ("%s:%d: warning: %s", filename.c_str(), line, msg.c_str());
-        else
-            m_errhandler->warning ("warning: %s", msg.c_str());
-#endif
     }
 
     /// Info reporting
@@ -147,19 +131,11 @@ public:
                   string_view format, const Args&... args) const
     {
         ASSERT (format.size());
-#if OIIO_VERSION >= 10804
         std::string msg = OIIO::Strutil::format (format, args...);
         if (filename.size())
             m_errhandler->info ("%s:%d: info: %s", filename, line, msg);
         else
             m_errhandler->info ("info: %s", msg);
-#else /* Deprecate when the OIIO minimum is 1.8 */
-        std::string msg = OIIO::Strutil::format (format.c_str(), args...);
-        if (filename.size())
-            m_errhandler->info ("%s:%d: info: %s", filename.c_str(), line, msg.c_str());
-        else
-            m_errhandler->info ("info: %s", msg.c_str());
-#endif
     }
 
     /// message reporting
@@ -168,19 +144,11 @@ public:
                   string_view format, const Args&... args) const
     {
         ASSERT (format.size());
-#if OIIO_VERSION >= 10804
         std::string msg = OIIO::Strutil::format (format, args...);
         if (filename.size())
             m_errhandler->message ("%s:%d: %s", filename, line, msg);
         else
             m_errhandler->message ("%s", msg);
-#else /* Deprecate when the OIIO minimum is 1.8 */
-        std::string msg = OIIO::Strutil::format (format.c_str(), args...);
-        if (filename.size())
-            m_errhandler->message ("%s:%d: %s", filename.c_str(), line, msg.c_str());
-        else
-            m_errhandler->message ("%s", msg.c_str());
-#endif
     }
 
     /// Have we hit an error?
@@ -408,14 +376,10 @@ private:
     void write_oso_symbol (const Symbol *sym);
     void write_oso_metadata (const ASTNode *metanode) const;
 
-#if OIIO_VERSION >= 10803
     template<typename... Args>
     inline void oso (string_view fmt, const Args&... args) const {
         (*m_osofile) << OIIO::Strutil::format (fmt, args...);
     }
-#else
-    TINYFORMAT_WRAP_FORMAT (void, oso, const, , (*m_osofile), )
-#endif
 
     void track_variable_lifetimes () {
         track_variable_lifetimes (m_ircode, m_opargs, symtab().allsyms());

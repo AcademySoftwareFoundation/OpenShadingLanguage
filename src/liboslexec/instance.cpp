@@ -246,11 +246,7 @@ ShaderInstance::parameters (const ParamValueList &params)
 
             if (master()->shadingsys().relaxed_param_typecheck()) {
                 // first handle cases where we actually need to modify the data (like setting a float parameter with an int)
-#if OIIO_VERSION >= 10804
                  if ((paramtype == TypeDesc::FLOAT || paramtype.is_vec3()) && valuetype.basetype == TypeDesc::INT && valuetype.basevalues() == 1) {
-#else
-                 if ((paramtype == TypeDesc::FLOAT || paramtype.is_vec3()) && valuetype.basetype == TypeDesc::INT && valuetype.numelements()*valuetype.aggregate == 1) {
-#endif
                     int val = *static_cast<const int*>(p.data());
                     float conv = float(val);
                     if (val != int(conv))
@@ -268,19 +264,11 @@ ShaderInstance::parameters (const ParamValueList &params)
                 //   * if paramtype is sized (or not an array) just check for the total number of entries
                 //   * if paramtype is unsized (shader writer is flexible about how many values come in) -- make sure we are a multiple of the target type
                 //   * allow a single float setting a vec3 (or equivalent)
-#if OIIO_VERSION >= 10804
                 if (!( valuetype.basetype == paramtype.basetype &&
                       !valuetype.is_unsized_array() &&
                       ((!paramtype.is_unsized_array() && valuetype.basevalues() == paramtype.basevalues()) ||
                        ( paramtype.is_unsized_array() && valuetype.basevalues() % paramtype.aggregate == 0) ||
                        ( paramtype.is_vec3()          && valuetype == TypeDesc::FLOAT) ) )) {
-#else
-                if (!( valuetype.basetype == paramtype.basetype &&
-                      !valuetype.is_unsized_array() &&
-                      ((!paramtype.is_unsized_array() && valuetype.numelements()*valuetype.aggregate == paramtype.numelements()*paramtype.aggregate) ||
-                       ( paramtype.is_unsized_array() && valuetype.numelements()*valuetype.aggregate % paramtype.aggregate == 0) ||
-                       ( paramtype.is_vec3()          && valuetype == TypeDesc::FLOAT) ) )) {
-#endif
                     // We are being very relaxed in this mode, so if the user _still_ got it wrong
                     // something more serious is at play and we should treat it as an error.
                     shadingsys().error ("attempting to set parameter from incompatible type: %s (expected '%s', received '%s')",

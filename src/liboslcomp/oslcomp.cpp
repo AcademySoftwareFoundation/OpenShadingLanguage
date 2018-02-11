@@ -129,7 +129,7 @@ OSLCompilerImpl::OSLCompilerImpl (ErrorHandler *errhandler)
       m_err(false), m_symtab(*this),
       m_current_typespec(TypeDesc::UNKNOWN), m_current_output(false),
       m_verbose(false), m_quiet(false), m_debug(false),
-      m_preprocess_only(false), m_optimizelevel(1),
+      m_preprocess_only(false), m_err_on_warning(false), m_optimizelevel(1),
       m_next_temp(0), m_next_const(0),
       m_osofile(NULL),
       m_total_nesting(0), m_loop_nesting(0), m_derivsym(NULL),
@@ -409,6 +409,8 @@ OSLCompilerImpl::read_compile_options (const std::vector<std::string> &options,
             m_optimizelevel = 1;
         } else if (options[i] == "-O2") {
             m_optimizelevel = 2;
+        } else if (options[i] == "-Werror") {
+            m_err_on_warning = true;
         } else if (options[i].c_str()[0] == '-' && options[i].size() > 2) {
             // options meant for the preprocessor
             if (options[i].c_str()[1] == 'D' || options[i].c_str()[1] == 'U')

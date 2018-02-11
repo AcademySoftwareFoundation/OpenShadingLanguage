@@ -119,6 +119,10 @@ public:
     {
         ASSERT (format.size());
         std::string msg = OIIO::Strutil::format (format, args...);
+        if (m_err_on_warning) {
+            error (filename, line, "%s", msg);
+            return;
+        }
         if (filename.size())
             m_errhandler->warning ("%s:%d: warning: %s", filename, line, msg);
         else
@@ -447,6 +451,7 @@ private:
     bool m_quiet;             ///< Quiet mode
     bool m_debug;             ///< Debug mode
     bool m_preprocess_only;   ///< Preprocess only?
+    bool m_err_on_warning;    ///< Treat warnings as errors?
     int m_optimizelevel;      ///< Optimization level
     OpcodeVec m_ircode;       ///< Generated IR code
     SymbolPtrVec m_opargs;    ///< Arguments for all instructions

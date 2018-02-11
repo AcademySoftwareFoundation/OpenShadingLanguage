@@ -108,7 +108,6 @@ static OSLC_ErrorHandler default_oslc_error_handler;
 
 
 
-
 int
 main (int argc, const char *argv[])
 {
@@ -139,7 +138,9 @@ main (int argc, const char *argv[])
                  ! strcmp (argv[a], "-d") ||
                  ! strcmp (argv[a], "-E") ||
                  ! strcmp (argv[a], "-O") || ! strcmp (argv[a], "-O0") ||
-                 ! strcmp (argv[a], "-O1") || ! strcmp (argv[a], "-O2")) {
+                 ! strcmp (argv[a], "-O1") || ! strcmp (argv[a], "-O2") ||
+                 ! strcmp (argv[a], "-Werror")
+                 ) {
             // Valid command-line argument
             args.emplace_back(argv[a]);
             quiet |= (strcmp (argv[a], "-q") == 0);

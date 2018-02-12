@@ -216,6 +216,10 @@ ifneq (${CLANG_TIDY_FIX},)
   # N.B. when fixing, you don't want parallel jobs!
 endif
 
+ifneq (${USE_OPTIX},)
+MY_CMAKE_FLAGS += -DUSE_OPTIX:BOOL=${USE_OPTIX}
+endif
+
 #$(info MY_CMAKE_FLAGS = ${MY_CMAKE_FLAGS})
 #$(info MY_MAKE_FLAGS = ${MY_MAKE_FLAGS})
 
@@ -386,6 +390,7 @@ help:
 	@echo "      USE_SIMD=arch            Build with SIMD support (choices: 0, sse2, sse3,"
 	@echo "                                  ssse3, sse4.1, sse4.2, f16c, avx, avx2"
 	@echo "                                  comma-separated ok)"
+	@echo "      USE_OPTIX=1              Build the OptiX test renderer"
 	@echo "  make test, extra options:"
 	@echo "      TEST=regex               Run only tests matching the regex"
 	@echo ""

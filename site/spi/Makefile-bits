@@ -30,6 +30,10 @@ ifeq ($(SP_OS), rhel7)
         MY_CMAKE_FLAGS += \
            -DCMAKE_C_COMPILER=/shots/spi/home/lib/arnold/rhel7/llvm_5.0.1_rc2/bin/clang \
            -DCMAKE_CXX_COMPILER=/shots/spi/home/lib/arnold/rhel7/llvm_5.0.1_rc2/bin/clang++
+    else ifeq (${COMPILER}, clang6)
+        MY_CMAKE_FLAGS += \
+           -DCMAKE_C_COMPILER=/shots/spi/home/lib/arnold/rhel7/llvm_6.0.0_rc2/bin/clang \
+           -DCMAKE_CXX_COMPILER=/shots/spi/home/lib/arnold/rhel7/llvm_6.0.0_rc2/bin/clang++
     else ifeq (${COMPILER},clang)
         MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
     else ifeq (${COMPILER}, gcc490)

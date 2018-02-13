@@ -118,8 +118,8 @@ before_build:
 
         # OpenImageIO
         cd $DWN_DIR
-        Start-FileDownload https://github.com/OpenImageIO/oiio/archive/Release-1.8.7.zip
-        unzip Release-1.8.7.zip; cd .\oiio-Release*\; md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
+        Start-FileDownload https://github.com/OpenImageIO/oiio/archive/Release-1.8.14.zip
+        unzip Release-1.8.14.zip; cd .\oiio-Release*\; md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
         cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$DEP_DIR;$BOOST_ROOT" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DFREETYPE_DIR="$DEP_DIR" -DBOOST_LIBRARYDIR="$BOOST_LIBRARYDIR" -DUSE_PYTHON=OFF -DOIIO_BUILD_TESTS=OFF -DUSE_NUKE=OFF
         cmake --build . --config $env:CONFIGURATION --target INSTALL
 

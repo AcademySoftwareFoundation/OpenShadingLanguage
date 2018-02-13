@@ -329,6 +329,11 @@ if (PARTIO_FOUND)
     TESTSUITE ( pointcloud pointcloud-fold )
 endif ()
 
+# Only run the OptiX tests if OptiX and CUDA are found
+if (OPTIX_FOUND AND CUDA_FOUND)
+    TESTSUITE ( testoptix )
+endif ()
+
 # FIXME: still working on MaterialX testsuite
 # add_subdirectory(testsuite/MaterialX)
 

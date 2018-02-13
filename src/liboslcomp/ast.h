@@ -186,11 +186,7 @@ public:
     void error (string_view format, const Args&... args) const
     {
         DASSERT (format.size());
-#if OIIO_VERSION >= 10803
         error_impl (OIIO::Strutil::format (format, args...));
-#else /* DEPRECATE when OIIO minimum is at least 1.8 */
-        error_impl (OIIO::Strutil::format (format.c_str(), args...));
-#endif
     }
 
     /// Warning reporting
@@ -198,11 +194,7 @@ public:
     void warning (string_view format, const Args&... args) const
     {
         DASSERT (format.size());
-#if OIIO_VERSION >= 10803
         warning_impl (OIIO::Strutil::format (format, args...));
-#else /* DEPRECATE when OIIO minimum is at least 1.8 */
-        warning_impl (OIIO::Strutil::format (format.c_str(), args...));
-#endif
     }
 
     /// info reporting
@@ -210,11 +202,7 @@ public:
     void info (string_view format, const Args&... args) const
     {
         DASSERT (format.size());
-#if OIIO_VERSION >= 10803
         info_impl (OIIO::Strutil::format (format, args...));
-#else /* DEPRECATE when OIIO minimum is at least 1.8 */
-        info_impl (OIIO::Strutil::format (format.c_str(), args...));
-#endif
     }
 
     /// message reporting
@@ -222,11 +210,7 @@ public:
     void message (string_view format, const Args&... args) const
     {
         DASSERT (format.size());
-#if OIIO_VERSION >= 10803
         message_impl (OIIO::Strutil::format (format, args...));
-#else /* DEPRECATE when OIIO minimum is at least 1.8 */
-        message_impl (OIIO::Strutil::format (format.c_str(), args...));
-#endif
     }
 
     bool is_lvalue () const { return m_is_lvalue; }

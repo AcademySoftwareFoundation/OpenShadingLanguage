@@ -522,7 +522,6 @@ public:
 
     // Internal error, warning, info, and message reporting routines that
     // take printf-like arguments.
-#if OIIO_VERSION >= 10803
     template<typename T1, typename... Args>
     inline void error (string_view fmt, const T1& v1, const Args&... args) const {
         error (Strutil::format (fmt, v1, args...));
@@ -546,20 +545,6 @@ public:
         message (Strutil::format (fmt, v1, args...));
     }
     void message (const std::string &message) const;
-#else
-    TINYFORMAT_WRAP_FORMAT (void, error, const,
-                            std::ostringstream msg;, msg, error(msg.str());)
-    TINYFORMAT_WRAP_FORMAT (void, warning, const,
-                            std::ostringstream msg;, msg, warning(msg.str());)
-    TINYFORMAT_WRAP_FORMAT (void, info, const,
-                            std::ostringstream msg;, msg, info(msg.str());)
-    TINYFORMAT_WRAP_FORMAT (void, message, const,
-                            std::ostringstream msg;, msg, message(msg.str());)
-    void error (const std::string &message) const;
-    void warning (const std::string &message) const;
-    void info (const std::string &message) const;
-    void message (const std::string &message) const;
-#endif
 
     std::string getstats (int level=1) const;
 
@@ -1780,7 +1765,6 @@ public:
     // Process all the recorded errors, warnings, printfs
     void process_errors () const;
 
-#if OIIO_VERSION >= 10803
     template<typename... Args>
     inline void error (string_view fmt, const Args&... args) const {
         record_error(ErrorHandler::EH_ERROR, Strutil::format (fmt, args...));
@@ -1800,20 +1784,6 @@ public:
     inline void message (string_view fmt, const Args&... args) const {
         record_error(ErrorHandler::EH_MESSAGE, Strutil::format (fmt, args...));
     }
-#else
-    TINYFORMAT_WRAP_FORMAT (void, error, const,
-                            std::ostringstream msg;, msg,
-                            record_error(ErrorHandler::EH_ERROR, msg.str());)
-    TINYFORMAT_WRAP_FORMAT (void, warning, const,
-                            std::ostringstream msg;, msg,
-                            record_error(ErrorHandler::EH_WARNING, msg.str());)
-    TINYFORMAT_WRAP_FORMAT (void, info, const,
-                            std::ostringstream msg;, msg,
-                            record_error(ErrorHandler::EH_INFO, msg.str());)
-    TINYFORMAT_WRAP_FORMAT (void, message, const,
-                            std::ostringstream msg;, msg,
-                            record_error(ErrorHandler::EH_MESSAGE, msg.str());)
-#endif
 
 private:
 

@@ -1,0 +1,6 @@
+test.osl:8: error: Ambiguous call to 'func ()'
+  Chosen function is:
+    test.osl:4	vector func ()
+  Other candidates are:
+    test.osl:3	normal func ()
+FAILED test.osl

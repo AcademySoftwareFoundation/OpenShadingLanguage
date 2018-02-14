@@ -51,6 +51,7 @@ failureok = 0
 failthresh = 0.004
 hardfail = 0.01
 failpercent = 0.02
+oslcargs = ""
 
 image_extensions = [ ".tif", ".tx", ".exr", ".jpg", ".png", ".rla",
                      ".dpx", ".iff", ".psd" ]
@@ -144,7 +145,7 @@ def oiio_app (app):
 # Construct a command that will compile the shader file, appending output to
 # the file "out.txt".
 def oslc (args) :
-    return (osl_app("oslc") + args + " >> out.txt 2>&1 ;\n")
+    return (osl_app("oslc") + oslcargs + " " + args + " >> out.txt 2>&1 ;\n")
 
 
 # Construct a command that will run oslinfo, appending output to

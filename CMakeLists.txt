@@ -310,7 +310,7 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms
             vararray-connect vararray-default
             vararray-deserialize vararray-param
             vecctr vector
-            wavelength_color xml )
+            wavelength_color Werror xml )
 
 # Only run field3d-related tests if the local OIIO was built with f3d support.
 EXECUTE_PROCESS ( COMMAND ${OPENIMAGEIO_BIN}/oiiotool --help

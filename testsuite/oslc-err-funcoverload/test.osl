@@ -6,6 +6,12 @@ int funcb() { return 1; }
 float funcb() { return 2; }
 color funcb() { return 3; }
 
+struct A { float a; };
+struct B { float b; };
+
+A ambig_struct_return() { A a; return a; }
+B ambig_struct_return() { B b; return b; }
+
 shader test()
 {
     funca();        // fail too few arguments
@@ -15,5 +21,7 @@ shader test()
     funcb();        // fail unresolvable ambiguity
 
     (int) funcb();  // ok
+
+    ambig_struct_return();
 }
 

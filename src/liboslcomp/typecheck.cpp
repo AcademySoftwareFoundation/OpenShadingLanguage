@@ -1187,9 +1187,13 @@ ASTfunction_call::typecheck_struct_constructor ()
 /// If there is a tie (and only then), the return type is considered in the score.
 /// If there is still not a single winner then a function is chosen by ranking
 /// the possible return types, using the following precedence:
-///   float, int, color, vector, point, normal, matrix, string
+///   float, int, color, vector, point, normal, matrix, string, color closure,
+///     struct, void
 /// A warning is shown, printing which was function chosen and the list of all
 /// that were considered ambiguous.
+///
+/// If two or more overloads differ only by return types that are both structs,
+/// then the warning above is treated as an error.
 ///
 /// Float to int coercion is scored, but is currently a synmonym for kNoMatch
 /// as the spec does not allow implicit float to int conversion.
@@ -1426,6 +1430,8 @@ public:
 
     std::pair<FunctionSymbol*, TypeSpec>
     best(ASTNode* caller, const ustring& funcname) {
+        ASSERT (caller);  // Assertion that passed ASTNode::ref was not empty
+
         switch (m_candidates.size()) {
             case 0:
                 // Nothing at all, Error
@@ -1460,7 +1466,45 @@ public:
         ASSERT (c.first && c.first->sym);
 
         if (ambiguity != -1) {
-            ASSERT (caller);
+
+            unsigned userstructs = 0;
+
+            auto rank = [&userstructs] (const TypeSpec& s) -> int {
+                // Arrays are currently not ranked as they cannot be returned.
+                ASSERT (!s.is_array());
+                ASSERT (!s.is_closure() || s.is_color_closure());
+
+                const TypeDesc& td = s.simpletype();
+                if (td == TypeDesc::TypeFloat)
+                    return 0;
+                if (td == TypeDesc::TypeInt)
+                    return 1;
+                if (td == TypeDesc::TypeColor)
+                    return 2;
+                if (td == TypeDesc::TypeVector)
+                    return 3;
+                if (td == TypeDesc::TypePoint)
+                    return 4;
+                if (td == TypeDesc::TypeNormal)
+                    return 5;
+                if (td == TypeDesc::TypeMatrix)
+                    return 6;
+                if (td == TypeDesc::TypeString)
+                    return 7;
+
+                if (s.is_color_closure())
+                    return 8;
+                if (s.is_structure_based()) {
+                    ++userstructs;
+                    return 9;
+                }
+                if (s.is_void())
+                    return 10;
+                
+                ASSERT (0 && "Unranked type");
+                return std::numeric_limits<int>::max();
+            };
+
             if (true /*m_rval.simpletype().is_unknown()*/) {
                 // Ambiguity because the return type desired is unknown
                 //   float noise(point p)
@@ -1473,28 +1517,8 @@ public:
                 // legible, and ambiguities will be reported in order they
                 // would be chosen.
                 std::sort(m_candidates.begin(), m_candidates.end(),
-                    [](const Candidate& a, const Candidate& b) -> bool {
-                        auto rank = [](const TypeSpec& s) -> int {
-                            if (s == TypeDesc::TypeFloat)
-                                return 0;
-                            if (s == TypeDesc::TypeInt)
-                                return 1;
-                            if (s == TypeDesc::TypeColor)
-                                return 2;
-                            if (s == TypeDesc::TypeVector)
-                                return 3;
-                            if (s == TypeDesc::TypePoint)
-                                return 4;
-                            if (s == TypeDesc::TypeNormal)
-                                return 5;
-                            if (s == TypeDesc::TypeMatrix)
-                                return 6;
-                            if (s == TypeDesc::TypeString)
-                                return 7;
-                            return std::numeric_limits<int>::max();
-                        };
-                        return rank(a.rtype.simpletype())
-                                 < rank(b.rtype.simpletype());
+                    [rank](const Candidate& a, const Candidate& b) -> bool {
+                        return rank(a.rtype) < rank(b.rtype);
                     });
 
                 // New choice is now front of the list
@@ -1502,14 +1526,31 @@ public:
                                    m_candidates.front().rscore);
             }
 
-            reportAmbiguity(caller, funcname, false, "Ambiguous call to");
+            if (userstructs) {
+                // std::sort can call 'rank' multiple times, and we can't use an
+                // address to store the actual count (as we are sorting!).
+                userstructs = 0;
+                for (Candidates::const_reverse_iterator i = m_candidates.rbegin(),
+                     e = m_candidates.rend(); i != e; ++i) {
+                    if (i->rtype.is_structure_based() && ++userstructs > 1)
+                        break;
+                }
+            }
 
-            candidateHeader("Chosen function is");
-            reportFunction(c.first->sym);
+            bool warn = userstructs < 2;
+            reportAmbiguity(caller, funcname, !warn /* "Candidates are" msg*/,
+                            "Ambiguous call to", warn /* As warning */);
+            if (warn) {
+                candidateHeader("Chosen function is");
+                reportFunction(c.first->sym);
 
-            candidateHeader("Other candidates are");
-            for (auto& candidate : m_candidates) {
-                if (candidate.sym != c.first->sym)
+                candidateHeader("Other candidates are");
+                for (auto& candidate : m_candidates) {
+                    if (candidate.sym != c.first->sym)
+                        reportFunction(candidate.sym);
+                }
+            } else {
+                for (auto& candidate : m_candidates)
                     reportFunction(candidate.sym);
             }
         }

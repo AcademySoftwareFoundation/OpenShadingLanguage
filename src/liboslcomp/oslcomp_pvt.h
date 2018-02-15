@@ -105,6 +105,8 @@ public:
     {
         ASSERT (format.size());
         std::string msg = OIIO::Strutil::format (format, args...);
+        if (msg.size() && msg.back() == '\n')  // trim extra newline
+            msg.pop_back();
         if (filename.size())
             m_errhandler->error ("%s:%d: error: %s", filename, line, msg);
         else
@@ -119,6 +121,8 @@ public:
     {
         ASSERT (format.size());
         std::string msg = OIIO::Strutil::format (format, args...);
+        if (msg.size() && msg.back() == '\n')  // trim extra newline
+            msg.pop_back();
         if (m_err_on_warning) {
             error (filename, line, "%s", msg);
             return;
@@ -136,6 +140,8 @@ public:
     {
         ASSERT (format.size());
         std::string msg = OIIO::Strutil::format (format, args...);
+        if (msg.size() && msg.back() == '\n')  // trim extra newline
+            msg.pop_back();
         if (filename.size())
             m_errhandler->info ("%s:%d: info: %s", filename, line, msg);
         else
@@ -149,6 +155,8 @@ public:
     {
         ASSERT (format.size());
         std::string msg = OIIO::Strutil::format (format, args...);
+        if (msg.size() && msg.back() == '\n')  // trim extra newline
+            msg.pop_back();
         if (filename.size())
             m_errhandler->message ("%s:%d: %s", filename, line, msg);
         else

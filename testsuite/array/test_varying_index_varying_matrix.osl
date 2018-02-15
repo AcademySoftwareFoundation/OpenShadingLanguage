@@ -1,0 +1,26 @@
+shader
+test_varying_index_varying_matrix (output color Cout = color(0,0,0))
+{
+    // Test array referencing with varying index
+    float s0 = 1.0/3.0;
+    float s1 = 2.0/3.0;
+    float s2 = 1;
+    matrix marray[3] = { matrix(s0,0,0,0,
+                                0,s0*u,0,0,
+                                0,0,s0*v,0,
+                                0,0,0,1),
+                         matrix(s1*u,0,0,0,
+                                0,s1*v,0,0,
+                                0,0,s1,0,
+                                0,0,0,1),
+                         matrix(s2,0,0,0,
+                                0,s2,0,0,
+                                0,0,s2,0,
+                                0,0,0,1) };
+    
+    int varyingIndex = int(clamp(P[0]*3, 0, 2));
+    matrix indirectM = marray[varyingIndex];
+    
+    point tp = transform(indirectM,P);
+    Cout = color(tp);    
+}

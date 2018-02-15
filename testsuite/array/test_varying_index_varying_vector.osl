@@ -1,0 +1,11 @@
+shader
+test_varying_index_varying_vector (output color Cout = color(0,0,0))
+{
+    // Test array referencing with varying index
+    vector varray[3] = { vector(.1,u,.3), P[0]+P[1], vector(.3,.3,v) };
+    
+    int varyingIndex = int(clamp(P[0]*3, 0, 2));
+    vector indirectV = varray[varyingIndex];
+    
+    Cout = indirectV;
+}

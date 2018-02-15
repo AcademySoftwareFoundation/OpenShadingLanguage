@@ -52,6 +52,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "builtindecl_wide.h"
 #undef DECL
 
+//#define OSL_DEV
 
 /*
 This whole file is concerned with taking our post-optimized OSO

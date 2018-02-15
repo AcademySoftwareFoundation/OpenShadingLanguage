@@ -388,6 +388,8 @@ public:
     llvm::Type *type_float() const { return m_llvm_type_float; }
     llvm::Type *type_double() const { return m_llvm_type_double; }
     llvm::Type *type_int() const { return m_llvm_type_int; }
+    llvm::Type *type_int8() const { return m_llvm_type_int8; }
+    llvm::Type *type_int16() const { return m_llvm_type_int16; }
     llvm::Type *type_addrint() const { return m_llvm_type_addrint; }
     llvm::Type *type_bool() const { return m_llvm_type_bool; }
     llvm::Type *type_char() const { return m_llvm_type_char; }
@@ -520,6 +522,8 @@ public:
     }
 
     llvm::Value * mask_as_int(llvm::Value *mask);
+    llvm::Value * mask_as_int8(llvm::Value *mask);
+    llvm::Value * mask_as_int16(llvm::Value *mask);
     llvm::Value * int_as_mask(llvm::Value *value);
     llvm::Value * test_if_mask_is_non_zero(llvm::Value *mask);
     void test_if_mask_has_any_on_or_off(llvm::Value *mask, llvm::Value* & any_on, llvm::Value* & any_off);
@@ -656,6 +660,8 @@ public:
     /// Dereference a pointer:  return *ptr
     llvm::Value *op_load (llvm::Value *ptr);
 
+    llvm::Value *op_gather(llvm::Value *ptr, llvm::Value *index);
+
     /// Store to a dereferenced pointer:   *ptr = val
     void op_store (llvm::Value *val, llvm::Value *ptr);
 
@@ -707,6 +713,7 @@ public:
     /// Extracts a scalar value from a vector type
     llvm::Value *op_extract(llvm::Value *a, int index);
     llvm::Value *op_extract(llvm::Value *a, llvm::Value * index);
+    llvm::Value *op_insert(llvm::Value *v, llvm::Value *a, int index);
 
     llvm::Value * op_1st_active_lane_of(llvm::Value * mask);
     llvm::Value * op_lanes_that_match_masked(
@@ -796,6 +803,8 @@ private:
     llvm::Type *m_llvm_type_float;
     llvm::Type *m_llvm_type_double;
     llvm::Type *m_llvm_type_int;
+    llvm::Type *m_llvm_type_int8;
+    llvm::Type *m_llvm_type_int16;
     llvm::Type *m_llvm_type_addrint;
     llvm::Type *m_llvm_type_bool;
     llvm::Type *m_llvm_type_char;
@@ -830,6 +839,8 @@ private:
 
     bool m_supports_masked_stores;
     bool m_supports_native_bit_masks;
+    bool m_supports_avx512f;
+    bool m_supports_avx2;
 
     // Profiling Info
     llvm::JITEventListener* mVTuneNotifier;

@@ -112,7 +112,7 @@ public:
     llvm::Value *llvm_load_value (const Symbol& sym, int deriv,
                                   llvm::Value *arrayindex, int component,
                                   TypeDesc cast=TypeDesc::UNKNOWN,
-								  bool op_is_uniform = true);
+								  bool op_is_uniform = true, bool index_is_uniform=true);
 
 
     /// Given an llvm::Value* of a pointer (and the type of the data
@@ -127,7 +127,7 @@ public:
     llvm::Value *llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
                               int deriv, llvm::Value *arrayindex,
                               int component, TypeDesc cast=TypeDesc::UNKNOWN,
-							  bool op_is_uniform = true);
+							  bool op_is_uniform = true, bool index_is_uniform=true);
 
     /// Just like llvm_load_value, but when both the symbol and the
     /// array index are known to be constants.  This can even handle

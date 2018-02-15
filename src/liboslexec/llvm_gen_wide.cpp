@@ -972,11 +972,7 @@ LLVMGEN (llvm_gen_modulus)
 
 	ASSERT((!op_is_uniform || result_is_uniform) && "incomplete not handled widening results yet");
 
-	ASSERT(is_float && "stdosl.h should have handled int mod(int, int)");
-	return llvm_gen_generic (rop, opnum);
-
 	// Have generic handler handle all combinations vs. special casing here
-#if 0
 #ifdef OSL_LLVM_NO_BITCODE
     // On Windows 32 bit this calls an unknown instruction, probably need to
     // link with LLVM compiler-rt to fix, for now just fall back to op
@@ -1029,7 +1025,6 @@ LLVMGEN (llvm_gen_modulus)
         }
     }
     return true;
-#endif
 }
 
 
@@ -1697,6 +1692,7 @@ LLVMGEN (llvm_gen_aref)
     Symbol& Index = *rop.opargsym (op, 2);
 
     bool op_is_uniform = rop.isSymbolUniform(Result);
+    bool index_is_uniform = rop.isSymbolUniform(Index);
 
     // Get array index we're interested in
     llvm::Value *index = rop.loadLLVMValue (Index);
@@ -1725,7 +1721,7 @@ LLVMGEN (llvm_gen_aref)
     int num_components = Src.typespec().simpletype().aggregate;
     for (int d = 0;  d <= 2;  ++d) {
         for (int c = 0;  c < num_components;  ++c) {
-            llvm::Value *val = rop.llvm_load_value (Src, d, index, c, TypeDesc::UNKNOWN, op_is_uniform);
+            llvm::Value *val = rop.llvm_load_value (Src, d, index, c, TypeDesc::UNKNOWN, op_is_uniform, index_is_uniform);
             rop.storeLLVMValue (val, Result, c, d);
         }
         if (! Result.has_derivs())

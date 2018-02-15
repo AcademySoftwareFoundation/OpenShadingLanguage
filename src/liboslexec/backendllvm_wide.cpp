@@ -2170,7 +2170,7 @@ BackendLLVMWide::llvm_alloca_and_widen_value(const Symbol& sym, int deriv)
 llvm::Value *
 BackendLLVMWide::llvm_load_value (const Symbol& sym, int deriv,
                                    llvm::Value *arrayindex, int component,
-                                   TypeDesc cast, bool op_is_uniform)
+                                   TypeDesc cast, bool op_is_uniform, bool index_is_uniform)
 {
     bool has_derivs = sym.has_derivs();
     if (!has_derivs && deriv != 0) {
@@ -2239,7 +2239,7 @@ BackendLLVMWide::llvm_load_value (const Symbol& sym, int deriv,
 
     OSL_DEV_ONLY(std::cout << "  llvm_load_value " << sym.typespec().string() << " cast " << cast << std::endl);
     return llvm_load_value (llvm_get_pointer (sym), sym.typespec(),
-                            deriv, arrayindex, component, cast, op_is_uniform);
+                            deriv, arrayindex, component, cast, op_is_uniform, index_is_uniform);
 }
 
 
@@ -2247,96 +2247,153 @@ BackendLLVMWide::llvm_load_value (const Symbol& sym, int deriv,
 llvm::Value *
 BackendLLVMWide::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
                                    int deriv, llvm::Value *arrayindex,
-                                   int component, TypeDesc cast, bool op_is_uniform)
+                                   int component, TypeDesc cast, bool op_is_uniform, bool index_is_uniform)
 {
     if (!ptr)
         return NULL;  // Error
 
-    // If it's an array or we're dealing with derivatives, step to the
-    // right element.
-    TypeDesc t = type.simpletype();
-    if (t.arraylen || deriv) {
-        int d = deriv * std::max(1,t.arraylen);
-        if (arrayindex)
-            arrayindex = ll.op_add (arrayindex, ll.constant(d));
-        else
-            arrayindex = ll.constant(d);
-        ptr = ll.GEP (ptr, arrayindex);
-    }
+    if (index_is_uniform) {
 
-    // If it's multi-component (triple or matrix), step to the right field
-    if (! type.is_closure_based() && t.aggregate > 1)
-    {
-    	OSL_DEV_ONLY(std::cout << "step to the right field " << component << std::endl);
-        ptr = ll.GEP (ptr, 0, component);
-    }
+        // If it's an array or we're dealing with derivatives, step to the
+        // right element.
+        TypeDesc t = type.simpletype();
+        if (t.arraylen || deriv) {
+            int d = deriv * std::max(1,t.arraylen);
+            llvm::Value * elem;
+            if (arrayindex)
+                elem = ll.op_add (arrayindex, ll.constant(d));
+            else
+                elem = ll.constant(d);
+            ptr = ll.GEP (ptr, elem);
+        }
 
-    // Now grab the value
-    llvm::Value *result = ll.op_load (ptr);
+        // If it's multi-component (triple or matrix), step to the right field
+        if (! type.is_closure_based() && t.aggregate > 1)
+        {
+            OSL_DEV_ONLY(std::cout << "step to the right field " << component << std::endl);
+            ptr = ll.GEP (ptr, 0, component);
+        }
 
-    if (type.is_closure_based())
+        // Now grab the value
+        llvm::Value *result;
+            result = ll.op_load (ptr);
+
+        if (type.is_closure_based())
+            return result;
+
+        // We may have bool masquarading as int's and need to promote them for
+        // use in any int arithmetic
+        if (type.is_int() &&
+            (ll.llvm_typeof(result) == ll.type_wide_bool())) {
+            if(cast == TypeDesc::TypeInt)
+            {
+                result = ll.op_bool_to_int(result);
+            } else if (cast == TypeDesc::TypeFloat)
+            {
+                result = ll.op_bool_to_float(result);
+            }
+        }
+        // Handle int<->float type casting
+        if (type.is_floatbased() && cast == TypeDesc::TypeInt)
+            result = ll.op_float_to_int (result);
+        else if (type.is_int() && cast == TypeDesc::TypeFloat)
+            result = ll.op_int_to_float (result);
+
+        if (!op_is_uniform) {
+            // TODO:  remove this assert once we have confirmed correct handling off all the
+            // different data types.  Using ASSERT as a checklist to verify what we have
+            // handled so far during development
+            ASSERT(cast == TypeDesc::UNKNOWN ||
+                   cast == TypeDesc::TypeColor ||
+                   cast == TypeDesc::TypeVector ||
+                   cast == TypeDesc::TypePoint ||
+                   cast == TypeDesc::TypeNormal ||
+                   cast == TypeDesc::TypeFloat ||
+                   cast == TypeDesc::TypeInt ||
+                   cast == TypeDesc::TypeString ||
+                   cast == TypeDesc::TypeMatrix);
+
+            if ((ll.llvm_typeof(result) ==  ll.type_bool()) ||
+                (ll.llvm_typeof(result) ==  ll.type_float()) ||
+                (ll.llvm_typeof(result) ==  ll.type_triple()) ||
+                (ll.llvm_typeof(result) ==  ll.type_int()) ||
+                (ll.llvm_typeof(result) ==  (llvm::Type*)ll.type_string()) ||
+                (ll.llvm_typeof(result) ==  ll.type_matrix())) {
+                result = ll.widen_value(result);
+            } else {
+    #ifdef OSL_DEV
+                if (!((ll.llvm_typeof(result) ==  ll.type_wide_float()) ||
+                       (ll.llvm_typeof(result) ==  ll.type_wide_int()) ||
+                       (ll.llvm_typeof(result) ==  ll.type_wide_matrix()) ||
+                       (ll.llvm_typeof(result) ==  ll.type_wide_triple()) ||
+                        (ll.llvm_typeof(result) ==  ll.type_wide_string()) ||
+                        (ll.llvm_typeof(result) ==  ll.type_wide_bool()))) {
+                    OSL_DEV_ONLY(std::cout << ">>>>>>>>>>>>>> TYPENAME OF " << ll.llvm_typenameof(result) << std::endl);
+                }
+    #endif
+                ASSERT((ll.llvm_typeof(result) ==  ll.type_wide_float()) ||
+                       (ll.llvm_typeof(result) ==  ll.type_wide_int()) ||
+                       (ll.llvm_typeof(result) ==  ll.type_wide_triple()) ||
+                       (ll.llvm_typeof(result) ==  ll.type_wide_string()) ||
+                       (ll.llvm_typeof(result) ==  ll.type_wide_bool()) ||
+                       (ll.llvm_typeof(result) ==  ll.type_wide_matrix()));
+            }
+        }
         return result;
+    } else {
+        ASSERT(!op_is_uniform);
+        ASSERT(nullptr != arrayindex);
+        // If it's an array or we're dealing with derivatives, step to the
+        // right element.
+        TypeDesc t = type.simpletype();
+        if (t.arraylen || deriv) {
+            int d = deriv * std::max(1,t.arraylen);
+            llvm::Value * elem;
+            elem = ll.constant(d);
+            ptr = ll.GEP (ptr, elem);
+        }
 
-    // We may have bool masquarading as int's and need to promote them for
-    // use in any int arithmetic
-    if (type.is_int() &&
-        (ll.llvm_typeof(result) == ll.type_wide_bool())) {
-        if(cast == TypeDesc::TypeInt)
+        // If it's multi-component (triple or matrix), step to the right field
+        if (! type.is_closure_based() && t.aggregate > 1)
         {
-            result = ll.op_bool_to_int(result);
-        } else if (cast == TypeDesc::TypeFloat)
-        {
-            result = ll.op_bool_to_float(result);
+            OSL_DEV_ONLY(std::cout << "step to the right field " << component << std::endl);
+            ptr = ll.GEP (ptr, 0, component);
+
+            // Need to scale the indices by the stride
+            // of the type
+            int elem_stride = t.aggregate;
+            arrayindex = ll.op_mul (arrayindex, ll.wide_constant(elem_stride));
+            // TODO: possible optimization when elem_stride == 2 && sizeof(type) == 4,
+            // could have optional parameter gather operation to use a scale of 8 (2*4)
+            // vs. the hardcoded 4 and avoid the multiplication above
         }
-    }
-    // Handle int<->float type casting
-    if (type.is_floatbased() && cast == TypeDesc::TypeInt)
-        result = ll.op_float_to_int (result);
-    else if (type.is_int() && cast == TypeDesc::TypeFloat)
-        result = ll.op_int_to_float (result);
-	
-	if (!op_is_uniform) { 
-    	// TODO:  remove this assert once we have confirmed correct handling off all the
-    	// different data types.  Using ASSERT as a checklist to verify what we have
-    	// handled so far during development
-    	ASSERT(cast == TypeDesc::UNKNOWN ||
-    		   cast == TypeDesc::TypeColor ||
-    		   cast == TypeDesc::TypeVector ||
-    		   cast == TypeDesc::TypePoint ||
-    		   cast == TypeDesc::TypeNormal ||
-    		   cast == TypeDesc::TypeFloat ||
-    		   cast == TypeDesc::TypeInt ||
-			   cast == TypeDesc::TypeString ||
-    		   cast == TypeDesc::TypeMatrix);
-    	
-    	if ((ll.llvm_typeof(result) ==  ll.type_bool()) ||
-    		(ll.llvm_typeof(result) ==  ll.type_float()) ||
-			(ll.llvm_typeof(result) ==  ll.type_triple()) ||
-			(ll.llvm_typeof(result) ==  ll.type_int()) ||
-			(ll.llvm_typeof(result) ==  (llvm::Type*)ll.type_string()) ||
-			(ll.llvm_typeof(result) ==  ll.type_matrix())) {
-            result = ll.widen_value(result);
-        } else {
-#ifdef OSL_DEV
-        	if (!((ll.llvm_typeof(result) ==  ll.type_wide_float()) ||
-         		   (ll.llvm_typeof(result) ==  ll.type_wide_int()) ||
-                   (ll.llvm_typeof(result) ==  ll.type_wide_matrix()) ||
-         		   (ll.llvm_typeof(result) ==  ll.type_wide_triple()) ||
-                    (ll.llvm_typeof(result) ==  ll.type_wide_string()) ||
-                    (ll.llvm_typeof(result) ==  ll.type_wide_bool()))) {
-        		OSL_DEV_ONLY(std::cout << ">>>>>>>>>>>>>> TYPENAME OF " << ll.llvm_typenameof(result) << std::endl);
-        	}
-#endif
-        	ASSERT((ll.llvm_typeof(result) ==  ll.type_wide_float()) ||
-        		   (ll.llvm_typeof(result) ==  ll.type_wide_int()) ||
-        		   (ll.llvm_typeof(result) ==  ll.type_wide_triple()) ||
-                   (ll.llvm_typeof(result) ==  ll.type_wide_string()) ||
-                   (ll.llvm_typeof(result) ==  ll.type_wide_bool()) ||
-				   (ll.llvm_typeof(result) ==  ll.type_wide_matrix()));
-        }
+
+
+        // Now grab the value
+        llvm::Value *result;
+        result = ll.op_gather (ptr, arrayindex);
+        // TODO:  possible optimization when we know the array size is small (<= 4)
+        // instead of performing a gather, we could load each value of the the array,
+        // compare the index array against that value's index and select/blend
+        // the results together.  Basically we will loading the entire content of the
+        // array, but can avoid branching or any gather statements.
+
+        if (type.is_closure_based())
+            return result;
+
+        ASSERT(ll.llvm_typeof(result) != ll.type_wide_bool());
+
+        // Handle int<->float type casting
+        if (type.is_floatbased() && cast == TypeDesc::TypeInt)
+            result = ll.op_float_to_int (result);
+        else if (type.is_int() && cast == TypeDesc::TypeFloat)
+            result = ll.op_int_to_float (result);
+
+
+        return result;
     }
 
-    return result;
+
 }
 
 

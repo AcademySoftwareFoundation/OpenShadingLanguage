@@ -1,0 +1,29 @@
+shader
+test_uniform_index_varying_matrix (output color Cout = color(0,0,0))
+{
+    // Test array referencing with varying index
+    float s0 = 1.0/3.0;
+    float s1 = 2.0/3.0;
+    float s2 = 1;
+    matrix marray[3] = { matrix(s0,0,0,0,
+                                0,s0*u,0,0,
+                                0,0,s0*v,0,
+                                0,0,0,1),
+                         matrix(s1*u,0,0,0,
+                                0,s1*v,0,0,
+                                0,0,s1,0,
+                                0,0,0,1),
+                         matrix(s2,0,0,0,
+                                0,s2,0,0,
+                                0,0,s2,0,
+                                0,0,0,1) };
+    
+    // Using getattribute to obtain a uniform, but non-const index    
+    int res[2];
+    getattribute("camera:resolution", res);
+    int uniformIndex = res[0]%3;
+    matrix indirectM = marray[uniformIndex];
+    
+    point tp = transform(indirectM,P);
+    Cout = color(tp);    
+}

@@ -407,6 +407,8 @@ LLVM_Util::LLVM_Util (int debuglevel, const LLVM_Util::PerThreadInfo &per_thread
     m_llvm_type_float = (llvm::Type *) llvm::Type::getFloatTy (*m_llvm_context);
     m_llvm_type_double = (llvm::Type *) llvm::Type::getDoubleTy (*m_llvm_context);
     m_llvm_type_int = (llvm::Type *) llvm::Type::getInt32Ty (*m_llvm_context);
+    m_llvm_type_int8 = (llvm::Type *) llvm::Type::getInt8Ty (*m_llvm_context);
+    m_llvm_type_int16 = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);
     if (sizeof(char *) == 4)
         m_llvm_type_addrint = (llvm::Type *) llvm::Type::getInt32Ty (*m_llvm_context);
     else
@@ -1249,72 +1251,83 @@ LLVM_Util::make_jit_execengine (std::string *err, bool debugging_symbols, bool p
     
     llvm::StringMap< bool > cpuFeatures;
     if (llvm::sys::getHostCPUFeatures(cpuFeatures)) {
-		m_supports_masked_stores = false;
-		m_supports_native_bit_masks = false;
+        m_supports_masked_stores = false;
+        m_supports_native_bit_masks = false;
+        m_supports_avx512f = false;
+        m_supports_avx2 = false;
 
     	OSL_DEV_ONLY(std::cout << std::endl<< "llvm::sys::getHostCPUFeatures()>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl);
 		std::vector<std::string> attrvec;
-		for (auto &cpuFeature : cpuFeatures) 
-		{
-			//auto enabled = (cpuFeature.second && (cpuFeature.first().str().find("512") == std::string::npos)) ? "+" : "-";
-			auto enabled = (cpuFeature.second) ? "+" : "-";
-			//OSL_DEV_ONLY(std::cout << cpuFeature.first().str()  << " is " << enabled << std::endl);
-			
-			if (oslIsa == TargetISA_UNLIMITTED) {				
-				if (!disableFMA || std::string("fma") != cpuFeature.first().str()) {
-					attrvec.push_back(enabled + cpuFeature.first().str());
-				}
+        for (auto &cpuFeature : cpuFeatures)
+        {
+            //auto enabled = (cpuFeature.second && (cpuFeature.first().str().find("512") == std::string::npos)) ? "+" : "-";
+            auto enabled = (cpuFeature.second) ? "+" : "-";
+            //OSL_DEV_ONLY(std::cout << cpuFeature.first().str()  << " is " << enabled << std::endl);
 
-				if(cpuFeature.first().str().find("512") != std::string::npos) {
-					m_supports_masked_stores = true;
-					m_supports_native_bit_masks = true;
-				}
-			}
-		}
+            if (oslIsa == TargetISA_UNLIMITTED) {
+                if (!disableFMA || std::string("fma") != cpuFeature.first().str()) {
+                    attrvec.push_back(enabled + cpuFeature.first().str());
+                }
+
+                if(cpuFeature.first().str().find("512") != std::string::npos) {
+                    m_supports_masked_stores = true;
+                    m_supports_native_bit_masks = true;
+                }
+                if(cpuFeature.first().str() == std::string("avx512f")) {
+                    m_supports_avx512f = true;
+                }
+                if(cpuFeature.first().str() == std::string("avx2")) {
+                    m_supports_avx2 = true;
+                }
+            }
+        }
 		//The particular format of the names are target dependent, and suitable for passing as -mattr to the target which matches the host.
 	//    const char *mattr[] = {"avx"};
 	//    std::vector<std::string> attrvec (mattr, mattr+1);
 
-		
-		// TODO: consider extending adding all CPU features for different target platforms
-		// and also intersecting with supported features vs. blindly adding them
-		switch(oslIsa) {
-		case TargetISA_SSE4_2:
-			attrvec.push_back("+sse4.2");
-			OSL_DEV_ONLY(std::cout << "Intended OSL ISA: SSE4.2" << std::endl);
-			break;
-		case TargetISA_AVX:
-			attrvec.push_back("+avx");
-			OSL_DEV_ONLY(std::cout << "Intended OSL ISA: AVX" << std::endl);
-			break;		
-		case TargetISA_AVX2:
-			attrvec.push_back("+sse4.2");
-			attrvec.push_back("+avx");
-			attrvec.push_back("+avx2");
-			OSL_DEV_ONLY(std::cout << "Intended OSL ISA: AVX2" << std::endl);
-			break;		
-		case TargetISA_AVX512:
-			m_supports_masked_stores = true;
-			m_supports_native_bit_masks = true;
-			attrvec.push_back("+avx512f");
-			attrvec.push_back("+avx512dq");
-			attrvec.push_back("+avx512bw");
-			attrvec.push_back("+avx512vl");
-			attrvec.push_back("+avx512cd");
-			attrvec.push_back("+avx512f");
-			
-			OSL_DEV_ONLY(std::cout << "Intended OSL ISA: AVX512" << std::endl);
-			break;		
-		case TargetISA_UNLIMITTED:		
-		default:
-			break;
-		};
+
+        // TODO: consider extending adding all CPU features for different target platforms
+        // and also intersecting with supported features vs. blindly adding them
+        switch(oslIsa) {
+        case TargetISA_SSE4_2:
+            attrvec.push_back("+sse4.2");
+            OSL_DEV_ONLY(std::cout << "Intended OSL ISA: SSE4.2" << std::endl);
+            break;
+        case TargetISA_AVX:
+            attrvec.push_back("+avx");
+            OSL_DEV_ONLY(std::cout << "Intended OSL ISA: AVX" << std::endl);
+            break;
+        case TargetISA_AVX2:
+            attrvec.push_back("+sse4.2");
+            attrvec.push_back("+avx");
+            attrvec.push_back("+avx2");
+            m_supports_avx2 = true;
+            OSL_DEV_ONLY(std::cout << "Intended OSL ISA: AVX2" << std::endl);
+            break;
+        case TargetISA_AVX512:
+            m_supports_masked_stores = true;
+            m_supports_native_bit_masks = true;
+            m_supports_avx512f = true;
+            attrvec.push_back("+avx512f");
+            attrvec.push_back("+avx512dq");
+            attrvec.push_back("+avx512bw");
+            attrvec.push_back("+avx512vl");
+            attrvec.push_back("+avx512cd");
+            attrvec.push_back("+avx512f");
+
+
+            OSL_DEV_ONLY(std::cout << "Intended OSL ISA: AVX512" << std::endl);
+            break;
+        case TargetISA_UNLIMITTED:
+        default:
+            break;
+        };
 		
 	    if (disableFMA) {
-			attrvec.push_back("-fma");
+            attrvec.push_back("-fma");
 	    }
-		engine_builder.setMAttrs(attrvec);
-		
+        engine_builder.setMAttrs(attrvec);
+
     }
     
 
@@ -1929,9 +1942,9 @@ LLVM_Util::type_union(const std::vector<llvm::Type *> &types)
     if (max_align == sizeof(void*))
         base_type = type_void_ptr();
     else if (max_align == 4)
-        base_type = (llvm::Type *) llvm::Type::getInt32Ty (context());
+        base_type = type_int();
     else if (max_align == 2)
-        base_type = (llvm::Type *) llvm::Type::getInt16Ty (context());
+        base_type = type_int16();
     else
         base_type = (llvm::Type *) llvm::Type::getInt8Ty (context());
 
@@ -2201,18 +2214,32 @@ LLVM_Util::mask_as_int(llvm::Value *mask)
    
     	break;
     case 16:    	
-    	int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);
+    	int_reinterpret_cast_vector_type = type_int16();
     	result = builder().CreateBitCast (mask, int_reinterpret_cast_vector_type);
     	break;
     }
 #else
-	int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);
-	result = builder().CreateBitCast (mask, int_reinterpret_cast_vector_type);
+	result = builder().CreateBitCast (mask, type_int16());
 #endif
     
 
-    return builder().CreateZExt(result, (llvm::Type *) llvm::Type::getInt32Ty (*m_llvm_context));
+    return builder().CreateZExt(result, type_int());
 }
+
+llvm::Value *
+LLVM_Util::mask_as_int16(llvm::Value *mask)
+{
+    ASSERT(mask->getType() == type_wide_bool());
+
+    return builder().CreateBitCast (mask, type_int16());
+}
+
+llvm::Value *
+LLVM_Util::mask_as_int8(llvm::Value *mask)
+{
+    return builder().CreateBitCast (mask, type_int8());
+}
+
 
 llvm::Value *
 LLVM_Util::int_as_mask(llvm::Value *value)
@@ -2266,7 +2293,7 @@ LLVM_Util::int_as_mask(llvm::Value *value)
     }
     case 16:
     {
-    	llvm::Type * intMaskType = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);
+    	llvm::Type * intMaskType = type_int16();
         llvm::Value* intMask = builder().CreateTrunc(value, intMaskType);
 
         result = builder().CreateBitCast (intMask, type_wide_bool());
@@ -2279,7 +2306,7 @@ LLVM_Util::int_as_mask(llvm::Value *value)
 
     	// We can just reinterpret cast a 16 bit integer to a 16 bit mask
     	// and all types are happy
-    	llvm::Type * intMaskType = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);
+    	llvm::Type * intMaskType = type_int16();
 		llvm::Value* intMask = builder().CreateTrunc(value, intMaskType);
 
 		result = builder().CreateBitCast (intMask, type_wide_bool());
@@ -2388,8 +2415,7 @@ LLVM_Util::test_if_mask_has_any_on_or_off(llvm::Value *mask, llvm::Value* & any_
 			allOffConstant = constant16(0);
 			allOnConstant = constant16(0xFFFF);
 
-			int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);
-			mask_as_int = builder().CreateBitCast (mask, int_reinterpret_cast_vector_type);
+			mask_as_int = builder().CreateBitCast (mask, type_int16());
 		}
 		break;
 	default:
@@ -2419,16 +2445,15 @@ LLVM_Util::op_1st_active_lane_of(llvm::Value * mask)
     ASSERT(m_vector_width == 16); // may be incomplete for other widths
 
     // Count trailing zeros, least significant
-    llvm::Type * int16_type = (llvm::Type *) llvm::Type::getInt16Ty(context());
     llvm::Type* types[] = {
-            int16_type
+            type_int16()
     };
     llvm::Function* func_cttz = llvm::Intrinsic::getDeclaration (module(),
         llvm::Intrinsic::cttz,
         llvm::ArrayRef<llvm::Type *>(types, sizeof(types)/sizeof(llvm::Type*)));
 
 
-    llvm::Value * int16_mask = builder().CreateBitCast (mask, int16_type);
+    llvm::Value * int16_mask = builder().CreateBitCast (mask, type_int16());
     llvm::Value *args[2] = {
             int16_mask,
             constant_bool(true)
@@ -2829,6 +2854,600 @@ LLVM_Util::op_load (llvm::Value *ptr)
     return builder().CreateLoad (ptr);
 }
 
+
+llvm::Value *
+LLVM_Util::op_gather(llvm::Value *ptr, llvm::Value *index)
+{
+
+    ASSERT(index->getType() == type_wide_int());
+    if (ptr->getType() == type_int_ptr()) {
+        if (m_supports_avx512f) {
+            ASSERT(m_vector_width == 16 && "incomplete");
+            /*   def int_x86_avx512_gather_dpi_512  : GCCBuiltin<"__builtin_ia32_gathersiv16si">,
+              Intrinsic<[llvm_v16i32_ty], [llvm_v16i32_ty, llvm_ptr_ty,
+                         llvm_v16i32_ty, llvm_i16_ty, llvm_i32_ty],
+                        [IntrReadMem, IntrArgMemOnly]>; */
+
+            llvm::Function* func_avx512_gather_pi = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx512_gather_dpi_512);
+            ASSERT(func_avx512_gather_pi);
+
+            llvm::Value *unmasked_value = wide_constant(0);
+            llvm::Value *args[] = {
+                unmasked_value,
+                void_ptr(ptr),
+                index,
+                mask_as_int16(current_mask()),
+                constant(4)
+            };
+            return builder().CreateCall (func_avx512_gather_pi, llvm::ArrayRef<llvm::Value*>(args, std::extent<decltype(args)>::value));
+        } else if (m_supports_avx2) {
+            ASSERT(m_vector_width == 16 && "incomplete");
+            /* def int_x86_avx2_gather_d_d_256 : GCCBuiltin<"__builtin_ia32_gatherd_d256">,
+                  Intrinsic<[llvm_v8i32_ty],
+                    [llvm_v8i32_ty, llvm_ptr_ty, llvm_v8i32_ty, llvm_v8i32_ty, llvm_i8_ty],
+                    [IntrReadMem, IntrArgMemOnly]>; */
+            llvm::Function* func_avx2_gather_pi = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx2_gather_d_d_256);
+            ASSERT(func_avx2_gather_pi);
+
+            llvm::Constant *avx2_unmasked_value = llvm::ConstantVector::getSplat(8,llvm::ConstantInt::get (context(), llvm::APInt(32,0)));
+            llvm::Constant *zero_vector_value = llvm::ConstantVector::getSplat(m_vector_width,llvm::ConstantInt::get (context(), llvm::APInt(32,0)));
+
+            // Convert <16 x i1> -> <16 x i32> -> to <2 x< 8 x i32>>
+            llvm::Value * wide_int_mask = builder().CreateSExt(current_mask(), type_wide_int());
+            uint32_t extractLanes0_to_7[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+            uint32_t extractLanes8_to_15[] = { 8, 9, 10, 11, 12, 13, 14, 15 };
+
+            llvm::Value * avx2_mask_1 = builder().CreateShuffleVector (wide_int_mask, zero_vector_value, makeArrayRef(extractLanes0_to_7, std::extent<decltype(extractLanes0_to_7)>::value));
+            llvm::Value * avx2_mask_2 = builder().CreateShuffleVector (wide_int_mask, zero_vector_value, makeArrayRef(extractLanes8_to_15, std::extent<decltype(extractLanes8_to_15)>::value));
+            llvm::Value * avx2_indices_1 = builder().CreateShuffleVector (index, zero_vector_value, makeArrayRef(extractLanes0_to_7, std::extent<decltype(extractLanes0_to_7)>::value));
+            llvm::Value * avx2_indices_2 = builder().CreateShuffleVector (index, zero_vector_value, makeArrayRef(extractLanes8_to_15, std::extent<decltype(extractLanes8_to_15)>::value));
+
+            llvm::Value *args[] = {
+                avx2_unmasked_value,
+                void_ptr(ptr),
+                avx2_indices_1,
+                avx2_mask_1,
+                constant8(4)
+            };
+            llvm::Value *gather1 = builder().CreateCall (func_avx2_gather_pi, llvm::ArrayRef<llvm::Value*>(args, std::extent<decltype(args)>::value));
+            args[2] = avx2_indices_2;
+            args[3] = avx2_mask_2;
+            llvm::Value *gather2 = builder().CreateCall (func_avx2_gather_pi, llvm::ArrayRef<llvm::Value*>(args, std::extent<decltype(args)>::value));
+
+            uint32_t combineIndices[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+            return builder().CreateShuffleVector (gather1, gather2, makeArrayRef(combineIndices, std::extent<decltype(combineIndices)>::value));
+
+        } else {
+            // To avoid loading masked off lanes,
+            // rather than add a bunch of branches to skip loading of lanes,
+            // we assume accessing index 0 is legal and in bounds
+            // and select the index and 0 based on the mask
+            llvm::Value *result = wide_constant(0);
+            llvm::Value *clampedIndices = op_select(current_mask(), index, wide_constant(0));
+            for(int l=0; l < m_vector_width; ++l) {
+                llvm::Value *index_for_lane = op_extract(clampedIndices, l);
+                llvm::Value *address = GEP(ptr, index_for_lane);
+                llvm::Value * val = op_load(address);
+
+                result = op_insert (result, val, l);
+            }
+            return result;
+        }
+
+    } else if (ptr->getType() == type_float_ptr()) {
+        if (m_supports_avx512f) {
+
+            /* def int_x86_avx512_gather_dps_512  : GCCBuiltin<"__builtin_ia32_gathersiv16sf">,
+                  Intrinsic<[llvm_v16f32_ty], [llvm_v16f32_ty, llvm_ptr_ty,
+                             llvm_v16i32_ty, llvm_i16_ty, llvm_i32_ty],*/
+
+            llvm::Function* func_avx512_gather_ps = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx512_gather_dps_512);
+            ASSERT(func_avx512_gather_ps);
+
+            llvm::Value *unmasked_value = wide_constant(0.0f);
+            llvm::Value *args[] = {
+                unmasked_value,
+                void_ptr(ptr),
+                index,
+                mask_as_int16(current_mask()),
+                constant(4)
+            };
+            return builder().CreateCall (func_avx512_gather_ps, llvm::ArrayRef<llvm::Value*>(args, std::extent<decltype(args)>::value));
+        } else if (m_supports_avx2) {
+            ASSERT(m_vector_width == 16 && "incomplete");
+            /* def int_x86_avx2_gather_d_ps_256 : GCCBuiltin<"__builtin_ia32_gatherd_ps256">,
+                Intrinsic<[llvm_v8f32_ty],
+                  [llvm_v8f32_ty, llvm_ptr_ty, llvm_v8i32_ty, llvm_v8f32_ty, llvm_i8_ty],
+                  [IntrReadMem, IntrArgMemOnly]>; */
+
+            llvm::Function* func_avx2_gather_ps = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx2_gather_d_ps_256);
+            ASSERT(func_avx2_gather_ps);
+
+            llvm::Constant *avx2_unmasked_value = llvm::ConstantVector::getSplat(8,llvm::ConstantFP::get (context(), llvm::APFloat(0.0f)));
+            llvm::Constant *zero_vector_value = llvm::ConstantVector::getSplat(m_vector_width,llvm::ConstantInt::get (context(), llvm::APInt(32,0)));
+
+            // Convert <16 x i1> -> <16 x i32> -> to <2 x< 8 x i32>>
+            llvm::Value * wide_int_mask = builder().CreateSExt(current_mask(), type_wide_int());
+            uint32_t extractLanes0_to_7[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+            uint32_t extractLanes8_to_15[] = { 8, 9, 10, 11, 12, 13, 14, 15 };
+
+            llvm::Value * avx2_mask_1 = builder().CreateShuffleVector (wide_int_mask, zero_vector_value, makeArrayRef(extractLanes0_to_7, std::extent<decltype(extractLanes0_to_7)>::value));
+            llvm::Value * avx2_mask_2 = builder().CreateShuffleVector (wide_int_mask, zero_vector_value, makeArrayRef(extractLanes8_to_15, std::extent<decltype(extractLanes8_to_15)>::value));
+            llvm::Value * avx2_indices_1 = builder().CreateShuffleVector (index, zero_vector_value, makeArrayRef(extractLanes0_to_7, std::extent<decltype(extractLanes0_to_7)>::value));
+            llvm::Value * avx2_indices_2 = builder().CreateShuffleVector (index, zero_vector_value, makeArrayRef(extractLanes8_to_15, std::extent<decltype(extractLanes8_to_15)>::value));
+
+            llvm::Value *args[] = {
+                    avx2_unmasked_value,
+                void_ptr(ptr),
+                avx2_indices_1,
+                builder().CreateBitCast (avx2_mask_1, llvm::VectorType::get(type_float(), 8)),
+                constant8(4)
+            };
+            llvm::Value *gather1 = builder().CreateCall (func_avx2_gather_ps, llvm::ArrayRef<llvm::Value*>(args, std::extent<decltype(args)>::value));
+            args[2] = avx2_indices_2;
+            args[3] = builder().CreateBitCast (avx2_mask_2, llvm::VectorType::get(type_float(), 8));
+            llvm::Value *gather2 = builder().CreateCall (func_avx2_gather_ps, llvm::ArrayRef<llvm::Value*>(args, std::extent<decltype(args)>::value));
+
+            uint32_t combineIndices[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+            return builder().CreateShuffleVector (gather1, gather2, makeArrayRef(combineIndices, std::extent<decltype(combineIndices)>::value));
+        } else {
+            // To avoid loading masked off lanes,
+            // rather than add a bunch of branches to skip loading of lanes,
+            // we assume accessing index 0 is legal and in bounds
+            // and select the index and 0 based on the mask
+            llvm::Value *clampedIndices = op_select(current_mask(), index, wide_constant(0));
+            llvm::Value *result = wide_constant(0.0f);
+
+            for(int l=0; l < m_vector_width; ++l) {
+                llvm::Value *index_for_lane = op_extract(clampedIndices, l);
+                llvm::Value *address = GEP(ptr, index_for_lane);
+                llvm::Value * val = op_load(address);
+
+                result = op_insert (result, val, l);
+            }
+            return result;
+        }
+    } else if (ptr->getType() == type_wide_float_ptr()) {
+        if (m_supports_avx512f) {
+
+            llvm::Value *strided_indices = op_mul (index, wide_constant(static_cast<int>(m_vector_width)));
+
+            llvm::Constant *offsets_to_lane[16] = {
+                llvm::ConstantInt::get (context(), llvm::APInt(32,0)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,1)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,2)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,3)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,4)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,5)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,6)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,7)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,8)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,9)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,10)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,11)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,12)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,13)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,14)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,15)),
+            };
+            llvm::Value *const_vec_offsets = llvm::ConstantVector::get(ArrayRef< Constant *>(&offsets_to_lane[0], 16));
+
+            llvm::Value * final_indices = op_add (strided_indices, const_vec_offsets);
+
+            /* def int_x86_avx512_gather_dps_512  : GCCBuiltin<"__builtin_ia32_gathersiv16sf">,
+                  Intrinsic<[llvm_v16f32_ty], [llvm_v16f32_ty, llvm_ptr_ty,
+                             llvm_v16i32_ty, llvm_i16_ty, llvm_i32_ty],*/
+
+            llvm::Function* func_avx512_gather_ps = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx512_gather_dps_512);
+            ASSERT(func_avx512_gather_ps);
+
+            llvm::Value *unmasked_value = wide_constant(0.0f);
+            llvm::Value *args[] = {
+                unmasked_value,
+                void_ptr(ptr),
+                final_indices,
+                mask_as_int16(current_mask()),
+                constant(4)
+            };
+            return builder().CreateCall (func_avx512_gather_ps, llvm::ArrayRef<llvm::Value*>(args, std::extent<decltype(args)>::value));
+        } else if (m_supports_avx2) {
+            ASSERT(m_vector_width == 16 && "incomplete");
+
+            llvm::Value *strided_indices = op_mul (index, wide_constant(static_cast<int>(m_vector_width)));
+
+            llvm::Constant *offsets_to_lane[16] = {
+                llvm::ConstantInt::get (context(), llvm::APInt(32,0)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,1)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,2)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,3)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,4)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,5)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,6)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,7)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,8)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,9)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,10)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,11)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,12)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,13)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,14)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,15)),
+            };
+            llvm::Value *const_vec_offsets = llvm::ConstantVector::get(ArrayRef< Constant *>(&offsets_to_lane[0], 16));
+
+            llvm::Value * final_indices = op_add (strided_indices, const_vec_offsets);
+
+
+            /* def int_x86_avx2_gather_d_ps_256 : GCCBuiltin<"__builtin_ia32_gatherd_ps256">,
+                Intrinsic<[llvm_v8f32_ty],
+                  [llvm_v8f32_ty, llvm_ptr_ty, llvm_v8i32_ty, llvm_v8f32_ty, llvm_i8_ty],
+                  [IntrReadMem, IntrArgMemOnly]>; */
+
+            llvm::Function* func_avx2_gather_ps = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx2_gather_d_ps_256);
+            ASSERT(func_avx2_gather_ps);
+
+            llvm::Constant *avx2_unmasked_value = llvm::ConstantVector::getSplat(8,llvm::ConstantFP::get (context(), llvm::APFloat(0.0f)));
+            llvm::Constant *zero_vector_value = llvm::ConstantVector::getSplat(m_vector_width,llvm::ConstantInt::get (context(), llvm::APInt(32,0)));
+
+            // Convert <16 x i1> -> <16 x i32> -> to <2 x< 8 x i32>>
+            llvm::Value * wide_int_mask = builder().CreateSExt(current_mask(), type_wide_int());
+            uint32_t extractLanes0_to_7[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+            uint32_t extractLanes8_to_15[] = { 8, 9, 10, 11, 12, 13, 14, 15 };
+
+            llvm::Value * avx2_mask_1 = builder().CreateShuffleVector (wide_int_mask, zero_vector_value, makeArrayRef(extractLanes0_to_7, std::extent<decltype(extractLanes0_to_7)>::value));
+            llvm::Value * avx2_mask_2 = builder().CreateShuffleVector (wide_int_mask, zero_vector_value, makeArrayRef(extractLanes8_to_15, std::extent<decltype(extractLanes8_to_15)>::value));
+            llvm::Value * avx2_indices_1 = builder().CreateShuffleVector (final_indices, zero_vector_value, makeArrayRef(extractLanes0_to_7, std::extent<decltype(extractLanes0_to_7)>::value));
+            llvm::Value * avx2_indices_2 = builder().CreateShuffleVector (final_indices, zero_vector_value, makeArrayRef(extractLanes8_to_15, std::extent<decltype(extractLanes8_to_15)>::value));
+
+            llvm::Value *args[] = {
+                    avx2_unmasked_value,
+                void_ptr(ptr),
+                avx2_indices_1,
+                builder().CreateBitCast (avx2_mask_1, llvm::VectorType::get(type_float(), 8)),
+                constant8(4)
+            };
+            llvm::Value *gather1 = builder().CreateCall (func_avx2_gather_ps, llvm::ArrayRef<llvm::Value*>(args, std::extent<decltype(args)>::value));
+            args[2] = avx2_indices_2;
+            args[3] = builder().CreateBitCast (avx2_mask_2, llvm::VectorType::get(type_float(), 8));
+            llvm::Value *gather2 = builder().CreateCall (func_avx2_gather_ps, llvm::ArrayRef<llvm::Value*>(args, std::extent<decltype(args)>::value));
+
+            uint32_t combineIndices[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+            return builder().CreateShuffleVector (gather1, gather2, makeArrayRef(combineIndices, std::extent<decltype(combineIndices)>::value));
+        } else {
+            // To avoid loading masked off lanes,
+
+            // rather than add a bunch of branches to skip loading of lanes,
+            // we assume accessing index 0 is legal and in bounds
+            // and select the index and 0 based on the mask
+            llvm::Value *clampedIndices = op_select(current_mask(), index, wide_constant(0));
+            llvm::Value *result = wide_constant(0.0f);
+            for(int l=0; l < m_vector_width; ++l) {
+                llvm::Value *index_for_lane = op_extract(clampedIndices, l);
+                llvm::Value *wide_address = GEP(ptr, index_for_lane);
+                llvm::Value *wide_val = op_load(wide_address);
+                llvm::Value *val = op_extract(wide_val, l);
+
+                result = op_insert (result, val, l);
+            }
+            return result;
+        }
+    } else if (ptr->getType() == type_wide_int_ptr()) {
+
+        if (m_supports_avx512f) {
+
+            llvm::Value *strided_indices = op_mul (index, wide_constant(static_cast<int>(m_vector_width)));
+
+            llvm::Constant *offsets_to_lane[16] = {
+                llvm::ConstantInt::get (context(), llvm::APInt(32,0)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,1)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,2)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,3)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,4)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,5)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,6)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,7)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,8)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,9)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,10)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,11)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,12)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,13)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,14)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,15)),
+            };
+            llvm::Value *const_vec_offsets = llvm::ConstantVector::get(ArrayRef< Constant *>(&offsets_to_lane[0], 16));
+
+            llvm::Value * final_indices = op_add (strided_indices, const_vec_offsets);
+
+            /*   def int_x86_avx512_gather_dpi_512  : GCCBuiltin<"__builtin_ia32_gathersiv16si">,
+              Intrinsic<[llvm_v16i32_ty], [llvm_v16i32_ty, llvm_ptr_ty,
+                         llvm_v16i32_ty, llvm_i16_ty, llvm_i32_ty],
+                        [IntrReadMem, IntrArgMemOnly]>; */
+
+            llvm::Function* func_avx512_gather_pi = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx512_gather_dpi_512);
+            ASSERT(func_avx512_gather_pi);
+
+            llvm::Value *unmasked_value = wide_constant(0);
+            llvm::Value *args[] = {
+                unmasked_value,
+                void_ptr(ptr),
+                final_indices,
+                mask_as_int16(current_mask()),
+                constant(4)
+            };
+            return builder().CreateCall (func_avx512_gather_pi, llvm::ArrayRef<llvm::Value*>(args, std::extent<decltype(args)>::value));
+        } else if (m_supports_avx2) {
+            ASSERT(m_vector_width == 16 && "incomplete");
+
+            llvm::Value *strided_indices = op_mul (index, wide_constant(static_cast<int>(m_vector_width)));
+
+            llvm::Constant *offsets_to_lane[16] = {
+                llvm::ConstantInt::get (context(), llvm::APInt(32,0)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,1)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,2)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,3)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,4)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,5)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,6)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,7)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,8)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,9)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,10)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,11)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,12)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,13)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,14)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,15)),
+            };
+            llvm::Value *const_vec_offsets = llvm::ConstantVector::get(ArrayRef< Constant *>(&offsets_to_lane[0], 16));
+
+            llvm::Value * final_indices = op_add (strided_indices, const_vec_offsets);
+
+
+            /* def int_x86_avx2_gather_d_d_256 : GCCBuiltin<"__builtin_ia32_gatherd_d256">,
+                  Intrinsic<[llvm_v8i32_ty],
+                    [llvm_v8i32_ty, llvm_ptr_ty, llvm_v8i32_ty, llvm_v8i32_ty, llvm_i8_ty],
+                    [IntrReadMem, IntrArgMemOnly]>; */
+            llvm::Function* func_avx2_gather_pi = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx2_gather_d_d_256);
+            ASSERT(func_avx2_gather_pi);
+
+            llvm::Constant *avx2_unmasked_value = llvm::ConstantVector::getSplat(8,llvm::ConstantInt::get (context(), llvm::APInt(32,0)));
+            llvm::Constant *zero_vector_value = llvm::ConstantVector::getSplat(m_vector_width,llvm::ConstantInt::get (context(), llvm::APInt(32,0)));
+
+            // Convert <16 x i1> -> <16 x i32> -> to <2 x< 8 x i32>>
+            llvm::Value * wide_int_mask = builder().CreateSExt(current_mask(), type_wide_int());
+            uint32_t extractLanes0_to_7[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+            uint32_t extractLanes8_to_15[] = { 8, 9, 10, 11, 12, 13, 14, 15 };
+
+            llvm::Value * avx2_mask_1 = builder().CreateShuffleVector (wide_int_mask, zero_vector_value, makeArrayRef(extractLanes0_to_7, std::extent<decltype(extractLanes0_to_7)>::value));
+            llvm::Value * avx2_mask_2 = builder().CreateShuffleVector (wide_int_mask, zero_vector_value, makeArrayRef(extractLanes8_to_15, std::extent<decltype(extractLanes8_to_15)>::value));
+            llvm::Value * avx2_indices_1 = builder().CreateShuffleVector (final_indices, zero_vector_value, makeArrayRef(extractLanes0_to_7, std::extent<decltype(extractLanes0_to_7)>::value));
+            llvm::Value * avx2_indices_2 = builder().CreateShuffleVector (final_indices, zero_vector_value, makeArrayRef(extractLanes8_to_15, std::extent<decltype(extractLanes8_to_15)>::value));
+
+            llvm::Value *args[] = {
+                avx2_unmasked_value,
+                void_ptr(ptr),
+                avx2_indices_1,
+                avx2_mask_1,
+                constant8(4)
+            };
+            llvm::Value *gather1 = builder().CreateCall (func_avx2_gather_pi, llvm::ArrayRef<llvm::Value*>(args, std::extent<decltype(args)>::value));
+            args[2] = avx2_indices_2;
+            args[3] = avx2_mask_2;
+            llvm::Value *gather2 = builder().CreateCall (func_avx2_gather_pi, llvm::ArrayRef<llvm::Value*>(args, std::extent<decltype(args)>::value));
+
+            uint32_t combineIndices[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+            return builder().CreateShuffleVector (gather1, gather2, makeArrayRef(combineIndices, std::extent<decltype(combineIndices)>::value));
+        } else {
+            // To avoid loading masked off lanes,
+            // rather than add a bunch of branches to skip loading of lanes,
+            // we assume accessing index 0 is legal and in bounds
+            // and select the index and 0 based on the mask
+            llvm::Value *clampedIndices = op_select(current_mask(), index, wide_constant(0));
+            llvm::Value *result = wide_constant(0);
+            for(int l=0; l < m_vector_width; ++l) {
+                llvm::Value *index_for_lane = op_extract(clampedIndices, l);
+                llvm::Value *wide_address = GEP(ptr, index_for_lane);
+                llvm::Value *wide_val = op_load(wide_address);
+                llvm::Value *val = op_extract(wide_val, l);
+
+                result = op_insert (result, val, l);
+            }
+            return result;
+        }
+    } else if (ptr->getType() == type_ustring_ptr()) {
+
+        if (m_supports_avx512f) {
+            ASSERT(m_vector_width == 16 && "incomplete");
+            // TODO:  Are we guaranteed a 64bit pointer?
+
+            // Gather 64bit integer, as that is binary compatible with 64bit pointers of ustring
+
+            /*  def int_x86_avx512_gather_dpq_512  : GCCBuiltin<"__builtin_ia32_gathersiv8di">,
+              Intrinsic<[llvm_v8i64_ty], [llvm_v8i64_ty, llvm_ptr_ty,
+                     llvm_v8i32_ty, llvm_i8_ty, llvm_i32_ty],
+                    [IntrReadMem, IntrArgMemOnly]>; */
+
+            llvm::Function* func_avx512_gather_dpq = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx512_gather_dpq_512);
+            ASSERT(func_avx512_gather_dpq);
+
+            // We can only gather 8 at a time, so need to split the work over 2 gathers
+            llvm::Constant *zero_vector_value = llvm::ConstantVector::getSplat(m_vector_width,llvm::ConstantInt::get (context(), llvm::APInt(32,0)));
+
+            // Convert <16 x i1> -> <16 x i32> -> to <2 x< 8 x i32>>
+            llvm::Value * wide_int_mask = builder().CreateSExt(current_mask(), type_wide_int());
+            uint32_t extractLanes0_to_7[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+            uint32_t extractLanes8_to_15[] = { 8, 9, 10, 11, 12, 13, 14, 15 };
+
+            llvm::Value * mask8_1 = builder().CreateShuffleVector (current_mask(), current_mask(), makeArrayRef(extractLanes0_to_7, std::extent<decltype(extractLanes0_to_7)>::value));
+            llvm::Value * mask8_2 = builder().CreateShuffleVector (current_mask(), current_mask(), makeArrayRef(extractLanes8_to_15, std::extent<decltype(extractLanes8_to_15)>::value));
+            llvm::Value * indices_1 = builder().CreateShuffleVector (index, index, makeArrayRef(extractLanes0_to_7, std::extent<decltype(extractLanes0_to_7)>::value));
+            llvm::Value * indices_2 = builder().CreateShuffleVector (index, index, makeArrayRef(extractLanes8_to_15, std::extent<decltype(extractLanes8_to_15)>::value));
+
+            llvm::Value *unmasked_value = builder().CreateVectorSplat(8,constant64(0));
+            llvm::Value *args[] = {
+                unmasked_value,
+                void_ptr(ptr),
+                indices_1,
+                mask_as_int8(mask8_1),
+                constant(8)
+            };
+            llvm::Value *gather1 = builder().CreateCall (func_avx512_gather_dpq, llvm::ArrayRef<llvm::Value*>(args, std::extent<decltype(args)>::value));
+            args[2] = indices_2;
+            args[3] = mask_as_int8(mask8_2);
+            llvm::Value *gather2 = builder().CreateCall (func_avx512_gather_dpq, llvm::ArrayRef<llvm::Value*>(args, std::extent<decltype(args)>::value));
+
+            uint32_t combineIndices[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+            llvm::Value *combined16xi64 = builder().CreateShuffleVector (gather1, gather2, makeArrayRef(combineIndices, std::extent<decltype(combineIndices)>::value));
+            return builder().CreateIntToPtr(combined16xi64, type_wide_string());
+
+
+        } else {
+            // AVX2 case falls through to here, choose not to specialize and use
+            // generic code gen as 4 AVX2 gathers would be required
+
+            // To avoid loading masked off lanes,
+            // rather than add a bunch of branches to skip loading of lanes,
+            // we assume accessing index 0 is legal and in bounds
+            // and select the index and 0 based on the mask
+            llvm::Value *result = wide_constant(OIIO::ustring());
+            llvm::Value *clampedIndices = op_select(current_mask(), index, wide_constant(0));
+            for(int l=0; l < m_vector_width; ++l) {
+                llvm::Value *index_for_lane = op_extract(clampedIndices, l);
+                llvm::Value *address = GEP(ptr, index_for_lane);
+                llvm::Value * val = op_load(address);
+
+                result = op_insert (result, val, l);
+            }
+            return result;
+        }
+    } else if (ptr->getType() == llvm::PointerType::get(type_wide_string(),0)) {
+        if (m_supports_avx512f) {
+
+            llvm::Value *strided_indices = op_mul (index, wide_constant(static_cast<int>(m_vector_width)));
+
+            llvm::Constant *offsets_to_lane[16] = {
+                llvm::ConstantInt::get (context(), llvm::APInt(32,0)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,1)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,2)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,3)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,4)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,5)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,6)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,7)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,8)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,9)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,10)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,11)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,12)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,13)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,14)),
+                llvm::ConstantInt::get (context(), llvm::APInt(32,15)),
+            };
+            llvm::Value *const_vec_offsets = llvm::ConstantVector::get(ArrayRef< Constant *>(&offsets_to_lane[0], 16));
+
+            llvm::Value * final_indices = op_add (strided_indices, const_vec_offsets);
+
+#if 0
+            /*   def int_x86_avx512_gather_dpi_512  : GCCBuiltin<"__builtin_ia32_gathersiv16si">,
+              Intrinsic<[llvm_v16i32_ty], [llvm_v16i32_ty, llvm_ptr_ty,
+                         llvm_v16i32_ty, llvm_i16_ty, llvm_i32_ty],
+                        [IntrReadMem, IntrArgMemOnly]>; */
+
+            llvm::Function* func_avx512_gather_pi = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx512_gather_dpi_512);
+            ASSERT(func_avx512_gather_pi);
+
+            llvm::Value *unmasked_value = wide_constant(0);
+            llvm::Value *args[] = {
+                unmasked_value,
+                void_ptr(ptr),
+                final_indices,
+                mask_as_int16(current_mask()),
+                constant(4)
+            };
+            return builder().CreateCall (func_avx512_gather_pi, llvm::ArrayRef<llvm::Value*>(args, std::extent<decltype(args)>::value));
+#endif
+            // Gather 64bit integer, as that is binary compatible with 64bit pointers of ustring
+
+            /*  def int_x86_avx512_gather_dpq_512  : GCCBuiltin<"__builtin_ia32_gathersiv8di">,
+              Intrinsic<[llvm_v8i64_ty], [llvm_v8i64_ty, llvm_ptr_ty,
+                     llvm_v8i32_ty, llvm_i8_ty, llvm_i32_ty],
+                    [IntrReadMem, IntrArgMemOnly]>; */
+
+            llvm::Function* func_avx512_gather_dpq = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx512_gather_dpq_512);
+            ASSERT(func_avx512_gather_dpq);
+
+            // We can only gather 8 at a time, so need to split the work over 2 gathers
+            llvm::Constant *zero_vector_value = llvm::ConstantVector::getSplat(m_vector_width,llvm::ConstantInt::get (context(), llvm::APInt(32,0)));
+
+            // Convert <16 x i1> -> <16 x i32> -> to <2 x< 8 x i32>>
+            llvm::Value * wide_int_mask = builder().CreateSExt(current_mask(), type_wide_int());
+            uint32_t extractLanes0_to_7[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+            uint32_t extractLanes8_to_15[] = { 8, 9, 10, 11, 12, 13, 14, 15 };
+
+            llvm::Value * mask8_1 = builder().CreateShuffleVector (current_mask(), current_mask(), makeArrayRef(extractLanes0_to_7, std::extent<decltype(extractLanes0_to_7)>::value));
+            llvm::Value * mask8_2 = builder().CreateShuffleVector (current_mask(), current_mask(), makeArrayRef(extractLanes8_to_15, std::extent<decltype(extractLanes8_to_15)>::value));
+            llvm::Value * indices_1 = builder().CreateShuffleVector (final_indices, final_indices, makeArrayRef(extractLanes0_to_7, std::extent<decltype(extractLanes0_to_7)>::value));
+            llvm::Value * indices_2 = builder().CreateShuffleVector (final_indices, final_indices, makeArrayRef(extractLanes8_to_15, std::extent<decltype(extractLanes8_to_15)>::value));
+
+            llvm::Value *unmasked_value = builder().CreateVectorSplat(8,constant64(0));
+            llvm::Value *args[] = {
+                unmasked_value,
+                void_ptr(ptr),
+                indices_1,
+                mask_as_int8(mask8_1),
+                constant(8)
+            };
+            llvm::Value *gather1 = builder().CreateCall (func_avx512_gather_dpq, llvm::ArrayRef<llvm::Value*>(args, std::extent<decltype(args)>::value));
+            args[2] = indices_2;
+            args[3] = mask_as_int8(mask8_2);
+            llvm::Value *gather2 = builder().CreateCall (func_avx512_gather_dpq, llvm::ArrayRef<llvm::Value*>(args, std::extent<decltype(args)>::value));
+
+            uint32_t combineIndices[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+            llvm::Value *combined16xi64 = builder().CreateShuffleVector (gather1, gather2, makeArrayRef(combineIndices, std::extent<decltype(combineIndices)>::value));
+            return builder().CreateIntToPtr(combined16xi64, type_wide_string());
+
+        } else {
+            // AVX2 case falls through to here, choose not to specialize and use
+            // generic code gen as 4 AVX2 gathers would be required
+
+            // To avoid loading masked off lanes,
+            // rather than add a bunch of branches to skip loading of lanes,
+            // we assume accessing index 0 is legal and in bounds
+            // and select the index and 0 based on the mask
+            llvm::Value *clampedIndices = op_select(current_mask(), index, wide_constant(0));
+            llvm::Value *result = wide_constant(OIIO::ustring());
+            for(int l=0; l < m_vector_width; ++l) {
+                llvm::Value *index_for_lane = op_extract(clampedIndices, l);
+                llvm::Value *wide_address = GEP(ptr, index_for_lane);
+                llvm::Value *wide_val = op_load(wide_address);
+                llvm::Value *val = op_extract(wide_val, l);
+
+                result = op_insert (result, val, l);
+            }
+            return result;
+        }
+
+    } else {
+
+        std::cout << "ptr->getType() = " <<
+        llvm_typenameof(ptr) <<
+        std::endl;
+
+        ASSERT(0 && "incomplete for all but i32 & f32 types");
+    }
+}
 
 void
 LLVM_Util::push_mask(llvm::Value *mask, bool negate, bool absolute)
@@ -3536,6 +4155,12 @@ llvm::Value *
 LLVM_Util::op_extract (llvm::Value *a, llvm::Value *index)
 {
     return builder().CreateExtractElement (a, index);
+}
+
+llvm::Value *
+LLVM_Util::op_insert (llvm::Value *v, llvm::Value *a, int index)
+{
+    return builder().CreateInsertElement (v, a, index);
 }
 
 

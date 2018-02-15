@@ -1,0 +1,19 @@
+shader
+test_uniform_index_varying_int (output color Cout = color(0,0,0))
+{
+    // Test array referencing with varying index
+    int rarray[3] = { int(10*u), 20, 30 };
+    int garray[3] = { 20, int(40*P[0]), int(60*P[1]) };
+    int barray[3] = { 30, 50, int(80*v) };
+    
+    // Using getattribute to obtain a uniform, but non-const index    
+    int res[2];
+    getattribute("camera:resolution", res);
+    int uniformIndex = res[0]%3;
+    
+    int indirectR = rarray[uniformIndex];
+    int indirectG = garray[uniformIndex];
+    int indirectB = barray[uniformIndex];
+    
+    Cout = color(indirectR/100.0,indirectG/100.0,indirectB/100.0);
+}

@@ -1,0 +1,15 @@
+shader
+test_varying_index_int (output color Cout = color(0,0,0))
+{
+    // Test array referencing with varying index
+    int rarray[3] = { 1, 2, 3 };
+    int garray[3] = { 2, 4, 6 };
+    int barray[3] = { 3, 5, 8 };
+    
+    int varyingIndex = int(clamp(P[0]*3, 0, 2));
+    int indirectR = rarray[varyingIndex];
+    int indirectG = garray[varyingIndex];
+    int indirectB = barray[varyingIndex];
+    
+    Cout = color(indirectR/10.0,indirectG/10.0,indirectB/10.0);
+}

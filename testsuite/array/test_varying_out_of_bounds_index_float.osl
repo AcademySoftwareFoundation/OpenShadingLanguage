@@ -1,0 +1,25 @@
+shader
+test_varying_out_of_bounds_index_float (output color Cout = color(0,0,0))
+{
+    // Test array referencing with varying index
+    float rarray[3] = { 0.1, 0.2, 0.3 };
+    float garray[3] = { 0.2, 0.4, 0.6 };
+    float barray[3] = { 0.3, 0.5, 0.8 };
+    
+    // out of bounds, should segfault if accessed accidentally
+    int varyingIndex = 2000000000;
+
+    float indirectR = 1;
+    float indirectG = 1;
+    float indirectB = 1;
+    
+    if (int(P[0]*256)%2 == 0) {
+        varyingIndex = int(clamp(P[0]*3, 0, 2));
+    
+        indirectR = rarray[varyingIndex];
+        indirectG = garray[varyingIndex];
+        indirectB = barray[varyingIndex];
+    }
+    
+    Cout = color(indirectR,indirectG,float(varyingIndex));
+}

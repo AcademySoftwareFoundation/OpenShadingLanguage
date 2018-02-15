@@ -1,0 +1,11 @@
+shader
+test_varying_index_color (output color Cout = color(0,0,0))
+{
+    // Test array referencing with varying index
+    color carray[3] = { color(.1,.2,.3), 0.2, color(.3,.3,.3) };
+    
+    int varyingIndex = int(clamp(P[0]*3, 0, 2));
+    color indirectC = carray[varyingIndex];
+    
+    Cout = indirectC;    
+}

@@ -475,7 +475,7 @@ DECL (osl_smoothstep_w16dfw16fw16dfw16f_masked, "xXXXXi")
 // DECL (osl_transformv_dvmdv, "xXXX")
 // DECL (osl_transformn_vmv, "xXXX")
 // DECL (osl_transformn_dvmdv, "xXXX")
-// DECL (osl_transform_point_vw16vw16m_masked, "xXXXii")
+DECL (osl_transform_point_vw16vw16m_masked, "xXXXii")
 DECL (osl_transform_point_w16vw16vw16m_masked, "xXXXii")
 DECL (osl_transform_point_w16dvw16dvw16m_masked, "xXXXii")
 

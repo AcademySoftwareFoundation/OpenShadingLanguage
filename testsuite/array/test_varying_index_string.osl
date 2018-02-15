@@ -1,0 +1,52 @@
+float power_of_2_string_to_float(string val) 
+{
+    if (val == "256") {
+        return 256/256.0;
+    }
+    if (val == "128") {
+        return 128/256.0;
+    }
+    if (val == "64") {
+        return 64/256.0;
+    }
+    if (val == "32") {
+        return 32/256.0;
+    }
+    if (val == "16") {
+        return 16/256.0;
+    }
+    if (val == "8") {
+        return 8/256.0;
+    }
+    if (val == "4") {
+        return 4/256.0;
+    }
+    if (val == "2") {
+        return 2/256.0;
+    }
+    if (val == "1") {
+        return 1/256.0;
+    }
+    return 0;
+ }
+
+
+shader
+test_varying_index_string (output color Cout = color(0,0,0))
+{
+    // Test array referencing with varying index
+    string rarray[3] = { "2", "4", "8" };
+    string garray[3] = { "16", "32", "64" };
+    string barray[3] = { "128", "256", "1" };
+    
+    int varyingIndexR = int(clamp(P[0]*3, 0, 2));
+    int varyingIndexG = int(P[0]*256)%3;
+    int varyingIndexB = int(P[0]*64)%3;
+    string indirectR = rarray[varyingIndexR];
+    string indirectG = garray[varyingIndexG];
+    string indirectB = barray[varyingIndexB];
+    
+    Cout[0] = power_of_2_string_to_float(indirectR);
+    Cout[1] = power_of_2_string_to_float(indirectG);
+    Cout[2] = power_of_2_string_to_float(indirectB);
+}

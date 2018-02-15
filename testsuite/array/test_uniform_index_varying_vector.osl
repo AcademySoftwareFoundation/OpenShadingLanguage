@@ -1,0 +1,14 @@
+shader
+test_uniform_index_varying_vector (output color Cout = color(0,0,0))
+{
+    // Test array referencing with varying index
+    vector varray[3] = { vector(.1,u,.3), P[0]+P[1], vector(.3,.3,v) };
+    
+    // Using getattribute to obtain a uniform, but non-const index    
+    int res[2];
+    getattribute("camera:resolution", res);
+    int uniformIndex = res[0]%3;
+    vector indirectV = varray[uniformIndex];
+    
+    Cout = indirectV;
+}

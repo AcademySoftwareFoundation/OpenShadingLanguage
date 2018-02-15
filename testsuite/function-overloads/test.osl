@@ -145,6 +145,17 @@ void structreturn() { printf("structreturn.void\n"); }
 void structreturn1() { printf("structreturn1.void\n"); }
 A structreturn1() { printf("structreturn1.struct\n"); A a; return a; }
 
+struct B { float b; };
+
+void aaa(A a, float b)  { printf("aaa.Afloat\n"); }
+void aaa(B b, int c)    { printf("aaa.Bint\n"); }
+
+void bbb(B b, int c)    { printf("bbb.Bint\n"); }
+void bbb(A a, float b)  { printf("bbb.Afloat\n"); }
+
+void ccc(A a, int b)    { printf("ccc.Aint\n"); }
+void ccc(B b, float c)  { printf("ccc.Bfloat\n"); }
+
 shader test ()
 {
   {
@@ -223,6 +234,16 @@ shader test ()
     ccreturn();
     structreturn();
     structreturn1();
+    printf("\n");
+  }
+
+  {
+    aaa({1}, 1);
+    aaa({1}, 1.0);
+    bbb({1}, 1);
+    bbb({1}, 1.0);
+    ccc({1}, 1);
+    ccc({1}, 1.0);
     printf("\n");
   }
 }

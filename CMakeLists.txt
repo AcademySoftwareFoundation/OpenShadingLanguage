@@ -235,8 +235,8 @@ endmacro ()
 if (OSL_BUILD_TESTS)
 # List all the individual testsuite tests here, except those that need
 # special installed tests.
-TESTSUITE ( aastep allowconnect-err and-or-not-synonyms
-            arithmetic array array-derivs array-range
+TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
+            array array-derivs array-range array-aassign
             blackbody blendmath breakcont
             bug-array-heapoffsets
             bug-locallifetime bug-outputinit bug-param-duplicate bug-peep
@@ -256,7 +256,7 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms
             getsymbol-nonheap gettextureinfo
             group-outputs groupstring
             hash hashnoise hex hyperb
-            ieee_fp if incdec initops intbits isconnected isconstant
+            ieee_fp if incdec initlist initops intbits isconnected isconstant
             layers layers-Ciassign layers-entry layers-lazy
             layers-nonlazycopy layers-repeatedoutputs
             linearstep
@@ -272,6 +272,7 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms
             oslc-err-arrayindex oslc-err-closuremul oslc-err-field
             oslc-err-format oslc-err-funcoverload
             oslc-err-intoverflow oslc-err-noreturn oslc-err-notfunc
+            oslc-err-initlist-args oslc-err-initlist-return
             oslc-err-outputparamvararray oslc-err-paramdefault
             oslc-err-struct-array-init oslc-err-struct-ctr
             oslc-err-struct-dup oslc-err-struct-print

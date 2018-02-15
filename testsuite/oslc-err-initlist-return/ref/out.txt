@@ -1,0 +1,8 @@
+test.osl:13: error: Cannot construct float (int, int, int)
+test.osl:13: error: Cannot return a 'unknown' from 'struct bcolor badreturn()'
+test.osl:14: warning: Function 'struct bcolor badreturn ()' redefined in the same scope
+  Previous definitions:
+    test.osl:13
+test.osl:14: error: Cannot return a 'struct acolor' from 'struct bcolor badreturn()'
+test.osl:17: error: Syntax error: syntax error
+FAILED test.osl

@@ -498,6 +498,12 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
       m_isparam(isparam), m_isoutput(isoutput), m_ismetadata(ismeta),
       m_initlist(initlist)
 {
+    if (m_initlist && init) {
+        // Typecheck the init list early.
+        ASSERT (init->nodetype() == compound_initializer_node);
+        static_cast<ASTcompound_initializer*>(init)->typecheck(type);
+    }
+
     m_typespec = type;
     Symbol *f = comp->symtab().clash (name);
     if (f  &&  ! m_ismetadata) {
@@ -868,7 +874,8 @@ ASTreturn_statement::childname (size_t i) const
 
 ASTcompound_initializer::ASTcompound_initializer (OSLCompilerImpl *comp,
                                                   ASTNode *exprlist)
-    : ASTNode (compound_initializer_node, comp, Nothing, exprlist)
+    : ASTtype_constructor (compound_initializer_node, comp, TypeSpec(), exprlist),
+      m_ctor(false)
 {
 }
 
@@ -877,7 +884,7 @@ ASTcompound_initializer::ASTcompound_initializer (OSLCompilerImpl *comp,
 const char *
 ASTcompound_initializer::childname (size_t i) const
 {
-    return "expression_list";
+    return canconstruct() ? "args" : "expression_list";
 }
 
 

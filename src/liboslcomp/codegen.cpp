@@ -461,9 +461,18 @@ ASTreturn_statement::codegen (Symbol *dest)
 
 
 Symbol *
-ASTcompound_initializer::codegen (Symbol *dest)
+ASTcompound_initializer::codegen (Symbol *sym)
 {
-    ASSERT(0 && "compound codegen");
+    if (canconstruct())
+        return ASTtype_constructor::codegen(sym);
+
+    if (m_typespec.is_structure_based()) {
+        if (!sym)
+            sym = m_compiler->make_temporary (m_typespec);
+        return codegen_struct_initializers (initlist(), sym, true /*is_constructor*/);
+    }
+
+	ASSERT(0 && "compound codegen");
     return NULL;
 }
 
@@ -661,7 +670,9 @@ ASTNode::one_default_literal (const Symbol *sym, ASTNode *init,
             float f = lit->floatval();
             out += Strutil::format ("%.8g%s%.8g%s%.8g", f, sep, f, sep, f);
         } else if (init && init->typespec() == type &&
-                   init->nodetype() == ASTNode::type_constructor_node) {
+                   (init->nodetype() == ASTNode::type_constructor_node ||
+                   (init->nodetype() == ASTNode::compound_initializer_node &&
+                   static_cast<ASTcompound_initializer*>(init)->canconstruct()))) {
             ASTtype_constructor *ctr = (ASTtype_constructor *) init;
             ASTNode::ref val = ctr->args();
             float f[3];
@@ -786,7 +797,9 @@ ASTvariable_declaration::param_default_literals (const Symbol *sym,
 
     bool compound = (init && init->nodetype() == compound_initializer_node);
     if (compound) {
-        init = ((ASTcompound_initializer *)init)->initlist().get();
+        compound = !static_cast<ASTcompound_initializer*>(init)->canconstruct();
+        if (compound)
+            init = ((ASTcompound_initializer *)init)->initlist().get();
     }
 
     bool completed = true;  // have we output the full initialization?
@@ -823,12 +836,60 @@ ASTvariable_declaration::codegen_initializer (ref init, Symbol *sym)
         init = ((ASTcompound_initializer *)init.get())->initlist();
         codegen_initlist (init, typespec(), sym);
     } else {
-        if (init->nodetype() == compound_initializer_node)
-            init = ((ASTcompound_initializer *)init.get())->initlist();
+        if (init->nodetype() == compound_initializer_node) {
+            ASTcompound_initializer* cinit = static_cast<ASTcompound_initializer*>(init.get());
+            init = cinit->initlist();
+            if (cinit->canconstruct()) {
+                bool paraminit = (m_compiler->codegen_method() != m_compiler->main_method_name() &&
+                                  (m_sym->symtype() == SymTypeParam ||
+                                   m_sym->symtype() == SymTypeOutputParam));
+                if (paraminit) {
+                    // For parameter initialization, don't really generate ops if it
+                    // can be statically initialized.
+                    m_compiler->codegen_method (sym->name());
+                    sym->initbegin (m_compiler->next_op_label ());
+                }
+
+                Symbol* dest = cinit->codegen(sym);
+                if (dest != sym)
+                    emitcode ("assign", sym, dest);
+
+                if (paraminit)
+                    sym->initend (m_compiler->next_op_label ());
+                return;
+            }
+        }
         codegen_initlist (init, m_typespec, m_sym);
     }
 }
 
+
+Symbol*
+ASTNode::codegen_aassign (TypeSpec elemtype, Symbol *src, Symbol *lval,
+                          Symbol* ind, int i)
+{
+    const TypeSpec& srctype = src->typespec();
+    if (! equivalent (elemtype, srctype)) {
+        // Allow floatarray[ind] = int or intarray[ind] = float, but otherwise
+        // A[ind] = x is only allowed if the type of x is equivalent to that of
+        // A's elements.
+        // You can't for example, do colorarray[ind] = int.
+        if (elemtype.is_closure() || !elemtype.is_scalarnum() ||
+            srctype.is_closure() || !srctype.is_scalarnum()) {
+            //  Convert through a temp.
+            Symbol *tmp = m_compiler->make_temporary (elemtype);
+            emitcode ("assign", tmp, src);
+            src = tmp;
+        }
+    }
+
+    if (!ind)
+        ind = m_compiler->make_constant (i);
+
+    emitcode ("aassign", lval, ind, src);
+
+    return src;
+}
 
 
 void
@@ -863,6 +924,12 @@ ASTNode::codegen_initlist (ref init, TypeSpec type, Symbol *sym)
     }
 
     if (paraminit) {
+        // Warn early about struct array paramters.
+        // Handling this will likely need changes to oso format.
+        if (type.is_structure_array()) {
+            error ("array of struct are not allowed as parameters");
+            return;
+        }
         // For parameter initialization, don't really generate ops if it
         // can be statically initialized.
         m_compiler->codegen_method (sym->name());
@@ -914,10 +981,39 @@ ASTNode::codegen_initlist (ref init, TypeSpec type, Symbol *sym)
             return;
         }
     }
+    else if (type.is_structure_array()) {
+        for (int i = 0; init && i < type.arraylength(); ++i) {
+            ASTNode* expr = init.get();
+            bool ctor = false;
+            Symbol* dest = sym;
+            switch (expr->nodetype()) {
+                case function_call_node: {
+                    ASTfunction_call* fcall = static_cast<ASTfunction_call*>(expr);
+                    if ((ctor = fcall->is_struct_ctr())) {
+                        expr = fcall->args().get();
+                        ASSERT (expr != nullptr);
+                    }
+                }
+                    break;
+                case compound_initializer_node:
+                    ctor = static_cast<ASTcompound_initializer*>(expr)->canconstruct();
+                    break;
+                default:
+                    break;
+            }
+            codegen_struct_initializers (expr, dest, ctor,
+                                         m_compiler->make_constant(i));
+
+            init = init->next();
+        }
+        if (paraminit)
+            sym->initend (m_compiler->next_op_label ());
+        return;
+    }
+    else if (init->nodetype() == compound_initializer_node)
+        init = ((ASTcompound_initializer *)init.get())->initlist();
 
     // Loop over a list of initializers (it's just 1 if not an array)...
-    if (init->nodetype() == compound_initializer_node)
-        init = ((ASTcompound_initializer *)init.get())->initlist();
     for (int i = 0;  init;  init = init->next(), ++i) {
         if (sym->typespec().is_structure() &&
                 init->nodetype() == compound_initializer_node) {
@@ -931,17 +1027,8 @@ ASTNode::codegen_initlist (ref init, TypeSpec type, Symbol *sym)
         if (dest != sym) {
             if (sym->typespec().is_array()) {
                 // Array variable -- assign to the i-th element
-                TypeSpec elemtype = sym->typespec().elementtype();
-                if (! equivalent (elemtype, dest->typespec())) {
-                    // We only allow A[ind] = x if the type of x is
-                    // equivalent to that of A's elements.  You can't,
-                    // for example, do floatarray[ind] = int.  So we 
-                    // convert through a temp.
-                    Symbol *tmp = dest;
-                    dest = m_compiler->make_temporary (elemtype);
-                    emitcode ("assign", dest, tmp);
-                }
-                emitcode ("aassign", sym, m_compiler->make_constant(i), dest);
+                dest = codegen_aassign (sym->typespec().elementtype(), dest,
+                                        sym, nullptr, i);
             } else {
                 // Non-array variable, just a simple assignment
                 emitcode ("assign", sym, dest);
@@ -959,7 +1046,7 @@ ASTNode::codegen_initlist (ref init, TypeSpec type, Symbol *sym)
 
 Symbol *
 ASTNode::codegen_struct_initializers (ref init, Symbol *sym,
-                                      bool is_constructor)
+                                      bool is_constructor, Symbol *arrayindex)
 {
     // If we're doing this initialization for shader params for their
     // init ops, we need to take care to set the codegen method names
@@ -968,21 +1055,21 @@ ASTNode::codegen_struct_initializers (ref init, Symbol *sym,
                       (sym->symtype() == SymTypeParam ||
                        sym->symtype() == SymTypeOutputParam));
 
-    ASSERT (sym->typespec().is_structure());
+    ASSERT (sym->typespec().is_structure_based());
     if (init->nodetype() != compound_initializer_node && !is_constructor) {
         // Just one initializer, it's a whole struct of the right type.
         Symbol *initsym = init->codegen (sym);
         if (initsym != sym) {
             StructSpec *structspec (sym->typespec().structspec());
             codegen_assign_struct (structspec, ustring(sym->mangled()),
-                                   ustring(initsym->mangled()), NULL, true, 0,
-                                   paraminit);
+                                   ustring(initsym->mangled()), arrayindex,
+                                   true, 0, paraminit);
         }
         return sym;
     }
 
     // General case -- per-field initializers
-    if (init->nodetype() == compound_initializer_node) {
+    if (!is_constructor && init->nodetype() == compound_initializer_node) {
         init = ((ASTcompound_initializer *)init.get())->initlist();
     }
     StructSpec *structspec (sym->typespec().structspec());
@@ -992,9 +1079,13 @@ ASTNode::codegen_struct_initializers (ref init, Symbol *sym,
         ustring fieldname = ustring::format ("%s.%s", sym->mangled().c_str(),
                                              field.name.c_str());
         Symbol *fieldsym = m_compiler->symtab().find_exact (fieldname);
-        if (fieldsym->typespec().is_structure()) {
+        if (fieldsym->typespec().is_structure_based() &&
+            (init->nodetype() == type_constructor_node ||
+             init->nodetype() == compound_initializer_node)) {
+            bool ctor = init->nodetype() == type_constructor_node ? true :
+              static_cast<ASTcompound_initializer*>(init.get())->canconstruct();
             // The field is itself a nested struct, so recurse
-            codegen_struct_initializers (init, fieldsym);
+            codegen_struct_initializers (init, fieldsym, ctor, arrayindex);
             continue;
         }
 
@@ -1012,15 +1103,27 @@ ASTNode::codegen_struct_initializers (ref init, Symbol *sym,
             fieldsym->initbegin (m_compiler->next_op_label ());
         }
 
-        if (init->nodetype() == compound_initializer_node) {
+        if (init->nodetype() == compound_initializer_node &&
+            !((ASTcompound_initializer *)init.get())->canconstruct()) {
             // Initialize the field with a compound initializer
             codegen_initlist (((ASTcompound_initializer *)init.get())->initlist(),
                               field.type, fieldsym);
-        } else {
+        } else if (init->nodetype() == function_call_node &&
+                   static_cast<ASTfunction_call*>(init.get())->is_struct_ctr()) {
+            codegen_struct_initializers (static_cast<ASTfunction_call*>(init.get())->args(),
+                                         fieldsym, true, arrayindex);
+        }
+        else {
             // Initialize the field with a scalar initializer
             Symbol *dest = init->codegen (fieldsym);
-            if (dest != fieldsym)
-                emitcode ("assign", fieldsym, dest);
+            if (dest != fieldsym) {
+                if (!arrayindex)
+                    emitcode ("assign", fieldsym, dest);
+                else {
+                    dest = codegen_aassign (fieldsym->typespec().elementtype(),
+                                            dest, fieldsym, arrayindex);
+                }
+            }
         }
 
         if (paraminit)
@@ -1177,19 +1280,8 @@ ASTindex::codegen_assign (Symbol *src, Symbol *ind,
             emitcode ("compassign", temp, ind2, src);
             emitcode ("aassign", lv, ind, temp);
         }
-        else if (! equivalent (elemtype, src->typespec())) {
-            // Type conversion, e.g., colorarray[i] = float or 
-            //    floatarray[i] = int
-            // We only allow A[ind] = x if the type of x is equivalent
-            // to that of A's elements.  You can't, for example, do
-            // floatarray[ind] = int.  So we convert through a temp.
-            Symbol *tmp = src;
-            src = m_compiler->make_temporary (elemtype);
-            emitcode ("assign", src, tmp);
-            emitcode ("aassign", lv, ind, src);
-        } else {
-            // Simple Xarray[i] = X
-            emitcode ("aassign", lv, ind, src);
+        else {
+            src = codegen_aassign (elemtype, src, lv, ind);
         }
     } else if (lv->typespec().is_triple()) {
         emitcode ("compassign", lv, ind, src);
@@ -1734,6 +1826,7 @@ ASTfunction_call::codegen (Symbol *dest)
                 // alias each of the fields
                 if (a->nodetype() == variable_ref_node ||
                     a->nodetype() == function_call_node ||
+                    a->nodetype() == compound_initializer_node ||
                     a->nodetype() == binary_expression_node ||
                     a->nodetype() == unary_expression_node) {
                     // Passed a variable that is a struct ; make the struct

@@ -1,0 +1,18 @@
+// Test assigning to float from int without temporary works properly.
+// Should really validate the generated oso too.
+
+struct nested {
+    float  fa[3];
+};
+
+shader test()
+{
+    int ival = 2;
+    float f[4];
+    f[0] = ival++;
+    printf("f[0]: %f\n", f[0]);
+
+    nested n;
+    n.fa[0] = ++ival;
+    printf("n.fa[0]: %f\n", n.fa[0]);
+}

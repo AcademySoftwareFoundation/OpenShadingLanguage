@@ -300,7 +300,8 @@ protected:
     /// Type check a list (whose head is given by 'arg' against the list
     /// of expected types given in encoded form by 'formals'.
     bool check_arglist (const char *funcname, ref arg,
-                        const char *formals, bool coerce=false);
+                        const char *formals, bool coerce=false,
+                        bool bind = true);
 
     /// Follow a list of nodes, generating code for each in turn, and return
     /// the Symbol* for the last thing generated.
@@ -346,25 +347,23 @@ protected:
                                 bool copywholearrays, int intindex,
                                 bool paraminit);
 
-    // Helper: type check an initializer list -- either a single item to
-    // a scalar, or a list to an array.
-    void typecheck_initlist (ref init, TypeSpec type, string_view name);
-
     // Helper: generate code for an initializer list -- either a single
     // item to a scalar, or a list to an array.
     void codegen_initlist (ref init, TypeSpec type, Symbol *sym);
-
-    // Special type checking for structure member initializers.
-    // It's in the ASTNode base class because it's used from mutiple
-    // subclasses.
-    TypeSpec typecheck_struct_initializers (ref init, TypeSpec type,
-                                            string_view name);
 
     // Special code generation for structure initializers.
     // It's in the ASTNode base class because it's used from mutiple
     // subclasses.
     Symbol *codegen_struct_initializers (ref init, Symbol *sym,
-                                         bool is_constructor=false);
+                                         bool is_constructor=false,
+                                         Symbol *arrayindex = nullptr);
+
+    // Codegen an array assignemnt: lval[index] = src
+    // If no index is provided the constant i is used.
+    // Will return either src or a temporary that was codegened.
+	Symbol*
+	codegen_aassign (TypeSpec elemtype, Symbol *src, Symbol *lval,
+                     Symbol* index, int i = 0);
 
     // Helper for param_default_literals: generate the string that gives
     // the initialization of the literal value (and/or the default, if
@@ -707,8 +706,41 @@ public:
 
 
 
-class ASTcompound_initializer : public ASTNode
+class ASTtype_constructor : public ASTNode
 {
+protected:
+    ASTtype_constructor (NodeType n, OSLCompilerImpl *c, TypeSpec t, ASTNode *a)
+        : ASTNode (n, c, Nothing, a) { m_typespec = t; }
+
+public:
+    ASTtype_constructor (OSLCompilerImpl *comp, TypeSpec typespec,
+                         ASTNode *args)
+        : ASTtype_constructor (type_constructor_node, comp, typespec, args) {}
+
+    const char *nodetypename () const { return "type_constructor"; }
+    const char *childname (size_t i) const;
+    Symbol *codegen (Symbol *dest = NULL);
+
+    ref args () const { return child (0); }
+
+    // Typecheck construction of expected against args()
+    // Optionally ignoring errors and binding any init-list arguments to the
+    // required type.
+    TypeSpec typecheck (TypeSpec expected, bool error, bool bind = true);
+
+    // Typecheck construction of m_typespec against args()
+    TypeSpec typecheck (TypeSpec expected) {
+        return typecheck (m_typespec, true, true);
+    }
+};
+
+
+class ASTcompound_initializer : public ASTtype_constructor
+{
+    bool m_ctor;
+
+    TypeSpec typecheck (TypeSpec expected, unsigned mode);
+
 public:
     ASTcompound_initializer (OSLCompilerImpl *comp, ASTNode *exprlist);
     const char *nodetypename () const { return "compound_initializer"; }
@@ -716,6 +748,16 @@ public:
     Symbol *codegen (Symbol *dest = NULL);
 
     ref initlist () const { return child (0); }
+
+    bool canconstruct() const { return m_ctor; }
+    void canconstruct(bool b) { m_ctor = b; }
+
+    TypeSpec typecheck (TypeSpec expected) {
+        return typecheck(expected, 0);
+    }
+
+    // Helper for typechecking an initlist or structure.
+    class TypeAdjuster;
 };
 
 
@@ -836,26 +878,6 @@ public:
     Symbol *codegen (Symbol *dest = NULL);
 
     ref expr () const { return child (0); }
-};
-
-
-
-class ASTtype_constructor : public ASTNode
-{
-public:
-    ASTtype_constructor (OSLCompilerImpl *comp, TypeSpec typespec,
-                         ASTNode *args)
-        : ASTNode (type_constructor_node, comp, 0, args)
-    {
-        m_typespec = typespec;
-    }
-
-    const char *nodetypename () const { return "type_constructor"; }
-    const char *childname (size_t i) const;
-    TypeSpec typecheck (TypeSpec expected);
-    Symbol *codegen (Symbol *dest = NULL);
-
-    ref args () const { return child (0); }
 };
 
 

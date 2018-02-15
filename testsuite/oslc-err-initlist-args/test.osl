@@ -1,0 +1,75 @@
+
+struct acolor {
+    float a;
+    color rgb;
+};
+
+struct bcolor {
+    color rgb;
+    float a;
+};
+
+void colorvalue(acolor a) {}
+
+void colorvalue(bcolor b) {}
+
+void failifnota(acolor a) {}
+
+
+// No float a, b, c; ???
+struct A { float a; float b; float c; };
+struct B { float a; float b; float c; };
+struct C { float a; float b; float c; float d; };
+struct D { float a; float b; float c; float d; };
+
+void aaa(A a, float b)  { printf("A.1\n"); }
+void aaa(B b, int c)    { printf("B.1\n"); }
+
+void bbb(B b, int c)    { printf("B.2\n"); }
+void bbb(A a, float b)  { printf("A.2\n"); }
+
+void ccc(A a, int b)    { printf("A.3\n"); }
+void ccc(B b, float c)  { printf("B.3\n"); }
+
+void ddd(A a, int b)    { printf("A.4\n"); }
+void ddd(B b, int c)    { printf("B.4\n"); }
+
+float eee(A a, int b)    { printf("A.5\n"); return 1; }
+void  eee(B b, int c)    { printf("B.5\n"); }
+
+void fff(A a) {}
+void fff(point p) {}
+
+void ggg(C c) {}
+float ggg(D d) { return 0; }
+
+float noise(A a)        { return 1; }
+float noise(C a)        { return 1; }
+
+shader test()
+{
+    // Failures
+    failifnota({6,7,8});
+    failifnota({ {6,7,8}, 5 });
+    ddd({1,2,3}, 1);
+    eee({1,2,3}, 1);
+    noise({1,2,3});
+    fff({1,2,3});
+    ggg({1,2,3,4});
+
+    // Success
+    colorvalue({ 1, {2,3,4} });
+	colorvalue({ {6,7,8}, 5 });
+	failifnota({ 1, {2,3,4} });
+
+    aaa({1,2,3}, 1);
+    aaa({1,2,3}, 1.0);
+    bbb({1,2,3}, 1);
+    bbb({1,2,3}, 1.0);
+    ccc({1,2,3}, 1);
+    ccc({1,2,3}, 1.0);
+    (float) eee({1,2,3}, 1);
+    (float) ggg({1,2,3,4});
+    noise({1,2,3,4});
+}
+

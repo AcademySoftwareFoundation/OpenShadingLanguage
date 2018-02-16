@@ -100,7 +100,7 @@ public:
 
     /// Error reporting
     template<typename... Args>
-    void error (string_view filename, int line,
+    void error (ustring filename, int line,
                 string_view format, const Args&... args) const
     {
         ASSERT (format.size());
@@ -116,10 +116,12 @@ public:
 
     /// Warning reporting
     template<typename... Args>
-    void warning (string_view filename, int line,
+    void warning (ustring filename, int line,
                   string_view format, const Args&... args) const
     {
         ASSERT (format.size());
+        if (nowarn(filename, line))
+            return;    // skip if the filename/line is on the nowarn list
         std::string msg = OIIO::Strutil::format (format, args...);
         if (msg.size() && msg.back() == '\n')  // trim extra newline
             msg.pop_back();
@@ -135,7 +137,7 @@ public:
 
     /// Info reporting
     template<typename... Args>
-    void info (string_view filename, int line,
+    void info (ustring filename, int line,
                   string_view format, const Args&... args) const
     {
         ASSERT (format.size());
@@ -150,7 +152,7 @@ public:
 
     /// message reporting
     template<typename... Args>
-    void message (string_view filename, int line,
+    void message (ustring filename, int line,
                   string_view format, const Args&... args) const
     {
         ASSERT (format.size());
@@ -379,6 +381,16 @@ public:
         m_func_decls.emplace_back (f);
     }
 
+    // Add a pragma nowarn for the following line
+    void pragma_nowarn () {
+        m_nowarn_lines.insert ({filename(), lineno()+1});
+    }
+
+    // Is the line amont
+    bool nowarn (ustring filename, int line) const {
+        return m_nowarn_lines.find({filename, line}) != m_nowarn_lines.end();
+    }
+
 private:
     void initialize_globals ();
     void initialize_builtin_funcs ();
@@ -477,6 +489,7 @@ private:
     Symbol *m_derivsym;       ///< Pseudo-symbol to track deriv dependencies
     int m_main_method_start;  ///< Instruction where 'main' starts
     bool m_declaring_shader_formals; ///< Are we declaring shader formals?
+    std::set<std::pair<ustring,int>> m_nowarn_lines;  ///< Lines for 'nowarn'
 };
 
 

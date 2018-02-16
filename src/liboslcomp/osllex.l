@@ -306,8 +306,18 @@ preprocess (const char *yytext)
         p++;
     if (! strncmp (p, "pragma", 6)) {
         // pragma
-        oslcompiler->error (oslcompiler->filename(), oslcompiler->lineno(),
-                            "Unknown pragma '%s'", p);
+        OIIO::string_view line (p+6);
+        string_view pragmatype = OIIO::Strutil::parse_word (line);
+        if (OIIO::Strutil::iequals (pragmatype, "osl")) {
+            string_view pragmaname = OIIO::Strutil::parse_word (line);
+            if (pragmaname == "nowarn") {
+                oslcompiler->pragma_nowarn ();
+            } else {
+                oslcompiler->warning (oslcompiler->filename(), oslcompiler->lineno(),
+                                      "Unknown pragma '%s'", pragmaname);
+            }
+        }
+        // N.B. Pragmas that don't start with "osl" are ignored
         oslcompiler->incr_lineno();  // the pragma ends with an EOLN
     } else {  /* probably the line number and filename */
         if (! strncmp (p, "line", 4))

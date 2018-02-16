@@ -1605,15 +1605,11 @@ class CandidateFunctions {
         return argscore;
     }
 
-    void candidateHeader(const char* msg) const {
-        m_compiler->errhandler().message("  %s:\n", msg);
-    }
-
 public:
-    CandidateFunctions(OSLCompilerImpl* compiler, TypeSpec rval, ASTNode::ref args,
-                       FunctionSymbol* func) :
-        m_compiler(compiler), m_rval(rval), m_args(args), m_nargs(0),
-        m_called(func), m_had_initlist(false) {
+    CandidateFunctions(OSLCompilerImpl* compiler, TypeSpec rval,
+                       ASTNode::ref args, FunctionSymbol* func)
+        : m_compiler(compiler), m_rval(rval), m_args(args), m_nargs(0),
+          m_called(func), m_had_initlist(false) {
 
         //std::cerr << "Matching " << func->name() << " formals='" << (rval.simpletype().basetype != TypeDesc::UNKNOWN ?  compiler->code_from_type (rval) : " ");
         for (ASTNode::ref arg = m_args; arg; arg = arg->next()) {
@@ -1630,46 +1626,37 @@ public:
         }
     }
 
-    void reportAmbiguity(ASTNode* caller, const ustring& funcname,
-                         bool candidateMsg = true,
-                         const char* msg = "No matching function call to",
-                         bool asWarning = true, bool showArgs = true) const {
+    std::string reportAmbiguity (ustring funcname, bool candidateMsg,
+                                 string_view msg) const {
         std::string argstr = funcname.string();
-        if (showArgs) {
-            argstr += " (";
-            const char *comma = "";
-            for (ASTNode::ref arg = m_args; arg; arg = arg->next()) {
-                argstr += comma;
-                if (arg->typespec().simpletype().is_unknown() &&
-                    arg->nodetype() == ASTNode::compound_initializer_node) {
-                    argstr += "initializer-list";
-                } else
-                    argstr += arg->typespec().string();
-                comma = ", ";
+        argstr += " (";
+        const char *comma = "";
+        for (ASTNode::ref arg = m_args; arg; arg = arg->next()) {
+            argstr += comma;
+            if (arg->typespec().simpletype().is_unknown() &&
+                  arg->nodetype() == ASTNode::compound_initializer_node) {
+                argstr += "initializer-list";
+            } else {
+                argstr += arg->typespec().string();
             }
-            argstr += ")";
+            comma = ", ";
         }
-        asWarning ? caller->warning ("%s '%s'", msg, argstr)
-                  : caller->error ("%s '%s'", msg, argstr);
-        if (candidateMsg)
-            candidateHeader("Candidates are");
+        argstr += ")";
+        return Strutil::format ("%s '%s'%s\n", msg, argstr,
+                                candidateMsg ? "\n  Candidates are:" : "");
     }
 
-    void reportFunction(FunctionSymbol* sym) const {
+    std::string reportFunction (FunctionSymbol* sym) const {
         int advance;
         const char *formals = sym->argcodes().c_str();
         TypeSpec returntype = m_compiler->type_from_code (formals, &advance);
         formals += advance;
-
-        auto& errh =  m_compiler->errhandler();
-        errh.message("    ");
-
+        std::string msg = "    ";
         if (ASTNode* decl = sym->node())
-            errh.message("%s:%d\t", decl->sourcefile(), decl->sourceline());
-
-        errh.message("%s %s (%s)\n", m_compiler->type_c_str(returntype),
-                     sym->name(),
-                     m_compiler->typelist_from_code(formals).c_str());
+            msg += Strutil::format("%s:%d\t", decl->sourcefile(), decl->sourceline());
+        msg += Strutil::format("%s %s (%s)\n", m_compiler->type_c_str(returntype),
+                               sym->name(), m_compiler->typelist_from_code(formals));
+        return msg;
     }
 
     std::pair<FunctionSymbol*, TypeSpec>
@@ -1680,21 +1667,20 @@ public:
         auto best = [](Candidate* c) -> std::pair<FunctionSymbol*, TypeSpec> {
             for (auto&& t : c->bindings)
                 t.second.bind();
-            return {c->sym, c->rtype };
+            return { c->sym, c->rtype };
         };
 
+        std::string errmsg;
         switch (m_candidates.size()) {
             case 0:
                 // Nothing at all, Error
                 // If m_called is 0, then user tried to call an undefined func.
                 // Might be nice to fuzzy match funcname against m_compiler->symtab()
-                reportAmbiguity(caller, funcname,
-                                m_called != nullptr /*Candidate Msg?*/,
-                                "No matching function call to",
-                                false /*As warning*/);
+                errmsg = reportAmbiguity (funcname, m_called != nullptr /*Candidate Msg?*/,
+                                          "No matching function call to");
                 for (FunctionSymbol* f = m_called; f; f = f->nextpoly())
-                    reportFunction(f);
-
+                    errmsg += reportFunction (f);
+                caller->error ("%s", errmsg);
                 return { nullptr, TypeSpec() };
 
             case 1: // Success
@@ -1717,7 +1703,6 @@ public:
         ASSERT (c.first && c.first->sym);
 
         if (ambiguity != -1) {
-
             unsigned userstructs = 0;
 
             auto rank = [&userstructs] (const TypeSpec& s) -> int {
@@ -1751,7 +1736,7 @@ public:
                 }
                 if (s.is_void())
                     return 10;
-                
+
                 ASSERT (0 && "Unranked type");
                 return std::numeric_limits<int>::max();
             };
@@ -1812,20 +1797,20 @@ public:
                 }
             }
 
-            reportAmbiguity(caller, funcname, !warn /* "Candidates are" msg*/,
-                            "Ambiguous call to", warn /* As warning */);
+            std::string errmsg = reportAmbiguity (funcname, !warn /* "Candidates are" msg*/,
+                                                  "Ambiguous call to");
             if (warn) {
-                candidateHeader("Chosen function is");
-                reportFunction(c.first->sym);
-
-                candidateHeader("Other candidates are");
-                for (auto& candidate : m_candidates) {
+                errmsg += Strutil::format ("  Chosen function is:\n%s",
+                                           reportFunction (c.first->sym));
+                errmsg += "  Other candidates are:\n";
+                for (auto& candidate : m_candidates)
                     if (candidate.sym != c.first->sym)
-                        reportFunction(candidate.sym);
-                }
+                        errmsg += reportFunction (candidate.sym);
+                caller->warning ("%s", errmsg);
             } else {
                 for (auto& candidate : m_candidates)
-                    reportFunction(candidate.sym);
+                    errmsg += reportFunction (candidate.sym);
+                caller->error ("%s", errmsg);
             }
         }
 
@@ -1964,23 +1949,29 @@ ASTfunction_call::typecheck (TypeSpec expected)
     // Check resolution against prior versions of OSL.
     // Skip the check if any arguments used initializer list syntax.
     static const char* OSL_LEGACY = ::getenv("OSL_LEGACY_FUNCTION_RESOLUTION");
-    if (candidates.hadinitlist() && OSL_LEGACY && strcmp(OSL_LEGACY, "0")) {
+    if (!candidates.hadinitlist() && OSL_LEGACY && strcmp(OSL_LEGACY, "0")) {
         auto* legacy = LegacyOverload(m_compiler, this, poly,
                                    &ASTfunction_call::check_arglist)(expected);
         if (m_sym != legacy) {
-            Strutil::iequals(OSL_LEGACY, "err")
-                ? error("overload chosen differs from OSL 1.9")
-                : warning("overload chosen differs from OSL 1.9");
-
-            m_compiler->errhandler().message ("  Current overload is ");
-            !m_sym ? m_compiler->errhandler().message("<none>")
-                   : candidates.reportFunction(static_cast<FunctionSymbol*>(m_sym));
-            m_compiler->errhandler().message ("  Prior overload was ");
-            !legacy ? m_compiler->errhandler().message("<none>")
-                       : candidates.reportFunction(legacy);
-
+            bool as_warning = true;
+            if (Strutil::iequals(OSL_LEGACY, "err"))
+                as_warning = false;  // full error
+            std::string errmsg = "  Current overload is\n";
+            if (m_sym)
+                errmsg += candidates.reportFunction (static_cast<FunctionSymbol*>(m_sym));
+            else
+                errmsg += "<none>";
+            errmsg += "\n  Prior overload was ";
+            if (legacy)
+                errmsg += candidates.reportFunction (legacy);
+            else
+                errmsg += "<none>";
             if (Strutil::iequals(OSL_LEGACY, "use"))
                 m_sym = legacy;
+            if (as_warning)
+                warning ("overload chosen differs from OSL 1.9\n%s", errmsg);
+            else
+                warning ("overload chosen differs from OSL 1.9\n%s", errmsg);
         }
     }
 
@@ -1989,7 +1980,7 @@ ASTfunction_call::typecheck (TypeSpec expected)
             if (func()->number_of_returns() == 0 &&
                 ! func()->typespec().is_void()) {
                 error ("non-void function \"%s\" had no 'return' statement.",
-                       func()->name().c_str());
+                       func()->name());
             }
         } else {
             // built-in

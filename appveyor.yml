@@ -23,23 +23,23 @@ platform:
   # - x86
 
 configuration:
-  #- Debug
   - Release
+  #- Debug
 
 environment:
   matrix:
-  - TOOLSET: msvc14
+  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+    TOOLSET: 140
+    BOOSTVER: 1_63_0
+    LLVMVER: 4
 
-os:
-  - Visual Studio 2015
-
-cache:
-  - C:\projects\OSLdeps -> appveyor.yml
-  # The -> means that the cache dir is discarded if appveyor.yml has changed
+  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+    TOOLSET: 141
+    BOOSTVER: 1_65_1
+    LLVMVER: 5
 
 before_build:
 - ps: |
-    $OSL_INSTALL_BEGIN=Get-Date
     Write-Output "Configuration: $env:CONFIGURATION"
     Write-Output "Platform: $env:PLATFORM"
     Get-ChildItem Env:
@@ -47,10 +47,9 @@ before_build:
     [Array]$OSL_BUILD_FLAGS = "--", "/nologo", "/verbosity:minimal";
 
     $DWN_DIR = "C:\projects\OSLdownloads"
-    $DEP_DIR = "C:\projects\OSLdeps"
-    $BOOST_ROOT = "C:\Libraries\boost_1_63_0"
+    $DEP_DIR = "$env:APPVEYOR_BUILD_FOLDER\dependencies"
+    $BOOST_ROOT = "C:\Libraries\boost_$env:BOOSTVER"
     $PYTHON_DIR = "C:\Python27"
-    $LLVM_DIR = "C:\Libraries\llvm-4.0.0"
     $LLVM_DIR = "$DEP_DIR"
     $env:Path += ";$DEP_DIR\lib;$DEP_DIR\bin"
     $OSL_INT_DIR = "build\windows$env:PLATFORM"
@@ -62,57 +61,77 @@ before_build:
     # Choose the VisualStudio generator
     $GENERATOR = switch ($env:TOOLSET)
     {
-        "msvc14" {"Visual Studio 14 2015"}
-        "msvc12" {"Visual Studio 12 2013"}
-        "msvc11" {"Visual Studio 11 2012"}
-        "msvc10" {"Visual Studio 10 2010"}
+        "141" {"Visual Studio 15 2017"}
+        "140" {"Visual Studio 14 2015"}
+        "120" {"Visual Studio 12 2013"}
     }
 
     # Final setup based on 64 or 32 bit
     if ($env:PLATFORM -eq "x64") {
         $GENERATOR = "$GENERATOR Win64"
         $PYTHON_DIR = "$PYTHON_DIR-x64"
-        $BOOST_LIBRARYDIR = "$BOOST_ROOT\lib64-msvc-14.0"
+        $BOOST_LIBRARYDIR = "$BOOST_ROOT\lib64"
     } else {
-        $BOOST_LIBRARYDIR = "$BOOST_ROOT\lib32-msvc-14.0"
+        $BOOST_LIBRARYDIR = "$BOOST_ROOT\lib32"
     }
+    $BOOST_LIBRARYDIR = "$BOOST_LIBRARYDIR-msvc-$($env:TOOLSET.Substring(0,2)).$($env:TOOLSET.Substring(2,1))"
 
     # Always create the download directory
     md $DWN_DIR -Force | Out-Null;
+    cd $DWN_DIR
+
+    cinst winflexbison
+
+    # Download the dependencies
+    $env:OSL_WINDEPS = "OSLWindowsDependencies-$($env:PLATFORM)-LLVM$($env:LLVMVER)-$($env:TOOLSET)"
+
+    # Try the user's repo first
+    Start-FileDownload "https://github.com/$env:APPVEYOR_REPO_NAME/releases/download/WindowsDependencies/$($env:OSL_WINDEPS).zip"
+    unzip "$($env:OSL_WINDEPS).zip" -d $DEP_DIR
+    if ($LastExitCode -ne 0) {
+        # Fallback to master
+        Start-FileDownload "https://github.com/imageworks/OpenShadingLanguage/releases/download/WindowsDependencies/$($env:OSL_WINDEPS).zip"
+        unzip "$($env:OSL_WINDEPS).zip" -d $DEP_DIR
+    }
 
     # If the dependency directory exists/cached, use it
-    if(!(Test-Path -Path $DEP_DIR )){
+    if (($LastExitCode -ne 0) -Or !(Test-Path -Path $DEP_DIR)) {
         md $DEP_DIR -Force | Out-Null; cd $DEP_DIR
         md $DEP_DIR\include -Force | Out-Null; cd $DEP_DIR
         md $DEP_DIR\lib -Force | Out-Null; cd $DEP_DIR
 
+        # Move this to OIIO and publish the image dependencies there?
         cd $DWN_DIR
-        nuget install libtiff-$env:TOOLSET-$env:PLATFORM-master -Version 4.0.6.85 -Source https://ci.appveyor.com/nuget/libtiff-i3h8tqqy7o7b
-        mv .\libtiff*\*.h $DEP_DIR\include\
-        mv .\libtiff*\*.lib $DEP_DIR\lib\
-        mv .\libtiff*\*.dll $DEP_DIR\lib\
-
-        nuget install libpng-$env:TOOLSET-$env:PLATFORM-master -Version 1.6.18.44 -Source https://ci.appveyor.com/nuget/libpng-7hwq4pmmrc48
-        mv .\libpng*\*.h $DEP_DIR\include\
-        mv .\libpng*\*.lib $DEP_DIR\lib\
-        mv .\libpng*\*.dll $DEP_DIR\lib\
-
-        nuget install libjpeg-$env:TOOLSET-$env:PLATFORM-master -Version 1.4.80.21 -Source https://ci.appveyor.com/nuget/libjpegturbo-o6k4js4y7pjw
-        mv .\libjpeg*\*.h $DEP_DIR\include\
-        mv .\libjpeg*\*.lib $DEP_DIR\lib\
-        mv .\libjpeg*\*.dll $DEP_DIR\lib\
-
         nuget install freetype
         mv .\freetype.2.8.0.1\build\native\include\* $DEP_DIR\include\
-        mv .\freetype.2.8.0.1\build\native\lib\$env:PLATFORM\v140\dynamic\$env:CONFIGURATION\*.lib $DEP_DIR\lib\
-        mv .\freetype.redist.2.8.0.1\build\native\bin\$env:PLATFORM\v140\dynamic\$env:CONFIGURATION\*.dll $DEP_DIR\lib\
+        mv .\freetype.2.8.0.1\build\native\lib\$env:PLATFORM\v$env:TOOLSET\dynamic\$env:CONFIGURATION\*.lib $DEP_DIR\lib\
+        mv .\freetype.redist.2.8.0.1\build\native\bin\$env:PLATFORM\v$env:TOOLSET\dynamic\$env:CONFIGURATION\*.dll $DEP_DIR\lib\
 
-        # ZLib
-        cd $DWN_DIR
-        Start-FileDownload https://github.com/madler/zlib/archive/v1.2.8.tar.gz
-        tar -xzf v1.2.8.tar.gz; cd zlib-1.2.8; md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
-        cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$DEP_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR"
-        cmake --build . --config $env:CONFIGURATION --target INSTALL $OSL_BUILD_FLAGS
+        # Tiff, JPEG, and PNG have no msvc-14.1 build (yet?)
+        $TOOLSET = $env:TOOLSET
+        if ($env:TOOLSET -eq "141") { $TOOLSET=140 }
+
+        # TIFF
+        nuget install libtiff
+        mv .\libtiff*\build\native\include\*.h $DEP_DIR\include\
+        mv .\libtiff*\build\native\lib\$env:CONFIGURATION\$env:PLATFORM\v$TOOLSET\*.lib $DEP_DIR\lib\
+        mv .\libtiff.redist*\build\native\bin\$env:CONFIGURATION\$env:PLATFORM\v$TOOLSET\*.dll $DEP_DIR\lib\
+
+        # TIFF installs ZIP too
+        mv zlib.v$TOOLSET.*\build\native\include\*.h $DEP_DIR\include\
+        mv zlib.v$TOOLSET.*\lib\native\v$TOOLSET\windesktop\msvcstl\dyn\rt-dyn\$env:PLATFORM\$env:CONFIGURATION\*.lib $DEP_DIR\lib\
+        mv zlib.v$TOOLSET.*\lib\native\v$TOOLSET\windesktop\msvcstl\dyn\rt-dyn\$env:PLATFORM\$env:CONFIGURATION\*.dll $DEP_DIR\lib\
+
+        # TIFF installs JPEG too
+        mv .\libjpeg*\build\native\include\*.h $DEP_DIR\include\
+        mv .\libjpeg*\build\native\lib\v$TOOLSET\$env:PLATFORM\$env:CONFIGURATION\dynamic\cdecl\*.lib $DEP_DIR\lib\
+        mv .\libjpeg.redist*\build\native\bin\v$TOOLSET\$env:PLATFORM\$env:CONFIGURATION\dynamic\cdecl\*.dll $DEP_DIR\lib\
+
+        # PNG
+        nuget install libpng
+        mv .\libpng*\build\native\include\*.h $DEP_DIR\include\
+        mv .\libpng*\build\native\lib\$env:PLATFORM\v$TOOLSET\dynamic\$env:CONFIGURATION\*.lib $DEP_DIR\lib\
+        mv .\libpng*\build\native\bin\$env:PLATFORM\v$TOOLSET\dynamic\$env:CONFIGURATION\*.dll $DEP_DIR\lib\
 
         # IlmBase
         cd $DWN_DIR
@@ -129,58 +148,59 @@ before_build:
         cmake --build . --config $env:CONFIGURATION --target INSTALL $OSL_BUILD_FLAGS
 
         # LLVM
-        cd $DWN_DIR
-        git clone --depth 10 --branch release_40 https://github.com/llvm-mirror/llvm.git
-        cd llvm; md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
-        cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$DEP_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DLLVM_TARGETS_TO_BUILD="X86"
-        cmake --build . --config $env:CONFIGURATION --target INSTALL $OSL_BUILD_FLAGS
+        if ($env:OSL_WINDEPS.IndexOf("LLVM") -gt 0) {
+          cd $DWN_DIR
+          git clone --depth 10 --branch "release_$($env:LLVMVER)0" https://github.com/llvm-mirror/llvm.git
+          cd llvm; md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
+          cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$DEP_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DLLVM_TARGETS_TO_BUILD="X86"
+          cmake --build . --config $env:CONFIGURATION --target INSTALL $OSL_BUILD_FLAGS
+        }
+        $env:OSL_BUILT_DEPS=1
+    } else {
+        $env:OSL_BUILT_DEPS=0
     }
-
-    # Always do this
-    cinst winflexbison
 
 
 build_script:
 - ps: |
-    # OpenImageIO
-    $env:OPENIMAGEIOHOME = "C:\projects\oiio"
-    $env:FREETYPE_DIR = "$DEP_DIR"
-    $FREETYPE_LIBRARY = "$DEP_DIR\lib\freetype28.lib"
-    cd $DWN_DIR
-    git clone --depth 10 https://github.com/OpenImageIO/oiio.git oiiosrc
-    cd .\oiiosrc; md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
-    cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_INSTALL_PREFIX="$env:OPENIMAGEIOHOME" -DCMAKE_PREFIX_PATH="$DEP_DIR;$BOOST_ROOT" -DBOOST_LIBRARYDIR="$BOOST_LIBRARYDIR" -DFREETYPE_LIBRARY="$FREETYPE_LIBRARY" -DUSE_PYTHON=OFF -DOIIO_BUILD_TESTS=OFF -DUSE_NUKE=OFF
-    cmake --build . --config $env:CONFIGURATION --target INSTALL $OSL_BUILD_FLAGS
-
-    # Build OSL
-    cd $env:APPVEYOR_BUILD_FOLDER
-    md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
-    cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$env:OPENIMAGEIOHOME;$DEP_DIR;$BOOST_ROOT;$LLVM_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DLLVM_DIRECTORY="$LLVM_DIR" -DLLVM_STATIC=ON -DOPENIMAGEIOHOME="$env:OPENIMAGEIOHOME" -DBOOST_LIBRARYDIR="$BOOST_LIBRARYDIR" -DFLEX_EXECUTABLE="C:\ProgramData\chocolatey\lib\winflexbison\tools\win_flex.exe" -DBISON_EXECUTABLE="C:\ProgramData\chocolatey\lib\winflexbison\tools\win_bison.exe" -DUSE_QT=OFF -DBUILDSTATIC=OFF -DLINKSTATIC=OFF
-
-    # OSL's CMake should probably be handling Windows config better...
-    $OSL_BUILD_DIR = "$env:APPVEYOR_BUILD_FOLDER\$OSL_INT_DIR"
-    $env:OSLHOME = "$env:APPVEYOR_BUILD_FOLDER\src"
-    $env:OIIO_LIBRARY_PATH = "$OSL_BUILD_DIR\src\osl.imageio\$env:CONFIGURATION"
-    $env:Path += ";$OSL_BUILD_DIR\src\oslc\$env:CONFIGURATION"
-    $env:Path += ";$OSL_BUILD_DIR\src\oslinfo\$env:CONFIGURATION"
-    $env:Path += ";$OSL_BUILD_DIR\src\liboslcomp\$env:CONFIGURATION"
-    $env:Path += ";$OSL_BUILD_DIR\src\liboslexec\$env:CONFIGURATION"
-    $env:Path += ";$OSL_BUILD_DIR\src\liboslnoise\$env:CONFIGURATION"
-    $env:Path += ";$OSL_BUILD_DIR\src\liboslquery\$env:CONFIGURATION"
-    $env:Path += ";$env:OPENIMAGEIOHOME\lib;$env:OPENIMAGEIOHOME\bin"
-    $env:Path += ";$BOOST_LIBRARYDIR"
-
-    cmake --build . --config $env:CONFIGURATION $OSL_BUILD_FLAGS
-
-    $OSL_BUILD_END=Get-Date
-    if(($OSL_BUILD_END-$OSL_INSTALL_BEGIN).TotalMinutes -gt 50) {
-        # Change to appveyor.yml means the cache needs to be rebuilt leaving
-        # us with not enough time to run the tests.
+    # If on a branch named 'appveyor' and dependencies (including LLVM) were
+    # built: skip OSL in favor of deployment of the pre-built dependencies
+    if (($env:APPVEYOR_REPO_BRANCH -eq "appveyor") -And
+        ($env:OSL_BUILT_DEPS -eq 1) -And
+        ($env:OSL_WINDEPS.IndexOf("LLVM") -gt 0)) {
         echo "OSL tests skipped in favor of uploading dependency cache"
         # Echo to build log and Appveyors message page
         Add-AppveyorMessage -Message "OSL tests skipped in favor of uploading dependency cache" -Category Warning
     } else {
-        # Test OSL
+        # OpenImageIO
+        $env:OPENIMAGEIOHOME = "C:\projects\oiio"
+        $env:FREETYPE_DIR = "$DEP_DIR"
+        $FREETYPE_LIBRARY = "$DEP_DIR\lib\freetype28.lib"
+        cd $DWN_DIR
+        git clone --depth 10 https://github.com/OpenImageIO/oiio.git oiiosrc
+        cd .\oiiosrc; md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
+        cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_INSTALL_PREFIX="$env:OPENIMAGEIOHOME" -DCMAKE_PREFIX_PATH="$DEP_DIR;$BOOST_ROOT" -DBOOST_LIBRARYDIR="$BOOST_LIBRARYDIR" -DFREETYPE_LIBRARY="$FREETYPE_LIBRARY" -DUSE_PYTHON=OFF -DOIIO_BUILD_TESTS=OFF -DUSE_NUKE=OFF
+        cmake --build . --config $env:CONFIGURATION --target INSTALL $OSL_BUILD_FLAGS
+
+        # Build OSL
+        cd $env:APPVEYOR_BUILD_FOLDER
+        md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
+        cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$env:OPENIMAGEIOHOME;$DEP_DIR;$BOOST_ROOT;$LLVM_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DLLVM_DIRECTORY="$LLVM_DIR" -DLLVM_STATIC=ON -DOPENIMAGEIOHOME="$env:OPENIMAGEIOHOME" -DBOOST_LIBRARYDIR="$BOOST_LIBRARYDIR" -DFLEX_EXECUTABLE="C:\ProgramData\chocolatey\lib\winflexbison\tools\win_flex.exe" -DBISON_EXECUTABLE="C:\ProgramData\chocolatey\lib\winflexbison\tools\win_bison.exe" -DUSE_QT=OFF -DBUILDSTATIC=OFF -DLINKSTATIC=OFF
+
+        # OSL's CMake should probably be handling Windows config better...
+        $OSL_BUILD_DIR = "$env:APPVEYOR_BUILD_FOLDER\$OSL_INT_DIR"
+        $env:OSLHOME = "$env:APPVEYOR_BUILD_FOLDER\src"
+        $env:OIIO_LIBRARY_PATH = "$OSL_BUILD_DIR\src\osl.imageio\$env:CONFIGURATION"
+        $env:Path += ";$OSL_BUILD_DIR\src\oslc\$env:CONFIGURATION"
+        $env:Path += ";$OSL_BUILD_DIR\src\oslinfo\$env:CONFIGURATION"
+        $env:Path += ";$OSL_BUILD_DIR\src\liboslcomp\$env:CONFIGURATION"
+        $env:Path += ";$OSL_BUILD_DIR\src\liboslexec\$env:CONFIGURATION"
+        $env:Path += ";$OSL_BUILD_DIR\src\liboslnoise\$env:CONFIGURATION"
+        $env:Path += ";$OSL_BUILD_DIR\src\liboslquery\$env:CONFIGURATION"
+        $env:Path += ";$env:OPENIMAGEIOHOME\lib;$env:OPENIMAGEIOHOME\bin"
+        $env:Path += ";$BOOST_LIBRARYDIR"
+
+        cmake --build . --config $env:CONFIGURATION $OSL_BUILD_FLAGS
         ctest -C $env:CONFIGURATION --output-on-failure
     }
 
@@ -190,4 +210,21 @@ build_script:
 
 #on_failure:
 #- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+
+
+artifacts:
+  - path: dependencies
+    name: $(OSL_WINDEPS)
+    type: zip
+
+deploy:
+  release: WindowsDependencies
+  description: 'OSL Windows Pre-Built Dependencies'
+  provider: GitHub
+  auth_token:
+    secure: r2L1KfXqOe5IdFQKpl+w15LTuqMhpx39jEvmpK5qEeeqblu3dyBtD8ziQ59vUfTI
+  artifact: $(OSL_WINDEPS)
+  on:
+    branch: appveyor
+    OSL_BUILT_DEPS: 1
 

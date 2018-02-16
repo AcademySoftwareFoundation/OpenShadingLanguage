@@ -1,0 +1,10 @@
+// Engineer an ambiguous case that should be a warning
+
+normal func () { return 1; }
+vector func () { return 2; }
+
+shader test ()
+{
+    #pragma osl nowarn
+    point p = func();
+}

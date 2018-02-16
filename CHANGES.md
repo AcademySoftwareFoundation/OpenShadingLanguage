@@ -37,6 +37,10 @@ OSL Language and oslc compiler:
 * A shader input parameter marked with metadata `[[ int allowconnect = 0 ]]`
   will disallow runtime connections via `ConnectShaders()`, resulting in an
   error. #857 (1.10.0)
+* oslc command-line argument `-Werror` will treat all warnings as hard
+  errors (failed compilation). (1.10.0)
+* `#pragma nowarn` will suppress any warnings arising from code on the
+  immediately following line of that source file. (1.10.0)
 
 OSL Standard library:
 

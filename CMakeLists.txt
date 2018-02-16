@@ -283,6 +283,7 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             oslinfo-metadata oslinfo-noparams
             osl-imageio
             paramval-floatpromotion
+            pragma-nowarn
             printf-whole-array
             raytype raytype-specialized reparam
             render-background render-bumptest

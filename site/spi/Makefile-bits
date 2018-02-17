@@ -15,6 +15,8 @@ ifeq ($(SP_OS), rhel7)
     MY_CMAKE_FLAGS += -DCMAKE_MAKE_PROGRAM=${NINJA}
     # Override lib64 and use SPI convention of lib
     MY_CMAKE_FLAGS += -DCMAKE_INSTALL_LIBDIR="${INSTALL_PREFIX}/lib"
+    MY_CMAKE_FLAGS += -DCUDA_TOOLKIT_ROOT_DIR=/net/soft_scratch/apps/arnold/tools/nvidia/cuda8.0
+    MY_CMAKE_FLAGS += -DOPTIXHOME=/net/soft_scratch/apps/arnold/tools/nvidia/NVIDIA-OptiX-SDK-5.0.0-linux64
 
     ## If not overridden, here is our preferred LLVM installation
     ## (may be changed as new versions are rolled out to the facility)

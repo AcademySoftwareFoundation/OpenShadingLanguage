@@ -201,7 +201,13 @@ build_script:
         $env:Path += ";$BOOST_LIBRARYDIR"
 
         cmake --build . --config $env:CONFIGURATION $OSL_BUILD_FLAGS
-        ctest -C $env:CONFIGURATION --output-on-failure
+
+        [Array]$OSL_TEST_FLAGS = "-C", $env:CONFIGURATION, "--output-on-failure"
+        if ($env:APPVEYOR_BUILD_WORKER_IMAGE -eq "Visual Studio 2017") {
+            $OSL_TEST_FLAGS += "-E"
+            $OSL_TEST_FLAGS += "render-cornell|render-oren-nayar|render-veachmis|render-ward"
+        }
+        ctest $OSL_TEST_FLAGS
     }
 
 

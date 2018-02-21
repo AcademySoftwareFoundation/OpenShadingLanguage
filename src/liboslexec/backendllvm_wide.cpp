@@ -60,6 +60,7 @@ static ustring op_getmatrix("getmatrix");
 static ustring op_getmessage("getmessage");
 static ustring op_if("if");
 static ustring op_return("return");
+static ustring op_stoi("stoi");
 static ustring op_transform("transform");
 static ustring op_transformv("transformv");
 static ustring op_transformn("transformn");
@@ -1321,6 +1322,10 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					}
 			    }
 			}
+            if (opcode.opname() == Strings::op_stoi) {
+                // TODO: should OpDescriptor handle identifying operations that always require masking?
+                m_requires_masking_by_layer_and_op_index[layer()][opIndex] = true;
+            }
 			if (opcode.opname() == Strings::op_getmatrix) {
 		    	// TODO:  Add optimization for common to and from spaces, could
 		    	// avoid creating a dependency for those
@@ -2348,8 +2353,7 @@ BackendLLVMWide::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
         TypeDesc t = type.simpletype();
         if (t.arraylen || deriv) {
             int d = deriv * std::max(1,t.arraylen);
-            llvm::Value * elem;
-            elem = ll.constant(d);
+            llvm::Value * elem = ll.constant(d);
             ptr = ll.GEP (ptr, elem);
         }
 
@@ -2593,7 +2597,7 @@ BackendLLVMWide::llvm_load_arg (const Symbol& sym, bool derivs, bool op_is_unifo
 bool
 BackendLLVMWide::llvm_store_value (llvm::Value* new_val, const Symbol& sym,
                                     int deriv, llvm::Value* arrayindex,
-                                    int component)
+                                    int component, bool index_is_uniform)
 {
     bool has_derivs = sym.has_derivs();
     if (!has_derivs && deriv != 0) {
@@ -2602,7 +2606,7 @@ BackendLLVMWide::llvm_store_value (llvm::Value* new_val, const Symbol& sym,
     }
 
     return llvm_store_value (new_val, llvm_get_pointer (sym), sym.typespec(),
-                             deriv, arrayindex, component);
+                             deriv, arrayindex, component, index_is_uniform);
 }
 
 
@@ -2611,50 +2615,88 @@ bool
 BackendLLVMWide::llvm_store_value (llvm::Value* new_val, llvm::Value* dst_ptr,
                                     const TypeSpec &type,
                                     int deriv, llvm::Value* arrayindex,
-                                    int component)
+                                    int component, bool index_is_uniform)
 {
     if (!dst_ptr)
         return false;  // Error
-
-    // If it's an array or we're dealing with derivatives, step to the
-    // right element.
-    TypeDesc t = type.simpletype();
-    if (t.arraylen || deriv) {
-        int d = deriv * std::max(1,t.arraylen);
-        if (arrayindex)
-            arrayindex = ll.op_add (arrayindex, ll.constant(d));
-        else
-            arrayindex = ll.constant(d);
-        dst_ptr = ll.GEP (dst_ptr, arrayindex);
-    }
-
-    // If it's multi-component (triple or matrix), step to the right field
-    if (! type.is_closure_based() && t.aggregate > 1)
-        dst_ptr = ll.GEP (dst_ptr, 0, component);
-
-#if 1
-    // TODO:  This check adds overhead, choose to remove (or not) later
-    if(ll.type_ptr(ll.llvm_typeof(new_val)) != ll.llvm_typeof(dst_ptr))
-    {
-    	std::cerr << " new_val type=";
-    	{
-    		llvm::raw_os_ostream os_cerr(std::cerr);
-    		ll.llvm_typeof(new_val)->print(os_cerr);
-    	}
-    	std::cerr << " dest_ptr type=";
-    	{
-    		llvm::raw_os_ostream os_cerr(std::cerr);
-    		ll.llvm_typeof(dst_ptr)->print(os_cerr);
-    	}
-    	std::cerr << std::endl;
-    }
-    ASSERT(ll.type_ptr(ll.llvm_typeof(new_val)) == ll.llvm_typeof(dst_ptr));
-#endif
     
+    if (index_is_uniform) {
+
+
+        // If it's an array or we're dealing with derivatives, step to the
+        // right element.
+        TypeDesc t = type.simpletype();
+        if (t.arraylen || deriv) {
+            int d = deriv * std::max(1,t.arraylen);
+            if (arrayindex)
+                arrayindex = ll.op_add (arrayindex, ll.constant(d));
+            else
+                arrayindex = ll.constant(d);
+            dst_ptr = ll.GEP (dst_ptr, arrayindex);
+        }
+
+        // If it's multi-component (triple or matrix), step to the right field
+        if (! type.is_closure_based() && t.aggregate > 1)
+            dst_ptr = ll.GEP (dst_ptr, 0, component);
+
+    #if 1
+        // TODO:  This check adds overhead, choose to remove (or not) later
+        if(ll.type_ptr(ll.llvm_typeof(new_val)) != ll.llvm_typeof(dst_ptr))
+        {
+            std::cerr << " new_val type=";
+            {
+                llvm::raw_os_ostream os_cerr(std::cerr);
+                ll.llvm_typeof(new_val)->print(os_cerr);
+            }
+            std::cerr << " dest_ptr type=";
+            {
+                llvm::raw_os_ostream os_cerr(std::cerr);
+                ll.llvm_typeof(dst_ptr)->print(os_cerr);
+            }
+            std::cerr << std::endl;
+        }
+        ASSERT(ll.type_ptr(ll.llvm_typeof(new_val)) == ll.llvm_typeof(dst_ptr));
+    #endif
+
+
+        // Finally, store the value.
+        ll.op_store (new_val, dst_ptr);
+        return true;
+    } else {
+        ASSERT(nullptr != arrayindex);
+
+        // If it's an array or we're dealing with derivatives, step to the
+        // right element.
+        TypeDesc t = type.simpletype();
+        if (t.arraylen || deriv) {
+            int d = deriv * std::max(1,t.arraylen);
+            llvm::Value * elem = ll.constant(d);
+            dst_ptr = ll.GEP (dst_ptr, elem);
+        }
     
-    // Finally, store the value.
-    ll.op_store (new_val, dst_ptr);
-    return true;
+        // If it's multi-component (triple or matrix), step to the right field
+        if (! type.is_closure_based() && t.aggregate > 1) {
+            OSL_DEV_ONLY(std::cout << "step to the right field " << component << std::endl);
+            dst_ptr = ll.GEP (dst_ptr, 0, component);
+
+            // Need to scale the indices by the stride
+            // of the type
+            int elem_stride = t.aggregate;
+            arrayindex = ll.op_mul (arrayindex, ll.wide_constant(elem_stride));
+            // TODO: possible optimization when elem_stride == 2 && sizeof(type) == 4,
+            // could have optional parameter gather operation to use a scale of 8 (2*4)
+            // vs. the hardcoded 4 and avoid the multiplication above
+        }
+
+        // Finally, store the value.
+        ll.op_scatter(new_val, dst_ptr, arrayindex);
+        // TODO:  possible optimization when we know the array size is small (<= 4)
+        // instead of performing a scatter, we could load each value of the the array,
+        // compare the index array against that value's index and select/blend
+        // the results together, and store the result.  Basically we will loading the entire content of the
+        // array, but can avoid branching or any scatter statements.
+        return true;
+    }
 }
 
 

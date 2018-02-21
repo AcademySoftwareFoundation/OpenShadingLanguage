@@ -1,0 +1,25 @@
+shader
+test_varying_out_of_bounds_index_string (output color Cout = color(0,0,0))
+{
+    // Test array referencing with varying index
+    string rarray[3] = { "1", "2", "3" };
+    string garray[3] = { "2", "4", "6" };
+    
+    
+    // out of bounds, should segfault if accessed accidentally
+    int varyingIndex = 2000000000;
+
+    if (int(P[0]*256)%2 == 0) {
+        varyingIndex = int(clamp(P[0]*3, 0, 2));
+    
+        rarray[varyingIndex] = "0";
+        garray[varyingIndex] = "0";
+    }
+    // We access the varyingIndex outside the conditional to force its assignment
+    // to be masked causing the unmasked lanes to remain at an out of bounds
+    // value, which should cause a segfault if not masked correctly during
+    // the array assignment operation
+    Cout = color((stoi(rarray[0]) + stoi(rarray[1]) + stoi(rarray[2]))/10.0,
+                 (stoi(garray[0]) + stoi(garray[1]) + stoi(garray[2]))/10.0,
+                 varyingIndex/3.0);
+}

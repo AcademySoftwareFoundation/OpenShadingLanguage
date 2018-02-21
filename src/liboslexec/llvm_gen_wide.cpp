@@ -1742,6 +1742,8 @@ LLVMGEN (llvm_gen_aassign)
     Symbol& Src = *rop.opargsym (op, 2);
 
     bool resultIsUniform = rop.isSymbolUniform(Result);
+    bool index_is_uniform = rop.isSymbolUniform(Index);
+    ASSERT(index_is_uniform || !resultIsUniform);
 
     // Get array index we're interested in
     llvm::Value *index = rop.loadLLVMValue (Index);
@@ -1771,7 +1773,7 @@ LLVMGEN (llvm_gen_aassign)
     for (int d = 0;  d <= 2;  ++d) {
         for (int c = 0;  c < num_components;  ++c) {
             llvm::Value *val = rop.loadLLVMValue (Src, c, d, TypeDesc::UNKNOWN, resultIsUniform);
-            rop.llvm_store_value (val, Result, d, index, c);
+            rop.llvm_store_value (val, Result, d, index, c, index_is_uniform);
         }
         if (! Result.has_derivs())
             break;

@@ -588,7 +588,9 @@ DECL (osl_hash_is, "is")
 DECL (osl_getchar_isi, "isi");
 DECL (osl_startswith_iss, "iss")
 DECL (osl_endswith_iss, "iss")
-DECL (osl_stoi_is, "is")
+#endif
+DECL (osl_stoi_w16iw16s_masked, "xXXi")
+#if 0 // incomplete
 DECL (osl_stof_fs, "fs")
 DECL (osl_substr_ssii, "ssii")
 DECL (osl_regex_impl, "iXsXisi")

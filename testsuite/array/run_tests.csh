@@ -50,6 +50,12 @@ testshade -t 1 -g 256 256 -od uint8 -o Cout sout_varying_out_of_bounds_index_flo
 testshade --batched -t 1 -g 256 256 -od uint8 -o Cout bout_varying_out_of_bounds_index_float.tif test_varying_out_of_bounds_index_float
 idiff sout_varying_out_of_bounds_index_float.tif bout_varying_out_of_bounds_index_float.tif
 
+oslc test_varying_out_of_bounds_index_string.osl
+testshade -t 1 -g 256 256 -od uint8 -o Cout sout_varying_out_of_bounds_index_string.tif test_varying_out_of_bounds_index_string
+testshade --batched -t 1 -g 256 256 -od uint8 -o Cout bout_varying_out_of_bounds_index_string.tif test_varying_out_of_bounds_index_string
+idiff sout_varying_out_of_bounds_index_string.tif bout_varying_out_of_bounds_index_string.tif
+
+
 
 oslc test_varying_index_ray.osl
 testshade -t 1 -g 256 256 -od uint8 -o Cout sout_varying_index_ray.tif test_varying_index_ray

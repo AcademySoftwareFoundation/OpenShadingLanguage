@@ -1,0 +1,13 @@
+shader
+test_varying_index_point (output color Cout = color(0,0,0))
+{
+    // Test array referencing with varying index
+    point parray[3] = { point(.1,.2,.3), 0.2, point(.3,.3,.3) };
+    
+    int varyingIndex = int(P[0]*256)%3;
+    for(int i = 0; i < 5000; ++i) {
+        parray[varyingIndex] = point(u,v,0);
+    }
+    
+    Cout = color(parray[0] + parray[1] + parray[2]);     
+}

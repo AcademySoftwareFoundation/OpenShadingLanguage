@@ -184,7 +184,7 @@ public:
     /// and it's a scalar, set the scalar.  Returns true if ok, false
     /// upon failure.
     bool llvm_store_value (llvm::Value *new_val, const Symbol& sym, int deriv,
-                           llvm::Value *arrayindex, int component);
+                           llvm::Value *arrayindex, int component, bool index_is_uniform=true);
 
     /// Store new_val into the memory pointed to by dst_ptr, given the
     /// derivative (0=value, 1=dx, 2=dy), array index (NULL if it's not
@@ -194,7 +194,7 @@ public:
     /// ok, false upon failure.
     bool llvm_store_value (llvm::Value* new_val, llvm::Value* dst_ptr,
                            const TypeSpec &type, int deriv,
-                           llvm::Value* arrayindex, int component);
+                           llvm::Value* arrayindex, int component, bool index_is_uniform=true);
 
     /// Non-array version of llvm_store_value, with default deriv &
     /// component.

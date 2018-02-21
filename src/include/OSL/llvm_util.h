@@ -665,6 +665,8 @@ public:
     /// Store to a dereferenced pointer:   *ptr = val
     void op_store (llvm::Value *val, llvm::Value *ptr);
 
+    void op_scatter(llvm::Value *wide_val, llvm::Value *ptr, llvm::Value *wide_index);
+
     // N.B. "GEP" -- GetElementPointer -- is a particular LLVM-ism that is
     // the means for retrieving elements from some kind of aggregate: the
     // i-th field in a struct, the i-th element of an array.  They can be

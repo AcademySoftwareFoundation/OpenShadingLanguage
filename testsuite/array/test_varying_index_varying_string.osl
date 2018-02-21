@@ -1,36 +1,3 @@
-float power_of_2_string_to_float(string val) 
-{
-    if (val == "256") {
-        return 256/256.0;
-    }
-    if (val == "128") {
-        return 128/256.0;
-    }
-    if (val == "64") {
-        return 64/256.0;
-    }
-    if (val == "32") {
-        return 32/256.0;
-    }
-    if (val == "16") {
-        return 16/256.0;
-    }
-    if (val == "8") {
-        return 8/256.0;
-    }
-    if (val == "4") {
-        return 4/256.0;
-    }
-    if (val == "2") {
-        return 2/256.0;
-    }
-    if (val == "1") {
-        return 1/256.0;
-    }
-    return 0;
- }
-
-
 shader
 test_varying_index_varying_string (output color Cout = color(0,0,0))
 {
@@ -47,7 +14,7 @@ test_varying_index_varying_string (output color Cout = color(0,0,0))
     string indirectG = garray[varyingIndexG];
     string indirectB = barray[varyingIndexB];
     
-    Cout[0] = power_of_2_string_to_float(indirectR);
-    Cout[1] = power_of_2_string_to_float(indirectG);
-    Cout[2] = power_of_2_string_to_float(indirectB);
+    Cout[0] = stoi(indirectR)/256.0;
+    Cout[1] = stoi(indirectG)/256.0;
+    Cout[2] = stoi(indirectB)/256.0;
 }

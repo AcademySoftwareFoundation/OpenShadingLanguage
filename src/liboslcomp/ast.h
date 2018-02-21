@@ -420,7 +420,7 @@ class ASTfunction_declaration : public ASTNode
 {
 public:
     ASTfunction_declaration (OSLCompilerImpl *comp, TypeSpec type, ustring name,
-                             ASTNode *form, ASTNode *stmts, ASTNode *meta=NULL,
+                             ASTNode *form, ASTNode *stmts, ASTNode *meta,
                              int sourceline_start=-1);
     const char *nodetypename () const { return "function_declaration"; }
     const char *childname (size_t i) const;
@@ -450,9 +450,9 @@ class ASTvariable_declaration : public ASTNode
 {
 public:
     ASTvariable_declaration (OSLCompilerImpl *comp, const TypeSpec &type,
-                             ustring name, ASTNode *init, bool isparam=false,
-                             bool ismeta=false, bool isoutput=false,
-                             bool initlist=false);
+                             ustring name, ASTNode *init, bool isparam,
+                             bool ismeta, bool isoutput,
+                             bool initlist, int sourceline_start=-1);
     const char *nodetypename () const;
     const char *childname (size_t i) const;
     void print (std::ostream &out, int indentlevel=0) const;

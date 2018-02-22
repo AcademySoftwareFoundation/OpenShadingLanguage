@@ -760,6 +760,9 @@ private:
 
     void SetupLLVM ();
     IRBuilder& builder();
+    llvm::Value * op_linearize_indices (llvm::Value *wide_index);
+    std::array<llvm::Value *,2> op_split_vector (llvm::Value * vector_val);
+
 
     int m_debug;
     PerThreadInfo::Impl *m_thread;

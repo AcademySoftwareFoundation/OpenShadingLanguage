@@ -50,6 +50,7 @@ namespace Strings {
 // TODO: What qualifies these to move to oslexec_pvt.h?
 //       Being used in more than one .cpp?
 // Operation strings
+static ustring op_backfacing("backfacing");
 static ustring op_break("break");
 static ustring op_calculatenormal("calculatenormal");
 static ustring op_continue("continue");
@@ -61,6 +62,7 @@ static ustring op_getmessage("getmessage");
 static ustring op_if("if");
 static ustring op_return("return");
 static ustring op_stoi("stoi");
+static ustring op_surfacearea("surfacearea");
 static ustring op_transform("transform");
 static ustring op_transformv("transformv");
 static ustring op_transformn("transformn");
@@ -346,9 +348,9 @@ namespace
 		ustring("Ps"),        
         Strings::object2common,
 		Strings::shader2common,
-        ustring("surfacearea"), 
+        Strings::op_surfacearea,
         ustring("flipHandedness"), 
-		ustring("backfacing")
+		Strings::op_backfacing
     };
 
     static bool field_is_uniform[] = {
@@ -1065,6 +1067,8 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	const Symbol sg_object2common(Strings::object2common, TypeSpec (), SymTypeGlobal);
 	const Symbol sg_flipHandedness(Strings::flipHandedness, TypeSpec (), SymTypeGlobal);
 	const Symbol sg_raytype(Strings::raytype, TypeSpec (), SymTypeGlobal);
+    const Symbol sg_backfacing(Strings::op_backfacing, TypeSpec (), SymTypeGlobal);
+    const Symbol sg_surfacearea(Strings::op_surfacearea, TypeSpec (), SymTypeGlobal);
 
 	const Symbol sg_time(Strings::time, TypeSpec (), SymTypeGlobal);
 
@@ -1073,7 +1077,11 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	// when we feed forward from varying shader globals, output parameters, and connected parameters
 	m_is_uniform_by_symbol[&sg_shader2common] = true;
 	m_is_uniform_by_symbol[&sg_object2common] = true;
-	m_is_uniform_by_symbol[&sg_time] = true;
+	m_is_uniform_by_symbol[&sg_flipHandedness] = true;
+    m_is_uniform_by_symbol[&sg_raytype] = true;
+    m_is_uniform_by_symbol[&sg_backfacing] = true;
+    m_is_uniform_by_symbol[&sg_surfacearea] = true;
+    m_is_uniform_by_symbol[&sg_time] = true;
 
 
 	// TODO:  Optimize: could probably use symbol index vs. a pointer 
@@ -1287,6 +1295,12 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 						symbolFeedForwardMap.insert(std::make_pair(symbolReadFrom, symbolWrittenTo));
 					}
 				}		
+				if (symbolsWritten == 0) {
+				    // Some operations have only side effects and no return value
+				    // We still want to track them so they can trigger transition
+				    // from uniform to varying if they are a shader global that is varying
+				    symbolFeedForwardMap.insert(std::make_pair(symbolReadFrom, nullptr));
+				}
 				
 				ensureWritesAtLowerDepthAreMasked(symbolReadFrom, stackOfSymbolsCurrentBlockDependsOn.top_pos());
 			}
@@ -1405,6 +1419,18 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					symbolFeedForwardMap.insert(std::make_pair(&sg_raytype, symbolWrittenTo));
 				}
 			}
+            if (opcode.opname() == Strings::op_surfacearea) {
+                for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
+                    const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
+                    symbolFeedForwardMap.insert(std::make_pair(&sg_surfacearea, symbolWrittenTo));
+                }
+            }
+            if (opcode.opname() == Strings::op_backfacing) {
+                for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
+                    const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
+                    symbolFeedForwardMap.insert(std::make_pair(&sg_backfacing, symbolWrittenTo));
+                }
+            }
 
 
 			// Add dependencies between symbols written to in this basic block
@@ -1865,7 +1891,11 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 			auto iter = range.first;
 			for(;iter != range.second; ++iter) {
 				const Symbol * symbolWrittenTo = iter->second;
-				recursivelyMarkNonUniform(symbolWrittenTo);
+                // Some symbols read for operations with only side effects and
+                // who do not write to another symbol, eg. printf(...)
+		        if (symbolWrittenTo != nullptr) {
+	                recursivelyMarkNonUniform(symbolWrittenTo);
+		        }
 			};
 		}
 	};
@@ -1874,12 +1904,13 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	for(auto feedIter = symbolFeedForwardMap.begin();feedIter != endOfFeeds; )
 	{
 		const Symbol * symbolReadFrom = feedIter->first;
-		//OSL_DEV_ONLY(std::cout << " " << symbolReadFrom->name() << " feeds into " << symbolWrittenTo->name() << std::endl);
+		OSL_DEV_ONLY(std::cout << " " << symbolReadFrom->name() << " feeds into " << (feedIter->second ? feedIter->second->name().c_str() : "nullptr") << std::endl);
 		
 		bool is_uniform = true;			
 		auto symType = symbolReadFrom->symtype();
 		if (symType == SymTypeGlobal) {
 			is_uniform = IsShaderGlobalUniformByName(symbolReadFrom->name());
+	        OSL_DEV_ONLY(std::cout << " SymTypeGlobal(" << symbolReadFrom->name() << " is_uniform=" << is_uniform << std::endl);
 		} else if (symType == SymTypeParam) {
 				// TODO: perhaps the connected params do not necessarily
 				// need to be varying 

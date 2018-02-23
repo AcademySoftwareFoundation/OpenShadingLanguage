@@ -288,27 +288,46 @@ WIDE_GENERIC_PNOISE_DERIV_IMPL(genericpnoise, __OSL_SIMD_LANE_COUNT)
 #if 0 // incomplete
 DECL (osl_count_noise, "xX")
 #endif
-
-
-DECL (osl_spline_w16fff, "xXXXXii")
-DECL (osl_spline_w16fw16ff, "xXXXXii")
-DECL (osl_spline_w16fw16fw16f, "xXXXXii")
-DECL (osl_spline_w16dfw16dfw16df, "xXXXXii")
-#if 0 // incomplete spline
 // Need w16 for combinations of the 3 parameters allowed to be uniform
 // caveat, some combos are unreachable/uneeded
-DECL (osl_spline_dfdfdf, "xXXXXii")
-DECL (osl_spline_dfdff, "xXXXXii")
-DECL (osl_spline_dffdf, "xXXXXii")
-DECL (osl_spline_vfv, "xXXXXii")
-DECL (osl_spline_dvdfdv, "xXXXXii")
-DECL (osl_spline_dvdfv, "xXXXXii")
-DECL (osl_spline_dvfdv, "xXXXXii")
-DECL (osl_splineinverse_fff, "xXXXXii")
-DECL (osl_splineinverse_dfdfdf, "xXXXXii")
-DECL (osl_splineinverse_dfdff, "xXXXXii")
-DECL (osl_splineinverse_dffdf, "xXXXXii")
-#endif
+// When result has a derivative, there is
+// no "easy" have a input parameter be non-derivative based on code
+// analysis promoting all inputs to be derivative base.
+// Some exceptions are possible, such a directly passing a shader global
+// Those cases can be worked around by creating a variable on the stack
+// first vs. directly passing the shader global.  We don't expect this
+// to be encountered, but is possible
+
+DECL (osl_spline_w16fw16fw16f_masked, "xXXXXiii")
+DECL (osl_spline_w16fff_masked, "xXXXXiii")
+DECL (osl_spline_w16fw16ff_masked, "xXXXXiii")
+DECL (osl_spline_w16ffw16f_masked, "xXXXXiii")
+DECL (osl_spline_w16dfw16dfw16df_masked, "xXXXXiii")
+// DECL (osl_spline_w16dfw16dfdf_masked, "xXXXXiii") // incomplete
+//DECL (osl_spline_w16dfdfw16df_masked, "xXXXXiii") // incomplete
+DECL (osl_spline_w16dfw16dff_masked, "xXXXXiii")
+DECL (osl_spline_w16dffw16df_masked, "xXXXXiii")
+DECL (osl_spline_w16vw16fv_masked,"xXXXXiii")
+DECL (osl_spline_w16vw16fw16v_masked, "xXXXXiii")
+DECL (osl_spline_w16vfw16v_masked, "xXXXXiii")
+DECL (osl_spline_w16dvw16dfw16dv_masked, "xXXXXiii")
+DECL (osl_spline_w16dvw16dfdv_masked, "xXXXXiii")
+//DECL (osl_spline_w16dvdfw16dv_masked, "xXXXXiii") // incomplete
+DECL (osl_spline_w16dvw16dfv_masked, "xXXXXiii")
+//DECL (osl_spline_w16dvw16dfw16v_masked, "xXXXXiii") // Are these possible?
+//DECL (osl_spline_w16dvdfw16v_masked, "xXXXXii")// Are these possible?
+DECL (osl_spline_w16dvfw16dv_masked, "xXXXXiii")
+DECL (osl_spline_w16dvw16fw16dv_masked, "xXXXXiii")
+DECL (osl_spline_w16dvw16fdv_masked, "xXXXXiii")
+
+DECL (osl_splineinverse_w16fw16fw16f_masked, "xXXXXiii")
+DECL (osl_splineinverse_w16fw16ff_masked, "xXXXXiii")
+DECL (osl_splineinverse_w16ffw16f_masked, "xXXXXiii") // incomplete
+//DECL (osl_splineinverse_w16fff_masked, "xXXXXii")
+
+DECL (osl_splineinverse_w16dfw16dfw16df_masked, "xXXXXiii")
+DECL (osl_splineinverse_w16dfw16dff_masked, "xXXXXiii")
+//DECL (osl_splineinverse_w16dffw16df_masked, "xXXXXiii") // incomplete
 
 #if 0 // incomplete
 DECL (osl_setmessage, "xXsLXisi")

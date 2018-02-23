@@ -38,6 +38,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #error Do not include this file unless DECL is defined
 #endif
 
+
+
 #define NOISE_IMPL(name)                           \
     DECL (osl_ ## name ## _ff,  "ff")              \
     DECL (osl_ ## name ## _fff, "fff")             \
@@ -196,10 +198,12 @@ DECL (osl_spline_vfv, "xXXXXii")
 DECL (osl_spline_dvdfdv, "xXXXXii")
 DECL (osl_spline_dvdfv, "xXXXXii")
 DECL (osl_spline_dvfdv, "xXXXXii")
+
 DECL (osl_splineinverse_fff, "xXXXXii")
 DECL (osl_splineinverse_dfdfdf, "xXXXXii")
 DECL (osl_splineinverse_dfdff, "xXXXXii")
 DECL (osl_splineinverse_dffdf, "xXXXXii")
+
 DECL (osl_setmessage, "xXsLXisi")
 DECL (osl_getmessage, "iXssLXiisi")
 DECL (osl_pointcloud_search, "iXsXfiiXXii*")

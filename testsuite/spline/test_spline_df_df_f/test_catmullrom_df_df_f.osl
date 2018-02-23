@@ -1,0 +1,69 @@
+shader test_catmullrom_df_df_f (
+	float X = 0.5, 
+	output float Fspline1 = 0, 
+	output float DxFspline1 = 0)
+{
+
+//Non-batched: osl_spline_w16dfw16dfdf
+//Batched: Couldn't find function osl_spline_w16dfw16dfw16df 	
+// testshade -g 400 400 -t 1 --iters 1 --stats -o Fspline1 a.tif -o DxFspline1 b.tif test_bezier_df_df_df | grep osl
+   
+
+   float fltknots[13];
+   color colknots[13];
+ 
+#if 0
+   fltknots[ 0] =  0.0 * u;
+   fltknots[ 1] =  0.0 * u;
+   fltknots[ 2] =  1.0 * u;
+   fltknots[ 3] =  1.0 * u;
+   fltknots[ 4] =  1.0 * u;
+   fltknots[ 5] =  0.5 * u;
+   fltknots[ 6] =  0.5 * u;
+   fltknots[ 7] =  0.5 * u;
+   fltknots[ 8] =  1.0 * u;
+   fltknots[ 9] =  1.0 * u;
+   fltknots[10] =  1.0 * u;
+   fltknots[11] =  0.0 * u;
+   fltknots[12] =  0.0 * u;
+#endif
+
+
+   fltknots[ 0] =  0.0 ;
+   fltknots[ 1] =  0.0 ;
+   fltknots[ 2] =  1.0 ;
+   fltknots[ 3] =  1.0 ;
+   fltknots[ 4] =  1.0 ;
+   fltknots[ 5] =  0.5 ;
+   fltknots[ 6] =  0.5 ;
+   fltknots[ 7] =  0.5 ;
+   fltknots[ 8] =  1.0 ;
+   fltknots[ 9] =  1.0 ;
+   fltknots[10] =  1.0 ;
+   fltknots[11] =  0.0 ;
+   fltknots[12] =  0.0 ;
+
+
+   colknots[ 0] =  0.0;
+   colknots[ 1] =  0.0;
+   colknots[ 2] =  1.0;
+   colknots[ 3] =  1.0;
+   colknots[ 4] =  1.0;
+   colknots[ 5] =  0.5;
+   colknots[ 6] =  0.5;
+   colknots[ 7] =  0.5;
+   colknots[ 8] =  1.0;
+   colknots[ 9] =  1.0;
+   colknots[10] =  1.0;
+   colknots[11] =  0.0;
+   colknots[12] =  0.0;
+
+
+if(P[0]>0.5){
+
+  Fspline1   = spline("catmull-rom", P[0], fltknots);
+  DxFspline1 = Dx(Fspline1);
+}
+
+
+}

@@ -1,0 +1,18 @@
+
+shader test_bezier_dv_df_v (
+	output vector cv = 0, 
+	output vector Dxcv = 0)
+
+{
+ 	
+//testshade --batched --llvm_debug -g 400 400 -t 1 --iters 1 --stats -o cv C.tiff -o Dxcv a.tif test_bezier_dv_df_v | grep osl
+
+if(P[0]>0.5){
+normal stackN = N;
+cv = spline ("bezier", P[0], stackN); //colknots gets into w16dv_w16df_v; knots gets into w16dv_w16df_w16dv
+
+Dxcv = Dx(cv);
+
+}
+
+}

@@ -1,0 +1,21 @@
+shader test_constant_dv_df_dv (output color cv = 0, output color Dxcv = 0, output color Dycv = 0)
+{
+ 	
+//testshade -g 400 400 -t 1 --iters 1 --stats -o cv a.tif -o Dxcv cv.tif -o Dycv b.tif test_bezier_dv_df_dv
+
+color colknots[16];
+
+for (int i = 0; i < 4; ++i)
+        colknots[i] = color (i/3, i/3, i/3);
+
+for (int i = 4; i <arraylength(colknots); ++i)
+	colknots[i] = color(u*1.0e9, u*1.0e9, u*1.0e9);
+
+if(P[0]>0.5){
+cv = spline ("constant",P[0], colknots);
+
+Dxcv = Dx(cv);
+Dycv = Dy(cv);
+}
+
+}

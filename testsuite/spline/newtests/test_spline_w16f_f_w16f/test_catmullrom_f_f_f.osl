@@ -1,0 +1,28 @@
+shader test_catmullrom_f_f_f (
+	output float Fspline1 = 0
+)
+
+{
+
+   float fltknots[13];
+   
+   fltknots[ 0] =  0.0*u ;
+   fltknots[ 1] =  0.0*u ;
+   fltknots[ 2] =  1.0*u ;
+   fltknots[ 3] =  1.0*u ;
+   fltknots[ 4] =  1.0*u ;
+   fltknots[ 5] =  0.5*u ;
+   fltknots[ 6] =  0.5*u ;
+   fltknots[ 7] =  0.5*u ;
+   fltknots[ 8] =  1.0*u ;
+   fltknots[ 9] =  1.0*u ;
+   fltknots[10] =  1.0*u ;
+   fltknots[11] =  0.0*u ;
+   fltknots[12] =  0.0*u ;
+
+if(P[0]>0.5){
+  Fspline1   = spline("catmull-rom",0.5, fltknots);
+}
+
+
+}

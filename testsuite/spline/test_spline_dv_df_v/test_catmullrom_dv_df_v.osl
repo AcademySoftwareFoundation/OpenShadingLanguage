@@ -1,0 +1,39 @@
+
+shader test_catmullrom_dv_df_v (output vector cv = 0, output vector Dxcv = 0)
+
+{
+ 	
+//testshade --batched -g 400 400 -t 1 --iters 1 --stats -o cv C.tiff -o Dxcv a.tif test_bezier_dv_df_v | grep osl
+
+   color colknots[13];
+
+
+   colknots[ 0] =  vector(0.0, 0.0, 0.0);
+   colknots[ 1] =  vector(0.0, 0.0, 0.0);
+   colknots[ 2] =  vector(1.0, 1.0, 1.0);
+   colknots[ 3] =  vector(1.0, 1.0, 1.0);
+   colknots[ 4] =  vector(1.0, 1.0, 1.0);
+   colknots[ 5] =  vector(0.5, 0.5,0.5);
+   colknots[ 6] =  vector(0.5, 0.5, 0.5);
+   colknots[ 7] =  vector(0.5, 0.5, 0.5);
+   colknots[ 8] =  vector(1.0, 1.0, 1.0);
+   colknots[ 9] =  vector(1.0, 1.0, 1.0);
+   colknots[10] =  vector(1.0, 1.0, 1.0);
+   colknots[11] =  vector(0.0, 0.0, 0.0);
+   colknots[12] =  vector(0.0, 0.0, 0.0);
+
+
+vector knots[13];
+
+for (int i = 0; i < 4; ++i)
+        knots[i] = vector (i/3, i/3, i/3);
+
+for (int i = 4; i <arraylength(knots); ++i)
+	knots[i] = vector(0.0, 1.0, 1.0);
+
+if(P[0]>0.5){
+cv = spline ("catmull-rom", P[0], colknots);
+
+Dxcv = Dx(cv);
+}
+}

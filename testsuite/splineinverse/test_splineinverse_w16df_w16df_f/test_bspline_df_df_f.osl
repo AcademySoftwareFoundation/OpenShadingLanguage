@@ -1,0 +1,35 @@
+shader test_bspline_df_df_f (
+	float X = 0.5,
+	output float Fspline1 = 0, 
+	output float DxFspline1 = 0)
+{
+
+// testshade -g 400 400 -t 1 --iters 1 --stats -o Fspline1 a.tif -o DxFspline1 b.tif test_bezier_df_df_df | grep osl
+   
+
+   float fltknots[13];
+ 
+
+   fltknots[ 0] =  0.0 ;
+   fltknots[ 1] =  0.0 ;
+   fltknots[ 2] =  1.0 ;
+   fltknots[ 3] =  1.0 ;
+   fltknots[ 4] =  1.0 ;
+   fltknots[ 5] =  0.5 ;
+   fltknots[ 6] =  0.5 ;
+   fltknots[ 7] =  0.5 ;
+   fltknots[ 8] =  1.0 ;
+   fltknots[ 9] =  1.0 ;
+   fltknots[10] =  1.0 ;
+   fltknots[11] =  0.0 ;
+   fltknots[12] =  0.0 ;
+
+
+//if(P[0]>0.5) {
+
+  Fspline1   = splineinverse("bspline", P[0], fltknots);
+  DxFspline1 = Dx(Fspline1);
+//}
+
+
+}

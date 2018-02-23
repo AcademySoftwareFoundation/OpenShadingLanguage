@@ -1,0 +1,57 @@
+shader test_bezier_w16v_w16f_w16v (
+	//float X = 0.5, 
+	output vector Fspline1 = 0, 
+	output vector DxFspline1 = 0,
+	//output float DyFspline2 = 0
+	)
+{
+   //Output: df; Input: f; Knots: df
+
+   float fltknots[13];
+   
+   fltknots[ 0] =  0.0 * u;
+   fltknots[ 1] =  0.0 * u;
+   fltknots[ 2] =  1.0 * u;
+   fltknots[ 3] =  1.0 * u;
+   fltknots[ 4] =  1.0 * u;
+   fltknots[ 5] =  0.5 * u;
+   fltknots[ 6] =  0.5 * u;
+   fltknots[ 7] =  0.5 * u;
+   fltknots[ 8] =  1.0 * u;
+   fltknots[ 9] =  1.0 * u;
+   fltknots[10] =  1.0 * u;
+   fltknots[11] =  0.0 * u;
+   fltknots[12] =  0.0 * u;
+
+   float x_input[4];
+   x_input[0] = 1.1;
+   x_input[1] = 1.2;
+   x_input[2] = 1.3;
+   x_input[3] = 1.4;
+
+  color c = (0,1,0);
+
+  vector vecknots[13];
+
+   vecknots[ 0] =  0.0 * u ;
+   vecknots[ 1] =  0.0 * u ;
+   vecknots[ 2] =  1.0 * u;
+   vecknots[ 3] =  1.0 * u;
+   vecknots[ 4] =  1.0 * u;
+   vecknots[ 5] =  0.5 * u;
+   vecknots[ 6] =  0.5 * u;
+   vecknots[ 7] =  0.5 * u;
+   vecknots[ 8] =  1.0 * u;
+   vecknots[ 9] =  1.0 * u;
+   vecknots[10] =  1.0 * u;
+   vecknots[11] =  0.0 * u;
+   vecknots[12] =  0.0 * u;
+
+
+  Fspline1   = spline("bezier", P[1], vecknots);
+  DxFspline1 = Dx(P[1]);
+ // DyFspline2 = Dy(Fspline1);
+
+
+
+}

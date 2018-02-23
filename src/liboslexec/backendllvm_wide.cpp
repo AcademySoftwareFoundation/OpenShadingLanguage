@@ -2320,7 +2320,7 @@ BackendLLVMWide::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
 			(ll.llvm_typeof(result) ==  ll.type_matrix())) {
             result = ll.widen_value(result);
         } else {
-#if OSL_DEV
+#ifdef OSL_DEV
         	if (!((ll.llvm_typeof(result) ==  ll.type_wide_float()) ||
          		   (ll.llvm_typeof(result) ==  ll.type_wide_int()) ||
                    (ll.llvm_typeof(result) ==  ll.type_wide_matrix()) ||

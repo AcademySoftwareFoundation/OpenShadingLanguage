@@ -1,0 +1,54 @@
+*****************
+Batched time: Run : 0.24s 
+Non-batched time: Run : 0.34s
+Comparing "constant_ref.tif" and "constant_out.tif" PASS 
+[smonteir@ortce-sklaw test_spline_w16f_f_w16f]$ vi runspline.csh
+[smonteir@ortce-sklaw test_spline_w16f_f_w16f]$ source runspline.csh
+
+
+*******************
+Catmull-Rom spline...
+*******************
+Batched time: Run : 17.71s 
+Non-batched time: Run : 2m 4.29s
+Comparing "catmullrom_ref.tif" and "catmullrom_out.tif" PASS 
+
+
+*******************
+Bezier spline...
+*******************
+Batched time: Run : 17.58s 
+Non-batched time: Run : 2m 4.36s
+Comparing "bezier_ref.tif" and "bezier_out.tif" PASS 
+
+
+*******************
+Bspline spline...
+*******************
+Batched time: Run : 17.39s 
+Non-batched time: Run : 2m 17.12s
+Comparing "bspline_ref.tif" and "bspline_out.tif" PASS 
+
+
+*******************
+Hermite spline...
+*******************
+Batched time: Run : 17.57s 
+Non-batched time: Run : 2m 4.61s
+Comparing "hermite_ref.tif" and "hermite_out.tif" PASS 
+
+
+*******************
+Linear spline...
+*******************
+Batched time: Run : 17.59s 
+Non-batched time: Run : 2m 6.74s
+Comparing "linear_ref.tif" and "linear_out.tif" PASS 
+
+
+*******************
+Constant spline...
+*******************
+Batched time: Run : 17.59s 
+Non-batched time: Run : 1m 56.52s
+Comparing "constant_ref.tif" and "constant_out.tif" PASS

@@ -1,0 +1,95 @@
+shader test_bezier_df_df_f (
+	float wide_val = 1.0 [[ int lockgeom=0 ]],
+	output float Fspline1 = 0, 
+	output float DxFspline1 = 0)
+{
+
+//Non-batched: osl_spline_w16dfw16dfdf
+//Batched: Couldn't find function osl_spline_w16dfw16dfw16df 	
+// testshade -g 400 400 -t 1 --iters 1 --stats -o Fspline1 a.tif -o DxFspline1 b.tif test_bezier_df_df_df | grep osl
+   
+
+   float fltknots[13];
+   color colknots[13];
+
+ 
+ //  float wide_val = 1.0;
+ 
+   // Always will have a derivative, because
+   // OSL has no way of knowing if renderer was going
+   // to supply one or not, so it always makes space for it
+   //getattribute("blahblah",wide_val);
+   
+   fltknots[ 0] =  0.0 * wide_val;
+   fltknots[ 1] =  0.0 * wide_val;
+   fltknots[ 2] =  1.0 * wide_val;
+   fltknots[ 3] =  1.0 * wide_val;
+   fltknots[ 4] =  1.0 * wide_val;
+   fltknots[ 5] =  0.5 * wide_val;
+   fltknots[ 6] =  0.5 * wide_val;
+   fltknots[ 7] =  0.5 * wide_val;
+   fltknots[ 8] =  1.0 * wide_val;
+   fltknots[ 9] =  1.0 * wide_val;
+   fltknots[10] =  1.0 * wide_val;
+   fltknots[11] =  0.0 * wide_val;
+   fltknots[12] =  0.0 * wide_val;
+
+	//for(int ki=0; ki < 13; ++ki) {
+	//	printf("%g Dx=%g\n",fltknots[ki],Dx(fltknots[ki]));
+	//}
+
+#if 0
+
+   fltknots[ 0] =  0.0 ;
+   fltknots[ 1] =  0.0 ;
+   fltknots[ 2] =  1.0 ;
+   fltknots[ 3] =  1.0 ;
+   fltknots[ 4] =  1.0 ;
+   fltknots[ 5] =  0.5 ;
+   fltknots[ 6] =  0.5 ;
+   fltknots[ 7] =  0.5 ;
+   fltknots[ 8] =  1.0 ;
+   fltknots[ 9] =  1.0 ;
+   fltknots[10] =  1.0 ;
+   fltknots[11] =  0.0 ;
+   fltknots[12] =  0.0 ;
+
+#endif
+   colknots[ 0] =  0.0;
+   colknots[ 1] =  0.0;
+   colknots[ 2] =  1.0;
+   colknots[ 3] =  1.0;
+   colknots[ 4] =  1.0;
+   colknots[ 5] =  0.5;
+   colknots[ 6] =  0.5;
+   colknots[ 7] =  0.5;
+   colknots[ 8] =  1.0;
+   colknots[ 9] =  1.0;
+   colknots[10] =  1.0;
+   colknots[11] =  0.0;
+   colknots[12] =  0.0;
+
+#if 0
+   fltknots[ 0] =  N;
+   fltknots[ 1] =  N;
+   fltknots[ 2] =  N;
+   fltknots[ 3] =  N;
+   fltknots[ 4] =  N;
+   fltknots[ 5] =  N;
+   fltknots[ 6] =  N;
+   fltknots[ 7] =  N;
+   fltknots[ 8] =  N;
+   fltknots[ 9] =  N;
+   fltknots[10] =  N;
+   fltknots[11] =  N;
+   fltknots[12] =  N;
+
+#endif
+if(P[0]>0.5) {
+
+  Fspline1   = spline("bezier", P[0],fltknots);
+  DxFspline1 = Dx(Fspline1);
+}
+
+
+}

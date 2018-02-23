@@ -1,0 +1,68 @@
+shader test_bspline_vec3 (output vector Fspline = 0)
+{
+ 	
+   color  colors[5] = { color(1,0,0),
+                        color(0,1,0),
+                        color(0,0,1),
+                        color(1,1,0),
+                        color(1,0,1) };
+ 
+   float x;
+   color colknots[13];
+
+   vector xvecknots[13];
+   //vector yfltknots[13];
+   //vector zfltknots[13];
+
+ 
+   
+   xvecknots[ 0] =  0.0;
+   xvecknots[ 1] =  0.0;
+   xvecknots[ 2] =  1.0;
+   xvecknots[ 3] =  1.0;
+   xvecknots[ 4] =  1.0;
+   xvecknots[ 5] =  0.5;
+   xvecknots[ 6] =  0.5;
+   xvecknots[ 7] =  0.5;
+   xvecknots[ 8] =  1.0;
+   xvecknots[ 9] =  1.0;
+   xvecknots[10] =  1.0;
+   xvecknots[11] =  0.0;
+   xvecknots[12] =  0.0;
+
+#if 0
+   yfltknots[ 0] =  0.0;
+   yfltknots[ 1] =  0.0;
+   yfltknots[ 2] =  1.0;
+   yfltknots[ 3] =  1.0;
+   yfltknots[ 4] =  1.0;
+   yfltknots[ 5] =  0.5;
+   yfltknots[ 6] =  0.5;
+   yfltknots[ 7] =  0.5;
+   yfltknots[ 8] =  1.0;
+   yfltknots[ 9] =  1.0;
+   yfltknots[10] =  1.0;
+   yfltknots[11] =  0.0;
+   yfltknots[12] =  0.0;
+
+   zfltknots[ 0] =  0.0;
+   zfltknots[ 1] =  0.0;
+   zfltknots[ 2] =  1.0;
+   zfltknots[ 3] =  1.0;
+   zfltknots[ 4] =  1.0;
+   zfltknots[ 5] =  0.5;
+   zfltknots[ 6] =  0.5;
+   zfltknots[ 7] =  0.5;
+   zfltknots[ 8] =  1.0;
+   zfltknots[ 9] =  1.0;
+   zfltknots[10] =  1.0;
+   zfltknots[11] =  0.0;
+   zfltknots[12] =  0.0;
+
+#endif
+
+if(P[0]>0.5){
+   // Test for spline with no derivatives, varying u, uniform knots
+   Fspline   = spline("bspline", P[0], xvecknots);
+ }
+}

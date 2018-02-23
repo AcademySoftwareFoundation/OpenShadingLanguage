@@ -1,0 +1,31 @@
+shader test_linear_f_f_f (
+	output float Fspline1 = 0,
+        output float DxFspline1 = 0
+)
+
+{
+
+   float fltknots[13];
+   
+   fltknots[ 0] =  0.0 ;
+   fltknots[ 1] =  0.0 ;
+   fltknots[ 2] =  1.0 ;
+   fltknots[ 3] =  1.0 ;
+   fltknots[ 4] =  1.0 ;
+   fltknots[ 5] =  0.5 ;
+   fltknots[ 6] =  0.5 ;
+   fltknots[ 7] =  0.5 ;
+   fltknots[ 8] =  1.0 ;
+   fltknots[ 9] =  1.0 ;
+   fltknots[10] =  1.0 ;
+   fltknots[11] =  0.0 ;
+   fltknots[12] =  0.0 ;
+
+
+  Fspline1   = spline("linear",0.1, fltknots);
+
+  DxFspline1 = Dx(Fspline1);
+
+
+
+}

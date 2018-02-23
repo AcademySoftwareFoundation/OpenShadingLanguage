@@ -1,0 +1,31 @@
+shader test_catmullrom_v_f_v (
+	output vector Fspline1 = 0
+)
+{
+
+ //testshade -g 4 4 -t 1 --iters 1 --stats -od uint8 -o Fspline1 a_ref.tif -o DxFspline1 b_ref.tif test_bezier_dv_f_dv | grep Inside  
+
+ 
+   vector vecknots[13];
+   
+   vecknots[0] = 0.0 * u;
+   vecknots[1] = 0.0 * u;
+   vecknots[2] = 1.0 * u;
+   vecknots[3] = 1.0 * u;
+   vecknots[4] = 1.0 * u;
+   vecknots[5] = 0.5 * u;
+   vecknots[6] = 0.5 * u;
+   vecknots[7] = 0.5 * u;
+   vecknots[8] = 1.0 * u;
+   vecknots[9] = 1.0 * u;
+   vecknots[10] = 1.0 * u;
+   vecknots[11] = 0.0 * u;
+   vecknots[12] = 0.0 * u;
+
+if(P[0]>0.5){ 
+ Fspline1   = spline("catmull-rom", 0.5, vecknots);
+  //DxFspline1 = Dx(Fspline1);
+ float DxX = Dx(u);
+}
+
+}

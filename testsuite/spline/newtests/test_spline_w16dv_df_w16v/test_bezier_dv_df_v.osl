@@ -1,0 +1,51 @@
+
+shader test_bezier_dv_df_v (
+	output vector cv = 0, 
+	output vector Dxcv = 0)
+
+{
+ 	
+//testshade --batched --llvm_debug -g 400 400 -t 1 --iters 1 --stats -o cv C.tiff -o Dxcv a.tif test_bezier_dv_df_v | grep osl
+
+vector vecknots_var [13];
+vecknots_var[0] = (1.0, 1.0, 1.0)*u;
+vecknots_var[1] = (1.0, 1.0, 1.0)*u;
+vecknots_var[2] = (0.5, 0.5, 0.5)*u;
+vecknots_var[3] = (0.5, 0.5, 0.5)*u;
+vecknots_var[4] = (0, 0, 0)*u;
+vecknots_var[5] = (0, 0, 0)*u;
+vecknots_var[6] = (0.5, 0.5, 0.5)*u;
+vecknots_var[7] = (0, 0, 0)*u;
+vecknots_var[8] = (0, 0, 0)*u;
+vecknots_var[9] = (0.5, 0.5, 0.5)*u;
+vecknots_var[10] = (0.5, 0.5, 0.5)*u;
+vecknots_var[11] = (1.0, 1.0, 1.0)*u;
+vecknots_var[12] = (1.0, 1.0, 1.0)*u;
+
+
+#if 0
+vector vecknots[13];
+vecknots[0] = (1.0, 1.0, 1.0);
+vecknots[1] = (1.0, 1.0, 1.0);
+vecknots[2] = (0.5, 0.5, 0.5);
+vecknots[3] = (0.5, 0.5, 0.5);
+vecknots[4] = (0, 0, 0);
+vecknots[5] = (0, 0, 0);
+vecknots[6] = (0.5, 0.5, 0.5);
+vecknots[7] = (0, 0, 0);
+vecknots[8] = (0, 0, 0);
+vecknots[9] = (0.5, 0.5, 0.5);
+vecknots[10] = (0.5, 0.5, 0.5);
+vecknots[11] = (1.0, 1.0, 1.0);
+vecknots[12] = (1.0, 1.0, 1.0);
+#endif
+
+vector vecknots = ( 1, 1, 1);
+if(P[0]>0.5){
+cv = spline ("bezier",N ,vecknots ); 
+
+Dxcv = Dx(cv);
+
+}
+
+}

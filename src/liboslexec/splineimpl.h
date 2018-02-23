@@ -189,6 +189,7 @@ private:
 
 // Evaluate the inverse of a spline, i.e., solve for the x for which
 // spline_evaluate(x) == y.
+
 template <class YTYPE>
 void spline_inverse (const SplineBasis *spline,
                      YTYPE &x, YTYPE y, const float *knots, int knot_count,
@@ -216,8 +217,10 @@ void spline_inverse (const SplineBasis *spline,
         }
     }
 
+    //SM: Eliminate the Functor, and move splineinverse to the fast space. And call
+    //our fast::spline_evaluate.
 
-    SplineFunctor<YTYPE,YTYPE> S (spline, knots, knot_count, knot_arraylen);
+    SplineFunctor<YTYPE,YTYPE> S (spline, knots, knot_count, knot_arraylen); //SM: Pass our spline_val
     // Because of the nature of spline interpolation, monotonic knots
     // can still lead to a non-monotonic curve.  To deal with this,
     // search separately on each spline segment and hope for the best.
@@ -233,7 +236,7 @@ void spline_inverse (const SplineBasis *spline,
             return;
         r0 = r1;  // Start of next interval is end of this one
     }
-}
+}//splineinverse() ends
 
 
 

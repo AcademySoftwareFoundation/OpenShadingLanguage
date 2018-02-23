@@ -1,0 +1,28 @@
+shader test_linear_v_f_v ( 
+	output vector Fspline1 = 0, 
+	output vector DxFspline1 = 0
+	
+	)
+{
+
+  vector vecknots[13];
+
+   vecknots[ 0] =  0.0 * u ;
+   vecknots[ 1] =  0.0 * u ;
+   vecknots[ 2] =  1.0 * u;
+   vecknots[ 3] =  1.0 * u;
+   vecknots[ 4] =  1.0 * u;
+   vecknots[ 5] =  0.5 * u;
+   vecknots[ 6] =  0.5 * u;
+   vecknots[ 7] =  0.5 * u;
+   vecknots[ 8] =  1.0 * u;
+   vecknots[ 9] =  1.0 * u;
+   vecknots[10] =  1.0 * u;
+   vecknots[11] =  0.0 * u;
+   vecknots[12] =  0.0 * u;
+
+if(P[0]>0.5){
+  Fspline1   = spline("linear", P[1], vecknots);
+  DxFspline1 = Dx(P[1]);
+}
+}

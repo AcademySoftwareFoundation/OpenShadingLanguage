@@ -4931,7 +4931,8 @@ LLVMGEN (llvm_gen_spline)
     //   result has derivs and (value || knots) have derivs
     bool result_derivs = Result.has_derivs() && (Value.has_derivs() || Knots.has_derivs());
 
-    if (false == rop.isSymbolUniform(Result))
+    bool result_is_uniform = rop.isSymbolUniform(Result);
+    if (false == result_is_uniform)
     	name += warg_lane_count();
     if (result_derivs)
         name += "d";
@@ -4957,8 +4958,10 @@ LLVMGEN (llvm_gen_spline)
         name += "f";
     else if (Knots.typespec().simpletype().elementtype().aggregate == TypeDesc::VEC3)
         name += "v";
-    // for simplicity, always call the masked version
-    name += "_masked";
+    if (false == result_is_uniform) {
+        // for simplicity, always call the masked version
+        name += "_masked";
+    }
 
     args.push_back (rop.llvm_void_ptr (Result));
     args.push_back (rop.llvm_load_value (Spline));
@@ -4970,7 +4973,10 @@ LLVMGEN (llvm_gen_spline)
         args.push_back (rop.ll.constant ((int)Knots.typespec().arraylength()));
     args.push_back (rop.ll.constant ((int)Knots.typespec().arraylength()));
 
-    args.push_back (rop.ll.mask_as_int(rop.ll.current_mask()));
+    if (false == result_is_uniform) {
+        // We always call the masked version, need to pass the mask value
+        args.push_back (rop.ll.mask_as_int(rop.ll.current_mask()));
+    }
 
     rop.ll.call_function (name.c_str(), &args[0], args.size());
 

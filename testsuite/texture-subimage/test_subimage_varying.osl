@@ -1,0 +1,19 @@
+shader
+test_subimage_varying (string filename = "../common/textures/mandrill.tif",
+      output color Cout = 0)
+{
+    // TODO: get test image with subimages, so we can set to a value other than 0
+    int subimage = 0;
+    int scaledX = int(P[0]*64.0);
+    if (mod(scaledX,9) > 0) {    
+        subimage = 0;
+    }
+    if (P[0] > 0.75) {
+        subimage = 0;
+    }    
+    if (P[1] > 0.75) {
+        subimage = 0;
+    }    
+
+    Cout = (color) texture (filename, u, v, "subimage", subimage);
+}

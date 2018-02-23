@@ -1293,6 +1293,81 @@ osl_normalize_w16vw16v(void *r_, void *V_)
 	}	
 }
 
+#if OSL_EXPERIMENTAL_NORMALIZE_MASKED
+// Experimental code that includes mask inside __builtin_expect to see how it affects code generation
+OSL_INLINE float HackedaccessibleTinyLength(const Vec3 &N)
+{
+    float absX = (N.x >= float (0))? N.x: -N.x;
+    float absY = (N.y >= float (0))? N.y: -N.y;
+    float absZ = (N.z >= float (0))? N.z: -N.z;
+
+    float max = absX;
+
+    if (max < absY)
+    max = absY;
+
+    if (max < absZ)
+    max = absZ;
+
+    if (max == float (0))
+    return float (0);
+
+    //
+    // Do not replace the divisions by max with multiplications by 1/max.
+    // Computing 1/max can overflow but the divisions below will always
+    // produce results less than or equal to 1.
+    //
+
+    absX /= max;
+    absY /= max;
+    absZ /= max;
+
+    return max * Imath::Math<float>::sqrt (absX * absX + absY * absY + absZ * absZ);
+}
+
+OSL_INLINE
+float HackedsimdFriendlyLength(const Vec3 &N, bool isLaneActive)
+{
+    float length2 = N.dot (N);
+
+    if (__builtin_expect(isLaneActive && (length2 < float (2) * Imath::limits<float>::smallest()), 0))
+        return HackedaccessibleTinyLength(N);
+
+    return Imath::Math<float>::sqrt (length2);
+}
+
+
+OSL_INLINE Vec3
+HackedsimdFriendlyNormalize(const Vec3 &N, bool isLaneActive)
+{
+    float l = HackedsimdFriendlyLength(N, isLaneActive);
+
+    if (l == float (0))
+        return Vec3 (float (0));
+
+    return Vec3 (N.x / l, N.y / l, N.z / l);
+}
+
+
+OSL_SHADEOP void
+osl_normalize_w16vw16v_masked(void *r_, void *V_, int mask_value)
+{
+    OSL_INTEL_PRAGMA(forceinline recursive)
+    {
+        ConstWideAccessor<Vec3> wV(V_);
+        MaskedAccessor<Vec3> wr(r_, Mask(mask_value));
+
+        OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
+        for(int lane=0; lane < wr.width; ++lane) {
+            // Hacked by A.W. to see if __builtin_expect behaves better when mask applied to it
+            Vec3 V = wV[lane];
+//              Vec3 N = simdFriendlyNormalize(V);
+                Vec3 N = HackedsimdFriendlyNormalize(V,wr.mask()[lane]);
+                wr[lane] = N;
+        }
+    }
+}
+#else
 OSL_SHADEOP void
 osl_normalize_w16vw16v_masked(void *r_, void *V_, int mask_value)
 {
@@ -1309,6 +1384,7 @@ osl_normalize_w16vw16v_masked(void *r_, void *V_, int mask_value)
 		}
 	}
 }
+#endif
 
 OSL_SHADEOP void
 osl_normalize_w16dvw16dv(void *r_, void *V_)

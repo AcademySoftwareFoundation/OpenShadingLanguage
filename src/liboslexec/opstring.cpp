@@ -109,6 +109,26 @@ osl_stoi_is (const char *str)
     return str ? strtol(str, NULL, 10) : 0;
 }
 
+OSL_SHADEOP void
+osl_stoi_w16iw16s_masked (void *wint_ptr, void * wstr_ptr, int mask_value)
+{
+    ConstWideAccessor<ustring> wstr(wstr_ptr);
+    MaskedAccessor<int> wresult(wint_ptr, Mask(mask_value));
+
+    for(int lane=0; lane < wresult.width; ++lane) {
+        ustring str = wstr[lane];
+        int result = 0;
+        // Avoid cost of strtol if lane is masked off
+        // Also the value of str for a masked off lane could be
+        // invalid/undefined and not safe to call strtol on.
+        if (wresult.mask()[lane] && str.c_str()) {
+            result = strtol(str.c_str(), NULL, 10);
+        }
+
+        wresult[lane] = result;
+    }
+}
+
 OSL_SHADEOP float
 osl_stof_fs (const char *str)
 {

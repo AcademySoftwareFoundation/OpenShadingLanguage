@@ -447,6 +447,9 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym)
         std::vector<llvm::Value*> args;
         args.push_back (sg_void_ptr());
         args.push_back (ll.constant (symname));
+#ifdef OSL_EXPERIMENTAL_BIND_USER_DATA_WITH_LAYERNAME
+        args.push_back (ll.constant (inst()->layername()));
+#endif
         args.push_back (ll.constant (type));
         args.push_back (ll.constant ((int) group().m_userdata_derivs[userdata_index]));
         args.push_back (groupdata_field_ptr (2 + userdata_index)); // userdata data ptr

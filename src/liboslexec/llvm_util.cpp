@@ -38,6 +38,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OSL/wide.h"
 #include "oslexec_pvt.h"
 
+#ifndef OSL_LLVM_VERSION
+    #error Must define an OSL_LLVM_VERSION
+#endif
+
 #if OSL_LLVM_VERSION < 34
 #error "LLVM minimum version required for OSL is 3.4"
 #endif
@@ -202,125 +206,137 @@ LLVM_Util::total_jit_memory_held ()
 class LLVM_Util::MemoryManager : public LLVMMemoryManager {
 protected:
     LLVMMemoryManager *mm;  // the real one
-    // TODO: A.W. investigate why this using was added to avoid build issue
-    // could be related to LLVM 5.0 (test and invistigate)
-    using llvm::RuntimeDyld::MemoryManager::deregisterEHFrames;
 public:
 
 #if USE_OLD_JIT // llvm::JITMemoryManager
     MemoryManager(LLVMMemoryManager *realmm) : mm(realmm) { HasGOT = realmm->isManagingGOT(); }
 
-    virtual void setMemoryWritable() { mm->setMemoryWritable(); }
-    virtual void setMemoryExecutable() { mm->setMemoryExecutable(); }
-    virtual void setPoisonMemory(bool poison) { mm->setPoisonMemory(poison); }
-    virtual void AllocateGOT() { ASSERT(HasGOT == false); ASSERT(HasGOT == mm->isManagingGOT()); mm->AllocateGOT(); HasGOT = true; ASSERT(HasGOT == mm->isManagingGOT()); }
-    virtual uint8_t *getGOTBase() const { return mm->getGOTBase(); }
-    virtual uint8_t *startFunctionBody(const llvm::Function *F,
-                                       uintptr_t &ActualSize) {
+    void setMemoryWritable() override { mm->setMemoryWritable(); }
+    void setMemoryExecutable() override { mm->setMemoryExecutable(); }
+    void setPoisonMemory(bool poison) override { mm->setPoisonMemory(poison); }
+    void AllocateGOT() override { ASSERT(HasGOT == false); ASSERT(HasGOT == mm->isManagingGOT()); mm->AllocateGOT(); HasGOT = true; ASSERT(HasGOT == mm->isManagingGOT()); }
+    uint8_t *getGOTBase() override const { return mm->getGOTBase(); }
+    uint8_t *startFunctionBody(const llvm::Function *F,
+                                       uintptr_t &ActualSize) override {
         return mm->startFunctionBody (F, ActualSize);
     }
-    virtual uint8_t *allocateStub(const llvm::GlobalValue* F, unsigned StubSize,
-                                  unsigned Alignment) {
+    uint8_t *allocateStub(const llvm::GlobalValue* F, unsigned StubSize,
+                                  unsigned Alignment) override {
         return mm->allocateStub (F, StubSize, Alignment);
     }
-    virtual void endFunctionBody(const llvm::Function *F,
-                                 uint8_t *FunctionStart, uint8_t *FunctionEnd) {
+    void endFunctionBody(const llvm::Function *F,
+                                 uint8_t *FunctionStart, uint8_t *FunctionEnd) override {
         mm->endFunctionBody (F, FunctionStart, FunctionEnd);
     }
-    virtual uint8_t *allocateSpace(intptr_t Size, unsigned Alignment) {
+    uint8_t *allocateSpace(intptr_t Size, unsigned Alignment) override {
         return mm->allocateSpace (Size, Alignment);
     }
-    virtual uint8_t *allocateGlobal(uintptr_t Size, unsigned Alignment) {
+    uint8_t *allocateGlobal(uintptr_t Size, unsigned Alignment) override {
         return mm->allocateGlobal (Size, Alignment);
     }
-    virtual void deallocateFunctionBody(void *Body) {
+    void deallocateFunctionBody(void *Body) override {
         // DON'T DEALLOCATE mm->deallocateFunctionBody (Body);
     }
-    virtual bool CheckInvariants(std::string &s) {
+    bool CheckInvariants(std::string &s) override {
         return mm->CheckInvariants(s);
     }
-    virtual size_t GetDefaultCodeSlabSize() {
+    size_t GetDefaultCodeSlabSize() override {
         return mm->GetDefaultCodeSlabSize();
     }
-    virtual size_t GetDefaultDataSlabSize() {
+    size_t GetDefaultDataSlabSize() override {
         return mm->GetDefaultDataSlabSize();
     }
-    virtual size_t GetDefaultStubSlabSize() {
+    size_t GetDefaultStubSlabSize() override {
         return mm->GetDefaultStubSlabSize();
     }
-    virtual unsigned GetNumCodeSlabs() { return mm->GetNumCodeSlabs(); }
-    virtual unsigned GetNumDataSlabs() { return mm->GetNumDataSlabs(); }
-    virtual unsigned GetNumStubSlabs() { return mm->GetNumStubSlabs(); }
+    unsigned GetNumCodeSlabs() override { return mm->GetNumCodeSlabs(); }
+    unsigned GetNumDataSlabs() override { return mm->GetNumDataSlabs(); }
+    unsigned GetNumStubSlabs() override { return mm->GetNumStubSlabs(); }
 
-    virtual void notifyObjectLoaded(llvm::ExecutionEngine *EE, const llvm::ObjectImage *oi) {
+    void notifyObjectLoaded(llvm::ExecutionEngine *EE, const llvm::ObjectImage *oi) override {
         mm->notifyObjectLoaded (EE, oi);
     }
 
 #else // MCJITMemoryManager
 
     MemoryManager(LLVMMemoryManager *realmm) : mm(realmm) {}
-    
-    virtual void notifyObjectLoaded(llvm::ExecutionEngine *EE, const llvm::object::ObjectFile &oi) {
+
+    void notifyObjectLoaded(llvm::ExecutionEngine *EE, const llvm::object::ObjectFile &oi) override {
         mm->notifyObjectLoaded (EE, oi);
     }
 
+    void notifyObjectLoaded (RuntimeDyld &RTDyld, const object::ObjectFile &Obj) override {
+        mm->notifyObjectLoaded(RTDyld, Obj);
+    }
+
 #if OSL_LLVM_VERSION <= 37
-  virtual void reserveAllocationSpace(
-    uintptr_t CodeSize, uintptr_t DataSizeRO, uintptr_t DataSizeRW) {
+    void reserveAllocationSpace(uintptr_t CodeSize, uintptr_t DataSizeRO, uintptr_t DataSizeRW) override {
         return mm->reserveAllocationSpace(CodeSize, DataSizeRO, DataSizeRW);
-}
+    }
 #else
-    virtual void reserveAllocationSpace(uintptr_t CodeSize, uint32_t CodeAlign,
-                                        uintptr_t RODataSize,
-                                        uint32_t RODataAlign,
-                                        uintptr_t RWDataSize,
-                                        uint32_t RWDataAlign) {
+    void reserveAllocationSpace(uintptr_t CodeSize, uint32_t CodeAlign,
+                                uintptr_t RODataSize, uint32_t RODataAlign,
+                                uintptr_t RWDataSize, uint32_t RWDataAlign) override {
         return mm->reserveAllocationSpace(CodeSize, CodeAlign, RODataSize, RODataAlign, RWDataSize, RWDataAlign);
     }
 #endif
 
-    virtual bool needsToReserveAllocationSpace() {
+    bool needsToReserveAllocationSpace() override {
         return mm->needsToReserveAllocationSpace();
     }
 
-    virtual void invalidateInstructionCache() {
+    void invalidateInstructionCache() override {
         mm->invalidateInstructionCache();
     }
     
+    JITSymbol findSymbol(const std::string &Name) override {
+        return mm->findSymbol(Name);
+    }
+
+    uint64_t getSymbolAddressInLogicalDylib (const std::string &Name) override {
+        return mm->getSymbolAddressInLogicalDylib(Name);
+    }
+
+    JITSymbol findSymbolInLogicalDylib (const std::string &Name) override {
+        return mm->findSymbolInLogicalDylib(Name);
+    }
 #endif
 
     // Common
     virtual ~MemoryManager() {}
 
-    virtual void *getPointerToNamedFunction(const std::string &Name,
-                                            bool AbortOnFailure = true) {
+    void *getPointerToNamedFunction(const std::string &Name,
+                                    bool AbortOnFailure) override {
         return mm->getPointerToNamedFunction (Name, AbortOnFailure);
     }
-    virtual uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment,
-                             unsigned SectionID, llvm::StringRef SectionName) {
+    uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment,
+                                 unsigned SectionID, llvm::StringRef SectionName) override {
         return mm->allocateCodeSection(Size, Alignment, SectionID, SectionName);
     }
-    virtual uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment,
-                             unsigned SectionID, llvm::StringRef SectionName,
-                             bool IsReadOnly) {
+    uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment,
+                                 unsigned SectionID, llvm::StringRef SectionName,
+                                 bool IsReadOnly) override {
         return mm->allocateDataSection(Size, Alignment, SectionID,
                                        SectionName, IsReadOnly);
     }
-    virtual void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) {
+    void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) override {
         mm->registerEHFrames (Addr, LoadAddr, Size);
     }
-    virtual void deregisterEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) {
-#if OSL_LLVM_VERSION < 50
-        mm->deregisterEHFrames(Addr, LoadAddr, Size);
-#else
-        // TODO: verify this is correct
-        mm->deregisterEHFrames();
-#endif
-    }
-    virtual uint64_t getSymbolAddress(const std::string &Name) {
+    #if OSL_LLVM_VERSION < 50
+        void deregisterEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) override {
+            mm->deregisterEHFrames(Addr, LoadAddr, Size);
+        }
+    #else
+        void deregisterEHFrames() override {
+            mm->deregisterEHFrames();
+        }
+    #endif
+
+    uint64_t getSymbolAddress(const std::string &Name) override {
         return mm->getSymbolAddress (Name);
     }
-    virtual bool finalizeMemory(std::string *ErrMsg = 0) {
+
+    bool finalizeMemory(std::string *ErrMsg) override {
         return mm->finalizeMemory (ErrMsg);
     }
 };
@@ -355,6 +371,7 @@ LLVM_Util::LLVM_Util (int debuglevel, const LLVM_Util::PerThreadInfo &per_thread
       m_llvm_module_passes(NULL), m_llvm_func_passes(NULL),
       m_llvm_exec(NULL),
       m_masked_exit_count(0),
+      mVTuneNotifier(nullptr),
       m_llvm_debug_builder(nullptr),
       mDebugCU(nullptr),
       mSubTypeForInlinedFunction(nullptr)
@@ -390,6 +407,8 @@ LLVM_Util::LLVM_Util (int debuglevel, const LLVM_Util::PerThreadInfo &per_thread
     m_llvm_type_float = (llvm::Type *) llvm::Type::getFloatTy (*m_llvm_context);
     m_llvm_type_double = (llvm::Type *) llvm::Type::getDoubleTy (*m_llvm_context);
     m_llvm_type_int = (llvm::Type *) llvm::Type::getInt32Ty (*m_llvm_context);
+    m_llvm_type_int8 = (llvm::Type *) llvm::Type::getInt8Ty (*m_llvm_context);
+    m_llvm_type_int16 = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);
     if (sizeof(char *) == 4)
         m_llvm_type_addrint = (llvm::Type *) llvm::Type::getInt32Ty (*m_llvm_context);
     else
@@ -541,12 +560,11 @@ LLVM_Util::debug_setup_compilation_unit(const char * compile_unit_name) {
 			"", // This string lists command line options. This string is directly embedded in debug info output which may be used by a tool analyzing generated debugging information.
 			1900, // This indicates runtime version for languages like Objective-C
 			StringRef(), // SplitName = he name of the file that we'll split debug info out into.
-			DICompileUnit::DebugEmissionKind::FullDebug, // DICompileUnit::DebugEmissionKind
+			DICompileUnit::DebugEmissionKind::LineTablesOnly, // DICompileUnit::DebugEmissionKind
 			0, // The DWOId if this is a split skeleton compile unit.
 			false /*true*/, // SplitDebugInlining = Whether to emit inline debug info.
 			true // DebugInfoForProfiling (default=false) = Whether to emit extra debug info for profile collection.
 			);
-
 
 	OSL_DEV_ONLY(std::cout << "created debug module for " << compile_unit_name << std::endl);
 }
@@ -593,7 +611,7 @@ LLVM_Util::debug_push_function(
 
     ASSERT(file);
     llvm::DISubprogram *function = m_llvm_debug_builder->createFunction(
-            file, // Scope
+            mDebugCU, // Scope
             function_name.c_str(),  // Name
             /*function_name.c_str()*/ llvm::StringRef(), // Linkage Name
             file, // File
@@ -625,6 +643,7 @@ LLVM_Util::debug_push_inlined_function(
 #endif
 
     ASSERT(debug_is_enabled());
+    ASSERT(m_builder);
     ASSERT(m_builder->getCurrentDebugLocation().get() != NULL);
     mInliningSites.push_back(m_builder->getCurrentDebugLocation().get());
 
@@ -633,10 +652,12 @@ LLVM_Util::debug_push_inlined_function(
 
     ASSERT(getCurrentDebugScope());
 
+    llvm::DINode::DIFlags fnFlags = (llvm::DINode::DIFlags)(llvm::DINode::FlagPrototyped | llvm::DINode::FlagNoReturn);
     llvm::DISubprogram *function = nullptr;
     function = m_llvm_debug_builder->createFunction(
-        getCurrentDebugScope(), // Scope
+        mDebugCU, // Scope
         function_name.c_str(),  // Name
+        // We are inlined function so not sure supplying a linkage name makes sense
         /*function_name.c_str()*/llvm::StringRef(), // Linkage Name
         file, // File
         method_line, // Line Number
@@ -644,7 +665,7 @@ LLVM_Util::debug_push_inlined_function(
         true, // isLocalToUnit
         true, // isDefinition
         method_scope_line, // Scope Line
-        llvm::DINode::FlagPrototyped | llvm::DINode::FlagNoReturn, // Flags
+        fnFlags, // Flags
         true /*false*/ //isOptimized
         );
 
@@ -678,6 +699,8 @@ LLVM_Util::debug_pop_inlined_function()
 	// Necessary to avoid unnecessarily creating DILexicalBlockFile
 	// if the source file changed
     llvm::DILocation *location_inlined_at = mInliningSites.back();
+    ASSERT(location_inlined_at);
+    ASSERT(m_builder);
     m_builder->SetCurrentDebugLocation(llvm::DebugLoc(location_inlined_at));
     mInliningSites.pop_back();
 
@@ -690,6 +713,7 @@ LLVM_Util::debug_pop_function()
     OSL_DEV_ONLY(std::cout << "debug_pop_function"<< std::endl);
     ASSERT(debug_is_enabled());
 
+    ASSERT(!mLexicalBlocks.empty());
     llvm::DIScope *scope = mLexicalBlocks.back();
     auto *existingLbf = dyn_cast<llvm::DILexicalBlockFile>(scope);
     if (existingLbf) {
@@ -702,14 +726,20 @@ LLVM_Util::debug_pop_function()
     auto *function = dyn_cast<llvm::DISubprogram>(scope);
     ASSERT(function);
 
-    m_llvm_debug_builder->finalizeSubprogram(function);
-
-	mLexicalBlocks.pop_back();
+    mLexicalBlocks.pop_back();
     ASSERT(mLexicalBlocks.empty());
 
-    if (m_builder->getCurrentDebugLocation().get() != nullptr) {
-        m_builder->SetCurrentDebugLocation(llvm::DebugLoc());
-    }
+    // Make sure our current debug location isn't pointing at a subprogram
+    // that has been finalized, point it back to the compilation unit
+    ASSERT(m_builder);
+    ASSERT(m_builder->getCurrentDebugLocation().get() != nullptr);
+    m_builder->SetCurrentDebugLocation(llvm::DebugLoc::get(static_cast<unsigned int>(1),
+                static_cast<unsigned int>(0), /* column?  we don't know it, may be worth tracking through osl->oso*/
+                getCurrentDebugScope()));
+
+    m_llvm_debug_builder->finalizeSubprogram(function);
+
+
 }
 
 void
@@ -717,6 +747,7 @@ LLVM_Util::debug_set_location(ustring source_file_name, int sourceline)
 {
     OSL_DEV_ONLY(std::cout << "LLVM_Util::debug_set_location:" << source_file_name.c_str() << "(" << sourceline << ")" << std::endl);
     ASSERT(debug_is_enabled());
+    ASSERT(sourceline > 0 && "GDB doesn't like 0 because its a nonsensical as a line number");
 
     llvm::DIScope *sp = getCurrentDebugScope();
     llvm::DILocation *inlineSite = getCurrentInliningSite();
@@ -765,6 +796,7 @@ LLVM_Util::debug_set_location(ustring source_file_name, int sourceline)
     ASSERT(sp != NULL);
 
 
+    ASSERT(m_builder);
     const llvm::DebugLoc & current_debug_location = m_builder->getCurrentDebugLocation();
     bool newDebugLocation = true;
     if (current_debug_location)
@@ -786,16 +818,6 @@ LLVM_Util::debug_set_location(ustring source_file_name, int sourceline)
         m_builder->SetCurrentDebugLocation(debug_location);
     }
 }
-
-
-void 
-LLVM_Util::debug_finalize() {
-    OSL_DEV_ONLY(std::cout << "LLVM_Util::debug_finalize" << std::endl);
-    ASSERT(debug_is_enabled());
-    m_llvm_debug_builder->finalize();
-}
-
-
 
 #if OSL_LLVM_VERSION >= 35
 #if OSL_LLVM_VERSION < 40
@@ -1026,6 +1048,12 @@ LLVM_Util::new_builder (llvm::BasicBlock *block)
     if (! block)
         block = new_basic_block ();
     m_builder = new IRBuilder (block);
+    if (this->debug_is_enabled()) {
+        ASSERT(getCurrentDebugScope());
+        m_builder->SetCurrentDebugLocation(llvm::DebugLoc::get(static_cast<unsigned int>(1),
+                static_cast<unsigned int>(0), /* column?  we don't know it, may be worth tracking through osl->oso*/
+                getCurrentDebugScope()));
+    }
 
     ASSERT(m_masked_exit_count == 0);
 	ASSERT(m_alloca_for_modified_mask_stack.empty());
@@ -1039,6 +1067,7 @@ LLVM_Util::IRBuilder &
 LLVM_Util::builder () {
     if (! m_builder)
         new_builder ();
+    ASSERT(m_builder);
     return *m_builder;
 }
 
@@ -1046,8 +1075,10 @@ LLVM_Util::builder () {
 void
 LLVM_Util::end_builder ()
 {
-	delete m_builder;
-	m_builder = nullptr;
+    if (m_builder) {
+        delete m_builder;
+        m_builder = nullptr;
+    }
 }
 
 
@@ -1115,7 +1146,7 @@ LLVM_Util::make_jit_execengine (std::string *err, bool debugging_symbols, bool p
     bool use_soft_float_abi = false;
     options.FloatABIType =
         use_soft_float_abi ? llvm::FloatABI::Soft : llvm::FloatABI::Hard;
-    #if LLVM_VERSION >= 39
+    #if OSL_LLVM_VERSION >= 39
     // Not supported by older linkers
     options.RelaxELFRelocations = false;    
     #endif    
@@ -1220,72 +1251,83 @@ LLVM_Util::make_jit_execengine (std::string *err, bool debugging_symbols, bool p
     
     llvm::StringMap< bool > cpuFeatures;
     if (llvm::sys::getHostCPUFeatures(cpuFeatures)) {
-		m_supports_masked_stores = false;
-		m_supports_native_bit_masks = false;
+        m_supports_masked_stores = false;
+        m_supports_native_bit_masks = false;
+        m_supports_avx512f = false;
+        m_supports_avx2 = false;
 
     	OSL_DEV_ONLY(std::cout << std::endl<< "llvm::sys::getHostCPUFeatures()>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl);
 		std::vector<std::string> attrvec;
-		for (auto &cpuFeature : cpuFeatures) 
-		{
-			//auto enabled = (cpuFeature.second && (cpuFeature.first().str().find("512") == std::string::npos)) ? "+" : "-";
-			auto enabled = (cpuFeature.second) ? "+" : "-";
-			//OSL_DEV_ONLY(std::cout << cpuFeature.first().str()  << " is " << enabled << std::endl);
-			
-			if (oslIsa == TargetISA_UNLIMITTED) {				
-				if (!disableFMA || std::string("fma") != cpuFeature.first().str()) {
-					attrvec.push_back(enabled + cpuFeature.first().str());
-				}
+        for (auto &cpuFeature : cpuFeatures)
+        {
+            //auto enabled = (cpuFeature.second && (cpuFeature.first().str().find("512") == std::string::npos)) ? "+" : "-";
+            auto enabled = (cpuFeature.second) ? "+" : "-";
+            //OSL_DEV_ONLY(std::cout << cpuFeature.first().str()  << " is " << enabled << std::endl);
 
-				if(cpuFeature.first().str().find("512") != std::string::npos) {
-					m_supports_masked_stores = true;
-					m_supports_native_bit_masks = true;
-				}
-			}
-		}
+            if (oslIsa == TargetISA_UNLIMITTED) {
+                if (!disableFMA || std::string("fma") != cpuFeature.first().str()) {
+                    attrvec.push_back(enabled + cpuFeature.first().str());
+                }
+
+                if(cpuFeature.first().str().find("512") != std::string::npos) {
+                    m_supports_masked_stores = true;
+                    m_supports_native_bit_masks = true;
+                }
+                if(cpuFeature.first().str() == std::string("avx512f")) {
+                    m_supports_avx512f = true;
+                }
+                if(cpuFeature.first().str() == std::string("avx2")) {
+                    m_supports_avx2 = true;
+                }
+            }
+        }
 		//The particular format of the names are target dependent, and suitable for passing as -mattr to the target which matches the host.
 	//    const char *mattr[] = {"avx"};
 	//    std::vector<std::string> attrvec (mattr, mattr+1);
 
-		
-		// TODO: consider extending adding all CPU features for different target platforms
-		// and also intersecting with supported features vs. blindly adding them
-		switch(oslIsa) {
-		case TargetISA_SSE4_2:
-			attrvec.push_back("+sse4.2");
-			OSL_DEV_ONLY(std::cout << "Intended OSL ISA: SSE4.2" << std::endl);
-			break;
-		case TargetISA_AVX:
-			attrvec.push_back("+avx");
-			OSL_DEV_ONLY(std::cout << "Intended OSL ISA: AVX" << std::endl);
-			break;		
-		case TargetISA_AVX2:
-			attrvec.push_back("+sse4.2");
-			attrvec.push_back("+avx");
-			attrvec.push_back("+avx2");
-			OSL_DEV_ONLY(std::cout << "Intended OSL ISA: AVX2" << std::endl);
-			break;		
-		case TargetISA_AVX512:
-			m_supports_masked_stores = true;
-			m_supports_native_bit_masks = true;
-			attrvec.push_back("+avx512f");
-			attrvec.push_back("+avx512dq");
-			attrvec.push_back("+avx512bw");
-			attrvec.push_back("+avx512vl");
-			attrvec.push_back("+avx512cd");
-			attrvec.push_back("+avx512f");
-			
-			OSL_DEV_ONLY(std::cout << "Intended OSL ISA: AVX512" << std::endl);
-			break;		
-		case TargetISA_UNLIMITTED:		
-		default:
-			break;
-		};
+
+        // TODO: consider extending adding all CPU features for different target platforms
+        // and also intersecting with supported features vs. blindly adding them
+        switch(oslIsa) {
+        case TargetISA_SSE4_2:
+            attrvec.push_back("+sse4.2");
+            OSL_DEV_ONLY(std::cout << "Intended OSL ISA: SSE4.2" << std::endl);
+            break;
+        case TargetISA_AVX:
+            attrvec.push_back("+avx");
+            OSL_DEV_ONLY(std::cout << "Intended OSL ISA: AVX" << std::endl);
+            break;
+        case TargetISA_AVX2:
+            attrvec.push_back("+sse4.2");
+            attrvec.push_back("+avx");
+            attrvec.push_back("+avx2");
+            m_supports_avx2 = true;
+            OSL_DEV_ONLY(std::cout << "Intended OSL ISA: AVX2" << std::endl);
+            break;
+        case TargetISA_AVX512:
+            m_supports_masked_stores = true;
+            m_supports_native_bit_masks = true;
+            m_supports_avx512f = true;
+            attrvec.push_back("+avx512f");
+            attrvec.push_back("+avx512dq");
+            attrvec.push_back("+avx512bw");
+            attrvec.push_back("+avx512vl");
+            attrvec.push_back("+avx512cd");
+            attrvec.push_back("+avx512f");
+
+
+            OSL_DEV_ONLY(std::cout << "Intended OSL ISA: AVX512" << std::endl);
+            break;
+        case TargetISA_UNLIMITTED:
+        default:
+            break;
+        };
 		
 	    if (disableFMA) {
-			attrvec.push_back("-fma");
+            attrvec.push_back("-fma");
 	    }
-		engine_builder.setMAttrs(attrvec);
-		
+        engine_builder.setMAttrs(attrvec);
+
     }
     
 
@@ -1301,6 +1343,13 @@ LLVM_Util::make_jit_execengine (std::string *err, bool debugging_symbols, bool p
     //OSL_DEV_ONLY(std::cout << "target_machine.getTargetCPU()=" << target_machine->getTargetCPU().str() << std::endl);
     OSL_DEV_ONLY(std::cout << "target_machine.getTargetFeatureString ()=" << target_machine->getTargetFeatureString ().str() << std::endl);
 	//OSL_DEV_ONLY(std::cout << "target_machine.getTargetTriple ()=" << target_machine->getTargetTriple().str() << std::endl);
+
+#if USE_MCJIT
+    // For unknown reasons the MCJIT when constructed registers the GDB listener (which is static)
+    // The following is an attempt to unregister it, and pretend it was never registered in the 1st place
+    // The underlying GDBRegistrationListener is static, so we are leaking it
+    m_llvm_exec->UnregisterJITEventListener(llvm::JITEventListener::createGDBRegistrationListener());
+#endif
 
     if (debugging_symbols) {
         ASSERT(m_llvm_module != nullptr);
@@ -1326,17 +1375,16 @@ LLVM_Util::make_jit_execengine (std::string *err, bool debugging_symbols, bool p
         //  OSL_DEV_ONLY(       << "------------------>enable_debug_info<-----------------------------module flag['Debug Info Version']= ")
         //  OSL_DEV_ONLY(       << modulesDebugInfoVersion << std::endl);
 
-        llvm::JITEventListener* gdbListener = llvm::JITEventListener::createGDBRegistrationListener();
-        assert (gdbListener != NULL);
-        m_llvm_exec->RegisterJITEventListener(gdbListener);
+        // The underlying GDBRegistrationListener is static, so we are leaking it
+        m_llvm_exec->RegisterJITEventListener(llvm::JITEventListener::createGDBRegistrationListener());
     }
 
     if (profiling_events) {
         // TODO:  Create better VTune listener that can handle inline fuctions
         //        https://software.intel.com/en-us/node/544211
-        llvm::JITEventListener* vtuneProfiler = llvm::JITEventListener::createIntelJITEventListener();
-        assert (vtuneProfiler != NULL);
-        m_llvm_exec->RegisterJITEventListener(vtuneProfiler);
+        mVTuneNotifier = llvm::JITEventListener::createIntelJITEventListener();
+        assert (mVTuneNotifier != NULL);
+        m_llvm_exec->RegisterJITEventListener(mVTuneNotifier);
     }
 
     // Force it to JIT as soon as we ask it for the code pointer,
@@ -1390,12 +1438,12 @@ LLVM_Util::validate_struct_data_layout(llvm::Type *Ty, const std::vector<unsigne
 
 
 	const StructLayout * layout = data_layout.getStructLayout (structTy);
-//	OSL_DEV_ONLY(std::cout << "dump_struct_data_layout: getSizeInBytes(" << layout->getSizeInBytes() << ") ")
-//	OSL_DEV_ONLY(	<< " getAlignment(" << layout->getAlignment() << ")")
-//	OSL_DEV_ONLY(	<< " hasPadding(" << layout->hasPadding() << ")" << std::endl);
+	OSL_DEV_ONLY(std::cout << "dump_struct_data_layout: getSizeInBytes(" << layout->getSizeInBytes() << ") ")
+	OSL_DEV_ONLY(	<< " getAlignment(" << layout->getAlignment() << ")")
+	OSL_DEV_ONLY(	<< " hasPadding(" << layout->hasPadding() << ")" << std::endl);
 	
 	for(int index=0; index < number_of_elements; ++index) {
-		//llvm::Type * et = structTy->getElementType(index);
+	    OSL_DEV_ONLY(llvm::Type * et = structTy->getElementType(index));
 		
 		auto actual_offset = layout->getElementOffset(index);
 
@@ -1403,16 +1451,16 @@ LLVM_Util::validate_struct_data_layout(llvm::Type *Ty, const std::vector<unsigne
 		
 
 		
-//		OSL_DEV_ONLY(std::cout << "   element[" << index << "] offset in bytes = " << actual_offset << " expect offset = " << expected_offset_by_index[index] <<)
-//		OSL_DEV_ONLY(		" type is ");
-//		{
-//			llvm::raw_os_ostream os_cout(std::cout);
-//			OSL_DEV_ONLY(		et->print(os_cout));
-//		}
+		OSL_DEV_ONLY(std::cout << "   element[" << index << "] offset in bytes = " << actual_offset << " expect offset = " << expected_offset_by_index[index] <<)
+		OSL_DEV_ONLY(		" type is ");
+		{
+			llvm::raw_os_ostream os_cout(std::cout);
+			OSL_DEV_ONLY(		et->print(os_cout));
+		}
 				
 				
 		ASSERT(expected_offset_by_index[index] == actual_offset);
-//		OSL_DEV_ONLY(std::cout << std::endl);
+		OSL_DEV_ONLY(std::cout << std::endl);
 	}		
 	if (expected_offset_by_index.size() != number_of_elements)
 	{
@@ -1422,11 +1470,32 @@ LLVM_Util::validate_struct_data_layout(llvm::Type *Ty, const std::vector<unsigne
 }
 
 
-
 void
 LLVM_Util::execengine (llvm::ExecutionEngine *exec)
 {
-    delete m_llvm_exec;
+    if (nullptr != m_llvm_exec) {
+        if (nullptr != mVTuneNotifier) {
+            // We explicitly remove the VTune listener, so it can't be notified of the object's release.
+            // As we are holding onto the memory backing the object, this should be fine.
+            // It is necessary because a profiler could try and lookup info from an object that otherwise
+            // would have been unregistered.
+            m_llvm_exec->UnregisterJITEventListener(mVTuneNotifier);
+
+            delete mVTuneNotifier;
+            mVTuneNotifier = nullptr;
+        }
+
+        if (debug_is_enabled()) {
+            // We explicitly remove the GDB listener, so it can't be notified of the object's release.
+            // As we are holding onto the memory backing the object, this should be fine.
+            // It is necessary because a debugger could try and lookup info from an object that otherwise
+            // would have been unregistered.
+
+            // The GDB listener is a static object, we really aren't creating one here
+            m_llvm_exec->UnregisterJITEventListener(llvm::JITEventListener::createGDBRegistrationListener());
+        }
+        delete m_llvm_exec;
+    }
     m_llvm_exec = exec;
 }
 
@@ -1436,9 +1505,16 @@ void *
 LLVM_Util::getPointerToFunction (llvm::Function *func)
 {
     DASSERT (func && "passed NULL to getPointerToFunction");
+
+    if (debug_is_enabled()) {
+        // We have to finalize debug info before jit happens
+        m_llvm_debug_builder->finalize();
+    }
+
     llvm::ExecutionEngine *exec = execengine();
     if (USE_MCJIT)
         exec->finalizeObject ();
+
     void *f = exec->getPointerToFunction (func);
     ASSERT (f && "could not getPointerToFunction");
     return f;
@@ -1866,9 +1942,9 @@ LLVM_Util::type_union(const std::vector<llvm::Type *> &types)
     if (max_align == sizeof(void*))
         base_type = type_void_ptr();
     else if (max_align == 4)
-        base_type = (llvm::Type *) llvm::Type::getInt32Ty (context());
+        base_type = type_int();
     else if (max_align == 2)
-        base_type = (llvm::Type *) llvm::Type::getInt16Ty (context());
+        base_type = type_int16();
     else
         base_type = (llvm::Type *) llvm::Type::getInt8Ty (context());
 
@@ -2133,23 +2209,37 @@ LLVM_Util::mask_as_int(llvm::Value *mask)
 	    llvm::Value *args[1] = {
 	    		wide_float_mask
 	    };
-	    result = builder().CreateCall (func, llvm::ArrayRef<llvm::Value*>(args, 1));
+	    result = builder().CreateCall (func, makeArrayRef(args));
 	   
    
     	break;
     case 16:    	
-    	int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);
+    	int_reinterpret_cast_vector_type = type_int16();
     	result = builder().CreateBitCast (mask, int_reinterpret_cast_vector_type);
     	break;
     }
 #else
-	int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);
-	result = builder().CreateBitCast (mask, int_reinterpret_cast_vector_type);
+	result = builder().CreateBitCast (mask, type_int16());
 #endif
     
 
-    return builder().CreateZExt(result, (llvm::Type *) llvm::Type::getInt32Ty (*m_llvm_context));
+    return builder().CreateZExt(result, type_int());
 }
+
+llvm::Value *
+LLVM_Util::mask_as_int16(llvm::Value *mask)
+{
+    ASSERT(mask->getType() == type_wide_bool());
+
+    return builder().CreateBitCast (mask, type_int16());
+}
+
+llvm::Value *
+LLVM_Util::mask_as_int8(llvm::Value *mask)
+{
+    return builder().CreateBitCast (mask, type_int8());
+}
+
 
 llvm::Value *
 LLVM_Util::int_as_mask(llvm::Value *value)
@@ -2203,7 +2293,7 @@ LLVM_Util::int_as_mask(llvm::Value *value)
     }
     case 16:
     {
-    	llvm::Type * intMaskType = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);
+    	llvm::Type * intMaskType = type_int16();
         llvm::Value* intMask = builder().CreateTrunc(value, intMaskType);
 
         result = builder().CreateBitCast (intMask, type_wide_bool());
@@ -2216,7 +2306,7 @@ LLVM_Util::int_as_mask(llvm::Value *value)
 
     	// We can just reinterpret cast a 16 bit integer to a 16 bit mask
     	// and all types are happy
-    	llvm::Type * intMaskType = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);
+    	llvm::Type * intMaskType = type_int16();
 		llvm::Value* intMask = builder().CreateTrunc(value, intMaskType);
 
 		result = builder().CreateBitCast (intMask, type_wide_bool());
@@ -2325,8 +2415,7 @@ LLVM_Util::test_if_mask_has_any_on_or_off(llvm::Value *mask, llvm::Value* & any_
 			allOffConstant = constant16(0);
 			allOnConstant = constant16(0xFFFF);
 
-			int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt16Ty (*m_llvm_context);
-			mask_as_int = builder().CreateBitCast (mask, int_reinterpret_cast_vector_type);
+			mask_as_int = builder().CreateBitCast (mask, type_int16());
 		}
 		break;
 	default:
@@ -2346,6 +2435,49 @@ LLVM_Util::test_mask_lane(llvm::Value *mask, int lane_index)
 	return builder().CreateExtractElement (mask, lane_index);
 }
 
+
+llvm::Value *
+LLVM_Util::op_1st_active_lane_of(llvm::Value * mask)
+{
+    ASSERT(mask->getType() == type_wide_bool());
+    // Assumes mask is not empty
+
+    ASSERT(m_vector_width == 16); // may be incomplete for other widths
+
+    // Count trailing zeros, least significant
+    llvm::Type* types[] = {
+            type_int16()
+    };
+    llvm::Function* func_cttz = llvm::Intrinsic::getDeclaration (module(),
+        llvm::Intrinsic::cttz,
+        makeArrayRef(types));
+
+
+    llvm::Value * int16_mask = builder().CreateBitCast (mask, type_int16());
+    llvm::Value *args[2] = {
+            int16_mask,
+            constant_bool(true)
+    };
+
+    llvm::Value * firstNonZeroIndex = builder().CreateCall (func_cttz, makeArrayRef(args));
+    return firstNonZeroIndex;
+}
+
+llvm::Value *
+LLVM_Util::op_lanes_that_match_masked(
+    llvm::Value * scalar_value,
+    llvm::Value * wide_value,
+    llvm::Value * mask
+    )
+{
+    ASSERT(scalar_value->getType()->isVectorTy() == false);
+    ASSERT(wide_value->getType()->isVectorTy() == true);
+
+    llvm::Value * uniformWideValue = widen_value(scalar_value);
+    llvm::Value * lanes_matching = op_eq(uniformWideValue, wide_value);
+    llvm::Value * masked_lanes_matching = op_and(lanes_matching, mask);
+    return masked_lanes_matching;
+}
 
 llvm::Value *
 LLVM_Util::widen_value (llvm::Value *val)
@@ -2497,6 +2629,14 @@ LLVM_Util::offset_ptr (llvm::Value *ptr, int offset, llvm::Type *ptrtype)
     return ptr;
 }
 
+void
+LLVM_Util::assume_ptr_is_aligned(llvm::Value *ptr, unsigned alignment)
+{
+    const llvm::DataLayout & data_layout = m_llvm_exec->getDataLayout();
+
+    builder().CreateAlignmentAssumption(data_layout, ptr, alignment);
+}
+
 
 
 llvm::Value *
@@ -2506,6 +2646,15 @@ LLVM_Util::op_alloca (llvm::Type *llvmtype, int n, const std::string &name)
     return builder().CreateAlloca (llvmtype, numalloc, name);
 }
 
+
+llvm::Value *
+LLVM_Util::op_alloca_aligned (unsigned alignment, llvm::Type *llvmtype, int n, const std::string &name)
+{
+    llvm::ConstantInt* numalloc = (llvm::ConstantInt*)constant(n);
+    llvm::AllocaInst * inst = builder().CreateAlloca (llvmtype, numalloc, name);
+    inst->setAlignment(alignment);
+    return inst;
+}
 
 
 llvm::Value *
@@ -2533,7 +2682,7 @@ LLVM_Util::call_function (llvm::Value *func, llvm::Value **args, int nargs)
         llvm::outs() << "\t" << *(args[i]) << "\n";
 #endif
     //llvm_gen_debug_printf (std::string("start ") + std::string(name));
-    llvm::Value *r = builder().CreateCall (func, llvm::ArrayRef<llvm::Value *>(args, nargs));
+    llvm::Value *r = builder().CreateCall (func, makeArrayRef(args, nargs));
     //llvm_gen_debug_printf (std::string(" end  ") + std::string(name));
     return r;
 }
@@ -2645,7 +2794,7 @@ LLVM_Util::op_memset (llvm::Value *ptr, int val, llvm::Value *len, int align)
 
     llvm::Function* func = llvm::Intrinsic::getDeclaration (module(),
         llvm::Intrinsic::memset,
-        llvm::ArrayRef<llvm::Type *>(types, sizeof(types)/sizeof(llvm::Type*)));
+        makeArrayRef(types));
 
     // NOTE(boulos): constant(0) would return an i32
     // version of 0, but we need the i8 version. If we make an
@@ -2662,7 +2811,7 @@ LLVM_Util::op_memset (llvm::Value *ptr, int val, llvm::Value *len, int align)
     llvm::Value *args[5] = {
         ptr, fill_val, len, constant(align), constant_bool(false)
     };
-    builder().CreateCall (func, llvm::ArrayRef<llvm::Value*>(args, 5));
+    builder().CreateCall (func, makeArrayRef(args));
 
 #endif
 }
@@ -2682,7 +2831,7 @@ LLVM_Util::op_memcpy (llvm::Value *dst, llvm::Value *src, int len, int align)
 
     llvm::Function* func = llvm::Intrinsic::getDeclaration (module(),
         llvm::Intrinsic::memcpy,
-        llvm::ArrayRef<llvm::Type *>(types, sizeof(types)/sizeof(llvm::Type*)));
+        makeArrayRef(types));
 
     // Non-volatile (allow optimizer to move it around as it wishes
     // and even remove it if it can prove it's useless)
@@ -2693,7 +2842,7 @@ LLVM_Util::op_memcpy (llvm::Value *dst, llvm::Value *src, int len, int align)
     llvm::Value *args[5] = {
         dst, src, constant(len), constant(align), constant_bool(false)
     };
-    builder().CreateCall (func, llvm::ArrayRef<llvm::Value*>(args, 5));
+    builder().CreateCall (func, makeArrayRef(args));
 #endif
 }
 
@@ -2705,6 +2854,572 @@ LLVM_Util::op_load (llvm::Value *ptr)
     return builder().CreateLoad (ptr);
 }
 
+llvm::Value *
+LLVM_Util::op_linearize_indices(llvm::Value *wide_index)
+{
+    llvm::Value *strided_indices = op_mul (wide_index, wide_constant(static_cast<int>(m_vector_width)));
+    llvm::Constant *offsets_to_lane[16] = {
+        llvm::ConstantInt::get (context(), llvm::APInt(32,0)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,1)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,2)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,3)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,4)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,5)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,6)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,7)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,8)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,9)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,10)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,11)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,12)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,13)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,14)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,15)),
+    };
+    llvm::Value *const_vec_offsets = llvm::ConstantVector::get(ArrayRef< Constant *>(&offsets_to_lane[0], 16));
+
+    return op_add (strided_indices, const_vec_offsets);
+};
+
+std::array<llvm::Value *,2>
+LLVM_Util::op_split_vector (llvm::Value * vector_val)
+{
+    const uint32_t extractLanes0_to_7[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+    const uint32_t extractLanes8_to_15[] = { 8, 9, 10, 11, 12, 13, 14, 15 };
+
+    llvm::Value * half_vec_1 = builder().CreateShuffleVector (vector_val, vector_val, makeArrayRef(extractLanes0_to_7));
+    llvm::Value * half_vec_2 = builder().CreateShuffleVector (vector_val, vector_val, makeArrayRef(extractLanes8_to_15));
+    return {half_vec_1, half_vec_2};
+};
+
+llvm::Value *
+LLVM_Util::op_gather(llvm::Value *ptr, llvm::Value *wide_index)
+{
+    ASSERT(wide_index->getType() == type_wide_int());
+
+    auto combine_vectors = [this](llvm::Value * half_vec_1, llvm::Value * half_vec_2)->llvm::Value * {
+        const uint32_t combineIndices[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+        return builder().CreateShuffleVector (half_vec_1, half_vec_2, makeArrayRef(combineIndices));
+    };
+
+    // To avoid loading masked off lanes,
+    // rather than add a bunch of branches to skip loading of lanes,
+    // we assume accessing index 0 is legal and in bounds
+    // and select the index and 0 based on the mask.
+    // Because OSL owns the data layout of arrays, we can make this
+    // assumption.  array[0] exists, is valid, and no indices will be negative
+    auto clamped_gather_from_uniform = [this, ptr, wide_index](llvm::Type *result_type)->llvm::Value * {
+        llvm::Value *result = llvm::UndefValue::get(result_type);
+        llvm::Value *clampedIndices = op_select(current_mask(), wide_index, wide_constant(0));
+        for(int l=0; l < m_vector_width; ++l) {
+            llvm::Value *index_for_lane = op_extract(clampedIndices, l);
+            llvm::Value *address = GEP(ptr, index_for_lane);
+            llvm::Value * val = op_load(address);
+
+            result = op_insert (result, val, l);
+        }
+        return result;
+    };
+
+    auto clamped_gather_from_varying = [this, ptr, wide_index](llvm::Type *result_type)->llvm::Value * {
+        llvm::Value *clampedIndices = op_select(current_mask(), wide_index, wide_constant(0));
+        llvm::Value *result = llvm::UndefValue::get(result_type);
+        for(int l=0; l < m_vector_width; ++l) {
+            llvm::Value *index_for_lane = op_extract(clampedIndices, l);
+            llvm::Value *wide_address = GEP(ptr, index_for_lane);
+            llvm::Value *wide_val = op_load(wide_address);
+            llvm::Value *val = op_extract(wide_val, l);
+
+            result = op_insert (result, val, l);
+        }
+        return result;
+    };
+
+    if (ptr->getType() == type_int_ptr()) {
+        if (m_supports_avx512f) {
+            ASSERT(m_vector_width == 16 && "incomplete");
+            /*   def int_x86_avx512_gather_dpi_512  : GCCBuiltin<"__builtin_ia32_gathersiv16si">,
+              Intrinsic<[llvm_v16i32_ty], [llvm_v16i32_ty, llvm_ptr_ty,
+                         llvm_v16i32_ty, llvm_i16_ty, llvm_i32_ty],
+                        [IntrReadMem, IntrArgMemOnly]>; */
+
+            llvm::Function* func_avx512_gather_pi = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx512_gather_dpi_512);
+            ASSERT(func_avx512_gather_pi);
+
+            llvm::Value *unmasked_value = wide_constant(0);
+            llvm::Value *args[] = {
+                unmasked_value,
+                void_ptr(ptr),
+                wide_index,
+                mask_as_int16(current_mask()),
+                constant(4)
+            };
+            return builder().CreateCall (func_avx512_gather_pi, makeArrayRef(args));
+        } else if (m_supports_avx2) {
+            ASSERT(m_vector_width == 16 && "incomplete");
+            /* def int_x86_avx2_gather_d_d_256 : GCCBuiltin<"__builtin_ia32_gatherd_d256">,
+                  Intrinsic<[llvm_v8i32_ty],
+                    [llvm_v8i32_ty, llvm_ptr_ty, llvm_v8i32_ty, llvm_v8i32_ty, llvm_i8_ty],
+                    [IntrReadMem, IntrArgMemOnly]>; */
+            llvm::Function* func_avx2_gather_pi = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx2_gather_d_d_256);
+            ASSERT(func_avx2_gather_pi);
+
+            llvm::Constant *avx2_unmasked_value = llvm::ConstantVector::getSplat(8,llvm::ConstantInt::get (context(), llvm::APInt(32,0)));
+
+            // Convert <16 x i1> -> <16 x i32> -> to <2 x< 8 x i32>>
+            llvm::Value * wide_int_mask = builder().CreateSExt(current_mask(), type_wide_int());
+            auto w8_int_masks = op_split_vector(wide_int_mask);
+            auto w8_int_indices = op_split_vector(wide_index);
+
+            llvm::Value *args[] = {
+                avx2_unmasked_value,
+                void_ptr(ptr),
+                w8_int_indices[0],
+                w8_int_masks[0],
+                constant8(4)
+            };
+            llvm::Value *gather1 = builder().CreateCall (func_avx2_gather_pi, makeArrayRef(args));
+            args[2] = w8_int_indices[1];
+            args[3] = w8_int_masks[1];
+            llvm::Value *gather2 = builder().CreateCall (func_avx2_gather_pi, makeArrayRef(args));
+
+            return combine_vectors(gather1,gather2);
+        } else {
+            return clamped_gather_from_uniform(type_wide_int());
+        }
+
+    } else if (ptr->getType() == type_float_ptr()) {
+        if (m_supports_avx512f) {
+
+            /* def int_x86_avx512_gather_dps_512  : GCCBuiltin<"__builtin_ia32_gathersiv16sf">,
+                  Intrinsic<[llvm_v16f32_ty], [llvm_v16f32_ty, llvm_ptr_ty,
+                             llvm_v16i32_ty, llvm_i16_ty, llvm_i32_ty],*/
+
+            llvm::Function* func_avx512_gather_ps = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx512_gather_dps_512);
+            ASSERT(func_avx512_gather_ps);
+
+            llvm::Value *unmasked_value = wide_constant(0.0f);
+            llvm::Value *args[] = {
+                unmasked_value,
+                void_ptr(ptr),
+                wide_index,
+                mask_as_int16(current_mask()),
+                constant(4)
+            };
+            return builder().CreateCall (func_avx512_gather_ps, makeArrayRef(args));
+        } else if (m_supports_avx2) {
+            ASSERT(m_vector_width == 16 && "incomplete");
+            /* def int_x86_avx2_gather_d_ps_256 : GCCBuiltin<"__builtin_ia32_gatherd_ps256">,
+                Intrinsic<[llvm_v8f32_ty],
+                  [llvm_v8f32_ty, llvm_ptr_ty, llvm_v8i32_ty, llvm_v8f32_ty, llvm_i8_ty],
+                  [IntrReadMem, IntrArgMemOnly]>; */
+
+            llvm::Function* func_avx2_gather_ps = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx2_gather_d_ps_256);
+            ASSERT(func_avx2_gather_ps);
+
+            llvm::Constant *avx2_unmasked_value = llvm::ConstantVector::getSplat(8,llvm::ConstantFP::get (context(), llvm::APFloat(0.0f)));
+
+            // Convert <16 x i1> -> <16 x i32> -> to <2 x< 8 x i32>>
+            llvm::Value * wide_int_mask = builder().CreateSExt(current_mask(), type_wide_int());
+            auto w8_int_masks = op_split_vector(wide_int_mask);
+            auto w8_int_indices = op_split_vector(wide_index);
+            llvm::Value *args[] = {
+                    avx2_unmasked_value,
+                void_ptr(ptr),
+                w8_int_indices[0],
+                builder().CreateBitCast (w8_int_masks[0], llvm::VectorType::get(type_float(), 8)),
+                constant8(4)
+            };
+            llvm::Value *gather1 = builder().CreateCall (func_avx2_gather_ps, makeArrayRef(args));
+            args[2] = w8_int_indices[1];
+            args[3] = builder().CreateBitCast (w8_int_masks[1], llvm::VectorType::get(type_float(), 8));
+            llvm::Value *gather2 = builder().CreateCall (func_avx2_gather_ps, makeArrayRef(args));
+
+            return combine_vectors(gather1,gather2);
+        } else {
+            return clamped_gather_from_uniform(type_wide_float());
+        }
+    } else if (ptr->getType() == type_ustring_ptr()) {
+
+        if (m_supports_avx512f) {
+            ASSERT(m_vector_width == 16 && "incomplete");
+            // TODO:  Are we guaranteed a 64bit pointer?
+            // Gather 64bit integer, as that is binary compatible with 64bit pointers of ustring
+            /*  def int_x86_avx512_gather_dpq_512  : GCCBuiltin<"__builtin_ia32_gathersiv8di">,
+              Intrinsic<[llvm_v8i64_ty], [llvm_v8i64_ty, llvm_ptr_ty,
+                     llvm_v8i32_ty, llvm_i8_ty, llvm_i32_ty],
+                    [IntrReadMem, IntrArgMemOnly]>; */
+
+            llvm::Function* func_avx512_gather_dpq = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx512_gather_dpq_512);
+            ASSERT(func_avx512_gather_dpq);
+
+            // We can only gather 8 at a time, so need to split the work over 2 gathers
+            auto w8_bit_masks = op_split_vector(current_mask());
+            auto w8_int_indices = op_split_vector(wide_index);
+
+            llvm::Value *unmasked_value = builder().CreateVectorSplat(8,constant64(0));
+            llvm::Value *args[] = {
+                unmasked_value,
+                void_ptr(ptr),
+                w8_int_indices[0],
+                mask_as_int8(w8_bit_masks[0]),
+                constant(8)
+            };
+            llvm::Value *gather1 = builder().CreateCall (func_avx512_gather_dpq, makeArrayRef(args));
+            args[2] = w8_int_indices[1];
+            args[3] = mask_as_int8(w8_bit_masks[1]);
+            llvm::Value *gather2 = builder().CreateCall (func_avx512_gather_dpq, makeArrayRef(args));
+
+            return builder().CreateIntToPtr(combine_vectors(gather1, gather2), type_wide_string());
+
+
+        } else {
+            return clamped_gather_from_uniform(type_wide_string());
+        }
+    } else if (ptr->getType() == type_wide_float_ptr()) {
+        if (m_supports_avx512f) {
+            /* def int_x86_avx512_gather_dps_512  : GCCBuiltin<"__builtin_ia32_gathersiv16sf">,
+                  Intrinsic<[llvm_v16f32_ty], [llvm_v16f32_ty, llvm_ptr_ty,
+                             llvm_v16i32_ty, llvm_i16_ty, llvm_i32_ty],*/
+
+            llvm::Function* func_avx512_gather_ps = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx512_gather_dps_512);
+            ASSERT(func_avx512_gather_ps);
+
+            llvm::Value *unmasked_value = wide_constant(0.0f);
+            llvm::Value *args[] = {
+                unmasked_value,
+                void_ptr(ptr),
+                op_linearize_indices(wide_index),
+                mask_as_int16(current_mask()),
+                constant(4)
+            };
+            return builder().CreateCall (func_avx512_gather_ps, makeArrayRef(args));
+        } else if (m_supports_avx2) {
+            ASSERT(m_vector_width == 16 && "incomplete");
+
+            /* def int_x86_avx2_gather_d_ps_256 : GCCBuiltin<"__builtin_ia32_gatherd_ps256">,
+                Intrinsic<[llvm_v8f32_ty],
+                  [llvm_v8f32_ty, llvm_ptr_ty, llvm_v8i32_ty, llvm_v8f32_ty, llvm_i8_ty],
+                  [IntrReadMem, IntrArgMemOnly]>; */
+
+            llvm::Function* func_avx2_gather_ps = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx2_gather_d_ps_256);
+            ASSERT(func_avx2_gather_ps);
+
+            llvm::Constant *avx2_unmasked_value = llvm::ConstantVector::getSplat(8,llvm::ConstantFP::get (context(), llvm::APFloat(0.0f)));
+            // Convert <16 x i1> -> <16 x i32> -> to <2 x< 8 x i32>>
+            llvm::Value * wide_int_mask = builder().CreateSExt(current_mask(), type_wide_int());
+            auto w8_int_masks = op_split_vector(wide_int_mask);
+            auto w8_int_indices = op_split_vector(op_linearize_indices(wide_index));
+            llvm::Value *args[] = {
+                avx2_unmasked_value,
+                void_ptr(ptr),
+                w8_int_indices[0],
+                builder().CreateBitCast (w8_int_masks[0], llvm::VectorType::get(type_float(), 8)),
+                constant8(4)
+            };
+            llvm::Value *gather1 = builder().CreateCall (func_avx2_gather_ps, makeArrayRef(args));
+            args[2] = w8_int_indices[1];
+            args[3] = builder().CreateBitCast (w8_int_masks[1], llvm::VectorType::get(type_float(), 8));
+            llvm::Value *gather2 = builder().CreateCall (func_avx2_gather_ps, makeArrayRef(args));
+
+            return combine_vectors(gather1, gather2);
+        } else {
+            return clamped_gather_from_varying(type_wide_float());
+        }
+    } else if (ptr->getType() == type_wide_int_ptr()) {
+
+        if (m_supports_avx512f) {
+            /*   def int_x86_avx512_gather_dpi_512  : GCCBuiltin<"__builtin_ia32_gathersiv16si">,
+              Intrinsic<[llvm_v16i32_ty], [llvm_v16i32_ty, llvm_ptr_ty,
+                         llvm_v16i32_ty, llvm_i16_ty, llvm_i32_ty],
+                        [IntrReadMem, IntrArgMemOnly]>; */
+
+            llvm::Function* func_avx512_gather_pi = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx512_gather_dpi_512);
+            ASSERT(func_avx512_gather_pi);
+
+            llvm::Value *unmasked_value = wide_constant(0);
+            llvm::Value *args[] = {
+                unmasked_value,
+                void_ptr(ptr),
+                op_linearize_indices(wide_index),
+                mask_as_int16(current_mask()),
+                constant(4)
+            };
+            return builder().CreateCall (func_avx512_gather_pi, makeArrayRef(args));
+        } else if (m_supports_avx2) {
+            ASSERT(m_vector_width == 16 && "incomplete");
+            /* def int_x86_avx2_gather_d_d_256 : GCCBuiltin<"__builtin_ia32_gatherd_d256">,
+                  Intrinsic<[llvm_v8i32_ty],
+                    [llvm_v8i32_ty, llvm_ptr_ty, llvm_v8i32_ty, llvm_v8i32_ty, llvm_i8_ty],
+                    [IntrReadMem, IntrArgMemOnly]>; */
+            llvm::Function* func_avx2_gather_pi = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx2_gather_d_d_256);
+            ASSERT(func_avx2_gather_pi);
+
+            llvm::Constant *avx2_unmasked_value = llvm::ConstantVector::getSplat(8,llvm::ConstantInt::get (context(), llvm::APInt(32,0)));
+
+            // Convert <16 x i1> -> <16 x i32> -> to <2 x< 8 x i32>>
+            llvm::Value * wide_int_mask = builder().CreateSExt(current_mask(), type_wide_int());
+            auto w8_int_masks = op_split_vector(wide_int_mask);
+            auto w8_int_indices = op_split_vector(op_linearize_indices(wide_index));
+            llvm::Value *args[] = {
+                avx2_unmasked_value,
+                void_ptr(ptr),
+                w8_int_indices[0],
+                w8_int_masks[0],
+                constant8(4)
+            };
+            llvm::Value *gather1 = builder().CreateCall (func_avx2_gather_pi, makeArrayRef(args));
+            args[2] = w8_int_indices[1];
+            args[3] = w8_int_masks[1];
+            llvm::Value *gather2 = builder().CreateCall (func_avx2_gather_pi, makeArrayRef(args));
+
+            return combine_vectors(gather1, gather2);
+        } else {
+            return clamped_gather_from_varying(type_wide_int());
+        }
+    } else if (ptr->getType() == llvm::PointerType::get(type_wide_string(),0)) {
+        if (m_supports_avx512f) {
+            // Gather 64bit integer, as that is binary compatible with 64bit pointers of ustring
+            /*  def int_x86_avx512_gather_dpq_512  : GCCBuiltin<"__builtin_ia32_gathersiv8di">,
+              Intrinsic<[llvm_v8i64_ty], [llvm_v8i64_ty, llvm_ptr_ty,
+                     llvm_v8i32_ty, llvm_i8_ty, llvm_i32_ty],
+                    [IntrReadMem, IntrArgMemOnly]>; */
+
+            llvm::Function* func_avx512_gather_dpq = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx512_gather_dpq_512);
+            ASSERT(func_avx512_gather_dpq);
+
+            // We can only gather 8 at a time, so need to split the work over 2 gathers
+            auto w8_bit_masks = op_split_vector(current_mask());
+            auto w8_int_indices = op_split_vector(op_linearize_indices(wide_index));
+
+            llvm::Value *unmasked_value = builder().CreateVectorSplat(8,constant64(0));
+            llvm::Value *args[] = {
+                unmasked_value,
+                void_ptr(ptr),
+                w8_int_indices[0],
+                mask_as_int8(w8_bit_masks[0]),
+                constant(8)
+            };
+            llvm::Value *gather1 = builder().CreateCall (func_avx512_gather_dpq, makeArrayRef(args));
+            args[2] = w8_int_indices[1];
+            args[3] = mask_as_int8(w8_bit_masks[1]);
+            llvm::Value *gather2 = builder().CreateCall (func_avx512_gather_dpq, makeArrayRef(args));
+
+            return builder().CreateIntToPtr(combine_vectors(gather1, gather2), type_wide_string());
+
+        } else {
+            // AVX2 case falls through to here, choose not to specialize and use
+            // generic code gen as 4 AVX2 gathers would be required
+            clamped_gather_from_varying(type_wide_string());
+        }
+
+    } else {
+
+        std::cout << "ptr->getType() = " <<
+        llvm_typenameof(ptr) <<
+        std::endl;
+
+        ASSERT(0 && "unsupported ptr type");
+    }
+}
+
+void
+LLVM_Util::op_scatter(llvm::Value *wide_val, llvm::Value *ptr, llvm::Value *wide_index)
+{
+    ASSERT(wide_index->getType() == type_wide_int());
+
+    auto scatter_using_conditional_block_per_lane = [this, wide_val, ptr, wide_index](llvm::Value * cast_ptr)->void {
+        llvm::Value * linear_indices = op_linearize_indices(wide_index);
+
+        llvm::BasicBlock* test_scatter_per_lane[m_vector_width+1];
+        for(int l=0; l < m_vector_width; ++l) {
+            test_scatter_per_lane[l] = new_basic_block (std::string("test scatter lane=").append(std::to_string(l)));
+        }
+        test_scatter_per_lane[m_vector_width] = new_basic_block ("after scatter");
+
+        // Main performance strategy is to not perform any extractions inside the conditional section
+        llvm::Value *val_per_lane[m_vector_width];
+        for(int l=0; l < m_vector_width; ++l) {
+            val_per_lane[l] = op_extract(wide_val, l);
+        }
+        llvm::Value *cm = current_mask();
+        llvm::Value *mask_per_lane[m_vector_width];
+        for(int l=0; l < m_vector_width; ++l) {
+            mask_per_lane[l] = op_extract(cm, l);
+        }
+
+        llvm::Value *index_per_lane[m_vector_width];
+        for(int l=0; l < m_vector_width; ++l) {
+            index_per_lane[l] = op_extract(linear_indices, l);
+        }
+
+        op_branch(test_scatter_per_lane[0]);
+        for(int l=0; l < m_vector_width; ++l) {
+            llvm::BasicBlock* scatter_block = new_basic_block (std::string("scatter lane=").append(std::to_string(l)));
+            op_branch(mask_per_lane[l], scatter_block, test_scatter_per_lane[l+1]);
+
+            llvm::Value *address = GEP(cast_ptr, index_per_lane[l]);
+            // uniform store, no need to mess with masking
+            op_store(val_per_lane[l], address);
+            op_branch(test_scatter_per_lane[l+1]);
+        }
+    };
+
+    if (ptr->getType() == type_wide_float_ptr()) {
+#if 0 // Choosing to not use generic scatter intrinsic as its fallback performance in non-AVX512 is poor
+      // Instead choose to use AVX512 specific intrinsic with a manually emitted fallback
+        llvm::PointerType * llvm_type_float_ptr_in_address_space1 = (llvm::PointerType *) llvm::Type::getFloatPtrTy (*m_llvm_context, 1);
+        llvm::Type * wide_ptr_as1_to_float = llvm::VectorType::get(llvm_type_float_ptr_in_address_space1, m_vector_width);
+
+        //llvm::Type * wide_ptr_to_float = llvm::VectorType::get(type_float_ptr(), m_vector_width);
+
+//        llvm::Value * float_ptr =  builder().CreateCast(llvm::Instruction::CastOps::BitCast, ptr, type_float_ptr());
+        llvm::Value * float_ptr =  builder().CreatePointerBitCastOrAddrSpaceCast(ptr, llvm_type_float_ptr_in_address_space1);
+        llvm::Value * mem_locations = builder().CreateGEP(float_ptr, op_linearize_indices(wide_index));
+        /* declare void @llvm.masked.scatter.v16f32.v16p1f32   (
+         *  <16 x float>  <value>,
+         *  <16 x float addrspace(1)*>  <ptrs>,
+         *  i32 <alignment>,
+         *  <16 x i1> <mask>)
+*/
+        llvm::Type* types[] = {
+                type_wide_float(), //<16 x float>  <value>,
+                wide_ptr_as1_to_float, //<16 x float addrspace(1)*> <ptrs>
+                // It only wants types to mangle the intrinsic name for uniqueness
+                // not all the parameters it will actually take
+                //type_int(), // i32 <alignment>,
+                //type_wide_bool() //<16 x i1> <mask>
+        };
+
+        llvm::Function* func_masked_scatter = llvm::Intrinsic::getDeclaration (module(),
+                //llvm::Intrinsic::x86_avx512_scatter_dps_512);
+                llvm::Intrinsic::masked_scatter,
+                makeArrayRef(types));
+        ASSERT(func_masked_scatter);
+
+        llvm::Value *unmasked_value = wide_constant(0.0f);
+        llvm::Value *args[] = {
+            wide_val,
+            mem_locations,
+            constant(4),
+            current_mask(),
+        };
+        builder().CreateCall (func_masked_scatter, makeArrayRef(args));
+#endif
+        ASSERT(wide_val->getType() == type_wide_float());
+        if (m_supports_avx512f) {
+            /*   def int_x86_avx512_scatter_dps_512  : GCCBuiltin<"__builtin_ia32_scattersiv16sf">,
+                    Intrinsic<[], [llvm_ptr_ty, llvm_i16_ty,
+                       llvm_v16i32_ty, llvm_v16f32_ty, llvm_i32_ty],
+                    [IntrArgMemOnly]>;*/
+
+            llvm::Function* func_avx512_scatter_ps = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx512_scatter_dps_512);
+            ASSERT(func_avx512_scatter_ps);
+
+            llvm::Value *unmasked_value = wide_constant(0.0f);
+            llvm::Value *args[] = {
+                void_ptr(ptr),
+                mask_as_int16(current_mask()),
+                op_linearize_indices(wide_index),
+                wide_val,
+                constant(4)
+            };
+            builder().CreateCall (func_avx512_scatter_ps, makeArrayRef(args));
+        } else {
+            // AVX2, AVX, SSE4.2 fall through to here
+            llvm::Value * float_ptr =  builder().CreatePointerBitCastOrAddrSpaceCast(ptr, type_float_ptr());
+            scatter_using_conditional_block_per_lane(float_ptr);
+        }
+    } else if (ptr->getType() == type_wide_int_ptr()) {
+
+        ASSERT(wide_val->getType() == type_wide_int());
+        if (m_supports_avx512f) {
+            /*     def int_x86_avx512_scatter_dpi_512  : GCCBuiltin<"__builtin_ia32_scattersiv16si">,
+                    Intrinsic<[], [llvm_ptr_ty, llvm_i16_ty,
+                     llvm_v16i32_ty, llvm_v16i32_ty, llvm_i32_ty],
+                    [IntrArgMemOnly]>; */
+
+            llvm::Function* func_avx512_scatter_pi = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx512_scatter_dpi_512);
+            ASSERT(func_avx512_scatter_pi);
+
+            llvm::Value *unmasked_value = wide_constant(0.0f);
+            llvm::Value *args[] = {
+                void_ptr(ptr),
+                mask_as_int16(current_mask()),
+                op_linearize_indices(wide_index),
+                wide_val,
+                constant(4)
+            };
+            builder().CreateCall (func_avx512_scatter_pi, makeArrayRef(args));
+        } else {
+            // AVX2, AVX, SSE4.2 fall through to here
+            llvm::Value * int_ptr =  builder().CreatePointerBitCastOrAddrSpaceCast(ptr, type_int_ptr());
+            scatter_using_conditional_block_per_lane(int_ptr);
+        }
+    } else if (ptr->getType() == llvm::PointerType::get(type_wide_string(),0)) {
+        ASSERT(wide_val->getType() == type_wide_string());
+        if (m_supports_avx512f) {
+            llvm::Value * linear_indices = op_linearize_indices(wide_index);
+
+            /*     def int_x86_avx512_scatter_dpq_512  : GCCBuiltin<"__builtin_ia32_scattersiv8di">,
+                        Intrinsic<[], [llvm_ptr_ty, llvm_i8_ty,
+                                       llvm_v8i32_ty, llvm_v8i64_ty, llvm_i32_ty],
+                                        [IntrArgMemOnly]>; */
+
+            llvm::Function* func_avx512_scatter_dpq = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx512_scatter_dpq_512);
+            ASSERT(func_avx512_scatter_dpq);
+
+            // We can only scatter 8 at a time, so need to split the work over 2 scatters
+            llvm::Type * w8_address_int = llvm::VectorType::get(type_addrint(), 8);
+
+            auto w8_bit_masks = op_split_vector(current_mask());
+            auto w8_int_indices = op_split_vector(linear_indices);
+            auto w8_string_vals = op_split_vector(wide_val);
+            std::array<llvm::Value *,2> w8_address_int_val = {
+                    builder().CreatePtrToInt(w8_string_vals[0], w8_address_int),
+                    builder().CreatePtrToInt(w8_string_vals[1], w8_address_int)
+            };
+
+            llvm::Value *unmasked_value = wide_constant(0.0f);
+            llvm::Value *args[] = {
+                void_ptr(ptr),
+                mask_as_int8(w8_bit_masks[0]),
+                w8_int_indices[0],
+                w8_address_int_val[0],
+                constant(8)
+            };
+            builder().CreateCall (func_avx512_scatter_dpq, makeArrayRef(args));
+            args[1] = mask_as_int8(w8_bit_masks[1]);
+            args[2] = w8_int_indices[1];
+            args[3] = w8_address_int_val[1];
+            builder().CreateCall (func_avx512_scatter_dpq, makeArrayRef(args));
+        } else {
+            // AVX2, AVX, SSE4.2 fall through to here
+            llvm::Value * ustring_ptr =  builder().CreatePointerBitCastOrAddrSpaceCast(ptr, type_ustring_ptr());
+            scatter_using_conditional_block_per_lane(ustring_ptr);
+        }
+    } else {
+
+        std::cout << "ptr->getType() = " <<
+        llvm_typenameof(ptr) <<
+        std::endl;
+
+        ASSERT(0 && "unsupported ptr type");
+    }
+}
 
 void
 LLVM_Util::push_mask(llvm::Value *mask, bool negate, bool absolute)
@@ -3407,6 +4122,19 @@ LLVM_Util::op_extract (llvm::Value *a, int index)
 {
     return builder().CreateExtractElement (a, index);
 }
+
+llvm::Value *
+LLVM_Util::op_extract (llvm::Value *a, llvm::Value *index)
+{
+    return builder().CreateExtractElement (a, index);
+}
+
+llvm::Value *
+LLVM_Util::op_insert (llvm::Value *v, llvm::Value *a, int index)
+{
+    return builder().CreateInsertElement (v, a, index);
+}
+
 
 llvm::Value *
 LLVM_Util::op_eq (llvm::Value *a, llvm::Value *b, bool ordered)

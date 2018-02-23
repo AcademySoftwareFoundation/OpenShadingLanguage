@@ -112,7 +112,7 @@ public:
     llvm::Value *llvm_load_value (const Symbol& sym, int deriv,
                                   llvm::Value *arrayindex, int component,
                                   TypeDesc cast=TypeDesc::UNKNOWN,
-								  bool op_is_uniform = true);
+								  bool op_is_uniform = true, bool index_is_uniform=true);
 
 
     /// Given an llvm::Value* of a pointer (and the type of the data
@@ -127,7 +127,7 @@ public:
     llvm::Value *llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
                               int deriv, llvm::Value *arrayindex,
                               int component, TypeDesc cast=TypeDesc::UNKNOWN,
-							  bool op_is_uniform = true);
+							  bool op_is_uniform = true, bool index_is_uniform=true);
 
     /// Just like llvm_load_value, but when both the symbol and the
     /// array index are known to be constants.  This can even handle
@@ -184,7 +184,7 @@ public:
     /// and it's a scalar, set the scalar.  Returns true if ok, false
     /// upon failure.
     bool llvm_store_value (llvm::Value *new_val, const Symbol& sym, int deriv,
-                           llvm::Value *arrayindex, int component);
+                           llvm::Value *arrayindex, int component, bool index_is_uniform=true);
 
     /// Store new_val into the memory pointed to by dst_ptr, given the
     /// derivative (0=value, 1=dx, 2=dy), array index (NULL if it's not
@@ -194,7 +194,7 @@ public:
     /// ok, false upon failure.
     bool llvm_store_value (llvm::Value* new_val, llvm::Value* dst_ptr,
                            const TypeSpec &type, int deriv,
-                           llvm::Value* arrayindex, int component);
+                           llvm::Value* arrayindex, int component, bool index_is_uniform=true);
 
     /// Non-array version of llvm_store_value, with default deriv &
     /// component.
@@ -270,6 +270,10 @@ public:
     /// ShaderGlobals struct.
     llvm::Type *llvm_type_sg_ptr ();
 
+    /// Return the LLVM type handle for the BatchedTextureOptions struct.
+    ///
+    llvm::Type *llvm_type_batched_texture_options ();
+
     /// Return the ShaderGlobals pointer.
     ///
     llvm::Value *sg_ptr () const { return m_llvm_shaderglobals_ptr; }
@@ -327,6 +331,10 @@ public:
     /// Return a pointer to an WideMatrix that was previously alloca
     /// on the stack, meant for generator to reuse as a temporary
     llvm::Value *temp_wide_matrix_ptr();
+
+    /// Return a pointer to an BatchedTextureOptions that was previously alloca
+    /// on the stack, meant for generator to reuse as a temporary
+    llvm::Value *temp_batched_texture_options_ptr();
 
 
     /// Return a ref to the bool where the "layer_run" flag is stored for
@@ -474,10 +482,12 @@ private:
     llvm::Value *m_llvm_shaderglobals_ptr;
     llvm::Value *m_llvm_groupdata_ptr;
     llvm::Value *m_llvm_temp_wide_matrix_ptr; // gen_tranform wants to reuse alloca
+    llvm::Value *m_llvm_temp_batched_texture_options_ptr; // texture wants to reuse alloca
     llvm::BasicBlock * m_exit_instance_block;  // exit point for the instance
     llvm::Type *m_llvm_type_sg;  // LLVM type of ShaderGlobals struct
     llvm::Type *m_llvm_type_groupdata;  // LLVM type of group data
     llvm::Type *m_llvm_type_closure_component; // LLVM type for ClosureComponent
+    llvm::Type *m_llvm_type_batched_texture_options;  // LLVM type of ShaderGlobals struct
     llvm::PointerType *m_llvm_type_prepare_closure_func;
     llvm::PointerType *m_llvm_type_setup_closure_func;
     int m_llvm_local_mem;             // Amount of memory we use for locals

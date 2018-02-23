@@ -1,0 +1,6 @@
+shader
+test_width_uniform (string filename = "../common/textures/mandrill.tif",
+      output color Cout = 0)
+{
+    Cout = (color) texture (filename, u, v, "width", 8);
+}

@@ -1,0 +1,18 @@
+shader
+test_firstchannel_varying (string filename = "../common/textures/mandrill.tif",
+      output color Cout = 0)
+{
+    int firstchannel = 0;
+    int scaledX = int(P[0]*64.0);
+    if (mod(scaledX,9) > 0) {    
+        firstchannel = 2;
+    }
+    if (P[0] > 0.75) {
+        firstchannel = 1;
+    }    
+    if (P[1] > 0.75) {
+        firstchannel = 2;
+    }    
+
+    Cout = (color) texture (filename, u, v, "firstchannel", firstchannel, "fill", 0.5);
+}

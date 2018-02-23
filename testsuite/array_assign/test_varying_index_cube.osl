@@ -1,0 +1,23 @@
+struct cube {
+    point pos[8];
+};
+
+shader
+test_varying_index_cube (output color Cout = color(0,0,0))
+{
+
+    // Test array referencing with varying index
+    cube ca;
+    for(int i=0;i < 8; ++i) {
+        ca.pos[i] = point((.1*i)/4, (.2*i)/4 , (.3*i)/4);
+    }
+    
+    int varyingIndex = int(P[0]*256)%8;
+
+    for(int i = 0; i < 5000; ++i) {
+        ca.pos[varyingIndex] = point(0,0,0);
+    }
+    
+   
+    Cout = color(ca.pos[0][0] + ca.pos[1][0] + ca.pos[2][0], + ca.pos[3][1] + ca.pos[4][1] + ca.pos[5][1], ca.pos[6][2] + ca.pos[7][2])/2.0;
+}

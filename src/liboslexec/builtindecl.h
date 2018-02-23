@@ -38,37 +38,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #error Do not include this file unless DECL is defined
 #endif
 
-#ifndef WDECL
-#error Do not include this file unless WDECL is defined
-#endif
-
-
-#define NOISE_WIMPL_INDIRECT(name, LANE_COUNT)                           \
-    WDECL (osl_ ## name ## _w ##LANE_COUNT## fw ##LANE_COUNT## f,  "wfwf")      \
-    WDECL (osl_ ## name ## _w ##LANE_COUNT## fw ##LANE_COUNT## v,  "wfwv")		\
-    WDECL (osl_ ## name ## _w ##LANE_COUNT## vw ##LANE_COUNT## v,  "wvwv")      \
-    WDECL (osl_ ## name ## _w ##LANE_COUNT## vw ##LANE_COUNT## f,  "wvwf")      \
-    WDECL (osl_ ## name ## _w ##LANE_COUNT## vw ##LANE_COUNT## vw ##LANE_COUNT## f, "wvwvwf") \
-
-#define NOISE_WIMPL(name, LANE_COUNT)                           \
-	NOISE_WIMPL_INDIRECT(name, LANE_COUNT)
-
-
-#define NOISE_DERIV_WIMPL_INDIRECT(name, LANE_COUNT)                     \
-    DECL (osl_ ## name ## _w ##LANE_COUNT## dfw ##LANE_COUNT## dv,   "xXX")          \
-
-#define NOISE_DERIV_WIMPL(name, LANE_COUNT)                           \
-	NOISE_DERIV_WIMPL_INDIRECT(name, LANE_COUNT)
-
-
-#define GENERIC_NOISE_DERIV_WIMPL_INDIRECT(name, LANE_COUNT)             \
-    WDECL (osl_ ## name ## _w ##LANE_COUNT## dfw ##LANE_COUNT## dv,   "xsXXXX")   \
-    WDECL (osl_ ## name ## _w ##LANE_COUNT## dvw ##LANE_COUNT## dvw ##LANE_COUNT## df,   "xsXXXXX")
-
-#define GENERIC_NOISE_DERIV_WIMPL(name, LANE_COUNT)             \
-	GENERIC_NOISE_DERIV_WIMPL_INDIRECT(name, LANE_COUNT)             \
-
-
 #define NOISE_IMPL(name)                           \
     DECL (osl_ ## name ## _ff,  "ff")              \
     DECL (osl_ ## name ## _fff, "fff")             \
@@ -177,41 +146,22 @@ DECL (osl_warning, "xXs*")
 DECL (osl_split, "isXsii")
 DECL (osl_incr_layers_executed, "xX")
 
-WDECL (osl_printf_batched, "xXis*")
-WDECL (osl_warning_batched, "xXis*")
-WDECL (osl_error_batched, "xXis*")
-WDECL (osl_get_attribute_batched, "iXiXXiiXXi")
-WDECL (osl_get_attribute_w16attr_name_batched, "iXiXXiiXXi")
-WDECL (osl_get_attribute_batched_uniform, "iXiXXiiXX")
-WDECL (osl_get_textureinfo_batched, "iXXXXXi")
-WDECL (osl_get_textureinfo_batched_uniform, "iXXXXXX")
-WDECL (osl_texture_batched, "iXXXXXXXXXiXiXiXi")
-WDECL (osl_texture_batched_uniform, "iXXXXXXXXXXiXiXiXi")
-
 NOISE_IMPL(cellnoise)
-NOISE_WIMPL(cellnoise, __OSL_SIMD_LANE_COUNT)
 //NOISE_DERIV_IMPL(cellnoise)
 
 NOISE_IMPL(noise)
 NOISE_DERIV_IMPL(noise)
-NOISE_WIMPL(noise, __OSL_SIMD_LANE_COUNT)
-NOISE_DERIV_WIMPL(noise, __OSL_SIMD_LANE_COUNT)
 
 NOISE_IMPL(snoise)
-NOISE_WIMPL(snoise, __OSL_SIMD_LANE_COUNT)
 NOISE_DERIV_IMPL(snoise)
-NOISE_DERIV_WIMPL(snoise, __OSL_SIMD_LANE_COUNT)
 
 NOISE_IMPL(simplexnoise)
-NOISE_WIMPL(simplexnoise, __OSL_SIMD_LANE_COUNT)
 NOISE_DERIV_IMPL(simplexnoise)
 
 NOISE_IMPL(usimplexnoise)
-NOISE_WIMPL(usimplexnoise, __OSL_SIMD_LANE_COUNT)
 NOISE_DERIV_IMPL(usimplexnoise)
 
 GENERIC_NOISE_DERIV_IMPL(gabornoise)
-GENERIC_NOISE_DERIV_WIMPL(gabornoise, __OSL_SIMD_LANE_COUNT)
 
 GENERIC_NOISE_DERIV_IMPL(genericnoise)
 NOISE_IMPL(nullnoise)
@@ -311,53 +261,13 @@ DECL (osl_wavelength_color_vf, "xXXf")
 
 DECL (osl_luminance_fv, "xXXX")
 DECL (osl_luminance_dfdv, "xXXX")
-DECL (osl_luminance_fv_batched, "xXXX")
-DECL (osl_luminance_dfdv_batched, "xXXX")
-
-
-DECL (osl_luminance_w16fv_batched, "xXXX")
-DECL (osl_luminance_w16fw16v_batched, "xXXX")
-DECL (osl_luminance_w16dfw16dv_batched, "xXXX")
-
 
 DECL (osl_prepend_color_from, "xXXs")
-DECL (osl_prepend_color_from_v_batched, "xXXs")
-DECL (osl_prepend_color_from_w16v_batched, "xXXs")
 DECL (osl_prepend_matrix_from, "iXXs")
-DECL (osl_prepend_matrix_from_w16ms_batched, "xXXs")
-DECL (osl_prepend_matrix_from_w16ms_masked, "xXXsi")
-DECL (osl_prepend_matrix_from_w16mw16s_batched, "xXXX")
-DECL (osl_prepend_matrix_from_w16mw16s_masked, "xXXXi")
 DECL (osl_get_matrix, "iXXs")
 DECL (osl_get_inverse_matrix, "iXXs")
 DECL (osl_transform_triple, "iXXiXiXXi")
 DECL (osl_transform_triple_nonlinear, "iXXiXiXXi")
-
-WDECL (osl_build_transform_matrix_ss_masked, "iXXXXi")
-WDECL (osl_build_transform_matrix_w16ss_masked, "iXXXXi")
-WDECL (osl_build_transform_matrix_sw16s_masked, "iXXXXi")
-WDECL (osl_build_transform_matrix_w16sw16s_masked, "iXXXXi")
-
-WDECL (osl_transform_point_vw16vw16m_masked, "xXXXii")
-WDECL (osl_transform_point_w16vw16vw16m_masked, "xXXXii")
-WDECL (osl_transform_point_w16dvw16dvw16m_masked, "xXXXii")
-
-WDECL (osl_transform_point_w16vw16vm_masked, "xXXXii")
-WDECL (osl_transform_point_w16dvw16dvm_masked, "xXXXii")
-
-WDECL (osl_transform_vector_vw16vw16m_masked, "xXXXii")
-WDECL (osl_transform_vector_w16vw16vw16m_masked, "xXXXii")
-WDECL (osl_transform_vector_w16dvw16dvw16m_masked, "xXXXii")
-
-WDECL (osl_transform_vector_w16vw16vm_masked, "xXXXii")
-WDECL (osl_transform_vector_w16dvw16dvm_masked, "xXXXii")
-
-WDECL (osl_transform_normal_vw16vw16m_masked, "xXXXii")
-WDECL (osl_transform_normal_w16vw16vw16m_masked, "xXXXii")
-WDECL (osl_transform_normal_w16dvw16dvw16m_masked, "xXXXii")
-
-WDECL (osl_transform_normal_w16vw16vm_masked, "xXXXii")
-WDECL (osl_transform_normal_w16dvw16dvm_masked, "xXXXii")
 
 DECL (osl_dict_find_iis, "iXiX")
 DECL (osl_dict_find_iss, "iXXX")
@@ -368,15 +278,14 @@ DECL (osl_range_check, "iiiXXXiXiXX")
 DECL (osl_naninf_check, "xiXiXXiXiiX")
 DECL (osl_uninit_check, "xLXXXiXiXXiXiXii")
 DECL (osl_get_attribute, "iXiXXiiXX")
+#ifdef OSL_EXPERIMENTAL_BIND_USER_DATA_WITH_LAYERNAME
+DECL (osl_bind_interpolated_param, "iXXXLiXiXiXi")
+#else
 DECL (osl_bind_interpolated_param, "iXXLiXiXiXi")
-WDECL (osl_bind_interpolated_param_wide, "iXXLiXiXiXii")
+#endif
 DECL (osl_get_texture_options, "XX");
-WDECL (osl_get_texture_options_batched, "XX");
 DECL (osl_get_noise_options, "XX");
 DECL (osl_get_trace_options, "XX");
-
-DECL (osl_raytype_name_batched, "iXX")
-WDECL (osl_wide_get_noise_options, "XX");
 
 // The following are defined inside llvm_ops.cpp. Only include these
 // declarations in the OSL_LLVM_NO_BITCODE case.
@@ -483,189 +392,19 @@ DECL (osl_normalize_dvdv, "xXX")
 #endif
 
 
-#define DEFINED_IN_OPTRANSCENDETALS_CPP 1
-#ifdef DEFINED_IN_OPTRANSCENDETALS_CPP
-
-WDECL (osl_sincos_w16fw16fw16f, "xXXX")
-WDECL (osl_sincos_w16dfw16dfw16f, "xXXX")
-WDECL (osl_sincos_w16dfw16fw16df, "xXXX")
-WDECL (osl_sincos_w16dfw16dfw16df, "xXXX")
-
-WDECL (osl_sincos_w16vw16vw16v, "xXXX")
-WDECL (osl_sincos_w16dvw16dvw16v, "xXXX")
-WDECL (osl_sincos_w16dvw16vw16dv, "xXXX")
-WDECL (osl_sincos_w16dvw16dvw16dv, "xXXX")
-
-WDECL (osl_smoothstep_w16fw16fw16fw16f, "xXXXX")
-WDECL (osl_smoothstep_w16fw16fw16fw16f_masked, "xXXXXi")
-WDECL (osl_smoothstep_w16dfw16dfw16dfw16df, "xXXXX")
-WDECL (osl_smoothstep_w16dfw16dfw16dfw16df_masked, "xXXXXi")
-WDECL (osl_smoothstep_w16dfw16fw16dfw16df, "xXXXX")
-WDECL (osl_smoothstep_w16dfw16fw16dfw16df_masked, "xXXXXi")
-WDECL (osl_smoothstep_w16dfw16dfw16fw16df, "xXXXX")
-WDECL (osl_smoothstep_w16dfw16dfw16fw16df_masked, "xXXXXi")
-WDECL (osl_smoothstep_w16dfw16dfw16dfw16f, "xXXXX")
-WDECL (osl_smoothstep_w16dfw16dfw16dfw16f_masked, "xXXXXi")
-WDECL (osl_smoothstep_w16dfw16fw16fw16df, "xXXXX")
-WDECL (osl_smoothstep_w16dfw16fw16fw16df_masked, "xXXXXi")
-WDECL (osl_smoothstep_w16dfw16dfw16fw16f, "xXXXX")
-WDECL (osl_smoothstep_w16dfw16dfw16fw16f_masked, "xXXXXi")
-WDECL (osl_smoothstep_w16dfw16fw16dfw16f, "xXXXX")
-WDECL (osl_smoothstep_w16dfw16fw16dfw16f_masked, "xXXXXi")
-
-#define WIDE_UNARY_OP_IMPL(name)                   \
-    DECL (osl_ ## name ## _w16fw16f,  "xXX")	\
-    DECL (osl_ ## name ## _w16fw16f_masked,  "xXXi")	\
-    DECL (osl_ ## name ## _w16dfw16df, "xXX")            \
-    DECL (osl_ ## name ## _w16dfw16df_masked, "xXXi")            \
-    DECL (osl_ ## name ## _w16vw16v,  "xXX")             \
-    DECL (osl_ ## name ## _w16vw16v_masked,  "xXXi")             \
-    DECL (osl_ ## name ## _w16dvw16dv, "xXX")
-
-
-#define WIDE_UNARY_I_OP_IMPL(name)              \
-    DECL (osl_ ## name ## _w16iw16i,  "xXX")	\
-
-#define WIDE_TEST_F_OP_IMPL(name)              \
-    DECL (osl_ ## name ## _w16iw16f,  "xXX")	\
-
-#define WIDE_UNARY_F_OR_V_OP_IMPL(name)               \
-    DECL (osl_ ## name ## _w16fw16f,  "xXX")          \
-    DECL (osl_ ## name ## _w16fw16f_masked,  "xXXi")          \
-    DECL (osl_ ## name ## _w16vw16v,  "xXX")          \
-
-// TODO: add _masked variations and unit test to exercise them first
-#define WIDE_BINARY_OP_IMPL(name)                       \
-    DECL (osl_ ## name ## _w16fw16fw16f,    "xXXX")          \
-    DECL (osl_ ## name ## _w16fw16fw16f_masked,    "xXXXi")          \
-    DECL (osl_ ## name ## _w16dfw16dfw16df, "xXXX")         \
-    DECL (osl_ ## name ## _w16dfw16dfw16df_masked, "xXXXi")         \
-    DECL (osl_ ## name ## _w16dfw16fw16df,  "xXXX")         \
-    DECL (osl_ ## name ## _w16dfw16dfw16f,  "xXXX")         \
-    DECL (osl_ ## name ## _w16dfw16dfw16f_masked,  "xXXXi")         \
-    DECL (osl_ ## name ## _w16vw16vw16v,    "xXXX")         \
-    DECL (osl_ ## name ## _w16vw16vw16v_masked,    "xXXXi")         \
-    DECL (osl_ ## name ## _w16dvw16dvw16dv, "xXXX")         \
-    DECL (osl_ ## name ## _w16dvw16vw16dv,  "xXXX")         \
-    DECL (osl_ ## name ## _w16dvw16dvw16v,  "xXXX")
-
-#define WIDE_BINARY_FI_OP_IMPL(name)                       \
-    DECL (osl_ ## name ## _w16fw16fw16f,    "xXXX")        \
-    DECL (osl_ ## name ## _w16iw16iw16i,    "xXXX")
-
-#define WIDE_BINARY_VF_OP_IMPL(name)                       \
-    DECL (osl_ ## name ## _w16vw16vw16f,    "xXXX")        \
-    DECL (osl_ ## name ## _w16dvw16dvw16df, "xXXX")        \
-    DECL (osl_ ## name ## _w16dvw16dvw16f,  "xXXX")	       \
-    DECL (osl_ ## name ## _w16dvw16vw16df,  "xXXX")	       \
-
-#define WIDE_BINARY_F_OR_V_OP_IMPL(name)                   \
-    DECL (osl_ ## name ## _w16fw16fw16f,    "xXXX")        \
-    DECL (osl_ ## name ## _w16fw16fw16f_masked,    "xXXXi")\
-    DECL (osl_ ## name ## _w16vw16vw16v,    "xXXX")        \
-    DECL (osl_ ## name ## _w16vw16vw16v_masked,    "xXXXi")
-
-
-WIDE_UNARY_OP_IMPL(sin)
-WIDE_UNARY_OP_IMPL(cos)
-WIDE_UNARY_OP_IMPL(tan)
-WIDE_UNARY_OP_IMPL(asin)
-WIDE_UNARY_OP_IMPL(acos)
-WIDE_UNARY_OP_IMPL(atan)
-WIDE_BINARY_OP_IMPL(atan2)
-WIDE_UNARY_OP_IMPL(sinh)
-WIDE_UNARY_OP_IMPL(cosh)
-WIDE_UNARY_OP_IMPL(tanh)
-
-WIDE_UNARY_OP_IMPL(log)
-WIDE_UNARY_OP_IMPL(log2)
-WIDE_UNARY_OP_IMPL(log10)
-WIDE_UNARY_OP_IMPL(exp)
-WIDE_UNARY_OP_IMPL(exp2)
-WIDE_UNARY_OP_IMPL(expm1)
-WIDE_BINARY_OP_IMPL(pow)
-WIDE_BINARY_VF_OP_IMPL(pow)
-WIDE_UNARY_OP_IMPL(erf)
-WIDE_UNARY_OP_IMPL(erfc)
-
-WIDE_UNARY_OP_IMPL(sqrt)
-WIDE_UNARY_OP_IMPL(inversesqrt)
-
-WIDE_UNARY_F_OR_V_OP_IMPL(logb)
-WIDE_UNARY_F_OR_V_OP_IMPL(floor)
-WIDE_UNARY_F_OR_V_OP_IMPL(ceil)
-WIDE_UNARY_F_OR_V_OP_IMPL(trunc)
-WIDE_UNARY_F_OR_V_OP_IMPL(round)
-WIDE_UNARY_F_OR_V_OP_IMPL(sign)
-WIDE_BINARY_F_OR_V_OP_IMPL(step)
-
-WIDE_TEST_F_OP_IMPL(isnan)
-WIDE_TEST_F_OP_IMPL(isinf)
-WIDE_TEST_F_OP_IMPL(isfinite)
-WIDE_UNARY_OP_IMPL(abs)
-WIDE_UNARY_I_OP_IMPL(abs)
-WIDE_UNARY_OP_IMPL(fabs)
-WIDE_UNARY_I_OP_IMPL(fabs)
-WIDE_BINARY_OP_IMPL(fmod)
-#endif
-
-WDECL (osl_area_w16, "xXX")
-WDECL (osl_area_w16_masked, "xXXi")
-WDECL (osl_distance_w16fw16vw16v, "xXXX")
-WDECL (osl_distance_w16fw16vw16v_masked, "xXXXi")
-WDECL (osl_distance_w16dfw16dvw16dv, "xXXX")
-WDECL (osl_distance_w16dfw16dvw16dv_masked, "xXXXi")
-
-WDECL (osl_normalize_w16vw16v, "xXX")
-WDECL (osl_normalize_w16vw16v_masked, "xXXi")
-WDECL (osl_normalize_w16dvw16dv, "xXX")
-WDECL (osl_normalize_w16dvw16dv_masked, "xXXi")
-WDECL (osl_cross_w16vw16vw16v, "xXXX")
-WDECL (osl_cross_w16vw16vw16v_masked, "xXXXi")
-WDECL (osl_cross_w16dvw16dvw16dv, "xXXX")
-WDECL (osl_cross_w16dvw16dvw16dv_masked, "xXXXi")
-
-WDECL (osl_length_w16fw16v, "xXX")
-WDECL (osl_length_w16fw16v_masked, "xXXi")
-WDECL (osl_length_w16dfw16dv, "xXX")
-WDECL (osl_length_w16dfw16dv_masked, "xXXi")
-WDECL (osl_dot_w16fw16vw16v, "xXXX")
-WDECL (osl_dot_w16fw16vw16v_masked, "xXXXi")
-WDECL (osl_dot_w16dfw16dvw16dv, "xXXX")
-WDECL (osl_dot_w16dfw16dvw16dv_masked, "xXXXi")
-
 DECL (osl_mul_mmm, "xXXX")
-DECL (osl_mul_w16mw16mw16m, "xXXX")
 DECL (osl_mul_mfm, "xXfX")
-DECL (osl_mul_w16mw16fw16m, "xXXX")
 DECL (osl_mul_mmf, "xXXf")
-DECL (osl_mul_w16mw16mw16f, "xXXX")
 DECL (osl_mul_mff, "xXff")
-DECL (osl_mul_w16mw16fw16f, "xXXX")
 
 DECL (osl_div_mmm, "xXXX")
-DECL (osl_div_w16mw16mw16m, "xXXX")
 DECL (osl_div_mmf, "xXXf")
-DECL (osl_div_w16mw16mw16f, "xXXX")
 DECL (osl_div_mfm, "xXfX")
-DECL (osl_div_w16mw16fw16m, "xXXX")
 DECL (osl_div_mff, "xXff")
-DECL (osl_div_w16mw16fw16f, "xXXf")
-
 
 DECL (osl_get_from_to_matrix, "iXXss")
-DECL (osl_get_from_to_matrix_w16mss_batched, "iXXss")
-DECL (osl_get_from_to_matrix_w16mss_masked, "iXXssi")
-DECL (osl_get_from_to_matrix_w16msw16s_batched, "iXXsX")
-DECL (osl_get_from_to_matrix_w16msw16s_masked, "iXXsXi")
-DECL (osl_get_from_to_matrix_w16mw16ss_batched, "iXXXs")
-DECL (osl_get_from_to_matrix_w16mw16ss_masked, "iXXXsi")
-DECL (osl_get_from_to_matrix_w16mw16sw16s_batched, "iXXXX")
-DECL (osl_get_from_to_matrix_w16mw16sw16s_masked, "iXXXXi")
 DECL (osl_transpose_mm, "xXX")
-DECL (osl_transpose_w16mw16m, "xXX")
 DECL (osl_determinant_fm, "fX")
-DECL (osl_determinant_w16fw16m, "xXX")
 
 DECL (osl_concat_sss, "sss")
 DECL (osl_strlen_is, "is")
@@ -721,15 +460,9 @@ DECL (osl_filterwidth_fdf, "fX")
 DECL (osl_filterwidth_vdv, "xXX")
 DECL (osl_raytype_bit, "iXi")
 #endif
-DECL (osl_raytype_bit_batched, "iXi")
-DECL (osl_calculatenormal_batched, "xXXX")
-DECL (osl_filterwidth_w16fw16df, "xXX")
-DECL (osl_filterwidth_w16vw16dv, "xXX")
-
 
 // Clean up local definitions
 #undef NOISE_IMPL
-#undef NOISE_WIMPL
 #undef NOISE_DERIV_IMPL
 #undef GENERIC_NOISE_DERIV_IMPL
 #undef PNOISE_IMPL
@@ -738,11 +471,3 @@ DECL (osl_filterwidth_w16vw16dv, "xXX")
 #undef UNARY_OP_IMPL
 #undef BINARY_OP_IMPL
 
-#undef WIDE_UNARY_OP_IMPL
-#undef WIDE_UNARY_I_OP_IMPL
-#undef WIDE_UNARY_F_OR_V_OP_IMPL
-#undef WIDE_TEST_F_OP_IMPL
-#undef WIDE_BINARY_OP_IMPL
-#undef WIDE_BINARY_F_OR_V_OP_IMPL
-#undef WIDE_BINARY_FI_OP_IMPL
-#undef WIDE_BINARY_VF_OP_IMPL

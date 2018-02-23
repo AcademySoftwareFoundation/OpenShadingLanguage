@@ -1,0 +1,14 @@
+shader
+test_uniform_index_varying_normal (output color Cout = color(0,0,0))
+{
+    // Test array referencing with varying index
+    normal narray[3] = { normal(.1,u,.3), P[0]+P[1], normal(.3,.3,v) };
+    
+    // Using getattribute to obtain a uniform, but non-const index    
+    int res[2];
+    getattribute("camera:resolution", res);
+    int uniformIndex = res[0]%3;
+    normal indirectN = narray[uniformIndex];
+    
+    Cout = indirectN;
+}

@@ -676,7 +676,7 @@ ustring color("color"), point("point"), vector("vector"), normal("normal");
 ustring matrix("matrix");
 ustring unknown ("unknown");
 ustring _emptystring_ ("");
-};
+}; // namespace Strings
 
 
 
@@ -2718,7 +2718,7 @@ ShadingSystemImpl::group_post_jit_cleanup (ShaderGroup &group)
 
 void
 ShadingSystemImpl::optimize_group (ShaderGroup &group,
-                                   int raytypes_on, int raytypes_off)
+                                   int raytypes_on, int raytypes_off, PerThreadInfo *threadinfo)
 {
     if (group.optimized())
         return;    // already optimized
@@ -2754,7 +2754,7 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group,
     
     double locking_time = timer();
 
-    ShadingContext *ctx = get_context ();
+    ShadingContext *ctx = get_context (threadinfo);
     RuntimeOptimizer rop (*this, group, ctx);
     rop.set_raytypes (raytypes_on, raytypes_off);
     rop.run ();
@@ -2794,13 +2794,16 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group,
 }
 
 void
-ShadingSystemImpl::jit_group (ShaderGroup &group)
+ShadingSystemImpl::jit_group (ShaderGroup &group, PerThreadInfo *threadinfo)
 {
     if (group.jitted())
         return;    // already optimized
     
     if (!group.optimized())
-        optimize_group (group);
+        optimize_group (group,
+                        0, // raytypes_on
+                        0, // raytypes_off
+                        threadinfo);
 
     OIIO::Timer timer;
     // TODO: we could have separate mutexes for jit vs. batched_jit
@@ -2817,7 +2820,7 @@ ShadingSystemImpl::jit_group (ShaderGroup &group)
         return;
     }
 	
-    ShadingContext *ctx = get_context ();
+    ShadingContext *ctx = get_context (threadinfo);
     BackendLLVM lljitter (*this, group, ctx);
     lljitter.run ();
 
@@ -2846,13 +2849,16 @@ ShadingSystemImpl::jit_group (ShaderGroup &group)
 }
 
 void
-ShadingSystemImpl::batched_jit_group (ShaderGroup &group)
+ShadingSystemImpl::batched_jit_group (ShaderGroup &group, PerThreadInfo *threadinfo)
 {    
     if (group.batch_jitted())
         return;    // already optimized
     
     if (!group.optimized())
-        optimize_group (group);
+        optimize_group (group,
+                        0, // raytypes_on
+                        0, // raytypes_off
+                        threadinfo);
 
     OIIO::Timer timer;
     // TODO: we could have separate mutexes for jit vs. batched_jit
@@ -2869,7 +2875,7 @@ ShadingSystemImpl::batched_jit_group (ShaderGroup &group)
         return;
     }
 	
-    ShadingContext *ctx = get_context ();
+    ShadingContext *ctx = get_context (threadinfo);
     BackendLLVMWide lljitter (*this, group, ctx);
     lljitter.run ();
 
@@ -3614,7 +3620,39 @@ OSL_SHADEOP bool osl_get_attribute_batched_uniform(void *sgb_,
     return success;
 }
 
+#ifdef OSL_EXPERIMENTAL_BIND_USER_DATA_WITH_LAYERNAME
+OSL_SHADEOP int
+osl_bind_interpolated_param (void *sg_, const void *name, const void *layername,
+                             long long type, int userdata_has_derivs,
+                             void *userdata_data, int symbol_has_derivs,
+                             void *symbol_data, int symbol_data_size,
+                             char *userdata_initialized, int userdata_index)
+{
+    // XXX: Disable the userdata cache for now, it does not correctly
+    //      handle layername caching. Ideally userdata_initialized
+    //      would be keyed from layername as well as name. -WLW
+    //char status = *userdata_initialized;
+    char status = 0;
 
+    if (status == 0) {
+        // First time retrieving this userdata
+        ShaderGlobals *sg = (ShaderGlobals *)sg_;
+        bool ok = sg->renderer->get_userdata (userdata_has_derivs, USTR(name),
+                                              USTR(layername), TYPEDESC(type),
+                                              sg, userdata_data);
+        // printf ("Binding %s %s : index %d, ok = %d\n", name,
+        //         TYPEDESC(type).c_str(),userdata_index, ok);
+        *userdata_initialized = status = 1 + ok;  // 1 = not found, 2 = found
+        sg->context->incr_get_userdata_calls ();
+    }
+    if (status == 2) {
+        // If userdata was present, copy it to the shader variable
+        memcpy (symbol_data, userdata_data, symbol_data_size);
+        return 1;
+    }
+    return 0;  // no such user data
+}
+#else
 OSL_SHADEOP int
 osl_bind_interpolated_param (void *sg_, const void *name, long long type,
                              int userdata_has_derivs, void *userdata_data,
@@ -3641,7 +3679,48 @@ osl_bind_interpolated_param (void *sg_, const void *name, long long type,
     }
     return 0;  // no such user data
 }
+#endif
 
+#ifdef OSL_EXPERIMENTAL_BIND_USER_DATA_WITH_LAYERNAME
+OSL_SHADEOP int
+osl_bind_interpolated_param_wide (void *sgb_, const void *name, const void *layername, long long type,
+                             int userdata_has_derivs, void *userdata_data,
+                             int symbol_has_derivs, void *symbol_data,
+                             int symbol_data_size,
+                             unsigned int *userdata_initialized, int userdata_index, int mask_value)
+{
+    // Top bit indicate if we have checked for user data yet or not
+    // the bottom half is a mask of which lanes successfully retrieved
+    // user data
+    // XXX: Disable the userdata cache for now, it does not correctly
+    //      handle layername caching. Ideally userdata_initialized
+    //      would be keyed from layername as well as name. -SAF
+    // int status = (*userdata_initialized)>>31;
+    int status = 0;
+    if (status == 0) {
+        // First time retrieving this userdata
+        ShaderGlobalsBatch *sgb   = reinterpret_cast<ShaderGlobalsBatch *>(sgb_);
+        MaskedDataRef userDest(TYPEDESC(type), userdata_has_derivs, Mask(mask_value), userdata_data);
+        Mask foundUserData = sgb->uniform().renderer->batched()->get_userdata (USTR(name),
+                USTR(layername), sgb, userDest);
+        // printf ("Binding [%s] %s %s : index %d, ok = %d\n", layername, name,
+        //         TYPEDESC(type).c_str(),userdata_index, foundUserData.value());
+
+        *userdata_initialized = (1<<31) | foundUserData.value();
+        sgb->uniform().context->incr_get_userdata_calls ();
+    }
+    DASSERT((*userdata_initialized)>>31 == 1);
+    Mask foundUserData(*userdata_initialized & 0x7FFFFFFF);
+    if (foundUserData.any_on()) {
+        // If userdata was present, copy it to the shader variable
+        // Don't bother masking as any lanes without user data
+        // will be overwritten by init ops or by default value
+        memcpy (symbol_data, userdata_data, symbol_data_size);
+    }
+
+    return foundUserData.value();
+}
+#else
 OSL_SHADEOP int
 osl_bind_interpolated_param_wide (void *sgb_, const void *name, long long type,
                              int userdata_has_derivs, void *userdata_data,
@@ -3658,10 +3737,10 @@ osl_bind_interpolated_param_wide (void *sgb_, const void *name, long long type,
         ShaderGlobalsBatch *sgb   = reinterpret_cast<ShaderGlobalsBatch *>(sgb_);  
         MaskedDataRef userDest(TYPEDESC(type), userdata_has_derivs, Mask(mask_value), userdata_data);
         Mask foundUserData = sgb->uniform().renderer->batched()->get_userdata (USTR(name),
+                sgb, userDest);
                                               
         // printf ("Binding %s %s : index %d, ok = %d\n", name,
-                                              sgb, userDest);
-        //         TYPEDESC(type).c_str(),userdata_index, ok);
+        //         TYPEDESC(type).c_str(),userdata_index, foundUserData.value());
         
         *userdata_initialized = (1<<31) | foundUserData.value();
         sgb->uniform().context->incr_get_userdata_calls ();
@@ -3677,3 +3756,4 @@ osl_bind_interpolated_param_wide (void *sgb_, const void *name, long long type,
     
     return foundUserData.value();  
 }
+#endif

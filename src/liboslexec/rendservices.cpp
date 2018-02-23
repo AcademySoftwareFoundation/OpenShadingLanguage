@@ -640,9 +640,9 @@ BatchedRendererServices::get_texture_info_uniform (ShaderGlobalsBatch *sgb, ustr
 }
 
 Mask
-BatchedRendererServices::texture_uniform (ustring filename, TextureHandle * texture_handle,
+BatchedRendererServices::texture(ustring filename, TextureHandle * texture_handle,
                                           TexturePerthread * texture_thread_info,
-                                          BatchedTextureOptionProvider & options, ShaderGlobalsBatch * sgb,
+                                          const BatchedTextureOptions & options, ShaderGlobalsBatch * sgb,
                                           ConstWideAccessor<float> s, ConstWideAccessor<float> t,
                                           ConstWideAccessor<float> dsdx, ConstWideAccessor<float> dtdx,
                                           ConstWideAccessor<float> dsdy, ConstWideAccessor<float> dtdy,
@@ -655,6 +655,7 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle * text
         texture_thread_info = context->texture_thread_info();
 
     Mask mask = outputs.mask();
+
     MaskedDataRef resultRef = outputs.result();
     bool has_derivs = resultRef.has_derivs();
     MaskedDataRef alphaRef = outputs.alpha();
@@ -663,19 +664,53 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle * text
 
     ASSERT(resultRef.valid());
 
+    // Convert our BatchedTextureOptions to a single TextureOpt
+    // and submit them 1 at a time through existing non-batched interface
+    // Renderers could implement their own batched texturing,
+    // although expected a future version of OIIO will support
+    // this exact batched iterface
+    const auto & uniform_opt = options.uniform;
+    TextureOpt opt;
+    // opt.time = ignoring (deprecated?)
+    // opt.bias = ignoring (deprecated?)
+    // opt.samples = ignoring (deprecated?)
+    opt.firstchannel = uniform_opt.firstchannel;
+    opt.subimage = uniform_opt.subimage;
+    opt.subimagename = uniform_opt.subimagename;
+    opt.swrap = (OpenImageIO::v1_7::TextureOpt::Wrap)uniform_opt.swrap;
+    opt.twrap = (OpenImageIO::v1_7::TextureOpt::Wrap)uniform_opt.twrap;
+    opt.rwrap = (OpenImageIO::v1_7::TextureOpt::Wrap)uniform_opt.rwrap;
+    opt.mipmode = (OpenImageIO::v1_7::TextureOpt::MipMode)uniform_opt.mipmode;
+    opt.interpmode = (OpenImageIO::v1_7::TextureOpt::InterpMode)uniform_opt.interpmode;
+    opt.anisotropic = uniform_opt.anisotropic;
+    opt.conservative_filter = uniform_opt.conservative_filter;
+    opt.fill = uniform_opt.fill;
+    opt.missingcolor = uniform_opt.missingcolor;
+
+    const auto & vary_opt = options.varying;
+
     for (int i = 0; i < SimdLaneCount; ++i) {
         if (mask[i]) {
-        	// Apparently the members of TextureOpt get modified from calls into
-        	// the texture system, so lets start with a fresh set of defaults for now
-        	TextureOpt opt;
-            options.updateOption(opt, i);
+
+            opt.sblur = vary_opt.sblur.get(i);
+            opt.tblur = vary_opt.tblur.get(i);
+            opt.swidth = vary_opt.swidth.get(i);
+            opt.twidth = vary_opt.twidth.get(i);
+
+            // For 3D volume texture lookups only:
+            //opt.rblur = vary_opt.rblur.get(i);
+            //opt.rwidth = vary_opt.rwidth.get(i);
+
+            // For debugging
+            //std::cout << "BatchedRendererServices::texture[lane=" << i << "opt = " << opt << std::endl;
+
             // It's actually faster to ask for 4 channels (even if we need fewer)
             // and ensure that they're being put in aligned memory.
             // TODO:  investigate if the above statement is true when nchannels==1
             OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd;
-            // TODO:  investigate if there any magic to this simd::float4 or 
-            // can we just use a float[4] to the same effect and avoid confustion
-            
+            // TODO:  investigate if there any magic to this simd::float4 or
+            // can we just use a float[4] to the same effect and avoid confusion
+
             bool retVal = false;
 
             if (texture_handle) {
@@ -698,125 +733,15 @@ BatchedRendererServices::texture_uniform (ustring filename, TextureHandle * text
                                                 has_derivs ? (float *)&dresultds_simd : NULL,
                                                 has_derivs ? (float *)&dresultdt_simd : NULL);
             }
-            
-            if (retVal) {
-            	// Per the OSL language specification
-            	// "The alpha channel (presumed to be the next channel following the channels returned by the texture() call)"
-            	// so despite the fact the alpha channel really is
-            	// we will always use +1 the final channel requested
-            	int alphaChannelIndex;
-                if (resultRef.is<Color3>()) {
-                	alphaChannelIndex = 3;
-                    auto result= resultRef.masked<Color3>();
-                    auto resultDs = resultRef.maskedDx<Color3>();
-                    auto resultDt = resultRef.maskedDy<Color3>();
-                    result[i] = Color3(result_simd[0], result_simd[1], result_simd[2]);
-					if (has_derivs) {
-                        resultDs[i] = Color3(dresultds_simd[0], dresultds_simd[1], dresultds_simd[2]);
-                        resultDt[i] = Color3(dresultdt_simd[0], dresultdt_simd[1], dresultdt_simd[2]);
-					}
-                } else if (resultRef.is<float>()) {
-                	alphaChannelIndex = 1;
-                    auto result= resultRef.masked<float>();
-                    auto resultDs = resultRef.maskedDx<float>();
-                    auto resultDt = resultRef.maskedDy<float>();
-                    result[i] = result_simd[0];
-					if (has_derivs) {
-                        resultDs[i] = dresultds_simd[0];
-                        resultDt[i] = dresultdt_simd[0];
-					}
-            	}
-                if (alphaIsValid) {
-				    auto alpha = alphaRef.masked<float>();
-                    alpha[i] = result_simd[alphaChannelIndex];
-                    if (alphaRef.has_derivs()) {
-						auto alphaDs = alphaRef.maskedDx<float>();
-    					auto alphaDt = alphaRef.maskedDy<float>();
-                        alphaDs[i] = dresultds_simd[alphaChannelIndex];
-                        alphaDt[i] = dresultdt_simd[alphaChannelIndex];
-                    }
-                }
-                //std::cout << "s: " << s.get(i) << " t: " << t.get(i) << " color: " << resultColor << " " << wideResult.get(i) << std::endl;
-            } else {
-                std::string err = texturesys()->geterror();
-				bool errMsgSize = err.size() > 0;
-				if (errormessageIsValid) {
-					auto errormessage = outputs.errormessage().masked<ustring>();
-					if (errMsgSize) {
-	                    errormessage[i] = ustring(err);
-					}
-					else {
-						errormessage[i] = Strings::unknown;
-					}
-				}
-				else if (errMsgSize) {
-					// compilation error when using commented out form, investigate further...
-					//Mask errMask(Lane(i));
-					context->error (Mask(Lane(i)), "[BatchedRendererServices::texture] %s", err);
-				}
-            }
-            status.set(i, retVal);
-        }
-    }
-    return status;
-}
-
-Mask
-BatchedRendererServices::texture (ConstWideAccessor<ustring> filename,
-                           TexturePerthread *texture_thread_info,
-                           BatchedTextureOptionProvider & options, ShaderGlobalsBatch *sgb,
-                           ConstWideAccessor<float> s, ConstWideAccessor<float> t,
-                           ConstWideAccessor<float> dsdx, ConstWideAccessor<float> dtdx,
-                           ConstWideAccessor<float> dsdy, ConstWideAccessor<float> dtdy,
-                           BatchedTextureOutputs& outputs)
-{
-	ASSERT(sgb);
-    Mask status(false);
-    ShadingContext *context = sgb->uniform().context;
-    if (! texture_thread_info)
-        texture_thread_info = context->texture_thread_info();
-
-    Mask mask = outputs.mask();
-    MaskedDataRef resultRef = outputs.result();
-    bool has_derivs = resultRef.has_derivs();
-    MaskedDataRef alphaRef = outputs.alpha();
-    bool alphaIsValid = outputs.alpha().valid();
-    bool errormessageIsValid = outputs.errormessage().valid();
-
-    ASSERT(resultRef.valid());
-
-    for (int i = 0; i < SimdLaneCount; ++i) {
-        if (mask[i]) {
-            // Apparently the members of TextureOpt get modified from calls into
-            // the texture system, so lets start with a fresh set of defaults for now
-            TextureOpt opt;
-            options.updateOption(opt, i);
-            // It's actually faster to ask for 4 channels (even if we need fewer)
-            // and ensure that they're being put in aligned memory.
-            // TODO:  investigate if the above statement is true when nchannels==1
-            OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd;
-            // TODO:  investigate if there any magic to this simd::float4 or
-            // can we just use a float[4] to the same effect and avoid confustion
-
-            bool retVal = false;
-
-            retVal = texturesys()->texture (filename[i], opt,
-                                            s[i], t[i],
-                                            dsdx[i], dtdx[i],
-                                            dsdy[i], dtdy[i],
-                                            4,
-                                            (float *)&result_simd,
-                                            has_derivs ? (float *)&dresultds_simd : NULL,
-                                            has_derivs ? (float *)&dresultdt_simd : NULL);
 
             if (retVal) {
-            	// Per the OSL language specification
-            	// "The alpha channel (presumed to be the next channel following the channels returned by the texture() call)"
-            	// so despite the fact the alpha channel really is
-            	// we will always use +1 the final channel requested
-            	int alphaChannelIndex;
+                // Per the OSL language specification
+                // "The alpha channel (presumed to be the next channel following the channels returned by the texture() call)"
+                // so despite the fact the alpha channel really is
+                // we will always use +1 the final channel requested
+                int alphaChannelIndex;
                 if (resultRef.is<Color3>()) {
-                	alphaChannelIndex = 3;
+                    alphaChannelIndex = 3;
                     auto result= resultRef.masked<Color3>();
                     auto resultDs = resultRef.maskedDx<Color3>();
                     auto resultDt = resultRef.maskedDy<Color3>();
@@ -826,7 +751,7 @@ BatchedRendererServices::texture (ConstWideAccessor<ustring> filename,
                         resultDt[i] = Color3(dresultdt_simd[0], dresultdt_simd[1], dresultdt_simd[2]);
                     }
                 } else if (resultRef.is<float>()) {
-                	alphaChannelIndex = 1;
+                    alphaChannelIndex = 1;
                     auto result= resultRef.masked<float>();
                     auto resultDs = resultRef.maskedDx<float>();
                     auto resultDt = resultRef.maskedDy<float>();
@@ -860,6 +785,8 @@ BatchedRendererServices::texture (ConstWideAccessor<ustring> filename,
                     }
                 }
                 else if (errMsgSize) {
+                    // compilation error when using commented out form, investigate further...
+                    //Mask errMask(Lane(i));
                     context->error (Mask(Lane(i)), "[BatchedRendererServices::texture] %s", err);
                 }
             }
@@ -868,5 +795,6 @@ BatchedRendererServices::texture (ConstWideAccessor<ustring> filename,
     }
     return status;
 }
+
 
 OSL_NAMESPACE_EXIT

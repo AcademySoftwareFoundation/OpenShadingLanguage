@@ -1,0 +1,101 @@
+
+
+shader
+test ()
+{
+    printf ("Shader Globals()\n");
+    int rt_camera = raytype("camera");
+    int rt_shadow = raytype("shadow");
+    int rt_diffuse = raytype("diffuse");
+    int rt_glossy = raytype("glossy");
+    int rt_reflection = raytype("reflection");
+    int rt_refraction = raytype("refraction");
+    printf ("raytype(\"camera\") = %d\n", rt_camera);
+    printf ("raytype(\"shadow\") = %d\n", rt_shadow);
+    printf ("raytype(\"diffuse\") = %d\n", rt_diffuse);
+    printf ("raytype(\"glossy\") = %d\n", rt_glossy);
+    printf ("raytype(\"reflection\") = %d\n", rt_reflection);
+    printf ("raytype(\"refraction\") = %d\n", rt_refraction);
+    
+
+    point sg_P = P;    
+    vector sg_dPdx = Dx(P);    
+    vector sg_dPdy = Dy(P);    
+    vector sg_dPdz = Dz(P);    
+
+    printf ("P = %g\n", sg_P);
+    printf ("dPdx = %g\n", sg_dPdx);
+    printf ("dPdy = %g\n", sg_dPdy);
+    printf ("dPdz = %g\n", sg_dPdz);
+
+    point sg_I = I;    
+    vector sg_dIdx = Dx(I);    
+    vector sg_dIdy = Dy(I);    
+
+    printf ("I = %g\n", sg_I);
+    printf ("dIdx = %g\n", sg_dIdx);
+    printf ("dIdy = %g\n", sg_dIdy);
+    
+    point sg_N = N;    
+    printf ("N = %g\n", sg_N);
+
+    point sg_Ng = Ng;    
+    printf ("Ng = %g\n", sg_Ng);
+
+    float sg_u = u;    
+    float sg_dudx = Dx(u);    
+    float sg_dudy = Dy(u);    
+
+    printf ("u = %f\n", sg_u);
+    printf ("dudx = %f\n", sg_dudx);
+    printf ("dudy = %f\n", sg_dudy);
+
+    float sg_v = v;    
+    float sg_dvdx = Dx(v);    
+    float sg_dvdy = Dy(v);    
+
+    printf ("v = %f\n", sg_v);
+    printf ("dvdx = %f\n", sg_dvdx);
+    printf ("dvdy = %f\n", sg_dvdy);
+    
+    vector sg_dPdu = dPdu;    
+    printf ("dPdu = %g\n", sg_dPdu);
+
+    vector sg_dPdv = dPdv;    
+    printf ("dPdv = %g\n", sg_dPdv);
+    
+    float sg_time = time;
+    printf ("time = %f\n", sg_time);
+    
+    float sg_dtime = dtime;
+    printf ("dtime = %f\n", sg_dtime);
+    
+    vector sg_dPdtime = dPdtime;    
+    printf ("dPdtime = %g\n", sg_dPdtime);
+    
+    
+    point sg_Ps = Ps;    
+    vector sg_dPsdx = Dx(Ps);    
+    vector sg_dPsdy = Dy(Ps);    
+
+    printf ("Ps = %g\n", sg_Ps);
+    printf ("dPsdx = %g\n", sg_dPsdx);
+    printf ("dPsdy = %g\n", sg_dPsdy);
+    
+    
+    point sg_object2common_of_P = transform("object","common",P);
+    printf ("object2common(P) = %g\n", sg_object2common_of_P);
+    
+    point sg_shader2common_of_P = transform("shader","common",P);
+    printf ("shader2common(P) = %g\n", sg_shader2common_of_P);
+        
+    float  sa = surfacearea();
+    printf ("surfacearea = %f\n", sa);
+
+    vector sg_calculatenormal_fliphandedness = calculatenormal(P);    
+    printf ("calculatenormal(P, sg.fliphandedness) = %g\n", sg_calculatenormal_fliphandedness);
+    
+    int sg_backfacing = backfacing();
+    printf ("backfacing = %d\n", sg_backfacing);
+    
+}

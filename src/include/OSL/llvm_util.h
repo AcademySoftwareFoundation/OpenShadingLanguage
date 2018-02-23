@@ -49,6 +49,7 @@ namespace llvm {
   class ExecutionEngine;
   class Function;
   class FunctionType;
+  class JITEventListener;
   class JITMemoryManager;
   class Linker;
   class LLVMContext;
@@ -136,7 +137,6 @@ public:
     	                     unsigned int method_line);
     void debug_pop_inlined_function();
     void debug_set_location(OIIO::ustring source_file_name, int sourceline);
-    void debug_finalize();
     
     
     /// Create a new function (that will later be populated with
@@ -388,6 +388,8 @@ public:
     llvm::Type *type_float() const { return m_llvm_type_float; }
     llvm::Type *type_double() const { return m_llvm_type_double; }
     llvm::Type *type_int() const { return m_llvm_type_int; }
+    llvm::Type *type_int8() const { return m_llvm_type_int8; }
+    llvm::Type *type_int16() const { return m_llvm_type_int16; }
     llvm::Type *type_addrint() const { return m_llvm_type_addrint; }
     llvm::Type *type_bool() const { return m_llvm_type_bool; }
     llvm::Type *type_char() const { return m_llvm_type_char; }
@@ -520,6 +522,8 @@ public:
     }
 
     llvm::Value * mask_as_int(llvm::Value *mask);
+    llvm::Value * mask_as_int8(llvm::Value *mask);
+    llvm::Value * mask_as_int16(llvm::Value *mask);
     llvm::Value * int_as_mask(llvm::Value *value);
     llvm::Value * test_if_mask_is_non_zero(llvm::Value *mask);
     void test_if_mask_has_any_on_or_off(llvm::Value *mask, llvm::Value* & any_on, llvm::Value* & any_off);
@@ -561,9 +565,13 @@ public:
     llvm::Value *offset_ptr (llvm::Value *ptr, int offset,
                              llvm::Type *ptrtype=NULL);
 
+    void assume_ptr_is_aligned(llvm::Value *ptr, unsigned alignment);
+
     /// Generate an alloca instruction to allocate space for n copies of the
     /// given llvm type, and return its pointer.
     llvm::Value *op_alloca (llvm::Type *llvmtype, int n=1,
+                            const std::string &name=std::string());
+    llvm::Value *op_alloca_aligned(unsigned alignment, llvm::Type *llvmtype, int n=1,
                             const std::string &name=std::string());
     llvm::Value *op_alloca (llvm::PointerType *llvmtype, int n=1,
                             const std::string &name=std::string()) {
@@ -652,8 +660,12 @@ public:
     /// Dereference a pointer:  return *ptr
     llvm::Value *op_load (llvm::Value *ptr);
 
+    llvm::Value *op_gather(llvm::Value *ptr, llvm::Value *index);
+
     /// Store to a dereferenced pointer:   *ptr = val
     void op_store (llvm::Value *val, llvm::Value *ptr);
+
+    void op_scatter(llvm::Value *wide_val, llvm::Value *ptr, llvm::Value *wide_index);
 
     // N.B. "GEP" -- GetElementPointer -- is a particular LLVM-ism that is
     // the means for retrieving elements from some kind of aggregate: the
@@ -702,6 +714,14 @@ public:
 
     /// Extracts a scalar value from a vector type
     llvm::Value *op_extract(llvm::Value *a, int index);
+    llvm::Value *op_extract(llvm::Value *a, llvm::Value * index);
+    llvm::Value *op_insert(llvm::Value *v, llvm::Value *a, int index);
+
+    llvm::Value * op_1st_active_lane_of(llvm::Value * mask);
+    llvm::Value * op_lanes_that_match_masked(
+        llvm::Value * scalar_value,
+        llvm::Value * wide_value,
+        llvm::Value * mask);
 
     // Comparison ops.  It auto-detects the type (int vs float).
     // ordered only applies to float comparisons -- ordered means the
@@ -740,6 +760,9 @@ private:
 
     void SetupLLVM ();
     IRBuilder& builder();
+    llvm::Value * op_linearize_indices (llvm::Value *wide_index);
+    std::array<llvm::Value *,2> op_split_vector (llvm::Value * vector_val);
+
 
     int m_debug;
     PerThreadInfo::Impl *m_thread;
@@ -785,6 +808,8 @@ private:
     llvm::Type *m_llvm_type_float;
     llvm::Type *m_llvm_type_double;
     llvm::Type *m_llvm_type_int;
+    llvm::Type *m_llvm_type_int8;
+    llvm::Type *m_llvm_type_int16;
     llvm::Type *m_llvm_type_addrint;
     llvm::Type *m_llvm_type_bool;
     llvm::Type *m_llvm_type_char;
@@ -819,13 +844,16 @@ private:
 
     bool m_supports_masked_stores;
     bool m_supports_native_bit_masks;
+    bool m_supports_avx512f;
+    bool m_supports_avx2;
 
+    // Profiling Info
+    llvm::JITEventListener* mVTuneNotifier;
 
     // Debug Info
     llvm::DIFile * getOrCreateDebugFileFor(const std::string &file_name);
     llvm::DIScope * getCurrentDebugScope() const;
     llvm::DILocation *getCurrentInliningSite() const;
-
 
     llvm::DIBuilder* m_llvm_debug_builder;
     llvm::DICompileUnit *mDebugCU;

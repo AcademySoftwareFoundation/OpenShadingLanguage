@@ -74,15 +74,36 @@ struct DebugParams      { ustring tag; };
 
 OSL_NAMESPACE_ENTER
 
-static ustring u_camera("camera"), u_screen("screen");
-static ustring u_NDC("NDC"), u_raster("raster");
-static ustring u_perspective("perspective");
-static ustring u_s("s"), u_t("t");
-static ustring u_lookupTable("lookupTable");
-static ustring u_blahblah("blahblah");
-static ustring u_options("options");
-static ustring u_global("global");
+struct UniqueStringCache {
+    UniqueStringCache()
+    : camera("camera"), screen("screen"),
+      NDC("NDC"), raster("raster"),
+      perspective("perspective"),
+      s("s"), t("t"),
+      lookupTable("lookupTable"),
+      blahblah("blahblah"),
+      options("options"),
+      global("global")
+    {}
 
+    ustring camera;
+    ustring screen;
+    ustring NDC;
+    ustring raster;
+    ustring perspective;
+    ustring s;
+    ustring t;
+    ustring lookupTable;
+    ustring blahblah;
+    ustring options;
+    ustring global;
+};
+
+// Lazily construct UniqueStringCache to avoid static construction issues of a global
+const UniqueStringCache & ucache() {
+    static UniqueStringCache unique_string_cache;
+    return unique_string_cache;
+}
 
 
 void register_closures(OSL::ShadingSystem* shadingsys) {
@@ -151,8 +172,8 @@ void register_closures(OSL::ShadingSystem* shadingsys) {
 BatchedSimpleRenderer::BatchedSimpleRenderer(SimpleRenderer &sr)
     : m_sr(sr)
 {
-	m_uniform_objects.insert(u_global);	
-	m_uniform_objects.insert(u_options);		
+	m_uniform_objects.insert(ucache().global);
+	m_uniform_objects.insert(ucache().options);
 }
 
 BatchedSimpleRenderer::~BatchedSimpleRenderer()
@@ -359,11 +380,11 @@ bool
 BatchedSimpleRenderer::get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
                                            ustring to, float time)
 {
-    if (to == u_camera || to == u_screen || to == u_NDC || to == u_raster) {
+    if (to == ucache().camera || to == ucache().screen || to == ucache().NDC || to == ucache().raster) {
         Matrix44 M = m_sr.m_world_to_camera;
-        if (to == u_screen || to == u_NDC || to == u_raster) {
+        if (to == ucache().screen || to == ucache().NDC || to == ucache().raster) {
             float depthrange = (double)m_sr.m_yon-(double)m_sr.m_hither;
-            if (m_sr.m_projection == u_perspective) {
+            if (m_sr.m_projection == ucache().perspective) {
                 float tanhalffov = tanf (0.5f * m_sr.m_fov * M_PI/180.0);
                 Matrix44 camera_to_screen (1/tanhalffov, 0, 0, 0,
                                            0, 1/tanhalffov, 0, 0,
@@ -377,7 +398,7 @@ BatchedSimpleRenderer::get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &re
                                            0, 0, -m_sr.m_hither/depthrange, 1);
                 M = M * camera_to_screen;
             }
-            if (to == u_NDC || to == u_raster) {
+            if (to == ucache().NDC || to == ucache().raster) {
                 float screenleft = -1.0, screenwidth = 2.0;
                 float screenbottom = -1.0, screenheight = 2.0;
                 Matrix44 screen_to_ndc (1/screenwidth, 0, 0, 0,
@@ -385,7 +406,7 @@ BatchedSimpleRenderer::get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &re
                                         0, 0, 1, 0,
                                         -screenleft/screenwidth, -screenbottom/screenheight, 0, 1);
                 M = M * screen_to_ndc;
-                if (to == u_raster) {
+                if (to == ucache().raster) {
                     Matrix44 ndc_to_raster (m_sr.m_xres, 0, 0, 0,
                                             0, m_sr.m_yres, 0, 0,
                                             0, 0, 1, 0,
@@ -430,7 +451,7 @@ BatchedSimpleRenderer::get_array_attribute (ShaderGlobalsBatch *sgb,
 {
 	ASSERT(is_attribute_uniform(object, name) == false);
 	
-    if (object == nullptr && name == u_blahblah) {
+    if (object == nullptr && name == ucache().blahblah) {
     	if(val.is<float>()) {
 			auto out = val.masked<float>();
 			for(int i=0; i < out.width; ++i) {
@@ -457,7 +478,7 @@ BatchedSimpleRenderer::get_array_attribute (ShaderGlobalsBatch *sgb,
     	}      
     }
     
-    if (object == nullptr && name == u_lookupTable) {
+    if (object == nullptr && name == ucache().lookupTable) {
     	
     	if(val.is<float[]>())
     	{
@@ -570,7 +591,11 @@ BatchedSimpleRenderer::get_array_attribute (ShaderGlobalsBatch *sgb,
     // If no named attribute was found, allow userdata to bind to the
     // attribute request.
     if (object.empty() && index == -1)
+#ifdef OSL_EXPERIMENTAL_BIND_USER_DATA_WITH_LAYERNAME
+        return get_userdata (name, ustring(), sgb, val);
+#else
         return get_userdata (name, sgb, val);
+#endif
 
     return Mask(false);
 }
@@ -613,9 +638,15 @@ BatchedSimpleRenderer::get_attribute_uniform (ShaderGlobalsBatch *sgb, ustring o
                                 		name, -1, val);
 }
 
+#if OSL_EXPERIMENTAL_BIND_USER_DATA_WITH_LAYERNAME
 Mask
-BatchedSimpleRenderer::get_userdata (ustring name, 
+BatchedSimpleRenderer::get_userdata (ustring name, ustring layername,
 									 ShaderGlobalsBatch *sgb, MaskedDataRef val)
+#else
+Mask
+BatchedSimpleRenderer::get_userdata (ustring name,
+                                     ShaderGlobalsBatch *sgb, MaskedDataRef val)
+#endif
 {
     // Just to illustrate how this works, respect s and t userdata, filled
     // in with the uv coordinates.  In a real renderer, it would probably
@@ -624,7 +655,7 @@ BatchedSimpleRenderer::get_userdata (ustring name,
 	
 	// For testing of interactions with default values
 	// may not provide data for all lanes
-    if (name == u_s && val.is<float>()) {
+    if (name == ucache().s && val.is<float>()) {
     
     	auto out = val.masked<float>();
 		for(int i=0; i < out.width; ++i) {
@@ -648,7 +679,7 @@ BatchedSimpleRenderer::get_userdata (ustring name,
     	
         return val.mask();
     }
-    if (name == u_t && val.is<float>()) {
+    if (name == ucache().t && val.is<float>()) {
     	auto out = val.masked<float>();
 		for(int i=0; i < out.width; ++i) {
 			out[i] = sgb->varying(i).v();
@@ -683,7 +714,7 @@ SimpleRenderer::SimpleRenderer ()
 : m_batched_simple_renderer(*this)
 {
     Matrix44 M;  M.makeIdentity();
-    camera_params (M, u_perspective, 90.0f,
+    camera_params (M, ucache().perspective, 90.0f,
                    0.1f, 1000.0f, 256, 256);
 
     // Set up getters
@@ -703,7 +734,7 @@ SimpleRenderer::SimpleRenderer ()
     {
     	m_batched_simple_renderer.m_uniform_attributes.insert(entry.first);
     }
-    m_batched_simple_renderer.m_uniform_attributes.insert(u_lookupTable);
+    m_batched_simple_renderer.m_uniform_attributes.insert(ucache().lookupTable);
     
 }
 
@@ -807,11 +838,11 @@ bool
 SimpleRenderer::get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
                                     ustring to, float time)
 {
-    if (to == u_camera || to == u_screen || to == u_NDC || to == u_raster) {
+    if (to == ucache().camera || to == ucache().screen || to == ucache().NDC || to == ucache().raster) {
         Matrix44 M = m_world_to_camera;
-        if (to == u_screen || to == u_NDC || to == u_raster) {
+        if (to == ucache().screen || to == ucache().NDC || to == ucache().raster) {
             float depthrange = (double)m_yon-(double)m_hither;
-            if (m_projection == u_perspective) {
+            if (m_projection == ucache().perspective) {
                 float tanhalffov = tanf (0.5f * m_fov * M_PI/180.0);
                 Matrix44 camera_to_screen (1/tanhalffov, 0, 0, 0,
                                            0, 1/tanhalffov, 0, 0,
@@ -825,7 +856,7 @@ SimpleRenderer::get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
                                            0, 0, -m_hither/depthrange, 1);
                 M = M * camera_to_screen;
             }
-            if (to == u_NDC || to == u_raster) {
+            if (to == ucache().NDC || to == ucache().raster) {
                 float screenleft = -1.0, screenwidth = 2.0;
                 float screenbottom = -1.0, screenheight = 2.0;
                 Matrix44 screen_to_ndc (1/screenwidth, 0, 0, 0,
@@ -833,7 +864,7 @@ SimpleRenderer::get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
                                         0, 0, 1, 0,
                                         -screenleft/screenwidth, -screenbottom/screenheight, 0, 1);
                 M = M * screen_to_ndc;
-                if (to == u_raster) {
+                if (to == ucache().raster) {
                     Matrix44 ndc_to_raster (m_xres, 0, 0, 0,
                                             0, m_yres, 0, 0,
                                             0, 0, 1, 0,
@@ -885,13 +916,13 @@ SimpleRenderer::common_get_attribute (ustring object, ustring name,
 
     // In order to test getattribute(), respond positively to
     // "options"/"blahblah"
-    if (object == u_options && name == u_blahblah && val.is<float>()) {
+    if (object == ucache().options && name == ucache().blahblah && val.is<float>()) {
     	val.ref<float>() = 3.14159;
         return true;
     }
     
     
-    if (/*object == nullptr &&*/ name == u_lookupTable) {
+    if (/*object == nullptr &&*/ name == ucache().lookupTable) {
 #if 0 // old way of checking typedesc and arraylength
     	if (val.type().is_array() && val.type().basetype == TypeDesc::FLOAT && val.type().aggregate == TypeDesc::SCALAR)
     	{
@@ -928,7 +959,7 @@ SimpleRenderer::get_array_attribute (ShaderGlobals *sg, bool derivatives, ustrin
 	if (common_get_attribute (object, name, val) )
 		return true;
 	
-    if (object == nullptr && name == u_blahblah) {
+    if (object == nullptr && name == ucache().blahblah) {
 		if (val.is<float>()) {
 			val.ref<float>() = 1.0f - sg->P.x;
 			return true;
@@ -942,7 +973,11 @@ SimpleRenderer::get_array_attribute (ShaderGlobals *sg, bool derivatives, ustrin
     // If no named attribute was found, allow userdata to bind to the
     // attribute request.
     if (object.empty() && index == -1)
+#if OSL_EXPERIMENTAL_BIND_USER_DATA_WITH_LAYERNAME
+        return get_userdata (derivatives, name, ustring(), type, sg, val_ptr);
+#else
         return get_userdata (derivatives, name, type, sg, val_ptr);
+#endif
 
     return false;
 }
@@ -957,9 +992,15 @@ SimpleRenderer::get_attribute (ShaderGlobals *sg, bool derivatives, ustring obje
 
 
 
+#if OSL_EXPERIMENTAL_BIND_USER_DATA_WITH_LAYERNAME
+bool
+SimpleRenderer::get_userdata (bool derivatives, ustring name, ustring layername, TypeDesc type,
+                              ShaderGlobals *sg, void *val_ptr)
+#else
 bool
 SimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type,
                               ShaderGlobals *sg, void *val_ptr)
+#endif
 {
     // Just to illustrate how this works, respect s and t userdata, filled
     // in with the uv coordinates.  In a real renderer, it would probably
@@ -967,7 +1008,7 @@ SimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type,
     // coded names.
 	DataRef val(type, derivatives, val_ptr);
 
-    if (name == u_s && val.is<float>()) {
+    if (name == ucache().s && val.is<float>()) {
         val.ref<float>() = sg->u;
 
         if (val.has_derivs()) {
@@ -976,7 +1017,7 @@ SimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type,
         }
         return true;
     }
-    if (name == u_t && type == val.is<float>()) {
+    if (name == ucache().t && type == val.is<float>()) {
     	val.ref<float>() = sg->v;
         if (derivatives) {
         	val.refDx<float>() = sg->dvdx;

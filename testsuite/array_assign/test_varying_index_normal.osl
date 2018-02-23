@@ -1,0 +1,13 @@
+shader
+test_varying_index_normal (output color Cout = color(0,0,0))
+{
+    // Test array referencing with varying index
+    normal narray[3] = { normal(.1,.2,.3), 0.2, normal(.3,.3,.3) };
+    
+    int varyingIndex = int(P[0]*256)%3;
+    for(int i = 0; i < 5000; ++i) {
+        narray[varyingIndex] = normal(u,v,0);
+    }
+    
+    Cout = narray[0] + narray[1] + narray[2];       
+}

@@ -1,0 +1,7 @@
+shader
+test_filename_varying (output color Cout = 0)
+{    
+    string filename = (P[0] > 0.5) ? "../common/textures/mandrill.tif" : "../common/textures/reverse_mandrill.tif";
+    color C = (color) texture (filename, u, v);
+    Cout = C;
+}

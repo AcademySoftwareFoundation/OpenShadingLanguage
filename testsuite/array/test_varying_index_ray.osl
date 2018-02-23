@@ -1,0 +1,26 @@
+struct ray {
+    point pos;
+    vector dir;
+};
+
+shader
+test_varying_index_ray (output color Cout = color(0,0,0))
+{
+
+    // Test array referencing with varying index
+    ray ray_array[3];
+    ray_array[0].pos = point(.1,.2,.3);
+    ray_array[0].dir = vector(.4,.5,.6); 
+    ray_array[1].pos = point(.7,.8,.9);
+    ray_array[1].dir = vector(1.0,1.1,1.2); 
+    ray_array[2].pos = point(1.3,1.4,1.5);
+    ray_array[2].dir = vector(1.6,1.7,1.8); 
+    
+    int varyingIndex = int(clamp(P[0]*3, 0, 2));
+    ray indirectRay = ray_array[varyingIndex];
+
+    int varyingIndex2 = int(P[0]*256)%3;
+    ray indirectRay2 = ray_array[varyingIndex2];
+    
+    Cout = color(indirectRay2.pos[0]*indirectRay.dir[2], indirectRay2.pos[1]*indirectRay.dir[1], indirectRay2.pos[2]*indirectRay.dir[0]);
+}

@@ -1,0 +1,24 @@
+shader
+test_stwrap_varying (string filename = "mandrill.tx",
+      output color Cout = 0)
+{
+    string  swrap = "periodic";
+    int scaledX = int(P[0]*64.0);
+    if (mod(scaledX,9) > 0) {    
+        swrap = "black";
+    }
+    if (P[1] > 0.75) {
+        swrap = "clamp";
+    }    
+    string  twrap = "black";
+    int scaledY = int(P[0]*64.0);
+    if (mod(scaledX,2) > 0) {
+        twrap = "clamp";
+    }
+    if (P[0] > 0.75) {
+        twrap = "black";
+    }    
+
+    Cout = (color) texture (filename, -0.1 + 2 * u, -0.2 + 2 * v,
+                              "swrap", swrap, "twrap", twrap);
+}

@@ -1,0 +1,19 @@
+shader
+test_wrap_varying (string filename = "mandrill.tx",
+      output color Cout = 0)
+{
+    string wrap = "periodic";
+    int scaledX = int(P[0]*64.0);
+    if (mod(scaledX,9) > 0) {    
+        wrap = "black";
+    }
+    if (P[0] > 0.75) {
+        wrap = "mirror";
+    }    
+    if (P[1] > 0.75) {
+        wrap = "clamp";
+    }    
+
+    Cout = (color) texture (filename, -0.1 + 2 * u, -0.2 + 2 * v,
+                              "wrap", wrap);
+}

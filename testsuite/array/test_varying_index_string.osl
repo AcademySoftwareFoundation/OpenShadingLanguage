@@ -1,0 +1,19 @@
+shader
+test_varying_index_string (output color Cout = color(0,0,0))
+{
+    // Test array referencing with varying index
+    string rarray[3] = { "2", "4", "8" };
+    string garray[3] = { "16", "32", "64" };
+    string barray[3] = { "128", "256", "1" };
+    
+    int varyingIndexR = int(clamp(P[0]*3, 0, 2));
+    int varyingIndexG = int(P[0]*256)%3;
+    int varyingIndexB = int(P[0]*64)%3;
+    string indirectR = rarray[varyingIndexR];
+    string indirectG = garray[varyingIndexG];
+    string indirectB = barray[varyingIndexB];
+    
+    Cout[0] = stoi(indirectR)/256.0;
+    Cout[1] = stoi(indirectG)/256.0;
+    Cout[2] = stoi(indirectB)/256.0;
+}

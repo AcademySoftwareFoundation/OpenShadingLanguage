@@ -191,6 +191,22 @@ osl_texture_set_time (void *opt, float x)
     ((TextureOpt *)opt)->time = x;
 }
 
+OSL_SHADEOP int
+osl_texture_decode_wrapmode(void * name)
+{
+    const ustring & uname = USTR(name);
+    // std::cout << "osl_texture_decode_wrapmode = " << uname.c_str() << std::endl;
+    return OIIO::TextureOpt::decode_wrapmode(uname);
+}
+
+OSL_SHADEOP int
+osl_texture_decode_interpmode(void * name)
+{
+    const ustring & uname = USTR(name);
+    // std::cout << "osl_texture_decode_interpmode = " << uname.c_str() << std::endl;
+    return ::tex_interp_to_code(uname);
+}
+
 inline int
 tex_interp_to_code (ustring modename)
 {
@@ -380,20 +396,18 @@ OSL_NOINLINE  void transformWideTextureGradients(BatchedTextureOutputs& outputs,
 }
 
 OSL_SHADEOP int
-osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
-                             const void *opt_, const void *s, const void *t,
-                             const void *dsdx, const void *dtdx, const void *dsdy, const void *dtdy,
-                             int chans, void *result, int resultHasDerivs,
-                             void *alpha, int alphaHasDerivs,
-                             void *errormessage, int mask_)
+osl_texture_batched(void *sgb_, void *name, void *handle,
+                    const void *opt_, const void *s, const void *t,
+                    const void *dsdx, const void *dtdx, const void *dsdy, const void *dtdy,
+                    int chans, void *result, int resultHasDerivs,
+                    void *alpha, int alphaHasDerivs,
+                    void *errormessage, int mask_)
 {
     Mask mask(mask_);
-    // TODO: LLVM could check this before calling this function
-    if (mask.all_off()) {
-        return 0;
-    }
+    ASSERT(!mask.all_off());
+
     ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
-    BatchedTextureOptionProvider opt(reinterpret_cast<const BatchedTextureOptionProvider::OptionData *>(opt_));
+    const BatchedTextureOptions & opt = *reinterpret_cast<const BatchedTextureOptions *>(opt_);
 
     BatchedTextureOutputs outputs(result, (bool)resultHasDerivs, chans,
                                   alpha, (bool)alphaHasDerivs,
@@ -401,17 +415,18 @@ osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
     // XXX lfeng: original code use simd float4, then copy back to result.
     // for batched. The renderer should decide which way is more efficient
     // (thus implement this in renderservices)?
-    Mask retVal = sgb->uniform().renderer->batched()->texture_uniform (USTR(name),
-                                                                       (TextureSystem::TextureHandle *)handle,
-                                                                       NULL,
-                                                                       opt, sgb,
-                                                                       ConstWideAccessor<float>(s),
-                                                                       ConstWideAccessor<float>(t),
-                                                                       ConstWideAccessor<float>(dsdx),
-                                                                       ConstWideAccessor<float>(dtdx),
-                                                                       ConstWideAccessor<float>(dsdy),
-                                                                       ConstWideAccessor<float>(dtdy),
-                                                                       outputs);
+    Mask retVal = sgb->uniform().renderer->batched()->texture(USTR(name),
+                                                              (TextureSystem::TextureHandle *)handle,
+                                                              NULL,
+                                                              opt,
+                                                              sgb,
+                                                              ConstWideAccessor<float>(s),
+                                                              ConstWideAccessor<float>(t),
+                                                              ConstWideAccessor<float>(dsdx),
+                                                              ConstWideAccessor<float>(dtdx),
+                                                              ConstWideAccessor<float>(dsdy),
+                                                              ConstWideAccessor<float>(dtdy),
+                                                              outputs);
 
     // Correct our st texture space gradients into xy-space gradients
     if (resultHasDerivs) {
@@ -434,58 +449,6 @@ osl_texture_batched_uniform (void *sgb_, void *name, void *handle,
     return retVal.value();
 }
 
-OSL_SHADEOP int
-osl_texture_batched (void *sgb_, void *name,
-                     const void *opt_, const void *s, const void *t,
-                     const void *dsdx, const void *dtdx, const void *dsdy, const void *dtdy,
-                     int chans, void *result, int resultHasDerivs,
-                     void *alpha, int alphaHasDerivs,
-                     void *errormessage, int mask_)
-{
-    Mask mask(mask_);
-    // TODO: LLVM could check this before calling this function
-    if (mask.all_off()) {
-        return 0;
-    }
-    ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
-    BatchedTextureOptionProvider opt(reinterpret_cast<const BatchedTextureOptionProvider::OptionData *>(opt_));
-
-    BatchedTextureOutputs outputs(result, (bool)resultHasDerivs, chans,
-                                  alpha, (bool)alphaHasDerivs,
-                                  errormessage, mask);
-    // XXX lfeng: original code use simd float4, then copy back to result.
-    // for batched. The renderer should decide which way is more efficient
-    // (thus implement this in renderservices)?
-    Mask retVal = sgb->uniform().renderer->batched()->texture (ConstWideAccessor<ustring>(name),
-                                                               NULL,
-                                                               opt, sgb,
-                                                               ConstWideAccessor<float>(s),
-                                                               ConstWideAccessor<float>(t),
-                                                               ConstWideAccessor<float>(dsdx),
-                                                               ConstWideAccessor<float>(dtdx),
-                                                               ConstWideAccessor<float>(dsdy),
-                                                               ConstWideAccessor<float>(dtdy),
-                                                               outputs);
-
-    // Correct our st texture space gradients into xy-space gradients
-    if (resultHasDerivs) {
-        transformWideTextureGradients(outputs,
-                                      ConstWideAccessor<float>(dsdx), ConstWideAccessor<float>(dtdx),
-                                      ConstWideAccessor<float>(dsdy), ConstWideAccessor<float>(dtdy));
-    }
-
-    OSL_INTEL_PRAGMA(forceinline recursive)
-    if (outputs.errormessage().valid()) {
-        auto err = outputs.errormessage().masked<ustring>();
-        OSL_OMP_PRAGMA(omp simd simdlen(err.width))
-        for (int i = 0; i < err.width; ++i) {
-            if (retVal[i]) {
-                err[i] = Strings::_emptystring_;
-            }
-        }
-    }
-    return retVal.value();
-}
 
 OSL_SHADEOP int
 osl_texture3d (void *sg_, const char *name, void *handle,

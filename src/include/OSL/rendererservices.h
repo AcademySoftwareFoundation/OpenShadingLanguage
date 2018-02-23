@@ -30,6 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #include "oslconfig.h"
+#include "batched_texture.h"
 
 #include <OpenImageIO/ustring.h>
 
@@ -196,8 +197,14 @@ public:
     /// 'val'. If derivatives is true, the derivatives should be written into val
     /// as well. Return false if no user-data with the given name and type was
     /// found.
+#ifdef OSL_EXPERIMENTAL_BIND_USER_DATA_WITH_LAYERNAME
+    virtual bool get_userdata (bool derivatives, ustring name, ustring layername,
+                               TypeDesc type,
+                               ShaderGlobals *sg, void *val) = 0;
+#else
     virtual bool get_userdata (bool derivatives, ustring name, TypeDesc type,
                                ShaderGlobals *sg, void *val) = 0;
+#endif
 
     /// Given the name of a texture, return an opaque handle that can be
     /// used with texture calls to avoid the name lookups.
@@ -604,8 +611,13 @@ public:
     /// as well. It is assumed the results are varying and returns Mask 
     // with its bit set to off if no user-data with the given name and type was
     /// found.
+#ifdef OSL_EXPERIMENTAL_BIND_USER_DATA_WITH_LAYERNAME
+    virtual Mask get_userdata (ustring name, ustring layername,
+                               ShaderGlobalsBatch *sgb, MaskedDataRef val) = 0;
+#else
     virtual Mask get_userdata (ustring name, 
     						   ShaderGlobalsBatch *sgb, MaskedDataRef val) = 0;
+#endif
 
 #if 0
     
@@ -650,34 +662,16 @@ public:
     /// be stored there, leaving it up to the caller/shader to handle the
     /// error.
     ///
-    /// Batch uniform version is called when filename is uniform, but everything else
-    /// could be varying
-    virtual Mask texture_uniform (ustring filename, TextureHandle *texture_handle,
+    virtual Mask texture(ustring filename, TextureHandle *texture_handle,
                                   TexturePerthread *texture_thread_info,
-                                  BatchedTextureOptionProvider & options, ShaderGlobalsBatch *sgb,
+                                  const BatchedTextureOptions &options, ShaderGlobalsBatch *sgb,
                                   ConstWideAccessor<float> s, ConstWideAccessor<float> t,
                                   ConstWideAccessor<float> dsdx, ConstWideAccessor<float> dtdx,
                                   ConstWideAccessor<float> dsdy, ConstWideAccessor<float> dtdy,
                                   BatchedTextureOutputs& outputs);
 
-    /// Batch version where filename is varying also
-    virtual Mask texture (ConstWideAccessor<ustring> filename,
-                          TexturePerthread *texture_thread_info,
-                          BatchedTextureOptionProvider & options, ShaderGlobalsBatch *sgb,
-                          ConstWideAccessor<float> s, ConstWideAccessor<float> t,
-                          ConstWideAccessor<float> dsdx, ConstWideAccessor<float> dtdx,
-                          ConstWideAccessor<float> dsdy, ConstWideAccessor<float> dtdy,
-                          BatchedTextureOutputs& outputs);
-#if 0
-    // Deprecated version, with no errormessage parameter. This will
-    // eventually disappear.
-    virtual bool texture (ustring filename, TextureHandle *texture_handle,
-                          TexturePerthread *texture_thread_info,
-                          TextureOpt &options, ShaderGlobals *sg,
-                          float s, float t, float dsdx, float dtdx,
-                          float dsdy, float dtdy, int nchannels,
-                          float *result, float *dresultds, float *dresultdt);
 
+#if 0
     /// Filtered 3D texture lookup for a single point.
     ///
     /// P is the volumetric texture coordinate; dPd{x,y,z} are the
@@ -711,15 +705,6 @@ public:
                             float *result, float *dresultds,
                             float *dresultdt, float *dresultdr,
                             ustring *errormessage);
-    // Deprecated version, with no errormessage parameter. This will
-    // eventually disappear.
-    virtual bool texture3d (ustring filename, TextureHandle *texture_handle,
-                            TexturePerthread *texture_thread_info,
-                            TextureOpt &options, ShaderGlobals *sg,
-                            const Vec3 &P, const Vec3 &dPdx, const Vec3 &dPdy,
-                            const Vec3 &dPdz, int nchannels,
-                            float *result, float *dresultds,
-                            float *dresultdt, float *dresultdr);
 
     /// Filtered environment lookup for a single point.
     ///
@@ -750,15 +735,6 @@ public:
                               int nchannels, float *result,
                               float *dresultds, float *dresultdt,
                               ustring *errormessage);
-    // Deprecated version, with no errormessage parameter. This will
-    // eventually disappear.
-    virtual bool environment (ustring filename, TextureHandle *texture_handle,
-                              TexturePerthread *texture_thread_info,
-                              TextureOpt &options, ShaderGlobals *sg,
-                              const Vec3 &R, const Vec3 &dRdx, const Vec3 &dRdy,
-                              int nchannels, float *result,
-                              float *dresultds, float *dresultdt);
-
 #endif
 
     /// Get information about the given texture.  Return true if found

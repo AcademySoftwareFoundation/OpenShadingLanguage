@@ -1461,6 +1461,8 @@ inline void perlin (Dual2<float> &result, const H &hash,
 
 
 template <typename H>
+// flatten is workaround to enable inlining of non-inlined methods
+OSL_CLANG_ATTRIBUTE(flatten)
 inline void perlin_scalar (Dual2<float> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z)
 {
@@ -2324,10 +2326,14 @@ struct Noise {
     }
 
 	template<int WidthT>
+	// flatten is workaround to enable inlining of non-inlined methods
+	OSL_CLANG_ATTRIBUTE(flatten)
 	inline void operator() (WideAccessor<Dual2<float>, WidthT> wresult, ConstWideAccessor<Dual2<Vec3>, WidthT> wp) const {
 		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+            // TODO: figure out why clang is "loop not vectorized: cannot identify array bounds"
+            //OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(WidthT))
+            OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				Dual2<Vec3> p = wp[i];
 		        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
@@ -2536,7 +2542,8 @@ struct SNoise {
 	inline void operator() (WideAccessor<Dual2<float>, WidthT> wresult, ConstWideAccessor<Dual2<Vec3>, WidthT> wp) const {
 		OSL_INTEL_PRAGMA(forceinline recursive)
 		{
-			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+            //OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(WidthT))
+            OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(WidthT))
 			for(int i=0; i< WidthT; ++i) {
 				Dual2<Vec3> p = wp[i];
 		        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);

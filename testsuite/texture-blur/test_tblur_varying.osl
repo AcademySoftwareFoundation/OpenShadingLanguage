@@ -1,0 +1,7 @@
+shader
+test_tblur_varying (string filename = "../common/textures/mandrill.tif",
+      output color Cout = 0)
+{
+    float b = pow (u/2, 2.0);
+    Cout = (color) texture (filename, u, v, "tblur", b);
+}

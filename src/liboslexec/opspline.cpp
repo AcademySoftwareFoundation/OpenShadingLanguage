@@ -595,7 +595,7 @@ struct StaticMatrix44
 
 
 
-template <class RTYPE, class XTYPE, class CTYPE, class KTYPE, bool knot_derivs, bool is_basis_u_constant, int basis_step, class MatrixType, class KARRAY_T>
+template <class RTYPE, class CTYPE, class KTYPE, bool knot_derivs, bool is_basis_u_constant, int basis_step, class MatrixType, class XTYPE, class KARRAY_T>
 void spline_weighted_evaluate(
 					 const MatrixType &M,
                      RTYPE &result,
@@ -669,23 +669,30 @@ void spline_weighted_evaluate(
 
 
 
-template <class RTYPE, class XTYPE, typename XAccessorT, class CTYPE, class KTYPE, typename KAccessor_T, bool knot_derivs, typename RAccessorT>
+template <
+	typename KAccessor_T,
+	bool knot_derivs,
+	typename RAccessorT,
+	typename XAccessorT>
 
 
 void spline_evaluate(
 	RAccessorT wR,
 	//XAccessorT wX,
 	ustring spline_basis,
-	void *wx_,
+	XAccessorT wX,
 	void *wknots_,
 	int knot_count)
 {
 
 	int basis_type = fast::getSplineBasisType(spline_basis);
-	static constexpr int vec_width = WideAccessor<RTYPE>::width;
-	XAccessorT wX(wx_);
+	static constexpr int vec_width = RAccessorT::width;
 	KAccessor_T wK(wknots_, knot_count);
 
+	typedef typename XAccessorT::value_type X_Type;
+    typedef typename RAccessorT::value_type R_Type;
+    typedef typename KAccessor_T::value_type KTYPE;
+    typedef typename KAccessor_T::value_type CTYPE;
 	OSL_INTEL_PRAGMA(forceinline recursive)
 	switch(basis_type)
 	{
@@ -695,7 +702,7 @@ void spline_evaluate(
 		OSL_INTEL_PRAGMA(nofusion)
 		OSL_INTEL_PRAGMA(omp simd simdlen(vec_width))
 		for(int lane=0; lane < wR.width; ++lane) {
-			XTYPE x = wX[lane];
+		    X_Type x = wX[lane];
 			auto knots = wK[lane];
 
 			fast::StaticMatrix44<-1, 3, -3, 1,
@@ -704,8 +711,8 @@ void spline_evaluate(
 								0, 2, 0, 0,
 								2 /* divisor */> catmullRomWeights;
 
-			RTYPE result;
-			spline_weighted_evaluate<RTYPE, XTYPE, CTYPE, KTYPE,
+			R_Type result;
+			spline_weighted_evaluate<R_Type, CTYPE, KTYPE,
 								  false /* knot_derivs */,
 								  false /*is_basis_u_constant */,
 								  1 /* basis_step */>
@@ -724,7 +731,7 @@ void spline_evaluate(
 		OSL_INTEL_PRAGMA(nofusion)
 		OSL_INTEL_PRAGMA(omp simd simdlen(vec_width))
 		for(int lane=0; lane < wR.width; ++lane) {
-			XTYPE x = wX[lane];
+            X_Type x = wX[lane];
 			auto knots = wK[lane];
 
 
@@ -732,8 +739,8 @@ void spline_evaluate(
 										3, -6, 3, 0,
 										-3, 3, 0, 0,
 										1, 0, 0, 0, 1 /*divisor*/> bezierWeights;
-			RTYPE result;
-			spline_weighted_evaluate<RTYPE, XTYPE, CTYPE, KTYPE,
+			R_Type result;
+			spline_weighted_evaluate<R_Type, CTYPE, KTYPE,
 								  false /* knot_derivs */,
 								  false /*is_basis_u_constant */,
 								  3 /* basis_step */>
@@ -751,7 +758,7 @@ void spline_evaluate(
 		OSL_INTEL_PRAGMA(nofusion)
 		OSL_INTEL_PRAGMA(omp simd simdlen(vec_width))
 		for(int lane=0; lane < wR.width; ++lane) {
-			XTYPE x = wX[lane];
+            X_Type x = wX[lane];
 			auto knots = wK[lane];
 
 
@@ -759,8 +766,8 @@ void spline_evaluate(
 										3, -6, 3, 0,
 										-3, 0, 3, 0,
 										1, 4, 1, 0, 6 /*bspline*/> bsplineWeights;
-			RTYPE result;
-			spline_weighted_evaluate<RTYPE, XTYPE, CTYPE, KTYPE,
+			R_Type result;
+			spline_weighted_evaluate<R_Type, CTYPE, KTYPE,
 								  false /* knot_derivs */,
 								  false /*is_basis_u_constant */,
 								  1 /* basis_step */>
@@ -776,7 +783,7 @@ void spline_evaluate(
 		OSL_INTEL_PRAGMA(nofusion)
 		OSL_INTEL_PRAGMA(omp simd simdlen(vec_width))
 		for(int lane=0; lane < wR.width; ++lane) {
-			XTYPE x = wX[lane];
+            X_Type x = wX[lane];
 			auto knots = wK[lane];
 
 
@@ -785,8 +792,8 @@ void spline_evaluate(
 										 0, 1, 0, 0,
 										 1, 0, 0, 0, 1 /*Divisor*/> hermiteWeights;
 
-			RTYPE result;
-			spline_weighted_evaluate<RTYPE, XTYPE, CTYPE, KTYPE,
+			R_Type result;
+			spline_weighted_evaluate<R_Type, CTYPE, KTYPE,
 								  false /* knot_derivs */,
 								  false /*is_basis_u_constant */,
 								  2 /* basis_step */>
@@ -802,7 +809,7 @@ void spline_evaluate(
 		OSL_INTEL_PRAGMA(nofusion)
 		OSL_INTEL_PRAGMA(omp simd simdlen(vec_width))
 		for(int lane=0; lane < wR.width; ++lane) {
-			XTYPE x = wX[lane];
+            X_Type x = wX[lane];
 			auto knots = wK[lane];
 
 
@@ -812,9 +819,9 @@ void spline_evaluate(
 										0, -1, 1, 0,
 										0, 1, 0, 0, 1 /*Divisor*/> linearWeights;
 
-			RTYPE result;
+			R_Type result;
 
-			spline_weighted_evaluate<RTYPE, XTYPE, CTYPE, KTYPE,
+			spline_weighted_evaluate<R_Type, CTYPE, KTYPE,
 								  false /* knot_derivs */,
 								  false /*is_basis_u_constant */,
 								  1 /* basis_step */>
@@ -831,7 +838,7 @@ void spline_evaluate(
 		OSL_INTEL_PRAGMA(nofusion)
 		OSL_INTEL_PRAGMA(omp simd simdlen(vec_width))
 		for(int lane=0; lane < wR.width; ++lane) {
-			XTYPE x = wX[lane];
+            X_Type x = wX[lane];
 			auto knots = wK[lane];
 
 			// NOTE:  when basis is constant the weights are ignored,
@@ -842,8 +849,8 @@ void spline_evaluate(
 									0, 0, 0, 0, 1 /*Divisor*/> constantWeights;
 
 
-			RTYPE result;
-			spline_weighted_evaluate<RTYPE, XTYPE, CTYPE, KTYPE,
+			R_Type result;
+			spline_weighted_evaluate<R_Type, CTYPE, KTYPE,
 								  false /* knot_derivs */,
 								  true /*is_basis_u_constant */,
 								  1 /* basis_step */>
@@ -884,7 +891,7 @@ void spline_evaluate_scalar(
 							0, 2, 0, 0,
 							2 /* divisor */> catmullRomWeights;
 
-		spline_weighted_evaluate<RTYPE, XTYPE, CTYPE, KTYPE,
+		spline_weighted_evaluate<RTYPE, CTYPE, KTYPE,
 							  false /* knot_derivs */,
 							  false /*is_basis_u_constant */,
 							  1 /* basis_step */>
@@ -901,7 +908,7 @@ void spline_evaluate_scalar(
 									3, -6, 3, 0,
 									-3, 3, 0, 0,
 									1, 0, 0, 0, 1 /*divisor*/> bezierWeights;
-		spline_weighted_evaluate<RTYPE, XTYPE, CTYPE, KTYPE,
+		spline_weighted_evaluate<RTYPE, CTYPE, KTYPE,
 							  false /* knot_derivs */,
 							  false /*is_basis_u_constant */,
 							  3 /* basis_step */>
@@ -915,7 +922,7 @@ void spline_evaluate_scalar(
 									3, -6, 3, 0,
 									-3, 0, 3, 0,
 									1, 4, 1, 0, 6 /*bspline*/> bsplineWeights;
-		spline_weighted_evaluate<RTYPE, XTYPE, CTYPE, KTYPE,
+		spline_weighted_evaluate<RTYPE, CTYPE, KTYPE,
 							  false /* knot_derivs */,
 							  false /*is_basis_u_constant */,
 							  1 /* basis_step */>
@@ -930,7 +937,7 @@ void spline_evaluate_scalar(
 									 0, 1, 0, 0,
 									 1, 0, 0, 0, 1 /*Divisor*/> hermiteWeights;
 
-		spline_weighted_evaluate<RTYPE, XTYPE, CTYPE, KTYPE,
+		spline_weighted_evaluate<RTYPE, CTYPE, KTYPE,
 							  false /* knot_derivs */,
 							  false /*is_basis_u_constant */,
 							  2 /* basis_step */>
@@ -944,7 +951,7 @@ void spline_evaluate_scalar(
 									0, 0, 0, 0,
 									0, -1, 1, 0,
 									0, 1, 0, 0, 1 /*Divisor*/> linearWeights;
-		spline_weighted_evaluate<RTYPE, XTYPE, CTYPE, KTYPE,
+		spline_weighted_evaluate<RTYPE, CTYPE, KTYPE,
 							  false /* knot_derivs */,
 							  false /*is_basis_u_constant */,
 							  1 /* basis_step */>
@@ -960,7 +967,7 @@ void spline_evaluate_scalar(
 								0, 0, 0, 0,
 								0, 0, 0, 0,
 								0, 0, 0, 0, 1 /*Divisor*/> constantWeights;
-		spline_weighted_evaluate<RTYPE, XTYPE, CTYPE, KTYPE,
+		spline_weighted_evaluate<RTYPE, CTYPE, KTYPE,
 							  false /* knot_derivs */,
 							  true /*is_basis_u_constant */,
 							  1 /* basis_step */>
@@ -976,14 +983,6 @@ void spline_evaluate_scalar(
 
 } // namespace fast
 
-OSL_SHADEOP void  osl_spline_w16fw16ff(void *wout_, const char *spline_, void *wx_,
-                                 float *knots, int knot_count, int knot_arraylen)
-{
-	fast::template spline_evaluate<float, //out
-	float, ConstWideAccessor<float>, //in
-	float, float, ConstUniformUnboundedArrayAccessor<float>, false>//knots
-	(WideAccessor<float>(wout_), USTR(spline_), wx_, knots, knot_count);
-}
 
 OSL_SHADEOP void  osl_spline_w16fw16ff_masked(void *wout_, const char *spline_, void *wx_,
                                  float *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
@@ -992,10 +991,12 @@ OSL_SHADEOP void  osl_spline_w16fw16ff_masked(void *wout_, const char *spline_, 
 
 
 	fast::template spline_evaluate<
-	float,
-	float, ConstWideAccessor<float>, //X
-	float, float, ConstUniformUnboundedArrayAccessor<float>, false>
-	(MaskedAccessor<float>(wout_, Mask(mask_value)), USTR(spline_), wx_, knots, knot_count);
+	    ConstUniformUnboundedArrayAccessor<float>, false>(
+        MaskedAccessor<float>(wout_, Mask(mask_value)),
+        USTR(spline_),
+        ConstWideAccessor<float>(wx_),
+        knots,
+        knot_count);
 }
 
 OSL_SHADEOP void  osl_spline_w16ffw16f(void *wout_, const char *spline_, void *wx_,
@@ -1004,10 +1005,12 @@ OSL_SHADEOP void  osl_spline_w16ffw16f(void *wout_, const char *spline_, void *w
 	//WideAccessor<Matrix44> mout(wout_, Mask(mask_value));
 
 	fast::template spline_evaluate<
-	float,
-	float, ConstUniformAccessor<float>, //X
-	float, float, ConstWideUnboundArrayAccessor<float>, false>
-	(WideAccessor<float>(wout_), USTR(spline_), wx_, knots, knot_count);
+	    ConstWideUnboundArrayAccessor<float>, false>(
+        WideAccessor<float>(wout_),
+        USTR(spline_),
+        ConstUniformAccessor<float>(wx_),
+        knots,
+        knot_count);
 }
 
 
@@ -1015,10 +1018,11 @@ OSL_SHADEOP void  osl_spline_w16ffw16f_masked(void *wout_, const char *spline_, 
                                  float *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
 	fast::template spline_evaluate<
-	float,
-	float, ConstUniformAccessor<float>, //X
-	float, float, ConstWideUnboundArrayAccessor<float>, false>
-	(MaskedAccessor<float>(wout_, Mask(mask_value)), USTR(spline_), wx_, knots, knot_count);
+	    ConstWideUnboundArrayAccessor<float>, false>(
+	    MaskedAccessor<float>(wout_, Mask(mask_value)),
+	    USTR(spline_),
+	    ConstUniformAccessor<float> (wx_),
+	    knots, knot_count);
 }
 
 
@@ -1028,10 +1032,8 @@ OSL_SHADEOP void  osl_spline_w16ffw16f_masked(void *wout_, const char *spline_, 
 //	MaskedAccessor<Matrix44> mout(wout_, Mask(mask_value));
 //
 //	fast::template spline_evaluate<
-//	float,
-//  float, ConstUniformAccessor<float>, //X
-//	float, float, ConstWideUnboundArrayAccessor<float>, false>
-//	(WideAccessor<float>(mout), USTR(spline_), wx_, knots, knot_count);
+//	ConstWideUnboundArrayAccessor<float>, false>
+//	(WideAccessor<float>(mout), USTR(spline_), ConstUniformAccessor<float>(wx_), knots, knot_count);
 //}
 
 OSL_SHADEOP void osl_spline_w16fff_masked(
@@ -1050,7 +1052,8 @@ OSL_SHADEOP void osl_spline_w16fff_masked(
 
 	float scalar_result;
 	fast::template spline_evaluate_scalar<
-		float, float,
+		float,
+		float,
 		float, float, false>
 		(scalar_result, USTR(spline_), *reinterpret_cast<float *>(x), knots, knot_count);
 
@@ -1060,13 +1063,10 @@ OSL_SHADEOP void osl_spline_w16fff_masked(
 }
 
 
-
-
-
 OSL_SHADEOP void  osl_spline_dfdfdf(void *out, const char *spline_, void *x,
                                     float *knots, int knot_count, int knot_arraylen)
 {
-	Spline::extractValueFromArray<Dual2<float>, float, true> myExtract;
+    Spline::extractValueFromArray<Dual2<float>, float, true> myExtract;
 
    const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
        Spline::spline_evaluate<Dual2<float>, Dual2<float>, Dual2<float>, float, true>
@@ -1076,28 +1076,16 @@ OSL_SHADEOP void  osl_spline_dfdfdf(void *out, const char *spline_, void *x,
 
 
 
-OSL_SHADEOP void osl_spline_w16dfw16dfw16df(void *wout_, const char *spline_, void *wx_,
-									float *knots, int knot_count, int knot_arraylen)
-{
-
-	std::cout<<"Inside osl_spline_w16dfw16dfw16df"<<std::endl;
-
-	fast::template spline_evaluate<
-		Dual2<float>,
-		Dual2<float>,ConstWideAccessor<Dual2<float>>,
-		Dual2<float>, float, ConstWideUnboundArrayAccessor<Dual2<float>>, true>
-	(WideAccessor<Dual2<float>>(wout_), USTR(spline_), wx_, knots, knot_count);
-}
-
 OSL_SHADEOP void osl_spline_w16dfw16dfw16df_masked(void *wout_, const char *spline_, void *wx_,
 									float *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
 
 	fast::template spline_evaluate<
-		Dual2<float>,
-		Dual2<float>,ConstWideAccessor<Dual2<float>>,
-		Dual2<float>, float, ConstWideUnboundArrayAccessor<Dual2<float>>, true>
-	(MaskedAccessor<Dual2<float>>(wout_, Mask(mask_value)), USTR(spline_), wx_, knots, knot_count);
+		ConstWideUnboundArrayAccessor<Dual2<float>>, true>(
+        MaskedAccessor<Dual2<float>>(wout_, Mask(mask_value)),
+	    USTR(spline_),
+	    ConstWideAccessor<Dual2<float>>(wx_),
+	    knots, knot_count);
 }
 
 
@@ -1106,24 +1094,16 @@ OSL_SHADEOP void osl_spline_w16dfdfw16df(void *wout_, const char *spline_, void 
 {
 	std::cout<<"Inside osl_spline_w16dfdfw16df"<<std::endl;
 	fast::template spline_evaluate<
-			Dual2<float>,
-			Dual2<float>, ConstUniformAccessor<Dual2<float>>,
-			Dual2<float>, float, ConstWideUnboundArrayAccessor<Dual2<float>>, true>
-		(WideAccessor<Dual2<float>>(wout_), USTR(spline_), wx_, knots, knot_count);
+			ConstWideUnboundArrayAccessor<Dual2<float>>, true>
+		(WideAccessor<Dual2<float>>(wout_),
+		 USTR(spline_),
+		 ConstUniformAccessor<Dual2<float>> (wx_),
+		 knots, knot_count);
 }
 
 
 
-OSL_SHADEOP void osl_spline_w16dfw16dfdf(void *wout_, const char *spline_, void *wx_,
-									float *knots, int knot_count, int knot_arraylen)
-{
-	std::cout<<"Inside osl_spline_w16dfw16dfdf"<<std::endl;
-	fast::template spline_evaluate<
-			Dual2<float>,
-			Dual2<float>, ConstWideAccessor<Dual2<float>>,//X
-			Dual2<float>, float, ConstUniformUnboundedArrayAccessor<Dual2<float>>, true> //knots
-		(WideAccessor<Dual2<float>>(wout_), USTR(spline_), wx_, knots, knot_count);
-}
+
 
 
 
@@ -1139,28 +1119,18 @@ OSL_SHADEOP void  osl_spline_dffdf(void *out, const char *spline_, void *x,
       (spline, DFLOAT(out), *(float *)x, knots, knot_count, knot_arraylen);
 }
 
-OSL_SHADEOP void  osl_spline_w16dffw16df(void *wout_, const char *spline_, void *wx_,
-                                   float *knots, int knot_count, int knot_arraylen)
-{
 
-		fast::template spline_evaluate<
-		Dual2<float>,
-		float, ConstUniformAccessor<float>,
-		Dual2<float>,float, ConstWideUnboundArrayAccessor<Dual2<float>>, true>
-	(WideAccessor<Dual2<float>>(wout_), USTR(spline_), wx_, knots, knot_count);
-
-
-}
 
 OSL_SHADEOP void  osl_spline_w16dffw16df_masked(void *wout_, const char *spline_, void *wx_,
                                    float *knots, int knot_count, int knot_arraylen, unsigned int  mask_value)
 {
 
 		fast::template spline_evaluate<
-		Dual2<float>,
-		float,ConstUniformAccessor<float>,
-		Dual2<float>,float, ConstWideUnboundArrayAccessor<Dual2<float>>, true>
-	(MaskedAccessor<Dual2<float>>(wout_, Mask(mask_value)), USTR(spline_), wx_, knots, knot_count);
+		ConstWideUnboundArrayAccessor<Dual2<float>>, true>(
+	MaskedAccessor<Dual2<float>>(wout_, Mask(mask_value)),
+	USTR(spline_),
+	ConstUniformAccessor<float>(wx_),
+	knots, knot_count);
 
 
 }
@@ -1172,10 +1142,11 @@ OSL_SHADEOP void  osl_spline_w16dfw16fw16df_masked(void *wout_, const char *spli
 {
 
 		fast::template spline_evaluate<
-		Dual2<float>,
-		float, ConstWideAccessor<float>,
-		Dual2<float>,float, ConstWideUnboundArrayAccessor<Dual2<float>>, true>
-	(MaskedAccessor<Dual2<float>>(wout_, Mask(mask_value)), USTR(spline_),  wx_, knots, knot_count);
+		ConstWideUnboundArrayAccessor<Dual2<float>>, true>(
+		MaskedAccessor<Dual2<float>>(wout_, Mask(mask_value)),
+		USTR(spline_),
+		ConstWideAccessor<float>(wx_),
+		knots, knot_count);
 
 
 }
@@ -1191,52 +1162,34 @@ OSL_SHADEOP void  osl_spline_dfdff(void *out, const char *spline_, void *x,
    Spline::spline_evaluate<Dual2<float>, Dual2<float>, float, float, false>
       (spline, DFLOAT(out), DFLOAT(x), knots, knot_count, knot_arraylen);
 }
-OSL_SHADEOP void  osl_spline_w16dfw16dff(void *wout_, const char *spline_, void *wx_,
-                                   float *knots, int knot_count, int knot_arraylen)
-{
 
-	fast::template spline_evaluate<
-		Dual2<float>,
-		Dual2<float>,ConstWideAccessor<Dual2<float>>,
-		float, float, ConstUniformUnboundedArrayAccessor<float>, false>
-	(WideAccessor<Dual2<float>>(wout_), USTR(spline_), wx_, knots, knot_count);
-
-
-}
 
 OSL_SHADEOP void  osl_spline_w16dfw16dff_masked(void *wout_, const char *spline_, void *wx_,
                                    float *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
 
 	fast::template spline_evaluate<
-		Dual2<float>,
-		Dual2<float>,ConstWideAccessor<Dual2<float>>,
-		float, float, ConstUniformUnboundedArrayAccessor<float>, false>
-	(MaskedAccessor<Dual2<float>>(wout_, Mask(mask_value)), USTR(spline_), wx_, knots, knot_count);
+		ConstUniformUnboundedArrayAccessor<float>, false>(
+		MaskedAccessor<Dual2<float>>(wout_, Mask(mask_value)),
+		USTR(spline_),
+		ConstWideAccessor<Dual2<float>>(wx_),
+		knots, knot_count);
 
 
 }
 
-OSL_SHADEOP void  osl_spline_w16fw16fw16f(void *wout_, const char *spline_, void *wx_,
-										  void *wknots_, int knot_count, int knot_arraylen)
-{
-	fast::template spline_evaluate<
-		float,
-		float,ConstWideAccessor<float>,
-	float, float, ConstWideUnboundArrayAccessor<float>, false>
-	(WideAccessor<float>(wout_), USTR(spline_), wx_, wknots_, knot_count);
 
-}
 
 OSL_SHADEOP void  osl_spline_w16fw16fw16f_masked(void *wout_, const char *spline_, void *wx_,
 										  void *wknots_, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
 	Wide<float> result;
 	fast::template spline_evaluate<
-		float,
-		float,ConstWideAccessor<float>,
-	float, float, ConstWideUnboundArrayAccessor<float>, false>
-	(MaskedAccessor<float>(wout_, Mask(mask_value)), USTR(spline_), wx_, wknots_, knot_count);
+	        ConstWideUnboundArrayAccessor<float>, false>(
+	        MaskedAccessor<float>(wout_, Mask(mask_value)),
+	        USTR(spline_),
+	        ConstWideAccessor<float>(wx_),
+	        wknots_, knot_count);
 }
 
 /*
@@ -1244,10 +1197,8 @@ OSL_SHADEOP void  osl_spline_w16dfw16f(void *wout_, const char *spline_, void *w
 										  void *wknots_, int knot_count, int knot_arraylen)
 {
 	fast::template spline_evaluate<
-	float,
-	float, ConstUniformAccessor<float>,
-	float, float, ConstWideUnboundArrayAccessor<float>, false>
-	(WideAccessor<float>(wout_), USTR(spline_), wx_, wknots_, knot_count);
+	ConstWideUnboundArrayAccessor<float>, false>
+	(WideAccessor<float>(wout_), USTR(spline_), ConstUniformAccessor<float>(wx_), wknots_, knot_count);
 }
 */
 
@@ -1256,10 +1207,8 @@ OSL_SHADEOP void  osl_spline_w16dfw16dfw16f(void *wout_, const char *spline_, vo
 										  void *wknots_, int knot_count, int knot_arraylen)
 {
 	fast::template spline_evaluate<
-	float,
-	float, ConstWideAccessor<float>,
-	float, float, ConstWideUnboundArrayAccessor<float>, false>
-	(WideAccessor<float>(wout_), USTR(spline_), wx_, wknots_, knot_count);
+	ConstWideUnboundArrayAccessor<float>, false>
+	(WideAccessor<float>(wout_), USTR(spline_), ConstWideAccessor<float>(wx_), wknots_, knot_count);
 }
 */
 
@@ -1273,54 +1222,36 @@ OSL_SHADEOP void  osl_spline_vfv(void *out, const char *spline_, void *x,
       (spline, *(Vec3 *)out, *(float *)x, knots, knot_count, knot_arraylen);
 }
 
-OSL_SHADEOP void  osl_spline_w16vw16fv(void *wout_, const char *spline_, void *wx_,
-                                 Vec3 *knots, int knot_count, int knot_arraylen)
-{
 
-	fast::template spline_evaluate<
-		Vec3,
-		float, ConstWideAccessor<float>,
-		Vec3, Vec3, ConstUniformUnboundedArrayAccessor<Vec3>, false>
-	(WideAccessor<Vec3>(wout_), USTR(spline_), wx_, knots, knot_count);
-
-
-}
 
 OSL_SHADEOP void  osl_spline_w16vw16fv_masked(void *wout_, const char *spline_, void *wx_,
                                  Vec3 *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
 
 	fast::template spline_evaluate<
-		Vec3,
-		float, ConstWideAccessor<float>,
-		Vec3, Vec3, ConstUniformUnboundedArrayAccessor<Vec3>, false>
-	(MaskedAccessor<Vec3>(wout_, Mask(mask_value)), USTR(spline_), wx_, knots, knot_count);
+		ConstUniformUnboundedArrayAccessor<Vec3>, false>(
+		        MaskedAccessor<Vec3>(wout_, Mask(mask_value)),
+		        USTR(spline_),
+		        ConstWideAccessor<float>(wx_),
+		        knots, knot_count);
 
 
 }
 
 
 
-OSL_SHADEOP void  osl_spline_w16vw16fw16v(void *wout_, const char *spline_, void *wx_,
-                                 Vec3 *knots, int knot_count, int knot_arraylen)
-{
 
-	fast::template spline_evaluate<
-	Vec3,
-	float,ConstWideAccessor<float>,
-	Vec3, Vec3, ConstWideUnboundArrayAccessor<Vec3>, false>
-	(WideAccessor<Vec3>(wout_), USTR(spline_), wx_, knots, knot_count);
-}
 
 OSL_SHADEOP void  osl_spline_w16vw16fw16v_masked(void *wout_, const char *spline_, void *wx_,
                                  Vec3 *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
 
 	fast::template spline_evaluate<
-	Vec3,
-	float, ConstWideAccessor<float>,
-	Vec3, Vec3, ConstWideUnboundArrayAccessor<Vec3>, false>
-	(MaskedAccessor<Vec3>(wout_, Mask(mask_value)), USTR(spline_), wx_, knots, knot_count);
+	    ConstWideUnboundArrayAccessor<Vec3>, false>(
+	        MaskedAccessor<Vec3>(wout_, Mask(mask_value)),
+	        USTR(spline_),
+	        ConstWideAccessor<float>(wx_),
+	        knots, knot_count);
 }
 
 
@@ -1330,10 +1261,11 @@ OSL_SHADEOP void  osl_spline_w16vfw16v_masked(void *wout_, const char *spline_, 
                                  Vec3 *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
 	fast::template spline_evaluate<
-		Vec3,
-		float, ConstUniformAccessor<float>,
-		Vec3, Vec3, ConstWideUnboundArrayAccessor<Vec3>, false> //Knots
-		(MaskedAccessor<Vec3>(wout_, Mask(mask_value)), USTR(spline_), wx_, knots, knot_count);
+		ConstWideUnboundArrayAccessor<Vec3>, false> (
+		        MaskedAccessor<Vec3>(wout_, Mask(mask_value)),
+		        USTR(spline_),
+		        ConstUniformAccessor<float>(wx_),
+		        knots, knot_count);
 
 }
 
@@ -1351,20 +1283,7 @@ OSL_SHADEOP void  osl_spline_dvdfv(void *out, const char *spline_, void *x,
       (spline, DVEC(out), DFLOAT(x), knots, knot_count, knot_arraylen);
 }
 
-OSL_SHADEOP void osl_spline_w16dvw16dfv (void *wout_, const char *spline_, void *wx_,
-        Vec3 *knots, int knot_count, int knot_arraylen)
-{
 
-
-
-	fast::template spline_evaluate<
-	Dual2<Vec3>,
-	Dual2<float>, ConstWideAccessor<Dual2<float>>,
-    Vec3, Vec3, ConstUniformUnboundedArrayAccessor<Vec3>, false>
-	(WideAccessor<Dual2<Vec3>>(wout_), USTR(spline_), wx_, knots, knot_count);
-
-
-}
 
 OSL_SHADEOP void osl_spline_w16dvw16dfv_masked (void *wout_, const char *spline_, void *wx_,
         Vec3 *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
@@ -1373,26 +1292,17 @@ OSL_SHADEOP void osl_spline_w16dvw16dfv_masked (void *wout_, const char *spline_
 
 
 	fast::template spline_evaluate<
-	Dual2<Vec3>,
-	Dual2<float>,ConstWideAccessor<Dual2<float>>,
-    Vec3, Vec3, ConstUniformUnboundedArrayAccessor<Vec3>, false>
-	(MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)), USTR(spline_), wx_, knots, knot_count);
+        ConstUniformUnboundedArrayAccessor<Vec3>, false>(
+            MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
+            USTR(spline_),
+            ConstWideAccessor<Dual2<float>>(wx_),
+            knots, knot_count);
 
 
 }
 
 
-OSL_SHADEOP void osl_spline_w16dvw16dfw16v (void *wout_, const char *spline_, void *wx_,
-        Vec3 *knots, int knot_count, int knot_arraylen)
-{
 
-	fast::template spline_evaluate<
-	Dual2<Vec3>,
-	Dual2<float>,ConstWideAccessor<Dual2<float>>,
-    Vec3, Vec3, ConstWideUnboundArrayAccessor<Vec3>, false>
-	(WideAccessor<Dual2<Vec3>>(wout_), USTR(spline_), wx_, knots, knot_count);
-
-}
 
 OSL_SHADEOP void osl_spline_w16dvw16dfw16v_masked (void *wout_, const char *spline_, void *wx_,
         Vec3 *knots, int knot_count, int knot_arraylen, unsigned int mask_value )
@@ -1400,10 +1310,11 @@ OSL_SHADEOP void osl_spline_w16dvw16dfw16v_masked (void *wout_, const char *spli
 
 	//std::cout<<"Knot count is: "<<knot_count<<std::endl;
 	fast::template spline_evaluate<
-	Dual2<Vec3>,
-	Dual2<float>, ConstWideAccessor<Dual2<float>>,
-    Vec3, Vec3, ConstWideUnboundArrayAccessor<Vec3>, false>
-	(MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)), USTR(spline_), wx_, knots, knot_count);
+        ConstWideUnboundArrayAccessor<Vec3>, false>(
+            MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
+            USTR(spline_),
+            ConstWideAccessor<Dual2<float>>(wx_),
+            knots, knot_count);
 
 }
 
@@ -1414,10 +1325,8 @@ OSL_SHADEOP void osl_spline_w16dvdfw16v (void *wout_, const char *spline_, void 
 {
 
 	fast::template spline_evaluate<
-	Dual2<Vec3>,
-	Dual2<float>, ConstUniformAccessor<Dual2<float>>,
-    Vec3, Vec3, ConstWideUnboundArrayAccessor<Vec3>, false>
-	(WideAccessor<Dual2<Vec3>>(wout_), USTR(spline_), wx_, knots, knot_count);
+    ConstWideUnboundArrayAccessor<Vec3>, false>
+	(WideAccessor<Dual2<Vec3>>(wout_), USTR(spline_), ConstUniformAccessor<Dual2<float>>(wx_), knots, knot_count);
 
 }
 */
@@ -1433,42 +1342,18 @@ OSL_SHADEOP void  osl_spline_dvfdv(void *out, const char *spline_, void *x,
       (spline, DVEC(out), *(float *)x, knots, knot_count, knot_arraylen);
 }
 
-OSL_SHADEOP void  osl_spline_w16dvfw16dv(void *wout_, const char *spline_, void *wx_,
-                                    Vec3 *knots, int knot_count, int knot_arraylen)
-{
-
-
-    fast::template spline_evaluate<
-	Dual2<Vec3>,
-	float, ConstUniformAccessor<float>,
-	Dual2<Vec3>, Vec3, ConstWideUnboundArrayAccessor<Dual2<Vec3>>,true>
-	(WideAccessor<Dual2<Vec3>>(wout_), USTR(spline_), wx_, knots, knot_count); //ConstUniformUnboundedArrayAccessor<Vec3> was Dual2<Vec3>
-
-}
-
 OSL_SHADEOP void  osl_spline_w16dvfw16dv_masked(void *wout_, const char *spline_, void *wx_,
                                     Vec3 *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
 
 
     fast::template spline_evaluate<
-	Dual2<Vec3>,
-	float, ConstUniformAccessor<float>,
-	Dual2<Vec3>, Vec3, ConstWideUnboundArrayAccessor<Dual2<Vec3>>,true>
-	(MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)), USTR(spline_), wx_, knots, knot_count); //ConstUniformUnboundedArrayAccessor<Vec3> was Dual2<Vec3>
+	ConstWideUnboundArrayAccessor<Dual2<Vec3>>,true>
+	(MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
+	        USTR(spline_),
+	        ConstUniformAccessor<float>(wx_),
+	        knots, knot_count); //ConstUniformUnboundedArrayAccessor<Vec3> was Dual2<Vec3>
 
-}
-
-
-OSL_SHADEOP void  osl_spline_w16dvw16fw16dv(void *wout_, const char *spline_, void *wx_,
-                                    Vec3 *knots, int knot_count, int knot_arraylen)
-{
-
-	fast::template spline_evaluate<
-	Dual2<Vec3>,
-	float,ConstWideAccessor<float>,
-	Dual2<Vec3>, Vec3, ConstWideUnboundArrayAccessor<Dual2<Vec3>>,true>
-	(WideAccessor<Dual2<Vec3>>(wout_), USTR(spline_), wx_, knots, knot_count); //ConstUniformUnboundedArrayAccessor<Vec3> was Dual2<Vec3>
 }
 
 OSL_SHADEOP void  osl_spline_w16dvw16fw16dv_masked(void *wout_, const char *spline_, void *wx_,
@@ -1476,34 +1361,23 @@ OSL_SHADEOP void  osl_spline_w16dvw16fw16dv_masked(void *wout_, const char *spli
 {
 
 	fast::template spline_evaluate<
-	Dual2<Vec3>,
-	float, ConstWideAccessor<float>,
-	Dual2<Vec3>, Vec3, ConstWideUnboundArrayAccessor<Dual2<Vec3>>,true>
-	(MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)), USTR(spline_), wx_, knots, knot_count); //ConstUniformUnboundedArrayAccessor<Vec3> was Dual2<Vec3>
+	    ConstWideUnboundArrayAccessor<Dual2<Vec3>>,true>
+	(MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
+	        USTR(spline_),
+	        ConstWideAccessor<float>(wx_),
+	        knots, knot_count); //ConstUniformUnboundedArrayAccessor<Vec3> was Dual2<Vec3>
 }
-
-/*
-OSL_SHADEOP void  osl_spline_w16dvw16fdv(void *wout_, const char *spline_, void *wx_,
-                                    Vec3 *knots, int knot_count, int knot_arraylen)
-{
-
-	fast::template spline_evaluate<
-	Dual2<Vec3>,
-	float, ConstWideAccessor<float>,
-	Dual2<Vec3>, Vec3, ConstUniformUnboundedArrayAccessor<Dual2<Vec3>>,true>
-	(WideAccessor<Dual2<Vec3>>(wout_), USTR(spline_), wx_, knots, knot_count); //ConstUniformUnboundedArrayAccessor<Vec3> was Dual2<Vec3>
-}
-*/
 
 OSL_SHADEOP void  osl_spline_w16dvw16fdv_masked(void *wout_, const char *spline_, void *wx_,
                                     Vec3 *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
 
 	fast::template spline_evaluate<
-	Dual2<Vec3>,
-	float, ConstWideAccessor<float>,
-	Dual2<Vec3>, Vec3, ConstUniformUnboundedArrayAccessor<Dual2<Vec3>>,true>
-	(MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)), USTR(spline_), wx_, knots, knot_count); //ConstUniformUnboundedArrayAccessor<Vec3> was Dual2<Vec3>
+	    ConstUniformUnboundedArrayAccessor<Dual2<Vec3>>,true>
+	(MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
+	        USTR(spline_),
+	        ConstWideAccessor<float>(wx_),
+	        knots, knot_count); //ConstUniformUnboundedArrayAccessor<Vec3> was Dual2<Vec3>
 }
 
 //=======================================================================
@@ -1516,66 +1390,35 @@ OSL_SHADEOP void  osl_spline_dvdfdv(void *out, const char *spline_, void *x,
       (spline, DVEC(out), DFLOAT(x), knots, knot_count, knot_arraylen);
 }
 
-OSL_SHADEOP void  osl_spline_w16dvw16dfw16dv(void *wout_, const char *spline_, void *wx_,
-                                    Vec3 *knots, int knot_count, int knot_arraylen)
-{
-
-	fast::template spline_evaluate<
-	Dual2<Vec3>,
-	Dual2<float>, ConstWideAccessor<Dual2<float>>,
-	Dual2<Vec3>, Vec3, ConstWideUnboundArrayAccessor<Dual2<Vec3>>,true>
-	(WideAccessor<Dual2<Vec3>>(wout_), USTR(spline_), wx_, knots, knot_count);
-
-}
-
 OSL_SHADEOP void  osl_spline_w16dvw16dfw16dv_masked(void *wout_, const char *spline_, void *wx_,
                                     Vec3 *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
 
 	fast::template spline_evaluate<
-	Dual2<Vec3>,
-	Dual2<float>, ConstWideAccessor<Dual2<float>>,
-	Dual2<Vec3>, Vec3, ConstWideUnboundArrayAccessor<Dual2<Vec3>>,true>
-	(MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)), USTR(spline_), wx_, knots, knot_count);
+	    ConstWideUnboundArrayAccessor<Dual2<Vec3>>,true>(
+	        MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
+	        USTR(spline_),
+	        ConstWideAccessor<Dual2<float>>(wx_),
+	        knots, knot_count);
 
 }
 
 
-OSL_SHADEOP void  osl_spline_w16dvw16dfdv(void *wout_, const char *spline_, void *wx_,
-                                    Vec3 *knots, int knot_count, int knot_arraylen)
-{
 
-	fast::template spline_evaluate<
-	Dual2<Vec3>,
-	Dual2<float>,ConstWideAccessor<Dual2<float>>,
-	Dual2<Vec3>, Vec3, ConstUniformUnboundedArrayAccessor<Dual2<Vec3>>,true>
-	(WideAccessor<Dual2<Vec3>>(wout_), USTR(spline_), wx_, knots, knot_count);
-}
 
 OSL_SHADEOP void  osl_spline_w16dvw16dfdv_masked(void *wout_, const char *spline_, void *wx_,
                                     Vec3 *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
 	std::cout<<"Knot count is: "<<knot_count<<std::endl;
 	fast::template spline_evaluate<
-	Dual2<Vec3>,
-	Dual2<float>, ConstWideAccessor<Dual2<float>>,
-	Dual2<Vec3>, Vec3, ConstUniformUnboundedArrayAccessor<Dual2<Vec3>>,true>
-	(MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)), USTR(spline_), wx_, knots, knot_count);
+	    ConstUniformUnboundedArrayAccessor<Dual2<Vec3>>,true>
+	(MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
+	        USTR(spline_),
+	        ConstWideAccessor<Dual2<float>>(wx_),
+	        knots, knot_count);
 }
 
 
-/*
-OSL_SHADEOP void  osl_spline_w16dvdfw16dv(void *wout_, const char *spline_, void *wx_,
-                                    Vec3 *knots, int knot_count, int knot_arraylen)
-{
-
-	fast::template spline_evaluate<
-	Dual2<Vec3>,
-	Dual2<float>, ConstUniformAccessor<Dual2<float>>,
-	Dual2<Vec3>, Vec3, ConstWideUnboundArrayAccessor<Dual2<Vec3>>,true>
-	(WideAccessor<Dual2<Vec3>>(wout_), USTR(spline_), wx_, knots, knot_count);
-}
-*/
 
 OSL_SHADEOP void osl_splineinverse_fff(void *out, const char *spline_, void *x,
                                        float *knots, int knot_count, int knot_arraylen)
@@ -1759,7 +1602,6 @@ OSL_SHADEOP void osl_splineinverse_dffdf(void *out, const char *spline_, void *x
     osl_splineinverse_fff (&outtmp, spline_, x, knots, knot_count, knot_arraylen);
     DFLOAT(out) = outtmp;
 }
-
 
 
 } // namespace pvt

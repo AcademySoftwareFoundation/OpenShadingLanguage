@@ -1538,6 +1538,7 @@ template <typename DataT, int WidthT = SimdLaneCount>
 struct ConstWideUnboundArrayAccessor
 {
 	static constexpr int width = WidthT;
+    typedef DataT value_type;
 
 	explicit OSL_INLINE
 	ConstWideUnboundArrayAccessor(const void *ptr_wide_data, int array_length)
@@ -1574,6 +1575,7 @@ template <typename DataT, int WidthT>
 struct ConstWideUnboundArrayAccessor<Dual2<DataT>, WidthT>
 {
 	static constexpr int width = WidthT;
+    typedef Dual2<DataT> value_type;
 
 	explicit OSL_INLINE
 	ConstWideUnboundArrayAccessor(const void *ptr_wide_data, int array_length)
@@ -1681,6 +1683,8 @@ template <typename DataT, int WidthT = SimdLaneCount>
 struct ConstUniformUnboundedArrayAccessor
 {
 	static constexpr int width = WidthT;
+    typedef DataT value_type;
+
 
 	explicit OSL_INLINE
 	ConstUniformUnboundedArrayAccessor(const void *ptr_data, int array_length)
@@ -1717,6 +1721,7 @@ template <typename DataT, int WidthT>
 struct ConstUniformUnboundedArrayAccessor<Dual2<DataT>, WidthT>
 {
 	static constexpr int width = WidthT;
+    typedef Dual2<DataT> value_type;
 
 	explicit OSL_INLINE
 	ConstUniformUnboundedArrayAccessor(const void *ptr_data, int array_length)

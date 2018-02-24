@@ -330,8 +330,9 @@ DECL (osl_splineinverse_w16dfw16dff_masked, "xXXXXiii")
 //DECL (osl_splineinverse_w16dffw16df_masked, "xXXXXiii") // incomplete
 
 #if 0 // incomplete
-DECL (osl_setmessage, "xXsLXisi")
-DECL (osl_getmessage, "iXssLXiisi")
+// setmessage/getmessage involve closures, leave to next iteration
+//DECL (osl_setmessage, "xXsLXisi")
+//DECL (osl_getmessage, "iXssLXiisi")
 DECL (osl_pointcloud_search, "iXsXfiiXXii*")
 DECL (osl_pointcloud_get, "iXsXisLX")
 DECL (osl_pointcloud_write, "iXsXiXXX")
@@ -643,6 +644,10 @@ DECL (osl_area_w16, "xXX")
 DECL (osl_area_w16_masked, "xXXi")
 DECL (osl_filterwidth_w16fw16df, "xXX")
 DECL (osl_filterwidth_w16vw16dv, "xXX")
+#if 0 // incomplete
+DECL (osl_filterwidth_w16fw16df_masked, "xXXi")
+DECL (osl_filterwidth_w16vw16dv_masked, "xXXi")
+#endif
 DECL (osl_raytype_bit_batched, "iXi")
 
 

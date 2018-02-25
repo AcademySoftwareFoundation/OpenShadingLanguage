@@ -1,26 +1,47 @@
 # The 'textoptix' executable
 
-set ( testoptix_src
-  testoptix.cpp
-  )
+# Compile a CUDA file to PTX using NVCC.
+MACRO ( NVCC_COMPILE cuda_src ptxlist )
+    GET_FILENAME_COMPONENT ( cuda_src_we ${cuda_src} NAME_WE )
+    SET ( cuda_ptx "${CMAKE_CURRENT_BINARY_DIR}/${cuda_src_we}.cu.ptx" )
+    SET ( ${ptxlist} ${${ptxlist}} ${cuda_ptx} )
 
-set ( testoptix_cuda_src
-  cuda/quad.cu
-  cuda/renderer.cu
-  cuda/sphere.cu
-  cuda/util.h
-  )
+    ADD_CUSTOM_COMMAND ( OUTPUT ${cuda_ptx}
+        COMMAND ${CUDA_NVCC_EXECUTABLE}
+            -m64 -arch sm_35 -ptx --std=c++11 -O3 --use_fast_math
+            "-I${CUDA_INCLUDE_DIR}"
+            "-I${OPTIX_INCLUDE_DIR}"
+            "-I${CMAKE_SOURCE_DIR}/cuda"
+            ${cuda_src} -o ${cuda_ptx}
+        MAIN_DEPENDENCY ${cuda_src}
+        DEPENDS ${cuda_src} oslexec
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
+ENDMACRO ()
 
-ADD_EXECUTABLE ( testoptix ${testoptix_src} )
-TARGET_LINK_LIBRARIES ( testoptix oslexec oslquery ${OPENIMAGEIO_LIBRARIES} ${Boost_LIBRARIES} ${OPTIX_LIBRARIES} ${CUDA_LIBRARIES} ${CMAKE_DL_LIBS} )
+set ( testoptix_srcs
+    testoptix.cpp
+    )
+
+set ( testoptix_cuda_srcs
+    cuda/quad.cu
+    cuda/renderer.cu
+    cuda/sphere.cu
+    )
+
+ADD_EXECUTABLE ( testoptix ${testoptix_srcs} )
+TARGET_LINK_LIBRARIES ( testoptix oslexec oslquery ${CUDA_LIBRARIES} ${OPTIX_LIBRARIES} ${OPENIMAGEIO_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} lzma )
 
 INSTALL ( TARGETS testoptix RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
 
-# Install the CUDA sources in a fixed location so that they can be loaded at run time
-INSTALL ( FILES ${testoptix_cuda_src} DESTINATION ${CMAKE_INSTALL_PREFIX}/cuda/testoptix )
+# Generate PTX for all of the CUDA files
+foreach (cudasrc ${testoptix_cuda_srcs})
+    NVCC_COMPILE ( ${cudasrc} ptx_list )
+endforeach ()
 
-# Set up some pre-processor macros so that the program will know where to look
-# for the CUDA sources to feed to NVRTC
-add_definitions ("-DOPTIX_INCLUDE_DIR=\"${OPTIX_INCLUDE_DIR}\"")
-add_definitions ("-DCUDA_INCLUDE_DIR=\"${CUDA_INCLUDE_DIR}\"")
-add_definitions ("-DCUDA_SRC_PATH=\"${CMAKE_INSTALL_PREFIX}/cuda/testoptix\"")
+ADD_CUSTOM_TARGET ( testoptix_ptx ALL
+    DEPENDS ${ptx_list}
+    SOURCES ${testoptix_cuda_srcs} )
+
+# Install the PTX files in a fixed location so that they can be loaded at run time
+INSTALL ( FILES ${ptx_list} DESTINATION ${CMAKE_INSTALL_PREFIX}/ptx/testoptix )
+add_definitions ("-DPTX_PATH=\"${CMAKE_INSTALL_PREFIX}/ptx/testoptix\"")

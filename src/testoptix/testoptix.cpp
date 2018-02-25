@@ -43,7 +43,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OSL/oslexec.h>
 
-#include <nvrtc.h>
 #include <optix_world.h>
 
 #include "raytracer.h"
@@ -55,11 +54,6 @@ namespace { // anonymous namespace
 
 int xres = 640;
 int yres = 480;
-
-// PTX strings
-static std::string renderer_ptx;
-static std::string sphere_ptx;
-static std::string quad_ptx;
 
 // Options strings
 static std::string imagefile;
@@ -147,83 +141,12 @@ get_pixel_buffer (const std::string& buffer_name, int width, int height)
 }
 
 
-// Compiles a CUDA source file to PTX using NVRTC and returns it as a string.
-void get_ptx_from_cu_file (std::string& ptx_string, const char* filename)
+// Construct the path to the pre-compiled PTX file for the given CUDA source.
+// The PTX files for each .cu source in testoptix/cuda are generated as part of
+// the CMake build process.
+std::string get_ptx_path (const std::string& source)
 {
-    // Read the CUDA source file into a std::string
-    std::string cu_source;
-    if (! OIIO::Filesystem::read_text_file (filename, cu_source)) {
-        std::cerr << "Unable to load " << filename << std::endl;
-        exit (EXIT_FAILURE);
-    }
-
-    // Set up the default NVRTC options
-    std::vector<const char *> options;
-    const std::string src_dir    = std::string("-I") + OIIO::Filesystem::parent_path (filename);
-    const std::string cuda_inc   = std::string("-I") + CUDA_INCLUDE_DIR;
-    const std::string optix_inc  = std::string("-I") + OPTIX_INCLUDE_DIR;
-    const std::string optixu_inc = std::string("-I") + OPTIX_INCLUDE_DIR + "/optixu";
-
-    options.push_back (src_dir.c_str());
-    options.push_back (cuda_inc.c_str());
-    options.push_back (optix_inc.c_str());
-    options.push_back (optixu_inc.c_str());
-
-    // NB: The 'gpu-architecture' option specifies the minimum compute
-    //     capability required to execute the generated PTX and may need
-    //     to be changed depending on the requirements of the input CUDA.
-    options.push_back ("--gpu-architecture=compute_35");
-    options.push_back ("--use_fast_math");
-    options.push_back ("--device-as-default-execution-space");
-    options.push_back ("--relocatable-device-code=true");
-    options.push_back ("-D__x86_64");
-
-    nvrtcProgram prog = 0;
-    nvrtcResult result = nvrtcCreateProgram (&prog, cu_source.c_str(),
-                                             filename, 0, nullptr, nullptr);
-    if (result != NVRTC_SUCCESS) {
-        std::cerr << "NVRTC program creation failed: "
-                  << nvrtcGetErrorString (result) << std::endl;
-        exit (EXIT_FAILURE);
-    }
-
-    // JIT compile CU to PTX
-    result = nvrtcCompileProgram (prog, static_cast<int>(options.size()),
-                                  options.data());
-
-    if (result != NVRTC_SUCCESS) {
-        std::cerr << "NVRTC Compilation failed: "
-                  << nvrtcGetErrorString (result) << std::endl;
-
-        size_t log_size = 0;
-        nvrtcGetProgramLogSize(prog, &log_size);
-
-        std::string log;
-        log.resize (log_size);
-        nvrtcGetProgramLog (prog, &log[0]);
-
-        std::cerr << log << std::endl;
-        exit (EXIT_FAILURE);
-    }
-
-    // Retrieve the PTX string
-    size_t ptx_size = 0;
-    result = nvrtcGetPTXSize (prog, &ptx_size);
-    if (result != NVRTC_SUCCESS || ptx_size < 1) {
-        std::cerr << "NVRTC PTX retrieval failed: "
-                  << nvrtcGetErrorString (result) << std::endl;
-        exit (EXIT_FAILURE);
-    }
-
-    ptx_string.resize (ptx_size);
-    result = nvrtcGetPTX (prog, &ptx_string[0]);
-    if (result != NVRTC_SUCCESS) {
-        std::cerr << "NVRTC PTX retrieval failed: "
-                  << nvrtcGetErrorString (result) << std::endl;
-        exit (EXIT_FAILURE);
-    }
-
-    nvrtcDestroyProgram (&prog);
+    return std::string (PTX_PATH) + "/" + source + ".ptx";
 }
 
 
@@ -252,22 +175,12 @@ void init_optix_context ()
                                                     xres, yres);
     optix_ctx["output_buffer"]->set (buffer);
 
-    // Load the renderer CUDA source and generate PTX for it
-    std::string filename = std::string(CUDA_SRC_PATH) + "/renderer.cu";
-    get_ptx_from_cu_file (renderer_ptx, filename.c_str());
+    std::string renderer_ptx = get_ptx_path ("renderer.cu");
 
     // Create the OptiX programs and set them on the Context
-    optix_ctx->setRayGenerationProgram (0, optix_ctx->createProgramFromPTXString (renderer_ptx, "raygen"));
-    optix_ctx->setMissProgram          (0, optix_ctx->createProgramFromPTXString (renderer_ptx, "miss"));
-    optix_ctx->setExceptionProgram     (0, optix_ctx->createProgramFromPTXString (renderer_ptx, "exception"));
-
-    // Create the sphere intersection program
-    filename = std::string(CUDA_SRC_PATH) + "/sphere.cu";
-    get_ptx_from_cu_file (sphere_ptx, filename.c_str());
-
-    // Create the quad intersection program
-    filename = std::string(CUDA_SRC_PATH) + "/quad.cu";
-    get_ptx_from_cu_file (quad_ptx, filename.c_str());
+    optix_ctx->setRayGenerationProgram (0, optix_ctx->createProgramFromPTXFile (renderer_ptx, "raygen"));
+    optix_ctx->setMissProgram          (0, optix_ctx->createProgramFromPTXFile (renderer_ptx, "miss"));
+    optix_ctx->setExceptionProgram     (0, optix_ctx->createProgramFromPTXFile (renderer_ptx, "exception"));
 }
 
 
@@ -303,17 +216,21 @@ void setup_scene()
     spheres.emplace_back (Vec3(0.0f, 30.0f, 120.0f), 30.0f, 0, false);
     spheres.emplace_back (Vec3(60.0f, 30.0f, 120.0f), 30.0f, 0, false);
 
+    std::string renderer_ptx = get_ptx_path ("renderer.cu");
+    std::string sphere_ptx   = get_ptx_path ("sphere.cu");
+    std::string quad_ptx     = get_ptx_path ("quad.cu");
+
     // Make an OptiX material to be shared by all objects in the scene. In this
     // example the material is a simple normal shader.
     optix::Material optix_mtl = optix_ctx->createMaterial();
-    optix_mtl->setClosestHitProgram (0, optix_ctx->createProgramFromPTXString (renderer_ptx, "closest_hit"));
+    optix_mtl->setClosestHitProgram (0, optix_ctx->createProgramFromPTXFile (renderer_ptx, "closest_hit"));
 
     // Create the bounding and intersection programs needed for acceleration
     // structure building and ray traversal
-    optix::Program sphere_bounds = optix_ctx->createProgramFromPTXString (sphere_ptx, "bounds");
-    optix::Program sphere_intersect = optix_ctx->createProgramFromPTXString (sphere_ptx, "intersect");
-    optix::Program quad_bounds = optix_ctx->createProgramFromPTXString (quad_ptx, "bounds");
-    optix::Program quad_intersect = optix_ctx->createProgramFromPTXString (quad_ptx, "intersect");
+    optix::Program sphere_bounds = optix_ctx->createProgramFromPTXFile (sphere_ptx, "bounds");
+    optix::Program sphere_intersect = optix_ctx->createProgramFromPTXFile (sphere_ptx, "intersect");
+    optix::Program quad_bounds = optix_ctx->createProgramFromPTXFile (quad_ptx, "bounds");
+    optix::Program quad_intersect = optix_ctx->createProgramFromPTXFile (quad_ptx, "intersect");
 
     // Create a GeometryGroup to contain the individual scene primitives
     optix::GeometryGroup geom_group = optix_ctx->createGeometryGroup();

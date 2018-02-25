@@ -215,29 +215,16 @@ endif ()
 # CUDA setup
 
 if (USE_CUDA OR USE_OPTIX)
-    if (NOT CUDAHOME AND NOT $ENV{CUDAHOME} STREQUAL "")
-        set (CUDAHOME $ENV{CUDAHOME})
+    if (NOT CUDA_TOOLKIT_ROOT_DIR AND NOT $ENV{CUDA_TOOLKIT_ROOT_DIR} STREQUAL "")
+        set (CUDA_TOOLKIT_ROOT_DIR $ENV{CUDA_TOOLKIT_ROOT_DIR})
     endif ()
 
     if (NOT CUDA_FIND_QUIETLY OR NOT OptiX_FIND_QUIETLY)
-        message (STATUS "CUDAHOME = ${CUDAHOME}")
+        message (STATUS "CUDA_TOOLKIT_ROOT_DIR = ${CUDA_TOOLKIT_ROOT_DIR}")
     endif ()
 
-    # Using find_package(cuda) is not quite sufficient, because cmake is not
-    # setup to find nvrtc...
     find_package (CUDA 7.0 REQUIRED)
-
-    # ...so, we need to explicitly look for it
-    cuda_find_library_local_first (CUDA_nvrtc_LIBRARY nvrtc "\"nvrtc\" library")
-    mark_as_advanced (CUDA_nvrtc_LIBRARY)
-
-    if (NOT CUDA_nvrtc_LIBRARY)
-        message (FATAL_ERROR "Required CUDA NVRTC library not found")
-    endif ()
-
-    list (APPEND CUDA_LIBRARIES ${CUDA_nvrtc_LIBRARY})
     set (CUDA_INCLUDE_DIR ${CUDA_TOOLKIT_ROOT_DIR}/include)
-
     include_directories (BEFORE "${CUDA_INCLUDE_DIR}")
 
     message (STATUS "CUDA version = ${CUDA_VERSION}")

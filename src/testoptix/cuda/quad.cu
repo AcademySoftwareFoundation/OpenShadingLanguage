@@ -35,15 +35,22 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace optix;
 
-rtDeclareVariable(float3, p,  , );
-rtDeclareVariable(float3, ex, , );
-rtDeclareVariable(float3, ey, , );
-rtDeclareVariable(float3, n,  , );
-rtDeclareVariable(float,  eu, , );
-rtDeclareVariable(float,  ev, , );
+rtDeclareVariable (float3, p,  , );
+rtDeclareVariable (float3, ex, , );
+rtDeclareVariable (float3, ey, , );
+rtDeclareVariable (float3, n,  , );
+rtDeclareVariable (float,  eu, , );
+rtDeclareVariable (float,  ev, , );
+rtDeclareVariable (float,  a, ,  );
 
+rtDeclareVariable (float3, texcoord,         attribute texcoord, );
 rtDeclareVariable (float3, geometric_normal, attribute geometric_normal, );
-rtDeclareVariable (float3, shading_normal, attribute shading_normal, );
+rtDeclareVariable (float3, shading_normal,   attribute shading_normal, );
+rtDeclareVariable (float,  surface_area,     attribute surface_area, );
+
+rtDeclareVariable (float3, dPdu, attribute dPdu, );
+rtDeclareVariable (float3, dPdv, attribute dPdv, );
+
 rtDeclareVariable (optix::Ray, ray, rtCurrentRay, );
 
 
@@ -59,6 +66,10 @@ RT_PROGRAM void intersect (void)
 
         if (dx >= 0 && dx < 1.0f && dy >= 0 && dy < 1.0f && rtPotentialIntersection(t)) {
             shading_normal = geometric_normal = n;
+            texcoord = make_float3(dot (h, ex) * eu, dot (h, ey) * ev, 0.0f);
+            dPdu = ey;
+            dPdv = ex;
+            surface_area = a;
             rtReportIntersection(0);
         }
     }

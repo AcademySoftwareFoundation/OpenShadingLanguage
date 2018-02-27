@@ -94,6 +94,7 @@ option (USE_FAST_MATH "Use fast math approximations (if no, then use system math
 option (OSL_BUILD_PLUGINS "Bool OSL plugins, for example OIIO plugin" ON)
 option (USE_BOOST_WAVE "Use Boost Wave for C preprocessor (alternative is to use clang)" OFF)
 option (USE_QT "Include Qt support" ON)
+option (USE_OPTIX "Include OptiX support" OFF)
 
 
 # set (USE_OIIO_STATIC ON CACHE BOOL "If OIIO is built static")
@@ -155,6 +156,10 @@ if (OSL_BUILD_TESTS)
 add_subdirectory (src/testshade)
 add_subdirectory (src/testrender)
 endif ()
+
+if (OSL_BUILD_TESTS AND USE_OPTIX)
+add_subdirectory (src/testoptix)
+endif()
 
 if (OSL_BUILD_PLUGINS)
 add_subdirectory (src/osl.imageio)
@@ -324,6 +329,11 @@ endif()
 # Only run pointcloud tests if Partio is found
 if (PARTIO_FOUND)
     TESTSUITE ( pointcloud pointcloud-fold )
+endif ()
+
+# Only run the OptiX tests if OptiX and CUDA are found
+if (OPTIX_FOUND AND CUDA_FOUND)
+    TESTSUITE ( testoptix )
 endif ()
 
 # FIXME: still working on MaterialX testsuite

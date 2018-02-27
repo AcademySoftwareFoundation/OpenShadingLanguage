@@ -201,6 +201,12 @@ def testrender (args) :
     return (osl_app("testrender") + " -v --stats " + args + " >> out.txt 2>&1 ;\n")
 
 
+# Construct a command that run testoptix with the specified arguments,
+# appending output to the file "out.txt".
+def testoptix (args) :
+    return (osl_app("testoptix") + " " + args + " >> out.txt 2>&1 ;\n")
+
+
 # Run 'command'.  For each file in 'outputs', compare it to the copy
 # in 'ref/'.  If all outputs match their reference copies, return 0
 # to pass.  If any outputs do not match their references return 1 to

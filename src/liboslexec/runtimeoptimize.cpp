@@ -3163,7 +3163,8 @@ RuntimeOptimizer::run ()
             // Find interpolated parameters
             if ((s.symtype() == SymTypeParam || s.symtype() == SymTypeOutputParam)
                 && ! s.lockgeom()) {
-                UserDataNeeded udn (s.name(), s.typespec().simpletype(), s.has_derivs());
+                UserDataNeeded udn (s.name(), layer, s.typespec().simpletype(),
+                                    s.data(), s.has_derivs());
                 std::set<UserDataNeeded>::iterator found;
                 found = m_userdata_needed.find (udn);
                 if (found == m_userdata_needed.end())

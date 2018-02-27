@@ -191,14 +191,20 @@ expand (std::vector<T> &vec, size_t size)
 // Struct to hold records about what user data a group needs
 struct UserDataNeeded {
     ustring name;
+    int layer_num;
     TypeDesc type;
+    void* data;
     bool derivs;
 
-    UserDataNeeded (ustring name, TypeDesc type, bool derivs=false)
-        : name(name), type(type), derivs(derivs) {}
+    UserDataNeeded (ustring name, int layer_num, TypeDesc type, void* data=NULL,
+                    bool derivs=false)
+        : name(name), layer_num(layer_num), type(type), data(data),
+          derivs(derivs) {}
     friend bool operator< (const UserDataNeeded &a, const UserDataNeeded &b) {
         if (a.name != b.name)
             return a.name < b.name;
+        if (a.layer_num != b.layer_num )
+            return a.layer_num < b.layer_num;
         if (a.type.basetype != b.type.basetype)
             return a.type.basetype < b.type.basetype;
         if (a.type.aggregate != b.type.aggregate)
@@ -744,6 +750,9 @@ private:
     ConstantPool<ustring> m_string_pool;
 
     OpDescriptorMap m_op_descriptor;
+
+    // Pre-compiled support library
+    std::vector<char> m_lib_bitcode;      ///> Container for the pre-compiled library bitcode
 
     // Options
     int m_statslevel;                     ///< Statistics level
@@ -1570,6 +1579,8 @@ private:
     std::vector<TypeDesc> m_userdata_types;
     std::vector<int> m_userdata_offsets;
     std::vector<char> m_userdata_derivs;
+    std::vector<int> m_userdata_layers;
+    std::vector<void*> m_userdata_init_vals;
     std::vector<ustring> m_attributes_needed;
     std::vector<ustring> m_attribute_scopes;
     std::vector<ustring> m_renderer_outputs; ///< Names of renderer outputs
@@ -1578,6 +1589,9 @@ private:
     bool m_unknown_attributes_needed;
     atomic_ll m_executions {0};       ///< Number of times the group executed
     atomic_ll m_stat_total_shading_time_ticks {0}; ///< Total shading time (ticks)
+
+    // PTX assembly for compiled ShaderGroup
+    std::string m_llvm_ptx_compiled_version;
 
     friend class OSL::pvt::ShadingSystemImpl;
     friend class OSL::pvt::BackendLLVM;

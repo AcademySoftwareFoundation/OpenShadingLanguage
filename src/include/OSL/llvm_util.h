@@ -72,7 +72,7 @@ namespace pvt {   // OSL::pvt
 /// tied to OSL internals at all.
 class OSLEXECPUBLIC LLVM_Util {
 public:
-    LLVM_Util (int debuglevel=0);
+    LLVM_Util (int debuglevel=0, bool use_generic_target=false);
     ~LLVM_Util ();
 
     struct PerThreadInfo;
@@ -448,6 +448,7 @@ public:
     llvm::Value *op_int_to_float (llvm::Value *a);
     llvm::Value *op_bool_to_int (llvm::Value *a);
     llvm::Value *op_float_to_double (llvm::Value *a);
+    llvm::Value *op_int_to_longlong (llvm::Value *a);
 
     llvm::Value *op_and (llvm::Value *a, llvm::Value *b);
     llvm::Value *op_or (llvm::Value *a, llvm::Value *b);
@@ -474,6 +475,10 @@ public:
     /// file.  If err is not NULL, errors will be deposited there.
     void write_bitcode_file (const char *filename, std::string *err=NULL);
 
+    /// Generate PTX for the current Module and return it as a string
+    bool ptx_compile_group (llvm::Module* lib_module, const std::string& name,
+                            std::string& out);
+
     /// Convert a whole module's bitcode to a string.
     std::string bitcode_string (llvm::Module *module);
 
@@ -499,6 +504,7 @@ private:
     IRBuilder& builder();
 
     int m_debug;
+    bool m_use_native_target;
     PerThreadInfo *m_thread;
     llvm::LLVMContext *m_llvm_context;
     llvm::Module *m_llvm_module;

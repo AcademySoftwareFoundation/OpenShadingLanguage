@@ -244,6 +244,10 @@ endif ()
 if (USE_OPTIX)
     find_package (OptiX REQUIRED)
     include_directories (BEFORE "${OPTIX_INCLUDE_DIR}")
+
+    if (NOT USE_LLVM_BITCODE OR NOT USE_FAST_MATH)
+        message (FATAL_ERROR "Enabling OptiX requires USE_LLVM_BITCODE=1 and USE_FAST_MATH=1")
+    endif ()
 endif ()
 
 # end OptiX setup

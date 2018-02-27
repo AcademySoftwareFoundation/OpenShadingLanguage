@@ -5,10 +5,11 @@
 
 in=$1
 out=$2
+prefix=$3
 
 echo "#include <cstddef>" > $out
-echo "unsigned char osl_llvm_compiled_ops_block[] = {" >> $out
+echo "unsigned char " ${prefix}"_block[] = {" >> $out
 hexdump -v -e '"" /1 "0x%02x" ",\n"' $in >> $out
 echo "0x00 };" >> $out
-echo "size_t osl_llvm_compiled_ops_size = sizeof(osl_llvm_compiled_ops_block)-1;" >> $out
+echo "size_t " ${prefix}"_size = sizeof("${prefix}"_block)-1;" >> $out
 

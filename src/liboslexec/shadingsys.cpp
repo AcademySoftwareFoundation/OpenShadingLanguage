@@ -1137,6 +1137,11 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
             m_renderer_outputs.emplace_back(((const char **)val)[i]);
         return true;
     }
+    if (name == "lib_bitcode" && type.basetype == TypeDesc::UINT8) {
+        m_lib_bitcode.clear();
+        m_lib_bitcode = *static_cast<const std::vector<char>*>(val);
+        return true;
+    }
     return false;
 #undef ATTR_SET
 #undef ATTR_SET_STRING
@@ -1497,6 +1502,55 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
     }
     if (name == "exec_repeat" && type == TypeDesc::TypeInt) {
         *(int *)val = group->m_exec_repeat;
+        return true;
+    }
+
+    // Additional atttributes useful to OptiX-based renderers
+    if (name == "userdata_layers" && type.basetype == TypeDesc::PTR) {
+        if (! group->optimized())
+            optimize_group (*group);
+        size_t n = group->m_userdata_layers.size();
+        *(int **)val = n ? &group->m_userdata_layers[0] : NULL;
+        return true;
+    }
+    if (name == "userdata_init_vals" && type.basetype == TypeDesc::PTR) {
+        if (! group->optimized())
+            optimize_group (*group);
+        size_t n = group->m_userdata_init_vals.size();
+        *(void **)val = n ? &group->m_userdata_init_vals[0] : NULL;
+        return true;
+    }
+    if (name == "ptx_compiled_version" && type.basetype == TypeDesc::PTR) {
+        bool exists = !group->m_llvm_ptx_compiled_version.empty();
+        *(std::string *)val = exists ? group->m_llvm_ptx_compiled_version : "";
+        return true;
+    }
+    if (name == "group_name" && type.basetype == TypeDesc::PTR) {
+        *(std::string *)val = group->name().string();
+        return true;
+    }
+    if (name == "group_id" && type == TypeDesc::TypeInt) {
+        if (! group->optimized())
+            optimize_group (*group);
+        *(int *)val = (int) group->id();
+        return true;
+    }
+    if (name == "group_init_name" && type.basetype == TypeDesc::PTR) {
+        *(std::string *)val = Strutil::format ("group_%d_init", group->id());
+        return true;
+    }
+    if (name == "group_entry_name" && type.basetype == TypeDesc::PTR) {
+        int nlayers = group->nlayers ();
+        ShaderInstance *inst = (*group)[nlayers-1];
+        // This formuation mirrors OSOProcessorBase::layer_function_name()
+        *(std::string *)val = Strutil::format ("%s_%s_%d", group->name(),
+                                               inst->layername(), inst->id());
+        return true;
+    }
+    if (name == "layer_osofiles" && type.basetype == TypeDesc::STRING) {
+        size_t n = std::min (type.numelements(), (size_t)group->nlayers());
+        for (size_t i = 0;  i < n;  ++i)
+            ((ustring *)val)[i] =(*group)[i]->master()->osofilename();
         return true;
     }
 
@@ -2715,10 +2769,14 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group)
     group.m_userdata_types.reserve (num_userdata);
     group.m_userdata_offsets.resize (num_userdata, 0);
     group.m_userdata_derivs.reserve (num_userdata);
+    group.m_userdata_layers.reserve (num_userdata);
+    group.m_userdata_init_vals.reserve (num_userdata);
     for (auto&& n : rop.m_userdata_needed) {
         group.m_userdata_names.push_back (n.name);
         group.m_userdata_types.push_back (n.type);
         group.m_userdata_derivs.push_back (n.derivs);
+        group.m_userdata_layers.push_back (n.layer_num);
+        group.m_userdata_init_vals.push_back (n.data);
     }
     group.m_unknown_attributes_needed = rop.m_unknown_attributes_needed;
     for (auto&& f : rop.m_attributes_needed) {

@@ -67,6 +67,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/PrettyStackTrace.h>
 #include <llvm/IR/Verifier.h>
+#include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/IPO.h>
@@ -74,6 +75,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
 #include <llvm/Transforms/Scalar/GVN.h>
+
+// additional includes for PTX generation
+#include <llvm/Transforms/Utils/SymbolRewriter.h>
+#include <llvm/Transforms/Utils/Cloning.h>
+#include <llvm/Analysis/TargetTransformInfo.h>
 
 OSL_NAMESPACE_ENTER
 
@@ -241,8 +247,8 @@ public:
 
 
 
-LLVM_Util::LLVM_Util (int debuglevel)
-    : m_debug(debuglevel), m_thread(NULL),
+LLVM_Util::LLVM_Util (int debuglevel, bool use_native_target)
+    : m_debug(debuglevel), m_use_native_target(use_native_target), m_thread(NULL),
       m_llvm_context(NULL), m_llvm_module(NULL),
       m_builder(NULL), m_llvm_jitmm(NULL),
       m_current_function(NULL),
@@ -323,12 +329,20 @@ LLVM_Util::SetupLLVM ()
         return;
     // Some global LLVM initialization for the first thread that
     // gets here.
-
-    LLVMInitializeNativeTarget();
-    LLVMInitializeNativeDisassembler();
-    LLVMInitializeNativeAsmPrinter();
-    LLVMInitializeNativeAsmParser();
-    LLVMLinkInMCJIT();
+    if (m_use_native_target) {
+        LLVMInitializeNativeTarget();
+        LLVMInitializeNativeDisassembler();
+        LLVMInitializeNativeAsmPrinter();
+        LLVMInitializeNativeAsmParser();
+        LLVMLinkInMCJIT();
+    } else {
+        llvm::InitializeAllTargets();
+        llvm::InitializeAllTargetMCs();
+        llvm::InitializeAllDisassemblers();
+        llvm::InitializeAllAsmPrinters();
+        llvm::InitializeAllAsmParsers();
+        LLVMLinkInMCJIT();
+    }
 
     if (debug()) {
         for (auto t : llvm::TargetRegistry::targets())
@@ -1367,6 +1381,14 @@ LLVM_Util::op_float_to_double (llvm::Value* a)
 
 
 llvm::Value *
+LLVM_Util::op_int_to_longlong (llvm::Value* a)
+{
+    ASSERT (a->getType() == type_int());
+    return builder().CreateSExt(a, llvm::Type::getInt64Ty(context()));
+}
+
+
+llvm::Value *
 LLVM_Util::op_int_to_float (llvm::Value* a)
 {
     if (a->getType() == type_int())
@@ -1526,6 +1548,109 @@ LLVM_Util::write_bitcode_file (const char *filename, std::string *err)
         if (err && local_error)
             *err = local_error.message ();
     }
+}
+
+
+
+bool
+LLVM_Util::ptx_compile_group (llvm::Module* lib_module, const std::string& name,
+                              std::string& out)
+{
+    std::string new_triple = "nvptx64-nvidia-cuda";
+    std::string new_layout = "e-i64:64-v16:16-v32:32-n16:32:64";
+
+    // Clone the source Module to prevent the linker from tinkering with it
+    std::unique_ptr<llvm::Module> mod_ptr = llvm::CloneModule (module());
+
+    llvm::Module* linked_module = new_module (name.c_str());
+
+    // Make sure the module targets/layouts match
+    mod_ptr.get()->setTargetTriple (new_triple);
+    mod_ptr.get()->setDataLayout (new_layout);
+    linked_module->setTargetTriple (new_triple);
+    linked_module->setDataLayout (new_layout);
+
+    // First, link in the support library
+    std::unique_ptr<llvm::Module> lib_ptr (lib_module);
+    bool failed = llvm::Linker::linkModules (*linked_module, std::move (lib_ptr));
+    if (failed) {
+        ASSERT (0 && "Unable to link library module");
+    }
+
+    // Second, link in the compiled ShaderGroup module
+    failed = llvm::Linker::linkModules (*linked_module, std::move (mod_ptr));
+    if (failed) {
+        ASSERT (0 && "Unable to link group module");
+    }
+
+    // Verify that the NVPTX target has been initialized
+    std::string error;
+    const llvm::Target* llvm_target =
+        llvm::TargetRegistry::lookupTarget (new_triple, error);
+    if(! llvm_target) {
+        ASSERT (0 && "LLVM Target is not initialized");
+    }
+
+    llvm::TargetOptions  options;
+    options.AllowFPOpFusion                        = llvm::FPOpFusion::Standard;
+    options.UnsafeFPMath                           = 1;
+    options.NoInfsFPMath                           = 1;
+    options.NoNaNsFPMath                           = 1;
+    options.HonorSignDependentRoundingFPMathOption = 0;
+    options.FloatABIType                           = llvm::FloatABI::Default;
+    options.AllowFPOpFusion                        = llvm::FPOpFusion::Fast;
+    options.NoZerosInBSS                           = 0;
+    options.GuaranteedTailCallOpt                  = 0;
+    options.StackAlignmentOverride                 = 0;
+    options.UseInitArray                           = 0;
+
+    llvm::TargetMachine* target_machine = llvm_target->createTargetMachine(
+        new_triple, "sm_35", "+ptx50", options,
+        llvm::Reloc::Static, llvm::CodeModel::Default, llvm::CodeGenOpt::Aggressive);
+
+    if (! target_machine) {
+        ASSERT(false && "Unable to create target machine");
+    }
+
+    // Setup the optimzation passes
+    llvm::legacy::FunctionPassManager fn_pm (linked_module);
+    fn_pm.add (llvm::createTargetTransformInfoWrapperPass (
+                   target_machine->getTargetIRAnalysis()));
+
+    llvm::legacy::PassManager mod_pm;
+    mod_pm.add (new llvm::TargetLibraryInfoWrapperPass (llvm::Triple (new_triple)));
+    mod_pm.add (llvm::createTargetTransformInfoWrapperPass (
+                    target_machine->getTargetIRAnalysis()));
+    mod_pm.add (llvm::createRewriteSymbolsPass());
+
+    // Make sure the 'flush-to-zero' instruction variants are used when possible
+    linked_module->addModuleFlag (llvm::Module::Override, "nvvm-reflect-ftz", 1);
+    for (llvm::Function& fn : *linked_module) {
+        fn.addFnAttr ("nvptx-f32ftz", "true");
+    }
+
+    llvm::SmallString<4096>   assembly;
+    llvm::raw_svector_ostream assembly_stream (assembly);
+
+    // TODO: Make sure rounding modes, etc., are set correctly
+    target_machine->addPassesToEmitFile (mod_pm, assembly_stream,
+                                         llvm::TargetMachine::CGFT_AssemblyFile);
+
+    // Run the optimization passes on the functions
+    fn_pm.doInitialization();
+    for (llvm::Module::iterator i = linked_module->begin(); i != linked_module->end(); i++) {
+        fn_pm.run (*i);
+    }
+
+    // Run the optimization passes on the module to generate the PTX
+    mod_pm.run (*linked_module);
+
+    // TODO: Minimize string copying
+    out = assembly_stream.str().str();
+
+    delete linked_module;
+
+    return true;
 }
 
 

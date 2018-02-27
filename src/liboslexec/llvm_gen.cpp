@@ -358,10 +358,23 @@ LLVMGEN (llvm_gen_printf)
                         s += " ";
                     s += ourformat;
 
-                    llvm::Value* loaded = rop.llvm_load_value (sym, 0, arrind, c);
+                    // In the OptiX case, we need to use the device-side string constant,
+                    // as added to the LLVM Module.
+                    llvm::Value* loaded = (simpletype.basetype == TypeDesc::STRING &&
+                                           sym.is_constant() &&
+                                           rop.renderer()->supports ("OptiX"))
+                        ? rop.getOrAllocateLLVMGlobal (sym)
+                        : rop.llvm_load_value (sym, 0, arrind, c);
+
                     if (simpletype.basetype == TypeDesc::FLOAT) {
                         // C varargs convention upconverts float->double.
                         loaded = rop.ll.op_float_to_double(loaded);
+                    }
+
+                    if (simpletype.basetype == TypeDesc::INT && rop.renderer()->supports ("OptiX")) {
+                        // The printf supported by OptiX expects 8-byte arguments,
+                        // so promote int to long long
+                        loaded = rop.ll.op_int_to_longlong(loaded);
                     }
 
                     call_args.push_back (loaded);
@@ -383,7 +396,11 @@ LLVMGEN (llvm_gen_printf)
     }
 
     // Now go back and put the new format string in its place
-    call_args[new_format_slot] = rop.ll.constant (s.c_str());
+    call_args[new_format_slot] = (! rop.renderer()->supports ("OptiX"))
+        ? rop.ll.constant (s.c_str())
+        // In the OptiX case, we need to use the pointer to the constant format
+        // string added to the LLVM Module
+        : rop.llvm_get_pointer (format_sym);
 
     // Construct the function name and call it.
     std::string opname = std::string("osl_") + op.opname().string();
@@ -1734,6 +1751,33 @@ LLVMGEN (llvm_gen_compare_op)
 
     llvm::Value* final_result = 0;
     ustring opname = op.opname();
+
+    if (rop.renderer()->supports ("OptiX") && A.typespec().is_string()) {
+        // Compare two strings for equality by comparing the pointers to
+        // their global constants.
+
+        ASSERT (B.typespec().is_string() && "Only string-to-string comparison is supported");
+
+        llvm::Value* a = (A.is_constant())
+            ? rop.llvm_get_pointer (A) : rop.llvm_load_value (A);
+
+        llvm::Value* b = (B.is_constant())
+            ? rop.llvm_get_pointer (B) : rop.llvm_load_value (B);
+
+        if (opname == op_eq) {
+            final_result = rop.ll.op_eq (a, b);
+        } else if (opname == op_neq) {
+            final_result = rop.ll.op_ne (a, b);
+        } else {
+            // Don't know how to handle this.
+            ASSERT (0 && "OptiX only supports equality testing for strings");
+        }
+        ASSERT (final_result);
+
+        final_result = rop.ll.op_bool_to_int (final_result);
+        rop.storeLLVMValue (final_result, Result, 0, 0);
+        return true;
+    }
 
     for (int i = 0; i < num_components; i++) {
         // Get A&B component i -- note that these correctly handle mixed

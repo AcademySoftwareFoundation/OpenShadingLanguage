@@ -147,7 +147,11 @@ void * __dso_handle = 0; // necessary to avoid linkage issues in bitcode
 
 
 #ifndef OSL_SHADEOP
+#ifdef __CUDACC__
+#define OSL_SHADEOP extern "C" __device__ OSL_LLVM_EXPORT
+#else
 #define OSL_SHADEOP extern "C" OSL_LLVM_EXPORT
+#endif
 #endif
 
 
@@ -449,8 +453,8 @@ MAKE_UNARY_PERCOMPONENT_OP     (exp2       , OIIO::fast_exp2      , fast_exp2)
 MAKE_UNARY_PERCOMPONENT_OP     (expm1      , OIIO::fast_expm1     , fast_expm1)
 MAKE_BINARY_PERCOMPONENT_OP    (pow        , OIIO::fast_safe_pow  , fast_safe_pow)
 MAKE_BINARY_PERCOMPONENT_VF_OP (pow        , OIIO::fast_safe_pow  , fast_safe_pow)
-MAKE_UNARY_PERCOMPONENT_OP     (erf        , OIIO::fast_erf       , erf)
-MAKE_UNARY_PERCOMPONENT_OP     (erfc       , OIIO::fast_erfc      , erfc)
+MAKE_UNARY_PERCOMPONENT_OP     (erf        , OIIO::fast_erf       , fast_erf)
+MAKE_UNARY_PERCOMPONENT_OP     (erfc       , OIIO::fast_erfc      , fast_erfc)
 #else
 MAKE_UNARY_PERCOMPONENT_OP     (log        , OIIO::safe_log       , safe_log)
 MAKE_UNARY_PERCOMPONENT_OP     (log2       , OIIO::safe_log2      , safe_log2)
@@ -463,6 +467,7 @@ MAKE_BINARY_PERCOMPONENT_VF_OP (pow        , OIIO::safe_pow       , safe_pow)
 MAKE_UNARY_PERCOMPONENT_OP     (erf        , erff                 , erf)
 MAKE_UNARY_PERCOMPONENT_OP     (erfc       , erfcf                , erfc)
 #endif
+
 MAKE_UNARY_PERCOMPONENT_OP     (sqrt       , OIIO::safe_sqrt      , sqrt)
 MAKE_UNARY_PERCOMPONENT_OP     (inversesqrt, OIIO::safe_inversesqrt, inversesqrt)
 
@@ -517,7 +522,7 @@ OSL_SHADEOP int osl_isfinite_if (float f) { return OIIO::isfinite (f); }
 OSL_SHADEOP int osl_abs_ii (int x) { return abs(x); }
 OSL_SHADEOP int osl_fabs_ii (int x) { return abs(x); }
 
-inline Dual2<float> fabsf (const Dual2<float> &x) {
+OSL_HOSTDEVICE inline Dual2<float> fabsf (const Dual2<float> &x) {
     return x.val() >= 0 ? x : -x;
 }
 
@@ -528,11 +533,11 @@ OSL_SHADEOP int osl_safe_mod_iii (int a, int b) {
     return (b != 0) ? (a % b) : 0;
 }
 
-inline float safe_fmod (float a, float b) {
+OSL_HOSTDEVICE inline float safe_fmod (float a, float b) {
     return (b != 0.0f) ? std::fmod (a,b) : 0.0f;
 }
 
-inline Dual2<float> safe_fmod (const Dual2<float> &a, const Dual2<float> &b) {
+OSL_HOSTDEVICE inline Dual2<float> safe_fmod (const Dual2<float> &a, const Dual2<float> &b) {
     return Dual2<float> (safe_fmod (a.val(), b.val()), a.dx(), a.dy());
 }
 
@@ -725,7 +730,7 @@ osl_normalize_dvdv (void *result, void *a)
 
 
 
-inline Vec3 calculatenormal(void *P_, bool flipHandedness)
+OSL_HOSTDEVICE inline Vec3 calculatenormal(void *P_, bool flipHandedness)
 {
     Dual2<Vec3> &tmpP (DVEC(P_));
     if (flipHandedness)
@@ -750,7 +755,7 @@ OSL_SHADEOP float osl_area(void *P_)
 
 
 
-inline float filter_width(float dx, float dy)
+OSL_HOSTDEVICE inline float filter_width(float dx, float dy)
 {
     return sqrtf(dx*dx + dy*dy);
 }

@@ -245,6 +245,7 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             blackbody blendmath breakcont
             bug-array-heapoffsets
             bug-locallifetime bug-outputinit bug-param-duplicate bug-peep
+            bug-struct-assign
             cellnoise closure closure-array color comparison
             compile-buffer
             component-range

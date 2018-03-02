@@ -392,6 +392,62 @@ private:
 };
 
 
+// Base class for any ASTNode that holds a name and Symbol that allows for
+// common error handling of using reserved or clashing names.
+class ASTnamed_symbol : public ASTNode
+{
+public:
+    ASTnamed_symbol (NodeType node_type, OSLCompilerImpl *comp, ustring name);
+
+    ASTnamed_symbol (NodeType node_type, OSLCompilerImpl *comp, ustring name,
+                     ASTNode *a);
+
+    ASTnamed_symbol (NodeType node_type, OSLCompilerImpl *comp, ustring name,
+                     ASTNode *a, ASTNode *b);
+
+    ASTnamed_symbol (NodeType node_type, OSLCompilerImpl *comp, ustring name,
+                     ASTNode *a, ASTNode *b, ASTNode *c);
+
+    Symbol *sym () const { return m_sym; }
+    ustring name () const { return m_name; }
+    std::string mangled () const { ASSERT (m_sym); return m_sym->mangled(); }
+    
+    enum Validation {
+        err_must_exist  = 0,  ///< Error when the named Symbol does not exist.
+        check_clashes   = 1,  ///< If named Symbol exists error as a clash.
+        warn_shadow     = 2,  ///< Warn if name shadows a known function.
+        allow_this      = 4,  ///< Allow m_name to be 'this'
+
+        /// Convenient aliases of validation schemes.
+        warn_function_exists = err_must_exist | warn_shadow,
+        warn_function_clash  = check_clashes | warn_shadow,
+    };
+
+    /// Validate that m_name is a legal name.
+    static bool check_reserved (ustring name, OSLCompilerImpl *comp,
+                                int allowThis = 0);
+
+    /// Validate that m_name is a legal name, and doesn't conflict with rules
+    /// given in vflags allowing duplicate symbol if its SymType matches allowed.
+    static Symbol* validate (ustring name, OSLCompilerImpl *comp,
+                             int vflags, int allowed = -1);
+
+protected:
+    bool check_reserved () {
+        return ASTnamed_symbol::check_reserved (m_name, m_compiler);
+    }
+
+    Symbol* validate (int vflags, int allowed = -1) {
+        return validate (m_name, m_compiler, vflags, allowed);
+    }
+
+    static std::string previous_decl (ASTNode* node);
+
+    ustring m_name;     ///< Name of the symbol (unmangled)
+    Symbol *m_sym;      ///< Ptr to the symbol this declares
+};
+
+
 
 class ASTshader_declaration : public ASTNode
 {
@@ -416,7 +472,7 @@ private:
 
 
 
-class ASTfunction_declaration : public ASTNode
+class ASTfunction_declaration : public ASTnamed_symbol
 {
 public:
     ASTfunction_declaration (OSLCompilerImpl *comp, TypeSpec type, ustring name,
@@ -439,20 +495,22 @@ public:
     void add_meta (ref meta);
 
 private:
-    ustring m_name;
-    Symbol *m_sym;
     bool m_is_builtin;
 };
 
 
 
-class ASTvariable_declaration : public ASTNode
+class ASTvariable_declaration : public ASTnamed_symbol
 {
 public:
     ASTvariable_declaration (OSLCompilerImpl *comp, const TypeSpec &type,
                              ustring name, ASTNode *init, bool isparam=false,
                              bool ismeta=false, bool isoutput=false,
-                             bool initlist=false);
+                             bool initlist=false, bool isthis=false);
+
+    ASTvariable_declaration (OSLCompilerImpl *comp, const TypeSpec &type,
+                             ASTNode *args);
+
     const char *nodetypename () const;
     const char *childname (size_t i) const;
     void print (std::ostream &out, int indentlevel=0) const;
@@ -467,9 +525,6 @@ public:
             addchild (NULL);
         m_children[1] = meta;  // beware changing the order!
     }
-
-    Symbol *sym () const { return m_sym; }
-    ustring name () const { return m_name; }
 
     bool is_output () const { return m_isoutput; }
 
@@ -487,8 +542,6 @@ public:
     }
 
 private:
-    ustring m_name;     ///< Name of the symbol (unmangled)
-    Symbol *m_sym;      ///< Ptr to the symbol this declares
     bool m_isparam;     ///< Is this a parameter?
     bool m_isoutput;    ///< Is this an output parameter?
     bool m_ismetadata;  ///< Is this declaration a piece of metadata?
@@ -501,21 +554,15 @@ private:
 
 
 
-class ASTvariable_ref : public ASTNode
+class ASTvariable_ref : public ASTnamed_symbol
 {
 public:
-    ASTvariable_ref (OSLCompilerImpl *comp, ustring name);
+    ASTvariable_ref (OSLCompilerImpl *comp, ustring name, bool allowthis);
     const char *nodetypename () const { return "variable_ref"; }
     const char *childname (size_t i) const { return ""; } // no children
     void print (std::ostream &out, int indentlevel=0) const;
     TypeSpec typecheck (TypeSpec expected);
     Symbol *codegen (Symbol *dest = NULL);
-    ustring name () const { return m_name; }
-    std::string mangled () const { return m_sym->mangled(); }
-    Symbol *sym () const { return m_sym; }
-private:
-    ustring m_name;
-    Symbol *m_sym;
 };
 
 
@@ -882,11 +929,13 @@ public:
 
 
 
-class ASTfunction_call : public ASTNode
+
+class ASTfunction_call : public ASTnamed_symbol
 {
 public:
     ASTfunction_call (OSLCompilerImpl *comp, ustring name, ASTNode *args,
-                      FunctionSymbol *funcsym = nullptr);
+                      FunctionSymbol *funcsym = nullptr,
+                      ASTNode* implicit_this = nullptr);
     const char *nodetypename () const { return "function_call"; }
     const char *childname (size_t i) const;
     const char *opname () const;
@@ -911,6 +960,8 @@ public:
     ASTfunction_declaration * user_function () const {
         return (ASTfunction_declaration *) func()->node();
     }
+
+    void method_from_function(ASTNode* thisRef);
 
 private:
     /// Handle all the special cases for built-ins.  This includes
@@ -985,12 +1036,13 @@ private:
                                  ustring formal, ustring actual,
                                  Symbol *arrayindex = NULL);
 
-    ustring m_name;                 ///< Name of the function being called
-    Symbol *m_sym;                  ///< Symbol of the function
+protected:
+
     FunctionSymbol *m_poly;         ///< The specific polymorphic variant
     unsigned int m_argread;         ///< Bit field - which args are read
     unsigned int m_argwrite;        ///< Bit field - which args are written
     unsigned int m_argtakesderivs;  ///< Bit field - which args take derivs
+    bool m_method;
 };
 
 

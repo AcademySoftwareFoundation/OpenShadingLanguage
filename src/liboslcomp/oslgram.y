@@ -64,6 +64,7 @@ TypeDesc osllextype (int lex);
 OSL_NAMESPACE_EXIT
 
 static std::stack<TypeSpec> typespec_stack; // just for function_declaration
+static ASTNode::ref implicit_this;
 
 %}
 
@@ -96,13 +97,13 @@ static std::stack<TypeSpec> typespec_stack; // just for function_declaration
 // Define the nonterminals 
 %type <n> shader_file 
 %type <n> global_declarations_opt global_declarations global_declaration
-%type <n> shader_or_function_declaration
+%type <n> shader_or_function_declaration method_declaration
 %type <n> formal_params_opt formal_params formal_param
 %type <n> metadata_block_opt metadata metadatum
 %type <n> function_declaration
 %type <n> function_body_or_just_decl
 %type <n> struct_declaration
-%type <i> field_declarations field_declaration
+%type <n> field_declarations field_declaration
 %type <n> typed_field_list typed_field
 %type <n> variable_declaration def_expressions def_expression
 %type <n> initializer_opt initializer initializer_list_opt initializer_list 
@@ -165,6 +166,7 @@ global_declarations
 global_declaration
         : shader_or_function_declaration    { $$ = 0; }
         | struct_declaration                { $$ = 0; }
+        | method_declaration                { $$ = 0; }
         ;
 
 shader_or_function_declaration
@@ -172,14 +174,13 @@ shader_or_function_declaration
                 {
                     if ($1 == ShadTypeUnknown) {
                         // It's a function declaration, not a shader
+                        ASSERT (! typespec_stack.empty ());
                         oslcompiler->symtab().push ();  // new scope
-                        typespec_stack.push (oslcompiler->current_typespec());
                     }
                 }
           metadata_block_opt '(' 
                 {
-                    if ($1 != ShadTypeUnknown)
-                        oslcompiler->declaring_shader_formals (true);
+                    oslcompiler->declaring_shader_formals ($1 != ShadTypeUnknown);
                 }
           formal_params_opt ')'
                 {
@@ -216,6 +217,49 @@ shader_or_function_declaration
                             oslcompiler->shader ($$);
                         }
                     }
+                }
+        ;
+
+method_declaration
+        : typespec_or_shadertype typespec ':' ':' IDENTIFIER
+                {
+                    // It's a method declaration, not a shader
+                    if ($1 != ShadTypeUnknown || typespec_stack.empty() ||
+                        (! oslcompiler->current_typespec().is_structure() &&
+                         ! oslcompiler->current_typespec().is_triple())) {
+                        oslcompiler->error (oslcompiler->filename(),
+                                            oslcompiler->lineno(),
+                                            "Cannot declare a method for this type");
+                    }
+
+                    oslcompiler->symtab().push ();  // new scope
+                    typespec_stack.push (oslcompiler->current_typespec());
+                }
+                '(' formal_params_opt ')' metadata_block_opt
+                {
+                    implicit_this = new ASTvariable_declaration(oslcompiler,
+                                                         typespec_stack.top(),
+                                                         $8);
+                    typespec_stack.pop ();
+                    $<n>$ = implicit_this.get();
+                }
+                function_body_or_just_decl
+                {
+                    // Method declaration
+                    ASSERT ($1 == ShadTypeUnknown);
+                    oslcompiler->symtab().pop ();  // restore scope
+                    ASTfunction_declaration *f;
+                    f = new ASTfunction_declaration (oslcompiler,
+                                                     typespec_stack.top(),
+                                                     ustring($5),
+                                                     $<n>11 /*arguments*/,
+                                                     $12 /*statements*/,
+                                                     $10 /*meta*/);
+                    implicit_this = nullptr;
+                    typespec_stack.pop ();
+                    oslcompiler->remember_function_decl (f);
+                    f->sourceline (@2.first_line);
+                    $$ = f;
                 }
         ;
 
@@ -324,22 +368,42 @@ function_body_or_just_decl
         ;
 
 function_declaration
-        : typespec IDENTIFIER 
+        : typespec IDENTIFIER
                 {
                     oslcompiler->symtab().push ();  // new scope
                     typespec_stack.push (oslcompiler->current_typespec());
+
+                    if (StructSpec *s = oslcompiler->symtab().current_struct()) {
+                        ustring name ($2);
+                        if (s->lookup_field (name) >= 0) {
+                            oslcompiler->error (oslcompiler->filename(),
+                                                oslcompiler->lineno(),
+                                                "Field \"%s\" already exists in struct \"%s\"",
+                                                name.c_str(), s->name().c_str());
+                        }
+                    }
                 }
-          '(' formal_params_opt ')' metadata_block_opt function_body_or_just_decl
+          '(' formal_params_opt ')' metadata_block_opt
+                {
+                    if (StructSpec *s = oslcompiler->symtab().current_struct()) {
+                        TypeSpec t(s->name().c_str(), 0);
+                        implicit_this = new ASTvariable_declaration(oslcompiler, t,
+                                                                    $5);
+                        $<n>$ = implicit_this.get();
+                    } else
+                        $<n>$ = $5;
+                }
+          function_body_or_just_decl
                 {
                     oslcompiler->symtab().pop ();  // restore scope
                     ASTfunction_declaration *f;
                     f = new ASTfunction_declaration (oslcompiler,
                                                      typespec_stack.top(),
-                                                     ustring($2), $5, $8, NULL);
+                                                     ustring($2), $<n>8, $9, $7);
+                    implicit_this = nullptr;
                     oslcompiler->remember_function_decl (f);
-                    f->add_meta ($7);
-                    $$ = f;
                     typespec_stack.pop ();
+                    $$ = f;
                 }
         ;
 
@@ -347,35 +411,25 @@ struct_declaration
         : STRUCT IDENTIFIER '{' 
                 {
                     ustring name ($2);
-                    Symbol *s = oslcompiler->symtab().clash (name);
-                    if (s) {
-                        oslcompiler->error (oslcompiler->filename(), 
-                                            oslcompiler->lineno(), 
-                                            "\"%s\" already declared in this scope",
-                                            name.c_str());
-                        // FIXME -- print the file and line of the other definition
-                    }
-                    if (name[0] == '_' && name[1] == '_' && name[2] == '_') {
-                        oslcompiler->error (oslcompiler->filename(), 
-                            oslcompiler->lineno(),
-                            "\"%s\" : sorry, can't start with three underscores",
-                            name.c_str());
-                    }
+                    ASTnamed_symbol::validate (name, oslcompiler,
+                                               ASTnamed_symbol::check_clashes);
                     oslcompiler->symtab().new_struct (name);
                 }
           field_declarations '}' ';'
                 {
+                    oslcompiler->symtab().end_struct ();
                     $$ = 0;
                 }
         ;
 
 field_declarations
         : field_declaration
-        | field_declarations field_declaration 
+        | field_declarations field_declaration
         ;
 
 field_declaration
-        : typespec typed_field_list ';'
+        : typespec typed_field_list ';' { $$ = 0; }
+        | function_declaration
         ;
 
 typed_field_list
@@ -387,6 +441,7 @@ typed_field
         : IDENTIFIER
                 {
                     ustring name ($1);
+                    ASTnamed_symbol::check_reserved (name, oslcompiler);
                     TypeSpec t = oslcompiler->current_typespec();
                     StructSpec *s = oslcompiler->symtab().current_struct();
                     if (s->lookup_field (name) >= 0)
@@ -402,6 +457,7 @@ typed_field
                 {
                     // Grab the current declaration type, modify it to be array
                     ustring name ($1);
+                    ASTnamed_symbol::check_reserved (name, oslcompiler);
                     TypeSpec t = oslcompiler->current_typespec();
                     t.make_array ($2);
                     if (t.arraylength() < 1)
@@ -573,12 +629,14 @@ typespec_or_shadertype
         : simple_typename
                 {
                     oslcompiler->current_typespec (TypeSpec (osllextype ($1)));
-                    $$ = 0;
+                    typespec_stack.push (oslcompiler->current_typespec ());
+                    $$ = ShadTypeUnknown;
                 }
         | CLOSURE simple_typename
                 {
                     oslcompiler->current_typespec (TypeSpec (osllextype ($2), true));
-                    $$ = 0;
+                    typespec_stack.push (oslcompiler->current_typespec ());
+                    $$ = ShadTypeUnknown;
                 }
         | IDENTIFIER /* struct name or shader type name */
                 {
@@ -593,9 +651,10 @@ typespec_or_shadertype
                         $$ = ShadTypeVolume;
                     else {
                         Symbol *s = oslcompiler->symtab().find (name);
-                        if (s && s->is_structure())
+                        if (s && s->is_structure()) {
                             oslcompiler->current_typespec (TypeSpec ("", s->typespec().structure()));
-                        else {
+                            typespec_stack.push (oslcompiler->current_typespec ());
+                        } else {
                             oslcompiler->current_typespec (TypeSpec (TypeDesc::UNKNOWN));
                             oslcompiler->error (oslcompiler->filename(),
                                                 oslcompiler->lineno(),
@@ -776,11 +835,26 @@ variable_lvalue
 id_or_field
         : IDENTIFIER 
                 {
-                    $$ = new ASTvariable_ref (oslcompiler, ustring($1));
+                    $$ = new ASTvariable_ref (oslcompiler, ustring($1), implicit_this);
                 }
         | variable_lvalue '.' IDENTIFIER
                 {
                     $$ = new ASTstructselect (oslcompiler, $1, ustring($3));
+                }
+        | variable_lvalue '.' function_call
+                {
+                    static_cast<ASTfunction_call*>($3)->method_from_function($1);
+                    $$ = $3;
+                }
+        | function_call '.' function_call
+                {
+                    static_cast<ASTfunction_call*>($3)->method_from_function($1);
+                    $$ = $3;
+                }
+        | type_constructor '.' function_call
+                {
+                    static_cast<ASTfunction_call*>($3)->method_from_function($1);
+                    $$ = $3;
                 }
         ;
 
@@ -916,7 +990,8 @@ type_constructor
 function_call
         : IDENTIFIER '(' function_args_opt ')'
                 {
-                    $$ = new ASTfunction_call (oslcompiler, ustring($1), $3);
+                    $$ = new ASTfunction_call (oslcompiler, ustring($1), $3,
+                                               nullptr, implicit_this.get());
                 }
         ;
 

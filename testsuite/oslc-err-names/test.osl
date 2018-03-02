@@ -1,0 +1,48 @@
+
+void globalfunc() {
+}
+
+void nestedfunc() {
+    void reusename() {
+    }
+    reusename;
+    globalfunc;
+
+    int globalfunc = 64;
+    int reusename = 32;
+}
+
+void reuseparm(int parm0) {
+    float parm0 = 3;
+}
+
+void ___threeunderscores(int ___parm, int parm2 [[ string ___meta = ""]] ) {
+    int ___vartoo = 4;
+}
+
+struct ___invalid {
+    float ___invalidfield;
+    float ___invalidarray[3];
+};
+
+struct sthis {
+    float this;
+};
+
+struct A { float f; };
+
+void this(float this) {
+    this;
+    this.obj;
+    float this;
+    float this[5];
+
+    float this = 5;
+    float this[2] = { 1, 1 };
+    A this = { 5 };
+}
+
+shader test (output int this = 5)
+{
+}
+

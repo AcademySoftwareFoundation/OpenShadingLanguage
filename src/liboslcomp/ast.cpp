@@ -291,6 +291,132 @@ ASTNode::list_to_types_string (const ASTNode *node)
 
 
 
+ASTnamed_symbol::ASTnamed_symbol (NodeType node_type, OSLCompilerImpl *comp,
+                                  ustring name)
+    : ASTNode (node_type, comp, Nothing), m_name(name), m_sym(nullptr)
+{
+}
+
+
+
+ASTnamed_symbol::ASTnamed_symbol (NodeType node_type, OSLCompilerImpl *comp,
+                                  ustring name, ASTNode *a)
+    : ASTNode (node_type, comp, Nothing, a), m_name(name), m_sym(nullptr)
+{
+}
+
+
+
+ASTnamed_symbol::ASTnamed_symbol (NodeType node_type, OSLCompilerImpl *comp,
+                                  ustring name, ASTNode *a, ASTNode *b)
+    : ASTNode (node_type, comp, Nothing, a, b), m_name(name), m_sym(nullptr)
+{
+}
+
+
+
+ASTnamed_symbol::ASTnamed_symbol (NodeType node_type, OSLCompilerImpl *comp,
+                                  ustring name, ASTNode *a, ASTNode *b,
+                                  ASTNode *c)
+    : ASTNode (node_type, comp, Nothing, a, b, c), m_name(name), m_sym(nullptr)
+{
+}
+
+
+
+bool
+ASTnamed_symbol::check_reserved (ustring name, OSLCompilerImpl *comp,
+                                 int vflags)
+{
+    if (Strutil::starts_with(name, "___")) {
+        comp->error (comp->filename(), comp->lineno(),
+                     "'%s' : sorry, can't start with three underscores",
+                     name);
+        return false;
+    } else if (!(vflags & allow_this) && name == "this") {
+        comp->error (comp->filename(), comp->lineno(),
+                     "'this' not allowed in this context");
+        return false;
+    }
+    return true;
+}
+
+
+
+std::string
+ASTnamed_symbol::previous_decl (ASTNode* node)
+{
+    if (! node)
+        return "";
+
+    return Strutil::format ("\n\t\tprevious declaration was at %s:%d",
+                             OIIO::Filesystem::filename(node->sourcefile().string()),
+                             node->sourceline());
+}
+
+
+
+Symbol*
+ASTnamed_symbol::validate (ustring name, OSLCompilerImpl *comp,
+                           int vflags, int allowed)
+{
+    check_reserved (name, comp, vflags);
+
+    Symbol *f;
+	bool shadow = vflags & warn_shadow;
+    if (! (vflags & check_clashes)) {
+        f = comp->symtab().find (name);
+        if (! f) {
+            comp->error (comp->filename(), comp->lineno(),
+                         "'%s' was not declared in this scope", name);
+            // FIXME -- would be fun to troll through the symtab and try to
+            // find the things that almost matched and offer suggestions.
+        }
+        else if (shadow && f->symtype() == SymTypeFunction) {
+            comp->error (comp->filename(), comp->lineno(),
+                         "function '%s' can't be used as a variable", name);
+        }
+    } else {
+        f = comp->symtab().clash (name);
+        // If no symbol, or symbol matches allowed type: no clash.
+        if (! f || f->symtype() == allowed)
+            return f;
+
+        std::string msg;
+        ASTNode* hint = f->node();
+        if (shadow) {
+            // Downgrade to warning if param to mask global function
+            shadow = f->scope() == 0 && f->symtype() == SymTypeFunction;
+
+            // also downgrade to warning if local variable shadowing a field
+            if (!shadow && f->alias() && f->alias()->node()) {
+                if (f->alias()->node()->typespec().is_structure() &&
+                    f->alias()->name() == Strutil::format("this.%s", name)) {
+                    msg = Strutil::format ("\"%s\" shadows a field with the same name",
+                                           name);
+                    // FIXME: Would be nice to hint about where the field was
+                    // declared, but f->alias()->node() is the 'this.field' node.
+                    hint = nullptr;
+                    shadow = true;
+                }
+            }
+        }
+
+        if (msg.empty())
+            msg = Strutil::format ("'%s' already declared in this scope", name);
+
+        msg += previous_decl (hint);
+
+        if (shadow)
+            comp->warning(comp->filename(), comp->lineno(), "%s", msg);
+        else
+            comp->error(comp->filename(), comp->lineno(), "%s", msg);
+    }
+    return f;
+}
+
+
+
 ASTshader_declaration::ASTshader_declaration (OSLCompilerImpl *comp,
                                 int stype, ustring name, ASTNode *form,
                                 ASTNode *stmts, ASTNode *meta)
@@ -346,8 +472,8 @@ ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
                              TypeSpec type, ustring name,
                              ASTNode *form, ASTNode *stmts, ASTNode *meta,
                              int sourceline_start)
-    : ASTNode (function_declaration_node, comp, 0, meta, form, stmts),
-      m_name(name), m_sym(NULL), m_is_builtin(false)
+    : ASTnamed_symbol (function_declaration_node, comp, name, meta, form, stmts),
+      m_is_builtin(false)
 {
     // Some trickery -- the compiler's idea of the "current" source line
     // is the END of the function body, so if a hint was passed about the
@@ -355,11 +481,8 @@ ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
     if (sourceline_start >= 0)
         m_sourceline = sourceline_start;
 
-    if (Strutil::starts_with (name, "___"))
-        error ("\"%s\" : sorry, can't start with three underscores", name);
-
     // Get a pointer to the first of the existing symbols of that name.
-    Symbol *existing_syms = comp->symtab().clash (name);
+    Symbol *existing_syms = validate (check_clashes, SymTypeFunction);
     if (existing_syms && existing_syms->symtype() != SymTypeFunction) {
         error ("\"%s\" already declared in this scope as a %s",
                name, existing_syms->typespec());
@@ -492,12 +615,16 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
                                                   const TypeSpec &type,
                                                   ustring name, ASTNode *init,
                                                   bool isparam, bool ismeta,
-                                                  bool isoutput, bool initlist)
-    : ASTNode (variable_declaration_node, comp, 0, init, NULL /* meta */),
-      m_name(name), m_sym(NULL),
+                                                  bool isoutput, bool initlist,
+                                                  bool isthis)
+    : ASTnamed_symbol (variable_declaration_node, comp, name, init, NULL /* meta */),
       m_isparam(isparam), m_isoutput(isoutput), m_ismetadata(ismeta),
       m_initlist(initlist)
 {
+    int vflags = isthis ? allow_this : 0;
+    if (! check_reserved (m_name, m_compiler, vflags))
+        return;
+
     if (m_initlist && init) {
         // Typecheck the init list early.
         ASSERT (init->nodetype() == compound_initializer_node);
@@ -505,25 +632,9 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
     }
 
     m_typespec = type;
-    Symbol *f = comp->symtab().clash (name);
-    if (f  &&  ! m_ismetadata) {
-        std::string e = Strutil::format ("\"%s\" already declared in this scope", name.c_str());
-        if (f->node()) {
-            std::string filename = OIIO::Filesystem::filename(f->node()->sourcefile().string());
-            e += Strutil::format ("\n\t\tprevious declaration was at %s:%d",
-                                  filename, f->node()->sourceline());
-        }
-        if (f->scope() == 0 && f->symtype() == SymTypeFunction && isparam) {
-            // special case: only a warning for param to mask global function
-            warning ("%s", e.c_str());
-        } else {
-            error ("%s", e.c_str());
-        }
-    }
-    if (name[0] == '_' && name[1] == '_' && name[2] == '_') {
-        error ("\"%s\" : sorry, can't start with three underscores",
-               name.c_str());
-    }
+    if (! m_ismetadata)
+        validate (vflags | warn_function_clash);
+
     SymType symtype = isparam ? (isoutput ? SymTypeOutputParam : SymTypeParam)
                               : SymTypeLocal;
     // Sneaky debugging aid: a local that starts with "__debug_tmp__"
@@ -541,6 +652,50 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
         m_compiler->add_struct_fields (type.structspec(), m_sym->name(), symtype,
                                        type.is_unsized_array() ? -1 : type.arraylength(),
                                        this, init);
+    }
+}
+
+
+
+ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
+                                                  const TypeSpec &type,
+                                                  ASTNode *args)
+    : ASTvariable_declaration(comp, type, ustring("this"), NULL,
+                              false, false, false, false, true)
+{
+    // Push 'this' to front of given arguments
+    concat(this, args);
+    if (StructSpec* sspec = type.structure() ? type.structspec() : nullptr) {
+        // Add the fields as accessible without 'this', warning about possible
+        // shadowing/ambiguity as we go.
+        for (int i = 0, n = sspec->numfields(); i < n; ++i) {
+            const auto& field = sspec->field(i);
+            bool conflict = false;
+            for (ref next = args; next; next = next->next()) {
+                ASSERT (next->nodetype() == variable_declaration_node);
+                auto *arg = static_cast<ASTvariable_declaration*>(next.get());
+
+                if (arg->name() == field.name) {
+                    warning ("argument \"%s\" shadows a field with the same name",
+                             field.name);
+                    conflict = true;
+                    break;
+                }
+            }
+            if (! conflict) {
+                ustring qualname = ustring::format ("this.%s", field.name);
+                ASSERT (m_compiler->symtab().find (qualname) != nullptr);
+                ASSERT (!m_compiler->symtab().find (field.name) ||
+                         m_compiler->symtab().find (field.name)->scope() !=
+                         m_compiler->symtab().scopeid());
+
+                Symbol* qsym = m_compiler->symtab().find (qualname);
+                Symbol *fsym = new Symbol (field.name, field.type,
+                                           qsym->symtype (), this);
+                fsym->alias (qsym);
+                m_compiler->symtab().insert (fsym);
+            }
+        }
     }
 }
 
@@ -583,21 +738,12 @@ ASTvariable_declaration::print (std::ostream &out, int indentlevel) const
 
 
 
-ASTvariable_ref::ASTvariable_ref (OSLCompilerImpl *comp, ustring name)
-    : ASTNode (variable_ref_node, comp), m_name(name), m_sym(NULL)
+ASTvariable_ref::ASTvariable_ref (OSLCompilerImpl *comp, ustring name, bool allowthis)
+    : ASTnamed_symbol (variable_ref_node, comp, name)
 {
-    m_sym = comp->symtab().find (name);
-    if (! m_sym) {
-        error ("'%s' was not declared in this scope", name.c_str());
-        // FIXME -- would be fun to troll through the symtab and try to
-        // find the things that almost matched and offer suggestions.
-        return;
-    }
-    if (m_sym->symtype() == SymTypeFunction) {
-        error ("function '%s' can't be used as a variable", name.c_str());
-        return;
-    }
-    m_typespec = m_sym->typespec();
+    m_sym = validate (warn_function_exists | (allowthis ? allow_this : 0));
+    if (m_sym)
+        m_typespec = m_sym->typespec();
 }
 
 
@@ -1110,28 +1256,52 @@ ASTtype_constructor::childname (size_t i) const
 
 
 ASTfunction_call::ASTfunction_call (OSLCompilerImpl *comp, ustring name,
-                                    ASTNode *args, FunctionSymbol *funcsym)
-    : ASTNode (function_call_node, comp, 0, args), m_name(name),
-      m_sym(funcsym ? funcsym : comp->symtab().find (name)), // Look it up.
-      m_poly(funcsym),    // Default - resolved symbol or null
-      m_argread(~1),      // Default - all args are read except the first
-      m_argwrite(1),      // Default - first arg only is written by the op
-      m_argtakesderivs(0) // Default - doesn't take derivs
+                                    ASTNode *args, FunctionSymbol *funcsym,
+                                    ASTNode* implicit_this)
+    : ASTnamed_symbol (function_call_node, comp, name, args),
+      m_poly(funcsym),     // Default - resolved symbol or null
+      m_argread(~1),       // Default - all args are read except the first
+      m_argwrite(1),       // Default - first arg only is written by the op
+      m_argtakesderivs(0), // Default - doesn't take derivs
+      m_method(false)
 {
-    if (! m_sym) {
-        error ("function '%s' was not declared in this scope", name);
-        // FIXME -- would be fun to troll through the symtab and try to
-        // find the things that almost matched and offer suggestions.
+    m_sym = funcsym ? funcsym : validate (err_must_exist); // Look it up.
+    if (! m_sym || is_struct_ctr())
         return;
-    }
-    if (is_struct_ctr()) {
-        return;  // It's a struct constructor
-    }
     if (m_sym->symtype() != SymTypeFunction) {
         error ("'%s' is not a function", name.c_str());
-        m_sym = NULL;
+        m_sym = nullptr;
         return;
     }
+    if (implicit_this && m_sym->node()) {
+        int advance;
+        const char* form = static_cast<FunctionSymbol*>(m_sym)->argcodes().c_str();
+        /*TypeSpec rval = */ comp->type_from_code(form, &advance);
+        form += advance;
+        if (*form && comp->type_from_code(form) == implicit_this->typespec()) {
+            method_from_function(new ASTvariable_ref(m_compiler,
+                                                     ustring("this"), true));
+        }
+    }
+}
+
+
+
+void
+ASTfunction_call::method_from_function (ASTNode* thisRef)
+{
+    // Only do this once!
+    if (m_method) {
+        delete thisRef;
+        return;
+    }
+
+    ASSERT (m_children.size() == 1);
+    m_method = true;
+    if (m_children[0])
+        thisRef->append(args().get());
+
+    m_children[0] = thisRef;
 }
 
 
@@ -1139,7 +1309,7 @@ ASTfunction_call::ASTfunction_call (OSLCompilerImpl *comp, ustring name,
 const char *
 ASTfunction_call::childname (size_t i) const
 {
-    return ustring::format ("param%d", (int)i).c_str();
+    return (i || !m_method ? ustring::format ("param%d", (int)i) : ustring("this")).c_str();
 }
 
 

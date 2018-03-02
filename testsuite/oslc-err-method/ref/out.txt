@@ -1,0 +1,4 @@
+test.osl:14: error: No matching function call to 'testmethod (vector)'
+  Candidates are:
+    test.osl:3	int testmethod (color)
+FAILED test.osl

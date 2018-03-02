@@ -208,7 +208,7 @@ public:
     typedef SymbolPtrVec::const_iterator const_iterator;
 
     SymbolTable (OSLCompilerImpl &comp)
-        : m_comp(comp), m_scopeid(-1), m_nextscopeid(0)
+        : m_comp(comp), m_scopeid(-1), m_nextscopeid(0), m_structid(0)
     {
         m_scopetables.reserve (20);  // So unlikely to ever copy tables
         push ();                     // Create scope 0 -- global scope
@@ -245,6 +245,8 @@ public:
     void add_struct_field (const TypeSpec &type, ustring name);
 
     StructSpec *current_struct ();
+
+    void end_struct ();
 
     /// Return the current scope ID
     ///
@@ -283,6 +285,7 @@ private:
     ScopeTable m_allmangled;         ///< All syms, mangled, in a hash table
     int m_scopeid;                   ///< Current scope ID
     int m_nextscopeid;               ///< Next unique scope ID
+    int m_structid;                  ///< Currently declaring a struct
 };
 
 

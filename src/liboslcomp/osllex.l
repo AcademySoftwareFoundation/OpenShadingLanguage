@@ -179,7 +179,7 @@ void preprocess (const char *yytext);
 "bool"|"case"|"char"|"class"|"const"|"default"|"double" |    \
 "enum"|"extern"|"false"|"friend"|"inline"|"long"|"private" | \
 "protected"|"short"|"signed"|"sizeof"|"static"|"struct" |    \
-"switch"|"template"|"this"|"true"|"typedef"|"uniform" |      \
+"switch"|"template"|"true"|"typedef"|"uniform" |      \
 "union"|"unsigned"|"varying"|"virtual" {
                             oslcompiler->error (oslcompiler->filename(),
                                                 oslcompiler->lineno(),

@@ -1,0 +1,26 @@
+test.osl:13: warning: argument "f" shadows a field with the same name
+test.osl:19: warning: argument "f" shadows a field with the same name
+test.osl:36: warning: "f" shadows a field with the same name
+Compiled test.osl -> test.oso
+emethod::test: (42) (2)
+emethod::test: (42) (46)
+emethod::testchain: 28
+emethod::testchain: 24
+emethod::testchain: 16
+emethod::testchain: 0
+emethod::predecl: (40) (40) (2)
+emethod::shadowed: (40) (3.14)
+emethod::shadowed2: 40 22.4 6.28
+emethod::shadowed: (40) (6.28)
+unshadowed 5
+unshadowed *
+custom_method0(c{1 1 1})
+custom_method0(v{2 2 2})
+custom_method1(c{1 1 1}, c{3 3 3})
+c.custom_method1 = 4 4 4
+custom_method1(v{2 2 2}, f2)
+vo = 4 4 4
+custom_method3: 101 2 3
+c1.custom_method3: 34 (101 2 3)
+custom_method3: 101 1 1
+

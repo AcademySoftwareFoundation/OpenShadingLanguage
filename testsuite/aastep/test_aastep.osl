@@ -1,0 +1,7 @@
+shader
+test_aastep (output color Cout = 0)
+{
+    float x = u - 0.5 - v/4;
+    float y = v - 0.5 - u/4;
+    Cout = color(aastep (0, x), aastep(0,y,filterwidth(y)), aastep(0,x+y,filterwidth(0),filterwidth(x+y)));
+}

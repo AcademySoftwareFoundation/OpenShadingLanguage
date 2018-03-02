@@ -932,21 +932,17 @@ LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
 void
 LLVM_Util::push_function_mask(llvm::Value * startMaskValue)
 {
-	// TODO:  refactor combining 	m_alloca_for_modified_mask_stack & m_masked_return_count_stack
-	// into a single stack of FunctionInfo, and change "modified mask" to "function mask"
-	// while at it change "exit mask" to "shader mask"
-
 	// As each nested function (that is inlined) will have different control flow,
 	// as some lanes of nested function may return early, but that would not affect
 	// the lanes of the calling function, we mush have a modified mask stack for each
 	// function
-    m_alloca_for_modified_mask_stack.push_back(op_alloca(type_wide_bool(), 1, "modified_mask"));
-	llvm::Value * loc_of_modified_mask = m_alloca_for_modified_mask_stack.back();
+    llvm::Value * alloca_for_function_mask = op_alloca(type_wide_bool(), 1, "inlined_function_mask");
+    m_masked_subroutine_stack.push_back(MaskedSubroutineContext{alloca_for_function_mask, /* return_count = */0 });
+
 	push_masking_enabled(false);
-	op_store(startMaskValue, loc_of_modified_mask);
+	op_store(startMaskValue, alloca_for_function_mask);
 	pop_masking_enabled();
 
-	m_masked_return_count_stack.push_back(0);
 
 	// Give the new function its own mask so that it may be swapped out
 	// to mask out lanes that have returned early,
@@ -957,8 +953,7 @@ LLVM_Util::push_function_mask(llvm::Value * startMaskValue)
 int
 LLVM_Util::masked_return_count() const
 {
-	ASSERT(!m_masked_return_count_stack.empty());
-	return m_masked_return_count_stack.back();
+	return masked_function_context().return_count;
 }
 
 int
@@ -974,11 +969,8 @@ LLVM_Util::pop_function_mask()
 {
 	pop_mask();
 
-	ASSERT(!m_alloca_for_modified_mask_stack.empty());
-	m_alloca_for_modified_mask_stack.pop_back();
-
-	ASSERT(!m_masked_return_count_stack.empty());
-	m_masked_return_count_stack.pop_back();
+	ASSERT(!m_masked_subroutine_stack.empty());
+	m_masked_subroutine_stack.pop_back();
 }
 
 void
@@ -988,35 +980,34 @@ LLVM_Util::push_masked_loop(llvm::Value* location_of_condition_mask, llvm::Value
 	// as some lanes of nested function may 'break' out early, but that would not affect
 	// the lanes outside the loop, and we could have nested loops,
 	// we mush have a break count for each loop
-	m_masked_loop_stack.push_back(LoopInfo{location_of_condition_mask, location_of_continue_mask, 0, 0});
+	m_masked_loop_stack.push_back(MaskedLoopContext{location_of_condition_mask, location_of_continue_mask, 0, 0});
 }
 
 bool
 LLVM_Util::is_innermost_loop_masked() const
 {
-	if(m_masked_loop_stack.empty())
-		return false;
-	return (m_masked_loop_stack.back().location_of_condition_mask != nullptr);
+	if(inside_of_masked_loop()) {
+	    return (masked_loop_context().location_of_condition_mask != nullptr);
+	}
+    return false;
 }
 
 int
 LLVM_Util::masked_break_count() const
 {
-	if(m_masked_loop_stack.empty()) {
-		return 0;
-	} else {
-		return m_masked_loop_stack.back().break_count;
+    if(inside_of_masked_loop()) {
+		return masked_loop_context().break_count;
 	}
+    return 0;
 }
 
 int
 LLVM_Util::masked_continue_count() const
 {
-	if(m_masked_loop_stack.empty()) {
-		return 0;
-	} else {
-		return m_masked_loop_stack.back().continue_count;
+    if(inside_of_masked_loop()) {
+		return masked_loop_context().continue_count;
 	}
+    return 0;
 }
 
 
@@ -1056,7 +1047,7 @@ LLVM_Util::new_builder (llvm::BasicBlock *block)
     }
 
     ASSERT(m_masked_exit_count == 0);
-	ASSERT(m_alloca_for_modified_mask_stack.empty());
+	ASSERT(m_masked_subroutine_stack.empty());
 	ASSERT(m_mask_stack.empty());
 }
 
@@ -1850,27 +1841,26 @@ void LLVM_Util::push_masked_return_block(llvm::BasicBlock *test_return)
 {
 	OSL_DEV_ONLY(std::cout << "push_masked_return_block" << std::endl);
 
-	m_masked_return_block_stack.push_back (test_return);
+	masked_function_context().return_block_stack.push_back (test_return);
 }
 
 void LLVM_Util::pop_masked_return_block()
 {
 	OSL_DEV_ONLY(std::cout << "pop_masked_return_block" << std::endl);
-	ASSERT(!m_masked_return_block_stack.empty());
-	m_masked_return_block_stack.pop_back();
+	masked_function_context().return_block_stack.pop_back();
 }
 
 bool
 LLVM_Util::has_masked_return_block() const
 {
-    return (! m_masked_return_block_stack.empty());
+    return (! masked_function_context().return_block_stack.empty());
 }
 
 llvm::BasicBlock *
 LLVM_Util::masked_return_block() const
 {
-    ASSERT (! m_masked_return_block_stack.empty());
-    return m_masked_return_block_stack.back();
+    ASSERT (! masked_function_context().return_block_stack.empty());
+    return masked_function_context().return_block_stack.back();
 }
 
 
@@ -3473,7 +3463,7 @@ LLVM_Util::push_mask(llvm::Value *mask, bool negate, bool absolute)
 llvm::Value *
 LLVM_Util::shader_mask()
 {
-	llvm::Value * loc_of_shader_mask = m_alloca_for_modified_mask_stack.front();
+	llvm::Value * loc_of_shader_mask = masked_shader_context().location_of_mask;
 	return op_load(loc_of_shader_mask);
 }
 
@@ -3481,16 +3471,15 @@ void
 LLVM_Util::apply_exit_to_mask_stack()
 {
 	ASSERT (false == m_mask_stack.empty());
-	ASSERT(false == m_alloca_for_modified_mask_stack.empty());
 
 
-	llvm::Value * loc_of_shader_mask = m_alloca_for_modified_mask_stack.front();
+	llvm::Value * loc_of_shader_mask = masked_shader_context().location_of_mask;
 	llvm::Value * shader_mask = op_load(loc_of_shader_mask);
 
-	llvm::Value * loc_of_function_mask = m_alloca_for_modified_mask_stack.back();
+	llvm::Value * loc_of_function_mask = masked_function_context().location_of_mask;
 	llvm::Value * function_mask = op_load(loc_of_function_mask);
 
-	// For any inactive lanes of the exit mask
+	// For any inactive lanes of the shader mask
 	// set the function_mask to 0.
 	llvm::Value * modified_function_mask = builder().CreateSelect(shader_mask, function_mask, shader_mask);
 
@@ -3501,17 +3490,16 @@ LLVM_Util::apply_exit_to_mask_stack()
 	// Apply the modified_function_mask to the current conditional mask stack
 	// By bumping the return count, the modified_return_mask will get applied
 	// to the conditional mask stack as it unwinds.
-	++m_masked_return_count_stack.back();
+	masked_function_context().return_count++;
 
 	// We could just call apply_return_to_mask_stack(), but will repeat the work
 	// here to take advantage of the already loaded return mask
 	auto & mi = m_mask_stack.back();
 
-	int masked_return_count = m_masked_return_count_stack.back();
+	int masked_return_count = masked_function_context().return_count;
 	ASSERT(masked_return_count > mi.applied_return_mask_count);
 	llvm::Value * existing_mask = mi.mask;
 
-	ASSERT(false == m_alloca_for_modified_mask_stack.empty());
 	if(mi.negate) {
 		mi.mask = builder().CreateSelect(modified_function_mask, existing_mask, wide_constant_bool(true));
 	} else {
@@ -3526,14 +3514,13 @@ LLVM_Util::apply_return_to_mask_stack()
 	ASSERT (false == m_mask_stack.empty());
 
 	auto & mi = m_mask_stack.back();
-	int masked_return_count = m_masked_return_count_stack.back();
+	int masked_return_count = masked_function_context().return_count;
 	// TODO: might be impossible for this conditional to be false, could change to assert
 	// or remove applied_return_mask_count entirely
 	if (masked_return_count > mi.applied_return_mask_count) {
 		llvm::Value * existing_mask = mi.mask;
 
-		ASSERT(false == m_alloca_for_modified_mask_stack.empty());
-		llvm::Value * loc_of_return_mask = m_alloca_for_modified_mask_stack.back();
+		llvm::Value * loc_of_return_mask = masked_function_context().location_of_mask;
 		llvm::Value * rs_mask = op_load(loc_of_return_mask);
 		if(mi.negate) {
 			mi.mask = builder().CreateSelect(rs_mask, existing_mask, wide_constant_bool(true));
@@ -3555,8 +3542,7 @@ LLVM_Util::apply_break_to_mask_stack()
 	llvm::Value * existing_mask = mi.mask;
 
 	// TODO: do we need to track if a break was applied or not?
-	ASSERT(false == m_masked_loop_stack.empty());
-	llvm::Value * loc_of_cond_mask = m_masked_loop_stack.back().location_of_condition_mask;
+	llvm::Value * loc_of_cond_mask = masked_loop_context().location_of_condition_mask;
 	llvm::Value * cond_mask = op_load(loc_of_cond_mask);
 	if(mi.negate) {
 		mi.mask = builder().CreateSelect(cond_mask, existing_mask, wide_constant_bool(true));
@@ -3575,8 +3561,7 @@ LLVM_Util::apply_continue_to_mask_stack()
 	llvm::Value * existing_mask = mi.mask;
 
 	// TODO: do we need to track if a break was applied or not?
-	ASSERT(false == m_masked_loop_stack.empty());
-	llvm::Value * loc_of_continue_mask = m_masked_loop_stack.back().location_of_continue_mask;
+	llvm::Value * loc_of_continue_mask = masked_loop_context().location_of_continue_mask;
 	llvm::Value * continue_mask = op_load(loc_of_continue_mask);
 	if(mi.negate) {
 		mi.mask = builder().CreateSelect(continue_mask, wide_constant_bool(true), existing_mask);
@@ -3589,10 +3574,9 @@ llvm::Value *
 LLVM_Util::apply_return_to(llvm::Value *existing_mask)
 {
 	// caller should have checked masked_return_count() beforehand
-	ASSERT (m_masked_return_count_stack.back() > 0);
-	ASSERT(false == m_alloca_for_modified_mask_stack.empty());
+    ASSERT (masked_function_context().return_count > 0);
 
-	llvm::Value * loc_of_return_mask = m_alloca_for_modified_mask_stack.back();
+	llvm::Value * loc_of_return_mask = masked_function_context().location_of_mask;
 	llvm::Value * rs_mask = op_load(loc_of_return_mask);
 	llvm::Value *result = builder().CreateSelect(rs_mask, existing_mask, rs_mask);
 	return result;
@@ -3633,8 +3617,7 @@ LLVM_Util::op_masked_break()
 	// by other scopes, instead we must store the result
 	// of to the stack for the outer scope to pickup and
 	// use
-	ASSERT(!m_masked_loop_stack.empty());
-	LoopInfo & loop = m_masked_loop_stack.back();
+	auto & loop = masked_loop_context();
 	llvm::Value * loc_of_cond_mask = loop.location_of_condition_mask;
 
 	llvm::Value * cond_mask = op_load(loc_of_cond_mask);
@@ -3671,8 +3654,7 @@ LLVM_Util::op_masked_continue()
 	// by other scopes, instead we must store the result
 	// of to the stack for the outer scope to pickup and
 	// use
-	ASSERT(!m_masked_loop_stack.empty());
-	LoopInfo & loop = m_masked_loop_stack.back();
+	auto & loop = masked_loop_context();
 	llvm::Value * loc_of_continue_mask = loop.location_of_continue_mask;
 
 	llvm::Value * continue_mask = op_load(loc_of_continue_mask);
@@ -3711,9 +3693,8 @@ LLVM_Util::op_masked_exit()
 	// by other scopes, instead we must store the result
 	// of to the stack for the outer scope to pickup and
 	// use
-	ASSERT(false == m_alloca_for_modified_mask_stack.empty());
 	{
-		llvm::Value * loc_of_shader_mask = m_alloca_for_modified_mask_stack.front();
+		llvm::Value * loc_of_shader_mask = masked_shader_context().location_of_mask;
 		llvm::Value * shader_mask = op_load(loc_of_shader_mask);
 
 		llvm::Value * modifiedMask;
@@ -3732,8 +3713,8 @@ LLVM_Util::op_masked_exit()
 
 	// Are we inside a function scope, then we will need to modify its active lane mask
 	// functions higher up in the stack will apply the current exit mask when functions are popped
-	if (m_alloca_for_modified_mask_stack.size() > 1) {
-		llvm::Value * loc_of_function_mask = m_alloca_for_modified_mask_stack.back();
+	if (inside_of_inlined_masked_function_call()) {
+		llvm::Value * loc_of_function_mask = masked_function_context().location_of_mask;
 		llvm::Value * function_mask = op_load(loc_of_function_mask);
 
 
@@ -3758,8 +3739,7 @@ LLVM_Util::op_masked_exit()
 
 	// Bumping the masked return count will cause the return mask(which is a subset of the shader_mask)
 	// to be applied to the mask stack when leaving if/else block
-	ASSERT(!m_masked_return_count_stack.empty());
-	m_masked_return_count_stack.back()++;
+	masked_function_context().return_count++;
 }
 
 void
@@ -3775,8 +3755,7 @@ LLVM_Util::op_masked_return()
 	// by other scopes, instead we must store the result
 	// of to the stack for the outer scope to pickup and
 	// use
-	ASSERT(false == m_alloca_for_modified_mask_stack.empty());
-	llvm::Value * loc_of_function_mask = m_alloca_for_modified_mask_stack.back();
+	llvm::Value * loc_of_function_mask = masked_function_context().location_of_mask;
 	llvm::Value * function_mask = op_load(loc_of_function_mask);
 
 
@@ -3795,9 +3774,7 @@ LLVM_Util::op_masked_return()
 	op_store(modifiedMask, loc_of_function_mask);
 	pop_masking_enabled();
 
-	ASSERT(!m_masked_return_count_stack.empty());
-	m_masked_return_count_stack.back()++;
-
+	masked_function_context().return_count++;
 }
 
 
@@ -3819,7 +3796,7 @@ LLVM_Util::pop_masking_enabled()
 void
 LLVM_Util::op_store (llvm::Value *val, llvm::Value *ptr)
 {	
-	if(m_mask_stack.empty() || val->getType()->isVectorTy() == false || m_enable_masking_stack.empty() || m_enable_masking_stack.back() == false) {
+	if(m_mask_stack.empty() || val->getType()->isVectorTy() == false || (!is_masking_enabled())) {
 		
 		//OSL_DEV_ONLY(std::cout << "unmasked op_store" << std::endl);
 		// We may not be in a non-uniform code block

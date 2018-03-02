@@ -777,10 +777,8 @@ private:
     std::vector<llvm::BasicBlock *> m_return_block;     // stack for func call
     std::vector<llvm::BasicBlock *> m_loop_after_block; // stack for break
     std::vector<llvm::BasicBlock *> m_loop_step_block;  // stack for continue
-    // stack for masked returns to return to, maybe not the same the regular return block
-    // because there could have been other active data lanes in the function
-    // not traveling the masked conditional path which encounters a return
-    std::vector<llvm::BasicBlock *> m_masked_return_block_stack;
+
+    // Additional tracking for masked conditionals, shaders, subroutines, and loop flow control
     struct MaskInfo
     {
     	llvm::Value * mask;
@@ -789,21 +787,58 @@ private:
     };
     std::vector<MaskInfo> m_mask_stack;  			// stack for masks that all stores should use when enabled
     std::vector<bool> m_enable_masking_stack;  			// stack for enabling stores to be masked
-    // For each pushed function call, keep a slot for modified masks
-    // to be stored from code blocks that might be branched over
-    std::vector<llvm::Value *> m_alloca_for_modified_mask_stack;
 
-    std::vector<int> m_masked_return_count_stack;
+    // For each pushed inlined function call, keep a slot for modified masks
+    // to be stored from code blocks that might be branched over
+    struct MaskedSubroutineContext
+    {
+        llvm::Value * location_of_mask;
+        int return_count;
+        // stack for masked returns to return to, maybe not the same the regular return block
+        // because there could have been other active data lanes in the function
+        // not traveling the masked conditional path which encounters a return
+        std::vector<llvm::BasicBlock *> return_block_stack;
+    };
+
+    std::vector<MaskedSubroutineContext> m_masked_subroutine_stack;
+    MaskedSubroutineContext & masked_function_context() {
+        ASSERT(false == m_masked_subroutine_stack.empty());
+        return m_masked_subroutine_stack.back();
+    }
+    const MaskedSubroutineContext & masked_function_context() const {
+        ASSERT(false == m_masked_subroutine_stack.empty());
+        return m_masked_subroutine_stack.back();
+    }
+    MaskedSubroutineContext & masked_shader_context() {
+        ASSERT(false == m_masked_subroutine_stack.empty());
+        return m_masked_subroutine_stack.front();
+    }
+    bool inside_of_inlined_masked_function_call() const {
+        return (m_masked_subroutine_stack.size() > size_t(1));
+    }
+
     int m_masked_exit_count;
 
-    struct LoopInfo
+    struct MaskedLoopContext
     {
     	llvm::Value *location_of_condition_mask;
     	llvm::Value *location_of_continue_mask;
     	int break_count;
     	int continue_count;
     };
-    std::vector<LoopInfo> m_masked_loop_stack; // stack to track loop condition & break count
+    std::vector<MaskedLoopContext> m_masked_loop_stack; // stack to track loop condition & break count
+    MaskedLoopContext & masked_loop_context() {
+        ASSERT(false == m_masked_loop_stack.empty());
+        return m_masked_loop_stack.back();
+    }
+    const MaskedLoopContext & masked_loop_context() const {
+        ASSERT(false == m_masked_loop_stack.empty());
+        return m_masked_loop_stack.back();
+    }
+    bool inside_of_masked_loop() const {
+        return (false == m_masked_loop_stack.empty());
+    }
+
 
     llvm::Type *m_llvm_type_float;
     llvm::Type *m_llvm_type_double;

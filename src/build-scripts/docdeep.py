@@ -7,6 +7,12 @@ from __future__ import print_function
 # https://github.com/imageworks/OpenShadingLanguage
 
 
+# ----------------------------------------------------------------------
+# To generate docdeep for docdeep, run this:
+#     python3 docdeep.py -d docdeep docdeep.py > docdeep.md.html
+# ----------------------------------------------------------------------
+
+
 ### <doc docdeep>
 ###
 ###                       **docdeep**

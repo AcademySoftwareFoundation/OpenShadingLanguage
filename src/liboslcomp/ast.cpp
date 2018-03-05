@@ -492,12 +492,19 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
                                                   const TypeSpec &type,
                                                   ustring name, ASTNode *init,
                                                   bool isparam, bool ismeta,
-                                                  bool isoutput, bool initlist)
+                                                  bool isoutput, bool initlist,
+                                                  int sourceline_start)
     : ASTNode (variable_declaration_node, comp, 0, init, NULL /* meta */),
       m_name(name), m_sym(NULL),
       m_isparam(isparam), m_isoutput(isoutput), m_ismetadata(ismeta),
       m_initlist(initlist)
 {
+    // Some trickery -- the compiler's idea of the "current" source line
+    // is the END of the declaration, so if a hint was passed about the
+    // start of the declaration, substitute that.
+    if (sourceline_start >= 0)
+        m_sourceline = sourceline_start;
+
     if (m_initlist && init) {
         // Typecheck the init list early.
         ASSERT (init->nodetype() == compound_initializer_node);
@@ -515,14 +522,13 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
         }
         if (f->scope() == 0 && f->symtype() == SymTypeFunction && isparam) {
             // special case: only a warning for param to mask global function
-            warning ("%s", e.c_str());
+            warning ("%s", e);
         } else {
-            error ("%s", e.c_str());
+            error ("%s", e);
         }
     }
-    if (name[0] == '_' && name[1] == '_' && name[2] == '_') {
-        error ("\"%s\" : sorry, can't start with three underscores",
-               name.c_str());
+    if (OIIO::Strutil::starts_with (name, "___")) {
+        error ("\"%s\" : sorry, can't start with three underscores", name);
     }
     SymType symtype = isparam ? (isoutput ? SymTypeOutputParam : SymTypeParam)
                               : SymTypeLocal;

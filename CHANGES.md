@@ -1,7 +1,7 @@
 Release 1.10? -- ?? 2018? (compared to 1.9)
 --------------------------------------------------
 Dependency and standards changes:
-* **LLVM 3.9 / 4.0 / 5.0**: Support has been removed for LLVM 3.5.
+* **LLVM 4.0 / 5.0 / 6.0**: Support has been removed for LLVM 3.x.
 * **OpenImageIO 1.8+**: This release of OSL should build properly against
   OIIO 1.8 or newer. Support has been dropped for OIIO 1.7.
 

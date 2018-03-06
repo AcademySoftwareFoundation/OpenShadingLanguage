@@ -67,7 +67,7 @@ message (STATUS "Using OpenImageIO ${OPENIMAGEIO_VERSION}")
 ###########################################################################
 # LLVM library setup
 
-find_package (LLVM 3.9 REQUIRED)
+find_package (LLVM 4.0 REQUIRED)
 
 # ensure include directory is added (in case of non-standard locations
 include_directories (BEFORE SYSTEM "${LLVM_INCLUDES}")
@@ -92,10 +92,6 @@ if (NOT Boost_FIND_QUIETLY)
     message (STATUS "BOOST_ROOT ${BOOST_ROOT}")
 endif ()
 
-if (NOT DEFINED Boost_ADDITIONAL_VERSIONS)
-  set (Boost_ADDITIONAL_VERSIONS "1.63" "1.62" "1.61" "1.60"
-                                 "1.59" "1.58" "1.57" "1.56" "1.55")
-endif ()
 if (LINKSTATIC)
     set (Boost_USE_STATIC_LIBS ON)
 endif ()
@@ -104,8 +100,7 @@ set (Boost_COMPONENTS system thread)
 if (NOT USE_STD_REGEX)
     list (APPEND Boost_COMPONENTS regex)
 endif ()
-if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG OR
-    ${LLVM_VERSION} VERSION_LESS 3.6)
+if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG)
     set (_CLANG_PREPROCESSOR_CAN_WORK ON)
 endif ()
 if (GCC_VERSION)

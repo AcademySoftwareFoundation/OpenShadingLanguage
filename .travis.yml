@@ -113,7 +113,7 @@ matrix:
     fast_finish: true
     include:
       # Build with C++11, default compiler, optimized build, against OIIO
-      # master, and LLVM 4.0.
+      # master, and LLVM 5.0.
       - os: linux
         compiler: gcc
         addons:
@@ -129,7 +129,7 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: WHICHGCC=4.8 LLVM_VERSION=4.0.0
+        env: WHICHGCC=4.8 LLVM_VERSION=5.0.0
       - os: osx
         compiler: clang
     # Test against the older release branch of OIIO (all the other tests
@@ -149,7 +149,7 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: OIIOBRANCH=release USE_SIMD=sse4.2 LLVM_VERSION=4.0.0
+        env: OIIOBRANCH=release USE_SIMD=sse4.2 LLVM_VERSION=5.0.0
     # Test gcc6, and highest SIMD level supported by Travis, and newer LLVM
       - os: linux
         compiler: gcc
@@ -167,7 +167,7 @@ matrix:
               - libboost-thread1.55
               - libboost-wave1.55
         env: WHICHGCC=6 USE_SIMD=avx,f16c LLVM_VERSION=5.0.0
-    # Linux only: test gcc 7, also test C++14 and even newer LLVM
+    # Linux only: test gcc 7, also test C++14 and newer LLVM
       - os: linux
         compiler: gcc
         addons:
@@ -200,7 +200,7 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: DEBUG=1 LLVM_VERSION=3.9.0
+        env: DEBUG=1 LLVM_VERSION=4.0.0
     # One more, just for the heck of it, turn all SIMD off, and also test
     # against the oldest LLVM we still support and the oldest OIIO.
       - os: linux
@@ -218,7 +218,7 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: USE_SIMD=0 LLVM_VERSION=3.9.1 OIIOBRANCH=RB-1.8
+        env: USE_SIMD=0 LLVM_VERSION=4.0.0 OIIOBRANCH=RB-1.8
 
 notifications:
     email:

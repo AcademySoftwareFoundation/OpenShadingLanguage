@@ -3067,16 +3067,6 @@ The {\cf mix} function returns a linear blending :
 $ x*(1-\alpha) + y*(\alpha) $
 \apiend
 
-\apiitem{int {\ce isnan} (float x) \\
-int {\ce isinf} (float x) \\
-int {\ce isfinite} (float x)}
-\indexapi{isnan()} \indexapi{isinf()} \indexapi{isfinite()}
-The {\cf isnan()} function returns 1 if $x$ is a not-a-number (NaN)
-value, 0 otherwise.  The {\cf isinf()} function returns 1 if $x$ is an
-infinite (Inf or --Inf) value, 0 otherwise.  The {\cf isfinite()}
-function returns 1 if $x$ is an ordinary number (neither infinite nor
-NaN), 0 otherwise.  \apiend
-
 \apiitem{\emph{type} {\ce select} (\emph{type} x, \emph{type} y, \emph{type} cond) \\
 \emph{type} {\ce select} (\emph{type} x, \emph{type} y, float cond) \\
 \emph{type} {\ce select} (\emph{type} x, \emph{type} y, int cond)}
@@ -3688,7 +3678,7 @@ animation (provided its input is \emph{precisely} identical).
 int {\ce hash} (float u, float v) \\
 int {\ce hash} (point p) \\
 int {\ce hash} (point p, float t) \\
-int {\ce hash) (int i)}}
+int {\ce hash} (int i)}
 \indexapi{hash()}
 \NEW % 1.9
 Returns a deterministic, repeatable integer \emph{hash} of the 1-, 2-, 3-,

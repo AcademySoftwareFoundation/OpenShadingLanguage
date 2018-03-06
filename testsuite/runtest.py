@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import os
 import glob
 import sys
@@ -63,7 +64,7 @@ splitsymbol = ';'
 #print ("tmpdir = " + tmpdir)
 #print ("path = " + path)
 #print ("refdir = " + refdir)
-print ("test source dir = " + test_source_dir)
+print ("test source dir = ", test_source_dir)
 
 if platform.system() == 'Windows' :
     if not os.path.exists("./ref") :
@@ -228,14 +229,14 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
             libOIIO_path = libOIIO_path + '\\' + options.devenv_config
         test_environ["PATH"] = libOIIO_path + ';' + test_environ["PATH"]
 
-    print "command = " + command
+    print ("command = ", command)
     for sub_command in command.split(splitsymbol):
         sub_command = sub_command.lstrip().rstrip()
-        #print "running = " + sub_command
+        #print ("running = ", sub_command)
         cmdret = subprocess.call (sub_command, shell=True, env=test_environ)
         if cmdret != 0 and failureok == 0 :
-            print "#### Error: this command failed: ", sub_command
-            print "FAIL"
+            print ("#### Error: this command failed: ", sub_command)
+            print ("FAIL")
             return (1)
 
     err = 0
@@ -251,7 +252,7 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
             if extension == ".tif" or extension == ".exr" :
                 # images -- use idiff
                 cmpcommand = oiiodiff (out, testfile, concat=False, silent=True)
-                # print "cmpcommand = " + cmpcommand
+                # print ("cmpcommand = ", cmpcommand)
                 cmpresult = os.system (cmpcommand)
             elif extension == ".txt" :
                 cmpresult = text_diff (out, testfile, out + ".diff")
@@ -266,11 +267,11 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
             # if extension == ".tif" or extension == ".exr" or extension == ".jpg" or extension == ".png":
             #     # If we got a match for an image, save the idiff results
             #     os.system (oiiodiff (out, testfile, silent=False))
-            print ("PASS: " + out + " matches " + testfile)
+            print ("PASS: ", out, " matches ", testfile)
         else :
             err = 1
-            print "NO MATCH for " + out
-            print "FAIL " + out
+            print ("NO MATCH for ", out)
+            print ("FAIL ", out)
             if extension == ".txt" :
                 # If we failed to get a match for a text file, print the
                 # file and the diff, for easy debugging.

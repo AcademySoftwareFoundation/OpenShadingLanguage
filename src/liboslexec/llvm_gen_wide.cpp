@@ -1837,7 +1837,7 @@ LLVMGEN (llvm_gen_construct_color)
         args[1] = rop.llvm_void_ptr (Result, 0);  // color
         args[2] = rop.llvm_load_value (Space); // from
 
-        ASSERT(false == rop.ll.is_masking_enabled());
+        ASSERT(false == rop.ll.is_masking_required());
         std::string func_name("osl_prepend_color_from_");
         func_name.append(arg_typecode(Result, false /*derivs*/, op_is_uniform));
         func_name.append("_batched");
@@ -2026,7 +2026,7 @@ LLVMGEN (llvm_gen_matrix)
 
         args[2] = from_is_uniform ? rop.llvm_load_value(From) : rop.llvm_void_ptr(From);
         args[3] = to_is_uniform ? rop.llvm_load_value(To): rop.llvm_void_ptr(To);
-        if (rop.ll.is_masking_enabled()) {
+        if (rop.ll.is_masking_required()) {
         	args[4] = rop.ll.mask_as_int(rop.ll.current_mask());
         }
 
@@ -2035,9 +2035,9 @@ LLVMGEN (llvm_gen_matrix)
         func_name += warg_typecode(&Result, false);
         func_name += arg_typecode(From, false, rop.isSymbolUniform(From));
         func_name += arg_typecode(To, false, rop.isSymbolUniform(To));
-        func_name += rop.ll.is_masking_enabled() ? "_masked" : "_batched";
+        func_name += rop.ll.is_masking_required() ? "_masked" : "_batched";
 
-        rop.ll.call_function (func_name.c_str(), args, rop.ll.is_masking_enabled() ? 5 : 4);
+        rop.ll.call_function (func_name.c_str(), args, rop.ll.is_masking_required() ? 5 : 4);
     } else {
         if (nfloats == 1) {
         	llvm::Value *zero;
@@ -2070,7 +2070,7 @@ LLVMGEN (llvm_gen_matrix)
             Symbol& From = *rop.opargsym (op, 1);
             bool from_is_uniform = rop.isSymbolUniform(From);
             args[2] = from_is_uniform ? rop.llvm_load_value(From) : rop.llvm_void_ptr(From);
-            if (rop.ll.is_masking_enabled()) {
+            if (rop.ll.is_masking_required()) {
             	args[3] = rop.ll.mask_as_int(rop.ll.current_mask());
             }
 
@@ -2078,9 +2078,9 @@ LLVMGEN (llvm_gen_matrix)
             std::string func_name("osl_prepend_matrix_from_");
             func_name += warg_typecode(&Result, false);
             func_name += arg_typecode(From, false, rop.isSymbolUniform(From));
-            func_name += rop.ll.is_masking_enabled() ? "_masked" : "_batched";
+            func_name += rop.ll.is_masking_required() ? "_masked" : "_batched";
 
-            rop.ll.call_function (func_name.c_str(), args, rop.ll.is_masking_enabled() ? 4 : 3);
+            rop.ll.call_function (func_name.c_str(), args, rop.ll.is_masking_required() ? 4 : 3);
         }
     }
     if (Result.has_derivs())
@@ -3048,9 +3048,7 @@ LLVMGEN (llvm_gen_loop_op)
         // Store current top of the mask stack (or all 1's) as the current mask value
         // as we enter the loop
         llvm::Value* initial_mask = rop.ll.current_mask();
-        rop.ll.push_masking_enabled(false);
-        rop.llvm_store_value (initial_mask, cond, /*deriv*/ 0, /*component*/ 0);
-        rop.ll.pop_masking_enabled();
+        rop.ll.op_unmasked_store(initial_mask, rop.llvm_get_pointer (cond));
 
     	// If all lanes inside the loop become inactive,
     	// jump to the step as it may have been cause by a continue.
@@ -3078,9 +3076,7 @@ LLVMGEN (llvm_gen_loop_op)
             // scope, although it is still a loop resource perhaps we can delay
             // setting it until now
             if (loopHasContinue) {
-				rop.ll.push_masking_enabled(false);
-				rop.ll.op_store(rop.ll.wide_constant_bool(false), loc_of_continue_mask);
-				rop.ll.pop_masking_enabled();
+				rop.ll.op_unmasked_store(rop.ll.wide_constant_bool(false), loc_of_continue_mask);
             }
 
             rop.build_llvm_code (op.jump(1), op.jump(2), body_block);
@@ -3173,9 +3169,7 @@ LLVMGEN (llvm_gen_loop_op)
             // scope, although it is still a loop resource perhaps we can delay
             // setting it until now
             if (loopHasContinue) {
-				rop.ll.push_masking_enabled(false);
-				rop.ll.op_store(rop.ll.wide_constant_bool(false), loc_of_continue_mask);
-				rop.ll.pop_masking_enabled();
+				rop.ll.op_unmasked_store(rop.ll.wide_constant_bool(false), loc_of_continue_mask);
             }
             rop.build_llvm_code (op.jump(1), op.jump(2), body_block);
 
@@ -3332,8 +3326,8 @@ llvm::Value* llvm_batched_texture_options(BackendLLVMWide &rop, int opnum,
 {
     llvm::Value * bto = rop.temp_batched_texture_options_ptr();
 
-    // The BatchedTextureOptions & missingcolor_buffer are local alloca, so no need to mask off non-active lanes
-    rop.ll.push_masking_enabled(false);
+    // The BatchedTextureOptions & missingcolor_buffer are local alloca,
+    // so no need to mask off non-active lanes
 
     // Explicitly assign a default value or an optional parameter value to every data member
     // of BatchedTextureOptions.
@@ -3594,7 +3588,7 @@ llvm::Value* llvm_batched_texture_options(BackendLLVMWide &rop, int opnum,
             ASSERT(missingcolor_buffer != nullptr);
             llvm::Value *val = rop.llvm_load_value (Val);
             // Depending on how render services handles channels, might need to be 3 period.
-            rop.ll.op_store (val, rop.ll.GEP(missingcolor_buffer, 3/*nchans*/));
+            rop.ll.op_unmasked_store (val, rop.ll.GEP(missingcolor_buffer, 3/*nchans*/));
             continue;
         }
 
@@ -3611,51 +3605,49 @@ llvm::Value* llvm_batched_texture_options(BackendLLVMWide &rop, int opnum,
     }
 
     if (is_firstchannel_uniform)
-        rop.ll.op_store (firstchannel, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::firstchannel)));
+        rop.ll.op_unmasked_store (firstchannel, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::firstchannel)));
     if (is_subimage_uniform)
-        rop.ll.op_store (subimage, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::subimage)));
+        rop.ll.op_unmasked_store (subimage, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::subimage)));
 
     if (is_subimagename_uniform)
-        rop.ll.op_store (subimagename, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::subimagename)));
+        rop.ll.op_unmasked_store (subimagename, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::subimagename)));
 
     if (is_swrap_uniform)
-        rop.ll.op_store (swrap, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::swrap)));
+        rop.ll.op_unmasked_store (swrap, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::swrap)));
     if (is_twrap_uniform)
-        rop.ll.op_store (twrap, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::twrap)));
+        rop.ll.op_unmasked_store (twrap, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::twrap)));
     if (is_rwrap_uniform)
-        rop.ll.op_store (rwrap, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::rwrap)));
+        rop.ll.op_unmasked_store (rwrap, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::rwrap)));
 
     // No way to set mipmode option from OSL
-    rop.ll.op_store (mipmode, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::mipmode)));
+    rop.ll.op_unmasked_store (mipmode, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::mipmode)));
 
     if (is_interpmode_uniform)
-        rop.ll.op_store (interpmode, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::interpmode)));
+        rop.ll.op_unmasked_store (interpmode, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::interpmode)));
 
     // No way to set anisotropic option from OSL
-    rop.ll.op_store (anisotropic, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::anisotropic)));
+    rop.ll.op_unmasked_store (anisotropic, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::anisotropic)));
 
     // No way to set conservative_filter option from OSL
-    rop.ll.op_store (conservative_filter, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::conservative_filter)));
+    rop.ll.op_unmasked_store (conservative_filter, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::conservative_filter)));
 
     if (is_fill_uniform)
-        rop.ll.op_store (fill, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::fill)));
+        rop.ll.op_unmasked_store (fill, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::fill)));
 
     // For uniform and varying we point the missingcolor to nullptr or the missingcolor_buffer,
     // The varying options will copy the lead lane's missing color value into the missingcolor_buffer
-    rop.ll.op_store (missingcolor, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::missingcolor)));
+    rop.ll.op_unmasked_store (missingcolor, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::missingcolor)));
 
     // blur's and width's are always communicated as wide, we we will handle them here
-    rop.ll.op_store (sblur, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::sblur)));
-    rop.ll.op_store (tblur, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::tblur)));
-    rop.ll.op_store (swidth, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::swidth)));
-    rop.ll.op_store (twidth, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::twidth)));
+    rop.ll.op_unmasked_store (sblur, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::sblur)));
+    rop.ll.op_unmasked_store (tblur, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::tblur)));
+    rop.ll.op_unmasked_store (swidth, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::swidth)));
+    rop.ll.op_unmasked_store (twidth, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::twidth)));
 
     if (tex3d) {
-            rop.ll.op_store (rblur, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::rblur)));
-            rop.ll.op_store (rwidth, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::rwidth)));
+            rop.ll.op_unmasked_store (rblur, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::rblur)));
+            rop.ll.op_unmasked_store (rwidth, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::rwidth)));
     }
-
-    rop.ll.pop_masking_enabled();
 
     return rop.ll.void_ptr(bto);
 
@@ -3669,8 +3661,8 @@ llvm::Value* llvm_batched_texture_varying_options(BackendLLVMWide &rop, int opnu
 {
     llvm::Value * bto = rop.temp_batched_texture_options_ptr();
 
-    // The BatchedTextureOptions & missingcolor_buffer are local alloca, so no need to mask off non-active lanes
-    rop.ll.push_masking_enabled(false);
+    // The BatchedTextureOptions & missingcolor_buffer are local alloca,
+    // so no need to mask off non-active lanes
 
     Opcode &op (rop.inst()->ops()[opnum]);
     for (int a = first_optional_arg;  a < op.nargs();  ++a) {
@@ -3727,11 +3719,11 @@ llvm::Value* llvm_batched_texture_varying_options(BackendLLVMWide &rop, int opnu
             llvm::Value *wide_wrap = rop.llvm_load_value (Val);
             llvm::Value *scalar_value = rop.ll.op_extract(wide_wrap, leadLane);
             llvm::Value *wrap_code = rop.ll.call_function("osl_texture_decode_wrapmode", scalar_value);
-            rop.ll.op_store (wrap_code, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::swrap)));
-            rop.ll.op_store (wrap_code, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::twrap)));
+            rop.ll.op_unmasked_store (wrap_code, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::swrap)));
+            rop.ll.op_unmasked_store (wrap_code, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::twrap)));
 
             if (tex3d)
-                rop.ll.op_store (wrap_code, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::rwrap)));
+                rop.ll.op_unmasked_store (wrap_code, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::rwrap)));
 
             remainingMask = rop.ll.op_lanes_that_match_masked(scalar_value, wide_wrap, remainingMask);
             continue;
@@ -3742,7 +3734,7 @@ llvm::Value* llvm_batched_texture_varying_options(BackendLLVMWide &rop, int opnu
             llvm::Value *wide_value = rop.llvm_load_value (Val);                              \
             llvm::Value *scalar_value = rop.ll.op_extract(wide_value, leadLane);              \
             llvm::Value *scalar_code = rop.ll.call_function(#llvm_decoder, scalar_value); \
-            rop.ll.op_store (scalar_code, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::fieldname))); \
+            rop.ll.op_unmasked_store (scalar_code, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::fieldname))); \
             remainingMask = rop.ll.op_lanes_that_match_masked(scalar_value, wide_value, remainingMask); \
             continue;                                                                         \
         }
@@ -3760,7 +3752,7 @@ llvm::Value* llvm_batched_texture_varying_options(BackendLLVMWide &rop, int opnu
             remainingMask = rop.ll.op_lanes_that_match_masked(scalar_value, wide_val, remainingMask);
             if (valtype == TypeDesc::INT)
                 scalar_value = rop.ll.op_int_to_float (scalar_value);
-            rop.ll.op_store (scalar_value, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::fill)));
+            rop.ll.op_unmasked_store (scalar_value, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::fill)));
             continue;
         }
 
@@ -3768,7 +3760,7 @@ llvm::Value* llvm_batched_texture_varying_options(BackendLLVMWide &rop, int opnu
         if (name == Strings::paramname && valtype == paramtype) {      \
             llvm::Value *wide_val = rop.llvm_load_value (Val);         \
             llvm::Value *scalar_value = rop.ll.op_extract(wide_val, leadLane); \
-            rop.ll.op_store (scalar_value, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::fieldname))); \
+            rop.ll.op_unmasked_store (scalar_value, rop.ll.GEP (bto, 0, static_cast<int>(BatchedTextureOptions::LLVMMemberIndex::fieldname))); \
             remainingMask = rop.ll.op_lanes_that_match_masked(scalar_value, wide_val, remainingMask); \
             continue; \
         }
@@ -3787,9 +3779,7 @@ llvm::Value* llvm_batched_texture_varying_options(BackendLLVMWide &rop, int opnu
                 llvm::Value *wide_component = rop.llvm_load_value (Val, 0, i, valtype, false /*op_is_uniform*/);
                 llvm::Value *scalar_component = rop.ll.op_extract(wide_component, leadLane);
                 // The missingcolor_buffer is a local alloca, so no need to mask off non-active lanes
-                rop.ll.push_masking_enabled(false);
-                rop.ll.op_store (scalar_component, rop.ll.GEP(missingcolor_buffer,i));
-                rop.ll.pop_masking_enabled();
+                rop.ll.op_unmasked_store (scalar_component, rop.ll.GEP(missingcolor_buffer,i));
 
                 remainingMask = rop.ll.op_lanes_that_match_masked(scalar_component, wide_component, remainingMask);
             }
@@ -3802,7 +3792,7 @@ llvm::Value* llvm_batched_texture_varying_options(BackendLLVMWide &rop, int opnu
             llvm::Value *wide_missingalpha = rop.llvm_load_value (Val);
             llvm::Value *scalar_missingalpha = rop.ll.op_extract(wide_missingalpha, leadLane);
             // Depending on how render services handles channels, might need to be 3 period.
-            rop.ll.op_store (scalar_missingalpha, rop.ll.GEP(missingcolor_buffer, 3 /*nchans*/));
+            rop.ll.op_unmasked_store (scalar_missingalpha, rop.ll.GEP(missingcolor_buffer, 3 /*nchans*/));
 
             remainingMask = rop.ll.op_lanes_that_match_masked(scalar_missingalpha, wide_missingalpha, remainingMask);
             continue;
@@ -3819,7 +3809,6 @@ llvm::Value* llvm_batched_texture_varying_options(BackendLLVMWide &rop, int opnu
 #undef PARAM_VARYING
 
     }
-    rop.ll.pop_masking_enabled();
 
     return remainingMask;
 }
@@ -3970,9 +3959,7 @@ LLVMGEN (llvm_gen_texture)
 
     // do while(remaining)
     llvm::Value * loc_of_remainingMask = rop.ll.op_alloca (rop.ll.type_wide_bool(), 1, "lanes remaining to texture");
-    rop.ll.push_masking_enabled(false);
-    rop.ll.op_store(rop.ll.current_mask(), loc_of_remainingMask);
-    rop.ll.pop_masking_enabled();
+    rop.ll.op_unmasked_store(rop.ll.current_mask(), loc_of_remainingMask);
 
     llvm::BasicBlock* bin_block = rop.ll.new_basic_block (std::string("bin_texture_options (varying texture options)"));
     llvm::BasicBlock* after_block = rop.ll.new_basic_block (std::string("after_bin_texture_options (varying texture options)"));
@@ -4000,9 +3987,7 @@ LLVMGEN (llvm_gen_texture)
 
         remainingMask = rop.ll.op_xor(remainingMask,lanesMatchingOptions);
         //rop.llvm_print_mask("xor remainingMask,lanesMatchingOptions", remainingMask);
-        rop.ll.push_masking_enabled(false);
-        rop.ll.op_store(remainingMask, loc_of_remainingMask);
-        rop.ll.pop_masking_enabled();
+        rop.ll.op_unmasked_store(remainingMask, loc_of_remainingMask);
 
         llvm::Value * int_remainingMask = rop.ll.mask_as_int(remainingMask);
         //rop.llvm_print_mask("remainingMask", remainingMask);
@@ -4356,7 +4341,7 @@ LLVMGEN (llvm_gen_noise)
     derivs &= Result.has_derivs();  // ignore derivs if result doesn't need
 
     bool pass_name = false, pass_sg = false, pass_options = false;
-    bool pass_mask = false;
+    //bool pass_mask = false;
     if (! name) {
         // name is not a constant
         name = periodic ? Strings::genericpnoise : Strings::genericnoise;
@@ -4462,10 +4447,6 @@ LLVMGEN (llvm_gen_noise)
     if (pass_options)
         args.push_back (opt);
 
-    if (pass_mask)
-    {
-    	rop.ll.push_masking_enabled(true);
-    }
 #ifdef OSL_DEV
     std::cout << "About to push " << funcname << "\n";
     for (size_t i = 0;  i < args.size();  ++i) {
@@ -4480,11 +4461,6 @@ LLVMGEN (llvm_gen_noise)
     // We always pass the result as a parameter, so no return value to store
     /*llvm::Value *r =*/ rop.ll.call_function (funcname.c_str(),
                                              &args[0], (int)args.size());
-
-    if (pass_mask)
-    {
-    	rop.ll.pop_masking_enabled();
-    }
 
 #if 0
     if (outdim == 1 && !derivs) {

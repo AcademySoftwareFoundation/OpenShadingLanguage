@@ -103,8 +103,15 @@ public:
         return i==0 ? Dual2<T> (T(0),T(1),T(0)) : Dual2<T> (T(0),T(0),T(1));
     }
 
-    OSL_INLINE const Dual2<T> & operator= (const T &x) {
+    OSL_INLINE Dual2<T> & operator= (const T &x) {
         set (x, T(0), T(0));
+        return *this;
+    }
+
+    OSL_INLINE Dual2<T> & operator= (const Dual2<T> &other) {
+        m_val = other.val();
+        m_dx = other.dx();
+        m_dy = other.dy();
         return *this;
     }
 

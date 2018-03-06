@@ -364,10 +364,64 @@ public:
     bool has_masked_return_block() const;
     llvm::BasicBlock *masked_return_block() const;
 
-    void push_masking_enabled(bool enable);
-    bool is_masking_enabled() const { return (m_enable_masking_stack.empty() == false) && (m_enable_masking_stack.back() == true); } 
-    void pop_masking_enabled();
-	
+    bool is_masking_required() const { return m_is_masking_required; }
+
+    struct ScopedMasking
+    {
+        ScopedMasking()
+        : m_util(nullptr)
+        {}
+
+        ScopedMasking(const ScopedMasking &other) = delete;
+
+        ScopedMasking(ScopedMasking && other)
+        : m_util(other.m_util)
+        , m_previous_masking_requirement(other.m_previous_masking_requirement)
+        {
+            other.m_util = nullptr;
+        }
+
+        void release()
+        {
+            ASSERT(nullptr != m_util);
+            m_util->set_masking_required(m_previous_masking_requirement);
+            m_util = nullptr;
+        }
+
+        ScopedMasking & operator = (ScopedMasking &&other)
+        {
+            if (nullptr != m_util) {
+                release();
+            }
+            m_util = other.m_util;
+            m_previous_masking_requirement = other.m_previous_masking_requirement;
+            other.m_util = nullptr;
+            return *this;
+        }
+
+        ~ScopedMasking() {
+            if (nullptr != m_util) {
+                release();
+            }
+        }
+
+    private:
+        friend class LLVM_Util;
+        ScopedMasking(LLVM_Util &util, bool enabled)
+        : m_util(&util)
+        , m_previous_masking_requirement(util.is_masking_required())
+        {
+            m_util->set_masking_required(enabled);
+        }
+
+        LLVM_Util *m_util;
+        bool m_previous_masking_requirement;
+    };
+
+    ScopedMasking create_masking_scope(bool enabled) {
+        return ScopedMasking(*this, enabled);
+    }
+
     /// Return the basic block where we go after returning from the current
     /// function.
     llvm::BasicBlock *return_block () const;
@@ -662,8 +716,12 @@ public:
 
     llvm::Value *op_gather(llvm::Value *ptr, llvm::Value *index);
 
-    /// Store to a dereferenced pointer:   *ptr = val
+    /// Store to a dereferenced pointer
+    /// respecting the current mask & masking_enabled flag:   *ptr = val
     void op_store (llvm::Value *val, llvm::Value *ptr);
+
+    /// Store to a dereferenced pointer with no masking:   *ptr = val
+    void op_unmasked_store (llvm::Value *val, llvm::Value *ptr);
 
     void op_scatter(llvm::Value *wide_val, llvm::Value *ptr, llvm::Value *wide_index);
 
@@ -786,7 +844,8 @@ private:
     	int applied_return_mask_count;
     };
     std::vector<MaskInfo> m_mask_stack;  			// stack for masks that all stores should use when enabled
-    std::vector<bool> m_enable_masking_stack;  			// stack for enabling stores to be masked
+    bool m_is_masking_required;
+    void set_masking_required(bool required) { m_is_masking_required = required; }
 
     // For each pushed inlined function call, keep a slot for modified masks
     // to be stored from code blocks that might be branched over

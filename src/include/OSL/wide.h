@@ -1253,8 +1253,8 @@ struct ConstDual2LaneProxy
 	explicit OSL_INLINE
 	ConstDual2LaneProxy(const Wide<DataT, WidthT> *array_of_wide_data, const int lane_index, const int array_index, const int array_length)
 	: m_array_of_wide_data(array_of_wide_data)
-	, m_lane_index(lane_index)
 	, m_array_index(array_index)
+    , m_lane_index(lane_index)
 	, m_array_length(array_length)
 	{}
 
@@ -1265,8 +1265,8 @@ struct ConstDual2LaneProxy
 	OSL_INLINE
 	ConstDual2LaneProxy(const ConstDual2LaneProxy &other)
 	: m_array_of_wide_data(other.m_array_of_wide_data)
-	, m_lane_index(other.m_lane_index)
 	, m_array_index(other.m_array_index)
+    , m_lane_index(other.m_lane_index)
 	, m_array_length(other.m_array_length)
 	{}
 

@@ -2937,7 +2937,7 @@ BackendLLVMWide::llvm_call_function (const char *name,
                                       bool functionIsLlvmInlined,
                                       bool ptrToReturnStructIs1stArg)
 {
-	bool requiresMasking = ptrToReturnStructIs1stArg && ll.is_masking_enabled();
+	bool requiresMasking = ptrToReturnStructIs1stArg && ll.is_masking_required();
 	
     std::vector<llvm::Value *> valargs;
     valargs.resize ((size_t)nargs + (requiresMasking ? 1 : 0));

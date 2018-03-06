@@ -93,6 +93,21 @@ namespace pvt {
 
 namespace fast {
 
+template<class T>
+OSL_INLINE void clamp_in_place (Dual2<T> &x, const Dual2<T> minv, const Dual2<T> maxv)
+{
+   const float xval = x.val();
+   if (xval < minv.val()) x = minv;
+   if (xval > maxv.val()) x = maxv;
+}
+
+
+OSL_INLINE void clamp_in_place(float &x, float minv, float maxv) {
+    const float xval = x;
+    if (xval < minv) x = minv;
+    if (xval > maxv) x = maxv;
+};
+
 int getSplineBasisType(const ustring &basis_name)
 {
     int basis_type = -1;
@@ -196,7 +211,7 @@ struct ProxyElement<0, DivisorT> {
 template <int MT>
 struct ProxyElement<MT, 1> {
 
-	OSL_INLINE float operator * (float value)
+	OSL_INLINE float operator * (float value) const
 	{
 		return static_cast<float>(MT)*value;
 	}
@@ -269,7 +284,7 @@ struct ProxyElement<DivisorT, DivisorT> {
 	template<int OtherDivisorT>
 	OSL_INLINE ProxyElement<0, DivisorT> operator + (ProxyElement<0, OtherDivisorT>) const
 	{
-		return ProxyElement<0, DivisorT>;
+	    return ProxyElement<0, DivisorT>();
 	}
 
 	OSL_INLINE float to_float() const { return 1.0f; }
@@ -302,7 +317,7 @@ struct ProxyElement<1, 1> {
 	OSL_INLINE
 	ProxyElement<0, 1> operator + (ProxyElement<0, OtherDivisorT>) const
 	{
-		return ProxyElement<0, 1>;
+		return ProxyElement<0, 1>();
 	}
 
 	OSL_INLINE float
@@ -337,7 +352,7 @@ struct ProxyElement<-1, 1> {
 	OSL_INLINE
 	ProxyElement<-1, 1> operator + (ProxyElement<0, OtherDivisorT>) const
 	{
-		return ProxyElement<-1>;
+        return ProxyElement<-1, 1>();
 	}
 
 	OSL_INLINE float
@@ -570,32 +585,32 @@ template <int M00, int M01, int M02, int M03,
 		  int M30, int M31, int M32, int M33, int DivisorT>
 struct StaticMatrix44
 {
-	static ProxyElement<M00,DivisorT> m00;
-	static ProxyElement<M01,DivisorT> m01;
-	static ProxyElement<M02,DivisorT> m02;
-	static ProxyElement<M03,DivisorT> m03;
+    ProxyElement<M00,DivisorT> m00;
+    ProxyElement<M01,DivisorT> m01;
+    ProxyElement<M02,DivisorT> m02;
+    ProxyElement<M03,DivisorT> m03;
 
-	static ProxyElement<M10,DivisorT> m10;
-	static ProxyElement<M11,DivisorT> m11;
-	static ProxyElement<M12,DivisorT> m12;
-	static ProxyElement<M13,DivisorT> m13;
+    ProxyElement<M10,DivisorT> m10;
+    ProxyElement<M11,DivisorT> m11;
+    ProxyElement<M12,DivisorT> m12;
+    ProxyElement<M13,DivisorT> m13;
 
-	static ProxyElement<M20,DivisorT> m20;
-	static ProxyElement<M21,DivisorT> m21;
-	static ProxyElement<M22,DivisorT> m22;
-	static ProxyElement<M23,DivisorT> m23;
+    ProxyElement<M20,DivisorT> m20;
+    ProxyElement<M21,DivisorT> m21;
+    ProxyElement<M22,DivisorT> m22;
+    ProxyElement<M23,DivisorT> m23;
 
-	static ProxyElement<M30,DivisorT> m30;
-	static ProxyElement<M31,DivisorT> m31;
-	static ProxyElement<M32,DivisorT> m32;
-	static ProxyElement<M33,DivisorT> m33;
-
+    ProxyElement<M30,DivisorT> m30;
+    ProxyElement<M31,DivisorT> m31;
+    ProxyElement<M32,DivisorT> m32;
+    ProxyElement<M33,DivisorT> m33;
 };
 
 
 
 
 template <class RTYPE, class CTYPE, class KTYPE, bool knot_derivs, bool is_basis_u_constant, int basis_step, class MatrixType, class XTYPE, class KARRAY_T>
+OSL_INLINE
 void spline_weighted_evaluate(
 					 const MatrixType &M,
                      RTYPE &result,
@@ -603,7 +618,12 @@ void spline_weighted_evaluate(
 					 KARRAY_T knots,
                      int knot_count)
 {
+#if __clang__
+    XTYPE x(xval);
+    fast::clamp_in_place(x, XTYPE(0.0), XTYPE(1.0));
+#else
     XTYPE x = Spline::Clamp(xval, XTYPE(0.0), XTYPE(1.0));
+#endif
     int nsegs = ((knot_count - 4) / basis_step) + 1;
     x = x*(float)nsegs;
     float seg_x = removeDerivatives(x);
@@ -613,14 +633,12 @@ void spline_weighted_evaluate(
     if (segnum > (nsegs-1))
        segnum = nsegs-1;
 
-
     if (is_basis_u_constant) {
         // Special case for "constant" basis
         RTYPE P = removeDerivatives (CTYPE(knots[segnum+1]));
         assignment (result, P);
         return;
     }
-
     // x is the position along segment 'segnum'
     x = x - float(segnum);
     int s = segnum*basis_step;
@@ -668,17 +686,13 @@ void spline_weighted_evaluate(
 }
 
 
-
 template <
 	typename KAccessor_T,
 	bool knot_derivs,
 	typename RAccessorT,
 	typename XAccessorT>
-
-
 void spline_evaluate(
 	RAccessorT wR,
-	//XAccessorT wX,
 	ustring spline_basis,
 	XAccessorT wX,
 	void *wknots_,
@@ -696,20 +710,21 @@ void spline_evaluate(
 	OSL_INTEL_PRAGMA(forceinline recursive)
 	switch(basis_type)
 	{
-
 	case 0:  // catmull-rom
 	{
+        fast::StaticMatrix44<-1, 3, -3, 1,
+                            2, -5, 4, -1,
+                            -1, 0, 1, 0,
+                            0, 2, 0, 0,
+                            2 /* divisor */> catmullRomWeights;
+
 		OSL_INTEL_PRAGMA(nofusion)
-		OSL_INTEL_PRAGMA(omp simd simdlen(vec_width))
+        OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(vec_width))
+        OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(vec_width))
 		for(int lane=0; lane < wR.width; ++lane) {
 		    X_Type x = wX[lane];
 			auto knots = wK[lane];
 
-			fast::StaticMatrix44<-1, 3, -3, 1,
-								2, -5, 4, -1,
-								-1, 0, 1, 0,
-								0, 2, 0, 0,
-								2 /* divisor */> catmullRomWeights;
 
 			R_Type result;
 			spline_weighted_evaluate<R_Type, CTYPE, KTYPE,
@@ -727,25 +742,24 @@ void spline_evaluate(
 
 	case 1:  // bezier
 	{
+        fast::StaticMatrix44<-1, 3, -3, 1,
+                                    3, -6, 3, 0,
+                                    -3, 3, 0, 0,
+                                    1, 0, 0, 0, 1 /*divisor*/> bezierWeights;
 
 		OSL_INTEL_PRAGMA(nofusion)
-		OSL_INTEL_PRAGMA(omp simd simdlen(vec_width))
+        OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(vec_width))
+        OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(vec_width))
 		for(int lane=0; lane < wR.width; ++lane) {
             X_Type x = wX[lane];
 			auto knots = wK[lane];
 
-
-			fast::StaticMatrix44<-1, 3, -3, 1,
-										3, -6, 3, 0,
-										-3, 3, 0, 0,
-										1, 0, 0, 0, 1 /*divisor*/> bezierWeights;
 			R_Type result;
 			spline_weighted_evaluate<R_Type, CTYPE, KTYPE,
 								  false /* knot_derivs */,
 								  false /*is_basis_u_constant */,
 								  3 /* basis_step */>
 			   (bezierWeights, result, x, knots, knot_count);
-
 
 			wR[lane] = result;
 		}
@@ -755,17 +769,18 @@ void spline_evaluate(
 
 	case 2:  // bspline
 	{
+        fast::StaticMatrix44<-1, 3, -3, 1,
+                                    3, -6, 3, 0,
+                                    -3, 0, 3, 0,
+                                    1, 4, 1, 0, 6 /*bspline*/> bsplineWeights;
+
 		OSL_INTEL_PRAGMA(nofusion)
-		OSL_INTEL_PRAGMA(omp simd simdlen(vec_width))
+        OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(vec_width))
+        OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(vec_width))
 		for(int lane=0; lane < wR.width; ++lane) {
             X_Type x = wX[lane];
 			auto knots = wK[lane];
 
-
-			fast::StaticMatrix44<-1, 3, -3, 1,
-										3, -6, 3, 0,
-										-3, 0, 3, 0,
-										1, 4, 1, 0, 6 /*bspline*/> bsplineWeights;
 			R_Type result;
 			spline_weighted_evaluate<R_Type, CTYPE, KTYPE,
 								  false /* knot_derivs */,
@@ -777,20 +792,19 @@ void spline_evaluate(
 		}
 		break;
 	}
-
 	case 3:  // hermite
 	{
+        fast::StaticMatrix44<2, 1, -2, 1,
+                                    -3, -2, 3, -1,
+                                     0, 1, 0, 0,
+                                     1, 0, 0, 0, 1 /*Divisor*/> hermiteWeights;
+//
 		OSL_INTEL_PRAGMA(nofusion)
-		OSL_INTEL_PRAGMA(omp simd simdlen(vec_width))
+        OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(vec_width))
+        OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(vec_width))
 		for(int lane=0; lane < wR.width; ++lane) {
             X_Type x = wX[lane];
 			auto knots = wK[lane];
-
-
-			fast::StaticMatrix44<2, 1, -2, 1,
-										-3, -2, 3, -1,
-										 0, 1, 0, 0,
-										 1, 0, 0, 0, 1 /*Divisor*/> hermiteWeights;
 
 			R_Type result;
 			spline_weighted_evaluate<R_Type, CTYPE, KTYPE,
@@ -803,21 +817,19 @@ void spline_evaluate(
 		}
 		break;
 	}
-
 	case 4:  // linear
 	{
+        fast::StaticMatrix44< 0, 0, 0, 0,
+                                    0, 0, 0, 0,
+                                    0, -1, 1, 0,
+                                    0, 1, 0, 0, 1 /*Divisor*/> linearWeights;
+
 		OSL_INTEL_PRAGMA(nofusion)
-		OSL_INTEL_PRAGMA(omp simd simdlen(vec_width))
+        OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(vec_width))
+        OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(vec_width))
 		for(int lane=0; lane < wR.width; ++lane) {
             X_Type x = wX[lane];
 			auto knots = wK[lane];
-
-
-
-			fast::StaticMatrix44< 0, 0, 0, 0,
-										0, 0, 0, 0,
-										0, -1, 1, 0,
-										0, 1, 0, 0, 1 /*Divisor*/> linearWeights;
 
 			R_Type result;
 
@@ -835,19 +847,19 @@ void spline_evaluate(
 
 	case 5:  // constant
 	{
+        // NOTE:  when basis is constant the weights are ignored,
+        // just pass in 0's for the compiler to ignore
+        fast::StaticMatrix44< 0, 0, 0, 0,
+                                0, 0, 0, 0,
+                                0, 0, 0, 0,
+                                0, 0, 0, 0, 1 /*Divisor*/> constantWeights;
+
 		OSL_INTEL_PRAGMA(nofusion)
-		OSL_INTEL_PRAGMA(omp simd simdlen(vec_width))
+        OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(vec_width))
+        OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(vec_width))
 		for(int lane=0; lane < wR.width; ++lane) {
             X_Type x = wX[lane];
 			auto knots = wK[lane];
-
-			// NOTE:  when basis is constant the weights are ignored,
-			// just pass in 0's for the compiler to ignore
-			fast::StaticMatrix44< 0, 0, 0, 0,
-									0, 0, 0, 0,
-									0, 0, 0, 0,
-									0, 0, 0, 0, 1 /*Divisor*/> constantWeights;
-
 
 			R_Type result;
 			spline_weighted_evaluate<R_Type, CTYPE, KTYPE,
@@ -860,7 +872,6 @@ void spline_evaluate(
 		}
 		break;
 	}
-
 	default:
 		ASSERT(0 && "unsupported spline basis");
 		break;
@@ -983,7 +994,6 @@ void spline_evaluate_scalar(
 
 } // namespace fast
 
-
 OSL_SHADEOP void  osl_spline_w16fw16ff_masked(void *wout_, const char *spline_, void *wx_,
                                  float *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
@@ -1066,13 +1076,10 @@ OSL_SHADEOP void osl_spline_w16fff_masked(
 OSL_SHADEOP void  osl_spline_dfdfdf(void *out, const char *spline_, void *x,
                                     float *knots, int knot_count, int knot_arraylen)
 {
-    Spline::extractValueFromArray<Dual2<float>, float, true> myExtract;
-
    const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
        Spline::spline_evaluate<Dual2<float>, Dual2<float>, Dual2<float>, float, true>
      (spline, DFLOAT(out), DFLOAT(x), knots, knot_count, knot_arraylen);
 }
-
 
 
 
@@ -1183,7 +1190,6 @@ OSL_SHADEOP void  osl_spline_w16dfw16dff_masked(void *wout_, const char *spline_
 OSL_SHADEOP void  osl_spline_w16fw16fw16f_masked(void *wout_, const char *spline_, void *wx_,
 										  void *wknots_, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
-	Wide<float> result;
 	fast::template spline_evaluate<
 	        ConstWideUnboundArrayAccessor<float>, false>(
 	        MaskedAccessor<float>(wout_, Mask(mask_value)),
@@ -1469,7 +1475,6 @@ OSL_SHADEOP void  osl_spline_w16fw16ff(void *wout_, const char *spline_, void *w
 	WideAccessor<float> wR(wout_);
 
 	// calling a function below, don't bother vectorizing
-	//OSL_INTEL_PRAGMA("omp simd simdlen(wR.width)")
 	//OSL_INTEL_PRAGMA("novector")
 	for(int lane=0; lane < wR.width; ++lane) {
 	    float x = wX[lane];
@@ -1602,7 +1607,6 @@ OSL_SHADEOP void osl_splineinverse_dffdf(void *out, const char *spline_, void *x
     osl_splineinverse_fff (&outtmp, spline_, x, knots, knot_count, knot_arraylen);
     DFLOAT(out) = outtmp;
 }
-
 
 } // namespace pvt
 OSL_NAMESPACE_EXIT

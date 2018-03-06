@@ -506,12 +506,13 @@ BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym, llvm::Value * llv
 
     // Handle interpolated params by calling osl_bind_interpolated_param,
     // which will check if userdata is already retrieved, if not it will
-    // call RendererServices::get_userdata to retrived it. In either case,
+    // call RendererServices::get_userdata to retrieve it. In either case,
     // it will return 1 if it put the userdata in the right spot (either
     // retrieved de novo or copied from a previous retrieval), or 0 if no
     // such userdata was available.
     llvm::BasicBlock *after_userdata_block = NULL;
     bool partial_userdata_mask_was_pushed = false;
+    LLVM_Util::ScopedMasking partial_data_masking_scope;
     if (! sym.lockgeom() && ! sym.typespec().is_closure() && ! (sym.symtype() == SymTypeOutputParam)) {
         int userdata_index = -1;
         ustring symname = sym.name();
@@ -570,7 +571,7 @@ BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym, llvm::Value * llv
         // that successfully got user data from the initops or default value
         // assignment
 		ll.push_mask(got_userdata_mask, /* negate */ true /*, absolute = false (not sure how it wouldn't be an absolute mask) */);
-		ll.push_masking_enabled(true);		
+		partial_data_masking_scope = ll.create_masking_scope(/*enabled=*/true);
         partial_userdata_mask_was_pushed = true;        
     }
 
@@ -612,13 +613,12 @@ BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym, llvm::Value * llv
                     llvm_store_value (init_val, sym, 0, arrind, i);                	
                 } else {
 					llvm::Value * wide_init_val = ll.wide_constant(init_val);
+				    LLVM_Util::ScopedMasking render_output_masking_scope;
+
 					if (sym.renderer_output()) {
-						ll.push_masking_enabled(true);
+					    render_output_masking_scope = ll.create_masking_scope(/*enabled=*/true);
 					}
 					llvm_store_value (wide_init_val, sym, 0, arrind, i);
-					if (sym.renderer_output()) {
-						ll.pop_masking_enabled();
-					}
                 }
             }
         }
@@ -627,7 +627,7 @@ BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym, llvm::Value * llv
     }
 
     if (partial_userdata_mask_was_pushed) {
-		ll.pop_masking_enabled();		
+        partial_data_masking_scope.release();
     	ll.pop_mask();
     }
     
@@ -784,11 +784,12 @@ BackendLLVMWide::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
             if (ll.debug_is_enabled()) {
                 ll.debug_set_location(op.sourcefile(), op.sourceline());
             }
-            ll.push_masking_enabled(requiresMasking(opnum));
-            bool ok = (*opd->llvmgenwide) (*this, opnum);
-            ll.pop_masking_enabled();
-            if (! ok)
-                return false;
+            {
+                auto op_masking_scope = ll.create_masking_scope(/*enabled=*/requiresMasking(opnum));
+                bool ok = (*opd->llvmgenwide) (*this, opnum);
+                if (! ok)
+                    return false;
+            }
             if (shadingsys().debug_nan() /* debug NaN/Inf */
                 && op.farthest_jump() < 0 /* Jumping ops don't need it */) {
                 llvm_generate_debugnan (op);

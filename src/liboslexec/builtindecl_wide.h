@@ -329,6 +329,7 @@ DECL (osl_spline_w16dvw16fw16dv_masked, "xXXXXiii")
 DECL (osl_spline_w16dvw16fdv_masked, "xXXXXiii")
 
 //---------------------------------------------------------------
+#if 0 // incomplete (under development)
 DECL (osl_splineinverse_w16fw16fw16f_masked, "xXXXXiii")
 DECL (osl_splineinverse_w16fw16ff_masked, "xXXXXiii")
 DECL (osl_splineinverse_w16ffw16f_masked, "xXXXXiii")
@@ -345,7 +346,7 @@ DECL (osl_splineinverse_w16dfw16dff_masked, "xXXXXiii")
 //dffdf is treated as fff
 DECL (osl_splineinverse_w16dffw16df_masked, "xXXXXiii") // incomplete
 //DECL (osl_splineinverse_w16dfw16fw16df_masked, "xXXXXiii")
-
+#endif
 #if 0 // incomplete
 // setmessage/getmessage involve closures, leave to next iteration
 //DECL (osl_setmessage, "xXsLXisi")

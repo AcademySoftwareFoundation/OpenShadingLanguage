@@ -1,0 +1,15 @@
+shader
+test_aastep_masked (output color Cout = 0)
+{
+    float x = u - 0.5 - v/4;
+    float y = v - 0.5 - u/4;
+    float r = 0.0;
+    float g = 0.5;
+    float b = 1.0;
+    if (int(P[1]*64)%2 == 0) {
+        r = aastep (0, x);
+        g = aastep(0,y,filterwidth(y));
+        b = aastep(0,x+y,filterwidth(0),filterwidth(x+y));
+    }
+    Cout = color(r,g,b);
+}

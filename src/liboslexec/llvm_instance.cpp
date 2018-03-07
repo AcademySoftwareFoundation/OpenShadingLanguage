@@ -518,10 +518,8 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         // If the call to osl_bind_interpolated_param returns 0, the default
         // value needs to be loaded from a corresponding OptiX variable, which
         // we are creating here.
-        ustring var_name (sym.name().string()          + "_" +
-                          inst()->layername().string() + "_" +
-                          group().name().string()      + "_" +
-                          std::to_string (group().id()));
+        ustring var_name = ustring::format ("%s_%s_%s_%d", sym.name(),
+                                   inst()->layername(), group().name(), group().id());
 
         llvm::Value* ud_var = createOptixVariable (var_name.string(),
                                                    sym.typespec().simpletype().c_str(),

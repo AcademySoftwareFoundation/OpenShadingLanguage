@@ -69,10 +69,6 @@ public:
     /// What LLVM debug level are we at?
     int llvm_debug() const;
 
-    /// Should we set up the native target, or a generic target
-    /// (i.e., don't target x86)?
-    bool llvm_use_native_target() const;
-
     /// Set up a bunch of static things we'll need for the whole group.
     ///
     void initialize_llvm_group ();

@@ -72,7 +72,7 @@ namespace pvt {   // OSL::pvt
 /// tied to OSL internals at all.
 class OSLEXECPUBLIC LLVM_Util {
 public:
-    LLVM_Util (int debuglevel=0, bool use_generic_target=false);
+    LLVM_Util (int debuglevel=0);
     ~LLVM_Util ();
 
     struct PerThreadInfo;
@@ -504,7 +504,6 @@ private:
     IRBuilder& builder();
 
     int m_debug;
-    bool m_use_native_target;
     PerThreadInfo *m_thread;
     llvm::LLVMContext *m_llvm_context;
     llvm::Module *m_llvm_module;

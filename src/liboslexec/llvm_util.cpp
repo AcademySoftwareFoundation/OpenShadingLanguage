@@ -247,8 +247,8 @@ public:
 
 
 
-LLVM_Util::LLVM_Util (int debuglevel, bool use_native_target)
-    : m_debug(debuglevel), m_use_native_target(use_native_target), m_thread(NULL),
+LLVM_Util::LLVM_Util (int debuglevel)
+    : m_debug(debuglevel), m_thread(NULL),
       m_llvm_context(NULL), m_llvm_module(NULL),
       m_builder(NULL), m_llvm_jitmm(NULL),
       m_current_function(NULL),
@@ -329,20 +329,12 @@ LLVM_Util::SetupLLVM ()
         return;
     // Some global LLVM initialization for the first thread that
     // gets here.
-    if (m_use_native_target) {
-        LLVMInitializeNativeTarget();
-        LLVMInitializeNativeDisassembler();
-        LLVMInitializeNativeAsmPrinter();
-        LLVMInitializeNativeAsmParser();
-        LLVMLinkInMCJIT();
-    } else {
-        llvm::InitializeAllTargets();
-        llvm::InitializeAllTargetMCs();
-        llvm::InitializeAllDisassemblers();
-        llvm::InitializeAllAsmPrinters();
-        llvm::InitializeAllAsmParsers();
-        LLVMLinkInMCJIT();
-    }
+    llvm::InitializeAllTargets();
+    llvm::InitializeAllTargetMCs();
+    llvm::InitializeAllDisassemblers();
+    llvm::InitializeAllAsmPrinters();
+    llvm::InitializeAllAsmParsers();
+    LLVMLinkInMCJIT();
 
     if (debug()) {
         for (auto t : llvm::TargetRegistry::targets())

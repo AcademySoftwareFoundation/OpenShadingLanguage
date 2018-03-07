@@ -226,7 +226,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     DECL (osl_closure_to_string, "sXC")
 #endif
 
-// DECL (osl_format, "ss*") // not called by anyone?
+DECL (osl_format_batched, "xXis*")
 DECL (osl_printf_batched, "xXis*")
 DECL (osl_error_batched, "xXis*")
 DECL (osl_warning_batched, "xXis*")
@@ -302,32 +302,49 @@ DECL (osl_spline_w16fw16fw16f_masked, "xXXXXiii")
 DECL (osl_spline_w16fff_masked, "xXXXXiii")
 DECL (osl_spline_w16fw16ff_masked, "xXXXXiii")
 DECL (osl_spline_w16ffw16f_masked, "xXXXXiii")
+
 DECL (osl_spline_w16dfw16dfw16df_masked, "xXXXXiii")
-// DECL (osl_spline_w16dfw16dfdf_masked, "xXXXXiii") // incomplete
-//DECL (osl_spline_w16dfdfw16df_masked, "xXXXXiii") // incomplete
+DECL (osl_spline_w16dfw16dfdf_masked, "xXXXXiii")
+DECL (osl_spline_w16dfdfw16df_masked, "xXXXXiii")
+
 DECL (osl_spline_w16dfw16dff_masked, "xXXXXiii")
-DECL (osl_spline_w16dffw16df_masked, "xXXXXiii")
+
 DECL (osl_spline_w16vw16fv_masked,"xXXXXiii")
 DECL (osl_spline_w16vw16fw16v_masked, "xXXXXiii")
 DECL (osl_spline_w16vfw16v_masked, "xXXXXiii")
+
 DECL (osl_spline_w16dvw16dfw16dv_masked, "xXXXXiii")
 DECL (osl_spline_w16dvw16dfdv_masked, "xXXXXiii")
-//DECL (osl_spline_w16dvdfw16dv_masked, "xXXXXiii") // incomplete
+DECL (osl_spline_w16dvdfw16dv_masked, "xXXXXiii")
+
 DECL (osl_spline_w16dvw16dfv_masked, "xXXXXiii")
-//DECL (osl_spline_w16dvw16dfw16v_masked, "xXXXXiii") // Are these possible?
-//DECL (osl_spline_w16dvdfw16v_masked, "xXXXXii")// Are these possible?
+DECL (osl_spline_w16dvw16dfw16v_masked, "xXXXXiii")
+DECL (osl_spline_w16dvdfw16v_masked, "xXXXXiii")
+
+DECL (osl_spline_w16dffw16df_masked, "xXXXXiii")
+DECL (osl_spline_w16dfw16fw16df_masked, "xXXXXiii")
+
 DECL (osl_spline_w16dvfw16dv_masked, "xXXXXiii")
 DECL (osl_spline_w16dvw16fw16dv_masked, "xXXXXiii")
 DECL (osl_spline_w16dvw16fdv_masked, "xXXXXiii")
 
+//---------------------------------------------------------------
 DECL (osl_splineinverse_w16fw16fw16f_masked, "xXXXXiii")
 DECL (osl_splineinverse_w16fw16ff_masked, "xXXXXiii")
-DECL (osl_splineinverse_w16ffw16f_masked, "xXXXXiii") // incomplete
-//DECL (osl_splineinverse_w16fff_masked, "xXXXXii")
+DECL (osl_splineinverse_w16ffw16f_masked, "xXXXXiii")
+DECL (osl_splineinverse_w16fff_masked, "xXXXXiii")
 
+//dfdfdf is treated as dfdff
 DECL (osl_splineinverse_w16dfw16dfw16df_masked, "xXXXXiii")
+DECL (osl_splineinverse_w16dfw16dfdf_masked, "xXXXXiii")
+DECL (osl_splineinverse_w16dfdfw16df_masked, "xXXXXiii") //SM: March 5th TODO
+
 DECL (osl_splineinverse_w16dfw16dff_masked, "xXXXXiii")
-//DECL (osl_splineinverse_w16dffw16df_masked, "xXXXXiii") // incomplete
+
+
+//dffdf is treated as fff
+DECL (osl_splineinverse_w16dffw16df_masked, "xXXXXiii") // incomplete
+//DECL (osl_splineinverse_w16dfw16fw16df_masked, "xXXXXiii")
 
 #if 0 // incomplete
 // setmessage/getmessage involve closures, leave to next iteration
@@ -609,6 +626,7 @@ DECL (osl_getchar_isi, "isi");
 DECL (osl_startswith_iss, "iss")
 DECL (osl_endswith_iss, "iss")
 #endif
+DECL (osl_concat_w16sw16sw16s_masked, "xXXXi")
 DECL (osl_stoi_w16iw16s_masked, "xXXi")
 #if 0 // incomplete
 DECL (osl_stof_fs, "fs")

@@ -1,0 +1,26 @@
+
+shader str_concat ()
+{
+  //  printf ("test string operations:\n\n");
+ 
+
+#if 0
+    string us = format ("raytype(\"camera\")=%d", raytype("camera"));
+    printf ("formatted uniform string: '%s'\n", us);
+
+    // Test format
+    printf ("\n");
+    string s = format ("P = %g", P);
+    printf ("formtted string: '%s'\n", s);
+#endif 
+
+    // Test concat
+    printf ("\n");
+    string a = "foo", b = format ("P = %g", P),  c = " bar";
+    string catstr = concat(a,b,c); //Gets into: osl_concat_w16sw16sw16s
+   // printf ("concat(\"%s\", \"%s\", \"%s\") = \"%s\"\n", a, b, c, concat(a,b,c));
+    printf("concatenated string: '%s'\n", catstr);
+
+
+    
+}

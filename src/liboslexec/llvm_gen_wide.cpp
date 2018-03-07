@@ -422,6 +422,21 @@ LLVMGEN (llvm_gen_printf)
         }
     }
 
+    // For some ops, we push the output symbol & mask
+    if ((op.opname() == op_format) && (false == op_is_uniform)) {
+        llvm::Value * mask = rop.ll.current_mask();
+        Symbol outSymbol = *rop.opargsym (op, 0);
+
+        llvm::Value * outPtr = rop.llvm_void_ptr(outSymbol);
+        // Need to populate all lane's call arguments with same value
+        for(int lane_index=0; lane_index < SimdLaneCount; ++lane_index) {
+            call_args[lane_index].push_back (outPtr);
+            Mask laneMask(false);
+            laneMask.set_on(lane_index);
+            call_args[lane_index].push_back (rop.ll.constant(static_cast<int>(laneMask.value())));
+        }
+    }
+
     // We're going to need to adjust the format string as we go, but I'd
     // like to reserve a spot for the char*.
     size_t new_format_slot = call_args[0].size();
@@ -553,7 +568,10 @@ LLVMGEN (llvm_gen_printf)
     }
 
     // Construct the function name and call it.
-    std::string opname = std::string("osl_") + op.opname().string() + std::string("_batched");
+    std::string opname = std::string("osl_") + op.opname().string();
+    if ((op.opname() != op_format) || (false == op_is_uniform)) {
+        opname += std::string("_batched");
+    }
     if (op_is_uniform) {
         llvm::Value *ret = rop.ll.call_function (opname.c_str(), &call_args[0][0],
                                                    (int)call_args[0].size());
@@ -597,9 +615,6 @@ LLVMGEN (llvm_gen_printf)
             if (after_block) {
                 rop.ll.op_branch (after_block);  // insert point is now after_block
             }
-
-            // The format op returns a string value, put in in the right spot
-            ASSERT(op.opname() != op_format && "INCOMPLETE");
         }
     }
 

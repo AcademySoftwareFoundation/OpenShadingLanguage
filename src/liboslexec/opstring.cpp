@@ -56,6 +56,28 @@ osl_concat_sss (const char *s, const char *t)
     return ustring::format("%s%s", s, t).c_str();
 }
 
+//SM: March 3rd
+OSL_SHADEOP void
+osl_concat_w16sw16sw16s_masked (void *wr_, void *ws_, void *wt_, unsigned int mask_value)
+{
+    ConstWideAccessor<ustring> wS (ws_);
+    ConstWideAccessor<ustring> wT (wt_);
+    MaskedAccessor<ustring> wR(wr_, Mask(mask_value));
+
+    for (int lane = 0; lane <wR.width; ++lane) {
+        // Must check mask before dereferencing s or t
+        // as they are undefined when masked off
+        if (wR.mask().is_on(lane)) {
+            ustring s = wS[lane];
+            ustring t = wT[lane];
+
+            wR[lane] = ustring::format("%s%s", s.c_str(), t.c_str());
+        }
+    }
+}
+
+
+
 OSL_SHADEOP int
 osl_strlen_is (const char *s)
 {
@@ -190,6 +212,22 @@ osl_format (const char* format_str, ...)
     std::string s = Strutil::vformat (format_str, args);
     va_end (args);
     return ustring(s).c_str();
+}
+
+OSL_SHADEOP void
+osl_format_batched (void * wide_output, unsigned int mask_value, const char* format_str, ...)
+{
+    va_list args;
+    va_start (args, format_str);
+    std::string s = Strutil::vformat (format_str, args);
+    va_end (args);
+    ustring result = ustring(s);
+    MaskedAccessor<ustring> wOut(wide_output, Mask(mask_value));
+
+    OSL_OMP_PRAGMA(omp simd simdlen(wOut.width))
+    for(int lane = 0; lane<wOut.width; ++lane){
+        wOut[lane] = result;
+    }
 }
 
 

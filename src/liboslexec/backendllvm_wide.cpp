@@ -53,6 +53,7 @@ namespace Strings {
 static ustring op_backfacing("backfacing");
 static ustring op_break("break");
 static ustring op_calculatenormal("calculatenormal");
+static ustring op_concat("concat");
 static ustring op_continue("continue");
 static ustring op_functioncall("functioncall");
 static ustring op_functioncall_nr("functioncall_nr");
@@ -1336,7 +1337,8 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					}
 			    }
 			}
-            if (opcode.opname() == Strings::op_stoi) {
+            if ((opcode.opname() == Strings::op_stoi) ||
+                (opcode.opname() == Strings::op_concat) ){
                 // TODO: should OpDescriptor handle identifying operations that always require masking?
                 m_requires_masking_by_layer_and_op_index[layer()][opIndex] = true;
             }

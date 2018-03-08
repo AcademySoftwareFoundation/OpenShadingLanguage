@@ -424,7 +424,6 @@ LLVMGEN (llvm_gen_printf)
 
     // For some ops, we push the output symbol & mask
     if ((op.opname() == op_format) && (false == op_is_uniform)) {
-        llvm::Value * mask = rop.ll.current_mask();
         Symbol outSymbol = *rop.opargsym (op, 0);
 
         llvm::Value * outPtr = rop.llvm_void_ptr(outSymbol);

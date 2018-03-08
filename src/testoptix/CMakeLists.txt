@@ -52,9 +52,9 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
           -D__CUDACC__ -D__CUDA_ARCH__=350
           -O3 -Wno-format-security --cuda-gpu-arch=sm_35 --cuda-device-only -emit-llvm
           ${llvm_src} -c -o ${llvm_bc}
-      COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash" ${llvm_bc} ${llvm_bc_cpp}
+      COMMAND "${CMAKE_SOURCE_DIR}/src/liboslexec/serialize-bc.bash" ${llvm_bc} ${llvm_bc_cpp} "rend_llvm_compiled_ops"
       MAIN_DEPENDENCY ${llvm_src}
-      DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash"
+      DEPENDS "${CMAKE_SOURCE_DIR}/src/liboslexec/serialize-bc.bash"
               ${llvm_src}
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cuda" )
 ENDMACRO ()

@@ -103,11 +103,6 @@ BackendLLVM::BackendLLVM (ShadingSystemImpl &shadingsys,
 
 BackendLLVM::~BackendLLVM ()
 {
-    std::map<std::string,llvm::GlobalVariable*>::iterator it;
-    for (it = m_const_map.begin(); it != m_const_map.begin(); ++it) {
-        delete it->second;
-    }
-    m_const_map.clear();
 }
 
 
@@ -384,11 +379,11 @@ BackendLLVM::createOptixVariable(const std::string& name, const std::string& typ
                                  int size, void* data)
 {
     // Return the Value if it has already been allocated
-    std::map<std::string,llvm::GlobalVariable*>::iterator it =
+    std::map<std::string, llvm::GlobalVariable*>::iterator it =
         get_const_map().find (name);
 
     if (it != get_const_map().end()) {
-        return reinterpret_cast<llvm::Value*>(it->second);
+        return it->second;
     }
 
     int alignment =
@@ -468,11 +463,11 @@ BackendLLVM::getOrAllocateLLVMGlobal (const Symbol& sym)
     const std::string name = ss.str();
 
     // Return the Value if it has already been allocated
-    std::map<std::string,llvm::GlobalVariable*>::iterator it =
+    std::map<std::string, llvm::GlobalVariable*>::iterator it =
         get_const_map().find (name);
 
     if (it != get_const_map().end()) {
-        return reinterpret_cast<llvm::Value*>(it->second);
+        return it->second;
     }
 
     int alignment =

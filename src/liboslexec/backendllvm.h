@@ -423,8 +423,11 @@ public:
             shadingsys().m_stat_tex_calls_as_handles += 1;
     }
 
-    /// Return the mapping from symbol names to GlobalVariables
+    /// Return the mapping from symbol names to GlobalVariables.
     std::map<std::string,llvm::GlobalVariable*>& get_const_map() { return m_const_map; }
+
+    /// Return whether or not we are compiling for an OptiX-based renderer.
+    bool use_optix() { return m_use_optix; }
 
     LLVM_Util ll;
 
@@ -454,6 +457,8 @@ private:
 
     // A mapping from symbol names to llvm::GlobalVariables
     std::map<std::string,llvm::GlobalVariable*> m_const_map;
+
+    bool m_use_optix;                   ///< Compile for OptiX?
 
     friend class ShadingSystemImpl;
 };

@@ -97,6 +97,7 @@ BackendLLVM::BackendLLVM (ShadingSystemImpl &shadingsys,
     // getcwd inside LLVM. Oy.
     check_cwd (shadingsys);
 #endif
+    m_use_optix = shadingsys.renderer()->supports ("OptiX");
 }
 
 
@@ -499,7 +500,7 @@ BackendLLVM::llvm_get_pointer (const Symbol& sym, int deriv,
 
     llvm::Value *result = NULL;
     if (sym.symtype() == SymTypeConst) {
-        if (shadingsys().renderer()->supports ("OptiX")) {
+        if (use_optix()) {
             // Check the constant map for the named Symbol; if it's found, then
             // a GlobalVariable has been created for it
             llvm::Value* ptr = getOrAllocateLLVMGlobal (sym);
@@ -660,7 +661,7 @@ BackendLLVM::llvm_load_constant_value (const Symbol& sym,
         int ncomps = (int) sym.typespec().aggregate();
         return ll.constant (val[ncomps*arrayindex + component]);
     }
-    if (sym.typespec().is_string() && shadingsys().renderer()->supports ("OptiX")) {
+    if (sym.typespec().is_string() && use_optix()) {
         // TODO: This ignores arrayindex
         llvm::Value* ptr = getOrAllocateLLVMGlobal (sym);
         return ll.ptr_cast (ll.GEP (ptr, 0), ll.type_string());

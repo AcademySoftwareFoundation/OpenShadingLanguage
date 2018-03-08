@@ -361,8 +361,7 @@ LLVMGEN (llvm_gen_printf)
                     // In the OptiX case, we need to use the device-side string constant,
                     // as added to the LLVM Module.
                     llvm::Value* loaded = (simpletype.basetype == TypeDesc::STRING &&
-                                           sym.is_constant() &&
-                                           rop.renderer()->supports ("OptiX"))
+                                           sym.is_constant() && rop.use_optix())
                         ? rop.getOrAllocateLLVMGlobal (sym)
                         : rop.llvm_load_value (sym, 0, arrind, c);
 
@@ -371,7 +370,7 @@ LLVMGEN (llvm_gen_printf)
                         loaded = rop.ll.op_float_to_double(loaded);
                     }
 
-                    if (simpletype.basetype == TypeDesc::INT && rop.renderer()->supports ("OptiX")) {
+                    if (simpletype.basetype == TypeDesc::INT && rop.use_optix()) {
                         // The printf supported by OptiX expects 8-byte arguments,
                         // so promote int to long long
                         loaded = rop.ll.op_int_to_longlong(loaded);
@@ -396,7 +395,7 @@ LLVMGEN (llvm_gen_printf)
     }
 
     // Now go back and put the new format string in its place
-    call_args[new_format_slot] = (! rop.renderer()->supports ("OptiX"))
+    call_args[new_format_slot] = (! rop.use_optix())
         ? rop.ll.constant (s.c_str())
         // In the OptiX case, we need to use the pointer to the constant format
         // string added to the LLVM Module
@@ -1752,7 +1751,7 @@ LLVMGEN (llvm_gen_compare_op)
     llvm::Value* final_result = 0;
     ustring opname = op.opname();
 
-    if (rop.renderer()->supports ("OptiX") && A.typespec().is_string()) {
+    if (rop.use_optix() && A.typespec().is_string()) {
         // Compare two strings for equality by comparing the pointers to
         // their global constants.
 

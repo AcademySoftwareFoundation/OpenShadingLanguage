@@ -277,7 +277,7 @@ BackendLLVM::llvm_type_groupdata ()
             //     making room for them in the GroupData struct can result in a
             //     large per-thread memory allocation, which could negatively
             //     impact performance.
-            int n = (! shadingsys().renderer()->supports("OptiX"))
+            int n = (! use_optix())
                 ? type.numelements() * 3  // make room for derivs by default
                 : type.numelements();
             type.arraylen = n;
@@ -458,7 +458,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
 
         llvm::Value* name_arg = NULL;
 
-        if (shadingsys().renderer()->supports("OptiX")) {
+        if (use_optix()) {
             // In the OptiX case, we need get a pointer to the sting constant
             // for the symbol name
             Symbol symname_const (ustring::format ("$symname_%s", symname),
@@ -507,14 +507,14 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         // Handle init ops.
         build_llvm_code (sym.initbegin(), sym.initend());
     } else if (! sym.lockgeom() && ! sym.typespec().is_closure() &&
-               ! shadingsys().renderer()->supports("OptiX")) {
+               ! use_optix()) {
         // geometrically-varying param; memcpy its default value
         TypeDesc t = sym.typespec().simpletype();
         ll.op_memcpy (llvm_void_ptr (sym), ll.constant_ptr (sym.data()),
                       t.size(), t.basesize() /*align*/);
         if (sym.has_derivs())
             llvm_zero_derivs (sym);
-    } else if (shadingsys().renderer()->supports("OptiX") && ! sym.typespec().is_string()) {
+    } else if (use_optix() && ! sym.typespec().is_string()) {
         // If the call to osl_bind_interpolated_param returns 0, the default
         // value needs to be loaded from a corresponding OptiX variable, which
         // we are creating here.
@@ -545,8 +545,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
                 llvm::Value* init_val = 0;
                 if (elemtype.is_floatbased())
                     init_val = ll.constant (((float*)sym.data())[c]);
-                else if (shadingsys().renderer()->supports ("OptiX") &&
-                         elemtype.is_string()) {
+                else if (use_optix() && elemtype.is_string()) {
                     llvm::Value* val = getOrAllocateLLVMGlobal (sym);
                     init_val = ll.ptr_cast (ll.GEP (val, 0), ll.type_void_ptr());
                 }
@@ -764,7 +763,7 @@ BackendLLVM::build_llvm_init ()
         ll.op_memset (ll.void_ptr(layer_run_ref(0)), 0, sz, 4 /*align*/);
     }
     int num_userdata = (int) group().m_userdata_names.size();
-    if (num_userdata && ! shadingsys().renderer()->supports("OptiX")) {
+    if (num_userdata && ! use_optix()) {
         // NB: we don't need these flags in the OptiX case because userdata is
         //     accessed through rtVariables, which are guaranteed to be initialized
         int sz = (num_userdata + 3) & (~3);  // round up to 32 bits
@@ -1046,7 +1045,7 @@ BackendLLVM::initialize_llvm_group ()
     initialize_llvm_helper_function_map();
 
     // Skipping this in the non-JIT OptiX case suppresses an LLVM warning
-    if (! shadingsys().renderer()->supports("OptiX"))
+    if (! use_optix())
         ll.InstallLazyFunctionCreator (helper_function_lookup);
 
     for (HelperFuncMap::iterator i = llvm_helper_function_map.begin(),
@@ -1073,7 +1072,7 @@ BackendLLVM::initialize_llvm_group ()
         llvm::Function *f = ll.make_function (funcname, false, llvm_type(rettype), params, varargs);
 
         // Skipping this in the non-JIT OptiX case suppresses an LLVM warning
-        if (! shadingsys().renderer()->supports("OptiX"))
+        if (! use_optix())
             ll.add_function_mapping (f, (void *)i->second.function);
     }
 
@@ -1121,7 +1120,7 @@ BackendLLVM::run ()
 #ifdef OSL_LLVM_NO_BITCODE
     ll.module (ll.new_module ("llvm_ops"));
 #else
-    if (! shadingsys().renderer()->supports("OptiX")) {
+    if (! use_optix()) {
         ll.module (ll.module_from_bitcode (osl_llvm_compiled_ops_block,
                                            osl_llvm_compiled_ops_size,
                                            "llvm_ops", &err));
@@ -1141,7 +1140,7 @@ BackendLLVM::run ()
 
     // Create the ExecutionEngine. We don't create an ExecutionEngine in the
     // OptiX case, because we are using the NVPTX backend and not MCJIT
-    if (! shadingsys().renderer()->supports("OptiX") && ! ll.make_jit_execengine (&err)) {
+    if (! use_optix() && ! ll.make_jit_execengine (&err)) {
         shadingcontext()->error ("Failed to create engine: %s\n", err.c_str());
         ASSERT (0);
         return;
@@ -1262,7 +1261,7 @@ BackendLLVM::run ()
         }
     }
 
-    if (shadingsys().renderer()->supports("OptiX")) {
+    if (use_optix()) {
         // Create an llvm::Module from the renderer-supplied library bitcode
         std::vector<char>& bitcode = shadingsys().m_lib_bitcode;
         ASSERT (bitcode.size() && "Library bitcode is empty");

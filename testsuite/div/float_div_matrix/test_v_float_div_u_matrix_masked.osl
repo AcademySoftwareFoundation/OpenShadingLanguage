@@ -1,0 +1,15 @@
+shader
+test_v_float_div_u_matrix_masked (output color Cout = 0)
+{
+    matrix m1 = matrix(raytype("camera"),0,0,0,
+                       0,2*raytype("camera"),0,0,
+                       0,0,3*raytype("camera"),0,
+                       0,0,0,1);
+              
+    float numerator = 1 - u;
+    matrix rm = m1;              
+    if (int(P[0]*64)%2==0) {
+        rm = numerator/m1;
+    }
+    Cout = color(rm[0][0],rm[1][1],rm[2][2]);
+}

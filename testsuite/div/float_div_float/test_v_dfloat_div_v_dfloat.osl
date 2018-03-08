@@ -1,0 +1,25 @@
+shader
+test_v_dfloat_div_v_dfloat (output color Cout = 0)
+{
+    // Quantize divisor to avoid disagreements between scalar & SIMD as it approaches 0
+    float divisor = float(64-int(64*u))/64;
+     
+              
+    float numerator = u;
+    float red = 0.0;
+    float green = 0.5;
+    float blue = 1.0;
+    
+    if (int(P[0]*64)%2==0) {        
+        red = numerator/divisor;
+        green = numerator/int(v);
+        blue = v/divisor;
+    }
+        
+    color c = color(red,green,blue);
+    
+    color dxc = Dx(c);
+    color dyc = Dy(c);
+    Cout = dxc + dyc;
+    
+}

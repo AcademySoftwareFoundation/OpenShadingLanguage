@@ -1,0 +1,17 @@
+shader
+test_u_int_div_u_int_masked (output color Cout = 0)
+{
+    int divisor = 2*raytype("camera");
+              
+    int numerator = 64;
+    int red = 0;
+    int green = 32;
+    int blue = 64;
+    if (int(P[0]*64)%2==0) {    
+        red = numerator/divisor;
+        green = numerator/0;
+        blue = divisor/numerator;
+    }
+        
+    Cout = color(red/64.0,green/64.0,blue/64.0);
+}

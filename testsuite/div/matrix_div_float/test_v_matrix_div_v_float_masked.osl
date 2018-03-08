@@ -1,0 +1,16 @@
+shader
+test_v_matrix_div_v_float_masked (output color Cout = 0)
+{
+    matrix m1 = matrix(u,0,0,0,
+              0,v,0,0,
+              0,0,1,0,
+              0,0,0,1);
+              
+    float divisor = 1 + u;
+    matrix rm = m1;              
+    if (int(P[0]*64)%2==0) {
+        rm = m1/divisor;
+    }
+    
+    Cout = color(rm[0][0],rm[1][1],rm[2][2]);
+}

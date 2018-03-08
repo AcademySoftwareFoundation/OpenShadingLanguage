@@ -1,0 +1,19 @@
+shader
+test_v_dvec_div_v_dfloat (output color Cout = 0)
+{
+    float u_float = raytype("camera");    
+    float v_float = u;
+    float v_float2 = v;
+    
+    color v_color = color(0.3*v_float,0.5*v_float, 0.75*v_float);
+    
+    color c = v_color/v_float2;
+    
+    if (int(P[0]*64)%2==0) {
+        c = (2*v_color)/v_float2;
+    }
+    
+    color dxc = Dx(c);
+    color dyc = Dy(c);
+    Cout = dxc + dyc;        
+}

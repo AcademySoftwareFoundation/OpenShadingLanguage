@@ -2937,8 +2937,11 @@ BackendLLVMWide::llvm_call_function (const char *name,
                                       bool functionIsLlvmInlined,
                                       bool ptrToReturnStructIs1stArg)
 {
-	bool requiresMasking = ptrToReturnStructIs1stArg && ll.is_masking_required();
+	bool requiresMasking = ptrToReturnStructIs1stArg && !function_is_uniform && ll.is_masking_required();
 	
+	llvm::Value *uniformResultTemp = nullptr;
+
+	bool needToBroadcastUniformResultToWide = false;
     std::vector<llvm::Value *> valargs;
     valargs.resize ((size_t)nargs + (requiresMasking ? 1 : 0));
     for (int i = 0;  i < nargs;  ++i) {
@@ -2955,13 +2958,36 @@ BackendLLVMWide::llvm_call_function (const char *name,
         	// Need to pass a pointer to the function
         	if (function_is_uniform || (s.symtype() != SymTypeConst)) {
         		//ASSERT(function_is_uniform || (false == isSymbolUniform(s)));
-        		if (function_is_uniform || (false == isSymbolUniform(s))) {
+        		if (function_is_uniform) {
+                    DASSERT(function_is_uniform);
+                    if (isSymbolUniform(s)) {
+                        DASSERT(isSymbolUniform(s));
+                        valargs[i] = llvm_void_ptr (s);
+                    } else {
+                        DASSERT(false == isSymbolUniform(s));
+                        // if the function is uniform, all parameters need to be uniform
+                        // however we could doing a masked assignment to a wide result
+                        // which would have to be the 1st parameter!
+                        ASSERT(i == 0);
+                        ASSERT(ptrToReturnStructIs1stArg);
+                        // in that case we will allocate a uniform result parameter on the
+                        // stack to hold the result and then do a masked store after
+                        // calling the uniform version of the function
+                        ASSERT(!t.is_array() && "incomplete");
+                        needToBroadcastUniformResultToWide = true;
+                        uniformResultTemp = llvm_alloca (t, s.has_derivs(), /*is_uniform=*/true);
+                        valargs[i] = ll.void_ptr(uniformResultTemp);
+                    }
+        		} else if (false == isSymbolUniform(s)) {
+        		    DASSERT(false == function_is_uniform);
         			valargs[i] = llvm_void_ptr (s);
         		} else {
-					// TODO: Consider dynamically generating function name based on varying/uniform paramters
+                    DASSERT(false == function_is_uniform);
+                    DASSERT(isSymbolUniform(s));
+					// TODO: Consider dynamically generating function name based on varying/uniform parameters
         			// and their types.  Could even detect what function names exist and only promote necessary
         			// parameters to be wide.  This would allow library implementer to add mixed varying uniform
-        			// parameter versions of their functions as deemed necessary for highly used comibnations
+        			// parameter versions of their functions as deemed necessary for highly used combinations
         			// versus supplying all combinations possible
         			OSL_DEV_ONLY(std::cout << "....widening value " << s.name().c_str() << std::endl);
 
@@ -2973,14 +2999,16 @@ BackendLLVMWide::llvm_call_function (const char *name,
 
             		ASSERT(!t.is_array() && "incomplete");
 
-            		// Have to have a place on the stack for the pointer to the wide constant to point to
-                    llvm::Value *tmpptr = llvm_alloca (t, true, function_is_uniform);
-
-                    for(int a=0; a < t.simpletype().aggregate; ++ a) {
-                    	llvm::Value * wide_value = llvm_load_value (s, /*deriv*/ 0, /*component*/ 0, TypeDesc::UNKNOWN, function_is_uniform);
-                    	// Store our wide pointer on the stack
-                    	llvm_store_value (wide_value, tmpptr, t, 0, NULL, a);
-            		}
+            		// Have to have a place on the stack for the pointer to the wide to point to
+                    llvm::Value *tmpptr = llvm_alloca (t, s.has_derivs(), /*is_uniform=*/false);
+                    int numDeriv = s.has_derivs() ? 3 : 1;
+                    for (int d=0; d < numDeriv; ++d) {
+                        for(int c=0; c < t.simpletype().aggregate; ++ c) {
+                            llvm::Value * wide_value = llvm_load_value (s, /*deriv=*/d, /*component*/ c, TypeDesc::UNKNOWN, function_is_uniform);
+                            // Store our wide pointer on the stack
+                            llvm_store_value (wide_value, tmpptr, t, d, NULL, c);
+                        }
+                    }
 
                     // return pointer to our stacked wide variable
                     valargs[i] =  ll.void_ptr (tmpptr);
@@ -3035,8 +3063,31 @@ BackendLLVMWide::llvm_call_function (const char *name,
     OSL_DEV_ONLY(std::cout << "call_function " << modifiedName << std::endl);
     llvm::Value * func_call = ll.call_function (modifiedName.c_str(), (valargs.size())? &valargs[0]: NULL,
                              (int)valargs.size());
-    if (ptrToReturnStructIs1stArg)
+    if (ptrToReturnStructIs1stArg) {
     	ll.mark_structure_return_value(func_call);
+    	if (needToBroadcastUniformResultToWide) {
+    	    const Symbol & wide_result_sym = *(symargs[0]);
+    	    ASSERT(!isSymbolUniform(wide_result_sym));
+    	    ASSERT(nullptr != uniformResultTemp);
+            const TypeSpec &t = wide_result_sym.typespec();
+
+            int numDeriv = wide_result_sym.has_derivs() ? 3 : 1;
+            for (int d=0; d < numDeriv; ++d) {
+                for(int c=0; c < t.simpletype().aggregate; ++ c) {
+                    // Will widen the uniform temporary value
+                    llvm::Value * wide_value = llvm_load_value (uniformResultTemp,
+                                                  t,
+                                                  /*deriv=*/d, /*arrayindex=*/ 0,
+                                                  /*component=*/c, TypeDesc::UNKNOWN,
+                                                  /*op_is_uniform=*/false);
+                    // The store will deal with masking
+                    llvm_store_value (wide_value, wide_result_sym, /*deriv*/d, /*component=*/c);
+                }
+            }
+    	}
+    } else {
+        ASSERT(false == needToBroadcastUniformResultToWide);
+    }
     return func_call;
 }
 

@@ -59,7 +59,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifdef __CUDACC__
 #include <OSL/ImathVec_cuda.h>
 #else
-#include <OSL/ImathVec_cuda.h>
+#include <OpenEXR/ImathVec.h>
 #endif
 #include <OpenEXR/ImathColor.h>
 #include <OpenEXR/ImathMatrix.h>

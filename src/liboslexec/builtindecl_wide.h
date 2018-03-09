@@ -590,12 +590,11 @@ DECL (osl_mul_w16mw16mw16f_masked, "xXXXi")
 DECL (osl_mul_w16mw16fw16f_masked, "xXXXi")
 #endif
 
-// TODO: consider always calling masked version
-DECL (osl_div_w16mw16mw16m, "xXXX")
+// forced masked version only
 DECL (osl_div_w16mw16mw16m_masked, "xXXXi")
 DECL (osl_div_w16mw16mw16f, "xXXX")
 DECL (osl_div_w16mw16mw16f_masked, "xXXXi")
-DECL (osl_div_w16mw16fw16m, "xXXX")
+// forced masked version only
 DECL (osl_div_w16mw16fw16m_masked, "xXXXi")
 
 DECL (osl_get_from_to_matrix_w16mss_batched, "iXXss")

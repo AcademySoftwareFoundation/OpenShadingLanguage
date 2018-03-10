@@ -48,9 +48,9 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
       COMMAND ${LLVM_BC_GENERATOR}
           "-I${OPTIX_INCLUDE_DIR}"
           "-I${CUDA_INCLUDE_DIR}"
-          "-I${CMAKE_SOURCE_DIR}/cuda"
           -D__CUDACC__ -D__CUDA_ARCH__=350
-          -O3 -Wno-format-security --cuda-gpu-arch=sm_35 --cuda-device-only -emit-llvm
+          --cuda-gpu-arch=sm_35 --cuda-device-only --cuda-path="${CUDA_TOOLKIT_ROOT_DIR}"
+          -O3 -Wno-format-security -emit-llvm
           ${llvm_src} -c -o ${llvm_bc}
       COMMAND "${CMAKE_SOURCE_DIR}/src/liboslexec/serialize-bc.bash" ${llvm_bc} ${llvm_bc_cpp} "rend_llvm_compiled_ops"
       MAIN_DEPENDENCY ${llvm_src}
@@ -67,14 +67,14 @@ MACRO ( NVCC_COMPILE cuda_src ptxlist )
 
     ADD_CUSTOM_COMMAND ( OUTPUT ${cuda_ptx}
         COMMAND ${CUDA_NVCC_EXECUTABLE}
-            -DOSL_USE_FAST_MATH=1
-            -m64 -arch sm_35 -ptx --std=c++11 -O3 --use_fast_math --expt-relaxed-constexpr
-            "-I${CUDA_INCLUDE_DIR}"
             "-I${OPTIX_INCLUDE_DIR}"
-            "-I${CMAKE_SOURCE_DIR}/cuda"
+            "-I${CUDA_INCLUDE_DIR}"
             "-I${OPENIMAGEIO_INCLUDE_DIR}"
+            "-I${ILMBASE_INCLUDE_DIR}"
             "-I${CMAKE_BINARY_DIR}/include"
             "-I${PROJECT_SOURCE_DIR}/src/include"
+            -DOSL_USE_FAST_MATH=1
+            -m64 -arch sm_35 -ptx --std=c++11 -O3 --use_fast_math --expt-relaxed-constexpr
             ${cuda_src} -o ${cuda_ptx}
         MAIN_DEPENDENCY ${cuda_src}
         DEPENDS ${cuda_src} oslexec
@@ -105,7 +105,7 @@ ADD_CUSTOM_TARGET ( testoptix_ptx ALL
     SOURCES ${testoptix_cuda_srcs} )
 
 ADD_EXECUTABLE ( testoptix ${testoptix_srcs} )
-TARGET_LINK_LIBRARIES ( testoptix oslexec oslquery ${CUDA_LIBRARIES} ${OPTIX_LIBRARIES} ${OPENIMAGEIO_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} )
+TARGET_LINK_LIBRARIES ( testoptix oslexec oslquery ${CUDA_LIBRARIES} ${OPTIX_LIBRARIES} ${OPTIX_EXTRA_LIBS} ${OPENIMAGEIO_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} )
 
 INSTALL ( TARGETS testoptix RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
 

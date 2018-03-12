@@ -73,6 +73,8 @@ struct Camera {
 struct Primitive {
     Primitive(int shaderID, bool isLight) : shaderID(shaderID), isLight(isLight) {}
 
+    virtual ~Primitive() {}
+
     int shaderid() const { return shaderID; }
     bool islight() const { return isLight; }
 

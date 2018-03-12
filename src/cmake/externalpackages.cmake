@@ -233,6 +233,11 @@ if (USE_CUDA OR USE_OPTIX)
         message (STATUS "CUDA includes  = ${CUDA_INCLUDE_DIR}")
         message (STATUS "CUDA libraries = ${CUDA_LIBRARIES}")
     endif ()
+
+    STRING (FIND ${LLVM_TARGETS} "NVPTX" nvptx_index)
+    if (NOT ${nvptx_index} GREATER -1)
+        message (FATAL_ERROR "NVTPX target is not available in the provided LLVM build")
+    endif()
 endif ()
 
 # end CUDA setup

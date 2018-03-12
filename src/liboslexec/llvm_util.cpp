@@ -1548,39 +1548,34 @@ bool
 LLVM_Util::ptx_compile_group (llvm::Module* lib_module, const std::string& name,
                               std::string& out)
 {
-    std::string new_triple = "nvptx64-nvidia-cuda";
-    std::string new_layout = "e-i64:64-v16:16-v32:32-n16:32:64";
+    std::string target_triple = module()->getTargetTriple();
+    ASSERT (lib_module->getTargetTriple() == target_triple &&
+            "PTX compile error: Shader and renderer bitcode library targets do not match");
 
-    // Clone the source Module to prevent the linker from tinkering with it
-    std::unique_ptr<llvm::Module> mod_ptr = llvm::CloneModule (module());
-
+    // Create a new empty module to hold the linked shadeops and compiled
+    // ShaderGroup
     llvm::Module* linked_module = new_module (name.c_str());
 
-    // Make sure the module targets/layouts match
-    mod_ptr.get()->setTargetTriple (new_triple);
-    mod_ptr.get()->setDataLayout (new_layout);
-    linked_module->setTargetTriple (new_triple);
-    linked_module->setDataLayout (new_layout);
-
-    // First, link in the support library
+    // First, link in the shadeops library
     std::unique_ptr<llvm::Module> lib_ptr (lib_module);
     bool failed = llvm::Linker::linkModules (*linked_module, std::move (lib_ptr));
     if (failed) {
-        ASSERT (0 && "Unable to link library module");
+        ASSERT (0 && "PTX compile error: Unable to link library module");
     }
 
     // Second, link in the compiled ShaderGroup module
+    std::unique_ptr<llvm::Module> mod_ptr = llvm::CloneModule (module());
     failed = llvm::Linker::linkModules (*linked_module, std::move (mod_ptr));
     if (failed) {
-        ASSERT (0 && "Unable to link group module");
+        ASSERT (0 && "PTX compile error: Unable to link group module");
     }
 
     // Verify that the NVPTX target has been initialized
     std::string error;
     const llvm::Target* llvm_target =
-        llvm::TargetRegistry::lookupTarget (new_triple, error);
+        llvm::TargetRegistry::lookupTarget (target_triple, error);
     if(! llvm_target) {
-        ASSERT (0 && "LLVM Target is not initialized");
+        ASSERT (0 && "PTX compile error: LLVM Target is not initialized");
     }
 
     llvm::TargetOptions  options;
@@ -1597,11 +1592,10 @@ LLVM_Util::ptx_compile_group (llvm::Module* lib_module, const std::string& name,
     options.UseInitArray                           = 0;
 
     llvm::TargetMachine* target_machine = llvm_target->createTargetMachine(
-        new_triple, "sm_35", "+ptx50", options,
-        llvm::Reloc::Static, llvm::CodeModel::Default, llvm::CodeGenOpt::Aggressive);
-
+        target_triple, "sm_35", "+ptx50", options,
+        llvm::Reloc::Static, llvm::CodeModel::Small, llvm::CodeGenOpt::Aggressive);
     if (! target_machine) {
-        ASSERT(false && "Unable to create target machine");
+        ASSERT(0 && "PTX compile error: Unable to create target machine -- is NVPTX enabled in LLVM?");
     }
 
     // Setup the optimzation passes
@@ -1610,7 +1604,7 @@ LLVM_Util::ptx_compile_group (llvm::Module* lib_module, const std::string& name,
                    target_machine->getTargetIRAnalysis()));
 
     llvm::legacy::PassManager mod_pm;
-    mod_pm.add (new llvm::TargetLibraryInfoWrapperPass (llvm::Triple (new_triple)));
+    mod_pm.add (new llvm::TargetLibraryInfoWrapperPass (llvm::Triple (target_triple)));
     mod_pm.add (llvm::createTargetTransformInfoWrapperPass (
                     target_machine->getTargetIRAnalysis()));
     mod_pm.add (llvm::createRewriteSymbolsPass());

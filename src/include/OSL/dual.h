@@ -29,14 +29,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pragma once
 
 #include <initializer_list>
+#include <OSL/oslconfig.h>
 #include <OSL/oslversion.h>
 #include <OpenImageIO/fmath.h>
 
-#ifdef __CUDACC__
-#define OSL_HOSTDEVICE __host__ __device__
-#else
-#define OSL_HOSTDEVICE
-#endif
 
 OSL_NAMESPACE_ENTER
 

@@ -147,11 +147,11 @@ void * __dso_handle = 0; // necessary to avoid linkage issues in bitcode
 
 
 #ifndef OSL_SHADEOP
-#ifdef __CUDACC__
-#define OSL_SHADEOP extern "C" __device__ OSL_LLVM_EXPORT
-#else
-#define OSL_SHADEOP extern "C" OSL_LLVM_EXPORT
-#endif
+#  ifdef __CUDACC__
+#    define OSL_SHADEOP extern "C" __device__ OSL_LLVM_EXPORT
+#  else
+#    define OSL_SHADEOP extern "C" OSL_LLVM_EXPORT
+#  endif
 #endif
 
 

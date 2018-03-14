@@ -52,6 +52,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #  error "This version of OSL requires C++11"
 #endif
 
+#ifndef OSL_HOSTDEVICE
+#  ifdef __CUDACC__
+#    define OSL_HOSTDEVICE __host__ __device__
+#  else
+#    define OSL_HOSTDEVICE
+#  endif
+#endif
+
 // Symbol export defines
 #include "export.h"
 
@@ -65,14 +73,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenEXR/ImathMatrix.h>
 
 // All the things we need from OpenImageIO
-#ifndef __CUDACC__
 #include <OpenImageIO/oiioversion.h>
 #include <OpenImageIO/errorhandler.h>
 #include <OpenImageIO/texture.h>
 #include <OpenImageIO/typedesc.h>
 #include <OpenImageIO/ustring.h>
 #include <OpenImageIO/platform.h>
-#endif
 
 // Extensions to Imath
 #include <OSL/matrix22.h>
@@ -110,7 +116,6 @@ typedef Imathx::Matrix22<Float> Matrix22;
 /// doesn't literally have to be OIIO's... it just needs to have the
 /// same API as OIIO's TextureSystem class, it's a purely abstract class
 /// anyway.
-#ifndef __CUDACC__
 using OIIO::TextureSystem;
 using OIIO::TextureOpt;
 
@@ -120,7 +125,6 @@ using OIIO::TypeDesc;
 using OIIO::ustring;
 using OIIO::ustringHash;
 using OIIO::string_view;
-#endif
 
 #ifndef __has_attribute
 #  define __has_attribute(x) 0

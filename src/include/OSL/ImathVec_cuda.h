@@ -58,7 +58,7 @@
 #endif
 
 #ifndef IMATH_HOSTDEVICE
-#  ifdef __CUDA_ARCH__
+#  ifdef __CUDACC__
 #    define IMATH_HOSTDEVICE __host__ __device__
 #  else
 #    define IMATH_HOSTDEVICE

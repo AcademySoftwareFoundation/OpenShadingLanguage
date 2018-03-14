@@ -39,14 +39,9 @@
 
 //----------------------------------------------------
 //
-//	2D, 3D and 4D point/vector class templates
+// 2D, 3D and 4D point/vector class templates
 //
 //----------------------------------------------------
-
-#ifdef __CUDACC__
-// declarations for CUDA intrinsics
-#include <device_functions_decls.h>
-#endif
 
 #include <OpenEXR/ImathExc.h>
 #include <OpenEXR/ImathLimits.h>
@@ -62,10 +57,12 @@
 #pragma warning(disable:4290)
 #endif
 
-#ifdef __CUDACC__
-#define HOSTDEVICE __host__ __device__
-#else
-#define HOSTDEVICE
+#ifndef IMATH_HOSTDEVICE
+#  ifdef __CUDA_ARCH__
+#    define IMATH_HOSTDEVICE __host__ __device__
+#  else
+#    define IMATH_HOSTDEVICE
+#  endif
 #endif
 
 
@@ -79,9 +76,9 @@ enum InfException {INF_EXCEPTION};
 
 namespace {
 // Define a host/device-compatible sqrt template that matches Math<T>::sqrt.
-template <typename T> HOSTDEVICE T hostdevice_sqrt (T x);
-template <> HOSTDEVICE double hostdevice_sqrt<double> (double x) { return sqrt (x); }
-template <> HOSTDEVICE float  hostdevice_sqrt<float> (float x)  { return sqrtf (x); }
+template <typename T> IMATH_HOSTDEVICE T hostdevice_sqrt (T x);
+template <> IMATH_HOSTDEVICE double hostdevice_sqrt<double> (double x) { return sqrt (x); }
+template <> IMATH_HOSTDEVICE float  hostdevice_sqrt<float> (float x)  { return sqrtf (x); }
 };
 
 
@@ -93,59 +90,59 @@ template <class T> class Vec2
     // Access to elements
     //-------------------
 
-    T           x, y;
+    T x, y;
 
-    HOSTDEVICE       T & operator [] (int i);
-    HOSTDEVICE const T & operator [] (int i) const;
+    IMATH_HOSTDEVICE       T & operator [] (int i);
+    IMATH_HOSTDEVICE const T & operator [] (int i) const;
 
 
     //-------------
     // Constructors
     //-------------
 
-    HOSTDEVICE          Vec2 ();             // no initialization
-    HOSTDEVICE explicit Vec2 (T a);          // (a a)
-    HOSTDEVICE          Vec2 (T a, T b);     // (a b)
+    IMATH_HOSTDEVICE          Vec2 ();             // no initialization
+    IMATH_HOSTDEVICE explicit Vec2 (T a);          // (a a)
+    IMATH_HOSTDEVICE          Vec2 (T a, T b);     // (a b)
 
 
     //---------------------------------
     // Copy constructors and assignment
     //---------------------------------
 
-    HOSTDEVICE Vec2 (const Vec2 &v);
-    template <class S> HOSTDEVICE Vec2 (const Vec2<S> &v);
+    IMATH_HOSTDEVICE Vec2 (const Vec2 &v);
+    template <class S> IMATH_HOSTDEVICE Vec2 (const Vec2<S> &v);
 
-    HOSTDEVICE const Vec2 & operator = (const Vec2 &v);
+    IMATH_HOSTDEVICE const Vec2 & operator = (const Vec2 &v);
 
 
     //----------------------
     // Compatibility with Sb
     //----------------------
 
-    template <class S> HOSTDEVICE
+    template <class S> IMATH_HOSTDEVICE
     void        setValue (S a, S b);
 
-    template <class S> HOSTDEVICE
+    template <class S> IMATH_HOSTDEVICE
     void        setValue (const Vec2<S> &v);
 
-    template <class S> HOSTDEVICE
+    template <class S> IMATH_HOSTDEVICE
     void        getValue (S &a, S &b) const;
 
-    template <class S> HOSTDEVICE
+    template <class S> IMATH_HOSTDEVICE
     void        getValue (Vec2<S> &v) const;
 
-    HOSTDEVICE       T * getValue ();
-    HOSTDEVICE const T * getValue () const;
+    IMATH_HOSTDEVICE       T * getValue ();
+    IMATH_HOSTDEVICE const T * getValue () const;
 
 
     //---------
     // Equality
     //---------
 
-    template <class S> HOSTDEVICE
+    template <class S> IMATH_HOSTDEVICE
     bool        operator == (const Vec2<S> &v) const;
 
-    template <class S> HOSTDEVICE
+    template <class S> IMATH_HOSTDEVICE
     bool        operator != (const Vec2<S> &v) const;
 
 
@@ -167,15 +164,15 @@ template <class T> class Vec2
     //      abs (this[i] - v[i]) <= e * abs (this[i])
     //-----------------------------------------------------------------------
 
-    HOSTDEVICE bool equalWithAbsError (const Vec2<T> &v, T e) const;
-    HOSTDEVICE bool equalWithRelError (const Vec2<T> &v, T e) const;
+    IMATH_HOSTDEVICE bool equalWithAbsError (const Vec2<T> &v, T e) const;
+    IMATH_HOSTDEVICE bool equalWithRelError (const Vec2<T> &v, T e) const;
 
     //------------
     // Dot product
     //------------
 
-    HOSTDEVICE T dot (const Vec2 &v) const;
-    HOSTDEVICE T operator ^ (const Vec2 &v) const;
+    IMATH_HOSTDEVICE T dot (const Vec2 &v) const;
+    IMATH_HOSTDEVICE T operator ^ (const Vec2 &v) const;
 
 
     //------------------------------------------------
@@ -183,52 +180,52 @@ template <class T> class Vec2
     // Vec3 (this->x, this->y, 0) % Vec3 (v.x, v.y, 0)
     //------------------------------------------------
 
-    HOSTDEVICE T cross (const Vec2 &v) const;
-    HOSTDEVICE T operator % (const Vec2 &v) const;
+    IMATH_HOSTDEVICE T cross (const Vec2 &v) const;
+    IMATH_HOSTDEVICE T operator % (const Vec2 &v) const;
 
 
     //------------------------
     // Component-wise addition
     //------------------------
 
-    HOSTDEVICE const Vec2 & operator += (const Vec2 &v);
-    HOSTDEVICE Vec2 operator + (const Vec2 &v) const;
+    IMATH_HOSTDEVICE const Vec2 & operator += (const Vec2 &v);
+    IMATH_HOSTDEVICE Vec2 operator + (const Vec2 &v) const;
 
 
     //---------------------------
     // Component-wise subtraction
     //---------------------------
 
-    HOSTDEVICE const Vec2 & operator -= (const Vec2 &v);
-    HOSTDEVICE Vec2 operator - (const Vec2 &v) const;
+    IMATH_HOSTDEVICE const Vec2 & operator -= (const Vec2 &v);
+    IMATH_HOSTDEVICE Vec2 operator - (const Vec2 &v) const;
 
 
     //------------------------------------
     // Component-wise multiplication by -1
     //------------------------------------
 
-    HOSTDEVICE Vec2 operator - () const;
-    HOSTDEVICE const Vec2 & negate ();
+    IMATH_HOSTDEVICE Vec2 operator - () const;
+    IMATH_HOSTDEVICE const Vec2 & negate ();
 
 
     //------------------------------
     // Component-wise multiplication
     //------------------------------
 
-    HOSTDEVICE const Vec2 & operator *= (const Vec2 &v);
-    HOSTDEVICE const Vec2 & operator *= (T a);
-    HOSTDEVICE Vec2     operator * (const Vec2 &v) const;
-    HOSTDEVICE Vec2     operator * (T a) const;
+    IMATH_HOSTDEVICE const Vec2 & operator *= (const Vec2 &v);
+    IMATH_HOSTDEVICE const Vec2 & operator *= (T a);
+    IMATH_HOSTDEVICE Vec2     operator * (const Vec2 &v) const;
+    IMATH_HOSTDEVICE Vec2     operator * (T a) const;
 
 
     //------------------------
     // Component-wise division
     //------------------------
 
-    HOSTDEVICE const Vec2 & operator /= (const Vec2 &v);
-    HOSTDEVICE const Vec2 & operator /= (T a);
-    HOSTDEVICE Vec2     operator / (const Vec2 &v) const;
-    HOSTDEVICE Vec2     operator / (T a) const;
+    IMATH_HOSTDEVICE const Vec2 & operator /= (const Vec2 &v);
+    IMATH_HOSTDEVICE const Vec2 & operator /= (T a);
+    IMATH_HOSTDEVICE Vec2     operator / (const Vec2 &v) const;
+    IMATH_HOSTDEVICE Vec2     operator / (T a) const;
 
 
     //----------------------------------------------------------------
@@ -240,33 +237,33 @@ template <class T> class Vec2
     // is 0.0, the result is undefined.
     //----------------------------------------------------------------
 
-    HOSTDEVICE T length () const;
-    HOSTDEVICE T length2 () const;
+    IMATH_HOSTDEVICE T length () const;
+    IMATH_HOSTDEVICE T length2 () const;
 
-    HOSTDEVICE const Vec2 & normalize ();           // modifies *this
-    HOSTDEVICE const Vec2 & normalizeExc () throw (IEX_NAMESPACE::MathExc);
-    HOSTDEVICE const Vec2 & normalizeNonNull ();
+    IMATH_HOSTDEVICE const Vec2 & normalize ();           // modifies *this
+    IMATH_HOSTDEVICE const Vec2 & normalizeExc () throw (IEX_NAMESPACE::MathExc);
+    IMATH_HOSTDEVICE const Vec2 & normalizeNonNull ();
 
-    HOSTDEVICE Vec2<T> normalized () const;        // does not modify *this
-    HOSTDEVICE Vec2<T> normalizedExc () const throw (IEX_NAMESPACE::MathExc);
-    HOSTDEVICE Vec2<T> normalizedNonNull () const;
+    IMATH_HOSTDEVICE Vec2<T> normalized () const;        // does not modify *this
+    IMATH_HOSTDEVICE Vec2<T> normalizedExc () const throw (IEX_NAMESPACE::MathExc);
+    IMATH_HOSTDEVICE Vec2<T> normalizedNonNull () const;
 
 
     //--------------------------------------------------------
     // Number of dimensions, i.e. number of elements in a Vec2
     //--------------------------------------------------------
 
-    HOSTDEVICE static unsigned int  dimensions() {return 2;}
+    IMATH_HOSTDEVICE static unsigned int  dimensions() {return 2;}
 
 
     //-------------------------------------------------
     // Limitations of type T (see also class limits<T>)
     //-------------------------------------------------
 
-    HOSTDEVICE static T baseTypeMin()       {return limits<T>::min();}
-    HOSTDEVICE static T baseTypeMax()       {return limits<T>::max();}
-    HOSTDEVICE static T baseTypeSmallest()  {return limits<T>::smallest();}
-    HOSTDEVICE static T baseTypeEpsilon()   {return limits<T>::epsilon();}
+    IMATH_HOSTDEVICE static T baseTypeMin()       {return limits<T>::min();}
+    IMATH_HOSTDEVICE static T baseTypeMax()       {return limits<T>::max();}
+    IMATH_HOSTDEVICE static T baseTypeSmallest()  {return limits<T>::smallest();}
+    IMATH_HOSTDEVICE static T baseTypeEpsilon()   {return limits<T>::epsilon();}
 
 
     //--------------------------------------------------------------
@@ -279,7 +276,7 @@ template <class T> class Vec2
 
   private:
 
-    HOSTDEVICE T lengthTiny () const;
+    IMATH_HOSTDEVICE T lengthTiny () const;
 };
 
 
@@ -293,27 +290,27 @@ template <class T> class Vec3
 
     T x, y, z;
 
-    HOSTDEVICE       T & operator [] (int i);
-    HOSTDEVICE const T & operator [] (int i) const;
+    IMATH_HOSTDEVICE       T & operator [] (int i);
+    IMATH_HOSTDEVICE const T & operator [] (int i) const;
 
 
     //-------------
     // Constructors
     //-------------
 
-    HOSTDEVICE Vec3 ();            // no initialization
-    HOSTDEVICE explicit Vec3 (T a);           // (a a a)
-    HOSTDEVICE Vec3 (T a, T b, T c);       // (a b c)
+    IMATH_HOSTDEVICE Vec3 ();            // no initialization
+    IMATH_HOSTDEVICE explicit Vec3 (T a);           // (a a a)
+    IMATH_HOSTDEVICE Vec3 (T a, T b, T c);       // (a b c)
 
 
     //---------------------------------
     // Copy constructors and assignment
     //---------------------------------
 
-    HOSTDEVICE Vec3 (const Vec3 &v);
-    template <class S> HOSTDEVICE Vec3 (const Vec3<S> &v);
+    IMATH_HOSTDEVICE Vec3 (const Vec3 &v);
+    template <class S> IMATH_HOSTDEVICE Vec3 (const Vec3<S> &v);
 
-    HOSTDEVICE const Vec3 & operator = (const Vec3 &v);
+    IMATH_HOSTDEVICE const Vec3 & operator = (const Vec3 &v);
 
 
     //---------------------------------------------------------
@@ -327,38 +324,38 @@ template <class T> class Vec3
     // if w is zero or if division by w would overflow.
     //---------------------------------------------------------
 
-    template <class S> HOSTDEVICE explicit Vec3 (const Vec4<S> &v);
-    template <class S> HOSTDEVICE explicit Vec3 (const Vec4<S> &v, InfException);
+    template <class S> IMATH_HOSTDEVICE explicit Vec3 (const Vec4<S> &v);
+    template <class S> IMATH_HOSTDEVICE explicit Vec3 (const Vec4<S> &v, InfException);
 
 
     //----------------------
     // Compatibility with Sb
     //----------------------
 
-    template <class S> HOSTDEVICE
+    template <class S> IMATH_HOSTDEVICE
     void      setValue (S a, S b, S c);
 
-    template <class S> HOSTDEVICE
+    template <class S> IMATH_HOSTDEVICE
     void      setValue (const Vec3<S> &v);
 
-    template <class S> HOSTDEVICE
+    template <class S> IMATH_HOSTDEVICE
     void      getValue (S &a, S &b, S &c) const;
 
-    template <class S> HOSTDEVICE
+    template <class S> IMATH_HOSTDEVICE
     void      getValue (Vec3<S> &v) const;
 
-    HOSTDEVICE T *       getValue();
-    HOSTDEVICE const T * getValue() const;
+    IMATH_HOSTDEVICE T *       getValue();
+    IMATH_HOSTDEVICE const T * getValue() const;
 
 
     //---------
     // Equality
     //---------
 
-    template <class S> HOSTDEVICE
+    template <class S> IMATH_HOSTDEVICE
     bool operator == (const Vec3<S> &v) const;
 
-    template <class S> HOSTDEVICE
+    template <class S> IMATH_HOSTDEVICE
     bool operator != (const Vec3<S> &v) const;
 
     //-----------------------------------------------------------------------
@@ -379,68 +376,68 @@ template <class T> class Vec3
     //      abs (this[i] - v[i]) <= e * abs (this[i])
     //-----------------------------------------------------------------------
 
-    HOSTDEVICE bool equalWithAbsError (const Vec3<T> &v, T e) const;
-    HOSTDEVICE bool equalWithRelError (const Vec3<T> &v, T e) const;
+    IMATH_HOSTDEVICE bool equalWithAbsError (const Vec3<T> &v, T e) const;
+    IMATH_HOSTDEVICE bool equalWithRelError (const Vec3<T> &v, T e) const;
 
     //------------
     // Dot product
     //------------
 
-    HOSTDEVICE T dot (const Vec3 &v) const;
-    HOSTDEVICE T operator ^ (const Vec3 &v) const;
+    IMATH_HOSTDEVICE T dot (const Vec3 &v) const;
+    IMATH_HOSTDEVICE T operator ^ (const Vec3 &v) const;
 
 
     //---------------------------
     // Right-handed cross product
     //---------------------------
 
-    HOSTDEVICE Vec3     cross (const Vec3 &v) const;
-    HOSTDEVICE const Vec3 & operator %= (const Vec3 &v);
-    HOSTDEVICE Vec3     operator % (const Vec3 &v) const;
+    IMATH_HOSTDEVICE Vec3     cross (const Vec3 &v) const;
+    IMATH_HOSTDEVICE const Vec3 & operator %= (const Vec3 &v);
+    IMATH_HOSTDEVICE Vec3     operator % (const Vec3 &v) const;
 
 
     //------------------------
     // Component-wise addition
     //------------------------
 
-    HOSTDEVICE const Vec3 & operator += (const Vec3 &v);
-    HOSTDEVICE Vec3     operator + (const Vec3 &v) const;
+    IMATH_HOSTDEVICE const Vec3 & operator += (const Vec3 &v);
+    IMATH_HOSTDEVICE Vec3     operator + (const Vec3 &v) const;
 
 
     //---------------------------
     // Component-wise subtraction
     //---------------------------
 
-    HOSTDEVICE const Vec3 & operator -= (const Vec3 &v);
-    HOSTDEVICE Vec3     operator - (const Vec3 &v) const;
+    IMATH_HOSTDEVICE const Vec3 & operator -= (const Vec3 &v);
+    IMATH_HOSTDEVICE Vec3     operator - (const Vec3 &v) const;
 
 
     //------------------------------------
     // Component-wise multiplication by -1
     //------------------------------------
 
-    HOSTDEVICE Vec3     operator - () const;
-    HOSTDEVICE const Vec3 & negate ();
+    IMATH_HOSTDEVICE Vec3     operator - () const;
+    IMATH_HOSTDEVICE const Vec3 & negate ();
 
 
     //------------------------------
     // Component-wise multiplication
     //------------------------------
 
-    HOSTDEVICE const Vec3 & operator *= (const Vec3 &v);
-    HOSTDEVICE const Vec3 & operator *= (T a);
-    HOSTDEVICE Vec3     operator * (const Vec3 &v) const;
-    HOSTDEVICE Vec3     operator * (T a) const;
+    IMATH_HOSTDEVICE const Vec3 & operator *= (const Vec3 &v);
+    IMATH_HOSTDEVICE const Vec3 & operator *= (T a);
+    IMATH_HOSTDEVICE Vec3     operator * (const Vec3 &v) const;
+    IMATH_HOSTDEVICE Vec3     operator * (T a) const;
 
 
     //------------------------
     // Component-wise division
     //------------------------
 
-    HOSTDEVICE const Vec3 & operator /= (const Vec3 &v);
-    HOSTDEVICE const Vec3 & operator /= (T a);
-    HOSTDEVICE Vec3     operator / (const Vec3 &v) const;
-    HOSTDEVICE Vec3     operator / (T a) const;
+    IMATH_HOSTDEVICE const Vec3 & operator /= (const Vec3 &v);
+    IMATH_HOSTDEVICE const Vec3 & operator /= (T a);
+    IMATH_HOSTDEVICE Vec3     operator / (const Vec3 &v) const;
+    IMATH_HOSTDEVICE Vec3     operator / (T a) const;
 
 
     //----------------------------------------------------------------
@@ -452,33 +449,33 @@ template <class T> class Vec3
     // is 0.0, the result is undefined.
     //----------------------------------------------------------------
 
-    HOSTDEVICE T length () const;
-    HOSTDEVICE T length2 () const;
+    IMATH_HOSTDEVICE T length () const;
+    IMATH_HOSTDEVICE T length2 () const;
 
-    HOSTDEVICE const Vec3 & normalize ();           // modifies *this
-    HOSTDEVICE const Vec3 & normalizeExc () throw (IEX_NAMESPACE::MathExc);
-    HOSTDEVICE const Vec3 & normalizeNonNull ();
+    IMATH_HOSTDEVICE const Vec3 & normalize ();           // modifies *this
+    IMATH_HOSTDEVICE const Vec3 & normalizeExc () throw (IEX_NAMESPACE::MathExc);
+    IMATH_HOSTDEVICE const Vec3 & normalizeNonNull ();
 
-    HOSTDEVICE Vec3<T> normalized () const; // does not modify *this
-    HOSTDEVICE Vec3<T> normalizedExc () const throw (IEX_NAMESPACE::MathExc);
-    HOSTDEVICE Vec3<T> normalizedNonNull () const;
+    IMATH_HOSTDEVICE Vec3<T> normalized () const; // does not modify *this
+    IMATH_HOSTDEVICE Vec3<T> normalizedExc () const throw (IEX_NAMESPACE::MathExc);
+    IMATH_HOSTDEVICE Vec3<T> normalizedNonNull () const;
 
 
     //--------------------------------------------------------
     // Number of dimensions, i.e. number of elements in a Vec3
     //--------------------------------------------------------
 
-    HOSTDEVICE static unsigned int  dimensions() {return 3;}
+    IMATH_HOSTDEVICE static unsigned int  dimensions() {return 3;}
 
 
     //-------------------------------------------------
     // Limitations of type T (see also class limits<T>)
     //-------------------------------------------------
 
-    HOSTDEVICE static T baseTypeMin()       {return limits<T>::min();}
-    HOSTDEVICE static T baseTypeMax()       {return limits<T>::max();}
-    HOSTDEVICE static T baseTypeSmallest()  {return limits<T>::smallest();}
-    HOSTDEVICE static T baseTypeEpsilon()   {return limits<T>::epsilon();}
+    IMATH_HOSTDEVICE static T baseTypeMin()       {return limits<T>::min();}
+    IMATH_HOSTDEVICE static T baseTypeMax()       {return limits<T>::max();}
+    IMATH_HOSTDEVICE static T baseTypeSmallest()  {return limits<T>::smallest();}
+    IMATH_HOSTDEVICE static T baseTypeEpsilon()   {return limits<T>::epsilon();}
 
 
     //--------------------------------------------------------------
@@ -491,7 +488,7 @@ template <class T> class Vec3
 
   private:
 
-    HOSTDEVICE T lengthTiny () const;
+    IMATH_HOSTDEVICE T lengthTiny () const;
 };
 
 
@@ -506,45 +503,45 @@ template <class T> class Vec4
 
     T               x, y, z, w;
 
-    T &             operator [] (int i);
-    const T &       operator [] (int i) const;
+    IMATH_HOSTDEVICE       T & operator [] (int i);
+    IMATH_HOSTDEVICE const T & operator [] (int i) const;
 
 
     //-------------
     // Constructors
     //-------------
 
-    Vec4 ();			   // no initialization
-    explicit Vec4 (T a);           // (a a a a)
-    Vec4 (T a, T b, T c, T d);	   // (a b c d)
+    IMATH_HOSTDEVICE          Vec4 ();                       // no initialization
+    IMATH_HOSTDEVICE explicit Vec4 (T a);                    // (a a a a)
+    IMATH_HOSTDEVICE          Vec4 (T a, T b, T c, T d);     // (a b c d)
 
 
     //---------------------------------
     // Copy constructors and assignment
     //---------------------------------
 
-    Vec4 (const Vec4 &v);
-    template <class S> Vec4 (const Vec4<S> &v);
+    IMATH_HOSTDEVICE Vec4 (const Vec4 &v);
+    template <class S> IMATH_HOSTDEVICE Vec4 (const Vec4<S> &v);
 
-    const Vec4 &    operator = (const Vec4 &v);
+    IMATH_HOSTDEVICE const Vec4 & operator = (const Vec4 &v);
 
 
     //-------------------------------------
     // Vec3 to Vec4 conversion, sets w to 1
     //-------------------------------------
 
-    template <class S> explicit Vec4 (const Vec3<S> &v);
+    template <class S> IMATH_HOSTDEVICE explicit Vec4 (const Vec3<S> &v);
 
 
     //---------
     // Equality
     //---------
 
-    template <class S>
-    bool            operator == (const Vec4<S> &v) const;
+    template <class S> IMATH_HOSTDEVICE
+    IMATH_HOSTDEVICE bool operator == (const Vec4<S> &v) const;
 
-    template <class S>
-    bool            operator != (const Vec4<S> &v) const;
+    template <class S> IMATH_HOSTDEVICE
+    IMATH_HOSTDEVICE bool operator != (const Vec4<S> &v) const;
 
 
     //-----------------------------------------------------------------------
@@ -552,29 +549,29 @@ template <class T> class Vec4
     //
     // equalWithAbsError (v, e)
     //
-    //	    Returns true if the coefficients of this and v are the same with
-    //	    an absolute error of no more than e, i.e., for all i
+    //      Returns true if the coefficients of this and v are the same with
+    //      an absolute error of no more than e, i.e., for all i
     //
     //      abs (this[i] - v[i]) <= e
     //
     // equalWithRelError (v, e)
     //
-    //	    Returns true if the coefficients of this and v are the same with
-    //	    a relative error of no more than e, i.e., for all i
+    //      Returns true if the coefficients of this and v are the same with
+    //      a relative error of no more than e, i.e., for all i
     //
     //      abs (this[i] - v[i]) <= e * abs (this[i])
     //-----------------------------------------------------------------------
 
-    bool		equalWithAbsError (const Vec4<T> &v, T e) const;
-    bool		equalWithRelError (const Vec4<T> &v, T e) const;
+    IMATH_HOSTDEVICE bool equalWithAbsError (const Vec4<T> &v, T e) const;
+    IMATH_HOSTDEVICE bool equalWithRelError (const Vec4<T> &v, T e) const;
 
 
     //------------
     // Dot product
     //------------
 
-    HOSTDEVICE T dot (const Vec4 &v) const;
-    HOSTDEVICE T operator ^ (const Vec4 &v) const;
+    IMATH_HOSTDEVICE T dot (const Vec4 &v) const;
+    IMATH_HOSTDEVICE T operator ^ (const Vec4 &v) const;
 
 
     //-----------------------------------
@@ -585,44 +582,44 @@ template <class T> class Vec4
     // Component-wise addition
     //------------------------
 
-    const Vec4 &    operator += (const Vec4 &v);
-    Vec4            operator + (const Vec4 &v) const;
+    IMATH_HOSTDEVICE const Vec4 &    operator += (const Vec4 &v);
+    IMATH_HOSTDEVICE Vec4            operator + (const Vec4 &v) const;
 
 
     //---------------------------
     // Component-wise subtraction
     //---------------------------
 
-    const Vec4 &    operator -= (const Vec4 &v);
-    Vec4            operator - (const Vec4 &v) const;
+    IMATH_HOSTDEVICE const Vec4 &    operator -= (const Vec4 &v);
+    IMATH_HOSTDEVICE Vec4            operator - (const Vec4 &v) const;
 
 
     //------------------------------------
     // Component-wise multiplication by -1
     //------------------------------------
 
-    Vec4            operator - () const;
-    const Vec4 &    negate ();
+    IMATH_HOSTDEVICE Vec4            operator - () const;
+    IMATH_HOSTDEVICE const Vec4 &    negate ();
 
 
     //------------------------------
     // Component-wise multiplication
     //------------------------------
 
-    const Vec4 &    operator *= (const Vec4 &v);
-    const Vec4 &    operator *= (T a);
-    Vec4            operator * (const Vec4 &v) const;
-    Vec4            operator * (T a) const;
+    IMATH_HOSTDEVICE const Vec4 &    operator *= (const Vec4 &v);
+    IMATH_HOSTDEVICE const Vec4 &    operator *= (T a);
+    IMATH_HOSTDEVICE Vec4            operator * (const Vec4 &v) const;
+    IMATH_HOSTDEVICE Vec4            operator * (T a) const;
 
 
     //------------------------
     // Component-wise division
     //------------------------
 
-    const Vec4 &    operator /= (const Vec4 &v);
-    const Vec4 &    operator /= (T a);
-    Vec4            operator / (const Vec4 &v) const;
-    Vec4            operator / (T a) const;
+    IMATH_HOSTDEVICE const Vec4 &    operator /= (const Vec4 &v);
+    IMATH_HOSTDEVICE const Vec4 &    operator /= (T a);
+    IMATH_HOSTDEVICE Vec4            operator / (const Vec4 &v) const;
+    IMATH_HOSTDEVICE Vec4            operator / (T a) const;
 
 
     //----------------------------------------------------------------
@@ -634,34 +631,32 @@ template <class T> class Vec4
     // is 0.0, the result is undefined.
     //----------------------------------------------------------------
 
-    T               length () const;
-    T               length2 () const;
+    IMATH_HOSTDEVICE T               length () const;
+    IMATH_HOSTDEVICE T               length2 () const;
 
-    const Vec4 &    normalize ();           // modifies *this
-    const Vec4 &    normalizeExc () throw (IEX_NAMESPACE::MathExc);
-    const Vec4 &    normalizeNonNull ();
+    IMATH_HOSTDEVICE const Vec4 &    normalize ();           // modifies *this
+    IMATH_HOSTDEVICE const Vec4 &    normalizeExc () throw (IEX_NAMESPACE::MathExc);
+    IMATH_HOSTDEVICE const Vec4 &    normalizeNonNull ();
 
-    Vec4<T>         normalized () const;	// does not modify *this
-    Vec4<T>         normalizedExc () const throw (IEX_NAMESPACE::MathExc);
-    Vec4<T>         normalizedNonNull () const;
-
+    IMATH_HOSTDEVICE Vec4<T>         normalized () const;    // does not modify *this
+    IMATH_HOSTDEVICE Vec4<T>         normalizedExc () const throw (IEX_NAMESPACE::MathExc);
+    IMATH_HOSTDEVICE Vec4<T>         normalizedNonNull () const;
 
     //--------------------------------------------------------
     // Number of dimensions, i.e. number of elements in a Vec4
     //--------------------------------------------------------
 
-    static unsigned int	dimensions() {return 4;}
-
+    IMATH_HOSTDEVICE static unsigned int dimensions() {return 4;}
 
     //-------------------------------------------------
     // Limitations of type T (see also class limits<T>)
     //-------------------------------------------------
 
-    static T		baseTypeMin()		{return limits<T>::min();}
-    static T		baseTypeMax()		{return limits<T>::max();}
-    static T		baseTypeSmallest()	{return limits<T>::smallest();}
-    static T		baseTypeEpsilon()	{return limits<T>::epsilon();}
-
+    IMATH_HOSTDEVICE static T        baseTypeMin()       {return limits<T>::min();}
+    IMATH_HOSTDEVICE static T        baseTypeMax()       {return limits<T>::max();}
+    IMATH_HOSTDEVICE static T        baseTypeSmallest()  {return limits<T>::smallest();}
+    IMATH_HOSTDEVICE static T        baseTypeEpsilon()   {return limits<T>::epsilon();}
+    
 
     //--------------------------------------------------------------
     // Base type -- in templates, which accept a parameter, V, which
@@ -669,11 +664,11 @@ template <class T> class Vec4
     // refer to T as V::BaseType
     //--------------------------------------------------------------
 
-    typedef T		BaseType;
+    typedef T       BaseType;
 
   private:
 
-    HOSTDEVICE T lengthTiny () const;
+    IMATH_HOSTDEVICE T lengthTiny () const;
 };
 
 
@@ -682,21 +677,21 @@ template <class T> class Vec4
 //--------------
 
 template <class T>
-std::ostream &	operator << (std::ostream &s, const Vec2<T> &v);
+std::ostream &  operator << (std::ostream &s, const Vec2<T> &v);
 
 template <class T>
-std::ostream &	operator << (std::ostream &s, const Vec3<T> &v);
+std::ostream &  operator << (std::ostream &s, const Vec3<T> &v);
 
 template <class T>
-std::ostream &	operator << (std::ostream &s, const Vec4<T> &v);
+std::ostream &  operator << (std::ostream &s, const Vec4<T> &v);
 
 //----------------------------------------------------
 // Reverse multiplication: S * Vec2<T> and S * Vec3<T>
 //----------------------------------------------------
 
-template <class T> Vec2<T>	operator * (T a, const Vec2<T> &v);
-template <class T> Vec3<T>	operator * (T a, const Vec3<T> &v);
-template <class T> Vec4<T>	operator * (T a, const Vec4<T> &v);
+template <class T> IMATH_HOSTDEVICE Vec2<T>  operator * (T a, const Vec2<T> &v);
+template <class T> IMATH_HOSTDEVICE Vec3<T>  operator * (T a, const Vec3<T> &v);
+template <class T> IMATH_HOSTDEVICE Vec4<T>  operator * (T a, const Vec4<T> &v);
 
 
 //-------------------------
@@ -723,144 +718,145 @@ typedef Vec4 <double> V4d;
 
 // Vec2<short>
 
-template <> HOSTDEVICE short
+template <> IMATH_HOSTDEVICE short
 Vec2<short>::length () const;
 
-template <> HOSTDEVICE const Vec2<short> &
+template <> IMATH_HOSTDEVICE const Vec2<short> &
 Vec2<short>::normalize ();
 
-template <> HOSTDEVICE const Vec2<short> &
+template <> IMATH_HOSTDEVICE const Vec2<short> &
 Vec2<short>::normalizeExc () throw (IEX_NAMESPACE::MathExc);
 
-template <> HOSTDEVICE const Vec2<short> &
+template <> IMATH_HOSTDEVICE const Vec2<short> &
 Vec2<short>::normalizeNonNull ();
 
-template <> HOSTDEVICE Vec2<short>
+template <> IMATH_HOSTDEVICE Vec2<short>
 Vec2<short>::normalized () const;
 
-template <> HOSTDEVICE Vec2<short>
+template <> IMATH_HOSTDEVICE Vec2<short>
 Vec2<short>::normalizedExc () const throw (IEX_NAMESPACE::MathExc);
 
-template <> HOSTDEVICE Vec2<short>
+template <> IMATH_HOSTDEVICE Vec2<short>
 Vec2<short>::normalizedNonNull () const;
 
 
 // Vec2<int>
 
-template <> HOSTDEVICE int
+template <> IMATH_HOSTDEVICE int
 Vec2<int>::length () const;
 
-template <> HOSTDEVICE const Vec2<int> &
+template <> IMATH_HOSTDEVICE const Vec2<int> &
 Vec2<int>::normalize ();
 
-template <> HOSTDEVICE const Vec2<int> &
+template <> IMATH_HOSTDEVICE const Vec2<int> &
 Vec2<int>::normalizeExc () throw (IEX_NAMESPACE::MathExc);
 
-template <> HOSTDEVICE const Vec2<int> &
+template <> IMATH_HOSTDEVICE const Vec2<int> &
 Vec2<int>::normalizeNonNull ();
 
-template <> HOSTDEVICE Vec2<int>
+template <> IMATH_HOSTDEVICE Vec2<int>
 Vec2<int>::normalized () const;
 
-template <> HOSTDEVICE Vec2<int>
+template <> IMATH_HOSTDEVICE Vec2<int>
 Vec2<int>::normalizedExc () const throw (IEX_NAMESPACE::MathExc);
 
-template <> HOSTDEVICE Vec2<int>
+template <> IMATH_HOSTDEVICE Vec2<int>
 Vec2<int>::normalizedNonNull () const;
 
 
 // Vec3<short>
 
-template <> HOSTDEVICE short
+template <> IMATH_HOSTDEVICE short
 Vec3<short>::length () const;
 
-template <> HOSTDEVICE const Vec3<short> &
+template <> IMATH_HOSTDEVICE const Vec3<short> &
 Vec3<short>::normalize ();
 
-template <> HOSTDEVICE const Vec3<short> &
+template <> IMATH_HOSTDEVICE const Vec3<short> &
 Vec3<short>::normalizeExc () throw (IEX_NAMESPACE::MathExc);
 
-template <> HOSTDEVICE const Vec3<short> &
+template <> IMATH_HOSTDEVICE const Vec3<short> &
 Vec3<short>::normalizeNonNull ();
 
-template <> HOSTDEVICE Vec3<short>
+template <> IMATH_HOSTDEVICE Vec3<short>
 Vec3<short>::normalized () const;
 
-template <> HOSTDEVICE Vec3<short>
+template <> IMATH_HOSTDEVICE Vec3<short>
 Vec3<short>::normalizedExc () const throw (IEX_NAMESPACE::MathExc);
 
-template <> HOSTDEVICE Vec3<short>
+template <> IMATH_HOSTDEVICE Vec3<short>
 Vec3<short>::normalizedNonNull () const;
 
 
 // Vec3<int>
 
-template <> HOSTDEVICE int
+template <> IMATH_HOSTDEVICE int
 Vec3<int>::length () const;
 
-template <> HOSTDEVICE const Vec3<int> &
+template <> IMATH_HOSTDEVICE const Vec3<int> &
 Vec3<int>::normalize ();
 
-template <> HOSTDEVICE const Vec3<int> &
+template <> IMATH_HOSTDEVICE const Vec3<int> &
 Vec3<int>::normalizeExc () throw (IEX_NAMESPACE::MathExc);
 
-template <> HOSTDEVICE const Vec3<int> &
+template <> IMATH_HOSTDEVICE const Vec3<int> &
 Vec3<int>::normalizeNonNull ();
 
-template <> HOSTDEVICE Vec3<int>
+template <> IMATH_HOSTDEVICE Vec3<int>
 Vec3<int>::normalized () const;
 
-template <> HOSTDEVICE Vec3<int>
+template <> IMATH_HOSTDEVICE Vec3<int>
 Vec3<int>::normalizedExc () const throw (IEX_NAMESPACE::MathExc);
 
-template <> HOSTDEVICE Vec3<int>
+template <> IMATH_HOSTDEVICE Vec3<int>
 Vec3<int>::normalizedNonNull () const;
+
 
 // Vec4<short>
 
-template <> short
+template <> short IMATH_HOSTDEVICE
 Vec4<short>::length () const;
 
-template <> const Vec4<short> &
+template <> IMATH_HOSTDEVICE const Vec4<short> &
 Vec4<short>::normalize ();
 
-template <> const Vec4<short> &
+template <> IMATH_HOSTDEVICE const Vec4<short> &
 Vec4<short>::normalizeExc () throw (IEX_NAMESPACE::MathExc);
 
-template <> const Vec4<short> &
+template <> IMATH_HOSTDEVICE const Vec4<short> &
 Vec4<short>::normalizeNonNull ();
 
-template <> Vec4<short>
+template <> IMATH_HOSTDEVICE Vec4<short>
 Vec4<short>::normalized () const;
 
-template <> Vec4<short>
+template <> IMATH_HOSTDEVICE Vec4<short>
 Vec4<short>::normalizedExc () const throw (IEX_NAMESPACE::MathExc);
 
-template <> Vec4<short>
+template <> IMATH_HOSTDEVICE Vec4<short>
 Vec4<short>::normalizedNonNull () const;
 
 
 // Vec4<int>
 
-template <> int
+template <> IMATH_HOSTDEVICE int
 Vec4<int>::length () const;
 
-template <> const Vec4<int> &
+template <> IMATH_HOSTDEVICE const Vec4<int> &
 Vec4<int>::normalize ();
 
-template <> const Vec4<int> &
+template <> IMATH_HOSTDEVICE const Vec4<int> &
 Vec4<int>::normalizeExc () throw (IEX_NAMESPACE::MathExc);
 
-template <> const Vec4<int> &
+template <> IMATH_HOSTDEVICE const Vec4<int> &
 Vec4<int>::normalizeNonNull ();
 
-template <> Vec4<int>
+template <> IMATH_HOSTDEVICE Vec4<int>
 Vec4<int>::normalized () const;
 
-template <> Vec4<int>
+template <> IMATH_HOSTDEVICE Vec4<int>
 Vec4<int>::normalizedExc () const throw (IEX_NAMESPACE::MathExc);
 
-template <> Vec4<int>
+template <> IMATH_HOSTDEVICE Vec4<int>
 Vec4<int>::normalizedNonNull () const;
 
 
@@ -868,35 +864,35 @@ Vec4<int>::normalizedNonNull () const;
 // Implementation of Vec2:
 //------------------------
 
-template <class T>
-HOSTDEVICE inline T &
+template <class T> IMATH_HOSTDEVICE
+inline T &
 Vec2<T>::operator [] (int i)
 {
     return (&x)[i];
 }
 
-template <class T>
-HOSTDEVICE inline const T &
+template <class T> IMATH_HOSTDEVICE
+inline const T &
 Vec2<T>::operator [] (int i) const
 {
     return (&x)[i];
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline
 Vec2<T>::Vec2 ()
 {
     // empty
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline
 Vec2<T>::Vec2 (T a)
 {
     x = y = a;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline
 Vec2<T>::Vec2 (T a, T b)
 {
@@ -904,7 +900,7 @@ Vec2<T>::Vec2 (T a, T b)
     y = b;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline
 Vec2<T>::Vec2 (const Vec2 &v)
 {
@@ -913,7 +909,7 @@ Vec2<T>::Vec2 (const Vec2 &v)
 }
 
 template <class T>
-template <class S> HOSTDEVICE
+template <class S> IMATH_HOSTDEVICE
 inline
 Vec2<T>::Vec2 (const Vec2<S> &v)
 {
@@ -921,7 +917,7 @@ Vec2<T>::Vec2 (const Vec2<S> &v)
     y = T (v.y);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline const Vec2<T> &
 Vec2<T>::operator = (const Vec2 &v)
 {
@@ -931,7 +927,7 @@ Vec2<T>::operator = (const Vec2 &v)
 }
 
 template <class T>
-template <class S> HOSTDEVICE
+template <class S> IMATH_HOSTDEVICE
 inline void
 Vec2<T>::setValue (S a, S b)
 {
@@ -940,7 +936,7 @@ Vec2<T>::setValue (S a, S b)
 }
 
 template <class T>
-template <class S> HOSTDEVICE
+template <class S> IMATH_HOSTDEVICE
 inline void
 Vec2<T>::setValue (const Vec2<S> &v)
 {
@@ -949,7 +945,7 @@ Vec2<T>::setValue (const Vec2<S> &v)
 }
 
 template <class T>
-template <class S> HOSTDEVICE
+template <class S> IMATH_HOSTDEVICE
 inline void
 Vec2<T>::getValue (S &a, S &b) const
 {
@@ -958,7 +954,7 @@ Vec2<T>::getValue (S &a, S &b) const
 }
 
 template <class T>
-template <class S> HOSTDEVICE
+template <class S> IMATH_HOSTDEVICE
 inline void
 Vec2<T>::getValue (Vec2<S> &v) const
 {
@@ -966,14 +962,14 @@ Vec2<T>::getValue (Vec2<S> &v) const
     v.y = S (y);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline T *
 Vec2<T>::getValue()
 {
     return (T *) &x;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline const T *
 Vec2<T>::getValue() const
 {
@@ -981,7 +977,7 @@ Vec2<T>::getValue() const
 }
 
 template <class T>
-template <class S> HOSTDEVICE
+template <class S> IMATH_HOSTDEVICE
 inline bool
 Vec2<T>::operator == (const Vec2<S> &v) const
 {
@@ -989,50 +985,50 @@ Vec2<T>::operator == (const Vec2<S> &v) const
 }
 
 template <class T>
-template <class S> HOSTDEVICE
+template <class S> IMATH_HOSTDEVICE
 inline bool
 Vec2<T>::operator != (const Vec2<S> &v) const
 {
     return x != v.x || y != v.y;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 bool
 Vec2<T>::equalWithAbsError (const Vec2<T> &v, T e) const
 {
     for (int i = 0; i < 2; i++)
-	if (!IMATH_INTERNAL_NAMESPACE::equalWithAbsError ((*this)[i], v[i], e))
-	    return false;
+        if (!IMATH_INTERNAL_NAMESPACE::equalWithAbsError ((*this)[i], v[i], e))
+            return false;
 
     return true;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 bool
 Vec2<T>::equalWithRelError (const Vec2<T> &v, T e) const
 {
     for (int i = 0; i < 2; i++)
-	if (!IMATH_INTERNAL_NAMESPACE::equalWithRelError ((*this)[i], v[i], e))
-	    return false;
+        if (!IMATH_INTERNAL_NAMESPACE::equalWithRelError ((*this)[i], v[i], e))
+            return false;
 
     return true;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline T
 Vec2<T>::dot (const Vec2 &v) const
 {
     return x * v.x + y * v.y;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline T
 Vec2<T>::operator ^ (const Vec2 &v) const
 {
     return dot (v);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline T
 Vec2<T>::cross (const Vec2 &v) const
 {
@@ -1040,14 +1036,14 @@ Vec2<T>::cross (const Vec2 &v) const
 
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline T
 Vec2<T>::operator % (const Vec2 &v) const
 {
     return x * v.y - y * v.x;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline const Vec2<T> &
 Vec2<T>::operator += (const Vec2 &v)
 {
@@ -1056,14 +1052,14 @@ Vec2<T>::operator += (const Vec2 &v)
     return *this;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline Vec2<T>
 Vec2<T>::operator + (const Vec2 &v) const
 {
     return Vec2 (x + v.x, y + v.y);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline const Vec2<T> &
 Vec2<T>::operator -= (const Vec2 &v)
 {
@@ -1072,21 +1068,21 @@ Vec2<T>::operator -= (const Vec2 &v)
     return *this;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline Vec2<T>
 Vec2<T>::operator - (const Vec2 &v) const
 {
     return Vec2 (x - v.x, y - v.y);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline Vec2<T>
 Vec2<T>::operator - () const
 {
     return Vec2 (-x, -y);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline const Vec2<T> &
 Vec2<T>::negate ()
 {
@@ -1095,7 +1091,7 @@ Vec2<T>::negate ()
     return *this;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline const Vec2<T> &
 Vec2<T>::operator *= (const Vec2 &v)
 {
@@ -1104,7 +1100,7 @@ Vec2<T>::operator *= (const Vec2 &v)
     return *this;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline const Vec2<T> &
 Vec2<T>::operator *= (T a)
 {
@@ -1113,21 +1109,21 @@ Vec2<T>::operator *= (T a)
     return *this;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline Vec2<T>
 Vec2<T>::operator * (const Vec2 &v) const
 {
     return Vec2 (x * v.x, y * v.y);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline Vec2<T>
 Vec2<T>::operator * (T a) const
 {
     return Vec2 (x * a, y * a);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline const Vec2<T> &
 Vec2<T>::operator /= (const Vec2 &v)
 {
@@ -1136,7 +1132,7 @@ Vec2<T>::operator /= (const Vec2 &v)
     return *this;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline const Vec2<T> &
 Vec2<T>::operator /= (T a)
 {
@@ -1145,21 +1141,21 @@ Vec2<T>::operator /= (T a)
     return *this;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline Vec2<T>
 Vec2<T>::operator / (const Vec2 &v) const
 {
     return Vec2 (x / v.x, y / v.y);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline Vec2<T>
 Vec2<T>::operator / (T a) const
 {
     return Vec2 (x / a, y / a);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 T
 Vec2<T>::lengthTiny () const
 {
@@ -1169,10 +1165,10 @@ Vec2<T>::lengthTiny () const
     T max = absX;
 
     if (max < absY)
-	max = absY;
+        max = absY;
 
     if (max == T (0))
-	return T (0);
+        return T (0);
 
     //
     // Do not replace the divisions by max with multiplications by 1/max.
@@ -1186,26 +1182,26 @@ Vec2<T>::lengthTiny () const
     return max * hostdevice_sqrt<T> (absX * absX + absY * absY);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline T
 Vec2<T>::length () const
 {
     T length2 = dot (*this);
 
     if (length2 < T (2) * std::numeric_limits<T>::min())
-	return lengthTiny();
+        return lengthTiny();
 
     return hostdevice_sqrt<T> (length2);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline T
 Vec2<T>::length2 () const
 {
     return dot (*this);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 const Vec2<T> &
 Vec2<T>::normalize ()
 {
@@ -1219,28 +1215,28 @@ Vec2<T>::normalize ()
         // produce results less than or equal to 1.
         //
 
-	x /= l;
-	y /= l;
+        x /= l;
+        y /= l;
     }
 
     return *this;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 const Vec2<T> &
 Vec2<T>::normalizeExc () throw (IEX_NAMESPACE::MathExc)
 {
     T l = length();
 
     if (l == T (0))
-	throw NullVecExc ("Cannot normalize null vector.");
+        throw NullVecExc ("Cannot normalize null vector.");
 
     x /= l;
     y /= l;
     return *this;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline
 const Vec2<T> &
 Vec2<T>::normalizeNonNull ()
@@ -1251,31 +1247,31 @@ Vec2<T>::normalizeNonNull ()
     return *this;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 Vec2<T>
 Vec2<T>::normalized () const
 {
     T l = length();
 
     if (l == T (0))
-	return Vec2 (T (0));
+        return Vec2 (T (0));
 
     return Vec2 (x / l, y / l);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 Vec2<T>
 Vec2<T>::normalizedExc () const throw (IEX_NAMESPACE::MathExc)
 {
     T l = length();
 
     if (l == T (0))
-	throw NullVecExc ("Cannot normalize null vector.");
+        throw NullVecExc ("Cannot normalize null vector.");
 
     return Vec2 (x / l, y / l);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline
 Vec2<T>
 Vec2<T>::normalizedNonNull () const
@@ -1289,35 +1285,35 @@ Vec2<T>::normalizedNonNull () const
 // Implementation of Vec3
 //-----------------------
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline T &
 Vec3<T>::operator [] (int i)
 {
     return (&x)[i];
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline const T &
 Vec3<T>::operator [] (int i) const
 {
     return (&x)[i];
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline
 Vec3<T>::Vec3 ()
 {
     // empty
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline
 Vec3<T>::Vec3 (T a)
 {
     x = y = z = a;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline
 Vec3<T>::Vec3 (T a, T b, T c)
 {
@@ -1326,7 +1322,7 @@ Vec3<T>::Vec3 (T a, T b, T c)
     z = c;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline
 Vec3<T>::Vec3 (const Vec3 &v)
 {
@@ -1336,7 +1332,7 @@ Vec3<T>::Vec3 (const Vec3 &v)
 }
 
 template <class T>
-template <class S> HOSTDEVICE
+template <class S> IMATH_HOSTDEVICE
 inline
 Vec3<T>::Vec3 (const Vec3<S> &v)
 {
@@ -1345,7 +1341,7 @@ Vec3<T>::Vec3 (const Vec3<S> &v)
     z = T (v.z);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline const Vec3<T> &
 Vec3<T>::operator = (const Vec3 &v)
 {
@@ -1356,7 +1352,7 @@ Vec3<T>::operator = (const Vec3 &v)
 }
 
 template <class T>
-template <class S> HOSTDEVICE
+template <class S> IMATH_HOSTDEVICE
 inline
 Vec3<T>::Vec3 (const Vec4<S> &v)
 {
@@ -1366,7 +1362,7 @@ Vec3<T>::Vec3 (const Vec4<S> &v)
 }
 
 template <class T>
-template <class S> HOSTDEVICE
+template <class S> IMATH_HOSTDEVICE
 Vec3<T>::Vec3 (const Vec4<S> &v, InfException)
 {
     T vx = T (v.x);
@@ -1390,7 +1386,7 @@ Vec3<T>::Vec3 (const Vec4<S> &v, InfException)
 }
 
 template <class T>
-template <class S> HOSTDEVICE
+template <class S> IMATH_HOSTDEVICE
 inline void
 Vec3<T>::setValue (S a, S b, S c)
 {
@@ -1400,7 +1396,7 @@ Vec3<T>::setValue (S a, S b, S c)
 }
 
 template <class T>
-template <class S> HOSTDEVICE
+template <class S> IMATH_HOSTDEVICE
 inline void
 Vec3<T>::setValue (const Vec3<S> &v)
 {
@@ -1410,7 +1406,7 @@ Vec3<T>::setValue (const Vec3<S> &v)
 }
 
 template <class T>
-template <class S> HOSTDEVICE
+template <class S> IMATH_HOSTDEVICE
 inline void
 Vec3<T>::getValue (S &a, S &b, S &c) const
 {
@@ -1420,7 +1416,7 @@ Vec3<T>::getValue (S &a, S &b, S &c) const
 }
 
 template <class T>
-template <class S> HOSTDEVICE
+template <class S> IMATH_HOSTDEVICE
 inline void
 Vec3<T>::getValue (Vec3<S> &v) const
 {
@@ -1429,14 +1425,14 @@ Vec3<T>::getValue (Vec3<S> &v) const
     v.z = S (z);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline T *
 Vec3<T>::getValue()
 {
     return (T *) &x;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline const T *
 Vec3<T>::getValue() const
 {
@@ -1444,7 +1440,7 @@ Vec3<T>::getValue() const
 }
 
 template <class T>
-template <class S> HOSTDEVICE
+template <class S> IMATH_HOSTDEVICE
 inline bool
 Vec3<T>::operator == (const Vec3<S> &v) const
 {
@@ -1452,59 +1448,59 @@ Vec3<T>::operator == (const Vec3<S> &v) const
 }
 
 template <class T>
-template <class S> HOSTDEVICE
+template <class S> IMATH_HOSTDEVICE
 inline bool
 Vec3<T>::operator != (const Vec3<S> &v) const
 {
     return x != v.x || y != v.y || z != v.z;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 bool
 Vec3<T>::equalWithAbsError (const Vec3<T> &v, T e) const
 {
     for (int i = 0; i < 3; i++)
-	if (!IMATH_INTERNAL_NAMESPACE::equalWithAbsError ((*this)[i], v[i], e))
-	    return false;
+        if (!IMATH_INTERNAL_NAMESPACE::equalWithAbsError ((*this)[i], v[i], e))
+            return false;
 
     return true;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 bool
 Vec3<T>::equalWithRelError (const Vec3<T> &v, T e) const
 {
     for (int i = 0; i < 3; i++)
-	if (!IMATH_INTERNAL_NAMESPACE::equalWithRelError ((*this)[i], v[i], e))
-	    return false;
+        if (!IMATH_INTERNAL_NAMESPACE::equalWithRelError ((*this)[i], v[i], e))
+            return false;
 
     return true;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline T
 Vec3<T>::dot (const Vec3 &v) const
 {
     return x * v.x + y * v.y + z * v.z;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline T
 Vec3<T>::operator ^ (const Vec3 &v) const
 {
     return dot (v);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline Vec3<T>
 Vec3<T>::cross (const Vec3 &v) const
 {
     return Vec3 (y * v.z - z * v.y,
-		 z * v.x - x * v.z,
-		 x * v.y - y * v.x);
+         z * v.x - x * v.z,
+         x * v.y - y * v.x);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline const Vec3<T> &
 Vec3<T>::operator %= (const Vec3 &v)
 {
@@ -1517,16 +1513,16 @@ Vec3<T>::operator %= (const Vec3 &v)
     return *this;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline Vec3<T>
 Vec3<T>::operator % (const Vec3 &v) const
 {
     return Vec3 (y * v.z - z * v.y,
-		 z * v.x - x * v.z,
-		 x * v.y - y * v.x);
+         z * v.x - x * v.z,
+         x * v.y - y * v.x);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline const Vec3<T> &
 Vec3<T>::operator += (const Vec3 &v)
 {
@@ -1536,14 +1532,14 @@ Vec3<T>::operator += (const Vec3 &v)
     return *this;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline Vec3<T>
 Vec3<T>::operator + (const Vec3 &v) const
 {
     return Vec3 (x + v.x, y + v.y, z + v.z);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline const Vec3<T> &
 Vec3<T>::operator -= (const Vec3 &v)
 {
@@ -1553,21 +1549,21 @@ Vec3<T>::operator -= (const Vec3 &v)
     return *this;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline Vec3<T>
 Vec3<T>::operator - (const Vec3 &v) const
 {
     return Vec3 (x - v.x, y - v.y, z - v.z);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline Vec3<T>
 Vec3<T>::operator - () const
 {
     return Vec3 (-x, -y, -z);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline const Vec3<T> &
 Vec3<T>::negate ()
 {
@@ -1577,7 +1573,7 @@ Vec3<T>::negate ()
     return *this;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline const Vec3<T> &
 Vec3<T>::operator *= (const Vec3 &v)
 {
@@ -1587,7 +1583,7 @@ Vec3<T>::operator *= (const Vec3 &v)
     return *this;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline const Vec3<T> &
 Vec3<T>::operator *= (T a)
 {
@@ -1597,21 +1593,21 @@ Vec3<T>::operator *= (T a)
     return *this;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline Vec3<T>
 Vec3<T>::operator * (const Vec3 &v) const
 {
     return Vec3 (x * v.x, y * v.y, z * v.z);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline Vec3<T>
 Vec3<T>::operator * (T a) const
 {
     return Vec3 (x * a, y * a, z * a);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline const Vec3<T> &
 Vec3<T>::operator /= (const Vec3 &v)
 {
@@ -1621,7 +1617,7 @@ Vec3<T>::operator /= (const Vec3 &v)
     return *this;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline const Vec3<T> &
 Vec3<T>::operator /= (T a)
 {
@@ -1631,21 +1627,21 @@ Vec3<T>::operator /= (T a)
     return *this;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline Vec3<T>
 Vec3<T>::operator / (const Vec3 &v) const
 {
     return Vec3 (x / v.x, y / v.y, z / v.z);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline Vec3<T>
 Vec3<T>::operator / (T a) const
 {
     return Vec3 (x / a, y / a, z / a);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 T
 Vec3<T>::lengthTiny () const
 {
@@ -1656,13 +1652,13 @@ Vec3<T>::lengthTiny () const
     T max = absX;
 
     if (max < absY)
-	max = absY;
+        max = absY;
 
     if (max < absZ)
-	max = absZ;
+        max = absZ;
 
     if (max == T (0))
-	return T (0);
+        return T (0);
 
     //
     // Do not replace the divisions by max with multiplications by 1/max.
@@ -1677,26 +1673,26 @@ Vec3<T>::lengthTiny () const
     return max *hostdevice_sqrt<T> (absX * absX + absY * absY + absZ * absZ);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline T
 Vec3<T>::length () const
 {
     T length2 = dot (*this);
 
     if (length2 < T (2) * std::numeric_limits<T>::min())
-	return lengthTiny();
+        return lengthTiny();
 
     return hostdevice_sqrt<T> (length2);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline T
 Vec3<T>::length2 () const
 {
     return dot (*this);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 const Vec3<T> &
 Vec3<T>::normalize ()
 {
@@ -1710,22 +1706,22 @@ Vec3<T>::normalize ()
         // produce results less than or equal to 1.
         //
 
-	x /= l;
-	y /= l;
-	z /= l;
+        x /= l;
+        y /= l;
+        z /= l;
     }
 
     return *this;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 const Vec3<T> &
 Vec3<T>::normalizeExc () throw (IEX_NAMESPACE::MathExc)
 {
     T l = length();
 
     if (l == T (0))
-	throw NullVecExc ("Cannot normalize null vector.");
+        throw NullVecExc ("Cannot normalize null vector.");
 
     x /= l;
     y /= l;
@@ -1733,7 +1729,7 @@ Vec3<T>::normalizeExc () throw (IEX_NAMESPACE::MathExc)
     return *this;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline
 const Vec3<T> &
 Vec3<T>::normalizeNonNull ()
@@ -1745,31 +1741,31 @@ Vec3<T>::normalizeNonNull ()
     return *this;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 Vec3<T>
 Vec3<T>::normalized () const
 {
     T l = length();
 
     if (l == T (0))
-	return Vec3 (T (0));
+        return Vec3 (T (0));
 
     return Vec3 (x / l, y / l, z / l);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 Vec3<T>
 Vec3<T>::normalizedExc () const throw (IEX_NAMESPACE::MathExc)
 {
     T l = length();
 
     if (l == T (0))
-	throw NullVecExc ("Cannot normalize null vector.");
+        throw NullVecExc ("Cannot normalize null vector.");
 
     return Vec3 (x / l, y / l, z / l);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline
 Vec3<T>
 Vec3<T>::normalizedNonNull () const
@@ -1783,35 +1779,35 @@ Vec3<T>::normalizedNonNull () const
 // Implementation of Vec4
 //-----------------------
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline T &
 Vec4<T>::operator [] (int i)
 {
     return (&x)[i];
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline const T &
 Vec4<T>::operator [] (int i) const
 {
     return (&x)[i];
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline
 Vec4<T>::Vec4 ()
 {
     // empty
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline
 Vec4<T>::Vec4 (T a)
 {
     x = y = z = w = a;
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline
 Vec4<T>::Vec4 (T a, T b, T c, T d)
 {
@@ -1821,7 +1817,7 @@ Vec4<T>::Vec4 (T a, T b, T c, T d)
     w = d;
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline
 Vec4<T>::Vec4 (const Vec4 &v)
 {
@@ -1832,7 +1828,7 @@ Vec4<T>::Vec4 (const Vec4 &v)
 }
 
 template <class T>
-template <class S>
+template <class S> IMATH_HOSTDEVICE
 inline
 Vec4<T>::Vec4 (const Vec4<S> &v)
 {
@@ -1842,7 +1838,7 @@ Vec4<T>::Vec4 (const Vec4<S> &v)
     w = T (v.w);
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline const Vec4<T> &
 Vec4<T>::operator = (const Vec4 &v)
 {
@@ -1854,7 +1850,7 @@ Vec4<T>::operator = (const Vec4 &v)
 }
 
 template <class T>
-template <class S>
+template <class S> IMATH_HOSTDEVICE
 inline
 Vec4<T>::Vec4 (const Vec3<S> &v)
 {
@@ -1865,7 +1861,7 @@ Vec4<T>::Vec4 (const Vec3<S> &v)
 }
 
 template <class T>
-template <class S>
+template <class S> IMATH_HOSTDEVICE
 inline bool
 Vec4<T>::operator == (const Vec4<S> &v) const
 {
@@ -1873,14 +1869,14 @@ Vec4<T>::operator == (const Vec4<S> &v) const
 }
 
 template <class T>
-template <class S>
+template <class S> IMATH_HOSTDEVICE
 inline bool
 Vec4<T>::operator != (const Vec4<S> &v) const
 {
     return x != v.x || y != v.y || z != v.z || w != v.w;
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 bool
 Vec4<T>::equalWithAbsError (const Vec4<T> &v, T e) const
 {
@@ -1891,7 +1887,7 @@ Vec4<T>::equalWithAbsError (const Vec4<T> &v, T e) const
     return true;
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 bool
 Vec4<T>::equalWithRelError (const Vec4<T> &v, T e) const
 {
@@ -1902,14 +1898,14 @@ Vec4<T>::equalWithRelError (const Vec4<T> &v, T e) const
     return true;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline T
 Vec4<T>::dot (const Vec4 &v) const
 {
     return x * v.x + y * v.y + z * v.z + w * v.w;
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 inline T
 Vec4<T>::operator ^ (const Vec4 &v) const
 {
@@ -1917,7 +1913,7 @@ Vec4<T>::operator ^ (const Vec4 &v) const
 }
 
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline const Vec4<T> &
 Vec4<T>::operator += (const Vec4 &v)
 {
@@ -1928,14 +1924,14 @@ Vec4<T>::operator += (const Vec4 &v)
     return *this;
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline Vec4<T>
 Vec4<T>::operator + (const Vec4 &v) const
 {
     return Vec4 (x + v.x, y + v.y, z + v.z, w + v.w);
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline const Vec4<T> &
 Vec4<T>::operator -= (const Vec4 &v)
 {
@@ -1946,21 +1942,21 @@ Vec4<T>::operator -= (const Vec4 &v)
     return *this;
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline Vec4<T>
 Vec4<T>::operator - (const Vec4 &v) const
 {
     return Vec4 (x - v.x, y - v.y, z - v.z, w - v.w);
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline Vec4<T>
 Vec4<T>::operator - () const
 {
     return Vec4 (-x, -y, -z, -w);
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline const Vec4<T> &
 Vec4<T>::negate ()
 {
@@ -1971,7 +1967,7 @@ Vec4<T>::negate ()
     return *this;
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline const Vec4<T> &
 Vec4<T>::operator *= (const Vec4 &v)
 {
@@ -1982,7 +1978,7 @@ Vec4<T>::operator *= (const Vec4 &v)
     return *this;
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline const Vec4<T> &
 Vec4<T>::operator *= (T a)
 {
@@ -1993,21 +1989,21 @@ Vec4<T>::operator *= (T a)
     return *this;
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline Vec4<T>
 Vec4<T>::operator * (const Vec4 &v) const
 {
     return Vec4 (x * v.x, y * v.y, z * v.z, w * v.w);
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline Vec4<T>
 Vec4<T>::operator * (T a) const
 {
     return Vec4 (x * a, y * a, z * a, w * a);
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline const Vec4<T> &
 Vec4<T>::operator /= (const Vec4 &v)
 {
@@ -2018,7 +2014,7 @@ Vec4<T>::operator /= (const Vec4 &v)
     return *this;
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline const Vec4<T> &
 Vec4<T>::operator /= (T a)
 {
@@ -2029,21 +2025,21 @@ Vec4<T>::operator /= (T a)
     return *this;
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline Vec4<T>
 Vec4<T>::operator / (const Vec4 &v) const
 {
     return Vec4 (x / v.x, y / v.y, z / v.z, w / v.w);
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline Vec4<T>
 Vec4<T>::operator / (T a) const
 {
     return Vec4 (x / a, y / a, z / a, w / a);
 }
 
-template <class T> HOSTDEVICE
+template <class T> IMATH_HOSTDEVICE
 T
 Vec4<T>::lengthTiny () const
 {
@@ -2081,7 +2077,7 @@ Vec4<T>::lengthTiny () const
        hostdevice_sqrt<T> (absX * absX + absY * absY + absZ * absZ + absW * absW);
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline T
 Vec4<T>::length () const
 {
@@ -2093,14 +2089,14 @@ Vec4<T>::length () const
     return hostdevice_sqrt<T> (length2);
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline T
 Vec4<T>::length2 () const
 {
     return dot (*this);
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 const Vec4<T> &
 Vec4<T>::normalize ()
 {
@@ -2123,7 +2119,7 @@ Vec4<T>::normalize ()
     return *this;
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 const Vec4<T> &
 Vec4<T>::normalizeExc () throw (IEX_NAMESPACE::MathExc)
 {
@@ -2139,7 +2135,7 @@ Vec4<T>::normalizeExc () throw (IEX_NAMESPACE::MathExc)
     return *this;
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline
 const Vec4<T> &
 Vec4<T>::normalizeNonNull ()
@@ -2152,7 +2148,7 @@ Vec4<T>::normalizeNonNull ()
     return *this;
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 Vec4<T>
 Vec4<T>::normalized () const
 {
@@ -2164,7 +2160,7 @@ Vec4<T>::normalized () const
     return Vec4 (x / l, y / l, z / l, w / l);
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 Vec4<T>
 Vec4<T>::normalizedExc () const throw (IEX_NAMESPACE::MathExc)
 {
@@ -2176,7 +2172,7 @@ Vec4<T>::normalizedExc () const throw (IEX_NAMESPACE::MathExc)
     return Vec4 (x / l, y / l, z / l, w / l);
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline
 Vec4<T>
 Vec4<T>::normalizedNonNull () const
@@ -2215,21 +2211,21 @@ operator << (std::ostream &s, const Vec4<T> &v)
 // Implementation of reverse multiplication
 //-----------------------------------------
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline Vec2<T>
 operator * (T a, const Vec2<T> &v)
 {
     return Vec2<T> (a * v.x, a * v.y);
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline Vec3<T>
 operator * (T a, const Vec3<T> &v)
 {
     return Vec3<T> (a * v.x, a * v.y, a * v.z);
 }
 
-template <class T>
+template <class T> IMATH_HOSTDEVICE
 inline Vec4<T>
 operator * (T a, const Vec4<T> &v)
 {

@@ -84,6 +84,25 @@ osl_strlen_is (const char *s)
     return (int) USTR(s).length();
 }
 
+OSL_SHADEOP void
+osl_strlen_w16iw16s_masked (void *wr_, void *ws_, unsigned int mask_value)
+{
+    ConstWideAccessor<ustring> wS (ws_);
+    MaskedAccessor <int> wR (wr_, Mask (mask_value));
+
+    for (int lane = 0; lane < wR.width; ++lane){
+
+        if(wR.mask().is_on(lane)){
+            ustring s = wS[lane];
+            wR[lane] = (int) USTR(s).length();
+        }
+    }
+
+    //return (int) USTR(s).length();
+}
+
+
+
 OSL_SHADEOP int
 osl_hash_is (const char *s)
 {

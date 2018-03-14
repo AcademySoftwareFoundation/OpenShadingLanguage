@@ -329,23 +329,24 @@ DECL (osl_spline_w16dvw16fw16dv_masked, "xXXXXiii")
 DECL (osl_spline_w16dvw16fdv_masked, "xXXXXiii")
 
 //---------------------------------------------------------------
-#if 0 // incomplete (under development)
+#if 1 // incomplete (under development)
 DECL (osl_splineinverse_w16fw16fw16f_masked, "xXXXXiii")
 DECL (osl_splineinverse_w16fw16ff_masked, "xXXXXiii")
 DECL (osl_splineinverse_w16ffw16f_masked, "xXXXXiii")
 DECL (osl_splineinverse_w16fff_masked, "xXXXXiii")
 
 //dfdfdf is treated as dfdff
-DECL (osl_splineinverse_w16dfw16dfw16df_masked, "xXXXXiii")
+DECL (osl_splineinverse_w16dfw16dfw16df_masked, "xXXXXiii")//redone
 DECL (osl_splineinverse_w16dfw16dfdf_masked, "xXXXXiii")
 DECL (osl_splineinverse_w16dfdfw16df_masked, "xXXXXiii") //SM: March 5th TODO
-
+//======
 DECL (osl_splineinverse_w16dfw16dff_masked, "xXXXXiii")
 
-
 //dffdf is treated as fff
-DECL (osl_splineinverse_w16dffw16df_masked, "xXXXXiii") // incomplete
-//DECL (osl_splineinverse_w16dfw16fw16df_masked, "xXXXXiii")
+DECL (osl_splineinverse_w16dffw16df_masked, "xXXXXiii")
+DECL (osl_splineinverse_w16dfw16fw16df_masked, "xXXXXiii")//SM: some tests fail.
+//test path: /nfs/pdx/home/smonteir/osl-wide-workspace/BatchedOSL/testsuite/splineinverse/test_splineinverse_w16df_w16f_w16df
+
 #endif
 #if 0 // incomplete
 // setmessage/getmessage involve closures, leave to next iteration
@@ -629,6 +630,7 @@ DECL (osl_endswith_iss, "iss")
 #endif
 DECL (osl_concat_w16sw16sw16s_masked, "xXXXi")
 DECL (osl_stoi_w16iw16s_masked, "xXXi")
+DECL (osl_strlen_w16iw16s_masked, "xXXi")//OP-void; IP-void,void, int
 #if 0 // incomplete
 DECL (osl_stof_fs, "fs")
 DECL (osl_substr_ssii, "ssii")

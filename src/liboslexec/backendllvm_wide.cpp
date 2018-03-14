@@ -63,6 +63,7 @@ static ustring op_getmessage("getmessage");
 static ustring op_if("if");
 static ustring op_return("return");
 static ustring op_stoi("stoi");
+static ustring op_strlen("strlen");
 static ustring op_surfacearea("surfacearea");
 static ustring op_transform("transform");
 static ustring op_transformv("transformv");
@@ -1338,7 +1339,8 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 			    }
 			}
             if ((opcode.opname() == Strings::op_stoi) ||
-                (opcode.opname() == Strings::op_concat) ){
+                (opcode.opname() == Strings::op_concat)||
+                (opcode.opname() == Strings::op_strlen)){
                 // TODO: should OpDescriptor handle identifying operations that always require masking?
                 m_requires_masking_by_layer_and_op_index[layer()][opIndex] = true;
             }

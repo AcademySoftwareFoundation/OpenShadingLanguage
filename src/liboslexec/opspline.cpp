@@ -360,10 +360,24 @@ struct ProxyElement<-1, 1> {
 
 };
 
-//Vec3
 template<typename ProxyElementX_T, typename ProxyElementY_T, typename ProxyElementZ_T>
 struct ProxyVec3
 {
+    ProxyVec3() = delete;
+    OSL_INLINE ProxyVec3(const ProxyVec3 &other)
+    : x(other.x)
+    , y(other.y)
+    , z(other.z)
+    {}
+    OSL_INLINE ProxyVec3(
+        const ProxyElementX_T &x_,
+        const ProxyElementY_T &y_,
+        const ProxyElementZ_T &z_)
+    : x(x_)
+    , y(y_)
+    , z(z_)
+    {}
+
 	ProxyElementX_T x;
 	ProxyElementY_T y;
 	ProxyElementZ_T z;
@@ -373,8 +387,7 @@ template<typename ProxyElementX_T, typename ProxyElementY_T, typename ProxyEleme
 OSL_INLINE ProxyVec3<ProxyElementX_T, ProxyElementY_T, ProxyElementZ_T>
 makeProxyVec3(ProxyElementX_T x, ProxyElementY_T y, ProxyElementZ_T z)
 {
-	ProxyVec3<ProxyElementX_T, ProxyElementY_T, ProxyElementZ_T> r = {x,y,z};
-	return r;
+	return ProxyVec3<ProxyElementX_T, ProxyElementY_T, ProxyElementZ_T>(x,y,z);
 }
 
 OSL_INLINE
@@ -386,45 +399,22 @@ makeProxyVec3(float x, float y, float z)
 
 
 template <int MT, int DivisorT>
-OSL_INLINE
-decltype(std::declval<ProxyElement<MT, DivisorT>>() + std::declval<float>())
+OSL_INLINE auto
 operator + (float a, ProxyElement<MT, DivisorT> b)
+-> decltype(b + a)
 {
 	return b + a;
 }
 
 template <int MT, int DivisorT>
-OSL_INLINE
-decltype(std::declval<ProxyElement<MT, DivisorT>>() + std::declval<Vec3>())
-operator + (Vec3 a, ProxyElement<MT, DivisorT> b)
-{
-	return b + a;
-}
-
-
-template<typename XT, typename YT, typename ZT>
-OSL_INLINE
-decltype(std::declval<ProxyVec3<XT, YT, ZT>>() + std::declval<Vec3>())
-operator + (Vec3 a, ProxyVec3<XT, YT, ZT> b)
-{
-	return b + a;
-}
-
-template <int MT, int DivisorT>
-OSL_INLINE
-decltype(std::declval<ProxyElement<MT, DivisorT>>() * std::declval<float>())
+OSL_INLINE auto
 operator * (float a, ProxyElement<MT, DivisorT> b)
+-> decltype(b * a)
 {
 	return b * a;
 }
 
-template <int MT, int DivisorT>
-OSL_INLINE
-decltype(std::declval<ProxyElement<MT, DivisorT>>() * std::declval<Vec3>())
-operator * (Vec3 a, ProxyElement<MT, DivisorT> b)
-{
-	return b * a;
-}
+
 
 OSL_INLINE
 float unproxy_element(float value)
@@ -471,33 +461,26 @@ Vec3 unproxy_vec3(const Vec3 &a)
 //Specialize operators for Vec3 to interact with ProxyElements:
 
 template <int MT, int DivisorT>
-OSL_INLINE decltype(makeProxyVec3 (std::declval<ProxyElement<MT, DivisorT>>()*float(),
-		                       std::declval<ProxyElement<MT, DivisorT>>()*float(),
-		                       std::declval<ProxyElement<MT, DivisorT>>()*float()))
+OSL_INLINE auto
 operator* (ProxyElement<MT, DivisorT> a, const Vec3 &b)
+-> decltype(makeProxyVec3 (a*b.x, a*b.y, a*b.z))
 {
-    return makeProxyVec3 (a*b.x,
-                     	  a*b.y,
-						  a*b.z);
+    return makeProxyVec3 (a*b.x, a*b.y, a*b.z);
 }
 
 
 template<int MT, int DivisorT>
-OSL_INLINE decltype(makeProxyVec3 (std::declval<ProxyElement<MT, DivisorT>>()+float(),
-        std::declval<ProxyElement<MT, DivisorT>>()+float(),
-        std::declval<ProxyElement<MT, DivisorT>>()+float()))
-
+OSL_INLINE auto
 operator+ (ProxyElement<MT, DivisorT> a, const Vec3 &b)
+-> decltype(makeProxyVec3 (a + b.x, a + b.y, a + b.z))
 {
     return makeProxyVec3 (a + b.x, a + b.y, a + b.z);
 }
 
 template<typename XT, typename YT, typename ZT>
-OSL_INLINE decltype(makeProxyVec3 (std::declval<XT>()+float(),
-        std::declval<YT>()+float(),
-        std::declval<ZT>()+float()))
-
+OSL_INLINE auto
 operator+ (ProxyVec3<XT, YT, ZT> a, const Vec3 &b)
+-> decltype(makeProxyVec3 (a.x + b.x, a.y + b.y, a.z + b.z))
 {
     return makeProxyVec3 (a.x + b.x, a.y + b.y, a.z + b.z);
 }
@@ -505,23 +488,44 @@ operator+ (ProxyVec3<XT, YT, ZT> a, const Vec3 &b)
 
 template<typename XT, typename YT, typename ZT,
          typename X2T, typename Y2T, typename Z2T>
-OSL_INLINE decltype(makeProxyVec3 (std::declval<XT>()+std::declval<X2T>(),
-        std::declval<YT>()+std::declval<Y2T>(),
-        std::declval<ZT>()+std::declval<Z2T>()))
-
-operator+ (ProxyVec3<XT, YT, ZT> a, const ProxyVec3<X2T, Y2T, Z2T> &b)
+OSL_INLINE auto
+operator+ (ProxyVec3<XT, YT, ZT> a, ProxyVec3<X2T, Y2T, Z2T> b)
+-> decltype(makeProxyVec3 (a.x + b.x, a.y + b.y, a.z + b.z))
 {
     return makeProxyVec3 (a.x + b.x, a.y + b.y, a.z + b.z);
 }
 
 template<typename XT, typename YT, typename ZT>
-OSL_INLINE decltype(makeProxyVec3 (std::declval<XT>()*float(),
-        std::declval<YT>()*float(),
-        std::declval<ZT>()*float()))
-
+OSL_INLINE auto
 operator* (ProxyVec3<XT, YT, ZT> a, float b)
+-> decltype(makeProxyVec3 (a.x*b, a.y*b, a.z*b))
 {
     return makeProxyVec3 (a.x*b, a.y*b, a.z*b);
+}
+
+template <int MT, int DivisorT>
+OSL_INLINE auto
+operator + (const Vec3 &a, ProxyElement<MT, DivisorT> b)
+-> decltype(b + a)
+{
+    return b + a;
+}
+
+
+template<typename XT, typename YT, typename ZT>
+OSL_INLINE auto
+operator + (const Vec3 &a, ProxyVec3<XT, YT, ZT> b)
+-> decltype(b + a)
+{
+    return b + a;
+}
+
+template <int MT, int DivisorT>
+OSL_INLINE auto
+operator * (const Vec3 &a, const ProxyElement<MT, DivisorT> &b)
+-> decltype (b * a)
+{
+    return b * a;
 }
 
 
@@ -529,8 +533,8 @@ operator* (ProxyVec3<XT, YT, ZT> a, float b)
 
 // Specialize operators for Dual2 to interact with ProxyElements
 template <class T, int MT, int DivisorT>
-OSL_INLINE
-Dual2<T> operator* (ProxyElement<MT, DivisorT> b, const Dual2<T> &a)
+OSL_INLINE Dual2<T>
+operator* (ProxyElement<MT, DivisorT> b, const Dual2<T> &a)
 {
     return Dual2<T> (unproxy_element(a.val()*b),
                      unproxy_element(a.dx()*b),
@@ -539,11 +543,12 @@ Dual2<T> operator* (ProxyElement<MT, DivisorT> b, const Dual2<T> &a)
 
 
 template<class T, int MT, int DivisorT>
-OSL_INLINE
-Dual2<T> operator+ (const Dual2<T> &a, ProxyElement<MT, DivisorT> b)
+OSL_INLINE Dual2<T>
+operator+ (const Dual2<T> &a, ProxyElement<MT, DivisorT> b)
 {
     return Dual2<T> (a.val()+b, a.dx(), a.dy());
 }
+
 
 template<typename XT, typename YT, typename ZT>
 OSL_INLINE Dual2<Vec3>
@@ -609,22 +614,24 @@ struct StaticMatrix44
 
 
 
-template <class RTYPE, class CTYPE, class KTYPE, bool knot_derivs, bool is_basis_u_constant, int basis_step, class MatrixType, class XTYPE, class KARRAY_T>
+template <class K_T, bool IsBasisUConstantT, int BasisStepT, class MatrixT, class R_T, class X_T, class KArrayT>
 OSL_INLINE
 void spline_weighted_evaluate(
-					 const MatrixType &M,
-                     RTYPE &result,
-                     XTYPE &xval,
-					 KARRAY_T knots,
+					 const MatrixT &M,
+                     R_T &result,
+                     X_T &xval,
+                     KArrayT knots,
                      int knot_count)
 {
 #if __clang__
-    XTYPE x(xval);
-    fast::clamp_in_place(x, XTYPE(0.0), XTYPE(1.0));
+    // Clang was unhappy tyring to SIMD a loop with min/max on Dual2 return type
+    // so instead use a function that works on a reference instead of returning
+    X_T x(xval);
+    fast::clamp_in_place(x, X_T(0.0), X_T(1.0));
 #else
-    XTYPE x = Spline::Clamp(xval, XTYPE(0.0), XTYPE(1.0));
+    X_T x = Spline::Clamp(xval, X_T(0.0), X_T(1.0));
 #endif
-    int nsegs = ((knot_count - 4) / basis_step) + 1;
+    int nsegs = ((knot_count - 4) / BasisStepT) + 1;
     x = x*(float)nsegs;
     float seg_x = removeDerivatives(x);
     int segnum = (int)seg_x;
@@ -633,81 +640,100 @@ void spline_weighted_evaluate(
     if (segnum > (nsegs-1))
        segnum = nsegs-1;
 
-    if (is_basis_u_constant) {
+    if (IsBasisUConstantT) {
         // Special case for "constant" basis
-        RTYPE P = removeDerivatives (CTYPE(knots[segnum+1]));
+        R_T P = removeDerivatives (K_T(knots[segnum+1]));
         assignment (result, P);
         return;
     }
     // x is the position along segment 'segnum'
     x = x - float(segnum);
-    int s = segnum*basis_step;
+    int s = segnum*BasisStepT;
 
+    // extract the knot elements
 
+    K_T P0 = knots[s];
+    K_T P1 = knots[s+1];
+    K_T P2 = knots[s+2];
+    K_T P3 = knots[s+3];
 
-    // create a functor so we can cleanly(!) extract
-    // the knot elements
-    //Spline::extractValueFromArray<CTYPE, KTYPE, knot_derivs> myExtract;
-    CTYPE P[4];
+    auto tk0 = M.m00 * P0 +
+            M.m01 * P1 +
+            M.m02 * P2 +
+            M.m03 * P3;
 
-    P[0] = knots[s];
-    P[1] = knots[s+1];
-    P[2] = knots[s+2];
-    P[3] = knots[s+3];
-   // P[0] = myExtract(knots, knot_arraylen, s + 0);
-//    P[1] = myExtract(knots, knot_arraylen, s + 1);
-//    P[2] = myExtract(knots, knot_arraylen, s + 2);
-//    P[3] = myExtract(knots, knot_arraylen, s + 3);
+    auto tk1 = M.m10 * P0 +
+            M.m11 * P1 +
+            M.m12 * P2 +
+            M.m13 * P3;
 
-        auto tk0 = M.m00 * P[0] +
-        		M.m01 * P[1] +
-				M.m02 * P[2] +
-				M.m03 * P[3];
-        auto tk1 = M.m10 * P[0] +
-        		M.m11 * P[1] +
-				M.m12 * P[2] +
-				M.m13 * P[3];
-        auto tk2 = M.m20 * P[0] +
-        		M.m21 * P[1] +
-				M.m22 * P[2] +
-				M.m23 * P[3];
+    auto tk2 = M.m20 * P0 +
+            M.m21 * P1 +
+            M.m22 * P2 +
+            M.m23 * P3;
 
+    auto tk3 = M.m30 * P0 +
+            M.m31 * P1 +
+            M.m32 * P2 +
+            M.m33 * P3;
 
-        auto tk3 = M.m30 * P[0] +
-        		M.m31 * P[1] +
-				M.m32 * P[2] +
-				M.m33 * P[3];
-
-
-    RTYPE tresult;
-
-    tresult = unproxy_element(((tk0*x + tk1)*x + tk2)*x + tk3);
+    R_T tresult = unproxy_element(((tk0*x + tk1)*x + tk2)*x + tk3);
     assignment(result, tresult);
 }
 
 
 template <
+    bool IsBasisUConstantT,
+    int BasisStepT,
+    typename MatrixT,
+    typename RAccessorT,
+    typename XAccessorT,
+    typename KAccessorT>
+OSL_NOINLINE
+void spline_evaluate_loop_over_wide(
+    const MatrixT &M,
+    RAccessorT wR,
+    XAccessorT wX,
+    KAccessorT wK)
+{
+    static constexpr int vec_width = RAccessorT::width;
+
+    typedef typename XAccessorT::value_type X_Type;
+    typedef typename RAccessorT::value_type R_Type;
+    typedef typename KAccessorT::value_type K_Type;
+
+    OSL_INTEL_PRAGMA(forceinline recursive)
+    {
+        OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(vec_width))
+        OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(vec_width))
+        for(int lane=0; lane < wR.width; ++lane) {
+            X_Type x = wX[lane];
+            auto knots = wK[lane];
+
+            R_Type result;
+            spline_weighted_evaluate<
+                K_Type,
+                IsBasisUConstantT,
+                BasisStepT>(M, result, x, knots, knots.length());
+
+            wR[lane] = result;
+        }
+    }
+}
+
+template <
 	typename KAccessor_T,
-	bool knot_derivs,
 	typename RAccessorT,
 	typename XAccessorT>
-void spline_evaluate(
+void spline_evaluate_wide(
 	RAccessorT wR,
 	ustring spline_basis,
 	XAccessorT wX,
-	void *wknots_,
-	int knot_count)
+	KAccessor_T wK
+	)
 {
 
 	int basis_type = fast::getSplineBasisType(spline_basis);
-	static constexpr int vec_width = RAccessorT::width;
-	KAccessor_T wK(wknots_, knot_count);
-
-	typedef typename XAccessorT::value_type X_Type;
-    typedef typename RAccessorT::value_type R_Type;
-    typedef typename KAccessor_T::value_type KTYPE;
-    typedef typename KAccessor_T::value_type CTYPE;
-	OSL_INTEL_PRAGMA(forceinline recursive)
 	switch(basis_type)
 	{
 	case 0:  // catmull-rom
@@ -717,28 +743,11 @@ void spline_evaluate(
                             -1, 0, 1, 0,
                             0, 2, 0, 0,
                             2 /* divisor */> catmullRomWeights;
-
-		OSL_INTEL_PRAGMA(nofusion)
-        OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(vec_width))
-        OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(vec_width))
-		for(int lane=0; lane < wR.width; ++lane) {
-		    X_Type x = wX[lane];
-			auto knots = wK[lane];
-
-
-			R_Type result;
-			spline_weighted_evaluate<R_Type, CTYPE, KTYPE,
-								  false /* knot_derivs */,
-								  false /*is_basis_u_constant */,
-								  1 /* basis_step */>
-			   (catmullRomWeights, result, x, knots, knot_count);
-
-			wR[lane] = result;
-		}
-		break;
+        spline_evaluate_loop_over_wide<
+            false /*is_basis_u_constant */,
+            1 /* basis_step */>
+            (catmullRomWeights, wR, wX, wK);
 	}
-
-
 
 	case 1:  // bezier
 	{
@@ -746,23 +755,10 @@ void spline_evaluate(
                                     3, -6, 3, 0,
                                     -3, 3, 0, 0,
                                     1, 0, 0, 0, 1 /*divisor*/> bezierWeights;
-
-		OSL_INTEL_PRAGMA(nofusion)
-        OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(vec_width))
-        OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(vec_width))
-		for(int lane=0; lane < wR.width; ++lane) {
-            X_Type x = wX[lane];
-			auto knots = wK[lane];
-
-			R_Type result;
-			spline_weighted_evaluate<R_Type, CTYPE, KTYPE,
-								  false /* knot_derivs */,
-								  false /*is_basis_u_constant */,
-								  3 /* basis_step */>
-			   (bezierWeights, result, x, knots, knot_count);
-
-			wR[lane] = result;
-		}
+        spline_evaluate_loop_over_wide<
+            false /*is_basis_u_constant */,
+            3 /* basis_step */>
+            (bezierWeights, wR, wX, wK);
 		break;
 
 	}
@@ -774,22 +770,10 @@ void spline_evaluate(
                                     -3, 0, 3, 0,
                                     1, 4, 1, 0, 6 /*bspline*/> bsplineWeights;
 
-		OSL_INTEL_PRAGMA(nofusion)
-        OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(vec_width))
-        OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(vec_width))
-		for(int lane=0; lane < wR.width; ++lane) {
-            X_Type x = wX[lane];
-			auto knots = wK[lane];
-
-			R_Type result;
-			spline_weighted_evaluate<R_Type, CTYPE, KTYPE,
-								  false /* knot_derivs */,
-								  false /*is_basis_u_constant */,
-								  1 /* basis_step */>
-			   (bsplineWeights, result, x, knots, knot_count);
-
-			wR[lane] = result;
-		}
+        spline_evaluate_loop_over_wide<
+            false /*is_basis_u_constant */,
+            1 /* basis_step */>
+            (bsplineWeights, wR, wX, wK);
 		break;
 	}
 	case 3:  // hermite
@@ -798,23 +782,11 @@ void spline_evaluate(
                                     -3, -2, 3, -1,
                                      0, 1, 0, 0,
                                      1, 0, 0, 0, 1 /*Divisor*/> hermiteWeights;
-//
-		OSL_INTEL_PRAGMA(nofusion)
-        OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(vec_width))
-        OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(vec_width))
-		for(int lane=0; lane < wR.width; ++lane) {
-            X_Type x = wX[lane];
-			auto knots = wK[lane];
 
-			R_Type result;
-			spline_weighted_evaluate<R_Type, CTYPE, KTYPE,
-								  false /* knot_derivs */,
-								  false /*is_basis_u_constant */,
-								  2 /* basis_step */>
-			   (hermiteWeights, result, x, knots, knot_count);
-
-			wR[lane] = result;
-		}
+        spline_evaluate_loop_over_wide<
+            false /*is_basis_u_constant */,
+            2 /* basis_step */>
+            (hermiteWeights, wR, wX, wK);
 		break;
 	}
 	case 4:  // linear
@@ -824,24 +796,10 @@ void spline_evaluate(
                                     0, -1, 1, 0,
                                     0, 1, 0, 0, 1 /*Divisor*/> linearWeights;
 
-		OSL_INTEL_PRAGMA(nofusion)
-        OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(vec_width))
-        OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(vec_width))
-		for(int lane=0; lane < wR.width; ++lane) {
-            X_Type x = wX[lane];
-			auto knots = wK[lane];
-
-			R_Type result;
-
-			spline_weighted_evaluate<R_Type, CTYPE, KTYPE,
-								  false /* knot_derivs */,
-								  false /*is_basis_u_constant */,
-								  1 /* basis_step */>
-			   (linearWeights, result, x, knots, knot_count);
-
-
-			wR[lane] = result;
-		}
+        spline_evaluate_loop_over_wide<
+            false /*is_basis_u_constant */,
+            1 /* basis_step */>
+            (linearWeights, wR, wX, wK);
 		break;
 	}
 
@@ -854,24 +812,13 @@ void spline_evaluate(
                                 0, 0, 0, 0,
                                 0, 0, 0, 0, 1 /*Divisor*/> constantWeights;
 
-		OSL_INTEL_PRAGMA(nofusion)
-        OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(vec_width))
-        OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(vec_width))
-		for(int lane=0; lane < wR.width; ++lane) {
-            X_Type x = wX[lane];
-			auto knots = wK[lane];
-
-			R_Type result;
-			spline_weighted_evaluate<R_Type, CTYPE, KTYPE,
-								  false /* knot_derivs */,
-								  true /*is_basis_u_constant */,
-								  1 /* basis_step */>
-			   (constantWeights, result, x, knots, knot_count);
-
-			wR[lane] = result;
-		}
+        spline_evaluate_loop_over_wide<
+        true /*is_basis_u_constant */,
+            1 /* basis_step */>
+            (constantWeights, wR, wX, wK);
 		break;
 	}
+
 	default:
 		ASSERT(0 && "unsupported spline basis");
 		break;
@@ -879,7 +826,7 @@ void spline_evaluate(
 }
 
 
-template <class RTYPE, class XTYPE, class CTYPE, class KTYPE, bool knot_derivs>
+template <class RTYPE, class XTYPE, class KTYPE>
 void spline_evaluate_scalar(
 	RTYPE &result,
 	ustring spline_basis,
@@ -902,8 +849,7 @@ void spline_evaluate_scalar(
 							0, 2, 0, 0,
 							2 /* divisor */> catmullRomWeights;
 
-		spline_weighted_evaluate<RTYPE, CTYPE, KTYPE,
-							  false /* knot_derivs */,
+		spline_weighted_evaluate<KTYPE,
 							  false /*is_basis_u_constant */,
 							  1 /* basis_step */>
 		   (catmullRomWeights, result, x, knots, knot_count);
@@ -919,8 +865,7 @@ void spline_evaluate_scalar(
 									3, -6, 3, 0,
 									-3, 3, 0, 0,
 									1, 0, 0, 0, 1 /*divisor*/> bezierWeights;
-		spline_weighted_evaluate<RTYPE, CTYPE, KTYPE,
-							  false /* knot_derivs */,
+		spline_weighted_evaluate<KTYPE,
 							  false /*is_basis_u_constant */,
 							  3 /* basis_step */>
 		   (bezierWeights, result, x, knots, knot_count);
@@ -933,8 +878,7 @@ void spline_evaluate_scalar(
 									3, -6, 3, 0,
 									-3, 0, 3, 0,
 									1, 4, 1, 0, 6 /*bspline*/> bsplineWeights;
-		spline_weighted_evaluate<RTYPE, CTYPE, KTYPE,
-							  false /* knot_derivs */,
+		spline_weighted_evaluate<KTYPE,
 							  false /*is_basis_u_constant */,
 							  1 /* basis_step */>
 		   (bsplineWeights, result, x, knots, knot_count);
@@ -948,8 +892,7 @@ void spline_evaluate_scalar(
 									 0, 1, 0, 0,
 									 1, 0, 0, 0, 1 /*Divisor*/> hermiteWeights;
 
-		spline_weighted_evaluate<RTYPE, CTYPE, KTYPE,
-							  false /* knot_derivs */,
+		spline_weighted_evaluate<KTYPE,
 							  false /*is_basis_u_constant */,
 							  2 /* basis_step */>
 		   (hermiteWeights, result, x, knots, knot_count);
@@ -962,8 +905,7 @@ void spline_evaluate_scalar(
 									0, 0, 0, 0,
 									0, -1, 1, 0,
 									0, 1, 0, 0, 1 /*Divisor*/> linearWeights;
-		spline_weighted_evaluate<RTYPE, CTYPE, KTYPE,
-							  false /* knot_derivs */,
+		spline_weighted_evaluate<KTYPE,
 							  false /*is_basis_u_constant */,
 							  1 /* basis_step */>
 		   (linearWeights, result, x, knots, knot_count);
@@ -978,8 +920,7 @@ void spline_evaluate_scalar(
 								0, 0, 0, 0,
 								0, 0, 0, 0,
 								0, 0, 0, 0, 1 /*Divisor*/> constantWeights;
-		spline_weighted_evaluate<RTYPE, CTYPE, KTYPE,
-							  false /* knot_derivs */,
+		spline_weighted_evaluate<KTYPE,
 							  true /*is_basis_u_constant */,
 							  1 /* basis_step */>
 		   (constantWeights, result, x, knots, knot_count);
@@ -993,20 +934,17 @@ void spline_evaluate_scalar(
 }//spline_eval ends
 
 } // namespace fast
-
 OSL_SHADEOP void  osl_spline_w16fw16ff_masked(void *wout_, const char *spline_, void *wx_,
                                  float *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
 
 
 
-	fast::template spline_evaluate<
-	    ConstUniformUnboundedArrayAccessor<float>, false>(
+	fast::template spline_evaluate_wide(
         MaskedAccessor<float>(wout_, Mask(mask_value)),
         USTR(spline_),
         ConstWideAccessor<float>(wx_),
-        knots,
-        knot_count);
+        ConstUniformUnboundedArrayAccessor<float>(knots, knot_count));
 }
 
 OSL_SHADEOP void  osl_spline_w16ffw16f(void *wout_, const char *spline_, void *wx_,
@@ -1014,25 +952,22 @@ OSL_SHADEOP void  osl_spline_w16ffw16f(void *wout_, const char *spline_, void *w
 {
 	//WideAccessor<Matrix44> mout(wout_, Mask(mask_value));
 
-	fast::template spline_evaluate<
-	    ConstWideUnboundArrayAccessor<float>, false>(
+	fast::template spline_evaluate_wide(
         WideAccessor<float>(wout_),
         USTR(spline_),
         ConstUniformAccessor<float>(wx_),
-        knots,
-        knot_count);
+        ConstWideUnboundArrayAccessor<float>(knots,knot_count));
 }
 
 
 OSL_SHADEOP void  osl_spline_w16ffw16f_masked(void *wout_, const char *spline_, void *wx_,
                                  float *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
-	fast::template spline_evaluate<
-	    ConstWideUnboundArrayAccessor<float>, false>(
+	fast::template spline_evaluate_wide(
 	    MaskedAccessor<float>(wout_, Mask(mask_value)),
 	    USTR(spline_),
 	    ConstUniformAccessor<float> (wx_),
-	    knots, knot_count);
+	    ConstWideUnboundArrayAccessor<float>(knots, knot_count));
 }
 
 
@@ -1041,9 +976,8 @@ OSL_SHADEOP void  osl_spline_w16ffw16f_masked(void *wout_, const char *spline_, 
 //{
 //	MaskedAccessor<Matrix44> mout(wout_, Mask(mask_value));
 //
-//	fast::template spline_evaluate<
-//	ConstWideUnboundArrayAccessor<float>, false>
-//	(WideAccessor<float>(mout), USTR(spline_), ConstUniformAccessor<float>(wx_), knots, knot_count);
+//	fast::template spline_evaluate_wide
+//	(WideAccessor<float>(mout), USTR(spline_), ConstUniformAccessor<float>(wx_), ConstWideUnboundArrayAccessor<float>(knots, knot_count));
 //}
 
 OSL_SHADEOP void osl_spline_w16fff_masked(
@@ -1064,14 +998,13 @@ OSL_SHADEOP void osl_spline_w16fff_masked(
 	fast::template spline_evaluate_scalar<
 		float,
 		float,
-		float, float, false>
+		float>
 		(scalar_result, USTR(spline_), *reinterpret_cast<float *>(x), knots, knot_count);
 
 	//Broadcast to a wide wout_
 	MaskedAccessor<float> wr(wout_, Mask(mask_value));
 	make_uniform(wr, scalar_result);
 }
-
 
 OSL_SHADEOP void  osl_spline_dfdfdf(void *out, const char *spline_, void *x,
                                     float *knots, int knot_count, int knot_arraylen)
@@ -1081,30 +1014,26 @@ OSL_SHADEOP void  osl_spline_dfdfdf(void *out, const char *spline_, void *x,
      (spline, DFLOAT(out), DFLOAT(x), knots, knot_count, knot_arraylen);
 }
 
-
-
 OSL_SHADEOP void osl_spline_w16dfw16dfw16df_masked(void *wout_, const char *spline_, void *wx_,
 									float *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
 
-	fast::template spline_evaluate<
-		ConstWideUnboundArrayAccessor<Dual2<float>>, true>(
+	fast::template spline_evaluate_wide(
         MaskedAccessor<Dual2<float>>(wout_, Mask(mask_value)),
 	    USTR(spline_),
 	    ConstWideAccessor<Dual2<float>>(wx_),
-	    knots, knot_count);
+	    ConstWideUnboundArrayAccessor<Dual2<float>>(knots, knot_count));
 }
 
 OSL_SHADEOP void osl_spline_w16dfw16dfdf_masked(void *wout_, const char *spline_, void *wx_,
                                     float *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
 
-    fast::template spline_evaluate<
-        ConstUniformUnboundedArrayAccessor<Dual2<float>>, true>(
+    fast::template spline_evaluate_wide(
         MaskedAccessor<Dual2<float>>(wout_, Mask(mask_value)),
         USTR(spline_),
         ConstWideAccessor<Dual2<float>>(wx_),
-        knots, knot_count);
+        ConstUniformUnboundedArrayAccessor<Dual2<float>>(knots, knot_count));
 }
 
 
@@ -1112,17 +1041,12 @@ OSL_SHADEOP void osl_spline_w16dfdfw16df_masked(void *wout_, const char *spline_
                                     float *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
 
-    fast::template spline_evaluate<
-        ConstWideUnboundArrayAccessor<Dual2<float>>, true>(
+    fast::template spline_evaluate_wide(
         MaskedAccessor<Dual2<float>>(wout_, Mask(mask_value)),
         USTR(spline_),
         ConstUniformAccessor<Dual2<float>>(wx_),
-        knots, knot_count);
+        ConstWideUnboundArrayAccessor<Dual2<float>>(knots, knot_count));
 }
-
-
-
-
 
 
 
@@ -1139,20 +1063,31 @@ OSL_SHADEOP void  osl_spline_dffdf(void *out, const char *spline_, void *x,
       (spline, DFLOAT(out), *(float *)x, knots, knot_count, knot_arraylen);
 }
 
-
-
 OSL_SHADEOP void  osl_spline_w16dffw16df_masked(void *wout_, const char *spline_, void *wx_,
                                    float *knots, int knot_count, int knot_arraylen, unsigned int  mask_value)
 {
 
-		fast::template spline_evaluate<
-	ConstWideUnboundArrayAccessor<Dual2<float>>, true>(
-	MaskedAccessor<Dual2<float>>(wout_, Mask(mask_value)),
-	USTR(spline_),
-	ConstUniformAccessor<float>(wx_),
-	knots, knot_count);
+//		fast::template spline_evaluate<
+//		ConstWideUnboundArrayAccessor<Dual2<float>>, true>(
+//	MaskedAccessor<Dual2<float>>(wout_, Mask(mask_value)),
+//	USTR(spline_),
+//	ConstUniformAccessor<float>(wx_),
+//	knots, knot_count);
+//
+//
+//		fast::template spline_evaluate<
+//	ConstWideUnboundArrayAccessor<Dual2<float>>, true>(
+//	MaskedAccessor<Dual2<float>>(wout_, Mask(mask_value)),
+//	USTR(spline_),
+//	ConstUniformAccessor<float>(wx_),
+//	knots, knot_count);
 
 
+    fast::template spline_evaluate_wide(
+        MaskedAccessor<Dual2<float>>(wout_, Mask(mask_value)),
+        USTR(spline_),
+        ConstUniformAccessor<float>(wx_),
+        ConstWideUnboundArrayAccessor<Dual2<float>>(knots, knot_count));
 }
 
 
@@ -1161,14 +1096,11 @@ OSL_SHADEOP void  osl_spline_w16dfw16fw16df_masked(void *wout_, const char *spli
                                    float *knots, int knot_count, int knot_arraylen, unsigned int  mask_value)
 {
 
-		fast::template spline_evaluate<
-		ConstWideUnboundArrayAccessor<Dual2<float>>, true>(
-		MaskedAccessor<Dual2<float>>(wout_, Mask(mask_value)),
-		USTR(spline_),
-		ConstWideAccessor<float>(wx_),
-		knots, knot_count);
-
-
+    fast::template spline_evaluate_wide(
+        MaskedAccessor<Dual2<float>>(wout_, Mask(mask_value)),
+        USTR(spline_),
+        ConstWideAccessor<float>(wx_),
+        ConstWideUnboundArrayAccessor<Dual2<float>>(knots, knot_count));
 }
 
 //===========================================================================
@@ -1182,20 +1114,15 @@ OSL_SHADEOP void  osl_spline_dfdff(void *out, const char *spline_, void *x,
    Spline::spline_evaluate<Dual2<float>, Dual2<float>, float, float, false>
       (spline, DFLOAT(out), DFLOAT(x), knots, knot_count, knot_arraylen);
 }
-
-
 OSL_SHADEOP void  osl_spline_w16dfw16dff_masked(void *wout_, const char *spline_, void *wx_,
                                    float *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
 
-	fast::template spline_evaluate<
-		ConstUniformUnboundedArrayAccessor<float>, false>(
+	fast::template spline_evaluate_wide(
 		MaskedAccessor<Dual2<float>>(wout_, Mask(mask_value)),
 		USTR(spline_),
 		ConstWideAccessor<Dual2<float>>(wx_),
-		knots, knot_count);
-
-
+		ConstUniformUnboundedArrayAccessor<float>(knots, knot_count));
 }
 
 
@@ -1203,21 +1130,19 @@ OSL_SHADEOP void  osl_spline_w16dfw16dff_masked(void *wout_, const char *spline_
 OSL_SHADEOP void  osl_spline_w16fw16fw16f_masked(void *wout_, const char *spline_, void *wx_,
 										  void *wknots_, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
-	fast::template spline_evaluate<
-	        ConstWideUnboundArrayAccessor<float>, false>(
-	        MaskedAccessor<float>(wout_, Mask(mask_value)),
-	        USTR(spline_),
-	        ConstWideAccessor<float>(wx_),
-	        wknots_, knot_count);
+	fast::template spline_evaluate_wide(
+        MaskedAccessor<float>(wout_, Mask(mask_value)),
+        USTR(spline_),
+        ConstWideAccessor<float>(wx_),
+        ConstWideUnboundArrayAccessor<float>(wknots_, knot_count));
 }
 
 /*
 OSL_SHADEOP void  osl_spline_w16dfw16f(void *wout_, const char *spline_, void *wx_,
 										  void *wknots_, int knot_count, int knot_arraylen)
 {
-	fast::template spline_evaluate<
-	ConstWideUnboundArrayAccessor<float>, false>
-	(WideAccessor<float>(wout_), USTR(spline_), ConstUniformAccessor<float>(wx_), wknots_, knot_count);
+	fast::template spline_evaluate_wide
+	(WideAccessor<float>(wout_), USTR(spline_), ConstUniformAccessor<float>(wx_), ConstWideUnboundArrayAccessor<float>(wknots_, knot_count));
 }
 */
 
@@ -1225,12 +1150,10 @@ OSL_SHADEOP void  osl_spline_w16dfw16f(void *wout_, const char *spline_, void *w
 OSL_SHADEOP void  osl_spline_w16dfw16dfw16f(void *wout_, const char *spline_, void *wx_,
 										  void *wknots_, int knot_count, int knot_arraylen)
 {
-	fast::template spline_evaluate<
-	ConstWideUnboundArrayAccessor<float>, false>
-	(WideAccessor<float>(wout_), USTR(spline_), ConstWideAccessor<float>(wx_), wknots_, knot_count);
+	fast::template spline_evaluate_wide
+	(WideAccessor<float>(wout_), USTR(spline_), ConstWideAccessor<float>(wx_), ConstWideUnboundArrayAccessor<float>(wknots_, knot_count));
 }
 */
-
 //=======================================================================
 OSL_SHADEOP void  osl_spline_vfv(void *out, const char *spline_, void *x,
                                  Vec3 *knots, int knot_count, int knot_arraylen)
@@ -1241,20 +1164,15 @@ OSL_SHADEOP void  osl_spline_vfv(void *out, const char *spline_, void *x,
       (spline, *(Vec3 *)out, *(float *)x, knots, knot_count, knot_arraylen);
 }
 
-
-
 OSL_SHADEOP void  osl_spline_w16vw16fv_masked(void *wout_, const char *spline_, void *wx_,
                                  Vec3 *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
 
-	fast::template spline_evaluate<
-		ConstUniformUnboundedArrayAccessor<Vec3>, false>(
-		        MaskedAccessor<Vec3>(wout_, Mask(mask_value)),
-		        USTR(spline_),
-		        ConstWideAccessor<float>(wx_),
-		        knots, knot_count);
-
-
+	fast::template spline_evaluate_wide(
+        MaskedAccessor<Vec3>(wout_, Mask(mask_value)),
+        USTR(spline_),
+        ConstWideAccessor<float>(wx_),
+        ConstUniformUnboundedArrayAccessor<Vec3>(knots, knot_count));
 }
 
 
@@ -1265,12 +1183,11 @@ OSL_SHADEOP void  osl_spline_w16vw16fw16v_masked(void *wout_, const char *spline
                                  Vec3 *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
 
-	fast::template spline_evaluate<
-	    ConstWideUnboundArrayAccessor<Vec3>, false>(
-	        MaskedAccessor<Vec3>(wout_, Mask(mask_value)),
-	        USTR(spline_),
-	        ConstWideAccessor<float>(wx_),
-	        knots, knot_count);
+	fast::template spline_evaluate_wide(
+        MaskedAccessor<Vec3>(wout_, Mask(mask_value)),
+        USTR(spline_),
+        ConstWideAccessor<float>(wx_),
+        ConstWideUnboundArrayAccessor<Vec3>(knots, knot_count));
 }
 
 
@@ -1279,16 +1196,13 @@ OSL_SHADEOP void  osl_spline_w16vw16fw16v_masked(void *wout_, const char *spline
 OSL_SHADEOP void  osl_spline_w16vfw16v_masked(void *wout_, const char *spline_, void *wx_,
                                  Vec3 *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
-	fast::template spline_evaluate<
-		ConstWideUnboundArrayAccessor<Vec3>, false> (
-		        MaskedAccessor<Vec3>(wout_, Mask(mask_value)),
-		        USTR(spline_),
-		        ConstUniformAccessor<float>(wx_),
-		        knots, knot_count);
+	fast::template spline_evaluate_wide(
+        MaskedAccessor<Vec3>(wout_, Mask(mask_value)),
+        USTR(spline_),
+        ConstUniformAccessor<float>(wx_),
+        ConstWideUnboundArrayAccessor<Vec3>(knots, knot_count));
 
 }
-
-
 //=======================================================================
 
 OSL_SHADEOP void  osl_spline_dvdfv(void *out, const char *spline_, void *x,
@@ -1303,21 +1217,17 @@ OSL_SHADEOP void  osl_spline_dvdfv(void *out, const char *spline_, void *x,
 }
 
 
-
 OSL_SHADEOP void osl_spline_w16dvw16dfv_masked (void *wout_, const char *spline_, void *wx_,
         Vec3 *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
 
 
 
-	fast::template spline_evaluate<
-        ConstUniformUnboundedArrayAccessor<Vec3>, false>(
-            MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
-            USTR(spline_),
-            ConstWideAccessor<Dual2<float>>(wx_),
-            knots, knot_count);
-
-
+	fast::template spline_evaluate_wide(
+        MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
+        USTR(spline_),
+        ConstWideAccessor<Dual2<float>>(wx_),
+        ConstUniformUnboundedArrayAccessor<Vec3>(knots, knot_count));
 }
 
 
@@ -1328,35 +1238,28 @@ OSL_SHADEOP void osl_spline_w16dvw16dfw16v_masked (void *wout_, const char *spli
 {
 
 	//std::cout<<"Knot count is: "<<knot_count<<std::endl;
-	fast::template spline_evaluate<
-        ConstWideUnboundArrayAccessor<Vec3>, false>(
-            MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
-            USTR(spline_),
-            ConstWideAccessor<Dual2<float>>(wx_),
-            knots, knot_count);
-
+	fast::template spline_evaluate_wide(
+        MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
+        USTR(spline_),
+        ConstWideAccessor<Dual2<float>>(wx_),
+        ConstWideUnboundArrayAccessor<Vec3>(knots, knot_count));
 }
-
 
 
 OSL_SHADEOP void osl_spline_w16dvdfw16v_masked (void *wout_, const char *spline_, void *wx_,
         Vec3 *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
 //
-//	fast::template spline_evaluate<
-//    ConstWideUnboundArrayAccessor<Vec3>, false>
-//	(WideAccessor<Dual2<Vec3>>(wout_), USTR(spline_), ConstUniformAccessor<Dual2<float>>(wx_), knots, knot_count);
+//	fast::template spline_evaluate_wide
+//	(WideAccessor<Dual2<Vec3>>(wout_), USTR(spline_), ConstUniformAccessor<Dual2<float>>(wx_), ConstWideUnboundArrayAccessor<Vec3>(knots, knot_count));
 
 
-    fast::template spline_evaluate<
-        ConstWideUnboundArrayAccessor<Vec3>, false>(
-            MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
-            USTR(spline_),
-            ConstUniformAccessor<Dual2<float>>(wx_),
-            knots, knot_count);
+    fast::template spline_evaluate_wide(
+        MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
+        USTR(spline_),
+        ConstUniformAccessor<Dual2<float>>(wx_),
+        ConstWideUnboundArrayAccessor<Vec3>(knots, knot_count));
 }
-
-
 
 //=======================================================================
 OSL_SHADEOP void  osl_spline_dvfdv(void *out, const char *spline_, void *x,
@@ -1371,39 +1274,32 @@ OSL_SHADEOP void  osl_spline_dvfdv(void *out, const char *spline_, void *x,
 OSL_SHADEOP void  osl_spline_w16dvfw16dv_masked(void *wout_, const char *spline_, void *wx_,
                                     Vec3 *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
-
-
-    fast::template spline_evaluate<
-	ConstWideUnboundArrayAccessor<Dual2<Vec3>>,true>
-	(MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
-	        USTR(spline_),
-	        ConstUniformAccessor<float>(wx_),
-	        knots, knot_count); //ConstUniformUnboundedArrayAccessor<Vec3> was Dual2<Vec3>
-
+    fast::template spline_evaluate_wide(
+	    MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
+        USTR(spline_),
+        ConstUniformAccessor<float>(wx_),
+        ConstWideUnboundArrayAccessor<Dual2<Vec3>>(knots, knot_count));
 }
 
 OSL_SHADEOP void  osl_spline_w16dvw16fw16dv_masked(void *wout_, const char *spline_, void *wx_,
                                     Vec3 *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
-
-	fast::template spline_evaluate<
-	    ConstWideUnboundArrayAccessor<Dual2<Vec3>>,true>
-	(MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
-	        USTR(spline_),
-	        ConstWideAccessor<float>(wx_),
-	        knots, knot_count); //ConstUniformUnboundedArrayAccessor<Vec3> was Dual2<Vec3>
+	fast::template spline_evaluate_wide(
+        MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
+        USTR(spline_),
+        ConstWideAccessor<float>(wx_),
+        ConstWideUnboundArrayAccessor<Dual2<Vec3>>(knots, knot_count));
 }
 
 OSL_SHADEOP void  osl_spline_w16dvw16fdv_masked(void *wout_, const char *spline_, void *wx_,
                                     Vec3 *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
 
-	fast::template spline_evaluate<
-	    ConstUniformUnboundedArrayAccessor<Dual2<Vec3>>,true>
-	(MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
-	        USTR(spline_),
-	        ConstWideAccessor<float>(wx_),
-	        knots, knot_count); //ConstUniformUnboundedArrayAccessor<Vec3> was Dual2<Vec3>
+	fast::template spline_evaluate_wide(
+        MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
+        USTR(spline_),
+        ConstWideAccessor<float>(wx_),
+        ConstUniformUnboundedArrayAccessor<Dual2<Vec3>>(knots, knot_count));
 }
 
 //=======================================================================
@@ -1419,40 +1315,32 @@ OSL_SHADEOP void  osl_spline_dvdfdv(void *out, const char *spline_, void *x,
 OSL_SHADEOP void  osl_spline_w16dvw16dfw16dv_masked(void *wout_, const char *spline_, void *wx_,
                                     Vec3 *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
-
-	fast::template spline_evaluate<
-	    ConstWideUnboundArrayAccessor<Dual2<Vec3>>,true>(
-	        MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
-	        USTR(spline_),
-	        ConstWideAccessor<Dual2<float>>(wx_),
-	        knots, knot_count);
-
+	fast::template spline_evaluate_wide(
+        MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
+        USTR(spline_),
+        ConstWideAccessor<Dual2<float>>(wx_),
+        ConstWideUnboundArrayAccessor<Dual2<Vec3>>(knots, knot_count));
 }
-
-
-
 
 OSL_SHADEOP void  osl_spline_w16dvw16dfdv_masked(void *wout_, const char *spline_, void *wx_,
                                     Vec3 *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
-	fast::template spline_evaluate<
-	    ConstUniformUnboundedArrayAccessor<Dual2<Vec3>>,true>
-	(MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
-	        USTR(spline_),
-	        ConstWideAccessor<Dual2<float>>(wx_),
-	        knots, knot_count);
+	fast::template spline_evaluate_wide(
+        MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
+        USTR(spline_),
+        ConstWideAccessor<Dual2<float>>(wx_),
+        ConstUniformUnboundedArrayAccessor<Dual2<Vec3>>(knots, knot_count));
 }
+
 OSL_SHADEOP void  osl_spline_w16dvdfw16dv_masked(void *wout_, const char *spline_, void *wx_,
                                     Vec3 *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
 {
-    fast::template spline_evaluate<
-        ConstWideUnboundArrayAccessor<Dual2<Vec3>>,true>
-    (MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
-            USTR(spline_),
-            ConstUniformAccessor<Dual2<float>>(wx_),
-            knots, knot_count);
+    fast::template spline_evaluate_wide(
+        MaskedAccessor<Dual2<Vec3>>(wout_, Mask(mask_value)),
+        USTR(spline_),
+        ConstUniformAccessor<Dual2<float>>(wx_),
+        ConstWideUnboundArrayAccessor<Dual2<Vec3>>(knots, knot_count));
 }
-
 
 OSL_SHADEOP void osl_splineinverse_fff(void *out, const char *spline_, void *x,
                                        float *knots, int knot_count, int knot_arraylen)
@@ -1865,20 +1753,20 @@ float *knots, int knot_count, int /*knot_arraylen*/, unsigned int mask_value)
 }
 
 OSL_SHADEOP void osl_splineinverse_w16dfdffw16df_masked (void *wout_, const char *spline_, void *wx_,
-float *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
+void *wknots_, int knot_count, int /*knot_arraylen*/, unsigned int mask_value)
 {
 
       const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
       ConstWideAccessor<float> wX (wx_);
-      ConstWideAccessor <float> wK (knots);
+      ConstWideUnboundArrayAccessor <float> wK (knots, knot_count);
       MaskedAccessor<float> wR(wout_, Mask (mask_value));
 
 
       for(int lane = 0; lane<wR.width; ++lane){
           if (wR.mask().is_on(lane)) {
-              float x = wR[lane];
+              float x = wX[lane];
               float k = wK[lane];
-              float *kp = &k;
+
               float result;
               //Spline::spline_inverse<float> (spline, result, *(float *)wx_, kp, knot_count, knot_arraylen);
               Spline::spline_inverse<float> (spline, result, x,
@@ -1887,7 +1775,6 @@ float *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
           }
       }
 }
-
 
 } // namespace pvt
 OSL_NAMESPACE_EXIT

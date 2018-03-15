@@ -424,7 +424,6 @@ LLVMGEN (llvm_gen_printf)
 
     // For some ops, we push the output symbol & mask
     if ((op.opname() == op_format) && (false == op_is_uniform)) {
-        llvm::Value * mask = rop.ll.current_mask();
         Symbol outSymbol = *rop.opargsym (op, 0);
 
         llvm::Value * outPtr = rop.llvm_void_ptr(outSymbol);
@@ -873,7 +872,21 @@ LLVMGEN (llvm_gen_div)
     	func_name.append(arg_typecode(Result,false,op_is_uniform));
     	func_name.append(arg_typecode(A,false,op_is_uniform));
     	func_name.append(arg_typecode(B,false,op_is_uniform));
-        rop.llvm_call_function (func_name.c_str(), Result, A, B, false /*deriv_ptrs*/, op_is_uniform, false /*functionIsLlvmInlined*/,  true /*ptrToReturnStructIs1stArg*/);
+    	{
+            LLVM_Util::ScopedMasking require_mask_be_passed;
+            // TODO: detect this in a manner not dependent on the simd
+            // lane count being hardcoded
+            if (func_name == "osl_div_w16mw16fw16m" ||
+                func_name == "osl_div_w16mw16mw16m" ) {
+                // We choose to only support masked version of these functions
+                // because then check the matrices to see if they are affine
+                // and take a slow path if not.  Unmasked lanes wold most
+                // likely take the slow path, which could have been avoided
+                // if we passed the mask in.
+                require_mask_be_passed = rop.ll.create_masking_scope(/*enabled=*/true);
+            }
+            rop.llvm_call_function (func_name.c_str(), Result, A, B, false /*deriv_ptrs*/, op_is_uniform, false /*functionIsLlvmInlined*/,  true /*ptrToReturnStructIs1stArg*/);
+    	}
 
         if (Result.has_derivs())
             rop.llvm_zero_derivs (Result);

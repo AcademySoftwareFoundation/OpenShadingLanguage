@@ -591,9 +591,8 @@ LLVMGEN (llvm_gen_div)
     // division involving matrices
     if (Result.typespec().is_matrix()) {
         if (A.typespec().is_float()) {
-            if (B.typespec().is_float())
-                rop.llvm_call_function ("osl_div_mff", Result, A, B);
-            else if (B.typespec().is_matrix())
+            ASSERT (!B.typespec().is_float() && "frontend should not allow");
+            if (B.typespec().is_matrix())
                 rop.llvm_call_function ("osl_div_mfm", Result, A, B);
             else ASSERT (0);
         } else if (A.typespec().is_matrix()) {

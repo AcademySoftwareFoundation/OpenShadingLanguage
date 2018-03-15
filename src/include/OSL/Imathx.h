@@ -278,6 +278,12 @@ inlinedMultMatrixMatrix (const Matrix44 &a,
                        const Matrix44 &b,
                        Matrix44 &c)
 {
+    // original version did casting from 2d with known offsets
+    // which only requires 1 pointer to a version with
+    // 3 different pointers and could cause aliasing issues
+    // Concerned that vectorizor might be doing work than necessary
+    // so made a simpler version below
+#if 0
     register const float *  ap = &a.x[0][0];
     register const float *  bp = &b.x[0][0];
     register       float *  cp = &c.x[0][0];
@@ -323,6 +329,47 @@ inlinedMultMatrixMatrix (const Matrix44 &a,
     cp[13] = a0 * bp[1]  + a1 * bp[5]  + a2 * bp[9]  + a3 * bp[13];
     cp[14] = a0 * bp[2]  + a1 * bp[6]  + a2 * bp[10] + a3 * bp[14];
     cp[15] = a0 * bp[3]  + a1 * bp[7]  + a2 * bp[11] + a3 * bp[15];
+#else
+    const float a00 = a.x[0][0];
+    const float a01 = a.x[0][1];
+    const float a02 = a.x[0][2];
+    const float a03 = a.x[0][3];
+
+    c.x[0][0]  = a00 * b.x[0][0]  + a01 * b.x[1][0]  + a02 * b.x[2][0]  + a03 * b.x[3][0];
+    c.x[0][1]  = a00 * b.x[0][1]  + a01 * b.x[1][1]  + a02 * b.x[2][1]  + a03 * b.x[3][1];
+    c.x[0][2]  = a00 * b.x[0][2]  + a01 * b.x[1][2]  + a02 * b.x[2][2] + a03 * b.x[3][2];
+    c.x[0][3]  = a00 * b.x[0][3]  + a01 * b.x[1][3]  + a02 * b.x[2][3] + a03 * b.x[3][3];
+
+    const float a10 = a.x[1][0];
+    const float a11 = a.x[1][1];
+    const float a12 = a.x[1][2];
+    const float a13 = a.x[1][3];
+
+    c.x[1][0]  = a10 * b.x[0][0]  + a11 * b.x[1][0]  + a12 * b.x[2][0]  + a13 * b.x[3][0];
+    c.x[1][1]  = a10 * b.x[0][1]  + a11 * b.x[1][1]  + a12 * b.x[2][1]  + a13 * b.x[3][1];
+    c.x[1][2]  = a10 * b.x[0][2]  + a11 * b.x[1][2]  + a12 * b.x[2][2] + a13 * b.x[3][2];
+    c.x[1][3]  = a10 * b.x[0][3]  + a11 * b.x[1][3]  + a12 * b.x[2][3] + a13 * b.x[3][3];
+
+    const float a20 = a.x[2][0];
+    const float a21 = a.x[2][1];
+    const float a22 = a.x[2][2];
+    const float a23 = a.x[2][3];
+
+    c.x[2][0]  = a20 * b.x[0][0]  + a21 * b.x[1][0]  + a22 * b.x[2][0]  + a23 * b.x[3][0];
+    c.x[2][1]  = a20 * b.x[0][1]  + a21 * b.x[1][1]  + a22 * b.x[2][1]  + a23 * b.x[3][1];
+    c.x[2][2] = a20 * b.x[0][2]  + a21 * b.x[1][2]  + a22 * b.x[2][2] + a23 * b.x[3][2];
+    c.x[2][3] = a20 * b.x[0][3]  + a21 * b.x[1][3]  + a22 * b.x[2][3] + a23 * b.x[3][3];
+
+    const float a30 = a.x[3][0];
+    const float a31 = a.x[3][1];
+    const float a32 = a.x[3][2];
+    const float a33 = a.x[3][3];
+
+    c.x[3][0] = a30 * b.x[0][0]  + a31 * b.x[1][0]  + a32 * b.x[2][0]  + a33 * b.x[3][0];
+    c.x[3][1] = a30 * b.x[0][1]  + a31 * b.x[1][1]  + a32 * b.x[2][1]  + a33 * b.x[3][1];
+    c.x[3][2] = a30 * b.x[0][2]  + a31 * b.x[1][2]  + a32 * b.x[2][2] + a33 * b.x[3][2];
+    c.x[3][3] = a30 * b.x[0][3]  + a31 * b.x[1][3]  + a32 * b.x[2][3] + a33 * b.x[3][3];
+#endif
 }
 
 namespace fast {

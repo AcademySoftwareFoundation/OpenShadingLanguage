@@ -1,0 +1,15 @@
+shader
+test_u_float_div_u_float (output color Cout = 0)
+{
+    float divisor = 2*raytype("camera");
+              
+    float numerator = 3.0;
+    float red = 0.0;
+    float green = 0.5;
+    float blue = 1.0;
+    red = numerator/divisor;
+    green = numerator/0.0;
+    blue = divisor/numerator;
+    
+    Cout = color(red,green,blue);
+}

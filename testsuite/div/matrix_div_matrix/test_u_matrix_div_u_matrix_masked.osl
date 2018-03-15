@@ -1,0 +1,20 @@
+shader
+test_u_matrix_div_u_matrix_masked (output color Cout = 0)
+{
+    matrix m1 = matrix(raytype("camera"),0,0,0,
+                       0,2*raytype("camera"),0,0,
+                       0,0,3*raytype("camera"),0,
+                       0,0,0,1);
+
+    matrix divisor = matrix(2,0,0,0,
+                       0,2,0,0,
+                       0,0,2,0,
+                       0,0,0,1);
+              
+    matrix rm = m1;              
+    if (int(P[0]*64)%2==0) {
+        rm = m1/divisor;
+    }
+    
+    Cout = color(rm[0][0],rm[1][1],rm[2][2]);
+}

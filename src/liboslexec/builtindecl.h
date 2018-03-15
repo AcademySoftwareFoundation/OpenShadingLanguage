@@ -354,7 +354,6 @@ DECL (osl_mul_mff, "xXff")
 DECL (osl_div_mmm, "xXXX")
 DECL (osl_div_mmf, "xXXf")
 DECL (osl_div_mfm, "xXfX")
-DECL (osl_div_mff, "xXff")
 
 DECL (osl_get_from_to_matrix, "iXXss")
 DECL (osl_transpose_mm, "xXX")

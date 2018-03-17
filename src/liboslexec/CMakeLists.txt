@@ -117,11 +117,47 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
           -Wno-deprecated-register
           -O3 -fno-math-errno -S -emit-llvm -o ${llvm_asm} ${llvm_src}
       COMMAND "${LLVM_DIRECTORY}/bin/llvm-as" -f -o ${llvm_bc} ${llvm_asm}
-      COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash" ${llvm_bc} ${llvm_bc_cpp}
+      COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash" ${llvm_bc} ${llvm_bc_cpp} "osl_llvm_compiled_ops"
       MAIN_DEPENDENCY ${llvm_src}
       DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash"
               ${exec_headers} ${PROJECT_PUBLIC_HEADERS}
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
+
+    # Optionally repeat the bitcode compilation with CUDA-specific options
+    if (CUDA_FOUND)
+      SET ( llvm_bc_cuda "${CMAKE_CURRENT_BINARY_DIR}/${llvmsrc_we}_cuda.bc" )
+      SET ( llvm_bc_cuda_cpp "${CMAKE_CURRENT_BINARY_DIR}/${llvmsrc_we}_cuda.bc.cpp" )
+      if (VERBOSE)
+          MESSAGE (STATUS "LLVM_COMPILE CUDA in=${llvm_src}")
+          MESSAGE (STATUS "LLVM_COMPILE CUDA bc=${llvm_bc_cuda}")
+          MESSAGE (STATUS "LLVM_COMPILE CUDA cpp=${llvm_bc_cuda_cpp}")
+      endif ()
+      SET ( ${srclist} ${${srclist}} ${llvm_bc_cuda_cpp} )
+      ADD_DEFINITIONS (-DOSL_LLVM_CUDA_BITCODE)
+
+      ADD_CUSTOM_COMMAND ( OUTPUT ${llvm_bc_cuda_cpp}
+        COMMAND ${LLVM_BC_GENERATOR}
+            ${LLVM_COMPILE_FLAGS}
+            "-I${CMAKE_CURRENT_SOURCE_DIR}"
+            "-I${CMAKE_SOURCE_DIR}/src/include"
+            "-I${CMAKE_BINARY_DIR}/include"
+            "-I${CUDA_INCLUDE_DIR}"
+            "-I${OPENIMAGEIO_INCLUDE_DIR}"
+            "-I${ILMBASE_INCLUDE_DIR}"
+            "-I${Boost_INCLUDE_DIRS}"
+            -DOSL_COMPILING_TO_BITCODE=1
+            -D__CUDACC__  -D__CUDA_ARCH__=350
+            --language=cuda --cuda-gpu-arch=sm_35 --cuda-device-only --cuda-path="${CUDA_TOOLKIT_ROOT_DIR}"
+            -Wno-deprecated-register
+            -O3 -Wno-format-security -emit-llvm
+            ${llvm_src} -c -o ${llvm_bc_cuda}
+        COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash" ${llvm_bc_cuda} ${llvm_bc_cuda_cpp} "osl_llvm_compiled_ops_cuda"
+        MAIN_DEPENDENCY ${llvm_src}
+        DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash"
+                ${exec_headers} ${PROJECT_PUBLIC_HEADERS}
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
+    endif ()
+
 ENDMACRO ( )
 
 if (USE_LLVM_BITCODE)

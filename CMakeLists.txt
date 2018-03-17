@@ -95,6 +95,7 @@ option (OSL_BUILD_PLUGINS "Bool OSL plugins, for example OIIO plugin" ON)
 option (USE_BOOST_WAVE "Use Boost Wave for C preprocessor (alternative is to use clang)" OFF)
 option (USE_QT "Include Qt support" ON)
 option (USE_OPTIX "Include OptiX support" OFF)
+set (OPTIX_EXTRA_LIBS CACHE STRING "Extra lib targets needed for OptiX")
 
 
 # set (USE_OIIO_STATIC ON CACHE BOOL "If OIIO is built static")

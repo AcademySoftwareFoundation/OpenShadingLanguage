@@ -26,6 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+
 #include <optix.h>
 #include <optixu/optixu_math_namespace.h>
 #include <optixu/optixu_vector_types.h>
@@ -100,10 +101,4 @@ RT_PROGRAM void exception()
 {
     rtPrintExceptionDetails();
     output_buffer[launch_index] = bad_color;
-}
-
-
-RT_PROGRAM void closest_hit()
-{
-    prd_radiance.result = normalize (rtTransformNormal (RT_OBJECT_TO_WORLD, shading_normal)) * 0.5f + 0.5f;
 }

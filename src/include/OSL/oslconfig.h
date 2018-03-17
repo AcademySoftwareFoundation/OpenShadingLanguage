@@ -52,11 +52,23 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #  error "This version of OSL requires C++11"
 #endif
 
+#ifndef OSL_HOSTDEVICE
+#  ifdef __CUDACC__
+#    define OSL_HOSTDEVICE __host__ __device__
+#  else
+#    define OSL_HOSTDEVICE
+#  endif
+#endif
+
 // Symbol export defines
 #include "export.h"
 
 // All the things we need from Imath
+#ifdef __CUDACC__
+#include <OSL/ImathVec_cuda.h>
+#else
 #include <OpenEXR/ImathVec.h>
+#endif
 #include <OpenEXR/ImathColor.h>
 #include <OpenEXR/ImathMatrix.h>
 
@@ -113,7 +125,6 @@ using OIIO::TypeDesc;
 using OIIO::ustring;
 using OIIO::ustringHash;
 using OIIO::string_view;
-
 
 #ifndef __has_attribute
 #  define __has_attribute(x) 0

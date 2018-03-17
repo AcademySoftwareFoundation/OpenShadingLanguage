@@ -38,6 +38,10 @@ using namespace OSL::pvt;
 #include "runtimeoptimize.h"
 #include <OSL/llvm_util.h>
 
+// additional includes for creating global OptiX variables
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Module.h"
 
 
 OSL_NAMESPACE_ENTER
@@ -210,6 +214,21 @@ public:
     /// from the allocation map if already there; and if not yet in the
     /// map, the symbol is alloca'd and placed in the map.
     llvm::Value *getOrAllocateLLVMSymbol (const Symbol& sym);
+
+    /// Allocate a GlobalVariable for the given OSL symbol and return a pointer
+    /// to it, or return the pointer if it has already been allocated
+    llvm::Value *getOrAllocateLLVMGlobal (const Symbol& sym);
+
+    /// Create a GlobalVariable and add it to the current Module
+    llvm::Value *addGlobalVariable (const std::string& name, int size,
+                                    int alignment, void* data,
+                                    const std::string& type="");
+
+    /// Create a GlobalVariable with the extra semantic information needed
+    /// by OptiX
+    llvm::Value *createOptixVariable (const std::string& name,
+                                      const std::string& type,
+                                      int size, void* data );
 
     /// Retrieve an llvm::Value that is a pointer holding the start address
     /// of the specified symbol. This always works for globals and params;
@@ -404,6 +423,12 @@ public:
             shadingsys().m_stat_tex_calls_as_handles += 1;
     }
 
+    /// Return the mapping from symbol names to GlobalVariables.
+    std::map<std::string,llvm::GlobalVariable*>& get_const_map() { return m_const_map; }
+
+    /// Return whether or not we are compiling for an OptiX-based renderer.
+    bool use_optix() { return m_use_optix; }
+
     LLVM_Util ll;
 
 private:
@@ -429,6 +454,11 @@ private:
     llvm::PointerType *m_llvm_type_prepare_closure_func;
     llvm::PointerType *m_llvm_type_setup_closure_func;
     int m_llvm_local_mem;             // Amount of memory we use for locals
+
+    // A mapping from symbol names to llvm::GlobalVariables
+    std::map<std::string,llvm::GlobalVariable*> m_const_map;
+
+    bool m_use_optix;                   ///< Compile for OptiX?
 
     friend class ShadingSystemImpl;
 };

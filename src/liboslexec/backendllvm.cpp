@@ -97,6 +97,7 @@ BackendLLVM::BackendLLVM (ShadingSystemImpl &shadingsys,
     // getcwd inside LLVM. Oy.
     check_cwd (shadingsys);
 #endif
+    m_use_optix = shadingsys.renderer()->supports ("OptiX");
 }
 
 
@@ -323,6 +324,169 @@ BackendLLVM::getOrAllocateLLVMSymbol (const Symbol& sym)
 
 
 
+llvm::Value*
+BackendLLVM::addGlobalVariable(const std::string& name, int size, int alignment,
+                               void* data, const std::string& type)
+{
+    llvm::GlobalVariable* g_var    = nullptr;
+    llvm::Constant*       constant = nullptr;
+
+    if (type == "float") {
+        constant = llvm::ConstantFP::get (
+            llvm::Type::getFloatTy (ll.module()->getContext()), *(float*) data);
+    }
+    else if (type == "int") {
+        constant = llvm::ConstantInt::get (
+            llvm::Type::getInt32Ty (ll.module()->getContext()), *(int*) data);
+    }
+    else if (type == "texid") {
+        constant = llvm::ConstantInt::get
+            (llvm::Type::getInt32Ty (ll.module()->getContext()), *(int*) data);
+    }
+    else if (type == "string") {
+        llvm::ArrayRef<uint8_t> arr_ref (
+            (uint8_t*)((ustring*)data)->c_str(), ((ustring*)data)->size() + 1);
+
+        constant = llvm::ConstantDataArray::get (ll.module()->getContext(), arr_ref);
+    }
+    else {
+        // Handle unspecified types as generic byte arrays
+        llvm::ArrayRef<uint8_t> arr_ref ((uint8_t*)data, size);
+        constant = llvm::ConstantDataArray::get (ll.module()->getContext(), arr_ref);
+    }
+
+    g_var = reinterpret_cast<llvm::GlobalVariable*>(
+        ll.module()->getOrInsertGlobal (name, constant->getType()));
+
+    if (!g_var) {
+        std::cout << "unable to create global" << std::endl;
+        return nullptr;
+    }
+
+    g_var->setAlignment  (alignment);
+    g_var->setLinkage    (llvm::GlobalValue::ExternalLinkage);
+    g_var->setVisibility (llvm::GlobalValue::DefaultVisibility);
+    g_var->setInitializer(constant);
+
+    m_const_map[ name ] = g_var;
+
+    return g_var;
+}
+
+
+
+llvm::Value*
+BackendLLVM::createOptixVariable(const std::string& name, const std::string& type,
+                                 int size, void* data)
+{
+    // Return the Value if it has already been allocated
+    std::map<std::string, llvm::GlobalVariable*>::iterator it =
+        get_const_map().find (name);
+
+    if (it != get_const_map().end()) {
+        return it->second;
+    }
+
+    int alignment =
+        (type == "float" ) ? 4 :
+        (type == "int"   ) ? 4 :
+        (type == "color" ) ? 8 :
+        (type == "texid" ) ? 4 :
+        (type == "string") ? 1 : 8;
+
+    // Create a global variable with the name, type, and initializer. This is
+    // the value that will be accessed when the shader executes.
+    llvm::Value* g_var = addGlobalVariable (name, size, alignment, data, type);
+
+    if (g_var == nullptr) {
+        ASSERT (0 && "Unable to create rtVariable");
+    }
+
+    auto mangle_name = [](const std::string& name, const std::string& prefix) {
+        return "_ZN" + std::to_string (prefix.size()) + "rti_internal" +
+        prefix + std::to_string (name.size()) + name + "E";
+    };
+
+    // Create additional variables with the semantic information needed by OptiX
+    // to access the global variable created above.
+    //
+    // There is no need to retain pointers to these variables, since they are not
+    // accessed during execution. They are only used internally by OptiX.
+    //
+    // Refer to the OptiX API documentation and optix_defines.h in the OptiX SDK
+    // for more information.
+
+    const std::string optix_type =
+        (type == "color") ? "float3" :
+        (type == "texid") ? "int"    : type;
+
+    // Copy the OptiX typename contents into a temporary vector
+    std::vector<char> type_name (optix_type.c_str(),
+                                 optix_type.c_str() + optix_type.size() + 1);
+
+    struct rti_typeinfo {
+        unsigned int kind = 0x796152; // _OPTIX_VARIABLE
+        unsigned int size;
+    } type_info;
+    type_info.size = size;
+
+    int type_enum = 0x1337;  // _OPTIX_TYPE_ENUM_UNKNOWN
+
+    char empty = 0;
+
+    addGlobalVariable (mangle_name (name, "typeinfo"  ), 8, 4, &type_info, "");
+    addGlobalVariable (mangle_name (name, "typename"  ), type_name.size(), 1, type_name.data(), "");
+    addGlobalVariable (mangle_name (name, "typeenum"  ), 4, 4, &type_enum, "int");
+    addGlobalVariable (mangle_name (name, "semantic"  ), 1, 1, &empty, "");
+    addGlobalVariable (mangle_name (name, "annotation"), 1, 1, &empty, "");
+
+    return g_var;
+}
+
+
+
+llvm::Value *
+BackendLLVM::getOrAllocateLLVMGlobal (const Symbol& sym)
+{
+    std::stringstream ss;
+    if (sym.typespec().is_string()) {
+        // Sse the USTRING hash to create a name for the symbol that's based on
+        // the string contents
+        ss << "str_"
+           << std::setbase (16) << std::setfill('0') << std::setw (16)
+           << (*(ustring *)sym.data()).hash();
+    }
+    else {
+        // Strip off the leading character for other symbols names
+        ss << sym.name().string().substr (1);
+    }
+
+    const std::string name = ss.str();
+
+    // Return the Value if it has already been allocated
+    std::map<std::string, llvm::GlobalVariable*>::iterator it =
+        get_const_map().find (name);
+
+    if (it != get_const_map().end()) {
+        return it->second;
+    }
+
+    int alignment =
+        (sym.typespec().is_scalarnum()) ? 4 :
+        (sym.typespec().is_triple()   ) ? 8 :
+        (sym.typespec().is_array()    ) ? 8 :
+        (sym.typespec().is_string()   ) ? 1 : -1;
+
+    if (alignment < 1) {
+        return nullptr;
+    }
+
+    return addGlobalVariable (name, sym.size(), alignment, sym.data(),
+                              sym.typespec().string());
+}
+
+
+
 llvm::Value *
 BackendLLVM::llvm_get_pointer (const Symbol& sym, int deriv,
                                llvm::Value *arrayindex)
@@ -336,9 +500,23 @@ BackendLLVM::llvm_get_pointer (const Symbol& sym, int deriv,
 
     llvm::Value *result = NULL;
     if (sym.symtype() == SymTypeConst) {
-        // For constants, start with *OUR* pointer to the constant values.
-        result = ll.ptr_cast (ll.constant_ptr (sym.data()),
-                              ll.type_ptr (llvm_type(sym.typespec().elementtype())));
+        if (use_optix()) {
+            // Check the constant map for the named Symbol; if it's found, then
+            // a GlobalVariable has been created for it
+            llvm::Value* ptr = getOrAllocateLLVMGlobal (sym);
+            if (ptr) {
+                llvm::Type *cast_type = (! sym.typespec().is_string())
+                    ? ll.type_ptr (llvm_type(sym.typespec().elementtype()))
+                    : ll.type_void_ptr();
+
+                result = ll.ptr_cast (ptr, cast_type);
+            }
+        }
+        else {
+            // For constants, start with *OUR* pointer to the constant values.
+            result = ll.ptr_cast (ll.constant_ptr (sym.data()),
+                                  ll.type_ptr (llvm_type(sym.typespec().elementtype())));
+        }
 
     } else {
         // Start with the initial pointer to the variable's memory location
@@ -482,6 +660,11 @@ BackendLLVM::llvm_load_constant_value (const Symbol& sym,
         const float *val = (const float *)sym.data();
         int ncomps = (int) sym.typespec().aggregate();
         return ll.constant (val[ncomps*arrayindex + component]);
+    }
+    if (sym.typespec().is_string() && use_optix()) {
+        // TODO: This ignores arrayindex
+        llvm::Value* ptr = getOrAllocateLLVMGlobal (sym);
+        return ll.ptr_cast (ll.GEP (ptr, 0), ll.type_string());
     }
     if (sym.typespec().is_string()) {
         const ustring *val = (const ustring *)sym.data();

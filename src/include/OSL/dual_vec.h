@@ -78,14 +78,14 @@ template<> struct ScalarFromVec<Dual2<Color3>> { typedef Dual2<Float> type; };
 
 /// A uniform way to assemble a Vec3 from float and a Dual<Vec3>
 /// from Dual<float>.
-inline Vec3
+OSL_HOSTDEVICE inline Vec3
 make_Vec3 (float x, float y, float z)
 {
     return Vec3 (x, y, z);
 }
 
 template<class T, int P>
-inline Dual<Imath::Vec3<T>,P>
+OSL_HOSTDEVICE inline Dual<Imath::Vec3<T>,P>
 make_Vec3 (const Dual<T,P> &x, const Dual<T,P> &y, const Dual<T,P> &z)
 {
     Dual<Imath::Vec3<T>,P> result;
@@ -98,7 +98,7 @@ make_Vec3 (const Dual<T,P> &x, const Dual<T,P> &y, const Dual<T,P> &z)
 /// Make a Dual<Vec3> from a single Dual<Float> x coordinate, and 0
 /// for the other components.
 template<class T, int P>
-inline Dual<Imath::Vec3<T>,P>
+OSL_HOSTDEVICE inline Dual<Imath::Vec3<T>,P>
 make_Vec3 (const Dual<T,P> &x)
 {
     Dual<Imath::Vec3<T>,P> result;
@@ -109,7 +109,7 @@ make_Vec3 (const Dual<T,P> &x)
 
 
 template<class T, int P>
-inline Dual<Imath::Vec3<T>,P>
+OSL_HOSTDEVICE inline Dual<Imath::Vec3<T>,P>
 make_Vec3 (const Dual<T,P> &x, const Dual<T,P> &y)
 {
     Dual<Imath::Vec3<T>,P> result;
@@ -122,14 +122,14 @@ make_Vec3 (const Dual<T,P> &x, const Dual<T,P> &y)
 
 /// A uniform way to assemble a Color3 from float and a Dual<Color3>
 /// from Dual<float>.
-inline Color3
+OSL_HOSTDEVICE inline Color3
 make_Color3 (float x, float y, float z)
 {
     return Color3 (x, y, z);
 }
 
 template<class T, int P>
-inline Dual<Imath::Color3<T>,P>
+OSL_HOSTDEVICE inline Dual<Imath::Color3<T>,P>
 make_Color3 (const Dual<T,P> &x, const Dual<T,P> &y, const Dual<T,P> &z)
 {
     Dual<Imath::Color3<T>,P> result;
@@ -142,14 +142,14 @@ make_Color3 (const Dual<T,P> &x, const Dual<T,P> &y, const Dual<T,P> &z)
 
 /// A uniform way to assemble a Vec2 from float and a Dual<Vec2>
 /// from Dual<float>.
-inline Vec2
+OSL_HOSTDEVICE inline Vec2
 make_Vec2 (float x, float y)
 {
     return Vec2 (x, y);
 }
 
 template<class T, int P>
-inline Dual<Imath::Vec2<T>,P>
+OSL_HOSTDEVICE inline Dual<Imath::Vec2<T>,P>
 make_Vec2 (const Dual<T,P> &x, const Dual<T,P> &y)
 {
     Dual<Imath::Vec2<T>,P> result;
@@ -167,7 +167,7 @@ make_Vec2 (const Dual<T,P> &x, const Dual<T,P> &y)
 /// comp(Dual<Vec3>,c) returns a Dual<float> of the c-th component (with
 /// derivs).
 
-inline float
+OSL_HOSTDEVICE inline float
 comp (const Vec3 &v, int c)
 {
     return v[c];
@@ -175,7 +175,7 @@ comp (const Vec3 &v, int c)
 
 
 template<class T, int P>
-inline OIIO_CONSTEXPR14 Dual<T,P>
+OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P>
 comp (const Dual<Imath::Vec3<T>,P> &v, int c)
 {
     Dual<T,P> result;
@@ -187,7 +187,7 @@ comp (const Dual<Imath::Vec3<T>,P> &v, int c)
 
 
 template<class T, int P>
-inline OIIO_CONSTEXPR14 Dual<T,P>
+OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P>
 comp (const Dual<Imath::Color3<T>,P> &v, int c)
 {
     Dual<T,P> result;
@@ -197,7 +197,7 @@ comp (const Dual<Imath::Color3<T>,P> &v, int c)
 }
 
 
-inline float
+OSL_HOSTDEVICE inline float
 comp (const Vec2 &v, int c)
 {
     return v[c];
@@ -205,7 +205,7 @@ comp (const Vec2 &v, int c)
 
 
 template<class T, int P>
-inline OIIO_CONSTEXPR14 Dual<T,P>
+OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P>
 comp (const Dual<Imath::Vec2<T>,P> &v, int c)
 {
     Dual<T,P> result;
@@ -334,7 +334,7 @@ multDirMatrix (const Imath::Matrix44<S> &M,
 
 
 template<class T, int P>
-inline OIIO_CONSTEXPR14 Dual<T,P>
+OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P>
 dot (const Dual<Imath::Vec3<T>,P> &a, const Dual<Imath::Vec3<T>,P> &b)
 {
     auto ax = comp (a, 0);
@@ -349,7 +349,7 @@ dot (const Dual<Imath::Vec3<T>,P> &a, const Dual<Imath::Vec3<T>,P> &b)
 
 
 template<class T, int P>
-inline OIIO_CONSTEXPR14 Dual<T,P>
+OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P>
 dot (const Dual<Imath::Vec3<T>,P> &a, const Imath::Vec3<T> &b)
 {
     auto ax = comp (a, 0);
@@ -364,7 +364,7 @@ dot (const Dual<Imath::Vec3<T>,P> &a, const Imath::Vec3<T> &b)
 
 
 template<class T, int P>
-inline OIIO_CONSTEXPR14 Dual<T,P>
+OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P>
 dot (const Imath::Vec3<T> &a, const Dual<Imath::Vec3<T>,P> &b)
 {
     return dot (b, a);
@@ -373,7 +373,7 @@ dot (const Imath::Vec3<T> &a, const Dual<Imath::Vec3<T>,P> &b)
 
 
 template<class T, int P>
-inline OIIO_CONSTEXPR14 Dual<T,P>
+OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P>
 dot (const Dual<Imath::Vec2<T>,P> &a, const Dual<Imath::Vec2<T>,P> &b)
 {
     auto ax = comp (a, 0);
@@ -386,7 +386,7 @@ dot (const Dual<Imath::Vec2<T>,P> &a, const Dual<Imath::Vec2<T>,P> &b)
 
 
 template<class T, int P>
-inline OIIO_CONSTEXPR14 Dual<T,P>
+OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P>
 dot (const Dual<Imath::Vec2<T>,P> &a, const Vec2 &b)
 {
     auto ax = comp (a, 0);
@@ -399,7 +399,7 @@ dot (const Dual<Imath::Vec2<T>,P> &a, const Vec2 &b)
 
 
 template<class T, int P>
-inline OIIO_CONSTEXPR14 Dual<T,P>
+OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P>
 dot (const Vec2 &a, const Dual<Imath::Vec2<T>,P> &b)
 {
     auto ax = comp (a, 0);
@@ -412,7 +412,7 @@ dot (const Vec2 &a, const Dual<Imath::Vec2<T>,P> &b)
 
 
 template<class T, int P>
-inline Dual<Imath::Vec3<T>,P>
+OSL_HOSTDEVICE inline Dual<Imath::Vec3<T>,P>
 cross (const Dual<Imath::Vec3<T>,P> &a, const Dual<Imath::Vec3<T>,P> &b)
 {
     auto ax = comp (a, 0);
@@ -430,7 +430,7 @@ cross (const Dual<Imath::Vec3<T>,P> &a, const Dual<Imath::Vec3<T>,P> &b)
 
 
 template<class T, int P>
-inline OIIO_CONSTEXPR14 Dual<T,P>
+OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P>
 length (const Dual<Imath::Vec3<T>,P> &a)
 {
     auto ax = comp (a, 0);
@@ -442,7 +442,7 @@ length (const Dual<Imath::Vec3<T>,P> &a)
 
 
 template<class T, int P>
-inline Dual<Imath::Vec3<T>,P>
+OSL_HOSTDEVICE inline Dual<Imath::Vec3<T>,P>
 normalize (const Dual<Imath::Vec3<T>,P> &a)
 {
     auto ax = comp (a, 0);
@@ -463,7 +463,7 @@ normalize (const Dual<Imath::Vec3<T>,P> &a)
 
 
 template<class T, int P>
-inline Dual<T,P>
+OSL_HOSTDEVICE inline Dual<T,P>
 distance (const Dual<Imath::Vec3<T>,P> &a, const Dual<Imath::Vec3<T>,P> &b)
 {
     return length (a - b);
@@ -471,7 +471,7 @@ distance (const Dual<Imath::Vec3<T>,P> &a, const Dual<Imath::Vec3<T>,P> &b)
 
 
 template<class T, int P>
-inline Dual<T,P>
+OSL_HOSTDEVICE inline Dual<T,P>
 distance (const Dual<Imath::Vec3<T>,P> &a, const Imath::Vec3<T> &b)
 {
     return length (a - b);
@@ -479,7 +479,7 @@ distance (const Dual<Imath::Vec3<T>,P> &a, const Imath::Vec3<T> &b)
 
 
 template<class T, int P>
-inline Dual<T,P>
+OSL_HOSTDEVICE inline Dual<T,P>
 distance (const Imath::Vec3<T> &a, const Dual<Imath::Vec3<T>,P> &b)
 {
     return length (a - b);

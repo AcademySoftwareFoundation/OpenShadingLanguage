@@ -35,15 +35,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/oslconfig.h>
 #include <vector>
 
+#include <optix_world.h>
 
-// This file contains stripped-down versions of the scene objects from
-// testrender/raytracer.h.
+
+
+// Converts from Imath::Vec3 to optix::float3
+optix::float3 vec3_to_float3 (const OSL::Vec3& vec)
+{
+    return optix::make_float3 (vec.x, vec.y, vec.z);
+}
+
+
+// The primitives don't included the intersection routines, etc., from the
+// versions in testrender, since those operations are performed on the GPU.
 //
-// The primitives don't included the render-time functions (intersect, etc.),
-// since those operations are performed on the GPU.
-//
-// See the source files for sphere and quad in the cuda subdirectory for the
-// implementations.
+// See the source files in the cuda subdirectory for the implementations.
 
 OSL_NAMESPACE_ENTER
 
@@ -67,8 +73,13 @@ struct Camera {
 struct Primitive {
     Primitive(int shaderID, bool isLight) : shaderID(shaderID), isLight(isLight) {}
 
+    virtual ~Primitive() {}
+
     int shaderid() const { return shaderID; }
     bool islight() const { return isLight; }
+
+    virtual void setOptixVariables (optix::Geometry geom, optix::Program  bounds,
+                                    optix::Program intersect) const = 0;
 
 private:
     int shaderID;
@@ -80,6 +91,18 @@ struct Sphere : public Primitive {
     Sphere(Vec3 c, float r, int shaderID, bool isLight)
         : Primitive(shaderID, isLight), c(c), r2(r * r) {
         ASSERT(r > 0);
+    }
+
+    virtual void setOptixVariables (optix::Geometry geom, optix::Program  bounds,
+                                    optix::Program intersect) const
+    {
+        geom->setPrimitiveCount (1u);
+        geom->setBoundingBoxProgram (bounds);
+        geom->setIntersectionProgram (intersect);
+
+        geom["sphere"]->setFloat (optix::make_float4(c.x, c.y, c.z, sqrtf(r2)));
+        geom["r2"]->setFloat (r2);
+        geom["a" ]->setFloat (M_PIf * (r2 * r2));
     }
 
     Vec3  c;
@@ -97,8 +120,58 @@ struct Quad : public Primitive {
         ev = 1 / ey.length2();
     }
 
+    virtual void setOptixVariables (optix::Geometry geom, optix::Program bounds,
+                                    optix::Program intersect) const
+    {
+        geom->setPrimitiveCount (1u);
+        geom->setBoundingBoxProgram (bounds);
+        geom->setIntersectionProgram (intersect);
+
+        geom["p" ]->setFloat (vec3_to_float3 (p));
+        geom["ex"]->setFloat (vec3_to_float3 (ex));
+        geom["ey"]->setFloat (vec3_to_float3 (ey));
+        geom["n" ]->setFloat (vec3_to_float3 (n));
+        geom["eu"]->setFloat (eu);
+        geom["ev"]->setFloat (ev);
+        geom["a" ]->setFloat (a);
+    }
+
     Vec3 p, ex, ey, n;
     float a, eu, ev;
+};
+
+
+struct Scene {
+    void create_geom_programs (optix::Context optix_ctx, const std::string& sphere_ptx,
+                               const std::string& quad_ptx)
+    {
+        // The bounds program is used to construct axis-aligned bounding boxes
+        // for each primitive when the acceleration structure is being created.
+        sphere_bounds    = optix_ctx->createProgramFromPTXString (sphere_ptx, "bounds");
+        quad_bounds      = optix_ctx->createProgramFromPTXString (quad_ptx,   "bounds");
+
+        // The intersection program is used to perform ray-geometry intersections.
+        sphere_intersect = optix_ctx->createProgramFromPTXString (sphere_ptx, "intersect");
+        quad_intersect   = optix_ctx->createProgramFromPTXString (quad_ptx,   "intersect");
+    }
+
+    void add_sphere(const Sphere& s) {
+        spheres.push_back(s);
+    }
+
+    void add_quad(const Quad& q) {
+        quads.push_back(q);
+    }
+
+    std::vector<Sphere> spheres;
+    std::vector<Quad> quads;
+
+    optix::Program sphere_intersect;
+    optix::Program sphere_bounds;
+    optix::Program quad_intersect;
+    optix::Program quad_bounds;
+
+    std::vector<optix::Material> optix_mtls;
 };
 
 OSL_NAMESPACE_EXIT

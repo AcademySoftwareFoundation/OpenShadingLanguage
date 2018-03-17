@@ -233,6 +233,11 @@ if (USE_CUDA OR USE_OPTIX)
         message (STATUS "CUDA includes  = ${CUDA_INCLUDE_DIR}")
         message (STATUS "CUDA libraries = ${CUDA_LIBRARIES}")
     endif ()
+
+    STRING (FIND ${LLVM_TARGETS} "NVPTX" nvptx_index)
+    if (NOT ${nvptx_index} GREATER -1)
+        message (FATAL_ERROR "NVTPX target is not available in the provided LLVM build")
+    endif()
 endif ()
 
 # end CUDA setup
@@ -244,6 +249,10 @@ endif ()
 if (USE_OPTIX)
     find_package (OptiX REQUIRED)
     include_directories (BEFORE "${OPTIX_INCLUDE_DIR}")
+
+    if (NOT USE_LLVM_BITCODE OR NOT USE_FAST_MATH)
+        message (FATAL_ERROR "Enabling OptiX requires USE_LLVM_BITCODE=1 and USE_FAST_MATH=1")
+    endif ()
 endif ()
 
 # end OptiX setup

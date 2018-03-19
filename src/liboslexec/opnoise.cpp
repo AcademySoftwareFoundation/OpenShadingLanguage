@@ -483,6 +483,12 @@ PNOISE_IMPL_DERIV (psnoise, PeriodicSNoise)
 
 
 
+// NB: We are ignoring noise functions that require string arguments
+//     in the CUDA case, since strings are not currently well-supported
+//     by the PTX backend. We will update this once string support has
+//     been improved.
+
+#ifndef __CUDA_ARCH__
 struct GaborNoise {
     GaborNoise () { }
 
@@ -600,62 +606,65 @@ struct GaborPNoise {
         result = pgabor3 (p, pp, opt);
     }
 };
+#endif
 
 
 
+#ifndef __CUDA_ARCH__
 NOISE_IMPL_DERIV_OPT (gabornoise, GaborNoise)
 PNOISE_IMPL_DERIV_OPT (gaborpnoise, GaborPNoise)
+#endif
 
 
 
 struct NullNoise {
-    NullNoise () { }
-    inline void operator() (float &result, float x) const { result = 0.0f; }
-    inline void operator() (float &result, float x, float y) const { result = 0.0f; }
-    inline void operator() (float &result, const Vec3 &p) const { result = 0.0f; }
-    inline void operator() (float &result, const Vec3 &p, float t) const { result = 0.0f; }
-    inline void operator() (Vec3 &result, float x) const { result = v(); }
-    inline void operator() (Vec3 &result, float x, float y) const { result = v(); }
-    inline void operator() (Vec3 &result, const Vec3 &p) const { result = v(); }
-    inline void operator() (Vec3 &result, const Vec3 &p, float t) const { result = v(); }
-    inline void operator() (Dual2<float> &result, const Dual2<float> &x,
-                            int seed=0) const { result.set (0.0f, 0.0f, 0.0f); }
-    inline void operator() (Dual2<float> &result, const Dual2<float> &x,
-                            const Dual2<float> &y, int seed=0) const { result.set (0.0f, 0.0f, 0.0f); }
-    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
-                            int seed=0) const { result.set (0.0f, 0.0f, 0.0f); }
-    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
-                            const Dual2<float> &t, int seed=0) const { result.set (0.0f, 0.0f, 0.0f); }
-    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const { result.set (v(), v(), v()); }
-    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {  result.set (v(), v(), v()); }
-    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {  result.set (v(), v(), v()); }
-    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const { result.set (v(), v(), v()); }
-    inline Vec3 v () const { return Vec3(0.0f, 0.0f, 0.0f); };
+    OSL_HOSTDEVICE NullNoise () { }
+    OSL_HOSTDEVICE inline void operator() (float &result, float x) const { result = 0.0f; }
+    OSL_HOSTDEVICE inline void operator() (float &result, float x, float y) const { result = 0.0f; }
+    OSL_HOSTDEVICE inline void operator() (float &result, const Vec3 &p) const { result = 0.0f; }
+    OSL_HOSTDEVICE inline void operator() (float &result, const Vec3 &p, float t) const { result = 0.0f; }
+    OSL_HOSTDEVICE inline void operator() (Vec3 &result, float x) const { result = v(); }
+    OSL_HOSTDEVICE inline void operator() (Vec3 &result, float x, float y) const { result = v(); }
+    OSL_HOSTDEVICE inline void operator() (Vec3 &result, const Vec3 &p) const { result = v(); }
+    OSL_HOSTDEVICE inline void operator() (Vec3 &result, const Vec3 &p, float t) const { result = v(); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<float> &result, const Dual2<float> &x,
+                                           int seed=0) const { result.set (0.0f, 0.0f, 0.0f); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<float> &result, const Dual2<float> &x,
+                                           const Dual2<float> &y, int seed=0) const { result.set (0.0f, 0.0f, 0.0f); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
+                                           int seed=0) const { result.set (0.0f, 0.0f, 0.0f); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
+                                           const Dual2<float> &t, int seed=0) const { result.set (0.0f, 0.0f, 0.0f); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const { result.set (v(), v(), v()); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {  result.set (v(), v(), v()); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {  result.set (v(), v(), v()); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const { result.set (v(), v(), v()); }
+    OSL_HOSTDEVICE inline Vec3 v () const { return Vec3(0.0f, 0.0f, 0.0f); };
 };
 
 struct UNullNoise {
-    UNullNoise () { }
-    inline void operator() (float &result, float x) const { result = 0.5f; }
-    inline void operator() (float &result, float x, float y) const { result = 0.5f; }
-    inline void operator() (float &result, const Vec3 &p) const { result = 0.5f; }
-    inline void operator() (float &result, const Vec3 &p, float t) const { result = 0.5f; }
-    inline void operator() (Vec3 &result, float x) const { result = v(); }
-    inline void operator() (Vec3 &result, float x, float y) const { result = v(); }
-    inline void operator() (Vec3 &result, const Vec3 &p) const { result = v(); }
-    inline void operator() (Vec3 &result, const Vec3 &p, float t) const { result = v(); }
-    inline void operator() (Dual2<float> &result, const Dual2<float> &x,
-                            int seed=0) const { result.set (0.5f, 0.5f, 0.5f); }
-    inline void operator() (Dual2<float> &result, const Dual2<float> &x,
-                            const Dual2<float> &y, int seed=0) const { result.set (0.5f, 0.5f, 0.5f); }
-    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
-                            int seed=0) const { result.set (0.5f, 0.5f, 0.5f); }
-    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
-                            const Dual2<float> &t, int seed=0) const { result.set (0.5f, 0.5f, 0.5f); }
-    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const { result.set (v(), v(), v()); }
-    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {  result.set (v(), v(), v()); }
-    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {  result.set (v(), v(), v()); }
-    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const { result.set (v(), v(), v()); }
-    inline Vec3 v () const { return Vec3(0.5f, 0.5f, 0.5f); };
+    OSL_HOSTDEVICE UNullNoise () { }
+    OSL_HOSTDEVICE inline void operator() (float &result, float x) const { result = 0.5f; }
+    OSL_HOSTDEVICE inline void operator() (float &result, float x, float y) const { result = 0.5f; }
+    OSL_HOSTDEVICE inline void operator() (float &result, const Vec3 &p) const { result = 0.5f; }
+    OSL_HOSTDEVICE inline void operator() (float &result, const Vec3 &p, float t) const { result = 0.5f; }
+    OSL_HOSTDEVICE inline void operator() (Vec3 &result, float x) const { result = v(); }
+    OSL_HOSTDEVICE inline void operator() (Vec3 &result, float x, float y) const { result = v(); }
+    OSL_HOSTDEVICE inline void operator() (Vec3 &result, const Vec3 &p) const { result = v(); }
+    OSL_HOSTDEVICE inline void operator() (Vec3 &result, const Vec3 &p, float t) const { result = v(); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<float> &result, const Dual2<float> &x,
+                                           int seed=0) const { result.set (0.5f, 0.5f, 0.5f); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<float> &result, const Dual2<float> &x,
+                                           const Dual2<float> &y, int seed=0) const { result.set (0.5f, 0.5f, 0.5f); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
+                                           int seed=0) const { result.set (0.5f, 0.5f, 0.5f); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
+                                           const Dual2<float> &t, int seed=0) const { result.set (0.5f, 0.5f, 0.5f); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const { result.set (v(), v(), v()); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {  result.set (v(), v(), v()); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {  result.set (v(), v(), v()); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const { result.set (v(), v(), v()); }
+    OSL_HOSTDEVICE inline Vec3 v () const { return Vec3(0.5f, 0.5f, 0.5f); };
 };
 
 NOISE_IMPL (nullnoise, NullNoise)
@@ -666,6 +675,7 @@ NOISE_IMPL_DERIV (unullnoise, UNullNoise)
 
 
 
+#ifndef __CUDA_ARCH__
 struct GenericNoise {
     GenericNoise () { }
 
@@ -747,8 +757,9 @@ struct GenericNoise {
 
 
 NOISE_IMPL_DERIV_OPT (genericnoise, GenericNoise)
+#endif
 
-
+#ifndef __CUDA_ARCH__
 struct GenericPNoise {
     GenericPNoise () { }
 
@@ -812,6 +823,7 @@ struct GenericPNoise {
 
 
 PNOISE_IMPL_DERIV_OPT (genericpnoise, GenericPNoise)
+#endif
 
 
 // Utility: retrieve a pointer to the ShadingContext's noise params
@@ -819,10 +831,14 @@ PNOISE_IMPL_DERIV_OPT (genericpnoise, GenericPNoise)
 OSL_SHADEOP void *
 osl_get_noise_options (void *sg_)
 {
+#ifndef __CUDA_ARCH__
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     RendererServices::NoiseOpt *opt = sg->context->noise_options_ptr ();
     new (opt) RendererServices::NoiseOpt;
     return opt;
+#else
+    return NULL;
+#endif
 }
 
 
@@ -870,8 +886,10 @@ osl_noiseparams_set_impulses (void *opt, float i)
 OSL_SHADEOP void
 osl_count_noise (void *sg_)
 {
+#ifndef __CUDA_ARCH__
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     sg->context->shadingsys().count_noise ();
+#endif
 }
 
 

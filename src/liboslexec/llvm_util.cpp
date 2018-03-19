@@ -1556,19 +1556,17 @@ LLVM_Util::ptx_compile_group (llvm::Module* lib_module, const std::string& name,
     // ShaderGroup
     llvm::Module* linked_module = new_module (name.c_str());
 
-    // First, link in the shadeops library
-    std::unique_ptr<llvm::Module> lib_ptr (lib_module);
-    bool failed = llvm::Linker::linkModules (*linked_module, std::move (lib_ptr));
-    if (failed) {
-        ASSERT (0 && "PTX compile error: Unable to link library module");
-    }
-
-    // Second, link in the compiled ShaderGroup module
+    // First, link in the cloned ShaderGroup module
     std::unique_ptr<llvm::Module> mod_ptr = llvm::CloneModule (module());
-    failed = llvm::Linker::linkModules (*linked_module, std::move (mod_ptr));
+    bool failed = llvm::Linker::linkModules (*linked_module, std::move (mod_ptr));
     if (failed) {
         ASSERT (0 && "PTX compile error: Unable to link group module");
     }
+
+    // Second, link in the shadeops library, keeping only the functions that are needed
+    std::unique_ptr<llvm::Module> lib_ptr (lib_module);
+    failed = llvm::Linker::linkModules (*linked_module, std::move (lib_ptr),
+                                        llvm::Linker::LinkOnlyNeeded);
 
     // Verify that the NVPTX target has been initialized
     std::string error;

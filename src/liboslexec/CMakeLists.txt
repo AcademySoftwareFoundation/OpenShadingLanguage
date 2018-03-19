@@ -123,45 +123,76 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
               ${exec_headers} ${PROJECT_PUBLIC_HEADERS}
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
 
-    # Optionally repeat the bitcode compilation with CUDA-specific options
-    if (CUDA_FOUND)
-      SET ( llvm_bc_cuda "${CMAKE_CURRENT_BINARY_DIR}/${llvmsrc_we}_cuda.bc" )
-      SET ( llvm_bc_cuda_cpp "${CMAKE_CURRENT_BINARY_DIR}/${llvmsrc_we}_cuda.bc.cpp" )
-      if (VERBOSE)
-          MESSAGE (STATUS "LLVM_COMPILE CUDA in=${llvm_src}")
-          MESSAGE (STATUS "LLVM_COMPILE CUDA bc=${llvm_bc_cuda}")
-          MESSAGE (STATUS "LLVM_COMPILE CUDA cpp=${llvm_bc_cuda_cpp}")
-      endif ()
-      SET ( ${srclist} ${${srclist}} ${llvm_bc_cuda_cpp} )
-      ADD_DEFINITIONS (-DOSL_LLVM_CUDA_BITCODE)
+ENDMACRO ( )
 
-      ADD_CUSTOM_COMMAND ( OUTPUT ${llvm_bc_cuda_cpp}
+# Function to compile a C++ source file to CUDA-compatible LLVM bitcode
+FUNCTION ( MAKE_CUDA_BITCODE src generated_bc )
+    GET_FILENAME_COMPONENT ( src_we ${src} NAME_WE )
+    SET ( asm_cuda "${CMAKE_CURRENT_BINARY_DIR}/${src_we}_cuda.s" )
+    SET ( bc_cuda "${CMAKE_CURRENT_BINARY_DIR}/${src_we}_cuda.bc" )
+
+    ADD_CUSTOM_COMMAND ( OUTPUT ${bc_cuda}
         COMMAND ${LLVM_BC_GENERATOR}
             ${LLVM_COMPILE_FLAGS}
             "-I${CMAKE_CURRENT_SOURCE_DIR}"
             "-I${CMAKE_SOURCE_DIR}/src/include"
             "-I${CMAKE_BINARY_DIR}/include"
-            "-I${CUDA_INCLUDE_DIR}"
             "-I${OPENIMAGEIO_INCLUDE_DIR}"
             "-I${ILMBASE_INCLUDE_DIR}"
-            "-I${Boost_INCLUDE_DIRS}"
-            -DOSL_COMPILING_TO_BITCODE=1
-            -D__CUDACC__  -D__CUDA_ARCH__=350
-            --language=cuda --cuda-gpu-arch=sm_35 --cuda-device-only --cuda-path="${CUDA_TOOLKIT_ROOT_DIR}"
-            -Wno-deprecated-register
-            -O3 -Wno-format-security -emit-llvm
-            ${llvm_src} -c -o ${llvm_bc_cuda}
-        COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash" ${llvm_bc_cuda} ${llvm_bc_cuda_cpp} "osl_llvm_compiled_ops_cuda"
-        MAIN_DEPENDENCY ${llvm_src}
-        DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash"
-                ${exec_headers} ${PROJECT_PUBLIC_HEADERS}
+            -D__CUDACC__ -DOSL_COMPILING_TO_BITCODE=1
+            -DNDEBUG -DOIIO_NO_SSE
+            --language=cuda --cuda-device-only --cuda-gpu-arch=${CUDA_TARGET_ARCH}
+            -std=c++11 -Wno-deprecated-register
+            -O3 -fno-math-errno -S -emit-llvm -o ${asm_cuda} ${src}
+        COMMAND "${LLVM_DIRECTORY}/bin/llvm-as" -f -o ${bc_cuda} ${asm_cuda}
+        DEPENDS ${exec_headers} ${PROJECT_PUBLIC_HEADERS} ${src}
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
-    endif ()
 
+    SET ( ${generated_bc} ${bc_cuda} PARENT_SCOPE )
+ENDFUNCTION ()
+
+MACRO ( CUDA_SHADEOPS_COMPILE srclist )
+    # Add all of the "shadeops" sources that need to be compiled to LLVM bitcode for CUDA
+    set ( shadeops_srcs
+        llvm_ops.cpp
+        opnoise.cpp
+        ../liboslnoise/simplexnoise.cpp
+        )
+
+    SET ( shadeops_bc_cuda_cpp "${CMAKE_CURRENT_BINARY_DIR}/shadeops_cuda.bc.cpp" )
+    SET ( linked_shadeops_bc "${CMAKE_CURRENT_BINARY_DIR}/linked_shadeops.bc" )
+
+    LIST ( APPEND ${srclist} ${shadeops_bc_cuda_cpp} )
+
+    ADD_DEFINITIONS (-DOSL_LLVM_CUDA_BITCODE)
+
+    FOREACH ( shadeops_src ${shadeops_srcs} )
+        MAKE_CUDA_BITCODE ( ${shadeops_src} shadeops_bc )
+        LIST ( APPEND shadeops_bc_list ${shadeops_bc} )
+    ENDFOREACH ()
+
+    # Link all of the individual LLVM bitcode files
+    ADD_CUSTOM_COMMAND ( OUTPUT ${linked_shadeops_bc}
+        COMMAND "${LLVM_DIRECTORY}/bin/llvm-link" -internalize ${shadeops_bc_list} -o ${linked_shadeops_bc}
+        DEPENDS ${shadeops_bc_list} ${exec_headers} ${PROJECT_PUBLIC_HEADERS} ${shadeops_srcs}
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
+
+    # Serialze the linked bitcode into a CPP file and add it to the list of liboslexec soures
+    ADD_CUSTOM_COMMAND ( OUTPUT ${shadeops_bc_cuda_cpp}
+        COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash"
+            ${linked_shadeops_bc} ${shadeops_bc_cuda_cpp} "osl_llvm_compiled_ops_cuda"
+        DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash" ${linked_shadeops_bc}
+        ${exec_headers} ${PROJECT_PUBLIC_HEADERS}
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
 ENDMACRO ( )
 
 if (USE_LLVM_BITCODE)
     LLVM_COMPILE ( llvm_ops.cpp liboslexec_srcs )
+
+    # Optionally repeat the bitcode compilation with CUDA-specific options
+    if (CUDA_FOUND)
+        CUDA_SHADEOPS_COMPILE ( liboslexec_srcs )
+    endif ()
 else ()
     # With MSVC/Mingw, we don't compile llvm_ops.cpp to LLVM bitcode, due
     # to clang being unable to compile MSVC C++ header files at this time.

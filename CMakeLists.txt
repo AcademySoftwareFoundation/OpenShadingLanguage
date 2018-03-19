@@ -96,6 +96,7 @@ option (USE_BOOST_WAVE "Use Boost Wave for C preprocessor (alternative is to use
 option (USE_QT "Include Qt support" ON)
 option (USE_OPTIX "Include OptiX support" OFF)
 set (OPTIX_EXTRA_LIBS CACHE STRING "Extra lib targets needed for OptiX")
+set (CUDA_TARGET_ARCH "sm_35" CACHE STRING "CUDA GPU architecture (e.g. sm_35)")
 
 
 # set (USE_OIIO_STATIC ON CACHE BOOL "If OIIO is built static")

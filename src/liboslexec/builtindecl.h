@@ -149,6 +149,7 @@ DECL (osl_warning, "xXs*")
 DECL (osl_split, "isXsii")
 DECL (osl_incr_layers_executed, "xX")
 
+#ifndef OSL_LLVM_CUDA_BITCODE
 NOISE_IMPL(cellnoise)
 //NOISE_DERIV_IMPL(cellnoise)
 NOISE_IMPL(hashnoise)
@@ -186,6 +187,7 @@ DECL (osl_hash_if,  "if")
 DECL (osl_hash_iff, "iff")
 DECL (osl_hash_iv,  "iX")
 DECL (osl_hash_ivf, "iXf")
+#endif
 
 DECL (osl_spline_fff, "xXXXXii")
 DECL (osl_spline_dfdfdf, "xXXXXii")

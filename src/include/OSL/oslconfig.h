@@ -60,17 +60,29 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #  endif
 #endif
 
+#ifndef OSL_DEVICE
+#  ifdef __CUDA_ARCH__
+#    define OSL_DEVICE __device__
+#  else
+#    define OSL_DEVICE
+#  endif
+#endif
+
 // Symbol export defines
 #include "export.h"
 
 // All the things we need from Imath
 #ifdef __CUDACC__
-#include <OSL/ImathVec_cuda.h>
+// When compiling for CUDA, we need to make sure the modified Imath
+// headers are included before the stock versions.
+#  include <OSL/ImathVec_cuda.h>
+#  include <OSL/ImathMatrix_cuda.h>
 #else
-#include <OpenEXR/ImathVec.h>
+#  include <OpenEXR/ImathVec.h>
+#  include <OpenEXR/ImathMatrix.h>
 #endif
+
 #include <OpenEXR/ImathColor.h>
-#include <OpenEXR/ImathMatrix.h>
 
 // All the things we need from OpenImageIO
 #include <OpenImageIO/oiioversion.h>

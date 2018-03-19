@@ -223,7 +223,7 @@ if (USE_CUDA OR USE_OPTIX)
         message (STATUS "CUDA_TOOLKIT_ROOT_DIR = ${CUDA_TOOLKIT_ROOT_DIR}")
     endif ()
 
-    find_package (CUDA 7.0 REQUIRED)
+    find_package (CUDA 8.0 REQUIRED)
     set (CUDA_INCLUDE_DIR ${CUDA_TOOLKIT_ROOT_DIR}/include)
     include_directories (BEFORE "${CUDA_INCLUDE_DIR}")
 
@@ -238,6 +238,21 @@ if (USE_CUDA OR USE_OPTIX)
     if (NOT ${nvptx_index} GREATER -1)
         message (FATAL_ERROR "NVTPX target is not available in the provided LLVM build")
     endif()
+
+    if (${CUDA_VERSION_MAJOR} GREATER 8 AND ${LLVM_VERSION} LESS 6)
+        message (FATAL_ERROR "CUDA ${CUDA_VERSION} requires LLVM 6.0 or greater")
+    endif ()
+
+    # TODO: When compiling for CUDA 9.0+ using clang, specifying the CUDA
+    #       path can result in multiply-defined symbol errors; for CUDA 8.0,
+    #       not defining it results in undefined symbols. It would be better
+    #       if there were a more robust and unified way to handle this, but
+    #       this will have to do for now.
+    if (${CUDA_VERSION_MAJOR} GREATER 8)
+        set (CUDA_LIB_FLAGS "")
+    else ()
+        set (CUDA_LIB_FLAGS "--cuda-path=${CUDA_TOOLKIT_ROOT_DIR}")
+    endif ()
 endif ()
 
 # end CUDA setup

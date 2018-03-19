@@ -34,8 +34,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/oslconfig.h>
 #include <OSL/llvm_util.h>
 
-#if OSL_LLVM_VERSION < 39
-#error "LLVM minimum version required for OSL is 3.9"
+#if OSL_LLVM_VERSION < 40
+#error "LLVM minimum version required for OSL is 4.0"
 #endif
 
 #include <llvm/IR/Constants.h>
@@ -52,12 +52,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Support/TargetRegistry.h>
 
-#if OSL_LLVM_VERSION < 40
-#  include <llvm/Bitcode/ReaderWriter.h>
-#else
-#  include <llvm/Bitcode/BitcodeReader.h>
-#  include <llvm/Bitcode/BitcodeWriter.h>
-#endif
+#include <llvm/Bitcode/BitcodeReader.h>
+#include <llvm/Bitcode/BitcodeWriter.h>
 #include <llvm/Support/ManagedStatic.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/ExecutionEngine/GenericValue.h>
@@ -87,11 +83,7 @@ namespace pvt {
 
 typedef llvm::SectionMemoryManager LLVMMemoryManager;
 
-#if OSL_LLVM_VERSION < 40
-    typedef std::error_code LLVMErr;
-#else
-    typedef llvm::Error LLVMErr;
-#endif
+typedef llvm::Error LLVMErr;
 
 
 namespace {
@@ -356,15 +348,6 @@ LLVM_Util::new_module (const char *id)
 
 
 
-#if OSL_LLVM_VERSION < 40
-inline bool error_string (const std::error_code &err, std::string *str) {
-    if (err) {
-        if (str) *str = err.message();
-        return true;
-    }
-    return false;
-}
-#else
 inline bool error_string (llvm::Error err, std::string *str) {
     if (err) {
         if (str) {
@@ -375,7 +358,6 @@ inline bool error_string (llvm::Error err, std::string *str) {
     }
     return false;
 }
-#endif
 
 
 
@@ -386,13 +368,8 @@ LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
     if (err)
         err->clear();
 
-# if OSL_LLVM_VERSION >= 40
     typedef llvm::Expected<std::unique_ptr<llvm::Module> > ErrorOrModule;
-# else
-    typedef llvm::ErrorOr<std::unique_ptr<llvm::Module> > ErrorOrModule;
-# endif
 
-# if OSL_LLVM_VERSION >= 40 || defined(OSL_FORCE_BITCODE_PARSE)
     llvm::MemoryBufferRef buf =
         llvm::MemoryBufferRef(llvm::StringRef(bitcode, size), name);
 #  ifdef OSL_FORCE_BITCODE_PARSE
@@ -415,18 +392,8 @@ LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
     ErrorOrModule ModuleOrErr = llvm::getLazyBitcodeModule(buf, context());
 #  endif
 
-# else /* !OSL_FORCE_BITCODE_PARSE */
-    std::unique_ptr<llvm::MemoryBuffer> buf (
-        llvm::MemoryBuffer::getMemBuffer (llvm::StringRef(bitcode, size), name, false));
-    ErrorOrModule ModuleOrErr = llvm::getLazyBitcodeModule(std::move(buf), context());
-# endif
-
     if (err) {
-# if OSL_LLVM_VERSION >= 40
         error_string(ModuleOrErr.takeError(), err);
-# else
-        error_string(ModuleOrErr.getError(), err);
-# endif
     }
     llvm::Module *m = ModuleOrErr ? ModuleOrErr->release() : nullptr;
 # if 0
@@ -622,13 +589,8 @@ LLVM_Util::internalize_module_functions (const std::string &prefix,
                                          const std::vector<std::string> &exceptions,
                                          const std::vector<std::string> &moreexceptions)
 {
-#if OSL_LLVM_VERSION < 40
-    for (llvm::Module::iterator iter = module()->begin(); iter != module()->end(); iter++) {
-        llvm::Function *sym = static_cast<llvm::Function*>(iter);
-#else
     for (llvm::Function& func : module()->getFunctionList()) {
         llvm::Function *sym = &func;
-#endif
         std::string symname = sym->getName();
         if (prefix.size() && ! OIIO::Strutil::starts_with(symname, prefix))
             continue;
@@ -1658,18 +1620,8 @@ LLVM_Util::bitcode_string (llvm::Module *module)
     std::string s;
     llvm::raw_string_ostream stream (s);
 
-#if OSL_LLVM_VERSION < 40
-    for (llvm::Module::iterator iter = module->begin(); iter != module->end(); iter++) {
-        llvm::Function *funcptr = static_cast<llvm::Function*>(iter);
-        stream << (*funcptr);
-        stream << "\n";
-    }
-#else
-    for (const llvm::Function& func : module->getFunctionList()) {
-        stream << func;
-        stream << "\n";
-    }
-#endif
+    for (auto&& func : module->getFunctionList())
+        stream << func << '\n';
 
     return stream.str();
 }

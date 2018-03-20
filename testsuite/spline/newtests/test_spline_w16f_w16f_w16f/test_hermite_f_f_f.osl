@@ -20,9 +20,9 @@ shader test_hermite_f_f_f (
    fltknots[11] =  0.0*u ;
    fltknots[12] =  0.0*u ;
 
-
+if(P[0]>0.5){
   Fspline1   = spline("hermite",P[0], fltknots);
-
+}
 
 
 }

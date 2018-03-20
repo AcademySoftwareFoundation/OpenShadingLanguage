@@ -1,0 +1,36 @@
+
+shader str_substr ()
+{
+ 
+
+if(P[0]>0.5){
+
+#if 0
+test_substr ("abcdefg", 0);
+test.osl:    test_substr ("abcdefg", 3);
+test.osl:    test_substr ("abcdefg", -2);
+test.osl:    test_substr ("abcdefg", 3, 2);
+test.osl:    test_substr ("abcdefg", 0, 20);
+test.osl:    test_substr ("abcdefg", 0, -4);
+#endif
+
+   string s_uni = "abcdefg";
+   string wide_s = format ("P = %g", P);
+   int begin = 3;
+   int len = 2;
+  
+   string s=concat(s_uni, wide_s);
+
+   
+    printf ("substr(\"%s\", %d, %d) = \"%s\"\n",s, begin, len, substr(s,3,2));
+
+    begin = 7; 
+    printf ("substr(\"%s\", %d) = \"%s\"\n",s, begin, substr(s,begin));
+
+    begin = 6;
+    printf ("substr(\"%s\", %d) = \"%s\"\n",s, begin, substr(s,begin));
+
+}
+
+    
+}

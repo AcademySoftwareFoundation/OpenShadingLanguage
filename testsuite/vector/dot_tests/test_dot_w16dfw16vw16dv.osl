@@ -1,0 +1,22 @@
+shader test_dot_w16dfw16vw16dv (output color ddot = 0,
+                                output color dxdot = 0,
+                                output color dydot = 0)
+//testshade --batched --llvm_debug -g 4 4 test_dot_w16dfw16dvw16v | grep osl_dot
+{
+
+if(P[0]>0.5){
+           
+           vector a = vector(1.0, 1.0, 1.0);
+           vector b = vector(u+v, -u-v, u+v);
+          // vector b = vector(u+v,  u+v, u+v);
+           
+           float d = dot(a, b);
+           //printf ("\n");
+           //printf ("dot product: d = dot(%.4g, %.4g) = %.4g  Dx(d) = %.4g  Dy(d) = %.4g\n",
+           //      a, b, d, Dx(d), Dy(d));
+           
+           ddot = dot(a,b);
+           dxdot = Dx(ddot);
+           dydot = Dy(ddot);
+}
+}

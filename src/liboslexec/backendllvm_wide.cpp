@@ -55,15 +55,21 @@ static ustring op_break("break");
 static ustring op_calculatenormal("calculatenormal");
 static ustring op_concat("concat");
 static ustring op_continue("continue");
+static ustring op_endswith("endswith");
 static ustring op_functioncall("functioncall");
 static ustring op_functioncall_nr("functioncall_nr");
 static ustring op_getattribute("getattribute");
+static ustring op_getchar("getchar");
 static ustring op_getmatrix("getmatrix");
 static ustring op_getmessage("getmessage");
+static ustring op_hash("hash");
 static ustring op_if("if");
 static ustring op_return("return");
+static ustring op_startswith("startswith");
 static ustring op_stoi("stoi");
+static ustring op_stof("stof");
 static ustring op_strlen("strlen");
+static ustring op_substr("substr");
 static ustring op_surfacearea("surfacearea");
 static ustring op_transform("transform");
 static ustring op_transformv("transformv");
@@ -1340,7 +1346,13 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 			}
             if ((opcode.opname() == Strings::op_stoi) ||
                 (opcode.opname() == Strings::op_concat)||
-                (opcode.opname() == Strings::op_strlen)){
+                (opcode.opname() == Strings::op_strlen) ||
+                (opcode.opname() == Strings::op_hash) ||
+                (opcode.opname() == Strings::op_getchar)||
+                (opcode.opname() == Strings::op_startswith)||
+                (opcode.opname() == Strings::op_endswith) ||
+                (opcode.opname() == Strings::op_stof)||
+                (opcode.opname() == Strings::op_substr))      {
                 // TODO: should OpDescriptor handle identifying operations that always require masking?
                 m_requires_masking_by_layer_and_op_index[layer()][opIndex] = true;
             }

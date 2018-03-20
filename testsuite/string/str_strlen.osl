@@ -1,0 +1,14 @@
+
+shader str_strlen ()
+{
+ 
+   if(P[0]>0.5){
+    printf ("\n");
+    string a = "foo", b = format ("P = %g", P),  c = " bar";
+    string catstr = concat(a,b,c);
+    int str_length = strlen(catstr);
+    printf ("strlen(\"%s\") = %d\n", catstr, strlen(catstr));
+}
+}
+
+    

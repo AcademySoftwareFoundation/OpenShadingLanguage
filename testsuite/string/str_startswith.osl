@@ -1,0 +1,26 @@
+
+shader str_startswith ()
+{
+ 
+
+if(P[0]>0.5){
+    // Test concat
+    printf ("\n");
+    string a = "disney", b = format ("P = %g", P),  c = " bar", d=" xkcd";
+    string concat_str = concat(a,b,c,d);
+   
+    printf("\n");
+    
+    string substr = "dis";
+
+    printf ("startswith (\"%s\", \"%s\") = %d\n", concat_str, substr, startswith (concat_str, substr));
+
+     printf ("startswith (\"%s\", \"%s\") = %d\n", concat_str, "x", startswith (concat_str, "x"));
+     printf ("startswith (\"%s\", \"%s\") = %d\n", concat_str, "disn", startswith (concat_str, "disn"));     printf ("startswith (\"%s\", \"%s\") = %d\n", concat_str, "disney", startswith (concat_str, "disney"));
+
+
+
+}
+
+    
+}

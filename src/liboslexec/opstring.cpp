@@ -109,14 +109,49 @@ osl_hash_is (const char *s)
     return (int) USTR(s).hash();
 }
 
+OSL_SHADEOP void
+osl_hash_w16iw16s_masked (void *wr_, void *ws_, unsigned int mask_value)
+{
+    ConstWideAccessor<ustring> wS (ws_);
+    MaskedAccessor <int> wR (wr_, Mask(mask_value));
+
+    for (int lane = 0; lane< wR.width; ++lane){
+        if(wR.mask().is_on(lane)){
+            ustring s = wS[lane];
+            wR[lane] = (int) USTR(s).hash();
+
+        }
+
+    }
+
+}
+
 OSL_SHADEOP int
 osl_getchar_isi (const char *str, int index)
 {
-    return str && unsigned(index) < USTR(str).length() ? str[index] : 0;
+    return str && unsigned(index) < USTR(str).length() ? str[index] : 0; //AND'ing of string length and str[index]
+}
+
+OSL_SHADEOP void
+osl_getchar_w16iw16sw16i_masked (void *wr_, void *ws_, void *wi_, unsigned int mask_value)
+{
+    ConstWideAccessor<ustring> wS (ws_);
+    ConstWideAccessor<int> wI (wi_);
+    MaskedAccessor <int> wR (wr_, Mask(mask_value));
+
+    for (int lane = 0; lane < wR.width; ++lane){
+        if(wR.mask().is_on(lane)){
+            ustring str = wS[lane];
+            int index = wI[lane];
+            wR[lane] = str && unsigned(index) < USTR(str).length() ? str[index] : 0;
+        }
+
+    }
+
 }
 
 
-    OSL_SHADEOP int
+OSL_SHADEOP int
 osl_startswith_iss (const char *s_, const char *substr_)
 {
     ustring substr (USTR(substr_));
@@ -129,6 +164,38 @@ osl_startswith_iss (const char *s_, const char *substr_)
         return 0;                // match (including empty s)
     return strncmp (s.c_str(), substr.c_str(), substr_len) == 0;
 }
+
+OSL_SHADEOP void
+osl_startswith_w16iw16sw16s_masked (void *wr_, void *ws_, void *wsubs_, unsigned int mask_value)
+{
+    ConstWideAccessor<ustring> wS (ws_);
+    ConstWideAccessor<ustring> wSubs (wsubs_);
+    MaskedAccessor<int> wR (wr_, Mask(mask_value));
+
+    for(int lane = 0; lane <wR.width; ++lane){
+        if(wR.mask().is_on(lane)){
+
+            ustring substr = wSubs[lane];
+            size_t substr_len = substr.length();
+
+             if (substr_len == 0)         // empty substr always matches
+                 wR[lane] = 1;
+
+             ustring s = wS[lane];
+             size_t s_len = s.length();
+
+             if (substr_len > s_len)      // longer needle than haystack can't
+                 wR[lane] = 0;
+
+             wR[lane] = strncmp (s.c_str(), substr.c_str(), substr_len) == 0;
+
+
+        }
+    }
+}
+
+
+
 
 OSL_SHADEOP int
 osl_endswith_iss (const char *s_, const char *substr_)
@@ -143,6 +210,38 @@ osl_endswith_iss (const char *s_, const char *substr_)
         return 0;                // match (including empty s)
     return strncmp (s.c_str()+s_len-substr_len, substr.c_str(), substr_len) == 0;
 }
+
+OSL_SHADEOP void
+osl_endswith_w16iw16sw16s_masked (void *wr_, void *ws_, void *wsubs_, unsigned int mask_value)
+{
+    ConstWideAccessor<ustring> wS (ws_);
+    ConstWideAccessor<ustring> wSubs (wsubs_);
+    MaskedAccessor<int> wR (wr_, Mask(mask_value));
+
+    for(int lane = 0; lane <wR.width; ++lane){
+        if(wR.mask().is_on(lane)){
+
+            ustring substr = wSubs[lane];
+            size_t substr_len = substr.length();
+
+             if (substr_len == 0)     //SM: Can't combine check with mask()[lane]    // empty substr always matches
+                 wR[lane] = 1;
+
+             ustring s = wS[lane];
+             size_t s_len = s.length();
+
+             if (substr_len > s_len)      // longer needle than haystack can't
+                 wR[lane] = 0;
+
+             wR[lane] = strncmp (s.c_str()+s_len-substr_len, substr.c_str(), substr_len) == 0;
+
+        }
+
+    }
+
+}
+
+
 
 OSL_SHADEOP int
 osl_stoi_is (const char *str)
@@ -176,6 +275,28 @@ osl_stof_fs (const char *str)
     return str ? (float)strtod(str, NULL) : 0.0f;
 }
 
+OSL_SHADEOP void
+osl_stof_w16fw16s_masked (void *wr_, void *ws_, int mask_value)
+{
+    ConstWideAccessor<ustring> wS (ws_);
+    MaskedAccessor<float> wR (wr_, Mask(mask_value));
+
+    for(int lane=0; lane < wR.width; ++lane) {
+        ustring str = wS[lane];
+        float result = 0.0;
+        // Avoid cost of strtol if lane is masked off
+        // Also the value of str for a masked off lane could be
+        // invalid/undefined and not safe to call strtod on.
+        if (wR.mask()[lane] && str.c_str()) {
+            result = (float)strtod(str.c_str(), NULL);
+        }
+
+        wR[lane] = result;
+    }
+
+}
+
+
 OSL_SHADEOP const char *
 osl_substr_ssii (const char *s_, int start, int length)
 {
@@ -188,6 +309,47 @@ osl_substr_ssii (const char *s_, int start, int length)
         b += slen;
     b = Imath::clamp (b, 0, slen);
     return ustring(s, b, Imath::clamp (length, 0, slen)).c_str();
+}
+
+
+OSL_SHADEOP void
+osl_substr_w16sw16sw16iw16i_masked (void *wr_, void *ws_,void *wstart_,
+                                    void *wlength_, unsigned int mask_value)
+{
+    ConstWideAccessor<ustring> wS (ws_);
+    ConstWideAccessor<int> wL (wlength_);
+    ConstWideAccessor<int> wSt (wstart_);
+    MaskedAccessor <ustring> wR (wr_, Mask(mask_value));
+
+    for (int lane = 0; lane < wR.width; ++lane) {
+        if(wR.mask().is_on(lane)) {
+
+             ustring s = wS[lane];
+             int length = wL[lane];
+             ustring result;
+             int slen = int(s.length());
+             if (slen == 0)
+                 wR[lane] = ustring(NULL);
+             int b = wSt[lane];
+             if (b < 0)
+                 b += slen;
+             b = Imath::clamp(b, 0, slen);
+
+             result = ustring(s, b, Imath::clamp (length, 0, slen)).c_str();
+             wR[lane] = result;
+
+        }
+
+    }
+//    ustring s (USTR(s_));
+//    int slen = int (s.length());
+//    if (slen == 0)
+//        return NULL;  // No substring of empty string
+//    int b = start;
+//    if (b < 0)
+//        b += slen;
+//    b = Imath::clamp (b, 0, slen);
+//    return ustring(s, b, Imath::clamp (length, 0, slen)).c_str();
 }
 
 

@@ -1,0 +1,18 @@
+shader str_stof()
+{
+
+string value = "3.14";
+
+string value_p = format ("P = %g", P);
+
+value = concat(value_p,value);
+
+printf ("stof(\"%s\") = %f\n", value, stof(value));
+
+
+
+
+
+
+
+}

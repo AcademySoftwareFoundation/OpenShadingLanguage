@@ -1,49 +1,54 @@
 
 shader test_bezier_dv_df_v (
-	output vector cv = 0, 
-	output vector Dxcv = 0)
+	output vector cv = 0 ,
+	output vector Dxcv = 0
+)
 
 {
  	
 //testshade --batched --llvm_debug -g 400 400 -t 1 --iters 1 --stats -o cv C.tiff -o Dxcv a.tif test_bezier_dv_df_v | grep osl
 
 vector vecknots_var [13];
-vecknots_var[0] = (1.0, 1.0, 1.0)*u;
-vecknots_var[1] = (1.0, 1.0, 1.0)*u;
-vecknots_var[2] = (0.5, 0.5, 0.5)*u;
-vecknots_var[3] = (0.5, 0.5, 0.5)*u;
-vecknots_var[4] = (0, 0, 0)*u;
-vecknots_var[5] = (0, 0, 0)*u;
-vecknots_var[6] = (0.5, 0.5, 0.5)*u;
-vecknots_var[7] = (0, 0, 0)*u;
-vecknots_var[8] = (0, 0, 0)*u;
-vecknots_var[9] = (0.5, 0.5, 0.5)*u;
-vecknots_var[10] = (0.5, 0.5, 0.5)*u;
-vecknots_var[11] = (1.0, 1.0, 1.0)*u;
-vecknots_var[12] = (1.0, 1.0, 1.0)*u;
+vecknots_var[0] = vector(1.0 ,1.0, 1.0)*u;
+vecknots_var[1] = vector(1.0, 1.0, 1.0)*u;
+vecknots_var[2] = vector(0.5, 0.5, 0.5)*u;
+vecknots_var[3] = vector(0.5, 0.5, 0.5)*u;
+vecknots_var[4] = vector(0, 0, 0)*u;
+vecknots_var[5] = vector(0, 0, 0)*u;
+vecknots_var[6] = vector(0.5, 0.5, 0.5)*u;
+vecknots_var[7] = vector(0, 0, 0)*u;
+vecknots_var[8] = vector(0, 0, 0)*u;
+vecknots_var[9] = vector(0.5, 0.5, 0.5)*u;
+vecknots_var[10] = vector(0.5, 0.5, 0.5)*u;
+vecknots_var[11] = vector(1.0, 1.0, 1.0)*u;
+vecknots_var[12] = vector(1.0, 1.0, 1.0)*u;
 
 
-#if 0
-vector vecknots[13];
-vecknots[0] = (1.0, 1.0, 1.0);
-vecknots[1] = (1.0, 1.0, 1.0);
-vecknots[2] = (0.5, 0.5, 0.5);
-vecknots[3] = (0.5, 0.5, 0.5);
-vecknots[4] = (0, 0, 0);
-vecknots[5] = (0, 0, 0);
-vecknots[6] = (0.5, 0.5, 0.5);
-vecknots[7] = (0, 0, 0);
-vecknots[8] = (0, 0, 0);
-vecknots[9] = (0.5, 0.5, 0.5);
-vecknots[10] = (0.5, 0.5, 0.5);
-vecknots[11] = (1.0, 1.0, 1.0);
-vecknots[12] = (1.0, 1.0, 1.0);
-#endif
 
-vector vecknots = ( 1, 1, 1);
+color vecknots[13];
+vecknots[0] = color(1.0e9*0, 1.0e9*0, 1.0e9*0);
+vecknots[1] = color(1.0e9*1, 1.0e9*1, 1.0e9*1);
+vecknots[2] = color(0.5e9*2, 0.5e9*2, 0.5e9*2);
+vecknots[3] = color(0.5e9*3, 0.5e9*3, 0.5e9*3);
+vecknots[4] = color(0e9*4, 0e9*4, 0e9*4);
+vecknots[5] = color(0e9*5, 0e9*5, 0e9*5);
+vecknots[6] = color(0.5e9*6, 0.5e9*6, 0.5e9*6);
+vecknots[7] = color(0e9*7, 0e9*7, 0e9*7);
+vecknots[8] = color(0e9*8, 0e9*8, 0e9*8);
+vecknots[9] = color(0.5e9*9, 0.5e9*9, 0.5e9*9);
+vecknots[10] = color(0.5e9*10, 0.5e9*10, 0.5e9*10);
+vecknots[11] = color(1.0e9*11, 1.0e9*11, 1.0e9*11);
+vecknots[12] = color(1.0e9*12, 1.0e9*12, 1.0e9*12);
+
+//vector vecknots = ( 1, 1, 1);
 if(P[0]>0.5){
-cv = spline ("bezier",N ,vecknots ); 
 
+normal stackN = N;
+//int sf = (int) surfacearea();
+//cv = spline ("bezier", sf*1.1 ,stackN ); //gets into osl_spline_w16dvw16dfw16v_masked
+
+int rtype = raytype("camera");
+cv = spline ("bezier", rtype ,stackN );
 Dxcv = Dx(cv);
 
 }

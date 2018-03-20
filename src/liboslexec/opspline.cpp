@@ -1472,21 +1472,27 @@ OSL_SHADEOP void osl_splineinverse_w16ffw16f_masked(void *wout_, const char *spl
 }
 
 OSL_SHADEOP void osl_splineinverse_w16fff_masked(void *wout_, const char *spline_, void *wx_,
-                                       float *knots, int knot_count, int knot_arraylen, unsigned int mask_value)
+                                       void *wknots_, int knot_count, int /*knot_arraylen*/, unsigned int mask_value)
 {
     // Version with no derivs
 
    const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
    ConstUniformAccessor <float> wX(wx_);
-   //ConstWideAccessor <float> wK (knots);
+   ConstUniformUnboundedArrayAccessor <float> wK (wknots_, knot_count);
    MaskedAccessor<float> wR(wout_, Mask (mask_value));
 
    for(int lane = 0; lane<wR.width; ++lane){
        if (wR.mask().is_on(lane)) {
            //float k = wK[lane];
-           //float *kp = &k;
+           //float *kp = &k;]
+           float x = wX[lane];
+           auto knot_array = wK[lane];
+           float knots[knot_array.length()];
+           for(int k = 0; k< knot_array.length(); ++k) {
+                knots[k] = knot_array[k];
+                      }
            float result;
-           Spline::spline_inverse<float> (spline, result, *(float *)wx_, knots, knot_count, knot_arraylen);
+           Spline::spline_inverse<float> (spline, result, x, knots, knot_array.length(), knot_array.length());
            wR[lane] = result;
        }
    }
@@ -1755,10 +1761,10 @@ float *knots, int knot_count, int /*knot_arraylen*/, unsigned int mask_value)
 OSL_SHADEOP void osl_splineinverse_w16dfdffw16df_masked (void *wout_, const char *spline_, void *wx_,
 void *wknots_, int knot_count, int /*knot_arraylen*/, unsigned int mask_value)
 {
-
+/*
       const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
       ConstWideAccessor<float> wX (wx_);
-      ConstWideUnboundArrayAccessor <float> wK (knots, knot_count);
+      ConstWideUnboundArrayAccessor <float> wK (wknots, knot_count);
       MaskedAccessor<float> wR(wout_, Mask (mask_value));
 
 
@@ -1774,6 +1780,7 @@ void *wknots_, int knot_count, int /*knot_arraylen*/, unsigned int mask_value)
               wR[lane] = result;
           }
       }
+      */
 }
 
 } // namespace pvt

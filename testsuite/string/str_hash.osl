@@ -1,0 +1,20 @@
+
+shader str_hash ()
+{
+ 
+
+if(P[0]>0.5){
+    // Test concat
+    printf ("\n");
+    string a = "foo", b = format ("P = %g", P),  c = " bar";
+    string concat_str = concat(a,b,c);
+   
+    printf("\n");
+    printf("hash(\"%s\") = %d\n", a, hash(a));
+    printf("hash(\"%s\") = %d\n", b, hash(b));
+    printf("hash(\"%s\") = %d\n", c, hash(c));
+    printf("hash(\"%s\") = %d\n",  concat_str, hash(concat_str));
+}
+
+    
+}

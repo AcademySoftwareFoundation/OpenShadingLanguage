@@ -9,27 +9,26 @@ shader test_catmullrom_df_df_f (
 
    float fltknots[13];
  
+   fltknots[0] =  (0.0/12.0);
+   fltknots[ 1] = (1.0/12.0) ;
+   fltknots[ 2] = (2.0/12.0) ;
+   fltknots[ 3] = (3.0/12/0) ;
+   fltknots[ 4] = (4.0/12.0) ;
+   fltknots[ 5] = (5.0/12.0) ;
+   fltknots[ 6] = (6.0/12.0) ;
+   fltknots[ 7] = (7.0/12.0) ;
+   fltknots[ 8] = (8.0/12.0) ;
+   fltknots[ 9] = (9.0/12.0) ;
+   fltknots[10] = (10.0/12.0) ;
+   fltknots[11] = (11.0/12.0) ;
+   fltknots[12] = (12.0/12.0) ;
 
-   fltknots[ 0] =  0.0 ;
-   fltknots[ 1] =  0.0 ;
-   fltknots[ 2] =  1.0 ;
-   fltknots[ 3] =  1.0 ;
-   fltknots[ 4] =  1.0 ;
-   fltknots[ 5] =  0.5 ;
-   fltknots[ 6] =  0.5 ;
-   fltknots[ 7] =  0.5 ;
-   fltknots[ 8] =  1.0 ;
-   fltknots[ 9] =  1.0 ;
-   fltknots[10] =  1.0 ;
-   fltknots[11] =  0.0 ;
-   fltknots[12] =  0.0 ;
 
-
-//if(P[0]>0.5) {
+if (int(P[0]*1024)%2) {
 
   Fspline1   = splineinverse("catmull-rom", P[0], fltknots);
   DxFspline1 = Dx(Fspline1);
-//}
+}
 
 
 }

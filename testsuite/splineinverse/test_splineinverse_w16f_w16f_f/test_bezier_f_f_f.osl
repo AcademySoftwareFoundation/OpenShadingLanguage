@@ -26,8 +26,10 @@ shader test_bezier_f_f_f (output float Fspline = 0)
    fltknots[11] =  11/12.0;
    fltknots[12] =  12/12.0;
 
+if(int(P[0]*1024)%2 == 0)
+{
    Fspline = splineinverse ("bezier", P[0], fltknots);//osl_splineinverse_w16fw16ff_masked
-
+}
 
 
 }

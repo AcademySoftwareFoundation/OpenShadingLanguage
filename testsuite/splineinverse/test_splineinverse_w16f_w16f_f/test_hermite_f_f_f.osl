@@ -9,25 +9,24 @@ shader test_hermite_f_f_f (output float Fspline = 0)
 {
 
    float fltknots[13];
-
-
    fltknots[ 0] =  0.0;
-   fltknots[ 1] =  0.0;
-   fltknots[ 2] =  1.0;
-   fltknots[ 3] =  1.0;
-   fltknots[ 4] =  1.0;
-   fltknots[ 5] =  0.5;
-   fltknots[ 6] =  0.5;
-   fltknots[ 7] =  0.5;
-   fltknots[ 8] =  1.0;
-   fltknots[ 9] =  1.0;
-   fltknots[10] =  1.0;
-   fltknots[11] =  0.0;
-   fltknots[12] =  0.0;
+   fltknots[ 1] =  1/12.0;
+   fltknots[ 2] =  2/12.0;
+   fltknots[ 3] =  3/12.0;
+   fltknots[ 4] =  4/12.0;
+   fltknots[ 5] =  5/12.0;
+   fltknots[ 6] =  6/12.0;
+   fltknots[ 7] =  7/12.0;
+   fltknots[ 8] =  8/12.0;
+   fltknots[ 9] =  9/12.0;
+   fltknots[10] =  10/12.0;
+   fltknots[11] =  11/12.0;
+   fltknots[12] =  12/12.0;
 
 
+if(int(P[0]*1024)%2 == 0){
 Fspline = splineinverse ("hermite", P[0], fltknots);//osl_splineinverse_w16fw16ff_masked
-
+}
 
 
 }

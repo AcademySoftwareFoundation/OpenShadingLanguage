@@ -3,12 +3,8 @@ shader test_bezier_dv_f_dv (
 	output vector DxFspline1 = 0)
 {
 
- //testshade --batched --llvm_debug -g 4 4 -t 1 --iters 1 --stats -od uint8 -o Fspline1 a_ref.tif -o DxFspline1 b_ref.tif test_bezier_dv_f_dv | grep osl  
-//Supposed to hit  osl_spline_w16dv_w16f_w16dv
  
-   vector vecknots[13];
- 
-  
+  vector vecknots[13];
 
    vecknots[0] = 0.0 * u;
    vecknots[1] = 0.0 * u;
@@ -24,30 +20,8 @@ shader test_bezier_dv_f_dv (
    vecknots[11] = 0.0 * u;
    vecknots[12] = 0.0 * u;
 
-
-#if 0
-   vecknots[0] = vector(0.0, 0.0, 0.0)*u ;
-   vecknots[1] = vector(0.0, 0.0, 0.0)*u ;
-   vecknots[2] = vector(1.0, 1.0, 1.0)*u ;
-   vecknots[3] = vector(1.0, 1.0, 1.0)*u ;
-   vecknots[4] = vector(1.0, 1.0, 1.0)*u ;
-   vecknots[5] = vector(0.5, 0.5, 0.5)*u ;
-   vecknots[6] = vector(0.5, 0.5, 0.5)*u ;
-   vecknots[7] = vector(0.5, 0.5, 0.5)*u ;
-   vecknots[8] = vector(1.0, 1.0, 1.0)*u ;
-   vecknots[9] = vector(1.0, 1.0, 1.0)*u ;
-   vecknots[10] = vector (1.0, 1.0, 1.0)*u ;
-   vecknots[11] = vector(0.0, 0.0, 0.0)*u ;
-   vecknots[12] = vector(0.0, 0.0, 0.0)*u ;
-
-#endif
-   
-  //Fspline1   = spline("bezier", 0.1, vecknots); //osl_spline_w16dvfw16dv
-  Fspline1   = spline("bezier", time, vecknots); //osl_spline_w16dvw16dfw16dv
-  
-
-//  printf(Fspline1);
-   
+if(P[0]>0.5){
+  Fspline1   = spline("bezier", time, vecknots); 
   DxFspline1 = Dx(Fspline1);
-
+}
 }

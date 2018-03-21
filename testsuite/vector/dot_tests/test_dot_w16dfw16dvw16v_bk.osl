@@ -1,0 +1,66 @@
+shader test_dot_w16dfw16dvw16v ()
+{
+ {   
+        printf ("Test vector functions\n\n");
+        vector X = vector (P[0], P[1], P[2]);
+        vector Y = vector (0, 1, 0);
+        vector XY = X + Y;
+        vector Zero = 0;
+        {
+            vector V = vector (0, 1, 2);
+            printf ("  V = vector (%g) has components %g, %g, %g\n",
+                    V, V[0], V[1], V[2]);
+            V[1] = 8;
+            printf ("  After V[1] = 8, V = (%g)\n", V);
+            V[2] = 0.5;
+            printf ("  After V[2] = 0.5, V = (%g)\n", V);
+            printf ("  dot ((%g), (%g)) = %g\n", V, V, dot(V,V));
+            printf ("  dot ((%g), (%g)) = %g\n", V, Y, dot(V,Y));
+            printf ("  cross ((%g), (%g)) = %g\n", X, Y, cross(X,Y));
+        }
+}
+ {   
+   
+        printf ("varying Test vector functions\n\n");
+        vector X = vector (1, 0, 0) + P[0];
+        vector Y = vector (0, 1, 0) + P[1];
+        vector XY = X + Y;
+        vector Zero = 0;
+        {
+            vector V = vector (u, v, u+v);
+            printf ("  V = vector (%g) has components %g, %g, %g\n",
+                    V, V[0], V[1], V[2]);
+            V[1] = u;
+            printf ("  After V[1] = u, V = (%g)\n", V);
+            V[2] = 0.5;
+            printf ("  After V[2] = 0.5, V = (%g)\n", V);
+            printf ("  dot ((%g), (%g)) = %g\n", V, V, dot(V,V));
+            printf ("  dot ((%g), (%g)) = %g\n", V, Y, dot(V,Y));
+            printf ("  cross ((%g), (%g)) = %g\n", X, Y, cross(X,Y));
+       }
+}
+
+}
+  
+    
+   int cond = P[0] > 0.5;
+   {
+        printf ("varying masked Test vector functions\n\n");
+        vector X = cond ? vector (1, 0, 0) + P[0] : P[0];
+        vector Y = cond ? vector (0, 1, 0) + P[1] : P[1];
+        vector XY = cond ? X + Y : 0;
+        vector Zero = 0;
+      {  
+            vector V = cond ? vector (u, v, u+v) : P[0];
+            printf ("  V = vector (%g) has components %g, %g, %g\n",
+                    V, V[0], V[1], V[2]);
+            V[1] = cond ? u : 0;
+            printf ("  After V[1] = u, V = (%g)\n", V);
+            V[2] = cond ? 0.5 : 0;
+            printf ("  After V[2] = 0.5, V = (%g)\n", V);
+            printf ("  dot ((%g), (%g)) = %g\n", V, V, cond ? dot(V,V) : P[0]);
+            printf ("  dot ((%g), (%g)) = %g\n", V, Y, cond ? dot(V,Y) : P[0]);
+     }
+
+}
+}

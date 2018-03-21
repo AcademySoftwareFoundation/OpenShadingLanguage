@@ -1,0 +1,31 @@
+
+shader str_endswith ()
+{
+ 
+
+if(P[0]>0.5){
+    // Test concat
+    printf ("\n");
+    string a = "disney", b = format ("P = %g", P),  c = " bar", d=" xkcd";
+    string concat_str = concat(a,b,c,d);
+   
+    printf("\n");
+    
+    string substr_small = "ney";
+    string substr_empty = "";
+    string substr_large = "zzzzzzzzzzzzzzzzzzzzzzzzzzz";
+    string substr_weird = "foo";
+    string substr_valid = "kcd";
+
+    printf ("endswith (\"%s\", \"%s\") = %d\n", concat_str, substr_small, endswith (concat_str, substr_small));
+
+   printf ("endswith (\"%s\", \"%s\") = %d\n", concat_str, substr_empty, endswith (concat_str, substr_empty));
+
+   printf ("endswith (\"%s\", \"%s\") = %d\n", concat_str, substr_large, endswith (concat_str, substr_large));
+
+   printf ("endswith (\"%s\", \"%s\") = %d\n", concat_str, substr_weird, endswith (concat_str, substr_weird));
+
+ printf ("endswith (\"%s\", \"%s\") = %d\n", concat_str, substr_valid, endswith (concat_str, substr_valid));
+
+}
+}

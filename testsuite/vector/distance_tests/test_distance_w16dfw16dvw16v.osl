@@ -1,0 +1,22 @@
+shader test_distance_w16dfw16dvw16v (output color ddistance = 0,
+                                     output color dxdistance = 0,
+                                     output color dydistance = 0)
+//testshade --batched --llvm_debug -g 4 4 test_dot_w16dfw16dvw16v | grep osl_dot
+{
+
+if(P[0]>0.5){
+           vector a = vector(u+v, -u-v, u+v);
+          // vector b = vector(u+v,  u+v, u+v);
+           vector b = vector(1.0, 1.0, 1.0);
+           float d = distance(a, b);
+           //printf ("\n");
+           //printf ("distance product: d = distance(%.4g, %.4g) = %.4g  Dx(d) = %.4g  Dy(d) = %.4g\n",
+           //      a, b, d, Dx(d), Dy(d));
+           
+           ddistance = distance(a,b);
+           dxdistance = Dx(ddistance);
+           dydistance = Dy(ddistance);
+           
+           
+}
+}

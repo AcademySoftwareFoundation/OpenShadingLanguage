@@ -338,14 +338,13 @@ DECL (osl_splineinverse_w16fff_masked, "xXXXXiii")
 //dfdfdf is treated as dfdff
 DECL (osl_splineinverse_w16dfw16dfw16df_masked, "xXXXXiii")//redone
 DECL (osl_splineinverse_w16dfw16dfdf_masked, "xXXXXiii")
-DECL (osl_splineinverse_w16dfdfw16df_masked, "xXXXXiii") //SM: March 5th TODO
+DECL (osl_splineinverse_w16dfdfw16df_masked, "xXXXXiii")
 //======
 DECL (osl_splineinverse_w16dfw16dff_masked, "xXXXXiii")
 
 //dffdf is treated as fff
 DECL (osl_splineinverse_w16dffw16df_masked, "xXXXXiii")
-DECL (osl_splineinverse_w16dfw16fw16df_masked, "xXXXXiii")//SM: some tests fail.
-//test path: /nfs/pdx/home/smonteir/osl-wide-workspace/BatchedOSL/testsuite/splineinverse/test_splineinverse_w16df_w16f_w16df
+DECL (osl_splineinverse_w16dfw16fw16df_masked, "xXXXXiii")
 
 #endif
 #if 0 // incomplete
@@ -538,25 +537,31 @@ DECL (osl_transform_normal_w16dvw16dvm_masked, "xXXXii")
 
 DECL (osl_dot_w16fw16vw16v, "xXXX")
 DECL (osl_dot_w16fw16vw16v_masked, "xXXXi")
+
 DECL (osl_dot_w16dfw16dvw16dv, "xXXX")
 DECL (osl_dot_w16dfw16dvw16dv_masked, "xXXXi")
-#if 0 // incomplete
+
 DECL (osl_dot_w16dfw16dvw16v, "xXXX")
 DECL (osl_dot_w16dfw16dvw16v_masked, "xXXXi")
+
 DECL (osl_dot_w16dfw16vw16dv, "xXXX")
 DECL (osl_dot_w16dfw16vw16dv_masked, "xXXXi")
-#endif
+
 
 DECL (osl_cross_w16vw16vw16v, "xXXX")
 DECL (osl_cross_w16vw16vw16v_masked, "xXXXi")
+
+
 DECL (osl_cross_w16dvw16dvw16dv, "xXXX")
 DECL (osl_cross_w16dvw16dvw16dv_masked, "xXXXi")
-#if 0 // incomplete
+
 DECL (osl_cross_w16dvw16dvw16v, "xXXX")
 DECL (osl_cross_w16dvw16dvw16v_masked, "xXXXi")
+
+
 DECL (osl_cross_w16dvw16vw16dv, "xXXX")
 DECL (osl_cross_w16dvw16vw16dv_masked, "xXXXi")
-#endif
+
 
 DECL (osl_length_w16fw16v, "xXX")
 DECL (osl_length_w16fw16v_masked, "xXXi")
@@ -566,14 +571,18 @@ DECL (osl_length_w16dfw16dv_masked, "xXXi")
 
 DECL (osl_distance_w16fw16vw16v, "xXXX")
 DECL (osl_distance_w16fw16vw16v_masked, "xXXXi")
+
+//Tests fail. Batched version produces 0s. Output as color. Remove uint8 to eliminate quantization
 DECL (osl_distance_w16dfw16dvw16dv, "xXXX")
 DECL (osl_distance_w16dfw16dvw16dv_masked, "xXXXi")
-#if 0 // incomplete
+
 DECL (osl_distance_w16dfw16dvw16v, "xXXX")
 DECL (osl_distance_w16dfw16dvw16v_masked, "xXXXi")
+
+
 DECL (osl_distance_w16dfw16vw16dv, "xXXX")
 DECL (osl_distance_w16dfw16vw16dv_masked, "xXXXi")
-#endif
+
 
 DECL (osl_normalize_w16vw16v, "xXX")
 DECL (osl_normalize_w16vw16v_masked, "xXXi")
@@ -623,11 +632,18 @@ DECL (osl_endswith_iss, "iss")
 DECL (osl_concat_w16sw16sw16s_masked, "xXXXi")
 DECL (osl_stoi_w16iw16s_masked, "xXXi")
 DECL (osl_strlen_w16iw16s_masked, "xXXi")//OP-void; IP-void,void, int
+DECL (osl_hash_w16iw16s_masked,"xXXi" )
+DECL (osl_getchar_w16iw16sw16i_masked, "xXXXi")
+DECL (osl_startswith_w16iw16sw16s_masked,"xXXXi" )
+DECL (osl_endswith_w16iw16sw16s_masked,"xXXXi" )
+
 #if 0 // incomplete
 DECL (osl_stof_fs, "fs")
 DECL (osl_substr_ssii, "ssii")
 DECL (osl_regex_impl, "iXsXisi")
 #endif
+DECL(osl_stof_w16fw16s_masked, "xXXi")
+DECL(osl_substr_w16sw16sw16iw16i_masked, "xXXXXi")
 
 // BATCH texturing manages the BatchedTextureOptions
 // directly in LLVM ir, and has no need for wide versions

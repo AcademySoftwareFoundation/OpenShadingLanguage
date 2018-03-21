@@ -10,7 +10,7 @@ shader test_catmullrom_f_f_f (output float Fspline = 0)
 
    float fltknots[13];
 
-
+#if 0
    fltknots[ 0] =  0.0 * u;
    fltknots[ 1] =  0.0 * u;
    fltknots[ 2] =  1.0 * u;
@@ -24,10 +24,40 @@ shader test_catmullrom_f_f_f (output float Fspline = 0)
    fltknots[10] =  1.0 * u;
    fltknots[11] =  0.0 * u;
    fltknots[12] =  0.0 * u ;
+#endif
+#if 0
+   fltknots[ 0] =  0.0 * u;
+   fltknots[ 1] =  1/12.0 * u;
+   fltknots[ 2] =  2/12.0 * u;
+   fltknots[ 3] =  3/12.0 * u;
+   fltknots[ 4] =  4/12.0 * u;
+   fltknots[ 5] =  5/12.0 * u;
+   fltknots[ 6] =  6/12.0 * u;
+   fltknots[ 7] =  7/12.0 * u;
+   fltknots[ 8] =  8/12.0 * u;
+   fltknots[ 9] =  9/12.0 * u;
+   fltknots[10] =  10/12.0 * u;
+   fltknots[11] =  11/12.0 * u;
+   fltknots[12] =  12/12.0 * u;
+#endif
 
+   fltknots[ 0] =  (0.0/12.0)* u;
+   fltknots[ 1] =  (1.0/12.0)* u;
+   fltknots[ 2] =  (2.0/12.0)* u;
+   fltknots[ 3] =  (3.0/12.0)* u;
+   fltknots[ 4] =  (4.0/12.0)* u;
+   fltknots[ 5] =  (5.0/12.0)* u;
+   fltknots[ 6] =  (6.0/12.0)* u;
+   fltknots[ 7] =  (7.0/12.0)* u;
+   fltknots[ 8] =  (8.0/12.0)* u;
+   fltknots[ 9] =  (9.0/12.0)* u;
+   fltknots[10] =  (10.0/12.0)* u;
+   fltknots[11] =  (11.0/12.0)* u;
+   fltknots[12] =  (12.0/12.0)* u;
 
+if(int(P[0]*1024)%2){
 Fspline = splineinverse ("catmull-rom", 0.5, fltknots);//osl_splineinverse_w16fw16ff_masked
-
+}
 
 
 }

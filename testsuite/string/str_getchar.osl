@@ -1,0 +1,40 @@
+
+
+shader str_getchar ()
+{
+ 
+
+if(P[0]>0.5){
+    // Test concat
+    printf ("\n");
+    string a = "foo", b = format ("P = %g", P),  c = " bar", d = " green eggs, spam, spam!";
+    string concat_str = concat(a,b,c,d);
+   
+    printf("\n");
+    
+    printf ("strlen(\"%s\") = %d\n", concat_str, strlen(concat_str));
+
+    printf("getchar(\"%s\", 0) = %d\n", concat_str, getchar(concat_str, 0));
+    printf("getchar(\"%s\", 11) = %d\n", concat_str, getchar(concat_str, 11));
+    printf("getchar(\"%s\", -1) = %d\n", concat_str, getchar(concat_str, -1));
+    printf("getchar(\"%s\", 12) = %d\n", concat_str, getchar(concat_str, 12));
+  
+
+   printf("\n");
+
+   string xkcd = "disney's";
+
+   printf ("strlen(\"%s\") = %d\n", xkcd, strlen(xkcd));
+
+   printf("getchar(\"%s\", 0) = %d\n", xkcd, getchar(xkcd, 0));
+   printf("getchar(\"%s\", 1) = %d\n", xkcd, getchar(xkcd, 1));
+   printf("getchar(\"%s\", 2) = %d\n", xkcd, getchar(xkcd, 2));
+   printf("getchar(\"%s\", 6) = %d\n", xkcd, getchar(xkcd, 6));
+   printf("getchar(\"%s\", 7) = %d\n", xkcd, getchar(xkcd, 7));
+   printf("getchar(\"%s\", 40) = %d\n", xkcd, getchar(xkcd, 40));
+   printf("getchar(\"%s\", -5) = %d\n", xkcd, getchar(xkcd, -5));
+
+}
+
+    
+}

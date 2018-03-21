@@ -520,9 +520,8 @@ LLVMGEN (llvm_gen_mul)
     // multiplication involving matrices
     if (Result.typespec().is_matrix()) {
         if (A.typespec().is_float()) {
-            if (B.typespec().is_float())
-                rop.llvm_call_function ("osl_mul_mff", Result, A, B);
-            else if (B.typespec().is_matrix())
+            ASSERT (!B.typespec().is_float() && "frontend should not allow");
+            if (B.typespec().is_matrix())
                 rop.llvm_call_function ("osl_mul_mmf", Result, B, A);
             else ASSERT(0);
         } else if (A.typespec().is_matrix()) {

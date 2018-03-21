@@ -1,0 +1,19 @@
+shader
+test_v_float_mul_v_float_masked (output color Cout = 0)
+{
+    // Quantize factor to avoid disagreements between scalar & SIMD as it approaches 0
+    float factor = 1.0/(float(64-int(64*u))/64);
+     
+              
+    float numerator = u;
+    float red = 0.0;
+    float green = 0.5;
+    float blue = 1.0;
+    if (int(P[0]*64)%2==0) {    
+        red = numerator*factor;
+        green = numerator*int(v);
+        blue = v*factor;
+    }
+    
+    Cout = color(red,green,blue);
+}

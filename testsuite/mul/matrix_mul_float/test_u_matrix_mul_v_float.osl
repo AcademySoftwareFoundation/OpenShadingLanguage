@@ -1,0 +1,12 @@
+shader
+test_u_matrix_mul_v_float (output color Cout = 0)
+{
+    matrix m1 = matrix(raytype("camera"),0,0,0,
+                       0,2*raytype("camera"),0,0,
+                       0,0,3*raytype("camera"),0,
+                       0,0,0,1);
+              
+    float factor = u;
+    matrix rm = m1*factor;
+    Cout = color(rm[0][0],rm[1][1],rm[2][2]);
+}

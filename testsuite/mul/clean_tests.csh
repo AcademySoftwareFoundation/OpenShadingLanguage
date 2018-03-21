@@ -1,32 +1,32 @@
-cd float_div_float
+cd float_mul_float
 rm *.tif *.oso *.log
 cd ..
 
-cd float_div_matrix
+cd float_mul_matrix
 rm *.tif *.oso *.log
 cd ..
 
-cd float_div_vec
+cd float_mul_vec
 rm *.tif *.oso *.log
 cd ..
 
-cd int_div_int
+cd int_mul_int
 rm *.tif *.oso *.log
 cd ..
 
-cd matrix_div_float
+cd matrix_mul_float
 rm *.tif *.oso *.log
 cd ..
 
-cd matrix_div_matrix
+cd matrix_mul_matrix
 rm *.tif *.oso *.log
 cd ..
 
-cd vec_div_float
+cd vec_mul_float
 rm *.tif *.oso *.log
 cd ..
 
-cd vec_div_vec
+cd vec_mul_vec
 rm *.tif *.oso *.log
 cd ..
 

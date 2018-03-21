@@ -1,0 +1,15 @@
+shader
+test_u_int_mul_v_int (output color Cout = 0)
+{
+    int factor = 196 + int(64*u);
+                  
+    int numerator = 128;
+    int red = 0;
+    int green = 32;
+    int blue = 64;
+    red = numerator*factor;
+    green = numerator*int(v);
+    blue = (2*numerator)*factor;
+    
+    Cout = color(red/33280.0,green/260,blue/33280.0);
+}

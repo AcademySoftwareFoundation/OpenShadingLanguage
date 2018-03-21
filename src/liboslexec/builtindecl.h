@@ -349,7 +349,6 @@ DECL (osl_normalize_dvdv, "xXX")
 DECL (osl_mul_mmm, "xXXX")
 DECL (osl_mul_mfm, "xXfX")
 DECL (osl_mul_mmf, "xXXf")
-DECL (osl_mul_mff, "xXff")
 
 DECL (osl_div_mmm, "xXXX")
 DECL (osl_div_mmf, "xXXf")

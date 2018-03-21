@@ -1,0 +1,24 @@
+shader
+test_v_int_add_v_int (output color Cout = 0)
+{
+    int val = 64-int(64*u);
+    int val2 = 2*val;
+     
+                  
+    int numerator = 64*int(64*v);
+    int red = 0;
+    int green = 32;
+    int blue = 64;
+    
+    red = numerator + val;
+    green = numerator + int(v);
+    blue = int(64*v) + val;
+
+    if (int(P[0]*64)%2==0) {    
+        red = numerator+val2;
+        green = numerator+int(v);
+        blue = int(64*v)+val2;
+    }    
+    
+    Cout = color(red/8192.0,green/4096.0,blue/192.0);    
+}

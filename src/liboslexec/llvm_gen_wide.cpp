@@ -874,12 +874,13 @@ LLVMGEN (llvm_gen_div)
     	func_name.append(arg_typecode(B,false,op_is_uniform));
     	{
             LLVM_Util::ScopedMasking require_mask_be_passed;
-            // TODO: detect this in a manner not dependent on the simd
-            // lane count being hardcoded
-            if (func_name == "osl_div_w16mw16fw16m" ||
-                func_name == "osl_div_w16mw16mw16m" ) {
-                // We choose to only support masked version of these functions
-                // because then check the matrices to see if they are affine
+            if (!op_is_uniform && B.typespec().is_matrix()) {
+                // We choose to only support masked version of these functions:
+                // osl_div_w16mw16fw16m
+                // osl_div_w16mw16mw16m
+                ASSERT(A.typespec().is_matrix() || A.typespec().is_float());
+                ASSERT(Result.typespec().is_matrix() && !resultIsUniform);
+                // Because then check the matrices to see if they are affine
                 // and take a slow path if not.  Unmasked lanes wold most
                 // likely take the slow path, which could have been avoided
                 // if we passed the mask in.

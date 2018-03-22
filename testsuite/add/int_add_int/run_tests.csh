@@ -1,6 +1,6 @@
 rm *.tif *.oso
 
-# int / int (includes masking)
+# int + int (includes masking)
 oslc test_u_int_add_u_int.osl
 testshade -t 1 -g 64 64 -od uint8 -o Cout sout_u_int_add_u_int.tif test_u_int_add_u_int
 testshade -t 1 --batched -g 64 64 -od uint8 -o Cout bout_u_int_add_u_int.tif test_u_int_add_u_int

@@ -1,0 +1,15 @@
+shader
+test_v_float_sub_u_vec (output color Cout = 0)
+{
+    float u_float = raytype("camera");    
+    float v_float = u;
+    float v_float2 = v;
+    
+    color u_color = color(.3*u_float,.5*u_float, .75*u_float);
+    
+    Cout = v_float - u_color;
+    
+    if (int(P[0]*64)%2==0) {
+        Cout = v_float2 - u_color;
+    }    
+}

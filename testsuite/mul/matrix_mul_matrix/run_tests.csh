@@ -1,7 +1,7 @@
 rm *.tif *.oso
 
 
-# matrix / matrix
+# matrix * matrix
 oslc test_u_matrix_mul_u_matrix.osl
 testshade -t 1 -g 64 64 -od uint8 -o Cout sout_u_matrix_mul_u_matrix.tif test_u_matrix_mul_u_matrix
 testshade -t 1 --batched -g 64 64 -od uint8 -o Cout bout_u_matrix_mul_u_matrix.tif test_u_matrix_mul_u_matrix
@@ -23,7 +23,7 @@ testshade -t 1 --batched -g 64 64 -od uint8 -o Cout bout_v_matrix_mul_v_matrix.t
 idiff sout_v_matrix_mul_v_matrix.tif bout_v_matrix_mul_v_matrix.tif
 
 
-# matrix / matrix MASKED
+# matrix * matrix MASKED
 oslc test_u_matrix_mul_u_matrix_masked.osl
 testshade -t 1 -g 64 64 -od uint8 -o Cout sout_u_matrix_mul_u_matrix_masked.tif test_u_matrix_mul_u_matrix_masked
 testshade -t 1 --batched -g 64 64 -od uint8 -o Cout bout_u_matrix_mul_u_matrix_masked.tif test_u_matrix_mul_u_matrix_masked

@@ -1,6 +1,6 @@
 rm *.tif *.oso
 
-# matrix / float
+# matrix * float
 oslc test_u_matrix_mul_u_float.osl
 testshade -t 1 -g 64 64 -od uint8 -o Cout sout_u_matrix_mul_u_float.tif test_u_matrix_mul_u_float
 testshade -t 1 --batched -g 64 64 -od uint8 -o Cout bout_u_matrix_mul_u_float.tif test_u_matrix_mul_u_float
@@ -24,7 +24,7 @@ idiff sout_v_matrix_mul_v_float.tif bout_v_matrix_mul_v_float.tif
 
 
 
-# matrix / float MASKED
+# matrix * float MASKED
 oslc test_u_matrix_mul_u_float_masked.osl
 testshade -t 1 -g 64 64 -od uint8 -o Cout sout_u_matrix_mul_u_float_masked.tif test_u_matrix_mul_u_float_masked
 testshade -t 1 --batched -g 64 64 -od uint8 -o Cout bout_u_matrix_mul_u_float_masked.tif test_u_matrix_mul_u_float_masked

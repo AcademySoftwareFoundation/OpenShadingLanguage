@@ -1,5 +1,5 @@
 shader
-test_v_float_add_u_float (output color Cout = 0)
+test_v_float_sub_u_float (output color Cout = 0)
 {
     float val = 1.0/(2*raytype("camera"));
     float val2 = val/2.0;
@@ -9,14 +9,14 @@ test_v_float_add_u_float (output color Cout = 0)
     float green = 0.5;
     float blue = 1.0;
     
-    red = numerator+val;
-    green = numerator+int(v);
-    blue = v+val;
+    red = numerator-val;
+    green = numerator-int(v);
+    blue = v-val;
     
     if (int(P[0]*64)%2==0) {    
-        red = numerator+val2;
-        green = numerator+int(v);
-        blue = v+val2;
+        red = numerator-val2;
+        green = numerator-int(v);
+        blue = v-val2;
     }
     
     Cout = color(red,green,blue);

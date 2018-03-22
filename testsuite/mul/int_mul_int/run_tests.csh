@@ -1,6 +1,6 @@
 rm *.tif *.oso
 
-# int / int
+# int * int
 oslc test_u_int_mul_u_int.osl
 testshade -t 1 -g 64 64 -od uint8 -o Cout sout_u_int_mul_u_int.tif test_u_int_mul_u_int
 testshade -t 1 --batched -g 64 64 -od uint8 -o Cout bout_u_int_mul_u_int.tif test_u_int_mul_u_int
@@ -21,7 +21,7 @@ testshade -t 1 -g 64 64 -od uint8 -o Cout sout_v_int_mul_v_int.tif test_v_int_mu
 testshade -t 1 --batched -g 64 64 -od uint8 -o Cout bout_v_int_mul_v_int.tif test_v_int_mul_v_int
 idiff sout_v_int_mul_v_int.tif bout_v_int_mul_v_int.tif
 
-# int / int MASKED
+# int * int MASKED
 oslc test_u_int_mul_u_int_masked.osl
 testshade -t 1 -g 64 64 -od uint8 -o Cout sout_u_int_mul_u_int_masked.tif test_u_int_mul_u_int_masked
 testshade -t 1 --batched -g 64 64 -od uint8 -o Cout bout_u_int_mul_u_int_masked.tif test_u_int_mul_u_int_masked

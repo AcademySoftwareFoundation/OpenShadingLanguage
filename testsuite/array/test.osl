@@ -9,6 +9,7 @@ void test_unspecified_length (string s[])
 shader
 test (color cparamarray[2] = { color(0,1,2), color(3,4,5) })
 {
+#if 1
     int iarray[3] = { 10, 11, 12 };
     // Initialization of farray includes one initializer that looks like
     // an int rather than a float
@@ -58,7 +59,8 @@ test (color cparamarray[2] = { color(0,1,2), color(3,4,5) })
             farray2[0], farray2[1], farray2[2]);
 
     test_unspecified_length (sarray);
-
+#endif
+#if 0
     {
         // Test message passing an array
         int imess[3];
@@ -67,7 +69,9 @@ test (color cparamarray[2] = { color(0,1,2), color(3,4,5) })
         printf ("Test message passing an array: imess = [%d %d %d]\n",
                 imess[0], imess[1], imess[2]);
     }
+#endif
 
+#if 0
     {
         printf ("\nTest array of closures:\n");
         closure color C[3];
@@ -93,5 +97,14 @@ test (color cparamarray[2] = { color(0,1,2), color(3,4,5) })
         printf ("Testing message passing of array of closures:\n");
         print_closure_array (Cmess);
     }
+#endif
+#if 1
+    //printf ("Test array referencing with varying index:\n");
+    //color carray[3] = { color(.1,.2,.3), 0.2, color(.3,.3,.3) };
+    
+    int varyingIndex = int(clamp(P[0]*3, 0, 2));
+    color indirectC = carray[varyingIndex];
+    printf ("carray[varyingIndex] = (%g)\n", indirectC);
+#endif
     printf ("\n\n");
 }

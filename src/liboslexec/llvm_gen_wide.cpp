@@ -1292,6 +1292,7 @@ LLVMGEN (llvm_gen_minmax)
     Symbol& y = *rop.opargsym (op, 2);
 
     bool op_is_uniform = rop.isSymbolUniform(x) && rop.isSymbolUniform(y);
+    bool result_is_uniform = rop.isSymbolUniform(Result);
 
     TypeDesc type = Result.typespec().simpletype();
     int num_components = type.aggregate;
@@ -1310,14 +1311,27 @@ LLVMGEN (llvm_gen_minmax)
         }
 
         llvm::Value* res_val = rop.ll.op_select (cond, x_val, y_val);
+        if (op_is_uniform && !result_is_uniform)
+        {
+            res_val = rop.ll.widen_value(res_val);
+        }
         rop.llvm_store_value (res_val, Result, 0, i);
         if (Result.has_derivs()) {
           llvm::Value* x_dx = rop.llvm_load_value (x, 1, i, type, op_is_uniform);
           llvm::Value* x_dy = rop.llvm_load_value (x, 2, i, type, op_is_uniform);
           llvm::Value* y_dx = rop.llvm_load_value (y, 1, i, type, op_is_uniform);
           llvm::Value* y_dy = rop.llvm_load_value (y, 2, i, type, op_is_uniform);
-          rop.llvm_store_value (rop.ll.op_select(cond, x_dx, y_dx), Result, 1, i);
-          rop.llvm_store_value (rop.ll.op_select(cond, x_dy, y_dy), Result, 2, i);
+
+          llvm::Value* res_dx = rop.ll.op_select(cond, x_dx, y_dx);
+          llvm::Value* res_dy = rop.ll.op_select(cond, x_dy, y_dy);
+          if (op_is_uniform && !result_is_uniform)
+          {
+              res_dx = rop.ll.widen_value(res_dx);
+              res_dy = rop.ll.widen_value(res_dy);
+          }
+
+          rop.llvm_store_value (res_dx, Result, 1, i);
+          rop.llvm_store_value (res_dy, Result, 2, i);
         }
     }
     return true;

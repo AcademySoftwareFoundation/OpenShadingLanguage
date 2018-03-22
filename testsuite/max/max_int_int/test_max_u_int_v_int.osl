@@ -1,0 +1,23 @@
+shader
+test_max_u_int_v_int (output color Cout = 0)
+{
+    int val = 196 + int(64*u);
+    int val2 = 2*val;
+                  
+    int numerator = 196+32;
+    int red = 0;
+    int green = 32;
+    int blue = 64;
+    
+    red = max(numerator, val);
+    green = max(numerator, int(v));
+    blue = max((2*numerator), val);
+    
+    if (int(P[0]*64)%2==0) {    
+        red = max(numerator, val2);
+        green = max(numerator, int(v));
+        blue = max((2*numerator), val2);
+    }
+    
+    Cout = color(red/260.0,green/260.0,blue/520.0);
+}

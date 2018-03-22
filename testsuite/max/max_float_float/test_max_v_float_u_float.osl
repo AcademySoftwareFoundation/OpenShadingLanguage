@@ -1,0 +1,23 @@
+shader
+test_max_v_float_u_float (output color Cout = 0)
+{
+    float val = 1.0/(2*raytype("camera"));
+    float val2 = val/2.0;
+              
+    float numerator = u;
+    float red = 0.0;
+    float green = 0.5;
+    float blue = 1.0;
+    
+    red = max(numerator, val);
+    green = max(numerator, int(v));
+    blue = max(v, val);
+    
+    if (int(P[0]*64)%2==0) {    
+        red = max(numerator, val2);
+        green = max(numerator, int(v));
+        blue = max(v, val2);
+    }
+    
+    Cout = color(red,green,blue);
+}

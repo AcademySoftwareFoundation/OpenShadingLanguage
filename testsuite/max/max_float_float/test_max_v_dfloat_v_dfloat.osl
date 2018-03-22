@@ -1,0 +1,30 @@
+shader
+test_max_v_dfloat_v_dfloat (output color Cout = 0)
+{
+    float val = 0.5*(v);
+    float val2 = -val;
+     
+              
+    float numerator = 0.5*u;
+    
+    float red = 0.0;
+    float green = 0.5;
+    float blue = 1.0;
+
+    red = max(numerator, val);
+    green = 0;
+    blue = max(v, val);
+    
+    if (int(P[0]*64)%2==0) {        
+        red = max(numerator, val2);
+        green = max(numerator, int(v));
+        blue = max(v, val2);
+    }
+        
+    color c = color(red,green,blue);
+    
+    color dxc = Dx(c);
+    color dyc = Dy(c);
+    Cout = dxc + dyc;
+    
+}

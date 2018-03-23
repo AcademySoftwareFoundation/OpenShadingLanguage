@@ -97,6 +97,7 @@ public:
     virtual bool close ();
     virtual int current_subimage (void) const { return m_subimage; }
     virtual int current_miplevel (void) const { return m_miplevel; }
+#if OIIO_PLUGIN_VERSION < 21   /* OIIO < 1.9 */
     virtual bool seek_subimage (int subimage, int miplevel, ImageSpec &newspec);
     virtual bool read_native_scanline (int y, int z, void *data);
     virtual bool read_native_scanlines (int ybegin, int yend, int z,
@@ -104,6 +105,19 @@ public:
     virtual bool read_native_tile (int x, int y, int z, void *data);
     virtual bool read_native_tiles (int xbegin, int xend, int ybegin, int yend,
                                     int zbegin, int zend, void *data);
+#else
+    virtual bool seek_subimage (int subimage, int miplevel);
+    virtual bool read_native_scanline (int subimage, int miplevel,
+                                       int y, int z, void *data);
+    virtual bool read_native_scanlines (int subimage, int miplevel,
+                                        int ybegin, int yend, int z,
+                                        void *data);
+    virtual bool read_native_tile (int subimage, int miplevel,
+                                   int x, int y, int z, void *data);
+    virtual bool read_native_tiles (int subimage, int miplevel,
+                                    int xbegin, int xend, int ybegin, int yend,
+                                    int zbegin, int zend, void *data);
+#endif
 private:
     std::string m_filename;          ///< Stash the filename
     ShaderGroupRef m_group;
@@ -221,7 +235,7 @@ static ErrorRecorder errhandler;
 static void
 setup_shadingsys ()
 {
-    lock_guard lock (shading_mutex);
+    OIIO::lock_guard lock (shading_mutex);
     if (! shadingsys) {
         renderer = new OIIO_RendererServices (TextureSystem::create(true));
         shadingsys = new ShadingSystem (renderer, NULL, &errhandler);
@@ -484,14 +498,14 @@ OSLInput::open (const std::string &name, ImageSpec &newspec,
         }
         // std::cout << "Processing group specification:\n---\n"
         //           << groupspec << "\n---\n";
-        lock_guard lock (shading_mutex);
+        OIIO::lock_guard lock (shading_mutex);
         m_group = shadingsys->ShaderGroupBegin ("", "surface", groupspec);
         if (! m_group)
             return false;   // Failed
         shadingsys->ShaderGroupEnd ();
     }
     if (Strutil::ends_with (shadername, ".oso")) { // Compiled shader
-        lock_guard lock (shading_mutex);
+        OIIO::lock_guard lock (shading_mutex);
         shadername.remove_suffix (4);
         m_group = shadingsys->ShaderGroupBegin ();
         for (size_t p = 0, np = m_topspec.extra_attribs.size(); p < np; ++p) {
@@ -509,7 +523,7 @@ OSLInput::open (const std::string &name, ImageSpec &newspec,
     if (Strutil::ends_with (shadername, ".osl")) { // shader source
     }
     if (Strutil::ends_with (shadername, ".oslbody")) { // shader source
-        lock_guard lock (shading_mutex);
+        OIIO::lock_guard lock (shading_mutex);
         shadername.remove_suffix (8);
         static int exprcount = 0;
         std::string exprname = OIIO::Strutil::format("expr_%d", exprcount++);
@@ -548,7 +562,16 @@ OSLInput::open (const std::string &name, ImageSpec &newspec,
                            TypeDesc(TypeDesc::STRING,m_outputs.size()),
                            &m_outputs[0]);
 
+#if OIIO_PLUGIN_VERSION < 21
     return ok && seek_subimage (0, 0, newspec);
+#else
+    ok &= seek_subimage (0, 0);
+    if (ok)
+        newspec = spec();
+    else
+        close ();
+    return ok;
+#endif
 }
 
 
@@ -563,10 +586,16 @@ OSLInput::close ()
 
 
 bool
-OSLInput::seek_subimage (int subimage, int miplevel, ImageSpec &newspec)
+OSLInput::seek_subimage (int subimage, int miplevel
+#if OIIO_PLUGIN_VERSION < 21
+                         , ImageSpec &newspec
+#endif
+                         )
 {
     if (subimage == current_subimage() && miplevel == current_miplevel()) {
+#if OIIO_PLUGIN_VERSION < 21
         newspec = spec();
+#endif
         return true;
     }
 
@@ -587,15 +616,27 @@ OSLInput::seek_subimage (int subimage, int miplevel, ImageSpec &newspec)
         m_spec.full_height = m_spec.height;
         m_spec.full_depth = m_spec.depth;
     }
+#if OIIO_PLUGIN_VERSION < 21
     newspec = spec();
+#endif
     return true;
 }
 
 
 
 bool
-OSLInput::read_native_scanlines (int ybegin, int yend, int z, void *data)
+OSLInput::read_native_scanlines (
+#if OIIO_PLUGIN_VERSION >= 21
+                                 int subimage, int miplevel,
+#endif
+                                 int ybegin, int yend, int z, void *data)
 {
+#if OIIO_PLUGIN_VERSION >= 21
+    lock_guard lock (m_mutex);
+    if (! seek_subimage (subimage, miplevel))
+        return false;
+#endif
+
     // Create an ImageBuf wrapper of the user's data
     ImageSpec spec = m_spec; // Make a spec that describes just this scanline
     spec.y = ybegin;
@@ -616,17 +657,35 @@ OSLInput::read_native_scanlines (int ybegin, int yend, int z, void *data)
 
 
 bool
-OSLInput::read_native_scanline (int y, int z, void *data)
+OSLInput::read_native_scanline (
+#if OIIO_PLUGIN_VERSION >= 21
+                                int subimage, int miplevel,
+#endif
+                                int y, int z, void *data)
 {
+#if OIIO_PLUGIN_VERSION >= 21
+    return read_native_scanlines (subimage, miplevel, y, y+1, z, data);
+#else
     return read_native_scanlines (y, y+1, z, data);
+#endif
 }
 
 
 
 bool
-OSLInput::read_native_tiles (int xbegin, int xend, int ybegin, int yend,
+OSLInput::read_native_tiles (
+#if OIIO_PLUGIN_VERSION >= 21
+                             int subimage, int miplevel,
+#endif
+                             int xbegin, int xend, int ybegin, int yend,
                              int zbegin, int zend, void *data)
 {
+#if OIIO_PLUGIN_VERSION >= 21
+    lock_guard lock (m_mutex);
+    if (! seek_subimage (subimage, miplevel))
+        return false;
+#endif
+
     // Create an ImageBuf wrapper of the user's data
     ImageSpec spec = m_spec; // Make a spec that describes just this scanline
     spec.x = xbegin;
@@ -649,10 +708,24 @@ OSLInput::read_native_tiles (int xbegin, int xend, int ybegin, int yend,
 
 
 bool
-OSLInput::read_native_tile (int x, int y, int z, void *data)
+OSLInput::read_native_tile (
+#if OIIO_PLUGIN_VERSION >= 21
+                            int subimage, int miplevel,
+#endif
+                            int x, int y, int z, void *data)
 {
+#if OIIO_PLUGIN_VERSION >= 21
+    lock_guard lock (m_mutex);
+    if (! seek_subimage (subimage, miplevel))
+        return false;
+#endif
+
     return
-        read_native_tiles (x, std::min (x+m_spec.tile_width, m_spec.x+m_spec.width),
+        read_native_tiles (
+#if OIIO_PLUGIN_VERSION >= 21
+                           subimage, miplevel,
+#endif
+                           x, std::min (x+m_spec.tile_width, m_spec.x+m_spec.width),
                            y, std::min (y+m_spec.tile_height, m_spec.y+m_spec.height),
                            z, std::min (z+m_spec.tile_depth, m_spec.z+m_spec.depth),
                            data);

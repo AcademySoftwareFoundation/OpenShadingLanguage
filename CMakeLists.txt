@@ -335,7 +335,7 @@ endif ()
 
 # Only run the OptiX tests if OptiX and CUDA are found
 if (OPTIX_FOUND AND CUDA_FOUND)
-    TESTSUITE ( testoptix )
+    TESTSUITE ( testoptix testoptix-noise )
 endif ()
 
 # FIXME: still working on MaterialX testsuite

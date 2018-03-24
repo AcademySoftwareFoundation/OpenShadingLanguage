@@ -20,6 +20,15 @@ macro (add_oiio_plugin)
     add_library (${_target_name} SHARED ${_plugin_UNPARSED_ARGUMENTS})
     target_link_libraries (${_target_name} ${OPENIMAGEIO_LIBRARIES} ${_plugin_LINK_LIBRARIES})
     set_target_properties (${_target_name} PROPERTIES PREFIX "" FOLDER "Plugins")
+
+    if (VERBOSE)
+        message(STATUS "Setting SOVERSION to: ${SOVERSION}")
+    endif ()
+    set_target_properties( ${_target_name}
+                          PROPERTIES
+                          VERSION ${OSL_VERSION_MAJOR}.${OSL_VERSION_MINOR}.${OSL_VERSION_PATCH}
+                          SOVERSION ${SOVERSION} )
+
     install_targets (${_target_name})
 endmacro ()
 

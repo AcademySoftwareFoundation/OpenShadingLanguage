@@ -9,6 +9,14 @@ if (BUILDSTATIC)
     ADD_LIBRARY ( "libtestshade" STATIC ${testshade_srcs} )
 else ()
     ADD_LIBRARY ( "libtestshade" SHARED ${testshade_srcs} )
+
+    if (VERBOSE)
+        message(STATUS "Setting SOVERSION to: ${SOVERSION}")
+    endif ()
+    set_target_properties( libtestshade
+                          PROPERTIES
+                          VERSION ${OSL_VERSION_MAJOR}.${OSL_VERSION_MINOR}.${OSL_VERSION_PATCH}
+                          SOVERSION ${SOVERSION} )
 endif ()
 
 TARGET_LINK_LIBRARIES (libtestshade oslexec oslquery ${OPENIMAGEIO_LIBRARIES} ${OPENEXR_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} )

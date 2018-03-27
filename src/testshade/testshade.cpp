@@ -120,8 +120,6 @@ inject_params ()
 static void
 set_shadingsys_options ()
 {
-    if (shadingsys_options_set)
-        return;
     shadingsys->attribute ("debug", debug2 ? 2 : (debug ? 1 : 0));
     shadingsys->attribute ("compile_report", debug|debug2);
     int opt = 2;  // default
@@ -419,8 +417,8 @@ action_groupspec (int argc, const char *argv[])
         // If it names a file, use the contents of the file as the group
         // specification.
         OIIO::Filesystem::read_text_file (groupspec, groupspec);
-        set_shadingsys_options ();
     }
+    set_shadingsys_options ();
     if (verbose)
         std::cout << "Processing group specification:\n---\n"
                   << groupspec << "\n---\n";
@@ -1061,6 +1059,10 @@ test_shade (int argc, const char *argv[])
         std::cerr << "ERROR: Invalid shader group. Exiting testshade.\n";
         return EXIT_FAILURE;
     }
+
+    // Set shading sys options again, in case late-encountered command line
+    // options change their values.
+    set_shadingsys_options ();
 
     shadingsys->attribute (shadergroup.get(), "groupname", groupname);
 

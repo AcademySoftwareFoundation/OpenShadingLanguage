@@ -1,0 +1,27 @@
+Compiled a.osl -> a.oso
+Compiled b.osl -> b.oso
+Processing group specification:
+---
+shader a alayer, shader b blayer, connect alayer.f_out blayer.f_in, connect alayer.c_out blayer.c_in
+---
+Shader group:
+---
+shader a alayer ;
+shader b blayer ;
+connect alayer.f_out blayer.f_in ;
+connect alayer.c_out blayer.c_in ;
+
+---
+
+Shader group "" layers are:
+    alayer
+	float Kd
+	output float f_out
+	output color c_out
+    blayer
+	float f_in
+	color c_in
+
+a: f_out = 0.5, c_out = 0.25 1 1
+b: f_in = 0.5, c_in = 0.25 1 1
+

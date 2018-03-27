@@ -248,6 +248,8 @@ set (OSL_BUILD_PLUGINS ON CACHE BOOL "Bool OSL plugins, for example OIIO plugin"
 set (USE_CCACHE ON CACHE BOOL "Use ccache if found")
 set (CODECOV OFF CACHE BOOL "Build code coverage tests")
 option (USE_BOOST_WAVE "Use Boost Wave for C preprocessor (alternative is to use clang)" OFF)
+set (SOVERSION ${OSL_VERSION_MAJOR}.${OSL_VERSION_MINOR}
+     CACHE STRING "Set the SO version in the SO name of the output library")
 
 # Use ccache if found
 find_program (CCACHE_FOUND ccache)

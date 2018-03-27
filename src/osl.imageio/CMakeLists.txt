@@ -37,6 +37,10 @@ macro (add_oiio_plugin)
     add_library (${_target_name} SHARED ${_plugin_DEFAULT_ARGS})
     target_link_libraries (${_target_name} ${OPENIMAGEIO_LIBRARY} ${_plugin_LINK_LIBRARIES})
     set_target_properties (${_target_name} PROPERTIES PREFIX "" FOLDER "Plugins")
+    set_target_properties( ${_target_name}
+                          PROPERTIES
+                          VERSION ${OSL_VERSION_MAJOR}.${OSL_VERSION_MINOR}.${OSL_VERSION_PATCH}
+                          SOVERSION ${SOVERSION} )
     oiio_install_targets (${_target_name})
 endmacro ()
 

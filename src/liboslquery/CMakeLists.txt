@@ -10,6 +10,10 @@ if (BUILDSTATIC)
     ADD_LIBRARY ( oslquery STATIC ${liboslquery_srcs} )
 else ()
     ADD_LIBRARY ( oslquery SHARED ${liboslquery_srcs} )
+    set_target_properties( oslquery
+                          PROPERTIES
+                          VERSION ${OSL_VERSION_MAJOR}.${OSL_VERSION_MINOR}.${OSL_VERSION_PATCH}
+                          SOVERSION ${SOVERSION} )
 endif ()
 
 TARGET_LINK_LIBRARIES ( oslquery ${OPENIMAGEIO_LIBRARY} ${ILMBASE_LIBRARIES} ${Boost_LIBRARIES} )

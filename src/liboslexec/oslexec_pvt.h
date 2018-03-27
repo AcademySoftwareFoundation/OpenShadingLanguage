@@ -39,7 +39,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/thread/tss.hpp>   /* for thread_specific_ptr */
 
-// Pull in the modified Imath headers.
+// Pull in the modified Imath headers and the OSL_HOSTDEVICE macro
 #ifdef __CUDACC__
 #include <OSL/oslconfig.h>
 #endif
@@ -243,12 +243,7 @@ struct AttributeNeeded {
 
 // Prefix for OSL shade op declarations. Make them local visibility, but
 // "C" linkage (no C++ name mangling).
-#ifndef __CUDA_ARCH__
-#  define OSL_SHADEOP extern "C" OSL_DLL_LOCAL
-#else
-#  define OSL_SHADEOP extern "C" __device__ OSL_LLVM_EXPORT
-#endif
-
+#define OSL_SHADEOP extern "C" OSL_DLL_LOCAL
 
 
 // Handy re-casting macros

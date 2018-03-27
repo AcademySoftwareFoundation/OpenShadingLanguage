@@ -2234,7 +2234,7 @@ struct Noise {
         result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {
+    inline OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {
         HashVector h;
         perlin(result, h, x, y);
         result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));

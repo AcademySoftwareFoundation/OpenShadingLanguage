@@ -139,9 +139,10 @@ FUNCTION ( MAKE_CUDA_BITCODE src generated_bc )
             "-I${CMAKE_BINARY_DIR}/include"
             "-I${OPENIMAGEIO_INCLUDE_DIR}"
             "-I${ILMBASE_INCLUDE_DIR}"
-            -D__CUDACC__ -DOSL_COMPILING_TO_BITCODE=1
-            -DNDEBUG -DOIIO_NO_SSE
+            "-I${Boost_INCLUDE_DIRS}"
+            -D__CUDACC__ -DOSL_COMPILING_TO_BITCODE=1 -DNDEBUG -DOIIO_NO_SSE
             --language=cuda --cuda-device-only --cuda-gpu-arch=${CUDA_TARGET_ARCH}
+            ${CUDA_LIB_FLAGS}
             -std=c++11 -Wno-deprecated-register
             -O3 -fno-math-errno -S -emit-llvm -o ${asm_cuda} ${src}
         COMMAND "${LLVM_DIRECTORY}/bin/llvm-as" -f -o ${bc_cuda} ${asm_cuda}
@@ -163,8 +164,6 @@ MACRO ( CUDA_SHADEOPS_COMPILE srclist )
     SET ( linked_shadeops_bc "${CMAKE_CURRENT_BINARY_DIR}/linked_shadeops.bc" )
 
     LIST ( APPEND ${srclist} ${shadeops_bc_cuda_cpp} )
-
-    ADD_DEFINITIONS (-DOSL_LLVM_CUDA_BITCODE)
 
     FOREACH ( shadeops_src ${shadeops_srcs} )
         MAKE_CUDA_BITCODE ( ${shadeops_src} shadeops_bc )
@@ -191,6 +190,7 @@ if (USE_LLVM_BITCODE)
 
     # Optionally repeat the bitcode compilation with CUDA-specific options
     if (CUDA_FOUND)
+        ADD_DEFINITIONS (-DOSL_LLVM_CUDA_BITCODE)
         CUDA_SHADEOPS_COMPILE ( liboslexec_srcs )
     endif ()
 else ()

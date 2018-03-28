@@ -61,6 +61,7 @@ usage ()
         "\t-O0, -O1, -O2  Set optimization level (default=1)\n"
         "\t-d             Debug mode\n"
         "\t-E             Only preprocess the input and output to stdout\n"
+        "\t-Werror        Treat all warnings as errors\n"
         ;
 }
 

@@ -477,7 +477,7 @@ public:
           m_has_derivs(false), m_const_initializer(false),
           m_connected_down(false),
           m_initialized(false), m_lockgeom(false), m_allowconnect(true),
-          m_renderer_output(false),
+          m_renderer_output(false), m_readonly(false),
           m_valuesource(DefaultVal), m_free_data(false),
           m_fieldid(-1), m_layer(-1),
           m_scope(0), m_dataoffset(-1), m_initializers(0),
@@ -699,6 +699,9 @@ public:
     bool renderer_output () const { return m_renderer_output; }
     void renderer_output (bool v) { m_renderer_output = v; }
 
+    bool readonly () const { return m_readonly; }
+    void readonly (bool v) { m_readonly = v; }
+
     bool is_constant () const { return symtype() == SymTypeConst; }
     bool is_temp () const { return symtype() == SymTypeTemp; }
 
@@ -737,6 +740,7 @@ protected:
     unsigned m_lockgeom:1;      ///< Is the param not overridden by geom?
     unsigned m_allowconnect:1;  ///< Is the param not overridden by geom?
     unsigned m_renderer_output:1; ///< Is this sym a renderer output?
+    unsigned m_readonly:1;      ///< read-only symbol
     char m_valuesource;         ///< Where did the value come from?
     bool m_free_data;           ///< Free m_data upon destruction?
     short m_fieldid;            ///< Struct field of this var (or -1)

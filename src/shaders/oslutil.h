@@ -90,8 +90,9 @@ float wireframe() { return wireframe("polygons", 1.0, 1); }
 
 float draw_string(string str, float s, float t, int wrap_s, int wrap_t, int jitter) {
    // Glyphs from http://font.gohu.org/ (8x14 version, most common ascii characters only)
-   int glyph_pixel(int c, int x, int y) {
-      c -= 33; x--; // nudge to origin
+   int glyph_pixel(int c_, int x_, int y) {
+      int c = c_ - 33;   // nudge to origin
+      int x = x_ - 1;
       if (c < 0  || x < 0 || y < 0 ) return 0;
       if (c > 93 || x > 6 || y > 13) return 0;
       int i = 98 * c + 7 * y + x;

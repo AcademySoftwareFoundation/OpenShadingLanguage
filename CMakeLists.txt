@@ -1,13 +1,13 @@
 cmake_minimum_required (VERSION 3.2.2)
 cmake_policy (SET CMP0048 NEW)  # Allow VERSION specifier in project()
 project (OSL
-         VERSION 1.9.8
+         VERSION 1.9.9
          LANGUAGES CXX C)
 set (PROJ_NAME ${PROJECT_NAME})    # short name
 string (TOLOWER ${PROJ_NAME} PROJ_NAME_LOWER)  # short name lower case
 set (PROJECT_VERSION_RELEASE_TYPE "")   # "dev", "betaX", "RCY", ""
 set (${PROJECT_NAME}_VERSION_RELEASE_TYPE ${PROJECT_VERSION_RELEASE_TYPE})
-set (PROJECT_COPYRIGHTYEARS "2008-2017")
+set (PROJECT_COPYRIGHTYEARS "2008-2018")
 set (PROJECT_AUTHORS "Sony Pictures Imageworks, et al")
 set (PROJECT_URL "")
 

@@ -1,3 +1,7 @@
+Release 1.9.9 -- 1 May 2018 (compared to 1.9.8)
+-----------------------------------------------
+
+
 Release 1.9.8 -- 1 Apr 2018 (compared to 1.9.7)
 -----------------------------------------------
 * Build the version into the shared library .so names. #876 (1.8.13/1.9.8)

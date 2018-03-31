@@ -1,5 +1,6 @@
-Release 1.9.8 -- 1 Mar 2018 (compared to 1.9.7)
+Release 1.9.8 -- 1 Apr 2018 (compared to 1.9.7)
 -----------------------------------------------
+* Build the version into the shared library .so names. #876 (1.8.13/1.9.8)
 
 Release 1.9.7 -- 1 Feb 2018 (compared to 1.9.6)
 -----------------------------------------------
@@ -273,6 +274,10 @@ Documentation:
 * Fixed unclear explanation about structures with nested arrays. (1.9.0)
 * Full testshade docs in `doc/testshade.md.html` (1.9.0)
 
+
+Release 1.8.13 -- 1 Apr 2018 (compared to 1.8.12)
+--------------------------------------------------
+* Build the version into the shared library .so names. #876
 
 Release 1.8.12 -- 1 Nov 2017 (compared to 1.8.11)
 --------------------------------------------------

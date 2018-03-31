@@ -55,14 +55,14 @@ Language Specification
 %\\ \large (CONFIDENTIAL --- draft in progress)
 } \bigskip }
 \author{
-\copyright\ Copyright 2009-2017 Sony Pictures Imageworks Inc., et al. All rights reserved.
+\copyright\ Copyright 2009-2018 Sony Pictures Imageworks Inc., et al. All rights reserved.
  \bigskip \\
 \vspace{1in} \\
 Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
 \date{{\large Date: 30 Jun 2017 \\
-% (with corrections, 12 May 2017)
+ (with corrections, 31 Mar 2018)
 }
 \bigskip
 \bigskip
@@ -4191,6 +4191,14 @@ parameters, respectively.
 \apiitem{"firstchannel", <int>}
 \vspace{12pt}
 The first channel to look up from the texture map (default: 0).
+\apiend
+\vspace{-16pt}
+
+\apiitem{"subimage", <int> \\
+"subimage", <string>}
+\vspace{12pt}
+Specify the subimage (by numerical index, or name) of the subimage
+within a multi-image texture file (default: subimage 0).
 \apiend
 \vspace{-16pt}
 

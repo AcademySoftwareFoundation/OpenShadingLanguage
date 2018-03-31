@@ -60,8 +60,8 @@ Language Specification
 Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
-\date{{\large Date: 30 Jun 2017 \\
- (with corrections, 17 Jan 2018)
+\date{{\large Date: 31 Mar 2018 \\
+% (with corrections, 31 Mar 2018)
 }
 \bigskip
 \bigskip
@@ -2059,6 +2059,22 @@ you can construct built-in types like \color or \point:
 
     // pass constructor expression as a parameter:
     RGBA d = add (c, RGBA(color(.3,.4,.5), 0));
+\end{code}
+
+\NEW % 1.10
+You may also use the \emph{compound initializer list} syntax to construct a
+type when it can be deduced from context which compound type is required.
+For example, this is equivalent to the preceding example:
+
+\begin{code}
+    RGBA c = {col,alpha};    // deduce by what is being assigned to
+
+    RGBA add (RGBA a, RGBA b)
+    {
+        return { a.rgb+b.rgb, a.a+b.a }; // deduce by func return type
+    }
+
+    RGBA d = add (c, {{.3,.4,.5}, 0}); // deduce by expected arg type
 \end{code}
 
 It is permitted to have a structure field that is an array, as well as to
@@ -4200,6 +4216,14 @@ The first channel to look up from the texture map (default: 0).
 \apiend
 \vspace{-16pt}
 
+\apiitem{"subimage", <int> \\
+"subimage", <string>}
+\vspace{12pt}
+Specify the subimage (by numerical index, or name) of the subimage
+within a multi-image texture file (default: subimage 0).
+\apiend
+\vspace{-16pt}
+
 \apiitem{"fill", <float>}
 \vspace{12pt}
 The value to return for any channels that are requested,
@@ -5431,6 +5455,7 @@ nothing (empty, no token).
 \alt <ternary-expression>
 \alt <typecast-expression>
 \alt <variable-ref>
+\alt <compound-initializer>
 
 <compound-expression> ::= <expression> \{ "," <expression> \}
 

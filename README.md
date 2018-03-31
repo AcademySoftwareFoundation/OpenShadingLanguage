@@ -243,6 +243,7 @@ adding OSL support):
 * [DNA Research: 3Delight](http://www.3delight.com/)
 * Ubisoft motion picture group's proprietary renderer
 * [Autodesk/SolidAngle: Arnold](https://www.solidangle.com/arnold/)
+* [Autodesk: 3DS Max 2019](https://help.autodesk.com/view/3DSMAX/2019/ENU/?guid=__developer_3ds_max_sdk_features_rendering_osl_html)
 
 Films using OSL (grouped by year of release date):
 * **(2012)**
@@ -276,8 +277,10 @@ Films using OSL (grouped by year of release date):
   Suicide Squad,
   Kingsglaive: Final Fantasy XV,
   Storks,
-  Miss Peregrine's Home for Peculiar Children, Assassin's Creed
-* **(2017) / upcoming**
+  Miss Peregrine's Home for Peculiar Children,
+  Fantastic Beasts and Where to Find Them,
+  Assassin's Creed
+* **(2017)**
   Lego Batman,
   The Great Wall,
   A Cure for Wellness,
@@ -302,6 +305,13 @@ Films using OSL (grouped by year of release date):
   Geostorm,
   Coco,
   Justice League,
+  Thor: Ragnarok
+* **(2018) / upcoming**
+  Peter Rabbit,
+  Black Panther,
+  Annnihilation,
+  Red Sparrow,
+  Pacific Rom Uprising
   ...
 
 
@@ -343,13 +353,12 @@ Van Lommel.
 Additionally, many others have contributed features, bug fixes, and other
 changes: Steve Agland, Shane Ambler, Martijn Berger, Farchad Bidgolirad,
 Nicholas Bishop, Stefan Büttner, Matthaus G. Chajdas, Thomas Dinges, Mark
-Final, Henri Fousse, Syoyo Fujita, Derek Haase, Sven-Hendrik Haase, John
-Haddon, Daniel Heckenberg, Ronan Keryell, Elvic Liang, Max Liani, Bastien
-
-Montagne, Alexis Oblet, Erich Ocean, Mikko Ohtamaa, Alex Schworer, Jonathan
-Scruggs, Sergey Sharybin, Stephan Steinbach, Esteban Tovagliari, Alexander
-von Knorring, Roman Zulak. (Listed alphabetically; if we've left anybody
-out, please let us know.)
+Final, Henri Fousse, Syoyo Fujita, Tim Grant, Derek Haase, Sven-Hendrik
+Haase, John Haddon, Daniel Heckenberg, Matt Johnson, Ronan Keryell, Elvic
+Liang, Max Liani, Bastien Montagne, Alexis Oblet, Erich Ocean, Mikko
+Ohtamaa, Alex Schworer, Jonathan Scruggs, Sergey Sharybin, Stephan
+Steinbach, Esteban Tovagliari, Alexander von Knorring, Roman Zulak. (Listed
+alphabetically; if we've left anybody out, please let us know.)
 
 We cannot possibly express sufficient gratitude to the managers at Sony
 Pictures Imageworks who allowed this project to proceed, supported it

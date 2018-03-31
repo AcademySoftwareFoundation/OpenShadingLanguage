@@ -1,9 +1,21 @@
-Release 1.10? -- ?? 2018? (compared to 1.9)
+Release 1.10? -- ?? 2018 (compared to 1.9)
 --------------------------------------------------
 Dependency and standards changes:
-* **LLVM 4.0 / 5.0 / 6.0**: Support has been removed for LLVM 3.x.
+* **LLVM 4.0 / 5.0 / 6.0**: Support has been removed for LLVM 3.x,
+  added for 6.0.
 * **OpenImageIO 1.8+**: This release of OSL should build properly against
   OIIO 1.8 or newer. Support has been dropped for OIIO 1.7.
+
+New back-end targets:
+* **OptiX** Work in progress: Experimental back end for NVIDIA OptiX GPU ray
+  tracing toolkit. #861
+    - Build with USE_OPTIX=1
+    - Requires OptiX 5.0+, Cuda 8.0+, OpenImageIO 1.8.10+, LLVM >= 5.0 with
+      PTX target enabled.
+    - New utility **testoptix** is an example of a simple OptiX renderer
+      that uses OSL for shaders.
+    * Work is in progress to support the majority of OSL, but right now it
+      is restricted to a small subset.
 
 New tools:
 * **osltoy** : GUI tool for interactive shader editing and pattern
@@ -15,6 +27,22 @@ New tools:
   Doxygen, but markdeep!) Experimental, caveat emptor. #842 (1.10.0)
 
 OSL Language and oslc compiler:
+* C++11 style Initializer lists. (#838) This lets you have constructs like
+
+        // pass a {} list as a triple, matrix, or struct
+        void func (point p);
+        func ({x, y, z});
+
+        // Assign {} to a struct if the types match up
+        struct vec2 { float x, y; };
+        vec2 v = {a,b};
+
+        // Compact 'return' notation, it knows to construct the return type
+        vec2 func (float a, float b)
+        {
+            return {a, b};
+        }
+
 * osl now warns when it detects duplicate declarations of functions with
   the exact same argument list, in the same scope. #746
 * Fix oslc crash with invalid field selection syntax. #835 (1.10.0/1.9.6)
@@ -38,9 +66,12 @@ OSL Language and oslc compiler:
   will disallow runtime connections via `ConnectShaders()`, resulting in an
   error. #857 (1.10.0)
 * oslc command-line argument `-Werror` will treat all warnings as hard
-  errors (failed compilation). (1.10.0)
-* `#pragma nowarn` will suppress any warnings arising from code on the
-  immediately following line of that source file. (1.10.0)
+  errors (failed compilation). #862 (1.10.0)
+* `#pragma osl nowarn` will suppress any warnings arising from code on the
+  immediately following line of that source file. #864 (1.10.0)
+* oslc error reporting is improved, many multi-line syntactic constructs
+  will report errors in a more intuitive, easy-to-understand line number.
+  #867 (1.10.0)
 
 OSL Standard library:
 
@@ -85,12 +116,19 @@ Build & test system improvements:
   minimize build breaks for users when a new compiler warning is hit. We
   still enable it in development/master branches as well as any CI build
   in any branch. #850 (1.10.0/1.9.7)
+* Testsuite is now Python 2/3 agnostic. #873 (1.10.0)
+* Build the version into the shared library .so names. #876
+  (1.8.13/1.9.8/1.10.0)
 
 Developer goodies:
 
 Documentation:
 * `osltoy` documentations in `doc/osltoy.md.html` (1.10.0).
 
+
+Release 1.9.8 -- 1 Apr 2018 (compared to 1.9.7)
+-----------------------------------------------
+* Build the version into the shared library .so names. #876 (1.8.13/1.9.8)
 
 Release 1.9.7 -- 1 Feb 2018 (compared to 1.9.6)
 -----------------------------------------------

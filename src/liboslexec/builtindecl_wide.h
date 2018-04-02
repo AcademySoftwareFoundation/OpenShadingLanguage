@@ -365,7 +365,7 @@ DECL (osl_luminance_w16fw16v_batched, "xXXX")
 DECL (osl_luminance_dfdv_batched, "xXXX")
 DECL (osl_luminance_w16dfw16dv_batched, "xXXX")
 
-DECL (osl_prepend_color_from_v_batched, "xXXs")
+DECL (osl_prepend_color_from_vs_batched, "xXXs")
 DECL (osl_prepend_color_from_w16vs_batched, "xXXs")
 DECL (osl_prepend_color_from_w16vs_masked, "xXXsi")
 DECL (osl_prepend_color_from_w16vw16s_batched, "xXXX")

@@ -1,5 +1,5 @@
 shader
-test_color_space_3xv_float (string colorspace = "--param colorspace must_be_provided", output color Cout = 0)
+test_color_u_space_3xv_float (string colorspace = "--param colorspace must_be_provided", output color Cout = 0)
 {
     // Quantize val to avoid disagreements between scalar & SIMD as it approaches 0
     float valr = 1.0/(2*float(64-int(64*u))/64);

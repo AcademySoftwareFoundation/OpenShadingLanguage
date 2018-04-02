@@ -1,0 +1,19 @@
+shader
+test_transformc_u_space_u_color (string colorspace = "--param colorspace must_be_provided", output color Cout = 0)
+{
+    // Quantize val to avoid disagreements between scalar & SIMD as it approaches 0
+   float  valr = 1.0/(2*raytype("camera"));
+    float  valg = 1.0/(3*raytype("camera"));
+    float  valb = 1.0/(4*raytype("camera"));
+    float val2r = valr/2;
+    float val2g = valg/2;
+    float val2b = valb/2;
+    
+    color c1 = color(valr, valg, valb);
+    color c2 = color(val2r, val2g, val2b);
+    
+    Cout = transformc(colorspace, c1);
+    if (int(P[0]*64)%2==0) {
+        Cout = transformc(colorspace, c2);
+    }
+}

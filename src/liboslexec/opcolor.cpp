@@ -624,7 +624,7 @@ osl_prepend_color_from (void *sg, void *c_, const char *from)
 }
 
 OSL_SHADEOP void
-osl_prepend_color_from_v_batched (void *sgb, void *c_, const char *from)
+osl_prepend_color_from_vs_batched (void *sgb, void *c_, const char *from)
 {
     ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
     Color3 &c (*(Color3*)c_);

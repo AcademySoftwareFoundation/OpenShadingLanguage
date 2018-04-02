@@ -366,11 +366,10 @@ DECL (osl_luminance_dfdv_batched, "xXXX")
 DECL (osl_luminance_w16dfw16dv_batched, "xXXX")
 
 DECL (osl_prepend_color_from_v_batched, "xXXs")
-DECL (osl_prepend_color_from_w16v_batched, "xXXs")
-#if 0 // incomplete
-DECL (osl_prepend_color_from_v_masked, "xXXsi")
-DECL (osl_prepend_color_from_w16v_masked, "xXXi")
-#endif
+DECL (osl_prepend_color_from_w16vs_batched, "xXXs")
+DECL (osl_prepend_color_from_w16vs_masked, "xXXsi")
+DECL (osl_prepend_color_from_w16vw16s_batched, "xXXX")
+DECL (osl_prepend_color_from_w16vw16s_masked, "xXXXi")
 
 DECL (osl_prepend_matrix_from_w16ms_batched, "xXXs")
 DECL (osl_prepend_matrix_from_w16ms_masked, "xXXsi")

@@ -1,0 +1,22 @@
+shader
+test_color_3xv_dfloat(output color Cout = 0)
+{
+    float valr = 0.5*(v);
+    float valg = 0.6*(v);
+    float valb = 0.4*(v);
+    float val2r = u;
+    float val2g = 0.3*u;
+    float val2b = 0.75*u;
+     
+              
+    color c1 = color(valr, valg, valb);
+    if (int(P[0]*64)%2==0) {
+        color c2 = color(val2r, val2g, val2b);
+        c1 = c2;
+    }
+            
+    color dxc = Dx(c1);
+    color dyc = Dy(c1);
+    Cout = dxc + dyc;
+    
+}

@@ -1,0 +1,18 @@
+shader
+test_color_space_3xv_float (string colorspace = "--param colorspace must_be_provided", output color Cout = 0)
+{
+    // Quantize val to avoid disagreements between scalar & SIMD as it approaches 0
+    float valr = 1.0/(2*float(64-int(64*u))/64);
+    float valg = 1.0/(3*float(64-int(64*u))/64);
+    float valb = 1.0/(4*float(64-int(64*u))/64);
+    float val2r = v;
+    float val2g = v/2;
+    float val2b = v/3;
+
+    color c1 = color(colorspace, valr, valg, valb);
+    if (int(P[0]*64)%2==0) {
+        c1 = color(colorspace, val2r, val2g, val2b);
+    }
+    
+    Cout = c1;
+}

@@ -881,36 +881,36 @@ osl_count_noise (void *sg_)
 
 
 
-OSL_SHADEOP int
+OSL_SHADEOP OSL_HOSTDEVICE int
 osl_hash_ii (int x)
 {
     return inthashi (x);
 }
 
-OSL_SHADEOP int
+OSL_SHADEOP OSL_HOSTDEVICE int
 osl_hash_if (float x)
 {
     return inthashf (x);
 }
 
-OSL_SHADEOP int
+OSL_SHADEOP OSL_HOSTDEVICE int
 osl_hash_iff (float x, float y)
 {
     return inthashf (x, y);
 }
 
 
-OSL_SHADEOP int
-osl_hash_iv (float *x)
+OSL_SHADEOP OSL_HOSTDEVICE int
+osl_hash_iv (void *x)
 {
-    return inthashf (x);
+    return inthashf (static_cast<float*>(x));
 }
 
 
-OSL_SHADEOP int
-osl_hash_ivf (float *x, float y)
+OSL_SHADEOP OSL_HOSTDEVICE int
+osl_hash_ivf (void *x, float y)
 {
-    return inthashf (x, y);
+    return inthashf (static_cast<float*>(x), y);
 }
 
 

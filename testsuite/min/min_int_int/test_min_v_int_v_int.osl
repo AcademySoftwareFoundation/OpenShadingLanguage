@@ -1,0 +1,24 @@
+shader
+test_min_v_int_v_int (output color Cout = 0)
+{
+    int val = 64-int(64*u);
+    int val2 = 2*val;
+     
+                  
+    int numerator = 64*int(64*v);
+    int red = 0;
+    int green = 32;
+    int blue = 64;
+    
+    red = min(numerator, val);
+    green = min(numerator, int(v));
+    blue = min(int(64*v), val);
+
+    if (int(P[0]*64)%2==0) {    
+        red = min(numerator, val2);
+        green = min(numerator, int(v));
+        blue = min(int(64*v), val2);
+    }    
+    
+    Cout = color(red/8192.0,green/4096.0,blue/192.0);    
+}

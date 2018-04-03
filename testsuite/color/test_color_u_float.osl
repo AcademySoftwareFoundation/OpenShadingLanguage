@@ -1,0 +1,14 @@
+shader
+test_color_u_float (output color Cout = 0)
+{
+    float  val = 1.0/(2*raytype("camera"));
+    float val2 = val/2;
+
+    color c1 = color(val);
+    if (int(P[0]*64)%2==0) {
+        color c2 = color(val2);
+        c1 = c2;
+    }
+    
+    Cout = c1;
+}

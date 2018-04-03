@@ -1,0 +1,18 @@
+shader
+test_color_v_dfloat(output color Cout = 0)
+{
+    float val = 0.5*(v);
+    float val2 = u;
+     
+              
+    color c1 = color(val);
+    if (int(P[0]*64)%2==0) {
+        color c2 = color(val2);
+        c1 = c2;
+    }
+            
+    color dxc = Dx(c1);
+    color dyc = Dy(c1);
+    Cout = dxc + dyc;
+    
+}

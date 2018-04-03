@@ -1,0 +1,21 @@
+shader
+test_color_v_space_3xv_float (output color Cout = 0)
+{
+    float valr = 0.5*(v);
+    float valg = 0.6*(v);
+    float valb = 0.4*(v);
+    float val2r = u;
+    float val2g = 0.3*u;
+    float val2b = 0.75*u;
+
+    string colorspaces[7] = { "rgb", "RGB", "hsv", "hsl", "YIQ", "XYZ", "xyY" };
+    string colorspace = colorspaces[int(P[0]*64)%7];
+
+
+    color c1 = color(colorspace, valr, valg, valb);
+    if (int(P[0]*64)%2==0) {
+        c1 = color(colorspace, val2r, val2g, val2b);
+    }
+    
+    Cout = c1;
+}

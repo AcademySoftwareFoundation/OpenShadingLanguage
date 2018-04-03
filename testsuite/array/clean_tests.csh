@@ -1,0 +1,2 @@
+rm *.tif *.oso *.log
+

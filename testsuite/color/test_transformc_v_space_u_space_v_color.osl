@@ -1,0 +1,24 @@
+shader
+test_transformc_v_space_u_space_v_color (
+    string tospace = "--param fromspace must_be_provided", 
+    output color Cout = 0)
+{
+    float valr = 1.0/(2*float(64-int(64*u))/64);
+    float valg = 1.0/(3*float(64-int(64*u))/64);
+    float valb = 1.0/(4*float(64-int(64*u))/64);
+    float val2r = v;
+    float val2g = v/2;
+    float val2b = v/3;
+    
+    // stdosl.h didn't implement xyY
+    string colorspaces[6] = { "rgb", "RGB", "hsv", "hsl", "YIQ", "XYZ" /*,"xyY"*/ };
+    string fromspace = colorspaces[int(P[0]*64)%6];
+    
+    color c1 = color(valr, valg, valb);
+    color c2 = color(val2r, val2g, val2b);
+    
+    Cout = transformc(fromspace, tospace, c1);
+    if (int(P[0]*64)%2==0) {
+        Cout = transformc(fromspace, tospace, c2);
+    }
+}

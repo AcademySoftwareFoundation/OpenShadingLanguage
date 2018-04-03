@@ -1,0 +1,24 @@
+shader
+test_u_float_add_v_float (output color Cout = 0)
+{
+    float val = 1 - u;
+    float val2 = 2*val;
+                  
+    float numerator = 0.3;
+    
+    float red = 0.0;
+    float green = 0.5;
+    float blue = 1.0;
+    
+    red = numerator+val;
+    green = numerator+int(v);
+    blue = (2*numerator)+val;
+    
+    if (int(P[0]*64)%2==0) {    
+        red = numerator+val2;
+        green = numerator+int(v);
+        blue = (2*numerator)+val2;
+    }
+    
+    Cout = color(red,green,blue);
+}

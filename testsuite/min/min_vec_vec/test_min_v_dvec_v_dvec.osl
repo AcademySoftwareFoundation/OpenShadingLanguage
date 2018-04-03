@@ -1,0 +1,20 @@
+shader
+test_min_v_dvec_v_dvec (output color Cout = 0)
+{
+    float u_float = raytype("camera");    
+    float v_float = u;
+    float v_float2 = v;
+    
+    color v_color = color(0.3*v_float,0.5*v_float, 0.75*v_float);
+    color v_color2 = color(0.1*v_float2,0.2*v_float2, 0.3*v_float2);
+    
+    color c = min(v_color, v_color2);
+        
+    if (int(P[0]*64)%2==0) {
+        c = min(v_color, (1.5*v_color2));
+    }    
+    
+    color dxc = Dx(c);
+    color dyc = Dy(c);
+    Cout = dxc + dyc;            
+}

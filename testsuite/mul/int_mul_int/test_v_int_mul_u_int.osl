@@ -1,0 +1,16 @@
+shader
+test_v_int_mul_u_int (output color Cout = 0)
+{
+    int factor = 2*raytype("camera");
+                  
+    int numerator = int(64*v);
+    int red = 0;
+    int green = 32;
+    int blue = 64;
+    red = numerator*factor;
+    green = numerator*int(v);
+    blue = int(64*v)*factor;
+    
+    Cout = color(red/128.0,green/64.0,blue/128.0);
+    
+}

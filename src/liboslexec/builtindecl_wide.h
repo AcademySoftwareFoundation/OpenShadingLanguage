@@ -362,12 +362,11 @@ DECL (osl_luminance_w16fw16v_batched, "xXXX")
 DECL (osl_luminance_dfdv_batched, "xXXX")
 DECL (osl_luminance_w16dfw16dv_batched, "xXXX")
 
-DECL (osl_prepend_color_from_v_batched, "xXXs")
-DECL (osl_prepend_color_from_w16v_batched, "xXXs")
-#if 0 // incomplete
-DECL (osl_prepend_color_from_v_masked, "xXXsi")
-DECL (osl_prepend_color_from_w16v_masked, "xXXi")
-#endif
+DECL (osl_prepend_color_from_vs_batched, "xXXs")
+DECL (osl_prepend_color_from_w16vs_batched, "xXXs")
+DECL (osl_prepend_color_from_w16vs_masked, "xXXsi")
+DECL (osl_prepend_color_from_w16vw16s_batched, "xXXX")
+DECL (osl_prepend_color_from_w16vw16s_masked, "xXXXi")
 
 DECL (osl_prepend_matrix_from_w16ms_batched, "xXXs")
 DECL (osl_prepend_matrix_from_w16ms_masked, "xXXsi")
@@ -600,15 +599,11 @@ DECL (osl_normalize_w16dvw16dv, "xXX")
 DECL (osl_normalize_w16dvw16dv_masked, "xXXi")
 
 DECL (osl_mul_w16mw16mw16m, "xXXX")
-DECL (osl_mul_w16mw16fw16m, "xXXX")
-DECL (osl_mul_w16mw16mw16f, "xXXX")
-DECL (osl_mul_w16mw16fw16f, "xXXX")
-#if 0 // incomplete
 DECL (osl_mul_w16mw16mw16m_masked, "xXXXi")
+DECL (osl_mul_w16mw16fw16m, "xXXX")
 DECL (osl_mul_w16mw16fw16m_masked, "xXXXi")
+DECL (osl_mul_w16mw16mw16f, "xXXX")
 DECL (osl_mul_w16mw16mw16f_masked, "xXXXi")
-DECL (osl_mul_w16mw16fw16f_masked, "xXXXi")
-#endif
 
 // forced masked version only
 DECL (osl_div_w16mw16mw16m_masked, "xXXXi")

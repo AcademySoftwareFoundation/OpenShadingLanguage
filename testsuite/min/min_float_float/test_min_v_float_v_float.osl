@@ -1,0 +1,25 @@
+shader
+test_min_v_float_v_float (output color Cout = 0)
+{
+    // Quantize val to avoid disagreements between scalar & SIMD as it approaches 0
+    float val = 1.0/(float(64-int(64*u))/64);
+    float val2 = 20*val;
+     
+              
+    float numerator = u;
+    float red = 0.0;
+    float green = 0.5;
+    float blue = 1.0;
+    
+    red = min(numerator, val);
+    green = min(numerator, int(v));
+    blue = min(v, val);
+    
+    if (int(P[0]*64)%2==0) {    
+        red = min(numerator, 0);
+        green = min(numerator, int(v));
+        blue = min(v, val2);
+    }
+
+    Cout = color(red,green,blue);
+}

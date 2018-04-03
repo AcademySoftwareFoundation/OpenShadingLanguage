@@ -1,0 +1,17 @@
+shader
+test_v_int_mul_v_int_masked (output color Cout = 0)
+{
+    int factor = 64-int(64*u);
+     
+                  
+    int numerator = 64*int(64*v);
+    int red = 512;
+    int green = 1024;
+    int blue = 4096;
+    if (int(P[0]*64)%2==0) {    
+        red = numerator*factor;
+        green = numerator*int(v);
+        blue = int(64*v)*factor;
+    }    
+    Cout = color(red/4096.0,green/4096.0,blue/4096.0);    
+}

@@ -1,0 +1,17 @@
+shader
+test_u_float_mul_u_float_masked (output color Cout = 0)
+{
+    float  factor = 1.0/(2*raytype("camera"));
+              
+    float numerator = 3.0;
+    float red = 0.0;
+    float green = 0.5;
+    float blue = 1.0;
+    if (int(P[0]*64)%2==0) {    
+        red = numerator*factor;
+        green = numerator*0.0;
+        blue =  factor*numerator;
+    }
+    
+    Cout = color(red,green,blue);
+}

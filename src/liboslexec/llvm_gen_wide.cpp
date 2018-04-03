@@ -874,12 +874,13 @@ LLVMGEN (llvm_gen_div)
     	func_name.append(arg_typecode(B,false,op_is_uniform));
     	{
             LLVM_Util::ScopedMasking require_mask_be_passed;
-            // TODO: detect this in a manner not dependent on the simd
-            // lane count being hardcoded
-            if (func_name == "osl_div_w16mw16fw16m" ||
-                func_name == "osl_div_w16mw16mw16m" ) {
-                // We choose to only support masked version of these functions
-                // because then check the matrices to see if they are affine
+            if (!op_is_uniform && B.typespec().is_matrix()) {
+                // We choose to only support masked version of these functions:
+                // osl_div_w16mw16fw16m
+                // osl_div_w16mw16mw16m
+                ASSERT(A.typespec().is_matrix() || A.typespec().is_float());
+                ASSERT(Result.typespec().is_matrix() && !resultIsUniform);
+                // Because then check the matrices to see if they are affine
                 // and take a slow path if not.  Unmasked lanes wold most
                 // likely take the slow path, which could have been avoided
                 // if we passed the mask in.
@@ -1291,6 +1292,7 @@ LLVMGEN (llvm_gen_minmax)
     Symbol& y = *rop.opargsym (op, 2);
 
     bool op_is_uniform = rop.isSymbolUniform(x) && rop.isSymbolUniform(y);
+    bool result_is_uniform = rop.isSymbolUniform(Result);
 
     TypeDesc type = Result.typespec().simpletype();
     int num_components = type.aggregate;
@@ -1309,14 +1311,27 @@ LLVMGEN (llvm_gen_minmax)
         }
 
         llvm::Value* res_val = rop.ll.op_select (cond, x_val, y_val);
+        if (op_is_uniform && !result_is_uniform)
+        {
+            res_val = rop.ll.widen_value(res_val);
+        }
         rop.llvm_store_value (res_val, Result, 0, i);
         if (Result.has_derivs()) {
           llvm::Value* x_dx = rop.llvm_load_value (x, 1, i, type, op_is_uniform);
           llvm::Value* x_dy = rop.llvm_load_value (x, 2, i, type, op_is_uniform);
           llvm::Value* y_dx = rop.llvm_load_value (y, 1, i, type, op_is_uniform);
           llvm::Value* y_dy = rop.llvm_load_value (y, 2, i, type, op_is_uniform);
-          rop.llvm_store_value (rop.ll.op_select(cond, x_dx, y_dx), Result, 1, i);
-          rop.llvm_store_value (rop.ll.op_select(cond, x_dy, y_dy), Result, 2, i);
+
+          llvm::Value* res_dx = rop.ll.op_select(cond, x_dx, y_dx);
+          llvm::Value* res_dy = rop.ll.op_select(cond, x_dy, y_dy);
+          if (op_is_uniform && !result_is_uniform)
+          {
+              res_dx = rop.ll.widen_value(res_dx);
+              res_dy = rop.ll.widen_value(res_dy);
+          }
+
+          rop.llvm_store_value (res_dx, Result, 1, i);
+          rop.llvm_store_value (res_dy, Result, 2, i);
         }
     }
     return true;
@@ -1842,35 +1857,45 @@ LLVMGEN (llvm_gen_construct_color)
               << " Z=" << Z.name().c_str()<< ((zIsUniform) ? "(uniform)" : "(varying)")
               << std::endl;
 #endif
-    bool op_is_uniform = rop.isSymbolUniform(Result);
-    ASSERT(!using_space || rop.isSymbolUniform(Space));
-
+    bool result_is_uniform = rop.isSymbolUniform(Result);
 
     // First, copy the floats into the vector
     int dmax = Result.has_derivs() ? 3 : 1;
     for (int d = 0;  d < dmax;  ++d) {  // loop over derivs
         for (int c = 0;  c < 3;  ++c) {  // loop over components
             const Symbol& comp = *rop.opargsym (op, c+1+using_space);
-            llvm::Value* val = rop.llvm_load_value (comp, d, NULL, 0, TypeDesc::TypeFloat, op_is_uniform);
+            llvm::Value* val = rop.llvm_load_value (comp, d, NULL, 0, TypeDesc::TypeFloat, result_is_uniform);
             rop.llvm_store_value (val, Result, d, NULL, c);
         }
     }
 
     // Do the color space conversion in-place, if called for
     if (using_space) {
-        llvm::Value *args[3];
+        // TODO: detect if space is constant, then call space specific conversion
+        // functions to avoid doing runtime detection of space.
+
+        std::string func_name("osl_prepend_color_from_");
+        // Ignoring derivs to match existing behavior, see comment below where
+        // any derivs on the result are 0'd out
+        func_name.append(arg_typecode(Result, false /*derivs*/, result_is_uniform));
+        bool space_is_uniform = rop.isSymbolUniform(Space);
+        func_name.append(arg_typecode(Space, false /*derivs*/, space_is_uniform));
+
+        llvm::Value *args[4];
         // NOTE:  Shader Globals is only passed to provide access to report an error to the context
         // no implicit dependency on any Shader Globals is necessary
         args[0] = rop.sg_void_ptr ();  // shader globals
         args[1] = rop.llvm_void_ptr (Result, 0);  // color
-        args[2] = rop.llvm_load_value (Space); // from
+        args[2] = space_is_uniform ? rop.llvm_load_value (Space) : rop.llvm_void_ptr(Space); // from
+        int arg_count = 3;
+        if(!result_is_uniform && rop.ll.is_masking_required()) {
+            args[arg_count++] = rop.ll.mask_as_int(rop.ll.current_mask());
+            func_name.append("_masked");
+        } else {
+            func_name.append("_batched");
+        }
 
-        ASSERT(false == rop.ll.is_masking_required());
-        std::string func_name("osl_prepend_color_from_");
-        func_name.append(arg_typecode(Result, false /*derivs*/, op_is_uniform));
-        func_name.append("_batched");
-
-        rop.ll.call_function (func_name.c_str(), args, 3);
+        rop.ll.call_function (func_name.c_str(), args, arg_count);
         // FIXME(deriv): Punt on derivs for color ctrs with space names.
         // We should try to do this right, but we never had it right for
         // the interpreter, to it's probably not an emergency.

@@ -1,0 +1,25 @@
+shader
+test_v_float_add_v_float (output color Cout = 0)
+{
+    // Quantize val to avoid disagreements between scalar & SIMD as it approaches 0
+    float val = 1.0/(float(64-int(64*u))/64);
+    float val2 = 2*val;
+     
+              
+    float numerator = u;
+    float red = 0.0;
+    float green = 0.5;
+    float blue = 1.0;
+    
+    red = numerator + val;
+    green = numerator + int(v);
+    blue = v + val;
+    
+    if (int(P[0]*64)%2==0) {    
+        red = numerator + val2;
+        green = numerator + int(v);
+        blue = v + val2;
+    }
+    
+    Cout = color(red,green,blue);
+}

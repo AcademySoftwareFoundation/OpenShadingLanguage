@@ -1,0 +1,23 @@
+shader
+test_max_u_int_u_int (output color Cout = 0)
+{
+    int val = raytype("camera");
+    int val2 = 24*val;
+              
+    int numerator = 64;
+    int red = 0;
+    int green = 32;
+    int blue = 64;
+    
+    red = max(numerator, val);
+    green = max(numerator, 0);
+    blue = max(val, numerator);
+    
+    if (int(P[0]*64)%2==0) {    
+        red = max(numerator, val2);
+        green = max(numerator, 0);
+        blue = max(val2, numerator);
+    }
+    
+    Cout = color(red/128.0,green/128.0,blue/128.0);
+}

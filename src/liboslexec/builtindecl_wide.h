@@ -143,10 +143,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     DECL (osl_ ## name ## _w16dfw16df_masked, "xXXi")            \
     DECL (osl_ ## name ## _w16vw16v,  "xXX")             \
     DECL (osl_ ## name ## _w16vw16v_masked,  "xXXi")             \
-    DECL (osl_ ## name ## _w16dvw16dv, "xXX")
-#if 0 // incomplete WIDE_UNARY_OP_IMPL
+    DECL (osl_ ## name ## _w16dvw16dv, "xXX")           \
     DECL (osl_ ## name ## _w16dvw16dv_masked, "xXXi")
-#endif
 
 #define WIDE_UNARY_I_OP_IMPL(name)              \
     DECL (osl_ ## name ## _w16iw16i,  "xXX")

@@ -162,11 +162,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define WIDE_UNARY_F_OR_V_OP_IMPL(name)               \
     DECL (osl_ ## name ## _w16fw16f,  "xXX")          \
-    DECL (osl_ ## name ## _w16fw16f_masked,  "xXXi")          \
-    DECL (osl_ ## name ## _w16vw16v,  "xXX")
-#if 0 // incomplete WIDE_TEST_F_OP_IMPL
+    DECL (osl_ ## name ## _w16fw16f_masked,  "xXXi")  \
+    DECL (osl_ ## name ## _w16vw16v,  "xXX")          \
     DECL (osl_ ## name ## _w16vw16v_masked,  "xXXi")
-#endif
 
 // TODO: add _masked variations and unit test to exercise them first
 #define WIDE_BINARY_OP_IMPL(name)                       \
@@ -175,19 +173,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     DECL (osl_ ## name ## _w16dfw16dfw16df, "xXXX")         \
     DECL (osl_ ## name ## _w16dfw16dfw16df_masked, "xXXXi")         \
     DECL (osl_ ## name ## _w16dfw16fw16df,  "xXXX")         \
+    DECL (osl_ ## name ## _w16dfw16fw16df_masked,  "xXXXi")         \
     DECL (osl_ ## name ## _w16dfw16dfw16f,  "xXXX")         \
     DECL (osl_ ## name ## _w16dfw16dfw16f_masked,  "xXXXi")         \
     DECL (osl_ ## name ## _w16vw16vw16v,    "xXXX")         \
     DECL (osl_ ## name ## _w16vw16vw16v_masked,    "xXXXi")         \
     DECL (osl_ ## name ## _w16dvw16dvw16dv, "xXXX")         \
-    DECL (osl_ ## name ## _w16dvw16vw16dv,  "xXXX")         \
-    DECL (osl_ ## name ## _w16dvw16dvw16v,  "xXXX")
-#if 0 // incomplete WIDE_BINARY_OP_IMPL
-    DECL (osl_ ## name ## _w16dfw16fw16df_masked,  "xXXXi")         \
     DECL (osl_ ## name ## _w16dvw16dvw16dv_masked, "xXXXi")         \
+    DECL (osl_ ## name ## _w16dvw16vw16dv,  "xXXX")         \
     DECL (osl_ ## name ## _w16dvw16vw16dv_masked,  "xXXXi")         \
+    DECL (osl_ ## name ## _w16dvw16dvw16v,  "xXXX")         \
     DECL (osl_ ## name ## _w16dvw16dvw16v_masked,  "xXXXi")
-#endif
+
 
 #define WIDE_BINARY_FI_OP_IMPL(name)                       \
     DECL (osl_ ## name ## _w16fw16fw16f,    "xXXX")        \
@@ -445,7 +442,6 @@ WIDE_UNARY_OP_IMPL(tanh)
 // DECL (osl_safe_div_fff, "fff") // impl by code generator
 // DECL (osl_safe_mod_iii, "iii") // unneeded stdosl.h should have handled int mod(int, int)
 
-// incomplete masked versions of sincos(if needed)
 DECL (osl_sincos_w16fw16fw16f, "xXXX")
 DECL (osl_sincos_w16dfw16dfw16f, "xXXX")
 DECL (osl_sincos_w16dfw16fw16df, "xXXX")
@@ -455,6 +451,17 @@ DECL (osl_sincos_w16vw16vw16v, "xXXX")
 DECL (osl_sincos_w16dvw16dvw16v, "xXXX")
 DECL (osl_sincos_w16dvw16vw16dv, "xXXX")
 DECL (osl_sincos_w16dvw16dvw16dv, "xXXX")
+
+DECL (osl_sincos_w16fw16fw16f_masked, "xXXXi")
+DECL (osl_sincos_w16dfw16dfw16f_masked, "xXXXi")
+DECL (osl_sincos_w16dfw16fw16df_masked, "xXXXi")
+DECL (osl_sincos_w16dfw16dfw16df_masked, "xXXXi")
+
+DECL (osl_sincos_w16vw16vw16v_masked, "xXXXi")
+DECL (osl_sincos_w16dvw16dvw16v_masked, "xXXXi")
+DECL (osl_sincos_w16dvw16vw16dv_masked, "xXXXi")
+DECL (osl_sincos_w16dvw16dvw16dv_masked, "xXXXi")
+
 
 WIDE_UNARY_OP_IMPL(log)
 WIDE_UNARY_OP_IMPL(log2)
@@ -473,6 +480,9 @@ WIDE_UNARY_OP_IMPL(inversesqrt)
 
 WIDE_UNARY_F_OR_V_OP_IMPL(logb)
 WIDE_UNARY_F_OR_V_OP_IMPL(floor)
+
+
+
 WIDE_UNARY_F_OR_V_OP_IMPL(ceil)
 WIDE_UNARY_F_OR_V_OP_IMPL(round)
 WIDE_UNARY_F_OR_V_OP_IMPL(trunc)
@@ -616,14 +626,14 @@ DECL (osl_get_from_to_matrix_w16mw16ss_masked, "iXXXsi")
 DECL (osl_get_from_to_matrix_w16mw16sw16s_batched, "iXXXX")
 DECL (osl_get_from_to_matrix_w16mw16sw16s_masked, "iXXXXi")
 
-DECL (osl_transpose_w16mw16m, "xXX")
-#if 0 // incomplete ?
+DECL (osl_transpose_w16mw16m, "xXX") //Check OSL specification for types of parameters
+//varying vs non varying
 DECL (osl_transpose_w16mw16m_masked, "xXXi")
-#endif
+
 DECL (osl_determinant_w16fw16m, "xXX")
-#if 0 // incomplete ?
+
 DECL (osl_determinant_w16fw16m_masked, "xXXi")
-#endif
+
 
 #if 0 // incomplete
 DECL (osl_concat_sss, "sss")
@@ -677,10 +687,10 @@ DECL (osl_area_w16, "xXX")
 DECL (osl_area_w16_masked, "xXXi")
 DECL (osl_filterwidth_w16fw16df, "xXX")
 DECL (osl_filterwidth_w16vw16dv, "xXX")
-#if 0 // incomplete
+
 DECL (osl_filterwidth_w16fw16df_masked, "xXXi")
 DECL (osl_filterwidth_w16vw16dv_masked, "xXXi")
-#endif
+
 DECL (osl_raytype_bit_batched, "iXi")
 
 

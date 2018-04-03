@@ -611,8 +611,31 @@ struct StaticMatrix44
     ProxyElement<M33,DivisorT> m33;
 };
 
+// For debugging purposes, you can swap in a DynamicMatrix44 for a StaticMatrix44
+#if __OSL_DEBUG_STATIC_MATRIX44
+struct DynamicMatrix44
+{
+    float m00;
+    float m01;
+    float m02;
+    float m03;
 
+    float m10;
+    float  m11;
+    float  m12;
+    float  m13;
 
+    float  m20;
+    float m21;
+    float m22;
+    float m23;
+
+    float m30;
+    float m31;
+    float m32;
+    float m33;
+};
+#endif
 
 template <class K_T, bool IsBasisUConstantT, int BasisStepT, class MatrixT, class R_T, class X_T, class KArrayT>
 OSL_INLINE
@@ -747,8 +770,8 @@ void spline_evaluate_wide(
             false /*is_basis_u_constant */,
             1 /* basis_step */>
             (catmullRomWeights, wR, wX, wK);
+        break;
 	}
-
 	case 1:  // bezier
 	{
         fast::StaticMatrix44<-1, 3, -3, 1,

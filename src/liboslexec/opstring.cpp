@@ -385,6 +385,43 @@ osl_regex_impl (void *sg_, const char *subject_, void *results, int nresults,
 }
 
 
+//OSL_SHADEOP int
+//osl_regex_impl_batched(void *sgb_, unsigned int mask value, const char *subject_, void *wresults,
+//        int nresults, const char *pattern, int fullmatch)
+//{
+//    ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
+//    ShadingContext *ctx = sgb->uniform().context;
+//
+//    Mask mask (mask_value);
+//    ASSERT(mask.any_on());
+//
+//    const std::string &subject (ustring::from_unique(subject_).string());
+//    boost::match_results<std::string::const_iterator> mresults;
+//
+//    const boost::regex &regex (ctx->find_regex (USTR(pattern)));
+//
+//    if (nresults > 0) {
+//        std::string::const_iterator start = subject.begin();
+//        int res = fullmatch ? boost::regex_match (subject, mresults, regex)
+//                            : boost::regex_search (subject, mresults, regex);
+//        int *m = (int *)results;
+//        for (int r = 0;  r < nresults;  ++r) {
+//            if (r/2 < (int)mresults.size()) {
+//                if ((r & 1) == 0)
+//                    m[r] = mresults[r/2].first - start;
+//                else
+//                    m[r] = mresults[r/2].second - start;
+//            } else {
+//                m[r] = USTR(pattern).length();
+//            }
+//        }
+//        return res;
+//    } else {
+//        return fullmatch ? boost::regex_match (subject, regex)
+//                         : boost::regex_search (subject, regex);
+//    }
+//}
+
 OSL_SHADEOP const char *
 osl_format (const char* format_str, ...)
 {
@@ -396,7 +433,9 @@ osl_format (const char* format_str, ...)
 }
 
 OSL_SHADEOP void
-osl_format_batched (void * wide_output, unsigned int mask_value, const char* format_str, ...)
+osl_format_batched (void * wide_output,
+        unsigned int mask_value,
+        const char* format_str, ...)
 {
     va_list args;
     va_start (args, format_str);

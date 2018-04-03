@@ -362,6 +362,26 @@ osl_transpose_w16mw16m(void *wr_, void *wm_)
 	}
 }
 
+OSL_SHADEOP OSL_CLANG_ATTRIBUTE(flatten) void
+osl_transpose_w16mw16m_masked(void *wr_, void *wm_, unsigned int mask_value)
+{
+    OSL_INTEL_PRAGMA(forceinline recursive)
+    {
+        ConstWideAccessor<Matrix44> wm(wm_);
+        MaskedAccessor<Matrix44> wr(wr_, Mask(mask_value));
+
+        OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
+        for(int lane=0; lane < wr.width; ++lane) {
+            Matrix44 m = wm[lane];
+            // Call inlineable transposed
+            //Matrix44 r = m.transposed();
+            Matrix44 r = inlinedTransposed(m);
+            wr[lane] = r;
+        }
+    }
+}
+
+
 
 
 OSL_SHADEOP int
@@ -1729,6 +1749,23 @@ osl_determinant_w16fw16m(void *wr_, void * wm_)
 			wr[lane] = r;
 		}
 	}
+}
+
+OSL_SHADEOP void
+osl_determinant_w16fw16m_masked(void *wr_, void * wm_, unsigned int mask_value)
+{
+    OSL_INTEL_PRAGMA(forceinline recursive)
+    {
+        ConstWideAccessor<Matrix44> wm(wm_);
+        MaskedAccessor<float> wr(wr_, Mask(mask_value));
+
+        OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
+        for(int lane=0; lane < wr.width; ++lane) {
+            Matrix44 m = wm[lane];
+            float r = det4x4(m);
+            wr[lane] = r;
+        }
+    }
 }
 
 } // namespace pvt

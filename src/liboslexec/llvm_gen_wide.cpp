@@ -2377,7 +2377,6 @@ LLVMGEN (llvm_gen_filterwidth)
     bool op_is_uniform = rop.isSymbolUniform(Result);
 
     if (Src.has_derivs()) {
-
         if (op_is_uniform)
         {
 			if (Src.typespec().is_float()) {
@@ -2397,18 +2396,27 @@ LLVMGEN (llvm_gen_filterwidth)
 			// Don't have 2nd order derivs
 			rop.llvm_zero_derivs (Result);
         } else {
-			// TODO: minding mask values
-			if (Src.typespec().is_float()) {
-		        // TODO: dynamically build width suffix
-				rop.ll.call_function ("osl_filterwidth_w16fw16df",
-									  rop.llvm_void_ptr (Result),
-									  rop.llvm_void_ptr (Src));
-			} else {
-		        // TODO: dynamically build width suffix
-				rop.ll.call_function ("osl_filterwidth_w16vw16dv",
-										rop.llvm_void_ptr (Result),
-										rop.llvm_void_ptr (Src));
-			}
+
+            // Dynamically build width suffix
+            std::string func_name("osl_filterwidth_");
+            // The result may have derivatives, but we zero them out after this
+            // function call, so just always treat the result as not having derivates
+            func_name += warg_typecode(&Result, false);
+            func_name += warg_typecode(&Src, true);
+
+            llvm::Value *args[3];
+            args[0] = rop.llvm_void_ptr (Result);
+            args[1] = rop.llvm_void_ptr (Src);
+            int argCount = 2;
+
+            if (rop.ll.is_masking_required()) {
+                func_name += "_masked";
+                args[2] = rop.ll.mask_as_int(rop.ll.current_mask());
+                argCount = 3;
+            }
+
+            rop.ll.call_function (func_name.c_str(),
+                                  args, argCount);
 			// Don't have 2nd order derivs
 			rop.llvm_zero_derivs (Result);
         }
@@ -2674,6 +2682,7 @@ LLVMGEN (llvm_gen_generic)
             name += "i";
         else ASSERT (0);
     }
+
     OSL_DEV_ONLY(std::cout << "llvm_gen_generic " << name.c_str() << std::endl);
 
     if (! Result.has_derivs() || ! any_deriv_args) {
@@ -2733,9 +2742,11 @@ LLVMGEN (llvm_gen_generic)
 LLVMGEN (llvm_gen_sincos)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
+
     Symbol& Theta   = *rop.opargsym (op, 0);
     Symbol& Sin_out = *rop.opargsym (op, 1);
     Symbol& Cos_out = *rop.opargsym (op, 2);
+
     bool theta_deriv   = Theta.has_derivs();
     bool result_derivs = (Sin_out.has_derivs() || Cos_out.has_derivs());
 
@@ -2750,14 +2761,23 @@ LLVMGEN (llvm_gen_sincos)
     func_name += arg_typecode(Sin_out, Sin_out.has_derivs() && result_derivs  && theta_deriv, op_is_uniform);
     func_name += arg_typecode(Cos_out, Cos_out.has_derivs() && result_derivs  && theta_deriv, op_is_uniform);
 
-    llvm::Value * args[] = {
-    	((theta_deriv && result_derivs) || Theta.typespec().is_triple() || !op_is_uniform) ?
-          rop.llvm_void_ptr (Theta) : rop.llvm_load_value (Theta),
-    	rop.llvm_void_ptr (Sin_out),
-    	rop.llvm_void_ptr (Cos_out)
-    };
+    std::vector<llvm::Value *> args;
+    if(true ==  ((theta_deriv && result_derivs) || Theta.typespec().is_triple() || !op_is_uniform) ){
+      args.push_back(rop.llvm_void_ptr (Theta)) ;
+    }
+    else {
+       args.push_back(rop.llvm_load_value (Theta));
+    }
+    args.push_back(rop.llvm_void_ptr (Sin_out));
+    args.push_back(rop.llvm_void_ptr (Cos_out));
 
-    rop.ll.call_function (func_name.c_str(), &args[0], std::extent<decltype(args)>::value);
+    if (rop.ll.is_masking_required() ) {
+        func_name += std::string("_masked");
+        args.push_back(rop.ll.mask_as_int(rop.ll.current_mask()));
+    }
+
+    rop.ll.call_function (func_name.c_str(), &args[0], args.size());
+
 
     // If the input angle didn't have derivatives, we would not have
     // called the version of sincos with derivs; however in that case we

@@ -309,6 +309,13 @@ Dictionary::dict_next (int nodeID)
     return m_nodes[nodeID].next;
 }
 
+//OSL_SHADEOP void
+//Dictionary::dict_next_ (void *wR, void *wNodeID, unsigned int mask_value)
+//{
+//    if (nodeID <= 0 || nodeID >= (int)m_nodes.size())
+//        return 0;     // invalid node ID
+//    return m_nodes[nodeID].next;
+//}
 
 
 int

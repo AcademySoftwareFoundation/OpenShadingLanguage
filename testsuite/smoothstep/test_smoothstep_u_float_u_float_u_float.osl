@@ -1,0 +1,15 @@
+shader
+test_smoothstep_u_float_u_float_u_float (output color Cout = 0)
+{
+    float  edge0 = 1.0*raytype("camera");
+    float  edge1 = 64.0*raytype("camera");
+    float x = 48.0*raytype("camera");
+    float x2 = 64.0*raytype("camera");
+
+    float st = smoothstep(edge0, edge1, x);
+    if (int(P[0]*64)%2==0) {
+        st = smoothstep(edge0, edge1, x2);
+    }
+    
+    Cout = color(st,st,st);
+}

@@ -1,5 +1,6 @@
 #!/bin/csh
 
+./run_test_dir.csh smoothstep
 ./run_test_dir.csh color
 
 ./run_test_dir.csh texture-filename

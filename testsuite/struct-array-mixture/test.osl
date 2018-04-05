@@ -3,8 +3,8 @@ struct B { A a; };
 struct C { B bs[5]; };
 struct D { C c; };
 
-        
-void Awrite (A a, int multiplier)
+
+void Awrite (output A a, int multiplier)
 {
     printf ("passing a ref to a A:\n");
     a.i = multiplier;
@@ -20,7 +20,7 @@ void Aprint (A a)
 
 
 
-void Bwrite (B b, int multiplier)
+void Bwrite (output B b, int multiplier)
 {
     printf ("passing a ref to a B:\n");
     b.a.i = multiplier;
@@ -36,7 +36,7 @@ void Bprint (B b)
 
 
 
-void Barraywrite (B bs[], int multiplier)
+void Barraywrite (output B bs[], int multiplier)
 {
     printf ("passing a ref to a B[]:\n");
     for (int i = 0;  i < 5;  ++i)
@@ -54,7 +54,7 @@ void Barrayprint (B bs[])
 
 
 
-void Cwrite (C c, int multiplier)
+void Cwrite (output C c, int multiplier)
 {
     printf ("passing a ref to a C:\n");
     for (int i = 0;  i < 5;  ++i)
@@ -72,7 +72,7 @@ void Cprint (C c)
 
 
 
-void Dwrite (D d, int multiplier)
+void Dwrite (output D d, int multiplier)
 {
     printf ("passing a ref to a D:\n");
     for (int i = 0;  i < 5;  ++i)

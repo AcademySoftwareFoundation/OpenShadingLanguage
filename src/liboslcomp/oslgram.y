@@ -234,11 +234,16 @@ formal_param
         : outputspec typespec IDENTIFIER initializer_opt metadata_block_opt
                 {
                     TypeSpec t = oslcompiler->current_typespec();
+                    bool is_output = $1;
                     auto var = new ASTvariable_declaration (oslcompiler,
                                             t, ustring($3), $4 /*init*/,
                                             oslcompiler->declaring_shader_formals() /*isparam*/,
-                                            false /*ismeta*/, $1 /*isoutput*/,
+                                            false /*ismeta*/, is_output,
                                             false /*instlist*/, @3.first_line);
+                    if (! oslcompiler->declaring_shader_formals() && !is_output) {
+                        // these are function formals, not shader formals,
+                        var->sym()->readonly (true);
+                    }
                     var->add_meta ($5);
                     $$ = var;
                 }

@@ -1,0 +1,21 @@
+// A function that tries verious ways to write to its non-output params
+float func (float x, int i)
+{
+    x = 0;
+    x += 3;
+    ++i;
+    i++;
+    return x*x;
+}
+
+
+shader test ()
+{
+    float y = 1;
+    int j = 1;
+    float z = func(y, j);
+    printf ("z=%g\n", z);
+
+    // Try writing to non-writeable global
+    u = 0;
+}

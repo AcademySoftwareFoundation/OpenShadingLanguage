@@ -670,6 +670,10 @@ OSLCompilerImpl::compile_buffer (string_view sourcecode,
 struct GlobalTable {
     const char *name;
     TypeSpec type;
+    bool readonly;
+
+    GlobalTable (const char *name, TypeSpec type, bool readonly=true)
+        : name(name), type(type), readonly(readonly) {}
 };
 
 
@@ -677,34 +681,24 @@ void
 OSLCompilerImpl::initialize_globals ()
 {
     static GlobalTable globals[] = {
-        { "P", TypeDesc::TypePoint },
+        { "P", TypeDesc::TypePoint, false },
         { "I", TypeDesc::TypeVector },
-        { "N", TypeDesc::TypeNormal },
+        { "N", TypeDesc::TypeNormal, false },
         { "Ng", TypeDesc::TypeNormal },
         { "u", TypeDesc::TypeFloat },
         { "v", TypeDesc::TypeFloat },
         { "dPdu", TypeDesc::TypeVector },
         { "dPdv", TypeDesc::TypeVector },
-    #if 0
-        // Light variables -- we don't seem to be on a route to support this
-        // kind of light shader, so comment these out for now.
-        { "L", TypeDesc::TypeVector },
-        { "Cl", TypeDesc::TypeColor },
-        { "Ns", TypeDesc::TypeNormal },
-        { "Pl", TypeDesc::TypePoint },
-        { "Nl", TypeDesc::TypeNormal },
-    #endif
         { "Ps", TypeDesc::TypePoint },
-        { "Ci", TypeSpec (TypeDesc::TypeColor, true) },
+        { "Ci", TypeSpec (TypeDesc::TypeColor, true), false },
         { "time", TypeDesc::TypeFloat },
         { "dtime", TypeDesc::TypeFloat },
-        { "dPdtime", TypeDesc::TypeVector },
-        { NULL }
+        { "dPdtime", TypeDesc::TypeVector }
     };
 
-    for (int i = 0;  globals[i].name;  ++i) {
-        Symbol *s = new Symbol (ustring(globals[i].name), globals[i].type,
-                                SymTypeGlobal);
+    for (auto& g : globals) {
+        Symbol *s = new Symbol (ustring(g.name), g.type, SymTypeGlobal);
+        s->readonly (g.readonly);
         symtab().insert (s);
     }
 }

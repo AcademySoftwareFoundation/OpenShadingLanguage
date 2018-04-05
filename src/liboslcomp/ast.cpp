@@ -620,11 +620,27 @@ ASTvariable_ref::print (std::ostream &out, int indentlevel) const
 
 
 
+ASTpreincdec::ASTpreincdec (OSLCompilerImpl *comp, int op, ASTNode *expr)
+    : ASTNode (preincdec_node, comp, op, expr)
+{
+    check_symbol_writeability (expr);
+}
+
+
+
 const char *
 ASTpreincdec::childname (size_t i) const
 {
     static const char *name[] = { "expression" };
     return name[i];
+}
+
+
+
+ASTpostincdec::ASTpostincdec (OSLCompilerImpl *comp, int op, ASTNode *expr)
+    : ASTNode (postincdec_node, comp, op, expr)
+{
+    check_symbol_writeability (expr);
 }
 
 
@@ -895,6 +911,37 @@ ASTcompound_initializer::childname (size_t i) const
 
 
 
+bool
+ASTNode::check_symbol_writeability (ASTNode *var)
+{
+    if (var->nodetype() == index_node)
+        return check_symbol_writeability (static_cast<ASTindex*>(var)->lvalue().get());
+    if (var->nodetype() == structselect_node)
+        return check_symbol_writeability (static_cast<ASTstructselect*>(var)->lvalue().get());
+
+    Symbol *dest = nullptr;
+    if (var->nodetype() == variable_ref_node)
+        dest = static_cast<ASTvariable_ref*>(var)->sym();
+    else if (var->nodetype() == variable_declaration_node)
+        dest = static_cast<ASTvariable_declaration*>(var)->sym();
+
+    if (dest) {
+        if (dest->readonly()) {
+            if (OSL_VERSION >= 11001)
+                error ("cannot write to \"%s\" (read-only symbol)", dest->name());
+            else
+                warning ("cannot write to \"%s\" (read-only symbol)", dest->name());
+            return false;
+        }
+    } else {
+        // std::cout << "Don't know how to check_symbol_writeability "
+        //           << var->nodetypename() << "\n";
+    }
+    return true;
+}
+
+
+
 ASTassign_expression::ASTassign_expression (OSLCompilerImpl *comp, ASTNode *var,
                                             Operator op, ASTNode *expr)
     : ASTNode (assign_expression_node, comp, op, var, expr)
@@ -904,6 +951,8 @@ ASTassign_expression::ASTassign_expression (OSLCompilerImpl *comp, ASTNode *var,
         m_op = Assign;
         m_children[1] = new ASTbinary_expression (comp, op, var, expr);
     }
+
+    check_symbol_writeability (var);
 }
 
 

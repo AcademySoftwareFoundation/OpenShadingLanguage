@@ -365,6 +365,11 @@ protected:
 	codegen_aassign (TypeSpec elemtype, Symbol *src, Symbol *lval,
                      Symbol* index, int i = 0);
 
+    // Check whether the node's symbol destination is ok to write. Return
+    // true if ok, return false and issue error or warning if not. (Used to
+    // check for writing to read-only variables like non-output parameters.)
+    bool check_symbol_writeability (ASTNode *var);
+
     // Helper for param_default_literals: generate the string that gives
     // the initialization of the literal value (and/or the default, if
     // init==NULL) and append it to 'out'.  Return whether the full
@@ -523,9 +528,7 @@ private:
 class ASTpreincdec : public ASTNode
 {
 public:
-    ASTpreincdec (OSLCompilerImpl *comp, int op, ASTNode *expr)
-        : ASTNode (preincdec_node, comp, op, expr)
-    { }
+    ASTpreincdec (OSLCompilerImpl *comp, int op, ASTNode *expr);
     const char *nodetypename () const { return m_op==Incr ? "preincrement" : "predecrement"; }
     const char *childname (size_t i) const;
     TypeSpec typecheck (TypeSpec expected);
@@ -539,9 +542,7 @@ public:
 class ASTpostincdec : public ASTNode
 {
 public:
-    ASTpostincdec (OSLCompilerImpl *comp, int op, ASTNode *expr)
-        : ASTNode (postincdec_node, comp, op, expr)
-    { }
+    ASTpostincdec (OSLCompilerImpl *comp, int op, ASTNode *expr);
     const char *nodetypename () const { return m_op==Incr ? "postincrement" : "postdecrement"; }
     const char *childname (size_t i) const;
     TypeSpec typecheck (TypeSpec expected);

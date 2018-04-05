@@ -279,7 +279,8 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             oslc-comma oslc-D
             oslc-err-arrayindex oslc-err-closuremul oslc-err-field
             oslc-err-format oslc-err-funcoverload
-            oslc-err-intoverflow oslc-err-noreturn oslc-err-notfunc
+            oslc-err-intoverflow oslc-err-write-nonoutput
+            oslc-err-noreturn oslc-err-notfunc
             oslc-err-initlist-args oslc-err-initlist-return
             oslc-err-outputparamvararray oslc-err-paramdefault
             oslc-err-struct-array-init oslc-err-struct-ctr

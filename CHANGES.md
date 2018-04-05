@@ -45,6 +45,10 @@ OSL Language and oslc compiler:
 
 * osl now warns when it detects duplicate declarations of functions with
   the exact same argument list, in the same scope. #746
+* osl now correctly reports the error when you write to a user-function
+  parameter that was not declared as `output` (function params are by
+  default read-only, but a shortcoming in oslc has prevented that error
+  from being issued). #878 (1.10.0)
 * Fix oslc crash with invalid field selection syntax. #835 (1.10.0/1.9.6)
 * oslc fix to properly handle command line arguments if the shader file is
   not the last argument on the command line. #841 (1.10.0/1.9.7)

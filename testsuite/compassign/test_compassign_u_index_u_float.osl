@@ -1,0 +1,12 @@
+shader
+test_compassign_u_index_u_float (output color Cout = 0)
+{
+    color  val = color(0.0);
+    color  val2 = color(0.25);
+    
+    val[0] = 0.5;
+    if (int(P[0]*64)%2==0) {
+        val2[1] = 1.0;
+    }
+    Cout = val + val2;
+}

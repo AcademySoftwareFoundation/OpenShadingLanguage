@@ -499,7 +499,6 @@ getargs (int argc, const char *argv[])
                 "--scaleuv %f %f", &uscale, &vscale, "Scale s & t texture lookups (default: 1, 1)",
                 "--scalest %f %f", &uscale, &vscale, "", // old name
                 "--userdata_isconnected", &userdata_isconnected, "Consider lockgeom=0 to be isconnected()",
-                "-v", &verbose, "Verbose output",
                 NULL);
     if (ap.parse(argc, argv) < 0 || (shadernames.empty() && groupspec.empty())) {
         std::cerr << ap.geterror() << std::endl;

@@ -1,5 +1,6 @@
 #!/bin/csh
 
+./run_test_dir.csh trig/pow
 ./run_test_dir.csh compassign
 
 ./run_test_dir.csh abs

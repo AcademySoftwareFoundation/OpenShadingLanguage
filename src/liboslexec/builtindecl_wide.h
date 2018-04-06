@@ -493,7 +493,7 @@ WIDE_UNARY_OP_IMPL(abs)
 WIDE_UNARY_I_OP_IMPL(abs)
 WIDE_UNARY_OP_IMPL(fabs)
 WIDE_UNARY_I_OP_IMPL(fabs)
-WIDE_BINARY_OP_IMPL(fmod)
+// fmod is handled by the code generator
 
 DECL (osl_smoothstep_w16fw16fw16fw16f, "xXXXX")
 DECL (osl_smoothstep_w16fw16fw16fw16f_masked, "xXXXXi")

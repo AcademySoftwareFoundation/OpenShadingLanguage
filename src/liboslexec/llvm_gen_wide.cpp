@@ -999,43 +999,30 @@ LLVMGEN (llvm_gen_modulus)
     bool result_is_uniform = rop.isSymbolUniform(Result);
 	ASSERT(op_is_uniform || !result_is_uniform);
 
-	ASSERT((!op_is_uniform || result_is_uniform) && "incomplete not handled widening results yet");
-
-	// Have generic handler handle all combinations vs. special casing here
-#ifdef OSL_LLVM_NO_BITCODE
-    // On Windows 32 bit this calls an unknown instruction, probably need to
-    // link with LLVM compiler-rt to fix, for now just fall back to op
-    if (is_float)
-        return llvm_gen_generic (rop, opnum);
-#endif
-
-    // The following should handle f%f, v%v, v%f, i%i
-    // That's all that should be allowed by oslc.
-    std::string safe_mod;
-    if (op_is_uniform) {
-        safe_mod = is_float ? "osl_fmod_fff" : "osl_safe_mod_iii";
-    } else {
-
-        std::string wf(warg_lane_count());
-        wf.append(is_float ? "f" : "i");
-        safe_mod = is_float ? "osl_fmod_" : "osl_safe_mod_";
-        safe_mod.append(wf).append(wf).append(wf);
-        // Intended for implementation of wide version to be inlined as to not have to handle masking
-    }
-
     int num_components = type.aggregate;
     for (int i = 0; i < num_components; i++) {
-        if (B.is_constant() && ! rop.is_zero(B)) {
-            llvm::Value *r;
-            llvm::Value *a = rop.loadLLVMValue (A, i, 0, type, op_is_uniform);
-            llvm::Value *b = rop.loadLLVMValue (B, i, 0, type, op_is_uniform);
-            if (!a || !b)
-                return false;
-            r = rop.ll.op_mod (a, b);
-            rop.storeLLVMValue (r, Result, i, 0);
+
+        llvm::Value *a = rop.loadLLVMValue (A, i, 0, type, op_is_uniform);
+        llvm::Value *b = rop.loadLLVMValue (B, i, 0, type, op_is_uniform);
+        if (!a || !b)
+            return false;
+        llvm::Value *zeroConstant;
+        if (is_float) {
+            zeroConstant = op_is_uniform ? rop.ll.constant(0.0f) : rop.ll.wide_constant(0.0f);
         } else {
-            rop.ll.call_function (safe_mod.c_str(), rop.llvm_void_ptr(Result), rop.llvm_void_ptr(A), rop.llvm_void_ptr(B));
+            // Integer versions of safe mod handled in stdosl.h
+            // We will leave the code to handle ints here as well
+            zeroConstant = op_is_uniform ? rop.ll.constant(0) : rop.ll.wide_constant(0);
         }
+
+        llvm::Value *is_zero_mask = rop.ll.op_eq(b, zeroConstant);
+        llvm::Value *mod_result = rop.ll.op_mod (a, b);
+        llvm::Value * r = rop.ll.op_select(is_zero_mask, zeroConstant, mod_result);
+        if (op_is_uniform && !result_is_uniform)
+        {
+            r = rop.ll.widen_value(r);
+        }
+        rop.storeLLVMValue (r, Result, i, 0);
     }
 
     if (Result.has_derivs()) {

@@ -975,14 +975,6 @@ MAKE_WIDE_TEST_F_OP(isnan,OIIO::isnan)
 MAKE_WIDE_TEST_F_OP(isinf,OIIO::isinf)
 MAKE_WIDE_TEST_F_OP(isfinite,OIIO::isfinite)
 
-// Integer versions of safe mod handled in stdosl.h
-MAKE_WIDE_BINARY_PERCOMPONENT_OP (fmod, sfm::safe_fmod, sfm::safe_fmod);
-MAKE_WIDE_BINARY_PERCOMPONENT_VF_OP (fmod, sfm::safe_fmod, sfm::safe_fmod)
-
-
-
-
-
 static OSL_INLINE void impl_sincos (float theta, float &rsine, float &rcosine) {
 #if OSL_FAST_MATH
 	//OIIO::fast_sincos(theta, &rsine, &rcosine);
@@ -1621,14 +1613,14 @@ osl_distance_w16dfw16vw16dv_masked(void *r_, void *a_, void *b_, int mask_value)
 }
 
 OSL_SHADEOP void
-osl_distance_w16dfw16dvw16dv(void *r_, void *a_, void *b_, int mask_value)
+osl_distance_w16dfw16dvw16dv(void *r_, void *a_, void *b_)
 {
 
     OSL_INTEL_PRAGMA(forceinline recursive)
     {
         ConstWideAccessor<Dual2<Vec3>> wA(a_);
         ConstWideAccessor<Dual2<Vec3>> wB(b_);
-        MaskedAccessor<Dual2<float>> wr(r_, Mask(mask_value));
+        WideAccessor<Dual2<float>> wr(r_);
 
         OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
         for(int lane=0; lane < wr.width; ++lane) {

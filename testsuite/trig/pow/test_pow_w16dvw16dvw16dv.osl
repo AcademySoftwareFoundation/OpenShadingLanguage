@@ -1,0 +1,28 @@
+#ifndef M_PI
+#define M_PI 3.14159265358979
+#endif
+
+//testshade --batched --llvm_debug -g 4 4 test_pow_w16f_w16f_w16f -o res a.tif | grep o
+
+shader
+test_pow_w16dv_w16dv_w16dv (output color res = 0,
+			     output color Dxres = 0,
+			     output color res_m = 0,
+			     output color Dxres_m = 0)
+{
+    
+  vector a = u;
+  vector b = v;
+
+
+ res = pow(a,b); 
+ Dxres = Dx(res);
+
+if (P[0]>0.5){
+
+res_m = pow(a,b);
+Dxres_m = Dx(res_m);
+
+}
+
+}

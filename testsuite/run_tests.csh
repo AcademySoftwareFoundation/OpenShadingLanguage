@@ -1,5 +1,7 @@
 #!/bin/csh
 
+./run_test_dir.csh trig/pow
+
 ./run_test_dir.csh smoothstep
 ./run_test_dir.csh color
 

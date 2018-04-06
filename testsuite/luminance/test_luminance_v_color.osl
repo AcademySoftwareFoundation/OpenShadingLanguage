@@ -1,0 +1,15 @@
+shader
+test_luminance_v_color (output color Cout = 0)
+{
+    color c1 = color(u, v, u+v);
+    
+    color c2 = color(u+v, u, v);
+
+    float val1 = luminance(c1);
+    float val2 = 0.0;
+    if (int(P[0]*64)%2==0) {
+        val2 = luminance(c2);
+    }
+    
+    Cout = color(val1, val2, val1+val2);
+}

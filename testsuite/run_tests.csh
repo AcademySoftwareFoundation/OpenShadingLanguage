@@ -33,3 +33,4 @@
 ./exec_test_dir.csh max
 ./exec_test_dir.csh min
 
+./run_test_dir.csh luminance

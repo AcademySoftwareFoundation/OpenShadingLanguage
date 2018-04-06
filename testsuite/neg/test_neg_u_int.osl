@@ -1,0 +1,13 @@
+shader
+test_neg_u_int (output color Cout = 0)
+{
+    int  val = 32*raytype("camera");
+    int  val2 = 16*raytype("camera");
+    
+    int d = -val;
+    if (int(P[0]*64)%2==0) {
+        d = -val2;
+    }
+    
+    Cout = color(-d/32.0, -d/32.0, -d/32.0);
+}

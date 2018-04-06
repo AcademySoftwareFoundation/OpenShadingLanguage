@@ -1,0 +1,28 @@
+shader
+test_neg_u_matrix (output color Cout = 0)
+{
+    int u_val = raytype("camera");
+    matrix  val = matrix(
+        -0.8*u_val, -0.5*u_val, -0.25*u_val, -0.1*u_val,
+        -0.2*u_val, -0.4*u_val, -0.65*u_val, -0.9*u_val,
+        -0.7*u_val, -0.85*u_val, -0.55*u_val, -0.85*u_val,
+        -0.33*u_val, -0.66*u_val, -0.77*u_val, -1.0*u_val
+    );
+    matrix  val2 = matrix(
+        -0.7*u_val, -0.85*u_val, -0.55*u_val, -0.85*u_val,
+        -0.2*u_val, -0.4*u_val, -0.65*u_val, -0.9*u_val,
+        -0.8*u_val, -0.5*u_val, -0.25*u_val, -0.1*u_val,
+        -0.77*u_val, -0.33*u_val, -0.66*u_val, -1.0*u_val
+    );
+    matrix d = -val;
+    if (int(P[0]*64)%2==0) {
+        d = -val2;
+    }
+    d*=0.1;
+    
+    Cout = color(
+        d[0][0] + d[0][1] + d[0][2] + d[0][3],
+        d[1][0] + d[1][1] + d[1][2] + d[1][3],
+        d[2][0] + d[2][1] + d[2][2] + d[2][3] +
+        d[3][0] + d[3][1] + d[3][2] + d[3][3]);         
+}

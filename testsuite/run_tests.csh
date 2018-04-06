@@ -1,6 +1,10 @@
 #!/bin/csh
 
 ./run_test_dir.csh trig/pow
+./run_test_dir.csh compassign
+
+./run_test_dir.csh abs
+./run_test_dir.csh neg
 
 ./run_test_dir.csh smoothstep
 ./run_test_dir.csh color

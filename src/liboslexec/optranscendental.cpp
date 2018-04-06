@@ -187,6 +187,31 @@ osl_##name##_w16dvw16dv (void *r_, void *val_)                      \
 			wr[lane] = r;                                           \
 		}                                                           \
 	}                                                               \
+}                                                                   \
+OSL_SHADEOP void                       \
+osl_##name##_w16dvw16dv_masked (void *r_, void *val_, int mask_value)                      \
+{                                                                   \
+    OSL_INTEL_PRAGMA(forceinline recursive)                         \
+    {                                                               \
+        ConstWideAccessor<Dual2<Vec3>> wdf(val_);                   \
+        MaskedAccessor<Dual2<Vec3>> wr(r_, Mask(mask_value));        \
+        /*OSL_OMP_PRAGMA(omp simd simdlen(wr.width))*/                  \
+        OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(wr.width)) \
+        OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(wr.width)) \
+        for(int lane=0; lane < wr.width; ++lane) {                  \
+            Dual2<Vec3> df = wdf[lane];                             \
+            Dual2<float> sx (df.val().x, df.dx().x, df.dy().x);   \
+            Dual2<float> sy (df.val().y, df.dx().y, df.dy().y);   \
+            Dual2<float> sz (df.val().z, df.dx().z, df.dy().z);   \
+            Dual2<float> ax = dualfunc (sx);   \
+            Dual2<float> ay = dualfunc (sy);   \
+            Dual2<float> az = dualfunc (sz);   \
+            Dual2<Vec3> r (Vec3( ax.val(), ay.val(), az.val()),     \
+                           Vec3( ax.dx(),  ay.dx(),  az.dx() ),     \
+                           Vec3( ax.dy(),  ay.dy(),  az.dy() ));    \
+            wr[lane] = r;                                           \
+        }                                                           \
+    }                                                               \
 }
 
 

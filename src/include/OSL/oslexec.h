@@ -114,6 +114,9 @@ public:
     ///                              fails to find the layer or parameter? (1)
     ///    int strict_messages    Issue error if a message is set after
     ///                              being queried (1).
+    ///    int error_repeats      If zero, suppress repeats of errors and
+    ///                              warnings that are exact duplicates of
+    ///                              earlier ones. (1)
     ///    int lazylayers         Evaluate shader layers only when their
     ///                              outputs are first needed (1)
     ///    int lazyglobals        Run layers lazily even if they write to

@@ -96,6 +96,10 @@ API changes, new options, new ShadingSystem features (for renderer writers):
     * New developer option "llvm_output_bitcode" dumps the bitcode for each
       group, even if other debug options aren't turned on, and also any
       dumped bitcode will save as text as well as binary. #831 (1.10.0)
+    * New attribute "error_repeats", if set to non-zero, turns off the
+      suppression of multiple identical errors and warnings. Setting it
+      (even to its existing value) also clears the "already seen" lists.
+      #880 (1.10.0/1.9.9/1.8.14)
 * Shader group attributes:
 * RendererServices API:
     * Older versions of RendererServices texture functions, the old ones
@@ -129,6 +133,14 @@ Developer goodies:
 Documentation:
 * `osltoy` documentations in `doc/osltoy.md.html` (1.10.0).
 
+
+
+Release 1.9.9 -- 1 May 2018 (compared to 1.9.8)
+-----------------------------------------------
+* New SS attribute "error_repeats", if set to non-zero, turns off the
+ suppression of multiple identical errors and warnings. Setting it (even to
+ its existing value) also clears the "already seen" lists. #880
+ (1.8.14/1.9.9)
 
 Release 1.9.8 -- 1 Apr 2018 (compared to 1.9.7)
 -----------------------------------------------
@@ -408,6 +420,15 @@ Documentation:
 
 
 
+Release 1.8.14 -- 1 May 2018 (compared to 1.8.13)
+--------------------------------------------------
+* New SS attribute "error_repeats", if set to non-zero, turns off the
+ suppression of multiple identical errors and warnings. Setting it (even to
+ its existing value) also clears the "already seen" lists. #880
+
+Release 1.8.13 -- 1 Apr 2018 (compared to 1.8.12)
+--------------------------------------------------
+* Build the version into the shared library .so names. #876
 
 Release 1.8.12 -- 1 Nov 2017 (compared to 1.8.11)
 --------------------------------------------------

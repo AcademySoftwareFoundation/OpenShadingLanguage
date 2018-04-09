@@ -409,6 +409,14 @@ getargs (int argc, const char *argv[])
 int
 main (int argc, char const *argv[])
 {
+#if !defined(NDEBUG) || defined(OIIO_CI) || defined(OIIO_CODE_COVERAGE)
+    // For the sake of test time, reduce the default iterations for DEBUG,
+    // CI, and code coverage builds. Explicit use of --iters or --trials
+    // will override this, since it comes before the getargs() call.
+    iterations /= 10;
+    ntrials = 1;
+#endif
+
     getargs (argc, argv);
 
     test_perlin ();

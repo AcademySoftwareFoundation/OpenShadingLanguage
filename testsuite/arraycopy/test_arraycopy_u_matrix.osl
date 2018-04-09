@@ -1,0 +1,22 @@
+shader
+test_arraycopy_u_matrix (output color Cout = color(0,0,0))
+{
+    float  uval = raytype("camera");
+
+    // Test array referencing with varying index
+    matrix marray[3] = { matrix(0.1*uval), matrix(0.25*uval), matrix(0.5*uval) };
+
+    matrix negmarray[3] = { matrix(0.6*uval), matrix(0.75*uval), matrix(0.8*uval) };
+
+    matrix marray2[3];
+    
+    
+    marray2 = marray;
+    
+    if (int(P[0]*64)%2==0) {
+        marray2 = negmarray;
+    }
+    
+    
+    Cout = marray2[0][0][0] + marray2[1][0][0] + marray2[2][0][0]; 
+}

@@ -3241,7 +3241,7 @@ BackendLLVMWide::llvm_assign_impl (Symbol &Result, Symbol &Src,
         return true;
     }
 
-#if 0  // memcpy compicated by promotion of uniform to wide during assignment, dissallow
+#if 0  // memcpy complicated by promotion of uniform to wide during assignment, dissallow
     // Copying of entire arrays.  It's ok if the array lengths don't match,
     // it will only copy up to the length of the smaller one.  The compiler
     // will ensure they are the same size, except for certain cases where

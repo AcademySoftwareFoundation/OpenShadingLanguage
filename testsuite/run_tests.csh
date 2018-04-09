@@ -1,5 +1,7 @@
 #!/bin/csh
 
+./run_test_dir.csh arraycopy
+
 ./run_test_dir.csh trig/pow
 ./run_test_dir.csh compassign
 

@@ -1,0 +1,24 @@
+shader
+test_arraycopy_u_color (output color Cout = color(0,0,0))
+{
+    // Test array referencing with varying index
+    color carray[3] = { color(0.7,0.8,0.9), color(0.2,0.3,0.4), color(0.5,0.6,0.7) };
+
+    color negcarray[3] = { color(-0.5,-0.6,-0.7), color(-0.7,-0.8,-0.9), color(-0.2,-0.3,-0.4) };
+
+    
+    
+
+    color carray2[3];
+    carray2 = carray;
+    
+    color carray3[3];    
+    carray3 = carray2;
+    
+    if (int(P[0]*64)%2==0) {
+        carray3 = negcarray;
+    }
+    
+    
+    Cout = carray3[0] + carray3[1] + carray3[2]; 
+}

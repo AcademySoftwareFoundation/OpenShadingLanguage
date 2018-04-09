@@ -1,6 +1,9 @@
 Release 1.9.9 -- 1 May 2018 (compared to 1.9.8)
 -----------------------------------------------
-
+* New SS attribute "error_repeats", if set to non-zero, turns off the
+ suppression of multiple identical errors and warnings. Setting it (even to
+ its existing value) also clears the "already seen" lists. #880
+ (1.8.14/1.9.9)
 
 Release 1.9.8 -- 1 Apr 2018 (compared to 1.9.7)
 -----------------------------------------------
@@ -278,6 +281,12 @@ Documentation:
 * Fixed unclear explanation about structures with nested arrays. (1.9.0)
 * Full testshade docs in `doc/testshade.md.html` (1.9.0)
 
+
+Release 1.8.14 -- 1 May 2018 (compared to 1.8.13)
+--------------------------------------------------
+* New SS attribute "error_repeats", if set to non-zero, turns off the
+ suppression of multiple identical errors and warnings. Setting it (even to
+ its existing value) also clears the "already seen" lists. #880
 
 Release 1.8.13 -- 1 Apr 2018 (compared to 1.8.12)
 --------------------------------------------------

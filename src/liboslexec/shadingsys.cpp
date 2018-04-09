@@ -648,6 +648,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_lazy_userdata(false), m_userdata_isconnected(false),
       m_clearmemory (false), m_debugnan (false), m_debug_uninit(false),
       m_lockgeom_default (true), m_strict_messages(true),
+      m_error_repeats(false),
       m_range_checking(true),
       m_unknown_coordsys_error(true), m_connection_error(true),
       m_greedyjit(false), m_countlayerexecs(false),
@@ -1092,6 +1093,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("llvm_debug_layers", int, m_llvm_debug_layers);
     ATTR_SET ("llvm_debug_ops", int, m_llvm_debug_ops);
     ATTR_SET ("strict_messages", int, m_strict_messages);
+    ATTR_SET ("error_repeats", int, m_error_repeats);
     ATTR_SET ("range_checking", int, m_range_checking);
     ATTR_SET ("unknown_coordsys_error", int, m_unknown_coordsys_error);
     ATTR_SET ("connection_error", int, m_connection_error);
@@ -1165,6 +1167,7 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     }
 
     lock_guard guard (m_mutex);  // Thread safety
+
     ATTR_DECODE_STRING ("searchpath:shader", m_searchpath);
     ATTR_DECODE ("statistics:level", int, m_statslevel);
     ATTR_DECODE ("lazylayers", int, m_lazylayers);
@@ -1286,6 +1289,14 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("stat:mem_inst_paramvals_peak", long long, m_stat_mem_inst_paramvals.peak());
     ATTR_DECODE ("stat:mem_inst_connections_current", long long, m_stat_mem_inst_connections.current());
     ATTR_DECODE ("stat:mem_inst_connections_peak", long long, m_stat_mem_inst_connections.peak());
+
+    if (name == "error_repeats") {
+        // Special case: setting error_repeats also clears the "previously
+        // seen" error and warning lists.
+        m_errseen.clear();
+        m_warnseen.clear();
+        ATTR_DECODE ("error_repeats", int, m_error_repeats);
+    }
 
     return false;
 #undef ATTR_DECODE
@@ -1514,7 +1525,7 @@ ShadingSystemImpl::error (const std::string &msg) const
     lock_guard guard (m_errmutex);
     int n = 0;
     for (auto&& s : m_errseen) {
-        if (s == msg)
+        if (s == msg && !m_error_repeats)
             return;
         ++n;
     }
@@ -1532,7 +1543,7 @@ ShadingSystemImpl::warning (const std::string &msg) const
     lock_guard guard (m_errmutex);
     int n = 0;
     for (auto&& s : m_warnseen) {
-        if (s == msg)
+        if (s == msg && !m_error_repeats)
             return;
         ++n;
     }
@@ -1626,6 +1637,7 @@ ShadingSystemImpl::getstats (int level) const
     BOOLOPT (debug_uninit);
     BOOLOPT (lockgeom_default);
     BOOLOPT (strict_messages);
+    BOOLOPT (error_repeats);
     BOOLOPT (range_checking);
     BOOLOPT (greedyjit);
     BOOLOPT (countlayerexecs);

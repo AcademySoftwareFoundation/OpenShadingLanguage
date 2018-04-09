@@ -751,6 +751,7 @@ private:
     bool m_debug_uninit;                  ///< Find use of uninitialized vars?
     bool m_lockgeom_default;              ///< Default value of lockgeom
     bool m_strict_messages;               ///< Strict checking of message passing usage?
+    bool m_error_repeats;                 ///< Allow repeats of identical err/warn?
     bool m_range_checking;                ///< Range check arrays & components?
     bool m_unknown_coordsys_error;        ///< Error to use unknown xform name?
     bool m_connection_error;              ///< Error for ConnectShaders to fail?

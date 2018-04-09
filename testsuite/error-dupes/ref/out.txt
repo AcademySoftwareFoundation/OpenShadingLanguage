@@ -1,4 +1,5 @@
 Compiled test.osl -> test.oso
+Without repeated errors:
 WARNING: Shader warning [test]: hi
 
 WARNING: Shader warning [test]: there
@@ -6,5 +7,87 @@ WARNING: Shader warning [test]: there
 ERROR: Shader error [test]: hi
 
 ERROR: Shader error [test]: there
+
+
+With repeated errors:
+WARNING: Shader warning [test]: hi
+
+WARNING: Shader warning [test]: there
+
+WARNING: Shader warning [test]: hi
+
+WARNING: Shader warning [test]: hi
+
+WARNING: Shader warning [test]: hi
+
+ERROR: Shader error [test]: hi
+
+ERROR: Shader error [test]: there
+
+ERROR: Shader error [test]: hi
+
+ERROR: Shader error [test]: hi
+
+ERROR: Shader error [test]: hi
+
+WARNING: Shader warning [test]: hi
+
+WARNING: Shader warning [test]: there
+
+WARNING: Shader warning [test]: hi
+
+WARNING: Shader warning [test]: hi
+
+WARNING: Shader warning [test]: hi
+
+ERROR: Shader error [test]: hi
+
+ERROR: Shader error [test]: there
+
+ERROR: Shader error [test]: hi
+
+ERROR: Shader error [test]: hi
+
+ERROR: Shader error [test]: hi
+
+WARNING: Shader warning [test]: hi
+
+WARNING: Shader warning [test]: there
+
+WARNING: Shader warning [test]: hi
+
+WARNING: Shader warning [test]: hi
+
+WARNING: Shader warning [test]: hi
+
+ERROR: Shader error [test]: hi
+
+ERROR: Shader error [test]: there
+
+ERROR: Shader error [test]: hi
+
+ERROR: Shader error [test]: hi
+
+ERROR: Shader error [test]: hi
+
+WARNING: Shader warning [test]: hi
+
+WARNING: Shader warning [test]: there
+
+WARNING: Shader warning [test]: hi
+
+WARNING: Shader warning [test]: hi
+
+WARNING: Shader warning [test]: hi
+
+ERROR: Shader error [test]: hi
+
+ERROR: Shader error [test]: there
+
+ERROR: Shader error [test]: hi
+
+ERROR: Shader error [test]: hi
+
+ERROR: Shader error [test]: hi
 
 

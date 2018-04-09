@@ -1,6 +1,8 @@
 Release 1.8.14 -- ?? 2018 (compared to 1.8.13)
 --------------------------------------------------
-
+* New SS attribute "error_repeats", if set to non-zero, turns off the
+ suppression of multiple identical errors and warnings. Setting it (even to
+ its existing value) also clears the "already seen" lists. #880
 
 Release 1.8.13 -- 1 Apr 2018 (compared to 1.8.12)
 --------------------------------------------------

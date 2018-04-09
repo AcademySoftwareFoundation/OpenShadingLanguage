@@ -1,3 +1,7 @@
+Release 1.8.14 -- ?? 2018 (compared to 1.8.13)
+--------------------------------------------------
+
+
 Release 1.8.13 -- 1 Apr 2018 (compared to 1.8.12)
 --------------------------------------------------
 * Build the version into the shared library .so names. #876

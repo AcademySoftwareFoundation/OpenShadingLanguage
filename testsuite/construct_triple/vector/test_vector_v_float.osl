@@ -1,0 +1,15 @@
+shader
+test_vector_v_float (output color Cout = 0)
+{
+    // Quantize val to avoid disagreements between scalar & SIMD as it approaches 0
+    float val = 1.0/(float(64-int(64*u))/64);
+    float val2 = v;
+     
+    vector p1 = vector(val);
+    if (int(P[0]*64)%2==0) {
+        vector p2 = vector(val2);
+        p1 = p2;
+    }
+    
+    Cout = p1;
+}

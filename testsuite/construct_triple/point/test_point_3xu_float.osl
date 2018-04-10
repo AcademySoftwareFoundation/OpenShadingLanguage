@@ -1,0 +1,18 @@
+shader
+test_point_3xu_float (output color Cout = 0)
+{
+    float  valr = 1.0/(2*raytype("camera"));
+    float  valg = 1.0/(3*raytype("camera"));
+    float  valb = 1.0/(4*raytype("camera"));
+    float val2r = valr/2;
+    float val2g = valg/2;
+    float val2b = valb/2;
+
+    point p1 = point(valr,valg,valb);
+    if (int(P[0]*64)%2==0) {
+        point p2 = point(val2r,val2g,val2b);
+        p1 = p2;
+    }
+    
+    Cout = p1;
+}

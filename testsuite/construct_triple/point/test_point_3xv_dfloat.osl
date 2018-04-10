@@ -1,0 +1,22 @@
+shader
+test_point_3xv_dfloat(output color Cout = 0)
+{
+    float valr = 0.5*(v);
+    float valg = 0.6*(v);
+    float valb = 0.4*(v);
+    float val2r = u;
+    float val2g = 0.3*u;
+    float val2b = 0.75*u;
+     
+              
+    point p1 = point(valr, valg, valb);
+    if (int(P[0]*64)%2==0) {
+        point p2 = point(val2r, val2g, val2b);
+        p1 = p2;
+    }
+            
+    point dxc = Dx(p1);
+    point dyc = Dy(p1);
+    Cout = dxc + dyc;
+    
+}

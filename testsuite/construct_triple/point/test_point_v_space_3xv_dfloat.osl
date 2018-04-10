@@ -1,0 +1,22 @@
+shader
+test_point_v_space_3xv_dfloat (output color Cout = 0)
+{
+    float valr = 0.5*(v);
+    float valg = 0.6*(v);
+    float valb = 0.4*(v);
+    float val2r = u;
+    float val2g = 0.3*u;
+    float val2b = 0.75*u;
+
+    string pointspaces[5] = { "common", "object", "shader", "world", "camera"};
+    string pointspace = pointspaces[int(P[0]*64)%5];
+
+    point c1 = point(pointspace, valr, valg, valb);
+    if (int(P[0]*64)%2==0) {
+        c1 = point(pointspace, val2r, val2g, val2b);
+    }
+    
+    point dxc = Dx(c1);
+    point dyc = Dy(c1);
+    Cout = dxc + dyc;
+}

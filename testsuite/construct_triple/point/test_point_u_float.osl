@@ -1,0 +1,14 @@
+shader
+test_point_u_float (output color Cout = 0)
+{
+    float  val = 1.0/(2*raytype("camera"));
+    float val2 = val/2;
+
+    point p1 = point(val);
+    if (int(P[0]*64)%2==0) {
+        point p2 = point(val2);
+        p1 = p2;
+    }
+    
+    Cout = p1;
+}

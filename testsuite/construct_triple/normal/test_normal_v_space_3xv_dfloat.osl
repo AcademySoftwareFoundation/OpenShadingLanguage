@@ -1,0 +1,22 @@
+shader
+test_normal_v_space_3xv_dfloat (output color Cout = 0)
+{
+    float valr = 0.5*(v);
+    float valg = 0.6*(v);
+    float valb = 0.4*(v);
+    float val2r = u;
+    float val2g = 0.3*u;
+    float val2b = 0.75*u;
+
+    string normalspaces[5] = { "common", "object", "shader", "world", "camera"};
+    string normalspace = normalspaces[int(P[0]*64)%5];
+
+    normal c1 = normal(normalspace, valr, valg, valb);
+    if (int(P[0]*64)%2==0) {
+        c1 = normal(normalspace, val2r, val2g, val2b);
+    }
+    
+    normal dxc = Dx(c1);
+    normal dyc = Dy(c1);
+    Cout = dxc + dyc;
+}

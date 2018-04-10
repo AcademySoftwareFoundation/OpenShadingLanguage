@@ -1,5 +1,6 @@
 #!/bin/csh
 
+./exec_test_dir.csh construct_triple
 ./run_test_dir.csh mxcompref
 ./run_test_dir.csh arraycopy
 

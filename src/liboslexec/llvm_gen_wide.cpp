@@ -1604,8 +1604,12 @@ LLVMGEN (llvm_gen_mxcompref)
     Symbol& Row = *rop.opargsym (op, 2);
     Symbol& Col = *rop.opargsym (op, 3);
 
-    llvm::Value *row = rop.llvm_load_value (Row);
-    llvm::Value *col = rop.llvm_load_value (Col);
+    bool op_is_uniform = rop.isSymbolUniform(Result);
+    bool components_are_uniform = rop.isSymbolUniform(Row) && rop.isSymbolUniform(Col);
+
+    llvm::Value *row = rop.llvm_load_value (Row, 0, 0, TypeDesc::UNKNOWN, components_are_uniform);
+    llvm::Value *col = rop.llvm_load_value (Col, 0, 0, TypeDesc::UNKNOWN, components_are_uniform);
+
     if (rop.shadingsys().range_checking()) {
         // TODO: Handle non-uniform case below minding mask values
         ASSERT(rop.isSymbolUniform(Result));
@@ -1630,11 +1634,11 @@ LLVMGEN (llvm_gen_mxcompref)
         int r = Imath::clamp (((int*)Row.data())[0], 0, 3);
         int c = Imath::clamp (((int*)Col.data())[0], 0, 3);
         int comp = 4 * r + c;
-        val = rop.llvm_load_value (M, 0, comp);
+        val = rop.llvm_load_value (M, 0, comp, TypeDesc::TypeFloat, op_is_uniform);
     } else {
-        llvm::Value *comp = rop.ll.op_mul (row, rop.ll.constant(4));
+        llvm::Value *comp = rop.ll.op_mul (row, components_are_uniform ? rop.ll.constant(4) : rop.ll.wide_constant(4));
         comp = rop.ll.op_add (comp, col);
-        val = rop.llvm_load_component_value (M, 0, comp);
+        val = rop.llvm_load_component_value (M, 0, comp, op_is_uniform, components_are_uniform);
     }
     rop.llvm_store_value (val, Result);
     rop.llvm_zero_derivs (Result);
@@ -1653,13 +1657,13 @@ LLVMGEN (llvm_gen_mxcompassign)
     Symbol& Col = *rop.opargsym (op, 2);
     Symbol& Val = *rop.opargsym (op, 3);
 
-    ASSERT(rop.isSymbolUniform(Col) && "incomplete");
-    ASSERT(rop.isSymbolUniform(Row) && "incomplete");
-
     bool op_is_uniform = rop.isSymbolUniform(Result);
+    bool row_is_uniform = rop.isSymbolUniform(Row);
+    bool col_is_uniform = rop.isSymbolUniform(Col);
+    bool components_are_uniform = row_is_uniform && col_is_uniform;
 
-    llvm::Value *row = rop.llvm_load_value (Row);
-    llvm::Value *col = rop.llvm_load_value (Col);
+    llvm::Value *row = rop.llvm_load_value (Row, 0, 0, TypeDesc::UNKNOWN, components_are_uniform);
+    llvm::Value *col = rop.llvm_load_value (Col, 0, 0, TypeDesc::UNKNOWN, components_are_uniform);
     if (rop.shadingsys().range_checking()) {
         // TODO: Handle non-uniform case below minding mask values
         ASSERT(rop.isSymbolUniform(Result));
@@ -1688,9 +1692,9 @@ LLVMGEN (llvm_gen_mxcompassign)
         int comp = 4 * r + c;
         rop.llvm_store_value (val, Result, 0, comp);
     } else {
-        llvm::Value *comp = rop.ll.op_mul (row, rop.ll.wide_constant(4));
+        llvm::Value *comp = rop.ll.op_mul (row, components_are_uniform ? rop.ll.constant(4) : rop.ll.wide_constant(4));
         comp = rop.ll.op_add (comp, col);
-        rop.llvm_store_component_value (val, Result, 0, comp);
+        rop.llvm_store_component_value (val, Result, 0, comp, components_are_uniform);
     }
     return true;
 }

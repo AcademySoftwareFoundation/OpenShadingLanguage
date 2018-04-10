@@ -2530,7 +2530,8 @@ BackendLLVMWide::llvm_load_constant_value (const Symbol& sym,
 llvm::Value *
 BackendLLVMWide::llvm_load_component_value (const Symbol& sym, int deriv,
                                              llvm::Value *component,
-                                             bool op_is_uniform)
+                                             bool op_is_uniform,
+                                             bool component_is_uniform)
 {
     bool has_derivs = sym.has_derivs();
     if (!has_derivs && deriv != 0) {
@@ -2562,11 +2563,24 @@ BackendLLVMWide::llvm_load_component_value (const Symbol& sym, int deriv,
     } else { 
     	pointer = ll.ptr_cast (pointer, ll.type_wide_float_ptr());
     }
-    llvm::Value * component_pointer = ll.GEP (pointer, component);  // get the component
-
-    // Now grab the value
-    llvm::Value* result = ll.op_load (component_pointer);
     
+    llvm::Value* result;
+    if (component_is_uniform) {
+
+        llvm::Value * component_pointer = ll.GEP (pointer, component);  // get the component
+
+        // Now grab the value
+        result = ll.op_load (component_pointer);
+    } else {
+        ASSERT(!op_is_uniform);
+        result = ll.op_gather (pointer, component);
+        // TODO:  possible optimization when we know the # of components is small (<= 4)
+        // instead of performing a gather, we could load each value of the components,
+        // compare the component index against that value's index and select/blend
+        // the results together.  Basically we will loading the entire content of the
+        // object, but can avoid branching or any gather statements.
+    }
+
 	if (!op_is_uniform) { 
     	if (ll.llvm_typeof(result) ==  ll.type_float()) {
             result = ll.widen_value(result);    		    		
@@ -2751,7 +2765,8 @@ BackendLLVMWide::llvm_store_value (llvm::Value* new_val, llvm::Value* dst_ptr,
 bool
 BackendLLVMWide::llvm_store_component_value (llvm::Value* new_val,
                                               const Symbol& sym, int deriv,
-                                              llvm::Value* component)
+                                              llvm::Value* component,
+                                              bool component_is_uniform)
 {
     bool has_derivs = sym.has_derivs();
     if (!has_derivs && deriv != 0) {
@@ -2769,15 +2784,24 @@ BackendLLVMWide::llvm_store_component_value (llvm::Value* new_val,
     ASSERT (t.basetype == TypeDesc::FLOAT);
     ASSERT (t.aggregate != TypeDesc::SCALAR);
     // cast the Vec* to a float*
-    if (isSymbolUniform(sym)) { 
+
+    bool symbolsIsUniform = isSymbolUniform(sym);
+    if (symbolsIsUniform) {
         pointer = ll.ptr_cast (pointer, ll.type_float_ptr());
     } else { 
         pointer = ll.ptr_cast (pointer, ll.type_wide_float_ptr());
     }    
-    llvm::Value * component_pointer = ll.GEP (pointer, component);  // get the component
 
-    // Finally, store the value.
-    ll.op_store (new_val, component_pointer);
+    if (component_is_uniform) {
+        llvm::Value * component_pointer = ll.GEP (pointer, component);  // get the component
+
+        // Finally, store the value.
+        ll.op_store (new_val, component_pointer);
+    } else {
+        ASSERT(!symbolsIsUniform);
+        ll.op_scatter(new_val, pointer, component);
+
+    }
     return true;
 }
 

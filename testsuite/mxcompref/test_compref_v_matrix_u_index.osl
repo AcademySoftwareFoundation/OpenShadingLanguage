@@ -1,0 +1,45 @@
+shader
+test_compref_v_matrix_u_index (output color Cout = 0)
+{
+    float v_val = P[0];
+    matrix m = matrix(
+        0.11*v_val, 0.12*v_val, 0.13*v_val, 0.14*v_val,
+        0.21*v_val, 0.22*v_val, 0.23*v_val, 0.24*v_val,
+        0.31*v_val, 0.32*v_val, 0.33*v_val, 0.34*v_val,
+        0.41*v_val, 0.42*v_val, 0.43*v_val, 0.44*v_val
+        );
+    
+    matrix m2; 
+    
+    for(int i=0; i < 4;++i) {
+        for(int j=0; j < 4;++j) {
+            m2[i][j] = m[j][i];
+        }
+    }
+
+    color c = color(0);
+    for(int i=0; i < 4;++i) 
+    {
+        for(int j=0; j < 4;++j) 
+        {
+            int cIndex = min(i,2);
+            c[cIndex] += m[i][j];
+        }
+    }
+    
+    if (int(P[0]*64)%2==0) 
+    {
+        c = color(0);
+        
+        for(int i=0; i < 4;++i) 
+        {
+            for(int j=0; j < 4;++j) 
+            {
+                int cIndex = min(i,2);
+                c[cIndex] += m2[i][j];
+            }
+        }
+    }
+    
+    Cout = c;
+}

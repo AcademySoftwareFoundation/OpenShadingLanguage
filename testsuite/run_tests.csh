@@ -1,5 +1,6 @@
 #!/bin/csh
 
+./run_test_dir.csh normalize
 ./exec_test_dir.csh blendmath
 ./exec_test_dir.csh construct_triple
 ./run_test_dir.csh mxcompref

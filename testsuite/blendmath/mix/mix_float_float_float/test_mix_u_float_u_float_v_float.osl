@@ -1,0 +1,18 @@
+shader
+test_mix_u_float_u_float_v_float (output color Cout = 0)
+{
+    float  val = 1.0/(2*raytype("camera"));
+    float val2 = val/4;
+    float val3 = val*0.75;
+              
+    float red = mix(val,val2,u);
+    float green = 0.5;
+    float blue = mix(val2,val,u);
+        
+    if (int(P[0]*64)%2==0) {    
+        green = mix(val,val2,v);
+        blue =  mix(val2,val3,v);
+    }
+            
+    Cout = color(red,green,blue);
+}

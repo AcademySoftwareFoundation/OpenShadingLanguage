@@ -1,0 +1,21 @@
+shader
+test_transform_v_matrix_v_normal (
+    output color Cout = 0)
+{
+    normal v1 = normal(u, v, u+v);
+    normal v2 = normal(v, u, v-u);
+    
+    matrix M = matrix(
+        u*0.1, u*0.125, u*0.150, u*0.175,
+        u*0.2, u*0.225, u*0.250, u*0.275,
+        v*0.3, v*0.325, v*0.350, v*0.375,
+        v*0.4, v*0.425, v*0.450, v*0.475);
+    normal tv = transform(M, v1);
+    normal tv2 = tv*transform(M*2, v1);
+
+    if (int(P[0]*64)%2==0) {
+        tv2 = transform(M, v2);
+    }
+    
+    Cout = tv2;
+}

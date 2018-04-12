@@ -1,0 +1,25 @@
+shader
+test_transform_v_matrix_u_normal (
+    output color Cout = 0)
+{
+    float val = raytype("camera");
+    float val2 = val/2;
+    float val3 = val/4;
+
+    normal v1 = normal(val, val2, val3);
+    normal v2 = normal(val3, val, val2);
+    
+    matrix M = matrix(
+        u*0.1, u*0.125, u*0.150, u*0.175,
+        u*0.2, u*0.225, u*0.250, u*0.275,
+        v*0.3, v*0.325, v*0.350, v*0.375,
+        v*0.4, v*0.425, v*0.450, v*0.475);
+    normal tv = transform(M, v1);
+    normal tv2 = tv*transform(M*2, v1);
+
+    if (int(P[0]*64)%2==0) {
+        tv2 = transform(M, v2);
+    }
+    
+    Cout = tv2;
+}

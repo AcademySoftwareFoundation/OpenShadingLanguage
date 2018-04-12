@@ -1,0 +1,17 @@
+shader
+test_transform_u_fromspace_u_tospace_v_dpoint (
+    string fromspace = "--param fromspace must_be_provided", 
+    string tospace = "--param fromspace must_be_provided", 
+    output color Cout = 0)
+{
+    point v1 = point(u, v, u-v);
+    point v2 = point(v, u, u+v);
+    
+    point tv = transform(fromspace, tospace, v1);
+
+    if (int(P[0]*64)%2==0) {
+        tv = transform(fromspace, tospace, v2);
+    }
+    
+    Cout = Dx(tv) + Dy(tv);
+}

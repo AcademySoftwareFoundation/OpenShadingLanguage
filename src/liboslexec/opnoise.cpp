@@ -94,28 +94,28 @@ void test_perlin(int d) {
 
 
 #define NOISE_IMPL(opname,implname)                                     \
-OSL_SHADEOP float osl_ ##opname## _ff (float x) {                       \
+OSL_SHADEOP OSL_HOSTDEVICE float osl_ ##opname## _ff (float x) {        \
     implname impl;                                                      \
     float r;                                                            \
     impl (r, x);                                                        \
     return r;                                                           \
 }                                                                       \
                                                                         \
-OSL_SHADEOP float osl_ ##opname## _fff (float x, float y) {             \
+OSL_SHADEOP OSL_HOSTDEVICE float osl_ ##opname## _fff (float x, float y) { \
     implname impl;                                                      \
     float r;                                                            \
     impl (r, x, y);                                                     \
     return r;                                                           \
 }                                                                       \
                                                                         \
-OSL_SHADEOP float osl_ ##opname## _fv (char *x) {                       \
+OSL_SHADEOP OSL_HOSTDEVICE float osl_ ##opname## _fv (char *x) {        \
     implname impl;                                                      \
     float r;                                                            \
     impl (r, VEC(x));                                                   \
     return r;                                                           \
 }                                                                       \
                                                                         \
-OSL_SHADEOP float osl_ ##opname## _fvf (char *x, float y) {             \
+OSL_SHADEOP OSL_HOSTDEVICE float osl_ ##opname## _fvf (char *x, float y) { \
     implname impl;                                                      \
     float r;                                                            \
     impl (r, VEC(x), y);                                                \
@@ -123,22 +123,22 @@ OSL_SHADEOP float osl_ ##opname## _fvf (char *x, float y) {             \
 }                                                                       \
                                                                         \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _vf (char *r, float x) {               \
+OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _vf (char *r, float x) { \
     implname impl;                                                      \
     impl (VEC(r), x);                                                   \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _vff (char *r, float x, float y) {     \
+OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _vff (char *r, float x, float y) { \
     implname impl;                                                      \
     impl (VEC(r), x, y);                                                \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _vv (char *r, char *x) {               \
+OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _vv (char *r, char *x) { \
     implname impl;                                                      \
     impl (VEC(r), VEC(x));                                              \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _vvf (char *r, char *x, float y) {     \
+OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _vvf (char *r, char *x, float y) { \
     implname impl;                                                      \
     impl (VEC(r), VEC(x), y);                                           \
 }
@@ -148,83 +148,83 @@ OSL_SHADEOP void osl_ ##opname## _vvf (char *r, char *x, float y) {     \
 
 
 #define NOISE_IMPL_DERIV(opname,implname)                               \
-OSL_SHADEOP void osl_ ##opname## _dfdf (char *r, char *x) {             \
+OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _dfdf (char *r, char *x) { \
     implname impl;                                                      \
     impl (DFLOAT(r), DFLOAT(x));                                        \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _dfdfdf (char *r, char *x, char *y) {  \
+OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _dfdfdf (char *r, char *x, char *y) { \
     implname impl;                                                      \
     impl (DFLOAT(r), DFLOAT(x), DFLOAT(y));                             \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _dfdff (char *r, char *x, float y) {   \
+OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _dfdff (char *r, char *x, float y) { \
     implname impl;                                                      \
     impl (DFLOAT(r), DFLOAT(x), Dual2<float>(y));                       \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _dffdf (char *r, float x, char *y) {   \
+OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _dffdf (char *r, float x, char *y) { \
     implname impl;                                                      \
     impl (DFLOAT(r), Dual2<float>(x), DFLOAT(y));                       \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _dfdv (char *r, char *x) {             \
+OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _dfdv (char *r, char *x) { \
     implname impl;                                                      \
     impl (DFLOAT(r), DVEC(x));                                          \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _dfdvdf (char *r, char *x, char *y) {  \
+OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _dfdvdf (char *r, char *x, char *y) { \
     implname impl;                                                      \
     impl (DFLOAT(r), DVEC(x), DFLOAT(y));                               \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _dfdvf (char *r, char *x, float y) {   \
+OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _dfdvf (char *r, char *x, float y) { \
     implname impl;                                                      \
     impl (DFLOAT(r), DVEC(x), Dual2<float>(y));                         \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _dfvdf (char *r, char *x, char *y) {   \
+OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _dfvdf (char *r, char *x, char *y) { \
     implname impl;                                                      \
     impl (DFLOAT(r), Dual2<Vec3>(VEC(x)), DFLOAT(y));                   \
 }                                                                       \
                                                                         \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _dvdf (char *r, char *x) {             \
+OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _dvdf (char *r, char *x) { \
     implname impl;                                                      \
     impl (DVEC(r), DFLOAT(x));                                          \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _dvdfdf (char *r, char *x, char *y) {  \
+OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _dvdfdf (char *r, char *x, char *y) { \
     implname impl;                                                      \
     impl (DVEC(r), DFLOAT(x), DFLOAT(y));                               \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _dvdff (char *r, char *x, float y) {   \
+OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _dvdff (char *r, char *x, float y) { \
     implname impl;                                                      \
     impl (DVEC(r), DFLOAT(x), Dual2<float>(y));                         \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _dvfdf (char *r, float x, char *y) {   \
+OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _dvfdf (char *r, float x, char *y) { \
     implname impl;                                                      \
     impl (DVEC(r), Dual2<float>(x), DFLOAT(y));                         \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _dvdv (char *r, char *x) {             \
+OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _dvdv (char *r, char *x) { \
     implname impl;                                                      \
     impl (DVEC(r), DVEC(x));                                            \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _dvdvdf (char *r, char *x, char *y) {  \
+OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _dvdvdf (char *r, char *x, char *y) { \
     implname impl;                                                      \
     impl (DVEC(r), DVEC(x), DFLOAT(y));                                 \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _dvdvf (char *r, char *x, float y) {   \
+OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _dvdvf (char *r, char *x, float y) { \
     implname impl;                                                      \
     impl (DVEC(r), DVEC(x), Dual2<float>(y));                           \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _dvvdf (char *r, char *x, char *y) {   \
+OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _dvvdf (char *r, char *x, char *y) { \
     implname impl;                                                      \
     impl (DVEC(r), Dual2<Vec3>(VEC(x)), DFLOAT(y));                     \
 }
@@ -235,43 +235,43 @@ OSL_SHADEOP void osl_ ##opname## _dvvdf (char *r, char *x, char *y) {   \
 #define NOISE_IMPL_DERIV_OPT(opname,implname)                           \
 OSL_SHADEOP void osl_ ##opname## _dfdf (char *name, char *r, char *x, char *sg, char *opt) { \
     implname impl;                                                      \
-    impl (USTR(name), DFLOAT(r), DFLOAT(x), (ShaderGlobals *)sg, (NoiseParams *)opt);                                   \
+    impl (USTR(name), DFLOAT(r), DFLOAT(x), (ShaderGlobals *)sg, (NoiseParams *)opt); \
 }                                                                       \
                                                                         \
 OSL_SHADEOP void osl_ ##opname## _dfdfdf (char *name, char *r, char *x, char *y, char *sg, char *opt) { \
     implname impl;                                                      \
-    impl (USTR(name), DFLOAT(r), DFLOAT(x), DFLOAT(y), (ShaderGlobals *)sg, (NoiseParams *)opt);                        \
+    impl (USTR(name), DFLOAT(r), DFLOAT(x), DFLOAT(y), (ShaderGlobals *)sg, (NoiseParams *)opt); \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _dfdv (char *name, char *r, char *x, char *sg, char *opt) {  \
+OSL_SHADEOP void osl_ ##opname## _dfdv (char *name, char *r, char *x, char *sg, char *opt) { \
     implname impl;                                                      \
-    impl (USTR(name), DFLOAT(r), DVEC(x), (ShaderGlobals *)sg, (NoiseParams *)opt);                                     \
+    impl (USTR(name), DFLOAT(r), DVEC(x), (ShaderGlobals *)sg, (NoiseParams *)opt); \
 }                                                                       \
                                                                         \
 OSL_SHADEOP void osl_ ##opname## _dfdvdf (char *name, char *r, char *x, char *y, char *sg, char *opt) { \
     implname impl;                                                      \
-    impl (USTR(name), DFLOAT(r), DVEC(x), DFLOAT(y), (ShaderGlobals *)sg, (NoiseParams *)opt);                          \
+    impl (USTR(name), DFLOAT(r), DVEC(x), DFLOAT(y), (ShaderGlobals *)sg, (NoiseParams *)opt); \
 }                                                                       \
                                                                         \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _dvdf (char *name, char *r, char *x, char *sg, char *opt) {  \
+OSL_SHADEOP void osl_ ##opname## _dvdf (char *name, char *r, char *x, char *sg, char *opt) { \
     implname impl;                                                      \
-    impl (USTR(name), DVEC(r), DFLOAT(x), (ShaderGlobals *)sg, (NoiseParams *)opt);                                     \
+    impl (USTR(name), DVEC(r), DFLOAT(x), (ShaderGlobals *)sg, (NoiseParams *)opt); \
 }                                                                       \
                                                                         \
 OSL_SHADEOP void osl_ ##opname## _dvdfdf (char *name, char *r, char *x, char *y, char *sg, char *opt) { \
     implname impl;                                                      \
-    impl (USTR(name), DVEC(r), DFLOAT(x), DFLOAT(y), (ShaderGlobals *)sg, (NoiseParams *)opt);                                     \
+    impl (USTR(name), DVEC(r), DFLOAT(x), DFLOAT(y), (ShaderGlobals *)sg, (NoiseParams *)opt); \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _dvdv (char *name, char *r, char *x, char *sg, char *opt) {  \
+OSL_SHADEOP void osl_ ##opname## _dvdv (char *name, char *r, char *x, char *sg, char *opt) { \
     implname impl;                                                      \
-    impl (USTR(name), DVEC(r), DVEC(x), (ShaderGlobals *)sg, (NoiseParams *)opt);                                       \
+    impl (USTR(name), DVEC(r), DVEC(x), (ShaderGlobals *)sg, (NoiseParams *)opt); \
 }                                                                       \
                                                                         \
 OSL_SHADEOP void osl_ ##opname## _dvdvdf (char *name, char *r, char *x, char *y, char *sg, char *opt) { \
     implname impl;                                                      \
-    impl (USTR(name), DVEC(r), DVEC(x), DFLOAT(y), (ShaderGlobals *)sg, (NoiseParams *)opt);                            \
+    impl (USTR(name), DVEC(r), DVEC(x), DFLOAT(y), (ShaderGlobals *)sg, (NoiseParams *)opt); \
 }
 
 
@@ -291,28 +291,28 @@ NOISE_IMPL_DERIV (usimplexnoise, USimplexNoise)
 
 
 #define PNOISE_IMPL(opname,implname)                                    \
-    OSL_SHADEOP float osl_ ##opname## _fff (float x, float px) {        \
+OSL_SHADEOP OSL_HOSTDEVICE float osl_ ##opname## _fff (float x, float px) { \
     implname impl;                                                      \
     float r;                                                            \
     impl (r, x, px);                                                    \
     return r;                                                           \
 }                                                                       \
                                                                         \
-OSL_SHADEOP float osl_ ##opname## _fffff (float x, float y, float px, float py) { \
+OSL_SHADEOP OSL_HOSTDEVICE float osl_ ##opname## _fffff (float x, float y, float px, float py) { \
     implname impl;                                                      \
     float r;                                                            \
     impl (r, x, y, px, py);                                             \
     return r;                                                           \
 }                                                                       \
                                                                         \
-OSL_SHADEOP float osl_ ##opname## _fvv (char *x, char *px) {            \
+OSL_SHADEOP OSL_HOSTDEVICE float osl_ ##opname## _fvv (char *x, char *px) { \
     implname impl;                                                      \
     float r;                                                            \
     impl (r, VEC(x), VEC(px));                                          \
     return r;                                                           \
 }                                                                       \
                                                                         \
-OSL_SHADEOP float osl_ ##opname## _fvfvf (char *x, float y, char *px, float py) { \
+OSL_SHADEOP OSL_HOSTDEVICE float osl_ ##opname## _fvfvf (char *x, float y, char *px, float py) { \
     implname impl;                                                      \
     float r;                                                            \
     impl (r, VEC(x), y, VEC(px), py);                                   \
@@ -320,22 +320,22 @@ OSL_SHADEOP float osl_ ##opname## _fvfvf (char *x, float y, char *px, float py) 
 }                                                                       \
                                                                         \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _vff (char *r, float x, float px) {    \
+OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _vff (char *r, float x, float px) { \
     implname impl;                                                      \
     impl (VEC(r), x, px);                                               \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _vffff (char *r, float x, float y, float px, float py) { \
+OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _vffff (char *r, float x, float y, float px, float py) { \
     implname impl;                                                      \
     impl (VEC(r), x, y, px, py);                                        \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _vvv (char *r, char *x, char *px) {    \
+OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _vvv (char *r, char *x, char *px) { \
     implname impl;                                                      \
     impl (VEC(r), VEC(x), VEC(px));                                     \
 }                                                                       \
                                                                         \
-OSL_SHADEOP void osl_ ##opname## _vvfvf (char *r, char *x, float y, char *px, float py) { \
+OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _vvfvf (char *r, char *x, float y, char *px, float py) { \
     implname impl;                                                      \
     impl (VEC(r), VEC(x), y, VEC(px), py);                              \
 }
@@ -483,6 +483,11 @@ PNOISE_IMPL_DERIV (psnoise, PeriodicSNoise)
 
 
 
+// NB: We are excluding noise functions that require (u)string arguments
+//     in the CUDA case, since strings are not currently well-supported
+//     by the PTX backend. We will update this once string support has
+//     been improved.
+
 struct GaborNoise {
     GaborNoise () { }
 
@@ -609,53 +614,53 @@ PNOISE_IMPL_DERIV_OPT (gaborpnoise, GaborPNoise)
 
 
 struct NullNoise {
-    NullNoise () { }
-    inline void operator() (float &result, float x) const { result = 0.0f; }
-    inline void operator() (float &result, float x, float y) const { result = 0.0f; }
-    inline void operator() (float &result, const Vec3 &p) const { result = 0.0f; }
-    inline void operator() (float &result, const Vec3 &p, float t) const { result = 0.0f; }
-    inline void operator() (Vec3 &result, float x) const { result = v(); }
-    inline void operator() (Vec3 &result, float x, float y) const { result = v(); }
-    inline void operator() (Vec3 &result, const Vec3 &p) const { result = v(); }
-    inline void operator() (Vec3 &result, const Vec3 &p, float t) const { result = v(); }
-    inline void operator() (Dual2<float> &result, const Dual2<float> &x,
-                            int seed=0) const { result.set (0.0f, 0.0f, 0.0f); }
-    inline void operator() (Dual2<float> &result, const Dual2<float> &x,
-                            const Dual2<float> &y, int seed=0) const { result.set (0.0f, 0.0f, 0.0f); }
-    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
-                            int seed=0) const { result.set (0.0f, 0.0f, 0.0f); }
-    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
-                            const Dual2<float> &t, int seed=0) const { result.set (0.0f, 0.0f, 0.0f); }
-    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const { result.set (v(), v(), v()); }
-    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {  result.set (v(), v(), v()); }
-    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {  result.set (v(), v(), v()); }
-    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const { result.set (v(), v(), v()); }
-    inline Vec3 v () const { return Vec3(0.0f, 0.0f, 0.0f); };
+    OSL_HOSTDEVICE NullNoise () { }
+    OSL_HOSTDEVICE inline void operator() (float &result, float x) const { result = 0.0f; }
+    OSL_HOSTDEVICE inline void operator() (float &result, float x, float y) const { result = 0.0f; }
+    OSL_HOSTDEVICE inline void operator() (float &result, const Vec3 &p) const { result = 0.0f; }
+    OSL_HOSTDEVICE inline void operator() (float &result, const Vec3 &p, float t) const { result = 0.0f; }
+    OSL_HOSTDEVICE inline void operator() (Vec3 &result, float x) const { result = v(); }
+    OSL_HOSTDEVICE inline void operator() (Vec3 &result, float x, float y) const { result = v(); }
+    OSL_HOSTDEVICE inline void operator() (Vec3 &result, const Vec3 &p) const { result = v(); }
+    OSL_HOSTDEVICE inline void operator() (Vec3 &result, const Vec3 &p, float t) const { result = v(); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<float> &result, const Dual2<float> &x,
+                                           int seed=0) const { result.set (0.0f, 0.0f, 0.0f); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<float> &result, const Dual2<float> &x,
+                                           const Dual2<float> &y, int seed=0) const { result.set (0.0f, 0.0f, 0.0f); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
+                                           int seed=0) const { result.set (0.0f, 0.0f, 0.0f); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
+                                           const Dual2<float> &t, int seed=0) const { result.set (0.0f, 0.0f, 0.0f); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const { result.set (v(), v(), v()); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {  result.set (v(), v(), v()); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {  result.set (v(), v(), v()); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const { result.set (v(), v(), v()); }
+    OSL_HOSTDEVICE inline Vec3 v () const { return Vec3(0.0f, 0.0f, 0.0f); };
 };
 
 struct UNullNoise {
-    UNullNoise () { }
-    inline void operator() (float &result, float x) const { result = 0.5f; }
-    inline void operator() (float &result, float x, float y) const { result = 0.5f; }
-    inline void operator() (float &result, const Vec3 &p) const { result = 0.5f; }
-    inline void operator() (float &result, const Vec3 &p, float t) const { result = 0.5f; }
-    inline void operator() (Vec3 &result, float x) const { result = v(); }
-    inline void operator() (Vec3 &result, float x, float y) const { result = v(); }
-    inline void operator() (Vec3 &result, const Vec3 &p) const { result = v(); }
-    inline void operator() (Vec3 &result, const Vec3 &p, float t) const { result = v(); }
-    inline void operator() (Dual2<float> &result, const Dual2<float> &x,
-                            int seed=0) const { result.set (0.5f, 0.5f, 0.5f); }
-    inline void operator() (Dual2<float> &result, const Dual2<float> &x,
-                            const Dual2<float> &y, int seed=0) const { result.set (0.5f, 0.5f, 0.5f); }
-    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
-                            int seed=0) const { result.set (0.5f, 0.5f, 0.5f); }
-    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
-                            const Dual2<float> &t, int seed=0) const { result.set (0.5f, 0.5f, 0.5f); }
-    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const { result.set (v(), v(), v()); }
-    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {  result.set (v(), v(), v()); }
-    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {  result.set (v(), v(), v()); }
-    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const { result.set (v(), v(), v()); }
-    inline Vec3 v () const { return Vec3(0.5f, 0.5f, 0.5f); };
+    OSL_HOSTDEVICE UNullNoise () { }
+    OSL_HOSTDEVICE inline void operator() (float &result, float x) const { result = 0.5f; }
+    OSL_HOSTDEVICE inline void operator() (float &result, float x, float y) const { result = 0.5f; }
+    OSL_HOSTDEVICE inline void operator() (float &result, const Vec3 &p) const { result = 0.5f; }
+    OSL_HOSTDEVICE inline void operator() (float &result, const Vec3 &p, float t) const { result = 0.5f; }
+    OSL_HOSTDEVICE inline void operator() (Vec3 &result, float x) const { result = v(); }
+    OSL_HOSTDEVICE inline void operator() (Vec3 &result, float x, float y) const { result = v(); }
+    OSL_HOSTDEVICE inline void operator() (Vec3 &result, const Vec3 &p) const { result = v(); }
+    OSL_HOSTDEVICE inline void operator() (Vec3 &result, const Vec3 &p, float t) const { result = v(); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<float> &result, const Dual2<float> &x,
+                                           int seed=0) const { result.set (0.5f, 0.5f, 0.5f); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<float> &result, const Dual2<float> &x,
+                                           const Dual2<float> &y, int seed=0) const { result.set (0.5f, 0.5f, 0.5f); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
+                                           int seed=0) const { result.set (0.5f, 0.5f, 0.5f); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
+                                           const Dual2<float> &t, int seed=0) const { result.set (0.5f, 0.5f, 0.5f); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const { result.set (v(), v(), v()); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {  result.set (v(), v(), v()); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {  result.set (v(), v(), v()); }
+    OSL_HOSTDEVICE inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const { result.set (v(), v(), v()); }
+    OSL_HOSTDEVICE inline Vec3 v () const { return Vec3(0.5f, 0.5f, 0.5f); };
 };
 
 NOISE_IMPL (nullnoise, NullNoise)
@@ -876,36 +881,36 @@ osl_count_noise (void *sg_)
 
 
 
-OSL_SHADEOP int
+OSL_SHADEOP OSL_HOSTDEVICE int
 osl_hash_ii (int x)
 {
     return inthashi (x);
 }
 
-OSL_SHADEOP int
+OSL_SHADEOP OSL_HOSTDEVICE int
 osl_hash_if (float x)
 {
     return inthashf (x);
 }
 
-OSL_SHADEOP int
+OSL_SHADEOP OSL_HOSTDEVICE int
 osl_hash_iff (float x, float y)
 {
     return inthashf (x, y);
 }
 
 
-OSL_SHADEOP int
-osl_hash_iv (float *x)
+OSL_SHADEOP OSL_HOSTDEVICE int
+osl_hash_iv (void *x)
 {
-    return inthashf (x);
+    return inthashf (static_cast<float*>(x));
 }
 
 
-OSL_SHADEOP int
-osl_hash_ivf (float *x, float y)
+OSL_SHADEOP OSL_HOSTDEVICE int
+osl_hash_ivf (void *x, float y)
 {
-    return inthashf (x, y);
+    return inthashf (static_cast<float*>(x), y);
 }
 
 

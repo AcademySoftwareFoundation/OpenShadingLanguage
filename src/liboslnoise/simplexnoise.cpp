@@ -80,7 +80,7 @@ OSL_NAMESPACE_ENTER
 namespace pvt {
 
 
-inline uint32_t
+inline OSL_HOSTDEVICE uint32_t
 scramble (uint32_t v0, uint32_t v1=0, uint32_t v2=0)
 {
     return OIIO::bjhash::bjfinal (v0, v1, v2^0xdeadbeef);
@@ -90,11 +90,11 @@ scramble (uint32_t v0, uint32_t v1=0, uint32_t v2=0)
 
 /* Static data ---------------------- */
 
-static float zero[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+static OSL_DEVICE float zero[] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 // Gradient table for 2D. These could be programmed the Ken Perlin way with
 // some clever bit-twiddling, but this is more clear, and not really slower.
-static float grad2lut[8][2] = {
+static OSL_DEVICE float grad2lut[8][2] = {
     { -1.0f, -1.0f }, { 1.0f,  0.0f }, { -1.0f, 0.0f }, { 1.0f,  1.0f },
     { -1.0f,  1.0f }, { 0.0f, -1.0f }, {  0.0f, 1.0f }, { 1.0f, -1.0f }
 };
@@ -105,7 +105,7 @@ static float grad2lut[8][2] = {
 // but these 12 (including 4 repeats to make the array length a power
 // of two) work better. They are not random, they are carefully chosen
 // to represent a small, isotropic set of directions.
-static float grad3lut[16][3] = {
+static OSL_DEVICE float grad3lut[16][3] = {
     {  1.0f,  0.0f,  1.0f }, {  0.0f,  1.0f,  1.0f }, // 12 cube edges
     { -1.0f,  0.0f,  1.0f }, {  0.0f, -1.0f,  1.0f },
     {  1.0f,  0.0f, -1.0f }, {  0.0f,  1.0f, -1.0f },
@@ -117,7 +117,7 @@ static float grad3lut[16][3] = {
 };
 
 // Gradient directions for 4D
-static float grad4lut[32][4] = {
+static OSL_DEVICE float grad4lut[32][4] = {
   { 0.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f, 1.0f, -1.0f }, { 0.0f, 1.0f, -1.0f, 1.0f }, { 0.0f, 1.0f, -1.0f, -1.0f }, // 32 tesseract edges
   { 0.0f, -1.0f, 1.0f, 1.0f }, { 0.0f, -1.0f, 1.0f, -1.0f }, { 0.0f, -1.0f, -1.0f, 1.0f }, { 0.0f, -1.0f, -1.0f, -1.0f },
   { 1.0f, 0.0f, 1.0f, 1.0f }, { 1.0f, 0.0f, 1.0f, -1.0f }, { 1.0f, 0.0f, -1.0f, 1.0f }, { 1.0f, 0.0f, -1.0f, -1.0f },
@@ -131,7 +131,7 @@ static float grad4lut[32][4] = {
 // A lookup table to traverse the simplex around a given point in 4D.
 // Details can be found where this table is used, in the 4D noise method.
 /* TODO: This should not be required, backport it from Bill's GLSL code! */
-static unsigned char simplex[64][4] = {
+static OSL_DEVICE unsigned char simplex[64][4] = {
   {0,1,2,3},{0,1,3,2},{0,0,0,0},{0,2,3,1},{0,0,0,0},{0,0,0,0},{0,0,0,0},{1,2,3,0},
   {0,2,1,3},{0,0,0,0},{0,3,1,2},{0,3,2,1},{0,0,0,0},{0,0,0,0},{0,0,0,0},{1,3,2,0},
   {0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},
@@ -148,7 +148,7 @@ static unsigned char simplex[64][4] = {
  * and gradients-dot-residualvectors in 2D to 4D.
  */
 
-inline float grad1 (int i, int seed)
+inline OSL_HOSTDEVICE float grad1 (int i, int seed)
 {
     int h = scramble (i, seed);
     float g = 1.0f + (h & 7);   // Gradient value is one of 1.0, 2.0, ..., 8.0
@@ -157,19 +157,19 @@ inline float grad1 (int i, int seed)
     return g;
 }
 
-inline const float * grad2 (int i, int j, int seed)
+inline OSL_HOSTDEVICE const float * grad2 (int i, int j, int seed)
 {
     int h = scramble (i, j, seed);
     return grad2lut[h & 7];
 }
 
-inline const float * grad3 (int i, int j, int k, int seed)
+inline OSL_HOSTDEVICE const float * grad3 (int i, int j, int k, int seed)
 {
     int h = scramble (i, j, scramble (k, seed));
     return grad3lut[h & 15];
 }
 
-inline const float * grad4 (int i, int j, int k, int l, int seed)
+inline OSL_HOSTDEVICE const float * grad4 (int i, int j, int k, int l, int seed)
 {
     int h = scramble (i, j, scramble (k, l, seed));
     return grad4lut[h & 31];
@@ -179,7 +179,7 @@ inline const float * grad4 (int i, int j, int k, int l, int seed)
 // 1D simplex noise with derivative.
 // If the last argument is not null, the analytic derivative
 // is also calculated.
-float
+OSL_HOSTDEVICE float
 simplexnoise1 (float x, int seed, float *dnoise_dx)
 {
     int i0 = quick_floor(x);
@@ -227,8 +227,8 @@ simplexnoise1 (float x, int seed, float *dnoise_dx)
 // 2D simplex noise with derivatives.
 // If the last two arguments are not null, the analytic derivative
 // (the 2D gradient of the scalar noise field) is also calculated.
-float simplexnoise2 (float x, float y, int seed,
-                     float *dnoise_dx, float *dnoise_dy)
+OSL_HOSTDEVICE float simplexnoise2 (float x, float y, int seed,
+                                    float *dnoise_dx, float *dnoise_dy)
 {
     // Skewing factors for 2D simplex grid:
     const float F2 = 0.366025403;   // = 0.5*(sqrt(3.0)-1.0)
@@ -338,7 +338,7 @@ float simplexnoise2 (float x, float y, int seed,
 // 3D simplex noise with derivatives.
 // If the last tthree arguments are not null, the analytic derivative
 // (the 3D gradient of the scalar noise field) is also calculated.
-float
+OSL_HOSTDEVICE float
 simplexnoise3 (float x, float y, float z, int seed,
                float *dnoise_dx, float *dnoise_dy, float *dnoise_dz)
 {
@@ -524,7 +524,7 @@ simplexnoise3 (float x, float y, float z, int seed,
 // 4D simplex noise with derivatives.
 // If the last four arguments are not null, the analytic derivative
 // (the 4D gradient of the scalar noise field) is also calculated.
-float
+OSL_HOSTDEVICE float
 simplexnoise4 (float x, float y, float z, float w, int seed,
                float *dnoise_dx, float *dnoise_dy,
                float *dnoise_dz, float *dnoise_dw)

@@ -39,6 +39,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/thread/tss.hpp>   /* for thread_specific_ptr */
 
+// Pull in the modified Imath headers and the OSL_HOSTDEVICE macro
+#ifdef __CUDACC__
+#include <OSL/oslconfig.h>
+#endif
+
 #include <OpenImageIO/ustring.h>
 #include <OpenImageIO/thread.h>
 #include <OpenImageIO/paramlist.h>

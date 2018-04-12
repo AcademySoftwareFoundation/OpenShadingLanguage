@@ -48,14 +48,16 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
       COMMAND ${LLVM_BC_GENERATOR}
           "-I${OPTIX_INCLUDE_DIR}"
           "-I${CUDA_INCLUDE_DIR}"
-          -D__CUDACC__ -D__CUDA_ARCH__=350
-          --cuda-gpu-arch=sm_35 --cuda-device-only --cuda-path="${CUDA_TOOLKIT_ROOT_DIR}"
+          -D__CUDACC__ -DOSL_COMPILING_TO_BITCODE=1
+          -DNDEBUG -DOIIO_NO_SSE -Doslexec_EXPORTS
+          --language=cuda --cuda-device-only --cuda-gpu-arch=${CUDA_TARGET_ARCH}
+          ${CUDA_LIB_FLAGS}
           -O3 -Wno-format-security -emit-llvm
           ${llvm_src} -c -o ${llvm_bc}
       COMMAND "${CMAKE_SOURCE_DIR}/src/liboslexec/serialize-bc.bash" ${llvm_bc} ${llvm_bc_cpp} "rend_llvm_compiled_ops"
       MAIN_DEPENDENCY ${llvm_src}
       DEPENDS "${CMAKE_SOURCE_DIR}/src/liboslexec/serialize-bc.bash"
-              ${llvm_src}
+              ${llvm_src} ${testoptix_cuda_headers}
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cuda" )
 ENDMACRO ()
 
@@ -74,7 +76,7 @@ MACRO ( NVCC_COMPILE cuda_src ptxlist )
             "-I${CMAKE_BINARY_DIR}/include"
             "-I${PROJECT_SOURCE_DIR}/src/include"
             -DOSL_USE_FAST_MATH=1
-            -m64 -arch sm_35 -ptx --std=c++11 -O3 --use_fast_math --expt-relaxed-constexpr
+            -m64 -arch ${CUDA_TARGET_ARCH} -ptx --std=c++11 -O3 --use_fast_math --expt-relaxed-constexpr
             ${cuda_src} -o ${cuda_ptx}
         MAIN_DEPENDENCY ${cuda_src}
         DEPENDS ${cuda_src} oslexec
@@ -91,6 +93,10 @@ set ( testoptix_cuda_srcs
     cuda/renderer.cu
     cuda/sphere.cu
     cuda/wrapper.cu
+    )
+
+set ( testoptix_cuda_headers
+    cuda/rend_lib.h
     )
 
 LLVM_COMPILE ( ${CMAKE_CURRENT_SOURCE_DIR}/cuda/rend_lib.cu testoptix_srcs )

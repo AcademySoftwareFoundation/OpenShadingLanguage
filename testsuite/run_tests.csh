@@ -1,5 +1,7 @@
 #!/bin/csh
 
+./run_test_dir.csh length
+./exec_test_dir.csh transform
 ./run_test_dir.csh normalize
 ./exec_test_dir.csh blendmath
 ./exec_test_dir.csh construct_triple
@@ -23,7 +25,7 @@
 ./run_test_dir.csh texture-subimage
 ./run_test_dir.csh texture-blur
 ./run_test_dir.csh texture-interp
-./run_test_dir.csh texture-subimagename
+./run_test_dir.csh texture-subimagename 10
 ./run_test_dir.csh texture-wrap
 
 ./run_test_dir.csh array 

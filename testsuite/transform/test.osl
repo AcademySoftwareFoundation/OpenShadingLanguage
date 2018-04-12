@@ -96,11 +96,6 @@ void all_transforms (point p, string from, string to, int derivs)
         printf (" transform(\"%s\", \"%s\", normal(%g)) = %.5g\n", from, to,
                 p, pretty(nx));
     }
-    #if 0
-    // In progress development to correctly identify writes to function local
-    // variables as independent from the next call.  After inlining it creates
-    // a read/write dependency causing unnecessary masking, currently an 
-    // assert will fire on the matrix constructor
     {
         matrix m = matrix(from, to);
         printf ("\ntransform '%s' to '%s':\n", from, to);
@@ -119,7 +114,6 @@ void all_transforms (point p, string from, string to, int derivs)
         printf (" transform(\"%s\", \"%s\", normal(%g)) = %.5g\n", from, to,
                 p, pretty(nx));
     }
-    #endif
     
     // TODO:  add test of uniform Matrix vs. varying triples
 }

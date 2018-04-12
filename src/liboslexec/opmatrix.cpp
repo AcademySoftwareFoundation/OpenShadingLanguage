@@ -1437,6 +1437,15 @@ impl_transform_point_masked(void *Pin,
 }
 
 OSL_SHADEOP void
+osl_transform_point_vw16vm_masked (void *Pin,
+                      void *Pout,
+                      void * transform, unsigned int mask_transform, unsigned int mask_value)
+{
+    // TODO: see if we can get gen_transform to call the vvm version then do a masked broadcast
+    impl_transform_point_masked<ConstUniformAccessor<Vec3>, ConstUniformAccessor<Matrix44>> (Pin, Pout, transform, mask_transform, mask_value);
+}
+
+OSL_SHADEOP void
 osl_transform_point_vw16vw16m_masked (void *Pin,
                       void *Pout,
 					  void * transform, unsigned int mask_transform, unsigned int mask_value)
@@ -1517,6 +1526,16 @@ impl_transform_vector_masked (void *Pin,
 
 	    impl_copy_untransformed_lanes(inPoints, Pout, succeeded, mask);
     }
+}
+
+OSL_SHADEOP void
+osl_transform_vector_vw16vm_masked(void *Pin,
+                      void *Pout,
+                      void * transform, unsigned int mask_transform, unsigned int mask_value)
+{
+    // TODO: see if we can get gen_transform to call the vvm version then do a masked broadcast
+    impl_transform_vector_masked<ConstUniformAccessor<Vec3>, ConstUniformAccessor<Matrix44>>
+        (Pin, Pout, transform, mask_transform, mask_value);
 }
 
 OSL_SHADEOP void
@@ -1638,6 +1657,16 @@ impl_transform_normal_masked (void *Pin,
 
     impl_copy_untransformed_lanes(inPoints, Pout, succeeded, mask);
 }
+
+OSL_SHADEOP void
+osl_transform_normal_vw16vm_masked (void *Pin,
+                      void *Pout,
+                      void * transform, unsigned int mask_transform, unsigned int mask_value)
+{
+    // TODO: see if we can get gen_transform to call the vvm version then do a masked broadcast
+    impl_transform_normal_masked<ConstUniformAccessor<Vec3>, ConstUniformAccessor<Matrix44>> (Pin, Pout, transform, mask_transform, mask_value);
+}
+
 
 OSL_SHADEOP void
 osl_transform_normal_vw16vw16m_masked (void *Pin,

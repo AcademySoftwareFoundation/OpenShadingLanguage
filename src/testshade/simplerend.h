@@ -50,49 +50,60 @@ public:
 	BatchedSimpleRenderer(SimpleRenderer &sr);
 	virtual ~BatchedSimpleRenderer();
 		
-	virtual Mask get_matrix (ShaderGlobalsBatch *sgb,
+	Mask get_matrix (ShaderGlobalsBatch *sgb,
 			                 MaskedAccessor<Matrix44> result,
 		                     ConstWideAccessor<TransformationPtr> xform,
-							 ConstWideAccessor<float> time);
-	virtual Mask get_matrix (ShaderGlobalsBatch *sgb,
+							 ConstWideAccessor<float> time) override;
+	Mask get_matrix (ShaderGlobalsBatch *sgb,
 			MaskedAccessor<Matrix44> result,
 							 ustring from,
-							 ConstWideAccessor<float> time);
-    virtual Mask get_matrix (ShaderGlobalsBatch *sgb,
+							 ConstWideAccessor<float> time) override;
+    Mask get_matrix (ShaderGlobalsBatch *sgb,
     						 MaskedAccessor<Matrix44> result,
     						 ConstWideAccessor<ustring> from,
-							 ConstWideAccessor<float> time);
+							 ConstWideAccessor<float> time) override;
 
-	virtual bool get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
-							 TransformationPtr xform);
-	virtual bool get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
-							 ustring from);
-	virtual bool get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
-									 ustring to, float time);
+	bool get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
+							 TransformationPtr xform) override;
+	bool get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
+							 ustring from) override;
+
+private:
+	template<typename RAccessorT>
+	OSL_INLINE bool impl_get_inverse_matrix (
+	    RAccessorT & result,
+	    ustring to) const;
+
+public:
+	Mask get_inverse_matrix (ShaderGlobalsBatch *sgb, MaskedAccessor<Matrix44> result,
+                             ustring to, ConstWideAccessor<float> time) override;
+    Mask get_inverse_matrix (ShaderGlobalsBatch *sgb, MaskedAccessor<Matrix44> result,
+                             ConstWideAccessor<ustring> to, ConstWideAccessor<float> time) override;
+
 	
-	virtual bool is_attribute_uniform(ustring object, ustring name);
+	bool is_attribute_uniform(ustring object, ustring name) override;
 	
-    virtual Mask get_array_attribute (ShaderGlobalsBatch *sgb, 
+    Mask get_array_attribute (ShaderGlobalsBatch *sgb,
                                       ustring object, ustring name,
-                                      int index, MaskedDataRef amd);
+                                      int index, MaskedDataRef amd) override;
     
-    virtual Mask get_attribute (ShaderGlobalsBatch *sgb, ustring object,
-                                ustring name, MaskedDataRef amd);
+    Mask get_attribute (ShaderGlobalsBatch *sgb, ustring object,
+                                ustring name, MaskedDataRef amd) override;
 
     
-    virtual bool get_array_attribute_uniform (ShaderGlobalsBatch *sgb, 
+    bool get_array_attribute_uniform (ShaderGlobalsBatch *sgb,
                                       ustring object, ustring name,
-                                      int index, DataRef val);
+                                      int index, DataRef val) override;
     
-    virtual bool get_attribute_uniform (ShaderGlobalsBatch *sgb, ustring object,
-                                ustring name, DataRef val);
+    bool get_attribute_uniform (ShaderGlobalsBatch *sgb, ustring object,
+                                ustring name, DataRef val) override;
     
 #ifdef OSL_EXPERIMENTAL_BIND_USER_DATA_WITH_LAYERNAME
-    virtual Mask get_userdata (ustring name, ustring layername,
-    						   ShaderGlobalsBatch *sgb, MaskedDataRef val);
+    Mask get_userdata (ustring name, ustring layername,
+    						   ShaderGlobalsBatch *sgb, MaskedDataRef val) override;
 #else
-    virtual Mask get_userdata (ustring name, 
-                               ShaderGlobalsBatch *sgb, MaskedDataRef val);
+    Mask get_userdata (ustring name,
+                               ShaderGlobalsBatch *sgb, MaskedDataRef val) override;
 #endif
 
 private:

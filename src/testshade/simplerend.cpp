@@ -376,9 +376,11 @@ BatchedSimpleRenderer::get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
 
 
 
+template<typename RAccessorT>
 bool
-BatchedSimpleRenderer::get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
-                                           ustring to, float time)
+BatchedSimpleRenderer::impl_get_inverse_matrix (
+    RAccessorT & result,
+    ustring to) const
 {
     if (to == ucache().camera || to == ucache().screen || to == ucache().NDC || to == ucache().raster) {
         Matrix44 M = m_sr.m_world_to_camera;
@@ -415,19 +417,65 @@ BatchedSimpleRenderer::get_inverse_matrix (ShaderGlobalsBatch *sgb, Matrix44 &re
                 }
             }
         }
+
         result = M;
+
         return true;
     }
 
     auto found = m_sr.m_named_xforms.find (to);
     if (found != m_sr.m_named_xforms.end()) {
-        result = *(found->second);
-        result.invert();
+        Matrix44 M = *(found->second);
+        M.invert();
+
+        result = M;
         return true;
     } else {
         return false;
     }
 }
+
+Mask
+BatchedSimpleRenderer::get_inverse_matrix (
+    ShaderGlobalsBatch *sgb,
+    MaskedAccessor<Matrix44> result,
+    ustring to,
+    ConstWideAccessor<float> time)
+{
+    Matrix44 scalar_result;
+    bool success = impl_get_inverse_matrix(scalar_result, to);
+
+    if (success) {
+        OSL_OMP_PRAGMA(omp simd simdlen(result.width))
+        for(int i = 0; i < result.width; ++i) {
+            result[i] = scalar_result;
+        }
+        return result.mask();
+    }
+    return Mask(false);
+}
+
+Mask
+BatchedSimpleRenderer::get_inverse_matrix (
+    ShaderGlobalsBatch *sgb,
+    MaskedAccessor<Matrix44> wResult,
+    ConstWideAccessor<ustring> wTo,
+    ConstWideAccessor<float> wTime)
+
+{
+    Mask status(false);
+
+    for(int i = 0; i < wResult.width; ++i) {
+        if (wResult.mask()[i]) {
+            ustring to = wTo[i];
+            auto result = wResult[i];
+            bool success = impl_get_inverse_matrix (result, to);
+            status.set(i, success);
+        }
+    }
+    return status;
+}
+
 
 bool 
 BatchedSimpleRenderer::is_attribute_uniform(ustring object, ustring name)

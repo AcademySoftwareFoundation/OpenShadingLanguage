@@ -1,37 +1,38 @@
 #!/bin/csh
 
-oslc test_pow_w16dfw16dfw16df.osl  
-oslc test_pow_w16dvw16dvw16v.osl
-oslc test_pow_w16dfw16dfw16f.osl   
-oslc test_pow_w16dvw16vw16dv.osl
-oslc test_pow_w16dfw16fw16df.osl   
-oslc test_pow_w16fw16fw16f.osl
-oslc test_pow_w16dvw16dvw16dv.osl  
-oslc test_pow_w16vw16vw16v.osl
-oslc test_pow_w16fff.osl
+
+
+
+oslc test_fmod_w16dfw16fw16df.osl   
+oslc test_fmod_w16dvw16vw16dv.osl
+oslc test_fmod_w16dfw16dfw16df.osl  
+oslc test_fmod_w16dvw16dvw16dv.osl  
+oslc test_fmod_w16fw16fw16f.osl
+oslc test_fmod_w16dfw16dfw16f.osl   
+oslc test_fmod_w16dvw16dvw16v.osl   
+oslc test_fmod_w16vw16vw16v.osl
+oslc test_fmod_w16fff.osl
 
 
 echo "\n"
 echo "*******************"
-echo "osl_pow_w16f_f_f"
+echo "osl_fmod_w16f_f_f"
 echo "*******************"
 
-testshade --batched  -g 200 200 test_pow_w16f_f_f  -od uint8 -o res wfff_out.tif -o res_m m_wfff_out.tif
-testshade -g 200 200 test_pow_w16f_f_f -od uint8 -o res wfff_ref.tif -o res_m m_wfff_ref.tif
+testshade --batched  -g 200 200 test_fmod_w16f_f_f  -od uint8 -o res wfff_out.tif -o res_m m_wfff_out.tif
+testshade -g 200 200 test_fmod_w16f_f_f -od uint8 -o res wfff_ref.tif -o res_m m_wfff_ref.tif
 
 idiff wfff_ref.tif wfff_out.tif
 idiff m_wfff_ref.tif m_wfff_out.tif
 
 
-
-
 echo "\n"
 echo "*******************"
-echo "osl_pow_w16f_w16f_w16f"
+echo "osl_fmod_w16f_w16f_w16f"
 echo "*******************"
 
-testshade --batched  -g 200 200 test_pow_w16f_w16f_w16f  -od uint8 -o res wfwfwf_out.tif -o res_m m_wfwfwf_out.tif
-testshade -g 200 200 test_pow_w16f_w16f_w16f -od uint8 -o res wfwfwf_ref.tif -o res_m m_wfwfwf_ref.tif
+testshade --batched  -g 200 200 test_fmod_w16f_w16f_w16f  -od uint8 -o res wfwfwf_out.tif -o res_m m_wfwfwf_out.tif
+testshade -g 200 200 test_fmod_w16f_w16f_w16f -od uint8 -o res wfwfwf_ref.tif -o res_m m_wfwfwf_ref.tif
 
 idiff wfwfwf_ref.tif wfwfwf_out.tif
 idiff m_wfwfwf_ref.tif m_wfwfwf_out.tif
@@ -42,40 +43,45 @@ idiff m_wfwfwf_ref.tif m_wfwfwf_out.tif
 
 echo "\n"
 echo "*******************"
-echo "osl_pow_w16df_w16df_w16df"
+echo "osl_fmod_w16df_w16df_w16df"
 echo "*******************"
 
-testshade --batched  -g 200 200 test_pow_w16df_w16df_w16df -od uint8 -o res wdfwdfwdf_out.tif \
+
+
+testshade --batched  -g 200 200 test_fmod_w16df_w16df_w16df -od uint8 -o res wdfwdfwdf_out.tif \
                                                                                       -o Dxres wdfwdfwdf_dx_out.tif \
                                                                                       -o res_m m_wdfwdfwdf_out.tif\
                                                                                       -o Dxres_m m_wdfwdfwdf_dx_out.tif
                                                                                       
-testshade  -g 200 200 test_pow_w16df_w16df_w16df -od uint8 -o res wdfwdfwdf_ref.tif \
+testshade  -g 200 200 test_fmod_w16df_w16df_w16df -od uint8 -o res wdfwdfwdf_ref.tif \
                                                                                       -o Dxres wdfwdfwdf_dx_ref.tif \
                                                                                       -o res_m m_wdfwdfwdf_ref.tif\
                                                                                       -o Dxres_m m_wdfwdfwdf_dx_ref.tif
 
-idiff -fail 0.004 wdfwdfwdf_ref.tif wdfwdfwdf_out.tif
-idiff -fail 0.004 wdfwdfwdf_dx_ref.tif wdfwdfwdf_dx_out.tif
+idiff wdfwdfwdf_ref.tif wdfwdfwdf_out.tif
+idiff wdfwdfwdf_dx_ref.tif wdfwdfwdf_dx_out.tif
 
 
 #Masked tests
-idiff -fail 0.004 m_wdfwdfwdf_ref.tif m_wdfwdfwdf_out.tif
-idiff -fail 0.004 m_wdfwdfwdf_dx_ref.tif m_wdfwdfwdf_dx_out.tif
+idiff m_wdfwdfwdf_ref.tif m_wdfwdfwdf_out.tif
+idiff m_wdfwdfwdf_dx_ref.tif m_wdfwdfwdf_dx_out.tif
+
+
+
 
 echo "\n"
 echo "*******************"
-echo "osl_pow_w16df_w16df_w16f"
+echo "osl_fmod_w16df_w16df_w16f"
 echo "*******************"
 
 
 
-testshade --batched  -g 200 200 test_pow_w16df_w16df_w16f -od uint8 -o res wdfwdfwf_out.tif \
+testshade --batched  -g 200 200 test_fmod_w16df_w16df_w16f -od uint8 -o res wdfwdfwf_out.tif \
                                                                                       -o Dxres wdfwdfwf_dx_out.tif \
                                                                                       -o res_m m_wdfwdfwf_out.tif\
                                                                                       -o Dxres_m m_wdfwdfwf_dx_out.tif
                                                                                       
-testshade  -g 200 200 test_pow_w16df_w16df_w16f -od uint8 -o res wdfwdfwf_ref.tif \
+testshade  -g 200 200 test_fmod_w16df_w16df_w16f -od uint8 -o res wdfwdfwf_ref.tif \
                                                                                       -o Dxres wdfwdfwf_dx_ref.tif \
                                                                                       -o res_m m_wdfwdfwf_ref.tif\
                                                                                       -o Dxres_m m_wdfwdfwf_dx_ref.tif
@@ -92,17 +98,15 @@ idiff m_wdfwdfwf_dx_ref.tif m_wdfwdfwf_dx_out.tif
 
 echo "\n"
 echo "*******************"
-echo "osl_pow_w16df_w16f_w16df"
+echo "osl_fmod_w16df_w16f_w16df"
 echo "*******************"
 
-
-
-testshade --batched  -g 200 200 test_pow_w16df_w16f_w16df -od uint8 -o res wdfwfwdf_out.tif \
+testshade --batched  -g 200 200 test_fmod_w16df_w16f_w16df -od uint8 -o res wdfwfwdf_out.tif \
                                                                                       -o Dxres wdfwfwdf_dx_out.tif \
                                                                                       -o res_m m_wdfwfwdf_out.tif\
                                                                                       -o Dxres_m m_wdfwfwdf_dx_out.tif
                                                                                       
-testshade  -g 200 200 test_pow_w16df_w16f_w16df -od uint8 -o res wdfwfwdf_ref.tif \
+testshade  -g 200 200 test_fmod_w16df_w16f_w16df -od uint8 -o res wdfwfwdf_ref.tif \
                                                                                       -o Dxres wdfwfwdf_dx_ref.tif \
                                                                                       -o res_m m_wdfwfwdf_ref.tif\
                                                                                       -o Dxres_m m_wdfwfwdf_dx_ref.tif
@@ -120,45 +124,44 @@ idiff m_wdfwfwdf_dx_ref.tif m_wdfwfwdf_dx_out.tif
 
 echo "\n"
 echo "*******************"
-echo "osl_pow_w16dv_w16dv_w16dv"
+echo "osl_fmod_w16dv_w16dv_w16dv"
 echo "*******************"
 
 
 
-testshade --batched  -g 200 200 test_pow_w16dv_w16dv_w16dv -od uint8 -o res wdvwdvwdv_out.tif \
+testshade --batched  -g 200 200 test_fmod_w16dv_w16dv_w16dv -od uint8 -o res wdvwdvwdv_out.tif \
                                                                                       -o Dxres wdvwdvwdv_dx_out.tif \
                                                                                       -o res_m m_wdvwdvwdv_out.tif\
                                                                                       -o Dxres_m m_wdvwdvwdv_dx_out.tif
                                                                                       
-testshade  -g 200 200 test_pow_w16dv_w16dv_w16dv -od uint8 -o res wdvwdvwdv_ref.tif \
+testshade  -g 200 200 test_fmod_w16dv_w16dv_w16dv -od uint8 -o res wdvwdvwdv_ref.tif \
                                                                                       -o Dxres wdvwdvwdv_dx_ref.tif \
                                                                                       -o res_m m_wdvwdvwdv_ref.tif\
                                                                                       -o Dxres_m m_wdvwdvwdv_dx_ref.tif
 
-idiff -fail 0.004 wdvwdvwdv_ref.tif wdvwdvwdv_out.tif
-idiff -fail 0.004  wdvwdvwdv_dx_ref.tif wdvwdvwdv_dx_out.tif
+idiff wdvwdvwdv_ref.tif wdvwdvwdv_out.tif
+idiff wdvwdvwdv_dx_ref.tif wdvwdvwdv_dx_out.tif
 
 
 #Masked tests
-idiff -fail 0.004 m_wdvwdvwdv_ref.tif m_wdvwdvwdv_out.tif
-idiff -fail 0.004 m_wdvwdvwdv_dx_ref.tif m_wdvwdvwdv_dx_out.tif
-
+idiff m_wdvwdvwdv_ref.tif m_wdvwdvwdv_out.tif
+idiff m_wdvwdvwdv_dx_ref.tif m_wdvwdvwdv_dx_out.tif
 
 
 
 echo "\n"
 echo "*******************"
-echo "osl_pow_w16dv_w16dv_w16v"
+echo "osl_fmod_w16dv_w16dv_w16v"
 echo "*******************"
 
 
 
-testshade --batched  -g 200 200 test_pow_w16dv_w16dv_w16v -od uint8 -o res wdvwdvwv_out.tif \
+testshade --batched  -g 200 200 test_fmod_w16dv_w16dv_w16v -od uint8 -o res wdvwdvwv_out.tif \
                                                                                       -o Dxres wdvwdvwv_dx_out.tif \
                                                                                       -o res_m m_wdvwdvwv_out.tif\
                                                                                       -o Dxres_m m_wdvwdvwv_dx_out.tif
                                                                                       
-testshade  -g 200 200 test_pow_w16dv_w16dv_w16v -od uint8 -o res wdvwdvwv_ref.tif \
+testshade  -g 200 200 test_fmod_w16dv_w16dv_w16v -od uint8 -o res wdvwdvwv_ref.tif \
                                                                                       -o Dxres wdvwdvwv_dx_ref.tif \
                                                                                       -o res_m m_wdvwdvwv_ref.tif\
                                                                                       -o Dxres_m m_wdvwdvwv_dx_ref.tif
@@ -169,6 +172,8 @@ idiff wdvwdvwv_dx_ref.tif wdvwdvwv_dx_out.tif
 
 #Masked tests
 idiff m_wdvwdvwv_ref.tif m_wdvwdvwv_out.tif
+
+
 idiff m_wdvwdvwv_dx_ref.tif m_wdvwdvwv_dx_out.tif
 
 
@@ -176,17 +181,17 @@ idiff m_wdvwdvwv_dx_ref.tif m_wdvwdvwv_dx_out.tif
 
 echo "\n"
 echo "*******************"
-echo "osl_pow_w16dv_w16v_w16dv"
+echo "osl_fmod_w16dv_w16v_w16dv"
 echo "*******************"
 
 
 
-testshade --batched  -g 200 200 test_pow_w16dv_w16v_w16dv -od uint8 -o res wdvwvwdv_out.tif \
+testshade --batched  -g 200 200 test_fmod_w16dv_w16v_w16dv -od uint8 -o res wdvwvwdv_out.tif \
                                                                                       -o Dxres wdvwvwdv_dx_out.tif \
                                                                                       -o res_m m_wdvwvwdv_out.tif\
                                                                                       -o Dxres_m m_wdvwvwdv_dx_out.tif
                                                                                       
-testshade  -g 200 200 test_pow_w16dv_w16v_w16dv -od uint8 -o res wdvwvwdv_ref.tif \
+testshade  -g 200 200 test_fmod_w16dv_w16v_w16dv -od uint8 -o res wdvwvwdv_ref.tif \
                                                                                       -o Dxres wdvwvwdv_dx_ref.tif \
                                                                                       -o res_m m_wdvwvwdv_ref.tif\
                                                                                       -o Dxres_m m_wdvwvwdv_dx_ref.tif
@@ -204,11 +209,11 @@ idiff m_wdvwvwdv_dx_ref.tif m_wdvwvwdv_dx_out.tif
 
 echo "\n"
 echo "*******************"
-echo "osl_pow_w16v_w16v_w16v"
+echo "osl_fmod_w16v_w16v_w16v"
 echo "*******************"
 
-testshade --batched  -g 200 200 test_pow_w16v_w16v_w16v  -od uint8 -o res wvwvwv_out.tif -o res_m m_wvwvwv_out.tif
-testshade -g 200 200 test_pow_w16v_w16v_w16v -od uint8 -o res wvwvwv_ref.tif -o res_m m_wvwvwv_ref.tif
+testshade --batched  -g 200 200 test_fmod_w16v_w16v_w16v  -od uint8 -o res wvwvwv_out.tif -o res_m m_wvwvwv_out.tif
+testshade -g 200 200 test_fmod_w16v_w16v_w16v -od uint8 -o res wvwvwv_ref.tif -o res_m m_wvwvwv_ref.tif
 
 idiff wvwvwv_ref.tif wvwvwv_out.tif
 idiff m_wvwvwv_ref.tif m_wvwvwv_out.tif

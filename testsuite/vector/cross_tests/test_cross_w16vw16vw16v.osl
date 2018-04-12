@@ -1,17 +1,20 @@
-shader test_cross_w16vw16vw16v (output color dcross = 0)
+shader test_cross_w16vw16vw16v (output color dcross = 0,
+                                output color mdcross = 0
+        )
 //testshade --batched --llvm_debug -g 4 4 test_dot_w16dfw16dvw16v | grep osl_dot
 {
+    
+    vector a = vector(u+v, u-v, -u+v);
+    vector b = vector(u-v, u+v, -u-v);
+
+    color um_dcross = cross(a,b);
 
 if(P[0]>0.5){
-           vector a = vector(u+v, u-v, -u+v);
-           vector b = vector(u-v, u+v, -u-v);
-           
-           vector d = cross(a, b);
-           //printf ("\n");
-          // printf ("cross product: d = cross(%.4g, %.4g) = %.4g",
-          //       a, b, d);
 
-           dcross = cross(a,b);
+           mdcross = cross(b,b);
            
 }
+
+dcross = um_dcross;
+
 }

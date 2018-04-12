@@ -1,0 +1,13 @@
+shader test_sincos (output float s = 0, output float c = 0)
+{
+    if(P[0]>0.5)
+{
+        float a = P[0];
+        float b = 2.0*a;
+        //float s, c;
+        sincos(a, s, c);
+      //  printf ("  cos (%g) = %g\n", a, cos(a));
+      //  printf ("  sin (%g) = %g\n", a, sin(a));
+      //  printf ("  sincos (%g) = %g %g\n", a, s, c);
+}
+}

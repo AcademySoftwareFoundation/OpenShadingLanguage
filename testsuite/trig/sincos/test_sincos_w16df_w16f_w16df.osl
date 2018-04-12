@@ -1,0 +1,41 @@
+//testshade --batched --llvm_debug -g 400 400 test_sincos_w16df_w16f_w16df -od uint8 -o sinop a.tif -o cosop b.tif 
+//-o dxcos c.tif -o msinop ma.tif -o mcosop mb.tif -o mdxcos mc.tif | grep osl
+
+shader test_sincos_w16df_w16f_w16df (output float sinop = 0, 
+				     output float cosop = 0, 
+				     output float dxcos = 0,
+				     
+				     output float msinop = 0,
+				     output float mcosop = 0,
+				     output float mdxcos = 0)
+				     
+{
+    
+   
+            float a = P[0];
+            float b = 2.0*a;
+     //sin is f; cos is df  
+            
+            float sinop_ = 0.0;
+            float cosop_ = 0.0;
+            float dxcos_ = 0.0;
+            float dxa_ = 0.0;
+            
+            sincos(a, sinop_, cosop_);
+            dxa_ = Dx(a);
+            dxcos_ = Dx(cosop_);
+
+    
+    if(int(P[0]*200)%2)
+{
+     
+        a = P[1];
+        sincos(a, msinop, mcosop);
+        float mdxa = Dx(a);
+        mdxcos = Dx(mcosop);
+}
+    
+    sinop = sinop_;
+    cosop = cosop_;
+    dxcos = dxcos_;
+}

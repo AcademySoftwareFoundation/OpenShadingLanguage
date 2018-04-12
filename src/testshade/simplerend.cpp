@@ -446,7 +446,8 @@ BatchedSimpleRenderer::get_inverse_matrix (
     bool success = impl_get_inverse_matrix(scalar_result, to);
 
     if (success) {
-        OSL_OMP_PRAGMA(omp simd simdlen(result.width))
+        OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(result.width))
+        OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(result.width))
         for(int i = 0; i < result.width; ++i) {
             result[i] = scalar_result;
         }

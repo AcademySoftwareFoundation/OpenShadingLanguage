@@ -1,22 +1,38 @@
 shader test_distance_w16dfw16vw16dv (output color ddistance = 0,
-                                    output color dxdistance = 0,
-                                    output color dydistance = 0)
-//testshade --batched --llvm_debug -g 4 4 test_dot_w16dfw16dvw16v | grep osl_dot
+                                output color dxdistance = 0,
+                                output color dydistance = 0,
+                                
+                                output color mddistance = 0,
+                                output color mdxdistance = 0,
+                                output color mdydistance = 0
+                                )
+//testshade --batched --llvm_debug -g 4 4 test_distance_w16dfw16dvw16v | grep osl_distance
 {
+    vector a = vector(1.0, 1.0, 1.0);
+    vector b = vector(u+v, -u-v, u+v);
+   // vector b = vector(u+v,  u+v, u+v);
+    
+   // float d = distance(a, b);
+    ddistance = distance(a,b);
+    dxdistance = Dx(ddistance);
+    dydistance = Dy(ddistance);
+    
+    float mddistance_= 0.0;
+    float mdxdistance_= 0.0;
+    float mdydistance_= 0.0;
+    
+if(int(P[0]*200)%2){
+           
+    
+           mddistance_ = distance(a+vector(0.1,0.2,0.3),b);
+           mdxdistance_ = Dx(mddistance_);
+           mdydistance_ = Dy(mddistance_);
 
-if(P[0]>0.5){
-           
-           vector a = vector(1.0, 1.0, 1.0);
-           vector b = vector(u+v, -u-v, u+v);
-          // vector b = vector(u+v,  u+v, u+v);
-           
-           float d = distance(a, b);
-         //  printf ("\n");
-         //  printf ("distance product: d = distance(%.4g, %.4g) = %.4g  Dx(d) = %.4g  Dy(d) = %.4g\n",
-          //       a, b, d, Dx(d), Dy(d));
-           
-           ddistance = distance(a,b);
-           dxdistance = Dx(ddistance);
-           dydistance = Dy(ddistance);
-}
+	}
+
+mddistance = mddistance_;
+mdxdistance = mdxdistance_;
+mdydistance = mdydistance_;
+
+
 }

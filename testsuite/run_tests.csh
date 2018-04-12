@@ -9,6 +9,16 @@
 ./run_test_dir.csh arraycopy
 
 ./run_test_dir.csh trig/pow
+./run_test_dir.csh trig/atan2
+./run_test_dir.csh trig/fmod
+./run_test_dir.csh trig/sincos
+
+./run_test_dir.csh vector/dot_tests
+./run_test_dir.csh vector/distance_tests
+./run_test_dir.csh vector/cross_tests
+
+./run_test_dir.csh filterwidth
+
 ./run_test_dir.csh compassign
 
 ./run_test_dir.csh abs

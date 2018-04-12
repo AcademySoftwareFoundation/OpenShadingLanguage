@@ -1,0 +1,25 @@
+#ifndef M_PI
+#define M_PI 3.14159265358979
+#endif
+
+//testshade --batched --llvm_debug -g 4 4 test_fmod_w16f_w16f_w16f -o res a.tif | grep o
+
+shader
+test_fmod_w16f_w16f_w16f (output color res = 0,
+			   output color res_m = 0)
+{
+    
+        float a = P[0];
+        float b = 2.0*P[0];
+        float r = 0.0;
+        r = fmod(a,b);
+        
+
+if (int(P[0]*200)%2){
+
+res_m = fmod(b,a);
+
+}
+
+res = color (r);
+}

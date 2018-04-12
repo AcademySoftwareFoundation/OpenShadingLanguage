@@ -1,0 +1,39 @@
+//testshade --batched --llvm_debug -g 400 400 test_sincos_w16dv_w16dv_w16v -od uint8 -o sinop a.tif -o cosop b.tif  -o dxsin c.tif -o dxa d.tif  -o msinop ma.tif -o mcosop mb.tif  -o mdxsin mc.tif -o mdxa md.tif| grep osl
+
+shader test_sincos_w16dv_w16dv_w16v (output vector sinop = 0, 
+				     output vector cosop = 0,
+				     output vector dxsin = 0,
+				     output vector dxa = 0,
+				     
+				     output vector msinop = 0, 
+				     output vector mcosop = 0,
+	                  output vector mdxsin = 0,   
+	                  output vector mdxa = 0)
+{
+    
+    
+    vector a = u*0.1;
+    
+    vector sinop_ = 0.0;
+    vector cosop_ = 0.0;
+    vector dxa_ = 0.0;
+    vector dxsin_ = 0.0;
+    
+    sincos(a, sinop_, cosop_);
+    dxa_ = Dx(a);
+    dxsin_ = Dx(sinop_);
+    
+    
+    if(int(P[0]*200)%2)
+{
+    a = v * 0.2;   
+    sincos(a, msinop, mcosop);
+	mdxa = Dx(a);
+	mdxsin = Dx(msinop);
+}
+    
+    sinop = sinop_;
+    cosop = cosop_;
+    dxa = dxa_;
+    dxsin = dxsin_;
+}

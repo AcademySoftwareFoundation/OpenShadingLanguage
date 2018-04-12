@@ -1,0 +1,28 @@
+//testshade --batched --llvm_debug -g 4 4 test_filter_width_w16f_w16df -o op a.tif | grep osl
+
+//testshade --batched --llvm_debug -g 4 4 test_filter_width_w16v_w16dv -o op a.tif -o dxop b.tif | grep osl
+shader test_filterwidth_w16vw16dv (output vector op = 0, 
+                                     output vector dxop = 0,
+                                     output vector mop = 0,
+                                     output vector mdxop = 0){
+
+vector x = u;
+
+
+vector op_ = 0;
+vector dxop_ = 0;
+
+op_ = filterwidth(x);
+dxop_ = Dx(op_);
+
+
+
+
+if(int(P[0]*200)%2){
+mop = filterwidth(vector(u,v,u));
+mdxop = Dx(mop);
+}
+
+op = op_;
+dxop = dxop_;
+}

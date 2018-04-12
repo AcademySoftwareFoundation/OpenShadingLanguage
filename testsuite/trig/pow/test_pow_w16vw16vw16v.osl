@@ -9,16 +9,22 @@ test_pow_w16v_w16v_w16v (output color res = 0,
 			   output color res_m = 0)
 {
     
-  vector a = -M_PI;
-  vector b = 2.0*a;
+  vector a = vector(-M_PI, -0.2, 0.1);
+  vector b = vector (2.0, 1.2, 0.2);
 
 
- res = pow(a,b); 
+ vector res_ = 0;
+ vector res_m_ = 0;
+ 
+ res_ = pow(u,b);
 
-if (P[0]>0.5){
+if (int(P[0]*200)%2){
 
-res_m = pow(a,b);
+res_m_ = pow(P[0],vector(0.1,0.2, 0.3));
 
 }
+
+res = res_;
+res_m = res_m_;
 
 }

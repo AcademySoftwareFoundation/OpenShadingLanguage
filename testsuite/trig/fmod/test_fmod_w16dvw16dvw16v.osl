@@ -2,11 +2,11 @@
 #define M_PI 3.14159265358979
 #endif
 
-//testshade --batched --llvm_debug -g 200 200 test_pow_w16dv_w16dv_w16v -od uint8 -o res a.tif -o Dxres b.tif -o res_m c.tif -o Dxres_m d.tif
+//testshade --batched --llvm_debug -g 200 200 test_fmod_w16dv_w16dv_w16v -od uint8 -o res a.tif -o Dxres b.tif -o res_m c.tif -o Dxres_m d.tif
 
 
 shader
-test_pow_w16dv_w16dv_w16v (output color res = 0,
+test_fmod_w16dv_w16dv_w16v (output color res = 0,
 			     output color Dxres = 0,
 			     output color res_m = 0,
 			     output color Dxres_m = 0)
@@ -15,16 +15,16 @@ test_pow_w16dv_w16dv_w16v (output color res = 0,
   vector a = u;
   vector b = 2;
 
+
   vector res_ = 0;
   vector Dxres_ = 0;
   
- res_ = pow(a,b); 
+ res_ = fmod(a,b); 
  Dxres_ = Dx(res_);
 
 if (P[0]>0.5){
 
-a = v;
-res_m = pow(a,b);
+res_m = fmod(b,a);
 Dxres_m = Dx(res_m);
 
 }

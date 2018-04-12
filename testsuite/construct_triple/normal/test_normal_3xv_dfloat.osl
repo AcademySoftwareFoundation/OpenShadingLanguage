@@ -1,0 +1,22 @@
+shader
+test_normal_3xv_dfloat(output color Cout = 0)
+{
+    float valr = 0.5*(v);
+    float valg = 0.6*(v);
+    float valb = 0.4*(v);
+    float val2r = u;
+    float val2g = 0.3*u;
+    float val2b = 0.75*u;
+     
+              
+    normal p1 = normal(valr, valg, valb);
+    if (int(P[0]*64)%2==0) {
+        normal p2 = normal(val2r, val2g, val2b);
+        p1 = p2;
+    }
+            
+    normal dxc = Dx(p1);
+    normal dyc = Dy(p1);
+    Cout = dxc + dyc;
+    
+}

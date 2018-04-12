@@ -1,0 +1,20 @@
+shader
+test_arraycopy_v_matrix (output color Cout = color(0,0,0))
+{
+    // Test array referencing with varying index
+    matrix marray[3] = { matrix(u), matrix(P[0]+P[1]), matrix(v) };
+
+    matrix negmarray[3] = { matrix(1-u), matrix(1-(P[0]+P[1])), matrix(1-v) };
+
+    matrix marray2[3];
+    
+    
+    marray2 = marray;
+    
+    if (int(P[0]*64)%2==0) {
+        marray2 = negmarray;
+    }
+    
+    
+    Cout = marray2[0][0][0] + marray2[1][0][0] + marray2[2][0][0]; 
+}

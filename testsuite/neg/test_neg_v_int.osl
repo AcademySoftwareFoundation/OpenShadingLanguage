@@ -1,0 +1,13 @@
+shader
+test_neg_v_int (output color Cout = 0)
+{
+    int  val = int(32*P[0]);
+    int  val2 = int(16*P[1]);
+    
+    int d = -val;
+    if (int(P[0]*64)%2==0) {
+        d = -val2;
+    }
+    
+    Cout = color(-d/32.0, -d/32.0, -d/32.0);
+}

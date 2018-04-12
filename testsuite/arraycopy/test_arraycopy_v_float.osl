@@ -1,0 +1,24 @@
+shader
+test_arraycopy_v_float (output color Cout = color(0,0,0))
+{
+    // Test array referencing with varying index
+    float farray[3] = {v, u, 0.5};
+
+    float negfarray[2] = { -0.5,-v };
+
+    
+    
+
+    float farray2[3];
+    farray2 = farray;
+    
+    float farray3[3];    
+    farray3 = farray2;
+    
+    if (int(P[0]*64)%2==0) {
+        farray3 = negfarray;
+    }
+    
+    
+    Cout = color(farray3[0], farray3[1], farray3[2]); 
+}

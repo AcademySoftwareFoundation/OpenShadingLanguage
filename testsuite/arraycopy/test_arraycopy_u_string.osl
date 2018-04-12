@@ -1,0 +1,24 @@
+shader
+test_arraycopy_u_string (output color Cout = color(0,0,0))
+{
+    // Test array referencing with varying index
+    string sarray[3] = { "7", "9", "5"};
+
+    string negsarray[2] = { "-5","6" };
+
+    
+    
+
+    string sarray2[3];
+    sarray2 = sarray;
+    
+    string sarray3[3];    
+    sarray3 = sarray2;
+    
+    if (int(P[0]*64)%2==0) {
+        sarray3 = negsarray;
+    }
+    
+    
+    Cout = color(stoi(sarray3[0])/10.0, stoi(sarray3[1])/10.0, stoi(sarray3[2])/10.0); 
+}

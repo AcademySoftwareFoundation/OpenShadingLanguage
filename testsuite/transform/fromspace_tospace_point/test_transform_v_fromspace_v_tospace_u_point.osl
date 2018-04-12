@@ -1,0 +1,24 @@
+shader
+test_transform_v_fromspace_v_tospace_u_point (
+    output color Cout = 0)
+{
+    float val = 1.0/(2*raytype("camera"));
+    float val2 = val/2;
+    float val3 = val/4;
+
+    point v1 = point(val, val2, val3);
+    point v2 = point(val3, val, val2);
+    
+    string spaces[5] = { "common", "object", "shader", "world", "camera"};
+    string fromspace = spaces[int(P[0]*64)%5];
+    string tospace = spaces[int(P[1]*64)%5];
+    
+    
+    point tv = transform(fromspace, tospace, v1);
+
+    if (int(P[0]*64)%2==0) {
+        tv = transform(fromspace, tospace, v2);
+    }
+    
+    Cout = tv;
+}

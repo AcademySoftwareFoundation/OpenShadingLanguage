@@ -1,0 +1,17 @@
+shader
+test_neg_v_dcolor (output color Cout = 0)
+{
+    color  val = color(-0.8*P[0], -0.5*P[0], 0.25*P[0]);
+    color  val2 = color(0.3*P[1], -0.25*P[1], -0.75*P[1]);
+    
+    color d = -val;
+    if (int(P[0]*64)%2==0) {
+        d = -val2;
+    }
+    
+    color derivX = Dx(d);
+    color derivY = Dy(d);
+    
+    
+    Cout = color(d[0] - d[1] -d[2], derivX[0] - derivX[1] - derivX[2], derivY[0] - derivY[1] -derivY[2]);
+}

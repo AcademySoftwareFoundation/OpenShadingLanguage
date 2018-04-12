@@ -1,0 +1,18 @@
+shader
+test_normalize_v_normal (output color Cout = 0)
+{
+    float  val = u;
+    float val2 = v;
+    float val3 = u+v;
+
+    normal v1 = normal(val, val2, val3);
+    normal v2 = normal(val3, val, val2);
+    
+    normal nv = normalize(v1);
+    
+    if (int(P[0]*64)%2==0) {
+        nv = normalize(v2);
+    }
+    
+    Cout = nv;
+}

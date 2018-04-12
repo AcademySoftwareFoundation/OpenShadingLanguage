@@ -1,0 +1,22 @@
+shader
+test_normalize_u_normal (output color Cout = 0)
+{
+    float  val = 1.0/(2*raytype("camera"));
+    float val2 = val/2;
+    float val3 = val/4;
+
+    normal v1 = normal(val, val2, val3);
+    normal v2 = normal(val3, val, val2);
+    
+    normal nv = normalize(v1);
+
+    normal nv2 = 2*nv;
+    nv2 = normalize(nv2);
+    
+    if (int(P[0]*64)%2==0) {
+        nv2 = normalize(v2);
+    }
+    
+    
+    Cout = nv2;
+}

@@ -1604,8 +1604,12 @@ LLVMGEN (llvm_gen_mxcompref)
     Symbol& Row = *rop.opargsym (op, 2);
     Symbol& Col = *rop.opargsym (op, 3);
 
-    llvm::Value *row = rop.llvm_load_value (Row);
-    llvm::Value *col = rop.llvm_load_value (Col);
+    bool op_is_uniform = rop.isSymbolUniform(Result);
+    bool components_are_uniform = rop.isSymbolUniform(Row) && rop.isSymbolUniform(Col);
+
+    llvm::Value *row = rop.llvm_load_value (Row, 0, 0, TypeDesc::UNKNOWN, components_are_uniform);
+    llvm::Value *col = rop.llvm_load_value (Col, 0, 0, TypeDesc::UNKNOWN, components_are_uniform);
+
     if (rop.shadingsys().range_checking()) {
         // TODO: Handle non-uniform case below minding mask values
         ASSERT(rop.isSymbolUniform(Result));
@@ -1630,11 +1634,11 @@ LLVMGEN (llvm_gen_mxcompref)
         int r = Imath::clamp (((int*)Row.data())[0], 0, 3);
         int c = Imath::clamp (((int*)Col.data())[0], 0, 3);
         int comp = 4 * r + c;
-        val = rop.llvm_load_value (M, 0, comp);
+        val = rop.llvm_load_value (M, 0, comp, TypeDesc::TypeFloat, op_is_uniform);
     } else {
-        llvm::Value *comp = rop.ll.op_mul (row, rop.ll.constant(4));
+        llvm::Value *comp = rop.ll.op_mul (row, components_are_uniform ? rop.ll.constant(4) : rop.ll.wide_constant(4));
         comp = rop.ll.op_add (comp, col);
-        val = rop.llvm_load_component_value (M, 0, comp);
+        val = rop.llvm_load_component_value (M, 0, comp, op_is_uniform, components_are_uniform);
     }
     rop.llvm_store_value (val, Result);
     rop.llvm_zero_derivs (Result);
@@ -1653,13 +1657,13 @@ LLVMGEN (llvm_gen_mxcompassign)
     Symbol& Col = *rop.opargsym (op, 2);
     Symbol& Val = *rop.opargsym (op, 3);
 
-    ASSERT(rop.isSymbolUniform(Col) && "incomplete");
-    ASSERT(rop.isSymbolUniform(Row) && "incomplete");
-
     bool op_is_uniform = rop.isSymbolUniform(Result);
+    bool row_is_uniform = rop.isSymbolUniform(Row);
+    bool col_is_uniform = rop.isSymbolUniform(Col);
+    bool components_are_uniform = row_is_uniform && col_is_uniform;
 
-    llvm::Value *row = rop.llvm_load_value (Row);
-    llvm::Value *col = rop.llvm_load_value (Col);
+    llvm::Value *row = rop.llvm_load_value (Row, 0, 0, TypeDesc::UNKNOWN, components_are_uniform);
+    llvm::Value *col = rop.llvm_load_value (Col, 0, 0, TypeDesc::UNKNOWN, components_are_uniform);
     if (rop.shadingsys().range_checking()) {
         // TODO: Handle non-uniform case below minding mask values
         ASSERT(rop.isSymbolUniform(Result));
@@ -1688,9 +1692,9 @@ LLVMGEN (llvm_gen_mxcompassign)
         int comp = 4 * r + c;
         rop.llvm_store_value (val, Result, 0, comp);
     } else {
-        llvm::Value *comp = rop.ll.op_mul (row, rop.ll.wide_constant(4));
+        llvm::Value *comp = rop.ll.op_mul (row, components_are_uniform ? rop.ll.constant(4) : rop.ll.wide_constant(4));
         comp = rop.ll.op_add (comp, col);
-        rop.llvm_store_component_value (val, Result, 0, comp);
+        rop.llvm_store_component_value (val, Result, 0, comp, components_are_uniform);
     }
     return true;
 }
@@ -5605,38 +5609,45 @@ LLVMGEN (llvm_gen_luminance)
     Symbol &C (*rop.opargsym (op, 1));
     ASSERT (Result.typespec().is_float() && C.typespec().is_triple());
 
-    // TODO: Handle non-uniform case below minding mask values
-    bool op_is_uniform = rop.isSymbolUniform(C);
+    // luminance = red * luminance_scale.red + green * luminance_scale.green + blue * luminance_scale.blue;
+
+    // Although color systems can be changed via a ShadingSystem attribute,
+    // any change of attributes should cause/require a rebuild of the shaders
+    // So we will emit the luminance scale as comple time constants
+    // and emit the simple math, vs. incur the overhead of a function call
+
+    Color3 luminance_scale = rop.shadingsys().luminance_scale();
+    //
     bool result_is_uniform = rop.isSymbolUniform(Result);
+    bool op_is_uniform = rop.isSymbolUniform(C);
 
-    bool deriv = C.has_derivs() && Result.has_derivs();
-    llvm::Value* args[3] = { rop.sg_void_ptr(), rop.llvm_void_ptr(Result),
-                             rop.llvm_void_ptr(C) };
-    std::string name("osl_luminance_");
-    if(result_is_uniform == false) {
-	  // Non uniform, so add the "wide" prefix
-	  name += "w";
-	  name += std::to_string(SimdLaneCount);
-    }
-    if (deriv) {
-    	name += "d";
-    }
-    name += "f";
-    if(op_is_uniform == false) {
-	  // Non uniform, so add the "wide" prefix
-	  name += "w";
-	  name += std::to_string(SimdLaneCount);
-    }
-    if (deriv) {
-    	name += "d";
-    }
-    name += "v_batched";
+    llvm::Value *red_scale = op_is_uniform ? rop.ll.constant(luminance_scale[0]) : rop.ll.wide_constant(luminance_scale[0]);
+    llvm::Value *green_scale = op_is_uniform ? rop.ll.constant(luminance_scale[1]) : rop.ll.wide_constant(luminance_scale[1]);
+    llvm::Value *blue_scale = op_is_uniform ? rop.ll.constant(luminance_scale[2]) : rop.ll.wide_constant(luminance_scale[2]);
 
-    rop.ll.call_function (name.c_str(),
-                            args, 3);
+    for (int d = 0;  d < 3;  ++d) {  // deriv
+        llvm::Value *red = rop.llvm_load_value (C, d, 0, TypeDesc::UNKNOWN, op_is_uniform);
+        llvm::Value *green = rop.llvm_load_value (C, d, 1, TypeDesc::UNKNOWN, op_is_uniform);
+        llvm::Value *blue = rop.llvm_load_value (C, d, 2, TypeDesc::UNKNOWN, op_is_uniform);
 
-    if (Result.has_derivs() && !C.has_derivs())
-        rop.llvm_zero_derivs (Result);
+        llvm::Value *scaled_red = rop.ll.op_mul(red_scale, red);
+        llvm::Value *scaled_green = rop.ll.op_mul(green_scale, green);
+        llvm::Value *scaled_blue = rop.ll.op_mul(blue_scale, blue);
+
+        llvm::Value *result = rop.ll.op_add(rop.ll.op_add(scaled_red,scaled_green),scaled_blue);
+
+        ASSERT(op_is_uniform || !result_is_uniform);
+        if (op_is_uniform && !result_is_uniform)
+        {
+            result = rop.ll.widen_value(result);
+        }
+
+        rop.llvm_store_value (result, Result, d);
+        if (! Result.has_derivs())  // skip the derivs if we don't need them
+            break;
+    }
+
+
 
     return true;
 }

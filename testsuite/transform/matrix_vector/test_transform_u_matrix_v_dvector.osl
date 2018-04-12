@@ -1,0 +1,25 @@
+shader
+test_transform_u_matrix_v_dvector (
+    output color Cout = 0)
+{
+    float val = raytype("camera");
+    float val2 = val/2;
+    float val3 = val/4;
+
+    vector v1 = vector(u, v, u+v);
+    vector v2 = vector(v, u, v-u);
+    
+    matrix M = matrix(
+        val*0.1, val*0.125, val*0.150, val*0.175,
+        val*0.2, val*0.225, val*0.250, val*0.275,
+        val*0.3, val*0.325, val*0.350, val*0.375,
+        val*0.4, val*0.425, val*0.450, val*0.475);
+    vector tv = transform(M, v1);
+    vector tv2 = tv*transform(M*2, v1);
+
+    if (int(P[0]*64)%2==0) {
+        tv2 = transform(M, v2);
+    }
+    
+    Cout = Dx(tv2) + Dy(tv2);
+}

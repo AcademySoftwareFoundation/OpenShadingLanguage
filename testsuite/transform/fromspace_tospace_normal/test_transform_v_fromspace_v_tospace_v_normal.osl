@@ -1,0 +1,20 @@
+shader
+test_transform_v_fromspace_v_tospace_v_normal (
+    output color Cout = 0)
+{
+    normal v1 = normal(u, v, u-v);
+    normal v2 = normal(v, u, u+v);
+    
+    string spaces[5] = { "common", "object", "shader", "world", "camera"};
+    string fromspace = spaces[int(P[0]*64)%5];
+    string tospace = spaces[int(P[1]*64)%5];
+    
+    
+    normal tv = transform(fromspace, tospace, v1);
+
+    if (int(P[0]*64)%2==0) {
+        tv = transform(fromspace, tospace, v2);
+    }
+    
+    Cout = tv;
+}

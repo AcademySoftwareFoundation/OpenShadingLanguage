@@ -674,6 +674,9 @@ public:
 
     /// Return the luminance of an RGB color in the current color space.
     float luminance (const Color3 &RGB) { return RGB.dot(m_luminance_scale); }
+    /// Return the luminance scale so code generator can use current values to emit constants.
+    Color3 luminance_scale() const { return m_luminance_scale; }
+
 
     /// Return the RGB in the current color space for blackbody radiation
     /// at temperature T (in Kelvin).

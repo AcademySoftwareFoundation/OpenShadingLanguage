@@ -1,0 +1,18 @@
+shader
+test_point_v_dfloat(output color Cout = 0)
+{
+    float val = 0.5*(v);
+    float val2 = u;
+     
+              
+    point p1 = point(val);
+    if (int(P[0]*64)%2==0) {
+        color p2 = point(val2);
+        p1 = p2;
+    }
+            
+    point dxc = Dx(p1);
+    point dyc = Dy(p1);
+    Cout = dxc + dyc;
+    
+}

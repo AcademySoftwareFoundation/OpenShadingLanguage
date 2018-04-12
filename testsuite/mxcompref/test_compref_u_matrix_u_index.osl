@@ -1,0 +1,45 @@
+shader
+test_compref_u_matrix_u_index (output color Cout = 0)
+{
+    float uval = raytype("camera");
+    matrix m = matrix(
+        0.011*uval, 0.012*uval, 0.013*uval, 0.014*uval,
+        0.021*uval, 0.022*uval, 0.023*uval, 0.024*uval,
+        0.031*uval, 0.032*uval, 0.033*uval, 0.034*uval,
+        0.041*uval, 0.042*uval, 0.043*uval, 0.044*uval
+        );
+    
+    matrix m2; 
+    
+    for(int i=0; i < 4;++i) {
+        for(int j=0; j < 4;++j) {
+            m2[i][j] = m[j][i];
+        }
+    }
+
+    color c = color(0);
+    for(int i=0; i < 4;++i) 
+    {
+        for(int j=0; j < 4;++j) 
+        {
+            int cIndex = min(i,2);
+            c[cIndex] += m[i][j];
+        }
+    }
+    
+    if (int(P[0]*64)%2==0) 
+    {
+        c = color(0);
+        
+        for(int i=0; i < 4;++i) 
+        {
+            for(int j=0; j < 4;++j) 
+            {
+                int cIndex = min(i,2);
+                c[cIndex] += m2[i][j];
+            }
+        }
+    }
+    
+    Cout = c;
+}

@@ -1,6 +1,6 @@
 #!/bin/csh
 
-cd $1
+cd $1 
 printf  "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n"
 printf  "<<<<   ./$1 \n"
 ./run_tests.csh >& test.log
@@ -13,10 +13,13 @@ printf "\n"
 if ( $err_count != "0" ) then
     printf "<<<<   $err_count ERROR(s)\n"
 endif
+if ( $2 != "" ) then
+    printf "<<<<   $2 ERROR(s) expected\n"
+endif
 if ( $fail_count != "0" ) then
     printf "<<<<   $fail_count FAILURE(s)\n"
 endif
-if ( $err_count != "0" ||  $fail_count != "0") then
+if ( ($err_count != 0 && $err_count != $2) || $fail_count != "0") then
     printf "<<<<   cat test.log:\n"
     cat test.log
 endif

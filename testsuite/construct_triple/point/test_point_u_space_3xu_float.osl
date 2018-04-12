@@ -1,0 +1,14 @@
+shader
+test_point_u_space_3xu_float (string pointspace = "--param pointspace must_be_provided", output color Cout = 0)
+{
+    float  val = 1.0/(2*raytype("camera"));
+    float val2 = val/2;
+
+    point c1 = point(pointspace, val, val, val);
+    
+    Cout = .666*c1;
+    if (int(P[0]*64)%2==0) {
+        Cout = point(pointspace, val2, val2, val2);
+    }
+    
+}

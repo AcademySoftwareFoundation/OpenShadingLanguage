@@ -1,0 +1,22 @@
+shader
+test_vector_v_space_3xv_dfloat (output color Cout = 0)
+{
+    float valr = 0.5*(v);
+    float valg = 0.6*(v);
+    float valb = 0.4*(v);
+    float val2r = u;
+    float val2g = 0.3*u;
+    float val2b = 0.75*u;
+
+    string vectorspaces[5] = { "common", "object", "shader", "world", "camera"};
+    string vectorspace = vectorspaces[int(P[0]*64)%5];
+
+    vector c1 = vector(vectorspace, valr, valg, valb);
+    if (int(P[0]*64)%2==0) {
+        c1 = vector(vectorspace, val2r, val2g, val2b);
+    }
+    
+    vector dxc = Dx(c1);
+    vector dyc = Dy(c1);
+    Cout = dxc + dyc;
+}

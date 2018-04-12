@@ -1,0 +1,21 @@
+shader
+test_mix_v_dvector_v_dvector_c_float (output color Cout = 0)
+{
+    float  val = 1.0/(2*raytype("camera"));
+    float val2 = val/2;
+    float val3 = val/3;
+    float val4 = val/5;
+    
+    vector v1 = vector(v, 0.5, val2);
+    vector v2 = vector(val2, 0.5, u);
+    vector v3 = vector(u, val, val2);
+    vector v4 = vector(1.0, val2, v);
+              
+    vector rv = mix(v1,v2,0.5);              
+        
+    if (int(P[0]*64)%2==0) {
+        rv = mix(v3,v4,0.3);
+    }
+            
+    Cout = Dx(rv) + Dy(rv);    
+}

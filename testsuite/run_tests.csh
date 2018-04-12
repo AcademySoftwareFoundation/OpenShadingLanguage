@@ -1,5 +1,11 @@
 #!/bin/csh
 
+./run_test_dir.csh normalize
+./exec_test_dir.csh blendmath
+./exec_test_dir.csh construct_triple
+./run_test_dir.csh mxcompref
+./run_test_dir.csh arraycopy
+
 ./run_test_dir.csh trig/pow
 ./run_test_dir.csh trig/atan2
 ./run_test_dir.csh trig/fmod
@@ -44,3 +50,4 @@
 ./exec_test_dir.csh max
 ./exec_test_dir.csh min
 
+./run_test_dir.csh luminance

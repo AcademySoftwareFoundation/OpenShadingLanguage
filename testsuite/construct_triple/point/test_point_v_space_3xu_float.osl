@@ -1,0 +1,17 @@
+shader
+test_point_v_space_3xu_float (output color Cout = 0)
+{
+    float  val = 1.0/(2*raytype("camera"));
+    float val2 = val/2;
+
+    string pointspaces[5] = { "common", "object", "shader", "world", "camera"};
+    string pointspace = pointspaces[int(P[0]*64)%5];
+
+
+    point c1 = point(pointspace, val, val, val);
+    if (int(P[0]*64)%2==0) {
+        c1 = point(pointspace, val2, val2, val2);
+    }
+    
+    Cout = c1;
+}

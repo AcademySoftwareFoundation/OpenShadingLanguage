@@ -1,0 +1,13 @@
+shader
+test_abs_u_color (output color Cout = 0)
+{
+    color  val = color(-0.8*raytype("camera"), -0.5*raytype("camera"), 0.25*raytype("camera"));
+    color  val2 = color(0.3*raytype("camera"), -0.25*raytype("camera"), -0.75*raytype("camera"));
+    
+    color d = abs(val);
+    if (int(P[0]*64)%2==0) {
+        d = abs(val2);
+    }
+    
+    Cout = color(d[1], d[0], d[2]);
+}

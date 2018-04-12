@@ -1,0 +1,13 @@
+shader
+test_abs_v_color (output color Cout = 0)
+{
+    color  val = color(-0.8*P[0], -0.5*P[0], 0.25*P[0]);
+    color  val2 = color(0.3*P[1], -0.25*P[1], -0.75*P[1]);
+    
+    color d = abs(val);
+    if (int(P[0]*64)%2==0) {
+        d = abs(val2);
+    }
+    
+    Cout = color(d[1], d[0], d[2]);
+}

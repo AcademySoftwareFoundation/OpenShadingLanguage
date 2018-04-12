@@ -1,0 +1,19 @@
+shader
+test_transform_v_fromspace_u_tospace_v_dvector (
+    string tospace = "--param fromspace must_be_provided", 
+    output color Cout = 0)
+{
+    vector v1 = vector(u, v, u-v);
+    vector v2 = vector(v, u, u+v);
+
+    string spaces[5] = { "common", "object", "shader", "world", "camera"};
+    string fromspace = spaces[int(P[0]*64)%5];
+    
+    vector tv = transform(fromspace, tospace, v1);
+
+    if (int(P[0]*64)%2==0) {
+        tv = transform(fromspace, tospace, v2);
+    }
+    
+    Cout = Dx(tv) + Dy(tv);
+}

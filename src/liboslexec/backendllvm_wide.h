@@ -141,7 +141,9 @@ public:
     /// llvm_load_value with non-constant component designation.  Does
     /// not work with arrays or do type casts!
     llvm::Value *llvm_load_component_value (const Symbol& sym, int deriv,
-                                            llvm::Value *component, bool op_is_uniform = true);
+                                            llvm::Value *component,
+                                            bool op_is_uniform = true,
+                                            bool component_is_uniform=true);
 
     /// Non-array version of llvm_load_value, with default deriv &
     /// component.
@@ -206,7 +208,8 @@ public:
     /// llvm_store_value with non-constant component designation.  Does
     /// not work with arrays or do type casts!
     bool llvm_store_component_value (llvm::Value *new_val, const Symbol& sym,
-                                     int deriv, llvm::Value *component);
+                                     int deriv, llvm::Value *component,
+                                     bool component_is_uniform = true);
 
     /// Legacy version
     ///

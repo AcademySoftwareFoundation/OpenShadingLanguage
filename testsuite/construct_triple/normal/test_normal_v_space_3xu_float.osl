@@ -1,0 +1,17 @@
+shader
+test_normal_v_space_3xu_float (output color Cout = 0)
+{
+    float  val = 1.0/(2*raytype("camera"));
+    float val2 = val/2;
+
+    string normalspaces[5] = { "common", "object", "shader", "world", "camera"};
+    string normalspace = normalspaces[int(P[0]*64)%5];
+
+
+    normal c1 = normal(normalspace, val, val, val);
+    if (int(P[0]*64)%2==0) {
+        c1 = normal(normalspace, val2, val2, val2);
+    }
+    
+    Cout = c1;
+}

@@ -1,5 +1,9 @@
 rm *.tif *.oso
 
+oslc test_transform_u_tospace_u_point.osl
+oslc test_transform_u_tospace_v_point.osl
+oslc test_transform_u_tospace_v_dpoint.osl
+
 ./run_tospace_tests.csh common
 ./run_tospace_tests.csh object
 ./run_tospace_tests.csh shader

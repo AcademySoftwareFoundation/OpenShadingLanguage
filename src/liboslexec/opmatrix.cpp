@@ -897,7 +897,9 @@ impl_get_uniform_from_to_matrix_batched (ShaderGlobalsBatch *sgb, MaskedAccessor
     MaskedAccessor<Matrix44> from_matrix(wMfrom, wrm.mask());
     Mask succeeded = impl_get_uniform_from_matrix_batched (sgb, from_matrix, from);
 
-    MaskedAccessor<Matrix44> to_matrix(wMto, wrm.mask() & succeeded);
+    // NOTE: even if we failed to get a from matrix, it should have been set to
+    // identity, so we still need to try to get the to matrix for the original mask
+    MaskedAccessor<Matrix44> to_matrix(wMto, wrm.mask());
     succeeded &= impl_get_uniform_to_inverse_matrix_batched (sgb, to_matrix, to);
 
     impl_wide_mat_multiply(wrm, from_matrix, to_matrix);
@@ -928,12 +930,14 @@ osl_get_from_to_matrix_w16msw16s_batched (void *sgb_, void *wr, const char *from
     ShadingContext *ctx = (ShadingContext *)sgb->uniform().context;
     Wide<Matrix44> wMfrom;
     MaskedAccessor<Matrix44> from_matrix(wMfrom, Mask(true));
-    Mask from_succeeded = impl_get_uniform_from_matrix_batched (sgb, from_matrix, from);
+    Mask succeeded = impl_get_uniform_from_matrix_batched (sgb, from_matrix, from);
 
     ConstWideAccessor<ustring> wToSpace(w_to_ptr);
     Wide<Matrix44> wMto;
-    MaskedAccessor<Matrix44> to_matrix(wMto, from_succeeded);
-    Mask succeeded = impl_get_varying_to_matrix_batched(sgb, ctx, wToSpace, to_matrix);
+    // NOTE: even if we failed to get a from matrix, it should have been set to
+    // identity, so we still need to try to get the to matrix for the original mask
+    MaskedAccessor<Matrix44> to_matrix(wMto, Mask(true));
+    succeeded &= impl_get_varying_to_matrix_batched(sgb, ctx, wToSpace, to_matrix);
 
     // No savings from using succeeded
     impl_wide_mat_multiply(WideAccessor<Matrix44>(wr), from_matrix, to_matrix);
@@ -947,14 +951,16 @@ osl_get_from_to_matrix_w16msw16s_masked (void *sgb_, void *wr, const char *from,
     ShadingContext *ctx = (ShadingContext *)sgb->uniform().context;
     Wide<Matrix44> wMfrom;
     MaskedAccessor<Matrix44> from_matrix(wMfrom, Mask(mask_value));
-    Mask from_succeeded = impl_get_uniform_from_matrix_batched (sgb, from_matrix, from);
+    Mask succeeded = impl_get_uniform_from_matrix_batched (sgb, from_matrix, from);
 
     ConstWideAccessor<ustring> wToSpace(w_to_ptr);
     Wide<Matrix44> wMto;
-    MaskedAccessor<Matrix44> to_matrix(wMto, from_succeeded);
-    Mask succeeded = impl_get_varying_to_matrix_batched(sgb, ctx, wToSpace, to_matrix);
+    // NOTE: even if we failed to get a from matrix, it should have been set to
+    // identity, so we still need to try to get the to matrix for the original mask
+    MaskedAccessor<Matrix44> to_matrix(wMto, Mask(mask_value));
+    succeeded &= impl_get_varying_to_matrix_batched(sgb, ctx, wToSpace, to_matrix);
 
-    MaskedAccessor<Matrix44> wrm(wr, succeeded);
+    MaskedAccessor<Matrix44> wrm(wr, Mask(mask_value));
     impl_wide_mat_multiply(wrm, from_matrix, to_matrix);
     return succeeded.value();
 }
@@ -971,11 +977,13 @@ osl_get_from_to_matrix_w16mw16ss_batched (void *sgb_, void *wr, void  *w_from_pt
 
     Wide<Matrix44> wMto;
     MaskedAccessor<Matrix44> to_matrix(wMto, Mask(true));
-    Mask to_succeeded = impl_get_uniform_to_inverse_matrix_batched (sgb, to_matrix, to);
+    Mask succeeded = impl_get_uniform_to_inverse_matrix_batched (sgb, to_matrix, to);
 
     Wide<Matrix44> wMfrom;
-    MaskedAccessor<Matrix44> from_matrix(wMfrom, to_succeeded);
-    Mask succeeded = impl_get_varying_from_matrix_batched(sgb, ctx, wFromName, from_matrix);
+    // NOTE: even if we failed to get a to matrix, it should have been set to
+    // identity, so we still need to try to get the to matrix for the original mask
+    MaskedAccessor<Matrix44> from_matrix(wMfrom, Mask(true));
+    succeeded &= impl_get_varying_from_matrix_batched(sgb, ctx, wFromName, from_matrix);
 
     // No savings from using succeeded
     impl_wide_mat_multiply(WideAccessor<Matrix44>(wr), from_matrix, to_matrix);
@@ -992,13 +1000,15 @@ osl_get_from_to_matrix_w16mw16ss_masked (void *sgb_, void *wr, void  *w_from_ptr
 
     Wide<Matrix44> wMto;
     MaskedAccessor<Matrix44> to_matrix(wMto, Mask(mask_value));
-    Mask to_succeeded = impl_get_uniform_to_inverse_matrix_batched (sgb, to_matrix, to);
+    Mask succeeded = impl_get_uniform_to_inverse_matrix_batched (sgb, to_matrix, to);
 
     Wide<Matrix44> wMfrom;
-    MaskedAccessor<Matrix44> from_matrix(wMfrom, to_succeeded);
-    Mask succeeded = impl_get_varying_from_matrix_batched(sgb, ctx, wFromName, from_matrix);
+    // NOTE: even if we failed to get a to matrix, it should have been set to
+    // identity, so we still need to try to get the to matrix for the original mask
+    MaskedAccessor<Matrix44> from_matrix(wMfrom, Mask(mask_value));
+    succeeded &= impl_get_varying_from_matrix_batched(sgb, ctx, wFromName, from_matrix);
 
-    MaskedAccessor<Matrix44> wrm(wr, succeeded);
+    MaskedAccessor<Matrix44> wrm(wr, Mask(mask_value));
     impl_wide_mat_multiply(wrm, from_matrix, to_matrix);
     return succeeded.value();
 }
@@ -1014,12 +1024,14 @@ osl_get_from_to_matrix_w16mw16sw16s_batched (void *sgb_, void *wr, void  *w_from
 
     Wide<Matrix44> wMfrom;
     MaskedAccessor<Matrix44> from_matrix(wMfrom, Mask(true));
-    Mask from_succeeded = impl_get_varying_from_matrix_batched(sgb, ctx, wFromName, from_matrix);
+    Mask succeeded = impl_get_varying_from_matrix_batched(sgb, ctx, wFromName, from_matrix);
 
     ConstWideAccessor<ustring> wToSpace(w_to_ptr);
     Wide<Matrix44> wMto;
-    MaskedAccessor<Matrix44> to_matrix(wMto, from_succeeded);
-    Mask succeeded = impl_get_varying_to_matrix_batched(sgb, ctx, wToSpace, to_matrix);
+    // NOTE: even if we failed to get a from matrix, it should have been set to
+    // identity, so we still need to try to get the to matrix for the original mask
+    MaskedAccessor<Matrix44> to_matrix(wMto, Mask(true));
+    succeeded &= impl_get_varying_to_matrix_batched(sgb, ctx, wToSpace, to_matrix);
 
     // No savings from using succeeded
     impl_wide_mat_multiply(WideAccessor<Matrix44>(wr), from_matrix, to_matrix);
@@ -1036,14 +1048,16 @@ osl_get_from_to_matrix_w16mw16sw16s_masked (void *sgb_, void *wr, void  *w_from_
 
     Wide<Matrix44> wMfrom;
     MaskedAccessor<Matrix44> from_matrix(wMfrom, Mask(mask_value));
-    Mask from_succeeded = impl_get_varying_from_matrix_batched(sgb, ctx, wFromName, from_matrix);
+    Mask succeeded = impl_get_varying_from_matrix_batched(sgb, ctx, wFromName, from_matrix);
 
     ConstWideAccessor<ustring> wToSpace(w_to_ptr);
     Wide<Matrix44> wMto;
-    MaskedAccessor<Matrix44> to_matrix(wMto, from_succeeded);
-    Mask succeeded = impl_get_varying_to_matrix_batched(sgb, ctx, wToSpace, to_matrix);
+    // NOTE: even if we failed to get a from matrix, it should have been set to
+    // identity, so we still need to try to get the to matrix for the original mask
+    MaskedAccessor<Matrix44> to_matrix(wMto, Mask(mask_value));
+    succeeded &= impl_get_varying_to_matrix_batched(sgb, ctx, wToSpace, to_matrix);
 
-    MaskedAccessor<Matrix44> wrm(wr, succeeded);
+    MaskedAccessor<Matrix44> wrm(wr, Mask(mask_value));
     impl_wide_mat_multiply(wrm, from_matrix, to_matrix);
     return succeeded.value();
 }

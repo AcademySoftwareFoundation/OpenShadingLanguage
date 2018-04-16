@@ -297,7 +297,8 @@ osl_texture (void *sg_, const char *name, void *handle,
                                      derivs ? (float *)&dresultds_simd : NULL,
                                      derivs ? (float *)&dresultdt_simd : NULL,
                                      errormessage);
-
+    // NOTE: regardless of the value of "ok" we will always copy over the texture system's results.
+    // We are relying on the texture system properly filling in missing or fill colors
     for (int i = 0;  i < chans;  ++i)
         ((float *)result)[i] = result_simd[i];
     if (alpha)

@@ -2054,12 +2054,11 @@ LLVMGEN (llvm_gen_matrix)
     int nfloats = nargs - 1 - (int)using_space;
     ASSERT (nargs == 2 || nargs == 3 || nargs == 17 || nargs == 18);
 
-    bool op_is_uniform = rop.isSymbolUniform(Result);
+    bool result_is_uniform = rop.isSymbolUniform(Result);
 
     if (using_two_spaces) {
     	// Implicit dependencies to shader globals
-    	// mean the result needs to be varying
-		ASSERT(false == op_is_uniform);
+    	// could mean the result needs to be varying
         llvm::Value *args[5];
         args[0] = rop.sg_void_ptr();  // shader globals
         args[1] = rop.llvm_void_ptr(Result);  // result
@@ -2076,7 +2075,7 @@ LLVMGEN (llvm_gen_matrix)
 
         // Dynamically build width suffix
         std::string func_name("osl_get_from_to_matrix_");
-        func_name += warg_typecode(&Result, false);
+        func_name += arg_typecode(Result, false, result_is_uniform);
         func_name += arg_typecode(From, false, rop.isSymbolUniform(From));
         func_name += arg_typecode(To, false, rop.isSymbolUniform(To));
         func_name += rop.ll.is_masking_required() ? "_masked" : "_batched";
@@ -2085,20 +2084,20 @@ LLVMGEN (llvm_gen_matrix)
     } else {
         if (nfloats == 1) {
         	llvm::Value *zero;
-            if (op_is_uniform)
+            if (result_is_uniform)
                 zero = rop.ll.constant (0.0f);
             else
             	zero = rop.ll.wide_constant (0.0f);
 
             for (int i = 0; i < 16; i++) {
                 llvm::Value* src_val = ((i%4) == (i/4))
-                    ? rop.llvm_load_value (*rop.opargsym(op,1+using_space),0,0,TypeDesc::UNKNOWN,op_is_uniform)
+                    ? rop.llvm_load_value (*rop.opargsym(op,1+using_space),0,0,TypeDesc::UNKNOWN,result_is_uniform)
                     : zero;
                 rop.llvm_store_value (src_val, Result, 0, i);
             }
         } else if (nfloats == 16) {
             for (int i = 0; i < 16; i++) {
-                llvm::Value* src_val = rop.llvm_load_value (*rop.opargsym(op,i+1+using_space),0,0,TypeDesc::UNKNOWN,op_is_uniform);
+                llvm::Value* src_val = rop.llvm_load_value (*rop.opargsym(op,i+1+using_space),0,0,TypeDesc::UNKNOWN,result_is_uniform);
                 rop.llvm_store_value (src_val, Result, 0, i);
             }
         } else {
@@ -2106,8 +2105,7 @@ LLVMGEN (llvm_gen_matrix)
         }
         if (using_space) {
         	// Implicit dependencies to shader globals
-        	// mean the result needs to be varying
-        	ASSERT(false == op_is_uniform);
+        	// could mean the result needs to be varying
             llvm::Value *args[4];
             args[0] = rop.sg_void_ptr();  // shader globals
             args[1] = rop.llvm_void_ptr(Result);  // result
@@ -2120,7 +2118,7 @@ LLVMGEN (llvm_gen_matrix)
 
             // Dynamically build width suffix
             std::string func_name("osl_prepend_matrix_from_");
-            func_name += warg_typecode(&Result, false);
+            func_name += arg_typecode(Result, false, result_is_uniform);
             func_name += arg_typecode(From, false, rop.isSymbolUniform(From));
             func_name += rop.ll.is_masking_required() ? "_masked" : "_batched";
 
@@ -2147,9 +2145,9 @@ LLVMGEN (llvm_gen_getmatrix)
 
 
 	// Implicit dependencies to shader globals
-	// mean the result needs to be varying
-	ASSERT(false == rop.isSymbolUniform(Result));
-	ASSERT(false == rop.isSymbolUniform(M));
+	// could mean the result needs to be varying
+    bool result_is_uniform = rop.isSymbolUniform(Result);
+	ASSERT(rop.isSymbolUniform(M) == result_is_uniform);
 
     llvm::Value *args[4];
     args[0] = rop.sg_void_ptr();  // shader globals
@@ -2162,7 +2160,7 @@ LLVMGEN (llvm_gen_getmatrix)
     args[3] = to_is_uniform ? rop.llvm_load_value(To): rop.llvm_void_ptr(To);
     // Dynamically build width suffix
     std::string func_name("osl_get_from_to_matrix_");
-    func_name += warg_typecode(&M, false);
+    func_name += arg_typecode(M, false, result_is_uniform);
     func_name += arg_typecode(From, false, rop.isSymbolUniform(From));
     func_name += arg_typecode(To, false, rop.isSymbolUniform(To));
     func_name += "_batched";

@@ -3,3 +3,4 @@
 ../run_test_dir.csh fromspace_16xfloat 8
 ../run_test_dir.csh fromspace_float 8
 ../run_test_dir.csh fromspace_tospace 22
+../run_test_dir.csh getmatrix 22

@@ -2149,7 +2149,7 @@ LLVMGEN (llvm_gen_getmatrix)
     bool result_is_uniform = rop.isSymbolUniform(Result);
 	ASSERT(rop.isSymbolUniform(M) == result_is_uniform);
 
-    llvm::Value *args[4];
+    llvm::Value *args[5];
     args[0] = rop.sg_void_ptr();  // shader globals
     args[1] = rop.llvm_void_ptr(M);  // matrix result
 
@@ -2158,14 +2158,19 @@ LLVMGEN (llvm_gen_getmatrix)
 
     args[2] = from_is_uniform ? rop.llvm_load_value(From) : rop.llvm_void_ptr(From);
     args[3] = to_is_uniform ? rop.llvm_load_value(To): rop.llvm_void_ptr(To);
+
+    if (rop.ll.is_masking_required()) {
+        args[4] = rop.ll.mask_as_int(rop.ll.current_mask());
+    }
+
     // Dynamically build width suffix
     std::string func_name("osl_get_from_to_matrix_");
     func_name += arg_typecode(M, false, result_is_uniform);
     func_name += arg_typecode(From, false, rop.isSymbolUniform(From));
     func_name += arg_typecode(To, false, rop.isSymbolUniform(To));
-    func_name += "_batched";
+    func_name += rop.ll.is_masking_required() ? "_masked" : "_batched";
 
-    llvm::Value *result = rop.ll.call_function (func_name.c_str(), args, 4);
+    llvm::Value *result = rop.ll.call_function (func_name.c_str(), args, rop.ll.is_masking_required() ? 5 : 4);
     rop.llvm_conversion_store_masked_status(result, Result);
     rop.llvm_zero_derivs (M);
     return true;

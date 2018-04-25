@@ -1086,7 +1086,6 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("llvm_debug_layers", int, m_llvm_debug_layers);
     ATTR_SET ("llvm_debug_ops", int, m_llvm_debug_ops);
     ATTR_SET ("strict_messages", int, m_strict_messages);
-    ATTR_SET ("error_repeats", int, m_error_repeats);
     ATTR_SET ("range_checking", int, m_range_checking);
     ATTR_SET ("unknown_coordsys_error", int, m_unknown_coordsys_error);
     ATTR_SET ("connection_error", int, m_connection_error);
@@ -1136,6 +1135,14 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
             m_renderer_outputs.push_back (ustring(((const char **)val)[i]));
         return true;
     }
+    if (name == "error_repeats") {
+        // Special case: setting error_repeats also clears the "previously
+        // seen" error and warning lists.
+        m_errseen.clear();
+        m_warnseen.clear();
+        ATTR_SET ("error_repeats", int, m_error_repeats);
+    }
+
     return false;
 #undef ATTR_SET
 #undef ATTR_SET_STRING
@@ -1197,6 +1204,7 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("llvm_debug_layers", int, m_llvm_debug_layers);
     ATTR_DECODE ("llvm_debug_ops", int, m_llvm_debug_ops);
     ATTR_DECODE ("strict_messages", int, m_strict_messages);
+    ATTR_DECODE ("error_repeats", int, m_error_repeats);
     ATTR_DECODE ("range_checking", int, m_range_checking);
     ATTR_DECODE ("unknown_coordsys_error", int, m_unknown_coordsys_error);
     ATTR_DECODE ("connection_error", int, m_connection_error);
@@ -1280,14 +1288,6 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("stat:mem_inst_paramvals_peak", long long, m_stat_mem_inst_paramvals.peak());
     ATTR_DECODE ("stat:mem_inst_connections_current", long long, m_stat_mem_inst_connections.current());
     ATTR_DECODE ("stat:mem_inst_connections_peak", long long, m_stat_mem_inst_connections.peak());
-
-    if (name == "error_repeats") {
-        // Special case: setting error_repeats also clears the "previously
-        // seen" error and warning lists.
-        m_errseen.clear();
-        m_warnseen.clear();
-        ATTR_DECODE ("error_repeats", int, m_error_repeats);
-    }
 
     return false;
 #undef ATTR_DECODE

@@ -1,9 +1,10 @@
 Release 1.9.9 -- 1 May 2018 (compared to 1.9.8)
 -----------------------------------------------
 * New SS attribute "error_repeats", if set to non-zero, turns off the
- suppression of multiple identical errors and warnings. Setting it (even to
- its existing value) also clears the "already seen" lists. #880
- (1.8.14/1.9.9)
+  suppression of multiple identical errors and warnings. Setting it (even to
+  its existing value) also clears the "already seen" lists. #880
+  (1.8.14/1.9.9)
+* Update to fix with some changes in OpenImageIO 1.9. #882
 
 Release 1.9.8 -- 1 Apr 2018 (compared to 1.9.7)
 -----------------------------------------------

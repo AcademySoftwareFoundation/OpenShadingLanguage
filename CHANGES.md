@@ -8,7 +8,7 @@ Dependency and standards changes:
 
 New back-end targets:
 * **OptiX** Work in progress: Experimental back end for NVIDIA OptiX GPU ray
-  tracing toolkit. #861
+  tracing toolkit. #861, #877
     - Build with USE_OPTIX=1
     - Requires OptiX 5.0+, Cuda 8.0+, OpenImageIO 1.8.10+, LLVM >= 5.0 with
       PTX target enabled.
@@ -99,7 +99,7 @@ API changes, new options, new ShadingSystem features (for renderer writers):
     * New attribute "error_repeats", if set to non-zero, turns off the
       suppression of multiple identical errors and warnings. Setting it
       (even to its existing value) also clears the "already seen" lists.
-      #880 (1.10.0/1.9.9/1.8.14)
+      #880, #883 (1.10.0/1.9.9/1.8.14)
 * Shader group attributes:
 * RendererServices API:
     * Older versions of RendererServices texture functions, the old ones
@@ -127,6 +127,7 @@ Build & test system improvements:
 * Testsuite is now Python 2/3 agnostic. #873 (1.10.0)
 * Build the version into the shared library .so names. #876
   (1.8.13/1.9.8/1.10.0)
+* Update to fix with OpenImageIO 1.9. #882
 
 Developer goodies:
 

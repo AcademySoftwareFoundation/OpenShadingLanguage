@@ -1,3 +1,7 @@
+Release 1.9.10 -- 1 Jun 2018 (compared to 1.9.9)
+------------------------------------------------
+
+
 Release 1.9.9 -- 1 May 2018 (compared to 1.9.8)
 -----------------------------------------------
 * New SS attribute "error_repeats", if set to non-zero, turns off the

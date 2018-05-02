@@ -550,14 +550,16 @@ BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym, llvm::Value * llv
         if (shadingsys().debug_nan() && type.basetype == TypeDesc::FLOAT) {
             // check for NaN/Inf for float-based types
             int ncomps = type.numelements() * type.aggregate;
-            llvm::Value *args[] = { ll.constant(ncomps), llvm_void_ptr(sym),
+            llvm::Value *args[] = { ll.constant(0)/*is_symbol_uniform*/,
+                 ll.mask_as_int(ll.current_mask()),
+                 ll.constant(ncomps), llvm_void_ptr(sym),
                  ll.constant((int)sym.has_derivs()), sg_void_ptr(),
                  ll.constant(ustring(inst()->shadername())),
                  ll.constant(0), ll.constant(sym.name()),
                  ll.constant(0), ll.constant(ncomps),
                  ll.constant("<get_userdata>")
             };
-            ll.call_function ("osl_naninf_check", args, 10);
+            ll.call_function ("osl_naninf_check_batched", args);
         }
         // We will enclose the subsequent initialization of default values
         // or init ops in an "if" so that the extra copies or code don't
@@ -653,33 +655,54 @@ BackendLLVMWide::llvm_generate_debugnan (const Opcode &op)
         llvm::Value *ncomps = ll.constant (int(t.numelements() * t.aggregate));
         llvm::Value *offset = ll.constant(0);
         llvm::Value *ncheck = ncomps;
+        llvm::Value *varying_offset = nullptr;
         if (op.opname() == op_aassign) {
             // Special case -- array assignment -- only check one element
             ASSERT (i == 0 && "only arg 0 is written for aassign");
-            llvm::Value *ind = llvm_load_value (*opargsym (op, 1));
+            Symbol &index_sym = *opargsym (op, 1);
+            llvm::Value *ind = llvm_load_value (index_sym);
             llvm::Value *agg = ll.constant(t.aggregate);
-            offset = t.aggregate == 1 ? ind : ll.op_mul (ind, agg);
+            llvm::Value *scaled_offset = t.aggregate == 1 ? ind : ll.op_mul (ind, agg);
+            if (isSymbolUniform(index_sym)) {
+                offset = scaled_offset;
+            } else {
+                varying_offset = scaled_offset;
+            }
             ncheck = agg;
         } else if (op.opname() == op_compassign) {
             // Special case -- component assignment -- only check one channel
             ASSERT (i == 0 && "only arg 0 is written for compassign");
-            llvm::Value *ind = llvm_load_value (*opargsym (op, 1));
-            offset = ind;
+            Symbol &index_sym = *opargsym (op, 1);
+            llvm::Value *ind = llvm_load_value (index_sym);
+            if (isSymbolUniform(index_sym)) {
+                offset = ind;
+            } else {
+                varying_offset = ind;
+            }
             ncheck = ll.constant(1);
         }
 
-        llvm::Value *args[] = { ncomps,
-                                llvm_void_ptr(sym),
-                                ll.constant((int)sym.has_derivs()),
-                                sg_void_ptr(), 
-                                ll.constant(op.sourcefile()),
-                                ll.constant(op.sourceline()),
-                                ll.constant(sym.name()),
-                                offset,
-                                ncheck,
-                                ll.constant(op.opname())
-                              };
-        ll.call_function ("osl_naninf_check", args, 10);
+        int lanes_to_process = (varying_offset != nullptr) ?  SimdLaneCount : 1;
+        for(int lane_index=0; lane_index < lanes_to_process; ++lane_index) {
+
+            if (varying_offset != nullptr) {
+                offset = ll.op_extract(varying_offset, lane_index);
+            }
+            llvm::Value *args[] = { ll.constant(static_cast<int>(isSymbolUniform(sym))),
+                                    ll.mask_as_int(ll.current_mask()),
+                                    ncomps,
+                                    llvm_void_ptr(sym),
+                                    ll.constant((int)sym.has_derivs()),
+                                    sg_void_ptr(),
+                                    ll.constant(op.sourcefile()),
+                                    ll.constant(op.sourceline()),
+                                    ll.constant(sym.name()),
+                                    offset,
+                                    ncheck,
+                                    ll.constant(op.opname())
+                                  };
+            ll.call_function ("osl_naninf_check_batched", args);
+        }
     }
 }
 
@@ -1114,14 +1137,16 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
             TypeDesc t = s.typespec().simpletype();
             if (t.basetype == TypeDesc::FLOAT) { // just check float-based types
                 int ncomps = t.numelements() * t.aggregate;
-                llvm::Value *args[] = { ll.constant(ncomps), llvm_void_ptr(s),
+                llvm::Value *args[] = { ll.constant(static_cast<int>(isSymbolUniform(s))),
+                     ll.mask_as_int(ll.current_mask()),
+                     ll.constant(ncomps), llvm_void_ptr(s),
                      ll.constant((int)s.has_derivs()), sg_void_ptr(), 
                      ll.constant(ustring(inst()->shadername())),
                      ll.constant(0), ll.constant(s.name()),
                      ll.constant(0), ll.constant(ncomps),
                      ll.constant("<none>")
                 };
-                ll.call_function ("osl_naninf_check", args, 10);
+                ll.call_function ("osl_naninf_check_batched", args);
             }
         }
     }

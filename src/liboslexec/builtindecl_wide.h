@@ -391,9 +391,9 @@ DECL (osl_dict_next, "iXi")
 DECL (osl_dict_value, "iXiXLX")
 #endif
 DECL (osl_raytype_name_batched, "iXX")
+DECL (osl_naninf_check_batched, "xiiiXiXXiXiiX")
 #if 0 // incomplete
 DECL (osl_range_check, "iiiXXXiXiXX")
-DECL (osl_naninf_check, "xiXiXXiXiiX")
 DECL (osl_uninit_check, "xLXXXiXiXXiXiXii")
 #endif
 

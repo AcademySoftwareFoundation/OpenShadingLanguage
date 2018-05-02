@@ -3401,6 +3401,51 @@ osl_naninf_check (int ncomps, const void *vals_, int has_derivs,
     }
 }
 
+// vals points to a symbol with a total of ncomps floats (ncomps ==
+// aggregate*arraylen).  If has_derivs is true, it's actually 3 times
+// that length, the main values then the derivatives.  We want to check
+// for nans in vals[firstcheck..firstcheck+nchecks-1], and also in the
+// derivatives if present.  Note that if firstcheck==0 and nchecks==ncomps,
+// we are checking the entire contents of the symbol.  More restrictive
+// firstcheck,nchecks are used to check just one element of an array.
+OSL_SHADEOP void
+osl_naninf_check_batched (int is_symbol_uniform, int mask_value,
+                  int ncomps, const void *vals_, int has_derivs,
+                  void *sgb, const void *sourcefile, int sourceline,
+                  void *symbolname, int firstcheck, int nchecks,
+                  const void *opname)
+{
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
+    const float *vals = (const float *)vals_;
+    for (int d = 0;  d < (has_derivs ? 3 : 1);  ++d) {
+        for (int c = firstcheck, e = c+nchecks; c < e;  ++c) {
+            int i = d*ncomps + c;
+            if (is_symbol_uniform) {
+                if (! OIIO::isfinite(vals[i])) {
+                    ctx->error ("Detected %g value in %s%s at %s:%d (op %s)",
+                                vals[i], d > 0 ? "the derivatives of " : "",
+                                USTR(symbolname), USTR(sourcefile), sourceline,
+                                USTR(opname));
+                    return;
+                }
+            } else {
+                Mask mask(mask_value);
+                for(int lane = 0; lane < SimdLaneCount; ++lane) {
+                    if (mask[lane]) {
+                        if (! OIIO::isfinite(vals[i*SimdLaneCount + lane])) {
+                            ctx->error ("Detected %g value in %s%s at %s:%d (op %s) batch lane:%d",
+                                        vals[i*SimdLaneCount + lane], d > 0 ? "the derivatives of " : "",
+                                        USTR(symbolname), USTR(sourcefile), sourceline,
+                                        USTR(opname), lane);
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 
 // vals points to the data of a float-, int-, or string-based symbol.

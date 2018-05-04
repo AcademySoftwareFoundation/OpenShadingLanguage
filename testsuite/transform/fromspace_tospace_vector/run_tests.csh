@@ -24,11 +24,23 @@ echo testshade --vary_udxdy --vary_vdxdy -t 1 --batched -g 64 64 -od uint8 -o Co
 testshade --vary_udxdy --vary_vdxdy -t 1 --batched -g 64 64 -od uint8 -o Cout "bout_transform_v_fromspace_v_tospace_v_dvector.tif" test_transform_v_fromspace_v_tospace_v_dvector
 idiff "sout_transform_v_fromspace_v_tospace_v_dvector.tif" "bout_transform_v_fromspace_v_tospace_v_dvector.tif"
 
+oslc test_transform_u_fromspace_u_tospace_u_vector.osl
+oslc test_transform_u_fromspace_u_tospace_v_vector.osl
+oslc test_transform_u_fromspace_u_tospace_v_dvector.osl
+
+oslc test_transform_u_fromspace_v_tospace_u_vector.osl
+oslc test_transform_u_fromspace_v_tospace_v_vector.osl
+oslc test_transform_u_fromspace_v_tospace_v_dvector.osl
+
 ./run_fromspace_tests.csh common
 ./run_fromspace_tests.csh object
 ./run_fromspace_tests.csh shader
 ./run_fromspace_tests.csh world
 ./run_fromspace_tests.csh camera
+
+oslc test_transform_v_fromspace_u_tospace_u_vector.osl
+oslc test_transform_v_fromspace_u_tospace_v_vector.osl
+oslc test_transform_v_fromspace_u_tospace_v_dvector.osl
 
 ./run_tospace_tests.csh common
 ./run_tospace_tests.csh object

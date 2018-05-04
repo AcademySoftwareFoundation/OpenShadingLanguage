@@ -734,45 +734,47 @@ BatchedRendererServices::texture(ustring filename, TextureHandle * texture_handl
                                                 has_derivs ? (float *)&dresultdt_simd : NULL);
             }
 
-            if (retVal) {
-                // Per the OSL language specification
-                // "The alpha channel (presumed to be the next channel following the channels returned by the texture() call)"
-                // so despite the fact the alpha channel really is
-                // we will always use +1 the final channel requested
-                int alphaChannelIndex;
-                if (resultRef.is<Color3>()) {
-                    alphaChannelIndex = 3;
-                    auto result= resultRef.masked<Color3>();
-                    auto resultDs = resultRef.maskedDx<Color3>();
-                    auto resultDt = resultRef.maskedDy<Color3>();
-                    result[i] = Color3(result_simd[0], result_simd[1], result_simd[2]);
-                    if (has_derivs) {
-                        resultDs[i] = Color3(dresultds_simd[0], dresultds_simd[1], dresultds_simd[2]);
-                        resultDt[i] = Color3(dresultdt_simd[0], dresultdt_simd[1], dresultdt_simd[2]);
-                    }
-                } else if (resultRef.is<float>()) {
-                    alphaChannelIndex = 1;
-                    auto result= resultRef.masked<float>();
-                    auto resultDs = resultRef.maskedDx<float>();
-                    auto resultDt = resultRef.maskedDy<float>();
-                    result[i] = result_simd[0];
-                    if (has_derivs) {
-                        resultDs[i] = dresultds_simd[0];
-                        resultDt[i] = dresultdt_simd[0];
-                    }
+            // NOTE: regardless of the value of "retVal" we will always copy over the texture system's results.
+            // We are relying on the texture system properly filling in missing or fill colors
+
+            // Per the OSL language specification
+            // "The alpha channel (presumed to be the next channel following the channels returned by the texture() call)"
+            // so despite the fact the alpha channel really is
+            // we will always use +1 the final channel requested
+            int alphaChannelIndex;
+            if (resultRef.is<Color3>()) {
+                alphaChannelIndex = 3;
+                auto result= resultRef.masked<Color3>();
+                auto resultDs = resultRef.maskedDx<Color3>();
+                auto resultDt = resultRef.maskedDy<Color3>();
+                result[i] = Color3(result_simd[0], result_simd[1], result_simd[2]);
+                if (has_derivs) {
+                    resultDs[i] = Color3(dresultds_simd[0], dresultds_simd[1], dresultds_simd[2]);
+                    resultDt[i] = Color3(dresultdt_simd[0], dresultdt_simd[1], dresultdt_simd[2]);
                 }
-                if (alphaIsValid) {
-                    auto alpha = alphaRef.masked<float>();
-                    alpha[i] = result_simd[alphaChannelIndex];
-                    if (alphaRef.has_derivs()) {
-                        auto alphaDs = alphaRef.maskedDx<float>();
-                        auto alphaDt = alphaRef.maskedDy<float>();
-                        alphaDs[i] = dresultds_simd[alphaChannelIndex];
-                        alphaDt[i] = dresultdt_simd[alphaChannelIndex];
-                    }
+            } else if (resultRef.is<float>()) {
+                alphaChannelIndex = 1;
+                auto result= resultRef.masked<float>();
+                auto resultDs = resultRef.maskedDx<float>();
+                auto resultDt = resultRef.maskedDy<float>();
+                result[i] = result_simd[0];
+                if (has_derivs) {
+                    resultDs[i] = dresultds_simd[0];
+                    resultDt[i] = dresultdt_simd[0];
                 }
-                //std::cout << "s: " << s.get(i) << " t: " << t.get(i) << " color: " << resultColor << " " << wideResult.get(i) << std::endl;
-            } else {
+            }
+            if (alphaIsValid) {
+                auto alpha = alphaRef.masked<float>();
+                alpha[i] = result_simd[alphaChannelIndex];
+                if (alphaRef.has_derivs()) {
+                    auto alphaDs = alphaRef.maskedDx<float>();
+                    auto alphaDt = alphaRef.maskedDy<float>();
+                    alphaDs[i] = dresultds_simd[alphaChannelIndex];
+                    alphaDt[i] = dresultdt_simd[alphaChannelIndex];
+                }
+            }
+            //std::cout << "s: " << s.get(i) << " t: " << t.get(i) << " color: " << resultColor << " " << wideResult.get(i) << std::endl;
+            if(!retVal) {
                 std::string err = texturesys()->geterror();
                 bool errMsgSize = err.size() > 0;
                 if (errormessageIsValid) {

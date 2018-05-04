@@ -393,9 +393,10 @@ DECL (osl_dict_next, "iXi")
 DECL (osl_dict_value, "iXiXLX")
 #endif
 DECL (osl_raytype_name_batched, "iXX")
+DECL (osl_naninf_check_batched, "xiiiXiXXiXiiX")
+DECL (osl_range_check_batched, "iiiXXXiXiXX")
+DECL (osl_range_check_masked, "xXiiXXXiXiXX")
 #if 0 // incomplete
-DECL (osl_range_check, "iiiXXXiXiXX")
-DECL (osl_naninf_check, "xiXiXXiXiiX")
 DECL (osl_uninit_check, "xLXXXiXiXXiXiXii")
 #endif
 
@@ -523,6 +524,7 @@ DECL (osl_smoothstep_w16dfw16fw16dfw16f_masked, "xXXXXi")
 // DECL (osl_transformv_dvmdv, "xXXX")
 // DECL (osl_transformn_vmv, "xXXX")
 // DECL (osl_transformn_dvmdv, "xXXX")
+DECL (osl_transform_point_vw16vm_masked, "xXXXii")
 DECL (osl_transform_point_vw16vw16m_masked, "xXXXii")
 DECL (osl_transform_point_w16vw16vw16m_masked, "xXXXii")
 DECL (osl_transform_point_w16dvw16dvw16m_masked, "xXXXii")
@@ -530,6 +532,8 @@ DECL (osl_transform_point_w16dvw16dvw16m_masked, "xXXXii")
 DECL (osl_transform_point_w16vw16vm_masked, "xXXXii")
 DECL (osl_transform_point_w16dvw16dvm_masked, "xXXXii")
 
+
+DECL (osl_transform_vector_vw16vm_masked, "xXXXii")
 DECL (osl_transform_vector_vw16vw16m_masked, "xXXXii")
 DECL (osl_transform_vector_w16vw16vw16m_masked, "xXXXii")
 DECL (osl_transform_vector_w16dvw16dvw16m_masked, "xXXXii")
@@ -537,6 +541,7 @@ DECL (osl_transform_vector_w16dvw16dvw16m_masked, "xXXXii")
 DECL (osl_transform_vector_w16vw16vm_masked, "xXXXii")
 DECL (osl_transform_vector_w16dvw16dvm_masked, "xXXXii")
 
+DECL (osl_transform_normal_vw16vm_masked, "xXXXii")
 DECL (osl_transform_normal_vw16vw16m_masked, "xXXXii")
 DECL (osl_transform_normal_w16vw16vw16m_masked, "xXXXii")
 DECL (osl_transform_normal_w16dvw16dvw16m_masked, "xXXXii")

@@ -3401,6 +3401,51 @@ osl_naninf_check (int ncomps, const void *vals_, int has_derivs,
     }
 }
 
+// vals points to a symbol with a total of ncomps floats (ncomps ==
+// aggregate*arraylen).  If has_derivs is true, it's actually 3 times
+// that length, the main values then the derivatives.  We want to check
+// for nans in vals[firstcheck..firstcheck+nchecks-1], and also in the
+// derivatives if present.  Note that if firstcheck==0 and nchecks==ncomps,
+// we are checking the entire contents of the symbol.  More restrictive
+// firstcheck,nchecks are used to check just one element of an array.
+OSL_SHADEOP void
+osl_naninf_check_batched (int is_symbol_uniform, int mask_value,
+                  int ncomps, const void *vals_, int has_derivs,
+                  void *sgb, const void *sourcefile, int sourceline,
+                  void *symbolname, int firstcheck, int nchecks,
+                  const void *opname)
+{
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
+    const float *vals = (const float *)vals_;
+    for (int d = 0;  d < (has_derivs ? 3 : 1);  ++d) {
+        for (int c = firstcheck, e = c+nchecks; c < e;  ++c) {
+            int i = d*ncomps + c;
+            if (is_symbol_uniform) {
+                if (! OIIO::isfinite(vals[i])) {
+                    ctx->error ("Detected %g value in %s%s at %s:%d (op %s)",
+                                vals[i], d > 0 ? "the derivatives of " : "",
+                                USTR(symbolname), USTR(sourcefile), sourceline,
+                                USTR(opname));
+                    return;
+                }
+            } else {
+                Mask mask(mask_value);
+                for(int lane = 0; lane < SimdLaneCount; ++lane) {
+                    if (mask[lane]) {
+                        if (! OIIO::isfinite(vals[i*SimdLaneCount + lane])) {
+                            ctx->error ("Detected %g value in %s%s at %s:%d (op %s) batch lane:%d",
+                                        vals[i*SimdLaneCount + lane], d > 0 ? "the derivatives of " : "",
+                                        USTR(symbolname), USTR(sourcefile), sourceline,
+                                        USTR(opname), lane);
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 
 // vals points to the data of a float-, int-, or string-based symbol.
@@ -3479,6 +3524,59 @@ osl_range_check (int indexvalue, int length, const char *symname,
             indexvalue = 0;
     }
     return indexvalue;
+}
+
+OSL_SHADEOP int
+osl_range_check_batched (int indexvalue, int length, const char *symname,
+                 void *sgb, const void *sourcefile, int sourceline,
+                 const char *groupname, int layer, const char *layername,
+                 const char *shadername)
+{
+    if (indexvalue < 0 || indexvalue >= length) {
+        ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
+        ctx->error ("Index [%d] out of range %s[0..%d]: %s:%d"
+                    " (group %s, layer %d %s, shader %s)",
+                    indexvalue, USTR(symname), length-1,
+                    USTR(sourcefile), sourceline,
+                    (groupname && groupname[0]) ? groupname : "<unnamed group>", layer,
+                    (layername && layername[0]) ? layername : "<unnamed layer>",
+                    USTR(shadername));
+        if (indexvalue >= length)
+            indexvalue = length-1;
+        else
+            indexvalue = 0;
+    }
+    return indexvalue;
+}
+
+OSL_SHADEOP void
+osl_range_check_masked (void * wide_indexvalue, int mask_value, int length, const char *symname,
+                 void *sgb, const void *sourcefile, int sourceline,
+                 const char *groupname, int layer, const char *layername,
+                 const char *shadername)
+{
+    MaskedAccessor<int> wIndexValue(wide_indexvalue, Mask(mask_value));
+    for(int lane = 0; lane < SimdLaneCount; ++lane) {
+        if (wIndexValue.mask()[lane]) {
+            int indexvalue = wIndexValue[lane];
+            if (indexvalue < 0 || indexvalue >= length) {
+                ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
+                ctx->error ("Index [%d] out of range %s[0..%d]: %s:%d"
+                            " (group %s, layer %d %s, shader %s)",
+                            indexvalue, USTR(symname), length-1,
+                            USTR(sourcefile), sourceline,
+                            (groupname && groupname[0]) ? groupname : "<unnamed group>", layer,
+                            (layername && layername[0]) ? layername : "<unnamed layer>",
+                            USTR(shadername));
+                if (indexvalue >= length)
+                    indexvalue = length-1;
+                else
+                    indexvalue = 0;
+                // modify index value so it is not out of bounds
+                wIndexValue[lane] = indexvalue;
+            }
+        }
+    }
 }
 
 

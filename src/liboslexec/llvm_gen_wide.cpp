@@ -1449,26 +1449,25 @@ LLVMGEN (llvm_gen_compref)
     bool op_is_uniform = rop.isSymbolUniform(Result);
 
     llvm::Value *c = rop.llvm_load_value(Index);
-    if (rop.shadingsys().range_checking()) {
-    	// TODO: handle varying cases, then remove the ASSERT
-    	ASSERT(op_is_uniform);
-        if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
-               *(int *)Index.data() < 3)) {
-            llvm::Value *args[] = { c, rop.ll.constant(3),
-                                    rop.ll.constant(Val.name()),
-                                    rop.sg_void_ptr(),
-                                    rop.ll.constant(op.sourcefile()),
-                                    rop.ll.constant(op.sourceline()),
-                                    rop.ll.constant(rop.group().name()),
-                                    rop.ll.constant(rop.layer()),
-                                    rop.ll.constant(rop.inst()->layername()),
-                                    rop.ll.constant(rop.inst()->shadername()) };
-            c = rop.ll.call_function ("osl_range_check", args);
-            ASSERT (c);
-        }
-    }
 
     if (rop.isSymbolUniform(Index)) {
+
+        if (rop.shadingsys().range_checking()) {
+           if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
+                  *(int *)Index.data() < 3)) {
+               llvm::Value *args[] = { c, rop.ll.constant(3),
+                                       rop.ll.constant(Val.name()),
+                                       rop.sg_void_ptr(),
+                                       rop.ll.constant(op.sourcefile()),
+                                       rop.ll.constant(op.sourceline()),
+                                       rop.ll.constant(rop.group().name()),
+                                       rop.ll.constant(rop.layer()),
+                                       rop.ll.constant(rop.inst()->layername()),
+                                       rop.ll.constant(rop.inst()->shadername()) };
+               c = rop.ll.call_function ("osl_range_check_batched", args);
+               ASSERT (c);
+           }
+       }
 
 		for (int d = 0;  d < 3;  ++d) {  // deriv
 			llvm::Value *val = NULL;
@@ -1487,6 +1486,30 @@ LLVMGEN (llvm_gen_compref)
     } else {
     	ASSERT(Index.is_constant() == false);
     	ASSERT(op_is_uniform == false);
+
+        if (rop.shadingsys().range_checking()) {
+            // We need a copy of the indices incase the range check clamps them
+            llvm::Value * loc_clamped_wide_index = rop.ll.op_alloca(rop.ll.type_wide_int(), 1, std::string("range clamped index:") + Val.name().c_str());
+            // copy the indices into our temporary
+            rop.ll.op_unmasked_store(c, loc_clamped_wide_index);
+            llvm::Value *args[] = { rop.ll.void_ptr(loc_clamped_wide_index),
+                                   rop.ll.mask_as_int(rop.ll.current_mask()),
+                                   rop.ll.constant(3),
+                                   rop.ll.constant(Val.name()),
+                                   rop.sg_void_ptr(),
+                                   rop.ll.constant(op.sourcefile()),
+                                   rop.ll.constant(op.sourceline()),
+                                   rop.ll.constant(rop.group().name()),
+                                   rop.ll.constant(rop.layer()),
+                                   rop.ll.constant(rop.inst()->layername()),
+                                   rop.ll.constant(rop.inst()->shadername()) };
+            rop.ll.call_function ("osl_range_check_masked", args);
+            // Use the range check indices
+            // Although as our implementation below doesn't use any
+            // out of range values, clamping the indices here
+            // is of questionable value
+            c = rop.ll.op_load(loc_clamped_wide_index);
+       }
 
     	// As the index is logically bound to 0, 1, or 2
     	// instead of doing a gather (which we will assume to cost 16 loads)
@@ -1521,30 +1544,28 @@ LLVMGEN (llvm_gen_compassign)
     Symbol& Index = *rop.opargsym (op, 1);
     Symbol& Val = *rop.opargsym (op, 2);
 
-    // TODO:  Technically the index could be varying as well
-    // Lets see if that is true in the wild before getting complicated
     bool op_is_uniform = rop.isSymbolUniform(Result);
 
     llvm::Value *c = rop.llvm_load_value(Index);
-    if (rop.shadingsys().range_checking()) {
-    	// TODO: handle varying cases, then remove the ASSERT
-    	ASSERT(op_is_uniform);
-        if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
-               *(int *)Index.data() < 3)) {
-            llvm::Value *args[] = { c, rop.ll.constant(3),
-                                    rop.ll.constant(Result.name()),
-                                    rop.sg_void_ptr(),
-                                    rop.ll.constant(op.sourcefile()),
-                                    rop.ll.constant(op.sourceline()),
-                                    rop.ll.constant(rop.group().name()),
-                                    rop.ll.constant(rop.layer()),
-                                    rop.ll.constant(rop.inst()->layername()),
-                                    rop.ll.constant(rop.inst()->shadername()) };
-            c = rop.ll.call_function ("osl_range_check", args);
-        }
-    }
 
     if (rop.isSymbolUniform(Index)) {
+        if (rop.shadingsys().range_checking()) {
+            if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
+                   *(int *)Index.data() < 3)) {
+                llvm::Value *args[] = { c, rop.ll.constant(3),
+                                        rop.ll.constant(Result.name()),
+                                        rop.sg_void_ptr(),
+                                        rop.ll.constant(op.sourcefile()),
+                                        rop.ll.constant(op.sourceline()),
+                                        rop.ll.constant(rop.group().name()),
+                                        rop.ll.constant(rop.layer()),
+                                        rop.ll.constant(rop.inst()->layername()),
+                                        rop.ll.constant(rop.inst()->shadername()) };
+                c = rop.ll.call_function ("osl_range_check_batched", args);
+                ASSERT (c);
+            }
+        }
+
 		for (int d = 0;  d < 3;  ++d) {  // deriv
 			llvm::Value *val = rop.llvm_load_value (Val, d, 0, TypeDesc::TypeFloat, op_is_uniform);
 			if (Index.is_constant()) {
@@ -1560,6 +1581,30 @@ LLVMGEN (llvm_gen_compassign)
     } else {
     	ASSERT(Index.is_constant() == false);
     	ASSERT(op_is_uniform == false);
+
+        if (rop.shadingsys().range_checking()) {
+            // We need a copy of the indices incase the range check clamps them
+            llvm::Value * loc_clamped_wide_index = rop.ll.op_alloca(rop.ll.type_wide_int(), 1, std::string("range clamped index:") + Val.name().c_str());
+                // copy the indices into our temporary
+               rop.ll.op_unmasked_store(c, loc_clamped_wide_index);
+               llvm::Value *args[] = { rop.ll.void_ptr(loc_clamped_wide_index),
+                                       rop.ll.mask_as_int(rop.ll.current_mask()),
+                                       rop.ll.constant(3),
+                                       rop.ll.constant(Val.name()),
+                                       rop.sg_void_ptr(),
+                                       rop.ll.constant(op.sourcefile()),
+                                       rop.ll.constant(op.sourceline()),
+                                       rop.ll.constant(rop.group().name()),
+                                       rop.ll.constant(rop.layer()),
+                                       rop.ll.constant(rop.inst()->layername()),
+                                       rop.ll.constant(rop.inst()->shadername()) };
+               rop.ll.call_function ("osl_range_check_masked", args);
+               // Use the range check indices
+               // Although as our implementation below doesn't use any
+               // out of range values, clamping the indices here
+               // is of questionable value
+               c = rop.ll.op_load(loc_clamped_wide_index);
+       }
 
     	// As the index is logically bound to 0, 1, or 2
     	// instead of doing a scatter
@@ -1611,22 +1656,52 @@ LLVMGEN (llvm_gen_mxcompref)
     llvm::Value *col = rop.llvm_load_value (Col, 0, 0, TypeDesc::UNKNOWN, components_are_uniform);
 
     if (rop.shadingsys().range_checking()) {
-        // TODO: Handle non-uniform case below minding mask values
-        ASSERT(rop.isSymbolUniform(Result));
-        ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
+        if (components_are_uniform) {
+            if (! (Row.is_constant() &&
+                   *(int *)Row.data() >= 0 &&
+                   *(int *)Row.data() < 4 &&
+                    Col.is_constant() &&
+                    *(int *)Col.data() >= 0 &&
+                    *(int *)Col.data() < 4)) {
+                llvm::Value *args[] = { row, rop.ll.constant(4),
+                                        rop.ll.constant(M.name()),
+                                        rop.sg_void_ptr(),
+                                        rop.ll.constant(op.sourcefile()),
+                                        rop.ll.constant(op.sourceline()),
+                                        rop.ll.constant(rop.group().name()),
+                                        rop.ll.constant(rop.layer()),
+                                        rop.ll.constant(rop.inst()->layername()),
+                                        rop.ll.constant(rop.inst()->shadername()) };
+                row = rop.ll.call_function ("osl_range_check_batched", args);
+                args[0] = col;
+                col = rop.ll.call_function ("osl_range_check_batched", args);
+            }
+        } else {
+            // We need a copy of the indices incase the range check clamps them
+            llvm::Value * loc_clamped_wide_index = rop.ll.op_alloca(rop.ll.type_wide_int(), 1, std::string("range clamped row or col:") + M.name().c_str());
+            // copy the indices into our temporary
+            rop.ll.op_unmasked_store(row, loc_clamped_wide_index);
+            llvm::Value *args[] = {rop.ll.void_ptr(loc_clamped_wide_index),
+                                   rop.ll.mask_as_int(rop.ll.current_mask()),
+                                   rop.ll.constant(4),
+                                   rop.ll.constant(M.name()),
+                                   rop.sg_void_ptr(),
+                                   rop.ll.constant(op.sourcefile()),
+                                   rop.ll.constant(op.sourceline()),
+                                   rop.ll.constant(rop.group().name()),
+                                   rop.ll.constant(rop.layer()),
+                                   rop.ll.constant(rop.inst()->layername()),
+                                   rop.ll.constant(rop.inst()->shadername()) };
+            rop.ll.call_function ("osl_range_check_masked", args);
+            // Use the range check row
+            row = rop.ll.op_load(loc_clamped_wide_index);
 
-        llvm::Value *args[] = { row, rop.ll.constant(4),
-                                rop.ll.constant(M.name()),
-                                rop.sg_void_ptr(),
-                                rop.ll.constant(op.sourcefile()),
-                                rop.ll.constant(op.sourceline()),
-                                rop.ll.constant(rop.group().name()),
-                                rop.ll.constant(rop.layer()),
-                                rop.ll.constant(rop.inst()->layername()),
-                                rop.ll.constant(rop.inst()->shadername()) };
-        row = rop.ll.call_function ("osl_range_check", args);
-        args[0] = col;
-        col = rop.ll.call_function ("osl_range_check", args);
+            // copy the indices into our temporary
+            rop.ll.op_unmasked_store(col, loc_clamped_wide_index);
+            rop.ll.call_function ("osl_range_check_masked", args);
+            // Use the range check col
+            col = rop.ll.op_load(loc_clamped_wide_index);
+        }
     }
 
     llvm::Value *val = NULL;
@@ -1658,30 +1733,60 @@ LLVMGEN (llvm_gen_mxcompassign)
     Symbol& Val = *rop.opargsym (op, 3);
 
     bool op_is_uniform = rop.isSymbolUniform(Result);
-    bool row_is_uniform = rop.isSymbolUniform(Row);
-    bool col_is_uniform = rop.isSymbolUniform(Col);
-    bool components_are_uniform = row_is_uniform && col_is_uniform;
+    bool components_are_uniform = rop.isSymbolUniform(Row) && rop.isSymbolUniform(Col);
 
     llvm::Value *row = rop.llvm_load_value (Row, 0, 0, TypeDesc::UNKNOWN, components_are_uniform);
     llvm::Value *col = rop.llvm_load_value (Col, 0, 0, TypeDesc::UNKNOWN, components_are_uniform);
-    if (rop.shadingsys().range_checking()) {
-        // TODO: Handle non-uniform case below minding mask values
-        ASSERT(rop.isSymbolUniform(Result));
-        ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
 
-        // TODO:  investigate range checking with wide types
-        llvm::Value *args[] = { row, rop.ll.constant(4),
-                                rop.ll.constant(Result.name()),
-                                rop.sg_void_ptr(),
-                                rop.ll.constant(op.sourcefile()),
-                                rop.ll.constant(op.sourceline()),
-                                rop.ll.constant(rop.group().name()),
-                                rop.ll.constant(rop.layer()),
-                                rop.ll.constant(rop.inst()->layername()),
-                                rop.ll.constant(rop.inst()->shadername()) };
-        row = rop.ll.call_function ("osl_range_check", args);
-        args[0] = col;
-        col = rop.ll.call_function ("osl_range_check", args);
+    if (rop.shadingsys().range_checking()) {
+        if (components_are_uniform) {
+            if (! (Row.is_constant() &&
+                   *(int *)Row.data() >= 0 &&
+                   *(int *)Row.data() < 4 &&
+                    Col.is_constant() &&
+                    *(int *)Col.data() >= 0 &&
+                    *(int *)Col.data() < 4)) {
+
+                llvm::Value *args[] = { row, rop.ll.constant(4),
+                                        rop.ll.constant(Result.name()),
+                                        rop.sg_void_ptr(),
+                                        rop.ll.constant(op.sourcefile()),
+                                        rop.ll.constant(op.sourceline()),
+                                        rop.ll.constant(rop.group().name()),
+                                        rop.ll.constant(rop.layer()),
+                                        rop.ll.constant(rop.inst()->layername()),
+                                        rop.ll.constant(rop.inst()->shadername()) };
+                row = rop.ll.call_function ("osl_range_check_batched", args);
+
+                args[0] = col;
+                col = rop.ll.call_function ("osl_range_check_batched", args);
+            }
+        } else {
+            // We need a copy of the indices incase the range check clamps them
+            llvm::Value * loc_clamped_wide_index = rop.ll.op_alloca(rop.ll.type_wide_int(), 1, std::string("range clamped row:") + Result.name().c_str());
+            // copy the indices into our temporary
+            rop.ll.op_unmasked_store(row, loc_clamped_wide_index);
+            llvm::Value *args[] = { rop.ll.void_ptr(loc_clamped_wide_index),
+                                   rop.ll.mask_as_int(rop.ll.current_mask()),
+                                   rop.ll.constant(4),
+                                   rop.ll.constant(Result.name()),
+                                   rop.sg_void_ptr(),
+                                   rop.ll.constant(op.sourcefile()),
+                                   rop.ll.constant(op.sourceline()),
+                                   rop.ll.constant(rop.group().name()),
+                                   rop.ll.constant(rop.layer()),
+                                   rop.ll.constant(rop.inst()->layername()),
+                                   rop.ll.constant(rop.inst()->shadername()) };
+            rop.ll.call_function ("osl_range_check_masked", args);
+            // Use the range check row
+            row = rop.ll.op_load(loc_clamped_wide_index);
+
+            // copy the indices into our temporary
+            rop.ll.op_unmasked_store(col, loc_clamped_wide_index);
+            rop.ll.call_function ("osl_range_check_masked", args);
+            // Use the range check col
+            col = rop.ll.op_load(loc_clamped_wide_index);
+        }
     }
 
     llvm::Value *val = rop.llvm_load_value (Val, 0, 0, TypeDesc::TypeFloat, op_is_uniform);
@@ -1732,13 +1837,31 @@ LLVMGEN (llvm_gen_aref)
     llvm::Value *index = rop.loadLLVMValue (Index);
     if (! index)
         return false;
+
     if (rop.shadingsys().range_checking()) {
-    	// TODO: handle varying cases, then remove the ASSERT
-    	ASSERT(op_is_uniform);
-        if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
-               *(int *)Index.data() < Src.typespec().arraylength())) {
-            // TODO:  investigate range checking with wide types
-            llvm::Value *args[] = { index,
+        if (index_is_uniform) {
+            if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
+                   *(int *)Index.data() < Src.typespec().arraylength())) {
+                llvm::Value *args[] = { index,
+                                        rop.ll.constant(Src.typespec().arraylength()),
+                                        rop.ll.constant(Src.name()),
+                                        rop.sg_void_ptr(),
+                                        rop.ll.constant(op.sourcefile()),
+                                        rop.ll.constant(op.sourceline()),
+                                        rop.ll.constant(rop.group().name()),
+                                        rop.ll.constant(rop.layer()),
+                                        rop.ll.constant(rop.inst()->layername()),
+                                        rop.ll.constant(rop.inst()->shadername()) };
+                index = rop.ll.call_function ("osl_range_check_batched", args);
+            }
+        } else {
+            // We need a copy of the indices incase the range check clamps them
+            llvm::Value * loc_clamped_wide_index = rop.ll.op_alloca(rop.ll.type_wide_int(), 1, std::string("range clamped index:") + Src.name().c_str());
+            // copy the indices into our temporary
+            rop.ll.op_unmasked_store(index, loc_clamped_wide_index);
+
+            llvm::Value *args[] = { rop.ll.void_ptr(loc_clamped_wide_index),
+                                    rop.ll.mask_as_int(rop.ll.current_mask()),
                                     rop.ll.constant(Src.typespec().arraylength()),
                                     rop.ll.constant(Src.name()),
                                     rop.sg_void_ptr(),
@@ -1748,7 +1871,9 @@ LLVMGEN (llvm_gen_aref)
                                     rop.ll.constant(rop.layer()),
                                     rop.ll.constant(rop.inst()->layername()),
                                     rop.ll.constant(rop.inst()->shadername()) };
-            index = rop.ll.call_function ("osl_range_check", args);
+            rop.ll.call_function ("osl_range_check_masked", args);
+            // Use the range check indices
+            index = rop.ll.op_load(loc_clamped_wide_index);
         }
     }
 
@@ -1783,23 +1908,43 @@ LLVMGEN (llvm_gen_aassign)
     llvm::Value *index = rop.loadLLVMValue (Index);
     if (! index)
         return false;
+
     if (rop.shadingsys().range_checking()) {
-    	// TODO: handle varying cases, then remove the ASSERT
-    	ASSERT(resultIsUniform);
-        if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
-               *(int *)Index.data() < Result.typespec().arraylength())) {
-            // TODO:  investigate range checking with wide types
-            llvm::Value *args[] = { index,
-                                    rop.ll.constant(Result.typespec().arraylength()),
-                                    rop.ll.constant(Result.name()),
-                                    rop.sg_void_ptr(),
-                                    rop.ll.constant(op.sourcefile()),
-                                    rop.ll.constant(op.sourceline()),
-                                    rop.ll.constant(rop.group().name()),
-                                    rop.ll.constant(rop.layer()),
-                                    rop.ll.constant(rop.inst()->layername()),
-                                    rop.ll.constant(rop.inst()->shadername()) };
-            index = rop.ll.call_function ("osl_range_check", args);
+        if (index_is_uniform) {
+            if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
+                   *(int *)Index.data() < Result.typespec().arraylength())) {
+                llvm::Value *args[] = { index,
+                                        rop.ll.constant(Result.typespec().arraylength()),
+                                        rop.ll.constant(Result.name()),
+                                        rop.sg_void_ptr(),
+                                        rop.ll.constant(op.sourcefile()),
+                                        rop.ll.constant(op.sourceline()),
+                                        rop.ll.constant(rop.group().name()),
+                                        rop.ll.constant(rop.layer()),
+                                        rop.ll.constant(rop.inst()->layername()),
+                                        rop.ll.constant(rop.inst()->shadername()) };
+                index = rop.ll.call_function ("osl_range_check_batched", args);
+            } else {
+                // We need a copy of the indices incase the range check clamps them
+                llvm::Value * loc_clamped_wide_index = rop.ll.op_alloca(rop.ll.type_wide_int(), 1, std::string("range clamped index:") + Result.name().c_str());
+                // copy the indices into our temporary
+                rop.ll.op_unmasked_store(index, loc_clamped_wide_index);
+
+                llvm::Value *args[] = { rop.ll.void_ptr(loc_clamped_wide_index),
+                                        rop.ll.mask_as_int(rop.ll.current_mask()),
+                                        rop.ll.constant(Result.typespec().arraylength()),
+                                        rop.ll.constant(Result.name()),
+                                        rop.sg_void_ptr(),
+                                        rop.ll.constant(op.sourcefile()),
+                                        rop.ll.constant(op.sourceline()),
+                                        rop.ll.constant(rop.group().name()),
+                                        rop.ll.constant(rop.layer()),
+                                        rop.ll.constant(rop.inst()->layername()),
+                                        rop.ll.constant(rop.inst()->shadername()) };
+                rop.ll.call_function ("osl_range_check_masked", args);
+                // Use the range check indices
+                index = rop.ll.op_load(loc_clamped_wide_index);
+            }
         }
     }
 
@@ -2054,12 +2199,11 @@ LLVMGEN (llvm_gen_matrix)
     int nfloats = nargs - 1 - (int)using_space;
     ASSERT (nargs == 2 || nargs == 3 || nargs == 17 || nargs == 18);
 
-    bool op_is_uniform = rop.isSymbolUniform(Result);
+    bool result_is_uniform = rop.isSymbolUniform(Result);
 
     if (using_two_spaces) {
     	// Implicit dependencies to shader globals
-    	// mean the result needs to be varying
-		ASSERT(false == op_is_uniform);
+    	// could mean the result needs to be varying
         llvm::Value *args[5];
         args[0] = rop.sg_void_ptr();  // shader globals
         args[1] = rop.llvm_void_ptr(Result);  // result
@@ -2076,7 +2220,7 @@ LLVMGEN (llvm_gen_matrix)
 
         // Dynamically build width suffix
         std::string func_name("osl_get_from_to_matrix_");
-        func_name += warg_typecode(&Result, false);
+        func_name += arg_typecode(Result, false, result_is_uniform);
         func_name += arg_typecode(From, false, rop.isSymbolUniform(From));
         func_name += arg_typecode(To, false, rop.isSymbolUniform(To));
         func_name += rop.ll.is_masking_required() ? "_masked" : "_batched";
@@ -2085,20 +2229,20 @@ LLVMGEN (llvm_gen_matrix)
     } else {
         if (nfloats == 1) {
         	llvm::Value *zero;
-            if (op_is_uniform)
+            if (result_is_uniform)
                 zero = rop.ll.constant (0.0f);
             else
             	zero = rop.ll.wide_constant (0.0f);
 
             for (int i = 0; i < 16; i++) {
                 llvm::Value* src_val = ((i%4) == (i/4))
-                    ? rop.llvm_load_value (*rop.opargsym(op,1+using_space),0,0,TypeDesc::UNKNOWN,op_is_uniform)
+                    ? rop.llvm_load_value (*rop.opargsym(op,1+using_space),0,0,TypeDesc::UNKNOWN,result_is_uniform)
                     : zero;
                 rop.llvm_store_value (src_val, Result, 0, i);
             }
         } else if (nfloats == 16) {
             for (int i = 0; i < 16; i++) {
-                llvm::Value* src_val = rop.llvm_load_value (*rop.opargsym(op,i+1+using_space),0,0,TypeDesc::UNKNOWN,op_is_uniform);
+                llvm::Value* src_val = rop.llvm_load_value (*rop.opargsym(op,i+1+using_space),0,0,TypeDesc::UNKNOWN,result_is_uniform);
                 rop.llvm_store_value (src_val, Result, 0, i);
             }
         } else {
@@ -2106,8 +2250,7 @@ LLVMGEN (llvm_gen_matrix)
         }
         if (using_space) {
         	// Implicit dependencies to shader globals
-        	// mean the result needs to be varying
-        	ASSERT(false == op_is_uniform);
+        	// could mean the result needs to be varying
             llvm::Value *args[4];
             args[0] = rop.sg_void_ptr();  // shader globals
             args[1] = rop.llvm_void_ptr(Result);  // result
@@ -2120,7 +2263,7 @@ LLVMGEN (llvm_gen_matrix)
 
             // Dynamically build width suffix
             std::string func_name("osl_prepend_matrix_from_");
-            func_name += warg_typecode(&Result, false);
+            func_name += arg_typecode(Result, false, result_is_uniform);
             func_name += arg_typecode(From, false, rop.isSymbolUniform(From));
             func_name += rop.ll.is_masking_required() ? "_masked" : "_batched";
 
@@ -2147,11 +2290,11 @@ LLVMGEN (llvm_gen_getmatrix)
 
 
 	// Implicit dependencies to shader globals
-	// mean the result needs to be varying
-	ASSERT(false == rop.isSymbolUniform(Result));
-	ASSERT(false == rop.isSymbolUniform(M));
+	// could mean the result needs to be varying
+    bool result_is_uniform = rop.isSymbolUniform(Result);
+	ASSERT(rop.isSymbolUniform(M) == result_is_uniform);
 
-    llvm::Value *args[4];
+    llvm::Value *args[5];
     args[0] = rop.sg_void_ptr();  // shader globals
     args[1] = rop.llvm_void_ptr(M);  // matrix result
 
@@ -2160,14 +2303,19 @@ LLVMGEN (llvm_gen_getmatrix)
 
     args[2] = from_is_uniform ? rop.llvm_load_value(From) : rop.llvm_void_ptr(From);
     args[3] = to_is_uniform ? rop.llvm_load_value(To): rop.llvm_void_ptr(To);
+
+    if (rop.ll.is_masking_required()) {
+        args[4] = rop.ll.mask_as_int(rop.ll.current_mask());
+    }
+
     // Dynamically build width suffix
     std::string func_name("osl_get_from_to_matrix_");
-    func_name += warg_typecode(&M, false);
+    func_name += arg_typecode(M, false, result_is_uniform);
     func_name += arg_typecode(From, false, rop.isSymbolUniform(From));
     func_name += arg_typecode(To, false, rop.isSymbolUniform(To));
-    func_name += "_batched";
+    func_name += rop.ll.is_masking_required() ? "_masked" : "_batched";
 
-    llvm::Value *result = rop.ll.call_function (func_name.c_str(), args, 4);
+    llvm::Value *result = rop.ll.call_function (func_name.c_str(), args, rop.ll.is_masking_required() ? 5 : 4);
     rop.llvm_conversion_store_masked_status(result, Result);
     rop.llvm_zero_derivs (M);
     return true;

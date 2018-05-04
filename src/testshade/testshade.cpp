@@ -180,8 +180,13 @@ set_shadingsys_options ()
     	// TODO:  Investigate if this is necessary, and document why
     	shadingsys->attribute ("opt_coalesce_temps", 0);
     } 
-	shadingsys->attribute ("range_checking", 0);
     
+    int do_range_checking = 0;
+    if (const char *opt_env = getenv ("TESTSHADE_RANGE_CHECK"))
+        do_range_checking = atoi(opt_env);
+
+	shadingsys->attribute ("range_checking", do_range_checking);
+
     shadingsys_options_set = true;
 }
 

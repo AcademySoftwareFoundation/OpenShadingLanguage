@@ -3526,6 +3526,59 @@ osl_range_check (int indexvalue, int length, const char *symname,
     return indexvalue;
 }
 
+OSL_SHADEOP int
+osl_range_check_batched (int indexvalue, int length, const char *symname,
+                 void *sgb, const void *sourcefile, int sourceline,
+                 const char *groupname, int layer, const char *layername,
+                 const char *shadername)
+{
+    if (indexvalue < 0 || indexvalue >= length) {
+        ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
+        ctx->error ("Index [%d] out of range %s[0..%d]: %s:%d"
+                    " (group %s, layer %d %s, shader %s)",
+                    indexvalue, USTR(symname), length-1,
+                    USTR(sourcefile), sourceline,
+                    (groupname && groupname[0]) ? groupname : "<unnamed group>", layer,
+                    (layername && layername[0]) ? layername : "<unnamed layer>",
+                    USTR(shadername));
+        if (indexvalue >= length)
+            indexvalue = length-1;
+        else
+            indexvalue = 0;
+    }
+    return indexvalue;
+}
+
+OSL_SHADEOP void
+osl_range_check_masked (void * wide_indexvalue, int mask_value, int length, const char *symname,
+                 void *sgb, const void *sourcefile, int sourceline,
+                 const char *groupname, int layer, const char *layername,
+                 const char *shadername)
+{
+    MaskedAccessor<int> wIndexValue(wide_indexvalue, Mask(mask_value));
+    for(int lane = 0; lane < SimdLaneCount; ++lane) {
+        if (wIndexValue.mask()[lane]) {
+            int indexvalue = wIndexValue[lane];
+            if (indexvalue < 0 || indexvalue >= length) {
+                ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
+                ctx->error ("Index [%d] out of range %s[0..%d]: %s:%d"
+                            " (group %s, layer %d %s, shader %s)",
+                            indexvalue, USTR(symname), length-1,
+                            USTR(sourcefile), sourceline,
+                            (groupname && groupname[0]) ? groupname : "<unnamed group>", layer,
+                            (layername && layername[0]) ? layername : "<unnamed layer>",
+                            USTR(shadername));
+                if (indexvalue >= length)
+                    indexvalue = length-1;
+                else
+                    indexvalue = 0;
+                // modify index value so it is not out of bounds
+                wIndexValue[lane] = indexvalue;
+            }
+        }
+    }
+}
+
 
 
 // Asked if the raytype is a name we can't know until mid-shader.

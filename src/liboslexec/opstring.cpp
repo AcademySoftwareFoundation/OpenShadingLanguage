@@ -97,8 +97,6 @@ osl_strlen_w16iw16s_masked (void *wr_, void *ws_, unsigned int mask_value)
             wR[lane] = (int) USTR(s).length();
         }
     }
-
-    //return (int) USTR(s).length();
 }
 
 
@@ -118,7 +116,7 @@ osl_hash_w16iw16s_masked (void *wr_, void *ws_, unsigned int mask_value)
     for (int lane = 0; lane< wR.width; ++lane){
         if(wR.mask().is_on(lane)){
             ustring s = wS[lane];
-            wR[lane] = (int) USTR(s).hash();
+            wR[lane] = (int) s.hash();
 
         }
 
@@ -151,18 +149,23 @@ osl_getchar_w16iw16sw16i_masked (void *wr_, void *ws_, void *wi_, unsigned int m
 }
 
 
-OSL_SHADEOP int
-osl_startswith_iss (const char *s_, const char *substr_)
+static OSL_INLINE int
+startswith_iss_impl (ustring s, ustring substr)
 {
-    ustring substr (USTR(substr_));
     size_t substr_len = substr.length();
     if (substr_len == 0)         // empty substr always matches
         return 1;
-    ustring s (USTR(s_));
     size_t s_len = s.length();
     if (substr_len > s_len)      // longer needle than haystack can't
         return 0;                // match (including empty s)
     return strncmp (s.c_str(), substr.c_str(), substr_len) == 0;
+}
+
+
+OSL_SHADEOP int
+osl_startswith_iss (const char *s_, const char *substr_)
+{
+    return startswith_iss_impl(USTR(s_), USTR(substr_));
 }
 
 OSL_SHADEOP void
@@ -176,39 +179,31 @@ osl_startswith_w16iw16sw16s_masked (void *wr_, void *ws_, void *wsubs_, unsigned
         if(wR.mask().is_on(lane)){
 
             ustring substr = wSubs[lane];
-            size_t substr_len = substr.length();
+            ustring s = wS[lane];
 
-             if (substr_len == 0)         // empty substr always matches
-                 wR[lane] = 1;
-
-             ustring s = wS[lane];
-             size_t s_len = s.length();
-
-             if (substr_len > s_len)      // longer needle than haystack can't
-                 wR[lane] = 0;
-
-             wR[lane] = strncmp (s.c_str(), substr.c_str(), substr_len) == 0;
-
-
+            wR[lane] = startswith_iss_impl (s, substr);
         }
     }
 }
 
 
+static OSL_INLINE int
+endswith_iss_impl (ustring s, ustring substr)
+{
+    size_t substr_len = substr.length();
+    if (substr_len == 0)         // empty substr always matches
+        return 1;
+    size_t s_len = s.length();
+    if (substr_len > s_len)      // longer needle than haystack can't
+        return 0;                // match (including empty s)
+    return strncmp (s.c_str()+s_len-substr_len, substr.c_str(), substr_len) == 0;
+}
 
 
 OSL_SHADEOP int
 osl_endswith_iss (const char *s_, const char *substr_)
 {
-    ustring substr (USTR(substr_));
-    size_t substr_len = substr.length();
-    if (substr_len == 0)         // empty substr always matches
-        return 1;
-    ustring s (USTR(s_));
-    size_t s_len = s.length();
-    if (substr_len > s_len)      // longer needle than haystack can't
-        return 0;                // match (including empty s)
-    return strncmp (s.c_str()+s_len-substr_len, substr.c_str(), substr_len) == 0;
+    return endswith_iss_impl(USTR(s_), USTR(substr_));
 }
 
 OSL_SHADEOP void
@@ -220,23 +215,10 @@ osl_endswith_w16iw16sw16s_masked (void *wr_, void *ws_, void *wsubs_, unsigned i
 
     for(int lane = 0; lane <wR.width; ++lane){
         if(wR.mask().is_on(lane)){
-
             ustring substr = wSubs[lane];
-            size_t substr_len = substr.length();
-
-             if (substr_len == 0)     //SM: Can't combine check with mask()[lane]    // empty substr always matches
-                 wR[lane] = 1;
-
-             ustring s = wS[lane];
-             size_t s_len = s.length();
-
-             if (substr_len > s_len)      // longer needle than haystack can't
-                 wR[lane] = 0;
-
-             wR[lane] = strncmp (s.c_str()+s_len-substr_len, substr.c_str(), substr_len) == 0;
-
+            ustring s = wS[lane];
+            wR[lane] = endswith_iss_impl(s, substr);
         }
-
     }
 
 }
@@ -256,16 +238,13 @@ osl_stoi_w16iw16s_masked (void *wint_ptr, void * wstr_ptr, int mask_value)
     MaskedAccessor<int> wresult(wint_ptr, Mask(mask_value));
 
     for(int lane=0; lane < wresult.width; ++lane) {
-        ustring str = wstr[lane];
-        int result = 0;
         // Avoid cost of strtol if lane is masked off
         // Also the value of str for a masked off lane could be
         // invalid/undefined and not safe to call strtol on.
-        if (wresult.mask()[lane] && str.c_str()) {
-            result = strtol(str.c_str(), NULL, 10);
+        if (wresult.mask()[lane]) {
+            const char * c_str = unproxy(wstr[lane]).c_str();
+            wresult[lane] = c_str ? strtol(c_str, NULL, 10) : 0;
         }
-
-        wresult[lane] = result;
     }
 }
 
@@ -282,33 +261,36 @@ osl_stof_w16fw16s_masked (void *wr_, void *ws_, int mask_value)
     MaskedAccessor<float> wR (wr_, Mask(mask_value));
 
     for(int lane=0; lane < wR.width; ++lane) {
-        ustring str = wS[lane];
-        float result = 0.0;
         // Avoid cost of strtol if lane is masked off
         // Also the value of str for a masked off lane could be
         // invalid/undefined and not safe to call strtod on.
-        if (wR.mask()[lane] && str.c_str()) {
-            result = (float)strtod(str.c_str(), NULL);
+        if (wR.mask()[lane]) {
+            const char *c_str = unproxy(wS[lane]).c_str();
+            wR[lane] =  c_str ? (float)strtod(c_str, NULL) : 0.0f;
         }
-
-        wR[lane] = result;
     }
 
 }
 
 
-OSL_SHADEOP const char *
-osl_substr_ssii (const char *s_, int start, int length)
+OSL_INLINE ustring
+substr_ssii_impl (ustring s, int start, int length)
 {
-    ustring s (USTR(s_));
     int slen = int (s.length());
-    if (slen == 0)
-        return NULL;  // No substring of empty string
+    if (slen == 0){
+        return ustring(NULL);  // No substring of empty string
+    }
     int b = start;
     if (b < 0)
         b += slen;
     b = Imath::clamp (b, 0, slen);
-    return ustring(s, b, Imath::clamp (length, 0, slen)).c_str();
+    return ustring(s, b, Imath::clamp (length, 0, slen));
+}
+
+OSL_SHADEOP const char *
+osl_substr_ssii (const char *s_, int start, int length)
+{
+    return substr_ssii_impl (USTR(s_), start, length).c_str();
 }
 
 
@@ -323,33 +305,12 @@ osl_substr_w16sw16sw16iw16i_masked (void *wr_, void *ws_,void *wstart_,
 
     for (int lane = 0; lane < wR.width; ++lane) {
         if(wR.mask().is_on(lane)) {
-
              ustring s = wS[lane];
+             int start = wSt[lane];
              int length = wL[lane];
-             ustring result;
-             int slen = int(s.length());
-             if (slen == 0)
-                 wR[lane] = ustring(NULL);
-             int b = wSt[lane];
-             if (b < 0)
-                 b += slen;
-             b = Imath::clamp(b, 0, slen);
-
-             result = ustring(s, b, Imath::clamp (length, 0, slen)).c_str();
-             wR[lane] = result;
-
+             wR[lane] = substr_ssii_impl (s, start, length);
         }
-
     }
-//    ustring s (USTR(s_));
-//    int slen = int (s.length());
-//    if (slen == 0)
-//        return NULL;  // No substring of empty string
-//    int b = start;
-//    if (b < 0)
-//        b += slen;
-//    b = Imath::clamp (b, 0, slen);
-//    return ustring(s, b, Imath::clamp (length, 0, slen)).c_str();
 }
 
 

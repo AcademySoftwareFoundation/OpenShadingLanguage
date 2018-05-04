@@ -1,0 +1,31 @@
+shader str_stoi(output vector res = 0,
+                output vector res_m = 0)
+{
+
+string value = "314";
+string value_p = format ("%g", P);
+string res_value = concat(value_p,value);
+
+
+
+
+//printf ("stoi(\"%s\") = %f\n", value, stoi(value));
+
+int s1 = stoi(res_value);
+vector res_ = vector (u*s1, u-v, tan(v));
+vector res_m_ = res_;
+
+if(int(P[0]*200)%2) {
+  
+    string value_m = "189";
+    string value_p_m = format ("%g", P);
+    string res_value_m = concat(value_p_m,value_m);
+   int s2 = stoi(res_value_m);
+
+    res_m_ = vector (u*s2, tan(u-v), v);
+    
+}
+ res = res_;
+ res_m = res_m_;
+
+}

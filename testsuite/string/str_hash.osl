@@ -1,20 +1,32 @@
-
-shader str_hash ()
+//testshade --batched -g 200 200 str_hash -od uint8 -o res h.tif -o res_m h_m.tif
+shader str_hash (output vector res = 0,
+                output vector res_m = 0)
 {
- 
 
-if(P[0]>0.5){
-    // Test concat
-    printf ("\n");
-    string a = "foo", b = format ("P = %g", P),  c = " bar";
+    string a = "alladin", b = format ("%g", P),  c = "genie";
     string concat_str = concat(a,b,c);
-   
-    printf("\n");
-    printf("hash(\"%s\") = %d\n", a, hash(a));
-    printf("hash(\"%s\") = %d\n", b, hash(b));
-    printf("hash(\"%s\") = %d\n", c, hash(c));
-    printf("hash(\"%s\") = %d\n",  concat_str, hash(concat_str));
-}
+    
+    int h1 = hash(a);
+    int h2 = hash(a);
+    
+    vector res_ = vector(0);
+    if (h1 == h2){
+        res_ = vector(u-v, tan(u), v);
+    }   
+    vector res_m_ = res_;
+    
+    if(int(P[0]*200)%2)
+    {
+        int s1 = hash(b);
+        int s2 = hash(b);
+           
+        if (s1 == s2){
+               res_m_ = vector(v, tan(u+v), u);
+           }
+        
+    }
 
+    res = res_;
+    res_m = res_m_;
     
 }

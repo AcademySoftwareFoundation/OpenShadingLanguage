@@ -1,0 +1,19 @@
+shader
+test_cosh_w16f_f (output color res = 0,
+               output color res_m = 0)
+{
+    float a = 1.0/(2*raytype("camera"));
+    float b = 1.0/(3*raytype("camera"));
+    float r = cosh(a);
+    
+
+    float fr = 0.0;
+    if (int(P[0]*200)%2){
+
+        fr = cosh(b);
+        
+
+    }
+    res_m = color(fr);
+    res = color (r);
+}

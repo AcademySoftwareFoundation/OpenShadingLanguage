@@ -76,6 +76,7 @@ test ()
 {
     printf ("test string operations:\n\n");
 
+#if 0
     // test source code string concatenation:
     printf ("Testing abutting string literals: \"%s\"\n",
             "foo" "bar" "baz");
@@ -86,17 +87,25 @@ test ()
     printf ("blah '%s'\n", "foo\\nbar\n");  // should print: blah 'foo\bar
                                             //                    '
     printf ("blah2 '%s'\n", "foo\\\\");     // should print: blah2 'foo\\'
+#endif
+
+#if 0
+    string us = format ("raytype(\"camera\")=%d", raytype("camera"));
+    printf ("formatted uniform string: '%s'\n", us);
 
     // Test format
     printf ("\n");
     string s = format ("P = %g", P);
     printf ("formtted string: '%s'\n", s);
+#endif 
 
     // Test concat
     printf ("\n");
     string a = "foo", b = "bar", c = "baz";
-    printf ("concat(\"%s\", \"%s\", \"%s\") = \"%s\"\n",
-            a, b, c, concat(a,b,c));
+    string catstr = concat(a,b,c);
+   // printf ("concat(\"%s\", \"%s\", \"%s\") = \"%s\"\n", a, b, c, concat(a,b,c));
+   // printf("concatenated string: '%s'\n", catstr);
+
 
     // Test strlen
     printf ("\n");
@@ -164,4 +173,5 @@ test ()
     printf("\n");
     printf("hash(\"%s\") = %d\n", a, hash(a));
     printf("hash(\"\") = %d\n", hash(""));
+
 }

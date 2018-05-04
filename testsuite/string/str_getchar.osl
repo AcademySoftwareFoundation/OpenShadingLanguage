@@ -1,40 +1,85 @@
+//testshade --batched -g 200 200 str_getchar -od uint8 str_getchar \
+ -o res_t1 a.tif -o res_t2 b.tif \
+ -o res_f1 c.tif -o res_f2 d.tif \
+-o res_t1_m a_m.tif -o res_t2_m b_m.tif \
+ -o res_f1_m c_m.tif -o res_f2_m d_m.tif 
 
-
-shader str_getchar ()
+shader str_getchar (output vector res_t1 = 0,
+                    output vector res_t2 = 0, 
+                    output vector res_f1 = 0,
+                    output vector res_f2 = 0,
+                    
+                    output vector res_t1_m = 0,
+                    output vector res_t2_m = 0,
+                    output vector res_f1_m = 0,
+                    output vector res_f2_m = 0)
 {
  
 
-if(P[0]>0.5){
-    // Test concat
-    printf ("\n");
-    string a = "foo", b = format ("P = %g", P),  c = " bar", d = " green eggs, spam, spam!";
+
+
+    string a = "elves", b = format("%g", P),  c = "and the", d = "shoemaker";
     string concat_str = concat(a,b,c,d);
    
-    printf("\n");
+  //  printf("\n");
     
-    printf ("strlen(\"%s\") = %d\n", concat_str, strlen(concat_str));
-
-    printf("getchar(\"%s\", 0) = %d\n", concat_str, getchar(concat_str, 0));
-    printf("getchar(\"%s\", 11) = %d\n", concat_str, getchar(concat_str, 11));
-    printf("getchar(\"%s\", -1) = %d\n", concat_str, getchar(concat_str, -1));
-    printf("getchar(\"%s\", 12) = %d\n", concat_str, getchar(concat_str, 12));
+    
   
+   int s1 = getchar(concat_str, 0);
+   int s2 = getchar(concat_str, 10);
+   int s3 = getchar(concat_str, 100);
+   int s4 = getchar(concat_str, -99);
+   
+   float fs1 = s1*0.002;
+   res_t1 = vector (-v*fs1, -u-v, u);
+  // printf("%g\n", res_t1);
+   
+   float fs2 = s2*0.004;
+   res_t2 = vector (v*fs2, -u-v, u);
+  // printf("%g\n", res_t2);
+   
+   float fs3 = s3+0.001;
+   res_f1 = vector (v*fs3, -u-v, u);
+ //  printf("%g\n", res_f1);
+   
+   float fs4 = s4+0.002;
+   res_f2 = vector (v, u+v, u*fs4);
+ //  printf("%g\n", res_f2);
+    
+    
+if (int(P[0]*200)%2)
+{
+    string a_m = "jack", b_m = format("%g", P),  c_m = "and the", d_m = "beanstalk";
+    string concat_str_m = concat(a_m,b_m,c_m,d_m);
+       
 
-   printf("\n");
-
-   string xkcd = "disney's";
-
-   printf ("strlen(\"%s\") = %d\n", xkcd, strlen(xkcd));
-
-   printf("getchar(\"%s\", 0) = %d\n", xkcd, getchar(xkcd, 0));
-   printf("getchar(\"%s\", 1) = %d\n", xkcd, getchar(xkcd, 1));
-   printf("getchar(\"%s\", 2) = %d\n", xkcd, getchar(xkcd, 2));
-   printf("getchar(\"%s\", 6) = %d\n", xkcd, getchar(xkcd, 6));
-   printf("getchar(\"%s\", 7) = %d\n", xkcd, getchar(xkcd, 7));
-   printf("getchar(\"%s\", 40) = %d\n", xkcd, getchar(xkcd, 40));
-   printf("getchar(\"%s\", -5) = %d\n", xkcd, getchar(xkcd, -5));
-
+        
+        
+      
+       int s1_m = getchar(concat_str_m, 0);
+       int s2_m = getchar(concat_str_m, 10);
+       int s3_m = getchar(concat_str_m, 100);
+       int s4_m = getchar(concat_str_m, -99);
+       
+       float fs1_m = s1*0.002;
+       res_t1_m = vector (-v*fs1_m, -u-v, u);
+      // printf("%g\n", res_t1_m);
+       
+       float fs2_m = s2*0.004;
+       res_t2_m = vector (v*fs2_m, -u-v, u);
+      // printf("%g\n", res_t2_m);
+       
+       float fs3_m = s3+0.001;
+       res_f1_m = vector (v*fs3_m, -u-v, u);
+      // printf("%g\n", res_f1_m);
+       
+       float fs4_m = s4+0.002;
+       res_f2_m = vector (v, u+v, u*fs4_m);
+     //  printf("%g\n", res_f2_m);
+    
 }
+
+
 
     
 }

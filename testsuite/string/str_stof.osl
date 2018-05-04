@@ -1,13 +1,28 @@
-shader str_stof()
+shader str_stof(output vector res = 0,
+                output vector res_m = 0)
 {
 
 string value = "3.14";
+string value_p = format ("%g", P);
+string res_value = concat(value_p,value);
 
-string value_p = format ("P = %g", P);
+//printf ("stof(\"%s\") = %f\n", value, stof(value));
 
-value = concat(value_p,value);
+float s1 = stof(res_value);
+res = vector (u*s1, u-v, tan(v));
 
-printf ("stof(\"%s\") = %f\n", value, stof(value));
+if(int(P[0]*200)%2) {
+  
+    string value_m = "1.89";
+    string value_p_m = format ("%g", P);
+    string res_value_m = concat(value_p_m,value_m);
+    float s2 = stof(res_value_m);
+
+    res_m = vector (u*s2, tan(u-v), v);
+    
+}
+
+
 
 
 

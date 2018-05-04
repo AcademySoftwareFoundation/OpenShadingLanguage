@@ -58,7 +58,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 OSL_NAMESPACE_ENTER
 namespace pvt {
 
-#define MAKE_WIDE_UNARY_PERCOMPONENT_OP(name,floatfunc,dualfunc)         \
+#define MAKE_WIDE_UNARY_F_OP(name,floatfunc,dualfunc)         \
 OSL_SHADEOP void                                                    \
 osl_##name##_w16fw16f (void * /*OSL_RESTRICT*/ r_, void * /*OSL_RESTRICT*/ val_)                        \
 {                                                                   \
@@ -123,8 +123,10 @@ osl_##name##_w16dfw16df_masked (void *r_, void *val_, int mask_value) \
 			wr[lane] = r;                                           \
 		}                                                           \
 	}                                                               \
-}                                                                   \
-                                                                    \
+}
+
+#define MAKE_WIDE_UNARY_PERCOMPONENT_OP(name,floatfunc,dualfunc)         \
+MAKE_WIDE_UNARY_F_OP(name,floatfunc,dualfunc)         \
 OSL_SHADEOP void                                                    \
 osl_##name##_w16vw16v (void *r_, void *val_)                        \
 {                                                                   \
@@ -773,6 +775,22 @@ osl_##name##_w16iw16i (void *r_, void *val_)                        \
 		}                                                           \
 	}                                                               \
 }                                                                   \
+\
+OSL_SHADEOP void                                                    \
+osl_##name##_w16iw16i_masked (void *r_, void *val_, unsigned int mask_value)\
+{                                                                   \
+    OSL_INTEL_PRAGMA(forceinline recursive)                         \
+    {                                                               \
+        ConstWideAccessor<int> wval(val_);                      \
+        MaskedAccessor<int> wr(r_, Mask(mask_value));                                   \
+        OSL_OMP_PRAGMA(omp simd simdlen(wr.width))                  \
+        for(int lane=0; lane < wr.width; ++lane) {                  \
+            int val = wval[lane];                                 \
+            int r = intfunc(val);                               \
+            wr[lane] = r;                                           \
+        }                                                           \
+    }                                                               \
+}                                                                   \
 
 #define MAKE_WIDE_BINARY_FI_OP(name,intfunc,floatfunc)              \
 OSL_SHADEOP void                                                    \
@@ -829,6 +847,23 @@ osl_##name##_w16iw16f (void *r_, void *val_)                        \
 		}                                                           \
 	}                                                               \
 }                                                                   \
+                                                                    \
+OSL_SHADEOP void                                                    \
+osl_##name##_w16iw16f_masked (void *r_, void *val_, unsigned int mask_value)\
+{                                                                   \
+    OSL_INTEL_PRAGMA(forceinline recursive)                         \
+    {                                                               \
+        ConstWideAccessor<float> wval(val_);                        \
+        MaskedAccessor<int> wr(r_, Mask(mask_value));               \
+        OSL_OMP_PRAGMA(omp simd simdlen(wr.width))                  \
+        for(int lane=0; lane < wr.width; ++lane) {                  \
+            float val = wval[lane];                                 \
+            int r = test_floatfunc(val);                            \
+            wr[lane] = r;                                           \
+        }                                                           \
+    }                                                               \
+}                                                                   \
+
 
 #if OSL_FAST_MATH
 // OIIO::fast_sin & OIIO::fast_cos are not vectorizing (presumably madd is interfering)
@@ -882,10 +917,10 @@ MAKE_WIDE_UNARY_PERCOMPONENT_OP     (expm1      , sfm::expm1   , sfm::expm1)
 //MAKE_WIDE_BINARY_PERCOMPONENT_OP    (pow        , OIIO::fast_safe_pow  , fast_safe_pow)
 MAKE_WIDE_BINARY_PERCOMPONENT_OP    (pow        , sfm::safe_pow  , sfm::safe_pow)
 MAKE_WIDE_BINARY_PERCOMPONENT_VF_OP (pow        , sfm::safe_pow  , sfm::safe_pow)
-//MAKE_WIDE_UNARY_PERCOMPONENT_OP     (erf        , OIIO::fast_erf       , erf)
-MAKE_WIDE_UNARY_PERCOMPONENT_OP     (erf        , sfm::erf   , sfm::erf)
-//MAKE_WIDE_UNARY_PERCOMPONENT_OP     (erfc       , OIIO::fast_erfc      , erfc)
-MAKE_WIDE_UNARY_PERCOMPONENT_OP     (erfc       , sfm::erfc  , sfm::erfc)
+//MAKE_WIDE_UNARY_F_OP     (erf        , OIIO::fast_erf       , erf)
+MAKE_WIDE_UNARY_F_OP     (erf        , sfm::erf   , sfm::erf)
+//MAKE_WIDE_UNARY_F_OP     (erfc       , OIIO::fast_erfc      , erfc)
+MAKE_WIDE_UNARY_F_OP     (erfc       , sfm::erfc  , sfm::erfc)
 #else
 MAKE_WIDE_UNARY_PERCOMPONENT_OP     (log        , OIIO::safe_log       , safe_log)
 MAKE_WIDE_UNARY_PERCOMPONENT_OP     (log2       , OIIO::safe_log2      , safe_log2)

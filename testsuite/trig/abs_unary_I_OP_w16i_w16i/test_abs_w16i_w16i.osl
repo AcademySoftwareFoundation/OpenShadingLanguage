@@ -1,0 +1,27 @@
+
+
+//testshade --llvm_debug --batched -g 200 200 test_abs_w16i_w16i -od uint8 -o res wiwi_ref.tif -o res_m m_wiwi_ref.tif
+
+shader
+test_abs_w16i_w16i (output color res = 0,
+			   output color res_m = 0)
+{
+    
+        int a = int(600*P[0]);
+        int b = int(200*P[1]);
+        
+        int r = abs(-a);
+        res = color (r)/600;
+        
+        int r_m = r;
+
+if (int(P[0]*200)%2){
+
+    
+    r_m = abs(-b);
+
+}
+
+res_m = color(r_m)/600;
+
+}

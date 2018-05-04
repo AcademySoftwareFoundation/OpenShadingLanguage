@@ -136,27 +136,29 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     DECL (osl_ ## name ## _dvdvdfvf, "xsvvXvfXX")
 #endif
 
-#define WIDE_UNARY_OP_IMPL(name)                   \
+#define WIDE_UNARY_F_OP_IMPL(name)                   \
     DECL (osl_ ## name ## _w16fw16f,  "xXX")    \
     DECL (osl_ ## name ## _w16fw16f_masked,  "xXXi")    \
     DECL (osl_ ## name ## _w16dfw16df, "xXX")            \
-    DECL (osl_ ## name ## _w16dfw16df_masked, "xXXi")            \
+    DECL (osl_ ## name ## _w16dfw16df_masked, "xXXi")
+
+#define WIDE_UNARY_OP_IMPL(name)                   \
+    WIDE_UNARY_F_OP_IMPL(name) \
     DECL (osl_ ## name ## _w16vw16v,  "xXX")             \
     DECL (osl_ ## name ## _w16vw16v_masked,  "xXXi")             \
     DECL (osl_ ## name ## _w16dvw16dv, "xXX")           \
     DECL (osl_ ## name ## _w16dvw16dv_masked, "xXXi")
 
+
 #define WIDE_UNARY_I_OP_IMPL(name)              \
-    DECL (osl_ ## name ## _w16iw16i,  "xXX")
-#if 0 // incomplete WIDE_UNARY_I_OP_IMPL
+    DECL (osl_ ## name ## _w16iw16i,  "xXX") \
     DECL (osl_ ## name ## _w16iw16i_masked,  "xXXi")
-#endif
+
 
 #define WIDE_TEST_F_OP_IMPL(name)              \
-    DECL (osl_ ## name ## _w16iw16f,  "xXX")
-#if 0 // incomplete WIDE_TEST_F_OP_IMPL
+    DECL (osl_ ## name ## _w16iw16f,  "xXX")\
     DECL (osl_ ## name ## _w16iw16f_masked,  "xXXi")
-#endif
+
 
 #define WIDE_UNARY_F_OR_V_OP_IMPL(name)               \
     DECL (osl_ ## name ## _w16fw16f,  "xXX")          \
@@ -428,7 +430,7 @@ WIDE_UNARY_OP_IMPL(sin)
 WIDE_UNARY_OP_IMPL(cos)
 WIDE_UNARY_OP_IMPL(tan)
 WIDE_UNARY_OP_IMPL(asin)
-WIDE_UNARY_OP_IMPL(acos)
+WIDE_UNARY_OP_IMPL(acos) //MAKE_WIDE_UNARY_PERCOMPONENT_OP
 WIDE_UNARY_OP_IMPL(atan)
 WIDE_BINARY_OP_IMPL(atan2)
 WIDE_UNARY_OP_IMPL(sinh)
@@ -467,8 +469,8 @@ WIDE_UNARY_OP_IMPL(exp)
 WIDE_UNARY_OP_IMPL(exp2)
 WIDE_UNARY_OP_IMPL(expm1)
 WIDE_BINARY_OP_IMPL(pow)
-WIDE_UNARY_OP_IMPL(erf)
-WIDE_UNARY_OP_IMPL(erfc)
+WIDE_UNARY_F_OP_IMPL(erf)
+WIDE_UNARY_F_OP_IMPL(erfc)
 
 WIDE_BINARY_VF_OP_IMPL(pow)
 
@@ -492,7 +494,8 @@ WIDE_TEST_F_OP_IMPL(isfinite)
 WIDE_UNARY_OP_IMPL(abs)
 WIDE_UNARY_I_OP_IMPL(abs)
 WIDE_UNARY_OP_IMPL(fabs)
-WIDE_UNARY_I_OP_IMPL(fabs)
+
+
 // fmod is handled by the code generator
 
 DECL (osl_smoothstep_w16fw16fw16fw16f, "xXXXX")
@@ -627,30 +630,20 @@ DECL (osl_determinant_w16fw16m, "xXX")
 
 DECL (osl_determinant_w16fw16m_masked, "xXXi")
 
-
-#if 0 // incomplete
-DECL (osl_concat_sss, "sss")
-DECL (osl_strlen_is, "is")
-DECL (osl_hash_is, "is")
-DECL (osl_getchar_isi, "isi");
-DECL (osl_startswith_iss, "iss")
-DECL (osl_endswith_iss, "iss")
-#endif
+// forced masked version only
 DECL (osl_concat_w16sw16sw16s_masked, "xXXXi")
-DECL (osl_stoi_w16iw16s_masked, "xXXi")
-DECL (osl_strlen_w16iw16s_masked, "xXXi")//OP-void; IP-void,void, int
+DECL (osl_strlen_w16iw16s_masked, "xXXi")
 DECL (osl_hash_w16iw16s_masked,"xXXi" )
 DECL (osl_getchar_w16iw16sw16i_masked, "xXXXi")
 DECL (osl_startswith_w16iw16sw16s_masked,"xXXXi" )
 DECL (osl_endswith_w16iw16sw16s_masked,"xXXXi" )
-
-#if 0 // incomplete
-DECL (osl_stof_fs, "fs")
-DECL (osl_substr_ssii, "ssii")
-DECL (osl_regex_impl, "iXsXisi")
-#endif
+DECL (osl_stoi_w16iw16s_masked, "xXXi")
 DECL(osl_stof_w16fw16s_masked, "xXXi")
 DECL(osl_substr_w16sw16sw16iw16i_masked, "xXXXXi")
+#if 0 // incomplete
+DECL (osl_regex_impl, "iXsXisi")
+#endif
+
 
 // BATCH texturing manages the BatchedTextureOptions
 // directly in LLVM ir, and has no need for wide versions

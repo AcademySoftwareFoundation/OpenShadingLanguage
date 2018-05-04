@@ -1,0 +1,83 @@
+Compiled getP.osl -> getP.oso
+Compiled vadd.osl -> vadd.oso
+Compiled vfBm3d.osl -> vfBm3d.oso
+i = 0
+Undeformed P = (0 0 0)  amplitude = 0
+Deformed (0 0 0)  -->  (0 0 0)
+
+i = 1
+Undeformed P = (0.1 0 0)  amplitude = 0.000125
+Deformed (0.1 0 0)  -->  (0.0999991 -9.45666e-07 -1.12243e-05)
+
+i = 2
+Undeformed P = (0.2 0 0)  amplitude = 0.001
+Deformed (0.2 0 0)  -->  (0.199954 -4.5502e-05 -0.000139523)
+
+i = 3
+Undeformed P = (0.3 0 0)  amplitude = 0.003375
+Deformed (0.3 0 0)  -->  (0.299622 -0.000378342 -0.000453787)
+
+i = 4
+Undeformed P = (0.4 0 0)  amplitude = 0.008
+Deformed (0.4 0 0)  -->  (0.398504 -0.00149629 -0.000648592)
+
+i = 5
+Undeformed P = (0.5 0 0)  amplitude = 0.015625
+Deformed (0.5 0 0)  -->  (0.496164 -0.00383594 0)
+
+i = 6
+Undeformed P = (0.6 0 0)  amplitude = 0.027
+Deformed (0.6 0 0)  -->  (0.592761 -0.00723896 0.002189)
+
+i = 7
+Undeformed P = (0.7 0 0)  amplitude = 0.042875
+Deformed (0.7 0 0)  -->  (0.689429 -0.0105711 0.00576478)
+
+i = 8
+Undeformed P = (0.8 0 0)  amplitude = 0.064
+Deformed (0.8 0 0)  -->  (0.788158 -0.0118416 0.00892945)
+
+i = 9
+Undeformed P = (0.9 0 0)  amplitude = 0.091125
+Deformed (0.9 0 0)  -->  (0.891128 -0.00887187 0.00818247)
+
+i = 10
+Undeformed P = (1 0 0)  amplitude = 0.125
+Deformed (1 0 0)  -->  (1 0 0)
+
+i = 11
+Undeformed P = (1.1 0 0)  amplitude = 0.166375
+Deformed (1.1 0 0)  -->  (1.11746 0.0149395 -0.0174569)
+
+i = 12
+Undeformed P = (1.2 0 0)  amplitude = 0.216
+Deformed (1.2 0 0)  -->  (1.24979 0.0301369 -0.0497937)
+
+i = 13
+Undeformed P = (1.3 0 0)  amplitude = 0.274625
+Deformed (1.3 0 0)  -->  (1.3985 0.0369248 -0.0984964)
+
+i = 14
+Undeformed P = (1.4 0 0)  amplitude = 0.343
+Deformed (1.4 0 0)  -->  (1.55611 0.0278084 -0.156115)
+
+i = 15
+Undeformed P = (1.5 0 0)  amplitude = 0.421875
+Deformed (1.5 0 0)  -->  (1.70714 0 -0.207141)
+
+i = 16
+Undeformed P = (1.6 0 0)  amplitude = 0.512
+Deformed (1.6 0 0)  -->  (1.83303 -0.0415099 -0.233034)
+
+i = 17
+Undeformed P = (1.7 0 0)  amplitude = 0.614125
+Deformed (1.7 0 0)  -->  (1.92026 -0.0825725 -0.220261)
+
+i = 18
+Undeformed P = (1.8 0 0)  amplitude = 0.729
+Deformed (1.8 0 0)  -->  (1.96805 -0.101712 -0.168054)
+
+i = 19
+Undeformed P = (1.9 0 0)  amplitude = 0.857375
+Deformed (1.9 0 0)  -->  (1.98996 -0.0769869 -0.0899601)
+

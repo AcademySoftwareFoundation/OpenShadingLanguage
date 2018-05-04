@@ -392,6 +392,7 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             derivs derivs-muldiv-clobber
             draw_string
             error-dupes error-serialized
+            example-deformer
             exit exponential
             fprintf
             function-earlyreturn function-simple function-outputelem

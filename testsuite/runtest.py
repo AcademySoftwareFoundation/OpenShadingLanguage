@@ -146,6 +146,15 @@ def text_diff (fromfile, tofile, diff_file=None):
 
 
 
+def run_app (app, silent=False, concat=True) :
+    command = app
+    if not silent :
+        command += redirect
+    if concat:
+        command += " ;\n"
+    return command
+
+
 def osl_app (app):
     apath = os.path.join(OSL_BUILD_DIR, "bin")
     if (platform.system () == 'Windows'):

@@ -82,7 +82,7 @@ public:
     /// transformation at the given time.  Return true if ok, false
     /// on error.
     virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
-                             TransformationPtr xform, float time) = 0;
+                             TransformationPtr xform, float time) { return false; }
 
     /// Get the 4x4 matrix that transforms by the specified
     /// transformation at the given time.  Return true if ok, false on
@@ -97,7 +97,7 @@ public:
     /// time value is given, also return false if the transformation may
     /// be time-varying.
     virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
-                             TransformationPtr xform) = 0;
+                             TransformationPtr xform) { return false; }
 
     /// Get the 4x4 matrix that transforms by the specified
     /// transformation.  Return true if ok, false on error.  Since no
@@ -112,7 +112,7 @@ public:
     /// 'from' coordinate system to "common" space at the given time.
     /// Returns true if ok, false if the named matrix is not known.
     virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
-                             ustring from, float time) = 0;
+                             ustring from, float time) { return false; }
 
     /// Get the 4x4 matrix that transforms points from "common" space to
     /// the named 'to' coordinate system to at the given time.  The
@@ -127,7 +127,7 @@ public:
     /// transformation may be time-varying (as well as if it's not found
     /// at all).
     virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
-                             ustring from) = 0;
+                             ustring from) { return false; }
 
     /// Get the 4x4 matrix that transforms points from "common" space to
     /// the named 'to' coordinate system.  Since there is no time value
@@ -183,20 +183,20 @@ public:
     /// otherwise just fail by returning 'false'.
     virtual bool get_attribute (ShaderGlobals *sg, bool derivatives,
                                 ustring object, TypeDesc type, ustring name,
-                                void *val ) = 0;
+                                void *val) { return false; }
 
     /// Similar to get_attribute();  this method will return the 'index'
     /// element of an attribute array.
     virtual bool get_array_attribute (ShaderGlobals *sg, bool derivatives,
                                       ustring object, TypeDesc type,
-                                      ustring name, int index, void *val ) = 0;
+                                      ustring name, int index, void *val) { return false; }
 
     /// Get the named user-data from the current object and write it into
     /// 'val'. If derivatives is true, the derivatives should be written into val
     /// as well. Return false if no user-data with the given name and type was
     /// found.
     virtual bool get_userdata (bool derivatives, ustring name, TypeDesc type,
-                               ShaderGlobals *sg, void *val) = 0;
+                               ShaderGlobals *sg, void *val) { return false; }
 
     /// Given the name of a texture, return an opaque handle that can be
     /// used with texture calls to avoid the name lookups.

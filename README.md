@@ -311,7 +311,7 @@ Films using OSL (grouped by year of release date):
   Black Panther,
   Annnihilation,
   Red Sparrow,
-  Pacific Rom Uprising
+  Pacific Rim Uprising
   ...
 
 

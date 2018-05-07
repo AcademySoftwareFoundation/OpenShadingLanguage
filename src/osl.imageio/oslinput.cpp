@@ -142,6 +142,8 @@ OIIO_PLUGIN_EXPORTS_BEGIN
 
 OIIO_EXPORT ImageInput *osl_input_imageio_create () { return new OSLInput; }
 
+OIIO_EXPORT void osl_input_imageio_delete (ImageInput *p) { delete p; }
+
 OIIO_EXPORT int osl_imageio_version = OIIO_PLUGIN_VERSION;
 
 OIIO_EXPORT const char * osl_input_extensions[] = {

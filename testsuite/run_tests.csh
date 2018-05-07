@@ -47,7 +47,7 @@
 
 ./run_test_dir.csh string
 
-./run_test_dir.csh error-dupes/error-warning
+./run_test_dir.csh error-dupes/error-warning 16
 
 
 

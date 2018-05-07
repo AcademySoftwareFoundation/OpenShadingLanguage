@@ -1,0 +1,7 @@
+shader
+test_missingalpha_varying (string filename = "missing.tx",
+      output color Cout = 1,
+      output float Aout = 0)
+{
+    Cout = (color) texture (filename, u, v, "missingalpha", P[0], "alpha", Aout);
+}

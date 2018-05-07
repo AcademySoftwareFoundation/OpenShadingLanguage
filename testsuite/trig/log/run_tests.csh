@@ -72,7 +72,7 @@ testshade  -g 200 200 test_log_w16dv_w16dv -od uint8 -o res wdvwdv_ref.tif -o Dx
 
  
 idiff wdvwdv_out.tif wdvwdv_ref.tif
-idiff wdvwdv_dx_out.tif  wdvwdv_dx_ref.tif
+idiff -fail 0.004 wdvwdv_dx_out.tif  wdvwdv_dx_ref.tif
 
 #Masked
 idiff m_wdvwdv_out.tif m_wdvwdv_ref.tif

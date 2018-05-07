@@ -1,5 +1,7 @@
 #!/bin/csh
 
+oslc test_step_w16f_w16f_w16f.osl  
+oslc test_step_w16v_w16v_w16v.osl
 testshade --batched -g 200 200 test_step_w16fw16fw16f -od uint8 -o res wfwfwf_out.tif -o res_m wfwfwf_m_out.tif
 testshade -g 200 200 test_step_w16fw16fw16f -od uint8 -o res wfwfwf_ref.tif -o res_m wfwfwf_m_ref.tif
 

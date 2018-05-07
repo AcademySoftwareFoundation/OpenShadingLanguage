@@ -5,21 +5,20 @@
 //testshade --batched --llvm_debug -g 4 4 test_acosh2_w16f_w16f_w16f -o res a.tif | grep o
 
 shader
-test_cosh_w16dv_w16dv (output color res = 0,
-			     output color Dxres = 0,
-			     output color res_m = 0,
-			     output color Dxres_m = 0)
+test_cosh_w16dv_w16dv (output vector res = 0,
+			     output vector Dxres = 0,
+			     output vector res_m = 0,
+			     output vector Dxres_m = 0)
 {
     
-  vector a = u;
-  vector b = v;
+  //vector a = vector(u, u-v, u+v);
+  //vector b = vector(-u, v, u-v);
 
-
-  vector res_ = 0.0;
-  vector Dxres_ = 0.0;
+vector a = u;
+vector b = v;
   
-  res_ = cosh(a); 
-  Dxres_ = Dx(res_);
+  vector res_ = cosh(a); 
+  vector Dxres_ = Dx(res_);
 
 if (int(P[0]*200)%2){
 

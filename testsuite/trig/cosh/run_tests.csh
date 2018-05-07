@@ -66,7 +66,7 @@ idiff m_wvwv_ref.tif m_wvwv_out.tif
 ################################
 
 
-testshade -g --batched 200 200 test_cosh_w16dv_w16dv -od uint8 -o res wdvwdv_out.tif -o Dxres wdvwdv_dx_out.tif -o res_m m_wdvwdv_out.tif -o Dxres_m m_wdvwdv_dx_out.tif
+testshade --batched -g 200 200 test_cosh_w16dv_w16dv -od uint8 -o res wdvwdv_out.tif -o Dxres wdvwdv_dx_out.tif -o res_m m_wdvwdv_out.tif -o Dxres_m m_wdvwdv_dx_out.tif
 
 testshade  -g 200 200 test_cosh_w16dv_w16dv -od uint8 -o res wdvwdv_ref.tif -o Dxres wdvwdv_dx_ref.tif -o res_m m_wdvwdv_ref.tif -o Dxres_m m_wdvwdv_dx_ref.tif
 

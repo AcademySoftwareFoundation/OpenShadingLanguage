@@ -125,6 +125,7 @@ static ustring op_end("end");
 static ustring op_nop("nop");
 static ustring op_aassign("aassign");
 static ustring op_compassign("compassign");
+static ustring op_mxcompassign("mxcompassign");
 static ustring op_aref("aref");
 static ustring op_compref("compref");
 static ustring op_useparam("useparam");
@@ -551,6 +552,17 @@ BackendLLVM::llvm_generate_debugnan (const Opcode &op)
             ASSERT (i == 0 && "only arg 0 is written for compassign");
             llvm::Value *ind = llvm_load_value (*opargsym (op, 1));
             offset = ind;
+            ncheck = ll.constant(1);
+        } else if (op.opname() == op_mxcompassign) {
+            // Special case -- matrix component assignment -- only check one channel
+            ASSERT (i == 0 && "only arg 0 is written for compassign");
+            Symbol &row_sym = *opargsym (op, 1);
+            Symbol &col_sym = *opargsym (op, 2);
+            llvm::Value *row_ind = llvm_load_value (row_sym);
+            llvm::Value *col_ind = llvm_load_value (col_sym);
+            llvm::Value *comp = ll.op_mul (row_ind, ll.constant(4));
+            comp = ll.op_add (comp, col_ind);
+            offset = comp;
             ncheck = ll.constant(1);
         }
 

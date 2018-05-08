@@ -1,31 +1,71 @@
+//testshade --llvm_debug -g 200 200 str_endswith -od uint8 -o res_t a.tif -o res_f b.tif -o res_t_m c.tif -o res_f_m d.tif
 
-shader str_endswith ()
+shader str_endswith (output vector res_t = 0,
+                        output vector res_f = 0,
+                        output vector res_t_m = 0,
+                        output vector res_f_m = 0)
 {
  
+//    string a = "disney", b = format ("P = %g", P),  c = " bar", d=" xkcd";
+//    string concat_str = concat(a,b,c,d);
+//       
+//    printf("\n");
+//        
+//    string substr = "dis";
+//
+//    printf ("endswith (\"%s\", \"%s\") = %d\n", concat_str, substr, endswith (concat_str, substr));
+//
+//    printf ("endswith (\"%s\", \"%s\") = %d\n", concat_str, "x", endswith (concat_str, "x"));
+//    printf ("endswith (\"%s\", \"%s\") = %d\n", concat_str, "disn", endswith (concat_str, "disn"));     printf ("endswith (\"%s\", \"%s\") = %d\n", concat_str, "disney", endswith (concat_str, "disney"));
 
-if(P[0]>0.5){
-    // Test concat
-    printf ("\n");
-    string a = "disney", b = format ("P = %g", P),  c = " bar", d=" xkcd";
-    string concat_str = concat(a,b,c,d);
-   
-    printf("\n");
     
-    string substr_small = "ney";
-    string substr_empty = "";
-    string substr_large = "zzzzzzzzzzzzzzzzzzzzzzzzzzz";
-    string substr_weird = "foo";
-    string substr_valid = "kcd";
+    string a = "0.24", b = format ("%g", P),  c = "0.48", d="0.64";
+    string concat_str = concat(a,b,c,d);
+     
+        
+    string substrm = "0.64";
+    
+    int temps = endswith(concat_str, substrm);
+    
+    
+    res_t = vector((temps/0.3)*u+0.1, tan(-u-v), v*0.3);
+   // printf("%g\n", res_t);
+    
+    substrm = "88";
+    temps = endswith(concat_str, substrm);
+    
+    
+   
+    res_f = vector((temps/0.2)*u+0.1, tan(-u-v), v*0.1);
+  //  printf("%g\n", res_f);
+    
 
-    printf ("endswith (\"%s\", \"%s\") = %d\n", concat_str, substr_small, endswith (concat_str, substr_small));
 
-   printf ("endswith (\"%s\", \"%s\") = %d\n", concat_str, substr_empty, endswith (concat_str, substr_empty));
+         
+if(int(P[0]*200)%2){
+ 
+        string a = "0.25", b = format ("%g", P),  c = "0.50", d="0.75";
+        string concat_str = concat(a,b,c,d);
+         
+            
+        string substrm = "0.75";
+        
+        int temps = endswith(concat_str, substrm);
+        
+        
+        res_t_m = vector((temps/0.3)*u+0.1, tan(-u-v), v*0.3);
+     //   printf("%g\n", res_t_m);
+        
+        substrm = "88";
+        temps = endswith(concat_str, substrm);
+        
+        
+       
+        res_f_m = vector((temps/0.2)*u+0.1, tan(-u-v), v*0.1);
+     //   printf("%g\n", res_f_m);
 
-   printf ("endswith (\"%s\", \"%s\") = %d\n", concat_str, substr_large, endswith (concat_str, substr_large));
-
-   printf ("endswith (\"%s\", \"%s\") = %d\n", concat_str, substr_weird, endswith (concat_str, substr_weird));
-
- printf ("endswith (\"%s\", \"%s\") = %d\n", concat_str, substr_valid, endswith (concat_str, substr_valid));
 
 }
+
+    
 }

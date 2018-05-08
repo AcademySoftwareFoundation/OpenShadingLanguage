@@ -195,6 +195,53 @@ robust_multVecMatrix (const Matrix44 &M, const Dual2<Vec3> &in, Dual2<Vec3> &out
              Vec3 (dout[0].dy(),  dout[1].dy(),  dout[2].dy()));
 }
 
+
+OSL_INLINE void robust_multDirMatrix(const Matrix44& x, const Imath::Vec3<float>& src, Imath::Vec3<float>& dst)
+{
+    // Avoid aliasing issues
+//    float a = src[0] * x[0][0] + src[1] * x[1][0] + src[2] * x[2][0];
+//    float b = src[0] * x[0][1] + src[1] * x[1][1] + src[2] * x[2][1];
+//    float c = src[0] * x[0][2] + src[1] * x[1][2] + src[2] * x[2][2];
+
+   float a = src.x * x[0][0] + src.y * x[1][0] + src.z * x[2][0];
+   float b = src.x * x[0][1] + src.y * x[1][1] + src.z * x[2][1];
+   float c = src.x * x[0][2] + src.y * x[1][2] + src.z * x[2][2];
+
+  dst.x = a;
+  dst.y = b;
+  dst.z = c;
+}
+
+/// Multiply a matrix times a vector with derivatives to obtain
+/// a transformed vector with derivatives.
+OSL_INLINE void
+robust_multDirMatrix (const Matrix44 &M, const Dual2<Vec3> &in, Dual2<Vec3> &out)
+{
+#if 0
+    // Rearrange into a Vec3<Dual2<float> >
+    Imath::Vec3<Dual2<float> > din, dout;
+    for (int i = 0;  i < 3;  ++i)
+        din[i].set (in.val()[i], in.dx()[i], in.dy()[i]);
+
+    Dual2<float> a = din[0] * M[0][0] + din[1] * M[1][0] + din[2] * M[2][0];
+    Dual2<float> b = din[0] * M[0][1] + din[1] * M[1][1] + din[2] * M[2][1];
+    Dual2<float> c = din[0] * M[0][2] + din[1] * M[1][2] + din[2] * M[2][2];
+
+   dout.x = a;
+   dout.y = b;
+   dout.z = c;
+
+    // Rearrange back into Dual2<Vec3>
+    out.set (Vec3 (dout[0].val(), dout[1].val(), dout[2].val()),
+             Vec3 (dout[0].dx(),  dout[1].dx(),  dout[2].dx()),
+             Vec3 (dout[0].dy(),  dout[1].dy(),  dout[2].dy()));
+#endif
+    // Not sure this is right
+    robust_multDirMatrix(M, in.val(), out.val());
+    robust_multDirMatrix(M, in.dx(), out.dx());
+    robust_multDirMatrix(M, in.dy(), out.dy());
+}
+
 /// Multiply a matrix times a direction with derivatives to obtain
 /// a transformed direction with derivatives.
 // flatten is workaround to enable inlining of non-inlined methods
@@ -211,6 +258,7 @@ OSL_INLINE OSL_CLANG_ATTRIBUTE(flatten) void
 multDirMatrix (const Matrix44 &M, const Vec3 &in, Vec3 &out)
 {
     M.multDirMatrix (in, out);
+//    robust_multDirMatrix(M, in, out);
 }
 
 

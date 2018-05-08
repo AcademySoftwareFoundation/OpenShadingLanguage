@@ -1,0 +1,52 @@
+ //testshade --batched -g 200 200 test_warning -od uint8 -o color_warning a.tif
+shader
+test_warning ()
+{
+
+
+    warning ("magic\n");
+    warning ("mirror\n");
+    
+     
+    warning ("magic\n");
+    warning ("magic\n");
+    warning ("magic\n");
+    
+    int warning_value = 10;
+    warning("unexpected result from getmessage - fetched value %d", warning_value);
+    
+    warning_value = 20;
+    warning("unexpected result from getmessage - fetched value %d", warning_value);
+    
+    warning_value = 20;
+    warning("unexpected result from getmessage - fetched value %d", warning_value);
+    
+    
+    if(int(P[0]*200)%2){
+        
+        
+        warning ("danger\n");
+        warning ("will robinson\n");
+        
+
+        warning ("danger\n");
+        warning ("danger\n");
+        warning ("danger\n");
+        
+        int warning_value_m = 25;
+        warning("warning - fetched value %d", warning_value_m);
+        
+        warning_value_m = 50;
+        warning("warning - fetched value %d", warning_value_m);
+        
+        warning_value_m = 50;
+        warning("warning - fetched value %d", warning_value_m);
+        
+        
+    }
+    
+    
+    
+    
+    
+}

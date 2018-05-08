@@ -1,0 +1,28 @@
+shader test_step_w16fw16fw16f(output vector res = 0,
+			  output vector res_m = 0)
+{
+    float a = P[1];
+    float b = P[0];
+
+    float am = P[2];
+    float bm = P[1];
+
+    float r = step (a,b);
+    float rm = r;
+
+    vector res_ = vector(-u-v, r*v, tan(v));
+	
+	
+        
+if(int(P[0]*200)%2){
+
+   rm = step(bm,am);
+
+}
+
+res_m = vector(-u+v, rm*u, u);
+res = res_;
+
+
+
+}

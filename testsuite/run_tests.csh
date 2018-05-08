@@ -9,10 +9,49 @@
 ./run_test_dir.csh mxcompref
 ./run_test_dir.csh arraycopy
 
+#SM: Added line 10 to 46
+./run_test_dir.csh trig/abs_unary_I_OP_w16i_w16i
 ./run_test_dir.csh trig/pow
 ./run_test_dir.csh trig/atan2
 ./run_test_dir.csh trig/fmod
 ./run_test_dir.csh trig/sincos
+
+./run_test_dir.csh trig/acos
+./run_test_dir.csh trig/asin
+./run_test_dir.csh trig/atan
+
+./run_test_dir.csh trig/cos
+./run_test_dir.csh trig/sin
+./run_test_dir.csh trig/tan
+
+./run_test_dir.csh trig/cosh
+./run_test_dir.csh trig/sinh
+./run_test_dir.csh trig/tanh
+
+./run_test_dir.csh trig/log2
+./run_test_dir.csh trig/log
+./run_test_dir.csh trig/log10
+
+
+./run_test_dir.csh trig/exp
+./run_test_dir.csh trig/exp2
+./run_test_dir.csh trig/expm1
+
+./run_test_dir.csh trig/sqrt
+./run_test_dir.csh trig/inversesqrt
+
+./run_test_dir.csh trig/erf
+./run_test_dir.csh trig/erfc
+
+./run_test_dir.csh blendmath/step
+
+./run_test_dir.csh string
+
+./run_test_dir.csh error-dupes/error-warning 16
+
+
+
+
 
 ./run_test_dir.csh vector/dot_tests
 ./run_test_dir.csh vector/distance_tests

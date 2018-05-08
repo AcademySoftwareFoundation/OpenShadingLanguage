@@ -1,0 +1,52 @@
+ //testshade --batched -g 200 200 test_error -od uint8 -o color_error a.tif
+shader
+test_error ()
+{
+
+
+    error ("apples\n");
+    error ("oranges\n");
+    
+     
+    error ("apples\n");
+    error ("apples\n");
+    error ("apples\n");
+    
+    int error_value = 10;
+    error("unexpected result from getmessage - fetched value %d", error_value);
+    
+    error_value = 20;
+    error("unexpected result from getmessage - fetched value %d", error_value);
+    
+    error_value = 20;
+    error("unexpected result from getmessage - fetched value %d", error_value);
+    
+    
+    if(int(P[0]*200)%2){
+        
+        
+        error ("thyme\n");
+        error ("mint\n");
+        
+
+        error ("thyme\n");
+        error ("thyme\n");
+        error ("thyme\n");
+        
+        int error_value_m = 25;
+        error("error - fetched value %d", error_value_m);
+        
+        error_value_m = 50;
+        error("error - fetched value %d", error_value_m);
+        
+        error_value_m = 50;
+        error("error - fetched value %d", error_value_m);
+        
+        
+    }
+    
+    
+    
+    
+    
+}

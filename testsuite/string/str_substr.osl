@@ -1,36 +1,107 @@
+//testshade --batched -g 200 200 str_substr -od uint8 -o res sub.tif -o res1 sub1.tif -o res2 sub2.tif -o \
+res_m sub_m.tif -o res1_m sub1_m.tif -o res2_m sub2_m.tif
 
-shader str_substr ()
+
+
+shader str_substr (output vector res = 0,
+                    output vector res1 = 0,
+                    output vector res2 = 0,
+                    
+                    output vector res_m = 0,
+                    output vector res1_m = 0,
+                    output vector res2_m = 0)
 {
- 
-
-if(P[0]>0.5){
-
-#if 0
-test_substr ("abcdefg", 0);
-test.osl:    test_substr ("abcdefg", 3);
-test.osl:    test_substr ("abcdefg", -2);
-test.osl:    test_substr ("abcdefg", 3, 2);
-test.osl:    test_substr ("abcdefg", 0, 20);
-test.osl:    test_substr ("abcdefg", 0, -4);
-#endif
 
    string s_uni = "abcdefg";
-   string wide_s = format ("P = %g", P);
+   vector res_;
+   string wide_s = format ("%g", P);
    int begin = 3;
    int len = 2;
-  
-   string s=concat(s_uni, wide_s);
 
+  
+   string s = concat(s_uni, wide_s);
+  // printf("%s", s);
    
-    printf ("substr(\"%s\", %d, %d) = \"%s\"\n",s, begin, len, substr(s,3,2));
+   // printf ("substr(\"%s\", %d, %d) = \"%s\"\n",s, begin, len, substr(s,3,2));
+   
+   string sub1 = substr(s,3,2);
+  // printf("%s\n", sub1);
+   
+   float sf1 = stof(sub1);
+  // printf("stof is %f", sf1);
 
     begin = 7; 
-    printf ("substr(\"%s\", %d) = \"%s\"\n",s, begin, substr(s,begin));
+   // printf ("substr(\"%s\", %d) = \"%s\"\n",s, begin, substr(s,begin));
+    
+    string sub2 = substr(s, begin);
+  //  printf("%s\n", sub2);
+    
+    float sf2 = stof(sub2);
+   // printf("stof is %f", sf2);
 
     begin = 6;
-    printf ("substr(\"%s\", %d) = \"%s\"\n",s, begin, substr(s,begin));
+   // printf ("substr(\"%s\", %d) = \"%s\"\n",s, begin, substr(s,begin));
+    string sub3 = substr(s, 6);
+  //  printf("%s\n", sub3);
+    
+    float sf3 = stof(sub3);
+  //  printf("stof is %f", sf3);
+    
+    res = vector(-u-v, u*sf1, tan(v));
+    res1 = vector(-u+v, v*sf2, tan(u));
+    res2 = vector(u+v, v*sf3, tan(v));
+    
+    vector res_m_ = res;
+    vector res1_m_ = res1;
+    vector res2_m_ = res2;
+    
+    
+    if(int(P[0]*200)%2) {
+        
+        
+        s_uni = "disneys";
+      
+        wide_s = format ("%g", P);
+        begin = 3;
+        //len = 2;
+         
+       s = concat(s_uni, wide_s);
+       // printf("%s", s);
+          
+          // printf ("substr(\"%s\", %d, %d) = \"%s\"\n",s, begin, len, substr(s,3,2));
+          
+        string sub1_m = substr(s,3,2);
+       // printf("%s\n", sub1_m);
+          
+        float sf1_m = stof(sub1_m);
+       // printf("stof is %f", sf1_m);
 
-}
+        begin = 7; 
+          // printf ("substr(\"%s\", %d) = \"%s\"\n",s, begin, substr(s,begin));
+           
+        string sub2_m = substr(s, begin);
+       // printf("%s\n", sub2_m);
+           
+        float sf2_m = stof(sub2_m);
+      //  printf("stof is %f", sf2_m);
+
+        begin = 6;
+ 
+        string sub3_m = substr(s, 6);
+      //  printf("%s\n", sub3_m);
+        
+        float sf3_m = stof(sub3_m);
+       // printf("stof is %f", sf3_m);
+           
+        res_m_ = vector(-u-v, v*sf1_m, tan(u));
+        res1_m_ = vector( u+v, v*sf2_m, tan(v+u));
+        res2_m_ = vector( -u+v, u*sf3_m, tan(u));
+        
+    }
+
+res_m = res_m_;
+res1_m = res1_m_;
+res2_m = res2_m_;
 
     
 }

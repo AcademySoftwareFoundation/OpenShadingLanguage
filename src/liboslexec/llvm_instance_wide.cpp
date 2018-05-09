@@ -133,6 +133,7 @@ static ustring op_nop("nop");
 static ustring op_aassign("aassign");
 static ustring op_compassign("compassign");
 static ustring op_mxcompassign("mxcompassign");
+static ustring op_mxcompref("mxcompref");
 static ustring op_aref("aref");
 static ustring op_compref("compref");
 static ustring op_useparam("useparam");
@@ -479,13 +480,24 @@ BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym, llvm::Value * llv
         if (sym.typespec().is_closure_based()) {
             // skip closures
         }
-        else if (sym.typespec().is_floatbased())
-            u = ll.constant (std::numeric_limits<float>::quiet_NaN());
-        else if (sym.typespec().is_int_based())
-            u = ll.constant (std::numeric_limits<int>::min());
-        else if (sym.typespec().is_string_based())
-            u = ll.constant (Strings::uninitialized_string);
+        else if (sym.typespec().is_floatbased()) {
+            u = isSymbolUniform(sym) ? ll.constant (std::numeric_limits<float>::quiet_NaN()) : ll.wide_constant(std::numeric_limits<float>::quiet_NaN());
+        } else if (sym.typespec().is_int_based()) {
+            // Because we allow temporaries and local results of comparison operations
+            // to use the native bool type of i1, we can just skip initializing these
+            // as they should always be assigned a value.
+            // We can just interrogate the underlying llvm symbol to see if
+            // it is a bool
+            llvm::Value * llvmValue = llvm_get_pointer (sym);
+            if (ll.llvm_typeof(llvmValue) != ll.type_ptr(ll.type_bool()) &&
+                ll.llvm_typeof(llvmValue) != ll.type_ptr(ll.type_wide_bool())) {
+                u = isSymbolUniform(sym) ? ll.constant (std::numeric_limits<int>::min()) : ll.wide_constant(std::numeric_limits<int>::min());
+            }
+        } else if (sym.typespec().is_string_based()) {
+            u = isSymbolUniform(sym) ? ll.constant (Strings::uninitialized_string) : ll.wide_constant (Strings::uninitialized_string);
+        }
         if (u) {
+            //std::cout << "Assigning uninit value to symbol=" << sym.name().c_str() << std::endl;
             for (int a = 0;  a < alen;  ++a) {
                 llvm::Value *aval = isarray ? ll.constant(a) : NULL;
                 for (int c = 0;  c < (int)sym.typespec().aggregate(); ++c)
@@ -774,8 +786,22 @@ BackendLLVMWide::llvm_generate_debug_uninit (const Opcode &op)
         if (t.basetype != TypeDesc::FLOAT && t.basetype != TypeDesc::INT &&
             t.basetype != TypeDesc::STRING)
             continue;  // just check float, int, string based types
+
+        // Because we allow temporaries and local results of comparison operations
+        // to use the native bool type of i1, we can just skip checking these
+        // as they should always be assigned a value.
+        // We can just interrogate the underlying llvm symbol to see if
+        // it is a bool
+        llvm::Value * llvmValue = llvm_get_pointer (sym);
+        if (ll.llvm_typeof(llvmValue) == ll.type_ptr(ll.type_bool()) ||
+            ll.llvm_typeof(llvmValue) == ll.type_ptr(ll.type_wide_bool())) {
+            continue;
+        }
+
         llvm::Value *ncheck = ll.constant (int(t.numelements() * t.aggregate));
         llvm::Value *offset = ll.constant(0);
+        llvm::Value *loc_varying_offsets = nullptr;
+
         // Some special cases...
         if (op.opname() == Strings::op_for && i == 0) {
             // The first argument of 'for' is the condition temp, but
@@ -783,36 +809,124 @@ BackendLLVMWide::llvm_generate_debug_uninit (const Opcode &op)
             // don't generate uninit test code for it.
             continue;
         }
+        if (op.opname() == Strings::op_dowhile && i == 0) {
+            // The first argument of 'dowhile' is the condition temp, but
+            // it most likely its initializer run yet.
+            // Unless there is no "condition" code block, in that
+            // case we should still
+            if (op.jump(0) != op.jump(1))
+                continue;
+        }
         if (op.opname() == op_aref && i == 1) {
-            // Special case -- array assignment -- only check one element
-            llvm::Value *ind = llvm_load_value (*opargsym (op, 2));
-            llvm::Value *agg = ll.constant(t.aggregate);
-            offset = t.aggregate == 1 ? ind : ll.op_mul (ind, agg);
-            ncheck = agg;
+            // Special case -- array reference -- only check one element
+            Symbol &index_sym = *opargsym (op, 2);
+            llvm::Value *ind = llvm_load_value (index_sym);
+
+            llvm::Value *agg = isSymbolUniform(index_sym) ? ll.constant(t.aggregate) : ll.wide_constant(t.aggregate);
+            llvm::Value *scaled_offset = t.aggregate == 1 ? ind : ll.op_mul (ind, agg);
+            if (isSymbolUniform(index_sym)) {
+                offset = scaled_offset;
+            } else {
+                loc_varying_offsets = ll.op_alloca(ll.type_wide_int(), 1, std::string("uninit check scaled indices:") + index_sym.name().c_str());
+                ll.op_store(scaled_offset, loc_varying_offsets);
+            }
+            ncheck = ll.constant(t.aggregate);
+
         } else if (op.opname() == op_compref && i == 1) {
-            // Special case -- component assignment -- only check one channel
-            llvm::Value *ind = llvm_load_value (*opargsym (op, 2));
-            offset = ind;
+            // Special case -- component reference -- only check one channel
+            Symbol &index_sym = *opargsym (op, 2);
+            if (isSymbolUniform(index_sym)) {
+                offset = llvm_load_value (index_sym);
+            } else {
+                loc_varying_offsets = llvm_get_pointer(index_sym);
+            }
+            ncheck = ll.constant(1);
+        } else if (op.opname() == op_mxcompref && i == 1) {
+            // Special case -- matrix component reference -- only check one channel
+            Symbol &row_sym = *opargsym (op, 2);
+            Symbol &col_sym = *opargsym (op, 3);
+            bool components_are_uniform = isSymbolUniform(row_sym) && isSymbolUniform(col_sym);
+
+            llvm::Value *row_ind = llvm_load_value (row_sym, 0, 0, TypeDesc::UNKNOWN, components_are_uniform);
+            llvm::Value *col_ind = llvm_load_value (col_sym, 0, 0, TypeDesc::UNKNOWN, components_are_uniform);
+
+            llvm::Value *comp = ll.op_mul (row_ind, components_are_uniform ? ll.constant(4) : ll.wide_constant(4));
+            comp = ll.op_add (comp, col_ind);
+
+            if (components_are_uniform) {
+                offset = comp;
+            } else {
+                loc_varying_offsets = ll.op_alloca(ll.type_wide_int(), 1, std::string("uninit check comp from row(") + row_sym.name().c_str() + ") col(" +  col_sym.name().c_str() + ")");
+                ll.op_store(comp, loc_varying_offsets);
+            }
             ncheck = ll.constant(1);
         }
 
-        llvm::Value *args[] = { ll.constant(t),
-                                llvm_void_ptr(sym),
-                                sg_void_ptr(), 
-                                ll.constant(op.sourcefile()),
-                                ll.constant(op.sourceline()),
-                                ll.constant(group().name()),
-                                ll.constant(layer()),
-                                ll.constant(inst()->layername()),
-                                ll.constant(inst()->shadername().c_str()),
-                                ll.constant(int(&op - &inst()->ops()[0])),
-                                ll.constant(op.opname()),
-                                ll.constant(i),
-                                ll.constant(sym.name()),
-                                offset,
-                                ncheck
-                              };
-        ll.call_function ("osl_uninit_check", args, 15);
+        if (loc_varying_offsets != nullptr) {
+            llvm::Value *args[] = { ll.mask_as_int(ll.current_mask()),
+                                    ll.constant(t),
+                                    llvm_void_ptr(sym),
+                                    sg_void_ptr(),
+                                    ll.constant(op.sourcefile()),
+                                    ll.constant(op.sourceline()),
+                                    ll.constant(group().name()),
+                                    ll.constant(layer()),
+                                    ll.constant(inst()->layername()),
+                                    ll.constant(inst()->shadername().c_str()),
+                                    ll.constant(int(&op - &inst()->ops()[0])),
+                                    ll.constant(op.opname()),
+                                    ll.constant(i),
+                                    ll.constant(sym.name()),
+                                    ll.void_ptr(loc_varying_offsets),
+                                    ncheck
+                                  };
+
+            if (isSymbolUniform(sym)) {
+                ll.call_function ("osl_uninit_check_u_values_w16_offset_masked", args);
+            } else {
+                ll.call_function ("osl_uninit_check_w16_values_w16_offset_masked", args);
+            }
+        } else {
+            if (isSymbolUniform(sym)) {
+
+                llvm::Value *args[] = { ll.constant(t),
+                                        llvm_void_ptr(sym),
+                                        sg_void_ptr(),
+                                        ll.constant(op.sourcefile()),
+                                        ll.constant(op.sourceline()),
+                                        ll.constant(group().name()),
+                                        ll.constant(layer()),
+                                        ll.constant(inst()->layername()),
+                                        ll.constant(inst()->shadername().c_str()),
+                                        ll.constant(int(&op - &inst()->ops()[0])),
+                                        ll.constant(op.opname()),
+                                        ll.constant(i),
+                                        ll.constant(sym.name()),
+                                        offset,
+                                        ncheck
+                                      };
+                ll.call_function ("osl_uninit_check_u_values_u_offset_batched", args);
+            } else {
+                llvm::Value *args[] = { ll.mask_as_int(ll.current_mask()),
+                                        ll.constant(t),
+                                        llvm_void_ptr(sym),
+                                        sg_void_ptr(),
+                                        ll.constant(op.sourcefile()),
+                                        ll.constant(op.sourceline()),
+                                        ll.constant(group().name()),
+                                        ll.constant(layer()),
+                                        ll.constant(inst()->layername()),
+                                        ll.constant(inst()->shadername().c_str()),
+                                        ll.constant(int(&op - &inst()->ops()[0])),
+                                        ll.constant(op.opname()),
+                                        ll.constant(i),
+                                        ll.constant(sym.name()),
+                                        offset,
+                                        ncheck
+                                      };
+                ll.call_function ("osl_uninit_check_w16_values_u_offset_masked", args);
+            }
+        }
     }
 }
 

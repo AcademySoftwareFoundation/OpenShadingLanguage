@@ -5,7 +5,7 @@ test_varying_index_point (output color Cout = color(0,0,0))
     point parray[3] = { point(.1,.2,.3), 0.2, point(.3,.3,.3) };
     
     int varyingIndex = int(P[0]*256)%3;
-    for(int i = 0; i < 5000; ++i) {
+    for(int i = 0; i < 50; ++i) {
         parray[varyingIndex] = point(u,v,0);
     }
     

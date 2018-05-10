@@ -322,6 +322,10 @@ public:
     /// data type, return the llvm::Value of the new pointer.
     llvm::Value *ptr_cast (llvm::Value* val, const OIIO::TypeDesc &type);
 
+    /// Cast the variable specified by val to a pointer of type void*,
+    /// return the llvm::Value of the new pointer.
+    llvm::Value *int_to_ptr_cast (llvm::Value* val);
+
     /// Cast the pointer variable specified by val to a pointer of type
     /// void* return the llvm::Value of the new pointer.
     llvm::Value *void_ptr (llvm::Value* val);

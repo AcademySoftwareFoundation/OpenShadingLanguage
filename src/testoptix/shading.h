@@ -9,5 +9,6 @@
 OSL_NAMESPACE_ENTER
 
 void register_closures(ShadingSystem* shadingsys);
+void register_string_tags(ShadingSystem* shadingsys);
 
 OSL_NAMESPACE_EXIT

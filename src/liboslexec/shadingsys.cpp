@@ -395,6 +395,22 @@ ShadingSystem::query_closure (const char **name, int *id,
 
 
 
+bool
+ShadingSystem::register_string_tag (string_view str, uint64_t tag)
+{
+    return m_impl->register_string_tag (ustring(str), tag);
+}
+
+
+
+uint64_t
+ShadingSystem::lookup_string_tag (string_view str)
+{
+    return m_impl->lookup_string_tag (ustring(str));
+}
+
+
+
 int
 ShadingSystem::raytype_bit (ustring name)
 {
@@ -780,6 +796,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
         attribute ("options", TypeDesc::STRING, &options);
 
     setup_op_descriptors ();
+
+    setup_string_tags ();
 }
 
 
@@ -974,6 +992,15 @@ ShadingSystemImpl::setup_op_descriptors ()
 
 
 void
+ShadingSystemImpl::setup_string_tags ()
+{
+    m_tag_map [ustring("")]            = StringTags::EMPTY_STRING;
+    m_tag_map [ustring("test_string")] = StringTags::TEST_STRING;
+}
+
+
+
+void
 ShadingSystemImpl::register_closure (string_view name, int id,
                                      const ClosureParam *params,
                                      PrepareClosureFunc prepare,
@@ -1008,6 +1035,18 @@ ShadingSystemImpl::query_closure(const char **name, int *id,
     if (params)
         *params = &entry->params[0];
 
+    return true;
+}
+
+
+
+bool
+ShadingSystemImpl::register_string_tag (ustring str, uint64_t tag)
+{
+    if (m_tag_map.count(str) && m_tag_map[str] != tag)
+        return false;
+
+    m_tag_map[str] = tag;
     return true;
 }
 
@@ -1884,6 +1923,14 @@ ShadingSystemImpl::getstats (int level) const
     }
 
     return out.str();
+}
+
+
+
+uint64_t
+ShadingSystemImpl::lookup_string_tag (ustring str)
+{
+    return m_tag_map.count(str) ? m_tag_map[str] : StringTags::UNKNOWN_STRING;
 }
 
 

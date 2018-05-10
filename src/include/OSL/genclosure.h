@@ -30,6 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/ustring.h>
 #include <OSL/oslconfig.h>
+#include <OSL/device_string.h>
 
 OSL_NAMESPACE_ENTER
 
@@ -57,6 +58,8 @@ struct ClosureParam {
     { TypeDesc::TypeString, (int)reckless_offsetof(st, fld), NULL, fieldsize(st, fld) }
 #define CLOSURE_CLOSURE_PARAM(st, fld) \
     { TypeDesc::PTR, (int)reckless_offsetof(st, fld), NULL, fieldsize(st, fld) }
+#define CLOSURE_DEVICE_STRING_PARAM(st, fld) \
+    { TypeDesc(TypeDesc::UINT64, TypeDesc::SCALAR, 2), (int)reckless_offsetof(st, fld), NULL, fieldsize(st, fld) }
 
 #define CLOSURE_INT_ARRAY_PARAM(st, fld, n) \
     { TypeDesc(TypeDesc::INT,   TypeDesc::SCALAR, TypeDesc::NOXFORM, n),(int)reckless_offsetof(st, fld), NULL, fieldsize(st, fld) }

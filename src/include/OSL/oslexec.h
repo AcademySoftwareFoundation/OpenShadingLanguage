@@ -570,6 +570,15 @@ public:
     bool query_closure (const char **name, int *id,
                         const ClosureParam **params);
 
+
+    /// Register a device_string tag for the specified string. Return
+    /// false if the string has been registered with a different tag.
+    bool register_string_tag (string_view str, uint64_t tag);
+
+    /// Lookup the tag registered for the given string.
+    /// Return StringTags::UNKNOWNSTRING if the string is not registered.
+    uint64_t lookup_string_tag (string_view str);
+
     /// For the proposed raytype name, return the bit pattern that
     /// describes it, or 0 for an unrecognized name.  (This retrieves
     /// data passed in via attribute("raytypes")).

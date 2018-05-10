@@ -14,6 +14,8 @@
 # If 'OPTIXHOME' not set, use the env variable of that name if available
 if (NOT OPTIXHOME AND NOT $ENV{OPTIXHOME} STREQUAL "")
     set (OPTIXHOME $ENV{OPTIXHOME})
+elseif (NOT $ENV{OPTIX_INSTALL_DIR} STREQUAL "")
+    set (OPTIXHOME $ENV{OPTIX_INSTALL_DIR})
 endif ()
 
 if (NOT OptiX_FIND_QUIETLY)
@@ -54,11 +56,6 @@ find_package_handle_standard_args (OptiX
     REQUIRED_VARS OPTIX_INCLUDE_DIR OPTIX_LIBRARIES
     )
 
-if (NOT OptiX_FIND_QUIETLY)
-    message (STATUS "OptiX includes  = ${OPTIX_INCLUDE_DIR}")
-    message (STATUS "OptiX libraries = ${OPTIX_LIBRARIES}")
-endif ()
-
 # Pull out the API version from optix.h
 file(STRINGS ${OPTIX_INCLUDE_DIR}/optix.h OPTIX_VERSION_LINE LIMIT_COUNT 1 REGEX OPTIX_VERSION)
 string(REGEX MATCH "([0-9]+)" OPTIX_VERSION "${OPTIX_VERSION_LINE}")
@@ -69,6 +66,13 @@ set(OPTIX_VERSION_STRING ${OPTIX_VERSION_MAJOR}.${OPTIX_VERSION_MINOR}.${OPTIX_V
 
 if (OPTIX_FOUND)
     message (STATUS "OptiX version = ${OPTIX_VERSION_STRING}")
+    if (NOT OptiX_FIND_QUIETLY)
+        message (STATUS "OptiX includes  = ${OPTIX_INCLUDE_DIR}")
+        message (STATUS "OptiX libraries = ${OPTIX_LIBRARIES}")
+    endif ()
+    if (${OPTIX_VERSION_MAJOR}.${OPTIX_VERSION_MINOR} STRLESS "5.1")
+        message (FATAL_ERROR "Minimum OptiX version is 5.1, found ${OPTIX_VERSION_STRING}")
+    endif()
 else ()
     message (FATAL_ERROR "OptiX not found")
 endif ()

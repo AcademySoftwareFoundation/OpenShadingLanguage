@@ -50,7 +50,6 @@ namespace pugi = OIIO::pugi;
 
 #include <OSL/oslexec.h>
 
-#include <nvrtc.h>
 #include <optix_world.h>
 
 #include "optixrend.h"
@@ -72,6 +71,7 @@ bool debug1 = false;
 bool debug2 = false;
 bool verbose = false;
 bool runstats = false;
+bool saveptx = false;
 int profile = 0;
 bool O0 = false, O1 = false, O2 = false;
 bool debugnan = false;
@@ -122,6 +122,7 @@ void getargs(int argc, const char *argv[])
                 "--debug", &debug1, "Lots of debugging info",
                 "--debug2", &debug2, "Even more debugging info",
                 "--runstats", &runstats, "Print run statistics",
+                "--saveptx", &saveptx, "Save the generated PTX",
                 "-r %d %d", &xres, &yres, "Render a WxH image",
                 "-aa %d", &aa, "Trace NxN rays per pixel",
                 "-t %d", &num_threads, "Render using N threads (default: auto-detect)",
@@ -475,6 +476,8 @@ void make_optix_materials ()
     optix::Program any_hit = optix_ctx->createProgramFromPTXString(
         wrapper_ptx, "any_hit_shadow");
 
+    int mtl_id = 0;
+
     // Optimize each ShaderGroup in the scene, and use the resulting PTX to create
     // OptiX Programs which can be called by the closest hit program in the wrapper
     // to execute the compiled OSL shader.
@@ -496,6 +499,12 @@ void make_optix_materials ()
             std::cerr << "Failed to generate PTX for ShaderGroup "
                       << group_name << std::endl;
             exit (EXIT_FAILURE);
+        }
+
+        if (saveptx) {
+            std::ofstream out( group_name + "_" + std::to_string( mtl_id++ ) + ".ptx" );
+            out << osl_ptx;
+            out.close();
         }
 
         // Create a new Material using the wrapper PTX
@@ -580,6 +589,7 @@ int main (int argc, const char *argv[])
 
     shadingsys = new ShadingSystem (&rend, NULL, &errhandler);
     register_closures(shadingsys);
+    register_string_tags(shadingsys);
 
     shadingsys->attribute ("lockgeom",           1);
     shadingsys->attribute ("debug",              0);

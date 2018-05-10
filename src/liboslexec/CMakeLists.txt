@@ -158,6 +158,7 @@ MACRO ( CUDA_SHADEOPS_COMPILE srclist )
         llvm_ops.cpp
         opnoise.cpp
         ../liboslnoise/simplexnoise.cpp
+        device_string.cpp
         )
 
     SET ( shadeops_bc_cuda_cpp "${CMAKE_CURRENT_BINARY_DIR}/shadeops_cuda.bc.cpp" )

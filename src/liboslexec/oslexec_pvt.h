@@ -61,6 +61,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/oslclosure.h>
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
+#include <OSL/device_string.h>
 #include "osl_pvt.h"
 #include "constantpool.h"
 
@@ -705,6 +706,14 @@ public:
     ustring colorspace () const { return m_colorspace; }
     OIIO::ColorConfig& colorconfig () { return m_colorconfig; }
 
+    /// Return the tag associated with the given string
+    uint64_t lookup_string_tag (ustring str);
+
+    /// Register a string/tag pair. Return false if the string has already
+    /// been registered with a different tag.
+    bool register_string_tag (ustring str, uint64_t tag);
+
+
 private:
     void printstats () const;
 
@@ -737,6 +746,10 @@ private:
     void SetupLLVM ();
 
     void setup_op_descriptors ();
+
+    /// Set up the mapping from string contents to integer tags, to be used when
+    /// constructing tagged strings for use on GPUs
+    void setup_string_tags ();
 
     RendererServices *m_renderer;         ///< Renderer services
     TextureSystem *m_texturesys;          ///< Texture system
@@ -911,6 +924,9 @@ private:
     atomic_int m_threads_currently_compiling;
     mutable std::map<ustring,long long> m_group_profile_times;
     // N.B. group_profile_times is protected by m_stat_mutex.
+
+    // A mapping from strings to integers, used for constructing tagged strings
+    std::map<ustring, uint64_t> m_tag_map;
 
     friend class OSL::ShadingContext;
     friend class ShaderMaster;

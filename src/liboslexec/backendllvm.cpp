@@ -339,15 +339,9 @@ BackendLLVM::addGlobalVariable(const std::string& name, int size, int alignment,
         constant = llvm::ConstantInt::get (
             llvm::Type::getInt32Ty (ll.module()->getContext()), *(int*) data);
     }
-    else if (type == "texid") {
-        constant = llvm::ConstantInt::get
-            (llvm::Type::getInt32Ty (ll.module()->getContext()), *(int*) data);
-    }
     else if (type == "string") {
-        llvm::ArrayRef<uint8_t> arr_ref (
-            (uint8_t*)((ustring*)data)->c_str(), ((ustring*)data)->size() + 1);
-
-        constant = llvm::ConstantDataArray::get (ll.module()->getContext(), arr_ref);
+        g_var = llvm::dyn_cast<llvm::GlobalVariable>(
+            makeTaggedString (name, *((ustring*)data)));
     }
     else {
         // Handle unspecified types as generic byte arrays
@@ -355,20 +349,104 @@ BackendLLVM::addGlobalVariable(const std::string& name, int size, int alignment,
         constant = llvm::ConstantDataArray::get (ll.module()->getContext(), arr_ref);
     }
 
-    g_var = reinterpret_cast<llvm::GlobalVariable*>(
-        ll.module()->getOrInsertGlobal (name, constant->getType()));
+    if (! g_var) {
+        g_var = reinterpret_cast<llvm::GlobalVariable*>(
+            ll.module()->getOrInsertGlobal (name, constant->getType()));
 
-    if (!g_var) {
-        std::cout << "unable to create global" << std::endl;
-        return nullptr;
+        ASSERT (g_var && "Unable to create GlobalVariable");
+
+        g_var->setAlignment  (alignment);
+        g_var->setLinkage    (llvm::GlobalValue::PrivateLinkage);
+        g_var->setVisibility (llvm::GlobalValue::DefaultVisibility);
+        g_var->setInitializer(constant);
     }
 
-    g_var->setAlignment  (alignment);
-    g_var->setLinkage    (llvm::GlobalValue::ExternalLinkage);
+    g_var->setLinkage    (llvm::GlobalValue::PrivateLinkage);
     g_var->setVisibility (llvm::GlobalValue::DefaultVisibility);
-    g_var->setInitializer(constant);
 
-    m_const_map[ name ] = g_var;
+    m_const_map[name] = g_var;
+
+    return g_var;
+}
+
+
+
+llvm::Value*
+BackendLLVM::makeTaggedString (const std::string& var_name, ustring str)
+{
+    llvm::GlobalVariable* g_var    = nullptr;
+    llvm::Constant*       constant = nullptr;
+
+    // Create the character array
+    constant = llvm::ConstantDataArray::getString (
+        ll.module()->getContext(), str.c_str());
+
+    llvm::ArrayType* array_ty =
+        llvm::dyn_cast<llvm::ConstantDataArray>(constant)->getType();
+
+    // Creater a GlobalVariable for the string literal
+    llvm::GlobalVariable* char_array = new llvm::GlobalVariable (
+        *ll.module(),
+        array_ty,
+        true,
+        llvm::GlobalValue::PrivateLinkage,
+        0,
+        std::string("_$_str_") + var_name);
+
+    char_array->setAlignment (8);
+    char_array->setInitializer (constant);
+
+    // Since tagged strings are a struct type, consisting of a uint64_t ID
+    // and a pointer to a C-style string, we need to construct one and add
+    // it to the Module.
+
+    // Get the associated LLVM Types
+    llvm::StructType* struct_type = ll.module()->getTypeByName(
+        Strutil::format ("struct.%s::device_string", OSL_NAMESPACE_STRING));
+
+    llvm::Type* ts_type = ll.module()->getTypeByName(
+        Strutil::format ("struct.%s::device_string", OSL_NAMESPACE_STRING));
+
+    ASSERT (struct_type && ts_type && "Unable to get tagged string LLVM Type");
+
+    // Check if there is a tag associated with the string contents
+    uint64_t tag = shadingsys().lookup_string_tag (str);
+
+    // If no tag has been assigned, use the ustring hash
+    if (tag == StringTags::UNKNOWN_STRING) {
+        tag = str.hash();
+    }
+
+    llvm::Constant* tag_constant = llvm::ConstantInt::get (
+        llvm::Type::getInt64Ty (ll.module()->getContext()), tag);
+
+    llvm::ConstantInt* zero = llvm::ConstantInt::get (
+        llvm::Type::getInt32Ty (ll.module()->getContext()), 0);
+
+    std::vector<llvm::Constant*> ptr_indices = { zero, zero };
+    llvm::Constant* const_ptr = llvm::ConstantExpr::getGetElementPtr (
+        constant->getType(), char_array, ptr_indices);
+
+    std::vector<llvm::Constant*> struct_fields = { tag_constant, const_ptr };
+    llvm::Constant* struct_constant = llvm::ConstantStruct::get (
+        struct_type, struct_fields);
+
+    // The GlobalVariable is a pointer to the struct
+    llvm::GlobalVariable* struct_var = new llvm::GlobalVariable (
+        *ll.module(),
+        ts_type,
+        false,
+        llvm::GlobalValue::PrivateLinkage,
+        0,
+        var_name,
+        nullptr,
+        llvm::GlobalValue::ThreadLocalMode::NotThreadLocal,
+        1);
+
+    struct_var->setAlignment (16);
+    struct_var->setInitializer (struct_constant);
+
+    g_var = struct_var;
 
     return g_var;
 }
@@ -391,8 +469,7 @@ BackendLLVM::createOptixVariable(const std::string& name, const std::string& typ
         (type == "float" ) ? 4 :
         (type == "int"   ) ? 4 :
         (type == "color" ) ? 8 :
-        (type == "texid" ) ? 4 :
-        (type == "string") ? 1 : 8;
+        (type == "string") ? 16 : 8;
 
     // Create a global variable with the name, type, and initializer. This is
     // the value that will be accessed when the shader executes.
@@ -403,7 +480,7 @@ BackendLLVM::createOptixVariable(const std::string& name, const std::string& typ
     }
 
     auto mangle_name = [](const std::string& name, const std::string& prefix) {
-        return "_ZN" + std::to_string (prefix.size()) + "rti_internal" +
+        return "_ZN" + std::to_string (prefix.size() + 12) + "rti_internal" +
         prefix + std::to_string (name.size()) + name + "E";
     };
 
@@ -416,9 +493,7 @@ BackendLLVM::createOptixVariable(const std::string& name, const std::string& typ
     // Refer to the OptiX API documentation and optix_defines.h in the OptiX SDK
     // for more information.
 
-    const std::string optix_type =
-        (type == "color") ? "float3" :
-        (type == "texid") ? "int"    : type;
+    const std::string optix_type = (type == "color") ? "float3" : type;
 
     // Copy the OptiX typename contents into a temporary vector
     std::vector<char> type_name (optix_type.c_str(),
@@ -450,9 +525,9 @@ BackendLLVM::getOrAllocateLLVMGlobal (const Symbol& sym)
 {
     std::stringstream ss;
     if (sym.typespec().is_string()) {
-        // Sse the USTRING hash to create a name for the symbol that's based on
+        // Use the ustring hash to create a name for the symbol that's based on
         // the string contents
-        ss << "str_"
+        ss << "ts_"
            << std::setbase (16) << std::setfill('0') << std::setw (16)
            << (*(ustring *)sym.data()).hash();
     }
@@ -475,7 +550,7 @@ BackendLLVM::getOrAllocateLLVMGlobal (const Symbol& sym)
         (sym.typespec().is_scalarnum()) ? 4 :
         (sym.typespec().is_triple()   ) ? 8 :
         (sym.typespec().is_array()    ) ? 8 :
-        (sym.typespec().is_string()   ) ? 1 : -1;
+        (sym.typespec().is_string()   ) ? 16 : -1;
 
     if (alignment < 1) {
         return nullptr;
@@ -508,7 +583,6 @@ BackendLLVM::llvm_get_pointer (const Symbol& sym, int deriv,
                 llvm::Type *cast_type = (! sym.typespec().is_string())
                     ? ll.type_ptr (llvm_type(sym.typespec().elementtype()))
                     : ll.type_void_ptr();
-
                 result = ll.ptr_cast (ptr, cast_type);
             }
         }
@@ -738,6 +812,39 @@ BackendLLVM::llvm_load_arg (const Symbol& sym, bool derivs)
 
     // Regular pointer case
     return llvm_void_ptr (sym);
+}
+
+
+
+llvm::Value *
+BackendLLVM::llvm_load_device_string_char_ptr (llvm::Value* val)
+{
+    // The device_string GlobalVariable is a pointer, so there are two levels of
+    // indirection to the actual string.
+    llvm::Value* char_ptr_ptr = ll.offset_ptr (val, 8);
+
+    // "Dereference" the device_string char* to get the address value
+    llvm::Value* ptr_val = llvm_load_value (
+        ll.ptr_to_cast (char_ptr_ptr, ll.type_longlong()),
+        TypeSpec(TypeDesc::UINT64), 0, NULL, 0, TypeDesc::UINT64);
+
+    // Cast the address value to a pointer
+    llvm::Value* char_ptr = ll.int_to_ptr_cast (ptr_val);
+
+    return char_ptr;
+}
+
+
+
+llvm::Value *
+BackendLLVM::llvm_load_device_string_tag (llvm::Value* val)
+{
+    // The first member of the device_string is a uint64_t
+    llvm::Value* tag_val = llvm_load_value (
+        ll.ptr_to_cast (val, ll.type_longlong()),
+        TypeSpec(TypeDesc::UINT64), 0, NULL, 0, TypeDesc::UINT64);
+
+    return tag_val;
 }
 
 

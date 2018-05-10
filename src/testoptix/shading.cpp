@@ -1,4 +1,5 @@
 #include "shading.h"
+#include <OSL/device_string.h>
 #include <OSL/genclosure.h>
 
 using namespace OSL;
@@ -30,7 +31,7 @@ struct PhongParams      { Vec3 N; float exponent; };
 struct WardParams       { Vec3 N, T; float ax, ay; };
 struct ReflectionParams { Vec3 N; float eta; };
 struct RefractionParams { Vec3 N; float eta; };
-struct MicrofacetParams { ustring dist; Vec3 N, U; float xalpha, yalpha, eta; int refract; };
+struct MicrofacetParams { device_string dist; Vec3 N, U; float xalpha, yalpha, eta; int refract; };
 
 } // anonymous namespace
 
@@ -62,7 +63,7 @@ void register_closures(OSL::ShadingSystem* shadingsys) {
                                                   CLOSURE_FLOAT_PARAM (WardParams, ax),
                                                   CLOSURE_FLOAT_PARAM (WardParams, ay),
                                                   CLOSURE_FINISH_PARAM(WardParams) } },
-        { "microfacet", MICROFACET_ID,          { CLOSURE_STRING_PARAM(MicrofacetParams, dist),
+        { "microfacet", MICROFACET_ID,          { CLOSURE_DEVICE_STRING_PARAM(MicrofacetParams, dist),
                                                   CLOSURE_VECTOR_PARAM(MicrofacetParams, N),
                                                   CLOSURE_VECTOR_PARAM(MicrofacetParams, U),
                                                   CLOSURE_FLOAT_PARAM (MicrofacetParams, xalpha),
@@ -90,6 +91,22 @@ void register_closures(OSL::ShadingSystem* shadingsys) {
             builtins[i].params,
             NULL, NULL);
     }
+}
+
+void register_string_tags(OSL::ShadingSystem* shadingsys) {
+#if 0
+    // The renderer can optionally register strings with specific tags.
+    // The registration will fail if the given string has already been
+    // registered with a different tag.
+    shadingsys->register_string_tag("my_cool_string", 1234u);
+    uint64_t tag = shadingsys->lookup_string_tag("my_cool_string");
+    ASSERT (tag != StringTags::UNKNOWN_STRING && "Unable to register string");
+
+    // Similarly, the renderer can check whether or not a string has been
+    // registered.
+    uint64_t fake_tag = shadingsys->lookup_string_tag("my_fake_string");
+    ASSERT (fake_tag == StringTags::UNKNOWN_STRING && "Unregistered string check failed");
+#endif
 }
 
 OSL_NAMESPACE_EXIT

@@ -77,6 +77,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm/Transforms/Utils/Cloning.h>
 #include <llvm/Analysis/TargetTransformInfo.h>
 
+#if OSL_LLVM_VERSION >= 70
+#include <llvm/Transforms/Utils.h>
+#include <llvm/Transforms/InstCombine/InstCombine.h>
+#endif
+
 OSL_NAMESPACE_ENTER
 
 namespace pvt {

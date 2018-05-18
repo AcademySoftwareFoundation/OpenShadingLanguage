@@ -1155,6 +1155,10 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
 	// Start with fewer data lanes active based on how full batch is.
     llvm::Value * initial_shader_mask = ll.int_as_mask(llvm_initial_shader_mask_value);
     ll.push_shader_instance(initial_shader_mask);
+//#define __OSL_TRACE_MASKS 1
+#ifdef __OSL_TRACE_MASKS
+        llvm_print_mask("initial_shader_mask", initial_shader_mask);
+#endif
 	
     // Always allocate a temporary wide matrix to serve as middle man between
     // from and to matrix spaces
@@ -1217,7 +1221,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
     // keep them as i1 (bool) vs. int to enable better code generation
     // but underlying OIIO::TypeDesc as well as OSL don't support bool so
     // will need to promote to int when interacting with others
-    std::unordered_set<Symbol *> booleanResults;
+    m_symbols_forced_boolean.clear();
     {
     	const OpcodeVec & opcodes = inst()->ops();
     	int numOps = static_cast<int>(opcodes.size());
@@ -1227,13 +1231,13 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
             if ((opd->llvmgenwide == llvm_gen_compare_op) ||
                 (opd->llvmgenwide == llvm_gen_getattribute) ) {
     		    Symbol * result = opargsym (opcode, 0);
-                booleanResults.insert(result);
+                m_symbols_forced_boolean.insert(result);
     			OSL_DEV_ONLY(std::cout << "RESULT of compare op = " << result->name() << std::endl);
     		}
     	}    	
     }
 
-    // 2nd pass to remove any booleanResults that get written to by
+    // 2nd pass to remove any m_symbols_forced_boolean that get written to by
     // non boolean operations
     {
         const OpcodeVec & opcodes = inst()->ops();
@@ -1248,7 +1252,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
                 for(int argIndex = 0; argIndex < argCount; ++argIndex) {
                     if (opcode.argwrite(argIndex)) {
                         Symbol * aSymbol = opargsym (opcode, argIndex);
-                        booleanResults.erase(aSymbol);
+                        m_symbols_forced_boolean.erase(aSymbol);
                     }
                 }
             }
@@ -1256,7 +1260,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
     }
 
 #ifdef OSL_DEV
-    for(Symbol *sym:booleanResults)
+    for(Symbol *sym:m_symbols_forced_boolean)
     {
         std::cout << "Forcing symbol " << sym->name() << " to be boolean" << std::endl;
     }
@@ -1280,8 +1284,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
         // Allocate space for locals, temps, aggregate constants
         if (s.symtype() == SymTypeLocal || s.symtype() == SymTypeTemp ||
                 s.symtype() == SymTypeConst) {
-            bool forceBool = booleanResults.find(&s) != booleanResults.end();
-            getOrAllocateLLVMSymbol (s, forceBool);
+            getOrAllocateLLVMSymbol (s);
         }
         // Set initial value for constants, closures, and strings that are
         // not parameters.

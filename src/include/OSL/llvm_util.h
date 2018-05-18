@@ -462,6 +462,12 @@ public:
     llvm::PointerType *type_triple_ptr() const { return m_llvm_type_triple_ptr; }
     llvm::PointerType *type_matrix_ptr() const { return m_llvm_type_matrix_ptr; }
 
+    // Different ISA's may have different representations of a mask
+    // from llvm's vector of bits that comparison operations emit.
+    // And we need varying boolean symbols to have the correct data type (size)
+    // on the stack and in data structures
+    llvm::Type *type_native_mask() const { return m_llvm_type_native_mask; }
+
     llvm::Type *type_wide_float() const { return m_llvm_type_wide_float; }
     llvm::Type *type_wide_double() const { return m_llvm_type_wide_double; }
     llvm::Type *type_wide_int() const { return m_llvm_type_wide_int; }
@@ -574,6 +580,9 @@ public:
     llvm::Value *wide_constant (const std::string &s) {
         return wide_constant(OIIO::ustring(s));
     }
+
+    llvm::Value * llvm_mask_to_native(llvm::Value *llvm_mask);
+    llvm::Value * native_to_llvm_mask(llvm::Value *native_mask);
 
     llvm::Value * mask_as_int(llvm::Value *mask);
     llvm::Value * mask_as_int8(llvm::Value *mask);
@@ -723,6 +732,14 @@ public:
     /// Store to a dereferenced pointer with no masking:   *ptr = val
     void op_unmasked_store (llvm::Value *val, llvm::Value *ptr);
 
+    /// Dereference a pointer of a native mask
+    /// converting it to a llvm mask (vector of bits):  return native_to_llvm_mask(*ptr)
+    llvm::Value * op_load_mask (llvm::Value *native_mask_ptr);
+
+    /// Store to a dereferenced pointer of a llvm mask
+    /// converting it to the native mask type for storage:   *ptr = llvm_mask_to_native(val);
+    void op_store_mask (llvm::Value *llvm_mask, llvm::Value *native_mask_ptr);
+
     void op_scatter(llvm::Value *wide_val, llvm::Value *ptr, llvm::Value *wide_index);
 
     // N.B. "GEP" -- GetElementPointer -- is a particular LLVM-ism that is
@@ -820,6 +837,7 @@ private:
     IRBuilder& builder();
     llvm::Value * op_linearize_indices (llvm::Value *wide_index);
     std::array<llvm::Value *,2> op_split_vector (llvm::Value * vector_val);
+    std::array<llvm::Value *,4> op_quarter_vector (llvm::Value * vector_val);
 
 
     int m_debug;
@@ -940,6 +958,10 @@ private:
     bool m_supports_native_bit_masks;
     bool m_supports_avx512f;
     bool m_supports_avx2;
+    bool m_supports_avx;
+
+    llvm::Type * m_llvm_type_native_mask;
+
 
     // Profiling Info
     llvm::JITEventListener* mVTuneNotifier;

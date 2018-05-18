@@ -3601,6 +3601,8 @@ osl_uninit_check_w16_values_u_offset_masked (int mask_value,
     TypeDesc typedesc = TYPEDESC(typedesc_);
     ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
     const Mask mask(mask_value);
+
+    //std::cout << "osl_uninit_check_w16_values_u_offset_masked="<< mask_value << std::endl;
     bool uninit = false;
     if (typedesc.basetype == TypeDesc::FLOAT) {
         float *vals = (float *)vals_;
@@ -3660,6 +3662,7 @@ osl_uninit_check_u_values_w16_offset_masked (int mask_value,
     ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
     ConstWideAccessor<int> wOffsets(wide_offsets_ptr);
     const Mask mask(mask_value);
+    //std::cout << "osl_uninit_check_u_values_w16_offset_masked="<< mask_value << std::endl;
     bool uninit = false;
     if (typedesc.basetype == TypeDesc::FLOAT) {
         float *vals = (float *)vals_;
@@ -3722,6 +3725,7 @@ osl_uninit_check_w16_values_w16_offset_masked (int mask_value,
     ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
     ConstWideAccessor<int> wOffsets(wide_offsets_ptr);
     const Mask mask(mask_value);
+    //std::cout << "osl_uninit_check_w16_values_w16_offset_masked="<< mask_value << std::endl;
     bool uninit = false;
     if (typedesc.basetype == TypeDesc::FLOAT) {
         float *vals = (float *)vals_;

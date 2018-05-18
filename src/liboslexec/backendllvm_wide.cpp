@@ -2852,7 +2852,7 @@ BackendLLVMWide::llvm_broadcast_uniform_value_at(
     const TypeDesc & dest_type = Destination.typespec().simpletype();
     bool derivs = Destination.has_derivs();
 
-	int derivCount =  derivs ? 1 : 3;
+	int derivCount =  derivs ? 3 : 1;
 
 	int arrayEnd;
 

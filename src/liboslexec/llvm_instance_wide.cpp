@@ -591,6 +591,12 @@ BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym, llvm::Value * llv
     }
 
     if (sym.has_init_ops() && sym.valuesource() == Symbol::DefaultVal) {
+        // Forcing masking shouldn't be required here,
+        // believe our discovery handled this correctly
+        // as these are initialization op's that are being processed,
+        // they should have corresponding require's masking entries,
+        // unlike the rest of the copies/initialization going on here
+
         // Handle init ops.
         build_llvm_code (sym.initbegin(), sym.initend());
 #if 0 // We think the non-memcpy route is preferable as it give the compiler a chance to optimize constant values
@@ -605,6 +611,11 @@ BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym, llvm::Value * llv
             llvm_zero_derivs (sym);
 #endif
     } else {
+        LLVM_Util::ScopedMasking render_output_masking_scope;
+        if (sym.renderer_output()) {
+            render_output_masking_scope = ll.create_masking_scope(/*enabled=*/true);
+        }
+
         // Use default value
         int num_components = sym.typespec().simpletype().aggregate;
         TypeSpec elemtype = sym.typespec().elementtype();
@@ -628,17 +639,13 @@ BackendLLVMWide::llvm_assign_initial_value (const Symbol& sym, llvm::Value * llv
                     llvm_store_value (init_val, sym, 0, arrind, i);                	
                 } else {
 					llvm::Value * wide_init_val = ll.wide_constant(init_val);
-				    LLVM_Util::ScopedMasking render_output_masking_scope;
-
-					if (sym.renderer_output()) {
-					    render_output_masking_scope = ll.create_masking_scope(/*enabled=*/true);
-					}
 					llvm_store_value (wide_init_val, sym, 0, arrind, i);
                 }
             }
         }
-        if (sym.has_derivs())
+        if (sym.has_derivs()) {
             llvm_zero_derivs (sym);
+        }
     }
 
     if (partial_userdata_mask_was_pushed) {
@@ -1312,7 +1319,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
                     ll.call_function ("osl_naninf_check_batched", args);
                 } else {
                     llvm::Value *args[] = {
-                         ll.mask_as_int(ll.current_mask()),
+                         llvm_initial_shader_mask_value,
                          ll.constant(ncomps), llvm_void_ptr(s),
                          ll.constant((int)s.has_derivs()), sg_void_ptr(),
                          ll.constant(ustring(inst()->shadername())),
@@ -1367,33 +1374,46 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
 
     build_llvm_code (inst()->maincodebegin(), inst()->maincodeend());
 
-    if (llvm_has_exit_instance_block())
+    if (llvm_has_exit_instance_block()) {
         ll.op_branch (m_exit_instance_block); // also sets insert point
+    }
 
-    // Transfer all of this layer's outputs into the downstream shader's
-    // inputs.
-    for (int layer = this->layer()+1;  layer < group().nlayers();  ++layer) {
-        ShaderInstance *child = group()[layer];
-        for (int c = 0;  c < child->nconnections();  ++c) {
-            const Connection &con (child->connection (c));
-            if (con.srclayer == this->layer()) {
-                ASSERT (con.src.arrayindex == -1 && con.src.channel == -1 &&
-                        con.dst.arrayindex == -1 && con.dst.channel == -1 &&
-                        "no support for individual element/channel connection");
-                Symbol *srcsym (inst()->symbol (con.src.param));
-                Symbol *dstsym (child->symbol (con.dst.param));
-                llvm_run_connected_layers (*srcsym, con.src.param);
-                OSL_DEV_ONLY(std::cout << "Copy connected data from " << srcsym->name().c_str() << "(" << srcsym->typespec() << ") to " << dstsym->name().c_str() << "(" << dstsym->typespec() << ")" << std::endl);
-                // FIXME -- I'm not sure I understand this.  Isn't this
-                // unnecessary if we wrote to the parameter ourself?
-                // If connection is to a node not used in the next layer
-                // then it may not have been analyzed properly
-                // and more importantly can be skipped
-                llvm_assign_impl (*dstsym, *srcsym);
+    {
+        // The current mask could be altered by early returns or exit
+        // But for copying output parameters to connected shaders,
+        // we want to use the shader mask
+        ll.push_mask(initial_shader_mask,  /*negate=*/ false, /*absolute = */ true);
+        // Need to make sure we only copy the lanes that this layer populated
+        // and avoid overwriting lanes that may have previously been populated
+        auto mask_copying_of_connected_symbols = ll.create_masking_scope(true);
+
+        // Transfer all of this layer's outputs into the downstream shader's
+        // inputs.
+        for (int layer = this->layer()+1;  layer < group().nlayers();  ++layer) {
+            ShaderInstance *child = group()[layer];
+            for (int c = 0;  c < child->nconnections();  ++c) {
+                const Connection &con (child->connection (c));
+                if (con.srclayer == this->layer()) {
+                    ASSERT (con.src.arrayindex == -1 && con.src.channel == -1 &&
+                            con.dst.arrayindex == -1 && con.dst.channel == -1 &&
+                            "no support for individual element/channel connection");
+                    Symbol *srcsym (inst()->symbol (con.src.param));
+                    Symbol *dstsym (child->symbol (con.dst.param));
+                    llvm_run_connected_layers (*srcsym, con.src.param);
+                    OSL_DEV_ONLY(std::cout << "Copy connected data from " << srcsym->name().c_str() << "(" << srcsym->typespec() << ") to " << dstsym->name().c_str() << "(" << dstsym->typespec() << ")" << std::endl);
+
+                    // FIXME -- I'm not sure I understand this.  Isn't this
+                    // unnecessary if we wrote to the parameter ourself?
+                    // If connection is to a node not used in the next layer
+                    // then it may not have been analyzed properly
+                    // and more importantly can be skipped
+                    llvm_assign_impl (*dstsym, *srcsym);
+                }
             }
         }
+        ll.pop_mask();
+        // llvm_gen_debug_printf ("done copying connections");
     }
-    // llvm_gen_debug_printf ("done copying connections");
 
     // All done
     if (shadingsys().llvm_debug_layers())

@@ -3603,15 +3603,16 @@ osl_uninit_check_w16_values_u_offset_masked (int mask_value,
     const Mask mask(mask_value);
 
     //std::cout << "osl_uninit_check_w16_values_u_offset_masked="<< mask_value << std::endl;
-    bool uninit = false;
+    Mask lanes_uninit(false);
+
     if (typedesc.basetype == TypeDesc::FLOAT) {
         float *vals = (float *)vals_;
         for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
             for(int lane = 0; lane < SimdLaneCount; ++lane) {
                 if (mask[lane]) {
                     if (!OIIO::isfinite(vals[c*SimdLaneCount + lane])) {
-                        uninit = true;
-                        vals[c] = 0;
+                        lanes_uninit.set_on(lane);
+                        vals[c*SimdLaneCount + lane] = 0;
                     }
                 }
             }
@@ -3622,8 +3623,8 @@ osl_uninit_check_w16_values_u_offset_masked (int mask_value,
             for(int lane = 0; lane < SimdLaneCount; ++lane) {
                 if (mask[lane]) {
                     if (vals[c*SimdLaneCount + lane] == std::numeric_limits<int>::min()) {
-                        uninit = true;
-                        vals[c] = 0;
+                        lanes_uninit.set_on(lane);
+                        vals[c*SimdLaneCount + lane] = 0;
                     }
                 }
             }
@@ -3634,18 +3635,18 @@ osl_uninit_check_w16_values_u_offset_masked (int mask_value,
             for(int lane = 0; lane < SimdLaneCount; ++lane) {
                 if (mask[lane]) {
                     if (vals[c*SimdLaneCount + lane] == Strings::uninitialized_string) {
-                        uninit = true;
-                        vals[c] = ustring();
+                        lanes_uninit.set_on(lane);
+                        vals[c*SimdLaneCount + lane] = ustring();
                     }
                 }
             }
     }
-    if (uninit) {
-        ctx->error ("Detected possible use of uninitialized value in %s %s at %s:%d (group %s, layer %d %s, shader %s, op %d '%s', arg %d)",
+    if (lanes_uninit.any_on()) {
+        ctx->error ("Detected possible use of uninitialized value in %s %s at %s:%d (group %s, layer %d %s, shader %s, op %d '%s', arg %d) for lanes(%x) of batch",
                     typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
                     (groupname && groupname[0]) ? groupname: "<unnamed group>",
                     layer, (layername && layername[0]) ? layername : "<unnamed layer>",
-                    shadername, opnum, USTR(opname), argnum);
+                    shadername, opnum, USTR(opname), argnum, lanes_uninit.value());
     }
 }
 
@@ -3663,7 +3664,7 @@ osl_uninit_check_u_values_w16_offset_masked (int mask_value,
     ConstWideAccessor<int> wOffsets(wide_offsets_ptr);
     const Mask mask(mask_value);
     //std::cout << "osl_uninit_check_u_values_w16_offset_masked="<< mask_value << std::endl;
-    bool uninit = false;
+    Mask lanes_uninit(false);
     if (typedesc.basetype == TypeDesc::FLOAT) {
         float *vals = (float *)vals_;
         for(int lane = 0; lane < SimdLaneCount; ++lane) {
@@ -3671,7 +3672,7 @@ osl_uninit_check_u_values_w16_offset_masked (int mask_value,
                 int firstcheck = wOffsets[lane];
                 for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
                     if (!OIIO::isfinite(vals[c])) {
-                        uninit = true;
+                        lanes_uninit.set_on(lane);
                         vals[c] = 0;
                     }
             }
@@ -3684,7 +3685,7 @@ osl_uninit_check_u_values_w16_offset_masked (int mask_value,
                 int firstcheck = wOffsets[lane];
                 for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
                     if (vals[c] == std::numeric_limits<int>::min()) {
-                        uninit = true;
+                        lanes_uninit.set_on(lane);
                         vals[c] = 0;
                     }
             }
@@ -3697,19 +3698,19 @@ osl_uninit_check_u_values_w16_offset_masked (int mask_value,
                 int firstcheck = wOffsets[lane];
                 for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
                     if (vals[c] == Strings::uninitialized_string) {
-                        uninit = true;
+                        lanes_uninit.set_on(lane);
                         vals[c] = ustring();
                     }
             }
         }
     }
 
-    if (uninit) {
-        ctx->error ("Detected possible use of uninitialized value in %s %s at %s:%d (group %s, layer %d %s, shader %s, op %d '%s', arg %d)",
+    if (lanes_uninit.any_on()) {
+        ctx->error ("Detected possible use of uninitialized value in %s %s at %s:%d (group %s, layer %d %s, shader %s, op %d '%s', arg %d) for lanes(%x) of batch",
                     typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
                     (groupname && groupname[0]) ? groupname: "<unnamed group>",
                     layer, (layername && layername[0]) ? layername : "<unnamed layer>",
-                    shadername, opnum, USTR(opname), argnum);
+                    shadername, opnum, USTR(opname), argnum, lanes_uninit.value());
     }
 }
 OSL_SHADEOP void
@@ -3726,7 +3727,7 @@ osl_uninit_check_w16_values_w16_offset_masked (int mask_value,
     ConstWideAccessor<int> wOffsets(wide_offsets_ptr);
     const Mask mask(mask_value);
     //std::cout << "osl_uninit_check_w16_values_w16_offset_masked="<< mask_value << std::endl;
-    bool uninit = false;
+    Mask lanes_uninit(false);
     if (typedesc.basetype == TypeDesc::FLOAT) {
         float *vals = (float *)vals_;
         for(int lane = 0; lane < SimdLaneCount; ++lane) {
@@ -3734,7 +3735,7 @@ osl_uninit_check_w16_values_w16_offset_masked (int mask_value,
                 int firstcheck = wOffsets[lane];
                 for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
                     if (!OIIO::isfinite(vals[c*SimdLaneCount + lane])) {
-                        uninit = true;
+                        lanes_uninit.set_on(lane);
                         vals[c*SimdLaneCount + lane] = 0;
                     }
             }
@@ -3747,7 +3748,7 @@ osl_uninit_check_w16_values_w16_offset_masked (int mask_value,
                 int firstcheck = wOffsets[lane];
                 for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
                     if (vals[c*SimdLaneCount + lane] == std::numeric_limits<int>::min()) {
-                        uninit = true;
+                        lanes_uninit.set_on(lane);
                         vals[c*SimdLaneCount + lane] = 0;
                     }
             }
@@ -3760,19 +3761,19 @@ osl_uninit_check_w16_values_w16_offset_masked (int mask_value,
                 int firstcheck = wOffsets[lane];
                 for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
                     if (vals[c*SimdLaneCount + lane] == Strings::uninitialized_string) {
-                        uninit = true;
+                        lanes_uninit.set_on(lane);
                         vals[c*SimdLaneCount + lane] = ustring();
                     }
             }
         }
     }
 
-    if (uninit) {
-        ctx->error ("Detected possible use of uninitialized value in %s %s at %s:%d (group %s, layer %d %s, shader %s, op %d '%s', arg %d)",
+    if (lanes_uninit.any_on()) {
+        ctx->error ("Detected possible use of uninitialized value in %s %s at %s:%d (group %s, layer %d %s, shader %s, op %d '%s', arg %d) for lanes(%x) of batch",
                     typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
                     (groupname && groupname[0]) ? groupname: "<unnamed group>",
                     layer, (layername && layername[0]) ? layername : "<unnamed layer>",
-                    shadername, opnum, USTR(opname), argnum);
+                    shadername, opnum, USTR(opname), argnum, lanes_uninit.value());
     }
 }
 

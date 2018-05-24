@@ -72,6 +72,7 @@ bool debug2 = false;
 bool verbose = false;
 bool runstats = false;
 bool saveptx = false;
+bool warmup = false;
 int profile = 0;
 bool O0 = false, O1 = false, O2 = false;
 bool debugnan = false;
@@ -122,6 +123,7 @@ void getargs(int argc, const char *argv[])
                 "--debug2", &debug2, "Even more debugging info",
                 "--runstats", &runstats, "Print run statistics",
                 "--saveptx", &saveptx, "Save the generated PTX",
+                "--warmup", &warmup, "Perform a warmup launch",
                 "-r %d %d", &xres, &yres, "Render a WxH image",
                 "-aa %d", &aa, "Trace NxN rays per pixel",
                 "-t %d", &num_threads, "Render using N threads (default: auto-detect)",
@@ -620,7 +622,9 @@ int main (int argc, const char *argv[])
     double setuptime = timer.lap ();
 
     // Perform a tiny launch to warm up the OptiX context
-    optix_ctx->launch (0, 1, 1);
+    if (warmup)
+        optix_ctx->launch (0, 1, 1);
+
     double warmuptime = timer.lap ();
 
     // Launch the GPU kernel to render the scene
@@ -655,7 +659,9 @@ int main (int argc, const char *argv[])
         double writetime = timer.lap();
         std::cout << "\n";
         std::cout << "Setup : " << OIIO::Strutil::timeintervalformat (setuptime,2) << "\n";
-        std::cout << "Warmup: " << OIIO::Strutil::timeintervalformat (warmuptime,2) << "\n";
+        if (warmup) {
+            std::cout << "Warmup: " << OIIO::Strutil::timeintervalformat (warmuptime,2) << "\n";
+        }
         std::cout << "Run   : " << OIIO::Strutil::timeintervalformat (runtime,2) << "\n";
         std::cout << "Write : " << OIIO::Strutil::timeintervalformat (writetime,2) << "\n";
         std::cout << "\n";

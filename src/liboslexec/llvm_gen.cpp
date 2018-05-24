@@ -2847,15 +2847,7 @@ LLVMGEN (llvm_gen_noise)
     std::string funcname = "osl_" + name.string() + "_" + arg_typecode(&Result,derivs);
     std::vector<llvm::Value *> args;
     if (pass_name) {
-        if (! rop.use_optix()) {
-            args.push_back (rop.llvm_load_value(*Name));
-        }
-        else {
-            llvm::Value* name_arg = (Name->is_constant())
-                ? rop.getOrAllocateLLVMGlobal (*Name)
-                : rop.llvm_load_value (*Name, 0, nullptr, 0);
-            args.push_back (name_arg);
-        }
+        args.push_back (rop.llvm_load_value(*Name));
     }
     llvm::Value *tmpresult = NULL;
     // triple return, or float return with derivs, passes result pointer

@@ -1,0 +1,4 @@
+Compiled checkerboard.osl -> checkerboard.oso
+Compiled matte.osl -> matte.oso
+Compiled test_print.osl -> test_print.oso
+str: default

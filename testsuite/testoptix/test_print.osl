@@ -1,0 +1,21 @@
+surface
+test_print
+    [[ string description = "Lambertian diffuse material" ]]
+(
+    float Kd = 1
+        [[  string description = "Diffuse scaling",
+            float UImin = 0, float UIsoftmax = 1 ]],
+    string str = "default",
+    color Cs = 1
+        [[  string description = "Base color",
+            float UImin = 0, float UImax = 1 ]]
+  )
+{
+    string tmp_str;
+    if (Cs[0] == 0)
+        tmp_str = "non-default";
+    else
+        tmp_str = str;
+
+    printf("str: %s\n", str);
+}

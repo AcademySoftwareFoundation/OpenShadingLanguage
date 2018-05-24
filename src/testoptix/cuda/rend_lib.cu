@@ -184,4 +184,10 @@ extern "C" {
         int layer = 0;
         return rend_get_userdata ((char*)name, symbol_data, symbol_data_size);
     }
+
+        __device__
+    void osl_printf (void* sg_, char* fmt_str, void* args)
+    {
+        printf (fmt_str, args);
+    }
 }

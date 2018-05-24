@@ -355,12 +355,10 @@ BackendLLVM::addGlobalVariable(const std::string& name, int size, int alignment,
 
         ASSERT (g_var && "Unable to create GlobalVariable");
 
-        g_var->setAlignment  (alignment);
-        g_var->setLinkage    (llvm::GlobalValue::PrivateLinkage);
-        g_var->setVisibility (llvm::GlobalValue::DefaultVisibility);
         g_var->setInitializer(constant);
     }
 
+    g_var->setAlignment  (alignment);
     g_var->setLinkage    (llvm::GlobalValue::PrivateLinkage);
     g_var->setVisibility (llvm::GlobalValue::DefaultVisibility);
 

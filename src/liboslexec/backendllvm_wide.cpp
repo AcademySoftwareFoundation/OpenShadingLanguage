@@ -2070,7 +2070,6 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 	if (iter == m_is_uniform_by_symbol.end()) 
 	{
 		OSL_DEV_ONLY(std::cout << " undiscovered " << sym.name() << " isUniform=");
-		ASSERT(sym.renderer_output() == false);
 		OSL_DEV_ONLY(std::cout << true << std::endl);
 		return true;
 	}
@@ -3381,7 +3380,10 @@ BackendLLVMWide::llvm_assign_impl (Symbol &Result, Symbol &Src,
 				// src and result both have derivs -- copy them
 				for (int d = 1;  d <= 2;  ++d) {
 					for (int i = 0; i < num_components; ++i) {
-						llvm::Value* val = llvm_load_value (Src, d, arrind, i);
+					    // Not sure how, but we have seen in wild
+					    // the ability to have a uniform Src try and store to a varying Result,
+					    // so we need to widen it here
+						llvm::Value* val = llvm_load_value (Src, d, arrind, i, TypeDesc::UNKNOWN, op_is_uniform);
 						llvm_store_value (val, Result, d, arrind, i);
 					}
 				}

@@ -92,7 +92,6 @@ static std::string shaderpath;
 //     testrender can be used as-is (and they will eventually be used, when
 //     path tracing is added to testoptix)
 
-bool optix_exceptions = false;
 optix::Context optix_ctx = NULL;
 
 static std::string renderer_ptx;  // ray generation, etc.
@@ -132,7 +131,6 @@ void getargs(int argc, const char *argv[])
                 "--debugnan", &debugnan, "Turn on 'debugnan' mode",
                 "--path %s", &shaderpath, "Specify oso search path",
                 "--options %s", &extraoptions, "Set extra OSL options",
-                "--exceptions", &optix_exceptions, "Enable OptiX device exceptions",
                 NULL);
     if (ap.parse(argc, argv) < 0) {
         std::cerr << ap.geterror() << std::endl;
@@ -418,14 +416,7 @@ void init_optix_context ()
     optix_ctx->setRayTypeCount (2);
     optix_ctx->setEntryPointCount (1);
     optix_ctx->setStackSize (2048);
-
     optix_ctx->setPrintEnabled (true);
-
-    // OptiX device exceptions and printing are disabled by default, but they
-    // can be enabled for debugging using the command-line option --exceptions
-    if (optix_exceptions) {
-        optix_ctx->setExceptionEnabled (RT_EXCEPTION_ALL, true);
-    }
 
     optix_ctx["radiance_ray_type"]->setUint  (0u);
     optix_ctx["shadow_ray_type"  ]->setUint  (1u);

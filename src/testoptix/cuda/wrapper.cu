@@ -35,8 +35,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "rend_lib.h"
 #include "util.h"
 
-#define OSL_EXCEPTION_0 (RT_EXCEPTION_USER + 0)
-
 using OSL::device_string;
 
 // Ray payload
@@ -170,11 +168,6 @@ float3 process_closure(const ClosureColor* closure_tree)
         default:
             cur = NULL;
             break;
-        }
-
-        // Throw an exception if the traversal stack overflows
-        if (stack_idx >= STACK_SIZE) {
-            rtThrow(OSL_EXCEPTION_0);
         }
 
         if (cur == NULL && stack_idx > 0) {

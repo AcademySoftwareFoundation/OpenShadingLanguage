@@ -155,8 +155,10 @@ float3 process_closure(const ClosureColor* closure_tree)
 #if 0
             const char*          mem = ((ClosureComponent*) cur)->mem;
             const device_string* ds  = (const device_string*) &mem[0];
+            uint64_t    tag = ds->tag();
+            const char* str = ds->c_str();
             if (launch_index.x == launch_dim.x / 2 && launch_index.y == launch_dim.y / 2) {
-                printf ("microfacet, tag %lu, str %s\n", ds->m_tag, ds->m_ptr);
+                printf ("microfacet, tag %lu, str %s\n", tag, str);
             }
 #endif
 

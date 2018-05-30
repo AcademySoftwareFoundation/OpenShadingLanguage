@@ -328,6 +328,8 @@ llvm::Value*
 BackendLLVM::addGlobalVariable(const std::string& name, int size, int alignment,
                                void* data, const std::string& type)
 {
+    ASSERT (use_optix() && "This function is only supposed to be used with OptiX!"); 
+
     llvm::GlobalVariable* g_var    = nullptr;
     llvm::Constant*       constant = nullptr;
 
@@ -372,6 +374,8 @@ BackendLLVM::addGlobalVariable(const std::string& name, int size, int alignment,
 llvm::Value*
 BackendLLVM::makeTaggedString (const std::string& var_name, ustring str)
 {
+    ASSERT (use_optix() && "This function is only supported when using OptiX!");
+
     llvm::GlobalVariable* g_var    = nullptr;
     llvm::Constant*       constant = nullptr;
 
@@ -455,6 +459,8 @@ llvm::Value*
 BackendLLVM::createOptixVariable(const std::string& name, const std::string& type,
                                  int size, void* data)
 {
+    ASSERT (use_optix() && "This function is only supported when using OptiX!");
+
     // Return the Value if it has already been allocated
     std::map<std::string, llvm::GlobalVariable*>::iterator it =
         get_const_map().find (name);
@@ -521,6 +527,8 @@ BackendLLVM::createOptixVariable(const std::string& name, const std::string& typ
 llvm::Value *
 BackendLLVM::getOrAllocateLLVMGlobal (const Symbol& sym)
 {
+    ASSERT (use_optix() && "This function is only supported when using OptiX!");
+
     std::stringstream ss;
     if (sym.typespec().is_string()) {
         // Use the ustring hash to create a name for the symbol that's based on

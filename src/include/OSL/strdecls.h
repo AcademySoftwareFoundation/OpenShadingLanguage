@@ -26,20 +26,20 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "oslexec_pvt.h"
-#include <OSL/device_string.h>
 
-OSL_NAMESPACE_ENTER
+// This file contains "declarations" for all the strings that might get used in
+// JITed shader code or in renderer code. But the declaration itself is
+// dependent on the STRDECL macro, which should be declared by the outer file
+// prior to including this file. Thus, this list may be repurposed and included
+// multiple times, with different STRDECL definitions.
 
 
-#ifdef __CUDA_ARCH__
-namespace Strings {
-#define STRDECL(str,var_name) \
-    __device__ device_string var_name = { StringTags::var_name, str };
-#include <OSL/strdecls.h>
-#undef STRDECL
-}
+#ifndef STRDECL
+#error Do not include this file unless STRDECL is defined
 #endif
 
-
-OSL_NAMESPACE_EXIT
+STRDECL ("",             EMPTY_STRING)
+STRDECL ("string one",   STRING_ONE)
+STRDECL ("string two",   STRING_TWO)
+STRDECL ("string three", STRING_THREE)
+STRDECL ("test_string",  TEST_STRING)

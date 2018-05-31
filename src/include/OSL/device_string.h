@@ -100,8 +100,10 @@ struct device_string {
 
 
 enum StringTags: uint64_t {
-    EMPTY_STRING = 0,
-    TEST_STRING,
+#define STRDECL(str,var_name) \
+    var_name,
+#include <OSL/strdecls.h>
+#undef STRDECL
     UNKNOWN_STRING = ~0u
 };
 

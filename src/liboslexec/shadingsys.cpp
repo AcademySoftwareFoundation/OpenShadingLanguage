@@ -1051,8 +1051,10 @@ ShadingSystemImpl::setup_op_descriptors ()
 void
 ShadingSystemImpl::setup_string_tags ()
 {
-    m_tag_map [ustring("")]            = StringTags::EMPTY_STRING;
-    m_tag_map [ustring("test_string")] = StringTags::TEST_STRING;
+#define STRDECL(str,var_name) \
+    m_tag_map [ustring(str)] = StringTags::var_name;
+#include <OSL/strdecls.h>
+#undef STRDECL
 }
 
 

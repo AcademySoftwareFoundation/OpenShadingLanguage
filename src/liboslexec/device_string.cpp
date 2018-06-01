@@ -33,7 +33,7 @@ OSL_NAMESPACE_ENTER
 
 
 #ifdef __CUDA_ARCH__
-namespace Strings {
+namespace DeviceStrings {
 #define STRDECL(str,var_name) \
     __device__ device_string var_name = { StringTags::var_name, str };
 #include <OSL/strdecls.h>

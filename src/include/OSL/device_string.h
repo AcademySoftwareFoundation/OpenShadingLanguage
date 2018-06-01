@@ -104,6 +104,7 @@ enum StringTags: uint64_t {
     var_name,
 #include <OSL/strdecls.h>
 #undef STRDECL
+    NUM_TAGS,
     UNKNOWN_STRING = ~0u
 };
 

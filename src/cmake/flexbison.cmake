@@ -76,8 +76,13 @@ IF ( FLEX_EXECUTABLE AND BISON_EXECUTABLE )
           MAIN_DEPENDENCY ${bisonsrc}
           DEPENDS ${${compiler_headers}}
           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+        if ( WINDOWS )
+            SET ( WINCOMPAT --wincompat )
+        else ()
+            SET ( WINCOMPAT )
+        endif ()
         ADD_CUSTOM_COMMAND ( OUTPUT ${flexoutputcxx} 
-          COMMAND ${FLEX_EXECUTABLE} -o ${flexoutputcxx} "${CMAKE_CURRENT_SOURCE_DIR}/${flexsrc}"
+          COMMAND ${FLEX_EXECUTABLE} ${WINCOMPAT} -o ${flexoutputcxx} "${CMAKE_CURRENT_SOURCE_DIR}/${flexsrc}"
           MAIN_DEPENDENCY ${flexsrc}
           DEPENDS ${${compiler_headers}}
           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )

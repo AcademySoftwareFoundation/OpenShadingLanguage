@@ -55,22 +55,40 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // register_string_tag().
 //
 // For other strings, the tag is the ustring hash.
+
+// USAGE NOTES:
 //
-// A pre-declared device_string is listed:
+// To define a "standard" device_string, add a STRDECL to <OSL/strdecls.h>
+// specifying the string literal and the name to use for the variable and
+// StringTags enum entry.
 //
-// 1) In the StringTags enum in this file. This file can be included in your
-//    OptiX/CUDA renderer to make the tags available.
+// Each STRDECL will be used to:
 //
-// 2) In the definitions in liboslexec/device_string.cpp. These are linked with
-//    the other 'shadeops' sources (opnoise.cpp, etc) and made available as
-//    global symbols to executing shaders.
+// 1) Create an entry in the StringTags enum in this file. You can include
+//    this file in your OptiX/CUDA render to make the tags available.
 //
-// 3) In ShadingSystemImpl::setup_string_tags(), which registers the enum value
-//    as the tag for that ustring. This lets libsolexec create a device_string
-//    with the appropriate tag during shader compilation.
+// 2) Define a device_string for the string in liboslexec/device_string.cpp.
+//    These device_strings are compiled and linked with the other 'shadeops'
+//    sources (opnoise.cpp, etc) and made available as global symbols to
+//    executing shaders.
+//
+// 3) Register the tag for each string with the ShadingSystem via
+//    ShadingSystemImpl::setup_string_tags(). This allows libsolexec to create
+//    device_string variables with the appropriate tag during shader
+//    compilation.
 
 
 OSL_NAMESPACE_ENTER
+
+
+enum StringTags: uint64_t {
+#define STRDECL(str,var_name) \
+    var_name,
+#include <OSL/strdecls.h>
+#undef STRDECL
+    BEGIN_USER_TAGS,
+    UNKNOWN_STRING = ~0u
+};
 
 
 struct device_string {
@@ -96,16 +114,6 @@ struct device_string {
 
     uint64_t    m_tag;
     const char* m_chars;
-};
-
-
-enum StringTags: uint64_t {
-#define STRDECL(str,var_name) \
-    var_name,
-#include <OSL/strdecls.h>
-#undef STRDECL
-    NUM_TAGS,
-    UNKNOWN_STRING = ~0u
 };
 
 

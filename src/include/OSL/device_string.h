@@ -117,4 +117,14 @@ struct device_string {
 };
 
 
+#ifdef __CUDA_ARCH__
+namespace DeviceStrings {
+#define STRDECL(str,var_name) \
+    extern __device__ device_string var_name;
+#include <OSL/strdecls.h>
+#undef STRDECL
+}
+#endif
+
+
 OSL_NAMESPACE_EXIT

@@ -1565,6 +1565,10 @@ LLVM_Util::ptx_compile_group (llvm::Module* lib_module, const std::string& name,
         ASSERT(0 && "PTX compile error: Unable to create target machine -- is NVPTX enabled in LLVM?");
     }
 
+    for (auto& g_var : linked_module->globals()) {
+        g_var.setLinkage(llvm::GlobalValue::InternalLinkage);
+    }
+
     // Setup the optimzation passes
     llvm::legacy::FunctionPassManager fn_pm (linked_module);
     fn_pm.add (llvm::createTargetTransformInfoWrapperPass (

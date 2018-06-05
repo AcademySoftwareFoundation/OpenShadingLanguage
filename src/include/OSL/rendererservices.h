@@ -421,6 +421,12 @@ public:
     /// Return a pointer to the texture system (if available).
     virtual TextureSystem *texturesys () const;
 
+    virtual uint64_t register_string (const std::string& str,
+                                      const std::string& var_name)
+    {
+        return 0;
+    }
+
     /// Options we use for noise calls.
     struct NoiseOpt {
         int anisotropic;

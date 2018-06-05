@@ -170,13 +170,10 @@ MACRO ( CUDA_SHADEOPS_COMPILE srclist )
         LIST ( APPEND shadeops_bc_list ${shadeops_bc} )
     ENDFOREACH ()
 
-    MAKE_CUDA_BITCODE ( device_string.cpp device_string_bc )
-
     # Link all of the individual LLVM bitcode files
     ADD_CUSTOM_COMMAND ( OUTPUT ${linked_shadeops_bc}
         COMMAND "${LLVM_DIRECTORY}/bin/llvm-link" -internalize ${shadeops_bc_list} -o ${linked_shadeops_bc}
-        COMMAND "${LLVM_DIRECTORY}/bin/llvm-link" -internalize ${device_string_bc} ${linked_shadeops_bc} -o ${linked_shadeops_bc}
-        DEPENDS ${shadeops_bc_list} ${device_string_bc} ${exec_headers} ${PROJECT_PUBLIC_HEADERS} ${shadeops_srcs}
+        DEPENDS ${shadeops_bc_list} ${exec_headers} ${PROJECT_PUBLIC_HEADERS} ${shadeops_srcs}
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
 
     # Serialze the linked bitcode into a CPP file and add it to the list of liboslexec soures

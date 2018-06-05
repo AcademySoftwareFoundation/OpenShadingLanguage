@@ -31,96 +31,39 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/oslconfig.h>
 
 
-// A device_string is a special string representation intended for use on GPUs,
-// which do not readily support ustrings.
-//
-// Two device_strings can be tested for equality simply by comparing their m_tag
-// fields; m_chars is available for cases where the actual string contents are
-// required (e.g., for printf).
-//
-// For comparisons between device_strings to be valid, OSL library code
-// (shadeops, noise gen, etc.), compiled shaders, and renderer application code
-// must all agree on the tag for each string.
-//
-// The other design goal is that compiled shaders containing strings can be
-// cached, because tags are consistent from run to run.
-//
-// For "standard" strings (in particular, members of the 'Strings' namespace in
-// liboslexec/oslexec_pvt.h), we declare fixed tags to make it easier to write
-// CUDA code that uses them.
-//
-// Strings that do not need to be shared between liboslexec and the renderer,
-// but which have special significance in the renderer (such as custom closure
-// parameters), can be registered with the shading system at runtime via
-// register_string_tag().
-//
-// For other strings, the tag is the ustring hash.
-
 // USAGE NOTES:
 //
-// To define a "standard" device_string, add a STRDECL to <OSL/strdecls.h>
-// specifying the string literal and the name to use for the variable and
-// StringTags enum entry.
-//
-// Each STRDECL will be used to:
-//
-// 1) Create an entry in the StringTags enum in this file. You can include
-//    this file in your OptiX/CUDA render to make the tags available.
-//
-// 2) Define a device_string for the string in liboslexec/device_string.cpp.
-//    These device_strings are compiled and linked with the other 'shadeops'
-//    sources (opnoise.cpp, etc) and made available as global symbols to
-//    executing shaders.
-//
-// 3) Register the tag for each string with the ShadingSystem via
-//    ShadingSystemImpl::setup_string_tags(). This allows libsolexec to create
-//    device_string variables with the appropriate tag during shader
-//    compilation.
+// To define a "standard" DeviceString, add a STRDECL to <OSL/strdecls.h>
+// specifying the string literal and the name to use for the variable.
 
 
 OSL_NAMESPACE_ENTER
 
 
-enum StringTags: uint64_t {
-#define STRDECL(str,var_name) \
-    var_name,
-#include <OSL/strdecls.h>
-#undef STRDECL
-    BEGIN_USER_TAGS,
-    UNKNOWN_STRING = ~0u
-};
+struct DeviceString {
+    uint64_t addr;
 
-
-struct device_string {
-    OSL_HOSTDEVICE uint64_t tag () const
+    OSL_HOSTDEVICE const char* c_str() const
     {
-        return m_tag;
+        return reinterpret_cast<const char*>(addr);
     }
 
-    OSL_HOSTDEVICE const char* c_str () const
+    OSL_HOSTDEVICE bool operator== (const DeviceString& other) const
     {
-        return m_chars;
+        return addr == other.addr;
     }
 
-    OSL_HOSTDEVICE bool operator== (const device_string& other) const
+    OSL_HOSTDEVICE bool operator!= (const DeviceString& other) const
     {
-        return m_tag == other.m_tag;
+        return addr != other.addr;
     }
-
-    OSL_HOSTDEVICE bool operator!= (const device_string& other) const
-    {
-        return m_tag != other.m_tag;
-    }
-
-    uint64_t    m_tag;
-    const char* m_chars;
 };
 
 
 #ifdef __CUDA_ARCH__
 namespace DeviceStrings {
-#define STRDECL(str,var_name) \
-    extern __device__ device_string var_name;
+#define STRDECL(str,var_name)                   \
+    extern __device__ DeviceString var_name;
 #include <OSL/strdecls.h>
 #undef STRDECL
 }

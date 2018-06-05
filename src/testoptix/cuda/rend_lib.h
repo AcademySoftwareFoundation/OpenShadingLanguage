@@ -1,6 +1,15 @@
 #pragma once
 
 #include <optix_math.h>
+#include <OSL/device_string.h>
+
+
+namespace DeviceStrings {
+#define STRDECL(str,var_name)                           \
+    rtDeclareVariable(OSL::DeviceString, var_name, , );
+#include <OSL/strdecls.h>
+#undef STRDECL
+}
 
 
 namespace {  // anonymous namespace

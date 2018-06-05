@@ -50,11 +50,11 @@ namespace pugi = OIIO::pugi;
 
 #include <OSL/oslexec.h>
 
-#include <optix_world.h>
-
 #include "optixrend.h"
 #include "raytracer.h"
 #include "shading.h"
+
+#include <optix_world.h>
 
 
 // The pre-compiled renderer support library LLVM bitcode is embedded into the
@@ -495,7 +495,7 @@ void make_optix_materials ()
         }
 
         if (saveptx) {
-            std::ofstream out( group_name + "_" + std::to_string( mtl_id++ ) + ".ptx" );
+            std::ofstream out (group_name + "_" + std::to_string( mtl_id++ ) + ".ptx");
             out << osl_ptx;
             out.close();
         }
@@ -519,6 +519,8 @@ void make_optix_materials ()
 
         scene.optix_mtls.push_back(mtl);
     }
+
+    rend.update_string_table();
 }
 
 
@@ -582,7 +584,6 @@ int main (int argc, const char *argv[])
 
     shadingsys = new ShadingSystem (&rend, NULL, &errhandler);
     register_closures(shadingsys);
-    register_string_tags(shadingsys);
 
     shadingsys->attribute ("lockgeom",           1);
     shadingsys->attribute ("debug",              0);
@@ -611,6 +612,12 @@ int main (int argc, const char *argv[])
 
     // Set up the OptiX Context
     init_optix_context();
+
+    // Set up the string table. This allocates a block of Unified Memory to hold
+    // all of the static strings used by the OSL shaders. The strings can be
+    // accessed via OptiX variables that hold pointers to the strings in the
+    // table.
+    rend.init_string_table(optix_ctx);
 
     // Convert the OSL ShaderGroups accumulated during scene parsing into
     // OptiX Materials
@@ -658,12 +665,12 @@ int main (int argc, const char *argv[])
     if (debug1 || runstats || profile) {
         double writetime = timer.lap();
         std::cout << "\n";
-        std::cout << "Setup : " << OIIO::Strutil::timeintervalformat (setuptime,2) << "\n";
+        std::cout << "Setup : " << OIIO::Strutil::timeintervalformat (setuptime,4) << "\n";
         if (warmup) {
-            std::cout << "Warmup: " << OIIO::Strutil::timeintervalformat (warmuptime,2) << "\n";
+            std::cout << "Warmup: " << OIIO::Strutil::timeintervalformat (warmuptime,4) << "\n";
         }
-        std::cout << "Run   : " << OIIO::Strutil::timeintervalformat (runtime,2) << "\n";
-        std::cout << "Write : " << OIIO::Strutil::timeintervalformat (writetime,2) << "\n";
+        std::cout << "Run   : " << OIIO::Strutil::timeintervalformat (runtime,4) << "\n";
+        std::cout << "Write : " << OIIO::Strutil::timeintervalformat (writetime,4) << "\n";
         std::cout << "\n";
     }
 

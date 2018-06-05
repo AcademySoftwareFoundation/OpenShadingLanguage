@@ -35,8 +35,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "rend_lib.h"
 #include "util.h"
 
-using OSL::device_string;
-
 // Ray payload
 rtDeclareVariable (PRD_radiance, prd_radiance, rtPayload, );
 
@@ -153,12 +151,10 @@ float3 process_closure(const ClosureColor* closure_tree)
 
         case MICROFACET_ID: {
 #if 0
-            const char*          mem = ((ClosureComponent*) cur)->mem;
-            const device_string* ds  = (const device_string*) &mem[0];
-            uint64_t    tag = ds->tag();
-            const char* str = ds->c_str();
+            const char*             mem = ((ClosureComponent*) cur)->mem;
+            const OSL::DeviceString str = *(OSL::DeviceString*) &mem[0];
             if (launch_index.x == launch_dim.x / 2 && launch_index.y == launch_dim.y / 2) {
-                printf ("microfacet, tag %lu, str %s\n", tag, str);
+                printf ("microfacet, str: %s\n", str.c_str());
             }
 #endif
 

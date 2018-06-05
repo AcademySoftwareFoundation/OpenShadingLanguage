@@ -328,10 +328,9 @@ llvm::Value*
 BackendLLVM::addGlobalVariable(const std::string& name, int size, int alignment,
                                void* data, const std::string& type)
 {
-    ASSERT (use_optix() && "This function is only supposed to be used with OptiX!"); 
+    ASSERT (use_optix() && "This function is only supposed to be used with OptiX!");
 
-    llvm::GlobalVariable* g_var    = nullptr;
-    llvm::Constant*       constant = nullptr;
+    llvm::Constant* constant = nullptr;
 
     if (type == "float") {
         constant = llvm::ConstantFP::get (
@@ -342,8 +341,19 @@ BackendLLVM::addGlobalVariable(const std::string& name, int size, int alignment,
             llvm::Type::getInt32Ty (ll.module()->getContext()), *(int*) data);
     }
     else if (type == "string") {
-        g_var = llvm::dyn_cast<llvm::GlobalVariable>(
-            makeTaggedString (name, *((ustring*)data)));
+        // Register the string with the OptiX renderer. The renderer will add
+        // the string to a global table and create an OptiX variable to hold the
+        // char*.
+        shadingsys().renderer()->register_string (((ustring*)data)->string(), name);
+
+        // Add the metadata needed by OptiX to access the variable.
+        createOptixMetadata (name, "string", 8);
+
+        // Leave the variable uninitialized to prevent raw pointers from
+        // appearing in the generated code. The OptiX renderer will set the
+        // variable to the string address before the kernel is launched.
+        constant = llvm::ConstantInt::get (
+            llvm::Type::getInt64Ty (ll.module()->getContext()), 0);
     }
     else {
         // Handle unspecified types as generic byte arrays
@@ -351,18 +361,15 @@ BackendLLVM::addGlobalVariable(const std::string& name, int size, int alignment,
         constant = llvm::ConstantDataArray::get (ll.module()->getContext(), arr_ref);
     }
 
-    if (! g_var) {
-        g_var = reinterpret_cast<llvm::GlobalVariable*>(
-            ll.module()->getOrInsertGlobal (name, constant->getType()));
+    llvm::GlobalVariable* g_var = reinterpret_cast<llvm::GlobalVariable*>(
+        ll.module()->getOrInsertGlobal (name, constant->getType()));
 
-        ASSERT (g_var && "Unable to create GlobalVariable");
-
-        g_var->setInitializer(constant);
-    }
+    ASSERT (g_var && "Unable to create GlobalVariable");
 
     g_var->setAlignment  (alignment);
-    g_var->setLinkage    (llvm::GlobalValue::PrivateLinkage);
+    g_var->setLinkage    (llvm::GlobalValue::ExternalLinkage);
     g_var->setVisibility (llvm::GlobalValue::DefaultVisibility);
+    g_var->setInitializer(constant);
 
     m_const_map[name] = g_var;
 
@@ -372,92 +379,8 @@ BackendLLVM::addGlobalVariable(const std::string& name, int size, int alignment,
 
 
 llvm::Value*
-BackendLLVM::makeTaggedString (const std::string& var_name, ustring str)
-{
-    ASSERT (use_optix() && "This function is only supported when using OptiX!");
-
-    llvm::GlobalVariable* g_var    = nullptr;
-    llvm::Constant*       constant = nullptr;
-
-    // Create the character array
-    constant = llvm::ConstantDataArray::getString (
-        ll.module()->getContext(), str.c_str());
-
-    llvm::ArrayType* array_ty =
-        llvm::dyn_cast<llvm::ConstantDataArray>(constant)->getType();
-
-    // Creater a GlobalVariable for the string literal
-    llvm::GlobalVariable* char_array = new llvm::GlobalVariable (
-        *ll.module(),
-        array_ty,
-        true,
-        llvm::GlobalValue::PrivateLinkage,
-        0,
-        std::string("_$_str_") + var_name);
-
-    char_array->setAlignment (8);
-    char_array->setInitializer (constant);
-
-    // Since tagged strings are a struct type, consisting of a uint64_t ID
-    // and a pointer to a C-style string, we need to construct one and add
-    // it to the Module.
-
-    // Get the associated LLVM Types
-    llvm::StructType* struct_type = ll.module()->getTypeByName(
-        Strutil::format ("struct.%s::device_string", OSL_NAMESPACE_STRING));
-
-    llvm::Type* ts_type = ll.module()->getTypeByName(
-        Strutil::format ("struct.%s::device_string", OSL_NAMESPACE_STRING));
-
-    ASSERT (struct_type && ts_type && "Unable to get tagged string LLVM Type");
-
-    // Check if there is a tag associated with the string contents
-    uint64_t tag = shadingsys().lookup_string_tag (str);
-
-    // If no tag has been assigned, use the ustring hash
-    if (tag == StringTags::UNKNOWN_STRING) {
-        tag = str.hash();
-    }
-
-    llvm::Constant* tag_constant = llvm::ConstantInt::get (
-        llvm::Type::getInt64Ty (ll.module()->getContext()), tag);
-
-    llvm::ConstantInt* zero = llvm::ConstantInt::get (
-        llvm::Type::getInt32Ty (ll.module()->getContext()), 0);
-
-    std::vector<llvm::Constant*> ptr_indices = { zero, zero };
-    llvm::Constant* const_ptr = llvm::ConstantExpr::getGetElementPtr (
-        constant->getType(), char_array, ptr_indices);
-
-    std::vector<llvm::Constant*> struct_fields = { tag_constant, const_ptr };
-    llvm::Constant* struct_constant = llvm::ConstantStruct::get (
-        struct_type, struct_fields);
-
-    // The GlobalVariable is a pointer to the struct
-    llvm::GlobalVariable* struct_var = new llvm::GlobalVariable (
-        *ll.module(),
-        ts_type,
-        false,
-        llvm::GlobalValue::PrivateLinkage,
-        0,
-        var_name,
-        nullptr,
-        llvm::GlobalValue::ThreadLocalMode::NotThreadLocal,
-        1);
-
-    struct_var->setAlignment (16);
-    struct_var->setInitializer (struct_constant);
-
-    g_var = struct_var;
-
-    return g_var;
-}
-
-
-
-llvm::Value*
-BackendLLVM::createOptixVariable(const std::string& name, const std::string& type,
-                                 int size, void* data)
+BackendLLVM::createOptixVariable (const std::string& name, const std::string& type,
+                                  int size, void* data)
 {
     ASSERT (use_optix() && "This function is only supported when using OptiX!");
 
@@ -473,7 +396,7 @@ BackendLLVM::createOptixVariable(const std::string& name, const std::string& typ
         (type == "float" ) ? 4 :
         (type == "int"   ) ? 4 :
         (type == "color" ) ? 8 :
-        (type == "string") ? 16 : 8;
+        (type == "string") ? 8 : 8;
 
     // Create a global variable with the name, type, and initializer. This is
     // the value that will be accessed when the shader executes.
@@ -483,11 +406,17 @@ BackendLLVM::createOptixVariable(const std::string& name, const std::string& typ
         ASSERT (0 && "Unable to create rtVariable");
     }
 
-    auto mangle_name = [](const std::string& name, const std::string& prefix) {
-        return "_ZN" + std::to_string (prefix.size() + 12) + "rti_internal" +
-        prefix + std::to_string (name.size()) + name + "E";
-    };
+    createOptixMetadata (name, type, size);
 
+    return g_var;
+}
+
+
+
+void
+BackendLLVM::createOptixMetadata (const std::string& name, const std::string& type,
+                                  int size)
+{
     // Create additional variables with the semantic information needed by OptiX
     // to access the global variable created above.
     //
@@ -497,7 +426,17 @@ BackendLLVM::createOptixVariable(const std::string& name, const std::string& typ
     // Refer to the OptiX API documentation and optix_defines.h in the OptiX SDK
     // for more information.
 
-    const std::string optix_type = (type == "color") ? "float3" : type;
+    ASSERT (use_optix() && "This function is only supported when using OptiX!");
+
+    auto mangle_name = [](const std::string& name, const std::string& prefix) {
+        return "_ZN" + std::to_string (prefix.size() + 13) + "rti_internal_" +
+        prefix + std::to_string (name.size()) + name + "E";
+    };
+
+    const std::string optix_type =
+        (type == "color" ) ? "float3"   :
+        (type == "string") ? "uint64_t" :
+        type;
 
     // Copy the OptiX typename contents into a temporary vector
     std::vector<char> type_name (optix_type.c_str(),
@@ -509,17 +448,15 @@ BackendLLVM::createOptixVariable(const std::string& name, const std::string& typ
     } type_info;
     type_info.size = size;
 
-    int type_enum = 0x1337;  // _OPTIX_TYPE_ENUM_UNKNOWN
+    int type_enum = 0x1337;           // _OPTIX_TYPE_ENUM_UNKNOWN
 
     char empty = 0;
 
     addGlobalVariable (mangle_name (name, "typeinfo"  ), 8, 4, &type_info, "");
-    addGlobalVariable (mangle_name (name, "typename"  ), type_name.size(), 1, type_name.data(), "");
+    addGlobalVariable (mangle_name (name, "typename"  ), type_name.size(), 16, type_name.data(), "");
     addGlobalVariable (mangle_name (name, "typeenum"  ), 4, 4, &type_enum, "int");
     addGlobalVariable (mangle_name (name, "semantic"  ), 1, 1, &empty, "");
     addGlobalVariable (mangle_name (name, "annotation"), 1, 1, &empty, "");
-
-    return g_var;
 }
 
 
@@ -533,13 +470,17 @@ BackendLLVM::getOrAllocateLLVMGlobal (const Symbol& sym)
     if (sym.typespec().is_string()) {
         // Use the ustring hash to create a name for the symbol that's based on
         // the string contents
-        ss << "ts_"
+        ss << "ds_"
            << std::setbase (16) << std::setfill('0') << std::setw (16)
            << (*(ustring *)sym.data()).hash();
     }
     else {
-        // Strip off the leading character for other symbols names
-        ss << sym.name().string().substr (1);
+        // PTX doesn't like leading dollar signs, so prepend an underscore
+        if (sym.name()[0] == '$') {
+            ss << '_';
+        }
+
+        ss << sym.name();
     }
 
     const std::string name = ss.str();
@@ -556,7 +497,7 @@ BackendLLVM::getOrAllocateLLVMGlobal (const Symbol& sym)
         (sym.typespec().is_scalarnum()) ? 4 :
         (sym.typespec().is_triple()   ) ? 8 :
         (sym.typespec().is_array()    ) ? 8 :
-        (sym.typespec().is_string()   ) ? 16 : -1;
+        (sym.typespec().is_string()   ) ? 8 : -1;
 
     if (alignment < 1) {
         return nullptr;
@@ -589,6 +530,7 @@ BackendLLVM::llvm_get_pointer (const Symbol& sym, int deriv,
                 llvm::Type *cast_type = (! sym.typespec().is_string())
                     ? ll.type_ptr (llvm_type(sym.typespec().elementtype()))
                     : ll.type_void_ptr();
+
                 result = ll.ptr_cast (ptr, cast_type);
             }
         }
@@ -702,8 +644,28 @@ BackendLLVM::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
         result = ll.op_float_to_int (result);
     else if (type.is_int() && cast == TypeDesc::TypeFloat)
         result = ll.op_int_to_float (result);
+    else if (type.is_string() && cast == TypeDesc::UINT64)
+        result = ll.ptr_to_cast (result, ll.type_longlong());
 
     return result;
+}
+
+
+
+llvm::Value *
+BackendLLVM::llvm_load_string_addr (const Symbol& sym, bool follow, bool cast)
+{
+    llvm::Value* val = (sym.is_constant() || sym.data())
+        ? getOrAllocateLLVMGlobal (sym)
+        : llvm_load_value (sym, 0, nullptr, 0, TypeDesc(TypeDesc::UINT64));
+
+    if (follow)
+        val = ll.op_load (val);
+
+    if (cast)
+        val = ll.int_to_ptr_cast (val);
+
+    return val;
 }
 
 
@@ -743,8 +705,7 @@ BackendLLVM::llvm_load_constant_value (const Symbol& sym,
     }
     if (sym.typespec().is_string() && use_optix()) {
         // TODO: This ignores arrayindex
-        llvm::Value* ptr = getOrAllocateLLVMGlobal (sym);
-        return ll.ptr_cast (ll.GEP (ptr, 0), ll.type_string());
+        return llvm_load_string_addr (sym);
     }
     if (sym.typespec().is_string()) {
         const ustring *val = (const ustring *)sym.data();
@@ -818,39 +779,6 @@ BackendLLVM::llvm_load_arg (const Symbol& sym, bool derivs)
 
     // Regular pointer case
     return llvm_void_ptr (sym);
-}
-
-
-
-llvm::Value *
-BackendLLVM::llvm_load_device_string_char_ptr (llvm::Value* val)
-{
-    // The device_string GlobalVariable is a pointer, so there are two levels of
-    // indirection to the actual string.
-    llvm::Value* char_ptr_ptr = ll.offset_ptr (val, 8);
-
-    // "Dereference" the device_string char* to get the address value
-    llvm::Value* ptr_val = llvm_load_value (
-        ll.ptr_to_cast (char_ptr_ptr, ll.type_longlong()),
-        TypeSpec(TypeDesc::UINT64), 0, NULL, 0, TypeDesc::UINT64);
-
-    // Cast the address value to a pointer
-    llvm::Value* char_ptr = ll.int_to_ptr_cast (ptr_val);
-
-    return char_ptr;
-}
-
-
-
-llvm::Value *
-BackendLLVM::llvm_load_device_string_tag (llvm::Value* val)
-{
-    // The first member of the device_string is a uint64_t
-    llvm::Value* tag_val = llvm_load_value (
-        ll.ptr_to_cast (val, ll.type_longlong()),
-        TypeSpec(TypeDesc::UINT64), 0, NULL, 0, TypeDesc::UINT64);
-
-    return tag_val;
 }
 
 
@@ -1123,7 +1051,13 @@ BackendLLVM::llvm_assign_impl (Symbol &Result, Symbol &Src,
     TypeDesc basetype = TypeDesc::BASETYPE(rt.basetype);
     const int num_components = rt.aggregate;
     const bool singlechan = (srccomp != -1) || (dstcomp != -1);
-    if (!singlechan) {
+    if (use_optix() && Src.typespec().is_string()) {
+        // TODO: Are we sure that Src.data() is non-null?
+        //       Does it matter?
+        llvm::Value* src = llvm_load_string_addr (Src, false, false);
+        llvm_store_value (ll.ptr_cast (src, ll.type_void_ptr()), Result);
+    }
+    else if (!singlechan) {
         for (int i = 0; i < num_components; ++i) {
             llvm::Value* src_val = Src.is_constant()
                 ? llvm_load_constant_value (Src, arrayindex, i, basetype)

@@ -32,6 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 OSL_NAMESPACE_ENTER
 
 
+#if 0
 #ifdef __CUDA_ARCH__
 namespace DeviceStrings {
 #define STRDECL(str,var_name) \
@@ -39,6 +40,7 @@ namespace DeviceStrings {
 #include <OSL/strdecls.h>
 #undef STRDECL
 }
+#endif
 #endif
 
 

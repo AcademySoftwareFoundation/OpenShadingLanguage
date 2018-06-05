@@ -146,6 +146,11 @@ public:
         return llvm_load_value (sym, deriv, NULL, component, cast);
     }
 
+    /// Load the address of a global device-side string pointer, optionally
+    /// follow the pointer and optionally cast the result to UINT64.
+    llvm::Value *llvm_load_string_addr (const Symbol& sym,
+                                        bool follow=true, bool cast=true);
+
     /// Legacy version
     ///
     llvm::Value *loadLLVMValue (const Symbol& sym, int component=0,
@@ -164,14 +169,6 @@ public:
     llvm::Value *llvm_load_arg (const Symbol& sym) {
         return llvm_load_arg (sym, sym.has_derivs());
     }
-
-    /// Return the llvm::Value* of the char* member of the device_string pointed
-    /// to by val.
-    llvm::Value *llvm_load_device_string_char_ptr (llvm::Value* val);
-
-    /// Return the llvm::Value* of the uint64_t member of the device_string pointed
-    /// to by val.
-    llvm::Value *llvm_load_device_string_tag (llvm::Value* val);
 
     /// Store new_val into the given symbol, given the derivative
     /// (0=value, 1=dx, 2=dy), array index (NULL if it's not an array),
@@ -227,9 +224,6 @@ public:
     /// to it, or return the pointer if it has already been allocated
     llvm::Value *getOrAllocateLLVMGlobal (const Symbol& sym);
 
-    /// Create a GlobalVariable for a "tagged string" for use on GPUs
-    llvm::Value *makeTaggedString (const std::string& var_name, ustring str);
-
     /// Create a GlobalVariable and add it to the current Module
     llvm::Value *addGlobalVariable (const std::string& name, int size,
                                     int alignment, void* data,
@@ -240,6 +234,10 @@ public:
     llvm::Value *createOptixVariable (const std::string& name,
                                       const std::string& type,
                                       int size, void* data );
+
+    /// Create the extra semantic information needed for OptiX variables
+    void createOptixMetadata (const std::string& name,
+                              const std::string& type, int size );
 
     /// Retrieve an llvm::Value that is a pointer holding the start address
     /// of the specified symbol. This always works for globals and params;

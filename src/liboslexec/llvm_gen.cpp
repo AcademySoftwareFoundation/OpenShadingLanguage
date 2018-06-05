@@ -360,11 +360,8 @@ LLVMGEN (llvm_gen_printf)
 
                     llvm::Value* loaded = nullptr;
                     if (rop.use_optix() && simpletype.basetype == TypeDesc::STRING) {
-                        // In the OptiX case, we use the device_string.
-                        llvm::Value* device_string = (sym.is_constant())
-                            ? rop.getOrAllocateLLVMGlobal (sym)
-                            : rop.llvm_load_value (sym, 0, arrind, c);
-                        loaded = rop.llvm_load_device_string_char_ptr (device_string);
+                        // In the OptiX case, we use the device-side string.
+                        loaded = rop.llvm_load_string_addr (sym);
                     }
                     else {
                         loaded = rop.llvm_load_value (sym, 0, arrind, c);
@@ -415,10 +412,8 @@ LLVMGEN (llvm_gen_printf)
         call_args[new_format_slot] = rop.ll.constant (s.c_str());
     }
     else {
-        // In the OptiX case, we need to use the pointer to the device_string
-        // added to the LLVM Module.
-        llvm::Value* device_string = rop.getOrAllocateLLVMGlobal (format_sym);
-        call_args[new_format_slot] = rop.llvm_load_device_string_char_ptr (device_string);
+        // In the OptiX case, we use the pointer to the device-side string
+        call_args[new_format_slot] = rop.llvm_load_string_addr (format_sym);
     }
 
     // Construct the function name and call it.
@@ -1774,18 +1769,8 @@ LLVMGEN (llvm_gen_compare_op)
     if (rop.use_optix() && A.typespec().is_string()) {
         ASSERT (B.typespec().is_string() && "Only string-to-string comparison is supported");
 
-        // Since we are using device_strings in the OptiX case, we compare the
-        // tags rather than comparing the string contents or the pointers
-        llvm::Value* string_a = (A.is_constant())
-            ? rop.getOrAllocateLLVMGlobal (A)
-            : rop.llvm_load_value (A, 0, nullptr, 0);
-
-        llvm::Value* string_b = (B.is_constant())
-            ? rop.getOrAllocateLLVMGlobal (B)
-            : rop.llvm_load_value (B, 0, nullptr, 0);
-
-        llvm::Value* a = rop.llvm_load_device_string_tag (string_a);
-        llvm::Value* b = rop.llvm_load_device_string_tag (string_b);
+        llvm::Value* a = rop.llvm_load_string_addr (A);
+        llvm::Value* b = rop.llvm_load_string_addr (B);
 
         if (opname == op_eq) {
             final_result = rop.ll.op_eq (a, b);
@@ -2851,10 +2836,7 @@ LLVMGEN (llvm_gen_noise)
             args.push_back (rop.llvm_load_value(*Name));
         }
         else {
-            llvm::Value* name_arg = (Name->is_constant())
-                ? rop.getOrAllocateLLVMGlobal (*Name)
-                : rop.llvm_load_value (*Name, 0, nullptr, 0);
-            args.push_back (name_arg);
+            args.push_back (rop.llvm_load_string_addr (*Name));
         }
     }
     llvm::Value *tmpresult = NULL;
@@ -3359,14 +3341,13 @@ LLVMGEN (llvm_gen_closure)
         TypeDesc t = sym.typespec().simpletype();
 
         if (rop.use_optix() && sym.typespec().is_string()) {
-            // For OptiX, need to copy the entire 16-byte device_string, which
-            // is a struct consisting of the 8-byte tag and the char*.
             llvm::Value* dst = rop.ll.offset_ptr (mem_void_ptr, p.offset);
             llvm::Value* src = nullptr;
-            src = (sym.is_constant())
-                ? rop.getOrAllocateLLVMGlobal (sym)
-                : rop.llvm_load_value (sym, 0, nullptr, 0);
-            src = rop.ll.int_to_ptr_cast(src);
+
+            // Load the address of the GlobalVariable containing the string
+            // address, but not the address of the string itself.
+            src = rop.llvm_load_string_addr (sym, false, true);
+
             rop.ll.op_memcpy (dst, src, (int)p.type.size(),
                               4 /* use 4 byte alignment for now */);
         }

@@ -519,8 +519,6 @@ void make_optix_materials ()
 
         scene.optix_mtls.push_back(mtl);
     }
-
-    rend.update_string_table();
 }
 
 

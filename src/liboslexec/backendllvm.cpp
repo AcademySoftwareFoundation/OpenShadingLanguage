@@ -910,6 +910,8 @@ BackendLLVM::llvm_call_function (const char *name,
         const Symbol &s = *(symargs[i]);
         if (s.typespec().is_closure())
             valargs[i] = llvm_load_value (s);
+        else if (use_optix() && s.typespec().is_string())
+            valargs[i] = llvm_load_string_addr (s);
         else if (s.typespec().simpletype().aggregate > 1 ||
                  (deriv_ptrs && s.has_derivs()))
             valargs[i] = llvm_void_ptr (s);

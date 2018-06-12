@@ -187,6 +187,20 @@ extern "C" {
 
 
     __device__
+    int osl_strlen_is (const char *s)
+    {
+        return *(size_t*) (s - 8);
+    }
+
+
+    __device__
+    int osl_hash_is (const char *s)
+    {
+        return *(size_t*) (s - 16);
+    }
+
+
+    __device__
     void osl_printf (void* sg_, char* fmt_str, void* args)
     {
         printf (fmt_str, args);

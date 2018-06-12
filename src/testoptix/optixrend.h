@@ -79,10 +79,26 @@ public:
     {
         int offset = getOffset(str);
         if (offset < 0) {
+            // Copy the string hash and the length before the characters
+            ustring ustr(str);
+            size_t hash = ustr.hash();
+            size_t len  = ustr.length();
+
+            memcpy (m_ptr + m_offset, (void*)&hash, sizeof(size_t));
+            m_offset += sizeof(size_t);
+
+            memcpy (m_ptr + m_offset, (void*)&len, sizeof(size_t));
+            m_offset += sizeof(size_t);
+
+            // Copy the characters
             offset = m_offset;
             m_strings.emplace_back (str, m_offset);
+
             memcpy (m_ptr + m_offset, str.c_str(), str.size() + 1);
             m_offset += str.size() + 1;
+
+            // Align the offset to 8-byte boundaries
+            m_offset = (m_offset + 0x7u) & ~0x3u;
         }
 
         uint64_t addr = reinterpret_cast<uint64_t>(m_ptr + offset);

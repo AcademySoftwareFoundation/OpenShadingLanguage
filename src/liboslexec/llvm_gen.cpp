@@ -389,7 +389,10 @@ LLVMGEN (llvm_gen_printf)
     }
 
     if (rop.use_optix() && arg > (format_arg + 2)) {
-        ASSERT (0 && "OptiX printf only supports 0 or 1 arguments at this time");
+        std::cerr << "WARNING: "
+                  << "OptiX only supports 0 or 1 printf arguments at this time. "
+                  << "Ignoring printf call in " << op.sourcefile() << std::endl;
+        return true;
     }
 
     // In OptiX, printf currently supports 0 or 1 arguments, and the signature
@@ -3354,8 +3357,7 @@ LLVMGEN (llvm_gen_closure)
         else if (!sym.typespec().is_closure_array() && !sym.typespec().is_structure()
                  && equivalent(t,p.type)) {
             llvm::Value* dst = rop.ll.offset_ptr (mem_void_ptr, p.offset);
-            llvm::Value* src = nullptr;
-            src = rop.llvm_void_ptr (sym);
+            llvm::Value* src = rop.llvm_void_ptr (sym);
             rop.ll.op_memcpy (dst, src, (int)p.type.size(),
                              4 /* use 4 byte alignment for now */);
         } else {

@@ -29,45 +29,40 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pragma once
 
 #include <map>
-#include <memory>
-#include <unordered_map>
 #include <OpenImageIO/ustring.h>
 #include <OSL/oslexec.h>
 
 #include <cuda_runtime_api.h>
 #include <optix_world.h>
 
+
 OSL_NAMESPACE_ENTER
 
 
 // TODO: Make sure this works with multiple GPUs
 class StringTable {
-
-    typedef std::pair<std::string, uint64_t> string_pair;
-
 public:
     StringTable() : m_ptr (nullptr), m_offset (0) { }
 
     ~StringTable()
     {
-        if (m_ptr) {
+        if (m_ptr)
             cudaFree (m_ptr);
-        }
     }
 
+
+    // Allocate CUDA Unified Memory for the raw string table and add the
+    // "standard" strings declared in strdecls.h.
     void init (optix::Context ctx)
     {
-        m_optix_ctx = ctx;
+        ASSERT (! m_ptr && "StringTable should only be initialized once");
 
-        // Allocate 64KB in CUDA Unified Memory for the raw string table.
-        // TODO: Make the table size a template parameter?
         cudaMallocManaged (reinterpret_cast<void**>(&m_ptr), (1<<16));
 
-        // Add the "standard" strings declared in strdecls.h to the string table
-        unsigned long long addr;
-#define STRDECL(str,var_name)                                       \
-        addr = addString (str);                                     \
-        ctx["DeviceStrings::"#var_name]->setUserData (8, &addr);
+        m_optix_ctx = ctx;
+
+#define STRDECL(str,var_name)                           \
+        addString (str, "DeviceStrings::"#var_name);
 #include <OSL/strdecls.h>
 #undef STRDECL
     }
@@ -75,29 +70,32 @@ public:
 
     // Add a string to the table (if it hasn't already been added), and return
     // its global address.
+    //
+    // Also, create an OptiX variable to hold the address of each string
+    // variable.
     uint64_t addString (const std::string& str, const std::string& var_name="")
     {
         int offset = getOffset(str);
         if (offset < 0) {
-            // Copy the string hash and the length before the characters
             ustring ustr(str);
-            size_t hash = ustr.hash();
-            size_t len  = ustr.length();
 
+            // Place the hash and length of the string before the characters
+            size_t hash = ustr.hash();
             memcpy (m_ptr + m_offset, (void*)&hash, sizeof(size_t));
             m_offset += sizeof(size_t);
 
+            size_t len = ustr.length();
             memcpy (m_ptr + m_offset, (void*)&len, sizeof(size_t));
             m_offset += sizeof(size_t);
 
-            // Copy the characters
             offset = m_offset;
-            m_strings.emplace_back (str, m_offset);
+            m_string_map [ustr] = offset;
 
+            // Copy the raw characters to the table
             memcpy (m_ptr + m_offset, str.c_str(), str.size() + 1);
             m_offset += str.size() + 1;
 
-            // Align the offset to 8-byte boundaries
+            // Align the offset for the next entry to 8-byte boundaries
             m_offset = (m_offset + 0x7u) & ~0x3u;
         }
 
@@ -115,27 +113,23 @@ public:
     // char array; otherwise, return -1.
     int getOffset (const std::string& str) const
     {
-        auto it = std::find_if (
-            m_strings.begin(), m_strings.end(),
-            [&](const string_pair& val) {
-                return val.first == str;
-            });
-
-        return (it != m_strings.end()) ? it->second : -1;
+        auto it = m_string_map.find(ustring(str));
+        return (it != m_string_map.end()) ? it->second : -1;
     }
 
 private:
     // A raw char array containing the concatenation of all strings added to the
     // table, allocated in CUDA Unified Memory.
-    char*                    m_ptr;
+    char*                      m_ptr;
 
     // The offset in the char array at which the next string will be added.
-    int                      m_offset;
+    int                        m_offset;
 
     // The collection of strings added so far, and their addresses.
-    std::vector<string_pair> m_strings;
+    std::map<ustring,uint64_t> m_string_map;
 
-    optix::Context           m_optix_ctx;
+    // A handle on the OptiX Context to use when creating global variables.
+    optix::Context             m_optix_ctx;
 };
 
 

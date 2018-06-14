@@ -111,7 +111,7 @@ shade_image (ShadingSystem &shadingsys, ShaderGroup &group,
     const ShaderSymbol **output_sym  = OIIO_ALLOCA(const ShaderSymbol*, outputs.size());
     TypeDesc *output_type = OIIO_ALLOCA(TypeDesc, outputs.size());
     int *output_nchans = OIIO_ALLOCA(int, outputs.size());
-    for (size_t i = 0;  i < outputs.size();  ++i) {
+    for (int i = 0;  i < int(outputs.size());  ++i) {
         output_sym[i] = shadingsys.find_symbol (group, outputs[i]);
         output_type[i] = shadingsys.symbol_typedesc (output_sym[i]);
         output_nchans[i] = output_type[i].numelements() * output_type[i].aggregate;
@@ -186,7 +186,7 @@ shade_image (ShadingSystem &shadingsys, ShaderGroup &group,
 
         // Save all the designated outputs.
         int chan = 0;
-        for (size_t i = 0;  i < outputs.size();  ++i) {
+        for (int i = 0;  i < int(outputs.size());  ++i) {
             const void *data = shadingsys.symbol_address (*ctx, output_sym[i]);
             if (!data)
                 continue;  // Skip if symbol isn't found

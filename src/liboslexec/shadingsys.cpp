@@ -49,9 +49,19 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using namespace OSL;
 using namespace OSL::pvt;
 
-// avoid naming conflict with MSVC macro
-#ifdef RGB
-#undef RGB
+// avoid naming conflicts with MSVC macros
+#ifdef _MSC_VER
+ #undef RGB
+ // We use some of the iso646.h macro names later on in this file. For
+ // some compilers (MSVS, I'm looking at you) this is trouble. I don't know
+ // how or why that header would have been included here, but it did for at
+ // least one person, so shut off those macros so they don't cause trouble.
+ #undef and
+ #undef or
+ #undef xor
+ #undef compl
+ #undef bitand
+ #undef bitor
 #endif
 
 OSL_NAMESPACE_ENTER

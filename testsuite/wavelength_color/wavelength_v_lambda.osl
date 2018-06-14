@@ -1,0 +1,9 @@
+shader wavelength_v_lambda (output color Cout = 0)
+{
+    float lambda = 380+u*320; //Increase visibility
+    //printf("%f\t", lambda);
+    Cout = wavelength_color (lambda);
+}
+
+//testshade --llvm_debug --batched -g 200 200 test_batched -od uint -o Cout a.tif
+//calls vf_batched

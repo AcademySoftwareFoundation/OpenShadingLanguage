@@ -346,42 +346,53 @@ osl_regex_impl (void *sg_, const char *subject_, void *results, int nresults,
 }
 
 
-//OSL_SHADEOP int
-//osl_regex_impl_batched(void *sgb_, unsigned int mask value, const char *subject_, void *wresults,
-//        int nresults, const char *pattern, int fullmatch)
-//{
-//    ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
-//    ShadingContext *ctx = sgb->uniform().context;
-//
-//    Mask mask (mask_value);
-//    ASSERT(mask.any_on());
-//
-//    const std::string &subject (ustring::from_unique(subject_).string());
-//    boost::match_results<std::string::const_iterator> mresults;
-//
-//    const boost::regex &regex (ctx->find_regex (USTR(pattern)));
-//
-//    if (nresults > 0) {
-//        std::string::const_iterator start = subject.begin();
-//        int res = fullmatch ? boost::regex_match (subject, mresults, regex)
-//                            : boost::regex_search (subject, mresults, regex);
-//        int *m = (int *)results;
-//        for (int r = 0;  r < nresults;  ++r) {
-//            if (r/2 < (int)mresults.size()) {
-//                if ((r & 1) == 0)
-//                    m[r] = mresults[r/2].first - start;
-//                else
-//                    m[r] = mresults[r/2].second - start;
-//            } else {
-//                m[r] = USTR(pattern).length();
-//            }
-//        }
-//        return res;
-//    } else {
-//        return fullmatch ? boost::regex_match (subject, regex)
-//                         : boost::regex_search (subject, regex);
-//    }
-//}
+// SM: WIP
+//OSL_SHADEOP void
+//osl_regex_impl_batched(void *wide_output /*int; ;length of matched result*/, unsigned int mask_value,  void *sgb_,  const char *subject_,
+//        void *wnresults, const char *wpattern, void *wfullmatch)
+
+OSL_SHADEOP int
+osl_regex_impl_batched (void *sgb_, unsigned int mask_value, const char *subject_, void *results, int nresults,
+                const char *pattern, int fullmatch)
+
+
+{
+    ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
+    ShadingContext *ctx = sgb->uniform().context;
+
+    Mask mask (mask_value);
+    ASSERT(mask.any_on());
+
+    const std::string &subject (ustring::from_unique(subject_).string());
+    boost::match_results<std::string::const_iterator> mresults;
+
+    const boost::regex &regex (ctx->find_regex (USTR(pattern)));
+
+  //  MaskedAccessor<*int> wM (wide_output, Mask(mask_value));
+
+    //for(int lane = 0; lane<wM.width; ++lane) {
+
+    if (nresults > 0) {
+        std::string::const_iterator start = subject.begin();
+        int res = fullmatch ? boost::regex_match (subject, mresults, regex)
+                            : boost::regex_search (subject, mresults, regex);
+        int *m = (int *)results;
+        for (int r = 0;  r < nresults;  ++r) {
+            if (r/2 < (int)mresults.size()) {
+                if ((r & 1) == 0)
+                    m[r] = mresults[r/2].first - start;
+                else
+                    m[r] = mresults[r/2].second - start;
+            } else {
+                m[r] = USTR(pattern).length();
+            }
+        }
+        return res;
+    } else {
+        return fullmatch ? boost::regex_match (subject, regex)
+                         : boost::regex_search (subject, regex);
+    }
+}
 
 OSL_SHADEOP const char *
 osl_format (const char* format_str, ...)
@@ -510,6 +521,7 @@ osl_warning_batched (ShaderGlobalsBatch *sgb, unsigned int mask_value, const cha
     }
 }
 
+
 OSL_SHADEOP int
 osl_split (const char *str, ustring *results, const char *sep,
            int maxsplit, int resultslen)
@@ -519,9 +531,43 @@ osl_split (const char *str, ustring *results, const char *sep,
     Strutil::split (USTR(str).string(), splits, USTR(sep).string(), maxsplit);
     int n = std::min (maxsplit, (int)splits.size());
     for (int i = 0;  i < n;  ++i)
-        results[i] = ustring(splits[i]);
+        results[i] = ustring(splits[i]); //split string
     return n;
 }
+
+OSL_SHADEOP void
+osl_split_masked (void *wresults, /*stores n*/  void *wstr,/*input string*/
+        void *wresult_string, /*resulting split string*/
+        void *wsep, /*sep*/
+        void *wmaxsplit, /*void *wrlen,*/
+        int resultslen,
+        unsigned int mask_value)
+{
+
+    ConstWideAccessor<ustring> wS (wstr);
+    MaskedAccessor<int> wR (wresults, Mask(mask_value)); //length of split array
+    MaskedUnboundArrayAccessor<ustring,SimdLaneCount> wRString (wresult_string, 0, resultslen, Mask(mask_value));//Split string
+    ConstWideAccessor<ustring> wSep (wsep);
+    ConstWideAccessor<int> wMaxSplit (wmaxsplit);
+
+    for(int lane = 0; lane <wR.width; ++lane){
+        if(wR.mask()[lane]) {
+          int maxsplit = wMaxSplit[lane];
+          ustring str = wS[lane];
+          ustring sep = wSep[lane];
+          auto resultStrings = wRString[lane];
+
+          maxsplit = OIIO::clamp(maxsplit, 0, resultslen );
+          std::vector<std::string> splits;
+          Strutil::split (str.string(), splits, sep.string(), maxsplit);
+          int n = std::min (maxsplit, (int)splits.size());
+          wR[lane] = n; //Length of split array
+          for (int i = 0;  i < n;  ++i)
+              resultStrings[i] = ustring(splits[i]);
+        }
+    }
+
+} //split ends
 
 
 } // end namespace pvt

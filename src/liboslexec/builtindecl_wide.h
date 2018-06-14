@@ -227,9 +227,11 @@ DECL (osl_format_batched, "xXis*")
 DECL (osl_printf_batched, "xXis*")
 DECL (osl_error_batched, "xXis*")
 DECL (osl_warning_batched, "xXis*")
-#if 0 // incomplete
+
+
 DECL (osl_split, "isXsii")
-#endif
+DECL (osl_split_masked, "xXXXXXii")
+
 // DECL (osl_incr_layers_executed, "xX") // original used by wide currently
 
 
@@ -356,6 +358,16 @@ DECL (osl_blackbody_vf, "xXXf")
 DECL (osl_wavelength_color_vf, "xXXf")
 #endif
 
+DECL (osl_getmessage_batched, "xXXXXLXXXXXi")
+
+DECL (osl_blackbody_vf, "xXXf")
+DECL (osl_blackbody_vf_batched, "xXXf")
+DECL (osl_blackbody_w16vw16f_masked, "xXXXi")
+
+DECL (osl_wavelength_color_vf, "xXXf")
+DECL (osl_wavelength_color_vf_batched, "xXXf")
+DECL (osl_wavelength_color_w16vw16f_masked, "xXXXi")
+
 DECL (osl_luminance_fv_batched, "xXXX")
 DECL (osl_luminance_w16fv_batched, "xXXX")
 DECL (osl_luminance_w16fw16v_batched, "xXXX")
@@ -392,6 +404,10 @@ DECL (osl_dict_find_iss, "iXXX")
 DECL (osl_dict_next, "iXi")
 DECL (osl_dict_value, "iXiXLX")
 #endif
+
+//DECL (osl_dict_next, "iXi")
+//DECL (osl_dict_next_masked, "xXi")
+
 DECL (osl_raytype_name_batched, "iXX")
 DECL (osl_naninf_check_batched, "xiiiXiXXiXiiX")
 DECL (osl_range_check_batched, "iiiXXXiXiXX")
@@ -672,6 +688,8 @@ DECL (osl_trace_set_shade, "xXi")
 DECL (osl_trace_set_traceset, "xXs")
 DECL (osl_trace, "iXXXXXXXX")
 #endif
+
+DECL (osl_trace_batched, "xXXXXXXXXXi")
 
 DECL (osl_calculatenormal_batched, "xXXX")
 DECL (osl_area_w16, "xXX")

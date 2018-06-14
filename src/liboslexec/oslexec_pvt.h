@@ -98,6 +98,7 @@ namespace Strings {
     extern ustring wrap, swrap, twrap, rwrap;
     extern ustring black, clamp, periodic, mirror;
     extern ustring firstchannel, fill, alpha, errormessage;
+    extern ustring mindist, maxdist, shade, traceset;
     extern ustring interp, closest, linear, cubic, smartcubic;
     extern ustring perlin, uperlin, noise, snoise, pnoise, psnoise;
     extern ustring cell, cellnoise, pcellnoise;

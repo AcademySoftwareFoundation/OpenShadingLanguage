@@ -1,5 +1,12 @@
 #!/bin/csh
 
+
+
+./exec_test_dir.csh string/split
+./exec_test_dir.csh blackbody
+./exec_test_dir.csh wavelength_color
+./exec_test_dir.csh trace
+
 ./exec_test_dir.csh matrix
 ./run_test_dir.csh length
 ./exec_test_dir.csh transform

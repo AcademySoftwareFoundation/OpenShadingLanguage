@@ -168,5 +168,108 @@ osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
 }
 
 
+OSL_SHADEOP void
+osl_getmessage_batched(ShaderGlobalsBatch *sgb_,void *result,
+                        const char *source_, const char *name_,
+                        long long type_, void *val, int derivs,
+                        int layeridx, const char* sourcefile_, int sourceline,
+                        unsigned int mask_value)
+{
+    const ustring &source (USTR(source_));
+    const ustring &name (USTR(name_));
+    const ustring &sourcefile (USTR(sourcefile_));
+
+    ShaderGlobalsBatch *sgb = reinterpret_cast<ShaderGlobalsBatch *>(sgb_);
+    MaskedAccessor<int> wR (result, Mask(mask_value));
+
+    // recreate TypeDesc -- we just crammed it into an int!
+    TypeDesc type = TYPEDESC(type_);
+    bool is_closure = (type.basetype == TypeDesc::UNKNOWN); // secret code for closure
+    if (is_closure) {
+        ASSERT(0 && "Incomplete add closure support to getmessage");
+        type.basetype = TypeDesc::PTR;  // for closures, we store a pointer
+    }
+
+    static ustring ktrace ("trace");
+    if (USTR(source_) == ktrace) {
+        // Source types where we need to ask the renderer
+        MaskedDataRef valRef(type, derivs, wR.mask(), val);
+        return sgb->uniform().renderer->batched()->getmessage(sgb, wR, source, name, valRef);
+    }
+    ASSERT(0 && "Incomplete need to finish non-trace getmessage + setmessage");
+#if 0
+    MessageList &messages (sgb->uniform().context->messages());
+
+    for (int lane = 0; lane < wR.width; ++lane)
+    {
+    ustring lname = Wname[lane];
+    ustring lsrcfile = Wsourcefile[lane];
+    int lsrcline = Wsourceline[lane];
+    int lidx = WlayerIDX[lane];
+    const Message* m = messages.find(lname);
+    if (m != NULL) {
+        if (m->name == lname) {
+            if (m->type != type) {
+                // found message, but types don't match
+                sgb->uniform().context->error(
+                    "type mismatch for message \"%s\" (%s as %s here: %s:%d)"
+                    " cannot fetch as %s from %s:%d",
+                    lname.c_str(),
+                    m->has_data() ? "created" : "queried",
+                    m->type == TypeDesc::PTR ? "closure color" : m->type.c_str(),
+                    m->sourcefile.c_str(),
+                    m->sourceline,
+                    is_closure ? "closure color" : type.c_str(),
+                    lsrcfile.c_str(),
+                    lsrcline);
+                //return 0;
+                wR[lane] = 0;
+                break;
+            }
+            if (!m->has_data()) {
+                // getmessage ran before and found nothing - just return 0
+                //return 0;
+                wR[lane] = 0;
+                break;
+            }
+            if (m->layeridx > lidx) {
+                // found message, but was set by a layer deeper than the one querying the message
+                sgb->uniform().context->error(
+                    "message \"%s\" was set by layer #%d (%s:%d)"
+                    " but is being queried by layer #%d (%s:%d)"
+                    " - messages may only be transfered from nodes "
+                    "that appear earlier in the shading network",
+                    lname.c_str(),//
+                                        m->layeridx,
+                                        m->sourcefile.c_str(),
+                                        m->sourceline,
+                                        lidx,
+                                        lsrcfile.c_str(),
+                                        lsrcline);
+                                    //return 0;
+                            wR[lane] = 0;
+                            break;
+                                }
+                                // Message found!
+                                size_t size = type.size();
+                                memcpy (val, m->data, size);
+                                if (derivs) // TODO: move this to llvm code gen?
+                                    memset (((char *)val)+size, 0, 2*size);
+                                //return 1;
+                                wR[lane] = 1;
+                                break;
+                            }
+                        }
+                        // Message not found -- we must record this event in case another layer tries to set the message again later on
+                        if (sgb->uniform().context->shadingsys().strict_messages())
+                            messages.add(lname, NULL, type, lidx, lsrcfile, lsrcline);
+                        //return 0;
+                        wR[lane] = 0;
+                        break;
+                    }
+#endif
+}
+
+
 } // namespace pvt
 OSL_NAMESPACE_EXIT

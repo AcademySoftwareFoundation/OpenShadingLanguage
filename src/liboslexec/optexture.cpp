@@ -683,6 +683,35 @@ osl_trace (void *sg_, void *opt_, void *Pos_, void *dPosdx_, void *dPosdy_,
                                 *Dir, *dDirdx, *dDirdy);
 }
 
+OSL_SHADEOP void
+osl_trace_batched (void *sgb_, void *result, void *opt_, void *Pos_, void *dPosdx_, void *dPosdy_,
+        void *Dir_, void *dDirdx_, void *dDirdy_, unsigned int mask_value)
+{
+    ShaderGlobalsBatch *sgb = reinterpret_cast<ShaderGlobalsBatch *>(sgb_);
+    BatchedRendererServices::TraceOpt * opt = reinterpret_cast<BatchedRendererServices::TraceOpt *>(opt_);
+
+    MaskedAccessor<int> wR (result, Mask(mask_value));
+
+    Wide<Vec3> wide_zero;
+    make_uniform(wide_zero, Vec3(0.0f));
+
+    ConstWideAccessor<Vec3> wP (Pos_);
+    ConstWideAccessor<Vec3> wPdx (dPosdx_ ? dPosdx_ : &wide_zero);
+    ConstWideAccessor<Vec3> wPdy(dPosdy_ ? dPosdy_ : &wide_zero);
+
+    ConstWideAccessor<Vec3> wD (Dir_);
+    ConstWideAccessor<Vec3> wDdx (dDirdx_ ? dDirdx_ : &wide_zero);
+    ConstWideAccessor<Vec3> wDdy(dDirdy_ ? dDirdy_ : &wide_zero);
+
+    sgb->uniform().renderer->batched()->trace (*opt,
+                     sgb,
+                     wR,
+                     wP,
+                     wPdx,
+                     wPdy,
+                     wD, wDdx, wDdy);
+}
+
 
 } // namespace pvt
 OSL_NAMESPACE_EXIT

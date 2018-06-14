@@ -1,0 +1,37 @@
+shader test_split_u_str_u_sep_v_max (output vector res=0, 
+           output vector calres = 0){
+
+string uniform_str = format("%d",raytype("camera"));
+string uniform_sep = ","; 
+//int var_maxsplit = int(P[0])+3;
+int var_maxsplit = int(u)+3;
+//printf("%d\t", var_maxsplit);
+    
+//Initialize result ouput array
+string results[4] = {uniform_str,uniform_str,uniform_str,uniform_str}; 
+string results1[4] = {uniform_str,uniform_str,uniform_str,uniform_str};
+
+//Setup uniform string
+int uval = raytype("camera");
+int sc = split(format("%d,%d,%d,%d", 2*uval, 4*uval, 6*uval, 8*uval ),results, uniform_sep, var_maxsplit); //varying maxsplit
+res = vector (u-v, tan(u), (float) sc*u);
+
+int accum = 0;
+for (int i = 0 ; i< sc; ++i){
+    accum += stoi(results[i]);
+}
+
+
+int accum2 = 0;
+
+int sc1 = 0;
+if(int(P[0]*200)%2){
+    sc1 = split(format("%d,%d,%d,%d", 3*uval,6*uval,9*uval,12*uval),results1, uniform_sep, var_maxsplit);//varying maxsplit
+}
+
+for (int i = 0 ; i<sc1; ++i){
+    accum2 += stoi(results1[i]);
+}
+
+calres= vector(((float)accum2)/(20.0 + u*20), u+v, ((float)accum)/(9 + v*9)); 
+}

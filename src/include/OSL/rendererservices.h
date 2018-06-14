@@ -766,6 +766,43 @@ public:
                                            ustring dataname,
                                            DataRef val);
 
+    //Batched trace June 5th
+
+    /// Options for the trace call.
+    struct TraceOpt {
+        float mindist;    ///< ignore hits closer than this
+        float maxdist;    ///< ignore hits farther than this
+        bool shade;       ///< whether to shade what is hit
+        ustring traceset; ///< named trace set
+        TraceOpt () : mindist(0.0f), maxdist(1.0e30), shade(false) { }
+    };
+
+    /// Immediately trace a ray from P in the direction R.  Return true
+    /// if anything hit, otherwise false.
+    virtual void trace (TraceOpt &options,  ShaderGlobalsBatch *sgb, MaskedAccessor<int> result,
+                            ConstWideAccessor<Vec3> P, ConstWideAccessor<Vec3> dPdx,
+                            ConstWideAccessor<Vec3> dPdy, ConstWideAccessor<Vec3> R,
+                            ConstWideAccessor<Vec3> dRdx, ConstWideAccessor<Vec3> dRdy)
+    {
+        for (int lane = 0; lane<result.width; ++lane)
+        {
+            result[lane] = 0;
+        }
+    }
+
+    virtual void getmessage (ShaderGlobalsBatch *sgb, MaskedAccessor<int> result,
+                             ustring source, ustring name, MaskedDataRef val) {
+        // Currently this code path should only be followed when source == "trace"
+        DASSERT(result.mask() == val.mask());
+        for (int lane = 0; lane<result.width; ++lane)
+        {
+            result[lane] = 0;
+        }
+    }
+
+
+
+
 
 #if 0
     /// Lookup nearest points in a point cloud. It will search for

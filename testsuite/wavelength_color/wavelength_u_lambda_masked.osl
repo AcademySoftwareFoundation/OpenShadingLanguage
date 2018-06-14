@@ -1,0 +1,14 @@
+shader wavelength_u_lambda_masked (output color Cout = 0)
+{
+    float lambda = 1.0/(2*raytype("camera"));
+   // float lambda = 0.18*u;
+    
+    color c = 0.0;
+
+    if(int(P[0]*200)%2)
+{
+    c = wavelength_color (lambda);
+    
+}
+    Cout = c;   
+}

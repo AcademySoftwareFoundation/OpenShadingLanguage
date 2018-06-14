@@ -492,6 +492,26 @@ BatchedSimpleRenderer::is_attribute_uniform(ustring object, ustring name)
 	return false;
 }
 
+void
+BatchedSimpleRenderer::trace (TraceOpt &options,  ShaderGlobalsBatch *sgb, MaskedAccessor<int> result,
+ConstWideAccessor<Vec3> P, ConstWideAccessor<Vec3> dPdx,
+ConstWideAccessor<Vec3> dPdy, ConstWideAccessor<Vec3> R,
+ConstWideAccessor<Vec3> dRdx, ConstWideAccessor<Vec3> dRdy)
+{
+    for (int lane = 0; lane<result.width; ++lane)
+    {
+        if(sgb->varying(lane).u()>0.75)
+        {
+           result[lane] = 1;
+        }
+
+        else
+        {
+            result[lane] = 0;
+        }
+    }
+}
+
 
 Mask
 BatchedSimpleRenderer::get_array_attribute (ShaderGlobalsBatch *sgb, 
@@ -881,7 +901,19 @@ SimpleRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
     }
 }
 
+bool
+SimpleRenderer::trace (TraceOpt &options, ShaderGlobals *sg,
+        const OSL::Vec3 &P, const OSL::Vec3 &dPdx,
+        const OSL::Vec3 &dPdy, const OSL::Vec3 &R,
+        const OSL::Vec3 &dRdx, const OSL::Vec3 &dRdy) {
 
+    if(sg->u > 0.75)
+    {
+        return true; //1 in batched
+    } else {
+        return false;
+    }
+}
 
 bool
 SimpleRenderer::get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,

@@ -354,6 +354,8 @@ BackendLLVM::addGlobalVariable(const std::string& name, int size, int alignment,
         // variable to the string address before the kernel is launched.
         constant = llvm::ConstantInt::get (
             llvm::Type::getInt64Ty (ll.module()->getContext()), 0);
+
+        m_varname_map [name] = ((ustring*)data)->string();
     }
     else {
         // Handle unspecified types as generic byte arrays
@@ -403,7 +405,7 @@ BackendLLVM::createOptixVariable (const std::string& name, const std::string& ty
     llvm::Value* g_var = addGlobalVariable (name, size, alignment, data, type);
 
     if (g_var == nullptr) {
-        ASSERT (0 && "Unable to create rtVariable");
+        ASSERT (0 && "Unable to create OptiX variable");
     }
 
     createOptixMetadata (name, type, size);
@@ -470,9 +472,31 @@ BackendLLVM::getOrAllocateLLVMGlobal (const Symbol& sym)
     if (sym.typespec().is_string()) {
         // Use the ustring hash to create a name for the symbol that's based on
         // the string contents
+        //
+        // TODO: Collisions between variable names are unlikely, but stil
+        //       possible. Using something like a counter to handle collisions
+        //       is unattractive because it depends on the order in which
+        //       strings are encountered at run time.
+        //
+        //       For now I am simply appending the length to the hash, but a
+        //       more robust solution may be called for.
+
         ss << "ds_"
            << std::setbase (16) << std::setfill('0') << std::setw (16)
-           << (*(ustring *)sym.data()).hash();
+           << (*(ustring *)sym.data()).hash()
+           << "_"
+           << std::setbase (16) << std::setfill('0') << std::setw (4)
+           << (*(ustring *)sym.data()).length();
+
+        auto it = m_varname_map.find(ss.str());
+        const std::string old_str = (it != m_varname_map.end())
+            ? it->second : "";
+
+        if (old_str != "" && old_str != (*(ustring *)sym.data()).string()) {
+            std::cerr << "Warning: variable name collision between " << old_str
+                      << " and " << (*(ustring *)sym.data()).string()
+                      << std::endl;
+        }
     }
     else {
         // PTX doesn't like leading dollar signs, so prepend an underscore

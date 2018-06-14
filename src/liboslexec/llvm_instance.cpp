@@ -459,8 +459,8 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         llvm::Value* name_arg = NULL;
 
         if (use_optix()) {
-            // In the OptiX case, we need get a pointer to the string constant
-            // for the symbol name.
+            // In the OptiX case, we need to get the pointer to the string
+            // constant for the symbol name.
             ustring arg_name = ustring::format ("$symname_%s_%d", symname, sym.layer());
             Symbol symname_const (arg_name, TypeDesc::TypeString, SymTypeConst);
             symname_const.data (&symname);
@@ -520,6 +520,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         ustring var_name = ustring::format ("%s_%s_%s_%d", sym.name(),
                                    inst()->layername(), group().name(), group().id());
 
+        // TODO: Make sure this works with string variables
         llvm::Value* ud_var = createOptixVariable (var_name.string(),
                                                    sym.typespec().simpletype().c_str(),
                                                    sym.size(),
@@ -535,7 +536,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         llvm::Value* src = llvm_load_string_addr (sym, false, false);
         ll.op_memcpy (llvm_void_ptr (sym),
                       ll.ptr_cast(src, ll.type_void_ptr()),
-                      8, 4 );
+                      8, 4);
     } else {
         // Use default value
         int num_components = sym.typespec().simpletype().aggregate;

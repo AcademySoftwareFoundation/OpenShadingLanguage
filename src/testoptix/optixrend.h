@@ -42,29 +42,32 @@ OSL_NAMESPACE_ENTER
 // TODO: Make sure this works with multiple GPUs
 class StringTable {
 public:
-    StringTable() : m_ptr (nullptr), m_offset (0) { }
-
-    ~StringTable()
-    {
-        if (m_ptr)
-            cudaFree (m_ptr);
-    }
+    StringTable() { }
+    ~StringTable() { }
 
 
     // Allocate CUDA Unified Memory for the raw string table and add the
     // "standard" strings declared in strdecls.h.
     void init (optix::Context ctx)
     {
-        ASSERT (! m_ptr && "StringTable should only be initialized once");
-
-        cudaMallocManaged (reinterpret_cast<void**>(&m_ptr), (1<<16));
-
         m_optix_ctx = ctx;
 
 #define STRDECL(str,var_name)                           \
         addString (str, "DeviceStrings::"#var_name);
 #include <OSL/strdecls.h>
 #undef STRDECL
+
+        ustring test_string("this is my test string");
+        uint64_t addr = (uint64_t)test_string.c_str();
+        m_optix_ctx["test_string_addr"]->setUserData (8, &addr);
+
+        // Make sure that ustrings are being stored in Unified Memory
+        cudaPointerAttributes attr;
+        cudaPointerGetAttributes (&attr, test_string.c_str());
+
+        // Shotgun blast to make sure ustrings are being placed in UM
+        ASSERT (attr.isManaged && attr.devicePointer && attr.hostPointer &&
+                "ustrings are not being allocated in CUDA Unified Memory!");
     }
 
 
@@ -75,56 +78,22 @@ public:
     // variable.
     uint64_t addString (const std::string& str, const std::string& var_name="")
     {
-        int offset = getOffset(str);
-        if (offset < 0) {
-            ustring ustr(str);
-
-            // Place the hash and length of the string before the characters
-            size_t hash = ustr.hash();
-            memcpy (m_ptr + m_offset, (void*)&hash, sizeof(size_t));
-            m_offset += sizeof(size_t);
-
-            size_t len = ustr.length();
-            memcpy (m_ptr + m_offset, (void*)&len, sizeof(size_t));
-            m_offset += sizeof(size_t);
-
-            offset = m_offset;
-            m_string_map [ustr] = offset;
-
-            // Copy the raw characters to the table
-            memcpy (m_ptr + m_offset, str.c_str(), str.size() + 1);
-            m_offset += str.size() + 1;
-
-            // Align the offset for the next entry to 8-byte boundaries
-            m_offset = (m_offset + 0x7u) & ~0x3u;
-        }
-
-        uint64_t addr = reinterpret_cast<uint64_t>(m_ptr + offset);
+        ustring ustr (str);
+        uint64_t addr = reinterpret_cast<uint64_t>(ustr.c_str());
 
         if (! var_name.empty()) {
             m_optix_ctx[var_name]->setUserData (8, &addr);
+#if 0
+            std::cout << "Creating var for " << str
+                      << " with name " << var_name
+                      << " and addr " << (void*) addr << std::endl;
+#endif
         }
 
         return addr;
     }
 
-
-    // If a string has already been added to the table, return its offset in the
-    // char array; otherwise, return -1.
-    int getOffset (const std::string& str) const
-    {
-        auto it = m_string_map.find(ustring(str));
-        return (it != m_string_map.end()) ? it->second : -1;
-    }
-
 private:
-    // A raw char array containing the concatenation of all strings added to the
-    // table, allocated in CUDA Unified Memory.
-    char*                      m_ptr;
-
-    // The offset in the char array at which the next string will be added.
-    int                        m_offset;
-
     // The collection of strings added so far, and their addresses.
     std::map<ustring,uint64_t> m_string_map;
 
@@ -144,12 +113,12 @@ public:
 
     void init_string_table(optix::Context ctx)
     {
-        m_str_table.init(ctx);
+        m_str_table.init (ctx);
     }
 
     uint64_t register_string (const std::string& str, const std::string& var_name)
     {
-        return m_str_table.addString(str, var_name);
+        return m_str_table.addString (str, var_name);
     }
 
     virtual int supports (string_view feature) const

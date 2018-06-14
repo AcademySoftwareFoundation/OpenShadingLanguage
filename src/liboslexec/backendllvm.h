@@ -467,6 +467,11 @@ private:
     // A mapping from symbol names to llvm::GlobalVariables
     std::map<std::string,llvm::GlobalVariable*> m_const_map;
 
+    // A mapping from canonical strings to string variable names, used to
+    // detect collisions that might occur due to using the string hash to
+    // create variable names.
+    std::map<std::string,std::string>           m_varname_map;
+
     bool m_use_optix;                   ///< Compile for OptiX?
 
     friend class ShadingSystemImpl;

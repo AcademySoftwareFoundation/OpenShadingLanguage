@@ -566,6 +566,10 @@ void finalize_scene ()
     optix_ctx["invw"]->setFloat (camera.invw);
     optix_ctx["invh"]->setFloat (camera.invh);
 
+    ustring test("abracadabra");
+    uint64_t addr = reinterpret_cast<uint64_t>(test.c_str());
+    optix_ctx["test_string_addr"]->setUserData (8, &addr);
+
     optix_ctx->validate();
 }
 
@@ -631,6 +635,32 @@ int main (int argc, const char *argv[])
         optix_ctx->launch (0, 1, 1);
 
     double warmuptime = timer.lap ();
+
+    if (false)
+    {
+        uint64_t hi = 0;
+        uint64_t lo = SIZE_MAX;
+
+        for (int i = 0; i < (1 << 20); ++i) {
+            std::stringstream ss;
+            ss << "0x"
+               << std::setbase (16) << std::setfill('0') << std::setw (8)
+               << i;
+
+            std::string str = ss.str();
+            ustring ustr(str.c_str());
+
+            uint64_t addr = (uint64_t) ustr.c_str();
+            hi = std::max(hi,addr);
+            lo = std::min(lo,addr);
+        }
+
+        std::cout << "hi:    " << (void*) hi << " " << (char*) hi << std::endl;
+        std::cout << "lo:    " << (void*) lo << " " << (char*) lo << std::endl;
+        std::cout << "range: " << (hi - lo)  << " " << (void*) (hi - lo) << std::endl;
+
+        std::cout << ustring("").getstats() << std::endl;
+    }
 
     // Launch the GPU kernel to render the scene
     optix_ctx->launch (0, xres, yres);

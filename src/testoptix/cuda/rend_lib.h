@@ -5,12 +5,13 @@
 
 
 namespace DeviceStrings {
-#define STRDECL(str,var_name)                           \
-    rtDeclareVariable(OSL::DeviceString, var_name, , );
+#define STRDECL(str,var_name)                               \
+    rtDeclareVariable(OSL::UstringDevice, var_name, , );
 #include <OSL/strdecls.h>
 #undef STRDECL
 }
 
+#define USTRD(cstr) (*((OSL::UstringDevice *)&cstr))
 
 namespace {  // anonymous namespace
 

@@ -3346,11 +3346,7 @@ LLVMGEN (llvm_gen_closure)
         if (rop.use_optix() && sym.typespec().is_string()) {
             llvm::Value* dst = rop.ll.offset_ptr (mem_void_ptr, p.offset);
             llvm::Value* src = nullptr;
-
-            // Load the address of the GlobalVariable containing the string
-            // address, but not the address of the string itself.
-            src = rop.llvm_load_string_addr (sym, false, true);
-
+            src = rop.llvm_load_string_addr (sym);
             rop.ll.op_memcpy (dst, src, (int)p.type.size(),
                               4 /* use 4 byte alignment for now */);
         }

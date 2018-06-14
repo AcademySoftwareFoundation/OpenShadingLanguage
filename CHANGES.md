@@ -1,3 +1,6 @@
+Release 1.8.15 -- 1 Jul 2018 (compared to 1.8.14)
+--------------------------------------------------
+
 Release 1.8.14 -- 1 May 2018 (compared to 1.8.13)
 --------------------------------------------------
 * New SS attribute "error_repeats", if set to non-zero, turns off the

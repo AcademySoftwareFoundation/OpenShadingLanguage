@@ -299,6 +299,9 @@ public:
     llvm::Value *constant (OIIO::string_view s) {
         return constant(OIIO::ustring(s));
     }
+    llvm::Value *constant (const char *s) {
+        return constant(OIIO::ustring(s));
+    }
 
     /// Return an llvm::Value for a long long that is a packed
     /// representation of a TypeDesc.

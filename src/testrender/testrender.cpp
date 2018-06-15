@@ -669,14 +669,20 @@ int main (int argc, const char *argv[]) {
     workers.join_all();
 
     // Write image to disk
+#if OPENIMAGEIO_VERSION >= 10900 && OIIO_PLUGIN_VERSION >= 22
+    auto out = ImageOutput::create(imagefile);
+#else
     ImageOutput* out = ImageOutput::create(imagefile);
+#endif
     ImageSpec spec(xres, yres, 3, TypeDesc::HALF);
     if (out && out->open(imagefile, spec)) {
         out->write_image(TypeDesc::TypeFloat, &pixels[0]);
     } else {
         errhandler.error("Unable to write output image");
     }
+#if OIIO_PLUGIN_VERSION < 22
     delete out;
+#endif
 
     // Print some debugging info
     if (debug1 || runstats || profile) {

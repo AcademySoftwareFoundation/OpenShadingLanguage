@@ -1168,9 +1168,17 @@ test_shade (int argc, const char *argv[])
                     Strutil::iends_with (filename, ".gif") ||
                     Strutil::iends_with (filename, ".png")) {
                     ImageBuf ccbuf;
+#if OPENIMAGEIO_VERSION >= 10800
+                    ImageBufAlgo::colorconvert (ccbuf, *outputimgs[i],
+                                                "linear", "sRGB", false);
+#elif (OPENIMAGEIO_VERSION >= 10700)
                     ImageBufAlgo::colorconvert (ccbuf, *outputimgs[i],
                                                 "linear", "sRGB", false,
                                                 "", "");
+#else
+                    ImageBufAlgo::colorconvert (ccbuf, *outputimgs[i],
+                                                "linear", "sRGB", false);
+#endif
                     ccbuf.set_write_format (outputimgs[i]->spec().format);
                     ccbuf.write (filename);
                 } else {

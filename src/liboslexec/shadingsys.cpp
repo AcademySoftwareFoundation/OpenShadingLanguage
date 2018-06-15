@@ -3413,7 +3413,7 @@ osl_naninf_check (int ncomps, const void *vals_, int has_derivs,
 // we are checking the entire contents of the symbol.  More restrictive
 // firstcheck,nchecks are used to check just one element of an array.
 OSL_SHADEOP void
-osl_naninf_check_batched (int is_symbol_uniform, int mask_value,
+osl_naninf_check_batched (
                   int ncomps, const void *vals_, int has_derivs,
                   void *sgb, const void *sourcefile, int sourceline,
                   void *symbolname, int firstcheck, int nchecks,
@@ -3424,25 +3424,39 @@ osl_naninf_check_batched (int is_symbol_uniform, int mask_value,
     for (int d = 0;  d < (has_derivs ? 3 : 1);  ++d) {
         for (int c = firstcheck, e = c+nchecks; c < e;  ++c) {
             int i = d*ncomps + c;
-            if (is_symbol_uniform) {
-                if (! OIIO::isfinite(vals[i])) {
-                    ctx->error ("Detected %g value in %s%s at %s:%d (op %s)",
-                                vals[i], d > 0 ? "the derivatives of " : "",
-                                USTR(symbolname), USTR(sourcefile), sourceline,
-                                USTR(opname));
-                    return;
-                }
-            } else {
-                Mask mask(mask_value);
-                for(int lane = 0; lane < SimdLaneCount; ++lane) {
-                    if (mask[lane]) {
-                        if (! OIIO::isfinite(vals[i*SimdLaneCount + lane])) {
-                            ctx->error ("Detected %g value in %s%s at %s:%d (op %s) batch lane:%d",
-                                        vals[i*SimdLaneCount + lane], d > 0 ? "the derivatives of " : "",
-                                        USTR(symbolname), USTR(sourcefile), sourceline,
-                                        USTR(opname), lane);
-                            return;
-                        }
+            if (! OIIO::isfinite(vals[i])) {
+                ctx->error ("Detected %g value in %s%s at %s:%d (op %s)",
+                            vals[i], d > 0 ? "the derivatives of " : "",
+                            USTR(symbolname), USTR(sourcefile), sourceline,
+                            USTR(opname));
+                return;
+            }
+        }
+    }
+}
+
+// Wide vals + mask, but uniform index
+OSL_SHADEOP void
+osl_naninf_check_u_offset_masked (int mask_value,
+                  int ncomps, const void *vals_, int has_derivs,
+                  void *sgb, const void *sourcefile, int sourceline,
+                  void *symbolname, int firstcheck, int nchecks,
+                  const void *opname)
+{
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
+    const float *vals = (const float *)vals_;
+    const Mask mask(mask_value);
+    for (int d = 0;  d < (has_derivs ? 3 : 1);  ++d) {
+        for (int c = firstcheck, e = c+nchecks; c < e;  ++c) {
+            int i = d*ncomps + c;
+            for(int lane = 0; lane < SimdLaneCount; ++lane) {
+                if (mask[lane]) {
+                    if (! OIIO::isfinite(vals[i*SimdLaneCount + lane])) {
+                        ctx->error ("Detected %g value in %s%s at %s:%d (op %s) batch lane:%d",
+                                    vals[i*SimdLaneCount + lane], d > 0 ? "the derivatives of " : "",
+                                    USTR(symbolname), USTR(sourcefile), sourceline,
+                                    USTR(opname), lane);
+                        return;
                     }
                 }
             }
@@ -3450,7 +3464,37 @@ osl_naninf_check_batched (int is_symbol_uniform, int mask_value,
     }
 }
 
+// Wide vals + mask + varying index
+OSL_SHADEOP void
+osl_naninf_check_w16_offset_masked (int mask_value,
+                  int ncomps, const void *vals_, int has_derivs,
+                  void *sgb, const void *sourcefile, int sourceline,
+                  void *symbolname, const void * wide_offsets_ptr,
+                  int nchecks, const void *opname)
+{
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
+    ConstWideAccessor<int> wOffsets(wide_offsets_ptr);
+    const Mask mask(mask_value);
 
+    const float *vals = (const float *)vals_;
+    for (int d = 0;  d < (has_derivs ? 3 : 1);  ++d) {
+        for(int lane = 0; lane < SimdLaneCount; ++lane) {
+            if (mask[lane]) {
+                int firstcheck = wOffsets[lane];
+                for (int c = firstcheck, e = c+nchecks; c < e;  ++c) {
+                    int i = d*ncomps + c;
+                    if (! OIIO::isfinite(vals[i*SimdLaneCount + lane])) {
+                        ctx->error ("Detected %g value in %s%s at %s:%d (op %s) batch lane:%d",
+                                    vals[i*SimdLaneCount + lane], d > 0 ? "the derivatives of " : "",
+                                    USTR(symbolname), USTR(sourcefile), sourceline,
+                                    USTR(opname), lane);
+                        return;
+                    }
+                }
+            }
+        }
+    }
+}
 
 // vals points to the data of a float-, int-, or string-based symbol.
 // (described by typedesc).  We want to check
@@ -3505,7 +3549,237 @@ osl_uninit_check (long long typedesc_, void *vals_,
     }
 }
 
+OSL_SHADEOP void
+osl_uninit_check_u_values_u_offset_batched (long long typedesc_, void *vals_,
+                  void *sgb, const void *sourcefile, int sourceline,
+                  const char *groupname, int layer, const char *layername,
+                  const char *shadername,
+                  int opnum, const char *opname, int argnum,
+                  void *symbolname, int firstcheck, int nchecks)
+{
+    TypeDesc typedesc = TYPEDESC(typedesc_);
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
+    bool uninit = false;
+    if (typedesc.basetype == TypeDesc::FLOAT) {
+        float *vals = (float *)vals_;
+        for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
+            if (!OIIO::isfinite(vals[c])) {
+                uninit = true;
+                vals[c] = 0;
+            }
+    }
+    if (typedesc.basetype == TypeDesc::INT) {
+        int *vals = (int *)vals_;
+        for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
+            if (vals[c] == std::numeric_limits<int>::min()) {
+                uninit = true;
+                vals[c] = 0;
+            }
+    }
+    if (typedesc.basetype == TypeDesc::STRING) {
+        ustring *vals = (ustring *)vals_;
+        for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
+            if (vals[c] == Strings::uninitialized_string) {
+                uninit = true;
+                vals[c] = ustring();
+            }
+    }
+    if (uninit) {
+        ctx->error ("Detected possible use of uninitialized value in %s %s at %s:%d (group %s, layer %d %s, shader %s, op %d '%s', arg %d)",
+                    typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
+                    (groupname && groupname[0]) ? groupname: "<unnamed group>",
+                    layer, (layername && layername[0]) ? layername : "<unnamed layer>",
+                    shadername, opnum, USTR(opname), argnum);
+    }
+}
 
+OSL_SHADEOP void
+osl_uninit_check_w16_values_u_offset_masked (int mask_value,
+                  long long typedesc_, void *vals_,
+                  void *sgb, const void *sourcefile, int sourceline,
+                  const char *groupname, int layer, const char *layername,
+                  const char *shadername,
+                  int opnum, const char *opname, int argnum,
+                  void *symbolname, int firstcheck, int nchecks)
+{
+    TypeDesc typedesc = TYPEDESC(typedesc_);
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
+    const Mask mask(mask_value);
+
+    //std::cout << "osl_uninit_check_w16_values_u_offset_masked="<< mask_value << std::endl;
+    Mask lanes_uninit(false);
+
+    if (typedesc.basetype == TypeDesc::FLOAT) {
+        float *vals = (float *)vals_;
+        for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
+            for(int lane = 0; lane < SimdLaneCount; ++lane) {
+                if (mask[lane]) {
+                    if (!OIIO::isfinite(vals[c*SimdLaneCount + lane])) {
+                        lanes_uninit.set_on(lane);
+                        vals[c*SimdLaneCount + lane] = 0;
+                    }
+                }
+            }
+    }
+    if (typedesc.basetype == TypeDesc::INT) {
+        int *vals = (int *)vals_;
+        for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
+            for(int lane = 0; lane < SimdLaneCount; ++lane) {
+                if (mask[lane]) {
+                    if (vals[c*SimdLaneCount + lane] == std::numeric_limits<int>::min()) {
+                        lanes_uninit.set_on(lane);
+                        vals[c*SimdLaneCount + lane] = 0;
+                    }
+                }
+            }
+    }
+    if (typedesc.basetype == TypeDesc::STRING) {
+        ustring *vals = (ustring *)vals_;
+        for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
+            for(int lane = 0; lane < SimdLaneCount; ++lane) {
+                if (mask[lane]) {
+                    if (vals[c*SimdLaneCount + lane] == Strings::uninitialized_string) {
+                        lanes_uninit.set_on(lane);
+                        vals[c*SimdLaneCount + lane] = ustring();
+                    }
+                }
+            }
+    }
+    if (lanes_uninit.any_on()) {
+        ctx->error ("Detected possible use of uninitialized value in %s %s at %s:%d (group %s, layer %d %s, shader %s, op %d '%s', arg %d) for lanes(%x) of batch",
+                    typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
+                    (groupname && groupname[0]) ? groupname: "<unnamed group>",
+                    layer, (layername && layername[0]) ? layername : "<unnamed layer>",
+                    shadername, opnum, USTR(opname), argnum, lanes_uninit.value());
+    }
+}
+
+OSL_SHADEOP void
+osl_uninit_check_u_values_w16_offset_masked (int mask_value,
+                  long long typedesc_, void *vals_,
+                  void *sgb, const void *sourcefile, int sourceline,
+                  const char *groupname, int layer, const char *layername,
+                  const char *shadername,
+                  int opnum, const char *opname, int argnum,
+                  void *symbolname, const void * wide_offsets_ptr, int nchecks)
+{
+    TypeDesc typedesc = TYPEDESC(typedesc_);
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
+    ConstWideAccessor<int> wOffsets(wide_offsets_ptr);
+    const Mask mask(mask_value);
+    //std::cout << "osl_uninit_check_u_values_w16_offset_masked="<< mask_value << std::endl;
+    Mask lanes_uninit(false);
+    if (typedesc.basetype == TypeDesc::FLOAT) {
+        float *vals = (float *)vals_;
+        for(int lane = 0; lane < SimdLaneCount; ++lane) {
+            if (mask[lane]) {
+                int firstcheck = wOffsets[lane];
+                for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
+                    if (!OIIO::isfinite(vals[c])) {
+                        lanes_uninit.set_on(lane);
+                        vals[c] = 0;
+                    }
+            }
+        }
+    }
+    if (typedesc.basetype == TypeDesc::INT) {
+        int *vals = (int *)vals_;
+        for(int lane = 0; lane < SimdLaneCount; ++lane) {
+            if (mask[lane]) {
+                int firstcheck = wOffsets[lane];
+                for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
+                    if (vals[c] == std::numeric_limits<int>::min()) {
+                        lanes_uninit.set_on(lane);
+                        vals[c] = 0;
+                    }
+            }
+        }
+    }
+    if (typedesc.basetype == TypeDesc::STRING) {
+        ustring *vals = (ustring *)vals_;
+        for(int lane = 0; lane < SimdLaneCount; ++lane) {
+            if (mask[lane]) {
+                int firstcheck = wOffsets[lane];
+                for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
+                    if (vals[c] == Strings::uninitialized_string) {
+                        lanes_uninit.set_on(lane);
+                        vals[c] = ustring();
+                    }
+            }
+        }
+    }
+
+    if (lanes_uninit.any_on()) {
+        ctx->error ("Detected possible use of uninitialized value in %s %s at %s:%d (group %s, layer %d %s, shader %s, op %d '%s', arg %d) for lanes(%x) of batch",
+                    typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
+                    (groupname && groupname[0]) ? groupname: "<unnamed group>",
+                    layer, (layername && layername[0]) ? layername : "<unnamed layer>",
+                    shadername, opnum, USTR(opname), argnum, lanes_uninit.value());
+    }
+}
+OSL_SHADEOP void
+osl_uninit_check_w16_values_w16_offset_masked (int mask_value,
+                  long long typedesc_, void *vals_,
+                  void *sgb, const void *sourcefile, int sourceline,
+                  const char *groupname, int layer, const char *layername,
+                  const char *shadername,
+                  int opnum, const char *opname, int argnum,
+                  void *symbolname, const void * wide_offsets_ptr, int nchecks)
+{
+    TypeDesc typedesc = TYPEDESC(typedesc_);
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
+    ConstWideAccessor<int> wOffsets(wide_offsets_ptr);
+    const Mask mask(mask_value);
+    //std::cout << "osl_uninit_check_w16_values_w16_offset_masked="<< mask_value << std::endl;
+    Mask lanes_uninit(false);
+    if (typedesc.basetype == TypeDesc::FLOAT) {
+        float *vals = (float *)vals_;
+        for(int lane = 0; lane < SimdLaneCount; ++lane) {
+            if (mask[lane]) {
+                int firstcheck = wOffsets[lane];
+                for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
+                    if (!OIIO::isfinite(vals[c*SimdLaneCount + lane])) {
+                        lanes_uninit.set_on(lane);
+                        vals[c*SimdLaneCount + lane] = 0;
+                    }
+            }
+        }
+    }
+    if (typedesc.basetype == TypeDesc::INT) {
+        int *vals = (int *)vals_;
+        for(int lane = 0; lane < SimdLaneCount; ++lane) {
+            if (mask[lane]) {
+                int firstcheck = wOffsets[lane];
+                for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
+                    if (vals[c*SimdLaneCount + lane] == std::numeric_limits<int>::min()) {
+                        lanes_uninit.set_on(lane);
+                        vals[c*SimdLaneCount + lane] = 0;
+                    }
+            }
+        }
+    }
+    if (typedesc.basetype == TypeDesc::STRING) {
+        ustring *vals = (ustring *)vals_;
+        for(int lane = 0; lane < SimdLaneCount; ++lane) {
+            if (mask[lane]) {
+                int firstcheck = wOffsets[lane];
+                for (int c = firstcheck, e = firstcheck+nchecks; c < e;  ++c)
+                    if (vals[c*SimdLaneCount + lane] == Strings::uninitialized_string) {
+                        lanes_uninit.set_on(lane);
+                        vals[c*SimdLaneCount + lane] = ustring();
+                    }
+            }
+        }
+    }
+
+    if (lanes_uninit.any_on()) {
+        ctx->error ("Detected possible use of uninitialized value in %s %s at %s:%d (group %s, layer %d %s, shader %s, op %d '%s', arg %d) for lanes(%x) of batch",
+                    typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
+                    (groupname && groupname[0]) ? groupname: "<unnamed group>",
+                    layer, (layername && layername[0]) ? layername : "<unnamed layer>",
+                    shadername, opnum, USTR(opname), argnum, lanes_uninit.value());
+    }
+}
 
 OSL_SHADEOP int
 osl_range_check (int indexvalue, int length, const char *symname,

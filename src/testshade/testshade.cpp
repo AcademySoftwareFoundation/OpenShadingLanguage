@@ -149,6 +149,7 @@ set_shadingsys_options ()
     // values for the next sample, who due to a bug, may not have correct control flow
     // and not actually write to those values
     shadingsys->attribute ("clearmemory", 1);
+    //shadingsys->attribute ("clearmemory", 0);
 
     shadingsys->attribute ("llvm_debug", (llvm_debug ? 2 : 0));
     OSL_DEV_ONLY(shadingsys->attribute ("llvm_debug", 2));
@@ -169,8 +170,15 @@ set_shadingsys_options ()
         opt = atoi(opt_env);
     shadingsys->attribute ("optimize", opt);
     shadingsys->attribute ("lockgeom", 1);
+
+    if (const char *opt_env = getenv ("TESTSHADE_DEBUG_NAN"))
+        debugnan = atoi(opt_env);
     shadingsys->attribute ("debug_nan", debugnan);
+
+    if (const char *opt_env = getenv ("TESTSHADE_DEBUG_UNINIT"))
+        debug_uninit = atoi(opt_env);
     shadingsys->attribute ("debug_uninit", debug_uninit);
+
     shadingsys->attribute ("userdata_isconnected", userdata_isconnected);
     if (! shaderpath.empty())
         shadingsys->attribute ("searchpath:shader", shaderpath);

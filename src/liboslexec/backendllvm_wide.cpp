@@ -2077,7 +2077,6 @@ BackendLLVMWide::isSymbolUniform(const Symbol& sym)
 	if (iter == m_is_uniform_by_symbol.end()) 
 	{
 		OSL_DEV_ONLY(std::cout << " undiscovered " << sym.name() << " isUniform=");
-		ASSERT(sym.renderer_output() == false);
 		OSL_DEV_ONLY(std::cout << true << std::endl);
 		return true;
 	}
@@ -2108,6 +2107,14 @@ BackendLLVMWide::loopHasContinue(int opIndex)
 	return (loops_with_continue_op_indices.find(opIndex) != loops_with_continue_op_indices.end());
 }
 
+bool
+BackendLLVMWide::isSymbolForcedBoolean(const Symbol& sym)
+{
+    auto iter = m_symbols_forced_boolean.find(&sym);
+    return (iter != m_symbols_forced_boolean.end());
+}
+
+
 llvm::Value *
 BackendLLVMWide::llvm_alloca (const TypeSpec &type, bool derivs, bool is_uniform, bool forceBool,
                           const std::string &name)
@@ -2128,7 +2135,7 @@ BackendLLVMWide::llvm_alloca (const TypeSpec &type, bool derivs, bool is_uniform
     } else {
     	OSL_DEV_ONLY(std::cout << " as VARYING " << std::endl);
     	if (forceBool) {    		
-    		return ll.op_alloca (ll.type_wide_bool(), n, name);
+    	    return ll.op_alloca (ll.type_native_mask(), n, name);
     	} else {
     		return ll.wide_op_alloca (t, n, name);
     	}
@@ -2138,7 +2145,7 @@ BackendLLVMWide::llvm_alloca (const TypeSpec &type, bool derivs, bool is_uniform
 
 
 llvm::Value *
-BackendLLVMWide::getOrAllocateLLVMSymbol (const Symbol& sym, bool forceBool)
+BackendLLVMWide::getOrAllocateLLVMSymbol (const Symbol& sym)
 {
     DASSERT ((sym.symtype() == SymTypeLocal || sym.symtype() == SymTypeTemp ||
               sym.symtype() == SymTypeConst)
@@ -2149,6 +2156,7 @@ BackendLLVMWide::getOrAllocateLLVMSymbol (const Symbol& sym, bool forceBool)
 
     if (map_iter == named_values().end()) {
     	bool is_uniform = isSymbolUniform(sym);
+    	bool forceBool = isSymbolForcedBoolean(sym);
     	
         llvm::Value* a = llvm_alloca (sym.typespec(), sym.has_derivs(), is_uniform, forceBool, mangled_name);
         named_values()[mangled_name] = a;
@@ -2306,6 +2314,24 @@ BackendLLVMWide::llvm_load_value (const Symbol& sym, int deriv,
                             deriv, arrayindex, component, cast, op_is_uniform, index_is_uniform);
 }
 
+
+llvm::Value *
+BackendLLVMWide::llvm_load_mask (const Symbol& cond)
+{
+    ASSERT(!isSymbolUniform(cond));
+    ASSERT(cond.typespec().is_int());
+    llvm::Value * native_mask_or_wide_int = llvm_load_value (cond, /*deriv*/ 0, /*component*/ 0, /*cast*/ TypeDesc::UNKNOWN, /*op_is_uniform*/ false);
+    llvm::Value * llvm_mask = nullptr;
+    if (isSymbolForcedBoolean(cond)) {
+        ASSERT(ll.llvm_typeof(native_mask_or_wide_int) == ll.type_native_mask());
+        llvm_mask = ll.native_to_llvm_mask(native_mask_or_wide_int);
+    } else {
+        ASSERT(ll.llvm_typeof(native_mask_or_wide_int) == ll.type_wide_int());
+        llvm_mask = ll.op_int_to_bool(native_mask_or_wide_int);
+    }
+    ASSERT(ll.llvm_typeof(llvm_mask) == ll.type_wide_bool());
+    return llvm_mask;
+}
 
 
 llvm::Value *
@@ -2772,6 +2798,18 @@ BackendLLVMWide::llvm_store_value (llvm::Value* new_val, llvm::Value* dst_ptr,
     }
 }
 
+bool
+BackendLLVMWide::llvm_store_mask (llvm::Value *new_mask, const Symbol& cond)
+{
+    ASSERT(ll.llvm_typeof(new_mask) == ll.type_wide_bool());
+    ASSERT(!isSymbolUniform(cond));
+    ASSERT(cond.typespec().is_int());
+    if (isSymbolForcedBoolean(cond)) {
+        return llvm_store_value (ll.llvm_mask_to_native(new_mask), cond);
+    } else {
+        return llvm_store_value (ll.op_bool_to_int(new_mask), cond);
+    }
+}
 
 
 bool
@@ -3364,7 +3402,10 @@ BackendLLVMWide::llvm_assign_impl (Symbol &Result, Symbol &Src,
 				// src and result both have derivs -- copy them
 				for (int d = 1;  d <= 2;  ++d) {
 					for (int i = 0; i < num_components; ++i) {
-						llvm::Value* val = llvm_load_value (Src, d, arrind, i);
+					    // Not sure how, but we have seen in wild
+					    // the ability to have a uniform Src try and store to a varying Result,
+					    // so we need to widen it here
+						llvm::Value* val = llvm_load_value (Src, d, arrind, i, TypeDesc::UNKNOWN, op_is_uniform);
 						llvm_store_value (val, Result, d, arrind, i);
 					}
 				}
@@ -3386,8 +3427,9 @@ BackendLLVMWide::llvm_print_mask (const char *title, llvm::Value *mask)
 
     call_args.push_back(sg_void_ptr());
     call_args.push_back(ll.constant(int(Mask(true).value())));
-    call_args.push_back(ll.constant("current_mask[%s]=%d\n"));
+    call_args.push_back(ll.constant("current_mask[%s]=%X (%d)\n"));
     call_args.push_back(ll.constant(title));
+    call_args.push_back(mask_value);
     call_args.push_back(mask_value);
 
     ll.call_function ("osl_printf_batched", &call_args[0], (int)call_args.size());

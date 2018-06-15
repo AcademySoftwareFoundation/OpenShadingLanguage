@@ -20,7 +20,7 @@ test_varying_index_matrix (output color Cout = color(0,0,0))
     
     
     int varyingIndex = int(P[0]*256)%3;
-    for(int i = 0; i < 500; ++i) {
+    for(int i = 0; i < 5; ++i) {
         marray[varyingIndex][0][0] = u;
         marray[varyingIndex][1][1] = v;
         marray[varyingIndex][2][2] = u-v;

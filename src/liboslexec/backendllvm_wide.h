@@ -160,12 +160,17 @@ public:
         return llvm_load_value (sym, deriv, NULL, component, cast, op_is_uniform);
     }
     
+    /// Version to handle converting from native mask representation
+    /// to LLVM's required vector of bits
+    llvm::Value *llvm_load_mask(const Symbol& cond);
+
     void discoverVaryingAndMaskingOfLayer();
     
     bool isSymbolUniform(const Symbol& sym);
     bool requiresMasking(int opIndex);
     bool getAttributesIsUniform(int opIndex);
     bool loopHasContinue(int opIndex);
+    bool isSymbolForcedBoolean(const Symbol& sym);
 
     /// Return an llvm::Value* that is either a scalar and derivs is
     /// false, or a pointer to sym's values (if sym is an aggreate or
@@ -205,6 +210,10 @@ public:
         return llvm_store_value (new_val, sym, deriv, NULL, component);
     }
 
+    /// Version to handle converting to native mask representation
+    /// from LLVM's required vector of bits
+    bool llvm_store_mask (llvm::Value *new_mask, const Symbol& cond);
+
     /// llvm_store_value with non-constant component designation.  Does
     /// not work with arrays or do type casts!
     bool llvm_store_component_value (llvm::Value *new_val, const Symbol& sym,
@@ -239,7 +248,7 @@ public:
     /// and just the plain value if it has derivatives).  This is retrieved
     /// from the allocation map if already there; and if not yet in the
     /// map, the symbol is alloca'd and placed in the map.
-    llvm::Value *getOrAllocateLLVMSymbol (const Symbol& sym, bool forceBool);
+    llvm::Value *getOrAllocateLLVMSymbol (const Symbol& sym);
 
     /// Retrieve an llvm::Value that is a pointer holding the start address
     /// of the specified symbol. This always works for globals and params;
@@ -507,6 +516,7 @@ private:
     int m_llvm_local_mem;             // Amount of memory we use for locals
 
 	std::unordered_map<const Symbol *, bool> m_is_uniform_by_symbol;
+	std::unordered_set<const Symbol *> m_symbols_forced_boolean;
 	std::vector<std::vector<bool>> m_requires_masking_by_layer_and_op_index;
 	std::vector<std::unordered_set<int>> m_uniform_get_attribute_op_indices_by_layer;
 	std::vector<std::unordered_set<int>> m_loops_with_continue_op_indices_by_layer;

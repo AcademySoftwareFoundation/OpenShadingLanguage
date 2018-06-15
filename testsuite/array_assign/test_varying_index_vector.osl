@@ -5,7 +5,7 @@ test_varying_index_vector (output color Cout = color(0,0,0))
     vector varray[3] = { vector(.1,.2,.3), 0.2, vector(.3,.3,.3) };
     
     int varyingIndex = int(P[0]*256)%3;
-    for(int i = 0; i < 5000; ++i) {
+    for(int i = 0; i < 50; ++i) {
         varray[varyingIndex] = vector(u,v,0);
     }
     

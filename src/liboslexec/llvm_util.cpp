@@ -54,7 +54,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define USE_MCJIT   (OSL_LLVM_VERSION >= 36)
 #define USE_OLD_JIT (OSL_LLVM_VERSION <  36)
 
-#include <llvm/CodeGen/CommandFlags.h>
+#if OSL_LLVM_VERSION < 60
+    #include <llvm/CodeGen/CommandFlags.h>
+#endif
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DebugInfo.h>
 #include <llvm/IR/DebugInfoMetadata.h>
@@ -265,7 +267,7 @@ public:
         mm->notifyObjectLoaded (EE, oi);
     }
 
-    void notifyObjectLoaded (RuntimeDyld &RTDyld, const object::ObjectFile &Obj) override {
+    void notifyObjectLoaded (llvm::RuntimeDyld &RTDyld, const llvm::object::ObjectFile &Obj) override {
         mm->notifyObjectLoaded(RTDyld, Obj);
     }
 
@@ -289,7 +291,7 @@ public:
         mm->invalidateInstructionCache();
     }
     
-    JITSymbol findSymbol(const std::string &Name) override {
+    llvm::JITSymbol findSymbol(const std::string &Name) override {
         return mm->findSymbol(Name);
     }
 
@@ -297,7 +299,7 @@ public:
         return mm->getSymbolAddressInLogicalDylib(Name);
     }
 
-    JITSymbol findSymbolInLogicalDylib (const std::string &Name) override {
+    llvm::JITSymbol findSymbolInLogicalDylib (const std::string &Name) override {
         return mm->findSymbolInLogicalDylib(Name);
     }
 #endif
@@ -372,6 +374,7 @@ LLVM_Util::LLVM_Util (int debuglevel, const LLVM_Util::PerThreadInfo &per_thread
       m_llvm_exec(NULL),
       m_is_masking_required(false),
       m_masked_exit_count(0),
+      m_llvm_type_native_mask(nullptr),
       mVTuneNotifier(nullptr),
       m_llvm_debug_builder(nullptr),
       mDebugCU(nullptr),
@@ -560,8 +563,8 @@ LLVM_Util::debug_setup_compilation_unit(const char * compile_unit_name) {
 			true /*false*/ , // isOptimized
 			"", // This string lists command line options. This string is directly embedded in debug info output which may be used by a tool analyzing generated debugging information.
 			1900, // This indicates runtime version for languages like Objective-C
-			StringRef(), // SplitName = he name of the file that we'll split debug info out into.
-			DICompileUnit::DebugEmissionKind::LineTablesOnly, // DICompileUnit::DebugEmissionKind
+			llvm::StringRef(), // SplitName = he name of the file that we'll split debug info out into.
+			llvm::DICompileUnit::DebugEmissionKind::LineTablesOnly, // DICompileUnit::DebugEmissionKind
 			0, // The DWOId if this is a split skeleton compile unit.
 			false /*true*/, // SplitDebugInlining = Whether to emit inline debug info.
 			true // DebugInfoForProfiling (default=false) = Whether to emit extra debug info for profile collection.
@@ -682,7 +685,7 @@ LLVM_Util::debug_pop_inlined_function()
 	ASSERT(!mLexicalBlocks.empty());
 
 	llvm::DIScope *scope = mLexicalBlocks.back();
-    auto *existingLbf = dyn_cast<llvm::DILexicalBlockFile>(scope);
+    auto *existingLbf = llvm::dyn_cast<llvm::DILexicalBlockFile>(scope);
     if (existingLbf) {
         // Allow nesting of exactly one DILexicalBlockFile
         // Unwrap it to a function
@@ -690,7 +693,7 @@ LLVM_Util::debug_pop_inlined_function()
         OSL_DEV_ONLY(std::cout << "DILexicalBlockFile popped"<< std::endl);
     }
 
-    auto *function = dyn_cast<llvm::DISubprogram>(scope);
+    auto *function = llvm::dyn_cast<llvm::DISubprogram>(scope);
 	ASSERT(function);
 	mLexicalBlocks.pop_back();
 
@@ -716,7 +719,7 @@ LLVM_Util::debug_pop_function()
 
     ASSERT(!mLexicalBlocks.empty());
     llvm::DIScope *scope = mLexicalBlocks.back();
-    auto *existingLbf = dyn_cast<llvm::DILexicalBlockFile>(scope);
+    auto *existingLbf = llvm::dyn_cast<llvm::DILexicalBlockFile>(scope);
     if (existingLbf) {
         // Allow nesting of exactly one DILexicalBlockFile
         // Unwrap it to a function
@@ -724,7 +727,7 @@ LLVM_Util::debug_pop_function()
         OSL_DEV_ONLY(std::cout << "DILexicalBlockFile popped"<< std::endl);
     }
 
-    auto *function = dyn_cast<llvm::DISubprogram>(scope);
+    auto *function = llvm::dyn_cast<llvm::DISubprogram>(scope);
     ASSERT(function);
 
     mLexicalBlocks.pop_back();
@@ -757,7 +760,7 @@ LLVM_Util::debug_set_location(ustring source_file_name, int sourceline)
     // If the file changed on us (due to an #include or inlined function that we missed) update the scope
     // As we do model inlined functions, don't expect this code path to be taken
     // unless support for the functioncall_nr has been disabled.
-    if(sp->getFilename().compare(StringRef(source_file_name.c_str())))
+    if(sp->getFilename().compare(llvm::StringRef(source_file_name.c_str())))
     {
         llvm::DIFile * file = getOrCreateDebugFileFor(source_file_name.c_str());
 
@@ -765,16 +768,16 @@ LLVM_Util::debug_set_location(ustring source_file_name, int sourceline)
         // to be a parent to another DILexicalBlockFile's).
         // Instead make the parent of the new DILexicalBlockFile
         // the same as the existing DILexicalBlockFile's parent.
-        auto *existingLbf = dyn_cast<llvm::DILexicalBlockFile>(sp);
+        auto *existingLbf = llvm::dyn_cast<llvm::DILexicalBlockFile>(sp);
         bool requiresNewLBF = true;
         llvm::DIScope *parentScope;
         if (existingLbf) {
             parentScope = existingLbf->getScope();
             // Only allow a single LBF, check for any logic bugs here
-            ASSERT(!dyn_cast<llvm::DILexicalBlockFile>(parentScope));
+            ASSERT(!llvm::dyn_cast<llvm::DILexicalBlockFile>(parentScope));
             // If the parent scope has the same filename, no need to create a LBF
             // we can directly use the parentScope
-            if (!parentScope->getFilename().compare(StringRef(source_file_name.c_str())))
+            if (!parentScope->getFilename().compare(llvm::StringRef(source_file_name.c_str())))
             {
                 // The parent scope has the same file name, we can just use it directly
                 sp = parentScope;
@@ -937,10 +940,10 @@ LLVM_Util::push_function_mask(llvm::Value * startMaskValue)
 	// as some lanes of nested function may return early, but that would not affect
 	// the lanes of the calling function, we mush have a modified mask stack for each
 	// function
-    llvm::Value * alloca_for_function_mask = op_alloca(type_wide_bool(), 1, "inlined_function_mask");
+    llvm::Value * alloca_for_function_mask = op_alloca(type_native_mask(), 1, "inlined_function_mask");
     m_masked_subroutine_stack.push_back(MaskedSubroutineContext{alloca_for_function_mask, /* return_count = */0 });
 
-	op_unmasked_store(startMaskValue, alloca_for_function_mask);
+	op_store_mask(startMaskValue, alloca_for_function_mask);
 
 
 	// Give the new function its own mask so that it may be swapped out
@@ -1245,6 +1248,7 @@ LLVM_Util::make_jit_execengine (std::string *err, bool debugging_symbols, bool p
         m_supports_native_bit_masks = false;
         m_supports_avx512f = false;
         m_supports_avx2 = false;
+        m_supports_avx = false;
 
     	OSL_DEV_ONLY(std::cout << std::endl<< "llvm::sys::getHostCPUFeatures()>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl);
 		std::vector<std::string> attrvec;
@@ -1265,9 +1269,15 @@ LLVM_Util::make_jit_execengine (std::string *err, bool debugging_symbols, bool p
                 }
                 if(cpuFeature.first().str() == std::string("avx512f")) {
                     m_supports_avx512f = true;
+                    m_supports_avx2 = true;
+                    m_supports_avx = true;
                 }
                 if(cpuFeature.first().str() == std::string("avx2")) {
                     m_supports_avx2 = true;
+                    m_supports_avx = true;
+                }
+                if(cpuFeature.first().str() == std::string("avx")) {
+                    m_supports_avx = true;
                 }
             }
         }
@@ -1285,6 +1295,7 @@ LLVM_Util::make_jit_execengine (std::string *err, bool debugging_symbols, bool p
             break;
         case TargetISA_AVX:
             attrvec.push_back("+avx");
+            m_supports_avx = true;
             OSL_DEV_ONLY(std::cout << "Intended OSL ISA: AVX" << std::endl);
             break;
         case TargetISA_AVX2:
@@ -1292,12 +1303,15 @@ LLVM_Util::make_jit_execengine (std::string *err, bool debugging_symbols, bool p
             attrvec.push_back("+avx");
             attrvec.push_back("+avx2");
             m_supports_avx2 = true;
+            m_supports_avx = true;
             OSL_DEV_ONLY(std::cout << "Intended OSL ISA: AVX2" << std::endl);
             break;
         case TargetISA_AVX512:
             m_supports_masked_stores = true;
             m_supports_native_bit_masks = true;
             m_supports_avx512f = true;
+            m_supports_avx2 = true;
+            m_supports_avx = true;
             attrvec.push_back("+avx512f");
             attrvec.push_back("+avx512dq");
             attrvec.push_back("+avx512bw");
@@ -1319,7 +1333,12 @@ LLVM_Util::make_jit_execengine (std::string *err, bool debugging_symbols, bool p
         engine_builder.setMAttrs(attrvec);
 
     }
-    
+
+    if (m_supports_avx512f) {
+        m_llvm_type_native_mask = m_llvm_type_wide_bool;
+    } else {
+        m_llvm_type_native_mask = llvm::VectorType::get(m_llvm_type_int, m_vector_width);
+    }
 
     m_llvm_exec = engine_builder.create();        
     if (! m_llvm_exec)
@@ -1398,7 +1417,7 @@ LLVM_Util::dump_struct_data_layout(llvm::Type *Ty)
     int number_of_elements = structTy->getNumElements();
 
 
-	const StructLayout * layout = data_layout.getStructLayout (structTy);
+	const llvm::StructLayout * layout = data_layout.getStructLayout (structTy);
 	std::cout << "dump_struct_data_layout: getSizeInBytes(" << layout->getSizeInBytes() << ") "
 		<< " getAlignment(" << layout->getAlignment() << ")"		
 		<< " hasPadding(" << layout->hasPadding() << ")" << std::endl;
@@ -1427,7 +1446,7 @@ LLVM_Util::validate_struct_data_layout(llvm::Type *Ty, const std::vector<unsigne
     int number_of_elements = structTy->getNumElements();
 
 
-	const StructLayout * layout = data_layout.getStructLayout (structTy);
+	const llvm::StructLayout * layout = data_layout.getStructLayout (structTy);
 	OSL_DEV_ONLY(std::cout << "dump_struct_data_layout: getSizeInBytes(" << layout->getSizeInBytes() << ") ")
 	OSL_DEV_ONLY(	<< " getAlignment(" << layout->getAlignment() << ")")
 	OSL_DEV_ONLY(	<< " hasPadding(" << layout->hasPadding() << ")" << std::endl);
@@ -2081,7 +2100,7 @@ LLVM_Util::constant128 (uint64_t left, uint64_t right)
 	bigNum[0] = left;
 	bigNum[1] = right;
 
-	ArrayRef< uint64_t > refBigNum(&bigNum[0], 2);
+	llvm::ArrayRef< uint64_t > refBigNum(&bigNum[0], 2);
 
     return llvm::ConstantInt::get (context(), llvm::APInt(128,refBigNum));
 }
@@ -2160,14 +2179,36 @@ LLVM_Util::wide_constant (ustring s)
 //    return llvm::ConstantVector::getSplat(m_vector_width, llvm::ConstantInt::get (context(), llvm::APInt(32,i)));
 }
 
+llvm::Value * LLVM_Util::llvm_mask_to_native(llvm::Value *llvm_mask) {
+    ASSERT(llvm_mask->getType() == type_wide_bool());
+    if (m_supports_avx512f) {
+        return llvm_mask;
+    }
+    llvm::Value * native_mask =  builder().CreateSExt(llvm_mask, type_wide_int());
+    ASSERT(native_mask);
+    ASSERT(native_mask->getType() == type_native_mask());
+    return native_mask;
+}
+
+llvm::Value * LLVM_Util::native_to_llvm_mask(llvm::Value *native_mask) {
+    ASSERT(native_mask->getType() == type_native_mask());
+
+    if (m_supports_avx512f) {
+        return native_mask;
+    }
+    llvm::Value * llvm_mask = builder().CreateTrunc(native_mask, type_wide_bool());
+    ASSERT(llvm_mask);
+    ASSERT(llvm_mask->getType() == type_wide_bool());
+    return llvm_mask;
+}
 
 llvm::Value *
 LLVM_Util::mask_as_int(llvm::Value *mask)
 {
     ASSERT(mask->getType() == type_wide_bool());
 
-    llvm::Value* result;
 #if 0
+    llvm::Value* result;
     llvm::Type * int_reinterpret_cast_vector_type;
     switch(m_vector_width)
     {
@@ -2207,18 +2248,96 @@ LLVM_Util::mask_as_int(llvm::Value *mask)
     	result = builder().CreateBitCast (mask, int_reinterpret_cast_vector_type);
     	break;
     }
+    return builder().CreateZExt(result, type_int());
 #else
-	result = builder().CreateBitCast (mask, type_int16());
+    if (m_supports_avx512f) {
+
+        // We can just reinterpret cast a 16 bit mask to a 16 bit integer
+        // and all types are happy
+
+        llvm::Value* result = builder().CreateBitCast (mask, type_int16());
+        return builder().CreateZExt(result, type_int());
+    } else if (m_supports_avx) {
+        // We need to do more than a simple cast to an int.
+        // Since we know vectorized comparisons for AVX&AVX2 end up setting 8 32 bit integers
+        // to 0xFFFFFFFF or 0x00000000,
+        // We need to do more than a simple cast to an int.
+
+        // Convert <16 x i1> -> <16 x i32> -> to <2 x< 8 x i32>>
+        llvm::Value * wide_int_mask = builder().CreateSExt(mask, type_wide_int());
+        auto w8_int_masks = op_split_vector(wide_int_mask);
+
+        // Now we will use the horizontal sign extraction intrinsic to build a 32 bit mask value.
+        // However the only 256bit version works on floats, so we will cast from int32 to float beforehand
+        llvm::Type * w8_float_type = llvm::VectorType::get(llvm::Type::getFloatTy (*m_llvm_context), 8);
+        std::array<llvm::Value *,2> w8_float_masks = {{
+                builder().CreateBitCast (w8_int_masks[0], w8_float_type),
+                builder().CreateBitCast (w8_int_masks[1], w8_float_type)
+        }};
+
+        llvm::Function* func = llvm::Intrinsic::getDeclaration (module(),
+            llvm::Intrinsic::x86_avx_movmsk_ps_256);
+
+        llvm::Value *args[1] = {
+                w8_float_masks[0]
+        };
+        std::array<llvm::Value *,2> int8_masks;
+        int8_masks[0] = builder().CreateCall (func, makeArrayRef(args));
+        args[0] = w8_float_masks[1];
+        int8_masks[1] = builder().CreateCall (func, makeArrayRef(args));
+
+        llvm::Value *upper_mask = op_shl(int8_masks[1], constant(8));
+        return op_or(upper_mask, int8_masks[0]);
+    } else {
+        // We need to do more than a simple cast to an int.
+        // Since we know vectorized comparisons for SSE4.2 ends up setting 4 32 bit integers
+        // to 0xFFFFFFFF or 0x00000000,
+        // We need to do more than a simple cast to an int.
+
+        // Convert <16 x i1> -> <16 x i32> -> to <4 x< 4 x i32>>
+        llvm::Value * wide_int_mask = builder().CreateSExt(mask, type_wide_int());
+        auto w4_int_masks = op_quarter_vector(wide_int_mask);
+
+        // Now we will use the horizontal sign extraction intrinsic to build a 32 bit mask value.
+        // However the only 128bit version works on floats, so we will cast from int32 to float beforehand
+        llvm::Type * w4_float_type = llvm::VectorType::get(llvm::Type::getFloatTy (*m_llvm_context), 4);
+        std::array<llvm::Value *,4> w4_float_masks = {{
+                builder().CreateBitCast (w4_int_masks[0], w4_float_type),
+                builder().CreateBitCast (w4_int_masks[1], w4_float_type),
+                builder().CreateBitCast (w4_int_masks[2], w4_float_type),
+                builder().CreateBitCast (w4_int_masks[3], w4_float_type)
+        }};
+
+        llvm::Function* func = llvm::Intrinsic::getDeclaration (module(),
+            llvm::Intrinsic::x86_sse_movmsk_ps);
+
+        llvm::Value *args[1] = {
+                w4_float_masks[0]
+        };
+        std::array<llvm::Value *,4> int4_masks;
+        int4_masks[0] = builder().CreateCall (func, makeArrayRef(args));
+        args[0] = w4_float_masks[1];
+        int4_masks[1] = builder().CreateCall (func, makeArrayRef(args));
+        args[0] = w4_float_masks[2];
+        int4_masks[2] = builder().CreateCall (func, makeArrayRef(args));
+        args[0] = w4_float_masks[3];
+        int4_masks[3] = builder().CreateCall (func, makeArrayRef(args));
+
+        llvm::Value *bits12_15 = op_shl(int4_masks[3], constant(12));
+        llvm::Value *bits8_11 = op_shl(int4_masks[2], constant(8));
+        llvm::Value *bits4_7 = op_shl(int4_masks[1], constant(4));
+        return op_or(bits12_15,op_or(bits8_11, op_or(bits4_7, int4_masks[0])));
+    }
 #endif
     
 
-    return builder().CreateZExt(result, type_int());
 }
 
 llvm::Value *
 LLVM_Util::mask_as_int16(llvm::Value *mask)
 {
     ASSERT(mask->getType() == type_wide_bool());
+    ASSERT(m_supports_native_bit_masks);
 
     return builder().CreateBitCast (mask, type_int16());
 }
@@ -2226,6 +2345,7 @@ LLVM_Util::mask_as_int16(llvm::Value *mask)
 llvm::Value *
 LLVM_Util::mask_as_int8(llvm::Value *mask)
 {
+    ASSERT(m_supports_native_bit_masks);
     return builder().CreateBitCast (mask, type_int8());
 }
 
@@ -2309,11 +2429,11 @@ LLVM_Util::int_as_mask(llvm::Value *value)
         llvm::Value * wide_int_mask = widen_value(value);
 
         // Create a filter for each lane to 0 out the other lane's bits
-        std::vector<Constant *> lane_masks(m_vector_width);
+        std::vector<llvm::Constant *> lane_masks(m_vector_width);
 		for (int lane_index = 0; lane_index < m_vector_width; ++lane_index) {
-		   lane_masks[lane_index] = ConstantInt::get(type_int(), (1<<lane_index));
+		   lane_masks[lane_index] = llvm::ConstantInt::get(type_int(), (1<<lane_index));
 		}
-		llvm::Value * lane_filter = ConstantVector::get(lane_masks);
+		llvm::Value * lane_filter = llvm::ConstantVector::get(lane_masks);
 
 		// Bitwise AND the wide_mask and the lane filter
         llvm::Value * filtered_mask = op_and(wide_int_mask, lane_filter);
@@ -2695,7 +2815,7 @@ LLVM_Util::mark_structure_return_value(llvm::Value *funccall)
                                llvm::Attribute::StructRet);
 #else
     // TODO: verify this is correct for LLVM 5.0
-    AttributeList attrs = llvm::AttributeList::get(call->getContext(), llvm::AttributeList::FunctionIndex, llvm::Attribute::NoUnwind);
+    llvm::AttributeList attrs = llvm::AttributeList::get(call->getContext(), llvm::AttributeList::FunctionIndex, llvm::Attribute::NoUnwind);
     attrs.addAttribute(call->getContext(), llvm::AttributeList::ReturnIndex, llvm::Attribute::StructRet);
 #endif
 
@@ -2865,7 +2985,7 @@ LLVM_Util::op_linearize_indices(llvm::Value *wide_index)
         llvm::ConstantInt::get (context(), llvm::APInt(32,14)),
         llvm::ConstantInt::get (context(), llvm::APInt(32,15)),
     };
-    llvm::Value *const_vec_offsets = llvm::ConstantVector::get(ArrayRef< Constant *>(&offsets_to_lane[0], 16));
+    llvm::Value *const_vec_offsets = llvm::ConstantVector::get(llvm::ArrayRef< llvm::Constant *>(&offsets_to_lane[0], 16));
 
     return op_add (strided_indices, const_vec_offsets);
 };
@@ -2876,9 +2996,24 @@ LLVM_Util::op_split_vector (llvm::Value * vector_val)
     const uint32_t extractLanes0_to_7[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
     const uint32_t extractLanes8_to_15[] = { 8, 9, 10, 11, 12, 13, 14, 15 };
 
-    llvm::Value * half_vec_1 = builder().CreateShuffleVector (vector_val, vector_val, makeArrayRef(extractLanes0_to_7));
-    llvm::Value * half_vec_2 = builder().CreateShuffleVector (vector_val, vector_val, makeArrayRef(extractLanes8_to_15));
-    return {{half_vec_1, half_vec_2}};
+    llvm::Value * half_vec_0 = builder().CreateShuffleVector (vector_val, vector_val, llvm::makeArrayRef(extractLanes0_to_7));
+    llvm::Value * half_vec_1 = builder().CreateShuffleVector (vector_val, vector_val, llvm::makeArrayRef(extractLanes8_to_15));
+    return {{half_vec_0, half_vec_1}};
+};
+
+std::array<llvm::Value *,4>
+LLVM_Util::op_quarter_vector (llvm::Value * vector_val)
+{
+    const uint32_t extractLanes0_to_3[] = { 0, 1, 2, 3 };
+    const uint32_t extractLanes4_to_7[] = { 4, 5, 6, 7 };
+    const uint32_t extractLanes8_to_11[] = { 8, 9, 10, 11};
+    const uint32_t extractLanes12_to_15[] = { 12, 13, 14, 15 };
+
+    llvm::Value * quarter_vec_0 = builder().CreateShuffleVector (vector_val, vector_val, llvm::makeArrayRef(extractLanes0_to_3));
+    llvm::Value * quarter_vec_1 = builder().CreateShuffleVector (vector_val, vector_val, llvm::makeArrayRef(extractLanes4_to_7));
+    llvm::Value * quarter_vec_2 = builder().CreateShuffleVector (vector_val, vector_val, llvm::makeArrayRef(extractLanes8_to_11));
+    llvm::Value * quarter_vec_3 = builder().CreateShuffleVector (vector_val, vector_val, llvm::makeArrayRef(extractLanes12_to_15));
+    return {{quarter_vec_0, quarter_vec_1, quarter_vec_2, quarter_vec_3}};
 };
 
 llvm::Value *
@@ -2888,7 +3023,7 @@ LLVM_Util::op_gather(llvm::Value *ptr, llvm::Value *wide_index)
 
     auto combine_vectors = [this](llvm::Value * half_vec_1, llvm::Value * half_vec_2)->llvm::Value * {
         const uint32_t combineIndices[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
-        return builder().CreateShuffleVector (half_vec_1, half_vec_2, makeArrayRef(combineIndices));
+        return builder().CreateShuffleVector (half_vec_1, half_vec_2, llvm::makeArrayRef(combineIndices));
     };
 
     // To avoid loading masked off lanes,
@@ -3461,7 +3596,7 @@ llvm::Value *
 LLVM_Util::shader_mask()
 {
 	llvm::Value * loc_of_shader_mask = masked_shader_context().location_of_mask;
-	return op_load(loc_of_shader_mask);
+	return op_load_mask(loc_of_shader_mask);
 }
 
 void
@@ -3471,16 +3606,16 @@ LLVM_Util::apply_exit_to_mask_stack()
 
 
 	llvm::Value * loc_of_shader_mask = masked_shader_context().location_of_mask;
-	llvm::Value * shader_mask = op_load(loc_of_shader_mask);
+	llvm::Value * shader_mask = op_load_mask(loc_of_shader_mask);
 
 	llvm::Value * loc_of_function_mask = masked_function_context().location_of_mask;
-	llvm::Value * function_mask = op_load(loc_of_function_mask);
+	llvm::Value * function_mask = op_load_mask(loc_of_function_mask);
 
 	// For any inactive lanes of the shader mask
 	// set the function_mask to 0.
 	llvm::Value * modified_function_mask = builder().CreateSelect(shader_mask, function_mask, shader_mask);
 
-	op_unmasked_store(modified_function_mask, loc_of_function_mask);
+	op_store_mask(modified_function_mask, loc_of_function_mask);
 
 	// Apply the modified_function_mask to the current conditional mask stack
 	// By bumping the return count, the modified_return_mask will get applied
@@ -3516,7 +3651,7 @@ LLVM_Util::apply_return_to_mask_stack()
 		llvm::Value * existing_mask = mi.mask;
 
 		llvm::Value * loc_of_return_mask = masked_function_context().location_of_mask;
-		llvm::Value * rs_mask = op_load(loc_of_return_mask);
+		llvm::Value * rs_mask = op_load_mask(loc_of_return_mask);
 		if(mi.negate) {
 			mi.mask = builder().CreateSelect(rs_mask, existing_mask, wide_constant_bool(true));
 		} else {
@@ -3538,7 +3673,7 @@ LLVM_Util::apply_break_to_mask_stack()
 
 	// TODO: do we need to track if a break was applied or not?
 	llvm::Value * loc_of_cond_mask = masked_loop_context().location_of_condition_mask;
-	llvm::Value * cond_mask = op_load(loc_of_cond_mask);
+	llvm::Value * cond_mask = op_load_mask(loc_of_cond_mask);
 	if(mi.negate) {
 		mi.mask = builder().CreateSelect(cond_mask, existing_mask, wide_constant_bool(true));
 	} else {
@@ -3557,7 +3692,7 @@ LLVM_Util::apply_continue_to_mask_stack()
 
 	// TODO: do we need to track if a break was applied or not?
 	llvm::Value * loc_of_continue_mask = masked_loop_context().location_of_continue_mask;
-	llvm::Value * continue_mask = op_load(loc_of_continue_mask);
+	llvm::Value * continue_mask = op_load_mask(loc_of_continue_mask);
 	if(mi.negate) {
 		mi.mask = builder().CreateSelect(continue_mask, wide_constant_bool(true), existing_mask);
 	} else {
@@ -3572,7 +3707,7 @@ LLVM_Util::apply_return_to(llvm::Value *existing_mask)
     ASSERT (masked_function_context().return_count > 0);
 
 	llvm::Value * loc_of_return_mask = masked_function_context().location_of_mask;
-	llvm::Value * rs_mask = op_load(loc_of_return_mask);
+	llvm::Value * rs_mask = op_load_mask(loc_of_return_mask);
 	llvm::Value *result = builder().CreateSelect(rs_mask, existing_mask, rs_mask);
 	return result;
 }
@@ -3615,7 +3750,7 @@ LLVM_Util::op_masked_break()
 	auto & loop = masked_loop_context();
 	llvm::Value * loc_of_cond_mask = loop.location_of_condition_mask;
 
-	llvm::Value * cond_mask = op_load(loc_of_cond_mask);
+	llvm::Value * cond_mask = op_load_mask(loc_of_cond_mask);
 
 	llvm::Value * break_from_mask = mi.mask;
 	llvm::Value * new_cond_mask;
@@ -3628,7 +3763,7 @@ LLVM_Util::op_masked_break()
 		new_cond_mask = builder().CreateSelect(break_from_mask, wide_constant_bool(false), cond_mask);
 	}
 
-	op_unmasked_store(new_cond_mask, loc_of_cond_mask);
+	op_store_mask(new_cond_mask, loc_of_cond_mask);
 
 	// Track that a break was called in the current masked loop
 	loop.break_count++;
@@ -3650,7 +3785,7 @@ LLVM_Util::op_masked_continue()
 	auto & loop = masked_loop_context();
 	llvm::Value * loc_of_continue_mask = loop.location_of_continue_mask;
 
-	llvm::Value * continue_mask = op_load(loc_of_continue_mask);
+	llvm::Value * continue_mask = op_load_mask(loc_of_continue_mask);
 
 	llvm::Value * continue_from_mask = mi.mask;
 	llvm::Value * new_abs_continue_mask;
@@ -3663,7 +3798,7 @@ LLVM_Util::op_masked_continue()
 		new_abs_continue_mask = builder().CreateSelect(continue_from_mask, continue_from_mask, continue_mask);
 	}
 
-	op_unmasked_store(new_abs_continue_mask, loc_of_continue_mask);
+	op_store_mask(new_abs_continue_mask, loc_of_continue_mask);
 
 	// Track that a break was called in the current masked loop
 	loop.continue_count++;
@@ -3686,7 +3821,7 @@ LLVM_Util::op_masked_exit()
 	// use
 	{
 		llvm::Value * loc_of_shader_mask = masked_shader_context().location_of_mask;
-		llvm::Value * shader_mask = op_load(loc_of_shader_mask);
+		llvm::Value * shader_mask = op_load_mask(loc_of_shader_mask);
 
 		llvm::Value * modifiedMask;
 		// For any active lanes of the mask we are returning from
@@ -3697,14 +3832,14 @@ LLVM_Util::op_masked_exit()
 			modifiedMask = builder().CreateSelect(exit_from_mask, wide_constant_bool(false), shader_mask);
 		}
 
-		op_unmasked_store(modifiedMask, loc_of_shader_mask);
+		op_store_mask(modifiedMask, loc_of_shader_mask);
 	}
 
 	// Are we inside a function scope, then we will need to modify its active lane mask
 	// functions higher up in the stack will apply the current exit mask when functions are popped
 	if (inside_of_inlined_masked_function_call()) {
 		llvm::Value * loc_of_function_mask = masked_function_context().location_of_mask;
-		llvm::Value * function_mask = op_load(loc_of_function_mask);
+		llvm::Value * function_mask = op_load_mask(loc_of_function_mask);
 
 
 		llvm::Value * modifiedMask;
@@ -3717,7 +3852,7 @@ LLVM_Util::op_masked_exit()
 			modifiedMask = builder().CreateSelect(exit_from_mask, wide_constant_bool(false), function_mask);
 		}
 
-		op_unmasked_store(modifiedMask, loc_of_function_mask);
+		op_store_mask(modifiedMask, loc_of_function_mask);
 	}
 
 	// Bumping the masked exit count will cause the exit mask to be applied to the return mask
@@ -3743,7 +3878,7 @@ LLVM_Util::op_masked_return()
 	// of to the stack for the outer scope to pickup and
 	// use
 	llvm::Value * loc_of_function_mask = masked_function_context().location_of_mask;
-	llvm::Value * function_mask = op_load(loc_of_function_mask);
+	llvm::Value * function_mask = op_load_mask(loc_of_function_mask);
 
 
 	llvm::Value * return_from_mask = mi.mask;
@@ -3757,7 +3892,7 @@ LLVM_Util::op_masked_return()
 		modifiedMask = builder().CreateSelect(return_from_mask, wide_constant_bool(false), function_mask);
 	}
 
-    op_unmasked_store(modifiedMask, loc_of_function_mask);
+    op_store_mask(modifiedMask, loc_of_function_mask);
 
 	masked_function_context().return_count++;
 }
@@ -3810,6 +3945,22 @@ LLVM_Util::op_unmasked_store (llvm::Value *val, llvm::Value *ptr)
 {
     builder().CreateStore (val, ptr);
 }
+
+llvm::Value *
+LLVM_Util::op_load_mask (llvm::Value *native_mask_ptr) {
+    ASSERT(native_mask_ptr->getType() == type_ptr(type_native_mask()));
+
+    return native_to_llvm_mask(op_load(native_mask_ptr));
+}
+
+void
+LLVM_Util::op_store_mask (llvm::Value *llvm_mask, llvm::Value *native_mask_ptr)
+{
+    ASSERT(llvm_mask->getType() == type_wide_bool());
+    ASSERT(native_mask_ptr->getType() == type_ptr(type_native_mask()));
+    builder().CreateStore (llvm_mask_to_native(llvm_mask), native_mask_ptr);
+}
+
 
 llvm::Value *
 LLVM_Util::GEP (llvm::Value *ptr, llvm::Value *elem)
@@ -4022,7 +4173,7 @@ LLVM_Util::op_or (llvm::Value *a, llvm::Value *b)
 llvm::Value *
 LLVM_Util::op_xor (llvm::Value *a, llvm::Value *b)
 {
-	// TODO: unlclear why inconsistent and not checking for operand types 
+	// TODO: unclear why inconsistent and not checking for operand types
 	// with final ASSERT for "bad value type combination"
     return builder().CreateXor (a, b);
 }
@@ -4031,7 +4182,7 @@ LLVM_Util::op_xor (llvm::Value *a, llvm::Value *b)
 llvm::Value *
 LLVM_Util::op_shl (llvm::Value *a, llvm::Value *b)
 {
-	// TODO: unlclear why inconsistent and not checking for operand types 
+	// TODO: unclear why inconsistent and not checking for operand types
 	// with final ASSERT for "bad value type combination"
     return builder().CreateShl (a, b);
 }

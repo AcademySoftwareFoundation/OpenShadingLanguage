@@ -125,6 +125,8 @@ static ustring op_end("end");
 static ustring op_nop("nop");
 static ustring op_aassign("aassign");
 static ustring op_compassign("compassign");
+static ustring op_mxcompassign("mxcompassign");
+static ustring op_mxcompref("mxcompref");
 static ustring op_aref("aref");
 static ustring op_compref("compref");
 static ustring op_useparam("useparam");
@@ -552,6 +554,17 @@ BackendLLVM::llvm_generate_debugnan (const Opcode &op)
             llvm::Value *ind = llvm_load_value (*opargsym (op, 1));
             offset = ind;
             ncheck = ll.constant(1);
+        } else if (op.opname() == op_mxcompassign) {
+            // Special case -- matrix component assignment -- only check one channel
+            ASSERT (i == 0 && "only arg 0 is written for compassign");
+            Symbol &row_sym = *opargsym (op, 1);
+            Symbol &col_sym = *opargsym (op, 2);
+            llvm::Value *row_ind = llvm_load_value (row_sym);
+            llvm::Value *col_ind = llvm_load_value (col_sym);
+            llvm::Value *comp = ll.op_mul (row_ind, ll.constant(4));
+            comp = ll.op_add (comp, col_ind);
+            offset = comp;
+            ncheck = ll.constant(1);
         }
 
         llvm::Value *args[] = { ncomps,
@@ -600,6 +613,14 @@ BackendLLVM::llvm_generate_debug_uninit (const Opcode &op)
             // don't generate uninit test code for it.
             continue;
         }
+        if (op.opname() == Strings::op_dowhile && i == 0) {
+            // The first argument of 'dowhile' is the condition temp, but
+            // it most likely its initializer run yet.
+            // Unless there is no "condition" code block, in that
+            // case we should still test it for uninit
+            if (op.jump(0) != op.jump(1))
+                continue;
+        }
         if (op.opname() == op_aref && i == 1) {
             // Special case -- array assignment -- only check one element
             llvm::Value *ind = llvm_load_value (*opargsym (op, 2));
@@ -610,6 +631,17 @@ BackendLLVM::llvm_generate_debug_uninit (const Opcode &op)
             // Special case -- component assignment -- only check one channel
             llvm::Value *ind = llvm_load_value (*opargsym (op, 2));
             offset = ind;
+            ncheck = ll.constant(1);
+        } else if (op.opname() == op_mxcompref && i == 1) {
+            // Special case -- matrix component reference -- only check one channel
+            Symbol &row_sym = *opargsym (op, 2);
+            Symbol &col_sym = *opargsym (op, 3);
+            llvm::Value *row_ind = llvm_load_value (row_sym);
+            llvm::Value *col_ind = llvm_load_value (col_sym);
+
+            llvm::Value *comp = ll.op_mul (row_ind, ll.constant(4));
+            comp = ll.op_add (comp, col_ind);
+            offset = comp;
             ncheck = ll.constant(1);
         }
 

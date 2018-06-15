@@ -409,12 +409,15 @@ DECL (osl_dict_value, "iXiXLX")
 //DECL (osl_dict_next_masked, "xXi")
 
 DECL (osl_raytype_name_batched, "iXX")
-DECL (osl_naninf_check_batched, "xiiiXiXXiXiiX")
+DECL (osl_naninf_check_batched, "xiXiXXiXiiX")
+DECL (osl_naninf_check_u_offset_masked, "xiiXiXXiXiiX")
+DECL (osl_naninf_check_w16_offset_masked, "xiiXiXXiXXiX")
 DECL (osl_range_check_batched, "iiiXXXiXiXX")
 DECL (osl_range_check_masked, "xXiiXXXiXiXX")
-#if 0 // incomplete
-DECL (osl_uninit_check, "xLXXXiXiXXiXiXii")
-#endif
+DECL (osl_uninit_check_u_values_u_offset_batched, "xLXXXiXiXXiXiXii")
+DECL (osl_uninit_check_u_values_w16_offset_masked, "xiLXXXiXiXXiXiXXi")
+DECL (osl_uninit_check_w16_values_u_offset_masked, "xiLXXXiXiXXiXiXii")
+DECL (osl_uninit_check_w16_values_w16_offset_masked, "xiLXXXiXiXXiXiXXi")
 
 DECL (osl_get_attribute_batched, "iXiXXiiXXi")
 DECL (osl_get_attribute_w16attr_name_batched, "iXiXXiiXXi")

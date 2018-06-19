@@ -170,7 +170,7 @@ osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
 
 OSL_SHADEOP void
 osl_getmessage_batched(ShaderGlobalsBatch *sgb_,void *result,
-                        const char *source_, const char *name_,
+                        char *source_,  char *name_,
                         long long type_, void *val, int derivs,
                         int layeridx, const char* sourcefile_, int sourceline,
                         unsigned int mask_value)

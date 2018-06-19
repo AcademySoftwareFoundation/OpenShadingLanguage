@@ -358,7 +358,7 @@ DECL (osl_blackbody_vf, "xXXf")
 DECL (osl_wavelength_color_vf, "xXXf")
 #endif
 
-DECL (osl_getmessage_batched, "xXXXXLXXXXXi")
+DECL (osl_getmessage_batched, "xXXssLXiisii")
 
 DECL (osl_blackbody_vf, "xXXf")
 DECL (osl_blackbody_vf_batched, "xXXf")

@@ -4547,7 +4547,7 @@ LLVMGEN (llvm_gen_trace)
     ASSERT(!rop.isSymbolUniform(Result));
 
     llvm::Value* opt;   // TraceOpt
-    opt = llvm_batched_trace_options (rop, opnum, first_optional_arg);
+    opt = llvm_batched_trace_options (rop, opnum, first_optional_arg); //These are uniform
 
     // Now call the osl_trace function, passing the options and all the
     // explicit args like trace coordinates.
@@ -5135,27 +5135,27 @@ LLVMGEN (llvm_gen_getmessage)
 
     //arg[1]: Check if source? push values (uniform or not) : push constant (uniform or not)
 
-    if(has_source)
-    {
-        ASSERT(rop.isSymbolUniform(Source) && "Incomplete:  add support for varying sources");
-        args.push_back(rop.llvm_void_ptr(Source));
-    }
-    else //No Source value, push a constant
-    {//Uniform push constant
-        args.push_back(rop.ll.constant(ustring()));
-    } //Source ends
+    int sourceArgumentIndex = args.size();
+    args.push_back(rop.llvm_void_ptr(Source));
 
-  //arg[2] Push Name (string)
-    if(rop.isSymbolUniform(Name)) {
-       args.push_back(rop.llvm_void_ptr(Name));
-    } else {
-        ASSERT(0 && "Incomplete:  add loop to create mask of coherent lanes");
-    }
+//    if(has_source)
+//    {
+//        ASSERT(rop.isSymbolUniform(Source) && "Incomplete:  add support for varying sources");
+//        args.push_back(rop.llvm_void_ptr(Source));
+//    }
+//    else //No Source value, push a constant
+//    {//Uniform push constant
+//        args.push_back(rop.ll.constant(ustring()));
+//    } //Source ends
+
+    int nameArgumentIndex = args.size();
+    args.push_back(rop.llvm_void_ptr(Name));
+
 
 
     //Data
     //args[3]
-    args.push_back (rop.ll.constant_ptr ((void *) dest_type));
+    args.push_back(rop.ll.constant (Data.typespec().simpletype()));
 
     //Check for closures, and skip it
     if (Data.typespec().is_closure_based()) {
@@ -5185,11 +5185,69 @@ LLVMGEN (llvm_gen_getmessage)
     //args[8]: sourceline
     args.push_back(rop.ll.constant(op.sourceline()));
 
-    //mask
-    args.push_back(rop.ll.mask_as_int(rop.ll.current_mask()));
+
+//SM: Add check if source.
+    if(rop.isSymbolUniform(Name) && rop.isSymbolUniform(Source)) {
+        //mask
+        args.push_back(rop.ll.mask_as_int(rop.ll.current_mask()));
+        rop.ll.call_function ("osl_getmessage_batched", &args[0], (int)args.size());
+    } else {
 
 
-    rop.ll.call_function ("osl_getmessage_batched", &args[0], (int)args.size());
+        //std::cout<<"trace name is varying"<<std::endl;
+        llvm::Value * nameVal = rop.llvm_load_value (Name);
+        llvm::Value * sourceVal = rop.llvm_load_value (Source);
+
+        llvm::Value * loc_of_remainingMask = rop.ll.op_alloca (rop.ll.type_native_mask(), 1, "lanes remaining to texture");
+        rop.ll.op_store_mask(rop.ll.current_mask(), loc_of_remainingMask);
+
+
+        llvm::BasicBlock* bin_block = rop.ll.new_basic_block (std::string("bin_getmessage"));
+        llvm::BasicBlock* after_block = rop.ll.new_basic_block (std::string("after_bin_getmessage"));
+
+        rop.ll.op_branch(bin_block);
+        {
+            llvm::Value * remainingMask = rop.ll.op_load_mask(loc_of_remainingMask);
+            llvm::Value * leadLane = rop.ll.op_1st_active_lane_of(remainingMask);
+
+
+            llvm::Value * scalar_name = rop.ll.op_extract(nameVal, leadLane);
+            args[nameArgumentIndex] = scalar_name;
+
+            llvm::Value * scalar_source = rop.ll.op_extract(sourceVal, leadLane);
+            args[sourceArgumentIndex] = scalar_source;
+
+            llvm::Value * lanesMatchingName = rop.ll.op_lanes_that_match_masked(scalar_name,
+                nameVal, remainingMask);
+            llvm::Value * lanesMatchingSource = rop.ll.op_lanes_that_match_masked(scalar_source,
+                sourceVal, remainingMask);
+
+            //Check matched masks, and push. Get matching lane
+
+            args.push_back (rop.ll.mask_as_int(lanesMatchingName));
+            args.push_back (rop.ll.mask_as_int(lanesMatchingSource));
+
+            rop.ll.call_function ("osl_getmessage_batched", &args[0], (int)args.size());
+
+            remainingMask = rop.ll.op_xor(remainingMask,lanesMatchingName);
+            remainingMask = rop.ll.op_xor(remainingMask,lanesMatchingSource);
+
+            //rop.llvm_print_mask("xor remainingMask,lanesMatchingOptions", remainingMask);
+            rop.ll.op_store_mask(remainingMask, loc_of_remainingMask);
+
+            llvm::Value * int_remainingMask = rop.ll.mask_as_int(remainingMask);
+            //rop.llvm_print_mask("remainingMask", remainingMask);
+            llvm::Value* cond_more_lanes_to_bin = rop.ll.op_ne(int_remainingMask, rop.ll.constant(0));
+            rop.ll.op_branch (cond_more_lanes_to_bin, bin_block, after_block);
+
+
+        }
+        // Continue on with the previous flow
+        rop.ll.set_insert_point (after_block);
+
+    }
+
+
     return true;
 }
 

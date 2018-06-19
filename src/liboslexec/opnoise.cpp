@@ -44,6 +44,34 @@ namespace pvt {
 
 
 
+void gabor (MaskedAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wResult,
+            ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wX,
+            const NoiseParams *opt);
+
+void gabor (MaskedAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wResult,
+            ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wX,
+            ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wY,
+            const NoiseParams *opt);
+
+void gabor (MaskedAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wResult,
+            ConstWideAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wP,
+            const NoiseParams *opt);
+
+
+
+void gabor3 (MaskedAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wResult,
+             ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wX,
+             const NoiseParams *opt);
+
+void gabor3 (MaskedAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wResult,
+             ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wX,
+             ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wY,
+             const NoiseParams *opt);
+
+void gabor3 (MaskedAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wResult,
+             ConstWideAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wP,
+             const NoiseParams *opt);
+
 
 
 
@@ -55,24 +83,28 @@ namespace pvt {
 
 
 NOISE_IMPL (cellnoise, CellNoise)
-NOISE_WIMPL (cellnoise, CellNoise, __OSL_SIMD_LANE_COUNT )
+#define __OSL_XMACRO_ARGS (cellnoise, CellNoise, __OSL_SIMD_LANE_COUNT)
+#include "opnoise_impl_wide_xmacro.h"
+
+
 #if 0 // moved to opnoise_perlin.cpp to enable parallel builds
 	NOISE_IMPL (noise, Noise)
-	NOISE_WIMPL (noise, Noise, __OSL_SIMD_LANE_COUNT)
 	NOISE_IMPL_DERIV (noise, Noise)
 #endif
 #if 0 // moved to opnoise_uperlin.cpp to enable parallel builds
 	NOISE_IMPL (snoise, SNoise)
-	NOISE_WIMPL (snoise, SNoise, __OSL_SIMD_LANE_COUNT)
 	NOISE_IMPL_DERIV (snoise, SNoise)
 #endif
-NOISE_IMPL (simplexnoise, SimplexNoise)
-NOISE_WIMPL (simplexnoise, SimplexNoise, __OSL_SIMD_LANE_COUNT)
-NOISE_IMPL_DERIV (simplexnoise, SimplexNoise)
-NOISE_IMPL (usimplexnoise, USimplexNoise)
-NOISE_WIMPL (usimplexnoise, USimplexNoise, __OSL_SIMD_LANE_COUNT)
-NOISE_IMPL_DERIV (usimplexnoise, USimplexNoise)
 
+#if 0 // moved to opnoise_simplex.cpp to enable parallel builds
+	NOISE_IMPL (simplexnoise, SimplexNoise)
+	NOISE_IMPL_DERIV (simplexnoise, SimplexNoise)
+#endif
+
+#if 0 // moved to opnoise_usimplex.cpp to enable parallel builds
+    NOISE_IMPL (usimplexnoise, USimplexNoise)
+    NOISE_IMPL_DERIV (usimplexnoise, USimplexNoise)
+#endif
 
 PNOISE_IMPL (pcellnoise, PeriodicCellNoise)
 PNOISE_IMPL (pnoise, PeriodicNoise)
@@ -104,16 +136,6 @@ struct GaborNoise {
                             ShaderGlobals *sg, const NoiseParams *opt) const {
         result = gabor (p, opt);
     }
-
-    template<int WidthT>
-    //inline void operator() (Wide<float, WidthT> &wresult, const Wide<Vec3, WidthT> &wp) const {
-	inline void operator() (ustring noisename, 
-			WideAccessor<Dual2<float>, WidthT> wresult,
-			ConstWideAccessor<Dual2<Vec3>, WidthT> wp,
-            ShaderGlobalsBatch *sgb, const NoiseParams *opt) const {
-
-        gabor (wp, wresult, opt);    	
-    }    
     
     inline void operator() (ustring noisename, Dual2<float> &result,
                             const Dual2<Vec3> &p, const Dual2<float> &t,
@@ -145,15 +167,6 @@ struct GaborNoise {
                             ShaderGlobals *sg, const NoiseParams *opt) const {
         // FIXME -- This is very broken, we are ignoring 4D!
         result = gabor3 (p, opt);
-    }
-
-    template<int WidthT>
-	inline void operator() (ustring noisename,
-			WideAccessor<Dual2<Vec3>, WidthT> wresult,
-			ConstWideAccessor<Dual2<Vec3>, WidthT> wp,
-			ConstWideAccessor<Dual2<float>, WidthT> wt,
-            ShaderGlobalsBatch *sgb, const NoiseParams *opt) const {
-        gabor3 (wp, wresult, opt);
     }
 
 };
@@ -223,7 +236,9 @@ struct GaborPNoise {
 
 
 NOISE_IMPL_DERIV_OPT (gabornoise, GaborNoise)
-NOISE_WIMPL_DERIV_OPT (gabornoise, GaborNoise, __OSL_SIMD_LANE_COUNT)
+#define __OSL_XMACRO_ARGS (gabornoise, gabor, __OSL_SIMD_LANE_COUNT)
+#include "opnoise_impl_opt_wide_xmacro.h"
+
 PNOISE_IMPL_DERIV_OPT (gaborpnoise, GaborPNoise)
 
 

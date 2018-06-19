@@ -47,43 +47,10 @@ OSL_NAMESPACE_ENTER
 
 namespace pvt {
 
-
-template<int WidthT>
-OSL_NOINLINE  void
-fast_simplexnoise3(WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp);
-
-template<int WidthT>
-OSL_NOINLINE  void
-fast_simplexnoise3(WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp);
-
-template<int WidthT>
-OSL_NOINLINE  void
-fast_simplexnoise4(WideAccessor<Vec3, WidthT> wresult,
-                        ConstWideAccessor<Vec3, WidthT> wp,
-                        ConstWideAccessor<float,WidthT> wt);
-
-template<int WidthT>
-OSL_NOINLINE  void
-fast_usimplexnoise1(WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<float, WidthT> wx);
-
-template<int WidthT>
-OSL_NOINLINE  void
-fast_usimplexnoise3(WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp);
-
-template<int WidthT>
-OSL_NOINLINE  void
-fast_usimplexnoise3(WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp);
-
-template<int WidthT>
-OSL_NOINLINE  void
-fast_usimplexnoise4(WideAccessor<Vec3, WidthT> wresult,
-                        ConstWideAccessor<Vec3, WidthT> wp,
-                        ConstWideAccessor<float,WidthT> wt);
-
 namespace {
 
 // return the greatest integer <= x
-inline int quick_floor (float x) {
+OSL_INLINE int quick_floor (float x) {
 	//	return (int) x - ((x < 0) ? 1 : 0);
 	
 	// std::floor is another option, however that appears to be
@@ -96,415 +63,15 @@ inline int quick_floor (float x) {
 	return (static_cast<int>(x)) - ((x < 0.0f) ? 1 : 0);
 }
 
-#if 0
-
-// return the greatest integer <= x, for 4 values at once
-OIIO_FORCEINLINE int4 quick_floor (const float4& x) {
-#if 0
-    // Even on SSE 4.1, this is actually very slightly slower!
-    // Continue to test on future architectures.
-    return floori(x);
-#else
-    int4 b (x);  // truncates
-    int4 isneg = bitcast_to_int4 (x < float4::Zero());
-    return b + isneg;
-    // Trick here (thanks, Cycles, for letting me spy on your code): the
-    // comparison will return (int)-1 for components that are less than
-    // zero, and adding that is the same as subtracting one!
-#endif
-}
-
-
-// convert a 32 bit integer into a floating point number in [0,1]
-inline float bits_to_01 (unsigned int bits) {
-    // divide by 2^32-1
-    return bits * (1.0f / std::numeric_limits<unsigned int>::max());
-    // TODO:  I am not sure the above is numerically correct
-    //return static_cast<float>(bits)/std::numeric_limits<unsigned int>::max();
-    }
-
-
-// Perform a bjmix (see OpenImageIO/hash.h) on 4 sets of values at once.
-OIIO_FORCEINLINE void
-bjmix (int4 &a, int4 &b, int4 &c)
-{
-    using OIIO::simd::rotl32;
-    a -= c;  a ^= rotl32(c, 4);  c += b;
-    b -= a;  b ^= rotl32(a, 6);  a += c;
-    c -= b;  c ^= rotl32(b, 8);  b += a;
-    a -= c;  a ^= rotl32(c,16);  c += b;
-    b -= a;  b ^= rotl32(a,19);  a += c;
-    c -= b;  c ^= rotl32(b, 4);  b += a;
-}
-
-
-// Perform a bjfinal (see OpenImageIO/hash.h) on 4 sets of values at once.
-OIIO_FORCEINLINE int4
-bjfinal (const int4& a_, const int4& b_, const int4& c_)
-{
-    using OIIO::simd::rotl32;
-	int4 a(a_), b(b_), c(c_);
-    c ^= b; c -= rotl32(b,14);
-    a ^= c; a -= rotl32(c,11);
-    b ^= a; b -= rotl32(a,25);
-    c ^= b; c -= rotl32(b,16);
-    a ^= c; a -= rotl32(c,4);
-    b ^= a; b -= rotl32(a,14);
-    c ^= b; c -= rotl32(b,24);
-    return c;
-}
-
-
-/// hash an array of N 32 bit values into a pseudo-random value
-/// based on my favorite hash: http://burtleburtle.net/bob/c/lookup3.c
-/// templated so that the compiler can unroll the loops for us
-template <int N>
-inline unsigned int
-inthash (const unsigned int k[N]) {
-    // now hash the data!
-    unsigned int a, b, c, len = N;
-    a = b = c = 0xdeadbeef + (len << 2) + 13;
-    while (len > 3) {
-        a += k[0];
-        b += k[1];
-        c += k[2];
-        OIIO::bjhash::bjmix(a, b, c);
-        len -= 3;
-        k += 3;
-    }
-    switch (len) {
-        case 3 : c += k[2];
-        case 2 : b += k[1];
-        case 1 : a += k[0];
-        c = OIIO::bjhash::bjfinal(a, b, c);
-        case 0:
-            break;
-    }
-    return c;
-}
-
-
-// Do four 2D hashes simultaneously.
-inline int4
-inthash_simd (const int4& key_x, const int4& key_y)
-{
-    const int len = 2;
-    const int seed_ = (0xdeadbeef + (len << 2) + 13);
-    static const OIIO_SIMD4_ALIGN int seed[4] = { seed_,seed_,seed_,seed_};
-    int4 a = (*(int4*)&seed)+key_x, b = (*(int4*)&seed)+key_y, c = (*(int4*)&seed);
-    return bjfinal (a, b, c);
-}
-
-
-// Do four 3D hashes simultaneously.
-inline int4
-inthash_simd (const int4& key_x, const int4& key_y, const int4& key_z)
-{
-    const int len = 3;
-    const int seed_ = (0xdeadbeef + (len << 2) + 13);
-    static const OIIO_SIMD4_ALIGN int seed[4] = { seed_,seed_,seed_,seed_};
-    int4 a = (*(int4*)&seed)+key_x, b = (*(int4*)&seed)+key_y, c = (*(int4*)&seed)+key_z;
-    return bjfinal (a, b, c);
-}
-
-
-
-// Do four 3D hashes simultaneously.
-inline int4
-inthash_simd (const int4& key_x, const int4& key_y, const int4& key_z, const int4& key_w)
-{
-    const int len = 4;
-    const int seed_ = (0xdeadbeef + (len << 2) + 13);
-    static const OIIO_SIMD4_ALIGN int seed[4] = { seed_,seed_,seed_,seed_};
-    int4 a = (*(int4*)&seed)+key_x, b = (*(int4*)&seed)+key_y, c = (*(int4*)&seed)+key_z;
-    bjmix (a, b, c);
-    a += key_w;
-    return bjfinal(a, b, c);
-}
-
-
-
-
-
-
-
-// Define select(bool,truevalue,falsevalue) template that works for a
-// variety of types that we can use for both scalars and vectors. Because ?:
-// won't work properly in template code with vector ops.
-template <typename B, typename F>
-OIIO_FORCEINLINE F select (const B& b, const F& t, const F& f) { return b ? t : f; }
-
-template <> OIIO_FORCEINLINE int4 select (const mask4& b, const int4& t, const int4& f) {
-    return blend (f, t, b);
-}
-
-template <> OIIO_FORCEINLINE float4 select (const mask4& b, const float4& t, const float4& f) {
-    return blend (f, t, b);
-}
-
-template <> OIIO_FORCEINLINE float4 select (const int4& b, const float4& t, const float4& f) {
-    return blend (f, t, mask4(b));
-}
-
-template <> OIIO_FORCEINLINE Dual2<float4>
-select (const mask4& b, const Dual2<float4>& t, const Dual2<float4>& f) {
-    return Dual2<float4> (blend (f.val(), t.val(), b),
-                          blend (f.dx(),  t.dx(),  b),
-                          blend (f.dy(),  t.dy(),  b));
-}
-
-template <>
-OIIO_FORCEINLINE Dual2<float4> select (const int4& b, const Dual2<float4>& t, const Dual2<float4>& f) {
-    return select (mask4(b), t, f);
-}
-
-
-
-// Define negate_if(value,bool) that will work for both scalars and vectors,
-// as well as Dual2's of both.
-template<typename FLOAT, typename BOOL>
-OIIO_FORCEINLINE FLOAT negate_if (const FLOAT& val, const BOOL& b) {
-    return b ? -val : val;
-}
-
-template<> OIIO_FORCEINLINE float4 negate_if (const float4& val, const int4& b) {
-    // Special case negate_if for SIMD -- can do it with bit tricks, no branches
-    int4 highbit (0x80000000);
-    return bitcast_to_float4 (bitcast_to_int4(val) ^ (blend0 (highbit, mask4(b))));
-}
-
-// Special case negate_if for SIMD -- can do it with bit tricks, no branches
-template<> OIIO_FORCEINLINE Dual2<float4> negate_if (const Dual2<float4>& val, const int4& b)
-{
-    return Dual2<float4> (negate_if (val.val(), b),
-                          negate_if (val.dx(),  b),
-                          negate_if (val.dy(),  b));
-}
-
-
-// Define shuffle<> template that works with Dual2<float4> analogously to
-// how it works for float4.
-template<int i0, int i1, int i2, int i3>
-OIIO_FORCEINLINE Dual2<float4> shuffle (const Dual2<float4>& a)
-{
-    return Dual2<float4> (OIIO::simd::shuffle<i0,i1,i2,i3>(a.val()),
-                          OIIO::simd::shuffle<i0,i1,i2,i3>(a.dx()),
-                          OIIO::simd::shuffle<i0,i1,i2,i3>(a.dy()));
-}
-
-template<int i>
-OIIO_FORCEINLINE Dual2<float4> shuffle (const Dual2<float4>& a)
-{
-    return Dual2<float4> (OIIO::simd::shuffle<i>(a.val()),
-                          OIIO::simd::shuffle<i>(a.dx()),
-                          OIIO::simd::shuffle<i>(a.dy()));
-}
-
-// Define extract<> that works with Dual2<float4> analogously to how it
-// works for float4.
-template<int i>
-OIIO_FORCEINLINE Dual2<float> extract (const Dual2<float4>& a)
-{
-    return Dual2<float> (OIIO::simd::extract<i>(a.val()),
-                         OIIO::simd::extract<i>(a.dx()),
-                         OIIO::simd::extract<i>(a.dy()));
-}
-
-
-
-// Equivalent to OIIO::bilerp (a, b, c, d, u, v), but if abcd are already
-// packed into a float4. We assume T is float and VECTYPE is float4,
-// but it also works if T is Dual2<float> and VECTYPE is Dual2<float4>.
-template<typename T, typename VECTYPE>
-OIIO_FORCEINLINE T bilerp (VECTYPE abcd, T u, T v) {
-    VECTYPE xx = OIIO::lerp (abcd, OIIO::simd::shuffle<1,1,3,3>(abcd), u);
-    return OIIO::simd::extract<0>(OIIO::lerp (xx,OIIO::simd::shuffle<2>(xx), v));
-}
-
-// Equivalent to OIIO::bilerp (a, b, c, d, u, v), but if abcd are already
-// packed into a float4 and uv are already packed into the first two
-// elements of a float4. We assume VECTYPE is float4, but it also works if
-// VECTYPE is Dual2<float4>.
-OIIO_FORCEINLINE Dual2<float> bilerp (const Dual2<float4>& abcd, const Dual2<float4>& uv) {
-    Dual2<float4> xx = OIIO::lerp (abcd, shuffle<1,1,3,3>(abcd), shuffle<0>(uv));
-    return extract<0>(OIIO::lerp (xx,shuffle<2>(xx), shuffle<1>(uv)));
-}
-
-
-// Equivalent to OIIO::trilerp (a, b, c, d, e, f, g, h, u, v, w), but if
-// abcd and efgh are already packed into float4's and uvw are packed into
-// the first 3 elements of a float4.
-OIIO_FORCEINLINE float trilerp (const float4& abcd, const float4& efgh, const float4& uvw) {
-    // Interpolate along z axis by w
-    float4 xy = OIIO::lerp (abcd, efgh, OIIO::simd::shuffle<2>(uvw));
-    // Interpolate along x axis by u
-    float4 xx = OIIO::lerp (xy, OIIO::simd::shuffle<1,1,3,3>(xy), OIIO::simd::shuffle<0>(uvw));
-    // interpolate along y axis by v
-    return OIIO::simd::extract<0>(OIIO::lerp (xx, OIIO::simd::shuffle<2>(xx), OIIO::simd::shuffle<1>(uvw)));
-}
-
-
-
-// always return a value inside [0,b) - even for negative numbers
-inline int imod(int a, int b) {
-    a %= b;
-    return a < 0 ? a + b : a;
-}
-
-// imod four values at once
-inline int4 imod(const int4& a, int b) {
-    int4 c = a % b;
-    return c + select(c < 0, int4(b), int4::Zero());
-}
-
-// floorfrac return quick_floor as well as the fractional remainder
-// FIXME: already implemented inside OIIO but can't easily override it for duals
-//        inside a different namespace
-inline float floorfrac(float x, int* i) {
-    *i = quick_floor(x);
-    return x - *i;
-}
-
-// floorfrac with derivs
-inline Dual2<float> floorfrac(const Dual2<float> &x, int* i) {
-    float frac = floorfrac(x.val(), i);
-    // slope of x is not affected by this operation
-    return Dual2<float>(frac, x.dx(), x.dy());
-}
-
-// floatfrac for four sets of values at once.
-inline float4 floorfrac(const float4& x, int4 * i) {
-#if 0
-    float4 thefloor = floor(x);
-    *i = int4(thefloor);
-    return x-thefloor;
-#else
-    int4 thefloor = quick_floor (x);
-    *i = thefloor;
-    return x - float4(thefloor);
-#endif
-}
-
-// floorfrac with derivs, computed on 4 values at once.
-inline Dual2<float4> floorfrac(const Dual2<float4> &x, int4* i) {
-    float4 frac = floorfrac(x.val(), i);
-    // slope of x is not affected by this operation
-    return Dual2<float4>(frac, x.dx(), x.dy());
-}
-
-
-// Perlin 'fade' function. Can be overloaded for float, Dual2, as well
-// as float4 / Dual2<float4>.
-template <typename T>
-inline T fade (const T &t) { 
-   return t * t * t * (t * (t * T(6.0f) - T(15.0f)) + T(10.0f));
-}
-
-
-// 1,2,3 and 4 dimensional gradient functions - perform a dot product against a
-// randomly chosen vector. Note that the gradient vector is not normalized, but
-// this only affects the overall "scale" of the result, so we simply account for
-// the scale by multiplying in the corresponding "perlin" function.
-// These factors were experimentally calculated to be:
-//    1D:   0.188
-//    2D:   0.507
-//    3D:   0.936
-//    4D:   0.870
-
-template <typename T>
-inline T grad (int hash, const T &x) {
-    int h = hash & 15;
-    float g = 1 + (h & 7);  // 1, 2, .., 8
-    if (h&8) g = -g;        // random sign
-    return g * x;           // dot-product
-}
-
-template <typename I, typename T>
-inline T grad (const I &hash, const T &x, const T &y) {
-    // 8 possible directions (+-1,+-2) and (+-2,+-1)
-    I h = hash & 7;
-    T u = select (h<4, x, y);
-    T v = 2.0f * select (h<4, y, x);
-    // compute the dot product with (x,y).
-    return negate_if(u, h&1) + negate_if(v, h&2);
-}
-
-template <typename I, typename T>
-inline T grad (const I &hash, const T &x, const T &y, const T &z) {
-    // use vectors pointing to the edges of the cube
-    I h = hash & 15;
-    T u = select (h<8, x, y);
-    T v = select (h<4, y, select ((h==I(12))|(h==I(14)), x, z));
-    return negate_if(u,h&1) + negate_if(v,h&2);
-}
-
-template <typename I, typename T>
-inline T grad (const I &hash, const T &x, const T &y, const T &z, const T &w) {
-    // use vectors pointing to the edges of the hypercube
-    I h = hash & 31;
-    T u = select (h<24, x, y);
-    T v = select (h<16, y, z);
-    T s = select (h<8 , z, w);
-    return negate_if(u,h&1) + negate_if(v,h&2) + negate_if(s,h&4);
-}
-
-typedef Imath::Vec3<int> Vec3i;
-
-inline Vec3 grad (const Vec3i &hash, float x) {
-    return Vec3 (grad (hash.x, x),
-                 grad (hash.y, x),
-                 grad (hash.z, x));
-}
-
-inline Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x) {
-    Dual2<float> rx = grad (hash.x, x);
-    Dual2<float> ry = grad (hash.y, x);
-    Dual2<float> rz = grad (hash.z, x);
-    return make_Vec3 (rx, ry, rz);
-}
-
-
-inline Vec3 grad (const Vec3i &hash, float x, float y) {
-    return Vec3 (grad (hash.x, x, y),
-                 grad (hash.y, x, y),
-                 grad (hash.z, x, y));
-}
-
-inline Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x, Dual2<float> y) {
-    Dual2<float> rx = grad (hash.x, x, y);
-    Dual2<float> ry = grad (hash.y, x, y);
-    Dual2<float> rz = grad (hash.z, x, y);
-    return make_Vec3 (rx, ry, rz);
-}
-
-inline Vec3 grad (const Vec3i &hash, float x, float y, float z) {
-    return Vec3 (grad (hash.x, x, y, z),
-                 grad (hash.y, x, y, z),
-                 grad (hash.z, x, y, z));
-}
-
-inline Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x, Dual2<float> y, Dual2<float> z) {
-    Dual2<float> rx = grad (hash.x, x, y, z);
-    Dual2<float> ry = grad (hash.y, x, y, z);
-    Dual2<float> rz = grad (hash.z, x, y, z);
-    return make_Vec3 (rx, ry, rz);
-}
-
-inline Vec3 grad (const Vec3i &hash, float x, float y, float z, float w) {
-    return Vec3 (grad (hash.x, x, y, z, w),
-                 grad (hash.y, x, y, z, w),
-                 grad (hash.z, x, y, z, w));
-}
-
-inline Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x, Dual2<float> y, Dual2<float> z, Dual2<float> w) {
-    Dual2<float> rx = grad (hash.x, x, y, z, w);
-    Dual2<float> ry = grad (hash.y, x, y, z, w);
-    Dual2<float> rz = grad (hash.z, x, y, z, w);
-    return make_Vec3 (rx, ry, rz);
-}
-#endif
-
-
+} // anonymous
+
+namespace fast {
+
+// Gradient table for 2D. These could be programmed the Ken Perlin way with
+// some clever bit-twiddling, but this is more clear, and not really slower.
+static const Wide<Vec2,8> fast_grad2lut_wide(
+    Vec2( -1.0f, -1.0f ), Vec2( 1.0f,  0.0f ), Vec2( -1.0f, 0.0f ), Vec2( 1.0f,  1.0f ),
+    Vec2( -1.0f,  1.0f ), Vec2( 0.0f, -1.0f ), Vec2(  0.0f, 1.0f ), Vec2(  1.0f, -1.0f ));
 
 // Gradient directions for 3D.
 // These vectors are based on the midpoints of the 12 edges of a cube.
@@ -554,9 +121,8 @@ static const unsigned char fast_simplex[64][4] = {
 	#define OSL_VERIFY(EXPR) if((EXPR)== false) osl_verify_fail(__LINE__, #EXPR); 
 #endif
 
-struct fast {
 	
-	static inline uint32_t
+	static OSL_INLINE uint32_t
 	scramble (uint32_t v0, uint32_t v1=0, uint32_t v2=0)
 	{
 	    return OIIO::bjhash::bjfinal (v0, v1, v2^0xdeadbeef);
@@ -564,7 +130,7 @@ struct fast {
 	
 	
 	template<int seedT>
-	static inline float
+	static OSL_INLINE float
 	grad1 (int i)
 	{
 	    int h = scramble (i, seedT);
@@ -574,8 +140,17 @@ struct fast {
 	    return g;
 	}
 
+    template<int seedT>
+    static OSL_INLINE Vec2
+    grad2 (int i, int j)
+	{
+	    int h = scramble (i, j, seedT);
+	    //return grad2lut[h & 7];
+        return fast_grad2lut_wide.get(h & 7);
+	}
+
 	template<int seedT>
-	static inline const Vec3 
+	static OSL_INLINE Vec3
 	grad3 (int i, int j, int k)
 	{
 	    int h = scramble (i, j, scramble (k, seedT));
@@ -585,7 +160,7 @@ struct fast {
 	}
 
 	template<int seedT>
-	static inline const Vec4
+	static OSL_INLINE const Vec4
 	grad4 (int i, int j, int k, int l)
 	{
 	    int h = scramble (i, j, scramble (k, l, seedT));
@@ -594,12 +169,90 @@ struct fast {
 	    return fast_grad4lut_wide.get(h & 31);
 	}
 
+    struct NoDerivs {
+        static OSL_INLINE constexpr bool has_derivs() { return false; }
+        static OSL_INLINE void set_dx(float) {}
+        static OSL_INLINE void set_dy(float) {}
+        static OSL_INLINE void set_dz(float) {}
+        static OSL_INLINE void set_dw(float) {}
+    };
+
+    struct DxRef {
+    private:
+        float & m_dx;
+    public:
+
+        explicit OSL_INLINE DxRef(float &dx)
+        : m_dx(dx)
+        {}
+
+        static OSL_INLINE constexpr bool has_derivs() { return true; }
+        OSL_INLINE void set_dx(float val) { m_dx = val; }
+    };
+
+    struct DxDyRef {
+    private:
+        float & m_dx;
+        float & m_dy;
+    public:
+
+        explicit OSL_INLINE DxDyRef(float &dx, float &dy)
+        : m_dx(dx)
+        , m_dy(dy)
+        {}
+
+        static OSL_INLINE constexpr bool has_derivs() { return true; }
+        OSL_INLINE void set_dx(float val) { m_dx = val; }
+        OSL_INLINE void set_dy(float val) { m_dy = val; }
+    };
+
+    struct DxDyDzRef {
+    private:
+        float & m_dx;
+        float & m_dy;
+        float & m_dz;
+    public:
+
+        explicit OSL_INLINE DxDyDzRef(float &dx, float &dy, float &dz)
+        : m_dx(dx)
+        , m_dy(dy)
+        , m_dz(dz)
+        {}
+
+        static OSL_INLINE constexpr bool has_derivs() { return true; }
+        OSL_INLINE void set_dx(float val) { m_dx = val; }
+        OSL_INLINE void set_dy(float val) { m_dy = val; }
+        OSL_INLINE void set_dz(float val) { m_dz = val; }
+    };
+
+    struct DxDyDzDwRef {
+    private:
+        float & m_dx;
+        float & m_dy;
+        float & m_dz;
+        float & m_dw;
+    public:
+
+        explicit OSL_INLINE DxDyDzDwRef(float &dx, float &dy, float &dz, float &dw)
+        : m_dx(dx)
+        , m_dy(dy)
+        , m_dz(dz)
+        , m_dw(dw)
+        {}
+
+        static OSL_INLINE constexpr bool has_derivs() { return true; }
+        OSL_INLINE void set_dx(float val) { m_dx = val; }
+        OSL_INLINE void set_dy(float val) { m_dy = val; }
+        OSL_INLINE void set_dz(float val) { m_dz = val; }
+        OSL_INLINE void set_dw(float val) { m_dw = val; }
+    };
+
 	// 1D simplex noise with derivative.
 	// If the last argument is not null, the analytic derivative
 	// is also calculated.
-	template<int seedT>
-	static inline float
-	simplexnoise1 (float x)
+	template<int seedT, typename OptionalDerivsT = NoDerivs>
+	static OSL_INLINE float
+	simplexnoise1 (float x, OptionalDerivsT derivPolicy = OptionalDerivsT())
 	{
 	    int i0 = quick_floor(x);
 	    int i1 = i0 + 1;
@@ -622,20 +275,144 @@ struct fast {
 	    float gx1 = grad1<seedT> (i1);
 	    float n1 = t41 * gx1 * x1;
 
+        // Sum up and scale the result.  The scale is empirical, to make it
+        // cover [-1,1], and to make it approximately match the range of our
+        // Perlin noise implementation.
+        const float scale = 0.36f;
+
+	    if (derivPolicy.has_derivs()) {
+	        // Compute derivative according to:
+	        // *dnoise_dx = -8.0f * t20 * t0 * x0 * (gx0 * x0) + t40 * gx0;
+	        // *dnoise_dx += -8.0f * t21 * t1 * x1 * (gx1 * x1) + t41 * gx1;
+	        float dnoise_dx = t20 * t0 * gx0 * x20;
+	        dnoise_dx += t21 * t1 * gx1 * x21;
+	        dnoise_dx *= -8.0f;
+	        dnoise_dx += t40 * gx0 + t41 * gx1;
+	        dnoise_dx *= scale;
+	        derivPolicy.set_dx(dnoise_dx);
+	    }
+
+	    return scale * (n0 + n1);
+	}
+
+	// 2D simplex noise with derivatives.
+	// If the last two arguments are not null, the analytic derivative
+	// (the 2D gradient of the scalar noise field) is also calculated.
+    template<int seedT, typename OptionalDerivsT = NoDerivs>
+	static OSL_INLINE float
+	simplexnoise2 (float x, float y, OptionalDerivsT derivPolicy = OptionalDerivsT())
+	{
+	    // Skewing factors for 2D simplex grid:
+	    const float F2 = 0.366025403;   // = 0.5*(sqrt(3.0)-1.0)
+	    const float G2 = 0.211324865;  // = (3.0-Math.sqrt(3.0))/6.0
+
+	    /* Skew the input space to determine which simplex cell we're in */
+	    float s = ( x + y ) * F2; /* Hairy factor for 2D */
+	    float xs = x + s;
+	    float ys = y + s;
+	    int i = quick_floor(xs);
+	    int j = quick_floor(ys);
+
+	    float t = (float) (i + j) * G2;
+	    float X0 = i - t; /* Unskew the cell origin back to (x,y) space */
+	    float Y0 = j - t;
+	    float x0 = x - X0; /* The x,y distances from the cell origin */
+	    float y0 = y - Y0;
+
+	    /* For the 2D case, the simplex shape is an equilateral triangle.
+	     * Determine which simplex we are in. */
+	    //int i1, j1; // Offsets for second (middle) corner of simplex in (i,j) coords
+	    //if (x0 > y0) {
+	    //    i1 = 1; j1 = 0;   // lower triangle, XY order: (0,0)->(1,0)->(1,1)
+	    //} else {
+	    //    i1 = 0; j1 = 1;   // upper triangle, YX order: (0,0)->(0,1)->(1,1)
+	    //}
+        int i1 = (x0 > y0);
+        int j1 = !i1;
+
+	    // A step of (1,0) in (i,j) means a step of (1-c,-c) in (x,y), and
+	    // a step of (0,1) in (i,j) means a step of (-c,1-c) in (x,y), where
+	    // c = (3-sqrt(3))/6
+	    float x1 = x0 - i1 + G2; // Offsets for middle corner in (x,y) unskewed coords
+	    float y1 = y0 - j1 + G2;
+	    float x2 = x0 - 1.0f + 2.0f * G2; // Offsets for last corner in (x,y) unskewed coords
+	    float y2 = y0 - 1.0f + 2.0f * G2;
+
+
+        // Noise contributions from the simplex corners
+	    // Calculate the contribution from the three corners
+        Vec2 g0 = grad2<seedT> (i, j);
+        Vec2 g1 = grad2<seedT> (i+i1, j+j1);
+        Vec2 g2 = grad2<seedT> (i+1, j+1);
+
+	    float t0 = 0.5f - x0 * x0 - y0 * y0;
+        float t20 = t0 * t0;
+        float t40 = t20 * t20;
+        float tn0 = t40 * (g0.x * x0 + g0.y * y0);
+        float n0 = (t0 >= 0.0f) ? tn0 : 0.0f;
+
+	    float t1 = 0.5f - x1 * x1 - y1 * y1;
+        float t21 = t1 * t1;
+        float t41 = t21 * t21;
+        float tn1 = t41 * (g1.x * x1 + g1.y * y1);
+        float n1 = (t1 >= 0.0f) ? tn1 : 0.0f;
+
+	    float t2 = 0.5f - x2 * x2 - y2 * y2;
+        float t22 = t2 * t2;
+        float t42 = t22 * t22;
+        float tn2 = t42 * (g2.x * x2 + g2.y * y2);
+        float n2 = (t2 >= 0.0f) ? tn2 : 0.0f;
+
 	    // Sum up and scale the result.  The scale is empirical, to make it
 	    // cover [-1,1], and to make it approximately match the range of our
 	    // Perlin noise implementation.
-	    const float scale = 0.36f;
+	    const float scale = 64.0f;
+	    float noise = scale * (n0 + n1 + n2);
 
-	    return scale * (n0 + n1);
+	    // Compute derivative, if requested by supplying non-null pointers
+	    // for the last two arguments
+	    if (derivPolicy.has_derivs()) {
+            // As we always calculated g# above,
+            // we need to zero out those who were invalid
+            // before they are used in more calculations
+            g0 = (t0 >= 0.0f) ? g0 : Vec2(0.0f);
+            g1 = (t1 >= 0.0f) ? g1 : Vec2(0.0f);
+            g2 = (t2 >= 0.0f) ? g2 : Vec2(0.0f);
+	    /*  A straight, unoptimised calculation would be like:
+	     *    *dnoise_dx = -8.0f * t20 * t0 * x0 * ( g0[0] * x0 + g0[1] * y0 ) + t40 * g0[0];
+	     *    *dnoise_dy = -8.0f * t20 * t0 * y0 * ( g0[0] * x0 + g0[1] * y0 ) + t40 * g0[1];
+	     *    *dnoise_dx += -8.0f * t21 * t1 * x1 * ( g1[0] * x1 + g1[1] * y1 ) + t41 * g1[0];
+	     *    *dnoise_dy += -8.0f * t21 * t1 * y1 * ( g1[0] * x1 + g1[1] * y1 ) + t41 * g1[1];
+	     *    *dnoise_dx += -8.0f * t22 * t2 * x2 * ( g2[0] * x2 + g2[1] * y2 ) + t42 * g2[0];
+	     *    *dnoise_dy += -8.0f * t22 * t2 * y2 * ( g2[0] * x2 + g2[1] * y2 ) + t42 * g2[1];
+	     */
+	        float temp0 = t20 * t0 * (g0.x * x0 + g0.y * y0);
+	        float dnoise_dx = temp0 * x0;
+	        float dnoise_dy = temp0 * y0;
+	        float temp1 = t21 * t1 * (g1.x * x1 + g1.y * y1);
+	        dnoise_dx += temp1 * x1;
+	        dnoise_dy += temp1 * y1;
+	        float temp2 = t22 * t2 * (g2.x* x2 + g2.y * y2);
+	        dnoise_dx += temp2 * x2;
+	        dnoise_dy += temp2 * y2;
+	        dnoise_dx *= -8.0f;
+	        dnoise_dy *= -8.0f;
+	        dnoise_dx += t40 * g0.x + t41 * g1.x + t42 * g2.x;
+	        dnoise_dy += t40 * g0.y + t41 * g1.y + t42 * g2.y;
+	        dnoise_dx *= scale; /* Scale derivative to match the noise scaling */
+	        dnoise_dy *= scale;
+	        derivPolicy.set_dx(dnoise_dx);
+            derivPolicy.set_dy(dnoise_dy);
+	    }
+	    return noise;
 	}
 
 	// 3D simplex noise with derivatives.
 	// If the last tthree arguments are not null, the analytic derivative
 	// (the 3D gradient of the scalar noise field) is also calculated.
-	template<int seedT>
-	static inline float
-	simplexnoise3 (float x, float y, float z)
+	template<int seedT, typename OptionalDerivsT = NoDerivs>
+	static OSL_INLINE float
+	simplexnoise3 (float x, float y, float z, OptionalDerivsT derivPolicy = OptionalDerivsT())
 	{
 	    // Skewing factors for 3D simplex grid:
 	    const float F3 = 0.333333333;   // = 1/3
@@ -664,24 +441,22 @@ struct fast {
 	    // Determine which simplex we are in.
 	    int i1, j1, k1; // Offsets for second corner of simplex in (i,j,k) coords
 	    int i2, j2, k2; // Offsets for third corner of simplex in (i,j,k) coords
+        // NOTE:  The GLSL version of the flags produced different results
+        // These flags are derived directly from the conditional logic
+        // which is repeated in the verification code block following
+        int bg0 = (x0 >= y0);
+        int bg1 = (y0 >= z0);
+        int bg2 = (x0 >= z0);
+        int nbg0 = !bg0;
+        int nbg1 = !bg1;
+        int nbg2 = !bg2;
+        i1 = bg0 & (bg1 | bg2);
+        j1 = nbg0 & bg1;
+        k1 =  nbg1 & ((bg0 & nbg2) | nbg0) ;
+        i2 = bg0 | (bg1 & bg2);
+        j2 = bg1 | nbg0;
+        k2 = (bg0 & nbg1) | (nbg0 &(nbg1 | nbg2));
 
-	    {
-	    	// NOTE:  The GLSL version of the flags produced different results
-	    	// These flags are derived directly from the conditional logic 
-	    	// which is repeated in the verification code block following
-	        int bg0 = (x0 >= y0);
-	        int bg1 = (y0 >= z0);
-	        int bg2 = (x0 >= z0);
-			int nbg0 = !bg0;
-			int nbg1 = !bg1;
-			int nbg2 = !bg2;
-	        i1 = bg0 & (bg1 | bg2);
-	        j1 = nbg0 & bg1;
-	        k1 =  nbg1 & ((bg0 & nbg2) | nbg0) ;
-	        i2 = bg0 | (bg1 & bg2);
-	        j2 = bg1 | nbg0;
-	        k2 = (bg0 & nbg1) | (nbg0 &(nbg1 | nbg2));
-	    }
 #ifdef OSL_VERIFY_SIMPLEX3  // Keep around to validate the bit logic above
 	    {
 	    	   if (x0>=y0) {
@@ -748,7 +523,6 @@ struct fast {
 	    float y3 = y0 - 1.0f + 3.0f * G3;
 	    float z3 = z0 - 1.0f + 3.0f * G3;
 
-	    
 	    // As we do not expect any coherency between data lanes
 	    // Hoisted work out of conditionals to encourage masking blending
     	// versus a check for coherency
@@ -793,7 +567,62 @@ struct fast {
 	    // Perlin noise implementation.
 	    constexpr float scale = 68.0f;
 	    float noise = scale * (n0 + n1 + n2 + n3);
-	
+
+
+        if (derivPolicy.has_derivs()) {
+            // As we always calculated g# above,
+            // we need to zero out those who were invalid
+            // before they are used in more calculations
+            g0 = (t0 >= 0.0f) ? g0 : Vec3(0.0f);
+            g1 = (t1 >= 0.0f) ? g1 : Vec3(0.0f);
+            g2 = (t2 >= 0.0f) ? g2 : Vec3(0.0f);
+            g3 = (t3 >= 0.0f) ? g3 : Vec3(0.0f);
+
+            /*  A straight, unoptimised calculation would be like:
+            *     *dnoise_dx = -8.0f * t20 * t0 * x0 * dot(g0[0], g0[1], g0[2], x0, y0, z0) + t40 * g0[0];
+            *    *dnoise_dy = -8.0f * t20 * t0 * y0 * dot(g0[0], g0[1], g0[2], x0, y0, z0) + t40 * g0[1];
+            *    *dnoise_dz = -8.0f * t20 * t0 * z0 * dot(g0[0], g0[1], g0[2], x0, y0, z0) + t40 * g0[2];
+            *    *dnoise_dx += -8.0f * t21 * t1 * x1 * dot(g1[0], g1[1], g1[2], x1, y1, z1) + t41 * g1[0];
+            *    *dnoise_dy += -8.0f * t21 * t1 * y1 * dot(g1[0], g1[1], g1[2], x1, y1, z1) + t41 * g1[1];
+            *    *dnoise_dz += -8.0f * t21 * t1 * z1 * dot(g1[0], g1[1], g1[2], x1, y1, z1) + t41 * g1[2];
+            *    *dnoise_dx += -8.0f * t22 * t2 * x2 * dot(g2[0], g2[1], g2[2], x2, y2, z2) + t42 * g2[0];
+            *    *dnoise_dy += -8.0f * t22 * t2 * y2 * dot(g2[0], g2[1], g2[2], x2, y2, z2) + t42 * g2[1];
+            *    *dnoise_dz += -8.0f * t22 * t2 * z2 * dot(g2[0], g2[1], g2[2], x2, y2, z2) + t42 * g2[2];
+            *    *dnoise_dx += -8.0f * t23 * t3 * x3 * dot(g3[0], g3[1], g3[2], x3, y3, z3) + t43 * g3[0];
+            *    *dnoise_dy += -8.0f * t23 * t3 * y3 * dot(g3[0], g3[1], g3[2], x3, y3, z3) + t43 * g3[1];
+            *    *dnoise_dz += -8.0f * t23 * t3 * z3 * dot(g3[0], g3[1], g3[2], x3, y3, z3) + t43 * g3[2];
+            */
+            float temp0 = t20 * t0 * (g0.x * x0 + g0.y * y0 + g0.z * z0);
+            float dnoise_dx = temp0 * x0;
+            float dnoise_dy = temp0 * y0;
+            float dnoise_dz = temp0 * z0;
+            float temp1 = t21 * t1 * (g1.x * x1 + g1.y * y1 + g1.z * z1);
+            dnoise_dx += temp1 * x1;
+            dnoise_dy += temp1 * y1;
+            dnoise_dz += temp1 * z1;
+            float temp2 = t22 * t2 * (g2.x * x2 + g2.y * y2 + g2.z * z2);
+            dnoise_dx += temp2 * x2;
+            dnoise_dy += temp2 * y2;
+            dnoise_dz += temp2 * z2;
+            float temp3 = t23 * t3 * (g3.x * x3 + g3.y * y3 + g3.z * z3);
+            dnoise_dx += temp3 * x3;
+            dnoise_dy += temp3 * y3;
+            dnoise_dz += temp3 * z3;
+            dnoise_dx *= -8.0f;
+            dnoise_dy *= -8.0f;
+            dnoise_dz *= -8.0f;
+            dnoise_dx += t40 * g0.x + t41 * g1.x + t42 * g2.x + t43 * g3.x;
+            dnoise_dy += t40 * g0.y + t41 * g1.y + t42 * g2.y + t43 * g3.y;
+            dnoise_dz += t40 * g0.z + t41 * g1.z + t42 * g2.z + t43 * g3.z;
+            dnoise_dx *= scale; // Scale derivative to match the noise scaling
+            dnoise_dy *= scale;
+            dnoise_dz *= scale;
+
+            derivPolicy.set_dx(dnoise_dx);
+            derivPolicy.set_dy(dnoise_dy);
+            derivPolicy.set_dz(dnoise_dz);
+        }
+
 	    return noise;		
 	}	
 
@@ -801,9 +630,9 @@ struct fast {
 	// 4D simplex noise with derivatives.
 	// If the last four arguments are not null, the analytic derivative
 	// (the 4D gradient of the scalar noise field) is also calculated.
-	template<int seedT>
-	static inline float
-	simplexnoise4 (float x, float y, float z, float w)
+	template<int seedT, typename OptionalDerivsT = NoDerivs>
+	static OSL_INLINE float
+	simplexnoise4 (float x, float y, float z, float w, OptionalDerivsT derivPolicy = OptionalDerivsT())
 	{
 	    // The skewing and unskewing factors are hairy again for the 4D case
 	    const float F4 = 0.309016994; // F4 = (Math.sqrt(5.0)-1.0)/4.0
@@ -952,201 +781,87 @@ struct fast {
 	    const float scale = 54.0f;
 	    float noise = scale * (n0 + n1 + n2 + n3 + n4);
 
+        if (derivPolicy.has_derivs()) {
+            // As we always calculated g# above,
+            // we need to zero out those who were invalid
+            // before they are used in more calculations
+            g0 = (t0 >= 0.0f) ? g0 : Vec4(0.0f);
+            g1 = (t1 >= 0.0f) ? g1 : Vec4(0.0f);
+            g2 = (t2 >= 0.0f) ? g2 : Vec4(0.0f);
+            g3 = (t3 >= 0.0f) ? g3 : Vec4(0.0f);
+            g4 = (t4 >= 0.0f) ? g4 : Vec4(0.0f);
+
+            /*  A straight, unoptimised calculation would be like:
+            *     *dnoise_dx = -8.0f * t20 * t0 * x0 * dot(g0[0], g0[1], g0[2], g0[3], x0, y0, z0, w0) + t40 * g0[0];
+            *    *dnoise_dy = -8.0f * t20 * t0 * y0 * dot(g0[0], g0[1], g0[2], g0[3], x0, y0, z0, w0) + t40 * g0[1];
+            *    *dnoise_dz = -8.0f * t20 * t0 * z0 * dot(g0[0], g0[1], g0[2], g0[3], x0, y0, z0, w0) + t40 * g0[2];
+            *    *dnoise_dw = -8.0f * t20 * t0 * w0 * dot(g0[0], g0[1], g0[2], g0[3], x0, y0, z0, w0) + t40 * g0[3];
+            *    *dnoise_dx += -8.0f * t21 * t1 * x1 * dot(g1[0], g1[1], g1[2], g1[3], x1, y1, z1, w1) + t41 * g1[0];
+            *    *dnoise_dy += -8.0f * t21 * t1 * y1 * dot(g1[0], g1[1], g1[2], g1[3], x1, y1, z1, w1) + t41 * g1[1];
+            *    *dnoise_dz += -8.0f * t21 * t1 * z1 * dot(g1[0], g1[1], g1[2], g1[3], x1, y1, z1, w1) + t41 * g1[2];
+            *    *dnoise_dw = -8.0f * t21 * t1 * w1 * dot(g1[0], g1[1], g1[2], g1[3], x1, y1, z1, w1) + t41 * g1[3];
+            *    *dnoise_dx += -8.0f * t22 * t2 * x2 * dot(g2[0], g2[1], g2[2], g2[3], x2, y2, z2, w2) + t42 * g2[0];
+            *    *dnoise_dy += -8.0f * t22 * t2 * y2 * dot(g2[0], g2[1], g2[2], g2[3], x2, y2, z2, w2) + t42 * g2[1];
+            *    *dnoise_dz += -8.0f * t22 * t2 * z2 * dot(g2[0], g2[1], g2[2], g2[3], x2, y2, z2, w2) + t42 * g2[2];
+            *    *dnoise_dw += -8.0f * t22 * t2 * w2 * dot(g2[0], g2[1], g2[2], g2[3], x2, y2, z2, w2) + t42 * g2[3];
+            *    *dnoise_dx += -8.0f * t23 * t3 * x3 * dot(g3[0], g3[1], g3[2], g3[3], x3, y3, z3, w3) + t43 * g3[0];
+            *    *dnoise_dy += -8.0f * t23 * t3 * y3 * dot(g3[0], g3[1], g3[2], g3[3], x3, y3, z3, w3) + t43 * g3[1];
+            *    *dnoise_dz += -8.0f * t23 * t3 * z3 * dot(g3[0], g3[1], g3[2], g3[3], x3, y3, z3, w3) + t43 * g3[2];
+            *    *dnoise_dw += -8.0f * t23 * t3 * w3 * dot(g3[0], g3[1], g3[2], g3[3], x3, y3, z3, w3) + t43 * g3[3];
+            *    *dnoise_dx += -8.0f * t24 * t4 * x4 * dot(g4[0], g4[1], g4[2], g4[3], x4, y4, z4, w4) + t44 * g4[0];
+            *    *dnoise_dy += -8.0f * t24 * t4 * y4 * dot(g4[0], g4[1], g4[2], g4[3], x4, y4, z4, w4) + t44 * g4[1];
+            *    *dnoise_dz += -8.0f * t24 * t4 * z4 * dot(g4[0], g4[1], g4[2], g4[3], x4, y4, z4, w4) + t44 * g4[2];
+            *    *dnoise_dw += -8.0f * t24 * t4 * w4 * dot(g4[0], g4[1], g4[2], g4[3], x4, y4, z4, w4) + t44 * g4[3];
+            */
+            float temp0 = t20 * t0 * (g0.x * x0 + g0.y * y0 + g0.z * z0 + g0.w * w0);
+            float dnoise_dx = temp0 * x0;
+            float dnoise_dy = temp0 * y0;
+            float dnoise_dz = temp0 * z0;
+            float dnoise_dw = temp0 * w0;
+            float temp1 = t21 * t1 * (g1.x * x1 + g1.y * y1 + g1.z * z1 + g1.w * w1);
+            dnoise_dx += temp1 * x1;
+            dnoise_dy += temp1 * y1;
+            dnoise_dz += temp1 * z1;
+            dnoise_dw += temp1 * w1;
+            float temp2 = t22 * t2 * (g2.x * x2 + g2.y * y2 + g2.z * z2 + g2.w * w2);
+            dnoise_dx += temp2 * x2;
+            dnoise_dy += temp2 * y2;
+            dnoise_dz += temp2 * z2;
+            dnoise_dw += temp2 * w2;
+            float temp3 = t23 * t3 * (g3.x * x3 + g3.y * y3 + g3.z * z3 + g3.w * w3);
+            dnoise_dx += temp3 * x3;
+            dnoise_dy += temp3 * y3;
+            dnoise_dz += temp3 * z3;
+            dnoise_dw += temp3 * w3;
+            float temp4 = t24 * t4 * (g4.x * x4 + g4.y * y4 + g4.z * z4 + g4.w * w4);
+            dnoise_dx += temp4 * x4;
+            dnoise_dy += temp4 * y4;
+            dnoise_dz += temp4 * z4;
+            dnoise_dw += temp4 * w4;
+            dnoise_dx *= -8.0f;
+            dnoise_dy *= -8.0f;
+            dnoise_dz *= -8.0f;
+            dnoise_dw *= -8.0f;
+            dnoise_dx += t40 * g0.x + t41 * g1.x + t42 * g2.x + t43 * g3.x + t44 * g4.x;
+            dnoise_dy += t40 * g0.y + t41 * g1.y + t42 * g2.y + t43 * g3.y + t44 * g4.y;
+            dnoise_dz += t40 * g0.z + t41 * g1.z + t42 * g2.z + t43 * g3.z + t44 * g4.z;
+            dnoise_dw += t40 * g0.w + t41 * g1.w + t42 * g2.w + t43 * g3.w + t44 * g4.w;
+            // Scale derivative to match the noise scaling
+            dnoise_dx *= scale;
+            dnoise_dy *= scale;
+            dnoise_dz *= scale;
+            dnoise_dw *= scale;
+
+
+            derivPolicy.set_dx(dnoise_dx);
+            derivPolicy.set_dy(dnoise_dy);
+            derivPolicy.set_dz(dnoise_dz);
+            derivPolicy.set_dw(dnoise_dw);
+        }
 	    return noise;
 	}
 
-};
-
-} // anonymous namespace
-
-
-template<int WidthT>
-void
-fast_simplexnoise3(WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp)
-{
-	OSL_INTEL_PRAGMA(forceinline recursive)
-	{
-#ifndef OSL_VERIFY_SIMPLEX3  			
-		// Workaround clang omp when it cant perform a runtime pointer check
-        // to ensure no overlap in output variables
-        // But we can tell clang to assume its safe
-		OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(WidthT))
-		OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(WidthT))
-#endif
-		for(int i=0; i< WidthT; ++i) {
-			Vec3 p = wp[i];
-
-			//float result = simplexnoise3 (p.x, p.y, p.z);
-			float result = fast::simplexnoise3<0/* seed */>(p.x, p.y, p.z);
-			wresult[i] = result;
-		}
-	}
-}
-    
-template<int WidthT>
-void
-fast_simplexnoise3(WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp)
-{
-	OSL_INTEL_PRAGMA(forceinline recursive)
-	{
-#ifndef OSL_VERIFY_SIMPLEX3  			
-		// Workaround clang omp when it cant perform a runtime pointer check
-        // to ensure no overlap in output variables
-        // But we can tell clang to assume its safe
-		OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(WidthT))
-		OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(WidthT))
-#endif
-		for(int i=0; i< WidthT; ++i) {
-			Vec3 p = wp[i];
-
-			//float result = simplexnoise3 (p.x, p.y, p.z);
-			Vec3 result;
-			result.x = fast::simplexnoise3<0/* seed */>(p.x, p.y, p.z);
-			result.y = fast::simplexnoise3<1/* seed */>(p.x, p.y, p.z);
-			result.z = fast::simplexnoise3<2/* seed */>(p.x, p.y, p.z);
-			wresult[i] = result;
-		}
-	}
-}
-
-
-template<int WidthT>
-void
-fast_simplexnoise4(WideAccessor<Vec3, WidthT> wresult,
-                        ConstWideAccessor<Vec3, WidthT> wp,
-                        ConstWideAccessor<float,WidthT> wt)
-{
-	OSL_INTEL_PRAGMA(forceinline recursive)
-	{
-#ifndef OSL_VERIFY_SIMPLEX3
-		// Workaround clang omp when it cant perform a runtime pointer check
-        // to ensure no overlap in output variables
-        // But we can tell clang to assume its safe
-		OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(WidthT))
-		OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(WidthT))
-#endif
-		for(int i=0; i< WidthT; ++i) {
-			Vec3 p = wp[i];
-			float t = wt[i];
-
-			Vec3 result;
-			result.x = fast::simplexnoise4<0/* seed */>(p.x, p.y, p.z, t);
-			result.y = fast::simplexnoise4<1/* seed */>(p.x, p.y, p.z, t);
-			result.z = fast::simplexnoise4<2/* seed */>(p.x, p.y, p.z, t);
-			wresult[i] = result;
-		}
-	}
-}
-    
-
-
-// USimplex
-template<int WidthT>
-void
-fast_usimplexnoise1(WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<float, WidthT> wx)
-{
-	OSL_INTEL_PRAGMA(forceinline recursive)
-	{
-		// Workaround clang omp when it cant perform a runtime pointer check
-        // to ensure no overlap in output variables
-        // But we can tell clang to assume its safe
-		OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(WidthT))
-		OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(WidthT))
-
-		for(int i=0; i< WidthT; ++i) {
-			float x = wx[i];
-
-			Vec3 result;
-			result.x = 0.5f * (fast::simplexnoise1<0/* seed */>(x) + 1.0f);
-			result.y = 0.5f * (fast::simplexnoise1<1/* seed */>(x) + 1.0f);
-			result.z = 0.5f * (fast::simplexnoise1<2/* seed */>(x) + 1.0f);
-			wresult[i] = result;
-		}
-	}
-}
-
-
-template<int WidthT>
-void
-fast_usimplexnoise3(WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp)
-{
-	OSL_INTEL_PRAGMA(forceinline recursive)
-	{
-#ifndef OSL_VERIFY_SIMPLEX3  
-		// Workaround clang omp when it cant perform a runtime pointer check
-        // to ensure no overlap in output variables
-        // But we can tell clang to assume its safe
-		OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(WidthT))
-		OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(WidthT))
-#endif
-		for(int i=0; i< WidthT; ++i) {
-			Vec3 p = wp[i];
-
-			float result = 0.5f * (fast::simplexnoise3<0/* seed */>(p.x, p.y, p.z) + 1.0f);
-
-			wresult[i] = result;
-		}
-	}
-}
-    
-    
-    
-template<int WidthT>
-void
-fast_usimplexnoise3(WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT>  wp)
-{
-	OSL_INTEL_PRAGMA(forceinline recursive)
-	{
-#ifndef OSL_VERIFY_SIMPLEX3  
-		// Workaround clang omp when it cant perform a runtime pointer check
-        // to ensure no overlap in output variables
-        // But we can tell clang to assume its safe
-		OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(WidthT))
-		OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(WidthT))
-#endif
-		for(int i=0; i< WidthT; ++i) {
-			Vec3 p = wp[i];
-
-			Vec3 result;
-			result.x = 0.5f * (fast::simplexnoise3<0/* seed */>(p.x, p.y, p.z) + 1.0f);
-			result.y = 0.5f * (fast::simplexnoise3<1/* seed */>(p.x, p.y, p.z) + 1.0f);
-			result.z = 0.5f * (fast::simplexnoise3<2/* seed */>(p.x, p.y, p.z) + 1.0f);
-
-			wresult[i] = result;
-		}
-	}
-}
-
-
-template<int WidthT>
-void
-fast_usimplexnoise4 (WideAccessor<Vec3, WidthT> wresult,
-						ConstWideAccessor<Vec3, WidthT> wp,
-						ConstWideAccessor<float,WidthT> wt)
-{
-	OSL_INTEL_PRAGMA(forceinline recursive)
-	{
-#ifndef OSL_VERIFY_SIMPLEX3
-		// Workaround clang omp when it cant perform a runtime pointer check
-        // to ensure no overlap in output variables
-        // But we can tell clang to assume its safe
-		OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(WidthT))
-		OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(WidthT))
-#endif
-		for(int i=0; i< WidthT; ++i) {
-			Vec3 p = wp[i];
-			float t = wt[i];
-
-			Vec3 result;
-			result.x = 0.5f * (fast::simplexnoise4<0/* seed */>(p.x, p.y, p.z, t) + 1.0f);
-			result.y = 0.5f * (fast::simplexnoise4<1/* seed */>(p.x, p.y, p.z, t) + 1.0f);
-			result.z = 0.5f * (fast::simplexnoise4<2/* seed */>(p.x, p.y, p.z, t) + 1.0f);
-			wresult[i] = result;
-		}
-	}
-}
-
-
+} // fast namespace
 
 
 }; // namespace pvt

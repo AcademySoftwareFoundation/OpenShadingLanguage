@@ -996,9 +996,9 @@ struct Wide<Dual2<Vec3>, WidthT>
 {	
 	typedef Dual2<Vec3> value_type;
 	static constexpr int width = WidthT; 
-	Wide<Vec3> x;
-	Wide<Vec3> dx;
-	Wide<Vec3> dy;
+	Wide<Vec3, WidthT> x;
+	Wide<Vec3, WidthT> dx;
+	Wide<Vec3, WidthT> dy;
 	
 	OSL_INLINE void 
 	set(int index, const value_type & value) 
@@ -1051,9 +1051,9 @@ struct Wide<Dual2<Color3>, WidthT>
 {
 	typedef Dual2<Color3> value_type;
 	static constexpr int width = WidthT;
-	Wide<Color3> x;
-	Wide<Color3> dx;
-	Wide<Color3> dy;
+	Wide<Color3, WidthT> x;
+	Wide<Color3, WidthT> dx;
+	Wide<Color3, WidthT> dy;
 
 	OSL_INLINE void
 	set(int index, const value_type & value)

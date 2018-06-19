@@ -207,6 +207,24 @@ using OIIO::string_view;
 #  define OSL_DEPRECATED(msg)
 #endif
 
+// Macro helpers for xmacro include files
+#define __OSL_EXPAND(A) A
+#define __OSL_XMACRO_ARG1(A,...) A
+#define __OSL_XMACRO_ARG2(A,B,...) B
+#define __OSL_XMACRO_ARG3(A,B,C,...) C
+#define __OSL_XMACRO_ARG4(A,B,C,D,...) D
+
+// Macro helpers to build function names based on other macros
+#define __OSL_CONCAT_INDIRECT(A, B) A ## B
+#define __OSL_CONCAT(A, B) __OSL_CONCAT_INDIRECT(A,B)
+#define __OSL_CONCAT3(A, B, C) __OSL_CONCAT(__OSL_CONCAT(A,B),C)
+#define __OSL_CONCAT4(A, B, C, D) __OSL_CONCAT(__OSL_CONCAT3(A,B,C),D)
+#define __OSL_CONCAT5(A, B, C, D, E) __OSL_CONCAT(__OSL_CONCAT4(A,B,C,D),E)
+#define __OSL_CONCAT6(A, B, C, D, E, F) __OSL_CONCAT(__OSL_CONCAT5(A,B,C,D,E),F)
+#define __OSL_CONCAT7(A, B, C, D, E, F, G) __OSL_CONCAT(__OSL_CONCAT6(A,B,C,D,E,F),G)
+
+
+
 // During development it can be useful to output extra information
 // NOTE:  internal use only
 //#define OSL_DEV

@@ -36,6 +36,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/hash.h>
 #include <OpenImageIO/simd.h>
 
+#include "../../liboslnoise/fast_simplex.h"
+
 OSL_NAMESPACE_ENTER
 
 
@@ -122,56 +124,10 @@ float simplexnoise4 (float x, float y, float z, float w, int seed=0,
                      float *dnoise_dx=NULL, float *dnoise_dy=NULL,
                      float *dnoise_dz=NULL, float *dnoise_dw=NULL);
 
-
-
-template<int WidthT>
-OSL_NOINLINE  void
-fast_simplexnoise3(WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp);
-
-template<int WidthT>
-OSL_NOINLINE  void
-fast_simplexnoise3(WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp);
-
-template<int WidthT>
-OSL_NOINLINE  void
-fast_simplexnoise4(WideAccessor<Vec3, WidthT> wresult,
-                        ConstWideAccessor<Vec3, WidthT> wp,
-                        ConstWideAccessor<float,WidthT> wt);
-
-template<int WidthT>
-OSL_NOINLINE  void
-fast_usimplexnoise1(WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<float, WidthT> wx);
-
-template<int WidthT>
-OSL_NOINLINE  void
-fast_usimplexnoise3(WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp);
-
-template<int WidthT>
-OSL_NOINLINE  void
-fast_usimplexnoise3(WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT>  wp);
-
-template<int WidthT>
-OSL_NOINLINE  void
-fast_usimplexnoise4 (WideAccessor<Vec3, WidthT> wresult,
-						ConstWideAccessor<Vec3, WidthT> wp,
-						ConstWideAccessor<float,WidthT> wt);
-
-
 namespace {
 
 // return the greatest integer <= x
-inline int quick_floor (float x) {
-	//	return (int) x - ((x < 0) ? 1 : 0);
-	
-	// std::floor is another option, however that appears to be
-	// a function call right now, and this sequence appears cheaper
-	//return static_cast<int>(x - ((x < 0.0f) ? 1.0f : 0.0f));
-	
-	// This factoring should allow the expensive float to integer
-	// conversion to happen at the same time the comparison is
-	// in an out of order CPU
-	return (static_cast<int>(x)) - ((x < 0.0f) ? 1 : 0);
-}
+// int quick_floor (float x) moved to fast_simplex.h
 
 // return the greatest integer <= x, for 4 values at once
 OIIO_FORCEINLINE int4 quick_floor (const float4& x) {
@@ -190,7 +146,7 @@ OIIO_FORCEINLINE int4 quick_floor (const float4& x) {
 }
 
 // convert a 32 bit integer into a floating point number in [0,1]
-inline float bits_to_01 (unsigned int bits) {
+OSL_INLINE float bits_to_01 (unsigned int bits) {
     // divide by 2^32-1
     return bits * (1.0f / std::numeric_limits<unsigned int>::max());
     // TODO:  I am not sure the above is numerically correct
@@ -233,7 +189,7 @@ bjfinal (const int4& a_, const int4& b_, const int4& c_)
 /// based on my favorite hash: http://burtleburtle.net/bob/c/lookup3.c
 /// templated so that the compiler can unroll the loops for us
 template <int N>
-inline unsigned int
+OSL_INLINE unsigned int
 inthash (const unsigned int k[N]) {
     // now hash the data!
     unsigned int a, b, c, len = N;
@@ -257,9 +213,56 @@ inthash (const unsigned int k[N]) {
     return c;
 }
 
+OSL_INLINE unsigned int
+inthash1 (const unsigned int k[1]) {
+    // now hash the data!
+    unsigned int start_val = 0xdeadbeef + (1 << 2) + 13;
+
+    unsigned int a = start_val + k[0];
+    unsigned int c = OIIO::bjhash::bjfinal(a, start_val, start_val);
+    return c;
+}
+
+OSL_INLINE unsigned int
+inthash2 (const unsigned int k[2]) {
+    // now hash the data!
+    unsigned int start_val = 0xdeadbeef + (2 << 2) + 13;
+
+    unsigned int a = start_val + k[0];
+    unsigned int b = start_val + k[1];
+    unsigned int c = OIIO::bjhash::bjfinal(a, b, start_val);
+    return c;
+}
+
+OSL_INLINE unsigned int
+inthash3 (const unsigned int k[3]) {
+    // now hash the data!
+    unsigned int start_val = 0xdeadbeef + (3 << 2) + 13;
+
+    unsigned int a = start_val + k[0];
+    unsigned int b = start_val + k[1];
+    unsigned int c = start_val + k[2];
+    c = OIIO::bjhash::bjfinal(a, b, c);
+    return c;
+}
+
+OSL_INLINE unsigned int
+inthash4 (const unsigned int k[4]) {
+    // now hash the data!
+    unsigned int start_val = 0xdeadbeef + (4 << 2) + 13;
+
+    unsigned int a = start_val + k[0];
+    unsigned int b = start_val + k[1];
+    unsigned int c = start_val + k[2];
+    OIIO::bjhash::bjmix(a, b, c);
+    a += k[3];
+    c = OIIO::bjhash::bjfinal(a, b, c);
+    return c;
+}
+
 
 // Do four 2D hashes simultaneously.
-inline int4
+OSL_INLINE int4
 inthash_simd (const int4& key_x, const int4& key_y)
 {
     const int len = 2;
@@ -271,7 +274,7 @@ inthash_simd (const int4& key_x, const int4& key_y)
 
 
 // Do four 3D hashes simultaneously.
-inline int4
+OSL_INLINE int4
 inthash_simd (const int4& key_x, const int4& key_y, const int4& key_z)
 {
     const int len = 3;
@@ -284,7 +287,7 @@ inthash_simd (const int4& key_x, const int4& key_y, const int4& key_z)
 
 
 // Do four 3D hashes simultaneously.
-inline int4
+OSL_INLINE int4
 inthash_simd (const int4& key_x, const int4& key_y, const int4& key_z, const int4& key_w)
 {
     const int len = 4;
@@ -298,37 +301,23 @@ inthash_simd (const int4& key_x, const int4& key_y, const int4& key_z, const int
 
 
 
-struct CellNoise {
+struct CellNoise  {
     CellNoise () { }
 
-    inline void operator() (float &result, float x) const {
+    OSL_INLINE void operator() (float &result, float x) const {
         unsigned int iv[1];
         iv[0] = quick_floor (x);
         hash1<1> (result, iv);
     }
-
-	template<int WidthT>
-	inline void operator() (WideAccessor<float, WidthT> wresult, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA(forceinline recursive)
-		{
-			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
-			for(int i=0; i< WidthT; ++i) {
-				const float x = wx[i];
-				float result;
-				this->operator()(result, x);		        
-				wresult[i] = result;
-			}
-		}
-	}    
     
-    inline void operator() (float &result, float x, float y) const {
+    OSL_INLINE void operator() (float &result, float x, float y) const {
         unsigned int iv[2];
         iv[0] = quick_floor (x);
         iv[1] = quick_floor (y);
         hash1<2> (result, iv);
     }
 
-    inline void operator() (float &result, const Vec3 &p) const {
+    OSL_INLINE void operator() (float &result, const Vec3 &p) const {
         unsigned int iv[3];
         iv[0] = quick_floor (p.x);
         iv[1] = quick_floor (p.y);
@@ -337,21 +326,8 @@ struct CellNoise {
     }
 
     
-	template<int WidthT>
-	inline void operator() (WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp) const {
-		OSL_INTEL_PRAGMA(forceinline recursive)
-		{
-			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
-			for(int i=0; i< WidthT; ++i) {
-				const Vec3 p = wp[i];
-				float result;
-				this->operator()(result, p);		        
-				wresult[i] = result;
-			}
-		}
-	}    
     
-    inline void operator() (float &result, const Vec3 &p, float t) const {
+    OSL_INLINE void operator() (float &result, const Vec3 &p, float t) const {
         unsigned int iv[4];
         iv[0] = quick_floor (p.x);
         iv[1] = quick_floor (p.y);
@@ -360,35 +336,21 @@ struct CellNoise {
         hash1<4> (result, iv);
     }
 
-    inline void operator() (Vec3 &result, float x) const {
+    OSL_INLINE void operator() (Vec3 &result, float x) const {
         unsigned int iv[2];
         iv[0] = quick_floor (x);
         hash3<2> (result, iv);
     }
     
-	template<int WidthT>
-	inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<float,WidthT> wx) const {
-		OSL_INTEL_PRAGMA(forceinline recursive)
-		{
-			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
-			for(int i=0; i< WidthT; ++i) {
-				const float x = wx[i];
-				Vec3 result;
-				this->operator()(result, x);
-				wresult[i] = result;
-			}
-		}
-	}    
-    
 
-    inline void operator() (Vec3 &result, float x, float y) const {
+    OSL_INLINE void operator() (Vec3 &result, float x, float y) const {
         unsigned int iv[3];
         iv[0] = quick_floor (x);
         iv[1] = quick_floor (y);
         hash3<3> (result, iv);
     }
 
-    inline void operator() (Vec3 &result, const Vec3 &p) const {
+    OSL_INLINE void operator() (Vec3 &result, const Vec3 &p) const {
         unsigned int iv[4];
         iv[0] = quick_floor (p.x);
         iv[1] = quick_floor (p.y);
@@ -396,22 +358,9 @@ struct CellNoise {
         hash3<4> (result, iv);
     }
     
-	template<int WidthT>
-	inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp) const {
-		OSL_INTEL_PRAGMA(forceinline recursive)
-		{
-			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
-			for(int i=0; i< WidthT; ++i) {
-				const Vec3 p = wp[i];
-				Vec3 result;
-				this->operator()(result, p);		        
-				wresult[i] = result;
-			}
-		}
-	}    
     
 
-    inline void operator() (Vec3 &result, const Vec3 &p, float t) const {
+    OSL_INLINE void operator() (Vec3 &result, const Vec3 &p, float t) const {
         unsigned int iv[5];
         iv[0] = quick_floor (p.x);
         iv[1] = quick_floor (p.y);
@@ -420,23 +369,6 @@ struct CellNoise {
         hash3<5> (result, iv);
     }
 
-	template<int WidthT>
-    inline void operator() (WideAccessor<Vec3, WidthT> wresult,
-    					    ConstWideAccessor<Vec3, WidthT> wp,
-							ConstWideAccessor<float,WidthT> wt) const {
-		OSL_INTEL_PRAGMA(forceinline recursive)
-		{
-			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
-			for(int i=0; i< WidthT; ++i) {
-				const Vec3 p = wp[i];
-				const float t = wt[i];
-				Vec3 result;
-				this->operator()(result, p, t);		        
-				wresult[i] = result;
-			}
-		}
-        
-    }
     
 private:
     template <int N>
@@ -457,13 +389,13 @@ private:
 struct PeriodicCellNoise {
     PeriodicCellNoise () { }
 
-    inline void operator() (float &result, float x, float px) const {
+    OSL_INLINE void operator() (float &result, float x, float px) const {
         unsigned int iv[1];
         iv[0] = quick_floor (wrap (x, px));
         hash1<1> (result, iv);
     }
 
-    inline void operator() (float &result, float x, float y,
+    OSL_INLINE void operator() (float &result, float x, float y,
                             float px, float py) const {
         unsigned int iv[2];
         iv[0] = quick_floor (wrap (x, px));
@@ -471,7 +403,7 @@ struct PeriodicCellNoise {
         hash1<2> (result, iv);
     }
 
-    inline void operator() (float &result, const Vec3 &p,
+    OSL_INLINE void operator() (float &result, const Vec3 &p,
                             const Vec3 &pp) const {
         unsigned int iv[3];
         iv[0] = quick_floor (wrap (p.x, pp.x));
@@ -480,7 +412,7 @@ struct PeriodicCellNoise {
         hash1<3> (result, iv);
     }
 
-    inline void operator() (float &result, const Vec3 &p, float t,
+    OSL_INLINE void operator() (float &result, const Vec3 &p, float t,
                             const Vec3 &pp, float tt) const {
         unsigned int iv[4];
         iv[0] = quick_floor (wrap (p.x, pp.x));
@@ -490,13 +422,13 @@ struct PeriodicCellNoise {
         hash1<4> (result, iv);
     }
 
-    inline void operator() (Vec3 &result, float x, float px) const {
+    OSL_INLINE void operator() (Vec3 &result, float x, float px) const {
         unsigned int iv[2];
         iv[0] = quick_floor (wrap (x, px));
         hash3<2> (result, iv);
     }
 
-    inline void operator() (Vec3 &result, float x, float y,
+    OSL_INLINE void operator() (Vec3 &result, float x, float y,
                             float px, float py) const {
         unsigned int iv[3];
         iv[0] = quick_floor (wrap (x, px));
@@ -504,7 +436,7 @@ struct PeriodicCellNoise {
         hash3<3> (result, iv);
     }
 
-    inline void operator() (Vec3 &result, const Vec3 &p, const Vec3 &pp) const {
+    OSL_INLINE void operator() (Vec3 &result, const Vec3 &p, const Vec3 &pp) const {
         unsigned int iv[4];
         iv[0] = quick_floor (wrap (p.x, pp.x));
         iv[1] = quick_floor (wrap (p.y, pp.y));
@@ -512,7 +444,7 @@ struct PeriodicCellNoise {
         hash3<4> (result, iv);
     }
 
-    inline void operator() (Vec3 &result, const Vec3 &p, float t,
+    OSL_INLINE void operator() (Vec3 &result, const Vec3 &p, float t,
                             const Vec3 &pp, float tt) const {
         unsigned int iv[5];
         iv[0] = quick_floor (wrap (p.x, pp.x));
@@ -522,30 +454,31 @@ struct PeriodicCellNoise {
         hash3<5> (result, iv);
     }
 
+
 private:
     template <int N>
-    inline void hash1 (float &result, const unsigned int k[N]) const {
+    OSL_INLINE void hash1 (float &result, const unsigned int k[N]) const {
         result = bits_to_01(inthash<N>(k));
     }
 
     template <int N>
-    inline void hash3 (Vec3 &result, unsigned int k[N]) const {
+    OSL_INLINE void hash3 (Vec3 &result, unsigned int k[N]) const {
         k[N-1] = 0; result.x = bits_to_01 (inthash<N> (k));
         k[N-1] = 1; result.y = bits_to_01 (inthash<N> (k));
         k[N-1] = 2; result.z = bits_to_01 (inthash<N> (k));
     }
 
-    inline float wrap (float s, float period) const {
+    OSL_INLINE float wrap (float s, float period) const {
         period = floorf (period);
         if (period < 1.0f)
             period = 1.0f;
         return s - period * floorf (s / period);
     }
 
-    inline Vec3 wrap (const Vec3 &s, const Vec3 &period) {
-        return Vec3 (wrap (s[0], period[0]),
-                     wrap (s[1], period[1]),
-                     wrap (s[2], period[2]));
+    OSL_INLINE Vec3 wrap (const Vec3 &s, const Vec3 &period) {
+        return Vec3 (wrap (s.x, period.x),
+                     wrap (s.y, period.y),
+                     wrap (s.z, period.z));
     }
 };
 
@@ -670,13 +603,13 @@ OIIO_FORCEINLINE float trilerp (const float4& abcd, const float4& efgh, const fl
 
 
 // always return a value inside [0,b) - even for negative numbers
-inline int imod(int a, int b) {
+OSL_INLINE int imod(int a, int b) {
     a %= b;
     return a < 0 ? a + b : a;
 }
 
 // imod four values at once
-inline int4 imod(const int4& a, int b) {
+OSL_INLINE int4 imod(const int4& a, int b) {
     int4 c = a % b;
     return c + select(c < 0, int4(b), int4::Zero());
 }
@@ -684,20 +617,20 @@ inline int4 imod(const int4& a, int b) {
 // floorfrac return quick_floor as well as the fractional remainder
 // FIXME: already implemented inside OIIO but can't easily override it for duals
 //        inside a different namespace
-inline float floorfrac(float x, int* i) {
+OSL_INLINE float floorfrac(float x, int* i) {
     *i = quick_floor(x);
     return x - *i;
 }
 
 // floorfrac with derivs
-inline Dual2<float> floorfrac(const Dual2<float> &x, int* i) {
+OSL_INLINE Dual2<float> floorfrac(const Dual2<float> &x, int* i) {
     float frac = floorfrac(x.val(), i);
     // slope of x is not affected by this operation
     return Dual2<float>(frac, x.dx(), x.dy());
 }
 
 // floatfrac for four sets of values at once.
-inline float4 floorfrac(const float4& x, int4 * i) {
+OSL_INLINE float4 floorfrac(const float4& x, int4 * i) {
 #if 0
     float4 thefloor = floor(x);
     *i = int4(thefloor);
@@ -710,7 +643,7 @@ inline float4 floorfrac(const float4& x, int4 * i) {
 }
 
 // floorfrac with derivs, computed on 4 values at once.
-inline Dual2<float4> floorfrac(const Dual2<float4> &x, int4* i) {
+OSL_INLINE Dual2<float4> floorfrac(const Dual2<float4> &x, int4* i) {
     float4 frac = floorfrac(x.val(), i);
     // slope of x is not affected by this operation
     return Dual2<float4>(frac, x.dx(), x.dy());
@@ -720,7 +653,7 @@ inline Dual2<float4> floorfrac(const Dual2<float4> &x, int4* i) {
 // Perlin 'fade' function. Can be overloaded for float, Dual2, as well
 // as float4 / Dual2<float4>.
 template <typename T>
-inline T fade (const T &t) { 
+OSL_INLINE T fade (const T &t) {
    return t * t * t * (t * (t * T(6.0f) - T(15.0f)) + T(10.0f));
 }
 
@@ -737,7 +670,7 @@ inline T fade (const T &t) {
 //    4D:   0.870
 
 template <typename T>
-inline T grad (int hash, const T &x) {
+OSL_INLINE T grad (int hash, const T &x) {
     int h = hash & 15;
     float g = 1 + (h & 7);  // 1, 2, .., 8
     if (h&8) g = -g;        // random sign
@@ -745,7 +678,7 @@ inline T grad (int hash, const T &x) {
 }
 
 template <typename I, typename T>
-inline T grad (const I &hash, const T &x, const T &y) {
+OSL_INLINE T grad (const I &hash, const T &x, const T &y) {
     // 8 possible directions (+-1,+-2) and (+-2,+-1)
     I h = hash & 7;
     T u = select (h<4, x, y);
@@ -755,7 +688,7 @@ inline T grad (const I &hash, const T &x, const T &y) {
 }
 
 template <typename I, typename T>
-inline T grad (const I &hash, const T &x, const T &y, const T &z) {
+OSL_INLINE T grad (const I &hash, const T &x, const T &y, const T &z) {
     // use vectors pointing to the edges of the cube
     I h = hash & 15;
     T u = select (h<8, x, y);
@@ -764,7 +697,7 @@ inline T grad (const I &hash, const T &x, const T &y, const T &z) {
 }
 
 template <typename I, typename T>
-inline T grad (const I &hash, const T &x, const T &y, const T &z, const T &w) {
+OSL_INLINE T grad (const I &hash, const T &x, const T &y, const T &z, const T &w) {
     // use vectors pointing to the edges of the hypercube
     I h = hash & 31;
     T u = select (h<24, x, y);
@@ -775,13 +708,13 @@ inline T grad (const I &hash, const T &x, const T &y, const T &z, const T &w) {
 
 typedef Imath::Vec3<int> Vec3i;
 
-inline Vec3 grad (const Vec3i &hash, float x) {
+OSL_INLINE Vec3 grad (const Vec3i &hash, float x) {
     return Vec3 (grad (hash.x, x),
                  grad (hash.y, x),
                  grad (hash.z, x));
 }
 
-inline Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x) {
+OSL_INLINE Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x) {
     Dual2<float> rx = grad (hash.x, x);
     Dual2<float> ry = grad (hash.y, x);
     Dual2<float> rz = grad (hash.z, x);
@@ -789,39 +722,39 @@ inline Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x) {
 }
 
 
-inline Vec3 grad (const Vec3i &hash, float x, float y) {
+OSL_INLINE Vec3 grad (const Vec3i &hash, float x, float y) {
     return Vec3 (grad (hash.x, x, y),
                  grad (hash.y, x, y),
                  grad (hash.z, x, y));
 }
 
-inline Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x, Dual2<float> y) {
+OSL_INLINE Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x, Dual2<float> y) {
     Dual2<float> rx = grad (hash.x, x, y);
     Dual2<float> ry = grad (hash.y, x, y);
     Dual2<float> rz = grad (hash.z, x, y);
     return make_Vec3 (rx, ry, rz);
 }
 
-inline Vec3 grad (const Vec3i &hash, float x, float y, float z) {
+OSL_INLINE Vec3 grad (const Vec3i &hash, float x, float y, float z) {
     return Vec3 (grad (hash.x, x, y, z),
                  grad (hash.y, x, y, z),
                  grad (hash.z, x, y, z));
 }
 
-inline Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x, Dual2<float> y, Dual2<float> z) {
+OSL_INLINE Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x, Dual2<float> y, Dual2<float> z) {
     Dual2<float> rx = grad (hash.x, x, y, z);
     Dual2<float> ry = grad (hash.y, x, y, z);
     Dual2<float> rz = grad (hash.z, x, y, z);
     return make_Vec3 (rx, ry, rz);
 }
 
-inline Vec3 grad (const Vec3i &hash, float x, float y, float z, float w) {
+OSL_INLINE Vec3 grad (const Vec3i &hash, float x, float y, float z, float w) {
     return Vec3 (grad (hash.x, x, y, z, w),
                  grad (hash.y, x, y, z, w),
                  grad (hash.z, x, y, z, w));
 }
 
-inline Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x, Dual2<float> y, Dual2<float> z, Dual2<float> w) {
+OSL_INLINE Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x, Dual2<float> y, Dual2<float> z, Dual2<float> w) {
     Dual2<float> rx = grad (hash.x, x, y, z, w);
     Dual2<float> ry = grad (hash.y, x, y, z, w);
     Dual2<float> rz = grad (hash.z, x, y, z, w);
@@ -829,31 +762,31 @@ inline Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x, Dual2<float> y, Dual
 }
 
 template <typename T>
-inline T scale1 (const T &result) { return 0.2500f * result; }
+OSL_INLINE T scale1 (const T &result) { return 0.2500f * result; }
 template <typename T>
-inline T scale2 (const T &result) { return 0.6616f * result; }
+OSL_INLINE T scale2 (const T &result) { return 0.6616f * result; }
 template <typename T>
-inline T scale3 (const T &result) { return 0.9820f * result; }
+OSL_INLINE T scale3 (const T &result) { return 0.9820f * result; }
 template <typename T>
-inline T scale4 (const T &result) { return 0.8344f * result; }
+OSL_INLINE T scale4 (const T &result) { return 0.8344f * result; }
 
 
 
 struct HashScalar {
-    int operator() (int x) const {
+    OSL_INLINE int operator() (int x) const {
         unsigned int iv[1];
         iv[0] = x;
         return inthash<1> (iv);
     }
 
-    int operator() (int x, int y) const {
+    OSL_INLINE int operator() (int x, int y) const {
         unsigned int iv[2];
         iv[0] = x;
         iv[1] = y;
         return inthash<2> (iv);
     }
 
-    int operator() (int x, int y, int z) const {
+    OSL_INLINE int operator() (int x, int y, int z) const {
         unsigned int iv[3];
         iv[0] = x;
         iv[1] = y;
@@ -861,7 +794,7 @@ struct HashScalar {
         return inthash<3> (iv);
     }
 
-    int operator() (int x, int y, int z, int w) const {
+    OSL_INLINE int operator() (int x, int y, int z, int w) const {
         unsigned int iv[4];
         iv[0] = x;
         iv[1] = y;
@@ -888,40 +821,53 @@ struct HashScalar {
 };
 
 struct HashVector {
-    Vec3i operator() (int x) const {
+    static OSL_INLINE HashScalar convertToScalar() { return HashScalar(); }
+
+    OSL_INLINE Vec3i operator() (int x) const {
         unsigned int iv[1];
         iv[0] = x;
         return hash3<1> (iv);
     }
 
-    Vec3i operator() (int x, int y) const {
+    OSL_INLINE Vec3i operator() (int x, int y) const {
         unsigned int iv[2];
         iv[0] = x;
         iv[1] = y;
         return hash3<2> (iv);
     }
 
-    Vec3i operator() (int x, int y, int z) const {
+    OSL_INLINE Vec3i operator() (int x, int y, int z) const {
         unsigned int iv[3];
         iv[0] = x;
         iv[1] = y;
         iv[2] = z;
         return hash3<3> (iv);
     }
-
-    Vec3i operator() (int x, int y, int z, int w) const {
+    OSL_INLINE Vec3i operator() (int x, int y, int z, int w) const {
         unsigned int iv[4];
         iv[0] = x;
         iv[1] = y;
         iv[2] = z;
         iv[3] = w;
-        return hash3<4> (iv);
+        //return hash3<4> (iv);
+        return hash3_4 (iv);
     }
 
     template <int N>
-    Vec3i hash3 (unsigned int k[N]) const {
+    OSL_INLINE Vec3i hash3 (unsigned int k[N]) const {
         Vec3i result;
         unsigned int h = inthash<N> (k);
+        // we only need the low-order bits to be random, so split out
+        // the 32 bit result into 3 parts for each channel
+        result.x = (h      ) & 0xFF;
+        result.y = (h >> 8 ) & 0xFF;
+        result.z = (h >> 16) & 0xFF;
+        return result;
+    }
+
+    OSL_INLINE Vec3i hash3_4 (unsigned int k[4]) const {
+        Vec3i result;
+        unsigned int h = inthash4 (k);
         // we only need the low-order bits to be random, so split out
         // the 32 bit result into 3 parts for each channel
         result.x = (h      ) & 0xFF;
@@ -957,6 +903,10 @@ struct HashVector {
 };
 
 struct HashScalarPeriodic {
+private:
+    friend struct HashVectorPeriodic;
+    HashScalarPeriodic () {}
+public:
     HashScalarPeriodic (float px) {
         m_px = quick_floor(px); if (m_px < 1) m_px = 1;
     }
@@ -1026,6 +976,7 @@ struct HashScalarPeriodic {
 };
 
 struct HashVectorPeriodic {
+
     HashVectorPeriodic (float px) {
         m_px = quick_floor(px); if (m_px < 1) m_px = 1;
     }
@@ -1046,6 +997,15 @@ struct HashVectorPeriodic {
     }
 
     int m_px, m_py, m_pz, m_pw;
+
+    OSL_INLINE HashScalarPeriodic convertToScalar() const {
+        HashScalarPeriodic r;
+        r.m_px = m_px;
+        r.m_py = m_py;
+        r.m_pz = m_pz;
+        r.m_pw = m_pw;
+        return r;
+    }
 
     Vec3i operator() (int x) const {
         unsigned int iv[1];
@@ -1115,10 +1075,22 @@ struct HashVectorPeriodic {
     }
 };
 
+// Code Generation Policies
+// main intent is to allow top level classes to share implementation and carry
+// the policy down into helper functions who might diverge in implementation
+// or conditionally emit different code paths
+struct CGDefault
+{
+    static constexpr bool allowSIMD = true;
+};
 
+struct CGScalar
+{
+    static constexpr bool allowSIMD = false;
+};
 
-template <typename V, typename H, typename T>
-inline void perlin (V& result, H& hash, const T &x) {
+template <typename CGPolicyT = CGDefault, typename V, typename H, typename T>
+OSL_INLINE void perlin (V& result, H& hash, const T &x) {
     int X; T fx = floorfrac(x, &X);
     T u = fade(fx);
 
@@ -1127,12 +1099,12 @@ inline void perlin (V& result, H& hash, const T &x) {
     result = scale1 (result);
 }
 
-
-template <typename H>
-inline void perlin (float &result, const H &hash, const float &x, const float &y)
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_INLINE void perlin (float &result, const H &hash, const float &x, const float &y)
 {
-    // result = 0.0f; return;
 #if OIIO_SIMD
+    if (CGPolicyT::allowSIMD)
+    {
     int4 XY;
     float4 fxy = floorfrac (float4(x,y,0.0f), &XY);
     float4 uv = fade(fxy);  // Note: will be (fade(fx), fade(fy), 0, 0)
@@ -1151,7 +1123,9 @@ inline void perlin (float &result, const H &hash, const float &x, const float &y
     float4 corner_grad = grad (corner_hash, remainderx, remaindery);
     result = scale2 (bilerp (corner_grad, uv[0], uv[1]));
 
-#else
+    } else
+#endif
+    {
     // ORIGINAL, non-SIMD
     int X; float fx = floorfrac(x, &X);
     int Y; float fy = floorfrac(y, &Y);
@@ -1164,16 +1138,17 @@ inline void perlin (float &result, const H &hash, const float &x, const float &y
                            grad (hash (X  , Y+1), fx     , fy-1.0f),
                            grad (hash (X+1, Y+1), fx-1.0f, fy-1.0f), u, v);
     result = scale2 (result);
-#endif
+    }
 }
 
 
-template <typename H>
-inline void perlin (float &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_INLINE void perlin (float &result, const H &hash,
                     const float &x, const float &y, const float &z)
 {
 #if OIIO_SIMD
-    // result = 0; return;
+    if (CGPolicyT::allowSIMD)
+    {
 #if 0
     // You'd think it would be faster to do the floorfrac in parallel, but
     // according to my timings, it is not. I don't understand exactly why.
@@ -1219,8 +1194,9 @@ inline void perlin (float &result, const H &hash,
     float4 corner_grad_z1 = grad (corner_hash_z1, remainderx, remaindery, remainderz-float4::One());
 
     result = scale3 (trilerp (corner_grad_z0, corner_grad_z1, uvw));
-
-#else
+    } else
+#endif
+    {
     // ORIGINAL -- non-SIMD
     int X; float fx = floorfrac(x, &X);
     int Y; float fy = floorfrac(y, &Y);
@@ -1238,40 +1214,17 @@ inline void perlin (float &result, const H &hash,
                             grad (hash (X+1, Y+1, Z+1), fx-1.0f, fy-1.0f, fz-1.0f),
                             u, v, w);
     result = scale3 (result);
-#endif
+    }
 }
 
 
-template <typename H>
-inline void perlin_scalar(float &result, const H &hash,
-                    const float &x, const float &y, const float &z)
-{	
-   // ORIGINAL -- non-SIMD
-    int X; float fx = floorfrac(x, &X);
-    int Y; float fy = floorfrac(y, &Y);
-    int Z; float fz = floorfrac(z, &Z);
-    float u = fade(fx);
-    float v = fade(fy);
-    float w = fade(fz);
-    result = OIIO::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz     ),
-                            grad (hash (X+1, Y  , Z  ), fx-1.0f, fy     , fz     ),
-                            grad (hash (X  , Y+1, Z  ), fx     , fy-1.0f, fz     ),
-                            grad (hash (X+1, Y+1, Z  ), fx-1.0f, fy-1.0f, fz     ),
-                            grad (hash (X  , Y  , Z+1), fx     , fy     , fz-1.0f),
-                            grad (hash (X+1, Y  , Z+1), fx-1.0f, fy     , fz-1.0f),
-                            grad (hash (X  , Y+1, Z+1), fx     , fy-1.0f, fz-1.0f),
-                            grad (hash (X+1, Y+1, Z+1), fx-1.0f, fy-1.0f, fz-1.0f),
-                            u, v, w);
-    result = scale3 (result);
-}
- 
-
-template <typename H>
-inline void perlin (float &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_INLINE void perlin (float &result, const H &hash,
                     const float &x, const float &y, const float &z, const float &w)
 {
 #if OIIO_SIMD
-    // result = 0; return;
+    if (CGPolicyT::allowSIMD)
+    {
 
     int4 XYZW;
     float4 fxyzw = floorfrac (float4(x,y,z,w), &XYZW);
@@ -1311,8 +1264,9 @@ inline void perlin (float &result, const H &hash,
     result = scale4 (OIIO::lerp (trilerp (corner_grad_z0, corner_grad_z1, uvts),
                                  trilerp (corner_grad_z2, corner_grad_z3, uvts),
                                  OIIO::simd::extract<3>(uvts)));
-
-#else
+    } else
+#endif
+    {
     // ORIGINAL -- non-SIMD
     int X; float fx = floorfrac(x, &X);
     int Y; float fy = floorfrac(y, &Y);
@@ -1345,17 +1299,16 @@ inline void perlin (float &result, const H &hash,
                               u, v, t),
                s);
     result = scale4 (result);
-#endif
+    }
 }
 
-
-
-template <typename H>
-inline void perlin (Dual2<float> &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_INLINE void perlin (Dual2<float> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y)
 {
 #if OIIO_SIMD
-    // result = 0; return;
+    if (CGPolicyT::allowSIMD)
+    {
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
     Dual2<float4> fxy (float4(fx.val(), fy.val(), 0.0f),
@@ -1378,7 +1331,9 @@ inline void perlin (Dual2<float> &result, const H &hash,
     Dual2<float4> corner_grad = grad (corner_hash, remainderx, remaindery);
 
     result = scale2 (bilerp (corner_grad, uv));
-#else
+    } else
+#endif
+    {
     // Non-SIMD case
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
@@ -1389,19 +1344,17 @@ inline void perlin (Dual2<float> &result, const H &hash,
                            grad (hash (X  , Y+1), fx     , fy-1.0f),
                            grad (hash (X+1, Y+1), fx-1.0f, fy-1.0f), u, v);
     result = scale2 (result);
-#endif
+    }
 }
 
 
-
-
-template <typename H>
-inline void perlin (Dual2<float> &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_INLINE void perlin (Dual2<float> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z)
 {
 #if OIIO_SIMD
-    // result = 0; return;
-
+    if (CGPolicyT::allowSIMD)
+    {
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
     int Z; Dual2<float> fz = floorfrac(z, &Z);
@@ -1437,36 +1390,9 @@ inline void perlin (Dual2<float> &result, const H &hash,
     Dual2<float4> xx = OIIO::lerp (xy, shuffle<1,1,3,3>(xy), shuffle<0>(uvw));
     // interpolate along y axis
     result = scale3 (extract<0>(OIIO::lerp (xx,shuffle<2>(xx), shuffle<1>(uvw))));
-
-#else
-    // Non-SIMD case
-    int X; Dual2<float> fx = floorfrac(x, &X);
-    int Y; Dual2<float> fy = floorfrac(y, &Y);
-    int Z; Dual2<float> fz = floorfrac(z, &Z);
-    Dual2<float> u = fade(fx);
-    Dual2<float> v = fade(fy);
-    Dual2<float> w = fade(fz);
-    result = OIIO::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz     ),
-                            grad (hash (X+1, Y  , Z  ), fx-1.0f, fy     , fz     ),
-                            grad (hash (X  , Y+1, Z  ), fx     , fy-1.0f, fz     ),
-                            grad (hash (X+1, Y+1, Z  ), fx-1.0f, fy-1.0f, fz     ),
-                            grad (hash (X  , Y  , Z+1), fx     , fy     , fz-1.0f),
-                            grad (hash (X+1, Y  , Z+1), fx-1.0f, fy     , fz-1.0f),
-                            grad (hash (X  , Y+1, Z+1), fx     , fy-1.0f, fz-1.0f),
-                            grad (hash (X+1, Y+1, Z+1), fx-1.0f, fy-1.0f, fz-1.0f),
-                            u, v, w);
-    result = scale3 (result);
+    } else
 #endif
-}
-
-
-template <typename H>
-// flatten is workaround to enable inlining of non-inlined methods
-OSL_CLANG_ATTRIBUTE(flatten)
-inline void perlin_scalar (Dual2<float> &result, const H &hash,
-                    const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z)
-{
-
+    {
     // Non-SIMD case
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
@@ -1484,16 +1410,17 @@ inline void perlin_scalar (Dual2<float> &result, const H &hash,
                             grad (hash (X+1, Y+1, Z+1), fx-1.0f, fy-1.0f, fz-1.0f),
                             u, v, w);
     result = scale3 (result);
+    }
 }
 
-template <typename H>
-inline void perlin (Dual2<float> &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_INLINE void perlin (Dual2<float> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y,
                     const Dual2<float> &z, const Dual2<float> &w)
 {
 #if OIIO_SIMD
-    // result = 0; return;
-
+    if (CGPolicyT::allowSIMD)
+    {
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
     int Z; Dual2<float> fz = floorfrac(z, &Z);
@@ -1542,8 +1469,9 @@ inline void perlin (Dual2<float> &result, const H &hash,
     Dual2<float4> xx = OIIO::lerp (xy, shuffle<1,1,3,3>(xy), shuffle<0>(uvts));
     // interpolate along y axis
     result = scale4 (extract<0>(OIIO::lerp (xx,shuffle<2>(xx), shuffle<1>(uvts))));
-
-#else
+    } else
+#endif
+    {
     // ORIGINAL -- non-SIMD
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
@@ -1576,34 +1504,17 @@ inline void perlin (Dual2<float> &result, const H &hash,
                               u, v, t),
                s);
     result = scale4 (result);
-#endif
+    }
 }
 
 
-template <typename H>
-inline void perlin_scalar (Vec3 &result, const H &hash,
-                    const float &x, const float &y)
-{
-    // Non-SIMD case
-    typedef float T;
-    int X; T fx = floorfrac(x, &X);
-    int Y; T fy = floorfrac(y, &Y);
-    T u = fade(fx);
-    T v = fade(fy);
-    result = OIIO::bilerp (grad (hash (X  , Y  ), fx     , fy     ),
-                           grad (hash (X+1, Y  ), fx-1.0f, fy     ),
-                           grad (hash (X  , Y+1), fx     , fy-1.0f),
-                           grad (hash (X+1, Y+1), fx-1.0f, fy-1.0f), u, v);
-    result = scale2 (result);
-}
-
-
-template <typename H>
-inline void perlin (Vec3 &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_INLINE void perlin (Vec3 &result, const H &hash,
                     const float &x, const float &y)
 {
 #if OIIO_SIMD
-    // result.setValue(0,0,0); return;
+    if (CGPolicyT::allowSIMD)
+    {
     int4 XYZ;
     float4 fxyz = floorfrac (float4(x,y,0), &XYZ);
     float4 uv = fade (fxyz);
@@ -1633,7 +1544,9 @@ inline void perlin (Vec3 &result, const H &hash,
         float4 xx = OIIO::lerp (corner_grad, OIIO::simd::shuffle<1,1,3,3>(corner_grad), uv[0]);
         result[i] = scale2 (OIIO::simd::extract<0>(OIIO::lerp (xx,OIIO::simd::shuffle<2>(xx), uv[1])));
     }
-#else
+    } else
+#endif
+    {
     // Non-SIMD case
     typedef float T;
     int X; T fx = floorfrac(x, &X);
@@ -1645,77 +1558,18 @@ inline void perlin (Vec3 &result, const H &hash,
                            grad (hash (X  , Y+1), fx     , fy-1.0f),
                            grad (hash (X+1, Y+1), fx-1.0f, fy-1.0f), u, v);
     result = scale2 (result);
-#endif
+    }
 }
 
 
-template <typename H>
-inline void perlin_scalar (Vec3 &result, const H &hash,
-                    const float &x, const float &y, const float &z)
-{
-	  int X; float fx = floorfrac(x, &X);
-      int Y; float fy = floorfrac(y, &Y);
-      int Z; float fz = floorfrac(z, &Z);
-      float u = fade(fx);
-      float v = fade(fy);
-      float w = fade(fz);
-            
-      int h000 = hash (X  , Y  , Z  );
-      int h100 = hash (X+1, Y  , Z  );
-      int h010 = hash (X  , Y+1, Z  );
-      int h110 = hash (X+1, Y+1, Z  );
-      int h001 = hash (X  , Y  , Z+1);
-      int h101 = hash (X+1, Y  , Z+1);
-      int h011 = hash (X  , Y+1, Z+1);
-      int h111 = hash (X+1, Y+1, Z+1);
-      
-      // We are mimicing the OIIO_SSE behavior
-      //      result[0] = (h        ) & 0xFF;
-      //	  result[1] = (srl(h,8 )) & 0xFF;
-      //	  result[2] = (srl(h,16)) & 0xFF;
-      // skipping masking the 0th version, perhaps that is a mistake
 
-      float result0 = OIIO::trilerp (grad (h000, fx     , fy     , fz      ),
-                              grad (h100, fx-1.0f, fy     , fz      ),
-                              grad (h010, fx     , fy-1.0f, fz      ),
-                              grad (h110, fx-1.0f, fy-1.0f, fz      ),
-                              grad (h001, fx     , fy     , fz-1.0f ),
-                              grad (h101, fx-1.0f, fy     , fz-1.0f ),
-                              grad (h011, fx     , fy-1.0f, fz-1.0f ),
-                              grad (h111, fx-1.0f, fy-1.0f, fz-1.0f ),
-                              u, v, w);
-      
-      float result1 = OIIO::trilerp (
-		  grad ((h000>>8) & 0xFF, fx     , fy     , fz      ),
-		  grad ((h100>>8) & 0xFF, fx-1.0f, fy     , fz      ),
-		  grad ((h010>>8) & 0xFF, fx     , fy-1.0f, fz      ),
-		  grad ((h110>>8) & 0xFF, fx-1.0f, fy-1.0f, fz      ),
-		  grad ((h001>>8) & 0xFF, fx     , fy     , fz-1.0f ),
-		  grad ((h101>>8) & 0xFF, fx-1.0f, fy     , fz-1.0f ),
-		  grad ((h011>>8) & 0xFF, fx     , fy-1.0f, fz-1.0f ),
-		  grad ((h111>>8) & 0xFF, fx-1.0f, fy-1.0f, fz-1.0f ),
-		  u, v, w);
-      
-      float result2 = OIIO::trilerp (
-		  grad ((h000>>16) & 0xFF, fx     , fy     , fz      ),
-		  grad ((h100>>16) & 0xFF, fx-1.0f, fy     , fz      ),
-		  grad ((h010>>16) & 0xFF, fx     , fy-1.0f, fz      ),
-		  grad ((h110>>16) & 0xFF, fx-1.0f, fy-1.0f, fz      ),
-		  grad ((h001>>16) & 0xFF, fx     , fy     , fz-1.0f ),
-		  grad ((h101>>16) & 0xFF, fx-1.0f, fy     , fz-1.0f ),
-		  grad ((h011>>16) & 0xFF, fx     , fy-1.0f, fz-1.0f ),
-		  grad ((h111>>16) & 0xFF, fx-1.0f, fy-1.0f, fz-1.0f ),
-		  u, v, w);
-      
-      result = Vec3(scale3 (result0), scale3 (result1), scale3 (result2));    
-}
-
-template <typename H>
-inline void perlin (Vec3 &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_INLINE void perlin (Vec3 &result, const H &hash,
                     const float &x, const float &y, const float &z)
 {
 #if OIIO_SIMD
-    // result.setValue(0,0,0); return;
+    if (CGPolicyT::allowSIMD)
+    {
 #if 0
     // You'd think it would be faster to do the floorfrac in parallel, but
     // according to my timings, it is not. Come back and understand why.
@@ -1771,7 +1625,9 @@ inline void perlin (Vec3 &result, const H &hash,
         // interpolate along y axis
         result[i] = scale3 (OIIO::simd::extract<0>(OIIO::lerp (xx,OIIO::simd::shuffle<2>(xx), OIIO::simd::shuffle<1>(uvw))));
     }
-#else
+    } else
+#endif
+    {
     // ORIGINAL -- non-SIMD
     int X; float fx = floorfrac(x, &X);
     int Y; float fy = floorfrac(y, &Y);
@@ -1779,6 +1635,10 @@ inline void perlin (Vec3 &result, const H &hash,
     float u = fade(fx);
     float v = fade(fy);
     float w = fade(fz);
+
+    // A.W. the OIIO_SIMD above differs from the original results
+    // so we are re-implementing the non-SIMD version to match below
+#if 0
     result = OIIO::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz      ),
                             grad (hash (X+1, Y  , Z  ), fx-1.0f, fy     , fz      ),
                             grad (hash (X  , Y+1, Z  ), fx     , fy-1.0f, fz      ),
@@ -1789,55 +1649,71 @@ inline void perlin (Vec3 &result, const H &hash,
                             grad (hash (X+1, Y+1, Z+1), fx-1.0f, fy-1.0f, fz-1.0f ),
                             u, v, w);
     result = scale3 (result);
+#else
+    static_assert(std::is_same<Vec3i, decltype(hash(X, Y, Z))>::value, "This re-implementation was developed for Hashs returning a vector type only");
+    // Want to avoid repeating the same hash work 3 times in a row
+    // so rather than executing the vector version, we will use HashScalar
+    // and directly mask its results on a per component basis
+    auto hash_scalar = hash.convertToScalar();
+    int h000 = hash_scalar (X  , Y  , Z  );
+    int h100 = hash_scalar (X+1, Y  , Z  );
+    int h010 = hash_scalar (X  , Y+1, Z  );
+    int h110 = hash_scalar (X+1, Y+1, Z  );
+    int h001 = hash_scalar (X  , Y  , Z+1);
+    int h101 = hash_scalar (X+1, Y  , Z+1);
+    int h011 = hash_scalar (X  , Y+1, Z+1);
+    int h111 = hash_scalar (X+1, Y+1, Z+1);
+
+    // We are mimicking the OIIO_SSE behavior
+    //      result[0] = (h        ) & 0xFF;
+    //      result[1] = (srl(h,8 )) & 0xFF;
+    //      result[2] = (srl(h,16)) & 0xFF;
+    // skipping masking the 0th version, perhaps that is a mistake
+
+    float result0 = OIIO::trilerp (grad (h000, fx     , fy     , fz      ),
+                            grad (h100, fx-1.0f, fy     , fz      ),
+                            grad (h010, fx     , fy-1.0f, fz      ),
+                            grad (h110, fx-1.0f, fy-1.0f, fz      ),
+                            grad (h001, fx     , fy     , fz-1.0f ),
+                            grad (h101, fx-1.0f, fy     , fz-1.0f ),
+                            grad (h011, fx     , fy-1.0f, fz-1.0f ),
+                            grad (h111, fx-1.0f, fy-1.0f, fz-1.0f ),
+                            u, v, w);
+
+    float result1 = OIIO::trilerp (
+        grad ((h000>>8) & 0xFF, fx     , fy     , fz      ),
+        grad ((h100>>8) & 0xFF, fx-1.0f, fy     , fz      ),
+        grad ((h010>>8) & 0xFF, fx     , fy-1.0f, fz      ),
+        grad ((h110>>8) & 0xFF, fx-1.0f, fy-1.0f, fz      ),
+        grad ((h001>>8) & 0xFF, fx     , fy     , fz-1.0f ),
+        grad ((h101>>8) & 0xFF, fx-1.0f, fy     , fz-1.0f ),
+        grad ((h011>>8) & 0xFF, fx     , fy-1.0f, fz-1.0f ),
+        grad ((h111>>8) & 0xFF, fx-1.0f, fy-1.0f, fz-1.0f ),
+        u, v, w);
+
+    float result2 = OIIO::trilerp (
+        grad ((h000>>16) & 0xFF, fx     , fy     , fz      ),
+        grad ((h100>>16) & 0xFF, fx-1.0f, fy     , fz      ),
+        grad ((h010>>16) & 0xFF, fx     , fy-1.0f, fz      ),
+        grad ((h110>>16) & 0xFF, fx-1.0f, fy-1.0f, fz      ),
+        grad ((h001>>16) & 0xFF, fx     , fy     , fz-1.0f ),
+        grad ((h101>>16) & 0xFF, fx-1.0f, fy     , fz-1.0f ),
+        grad ((h011>>16) & 0xFF, fx     , fy-1.0f, fz-1.0f ),
+        grad ((h111>>16) & 0xFF, fx-1.0f, fy-1.0f, fz-1.0f ),
+        u, v, w);
+
+    result = Vec3(scale3 (result0), scale3 (result1), scale3 (result2));
 #endif
+    }
 }
 
-
-template <typename H>
-OSL_INLINE Vec3 perlin_scalar (const H hash,
-                    const float x, const float y, const float z, const float w)
-{
-    int X; float fx = floorfrac(x, &X);
-    int Y; float fy = floorfrac(y, &Y);
-    int Z; float fz = floorfrac(z, &Z);
-    int W; float fw = floorfrac(w, &W);
-
-    float u = fade(fx);
-    float v = fade(fy);
-    float t = fade(fz);
-    float s = fade(fw);
-
-    auto result = OIIO::lerp (
-    		  OIIO::trilerp  (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
-                              grad (hash (X+1, Y  , Z  , W  ), fx-1.0f, fy     , fz     , fw     ),
-                              grad (hash (X  , Y+1, Z  , W  ), fx     , fy-1.0f, fz     , fw     ),
-                              grad (hash (X+1, Y+1, Z  , W  ), fx-1.0f, fy-1.0f, fz     , fw     ),
-                              grad (hash (X  , Y  , Z+1, W  ), fx     , fy     , fz-1.0f, fw     ),
-                              grad (hash (X+1, Y  , Z+1, W  ), fx-1.0f, fy     , fz-1.0f, fw     ),
-                              grad (hash (X  , Y+1, Z+1, W  ), fx     , fy-1.0f, fz-1.0f, fw     ),
-                              grad (hash (X+1, Y+1, Z+1, W  ), fx-1.0f, fy-1.0f, fz-1.0f, fw     ),
-                              u, v, t),
-		      OIIO::trilerp  (grad (hash (X  , Y  , Z  , W+1), fx     , fy     , fz     , fw-1.0f),
-                              grad (hash (X+1, Y  , Z  , W+1), fx-1.0f, fy     , fz     , fw-1.0f),
-                              grad (hash (X  , Y+1, Z  , W+1), fx     , fy-1.0f, fz     , fw-1.0f),
-                              grad (hash (X+1, Y+1, Z  , W+1), fx-1.0f, fy-1.0f, fz     , fw-1.0f),
-                              grad (hash (X  , Y  , Z+1, W+1), fx     , fy     , fz-1.0f, fw-1.0f),
-                              grad (hash (X+1, Y  , Z+1, W+1), fx-1.0f, fy     , fz-1.0f, fw-1.0f),
-                              grad (hash (X  , Y+1, Z+1, W+1), fx     , fy-1.0f, fz-1.0f, fw-1.0f),
-                              grad (hash (X+1, Y+1, Z+1, W+1), fx-1.0f, fy-1.0f, fz-1.0f, fw-1.0f),
-                              u, v, t),
-               s);
-    return scale4 (result);
-}
-
-
-template <typename H>
-inline void perlin (Vec3 &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_INLINE void perlin (Vec3 &result, const H &hash,
                     const float &x, const float &y, const float &z, const float &w)
 {
 #if OIIO_SIMD
-    // result.setValue(0,0,0); return;
-
+    if (CGPolicyT::allowSIMD)
+    {
     int4 XYZW;
     float4 fxyzw = floorfrac (float4(x,y,z,w), &XYZW);
     float4 uvts = fade (fxyzw);
@@ -1879,7 +1755,9 @@ inline void perlin (Vec3 &result, const H &hash,
                                         trilerp (corner_grad_z2, corner_grad_z3, uvts),
                                         OIIO::simd::extract<3>(uvts)));
     }
-#else
+    } else
+#endif
+    {
     // ORIGINAL -- non-SIMD
     int X; float fx = floorfrac(x, &X);
     int Y; float fy = floorfrac(y, &Y);
@@ -1912,17 +1790,17 @@ inline void perlin (Vec3 &result, const H &hash,
                               u, v, t),
                s);
     result = scale4 (result);
-#endif
+    }
 }
 
 
-
-template <typename H>
-inline void perlin (Dual2<Vec3> &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_INLINE void perlin (Dual2<Vec3> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y)
 {
-    // result = Vec3(0,0,0); return;
 #if OIIO_SIMD
+    if (CGPolicyT::allowSIMD)
+    {
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
     Dual2<float4> fxyz (float4(fx.val(), fy.val(), 0.0f),
@@ -1959,8 +1837,9 @@ inline void perlin (Dual2<Vec3> &result, const H &hash,
     result.set (Vec3 (r[0].val(), r[1].val(), r[2].val()),
                 Vec3 (r[0].dx(),  r[1].dx(),  r[2].dx()),
                 Vec3 (r[0].dy(),  r[1].dy(),  r[2].dy()));
-
-#else
+    } else
+#endif
+    {
     // ORIGINAL -- non-SIMD
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
@@ -1972,17 +1851,17 @@ inline void perlin (Dual2<Vec3> &result, const H &hash,
                            grad (hash (X+1, Y+1), fx-1.0f, fy-1.0f),
                            u, v);
     result = scale2 (result);
-#endif
+    }
 }
 
 
-
-template <typename H>
-inline void perlin (Dual2<Vec3> &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_INLINE void perlin (Dual2<Vec3> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z)
 {
-    // result = Vec3(0,0,0); return;
 #if OIIO_SIMD
+    if (CGPolicyT::allowSIMD)
+    {
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
     int Z; Dual2<float> fz = floorfrac(z, &Z);
@@ -2028,8 +1907,9 @@ inline void perlin (Dual2<Vec3> &result, const H &hash,
     result.set (Vec3 (r[0].val(), r[1].val(), r[2].val()),
                 Vec3 (r[0].dx(),  r[1].dx(),  r[2].dx()),
                 Vec3 (r[0].dy(),  r[1].dy(),  r[2].dy()));
-
-#else
+    } else
+#endif
+    {
     // ORIGINAL -- non-SIMD
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
@@ -2047,19 +1927,18 @@ inline void perlin (Dual2<Vec3> &result, const H &hash,
                             grad (hash (X+1, Y+1, Z+1), fx-1.0f, fy-1.0f, fz-1.0f ),
                             u, v, w);
     result = scale3 (result);
-#endif
+    }
 }
 
 
-
-template <typename H>
-inline void perlin (Dual2<Vec3> &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_INLINE void perlin (Dual2<Vec3> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y,
                     const Dual2<float> &z, const Dual2<float> &w)
 {
-    // result = Vec3(0,0,0); return;
 #if OIIO_SIMD
-
+    if (CGPolicyT::allowSIMD)
+    {
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
     int Z; Dual2<float> fz = floorfrac(z, &Z);
@@ -2119,8 +1998,9 @@ inline void perlin (Dual2<Vec3> &result, const H &hash,
     result.set (Vec3 (r[0].val(), r[1].val(), r[2].val()),
                 Vec3 (r[0].dx(),  r[1].dx(),  r[2].dx()),
                 Vec3 (r[0].dy(),  r[1].dy(),  r[2].dy()));
-
-#else
+    } else
+#endif
+    {
     // ORIGINAL -- non-SIMD
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
@@ -2153,493 +2033,287 @@ inline void perlin (Dual2<Vec3> &result, const H &hash,
                               u, v, t),
                s);
     result = scale4 (result);
-#endif
+    }
 }
 
 
 
-struct Noise {
-    Noise () { }
+template<typename CGPolicyT = CGDefault>
+struct NoiseImpl {
+    NoiseImpl () { }
 
-    inline void operator() (float &result, float x) const {
+    OSL_INLINE void operator() (float &result, float x) const {
         HashScalar h;
-        perlin(result, h, x);
-        result = 0.5f * (result + 1.0f);
-    }
-    
-	template<int WidthT>
-	inline void operator() (WideAccessor<float, WidthT> result, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA(forceinline recursive)
-		{
-			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
-			for(int i=0; i< WidthT; ++i) {
-				float x = wx[i];
-				float perlinResult;
-				// perlin(float, hash, float) isn't based on OIIO_SIMD
-				// so no need for a seperate perlin_scalar
-				this->operator()(perlinResult,x);
-				result[i] = perlinResult;
-			}
-		}
-	}
-    
-
-    inline void operator() (float &result, float x, float y) const {
-        HashScalar h;
-        perlin(result, h, x, y);
+        perlin<CGPolicyT>(result, h, x);
         result = 0.5f * (result + 1.0f);
     }
 
-    inline void operator() (float &result, const Vec3 &p) const {
+    OSL_INLINE void operator() (float &result, float x, float y) const {
         HashScalar h;
-        perlin(result, h, p.x, p.y, p.z);
+        perlin<CGPolicyT>(result, h, x, y);
         result = 0.5f * (result + 1.0f);
     }
 
-	template<int WidthT>
-	inline void operator() (WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp) const {
-		OSL_INTEL_PRAGMA(forceinline recursive)
-		{
-			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
-			for(int i=0; i< WidthT; ++i) {
-				Vec3 p = wp[i];
-				float perlinResult;
-				HashScalar h;
-				perlin_scalar(perlinResult, h, p.x, p.y, p.z);
-				float scaledResult = 0.5f * (perlinResult + 1.0f);								
-				wresult[i] = scaledResult;
-			}
-		}
-	}
-    
-    inline void operator() (float &result, const Vec3 &p, float t) const {
+    OSL_INLINE void operator() (float &result, const Vec3 &p) const {
         HashScalar h;
-        perlin(result, h, p.x, p.y, p.z, t);
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z);
         result = 0.5f * (result + 1.0f);
     }
 
-    inline void operator() (Vec3 &result, float x) const {
-        HashVector h;
-        perlin(result, h, x);
-        result = 0.5f * (result + Vec3(1.0f, 1.0f, 1.0f));
+    OSL_INLINE void operator() (float &result, const Vec3 &p, float t) const {
+        HashScalar h;
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z, t);
+        result = 0.5f * (result + 1.0f);
     }
-    
-	template<int WidthT>
-	inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA(forceinline recursive)
-		{
-			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
-			for(int i=0; i< WidthT; ++i) {
-				float x = wx[i];
-				Vec3 perlinResult;
-				HashVector h;
-				perlin(perlinResult, h, x);
-				Vec3 scaledResult = 0.5f * (perlinResult + Vec3(1.0f, 1.0f, 1.0f));								
-				wresult[i] = scaledResult;
-			}
-		}
-	}
-    
 
-    inline void operator() (Vec3 &result, float x, float y) const {
+    OSL_INLINE void operator() (Vec3 &result, float x) const {
         HashVector h;
-        perlin(result, h, x, y);
+        perlin<CGPolicyT>(result, h, x);
         result = 0.5f * (result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
-    inline void operator() (Vec3 &result, const Vec3 &p) const {
+    OSL_INLINE void operator() (Vec3 &result, float x, float y) const {
         HashVector h;
-        perlin(result, h, p.x, p.y, p.z);
+        perlin<CGPolicyT>(result, h, x, y);
         result = 0.5f * (result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
-	template<int WidthT>
-	inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp) const {
-		OSL_INTEL_PRAGMA(forceinline recursive)
-		{
-			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
-			for(int i=0; i< WidthT; ++i) {
-				Vec3 p = wp[i];
-				Vec3 perlinResult;
-				// NOT A BUG:  this version of perlin scalar requires a scalar hash
-				// despite operation on Vec3
-				HashScalar h;
-				perlin_scalar(perlinResult, h, p.x, p.y, p.z);
-				Vec3 scaledResult = 0.5f * (perlinResult + Vec3(1.0f, 1.0f, 1.0f));								
-				wresult[i] = scaledResult;
-			}
-		}
-	}
-    
-    inline void operator() (Vec3 &result, const Vec3 &p, float t) const {
+    OSL_INLINE void operator() (Vec3 &result, const Vec3 &p) const {
         HashVector h;
-        perlin(result, h, p.x, p.y, p.z, t);
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z);
         result = 0.5f * (result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
-	template<int WidthT>
-    inline void operator() (WideAccessor<Vec3, WidthT> wresult,
-		                    ConstWideAccessor<Vec3, WidthT> wp,
-			                ConstWideAccessor<float,WidthT> wt) const {
-		OSL_INTEL_PRAGMA(forceinline recursive)
-		{
-			#ifdef __AVX512F__
-			    OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
-			#else
-				// remark #15547: simd loop was not vectorized: code size was too large for vectorization. Consider reducing the number of distinct variables use
-				// So don't mandate interleaved loop unrolling by forcing a simdlen wider than ISA
-				OSL_OMP_PRAGMA(omp simd)
-			#endif
-			for(int i=0; i< WidthT; ++i) {
-				Vec3 p = wp[i];
-				float t = wt[i];
+    OSL_INLINE void operator() (Vec3 &result, const Vec3 &p, float t) const {
+        HashVector h;
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z, t);
+        result = 0.5f * (result + Vec3(1.0f, 1.0f, 1.0f));
+    }
 
-		        HashVector h;
-		        Vec3 perlinResult = perlin_scalar(h, p.x, p.y, p.z, t);
-		        Vec3 scaledResult =  0.5f * (perlinResult + Vec3(1.0f, 1.0f, 1.0f));
-				wresult[i] = scaledResult;
-			}
-		}
-	}
     
     // dual versions
 
-    inline void operator() (Dual2<float> &result, const Dual2<float> &x) const {
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<float> &x) const {
         HashScalar h;
-        perlin(result, h, x);
+        perlin<CGPolicyT>(result, h, x);
         result = 0.5f * (result + 1.0f);
     }
 
-    inline void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y) const {
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y) const {
         HashScalar h;
-        perlin(result, h, x, y);
+        perlin<CGPolicyT>(result, h, x, y);
         result = 0.5f * (result + 1.0f);
     }
 
-    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p) const {
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<Vec3> &p) const {
         HashScalar h;
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz);
+        perlin<CGPolicyT>(result, h, px, py, pz);
         result = 0.5f * (result + 1.0f);
     }
 
-	template<int WidthT>
-	// flatten is workaround to enable inlining of non-inlined methods
-	OSL_CLANG_ATTRIBUTE(flatten)
-	inline void operator() (WideAccessor<Dual2<float>, WidthT> wresult, ConstWideAccessor<Dual2<Vec3>, WidthT> wp) const {
-		OSL_INTEL_PRAGMA(forceinline recursive)
-		{
-            // TODO: figure out why clang is "loop not vectorized: cannot identify array bounds"
-            //OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(WidthT))
-            OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(WidthT))
-			for(int i=0; i< WidthT; ++i) {
-				Dual2<Vec3> p = wp[i];
-		        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
-		        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
-		        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-				Dual2<float> perlinResult;
-				HashScalar h;
-				perlin_scalar(perlinResult, h, px, py, pz);
-				Dual2<float> scaledResult = 0.5f * (perlinResult + 1.0f);
-				wresult[i] = scaledResult;
-			}
-		}
-	}
-
-
-    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
         HashScalar h;        
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz, t);
+        perlin<CGPolicyT>(result, h, px, py, pz, t);
         result = 0.5f * (result + 1.0f);
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const {
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const {
         HashVector h;
-        perlin(result, h, x);
+        perlin<CGPolicyT>(result, h, x);
         result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {
         HashVector h;
-        perlin(result, h, x, y);
+        perlin<CGPolicyT>(result, h, x, y);
         result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {
         HashVector h;
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz);
+        perlin<CGPolicyT>(result, h, px, py, pz);
         result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
         HashVector h;
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz, t);
+        perlin<CGPolicyT>(result, h, px, py, pz, t);
         result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));
     }
 };
 
-struct SNoise {
-    SNoise () { }
+struct Noise : NoiseImpl<CGDefault> {};
+// Scalar version of Noise that is SIMD friendly suitable to be
+// inlined inside of a SIMD loops
+struct NoiseScalar : NoiseImpl<CGScalar> {};
 
-    inline void operator() (float &result, float x) const {
+
+template<typename CGPolicyT = CGDefault>
+struct SNoiseImpl {
+    SNoiseImpl () { }
+
+    OSL_INLINE void operator() (float &result, float x) const {
         HashScalar h;
-        perlin(result, h, x);
+        perlin<CGPolicyT>(result, h, x);
     }
 
-    template<int WidthT>
-	inline void operator() (WideAccessor<float, WidthT> result, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA(forceinline recursive)
-		{
-			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
-			for(int i=0; i< WidthT; ++i) {
-				float x = wx[i];
-				float perlinResult;
-				this->operator()(perlinResult,x);
-				result[i] = perlinResult;
-			}
-		}
-	}
-    
-    inline void operator() (float &result, float x, float y) const {
+    OSL_INLINE void operator() (float &result, float x, float y) const {
         HashScalar h;
-        perlin(result, h, x, y);
+        perlin<CGPolicyT>(result, h, x, y);
     }
 
-    inline void operator() (float &result, const Vec3 &p) const {
+    OSL_INLINE void operator() (float &result, const Vec3 &p) const {
         HashScalar h;
-        perlin(result, h, p.x, p.y, p.z);
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z);
     }
     
-    template<int WidthT>
-	inline void operator() (WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp) const {
-		OSL_INTEL_PRAGMA(forceinline recursive)
-		{
-			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
-			for(int i=0; i< WidthT; ++i) {
-				Vec3 p = wp[i];
-				float perlinResult;
-				HashScalar h;
-				perlin_scalar(perlinResult, h, p.x, p.y, p.z);
-				wresult[i] = perlinResult;
-			}
-		}
-	}
-
-    inline void operator() (float &result, const Vec3 &p, float t) const {
+    OSL_INLINE void operator() (float &result, const Vec3 &p, float t) const {
         HashScalar h;
-        perlin(result, h, p.x, p.y, p.z, t);
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z, t);
     }
 
-    inline void operator() (Vec3 &result, float x) const {
+    OSL_INLINE void operator() (Vec3 &result, float x) const {
         HashVector h;
-        perlin(result, h, x);
+        perlin<CGPolicyT>(result, h, x);
     }
 
-    template<int WidthT>
-	inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA(forceinline recursive)
-		{
-			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
-			for(int i=0; i< WidthT; ++i) {
-				float x = wx[i];
-				Vec3 perlinResult;
-				HashVector h;
-				perlin(perlinResult, h, x);
-				wresult[i] = perlinResult;
-			}
-		}
-	}
-
-    
-    inline void operator() (Vec3 &result, float x, float y) const {
+    OSL_INLINE void operator() (Vec3 &result, float x, float y) const {
         HashVector h;
-        perlin(result, h, x, y);
+        perlin<CGPolicyT>(result, h, x, y);
     }
 
-    inline void operator() (Vec3 &result, const Vec3 &p) const {
+    OSL_INLINE void operator() (Vec3 &result, const Vec3 &p) const {
         HashVector h;
-        perlin(result, h, p.x, p.y, p.z);
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z);
     }
 
-    template<int WidthT>
-	inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp) const {
-		OSL_INTEL_PRAGMA(forceinline recursive)
-		{
-			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
-			for(int i=0; i< WidthT; ++i) {
-				Vec3 p = wp[i];
-				Vec3 perlinResult;
-				HashScalar h;
-				perlin_scalar(perlinResult, h, p.x, p.y, p.z);
-				wresult[i] = perlinResult;
-			}
-		}
-	}
-    
-    inline void operator() (Vec3 &result, const Vec3 &p, float t) const {
+    OSL_INLINE void operator() (Vec3 &result, const Vec3 &p, float t) const {
         HashVector h;
-        perlin(result, h, p.x, p.y, p.z, t);
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z, t);
     }
 
-    template<int WidthT>
-	inline void operator() (WideAccessor<Vec3, WidthT> wresult,
-                            ConstWideAccessor<Vec3, WidthT> wp,
-                            ConstWideAccessor<float,WidthT> wt) const {
-		OSL_INTEL_PRAGMA(forceinline recursive)
-		{
-			#ifdef __AVX512F__
-				OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
-			#else
-				// remark #15547: simd loop was not vectorized: code size was too large for vectorization. Consider reducing the number of distinct variables use
-				// So don't mandate interleaved loop unrolling by forcing a simdlen wider than ISA
-				OSL_OMP_PRAGMA(omp simd)
-			#endif
-			for(int i=0; i< WidthT; ++i) {
-				Vec3 p = wp[i];
-				float t = wt[i];
-
-		        HashVector h;
-		        Vec3 perlinResult = perlin_scalar(h, p.x, p.y, p.z, t);
-
-				wresult[i] = perlinResult;
-			}
-		}
-	}
-    
 
     // dual versions
 
-    inline void operator() (Dual2<float> &result, const Dual2<float> &x) const {
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<float> &x) const {
         HashScalar h;
-        perlin(result, h, x);
+        perlin<CGPolicyT>(result, h, x);
     }
 
-    inline void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y) const {
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y) const {
         HashScalar h;
-        perlin(result, h, x, y);
+        perlin<CGPolicyT>(result, h, x, y);
     }
 
-    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p) const {
-        HashScalar h;
-        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
-        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
-        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz);
-    }
-
-	template<int WidthT>
-	inline void operator() (WideAccessor<Dual2<float>, WidthT> wresult, ConstWideAccessor<Dual2<Vec3>, WidthT> wp) const {
-		OSL_INTEL_PRAGMA(forceinline recursive)
-		{
-            //OSL_OMP_AND_CLANG_PRAGMA(clang loop vectorize(assume_safety) vectorize_width(WidthT))
-            OSL_OMP_NOT_CLANG_PRAGMA(omp simd simdlen(WidthT))
-			for(int i=0; i< WidthT; ++i) {
-				Dual2<Vec3> p = wp[i];
-		        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
-		        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
-		        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-				Dual2<float> perlinResult;
-				HashScalar h;
-				perlin_scalar(perlinResult, h, px, py, pz);
-				wresult[i] = perlinResult;
-			}
-		}
-	}
-
-    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<Vec3> &p) const {
         HashScalar h;
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz, t);
+        perlin<CGPolicyT>(result, h, px, py, pz);
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const {
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
+        HashScalar h;
+        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+        perlin<CGPolicyT>(result, h, px, py, pz, t);
+    }
+
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const {
         HashVector h;
-        perlin(result, h, x);
+        perlin<CGPolicyT>(result, h, x);
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {
+
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {
         HashVector h;
-        perlin(result, h, x, y);
+        perlin<CGPolicyT>(result, h, x, y);
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {
         HashVector h;
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz);
+        perlin<CGPolicyT>(result, h, px, py, pz);
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
         HashVector h;
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz, t);
+        perlin<CGPolicyT>(result, h, px, py, pz, t);
     }
 };
+
+struct SNoise : SNoiseImpl<CGDefault> {};
+// Scalar version of SNoise that is SIMD friendly suitable to be
+// inlined inside of a SIMD loops
+struct SNoiseScalar : SNoiseImpl<CGScalar> {};
 
 
 
 struct PeriodicNoise {
     PeriodicNoise () { }
 
-    inline void operator() (float &result, float x, float px) const {
+    OSL_INLINE void operator() (float &result, float x, float px) const {
         HashScalarPeriodic h(px);
         perlin(result, h, x);
         result = 0.5f * (result + 1);
     }
 
-    inline void operator() (float &result, float x, float y, float px, float py) const {
+    OSL_INLINE void operator() (float &result, float x, float y, float px, float py) const {
         HashScalarPeriodic h(px, py);
         perlin(result, h, x, y);
         result = 0.5f * (result + 1);
     }
 
-    inline void operator() (float &result, const Vec3 &p, const Vec3 &pp) const {
+    OSL_INLINE void operator() (float &result, const Vec3 &p, const Vec3 &pp) const {
         HashScalarPeriodic h(pp.x, pp.y, pp.z);
         perlin(result, h, p.x, p.y, p.z);
         result = 0.5f * (result + 1);
     }
 
-    inline void operator() (float &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
+    OSL_INLINE void operator() (float &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
         HashScalarPeriodic h(pp.x, pp.y, pp.z, pt);
         perlin(result, h, p.x, p.y, p.z, t);
         result = 0.5f * (result + 1);
     }
 
-    inline void operator() (Vec3 &result, float x, float px) const {
+    OSL_INLINE void operator() (Vec3 &result, float x, float px) const {
         HashVectorPeriodic h(px);
         perlin(result, h, x);
         result = 0.5f * (result + Vec3(1, 1, 1));
     }
 
-    inline void operator() (Vec3 &result, float x, float y, float px, float py) const {
+    OSL_INLINE void operator() (Vec3 &result, float x, float y, float px, float py) const {
         HashVectorPeriodic h(px, py);
         perlin(result, h, x, y);
         result = 0.5f * (result + Vec3(1, 1, 1));
     }
 
-    inline void operator() (Vec3 &result, const Vec3 &p, const Vec3 &pp) const {
+    OSL_INLINE void operator() (Vec3 &result, const Vec3 &p, const Vec3 &pp) const {
         HashVectorPeriodic h(pp.x, pp.y, pp.z);
         perlin(result, h, p.x, p.y, p.z);
         result = 0.5f * (result + Vec3(1, 1, 1));
     }
 
-    inline void operator() (Vec3 &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
+    OSL_INLINE void operator() (Vec3 &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
         HashVectorPeriodic h(pp.x, pp.y, pp.z, pt);
         perlin(result, h, p.x, p.y, p.z, t);
         result = 0.5f * (result + Vec3(1, 1, 1));
@@ -2647,20 +2321,20 @@ struct PeriodicNoise {
 
     // dual versions
 
-    inline void operator() (Dual2<float> &result, const Dual2<float> &x, float px) const {
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<float> &x, float px) const {
         HashScalarPeriodic h(px);
         perlin(result, h, x);
         result = 0.5f * (result + 1.0f);
     }
 
-    inline void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y,
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y,
             float px, float py) const {
         HashScalarPeriodic h(px, py);
         perlin(result, h, x, y);
         result = 0.5f * (result + 1.0f);
     }
 
-    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Vec3 &pp) const {
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Vec3 &pp) const {
         HashScalarPeriodic h(pp.x, pp.y, pp.z);
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
@@ -2669,7 +2343,7 @@ struct PeriodicNoise {
         result = 0.5f * (result + 1.0f);
     }
 
-    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t,
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t,
             const Vec3 &pp, float pt) const {
         HashScalarPeriodic h(pp.x, pp.y, pp.z, pt);        
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
@@ -2679,20 +2353,20 @@ struct PeriodicNoise {
         result = 0.5f * (result + 1.0f);
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, float px) const {
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, float px) const {
         HashVectorPeriodic h(px);
         perlin(result, h, x);
         result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y,
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y,
             float px, float py) const {
         HashVectorPeriodic h(px, py);
         perlin(result, h, x, y);
         result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Vec3 &pp) const {
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Vec3 &pp) const {
         HashVectorPeriodic h(pp.x, pp.y, pp.z);
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
@@ -2701,7 +2375,7 @@ struct PeriodicNoise {
         result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t,
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t,
             const Vec3 &pp, float pt) const {
         HashVectorPeriodic h(pp.x, pp.y, pp.z, pt);
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
@@ -2710,65 +2384,66 @@ struct PeriodicNoise {
         perlin(result, h, px, py, pz, t);
         result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));
     }
+
 };
 
 struct PeriodicSNoise {
     PeriodicSNoise () { }
 
-    inline void operator() (float &result, float x, float px) const {
+    OSL_INLINE void operator() (float &result, float x, float px) const {
         HashScalarPeriodic h(px);
         perlin(result, h, x);
     }
 
-    inline void operator() (float &result, float x, float y, float px, float py) const {
+    OSL_INLINE void operator() (float &result, float x, float y, float px, float py) const {
         HashScalarPeriodic h(px, py);
         perlin(result, h, x, y);
     }
 
-    inline void operator() (float &result, const Vec3 &p, const Vec3 &pp) const {
+    OSL_INLINE void operator() (float &result, const Vec3 &p, const Vec3 &pp) const {
         HashScalarPeriodic h(pp.x, pp.y, pp.z);
         perlin(result, h, p.x, p.y, p.z);
     }
 
-    inline void operator() (float &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
+    OSL_INLINE void operator() (float &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
         HashScalarPeriodic h(pp.x, pp.y, pp.z, pt);
         perlin(result, h, p.x, p.y, p.z, t);
     }
 
-    inline void operator() (Vec3 &result, float x, float px) const {
+    OSL_INLINE void operator() (Vec3 &result, float x, float px) const {
         HashVectorPeriodic h(px);
         perlin(result, h, x);
     }
 
-    inline void operator() (Vec3 &result, float x, float y, float px, float py) const {
+    OSL_INLINE void operator() (Vec3 &result, float x, float y, float px, float py) const {
         HashVectorPeriodic h(px, py);
         perlin(result, h, x, y);
     }
 
-    inline void operator() (Vec3 &result, const Vec3 &p, const Vec3 &pp) const {
+    OSL_INLINE void operator() (Vec3 &result, const Vec3 &p, const Vec3 &pp) const {
         HashVectorPeriodic h(pp.x, pp.y, pp.z);
         perlin(result, h, p.x, p.y, p.z);
     }
 
-    inline void operator() (Vec3 &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
+    OSL_INLINE void operator() (Vec3 &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
         HashVectorPeriodic h(pp.x, pp.y, pp.z, pt);
         perlin(result, h, p.x, p.y, p.z, t);
     }
 
     // dual versions
 
-    inline void operator() (Dual2<float> &result, const Dual2<float> &x, float px) const {
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<float> &x, float px) const {
         HashScalarPeriodic h(px);
         perlin(result, h, x);
     }
 
-    inline void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y,
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y,
             float px, float py) const {
         HashScalarPeriodic h(px, py);
         perlin(result, h, x, y);
     }
 
-    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Vec3 &pp) const {
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Vec3 &pp) const {
         HashScalarPeriodic h(pp.x, pp.y, pp.z);
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
@@ -2776,7 +2451,7 @@ struct PeriodicSNoise {
         perlin(result, h, px, py, pz);
     }
 
-    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t,
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t,
             const Vec3 &pp, float pt) const {
         HashScalarPeriodic h(pp.x, pp.y, pp.z, pt);        
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
@@ -2785,18 +2460,18 @@ struct PeriodicSNoise {
         perlin(result, h, px, py, pz, t);
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, float px) const {
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, float px) const {
         HashVectorPeriodic h(px);
         perlin(result, h, x);
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y,
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y,
             float px, float py) const {
         HashVectorPeriodic h(px, py);
         perlin(result, h, x, y);
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Vec3 &pp) const {
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Vec3 &pp) const {
         HashVectorPeriodic h(pp.x, pp.y, pp.z);
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
@@ -2804,7 +2479,7 @@ struct PeriodicSNoise {
         perlin(result, h, px, py, pz);
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t,
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t,
             const Vec3 &pp, float pt) const {
         HashVectorPeriodic h(pp.x, pp.y, pp.z, pt);
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
@@ -2812,165 +2487,64 @@ struct PeriodicSNoise {
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
         perlin(result, h, px, py, pz, t);
     }
+
 };
-
-
-
-
-// Gradient directions for 3D.
-// These vectors are based on the midpoints of the 12 edges of a cube.
-// A larger array of random unit length vectors would also do the job,
-// but these 12 (including 4 repeats to make the array length a power
-// of two) work better. They are not random, they are carefully chosen
-// to represent a small, isotropic set of directions.
-// Store in SOA data layout using our Wide helper
-static const Wide<Vec3,16> fast_grad3lut_wide(
-	Vec3(  1.0f,  0.0f,  1.0f ), Vec3(  0.0f,  1.0f,  1.0f ), // 12 cube edges
-	Vec3( -1.0f,  0.0f,  1.0f ), Vec3( 0.0f, -1.0f,  1.0f ),
-	Vec3(  1.0f,  0.0f, -1.0f ), Vec3( 0.0f,  1.0f, -1.0f ),
-	Vec3( -1.0f,  0.0f, -1.0f ), Vec3(  0.0f, -1.0f, -1.0f ),
-	Vec3(  1.0f, -1.0f,  0.0f ), Vec3( 1.0f,  1.0f,  0.0f ),
-	Vec3( -1.0f,  1.0f,  0.0f ), Vec3( -1.0f, -1.0f,  0.0f ),
-	Vec3(  1.0f,  0.0f,  1.0f ), Vec3( -1.0f,  0.0f,  1.0f ), // 4 repeats to make 16
-	Vec3(  0.0f,  1.0f, -1.0f ), Vec3( 0.0f, -1.0f, -1.0f ));
-
-static const Wide<Vec4,32> fast_grad4lut_wide(
-  Vec4( 0.0f, 1.0f, 1.0f, 1.0f ),  Vec4( 0.0f, 1.0f, 1.0f, -1.0f ),  Vec4( 0.0f, 1.0f, -1.0f, 1.0f ),  Vec4( 0.0f, 1.0f, -1.0f, -1.0f ), // 32 tesseract edges
-  Vec4( 0.0f, -1.0f, 1.0f, 1.0f ), Vec4( 0.0f, -1.0f, 1.0f, -1.0f ), Vec4( 0.0f, -1.0f, -1.0f, 1.0f ), Vec4( 0.0f, -1.0f, -1.0f, -1.0f ),
-  Vec4( 1.0f, 0.0f, 1.0f, 1.0f ),  Vec4( 1.0f, 0.0f, 1.0f, -1.0f ),  Vec4( 1.0f, 0.0f, -1.0f, 1.0f ),  Vec4( 1.0f, 0.0f, -1.0f, -1.0f ),
-  Vec4( -1.0f, 0.0f, 1.0f, 1.0f ), Vec4( -1.0f, 0.0f, 1.0f, -1.0f ), Vec4( -1.0f, 0.0f, -1.0f, 1.0f ), Vec4( -1.0f, 0.0f, -1.0f, -1.0f ),
-  Vec4( 1.0f, 1.0f, 0.0f, 1.0f ),  Vec4( 1.0f, 1.0f, 0.0f, -1.0f ),  Vec4( 1.0f, -1.0f, 0.0f, 1.0f ),  Vec4( 1.0f, -1.0f, 0.0f, -1.0f ),
-  Vec4( -1.0f, 1.0f, 0.0f, 1.0f ), Vec4( -1.0f, 1.0f, 0.0f, -1.0f ), Vec4( -1.0f, -1.0f, 0.0f, 1.0f ), Vec4( -1.0f, -1.0f, 0.0f, -1.0f ),
-  Vec4( 1.0f, 1.0f, 1.0f, 0.0f ),  Vec4( 1.0f, 1.0f, -1.0f, 0.0f ),  Vec4( 1.0f, -1.0f, 1.0f, 0.0f ),  Vec4( 1.0f, -1.0f, -1.0f, 0.0f ),
-  Vec4( -1.0f, 1.0f, 1.0f, 0.0f ), Vec4( -1.0f, 1.0f, -1.0f, 0.0f ), Vec4( -1.0f, -1.0f, 1.0f, 0.0f ), Vec4( -1.0f, -1.0f, -1.0f, 0.0f ));
-
-static const unsigned char fast_simplex[64][4] = {
-  {0,1,2,3},{0,1,3,2},{0,0,0,0},{0,2,3,1},{0,0,0,0},{0,0,0,0},{0,0,0,0},{1,2,3,0},
-  {0,2,1,3},{0,0,0,0},{0,3,1,2},{0,3,2,1},{0,0,0,0},{0,0,0,0},{0,0,0,0},{1,3,2,0},
-  {0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},
-  {1,2,0,3},{0,0,0,0},{1,3,0,2},{0,0,0,0},{0,0,0,0},{0,0,0,0},{2,3,0,1},{2,3,1,0},
-  {1,0,2,3},{1,0,3,2},{0,0,0,0},{0,0,0,0},{0,0,0,0},{2,0,3,1},{0,0,0,0},{2,1,3,0},
-  {0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},
-  {2,0,1,3},{0,0,0,0},{0,0,0,0},{0,0,0,0},{3,0,1,2},{3,0,2,1},{0,0,0,0},{3,1,2,0},
-  {2,1,0,3},{0,0,0,0},{0,0,0,0},{0,0,0,0},{3,1,0,2},{0,0,0,0},{3,2,0,1},{3,2,1,0}};
-
-
-//#define OSL_VERIFY_SIMPLEX3 1	
-#ifdef OSL_VERIFY_SIMPLEX3
-		static void osl_verify_fail(int lineNumber, const char *expression)
-		{
-			std::cout << "Line " << __LINE__ << " failed OSL_VERIFY(" << expression << ")" << std::endl; 
-			exit(1);
-		}
-	#define OSL_VERIFY(EXPR) if((EXPR)== false) osl_verify_fail(__LINE__, #EXPR); 
-#endif
 
 
 struct SimplexNoise {
     SimplexNoise () { }
 
-    inline void operator() (float &result, float x) const {
+    OSL_INLINE void operator() (float &result, float x) const {
         result = simplexnoise1 (x);
     }
-    
-    template<int WidthT>
-    inline void operator() (WideAccessor<float, WidthT> wresult, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA(forceinline recursive)
-		{
-#ifndef OSL_VERIFY_SIMPLEX3  			
-			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
-#endif
-			for(int i=0; i< WidthT; ++i) {
-				float x = wx[i];
-				float result;
-				this->operator()(result,x);		        
-		        wresult[i] = result;
-			}
-		}
-    }
-    
 
-    inline void operator() (float &result, float x, float y) const {
+    OSL_INLINE void operator() (float &result, float x, float y) const {
         result = simplexnoise2 (x, y);
     }
 
-    inline void operator() (float &result, const Vec3 &p) const {
+    OSL_INLINE void operator() (float &result, const Vec3 &p) const {
         result = simplexnoise3 (p.x, p.y, p.z);
     }
-    
-    template<int WidthT>
-    inline void operator() (WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp) const {
-		fast_simplexnoise3(wresult, wp);
-    }
-    
-    
 
-    inline void operator() (float &result, const Vec3 &p, float t) const {
+    OSL_INLINE void operator() (float &result, const Vec3 &p, float t) const {
         result = simplexnoise4 (p.x, p.y, p.z, t);
     }
 
-    inline void operator() (Vec3 &result, float x) const {
+    OSL_INLINE void operator() (Vec3 &result, float x) const {
         result.x = simplexnoise1 (x, 0);
         result.y = simplexnoise1 (x, 1);
         result.z = simplexnoise1 (x, 2);
     }
 
-    template<int WidthT>
-    inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA(forceinline recursive)
-		{
-			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
-			for(int i=0; i< WidthT; ++i) {
-				float x = wx[i];
-				//float result = simplexnoise3 (p.x, p.y, p.z);
-				Vec3 result;	        
-				this->operator()(result, x);
-		        wresult[i] = result;
-			}
-		}
-    }
-    
-    inline void operator() (Vec3 &result, float x, float y) const {
-        result[0] = simplexnoise2 (x, y, 0);
-        result[1] = simplexnoise2 (x, y, 1);
-        result[2] = simplexnoise2 (x, y, 2);
+    OSL_INLINE void operator() (Vec3 &result, float x, float y) const {
+        result.x = simplexnoise2 (x, y, 0);
+        result.y = simplexnoise2 (x, y, 1);
+        result.z = simplexnoise2 (x, y, 2);
     }
 
-    inline void operator() (Vec3 &result, const Vec3 &p) const {
-        result[0] = simplexnoise3 (p.x, p.y, p.z, 0);
-        result[1] = simplexnoise3 (p.x, p.y, p.z, 1);
-        result[2] = simplexnoise3 (p.x, p.y, p.z, 2);
+    OSL_INLINE void operator() (Vec3 &result, const Vec3 &p) const {
+        result.x = simplexnoise3 (p.x, p.y, p.z, 0);
+        result.y = simplexnoise3 (p.x, p.y, p.z, 1);
+        result.z = simplexnoise3 (p.x, p.y, p.z, 2);
     }
     
-    template<int WidthT>
-    inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp) const {
-		fast_simplexnoise3(wresult, wp);
-    }    
-
-    inline void operator() (Vec3 &result, const Vec3 &p, float t) const {
-        result[0] = simplexnoise4 (p.x, p.y, p.z, t, 0);
-        result[1] = simplexnoise4 (p.x, p.y, p.z, t, 1);
-        result[2] = simplexnoise4 (p.x, p.y, p.z, t, 2);
+    OSL_INLINE void operator() (Vec3 &result, const Vec3 &p, float t) const {
+        result.x = simplexnoise4 (p.x, p.y, p.z, t, 0);
+        result.y = simplexnoise4 (p.x, p.y, p.z, t, 1);
+        result.z = simplexnoise4 (p.x, p.y, p.z, t, 2);
     }
 
-	template<int WidthT>
-    inline void operator() (WideAccessor<Vec3, WidthT> wresult,
-                            ConstWideAccessor<Vec3, WidthT> wp,
-                            ConstWideAccessor<float,WidthT> wt) const {
-		fast_simplexnoise4(wresult, wp, wt);
-    }
-    
 
     // dual versions
 
-    inline void operator() (Dual2<float> &result, const Dual2<float> &x,
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<float> &x,
                             int seed=0) const {
         float r, dndx;
         r = simplexnoise1 (x.val(), seed, &dndx);
         result.set (r, dndx * x.dx(), dndx * x.dy());
     }
 
-    inline void operator() (Dual2<float> &result, const Dual2<float> &x,
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<float> &x,
                             const Dual2<float> &y, int seed=0) const {
         float r, dndx, dndy;
         r = simplexnoise2 (x.val(), y.val(), seed, &dndx, &dndy);
@@ -2978,25 +2552,25 @@ struct SimplexNoise {
                        dndx * x.dy() + dndy * y.dy());
     }
 
-    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
                             int seed=0) const {
         float r, dndx, dndy, dndz;
-        r = simplexnoise3 (p.val()[0], p.val()[1], p.val()[2],
+        r = simplexnoise3 (p.val().x, p.val().y, p.val().z,
                            seed, &dndx, &dndy, &dndz);
-        result.set (r, dndx * p.dx()[0] + dndy * p.dx()[1] + dndz * p.dx()[2],
-                       dndx * p.dy()[0] + dndy * p.dy()[1] + dndz * p.dy()[2]);
+        result.set (r, dndx * p.dx().x + dndy * p.dx().y + dndz * p.dx().z,
+                       dndx * p.dy().x + dndy * p.dy().y + dndz * p.dy().z);
     }
 
-    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
                             const Dual2<float> &t, int seed=0) const {
         float r, dndx, dndy, dndz, dndt;
-        r = simplexnoise4 (p.val()[0], p.val()[1], p.val()[2], t.val(),
+        r = simplexnoise4 (p.val().x, p.val().y, p.val().z, t.val(),
                            seed, &dndx, &dndy, &dndz, &dndt);
-        result.set (r, dndx * p.dx()[0] + dndy * p.dx()[1] + dndz * p.dx()[2] + dndt * t.dx(),
-                       dndx * p.dy()[0] + dndy * p.dy()[1] + dndz * p.dy()[2] + dndt * t.dy());
+        result.set (r, dndx * p.dx().x + dndy * p.dx().y + dndz * p.dx().z + dndt * t.dx(),
+                       dndx * p.dy().x + dndy * p.dy().y + dndz * p.dy().z + dndt * t.dy());
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const {
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const {
         Dual2<float> r0, r1, r2;
         (*this)(r0, x, 0);
         (*this)(r1, x, 1);
@@ -3004,7 +2578,7 @@ struct SimplexNoise {
         result = make_Vec3 (r0, r1, r2);
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {
         Dual2<float> r0, r1, r2;
         (*this)(r0, x, y, 0);
         (*this)(r1, x, y, 1);
@@ -3012,7 +2586,7 @@ struct SimplexNoise {
         result = make_Vec3 (r0, r1, r2);
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {
         Dual2<float> r0, r1, r2;
         (*this)(r0, p, 0);
         (*this)(r1, p, 1);
@@ -3020,7 +2594,7 @@ struct SimplexNoise {
         result = make_Vec3 (r0, r1, r2);
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
         Dual2<float> r0, r1, r2;
         (*this)(r0, p, t, 0);
         (*this)(r1, p, t, 1);
@@ -3030,93 +2604,168 @@ struct SimplexNoise {
 };
 
 
+// Scalar version of SimplexNoise that is SIMD friendly suitable to be
+// inlined inside of a SIMD loops
+struct SimplexNoiseScalar {
+    SimplexNoiseScalar () { }
+
+    OSL_INLINE void operator() (float &result, float x) const {
+        result = fast::simplexnoise1<0/* seed */>(x);
+    }
+
+    OSL_INLINE void operator() (float &result, float x, float y) const {
+        result = fast::simplexnoise2<0/* seed */>(x, y);
+    }
+
+    OSL_INLINE void operator()(float &result, const Vec3 &p) const {
+        result = fast::simplexnoise3<0/* seed */>(p.x, p.y, p.z);
+    }
+
+    OSL_INLINE void operator()(float &result, const Vec3 &p, float t) const {
+        result = fast::simplexnoise4<0/* seed */>(p.x, p.y, p.z, t);
+    }
+
+    OSL_INLINE void operator() (Vec3 &result, float x) const {
+        result.x = fast::simplexnoise1<0/* seed */>(x);
+        result.y = fast::simplexnoise1<1/* seed */>(x);
+        result.z = fast::simplexnoise1<2/* seed */>(x);
+    }
+
+    OSL_INLINE void operator() (Vec3 &result, float x, float y) const {
+        result.x = fast::simplexnoise2<0/* seed */>(x, y);
+        result.y = fast::simplexnoise2<1/* seed */>(x, y);
+        result.z = fast::simplexnoise2<2/* seed */>(x, y);
+    }
+
+    OSL_INLINE void operator() (Vec3 &result, const Vec3 &p) const {
+        result.x = fast::simplexnoise3<0/* seed */>(p.x, p.y, p.z);
+        result.y = fast::simplexnoise3<1/* seed */>(p.x, p.y, p.z);
+        result.z = fast::simplexnoise3<2/* seed */>(p.x, p.y, p.z);
+    }
+
+    OSL_INLINE void operator() (Vec3 &result, const Vec3 &p, float t) const {
+        result.x = fast::simplexnoise4<0/* seed */>(p.x, p.y, p.z, t);
+        result.y = fast::simplexnoise4<1/* seed */>(p.x, p.y, p.z, t);
+        result.z = fast::simplexnoise4<2/* seed */>(p.x, p.y, p.z, t);
+    }
+
+
+    // dual versions
+    template<int seed=0>
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<float> &x) const {
+        float r, dndx;
+        r = fast::simplexnoise1<seed>(x.val(), fast::DxRef(dndx));
+        result.set (r, dndx * x.dx(), dndx * x.dy());
+    }
+
+    template<int seedT=0>
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y) const {
+        float r, dndx, dndy;
+        r = fast::simplexnoise2<seedT> (x.val(), y.val(), fast::DxDyRef(dndx, dndy));
+        result.set (r, dndx * x.dx() + dndy * y.dx(),
+                       dndx * x.dy() + dndy * y.dy());
+    }
+
+    template<int seed=0>
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<Vec3> &p) const {
+        float dndx, dndy, dndz;
+        const Vec3 &p_val = p.val();
+        float r = fast::simplexnoise3<seed>(p_val.x, p_val.y, p_val.z, fast::DxDyDzRef(dndx, dndy, dndz));
+        result.set (r, dndx * p.dx().x + dndy * p.dx().y + dndz * p.dx().z,
+                       dndx * p.dy().x + dndy * p.dy().y + dndz * p.dy().z);
+    }
+
+    template<int seed=0>
+    OSL_INLINE void operator()(Dual2<float> &result, const Dual2<Vec3> &p,
+                            const Dual2<float> &t) const {
+        float dndx, dndy, dndz, dndt;
+        float r = fast::simplexnoise4<seed> (p.val().x, p.val().y, p.val().z, t.val(),
+                           fast::DxDyDzDwRef(dndx, dndy, dndz, dndt));
+        result.set (r, dndx * p.dx().x + dndy * p.dx().y + dndz * p.dx().z + dndt * t.dx(),
+                       dndx * p.dy().x + dndy * p.dy().y + dndz * p.dy().z + dndt * t.dy());
+    }
+
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const {
+        Dual2<float> r0, r1, r2;
+        operator()<0>(r0, x);
+        operator()<1>(r1, x);
+        operator()<2>(r2, x);
+        result = make_Vec3 (r0, r1, r2);
+    }
+
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {
+        Dual2<float> r0, r1, r2;
+        operator()<0>(r0, x, y);
+        operator()<1>(r1, x, y);
+        operator()<2>(r2, x, y);
+        result = make_Vec3 (r0, r1, r2);
+    }
+
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {
+        Dual2<float> r0, r1, r2;
+        operator()<0>(r0, p);
+        operator()<1>(r1, p);
+        operator()<2>(r2, p);
+        result = make_Vec3 (r0, r1, r2);
+    }
+
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
+        Dual2<float> r0, r1, r2;
+        operator()<0>(r0, p, t);
+        operator()<1>(r1, p, t);
+        operator()<2>(r2, p, t);
+        result = make_Vec3 (r0, r1, r2);
+    }
+};
 
 // Unsigned simplex noise
 struct USimplexNoise {
     USimplexNoise () { }
 
-    inline void operator() (float &result, float x) const {
+    OSL_INLINE void operator() (float &result, float x) const {
         result = 0.5f * (simplexnoise1 (x) + 1.0f);
     }
 
-    template<int WidthT>
-    inline void operator() (WideAccessor<float, WidthT> wresult, ConstWideAccessor<float, WidthT> wx) const {
-		OSL_INTEL_PRAGMA(forceinline recursive)
-		{
-#ifndef OSL_VERIFY_SIMPLEX3  
-			OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
-#endif
-			for(int i=0; i< WidthT; ++i) {
-				float x = wx[i];
-				float result;
-				this->operator()(result,x);
-		        wresult[i] = result;
-			}
-		}
-    }
-    
-    inline void operator() (float &result, float x, float y) const {
+    OSL_INLINE void operator() (float &result, float x, float y) const {
         result = 0.5f * (simplexnoise2 (x, y) + 1.0f);
     }
 
-    inline void operator() (float &result, const Vec3 &p) const {
+    OSL_INLINE void operator() (float &result, const Vec3 &p) const {
         result = 0.5f * (simplexnoise3 (p.x, p.y, p.z) + 1.0f);
     }
 
-    template<int WidthT>
-    inline void operator() (WideAccessor<float, WidthT> wresult, ConstWideAccessor<Vec3, WidthT> wp) const {
-    	fast_usimplexnoise3(wresult, wp);
-    }
-    
-    
-    inline void operator() (float &result, const Vec3 &p, float t) const {
+    OSL_INLINE void operator() (float &result, const Vec3 &p, float t) const {
         result = 0.5f * (simplexnoise4 (p.x, p.y, p.z, t) + 1.0f);
     }
 
-    inline void operator() (Vec3 &result, float x) const {
+    OSL_INLINE void operator() (Vec3 &result, float x) const {
         result.x = 0.5f * (simplexnoise1 (x, 0) + 1.0f);
         result.y = 0.5f * (simplexnoise1 (x, 1) + 1.0f);
         result.z = 0.5f * (simplexnoise1 (x, 2) + 1.0f);
     }
-    
-    template<int WidthT>
-    inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<float, WidthT> wx) const {
-		fast_usimplexnoise1 (wresult, wx);
-    }    
 
-    inline void operator() (Vec3 &result, float x, float y) const {
-        result[0] = 0.5f * (simplexnoise2 (x, y, 0) + 1.0f);
-        result[1] = 0.5f * (simplexnoise2 (x, y, 1) + 1.0f);
-        result[2] = 0.5f * (simplexnoise2 (x, y, 2) + 1.0f);
+    OSL_INLINE void operator() (Vec3 &result, float x, float y) const {
+        result.x = 0.5f * (simplexnoise2 (x, y, 0) + 1.0f);
+        result.y = 0.5f * (simplexnoise2 (x, y, 1) + 1.0f);
+        result.z = 0.5f * (simplexnoise2 (x, y, 2) + 1.0f);
     }
 
-    inline void operator() (Vec3 &result, const Vec3 &p) const {
-        result[0] = 0.5f * (simplexnoise3 (p.x, p.y, p.z, 0) + 1.0f);
-        result[1] = 0.5f * (simplexnoise3 (p.x, p.y, p.z, 1) + 1.0f);
-        result[2] = 0.5f * (simplexnoise3 (p.x, p.y, p.z, 2) + 1.0f);
-    }
-    
-    template<int WidthT>
-    inline void operator() (WideAccessor<Vec3, WidthT> wresult, ConstWideAccessor<Vec3, WidthT>  wp) const {
-    	fast_usimplexnoise3(wresult, wp);
-    }    
-
-    inline void operator() (Vec3 &result, const Vec3 &p, float t) const {
-        result[0] = 0.5f * (simplexnoise4 (p.x, p.y, p.z, t, 0) + 1.0f);
-        result[1] = 0.5f * (simplexnoise4 (p.x, p.y, p.z, t, 1) + 1.0f);
-        result[2] = 0.5f * (simplexnoise4 (p.x, p.y, p.z, t, 2) + 1.0f);
+    OSL_INLINE void operator() (Vec3 &result, const Vec3 &p) const {
+        result.x = 0.5f * (simplexnoise3 (p.x, p.y, p.z, 0) + 1.0f);
+        result.y = 0.5f * (simplexnoise3 (p.x, p.y, p.z, 1) + 1.0f);
+        result.z = 0.5f * (simplexnoise3 (p.x, p.y, p.z, 2) + 1.0f);
     }
 
-	template<int WidthT>
-    inline void operator() (WideAccessor<Vec3, WidthT> wresult,
-                            ConstWideAccessor<Vec3, WidthT> wp,
-                            ConstWideAccessor<float,WidthT> wt) const {
-		fast_usimplexnoise4 (wresult, wp, wt);
+    OSL_INLINE void operator() (Vec3 &result, const Vec3 &p, float t) const {
+        result.x = 0.5f * (simplexnoise4 (p.x, p.y, p.z, t, 0) + 1.0f);
+        result.y = 0.5f * (simplexnoise4 (p.x, p.y, p.z, t, 1) + 1.0f);
+        result.z = 0.5f * (simplexnoise4 (p.x, p.y, p.z, t, 2) + 1.0f);
     }
-    
+
+
     // dual versions
 
-    inline void operator() (Dual2<float> &result, const Dual2<float> &x,
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<float> &x,
                             int seed=0) const {
         float r, dndx;
         r = simplexnoise1 (x.val(), seed, &dndx);
@@ -3125,7 +2774,7 @@ struct USimplexNoise {
         result.set (r, dndx * x.dx(), dndx * x.dy());
     }
 
-    inline void operator() (Dual2<float> &result, const Dual2<float> &x,
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<float> &x,
                             const Dual2<float> &y, int seed=0) const {
         float r, dndx, dndy;
         r = simplexnoise2 (x.val(), y.val(), seed, &dndx, &dndy);
@@ -3136,34 +2785,34 @@ struct USimplexNoise {
                        dndx * x.dy() + dndy * y.dy());
     }
 
-    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
                             int seed=0) const {
         float r, dndx, dndy, dndz;
-        r = simplexnoise3 (p.val()[0], p.val()[1], p.val()[2],
+        r = simplexnoise3 (p.val().x, p.val().y, p.val().z,
                            seed, &dndx, &dndy, &dndz);
         r = 0.5f * (r + 1.0f);
         dndx *= 0.5f;
         dndy *= 0.5f;
         dndz *= 0.5f;
-        result.set (r, dndx * p.dx()[0] + dndy * p.dx()[1] + dndz * p.dx()[2],
-                       dndx * p.dy()[0] + dndy * p.dy()[1] + dndz * p.dy()[2]);
+        result.set (r, dndx * p.dx().x + dndy * p.dx().y + dndz * p.dx().z,
+                       dndx * p.dy().x + dndy * p.dy().y + dndz * p.dy().z);
     }
 
-    inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
                             const Dual2<float> &t, int seed=0) const {
         float r, dndx, dndy, dndz, dndt;
-        r = simplexnoise4 (p.val()[0], p.val()[1], p.val()[2], t.val(),
+        r = simplexnoise4 (p.val().x, p.val().y, p.val().z, t.val(),
                            seed, &dndx, &dndy, &dndz, &dndt);
         r = 0.5f * (r + 1.0f);
         dndx *= 0.5f;
         dndy *= 0.5f;
         dndz *= 0.5f;
         dndt *= 0.5f;
-        result.set (r, dndx * p.dx()[0] + dndy * p.dx()[1] + dndz * p.dx()[2] + dndt * t.dx(),
-                       dndx * p.dy()[0] + dndy * p.dy()[1] + dndz * p.dy()[2] + dndt * t.dy());
+        result.set (r, dndx * p.dx().x + dndy * p.dx().y + dndz * p.dx().z + dndt * t.dx(),
+                       dndx * p.dy().x + dndy * p.dy().y + dndz * p.dy().z + dndt * t.dy());
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const {
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const {
         Dual2<float> r0, r1, r2;
         (*this)(r0, x, 0);
         (*this)(r1, x, 1);
@@ -3171,7 +2820,7 @@ struct USimplexNoise {
         result = make_Vec3 (r0, r1, r2);
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {
         Dual2<float> r0, r1, r2;
         (*this)(r0, x, y, 0);
         (*this)(r1, x, y, 1);
@@ -3179,7 +2828,7 @@ struct USimplexNoise {
         result = make_Vec3 (r0, r1, r2);
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {
         Dual2<float> r0, r1, r2;
         (*this)(r0, p, 0);
         (*this)(r1, p, 1);
@@ -3187,15 +2836,144 @@ struct USimplexNoise {
         result = make_Vec3 (r0, r1, r2);
     }
 
-    inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
         Dual2<float> r0, r1, r2;
         (*this)(r0, p, t, 0);
         (*this)(r1, p, t, 1);
         (*this)(r2, p, t, 2);
         result = make_Vec3 (r0, r1, r2);
     }
+
 };
 
+// Scalar version of USimplexNoise that is SIMD friendly suitable to be
+// inlined inside of a SIMD loops
+struct USimplexNoiseScalar {
+    USimplexNoiseScalar () { }
+
+    OSL_INLINE void operator() (float &result, float x) const {
+        result = 0.5f * (fast::simplexnoise1<0/* seed */>(x) + 1.0f);
+    }
+
+    OSL_INLINE void operator() (float &result, float x, float y) const {
+        result = 0.5f * (fast::simplexnoise2<0/* seed */>(x, y) + 1.0f);
+    }
+
+    OSL_INLINE void operator() (float &result, const Vec3 &p) const {
+        result = 0.5f * (fast::simplexnoise3<0/* seed */>(p.x, p.y, p.z) + 1.0f);
+    }
+
+    OSL_INLINE void operator() (float &result, const Vec3 &p, float t) const {
+        result = 0.5f * (fast::simplexnoise4<0/* seed */> (p.x, p.y, p.z, t) + 1.0f);
+    }
+
+    OSL_INLINE void operator() (Vec3 &result, float x) const {
+        result.x = 0.5f * (fast::simplexnoise1<0/* seed */>(x) + 1.0f);
+        result.y = 0.5f * (fast::simplexnoise1<1/* seed */>(x) + 1.0f);
+        result.z = 0.5f * (fast::simplexnoise1<2/* seed */>(x) + 1.0f);
+    }
+
+    OSL_INLINE void operator() (Vec3 &result, float x, float y) const {
+        result.x = 0.5f * (fast::simplexnoise2<0>(x, y) + 1.0f);
+        result.y = 0.5f * (fast::simplexnoise2<1>(x, y) + 1.0f);
+        result.z = 0.5f * (fast::simplexnoise2<2>(x, y) + 1.0f);
+    }
+
+    OSL_INLINE void operator() (Vec3 &result, const Vec3 &p) const {
+        result.x = 0.5f * (fast::simplexnoise3<0/* seed */>(p.x, p.y, p.z) + 1.0f);
+        result.y = 0.5f * (fast::simplexnoise3<1/* seed */>(p.x, p.y, p.z) + 1.0f);
+        result.z = 0.5f * (fast::simplexnoise3<2/* seed */>(p.x, p.y, p.z) + 1.0f);
+    }
+
+    OSL_INLINE void operator() (Vec3 &result, const Vec3 &p, float t) const {
+        result.x = 0.5f * (fast::simplexnoise4<0/* seed */>(p.x, p.y, p.z, t) + 1.0f);
+        result.y = 0.5f * (fast::simplexnoise4<1/* seed */>(p.x, p.y, p.z, t) + 1.0f);
+        result.z = 0.5f * (fast::simplexnoise4<2/* seed */>(p.x, p.y, p.z, t) + 1.0f);
+    }
+
+    // dual versions
+    template<int seed=0>
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<float> &x) const {
+        float r, dndx;
+        r = fast::simplexnoise1<seed>(x.val(), fast::DxRef(dndx));
+        r = 0.5f * (r + 1.0f);
+        dndx *= 0.5f;
+        result.set (r, dndx * x.dx(), dndx * x.dy());
+    }
+
+    template<int seedT=0>
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<float> &x,
+                             const Dual2<float> &y) const {
+        float r, dndx, dndy;
+        r = fast::simplexnoise2<seedT> (x.val(), y.val(), fast::DxDyRef(dndx, dndy));
+        r = 0.5f * (r + 1.0f);
+        dndx *= 0.5f;
+        dndy *= 0.5f;
+        result.set (r, dndx * x.dx() + dndy * y.dx(),
+                       dndx * x.dy() + dndy * y.dy());
+    }
+
+    template<int seed=0>
+    OSL_INLINE void operator() (Dual2<float> &result, const Dual2<Vec3> &p) const {
+        float r, dndx, dndy, dndz;
+        const Vec3 &p_val = p.val();
+        r = fast::simplexnoise3<seed>(p_val.x, p_val.y, p_val.z, fast::DxDyDzRef(dndx, dndy, dndz));
+        r = 0.5f * (r + 1.0f);
+        dndx *= 0.5f;
+        dndy *= 0.5f;
+        dndz *= 0.5f;
+        result.set (r, dndx * p.dx().x + dndy * p.dx().y + dndz * p.dx().z,
+                       dndx * p.dy().x + dndy * p.dy().y + dndz * p.dy().z);
+    }
+
+    template<int seed=0>
+    OSL_INLINE void operator()(Dual2<float> &result, const Dual2<Vec3> &p,
+                            const Dual2<float> &t) const {
+        float dndx, dndy, dndz, dndt;
+        float r = fast::simplexnoise4<seed> (p.val().x, p.val().y, p.val().z, t.val(),
+                           fast::DxDyDzDwRef(dndx, dndy, dndz, dndt));
+        r = 0.5f * (r + 1.0f);
+        dndx *= 0.5f;
+        dndy *= 0.5f;
+        dndz *= 0.5f;
+        dndt *= 0.5f;
+        result.set (r, dndx * p.dx().x + dndy * p.dx().y + dndz * p.dx().z + dndt * t.dx(),
+                       dndx * p.dy().x + dndy * p.dy().y + dndz * p.dy().z + dndt * t.dy());
+    }
+
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const {
+        Dual2<float> r0, r1, r2;
+        operator()<0>(r0, x);
+        operator()<1>(r1, x);
+        operator()<2>(r2, x);
+        result = make_Vec3 (r0, r1, r2);
+    }
+
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {
+        Dual2<float> r0, r1, r2;
+        operator()<0>(r0, x, y);
+        operator()<1>(r1, x, y);
+        operator()<2>(r2, x, y);
+        result = make_Vec3 (r0, r1, r2);
+    }
+
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {
+        Dual2<float> r0, r1, r2;
+        operator()<0>(r0, p);
+        operator()<1>(r1, p);
+        operator()<2>(r2, p);
+        result = make_Vec3 (r0, r1, r2);
+    }
+
+    OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
+        Dual2<float> r0, r1, r2;
+        operator()<0>(r0, p, t);
+        operator()<1>(r1, p, t);
+        operator()<2>(r2, p, t);
+        result = make_Vec3 (r0, r1, r2);
+    }
+
+};
 } // anonymous namespace
 
 
@@ -3213,9 +2991,6 @@ Dual2<Vec3> gabor3 (const Dual2<float> &x, const Dual2<float> &y,
 Dual2<Vec3> gabor3 (const Dual2<float> &x, const NoiseParams *opt);
 
 
-
-void gabor (ConstWideAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wP, WideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wResult, const NoiseParams *opt);
-void gabor3 (ConstWideAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wP, WideAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wResult, const NoiseParams *opt);
 
 
 
@@ -3278,7 +3053,6 @@ DECLNOISE (noise, Noise)
 DECLNOISE (cellnoise, CellNoise)
 
 #undef DECLNOISE
-
 }   // namespace oslnoise
 
 

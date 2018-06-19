@@ -2492,8 +2492,10 @@ LLVMGEN (llvm_gen_DxDy)
     Symbol& Src (*rop.opargsym (op, 1));
     int deriv = (op.opname() == "Dx") ? 1 : 2;
 
+    bool result_is_uniform = rop.isSymbolUniform(Result);
+
     for (int i = 0; i < Result.typespec().aggregate(); ++i) {
-        llvm::Value* src_val = rop.llvm_load_value (Src, deriv, i);
+        llvm::Value* src_val = rop.llvm_load_value (Src, deriv, i, TypeDesc::UNKNOWN, result_is_uniform);
         rop.storeLLVMValue (src_val, Result, i, 0);
     }
 
@@ -2511,11 +2513,13 @@ LLVMGEN (llvm_gen_Dz)
     Symbol& Result (*rop.opargsym (op, 0));
     Symbol& Src (*rop.opargsym (op, 1));
 
+    bool result_is_uniform = rop.isSymbolUniform(Result);
+
     if (&Src == rop.inst()->symbol(rop.inst()->Psym())) {
         // dPdz -- the only Dz we know how to take
         int deriv = 3;
         for (int i = 0; i < Result.typespec().aggregate(); ++i) {
-            llvm::Value* src_val = rop.llvm_load_value (Src, deriv, i);
+            llvm::Value* src_val = rop.llvm_load_value (Src, deriv, i, TypeDesc::UNKNOWN, result_is_uniform);
             rop.storeLLVMValue (src_val, Result, i, 0);
         }
         // Don't have 2nd order derivs
@@ -4703,7 +4707,7 @@ LLVMGEN (llvm_gen_noise)
     bool op_is_uniform = rop.isSymbolUniform(Result);
     OSL_DEV_ONLY(std::cout << "llvm_gen_noise op_is_uniform="<<op_is_uniform<< std::endl);
 
-    //int outdim =  Result.typespec().is_triple() ? 3 : 1;
+    int outdim =  Result.typespec().is_triple() ? 3 : 1;
     Symbol *Name = rop.opargsym (op, arg++);
     ustring name;
     if (Name->typespec().is_string()) {
@@ -4809,7 +4813,7 @@ LLVMGEN (llvm_gen_noise)
 
     OSL_DEV_ONLY(std::cout << "llvm_gen_noise function name=" << name << std::endl);
 
-    std::string funcname = "osl_" + name.string() + "_" + warg_typecode(&Result,derivs);
+    std::string funcname = "osl_" + name.string() + "_" + arg_typecode(Result,derivs,op_is_uniform);
     std::vector<llvm::Value *> args;
 
 //    args.push_back (rop.llvm_void_ptr (Result));
@@ -4821,26 +4825,26 @@ LLVMGEN (llvm_gen_noise)
 
     // triple return, or float return with derivs, passes result pointer
     // Always pass result as we can't return a wide type through C ABI
-    //if (outdim == 3 || derivs) {
+    if (outdim == 3 || derivs || !op_is_uniform) {
         if (derivs && !Result.has_derivs()) {
             tmpresult = rop.llvm_load_arg (Result, true, op_is_uniform);
             args.push_back (tmpresult);
         }
         else
             args.push_back (rop.llvm_void_ptr (Result));
-    //}
-    funcname += warg_typecode(S, derivs);
+    }
+    funcname += arg_typecode(*S, derivs, op_is_uniform);
     args.push_back (rop.llvm_load_arg (*S, derivs, op_is_uniform));
     if (T) {
-        funcname += warg_typecode(T, derivs);
+        funcname += arg_typecode(*T, derivs, op_is_uniform);
         args.push_back (rop.llvm_load_arg (*T, derivs, op_is_uniform));
     }
 
     if (periodic) {
-        funcname += warg_typecode (Sper, false /* no derivs */);
+        funcname += arg_typecode (*Sper, false /* no derivs */, op_is_uniform);
         args.push_back (rop.llvm_load_arg (*Sper, false, op_is_uniform));
         if (Tper) {
-            funcname += warg_typecode (Tper, false /* no derivs */);
+            funcname += arg_typecode (*Tper, false /* no derivs */, op_is_uniform);
             args.push_back (rop.llvm_load_arg (*Tper, false, op_is_uniform));
         }
     }
@@ -4849,6 +4853,12 @@ LLVMGEN (llvm_gen_noise)
         args.push_back (rop.sg_void_ptr());
     if (pass_options)
         args.push_back (opt);
+
+    if (!op_is_uniform) {
+        // force masking
+        args.push_back ( rop.ll.mask_as_int(rop.ll.current_mask()) );
+        funcname.append("_masked");
+    }
 
 #ifdef OSL_DEV
     std::cout << "About to push " << funcname << "\n";
@@ -4862,16 +4872,13 @@ LLVMGEN (llvm_gen_noise)
 #endif
 
     // We always pass the result as a parameter, so no return value to store
-    /*llvm::Value *r =*/ rop.ll.call_function (funcname.c_str(),
+    llvm::Value *r = rop.ll.call_function (funcname.c_str(),
                                              &args[0], (int)args.size());
 
-#if 0
-    if (outdim == 1 && !derivs) {
+    if (op_is_uniform && outdim == 1 && !derivs) {
         // Just plain float (no derivs) returns its value
         rop.llvm_store_value (r, Result);
-    } else
-#endif
-    if (derivs && !Result.has_derivs()) {
+    } else if (derivs && !Result.has_derivs()) {
         // Function needed to take derivs, but our result doesn't have them.
         // We created a temp, now we need to copy to the real result.
 

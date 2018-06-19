@@ -1,0 +1,12 @@
+shader
+test_dfloat_3d_v_point (string type = "perlin", output color Cout = 0)
+{
+    float val = noise (type, point(u, v, u - v));
+    val *= 2.0;
+    Cout[1] = Dy(val);    
+    Cout[2] = Dx(val);    
+    if (int(P[0]*64)%2 == 0) {
+        float val2 = noise (type, point(v, u, v - u));
+        Cout[1] += Dy(val2) + Dx(val2);        
+    }
+}

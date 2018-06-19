@@ -121,7 +121,9 @@ slice_gabor_kernel_3d (const Dual2<float> &d, float w, float a,
     //phi_s = phi - float(M_TWO_PI) * d * omega[2];
     omega_s.x = omega.x;
     omega_s.y = omega.y;
-    phi_s = phi - float(M_TWO_PI) * d * omega.x;
+    // A.W. think this was a bug, supposed to be omega.z not omega.x;
+    //phi_s = phi - float(M_TWO_PI) * d * omega.x;
+    phi_s = phi - float(M_TWO_PI) * d * omega.z;
 }
 
 
@@ -164,13 +166,13 @@ wrap (float s, float period)
 }
 
 
-
+// avoid aliasing issues
 static Vec3
 wrap (const Vec3 &s, const Vec3 &period)
 {
-    return Vec3 (wrap (s[0], period[0]),
-                 wrap (s[1], period[1]),
-                 wrap (s[2], period[2]));
+    return Vec3 (wrap (s.x, period.x),
+                 wrap (s.y, period.y),
+                 wrap (s.z, period.z));
 }
 
 
@@ -183,11 +185,12 @@ wrap (const Vec3 &s, const Vec3 &period)
 inline void
 make_orthonormals (Vec3 &v, Vec3 &a, Vec3 &b)
 {
+    // avoid aliasing issues by not using the [] operator
     v.normalize();
-    if (fabsf(v[0]) < 0.9f)
-	a.setValue (0.0f, v[2], -v[1]);   // v X (1,0,0)
+    if (fabsf(v.x) < 0.9f)
+        a.setValue (0.0f, v.z, -v.y);   // v X (1,0,0)
     else
-        a.setValue (-v[2], 0.0f, v[0]);   // v X (0,1,0)
+        a.setValue (-v.z, 0.0f, v.x);   // v X (0,1,0)
     a.normalize ();
     b = v.cross (a);
 //    b.normalize ();  // note: not necessary since v is unit length
@@ -199,8 +202,9 @@ make_orthonormals (Vec3 &v, Vec3 &a, Vec3 &b)
 inline Vec3
 floor (const Dual2<Vec3> &vd)
 {
+    // avoid aliasing issues by not using the [] operator
     const Vec3 &v (vd.val());
-    return Vec3 (floorf(v[0]), floorf(v[1]), floorf(v[2]));
+    return Vec3 (floorf(v.x), floorf(v.y), floorf(v.z));
 }
 
 
@@ -219,16 +223,50 @@ struct EnabledFilterPolicy
 template<int AnisotropicT, typename FilterPolicyT, int WidthT>
 OSL_NOINLINE void
 fast_gabor (
+        MaskedAccessor<Dual2<float>,WidthT> wResult,
 		ConstWideAccessor<Dual2<Vec3>,WidthT> wP,
-		WideAccessor<Dual2<float>,WidthT> wResult,
 		NoiseParams const *opt);
+
+// Foward declaration, implementation is in fast_gabor.h
+template<int AnisotropicT, typename FilterPolicyT, int WidthT>
+OSL_NOINLINE void
+fast_gabor (
+        MaskedAccessor<Dual2<float>,WidthT> wResult,
+        ConstWideAccessor<Dual2<float>,WidthT> wX,
+        NoiseParams const *opt);
+
+// Foward declaration, implementation is in fast_gabor.h
+template<int AnisotropicT, typename FilterPolicyT, int WidthT>
+OSL_NOINLINE void
+fast_gabor (
+        MaskedAccessor<Dual2<float>,WidthT> wResult,
+        ConstWideAccessor<Dual2<float>,WidthT> wX,
+        ConstWideAccessor<Dual2<float>,WidthT> wY,
+        NoiseParams const *opt);
 
 // Foward declaration, implementation is in fast_gabor.h
 template<int AnisotropicT, typename FilterPolicyT, int WidthT>
 OSL_NOINLINE  void
 fast_gabor3 (
+        MaskedAccessor<Dual2<Vec3>,WidthT> wResult,
+        ConstWideAccessor<Dual2<float>, WidthT> wX,
+        NoiseParams const *opt);
+
+// Foward declaration, implementation is in fast_gabor.h
+template<int AnisotropicT, typename FilterPolicyT, int WidthT>
+OSL_NOINLINE  void
+fast_gabor3 (
+        MaskedAccessor<Dual2<Vec3>,WidthT> wResult,
+        ConstWideAccessor<Dual2<float>, WidthT> wX,
+        ConstWideAccessor<Dual2<float>, WidthT> wY,
+        NoiseParams const *opt);
+
+// Foward declaration, implementation is in fast_gabor.h
+template<int AnisotropicT, typename FilterPolicyT, int WidthT>
+OSL_NOINLINE  void
+fast_gabor3 (
+        MaskedAccessor<Dual2<Vec3>,WidthT> wResult,
 		ConstWideAccessor<Dual2<Vec3>, WidthT> wP,
-		WideAccessor<Dual2<Vec3>,WidthT> wResult,
 		NoiseParams const *opt);
 
 } // namespace pvt

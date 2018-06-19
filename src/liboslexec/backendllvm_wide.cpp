@@ -2635,17 +2635,21 @@ llvm::Value *
 BackendLLVMWide::llvm_load_arg (const Symbol& sym, bool derivs, bool op_is_uniform)
 {
     ASSERT (sym.typespec().is_floatbased());
+
+    bool sym_is_uniform = isSymbolUniform(sym);
+
     if (sym.typespec().is_int() ||
         (sym.typespec().is_float() && !derivs)) {
         // Scalar case
 
     	// If we are not uniform, then the argument should
-    	// get passed as a pointer intstead of by value
+    	// get passed as a pointer instead of by value
     	// So let this case fall through
     	// NOTE:  Unclear of behavior if symbol is a constant
     	if (op_is_uniform) {
-    		return llvm_load_value (sym, op_is_uniform);
+    		return llvm_load_value (sym, 0, 0, TypeDesc::UNKNOWN, op_is_uniform);
     	} else if (sym.symtype() == SymTypeConst) {
+
     		// As the case to deliver a pointer to a symbol data
     		// doesn't provide an opportunity to promote a uniform constant
     		// to a wide value that the non-uniform function is expecting
@@ -2654,7 +2658,7 @@ BackendLLVMWide::llvm_load_arg (const Symbol& sym, bool derivs, bool op_is_unifo
     		
     		// Have to have a place on the stack for the pointer to the wide constant to point to
             const TypeSpec &t = sym.typespec();
-            llvm::Value *tmpptr = llvm_alloca (t, true, op_is_uniform);
+            llvm::Value *tmpptr = llvm_alloca (t, false, op_is_uniform);
             
             // Store our wide pointer on the stack
             llvm_store_value (wide_constant_value, tmpptr, t, 0, NULL, 0);
@@ -2664,26 +2668,32 @@ BackendLLVMWide::llvm_load_arg (const Symbol& sym, bool derivs, bool op_is_unifo
     	}
     }
 
-    if (derivs && !sym.has_derivs()) {
+    if (sym_is_uniform || (derivs && !sym.has_derivs())) {
         // Manufacture-derivs case
         const TypeSpec &t = sym.typespec();
     	
         // Copy the non-deriv values component by component
-        llvm::Value *tmpptr = llvm_alloca (t, true, op_is_uniform);
-        for (int c = 0;  c < t.aggregate();  ++c) {
-            llvm::Value *v = llvm_load_value (sym, 0, c, TypeDesc::UNKNOWN, op_is_uniform);
-            llvm_store_value (v, tmpptr, t, 0, NULL, c);
+        llvm::Value *tmpptr = llvm_alloca (t, derivs, op_is_uniform);
+        int copy_deriv_count = (derivs && sym.has_derivs()) ? 3 : 1;
+        for (int d = 0; d < copy_deriv_count; ++d) {
+            for (int c = 0;  c < t.aggregate();  ++c) {
+                // Will automatically widen value if needed
+                llvm::Value *v = llvm_load_value (sym, d, c, TypeDesc::UNKNOWN, op_is_uniform);
+                llvm_store_value (v, tmpptr, t, d, NULL, c);
+            }
         }
-        // Zero out the deriv values
-        llvm::Value *zero;
-        if (op_is_uniform)
-            zero = ll.constant (0.0f);
-        else
-        	zero = ll.wide_constant (0.0f);
-        for (int c = 0;  c < t.aggregate();  ++c)
-            llvm_store_value (zero, tmpptr, t, 1, NULL, c);
-        for (int c = 0;  c < t.aggregate();  ++c)
-            llvm_store_value (zero, tmpptr, t, 2, NULL, c);
+        if (derivs && !sym.has_derivs()) {
+            // Zero out the deriv values
+            llvm::Value *zero;
+            if (op_is_uniform)
+                zero = ll.constant (0.0f);
+            else
+                zero = ll.wide_constant (0.0f);
+            for (int c = 0;  c < t.aggregate();  ++c)
+                llvm_store_value (zero, tmpptr, t, 1, NULL, c);
+            for (int c = 0;  c < t.aggregate();  ++c)
+                llvm_store_value (zero, tmpptr, t, 2, NULL, c);
+        }
         return ll.void_ptr (tmpptr);
     }
 

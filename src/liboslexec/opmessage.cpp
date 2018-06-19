@@ -178,6 +178,7 @@ osl_getmessage_batched(ShaderGlobalsBatch *sgb_,void *result,
     const ustring &source (USTR(source_));
     const ustring &name (USTR(name_));
     const ustring &sourcefile (USTR(sourcefile_));
+    (void)sourcefile; // avoid unused variable warning, for now
 
     ShaderGlobalsBatch *sgb = reinterpret_cast<ShaderGlobalsBatch *>(sgb_);
     MaskedAccessor<int> wR (result, Mask(mask_value));

@@ -1716,7 +1716,6 @@ BackendLLVMWide::run ()
 
         std::vector<unsigned int> offset_by_index;
 
-        auto uniform_offset = offsetof(BatchedTextureOptions,uniform);//why?
         offset_by_index.push_back(offsetof(RendererServices::TraceOpt, mindist));
         offset_by_index.push_back(offsetof(RendererServices::TraceOpt, maxdist));
         offset_by_index.push_back(offsetof(RendererServices::TraceOpt, shade));

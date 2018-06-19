@@ -12,13 +12,6 @@ SET ( liboslnoise_srcs
 	fast_gabor3_hybrid_enabled_16.cpp
 	fast_gabor3_isotropic_disabled_16.cpp
 	fast_gabor3_isotropic_enabled_16.cpp
-	fast_simplexnoise3_16_float.cpp
-	fast_simplexnoise3_16_vec3.cpp
-	fast_simplexnoise4_16_vec3.cpp
-    fast_usimplexnoise1_16_vec3.cpp
-	fast_usimplexnoise3_16_float.cpp
-	fast_usimplexnoise3_16_vec3.cpp
-	fast_usimplexnoise4_16_vec3.cpp
  	simplexnoise.cpp )
 
 #FILE ( GLOB compiler_headers "../liboslexec/*.h" )

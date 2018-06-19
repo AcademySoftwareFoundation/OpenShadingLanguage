@@ -95,9 +95,15 @@ void test_perlin(int d) {
 
 
 NOISE_IMPL (snoise, SNoise)
-NOISE_WIMPL (snoise, SNoise, __OSL_SIMD_LANE_COUNT)
 NOISE_IMPL_DERIV (snoise, SNoise)
-NOISE_WIMPL_DERIV (snoise, SNoise, __OSL_SIMD_LANE_COUNT)
+
+#define __OSL_XMACRO_ARGS (snoise, SNoiseScalar, __OSL_SIMD_LANE_COUNT)
+#include "opnoise_impl_wide_xmacro.h"
+
+#define __OSL_XMACRO_ARGS (snoise, SNoiseScalar, __OSL_SIMD_LANE_COUNT)
+#define __OSL_XMACRO_NO_SIMD_FOR_WDV_WDV_WDF 1
+#include "opnoise_impl_deriv_wide_xmacro.h"
+
 
 
 } // namespace pvt

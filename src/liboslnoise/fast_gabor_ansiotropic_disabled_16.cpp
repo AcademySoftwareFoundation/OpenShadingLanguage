@@ -36,10 +36,22 @@ namespace pvt {
 
 template void
 fast_gabor<1 /*ansiotropic*/, DisabledFilterPolicy, 16 /* WidthT */>(
+        MaskedAccessor<Dual2<float>,16 /*WidthT*/> wResult,
 		ConstWideAccessor<Dual2<Vec3>, 16 /*WidthT*/> wP,
-		WideAccessor<Dual2<float>,16 /*WidthT*/> wResult,
 		NoiseParams const *opt);
 
+template void
+fast_gabor<1 /*ansiotropic*/, DisabledFilterPolicy, 16 /* WidthT */>(
+        MaskedAccessor<Dual2<float>,16 /*WidthT*/> wResult,
+        ConstWideAccessor<Dual2<float>, 16 /*WidthT*/> wX,
+        NoiseParams const *opt);
+
+template void
+fast_gabor<1 /*ansiotropic*/, DisabledFilterPolicy, 16 /* WidthT */>(
+        MaskedAccessor<Dual2<float>,16 /*WidthT*/> wResult,
+        ConstWideAccessor<Dual2<float>, 16 /*WidthT*/> wX,
+        ConstWideAccessor<Dual2<float>, 16 /*WidthT*/> wY,
+        NoiseParams const *opt);
 
 
 }; // namespace pvt

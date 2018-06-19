@@ -1158,9 +1158,9 @@ avoidAliasingRobustMultVecMatrix(const Matrix44 &M, const Dual2<Vec3> &src, Dual
 OSL_INLINE void
 avoidAliasingMultDirMatrix (const Matrix44 &M, const Vec3 &src, Vec3 &dst)
 {
-	float a = src.x * M[0][0] + src.y * M[1][0] + src.z * M[2][0];
-	float b = src.x * M[0][1] + src.y * M[1][1] + src.z * M[2][1];
-	float c = src.x * M[0][2] + src.y * M[1][2] + src.z * M[2][2];
+	float a = src.x * M.x[0][0] + src.y * M.x[1][0] + src.z * M.x[2][0];
+	float b = src.x * M.x[0][1] + src.y * M.x[1][1] + src.z * M.x[2][1];
+	float c = src.x * M.x[0][2] + src.y * M.x[1][2] + src.z * M.x[2][2];
 
 	dst.x = a;
 	dst.y = b;
@@ -1434,14 +1434,13 @@ impl_transform_point_masked(void *Pin,
 		OSL_OMP_PRAGMA(omp simd simdlen(width))
 		for(int i=0; i < wresult.width; ++i)
 		{
-			Matrix44 m = wM[i];
-			data_type v = inPoints[i];
+			const Matrix44 m = wM[i];
+			const data_type v = inPoints[i];
 			data_type r;
 
 			// Do to illegal aliasing in OpenEXR version
 			// we call our own flavor without aliasing
-			// robust_multVecMatrix(x, v, r);
-			avoidAliasingRobustMultVecMatrix(m, v, r);
+			robust_multVecMatrix(m, v, r);
 
 			wresult[i] = r;
 		}

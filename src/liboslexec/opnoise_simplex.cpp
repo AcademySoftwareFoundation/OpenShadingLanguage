@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2012 Sony Pictures Imageworks Inc., et al.
+Copyright (c) 2009-2010 Sony Pictures Imageworks Inc., et al.
 All Rights Reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -26,18 +26,39 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "fast_simplex.h"
+#include <limits>
 
+#include "oslexec_pvt.h"
+#include <OSL/oslnoise.h>
+#include <OSL/dual_vec.h>
+#include <OSL/Imathx.h>
+
+#include <OpenImageIO/fmath.h>
+
+#include "opnoise.h"
+
+using namespace OSL;
 
 OSL_NAMESPACE_ENTER
-
 namespace pvt {
 
-template void
-fast_usimplexnoise3<16 /* WidthT */>(
-		WideAccessor<float, 16> wresult,
-		ConstWideAccessor<Vec3, 16> wp);
+/***********************************************************************
+ * noise routines callable by the LLVM-generated code.
+ */
+NOISE_IMPL (simplexnoise, SimplexNoise)
+NOISE_IMPL_DERIV (simplexnoise, SimplexNoise)
 
 
-}; // namespace pvt
+#define __OSL_XMACRO_ARGS (simplexnoise, SimplexNoiseScalar, __OSL_SIMD_LANE_COUNT)
+#include "opnoise_impl_wide_xmacro.h"
+
+
+#define __OSL_XMACRO_ARGS (simplexnoise, SimplexNoiseScalar, __OSL_SIMD_LANE_COUNT)
+#ifdef __clang__
+    #define __OSL_XMACRO_NO_SIMD_FOR_WDV_WDV_WDF 1
+#endif
+#include "opnoise_impl_deriv_wide_xmacro.h"
+
+} // namespace pvt
 OSL_NAMESPACE_EXIT
+

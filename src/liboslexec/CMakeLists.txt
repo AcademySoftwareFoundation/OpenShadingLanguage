@@ -4,7 +4,7 @@ SET ( liboslexec_srcs
           context.cpp instance.cpp
           loadshader.cpp master.cpp
           opcolor.cpp opmatrix.cpp opmessage.cpp
-          opnoise.cpp opnoise_perlin.cpp opnoise_uperlin.cpp
+          opnoise.cpp opnoise_perlin.cpp opnoise_uperlin.cpp opnoise_simplex.cpp opnoise_usimplex.cpp
           opspline.cpp opstring.cpp optexture.cpp
           optranscendental.cpp
           oslexec.cpp
@@ -46,13 +46,6 @@ LIST(APPEND liboslexec_srcs
    ../liboslnoise/fast_gabor3_hybrid_enabled_16.cpp
    ../liboslnoise/fast_gabor3_isotropic_disabled_16.cpp
    ../liboslnoise/fast_gabor3_isotropic_enabled_16.cpp   
-   ../liboslnoise/fast_simplexnoise3_16_float.cpp
-   ../liboslnoise/fast_simplexnoise3_16_vec3.cpp
-   ../liboslnoise/fast_simplexnoise4_16_vec3.cpp
-   ../liboslnoise/fast_usimplexnoise1_16_vec3.cpp
-   ../liboslnoise/fast_usimplexnoise3_16_float.cpp
-   ../liboslnoise/fast_usimplexnoise3_16_vec3.cpp
-   ../liboslnoise/fast_usimplexnoise4_16_vec3.cpp
    ../liboslnoise/simplexnoise.cpp
    )
 

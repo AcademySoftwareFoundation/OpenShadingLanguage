@@ -375,9 +375,15 @@ Matrix22<T>::Matrix22 (T a)
 
 template <class T>
 inline
-Matrix22<T>::Matrix22 (const T a[2][2]) 
+Matrix22<T>::Matrix22 (const T a[2][2])
+: x{{a[0][0],
+     a[0][1]},
+    {a[1][0],
+     a[1][1]}}
 {
-    memcpy (x, a, sizeof (x));
+    // function calls and aliasing issues can inhibit vectorization
+    // versus straight assignment of data members
+    //memcpy (x, a, sizeof (x));
 }
 
 template <class T>
@@ -398,6 +404,8 @@ Matrix22<T>::Matrix22 (const Matrix22 &v)
 	{v.x[1][0],
 	 v.x[1][1]}}
 {
+    // function calls and aliasing issues can inhibit vectorization
+    // versus straight assignment of data members
     //memcpy (x, v.x, sizeof (x));
 }
 
@@ -454,11 +462,15 @@ template <class S>
 inline void
 Matrix22<T>::getValue (Matrix22<S> &v) const
 {
+    // function calls and aliasing issues can inhibit vectorization
+    // versus straight assignment of data members
+#if 0
     if (isSameType<S,T>::value)
     {
         memcpy (v.x, x, sizeof (x));
     }
     else
+#endif
     {
         v.x[0][0] = x[0][0];
         v.x[0][1] = x[0][1];
@@ -472,11 +484,15 @@ template <class S>
 inline Matrix22<T> &
 Matrix22<T>::setValue (const Matrix22<S> &v)
 {
+    // function calls and aliasing issues can inhibit vectorization
+    // versus straight assignment of data members
+#if 0
     if (isSameType<S,T>::value)
     {
         memcpy (x, v.x, sizeof (x));
     }
     else
+#endif
     {
         x[0][0] = v.x[0][0];
         x[0][1] = v.x[0][1];
@@ -492,11 +508,15 @@ template <class S>
 inline Matrix22<T> &
 Matrix22<T>::setTheMatrix (const Matrix22<S> &v)
 {
+    // function calls and aliasing issues can inhibit vectorization
+    // versus straight assignment of data members
+#if 0
     if (isSameType<S,T>::value)
     {
         memcpy (x, v.x, sizeof (x));
     }
     else
+#endif
     {
         x[0][0] = v.x[0][0];
         x[0][1] = v.x[0][1];
@@ -684,12 +704,25 @@ template <class T>
 const Matrix22<T> &
 Matrix22<T>::operator *= (const Matrix22<T> &v)
 {
+    // Manually unroll loops and avoid writing to
+    // the data members twice by using the uninitialized
+    // version of the constructor
+#if 0
     Matrix22 tmp (T (0));
 
     for (int i = 0; i < 2; i++)
         for (int j = 0; j < 2; j++)
             for (int k = 0; k < 2; k++)
                 tmp.x[i][j] += x[i][k] * v.x[k][j];
+#else
+    Matrix22 tmp (Imathx::UNINITIALIZED);
+
+    tmp.x[0][0] = x[0][0] * v.x[0][0] + x[0][1] * v.x[1][0];
+    tmp.x[0][1] = x[0][0] * v.x[0][1] + x[0][1] * v.x[1][1];
+
+    tmp.x[1][0] = x[1][0] * v.x[0][0] + x[1][1] * v.x[1][0];
+    tmp.x[1][1] = x[1][0] * v.x[0][1] + x[1][1] * v.x[1][1];
+#endif
 
     *this = tmp;
     return *this;
@@ -700,6 +733,9 @@ Matrix22<T>
 Matrix22<T>::operator * (const Matrix22<T> &v) const
 {
 
+    // Manually unroll loops and avoid writing to
+    // the data members twice by using the uninitialized
+    // version of the constructor
 #if 0
     Matrix22 tmp (T (0));
     
@@ -736,12 +772,14 @@ Matrix22<T>::multMatrix(const Imath::Vec2<S> &src, Imath::Vec2<S> &dst) const
 {
     S a, b;
 
-    a = src[0] * x[0][0] + src[1] * x[1][0];
-    b = src[0] * x[0][1] + src[1] * x[1][1];
+    // Non-aliasing by avoiding [int] operator on Vec2
+    a = src.x * x[0][0] + src.y * x[1][0];
+    b = src.x * x[0][1] + src.y * x[1][1];
 
     dst.x = a;
     dst.y = b;
 }
+
 
 template <class T>
 const Matrix22<T> &

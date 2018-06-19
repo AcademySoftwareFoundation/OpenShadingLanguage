@@ -79,34 +79,6 @@ OSL_SHADEOP void osl_ ##opname## _vvf (char *r, char *x, float y) {     \
 
 
 
-// TODO: expand to cover all combinations
-#define NOISE_WIMPL_INDIRECT(opname,implname,LANE_COUNT)                         \
-OSL_SHADEOP void osl_ ##opname## _w ##LANE_COUNT## fw ##LANE_COUNT## v(char *r, char *x) {        \
-    implname impl;                                                      \
-    impl (WideAccessor<float,LANE_COUNT>(r), ConstWideAccessor<Vec3,LANE_COUNT>(x));    \
-}                                                                       \
-OSL_SHADEOP void osl_ ##opname## _w ##LANE_COUNT## vw ##LANE_COUNT## v (char *r, char *x) {               \
-implname impl;                                                      \
-impl (WideAccessor<Vec3,LANE_COUNT>(r), ConstWideAccessor<Vec3,LANE_COUNT>(x));                                              \
-}                                                                       \
-OSL_SHADEOP void osl_ ##opname## _w ##LANE_COUNT## vw ##LANE_COUNT## f (char *r, char *x) {               \
-implname impl;                                                      \
-impl (WideAccessor<Vec3,LANE_COUNT>(r), ConstWideAccessor<float,LANE_COUNT>(x));                                              \
-}                                                                       \
-OSL_SHADEOP void osl_ ##opname## _w ##LANE_COUNT## fw ##LANE_COUNT## f (char *r, char *x) {               \
-implname impl;                                                      \
-impl (WideAccessor<float,LANE_COUNT>(r), ConstWideAccessor<float,LANE_COUNT>(x));                                              \
-}                                                                       \
-OSL_SHADEOP void osl_ ##opname## _w ##LANE_COUNT## vw ##LANE_COUNT## vw ##LANE_COUNT## f (char *r, char *x, char *y) {     	\
-    implname impl;                                                      \
-    impl (WideAccessor<Vec3,LANE_COUNT>(r), ConstWideAccessor<Vec3,LANE_COUNT>(x), ConstWideAccessor<float,LANE_COUNT>(y));	\
-}	\
-
-
-#define NOISE_WIMPL(opname,implname,LANE_COUNT)                         \
-		NOISE_WIMPL_INDIRECT(opname,implname,LANE_COUNT)
-
-
 #define NOISE_IMPL_DERIV(opname,implname)                               \
 OSL_SHADEOP void osl_ ##opname## _dfdf (char *r, char *x) {             \
     implname impl;                                                      \
@@ -189,18 +161,6 @@ OSL_SHADEOP void osl_ ##opname## _dvvdf (char *r, char *x, char *y) {   \
     impl (DVEC(r), Dual2<Vec3>(VEC(x)), DFLOAT(y));                     \
 }
 
-#define NOISE_WIMPL_DERIV_INDIRECT(opname,implname,LANE_COUNT)          \
-OSL_SHADEOP void osl_ ##opname## _w ##LANE_COUNT## dfw ##LANE_COUNT## dv (char *r, char *x) {             \
-    implname impl;                                                      \
-    impl (WideAccessor<Dual2<float>,LANE_COUNT>(r), ConstWideAccessor<Dual2<Vec3>,LANE_COUNT>(x));    \
-}                                                                       \
-                                                                        \
-
-
-#define NOISE_WIMPL_DERIV(opname,implname,LANE_COUNT)                         \
-		NOISE_WIMPL_DERIV_INDIRECT(opname,implname,LANE_COUNT)
-
-
 
 
 #define NOISE_IMPL_DERIV_OPT(opname,implname)                           \
@@ -246,18 +206,6 @@ OSL_SHADEOP void osl_ ##opname## _dvdvdf (char *name, char *r, char *x, char *y,
 }
 
 
-#define NOISE_WIMPL_DERIV_OPT_INDIRECT(opname,implname, LANE_COUNT)                           \
-OSL_SHADEOP void osl_ ##opname## _w ##LANE_COUNT## dfw ##LANE_COUNT## dv (char *name, char *r, char *x, char *sgb, char *opt) {  \
-    implname impl;                                                      \
-    impl (USTR(name), WideAccessor<Dual2<Float>,LANE_COUNT>(r), ConstWideAccessor<Dual2<Vec3>,LANE_COUNT>(x), (ShaderGlobalsBatch *)sgb, (NoiseParams *)opt);	\
-}                                                                       \
-OSL_SHADEOP void osl_ ##opname## _w ##LANE_COUNT## dvw ##LANE_COUNT## dvw ##LANE_COUNT## df (char *name, char *r, char *x, char *y, char *sgb, char *opt) { \
-    implname impl;                                                      \
-    impl (USTR(name), WideAccessor<Dual2<Vec3>,LANE_COUNT>(r), ConstWideAccessor<Dual2<Vec3>,LANE_COUNT>(x), ConstWideAccessor<Dual2<Float>,LANE_COUNT>(y), (ShaderGlobalsBatch *)sgb, (NoiseParams *)opt);                            \
-}
-
-#define NOISE_WIMPL_DERIV_OPT(opname,implname, LANE_COUNT)                           \
-		NOISE_WIMPL_DERIV_OPT_INDIRECT(opname,implname, LANE_COUNT)
 
 #define PNOISE_IMPL(opname,implname)                                    \
     OSL_SHADEOP float osl_ ##opname## _fff (float x, float px) {        \

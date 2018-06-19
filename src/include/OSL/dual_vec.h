@@ -135,23 +135,19 @@ multMatrix (const Imath::Matrix33<T> &M, const Dual2<Imath::Vec3<S> > &src,
 	Dual2<float> src0(src.val().x, src.dx().x, src.dy().x);
 	Dual2<float> src1(src.val().y, src.dx().y, src.dy().y);
 	Dual2<float> src2(src.val().z, src.dx().z, src.dy().z);
-    Dual2<S> a = src0 * M[0][0] + src1 * M[1][0] + src2 * M[2][0];
-    Dual2<S> b = src0 * M[0][1] + src1 * M[1][1] + src2 * M[2][1];
-    Dual2<S> c = src0 * M[0][2] + src1 * M[1][2] + src2 * M[2][2];
+    Dual2<S> a = src0 * M.x[0][0] + src1 * M.x[1][0] + src2 * M.x[2][0];
+    Dual2<S> b = src0 * M.x[0][1] + src1 * M.x[1][1] + src2 * M.x[2][1];
+    Dual2<S> c = src0 * M.x[0][2] + src1 * M.x[1][2] + src2 * M.x[2][2];
     dst = make_Vec3 (a, b, c);
 }
 
-OSL_INLINE void robust_multVecMatrix(const Matrix44& x, const Imath::Vec3<float>& src, Imath::Vec3<float>& dst)
+OSL_INLINE void robust_multVecMatrix(const Matrix44& M, const Imath::Vec3<float>& src, Imath::Vec3<float>& dst)
 {
 	// Avoid aliasing issues
-//   float a = src[0] * x[0][0] + src[1] * x[1][0] + src[2] * x[2][0] + x[3][0];
-//   float b = src[0] * x[0][1] + src[1] * x[1][1] + src[2] * x[2][1] + x[3][1];
-//   float c = src[0] * x[0][2] + src[1] * x[1][2] + src[2] * x[2][2] + x[3][2];
-//   float w = src[0] * x[0][3] + src[1] * x[1][3] + src[2] * x[2][3] + x[3][3];
-   float a = src.x * x[0][0] + src.y * x[1][0] + src.z * x[2][0] + x[3][0];
-   float b = src.x * x[0][1] + src.y * x[1][1] + src.z * x[2][1] + x[3][1];
-   float c = src.x * x[0][2] + src.y * x[1][2] + src.z * x[2][2] + x[3][2];
-   float w = src.x * x[0][3] + src.y * x[1][3] + src.z * x[2][3] + x[3][3];
+   float a = src.x * M.x[0][0] + src.y * M.x[1][0] + src.z * M.x[2][0] + M.x[3][0];
+   float b = src.x * M.x[0][1] + src.y * M.x[1][1] + src.z * M.x[2][1] + M.x[3][1];
+   float c = src.x * M.x[0][2] + src.y * M.x[1][2] + src.z * M.x[2][2] + M.x[3][2];
+   float w = src.x * M.x[0][3] + src.y * M.x[1][3] + src.z * M.x[2][3] + M.x[3][3];
 
    if (w != 0) {
       dst.x = a / w;
@@ -170,16 +166,22 @@ OSL_INLINE void
 robust_multVecMatrix (const Matrix44 &M, const Dual2<Vec3> &in, Dual2<Vec3> &out)
 {
     // Rearrange into a Vec3<Dual2<float> >
-    Imath::Vec3<Dual2<float> > din, dout;
-    for (int i = 0;  i < 3;  ++i)
-        din[i].set (in.val()[i], in.dx()[i], in.dy()[i]);
+    // Avoid aliasing issues
+    //Imath::Vec3<Dual2<float> > din, dout;
+    //for (int i = 0;  i < 3;  ++i)
+     //   din[i].set (in.val()[i], in.dx()[i], in.dy()[i]);
+    Imath::Vec3<Dual2<float> > din(Dual2<float>(in.val().x, in.dx().x, in.dy().x),
+                                   Dual2<float>(in.val().y, in.dx().y, in.dy().y),
+                                   Dual2<float>(in.val().z, in.dx().z, in.dy().z));
+    Imath::Vec3<Dual2<float> > dout;
 
-    Dual2<float> a = din[0] * M[0][0] + din[1] * M[1][0] + din[2] * M[2][0] + M[3][0];
-    Dual2<float> b = din[0] * M[0][1] + din[1] * M[1][1] + din[2] * M[2][1] + M[3][1];
-    Dual2<float> c = din[0] * M[0][2] + din[1] * M[1][2] + din[2] * M[2][2] + M[3][2];
-    Dual2<float> w = din[0] * M[0][3] + din[1] * M[1][3] + din[2] * M[2][3] + M[3][3];
+    // Avoid aliasing issues
+    Dual2<float> a = din.x * M.x[0][0] + din.y * M.x[1][0] + din.z * M.x[2][0] + M.x[3][0];
+    Dual2<float> b = din.x * M.x[0][1] + din.y * M.x[1][1] + din.z * M.x[2][1] + M.x[3][1];
+    Dual2<float> c = din.x * M.x[0][2] + din.y * M.x[1][2] + din.z * M.x[2][2] + M.x[3][2];
+    Dual2<float> w = din.x * M.x[0][3] + din.y * M.x[1][3] + din.z * M.x[2][3] + M.x[3][3];
 
-    if (w.val() != 0) {
+    if (w.val() != 0.0f) {
        dout.x = a / w;
        dout.y = b / w;
        dout.z = c / w;
@@ -190,22 +192,23 @@ robust_multVecMatrix (const Matrix44 &M, const Dual2<Vec3> &in, Dual2<Vec3> &out
     }
 
     // Rearrange back into Dual2<Vec3>
-    out.set (Vec3 (dout[0].val(), dout[1].val(), dout[2].val()),
-             Vec3 (dout[0].dx(),  dout[1].dx(),  dout[2].dx()),
-             Vec3 (dout[0].dy(),  dout[1].dy(),  dout[2].dy()));
+    // Avoid aliasing issues
+    out.set (Vec3 (dout.x.val(), dout.y.val(), dout.z.val()),
+             Vec3 (dout.x.dx(),  dout.y.dx(),  dout.z.dx()),
+             Vec3 (dout.x.dy(),  dout.y.dy(),  dout.z.dy()));
 }
 
 
-OSL_INLINE void robust_multDirMatrix(const Matrix44& x, const Imath::Vec3<float>& src, Imath::Vec3<float>& dst)
+OSL_INLINE void robust_multDirMatrix(const Matrix44& M, const Imath::Vec3<float>& src, Imath::Vec3<float>& dst)
 {
     // Avoid aliasing issues
 //    float a = src[0] * x[0][0] + src[1] * x[1][0] + src[2] * x[2][0];
 //    float b = src[0] * x[0][1] + src[1] * x[1][1] + src[2] * x[2][1];
 //    float c = src[0] * x[0][2] + src[1] * x[1][2] + src[2] * x[2][2];
 
-   float a = src.x * x[0][0] + src.y * x[1][0] + src.z * x[2][0];
-   float b = src.x * x[0][1] + src.y * x[1][1] + src.z * x[2][1];
-   float c = src.x * x[0][2] + src.y * x[1][2] + src.z * x[2][2];
+   float a = src.x * M.x[0][0] + src.y * M.x[1][0] + src.z * M.x[2][0];
+   float b = src.x * M.x[0][1] + src.y * M.x[1][1] + src.z * M.x[2][1];
+   float c = src.x * M.x[0][2] + src.y * M.x[1][2] + src.z * M.x[2][2];
 
   dst.x = a;
   dst.y = b;

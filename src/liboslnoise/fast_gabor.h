@@ -42,9 +42,9 @@ public:
     // seed based on the cell containing P
 	OSL_INLINE fast_rng (const Vec3 &p, int seed=0) {
         // Use guts of cellnoise
-        unsigned int pi[4] = { unsigned(quick_floor(p[0])),
-                               unsigned(quick_floor(p[1])),
-                               unsigned(quick_floor(p[2])),
+        unsigned int pi[4] = { unsigned(quick_floor(p.x)),
+                               unsigned(quick_floor(p.y)),
+                               unsigned(quick_floor(p.z)),
                                unsigned(seed) };
         m_seed = inthash<4>(pi);
         if (! m_seed)
@@ -52,8 +52,10 @@ public:
     }
     // Return uniform on [0,1)
     OSL_INLINE float operator() () {
-        return (m_seed *= 3039177861u) / float(UINT_MAX);
+        //return (m_seed *= 3039177861u) / float(UINT_MAX);
+        return (m_seed *= 3039177861u)*(1.0f/float(UINT_MAX));
     }
+
     // Return poisson distribution with the given mean
     OSL_INLINE int poisson (float mean) {
         float g = expf (-mean);
@@ -86,6 +88,8 @@ private:
 		: parent(uninit)
 		{}
 
+		// Avoid the memset that is part of the Imath::Matrix33
+		// default constructor
 		OSL_INLINE Matrix33 ()
 		: parent(1.0f, 0.0f, 0.0f,
 				                 0.0f, 1.0f, 0.0f,
@@ -100,7 +104,7 @@ private:
 		: parent(a)
 		{}
 
-
+		// Avoid the memcpy that is part of the Imath::Matrix33
 		OSL_INLINE
 		Matrix33 (const float a[3][3])
 		: Imath::Matrix33<float>(
@@ -110,7 +114,7 @@ private:
 		{}
 
 
-
+        // Avoid the memcpy that is part of Imath::Matrix33::operator=
 		OSL_INLINE Matrix33 &
 		operator = (const Matrix33 &v)
 		{
@@ -130,7 +134,9 @@ private:
 		}
 
 
-
+        // Avoid Imath::Matrix33::operator * that
+		// initializing values to 0 before overwriting them
+		// Also manually unroll its nested loops
 		OSL_INLINE Matrix33
 		operator * (const Matrix33 &v) const
 		{
@@ -174,9 +180,9 @@ private:
 	OSL_INLINE fast::Matrix33
 	make_matrix33_cols (const Vec3 &a, const Vec3 &b, const Vec3 &c)
 	{
-	    return fast::Matrix33 (a[0], b[0], c[0],
-	                     a[1], b[1], c[1],
-	                     a[2], b[2], c[2]);
+	    return fast::Matrix33 (a.x, b.x, c.x,
+	                     a.y, b.y, c.y,
+	                     a.z, b.z, c.z);
 	}
 
 	struct GaborUniformParams {
@@ -216,16 +222,26 @@ private:
 	};
 
 	struct GaborParams {
-		int do_filter;
-		Vec3 N;
 		Matrix22 filter;
 		fast::Matrix33 local;
-		float det_filter;
+        Vec3 N;
+        float det_filter;
+        int do_filter;
 
 		OSL_INLINE GaborParams()
-		:filter(Imath::UNINITIALIZED)
-		,local(Imath::UNINITIALIZED)
+        : filter(Imath::UNINITIALIZED)
+		, local(Imath::UNINITIALIZED)
 		{}
+
+
+		OSL_INLINE GaborParams(const GaborParams &other)
+        : filter(other.filter)
+        , local(other.local)
+        , N(other.N)
+        , det_filter(other.det_filter)
+        , do_filter (other.do_filter)
+		{}
+
 	};
 
 
@@ -248,8 +264,8 @@ private:
 			Matrix33 Mtex_to_tan = make_matrix33_cols (t, b, n);  // M3_local
 			Matrix33 Mscreen_to_tex = make_matrix33_cols (P.dx(), P.dy(), Vec3(0.0f,0.0f,0.0f));
 			Matrix33 Mscreen_to_tan = Mscreen_to_tex * Mtex_to_tan;  // M3_scr_tan
-			Matrix22 M_scr_tan (Mscreen_to_tan[0][0], Mscreen_to_tan[0][1],
-								Mscreen_to_tan[1][0], Mscreen_to_tan[1][1]);
+			Matrix22 M_scr_tan (Mscreen_to_tan.x[0][0], Mscreen_to_tan.x[0][1],
+								Mscreen_to_tan.x[1][0], Mscreen_to_tan.x[1][1]);
 			float sigma_f_scr = 0.5f;
 			Matrix22 Sigma_f_scr (sigma_f_scr * sigma_f_scr, 0.0f,
 								  0.0f, sigma_f_scr * sigma_f_scr);
@@ -275,7 +291,7 @@ private:
 // based on the user-selected noise mode.
 	template<int AnisotropicT>
 	OSL_INLINE void
-	gabor_sample (const fast::GaborUniformParams &gup, const Vec3 &x_c, fast_rng &rng,
+	gabor_sample (const fast::GaborUniformParams &gup, const Vec3 &x_c, fast::fast_rng &rng,
 				  Vec3 &omega, float &phi)
 	{
 		// section 3.3, solid random-phase gabor noise
@@ -329,7 +345,7 @@ private:
 	// the rng() calls
 	template<int AnisotropicT>
 	OSL_INLINE void
-	gabor_no_sample (fast_rng &rng)
+	gabor_no_sample (fast::fast_rng &rng)
 	{
 		// section 3.3, solid random-phase gabor noise
 		if (AnisotropicT == 1 /* anisotropic */) {
@@ -342,6 +358,40 @@ private:
 		rng();
 	}
 
+	static void
+	filter_gabor_kernel_2d (const Matrix22 &filter, const Dual2<float> &w, float a,
+	                        const Vec2 &omega, const Dual2<float> &phi,
+	                        Dual2<float> &w_f, float &a_f,
+	                        Vec2 &omega_f, Dual2<float> &phi_f)
+	{
+	    //  Equation 10
+	    Matrix22 Sigma_f = filter;
+	    Dual2<float> c_G = w;
+	    Vec2 mu_G = omega;
+	    Matrix22 Sigma_G = (a * a / float(M_TWO_PI)) * Matrix22();
+	    float c_F = 1.0f / (float(M_TWO_PI) * sqrtf(determinant(Sigma_f)));
+#if 0
+        Matrix22 Sigma_F = float(1.0 / (4.0 * M_PI * M_PI)) * Sigma_f.inverse();
+#else
+        Matrix22 Sigma_f_inverse = Sigma_f.inverse();
+	    Matrix22 Sigma_F = float(1.0 / (4.0 * M_PI * M_PI)) * Sigma_f_inverse;
+#endif
+	    Matrix22 Sigma_G_Sigma_F = Sigma_G + Sigma_F;
+	    Dual2<float> c_GF = c_F * c_G
+	        * (1.0f / (float(M_TWO_PI) * sqrtf(determinant(Sigma_G_Sigma_F))))
+	        * expf(-0.5f * dot(Sigma_G_Sigma_F.inverse()*mu_G, mu_G));
+	    Matrix22 Sigma_G_i = Sigma_G.inverse();
+	    Matrix22 Sigma_GF = (Sigma_F.inverse() + Sigma_G_i).inverse();
+	    Vec2 mu_GF;
+	    Matrix22 Sigma_GF_Gi = Sigma_GF * Sigma_G_i;
+	    Sigma_GF_Gi.multMatrix (mu_G, mu_GF);
+	    w_f = c_GF;
+	    a_f = sqrtf(M_TWO_PI * sqrtf(determinant(Sigma_GF)));
+	    omega_f = mu_GF;
+	    phi_f = phi;
+	}
+
+
 	// Evaluate the summed contribution of all gabor impulses within the
 	// cell whose corner is c_i.  x_c_i is vector from x (the point
 	// we are trying to evaluate noise at) and c_i.
@@ -351,9 +401,9 @@ private:
 	gabor_cell (const fast::GaborUniformParams &gup, fast::GaborParams &gp, const Vec3 &c_i, const Dual2<Vec3> &x_c_i,
 				int seed = 0)
 	{
-		fast_rng rng (PeriodicT ? Vec3(wrap(c_i,gup.period)) : c_i, seed);
+	    fast::fast_rng rng (PeriodicT ? Vec3(wrap(c_i,gup.period)) : c_i, seed);
 		int n_impulses = rng.poisson (gup.lambda * gup.radius3);
-		Dual2<float> sum = 0;
+		Dual2<float> sum = 0.0f;
 
 		for (int i = 0; i < n_impulses; i++) {
 			// OLD code: Vec3 x_i_c (rng(), rng(), rng());
@@ -399,12 +449,15 @@ private:
 					float a_i_t_s_f;
 					Vec2 omega_i_t_s_f;
 					Dual2<float> phi_i_t_s_f;
-					filter_gabor_kernel_2d (gp.filter, w_i_t_s, gup.a, omega_i_t_s, phi_i_t_s, w_i_t_s_f, a_i_t_s_f, omega_i_t_s_f, phi_i_t_s_f);
+					fast::filter_gabor_kernel_2d (gp.filter, w_i_t_s, gup.a, omega_i_t_s, phi_i_t_s, w_i_t_s_f, a_i_t_s_f, omega_i_t_s_f, phi_i_t_s_f);
 
 					// Now evaluate the 2D filtered kernel
 					Dual2<Vec3> xkit;
 					multMatrix (gp.local, x_k_i, xkit);
-					Dual2<Vec2> x_k_i_t = make_Vec2 (comp(xkit,0), comp(xkit,1));
+					//Dual2<Vec2> x_k_i_t = make_Vec2 (comp(xkit,0), comp(xkit,1));
+					// TODO:  Add templated comp function that specializes for 0,1,2 directly accessing .x, .y, .z
+					// Avoid aliasing
+					Dual2<Vec2> x_k_i_t = make_Vec2 (Dual2<float> (xkit.val().x, xkit.dx().x, xkit.dy().x), Dual2<float> (xkit.val().y, xkit.dx().y, xkit.dy().y));
 					Dual2<float> gk = gabor_kernel (w_i_t_s_f, omega_i_t_s_f, phi_i_t_s_f, a_i_t_s_f, x_k_i_t); // 2D
 					if (__builtin_expect(!OIIO::isfinite(gk.val()),0))
 					{
@@ -473,8 +526,8 @@ OSL_INTEL_PRAGMA(nounroll_and_jam)
 template<int AnisotropicT, typename FilterPolicyT, int WidthT>
 OSL_NOINLINE  void
 fast_gabor (
+        MaskedAccessor<Dual2<float>,WidthT> wResult,
 		ConstWideAccessor<Dual2<Vec3>,WidthT> wP,
-		WideAccessor<Dual2<float>,WidthT> wResult,
 		NoiseParams const *opt)
 {
     DASSERT (opt);
@@ -511,11 +564,206 @@ fast_gabor (
 
 }
 
+
 template<int AnisotropicT, typename FilterPolicyT, int WidthT>
-OSL_NOINLINE OSL_CLANG_ATTRIBUTE(flatten) void
+OSL_NOINLINE  void
+fast_gabor (
+        MaskedAccessor<Dual2<float>,WidthT> wResult,
+        ConstWideAccessor<Dual2<float>,WidthT> wX,
+        NoiseParams const *opt)
+{
+    DASSERT (opt);
+
+    OSL_INTEL_PRAGMA(forceinline recursive)
+    {
+
+        fast::GaborUniformParams gup(*opt);
+
+        // Complicated code caused compilation issues with icc17u2
+        // but verified fixed in icc17u4
+#if __INTEL_COMPILER >= 1700 && __INTEL_COMPILER_UPDATE >= 4
+        OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+#endif
+        for(int i=0; i< WidthT; ++i) {
+
+            const Dual2<float> x = wX[i];
+            const Dual2<Vec3> P = make_Vec3(x);
+
+            fast::GaborParams gp;
+
+            if (FilterPolicyT::active)
+                fast::gabor_setup_filter (P, gp);
+
+            Dual2<float> result = fast::gabor_evaluate<AnisotropicT, FilterPolicyT, false>(gup, gp, P);
+            float gabor_variance = 1.0f / (4.0f*sqrtf(2.0f) * (gup.a * gup.a * gup.a));
+            float scale = 1.0f / (3.0f*sqrtf(gabor_variance));
+            scale *= 0.5f;  // empirical -- make it fit in [-1..1]
+
+            Dual2<float> scaled_result = result * scale;
+
+            wResult[i] = scaled_result;
+        }
+    }
+}
+
+template<int AnisotropicT, typename FilterPolicyT, int WidthT>
+OSL_NOINLINE  void
+fast_gabor (
+        MaskedAccessor<Dual2<float>,WidthT> wResult,
+        ConstWideAccessor<Dual2<float>,WidthT> wX,
+        ConstWideAccessor<Dual2<float>,WidthT> wY,
+        NoiseParams const *opt)
+{
+    DASSERT (opt);
+
+    OSL_INTEL_PRAGMA(forceinline recursive)
+    {
+
+        fast::GaborUniformParams gup(*opt);
+
+        // Complicated code caused compilation issues with icc17u2
+        // but verified fixed in icc17u4
+#if __INTEL_COMPILER >= 1700 && __INTEL_COMPILER_UPDATE >= 4
+        OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+
+//#pragma ivdep
+//#pragma vector always assert
+//        OSL_OMP_PRAGMA(omp simd)
+#endif
+        for(int i=0; i< WidthT; ++i) {
+
+            const Dual2<float> x = wX[i];
+            const Dual2<float> y = wY[i];
+            const Dual2<Vec3> P = make_Vec3(x, y);
+
+            fast::GaborParams gp;
+
+            if (FilterPolicyT::active)
+                fast::gabor_setup_filter (P, gp);
+
+            Dual2<float> result = fast::gabor_evaluate<AnisotropicT, FilterPolicyT, false>(gup, gp, P);
+            float gabor_variance = 1.0f / (4.0f*sqrtf(2.0f) * (gup.a * gup.a * gup.a));
+            float scale = 1.0f / (3.0f*sqrtf(gabor_variance));
+            scale *= 0.5f;  // empirical -- make it fit in [-1..1]
+
+            Dual2<float> scaled_result = result * scale;
+
+            wResult[i] = scaled_result;
+        }
+    }
+}
+
+template<int AnisotropicT, typename FilterPolicyT, int WidthT>
+OSL_NOINLINE /*OSL_CLANG_ATTRIBUTE(flatten)*/ void
 fast_gabor3 (
+        MaskedAccessor<Dual2<Vec3>,WidthT> wResult,
+        ConstWideAccessor<Dual2<float>, WidthT> wX,
+        NoiseParams const *opt)
+{
+    DASSERT (opt);
+
+    OSL_INTEL_PRAGMA(forceinline recursive)
+    {
+
+        fast::GaborUniformParams gup(*opt);
+
+        // Complicated code caused compilation issues with icc17u2
+        // but verified fixed in icc17u4
+#if (!defined(__INTEL_COMPILER)) || (__INTEL_COMPILER >= 1700 && __INTEL_COMPILER_UPDATE >= 4)
+        #ifdef __AVX512F__
+            OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+        #else
+            // remark #15547: simd loop was not vectorized: code size was too large for vectorization. Consider reducing the number of distinct variables use
+            // So don't mandate interleaved loop unrolling by forcing a simdlen wider than ISA
+            OSL_OMP_PRAGMA(omp simd)
+        #endif
+#endif
+        for(int i=0; i< WidthT; ++i) {
+
+            const Dual2<float> x = wX[i];
+            const Dual2<Vec3> P = make_Vec3(x);
+
+            fast::GaborParams gp;
+
+            if (FilterPolicyT::active)
+                fast::gabor_setup_filter (P, gp);
+
+            Dual2<Vec3> result = make_Vec3(
+                fast::gabor_evaluate<AnisotropicT, FilterPolicyT, false>(gup, gp, P, 0),
+                fast::gabor_evaluate<AnisotropicT, FilterPolicyT, false>(gup, gp, P, 1),
+                fast::gabor_evaluate<AnisotropicT, FilterPolicyT, false>(gup, gp, P, 2));
+
+            float gabor_variance = 1.0f / (4.0f*sqrtf(2.0f) * (gup.a * gup.a * gup.a));
+            float scale = 1.0f / (3.0f*sqrtf(gabor_variance));
+            scale *= 0.5f;  // empirical -- make it fit in [-1..1]
+
+            Dual2<Vec3> scaled_result = result * scale;
+
+            wResult[i] = scaled_result;
+        }
+    }
+
+}
+
+template<int AnisotropicT, typename FilterPolicyT, int WidthT>
+OSL_NOINLINE /*OSL_CLANG_ATTRIBUTE(flatten)*/ void
+fast_gabor3 (
+        MaskedAccessor<Dual2<Vec3>,WidthT> wResult,
+        ConstWideAccessor<Dual2<float>, WidthT> wX,
+        ConstWideAccessor<Dual2<float>, WidthT> wY,
+        NoiseParams const *opt)
+{
+    DASSERT (opt);
+
+    OSL_INTEL_PRAGMA(forceinline recursive)
+    {
+
+        fast::GaborUniformParams gup(*opt);
+
+        // Complicated code caused compilation issues with icc17u2
+        // but verified fixed in icc17u4
+#if (!defined(__INTEL_COMPILER)) || (__INTEL_COMPILER >= 1700 && __INTEL_COMPILER_UPDATE >= 4)
+        #ifdef __AVX512F__
+            OSL_OMP_PRAGMA(omp simd simdlen(WidthT))
+        #else
+            // remark #15547: simd loop was not vectorized: code size was too large for vectorization. Consider reducing the number of distinct variables use
+            // So don't mandate interleaved loop unrolling by forcing a simdlen wider than ISA
+            OSL_OMP_PRAGMA(omp simd)
+        #endif
+#endif
+        for(int i=0; i< WidthT; ++i) {
+
+            const Dual2<float> x = wX[i];
+            const Dual2<float> y = wY[i];
+            const Dual2<Vec3> P = make_Vec3(x, y);
+
+            fast::GaborParams gp;
+
+            if (FilterPolicyT::active)
+                fast::gabor_setup_filter (P, gp);
+
+            Dual2<Vec3> result = make_Vec3(
+                fast::gabor_evaluate<AnisotropicT, FilterPolicyT, false>(gup, gp, P, 0),
+                fast::gabor_evaluate<AnisotropicT, FilterPolicyT, false>(gup, gp, P, 1),
+                fast::gabor_evaluate<AnisotropicT, FilterPolicyT, false>(gup, gp, P, 2));
+
+            float gabor_variance = 1.0f / (4.0f*sqrtf(2.0f) * (gup.a * gup.a * gup.a));
+            float scale = 1.0f / (3.0f*sqrtf(gabor_variance));
+            scale *= 0.5f;  // empirical -- make it fit in [-1..1]
+
+            Dual2<Vec3> scaled_result = result * scale;
+
+            wResult[i] = scaled_result;
+        }
+    }
+
+}
+
+template<int AnisotropicT, typename FilterPolicyT, int WidthT>
+OSL_NOINLINE /*OSL_CLANG_ATTRIBUTE(flatten)*/ void
+fast_gabor3 (
+        MaskedAccessor<Dual2<Vec3>,WidthT> wResult,
 		ConstWideAccessor<Dual2<Vec3>, WidthT> wP,
-		WideAccessor<Dual2<Vec3>,WidthT> wResult,
 		NoiseParams const *opt)
 {
     DASSERT (opt);

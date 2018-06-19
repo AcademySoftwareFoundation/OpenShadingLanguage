@@ -55,12 +55,13 @@ inline void
 multMatrix (const Imath::Matrix33<T> &M, const Imath::Vec3<S> &src,
             Imath::Vec3<S> &dst)
 {
-    S a = src[0] * M[0][0] + src[1] * M[1][0] + src[2] * M[2][0];
-    S b = src[0] * M[0][1] + src[1] * M[1][1] + src[2] * M[2][1];
-    S c = src[0] * M[0][2] + src[1] * M[1][2] + src[2] * M[2][2];
-    dst[0] = a;
-    dst[1] = b;
-    dst[2] = c;
+    // Changed all Vec3 subscripts to access data members versus array casts
+    S a = src.x * M.x[0][0] + src.y * M.x[1][0] + src.z * M.x[2][0];
+    S b = src.x * M.x[0][1] + src.y * M.x[1][1] + src.z * M.x[2][1];
+    S c = src.x * M.x[0][2] + src.y * M.x[1][2] + src.z * M.x[2][2];
+    dst.x = a;
+    dst.y = b;
+    dst.z = c;
 }
 
 
@@ -86,9 +87,9 @@ dot (const Imath::Vec3<T> &a, const Imath::Vec3<T> &b)
 /// Return the determinant of a 2x2 matrix.
 template <class T>
 inline
-T determinant (const Imathx::Matrix22<T> &m)
+T determinant (const Imathx::Matrix22<T> &M)
 {
-    return m[0][0]*m[1][1] - m[0][1]*m[1][0];
+    return M.x[0][0]*M.x[1][1] - M.x[0][1]*M.x[1][0];
 }
 
 // Imath::Vec3::lengthTiny is private
@@ -179,7 +180,7 @@ affineInvert(const Matrix44 &m)
 				0.0f,
 				1.0f);
 
-	float r = m.x[0][0] * s[0][0] + m.x[0][1] * s[1][0] + m.x[0][2] * s[2][0];
+	float r = m.x[0][0] * s.x[0][0] + m.x[0][1] * s.x[1][0] + m.x[0][2] * s.x[2][0];
 	float abs_r = IMATH_INTERNAL_NAMESPACE::abs (r);
 
 
@@ -193,7 +194,7 @@ affineInvert(const Matrix44 &m)
 			OSL_INTEL_PRAGMA(unroll)
 			for (int j = 0; j < 3; ++j)
 			{
-				if (mr <= IMATH_INTERNAL_NAMESPACE::abs (s[i][j]))
+				if (mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[i][j]))
 				{
 					may_have_divided_by_zero = 1;
 				}
@@ -207,13 +208,13 @@ affineInvert(const Matrix44 &m)
 		OSL_INTEL_PRAGMA(unroll)
 		for (int j = 0; j < 3; ++j)
 		{
-			s[i][j] /= r;
+			s.x[i][j] /= r;
 		}
 	}
 
-	s[3][0] = -m.x[3][0] * s[0][0] - m.x[3][1] * s[1][0] - m.x[3][2] * s[2][0];
-	s[3][1] = -m.x[3][0] * s[0][1] - m.x[3][1] * s[1][1] - m.x[3][2] * s[2][1];
-	s[3][2] = -m.x[3][0] * s[0][2] - m.x[3][1] * s[1][2] - m.x[3][2] * s[2][2];
+	s.x[3][0] = -m.x[3][0] * s.x[0][0] - m.x[3][1] * s.x[1][0] - m.x[3][2] * s.x[2][0];
+	s.x[3][1] = -m.x[3][0] * s.x[0][1] - m.x[3][1] * s.x[1][1] - m.x[3][2] * s.x[2][1];
+	s.x[3][2] = -m.x[3][0] * s.x[0][2] - m.x[3][1] * s.x[1][2] - m.x[3][2] * s.x[2][2];
 
 	if (__builtin_expect(may_have_divided_by_zero == 1, 0))
 	{

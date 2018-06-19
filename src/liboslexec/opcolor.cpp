@@ -500,6 +500,36 @@ OSL_SHADEOP void osl_blackbody_vf (void *sg, void *out, float temp)
     *(Color3 *)out = ctx->shadingsys().blackbody_rgb (temp);
 }
 
+OSL_SHADEOP void osl_blackbody_vf_batched (void *sgb, void *out, float temp)
+{
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
+    *(Color3 *)out = ctx->shadingsys().blackbody_rgb (temp);
+}
+
+OSL_SHADEOP void osl_blackbody_w16vw16f_masked (void *sgb, void *wout_, void *wtemp_,
+        unsigned int mask_value)
+{
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
+
+    MaskedAccessor<Color3> wR(wout_, Mask(mask_value)); //output
+    ConstWideAccessor<float> wL (wtemp_);//input lambda
+
+    for(int lane = 0; lane < wR.width; ++lane){
+
+        if(wR.mask()[lane]){
+
+            float temperature = wL[lane];
+
+            Color3 rgb = ctx->shadingsys().blackbody_rgb (temperature);
+
+            wR[lane] = rgb;
+        }
+    }
+
+
+
+}
+
 
 
 OSL_SHADEOP void osl_wavelength_color_vf (void *sg, void *out, float lambda)
@@ -513,6 +543,43 @@ OSL_SHADEOP void osl_wavelength_color_vf (void *sg, void *out, float lambda)
     *(Color3 *)out = rgb;
 }
 
+OSL_SHADEOP void osl_wavelength_color_vf_batched (void *sgb, void *out, float lambda)
+{
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
+    Color3 rgb = ctx->shadingsys().XYZ_to_RGB (wavelength_color_XYZ (lambda));
+//    constrain_rgb (rgb);
+    rgb *= 1.0/2.52;    // Empirical scale from lg to make all comps <= 1
+//    norm_rgb (rgb);
+    clamp_zero (rgb);
+    *(Color3 *)out = rgb;
+
+}
+
+OSL_SHADEOP void osl_wavelength_color_w16vw16f_masked (void *sgb, void *wout_, void *wlambda_,
+        unsigned int mask_value)
+{
+    ShadingContext *ctx = (ShadingContext *)((ShaderGlobalsBatch *)sgb)->uniform().context;
+
+    MaskedAccessor<Color3> wR(wout_, Mask(mask_value)); //output
+    ConstWideAccessor<float> wL (wlambda_);//input lambda
+
+    for(int lane = 0; lane < wR.width; ++lane){
+
+        if(wR.mask()[lane]){
+
+            float lambda = wL[lane];
+
+            Color3 rgb = ctx->shadingsys().XYZ_to_RGB (wavelength_color_XYZ (lambda));
+            rgb *= 1.0/2.52;    // Empirical scale from lg to make all comps <= 1
+
+            clamp_zero (rgb);
+            wR[lane] = rgb;
+        }
+    }
+
+
+
+}
 
 
 OSL_SHADEOP void osl_luminance_fv (void *sg, void *out, void *c)

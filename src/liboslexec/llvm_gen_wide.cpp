@@ -4368,48 +4368,177 @@ LLVMGEN (llvm_gen_environment)
 }
 
 
+namespace  {
+    // Implementation detail
+    // keep order synchronized to the data members in BatchedRendererServices::TraceOpt
+    enum class TraceOpt_LLVMMemberIndex
+    {
+        mindist = 0,
+        maxdist,
+        shade,
+        traceset,
+    };
+}
 
-static llvm::Value *
-llvm_gen_trace_options (BackendLLVMWide &rop, int opnum,
-                        int first_optional_arg)
+
+llvm::Value* llvm_batched_trace_options(BackendLLVMWide &rop, int opnum,
+                                       int first_optional_arg)
 {
-    ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
-    llvm::Value* opt = rop.ll.call_function ("osl_get_trace_options",
-                                             rop.sg_void_ptr());
+    llvm::Value * bto = rop.temp_batched_trace_options_ptr();
+
+    // Explicitly assign a default value or an optional parameter value to every data member
+    // of TraceOpt.
+    llvm::Value * mindist = rop.ll.constant(0.0f);
+    llvm::Value * maxdist = rop.ll.constant(1.0e30f);
+    llvm::Value * shade = rop.ll.constant(0);
+    llvm::Value * traceset = rop.ll.constant_ptr(nullptr);
+
+
+    bool is_mindist_uniform = true;
+    bool is_maxdist_uniform = true;
+    bool is_shade_uniform = true;
+    bool is_traceset_uniform = true;
+
+
     Opcode &op (rop.inst()->ops()[opnum]);
     for (int a = first_optional_arg;  a < op.nargs();  ++a) {
-        Symbol &Name (*rop.opargsym(op,a));
+        Symbol &Name(*rop.opargsym(op,a));
         ASSERT (Name.typespec().is_string() &&
                 "optional trace token must be a string");
         ASSERT (a+1 < op.nargs() && "malformed argument list for trace");
         ustring name = *(ustring *)Name.data();
+        ++a;  // advance to next argument (value)
 
-        ++a;  // advance to next argument
-        Symbol &Val (*rop.opargsym(op,a));
+        if (! name)    // skip empty string param name
+            continue;
+        Symbol &Val(*rop.opargsym(op,a));
         TypeDesc valtype = Val.typespec().simpletype ();
 
-        llvm::Value *val = rop.llvm_load_value (Val);
-        static ustring kmindist("mindist"), kmaxdist("maxdist");
-        static ustring kshade("shade"), ktraceset("traceset");
-        if (name == kmindist && valtype == TypeDesc::FLOAT) {
-            rop.ll.call_function ("osl_trace_set_mindist", opt, val);
-        } else if (name == kmaxdist && valtype == TypeDesc::FLOAT) {
-            rop.ll.call_function ("osl_trace_set_maxdist", opt, val);
-        } else if (name == kshade && valtype == TypeDesc::INT) {
-            rop.ll.call_function ("osl_trace_set_shade", opt, val);
-        } else if (name == ktraceset && valtype == TypeDesc::STRING) {
-            rop.ll.call_function ("osl_trace_set_traceset", opt, val);
-        } else {
-            rop.shadingcontext()->error ("Unknown trace() optional argument: \"%s\", <%s> (%s:%d)",
-                                    name.c_str(), valtype.c_str(),
-                                    op.sourcefile().c_str(), op.sourceline());
+
+        bool nameIsVarying = !rop.isSymbolUniform(Name);
+        // assuming option names can't be varying
+        ASSERT(!nameIsVarying);
+        // data could be varying
+        bool valIsVarying = !rop.isSymbolUniform(Val);
+
+#define PARAM_UNIFORM_FLOAT(paramname)                                  \
+        if (name == Strings::paramname &&                               \
+            (valtype == TypeDesc::FLOAT || valtype == TypeDesc::INT)) { \
+            is_##paramname##_uniform = !valIsVarying;                   \
+            if (valIsVarying) {                                         \
+                continue;                                               \
+            }                                                           \
+            llvm::Value *val = rop.llvm_load_value (Val);               \
+            if (valtype == TypeDesc::INT)                               \
+                val = rop.ll.op_int_to_float (val);                     \
+            paramname = val;                                            \
+            continue;                                                   \
         }
+
+        PARAM_UNIFORM_FLOAT(mindist)
+        PARAM_UNIFORM_FLOAT(maxdist)
+
+        if (name == Strings::shade &&
+            (valtype == TypeDesc::INT)) {
+            is_shade_uniform = !valIsVarying;
+            if (valIsVarying) {
+                continue;
+            }
+            llvm::Value *val = rop.llvm_load_value (Val);
+            shade = val;
+            continue;
+        }
+        if (name == Strings::traceset && valtype == TypeDesc::STRING) {
+            if (valIsVarying) {
+                is_traceset_uniform = false;
+                continue;
+            }
+            llvm::Value *val = rop.llvm_load_value (Val);
+            traceset = val;
+            continue;
+        }
+
+#undef PARAM_UNIFORM_FLOAT
     }
 
-    return opt;
+    if (is_mindist_uniform)
+        rop.ll.op_unmasked_store (mindist, rop.ll.GEP (bto, 0, static_cast<int>(TraceOpt_LLVMMemberIndex::mindist)));
+
+    if (is_maxdist_uniform)
+        rop.ll.op_unmasked_store (maxdist, rop.ll.GEP (bto, 0, static_cast<int>(TraceOpt_LLVMMemberIndex::maxdist)));
+
+    if (is_shade_uniform)
+        rop.ll.op_unmasked_store (shade, rop.ll.GEP (bto, 0, static_cast<int>(TraceOpt_LLVMMemberIndex::shade)));
+
+    if (is_traceset_uniform)
+        rop.ll.op_unmasked_store (traceset, rop.ll.GEP (bto, 0, static_cast<int>(TraceOpt_LLVMMemberIndex::traceset)));
+
+
+    return rop.ll.void_ptr(bto);
+
 }
 
 
+
+
+llvm::Value* llvm_batched_trace_varying_options(BackendLLVMWide &rop, int opnum,
+                                       int first_optional_arg, llvm::Value *remainingMask,
+                                       llvm::Value * leadLane)
+{
+    llvm::Value * bto = rop.temp_batched_trace_options_ptr();
+
+    // The BatchedTraceOptions is local alloca,
+    // so no need to mask off non-active lanes
+
+    Opcode &op (rop.inst()->ops()[opnum]);
+    for (int a = first_optional_arg;  a < op.nargs();  ++a) {
+        Symbol &Name(*rop.opargsym(op,a));
+        ASSERT (Name.typespec().is_string() &&
+                "optional trace token must be a string");
+        ASSERT (a+1 < op.nargs() && "malformed argument list for texture");
+        ustring name = *(ustring *)Name.data();
+        ++a;  // advance to next argument (value)
+
+        if (! name)    // skip empty string param name
+            continue;
+        Symbol &Val(*rop.opargsym(op,a));
+        TypeDesc valtype = Val.typespec().simpletype ();
+
+
+        bool nameIsVarying = !rop.isSymbolUniform(Name);
+        // assuming option names can't be varying
+        ASSERT(!nameIsVarying);
+
+        // data could be uniform
+        bool valIsVarying = !rop.isSymbolUniform(Val);
+        if (!valIsVarying)
+            continue;
+
+        ASSERT(!Val.is_constant() && "can't be a varying constant");
+
+#define PARAM_VARYING(paramname, paramtype)                 \
+        if (name == Strings::paramname && valtype == paramtype) {      \
+            llvm::Value *wide_val = rop.llvm_load_value (Val);         \
+            llvm::Value *scalar_value = rop.ll.op_extract(wide_val, leadLane); \
+            rop.ll.op_unmasked_store (scalar_value, rop.ll.GEP (bto, 0, static_cast<int>(TraceOpt_LLVMMemberIndex::paramname))); \
+            remainingMask = rop.ll.op_lanes_that_match_masked(scalar_value, wide_val, remainingMask); \
+            continue; \
+        }
+        PARAM_VARYING(mindist, TypeDesc::FLOAT)
+        PARAM_VARYING(maxdist, TypeDesc::FLOAT)
+        PARAM_VARYING(shade, TypeDesc::INT)
+        PARAM_VARYING(traceset, TypeDesc::STRING)
+
+        rop.shadingcontext()->error ("Unknown trace optional argument: \"%s\", <%s> (%s:%d)",
+                                     name.c_str(), valtype.c_str(),
+                                     op.sourcefile().c_str(), op.sourceline());
+
+#undef PARAM_VARYING
+
+    }
+
+    return remainingMask;
+}
 
 LLVMGEN (llvm_gen_trace)
 {
@@ -4419,31 +4548,90 @@ LLVMGEN (llvm_gen_trace)
     Symbol &Dir = *rop.opargsym (op, 2);
     int first_optional_arg = 3;
 
-    // TODO: Handle non-uniform case below minding mask values
-    ASSERT(rop.isSymbolUniform(Result));
-    ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
+    ASSERT(!rop.isSymbolUniform(Result));
 
     llvm::Value* opt;   // TraceOpt
-    opt = llvm_gen_trace_options (rop, opnum, first_optional_arg);
+    opt = llvm_batched_trace_options (rop, opnum, first_optional_arg);
 
     // Now call the osl_trace function, passing the options and all the
     // explicit args like trace coordinates.
     std::vector<llvm::Value *> args;
     args.push_back (rop.sg_void_ptr());
+    args.push_back (rop.llvm_void_ptr(Result));
+
+    llvm::Value* widePos = nullptr;
+    llvm::Value* widePosDx = nullptr;
+    llvm::Value* widePosDy = nullptr;
+    if (rop.isSymbolUniform(Pos)) {
+        widePos = rop.llvm_alloca_and_widen_value(Pos, 0);
+        widePosDx = rop.llvm_alloca_and_widen_value(Pos, 1);
+        widePosDy = rop.llvm_alloca_and_widen_value(Pos, 2);
+    }
+    else {
+        widePos = rop.llvm_void_ptr(Pos, 0);
+        widePosDx = rop.llvm_void_ptr(Pos, 1);
+        widePosDy = rop.llvm_void_ptr(Pos, 2);
+    }
+
+    llvm::Value* wideDir = nullptr;
+    llvm::Value* wideDirDx = nullptr;
+    llvm::Value* wideDirDy = nullptr;
+    if (rop.isSymbolUniform(Dir)) {
+        wideDir = rop.llvm_alloca_and_widen_value(Dir, 0);
+        wideDirDx = rop.llvm_alloca_and_widen_value(Dir, 1);
+        wideDirDy = rop.llvm_alloca_and_widen_value(Dir, 2);
+    }
+    else {
+        wideDir = rop.llvm_void_ptr(Dir, 0);
+        wideDirDx = rop.llvm_void_ptr(Dir, 1);
+        wideDirDy = rop.llvm_void_ptr(Dir, 2);
+
+    }
+
     args.push_back (opt);
-    args.push_back (rop.llvm_void_ptr (Pos, 0));
-    args.push_back (rop.llvm_void_ptr (Pos, 1));
-    args.push_back (rop.llvm_void_ptr (Pos, 2));
-    args.push_back (rop.llvm_void_ptr (Dir, 0));
-    args.push_back (rop.llvm_void_ptr (Dir, 1));
-    args.push_back (rop.llvm_void_ptr (Dir, 2));
-    llvm::Value *r = rop.ll.call_function ("osl_trace", &args[0],
-                                             (int)args.size());
-    rop.llvm_store_value (r, Result);
+    args.push_back (widePos);
+    args.push_back (widePosDx);
+    args.push_back (widePosDy);
+    args.push_back (wideDir);
+    args.push_back (wideDirDx);
+    args.push_back (wideDirDy);
+
+
+    // do while(remaining)
+    llvm::Value * loc_of_remainingMask = rop.ll.op_alloca (rop.ll.type_wide_bool(), 1, "lanes remaining to trace");
+    rop.ll.op_unmasked_store(rop.ll.current_mask(), loc_of_remainingMask);
+
+    llvm::BasicBlock* bin_block = rop.ll.new_basic_block (std::string("bin_trace_options (varying trace options)"));
+    llvm::BasicBlock* after_block = rop.ll.new_basic_block (std::string("after_bin_trace_options (varying trace options)"));
+    rop.ll.op_branch(bin_block);
+    {
+
+        llvm::Value * remainingMask = rop.ll.op_load(loc_of_remainingMask);
+        llvm::Value * leadLane = rop.ll.op_1st_active_lane_of(remainingMask);
+
+        //rop.llvm_print_mask("before remainingMask", remainingMask);
+        llvm::Value * lanesMatchingOptions = llvm_batched_trace_varying_options (rop, opnum, first_optional_arg,
+                                        remainingMask, leadLane);
+        ASSERT(lanesMatchingOptions);
+        //rop.llvm_print_mask("lanesMatchingOptions", lanesMatchingOptions);
+        args.push_back (rop.ll.mask_as_int(lanesMatchingOptions));
+
+        rop.ll.call_function ("osl_trace_batched", &args[0], (int)args.size());
+
+        remainingMask = rop.ll.op_xor(remainingMask,lanesMatchingOptions);
+        //rop.llvm_print_mask("xor remainingMask,lanesMatchingOptions", remainingMask);
+        rop.ll.op_unmasked_store(remainingMask, loc_of_remainingMask);
+
+        llvm::Value * int_remainingMask = rop.ll.mask_as_int(remainingMask);
+        //rop.llvm_print_mask("remainingMask", remainingMask);
+        llvm::Value* cond_more_lanes_to_bin = rop.ll.op_ne(int_remainingMask, rop.ll.constant(0));
+        rop.ll.op_branch (cond_more_lanes_to_bin, bin_block, after_block);
+    }
+    // Continue on with the previous flow
+    rop.ll.set_insert_point (after_block);
+
     return true;
 }
-
-
 
 
 
@@ -4940,34 +5128,75 @@ LLVMGEN (llvm_gen_getmessage)
     DASSERT (has_source == 0 || Source.typespec().is_string());
 
     // TODO: Handle non-uniform case below minding mask values
-    ASSERT(rop.isSymbolUniform(Result));
-    ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
+    ASSERT(rop.isSymbolUniform(Result) == false);
+    ASSERT(rop.isSymbolUniform(Data) == false);
 
-    llvm::Value *args[9];
-    args[0] = rop.sg_void_ptr();
-    args[1] = has_source ? rop.llvm_load_value(Source)
-                         : rop.ll.constant(ustring());
-    args[2] = rop.llvm_load_value (Name);
 
-    if (Data.typespec().is_closure_based()) {
-    	ASSERT(0 && "incomplete");
-        // FIXME: secret handshake for closures ...
-        args[3] = rop.ll.constant (TypeDesc(TypeDesc::UNKNOWN,
-                                              Data.typespec().arraylength()));
-        // We need a void ** here so the function can modify the closure
-        args[4] = rop.llvm_void_ptr(Data);
-    } else {
-        args[3] = rop.ll.constant (Data.typespec().simpletype());
-        args[4] = rop.llvm_void_ptr (Data);
+    const TypeDesc* dest_type = &Data.typespec().simpletype();
+
+    std::vector<llvm::Value *> args;
+
+    //arg[0]: Push shader global
+    args.push_back (rop.sg_void_ptr());
+    args.push_back (rop.llvm_void_ptr(Result));
+
+    //arg[1]: Check if source? push values (uniform or not) : push constant (uniform or not)
+
+    if(has_source)
+    {
+        ASSERT(rop.isSymbolUniform(Source) && "Incomplete:  add support for varying sources");
+        args.push_back(rop.llvm_void_ptr(Source));
     }
-    args[5] = rop.ll.constant ((int)Data.has_derivs());
+    else //No Source value, push a constant
+    {//Uniform push constant
+        args.push_back(rop.ll.constant(ustring()));
+    } //Source ends
 
-    args[6] = rop.ll.constant(rop.inst()->id());
-    args[7] = rop.ll.constant(op.sourcefile());
-    args[8] = rop.ll.constant(op.sourceline());
+  //arg[2] Push Name (string)
+    if(rop.isSymbolUniform(Name)) {
+       args.push_back(rop.llvm_void_ptr(Name));
+    } else {
+        ASSERT(0 && "Incomplete:  add loop to create mask of coherent lanes");
+    }
 
-    llvm::Value *r = rop.ll.call_function ("osl_getmessage", args, 9);
-    rop.llvm_store_value (r, Result);
+
+    //Data
+    //args[3]
+    args.push_back (rop.ll.constant_ptr ((void *) dest_type));
+
+    //Check for closures, and skip it
+    if (Data.typespec().is_closure_based()) {
+      ASSERT(0 && "incomplete");
+    }
+    else
+    {
+        args.push_back(rop.llvm_void_ptr(Data));
+    }
+
+    //Do not leave derivs uninitialized or bad things may happen
+
+    if(Data.has_derivs())
+    {
+        rop.llvm_zero_derivs(Data);
+    }
+
+    //args[5]: Data.has_derivs
+    args.push_back(rop.ll.constant ((int)Data.has_derivs()));
+
+    //args[6]: ID
+    args.push_back(rop.ll.constant(rop.inst()->id()));
+
+    //args[7]: sourcefile
+    args.push_back(rop.ll.constant(op.sourcefile()));
+
+    //args[8]: sourceline
+    args.push_back(rop.ll.constant(op.sourceline()));
+
+    //mask
+    args.push_back(rop.ll.mask_as_int(rop.ll.current_mask()));
+
+
+    rop.ll.call_function ("osl_getmessage_batched", &args[0], (int)args.size());
     return true;
 }
 
@@ -5575,7 +5804,7 @@ LLVMGEN (llvm_gen_pointcloud_write)
 
 
 
-
+// SM: WIP
 LLVMGEN (llvm_gen_dict_find)
 {
     // OSL has two variants of this function:
@@ -5584,14 +5813,42 @@ LLVMGEN (llvm_gen_dict_find)
     Opcode &op (rop.inst()->ops()[opnum]);
     DASSERT (op.nargs() == 3);
     Symbol& Result = *rop.opargsym (op, 0);
-    Symbol& Source = *rop.opargsym (op, 1);
-    Symbol& Query  = *rop.opargsym (op, 2);
+    Symbol& Source = *rop.opargsym (op, 1);//Can be nodeID or string; can be uniform or varying
+    Symbol& Query  = *rop.opargsym (op, 2);//can be uniform or varying
     DASSERT (Result.typespec().is_int() && Query.typespec().is_string() &&
              (Source.typespec().is_int() || Source.typespec().is_string()));
 
     // TODO: Handle non-uniform case below minding mask values
     ASSERT(rop.isSymbolUniform(Result));
     ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
+
+//    std::vector<llvm::Value *> args;
+//    bool source_is_uniform = rop.isSymbolUniform(Source);
+//    bool query_is_uniform = rop.isSymbolUniform(Query);
+//
+//    llvm::Value *wideSource = nullptr;
+//    llvm::Value *wideQuery = nullptr;
+//    llvm::Value *tempUniformSource = nullptr;
+//
+//    if(source_is_uniform)
+//    {
+//        llvm::Value
+//    }
+//    else
+//    {
+//        tempUniformSource = rop.llvm_alloca (Source.typespec(), Source.has_derivs(), true /*is_not_uniform*/);
+//        args.push_back (rop.ll.void_ptr(tempUniformSource));
+//    }
+//
+//    if(query_is_uniform)
+//    {
+//
+//    }
+//    else
+//    {
+//
+//    }
+//    //If Uniform, alloca and widen; else load nullptr
 
     bool sourceint = Source.typespec().is_int();  // is it an int?
     llvm::Value *args[3];
@@ -5605,7 +5862,7 @@ LLVMGEN (llvm_gen_dict_find)
 }
 
 
-
+// SM: WIP
 LLVMGEN (llvm_gen_dict_next)
 {
     // dict_net is very straightforward -- just insert sg ptr as first arg
@@ -5619,9 +5876,40 @@ LLVMGEN (llvm_gen_dict_next)
     ASSERT(rop.isSymbolUniform(Result));
     ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
 
-    llvm::Value *ret = rop.ll.call_function ("osl_dict_next",
-                                               rop.sg_void_ptr(),
-                                               rop.llvm_load_value(NodeID));
+    std::vector<llvm::Value *> args;
+    std::string func_name = std::string("osl_dict_next");
+
+    args.push_back(rop.sg_void_ptr());//arg[0] is the shaderglobal
+//
+//    llvm::Value* wideNodeID = nullptr;//arg[1] is nodeID, could be uniform or not
+//
+//    if(rop.isSymbolUniform(NodeID))
+//    {
+//        wideNodeID = rop.llvm_alloca_and_widen_value(NodeID, 0);
+//    }
+//    else
+//    {
+//        wideNodeID = rop.llvm_void_ptr(NodeID, 0);
+//    }
+//
+//    //Check if NodeID is uniform. If uniform: alloca and widen; else load voidptr
+//    args.push_back(wideNodeID);
+    bool nodeIDIsUniform = rop.isSymbolUniform(NodeID);
+    llvm::Value * nodeidval = rop.llvm_load_value(NodeID);
+    args.push_back(nodeIDIsUniform ? nodeidval: nullptr);
+
+    if (!(rop.isSymbolUniform(NodeID))) {
+           func_name += std::string("_masked");
+           args.push_back(rop.ll.mask_as_int(rop.ll.current_mask()));
+
+    }
+
+//    llvm::Value *ret = rop.ll.call_function ("osl_dict_next",
+//                                               rop.sg_void_ptr(),
+//                                               rop.llvm_load_value(NodeID));
+
+    llvm::Value *ret = rop.ll.call_function(func_name.c_str(), &args[0], (int)args.size());
+    //Check for masking
     rop.llvm_store_value (ret, Result);
     return true;
 }
@@ -5673,29 +5961,126 @@ LLVMGEN (llvm_gen_split)
              Results.typespec().is_array() &&
              Results.typespec().is_string_based());
 
-    // TODO: Handle non-uniform case below minding mask values
-    ASSERT(rop.isSymbolUniform(R));
+    Symbol * optSep = (op.nargs() >= 4) ?  rop.opargsym (op, 3) : nullptr;
+    Symbol * optMaxsplit = (op.nargs() >= 5) ?  rop.opargsym (op, 4) : nullptr;
 
-    llvm::Value *args[5];
-    args[0] = rop.llvm_load_value (Str);
-    args[1] = rop.llvm_void_ptr (Results);
-    if (op.nargs() >= 4) {
-        Symbol& Sep = *rop.opargsym (op, 3);
-        DASSERT (Sep.typespec().is_string());
-        args[2] = rop.llvm_load_value (Sep);
-    } else {
-        args[2] = rop.ll.constant ("");
+
+    ASSERT(rop.isSymbolUniform(R) == rop.isSymbolUniform(Results));
+
+    bool op_is_uniform = rop.isSymbolUniform(Str) &&
+                         ((!optSep) || rop.isSymbolUniform(*optSep)) &&
+                         ((!optMaxsplit) || rop.isSymbolUniform(*optMaxsplit));
+    bool result_is_uniform = rop.isSymbolUniform(Results);
+    ASSERT(op_is_uniform || (op_is_uniform == result_is_uniform));
+
+    std::string func_name = std::string("osl_split");
+
+   // llvm::Value *args[5];
+    std::vector<llvm::Value *> args;
+
+    if (!op_is_uniform) {
+        args.push_back(rop.llvm_void_ptr (R));
     }
-    if (op.nargs() >= 5) {
-        Symbol& Maxsplit = *rop.opargsym (op, 4);
-        DASSERT (Maxsplit.typespec().is_int());
-        args[3] = rop.llvm_load_value (Maxsplit);
+
+    if (op_is_uniform) {
+        args.push_back(rop.llvm_load_value (Str, 0, 0, TypeDesc::UNKNOWN, op_is_uniform));
     } else {
-        args[3] = rop.ll.constant (Results.typespec().arraylength());
+        if (rop.isSymbolUniform(Str)) {
+            llvm::Value *wide_str = rop.llvm_load_value(Str, 0, 0, TypeDesc::UNKNOWN, op_is_uniform);
+            llvm::Value *temp_wide_str = rop.ll.op_alloca (rop.ll.type_wide_string(), 1, "wide string");
+            rop.ll.op_store(wide_str, temp_wide_str);
+            args.push_back(rop.ll.void_ptr(temp_wide_str));
+        } else {
+            args.push_back(rop.llvm_void_ptr (Str));
+        }
     }
-    args[4] = rop.ll.constant (Results.typespec().arraylength());
-    llvm::Value *ret = rop.ll.call_function ("osl_split", &args[0], 5);
-    rop.llvm_store_value (ret, R);
+
+
+    llvm::Value *temp_results_array = nullptr;
+    if (op_is_uniform && !result_is_uniform) {
+        temp_results_array = rop.ll.op_alloca (rop.ll.type_array(rop.ll.type_string(),Results.typespec().arraylength()), 1, "uniform split result");
+        args.push_back(rop.ll.void_ptr(temp_results_array));
+    } else {
+        args.push_back(rop.llvm_void_ptr (Results));
+    }
+
+    if (optSep)  {
+        if (op_is_uniform) {
+            DASSERT (optSep->typespec().is_string());
+            args.push_back(rop.llvm_load_value(*optSep));
+        } else {
+           DASSERT (optSep->typespec().is_string());
+           if (rop.isSymbolUniform(*optSep)) {
+               llvm::Value *wide_sep = rop.llvm_load_value(*optSep, 0, 0, TypeDesc::UNKNOWN, op_is_uniform);
+               llvm::Value *temp_wide_sep = rop.ll.op_alloca (rop.ll.type_wide_string(), 1, "wide seperator");
+               rop.ll.op_store(wide_sep, temp_wide_sep);
+               args.push_back(rop.ll.void_ptr(temp_wide_sep));
+           } else {
+               args.push_back(rop.llvm_void_ptr(*optSep));
+           }
+        }
+    } else {
+        if (op_is_uniform) {
+            args.push_back(rop.ll.constant(""));
+        } else {
+           llvm::Value *wide_sep = rop.ll.wide_constant("");
+           llvm::Value *temp_wide_sep = rop.ll.op_alloca (rop.ll.type_wide_string(), 1, "wide seperator");
+           rop.ll.op_store(wide_sep, temp_wide_sep);
+           args.push_back(rop.ll.void_ptr(temp_wide_sep));
+        }
+    }
+
+    if (optMaxsplit)  {
+        DASSERT (optMaxsplit->typespec().is_int());
+        if (op_is_uniform) {
+
+            args.push_back(rop.llvm_load_value(*optMaxsplit));
+        } else {
+
+           if (rop.isSymbolUniform(*optMaxsplit)) {
+               llvm::Value *wide_max_split = rop.llvm_load_value(*optMaxsplit, 0, 0, TypeDesc::UNKNOWN, op_is_uniform);
+               llvm::Value *temp_wide_max_split = rop.ll.op_alloca (rop.ll.type_wide_int(), 1, "wide max split");
+               rop.ll.op_store(wide_max_split, temp_wide_max_split);
+               args.push_back(rop.ll.void_ptr(temp_wide_max_split));
+           } else {
+               args.push_back(rop.llvm_void_ptr(*optMaxsplit));
+           }
+        }
+    } else {
+        if (op_is_uniform) {
+            args.push_back(rop.ll.constant(Results.typespec().arraylength()));
+        } else {
+           llvm::Value *wide_max_split = rop.ll.wide_constant(Results.typespec().arraylength());
+           llvm::Value *temp_wide_max_split = rop.ll.op_alloca (rop.ll.type_wide_int(), 1, "wide wide max split");
+           rop.ll.op_store(wide_max_split, temp_wide_max_split);
+           args.push_back(rop.ll.void_ptr(temp_wide_max_split));
+        }
+    }
+
+    args.push_back(rop.ll.constant (Results.typespec().arraylength()));
+
+
+    if (!op_is_uniform) {
+           func_name += std::string("_masked");
+           args.push_back(rop.ll.mask_as_int(rop.ll.current_mask()));
+          // std::cout<<"LLVM GEN: added on mask"<<std::endl;
+    }
+    llvm::Value *ret = rop.ll.call_function (func_name.c_str(), &args[0], args.size());
+    if (op_is_uniform && !result_is_uniform) {
+        ret = rop.ll.widen_value(ret);
+
+        ASSERT(temp_results_array);
+        for(int ai=0; ai < Results.typespec().arraylength(); ++ai) {
+            llvm::Value * elem_ptr = rop.ll.GEP (temp_results_array, 0, ai);
+            llvm::Value * elem = rop.ll.op_load(elem_ptr);
+            llvm::Value * wide_elem = rop.ll.widen_value(elem);
+            rop.llvm_store_value (wide_elem, Results, 0 /*deriv*/,
+                    rop.ll.constant(ai) /*arrayindex*/, 0 /* component*/);
+        }
+    }
+    if (op_is_uniform) {
+        rop.llvm_store_value (ret, R);
+    }
     return true;
 }
 
@@ -5739,19 +6124,51 @@ LLVMGEN (llvm_gen_blackbody)
     Symbol &Result (*rop.opargsym (op, 0));
     Symbol &Temperature (*rop.opargsym (op, 1));
     ASSERT (Result.typespec().is_triple() && Temperature.typespec().is_float());
-    // TODO: Handle non-uniform case below minding mask values
-    ASSERT(rop.isSymbolUniform(Result));
-    ASSERT(0 && "incomplete"); // needs uniform version accepting ShaderGlobalsBatched
 
-    llvm::Value* args[3] = { rop.sg_void_ptr(), rop.llvm_void_ptr(Result),
-                             rop.llvm_load_value(Temperature) };
-    rop.ll.call_function (Strutil::format("osl_%s_vf",op.opname().c_str()).c_str(), args, 3);
+    bool result_is_uniform = rop.isSymbolUniform(Result);
+    bool op_is_uniform = rop.isSymbolUniform(Temperature);
+
+
+    std::vector<llvm::Value *> args;
+    args.push_back(rop.sg_void_ptr());
+
+    std::string func_name = Strutil::format("osl_%s_",op.opname().c_str()).c_str();
+
+    llvm::Value *u_result = nullptr;
+
+    if (op_is_uniform && !result_is_uniform) {
+        u_result = rop.ll.op_alloca (rop.ll.type_triple(), 1, "blackbody temp result");
+        args.push_back(rop.ll.void_ptr(u_result));
+    } else {
+        args.push_back(rop.llvm_void_ptr(Result));
+    }
+    func_name += arg_typecode (Result, false /* no derivs */, op_is_uniform);
+    func_name += arg_typecode (Temperature, false /* no derivs */, op_is_uniform);
+    args.push_back(op_is_uniform ? rop.llvm_load_value(Temperature) : rop.llvm_void_ptr(Temperature));
+
+    if (op_is_uniform) {
+        func_name += std::string("_batched");
+    } else {
+        func_name += std::string("_masked");
+        args.push_back(rop.ll.mask_as_int(rop.ll.current_mask()));
+        // tack on additional mask argument
+    }
+
+
+    rop.ll.call_function (func_name.c_str(), &args[0], args.size());
+
+
+    if (op_is_uniform && !result_is_uniform) {
+        rop.llvm_broadcast_uniform_value_at(u_result,
+                Result,
+                true /* ignore_derivs */);
+    }
 
     // Punt, zero out derivs.
-    // FIXME -- only of some day, someone truly needs blackbody() to
-    // correctly return derivs with spatially-varying temperature.
-    if (Result.has_derivs())
-        rop.llvm_zero_derivs (Result);
+     // FIXME -- only of some day, someone truly needs blackbody() to
+     // correctly return derivs with spatially-varying temperature.
+     if (Result.has_derivs())
+         rop.llvm_zero_derivs (Result);
 
     return true;
 }

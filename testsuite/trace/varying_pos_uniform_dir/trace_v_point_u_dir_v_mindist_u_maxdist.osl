@@ -1,0 +1,25 @@
+shader trace_v_point_u_vector_v_mindist_u_maxdist(output vector cout = 0, output vector mcout = 0)
+{
+
+    point src = point(u, v-u, u);
+    vector dir = vector(0.8, 1.2, 8.0);
+
+
+int trace_res = 0;
+int trace_res_m = trace_res;
+trace_res = trace(src, dir, "mindist", u, "maxdist", 0.6, "shade", 2 );
+
+cout = vector(trace_res+u, u, v);
+
+
+if(int(P[0]*200)%2)
+{
+    trace_res_m = trace(src, dir, "mindist", v, "maxdist", 0.4, "shade", 3 ); 
+
+    
+}
+
+
+mcout = vector(trace_res_m+v, tan(v/0.6), u-v);
+
+}

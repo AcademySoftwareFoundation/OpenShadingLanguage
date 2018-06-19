@@ -1,0 +1,9 @@
+shader wavelength_u_lambda (output color Cout = 0)
+{
+    //float lambda = 0.10/100;
+    float lambda = raytype("camera")*600;
+    Cout = wavelength_color (lambda);
+}
+
+//testshade --llvm_debug --batched -g 200 200 test_batched -od uint -o Cout a.tif
+//calls vf_batched

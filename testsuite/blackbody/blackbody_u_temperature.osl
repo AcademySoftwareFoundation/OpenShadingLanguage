@@ -1,0 +1,21 @@
+//  call void @osl_blackbody_vf_batched(i8* %69, i8* %70, i8* %71), !dbg !12
+//  call void @osl_blackbody_vf_batched(i8* %111, i8* %112, i8* %113), !dbg !15
+
+shader blackbody_u_temperature (output color Cout = 0, output color mCout = 0)
+{
+    float T = 10000.0*(1.0/(2*raytype("camera")));   // map u range from 0K to 10,000K
+    float Tm = 20000.0*(1.0/(2*raytype("camera")));
+    color cout_ = blackbody (T) / 10000.0;  // scale so we can see it
+    color mcout_ = cout_;
+   // Cout *= 0.7/luminance(Cout);
+
+    if (int(P[0]*200)%2) {
+        // bottom half: just show color temperature with constant luminance
+        color mtemp = blackbody  (Tm)/20000.0;
+        mcout_ *= 0.7/luminance(mtemp);
+    }
+    
+    mCout = mcout_;
+    Cout = cout_;
+    
+}

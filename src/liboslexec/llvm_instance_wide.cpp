@@ -294,6 +294,30 @@ BackendLLVMWide::llvm_type_batched_texture_options ()
 
 
 llvm::Type *
+BackendLLVMWide::llvm_type_batched_trace_options ()
+{
+    // Create a type that defines the BatchedTraceOptions for LLVM IR.  This
+    // absolutely MUST exactly match the BatchedTraceOptions struct in batched_texture.h.
+    if (m_llvm_type_batched_trace_options)
+        return m_llvm_type_batched_trace_options;
+
+
+    //OSL_DEV_ONLY(int offset_to_varying_sblur = offsetof(BatchedTextureOptions, varying));
+    //OSL_DEV_ONLY(std::cout << ">>>>>>>>>>>>>> BatchedTextureOptions::varying = " << offset_to_varying_sblur << std::endl);
+
+    std::vector<llvm::Type*> sg_types;
+
+    // Uniform values of the batch
+    sg_types.push_back (ll.type_float());   // mindist
+    sg_types.push_back (ll.type_float());   // maxdist
+    sg_types.push_back (ll.type_int());     // shade
+    sg_types.push_back (reinterpret_cast<llvm::Type*>(ll.type_string()));     // traceset
+
+    return m_llvm_type_batched_trace_options = ll.type_struct (sg_types, "TraceOptions", false /*is_packed*/);
+}
+
+
+llvm::Type *
 BackendLLVMWide::llvm_type_sg_ptr ()
 {
     return ll.type_ptr (llvm_type_sg());
@@ -1034,6 +1058,7 @@ BackendLLVMWide::build_llvm_init ()
     // New function, reset temp matrix pointer
     m_llvm_temp_wide_matrix_ptr = nullptr;
     m_llvm_temp_batched_texture_options_ptr = nullptr;
+    m_llvm_temp_batched_trace_options_ptr = nullptr;
 
     // Set up a new IR builder
     llvm::BasicBlock *entry_bb = ll.new_basic_block (unique_name);
@@ -1049,6 +1074,7 @@ BackendLLVMWide::build_llvm_init ()
     // inside a code block out of order with its actual usage(?)
     temp_wide_matrix_ptr();
     temp_batched_texture_options_ptr();
+    temp_batched_trace_options_ptr();
 
 #if 0 /* helpful for debugging */
     if (llvm_debug()) {
@@ -1149,6 +1175,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
     // New function, reset temp matrix pointer
     m_llvm_temp_wide_matrix_ptr = nullptr;
     m_llvm_temp_batched_texture_options_ptr = nullptr;
+    m_llvm_temp_batched_trace_options_ptr = nullptr;
 
     llvm::BasicBlock *entry_bb = ll.new_basic_block (unique_layer_name);
     m_exit_instance_block = NULL;
@@ -1455,6 +1482,7 @@ BackendLLVMWide::initialize_llvm_group ()
     m_llvm_type_groupdata = NULL;
     m_llvm_type_closure_component = NULL;
     m_llvm_type_batched_texture_options = NULL;
+    m_llvm_type_batched_trace_options = NULL;
 
     initialize_llvm_helper_function_map();
     ll.InstallLazyFunctionCreator (helper_function_lookup);
@@ -1680,9 +1708,30 @@ BackendLLVMWide::run ()
         offset_by_index.push_back(offsetof(BatchedTextureOptions, private_envlayout));
 
         ll.validate_struct_data_layout(m_llvm_type_batched_texture_options, offset_by_index);
+       // std::cout<<"After texture validation"<<std::endl;
     }
 
     
+    {
+
+        std::vector<unsigned int> offset_by_index;
+
+        auto uniform_offset = offsetof(BatchedTextureOptions,uniform);//why?
+        offset_by_index.push_back(offsetof(RendererServices::TraceOpt, mindist));
+        offset_by_index.push_back(offsetof(RendererServices::TraceOpt, maxdist));
+        offset_by_index.push_back(offsetof(RendererServices::TraceOpt, shade));
+        offset_by_index.push_back(offsetof(RendererServices::TraceOpt, traceset));
+//        std::cout<<"Offset vec size is "<<offset_by_index.size()<<std::endl;
+//        std::cout<<"Offset by index size is "<<offset_by_index.size()<<std::endl;
+//        std::cout<<"Offset_by_index[0] "<<offset_by_index[0]<<std::endl;
+//        std::cout<<"Offset_by_index[1] "<<offset_by_index[1]<<std::endl;
+//        std::cout<<"Offset_by_index[2] "<<offset_by_index[2]<<std::endl;
+//        std::cout<<"Offset_by_index[3] "<<offset_by_index[3]<<std::endl;
+
+        ll.validate_struct_data_layout(m_llvm_type_batched_trace_options, offset_by_index);
+
+    }
+
     // We need to discover uniformity and masking requirements of our layers before generating code
     m_requires_masking_by_layer_and_op_index.resize(nlayers);
     m_uniform_get_attribute_op_indices_by_layer.resize(nlayers);

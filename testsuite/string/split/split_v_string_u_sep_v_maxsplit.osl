@@ -1,0 +1,41 @@
+shader test_split_v_str_u_sep_v_max (output vector res=0, 
+           output vector calres = 0){
+
+string var_str = format("%f",v);
+string uniform_sep = ","; //Uniform sep
+int var_maxsplit =  2*int(u) + 2;//Uniform maxsplit
+    
+//Initialize result ouput array
+string results[4] = {var_str,var_str,var_str,var_str}; 
+string results1[4] = {var_str,var_str,var_str,var_str};
+
+//Setup uniform string
+int accum1 = 0;
+int sc1 = 0;
+sc1 = split(format("%f,%f,%f,%f", 2*v, u, 2*(u+v), 2*(v-u) ),results, uniform_sep, var_maxsplit); //varying string amd varying seperator
+
+for (int i = 0 ; i<sc1; ++i){
+    accum1 += stoi(results[i]);
+}
+
+
+int accum2 = 0;
+int sc2 = 0;
+
+if(int(P[0]*200)%2){
+    sc2 = split(format("%f,%f,%f,%f", u+v, u, v-u,v),results1, uniform_sep, var_maxsplit);//varying string and varying sep
+}
+
+for (int i = 0 ; i<sc2; ++i){
+    accum2 += stoi(results1[i])+var_maxsplit;
+}
+
+//printf("sc2 is %d", sc2);
+//printf("accum2 is %d", accum2);
+string s = format("%f,%f,%f,%f", 2*v, u, 2*(u+v), 2*(v-u));
+//printf("String is %s\t", s);
+//printf("Maxsplit is %d\t", var_maxsplit);
+
+calres = vector(((float)accum2)+14.0/(15.0 + u*15), u+v, ((float)accum1)+4.0/(9.0 + v*9.0));  
+}
+

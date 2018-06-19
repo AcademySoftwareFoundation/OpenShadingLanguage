@@ -71,6 +71,7 @@ static ustring op_stof("stof");
 static ustring op_strlen("strlen");
 static ustring op_substr("substr");
 static ustring op_surfacearea("surfacearea");
+static ustring op_trace("trace");
 static ustring op_transform("transform");
 static ustring op_transformv("transformv");
 static ustring op_transformn("transformn");
@@ -1344,13 +1345,13 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 					}
 			    }
 			}
-            if ((opcode.opname() == Strings::op_stoi) ||
-                (opcode.opname() == Strings::op_concat)||
+            if ((opcode.opname() == Strings::op_concat)||
                 (opcode.opname() == Strings::op_strlen) ||
                 (opcode.opname() == Strings::op_hash) ||
                 (opcode.opname() == Strings::op_getchar)||
                 (opcode.opname() == Strings::op_startswith)||
                 (opcode.opname() == Strings::op_endswith) ||
+                (opcode.opname() == Strings::op_stoi) ||
                 (opcode.opname() == Strings::op_stof)||
                 (opcode.opname() == Strings::op_substr))      {
                 // TODO: should OpDescriptor handle identifying operations that always require masking?
@@ -1445,6 +1446,12 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
                 for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
                     const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
                     symbolFeedForwardMap.insert(std::make_pair(&sg_backfacing, symbolWrittenTo));
+                }
+            }
+            if (opcode.opname() == Strings::op_trace) {
+                for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
+                    const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
+                    symbolsWrittenToByImplicitlyVaryingOps.push_back(symbolWrittenTo);
                 }
             }
 
@@ -2219,11 +2226,16 @@ llvm::Value *
 BackendLLVMWide::llvm_alloca_and_widen_value(const Symbol& sym, int deriv)
 {
     ASSERT(isSymbolUniform(sym) == true);
-    TypeDesc symType = sym.typespec().simpletype();
+    const TypeSpec &t = sym.typespec();
+
+    TypeDesc symType = t.simpletype();
     ASSERT(symType.is_unknown() == false);
+
     llvm::Value* widePtr = ll.wide_op_alloca(symType);
-    llvm::Value* wideValue = ll.widen_value(llvm_load_value(sym, deriv));
-    ll.op_store(wideValue, widePtr);
+    for (int c = 0;  c < t.aggregate();  ++c) {
+        llvm::Value *v = llvm_load_value (sym, 0, c, TypeDesc::UNKNOWN, /*is_uniform*/ false);
+        llvm_store_value (v, widePtr, t, 0, NULL, c);
+    }
     return ll.void_ptr(widePtr);
 }
 
@@ -2856,12 +2868,12 @@ BackendLLVMWide::llvm_store_component_value (llvm::Value* new_val,
 void 
 BackendLLVMWide::llvm_broadcast_uniform_value_at(
 	llvm::Value * pointerTotempUniform,
-	Symbol & Destination)
+	Symbol & Destination, bool ignore_derivs)
 {
     const TypeDesc & dest_type = Destination.typespec().simpletype();
     bool derivs = Destination.has_derivs();
 
-	int derivCount =  derivs ? 3 : 1;
+	int derivCount =  (!ignore_derivs && derivs) ? 3 : 1;
 
 	int arrayEnd;
 
@@ -2995,6 +3007,16 @@ BackendLLVMWide::temp_batched_texture_options_ptr ()
         m_llvm_temp_batched_texture_options_ptr = ll.op_alloca_aligned(64, llvm_type_batched_texture_options());
     }
     return m_llvm_temp_batched_texture_options_ptr;
+}
+
+llvm::Value *
+BackendLLVMWide::temp_batched_trace_options_ptr ()
+{
+    if (m_llvm_temp_batched_trace_options_ptr == nullptr)
+    {
+        m_llvm_temp_batched_trace_options_ptr = ll.op_alloca_aligned(64, llvm_type_batched_trace_options());
+    }
+    return m_llvm_temp_batched_trace_options_ptr;
 }
 
 

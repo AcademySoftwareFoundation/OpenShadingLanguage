@@ -67,6 +67,10 @@ public:
 							 TransformationPtr xform) override;
 	bool get_matrix (ShaderGlobalsBatch *sgb, Matrix44 &result,
 							 ustring from) override;
+	void trace (TraceOpt &options,  ShaderGlobalsBatch *sgb, MaskedAccessor<int> result,
+            ConstWideAccessor<Vec3> P, ConstWideAccessor<Vec3> dPdx,
+            ConstWideAccessor<Vec3> dPdy, ConstWideAccessor<Vec3> R,
+            ConstWideAccessor<Vec3> dRdx, ConstWideAccessor<Vec3> dRdy) override;
 
 private:
 	template<typename RAccessorT>
@@ -141,11 +145,18 @@ public:
                                       ustring object, TypeDesc type, ustring name,
                                       int index, void *val );
     
+    virtual bool trace (TraceOpt &options, ShaderGlobals *sg,
+                            const OSL::Vec3 &P, const OSL::Vec3 &dPdx,
+                            const OSL::Vec3 &dPdy, const OSL::Vec3 &R,
+                            const OSL::Vec3 &dRdx, const OSL::Vec3 &dRdy);
+
+
     // Common impl shared with BatchedSimpleRenderer  
     bool common_get_attribute(ustring object, ustring name, DataRef val);
     
     virtual bool get_attribute (ShaderGlobals *sg, bool derivatives, ustring object,
                                 TypeDesc type, ustring name, void *val);
+
 #ifdef OSL_EXPERIMENTAL_BIND_USER_DATA_WITH_LAYERNAME
     virtual bool get_userdata (bool derivatives, ustring name, ustring layername, TypeDesc type,
                                ShaderGlobals *sg, void *val);

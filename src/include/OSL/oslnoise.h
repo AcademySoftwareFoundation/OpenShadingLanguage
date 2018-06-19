@@ -32,11 +32,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
+#include <OSL/fast_simplex.h>
 #include <OSL/wide.h>
 #include <OpenImageIO/hash.h>
 #include <OpenImageIO/simd.h>
 
-#include "../../liboslnoise/fast_simplex.h"
 
 OSL_NAMESPACE_ENTER
 

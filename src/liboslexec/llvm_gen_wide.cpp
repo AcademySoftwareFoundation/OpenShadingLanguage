@@ -5269,12 +5269,9 @@ LLVMGEN (llvm_gen_calculatenormal)
     Symbol& Result = *rop.opargsym (op, 0);
     Symbol& P      = *rop.opargsym (op, 1);
 
-    // TODO: because calculatenormal implicitly uses the flip-handedness
+    // NOTE: because calculatenormal implicitly uses the flip-handedness
     // of the BatchedShaderGlobals, all of its results must be varying
-    // TODO: Update uniform discovery to handle widening results that are
-    // implicitly dependent upon varying shader globals
     ASSERT(false == rop.isSymbolUniform(Result));
-    ASSERT(false == rop.isSymbolUniform(P));
 
     DASSERT (Result.typespec().is_triple() && P.typespec().is_triple());
     if (! P.has_derivs()) {
@@ -5282,11 +5279,20 @@ LLVMGEN (llvm_gen_calculatenormal)
         return true;
     }
 
-    std::vector<llvm::Value *> args;
-    args.push_back (rop.llvm_void_ptr (Result));
-    args.push_back (rop.sg_void_ptr());
-    args.push_back (rop.llvm_void_ptr (P));
-    rop.ll.call_function ("osl_calculatenormal_batched", &args[0], args.size());
+    llvm::Value *args[4];
+    args[0] = rop.llvm_void_ptr (Result);
+    args[1] = rop.sg_void_ptr();
+    args[2] = rop.llvm_load_arg (P, true /*derivs*/, false /*op_is_uniform*/);
+    int arg_count = 3;
+    std::string func_name("osl_calculatenormal");
+    if(rop.ll.is_masking_required()) {
+        args[arg_count++] = rop.ll.mask_as_int(rop.ll.current_mask());
+        func_name.append("_masked");
+    } else {
+        func_name.append("_batched");
+    }
+    rop.ll.call_function (func_name.c_str(), args, arg_count);
+
     if (Result.has_derivs())
         rop.llvm_zero_derivs (Result);
     return true;

@@ -1,0 +1,15 @@
+shader
+test_calculatenormal_u_point (output point Cout = 0)
+{
+    point  val = point(-0.8*raytype("camera"), -0.5*raytype("camera"), 0.25*raytype("camera"));
+    point  val2 = point(0.3*raytype("camera"), -0.25*raytype("camera"), -0.75*raytype("camera"));
+    
+    vector d = calculatenormal(val);
+    if (int(P[0]*64)%2==0) {
+        d = calculatenormal(val2);
+    }
+    d += 1; // Shift it over to be positive [0-2]
+    d *= 0.5; // Scale down to fit in [0-1]
+    
+    Cout = color(d[1], d[0], d[2]);
+}

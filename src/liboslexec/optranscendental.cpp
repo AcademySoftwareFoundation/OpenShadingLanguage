@@ -2303,6 +2303,26 @@ OSL_SHADEOP void osl_calculatenormal_batched(void *out, void *sgb_, void *P_)
 	}
 }
 
+OSL_SHADEOP void osl_calculatenormal_masked(void *out, void *sgb_, void *P_, unsigned int mask_value)
+{
+    ShaderGlobalsBatch *sgb = (ShaderGlobalsBatch *)sgb_;
+    OSL_INTEL_PRAGMA(forceinline recursive)
+    {
+        ConstWideAccessor<Dual2<Vec3>> wP(P_);
+        ConstWideAccessor<int> wFlipHandedness(sgb->varyingData().flipHandedness);
+        MaskedAccessor<Vec3> wr(out, Mask(mask_value));
+
+        OSL_OMP_PRAGMA(omp simd simdlen(wr.width))
+        for(int lane=0; lane < wr.width; ++lane) {
+            Dual2<Vec3> P = wP[lane];
+            //std::cout << "P=" << P.val() << "," << P.dx() << "," << P.dy() << std::endl;
+            Vec3 N = calculatenormal(P, wFlipHandedness[lane]);
+            wr[lane] = N;
+        }
+    }
+}
+
+
 OSL_SHADEOP void
 osl_smoothstep_w16fw16fw16fw16f (void *r_, void *e0_, void *e1_, void *x_)
 {

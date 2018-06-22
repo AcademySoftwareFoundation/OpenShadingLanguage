@@ -5,6 +5,7 @@ SET ( liboslexec_srcs
           loadshader.cpp master.cpp
           opcolor.cpp opmatrix.cpp opmessage.cpp
           opnoise.cpp opnoise_perlin.cpp opnoise_uperlin.cpp opnoise_simplex.cpp opnoise_usimplex.cpp
+          opnoise_periodic_perlin.cpp opnoise_periodic_uperlin.cpp
           opspline.cpp opstring.cpp optexture.cpp
           optranscendental.cpp
           oslexec.cpp

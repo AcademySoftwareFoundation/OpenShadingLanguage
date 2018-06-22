@@ -222,6 +222,9 @@ using OIIO::string_view;
 #define __OSL_CONCAT5(A, B, C, D, E) __OSL_CONCAT(__OSL_CONCAT4(A,B,C,D),E)
 #define __OSL_CONCAT6(A, B, C, D, E, F) __OSL_CONCAT(__OSL_CONCAT5(A,B,C,D,E),F)
 #define __OSL_CONCAT7(A, B, C, D, E, F, G) __OSL_CONCAT(__OSL_CONCAT6(A,B,C,D,E,F),G)
+#define __OSL_CONCAT8(A, B, C, D, E, F, G, H) __OSL_CONCAT(__OSL_CONCAT7(A,B,C,D,E,F,G),H)
+#define __OSL_CONCAT9(A, B, C, D, E, F, G, H, I) __OSL_CONCAT(__OSL_CONCAT8(A,B,C,D,E,F,G,H),I)
+#define __OSL_CONCAT10(A, B, C, D, E, F, G, H, I, J) __OSL_CONCAT(__OSL_CONCAT9(A,B,C,D,E,F,G,H,I),J)
 
 
 

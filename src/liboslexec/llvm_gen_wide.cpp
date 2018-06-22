@@ -1924,27 +1924,27 @@ LLVMGEN (llvm_gen_aassign)
                                         rop.ll.constant(rop.inst()->layername()),
                                         rop.ll.constant(rop.inst()->shadername()) };
                 index = rop.ll.call_function ("osl_range_check_batched", args);
-            } else {
-                // We need a copy of the indices incase the range check clamps them
-                llvm::Value * loc_clamped_wide_index = rop.ll.op_alloca(rop.ll.type_wide_int(), 1, std::string("range clamped index:") + Result.name().c_str());
-                // copy the indices into our temporary
-                rop.ll.op_unmasked_store(index, loc_clamped_wide_index);
-
-                llvm::Value *args[] = { rop.ll.void_ptr(loc_clamped_wide_index),
-                                        rop.ll.mask_as_int(rop.ll.current_mask()),
-                                        rop.ll.constant(Result.typespec().arraylength()),
-                                        rop.ll.constant(Result.name()),
-                                        rop.sg_void_ptr(),
-                                        rop.ll.constant(op.sourcefile()),
-                                        rop.ll.constant(op.sourceline()),
-                                        rop.ll.constant(rop.group().name()),
-                                        rop.ll.constant(rop.layer()),
-                                        rop.ll.constant(rop.inst()->layername()),
-                                        rop.ll.constant(rop.inst()->shadername()) };
-                rop.ll.call_function ("osl_range_check_masked", args);
-                // Use the range check indices
-                index = rop.ll.op_load(loc_clamped_wide_index);
             }
+        } else {
+            // We need a copy of the indices incase the range check clamps them
+            llvm::Value * loc_clamped_wide_index = rop.ll.op_alloca(rop.ll.type_wide_int(), 1, std::string("range clamped index:") + Result.name().c_str());
+            // copy the indices into our temporary
+            rop.ll.op_unmasked_store(index, loc_clamped_wide_index);
+
+            llvm::Value *args[] = { rop.ll.void_ptr(loc_clamped_wide_index),
+                                    rop.ll.mask_as_int(rop.ll.current_mask()),
+                                    rop.ll.constant(Result.typespec().arraylength()),
+                                    rop.ll.constant(Result.name()),
+                                    rop.sg_void_ptr(),
+                                    rop.ll.constant(op.sourcefile()),
+                                    rop.ll.constant(op.sourceline()),
+                                    rop.ll.constant(rop.group().name()),
+                                    rop.ll.constant(rop.layer()),
+                                    rop.ll.constant(rop.inst()->layername()),
+                                    rop.ll.constant(rop.inst()->shadername()) };
+            rop.ll.call_function ("osl_range_check_masked", args);
+            // Use the range check indices
+            index = rop.ll.op_load(loc_clamped_wide_index);
         }
     }
 

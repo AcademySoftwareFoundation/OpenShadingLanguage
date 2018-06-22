@@ -297,11 +297,26 @@ BackendLLVMWide::llvm_zero_derivs (const Symbol &sym)
         if (isSymbolUniform(sym))
             zero = ll.constant (0.0f);
         else
-        	zero = ll.wide_constant (0.0f);
-        for (int c = 0;  c < t.aggregate();  ++c)
-            llvm_store_value (zero, sym, 1, NULL, c);
-        for (int c = 0;  c < t.aggregate();  ++c)
-            llvm_store_value (zero, sym, 2, NULL, c);
+            zero = ll.wide_constant (0.0f);
+
+        int start_array_index = -1;
+        int end_array_index = start_array_index + 1;
+        if (t.is_array())
+        {
+            // TODO: investigate doing a memset for arrays & matrices,
+            // but not for simple aggregates
+            start_array_index = 0;
+            end_array_index = t.arraylength();
+        }
+
+        for(int arrayindex=start_array_index; arrayindex < end_array_index; ++arrayindex) {
+            llvm::Value * arrind = arrayindex >= 0 ? ll.constant (arrayindex) : NULL;
+
+            for (int c = 0;  c < t.aggregate();  ++c)
+                llvm_store_value (zero, sym, 1, arrind, c);
+            for (int c = 0;  c < t.aggregate();  ++c)
+                llvm_store_value (zero, sym, 2, arrind, c);
+        }
     }
 }
 
@@ -3406,23 +3421,25 @@ BackendLLVMWide::llvm_assign_impl (Symbol &Result, Symbol &Src,
 			}
 		}
 	
+
 		// Handle derivatives
 		if (Result.has_derivs()) {
-			if (Src.has_derivs()) {
-				// src and result both have derivs -- copy them
-				for (int d = 1;  d <= 2;  ++d) {
-					for (int i = 0; i < num_components; ++i) {
-					    // Not sure how, but we have seen in wild
-					    // the ability to have a uniform Src try and store to a varying Result,
-					    // so we need to widen it here
-						llvm::Value* val = llvm_load_value (Src, d, arrind, i, TypeDesc::UNKNOWN, op_is_uniform);
-						llvm_store_value (val, Result, d, arrind, i);
-					}
-				}
-			} else {
-				// Result wants derivs but src didn't have them -- zero them
-				llvm_zero_derivs (Result);
-			}
+	        llvm::Value *zero = nullptr;
+	        if (!Src.has_derivs()) {
+                zero = op_is_uniform ? ll.constant (0.0f) : ll.wide_constant (0.0f);
+	        }
+
+            for (int d = 1;  d <= 2;  ++d) {
+                for (int i = 0; i < num_components; ++i) {
+                    llvm::Value* val = zero;
+                    if (Src.has_derivs()) {
+                        // src and result both have derivs -- copy them
+                        // allow a uniform Src to store to a varying Result,
+                        val = llvm_load_value (Src, d, arrind, i, TypeDesc::UNKNOWN, op_is_uniform);
+                    }
+                    llvm_store_value (val, Result, d, arrind, i);
+        		}
+		    }
 		}
 	}
     return true;

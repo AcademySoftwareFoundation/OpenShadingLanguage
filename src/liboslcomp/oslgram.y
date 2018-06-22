@@ -170,7 +170,7 @@ global_declaration
 shader_or_function_declaration
         : typespec_or_shadertype IDENTIFIER
                 {
-                    if ($1 == ShadTypeUnknown) {
+                    if ($1 == (int)ShaderType::Unknown) {
                         // It's a function declaration, not a shader
                         oslcompiler->symtab().push ();  // new scope
                         typespec_stack.push (oslcompiler->current_typespec());
@@ -178,7 +178,7 @@ shader_or_function_declaration
                 }
           metadata_block_opt '(' 
                 {
-                    if ($1 != ShadTypeUnknown)
+                    if ($1 != (int)ShaderType::Unknown)
                         oslcompiler->declaring_shader_formals (true);
                 }
           formal_params_opt ')'
@@ -187,7 +187,7 @@ shader_or_function_declaration
                 }
           metadata_block_opt function_body_or_just_decl
                 {
-                    if ($1 == ShadTypeUnknown) {
+                    if ($1 == (int)ShaderType::Unknown) {
                         // Function declaration
                         oslcompiler->symtab().pop ();  // restore scope
                         ASTfunction_declaration *f;
@@ -589,13 +589,17 @@ typespec_or_shadertype
                 {
                     ustring name ($1);
                     if (name == "shader")
-                        $$ = ShadTypeGeneric;
+                        $$ = (int)ShaderType::Generic;
                     else if (name == "surface")
-                        $$ = ShadTypeSurface;
+                        $$ = (int)ShaderType::Surface;
                     else if (name == "displacement")
-                        $$ = ShadTypeDisplacement;
+                        $$ = (int)ShaderType::Displacement;
                     else if (name == "volume")
-                        $$ = ShadTypeVolume;
+                        $$ = (int)ShaderType::Volume;
+                    else if (name == "camera")
+                        $$ = (int)ShaderType::Camera;
+                    else if (name == "image")
+                        $$ = (int)ShaderType::Image;
                     else {
                         Symbol *s = oslcompiler->symtab().find (name);
                         if (s && s->is_structure())
@@ -606,7 +610,7 @@ typespec_or_shadertype
                                                 oslcompiler->lineno(),
                                                 "Unknown struct name: %s", $1);
                         }
-                        $$ = ShadTypeUnknown;
+                        $$ = (int)ShaderType::Unknown;
                     }
                 }
         ;

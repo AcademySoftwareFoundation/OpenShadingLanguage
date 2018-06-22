@@ -43,10 +43,9 @@ class StructSpec;
 
 /// Kinds of shaders
 ///
-enum ShaderType {
-    ShadTypeUnknown=0, ShadTypeGeneric, ShadTypeSurface,
-    ShadTypeDisplacement, ShadTypeVolume, ShadTypeLight,
-    ShadTypeLast
+enum class ShaderType {
+    Unknown=0, Generic, Surface, Displacement, Volume, Light, Camera, Image,
+    Last
 };
 
 
@@ -62,9 +61,9 @@ ShaderType shadertype_from_name (string_view name);
 
 /// Uses of shaders
 ///
-enum ShaderUse {
-    ShadUseSurface, ShadUseDisplacement,
-    ShadUseLast, ShadUseUnknown = ShadUseLast
+enum class ShaderUse {
+    Surface, Displacement, Camera, Image,
+    Last, Unknown = Last
 };
 
 

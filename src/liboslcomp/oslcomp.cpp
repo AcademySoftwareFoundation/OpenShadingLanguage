@@ -682,7 +682,7 @@ OSLCompilerImpl::initialize_globals ()
 {
     static GlobalTable globals[] = {
         { "P", TypeDesc::TypePoint, false },
-        { "I", TypeDesc::TypeVector },
+        { "I", TypeDesc::TypeVector, false },
         { "N", TypeDesc::TypeNormal, false },
         { "Ng", TypeDesc::TypeNormal },
         { "u", TypeDesc::TypeFloat },
@@ -1049,6 +1049,15 @@ OSLCompilerImpl::retrieve_source (ustring filename, int line)
 
 
 
+ShaderType
+OSLCompilerImpl::shadertype () const
+{
+    auto s = shaderdecl();
+    return s ? s->shadertype() : ShaderType::Unknown;
+}
+
+
+
 void
 OSLCompilerImpl::push_nesting (bool isloop)
 {
@@ -1149,8 +1158,38 @@ OSLCompilerImpl::check_write_legality (const Opcode &op, int opnum,
                sym->name().c_str(), opnum);
     }
 
-    // FIXME -- check for writing to globals.  But it's tricky, depends on
-    // what kind of shader we are.
+    // Check for writing to globals.
+    if (sym->symtype() == SymTypeGlobal) {
+        static ustring Ci("Ci"), P("P"), I("I"), N("N"), Ng("Ng");
+        static ustring dPdu("Pdu"), dPdv("Pdv"), u("u"), v("v");
+        static ustring time("time"), dtime("dtime"), dPdtime("dPdtime");
+        ustring symname = sym->name();
+        bool ok = true;
+        switch (shadertype()) {
+        case ShaderType::Surface:
+            ok = (symname == Ci || symname == N);
+            break;
+        case ShaderType::Displacement:
+            ok = (symname == P || symname == N);
+            break;
+        case ShaderType::Volume:
+            ok = (symname == Ci);
+            break;
+        case ShaderType::Camera:
+            ok = (symname == P || symname == I);
+            break;
+        case ShaderType::Image:
+            ok = false; // can't write to globals
+            break;
+        default:  // generic
+            ok = true;
+        }
+        // N.B. all is fair game in generic 'shader' shaders
+        if (!ok)
+            error (op.sourcefile(), op.sourceline(),
+                   "Cannot write to global '%s' in a %s shader",
+                   symname, pvt::shadertypename(shadertype()));
+    }
 }
 
 

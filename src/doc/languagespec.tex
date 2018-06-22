@@ -60,7 +60,7 @@ Language Specification
 Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
-\date{{\large Date: 31 Mar 2018 \\
+\date{{\large Date: 22 Jun 2018 \\
 % (with corrections, 31 Mar 2018)
 }
 \bigskip
@@ -583,17 +583,11 @@ The attribute state also includes shader assignments --- the shaders or
 shader groups for each of several \emph{shader uses}, such as surface
 shaders that designate how light reflects or emits from each point on a shape,
 displacement shaders that can add fine detail to the shape on a
-point-by-point basis, and volume shaders that describe how light is
-scattered within a region of space.  A particular renderer may have
-additional shader types that it supports.
-
-%\subsection*{Shader types}
-%
-%There are several types of shaders: surface, displacement, light,
-%volume.  The type of shader determines what it's allowed to do (for
-%example, only displacement shaders can alter the surface position).
-%There is also a generic kind of shader that can be used for any of the
-%shader uses.
+point-by-point basis, volume shaders that describe how light is
+scattered within a region of space, camera shaders that can specify
+projection or lens effects, and image shaders that can perform image
+processing or compositing operations on output images.
+A particular renderer may support only a subset of shader types.
 
 \subsection*{Shader execution state: parameter binding and global variables}
 
@@ -916,9 +910,10 @@ ordinary execution instructions (such as assignments, etc.).
 \index{shader types} \index{types!shader}
 
 Shader types include the following: {\cf surface}, {\cf displacement},
-{\cf light}, {\cf volume}, and generic {\cf shader}.  Some operations
+{\cf light}, {\cf volume}, {\cf camera}, {\cf image},
+and generic {\cf shader}.  Some operations
 may only be performed from within certain types of shaders (e.g., one
-may only call {\cf displace()} or alter \P in a displacement shader),
+may only call {\cf displace()} or alter \P in a displacement or camera shader),
 and some global variables may only be accessed from within certain types
 of shaders (e.g., {\cf dPdu} is not defined inside a volume shader).
 
@@ -955,6 +950,20 @@ side of the medium.  They are similar to {\cf surface} shaders, except
 that they may be called from positions that do not lie upon (and are not
 necessarily associated with) any particular primitive.
 
+\subsection*{{\cf camera} shaders}
+
+Camera shaders take a $(u,v)$ coordinate on the image plane and optionally
+warp the view direction (as \P and \I). This can be used for certain
+projection and lens effects. (Note: there may be renderer implementations
+that are not able to support camera shaders.)
+
+\subsection*{{\cf image} shaders}
+
+Image shaders run on the results of a rendered images (including all outputs
+such as AOVs) and can generate new outputs. Alternatively, an image shader
+can be used to express most pixel-by-pixel image processing or compositing
+operations.
+
 
 
 \subsection*{{\cf shader} generic shaders}
@@ -962,10 +971,10 @@ necessarily associated with) any particular primitive.
 Generic shaders are used for utility code, generic routines that may be
 called as individual layers in a shader group.  Generic shaders need not
 specify a shader type, and therefore may be reused from inside surface,
-displacement, or volume shader groups.  But as a result, they may
+displacement, volume, camera, or image shader groups.  But as a result, they may
 not contain any functionality that cannot be performed from inside all
 shader types (for example, they may not alter \P, which can only be done
-from within a displacement shader).
+from within a displacement or camera shader).
 
 
 \section{Shader parameters}
@@ -2812,56 +2821,23 @@ P/\partial u$ and $\partial P/\partial v$ tangent to the surface at \P.  \\
 \end{table}
 
 
-\begin{comment}  % old table
-\begin{table}
-\begin{tabular}{|p{1in}p{0.75in}p{0.75in}p{0.75in}p{1.7in}|}
-\hline
-{\bf Variable} & surface & displacement & volume & light \\
-\hline
-\P            & R     & RW & R     & R \\
-\I            & R     &    & R &   \\
-\N            & RW    & RW &  &  \\
-{\cf Ng}      & R     & R  &  &  \\
-{\cf dPdu}    & R     & R  &  &  \\
-{\cf dPdv}    & R     & R  &  &  \\
-{\cf u, v}    & R     & R  & R$^1$ & R$^1$ \\
-{\cf time}    & R     & R  & R     & R \\
-{\cf dtime}   & R     & R  & R     & R \\
-{\cf dPdtime} & R     & R  & R     & R \\
-\Ci           & RW    &    & RW    & \\
-%\Oi           & RW    &    & RW    & \\
-%{\cf L}       & R$^2$ &    & R$^2$ & RW \\
-{\cf L}       &       &    &       & RW \\
-%{\cf Cl}      & R$^2$ &    & R$^2$ & RW \\
-{\cf Cl}      &       &    &       & RW \\
-{\cf Ps}      &       &    &       & R \\
-{\cf Ns}      &       &    &       & R \\
-%{\cf Pl}      &       &    & R$^2$ & R \\
-%{\cf Nl}      &       &    & R$^2$ & R \\
-{\cf Pl}      &       &    &  & R \\
-{\cf Nl}      &       &    &  & R \\
-\hline 
-\end{tabular}
-\end{table}
-\end{comment}
-
 \begin{table}
 \begin{tabular}{|p{1in}p{0.75in}p{0.75in}p{0.75in}|}
 \hline
-{\bf Variable} & surface & displacement & volume  \\
+{\bf Variable} & surface & displacement & volume & camera & image \\
 \hline
-\P            & R     & RW & R      \\
-\I            & R     &    & R    \\
-\N            & RW    & RW &    \\
-{\cf Ng}      & R     & R  &    \\
-{\cf dPdu}    & R     & R  &    \\
-{\cf dPdv}    & R     & R  &    \\
-{\cf Ps}      &       &    & R   \\
-{\cf u, v}    & R     & R  & R   \\
-{\cf time}    & R     & R  & R       \\
-{\cf dtime}   & R     & R  & R       \\
-{\cf dPdtime} & R     & R  & R       \\
-\Ci           & RW    &    & RW     \\
+\P            & R        & RW           & R      & RW     &       \\
+\I            & R        &              & R      & RW     &       \\
+\N            & RW       & RW           &        &        &       \\
+{\cf Ng}      & R        & R            &        &        &       \\
+{\cf dPdu}    & R        & R            &        & R      &       \\
+{\cf dPdv}    & R        & R            &        & R      &       \\
+%{\cf Ps}      &          &              & R      &        &       \\
+{\cf u, v}    & R        & R            & R      & R      & R     \\
+{\cf time}    & R        & R            & R      & R      & R     \\
+{\cf dtime}   & R        & R            & R      & R      & R     \\
+{\cf dPdtime} & R        & R            & R      & R      &       \\
+\Ci           & RW       &              & RW     &        &       \\
 \hline 
 \end{tabular}
 
@@ -5320,7 +5296,7 @@ nothing (empty, no token).
     <shadertype> <identifier> <metadata-block-opt> 
     "(" <shader-formal-params-opt> ")" "{" <statement-list> "}"
 
-<shadertype> ::= "displacement" |  "shader" | "surface" | "volume"
+<shadertype> ::= "camera" | displacement" | "image" | "shader" | "surface" | "volume"
 
 <shader-formal-params> ::= <shader-formal-param> \{ "," <shader-formal-param> \}
 

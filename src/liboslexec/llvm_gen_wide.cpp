@@ -5356,7 +5356,14 @@ LLVMGEN (llvm_gen_spline)
              Knots.typespec().is_array() &&
              (!has_knot_count || (has_knot_count && Knot_count.typespec().is_int())));
 
-    ASSERT(rop.isSymbolUniform(Spline));
+
+    bool result_is_uniform = rop.isSymbolUniform(Result);
+    bool spline_is_uniform = rop.isSymbolUniform(Spline);
+    ASSERT(spline_is_uniform);
+    bool value_is_uniform = rop.isSymbolUniform(Value);
+    bool knots_is_uniform = rop.isSymbolUniform(Knots);
+
+    bool op_is_uniform = spline_is_uniform && value_is_uniform && knots_is_uniform;
 
     std::string name = Strutil::format("osl_%s_", op.opname().c_str());
     std::vector<llvm::Value *> args;
@@ -5364,8 +5371,7 @@ LLVMGEN (llvm_gen_spline)
     //   result has derivs and (value || knots) have derivs
     bool result_derivs = Result.has_derivs() && (Value.has_derivs() || Knots.has_derivs());
 
-    bool result_is_uniform = rop.isSymbolUniform(Result);
-    if (false == result_is_uniform)
+    if (false == op_is_uniform)
     	name += warg_lane_count();
     if (result_derivs)
         name += "d";
@@ -5374,7 +5380,7 @@ LLVMGEN (llvm_gen_spline)
     else if (Result.typespec().is_triple())
         name += "v";
 
-    if (false == rop.isSymbolUniform(Value))
+    if (false == value_is_uniform)
     	name += warg_lane_count();
     if (result_derivs && Value.has_derivs())
         name += "d";
@@ -5383,7 +5389,7 @@ LLVMGEN (llvm_gen_spline)
     else if (Value.typespec().is_triple())
         name += "v";
 
-    if (false == rop.isSymbolUniform(Knots))
+    if (false == knots_is_uniform)
     	name += warg_lane_count();
     if (result_derivs && Knots.has_derivs())
         name += "d";
@@ -5391,12 +5397,18 @@ LLVMGEN (llvm_gen_spline)
         name += "f";
     else if (Knots.typespec().simpletype().elementtype().aggregate == TypeDesc::VEC3)
         name += "v";
-    if (false == result_is_uniform) {
+    if (false == op_is_uniform) {
         // for simplicity, always call the masked version
         name += "_masked";
     }
 
-    args.push_back (rop.llvm_void_ptr (Result));
+    llvm::Value *temp_results = nullptr;
+    if (op_is_uniform && !result_is_uniform) {
+        temp_results = rop.ll.op_alloca (rop.ll.llvm_type(Result.typespec().simpletype().elementtype()), 1, "uniform spline result");
+        args.push_back (rop.ll.void_ptr (temp_results));
+    } else {
+        args.push_back (rop.llvm_void_ptr (Result));
+    }
     args.push_back (rop.llvm_load_value (Spline));
     args.push_back (rop.llvm_void_ptr (Value)); // make things easy
     args.push_back (rop.llvm_void_ptr (Knots));
@@ -5406,12 +5418,29 @@ LLVMGEN (llvm_gen_spline)
         args.push_back (rop.ll.constant ((int)Knots.typespec().arraylength()));
     args.push_back (rop.ll.constant ((int)Knots.typespec().arraylength()));
 
-    if (false == result_is_uniform) {
+    if (false == op_is_uniform) {
         // We always call the masked version, need to pass the mask value
         args.push_back (rop.ll.mask_as_int(rop.ll.current_mask()));
     }
 
     rop.ll.call_function (name.c_str(), &args[0], args.size());
+
+    if (op_is_uniform && !result_is_uniform) {
+
+        ASSERT(temp_results);
+        // Should be impossible to have derivs as the op is uniform
+        for (int c = 0;  c < Result.typespec().aggregate();  ++c) {
+            // Will automatically widen value
+            llvm::Value *wide_component_value = rop.llvm_load_value (temp_results, Result.typespec(),
+                                                          0 /*derivIndex*/, nullptr,
+                                                          c, TypeDesc::UNKNOWN,
+                                                          false /*op_is_uniform*/);
+
+            bool success = rop.llvm_store_value (wide_component_value, Result, 0,
+                    nullptr, c);
+            ASSERT(success);
+        }
+    }
 
     if (Result.has_derivs() && !result_derivs)
         rop.llvm_zero_derivs (Result);

@@ -1,0 +1,12 @@
+shader
+test_calculatenormal_v_point (output point Cout = 0)
+{   
+    vector d = calculatenormal(P);
+    point p2 = point(P[2], P[0], P[1]); 
+    if (int(P[0]*64)%2==0) {
+        d = calculatenormal(p2);
+    }
+    d += 1; // Shift it over to be positive [0-2]
+    d *= 0.5; // Scale down to fit in [0-1]
+    Cout = color(d[1], d[0], d[2]);
+}

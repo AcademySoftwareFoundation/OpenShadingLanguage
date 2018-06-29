@@ -32,11 +32,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
+#include <OSL/fast_simplex.h>
 #include <OSL/wide.h>
 #include <OpenImageIO/hash.h>
 #include <OpenImageIO/simd.h>
 
-#include "../../liboslnoise/fast_simplex.h"
 
 OSL_NAMESPACE_ENTER
 
@@ -2268,54 +2268,55 @@ struct SNoiseScalar : SNoiseImpl<CGScalar> {};
 
 
 
-struct PeriodicNoise {
-    PeriodicNoise () { }
+template<typename CGPolicyT = CGDefault>
+struct PeriodicNoiseImpl {
+    PeriodicNoiseImpl () { }
 
     OSL_INLINE void operator() (float &result, float x, float px) const {
         HashScalarPeriodic h(px);
-        perlin(result, h, x);
+        perlin<CGPolicyT>(result, h, x);
         result = 0.5f * (result + 1);
     }
 
     OSL_INLINE void operator() (float &result, float x, float y, float px, float py) const {
         HashScalarPeriodic h(px, py);
-        perlin(result, h, x, y);
+        perlin<CGPolicyT>(result, h, x, y);
         result = 0.5f * (result + 1);
     }
 
     OSL_INLINE void operator() (float &result, const Vec3 &p, const Vec3 &pp) const {
         HashScalarPeriodic h(pp.x, pp.y, pp.z);
-        perlin(result, h, p.x, p.y, p.z);
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z);
         result = 0.5f * (result + 1);
     }
 
     OSL_INLINE void operator() (float &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
         HashScalarPeriodic h(pp.x, pp.y, pp.z, pt);
-        perlin(result, h, p.x, p.y, p.z, t);
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z, t);
         result = 0.5f * (result + 1);
     }
 
     OSL_INLINE void operator() (Vec3 &result, float x, float px) const {
         HashVectorPeriodic h(px);
-        perlin(result, h, x);
+        perlin<CGPolicyT>(result, h, x);
         result = 0.5f * (result + Vec3(1, 1, 1));
     }
 
     OSL_INLINE void operator() (Vec3 &result, float x, float y, float px, float py) const {
         HashVectorPeriodic h(px, py);
-        perlin(result, h, x, y);
+        perlin<CGPolicyT>(result, h, x, y);
         result = 0.5f * (result + Vec3(1, 1, 1));
     }
 
     OSL_INLINE void operator() (Vec3 &result, const Vec3 &p, const Vec3 &pp) const {
         HashVectorPeriodic h(pp.x, pp.y, pp.z);
-        perlin(result, h, p.x, p.y, p.z);
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z);
         result = 0.5f * (result + Vec3(1, 1, 1));
     }
 
     OSL_INLINE void operator() (Vec3 &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
         HashVectorPeriodic h(pp.x, pp.y, pp.z, pt);
-        perlin(result, h, p.x, p.y, p.z, t);
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z, t);
         result = 0.5f * (result + Vec3(1, 1, 1));
     }
 
@@ -2323,14 +2324,14 @@ struct PeriodicNoise {
 
     OSL_INLINE void operator() (Dual2<float> &result, const Dual2<float> &x, float px) const {
         HashScalarPeriodic h(px);
-        perlin(result, h, x);
+        perlin<CGPolicyT>(result, h, x);
         result = 0.5f * (result + 1.0f);
     }
 
     OSL_INLINE void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y,
             float px, float py) const {
         HashScalarPeriodic h(px, py);
-        perlin(result, h, x, y);
+        perlin<CGPolicyT>(result, h, x, y);
         result = 0.5f * (result + 1.0f);
     }
 
@@ -2339,7 +2340,7 @@ struct PeriodicNoise {
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz);
+        perlin<CGPolicyT>(result, h, px, py, pz);
         result = 0.5f * (result + 1.0f);
     }
 
@@ -2349,7 +2350,7 @@ struct PeriodicNoise {
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz, t);
+        perlin<CGPolicyT>(result, h, px, py, pz, t);
         result = 0.5f * (result + 1.0f);
     }
 
@@ -2362,7 +2363,7 @@ struct PeriodicNoise {
     OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y,
             float px, float py) const {
         HashVectorPeriodic h(px, py);
-        perlin(result, h, x, y);
+        perlin<CGPolicyT>(result, h, x, y);
         result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));
     }
 
@@ -2371,7 +2372,7 @@ struct PeriodicNoise {
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz);
+        perlin<CGPolicyT>(result, h, px, py, pz);
         result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));
     }
 
@@ -2381,66 +2382,72 @@ struct PeriodicNoise {
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz, t);
+        perlin<CGPolicyT>(result, h, px, py, pz, t);
         result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));
     }
 
 };
 
-struct PeriodicSNoise {
-    PeriodicSNoise () { }
+struct PeriodicNoise : PeriodicNoiseImpl<CGDefault> {};
+// Scalar version of PeriodicNoise that is SIMD friendly suitable to be
+// inlined inside of a SIMD loops
+struct PeriodicNoiseScalar : PeriodicNoiseImpl<CGScalar> {};
+
+template<typename CGPolicyT = CGDefault>
+struct PeriodicSNoiseImpl {
+    PeriodicSNoiseImpl () { }
 
     OSL_INLINE void operator() (float &result, float x, float px) const {
         HashScalarPeriodic h(px);
-        perlin(result, h, x);
+        perlin<CGPolicyT>(result, h, x);
     }
 
     OSL_INLINE void operator() (float &result, float x, float y, float px, float py) const {
         HashScalarPeriodic h(px, py);
-        perlin(result, h, x, y);
+        perlin<CGPolicyT>(result, h, x, y);
     }
 
     OSL_INLINE void operator() (float &result, const Vec3 &p, const Vec3 &pp) const {
         HashScalarPeriodic h(pp.x, pp.y, pp.z);
-        perlin(result, h, p.x, p.y, p.z);
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z);
     }
 
     OSL_INLINE void operator() (float &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
         HashScalarPeriodic h(pp.x, pp.y, pp.z, pt);
-        perlin(result, h, p.x, p.y, p.z, t);
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z, t);
     }
 
     OSL_INLINE void operator() (Vec3 &result, float x, float px) const {
         HashVectorPeriodic h(px);
-        perlin(result, h, x);
+        perlin<CGPolicyT>(result, h, x);
     }
 
     OSL_INLINE void operator() (Vec3 &result, float x, float y, float px, float py) const {
         HashVectorPeriodic h(px, py);
-        perlin(result, h, x, y);
+        perlin<CGPolicyT>(result, h, x, y);
     }
 
     OSL_INLINE void operator() (Vec3 &result, const Vec3 &p, const Vec3 &pp) const {
         HashVectorPeriodic h(pp.x, pp.y, pp.z);
-        perlin(result, h, p.x, p.y, p.z);
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z);
     }
 
     OSL_INLINE void operator() (Vec3 &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
         HashVectorPeriodic h(pp.x, pp.y, pp.z, pt);
-        perlin(result, h, p.x, p.y, p.z, t);
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z, t);
     }
 
     // dual versions
 
     OSL_INLINE void operator() (Dual2<float> &result, const Dual2<float> &x, float px) const {
         HashScalarPeriodic h(px);
-        perlin(result, h, x);
+        perlin<CGPolicyT>(result, h, x);
     }
 
     OSL_INLINE void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y,
             float px, float py) const {
         HashScalarPeriodic h(px, py);
-        perlin(result, h, x, y);
+        perlin<CGPolicyT>(result, h, x, y);
     }
 
     OSL_INLINE void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Vec3 &pp) const {
@@ -2448,7 +2455,7 @@ struct PeriodicSNoise {
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz);
+        perlin<CGPolicyT>(result, h, px, py, pz);
     }
 
     OSL_INLINE void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t,
@@ -2457,18 +2464,18 @@ struct PeriodicSNoise {
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz, t);
+        perlin<CGPolicyT>(result, h, px, py, pz, t);
     }
 
     OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, float px) const {
         HashVectorPeriodic h(px);
-        perlin(result, h, x);
+        perlin<CGPolicyT>(result, h, x);
     }
 
     OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y,
             float px, float py) const {
         HashVectorPeriodic h(px, py);
-        perlin(result, h, x, y);
+        perlin<CGPolicyT>(result, h, x, y);
     }
 
     OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Vec3 &pp) const {
@@ -2476,7 +2483,7 @@ struct PeriodicSNoise {
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz);
+        perlin<CGPolicyT>(result, h, px, py, pz);
     }
 
     OSL_INLINE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t,
@@ -2485,10 +2492,15 @@ struct PeriodicSNoise {
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz, t);
+        perlin<CGPolicyT>(result, h, px, py, pz, t);
     }
 
 };
+
+struct PeriodicSNoise : PeriodicSNoiseImpl<CGDefault> {};
+// Scalar version of PeriodicSNoise that is SIMD friendly suitable to be
+// inlined inside of a SIMD loops
+struct PeriodicSNoiseScalar : PeriodicSNoiseImpl<CGScalar> {};
 
 
 struct SimplexNoise {

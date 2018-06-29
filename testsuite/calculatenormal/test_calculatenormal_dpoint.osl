@@ -1,0 +1,15 @@
+shader
+test_calculatenormal_dpoint (output point Cout = 0)
+{
+    vector d = calculatenormal(P);
+    point p2 = point(P[2], P[0], P[1]); 
+    if (int(P[0]*64)%2==0) {
+        d = calculatenormal(p2);
+    }
+    
+    vector derivX = Dx(d);
+    vector derivY = Dy(d);
+    
+    
+    Cout = derivX + derivY;
+}

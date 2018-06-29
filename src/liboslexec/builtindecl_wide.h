@@ -82,47 +82,82 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define WIDE_GENERIC_NOISE_DERIV_IMPL_INDIRECT(name, LANE_COUNT)             \
     DECL (osl_ ## name ## _w ##LANE_COUNT## dfw ##LANE_COUNT## df_masked,   "xsXXXXi")   \
-    DECL (osl_ ## name ## _w ##LANE_COUNT## dfw ##LANE_COUNT## dv_masked,   "xsXXXXi")   \
     DECL (osl_ ## name ## _w ##LANE_COUNT## dfw ##LANE_COUNT## dfw ##LANE_COUNT## df_masked,   "xsXXXXXi") \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## dfw ##LANE_COUNT## dv_masked,   "xsXXXXi")   \
     DECL (osl_ ## name ## _w ##LANE_COUNT## dfw ##LANE_COUNT## dvw ##LANE_COUNT## df_masked,   "xsXXXXXi") \
-    DECL (osl_ ## name ## _w ##LANE_COUNT## dvw ##LANE_COUNT## dvw ##LANE_COUNT## df_masked,   "xsXXXXXi") \
     DECL (osl_ ## name ## _w ##LANE_COUNT## dvw ##LANE_COUNT## df_masked,   "xsXXXXi")   \
     DECL (osl_ ## name ## _w ##LANE_COUNT## dvw ##LANE_COUNT## dfw ##LANE_COUNT## df_masked,   "xsXXXXXi") \
-    DECL (osl_ ## name ## _w ##LANE_COUNT## dvw ##LANE_COUNT## dv_masked,   "xsXXXXi")
-
-
+    DECL (osl_ ## name ## _w ##LANE_COUNT## dvw ##LANE_COUNT## dv_masked,   "xsXXXXi") \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## dvw ##LANE_COUNT## dvw ##LANE_COUNT## df_masked,   "xsXXXXXi")
 
 #define WIDE_GENERIC_NOISE_DERIV_IMPL(name, LANE_COUNT)             \
 	WIDE_GENERIC_NOISE_DERIV_IMPL_INDIRECT(name, LANE_COUNT)             \
 
-#if 0 // incomplete
-#define PNOISE_IMPL(name)                          \
-    DECL (osl_ ## name ## _fff,   "fff")           \
-    DECL (osl_ ## name ## _fffff, "fffff")         \
-    DECL (osl_ ## name ## _fvv,   "fvv")           \
-    DECL (osl_ ## name ## _fvfvf, "fvfvf")         \
-    DECL (osl_ ## name ## _vff,   "xvff")          \
-    DECL (osl_ ## name ## _vffff, "xvffff")        \
-    DECL (osl_ ## name ## _vvv,   "xvvv")          \
-    DECL (osl_ ## name ## _vvfvf, "xvvfvf")
 
-#define PNOISE_DERIV_IMPL(name)                    \
-    DECL (osl_ ## name ## _dfdff,    "xXXf")       \
+#define WIDE_PNOISE_IMPL_INDIRECT(name, LANE_COUNT)                           \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## fw ##LANE_COUNT## fw ##LANE_COUNT## f_masked,  "wfwfwfi")      \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## fw ##LANE_COUNT## fw ##LANE_COUNT## fw ##LANE_COUNT## fw ##LANE_COUNT##f_masked,  "wfwfwfwfwfi")      \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## fw ##LANE_COUNT## vw ##LANE_COUNT## v_masked,  "wfwvwvi")       \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## fw ##LANE_COUNT## vw ##LANE_COUNT## fw ##LANE_COUNT## vw ##LANE_COUNT## f_masked, "wfwvwfwvwfi") \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## vw ##LANE_COUNT## fw ##LANE_COUNT## f_masked,  "wvwfwfi")      \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## vw ##LANE_COUNT## fw ##LANE_COUNT## fw ##LANE_COUNT## fw ##LANE_COUNT##f_masked,  "wvwfwfwfwfi")      \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## vw ##LANE_COUNT## vw ##LANE_COUNT## v_masked,  "wvwvwvi")       \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## vw ##LANE_COUNT## vw ##LANE_COUNT## fw ##LANE_COUNT## vw ##LANE_COUNT## f_masked, "wvwvwfwvwfi") \
+
+
+#define WIDE_PNOISE_IMPL(name, LANE_COUNT)                           \
+    WIDE_PNOISE_IMPL_INDIRECT(name, LANE_COUNT)
+
+
+#define WIDE_PNOISE_DERIV_IMPL_INDIRECT(name, LANE_COUNT)                     \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## dfw ##LANE_COUNT## dfw ##LANE_COUNT## f_masked,   "xXXXi")          \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## dfw ##LANE_COUNT## dfw ##LANE_COUNT## dfw ##LANE_COUNT## fw ##LANE_COUNT## f_masked,   "xXXXXXi")          \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## dfw ##LANE_COUNT## dvw ##LANE_COUNT## v_masked,   "xXXXi")          \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## dfw ##LANE_COUNT## dvw ##LANE_COUNT## dfw ##LANE_COUNT## vw ##LANE_COUNT## f_masked,   "xXXXXXi")          \
+
+#if 0 // WIP
+    DECL (osl_ ## name ## _w ##LANE_COUNT## dvw ##LANE_COUNT## dfw ##LANE_COUNT## f_masked,   "xXXXi")          \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## dvw ##LANE_COUNT## dfw ##LANE_COUNT## dfw ##LANE_COUNT## fw ##LANE_COUNT## f_masked,   "xXXXXXi")          \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## dvw ##LANE_COUNT## dvw ##LANE_COUNT## v_masked,   "xXXi")          \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## dvw ##LANE_COUNT## dvw ##LANE_COUNT## dfw ##LANE_COUNT## vw ##LANE_COUNT## f_masked,   "xXXXXXi")          \
+
+#endif
+
+#if 0 // incomplete of PNOISE_DERIV_IMPL
+    // Not sure we can create a shader that would actually generate these
+    // combinations in batched or non batched execution
     DECL (osl_ ## name ## _dfdffff,  "xXXfff")     \
     DECL (osl_ ## name ## _dffdfff,  "xXfXff")     \
-    DECL (osl_ ## name ## _dfdfdfff, "xXXXff")     \
-    DECL (osl_ ## name ## _dfdvv,    "xXXv")       \
     DECL (osl_ ## name ## _dfdvfvf,  "xXvfvf")     \
     DECL (osl_ ## name ## _dfvdfvf,  "xXvXvf")     \
-    DECL (osl_ ## name ## _dfdvdfvf, "xXvXvf")     \
-    DECL (osl_ ## name ## _dvdff,    "xvXf")       \
     DECL (osl_ ## name ## _dvdffff,  "xvXfff")     \
     DECL (osl_ ## name ## _dvfdfff,  "xvfXff")     \
-    DECL (osl_ ## name ## _dvdfdfff, "xvXXff")     \
-    DECL (osl_ ## name ## _dvdvv,    "xvvv")       \
     DECL (osl_ ## name ## _dvdvfvf,  "xvvfvf")     \
-    DECL (osl_ ## name ## _dvvdfvf,  "xvvXvf")     \
-    DECL (osl_ ## name ## _dvdvdfvf, "xvvXvf")
+    DECL (osl_ ## name ## _dvvdfvf,  "xvvXvf")
+#endif
+
+#define WIDE_PNOISE_DERIV_IMPL(name, LANE_COUNT)                           \
+    WIDE_PNOISE_DERIV_IMPL_INDIRECT(name, LANE_COUNT)
+
+
+#define WIDE_GENERIC_PNOISE_DERIV_IMPL_INDIRECT(name, LANE_COUNT)             \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## dfw ##LANE_COUNT## dfw ##LANE_COUNT## f_masked,   "xsXXXXXi")   \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## dfw ##LANE_COUNT## dfw ##LANE_COUNT## dfw ##LANE_COUNT## fw ##LANE_COUNT## f_masked,   "xsXXXXXXXi") \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## dfw ##LANE_COUNT## dvw ##LANE_COUNT## v_masked,   "xsXXXXXi")   \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## dfw ##LANE_COUNT## dvw ##LANE_COUNT## dfw ##LANE_COUNT## vw ##LANE_COUNT## f_masked,   "xsXXXXXXXi") \
+
+#if 0 //WIP
+    DECL (osl_ ## name ## _w ##LANE_COUNT## dvw ##LANE_COUNT## df_masked,   "xsXXXXi")   \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## dvw ##LANE_COUNT## dfw ##LANE_COUNT## df_masked,   "xsXXXXXi") \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## dvw ##LANE_COUNT## dv_masked,   "xsXXXXi") \
+    DECL (osl_ ## name ## _w ##LANE_COUNT## dvw ##LANE_COUNT## dvw ##LANE_COUNT## df_masked,   "xsXXXXXi")
+#endif
+
+#define WIDE_GENERIC_PNOISE_DERIV_IMPL(name, LANE_COUNT)             \
+    WIDE_GENERIC_PNOISE_DERIV_IMPL_INDIRECT(name, LANE_COUNT)             \
+
+#if 0 // incomplete
+
 
 #define GENERIC_PNOISE_DERIV_IMPL(name)            \
     DECL (osl_ ## name ## _dfdff,    "xsXXfXX")    \
@@ -224,7 +259,8 @@ DECL (osl_split_masked, "xXXXXXii")
 
 
 WIDE_NOISE_IMPL(cellnoise, __OSL_SIMD_LANE_COUNT)
-//WIDE_NOISE_DERIV_IMPL(cellnoise, __OSL_SIMD_LANE_COUNT) // commented out in non-wide
+// commented out in non-wide, there is no derivative version of cellnoise
+//WIDE_NOISE_DERIV_IMPL(cellnoise, __OSL_SIMD_LANE_COUNT)
 
 WIDE_NOISE_IMPL(noise, __OSL_SIMD_LANE_COUNT)
 WIDE_NOISE_DERIV_IMPL(noise, __OSL_SIMD_LANE_COUNT)
@@ -238,7 +274,22 @@ WIDE_NOISE_DERIV_IMPL(simplexnoise, __OSL_SIMD_LANE_COUNT)
 WIDE_NOISE_IMPL(usimplexnoise, __OSL_SIMD_LANE_COUNT)
 WIDE_NOISE_DERIV_IMPL(usimplexnoise, __OSL_SIMD_LANE_COUNT)
 
+
+WIDE_PNOISE_IMPL(pnoise, __OSL_SIMD_LANE_COUNT)
+WIDE_PNOISE_DERIV_IMPL(pnoise, __OSL_SIMD_LANE_COUNT)
+
+WIDE_PNOISE_IMPL(psnoise, __OSL_SIMD_LANE_COUNT)
+WIDE_PNOISE_DERIV_IMPL(psnoise, __OSL_SIMD_LANE_COUNT)
+
+WIDE_PNOISE_IMPL(pcellnoise, __OSL_SIMD_LANE_COUNT)
+// commented out in non-wide, there is no derivative version of pcellnoise
+//WIDE_PNOISE_DERIV_IMPL(pcellnoise, __OSL_SIMD_LANE_COUNT)
+
+
 WIDE_GENERIC_NOISE_DERIV_IMPL(gabornoise, __OSL_SIMD_LANE_COUNT)
+
+//WIDE_GENERIC_PNOISE_DERIV_IMPL(gaborpnoise, __OSL_SIMD_LANE_COUNT)
+
 #if 0 // incomplete
 WIDE_GENERIC_NOISE_DERIV_IMPL(genericnoise, __OSL_SIMD_LANE_COUNT)
 
@@ -247,16 +298,8 @@ WIDE_NOISE_DERIV_IMPL(nullnoise, __OSL_SIMD_LANE_COUNT)
 
 WIDE_NOISE_IMPL(unullnoise, __OSL_SIMD_LANE_COUNT)
 WIDE_NOISE_DERIV_IMPL(unullnoise, __OSL_SIMD_LANE_COUNT)
-WIDE_PNOISE_IMPL(pcellnoise, __OSL_SIMD_LANE_COUNT)
 
-//WIDE_PNOISE_DERIV_IMPL(pcellnoise, __OSL_SIMD_LANE_COUNT) // commented out in non-wide
-WIDE_PNOISE_IMPL(pnoise, __OSL_SIMD_LANE_COUNT)
-WIDE_PNOISE_DERIV_IMPL(pnoise, __OSL_SIMD_LANE_COUNT)
 
-WIDE_PNOISE_IMPL(psnoise, __OSL_SIMD_LANE_COUNT)
-WIDE_PNOISE_DERIV_IMPL(psnoise, __OSL_SIMD_LANE_COUNT)
-
-WIDE_GENERIC_PNOISE_DERIV_IMPL(gaborpnoise, __OSL_SIMD_LANE_COUNT)
 WIDE_GENERIC_PNOISE_DERIV_IMPL(genericpnoise, __OSL_SIMD_LANE_COUNT)
 #endif
 
@@ -673,6 +716,7 @@ DECL (osl_get_textureinfo_batched_uniform, "iXXXXXX")
 DECL (osl_trace_batched, "xXXXXXXXXXi")
 
 DECL (osl_calculatenormal_batched, "xXXX")
+DECL (osl_calculatenormal_masked, "xXXXi")
 DECL (osl_area_w16, "xXX")
 DECL (osl_area_w16_masked, "xXXi")
 DECL (osl_filterwidth_w16fw16df, "xXX")

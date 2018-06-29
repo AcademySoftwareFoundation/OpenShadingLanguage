@@ -1,14 +1,15 @@
 #!/bin/csh
 
+./run_test_dir.csh calculatenormal 
 
 
 ./run_test_dir.csh trig/pow_vf
 ./exec_test_dir.csh trace
 ./exec_test_dir.csh message
 
-./exec_test_dir.csh string/split
-./exec_test_dir.csh blackbody
-./exec_test_dir.csh wavelength_color
+./run_test_dir.csh string/split
+./run_test_dir.csh blackbody
+./run_test_dir.csh wavelength_color
 ./exec_test_dir.csh trace
 
 ./exec_test_dir.csh matrix

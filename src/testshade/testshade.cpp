@@ -675,8 +675,8 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
     sg.P = Vec3 (sg.u, sg.v, 1.0f);
     // Derivatives with respect to x,y
     if (vary_Pdxdy) {
-    	sg.dPdx = Vec3 (1.0f - sg.u, 0.0f, 0.0f); 
-    	sg.dPdy = Vec3 (1.0f - sg.v, 0.0f, 0.0f);
+    	sg.dPdx = Vec3 (1.0f - sg.u, 1.0f - sg.v, sg.u*0.5);
+    	sg.dPdy = Vec3 (1.0f - sg.v, 1.0f - sg.u, sg.v*0.5);
     } else {     
 		sg.dPdx = Vec3 (sg.dudx, sg.dudy, 0.0f);
 		sg.dPdy = Vec3 (sg.dvdx, sg.dvdy, 0.0f);
@@ -830,6 +830,8 @@ setup_varying_shaderglobals (ShaderGlobalsBatch & sgb, ShadingSystem *shadingsys
     if (vary_Pdxdy) {
 		vsp.dPdx() = Vec3 (1.0f - u, 0.0f, 0.0f); 
 		vsp.dPdy() = Vec3 (1.0f - v, 0.0f, 0.0f);
+		vsp.dPdx() = Vec3 (1.0f - u, 1.0f - v, u*0.5);
+		vsp.dPdy() = Vec3 (1.0f - v, 1.0f - u, v*0.5);
     } 
     
     

@@ -1263,21 +1263,23 @@ LLVM_Util::make_jit_execengine (std::string *err, bool debugging_symbols, bool p
                     attrvec.push_back(enabled + cpuFeature.first().str());
                 }
 
-                if(cpuFeature.first().str().find("512") != std::string::npos) {
-                    m_supports_masked_stores = true;
-                    m_supports_native_bit_masks = true;
-                }
-                if(cpuFeature.first().str() == std::string("avx512f")) {
-                    m_supports_avx512f = true;
-                    m_supports_avx2 = true;
-                    m_supports_avx = true;
-                }
-                if(cpuFeature.first().str() == std::string("avx2")) {
-                    m_supports_avx2 = true;
-                    m_supports_avx = true;
-                }
-                if(cpuFeature.first().str() == std::string("avx")) {
-                    m_supports_avx = true;
+                if (cpuFeature.second) {
+                    if(cpuFeature.first().str().find("512") != std::string::npos) {
+                        m_supports_masked_stores = true;
+                        m_supports_native_bit_masks = true;
+                    }
+                    if(cpuFeature.first().str() == std::string("avx512f")) {
+                        m_supports_avx512f = true;
+                        m_supports_avx2 = true;
+                        m_supports_avx = true;
+                    }
+                    if(cpuFeature.first().str() == std::string("avx2")) {
+                        m_supports_avx2 = true;
+                        m_supports_avx = true;
+                    }
+                    if(cpuFeature.first().str() == std::string("avx")) {
+                        m_supports_avx = true;
+                    }
                 }
             }
         }
@@ -1330,6 +1332,7 @@ LLVM_Util::make_jit_execengine (std::string *err, bool debugging_symbols, bool p
 	    if (disableFMA) {
             attrvec.push_back("-fma");
 	    }
+
         engine_builder.setMAttrs(attrvec);
 
     }

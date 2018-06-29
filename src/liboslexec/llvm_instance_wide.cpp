@@ -1294,7 +1294,7 @@ BackendLLVMWide::build_llvm_instance (bool groupentry)
     }
 
 #ifdef OSL_DEV
-    for(Symbol *sym:m_symbols_forced_boolean)
+    for(const Symbol *sym:m_symbols_forced_boolean)
     {
         std::cout << "Forcing symbol " << sym->name() << " to be boolean" << std::endl;
     }

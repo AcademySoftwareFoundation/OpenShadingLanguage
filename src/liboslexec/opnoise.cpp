@@ -76,6 +76,44 @@ void gabor3 (MaskedAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wResult,
 
 
 
+void pgabor (MaskedAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wResult,
+            ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wX,
+            ConstWideAccessor<float,__OSL_SIMD_LANE_COUNT> wPX,
+            const NoiseParams *opt);
+
+void pgabor (MaskedAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wResult,
+            ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wX,
+            ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wY,
+            ConstWideAccessor<float,__OSL_SIMD_LANE_COUNT> wPX,
+            ConstWideAccessor<float,__OSL_SIMD_LANE_COUNT> wPY,
+            const NoiseParams *opt);
+
+void pgabor (MaskedAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wResult,
+            ConstWideAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wP,
+            ConstWideAccessor<Vec3,__OSL_SIMD_LANE_COUNT> wPP,
+            const NoiseParams *opt);
+
+
+
+void pgabor3 (MaskedAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wResult,
+             ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wX,
+             ConstWideAccessor<float,__OSL_SIMD_LANE_COUNT> wPX,
+             const NoiseParams *opt);
+
+void pgabor3 (MaskedAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wResult,
+             ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wX,
+             ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wY,
+             ConstWideAccessor<float,__OSL_SIMD_LANE_COUNT> wPX,
+             ConstWideAccessor<float,__OSL_SIMD_LANE_COUNT> wPY,
+             const NoiseParams *opt);
+
+void pgabor3 (MaskedAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wResult,
+             ConstWideAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wP,
+             ConstWideAccessor<Vec3,__OSL_SIMD_LANE_COUNT> wPP,
+             const NoiseParams *opt);
+
+
+
 /***********************************************************************
  * noise routines callable by the LLVM-generated code.
  */
@@ -107,10 +145,18 @@ NOISE_IMPL (cellnoise, CellNoise)
 #endif
 
 PNOISE_IMPL (pcellnoise, PeriodicCellNoise)
+#define __OSL_XMACRO_ARGS (pcellnoise, PeriodicCellNoise, __OSL_SIMD_LANE_COUNT)
+#include "opnoise_periodic_impl_wide_xmacro.h"
+
+
+#if 0 // moved to oppnoise_uperlin.cpp to enable parallel builds
 PNOISE_IMPL (pnoise, PeriodicNoise)
 PNOISE_IMPL_DERIV (pnoise, PeriodicNoise)
+#endif
+#if 0 // moved to oppnoise_perlin.cpp to enable parallel builds
 PNOISE_IMPL (psnoise, PeriodicSNoise)
 PNOISE_IMPL_DERIV (psnoise, PeriodicSNoise)
+#endif
 
 
 
@@ -240,6 +286,8 @@ NOISE_IMPL_DERIV_OPT (gabornoise, GaborNoise)
 #include "opnoise_impl_opt_wide_xmacro.h"
 
 PNOISE_IMPL_DERIV_OPT (gaborpnoise, GaborPNoise)
+//#define __OSL_XMACRO_ARGS (gaborpnoise, pgabor, __OSL_SIMD_LANE_COUNT)
+//#include "opnoise_periodic_impl_opt_wide_xmacro.h"
 
 
 

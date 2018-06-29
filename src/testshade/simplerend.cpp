@@ -500,7 +500,12 @@ ConstWideAccessor<Vec3> dRdx, ConstWideAccessor<Vec3> dRdy)
 {
     for (int lane = 0; lane<result.width; ++lane)
     {
-        if(sgb->varying(lane).u()>0.75)
+        Vec3 point_lane = P[lane];
+        Vec3 dir_lane = R[lane];
+
+        float dot_val = point_lane.dot(dir_lane);
+
+        if((sgb->varying(lane).u())/dot_val>0.75)
         {
            result[lane] = 1;
         }
@@ -511,6 +516,28 @@ ConstWideAccessor<Vec3> dRdx, ConstWideAccessor<Vec3> dRdy)
         }
     }
 }
+
+void
+BatchedSimpleRenderer::getmessage(ShaderGlobalsBatch *sgb, MaskedAccessor<int> result,
+                        ustring source, ustring name, MaskedDataRef val) {
+
+
+    for (int lane = 0; lane<result.width; ++lane)
+       {
+           if(sgb->varying(lane).u()>0.75 )
+           {
+              result[lane] = 1;
+           }
+
+           else
+           {
+               result[lane] = 0;
+           }
+       }
+
+
+}
+
 
 
 Mask
@@ -907,7 +934,10 @@ SimpleRenderer::trace (TraceOpt &options, ShaderGlobals *sg,
         const OSL::Vec3 &dPdy, const OSL::Vec3 &R,
         const OSL::Vec3 &dRdx, const OSL::Vec3 &dRdy) {
 
-    if(sg->u > 0.75)
+    //Using source and direction
+    float dot_val = P.dot(R);
+
+    if((sg->u)/dot_val > 0.75)
     {
         return true; //1 in batched
     } else {
@@ -915,6 +945,19 @@ SimpleRenderer::trace (TraceOpt &options, ShaderGlobals *sg,
     }
 }
 
+bool
+SimpleRenderer::getmessage(ShaderGlobals *sg, ustring source, ustring name,
+        TypeDesc type, void *val, bool derivatives) {
+
+    if(sg->u > 0.75)
+       {
+           return true; //1 in batched
+       }
+    else
+       {
+           return false;
+       }
+}
 bool
 SimpleRenderer::get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
                                     ustring to, float time)

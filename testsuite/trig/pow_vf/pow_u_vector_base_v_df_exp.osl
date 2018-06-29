@@ -1,0 +1,29 @@
+shader
+pow_u_vec_base_v_df_exp (output vector res = 0,
+                 output vector Dxres = 0,
+                 output vector res_m = 0,
+                 output vector Dxres_m = 0)
+{
+
+    vector a = vector(0.1, 0.1, 0.3);
+    vector c = vector (0.9, 0.5, 0.2);
+    float b = P[0];
+
+
+   vector res_ = 0;
+   vector Dxres_ = 0;
+   
+   res_ = pow(a,b); 
+   Dxres_ = Dx(res_);
+
+  if (int(P[0]*200)%2){
+
+  res_m = pow(c,b);
+  Dxres_m = Dx(res_m);
+
+  }
+
+  res = res_;
+  Dxres = Dxres_;
+
+}

@@ -1,0 +1,20 @@
+shader
+pow_u_vector_base_u_float_exp(output vector res = 0,
+               output vector res_m = 0)
+{
+    vector a = vector (0.1, 2.3, 0.6);
+    vector c = vector(0.4,0.5,0.1);
+    float b = 1.0/(3*raytype("camera"));
+    
+    vector r = pow(a,b);
+    res = r;
+
+    vector fr = r;
+    
+    if (int(P[0]*200)%2){
+
+        fr = pow(c,b);
+
+    }
+    res_m = fr;
+}

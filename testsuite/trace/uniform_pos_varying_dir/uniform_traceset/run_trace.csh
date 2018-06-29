@@ -1,0 +1,65 @@
+#!/bin/csh
+
+
+
+oslc trace_u_point_v_dir_u_mindist_v_maxdist_u_traceset.osl  
+oslc trace_u_point_v_vector_u_mindist_u_maxdist_u_traceset.osl
+oslc trace_u_point_v_dir_v_mindist_u_maxdist_u_traceset.osl  
+oslc trace_u_point_v_vector_v_mindist_v_maxdist_u_traceset.osl
+
+
+###########################################
+#Uniform position; Varying direction; Varying traceset
+#Uniform mindist
+#Uniform maxdist
+###########################################
+
+
+testshade --batched -g 200 200 trace_u_point_v_vector_v_mindist_v_maxdist_u_traceset -od uint8 -o cout trace_vu_uu_out.tif -o mcout trace_vu_uu_m_out.tif
+testshade -g 200 200 trace_u_point_v_vector_v_mindist_v_maxdist_u_traceset -od uint8 -o cout trace_vu_uu_ref.tif -o mcout trace_vu_uu_m_ref.tif
+
+idiff trace_vu_uu_ref.tif trace_vu_uu_out.tif
+idiff trace_vu_uu_m_ref.tif trace_vu_uu_m_out.tif
+
+###########################################
+#Uniform position; Varying direction
+#Varying mindist
+#Uniform maxdist
+###########################################
+
+
+testshade --batched -g 200 200 trace_u_point_v_vector_v_mindist_u_maxdist_u_traceset -od uint8 -o cout trace_vu_vu_out.tif -o mcout trace_vu_vu_m_out.tif
+testshade -g 200 200 trace_u_point_v_vector_v_mindist_u_maxdist_u_traceset -od uint8 -o cout trace_vu_vu_ref.tif -o mcout trace_vu_vu_m_ref.tif
+
+idiff trace_vu_vu_ref.tif trace_vu_vu_out.tif
+idiff trace_vu_vu_m_ref.tif trace_vu_vu_m_out.tif
+
+
+###########################################
+#Uniform position; Varying direction
+#Uniform mindist
+#Varying maxdist
+###########################################
+
+
+testshade --batched -g 200 200 trace_u_point_v_vector_u_mindist_v_maxdist_u_traceset -od uint8 -o cout trace_vu_uv_out.tif -o mcout trace_vu_uv_m_out.tif
+testshade -g 200 200 trace_u_point_v_vector_u_mindist_v_maxdist_u_traceset -od uint8 -o cout trace_vu_uv_ref.tif -o mcout trace_vu_uv_m_ref.tif
+
+idiff trace_vu_uv_ref.tif trace_vu_uv_out.tif
+idiff trace_vu_uv_m_ref.tif trace_vu_uv_m_out.tif
+
+
+
+###########################################
+#Uniform position; Varying direction
+#Varying mindist
+#Varying maxdist
+###########################################
+
+
+testshade --batched -g 200 200 trace_u_point_v_vector_v_mindist_v_maxdist_u_traceset -od uint8 -o cout trace_vu_vv_out.tif -o mcout trace_vu_vv_m_out.tif
+testshade -g 200 200 trace_u_point_v_vector_v_mindist_v_maxdist_u_traceset -od uint8 -o cout trace_vu_vv_ref.tif -o mcout trace_vu_vv_m_ref.tif
+
+idiff trace_vu_vv_ref.tif trace_vu_vv_out.tif
+idiff trace_vu_vv_m_ref.tif trace_vu_vv_m_out.tif
+

@@ -1,0 +1,41 @@
+shader test_spline (
+        string splinename="spline", 
+	output float Fspline1 = 0, 
+	output float DxFspline1 = 0,
+        output float mFspline1 = 0,
+        output float mDxFspline1 = 0)
+{
+   
+
+   float fltknots[13];
+
+   float mvalue = float(6.0/raytype("camera"));
+   
+   fltknots[ 0] =  0.0 * mvalue;
+   fltknots[ 1] =  0.0 * mvalue;
+   fltknots[ 2] =  1.0 * mvalue;
+   fltknots[ 3] =  1.0 * mvalue;
+   fltknots[ 4] =  1.0 * mvalue;
+   fltknots[ 5] =  0.5 * mvalue;
+   fltknots[ 6] =  0.5 * mvalue;
+   fltknots[ 7] =  0.5 * mvalue;
+   fltknots[ 8] =  1.0 * mvalue;
+   fltknots[ 9] =  1.0 * mvalue;
+   fltknots[10] =  1.0 * mvalue;
+   fltknots[11] =  0.0 * mvalue;
+   fltknots[12] =  0.0 * mvalue;
+
+// float value = float(2.0/raytype("camera"));
+ Fspline1   = spline(splinename, 0.5, fltknots);
+ DxFspline1 = Dx(Fspline1);
+
+
+//float mvalue = float(6.0/raytype("camera"));
+
+if(P[0]>0.5){
+  mFspline1   = spline(splinename, 0.5, fltknots);
+ mDxFspline1 = Dx(mFspline1);
+}
+
+
+}

@@ -1,0 +1,35 @@
+#ifndef M_PI
+#define M_PI 3.14159265358979
+#endif
+
+//testshade --batched --llvm_debug -g 4 4 test_atan2_w16f_w16f_w16f -o res a.tif | grep o
+
+shader
+atan2_u_vector_v_vector_dv(output color res = 0,
+                 output color Dxres = 0,
+                 output color res_m = 0,
+                 output color Dxres_m = 0)
+{
+    
+  vector a = vector(0.3,0.5, 0.7);
+  vector b = vector(u, v, u-v);
+
+
+  vector res_ = 0;
+  vector Dxres_  = 0;
+  
+ res_ = atan2(a,b); 
+ Dxres_ = Dx(res_);
+
+if (int(P[0]*200)%2){
+b = vector(-u, v, -u+v);
+res_m = atan2(a,b);
+Dxres_m = Dx(res_m);
+
+}
+
+res = res_;
+Dxres = Dxres_;
+
+
+}

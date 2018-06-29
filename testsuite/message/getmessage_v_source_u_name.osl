@@ -1,0 +1,46 @@
+shader getmessage_v_source_u_name ( output vector cout = 0, output vector mcout = 0)
+{
+   
+    point src = point(0.8, 1.2, 8.0);
+    vector dir = vector (1.0, 0.4, 0.5);
+    string trace_set = "uniform trace";
+    string var_source = "trace";
+    string uni_name = "trace";
+    
+  
+      if(int(P[0]*200)%2) {
+          var_source = "trace";
+      }
+
+
+    int trace_res = 0;
+    int trace_res_m = trace_res;
+    trace_res = trace(src, dir, "mindist", 0.6, "maxdist", 0.8, "shade", 2, "traceset", trace_set );
+    int result1 = 0;
+    
+    
+  
+    result1 = getmessage (var_source, uni_name, trace_res);
+       //   printf ("b: retrieved message 'trace', result = %d, trace = %d\n",
+       //            result1, trace_res); 
+     int result2 = result1;
+     
+   
+     if(int(P[0]*200)%2)
+           
+       {
+           trace_res_m = trace(src, dir, "mindist", 0.5, "maxdist", 0.7, "shade", 2, "traceset", trace_set );
+           result2 = getmessage (var_source, uni_name, trace_res_m);
+         //  printf ("b: retrieved message 'tracem', result = %d, trace = %d\n",
+         //           result2, trace_res_m);    
+          
+       }
+       
+    // printf("Mask control %d\n", mc);
+       //Construct output:
+       
+       cout = vector(v, tan(u-v), (float) (result1)+u/u-v );
+       mcout = vector(u ,(u+v), (float) (result2)+u/u+v); 
+
+
+}

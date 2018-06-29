@@ -32,8 +32,9 @@ shader test_spline (
 
 //float mvalue = float(6.0/raytype("camera"));
 
-if(P[0]>0.5){
-  mFspline1   = spline(splinename, 0.5, fltknots);
+if(P[0]>0.5)
+{
+ mFspline1   = spline(splinename, 0.5, fltknots);
  mDxFspline1 = Dx(mFspline1);
 }
 

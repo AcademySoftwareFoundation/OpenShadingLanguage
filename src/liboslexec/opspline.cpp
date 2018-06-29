@@ -1081,6 +1081,7 @@ OSL_SHADEOP void  osl_spline_dffdf(void *out, const char *spline_, void *x,
 {
 
 
+
    const Spline::SplineBasis *spline = Spline::getSplineBasis(USTR(spline_));
    Spline::spline_evaluate<Dual2<float>, float, Dual2<float>, float, true>
       (spline, DFLOAT(out), *(float *)x, knots, knot_count, knot_arraylen);

@@ -3,6 +3,7 @@
 ./run_test_dir.csh calculatenormal 
 
 
+./run_test_dir.csh spline
 ./run_test_dir.csh trig/pow_vf
 ./exec_test_dir.csh trace
 ./exec_test_dir.csh message

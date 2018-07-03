@@ -121,7 +121,7 @@ using namespace OSL::pvt;
 
 // flex itself will generate fatal warnings about signed vs unsigned.
 // Bypass that nonsense.
-#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ >= 7
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ >= 6
 #pragma GCC diagnostic ignored "-Wsign-compare"
 #endif
 

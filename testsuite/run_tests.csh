@@ -1,5 +1,9 @@
 #!/bin/csh
 
+
+./run_test_dir.csh noise 
+./run_test_dir.csh pnoise
+
 ./run_test_dir.csh calculatenormal 
 
 

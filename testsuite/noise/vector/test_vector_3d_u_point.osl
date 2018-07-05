@@ -1,0 +1,13 @@
+shader
+test_vector_3d_u_point (string type = "perlin", output color Cout = 0)
+{
+    float  u_val1 = raytype("camera")/4.0;
+    float  u_val2 = 2.0*raytype("camera")/4.0;
+
+    color val = noise (type, point(u_val1, u_val2, u_val1/u_val2));
+    val *= 2.0;
+    Cout = val;
+    if (int(P[0]*64)%2 == 0) {
+        Cout = noise (type, point(u_val2, u_val1, u_val2/u_val1));
+    }
+}

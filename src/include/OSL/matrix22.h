@@ -561,24 +561,40 @@ template <class T>
 bool
 Matrix22<T>::equalWithAbsError (const Matrix22<T> &m, T e) const
 {
+    // Simplify control flow by unrolling loop completely
+#if 0
     for (int i = 0; i < 2; i++)
         for (int j = 0; j < 2; j++)
-            if (!Imath::equalWithAbsError ((*this)[i][j], m[i][j], e))
+            if (!Imath::equalWithAbsError ((*this).x[i][j], m.x[i][j], e))
                 return false;
 
     return true;
+#else
+    return  Imath::equalWithAbsError ((*this).x[0][0], m.x[0][0], e) &&
+            Imath::equalWithAbsError ((*this).x[0][1], m.x[0][1], e) &&
+            Imath::equalWithAbsError ((*this).x[1][0], m.x[1][0], e) &&
+            Imath::equalWithAbsError ((*this).x[1][1], m.x[1][1], e);
+#endif
 }
 
 template <class T>
 bool
 Matrix22<T>::equalWithRelError (const Matrix22<T> &m, T e) const
 {
+    // Simplify control flow by unrolling loop completely
+#if 0
     for (int i = 0; i < 2; i++)
         for (int j = 0; j < 2; j++)
-            if (!Imath::equalWithRelError ((*this)[i][j], m[i][j], e))
+            if (!Imath::equalWithRelError ((*this).x[i][j], m.x[i][j], e))
                 return false;
 
     return true;
+#else
+    return  Imath::equalWithRelError ((*this).x[0][0], m.x[0][0], e) &&
+            Imath::equalWithRelError ((*this).x[0][1], m.x[0][1], e) &&
+            Imath::equalWithRelError ((*this).x[1][0], m.x[1][0], e) &&
+            Imath::equalWithRelError ((*this).x[1][1], m.x[1][1], e);
+#endif
 }
 
 template <class T>
@@ -770,11 +786,9 @@ template <class S>
 void
 Matrix22<T>::multMatrix(const Imath::Vec2<S> &src, Imath::Vec2<S> &dst) const
 {
-    S a, b;
-
     // Non-aliasing by avoiding [int] operator on Vec2
-    a = src.x * x[0][0] + src.y * x[1][0];
-    b = src.x * x[0][1] + src.y * x[1][1];
+    S a = src.x * x[0][0] + src.y * x[1][0];
+    S b = src.x * x[0][1] + src.y * x[1][1];
 
     dst.x = a;
     dst.y = b;
@@ -849,20 +863,24 @@ Matrix22<T>::inverse () const
 	{
 		float mr = abs_r / Imath::limits<T>::smallest();
 		
-		if ((mr <= Imath::abs (s[0][0])) ||
-			(mr <= Imath::abs (s[0][1])) ||
-			(mr <= Imath::abs (s[1][0])) ||
-			(mr <= Imath::abs (s[1][1])))
+		if ((mr <= Imath::abs (s.x[0][0])) ||
+			(mr <= Imath::abs (s.x[0][1])) ||
+			(mr <= Imath::abs (s.x[1][0])) ||
+			(mr <= Imath::abs (s.x[1][1])))
 		{
 			may_have_divided_by_zero = 1;
 		}
 	}
 	
-	s /= r;
-	
 	if (__builtin_expect(may_have_divided_by_zero == 1, 0))
 	{
-		s = Matrix22();
+		//s = Matrix22();
+	    s.x[0][0] = T(1);
+	    s.x[0][1] = T(0);
+	    s.x[1][0] = T(0);
+	    s.x[1][1] = T(1);
+	} else {
+	    s /= r;
 	}
 	
     return s;
@@ -891,9 +909,9 @@ Matrix22<T>::inverse (bool singExc) const throw (Iex::MathExc)
 			OSL_INTEL_PRAGMA(unroll)
             for (int j = 0; j < 2; ++j)
             {
-                if (mr > Imath::abs (s[i][j]))
+                if (mr > Imath::abs (s.x[i][j]))
                 {
-                    s[i][j] /= r;
+                    s.x[i][j] /= r;
                 }
                 else
                 {
@@ -916,6 +934,8 @@ Matrix22<T>::setRotation (S r)
 {
     S cos_r, sin_r;
 
+    // TODO: consider calling std::cos/sin to allow compiler to use its own
+    // optimized version.
     cos_r = Imath::Math<T>::cos (r);
     sin_r = Imath::Math<T>::sin (r);
 
@@ -941,8 +961,12 @@ template <class T>
 const Matrix22<T> &
 Matrix22<T>::setScale (T s)
 {
-    memset (x, 0, sizeof (x));
+    // function calls and aliasing issues can inhibit vectorization
+    // versus straight assignment of data members
+//    memset (x, 0, sizeof (x));
+    x[0][1] = static_cast<T>(0);
     x[0][0] = s;
+    x[1][0] = static_cast<T>(0);
     x[1][1] = s;
 
     return *this;
@@ -953,9 +977,16 @@ template <class S>
 const Matrix22<T> &
 Matrix22<T>::setScale (const Imath::Vec2<S> &s)
 {
-    memset (x, 0, sizeof (x));
-    x[0][0] = s[0];
-    x[1][1] = s[1];
+    // function calls and aliasing issues can inhibit vectorization
+    // versus straight assignment of data members
+    //memset (x, 0, sizeof (x));
+    //x[0][0] = s[0];
+    //x[1][1] = s[1];
+    x[0][0] = s.x;
+    x[0][1] = static_cast<T>(0);
+
+    x[1][0] = static_cast<T>(0);
+    x[1][1] = s.y;
 
     return *this;
 }
@@ -965,11 +996,12 @@ template <class S>
 const Matrix22<T> &
 Matrix22<T>::scale (const Imath::Vec2<S> &s)
 {
-    x[0][0] *= s[0];
-    x[0][1] *= s[0];
+    // avoid aliasing of Vec2::operator[](int)
+    x[0][0] *= s.x;
+    x[0][1] *= s.x;
 
-    x[1][0] *= s[1];
-    x[1][1] *= s[1];
+    x[1][0] *= s.y;
+    x[1][1] *= s.y;
 
     return *this;
 }
@@ -998,11 +1030,11 @@ operator << (std::ostream &s, const Matrix22<T> &m)
         width = s.precision() + 8;
     }
 
-    s << "(" << std::setw (width) << m[0][0] <<
-         " " << std::setw (width) << m[0][1] << "\n" <<
+    s << "(" << std::setw (width) << m.x[0][0] <<
+         " " << std::setw (width) << m.x[0][1] << "\n" <<
 
-         " " << std::setw (width) << m[1][0] <<
-         " " << std::setw (width) << m[1][1] << ")\n";
+         " " << std::setw (width) << m.x[1][0] <<
+         " " << std::setw (width) << m.x[1][1] << ")\n";
 
     s.flags (oldFlags);
     return s;

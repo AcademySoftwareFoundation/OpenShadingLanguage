@@ -51,6 +51,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define __OSL_NOISE_OP2(A, B) __OSL_CONCAT6(osl_,__OSL_XMACRO_OPNAME,_,A,B,_masked)
 #define __OSL_NOISE_OP3(A, B, C) __OSL_CONCAT7(osl_,__OSL_XMACRO_OPNAME,_,A,B,C,_masked)
 
+#ifndef __OSL_XMACRO_VEC3_RESULTS_ONLY
+
 OSL_SHADEOP void __OSL_NOISE_OP2(__WDF,__WDF) (
     char *r_ptr, char *x_ptr, unsigned int mask_value) {
     __OSL_XMACRO_IMPLNAME impl;
@@ -130,6 +132,11 @@ OSL_SHADEOP void __OSL_NOISE_OP3(__WDF, __WDV, __WDF) (
         }
     }
 }
+
+#endif
+
+#ifndef __OSL_XMACRO_FLOAT_RESULTS_ONLY
+
 OSL_SHADEOP void __OSL_NOISE_OP2(__WDV, __WDF) (
     char *r_ptr, char *x_ptr, unsigned int mask_value) {
     __OSL_XMACRO_IMPLNAME impl;
@@ -213,7 +220,11 @@ OSL_SHADEOP void __OSL_NOISE_OP3(__WDV, __WDV, __WDF) (
         }
     }
 }
+#endif
 
+
+#undef __OSL_XMACRO_FLOAT_RESULTS_ONLY
+#undef __OSL_XMACRO_VEC3_RESULTS_ONLY
 #undef __OSL_XMACRO_ARGS
 #undef __OSL_XMACRO_OPNAME
 #undef __OSL_XMACRO_IMPLNAME

@@ -1,17 +1,17 @@
 SET ( liboslnoise_srcs 
 	gabornoise.cpp 
-	fast_gabor_ansiotropic_disabled_16.cpp
-	fast_gabor_ansiotropic_enabled_16.cpp
-	fast_gabor_hybrid_disabled_16.cpp
-	fast_gabor_hybrid_enabled_16.cpp
-	fast_gabor_isotropic_disabled_16.cpp
-	fast_gabor_isotropic_enabled_16.cpp
-	fast_gabor3_ansiotropic_disabled_16.cpp
-	fast_gabor3_ansiotropic_enabled_16.cpp
-	fast_gabor3_hybrid_disabled_16.cpp
-	fast_gabor3_hybrid_enabled_16.cpp
-	fast_gabor3_isotropic_disabled_16.cpp
-	fast_gabor3_isotropic_enabled_16.cpp
+	b16/wide_gabor_ansiotropic_disabled_16.cpp
+	b16/wide_gabor_ansiotropic_enabled_16.cpp
+	b16/wide_gabor_hybrid_disabled_16.cpp
+	b16/wide_gabor_hybrid_enabled_16.cpp
+	b16/wide_gabor_isotropic_disabled_16.cpp
+	b16/wide_gabor_isotropic_enabled_16.cpp
+	b16/wide_gabor3_ansiotropic_disabled_16.cpp
+	b16/wide_gabor3_ansiotropic_enabled_16.cpp
+	b16/wide_gabor3_hybrid_disabled_16.cpp
+	b16/wide_gabor3_hybrid_enabled_16.cpp
+	b16/wide_gabor3_isotropic_disabled_16.cpp
+	b16/wide_gabor3_isotropic_enabled_16.cpp
  	simplexnoise.cpp )
 
 #FILE ( GLOB compiler_headers "../liboslexec/*.h" )

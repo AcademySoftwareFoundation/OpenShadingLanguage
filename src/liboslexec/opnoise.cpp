@@ -37,6 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "opnoise.h"
 
+
 using namespace OSL;
 
 OSL_NAMESPACE_ENTER
@@ -44,73 +45,47 @@ namespace pvt {
 
 
 
-void gabor (MaskedAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wResult,
-            ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wX,
-            const NoiseParams *opt);
+#if 0 // only when testing the statistics of perlin noise to normalize the range
 
-void gabor (MaskedAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wResult,
-            ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wX,
-            ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wY,
-            const NoiseParams *opt);
+#include <random>
 
-void gabor (MaskedAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wResult,
-            ConstWideAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wP,
-            const NoiseParams *opt);
+void test_perlin(int d) {
+    HashScalar h;
+    float noise_min = +std::numeric_limits<float>::max();
+    float noise_max = -std::numeric_limits<float>::max();
+    float noise_avg = 0;
+    float noise_avg2 = 0;
+    float noise_stddev;
+    std::mt19937 rndgen;
+    std::uniform_real_distribution<float> rnd (0.0f, 1.0f);
+    printf("Running perlin-%d noise test ...\n", d);
+    const int n = 100000000;
+    const float r = 1024;
+    for (int i = 0; i < n; i++) {
+        float noise;
+        float nx = rnd(rndgen); nx = (2 * nx - 1) * r;
+        float ny = rnd(rndgen); ny = (2 * ny - 1) * r;
+        float nz = rnd(rndgen); nz = (2 * nz - 1) * r;
+        float nw = rnd(rndgen); nw = (2 * nw - 1) * r;
+        switch (d) {
+            case 1: perlin(noise, h, nx); break;
+            case 2: perlin(noise, h, nx, ny); break;
+            case 3: perlin(noise, h, nx, ny, nz); break;
+            case 4: perlin(noise, h, nx, ny, nz, nw); break;
+        }
+        if (noise_min > noise) noise_min = noise;
+        if (noise_max < noise) noise_max = noise;
+        noise_avg += noise;
+        noise_avg2 += noise * noise;
+    }
+    noise_avg /= n;
+    noise_stddev = std::sqrt((noise_avg2 - noise_avg * noise_avg * n) / n);
+    printf("Result: perlin-%d noise stats:\n\tmin: %.17g\n\tmax: %.17g\n\tavg: %.17g\n\tdev: %.17g\n",
+            d, noise_min, noise_max, noise_avg, noise_stddev);
+    printf("Normalization: %.17g\n", 1.0f / std::max(fabsf(noise_min), fabsf(noise_max)));
+}
 
-
-
-void gabor3 (MaskedAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wResult,
-             ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wX,
-             const NoiseParams *opt);
-
-void gabor3 (MaskedAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wResult,
-             ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wX,
-             ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wY,
-             const NoiseParams *opt);
-
-void gabor3 (MaskedAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wResult,
-             ConstWideAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wP,
-             const NoiseParams *opt);
-
-
-
-
-
-void pgabor (MaskedAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wResult,
-            ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wX,
-            ConstWideAccessor<float,__OSL_SIMD_LANE_COUNT> wPX,
-            const NoiseParams *opt);
-
-void pgabor (MaskedAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wResult,
-            ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wX,
-            ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wY,
-            ConstWideAccessor<float,__OSL_SIMD_LANE_COUNT> wPX,
-            ConstWideAccessor<float,__OSL_SIMD_LANE_COUNT> wPY,
-            const NoiseParams *opt);
-
-void pgabor (MaskedAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wResult,
-            ConstWideAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wP,
-            ConstWideAccessor<Vec3,__OSL_SIMD_LANE_COUNT> wPP,
-            const NoiseParams *opt);
-
-
-
-void pgabor3 (MaskedAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wResult,
-             ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wX,
-             ConstWideAccessor<float,__OSL_SIMD_LANE_COUNT> wPX,
-             const NoiseParams *opt);
-
-void pgabor3 (MaskedAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wResult,
-             ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wX,
-             ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wY,
-             ConstWideAccessor<float,__OSL_SIMD_LANE_COUNT> wPX,
-             ConstWideAccessor<float,__OSL_SIMD_LANE_COUNT> wPY,
-             const NoiseParams *opt);
-
-void pgabor3 (MaskedAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wResult,
-             ConstWideAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wP,
-             ConstWideAccessor<Vec3,__OSL_SIMD_LANE_COUNT> wPP,
-             const NoiseParams *opt);
+#endif
 
 
 
@@ -121,42 +96,28 @@ void pgabor3 (MaskedAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wResult,
 
 
 NOISE_IMPL (cellnoise, CellNoise)
-#define __OSL_XMACRO_ARGS (cellnoise, CellNoise, __OSL_SIMD_LANE_COUNT)
-#include "opnoise_impl_wide_xmacro.h"
 
 
-#if 0 // moved to opnoise_perlin.cpp to enable parallel builds
-	NOISE_IMPL (noise, Noise)
-	NOISE_IMPL_DERIV (noise, Noise)
-#endif
-#if 0 // moved to opnoise_uperlin.cpp to enable parallel builds
-	NOISE_IMPL (snoise, SNoise)
-	NOISE_IMPL_DERIV (snoise, SNoise)
-#endif
+NOISE_IMPL (noise, Noise)
+NOISE_IMPL_DERIV (noise, Noise)
+NOISE_IMPL (snoise, SNoise)
+NOISE_IMPL_DERIV (snoise, SNoise)
 
-#if 0 // moved to opnoise_simplex.cpp to enable parallel builds
-	NOISE_IMPL (simplexnoise, SimplexNoise)
-	NOISE_IMPL_DERIV (simplexnoise, SimplexNoise)
-#endif
+NOISE_IMPL (simplexnoise, SimplexNoise)
+NOISE_IMPL_DERIV (simplexnoise, SimplexNoise)
 
-#if 0 // moved to opnoise_usimplex.cpp to enable parallel builds
-    NOISE_IMPL (usimplexnoise, USimplexNoise)
-    NOISE_IMPL_DERIV (usimplexnoise, USimplexNoise)
-#endif
+NOISE_IMPL (usimplexnoise, USimplexNoise)
+NOISE_IMPL_DERIV (usimplexnoise, USimplexNoise)
 
 PNOISE_IMPL (pcellnoise, PeriodicCellNoise)
-#define __OSL_XMACRO_ARGS (pcellnoise, PeriodicCellNoise, __OSL_SIMD_LANE_COUNT)
-#include "opnoise_periodic_impl_wide_xmacro.h"
 
 
-#if 0 // moved to oppnoise_uperlin.cpp to enable parallel builds
+
 PNOISE_IMPL (pnoise, PeriodicNoise)
 PNOISE_IMPL_DERIV (pnoise, PeriodicNoise)
-#endif
-#if 0 // moved to oppnoise_perlin.cpp to enable parallel builds
+
 PNOISE_IMPL (psnoise, PeriodicSNoise)
 PNOISE_IMPL_DERIV (psnoise, PeriodicSNoise)
-#endif
 
 
 
@@ -282,14 +243,7 @@ struct GaborPNoise {
 
 
 NOISE_IMPL_DERIV_OPT (gabornoise, GaborNoise)
-#define __OSL_XMACRO_ARGS (gabornoise, gabor, __OSL_SIMD_LANE_COUNT)
-#include "opnoise_impl_opt_wide_xmacro.h"
-
 PNOISE_IMPL_DERIV_OPT (gaborpnoise, GaborPNoise)
-//#define __OSL_XMACRO_ARGS (gaborpnoise, pgabor, __OSL_SIMD_LANE_COUNT)
-//#include "opnoise_periodic_impl_opt_wide_xmacro.h"
-
-
 
 struct NullNoise {
     NullNoise () { }

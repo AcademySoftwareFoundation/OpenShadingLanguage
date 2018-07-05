@@ -1,0 +1,1558 @@
+Compiled test_dfloat_1d_u_float_u_float.osl -> test_dfloat_1d_u_float_u_float.oso
+Compiled test_dfloat_1d_v_float_u_float.osl -> test_dfloat_1d_v_float_u_float.oso
+Compiled test_dfloat_1d_u_float_v_float.osl -> test_dfloat_1d_u_float_v_float.oso
+Compiled test_dfloat_1d_v_float_v_float.osl -> test_dfloat_1d_v_float_v_float.oso
+Compiled test_dfloat_2d_u_float_u_float_u_float_u_float.osl -> test_dfloat_2d_u_float_u_float_u_float_u_float.oso
+Compiled test_dfloat_2d_u_float_v_float_u_float_u_float.osl -> test_dfloat_2d_u_float_v_float_u_float_u_float.oso
+Compiled test_dfloat_2d_v_float_u_float_u_float_u_float.osl -> test_dfloat_2d_v_float_u_float_u_float_u_float.oso
+Compiled test_dfloat_2d_v_float_v_float_u_float_u_float.osl -> test_dfloat_2d_v_float_v_float_u_float_u_float.oso
+Compiled test_dfloat_2d_u_float_u_float_u_float_v_float.osl -> test_dfloat_2d_u_float_u_float_u_float_v_float.oso
+Compiled test_dfloat_2d_u_float_v_float_u_float_v_float.osl -> test_dfloat_2d_u_float_v_float_u_float_v_float.oso
+Compiled test_dfloat_2d_v_float_u_float_u_float_v_float.osl -> test_dfloat_2d_v_float_u_float_u_float_v_float.oso
+Compiled test_dfloat_2d_v_float_v_float_u_float_v_float.osl -> test_dfloat_2d_v_float_v_float_u_float_v_float.oso
+Compiled test_dfloat_2d_u_float_u_float_v_float_u_float.osl -> test_dfloat_2d_u_float_u_float_v_float_u_float.oso
+Compiled test_dfloat_2d_u_float_v_float_v_float_u_float.osl -> test_dfloat_2d_u_float_v_float_v_float_u_float.oso
+Compiled test_dfloat_2d_v_float_u_float_v_float_u_float.osl -> test_dfloat_2d_v_float_u_float_v_float_u_float.oso
+Compiled test_dfloat_2d_v_float_v_float_v_float_u_float.osl -> test_dfloat_2d_v_float_v_float_v_float_u_float.oso
+Compiled test_dfloat_2d_u_float_u_float_v_float_v_float.osl -> test_dfloat_2d_u_float_u_float_v_float_v_float.oso
+Compiled test_dfloat_2d_u_float_v_float_v_float_v_float.osl -> test_dfloat_2d_u_float_v_float_v_float_v_float.oso
+Compiled test_dfloat_2d_v_float_u_float_v_float_v_float.osl -> test_dfloat_2d_v_float_u_float_v_float_v_float.oso
+Compiled test_dfloat_2d_v_float_v_float_v_float_v_float.osl -> test_dfloat_2d_v_float_v_float_v_float_v_float.oso
+Compiled test_dfloat_3d_u_point_u_point.osl -> test_dfloat_3d_u_point_u_point.oso
+Compiled test_dfloat_3d_v_point_u_point.osl -> test_dfloat_3d_v_point_u_point.oso
+Compiled test_dfloat_3d_u_point_v_point.osl -> test_dfloat_3d_u_point_v_point.oso
+Compiled test_dfloat_3d_v_point_v_point.osl -> test_dfloat_3d_v_point_v_point.oso
+Compiled test_dfloat_4d_u_point_u_float_u_point_u_float.osl -> test_dfloat_4d_u_point_u_float_u_point_u_float.oso
+Compiled test_dfloat_4d_u_point_v_float_u_point_u_float.osl -> test_dfloat_4d_u_point_v_float_u_point_u_float.oso
+Compiled test_dfloat_4d_v_point_u_float_u_point_u_float.osl -> test_dfloat_4d_v_point_u_float_u_point_u_float.oso
+Compiled test_dfloat_4d_v_point_v_float_u_point_u_float.osl -> test_dfloat_4d_v_point_v_float_u_point_u_float.oso
+Compiled test_dfloat_4d_u_point_u_float_u_point_v_float.osl -> test_dfloat_4d_u_point_u_float_u_point_v_float.oso
+Compiled test_dfloat_4d_u_point_v_float_u_point_v_float.osl -> test_dfloat_4d_u_point_v_float_u_point_v_float.oso
+Compiled test_dfloat_4d_v_point_u_float_u_point_v_float.osl -> test_dfloat_4d_v_point_u_float_u_point_v_float.oso
+Compiled test_dfloat_4d_v_point_v_float_u_point_v_float.osl -> test_dfloat_4d_v_point_v_float_u_point_v_float.oso
+Compiled test_dfloat_4d_u_point_u_float_v_point_u_float.osl -> test_dfloat_4d_u_point_u_float_v_point_u_float.oso
+Compiled test_dfloat_4d_u_point_v_float_v_point_u_float.osl -> test_dfloat_4d_u_point_v_float_v_point_u_float.oso
+Compiled test_dfloat_4d_v_point_u_float_v_point_u_float.osl -> test_dfloat_4d_v_point_u_float_v_point_u_float.oso
+Compiled test_dfloat_4d_v_point_v_float_v_point_u_float.osl -> test_dfloat_4d_v_point_v_float_v_point_u_float.oso
+Compiled test_dfloat_4d_u_point_u_float_v_point_v_float.osl -> test_dfloat_4d_u_point_u_float_v_point_v_float.oso
+Compiled test_dfloat_4d_u_point_v_float_v_point_v_float.osl -> test_dfloat_4d_u_point_v_float_v_point_v_float.oso
+Compiled test_dfloat_4d_v_point_u_float_v_point_v_float.osl -> test_dfloat_4d_v_point_u_float_v_point_v_float.oso
+Compiled test_dfloat_4d_v_point_v_float_v_point_v_float.osl -> test_dfloat_4d_v_point_v_float_v_point_v_float.oso
+Run dfloat Tests for perlin
+
+Output Cout to sout_perlin_dfloat_1d_u_float_u_float.tif
+
+Output Cout to bout_perlin_dfloat_1d_u_float_u_float.tif
+Comparing "sout_perlin_dfloat_1d_u_float_u_float.tif" and "bout_perlin_dfloat_1d_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_1d_v_float_u_float.tif
+
+Output Cout to bout_perlin_dfloat_1d_v_float_u_float.tif
+Comparing "sout_perlin_dfloat_1d_v_float_u_float.tif" and "bout_perlin_dfloat_1d_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_1d_u_float_v_float.tif
+
+Output Cout to bout_perlin_dfloat_1d_u_float_v_float.tif
+Comparing "sout_perlin_dfloat_1d_u_float_v_float.tif" and "bout_perlin_dfloat_1d_u_float_v_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_1d_v_float_v_float.tif
+
+Output Cout to bout_perlin_dfloat_1d_v_float_v_float.tif
+Comparing "sout_perlin_dfloat_1d_v_float_v_float.tif" and "bout_perlin_dfloat_1d_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_2d_u_float_u_float_u_float_u_float.tif
+
+Output Cout to bout_perlin_dfloat_2d_u_float_u_float_u_float_u_float.tif
+Comparing "sout_perlin_dfloat_2d_u_float_u_float_u_float_u_float.tif" and "bout_perlin_dfloat_2d_u_float_u_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_2d_u_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_perlin_dfloat_2d_u_float_v_float_u_float_u_float.tif
+Comparing "sout_perlin_dfloat_2d_u_float_v_float_u_float_u_float.tif" and "bout_perlin_dfloat_2d_u_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_2d_v_float_u_float_u_float_u_float.tif
+
+Output Cout to bout_perlin_dfloat_2d_v_float_u_float_u_float_u_float.tif
+Comparing "sout_perlin_dfloat_2d_v_float_u_float_u_float_u_float.tif" and "bout_perlin_dfloat_2d_v_float_u_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_2d_v_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_perlin_dfloat_2d_v_float_v_float_u_float_u_float.tif
+Comparing "sout_perlin_dfloat_2d_v_float_v_float_u_float_u_float.tif" and "bout_perlin_dfloat_2d_v_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_2d_v_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_perlin_dfloat_2d_v_float_v_float_u_float_u_float.tif
+Comparing "sout_perlin_dfloat_2d_v_float_v_float_u_float_u_float.tif" and "bout_perlin_dfloat_2d_v_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_2d_u_float_u_float_u_float_v_float.tif
+
+Output Cout to bout_perlin_dfloat_2d_u_float_u_float_u_float_v_float.tif
+Comparing "sout_perlin_dfloat_2d_u_float_u_float_u_float_v_float.tif" and "bout_perlin_dfloat_2d_u_float_u_float_u_float_v_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_2d_u_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_perlin_dfloat_2d_u_float_v_float_u_float_u_float.tif
+Comparing "sout_perlin_dfloat_2d_u_float_v_float_u_float_u_float.tif" and "bout_perlin_dfloat_2d_u_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_2d_v_float_u_float_u_float_u_float.tif
+
+Output Cout to bout_perlin_dfloat_2d_v_float_u_float_u_float_u_float.tif
+Comparing "sout_perlin_dfloat_2d_v_float_u_float_u_float_u_float.tif" and "bout_perlin_dfloat_2d_v_float_u_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_2d_v_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_perlin_dfloat_2d_v_float_v_float_u_float_u_float.tif
+Comparing "sout_perlin_dfloat_2d_v_float_v_float_u_float_u_float.tif" and "bout_perlin_dfloat_2d_v_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_2d_u_float_u_float_v_float_u_float.tif
+
+Output Cout to bout_perlin_dfloat_2d_u_float_u_float_v_float_u_float.tif
+Comparing "sout_perlin_dfloat_2d_u_float_u_float_v_float_u_float.tif" and "bout_perlin_dfloat_2d_u_float_u_float_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_2d_u_float_v_float_v_float_u_float.tif
+
+Output Cout to bout_perlin_dfloat_2d_u_float_v_float_v_float_u_float.tif
+Comparing "sout_perlin_dfloat_2d_u_float_v_float_v_float_u_float.tif" and "bout_perlin_dfloat_2d_u_float_v_float_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_2d_v_float_u_float_v_float_u_float.tif
+
+Output Cout to bout_perlin_dfloat_2d_v_float_u_float_v_float_u_float.tif
+Comparing "sout_perlin_dfloat_2d_v_float_u_float_v_float_u_float.tif" and "bout_perlin_dfloat_2d_v_float_u_float_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_2d_v_float_v_float_v_float_u_float.tif
+
+Output Cout to bout_perlin_dfloat_2d_v_float_v_float_v_float_u_float.tif
+Comparing "sout_perlin_dfloat_2d_v_float_v_float_v_float_u_float.tif" and "bout_perlin_dfloat_2d_v_float_v_float_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_2d_u_float_u_float_v_float_v_float.tif
+
+Output Cout to bout_perlin_dfloat_2d_u_float_u_float_v_float_v_float.tif
+Comparing "sout_perlin_dfloat_2d_u_float_u_float_v_float_v_float.tif" and "bout_perlin_dfloat_2d_u_float_u_float_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_2d_u_float_v_float_v_float_v_float.tif
+
+Output Cout to bout_perlin_dfloat_2d_u_float_v_float_v_float_v_float.tif
+Comparing "sout_perlin_dfloat_2d_u_float_v_float_v_float_v_float.tif" and "bout_perlin_dfloat_2d_u_float_v_float_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_2d_v_float_u_float_v_float_v_float.tif
+
+Output Cout to bout_perlin_dfloat_2d_v_float_u_float_v_float_v_float.tif
+Comparing "sout_perlin_dfloat_2d_v_float_u_float_v_float_v_float.tif" and "bout_perlin_dfloat_2d_v_float_u_float_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_2d_v_float_v_float_v_float_v_float.tif
+
+Output Cout to bout_perlin_dfloat_2d_v_float_v_float_v_float_v_float.tif
+Comparing "sout_perlin_dfloat_2d_v_float_v_float_v_float_v_float.tif" and "bout_perlin_dfloat_2d_v_float_v_float_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_3d_u_point_u_point.tif
+
+Output Cout to bout_perlin_dfloat_3d_u_point_u_point.tif
+Comparing "sout_perlin_dfloat_3d_u_point_u_point.tif" and "bout_perlin_dfloat_3d_u_point_u_point.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_3d_v_point_u_point.tif
+
+Output Cout to bout_perlin_dfloat_3d_v_point_u_point.tif
+Comparing "sout_perlin_dfloat_3d_v_point_u_point.tif" and "bout_perlin_dfloat_3d_v_point_u_point.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_3d_u_point_v_point.tif
+
+Output Cout to bout_perlin_dfloat_3d_u_point_v_point.tif
+Comparing "sout_perlin_dfloat_3d_u_point_v_point.tif" and "bout_perlin_dfloat_3d_u_point_v_point.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_3d_v_point_v_point.tif
+
+Output Cout to bout_perlin_dfloat_3d_v_point_v_point.tif
+Comparing "sout_perlin_dfloat_3d_v_point_v_point.tif" and "bout_perlin_dfloat_3d_v_point_v_point.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_4d_u_point_u_float_u_point_u_float.tif
+
+Output Cout to bout_perlin_dfloat_4d_u_point_u_float_u_point_u_float.tif
+Comparing "sout_perlin_dfloat_4d_u_point_u_float_u_point_u_float.tif" and "bout_perlin_dfloat_4d_u_point_u_float_u_point_u_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_4d_u_point_v_float_u_point_u_float.tif
+
+Output Cout to bout_perlin_dfloat_4d_u_point_v_float_u_point_u_float.tif
+Comparing "sout_perlin_dfloat_4d_u_point_v_float_u_point_u_float.tif" and "bout_perlin_dfloat_4d_u_point_v_float_u_point_u_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_4d_v_point_u_float_u_point_u_float.tif
+
+Output Cout to bout_perlin_dfloat_4d_v_point_u_float_u_point_u_float.tif
+Comparing "sout_perlin_dfloat_4d_v_point_u_float_u_point_u_float.tif" and "bout_perlin_dfloat_4d_v_point_u_float_u_point_u_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_4d_v_point_v_float_u_point_u_float.tif
+
+Output Cout to bout_perlin_dfloat_4d_v_point_v_float_u_point_u_float.tif
+Comparing "sout_perlin_dfloat_4d_v_point_v_float_u_point_u_float.tif" and "bout_perlin_dfloat_4d_v_point_v_float_u_point_u_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_4d_u_point_u_float_u_point_v_float.tif
+
+Output Cout to bout_perlin_dfloat_4d_u_point_u_float_u_point_v_float.tif
+Comparing "sout_perlin_dfloat_4d_u_point_u_float_u_point_v_float.tif" and "bout_perlin_dfloat_4d_u_point_u_float_u_point_v_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_4d_u_point_v_float_u_point_v_float.tif
+
+Output Cout to bout_perlin_dfloat_4d_u_point_v_float_u_point_v_float.tif
+Comparing "sout_perlin_dfloat_4d_u_point_v_float_u_point_v_float.tif" and "bout_perlin_dfloat_4d_u_point_v_float_u_point_v_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_4d_v_point_u_float_u_point_v_float.tif
+
+Output Cout to bout_perlin_dfloat_4d_v_point_u_float_u_point_v_float.tif
+Comparing "sout_perlin_dfloat_4d_v_point_u_float_u_point_v_float.tif" and "bout_perlin_dfloat_4d_v_point_u_float_u_point_v_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_4d_v_point_v_float_u_point_v_float.tif
+
+Output Cout to bout_perlin_dfloat_4d_v_point_v_float_u_point_v_float.tif
+Comparing "sout_perlin_dfloat_4d_v_point_v_float_u_point_v_float.tif" and "bout_perlin_dfloat_4d_v_point_v_float_u_point_v_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_4d_u_point_u_float_v_point_u_float.tif
+
+Output Cout to bout_perlin_dfloat_4d_u_point_u_float_v_point_u_float.tif
+Comparing "sout_perlin_dfloat_4d_u_point_u_float_v_point_u_float.tif" and "bout_perlin_dfloat_4d_u_point_u_float_v_point_u_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_4d_u_point_v_float_v_point_u_float.tif
+
+Output Cout to bout_perlin_dfloat_4d_u_point_v_float_v_point_u_float.tif
+Comparing "sout_perlin_dfloat_4d_u_point_v_float_v_point_u_float.tif" and "bout_perlin_dfloat_4d_u_point_v_float_v_point_u_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_4d_v_point_u_float_v_point_u_float.tif
+
+Output Cout to bout_perlin_dfloat_4d_v_point_u_float_v_point_u_float.tif
+Comparing "sout_perlin_dfloat_4d_v_point_u_float_v_point_u_float.tif" and "bout_perlin_dfloat_4d_v_point_u_float_v_point_u_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_4d_v_point_v_float_v_point_u_float.tif
+
+Output Cout to bout_perlin_dfloat_4d_v_point_v_float_v_point_u_float.tif
+Comparing "sout_perlin_dfloat_4d_v_point_v_float_v_point_u_float.tif" and "bout_perlin_dfloat_4d_v_point_v_float_v_point_u_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_4d_u_point_u_float_v_point_v_float.tif
+
+Output Cout to bout_perlin_dfloat_4d_u_point_u_float_v_point_v_float.tif
+Comparing "sout_perlin_dfloat_4d_u_point_u_float_v_point_v_float.tif" and "bout_perlin_dfloat_4d_u_point_u_float_v_point_v_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_4d_u_point_v_float_v_point_v_float.tif
+
+Output Cout to bout_perlin_dfloat_4d_u_point_v_float_v_point_v_float.tif
+Comparing "sout_perlin_dfloat_4d_u_point_v_float_v_point_v_float.tif" and "bout_perlin_dfloat_4d_u_point_v_float_v_point_v_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_4d_v_point_u_float_v_point_v_float.tif
+
+Output Cout to bout_perlin_dfloat_4d_v_point_u_float_v_point_v_float.tif
+Comparing "sout_perlin_dfloat_4d_v_point_u_float_v_point_v_float.tif" and "bout_perlin_dfloat_4d_v_point_u_float_v_point_v_float.tif"
+PASS
+
+Output Cout to sout_perlin_dfloat_4d_v_point_v_float_v_point_v_float.tif
+
+Output Cout to bout_perlin_dfloat_4d_v_point_v_float_v_point_v_float.tif
+Comparing "sout_perlin_dfloat_4d_v_point_v_float_v_point_v_float.tif" and "bout_perlin_dfloat_4d_v_point_v_float_v_point_v_float.tif"
+PASS
+Run dfloat Tests for snoise
+
+Output Cout to sout_snoise_dfloat_1d_u_float_u_float.tif
+
+Output Cout to bout_snoise_dfloat_1d_u_float_u_float.tif
+Comparing "sout_snoise_dfloat_1d_u_float_u_float.tif" and "bout_snoise_dfloat_1d_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_1d_v_float_u_float.tif
+
+Output Cout to bout_snoise_dfloat_1d_v_float_u_float.tif
+Comparing "sout_snoise_dfloat_1d_v_float_u_float.tif" and "bout_snoise_dfloat_1d_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_1d_u_float_v_float.tif
+
+Output Cout to bout_snoise_dfloat_1d_u_float_v_float.tif
+Comparing "sout_snoise_dfloat_1d_u_float_v_float.tif" and "bout_snoise_dfloat_1d_u_float_v_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_1d_v_float_v_float.tif
+
+Output Cout to bout_snoise_dfloat_1d_v_float_v_float.tif
+Comparing "sout_snoise_dfloat_1d_v_float_v_float.tif" and "bout_snoise_dfloat_1d_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_2d_u_float_u_float_u_float_u_float.tif
+
+Output Cout to bout_snoise_dfloat_2d_u_float_u_float_u_float_u_float.tif
+Comparing "sout_snoise_dfloat_2d_u_float_u_float_u_float_u_float.tif" and "bout_snoise_dfloat_2d_u_float_u_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_2d_u_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_snoise_dfloat_2d_u_float_v_float_u_float_u_float.tif
+Comparing "sout_snoise_dfloat_2d_u_float_v_float_u_float_u_float.tif" and "bout_snoise_dfloat_2d_u_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_2d_v_float_u_float_u_float_u_float.tif
+
+Output Cout to bout_snoise_dfloat_2d_v_float_u_float_u_float_u_float.tif
+Comparing "sout_snoise_dfloat_2d_v_float_u_float_u_float_u_float.tif" and "bout_snoise_dfloat_2d_v_float_u_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_2d_v_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_snoise_dfloat_2d_v_float_v_float_u_float_u_float.tif
+Comparing "sout_snoise_dfloat_2d_v_float_v_float_u_float_u_float.tif" and "bout_snoise_dfloat_2d_v_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_2d_v_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_snoise_dfloat_2d_v_float_v_float_u_float_u_float.tif
+Comparing "sout_snoise_dfloat_2d_v_float_v_float_u_float_u_float.tif" and "bout_snoise_dfloat_2d_v_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_2d_u_float_u_float_u_float_v_float.tif
+
+Output Cout to bout_snoise_dfloat_2d_u_float_u_float_u_float_v_float.tif
+Comparing "sout_snoise_dfloat_2d_u_float_u_float_u_float_v_float.tif" and "bout_snoise_dfloat_2d_u_float_u_float_u_float_v_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_2d_u_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_snoise_dfloat_2d_u_float_v_float_u_float_u_float.tif
+Comparing "sout_snoise_dfloat_2d_u_float_v_float_u_float_u_float.tif" and "bout_snoise_dfloat_2d_u_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_2d_v_float_u_float_u_float_u_float.tif
+
+Output Cout to bout_snoise_dfloat_2d_v_float_u_float_u_float_u_float.tif
+Comparing "sout_snoise_dfloat_2d_v_float_u_float_u_float_u_float.tif" and "bout_snoise_dfloat_2d_v_float_u_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_2d_v_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_snoise_dfloat_2d_v_float_v_float_u_float_u_float.tif
+Comparing "sout_snoise_dfloat_2d_v_float_v_float_u_float_u_float.tif" and "bout_snoise_dfloat_2d_v_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_2d_u_float_u_float_v_float_u_float.tif
+
+Output Cout to bout_snoise_dfloat_2d_u_float_u_float_v_float_u_float.tif
+Comparing "sout_snoise_dfloat_2d_u_float_u_float_v_float_u_float.tif" and "bout_snoise_dfloat_2d_u_float_u_float_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_2d_u_float_v_float_v_float_u_float.tif
+
+Output Cout to bout_snoise_dfloat_2d_u_float_v_float_v_float_u_float.tif
+Comparing "sout_snoise_dfloat_2d_u_float_v_float_v_float_u_float.tif" and "bout_snoise_dfloat_2d_u_float_v_float_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_2d_v_float_u_float_v_float_u_float.tif
+
+Output Cout to bout_snoise_dfloat_2d_v_float_u_float_v_float_u_float.tif
+Comparing "sout_snoise_dfloat_2d_v_float_u_float_v_float_u_float.tif" and "bout_snoise_dfloat_2d_v_float_u_float_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_2d_v_float_v_float_v_float_u_float.tif
+
+Output Cout to bout_snoise_dfloat_2d_v_float_v_float_v_float_u_float.tif
+Comparing "sout_snoise_dfloat_2d_v_float_v_float_v_float_u_float.tif" and "bout_snoise_dfloat_2d_v_float_v_float_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_2d_u_float_u_float_v_float_v_float.tif
+
+Output Cout to bout_snoise_dfloat_2d_u_float_u_float_v_float_v_float.tif
+Comparing "sout_snoise_dfloat_2d_u_float_u_float_v_float_v_float.tif" and "bout_snoise_dfloat_2d_u_float_u_float_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_2d_u_float_v_float_v_float_v_float.tif
+
+Output Cout to bout_snoise_dfloat_2d_u_float_v_float_v_float_v_float.tif
+Comparing "sout_snoise_dfloat_2d_u_float_v_float_v_float_v_float.tif" and "bout_snoise_dfloat_2d_u_float_v_float_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_2d_v_float_u_float_v_float_v_float.tif
+
+Output Cout to bout_snoise_dfloat_2d_v_float_u_float_v_float_v_float.tif
+Comparing "sout_snoise_dfloat_2d_v_float_u_float_v_float_v_float.tif" and "bout_snoise_dfloat_2d_v_float_u_float_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_2d_v_float_v_float_v_float_v_float.tif
+
+Output Cout to bout_snoise_dfloat_2d_v_float_v_float_v_float_v_float.tif
+Comparing "sout_snoise_dfloat_2d_v_float_v_float_v_float_v_float.tif" and "bout_snoise_dfloat_2d_v_float_v_float_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_3d_u_point_u_point.tif
+
+Output Cout to bout_snoise_dfloat_3d_u_point_u_point.tif
+Comparing "sout_snoise_dfloat_3d_u_point_u_point.tif" and "bout_snoise_dfloat_3d_u_point_u_point.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_3d_v_point_u_point.tif
+
+Output Cout to bout_snoise_dfloat_3d_v_point_u_point.tif
+Comparing "sout_snoise_dfloat_3d_v_point_u_point.tif" and "bout_snoise_dfloat_3d_v_point_u_point.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_3d_u_point_v_point.tif
+
+Output Cout to bout_snoise_dfloat_3d_u_point_v_point.tif
+Comparing "sout_snoise_dfloat_3d_u_point_v_point.tif" and "bout_snoise_dfloat_3d_u_point_v_point.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_3d_v_point_v_point.tif
+
+Output Cout to bout_snoise_dfloat_3d_v_point_v_point.tif
+Comparing "sout_snoise_dfloat_3d_v_point_v_point.tif" and "bout_snoise_dfloat_3d_v_point_v_point.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_4d_u_point_u_float_u_point_u_float.tif
+
+Output Cout to bout_snoise_dfloat_4d_u_point_u_float_u_point_u_float.tif
+Comparing "sout_snoise_dfloat_4d_u_point_u_float_u_point_u_float.tif" and "bout_snoise_dfloat_4d_u_point_u_float_u_point_u_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_4d_u_point_v_float_u_point_u_float.tif
+
+Output Cout to bout_snoise_dfloat_4d_u_point_v_float_u_point_u_float.tif
+Comparing "sout_snoise_dfloat_4d_u_point_v_float_u_point_u_float.tif" and "bout_snoise_dfloat_4d_u_point_v_float_u_point_u_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_4d_v_point_u_float_u_point_u_float.tif
+
+Output Cout to bout_snoise_dfloat_4d_v_point_u_float_u_point_u_float.tif
+Comparing "sout_snoise_dfloat_4d_v_point_u_float_u_point_u_float.tif" and "bout_snoise_dfloat_4d_v_point_u_float_u_point_u_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_4d_v_point_v_float_u_point_u_float.tif
+
+Output Cout to bout_snoise_dfloat_4d_v_point_v_float_u_point_u_float.tif
+Comparing "sout_snoise_dfloat_4d_v_point_v_float_u_point_u_float.tif" and "bout_snoise_dfloat_4d_v_point_v_float_u_point_u_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_4d_u_point_u_float_u_point_v_float.tif
+
+Output Cout to bout_snoise_dfloat_4d_u_point_u_float_u_point_v_float.tif
+Comparing "sout_snoise_dfloat_4d_u_point_u_float_u_point_v_float.tif" and "bout_snoise_dfloat_4d_u_point_u_float_u_point_v_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_4d_u_point_v_float_u_point_v_float.tif
+
+Output Cout to bout_snoise_dfloat_4d_u_point_v_float_u_point_v_float.tif
+Comparing "sout_snoise_dfloat_4d_u_point_v_float_u_point_v_float.tif" and "bout_snoise_dfloat_4d_u_point_v_float_u_point_v_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_4d_v_point_u_float_u_point_v_float.tif
+
+Output Cout to bout_snoise_dfloat_4d_v_point_u_float_u_point_v_float.tif
+Comparing "sout_snoise_dfloat_4d_v_point_u_float_u_point_v_float.tif" and "bout_snoise_dfloat_4d_v_point_u_float_u_point_v_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_4d_v_point_v_float_u_point_v_float.tif
+
+Output Cout to bout_snoise_dfloat_4d_v_point_v_float_u_point_v_float.tif
+Comparing "sout_snoise_dfloat_4d_v_point_v_float_u_point_v_float.tif" and "bout_snoise_dfloat_4d_v_point_v_float_u_point_v_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_4d_u_point_u_float_v_point_u_float.tif
+
+Output Cout to bout_snoise_dfloat_4d_u_point_u_float_v_point_u_float.tif
+Comparing "sout_snoise_dfloat_4d_u_point_u_float_v_point_u_float.tif" and "bout_snoise_dfloat_4d_u_point_u_float_v_point_u_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_4d_u_point_v_float_v_point_u_float.tif
+
+Output Cout to bout_snoise_dfloat_4d_u_point_v_float_v_point_u_float.tif
+Comparing "sout_snoise_dfloat_4d_u_point_v_float_v_point_u_float.tif" and "bout_snoise_dfloat_4d_u_point_v_float_v_point_u_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_4d_v_point_u_float_v_point_u_float.tif
+
+Output Cout to bout_snoise_dfloat_4d_v_point_u_float_v_point_u_float.tif
+Comparing "sout_snoise_dfloat_4d_v_point_u_float_v_point_u_float.tif" and "bout_snoise_dfloat_4d_v_point_u_float_v_point_u_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_4d_v_point_v_float_v_point_u_float.tif
+
+Output Cout to bout_snoise_dfloat_4d_v_point_v_float_v_point_u_float.tif
+Comparing "sout_snoise_dfloat_4d_v_point_v_float_v_point_u_float.tif" and "bout_snoise_dfloat_4d_v_point_v_float_v_point_u_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_4d_u_point_u_float_v_point_v_float.tif
+
+Output Cout to bout_snoise_dfloat_4d_u_point_u_float_v_point_v_float.tif
+Comparing "sout_snoise_dfloat_4d_u_point_u_float_v_point_v_float.tif" and "bout_snoise_dfloat_4d_u_point_u_float_v_point_v_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_4d_u_point_v_float_v_point_v_float.tif
+
+Output Cout to bout_snoise_dfloat_4d_u_point_v_float_v_point_v_float.tif
+Comparing "sout_snoise_dfloat_4d_u_point_v_float_v_point_v_float.tif" and "bout_snoise_dfloat_4d_u_point_v_float_v_point_v_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_4d_v_point_u_float_v_point_v_float.tif
+
+Output Cout to bout_snoise_dfloat_4d_v_point_u_float_v_point_v_float.tif
+Comparing "sout_snoise_dfloat_4d_v_point_u_float_v_point_v_float.tif" and "bout_snoise_dfloat_4d_v_point_u_float_v_point_v_float.tif"
+PASS
+
+Output Cout to sout_snoise_dfloat_4d_v_point_v_float_v_point_v_float.tif
+
+Output Cout to bout_snoise_dfloat_4d_v_point_v_float_v_point_v_float.tif
+Comparing "sout_snoise_dfloat_4d_v_point_v_float_v_point_v_float.tif" and "bout_snoise_dfloat_4d_v_point_v_float_v_point_v_float.tif"
+PASS
+Run dfloat Tests for uperlin
+
+Output Cout to sout_uperlin_dfloat_1d_u_float_u_float.tif
+
+Output Cout to bout_uperlin_dfloat_1d_u_float_u_float.tif
+Comparing "sout_uperlin_dfloat_1d_u_float_u_float.tif" and "bout_uperlin_dfloat_1d_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_1d_v_float_u_float.tif
+
+Output Cout to bout_uperlin_dfloat_1d_v_float_u_float.tif
+Comparing "sout_uperlin_dfloat_1d_v_float_u_float.tif" and "bout_uperlin_dfloat_1d_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_1d_u_float_v_float.tif
+
+Output Cout to bout_uperlin_dfloat_1d_u_float_v_float.tif
+Comparing "sout_uperlin_dfloat_1d_u_float_v_float.tif" and "bout_uperlin_dfloat_1d_u_float_v_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_1d_v_float_v_float.tif
+
+Output Cout to bout_uperlin_dfloat_1d_v_float_v_float.tif
+Comparing "sout_uperlin_dfloat_1d_v_float_v_float.tif" and "bout_uperlin_dfloat_1d_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_2d_u_float_u_float_u_float_u_float.tif
+
+Output Cout to bout_uperlin_dfloat_2d_u_float_u_float_u_float_u_float.tif
+Comparing "sout_uperlin_dfloat_2d_u_float_u_float_u_float_u_float.tif" and "bout_uperlin_dfloat_2d_u_float_u_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_2d_u_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_uperlin_dfloat_2d_u_float_v_float_u_float_u_float.tif
+Comparing "sout_uperlin_dfloat_2d_u_float_v_float_u_float_u_float.tif" and "bout_uperlin_dfloat_2d_u_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_2d_v_float_u_float_u_float_u_float.tif
+
+Output Cout to bout_uperlin_dfloat_2d_v_float_u_float_u_float_u_float.tif
+Comparing "sout_uperlin_dfloat_2d_v_float_u_float_u_float_u_float.tif" and "bout_uperlin_dfloat_2d_v_float_u_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_2d_v_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_uperlin_dfloat_2d_v_float_v_float_u_float_u_float.tif
+Comparing "sout_uperlin_dfloat_2d_v_float_v_float_u_float_u_float.tif" and "bout_uperlin_dfloat_2d_v_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_2d_v_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_uperlin_dfloat_2d_v_float_v_float_u_float_u_float.tif
+Comparing "sout_uperlin_dfloat_2d_v_float_v_float_u_float_u_float.tif" and "bout_uperlin_dfloat_2d_v_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_2d_u_float_u_float_u_float_v_float.tif
+
+Output Cout to bout_uperlin_dfloat_2d_u_float_u_float_u_float_v_float.tif
+Comparing "sout_uperlin_dfloat_2d_u_float_u_float_u_float_v_float.tif" and "bout_uperlin_dfloat_2d_u_float_u_float_u_float_v_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_2d_u_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_uperlin_dfloat_2d_u_float_v_float_u_float_u_float.tif
+Comparing "sout_uperlin_dfloat_2d_u_float_v_float_u_float_u_float.tif" and "bout_uperlin_dfloat_2d_u_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_2d_v_float_u_float_u_float_u_float.tif
+
+Output Cout to bout_uperlin_dfloat_2d_v_float_u_float_u_float_u_float.tif
+Comparing "sout_uperlin_dfloat_2d_v_float_u_float_u_float_u_float.tif" and "bout_uperlin_dfloat_2d_v_float_u_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_2d_v_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_uperlin_dfloat_2d_v_float_v_float_u_float_u_float.tif
+Comparing "sout_uperlin_dfloat_2d_v_float_v_float_u_float_u_float.tif" and "bout_uperlin_dfloat_2d_v_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_2d_u_float_u_float_v_float_u_float.tif
+
+Output Cout to bout_uperlin_dfloat_2d_u_float_u_float_v_float_u_float.tif
+Comparing "sout_uperlin_dfloat_2d_u_float_u_float_v_float_u_float.tif" and "bout_uperlin_dfloat_2d_u_float_u_float_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_2d_u_float_v_float_v_float_u_float.tif
+
+Output Cout to bout_uperlin_dfloat_2d_u_float_v_float_v_float_u_float.tif
+Comparing "sout_uperlin_dfloat_2d_u_float_v_float_v_float_u_float.tif" and "bout_uperlin_dfloat_2d_u_float_v_float_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_2d_v_float_u_float_v_float_u_float.tif
+
+Output Cout to bout_uperlin_dfloat_2d_v_float_u_float_v_float_u_float.tif
+Comparing "sout_uperlin_dfloat_2d_v_float_u_float_v_float_u_float.tif" and "bout_uperlin_dfloat_2d_v_float_u_float_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_2d_v_float_v_float_v_float_u_float.tif
+
+Output Cout to bout_uperlin_dfloat_2d_v_float_v_float_v_float_u_float.tif
+Comparing "sout_uperlin_dfloat_2d_v_float_v_float_v_float_u_float.tif" and "bout_uperlin_dfloat_2d_v_float_v_float_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_2d_u_float_u_float_v_float_v_float.tif
+
+Output Cout to bout_uperlin_dfloat_2d_u_float_u_float_v_float_v_float.tif
+Comparing "sout_uperlin_dfloat_2d_u_float_u_float_v_float_v_float.tif" and "bout_uperlin_dfloat_2d_u_float_u_float_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_2d_u_float_v_float_v_float_v_float.tif
+
+Output Cout to bout_uperlin_dfloat_2d_u_float_v_float_v_float_v_float.tif
+Comparing "sout_uperlin_dfloat_2d_u_float_v_float_v_float_v_float.tif" and "bout_uperlin_dfloat_2d_u_float_v_float_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_2d_v_float_u_float_v_float_v_float.tif
+
+Output Cout to bout_uperlin_dfloat_2d_v_float_u_float_v_float_v_float.tif
+Comparing "sout_uperlin_dfloat_2d_v_float_u_float_v_float_v_float.tif" and "bout_uperlin_dfloat_2d_v_float_u_float_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_2d_v_float_v_float_v_float_v_float.tif
+
+Output Cout to bout_uperlin_dfloat_2d_v_float_v_float_v_float_v_float.tif
+Comparing "sout_uperlin_dfloat_2d_v_float_v_float_v_float_v_float.tif" and "bout_uperlin_dfloat_2d_v_float_v_float_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_3d_u_point_u_point.tif
+
+Output Cout to bout_uperlin_dfloat_3d_u_point_u_point.tif
+Comparing "sout_uperlin_dfloat_3d_u_point_u_point.tif" and "bout_uperlin_dfloat_3d_u_point_u_point.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_3d_v_point_u_point.tif
+
+Output Cout to bout_uperlin_dfloat_3d_v_point_u_point.tif
+Comparing "sout_uperlin_dfloat_3d_v_point_u_point.tif" and "bout_uperlin_dfloat_3d_v_point_u_point.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_3d_u_point_v_point.tif
+
+Output Cout to bout_uperlin_dfloat_3d_u_point_v_point.tif
+Comparing "sout_uperlin_dfloat_3d_u_point_v_point.tif" and "bout_uperlin_dfloat_3d_u_point_v_point.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_3d_v_point_v_point.tif
+
+Output Cout to bout_uperlin_dfloat_3d_v_point_v_point.tif
+Comparing "sout_uperlin_dfloat_3d_v_point_v_point.tif" and "bout_uperlin_dfloat_3d_v_point_v_point.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_4d_u_point_u_float_u_point_u_float.tif
+
+Output Cout to bout_uperlin_dfloat_4d_u_point_u_float_u_point_u_float.tif
+Comparing "sout_uperlin_dfloat_4d_u_point_u_float_u_point_u_float.tif" and "bout_uperlin_dfloat_4d_u_point_u_float_u_point_u_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_4d_u_point_v_float_u_point_u_float.tif
+
+Output Cout to bout_uperlin_dfloat_4d_u_point_v_float_u_point_u_float.tif
+Comparing "sout_uperlin_dfloat_4d_u_point_v_float_u_point_u_float.tif" and "bout_uperlin_dfloat_4d_u_point_v_float_u_point_u_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_4d_v_point_u_float_u_point_u_float.tif
+
+Output Cout to bout_uperlin_dfloat_4d_v_point_u_float_u_point_u_float.tif
+Comparing "sout_uperlin_dfloat_4d_v_point_u_float_u_point_u_float.tif" and "bout_uperlin_dfloat_4d_v_point_u_float_u_point_u_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_4d_v_point_v_float_u_point_u_float.tif
+
+Output Cout to bout_uperlin_dfloat_4d_v_point_v_float_u_point_u_float.tif
+Comparing "sout_uperlin_dfloat_4d_v_point_v_float_u_point_u_float.tif" and "bout_uperlin_dfloat_4d_v_point_v_float_u_point_u_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_4d_u_point_u_float_u_point_v_float.tif
+
+Output Cout to bout_uperlin_dfloat_4d_u_point_u_float_u_point_v_float.tif
+Comparing "sout_uperlin_dfloat_4d_u_point_u_float_u_point_v_float.tif" and "bout_uperlin_dfloat_4d_u_point_u_float_u_point_v_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_4d_u_point_v_float_u_point_v_float.tif
+
+Output Cout to bout_uperlin_dfloat_4d_u_point_v_float_u_point_v_float.tif
+Comparing "sout_uperlin_dfloat_4d_u_point_v_float_u_point_v_float.tif" and "bout_uperlin_dfloat_4d_u_point_v_float_u_point_v_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_4d_v_point_u_float_u_point_v_float.tif
+
+Output Cout to bout_uperlin_dfloat_4d_v_point_u_float_u_point_v_float.tif
+Comparing "sout_uperlin_dfloat_4d_v_point_u_float_u_point_v_float.tif" and "bout_uperlin_dfloat_4d_v_point_u_float_u_point_v_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_4d_v_point_v_float_u_point_v_float.tif
+
+Output Cout to bout_uperlin_dfloat_4d_v_point_v_float_u_point_v_float.tif
+Comparing "sout_uperlin_dfloat_4d_v_point_v_float_u_point_v_float.tif" and "bout_uperlin_dfloat_4d_v_point_v_float_u_point_v_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_4d_u_point_u_float_v_point_u_float.tif
+
+Output Cout to bout_uperlin_dfloat_4d_u_point_u_float_v_point_u_float.tif
+Comparing "sout_uperlin_dfloat_4d_u_point_u_float_v_point_u_float.tif" and "bout_uperlin_dfloat_4d_u_point_u_float_v_point_u_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_4d_u_point_v_float_v_point_u_float.tif
+
+Output Cout to bout_uperlin_dfloat_4d_u_point_v_float_v_point_u_float.tif
+Comparing "sout_uperlin_dfloat_4d_u_point_v_float_v_point_u_float.tif" and "bout_uperlin_dfloat_4d_u_point_v_float_v_point_u_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_4d_v_point_u_float_v_point_u_float.tif
+
+Output Cout to bout_uperlin_dfloat_4d_v_point_u_float_v_point_u_float.tif
+Comparing "sout_uperlin_dfloat_4d_v_point_u_float_v_point_u_float.tif" and "bout_uperlin_dfloat_4d_v_point_u_float_v_point_u_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_4d_v_point_v_float_v_point_u_float.tif
+
+Output Cout to bout_uperlin_dfloat_4d_v_point_v_float_v_point_u_float.tif
+Comparing "sout_uperlin_dfloat_4d_v_point_v_float_v_point_u_float.tif" and "bout_uperlin_dfloat_4d_v_point_v_float_v_point_u_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_4d_u_point_u_float_v_point_v_float.tif
+
+Output Cout to bout_uperlin_dfloat_4d_u_point_u_float_v_point_v_float.tif
+Comparing "sout_uperlin_dfloat_4d_u_point_u_float_v_point_v_float.tif" and "bout_uperlin_dfloat_4d_u_point_u_float_v_point_v_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_4d_u_point_v_float_v_point_v_float.tif
+
+Output Cout to bout_uperlin_dfloat_4d_u_point_v_float_v_point_v_float.tif
+Comparing "sout_uperlin_dfloat_4d_u_point_v_float_v_point_v_float.tif" and "bout_uperlin_dfloat_4d_u_point_v_float_v_point_v_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_4d_v_point_u_float_v_point_v_float.tif
+
+Output Cout to bout_uperlin_dfloat_4d_v_point_u_float_v_point_v_float.tif
+Comparing "sout_uperlin_dfloat_4d_v_point_u_float_v_point_v_float.tif" and "bout_uperlin_dfloat_4d_v_point_u_float_v_point_v_float.tif"
+PASS
+
+Output Cout to sout_uperlin_dfloat_4d_v_point_v_float_v_point_v_float.tif
+
+Output Cout to bout_uperlin_dfloat_4d_v_point_v_float_v_point_v_float.tif
+Comparing "sout_uperlin_dfloat_4d_v_point_v_float_v_point_v_float.tif" and "bout_uperlin_dfloat_4d_v_point_v_float_v_point_v_float.tif"
+PASS
+Run dfloat Tests for noise
+
+Output Cout to sout_noise_dfloat_1d_u_float_u_float.tif
+
+Output Cout to bout_noise_dfloat_1d_u_float_u_float.tif
+Comparing "sout_noise_dfloat_1d_u_float_u_float.tif" and "bout_noise_dfloat_1d_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_1d_v_float_u_float.tif
+
+Output Cout to bout_noise_dfloat_1d_v_float_u_float.tif
+Comparing "sout_noise_dfloat_1d_v_float_u_float.tif" and "bout_noise_dfloat_1d_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_1d_u_float_v_float.tif
+
+Output Cout to bout_noise_dfloat_1d_u_float_v_float.tif
+Comparing "sout_noise_dfloat_1d_u_float_v_float.tif" and "bout_noise_dfloat_1d_u_float_v_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_1d_v_float_v_float.tif
+
+Output Cout to bout_noise_dfloat_1d_v_float_v_float.tif
+Comparing "sout_noise_dfloat_1d_v_float_v_float.tif" and "bout_noise_dfloat_1d_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_2d_u_float_u_float_u_float_u_float.tif
+
+Output Cout to bout_noise_dfloat_2d_u_float_u_float_u_float_u_float.tif
+Comparing "sout_noise_dfloat_2d_u_float_u_float_u_float_u_float.tif" and "bout_noise_dfloat_2d_u_float_u_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_2d_u_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_noise_dfloat_2d_u_float_v_float_u_float_u_float.tif
+Comparing "sout_noise_dfloat_2d_u_float_v_float_u_float_u_float.tif" and "bout_noise_dfloat_2d_u_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_2d_v_float_u_float_u_float_u_float.tif
+
+Output Cout to bout_noise_dfloat_2d_v_float_u_float_u_float_u_float.tif
+Comparing "sout_noise_dfloat_2d_v_float_u_float_u_float_u_float.tif" and "bout_noise_dfloat_2d_v_float_u_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_2d_v_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_noise_dfloat_2d_v_float_v_float_u_float_u_float.tif
+Comparing "sout_noise_dfloat_2d_v_float_v_float_u_float_u_float.tif" and "bout_noise_dfloat_2d_v_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_2d_v_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_noise_dfloat_2d_v_float_v_float_u_float_u_float.tif
+Comparing "sout_noise_dfloat_2d_v_float_v_float_u_float_u_float.tif" and "bout_noise_dfloat_2d_v_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_2d_u_float_u_float_u_float_v_float.tif
+
+Output Cout to bout_noise_dfloat_2d_u_float_u_float_u_float_v_float.tif
+Comparing "sout_noise_dfloat_2d_u_float_u_float_u_float_v_float.tif" and "bout_noise_dfloat_2d_u_float_u_float_u_float_v_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_2d_u_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_noise_dfloat_2d_u_float_v_float_u_float_u_float.tif
+Comparing "sout_noise_dfloat_2d_u_float_v_float_u_float_u_float.tif" and "bout_noise_dfloat_2d_u_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_2d_v_float_u_float_u_float_u_float.tif
+
+Output Cout to bout_noise_dfloat_2d_v_float_u_float_u_float_u_float.tif
+Comparing "sout_noise_dfloat_2d_v_float_u_float_u_float_u_float.tif" and "bout_noise_dfloat_2d_v_float_u_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_2d_v_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_noise_dfloat_2d_v_float_v_float_u_float_u_float.tif
+Comparing "sout_noise_dfloat_2d_v_float_v_float_u_float_u_float.tif" and "bout_noise_dfloat_2d_v_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_2d_u_float_u_float_v_float_u_float.tif
+
+Output Cout to bout_noise_dfloat_2d_u_float_u_float_v_float_u_float.tif
+Comparing "sout_noise_dfloat_2d_u_float_u_float_v_float_u_float.tif" and "bout_noise_dfloat_2d_u_float_u_float_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_2d_u_float_v_float_v_float_u_float.tif
+
+Output Cout to bout_noise_dfloat_2d_u_float_v_float_v_float_u_float.tif
+Comparing "sout_noise_dfloat_2d_u_float_v_float_v_float_u_float.tif" and "bout_noise_dfloat_2d_u_float_v_float_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_2d_v_float_u_float_v_float_u_float.tif
+
+Output Cout to bout_noise_dfloat_2d_v_float_u_float_v_float_u_float.tif
+Comparing "sout_noise_dfloat_2d_v_float_u_float_v_float_u_float.tif" and "bout_noise_dfloat_2d_v_float_u_float_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_2d_v_float_v_float_v_float_u_float.tif
+
+Output Cout to bout_noise_dfloat_2d_v_float_v_float_v_float_u_float.tif
+Comparing "sout_noise_dfloat_2d_v_float_v_float_v_float_u_float.tif" and "bout_noise_dfloat_2d_v_float_v_float_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_2d_u_float_u_float_v_float_v_float.tif
+
+Output Cout to bout_noise_dfloat_2d_u_float_u_float_v_float_v_float.tif
+Comparing "sout_noise_dfloat_2d_u_float_u_float_v_float_v_float.tif" and "bout_noise_dfloat_2d_u_float_u_float_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_2d_u_float_v_float_v_float_v_float.tif
+
+Output Cout to bout_noise_dfloat_2d_u_float_v_float_v_float_v_float.tif
+Comparing "sout_noise_dfloat_2d_u_float_v_float_v_float_v_float.tif" and "bout_noise_dfloat_2d_u_float_v_float_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_2d_v_float_u_float_v_float_v_float.tif
+
+Output Cout to bout_noise_dfloat_2d_v_float_u_float_v_float_v_float.tif
+Comparing "sout_noise_dfloat_2d_v_float_u_float_v_float_v_float.tif" and "bout_noise_dfloat_2d_v_float_u_float_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_2d_v_float_v_float_v_float_v_float.tif
+
+Output Cout to bout_noise_dfloat_2d_v_float_v_float_v_float_v_float.tif
+Comparing "sout_noise_dfloat_2d_v_float_v_float_v_float_v_float.tif" and "bout_noise_dfloat_2d_v_float_v_float_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_3d_u_point_u_point.tif
+
+Output Cout to bout_noise_dfloat_3d_u_point_u_point.tif
+Comparing "sout_noise_dfloat_3d_u_point_u_point.tif" and "bout_noise_dfloat_3d_u_point_u_point.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_3d_v_point_u_point.tif
+
+Output Cout to bout_noise_dfloat_3d_v_point_u_point.tif
+Comparing "sout_noise_dfloat_3d_v_point_u_point.tif" and "bout_noise_dfloat_3d_v_point_u_point.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_3d_u_point_v_point.tif
+
+Output Cout to bout_noise_dfloat_3d_u_point_v_point.tif
+Comparing "sout_noise_dfloat_3d_u_point_v_point.tif" and "bout_noise_dfloat_3d_u_point_v_point.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_3d_v_point_v_point.tif
+
+Output Cout to bout_noise_dfloat_3d_v_point_v_point.tif
+Comparing "sout_noise_dfloat_3d_v_point_v_point.tif" and "bout_noise_dfloat_3d_v_point_v_point.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_4d_u_point_u_float_u_point_u_float.tif
+
+Output Cout to bout_noise_dfloat_4d_u_point_u_float_u_point_u_float.tif
+Comparing "sout_noise_dfloat_4d_u_point_u_float_u_point_u_float.tif" and "bout_noise_dfloat_4d_u_point_u_float_u_point_u_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_4d_u_point_v_float_u_point_u_float.tif
+
+Output Cout to bout_noise_dfloat_4d_u_point_v_float_u_point_u_float.tif
+Comparing "sout_noise_dfloat_4d_u_point_v_float_u_point_u_float.tif" and "bout_noise_dfloat_4d_u_point_v_float_u_point_u_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_4d_v_point_u_float_u_point_u_float.tif
+
+Output Cout to bout_noise_dfloat_4d_v_point_u_float_u_point_u_float.tif
+Comparing "sout_noise_dfloat_4d_v_point_u_float_u_point_u_float.tif" and "bout_noise_dfloat_4d_v_point_u_float_u_point_u_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_4d_v_point_v_float_u_point_u_float.tif
+
+Output Cout to bout_noise_dfloat_4d_v_point_v_float_u_point_u_float.tif
+Comparing "sout_noise_dfloat_4d_v_point_v_float_u_point_u_float.tif" and "bout_noise_dfloat_4d_v_point_v_float_u_point_u_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_4d_u_point_u_float_u_point_v_float.tif
+
+Output Cout to bout_noise_dfloat_4d_u_point_u_float_u_point_v_float.tif
+Comparing "sout_noise_dfloat_4d_u_point_u_float_u_point_v_float.tif" and "bout_noise_dfloat_4d_u_point_u_float_u_point_v_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_4d_u_point_v_float_u_point_v_float.tif
+
+Output Cout to bout_noise_dfloat_4d_u_point_v_float_u_point_v_float.tif
+Comparing "sout_noise_dfloat_4d_u_point_v_float_u_point_v_float.tif" and "bout_noise_dfloat_4d_u_point_v_float_u_point_v_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_4d_v_point_u_float_u_point_v_float.tif
+
+Output Cout to bout_noise_dfloat_4d_v_point_u_float_u_point_v_float.tif
+Comparing "sout_noise_dfloat_4d_v_point_u_float_u_point_v_float.tif" and "bout_noise_dfloat_4d_v_point_u_float_u_point_v_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_4d_v_point_v_float_u_point_v_float.tif
+
+Output Cout to bout_noise_dfloat_4d_v_point_v_float_u_point_v_float.tif
+Comparing "sout_noise_dfloat_4d_v_point_v_float_u_point_v_float.tif" and "bout_noise_dfloat_4d_v_point_v_float_u_point_v_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_4d_u_point_u_float_v_point_u_float.tif
+
+Output Cout to bout_noise_dfloat_4d_u_point_u_float_v_point_u_float.tif
+Comparing "sout_noise_dfloat_4d_u_point_u_float_v_point_u_float.tif" and "bout_noise_dfloat_4d_u_point_u_float_v_point_u_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_4d_u_point_v_float_v_point_u_float.tif
+
+Output Cout to bout_noise_dfloat_4d_u_point_v_float_v_point_u_float.tif
+Comparing "sout_noise_dfloat_4d_u_point_v_float_v_point_u_float.tif" and "bout_noise_dfloat_4d_u_point_v_float_v_point_u_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_4d_v_point_u_float_v_point_u_float.tif
+
+Output Cout to bout_noise_dfloat_4d_v_point_u_float_v_point_u_float.tif
+Comparing "sout_noise_dfloat_4d_v_point_u_float_v_point_u_float.tif" and "bout_noise_dfloat_4d_v_point_u_float_v_point_u_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_4d_v_point_v_float_v_point_u_float.tif
+
+Output Cout to bout_noise_dfloat_4d_v_point_v_float_v_point_u_float.tif
+Comparing "sout_noise_dfloat_4d_v_point_v_float_v_point_u_float.tif" and "bout_noise_dfloat_4d_v_point_v_float_v_point_u_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_4d_u_point_u_float_v_point_v_float.tif
+
+Output Cout to bout_noise_dfloat_4d_u_point_u_float_v_point_v_float.tif
+Comparing "sout_noise_dfloat_4d_u_point_u_float_v_point_v_float.tif" and "bout_noise_dfloat_4d_u_point_u_float_v_point_v_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_4d_u_point_v_float_v_point_v_float.tif
+
+Output Cout to bout_noise_dfloat_4d_u_point_v_float_v_point_v_float.tif
+Comparing "sout_noise_dfloat_4d_u_point_v_float_v_point_v_float.tif" and "bout_noise_dfloat_4d_u_point_v_float_v_point_v_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_4d_v_point_u_float_v_point_v_float.tif
+
+Output Cout to bout_noise_dfloat_4d_v_point_u_float_v_point_v_float.tif
+Comparing "sout_noise_dfloat_4d_v_point_u_float_v_point_v_float.tif" and "bout_noise_dfloat_4d_v_point_u_float_v_point_v_float.tif"
+PASS
+
+Output Cout to sout_noise_dfloat_4d_v_point_v_float_v_point_v_float.tif
+
+Output Cout to bout_noise_dfloat_4d_v_point_v_float_v_point_v_float.tif
+Comparing "sout_noise_dfloat_4d_v_point_v_float_v_point_v_float.tif" and "bout_noise_dfloat_4d_v_point_v_float_v_point_v_float.tif"
+PASS
+Run dfloat Tests for cell
+
+Output Cout to sout_cell_dfloat_1d_u_float_u_float.tif
+
+Output Cout to bout_cell_dfloat_1d_u_float_u_float.tif
+Comparing "sout_cell_dfloat_1d_u_float_u_float.tif" and "bout_cell_dfloat_1d_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_1d_v_float_u_float.tif
+
+Output Cout to bout_cell_dfloat_1d_v_float_u_float.tif
+Comparing "sout_cell_dfloat_1d_v_float_u_float.tif" and "bout_cell_dfloat_1d_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_1d_u_float_v_float.tif
+
+Output Cout to bout_cell_dfloat_1d_u_float_v_float.tif
+Comparing "sout_cell_dfloat_1d_u_float_v_float.tif" and "bout_cell_dfloat_1d_u_float_v_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_1d_v_float_v_float.tif
+
+Output Cout to bout_cell_dfloat_1d_v_float_v_float.tif
+Comparing "sout_cell_dfloat_1d_v_float_v_float.tif" and "bout_cell_dfloat_1d_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_2d_u_float_u_float_u_float_u_float.tif
+
+Output Cout to bout_cell_dfloat_2d_u_float_u_float_u_float_u_float.tif
+Comparing "sout_cell_dfloat_2d_u_float_u_float_u_float_u_float.tif" and "bout_cell_dfloat_2d_u_float_u_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_2d_u_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_cell_dfloat_2d_u_float_v_float_u_float_u_float.tif
+Comparing "sout_cell_dfloat_2d_u_float_v_float_u_float_u_float.tif" and "bout_cell_dfloat_2d_u_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_2d_v_float_u_float_u_float_u_float.tif
+
+Output Cout to bout_cell_dfloat_2d_v_float_u_float_u_float_u_float.tif
+Comparing "sout_cell_dfloat_2d_v_float_u_float_u_float_u_float.tif" and "bout_cell_dfloat_2d_v_float_u_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_2d_v_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_cell_dfloat_2d_v_float_v_float_u_float_u_float.tif
+Comparing "sout_cell_dfloat_2d_v_float_v_float_u_float_u_float.tif" and "bout_cell_dfloat_2d_v_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_2d_v_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_cell_dfloat_2d_v_float_v_float_u_float_u_float.tif
+Comparing "sout_cell_dfloat_2d_v_float_v_float_u_float_u_float.tif" and "bout_cell_dfloat_2d_v_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_2d_u_float_u_float_u_float_v_float.tif
+
+Output Cout to bout_cell_dfloat_2d_u_float_u_float_u_float_v_float.tif
+Comparing "sout_cell_dfloat_2d_u_float_u_float_u_float_v_float.tif" and "bout_cell_dfloat_2d_u_float_u_float_u_float_v_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_2d_u_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_cell_dfloat_2d_u_float_v_float_u_float_u_float.tif
+Comparing "sout_cell_dfloat_2d_u_float_v_float_u_float_u_float.tif" and "bout_cell_dfloat_2d_u_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_2d_v_float_u_float_u_float_u_float.tif
+
+Output Cout to bout_cell_dfloat_2d_v_float_u_float_u_float_u_float.tif
+Comparing "sout_cell_dfloat_2d_v_float_u_float_u_float_u_float.tif" and "bout_cell_dfloat_2d_v_float_u_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_2d_v_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_cell_dfloat_2d_v_float_v_float_u_float_u_float.tif
+Comparing "sout_cell_dfloat_2d_v_float_v_float_u_float_u_float.tif" and "bout_cell_dfloat_2d_v_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_2d_u_float_u_float_v_float_u_float.tif
+
+Output Cout to bout_cell_dfloat_2d_u_float_u_float_v_float_u_float.tif
+Comparing "sout_cell_dfloat_2d_u_float_u_float_v_float_u_float.tif" and "bout_cell_dfloat_2d_u_float_u_float_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_2d_u_float_v_float_v_float_u_float.tif
+
+Output Cout to bout_cell_dfloat_2d_u_float_v_float_v_float_u_float.tif
+Comparing "sout_cell_dfloat_2d_u_float_v_float_v_float_u_float.tif" and "bout_cell_dfloat_2d_u_float_v_float_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_2d_v_float_u_float_v_float_u_float.tif
+
+Output Cout to bout_cell_dfloat_2d_v_float_u_float_v_float_u_float.tif
+Comparing "sout_cell_dfloat_2d_v_float_u_float_v_float_u_float.tif" and "bout_cell_dfloat_2d_v_float_u_float_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_2d_v_float_v_float_v_float_u_float.tif
+
+Output Cout to bout_cell_dfloat_2d_v_float_v_float_v_float_u_float.tif
+Comparing "sout_cell_dfloat_2d_v_float_v_float_v_float_u_float.tif" and "bout_cell_dfloat_2d_v_float_v_float_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_2d_u_float_u_float_v_float_v_float.tif
+
+Output Cout to bout_cell_dfloat_2d_u_float_u_float_v_float_v_float.tif
+Comparing "sout_cell_dfloat_2d_u_float_u_float_v_float_v_float.tif" and "bout_cell_dfloat_2d_u_float_u_float_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_2d_u_float_v_float_v_float_v_float.tif
+
+Output Cout to bout_cell_dfloat_2d_u_float_v_float_v_float_v_float.tif
+Comparing "sout_cell_dfloat_2d_u_float_v_float_v_float_v_float.tif" and "bout_cell_dfloat_2d_u_float_v_float_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_2d_v_float_u_float_v_float_v_float.tif
+
+Output Cout to bout_cell_dfloat_2d_v_float_u_float_v_float_v_float.tif
+Comparing "sout_cell_dfloat_2d_v_float_u_float_v_float_v_float.tif" and "bout_cell_dfloat_2d_v_float_u_float_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_2d_v_float_v_float_v_float_v_float.tif
+
+Output Cout to bout_cell_dfloat_2d_v_float_v_float_v_float_v_float.tif
+Comparing "sout_cell_dfloat_2d_v_float_v_float_v_float_v_float.tif" and "bout_cell_dfloat_2d_v_float_v_float_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_3d_u_point_u_point.tif
+
+Output Cout to bout_cell_dfloat_3d_u_point_u_point.tif
+Comparing "sout_cell_dfloat_3d_u_point_u_point.tif" and "bout_cell_dfloat_3d_u_point_u_point.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_3d_v_point_u_point.tif
+
+Output Cout to bout_cell_dfloat_3d_v_point_u_point.tif
+Comparing "sout_cell_dfloat_3d_v_point_u_point.tif" and "bout_cell_dfloat_3d_v_point_u_point.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_3d_u_point_v_point.tif
+
+Output Cout to bout_cell_dfloat_3d_u_point_v_point.tif
+Comparing "sout_cell_dfloat_3d_u_point_v_point.tif" and "bout_cell_dfloat_3d_u_point_v_point.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_3d_v_point_v_point.tif
+
+Output Cout to bout_cell_dfloat_3d_v_point_v_point.tif
+Comparing "sout_cell_dfloat_3d_v_point_v_point.tif" and "bout_cell_dfloat_3d_v_point_v_point.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_4d_u_point_u_float_u_point_u_float.tif
+
+Output Cout to bout_cell_dfloat_4d_u_point_u_float_u_point_u_float.tif
+Comparing "sout_cell_dfloat_4d_u_point_u_float_u_point_u_float.tif" and "bout_cell_dfloat_4d_u_point_u_float_u_point_u_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_4d_u_point_v_float_u_point_u_float.tif
+
+Output Cout to bout_cell_dfloat_4d_u_point_v_float_u_point_u_float.tif
+Comparing "sout_cell_dfloat_4d_u_point_v_float_u_point_u_float.tif" and "bout_cell_dfloat_4d_u_point_v_float_u_point_u_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_4d_v_point_u_float_u_point_u_float.tif
+
+Output Cout to bout_cell_dfloat_4d_v_point_u_float_u_point_u_float.tif
+Comparing "sout_cell_dfloat_4d_v_point_u_float_u_point_u_float.tif" and "bout_cell_dfloat_4d_v_point_u_float_u_point_u_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_4d_v_point_v_float_u_point_u_float.tif
+
+Output Cout to bout_cell_dfloat_4d_v_point_v_float_u_point_u_float.tif
+Comparing "sout_cell_dfloat_4d_v_point_v_float_u_point_u_float.tif" and "bout_cell_dfloat_4d_v_point_v_float_u_point_u_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_4d_u_point_u_float_u_point_v_float.tif
+
+Output Cout to bout_cell_dfloat_4d_u_point_u_float_u_point_v_float.tif
+Comparing "sout_cell_dfloat_4d_u_point_u_float_u_point_v_float.tif" and "bout_cell_dfloat_4d_u_point_u_float_u_point_v_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_4d_u_point_v_float_u_point_v_float.tif
+
+Output Cout to bout_cell_dfloat_4d_u_point_v_float_u_point_v_float.tif
+Comparing "sout_cell_dfloat_4d_u_point_v_float_u_point_v_float.tif" and "bout_cell_dfloat_4d_u_point_v_float_u_point_v_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_4d_v_point_u_float_u_point_v_float.tif
+
+Output Cout to bout_cell_dfloat_4d_v_point_u_float_u_point_v_float.tif
+Comparing "sout_cell_dfloat_4d_v_point_u_float_u_point_v_float.tif" and "bout_cell_dfloat_4d_v_point_u_float_u_point_v_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_4d_v_point_v_float_u_point_v_float.tif
+
+Output Cout to bout_cell_dfloat_4d_v_point_v_float_u_point_v_float.tif
+Comparing "sout_cell_dfloat_4d_v_point_v_float_u_point_v_float.tif" and "bout_cell_dfloat_4d_v_point_v_float_u_point_v_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_4d_u_point_u_float_v_point_u_float.tif
+
+Output Cout to bout_cell_dfloat_4d_u_point_u_float_v_point_u_float.tif
+Comparing "sout_cell_dfloat_4d_u_point_u_float_v_point_u_float.tif" and "bout_cell_dfloat_4d_u_point_u_float_v_point_u_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_4d_u_point_v_float_v_point_u_float.tif
+
+Output Cout to bout_cell_dfloat_4d_u_point_v_float_v_point_u_float.tif
+Comparing "sout_cell_dfloat_4d_u_point_v_float_v_point_u_float.tif" and "bout_cell_dfloat_4d_u_point_v_float_v_point_u_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_4d_v_point_u_float_v_point_u_float.tif
+
+Output Cout to bout_cell_dfloat_4d_v_point_u_float_v_point_u_float.tif
+Comparing "sout_cell_dfloat_4d_v_point_u_float_v_point_u_float.tif" and "bout_cell_dfloat_4d_v_point_u_float_v_point_u_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_4d_v_point_v_float_v_point_u_float.tif
+
+Output Cout to bout_cell_dfloat_4d_v_point_v_float_v_point_u_float.tif
+Comparing "sout_cell_dfloat_4d_v_point_v_float_v_point_u_float.tif" and "bout_cell_dfloat_4d_v_point_v_float_v_point_u_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_4d_u_point_u_float_v_point_v_float.tif
+
+Output Cout to bout_cell_dfloat_4d_u_point_u_float_v_point_v_float.tif
+Comparing "sout_cell_dfloat_4d_u_point_u_float_v_point_v_float.tif" and "bout_cell_dfloat_4d_u_point_u_float_v_point_v_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_4d_u_point_v_float_v_point_v_float.tif
+
+Output Cout to bout_cell_dfloat_4d_u_point_v_float_v_point_v_float.tif
+Comparing "sout_cell_dfloat_4d_u_point_v_float_v_point_v_float.tif" and "bout_cell_dfloat_4d_u_point_v_float_v_point_v_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_4d_v_point_u_float_v_point_v_float.tif
+
+Output Cout to bout_cell_dfloat_4d_v_point_u_float_v_point_v_float.tif
+Comparing "sout_cell_dfloat_4d_v_point_u_float_v_point_v_float.tif" and "bout_cell_dfloat_4d_v_point_u_float_v_point_v_float.tif"
+PASS
+
+Output Cout to sout_cell_dfloat_4d_v_point_v_float_v_point_v_float.tif
+
+Output Cout to bout_cell_dfloat_4d_v_point_v_float_v_point_v_float.tif
+Comparing "sout_cell_dfloat_4d_v_point_v_float_v_point_v_float.tif" and "bout_cell_dfloat_4d_v_point_v_float_v_point_v_float.tif"
+PASS
+Run dfloat Tests for gabor
+
+Output Cout to sout_gabor_dfloat_1d_u_float_u_float.tif
+
+Output Cout to bout_gabor_dfloat_1d_u_float_u_float.tif
+Comparing "sout_gabor_dfloat_1d_u_float_u_float.tif" and "bout_gabor_dfloat_1d_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_1d_v_float_u_float.tif
+
+Output Cout to bout_gabor_dfloat_1d_v_float_u_float.tif
+Comparing "sout_gabor_dfloat_1d_v_float_u_float.tif" and "bout_gabor_dfloat_1d_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_1d_u_float_v_float.tif
+
+Output Cout to bout_gabor_dfloat_1d_u_float_v_float.tif
+Comparing "sout_gabor_dfloat_1d_u_float_v_float.tif" and "bout_gabor_dfloat_1d_u_float_v_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_1d_v_float_v_float.tif
+
+Output Cout to bout_gabor_dfloat_1d_v_float_v_float.tif
+Comparing "sout_gabor_dfloat_1d_v_float_v_float.tif" and "bout_gabor_dfloat_1d_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_2d_u_float_u_float_u_float_u_float.tif
+
+Output Cout to bout_gabor_dfloat_2d_u_float_u_float_u_float_u_float.tif
+Comparing "sout_gabor_dfloat_2d_u_float_u_float_u_float_u_float.tif" and "bout_gabor_dfloat_2d_u_float_u_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_2d_u_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_gabor_dfloat_2d_u_float_v_float_u_float_u_float.tif
+Comparing "sout_gabor_dfloat_2d_u_float_v_float_u_float_u_float.tif" and "bout_gabor_dfloat_2d_u_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_2d_v_float_u_float_u_float_u_float.tif
+
+Output Cout to bout_gabor_dfloat_2d_v_float_u_float_u_float_u_float.tif
+Comparing "sout_gabor_dfloat_2d_v_float_u_float_u_float_u_float.tif" and "bout_gabor_dfloat_2d_v_float_u_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_2d_v_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_gabor_dfloat_2d_v_float_v_float_u_float_u_float.tif
+Comparing "sout_gabor_dfloat_2d_v_float_v_float_u_float_u_float.tif" and "bout_gabor_dfloat_2d_v_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_2d_v_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_gabor_dfloat_2d_v_float_v_float_u_float_u_float.tif
+Comparing "sout_gabor_dfloat_2d_v_float_v_float_u_float_u_float.tif" and "bout_gabor_dfloat_2d_v_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_2d_u_float_u_float_u_float_v_float.tif
+
+Output Cout to bout_gabor_dfloat_2d_u_float_u_float_u_float_v_float.tif
+Comparing "sout_gabor_dfloat_2d_u_float_u_float_u_float_v_float.tif" and "bout_gabor_dfloat_2d_u_float_u_float_u_float_v_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_2d_u_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_gabor_dfloat_2d_u_float_v_float_u_float_u_float.tif
+Comparing "sout_gabor_dfloat_2d_u_float_v_float_u_float_u_float.tif" and "bout_gabor_dfloat_2d_u_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_2d_v_float_u_float_u_float_u_float.tif
+
+Output Cout to bout_gabor_dfloat_2d_v_float_u_float_u_float_u_float.tif
+Comparing "sout_gabor_dfloat_2d_v_float_u_float_u_float_u_float.tif" and "bout_gabor_dfloat_2d_v_float_u_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_2d_v_float_v_float_u_float_u_float.tif
+
+Output Cout to bout_gabor_dfloat_2d_v_float_v_float_u_float_u_float.tif
+Comparing "sout_gabor_dfloat_2d_v_float_v_float_u_float_u_float.tif" and "bout_gabor_dfloat_2d_v_float_v_float_u_float_u_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_2d_u_float_u_float_v_float_u_float.tif
+
+Output Cout to bout_gabor_dfloat_2d_u_float_u_float_v_float_u_float.tif
+Comparing "sout_gabor_dfloat_2d_u_float_u_float_v_float_u_float.tif" and "bout_gabor_dfloat_2d_u_float_u_float_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_2d_u_float_v_float_v_float_u_float.tif
+
+Output Cout to bout_gabor_dfloat_2d_u_float_v_float_v_float_u_float.tif
+Comparing "sout_gabor_dfloat_2d_u_float_v_float_v_float_u_float.tif" and "bout_gabor_dfloat_2d_u_float_v_float_v_float_u_float.tif"
+  Mean error = 3.19138e-07
+  RMS error = 3.53769e-05
+  Peak SNR = 89.0256
+  Max error  = 0.00392157 @ (26, 13, G)
+  1 pixels (0.0244%) over 1e-06
+  0 pixels (0%) over 0.04
+WARNING
+
+Output Cout to sout_gabor_dfloat_2d_v_float_u_float_v_float_u_float.tif
+
+Output Cout to bout_gabor_dfloat_2d_v_float_u_float_v_float_u_float.tif
+Comparing "sout_gabor_dfloat_2d_v_float_u_float_v_float_u_float.tif" and "bout_gabor_dfloat_2d_v_float_u_float_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_2d_v_float_v_float_v_float_u_float.tif
+
+Output Cout to bout_gabor_dfloat_2d_v_float_v_float_v_float_u_float.tif
+Comparing "sout_gabor_dfloat_2d_v_float_v_float_v_float_u_float.tif" and "bout_gabor_dfloat_2d_v_float_v_float_v_float_u_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_2d_u_float_u_float_v_float_v_float.tif
+
+Output Cout to bout_gabor_dfloat_2d_u_float_u_float_v_float_v_float.tif
+Comparing "sout_gabor_dfloat_2d_u_float_u_float_v_float_v_float.tif" and "bout_gabor_dfloat_2d_u_float_u_float_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_2d_u_float_v_float_v_float_v_float.tif
+
+Output Cout to bout_gabor_dfloat_2d_u_float_v_float_v_float_v_float.tif
+Comparing "sout_gabor_dfloat_2d_u_float_v_float_v_float_v_float.tif" and "bout_gabor_dfloat_2d_u_float_v_float_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_2d_v_float_u_float_v_float_v_float.tif
+
+Output Cout to bout_gabor_dfloat_2d_v_float_u_float_v_float_v_float.tif
+Comparing "sout_gabor_dfloat_2d_v_float_u_float_v_float_v_float.tif" and "bout_gabor_dfloat_2d_v_float_u_float_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_2d_v_float_v_float_v_float_v_float.tif
+
+Output Cout to bout_gabor_dfloat_2d_v_float_v_float_v_float_v_float.tif
+Comparing "sout_gabor_dfloat_2d_v_float_v_float_v_float_v_float.tif" and "bout_gabor_dfloat_2d_v_float_v_float_v_float_v_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_3d_u_point_u_point.tif
+
+Output Cout to bout_gabor_dfloat_3d_u_point_u_point.tif
+Comparing "sout_gabor_dfloat_3d_u_point_u_point.tif" and "bout_gabor_dfloat_3d_u_point_u_point.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_3d_v_point_u_point.tif
+
+Output Cout to bout_gabor_dfloat_3d_v_point_u_point.tif
+Comparing "sout_gabor_dfloat_3d_v_point_u_point.tif" and "bout_gabor_dfloat_3d_v_point_u_point.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_3d_u_point_v_point.tif
+
+Output Cout to bout_gabor_dfloat_3d_u_point_v_point.tif
+Comparing "sout_gabor_dfloat_3d_u_point_v_point.tif" and "bout_gabor_dfloat_3d_u_point_v_point.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_3d_v_point_v_point.tif
+
+Output Cout to bout_gabor_dfloat_3d_v_point_v_point.tif
+Comparing "sout_gabor_dfloat_3d_v_point_v_point.tif" and "bout_gabor_dfloat_3d_v_point_v_point.tif"
+  Mean error = 3.19139e-07
+  RMS error = 3.5377e-05
+  Peak SNR = 89.0256
+  Max error  = 0.00392158 @ (30, 50, B)
+  1 pixels (0.0244%) over 1e-06
+  0 pixels (0%) over 0.004
+WARNING
+
+Output Cout to sout_gabor_dfloat_4d_u_point_u_float_u_point_u_float.tif
+
+Output Cout to bout_gabor_dfloat_4d_u_point_u_float_u_point_u_float.tif
+Comparing "sout_gabor_dfloat_4d_u_point_u_float_u_point_u_float.tif" and "bout_gabor_dfloat_4d_u_point_u_float_u_point_u_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_4d_u_point_v_float_u_point_u_float.tif
+
+Output Cout to bout_gabor_dfloat_4d_u_point_v_float_u_point_u_float.tif
+Comparing "sout_gabor_dfloat_4d_u_point_v_float_u_point_u_float.tif" and "bout_gabor_dfloat_4d_u_point_v_float_u_point_u_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_4d_v_point_u_float_u_point_u_float.tif
+
+Output Cout to bout_gabor_dfloat_4d_v_point_u_float_u_point_u_float.tif
+Comparing "sout_gabor_dfloat_4d_v_point_u_float_u_point_u_float.tif" and "bout_gabor_dfloat_4d_v_point_u_float_u_point_u_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_4d_v_point_v_float_u_point_u_float.tif
+
+Output Cout to bout_gabor_dfloat_4d_v_point_v_float_u_point_u_float.tif
+Comparing "sout_gabor_dfloat_4d_v_point_v_float_u_point_u_float.tif" and "bout_gabor_dfloat_4d_v_point_v_float_u_point_u_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_4d_u_point_u_float_u_point_v_float.tif
+
+Output Cout to bout_gabor_dfloat_4d_u_point_u_float_u_point_v_float.tif
+Comparing "sout_gabor_dfloat_4d_u_point_u_float_u_point_v_float.tif" and "bout_gabor_dfloat_4d_u_point_u_float_u_point_v_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_4d_u_point_v_float_u_point_v_float.tif
+
+Output Cout to bout_gabor_dfloat_4d_u_point_v_float_u_point_v_float.tif
+Comparing "sout_gabor_dfloat_4d_u_point_v_float_u_point_v_float.tif" and "bout_gabor_dfloat_4d_u_point_v_float_u_point_v_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_4d_v_point_u_float_u_point_v_float.tif
+
+Output Cout to bout_gabor_dfloat_4d_v_point_u_float_u_point_v_float.tif
+Comparing "sout_gabor_dfloat_4d_v_point_u_float_u_point_v_float.tif" and "bout_gabor_dfloat_4d_v_point_u_float_u_point_v_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_4d_v_point_v_float_u_point_v_float.tif
+
+Output Cout to bout_gabor_dfloat_4d_v_point_v_float_u_point_v_float.tif
+Comparing "sout_gabor_dfloat_4d_v_point_v_float_u_point_v_float.tif" and "bout_gabor_dfloat_4d_v_point_v_float_u_point_v_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_4d_u_point_u_float_v_point_u_float.tif
+
+Output Cout to bout_gabor_dfloat_4d_u_point_u_float_v_point_u_float.tif
+Comparing "sout_gabor_dfloat_4d_u_point_u_float_v_point_u_float.tif" and "bout_gabor_dfloat_4d_u_point_u_float_v_point_u_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_4d_u_point_v_float_v_point_u_float.tif
+
+Output Cout to bout_gabor_dfloat_4d_u_point_v_float_v_point_u_float.tif
+Comparing "sout_gabor_dfloat_4d_u_point_v_float_v_point_u_float.tif" and "bout_gabor_dfloat_4d_u_point_v_float_v_point_u_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_4d_v_point_u_float_v_point_u_float.tif
+
+Output Cout to bout_gabor_dfloat_4d_v_point_u_float_v_point_u_float.tif
+Comparing "sout_gabor_dfloat_4d_v_point_u_float_v_point_u_float.tif" and "bout_gabor_dfloat_4d_v_point_u_float_v_point_u_float.tif"
+  Mean error = 3.19139e-07
+  RMS error = 3.5377e-05
+  Peak SNR = 89.0256
+  Max error  = 0.00392158 @ (30, 50, B)
+  1 pixels (0.0244%) over 1e-06
+  0 pixels (0%) over 0.04
+WARNING
+
+Output Cout to sout_gabor_dfloat_4d_v_point_v_float_v_point_u_float.tif
+
+Output Cout to bout_gabor_dfloat_4d_v_point_v_float_v_point_u_float.tif
+Comparing "sout_gabor_dfloat_4d_v_point_v_float_v_point_u_float.tif" and "bout_gabor_dfloat_4d_v_point_v_float_v_point_u_float.tif"
+  Mean error = 3.19139e-07
+  RMS error = 3.5377e-05
+  Peak SNR = 89.0256
+  Max error  = 0.00392158 @ (30, 50, B)
+  1 pixels (0.0244%) over 1e-06
+  0 pixels (0%) over 0.04
+WARNING
+
+Output Cout to sout_gabor_dfloat_4d_u_point_u_float_v_point_v_float.tif
+
+Output Cout to bout_gabor_dfloat_4d_u_point_u_float_v_point_v_float.tif
+Comparing "sout_gabor_dfloat_4d_u_point_u_float_v_point_v_float.tif" and "bout_gabor_dfloat_4d_u_point_u_float_v_point_v_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_4d_u_point_v_float_v_point_v_float.tif
+
+Output Cout to bout_gabor_dfloat_4d_u_point_v_float_v_point_v_float.tif
+Comparing "sout_gabor_dfloat_4d_u_point_v_float_v_point_v_float.tif" and "bout_gabor_dfloat_4d_u_point_v_float_v_point_v_float.tif"
+PASS
+
+Output Cout to sout_gabor_dfloat_4d_v_point_u_float_v_point_v_float.tif
+
+Output Cout to bout_gabor_dfloat_4d_v_point_u_float_v_point_v_float.tif
+Comparing "sout_gabor_dfloat_4d_v_point_u_float_v_point_v_float.tif" and "bout_gabor_dfloat_4d_v_point_u_float_v_point_v_float.tif"
+  Mean error = 3.19139e-07
+  RMS error = 3.5377e-05
+  Peak SNR = 89.0256
+  Max error  = 0.00392158 @ (30, 50, B)
+  1 pixels (0.0244%) over 1e-06
+  0 pixels (0%) over 0.04
+WARNING
+
+Output Cout to sout_gabor_dfloat_4d_v_point_v_float_v_point_v_float.tif
+
+Output Cout to bout_gabor_dfloat_4d_v_point_v_float_v_point_v_float.tif
+Comparing "sout_gabor_dfloat_4d_v_point_v_float_v_point_v_float.tif" and "bout_gabor_dfloat_4d_v_point_v_float_v_point_v_float.tif"
+  Mean error = 3.19139e-07
+  RMS error = 3.5377e-05
+  Peak SNR = 89.0256
+  Max error  = 0.00392158 @ (30, 50, B)
+  1 pixels (0.0244%) over 1e-06
+  0 pixels (0%) over 0.04
+WARNING

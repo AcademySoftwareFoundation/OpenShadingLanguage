@@ -1,0 +1,12 @@
+shader
+test_dvector_2d_v_float_v_float_v_float_v_float (string type = "perlin", output color Cout = 0)
+{
+    vector val = pnoise (type, u, v, 32*u, 32*v);
+    val *= 2.0;
+    Cout = val;
+    Cout = Dx(val);    
+    if (int(P[0]*64)%2 == 0) {
+        vector val2 = pnoise (type, v, u, 64*v, 64*u);
+        Cout += Dy(val2);        
+    }
+}

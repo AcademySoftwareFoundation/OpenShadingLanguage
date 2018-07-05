@@ -47,7 +47,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OSL/dual_vec.h"
 #include "OSL/Imathx.h"
 #include "OSL/wide.h"
-#include "sfmath.h"
+#include "OSL/sfmath.h"
 
 #include <OpenEXR/ImathFun.h>
 #include <OpenImageIO/fmath.h>

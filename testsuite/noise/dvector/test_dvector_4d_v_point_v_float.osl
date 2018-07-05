@@ -1,0 +1,13 @@
+shader
+test_dvector_4d_v_point_v_float (string type = "perlin", output color Cout = 0)
+{
+    vector val = noise (type, point(u, v, u - v), u);
+    val *= 2.0;
+    Cout = Dy(val);    
+    Cout -= Dx(val);    
+    
+    if (int(P[0]*64)%2 == 0) {
+        vector val2 = noise (type, point(v, u, v - u), v);
+        Cout += Dy(val2) + Dx(val2);        
+    }
+}

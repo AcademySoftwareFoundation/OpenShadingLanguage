@@ -54,6 +54,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define __OSL_PNOISE_OP3(A, B, C) __OSL_CONCAT7(osl_,__OSL_XMACRO_OPNAME,_,A,B,C,_masked)
 #define __OSL_PNOISE_OP5(A, B, C, D, E) __OSL_CONCAT9(osl_,__OSL_XMACRO_OPNAME,_,A,B,C,D,E,_masked)
 
+#ifndef __OSL_XMACRO_VEC3_RESULTS_ONLY
+
 OSL_SHADEOP void __OSL_PNOISE_OP3(__WDF,__WDF, __WF) (
     char *r_ptr, char *x_ptr, char *px_ptr, unsigned int mask_value) {
     __OSL_XMACRO_IMPLNAME impl;
@@ -147,8 +149,9 @@ OSL_SHADEOP void __OSL_PNOISE_OP5(__WDF, __WDV, __WDF, __WV, __WF) (
     }
 }
 
-#if 0
+#endif
 
+#ifndef __OSL_XMACRO_FLOAT_RESULTS_ONLY
 
 OSL_SHADEOP void __OSL_PNOISE_OP3(__WDV, __WDF, __WF) (
     char *r_ptr, char *x_ptr, char *px_ptr, unsigned int mask_value) {
@@ -245,8 +248,11 @@ OSL_SHADEOP void __OSL_PNOISE_OP5(__WDV, __WDV, __WDF, __WV, __WF) (
         }
     }
 }
+
 #endif
 
+#undef __OSL_XMACRO_FLOAT_RESULTS_ONLY
+#undef __OSL_XMACRO_VEC3_RESULTS_ONLY
 #undef __OSL_XMACRO_ARGS
 #undef __OSL_XMACRO_OPNAME
 #undef __OSL_XMACRO_IMPLNAME

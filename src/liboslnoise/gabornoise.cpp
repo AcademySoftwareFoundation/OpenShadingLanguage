@@ -28,7 +28,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "gabornoise.h"
 
-
 OSL_NAMESPACE_ENTER
 
 namespace pvt {
@@ -291,110 +290,11 @@ gabor (const Dual2<float> &x, const NoiseParams *opt)
     return gabor (make_Vec3(x), opt);
 }
 
-template<int WidthT>
-inline
-void
-dispatch_gabor (
-        MaskedAccessor<Dual2<float>,WidthT> wResult,
-        ConstWideAccessor<Dual2<float>,WidthT> wX,
-        NoiseParams const *opt)
-{
-    DASSERT (opt);
-
-    if (opt->do_filter)
-    {
-        switch(opt->anisotropic)
-        {
-        case 0: // isotropic
-            fast_gabor<0, EnabledFilterPolicy, WidthT>(wResult, wX, opt);
-            break;
-        case 1: // ansiotropic
-            fast_gabor<1, EnabledFilterPolicy, WidthT>(wResult, wX, opt);
-            break;
-        default:  // hybrid
-            fast_gabor<3, EnabledFilterPolicy, WidthT>(wResult, wX, opt);
-            break;
-        };
-    } else {
-        switch(opt->anisotropic)
-        {
-        case 0: // isotropic
-            fast_gabor<0, DisabledFilterPolicy, WidthT>(wResult, wX, opt);
-            break;
-        case 1: // ansiotropic
-            fast_gabor<1, DisabledFilterPolicy, WidthT>(wResult, wX, opt);
-            break;
-        default:  // hybrid
-            fast_gabor<3, DisabledFilterPolicy, WidthT>(wResult, wX, opt);
-            break;
-        };
-    }
-}
-
-void gabor (MaskedAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wResult,
-            ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wX,
-            const NoiseParams *opt)
-{
-    dispatch_gabor<__OSL_SIMD_LANE_COUNT>(wResult, wX, opt);
-}
-
-
 Dual2<float>
 gabor (const Dual2<float> &x, const Dual2<float> &y, const NoiseParams *opt)
 {
     // for now, just slice 3D
     return gabor (make_Vec3(x,y), opt);
-}
-
-
-template<int WidthT>
-inline
-void
-dispatch_gabor (
-        MaskedAccessor<Dual2<float>,WidthT> wResult,
-        ConstWideAccessor<Dual2<float>,WidthT> wX,
-        ConstWideAccessor<Dual2<float>,WidthT> wY,
-        NoiseParams const *opt)
-{
-    DASSERT (opt);
-
-    if (opt->do_filter)
-    {
-        switch(opt->anisotropic)
-        {
-        case 0: // isotropic
-            fast_gabor<0, EnabledFilterPolicy, WidthT>(wResult, wX, wY, opt);
-            break;
-        case 1: // ansiotropic
-            fast_gabor<1, EnabledFilterPolicy, WidthT>(wResult, wX, wY, opt);
-            break;
-        default:  // hybrid
-            fast_gabor<3, EnabledFilterPolicy, WidthT>(wResult, wX, wY, opt);
-            break;
-        };
-    } else {
-        switch(opt->anisotropic)
-        {
-        case 0: // isotropic
-            fast_gabor<0, DisabledFilterPolicy, WidthT>(wResult, wX, wY, opt);
-            break;
-        case 1: // ansiotropic
-            fast_gabor<1, DisabledFilterPolicy, WidthT>(wResult, wX, wY, opt);
-            break;
-        default:  // hybrid
-            fast_gabor<3, DisabledFilterPolicy, WidthT>(wResult, wX, wY, opt);
-            break;
-        };
-    }
-}
-
-void gabor (
-            MaskedAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wResult,
-            ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wX,
-            ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wY,
-            const NoiseParams *opt)
-{
-    dispatch_gabor<__OSL_SIMD_LANE_COUNT>(wResult, wX, wY, opt);
 }
 
 
@@ -415,110 +315,12 @@ gabor (const Dual2<Vec3> &P, const NoiseParams *opt)
     return result * scale;
 }
 
-
-template<int WidthT>
-inline 
-void
-dispatch_gabor (
-        MaskedAccessor<Dual2<float>,WidthT> wResult,
-		ConstWideAccessor<Dual2<Vec3>,WidthT> wP,
-		NoiseParams const *opt)
-{
-    DASSERT (opt);
-    
-    if (opt->do_filter) 
-    {
-		switch(opt->anisotropic)
-		{
-		case 0: // isotropic
-			fast_gabor<0, EnabledFilterPolicy, WidthT>(wResult, wP, opt);
-			break;
-		case 1: // ansiotropic
-			fast_gabor<1, EnabledFilterPolicy, WidthT>(wResult, wP, opt);
-			break;
-		default:  // hybrid
-			fast_gabor<3, EnabledFilterPolicy, WidthT>(wResult, wP, opt);
-			break;    	
-		};
-    } else {
-		switch(opt->anisotropic)
-		{
-		case 0: // isotropic
-			fast_gabor<0, DisabledFilterPolicy, WidthT>(wResult, wP, opt);
-			break;
-		case 1: // ansiotropic
-			fast_gabor<1, DisabledFilterPolicy, WidthT>(wResult, wP, opt);
-			break;
-		default:  // hybrid
-			fast_gabor<3, DisabledFilterPolicy, WidthT>(wResult, wP, opt);
-			break;    	
-		};
-    }
-}
-
-void gabor (
-        MaskedAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wResult,
-            ConstWideAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wP,
-			const NoiseParams *opt)
-{
-	dispatch_gabor<__OSL_SIMD_LANE_COUNT>(wResult, wP, opt);
-}
-
 Dual2<Vec3>
 gabor3 (const Dual2<float> &x, const NoiseParams *opt)
 {
     // for now, just slice 3D
     return gabor3 (make_Vec3(x), opt);
 }
-
-template<int WidthT>
-inline
-void
-dispatch_gabor3 (
-        MaskedAccessor<Dual2<Vec3>,WidthT> wResult,
-        ConstWideAccessor<Dual2<float>, WidthT> wX,
-        NoiseParams const *opt)
-{
-    DASSERT (opt);
-
-    if (opt->do_filter)
-    {
-        switch(opt->anisotropic)
-        {
-        case 0: // isotropic
-            fast_gabor3<0, EnabledFilterPolicy, WidthT>(wResult, wX, opt);
-            break;
-        case 1: // ansiotropic
-            fast_gabor3<1, EnabledFilterPolicy, WidthT>(wResult, wX, opt);
-            break;
-        default:  // hybrid
-            fast_gabor3<3, EnabledFilterPolicy, WidthT>(wResult, wX, opt);
-            break;
-        };
-    } else {
-        switch(opt->anisotropic)
-        {
-        case 0: // isotropic
-            fast_gabor3<0, DisabledFilterPolicy, WidthT>(wResult, wX, opt);
-            break;
-        case 1: // ansiotropic
-            fast_gabor3<1, DisabledFilterPolicy, WidthT>(wResult, wX, opt);
-            break;
-        default:  // hybrid
-            fast_gabor3<3, DisabledFilterPolicy, WidthT>(wResult, wX, opt);
-            break;
-        };
-    }
-}
-
-void gabor3 (
-             MaskedAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wResult,
-             ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wX,
-             const NoiseParams *opt)
-{
-    dispatch_gabor3<__OSL_SIMD_LANE_COUNT>(wResult, wX, opt);
-}
-
 
 
 Dual2<Vec3>
@@ -528,55 +330,6 @@ gabor3 (const Dual2<float> &x, const Dual2<float> &y, const NoiseParams *opt)
     return gabor3 (make_Vec3(x,y), opt);
 }
 
-template<int WidthT>
-inline
-void
-dispatch_gabor3 (
-        MaskedAccessor<Dual2<Vec3>,WidthT> wResult,
-        ConstWideAccessor<Dual2<float>, WidthT> wX,
-        ConstWideAccessor<Dual2<float>, WidthT> wY,
-        NoiseParams const *opt)
-{
-    DASSERT (opt);
-
-    if (opt->do_filter)
-    {
-        switch(opt->anisotropic)
-        {
-        case 0: // isotropic
-            fast_gabor3<0, EnabledFilterPolicy, WidthT>(wResult, wX, wY, opt);
-            break;
-        case 1: // ansiotropic
-            fast_gabor3<1, EnabledFilterPolicy, WidthT>(wResult, wX, wY, opt);
-            break;
-        default:  // hybrid
-            fast_gabor3<3, EnabledFilterPolicy, WidthT>(wResult, wX, wY, opt);
-            break;
-        };
-    } else {
-        switch(opt->anisotropic)
-        {
-        case 0: // isotropic
-            fast_gabor3<0, DisabledFilterPolicy, WidthT>(wResult, wX, wY, opt);
-            break;
-        case 1: // ansiotropic
-            fast_gabor3<1, DisabledFilterPolicy, WidthT>(wResult, wX, wY, opt);
-            break;
-        default:  // hybrid
-            fast_gabor3<3, DisabledFilterPolicy, WidthT>(wResult, wX, wY, opt);
-            break;
-        };
-    }
-}
-
-void gabor3 (
-             MaskedAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wResult,
-             ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wX,
-             ConstWideAccessor<Dual2<float>,__OSL_SIMD_LANE_COUNT> wY,
-             const NoiseParams *opt)
-{
-    dispatch_gabor3<__OSL_SIMD_LANE_COUNT>(wResult, wX, wY, opt);
-}
 
 Dual2<Vec3>
 gabor3 (const Dual2<Vec3> &P, const NoiseParams *opt)
@@ -600,60 +353,14 @@ gabor3 (const Dual2<Vec3> &P, const NoiseParams *opt)
 
 
 
-template<int WidthT>
-inline
-void
-dispatch_gabor3 (
-        MaskedAccessor<Dual2<Vec3>,WidthT> wResult,
-		ConstWideAccessor<Dual2<Vec3>, WidthT> wP,
-		NoiseParams const *opt)
-{
-    DASSERT (opt);
-
-    if (opt->do_filter)
-    {
-		switch(opt->anisotropic)
-		{
-		case 0: // isotropic
-			fast_gabor3<0, EnabledFilterPolicy, WidthT>(wResult, wP, opt);
-			break;
-		case 1: // ansiotropic
-			fast_gabor3<1, EnabledFilterPolicy, WidthT>(wResult, wP, opt);
-			break;
-		default:  // hybrid
-			fast_gabor3<3, EnabledFilterPolicy, WidthT>(wResult, wP, opt);
-			break;
-		};
-    } else {
-		switch(opt->anisotropic)
-		{
-		case 0: // isotropic
-			fast_gabor3<0, DisabledFilterPolicy, WidthT>(wResult, wP, opt);
-			break;
-		case 1: // ansiotropic
-			fast_gabor3<1, DisabledFilterPolicy, WidthT>(wResult, wP, opt);
-			break;
-		default:  // hybrid
-			fast_gabor3<3, DisabledFilterPolicy, WidthT>(wResult, wP, opt);
-			break;
-		};
-    }
-}
-
-void gabor3 (
-             MaskedAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wResult,
-             ConstWideAccessor<Dual2<Vec3>,__OSL_SIMD_LANE_COUNT> wP,
-			 const NoiseParams *opt)
-{
-	dispatch_gabor3<__OSL_SIMD_LANE_COUNT>(wResult, wP, opt);
-}
-
 Dual2<float>
 pgabor (const Dual2<float> &x, float xperiod, const NoiseParams *opt)
 {
     // for now, just slice 3D
     return pgabor (make_Vec3(x), Vec3(xperiod,0.0f,0.0f), opt);
 }
+
+
 
 
 
@@ -675,7 +382,7 @@ pgabor (const Dual2<Vec3> &P, const Vec3 &Pperiod, const NoiseParams *opt)
 
     gp.periodic = true;
     gp.period = Pperiod;
-    
+
     if (gp.do_filter)
         gabor_setup_filter (P, gp);
 
@@ -695,8 +402,6 @@ pgabor3 (const Dual2<float> &x, float xperiod, const NoiseParams *opt)
     return pgabor3 (make_Vec3(x), Vec3(xperiod,0.0f,0.0f), opt);
 }
 
-
-
 Dual2<Vec3>
 pgabor3 (const Dual2<float> &x, const Dual2<float> &y,
         float xperiod, float yperiod, const NoiseParams *opt)
@@ -704,8 +409,6 @@ pgabor3 (const Dual2<float> &x, const Dual2<float> &y,
     // for now, just slice 3D
     return pgabor3 (make_Vec3(x,y), Vec3(xperiod,yperiod,0.0f), opt);
 }
-
-
 
 Dual2<Vec3>
 pgabor3 (const Dual2<Vec3> &P, const Vec3 &Pperiod, const NoiseParams *opt)
@@ -715,7 +418,7 @@ pgabor3 (const Dual2<Vec3> &P, const Vec3 &Pperiod, const NoiseParams *opt)
 
     gp.periodic = true;
     gp.period = Pperiod;
-    
+
     if (gp.do_filter)
         gabor_setup_filter (P, gp);
 
@@ -732,4 +435,5 @@ pgabor3 (const Dual2<Vec3> &P, const Vec3 &Pperiod, const NoiseParams *opt)
 
 
 }; // namespace pvt
+
 OSL_NAMESPACE_EXIT

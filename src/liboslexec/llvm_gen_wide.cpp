@@ -5132,8 +5132,6 @@ LLVMGEN (llvm_gen_getmessage)
     ASSERT(rop.isSymbolUniform(Data) == false);
 
 
-    const TypeDesc* dest_type = &Data.typespec().simpletype();
-
     std::vector<llvm::Value *> args;
 
     //arg[0]: Push shader global

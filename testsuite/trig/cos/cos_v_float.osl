@@ -1,0 +1,28 @@
+#ifndef M_PI
+#define M_PI 3.14159265358979
+#endif
+
+//testshade --batched --llvm_debug -g 4 4 test_acos2_w16f_w16f_w16f -o res a.tif | grep o
+
+shader
+cos_v_float (output color res = 0,
+			   output color res_m = 0)
+{
+    
+        float a = -M_PI;
+        float b = 2.0*P[0];
+        float r = cos(b);
+        res = color (r);
+        
+        float res_m_ = 0.0;
+
+if (int(P[0]*200)%2){
+
+    b = 3.0 * P[1];
+    res_m_ = cos(b);
+
+}
+
+res_m = res_m_;
+
+}

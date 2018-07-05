@@ -169,8 +169,8 @@ osl_getmessage (ShaderGlobals *sg, const char *source_, const char *name_,
 
 
 OSL_SHADEOP void
-osl_getmessage_batched(ShaderGlobalsBatch *sgb_,void *result,
-                        const char *source_, const char *name_,
+osl_getmessage_masked(ShaderGlobalsBatch *sgb_,void *result,
+                        char *source_,  char *name_,
                         long long type_, void *val, int derivs,
                         int layeridx, const char* sourcefile_, int sourceline,
                         unsigned int mask_value)
@@ -192,6 +192,7 @@ osl_getmessage_batched(ShaderGlobalsBatch *sgb_,void *result,
     }
 
     static ustring ktrace ("trace");
+   // std::cout<<"ustring ktrace is "<<USTR(source_)<<std::endl;
     if (USTR(source_) == ktrace) {
         // Source types where we need to ask the renderer
         MaskedDataRef valRef(type, derivs, wR.mask(), val);

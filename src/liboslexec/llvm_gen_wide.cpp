@@ -4551,7 +4551,7 @@ LLVMGEN (llvm_gen_trace)
     ASSERT(!rop.isSymbolUniform(Result));
 
     llvm::Value* opt;   // TraceOpt
-    opt = llvm_batched_trace_options (rop, opnum, first_optional_arg);
+    opt = llvm_batched_trace_options (rop, opnum, first_optional_arg); //These are uniform
 
     // Now call the osl_trace function, passing the options and all the
     // explicit args like trace coordinates.
@@ -5140,29 +5140,19 @@ LLVMGEN (llvm_gen_getmessage)
     args.push_back (rop.sg_void_ptr());
     args.push_back (rop.llvm_void_ptr(Result));
 
-    //arg[1]: Check if source? push values (uniform or not) : push constant (uniform or not)
+    //arg[1]: source (deferred)
+    int sourceArgumentIndex = args.size();
+    args.push_back(nullptr);
 
-    if(has_source)
-    {
-        ASSERT(rop.isSymbolUniform(Source) && "Incomplete:  add support for varying sources");
-        args.push_back(rop.llvm_void_ptr(Source));
-    }
-    else //No Source value, push a constant
-    {//Uniform push constant
-        args.push_back(rop.ll.constant(ustring()));
-    } //Source ends
+    //arg[2]: name (deferred)
+    int nameArgumentIndex = args.size();
+    args.push_back(nullptr);
 
-  //arg[2] Push Name (string)
-    if(rop.isSymbolUniform(Name)) {
-       args.push_back(rop.llvm_void_ptr(Name));
-    } else {
-        ASSERT(0 && "Incomplete:  add loop to create mask of coherent lanes");
-    }
 
 
     //Data
     //args[3]
-    args.push_back (rop.ll.constant_ptr ((void *) dest_type));
+    args.push_back(rop.ll.constant (Data.typespec().simpletype()));
 
     //Check for closures, and skip it
     if (Data.typespec().is_closure_based()) {
@@ -5192,11 +5182,85 @@ LLVMGEN (llvm_gen_getmessage)
     //args[8]: sourceline
     args.push_back(rop.ll.constant(op.sourceline()));
 
-    //mask
-    args.push_back(rop.ll.mask_as_int(rop.ll.current_mask()));
+
+//SM: Add check if source.
+    bool sourceVal_is_uniform = !has_source || rop.isSymbolUniform(Source);
+    bool nameVal_is_uniform = rop.isSymbolUniform(Name);
+    if(nameVal_is_uniform && sourceVal_is_uniform) { //&& has_source
+        args[nameArgumentIndex] = rop.llvm_load_value (Name);
+        args[sourceArgumentIndex]  = has_source ? rop.llvm_load_value(Source)
+                             : rop.ll.constant(ustring());
+        //mask
+        args.push_back(rop.ll.mask_as_int(rop.ll.current_mask()));
+        rop.ll.call_function ("osl_getmessage_masked", &args[0], (int)args.size());
+    } else {
 
 
-    rop.ll.call_function ("osl_getmessage_batched", &args[0], (int)args.size());
+        llvm::Value * nameVal = rop.llvm_load_value (Name);
+        if(nameVal_is_uniform) {
+            args[nameArgumentIndex] = nameVal;
+        }
+
+        llvm::Value * sourceVal = has_source ? rop.llvm_load_value (Source) : rop.ll.constant(ustring());
+        if (sourceVal_is_uniform) {
+            args[sourceArgumentIndex] = sourceVal;
+        }
+
+
+
+        llvm::Value * loc_of_remainingMask = rop.ll.op_alloca (rop.ll.type_native_mask(), 1, "lanes remaining to texture");
+        rop.ll.op_store_mask(rop.ll.current_mask(), loc_of_remainingMask);
+
+
+        llvm::BasicBlock* bin_block = rop.ll.new_basic_block (std::string("bin_getmessage"));
+        llvm::BasicBlock* after_block = rop.ll.new_basic_block (std::string("after_bin_getmessage"));
+
+        rop.ll.op_branch(bin_block);
+        {
+            llvm::Value * remainingMask = rop.ll.op_load_mask(loc_of_remainingMask);
+            llvm::Value * leadLane = rop.ll.op_1st_active_lane_of(remainingMask);
+
+            llvm::Value * lanesMatching = remainingMask;
+            if (!nameVal_is_uniform) {
+                llvm::Value * scalar_name = rop.ll.op_extract(nameVal, leadLane);
+                args[nameArgumentIndex] = scalar_name;
+
+                lanesMatching = rop.ll.op_lanes_that_match_masked(scalar_name,
+                    nameVal, lanesMatching);
+            }
+
+            if (!sourceVal_is_uniform) {
+                llvm::Value * scalar_source = rop.ll.op_extract(sourceVal, leadLane);
+                args[sourceArgumentIndex] = scalar_source;
+
+                lanesMatching = rop.ll.op_lanes_that_match_masked(scalar_source,
+                    sourceVal, lanesMatching);
+            }
+
+            //Check matched masks, and push. Get matching lane
+
+            args.push_back (rop.ll.mask_as_int(lanesMatching));
+
+            rop.ll.call_function ("osl_getmessage_masked", &args[0], (int)args.size());
+
+            remainingMask = rop.ll.op_xor(remainingMask,lanesMatching);
+
+            //rop.llvm_print_mask("xor remainingMask,lanesMatchingOptions", remainingMask);
+            rop.ll.op_store_mask(remainingMask, loc_of_remainingMask);
+
+            llvm::Value * int_remainingMask = rop.ll.mask_as_int(remainingMask);
+            //rop.llvm_print_mask("remainingMask", remainingMask);
+            llvm::Value* cond_more_lanes_to_bin = rop.ll.op_ne(int_remainingMask, rop.ll.constant(0));
+            rop.ll.op_branch (cond_more_lanes_to_bin, bin_block, after_block);
+
+
+        }
+        // Continue on with the previous flow
+        rop.ll.set_insert_point (after_block);
+
+    }
+
+
     return true;
 }
 
@@ -5369,11 +5433,11 @@ LLVMGEN (llvm_gen_spline)
     std::vector<llvm::Value *> args;
     // only use derivatives for result if:
     //   result has derivs and (value || knots) have derivs
-    bool result_derivs = Result.has_derivs() && (Value.has_derivs() || Knots.has_derivs());
+    bool op_derivs = Result.has_derivs() && (Value.has_derivs() || Knots.has_derivs());
 
     if (false == op_is_uniform)
     	name += warg_lane_count();
-    if (result_derivs)
+    if (op_derivs)
         name += "d";
     if (Result.typespec().is_float())
         name += "f";
@@ -5382,7 +5446,7 @@ LLVMGEN (llvm_gen_spline)
 
     if (false == value_is_uniform)
     	name += warg_lane_count();
-    if (result_derivs && Value.has_derivs())
+    if (op_derivs && Value.has_derivs())
         name += "d";
     if (Value.typespec().is_float())
         name += "f";
@@ -5391,7 +5455,7 @@ LLVMGEN (llvm_gen_spline)
 
     if (false == knots_is_uniform)
     	name += warg_lane_count();
-    if (result_derivs && Knots.has_derivs())
+    if (op_derivs && Knots.has_derivs())
         name += "d";
     if (Knots.typespec().simpletype().elementtype() == TypeDesc::FLOAT)
         name += "f";
@@ -5402,10 +5466,11 @@ LLVMGEN (llvm_gen_spline)
         name += "_masked";
     }
 
-    llvm::Value *temp_results = nullptr;
+    llvm::Value *temp_uniform_results = nullptr;
     if (op_is_uniform && !result_is_uniform) {
-        temp_results = rop.ll.op_alloca (rop.ll.llvm_type(Result.typespec().simpletype().elementtype()), 1, "uniform spline result");
-        args.push_back (rop.ll.void_ptr (temp_results));
+        temp_uniform_results = rop.llvm_alloca (Result.typespec(), Result.has_derivs(), true /*is_uniform*/, false /*is_uniform*/, "uniform spline result");
+        args.push_back (rop.ll.void_ptr(temp_uniform_results));
+
     } else {
         args.push_back (rop.llvm_void_ptr (Result));
     }
@@ -5427,11 +5492,13 @@ LLVMGEN (llvm_gen_spline)
 
     if (op_is_uniform && !result_is_uniform) {
 
+            rop.llvm_broadcast_uniform_value_at(temp_uniform_results, Result);
+#if 0
         ASSERT(temp_results);
         // Should be impossible to have derivs as the op is uniform
         for (int c = 0;  c < Result.typespec().aggregate();  ++c) {
             // Will automatically widen value
-            llvm::Value *wide_component_value = rop.llvm_load_value (temp_results, Result.typespec(),
+            llvm::Value *wide_component_value = rop.llvm_load_value (temp_uniform_results, Result.typespec(),
                                                           0 /*derivIndex*/, nullptr,
                                                           c, TypeDesc::UNKNOWN,
                                                           false /*op_is_uniform*/);
@@ -5439,10 +5506,12 @@ LLVMGEN (llvm_gen_spline)
             bool success = rop.llvm_store_value (wide_component_value, Result, 0,
                     nullptr, c);
             ASSERT(success);
+
         }
+#endif
     }
 
-    if (Result.has_derivs() && !result_derivs)
+    if (Result.has_derivs() && !op_derivs)
         rop.llvm_zero_derivs (Result);
 
     return true;

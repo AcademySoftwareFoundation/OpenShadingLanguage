@@ -72,6 +72,8 @@ public:
             ConstWideAccessor<Vec3> dPdy, ConstWideAccessor<Vec3> R,
             ConstWideAccessor<Vec3> dRdx, ConstWideAccessor<Vec3> dRdy) override;
 
+	void getmessage (ShaderGlobalsBatch *sgb, MaskedAccessor<int> result,
+	                             ustring source, ustring name, MaskedDataRef val) override;
 private:
 	template<typename RAccessorT>
 	OSL_INLINE bool impl_get_inverse_matrix (
@@ -149,6 +151,9 @@ public:
                             const OSL::Vec3 &P, const OSL::Vec3 &dPdx,
                             const OSL::Vec3 &dPdy, const OSL::Vec3 &R,
                             const OSL::Vec3 &dRdx, const OSL::Vec3 &dRdy);
+
+    virtual bool getmessage (ShaderGlobals *sg, ustring source, ustring name,
+                                TypeDesc type, void *val, bool derivatives);
 
 
     // Common impl shared with BatchedSimpleRenderer  

@@ -1,7 +1,7 @@
-shader trace_v_point_v_vector_u_mindist_v_maxdist(output vector cout = 0, output vector mcout = 0)
+shader trace_v_point_u_vector_u_mindist_v_maxdist(output vector cout = 0, output vector mcout = 0)
 {
 
-    point src = point(u, v-u, u);
+ point src = point(u, v-u, u);
  vector dir = vector(0.8, 1.2, 8.0);
 
 

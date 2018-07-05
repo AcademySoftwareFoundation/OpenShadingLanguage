@@ -1,0 +1,19 @@
+shader
+atan2_v_float_u_float (output color res = 0,
+               output color res_m = 0)
+{
+    float a = 1.0/(2*raytype("camera"));
+    float b = 1.0/(3*raytype("camera"));
+    float c = P[0];
+    float r = atan2(c,a);
+    res = color (r);
+
+    float fr = 0.0;
+    if (int(P[0]*200)%2){
+
+        c = P[1];
+        fr = atan2(c,b);
+
+    }
+    res_m = color(fr);
+}

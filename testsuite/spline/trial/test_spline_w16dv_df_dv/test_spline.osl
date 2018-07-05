@@ -1,0 +1,33 @@
+shader test_spline (string splinename="spline",
+		    output color Fspline1 = 0, 
+		    output color DxFspline1 = 0,
+
+		    output color mFspline1 = 0,
+                    output color mDxFspline1 = 0
+                    )
+{
+ 	
+//testshade -g 400 400 -t 1 --iters 1 --stats -o cv a.tif -o Dxcv cv.tif -o Dycv b.tif test_bezier_dv_df_dv
+
+color colknots[16];
+
+for (int i = 0; i < 4; ++i)
+        colknots[i] = color ((i*raytype("camera"))/3, (i*raytype("camera"))/3, (i*raytype("camera"))/3);
+
+for (int i = 4; i <arraylength(colknots); ++i)
+	colknots[i] = color((2*raytype("camera"))*1.0e9, (i*raytype("camera"))*1.0e9, (2*i*raytype("camera"))*1.0e9);
+
+float mvalue = 2.0 *(1.0/raytype("camera"));
+Fspline1 = spline (splinename,P[0], colknots);
+
+DxFspline1 = Dx(Fspline1);
+
+
+if(P[0]>0.5){
+mFspline1 = spline (splinename,mvalue, colknots);
+
+mDxFspline1 = Dx(mFspline1);
+
+}
+
+}

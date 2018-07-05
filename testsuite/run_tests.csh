@@ -7,6 +7,11 @@
 ./run_test_dir.csh calculatenormal 
 
 
+./run_test_dir.csh spline
+./run_test_dir.csh trig/pow_vf
+./exec_test_dir.csh trace
+./exec_test_dir.csh message
+
 ./run_test_dir.csh string/split
 ./run_test_dir.csh blackbody
 ./run_test_dir.csh wavelength_color

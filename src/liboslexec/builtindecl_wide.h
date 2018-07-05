@@ -193,7 +193,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     DECL (osl_ ## name ## _w16vw16v,  "xXX")          \
     DECL (osl_ ## name ## _w16vw16v_masked,  "xXXi")
 
-// TODO: add _masked variations and unit test to exercise them first
 #define WIDE_BINARY_OP_IMPL(name)                       \
     DECL (osl_ ## name ## _w16fw16fw16f,    "xXXX")          \
     DECL (osl_ ## name ## _w16fw16fw16f_masked,    "xXXXi")          \
@@ -213,27 +212,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     DECL (osl_ ## name ## _w16dvw16dvw16v_masked,  "xXXXi")
 
 
-#define WIDE_BINARY_FI_OP_IMPL(name)                       \
-    DECL (osl_ ## name ## _w16fw16fw16f,    "xXXX")        \
-    DECL (osl_ ## name ## _w16iw16iw16i,    "xXXX")
-#if 0 // incomplete WIDE_BINARY_FI_OP_IMPL
-    DECL (osl_ ## name ## _w16fw16fw16f_masked,    "xXXXi")        \
-    DECL (osl_ ## name ## _w16iw16iw16i_masked,    "xXXXi")
-#endif
-
-// Investigate if we need any variations of uniform and varying
-// for Vec3 parameters
 #define WIDE_BINARY_VF_OP_IMPL(name)                       \
     DECL (osl_ ## name ## _w16vw16vw16f,    "xXXX")        \
     DECL (osl_ ## name ## _w16dvw16dvw16df, "xXXX")        \
     DECL (osl_ ## name ## _w16dvw16dvw16f,  "xXXX")        \
-    DECL (osl_ ## name ## _w16dvw16vw16df,  "xXXX")
-    #if 0 // incomplete WIDE_BINARY_VF_OP_IMPL
+    DECL (osl_ ## name ## _w16dvw16vw16df,  "xXXX")        \
     DECL (osl_ ## name ## _w16vw16vw16f_masked,    "xXXXi")        \
     DECL (osl_ ## name ## _w16dvw16dvw16df_masked, "xXXXi")        \
     DECL (osl_ ## name ## _w16dvw16dvw16f_masked,  "xXXXi")        \
     DECL (osl_ ## name ## _w16dvw16vw16df_masked,  "xXXXi")
-    #endif
+
 
 #define WIDE_BINARY_F_OR_V_OP_IMPL(name)                   \
     DECL (osl_ ## name ## _w16fw16fw16f,    "xXXX")        \
@@ -337,6 +325,7 @@ DECL (osl_spline_w16dfw16dfw16df_masked, "xXXXXiii")
 DECL (osl_spline_w16dfw16dfdf_masked, "xXXXXiii")
 DECL (osl_spline_w16dfdfw16df_masked, "xXXXXiii")
 
+//SM: Check other previously-thought-impossible variants
 DECL (osl_spline_w16dfw16dff_masked, "xXXXXiii")
 
 DECL (osl_spline_w16vw16fv_masked,"xXXXXiii")
@@ -351,6 +340,7 @@ DECL (osl_spline_w16dvw16dfv_masked, "xXXXXiii")
 DECL (osl_spline_w16dvw16dfw16v_masked, "xXXXXiii")
 DECL (osl_spline_w16dvdfw16v_masked, "xXXXXiii")
 
+//SM: Check other previously-thought-impossible variants
 DECL (osl_spline_w16dffw16df_masked, "xXXXXiii")
 DECL (osl_spline_w16dfw16fw16df_masked, "xXXXXiii")
 
@@ -359,7 +349,6 @@ DECL (osl_spline_w16dvw16fw16dv_masked, "xXXXXiii")
 DECL (osl_spline_w16dvw16fdv_masked, "xXXXXiii")
 
 //---------------------------------------------------------------
-#if 1 // incomplete (under development)
 DECL (osl_splineinverse_w16fw16fw16f_masked, "xXXXXiii")
 DECL (osl_splineinverse_w16fw16ff_masked, "xXXXXiii")
 DECL (osl_splineinverse_w16ffw16f_masked, "xXXXXiii")
@@ -376,20 +365,18 @@ DECL (osl_splineinverse_w16dfw16dff_masked, "xXXXXiii")
 DECL (osl_splineinverse_w16dffw16df_masked, "xXXXXiii")
 DECL (osl_splineinverse_w16dfw16fw16df_masked, "xXXXXiii")
 
-#endif
 #if 0 // incomplete
 // setmessage/getmessage involve closures, leave to next iteration
 //DECL (osl_setmessage, "xXsLXisi")
-//DECL (osl_getmessage, "iXssLXiisi")
 DECL (osl_pointcloud_search, "iXsXfiiXXii*")
 DECL (osl_pointcloud_get, "iXsXisLX")
 DECL (osl_pointcloud_write, "iXsXiXXX")
 DECL (osl_pointcloud_write_helper, "xXXXisLX")
-DECL (osl_blackbody_vf, "xXXf")
-DECL (osl_wavelength_color_vf, "xXXf")
+//DECL (osl_blackbody_vf, "xXXf")
+//DECL (osl_wavelength_color_vf, "xXXf")
 #endif
 
-DECL (osl_getmessage_batched, "xXXXXLXXXXXi")
+DECL (osl_getmessage_masked, "xXXssLXiisii")
 
 DECL (osl_blackbody_vf, "xXXf")
 DECL (osl_blackbody_vf_batched, "xXXf")
@@ -703,8 +690,6 @@ DECL (osl_regex_impl, "iXsXisi")
 // BATCH texturing manages the BatchedTextureOptions
 // directly in LLVM ir, and has no need for wide versions
 // of osl_texture_set_XXX functions
-#ifdef OSL_LLVM_NO_BITCODE
-#endif
 DECL (osl_texture_decode_wrapmode, "iX");
 DECL (osl_texture_decode_interpmode, "iX");
 DECL (osl_texture_batched, "iXXXXXXXXXXiXiXiXi")
@@ -715,14 +700,12 @@ DECL (osl_environment, "iXXXXXXXiXXXXXXX")
 DECL (osl_get_textureinfo_batched, "iXXXXXi")
 DECL (osl_get_textureinfo_batched_uniform, "iXXXXXX")
 
-#if 0
-DECL (osl_trace_set_mindist, "xXf")
-DECL (osl_trace_set_maxdist, "xXf")
-DECL (osl_trace_set_shade, "xXi")
-DECL (osl_trace_set_traceset, "xXs")
-DECL (osl_trace, "iXXXXXXXX")
-#endif
-
+// Wide Code generator will set trace options directly in LLVM IR
+// without calling helper functions
+//DECL (osl_trace_set_mindist, "xXf") // unneeded
+//DECL (osl_trace_set_maxdist, "xXf") // unneeded
+//DECL (osl_trace_set_shade, "xXi") // unneeded
+//DECL (osl_trace_set_traceset, "xXs") // unneeded
 DECL (osl_trace_batched, "xXXXXXXXXXi")
 
 DECL (osl_calculatenormal_batched, "xXXX")

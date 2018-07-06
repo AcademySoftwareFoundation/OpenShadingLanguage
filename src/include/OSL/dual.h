@@ -80,7 +80,6 @@ public:
             m_data[i] = T(x.m_data[i]);
     }
 
-#if 1
     /// Copy constructor from another Dual of same dimension and different,
     /// but castable, data type.
     template<class F>
@@ -88,7 +87,6 @@ public:
         for (int i = 0; i <= PARTIALS; ++i)
             m_data[i] = T(x.elem(i));
     }
-#endif
 
     /// Construct a Dual from a real and infinitesimals.
     ///
@@ -113,7 +111,9 @@ public:
     }
 
     OSL_HOSTDEVICE OIIO_CONSTEXPR14 Dual (std::initializer_list<T> vals) {
+#if OIIO_CPLUSPLUS_VERSION >= 14
         static_assert (vals.size() == elements, "Wrong number of initializers");
+#endif
         for (int i = 0; i < elements; ++i)
             m_data[i] = vals.begin()[i];
     }

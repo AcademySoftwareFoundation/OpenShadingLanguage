@@ -277,6 +277,12 @@ public:
     ///   int unknown_closures_needed  Nonzero if additional closures may be
     ///                                needed, whose names can't be known
     ///                                without actually running the shader.
+    ///   int globals_read           Bitfield ("or'ed" SGBits values) of
+    ///                                which ShaderGlobals may be read by
+    ///                                by the shader group.
+    ///   int globals_write         Bitfield ("or'ed" SGBits values) of
+    ///                                which ShaderGlobals may be written by
+    ///                                by the shader group.
     ///   int num_globals_needed     The number of named globals needed.
     ///   ptr globals_needed         Retrieves a pointer to the ustring array
     ///                                containing all globals needed.
@@ -402,12 +408,12 @@ public:
     bool Parameter (string_view name, TypeDesc t, const void *val,
                     bool lockgeom);
 
-    /// Create a new shader instance, either replacing the one for the
-    /// specified usage (if not within a group) or appending to the
-    /// current group (if a group has been started).
+    /// Create a new shader instance, either replacing the current group (if
+    /// not within a group) or appending to the current group (if a group
+    /// has been started).
     bool Shader (string_view shaderusage,
-                 string_view shadername = string_view(),
-                 string_view layername = string_view());
+                 string_view shadername,
+                 string_view layername);
 
     /// Connect two shaders within the current group. The source layer must
     /// be *upstream* of down destination layer (i.e. source must be
@@ -569,6 +575,13 @@ public:
     /// optional but at least one of name or id must non NULL.
     bool query_closure (const char **name, int *id,
                         const ClosureParam **params);
+
+    /// For the proposed shader "global" name, return the corresponding
+    /// SGBits enum.
+    static SGBits globals_bit (ustring name);
+
+    /// For the SGBits value, return the shader "globals" name.
+    static ustring globals_name (SGBits bit);
 
     /// For the proposed raytype name, return the bit pattern that
     /// describes it, or 0 for an unrecognized name.  (This retrieves

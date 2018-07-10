@@ -405,6 +405,48 @@ ShadingSystem::query_closure (const char **name, int *id,
 
 
 
+SGBits
+ShadingSystem::globals_bit (ustring name)
+{
+    // **MUST** match the order of SGBits!!
+    static ustring globalnames[] = {
+        ustring("P"), ustring("I"), ustring("N"), ustring("Ng"),
+        ustring("u"), ustring("v"), ustring("dPdu"), ustring("dPdv"),
+        ustring("time"), ustring("dtim"), ustring("dPdtime"), ustring("Ps"),
+        ustring("Ci")
+    };
+    int i = 0;
+    for (auto n : globalnames) {
+        if (name == n)
+            return SGBits(1<<i);
+        ++i;
+    }
+    return SGBits::None;
+}
+
+
+
+ustring
+ShadingSystem::globals_name (SGBits bit)
+{
+    // **MUST** match the order of SGBits!!
+    static ustring globalnames[] = {
+        ustring("P"), ustring("I"), ustring("N"), ustring("Ng"),
+        ustring("u"), ustring("v"), ustring("dPdu"), ustring("dPdv"),
+        ustring("time"), ustring("dtim"), ustring("dPdtime"), ustring("Ps"),
+        ustring("Ci")
+    };
+    int b = 1;
+    for (auto n : globalnames) {
+        if (b == int(bit))
+            return n;
+        b <<= 1;
+    }
+    return ustring();
+}
+
+
+
 int
 ShadingSystem::raytype_bit (ustring name)
 {
@@ -1455,6 +1497,18 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
         *(ustring **)val = n ? &group->m_globals_needed[0] : NULL;
         return true;
     }
+    if (name == "globals_read" && type.basetype == TypeDesc::INT) {
+        if (! group->optimized())
+            optimize_group (*group);
+        *(int *)val = group->m_globals_read;
+        return true;
+    }
+    if (name == "globals_write" && type.basetype == TypeDesc::INT) {
+        if (! group->optimized())
+            optimize_group (*group);
+        *(int *)val = group->m_globals_write;
+        return true;
+    }
 
     if (name == "num_userdata" && type == TypeDesc::TypeInt) {
         if (! group->optimized())
@@ -1942,7 +1996,7 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname)
         return ShaderGroupRef();
     }
     m_in_group = true;
-    m_group_use = ShadUseUnknown;
+    m_group_use.clear();   // unknown/unset group
     m_curgroup.reset (new ShaderGroup(groupname));
     m_curgroup->m_exec_repeat = m_exec_repeat;
     return m_curgroup;
@@ -1959,7 +2013,7 @@ ShadingSystemImpl::ShaderGroupEnd (void)
     }
 
     // Mark the layers that can be run lazily
-    if (m_group_use != ShadUseUnknown) {
+    if (! m_group_use.empty()) {
         int nlayers = m_curgroup->nlayers ();
         for (int layer = 0;  layer < nlayers;  ++layer) {
             ShaderInstance *inst = (*m_curgroup)[layer];
@@ -1992,7 +2046,7 @@ ShadingSystemImpl::ShaderGroupEnd (void)
     }
 
     m_in_group = false;
-    m_group_use = ShadUseUnknown;
+    m_group_use.clear();  // Mark use as unset/unknown
 
     ustring groupname = m_curgroup->name();
     if (groupname.size() && groupname == m_archive_groupname) {
@@ -2022,9 +2076,8 @@ ShadingSystemImpl::Shader (string_view shaderusage,
         return false;
     }
 
-    ShaderUse use = shaderuse_from_name (shaderusage);
-    if (use == ShadUseUnknown) {
-        error ("Unknown shader usage \"%s\"", shaderusage);
+    if (shaderusage.empty()) {
+        error ("Shader usage required");
         return false;
     }
 
@@ -2040,17 +2093,17 @@ ShadingSystemImpl::Shader (string_view shaderusage,
     instance->parameters (m_pending_params);
     m_pending_params.clear ();
 
-    if (singleton || m_group_use == ShadUseUnknown) {
+    if (singleton || m_group_use.empty()) {
         // A singleton, or the first in a group
         m_curgroup->clear ();
         m_stat_groups += 1;
     }
     if (! singleton) {
-        if (m_group_use == ShadUseUnknown) {  // First shader in group
-            m_group_use = use;
-        } else if (use != m_group_use) {
+        if (m_group_use.empty()) {  // First shader in group
+            m_group_use = shaderusage;
+        } else if (shaderusage != m_group_use) {
             error ("Shader usage \"%s\" does not match current group (%s)",
-                   shaderusage, shaderusename (m_group_use));
+                   shaderusage, m_group_use);
             return false;
         }
     }
@@ -2554,7 +2607,7 @@ ShadingSystemImpl::find_named_layer_in_group (ustring layername,
                                               ShaderInstance * &inst)
 {
     inst = NULL;
-    if (m_group_use >= ShadUseUnknown)
+    if (m_group_use.empty())
         return -1;
     ShaderGroup &group (*m_curgroup);
     for (int i = 0;  i < group.nlayers();  ++i) {
@@ -2786,6 +2839,8 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group)
         group.m_closures_needed.push_back (f);
     for (auto&& f : rop.m_globals_needed)
         group.m_globals_needed.push_back (f);
+    group.m_globals_read = rop.m_globals_read;
+    group.m_globals_write = rop.m_globals_write;
     size_t num_userdata = rop.m_userdata_needed.size();
     group.m_userdata_names.reserve (num_userdata);
     group.m_userdata_types.reserve (num_userdata);

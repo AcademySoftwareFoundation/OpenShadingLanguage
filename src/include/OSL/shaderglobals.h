@@ -145,4 +145,25 @@ struct ShaderGlobals {
 };
 
 
+
+/// Enum giving values that can be 'or'-ed together to make a bitmask
+/// of which "global" variables are needed or written to by the shader.
+enum class SGBits {
+    None    = 0,
+    P       = 1 <<  0,
+    I       = 1 <<  1,
+    N       = 1 <<  2,
+    Ng      = 1 <<  3,
+    u       = 1 <<  4,
+    v       = 1 <<  5,
+    dPdu    = 1 <<  6,
+    dPdv    = 1 <<  7,
+    time    = 1 <<  8,
+    dtime   = 1 <<  9,
+    dPdtime = 1 << 10,
+    Ps      = 1 << 11,
+    Ci      = 1 << 12,
+    last
+};
+
 OSL_NAMESPACE_EXIT

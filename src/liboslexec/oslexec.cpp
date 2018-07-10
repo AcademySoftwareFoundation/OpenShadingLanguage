@@ -48,11 +48,11 @@ string_view
 shadertypename (ShaderType s)
 {
     switch (s) {
-    case ShadTypeGeneric:      return ("shader");
-    case ShadTypeSurface:      return ("surface");
-    case ShadTypeDisplacement: return ("displacement");
-    case ShadTypeVolume:       return ("volume");
-    case ShadTypeLight:        return ("light");
+    case ShaderType::Generic :      return ("shader");
+    case ShaderType::Surface :      return ("surface");
+    case ShaderType::Displacement : return ("displacement");
+    case ShaderType::Volume :       return ("volume");
+    case ShaderType::Light :        return ("light");
     default:
         ASSERT (0 && "Invalid shader type");
     }
@@ -64,40 +64,16 @@ ShaderType
 shadertype_from_name (string_view name)
 {
     if (name == "shader" || name == "generic")
-        return ShadTypeGeneric;
+        return ShaderType::Generic;
     if (name == "surface")
-        return ShadTypeSurface;
+        return ShaderType::Surface;
     if (name == "displacement")
-        return ShadTypeDisplacement;
+        return ShaderType::Displacement;
     if (name == "volume")
-        return ShadTypeVolume;
+        return ShaderType::Volume;
     if (name == "light")
-        return ShadTypeLight;
-    return ShadTypeUnknown;
-}
-
-
-const char *
-shaderusename (ShaderUse s)
-{
-    switch (s) {
-    case ShadUseSurface:      return ("surface");
-    case ShadUseDisplacement: return ("displacement");
-    default:
-        ASSERT (0 && "Invalid shader use");
-    }
-}
-
-
-
-ShaderUse
-shaderuse_from_name (string_view name)
-{
-    if (name == "surface")
-        return ShadUseSurface;
-    if (name == "displacement")
-        return ShadUseDisplacement;
-    return ShadUseLast;
+        return ShaderType::Light;
+    return ShaderType::Unknown;
 }
 
 

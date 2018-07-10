@@ -615,7 +615,7 @@ OSLToyMainWindow::build_shader_group ()
             ss->Parameter (instparam.name(), instparam.type(),
                            instparam.data(), !m_diddlers[instparam.name().string()]);
         }
-        ss->Shader ("surface", m_firstshadername);
+        ss->Shader ("surface", m_firstshadername, "layer1");
         ss->ShaderGroupEnd ();
     }
     renderer()->set_shadergroup (group);

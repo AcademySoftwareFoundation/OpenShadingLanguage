@@ -682,7 +682,7 @@ OSLCompilerImpl::initialize_globals ()
 {
     static GlobalTable globals[] = {
         { "P", TypeDesc::TypePoint, false },
-        { "I", TypeDesc::TypeVector },
+        { "I", TypeDesc::TypeVector, false },
         { "N", TypeDesc::TypeNormal, false },
         { "Ng", TypeDesc::TypeNormal },
         { "u", TypeDesc::TypeFloat },
@@ -1129,8 +1129,9 @@ OSLCompilerImpl::struct_field_pair (const StructSpec *structspec, int fieldnum,
 
 
 
-/// Verify that the given symbol (written by the given op) is legal to
-/// be written.
+/// Verify that the given symbol (written by the given op) is legal to be
+/// written. If writeable, it's writeable, We don't try to enforce
+/// differences in policy per shader types.
 void
 OSLCompilerImpl::check_write_legality (const Opcode &op, int opnum,
                                        const Symbol *sym)
@@ -1148,9 +1149,6 @@ OSLCompilerImpl::check_write_legality (const Opcode &op, int opnum,
                "Cannot write to input parameter '%s' (op %d)",
                sym->name().c_str(), opnum);
     }
-
-    // FIXME -- check for writing to globals.  But it's tricky, depends on
-    // what kind of shader we are.
 }
 
 

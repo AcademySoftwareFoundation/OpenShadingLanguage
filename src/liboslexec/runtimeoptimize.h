@@ -442,6 +442,8 @@ private:
     std::set<ustring> m_textures_needed;
     std::set<ustring> m_closures_needed;
     std::set<ustring> m_globals_needed;
+    int m_globals_read = 0;
+    int m_globals_write = 0;
     std::set<AttributeNeeded> m_attributes_needed;
     bool m_unknown_textures_needed;
     bool m_unknown_closures_needed;

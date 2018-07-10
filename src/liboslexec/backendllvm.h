@@ -165,6 +165,14 @@ public:
         return llvm_load_arg (sym, sym.has_derivs());
     }
 
+    /// Return the llvm::Value* of the char* member of the device_string pointed
+    /// to by val.
+    llvm::Value *llvm_load_device_string_char_ptr (llvm::Value* val);
+
+    /// Return the llvm::Value* of the uint64_t member of the device_string pointed
+    /// to by val.
+    llvm::Value *llvm_load_device_string_tag (llvm::Value* val);
+
     /// Store new_val into the given symbol, given the derivative
     /// (0=value, 1=dx, 2=dy), array index (NULL if it's not an array),
     /// and component (x=0 or scalar, y=1, z=2).  If deriv>0 and the
@@ -218,6 +226,9 @@ public:
     /// Allocate a GlobalVariable for the given OSL symbol and return a pointer
     /// to it, or return the pointer if it has already been allocated
     llvm::Value *getOrAllocateLLVMGlobal (const Symbol& sym);
+
+    /// Create a GlobalVariable for a "tagged string" for use on GPUs
+    llvm::Value *makeTaggedString (const std::string& var_name, ustring str);
 
     /// Create a GlobalVariable and add it to the current Module
     llvm::Value *addGlobalVariable (const std::string& name, int size,

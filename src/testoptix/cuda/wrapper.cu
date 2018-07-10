@@ -30,11 +30,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <optix.h>
 #include <optixu/optixu_math_namespace.h>
 
+#include <OSL/device_string.h>
+
 #include "rend_lib.h"
 #include "util.h"
 
-
-#define OSL_EXCEPTION_0 (RT_EXCEPTION_USER + 0)
+using OSL::device_string;
 
 // Ray payload
 rtDeclareVariable (PRD_radiance, prd_radiance, rtPayload, );
@@ -144,8 +145,23 @@ float3 process_closure(const ClosureColor* closure_tree)
         case WARD_ID:
         case REFLECTION_ID:
         case REFRACTION_ID:
-        case FRESNEL_REFLECTION_ID:
+        case FRESNEL_REFLECTION_ID: {
+            result += ((ClosureComponent*) cur)->w * weight;
+            cur = NULL;
+            break;
+        }
+
         case MICROFACET_ID: {
+#if 0
+            const char*          mem = ((ClosureComponent*) cur)->mem;
+            const device_string* ds  = (const device_string*) &mem[0];
+            uint64_t    tag = ds->tag();
+            const char* str = ds->c_str();
+            if (launch_index.x == launch_dim.x / 2 && launch_index.y == launch_dim.y / 2) {
+                printf ("microfacet, tag %lu, str %s\n", tag, str);
+            }
+#endif
+
             result += ((ClosureComponent*) cur)->w * weight;
             cur = NULL;
             break;
@@ -154,11 +170,6 @@ float3 process_closure(const ClosureColor* closure_tree)
         default:
             cur = NULL;
             break;
-        }
-
-        // Throw an exception if the traversal stack overflows
-        if (stack_idx >= STACK_SIZE) {
-            rtThrow(OSL_EXCEPTION_0);
         }
 
         if (cur == NULL && stack_idx > 0) {

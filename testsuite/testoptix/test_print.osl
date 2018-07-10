@@ -1,0 +1,5 @@
+surface test_print ( string str = "default", color Cs = 1)
+{
+    printf("str: %s\n", str);
+    Ci = Cs * diffuse (N);
+}

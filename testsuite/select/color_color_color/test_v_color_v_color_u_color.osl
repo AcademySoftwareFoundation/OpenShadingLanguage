@@ -1,0 +1,19 @@
+shader
+test_v_color_v_color_u_color (output color Cout = 0)
+{
+    color val = color(P[0],P[1],P[2]);
+    color val2 = color(P[1],P[2],P[0]);
+
+
+    color c1 = color(raytype("camera"), 0.0*raytype("camera"), raytype("camera"));
+    color c2 = color(0.0*raytype("camera"), raytype("camera"), 0.0*raytype("camera"));
+              
+    color col = select(val, val2, c1);    
+    color col2 = col;    
+    
+    if (int(P[0]*64)%2==0) {    
+        col2 = select(val, val2, c2);
+    }
+
+    Cout = 0.5*col + 0.5*col2;
+}

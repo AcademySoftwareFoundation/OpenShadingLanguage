@@ -184,6 +184,8 @@ set_shadingsys_options ()
     if (! shaderpath.empty())
         shadingsys->attribute ("searchpath:shader", shaderpath);
     
+    if (const char *opt_env = getenv ("TESTSHADE_BATCHED"))
+        batched = atoi(opt_env);
     if (batched) {
     	// For batched operations turn off coalesce temps
     	// TODO:  Investigate if this is necessary, and document why

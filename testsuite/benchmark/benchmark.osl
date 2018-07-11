@@ -1,0 +1,144 @@
+shader
+benchmark (string op = "null",
+           int repeat = 10000, 
+           output color Cout = 0)
+{
+    for (int i = 0; i < repeat; ++i) {
+        if (op == "null") {
+        }
+        if (op == "sin") {
+            Cout = color(sin(P[0]), sin(P[1]), sin(P[2]));
+        }
+        if (op == "cos") {
+            Cout = color(cos(P[0]), cos(P[1]), cos(P[2]));
+        }
+        if (op == "tan") {
+            Cout = color(tan(P[0]), tan(P[1]), tan(P[2]));
+        }
+        if (op == "sinh") {
+            Cout = color(sinh(P[0]), sinh(P[1]), sinh(P[2]));
+        }
+        if (op == "cosh") {
+            Cout = color(cosh(P[0]), cosh(P[1]), cosh(P[2]));
+        }
+        if (op == "tanh") {
+            Cout = color(tanh(P[0]), tanh(P[1]), tanh(P[2]));
+        }
+        if (op == "asin") {
+            Cout = color(asin(P[0]), asin(P[1]), asin(P[2]));
+        }
+        if (op == "acos") {
+            Cout = color(acos(P[0]), acos(P[1]), acos(P[2]));
+        }
+        if (op == "atan") {
+            Cout = color(atan(P[0]), atan(P[1]), atan(P[2]));
+        }
+        if (op == "atan2") {
+            Cout = color(atan2(P[0],P[1]), atan2(P[1],P[0]), atan2(P[2],P[1]));
+        }
+        if (op == "sincos") {
+            float sinX;
+            float cosX;
+            sincos(P[0], sinX, cosX);
+            Cout[0] = sinX;
+            Cout[1] = cosX;
+        }
+        if (op == "log") {
+            Cout = color(log(P[0]), log(P[1]), log(P[2]));
+        }
+        if (op == "log2") {
+            Cout = color(log2(P[0]), log2(P[1]), log2(P[2]));
+        }
+        if (op == "log10") {
+            Cout = color(log10(P[0]), log10(P[1]), log10(P[2]));
+        }
+        if (op == "logb") {
+            Cout = color(logb(P[0]), logb(P[1]), logb(P[2]));
+        }
+        if (op == "exp") {
+            Cout = color(exp(P[0]), exp(P[1]), exp(P[2]));
+        }
+        if (op == "exp2") {
+            Cout = color(exp2(P[0]), exp2(P[1]), exp2(P[2]));
+        }
+        if (op == "expm1") {
+            Cout = color(expm1(P[0]), expm1(P[1]), expm1(P[2]));
+        }
+        if (op == "pow") {
+            Cout = color(pow(P[1],P[0]), pow(P[0],P[1]), pow(P[2],P[0]));
+        }
+        if (op == "erf") {
+            Cout = color(erf(P[0]), erf(P[1]), erf(P[2]));
+        }
+        if (op == "erfc") {
+            Cout = color(erfc(P[0]), erfc(P[1]), erfc(P[2]));
+        }        
+        if (op == "radians") {
+            Cout = color(radians(P[0]), radians(P[1]), radians(P[2]));
+        }        
+        if (op == "degrees") {
+            Cout = color(degrees(P[0]), degrees(P[1]), degrees(P[2]));
+        }        
+        if (op == "sqrt") {
+            Cout = color(sqrt(P[0]), sqrt(P[1]), sqrt(P[2]));
+        }        
+        if (op == "inversesqrt") {
+            Cout = color(inversesqrt(P[0]), inversesqrt(P[1]), inversesqrt(P[2]));
+        }        
+        if (op == "hypot") {
+            Cout = color(hypot(P[0],P[1]), hypot(P[1],P[0]), hypot(P[2],P[1]));
+        }        
+        if (op == "abs") {
+            Cout = color(abs(P[0]), abs(P[1]), abs(P[2]));
+        }        
+        if (op == "fabs") {
+            Cout = color(fabs(P[0]), fabs(P[1]), fabs(P[2]));
+        }        
+        if (op == "sign") {
+            Cout = color(sign(P[0]), sign(P[1]), sign(P[2]));
+        }        
+        if (op == "floor") {
+            Cout = color(floor(P[0]), floor(P[1]), floor(P[2]));
+        }        
+        if (op == "ceil") {
+            Cout = color(ceil(P[0]), ceil(P[1]), ceil(P[2]));
+        }        
+        if (op == "round") {
+            Cout = color(round(P[0]), round(P[1]), round(P[2]));
+        }        
+        if (op == "trunc") {
+            Cout = color(trunc(P[0]), trunc(P[1]), trunc(P[2]));
+        }  
+        if (op == "mod") {
+            Cout = color(mod(P[0],P[1]), mod(P[1],P[0]), mod(P[2],P[1]));
+        }        
+        if (op == "fmod") {
+            Cout = color(fmod(P[0],P[1]), fmod(P[1],P[0]), fmod(P[2],P[1]));
+        }        
+        if (op == "min") {
+            Cout = color(min(P[0],P[1]), min(P[1],P[0]), min(P[2],P[1]));
+        }        
+        if (op == "max") {
+            Cout = color(max(P[0],P[1]), max(P[1],P[0]), max(P[2],P[1]));
+        }        
+        if (op == "clamp") {
+            Cout = color(clamp(P[0],P[1],P[2]), clamp(P[2],P[1],P[0]), clamp(P[2],P[1],P[0]));
+        }        
+        if (op == "mix") {
+            Cout = color(mix(P[0],P[1],P[2]), mix(P[2],P[1],P[0]), mix(P[2],P[1],P[0]));
+        }        
+        if (op == "isnan") {
+            Cout = color(isnan(P[0]), isnan(P[1]), isnan(P[2]));
+        }        
+        if (op == "isinf") {
+            Cout = color(isinf(P[0]), isinf(P[1]), isinf(P[2]));
+        }        
+        if (op == "isfinite") {
+            Cout = color(isfinite(P[0]), isfinite(P[1]), isfinite(P[2]));
+        }        
+        if (op == "select") {
+            Cout = color(select(P[0],P[1],P[2]), select(P[2],P[1],P[0]), select(P[2],P[1],P[0]));
+        }        
+              
+    }
+}

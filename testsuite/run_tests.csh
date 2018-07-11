@@ -1,8 +1,10 @@
 #!/bin/csh
 
 
-./run_test_dir.csh noise 
-./run_test_dir.csh pnoise
+./exec_test_dir.csh select
+
+./exec_test_dir.csh noise 
+./exec_test_dir.csh pnoise
 
 ./run_test_dir.csh calculatenormal 
 
@@ -71,7 +73,7 @@
 
 
 ./run_test_dir.csh vector/dot_tests
-./run_test_dir.csh vector/distance_tests
+./exec_test_dir.csh vector/distance_tests
 ./run_test_dir.csh vector/cross_tests
 
 ./run_test_dir.csh filterwidth

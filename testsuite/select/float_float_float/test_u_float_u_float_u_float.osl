@@ -1,0 +1,24 @@
+shader
+test_u_float_u_float_u_float (output color Cout = 0)
+{
+    float val = 1.0/(2*raytype("camera"));
+    float val2 = 1.0/(4*raytype("camera"));
+    
+    
+    float c1 = raytype("camera");
+    float c2 = 0.0*raytype("camera");
+              
+    float red = select(val, val2, c1);
+    float green = select(val2, val, c1);
+    float blue =  select(val, val2, c2);
+    Cout = color(red,green,blue);
+    
+    
+    if (int(P[0]*64)%2==0) {    
+        green = select(val2, val, c2);
+        blue =  select(val, val2, c1);
+    }
+        
+    Cout[1] = green;
+    Cout[2] = blue;
+}

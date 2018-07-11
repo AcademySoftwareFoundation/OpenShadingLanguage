@@ -1,0 +1,20 @@
+shader
+test_v_float_v_float_v_float (output color Cout = 0)
+{
+    float vc = float(int(P[1] + P[0]));
+    float vc2 = float(int(1.5 - P[1]));
+              
+    float red = select(P[1], P[0], vc);
+    float green = select(P[0], P[1], vc);
+    float blue =  select(P[1], P[2], vc);
+    Cout = color(red,green,blue);
+    
+    
+    if (int(P[0]*64)%2==0) {    
+        green = select(P[0], P[1], vc2);
+        blue =  select(P[1], P[2], vc2);
+    }
+        
+    Cout[1] = green;
+    Cout[2] = blue;
+}

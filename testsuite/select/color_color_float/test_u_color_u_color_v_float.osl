@@ -1,0 +1,19 @@
+shader
+test_u_color_u_color_v_float (output color Cout = 0)
+{
+    color val = color(0.5*raytype("camera"), 0.75*raytype("camera"), 0.25*raytype("camera"));
+    color val2 = color(0.3*raytype("camera"), 0.6*raytype("camera"), 0.8*raytype("camera"));
+    
+    
+    float vc = float(int(P[1] + P[0]));
+    float vc2 = float(int(1.5 - P[1]));
+              
+    color col = select(val, val2, vc);    
+    color col2 = col;    
+    
+    if (int(P[0]*64)%2==0) {    
+        col2 = select(val, val2, vc2);
+    }
+
+    Cout = 0.5*col + 0.5*col2;
+}

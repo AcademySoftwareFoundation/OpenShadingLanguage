@@ -199,6 +199,17 @@ public:
     ///
     ASTNode::ref shader () const { return m_shader; }
 
+    /// Pointer to the ASTshader_declaration.
+    ASTshader_declaration* shaderdecl () const {
+        if (m_shader && m_shader->nodetype() == ASTNode::shader_declaration_node)
+            return (ASTshader_declaration *) m_shader.get();
+        else
+            return nullptr;
+    }
+
+    /// What kind of shader are we compiling?
+    ShaderType shadertype () const;
+
     /// Return a reference to the symbol table.
     ///
     SymbolTable &symtab () { return m_symtab; }

@@ -1942,7 +1942,7 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname)
         return ShaderGroupRef();
     }
     m_in_group = true;
-    m_group_use = ShadUseUnknown;
+    m_group_use = ShaderUse::Unknown;
     m_curgroup.reset (new ShaderGroup(groupname));
     m_curgroup->m_exec_repeat = m_exec_repeat;
     return m_curgroup;
@@ -1959,7 +1959,7 @@ ShadingSystemImpl::ShaderGroupEnd (void)
     }
 
     // Mark the layers that can be run lazily
-    if (m_group_use != ShadUseUnknown) {
+    if (m_group_use != ShaderUse::Unknown) {
         int nlayers = m_curgroup->nlayers ();
         for (int layer = 0;  layer < nlayers;  ++layer) {
             ShaderInstance *inst = (*m_curgroup)[layer];
@@ -1992,7 +1992,7 @@ ShadingSystemImpl::ShaderGroupEnd (void)
     }
 
     m_in_group = false;
-    m_group_use = ShadUseUnknown;
+    m_group_use = ShaderUse::Unknown;
 
     ustring groupname = m_curgroup->name();
     if (groupname.size() && groupname == m_archive_groupname) {
@@ -2023,7 +2023,7 @@ ShadingSystemImpl::Shader (string_view shaderusage,
     }
 
     ShaderUse use = shaderuse_from_name (shaderusage);
-    if (use == ShadUseUnknown) {
+    if (use == ShaderUse::Unknown) {
         error ("Unknown shader usage \"%s\"", shaderusage);
         return false;
     }
@@ -2040,13 +2040,13 @@ ShadingSystemImpl::Shader (string_view shaderusage,
     instance->parameters (m_pending_params);
     m_pending_params.clear ();
 
-    if (singleton || m_group_use == ShadUseUnknown) {
+    if (singleton || m_group_use == ShaderUse::Unknown) {
         // A singleton, or the first in a group
         m_curgroup->clear ();
         m_stat_groups += 1;
     }
     if (! singleton) {
-        if (m_group_use == ShadUseUnknown) {  // First shader in group
+        if (m_group_use == ShaderUse::Unknown) {  // First shader in group
             m_group_use = use;
         } else if (use != m_group_use) {
             error ("Shader usage \"%s\" does not match current group (%s)",
@@ -2554,7 +2554,7 @@ ShadingSystemImpl::find_named_layer_in_group (ustring layername,
                                               ShaderInstance * &inst)
 {
     inst = NULL;
-    if (m_group_use >= ShadUseUnknown)
+    if (m_group_use >= ShaderUse::Unknown)
         return -1;
     ShaderGroup &group (*m_curgroup);
     for (int i = 0;  i < group.nlayers();  ++i) {

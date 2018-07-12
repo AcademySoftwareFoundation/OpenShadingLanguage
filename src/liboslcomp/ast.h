@@ -413,6 +413,7 @@ public:
     ref formals () const { return child (1); }
     ref statements () const { return child (2); }
     ustring shadername () const { return m_shadername; }
+    ShaderType shadertype () const { return (ShaderType)m_op; }
     string_view shadertypename () const;
 
 private:

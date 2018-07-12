@@ -405,7 +405,7 @@ ShadingSystem::query_closure (const char **name, int *id,
 
 
 
-static OIIO::cspan< std::pair<ustring,SGBits> >
+static cspan< std::pair<ustring,SGBits> >
 sgbit_table ()
 {
     static const std::pair<ustring,SGBits> table[] = {
@@ -423,7 +423,7 @@ sgbit_table ()
         { ustring("Ps"),      SGBits::Ps },
         { ustring("Ci"),      SGBits::Ci }
     };
-    return table;
+    return cspan<std::pair<ustring,SGBits>>(table);
 }
 
 

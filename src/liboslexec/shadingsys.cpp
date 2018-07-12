@@ -405,21 +405,35 @@ ShadingSystem::query_closure (const char **name, int *id,
 
 
 
+static OIIO::cspan< std::pair<ustring,SGBits> >
+sgbit_table ()
+{
+    static const std::pair<ustring,SGBits> table[] = {
+        { ustring("P"),       SGBits::P },
+        { ustring("I"),       SGBits::I },
+        { ustring("N"),       SGBits::N },
+        { ustring("Ng"),      SGBits::Ng },
+        { ustring("u"),       SGBits::u },
+        { ustring("v"),       SGBits::v },
+        { ustring("dPdu"),    SGBits::dPdu },
+        { ustring("dPdv"),    SGBits::dPdv },
+        { ustring("time"),    SGBits::time },
+        { ustring("dtime"),   SGBits::dtime },
+        { ustring("dPdtime"), SGBits::dPdtime },
+        { ustring("Ps"),      SGBits::Ps },
+        { ustring("Ci"),      SGBits::Ci }
+    };
+    return table;
+}
+
+
+
 SGBits
 ShadingSystem::globals_bit (ustring name)
 {
-    // **MUST** match the order of SGBits!!
-    static ustring globalnames[] = {
-        ustring("P"), ustring("I"), ustring("N"), ustring("Ng"),
-        ustring("u"), ustring("v"), ustring("dPdu"), ustring("dPdv"),
-        ustring("time"), ustring("dtim"), ustring("dPdtime"), ustring("Ps"),
-        ustring("Ci")
-    };
-    int i = 0;
-    for (auto n : globalnames) {
-        if (name == n)
-            return SGBits(1<<i);
-        ++i;
+    for (auto t : sgbit_table()) {
+        if (name == t.first)
+            return t.second;
     }
     return SGBits::None;
 }
@@ -429,18 +443,9 @@ ShadingSystem::globals_bit (ustring name)
 ustring
 ShadingSystem::globals_name (SGBits bit)
 {
-    // **MUST** match the order of SGBits!!
-    static ustring globalnames[] = {
-        ustring("P"), ustring("I"), ustring("N"), ustring("Ng"),
-        ustring("u"), ustring("v"), ustring("dPdu"), ustring("dPdv"),
-        ustring("time"), ustring("dtim"), ustring("dPdtime"), ustring("Ps"),
-        ustring("Ci")
-    };
-    int b = 1;
-    for (auto n : globalnames) {
-        if (b == int(bit))
-            return n;
-        b <<= 1;
+    for (auto t : sgbit_table()) {
+        if (bit == t.second)
+            return t.first;
     }
     return ustring();
 }

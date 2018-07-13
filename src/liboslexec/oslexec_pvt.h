@@ -517,9 +517,8 @@ public:
     bool Parameter (string_view name, TypeDesc t, const void *val);
     bool Parameter (string_view name, TypeDesc t, const void *val,
                     bool lockgeom);
-    bool Shader (string_view shaderusage,
-                 string_view shadername = string_view(),
-                 string_view layername = string_view());
+    bool Shader (string_view shaderusage, string_view shadername,
+                 string_view layername);
     ShaderGroupRef ShaderGroupBegin (string_view groupname = string_view());
     bool ShaderGroupEnd (void);
     bool ConnectShaders (string_view srclayer, string_view srcparam,
@@ -836,7 +835,7 @@ private:
 
     // State
     bool m_in_group;                      ///< Are we specifying a group?
-    ShaderUse m_group_use;                ///< Use of group
+    std::string m_group_use;              ///< "Use" of group
     ParamValueList m_pending_params;      ///< Pending Parameter() values
     ShaderGroupRef m_curgroup;            ///< Current shading attribute state
     mutable mutex m_mutex;                ///< Thread safety
@@ -1578,9 +1577,11 @@ private:
     int m_raytypes_on = 0;           ///< Bitmask of raytypes we assume to be on
     int m_raytypes_off = 0;          ///< Bitmask of raytypes we assume to be off
     mutable mutex m_mutex;           ///< Thread-safe optimization
+    int m_globals_read = 0;
+    int m_globals_write = 0;
     std::vector<ustring> m_textures_needed;
     std::vector<ustring> m_closures_needed;
-    std::vector<ustring> m_globals_needed;
+    std::vector<ustring> m_globals_needed;  // semi-deprecated
     std::vector<ustring> m_userdata_names;
     std::vector<TypeDesc> m_userdata_types;
     std::vector<int> m_userdata_offsets;
@@ -1711,10 +1712,6 @@ public:
     /// Look up an attribute of the given dictionary node.  If
     /// attribname is "", return the value of the node itself.
     int dict_value (int nodeID, ustring attribname, TypeDesc type, void *data);
-
-    /// Various setup of the context done by execute().  Return true if
-    /// the function should be executed, otherwise false.
-    bool prepare_execution (ShaderUse use, ShaderGroup &sas);
 
     bool osl_get_attribute (ShaderGlobals *sg, void *objdata, int dest_derivs,
                             ustring obj_name, ustring attr_name,

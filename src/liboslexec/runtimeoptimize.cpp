@@ -3149,6 +3149,8 @@ RuntimeOptimizer::run ()
     m_unknown_attributes_needed = false;
     m_textures_needed.clear();
     m_closures_needed.clear();
+    m_globals_read = 0;
+    m_globals_write = 0;
     m_globals_needed.clear();
     m_userdata_needed.clear();
     m_attributes_needed.clear();
@@ -3177,6 +3179,11 @@ RuntimeOptimizer::run ()
             // Track which globals the group needs
             if (s.symtype() == SymTypeGlobal) {
                 m_globals_needed.insert (s.name());
+                int bit = int(ShadingSystem::globals_bit (s.name()));
+                if (s.everread())
+                    m_globals_read |= bit;
+                if (s.everwritten())
+                    m_globals_write |= bit;
             }
             if (s.has_derivs())
                 ++new_deriv_syms;

@@ -836,13 +836,29 @@ test_group_attributes (ShaderGroup *group)
     }
     int nglobals = 0;
     if (shadingsys->getattribute (group, "num_globals_needed", nglobals)) {
-        std::cout << "Need " << nglobals << " globals:\n";
+        std::cout << "Need " << nglobals << " globals: ";
         ustring *globals = NULL;
         shadingsys->getattribute (group, "globals_needed",
                                   TypeDesc::PTR, &globals);
         for (int i = 0; i < nglobals; ++i)
-            std::cout << "    " << globals[i] << "\n";
+            std::cout << " " << globals[i];
+        std::cout << "\n";
     }
+
+    int globals_read = 0;
+    int globals_write = 0;
+    shadingsys->getattribute (group, "globals_read", globals_read);
+    shadingsys->getattribute (group, "globals_write", globals_write);
+    std::cout << "Globals read: (" << globals_read << ") ";
+    for (int i = 1; i < int(SGBits::last); i <<= 1)
+        if (globals_read & i)
+            std::cout << ' ' << shadingsys->globals_name (SGBits(i));
+    std::cout << "\nGlobals written: (" << globals_write << ") ";
+    for (int i = 1; i < int(SGBits::last); i <<= 1)
+        if (globals_write & i)
+            std::cout << ' ' << shadingsys->globals_name (SGBits(i));
+    std::cout << "\n";
+
     int nuser = 0;
     if (shadingsys->getattribute (group, "num_userdata", nuser) && nuser) {
         std::cout << "Need " << nuser << " user data items:\n";

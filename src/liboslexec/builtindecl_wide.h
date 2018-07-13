@@ -631,7 +631,7 @@ DECL (osl_length_w16dfw16dv_masked, "xXXi")
 DECL (osl_distance_w16fw16vw16v, "xXXX")
 DECL (osl_distance_w16fw16vw16v_masked, "xXXXi")
 
-//Tests fail. Batched version produces 0s. Output as color. Remove uint8 to eliminate quantization
+
 DECL (osl_distance_w16dfw16dvw16dv, "xXXX")
 DECL (osl_distance_w16dfw16dvw16dv_masked, "xXXXi")
 

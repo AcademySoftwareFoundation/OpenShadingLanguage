@@ -1454,7 +1454,7 @@ batched_shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
         	setup_varying_shaderglobals (sgBatch, shadingsys, x, y);
 
             //std::cout << "shading x=" << x << " y=" << y << std::endl;
-            if(sgBatch.isFull() || (isFinalX && isFinalY))
+            if(sgBatch.isFull() || (isFinalX && isFinalY)) //SM: sgBatch.size() > integer ENV
             {
 	            //std::cout << "shading batch with size=" << sgBatch.size() << std::endl;
 				

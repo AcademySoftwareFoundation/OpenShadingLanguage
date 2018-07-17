@@ -299,7 +299,7 @@ Films using OSL (grouped by year of release date):
   The Emoji Movie,
   Detroit,
   Kingsman: The Golden Circle,
-  Lega Ninjago Movie,
+  Lego Ninjago Movie,
   Blade Runner 2049,
   Geostorm,
   Coco,
@@ -310,7 +310,13 @@ Films using OSL (grouped by year of release date):
   Black Panther,
   Annnihilation,
   Red Sparrow,
-  Pacific Rom Uprising
+  Pacific Rim Uprising,
+  Avengers Infinity War,
+  Deadpool 2,
+  Incredibles 2,
+  Hotel Transylvania 3: Summer Vacation,
+  Ant Man and the Wasp,
+  Skyscraper,
   ...
 
 

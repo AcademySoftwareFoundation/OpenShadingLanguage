@@ -1065,7 +1065,7 @@ BackendLLVM::run ()
 #endif
 
     // Create the ExecutionEngine
-    if (! ll.make_jit_execengine (&err)) {
+    if (! ll.make_jit_execengine (&err, false /* non-wide code gen not plumbed for debug info yet shadingsys().llvm_debugging_symbols()*/, shadingsys().llvm_profiling_events())) {
         shadingcontext()->error ("Failed to create engine: %s\n", err.c_str());
         ASSERT (0);
         return;

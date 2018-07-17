@@ -1,8 +1,34 @@
 shader
-benchmark (string op = "null",
+benchmark (string op = "error",
            int repeat = 10000, 
            output color Cout = 0)
 {
+    if (op == "error") {
+        exit();
+    }
+
+    matrix m = matrix(u,0,0,0,
+             0,v,0,0,
+             0,0,1,0,
+             0,0,0,1);
+
+    vector xvecknots[13];
+    
+    xvecknots[ 0] =  0.0;
+    xvecknots[ 1] =  0.0;
+    xvecknots[ 2] =  1.0;
+    xvecknots[ 3] =  1.0;
+    xvecknots[ 4] =  1.0;
+    xvecknots[ 5] =  0.5;
+    xvecknots[ 6] =  0.5;
+    xvecknots[ 7] =  0.5;
+    xvecknots[ 8] =  1.0;
+    xvecknots[ 9] =  1.0;
+    xvecknots[10] =  1.0;
+    xvecknots[11] =  0.0;
+    xvecknots[12] =  0.0;
+            
+
     for (int i = 0; i < repeat; ++i) {
         if (op == "null") {
         }
@@ -139,6 +165,108 @@ benchmark (string op = "null",
         if (op == "select") {
             Cout = color(select(P[0],P[1],P[2]), select(P[2],P[1],P[0]), select(P[2],P[1],P[0]));
         }        
-              
+        if (op == "dot") {
+            Cout = dot(P,N);
+        }        
+        if (op == "cross") {
+            Cout = cross(P,N);
+        }        
+        if (op == "length") {
+            Cout = length(P);
+        }        
+        if (op == "distance") {
+            Cout = distance(P,N);
+        }        
+        if (op == "normalize") {
+            Cout = normalize(P);
+        }        
+        if (op == "reflect") {
+            Cout = reflect(P, N);
+        }        
+        if (op == "refract") {
+            Cout = refract(P, N, 0.5);
+        }        
+        if (op == "fresnel") {
+            float Kr;
+            float Kt;
+            vector R;
+            vector T;
+            fresnel (I, N, 0.5, Kr, Kt, R, T);
+            Cout = (R + T) + Kr + Kt;
+        }              
+        if (op == "rotate") {
+            Cout = rotate(P, u, point(0,0,0), point(v,v,v));
+        }        
+        if (op == "transform") {
+            Cout = transform("object",P);
+        }        
+        if (op == "transform_matrix") {
+            Cout = transform(m,P);
+        }        
+        if (op == "matrix_object_camera") {
+            matrix moc = matrix("object","camera");
+            Cout = color(moc[3][0], moc[3][1], moc[3][2]);
+        }                
+        if (op == "determinant") {
+            Cout = determinant(m);
+        }        
+        if (op == "transpose") {
+            matrix tm = transpose(m);
+            Cout = color(tm[3][0], tm[3][1], tm[3][2]);
+        }                
+        if (op == "step") {
+            Cout = color(step(0.5,u),step(0.5,v), step(0.2,u));
+        }                
+        if (op == "linearstep") {
+            Cout = color(linearstep(1.0, 0, u),linearstep(1.0, 0, v), linearstep(0, 0.5, u));
+        }                
+        if (op == "smoothstep") {
+            Cout = color(smoothstep(1.0, 0, u),smoothstep(1.0, 0, v), smoothstep(0, 0.5, u));
+        }                
+        if (op == "smooth_linearstep") {
+            Cout = color(smooth_linearstep(1.0, 0, u, 0.1), smooth_linearstep(1.0, 0, v, 0.2), smooth_linearstep(0, 0.5, u, 0.3));
+        }                
+        if (op == "noise_perlin") {
+        
+            Cout = noise("perlin", P);
+        }        
+        if (op == "noise_cell") {
+            Cout = noise("cell", P);
+        }        
+        if (op == "noise_simplex") {
+            Cout = noise("simplex", P);
+        }        
+        if (op == "noise_gabor") {
+            Cout = noise("gabor", P);
+        }        
+        if (op == "pnoise_perlin") {
+        
+            Cout = pnoise("perlin", P, v);
+        }        
+        if (op == "pnoise_cell") {
+            Cout = pnoise("cell", P, v);
+        }        
+        if (op == "pnoise_gabor") {
+            Cout = pnoise("gabor", P, v);
+        }        
+        if (op == "spline_bezier") {
+            Cout   = spline("bezier", P[0], xvecknots);
+        }        
+        if (op == "spline_bspline") {
+            Cout   = spline("bspline", P[0], xvecknots);
+        }        
+        if (op == "spline_catmull-rom") {
+            Cout   = spline("catmull-rom", P[0], xvecknots);
+        }        
+        if (op == "spline_hermite") {
+            Cout   = spline("hermite", P[0], xvecknots);
+        }        
+        if (op == "spline_linear") {
+            Cout   = spline("linear", P[0], xvecknots);
+        }        
+        if (op == "spline_constant") {
+            Cout   = spline("constant", P[0], xvecknots);
+        }        
+        
     }
 }

@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2009-2010 Sony Pictures Imageworks Inc., et al.
+Copyright (c) 2009-2018 Sony Pictures Imageworks Inc., et al.
 All Rights Reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -28,78 +28,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-#include <map>
+#include "stringtable.h"
+
 #include <OpenImageIO/ustring.h>
 #include <OSL/oslexec.h>
 
-#include <cuda_runtime_api.h>
 #include <optix_world.h>
 
 
 OSL_NAMESPACE_ENTER
-
-
-// TODO: Make sure this works with multiple GPUs
-class StringTable {
-public:
-    StringTable() { }
-    ~StringTable() { }
-
-
-    // Allocate CUDA Unified Memory for the raw string table and add the
-    // "standard" strings declared in strdecls.h.
-    void init (optix::Context ctx)
-    {
-        m_optix_ctx = ctx;
-
-#define STRDECL(str,var_name)                           \
-        addString (str, "DeviceStrings::"#var_name);
-#include <OSL/strdecls.h>
-#undef STRDECL
-
-        ustring test_string("this is my test string");
-        uint64_t addr = (uint64_t)test_string.c_str();
-        m_optix_ctx["test_string_addr"]->setUserData (8, &addr);
-
-        // Make sure that ustrings are being stored in Unified Memory
-        cudaPointerAttributes attr;
-        cudaPointerGetAttributes (&attr, test_string.c_str());
-
-        // Shotgun blast to make sure ustrings are being placed in UM
-        ASSERT (attr.isManaged && attr.devicePointer && attr.hostPointer &&
-                "ustrings are not being allocated in CUDA Unified Memory!");
-    }
-
-
-    // Add a string to the table (if it hasn't already been added), and return
-    // its global address.
-    //
-    // Also, create an OptiX variable to hold the address of each string
-    // variable.
-    uint64_t addString (const std::string& str, const std::string& var_name="")
-    {
-        ustring ustr (str);
-        uint64_t addr = reinterpret_cast<uint64_t>(ustr.c_str());
-
-        if (! var_name.empty()) {
-            m_optix_ctx[var_name]->setUserData (8, &addr);
-#if 0
-            std::cout << "Creating var for " << str
-                      << " with name " << var_name
-                      << " and addr " << (void*) addr << std::endl;
-#endif
-        }
-
-        return addr;
-    }
-
-private:
-    // The collection of strings added so far, and their addresses.
-    std::map<ustring,uint64_t> m_string_map;
-
-    // A handle on the OptiX Context to use when creating global variables.
-    optix::Context             m_optix_ctx;
-};
 
 
 class OptixRenderer : public RendererServices
@@ -111,14 +48,14 @@ public:
     OptixRenderer () { }
     ~OptixRenderer () { }
 
-    void init_string_table(optix::Context ctx)
+    void init_string_table (optix::Context ctx)
     {
         m_str_table.init (ctx);
     }
 
     uint64_t register_string (const std::string& str, const std::string& var_name)
     {
-        return m_str_table.addString (str, var_name);
+        return m_str_table.addString (ustring(str), ustring(var_name));
     }
 
     virtual int supports (string_view feature) const
@@ -132,8 +69,7 @@ public:
 
     // Function stubs
     virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
-                             TransformationPtr xform,
-                             float time)
+                             TransformationPtr xform, float time)
     {
         return 0;
     }
@@ -162,10 +98,9 @@ public:
         return 0;
     }
 
-
     virtual bool get_array_attribute (ShaderGlobals *sg, bool derivatives,
                                       ustring object, TypeDesc type, ustring name,
-                                      int index, void *val )
+                                      int index, void *val)
     {
         return 0;
     }
@@ -183,6 +118,7 @@ public:
     }
 
 
+private:
     StringTable m_str_table;
 };
 

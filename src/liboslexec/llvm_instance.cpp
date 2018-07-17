@@ -464,7 +464,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
             ustring arg_name = ustring::format ("$symname_%s_%d", symname, sym.layer());
             Symbol symname_const (arg_name, TypeDesc::TypeString, SymTypeConst);
             symname_const.data (&symname);
-            name_arg = llvm_load_string_addr (symname_const);
+            name_arg = llvm_load_device_string (symname_const);
         } else {
             name_arg = ll.constant (symname);
         }
@@ -533,10 +533,8 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         TypeDesc t = sym.typespec().simpletype();
         ll.op_memcpy (dst, src, t.size(), t.basesize());
     } else if (use_optix() && sym.typespec().is_string()) {
-        llvm::Value* src = llvm_load_string_addr (sym, false, false);
-        ll.op_memcpy (llvm_void_ptr (sym),
-                      ll.ptr_cast(src, ll.type_void_ptr()),
-                      8, 4);
+        llvm::Value* src = llvm_load_device_string (sym);
+        ll.op_memcpy (llvm_void_ptr (sym), src, 8, 4);
     } else {
         // Use default value
         int num_components = sym.typespec().simpletype().aggregate;

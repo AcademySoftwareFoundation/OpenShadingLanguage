@@ -61,9 +61,6 @@ rtBuffer<float3,2> output_buffer;
 rtDeclareVariable (rtCallableProgramId<void (void*, void*)>, osl_init_func, , );
 rtDeclareVariable (rtCallableProgramId<void (void*, void*)>, osl_group_func, ,);
 
-rtDeclareVariable (uint64_t, test_string_addr, ,);
-
-using OSL::UstringDevice;
 
 RT_PROGRAM void any_hit_shadow()
 {
@@ -153,11 +150,11 @@ float3 process_closure(const ClosureColor* closure_tree)
         }
 
         case MICROFACET_ID: {
-#if 1
-            const char* mem = ((ClosureComponent*) cur)->mem;
-            const char* str = (const char*)&mem[0];
+#if 0
+            const char*             mem = ((ClosureComponent*) cur)->mem;
+            const OSL::DeviceString str = *(OSL::DeviceString*) &mem[0];
             if (launch_index.x == launch_dim.x / 2 && launch_index.y == launch_dim.y / 2) {
-                printf ("microfacet, str: %s\n", str);
+                printf ("microfacet, str: %s\n", str.c_str());
             }
 #endif
 

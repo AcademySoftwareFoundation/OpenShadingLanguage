@@ -1,0 +1,121 @@
+#include "stringtable.h"
+
+using OIIO::ustring;
+
+StringTable::StringTable()
+    : m_ptr    (nullptr),
+      m_size   (1 << 16),
+      m_offset (0)
+{
+}
+
+
+StringTable::~StringTable()
+{
+    if (m_ptr)
+        cudaFree (m_ptr);
+}
+
+
+void StringTable::init (optix::Context ctx)
+{
+    ASSERT (! m_ptr && "StringTable should only be initialized once");
+    m_optix_ctx = ctx;
+
+    ASSERT ((m_optix_ctx->getEnabledDeviceCount() == 1) &&
+            "Only one CUDA device is currently supported");
+
+    cudaMalloc (reinterpret_cast<void**>(&m_ptr), (m_size));
+
+    // Construct the statically-declared strings, and create OptiX variables for
+    // them in the DeviceStrings namespace.
+#define STRDECL(str,var_name)                                       \
+    addString (ustring(str), ustring("DeviceStrings::"#var_name));
+#include <OSL/strdecls.h>
+#undef STRDECL
+}
+
+
+uint64_t StringTable::addString (ustring str, ustring var_name)
+{
+    ASSERT (m_ptr && "StringTable has not been initialized");
+
+    // The strings are laid out in the table as a struct:
+    //
+    //   struct DeviceString {
+    //       size_t len;
+    //       size_t hash;
+    //       char   str[len+1];
+    //    };
+
+    // Compute the size of the entry before adding it to the table 
+    size_t size = sizeof(size_t) + sizeof(size_t) + str.size() + 1;
+    if (((m_offset + size) >= m_size)) {
+        reallocTable();
+    }
+
+    // It should be hard to trigger this assert, unless the table size is
+    // very small and the string is very large.
+    ASSERT (m_offset + size <= m_size && "String table allocation error");
+
+    int offset = getOffset(str.string());
+    if (offset < 0) {
+        // Place the hash and length of the string before the characters
+        size_t hash = str.hash();
+        cudaMemcpy (m_ptr + m_offset, (void*)&hash, sizeof(size_t), cudaMemcpyHostToDevice);
+        m_offset += sizeof(size_t);
+
+        size_t len = str.length();
+        cudaMemcpy (m_ptr + m_offset, (void*)&len, sizeof(size_t), cudaMemcpyHostToDevice);
+        m_offset += sizeof(size_t);
+
+        offset = m_offset;
+        m_offset_map [str] = offset;
+        m_name_map   [str] = var_name;
+
+        // Copy the raw characters to the table
+        cudaMemcpy (m_ptr + m_offset, str.c_str(), str.size() + 1, cudaMemcpyHostToDevice);
+        m_offset += str.size() + 1;
+
+        // Align the offset for the next entry to 8-byte boundaries
+        m_offset = (m_offset + 0x7u) & ~0x7u;
+    }
+
+    uint64_t addr = reinterpret_cast<uint64_t>(m_ptr + offset);
+
+    // Optionally create an OptiX variable for the string. It's not necessary to
+    // create a variable for strings that do not appear by name in compiled code
+    // (in either the OSL library functions or in the renderer).
+    if (! var_name.empty()) {
+        m_optix_ctx [var_name.string()]->setUserData (8, &addr);
+    }
+
+    return addr;
+}
+
+
+int StringTable::getOffset (const std::string& str) const
+{
+    auto it = m_offset_map.find (ustring(str));
+    return (it != m_offset_map.end()) ? it->second : -1;
+}
+
+
+void StringTable::reallocTable()
+{
+    ASSERT ((m_optix_ctx->getEnabledDeviceCount() == 1) &&
+            "Only one CUDA device is currently supported");
+
+    m_size *= 2;
+    cudaFree (m_ptr);
+    cudaMalloc (reinterpret_cast<void**>(&m_ptr), (m_size));
+
+    // The offsets need to be recomputed
+    m_offset = 0;
+    m_offset_map.clear();
+
+    // Add the string collection to the newly-allocated memory
+    for (auto& entry : m_name_map) {
+        addString (entry.first, entry.second);
+    }
+}

@@ -361,7 +361,7 @@ LLVMGEN (llvm_gen_printf)
                     llvm::Value* loaded = nullptr;
                     if (rop.use_optix() && simpletype.basetype == TypeDesc::STRING) {
                         // In the OptiX case, we use the device-side string.
-                        loaded = rop.llvm_load_string_addr (sym);
+                        loaded = rop.llvm_load_device_string (sym);
                     }
                     else {
                         loaded = rop.llvm_load_value (sym, 0, arrind, c);
@@ -416,7 +416,7 @@ LLVMGEN (llvm_gen_printf)
     }
     else {
         // In the OptiX case, we use the pointer to the device-side string
-        call_args[new_format_slot] = rop.llvm_load_string_addr (format_sym);
+        call_args[new_format_slot] = rop.llvm_load_device_string (format_sym);
     }
 
     // Construct the function name and call it.
@@ -1772,8 +1772,8 @@ LLVMGEN (llvm_gen_compare_op)
     if (rop.use_optix() && A.typespec().is_string()) {
         ASSERT (B.typespec().is_string() && "Only string-to-string comparison is supported");
 
-        llvm::Value* a = rop.llvm_load_string_addr (A);
-        llvm::Value* b = rop.llvm_load_string_addr (B);
+        llvm::Value* a = rop.llvm_load_device_string (A);
+        llvm::Value* b = rop.llvm_load_device_string (B);
 
         if (opname == op_eq) {
             final_result = rop.ll.op_eq (a, b);
@@ -2839,7 +2839,7 @@ LLVMGEN (llvm_gen_noise)
             args.push_back (rop.llvm_load_value(*Name));
         }
         else {
-            args.push_back (rop.llvm_load_string_addr (*Name));
+            args.push_back (rop.llvm_load_device_string (*Name));
         }
     }
     llvm::Value *tmpresult = NULL;
@@ -3345,8 +3345,7 @@ LLVMGEN (llvm_gen_closure)
 
         if (rop.use_optix() && sym.typespec().is_string()) {
             llvm::Value* dst = rop.ll.offset_ptr (mem_void_ptr, p.offset);
-            llvm::Value* src = nullptr;
-            src = rop.llvm_load_string_addr (sym);
+            llvm::Value* src = rop.llvm_load_device_string (sym);
             rop.ll.op_memcpy (dst, src, (int)p.type.size(),
                               4 /* use 4 byte alignment for now */);
         }

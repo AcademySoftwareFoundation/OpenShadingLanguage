@@ -1,0 +1,14 @@
+surface test_assign (string str = "default", color Cs = 1)
+{
+    string temp  = str;
+    string temp2 = "temp2 initial value";
+
+    if (temp == "abracadabra") {
+       temp2 = "open sesame";
+    }
+
+    printf("temp:  %s\n", temp);
+    printf("temp2: %s\n", temp2);
+
+    Ci = Cs * diffuse (N);
+}

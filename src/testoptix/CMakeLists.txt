@@ -89,6 +89,7 @@ ENDMACRO ()
 
 set ( testoptix_srcs
     shading.cpp
+    stringtable.cpp
     testoptix.cpp
     )
 

@@ -677,17 +677,18 @@ BackendLLVM::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
 
 
 llvm::Value *
-BackendLLVM::llvm_load_string_addr (const Symbol& sym, bool follow, bool cast)
+BackendLLVM::llvm_load_device_string (const Symbol& sym, bool follow)
 {
+    ASSERT (use_optix() && "This is only intended to be used with CUDA");
+
     llvm::Value* val = (sym.is_constant() || sym.data())
         ? getOrAllocateLLVMGlobal (sym)
         : llvm_load_value (sym, 0, nullptr, 0, TypeDesc(TypeDesc::UINT64));
 
+    // Typically, the address of the string is held in a global variable, so we
+    // need to dereference the global to get to the char*.
     if (follow)
-        val = ll.op_load (val);
-
-    if (cast)
-        val = ll.int_to_ptr_cast (val);
+        val = ll.int_to_ptr_cast (ll.op_load (val));
 
     return val;
 }
@@ -729,7 +730,7 @@ BackendLLVM::llvm_load_constant_value (const Symbol& sym,
     }
     if (sym.typespec().is_string() && use_optix()) {
         // TODO: This ignores arrayindex
-        return llvm_load_string_addr (sym);
+        return llvm_load_device_string (sym);
     }
     if (sym.typespec().is_string()) {
         const ustring *val = (const ustring *)sym.data();
@@ -935,7 +936,7 @@ BackendLLVM::llvm_call_function (const char *name,
         if (s.typespec().is_closure())
             valargs[i] = llvm_load_value (s);
         else if (use_optix() && s.typespec().is_string())
-            valargs[i] = llvm_load_string_addr (s);
+            valargs[i] = llvm_load_device_string (s);
         else if (s.typespec().simpletype().aggregate > 1 ||
                  (deriv_ptrs && s.has_derivs()))
             valargs[i] = llvm_void_ptr (s);
@@ -1078,9 +1079,9 @@ BackendLLVM::llvm_assign_impl (Symbol &Result, Symbol &Src,
     const int num_components = rt.aggregate;
     const bool singlechan = (srccomp != -1) || (dstcomp != -1);
     if (use_optix() && Src.typespec().is_string()) {
-        // TODO: Are we sure that Src.data() is non-null?
-        //       Does it matter?
-        llvm::Value* src = llvm_load_string_addr (Src, false, false);
+        // We defer the loading of the char* until the assigned value is
+        // actually used, so just pass the value of the global variable.
+        llvm::Value* src = llvm_load_device_string (Src, false);
         llvm_store_value (ll.ptr_cast (src, ll.type_void_ptr()), Result);
     }
     else if (!singlechan) {

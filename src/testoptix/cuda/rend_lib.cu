@@ -189,21 +189,21 @@ extern "C" {
     __device__
     int osl_strlen_is (const char *str)
     {
-        return (str) ? (int) USTRD(str).length() : 0;
+        return ((OSL::StrRep*) (str-16))->len;
     }
 
 
     __device__
     int osl_hash_is (const char *str)
     {
-        return (str) ? (int) USTRD(str).hash() : 0;
+        return ((OSL::StrRep*) (str-16))->hash;
     }
 
 
     __device__
     int osl_getchar_isi (const char *str, int index)
     {
-        return (str && unsigned(index) < USTRD(str).length())
+        return (str && unsigned(index) < ((OSL::StrRep*) (str-16))->len)
             ? str[index] : 0;
     }
 

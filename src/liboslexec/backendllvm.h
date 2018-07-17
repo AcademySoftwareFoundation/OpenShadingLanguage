@@ -147,9 +147,8 @@ public:
     }
 
     /// Load the address of a global device-side string pointer, optionally
-    /// follow the pointer and optionally cast the result to UINT64.
-    llvm::Value *llvm_load_string_addr (const Symbol& sym,
-                                        bool follow=true, bool cast=true);
+    /// follow the pointer and cast the result to UINT64.
+    llvm::Value *llvm_load_device_string (const Symbol& sym, bool follow=true);
 
     /// Legacy version
     ///

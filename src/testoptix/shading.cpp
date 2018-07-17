@@ -1,5 +1,4 @@
 #include "shading.h"
-#include <OSL/device_string.h>
 #include <OSL/genclosure.h>
 
 using namespace OSL;

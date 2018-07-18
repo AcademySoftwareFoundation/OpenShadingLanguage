@@ -1706,7 +1706,14 @@ test_shade (int argc, const char *argv[])
         else {
             bool save = (iter == (iters-1));   // save on last iteration
 			if (batched) {
-				batched_shade_region (shadergroup.get(), roi, save);
+			    if (num_threads == 1) {
+				    batched_shade_region (shadergroup.get(), roi, save);
+			    } else {
+                    OIIO::ImageBufAlgo::parallel_image (
+                            //std::bind (shade_region, shadergroup.get(), std::placeholders::_1, save),
+                            [&](OIIO::ROI sub_roi)->void { batched_shade_region (shadergroup.get(), sub_roi, save); },
+                            roi, num_threads);
+			    }
 			} else {
 				#if 0
 					shade_region (shadergroup.get(), roi, save);

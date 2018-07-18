@@ -149,14 +149,14 @@ OSL_INLINE void robust_multVecMatrix(const Matrix44& M, const Imath::Vec3<float>
    float c = src.x * M.x[0][2] + src.y * M.x[1][2] + src.z * M.x[2][2] + M.x[3][2];
    float w = src.x * M.x[0][3] + src.y * M.x[1][3] + src.z * M.x[2][3] + M.x[3][3];
 
-   if (w != 0) {
+   if (w != 0.0f) {
       dst.x = a / w;
       dst.y = b / w;
       dst.z = c / w;
    } else {
-      dst.x = 0;
-      dst.y = 0;
-      dst.z = 0;
+      dst.x = 0.0f;
+      dst.y = 0.0f;
+      dst.z = 0.0f;
    }
 }
 
@@ -186,9 +186,9 @@ robust_multVecMatrix (const Matrix44 &M, const Dual2<Vec3> &in, Dual2<Vec3> &out
        dout.y = b / w;
        dout.z = c / w;
     } else {
-       dout.x = 0;
-       dout.y = 0;
-       dout.z = 0;
+       dout.x = 0.0f;
+       dout.y = 0.0f;
+       dout.z = 0.0f;
     }
 
     // Rearrange back into Dual2<Vec3>
@@ -439,10 +439,10 @@ length (const Dual2<Vec3> &a)
 OSL_INLINE Dual2<Vec3>
 normalize (const Dual2<Vec3> &a)
 {
-    if (a.val().x == 0 && a.val().y == 0 && a.val().z == 0) {
-        return Dual2<Vec3> (Vec3(0, 0, 0),
-                            Vec3(0, 0, 0),
-                            Vec3(0, 0, 0));
+    if (a.val().x == 0.0f && a.val().y == 0.0f && a.val().z == 0.0f) {
+        return Dual2<Vec3> (Vec3(0.0f, 0.0f, 0.0f),
+                            Vec3(0.0f, 0.0f, 0.0f),
+                            Vec3(0.0f, 0.0f, 0.0f));
     } else {
         Dual2<float> ax (a.val().x, a.dx().x, a.dy().x);
         Dual2<float> ay (a.val().y, a.dx().y, a.dy().y);
@@ -470,10 +470,10 @@ distance (const Dual2<Vec3> &a, const Dual2<Vec3> &b)
 OSL_INLINE Dual2<Vec3>
 simdFriendlyNormalize (const Dual2<Vec3> &a)
 {
-    if (__builtin_expect(a.val().x == 0 && a.val().y == 0 && a.val().z == 0, 0)) {
-        return Dual2<Vec3> (Vec3(0, 0, 0),
-                            Vec3(0, 0, 0),
-                            Vec3(0, 0, 0));
+    if (__builtin_expect(a.val().x == 0.0f && a.val().y == 0.0f && a.val().z == 0.0f, 0)) {
+        return Dual2<Vec3> (Vec3(0.0f, 0.0f, 0.0f),
+                            Vec3(0.0f, 0.0f, 0.0f),
+                            Vec3(0.0f, 0.0f, 0.0f));
     } else {
         Dual2<float> ax (a.val().x, a.dx().x, a.dy().x);
         Dual2<float> ay (a.val().y, a.dx().y, a.dy().y);

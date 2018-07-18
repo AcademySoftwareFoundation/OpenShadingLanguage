@@ -156,7 +156,7 @@ filter_gabor_kernel_2d (const Matrix22 &filter, const Dual2<float> &w, float a,
 }
 
 
-inline float
+OSL_INLINE float
 wrap (float s, float period)
 {
     period = floorf (period);
@@ -167,7 +167,7 @@ wrap (float s, float period)
 
 
 // avoid aliasing issues
-static Vec3
+static OSL_INLINE Vec3
 wrap (const Vec3 &s, const Vec3 &period)
 {
     return Vec3 (wrap (s.x, period.x),
@@ -206,68 +206,6 @@ floor (const Dual2<Vec3> &vd)
     const Vec3 &v (vd.val());
     return Vec3 (floorf(v.x), floorf(v.y), floorf(v.z));
 }
-
-
-struct DisabledFilterPolicy
-{
-	static constexpr bool active = false;
-};
-
-struct EnabledFilterPolicy
-{
-	static constexpr bool active = true;
-};
-
-
-// Foward declaration, implementation is in fast_gabor.h
-template<int AnisotropicT, typename FilterPolicyT, int WidthT>
-OSL_NOINLINE void
-fast_gabor (
-        MaskedAccessor<Dual2<float>,WidthT> wResult,
-		ConstWideAccessor<Dual2<Vec3>,WidthT> wP,
-		NoiseParams const *opt);
-
-// Foward declaration, implementation is in fast_gabor.h
-template<int AnisotropicT, typename FilterPolicyT, int WidthT>
-OSL_NOINLINE void
-fast_gabor (
-        MaskedAccessor<Dual2<float>,WidthT> wResult,
-        ConstWideAccessor<Dual2<float>,WidthT> wX,
-        NoiseParams const *opt);
-
-// Foward declaration, implementation is in fast_gabor.h
-template<int AnisotropicT, typename FilterPolicyT, int WidthT>
-OSL_NOINLINE void
-fast_gabor (
-        MaskedAccessor<Dual2<float>,WidthT> wResult,
-        ConstWideAccessor<Dual2<float>,WidthT> wX,
-        ConstWideAccessor<Dual2<float>,WidthT> wY,
-        NoiseParams const *opt);
-
-// Foward declaration, implementation is in fast_gabor.h
-template<int AnisotropicT, typename FilterPolicyT, int WidthT>
-OSL_NOINLINE  void
-fast_gabor3 (
-        MaskedAccessor<Dual2<Vec3>,WidthT> wResult,
-        ConstWideAccessor<Dual2<float>, WidthT> wX,
-        NoiseParams const *opt);
-
-// Foward declaration, implementation is in fast_gabor.h
-template<int AnisotropicT, typename FilterPolicyT, int WidthT>
-OSL_NOINLINE  void
-fast_gabor3 (
-        MaskedAccessor<Dual2<Vec3>,WidthT> wResult,
-        ConstWideAccessor<Dual2<float>, WidthT> wX,
-        ConstWideAccessor<Dual2<float>, WidthT> wY,
-        NoiseParams const *opt);
-
-// Foward declaration, implementation is in fast_gabor.h
-template<int AnisotropicT, typename FilterPolicyT, int WidthT>
-OSL_NOINLINE  void
-fast_gabor3 (
-        MaskedAccessor<Dual2<Vec3>,WidthT> wResult,
-		ConstWideAccessor<Dual2<Vec3>, WidthT> wP,
-		NoiseParams const *opt);
 
 } // namespace pvt
 

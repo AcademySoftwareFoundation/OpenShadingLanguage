@@ -1,0 +1,11 @@
+shader
+test_float_1d_v_float_v_float (string type = "perlin", output color Cout = 0)
+{
+    float val = pnoise (type, u, 64*v);    
+    val *= 2.0;
+    Cout = val;    
+    
+    if (int(P[0]*64)%2 == 0) {
+        Cout[1] = pnoise (type, v, 64*u);
+    }
+}

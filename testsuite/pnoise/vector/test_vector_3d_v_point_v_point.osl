@@ -1,0 +1,13 @@
+shader
+test_vector_3d_v_point_v_point (string type = "perlin", output color Cout = 0)
+{
+    
+    vector val = pnoise (type, point(u, v, u - v), point(32*u, 64*v, 16*(u+v)));
+    val *= 2.0;
+    Cout = val;
+    if (int(P[0]*64)%2 == 0) {
+        vector val2 = pnoise (type, point(v, u, v - u), point(32*v, 64*u, 48*(u+v)));
+        val2 *= 1.125;
+        Cout = val2;
+    }
+}

@@ -124,6 +124,7 @@ static int exprcount = 0;
 static bool shadingsys_options_set = false;
 static float sscale = 1, tscale = 1;
 static float soffset = 0, toffset = 0;
+static int max_batch_size = -1;
 
 static void
 inject_params ()
@@ -183,6 +184,8 @@ set_shadingsys_options ()
     if (! shaderpath.empty())
         shadingsys->attribute ("searchpath:shader", shaderpath);
     
+    if (const char *opt_env = getenv ("TESTSHADE_BATCHED"))
+        batched = atoi(opt_env);
     if (batched) {
     	// For batched operations turn off coalesce temps
     	// TODO:  Investigate if this is necessary, and document why
@@ -192,6 +195,10 @@ set_shadingsys_options ()
     int do_range_checking = 0;
     if (const char *opt_env = getenv ("TESTSHADE_RANGE_CHECK"))
         do_range_checking = atoi(opt_env);
+
+    max_batch_size = ShaderGlobalsBatch::maxSize;
+    if (const char *opt_env = getenv ("TESTSHADE_MAX_BATCH_SIZE"))
+        max_batch_size = atoi(opt_env);
 
 	shadingsys->attribute ("range_checking", do_range_checking);
 
@@ -1454,7 +1461,7 @@ batched_shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
         	setup_varying_shaderglobals (sgBatch, shadingsys, x, y);
 
             //std::cout << "shading x=" << x << " y=" << y << std::endl;
-            if(sgBatch.isFull() || (isFinalX && isFinalY)) //SM: sgBatch.size() > integer ENV
+            if(sgBatch.isFull() || (isFinalX && isFinalY) || (sgBatch.size() >= max_batch_size))
             {
 	            //std::cout << "shading batch with size=" << sgBatch.size() << std::endl;
 				

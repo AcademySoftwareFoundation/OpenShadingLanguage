@@ -4,8 +4,35 @@ SET ( liboslexec_srcs
           context.cpp instance.cpp
           loadshader.cpp master.cpp
           opcolor.cpp opmatrix.cpp opmessage.cpp
-          opnoise.cpp opnoise_perlin.cpp opnoise_uperlin.cpp opnoise_simplex.cpp opnoise_usimplex.cpp
-          opnoise_periodic_perlin.cpp opnoise_periodic_uperlin.cpp
+          opnoise.cpp 
+          b16/opnoise_cell.cpp 
+          b16/opnoise_gabor.cpp 
+          b16/opnoise_perlin_float.cpp
+          b16/opnoise_perlin_Vec3.cpp
+          b16/opnoise_perlin_deriv_float.cpp
+          b16/opnoise_perlin_deriv_Vec3.cpp
+          b16/opnoise_uperlin_float.cpp
+          b16/opnoise_uperlin_Vec3.cpp
+          b16/opnoise_uperlin_deriv_float.cpp
+          b16/opnoise_uperlin_deriv_Vec3.cpp
+          b16/opnoise_simplex_float.cpp
+          b16/opnoise_simplex_Vec3.cpp
+          b16/opnoise_simplex_deriv_float.cpp
+          b16/opnoise_simplex_deriv_Vec3.cpp
+          b16/opnoise_usimplex_float.cpp
+          b16/opnoise_usimplex_deriv_float.cpp
+          b16/opnoise_usimplex_Vec3.cpp
+          b16/opnoise_usimplex_deriv_Vec3.cpp
+          b16/opnoise_periodic_cell.cpp 
+          b16/opnoise_periodic_gabor.cpp
+          b16/opnoise_periodic_perlin_float.cpp
+          b16/opnoise_periodic_perlin_Vec3.cpp
+          b16/opnoise_periodic_perlin_deriv_float.cpp
+          b16/opnoise_periodic_perlin_deriv_Vec3.cpp
+          b16/opnoise_periodic_uperlin_float.cpp
+          b16/opnoise_periodic_uperlin_Vec3.cpp
+          b16/opnoise_periodic_uperlin_deriv_float.cpp
+          b16/opnoise_periodic_uperlin_deriv_Vec3.cpp
           opspline.cpp opstring.cpp optexture.cpp
           optranscendental.cpp
           oslexec.cpp
@@ -35,18 +62,18 @@ endif ()
 # oslnoise symbols used in oslexec
 LIST(APPEND liboslexec_srcs
    ../liboslnoise/gabornoise.cpp
-   ../liboslnoise/fast_gabor_ansiotropic_disabled_16.cpp
-   ../liboslnoise/fast_gabor_ansiotropic_enabled_16.cpp
-   ../liboslnoise/fast_gabor_hybrid_disabled_16.cpp
-   ../liboslnoise/fast_gabor_hybrid_enabled_16.cpp
-   ../liboslnoise/fast_gabor_isotropic_disabled_16.cpp
-   ../liboslnoise/fast_gabor_isotropic_enabled_16.cpp   
-   ../liboslnoise/fast_gabor3_ansiotropic_disabled_16.cpp
-   ../liboslnoise/fast_gabor3_ansiotropic_enabled_16.cpp
-   ../liboslnoise/fast_gabor3_hybrid_disabled_16.cpp
-   ../liboslnoise/fast_gabor3_hybrid_enabled_16.cpp
-   ../liboslnoise/fast_gabor3_isotropic_disabled_16.cpp
-   ../liboslnoise/fast_gabor3_isotropic_enabled_16.cpp   
+   ../liboslnoise/b16/wide_gabor_ansiotropic_disabled_16.cpp
+   ../liboslnoise/b16/wide_gabor_ansiotropic_enabled_16.cpp
+   ../liboslnoise/b16/wide_gabor_hybrid_disabled_16.cpp
+   ../liboslnoise/b16/wide_gabor_hybrid_enabled_16.cpp
+   ../liboslnoise/b16/wide_gabor_isotropic_disabled_16.cpp
+   ../liboslnoise/b16/wide_gabor_isotropic_enabled_16.cpp   
+   ../liboslnoise/b16/wide_gabor3_ansiotropic_disabled_16.cpp
+   ../liboslnoise/b16/wide_gabor3_ansiotropic_enabled_16.cpp
+   ../liboslnoise/b16/wide_gabor3_hybrid_disabled_16.cpp
+   ../liboslnoise/b16/wide_gabor3_hybrid_enabled_16.cpp
+   ../liboslnoise/b16/wide_gabor3_isotropic_disabled_16.cpp
+   ../liboslnoise/b16/wide_gabor3_isotropic_enabled_16.cpp   
    ../liboslnoise/simplexnoise.cpp
    )
 
@@ -67,7 +94,7 @@ FLEX_BISON ( ../liboslcomp/osllex.l ../liboslcomp/oslgram.y osl liboslexec_srcs 
 
 if (CMAKE_COMPILER_IS_INTEL)
 	#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS" )
-	SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -qopt-report=5 -qopt-report-phase=vec -fp-model precise" )
+	SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -qopt-report=5 -fp-model precise" )
 	#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -no-fma -fp-model precise" )
 	#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS" )
 	#SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -mavx" )

@@ -1,0 +1,15 @@
+shader
+test_dvector_2d_u_float_u_float_v_float_v_float (string type = "perlin", output color Cout = 0)
+{
+    float  u_val1 = raytype("camera")/4.0;
+    float  u_val2 = 2.0*raytype("camera")/4.0;
+
+    vector val = pnoise (type, u_val1, u_val2, 32*u, 32*v);
+    val *= 2.0;
+    Cout = val;
+    Cout = Dx(val);    
+    if (int(P[0]*64)%2 == 0) {
+        vector val2 = pnoise (type, u_val2, u_val1, 64*v, 32*u);
+        Cout += Dy(val2);        
+    }
+}

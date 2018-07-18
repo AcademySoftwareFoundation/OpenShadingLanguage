@@ -1238,23 +1238,51 @@ LLVMGEN (llvm_gen_select)
     bool derivs = (Result.has_derivs() &&
                    (A.has_derivs() || B.has_derivs()));
 
-    llvm::Value *zero = X.typespec().is_int() ? rop.ll.constant (0)
-                                              : rop.ll.constant (0.0f);
+
+    bool op_is_uniform = rop.isSymbolUniform(A) &&
+                         rop.isSymbolUniform(B) &&
+                         rop.isSymbolUniform(X);
+    bool result_is_uniform = rop.isSymbolUniform(Result);
+    ASSERT(op_is_uniform || (op_is_uniform == result_is_uniform));
+
+    llvm::Value *zero;
+    if (rop.isSymbolUniform(X)) {
+        zero = X.typespec().is_int() ? rop.ll.constant (0)
+                                     : rop.ll.constant (0.0f);
+    } else {
+        zero = X.typespec().is_int() ? rop.ll.wide_constant (0)
+                                     : rop.ll.wide_constant (0.0f);
+    }
     llvm::Value *cond[3];
-    for (int i = 0; i < x_components; ++i)
-        cond[i] = rop.ll.op_ne (rop.llvm_load_value (X, 0, i), zero);
+    for (int i = 0; i < x_components; ++i) {
+        llvm::Value * x_val = rop.llvm_load_value (X, 0, i);
+        if (rop.ll.llvm_typeof(x_val) == rop.ll.type_wide_bool()) {
+            // X was already a result of a comparison we can use it directly
+            // in the select, no need to promote it to integer and
+            // compare to 0
+            cond[i] = x_val;
+        } else {
+            cond[i] = rop.ll.op_ne (x_val, zero);
+        }
+    }
 
     for (int i = 0; i < num_components; i++) {
-        llvm::Value *a = rop.llvm_load_value (A, 0, i, type);
-        llvm::Value *b = rop.llvm_load_value (B, 0, i, type);
+        llvm::Value *a = rop.llvm_load_value (A, 0, i, type, op_is_uniform);
+        llvm::Value *b = rop.llvm_load_value (B, 0, i, type, op_is_uniform);
         llvm::Value *c = (i >= x_components) ? cond[0] : cond[i];
         llvm::Value *r = rop.ll.op_select (c, b, a);
+        if (op_is_uniform && !result_is_uniform) {
+            r = rop.ll.widen_value(r);
+        }
         rop.llvm_store_value (r, Result, 0, i);
         if (derivs) {
             for (int d = 1; d < 3; ++d) {
-                a = rop.llvm_load_value (A, d, i, type);
-                b = rop.llvm_load_value (B, d, i, type);
+                a = rop.llvm_load_value (A, d, i, type, op_is_uniform);
+                b = rop.llvm_load_value (B, d, i, type, op_is_uniform);
                 r = rop.ll.op_select (c, b, a);
+                if (op_is_uniform && !result_is_uniform) {
+                    r = rop.ll.widen_value(r);
+                }
                 rop.llvm_store_value (r, Result, d, i);
             }
         }
@@ -5131,8 +5159,6 @@ LLVMGEN (llvm_gen_getmessage)
     ASSERT(rop.isSymbolUniform(Result) == false);
     ASSERT(rop.isSymbolUniform(Data) == false);
 
-
-    const TypeDesc* dest_type = &Data.typespec().simpletype();
 
     std::vector<llvm::Value *> args;
 

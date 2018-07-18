@@ -313,13 +313,14 @@ ShaderInstance::parameters (const ParamValueList &params)
                 // data offsets to each parameter, we didn't know the length
                 // needed to allocate this param in its proper spot.
                 ASSERT (valuetype.arraylen > 0);
+                int nelements = valuetype.arraylen * valuetype.aggregate;
                 // Store the actual length in the shader instance parameter
-                // override info.
-                so->arraylen (valuetype.arraylen);
+                // override info. Compute the length this way to account for relaxed
+                // parameter checking (for example passing an array of floats to an array of colors)
+                so->arraylen (nelements / paramtype.aggregate);
                 // Allocate space for the new param size at the end of its
                 // usual parameter area, and set the new dataoffset to that
                 // position.
-                int nelements = valuetype.arraylen * valuetype.aggregate;
                 if (paramtype.basetype == TypeDesc::FLOAT) {
                     so->dataoffset((int) m_fparams.size());
                     expand (m_fparams, nelements);

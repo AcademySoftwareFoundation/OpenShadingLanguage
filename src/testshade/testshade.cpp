@@ -200,6 +200,7 @@ set_shadingsys_options ()
     if (const char *opt_env = getenv ("TESTSHADE_MAX_BATCH_SIZE"))
         max_batch_size = atoi(opt_env);
 
+
 	shadingsys->attribute ("range_checking", do_range_checking);
 
     shadingsys_options_set = true;
@@ -1461,6 +1462,7 @@ batched_shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
         	setup_varying_shaderglobals (sgBatch, shadingsys, x, y);
 
             //std::cout << "shading x=" << x << " y=" << y << std::endl;
+        	//std::cout<<"sgBatch.size() in testshade.cpp is "<< sgBatch.size()<<std::endl;
             if(sgBatch.isFull() || (isFinalX && isFinalY) || (sgBatch.size() >= max_batch_size))
             {
 	            //std::cout << "shading batch with size=" << sgBatch.size() << std::endl;

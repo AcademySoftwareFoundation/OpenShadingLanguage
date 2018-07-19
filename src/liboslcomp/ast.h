@@ -172,6 +172,9 @@ public:
             return B;
     }
 
+    /// Reverse the order of the list.
+    friend ASTNode *reverse (ASTNode *list);
+
     /// What source file was this parse node created from?
     ///
     ustring sourcefile () const { return m_sourcefile; }

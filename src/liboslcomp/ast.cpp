@@ -26,6 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <algorithm>
 #include <vector>
 #include <string>
 #include <sstream>
@@ -73,6 +74,41 @@ ScopeExit print_node_counts ([](){
 });
 }
 #endif
+
+
+
+ASTNode *
+reverse (ASTNode *list)
+{
+    // trivial case: empty or just one item
+    if (!list || !list->nextptr())
+        return list;
+
+#ifndef OIIO_REFCNT_HAS_RELEASE
+    ASSERT (0 && "Do not call reverse() if you didn't build with an OIIO "
+                 "new enough to have intrustive_ptr::release().");
+    return nullptr;
+#else
+    // Turn the list (whose `next` fields are ref-counted pointers) into
+    // a vector of raw pointers, releasing the ref-counted pointers in the
+    // process (but don't free the nodes!).
+    std::vector<ASTNode *> nodes;
+    while (list) {
+        nodes.push_back (list);
+        list = list->m_next.release();
+    }
+
+    // reverse the list
+    std::reverse (nodes.begin(), nodes.end());
+
+    // reassemble!
+    for (size_t i = 0, e = nodes.size(); i < e; ++i)
+        nodes[i]->m_next.reset ((i+1 < e) ? nodes[i+1] : nullptr);
+
+    // return the new head of list
+    return nodes[0];
+#endif
+}
 
 
 

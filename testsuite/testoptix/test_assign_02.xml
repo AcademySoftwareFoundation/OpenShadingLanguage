@@ -4,6 +4,6 @@
      param string str "abracadabra" [[int lockgeom=0]];
      shader test_assign layer1;
    </ShaderGroup>
-   <Quad corner="-100,-100,0" edge_x="200,0,0" edge_y="0,200,0" />   
+   <Quad corner="-100,-100,0" edge_x="200,0,0" edge_y="0,200,0" />
 </World>
 

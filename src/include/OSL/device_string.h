@@ -39,34 +39,46 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 OSL_NAMESPACE_ENTER
 
+// Strings are stored in a block of CUDA device memory. String variables hold a
+// pointer to the start of the char array for each string. Each canonical string
+// has a unique entry in the table, so two strings can be tested for equality by
+// comparing their addresses.
+//
+// As a convenience, the ustring hash and the length of the string are also
+// stored in the table, in the 16 bytes preceding the characters.
 
 struct DeviceString {
-    uint64_t addr;
+    const char* m_chars;
 
-    OSL_HOSTDEVICE const char* c_str() const
+    OSL_HOSTDEVICE uint64_t hash()
     {
-        return reinterpret_cast<const char*>(addr);
+        return *(uint64_t*)(m_chars - sizeof(uint64_t) - sizeof(uint64_t));
+    }
+
+    OSL_HOSTDEVICE uint64_t length()
+    {
+        return *(uint64_t*)(m_chars - sizeof(uint64_t));
+    }
+
+    OSL_HOSTDEVICE const char* c_str()
+    {
+        return m_chars;
     }
 
     OSL_HOSTDEVICE bool operator== (const DeviceString& other) const
     {
-        return addr == other.addr;
+        return m_chars == other.m_chars;
     }
 
     OSL_HOSTDEVICE bool operator!= (const DeviceString& other) const
     {
-        return addr != other.addr;
+        return m_chars != other.m_chars;
     }
 };
 
 
-// Cast a raw DeviceString pointer to this type to access the hash and length
-// more conveniently.
-struct StrRep {
-    uint64_t    hash;
-    uint64_t    len;
-    const char* chars;
-};
+// Handy re-casting macro
+#define DEVSTR(cstr) (*(OSL::DeviceString*)&cstr)
 
 
 #ifdef __CUDA_ARCH__

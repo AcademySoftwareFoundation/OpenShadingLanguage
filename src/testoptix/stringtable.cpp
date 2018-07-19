@@ -27,8 +27,13 @@ void StringTable::init (optix::Context ctx)
 
     cudaMalloc (reinterpret_cast<void**>(&m_ptr), (m_size));
 
-    // Construct the statically-declared strings, and create OptiX variables for
-    // them in the DeviceStrings namespace.
+    // Add the statically-declared strings to the table, and create OptiX
+    // variables for them in the DeviceStrings namespace.
+    //
+    // The names of the variables created here must match the extern variables
+    // declared in OSL/device_string.h for OptiX's variable scoping mechanisms
+    // to work.
+
 #define STRDECL(str,var_name)                                       \
     addString (ustring(str), ustring("DeviceStrings::"#var_name));
 #include <OSL/strdecls.h>
@@ -42,11 +47,11 @@ uint64_t StringTable::addString (ustring str, ustring var_name)
 
     // The strings are laid out in the table as a struct:
     //
-    //   struct DeviceString {
+    //   struct TableRep {
     //       size_t len;
     //       size_t hash;
     //       char   str[len+1];
-    //    };
+    //   };
 
     // Compute the size of the entry before adding it to the table 
     size_t size = sizeof(size_t) + sizeof(size_t) + str.size() + 1;

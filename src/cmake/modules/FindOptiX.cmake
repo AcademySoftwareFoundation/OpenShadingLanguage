@@ -12,10 +12,12 @@
 
 
 # If 'OPTIXHOME' not set, use the env variable of that name if available
-if (NOT OPTIXHOME AND NOT $ENV{OPTIXHOME} STREQUAL "")
-    set (OPTIXHOME $ENV{OPTIXHOME})
-elseif (NOT $ENV{OPTIX_INSTALL_DIR} STREQUAL "")
-    set (OPTIXHOME $ENV{OPTIX_INSTALL_DIR})
+if (NOT OPTIXHOME)
+    if (NOT $ENV{OPTIXHOME} STREQUAL "")
+        set (OPTIXHOME $ENV{OPTIXHOME})
+    elseif (NOT $ENV{OPTIX_INSTALL_DIR} STREQUAL "")
+        set (OPTIXHOME $ENV{OPTIX_INSTALL_DIR})
+    endif ()
 endif ()
 
 if (NOT OptiX_FIND_QUIETLY)

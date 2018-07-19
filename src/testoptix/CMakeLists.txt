@@ -61,7 +61,7 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
       COMMAND "${CMAKE_SOURCE_DIR}/src/liboslexec/serialize-bc.bash" ${llvm_bc} ${llvm_bc_cpp} "rend_llvm_compiled_ops"
       MAIN_DEPENDENCY ${llvm_src}
       DEPENDS "${CMAKE_SOURCE_DIR}/src/liboslexec/serialize-bc.bash"
-              ${llvm_src} ${testoptix_cuda_headers}
+              ${llvm_src} ${testoptix_cuda_headers} ${PROJECT_PUBLIC_HEADERS}
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cuda" )
 ENDMACRO ()
 

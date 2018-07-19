@@ -505,21 +505,21 @@ init_expression_list
         | init_expression_list_rev ',' init_expression
                 {
                 #ifdef OIIO_REFCNT_HAS_RELEASE
-                    /* Left recursion is much more efficient for Bison, but
-                     * concatenating the sole last expression ($3) on the
-                     * far end of the running list ($1) leads to an
-                     * inadvertently quadratic algorithm, which is very
-                     * painful for long initializer lists of thousands of
-                     * items (like for a big table). So we use a trick:
-                     * accumulate the list in referse order (lets us prepend
-                     * as O(1) instead of append with O(n)) and then reverse
-                     * it right before we return the list. BUT... note that
-                     * we only do this for sufficiently new OIIO that lets
-                     * use implement reverse in a safe way with respect
-                     * to the ref-counted pointers involved.
-                     */
-                    auto revlist = concat ($3, $1);
-                    $$ = reverse (revlist);
+                    // Left recursion is much more efficient for Bison, but
+                    // concatenating the sole last expression ($3) on the
+                    // far end of the running list ($1) leads to an
+                    // inadvertently quadratic algorithm, which is very
+                    // painful for long initializer lists of thousands of
+                    // items (like for a big table). So we use a trick:
+                    // accumulate the list in referse order (lets us prepend
+                    // as O(1) instead of append with O(n)) and then reverse
+                    // it right before we return the list. BUT... note that
+                    // we only do this for sufficiently new OIIO that lets
+                    // us safely convert the ref-counted pointer to a raw
+                    // pointer.
+                    ASTNode::ref revlist = concat ($3, $1);
+                    revlist = reverse (revlist);
+                    $$ = revlist.release ();
                 #else
                     // OIIO too old to support reverse(), so just do it
                     // the old way, normal order.

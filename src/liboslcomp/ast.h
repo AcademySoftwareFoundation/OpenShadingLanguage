@@ -173,7 +173,7 @@ public:
     }
 
     /// Reverse the order of the list.
-    friend ASTNode *reverse (ASTNode *list);
+    friend ASTNode::ref reverse (ASTNode::ref list);
 
     /// What source file was this parse node created from?
     ///

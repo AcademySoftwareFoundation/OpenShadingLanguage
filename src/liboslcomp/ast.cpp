@@ -77,37 +77,17 @@ ScopeExit print_node_counts ([](){
 
 
 
-ASTNode *
-reverse (ASTNode *list)
+ASTNode::ref
+reverse (ASTNode::ref list)
 {
-    // trivial case: empty or just one item
-    if (!list || !list->nextptr())
-        return list;
-
-#ifndef OIIO_REFCNT_HAS_RELEASE
-    ASSERT (0 && "Do not call reverse() if you didn't build with an OIIO "
-                 "new enough to have intrustive_ptr::release().");
-    return nullptr;
-#else
-    // Turn the list (whose `next` fields are ref-counted pointers) into
-    // a vector of raw pointers, releasing the ref-counted pointers in the
-    // process (but don't free the nodes!).
-    std::vector<ASTNode *> nodes;
+    ASTNode::ref new_list;
     while (list) {
-        nodes.push_back (list);
-        list = list->m_next.release();
+        ASTNode::ref next = list->next();
+        list->m_next = new_list;
+        new_list = list;
+        list = next;
     }
-
-    // reverse the list
-    std::reverse (nodes.begin(), nodes.end());
-
-    // reassemble!
-    for (size_t i = 0, e = nodes.size(); i < e; ++i)
-        nodes[i]->m_next.reset ((i+1 < e) ? nodes[i+1] : nullptr);
-
-    // return the new head of list
-    return nodes[0];
-#endif
+    return new_list;
 }
 
 

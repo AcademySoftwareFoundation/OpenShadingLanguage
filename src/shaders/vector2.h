@@ -4,7 +4,6 @@
 #pragma once
 #define VECTOR2_H
 
-
 // vector2 is a 2D vector
 struct vector2
 {
@@ -147,9 +146,29 @@ vector2 abs(vector2 a)
     return vector2 (abs(a.x), abs(a.y));
 }
 
+vector2 ceil(vector2 a)
+{
+    return vector2 (ceil(a.x), ceil(a.y));
+}
+
 vector2 floor(vector2 a)
 {
     return vector2 (floor(a.x), floor(a.y));
+}
+
+vector2 sqrt(vector2 a)
+{
+    return vector2 (sqrt(a.x), sqrt(a.y));
+}
+
+vector2 exp(vector2 a)
+{
+    return vector2 (exp(a.x), exp(a.y));
+}
+
+vector2 log2(vector2 a)
+{
+    return vector2 (log2(a.x), log2(a.y));
 }
 
 vector2 mix(vector2 a, vector2 b, float x )
@@ -248,3 +267,47 @@ vector2 pow (vector2 in, float amount)
 {
     return pow(in, vector2(amount, amount));
 }
+
+vector2 sin(vector2 a)
+{
+    return vector2(sin(a.x),
+                   sin(a.y));
+}
+
+vector2 cos(vector2 a)
+{
+    return vector2(cos(a.x),
+                   cos(a.y));
+}
+
+vector2 tan(vector2 a)
+{
+    return vector2(tan(a.x),
+                   tan(a.y));
+}
+
+vector2 asin(vector2 a)
+{
+    return vector2(asin(a.x),
+                   asin(a.y));
+}
+
+vector2 acos(vector2 a)
+{
+    return vector2(acos(a.x),
+                   acos(a.y));
+}
+
+vector2 atan2(vector2 a, float f)
+{
+    return vector2(atan2(a.x, f),
+                  atan2(a.y, f));
+}
+
+vector2 atan2(vector2 a, vector2 b)
+{
+    return vector2(atan2(a.x, b.x),
+                  atan2(a.y, b.y));
+}
+
+

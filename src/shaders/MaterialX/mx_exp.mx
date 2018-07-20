@@ -6,13 +6,12 @@
 
 #include "mx_funcs.h"
 
-shader mx_exponent_TYPE_SUFFIX
-    [[ string help = TYPE_STR" Raise incoming float/color/vector values to the in2 exponent value/stream" ]]
+shader exp_TYPE_SUFFIX
+    [[ string help = TYPE_STR" e(in)" ]]
   (
-    TYPE in1 = TYPE_DEFAULT_IN,
-    TYPE in2 = TYPE_ONE,
+    TYPE in = TYPE_DEFAULT_IN,
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {
-    out = pow(in1, in2);
+    out = exp(in);
 }

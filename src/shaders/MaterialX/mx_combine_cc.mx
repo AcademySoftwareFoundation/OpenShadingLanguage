@@ -6,8 +6,8 @@
 
 #include "mx_funcs.h"
 
-shader mx_pack_cc_TYPE_SUFFIX
-    [[ string help = "Pack the channels from two, three or four streams into the same number of channels of a \
+shader mx_combine_cc_TYPE_SUFFIX
+    [[ string help = "Combine the channels from two, three or four streams into the same number of channels of a \
                       single stream of a specified compatible type;" ]]
   (
     color2 in1 = {0,0},

@@ -100,25 +100,26 @@ endmacro()
 
 # MX shaders that come in flavors for all color/vector types, and float.
 make_mx_flavors (
-            mx_absval.mx mx_add.mx mx_blur.mx mx_clamp.mx mx_compare.mx
-            mx_constant.mx mx_contrast.mx mx_divide.mx mx_dot.mx
-            mx_exponent.mx mx_floor.mx mx_fractal3d.mx mx_geomattrvalue.mx
-            mx_image.mx mx_invert.mx mx_max.mx mx_min.mx mx_mix.mx
-            mx_modulo.mx mx_multiply.mx mx_noise2d.mx mx_noise3d.mx
+            mx_absval.mx mx_acos.mx mx_add.mx mx_asin.mx mx_atan2.mx
+            mx_blur.mx mx_ceil.mx mx_clamp.mx mx_compare.mx
+            mx_constant.mx mx_contrast.mx mx_cos.mx mx_dot.mx
+            mx_exp.mx mx_power.mx mx_floor.mx mx_fractal3d.mx mx_geomattrvalue.mx
+            mx_image.mx mx_invert.mx mx_ln.mx mx_max.mx mx_min.mx mx_mix.mx
+            mx_modulo.mx mx_noise2d.mx mx_noise3d.mx
             mx_ramp4.mx mx_ramplr.mx mx_ramptb.mx mx_remap.mx
-            mx_smoothstep.mx mx_splitlr.mx mx_splittb.mx mx_subtract.mx
+            mx_sin.mx mx_smoothstep.mx mx_splitlr.mx mx_splittb.mx mx_sqrt.mx mx_subtract.mx
             mx_switch.mx mx_swizzle_color.mx mx_swizzle_color2.mx
             mx_swizzle_color4.mx mx_swizzle_vector.mx mx_swizzle_vector2.mx
-            mx_swizzle_vector4.mx mx_triplanarprojection.mx
+            mx_swizzle_vector4.mx mx_tan.mx mx_triplanarprojection.mx
     TYPES   float color color2 color4 vector vector2 vector4)
 
 # MX shaders that come in flavors for all color/vector types.
 make_mx_flavors (
-            mx_add_float.mx mx_clamp_float.mx mx_contrast_float.mx
-            mx_divide_float.mx mx_exponent_float.mx mx_fractal3d_fa.mx
+            mx_add_float.mx mx_atan2_float.mx mx_clamp_float.mx mx_contrast_float.mx
+            mx_divide_float.mx mx_power_float.mx mx_fractal3d_fa.mx
             mx_invert_float.mx mx_max_float.mx mx_min_float.mx
             mx_modulo_float.mx mx_multiply_float.mx mx_noise2d_fa.mx
-            mx_noise3d_fa.mx mx_pack.mx mx_remap_float.mx
+            mx_noise3d_fa.mx mx_remap_float.mx
             mx_smoothstep_float.mx mx_subtract_float.mx mx_swizzle_float.mx
     TYPES   color color2 color4 vector vector2 vector4)
 
@@ -136,6 +137,7 @@ make_mx_flavors (mx_cellnoise2d.mx      TYPES float)
 make_mx_flavors (mx_cellnoise3d.mx      TYPES float)
 make_mx_flavors (mx_constant.mx         TYPES matrix44 matrix33 string filename bool int)
 make_mx_flavors (mx_crossproduct.mx     TYPES vector)
+make_mx_flavors (mx_determinant.mx      TYPES matrix44 matrix33)
 make_mx_flavors (mx_disjointover.mx     TYPES color2 color4)
 make_mx_flavors (mx_dot.mx              TYPES matrix44 matrix33 string filename bool int surfaceshader)
 make_mx_flavors (mx_dotproduct.mx       TYPES vector vector2 vector4)
@@ -154,10 +156,10 @@ make_mx_flavors (mx_normal.mx           TYPES vector)
 make_mx_flavors (mx_normalize.mx        TYPES vector vector2 vector4)
 make_mx_flavors (mx_out.mx              TYPES color2 color4)
 make_mx_flavors (mx_over.mx             TYPES color2 color4)
-make_mx_flavors (mx_pack_cc.mx          TYPES color4)
-make_mx_flavors (mx_pack_cf.mx          TYPES color4)
-make_mx_flavors (mx_pack_vf.mx          TYPES vector4)
-make_mx_flavors (mx_pack_vv.mx          TYPES vector4)
+make_mx_flavors (mx_combine_cc.mx       TYPES color4)
+make_mx_flavors (mx_combine_cf.mx       TYPES color4)
+make_mx_flavors (mx_combine_vf.mx       TYPES vector4)
+make_mx_flavors (mx_combine_vv.mx       TYPES vector4)
 make_mx_flavors (mx_position.mx         TYPES vector)
 make_mx_flavors (mx_premult.mx          TYPES color color2 color4)
 make_mx_flavors (mx_rotate2d.mx         TYPES vector2)
@@ -166,7 +168,11 @@ make_mx_flavors (mx_scale.mx            TYPES vector vector2)
 make_mx_flavors (mx_tangent.mx          TYPES vector)
 make_mx_flavors (mx_texcoord.mx         TYPES vector vector2)
 make_mx_flavors (mx_time.mx             TYPES float)
+make_mx_flavors (mx_transpose.mx        TYPES matrix44 matrix33)
 make_mx_flavors (mx_unpremult.mx        TYPES color color2 color4)
+make_mx_flavors (mx_matrix_invert.mx    TYPES matrix44 matrix33)
+make_mx_flavors (mx_divide.mx           TYPES float color color2 color4 vector vector2 vector4 matrix44 matrix33)
+make_mx_flavors (mx_multiply.mx         TYPES float color color2 color4 vector vector2 vector4 matrix44 matrix33)
 
 
 add_custom_target (mxshaders ALL

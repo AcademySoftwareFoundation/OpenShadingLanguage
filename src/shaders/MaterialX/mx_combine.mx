@@ -6,17 +6,17 @@
 
 #include "mx_funcs.h"
 
-shader mx_pack_vv_TYPE_SUFFIX
-    [[ string help = "Pack the channels from two, three or four streams into the same number of channels of a \
+shader mx_pack_TYPE_SUFFIX
+    [[ string help = "Combine the channels from two, three or four streams into the same number of channels of a \
                       single stream of a specified compatible type;" ]]
   (
-    vector2 in1 = {0,0},
-    vector2 in2 = {0.0},
-    output vector4 out = {0,0,0,0}
+    float in1 = 0,
+    float in2 = 0,
+    float in3 = 0,
+    float in4 = 0,
+
+    output TYPE out = TYPE_ZERO
   )
 {
-    out.x = in1.x;
-    out.y = in1.y;
-    out.z = in2.x;
-    out.w = in2.y;
+    out = combine (in1, in2, in3, in4);
 }

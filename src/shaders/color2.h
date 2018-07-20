@@ -148,9 +148,29 @@ color2 abs(color2 a)
     return color2(abs(a.r), abs(a.a));
 }
 
+color2 ceil(color2 a)
+{
+    return color2(ceil(a.r), ceil(a.a));
+}
+
 color2 floor(color2 a)
 {
     return color2(floor(a.r), floor(a.a));
+}
+
+color2 sqrt(color2 a)
+{
+    return color2(sqrt(a.r), sqrt(a.a));
+}
+
+color2 exp(color2 a)
+{
+    return color2(exp(a.r), exp(a.a));
+}
+
+color2 log2(color2 a)
+{
+    return color2(log2(a.r), log2(a.a));
 }
 
 color2 mix(color2 a, color2 b, float x )
@@ -230,3 +250,48 @@ color2 pow(color2 base, float power)
 {
     return pow(base, color2(power, power));
 }
+
+color2 sin(color2 a)
+{
+    return color2(sin(a.r),
+                  sin(a.a));
+}
+
+color2 cos(color2 a)
+{
+    return color2(cos(a.r),
+                  cos(a.a));
+}
+
+color2 tan(color2 a)
+{
+    return color2(tan(a.r),
+                  tan(a.a));
+}
+
+color2 asin(color2 a)
+{
+    return color2(asin(a.r),
+                  asin(a.a));
+}
+
+color2 acos(color2 a)
+{
+    return color2(acos(a.r),
+                  acos(a.a));
+}
+
+color2 atan2(color2 a, float f)
+{
+    return color2(atan2(a.r, f),
+                  atan2(a.a, f));
+}
+
+
+color2 atan2(color2 a, color2 b)
+{
+    return color2(atan2(a.r, b.r),
+                  atan2(a.a, b.a));
+}
+
+

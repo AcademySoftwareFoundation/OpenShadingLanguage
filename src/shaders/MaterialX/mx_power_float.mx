@@ -1,0 +1,18 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// 
+// MaterialX specification (c) 2017 Lucasfilm Ltd. 
+// http://www.materialx.org/
+
+#include "mx_funcs.h"
+
+shader mx_power_float_TYPE_SUFFIX
+    [[ string help = TYPE_STR" Raise incoming float/color/vector values to the in2 power value/stream" ]]
+  (
+    TYPE in1 = TYPE_DEFAULT_IN,
+    float in2 = 1.0,
+    output TYPE out = TYPE_DEFAULT_OUT
+  )
+{
+    out = pow(in1, in2);
+}

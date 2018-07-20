@@ -49,5 +49,5 @@ shader mx_image_TYPE_SUFFIX
                         "alpha", alpha, "subimage", layer,
                         "missingcolor", missingColor, "missingalpha", missingAlpha);
 
-    out = pack (rgb, alpha);
+    out = combine (rgb, alpha);
 }

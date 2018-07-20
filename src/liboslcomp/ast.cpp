@@ -26,6 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <algorithm>
 #include <vector>
 #include <string>
 #include <sstream>
@@ -78,6 +79,21 @@ ScopeExit print_node_counts ([](){
 });
 }
 #endif
+
+
+
+ASTNode::ref
+reverse (ASTNode::ref list)
+{
+    ASTNode::ref new_list;
+    while (list) {
+        ASTNode::ref next = list->next();
+        list->m_next = new_list;
+        new_list = list;
+        list = next;
+    }
+    return new_list;
+}
 
 
 

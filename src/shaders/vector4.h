@@ -152,12 +152,44 @@ vector4 abs(vector4 in)
                     abs(in.w));
 }
 
+vector4 ceil(vector4 in)
+{
+    return vector4 (ceil(in.x),
+                    ceil(in.y),
+                    ceil(in.z),
+                    ceil(in.w));
+}
+
 vector4 floor(vector4 in)
 {
     return vector4 (floor(in.x),
                     floor(in.y),
                     floor(in.z),
                     floor(in.w));
+}
+
+vector4 sqrt(vector4 in)
+{
+    return vector4 (sqrt(in.x),
+                    sqrt(in.y),
+                    sqrt(in.z),
+                    sqrt(in.w));
+}
+
+vector4 exp(vector4 in)
+{
+    return vector4 (exp(in.x),
+                    exp(in.y),
+                    exp(in.z),
+                    exp(in.w));
+}
+
+vector4 log2(vector4 in)
+{
+    return vector4 (log2(in.x),
+                    log2(in.y),
+                    log2(in.z),
+                    log2(in.w));
 }
 
 vector4 mix(vector4 value1, vector4 value2, float x )
@@ -274,3 +306,61 @@ vector4 pow(vector4 in, float amount)
                     pow(in.z, amount),
                     pow(in.w, amount));
 }
+
+vector4 sin(vector4 a)
+{
+    return vector4(sin(a.x),
+                   sin(a.y),
+                   sin(a.z),
+                   sin(a.w));
+}
+
+vector4 cos(vector4 a)
+{
+    return vector4(cos(a.x),
+                   cos(a.y),
+                   cos(a.z),
+                   cos(a.w));
+}
+
+vector4 tan(vector4 a)
+{
+    return vector4(tan(a.x),
+                   tan(a.y),
+                   tan(a.z),
+                   tan(a.w));
+}
+
+vector4 asin(vector4 a)
+{
+    return vector4(asin(a.x),
+                   asin(a.y),
+                   asin(a.z),
+                   asin(a.w));
+}
+
+vector4 acos(vector4 a)
+{
+    return vector4(acos(a.x),
+                   acos(a.y),
+                   acos(a.z),
+                   acos(a.w));
+}
+
+vector4 atan2(vector4 a, float f)
+{
+    return vector4(atan2(a.x, f),
+                   atan2(a.y, f),
+                   atan2(a.z, f),
+                   atan2(a.w, f));
+}
+
+vector4 atan2(vector4 a, vector4 b)
+{
+    return vector4(atan2(a.x, b.x),
+                   atan2(a.y, b.y),
+                   atan2(a.z, b.z),
+                   atan2(a.w, b.w));
+}
+
+

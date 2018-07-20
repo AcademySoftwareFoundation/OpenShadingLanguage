@@ -146,9 +146,29 @@ color4 abs(color4 a)
     return color4(abs(a.rgb), abs(a.a));
 }
 
+color4 ceil(color4 a)
+{
+    return color4(ceil(a.rgb), ceil(a.a));
+}
+
 color4 floor(color4 a)
 {
     return color4(floor(a.rgb), floor(a.a));
+}
+
+color4 sqrt(color4 a)
+{
+    return color4(sqrt(a.rgb), sqrt(a.a));
+}
+
+color4 exp(color4 a)
+{
+    return color4(exp(a.rgb), exp(a.a));
+}
+
+color4 log2(color4 a)
+{
+    return color4(log2(a.rgb), log2(a.a));
 }
 
 color4 mix(color4 a, color4 b, float x )
@@ -233,3 +253,47 @@ color4 pow(color4 base, float power)
 {
     return pow(base, color4(color(power), power));
 }
+
+color4 sin(color4 a)
+{
+    return color4(sin(a.rgb),
+                  sin(a.a));
+}
+
+color4 cos(color4 a)
+{
+    return color4(cos(a.rgb),
+                  cos(a.a));
+}
+
+color4 tan(color4 a)
+{
+    return color4(tan(a.rgb),
+                  tan(a.a));
+}
+
+color4 asin(color4 a)
+{
+    return color4(asin(a.rgb),
+                  asin(a.a));
+}
+
+color4 acos(color4 a)
+{
+    return color4(acos(a.rgb),
+                  acos(a.a));
+}
+
+color4 atan2(color4 a, float f)
+{
+    return color4(atan2(a.rgb, f),
+                  atan2(a.a, f));
+}
+
+color4 atan2(color4 a, color4 b)
+{
+    return color4(atan2(a.rgb, b.rgb),
+                  atan2(a.a, b.a));
+}
+
+

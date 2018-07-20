@@ -6,13 +6,12 @@
 
 #include "mx_funcs.h"
 
-shader mx_exponent_float_TYPE_SUFFIX
-    [[ string help = TYPE_STR" Raise incoming float/color/vector values to the in2 exponent value/stream" ]]
+shader mx_sqrt_TYPE_SUFFIX
+    [[ string help = TYPE_STR" sqrt(in)" ]]
   (
-    TYPE in1 = TYPE_DEFAULT_IN,
-    float in2 = 1.0,
+    TYPE in = TYPE_DEFAULT_IN,
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {
-    out = pow(in1, in2);
+    out = sqrt(in);
 }

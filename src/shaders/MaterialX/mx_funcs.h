@@ -671,78 +671,76 @@ void setup_missing_color_alpha (color4 default_value,
 
 
 //
-// pack() combines an up to 4 floats, or an rgb and alpha, into the given
+// combine() combines an up to 4 floats, or an rgb and alpha, into the given
 // return type, in a way that makes as much sense as possible.
 //
-float pack (float a, float b, float c, float d)
+float combine (float a, float b, float c, float d)
 {
     return a;
 }
 
-color pack (float a, float b, float c, float d)
+color combine (float a, float b, float c, float d)
 {
     return color (a, b, c);
 }
 
-vector pack (float a, float b, float c, float d)
+vector combine (float a, float b, float c, float d)
 {
     return vector (a, b, c);
 }
 
-color2 pack (float a, float b, float c, float d)
+color2 combine (float a, float b, float c, float d)
 {
     return color2 (a, b);
 }
 
-vector2 pack (float a, float b, float c, float d)
+vector2 combine (float a, float b, float c, float d)
 {
     return vector2 (a, b);
 }
 
-color4 pack (float a, float b, float c, float d)
+color4 combine (float a, float b, float c, float d)
 {
     return color4 (color(a,b,c), d);
 }
 
-vector4 pack (float a, float b, float c, float d)
+vector4 combine (float a, float b, float c, float d)
 {
     return vector4 (a, b, c, d);
 }
 
 
-float pack (color rgb, float alpha)
+float combine (color rgb, float alpha)
 {
     return rgb[0];
 }
 
-color pack (color rgb, float alpha)
+color combine (color rgb, float alpha)
 {
     return rgb;
 }
 
-vector pack (color rgb, float alpha)
+vector combine (color rgb, float alpha)
 {
     return (vector)rgb;
 }
 
-color2 pack (color rgb, float alpha)
+color2 combine (color rgb, float alpha)
 {
     return color2 (rgb[0], rgb[1]);
 }
 
-vector2 pack (color rgb, float alpha)
+vector2 combine (color rgb, float alpha)
 {
     return vector2 (rgb[0], rgb[1]);
 }
 
-color4 pack (color rgb, float alpha)
+color4 combine (color rgb, float alpha)
 {
     return color4 (rgb, alpha);
 }
 
-vector4 pack (color rgb, float alpha)
+vector4 combine (color rgb, float alpha)
 {
     return vector4 (rgb[0], rgb[1], rgb[2], alpha);
 }
-
-

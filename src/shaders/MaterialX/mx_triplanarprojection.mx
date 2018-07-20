@@ -61,5 +61,5 @@ shader mx_triplanarprojection_TYPE_SUFFIX
     color rgb = (filex_rgb * blendx) + (filey_rgb * blendy) + (filez_rgb * blendz);
     float alpha = (filex_a * blendx) + (filey_a * blendy) + (filez_a * blendz);
 
-    out = pack (rgb, alpha);
+    out = combine (rgb, alpha);
 }

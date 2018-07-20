@@ -21,7 +21,7 @@ macro ( MXTESTSUITE )
                 set(_env MATERIALX_OSOS=$ENV{OSL_HOME}/shaders/MaterialX)
                 TESTSUITE(${test})
             endforeach ()
-    endforeach ()            
+    endforeach ()
 
 endmacro ()
 
@@ -40,7 +40,7 @@ MXTESTSUITE(
     mx_min
     mx_min_float
     mx_max
-    mx_max_float    
+    mx_max_float
     mx_exponent
     mx_exponent_float
 )

@@ -679,6 +679,7 @@ BackendLLVM::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
 llvm::Value *
 BackendLLVM::llvm_load_device_string (const Symbol& sym, bool follow)
 {
+    // TODO: need to make this work with arrays of strings
     ASSERT (use_optix() && "This is only intended to be used with CUDA");
 
     llvm::Value* val = (sym.is_constant() || sym.data())

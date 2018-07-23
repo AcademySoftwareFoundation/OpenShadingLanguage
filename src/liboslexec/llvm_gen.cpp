@@ -360,6 +360,7 @@ LLVMGEN (llvm_gen_printf)
 
                     llvm::Value* loaded = nullptr;
                     if (rop.use_optix() && simpletype.basetype == TypeDesc::STRING) {
+                        // TODO: make this work with arrind
                         // In the OptiX case, we use the device-side string.
                         loaded = rop.llvm_load_device_string (sym);
                     }

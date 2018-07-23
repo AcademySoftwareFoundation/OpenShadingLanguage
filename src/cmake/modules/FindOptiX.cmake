@@ -47,34 +47,30 @@ OPTIX_find_api_library(optix_prime 1)
 
 set (OPTIX_LIBRARIES ${optix_LIBRARY} ${optixu_LIBRARY} ${optix_prime_LIBRARY})
 
+# Pull out the API version from optix.h
+file(STRINGS ${OPTIX_INCLUDE_DIR}/optix.h OPTIX_VERSION_LINE LIMIT_COUNT 1 REGEX OPTIX_VERSION)
+string(REGEX MATCH "([0-9]+)" OPTIX_VERSION_STRING "${OPTIX_VERSION_LINE}")
+math(EXPR OPTIX_VERSION_MAJOR "${OPTIX_VERSION_STRING}/10000")
+math(EXPR OPTIX_VERSION_MINOR "(${OPTIX_VERSION_STRING}%10000)/100")
+math(EXPR OPTIX_VERSION_MICRO "${OPTIX_VERSION_STRING}%100")
+set(OPTIX_VERSION "${OPTIX_VERSION_MAJOR}.${OPTIX_VERSION_MINOR}.${OPTIX_VERSION_MICRO}")
+
+message (STATUS "OptiX version = ${OPTIX_VERSION}")
+if (NOT OptiX_FIND_QUIETLY)
+    message (STATUS "OptiX includes  = ${OPTIX_INCLUDE_DIR}")
+    message (STATUS "OptiX libraries = ${OPTIX_LIBRARIES}")
+endif ()
+
 mark_as_advanced (
     OPTIX_INCLUDE_DIR
     OPTIX_LIBRARIES
+    OPTIX_VERSION
     )
 
 include (FindPackageHandleStandardArgs)
 find_package_handle_standard_args (OptiX
     FOUND_VAR     OPTIX_FOUND
-    REQUIRED_VARS OPTIX_INCLUDE_DIR OPTIX_LIBRARIES
+    REQUIRED_VARS OPTIX_INCLUDE_DIR OPTIX_LIBRARIES OPTIX_VERSION
+    VERSION_VAR   OPTIX_VERSION
     )
 
-# Pull out the API version from optix.h
-file(STRINGS ${OPTIX_INCLUDE_DIR}/optix.h OPTIX_VERSION_LINE LIMIT_COUNT 1 REGEX OPTIX_VERSION)
-string(REGEX MATCH "([0-9]+)" OPTIX_VERSION "${OPTIX_VERSION_LINE}")
-math(EXPR OPTIX_VERSION_MAJOR "${OPTIX_VERSION}/10000")
-math(EXPR OPTIX_VERSION_MINOR "(${OPTIX_VERSION}%10000)/100")
-math(EXPR OPTIX_VERSION_MICRO "${OPTIX_VERSION}%100")
-set(OPTIX_VERSION_STRING ${OPTIX_VERSION_MAJOR}.${OPTIX_VERSION_MINOR}.${OPTIX_VERSION_MICRO})
-
-if (OPTIX_FOUND)
-    message (STATUS "OptiX version = ${OPTIX_VERSION_STRING}")
-    if (NOT OptiX_FIND_QUIETLY)
-        message (STATUS "OptiX includes  = ${OPTIX_INCLUDE_DIR}")
-        message (STATUS "OptiX libraries = ${OPTIX_LIBRARIES}")
-    endif ()
-    if (${OPTIX_VERSION_MAJOR}.${OPTIX_VERSION_MINOR} STRLESS "5.1")
-        message (FATAL_ERROR "Minimum OptiX version is 5.1, found ${OPTIX_VERSION_STRING}")
-    endif()
-else ()
-    message (FATAL_ERROR "OptiX not found")
-endif ()

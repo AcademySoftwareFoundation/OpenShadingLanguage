@@ -219,17 +219,18 @@ public:
     /// map, the symbol is alloca'd and placed in the map.
     llvm::Value *getOrAllocateLLVMSymbol (const Symbol& sym);
 
-    /// Allocate a GlobalVariable for the given OSL symbol and return a pointer
-    /// to it, or return the pointer if it has already been allocated
-    llvm::Value *getOrAllocateLLVMGlobal (const Symbol& sym);
+    /// Allocate a CUDA variable for the given OSL symbol and return a pointer
+    /// to the corresponding LLVM GlobalVariable, or return the pointer if it
+    /// has already been allocated.
+    llvm::Value *getOrAllocateCUDAVariable (const Symbol& sym);
 
-    /// Create a GlobalVariable and add it to the current Module
-    llvm::Value *addGlobalVariable (const std::string& name, int size,
-                                    int alignment, void* data,
-                                    const std::string& type="");
+    /// Create a CUDA global variable and add it to the current Module
+    llvm::Value *addCUDAVariable (const std::string& name, int size,
+                                  int alignment, void* data,
+                                  const std::string& type="");
 
-    /// Create a GlobalVariable with the extra semantic information needed
-    /// by OptiX
+    /// Create a CUDA variable, along with the extra semantic information needed
+    /// by OptiX.
     llvm::Value *createOptixVariable (const std::string& name,
                                       const std::string& type,
                                       int size, void* data );

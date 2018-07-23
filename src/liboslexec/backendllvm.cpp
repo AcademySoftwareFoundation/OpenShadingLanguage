@@ -325,8 +325,8 @@ BackendLLVM::getOrAllocateLLVMSymbol (const Symbol& sym)
 
 
 llvm::Value*
-BackendLLVM::addGlobalVariable(const std::string& name, int size, int alignment,
-                               void* data, const std::string& type)
+BackendLLVM::addCUDAVariable(const std::string& name, int size, int alignment,
+                             void* data, const std::string& type)
 {
     ASSERT (use_optix() && "This function is only supposed to be used with OptiX!");
 
@@ -402,7 +402,7 @@ BackendLLVM::createOptixVariable (const std::string& name, const std::string& ty
 
     // Create a global variable with the name, type, and initializer. This is
     // the value that will be accessed when the shader executes.
-    llvm::Value* g_var = addGlobalVariable (name, size, alignment, data, type);
+    llvm::Value* g_var = addCUDAVariable (name, size, alignment, data, type);
 
     if (g_var == nullptr) {
         ASSERT (0 && "Unable to create OptiX variable");
@@ -431,8 +431,8 @@ BackendLLVM::createOptixMetadata (const std::string& name, const std::string& ty
     ASSERT (use_optix() && "This function is only supported when using OptiX!");
 
     auto mangle_name = [](const std::string& name, const std::string& prefix) {
-        return "_ZN" + std::to_string (prefix.size() + 13) + "rti_internal_" +
-        prefix + std::to_string (name.size()) + name + "E";
+        return OIIO::Strutil::format ("_ZN%drti_internal_%s%d%sE",
+                                      prefix.size()+13, prefix, name.size(), name);
     };
 
     const std::string optix_type =
@@ -454,17 +454,17 @@ BackendLLVM::createOptixMetadata (const std::string& name, const std::string& ty
 
     char empty = 0;
 
-    addGlobalVariable (mangle_name (name, "typeinfo"  ), 8, 4, &type_info, "");
-    addGlobalVariable (mangle_name (name, "typename"  ), type_name.size(), 16, type_name.data(), "");
-    addGlobalVariable (mangle_name (name, "typeenum"  ), 4, 4, &type_enum, "int");
-    addGlobalVariable (mangle_name (name, "semantic"  ), 1, 1, &empty, "");
-    addGlobalVariable (mangle_name (name, "annotation"), 1, 1, &empty, "");
+    addCUDAVariable (mangle_name (name, "typeinfo"  ), 8, 4, &type_info, "");
+    addCUDAVariable (mangle_name (name, "typename"  ), type_name.size(), 16, type_name.data(), "");
+    addCUDAVariable (mangle_name (name, "typeenum"  ), 4, 4, &type_enum, "int");
+    addCUDAVariable (mangle_name (name, "semantic"  ), 1, 1, &empty, "");
+    addCUDAVariable (mangle_name (name, "annotation"), 1, 1, &empty, "");
 }
 
 
 
 llvm::Value *
-BackendLLVM::getOrAllocateLLVMGlobal (const Symbol& sym)
+BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym)
 {
     ASSERT (use_optix() && "This function is only supported when using OptiX!");
 
@@ -527,8 +527,8 @@ BackendLLVM::getOrAllocateLLVMGlobal (const Symbol& sym)
         return nullptr;
     }
 
-    return addGlobalVariable (name, sym.size(), alignment, sym.data(),
-                              sym.typespec().string());
+    return addCUDAVariable (name, sym.size(), alignment, sym.data(),
+                            sym.typespec().string());
 }
 
 
@@ -549,7 +549,7 @@ BackendLLVM::llvm_get_pointer (const Symbol& sym, int deriv,
         if (use_optix()) {
             // Check the constant map for the named Symbol; if it's found, then
             // a GlobalVariable has been created for it
-            llvm::Value* ptr = getOrAllocateLLVMGlobal (sym);
+            llvm::Value* ptr = getOrAllocateCUDAVariable (sym);
             if (ptr) {
                 llvm::Type *cast_type = (! sym.typespec().is_string())
                     ? ll.type_ptr (llvm_type(sym.typespec().elementtype()))
@@ -682,7 +682,7 @@ BackendLLVM::llvm_load_device_string (const Symbol& sym, bool follow)
     ASSERT (use_optix() && "This is only intended to be used with CUDA");
 
     llvm::Value* val = (sym.is_constant() || sym.data())
-        ? getOrAllocateLLVMGlobal (sym)
+        ? getOrAllocateCUDAVariable (sym)
         : llvm_load_value (sym, 0, nullptr, 0, TypeDesc(TypeDesc::UINT64));
 
     // Typically, the address of the string is held in a global variable, so we

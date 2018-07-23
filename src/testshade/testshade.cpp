@@ -1690,6 +1690,69 @@ test_shade (int argc, const char *argv[])
 
     double setuptime = timer.lap ();
 
+// OIIO parallel_image has overhead of spinning up a thread pool,
+// we really don't want that in any benchmark timings,
+// so we want to move the iters loop inside the parallelism to repeat
+// each sub_roi
+#define ITERS_ON_SUB_ROI 1
+#if ITERS_ON_SUB_ROI
+    // Allow a settable number of iterations to "render" the whole image,
+    // which is useful for time trials of things that would be too quick
+    // to accurately time for a single iteration
+        OIIO::ROI roi (0, xres, 0, yres);
+
+        if (use_shade_image)
+            OSL::shade_image (*shadingsys, *shadergroup, NULL,
+                              *outputimgs[0], outputvarnames,
+                              pixelcenters ? ShadePixelCenters : ShadePixelGrid,
+                              roi, num_threads);
+        else {
+			if (batched) {
+			    if (num_threads == 1) {
+				    for (int iter = 0;  iter < iters;  ++iter) {
+			            bool save = (iter == (iters-1));   // save on last iteration
+					    batched_shade_region (shadergroup.get(), roi, save);
+					}
+			    } else {
+                    OIIO::ImageBufAlgo::parallel_image (
+                            //std::bind (shade_region, shadergroup.get(), std::placeholders::_1, save),
+                            [&](OIIO::ROI sub_roi)->void {
+							    for (int iter = 0;  iter < iters;  ++iter) {
+						            bool save = (iter == (iters-1));   // save on last iteration
+									batched_shade_region (shadergroup.get(), sub_roi, save);
+								}
+							},
+                            roi, num_threads);
+			    }
+			} else {
+					OIIO::ImageBufAlgo::parallel_image (
+							//std::bind (shade_region, shadergroup.get(), std::placeholders::_1, save),
+							[&](OIIO::ROI sub_roi)->void { 
+							    for (int iter = 0;  iter < iters;  ++iter) {
+						            bool save = (iter == (iters-1));   // save on last iteration
+									shade_region (shadergroup.get(), sub_roi, save);
+								}
+							},
+							roi, num_threads);
+			}
+        }
+#if 0
+        // If any reparam was requested, do it now
+        if (reparams.size() && reparam_layer.size()) {
+            for (size_t p = 0;  p < reparams.size();  ++p) {
+                std::cout << "<<<<<<<<<<<<<<<<<<<<shadingsys->ReParameter >>>>>>>>>>>>>>>>>>>>>>" << std::endl;
+                const ParamValue &pv (reparams[p]);
+                shadingsys->ReParameter (*shadergroup, reparam_layer.c_str(),
+                                         pv.name().c_str(), pv.type(),
+                                         pv.data());
+            }
+        }
+        
+        if (alternate_batched) {
+        	batched = ! batched;
+        }
+#endif
+#else
     // Allow a settable number of iterations to "render" the whole image,
     // which is useful for time trials of things that would be too quick
     // to accurately time for a single iteration
@@ -1739,6 +1802,7 @@ test_shade (int argc, const char *argv[])
         	batched = ! batched;
         }
     }
+#endif
 
     if (outputfiles.size() == 0)
         std::cout << "\n";

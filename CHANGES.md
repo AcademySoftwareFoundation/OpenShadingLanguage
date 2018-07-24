@@ -1,5 +1,6 @@
-Release 1.8.15 -- 1 Jul 2018 (compared to 1.8.14)
+Release 1.8.15 -- 1 Aug 2018 (compared to 1.8.14)
 --------------------------------------------------
+* Fixes for compatibility with OIIO 1.9.
 
 Release 1.8.14 -- 1 May 2018 (compared to 1.8.13)
 --------------------------------------------------

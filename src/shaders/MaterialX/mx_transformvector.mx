@@ -1,0 +1,27 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+//
+// MaterialX specification (c) 2017 Lucasfilm Ltd.
+// http://www.materialx.org/
+
+#include "mx_funcs.h"
+
+shader mx_transformvector
+    [[ string help = "Transform a vector between coordinate systems" ]]
+  (
+    TYPE in = TYPE_ZERO
+        [[ string help = "Input coordinate vector" ]],
+    string fromspace = "common"
+        [[ string help = "Coordinate system of input source" ]],
+    string tospace = ""
+        [[ string help = "Coordinate system of output target" ]],
+    matrix mat = 1
+        [[ string help = "Optional matrix for transformation (if tospace is empty)" ]],
+    output TYPE out = TYPE_ZERO
+  )
+{
+    if (tospace)
+        out = transform (fromspace, tospace, in);
+    else
+        out = transform (mat, in);
+}

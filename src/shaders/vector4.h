@@ -380,3 +380,15 @@ vector4 atan2(vector4 a, vector4 b)
 }
 
 
+vector4 transform (matrix M, vector4 p)
+{
+    return vector4 (M[0][0]*p.x + M[0][1]*p.y + M[0][2]*p.z + M[0][2]*p.w,
+                    M[1][0]*p.x + M[1][1]*p.y + M[1][2]*p.z + M[1][2]*p.w,
+                    M[2][0]*p.x + M[2][1]*p.y + M[2][2]*p.z + M[2][2]*p.w,
+                    M[3][0]*p.x + M[3][1]*p.y + M[3][2]*p.z + M[3][2]*p.w);
+}
+
+vector4 transform (string fromspace, string tospace, vector4 p)
+{
+    return transform (matrix(fromspace,tospace), p);
+}

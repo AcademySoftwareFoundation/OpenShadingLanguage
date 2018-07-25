@@ -3247,10 +3247,12 @@ and {\cf eta} is the ratio of refractive index of the medium
 containing {\cf I} to that on the opposite side of the surface.
 \apiend
 
-\apiitem{point {\ce rotate} (point Q, float angle, point P0, point P1)}
+\apiitem{point {\ce rotate} (point Q, float angle, point P0, point P1) \\
+point {\ce rotate} (point Q, float angle, vector axis)}
 \indexapi{rotate()}
-Returns the point computed by rotating point {\cf Q} by {\cf angle} 
-radians about the axis that passes from point {\cf P0} to {\cf P1}.
+Returns the point computed by rotating point {\cf Q} by {\cf angle}
+radians about the axis that passes from point {\cf P0} to {\cf P1},
+or about the {\cf axis} vector centered on the origin.
 \apiend
 
 \apiitem{\emph{ptype} {\ce transform} (string tospace, \emph{ptype} p) \\

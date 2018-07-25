@@ -168,6 +168,11 @@ color2 exp(color2 a)
     return color2(exp(a.r), exp(a.a));
 }
 
+color2 log(color2 a)
+{
+    return color2(log(a.r), log(a.a));
+}
+
 color2 log2(color2 a)
 {
     return color2(log2(a.r), log2(a.a));
@@ -249,6 +254,12 @@ color2 pow(color2 base, color2 power)
 color2 pow(color2 base, float power)
 {
     return pow(base, color2(power, power));
+}
+
+color2 sign(color2 a)
+{
+    return color2(sign(a.r),
+                  sign(a.a));
 }
 
 color2 sin(color2 a)

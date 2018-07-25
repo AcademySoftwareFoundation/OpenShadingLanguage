@@ -744,3 +744,28 @@ vector4 combine (color rgb, float alpha)
 {
     return vector4 (rgb[0], rgb[1], rgb[2], alpha);
 }
+
+
+// DEPRECATED: MatrialX <= 1.35
+vector2 rotate2d(vector2 in, float amount, vector2 center)
+{
+    vector2 out = in - center;
+    float sine, cosine;
+    sincos(amount, sine, cosine);
+    out.x = in.x * cosine - in.y * sine;
+    out.y = in.y * cosine + in.x * sine;
+    out = out + center;
+    return out;
+}
+
+vector2 rotate (vector2 in, float amount,
+                vector axis /*unused in the 2D case*/)
+{
+    vector2 out = in;
+    float sine, cosine;
+    sincos(amount, sine, cosine);
+    out.x = in.x * cosine - in.y * sine;
+    out.y = in.y * cosine + in.x * sine;
+    out = out;
+    return out;
+}

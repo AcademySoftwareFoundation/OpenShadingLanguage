@@ -281,8 +281,9 @@ BUILD_DICT = {
     'mx_ramptb': ALL_TYPES,
     'mx_remap': ALL_TYPES,
     'mx_remap_float': ['color', 'color2', 'color4', 'vector', 'vector2', 'vector4'],
-    'mx_rotate2d': ['vector2'],
     'mx_rgbtohsv' : ['color', 'color4'],
+    'mx_rotate': ['vector', 'vector2'],   # Deprecated in MX 1.36
+    'mx_rotate2d': ['vector2'],
     'mx_saturate': ['color', 'color4'],
     'mx_scale': ['vector', 'vector2'],
     'mx_sign': ALL_TYPES,

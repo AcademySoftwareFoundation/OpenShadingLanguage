@@ -1,0 +1,18 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+//
+// MaterialX specification (c) 2017 Lucasfilm Ltd.
+// http://www.materialx.org/
+
+#include "mx_funcs.h"
+
+shader mx_rgbtohsv
+    [[ string help = "Transform a color from RGB to HSV" ]]
+  (
+    TYPE in = TYPE_ZERO
+        [[ string help = "Input color" ]],
+    output TYPE out = TYPE_ZERO
+  )
+{
+    out = transformc ("rgb", "hsv", in);
+}

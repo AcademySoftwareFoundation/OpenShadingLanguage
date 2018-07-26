@@ -6,12 +6,12 @@
 
 #include "mx_funcs.h"
 
-shader mx_ln_TYPE_SUFFIX
-    [[ string help = TYPE_STR" ln(in)" ]]
+shader mx_sign_TYPE_SUFFIX
+    [[ string help = TYPE_STR" sign(in)" ]]
   (
     TYPE in = TYPE_DEFAULT_IN,
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {
-    out = log(in);
+    out = sign(in);
 }

@@ -184,6 +184,14 @@ vector4 exp(vector4 in)
                     exp(in.w));
 }
 
+vector4 log(vector4 in)
+{
+    return vector4 (log(in.x),
+                    log(in.y),
+                    log(in.z),
+                    log(in.w));
+}
+
 vector4 log2(vector4 in)
 {
     return vector4 (log2(in.x),
@@ -305,6 +313,14 @@ vector4 pow(vector4 in, float amount)
                     pow(in.y, amount),
                     pow(in.z, amount),
                     pow(in.w, amount));
+}
+
+vector4 sign(vector4 a)
+{
+    return vector4(sign(a.x),
+                   sign(a.y),
+                   sign(a.z),
+                   sign(a.w));
 }
 
 vector4 sin(vector4 a)

@@ -166,6 +166,11 @@ vector2 exp(vector2 a)
     return vector2 (exp(a.x), exp(a.y));
 }
 
+vector2 log(vector2 a)
+{
+    return vector2 (log(a.x), log(a.y));
+}
+
 vector2 log2(vector2 a)
 {
     return vector2 (log2(a.x), log2(a.y));
@@ -266,6 +271,12 @@ vector2 pow (vector2 in, vector2 amount)
 vector2 pow (vector2 in, float amount)
 {
     return pow(in, vector2(amount, amount));
+}
+
+vector2 sign(vector2 a)
+{
+    return vector2(sign(a.x),
+                   sign(a.y));
 }
 
 vector2 sin(vector2 a)

@@ -105,7 +105,8 @@ make_mx_flavors (
             mx_image.mx mx_invert.mx mx_ln.mx mx_max.mx mx_min.mx mx_mix.mx
             mx_modulo.mx mx_noise2d.mx mx_noise3d.mx
             mx_ramp4.mx mx_ramplr.mx mx_ramptb.mx mx_remap.mx
-            mx_sin.mx mx_smoothstep.mx mx_splitlr.mx mx_splittb.mx mx_sqrt.mx mx_subtract.mx
+            mx_sign.mx mx_sin.mx mx_smoothstep.mx mx_splitlr.mx
+            mx_splittb.mx mx_sqrt.mx mx_subtract.mx
             mx_switch.mx mx_swizzle_color.mx mx_swizzle_color2.mx
             mx_swizzle_color4.mx mx_swizzle_vector.mx mx_swizzle_vector2.mx
             mx_swizzle_vector4.mx mx_tan.mx mx_triplanarprojection.mx

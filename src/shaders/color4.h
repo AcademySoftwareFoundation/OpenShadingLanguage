@@ -166,6 +166,11 @@ color4 exp(color4 a)
     return color4(exp(a.rgb), exp(a.a));
 }
 
+color4 log(color4 a)
+{
+    return color4(log(a.rgb), log(a.a));
+}
+
 color4 log2(color4 a)
 {
     return color4(log2(a.rgb), log2(a.a));
@@ -252,6 +257,12 @@ color4 pow(color4 base, color4 power)
 color4 pow(color4 base, float power)
 {
     return pow(base, color4(color(power), power));
+}
+
+color4 sign(color4 a)
+{
+    return color4(sign(a.rgb),
+                  sign(a.a));
 }
 
 color4 sin(color4 a)

@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2009-2010 Sony Pictures Imageworks Inc., et al.
+Copyright (c) 2009-2018 Sony Pictures Imageworks Inc., et al.
 All Rights Reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -28,13 +28,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-#include <map>
-#include <memory>
-#include <unordered_map>
+#include "stringtable.h"
+
 #include <OpenImageIO/ustring.h>
 #include <OSL/oslexec.h>
 
+#include <optix_world.h>
+
+
 OSL_NAMESPACE_ENTER
+
 
 class OptixRenderer : public RendererServices
 {
@@ -45,6 +48,16 @@ public:
     OptixRenderer () { }
     ~OptixRenderer () { }
 
+    void init_string_table (optix::Context ctx)
+    {
+        m_str_table.init (ctx);
+    }
+
+    uint64_t register_string (const std::string& str, const std::string& var_name)
+    {
+        return m_str_table.addString (ustring(str), ustring(var_name));
+    }
+
     virtual int supports (string_view feature) const
     {
         if (feature == "OptiX") {
@@ -54,11 +67,9 @@ public:
         return false;
     }
 
-
     // Function stubs
     virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
-                             TransformationPtr xform,
-                             float time)
+                             TransformationPtr xform, float time)
     {
         return 0;
     }
@@ -87,10 +98,9 @@ public:
         return 0;
     }
 
-
     virtual bool get_array_attribute (ShaderGlobals *sg, bool derivatives,
                                       ustring object, TypeDesc type, ustring name,
-                                      int index, void *val )
+                                      int index, void *val)
     {
         return 0;
     }
@@ -107,6 +117,9 @@ public:
         return 0;
     }
 
+
+private:
+    StringTable m_str_table;
 };
 
 

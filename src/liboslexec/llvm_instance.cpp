@@ -459,13 +459,12 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         llvm::Value* name_arg = NULL;
 
         if (use_optix()) {
-            // In the OptiX case, we need get a pointer to the sting constant
-            // for the symbol name
-            Symbol symname_const (ustring::format ("$symname_%s", symname),
-                                  TypeDesc::TypeString, SymTypeConst);
+            // In the OptiX case, we need to get the pointer to the string
+            // constant for the symbol name.
+            ustring arg_name = ustring::format ("$symname_%s_%d", symname, sym.layer());
+            Symbol symname_const (arg_name, TypeDesc::TypeString, SymTypeConst);
             symname_const.data (&symname);
-            llvm::Value* name_sym = getOrAllocateLLVMGlobal (symname_const);
-            name_arg = ll.ptr_cast (ll.GEP (name_sym, 0), ll.type_void_ptr());
+            name_arg = llvm_load_device_string (symname_const);
         } else {
             name_arg = ll.constant (symname);
         }
@@ -521,6 +520,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         ustring var_name = ustring::format ("%s_%s_%s_%d", sym.name(),
                                    inst()->layername(), group().name(), group().id());
 
+        // TODO: Make sure this works with string variables
         llvm::Value* ud_var = createOptixVariable (var_name.string(),
                                                    sym.typespec().simpletype().c_str(),
                                                    sym.size(),
@@ -532,6 +532,9 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
 
         TypeDesc t = sym.typespec().simpletype();
         ll.op_memcpy (dst, src, t.size(), t.basesize());
+    } else if (use_optix() && sym.typespec().is_string()) {
+        llvm::Value* src = llvm_load_device_string (sym);
+        ll.op_memcpy (llvm_void_ptr (sym), src, 8, 4);
     } else {
         // Use default value
         int num_components = sym.typespec().simpletype().aggregate;
@@ -545,10 +548,6 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
                 llvm::Value* init_val = 0;
                 if (elemtype.is_floatbased())
                     init_val = ll.constant (((float*)sym.data())[c]);
-                else if (use_optix() && elemtype.is_string()) {
-                    llvm::Value* val = getOrAllocateLLVMGlobal (sym);
-                    init_val = ll.ptr_cast (ll.GEP (val, 0), ll.type_void_ptr());
-                }
                 else if (elemtype.is_string())
                     init_val = ll.constant (((ustring*)sym.data())[c]);
                 else if (elemtype.is_int())

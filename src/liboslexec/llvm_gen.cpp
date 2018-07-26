@@ -358,12 +358,15 @@ LLVMGEN (llvm_gen_printf)
                         s += " ";
                     s += ourformat;
 
-                    // In the OptiX case, we need to use the device-side string constant,
-                    // as added to the LLVM Module.
-                    llvm::Value* loaded = (simpletype.basetype == TypeDesc::STRING &&
-                                           sym.is_constant() && rop.use_optix())
-                        ? rop.getOrAllocateLLVMGlobal (sym)
-                        : rop.llvm_load_value (sym, 0, arrind, c);
+                    llvm::Value* loaded = nullptr;
+                    if (rop.use_optix() && simpletype.basetype == TypeDesc::STRING) {
+                        // TODO: make this work with arrind
+                        // In the OptiX case, we use the device-side string.
+                        loaded = rop.llvm_load_device_string (sym);
+                    }
+                    else {
+                        loaded = rop.llvm_load_value (sym, 0, arrind, c);
+                    }
 
                     if (simpletype.basetype == TypeDesc::FLOAT) {
                         // C varargs convention upconverts float->double.
@@ -386,6 +389,20 @@ LLVMGEN (llvm_gen_printf)
         }
     }
 
+    if (rop.use_optix() && arg > (format_arg + 2)) {
+        std::cerr << "WARNING: "
+                  << "OptiX only supports 0 or 1 printf arguments at this time. "
+                  << "Ignoring printf call in " << op.sourcefile() << std::endl;
+        return true;
+    }
+
+    // In OptiX, printf currently supports 0 or 1 arguments, and the signature
+    // requires 1 argument, so push a null pointer onto the call args if there
+    // is no argument.
+    if (rop.use_optix() && arg == format_arg + 1) {
+        call_args.push_back(rop.ll.void_ptr_null());
+    }
+
     // Some ops prepend things
     if (op.opname() == op_error || op.opname() == op_warning) {
         std::string prefix = Strutil::format ("Shader %s [%s]: ",
@@ -395,11 +412,13 @@ LLVMGEN (llvm_gen_printf)
     }
 
     // Now go back and put the new format string in its place
-    call_args[new_format_slot] = (! rop.use_optix())
-        ? rop.ll.constant (s.c_str())
-        // In the OptiX case, we need to use the pointer to the constant format
-        // string added to the LLVM Module
-        : rop.llvm_get_pointer (format_sym);
+    if (! rop.use_optix()) {
+        call_args[new_format_slot] = rop.ll.constant (s.c_str());
+    }
+    else {
+        // In the OptiX case, we use the pointer to the device-side string
+        call_args[new_format_slot] = rop.llvm_load_device_string (format_sym);
+    }
 
     // Construct the function name and call it.
     std::string opname = std::string("osl_") + op.opname().string();
@@ -1752,16 +1771,10 @@ LLVMGEN (llvm_gen_compare_op)
     ustring opname = op.opname();
 
     if (rop.use_optix() && A.typespec().is_string()) {
-        // Compare two strings for equality by comparing the pointers to
-        // their global constants.
-
         ASSERT (B.typespec().is_string() && "Only string-to-string comparison is supported");
 
-        llvm::Value* a = (A.is_constant())
-            ? rop.llvm_get_pointer (A) : rop.llvm_load_value (A);
-
-        llvm::Value* b = (B.is_constant())
-            ? rop.llvm_get_pointer (B) : rop.llvm_load_value (B);
+        llvm::Value* a = rop.llvm_load_device_string (A);
+        llvm::Value* b = rop.llvm_load_device_string (B);
 
         if (opname == op_eq) {
             final_result = rop.ll.op_eq (a, b);
@@ -2649,6 +2662,12 @@ llvm_gen_noise_options (BackendLLVM &rop, int opnum,
 {
     llvm::Value* opt = rop.ll.call_function ("osl_get_noise_options",
                                              rop.sg_void_ptr());
+
+    // TODO: implement noise options in OptiX
+    if (rop.use_optix()) {
+        return opt;
+    }
+
     Opcode &op (rop.inst()->ops()[opnum]);
     for (int a = first_optional_arg;  a < op.nargs();  ++a) {
         Symbol &Name (*rop.opargsym(op,a));
@@ -2816,8 +2835,14 @@ LLVMGEN (llvm_gen_noise)
 
     std::string funcname = "osl_" + name.string() + "_" + arg_typecode(&Result,derivs);
     std::vector<llvm::Value *> args;
-    if (pass_name)
-        args.push_back (rop.llvm_load_value(*Name));
+    if (pass_name) {
+        if (! rop.use_optix()) {
+            args.push_back (rop.llvm_load_value(*Name));
+        }
+        else {
+            args.push_back (rop.llvm_load_device_string (*Name));
+        }
+    }
     llvm::Value *tmpresult = NULL;
     // triple return, or float return with derivs, passes result pointer
     if (outdim == 3 || derivs) {
@@ -3318,8 +3343,15 @@ LLVMGEN (llvm_gen_closure)
         DASSERT(p.offset + p.field_size <= clentry->struct_size);
         Symbol &sym = *rop.opargsym (op, carg + 2 + weighted);
         TypeDesc t = sym.typespec().simpletype();
-        if (!sym.typespec().is_closure_array() && !sym.typespec().is_structure()
-            && equivalent(t,p.type)) {
+
+        if (rop.use_optix() && sym.typespec().is_string()) {
+            llvm::Value* dst = rop.ll.offset_ptr (mem_void_ptr, p.offset);
+            llvm::Value* src = rop.llvm_load_device_string (sym);
+            rop.ll.op_memcpy (dst, src, (int)p.type.size(),
+                              4 /* use 4 byte alignment for now */);
+        }
+        else if (!sym.typespec().is_closure_array() && !sym.typespec().is_structure()
+                 && equivalent(t,p.type)) {
             llvm::Value* dst = rop.ll.offset_ptr (mem_void_ptr, p.offset);
             llvm::Value* src = rop.llvm_void_ptr (sym);
             rop.ll.op_memcpy (dst, src, (int)p.type.size(),

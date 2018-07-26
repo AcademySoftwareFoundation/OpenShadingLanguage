@@ -146,6 +146,10 @@ public:
         return llvm_load_value (sym, deriv, NULL, component, cast);
     }
 
+    /// Load the address of a global device-side string pointer, optionally
+    /// follow the pointer and cast the result to UINT64.
+    llvm::Value *llvm_load_device_string (const Symbol& sym, bool follow=true);
+
     /// Legacy version
     ///
     llvm::Value *loadLLVMValue (const Symbol& sym, int component=0,
@@ -215,20 +219,25 @@ public:
     /// map, the symbol is alloca'd and placed in the map.
     llvm::Value *getOrAllocateLLVMSymbol (const Symbol& sym);
 
-    /// Allocate a GlobalVariable for the given OSL symbol and return a pointer
-    /// to it, or return the pointer if it has already been allocated
-    llvm::Value *getOrAllocateLLVMGlobal (const Symbol& sym);
+    /// Allocate a CUDA variable for the given OSL symbol and return a pointer
+    /// to the corresponding LLVM GlobalVariable, or return the pointer if it
+    /// has already been allocated.
+    llvm::Value *getOrAllocateCUDAVariable (const Symbol& sym);
 
-    /// Create a GlobalVariable and add it to the current Module
-    llvm::Value *addGlobalVariable (const std::string& name, int size,
-                                    int alignment, void* data,
-                                    const std::string& type="");
+    /// Create a CUDA global variable and add it to the current Module
+    llvm::Value *addCUDAVariable (const std::string& name, int size,
+                                  int alignment, void* data,
+                                  const std::string& type="");
 
-    /// Create a GlobalVariable with the extra semantic information needed
-    /// by OptiX
+    /// Create a CUDA variable, along with the extra semantic information needed
+    /// by OptiX.
     llvm::Value *createOptixVariable (const std::string& name,
                                       const std::string& type,
                                       int size, void* data );
+
+    /// Create the extra semantic information needed for OptiX variables
+    void createOptixMetadata (const std::string& name,
+                              const std::string& type, int size );
 
     /// Retrieve an llvm::Value that is a pointer holding the start address
     /// of the specified symbol. This always works for globals and params;
@@ -457,6 +466,11 @@ private:
 
     // A mapping from symbol names to llvm::GlobalVariables
     std::map<std::string,llvm::GlobalVariable*> m_const_map;
+
+    // A mapping from canonical strings to string variable names, used to
+    // detect collisions that might occur due to using the string hash to
+    // create variable names.
+    std::map<std::string,std::string>           m_varname_map;
 
     bool m_use_optix;                   ///< Compile for OptiX?
 

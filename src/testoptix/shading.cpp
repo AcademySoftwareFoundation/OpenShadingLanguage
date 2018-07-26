@@ -30,13 +30,16 @@ struct PhongParams      { Vec3 N; float exponent; };
 struct WardParams       { Vec3 N, T; float ax, ay; };
 struct ReflectionParams { Vec3 N; float eta; };
 struct RefractionParams { Vec3 N; float eta; };
-struct MicrofacetParams { ustring dist; Vec3 N, U; float xalpha, yalpha, eta; int refract; };
+struct MicrofacetParams { char* dist; Vec3 N, U; float xalpha, yalpha, eta; int refract; };
 
 } // anonymous namespace
 
+
 OSL_NAMESPACE_ENTER
 
-void register_closures(OSL::ShadingSystem* shadingsys) {
+
+void register_closures(OSL::ShadingSystem* shadingsys)
+{
     // Describe the memory layout of each closure type to the OSL runtime
     enum { MaxParams = 32 };
     struct BuiltinClosures {
@@ -91,5 +94,6 @@ void register_closures(OSL::ShadingSystem* shadingsys) {
             NULL, NULL);
     }
 }
+
 
 OSL_NAMESPACE_EXIT

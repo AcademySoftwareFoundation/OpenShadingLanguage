@@ -12,8 +12,12 @@
 
 
 # If 'OPTIXHOME' not set, use the env variable of that name if available
-if (NOT OPTIXHOME AND NOT $ENV{OPTIXHOME} STREQUAL "")
-    set (OPTIXHOME $ENV{OPTIXHOME})
+if (NOT OPTIXHOME)
+    if (NOT $ENV{OPTIXHOME} STREQUAL "")
+        set (OPTIXHOME $ENV{OPTIXHOME})
+    elseif (NOT $ENV{OPTIX_INSTALL_DIR} STREQUAL "")
+        set (OPTIXHOME $ENV{OPTIX_INSTALL_DIR})
+    endif ()
 endif ()
 
 if (NOT OptiX_FIND_QUIETLY)
@@ -43,32 +47,30 @@ OPTIX_find_api_library(optix_prime 1)
 
 set (OPTIX_LIBRARIES ${optix_LIBRARY} ${optixu_LIBRARY} ${optix_prime_LIBRARY})
 
-mark_as_advanced (
-    OPTIX_INCLUDE_DIR
-    OPTIX_LIBRARIES
-    )
+# Pull out the API version from optix.h
+file(STRINGS ${OPTIX_INCLUDE_DIR}/optix.h OPTIX_VERSION_LINE LIMIT_COUNT 1 REGEX OPTIX_VERSION)
+string(REGEX MATCH "([0-9]+)" OPTIX_VERSION_STRING "${OPTIX_VERSION_LINE}")
+math(EXPR OPTIX_VERSION_MAJOR "${OPTIX_VERSION_STRING}/10000")
+math(EXPR OPTIX_VERSION_MINOR "(${OPTIX_VERSION_STRING}%10000)/100")
+math(EXPR OPTIX_VERSION_MICRO "${OPTIX_VERSION_STRING}%100")
+set(OPTIX_VERSION "${OPTIX_VERSION_MAJOR}.${OPTIX_VERSION_MINOR}.${OPTIX_VERSION_MICRO}")
 
-include (FindPackageHandleStandardArgs)
-find_package_handle_standard_args (OptiX
-    FOUND_VAR     OPTIX_FOUND
-    REQUIRED_VARS OPTIX_INCLUDE_DIR OPTIX_LIBRARIES
-    )
-
+message (STATUS "OptiX version = ${OPTIX_VERSION}")
 if (NOT OptiX_FIND_QUIETLY)
     message (STATUS "OptiX includes  = ${OPTIX_INCLUDE_DIR}")
     message (STATUS "OptiX libraries = ${OPTIX_LIBRARIES}")
 endif ()
 
-# Pull out the API version from optix.h
-file(STRINGS ${OPTIX_INCLUDE_DIR}/optix.h OPTIX_VERSION_LINE LIMIT_COUNT 1 REGEX OPTIX_VERSION)
-string(REGEX MATCH "([0-9]+)" OPTIX_VERSION "${OPTIX_VERSION_LINE}")
-math(EXPR OPTIX_VERSION_MAJOR "${OPTIX_VERSION}/10000")
-math(EXPR OPTIX_VERSION_MINOR "(${OPTIX_VERSION}%10000)/100")
-math(EXPR OPTIX_VERSION_MICRO "${OPTIX_VERSION}%100")
-set(OPTIX_VERSION_STRING ${OPTIX_VERSION_MAJOR}.${OPTIX_VERSION_MINOR}.${OPTIX_VERSION_MICRO})
+mark_as_advanced (
+    OPTIX_INCLUDE_DIR
+    OPTIX_LIBRARIES
+    OPTIX_VERSION
+    )
 
-if (OPTIX_FOUND)
-    message (STATUS "OptiX version = ${OPTIX_VERSION_STRING}")
-else ()
-    message (FATAL_ERROR "OptiX not found")
-endif ()
+include (FindPackageHandleStandardArgs)
+find_package_handle_standard_args (OptiX
+    FOUND_VAR     OPTIX_FOUND
+    REQUIRED_VARS OPTIX_INCLUDE_DIR OPTIX_LIBRARIES OPTIX_VERSION
+    VERSION_VAR   OPTIX_VERSION
+    )
+

@@ -257,7 +257,7 @@ endif ()
 # OptiX setup
 
 if (USE_OPTIX)
-    find_package (OptiX REQUIRED)
+    find_package (OptiX 5.1 REQUIRED)
     include_directories (BEFORE "${OPTIX_INCLUDE_DIR}")
 
     if (NOT USE_LLVM_BITCODE OR NOT USE_FAST_MATH)

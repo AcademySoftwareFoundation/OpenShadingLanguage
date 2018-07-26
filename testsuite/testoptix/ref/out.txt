@@ -1,0 +1,16 @@
+Compiled checkerboard.osl -> checkerboard.oso
+Compiled matte.osl -> matte.oso
+Compiled test_assign.osl -> test_assign.oso
+Compiled test_compare.osl -> test_compare.oso
+Compiled test_print.osl -> test_print.oso
+Compiled test_str_ops.osl -> test_str_ops.oso
+str: default
+non-default string
+temp:  default
+temp2: temp2 initial value
+temp:  abracadabra
+temp2: open sesame
+str:             default
+hash(str):       3d6b922d
+strlen(str):     7
+getchar(str, 0): 100

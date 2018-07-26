@@ -1,0 +1,8 @@
+surface test_str_ops (string str = "default", color Cs = 1)
+{
+    printf("str:             %s\n", str);
+    printf("hash(str):       %x\n", hash(str));
+    printf("strlen(str):     %d\n", strlen(str));
+    printf("getchar(str, 0): %d\n", getchar(str, 0));
+    Ci = Cs * diffuse (N);
+}

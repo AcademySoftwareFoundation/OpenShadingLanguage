@@ -90,7 +90,7 @@ extern "C" {
     {
         ShaderGlobals* sg_ptr = (ShaderGlobals*) sg_;
 
-        if  (w->x == 0.0f && w->y == 0.0f && w->z == 0.0f) {
+        if (w->x == 0.0f && w->y == 0.0f && w->z == 0.0f) {
             return NULL;
         }
 
@@ -108,15 +108,15 @@ extern "C" {
     {
         ShaderGlobals* sg_ptr = (ShaderGlobals*) sg_;
 
-        if  (a == NULL) {
+        if (a == NULL) {
             return NULL;
         }
 
-        if  (w->x == 0.0f && w->y == 0.0f && w->z == 0.0f) {
+        if (w->x == 0.0f && w->y == 0.0f && w->z == 0.0f) {
             return NULL;
         }
 
-        if  (w->x == 1.0f && w->y == 1.0f && w->z == 1.0f) {
+        if (w->x == 1.0f && w->y == 1.0f && w->z == 1.0f) {
             return a;
         }
 
@@ -132,11 +132,11 @@ extern "C" {
     {
         ShaderGlobals* sg_ptr = (ShaderGlobals*) sg_;
 
-        if  (a == NULL || w == 0.0f) {
+        if (a == NULL || w == 0.0f) {
             return NULL;
         }
 
-        if  (w == 1.0f) {
+        if (w == 1.0f) {
             return a;
         }
 
@@ -152,11 +152,11 @@ extern "C" {
     {
         ShaderGlobals* sg_ptr = (ShaderGlobals*) sg_;
 
-        if  (a == NULL) {
+        if (a == NULL) {
             return b;
         }
 
-        if  (b == NULL) {
+        if (b == NULL) {
             return a;
         }
 
@@ -183,5 +183,34 @@ extern "C" {
     {
         int layer = 0;
         return rend_get_userdata ((char*)name, symbol_data, symbol_data_size);
+    }
+
+
+    __device__
+    int osl_strlen_is (const char *str)
+    {
+        return DEVSTR(str).length();
+    }
+
+
+    __device__
+    int osl_hash_is (const char *str)
+    {
+        return DEVSTR(str).hash();
+    }
+
+
+    __device__
+    int osl_getchar_isi (const char *str, int index)
+    {
+        return (str && unsigned(index) < DEVSTR(str).length())
+            ? str[index] : 0;
+    }
+
+
+    __device__
+    void osl_printf (void* sg_, char* fmt_str, void* args)
+    {
+        printf (fmt_str, args);
     }
 }

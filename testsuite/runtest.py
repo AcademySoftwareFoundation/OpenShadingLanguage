@@ -205,6 +205,9 @@ def testrender (args) :
 # Construct a command that run testoptix with the specified arguments,
 # appending output to the file "out.txt".
 def testoptix (args) :
+    # Disable OptiX logging to prevent messages from the library from
+    # appearing in the program output.
+    os.environ["optix_log_level"] = "0"
     return (osl_app("testoptix") + " " + args + " >> out.txt 2>&1 ;\n")
 
 

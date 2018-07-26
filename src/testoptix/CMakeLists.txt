@@ -48,16 +48,20 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
       COMMAND ${LLVM_BC_GENERATOR}
           "-I${OPTIX_INCLUDE_DIR}"
           "-I${CUDA_INCLUDE_DIR}"
-          -D__CUDACC__ -DOSL_COMPILING_TO_BITCODE=1
-          -DNDEBUG -DOIIO_NO_SSE -Doslexec_EXPORTS
+          "-I${OPENIMAGEIO_INCLUDE_DIR}"
+          "-I${ILMBASE_INCLUDE_DIR}"
+          "-I${CMAKE_BINARY_DIR}/include"
+          "-I${PROJECT_SOURCE_DIR}/src/include"
+          -D__CUDACC__ -DOSL_COMPILING_TO_BITCODE=1 -DNDEBUG -DOIIO_NO_SSE
           --language=cuda --cuda-device-only --cuda-gpu-arch=${CUDA_TARGET_ARCH}
           ${CUDA_LIB_FLAGS}
+          -std=c++11 -Wno-deprecated-register
           -O3 -Wno-format-security -emit-llvm
           ${llvm_src} -c -o ${llvm_bc}
       COMMAND "${CMAKE_SOURCE_DIR}/src/liboslexec/serialize-bc.bash" ${llvm_bc} ${llvm_bc_cpp} "rend_llvm_compiled_ops"
       MAIN_DEPENDENCY ${llvm_src}
       DEPENDS "${CMAKE_SOURCE_DIR}/src/liboslexec/serialize-bc.bash"
-              ${llvm_src} ${testoptix_cuda_headers}
+              ${llvm_src} ${testoptix_cuda_headers} ${PROJECT_PUBLIC_HEADERS}
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cuda" )
 ENDMACRO ()
 
@@ -85,6 +89,7 @@ ENDMACRO ()
 
 set ( testoptix_srcs
     shading.cpp
+    stringtable.cpp
     testoptix.cpp
     )
 

@@ -50,12 +50,11 @@ namespace pugi = OIIO::pugi;
 
 #include <OSL/oslexec.h>
 
-#include <nvrtc.h>
-#include <optix_world.h>
-
 #include "optixrend.h"
 #include "raytracer.h"
 #include "shading.h"
+
+#include <optix_world.h>
 
 
 // The pre-compiled renderer support library LLVM bitcode is embedded into the
@@ -72,6 +71,8 @@ bool debug1 = false;
 bool debug2 = false;
 bool verbose = false;
 bool runstats = false;
+bool saveptx = false;
+bool warmup = false;
 int profile = 0;
 bool O0 = false, O1 = false, O2 = false;
 bool debugnan = false;
@@ -92,7 +93,6 @@ static std::string shaderpath;
 //     testrender can be used as-is (and they will eventually be used, when
 //     path tracing is added to testoptix)
 
-bool optix_exceptions = false;
 optix::Context optix_ctx = NULL;
 
 static std::string renderer_ptx;  // ray generation, etc.
@@ -122,6 +122,8 @@ void getargs(int argc, const char *argv[])
                 "--debug", &debug1, "Lots of debugging info",
                 "--debug2", &debug2, "Even more debugging info",
                 "--runstats", &runstats, "Print run statistics",
+                "--saveptx", &saveptx, "Save the generated PTX",
+                "--warmup", &warmup, "Perform a warmup launch",
                 "-r %d %d", &xres, &yres, "Render a WxH image",
                 "-aa %d", &aa, "Trace NxN rays per pixel",
                 "-t %d", &num_threads, "Render using N threads (default: auto-detect)",
@@ -131,7 +133,6 @@ void getargs(int argc, const char *argv[])
                 "--debugnan", &debugnan, "Turn on 'debugnan' mode",
                 "--path %s", &shaderpath, "Specify oso search path",
                 "--options %s", &extraoptions, "Set extra OSL options",
-                "--exceptions", &optix_exceptions, "Enable OptiX device exceptions",
                 NULL);
     if (ap.parse(argc, argv) < 0) {
         std::cerr << ap.geterror() << std::endl;
@@ -414,17 +415,13 @@ void init_optix_context ()
     // Set up the OptiX context
     optix_ctx = optix::Context::create();
 
+    ASSERT ((optix_ctx->getEnabledDeviceCount() == 1) &&
+            "Only one CUDA device is currently supported");
+
     optix_ctx->setRayTypeCount (2);
     optix_ctx->setEntryPointCount (1);
     optix_ctx->setStackSize (2048);
-
     optix_ctx->setPrintEnabled (true);
-
-    // OptiX device exceptions and printing are disabled by default, but they
-    // can be enabled for debugging using the command-line option --exceptions
-    if (optix_exceptions) {
-        optix_ctx->setExceptionEnabled (RT_EXCEPTION_ALL, true);
-    }
 
     optix_ctx["radiance_ray_type"]->setUint  (0u);
     optix_ctx["shadow_ray_type"  ]->setUint  (1u);
@@ -475,6 +472,8 @@ void make_optix_materials ()
     optix::Program any_hit = optix_ctx->createProgramFromPTXString(
         wrapper_ptx, "any_hit_shadow");
 
+    int mtl_id = 0;
+
     // Optimize each ShaderGroup in the scene, and use the resulting PTX to create
     // OptiX Programs which can be called by the closest hit program in the wrapper
     // to execute the compiled OSL shader.
@@ -496,6 +495,12 @@ void make_optix_materials ()
             std::cerr << "Failed to generate PTX for ShaderGroup "
                       << group_name << std::endl;
             exit (EXIT_FAILURE);
+        }
+
+        if (saveptx) {
+            std::ofstream out (group_name + "_" + std::to_string( mtl_id++ ) + ".ptx");
+            out << osl_ptx;
+            out.close();
         }
 
         // Create a new Material using the wrapper PTX
@@ -609,6 +614,11 @@ int main (int argc, const char *argv[])
     // Set up the OptiX Context
     init_optix_context();
 
+    // Set up the string table. This allocates a block of CUDA device memory to
+    // hold all of the static strings used by the OSL shaders. The strings can
+    // be accessed via OptiX variables that hold pointers to the table entries.
+    rend.init_string_table(optix_ctx);
+
     // Convert the OSL ShaderGroups accumulated during scene parsing into
     // OptiX Materials
     make_optix_materials();
@@ -619,7 +629,9 @@ int main (int argc, const char *argv[])
     double setuptime = timer.lap ();
 
     // Perform a tiny launch to warm up the OptiX context
-    optix_ctx->launch (0, 1, 1);
+    if (warmup)
+        optix_ctx->launch (0, 1, 1);
+
     double warmuptime = timer.lap ();
 
     // Launch the GPU kernel to render the scene
@@ -653,10 +665,12 @@ int main (int argc, const char *argv[])
     if (debug1 || runstats || profile) {
         double writetime = timer.lap();
         std::cout << "\n";
-        std::cout << "Setup : " << OIIO::Strutil::timeintervalformat (setuptime,2) << "\n";
-        std::cout << "Warmup: " << OIIO::Strutil::timeintervalformat (warmuptime,2) << "\n";
-        std::cout << "Run   : " << OIIO::Strutil::timeintervalformat (runtime,2) << "\n";
-        std::cout << "Write : " << OIIO::Strutil::timeintervalformat (writetime,2) << "\n";
+        std::cout << "Setup : " << OIIO::Strutil::timeintervalformat (setuptime,4) << "\n";
+        if (warmup) {
+            std::cout << "Warmup: " << OIIO::Strutil::timeintervalformat (warmuptime,4) << "\n";
+        }
+        std::cout << "Run   : " << OIIO::Strutil::timeintervalformat (runtime,4) << "\n";
+        std::cout << "Write : " << OIIO::Strutil::timeintervalformat (writetime,4) << "\n";
         std::cout << "\n";
     }
 

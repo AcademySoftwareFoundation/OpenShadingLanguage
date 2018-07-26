@@ -1,0 +1,11 @@
+surface test_compare (string str = "default", color Cs = 1)
+{
+    if (str == "default") {
+        printf("default string\n");
+        Ci = Cs * diffuse (N);
+    }
+    else {
+        printf("non-default string\n");
+        Ci = (color(1) - Cs) * diffuse (N);
+    }
+}

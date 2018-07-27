@@ -224,8 +224,9 @@ BUILD_DICT = {
     'mx_geomattrvalue': ALL_TYPES + ['bool', 'string', 'int'],
     'mx_geomcolor': ['float', 'color', 'color2', 'color4'],
     'mx_heighttonormal': ['vector'],
+    'mx_hsvadjust' : ['color', 'color4'],
     'mx_hsvtorgb' : ['color', 'color4'],
-    'mx_hueshift': ['color', 'color4'],
+    'mx_hueshift': ['color', 'color4'],   # DEPRECATED in MX 1.36
     'mx_image': ALL_TYPES,
     'mx_ln' : ALL_TYPES + ['int'],
     'mx_max': ALL_TYPES,

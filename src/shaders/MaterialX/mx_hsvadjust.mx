@@ -1,0 +1,41 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+//
+// MaterialX specification (c) 2017 Lucasfilm Ltd.
+// http://www.materialx.org/
+
+#include "mx_funcs.h"
+
+
+//
+// Shift the hue of a color by the given amount.
+//
+color hsvadjust(color in, vector amount)
+{
+    color hsv3 = transformc("rgb","hsv", in);
+    hsv3[0] += amount[0];   // add hue adjustment
+    hsv3[1] *= amount[1];   // multiply saturation adjustment
+    hsv3[2] *= amount[2];   // multiply value adjustment
+    hsv3[0] = fmod(hsv3[0], 1.0);
+    color out = transformc("hsv","rgb", hsv3);
+    return out;
+}
+
+color4 hsvadjust(color4 in, vector amount)
+{
+    return color4 (hsvadjust(in.rgb, amount), in.a);
+}
+
+
+
+shader mx_hsvadjust_TYPE_SUFFIX
+    [[ string help = "Adjust the hue, saturation, and value of a color." ]]
+  (
+    TYPE in = TYPE_ZERO,
+    vector amount = vector(0,1,1)
+        [[ string help = "Adjustment (hue add, sat mul, val mul)" ]],
+    output TYPE out = TYPE_ZERO
+  )
+{
+    out = hsvadjust(in, amount);
+}

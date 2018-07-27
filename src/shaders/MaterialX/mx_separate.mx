@@ -1,0 +1,82 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+//
+// MaterialX specification (c) 2017 Lucasfilm Ltd.
+// http://www.materialx.org/
+
+#include "mx_funcs.h"
+
+
+void sep (color2 in,
+          output float a, output float b, output float c, output float d)
+{
+    a = in.r;
+    b = in.a;
+}
+
+void sep (vector2 in,
+          output float a, output float b, output float c, output float d)
+{
+    a = in.x;
+    b = in.y;
+}
+
+
+void sep (color in,
+          output float a, output float b, output float c, output float d)
+{
+    a = in[0];
+    b = in[1];
+    c = in[2];
+}
+
+void sep (vector in,
+          output float a, output float b, output float c, output float d)
+{
+    a = in[0];
+    b = in[1];
+    c = in[2];
+}
+
+
+void sep (color4 in,
+          output float a, output float b, output float c, output float d)
+{
+    a = in.rgb[0];
+    b = in.rgb[1];
+    c = in.rgb[2];
+    d = in.a;
+}
+
+void sep (vector4 in,
+          output float a, output float b, output float c, output float d)
+{
+    a = in.x;
+    b = in.y;
+    c = in.z;
+    d = in.w;
+}
+
+
+
+
+shader mx_separate_TYPE_SUFFIX
+    [[ string help = "Separate the individual floats of an aggregate (vector, color, etc.)" ]]
+  (
+    TYPE in = TYPE_ZERO,
+    output float outx = 0,
+    output float outy = 0,
+    output float outz = 0,
+    output float outw = 0,
+    output float outr = 0,
+    output float outg = 0,
+    output float outb = 0,
+    output float outa = 0
+  )
+{
+    sep (in, outx, outy, outz, outw);
+    outr = outx;
+    outg = outy;
+    outb = outz;
+    outa = outw;
+}

@@ -308,3 +308,7 @@ color4 atan2(color4 a, color4 b)
 }
 
 
+color4 transformc (string fromspace, string tospace, color4 C)
+{
+    return color4 (transformc (fromspace, tospace, C.rgb), C.a);
+}

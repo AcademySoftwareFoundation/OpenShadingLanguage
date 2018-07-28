@@ -117,10 +117,10 @@ make_mx_flavors (
 # MX shaders that come in flavors for all color/vector types.
 make_mx_flavors (
             mx_add_float.mx mx_atan2_float.mx mx_clamp_float.mx mx_contrast_float.mx
-            mx_divide_float.mx mx_power_float.mx mx_fractal3d_fa.mx
+            mx_extract.mx mx_divide_float.mx mx_power_float.mx mx_fractal3d_fa.mx
             mx_invert_float.mx mx_max_float.mx mx_min_float.mx
             mx_modulo_float.mx mx_multiply_float.mx mx_noise2d_fa.mx
-            mx_noise3d_fa.mx mx_remap_float.mx
+            mx_noise3d_fa.mx mx_remap_float.mx mx_separate.mx
             mx_smoothstep_float.mx mx_subtract_float.mx mx_swizzle_float.mx
     TYPES   color color2 color4 vector vector2 vector4)
 
@@ -145,7 +145,9 @@ make_mx_flavors (mx_dotproduct.mx       TYPES vector vector2 vector4)
 make_mx_flavors (mx_frame.mx            TYPES float)
 make_mx_flavors (mx_geomattrvalue.mx    TYPES int bool string)
 make_mx_flavors (mx_heighttonormal.mx   TYPES vector)
-make_mx_flavors (mx_hueshift.mx         TYPES color color4)
+make_mx_flavors (mx_hsvadjust.mx        TYPES color color4)
+make_mx_flavors (mx_hsvtorgb.mx         TYPES color color4)
+make_mx_flavors (mx_hueshift.mx         TYPES color color4)  # DEPRECATED in MX 1.36
 make_mx_flavors (mx_in.mx               TYPES color2 color4)
 make_mx_flavors (mx_luminance.mx        TYPES color color4)
 make_mx_flavors (mx_magnitude.mx        TYPES vector vector2 vector4)
@@ -163,12 +165,17 @@ make_mx_flavors (mx_combine_vf.mx       TYPES vector4)
 make_mx_flavors (mx_combine_vv.mx       TYPES vector4)
 make_mx_flavors (mx_position.mx         TYPES vector)
 make_mx_flavors (mx_premult.mx          TYPES color color2 color4)
-make_mx_flavors (mx_rotate2d.mx         TYPES vector2)
+make_mx_flavors (mx_rgbtohsv.mx         TYPES color color4)
+make_mx_flavors (mx_rotate.mx           TYPES vector vector2)
+make_mx_flavors (mx_rotate2d.mx         TYPES vector2)     # DEPRECATED in MX 1.36
 make_mx_flavors (mx_saturate.mx         TYPES color color4)
 make_mx_flavors (mx_scale.mx            TYPES vector vector2)
 make_mx_flavors (mx_tangent.mx          TYPES vector)
 make_mx_flavors (mx_texcoord.mx         TYPES vector vector2)
 make_mx_flavors (mx_time.mx             TYPES float)
+make_mx_flavors (mx_transformpoint.mx   TYPES vector vector4)
+make_mx_flavors (mx_transformvector.mx  TYPES vector vector4)
+make_mx_flavors (mx_transformnormal.mx  TYPES vector vector4)
 make_mx_flavors (mx_transpose.mx        TYPES matrix44 matrix33)
 make_mx_flavors (mx_unpremult.mx        TYPES color color2 color4)
 make_mx_flavors (mx_matrix_invert.mx    TYPES matrix44 matrix33)

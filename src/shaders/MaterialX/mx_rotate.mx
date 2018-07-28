@@ -1,0 +1,21 @@
+// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
+// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+//
+// MaterialX specification (c) 2017 Lucasfilm Ltd.
+// http://www.materialx.org/
+
+#include "mx_funcs.h"
+
+shader mx_rotate_TYPE_SUFFIX
+    [[ string help = "Rotates a vector2 value about an axis centered at the origin." ]]
+  (
+    TYPE in = TYPE_ZERO,
+    float amount = 0
+        [[ string help = "Amount to rotate, in degrees" ]],
+    vector axis = vector(0,0,1)
+        [[ string help = "Axis about which to rotate (only used for 3D case)" ]],
+    output TYPE out = TYPE_ZERO
+  )
+{
+    out = rotate (in, radians(amount), axis);
+}

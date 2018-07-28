@@ -8,6 +8,11 @@
 
 
 //
+// NOTE: This node is DEPRECATED as of MaterialX 1.36
+//
+
+
+//
 // Shift the hue of a color by the given amount.
 //
 color hueshift(color in, float amount)

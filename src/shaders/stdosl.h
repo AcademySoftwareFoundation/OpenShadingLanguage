@@ -292,6 +292,11 @@ point rotate (point p, float angle, point a, point b)
     return transform (M, p-a) + a;
 }
 
+point rotate (point p, float angle, vector axis)
+{
+    return rotate (p, angle, point(0), axis);
+}
+
 
 
 // Color functions

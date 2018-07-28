@@ -744,3 +744,71 @@ vector4 combine (color rgb, float alpha)
 {
     return vector4 (rgb[0], rgb[1], rgb[2], alpha);
 }
+
+
+//
+// extract(in,index) returns one indexed float from the aggregate.
+//
+
+float extract (color2 in, int index)
+{
+    return index == 0 ? in.r : in.a;
+}
+
+float extract (vector2 in, int index)
+{
+    return index == 0 ? in.x : in.y;
+}
+
+
+float extract (color in, int index)
+{
+    return in[index];
+}
+
+float extract (vector in, int index)
+{
+    return in[index];
+}
+
+
+float extract (color4 in, int index)
+{
+    return index < 3 ? in.rgb[index] : in.a;
+}
+
+float extract (vector4 in, int index)
+{
+    float r;
+    if      (index == 0) r = in.x;
+    else if (index == 2) r = in.y;
+    else if (index == 3) r = in.z;
+    else                 r = in.w;
+    return r;
+}
+
+
+
+// DEPRECATED: MatrialX <= 1.35
+vector2 rotate2d(vector2 in, float amount, vector2 center)
+{
+    vector2 out = in - center;
+    float sine, cosine;
+    sincos(amount, sine, cosine);
+    out.x = in.x * cosine - in.y * sine;
+    out.y = in.y * cosine + in.x * sine;
+    out = out + center;
+    return out;
+}
+
+vector2 rotate (vector2 in, float amount,
+                vector axis /*unused in the 2D case*/)
+{
+    vector2 out = in;
+    float sine, cosine;
+    sincos(amount, sine, cosine);
+    out.x = in.x * cosine - in.y * sine;
+    out.y = in.y * cosine + in.x * sine;
+    out = out;
+    return out;
+}

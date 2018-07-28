@@ -252,17 +252,6 @@ vector2 fmod(vector2 a, float b)
     return fmod(a, vector2(b, b));
 }
 
-vector2 rotate2d(vector2 in, float amount, vector2 center)
-{
-    vector2 out = in - center;
-    float sine, cosine;
-    sincos(amount, sine, cosine);
-    out.x = in.x * cosine - in.y * sine;
-    out.y = in.y * cosine + in.x * sine;
-    out = out + center;
-    return out;
-}
-
 vector2 pow (vector2 in, vector2 amount)
 {
     return vector2 (pow(in.x, amount.x), pow(in.y, amount.y));

@@ -4,6 +4,10 @@
 // MaterialX specification (c) 2017 Lucasfilm Ltd. 
 // http://www.materialx.org/
 
+
+// NOTE: This node was DEPRECATED in MaterialX 1.36
+
+
 #include "mx_funcs.h"
 
 shader mx_rotate2d_TYPE_SUFFIX

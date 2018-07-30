@@ -1353,7 +1353,64 @@ LLVMGEN (llvm_gen_minmax)
 }
 
 
+#if 1
+LLVMGEN (llvm_gen_bitwise_binary_op)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& A = *rop.opargsym (op, 1);
+    Symbol& B = *rop.opargsym (op, 2);
+    ASSERT (Result.typespec().is_int() && A.typespec().is_int() &&
+            B.typespec().is_int());
 
+    // TODO:  handle the A or B operands being the result of a conditional test.
+    // IE:  int A = (P[0] > 0.5);
+    // int B = int(v);
+    // int r = A^B;
+    // int r2 = (P[1] > 0.5)^B;
+
+    bool op_is_uniform = rop.isSymbolUniform(A) && rop.isSymbolUniform(B);
+    bool result_is_uniform = rop.isSymbolUniform(Result);
+
+    llvm::Value *a = rop.loadLLVMValue (A, 0, 0, TypeDesc::UNKNOWN, op_is_uniform);
+    llvm::Value *b = rop.loadLLVMValue (B, 0, 0, TypeDesc::UNKNOWN, op_is_uniform);
+
+//    llvm::Type * typeOfA = rop.ll.llvm_typeof(a);
+//    llvm::Type * typeOfB = rop.ll.llvm_typeof(b);
+//
+//    if(typeOfA == rop.ll.type_wide_bool()) {
+//        a = rop.ll.op_bool_to_int(a);
+//    }
+//    if(typeOfB == rop.ll.type_wide_bool()) {
+//        b = rop.ll.op_bool_to_int(b);
+//    }
+
+
+    if (!a || !b)
+        return false;
+    llvm::Value *r = NULL;
+    if (op.opname() == op_bitand)
+        r = rop.ll.op_and (a, b);
+    else if (op.opname() == op_bitor)
+        r = rop.ll.op_or (a, b);
+    else if (op.opname() == op_xor)
+        r = rop.ll.op_xor (a, b);
+    else if (op.opname() == op_shl)
+        r = rop.ll.op_shl (a, b);
+    else if (op.opname() == op_shr)
+        r = rop.ll.op_shr (a, b);
+    else
+        return false;
+
+    if (op_is_uniform && !result_is_uniform)
+    {
+        r = rop.ll.widen_value(r);
+    }
+
+    rop.storeLLVMValue (r, Result);
+    return true;
+}
+#else
 LLVMGEN (llvm_gen_bitwise_binary_op)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
@@ -1380,9 +1437,11 @@ LLVMGEN (llvm_gen_bitwise_binary_op)
         r = rop.ll.op_shr (a, b);
     else
         return false;
+
     rop.storeLLVMValue (r, Result);
     return true;
 }
+#endif
 
 
 
@@ -1411,6 +1470,7 @@ LLVMGEN (llvm_gen_unary_op)
 
         if (opname == op_compl) {
             ASSERT (dst.typespec().is_int());
+            std::cout<<"LLVM COMPL"<<std::endl;
             result = rop.ll.op_not (src_val);
         } else {
             // Don't know how to handle this.
@@ -2666,6 +2726,7 @@ LLVMGEN (llvm_gen_compare_op)
 
         llvm::Type * typeOfA = rop.ll.llvm_typeof(a);
         llvm::Type * typeOfB = rop.ll.llvm_typeof(b);
+
         if (typeOfA != typeOfB) {
             if ((typeOfA == rop.ll.type_bool() && typeOfB == rop.ll.type_int()) ||
                 (typeOfA == rop.ll.type_wide_bool() && typeOfB == rop.ll.type_wide_int())) {

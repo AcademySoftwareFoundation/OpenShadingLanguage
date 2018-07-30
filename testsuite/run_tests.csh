@@ -11,7 +11,11 @@
 
 #./run_test_dir.csh spline
 
-
+./run_test_dir.csh bitwise_binary_op/bitand
+./run_test_dir.csh bitwise_binary_op/bitor
+./run_test_dir.csh bitwise_binary_op/shr
+./run_test_dir.csh bitwise_binary_op/shl
+./run_test_dir.csh bitwise_binary_op/and
 
 ./run_test_dir.csh spline/test_spline_w16dvw16fdv
 ./run_test_dir.csh spline/test_spline_w16dvw16fw16dv

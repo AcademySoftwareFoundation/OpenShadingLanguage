@@ -1,0 +1,19 @@
+
+shader a_u_b_u (output vector cout = 0, output vector mcout = 0) {
+int a = raytype("camera")*10;
+int b = raytype("camera")*2;
+
+int c = a>>b;
+cout = vector(tan(v/u), tan(u*v/c), u);
+
+vector mcout_ = cout;
+if(int(P[0]*200)%2)
+{
+a = raytype("camera") * 3;
+b = raytype("camera") * 7;
+c = a>>b;
+mcout_ = vector(tan(u), tan(P[0]/c), v*u);
+}
+mcout = mcout_;
+
+}

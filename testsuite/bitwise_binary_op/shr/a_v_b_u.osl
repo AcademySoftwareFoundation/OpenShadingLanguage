@@ -1,0 +1,20 @@
+
+shader a_v_b_u (output vector cout = 0, output vector mcout = 0) {
+int a = int(P[0])*10;
+int b = 2;
+
+int c = a>>b;
+
+cout = vector(tan(u), tan(P[0]/c), v*u);
+vector mcout_ = cout;
+
+if(int(P[0]*200)%2)
+{
+a = int(u)*8;
+b = 5;
+c = a>>b;
+cout = vector(tan(u/c), tan(v/c), P[2]);
+}
+
+mcout = mcout_;
+}

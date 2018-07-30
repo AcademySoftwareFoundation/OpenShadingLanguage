@@ -111,7 +111,8 @@ make_mx_flavors (
             mx_splittb.mx mx_sqrt.mx mx_subtract.mx
             mx_switch.mx mx_swizzle_color.mx mx_swizzle_color2.mx
             mx_swizzle_color4.mx mx_swizzle_vector.mx mx_swizzle_vector2.mx
-            mx_swizzle_vector4.mx mx_tan.mx mx_triplanarprojection.mx
+            mx_swizzle_vector4.mx mx_tan.mx mx_tiledimage.mx
+            mx_triplanarprojection.mx
     TYPES   float color color2 color4 vector vector2 vector4)
 
 # MX shaders that come in flavors for all color/vector types.

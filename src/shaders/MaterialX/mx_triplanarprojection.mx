@@ -11,23 +11,28 @@ shader mx_triplanarprojection_TYPE_SUFFIX
     [[ string help = "triplanarprojection node" ]]
   (
     string filex = ""
-        [[  string help = "Texture filename",
+        [[  string help = "Texture filename projected along X axis",
             string widget = "filename" ]],
 
     string filey = ""
-        [[  string help = "Texture filename",
+        [[  string help = "Texture filename projected along Y axis",
             string widget = "filename" ]],
 
     string filez = ""
-        [[  string help = "Texture filename",
+        [[  string help = "Texture filename projected along Z axis",
             string widget = "filename" ]],
 
-    string layerx = "",
-    string layery = "",
-    string layerz = "",
+    string layerx = ""
+        [[ string help = "Optional subimage name for X texture" ]],
+    string layery = ""
+        [[ string help = "Optional subimage name for Y texture" ]],
+    string layerz = ""
+        [[ string help = "Optional subimage name for Z texture" ]],
+
     TYPE default_value = TYPE_DEFAULT_IN,
     vector position = P,
 	normal inN   = N,
+    string filtertype = "smartcubic",
     output TYPE out = TYPE_ZERO
   )
 {
@@ -38,28 +43,31 @@ shader mx_triplanarprojection_TYPE_SUFFIX
     float filex_a;
     color filex_rgb = texture(filex, position[1], position[2],
                               "alpha", filex_a, "subimage", layerx,
+                              "interp", filtertype, "wrap", "periodic",
                               "missingcolor", missingColor,
                               "missingalpha", missingAlpha);
 
     float filey_a;
     color filey_rgb = texture(filey, position[0], position[2],
                               "alpha", filey_a, "subimage", layery,
+                              "interp", filtertype, "wrap", "periodic",
                               "missingcolor", missingColor,
                               "missingalpha", missingAlpha);
 
     float filez_a;
     color filez_rgb = texture(filez, position[0], position[1],
                               "alpha", filez_a, "subimage", layerz,
+                              "interp", filtertype, "wrap", "periodic",
                               "missingcolor", missingColor,
                               "missingalpha", missingAlpha);
 
     normal nIn = normalize(inN);
-    float blendx = dot(nIn, vector(1, 0, 0));
-    float blendy = dot(nIn, vector(0, 1, 0));
-    float blendz = dot(nIn, vector(0, 0, 1));
+    float blendx = abs (nIn[0]);
+    float blendy = abs (nIn[1]);
+    float blendz = abs (nIn[2]);
 
     color rgb = (filex_rgb * blendx) + (filey_rgb * blendy) + (filez_rgb * blendz);
     float alpha = (filex_a * blendx) + (filey_a * blendy) + (filez_a * blendz);
 
-    out = combine (rgb, alpha);
+    out = combine (rgb, alpha) / (blendx+blendy+blendz);
 }

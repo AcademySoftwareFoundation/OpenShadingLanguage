@@ -308,6 +308,7 @@ BUILD_DICT = {
     'mx_tan': ALL_TYPES,
     'mx_tangent': ['vector'],
     'mx_texcoord': ['vector', 'vector2'],
+    'mx_tiledimage': ALL_TYPES,
     'mx_time': ['float'],
     'mx_transformpoint' : ['vector', 'vector4'],
     'mx_transformvector' : ['vector', 'vector4'],

@@ -9,12 +9,118 @@
 #include "color4.h"
 #include "vector2.h"
 #include "vector4.h"
+#include "matrix33.h"
 
 
 ///////////////////////////////////////////////////////////////////////////
 // This file contains lots of functions helpful in the implementation of
 // the MaterialX nodes.
 ///////////////////////////////////////////////////////////////////////////
+
+
+
+// Define mx_add() overloaded for all MX types.
+float mx_add (float a, float b) { return a+b; }
+point mx_add (point a, point b) { return a+b; }
+point mx_add (point a, float b) { return a+b; }
+vector mx_add (vector a, vector b) { return a+b; }
+vector mx_add (vector a, float b) { return a+b; }
+vector2 mx_add (vector2 a, vector2 b) { return a+b; }
+vector2 mx_add (vector2 a, float b) { return a+b; }
+vector4 mx_add (vector4 a, vector4 b) { return a+b; }
+vector4 mx_add (vector4 a, float b) { return a+b; }
+color mx_add (color a, color b) { return a+b; }
+color mx_add (color a, float b) { return a+b; }
+color2 mx_add (color2 a, color2 b) { return a+b; }
+color2 mx_add (color2 a, float b) { return a+b; }
+color4 mx_add (color4 a, color4 b) { return a+b; }
+color4 mx_add (color4 a, float b) { return a+b; }
+closure color mx_add (closure color a, closure color b) { return a+b; }
+
+matrix33 mx_add(matrix33 a, matrix33 b)
+{
+    return matrix33 (matrix(
+        a.m[0][0]+b.m[0][0], a.m[0][1]+b.m[0][1], a.m[0][2]+b.m[0][2], 0.0,
+        a.m[1][0]+b.m[1][0], a.m[1][1]+b.m[1][1], a.m[1][2]+b.m[1][2], 0.0,
+        a.m[2][0]+b.m[2][0], a.m[2][1]+b.m[2][1], a.m[2][2]+b.m[2][2], 0.0,
+        0.0, 0.0, 0.0, 1.0));
+}
+
+matrix33 mx_add(matrix33 a, float b)
+{
+    return matrix33 (matrix(a.m[0][0]+b, a.m[0][1]+b, a.m[0][2]+b, 0.0,
+                            a.m[1][0]+b, a.m[1][1]+b, a.m[1][2]+b, 0.0,
+                            a.m[2][0]+b, a.m[2][1]+b, a.m[2][2]+b, 0.0,
+                            0.0, 0.0, 0.0, 1.0));
+}
+
+matrix mx_add(matrix a, matrix b)
+{
+    return matrix (a[0][0]+b[0][0], a[0][1]+b[0][1], a[0][2]+b[0][2], a[0][3]+b[0][3],
+                   a[1][0]+b[1][0], a[1][1]+b[1][1], a[1][2]+b[1][2], a[1][3]+b[1][3],
+                   a[2][0]+b[2][0], a[2][1]+b[2][1], a[2][2]+b[2][2], a[2][3]+b[2][3],
+                   a[3][0]+b[3][0], a[3][1]+b[3][1], a[3][2]+b[3][2], a[3][3]+b[3][3]);
+}
+
+matrix mx_add(matrix a, float b)
+{
+    return matrix (a[0][0]+b, a[0][1]+b, a[0][2]+b, a[0][3]+b,
+                   a[1][0]+b, a[1][1]+b, a[1][2]+b, a[1][3]+b,
+                   a[2][0]+b, a[2][1]+b, a[2][2]+b, a[2][3]+b,
+                   a[3][0]+b, a[3][1]+b, a[3][2]+b, a[3][3]+b);
+}
+
+
+// Define mx_sub() overloaded for all MX types.
+float mx_sub (float a, float b) { return a-b; }
+point mx_sub (point a, point b) { return a-b; }
+point mx_sub (point a, float b) { return a-b; }
+vector mx_sub (vector a, vector b) { return a-b; }
+vector mx_sub (vector a, float b) { return a-b; }
+vector2 mx_sub (vector2 a, vector2 b) { return a-b; }
+vector2 mx_sub (vector2 a, float b) { return a-b; }
+vector4 mx_sub (vector4 a, vector4 b) { return a-b; }
+vector4 mx_sub (vector4 a, float b) { return a-b; }
+color mx_sub (color a, color b) { return a-b; }
+color mx_sub (color a, float b) { return a-b; }
+color2 mx_sub (color2 a, color2 b) { return a-b; }
+color2 mx_sub (color2 a, float b) { return a-b; }
+color4 mx_sub (color4 a, color4 b) { return a-b; }
+color4 mx_sub (color4 a, float b) { return a-b; }
+
+matrix33 mx_sub (matrix33 a, matrix33 b)
+{
+    return matrix33 (matrix(
+        a.m[0][0]-b.m[0][0], a.m[0][1]-b.m[0][1], a.m[0][2]-b.m[0][2], 0.0,
+        a.m[1][0]-b.m[1][0], a.m[1][1]-b.m[1][1], a.m[1][2]-b.m[1][2], 0.0,
+        a.m[2][0]-b.m[2][0], a.m[2][1]-b.m[2][1], a.m[2][2]-b.m[2][2], 0.0,
+        0.0, 0.0, 0.0, 1.0));
+}
+
+matrix33 mx_sub (matrix33 a, float b)
+{
+    return matrix33 (matrix(
+        a.m[0][0]-b, a.m[0][1]-b, a.m[0][2]-b, 0.0,
+        a.m[1][0]-b, a.m[1][1]-b, a.m[1][2]-b, 0.0,
+        a.m[2][0]-b, a.m[2][1]-b, a.m[2][2]-b, 0.0,
+        0.0, 0.0, 0.0, 1.0));
+}
+
+matrix mx_sub (matrix a, matrix b)
+{
+    return matrix(a[0][0]-b[0][0], a[0][1]-b[0][1], a[0][2]-b[0][2], a[0][3]-b[0][3],
+                  a[1][0]-b[1][0], a[1][1]-b[1][1], a[1][2]-b[1][2], a[1][3]-b[1][3],
+                  a[2][0]-b[2][0], a[2][1]-b[2][1], a[2][2]-b[2][2], a[2][3]-b[2][3],
+                  a[3][0]-b[3][0], a[3][1]-b[3][1], a[3][2]-b[3][2], a[3][3]-b[3][3]);
+}
+
+matrix mx_sub (matrix a, float b)
+{
+    return matrix (a[0][0]-b, a[0][1]-b, a[0][2]-b, a[0][3]-b,
+                   a[1][0]-b, a[1][1]-b, a[1][2]-b, a[1][3]-b,
+                   a[2][0]-b, a[2][1]-b, a[2][2]-b, a[2][3]-b,
+                   a[3][0]-b, a[3][1]-b, a[3][2]-b, a[3][3]-b);
+}
 
 
 

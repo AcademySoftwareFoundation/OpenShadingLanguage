@@ -14,5 +14,5 @@ shader mx_multiply_TYPE_SUFFIX
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {
-    out = in1 * in2; 
+    out = in1 * in2;
 }

@@ -98,7 +98,7 @@ endmacro()
 
 # MX shaders that come in flavors for all color/vector types, and float.
 make_mx_flavors (
-            mx_absval.mx mx_acos.mx mx_add.mx mx_asin.mx mx_atan2.mx
+            mx_absval.mx mx_acos.mx mx_asin.mx mx_atan2.mx
             mx_blur.mx mx_ceil.mx mx_clamp.mx mx_compare.mx
             mx_constant.mx mx_contrast.mx mx_cos.mx mx_dot.mx
             mx_exp.mx mx_power.mx mx_floor.mx mx_fractal3d.mx mx_geomattrvalue.mx
@@ -106,20 +106,32 @@ make_mx_flavors (
             mx_modulo.mx mx_noise2d.mx mx_noise3d.mx
             mx_ramp4.mx mx_ramplr.mx mx_ramptb.mx mx_remap.mx
             mx_sign.mx mx_sin.mx mx_smoothstep.mx mx_splitlr.mx
-            mx_splittb.mx mx_sqrt.mx mx_subtract.mx
+            mx_splittb.mx mx_sqrt.mx
             mx_switch.mx mx_swizzle_color.mx mx_swizzle_color2.mx
             mx_swizzle_color4.mx mx_swizzle_vector.mx mx_swizzle_vector2.mx
-            mx_swizzle_vector4.mx mx_tan.mx mx_triplanarprojection.mx
+            mx_swizzle_vector4.mx mx_tan.mx mx_tiledimage.mx
+            mx_triplanarprojection.mx
     TYPES   float color color2 color4 vector vector2 vector4)
+
+# MX shaders that come in flavors for all float-based types
+make_mx_flavors (
+            mx_add.mx mx_divide.mx mx_multiply.mx mx_subtract.mx
+    TYPES   float color color2 color4 vector vector2 vector4 matrix33 matrix44)
+
+# MX shaders that come in flavors for all color, vector, matrix types
+make_mx_flavors (
+            mx_add_float.mx mx_divide_float.mx
+            mx_multiply_float.mx mx_subtract_float.mx
+    TYPES   color color2 color4 vector vector2 vector4 matrix33 matrix44)
 
 # MX shaders that come in flavors for all color/vector types.
 make_mx_flavors (
-            mx_add_float.mx mx_atan2_float.mx mx_clamp_float.mx mx_contrast_float.mx
-            mx_extract.mx mx_divide_float.mx mx_power_float.mx mx_fractal3d_fa.mx
+            mx_atan2_float.mx mx_clamp_float.mx mx_contrast_float.mx
+            mx_extract.mx mx_power_float.mx mx_fractal3d_fa.mx
             mx_invert_float.mx mx_max_float.mx mx_min_float.mx
-            mx_modulo_float.mx mx_multiply_float.mx mx_noise2d_fa.mx
+            mx_modulo_float.mx mx_noise2d_fa.mx
             mx_noise3d_fa.mx mx_remap_float.mx mx_separate.mx
-            mx_smoothstep_float.mx mx_subtract_float.mx mx_swizzle_float.mx
+            mx_smoothstep_float.mx mx_swizzle_float.mx
     TYPES   color color2 color4 vector vector2 vector4)
 
 # MX shaders that come in flavors for all color types, and float
@@ -177,8 +189,6 @@ make_mx_flavors (mx_transformnormal.mx  TYPES vector vector4)
 make_mx_flavors (mx_transpose.mx        TYPES matrix44 matrix33)
 make_mx_flavors (mx_unpremult.mx        TYPES color color2 color4)
 make_mx_flavors (mx_matrix_invert.mx    TYPES matrix44 matrix33)
-make_mx_flavors (mx_divide.mx           TYPES float color color2 color4 vector vector2 vector4 matrix44 matrix33)
-make_mx_flavors (mx_multiply.mx         TYPES float color color2 color4 vector vector2 vector4 matrix44 matrix33)
 
 
 add_custom_target (mxshaders ALL

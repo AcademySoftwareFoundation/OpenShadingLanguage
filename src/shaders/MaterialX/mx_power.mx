@@ -6,11 +6,11 @@
 
 #include "mx_funcs.h"
 
-shader mx_power_TYPE_SUFFIX
-    [[ string help = TYPE_STR" Raise incoming float/color/vector values to the in2 power value/stream" ]]
+shader mx_power_TYPE_SUFFIX_OTHERTYPE_SUFFIX
+    [[ string help = "Raise incoming float/color/vector values to the in2 power value/stream" ]]
   (
     TYPE in1 = TYPE_DEFAULT_IN,
-    TYPE in2 = TYPE_ONE,
+    OTHERTYPE in2 = OTHERTYPE_ONE,
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {

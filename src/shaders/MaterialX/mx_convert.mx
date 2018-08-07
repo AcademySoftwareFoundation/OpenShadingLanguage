@@ -6,13 +6,13 @@
 
 #include "mx_funcs.h"
 
-shader mx_invert_float_TYPE_SUFFIX
-    [[ string help = TYPE_STR" Subtract the incoming float/color/vector from amount in all channels," ]]
+
+shader mx_convert_TYPE_SUFFIX_OTHERTYPE_SUFFIX
+    [[ string help = "Convert TYPE_SUFFIX to OTHERTYPE_SUFFIX" ]]
   (
-    TYPE in = TYPE_DEFAULT_IN,
-    float amount = 1.0,
-    output TYPE out = TYPE_DEFAULT_OUT
+    TYPE in1 = TYPE_DEFAULT_IN,
+    output OTHERTYPE out = OTHERTYPE_DEFAULT_OUT
   )
 {
-    out = amount - in;
+    out = mx_convert (in1);
 }

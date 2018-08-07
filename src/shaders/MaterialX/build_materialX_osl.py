@@ -4,11 +4,9 @@ Generate compilable .osl files from .mx templates
 
 Adam Martinez
 
-TODO:  Some functionalization in place, can it be expanded?
-       Add ability to specify shader and shader type to compile to osl
-       Is there a more compact representation of the BUILD_DICT we can employ?
 '''
 
+from __future__ import print_function
 import os
 import sys
 import re
@@ -33,6 +31,7 @@ SHADER_TYPES = {
     'int': 'int',
 }
 
+# Define macro replacement lists for each data type
 replacements = {
     "float" : (
         ('TYPE_ZERO_POINT_FIVE',   '0.5'),
@@ -190,145 +189,12 @@ replacements = {
     )
 }
 
-COL_TYPES = ['color', 'color2', 'color4']
-VEC_TYPES = ['vector', 'vector2', 'vector4']
-MAT_TYPES = ['matrix33', 'matrix44']
-CV_TYPES = COL_TYPES + VEC_TYPES
-CVF_TYPES = CV_TYPES + ['float']
-EXTRA_TYPES = ['matrix44', 'matrix33', 'string', 'filename', 'bool', 'int', 'surfaceshader']
 
-BUILD_DICT = {
-    'mx_absval': CVF_TYPES,
-    'mx_acos' : CVF_TYPES,
-    'mx_add': CVF_TYPES + ['matrix33', 'matrix44', 'surfaceshader'],
-    'mx_add_float': CV_TYPES + MAT_TYPES,
-    'mx_asin' : CVF_TYPES,
-    'mx_atan2' : CVF_TYPES,
-    'mx_atan2_float' : CVF_TYPES,
-    'mx_ambientocclusion': ['float'],
-    'mx_bitangent': ['vector'],
-    'mx_blur': CVF_TYPES,
-    'mx_burn': ['float', 'color', 'color2', 'color4'],
-    'mx_ceil' : CVF_TYPES,
-    'mx_cellnoise2d': ['float'],
-    'mx_cellnoise3d': ['float'],
-    'mx_clamp': CVF_TYPES,
-    'mx_clamp_float': CV_TYPES,
-    'mx_compare': CVF_TYPES,
-    'mx_constant': CVF_TYPES + ['matrix44', 'matrix33', 'string', 'filename', 'bool', 'int'],
-    'mx_cos': CVF_TYPES,
-    'mx_crossproduct': ['vector'],
-    'mx_determinant' : MAT_TYPES,
-    'mx_dodge': ['float', 'color', 'color2', 'color4'],
-    'mx_dotproduct': VEC_TYPES,
-    'mx_dot': CVF_TYPES + ['matrix44', 'matrix33', 'string', 'filename', 'bool', 'int', 'surfaceshader'],
-    'mx_exp' : CVF_TYPES + ['int'],
-    'mx_extract' : CV_TYPES,
-    'mx_floor': CVF_TYPES,
-    'mx_frame': ['float'],
-    'mx_geomattrvalue': CVF_TYPES + ['bool', 'string', 'int'],
-    'mx_geomcolor': ['float', 'color', 'color2', 'color4'],
-    'mx_heighttonormal': ['vector'],
-    'mx_hsvadjust' : ['color', 'color4'],
-    'mx_hsvtorgb' : ['color', 'color4'],
-    'mx_hueshift': ['color', 'color4'],   # DEPRECATED in MX 1.36
-    'mx_image': CVF_TYPES,
-    'mx_ln' : CVF_TYPES + ['int'],
-    'mx_max': CVF_TYPES,
-    'mx_min': CVF_TYPES,
-    'mx_overlay': ['float', 'color', 'color2', 'color4'],
-    'mx_screen': ['float', 'color', 'color2', 'color4'],
-    'mx_inside': ['float','color', 'color2', 'color4'],
-    'mx_outside': ['float','color', 'color2', 'color4'],
-    'mx_disjointover': ['color2', 'color4'],
-    'mx_in': ['color2', 'color4'],
-    'mx_mask': ['color2', 'color4'],
-    'mx_matte': ['color2', 'color4'],
-    'mx_out': ['color2', 'color4'],
-    'mx_over': ['color2', 'color4'],
-    'mx_mix': CVF_TYPES + ['surfaceshader'],
-    'mx_fractal3d': CVF_TYPES,
-    'mx_fractal3d_fa':CV_TYPES,
-    'mx_contrast': CVF_TYPES,
-    'mx_contrast_float': CV_TYPES,
-    'mx_smoothstep': CVF_TYPES,
-    'mx_smoothstep_float': CV_TYPES,
-    'mx_divide': CVF_TYPES + MAT_TYPES,
-    'mx_divide_float': CV_TYPES + MAT_TYPES,
-    'mx_power': CVF_TYPES,
-    'mx_power_float': CV_TYPES,
-    'mx_invert': CVF_TYPES,
-    'mx_invert_float': CV_TYPES,
-    'mx_luminance': ['color', 'color4'],
-    'mx_magnitude': VEC_TYPES,
-    'mx_max': CVF_TYPES,
-    'mx_max_float': CV_TYPES,
-    'mx_min': CVF_TYPES,
-    'mx_min_float': CV_TYPES,
-    'mx_modulo': CVF_TYPES,
-    'mx_modulo_float': CV_TYPES,
-    'mx_multiply': CVF_TYPES + MAT_TYPES,
-    'mx_multiply_float': CV_TYPES + MAT_TYPES,
-    'mx_noise2d': CVF_TYPES,
-    'mx_noise2d_fa':CV_TYPES,
-    'mx_noise3d': CVF_TYPES,
-    'mx_noise3d_fa':CV_TYPES,
-    'mx_normal': ['vector'],
-    'mx_normalize': VEC_TYPES,
-    'mx_combine': CV_TYPES,
-    'mx_combine_cf': ['color4'],
-    'mx_combine_cc': ['color4'],
-    'mx_combine_vf': ['vector4'],
-    'mx_combine_vv': ['vector4'],
-    'mx_position': ['vector'],
-    'mx_premult': COL_TYPES,
-    'mx_ramp4': CVF_TYPES,
-    'mx_ramplr': CVF_TYPES,
-    'mx_ramptb': CVF_TYPES,
-    'mx_remap': CVF_TYPES,
-    'mx_remap_float': CV_TYPES,
-    'mx_rgbtohsv' : ['color', 'color4'],
-    'mx_rotate': ['vector', 'vector2'],   # Deprecated in MX 1.36
-    'mx_rotate2d': ['vector2'],
-    'mx_saturate': ['color', 'color4'],
-    'mx_scale': ['vector', 'vector2'],
-    'mx_separate': CV_TYPES,
-    'mx_sign': CVF_TYPES,
-    'mx_sin': CVF_TYPES,
-    'mx_splitlr': CVF_TYPES,
-    'mx_splittb': CVF_TYPES,
-    'mx_sqrt' : CVF_TYPES,
-    'mx_subtract': CVF_TYPES + MAT_TYPES,
-    'mx_subtract_float': CV_TYPES + MAT_TYPES,
-    'mx_swizzle_float': CV_TYPES,
-    'mx_swizzle_color': CVF_TYPES,
-    'mx_swizzle_color2': CVF_TYPES,
-    'mx_swizzle_color4': CVF_TYPES,
-    'mx_swizzle_vector': CVF_TYPES,
-    'mx_swizzle_vector2': CVF_TYPES,
-    'mx_swizzle_vector4': CVF_TYPES,
-    'mx_switch': CVF_TYPES,
-    'mx_tan': CVF_TYPES,
-    'mx_tangent': ['vector'],
-    'mx_texcoord': ['vector', 'vector2'],
-    'mx_tiledimage': CVF_TYPES,
-    'mx_time': ['float'],
-    'mx_transformpoint' : ['vector', 'vector4'],
-    'mx_transformvector' : ['vector', 'vector4'],
-    'mx_transformnormal' : ['vector', 'vector4'],
-    'mx_transpose' : MAT_TYPES,
-    'mx_triplanarprojection': CVF_TYPES,
-    'mx_unpremult': COL_TYPES,
-    'mx_mult_surfaceshader': ['color', 'float'],
-    'mx_matrix_invert'  : MAT_TYPES,
-}
 
 # open_mx_file:  open a file on disk and return its contents
-def open_mx_file(shader, options):
-    mx_filename = '%s.%s' % (shader, options['mx_ext'])
-    mx_filepath = os.path.join(options['source'], mx_filename)
+def open_mx_file(mx_filename):
     try:
-        mx_file = open(mx_filepath, 'r')
+        mx_file = open(mx_filename, 'r')
     except:
         print('ERROR: %s not found' % mx_filename)
         return None
@@ -336,114 +202,81 @@ def open_mx_file(shader, options):
     mx_file.close()
     return mx_code
 
+
 # write_mx_file: write the osl_code text to a file
-def write_osl_file(osl_shadername, osl_code, options):
-    osl_filename = '%s.osl' % (osl_shadername)
-    osl_filepath = os.path.join(options['dest'], osl_filename)
+def write_osl_file(osl_filename, osl_code):
     try:
-        osl_file = open(osl_filepath, 'w')
+        osl_file = open(osl_filename, 'w')
         osl_file.write(osl_code)
         osl_file.close()
-        return osl_filepath
+        return osl_filename
     except:
         print('ERROR: Could not open %s for writing' % mx_filename)
         return None
 
-# mx_to_osl: open an mx file and for each type in the BUILD_DICT, generate a corresponding .osl file
-def mx_to_osl(shader, build_types, options):
-    mx_code = open_mx_file(shader, options)
-    build_count = 0
-    if mx_code is not None:
-        for var_type in build_types:
-            if var_type in SHADER_TYPES:
-                if options['types']:
-                    if not var_type in options['types']:
-                        if options['v']: print('OSL Generation for type %s skipped.'%var_type)
-                        continue
-                substitutions = replacements[var_type]
-                osl_code = mx_code
-                osl_shadername = '%s_%s' % (shader, var_type)
-                if options['v']:
-                    print('Building %s' % osl_shadername)
-                #osl_code = mx_code.replace('SHADER_NAME(%s)' % shader, osl_shadername)
-                #osl_code = osl_code.replace('#include \"mx_types.h\"', '#define %s 1\n#include \"mx_types.h\"' % var_type)
-                #osl_code = re.sub(r'\bTYPE\b', SHADER_TYPES[var_type], osl_code)
-                for s in substitutions :
-                    osl_code = osl_code.replace(s[0], s[1])
 
-                osl_filepath = write_osl_file(osl_shadername, osl_code, options)
-                build_count += 1
-                # build oso bytecode if compile flag is on
-                if options['compile']:
-                    oso_filename = '%s.oso'%(osl_shadername)
-                    osl_filepath = '%s.osl' % (osl_shadername)
-                    if options['v']:
-                        print('Executing: '+ options['oslc_exec']+' '+osl_filepath)
-                    call([options['oslc_exec'], '-I..', osl_filepath], cwd=options['dest'])
-            else:
-                print('Type %s not found in supported types.'%var_type)
-                continue;
+# mx_to_osl: open an mx file and for each type in build_types, generate a corresponding .osl file
+def mx_to_osl (shadername, mx_filename, osl_filename, build_types, othertypes, verbose):
+    # print ('mx_to_osl shader=', shadername, ', build_types=', build_types,
+    #        ', othertypes=', othertypes)
+    mx_code = open_mx_file(mx_filename)
+    if mx_code is None:
+        return 0
+    build_count = 0
+    for var_type in build_types:
+        if not var_type in SHADER_TYPES:
+            print('Type %s not found in supported types.'%var_type)
+            continue
+        osl_code = mx_code
+        osl_shadername = '%s_%s' % (shadername, var_type)
+        othertype = othertypes[0]
+        if othertype is not None and othertype != 'none' :
+            if othertype == 'same' :
+                othertype = var_type
+            osl_shadername = '%s_%s' % (osl_shadername, othertype)
+            for s in replacements[othertype] :
+                osl_code = osl_code.replace('OTHER'+s[0], s[1])
+        for s in replacements[var_type] :
+            osl_code = osl_code.replace(s[0], s[1])
+        if verbose:
+            print('Building %s' % osl_filename)
+        osl_filepath = write_osl_file(osl_filename, osl_code)
+        build_count += 1
     return build_count
+
 
 def main():
     # Parse arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('-v','--v', default=0, help='Verbosity, 0|1.  Default: 0')
-    parser.add_argument('-mx','--mx', default='.', help='MaterialX source directory.  Default: .')
-    parser.add_argument('-oslc_path', '--oslc_path', default='', help='Path to oslc executable.  Default: environment default')
-    parser.add_argument('-compile', '--compile', default=0, help='Compile generated osl files in place. 0|1.  Default: 0')
-    parser.add_argument('-s', '--shader', default='', help='Specify a comma separated list of mx shaders to convert, e.g. mx_add,mx_absval.  Default: all')
-    parser.add_argument('-t', '--types', default='', help='Comma separated list of types to convert, e.g. float,color.  Default: all')
-    parser.add_argument('-o', '--out', default='.', help='Destination folder.  Default: current')
+    parser.add_argument('-v','--verbose', default=0, help='Verbosity, 0|1.  Default: 0')
+    parser.add_argument('-s','--shader', required=True,
+                        help='Shader name.')
+    parser.add_argument('-m','--mxfile', required=True,
+                        help='MaterialX template file, with full path.')
+    parser.add_argument('-o','--osl', required=True,
+                        help='OSL specialized output file, with full path.')
+    parser.add_argument('-t', '--types', required=True,
+                        help='Comma separated list of types to convert, e.g. "float,color".')
+    parser.add_argument('--othertypes', '--othertypes', default='',
+                        help='Comma separated list of secondary types to convert.  Default: none')
 
     args = parser.parse_args()
 
     # create a dictionary of options
-    oslc_exec = 'oslc'
-    types = None
-
-    if args.oslc_path != '':
-        oslc_exec = str(os.path.abspath(os.path.join(args.oslc_path, 'oslc')))
 
     if args.types != '':
         types = args.types.split(',')
         types = [t.lower() for t in types]
 
-    options = {
-        'v':int(args.v),
-        'source': args.mx,
-        'dest':  args.out,
-        'mx_ext': 'mx',
-        'oslc_path': args.oslc_path,
-        'oslc_exec': oslc_exec,
-        'compile': args.compile,
-        'types': types
-    }
+    if args.othertypes != '':
+        othertypes = args.othertypes.split(',')
+        othertypes = [t.lower() for t in othertypes]
+    else :
+        othertypes = None
 
-    # sanity check paths
-    if not os.path.exists(options['dest']):
-        print('ERROR: Destination path %s does not exist'%options['dest'])
-        return
+    i = mx_to_osl (args.shader, args.mxfile, args.osl, types, othertypes, args.verbose)
 
-    if not os.path.exists(options['source']):
-        print('ERROR: Source path %s does not exist'%options['source'])
-        return
-
-    # If the shader flag was specified, we're only going to build the
-    # osl for the named mx file.  If the types flag was specified as well,
-    # only generate osl for those types
-    if args.shader:
-        shaders = args.shader.split(',')
-        shaders = [s.split('.')[0] for s in shaders]
-        shader_list = { s: BUILD_DICT[s] for s in shaders}
-    else:
-        shader_list = BUILD_DICT
-
-    # Loop over each shader
-    i = 0
-    for shader, shader_types in shader_list.items():
-        i += mx_to_osl(shader, shader_types, options)
-    if options['v']:
+    if args.verbose:
         print('Generated ' + str(i) + ' OSL files in ' + options['dest'])
 
 if __name__ == '__main__':

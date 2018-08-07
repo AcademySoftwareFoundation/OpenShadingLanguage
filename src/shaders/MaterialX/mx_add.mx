@@ -7,11 +7,11 @@
 #include "mx_funcs.h"
 
 
-shader mx_add_TYPE_SUFFIX
+shader mx_add_TYPE_SUFFIX_OTHERTYPE_SUFFIX
     [[ string help = TYPE_STR" add in2 to the incoming data" ]]
   (
     TYPE in1 = TYPE_DEFAULT_IN,
-    TYPE in2 = TYPE_DEFAULT_IN,
+    OTHERTYPE in2 = OTHERTYPE_DEFAULT_IN,
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {

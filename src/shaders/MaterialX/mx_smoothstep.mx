@@ -6,15 +6,15 @@
 
 #include "mx_funcs.h"
 
-shader mx_smoothstep_TYPE_SUFFIX
+shader mx_smoothstep_TYPE_SUFFIX_OTHERTYPE_SUFFIX
     [[ string help = "outputs a smooth (hermite-interpolated) remapping of input values from low-high to output 0-1."  ]]
   (
     TYPE in = TYPE_ZERO
         [[  string help = "input"  ]],
-    TYPE low = TYPE_ZERO
-        [[  string help = "input value of this or lower will return 0"  ]],
-    TYPE high = TYPE_ONE
-        [[  string help = " an input value of this or higher will result in an output value of 1"  ]],
+    OTHERTYPE low = OTHERTYPE_ZERO
+        [[  string help = "input value of this or lower will return 0" ]],
+    OTHERTYPE high = OTHERTYPE_ONE
+        [[  string help = "input value of this or higher will return 1"  ]],
     output TYPE out = TYPE_ZERO
   )
 {

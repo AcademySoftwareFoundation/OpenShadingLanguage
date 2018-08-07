@@ -18,6 +18,24 @@
 ///////////////////////////////////////////////////////////////////////////
 
 
+// Define mx_convert_type
+//   float -> colvecN
+color mx_convert (float a) { return color(a); }
+color2 mx_convert (float a) { return color2(a,a); }
+color4 mx_convert (float a) { return color4(a,a); }
+vector mx_convert (float a) { return vector(a); }
+vector2 mx_convert (float a) { return vector2(a,a); }
+vector4 mx_convert (float a) { return vector4(a,a,a,a); }
+//   colN <-> vecN
+vector mx_convert (color a) { return (vector)a; }
+vector2 mx_convert (color2 a) { return vector2 (a.r, a.a); }
+vector4 mx_convert (color4 a) { return vector4 (a.rgb[0], a.rgb[1], a.rgb[2], a.a); }
+color mx_convert (vector a) { return (color)a; }
+color2 mx_convert (vector2 a) { return color2 (a.x, a.y); }
+color4 mx_convert (vector4 a) { return color4 ({a.x,a.y,a.z}, a.w); }
+//   col3 <-> col4
+color mx_convert (color4 a) { return a.rgb; }
+color4 mx_convert (color a) { return color4(a,1.0); }
 
 // Define mx_add() overloaded for all MX types.
 float mx_add (float a, float b) { return a+b; }

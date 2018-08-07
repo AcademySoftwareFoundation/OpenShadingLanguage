@@ -652,6 +652,7 @@ public:
 	OSL_INLINE Iterator 
 	end() const { return Iterator(*this, end_pos()); }
 	
+
 	OSL_INLINE void
 	push(const Symbol * sym)
 	{
@@ -1120,23 +1121,29 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 
 		DependencyTreeTracker::Position m_pos_in_tree;
 		int m_op_num;
+        int m_loop_op_index;
 		static constexpr int InitialAssignmentOp() { return -1; }
+        static constexpr int NoLoopIndex() { return -1; }
 	public:
 
-		WriteEvent(DependencyTreeTracker::Position pos_in_tree_, int op_num_)
+		WriteEvent(DependencyTreeTracker::Position pos_in_tree_, int op_num_, int loop_op_index)
 		: m_pos_in_tree(pos_in_tree_)
 		, m_op_num(op_num_)
+	    , m_loop_op_index(loop_op_index)
 		{}
 
 		WriteEvent(DependencyTreeTracker::Position pos_in_tree_)
 		: m_pos_in_tree(pos_in_tree_)
 		, m_op_num(InitialAssignmentOp())
+        , m_loop_op_index(NoLoopIndex())
 		{}
 
-		OSL_INLINE DependencyTreeTracker::Position pos_in_tree() const
+		OSL_INLINE DependencyTreeTracker::Position
+		pos_in_tree() const
 		{
 			return m_pos_in_tree;
 		}
+
 
 		OSL_INLINE bool
 		is_initial_assignment() const
@@ -1149,13 +1156,71 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 			ASSERT(!is_initial_assignment());
 			return m_op_num;
 		}
+
+        OSL_INLINE int
+        loop_op_index() const
+        {
+            return m_loop_op_index;
+        }
 	};
 
 
 	typedef std::vector<WriteEvent> WriteChronology;
 	
 	std::unordered_map<const Symbol *, WriteChronology > potentiallyUnmaskedOpsBySymbol;
-	
+
+    class ReadEvent
+    {
+
+        DependencyTreeTracker::Position m_pos_in_tree;
+        int m_op_num;
+        int m_loop_op_index;
+        static constexpr int InitialReadOp() { return -1; }
+        static constexpr int NoLoopIndex() { return -1; }
+    public:
+
+        ReadEvent(DependencyTreeTracker::Position pos_in_tree_, int op_num_, int loop_op_index)
+        : m_pos_in_tree(pos_in_tree_)
+        , m_op_num(op_num_)
+        , m_loop_op_index(loop_op_index)
+        {}
+
+        ReadEvent(DependencyTreeTracker::Position pos_in_tree_)
+        : m_pos_in_tree(pos_in_tree_)
+        , m_op_num(InitialReadOp())
+        , m_loop_op_index(NoLoopIndex())
+        {}
+
+        OSL_INLINE DependencyTreeTracker::Position pos_in_tree() const
+        {
+            return m_pos_in_tree;
+        }
+
+        OSL_INLINE bool
+        is_initial_read() const
+        {
+            return m_op_num == InitialReadOp();
+        }
+
+        OSL_INLINE int
+        op_num() const {
+            ASSERT(!is_initial_read());
+            return m_op_num;
+        }
+
+        OSL_INLINE int
+        loop_op_index() const
+        {
+            return m_loop_op_index;
+        }
+
+    };
+    typedef std::vector<ReadEvent> ReadChronology;
+
+    std::unordered_map<const Symbol *, ReadChronology > potentiallyCyclicReadOpsBySymbol;
+
+
+
 	DependencyTreeTracker stackOfSymbolsCurrentBlockDependsOn;
 	FunctionTreeTracker stackOfExecutionScopes;
 
@@ -1179,6 +1244,14 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 	std::vector<FunctionTreeTracker::Position> pos_in_exec_scope_stack_by_op_index(opcodes.size(), FunctionTreeTracker::end_pos());
 	
 	std::vector<int> loopControlFlowOpIndiceStack;
+
+	auto currentLoopOpIndex = [&loopControlFlowOpIndiceStack]()->int
+    {
+	    if (loopControlFlowOpIndiceStack.empty())
+	        return -1;
+	    return loopControlFlowOpIndiceStack.back();
+    };
+
 	std::vector<const Symbol *> loopControlFlowSymbolStack;
 
     std::vector<const Symbol *> symbolsWrittenToByImplicitlyVaryingOps;
@@ -1223,6 +1296,61 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 		}
 	};
     
+    auto checkIfLastWriteHappenedInDifferentLoopCycle = [&](const Symbol *symbolToCheck, int loopOpIndex)->bool {
+        // Check if reading a Symbol that was written to from a different
+        // dependency lineage than we are reading, if so we need to mark it as requiring masking
+        auto lookup = potentiallyUnmaskedOpsBySymbol.find(symbolToCheck);
+        if(lookup != potentiallyUnmaskedOpsBySymbol.end()) {
+            auto & write_chronology = lookup->second;
+            if (!write_chronology.empty()) {
+                auto & write_event = write_chronology.back();
+                return (write_event.loop_op_index() != loopOpIndex);
+            }
+        }
+        return false;
+    };
+
+    std::function<void(const Symbol *, DependencyTreeTracker::Position, int)> maskIfCyclicReadsExist;
+    maskIfCyclicReadsExist = [&](const Symbol *symbolToCheck, DependencyTreeTracker::Position writeAtPos, int write_op_num)->void {
+        // Check if writing a Symbol that was read from a different
+        // dependency lineage than we are writing
+        auto lookup = potentiallyCyclicReadOpsBySymbol.find(symbolToCheck);
+        if(lookup != potentiallyCyclicReadOpsBySymbol.end()) {
+            auto & read_chronology = lookup->second;
+            if (!read_chronology.empty()) {
+
+                auto readEnd = read_chronology.end();
+                // Find common ancestor (ca) between the write position and the read pos
+                // ???? = if generation of ca is older than current oldest ca for write instruction, record it
+                for (auto readIter=read_chronology.begin(); readIter != readEnd; ++readIter) {
+                    // Is there a way for the write to be shallower than the read?
+                    auto commonAncestor = stackOfSymbolsCurrentBlockDependsOn.commonAncestorBetween(writeAtPos, readIter->pos_in_tree());
+                    if (commonAncestor != writeAtPos )
+                    //if (writeAtPos != readIter->pos_in_tree() )
+                    {
+                        // if common ancestor is the write position, then no need to mask
+                        // otherwise we know masking will be needed for the instruction
+                        m_requires_masking_by_layer_and_op_index[layer()][write_op_num] = true;
+                        OSL_DEV_ONLY(std::cout << "cyclic read m_requires_masking_by_layer_and_op_index[" << write_op_num << "]=true" << std::endl);
+#if 1
+                        auto ancestor = stackOfSymbolsCurrentBlockDependsOn.begin_at(commonAncestor);
+
+                        // eldest_read_branch is used to identify the end of the dependencies
+                        // that must have symbolFeedForwardMap entries added to correctly
+                        // propagate Wide values through the symbols.
+                        auto & eldest_read_branch = eldest_read_branch_by_op_index[write_op_num];
+                        if(ancestor.depth() < eldest_read_branch.depth)
+                        {
+                            eldest_read_branch.depth = ancestor.depth();
+                            eldest_read_branch.pos = ancestor.pos();
+                        }
+#endif
+                    }
+                }
+            }
+        }
+    };
+
 	std::function<void(const Symbol *, int, FunctionTreeTracker::Position)> ensureWritesWithDifferentEarlyOutPathsAreMasked;
 
 	ensureWritesWithDifferentEarlyOutPathsAreMasked = [&](const Symbol *symbolToCheck, int op_index, FunctionTreeTracker::Position writtenAtPos)->void {
@@ -1312,6 +1440,11 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 
 			for(int readIndex=0; readIndex < symbolsRead; ++readIndex) {
 				const Symbol * symbolReadFrom = symbolsReadByOp[readIndex];
+
+				if (checkIfLastWriteHappenedInDifferentLoopCycle(symbolReadFrom, currentLoopOpIndex())) {
+				    potentiallyCyclicReadOpsBySymbol[symbolReadFrom].push_back(ReadEvent(stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex, currentLoopOpIndex()));
+				}
+
 				for(int writeIndex=0; writeIndex < symbolsWritten; ++writeIndex) {
 					const Symbol * symbolWrittenTo = symbolsWrittenByOp[writeIndex];
 					// Skip self dependencies
@@ -1334,8 +1467,11 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 
 				ensureWritesWithDifferentEarlyOutPathsAreMasked(symbolWrittenTo, opIndex, stackOfExecutionScopes.top_pos());
 
+				maskIfCyclicReadsExist(symbolWrittenTo, stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex);
+
 				potentiallyUnmaskedOpsBySymbol[symbolWrittenTo].push_back(
-					WriteEvent(stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex));
+					WriteEvent(stackOfSymbolsCurrentBlockDependsOn.top_pos(), opIndex, currentLoopOpIndex()));
+
 			}
 			
 			// Add dependencies for operations that implicitly read global variables
@@ -1622,7 +1758,7 @@ BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 			addCurrentDependenciesToLoopControlFlow = [&](void)->void {
 				// Need change the loop control flow which is dependent upon
 				// a conditional.  By making a circular dependency between the this
-				// [return|exit|break|continue] operationand the conditionals value,
+				// [return|exit|break|continue] operation and the conditionals value,
 				// any varying values in the conditional controlling
 				// the continue should flow back to the loop control variable, which might need to
 				// be varying so allow lanes to terminate the loop independently

@@ -1,4 +1,7 @@
 /*
+Copyright (c) 2017 Intel Inc., et al.
+All Rights Reserved.
+ 
 Copyright (c) 2009-2013 Sony Pictures Imageworks Inc., et al.
 All Rights Reserved.
 

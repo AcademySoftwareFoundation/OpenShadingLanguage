@@ -24,6 +24,8 @@ DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
 THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+Portions Copyright (c) 2017 Intel Inc., et al. All Rights Reserved.
 */
 
 //#define OSL_DEV
@@ -493,6 +495,8 @@ BackendLLVMWide::getLLVMSymbolBase (const Symbol &sym)
 // Nothing invalidates an iterator.
 class DependencyTreeTracker
 {
+	// Copyright (c) 2017 Intel Inc., et al.
+	// All Rights Reserved.
 public:
 	// Simple wrapper to improve readability
 	class Position
@@ -761,6 +765,8 @@ public:
 // Idea is the top_pos can be cached per instruction and later be used
 class FunctionTreeTracker
 {
+	// Copyright (c) 2017 Intel Inc., et al.
+	// All Rights Reserved.
 public:
 	// Simple wrapper to improve readability
 	class Position
@@ -1057,6 +1063,8 @@ public:
 void 
 BackendLLVMWide::discoverVaryingAndMaskingOfLayer()
 {
+	// Copyright (c) 2017 Intel Inc., et al.
+	// All Rights Reserved.
 	OSL_DEV_ONLY(std::cout << "start discoverVaryingAndMaskingOfLayer of layer=" << layer() << " name \"" << inst()->layername() << "\"" << std::endl);
 	
 	const OpcodeVec & opcodes = inst()->ops();

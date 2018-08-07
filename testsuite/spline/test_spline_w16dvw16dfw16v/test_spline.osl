@@ -1,0 +1,29 @@
+
+shader test_spline (
+	string splinename="spline",
+	output vector Fspline1 = 0, 
+	output vector DxFspline1 = 0,
+
+	output vector mFspline1 = 0,
+        output vector mDxFspline1 = 0
+
+
+	)
+
+{
+ 	
+//testshade --batched --llvm_debug -g 400 400 -t 1 --iters 1 --stats -o cv C.tiff -o Dxcv a.tif test_bezier_dv_df_v | grep osl
+
+Fspline1 = spline (splinename, P[0], N); //colknots gets into w16dv_w16df_v; knots gets into w16dv_w16df_w16dv
+
+DxFspline1 = Dx(Fspline1);
+
+
+if(P[0]>0.2){
+mFspline1 = spline (splinename, P[0], N); //colknots gets into w16dv_w16df_v; knots gets into w16dv_w16df_w16dv
+
+mDxFspline1 = Dx(mFspline1);
+
+}
+
+}

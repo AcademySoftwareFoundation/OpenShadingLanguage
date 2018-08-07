@@ -3057,20 +3057,28 @@ LLVMGEN (llvm_gen_andor)
     Symbol& a = *rop.opargsym (op, 1);
     Symbol& b = *rop.opargsym (op, 2);
 
+    bool op_is_uniform = rop.isSymbolUniform(a) && rop.isSymbolUniform(b);
+    bool result_is_uniform = rop.isSymbolUniform(result);
+
+
     llvm::Value* i1_res = NULL;
-    llvm::Value* a_val = rop.llvm_load_value (a, 0, 0, TypeDesc::TypeInt);
-    llvm::Value* b_val = rop.llvm_load_value (b, 0, 0, TypeDesc::TypeInt);
-    if (op.opname() == op_and) {
+    llvm::Value* a_val = rop.llvm_load_value (a, 0, 0, TypeDesc::TypeInt, op_is_uniform);
+    llvm::Value* b_val = rop.llvm_load_value (b, 0, 0, TypeDesc::TypeInt, op_is_uniform);
+    llvm::Value* zero_set = op_is_uniform ? rop.ll.constant(0): rop.ll.wide_constant(0);
+
+      if (op.opname() == op_and) {
         // From the old bitcode generated
         // define i32 @osl_and_iii(i32 %a, i32 %b) nounwind readnone ssp {
         //     %1 = icmp ne i32 %b, 0
         //  %not. = icmp ne i32 %a, 0
         //     %2 = and i1 %1, %not.
         //     %3 = zext i1 %2 to i32
-        //   ret i32 %3
-        llvm::Value* b_ne_0 = rop.ll.op_ne (b_val, rop.ll.constant(0));
-        llvm::Value* a_ne_0 = rop.ll.op_ne (a_val, rop.ll.constant(0));
-        llvm::Value* both_ne_0 = rop.ll.op_and  (b_ne_0, a_ne_0);
+//        //   ret i32 %3
+
+
+        llvm::Value* b_ne_0 = rop.ll.op_ne (b_val, zero_set);
+        llvm::Value* a_ne_0 = rop.ll.op_ne (a_val, zero_set);
+        llvm::Value* both_ne_0 = rop.ll.op_and (b_ne_0, a_ne_0);
         i1_res = both_ne_0;
     } else {
         // Also from the bitcode
@@ -3078,9 +3086,16 @@ LLVMGEN (llvm_gen_andor)
         // %2 = icmp ne i32 %1, 0
         // %3 = zext i1 %2 to i32
         llvm::Value* or_ab = rop.ll.op_or(a_val, b_val);
-        llvm::Value* or_ab_ne_0 = rop.ll.op_ne (or_ab, rop.ll.constant(0));
+        llvm::Value* or_ab_ne_0 = rop.ll.op_ne (or_ab, zero_set);
         i1_res = or_ab_ne_0;
     }
+
+      // TODO: should llvm_store_value handle this internally,
+      // To make sure we don't miss any scenarios
+      if(op_is_uniform && !result_is_uniform)
+      {
+          i1_res = rop.ll.widen_value(i1_res);
+      }
 
     // Although we try to use llvm bool (i1) for comparison results
     // sometimes we could not force the data type to be an bool and it remains
@@ -3088,13 +3103,9 @@ LLVMGEN (llvm_gen_andor)
 	llvm::Type * resultType = rop.ll.llvm_typeof(rop.llvm_get_pointer(result));
 	if ((resultType == reinterpret_cast<llvm::Type *>(rop.ll.type_wide_int_ptr())) ||
 		(resultType == reinterpret_cast<llvm::Type *>(rop.ll.type_int_ptr()))) {
-		llvm::Value* final_result = rop.ll.op_bool_to_int (i1_res);
-		// TODO: should llvm_store_value handle this internally,
-		// To make sure we don't miss any scenarios
-		rop.llvm_store_value(final_result, result, 0, 0);
-	} else {
-		rop.llvm_store_value(i1_res, result, 0, 0);
+	    i1_res = rop.ll.op_bool_to_int (i1_res);
 	}
+    rop.llvm_store_value(i1_res, result, 0, 0);
     return true;
 }
 

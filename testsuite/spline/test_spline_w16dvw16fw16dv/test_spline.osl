@@ -1,0 +1,39 @@
+shader test_spline (
+	string splinename="spline",
+	output vector Fspline1 = 0, 
+	output vector DxFspline1 = 0,
+
+	output vector mFspline1 = 0,
+        output vector mDxFspline1 = 0
+)
+{
+
+ 
+   vector vecknots[13];
+ 
+  
+
+   vecknots[0] = 0.0 * u;
+   vecknots[1] = 0.0 * u;
+   vecknots[2] = 1.0 * u;
+   vecknots[3] = 1.0 * u;
+   vecknots[4] = 1.0 * u;
+   vecknots[5] = 0.5 * u;
+   vecknots[6] = 0.5 * u;
+   vecknots[7] = 0.5 * u;
+   vecknots[8] = 1.0 * u;
+   vecknots[9] = 1.0 * u;
+   vecknots[10] = 1.0 * u;
+   vecknots[11] = 0.0 * u;
+   vecknots[12] = 0.0 * u;
+
+  Fspline1   = spline(splinename, time, vecknots); //osl_spline_w16dvw16dfw16dv
+  DxFspline1 = Dx(Fspline1);
+
+
+
+if(P[0]>0.5){
+  mFspline1   = spline(splinename, time, vecknots); //osl_spline_w16dvw16dfw16dv
+  mDxFspline1 = Dx(mFspline1);
+}
+}

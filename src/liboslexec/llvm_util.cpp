@@ -1116,7 +1116,6 @@ LLVM_Util::make_jit_execengine (std::string *err, bool debugging_symbols, bool p
     const char * oslDumpAsmString = std::getenv("OSL_DUMP_ASM");
     bool dumpAsm = (oslDumpAsmString != NULL);
 
-#if 1
     llvm::TargetOptions options;
     options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
     options.UnsafeFPMath = true;
@@ -1152,45 +1151,7 @@ LLVM_Util::make_jit_execengine (std::string *err, bool debugging_symbols, bool p
     engine_builder.setTargetOptions(options);
     
     
-#endif
     
-#if 0
-//    llvm::TargetOptions options = InitTargetOptionsFromCodeGenFlags();
-    llvm::TargetOptions options;
-    options.LessPreciseFPMADOption = EnableFPMAD;
-   options.AllowFPOpFusion = FuseFPOps;
-   options.Reciprocals = TargetRecip(ReciprocalOps);
-   options.UnsafeFPMath = EnableUnsafeFPMath;
-   options.NoInfsFPMath = EnableNoInfsFPMath;
-   options.NoNaNsFPMath = EnableNoNaNsFPMath;
-   options.HonorSignDependentRoundingFPMathOption =
-		   EnableHonorSignDependentRoundingFPMath;
-   if (FloatABIForCalls != FloatABI::Default)
-      options.FloatABIType = FloatABIForCalls;
-   options.NoZerosInBSS = DontPlaceZerosInBSS;
-   options.GuaranteedTailCallOpt = EnableGuaranteedTailCallOpt;
-   //options.StackAlignmentOverride = OverrideStackAlignment;
-   options.StackAlignmentOverride = 32;
-   //options.PositionIndependentExecutable = EnablePIE;
-   options.UseInitArray = !UseCtors;
-   options.DataSections = DataSections;
-   options.FunctionSections = FunctionSections;
-   options.UniqueSectionNames = UniqueSectionNames;
-   options.EmulatedTLS = EmulatedTLS;
-   
-   options.MCOptions = InitMCTargetOptionsFromFlags();
-   options.JTType = JTableType;
-   
-   options.ThreadModel = llvm::ThreadModel::Single;
-   options.EABIVersion = EABIVersion;
-   //options.EABIVersion = EABI::EABI4;
-   options.DebuggerTuning = DebuggerTuningOpt;   
-   options.RelaxELFRelocations = false;
-   //options.PrintMachineCode = true;
-   engine_builder.setTargetOptions(options);
-#endif
-    
-   
    enum TargetISA
    {
 	   TargetISA_UNLIMITTED,

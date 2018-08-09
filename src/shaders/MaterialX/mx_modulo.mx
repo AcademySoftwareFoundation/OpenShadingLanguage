@@ -6,15 +6,13 @@
 
 #include "mx_funcs.h"
 
-shader mx_modulo_TYPE_SUFFIX
-    [[ string help = TYPE_STR" The remaining fraction after dividing the incoming \
-                     float/color/vector by the constant amount and subtracting the integer portion.\
-                     The modula amount cannot be 0." ]]
+shader mx_modulo_TYPE_SUFFIX_OTHERTYPE_SUFFIX
+    [[ string help = "The remaining fraction after dividing the incoming float/color/vector by the constant amount and subtracting the integer portion. The modulo amount cannot be 0." ]]
   (
     TYPE in1 = TYPE_DEFAULT_IN,
-    TYPE in2 = TYPE_ONE,
+    OTHERTYPE in2 = OTHERTYPE_ONE,
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {
-    out = fmod(in1, in2); 
+    out = fmod(in1, in2);
 }

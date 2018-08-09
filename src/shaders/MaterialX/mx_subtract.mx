@@ -7,11 +7,11 @@
 #include "mx_funcs.h"
 
 
-shader mx_subtract_TYPE_SUFFIX
+shader mx_subtract_TYPE_SUFFIX_OTHERTYPE_SUFFIX
     [[ string help = TYPE_STR" subtract in2 from the incoming data" ]]
   (
     TYPE in1 = TYPE_DEFAULT_IN,
-    TYPE in2 = TYPE_ZERO,
+    OTHERTYPE in2 = OTHERTYPE_ZERO,
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {

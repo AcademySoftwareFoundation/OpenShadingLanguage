@@ -6,12 +6,12 @@
 
 #include "mx_funcs.h"
 
-shader mx_contrast_TYPE_SUFFIX
-    [[ string help = TYPE_STR" Increase or decrease contrast of a float/color value using a linear slope multiplier." ]]
+shader mx_contrast_TYPE_SUFFIX_OTHERTYPE_SUFFIX
+    [[ string help = "Increase or decrease contrast of a float/color value using a linear slope multiplier." ]]
   (
     TYPE in = TYPE_DEFAULT_IN,
-    TYPE amount = TYPE_ONE,
-    TYPE pivot = TYPE_ZERO_POINT_FIVE,
+    OTHERTYPE amount = OTHERTYPE_ONE,
+    OTHERTYPE pivot = OTHERTYPE_ZERO_POINT_FIVE,
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {

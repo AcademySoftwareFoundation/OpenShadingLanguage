@@ -6,13 +6,13 @@
 
 #include "mx_funcs.h"
 
-shader mx_min_TYPE_SUFFIX
-    [[ string help = TYPE_STR" Select the minimum among incoming values." ]]
+shader mx_min_TYPE_SUFFIX_OTHERTYPE_SUFFIX
+    [[ string help = "Select the minimum among incoming values." ]]
   (
     TYPE in1 = TYPE_DEFAULT_IN,
-    TYPE in2 = TYPE_DEFAULT_IN,
+    OTHERTYPE in2 = OTHERTYPE_DEFAULT_IN,
     output TYPE out = TYPE_DEFAULT_OUT
   )
 {
-    out = min(in1, in2); 
+    out = min(in1, in2);
 }

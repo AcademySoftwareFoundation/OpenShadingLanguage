@@ -6,11 +6,11 @@
 
 #include "mx_funcs.h"
 
-shader mx_atan2_TYPE_SUFFIX
+shader mx_atan2_TYPE_SUFFIX_OTHERTYPE_SUFFIX
     [[ string help = TYPE_STR" atan2(in1, in2)" ]]
   (
     TYPE in1 = TYPE_DEFAULT_IN,
-    TYPE in2 = TYPE_DEFAULT_IN,
+    OTHERTYPE in2 = OTHERTYPE_DEFAULT_IN,
 
     output TYPE out = TYPE_DEFAULT_OUT
   )

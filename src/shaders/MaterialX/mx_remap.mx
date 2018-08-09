@@ -6,28 +6,21 @@
 
 #include "mx_funcs.h"
 
-shader mx_remap_TYPE_SUFFIX
-    [[ string help = "bilinear 4-corner ramp source" ]]
+shader mx_remap_TYPE_SUFFIX_OTHERTYPE_SUFFIX
+    [[ string help = "Increase or decrease remap of a value using a linear slope multiplier." ]]
   (
-    TYPE valuetl = TYPE_ZERO
-        [[  string help = "value at the top right (s=0,t=0) edge"  ]],
-    TYPE valuetr = TYPE_ONE
-        [[  string help = "value at the top right (s=1,t=0) edge"  ]],
-    TYPE valuebl = TYPE_ZERO
-        [[  string help = "value at the bottom left (s=0,t=1) edge"  ]],
-    TYPE valuebr = TYPE_ONE
-        [[  string help = "value at the bottom right (s=1,t=1) edge"  ]],
-
-    vector2 texcoord = { u, v }
-        [[  string help = "input coordinate position",
-            int lockgeom = 0 ]],
-
-    output TYPE out = TYPE_ZERO
+    TYPE in = TYPE_DEFAULT_IN,
+    OTHERTYPE inlow = OTHERTYPE_ZERO,
+    OTHERTYPE inhigh = OTHERTYPE_ONE,
+    OTHERTYPE outlow = OTHERTYPE_ZERO,
+    OTHERTYPE outhigh = OTHERTYPE_ONE,
+    int doclamp = 0,
+    output TYPE out = TYPE_DEFAULT_OUT
   )
 {
-    float ss = clamp (texcoord.x, 0, 1);
-    float tt = clamp (texcoord.y, 0, 1);
-    out = mix ( mix(valuetl, valuetr, ss),
-                mix(valuebl, valuebr, ss), 
-                tt);
+    //remap from [inlow, inhigh] to [0,1]
+    out = remap(in, inlow, inhigh, OTHERTYPE_ZERO, OTHERTYPE_ONE, 0);
+
+    //remap from [0,1] to [outlow, outhigh]
+    out = remap(out, OTHERTYPE_ZERO, OTHERTYPE_ZERO, outlow, outhigh, doclamp);
 }

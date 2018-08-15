@@ -77,6 +77,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm/Transforms/Utils/Cloning.h>
 #include <llvm/Analysis/TargetTransformInfo.h>
 
+#if OSL_LLVM_VERSION >= 70
+#include <llvm/Transforms/Utils.h>
+#include <llvm/Transforms/InstCombine/InstCombine.h>
+#endif
+
 OSL_NAMESPACE_ENTER
 
 namespace pvt {
@@ -1506,7 +1511,11 @@ LLVM_Util::write_bitcode_file (const char *filename, std::string *err)
     std::error_code local_error;
     llvm::raw_fd_ostream out (filename, local_error, llvm::sys::fs::F_None);
     if (! out.has_error()) {
+#if OSL_LLVM_VERSION >= 70
+        llvm::WriteBitcodeToFile (*module(), out);
+#else
         llvm::WriteBitcodeToFile (module(), out);
+#endif
         if (err && local_error)
             *err = local_error.message ();
     }

@@ -414,6 +414,10 @@ public:
     /// Generate code for a memcpy.
     void op_memcpy (llvm::Value *dst, llvm::Value *src, int len, int align=1);
 
+    /// Generate code for a memcpy.
+    void op_memcpy (llvm::Value *dst, int dstalign,
+                    llvm::Value *src, int srcalign, int len);
+
     /// Dereference a pointer:  return *ptr
     llvm::Value *op_load (llvm::Value *ptr);
 

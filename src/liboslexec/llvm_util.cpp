@@ -72,6 +72,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
 #include <llvm/Transforms/Scalar/GVN.h>
 
+#if OSL_LLVM_VERSION >= 70
+#include <llvm/Transforms/Utils.h>
+#include <llvm/Transforms/InstCombine/InstCombine.h>
+#endif
+
 // additional includes for PTX generation
 #include <llvm/Transforms/Utils/SymbolRewriter.h>
 #include <llvm/Transforms/Utils/Cloning.h>
@@ -1149,7 +1154,8 @@ LLVM_Util::op_return (llvm::Value *retval)
 void
 LLVM_Util::op_memset (llvm::Value *ptr, int val, int len, int align)
 {
-    op_memset(ptr, val, constant(len), align);
+    builder().CreateMemSet (ptr, builder().getInt8((unsigned char)val),
+                            uint64_t(len), (unsigned)align);
 }
 
 
@@ -1157,29 +1163,8 @@ LLVM_Util::op_memset (llvm::Value *ptr, int val, int len, int align)
 void
 LLVM_Util::op_memset (llvm::Value *ptr, int val, llvm::Value *len, int align)
 {
-    // memset with i32 len
-    // and with an i8 pointer (dst) for LLVM-2.8
-    llvm::Type* types[] = {
-        (llvm::Type *) llvm::PointerType::get(llvm::Type::getInt8Ty(context()), 0),
-        (llvm::Type *) llvm::Type::getInt32Ty(context())
-    };
-
-    llvm::Function* func = llvm::Intrinsic::getDeclaration (module(),
-        llvm::Intrinsic::memset,
-        llvm::ArrayRef<llvm::Type *>(types, sizeof(types)/sizeof(llvm::Type*)));
-
-    // NOTE(boulos): constant(0) would return an i32
-    // version of 0, but we need the i8 version. If we make an
-    // ::constant(char val) though then we'll get ambiguity
-    // everywhere.
-    llvm::Value* fill_val = llvm::ConstantInt::get (context(),
-                                                    llvm::APInt(8, val));
-    // Non-volatile (allow optimizer to move it around as it wishes
-    // and even remove it if it can prove it's useless)
-    llvm::Value *args[5] = {
-        ptr, fill_val, len, constant(align), constant_bool(false)
-    };
-    builder().CreateCall (func, llvm::ArrayRef<llvm::Value*>(args, 5));
+    builder().CreateMemSet (ptr, builder().getInt8((unsigned char)val),
+                            len, (unsigned)align);
 }
 
 
@@ -1187,24 +1172,22 @@ LLVM_Util::op_memset (llvm::Value *ptr, int val, llvm::Value *len, int align)
 void
 LLVM_Util::op_memcpy (llvm::Value *dst, llvm::Value *src, int len, int align)
 {
-    // i32 len
-    // and with i8 pointers (dst and src) for LLVM-2.8
-    llvm::Type* types[] = {
-        (llvm::Type *) llvm::PointerType::get(llvm::Type::getInt8Ty(context()), 0),
-        (llvm::Type *) llvm::PointerType::get(llvm::Type::getInt8Ty(context()), 0),
-        (llvm::Type *) llvm::Type::getInt32Ty(context())
-    };
+    op_memcpy (dst, align, src, align, len);
+}
 
-    llvm::Function* func = llvm::Intrinsic::getDeclaration (module(),
-        llvm::Intrinsic::memcpy,
-        llvm::ArrayRef<llvm::Type *>(types, sizeof(types)/sizeof(llvm::Type*)));
 
-    // Non-volatile (allow optimizer to move it around as it wishes
-    // and even remove it if it can prove it's useless)
-    llvm::Value *args[5] = {
-        dst, src, constant(len), constant(align), constant_bool(false)
-    };
-    builder().CreateCall (func, llvm::ArrayRef<llvm::Value*>(args, 5));
+
+void
+LLVM_Util::op_memcpy (llvm::Value *dst, int dstalign,
+                      llvm::Value *src, int srcalign, int len)
+{
+#if OSL_LLVM_VERSION >= 70
+    builder().CreateMemCpy (dst, (unsigned)dstalign, src, (unsigned)srcalign,
+                            uint64_t(len));
+#else
+    builder().CreateMemCpy (dst, src, uint64_t(len),
+                            std::min ((unsigned)dstalign, (unsigned)srcalign));
+#endif
 }
 
 
@@ -1506,7 +1489,11 @@ LLVM_Util::write_bitcode_file (const char *filename, std::string *err)
     std::error_code local_error;
     llvm::raw_fd_ostream out (filename, local_error, llvm::sys::fs::F_None);
     if (! out.has_error()) {
+#if OSL_LLVM_VERSION >= 70
+        llvm::WriteBitcodeToFile (*module(), out);
+#else
         llvm::WriteBitcodeToFile (module(), out);
+#endif
         if (err && local_error)
             *err = local_error.message ();
     }
@@ -1527,7 +1514,11 @@ LLVM_Util::ptx_compile_group (llvm::Module* lib_module, const std::string& name,
     llvm::Module* linked_module = new_module (name.c_str());
 
     // First, link in the cloned ShaderGroup module
+#if OSL_LLVM_VERSION >= 70
+    std::unique_ptr<llvm::Module> mod_ptr = llvm::CloneModule (*module());
+#else
     std::unique_ptr<llvm::Module> mod_ptr = llvm::CloneModule (module());
+#endif
     bool failed = llvm::Linker::linkModules (*linked_module, std::move (mod_ptr));
     if (failed) {
         ASSERT (0 && "PTX compile error: Unable to link group module");
@@ -1591,8 +1582,14 @@ LLVM_Util::ptx_compile_group (llvm::Module* lib_module, const std::string& name,
     llvm::raw_svector_ostream assembly_stream (assembly);
 
     // TODO: Make sure rounding modes, etc., are set correctly
+#if OSL_LLVM_VERSION >= 70
+    target_machine->addPassesToEmitFile (mod_pm, assembly_stream,
+                                         nullptr,  // FIXME: Correct?
+                                         llvm::TargetMachine::CGFT_AssemblyFile);
+#else
     target_machine->addPassesToEmitFile (mod_pm, assembly_stream,
                                          llvm::TargetMachine::CGFT_AssemblyFile);
+#endif
 
     // Run the optimization passes on the functions
     fn_pm.doInitialization();

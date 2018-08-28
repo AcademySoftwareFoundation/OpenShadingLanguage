@@ -274,8 +274,8 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             metadata-braces miscmath missing-shader
             noise noise-cell
             noise-gabor noise-gabor2d-filter noise-gabor3d-filter
-            noise-perlin noise-uperlin noise-simplex noise-usimplex
-            pnoise pnoise-cell pnoise-gabor pnoise-perlin pnoise-uperlin
+            noise-perlin noise-simplex
+            pnoise pnoise-cell pnoise-gabor pnoise-perlin
             operator-overloading
             oslc-comma oslc-D
             oslc-err-arrayindex oslc-err-closuremul oslc-err-field

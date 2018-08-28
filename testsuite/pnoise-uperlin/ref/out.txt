@@ -1,3 +1,0 @@
-Compiled ../common/shaders/testpnoise.osl -> testpnoise.oso
-
-Output Cout to out.tif

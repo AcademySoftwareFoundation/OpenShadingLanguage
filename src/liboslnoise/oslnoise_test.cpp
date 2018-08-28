@@ -29,10 +29,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <iostream>
 
+#include <OpenImageIO/simd.h>
 #include <OpenImageIO/unittest.h>
 #include <OpenImageIO/argparse.h>
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/timer.h>
+#include <OpenImageIO/benchmark.h>
 
 #include <OSL/oslnoise.h>
 
@@ -95,48 +97,6 @@ inline float abs (const Vec3& a) {
             img.write (Strutil::format ("osl_%s_%d_%d.tif", #noisename, outdim, indim)); \
         }                                                               \
     }
-
-
-
-template <typename FUNC, typename T>
-void benchmark1 (string_view funcname, FUNC func, T x)
-{
-    auto repeat_func = [&](){
-        // Unroll the loop 8 times
-        auto r = func(x); DoNotOptimize (r); clobber_all_memory();
-        r = func(x); DoNotOptimize (r); clobber_all_memory();
-        r = func(x); DoNotOptimize (r); clobber_all_memory();
-        r = func(x); DoNotOptimize (r); clobber_all_memory();
-        r = func(x); DoNotOptimize (r); clobber_all_memory();
-        r = func(x); DoNotOptimize (r); clobber_all_memory();
-        r = func(x); DoNotOptimize (r); clobber_all_memory();
-        r = func(x); DoNotOptimize (r); clobber_all_memory();
-    };
-    float time = time_trial (repeat_func, ntrials, iterations/8);
-    std::cout << Strutil::format ("  %s: %7.1f Mcalls/sec\n",
-                                  funcname, (iterations/1.0e6)/time);
-}
-
-
-
-template <typename FUNC, typename S, typename T>
-void benchmark2 (string_view funcname, FUNC func, S x, T y)
-{
-    auto repeat_func = [&](){
-        // Unroll the loop 8 times
-        auto r = func(x,y); DoNotOptimize (r); clobber_all_memory();
-        r = func(x,y); DoNotOptimize (r); clobber_all_memory();
-        r = func(x,y); DoNotOptimize (r); clobber_all_memory();
-        r = func(x,y); DoNotOptimize (r); clobber_all_memory();
-        r = func(x,y); DoNotOptimize (r); clobber_all_memory();
-        r = func(x,y); DoNotOptimize (r); clobber_all_memory();
-        r = func(x,y); DoNotOptimize (r); clobber_all_memory();
-        r = func(x,y); DoNotOptimize (r); clobber_all_memory();
-    };
-    float time = time_trial (repeat_func, ntrials, iterations/8);
-    std::cout << Strutil::format ("  %s: %7.1f Mcalls/sec\n",
-                                  funcname, (iterations/1.0e6)/time);
-}
 
 
 
@@ -214,20 +174,35 @@ test_perlin ()
         OIIO_CHECK_EQUAL_THRESH (vs4, vresults_4d[i], eps);
     }
 
+#if OPENIMAGEIO_VERSION >= 10904
+    // Make sure the right thing happens at integer cell boundaries.
+    // Perlin noise should be continuous everywhere.
+    OIIO_CHECK_EQUAL_APPROX (noise( 0.9999f), noise( 1.0f));
+    OIIO_CHECK_EQUAL_APPROX (noise( 1.0001f), noise( 1.0f));
+    OIIO_CHECK_EQUAL_APPROX (noise(-0.0001f), noise( 0.0f));
+    OIIO_CHECK_EQUAL_APPROX (noise( 0.0001f), noise( 0.0f));
+    OIIO_CHECK_EQUAL_APPROX (noise(-1.0001f), noise(-1.0f));
+    OIIO_CHECK_EQUAL_APPROX (noise(-0.9999f), noise(-1.0f));
+    Strutil::printf ("noise around -1: %g %g %g\n", 
+                     noise(-0.9999f), noise(-1.0f), noise(-1.0001f));
+#endif
+
     if (make_images) {
         MAKE_IMAGE (noise);
     }
 
-    // Time trials
-    benchmark1 ("snoise(f)      ", snoise<float>, 0.5f);
-    benchmark2 ("snoise(f,f)    ", snoise<float,float>, 0.5f, 0.5f);
-    benchmark1 ("snoise(v)      ", snoise<const Vec3&>, Vec3(0,0,0));
-    benchmark2 ("snoise(v,f)    ", snoise<const Vec3&,float>, Vec3(0,0,0), 0.5f);
+    Benchmarker bench;
+    float fval = 0.5f; clobber (fval);
+    Vec3 vval (0,0,0); clobber (vval);
+    bench ("  snoise(f)", [&](){ DoNotOptimize (snoise<float>(fval)); });
+    bench ("  snoise(f,f)", [&](){ DoNotOptimize (snoise<float,float>(fval, fval)); });
+    bench ("  snoise(v)", [&](){ DoNotOptimize (snoise<const Vec3&>(vval)); });
+    bench ("  snoise(v,f)", [&](){ DoNotOptimize (snoise<const Vec3&,float>(vval, fval)); });
 
-    benchmark1 ("vsnoise(f)     ", vsnoise<float>, 0.5f);
-    benchmark2 ("vsnoise(f,f)   ", vsnoise<float,float>, 0.5f, 0.5f);
-    benchmark1 ("vsnoise(v)     ", vsnoise<const Vec3&>, Vec3(0,0,0));
-    benchmark2 ("vsnoise(v,f)   ", vsnoise<const Vec3&,float>, Vec3(0,0,0), 0.5f);
+    bench ("  vsnoise(f)", [&](){ DoNotOptimize (vsnoise<float>(fval)); });
+    bench ("  vsnoise(f,f)", [&](){ DoNotOptimize (vsnoise<float,float>(fval, fval)); });
+    bench ("  vsnoise(v)", [&](){ DoNotOptimize (vsnoise<const Vec3&>(vval)); });
+    bench ("  vsnoise(v,f)", [&](){ DoNotOptimize (vsnoise<const Vec3&,float>(vval, fval)); });
 }
 
 
@@ -287,20 +262,35 @@ test_cell ()
         OIIO_CHECK_EQUAL_THRESH (vs4, vresults_4d[i], eps);
     }
 
+#if OPENIMAGEIO_VERSION >= 10904
+    // Make sure the right thing happens at integer cell boundaries
+    OIIO_CHECK_EQUAL (cellnoise( 1.0001f), cellnoise( 1.0f));
+    OIIO_CHECK_NE    (cellnoise( 0.9999f), cellnoise( 1.0f));
+    OIIO_CHECK_EQUAL (cellnoise( 0.9999f), cellnoise( 0.0f));
+    OIIO_CHECK_EQUAL (cellnoise( 0.0001f), cellnoise( 0.0f));
+    OIIO_CHECK_NE    (cellnoise(-0.0001f), cellnoise( 0.0f));
+    OIIO_CHECK_EQUAL (cellnoise(-0.0001f), cellnoise(-1.0f));
+    OIIO_CHECK_EQUAL (cellnoise(-0.9999f), cellnoise(-1.0f));
+    OIIO_CHECK_EQUAL (cellnoise(-1.0001f), cellnoise(-2.0f));
+#endif
+
     if (make_images) {
         MAKE_IMAGE (cellnoise);
     }
 
     // Time trials
-    benchmark1 ("cellnoise(f)   ", cellnoise<float>, 0.5f);
-    benchmark2 ("cellnoise(f,f) ", cellnoise<float,float>, 0.5f, 0.5f);
-    benchmark1 ("cellnoise(v)   ", cellnoise<const Vec3&>, Vec3(0,0,0));
-    benchmark2 ("cellnoise(v,f) ", cellnoise<const Vec3&,float>, Vec3(0,0,0), 0.5f);
+    Benchmarker bench;
+    float fval = 0.5f; clobber (fval);
+    Vec3 vval (0,0,0); clobber (vval);
+    bench ("  cellnoise(f)", [&](){ DoNotOptimize (cellnoise<float>(fval)); });
+    bench ("  cellnoise(f,f)", [&](){ DoNotOptimize (cellnoise<float,float>(fval, fval)); });
+    bench ("  cellnoise(v)", [&](){ DoNotOptimize (cellnoise<const Vec3&>(vval)); });
+    bench ("  cellnoise(v,f)", [&](){ DoNotOptimize (cellnoise<const Vec3&,float>(vval, fval)); });
 
-    benchmark1 ("vcellnoise(f)  ", vcellnoise<float>, 0.5f);
-    benchmark2 ("vcellnoise(f,f)", vcellnoise<float,float>, 0.5f, 0.5f);
-    benchmark1 ("vcellnoise(v)  ", vcellnoise<const Vec3&>, Vec3(0,0,0));
-    benchmark2 ("vcellnoise(v,f)", vcellnoise<const Vec3&,float>, Vec3(0,0,0), 0.5f);
+    bench ("  vcellnoise(f)", [&](){ DoNotOptimize (vcellnoise<float>(fval)); });
+    bench ("  vcellnoise(f,f)", [&](){ DoNotOptimize (vcellnoise<float,float>(fval, fval)); });
+    bench ("  vcellnoise(v)", [&](){ DoNotOptimize (vcellnoise<const Vec3&>(vval)); });
+    bench ("  vcellnoise(v,f)", [&](){ DoNotOptimize (vcellnoise<const Vec3&,float>(vval, fval)); });
 }
 
 
@@ -360,20 +350,34 @@ test_hash ()
         OIIO_CHECK_EQUAL_THRESH (vs4, vresults_4d[i], eps);
     }
 
+#if OPENIMAGEIO_VERSION >= 10904
+    // Make sure the right thing happens at integer cell boundaries.
+    // hashnoise should be discontinuous everywhere!
+    OIIO_CHECK_NE (hashnoise( 0.9999f), hashnoise( 1.0f));
+    OIIO_CHECK_NE (hashnoise( 1.0001f), hashnoise( 1.0f));
+    OIIO_CHECK_NE (hashnoise(-0.0001f), hashnoise( 0.0f));
+    OIIO_CHECK_NE (hashnoise( 0.0001f), hashnoise( 0.0f));
+    OIIO_CHECK_NE (hashnoise(-1.0001f), hashnoise(-1.0f));
+    OIIO_CHECK_NE (hashnoise(-0.9999f), hashnoise(-1.0f));
+#endif
+
     if (make_images) {
         MAKE_IMAGE (hashnoise);
     }
 
     // Time trials
-    benchmark1 ("hashnoise(f)   ", hashnoise<float>, 0.5f);
-    benchmark2 ("hashnoise(f,f) ", hashnoise<float,float>, 0.5f, 0.5f);
-    benchmark1 ("hashnoise(v)   ", hashnoise<const Vec3&>, Vec3(0,0,0));
-    benchmark2 ("hashnoise(v,f) ", hashnoise<const Vec3&,float>, Vec3(0,0,0), 0.5f);
+    Benchmarker bench;
+    float fval = 0.5f; clobber (fval);
+    Vec3 vval (0,0,0); clobber (vval);
+    bench ("  hashnoise(f)", [&](){ DoNotOptimize (hashnoise<float>(fval)); });
+    bench ("  hashnoise(f,f)", [&](){ DoNotOptimize (hashnoise<float,float>(fval, fval)); });
+    bench ("  hashnoise(v)", [&](){ DoNotOptimize (hashnoise<const Vec3&>(vval)); });
+    bench ("  hashnoise(v,f)", [&](){ DoNotOptimize (hashnoise<const Vec3&,float>(vval, fval)); });
 
-    benchmark1 ("vhashnoise(f)  ", vhashnoise<float>, 0.5f);
-    benchmark2 ("vhashnoise(f,f)", vhashnoise<float,float>, 0.5f, 0.5f);
-    benchmark1 ("vhashnoise(v)  ", vhashnoise<const Vec3&>, Vec3(0,0,0));
-    benchmark2 ("vhashnoise(v,f)", vhashnoise<const Vec3&,float>, Vec3(0,0,0), 0.5f);
+    bench ("  vhashnoise(f)", [&](){ DoNotOptimize (vhashnoise<float>(fval)); });
+    bench ("  vhashnoise(f,f)", [&](){ DoNotOptimize (vhashnoise<float,float>(fval, fval)); });
+    bench ("  vhashnoise(v)", [&](){ DoNotOptimize (vhashnoise<const Vec3&>(vval)); });
+    bench ("  vhashnoise(v,f)", [&](){ DoNotOptimize (vhashnoise<const Vec3&,float>(vval, fval)); });
 }
 
 

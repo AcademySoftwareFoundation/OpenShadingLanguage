@@ -4,7 +4,7 @@ Dependency and standards changes:
 * **LLVM 4.0 / 5.0 / 6.0**: Support has been removed for LLVM 3.x,
   added for 6.0.
 * **OpenImageIO 1.8+**: This release of OSL should build properly against
-  OIIO 1.8 or newer. Support has been dropped for OIIO 1.7.
+  OIIO 1.8.5 or newer. Support has been dropped for OIIO 1.7.
 
 New back-end targets:
 * **OptiX** Work in progress: Experimental back end for NVIDIA OptiX GPU ray
@@ -78,6 +78,14 @@ OSL Language and oslc compiler:
   #867 (1.10.0)
 
 OSL Standard library:
+* There has been a change in the appearance to Cell noise and Gabor noise.
+  This is to fix a bug that made an incorrect pattern for certain negative
+  exact-integer values for cellnoise, and in lots of places for Gabor noise.
+  The only way to fix it was to potentially change the appearance for some
+  shaders. Sorry. If this is a real problem, let us know, perhaps we can
+  make a build-time switch that will let you use the old buggy noise? But
+  since this is a "2.0" release, we figured it was as good a time as ever to
+  let it change to the correct results. #912 (1.10.0)
 
 Contributed shader library changes:
 * mandelbrot.osl: computes Mandelbrot and Julia images. #827 (1.10.0)

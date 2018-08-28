@@ -55,7 +55,7 @@ endif ()
 ###########################################################################
 # OpenImageIO
 
-find_package (OpenImageIO 1.8 REQUIRED)
+find_package (OpenImageIO 1.8.5 REQUIRED)
 include_directories ("${OPENIMAGEIO_INCLUDE_DIR}")
 link_directories ("${OPENIMAGEIO_LIBRARY_DIRS}")
 message (STATUS "Using OpenImageIO ${OPENIMAGEIO_VERSION}")

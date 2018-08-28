@@ -28,12 +28,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <type_traits>
 
-#include <OpenImageIO/dassert.h>
-#include <OpenImageIO/unittest.h>
-
 #include <OSL/oslconfig.h>
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
+
+#include <OpenImageIO/dassert.h>
+#include <OpenImageIO/unittest.h>
 
 using namespace OSL;
 

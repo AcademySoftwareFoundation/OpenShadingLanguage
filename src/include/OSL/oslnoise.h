@@ -145,24 +145,13 @@ namespace {
 
 // return the greatest integer <= x
 inline OSL_HOSTDEVICE int quick_floor (float x) {
-    return (int) x - ((x < 0) ? 1 : 0);
+    return (int)floorf(x);
 }
 
 #ifndef __CUDA_ARCH__
 // return the greatest integer <= x, for 4 values at once
 OIIO_FORCEINLINE int4 quick_floor (const float4& x) {
-#if 0
-    // Even on SSE 4.1, this is actually very slightly slower!
-    // Continue to test on future architectures.
-    return floori(x);
-#else
-    int4 b (x);  // truncates
-    int4 isneg = bitcast_to_int4 (x < float4::Zero());
-    return b + isneg;
-    // Trick here (thanks, Cycles, for letting me spy on your code): the
-    // comparison will return (int)-1 for components that are less than
-    // zero, and adding that is the same as subtracting one!
-#endif
+    return ifloor(x);
 }
 #endif
 

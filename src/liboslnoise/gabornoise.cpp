@@ -60,9 +60,9 @@ public:
     // seed based on the cell containing P
     fast_rng (const Vec3 &p, int seed=0) {
         // Use guts of cellnoise
-        unsigned int pi[4] = { unsigned(quick_floor(p[0])),
-                               unsigned(quick_floor(p[1])),
-                               unsigned(quick_floor(p[2])),
+        unsigned int pi[4] = { unsigned(OIIO::ifloor(p[0])),
+                               unsigned(OIIO::ifloor(p[1])),
+                               unsigned(OIIO::ifloor(p[2])),
                                unsigned(seed) };
         m_seed = inthash<4>(pi);
         if (! m_seed)

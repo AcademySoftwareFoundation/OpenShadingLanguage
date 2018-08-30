@@ -182,7 +182,7 @@ inline OSL_HOSTDEVICE const float * grad4 (int i, int j, int k, int l, int seed)
 OSL_HOSTDEVICE float
 simplexnoise1 (float x, int seed, float *dnoise_dx)
 {
-    int i0 = quick_floor(x);
+    int i0 = OIIO::ifloor(x);
     int i1 = i0 + 1;
     float x0 = x - i0;
     float x1 = x0 - 1.0f;
@@ -239,8 +239,8 @@ OSL_HOSTDEVICE float simplexnoise2 (float x, float y, int seed,
     float s = ( x + y ) * F2; /* Hairy factor for 2D */
     float xs = x + s;
     float ys = y + s;
-    int i = quick_floor(xs);
-    int j = quick_floor(ys);
+    int i = OIIO::ifloor(xs);
+    int j = OIIO::ifloor(ys);
 
     float t = (float) (i + j) * G2;
     float X0 = i - t; /* Unskew the cell origin back to (x,y) space */
@@ -354,9 +354,9 @@ simplexnoise3 (float x, float y, float z, int seed,
     float xs = x+s;
     float ys = y+s;
     float zs = z+s;
-    int i = quick_floor(xs);
-    int j = quick_floor(ys);
-    int k = quick_floor(zs);
+    int i = OIIO::ifloor(xs);
+    int j = OIIO::ifloor(ys);
+    int k = OIIO::ifloor(zs);
 
     float t = (float)(i+j+k)*G3; 
     float X0 = i-t; // Unskew the cell origin back to (x,y,z) space
@@ -547,10 +547,10 @@ simplexnoise4 (float x, float y, float z, float w, int seed,
     float ys = y + s;
     float zs = z + s;
     float ws = w + s;
-    int i = quick_floor(xs);
-    int j = quick_floor(ys);
-    int k = quick_floor(zs);
-    int l = quick_floor(ws);
+    int i = OIIO::ifloor(xs);
+    int j = OIIO::ifloor(ys);
+    int k = OIIO::ifloor(zs);
+    int l = OIIO::ifloor(ws);
 
     float t = (i + j + k + l) * G4; // Factor for 4D unskewing
     float X0 = i - t; // Unskew the cell origin back to (x,y,z,w) space

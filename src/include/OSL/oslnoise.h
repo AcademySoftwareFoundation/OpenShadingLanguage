@@ -32,6 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
+#include <OpenImageIO/fmath.h>
 #include <OpenImageIO/hash.h>
 #include <OpenImageIO/simd.h>
 
@@ -142,18 +143,6 @@ float simplexnoise4 (float x, float y, float z, float w, int seed=0,
 
 
 namespace {
-
-// return the greatest integer <= x
-inline OSL_HOSTDEVICE int quick_floor (float x) {
-    return (int)floorf(x);
-}
-
-#ifndef __CUDA_ARCH__
-// return the greatest integer <= x, for 4 values at once
-OIIO_FORCEINLINE int4 quick_floor (const float4& x) {
-    return ifloor(x);
-}
-#endif
 
 // convert a 32 bit integer into a floating point number in [0,1]
 inline OSL_HOSTDEVICE float bits_to_01 (unsigned int bits) {
@@ -270,61 +259,61 @@ struct CellNoise {
 
     inline OSL_HOSTDEVICE void operator() (float &result, float x) const {
         unsigned int iv[1];
-        iv[0] = quick_floor (x);
+        iv[0] = OIIO::ifloor (x);
         hash1<1> (result, iv);
     }
 
     inline OSL_HOSTDEVICE void operator() (float &result, float x, float y) const {
         unsigned int iv[2];
-        iv[0] = quick_floor (x);
-        iv[1] = quick_floor (y);
+        iv[0] = OIIO::ifloor (x);
+        iv[1] = OIIO::ifloor (y);
         hash1<2> (result, iv);
     }
 
     inline OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p) const {
         unsigned int iv[3];
-        iv[0] = quick_floor (p.x);
-        iv[1] = quick_floor (p.y);
-        iv[2] = quick_floor (p.z);
+        iv[0] = OIIO::ifloor (p.x);
+        iv[1] = OIIO::ifloor (p.y);
+        iv[2] = OIIO::ifloor (p.z);
         hash1<3> (result, iv);
     }
 
     inline OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, float t) const {
         unsigned int iv[4];
-        iv[0] = quick_floor (p.x);
-        iv[1] = quick_floor (p.y);
-        iv[2] = quick_floor (p.z);
-        iv[3] = quick_floor (t);
+        iv[0] = OIIO::ifloor (p.x);
+        iv[1] = OIIO::ifloor (p.y);
+        iv[2] = OIIO::ifloor (p.z);
+        iv[3] = OIIO::ifloor (t);
         hash1<4> (result, iv);
     }
 
     inline OSL_HOSTDEVICE void operator() (Vec3 &result, float x) const {
         unsigned int iv[2];
-        iv[0] = quick_floor (x);
+        iv[0] = OIIO::ifloor (x);
         hash3<2> (result, iv);
     }
 
     inline OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float y) const {
         unsigned int iv[3];
-        iv[0] = quick_floor (x);
-        iv[1] = quick_floor (y);
+        iv[0] = OIIO::ifloor (x);
+        iv[1] = OIIO::ifloor (y);
         hash3<3> (result, iv);
     }
 
     inline OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p) const {
         unsigned int iv[4];
-        iv[0] = quick_floor (p.x);
-        iv[1] = quick_floor (p.y);
-        iv[2] = quick_floor (p.z);
+        iv[0] = OIIO::ifloor (p.x);
+        iv[1] = OIIO::ifloor (p.y);
+        iv[2] = OIIO::ifloor (p.z);
         hash3<4> (result, iv);
     }
 
     inline OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, float t) const {
         unsigned int iv[5];
-        iv[0] = quick_floor (p.x);
-        iv[1] = quick_floor (p.y);
-        iv[2] = quick_floor (p.z);
-        iv[3] = quick_floor (t);
+        iv[0] = OIIO::ifloor (p.x);
+        iv[1] = OIIO::ifloor (p.y);
+        iv[2] = OIIO::ifloor (p.z);
+        iv[3] = OIIO::ifloor (t);
         hash3<5> (result, iv);
     }
 
@@ -349,66 +338,66 @@ struct PeriodicCellNoise {
 
     inline OSL_HOSTDEVICE void operator() (float &result, float x, float px) const {
         unsigned int iv[1];
-        iv[0] = quick_floor (wrap (x, px));
+        iv[0] = OIIO::ifloor (wrap (x, px));
         hash1<1> (result, iv);
     }
 
     inline OSL_HOSTDEVICE void operator() (float &result, float x, float y,
                                            float px, float py) const {
         unsigned int iv[2];
-        iv[0] = quick_floor (wrap (x, px));
-        iv[1] = quick_floor (wrap (y, py));
+        iv[0] = OIIO::ifloor (wrap (x, px));
+        iv[1] = OIIO::ifloor (wrap (y, py));
         hash1<2> (result, iv);
     }
 
     inline OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p,
                                            const Vec3 &pp) const {
         unsigned int iv[3];
-        iv[0] = quick_floor (wrap (p.x, pp.x));
-        iv[1] = quick_floor (wrap (p.y, pp.y));
-        iv[2] = quick_floor (wrap (p.z, pp.z));
+        iv[0] = OIIO::ifloor (wrap (p.x, pp.x));
+        iv[1] = OIIO::ifloor (wrap (p.y, pp.y));
+        iv[2] = OIIO::ifloor (wrap (p.z, pp.z));
         hash1<3> (result, iv);
     }
 
     inline OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, float t,
                             const Vec3 &pp, float tt) const {
         unsigned int iv[4];
-        iv[0] = quick_floor (wrap (p.x, pp.x));
-        iv[1] = quick_floor (wrap (p.y, pp.y));
-        iv[2] = quick_floor (wrap (p.z, pp.z));
-        iv[3] = quick_floor (wrap (t, tt));
+        iv[0] = OIIO::ifloor (wrap (p.x, pp.x));
+        iv[1] = OIIO::ifloor (wrap (p.y, pp.y));
+        iv[2] = OIIO::ifloor (wrap (p.z, pp.z));
+        iv[3] = OIIO::ifloor (wrap (t, tt));
         hash1<4> (result, iv);
     }
 
     inline OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float px) const {
         unsigned int iv[2];
-        iv[0] = quick_floor (wrap (x, px));
+        iv[0] = OIIO::ifloor (wrap (x, px));
         hash3<2> (result, iv);
     }
 
     inline OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float y,
                                            float px, float py) const {
         unsigned int iv[3];
-        iv[0] = quick_floor (wrap (x, px));
-        iv[1] = quick_floor (wrap (y, py));
+        iv[0] = OIIO::ifloor (wrap (x, px));
+        iv[1] = OIIO::ifloor (wrap (y, py));
         hash3<3> (result, iv);
     }
 
     inline OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, const Vec3 &pp) const {
         unsigned int iv[4];
-        iv[0] = quick_floor (wrap (p.x, pp.x));
-        iv[1] = quick_floor (wrap (p.y, pp.y));
-        iv[2] = quick_floor (wrap (p.z, pp.z));
+        iv[0] = OIIO::ifloor (wrap (p.x, pp.x));
+        iv[1] = OIIO::ifloor (wrap (p.y, pp.y));
+        iv[2] = OIIO::ifloor (wrap (p.z, pp.z));
         hash3<4> (result, iv);
     }
 
     inline OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, float t,
                                            const Vec3 &pp, float tt) const {
         unsigned int iv[5];
-        iv[0] = quick_floor (wrap (p.x, pp.x));
-        iv[1] = quick_floor (wrap (p.y, pp.y));
-        iv[2] = quick_floor (wrap (p.z, pp.z));
-        iv[3] = quick_floor (wrap (t, tt));
+        iv[0] = OIIO::ifloor (wrap (p.x, pp.x));
+        iv[1] = OIIO::ifloor (wrap (p.y, pp.y));
+        iv[2] = OIIO::ifloor (wrap (p.z, pp.z));
+        iv[3] = OIIO::ifloor (wrap (t, tt));
         hash3<5> (result, iv);
     }
 
@@ -807,11 +796,11 @@ inline int4 imod(const int4& a, int b) {
 }
 #endif
 
-// floorfrac return quick_floor as well as the fractional remainder
+// floorfrac return ifloor as well as the fractional remainder
 // FIXME: already implemented inside OIIO but can't easily override it for duals
 //        inside a different namespace
 inline OSL_HOSTDEVICE float floorfrac(float x, int* i) {
-    *i = quick_floor(x);
+    *i = OIIO::ifloor(x);
     return x - *i;
 }
 
@@ -830,7 +819,7 @@ inline float4 floorfrac(const float4& x, int4 * i) {
     *i = int4(thefloor);
     return x-thefloor;
 #else
-    int4 thefloor = quick_floor (x);
+    int4 thefloor = OIIO::simd::ifloor (x);
     *i = thefloor;
     return x - float4(thefloor);
 #endif
@@ -1090,22 +1079,22 @@ struct HashVector {
 
 struct HashScalarPeriodic {
     OSL_HOSTDEVICE HashScalarPeriodic (float px) {
-        m_px = quick_floor(px); if (m_px < 1) m_px = 1;
+        m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
     }
     OSL_HOSTDEVICE HashScalarPeriodic (float px, float py) {
-        m_px = quick_floor(px); if (m_px < 1) m_px = 1;
-        m_py = quick_floor(py); if (m_py < 1) m_py = 1;
+        m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
+        m_py = OIIO::ifloor(py); if (m_py < 1) m_py = 1;
     }
     OSL_HOSTDEVICE HashScalarPeriodic (float px, float py, float pz) {
-        m_px = quick_floor(px); if (m_px < 1) m_px = 1;
-        m_py = quick_floor(py); if (m_py < 1) m_py = 1;
-        m_pz = quick_floor(pz); if (m_pz < 1) m_pz = 1;
+        m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
+        m_py = OIIO::ifloor(py); if (m_py < 1) m_py = 1;
+        m_pz = OIIO::ifloor(pz); if (m_pz < 1) m_pz = 1;
     }
     OSL_HOSTDEVICE HashScalarPeriodic (float px, float py, float pz, float pw) {
-        m_px = quick_floor(px); if (m_px < 1) m_px = 1;
-        m_py = quick_floor(py); if (m_py < 1) m_py = 1;
-        m_pz = quick_floor(pz); if (m_pz < 1) m_pz = 1;
-        m_pw = quick_floor(pw); if (m_pw < 1) m_pw = 1;
+        m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
+        m_py = OIIO::ifloor(py); if (m_py < 1) m_py = 1;
+        m_pz = OIIO::ifloor(pz); if (m_pz < 1) m_pz = 1;
+        m_pw = OIIO::ifloor(pw); if (m_pw < 1) m_pw = 1;
     }
 
     int m_px, m_py, m_pz, m_pw;
@@ -1161,22 +1150,22 @@ struct HashScalarPeriodic {
 
 struct HashVectorPeriodic {
     OSL_HOSTDEVICE HashVectorPeriodic (float px) {
-        m_px = quick_floor(px); if (m_px < 1) m_px = 1;
+        m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
     }
     OSL_HOSTDEVICE HashVectorPeriodic (float px, float py) {
-        m_px = quick_floor(px); if (m_px < 1) m_px = 1;
-        m_py = quick_floor(py); if (m_py < 1) m_py = 1;
+        m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
+        m_py = OIIO::ifloor(py); if (m_py < 1) m_py = 1;
     }
     OSL_HOSTDEVICE HashVectorPeriodic (float px, float py, float pz) {
-        m_px = quick_floor(px); if (m_px < 1) m_px = 1;
-        m_py = quick_floor(py); if (m_py < 1) m_py = 1;
-        m_pz = quick_floor(pz); if (m_pz < 1) m_pz = 1;
+        m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
+        m_py = OIIO::ifloor(py); if (m_py < 1) m_py = 1;
+        m_pz = OIIO::ifloor(pz); if (m_pz < 1) m_pz = 1;
     }
     OSL_HOSTDEVICE HashVectorPeriodic (float px, float py, float pz, float pw) {
-        m_px = quick_floor(px); if (m_px < 1) m_px = 1;
-        m_py = quick_floor(py); if (m_py < 1) m_py = 1;
-        m_pz = quick_floor(pz); if (m_pz < 1) m_pz = 1;
-        m_pw = quick_floor(pw); if (m_pw < 1) m_pw = 1;
+        m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
+        m_py = OIIO::ifloor(py); if (m_py < 1) m_py = 1;
+        m_pz = OIIO::ifloor(pz); if (m_pz < 1) m_pz = 1;
+        m_pw = OIIO::ifloor(pw); if (m_pw < 1) m_pw = 1;
     }
 
     int m_px, m_py, m_pz, m_pw;

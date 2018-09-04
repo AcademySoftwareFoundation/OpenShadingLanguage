@@ -1,6 +1,18 @@
-Release 1.9.10 -- 1 Jun 2018 (compared to 1.9.9)
+Release 1.9.10 -- 1 Sep 2018 (compared to 1.9.9)
 ------------------------------------------------
-
+* Fix Windows compile of the flex/bison compiler components. #891
+* Fix for compatibility with OIIO 1.9.
+* Fix incorrect array length on unbounced arrays specified by relaxed
+  parameter type checking. #900
+* Speed up oslc parsing of long constant initializer lists. #901
+* Add more functions to color2.h, color4.h, vector2.h, vector4.h: ceil,
+  sqrt, exp, log2, log, sign, sin, cos, tan, asin, acos, atan2. #903, #904
+* Improved support for MaterialX 1.36: add sin, cos, tan, atan2, ceil, sqrt,
+  exp, determinent, ln, transpose, sign, rotate, transforms, rgb/hsv convert,
+  extract, separate, tiledimage. Rename exponent -> power, pack -> combine,
+  hsvadjust -> hueshift. Add some color2/4 mutual conversion operators.
+  Fixes to ramp4, clean up texture mapping nodes, fixes to triplanarprojection
+  weighting. Extend add/sub/muldiv to include matrices. #903, #904, #905
 
 Release 1.9.9 -- 1 May 2018 (compared to 1.9.8)
 -----------------------------------------------

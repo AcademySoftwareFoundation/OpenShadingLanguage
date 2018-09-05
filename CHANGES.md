@@ -1,8 +1,11 @@
+Release 1.9.11 -- 1 Oct? 2018 (compared to 1.9.10)
+------------------------------------------------
+
 Release 1.9.10 -- 1 Sep 2018 (compared to 1.9.9)
 ------------------------------------------------
 * Fix Windows compile of the flex/bison compiler components. #891
 * Fix for compatibility with OIIO 1.9.
-* Fix incorrect array length on unbounced arrays specified by relaxed
+* Fix incorrect array length on unbounded arrays specified by relaxed
   parameter type checking. #900
 * Speed up oslc parsing of long constant initializer lists. #901
 * Add more functions to color2.h, color4.h, vector2.h, vector4.h: ceil,

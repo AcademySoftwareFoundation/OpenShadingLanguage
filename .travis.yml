@@ -166,8 +166,8 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: WHICHGCC=6 USE_SIMD=avx,f16c LLVM_VERSION=5.0.0
-    # Linux only: test gcc 7, also test C++14 and newer LLVM
+        env: WHICHGCC=6 USE_SIMD=avx,f16c LLVM_VERSION=6.0.1
+    # Linux only: test gcc 7, also test C++14 and newer LLVM (6.0)
       - os: linux
         compiler: gcc
         addons:
@@ -183,7 +183,7 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: WHICHGCC=7 USE_CPP=14 LLVM_VERSION=5.0.0
+        env: WHICHGCC=7 USE_CPP=14 LLVM_VERSION=6.0.1
     # Build with C++11, DEBUG build, against OIIO master
       - os: linux
         compiler: gcc

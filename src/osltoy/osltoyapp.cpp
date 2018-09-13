@@ -152,6 +152,16 @@ OSLToyMainWindow::OSLToyMainWindow (OSLToyRenderer *rend, int xr, int yr)
              this, &OSLToyMainWindow::recompile_shaders);
     control_area_layout->addWidget (recompileButton);
 
+    pauseButton = new QPushButton ("Pause");
+    connect (pauseButton, &QPushButton::clicked,
+             this, &OSLToyMainWindow::toggle_pause);
+    control_area_layout->addWidget (pauseButton);
+
+    restartButton = new QPushButton ("Restart");
+    connect (restartButton, &QPushButton::clicked,
+             this, &OSLToyMainWindow::restart_time);
+    control_area_layout->addWidget (restartButton);
+
     auto editorarea = new QWidget;
     QFontMetrics fontmetrics (CodeEditor::fixedFont());
     editorarea->setMinimumSize (85*fontmetrics.width(QLatin1Char('M')),
@@ -466,7 +476,8 @@ static OIIO::thread_pool trigger_pool;
 void
 OSLToyMainWindow::timed_rerender_trigger (void)
 {
-
+    if (paused)
+        return;
     float now = timer();
     if (now - last_frame_update_time > 0.05f) {
         last_frame_update_time = now;
@@ -594,8 +605,42 @@ OSLToyMainWindow::recompile_shaders ()
         build_shader_group ();
         inventory_params ();
         rebuild_param_area ();
+        if (paused && fps == 0 /* never started */)
+            toggle_pause ();
         rerender_needed ();
     }
+}
+
+
+
+void
+OSLToyMainWindow::toggle_pause ()
+{
+    OIIO::spin_lock lock (m_job_mutex);
+    if (paused) {
+        pauseButton->setText ("Pause");
+        timer.start ();
+        paused = false;
+    } else {
+        pauseButton->setText ("Continue");
+        timer.stop ();
+        paused = true;
+    }
+    repaint ();//qApp->processEvents();
+}
+
+
+
+void
+OSLToyMainWindow::restart_time ()
+{
+    OIIO::spin_lock lock (m_job_mutex);
+    timer.reset ();
+    timer.start ();
+    last_fps_update_time = -1.0f;
+    last_frame_update_time = -1.0f;
+    last_finished_frametime = -1.0f;
+    update_statusbar_fps (0.0f, 0.0f);
 }
 
 

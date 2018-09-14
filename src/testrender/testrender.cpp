@@ -488,7 +488,8 @@ Color3 subpixel_radiance(float x, float y, Sampler& sampler, ShadingContext* ctx
             float light_pdf;
             Vec3 ldir = scene.sample(lid, sg.P, xi, yi, light_pdf);
             float bsdf_pdf = 0;
-            Color3 contrib = path_weight * result.bsdf.eval(sg, ldir, bsdf_pdf) * MIS::power_heuristic<MIS::EVAL_WEIGHT>(light_pdf, bsdf_pdf);
+            Color3 bsdf_weight = result.bsdf.eval(sg, ldir, bsdf_pdf);
+            Color3 contrib = path_weight * bsdf_weight * MIS::power_heuristic<MIS::EVAL_WEIGHT>(light_pdf, bsdf_pdf);
             if ((contrib.x + contrib.y + contrib.z) > 0) {
                 Ray shadow_ray = Ray(sg.P, ldir);
                 // trace a shadow ray and see if we actually hit the target

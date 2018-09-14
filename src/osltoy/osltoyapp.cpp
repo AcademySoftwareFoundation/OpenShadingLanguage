@@ -50,11 +50,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QPixmap>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QSlider>
+#include <QStyleOptionSlider>
 #include <QScrollArea>
 #include <QSpinBox>
 #include <QSplitter>
 #include <QTabWidget>
 #include <QTextEdit>
+#include <QTooltip>
 
 
 #include <OpenImageIO/array_view.h>
@@ -76,6 +79,29 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 OSL_NAMESPACE_ENTER
 using namespace QtUtils;
 
+class ValueSlider : public QSlider {
+public:
+    ValueSlider(Qt::Orientation orientation, QWidget *parent)
+      : QSlider(orientation, parent) {
+        setTickPosition(QSlider::TicksRight);
+    }
+
+    void sliderChange(QAbstractSlider::SliderChange change) {
+        QSlider::sliderChange(change);
+
+        if (change == QAbstractSlider::SliderValueChange )
+        {
+            QStyleOptionSlider opt;
+            initStyleOption(&opt);
+            QRect handle = style()->subControlRect(QStyle::CC_Slider, &opt,
+                                                   QStyle::SC_SliderHandle,
+                                                   this);
+            QPoint pos = handle.topRight();
+
+            QToolTip::showText(mapToGlobal(pos), QString::number(value()), this);
+        }
+    }
+};
 
 // Shadertoy inspiration:
 // ----------------------
@@ -122,6 +148,49 @@ OSLToyMainWindow::OSLToyMainWindow (OSLToyRenderer *rend, int xr, int yr)
     imageLabel->setMinimumSize (xres, yres);
     m_renderer->set_resolution (xres, yres);
 
+    QWidget* viewport = new QWidget(this);
+    QGridLayout* vplayout = new QGridLayout(this);
+    viewport->setLayout (vplayout);
+    vplayout->addWidget(imageLabel, 0, 0, 4, 1);
+    vplayout->addWidget(new ValueSlider(Qt::Vertical, this), 0, 1, 4, 1);
+
+    int zoomsize = 150;
+    QLabel* zoombox = new QLabel(this);
+    zoombox->setMinimumSize (zoomsize, zoomsize);
+    zoombox->setMaximumSize (zoomsize, zoomsize);
+    zoombox->setScaledContents(false);
+    {
+    OIIO::ImageBuf checks (OIIO::ImageSpec (xres, yres, 3, OIIO::TypeDesc::UINT8));
+    const float white[] = { 1, 1, 1 };
+    const float black[] = { 0, 0, 0 };
+    OIIO::ImageBufAlgo::checker (checks, 16, 16, 1, white, black);
+    QImage qimage = QtUtils::ImageBuf_to_QImage (checks);
+    if (! qimage.isNull())
+        zoombox->setPixmap (QPixmap::fromImage (qimage));
+    }
+    vplayout->addWidget(zoombox, 0, 2, 1, 1, Qt::AlignTop | Qt::AlignHCenter);
+    vplayout->addWidget(new QSlider(Qt::Horizontal, this), 1, 2, 1, 1);
+
+    QLabel* pixelinfo = new QLabel(this);
+    pixelinfo->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+    pixelinfo->setText("RGB");
+    vplayout->addWidget(pixelinfo, 2, 2, 1, 1, Qt::AlignTop);
+
+    QLabel* imageinfo = new QLabel(this);
+    imageinfo->setAlignment(Qt::AlignBottom | Qt::AlignLeft);
+    imageinfo->setText("MIN MAX");
+    vplayout->addWidget(imageinfo, 3, 2, 1, 1, Qt::AlignBottom);
+
+    auto background = [&](QWidget* widget, QColor color) {
+        QPalette palette = widget->palette();
+        palette.setColor(widget->backgroundRole(), color);
+        widget->setPalette(palette);
+        widget->setAutoFillBackground(true);
+    };
+    background(pixelinfo, Qt::red);
+    background(imageinfo, Qt::blue);
+    
+
     clear_param_area ();   // will initialize i
     paramLayout->addWidget (new QLabel("Parameter Controls"), 0, 0);
     paramScroll->setWidget (paramWidget);
@@ -130,7 +199,7 @@ OSLToyMainWindow::OSLToyMainWindow (OSLToyRenderer *rend, int xr, int yr)
     auto display_area = new QWidget;
     auto display_area_layout = new QVBoxLayout;
     display_area->setLayout (display_area_layout);
-    display_area_layout->addWidget (imageLabel);
+    display_area_layout->addWidget (viewport);
     display_area_layout->addWidget (paramScroll);
 
     QPixmap pixmap (xres, yres);

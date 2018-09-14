@@ -1,4 +1,4 @@
-#!usr/bin/env bash
+#!/usr/bin/env bash
 
 # Turn an LLVM-compiled bitfile into a C++ source file where the compiled
 # bitcode is in a huge array.

@@ -90,6 +90,8 @@ public:
 
     void recompile_shaders ();
     void build_shader_group ();
+    void toggle_pause ();
+    void restart_time ();
 
     void replace_image (const OIIO::ImageBuf &ib);
 
@@ -129,7 +131,7 @@ private:
     QGridLayout *paramLayout = nullptr;
     QLabel *statusFPS;
     QMenu *fileMenu, *editMenu, *viewMenu, *toolsMenu, *helpMenu;
-    QPushButton *recompileButton;
+    QPushButton *recompileButton, *pauseButton, *restartButton;
     std::vector<CodeEditor *> editors;
     std::vector<QTextEdit *> error_displays;
     QTimer *maintimer;
@@ -222,11 +224,12 @@ private:
     std::atomic<int> m_rerender_needed { 0 };
     //vvv--- access by the GUI thread only if m_working == 0, and by the
     //       shading thread only if m_working == 1.
-    OIIO::Timer timer;
+    OIIO::Timer timer { false /*don't start*/ };
     float fps = 0;
     float last_frame_update_time = -1;
     float last_fps_update_time = -1;
     float last_finished_frametime = 0;
+    bool paused = true;
     OIIO::ImageBuf framebuffer;
 };
 

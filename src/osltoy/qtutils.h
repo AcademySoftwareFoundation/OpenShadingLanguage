@@ -107,15 +107,23 @@ ImageBuf_to_QImage (const OIIO::ImageBuf& ib)
 {
     using namespace OIIO;
     if (ib.storage() == ImageBuf::UNINITIALIZED)
-        return QImage();
+        return {};
+
     const ImageSpec &spec (ib.spec());
-    if (spec.nchannels != 3 || spec.format != TypeDesc::UINT8)
-        return QImage();
+    QImage::Format format = QImage::Format_Invalid;
+    if (spec.format == TypeDesc::UINT8) {
+        if (spec.nchannels == 3)
+            format = QImage::Format_RGB888;
+        else if (spec.nchannels == 4)
+            format = QImage::Format_RGBA8888;
+    }
+    if (format == QImage::Format_Invalid)
+        return {};
+
     if (ib.cachedpixels())
         const_cast<ImageBuf*>(&ib)->make_writeable (true);
-    return QImage ((const uchar*)ib.localpixels(),
-                   spec.width, spec.height, (int)spec.scanline_bytes(),
-                   QImage::Format_RGB888);
+    return QImage ((const uchar*)ib.localpixels(), spec.width, spec.height,
+                   (int)spec.scanline_bytes(), format);
 }
 
 

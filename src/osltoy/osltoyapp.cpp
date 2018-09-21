@@ -57,7 +57,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <QSplitter>
 #include <QTabWidget>
 #include <QTextEdit>
-#include <QTooltip>
+#include <QToolTip>
 
 
 #include <OpenImageIO/array_view.h>
@@ -103,6 +103,228 @@ public:
     }
 };
 
+static void setBackground(QWidget* widget, QColor color) {
+    QPalette palette = widget->palette();
+    palette.setColor(widget->backgroundRole(), color);
+    widget->setPalette(palette);
+    widget->setAutoFillBackground(true);
+}
+
+struct PixelInfo {
+    // The image and where to magnify
+    const OIIO::ImageBuf& full;
+    int    x, y;
+
+    Color3 Cd;
+    Vec3   P;
+    Vec2   uv;
+};
+
+class Magnifier : public QWidget {
+    QLabel* m_image;
+    QLabel* m_info;
+    OSLToyRenderView* m_renderview;
+    const int m_res;
+
+public:
+    void setInfo(const PixelInfo& info, OSLToyRenderView* owner, int pixels = 8) {
+        m_renderview = owner;
+        if (!m_renderview)
+            return;
+
+        ASSERT( m_image->width() == m_image->height() );
+        using namespace OIIO;
+
+        int res = m_image->width();
+        float sample = float(pixels) * 0.5;
+        ROI roi(info.x-sample, info.x+sample, info.y-sample, info.y+sample);
+
+        ImageBuf display(ImageSpec(pixels, pixels, 3, TypeDesc::UINT8));
+        ImageBufAlgo::colorconvert (display, ImageBufAlgo::cut(info.full, roi),
+                                    "linear", "sRGB");
+
+        // Use Qt to do the image scaling, so minimal interpolation
+        QImage qimage = QtUtils::ImageBuf_to_QImage (display).scaled(res, res, Qt::IgnoreAspectRatio);
+        if (! qimage.isNull())
+            m_image->setPixmap (QPixmap::fromImage (qimage));
+
+        int fwidth = 0;
+        char fmt = 'f';
+        m_info->setText(QString(" Cout:\n"
+                                "  %1\n  %2\n  %3\n"
+                                " P:\n"
+                                "  %4\n  %5\n  %6\n"
+                                " uv:\n"
+                                "  %7\n  %8")
+                        .arg(info.Cd.x, fwidth, fmt)
+                        .arg(info.Cd.y, fwidth, fmt)
+                        .arg(info.Cd.z, fwidth, fmt)
+                        .arg(info.P.x,  fwidth, fmt)
+                        .arg(info.P.y,  fwidth, fmt)
+                        .arg(info.P.z,  fwidth, fmt)
+                        .arg(info.uv.x, fwidth, fmt)
+                        .arg(info.uv.y, fwidth, fmt));
+    }
+
+    Magnifier(QWidget *parent, int res = 170) :
+      QWidget(parent), m_image(nullptr), m_info(nullptr),
+      m_renderview(nullptr), m_res(res) {
+
+        int textSize = 100;
+        setMinimumSize (m_res+textSize, m_res);
+        setMaximumSize (m_res+textSize, m_res);
+
+        QLayout* layout = new QHBoxLayout(this);
+        setLayout(layout);
+
+        m_image = new QLabel(this);
+        m_image->setMinimumSize (m_res, m_res);
+        m_image->setMaximumSize (m_res, m_res);
+        m_image->setScaledContents(false);
+        layout->addWidget(m_image);
+
+        m_info = new QLabel(this);
+        m_info->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+        m_info->setMinimumSize(textSize, m_res);
+        layout->addWidget(m_info);
+
+        setBackground(m_info, Qt::black);
+
+        // Hilight the edges against solid backgrounds
+        m_image->setStyleSheet("border: 2px solid black");
+
+        // When mouse moves fast, it might get over the inspector.
+        setAttribute(Qt::WA_Hover, true);
+        setMouseTracking(true);
+    }
+
+    void hideEvent(QHideEvent* e) override {
+        m_renderview = nullptr;
+        QWidget::hideEvent(e);
+    }
+
+    void enterEvent(QEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
+};
+
+class OSLToyRenderView : public QLabel {
+    Magnifier* m_magnifier;
+    OIIO::ImageBuf m_framebuffer;
+
+    float static mapPixel(float pos, float res) {
+        return (pos / res);
+    }
+
+    // Shold probably live in PixelInfo, but its here now
+    bool getPixel(QPoint pos, PixelInfo& info) {
+        if (! m_framebuffer.initialized())
+            return false;
+        const auto* pmap = pixmap();
+        if (! pmap )
+            return false;
+        const auto& spec = m_framebuffer.spec();
+        info.x = pos.x();
+        info.y = pos.y();
+        if (info.x > spec.width || info.y > spec.height)
+            return false;
+        info.uv = Vec2( mapPixel(pos.x(), spec.width),
+                        mapPixel(pos.y(), spec.height) );
+
+        m_framebuffer.getpixel(info.x, info.y, &info.Cd.x, 3);
+        info.P = Vec3(info.uv.x * spec.width, info.uv.y * spec.height, 0);
+        return true;
+    }
+
+public:
+    OSLToyRenderView(int xres, int yres, QWidget* parent) :
+      QLabel(parent), m_magnifier(nullptr) {
+        // setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+        // setAlignment (Qt::AlignHCenter | Qt::AlignVCenter);
+        setScaledContents(false);
+        setMinimumSize (xres, yres);
+        setMaximumSize (xres, yres);
+
+        setAttribute(Qt::WA_Hover, true);
+        setMouseTracking(true);
+    }
+
+    // void hoverEnter(QHoverEvent* e) override;
+    // void hoverLeave(QHoverEvent* e) override;
+    // void hoverMove(QHoverEvent* e) override;
+
+    void mouseEvent() {
+        QPoint pos = mapFromGlobal(QCursor::pos());
+        PixelInfo info = { m_framebuffer };
+        if (m_magnifier) {
+            if (getPixel(pos, info)) {
+                m_magnifier->setInfo(info, this);
+                m_magnifier->move(pos + geometry().topLeft() + QPoint(40,40));
+                m_magnifier->show();
+            } else if (! m_magnifier->underMouse())
+                m_magnifier->hide();
+        }
+    }
+
+    void mouseMoveEvent(QMouseEvent* event) override {
+        mouseEvent();
+    }
+
+    void enterEvent(QEvent* event) override {
+        if (!m_magnifier) {
+            // Create the magnifier in the top-most parent
+            // so no siblings will draw ontop
+            QWidget* parent = parentWidget();
+            QWidget* lastParent = nullptr;
+            do {
+                lastParent = parent;
+                parent = parent->parentWidget();
+            } while (parent);
+            ASSERT( lastParent != nullptr );
+            m_magnifier = new Magnifier(lastParent);
+        }
+
+        setCursor(Qt::CrossCursor);
+        mouseEvent();
+        m_magnifier->show();
+    }
+
+    void leaveEvent(QEvent* event) override {
+        if (m_magnifier && !m_magnifier->underMouse())
+            m_magnifier->hide();
+    }
+
+    bool update(const OIIO::ImageBuf& image) {
+        using namespace OIIO;
+
+        // Copy from the renderer's framebuffer to ours
+        m_framebuffer = ImageBufAlgo::resize(image);
+
+        // Copy from the renderer's framebuffer (linear float) to display (sRGB uint8)
+        OIIO::ImageBuf display(ImageSpec(width(), height(), 3, TypeDesc::UINT8));
+        ImageBufAlgo::colorconvert (display, image, "linear", "sRGB");
+        QImage qimage = QtUtils::ImageBuf_to_QImage (display);
+        if (qimage.isNull())
+            return false;
+
+        setPixmap (QPixmap::fromImage (qimage));
+        return true;
+    }
+};
+
+void Magnifier::enterEvent(QEvent* event) {
+    if (m_renderview)
+        m_renderview->mouseEvent();
+    else
+        event->setAccepted(false);
+}
+
+void Magnifier::mouseMoveEvent(QMouseEvent* event) {
+    if (m_renderview)
+        m_renderview->mouseEvent();
+    else
+        event->setAccepted(false);
+}
+
 // Shadertoy inspiration:
 // ----------------------
 // Shadertoy basic docs: https://www.shadertoy.com/howto
@@ -141,55 +363,14 @@ OSLToyMainWindow::OSLToyMainWindow (OSLToyRenderer *rend, int xr, int yr)
     createMenus ();
     createStatusBar ();
 
-    imageLabel = new QLabel;
-    // imageLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
-    imageLabel->setScaledContents(false);
-    // imageLabel->setAlignment (Qt::AlignHCenter | Qt::AlignVCenter);
-    imageLabel->setMinimumSize (xres, yres);
+    renderView = new OSLToyRenderView(xres, yres, this);
     m_renderer->set_resolution (xres, yres);
 
     QWidget* viewport = new QWidget(this);
     QGridLayout* vplayout = new QGridLayout(this);
     viewport->setLayout (vplayout);
-    vplayout->addWidget(imageLabel, 0, 0, 4, 1);
+    vplayout->addWidget(renderView, 0, 0, 4, 1);
     vplayout->addWidget(new ValueSlider(Qt::Vertical, this), 0, 1, 4, 1);
-
-    int zoomsize = 150;
-    QLabel* zoombox = new QLabel(this);
-    zoombox->setMinimumSize (zoomsize, zoomsize);
-    zoombox->setMaximumSize (zoomsize, zoomsize);
-    zoombox->setScaledContents(false);
-    {
-    OIIO::ImageBuf checks (OIIO::ImageSpec (xres, yres, 3, OIIO::TypeDesc::UINT8));
-    const float white[] = { 1, 1, 1 };
-    const float black[] = { 0, 0, 0 };
-    OIIO::ImageBufAlgo::checker (checks, 16, 16, 1, white, black);
-    QImage qimage = QtUtils::ImageBuf_to_QImage (checks);
-    if (! qimage.isNull())
-        zoombox->setPixmap (QPixmap::fromImage (qimage));
-    }
-    vplayout->addWidget(zoombox, 0, 2, 1, 1, Qt::AlignTop | Qt::AlignHCenter);
-    vplayout->addWidget(new QSlider(Qt::Horizontal, this), 1, 2, 1, 1);
-
-    QLabel* pixelinfo = new QLabel(this);
-    pixelinfo->setAlignment(Qt::AlignTop | Qt::AlignLeft);
-    pixelinfo->setText("RGB");
-    vplayout->addWidget(pixelinfo, 2, 2, 1, 1, Qt::AlignTop);
-
-    QLabel* imageinfo = new QLabel(this);
-    imageinfo->setAlignment(Qt::AlignBottom | Qt::AlignLeft);
-    imageinfo->setText("MIN MAX");
-    vplayout->addWidget(imageinfo, 3, 2, 1, 1, Qt::AlignBottom);
-
-    auto background = [&](QWidget* widget, QColor color) {
-        QPalette palette = widget->palette();
-        palette.setColor(widget->backgroundRole(), color);
-        widget->setPalette(palette);
-        widget->setAutoFillBackground(true);
-    };
-    background(pixelinfo, Qt::red);
-    background(imageinfo, Qt::blue);
-    
 
     clear_param_area ();   // will initialize i
     paramLayout->addWidget (new QLabel("Parameter Controls"), 0, 0);
@@ -207,7 +388,7 @@ OSLToyMainWindow::OSLToyMainWindow (OSLToyRenderer *rend, int xr, int yr)
     const float white[] = { 1, 1, 1 };
     const float black[] = { 0, 0, 0 };
     OIIO::ImageBufAlgo::checker (checks, 16, 16, 1, white, black);
-    replace_image (checks);
+    renderView->update (checks);
 
     textTabs = new QTabWidget;
     action_newfile (); // Start with one tab
@@ -527,16 +708,6 @@ OSLToyMainWindow::action_save ()
 
 
 
-void
-OSLToyMainWindow::replace_image (const OIIO::ImageBuf &ib)
-{
-    QImage qimage = QtUtils::ImageBuf_to_QImage (ib);
-    if (! qimage.isNull())
-        imageLabel->setPixmap (QPixmap::fromImage (qimage));
-}
-
-
-
 // Separate thread pool just for the async render kickoff triggers, but use
 // the default pool for the workers.
 static OIIO::thread_pool trigger_pool;
@@ -571,20 +742,14 @@ OSLToyMainWindow::osl_do_rerender (float frametime)
 {
     using namespace OIIO;
     m_rerender_needed = 0;
-    if (! framebuffer.initialized() || framebuffer.spec().width != xres ||
-        framebuffer.spec().height != yres)
-        framebuffer.reset (ImageSpec (xres, yres, 3, TypeDesc::UINT8));
 
     if (renderer()->shadergroup()) {
         float start = timer();
         renderer()->set_time (start);
         renderer()->render_image();
         OIIO_UNUSED_OK float rendertime = timer() - start;
-        // Copy from the renderer's framebuffer (linear float) to ours (sRGB
-        // uint8) and use the results as the new displayed image.
-        ImageBufAlgo::colorconvert (framebuffer, renderer()->framebuffer(),
-                                    "linear", "sRGB");
-        replace_image (framebuffer);
+
+        renderView->update (renderer()->framebuffer());
 
         float now = timer();
         // std::cout <<"render only " << (1.0f/rendertime) << "  with coco " << 1.0f/(now-start)

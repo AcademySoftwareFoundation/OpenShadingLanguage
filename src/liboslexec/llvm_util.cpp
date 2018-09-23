@@ -88,6 +88,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #  include <llvm/Transforms/Scalar/GVN.h>
 #endif
 
+#if OSL_LLVM_VERSION >= 70
+#include <llvm/Transforms/Utils.h>
+#include <llvm/Transforms/InstCombine/InstCombine.h>
+#endif
+
 OSL_NAMESPACE_ENTER
 
 namespace pvt {
@@ -1353,6 +1358,10 @@ LLVM_Util::op_memset (llvm::Value *ptr, int val, int len, int align)
 void
 LLVM_Util::op_memset (llvm::Value *ptr, int val, llvm::Value *len, int align)
 {
+#if OSL_LLVM_VERSION >= 70
+    builder().CreateMemSet (ptr, builder().getInt8((unsigned char)val),
+                            len, (unsigned)align);
+#else
     // memset with i32 len
     // and with an i8 pointer (dst) for LLVM-2.8
     llvm::Type* types[] = {
@@ -1382,6 +1391,7 @@ LLVM_Util::op_memset (llvm::Value *ptr, int val, llvm::Value *len, int align)
     builder().CreateCall (func, llvm::ArrayRef<llvm::Value*>(args, 5));
 
 #endif
+#endif
 }
 
 
@@ -1389,6 +1399,10 @@ LLVM_Util::op_memset (llvm::Value *ptr, int val, llvm::Value *len, int align)
 void
 LLVM_Util::op_memcpy (llvm::Value *dst, llvm::Value *src, int len, int align)
 {
+#if OSL_LLVM_VERSION >= 70
+    builder().CreateMemCpy (dst, (unsigned)align, src, (unsigned)align,
+                            uint64_t(len));
+#else
     // i32 len
     // and with i8 pointers (dst and src) for LLVM-2.8
     llvm::Type* types[] = {
@@ -1411,6 +1425,7 @@ LLVM_Util::op_memcpy (llvm::Value *dst, llvm::Value *src, int len, int align)
         dst, src, constant(len), constant(align), constant_bool(false)
     };
     builder().CreateCall (func, llvm::ArrayRef<llvm::Value*>(args, 5));
+#endif
 #endif
 }
 
@@ -1713,12 +1728,17 @@ LLVM_Util::write_bitcode_file (const char *filename, std::string *err)
     std::string local_error;
     llvm::raw_fd_ostream out (filename, err ? *err : local_error, llvm::sys::fs::F_None);
 #endif
-    llvm::WriteBitcodeToFile (module(), out);
-
-#if OSL_LLVM_VERSION >= 36
-    if (err && local_error)
-        *err = local_error.message ();
+    if (! out.has_error()) {
+#if OSL_LLVM_VERSION >= 70
+        llvm::WriteBitcodeToFile (*module(), out);
+#else
+        llvm::WriteBitcodeToFile (module(), out);
 #endif
+#if OSL_LLVM_VERSION >= 36
+        if (err && local_error)
+            *err = local_error.message ();
+#endif
+    }
 }
 
 

@@ -331,6 +331,12 @@ OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
 
     inst.getPreprocessorOutputOpts().ShowCPP = 1;
     inst.getPreprocessorOutputOpts().ShowMacros = 0;
+#if OSL_LLVM_VERSION >= 40
+    inst.getPreprocessorOutputOpts().ShowComments = 0;
+    inst.getPreprocessorOutputOpts().ShowLineMarkers = 1;
+    inst.getPreprocessorOutputOpts().ShowMacroComments = 0;
+    inst.getPreprocessorOutputOpts().ShowIncludeDirectives = 0;
+#endif
 
     clang::HeaderSearchOptions &headerOpts = inst.getHeaderSearchOpts();
     headerOpts.UseBuiltinIncludes = 0;

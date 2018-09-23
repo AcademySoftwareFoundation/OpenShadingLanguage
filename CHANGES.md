@@ -1,6 +1,6 @@
 Release 1.9.11 -- 1 Oct? 2018 (compared to 1.9.10)
 ------------------------------------------------
-* Full support for using LLVM 6.0.
+* Full support for using LLVM 6.0 and 7.0. #913, #919
 
 Release 1.9.10 -- 1 Sep 2018 (compared to 1.9.9)
 ------------------------------------------------

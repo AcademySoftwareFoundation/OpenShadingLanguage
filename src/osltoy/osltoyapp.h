@@ -77,11 +77,13 @@ public:
     ParamRec (ParamRec&& p) : Parameter(p), widgets(p.widgets) {}
 };
 
-
+class OSLToyRenderView;
 
 class OSLToyMainWindow : public QMainWindow
 {
     Q_OBJECT
+
+
 public:
     explicit OSLToyMainWindow (OSLToyRenderer *rend, int xr, int yr);
     ~OSLToyMainWindow ();
@@ -92,8 +94,6 @@ public:
     void build_shader_group ();
     void toggle_pause ();
     void restart_time ();
-
-    void replace_image (const OIIO::ImageBuf &ib);
 
     void finish_and_close ();
 
@@ -124,8 +124,8 @@ private:
     // Non-owning pointers to all the widgets we create. Qt is responsible
     // for deleting.
     QSplitter *centralSplitter;
-    QLabel *imageLabel;
-    QTabWidget *textTabs;
+    OSLToyRenderView *renderView = nullptr;
+    QTabWidget *textTabs = nullptr;
     QScrollArea *paramScroll = nullptr;
     QWidget *paramWidget = nullptr;
     QGridLayout *paramLayout = nullptr;
@@ -204,6 +204,7 @@ private:
 
     void rebuild_param_area ();
     void inventory_params ();
+    OIIO::ImageBuf& framebuffer();
 
     std::unique_ptr<OSLToyRenderer> m_renderer;
 
@@ -230,7 +231,6 @@ private:
     float last_fps_update_time = -1;
     float last_finished_frametime = 0;
     bool paused = true;
-    OIIO::ImageBuf framebuffer;
 };
 
 

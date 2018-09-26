@@ -103,9 +103,10 @@ public:
     }
 };
 
-static void setBackground(QWidget* widget, QColor color) {
+static void setBackground(QWidget* widget, QColor bg, QColor fg) {
     QPalette palette = widget->palette();
-    palette.setColor(widget->backgroundRole(), color);
+    palette.setColor(widget->backgroundRole(), bg);
+    palette.setColor(widget->foregroundRole(), fg);
     widget->setPalette(palette);
     widget->setAutoFillBackground(true);
 }
@@ -188,7 +189,7 @@ public:
         m_info->setMinimumSize(textSize, m_res);
         layout->addWidget(m_info);
 
-        setBackground(m_info, Qt::black);
+        setBackground(m_info, Qt::black, Qt::white);
 
         // Hilight the edges against solid backgrounds
         m_image->setStyleSheet("border: 2px solid black");
@@ -235,6 +236,32 @@ class OSLToyRenderView : public QLabel {
         return true;
     }
 
+    static bool shouldShowMagnifier(const Qt::KeyboardModifiers& mods) {
+        return mods.testFlag(Qt::AltModifier);
+    }
+    static bool shouldShowMagnifier() {
+        return shouldShowMagnifier(QGuiApplication::keyboardModifiers());
+    }
+
+    void showMagnifier() {
+        if (!m_magnifier) {
+            // Create the magnifier in the top-most parent
+            // so no siblings will draw ontop
+            QWidget* parent = parentWidget();
+            QWidget* lastParent = nullptr;
+            do {
+                lastParent = parent;
+                parent = parent->parentWidget();
+            } while (parent);
+            ASSERT( lastParent != nullptr );
+            m_magnifier = new Magnifier(lastParent);
+        }
+
+        setCursor(Qt::CrossCursor);
+        magnifierEvent(true);
+        m_magnifier->show();
+    }
+
 public:
     OSLToyRenderView(int xres, int yres, QWidget* parent) :
       QLabel(parent), m_magnifier(nullptr) {
@@ -252,40 +279,29 @@ public:
     // void hoverLeave(QHoverEvent* e) override;
     // void hoverMove(QHoverEvent* e) override;
 
-    void mouseEvent() {
-        QPoint pos = mapFromGlobal(QCursor::pos());
-        PixelInfo info = { m_framebuffer };
-        if (m_magnifier) {
-            if (getPixel(pos, info)) {
-                m_magnifier->setInfo(info, this);
-                m_magnifier->move(pos + geometry().topLeft() + QPoint(40,40));
-                m_magnifier->show();
-            } else if (! m_magnifier->underMouse())
-                m_magnifier->hide();
-        }
+    void magnifierEvent(bool force = false) {
+        if (force || shouldShowMagnifier()) {
+            QPoint pos = mapFromGlobal(QCursor::pos());
+            PixelInfo info = { m_framebuffer };
+            if (m_magnifier) {
+                if (getPixel(pos, info)) {
+                    m_magnifier->setInfo(info, this);
+                    m_magnifier->move(pos + geometry().topLeft() + QPoint(40,40));
+                    m_magnifier->show();
+                } else if (! m_magnifier->underMouse())
+                    m_magnifier->hide();
+            }
+        } else if (m_magnifier)
+            m_magnifier->hide();
     }
 
     void mouseMoveEvent(QMouseEvent* event) override {
-        mouseEvent();
+        magnifierEvent();
     }
 
     void enterEvent(QEvent* event) override {
-        if (!m_magnifier) {
-            // Create the magnifier in the top-most parent
-            // so no siblings will draw ontop
-            QWidget* parent = parentWidget();
-            QWidget* lastParent = nullptr;
-            do {
-                lastParent = parent;
-                parent = parent->parentWidget();
-            } while (parent);
-            ASSERT( lastParent != nullptr );
-            m_magnifier = new Magnifier(lastParent);
-        }
-
-        setCursor(Qt::CrossCursor);
-        mouseEvent();
-        m_magnifier->show();
+        if (shouldShowMagnifier())
+            showMagnifier();
     }
 
     void leaveEvent(QEvent* event) override {
@@ -309,18 +325,35 @@ public:
         setPixmap (QPixmap::fromImage (qimage));
         return true;
     }
+
+#if 0
+    void keyPressEvent(QKeyEvent* event) override {
+        if (shouldShowMagnifier(event->modifiers()))
+            showMagnifier();
+        else if (m_magnifier && m_magnifier->isVisible())
+            m_magnifier->hide();
+        event->setAccepted(true);
+    }
+
+    void keyReleaseEvent(QKeyEvent* event) override {
+        if (m_magnifier && !shouldShowMagnifier() &&
+            m_magnifier && m_magnifier->isVisible()) {
+            m_magnifier->hide();
+        }
+    }
+#endif
 };
 
 void Magnifier::enterEvent(QEvent* event) {
     if (m_renderview)
-        m_renderview->mouseEvent();
+        m_renderview->magnifierEvent();
     else
         event->setAccepted(false);
 }
 
 void Magnifier::mouseMoveEvent(QMouseEvent* event) {
     if (m_renderview)
-        m_renderview->mouseEvent();
+        m_renderview->magnifierEvent();
     else
         event->setAccepted(false);
 }

@@ -74,8 +74,7 @@ clear_layout (QLayout *lay)
 {
     QLayoutItem *child;
     while ((child = lay->takeAt(0)) != 0) {
-        if (child->widget())
-            delete (child->widget());
+        delete (child->widget());
         delete child;
     }
 }

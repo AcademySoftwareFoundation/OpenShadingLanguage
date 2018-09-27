@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #include <memory>
+#include <cinttypes>
 #include <OpenImageIO/thread.h>
 #include <boost/thread/tss.hpp>   /* for thread_specific_ptr */
 

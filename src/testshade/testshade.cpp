@@ -607,7 +607,7 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
                      int x, int y)
 {
     // Just zero the whole thing out to start
-    memset(&sg, 0, sizeof(ShaderGlobals));
+    memset ((char *)&sg, 0, sizeof(ShaderGlobals));
 
     // In our SimpleRenderer, the "renderstate" itself just a pointer to
     // the ShaderGlobals.

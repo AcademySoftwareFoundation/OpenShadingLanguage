@@ -496,7 +496,8 @@ public:
         // since by design we have made this structure hold no unique
         // pointers and have no elements that aren't safe to memcpy, even
         // though the compiler probably can't figure that out.
-        if (this != &a) memcpy (this, &a, sizeof(Symbol));
+        // Cast to char* to defeat gcc8 rejecting this.
+        if (this != &a) memcpy ((char *)this, (const char *)&a, sizeof(Symbol));
         return *this;
     }
 

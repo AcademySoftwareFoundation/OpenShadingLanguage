@@ -12,8 +12,8 @@ NEW or CHANGED dependencies since the last major release are **bold**.
 * Build system: **[CMake](https://cmake.org/) 3.2.2 or newer**
 
 * A suitable **C++11** compiler to build OSL itself, which may be any of:
-   - GCC 4.8.5 or newer
-   - Clang 3.4 or newer
+   - GCC 4.8.5 or newer (through gcc 8)
+   - Clang 3.4 or newer (through clang 7)
    - Microsoft Visual Studio 2015 or newer
    - Intel C++ compiler icc version 13 (?) or newer
 

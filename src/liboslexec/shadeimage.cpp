@@ -111,10 +111,10 @@ shade_image (ShadingSystem &shadingsys, ShaderGroup &group,
     if (defaultsg) {
         // If the caller passed a default SG template, use it to initialize
         // the sg and in particular to set all the constant fields.
-        memcpy (&sg, defaultsg, sizeof(ShaderGlobals));
+        memcpy ((char *)&sg, (const char*)defaultsg, sizeof(ShaderGlobals));
     } else {
         // No SG template was passed, so set up reasonable defaults.
-        memset (&sg, 0, sizeof(ShaderGlobals));
+        memset ((char *)&sg, 0, sizeof(ShaderGlobals));
         // Set "shader" space to be Mshad.  In a real renderer, this may be
         // different for each shader group.
         sg.shader2common = OSL::TransformationPtr (&Mshad);

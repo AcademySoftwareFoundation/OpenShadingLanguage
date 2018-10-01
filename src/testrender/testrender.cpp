@@ -370,7 +370,7 @@ void parse_scene() {
 }
 
 void globals_from_hit(ShaderGlobals& sg, const Ray& r, const Dual2<float>& t, int id, bool flip) {
-    memset(&sg, 0, sizeof(ShaderGlobals));
+    memset((char *)&sg, 0, sizeof(ShaderGlobals));
     Dual2<Vec3> P = r.point(t);
     sg.P = P.val(); sg.dPdx = P.dx(); sg.dPdy = P.dy();
     Dual2<Vec3> N = scene.normal(P, id);
@@ -396,7 +396,7 @@ void globals_from_hit(ShaderGlobals& sg, const Ray& r, const Dual2<float>& t, in
 
 Vec3 eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx) {
     ShaderGlobals sg;
-    memset(&sg, 0, sizeof(ShaderGlobals));
+    memset((char *)&sg, 0, sizeof(ShaderGlobals));
     sg.I = dir.val();
     sg.dIdx = dir.dx();
     sg.dIdy = dir.dy();

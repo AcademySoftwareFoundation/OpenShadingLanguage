@@ -1,6 +1,9 @@
-Release 1.9.11 -- 1 Oct? 2018 (compared to 1.9.10)
+Release 1.9.11 -- 1 Oct 2018 (compared to 1.9.10)
 ------------------------------------------------
 * Full support for using LLVM 6.0 and 7.0. #913, #919
+* Support for building with gcc 8. #921
+* Fix testrender bug with undefined order of operations (only was a problem
+  with gcc5 and clang7). #916
 
 Release 1.9.10 -- 1 Sep 2018 (compared to 1.9.9)
 ------------------------------------------------

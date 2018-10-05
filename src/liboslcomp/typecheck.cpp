@@ -1261,6 +1261,7 @@ ASTfunction_call::typecheck_builtin_specialcase ()
     }
 
     if (func()->readwrite_special_case()) {
+        int nargs = (int)listlength(args());
         if (m_name == "sincos") {
             argwriteonly (1);
             argwriteonly (2);
@@ -1268,11 +1269,16 @@ ASTfunction_call::typecheck_builtin_specialcase ()
                    m_name == "gettextureinfo" || m_name == "getmatrix" ||
                    m_name == "dict_value") {
             // these all write to their last argument
-            argwriteonly ((int)listlength(args()));
+            argwriteonly (nargs);
         } else if (m_name == "pointcloud_get") {
             argwriteonly (5);
         } else if (m_name == "pointcloud_search") {
             mark_optional_output(5, pointcloud_out_args);
+        } else if ((m_name == "regex_search" || m_name == "regex_match")
+                   && nargs == 3) {
+            // the kind of regex_search and regex_match that contains a
+            // results argument should mark it writeable.
+            argwriteonly (2);
         } else if (m_name == "split") {
             argwriteonly (2);
         } else if (func()->texture_args()) {
@@ -2068,8 +2074,8 @@ static const char * builtin_func_args [] = {
     "printf", "xs*", "!printf", NULL,
     "psnoise", PNOISE_ARGS, NULL,
     "random", "f", "c", "p", "v", "n", NULL,
-    "regex_match", "iss", "isi[]s", NULL,
-    "regex_search", "iss", "isi[]s", NULL,
+    "regex_match", "iss", "isi[]s", "!rw", NULL,
+    "regex_search", "iss", "isi[]s", "!rw", NULL,
     "setmessage", "xs?", "xs?[]", NULL,
     "sincos", "xfff", "xccc", "xppp", "xvvv", "xnnn", "!rw", NULL,
     "snoise", NOISE_ARGS, NULL,

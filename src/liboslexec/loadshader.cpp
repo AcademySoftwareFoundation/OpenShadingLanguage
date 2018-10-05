@@ -434,9 +434,16 @@ OSOReaderToMaster::hint (string_view hintstring)
         }
         ASSERT(m_nargs == i);
         // Fix old bug where oslc forgot to mark getmatrix last arg as write
+        ustring opname = m_master->m_ops.back().opname();
         static ustring getmatrix("getmatrix");
-        if (m_master->m_ops.back().opname() == getmatrix)
-            m_master->m_ops.back().argwrite(m_nargs-1, true);
+        if (opname == getmatrix)
+            m_master->m_ops.back().argwriteonly (m_nargs-1);
+        // Fix old bug where oslc forgot to mark regex results as write.
+        // This was a bug prior to 1.10.
+        static ustring regex_search("regex_search");
+        static ustring regex_match("regex_match");
+        if (opname == regex_search || opname == regex_search)
+            m_master->m_ops.back().argwriteonly (2);
     }
     if (extract_prefix(h, "%argderivs{")) {
         while (1) {

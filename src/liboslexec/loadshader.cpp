@@ -387,8 +387,7 @@ OSOReaderToMaster::hint (string_view hintstring)
         m_sourceline = atoi (h.c_str());
         return;
     }
-    if (extract_prefix (h, "%structfields{")) {
-        ASSERT (m_master->m_symbols.size() && "structfields hint but no sym");
+    if (extract_prefix (h, "%structfields{") && m_master->m_symbols.size()) {
         Symbol &sym (m_master->m_symbols.back());
         StructSpec *structspec = sym.typespec().structspec();
         if (structspec->numfields() == 0) {
@@ -402,39 +401,34 @@ OSOReaderToMaster::hint (string_view hintstring)
         }
         return;
     }
-    if (extract_prefix (h, "%mystructfield{")) {
-        ASSERT (m_master->m_symbols.size() && "mystructfield hint but no sym");
+    if (extract_prefix (h, "%mystructfield{") && m_master->m_symbols.size()) {
         Symbol &sym (m_master->m_symbols.back());
         sym.fieldid (atoi(h.c_str()+15));
         return;
     }
-    if (extract_prefix (h, "%read{")) {
-        ASSERT (m_master->m_symbols.size() && "read hint but no sym");
+    if (extract_prefix (h, "%read{") && m_master->m_symbols.size()) {
         Symbol &sym (m_master->m_symbols.back());
         int first, last;
         sscanf (h.c_str(), "%d,%d", &first, &last);
         sym.set_read (first, last);
         return;
     }
-    if (extract_prefix (h, "%write{")) {
-        ASSERT (m_master->m_symbols.size() && "write hint but no sym");
+    if (extract_prefix (h, "%write{") && m_master->m_symbols.size()) {
         Symbol &sym (m_master->m_symbols.back());
         int first, last;
         sscanf (h.c_str(), "%d,%d", &first, &last);
         sym.set_write (first, last);
         return;
     }
-    if (extract_prefix(h, "%argrw{")) {
+    if (extract_prefix(h, "%argrw{") && m_master->m_ops.size()) {
         const char* str = h.c_str();
-        ASSERT(*str == '\"');
-        str++; // skip open quote
-        size_t i = 0;
-        for (; *str != '\"'; i++, str++) {
-            ASSERT(*str == 'r' || *str == 'w' || *str == 'W' || *str == '-');
+        if (*str == '\"')
+            ++str;   // skip open quote
+        for (size_t i = 0; *str && *str != '\"' && i < m_nargs; i++, str++) {
+            DASSERT(*str == 'r' || *str == 'w' || *str == 'W' || *str == '-');
             m_master->m_ops.back().argwrite(i, *str == 'w' || *str =='W');
             m_master->m_ops.back().argread(i, *str == 'r' || *str =='W');
         }
-        ASSERT(m_nargs == i);
         // Fix old bug where oslc forgot to mark getmatrix last arg as write
         static ustring getmatrix("getmatrix");
         if (m_master->m_ops.back().opname() == getmatrix)

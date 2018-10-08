@@ -102,7 +102,7 @@ matrix:
         env: USE_CPP11=1 USE_CPP=11 OIIOBRANCH=RB-1.8
       - os: osx
         compiler: clang
-        env: USE_CPP11=1 USE_CPP=11 OIIOBRANCH=RB-1.8
+        env: USE_CPP11=1 USE_CPP=11 OIIOBRANCH=RB-1.8 LLVMBREWVER="@5"
       # Build with C++11, DEBUG build, against OIIO 1.8
       - os: linux
         compiler: gcc

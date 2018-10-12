@@ -318,6 +318,13 @@ Films using OSL (grouped by year of release date):
   Hotel Transylvania 3: Summer Vacation,
   Ant Man and the Wasp,
   Skyscraper,
+  Mission Impossible: Fallout,
+  The Meg,
+  Kin,
+  Smallfoot,
+  Alpha,
+  Venom,
+  First Man,
   ...
 
 

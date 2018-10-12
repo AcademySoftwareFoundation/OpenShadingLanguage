@@ -1,32 +1,44 @@
 Release 1.10? -- ?? 2018 (compared to 1.9)
 --------------------------------------------------
 Dependency and standards changes:
-* **LLVM 4.0 / 5.0 / 6.0**: Support has been removed for LLVM 3.x,
-  added for 6.0.
-* **OpenImageIO 1.8+**: This release of OSL should build properly against
-  OIIO 1.8.5 or newer. Support has been dropped for OIIO 1.7.
+* **LLVM 4.0 / 5.0 / 6.0, 7.0**: Support has been removed for LLVM 3.x,
+  added for 6.0 and 7.0.
+* **OpenImageIO 1.8/1.9+**: This release of OSL should build properly against
+  OIIO 1.8 or 1.9. Support has been dropped for OIIO 1.7.
 
 New back-end targets:
 * **OptiX** Work in progress: Experimental back end for NVIDIA OptiX GPU ray
-  tracing toolkit. #861, #877
+  tracing toolkit. #861, #877, #902
     - Build with USE_OPTIX=1
-    - Requires OptiX 5.0+, Cuda 8.0+, OpenImageIO 1.8.10+, LLVM >= 5.0 with
+    - Requires OptiX 5.1+, Cuda 8.0+, OpenImageIO 1.8.10+, LLVM >= 5.0 with
       PTX target enabled.
     - New utility **testoptix** is an example of a simple OptiX renderer
       that uses OSL for shaders.
-    * Work is in progress to support the majority of OSL, but right now it
-      is restricted to a small subset.
+    - Work is in progress to support the majority of OSL, but right now it
+      is restricted to a subset. All the basic math, most of the
+      standard library, noise functions, strings (aside from if you create
+      entirely new strings in the middle of a shader), and closures work.
+      The biggest thing not working yet is textures, but those are coming
+      soon.
 
 New tools:
 * **osltoy** : GUI tool for interactive shader editing and pattern
   visualization (somewhat in the style of [Shadertoy](http://shadertoy.com).
-  #827 (1.10.0)
+  #827, #914, #918, #926 (1.10.0)
 * **docdeep** : This Python script (in src/build-scripts/docdeep.py) is an
   experimental tool to scrape comments from code and turn them into
   beautiful Markdeep documentation. (A little like a VERY poor man's
   Doxygen, but markdeep!) Experimental, caveat emptor. #842 (1.10.0)
 
 OSL Language and oslc compiler:
+* In OSL source code, we now encourage the use of the generic "shader" type
+  for all shaders, and it is no longer necessary or encouraged to mark
+  the OSL shader with a specific type, "surface", "displacement", etc.
+  From a source code and/or `oslc` perspective, all shaders are the same
+  generic type. A renderer may, however, have different "uses" or "contexts"
+  and may additional runtime perform error checking to ensure that the
+  shader group you have supplied for a particular "use" does not do things
+  or access globals that are not allowed for that use. #899
 * C++11 style Initializer lists. (#838) This lets you have constructs like
 
         // pass a {} list as a triple, matrix, or struct
@@ -76,6 +88,10 @@ OSL Language and oslc compiler:
 * oslc error reporting is improved, many multi-line syntactic constructs
   will report errors in a more intuitive, easy-to-understand line number.
   #867 (1.10.0)
+* Faster parsing of very large constant initializer lists for arrays in OSL.
+  We found an inadvertent O(n^2) behavior when parsing initializer lists.
+  It used to be that a constant table in the form an array of 64k floats
+  took over 10s to compile, now it is 50x faster. #901
 
 OSL Standard library:
 * There has been a change in the appearance to Cell noise and Gabor noise.
@@ -87,8 +103,17 @@ OSL Standard library:
   since this is a "2.0" release, we figured it was as good a time as ever to
   let it change to the correct results. #912 (1.10.0)
 
-Contributed shader library changes:
-* mandelbrot.osl: computes Mandelbrot and Julia images. #827 (1.10.0)
+Shaders:
+* Contributed shader library changes:
+    * mandelbrot.osl: computes Mandelbrot and Julia images. #827 (1.10.0)
+* MaterialX support:
+    * Improved support for MaterialX 1.36: add sin, cos, tan, atan2, ceil,
+      sqrt, exp, determinent, ln, transpose, sign, rotate, transforms,
+      rgb/hsv convert, extract, separate, tiledimage. Rename exponent ->
+      power, pack -> combine, hsvadjust -> hueshift. Add some color2/4
+      mutual conversion operators. Fixes to ramp4, clean up texture mapping
+      nodes, fixes to triplanarprojection weighting. Extend add/sub/mul/div
+      to include matrices. #903, #904, #905, #907, #909 (1.9.10/1.10.0)
 
 API changes, new options, new ShadingSystem features (for renderer writers):
 * ShadingSystem API:
@@ -96,6 +121,9 @@ API changes, new options, new ShadingSystem features (for renderer writers):
       color/point/vector/normal to a float and vice versa. #801 (1.10.0)
     * An older version of ShadingSystem::execute, which had been marked
       as deprecated since OSL 1.6, has been fully removed. #832 (1.10.0)
+    * `ShadingSystem::Shader()` now has all three parameters required (none
+      are optional), though the "use" parameter no longer has any meaning.
+      (It will be deprecated and removed in a future release.) #899
 * ShadingSystem attributes:
     * New "allow_shader_replacement" (int) attribute, when nonzero, allows
       shaders to be specified more than once, replacing their former
@@ -109,22 +137,44 @@ API changes, new options, new ShadingSystem features (for renderer writers):
       (even to its existing value) also clears the "already seen" lists.
       #880, #883 (1.10.0/1.9.9/1.8.14)
 * Shader group attributes:
+    * New attributes that can be queried with `getattribute()`:
+      `"globals_read"` and `"globals_write"` retrieve an integer bitfield
+      that can reveal which "globals" may be read or written by the shader
+      group. The meaning of the bits is given by the enum class `SGBits`
+      in `oslexec.h`. #899
 * RendererServices API:
     * Older versions of RendererServices texture functions, the old ones
       with no errormessage parameter, which were documented as deprecated
       since 1.8, are now marked OSL_DEPRECATED. #832 (1.10.0)
 * Miscellaneous:
     * liboslnoise: Properly hide/export symbols. #849 (1.10.0/1.9.7)
+    * The behavior of the "searchpath:shader" attribute, used for finding
+      `.oso` files when shaders is requested, has been modified. If no
+      search path is specified, the current working directory (".") will
+      be searched. But if there is a search path attribute specified, only
+      those directories will be searched, with "." only searched if it is
+      explicitly included in the search path value. #925 (1.10.0)
 
-Performance improvements:
+Runtime performance improvements:
 
 Bug fixes and other improvements (internals):
 * The context's texture_thread_info is now properly passed to the
   RenderServices callbacks instead of passing NULL. (1.10.0)
 * Symbols are enbled in the JIT, allowing Intel Vtune profiler to correctly
   report which JITed OSL code is being executed. #830 (1.10.0)
-* AstNode and OSLCompilerImpl -- add info() and message() methods to
+* ASTNode and OSLCompilerImpl -- add info() and message() methods to
   complement the existing error and warning. #854 (1.10.0)
+* Fix incorrect array length on unbounded arrays specified by relaxed
+  parameter type checking. #900 (1.9.10/1.10.0)
+* oslc bug fix: the regex_search()/regex_match() functions did not properly
+  mark their `results` output parameter as write-only. This was never
+  noticed by anyone, but could have resulted in incorrect optimizations.
+  #922 (1.10.0)
+* When reading `.oso` files, the parser is now more robust for certain ways
+  that the oso file might be corrupted (it's more forgiving, fewer possible
+  ways for it to abort or assert). #923 (1.10.0)
+* Bug fixes related to incorrect reliance on OIIO's `ustring::operator int()`.
+  It's being removed from OIIO, so wean ourselves off it. #929 (1.10.0)
 
 Build & test system improvements:
 * Appveyor CI testing for Windows. #849,852,855 (1.10.0/1.9.7)
@@ -135,7 +185,19 @@ Build & test system improvements:
 * Testsuite is now Python 2/3 agnostic. #873 (1.10.0)
 * Build the version into the shared library .so names. #876
   (1.8.13/1.9.8/1.10.0)
-* Update to fix with OpenImageIO 1.9. #882
+* Update to fix with OpenImageIO 1.9. #882,#889
+* Flex/bison fixes on Windows. #891
+* Fix Windows build break with iso646.h macros. #892
+* Fix warnings on gcc 6. #896
+* Fix errors building with MSVC. #898
+* Fixes to build with clang 7, and to use LLVM 7. #910, #921 (1.10.0)
+* Fix warnings on gcc 8. #921 (1.10.0)
+* Build system: the variables containing hints for where to find IlmBase
+  and OpenEXR have been changed to ILMBASE_ROOT_DIR and OPENEXR_ROOT_DIR
+  (no longer ILMBASE_HOME/OPENEXR_HOME). Similarly, OPENIMAGEIO_ROOT_DIR
+  is the hint for custom OIIO location (no longer OPENIMAGEIOHOME). #928
+* Eliminated some in-progress MaterialX tests, they weren't in good order,
+  we will do it differently if we want to add MX tests in the future. #928
 
 Developer goodies:
 
@@ -144,12 +206,44 @@ Documentation:
 
 
 
+Release 1.9.12 -- 1 Nov 2018 (compared to 1.9.11)
+------------------------------------------------
+* Fix oslc read/write error for regex_search/regex_match #922
+* Make oso reading more robust to certain broken inputs. #923
+* Internals: make safe for some changes coming to ustring API in OIIO
+  master. #929
+* Several docs fixes.
+
+Release 1.9.11 -- 1 Oct 2018 (compared to 1.9.10)
+------------------------------------------------
+* Full support for using LLVM 6.0 and 7.0. #913, #919
+* Support for building with gcc 8. #921
+* Fix testrender bug with undefined order of operations (only was a problem
+  with gcc5 and clang7). #916
+
+Release 1.9.10 -- 1 Sep 2018 (compared to 1.9.9)
+------------------------------------------------
+* Fix Windows compile of the flex/bison compiler components. #891
+* Fix for compatibility with OIIO 1.9.
+* Fix incorrect array length on unbounded arrays specified by relaxed
+  parameter type checking. #900
+* Speed up oslc parsing of long constant initializer lists. #901
+* Add more functions to color2.h, color4.h, vector2.h, vector4.h: ceil,
+  sqrt, exp, log2, log, sign, sin, cos, tan, asin, acos, atan2. #903, #904
+* Improved support for MaterialX 1.36: add sin, cos, tan, atan2, ceil, sqrt,
+  exp, determinent, ln, transpose, sign, rotate, transforms, rgb/hsv convert,
+  extract, separate, tiledimage. Rename exponent -> power, pack -> combine,
+  hsvadjust -> hueshift. Add some color2/4 mutual conversion operators.
+  Fixes to ramp4, clean up texture mapping nodes, fixes to triplanarprojection
+  weighting. Extend add/sub/muldiv to include matrices. #903, #904, #905
+
 Release 1.9.9 -- 1 May 2018 (compared to 1.9.8)
 -----------------------------------------------
 * New SS attribute "error_repeats", if set to non-zero, turns off the
- suppression of multiple identical errors and warnings. Setting it (even to
- its existing value) also clears the "already seen" lists. #880
- (1.8.14/1.9.9)
+  suppression of multiple identical errors and warnings. Setting it (even to
+  its existing value) also clears the "already seen" lists. #880
+  (1.8.14/1.9.9)
+* Update to fix with some changes in OpenImageIO 1.9. #882
 
 Release 1.9.8 -- 1 Apr 2018 (compared to 1.9.7)
 -----------------------------------------------
@@ -429,11 +523,16 @@ Documentation:
 
 
 
+Release 1.8.15 -- 1 Aug 2018 (compared to 1.8.14)
+--------------------------------------------------
+* Fixes for compatibility with OIIO 1.9.
+
 Release 1.8.14 -- 1 May 2018 (compared to 1.8.13)
 --------------------------------------------------
 * New SS attribute "error_repeats", if set to non-zero, turns off the
- suppression of multiple identical errors and warnings. Setting it (even to
- its existing value) also clears the "already seen" lists. #880
+  suppression of multiple identical errors and warnings. Setting it (even to
+  its existing value) also clears the "already seen" lists. #880
+* Update to fix with some changes in OpenImageIO 1.9. #882
 
 Release 1.8.13 -- 1 Apr 2018 (compared to 1.8.12)
 --------------------------------------------------

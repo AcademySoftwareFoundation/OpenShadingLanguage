@@ -593,10 +593,12 @@ ShadingSystemImpl::loadshader (string_view cname)
 
     // Not found in the map
     OSOReaderToMaster oso (*this);
+    bool testcwd = m_searchpath_dirs.empty();  // test "." if there's no searchpath
     std::string filename = OIIO::Filesystem::searchpath_find (name.string() + ".oso",
-                                                        m_searchpath_dirs);
+                                                        m_searchpath_dirs,
+                                                        testcwd);
     if (filename.empty ()) {
-        error ("No .oso file could be found for shader \"%s\"", name.c_str());
+        error ("No .oso file could be found for shader \"%s\"", name);
         return NULL;
     }
     OIIO::Timer timer;

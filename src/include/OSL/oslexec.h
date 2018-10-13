@@ -83,6 +83,7 @@ public:
     /// 1. Attributes that should be exposed to users:
     ///    int statistics:level   Automatically print OSL statistics (0).
     ///    string searchpath:shader  Colon-separated path to search for .oso
+    ///                                files ("", meaning test "." only)
     ///    string colorspace      Name of RGB color space ("Rec709")
     ///    int range_checking     Generate extra code for component & array
     ///                              range checking (1)

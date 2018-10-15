@@ -141,8 +141,9 @@ public:
         ROI roi(info.x-sample, info.x+sample, info.y-sample, info.y+sample);
 
         ImageBuf display(ImageSpec(pixels, pixels, 3, TypeDesc::UINT8));
-        ImageBufAlgo::colorconvert (display, ImageBufAlgo::cut(info.full, roi),
-                                    "linear", "sRGB");
+        ImageBuf cut;
+        ImageBufAlgo::cut (cut, info.full, roi);
+        ImageBufAlgo::colorconvert (display, cut, "linear", "sRGB");
 
         // Use Qt to do the image scaling, so minimal interpolation
         QImage qimage = QtUtils::ImageBuf_to_QImage (display).scaled(res, res, Qt::IgnoreAspectRatio);
@@ -313,7 +314,7 @@ public:
         using namespace OIIO;
 
         // Copy from the renderer's framebuffer to ours
-        m_framebuffer = ImageBufAlgo::resize(image);
+        ImageBufAlgo::resize(m_framebuffer, image);
 
         // Copy from the renderer's framebuffer (linear float) to display (sRGB uint8)
         OIIO::ImageBuf display(ImageSpec(width(), height(), 3, TypeDesc::UINT8));

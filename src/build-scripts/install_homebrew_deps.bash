@@ -26,6 +26,7 @@ brew install ilmbase openexr
 brew install opencolorio partio
 brew install freetype libpng
 brew install llvm${LLVMBREWVER}
+brew install qt
 #brew install homebrew/science/hdf5 --with-threadsafe
 #brew install field3d webp ffmpeg openjpeg opencv
 echo ""

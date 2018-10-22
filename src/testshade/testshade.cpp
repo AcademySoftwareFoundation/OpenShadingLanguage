@@ -923,7 +923,7 @@ shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
     OSL::PerThreadInfo *thread_info = shadingsys->create_thread_info();
 
     // Request a shading context so that we can execute the shader.
-    // We could get_context/release_constext for each shading point,
+    // We could get_context/release_context for each shading point,
     // but to save overhead, it's more efficient to reuse a context
     // within a thread.
     ShadingContext *ctx = shadingsys->get_context (thread_info);
@@ -1019,7 +1019,7 @@ test_shade (int argc, const char *argv[])
     // will not be overridden with interpolated or
     // per-geometric-primitive data).
     // 
-    // In order to most fully optimize shader, we typically want any
+    // In order to most fully optimize the shader, we typically want any
     // shader parameter not explicitly specified to default to being
     // locked (i.e. no per-geometry override):
     shadingsys->attribute("lockgeom", 1);

@@ -614,7 +614,7 @@ information about the renderer as a whole (rendering options, etc.).
 
 Surface shaders (and volume shaders) do not by themselves compute the
 final color of light emanating from the surface (or along a volume).
-Rather, the compute a \emph{closure}, which is a symbolic representation
+Rather, they compute a \emph{closure}, which is a symbolic representation
 describing the appearance of the surface, that may be more fully
 evaluated later.  This is in effect a parameterized formula, in which
 some inputs have definite numeric values, but others may depend on
@@ -979,7 +979,7 @@ different behaviors or appearances when used on different objects.
 
 Shader parameters are specified in the shader declaration, in
 parentheses after the shader's name.  This is much like the parameters
-to a \languagename function (or a function in C or similar languages),
+to an OSL function (or a function in C or similar languages),
 except that shader parameters must have an \emph{initializer}, giving a
 default value for the parameter.  Shader parameter default initializers
 may be expressions (i.e., may be computed rather than restricted to
@@ -2105,7 +2105,7 @@ At present, the only type of \closure supported by \langname is the
 form a linear combination of \colorclosure's.  Additional closure types
 and operations are reserved for future use.
 
-Allowable operations on \colorclosure's include:
+Allowable operations on \colorclosure include:
 
 \medskip
 \noindent \begin{tabular}{|p{2.25in}|p{1.25in}|p{1.75in}|}

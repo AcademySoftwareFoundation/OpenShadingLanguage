@@ -35,14 +35,9 @@ NINJA ?= ninja
 CMAKE ?= cmake
 
 # Site-specific build instructions
-ifndef OSL_SITE
-    OSL_SITE := ${shell uname -n}
-endif
+OSL_SITE ?= ${shell uname -n}
 ifneq (${shell echo ${OSL_SITE} | grep imageworks.com},)
 include ${working_dir}/site/spi/Makefile-bits
-endif
-ifneq (${shell echo ${OSL_SITE} | grep pixar.com},)
-include ${working_dir}/site/pixar/Makefile-bits
 endif
 
 # Set up variables holding the names of platform-dependent directories --
@@ -51,7 +46,7 @@ top_build_dir := build
 build_dir     := ${top_build_dir}/${platform}${variant}
 top_dist_dir  := dist
 dist_dir      := ${top_dist_dir}/${platform}${variant}
-OSLHOME       ?= ${working_dir}/${dist_dir}
+OSL_ROOT_DIR  ?= ${working_dir}/${dist_dir}
 
 ifndef INSTALL_PREFIX
 INSTALL_PREFIX := ${working_dir}/${dist_dir}
@@ -109,12 +104,20 @@ ifneq (${USE_FAST_MATH},)
 MY_CMAKE_FLAGS += -DUSE_FAST_MATH:BOOL=${USE_FAST_MATH}
 endif
 
+# Old names -- DEPRECATED (1.9)
 ifneq (${OPENEXR_HOME},)
-MY_CMAKE_FLAGS += -DOPENEXR_HOME:STRING=${OPENEXR_HOME}
+MY_CMAKE_FLAGS += -DOPENEXR_ROOT_DIR:STRING=${OPENEXR_HOME}
+endif
+ifneq (${ILMBASE_HOME},)
+MY_CMAKE_FLAGS += -DILMBASE_ROOT_DIR:STRING=${ILMBASE_HOME}
 endif
 
-ifneq (${ILMBASE_HOME},)
-MY_CMAKE_FLAGS += -DILMBASE_HOME:STRING=${ILMBASE_HOME}
+ifneq (${OPENEXR_ROOT_DIR},)
+MY_CMAKE_FLAGS += -DOPENEXR_ROOT_DIR:STRING=${OPENEXR_ROOT_DIR}
+endif
+
+ifneq (${ILMBASE_ROOT_DIR},)
+MY_CMAKE_FLAGS += -DILMBASE_ROOT_DIR:STRING=${ILMBASE_ROOT_DIR}
 endif
 
 ifneq (${USE_PARTIO},)
@@ -312,7 +315,7 @@ test: cmake
 	@ ${CMAKE} -E cmake_echo_color --switch=$(COLOR) --cyan "Running tests ${TEST_FLAGS}..."
 	@ # if [ "${CODECOV}" == "1" ] ; then lcov -b ${build_dir} -d ${build_dir} -z ; rm -rf ${build_dir}/cov ; fi
 	@ ( cd ${build_dir} ; \
-	    OSLHOME=${OSLHOME} \
+	    OSL_ROOT_DIR=${OSL_ROOT_DIR} \
 	    LD_LIBRARY_PATH=${INSTALL_PREFIX}/lib:${LD_LIBRARY_PATH} \
 	    DYLD_LIBRARY_PATH=${INSTALL_PREFIX}/lib:${DYLD_LIBRARY_PATH} \
 	    OIIO_LIBRARY_PATH=${INSTALL_PREFIX}/lib:${OIIO_LIBRARY_PATH} \
@@ -375,8 +378,8 @@ help:
 	@echo "      LINKSTATIC=1             Link with static external libs when possible"
 	@echo "  Finding and Using Dependencies:"
 	@echo "      BOOST_HOME=path          Custom Boost installation"
-	@echo "      OPENEXR_HOME=path        Custom OpenEXR installation"
-	@echo "      ILMBASE_HOME=path        Custom Ilmbase installation"
+	@echo "      OPENEXR_ROOT_DIR=path    Custom OpenEXR installation"
+	@echo "      ILMBASE_ROOT_DIR=path    Custom Ilmbase installation"
 	@echo "      PARTIO_HOME=path         Use Partio from the given location"
 	@echo "      USE_QT=0                 Skip anything that needs Qt"
 	@echo "  LLVM-related options:"

@@ -1,4 +1,13 @@
 ###########################################################################
+# OpenImageIO   https://www.openimageio.org
+# Copyright 2008-2018 Larry Gritz et al. All rights reserved.
+# BSD 3-clause license:
+#   https://github.com/OpenImageIO/oiio/blob/master/LICENSE
+# For an up-to-date version of this file, see:
+#   https://github.com/OpenImageIO/oiio/blob/master/src/cmake/Modules/FindOpenImageIO.cmake
+#
+###########################################################################
+#
 # CMake module to find OpenImageIO
 #
 # This module will set
@@ -10,35 +19,38 @@
 #   OPENIMAGEIO_VERSION_MAJOR  Version major number
 #   OPENIMAGEIO_VERSION_MINOR  Version minor number
 #   OPENIMAGEIO_VERSION_PATCH  Version minor patch
+#   OIIOTOOL_BIN               Path to oiiotool executable
 #
 # Special inputs:
-#   OPENIMAGEIOHOME - custom "prefix" location of OIIO installation
-#                      (expecting bin, lib, include subdirectories)
+#   OPENIMAGEIO_ROOT_DIR - custom "prefix" location of OIIO installation
+#                          (expecting bin, lib, include subdirectories)
+#   OpenImageIO_FIND_QUIETLY - if set, print minimal console output
 #
+###########################################################################
 
 
-# If 'OPENIMAGEHOME' not set, use the env variable of that name if available
-if (NOT OPENIMAGEIOHOME AND NOT $ENV{OPENIMAGEIOHOME} STREQUAL "")
-    set (OPENIMAGEIOHOME $ENV{OPENIMAGEIOHOME})
+# If 'OPENIMAGE_HOME' not set, use the env variable of that name if available
+if (NOT OPENIMAGEIO_ROOT_DIR AND NOT $ENV{OPENIMAGEIO_ROOT_DIR} STREQUAL "")
+    set (OPENIMAGEIO_ROOT_DIR $ENV{OPENIMAGEIO_ROOT_DIR})
 endif ()
 
 
 if (NOT OpenImageIO_FIND_QUIETLY)
-    message ( STATUS "OPENIMAGEIOHOME = ${OPENIMAGEIOHOME}" )
+    message ( STATUS "OPENIMAGEIO_ROOT_DIR = ${OPENIMAGEIO_ROOT_DIR}" )
 endif ()
 
 find_library ( OPENIMAGEIO_LIBRARY
                NAMES OpenImageIO
-               HINTS ${OPENIMAGEIOHOME}/lib
+               HINTS ${OPENIMAGEIO_ROOT_DIR}/lib
                PATH_SUFFIXES lib64 lib
-               PATHS "${OPENIMAGEIOHOME}/lib" )
+               PATHS "${OPENIMAGEIO_ROOT_DIR}/lib" )
 find_path ( OPENIMAGEIO_INCLUDE_DIR
             NAMES OpenImageIO/imageio.h
-            HINTS ${OPENIMAGEIOHOME}/include
+            HINTS ${OPENIMAGEIO_ROOT_DIR}/include
             PATH_SUFFIXES include )
-find_program ( OPENIMAGEIO_BIN
-               NAMES oiiotool
-               HINTS ${OPENIMAGEIOHOME}/bin
+find_program ( OIIOTOOL_BIN
+               NAMES oiiotool oiiotool.exe
+               HINTS ${OPENIMAGEIO_ROOT_DIR}/bin
                PATH_SUFFIXES bin )
 
 # Try to figure out version number
@@ -60,7 +72,7 @@ if (NOT OpenImageIO_FIND_QUIETLY)
     message ( STATUS "OpenImageIO includes     = ${OPENIMAGEIO_INCLUDE_DIR}" )
     message ( STATUS "OpenImageIO libraries    = ${OPENIMAGEIO_LIBRARIES}" )
     message ( STATUS "OpenImageIO library_dirs = ${OPENIMAGEIO_LIBRARY_DIRS}" )
-    message ( STATUS "OpenImageIO bin          = ${OPENIMAGEIO_BIN}" )
+    message ( STATUS "OpenImageIO oiiiotool    = ${OIIOTOOL_BIN}" )
 endif ()
 
 include (FindPackageHandleStandardArgs)

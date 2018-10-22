@@ -432,10 +432,20 @@ OSLCompilerImpl::read_compile_options (const std::vector<std::string> &options,
 static string_view
 find_stdoslpath (const std::vector<std::string>& includepaths)
 {
-    // first look in $OSLHOME/shaders
-    std::string OSLHOME = OIIO::Sysutil::getenv ("OSLHOME");
-    if (! OSLHOME.empty()) {
-        std::string path = OSLHOME + "/shaders";
+    // first look in $OSL_ROOT_DIR/shaders
+    std::string osl_root_dir = OIIO::Sysutil::getenv ("OSL_ROOT_DIR");
+    if (! osl_root_dir.empty()) {
+        std::string path = osl_root_dir + "/shaders";
+        if (OIIO::Filesystem::is_directory (path)) {
+            path = path + "/stdosl.h";
+            if (OIIO::Filesystem::exists (path))
+                return ustring(path);
+        }
+    }
+    // deprecated name: OSLHOME
+    osl_root_dir = OIIO::Sysutil::getenv ("OSLHOME");
+    if (! osl_root_dir.empty()) {
+        std::string path = osl_root_dir + "/shaders";
         if (OIIO::Filesystem::is_directory (path)) {
             path = path + "/stdosl.h";
             if (OIIO::Filesystem::exists (path))
@@ -443,8 +453,8 @@ find_stdoslpath (const std::vector<std::string>& includepaths)
         }
     }
 
-    // If no OSLHOME, try looking wherever this program (the one running)
-    // lives, in a shaders or lib/osl/include directory.
+    // If not found in $OSL_ROOT_DIR, try looking wherever this program (the
+    // one running) lives, in a shaders or lib/osl/include directory.
     std::string program = OIIO::Sysutil::this_program_path ();
     if (program.size()) {
         std::string path (program);  // our program

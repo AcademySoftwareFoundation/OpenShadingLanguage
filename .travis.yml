@@ -58,8 +58,10 @@ install:
           src/build-scripts/install_homebrew_deps.bash ;
       elif [ $TRAVIS_OS_NAME == linux ] ; then
           CXX="ccache $CXX" CCACHE_CPP2=1 src/build-scripts/build_openexr.bash ;
-          export ILMBASE_HOME=$PWD/openexr-install ;
-          export OPENEXR_HOME=$PWD/openexr-install ;
+          export ILMBASE_ROOT_DIR=$PWD/ext/openexr-install ;
+          export OPENEXR_ROOT_DIR=$PWD/ext/openexr-install ;
+          export ILMBASE_HOME=$PWD/ext/openexr-install ;
+          export OPENEXR_HOME=$PWD/ext/openexr-install ;
           if [ "$LLVM_VERSION" == "" ]; then export LLVM_VERSION="error" ; fi ;
           if [ "$LLVM_VERSION" == "5.0.0" ]; then export LLVMTAR=clang+llvm-${LLVM_VERSION}-linux-x86_64-ubuntu14.04.tar.xz ; else export LLVMTAR=clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-14.04.tar.xz ; fi;
           echo LLVMTAR = $LLVMTAR ;
@@ -71,15 +73,17 @@ install:
           export LLVM_DIRECTORY=$PWD/llvm-install ;
           ls -a $LLVM_DIRECTORY ;
       fi
+      # Note: can remove the ILMBASE_HOME/OPENEXR_HOME when OIIO 2.x is floor
     - export OIIOMAKEFLAGS="$OIIOMAKEFLAGS -j2 DEBUG= USE_PYTHON=0 OIIO_BUILD_TESTS=0"
     - export OPENIMAGEIO_SITE=travis
     - export OSL_SITE=travis
     - src/build-scripts/build_openimageio.bash
-    - export OPENIMAGEIOHOME=$PWD/OpenImageIO/dist/$OIIOPLATFORM
-    - export PATH=$OPENIMAGEIOHOME/bin:$PATH
-    - export DYLD_LIBRARY_PATH=$OPENIMAGEIOHOME/lib:$DYLD_LIBRARY_PATH
-    - export LD_LIBRARY_PATH=$OPENIMAGEIOHOME/lib:$LD_LIBRARY_PATH
-    - export PYTHONPATH=$OPENIMAGEIOHOME/python:$PYTHONPATH
+    - export OPENIMAGEIO_ROOT_DIR=$PWD/OpenImageIO/dist/$OIIOPLATFORM
+    - export OPENIMAGEIOHOME=$OPENIMAGEIO_ROOT_DIR
+    - export PATH=$OPENIMAGEIO_ROOT_DIR/bin:$PATH
+    - export DYLD_LIBRARY_PATH=$OPENIMAGEIO_ROOT_DIR/lib:$DYLD_LIBRARY_PATH
+    - export LD_LIBRARY_PATH=$OPENIMAGEIO_ROOT_DIR/lib:$LD_LIBRARY_PATH
+    - export PYTHONPATH=$OPENIMAGEIO_ROOT_DIR/python:$PYTHONPATH
     - if [ $TRAVIS_OS_NAME == linux ] ; then
           export BUILD_FLAGS="$BUILD_FLAGS LLVM_STATIC=1" ;
           export TEST_FLAGS="-E broken\|render-cornell\|render-oren-nayar\|render-veachmis\|render-ward" ;
@@ -92,8 +96,8 @@ script:
     - make VERBOSE=1 $BUILD_FLAGS cmakesetup
     - make -j2 $BUILD_FLAGS
     - export LSAN_OPTIONS=suppressions=$PWD/src/build-scripts/nosanitize.txt
-    - export OSLHOME=$PWD/dist/$PLATFORM
-    - export OIIO_LIBRARY_PATH=$OSLHOME/lib:${OIIO_LIBRARY_PATH}
+    - export OSL_ROOT_DIR=$PWD/dist/$PLATFORM
+    - export OIIO_LIBRARY_PATH=${OSL_ROOT_DIR}/lib:${OIIO_LIBRARY_PATH}
     - make $BUILD_FLAGS test
 
 

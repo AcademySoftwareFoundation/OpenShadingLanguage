@@ -74,17 +74,26 @@ ifeq ($(SP_OS), rhel7)
     ifneq (${SPCOMP2_USE_BOOSTVERS}, 1)
 	BOOSTVERS=1.55
     endif
-    BOOSTVERSSP=${BOOSTVERS}sp
+
+    BOOSTSPSUFFIX ?= 
+    BOOSTVERSSP=${BOOSTVERS}${BOOSTSPSUFFIX}
     BOOSTVERS_SUFFIX = -${shell echo ${BOOSTVERS} | sed "s/\\./_/"}
     BOOSTVERS_PREFIX = ${shell echo ${BOOSTVERS} | sed "s/\\./_/"}_0
     CONSTRUCTED_BOOSTVERS = ${shell echo ${BOOSTVERS} | sed "s/\\./0/"}00
-    MY_CMAKE_FLAGS += \
-	-DBOOST_CUSTOM=1 \
-	-DBoost_VERSION=${CONSTRUCTED_BOOSTVERS} \
-	-DBoost_INCLUDE_DIRS=/usr/include/boost_${BOOSTVERSSP} \
-	-DBoost_LIBRARY_DIRS=/usr/lib64/boost_${BOOSTVERS} \
-	-DBoost_LIBRARIES:STRING="/usr/lib64/boost_${BOOSTVERSSP}/libspboost_${BOOSTVERS_PREFIX}_filesystem-gcc48-mt${BOOSTVERS_SUFFIX}.so;/usr/lib64/boost_${BOOSTVERSSP}/libspboost_${BOOSTVERS_PREFIX}_regex-gcc48-mt${BOOSTVERS_SUFFIX}.so;/usr/lib64/boost_${BOOSTVERSSP}/libspboost_${BOOSTVERS_PREFIX}_system-gcc48-mt${BOOSTVERS_SUFFIX}.so;/usr/lib64/boost_${BOOSTVERSSP}/libspboost_${BOOSTVERS_PREFIX}_thread-gcc48-mt${BOOSTVERS_SUFFIX}.so;/usr/lib64/boost_${BOOSTVERSSP}/libspboost_${BOOSTVERS_PREFIX}_wave-gcc48-mt${BOOSTVERS_SUFFIX}.so"
 
+    MY_CMAKE_FLAGS += \
+  -DBOOST_CUSTOM=1 \
+  -DBoost_VERSION=${CONSTRUCTED_BOOSTVERS} \
+  -DBoost_INCLUDE_DIRS=/usr/include/boost_${BOOSTVERSSP} \
+  -DBoost_LIBRARY_DIRS=/usr/lib64/boost_${BOOSTVERS}
+
+    ifeq (${BOOSTSPSUFFIX}, sp)
+      MY_CMAKE_FLAGS += \
+  -DBoost_LIBRARIES:STRING="/usr/lib64/boost_${BOOSTVERSSP}/lib${BOOSTSPSUFFIX}boost_${BOOSTVERS_PREFIX}_regex-gcc48-mt${BOOSTVERS_SUFFIX}.so;/usr/lib64/boost_${BOOSTVERSSP}/lib${BOOSTSPSUFFIX}boost_${BOOSTVERS_PREFIX}_system-gcc48-mt${BOOSTVERS_SUFFIX}.so;/usr/lib64/boost_${BOOSTVERSSP}/lib${BOOSTSPSUFFIX}boost_${BOOSTVERS_PREFIX}_thread-gcc48-mt${BOOSTVERS_SUFFIX}.so"
+    else
+      MY_CMAKE_FLAGS += \
+  -DBoost_LIBRARIES:STRING="/usr/lib64/boost_${BOOSTVERSSP}/lib${BOOSTSPSUFFIX}boost_regex-gcc48-mt${BOOSTVERS_SUFFIX}.so;/usr/lib64/boost_${BOOSTVERSSP}/lib${BOOSTSPSUFFIX}boost_system-gcc48-mt${BOOSTVERS_SUFFIX}.so;/usr/lib64/boost_${BOOSTVERSSP}/lib${BOOSTSPSUFFIX}boost_thread-gcc48-mt${BOOSTVERS_SUFFIX}.so"
+    endif
     # end rhel7
 
 ## Generic OSX machines (including LG's laptop)

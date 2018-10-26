@@ -137,8 +137,8 @@ def oiio_relpath (path, start=os.curdir):
 
 
 def oiio_app (app):
-    if os.environ.__contains__('OPENIMAGEIOHOME') :
-        return os.path.join (os.environ['OPENIMAGEIOHOME'], "bin", app) + " "
+    if os.environ.__contains__('OPENIMAGEIO_ROOT_DIR') :
+        return os.path.join (os.environ['OPENIMAGEIO_ROOT_DIR'], "bin", app) + " "
     else :
         return app + " "
 

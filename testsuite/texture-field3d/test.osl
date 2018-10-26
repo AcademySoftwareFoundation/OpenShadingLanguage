@@ -1,5 +1,5 @@
 shader
-test (string filename = "sparse_half.f3d",
+test (string filename = "data/sparse_half.f3d",
       output color Cout = 0)
 {
     Cout = (color) texture3d (filename, point(u,v,0.5));

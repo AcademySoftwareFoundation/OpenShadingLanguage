@@ -1,3 +1,7 @@
+Release 1.9.13 -- 1 Dec? 2018 (compared to 1.9.12)
+------------------------------------------------
+
+
 Release 1.9.12 -- 1 Nov 2018 (compared to 1.9.11)
 ------------------------------------------------
 * Fix oslc read/write error for regex_search/regex_match #922

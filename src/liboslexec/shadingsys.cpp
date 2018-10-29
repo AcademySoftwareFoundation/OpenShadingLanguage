@@ -2815,7 +2815,7 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group)
         return;
     }
 
-    if (m_only_groupname && m_only_groupname != group.name()) {
+    if (!m_only_groupname.empty() && m_only_groupname != group.name()) {
         // For debugging purposes, we are requested to compile only one
         // shader group, and this is not it.  Mark it as does_nothing,
         // and also as optimized so nobody locks on it again, and record

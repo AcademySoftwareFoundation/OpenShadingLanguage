@@ -949,7 +949,7 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename,
             lastline = -1;
         }
 
-        if (/*m_debug &&*/ op.sourcefile()) {
+        if (/*m_debug &&*/ !op.sourcefile().empty()) {
             ustring file = op.sourcefile();
             int line = op.sourceline();
             if (file != lastfile || line != lastline)
@@ -982,7 +982,7 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename,
         // %filename and %line document the source code file and line that
         // contained code that generated this op.  To avoid clutter, we
         // only output these hints when they DIFFER from the previous op.
-        if (op.sourcefile()) {
+        if (!op.sourcefile().empty()) {
             if (op.sourcefile() != lastfile) {
                 lastfile = op.sourcefile();
                 oso ("%c%%filename{\"%s\"}", firsthint ? '\t' : ' ', lastfile);

@@ -91,7 +91,7 @@ struct SortedPointCompare {
 PointCloud *
 PointCloud::get (ustring filename, bool write)
 {
-    if (! filename)
+    if (filename.empty())
         return NULL;
     spin_lock lock (pointcloudmap_mutex);
     PointCloudMap::const_iterator found = pointclouds.find(filename);
@@ -139,7 +139,7 @@ PointCloud::PointCloud (ustring filename,
 PointCloud::~PointCloud ()
 {
     // Save the file if we wrote to it
-    if (m_write && m_filename)
+    if (m_write && !m_filename.empty())
         Partio::write (m_filename.c_str(), *m_partio_cloud);
     if (m_partio_cloud)
         m_partio_cloud->release ();
@@ -238,7 +238,7 @@ RendererServices::pointcloud_search (ShaderGlobals *sg,
                                      float *out_distances, int derivs_offset)
 {
 #if USE_PARTIO
-    if (! filename)
+    if (filename.empty())
         return 0;
     PointCloud *pc = PointCloud::get(filename);
     if (pc == NULL) { // The file failed to load
@@ -408,7 +408,7 @@ RendererServices::pointcloud_write (ShaderGlobals *sg,
                                     const void **data)
 {
 #if USE_PARTIO
-    if (! filename)
+    if (filename.empty())
         return false;
     PointCloud *pc = PointCloud::get(filename, true /* create file to write */);
     spin_lock lock (pc->m_mutex);

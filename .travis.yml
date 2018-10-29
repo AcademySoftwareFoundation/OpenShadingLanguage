@@ -112,7 +112,8 @@ branches:
 matrix:
     fast_finish: true
     include:
-      # Build with C++11, default compiler, optimized build, against OIIO master
+      # Build with C++11, default compiler, optimized build, against the
+      # latest OIIO master.
       - os: linux
         compiler: gcc
         addons:
@@ -148,7 +149,7 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: OIIOBRANCH=release USE_SIMD=sse4.2 LLVM_VERSION=3.9.0
+        env: USE_SIMD=sse4.2 OIIOBRANCH=RB-1.8 LLVM_VERSION=3.9.0
     # Test gcc6, and highest SIMD level supported by Travis, and LLVM 4
       - os: linux
         compiler: gcc
@@ -165,7 +166,7 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: WHICHGCC=6 USE_SIMD=avx,f16c LLVM_VERSION=4.0.0
+        env: WHICHGCC=6 USE_SIMD=avx,f16c OIIOBRANCH=RB-1.9 LLVM_VERSION=4.0.0
     # Linux only: test gcc 7, also test C++14 and LLVM 5.0
       - os: linux
         compiler: gcc
@@ -182,7 +183,7 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: WHICHGCC=7 USE_CPP=14 LLVM_VERSION=5.0.1
+        env: WHICHGCC=7 USE_CPP=14 OIIOBRANCH=release LLVM_VERSION=5.0.1
     # Linux only: test gcc 7, also test C++14 and LLVM 6.0
       - os: linux
         compiler: gcc
@@ -199,7 +200,7 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: WHICHGCC=7 USE_CPP=14 LLVM_VERSION=6.0.1
+        env: WHICHGCC=7 USE_CPP=14 OIIOBRANCH=master LLVM_VERSION=6.0.1
     # Linux only: test gcc 7, also test C++14 and newer LLVM (7.0)
       - os: linux
         compiler: gcc
@@ -216,7 +217,7 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: WHICHGCC=7 USE_CPP=14 LLVM_VERSION=7.0.0
+        env: WHICHGCC=7 USE_CPP=14 OIIOBRANCH=release LLVM_VERSION=7.0.0
     # Linux only: test gcc 8, also test C++14 and newer LLVM (7.0)
       - os: linux
         compiler: gcc
@@ -233,7 +234,7 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: WHICHGCC=8 USE_CPP=14 LLVM_VERSION=7.0.0
+        env: WHICHGCC=8 USE_CPP=14 OIIOBRANCH=master LLVM_VERSION=7.0.0
     # Build with C++11, DEBUG build, against OIIO master
       - os: linux
         compiler: gcc

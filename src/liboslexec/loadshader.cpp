@@ -474,7 +474,7 @@ OSOReaderToMaster::codeend ()
         // If we were previously chalking up the code to init ops for a
         // symbol, mark the end.
         m_master->symbol(m_codesym)->initend (nextop);
-    } else if (m_codesection && m_codesection == "___main___") {
+    } else if (m_codesection == "___main___") {
         // If we were previously reading ops for the ___main___ entry
         // point, mark its end properly.
         m_master->m_maincodeend = nextop;

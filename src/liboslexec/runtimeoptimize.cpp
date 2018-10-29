@@ -169,15 +169,15 @@ OSOProcessorBase::set_debug ()
 
     // If either group or layer was specified for debug, surely they want
     // debugging turned on.
-    if (shadingsys().debug_groupname() || shadingsys().debug_layername())
+    if (!shadingsys().debug_groupname().empty() || !shadingsys().debug_layername().empty())
         m_debug = std::max (m_debug, 1);
 
     // Force debugging off if a specific group was selected for debug
     // and we're not it, or a specific layer was selected for debug and
     // we're not it.
-    bool wronggroup = (shadingsys().debug_groupname() && 
+    bool wronggroup = (!shadingsys().debug_groupname().empty() &&
                        shadingsys().debug_groupname() != group().name());
-    bool wronglayer = (shadingsys().debug_layername() && inst() &&
+    bool wronglayer = (!shadingsys().debug_layername().empty() && inst() &&
                        shadingsys().debug_layername() != inst()->layername());
     if (wronggroup || wronglayer)
         m_debug = 0;
@@ -192,7 +192,7 @@ RuntimeOptimizer::set_debug ()
 
     // If a specific group is isolated for debugging and  the
     // 'optimize_dondebug' flag is on, fully optimize all other groups.
-    if (shadingsys().debug_groupname() &&
+    if (!shadingsys().debug_groupname().empty() &&
         shadingsys().debug_groupname() != group().name()) {
         if (shadingsys().m_optimize_nondebug) {
             // Debugging trick: if user said to only debug one group, turn
@@ -2250,7 +2250,7 @@ void
 RuntimeOptimizer::optimize_instance ()
 {
     // If "opt_layername" attribute is set, only optimize the named layer
-    if (shadingsys().m_opt_layername &&
+    if (!shadingsys().m_opt_layername.empty() &&
         shadingsys().m_opt_layername != inst()->layername())
         return;
 

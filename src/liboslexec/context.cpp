@@ -325,7 +325,7 @@ ShadingContext::osl_get_attribute (ShaderGlobals *sg, void *objdata,
     bool ok;
 
     for (auto& f : m_failed_attribs) {
-        if ((obj_name || f.objdata == objdata) &&
+        if ((!obj_name.empty() || f.objdata == objdata) &&
             f.attr_name == attr_name && f.obj_name == obj_name &&
             f.attr_type == attr_type && f.array_lookup == array_lookup &&
             f.index == index && f.objdata) {

@@ -2095,7 +2095,7 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
         ustring name = *(ustring *)Name.data();
         ++a;  // advance to next argument
 
-        if (! name)    // skip empty string param name
+        if (name.empty())    // skip empty string param name
             continue;
 
         Symbol &Val (*rop.opargsym(op,a));
@@ -2204,7 +2204,7 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
         if (name == Strings::subimage && valtype == TypeDesc::STRING) {
             if (Val.is_constant()) {
                 ustring v = *(ustring *)Val.data();
-                if (! v && ! subimage_set) {
+                if (v.empty() && ! subimage_set) {
                     continue;     // Ignore nulls unless they are overrides
                 }
             }
@@ -2605,7 +2605,7 @@ llvm_gen_noise_options (BackendLLVM &rop, int opnum,
         Symbol &Val (*rop.opargsym(op,a));
         TypeDesc valtype = Val.typespec().simpletype ();
         
-        if (! name)    // skip empty string param name
+        if (name.empty())    // skip empty string param name
             continue;
 
         if (name == Strings::anisotropic && Val.typespec().is_int()) {
@@ -2696,7 +2696,7 @@ LLVMGEN (llvm_gen_noise)
     derivs &= Result.has_derivs();  // ignore derivs if result doesn't need
 
     bool pass_name = false, pass_sg = false, pass_options = false;
-    if (! name) {
+    if (name.empty()) {
         // name is not a constant
         name = periodic ? Strings::genericpnoise : Strings::genericnoise;
         pass_name = true;

@@ -2345,7 +2345,7 @@ DECLFOLDER(constfold_getattribute)
         ustring obj_name;
         if (object_lookup)
             obj_name = *(const ustring *)ObjectName.data();
-        if (! obj_name)
+        if (obj_name.empty())
             return 0;
 
         found = array_lookup
@@ -2539,9 +2539,22 @@ DECLFOLDER(constfold_texture)
 #endif
             CHECK_str (width, float, TypeDesc::FLOAT)
             else CHECK_str (blur, float, TypeDesc::FLOAT)
-            else CHECK_str (wrap, ustring, TypeDesc::STRING)
             else CHECK (firstchannel, int, TypeDesc::INT)
             else CHECK (fill, float, TypeDesc::FLOAT)
+
+            else if ((name == Strings::wrap || name == Strings::swrap ||
+                 name == Strings::twrap || name == Strings::rwrap)
+                 && value && valuetype == TypeDesc::STRING) {
+                // Special trick is needed for wrap modes because the input
+                // is a string but the field we're setting is an int enum.
+#if OIIO_VERSION < 10800
+                OIIO::TextureOpt::Wrap wrapmode = OIIO::TextureOpt::decode_wrapmode (*(ustring *)value);
+#else
+                OIIO::Tex::Wrap wrapmode = OIIO::Tex::decode_wrapmode (*(ustring *)value);
+#endif
+                void* value = &wrapmode;
+                CHECK_str (wrap, int, TypeDesc::INT);
+            }
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
@@ -2666,7 +2679,7 @@ DECLFOLDER(constfold_pointcloud_search)
     for (int i = 0; i < nattrs; ++i) {
         // We had stashed names, data types, and destinations earlier.
         // Retrieve them now to build a query.
-        if (! names[i])
+        if (names[i].empty())
             continue;
         void *const_data = NULL;
         TypeDesc const_valtype = value_types[i];

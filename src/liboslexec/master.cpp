@@ -264,7 +264,7 @@ ShaderMaster::print ()
         for (size_t j = 0;  j < Opcode::max_jumps;  ++j)
             if (m_ops[i].jump(j) >= 0)
                 out << " " << m_ops[i].jump(j);
-        if (m_ops[i].sourcefile())
+        if (!m_ops[i].sourcefile().empty())
             out << "\t(" << m_ops[i].sourcefile() << ":" 
                       << m_ops[i].sourceline() << ")";
         out << "\n";

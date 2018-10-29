@@ -113,10 +113,10 @@ BackendLLVM::llvm_debug() const
 {
     if (shadingsys().llvm_debug() == 0)
         return 0;
-    if (shadingsys().debug_groupname() &&
+    if (!shadingsys().debug_groupname().empty() &&
         shadingsys().debug_groupname() != group().name())
         return 0;
-    if (inst() && shadingsys().debug_layername() &&
+    if (inst() && !shadingsys().debug_layername().empty() &&
         shadingsys().debug_layername() != inst()->layername())
         return 0;
     return shadingsys().llvm_debug();

@@ -1151,9 +1151,11 @@ OSLToyMainWindow::set_param_instance_value (ParamRec *param)
     }
 
     if (m_diddlers[param->name.string()]) {
-        shadingsys()->ReParameter (*renderer()->shadergroup(), param->layername,
-                                   param->name, param->type,
-                                   m_shaderparam_instvalues[param->name].data());
+        auto val = m_shaderparam_instvalues.find (param->name);
+        if (val != m_shaderparam_instvalues.end())
+            shadingsys()->ReParameter (*renderer()->shadergroup(), param->layername,
+                                       param->name, param->type,
+                                       val->data());
         rerender_needed ();
     } else {
         build_shader_group ();

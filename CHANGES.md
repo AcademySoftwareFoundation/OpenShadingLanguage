@@ -1,6 +1,10 @@
-Release 1.9.12 -- 1 Nov? 2018 (compared to 1.9.11)
+Release 1.9.12 -- 1 Nov 2018 (compared to 1.9.11)
 ------------------------------------------------
-
+* Fix oslc read/write error for regex_search/regex_match #922
+* Make oso reading more robust to certain broken inputs. #923
+* Internals: make safe for some changes coming to ustring API in OIIO
+  master. #929
+* Several docs fixes.
 
 Release 1.9.11 -- 1 Oct 2018 (compared to 1.9.10)
 ------------------------------------------------

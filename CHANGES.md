@@ -1,4 +1,4 @@
-Release 1.10? -- ?? 2018 (compared to 1.9)
+Release 1.10? -- ?? 2018? (compared to 1.9)
 --------------------------------------------------
 Dependency and standards changes:
 * **LLVM 4.0 / 5.0 / 6.0, 7.0**: Support has been removed for LLVM 3.x,

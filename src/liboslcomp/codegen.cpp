@@ -1697,11 +1697,19 @@ ASTtype_constructor::codegen (Symbol *dest)
         // Doesn't fit the pattern, drop to the usual case...
     }
 
+    // Special case: construct float(float_expr) -- just put it directly
+    // in the dest.
+    Symbol *argevaldest = nullptr;
+    if (dest && typespec().is_float() &&
+          nchildren() == 1 && child(0)->typespec().is_float()) {
+        argevaldest = dest;
+    }
+
     std::vector<Symbol *> argdest;
     argdest.push_back (dest);
     int nargs = 0;
     for (ref a = args();  a;  a = a->next(), ++nargs) {
-        Symbol *argval = a->codegen();
+        Symbol *argval = a->codegen(argevaldest);
         if (argval->typespec().is_int() && !typespec().is_int()) {
             // Coerce to float if it's an int
             if (a->nodetype() == literal_node) {
@@ -1717,9 +1725,16 @@ ASTtype_constructor::codegen (Symbol *dest)
         }
         argdest.push_back (argval);
     }
-    if (nargs == 1)
+    if (nargs == 1 && argdest.size() == 2 && argdest[1] == dest) {
+        // Don't have to do anything, we already coaxed the one argument
+        // to show up in the requested destination. This can happen for
+        //    foo = float(float_expr)
+        // to avoid the extra needless copy.
+    }
+    else if (nargs == 1) {
         emitcode ("assign",
                   argdest.size(), (argdest.size())? &argdest[0]: NULL);
+    }
     else
         emitcode (typespec().string().c_str(),
                   argdest.size(), (argdest.size())? &argdest[0]: NULL);

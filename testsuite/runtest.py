@@ -52,7 +52,7 @@ failureok = 0
 failthresh = 0.004
 hardfail = 0.01
 failpercent = 0.02
-oslcargs = ""
+oslcargs = "-Wall"
 
 image_extensions = [ ".tif", ".tx", ".exr", ".jpg", ".png", ".rla",
                      ".dpx", ".iff", ".psd" ]

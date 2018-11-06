@@ -697,14 +697,21 @@ ASTtype_constructor::typecheck (TypeSpec expected, bool report, bool bind)
     TypeSpec argexpected;  // default to unknown
     if (expected.is_float()) {
         patterns = float_patterns;
+        argexpected = TypeDesc::FLOAT;
+        // ^^^ Since simetimes tht constructor `float(expr)` is used as a
+        // synonym for a cast `(float)expr`, we know that ambiguously typed
+        // expressions should favor disambiguating to a float.
     } else if (expected.is_triple()) {
         patterns = triple_patterns;
         // For triples, the constructor that takes just one argument is often
         // is used as a typecast, i.e. (vector)foo <==> vector(foo)
         // So pass on the expected type so it can resolve polymorphism in
-        // the expected way.
+        // the expected way. Similarly, the three-argument triple constructor
+        // can infer that all three arguments should disambiguate to float.
         if (listlength(args()) == 1)
             argexpected = expected;
+        else
+            argexpected = TypeDesc::FLOAT;
     } else if (expected.is_matrix()) {
         patterns = matrix_patterns;
     } else if (expected.is_int()) {

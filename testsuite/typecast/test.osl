@@ -51,4 +51,13 @@ test ()
         // point q[2] = { ... };
         // color c = (color) q[1];
     }
+
+    // Test some tricky cases -- these should not warn! The constructors
+    // ought to be able to figure out the desired type of the ambiguous
+    // function arguments.
+    closure color result = diffuse(N) * float(cellnoise(u, v));
+    color c1 = float(cellnoise(u,v));
+    color c2 = color(cellnoise(u,v));
+    color c3 = color(cellnoise(u,v),0.0,0.0);
+    color c4 = c1 * cellnoise(u,v);
 }

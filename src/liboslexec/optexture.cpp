@@ -294,18 +294,15 @@ osl_texture (void *sg_, const char *name, void *handle,
 
 OSL_SHADEOP int
 osl_texture3d (void *sg_, const char *name, void *handle,
-               void *opt_, void *P_,
-               void *dPdx_, void *dPdy_, void *dPdz_, int chans,
-               void *result, void *dresultdx,
-               void *dresultdy, void *dresultdz,
-               void *alpha, void *dalphadx,
-               void *dalphady, void *dalphadz,
+               void *opt_, void *P_, void *dPdx_, void *dPdy_,
+               int chans,
+               void *result, void *dresultdx, void *dresultdy,
+               void *alpha , void *dalphadx , void *dalphady ,
                ustring *errormessage)
 {
     const Vec3 &P (*(Vec3 *)P_);
     const Vec3 &dPdx (*(Vec3 *)dPdx_);
     const Vec3 &dPdy (*(Vec3 *)dPdy_);
-    const Vec3 &dPdz (*(Vec3 *)dPdz_);
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     TextureOpt *opt = (TextureOpt *)opt_;
     bool derivs = (dresultdx != NULL || dalphadx != NULL);
@@ -314,11 +311,11 @@ osl_texture3d (void *sg_, const char *name, void *handle,
     OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd, dresultdr_simd;
     bool ok = sg->renderer->texture3d (USTR(name),
                                        (TextureSystem::TextureHandle *)handle, sg->context->texture_thread_info(),
-                                       *opt, sg, P, dPdx, dPdy, dPdz,
+                                       *opt, sg, P, dPdx, dPdy, Vec3(0),
                                        4, (float *)&result_simd,
-                                       derivs ? (float *)&dresultds_simd : NULL,
-                                       derivs ? (float *)&dresultdt_simd : NULL,
-                                       derivs ? (float *)&dresultdr_simd : NULL,
+                                       derivs ? (float *)&dresultds_simd : nullptr,
+                                       derivs ? (float *)&dresultdt_simd : nullptr,
+                                       derivs ? (float *)&dresultdr_simd : nullptr,
                                        errormessage);
 
     for (int i = 0;  i < chans;  ++i)
@@ -330,19 +327,15 @@ osl_texture3d (void *sg_, const char *name, void *handle,
     if (derivs) {
         OIIO::simd::float4 dresultdx_simd = dresultds_simd * dPdx[0] + dresultdt_simd * dPdx[1] + dresultdr_simd * dPdx[2];
         OIIO::simd::float4 dresultdy_simd = dresultds_simd * dPdy[0] + dresultdt_simd * dPdy[1] + dresultdr_simd * dPdy[2];
-        OIIO::simd::float4 dresultdz_simd = dresultds_simd * dPdz[0] + dresultdt_simd * dPdz[1] + dresultdr_simd * dPdz[2];
         if (dresultdx) {
             for (int i = 0;  i < chans;  ++i)
                 ((float *)dresultdx)[i] = dresultdx_simd[i];
             for (int i = 0;  i < chans;  ++i)
                 ((float *)dresultdy)[i] = dresultdy_simd[i];
-            for (int i = 0;  i < chans;  ++i)
-                ((float *)dresultdz)[i] = dresultdz_simd[i];
         }
         if (dalphadx) {
             ((float *)dalphadx)[0] = dresultdx_simd[chans];
             ((float *)dalphady)[0] = dresultdy_simd[chans];
-            ((float *)dalphadz)[0] = dresultdz_simd[chans];
         }
     }
 

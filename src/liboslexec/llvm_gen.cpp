@@ -2392,32 +2392,18 @@ LLVMGEN (llvm_gen_texture3d)
     if (user_derivs) {
         args.push_back (rop.llvm_void_ptr (*rop.opargsym (op, 3)));
         args.push_back (rop.llvm_void_ptr (*rop.opargsym (op, 4)));
-        args.push_back (rop.llvm_void_ptr (*rop.opargsym (op, 5)));
     } else {
         // Auto derivs of P
         args.push_back (rop.llvm_void_ptr (P, 1));
         args.push_back (rop.llvm_void_ptr (P, 2));
-        // dPdz is correct for input P, zero for all else
-        if (&P == rop.inst()->symbol(rop.inst()->Psym())) {
-            args.push_back (rop.llvm_void_ptr (P, 3));
-        } else {
-            // zero for dPdz, for now
-            llvm::Value *fzero = rop.ll.constant (0.0f);
-            llvm::Value *vzero = rop.ll.op_alloca (rop.ll.type_triple());
-            for (int i = 0;  i < 3;  ++i)
-                rop.ll.op_store (fzero, rop.ll.GEP (vzero, 0, i));
-            args.push_back (rop.ll.void_ptr(vzero));
-        }
     }
     args.push_back (rop.ll.constant (nchans));
     args.push_back (rop.ll.void_ptr (rop.llvm_void_ptr (Result, 0)));
     args.push_back (rop.ll.void_ptr (rop.llvm_void_ptr (Result, 1)));
     args.push_back (rop.ll.void_ptr (rop.llvm_void_ptr (Result, 2)));
-    args.push_back (rop.ll.void_ptr_null());  // no dresultdz for now
     args.push_back (rop.ll.void_ptr (alpha    ? alpha    : rop.ll.void_ptr_null()));
     args.push_back (rop.ll.void_ptr (dalphadx ? dalphadx : rop.ll.void_ptr_null()));
     args.push_back (rop.ll.void_ptr (dalphady ? dalphady : rop.ll.void_ptr_null()));
-    args.push_back (rop.ll.void_ptr_null());  // No dalphadz for now
     args.push_back (rop.ll.void_ptr (errormessage ? errormessage : rop.ll.void_ptr_null()));
     rop.ll.call_function ("osl_texture3d", &args[0], (int)args.size());
     rop.generated_texture_call (texture_handle != NULL);

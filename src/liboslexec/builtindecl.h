@@ -386,7 +386,7 @@ DECL (osl_texture_set_subimagename, "xXs")
 DECL (osl_texture_set_missingcolor_arena, "xXX")
 DECL (osl_texture_set_missingcolor_alpha, "xXif")
 DECL (osl_texture, "iXXXXffffffiXXXXXXX")
-DECL (osl_texture3d, "iXXXXXXXXiXXXXXXXXX")
+DECL (osl_texture3d, "iXXXXXXXiXXXXXXX")
 DECL (osl_environment, "iXXXXXXXiXXXXXXX")
 DECL (osl_get_textureinfo, "iXXXXiiiX")
 

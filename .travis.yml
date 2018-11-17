@@ -1,8 +1,7 @@
 # .travis.yml for OSL
 
 language: cpp
-sudo: false
-osx_image: xcode8.3
+osx_image: xcode10
 dist: trusty
 
 
@@ -12,9 +11,7 @@ dist: trusty
 #addons:
 #  apt:
 #   sources:
-#      - boost-latest
 #      - ubuntu-toolchain-r-test
-#      - george-edison55-precise-backports
 #   packages:
 #      - g++-4.8
 #      - g++-6
@@ -116,52 +113,13 @@ branches:
 matrix:
     fast_finish: true
     include:
-      # Build with C++11, default compiler, optimized build, against OIIO
-      # master, and LLVM 5.0.
-      - os: linux
+      - name: "VFX Platform 2018 (gcc6, c++14), llvm 7, OIIO master, avx/f16c"
+        os: linux
         compiler: gcc
         addons:
           apt:
             sources:
               - ubuntu-toolchain-r-test
-              - boost-latest
-            packages:
-              - libboost1.55-dev
-              - libboost-filesystem1.55
-              - libboost-python1.55
-              - libboost-regex1.55
-              - libboost-system1.55
-              - libboost-thread1.55
-              - libboost-wave1.55
-        env: WHICHGCC=4.8 LLVM_VERSION=5.0.0
-      - os: osx
-        compiler: clang
-    # Test against the older release branch of OIIO (all the other tests
-    # are against OIIO master). Simultaneously, test a higher SIMD level.
-      - os: linux
-        compiler: gcc
-        addons:
-          apt:
-            sources:
-              - ubuntu-toolchain-r-test
-              - boost-latest
-            packages:
-              - libboost1.55-dev
-              - libboost-filesystem1.55
-              - libboost-python1.55
-              - libboost-regex1.55
-              - libboost-system1.55
-              - libboost-thread1.55
-              - libboost-wave1.55
-        env: OIIOBRANCH=release USE_SIMD=sse4.2 LLVM_VERSION=5.0.0
-    # Test gcc6, and highest SIMD level supported by Travis, and newer LLVM
-      - os: linux
-        compiler: gcc
-        addons:
-          apt:
-            sources:
-              - ubuntu-toolchain-r-test
-              - boost-latest
             packages:
               - g++-6
               - libboost1.55-dev
@@ -170,15 +128,50 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: WHICHGCC=6 USE_SIMD=avx,f16c LLVM_VERSION=6.0.1
-    # Linux only: test gcc 7, also test C++14 and newer LLVM (7.0)
-      - os: linux
+        env: WHICHGCC=6 USE_CPP=14 LLVM_VERSION=7.0.0 OIIOBRANCH=master USE_SIMD=avx,f16c
+      - name: "MacOS (latest Apple clang, llvm 7, OIIO master, latest homebrew libs"
+        os: osx
+        compiler: clang
+      - name: "VFX Platform 2017 (gcc48, c++11), llvm 6, OIIO release, sse4.2"
+        os: linux
         compiler: gcc
         addons:
           apt:
             sources:
               - ubuntu-toolchain-r-test
-              - boost-latest
+            packages:
+              - libboost1.55-dev
+              - libboost-filesystem1.55
+              - libboost-python1.55
+              - libboost-regex1.55
+              - libboost-system1.55
+              - libboost-thread1.55
+              - libboost-wave1.55
+        env: WHICHGCC=4.8 USE_CPP=11 LLVM_VERSION=6.0.1 USE_SIMD=sse4.2 OIIOBRANCH=release
+      - name: "Older things: release OIIO, llvm 5, OIIO 1.8/oldest, boost 1.55"
+        os: linux
+        compiler: gcc
+        addons:
+          apt:
+            sources:
+              - ubuntu-toolchain-r-test
+            packages:
+              - libboost1.55-dev
+              - libboost-filesystem1.55
+              - libboost-python1.55
+              - libboost-regex1.55
+              - libboost-system1.55
+              - libboost-thread1.55
+              - libboost-wave1.55
+        env: WHICHGCC=4.8 USE_CPP=11 LLVM_VERSION=5.0.0 USE_SIMD=sse4.2 OIIOBRANCH=RB-1.9
+        if: branch =~ /(master|RB|travis)/ OR type = pull_request
+      - name: "gcc7, llvm7, C++14"
+        os: linux
+        compiler: gcc
+        addons:
+          apt:
+            sources:
+              - ubuntu-toolchain-r-test
             packages:
               - g++-7
               - libboost1.55-dev
@@ -188,14 +181,14 @@ matrix:
               - libboost-thread1.55
               - libboost-wave1.55
         env: WHICHGCC=7 USE_CPP=14 LLVM_VERSION=7.0.0
-    # Linux only: test gcc 8, also test C++14 and newer LLVM (7.0)
-      - os: linux
+        if: branch =~ /(master|RB|travis)/ OR type = pull_request
+      - name: "Future: gcc8, C++14, LLVM 7, OIIO master, AVX/f16c"
+        os: linux
         compiler: gcc
         addons:
           apt:
             sources:
               - ubuntu-toolchain-r-test
-              - boost-latest
             packages:
               - g++-8
               - libboost1.55-dev
@@ -204,15 +197,14 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: WHICHGCC=8 USE_CPP=14 LLVM_VERSION=7.0.0
-    # Build with C++11, DEBUG build, against OIIO master
-      - os: linux
+        env: WHICHGCC=8 USE_CPP=14 LLVM_VERSION=7.0.0 USE_SIMD=avx,f16c
+      - name: "DEBUG build, LLVM 7, OIIO master"
+        os: linux
         compiler: gcc
         addons:
           apt:
             sources:
               - ubuntu-toolchain-r-test
-              - boost-latest
             packages:
               - libboost1.55-dev
               - libboost-filesystem1.55
@@ -221,16 +213,14 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: DEBUG=1 LLVM_VERSION=4.0.0
-    # One more, just for the heck of it, turn all SIMD off, and also test
-    # against the oldest LLVM we still support and the oldest OIIO.
-      - os: linux
+        env: DEBUG=1 LLVM_VERSION=7.0.0 OIIOBRANCH=master
+      - name: "Oldest everything: LLVM 4, OIIO 1.8, no simd"
+        os: linux
         compiler: gcc
         addons:
           apt:
             sources:
               - ubuntu-toolchain-r-test
-              - boost-latest
             packages:
               - libboost1.55-dev
               - libboost-filesystem1.55
@@ -240,6 +230,7 @@ matrix:
               - libboost-thread1.55
               - libboost-wave1.55
         env: USE_SIMD=0 LLVM_VERSION=4.0.0 OIIOBRANCH=RB-1.8
+        if: branch =~ /(master|RB|travis)/ OR type = pull_request
 
 notifications:
     email:

@@ -1,15 +1,15 @@
-Release 1.10? -- ?? 2018? (compared to 1.9)
+Release 1.10 -- Dec 1, 2018 (compared to 1.9)
 --------------------------------------------------
 Dependency and standards changes:
-* **LLVM 4.0 / 5.0 / 6.0, 7.0**: Support has been removed for LLVM 3.x,
+* **LLVM 4.0 / 5.0 / 6.0 / 7.0**: Support has been removed for LLVM 3.x,
   added for 6.0 and 7.0.
-* **OpenImageIO 1.8/1.9+**: This release of OSL should build properly against
-  OIIO 1.8 or 1.9. Support has been dropped for OIIO 1.7.
+* **OpenImageIO 1.8/2.0+**: This release of OSL should build properly against
+  OIIO 1.8 or 2.0. Support has been dropped for OIIO 1.7.
 
 New back-end targets:
 * **OptiX** Work in progress: Experimental back end for NVIDIA OptiX GPU ray
   tracing toolkit. #861, #877, #902
-    - Build with USE_OPTIX=1
+    - Build with `USE_OPTIX=1`
     - Requires OptiX 5.1+, Cuda 8.0+, OpenImageIO 1.8.10+, LLVM >= 5.0 with
       PTX target enabled.
     - New utility **testoptix** is an example of a simple OptiX renderer
@@ -92,6 +92,9 @@ OSL Language and oslc compiler:
   We found an inadvertent O(n^2) behavior when parsing initializer lists.
   It used to be that a constant table in the form an array of 64k floats
   took over 10s to compile, now it is 50x faster. #901
+* Resolution of ambiguous return type functions (such as noise) has been
+  improved when their results are used as arguments to type constructors.
+  #931 (1.10.1)
 
 OSL Standard library:
 * There has been a change in the appearance to Cell noise and Gabor noise.
@@ -125,14 +128,14 @@ API changes, new options, new ShadingSystem features (for renderer writers):
       are optional), though the "use" parameter no longer has any meaning.
       (It will be deprecated and removed in a future release.) #899
 * ShadingSystem attributes:
-    * New "allow_shader_replacement" (int) attribute, when nonzero, allows
+    * New `"allow_shader_replacement"` (int) attribute, when nonzero, allows
       shaders to be specified more than once, replacing their former
       definitions. The default, 0, considers that an error, as it always
       has. #816 (1.10.0).
-    * New developer option "llvm_output_bitcode" dumps the bitcode for each
+    * New developer option `"llvm_output_bitcode"` dumps the bitcode for each
       group, even if other debug options aren't turned on, and also any
       dumped bitcode will save as text as well as binary. #831 (1.10.0)
-    * New attribute "error_repeats", if set to non-zero, turns off the
+    * New attribute `"error_repeats"`, if set to non-zero, turns off the
       suppression of multiple identical errors and warnings. Setting it
       (even to its existing value) also clears the "already seen" lists.
       #880, #883 (1.10.0/1.9.9/1.8.14)
@@ -155,10 +158,8 @@ API changes, new options, new ShadingSystem features (for renderer writers):
       those directories will be searched, with "." only searched if it is
       explicitly included in the search path value. #925 (1.10.0)
 
-Runtime performance improvements:
-
 Bug fixes and other improvements (internals):
-* The context's texture_thread_info is now properly passed to the
+* The context's `texture_thread_info` is now properly passed to the
   RenderServices callbacks instead of passing NULL. (1.10.0)
 * Symbols are enbled in the JIT, allowing Intel Vtune profiler to correctly
   report which JITed OSL code is being executed. #830 (1.10.0)
@@ -166,7 +167,7 @@ Bug fixes and other improvements (internals):
   complement the existing error and warning. #854 (1.10.0)
 * Fix incorrect array length on unbounded arrays specified by relaxed
   parameter type checking. #900 (1.9.10/1.10.0)
-* oslc bug fix: the regex_search()/regex_match() functions did not properly
+* oslc bug fix: the `regex_search()`/`regex_match()` functions did not properly
   mark their `results` output parameter as write-only. This was never
   noticed by anyone, but could have resulted in incorrect optimizations.
   #922 (1.10.0)
@@ -175,10 +176,13 @@ Bug fixes and other improvements (internals):
   ways for it to abort or assert). #923 (1.10.0)
 * Bug fixes related to incorrect reliance on OIIO's `ustring::operator int()`.
   It's being removed from OIIO, so wean ourselves off it. #929 (1.10.0)
+* Certain texture3d lookups with derivatives could crash. #932 (1.10.1)
+* Fix oslc assertion crash when a struct parameter was initialized with
+  a function call. #934 (1.10.1)
 
 Build & test system improvements:
 * Appveyor CI testing for Windows. #849,852,855 (1.10.0/1.9.7)
-* Our new policy is to disable STOP_ON_WARNING for release branches, to
+* Our new policy is to disable `STOP_ON_WARNING` for release branches, to
   minimize build breaks for users when a new compiler warning is hit. We
   still enable it in development/master branches as well as any CI build
   in any branch. #850 (1.10.0/1.9.7)
@@ -193,13 +197,14 @@ Build & test system improvements:
 * Fixes to build with clang 7, and to use LLVM 7. #910, #921 (1.10.0)
 * Fix warnings on gcc 8. #921 (1.10.0)
 * Build system: the variables containing hints for where to find IlmBase
-  and OpenEXR have been changed to ILMBASE_ROOT_DIR and OPENEXR_ROOT_DIR
-  (no longer ILMBASE_HOME/OPENEXR_HOME). Similarly, OPENIMAGEIO_ROOT_DIR
+  and OpenEXR have been changed to `ILMBASE_ROOT_DIR` and `OPENEXR_ROOT_DIR`
+  (no longer `ILMBASE_HOME`/`OPENEXR_HOME`). Similarly, `OPENIMAGEIO_ROOT_DIR`
   is the hint for custom OIIO location (no longer OPENIMAGEIOHOME). #928
 * Eliminated some in-progress MaterialX tests, they weren't in good order,
   we will do it differently if we want to add MX tests in the future. #928
-
-Developer goodies:
+* Build options `OSL_BUILD_SHADERS` and `OSL_BUILD_MATERIALX` (both default
+  to ON) can be used to disable building of all shaders or MX shaders,
+  respectively. #935 (1.10.1)
 
 Documentation:
 * `osltoy` documentations in `doc/osltoy.md.html` (1.10.0).
@@ -208,7 +213,7 @@ Documentation:
 
 Release 1.9.12 -- 1 Nov 2018 (compared to 1.9.11)
 ------------------------------------------------
-* Fix oslc read/write error for regex_search/regex_match #922
+* Fix oslc read/write error for `regex_search`/`regex_match` #922
 * Make oso reading more robust to certain broken inputs. #923
 * Internals: make safe for some changes coming to ustring API in OIIO
   master. #929
@@ -239,7 +244,7 @@ Release 1.9.10 -- 1 Sep 2018 (compared to 1.9.9)
 
 Release 1.9.9 -- 1 May 2018 (compared to 1.9.8)
 -----------------------------------------------
-* New SS attribute "error_repeats", if set to non-zero, turns off the
+* New SS attribute `"error_repeats"`, if set to non-zero, turns off the
   suppression of multiple identical errors and warnings. Setting it (even to
   its existing value) also clears the "already seen" lists. #880
   (1.8.14/1.9.9)
@@ -285,8 +290,8 @@ Dependency and standards changes:
 * **OpenEXR/IlmBase >= 2.0** (recommended: 2.2)
 
 Language features:
-* New preprocessor symbols: OSL_VERSION_MAJOR, OSL_VERSION_MINOR,
-  OSL_VERSION_PATCH, and OSL_VERSION (e.g. 10900 for 1.9.0) reveal the
+* New preprocessor symbols: `OSL_VERSION_MAJOR`, `OSL_VERSION_MINOR`,
+  `OSL_VERSION_PATCH`, and `OSL_VERSION` (e.g. 10900 for 1.9.0) reveal the
   OSL release at shader compile time. #747 (1.9.0)
 * Structure constructors: If you have a struct `S` comprising fields with
   types T1, T2, ..., you may now have an expression `S(T1 v2, T2 v2,...)`

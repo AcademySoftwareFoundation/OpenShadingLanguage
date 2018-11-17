@@ -325,6 +325,8 @@ Films using OSL (grouped by year of release date):
   Alpha,
   Venom,
   First Man,
+  Fantastic Beasts: The Crimes of Grindelwald,
+  Spider-Man: Into the Spider-Verse,
   ...
 
 

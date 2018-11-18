@@ -107,7 +107,7 @@ public:
     /// `Parameter` holds all the information about a single shader
     /// parameter.
     /// <code>
-    struct Parameter {
+    struct OSLQUERYPUBLIC Parameter {
         ustring name;                    //< name
         TypeDesc type;                   //< data type
         bool isoutput = false;           //< is it an output param?

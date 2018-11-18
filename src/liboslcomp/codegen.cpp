@@ -1089,15 +1089,15 @@ ASTNode::codegen_struct_initializers (ref init, Symbol *sym,
             continue;
         }
 
-        if (paraminit) {
+        if (paraminit && nodetype() == variable_declaration_node) {
             // For parameter initialization, don't really generate ops if it
             // can be statically initialized.
             std::string out;
-            ASSERT (nodetype() == variable_declaration_node);
             ASTvariable_declaration *v = (ASTvariable_declaration *)this;
             if (v->param_default_literals (fieldsym, init.get(), out))
                 continue;
-
+        }
+        if (paraminit) {
             // Delineate and remember the init ops for this field individually
             m_compiler->codegen_method (fieldname);
             fieldsym->initbegin (m_compiler->next_op_label ());

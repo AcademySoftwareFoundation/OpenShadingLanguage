@@ -156,6 +156,14 @@ ifneq (${OSL_BUILD_TESTS},)
 MY_CMAKE_FLAGS += -DOSL_BUILD_TESTS:BOOL=${OSL_BUILD_TESTS}
 endif
 
+ifneq (${OSL_BUILD_SHADERS},)
+MY_CMAKE_FLAGS += -DOSL_BUILD_SHADERS:BOOL=${OSL_BUILD_SHADERS}
+endif
+
+ifneq (${OSL_BUILD_MATERIALX},)
+MY_CMAKE_FLAGS += -DOSL_BUILD_MATERIALX:BOOL=${OSL_BUILD_MATERIALX}
+endif
+
 ifdef DEBUG
 MY_CMAKE_FLAGS += -DCMAKE_BUILD_TYPE:STRING=Debug
 endif
@@ -394,6 +402,8 @@ help:
 	@echo "      NAMESPACE=name           Override namespace base name (default: OSL)"
 	@echo "      USE_FAST_MATH=1          Use faster, but less accurate math (set to 0 for libm defaults)"
 	@echo "      OSL_BUILD_TESTS=0        Don't build unit tests, testshade, testrender"
+	@echo "      OSL_BUILD_SHADERS=0      Don't build any shaders"
+	@echo "      OSL_BUILD_MATERIALX=0    Don't build MaterialX shaders"
 	@echo "      USE_SIMD=arch            Build with SIMD support (choices: 0, sse2, sse3,"
 	@echo "                                  ssse3, sse4.1, sse4.2, f16c, avx, avx2"
 	@echo "                                  comma-separated ok)"

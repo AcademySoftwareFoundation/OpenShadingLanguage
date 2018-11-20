@@ -1,4 +1,5 @@
 Compiled test.osl -> test.oso
+test struct param initialization: v2iparam = 19 20
 test struct return
 {2 3} + {10 20} = {12 23}
 square({2 3}) = {4 9}

@@ -45,8 +45,11 @@ Complicated ugly ()
 
 
 shader
-test ()
+test (Vec2i v2iparam = Vec2i(19,20))
 {
+    printf ("test struct param initialization: v2iparam = %d %d\n",
+            v2iparam.x, v2iparam.y);
+    
     // Example of a function returning a struct in an inner scope
     Vec2i square (Vec2i a) {
         Vec2i r;

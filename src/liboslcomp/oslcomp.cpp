@@ -95,12 +95,12 @@ OSLCompiler::compile (string_view filename,
 
 
 bool
-OSLCompiler::compile_buffer (string_view sourcecode,
-                             std::string &osobuffer,
+OSLCompiler::compile_buffer (string_view sourcecode, std::string &osobuffer,
                              const std::vector<std::string> &options,
-                             string_view stdoslpath)
+                             string_view stdoslpath, string_view filename)
 {
-    return m_impl->compile_buffer (sourcecode, osobuffer, options, stdoslpath);
+    return m_impl->compile_buffer (sourcecode, osobuffer, options,
+                                   stdoslpath, filename);
 }
 
 
@@ -129,7 +129,8 @@ OSLCompilerImpl::OSLCompilerImpl (ErrorHandler *errhandler)
       m_err(false), m_symtab(*this),
       m_current_typespec(TypeDesc::UNKNOWN), m_current_output(false),
       m_verbose(false), m_quiet(false), m_debug(false),
-      m_preprocess_only(false), m_err_on_warning(false), m_optimizelevel(1),
+      m_preprocess_only(false), m_err_on_warning(false),
+      m_optimizelevel(1),
       m_next_temp(0), m_next_const(0),
       m_osofile(NULL),
       m_total_nesting(0), m_loop_nesting(0), m_derivsym(NULL),
@@ -588,7 +589,7 @@ OSLCompilerImpl::compile (string_view filename,
             OIIO::Filesystem::open (oso_output, m_output_filename);
             if (! oso_output.good()) {
                 error (ustring(), 0, "Could not open \"%s\"",
-                       m_output_filename.c_str());
+                       m_output_filename);
                 return false;
             }
             ASSERT (m_osofile == NULL);
@@ -610,9 +611,11 @@ bool
 OSLCompilerImpl::compile_buffer (string_view sourcecode,
                                  std::string &osobuffer,
                                  const std::vector<std::string> &options,
-                                 string_view stdoslpath)
+                                 string_view stdoslpath,
+                                 string_view filename)
 {
-    string_view filename ("<buffer>");
+    if (filename.empty())
+        filename = string_view("<buffer>");
 
     std::vector<std::string> defines;
     std::vector<std::string> includepaths;
@@ -661,7 +664,8 @@ OSLCompilerImpl::compile_buffer (string_view sourcecode,
         }
  
         if (! error_encountered()) {
-            m_output_filename = "<buffer>";
+            if (m_output_filename.empty())
+                m_output_filename = default_output_filename ();
 
             std::ostringstream oso_output;
             oso_output.imbue (std::locale::classic());  // force C locale

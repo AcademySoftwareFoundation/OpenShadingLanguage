@@ -72,7 +72,8 @@ public:
     bool compile_buffer (string_view sourcecode,
                          std::string &osobuffer,
                          const std::vector<std::string> &options,
-                         string_view stdoslpath);
+                         string_view stdoslpath,
+                         string_view filename);
 
     bool osl_parse_buffer (const std::string &preprocessed_buffer);
 

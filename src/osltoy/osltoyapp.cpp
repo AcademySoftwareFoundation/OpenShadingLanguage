@@ -847,7 +847,8 @@ OSLToyMainWindow::recompile_shaders ()
             OSLCompiler oslcomp (&errhandler);
             std::string osooutput;
             std::vector<std::string> options;
-            ok = oslcomp.compile_buffer (source, osooutput, options);
+            ok = oslcomp.compile_buffer (source, osooutput, options, "",
+                                         briefname);
             set_error_message (tab, OIIO::Strutil::join (errhandler.errors, "\n"));
             if (ok) {
                 // std::cout << osooutput << "\n";

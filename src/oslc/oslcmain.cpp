@@ -62,6 +62,7 @@ usage ()
         "\t-d             Debug mode\n"
         "\t-E             Only preprocess the input and output to stdout\n"
         "\t-Werror        Treat all warnings as errors\n"
+        "\t-buffer        (debugging) Force compile from buffer\n"
         ;
 }
 
@@ -118,7 +119,6 @@ main (int argc, const char *argv[])
 
     OIIO::Filesystem::convert_native_arguments (argc, (const char **)argv);
 
-
     if (argc <= 1) {
         usage ();
         return EXIT_SUCCESS;
@@ -126,6 +126,7 @@ main (int argc, const char *argv[])
 
     std::vector<std::string> args;
     bool quiet = false;
+    bool compile_from_buffer = false;
     std::string shader_path;
 
     // Parse arguments from command line
@@ -156,6 +157,9 @@ main (int argc, const char *argv[])
                  (argv[a][1] == 'D' || argv[a][1] == 'U' || argv[a][1] == 'I')) {
             args.emplace_back(argv[a]);
         }
+        else if (!strcmp(argv[a], "-buffer")) {
+            compile_from_buffer = true;
+        }
         else {
             // Shader to compile
             shader_path = argv[a];
@@ -169,7 +173,28 @@ main (int argc, const char *argv[])
     }
 
     OSLCompiler compiler (&default_oslc_error_handler);
-    bool ok = compiler.compile (shader_path, args);
+    bool ok = true;
+    if (compile_from_buffer) {
+        // Force a compile-from-buffer for debugging purposes
+        std::string sourcecode;
+        ok = OIIO::Filesystem::read_text_file (shader_path, sourcecode);
+        std::string osobuffer;
+        if (ok)
+            ok = compiler.compile_buffer (sourcecode, osobuffer, args, "",
+                                          shader_path);
+        if (ok) {
+            std::ofstream file;
+            OIIO::Filesystem::open (file, compiler.output_filename());
+            if (file.good()) {
+                file << osobuffer;
+                file.close ();
+            }
+        }
+    } else {
+        // Ordinary compile from file
+        ok = compiler.compile (shader_path, args);
+    }
+
     if (ok) {
         if (!quiet)
             std::cout << "Compiled " << shader_path << " -> " << compiler.output_filename() << "\n";

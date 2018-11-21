@@ -630,7 +630,7 @@ public:
     /// The group is set and won't be changed again; take advantage of
     /// this by optimizing the code knowing all our instance parameters
     /// (at least the ones that can't be overridden by the geometry).
-    void optimize_group (ShaderGroup &group);
+    void optimize_group (ShaderGroup &group, ShadingContext *ctx = nullptr);
 
     /// After doing all optimization and code JIT, we can clean up by
     /// deleting the instances' code and arguments, and paring their

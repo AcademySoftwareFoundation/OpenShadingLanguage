@@ -127,6 +127,9 @@ API changes, new options, new ShadingSystem features (for renderer writers):
     * `ShadingSystem::Shader()` now has all three parameters required (none
       are optional), though the "use" parameter no longer has any meaning.
       (It will be deprecated and removed in a future release.) #899
+    * `ShadingSystem::optimize_group()` now takes an optional pointer to a
+      `ShadingContext`, which it will use if needed (if passed NULL, one
+      will be internally allocated, used, and freed, as before). #936
 * ShadingSystem attributes:
     * New `"allow_shader_replacement"` (int) attribute, when nonzero, allows
       shaders to be specified more than once, replacing their former

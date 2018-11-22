@@ -453,7 +453,12 @@ private:
             return NULL;
         return static_cast<ASTshader_declaration *>(m_shader.get());
     }
-    std::string retrieve_source (ustring filename, int line);
+
+    // Retrieve the particular line of a file.
+    string_view retrieve_source (ustring filename, int line);
+
+    // Clear internal caches that speed up retrieve_source().
+    void clear_filecontents_cache();
 
     ustring m_filename;       ///< Current file we're parsing
     int m_lineno;             ///< Current line we're parsing
@@ -479,8 +484,6 @@ private:
     int m_next_const;         ///< Next const symbol index
     std::vector<ConstantSymbol *> m_const_syms;  ///< All consts we've made
     std::ostream *m_osofile;  ///< Open .oso stream for output
-    std::string m_filecontents; ///< Contents of source file
-    ustring m_last_sourcefile;///< Last filename for retrieve_source
     ustring m_codegenmethod;  ///< Current method we're generating code for
     std::stack<FunctionSymbol *> m_function_stack; ///< Stack of called funcs
     int m_total_nesting;      ///< total conditional nesting level (0 == none)
@@ -490,6 +493,12 @@ private:
     int m_main_method_start;  ///< Instruction where 'main' starts
     bool m_declaring_shader_formals; ///< Are we declaring shader formals?
     std::set<std::pair<ustring,int>> m_nowarn_lines;  ///< Lines for 'nowarn'
+    typedef std::unordered_map<ustring,std::string,ustringHash> FCMap;
+    FCMap m_filecontents_map; ///< Contents of source files we've seen
+    ustring m_last_sourcefile;///< Last filename for retrieve_source
+    std::string* m_last_filecontents = nullptr; //< Last file contents
+    int m_last_sourceline;
+    size_t m_last_sourceline_offset;
 };
 
 

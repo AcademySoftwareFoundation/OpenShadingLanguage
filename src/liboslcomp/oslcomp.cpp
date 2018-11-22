@@ -534,6 +534,7 @@ OSLCompilerImpl::compile (string_view filename,
     std::vector<std::string> includepaths;
     m_cwd = OIIO::Filesystem::current_path();
     m_main_filename = filename;
+    clear_filecontents_cache();
 
     read_compile_options (options, defines, includepaths);
 
@@ -620,6 +621,7 @@ OSLCompilerImpl::compile_buffer (string_view sourcecode,
 
     m_cwd = OIIO::Filesystem::current_path();
     m_main_filename = filename;
+    clear_filecontents_cache();
 
     // Determine where the installed shader include directory is, and
     // look for ../shaders/stdosl.h and force it to include.
@@ -1035,29 +1037,70 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename,
 
 
 
-std::string
+void
+OSLCompilerImpl::clear_filecontents_cache()
+{
+    m_filecontents_map.clear();
+    m_last_sourcefile.clear();
+    m_last_filecontents = nullptr;
+    m_last_sourceline = 1;  // note we call the first line "1" for users
+    m_last_sourceline_offset = 0;
+}
+
+
+
+string_view
 OSLCompilerImpl::retrieve_source (ustring filename, int line)
 {
-    // If we don't already have the file open, open it
-    if (filename != m_last_sourcefile) {
-        bool ok = OIIO::Filesystem::read_text_file (filename, m_filecontents);
-        if (ok) {
-            m_last_sourcefile = filename;
+    // If we don't have a valid "last", look it up in the cache.
+    if (filename != m_last_sourcefile || !m_last_filecontents) {
+        m_last_sourceline = 1;
+        m_last_sourceline_offset = 0;
+        auto found = m_filecontents_map.find (filename);
+        if (found == m_filecontents_map.end()) {
+            // If it wasn't in the cache, read the file and add it.
+            std::string contents;
+            bool ok = OIIO::Filesystem::read_text_file (filename, contents);
+            if (ok) {
+                m_last_sourcefile = filename;
+                m_filecontents_map[filename] = std::move(contents);
+                m_last_filecontents = &m_filecontents_map[filename];
+            } else {
+                m_last_sourcefile = ustring();
+                m_last_filecontents = nullptr;
+                return "<file not found>";
+            }
         } else {
-            m_last_sourcefile = ustring();
-            return "<file not found>";
+            m_last_sourcefile = filename;
+            m_last_filecontents = &found->second;
         }
     }
 
     // Now read lines up to and including the file we want.
-    OIIO::string_view s (m_filecontents);
+    OIIO::string_view s (*m_last_filecontents);
+    int orig_sourceline = line;
+    if (line >= m_last_sourceline) {
+        // Shortcut: the line we want is in the same file as the last read,
+        // and at least as far in the file. Start the search from where we
+        // left off last time.
+        s.remove_prefix (m_last_sourceline_offset);
+        line -= m_last_sourceline - 1;
+    } else {
+        // If we have to backtrack at all, backtrack to the file start.
+        m_last_sourceline_offset = 0;
+        m_last_sourceline = 1;
+    }
+    size_t offset = m_last_sourceline_offset;
     for ( ; line > 1; --line) {
         size_t p = s.find_first_of ('\n');
         if (p == OIIO::string_view::npos)
             return "<line not found>";
         s.remove_prefix (p+1);
+        offset += p+1;
     }
     s = s.substr (0, s.find_first_of ('\n'));
+    m_last_sourceline_offset = offset;
+    m_last_sourceline = orig_sourceline;
     return s;
 }
 

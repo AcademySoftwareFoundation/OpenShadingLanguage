@@ -44,12 +44,23 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // same if another packages is compiling against OSL and using these headers
 // (OSL may be C++11 but the client package may be older, or vice versa --
 // use these two symbols to differentiate these cases, when important).
-#if (__cplusplus >= 201402L)
-#  define OSL_CPLUSPLUS_VERSION  14
+#if (__cplusplus >= 201703L)
+#    define OSL_CPLUSPLUS_VERSION 17
+#    define OSL_CONSTEXPR14 constexpr
+#    define OSL_CONSTEXPR17 constexpr
+#    define OSL_CONSTEXPR20 /* not constexpr before C++20 */
+#elif (__cplusplus >= 201402L)
+#    define OSL_CPLUSPLUS_VERSION 14
+#    define OSL_CONSTEXPR14 constexpr
+#    define OSL_CONSTEXPR17 /* not constexpr before C++17 */
+#    define OSL_CONSTEXPR20 /* not constexpr before C++20 */
 #elif (__cplusplus >= 201103L) || _MSC_VER >= 1900
-#  define OSL_CPLUSPLUS_VERSION  11
+#    define OSL_CPLUSPLUS_VERSION 11
+#    define OSL_CONSTEXPR14 /* not constexpr before C++14 */
+#    define OSL_CONSTEXPR17 /* not constexpr before C++17 */
+#    define OSL_CONSTEXPR20 /* not constexpr before C++20 */
 #else
-#  error "This version of OSL requires C++11"
+#    error "This version of OSL requires C++11"
 #endif
 
 #ifndef OSL_HOSTDEVICE
@@ -153,16 +164,14 @@ using OIIO::string_view;
 #endif
 
 
-#ifndef __has_attribute
-#  define __has_attribute(x) 0
-#endif
+// Note: __has_cpp_attribute, __has_include, __has_attribute fallbacks
+// are defined in OpenImageIO/platform.h.
 
-#if OSL_CPLUSPLUS_VERSION >= 14 && __has_attribute(deprecated)
+
+#if OSL_CPLUSPLUS_VERSION >= 14 || __has_cpp_attribute(deprecated)
 #  define OSL_DEPRECATED(msg) [[deprecated(msg)]]
-#elif (defined(__GNUC__) && OIIO_GNUC_VERSION >= 40600) || defined(__clang__)
+#elif defined(__GNUC__) || defined(__clang__) || __has_attribute(deprecated)
 #  define OSL_DEPRECATED(msg) __attribute__((deprecated(msg)))
-#elif defined(__GNUC__) /* older gcc -- only the one with no message */
-#  define OSL_DEPRECATED(msg) __attribute__((deprecated))
 #elif defined(_MSC_VER)
 #  define OSL_DEPRECATED(msg) __declspec(deprecated(msg))
 #else

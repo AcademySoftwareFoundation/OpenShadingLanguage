@@ -152,6 +152,11 @@ API changes, new options, new ShadingSystem features (for renderer writers):
     * Older versions of RendererServices texture functions, the old ones
       with no errormessage parameter, which were documented as deprecated
       since 1.8, are now marked OSL_DEPRECATED. #832 (1.10.0)
+* OSLCompiler API:
+    * Improved error reporting when compiling from memory buffer. The
+      `OSLCompiler::compile_buffer()` method now takes an optional filename
+      parameter that will make error messages attribute the right "file"
+      (e.g., `Error: foo.osl:5...` rather than `<buffer>:5...`). #937 (1.10.2)
 * Miscellaneous:
     * liboslnoise: Properly hide/export symbols. #849 (1.10.0/1.9.7)
     * The behavior of the "searchpath:shader" attribute, used for finding

@@ -500,21 +500,22 @@ ShadingSystem::set_raytypes (ShaderGroup *group, int raytypes_on, int raytypes_o
 
 
 void
-ShadingSystem::optimize_group (ShaderGroup *group)
+ShadingSystem::optimize_group (ShaderGroup *group, ShadingContext *ctx)
 {
     DASSERT (group);
-    m_impl->optimize_group (*group);
+    m_impl->optimize_group (*group, ctx);
 }
 
 
 
 void
 ShadingSystem::optimize_group (ShaderGroup *group,
-                               int raytypes_on, int raytypes_off)
+                               int raytypes_on, int raytypes_off,
+                               ShadingContext *ctx)
 {
     // convenience function for backwards compatibility
     set_raytypes (group, raytypes_on, raytypes_off);
-    optimize_group (group);
+    optimize_group (group, ctx);
 
 }
 
@@ -2797,7 +2798,7 @@ ShadingSystemImpl::group_post_jit_cleanup (ShaderGroup &group)
 
 
 void
-ShadingSystemImpl::optimize_group (ShaderGroup &group)
+ShadingSystemImpl::optimize_group (ShaderGroup &group, ShadingContext *ctx)
 {
     if (group.optimized())
         return;    // already optimized
@@ -2831,7 +2832,11 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group)
 
     double locking_time = timer();
 
-    ShadingContext *ctx = get_context ();
+    bool ctx_allocated = false;
+    if (! ctx) {
+        ctx = get_context ();
+        ctx_allocated = true;
+    }
     RuntimeOptimizer rop (*this, group, ctx);
     rop.run ();
 
@@ -2871,7 +2876,8 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group)
 
     group_post_jit_cleanup (group);
 
-    release_context (ctx);
+    if (ctx_allocated)
+        release_context (ctx);
 
     group.m_optimized = true;
     spin_lock stat_lock (m_stat_mutex);

@@ -596,14 +596,17 @@ public:
     /// to the optimizer, and will be determined strictly at execution time.
     void set_raytypes(ShaderGroup *group, int raytypes_on, int raytypes_off);
 
-    /// Ensure that the group has been optimized and JITed.
-    /// Ensure that the group has been optimized and JITed.
-    void optimize_group (ShaderGroup *group);
+    /// Ensure that the group has been optimized and JITed. The ctx pointer
+    /// optionally supplies a ShadingContext to use; if one is not supplied,
+    /// one will be temporarily allocated if needed.
+    void optimize_group (ShaderGroup *group, ShadingContext *ctx = nullptr);
 
     /// Ensure that the group has been optimized and JITed. This is a
-    /// convenience function that simply calls set_raytypes followed by optimize_group.
+    /// convenience function that simply calls set_raytypes followed by
+    /// optimize_group. The ctx optionally supplies a ShadingContext to use;
+    /// if not supplied, one will be temporarily allocated if needed.
     void optimize_group (ShaderGroup *group, int raytypes_on,
-                         int raytypes_off);
+                         int raytypes_off, ShadingContext *ctx = nullptr);
 
     /// If option "greedyjit" was set, this call will trigger all
     /// shader groups that have not yet been compiled to do so with the

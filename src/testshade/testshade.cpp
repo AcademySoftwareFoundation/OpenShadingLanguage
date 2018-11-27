@@ -999,11 +999,16 @@ test_shade (int argc, const char *argv[])
 {
     OIIO::Timer timer;
 
+    // Request a TextureSystem (by default it will be the global shared
+    // one). This isn't strictly necessary, if you pass nullptr to
+    // ShadingSystem ctr, it will ask for the shared one internally.
+    TextureSystem *texturesys = TextureSystem::create();
+
     // Create a new shading system.  We pass it the RendererServices
     // object that services callbacks from the shading system, NULL for
     // the TextureSystem (that just makes 'create' make its own TS), and
     // an error handler.
-    shadingsys = new ShadingSystem (&rend, NULL, &errhandler);
+    shadingsys = new ShadingSystem (&rend, texturesys, &errhandler);
 
     // Register the layout of all closures known to this renderer
     // Any closure used by the shader which is not registered, or
@@ -1239,7 +1244,25 @@ test_shade (int argc, const char *argv[])
 
     // We're done with the shading system now, destroy it
     shadergroup.reset ();  // Must release this before destroying shadingsys
-    delete shadingsys;
 
-    return EXIT_SUCCESS;
+    delete shadingsys;
+    int retcode = EXIT_SUCCESS;
+
+#if OPENIMAGEIO_VERSION >= 10904
+    // Double check that there were no uncaught errors in the texture
+    // system and image cache.
+    std::string err = texturesys->geterror();
+    if (!err.empty()) {
+        std::cout << "ERRORS left in TextureSystem:\n" << err << "\n";
+        retcode = EXIT_FAILURE;
+    }
+    OIIO::ImageCache *ic = texturesys->imagecache();
+    err = ic ? ic->geterror() : std::string();
+    if (!err.empty()) {
+        std::cout << "ERRORS left in ImageCache:\n" << err << "\n";
+        retcode = EXIT_FAILURE;
+    }
+#endif
+
+    return retcode;
 }

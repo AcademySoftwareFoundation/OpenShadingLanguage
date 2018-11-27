@@ -637,13 +637,16 @@ public:
     /// assignment in OSL itself:
     ///   int -> float             convert to float
     ///   int -> triple            convert to float and replicate x3
+    ///   int -> float[4]          convert to float and replicate x4
     ///   float -> triple          replicate x3
+    ///   float -> float[4]        replicate x4
     ///   float -> int             truncate like a (int) type cast
     ///   triple -> triple         copy, regarless of differing vector types
     /// 3. Additional rules not allowed in OSL source code:
     ///   float -> float[2]        replicate x2
     ///   int -> float[2]          convert to float and replicate x2
     ///   float[2] -> triple       (f[0], f[1], 0)
+    ///   float[4] -> vec4         allow conversion to OIIO type (no vec4 in OSL)
     ///
     /// Observation: none of the supported conversions require more
     /// storage for src than for dst.

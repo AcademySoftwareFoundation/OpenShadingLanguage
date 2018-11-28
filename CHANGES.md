@@ -1,3 +1,34 @@
+Release 1.11/2.0? -- ?? 2019 (compared to 1.10)
+--------------------------------------------------
+Dependency and standards changes:
+* LLVM 4.0-7.0:  Alert: we are expecting this release of OSL to at some
+  point drop support for LLVM 4.0. Maybe 5.0?
+* OpenImageIO 1.8-2.0: Alert: by the time we release this version of OSL,
+  we may drop support for OIIO 1.x.
+
+OSL Language and oslc compiler:
+* oslc compilation speed-ups with faster retrieval of source lines when
+  pasted into oso output. #938 (1.11.0)
+
+OSL Standard library:
+
+Shaders:
+
+API changes, new options, new ShadingSystem features (for renderer writers):
+*  `ShadingSystem::convert_value()` will now allow promotion of int or
+   float to `float[4]`. #940 (1.11.0)
+
+Bug fixes and other improvements (internals):
+
+Build & test system improvements:
+* Testshade makes sure that no unreported errors accumulted in the texture
+  system or image cache. #939 (1.11.0)
+
+Documentation:
+
+
+
+
 Release 1.10 -- Dec 1, 2018 (compared to 1.9)
 --------------------------------------------------
 Dependency and standards changes:
@@ -152,6 +183,11 @@ API changes, new options, new ShadingSystem features (for renderer writers):
     * Older versions of RendererServices texture functions, the old ones
       with no errormessage parameter, which were documented as deprecated
       since 1.8, are now marked OSL_DEPRECATED. #832 (1.10.0)
+* OSLCompiler API:
+    * Improved error reporting when compiling from memory buffer. The
+      `OSLCompiler::compile_buffer()` method now takes an optional filename
+      parameter that will make error messages attribute the right "file"
+      (e.g., `Error: foo.osl:5...` rather than `<buffer>:5...`). #937 (1.10.2)
 * Miscellaneous:
     * liboslnoise: Properly hide/export symbols. #849 (1.10.0/1.9.7)
     * The behavior of the "searchpath:shader" attribute, used for finding

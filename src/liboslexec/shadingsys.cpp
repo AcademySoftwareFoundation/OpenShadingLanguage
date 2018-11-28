@@ -523,6 +523,7 @@ ShadingSystem::optimize_group (ShaderGroup *group,
 
 static TypeDesc TypeFloatArray2 (TypeDesc::FLOAT, 2);
 static TypeDesc TypeFloatArray3 (TypeDesc::FLOAT, 3);
+static TypeDesc TypeFloatArray4 (TypeDesc::FLOAT, 4);
 
 
 
@@ -581,12 +582,31 @@ ShadingSystem::convert_value (void *dst, TypeDesc dsttype,
             }
             return true;
         }
+        // float->float[4]
+        if (dsttype == TypeFloatArray4) {
+            if (dst && src) {
+                float f = *(const float *)src;
+                ((float *)dst)[0] = f;
+                ((float *)dst)[1] = f;
+                ((float *)dst)[2] = f;
+                ((float *)dst)[3] = f;
+            }
+            return true;
+        }
         return false; // Unsupported conversion
     }
 
     // float[3] -> triple
     if ((srctype == TypeFloatArray3 && equivalent(dsttype, TypeDesc::TypePoint)) ||
         (dsttype == TypeFloatArray3 && equivalent(srctype, TypeDesc::TypePoint))) {
+        if (dst && src)
+            memcpy (dst, src, dsttype.size());
+        return true;
+    }
+
+    // float[4] -> vec4
+    if ((srctype == TypeFloatArray4 && equivalent(dsttype, TypeDesc::TypeFloat4)) ||
+        (dsttype == TypeFloatArray4 && equivalent(srctype, TypeDesc::TypeFloat4))) {
         if (dst && src)
             memcpy (dst, src, dsttype.size());
         return true;

@@ -43,7 +43,7 @@
 
 \def\langname{Open Shading Language\xspace}
 \def\product{{\sffamily Open Shading Language}\xspace}
-\def\versionnumber{1.10}
+\def\versionnumber{1.11}
 \def\productver{\product\ {\sffamily \versionnumber}\xspace}
 
 
@@ -54,7 +54,7 @@
 Language Specification
 } \bigskip }
 \author{
-\copyright\ Copyright 2009-2018 Sony Pictures Imageworks Inc., et al. All rights reserved.
+\copyright\ Copyright 2009-2019 Sony Pictures Imageworks Inc., et al. All rights reserved.
  \bigskip \\
 \vspace{1in} \\
 Editor: Larry Gritz \\
@@ -2054,7 +2054,6 @@ you can construct built-in types like \color or \point:
     RGBA d = add (c, RGBA(color(.3,.4,.5), 0));
 \end{code}
 
-\NEW % 1.10
 You may also use the \emph{compound initializer list} syntax to construct a
 type when it can be deduced from context which compound type is required.
 For example, this is equivalent to the preceding example:
@@ -2675,7 +2674,6 @@ match the return value to the type of variable the result is assigned to.
 \label{sec:syntax:operatoroverloading}
 \index{operator overloading}
 
-\NEW  % 1.9
 OSL permits \emph{operator overloading}, which is the practice of providing
 a function that will be called when you use an operator like {\cf +} or
 {\cf *}. This is especially handy when you use {\cf struct} to define
@@ -3681,7 +3679,6 @@ The old {\cf cellnoise(...coords...)} function is equivalent to
 \emph{type} {\ce hashnoise} (point p) \\
 \emph{type} {\ce hashnoise} (point p, float t)}
 \indexapi{hashnoise()}
-\NEW % 1.9
 Returns a deterministic, repeatable \emph{hash} of the 1-, 2-, 3-, or
 4-D coordinates.  The return values will be evenly
 distributed on $[0,1]$ and be completely repeatable when passed the same
@@ -3697,7 +3694,6 @@ int {\ce hash} (point p) \\
 int {\ce hash} (point p, float t) \\
 int {\ce hash} (int i)}
 \indexapi{hash()}
-\NEW % 1.9
 Returns a deterministic, repeatable integer \emph{hash} of the 1-, 2-, 3-,
 or 4-D coordinates.
 \apiend

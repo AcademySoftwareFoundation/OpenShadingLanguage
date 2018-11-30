@@ -41,9 +41,6 @@ namespace pvt {
 
 class OSLCOMPPUBLIC OSLCompiler {
 public:
-    OSL_DEPRECATED("Directly construct or new an OSLCompiler")
-    static OSLCompiler *create ();
-
     OSLCompiler (ErrorHandler *errhandler=NULL);
     ~OSLCompiler ();
 

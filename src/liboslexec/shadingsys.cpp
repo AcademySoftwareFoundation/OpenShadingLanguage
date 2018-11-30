@@ -554,7 +554,7 @@ ShadingSystem::convert_value (void *dst, TypeDesc dsttype,
     // Just copy equivalent types
     if (equivalent (dsttype, srctype)) {
         if (dst && src)
-            memcpy (dst, src, dsttype.size());
+            memmove (dst, src, dsttype.size());
         return true;
     }
 
@@ -600,7 +600,7 @@ ShadingSystem::convert_value (void *dst, TypeDesc dsttype,
     if ((srctype == TypeFloatArray3 && equivalent(dsttype, TypeDesc::TypePoint)) ||
         (dsttype == TypeFloatArray3 && equivalent(srctype, TypeDesc::TypePoint))) {
         if (dst && src)
-            memcpy (dst, src, dsttype.size());
+            memmove (dst, src, dsttype.size());
         return true;
     }
 
@@ -608,7 +608,7 @@ ShadingSystem::convert_value (void *dst, TypeDesc dsttype,
     if ((srctype == TypeFloatArray4 && equivalent(dsttype, TypeDesc::TypeFloat4)) ||
         (dsttype == TypeFloatArray4 && equivalent(srctype, TypeDesc::TypeFloat4))) {
         if (dst && src)
-            memcpy (dst, src, dsttype.size());
+            memmove (dst, src, dsttype.size());
         return true;
     }
 

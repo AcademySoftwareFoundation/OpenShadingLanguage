@@ -219,6 +219,12 @@ Documentation:
 
 
 
+Release 1.9.13 -- 1 Dec? 2018 (compared to 1.9.12)
+------------------------------------------------
+* Fix crash with texture3d lookups with derivatives. #932
+* Fix oslc crash when a struct parameter is initialized with a function call
+  that returns a structure. #934
+
 Release 1.9.12 -- 1 Nov 2018 (compared to 1.9.11)
 ------------------------------------------------
 * Fix oslc read/write error for `regex_search`/`regex_match` #922

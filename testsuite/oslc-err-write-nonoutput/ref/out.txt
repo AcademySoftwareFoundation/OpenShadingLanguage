@@ -1,6 +1,6 @@
-test.osl:4: error: cannot write to "x" (read-only symbol)
-test.osl:5: error: cannot write to "x" (read-only symbol)
-test.osl:6: error: cannot write to "i" (read-only symbol)
-test.osl:7: error: cannot write to "i" (read-only symbol)
-test.osl:20: error: cannot write to "u" (read-only symbol)
+test.osl:4: error: cannot write to non-output parameter "x"
+test.osl:5: error: cannot write to non-output parameter "x"
+test.osl:6: error: cannot write to non-output parameter "i"
+test.osl:7: error: cannot write to non-output parameter "i"
+test.osl:20: error: cannot write to non-output parameter "u"
 FAILED test.osl

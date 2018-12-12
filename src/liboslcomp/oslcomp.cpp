@@ -1207,8 +1207,8 @@ OSLCompilerImpl::check_write_legality (const Opcode &op, int opnum,
     if (sym->symtype() == SymTypeParam && 
         (opnum < sym->initbegin() || opnum >= sym->initend())) {
         error (op.sourcefile(), op.sourceline(),
-               "Cannot write to input parameter '%s' (op %d)",
-               sym->name().c_str(), opnum);
+               "cannot write to non-output parameter \"%s\"",
+               sym->name());
     }
 }
 

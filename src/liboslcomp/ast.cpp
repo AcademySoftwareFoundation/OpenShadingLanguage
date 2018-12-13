@@ -943,10 +943,11 @@ ASTNode::check_symbol_writeability (ASTNode *var)
 
     if (dest) {
         if (dest->readonly()) {
-            if (OSL_VERSION >= 11001)
-                error ("cannot write to \"%s\" (read-only symbol)", dest->name());
-            else
-                warning ("cannot write to \"%s\" (read-only symbol)", dest->name());
+            warning ("cannot write to non-output parameter \"%s\"", dest->name());
+            // Note: Consider it only a warning to write to a non-output
+            // parameter. Users who want it to be a hard error can use
+            // -Werror. Writing to any other readonly symbols is a full
+            // error.
             return false;
         }
     } else {

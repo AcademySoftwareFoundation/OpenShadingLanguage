@@ -348,9 +348,9 @@ RuntimeOptimizer::debug_opt_ops (int opbegin, int opend, string_view message) co
     const Opcode &op (inst()->ops()[opbegin]);
     std::string oprange;
     if (opbegin >= 0 && opend-opbegin > 1)
-        oprange = Strutil::format ("ops %d-%d ", opbegin, opend);
+        oprange = Strutil::sprintf ("ops %d-%d ", opbegin, opend);
     else if (opbegin >= 0)
-        oprange = Strutil::format ("op %d ", opbegin);
+        oprange = Strutil::sprintf ("op %d ", opbegin);
     debug_opt ("%s%s (@ %s:%d)\n", oprange, message,
                op.sourcefile(), op.sourceline());
 }
@@ -366,18 +366,18 @@ RuntimeOptimizer::debug_turn_into (const Opcode &op, int numops,
     int opnum = &op - &(inst()->ops()[0]);
     std::string msg;
     if (numops == 1)
-        msg = Strutil::format ("turned '%s' to '%s", op_string(op), newop);
+        msg = Strutil::sprintf ("turned '%s' to '%s", op_string(op), newop);
     else
-        msg = Strutil::format ("turned to '%s", newop);
+        msg = Strutil::sprintf ("turned to '%s", newop);
     if (newarg0 >= 0)
-        msg += Strutil::format (" %s", inst()->symbol(newarg0)->name());
+        msg += Strutil::sprintf (" %s", inst()->symbol(newarg0)->name());
     if (newarg1 >= 0)
-        msg += Strutil::format (" %s", inst()->symbol(newarg1)->name());
+        msg += Strutil::sprintf (" %s", inst()->symbol(newarg1)->name());
     if (newarg2 >= 0)
-        msg += Strutil::format (" %s", inst()->symbol(newarg2)->name());
+        msg += Strutil::sprintf (" %s", inst()->symbol(newarg2)->name());
     msg += "'";
     if (why.size())
-        msg += Strutil::format (" : %s", why);
+        msg += Strutil::sprintf (" : %s", why);
     debug_opt_ops (opnum, opnum+numops, msg);
 }
 
@@ -1241,7 +1241,7 @@ RuntimeOptimizer::simple_sym_assign (int sym, int opnum)
             Opcode &uselessop (inst()->ops()[i->second]);
             if (uselessop.opname() != u_nop)
                 turn_into_nop (uselessop,
-                           debug() > 1 ? Strutil::format("remove stale value assignment to %s, reassigned on op %d",
+                           debug() > 1 ? Strutil::sprintf("remove stale value assignment to %s, reassigned on op %d",
                                                          opargsym(uselessop,0)->name(), opnum).c_str() : "");
         }
     }
@@ -1434,9 +1434,9 @@ RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
         // replace its default value entirely and get rid of the assignment.
         if (R->firstread() > opnum && ! R->renderer_output() &&
                 m_opt_elide_unconnected_outputs) {
-            make_param_use_instanceval (R, Strutil::format("- written once, with a constant (%s), before any reads", const_value_as_string(*A)));
+            make_param_use_instanceval (R, Strutil::sprintf("- written once, with a constant (%s), before any reads", const_value_as_string(*A)));
             replace_param_value (R, A->data(), A->typespec());
-            turn_into_nop (op, debug() > 1 ? Strutil::format("oparam %s never subsequently read or connected", R->name().c_str()).c_str() : "");
+            turn_into_nop (op, debug() > 1 ? Strutil::sprintf("oparam %s never subsequently read or connected", R->name().c_str()).c_str() : "");
             return true;
         }
     }
@@ -1446,7 +1446,7 @@ RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
     // assignment at all. Note that unread_after() does take into
     // consideration whether it's a renderer output.
     if (unread_after(R,opnum)) {
-        turn_into_nop (op, debug() > 1 ? Strutil::format("oparam %s never subsequently read or connected", R->name().c_str()).c_str() : "");
+        turn_into_nop (op, debug() > 1 ? Strutil::sprintf("oparam %s never subsequently read or connected", R->name().c_str()).c_str() : "");
         return true;
     }
 
@@ -1723,7 +1723,7 @@ RuntimeOptimizer::peephole2 (int opnum, int op2num)
               equivalent (a->typespec(), c->typespec())) {
             if (debug() > 1)
                 debug_opt_ops (opnum, opnum+1,
-                               Strutil::format ("turned '%s %s...' to '%s %s...' as part of daisy-chain",
+                               Strutil::sprintf ("turned '%s %s...' to '%s %s...' as part of daisy-chain",
                                  op.opname(), a->name(), op.opname(), c->name()));
             inst()->args()[op.firstarg()] = inst()->args()[next.firstarg()];
             c->mark_rw (opnum, false, true);
@@ -1831,7 +1831,7 @@ RuntimeOptimizer::remove_unused_params ()
         if (param_never_used(s) && s.has_init_ops()) {
             std::string why;
             if (debug() > 1)
-                why = Strutil::format ("remove init ops of unused param %s %s", s.typespec().c_str(), s.name());
+                why = Strutil::sprintf ("remove init ops of unused param %s %s", s.typespec().c_str(), s.name());
             turn_into_nop (s.initbegin(), s.initend(), why);
             s.set_initrange (0, 0);
             s.clear_rw();   // mark as totally unused
@@ -2382,7 +2382,7 @@ RuntimeOptimizer::optimize_instance ()
         // Not needed.  Remove all its connections and ops.
         inst()->connections().clear ();
         turn_into_nop (0, (int)inst()->ops().size()-1,
-                       debug() > 1 ? Strutil::format("eliminate layer %s with no outward connections", inst()->layername().c_str()).c_str() : "");
+                       debug() > 1 ? Strutil::sprintf("eliminate layer %s with no outward connections", inst()->layername().c_str()).c_str() : "");
         for (auto&& s : inst()->symbols())
             s.clear_rw ();
     }
@@ -2992,7 +2992,7 @@ RuntimeOptimizer::printinst (std::ostream &out) const
             if (op.jump(j) >= 0)
                 out << " " << op.jump(j);
         out << "\t# ";
-//        out << "    rw " << Strutil::format("%x",op.argread_bits())
+//        out << "    rw " << Strutil::sprintf("%x",op.argread_bits())
 //            << ' ' << op.argwrite_bits();
         if (op.argtakesderivs_all())
             out << " %derivs(" << op.argtakesderivs_all() << ") ";

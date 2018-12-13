@@ -334,7 +334,7 @@ BackendLLVM::llvm_type_groupdata ()
         std::cout << " Group struct had " << order << " fields, total size "
                   << offset << "\n\n";
 
-    std::string groupdataname = Strutil::format("Groupdata_%llu",
+    std::string groupdataname = Strutil::sprintf("Groupdata_%llu",
                                                 (long long unsigned int)group().name().hash());
     m_llvm_type_groupdata = ll.type_struct (fields, groupdataname);
 
@@ -736,7 +736,7 @@ BackendLLVM::build_llvm_init ()
 {
     // Make a group init function: void group_init(ShaderGlobals*, GroupData*)
     // Note that the GroupData* is passed as a void*.
-    std::string unique_name = Strutil::format ("group_%d_init", group().id());
+    std::string unique_name = Strutil::sprintf ("group_%d_init", group().id());
     ll.current_function (
            ll.make_function (unique_name, false,
                              ll.type_void(), // return type
@@ -751,7 +751,7 @@ BackendLLVM::build_llvm_init ()
     ll.new_builder (entry_bb);
 #if 0 /* helpful for debugging */
     if (llvm_debug()) {
-        llvm_gen_debug_printf (Strutil::format("\n\n\n\nGROUP! %s",group().name()));
+        llvm_gen_debug_printf (Strutil::sprintf("\n\n\n\nGROUP! %s",group().name()));
         llvm_gen_debug_printf ("enter group initlayer %d %s %s");                               this->layer(), inst()->layername(), inst()->shadername()));
     }
 #endif
@@ -791,7 +791,7 @@ BackendLLVM::build_llvm_init ()
     // All done
 #if 0 /* helpful for debugging */
     if (llvm_debug())
-        llvm_gen_debug_printf (Strutil::format("exit group init %s",
+        llvm_gen_debug_printf (Strutil::sprintf("exit group init %s",
                                                group().name());
 #endif
     ll.op_return();
@@ -837,7 +837,7 @@ BackendLLVM::build_llvm_instance (bool groupentry)
         // ran. If it has, do an early return. Otherwise, set the 'ran' flag
         // and then run the layer.
         if (shadingsys().llvm_debug_layers())
-            llvm_gen_debug_printf (Strutil::format("checking for already-run layer %d %s %s",
+            llvm_gen_debug_printf (Strutil::sprintf("checking for already-run layer %d %s %s",
                                    this->layer(), inst()->layername(), inst()->shadername()));
         llvm::Value *executed = ll.op_eq (ll.op_load (layerfield), ll.constant_bool(true));
         llvm::BasicBlock *then_block = ll.new_basic_block();
@@ -846,14 +846,14 @@ BackendLLVM::build_llvm_instance (bool groupentry)
         // insert point is now then_block
         // we've already executed, so return early
         if (shadingsys().llvm_debug_layers())
-            llvm_gen_debug_printf (Strutil::format("  taking early exit, already executed layer %d %s %s",
+            llvm_gen_debug_printf (Strutil::sprintf("  taking early exit, already executed layer %d %s %s",
                                    this->layer(), inst()->layername(), inst()->shadername()));
         ll.op_return ();
         ll.set_insert_point (after_block);
     }
 
     if (shadingsys().llvm_debug_layers())
-        llvm_gen_debug_printf (Strutil::format("enter layer %d %s %s",
+        llvm_gen_debug_printf (Strutil::sprintf("enter layer %d %s %s",
                                this->layer(), inst()->layername(), inst()->shadername()));
     // Mark this layer as executed
     if (! group().is_last_layer(layer())) {
@@ -1014,7 +1014,7 @@ BackendLLVM::build_llvm_instance (bool groupentry)
 
     // All done
     if (shadingsys().llvm_debug_layers())
-        llvm_gen_debug_printf (Strutil::format("exit layer %d %s %s",
+        llvm_gen_debug_printf (Strutil::sprintf("exit layer %d %s %s",
                                this->layer(), inst()->layername(), inst()->shadername()));
     ll.op_return();
 
@@ -1221,8 +1221,8 @@ BackendLLVM::run ()
         // filename length limits.
         std::string safegroup = Strutil::replace (group().name(), "/", ".", true);
         if (safegroup.size() > 235)
-            safegroup = Strutil::format ("TRUNC_%s_%d", safegroup.substr(safegroup.size()-235), group().id());
-        std::string name = Strutil::format ("%s.ll", safegroup);
+            safegroup = Strutil::sprintf ("TRUNC_%s_%d", safegroup.substr(safegroup.size()-235), group().id());
+        std::string name = Strutil::sprintf ("%s.ll", safegroup);
         std::ofstream out (name, std::ios_base::out | std::ios_base::trunc);
         if (out.good()) {
             out << ll.bitcode_string (ll.module());
@@ -1250,8 +1250,8 @@ BackendLLVM::run ()
         // filename length limits.
         std::string safegroup = Strutil::replace (group().name(), "/", ".", true);
         if (safegroup.size() > 235)
-            safegroup = Strutil::format ("TRUNC_%s_%d", safegroup.substr(safegroup.size()-235), group().id());
-        std::string name = Strutil::format ("%s_opt.ll", safegroup);
+            safegroup = Strutil::sprintf ("TRUNC_%s_%d", safegroup.substr(safegroup.size()-235), group().id());
+        std::string name = Strutil::sprintf ("%s_opt.ll", safegroup);
         std::ofstream out (name, std::ios_base::out | std::ios_base::trunc);
         if (out.good()) {
             out << ll.bitcode_string (ll.module());
@@ -1270,7 +1270,7 @@ BackendLLVM::run ()
             ll.module_from_bitcode (static_cast<const char*>(bitcode.data()),
                                     bitcode.size(), "cuda_lib");
 
-        std::string name = Strutil::format ("%s_%d", group().name(), group().id());
+        std::string name = Strutil::sprintf ("%s_%d", group().name(), group().id());
         ll.ptx_compile_group (lib_module, name, group().m_llvm_ptx_compiled_version);
 
         if (group().m_llvm_ptx_compiled_version.empty()) {

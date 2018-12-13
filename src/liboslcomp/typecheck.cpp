@@ -738,8 +738,8 @@ ASTtype_constructor::typecheck (TypeSpec expected, bool report, bool bind)
 
     // If we made it this far, no match could be found.
     if (report) {
-        std::string err = Strutil::format ("Cannot construct %s (",
-                                           type_c_str(expected));
+        std::string err = OIIO::Strutil::sprintf ("Cannot construct %s (",
+                                                  type_c_str(expected));
         for (ref a = args();  a;  a = a->next()) {
             err += a->typespec().string();
             if (a->next())
@@ -1003,7 +1003,7 @@ private:
                          m_compiler->type_c_str(node->typespec()),
                          m_compiler->type_c_str(expected),
                          !spec ? "" :
-                         Strutil::format(" %s.%s", spec->name(), field->name));
+                         Strutil::sprintf(" %s.%s", spec->name(), field->name));
         }
         return true;
     }
@@ -1657,7 +1657,7 @@ public:
             comma = ", ";
         }
         argstr += ")";
-        return Strutil::format ("%s '%s'%s\n", msg, argstr,
+        return Strutil::sprintf ("%s '%s'%s\n", msg, argstr,
                                 candidateMsg ? "\n  Candidates are:" : "");
     }
 
@@ -1668,8 +1668,8 @@ public:
         formals += advance;
         std::string msg = "    ";
         if (ASTNode* decl = sym->node())
-            msg += Strutil::format("%s:%d\t", decl->sourcefile(), decl->sourceline());
-        msg += Strutil::format("%s %s (%s)\n", m_compiler->type_c_str(returntype),
+            msg += Strutil::sprintf("%s:%d\t", decl->sourcefile(), decl->sourceline());
+        msg += Strutil::sprintf("%s %s (%s)\n", m_compiler->type_c_str(returntype),
                                sym->name(), m_compiler->typelist_from_code(formals));
         return msg;
     }
@@ -1815,7 +1815,7 @@ public:
             std::string errmsg = reportAmbiguity (funcname, !warn /* "Candidates are" msg*/,
                                                   "Ambiguous call to");
             if (warn) {
-                errmsg += Strutil::format ("  Chosen function is:\n%s",
+                errmsg += Strutil::sprintf ("  Chosen function is:\n%s",
                                            reportFunction (c.first->sym));
                 errmsg += "  Other candidates are:\n";
                 for (auto& candidate : m_candidates)
@@ -2250,7 +2250,7 @@ OSLCompilerImpl::code_from_type (TypeSpec type) const
     std::string out;
     TypeDesc elem = type.elementtype().simpletype();
     if (type.is_structure() || type.is_structure_array()) {
-        out = Strutil::format ("S%d", type.structure());
+        out = Strutil::sprintf ("S%d", type.structure());
     } else if (type.is_closure() || type.is_closure_array()) {
         out = 'C';
     } else {
@@ -2280,7 +2280,7 @@ OSLCompilerImpl::code_from_type (TypeSpec type) const
         if (type.is_unsized_array())
             out += "[]";
         else
-            out += Strutil::format ("[%d]", type.arraylength());
+            out += Strutil::sprintf ("[%d]", type.arraylength());
     }
 
     return out;

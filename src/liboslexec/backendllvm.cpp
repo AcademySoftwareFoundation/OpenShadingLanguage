@@ -49,7 +49,7 @@ check_cwd (ShadingSystemImpl &shadingsys)
     char pathname[1024] = { "" };
     if (! getcwd (pathname, sizeof(pathname)-1)) {
         int e = errno;
-        err += Strutil::format ("Failed getcwd(), errno is %d: %s\n",
+        err += Strutil::sprintf ("Failed getcwd(), errno is %d: %s\n",
                                 errno, pathname);
         if (e == EACCES || e == ENOENT) {
             err += "Read/search permission problem or dir does not exist.\n";
@@ -57,10 +57,10 @@ check_cwd (ShadingSystemImpl &shadingsys)
             if (! pwdenv) {
                 err += "$PWD is not even found in the environment.\n";
             } else {
-                err += Strutil::format ("$PWD is \"%s\"\n", pwdenv);
-                err += Strutil::format ("That %s.\n",
+                err += Strutil::sprintf ("$PWD is \"%s\"\n", pwdenv);
+                err += Strutil::sprintf ("That %s.\n",
                           OIIO::Filesystem::exists(pwdenv) ? "exists" : "does NOT exist");
-                err += Strutil::format ("That %s a directory.\n",
+                err += Strutil::sprintf ("That %s a directory.\n",
                           OIIO::Filesystem::is_directory(pwdenv) ? "is" : "is NOT");
                 std::vector<std::string> pieces;
                 Strutil::split (pwdenv, pieces, "/");
@@ -70,7 +70,7 @@ check_cwd (ShadingSystemImpl &shadingsys)
                         continue;
                     p += "/";
                     p += pieces[i];
-                    err += Strutil::format ("  %s : %s and is%s a directory.\n", p,
+                    err += Strutil::sprintf ("  %s : %s and is%s a directory.\n", p,
                         OIIO::Filesystem::exists(p) ? "exists" : "does NOT exist",
                         OIIO::Filesystem::is_directory(p) ? "" : " NOT");
                 }
@@ -431,7 +431,7 @@ BackendLLVM::createOptixMetadata (const std::string& name, const std::string& ty
     ASSERT (use_optix() && "This function is only supported when using OptiX!");
 
     auto mangle_name = [](const std::string& name, const std::string& prefix) {
-        return OIIO::Strutil::format ("_ZN%drti_internal_%s%d%sE",
+        return OIIO::Strutil::sprintf ("_ZN%drti_internal_%s%d%sE",
                                       prefix.size()+13, prefix, name.size(), name);
     };
 

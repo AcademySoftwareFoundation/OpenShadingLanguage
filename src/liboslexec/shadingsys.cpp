@@ -1472,15 +1472,24 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
         return true;
     }
     if (name == "group_init_name" && type.basetype == TypeDesc::STRING) {
+#ifdef OIIO_HAS_SPRINTF
+        *(ustring *)val = ustring::sprintf ("group_%d_init", group->id());
+#else
         *(ustring *)val = ustring::format ("group_%d_init", group->id());
+#endif
         return true;
     }
     if (name == "group_entry_name" && type.basetype == TypeDesc::STRING) {
         int nlayers = group->nlayers ();
         ShaderInstance *inst = (*group)[nlayers-1];
         // This formuation mirrors OSOProcessorBase::layer_function_name()
+#ifdef OIIO_HAS_SPRINTF
+        *(ustring *)val = ustring::sprintf ("%s_%s_%d", group->name(),
+                                           inst->layername(), inst->id());
+#else
         *(ustring *)val = ustring::format ("%s_%s_%d", group->name(),
                                            inst->layername(), inst->id());
+#endif
         return true;
     }
     if (name == "num_textures_needed" && type == TypeDesc::TypeInt) {
@@ -1755,9 +1764,9 @@ ShadingSystemImpl::getstats (int level) const
     }
 
     std::string opt;
-#define BOOLOPT(name) opt += Strutil::format(#name "=%d ", m_##name)
-#define INTOPT(name) opt += Strutil::format(#name "=%d ", m_##name)
-#define STROPT(name) if (m_##name.size()) opt += Strutil::format(#name "=\"%s\" ", m_##name)
+#define BOOLOPT(name) opt += Strutil::sprintf(#name "=%d ", m_##name)
+#define INTOPT(name) opt += Strutil::sprintf(#name "=%d ", m_##name)
+#define STROPT(name) if (m_##name.size()) opt += Strutil::sprintf(#name "=\"%s\" ", m_##name)
     INTOPT (optimize);
     INTOPT (llvm_optimize);
     INTOPT (debug);
@@ -1821,7 +1830,7 @@ ShadingSystemImpl::getstats (int level) const
     out << "    Total instances in all groups: " << m_stat_groupinstances << "\n";
     float iperg = (float)m_stat_groupinstances/std::max(m_stat_groups,1);
     out << "    Avg instances per group: "
-        << Strutil::format ("%.1f", iperg) << "\n";
+        << Strutil::sprintf ("%.1f", iperg) << "\n";
     out << "  Shading contexts: " << m_stat_contexts << "\n";
     if (m_countlayerexecs)
         out << "  Total layers executed: " << m_stat_layers_executed << "\n";
@@ -1829,15 +1838,15 @@ ShadingSystemImpl::getstats (int level) const
 #if 0
     long long totalexec = m_layers_executed_uncond + m_layers_executed_lazy +
                           m_layers_executed_never;
-    out << Strutil::format ("  Total layers run: %10lld\n", totalexec);
+    out << Strutil::sprintf ("  Total layers run: %10lld\n", totalexec);
     double inv_totalexec = 1.0 / std::max (totalexec, 1LL);  // prevent div by 0
-    out << Strutil::format ("    Unconditional:  %10lld  (%.1f%%)\n",
+    out << Strutil::sprintf ("    Unconditional:  %10lld  (%.1f%%)\n",
                             (long long)m_layers_executed_uncond,
                             (100.0*m_layers_executed_uncond) * inv_totalexec);
-    out << Strutil::format ("    On demand:      %10lld  (%.1f%%)\n",
+    out << Strutil::sprintf ("    On demand:      %10lld  (%.1f%%)\n",
                             (long long)m_layers_executed_lazy,
                             (100.0*m_layers_executed_lazy) * inv_totalexec);
-    out << Strutil::format ("    Skipped:        %10lld  (%.1f%%)\n",
+    out << Strutil::sprintf ("    Skipped:        %10lld  (%.1f%%)\n",
                             (long long)m_layers_executed_never,
                             (100.0*m_layers_executed_never) * inv_totalexec);
 
@@ -1857,22 +1866,22 @@ ShadingSystemImpl::getstats (int level) const
         out << "  After optimization, " << m_stat_empty_groups << " empty groups ("
             << (int)(100.0f*m_stat_empty_groups/m_stat_groups_compiled)<< "%)\n";
     if (m_stat_instances_compiled > 0 || m_stat_groups_compiled > 0) {
-        out << Strutil::format ("  Optimized %llu ops to %llu (%.1f%%)\n",
+        out << Strutil::sprintf ("  Optimized %llu ops to %llu (%.1f%%)\n",
                                 (long long)m_stat_preopt_ops,
                                 (long long)m_stat_postopt_ops,
                                 100.0*(double(m_stat_postopt_ops)/double(std::max(1,(int)m_stat_preopt_ops))-1.0));
-        out << Strutil::format ("  Optimized %llu symbols to %llu (%.1f%%)\n",
+        out << Strutil::sprintf ("  Optimized %llu symbols to %llu (%.1f%%)\n",
                                 (long long)m_stat_preopt_syms,
                                 (long long)m_stat_postopt_syms,
                                 100.0*(double(m_stat_postopt_syms)/double(std::max(1,(int)m_stat_preopt_syms))-1.0));
     }
-    out << Strutil::format ("  Constant connections eliminated: %d\n",
+    out << Strutil::sprintf ("  Constant connections eliminated: %d\n",
                             (int)m_stat_const_connections);
-    out << Strutil::format ("  Global connections eliminated: %d\n",
+    out << Strutil::sprintf ("  Global connections eliminated: %d\n",
                             (int)m_stat_global_connections);
-    out << Strutil::format ("  Middlemen eliminated: %d\n",
+    out << Strutil::sprintf ("  Middlemen eliminated: %d\n",
                             (int)m_stat_middlemen_eliminated);
-    out << Strutil::format ("  Derivatives needed on %d / %d symbols (%.1f%%)\n",
+    out << Strutil::sprintf ("  Derivatives needed on %d / %d symbols (%.1f%%)\n",
                             (int)m_stat_syms_with_derivs, (int)m_stat_postopt_syms,
                             (100.0*(int)m_stat_syms_with_derivs)/std::max((int)m_stat_postopt_syms,1));
     out << "  Runtime optimization cost: "
@@ -1913,7 +1922,7 @@ ShadingSystemImpl::getstats (int level) const
         out << "      max query results: " << m_stat_pointcloud_max_results << "\n";
         double avg = m_stat_pointcloud_searches ?
             (double)m_stat_pointcloud_searches_total_results/(double)m_stat_pointcloud_searches : 0.0;
-        out << "      average query results: " << Strutil::format ("%.1f", avg) << "\n";
+        out << "      average query results: " << Strutil::sprintf ("%.1f", avg) << "\n";
         out << "      failures: " << m_stat_pointcloud_failures << "\n";
         out << "    pointcloud_get calls: " << m_stat_pointcloud_gets << "\n";
         out << "    pointcloud_write calls: " << m_stat_pointcloud_writes << "\n";
@@ -2107,7 +2116,7 @@ ShadingSystemImpl::Shader (string_view shaderusage,
     // If a layer name was not supplied, make one up.
     std::string local_layername;
     if (layername.empty()) {
-        local_layername = OIIO::Strutil::format ("%s_%d", master->shadername(),
+        local_layername = OIIO::Strutil::sprintf ("%s_%d", master->shadername(),
                                                  m_curgroup->nlayers());
         layername = string_view (local_layername);
     }
@@ -2202,8 +2211,8 @@ ShadingSystemImpl::ConnectShaders (string_view srclayer, string_view srcparam,
         StructSpec *srcstruct = srccon.type.structspec();
         StructSpec *dststruct = dstcon.type.structspec();
         for (size_t i = 0;  i < (size_t)srcstruct->numfields();  ++i) {
-            std::string s = Strutil::format("%s.%s", srcparam, srcstruct->field(i).name);
-            std::string d = Strutil::format("%s.%s", dstparam, dststruct->field(i).name);
+            std::string s = Strutil::sprintf("%s.%s", srcparam, srcstruct->field(i).name);
+            std::string d = Strutil::sprintf("%s.%s", dstparam, dststruct->field(i).name);
             ConnectShaders (srclayer, s, dstlayer, d);
         }
         return true;
@@ -2222,7 +2231,7 @@ ShadingSystemImpl::ConnectShaders (string_view srclayer, string_view srcparam,
     const Symbol *dstsym = dstinst->mastersymbol(dstcon.param);
     ASSERT (dstsym);
     if (dstsym && !dstsym->allowconnect()) {
-        std::string name = dstlayer.size() ? Strutil::format("%s.%s", dstlayer, dstparam)
+        std::string name = dstlayer.size() ? Strutil::sprintf("%s.%s", dstlayer, dstparam)
                                            : std::string(dstparam);
         error ("ConnectShaders: cannot connect to %s because it has metadata allowconnect=0",
                name);
@@ -2299,7 +2308,7 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
             typestring = keyword;
         } else {
             err = true;
-            errdesc = Strutil::format ("Unknown statement (expected 'param', "
+            errdesc = Strutil::sprintf ("Unknown statement (expected 'param', "
                                        "'shader', or 'connect'): \"%s\"",
                                        keyword);
             break;
@@ -2323,7 +2332,7 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
             type = TypeDesc::TypeString;
         else {
             err = true;
-            errdesc = Strutil::format ("Unknown type: %s", typestring);
+            errdesc = Strutil::sprintf ("Unknown type: %s", typestring);
             break;  // error
         }
         if (Strutil::parse_char (p, '[')) {
@@ -2440,12 +2449,12 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
                 if (hint_name == "lockgeom" && hint_type == TypeDesc::INT) {
                     if (! Strutil::parse_int (p, lockgeom)) {
                         err = true;
-                        errdesc = Strutil::format ("hint %s expected int value", hint_name);
+                        errdesc = Strutil::sprintf ("hint %s expected int value", hint_name);
                         break;
                     }
                 } else {
                     err = true;
-                    errdesc = Strutil::format ("unknown hint '%s %s'",
+                    errdesc = Strutil::sprintf ("unknown hint '%s %s'",
                                                hint_type, hint_name);
                     break;
                 }
@@ -3151,7 +3160,7 @@ ShadingSystemImpl::archive_shadergroup (ShaderGroup *group, string_view filename
 
     if (extension == ".tar" || extension == ".tar.gz" || extension == ".tgz") {
         std::string z = Strutil::ends_with (extension, "gz") ? "-z" : "";
-        std::string cmd = Strutil::format ("tar -c %s -C %s -f %s%s %s",
+        std::string cmd = Strutil::sprintf ("tar -c %s -C %s -f %s%s %s",
                                            z, tmpdir, filename, extension,
                                            filename_list);
         // std::cout << "Command =\n" << cmd << "\n";
@@ -3161,7 +3170,7 @@ ShadingSystemImpl::archive_shadergroup (ShaderGroup *group, string_view filename
         }
 
     } else if (extension == ".zip") {
-        std::string cmd = Strutil::format ("zip -q %s%s %s",
+        std::string cmd = Strutil::sprintf ("zip -q %s%s %s",
                                            filename, extension,
                                            filename_list);
         // std::cout << "Command =\n" << cmd << "\n";

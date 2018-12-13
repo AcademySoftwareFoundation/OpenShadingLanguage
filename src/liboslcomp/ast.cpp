@@ -414,14 +414,14 @@ ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
                 auto other = static_cast<ASTfunction_declaration*>(f->node());
                 if (!other || (other->statements() || other->is_builtin())) {
                     if (err.empty()) {
-                        err = Strutil::format("Function '%s %s (%s)' redefined "
+                        err = Strutil::sprintf("Function '%s %s (%s)' redefined "
                                               "in the same scope\n"
                                               "  Previous definitions:", type,
                                               name, list_to_types_string(form));
                     }
                     err += "\n    ";
                     if (other) {
-                        err += Strutil::format("%s:%d",
+                        err += Strutil::sprintf("%s:%d",
                                     OIIO::Filesystem::filename(other->sourcefile().string()),
                                     other->sourceline());
                     } else
@@ -530,11 +530,11 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
     m_typespec = type;
     Symbol *f = comp->symtab().clash (name);
     if (f  &&  ! m_ismetadata) {
-        std::string e = Strutil::format ("\"%s\" already declared in this scope", name.c_str());
+        std::string e = Strutil::sprintf ("\"%s\" already declared in this scope", name.c_str());
         if (f->node()) {
             std::string filename = OIIO::Filesystem::filename(f->node()->sourcefile().string());
-            e += Strutil::format ("\n\t\tprevious declaration was at %s:%d",
-                                  filename, f->node()->sourceline());
+            e += Strutil::sprintf ("\n\t\tprevious declaration was at %s:%d",
+                                   filename, f->node()->sourceline());
         }
         if (f->scope() == 0 && f->symtype() == SymTypeFunction && isparam) {
             // special case: only a warning for param to mask global function
@@ -773,13 +773,13 @@ ASTstructselect::find_fieldsym (int &structid, int &fieldid)
 
     if (fieldid < 0) {
         error ("struct type '%s' does not have a member '%s'",
-               structspec->name().c_str(), m_field.c_str());
+               structspec->name(), m_field);
         return NULL;
     }
 
     const StructSpec::FieldSpec &fieldrec (structspec->field(fieldid));
-    ustring fieldsymname = ustring::format ("%s.%s", structsymname.c_str(),
-                                            fieldrec.name.c_str());
+    ustring fieldsymname = ustring::format ("%s.%s", structsymname,
+                                            fieldrec.name);
     Symbol *sym = m_compiler->symtab().find (fieldsymname);
     return sym;
 }

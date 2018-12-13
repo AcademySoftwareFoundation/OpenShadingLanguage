@@ -110,6 +110,19 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #  include <OpenImageIO/array_view.h>
 #endif
 
+// If we're using an old version of OIIO prior to the introduction of
+// Strutil::sprintf, define it ourselves to be a synonym for format.
+#ifndef OIIO_HAS_SPRINTF
+OIIO_NAMESPACE_BEGIN
+namespace Strutil {
+template<typename... Args>
+inline std::string sprintf (const char* fmt, const Args&... args) {
+    return Strutil::format (fmt, args...);
+}
+} // namespace strutil
+OIIO_NAMESPACE_END
+#endif
+
 // Extensions to Imath
 #include <OSL/matrix22.h>
 

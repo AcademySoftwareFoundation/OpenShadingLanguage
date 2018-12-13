@@ -191,7 +191,7 @@ OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
 
     std::string instring;
     if (!stdoslpath.empty())
-        instring = OIIO::Strutil::format("#include \"%s\"\n", stdoslpath.c_str());
+        instring = OIIO::Strutil::sprintf("#include \"%s\"\n", stdoslpath);
     else
         instring = "\n";
     instring += buffer;
@@ -211,13 +211,13 @@ OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
                 & ~boost::wave::language_support::support_option_insert_whitespace);
         ctx.set_language (lang);
 
-        ctx.add_macro_definition (OIIO::Strutil::format("OSL_VERSION_MAJOR=%d",
+        ctx.add_macro_definition (OIIO::Strutil::sprintf("OSL_VERSION_MAJOR=%d",
                                                   OSL_LIBRARY_VERSION_MAJOR).c_str());
-        ctx.add_macro_definition (OIIO::Strutil::format("OSL_VERSION_MINOR=%d",
+        ctx.add_macro_definition (OIIO::Strutil::sprintf("OSL_VERSION_MINOR=%d",
                                                   OSL_LIBRARY_VERSION_MINOR).c_str());
-        ctx.add_macro_definition (OIIO::Strutil::format("OSL_VERSION_PATCH=%d",
+        ctx.add_macro_definition (OIIO::Strutil::sprintf("OSL_VERSION_PATCH=%d",
                                                   OSL_LIBRARY_VERSION_PATCH).c_str());
-        ctx.add_macro_definition (OIIO::Strutil::format("OSL_VERSION=%d",
+        ctx.add_macro_definition (OIIO::Strutil::sprintf("OSL_VERSION=%d",
                                                   OSL_LIBRARY_VERSION_CODE).c_str());
         for (size_t i = 0; i < defines.size(); ++i) {
             if (defines[i][1] == 'D')
@@ -293,7 +293,7 @@ OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
 {
     std::string instring;
     if (!stdoslpath.empty())
-        instring = OIIO::Strutil::format("#include \"%s\"\n", stdoslpath);
+        instring = OIIO::Strutil::sprintf("#include \"%s\"\n", stdoslpath);
     else
         instring = "\n";
     instring += buffer;
@@ -348,13 +348,13 @@ OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
 
     clang::PreprocessorOptions &preprocOpts = inst.getPreprocessorOpts();
     preprocOpts.UsePredefines = 0;
-    preprocOpts.addMacroDef (OIIO::Strutil::format("OSL_VERSION_MAJOR=%d",
+    preprocOpts.addMacroDef (OIIO::Strutil::sprintf("OSL_VERSION_MAJOR=%d",
                                              OSL_LIBRARY_VERSION_MAJOR).c_str());
-    preprocOpts.addMacroDef (OIIO::Strutil::format("OSL_VERSION_MINOR=%d",
+    preprocOpts.addMacroDef (OIIO::Strutil::sprintf("OSL_VERSION_MINOR=%d",
                                              OSL_LIBRARY_VERSION_MINOR).c_str());
-    preprocOpts.addMacroDef (OIIO::Strutil::format("OSL_VERSION_PATCH=%d",
+    preprocOpts.addMacroDef (OIIO::Strutil::sprintf("OSL_VERSION_PATCH=%d",
                                              OSL_LIBRARY_VERSION_PATCH).c_str());
-    preprocOpts.addMacroDef (OIIO::Strutil::format("OSL_VERSION=%d",
+    preprocOpts.addMacroDef (OIIO::Strutil::sprintf("OSL_VERSION=%d",
                                              OSL_LIBRARY_VERSION_CODE).c_str());
     for (auto&& d : defines) {
         if (d[1] == 'D')

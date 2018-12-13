@@ -57,7 +57,7 @@ getargs (int argc, char *argv[])
                 "--debug", &debug, "Debug mode",
                 "--memtest %d", &memtest, "Memory test mode (arg: iterations)",
                 // "--iters %d", &iterations,
-                //     Strutil::format("Number of iterations (default: %d)", iterations).c_str(),
+                //     Strutil::sprintf("Number of iterations (default: %d)", iterations).c_str(),
                 // "--trials %d", &ntrials, "Number of trials",
                 NULL);
     if (ap.parse (argc, (const char**)argv) < 0) {

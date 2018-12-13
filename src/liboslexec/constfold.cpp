@@ -1387,15 +1387,15 @@ DECLFOLDER(constfold_format)
         std::string formatted;
         const TypeSpec &argtype = Arg.typespec();
         if (argtype.is_int())
-            formatted = Strutil::format (mid.c_str(), *(int *)Arg.data());
+            formatted = Strutil::sprintf (mid.c_str(), *(int *)Arg.data());
         else if (argtype.is_float())
-            formatted = Strutil::format (mid.c_str(), *(float *)Arg.data());
+            formatted = Strutil::sprintf (mid.c_str(), *(float *)Arg.data());
         else if (argtype.is_triple())
-            formatted = Strutil::format (mid.c_str(), *(Vec3 *)Arg.data());
+            formatted = Strutil::sprintf (mid.c_str(), *(Vec3 *)Arg.data());
         else if (argtype.is_matrix())
-            formatted = Strutil::format (mid.c_str(), *(Matrix44 *)Arg.data());
+            formatted = Strutil::sprintf (mid.c_str(), *(Matrix44 *)Arg.data());
         else if (argtype.is_string())
-            formatted = Strutil::format (mid.c_str(), *(ustring *)Arg.data());
+            formatted = Strutil::sprintf (mid.c_str(), *(ustring *)Arg.data());
         else
             break;   // something else we don't handle -- we're done
 

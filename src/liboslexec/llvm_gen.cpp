@@ -405,9 +405,9 @@ LLVMGEN (llvm_gen_printf)
 
     // Some ops prepend things
     if (op.opname() == op_error || op.opname() == op_warning) {
-        std::string prefix = Strutil::format ("Shader %s [%s]: ",
-                                              op.opname().c_str(),
-                                              rop.inst()->shadername().c_str());
+        std::string prefix = Strutil::sprintf ("Shader %s [%s]: ",
+                                               op.opname(),
+                                               rop.inst()->shadername());
         s = prefix + s;
     }
 
@@ -3168,7 +3168,7 @@ LLVMGEN (llvm_gen_spline)
              Knots.typespec().is_array() &&  
              (!has_knot_count || (has_knot_count && Knot_count.typespec().is_int())));
 
-    std::string name = Strutil::format("osl_%s_", op.opname().c_str());
+    std::string name = Strutil::sprintf("osl_%s_", op.opname());
     std::vector<llvm::Value *> args;
     // only use derivatives for result if:
     //   result has derivs and (value || knots) have derivs
@@ -3270,7 +3270,7 @@ LLVMGEN (llvm_gen_closure)
 
     const ClosureRegistry::ClosureEntry * clentry = rop.shadingsys().find_closure(closure_name);
     if (!clentry) {
-        rop.llvm_gen_error (Strutil::format("Closure '%s' is not supported by the current renderer, called from %s:%d in shader \"%s\", layer %d \"%s\", group \"%s\"",
+        rop.llvm_gen_error (Strutil::sprintf("Closure '%s' is not supported by the current renderer, called from %s:%d in shader \"%s\", layer %d \"%s\", group \"%s\"",
                                      closure_name, op.sourcefile(), op.sourceline(),
                                      rop.inst()->shadername(), rop.layer(),
                                      rop.inst()->layername(), rop.group().name()));
@@ -3744,7 +3744,7 @@ LLVMGEN (llvm_gen_blackbody)
 
     llvm::Value* args[3] = { rop.sg_void_ptr(), rop.llvm_void_ptr(Result),
                              rop.llvm_load_value(Temperature) };
-    rop.ll.call_function (Strutil::format("osl_%s_vf",op.opname().c_str()).c_str(), args, 3);
+    rop.ll.call_function (Strutil::sprintf("osl_%s_vf",op.opname()).c_str(), args, 3);
 
     // Punt, zero out derivs.
     // FIXME -- only of some day, someone truly needs blackbody() to

@@ -356,7 +356,7 @@ compile_buffer (const std::string &sourcecode,
         if (errhandler.haserror())
             errormessage = errhandler.geterror();
         else
-            errormessage = Strutil::format ("OSL: Could not compile \"%s\"", shadername);
+            errormessage = Strutil::sprintf ("OSL: Could not compile \"%s\"", shadername);
         return false;
     }
     // std::cout << "Compiled to oso:\n---\n" << osobuffer << "---\n\n";
@@ -364,7 +364,7 @@ compile_buffer (const std::string &sourcecode,
         if (errhandler.haserror())
             errormessage = errhandler.geterror();
         else
-            errormessage = Strutil::format ("OSL: Could not load compiled buffer from \"%s\"", shadername);
+            errormessage = Strutil::sprintf ("OSL: Could not load compiled buffer from \"%s\"", shadername);
         return false;
     }
     return true;
@@ -528,7 +528,7 @@ OSLInput::open (const std::string &name, ImageSpec &newspec,
         OIIO::lock_guard lock (shading_mutex);
         shadername.remove_suffix (8);
         static int exprcount = 0;
-        std::string exprname = OIIO::Strutil::format("expr_%d", exprcount++);
+        std::string exprname = OIIO::Strutil::sprintf("expr_%d", exprcount++);
         std::string sourcecode =
             "shader " + exprname + " (\n"
             "    float s = u [[ int lockgeom=0 ]],\n"

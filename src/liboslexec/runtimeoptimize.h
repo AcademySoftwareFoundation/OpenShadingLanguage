@@ -156,8 +156,8 @@ public:
     void debug_opt_impl (string_view message) const;
 
     template<typename... Args>
-    inline void debug_opt (string_view fmt, const Args&... args) const {
-        debug_opt_impl (Strutil::format (fmt, args...));
+    inline void debug_opt (const char* fmt, const Args&... args) const {
+        debug_opt_impl (OIIO::Strutil::sprintf (fmt, args...));
     }
 
     void debug_opt_ops (int opbegin, int opend, string_view message) const;

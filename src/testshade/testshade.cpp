@@ -247,7 +247,7 @@ static void
 specify_expr (int argc, const char *argv[])
 {
     ASSERT (argc == 2);
-    std::string shadername = OIIO::Strutil::format("expr_%d", exprcount++);
+    std::string shadername = OIIO::Strutil::sprintf("expr_%d", exprcount++);
     std::string sourcecode =
         "shader " + shadername + " (\n"
         "    float s = u [[ int lockgeom=0 ]],\n"

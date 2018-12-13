@@ -537,9 +537,9 @@ std::string
 ConnectedParam::str (const ShaderInstance *inst)
 {
     const Symbol *s = inst->symbol(param);
-    return Strutil::format ("%s%s%s (%s)", s->name(),
-                            arrayindex >= 0 ? Strutil::format("[%d]", arrayindex) : std::string(),
-                            channel >= 0 ? Strutil::format("[%d]", channel) : std::string(),
+    return Strutil::sprintf ("%s%s%s (%s)", s->name(),
+                            arrayindex >= 0 ? Strutil::sprintf("[%d]", arrayindex) : std::string(),
+                            channel >= 0 ? Strutil::sprintf("[%d]", channel) : std::string(),
                             type);
 }
 
@@ -548,7 +548,7 @@ ConnectedParam::str (const ShaderInstance *inst)
 std::string
 Connection::str (const ShaderGroup &group, const ShaderInstance *dstinst)
 {
-    return Strutil::format ("%s -> %s", src.str (group[srclayer]),
+    return Strutil::sprintf ("%s -> %s", src.str (group[srclayer]),
                             dst.str (dstinst));
 }
 
@@ -868,7 +868,7 @@ ShaderGroup::serialize () const
                 bool lockgeom = dstsyms_exist ? s->lockgeom()
                                               : inst->instoverride(p)->lockgeom();
                 if (! lockgeom)
-                    out << Strutil::format (" [[int lockgeom=%d]]", lockgeom);
+                    out << Strutil::sprintf (" [[int lockgeom=%d]]", lockgeom);
                 out << " ;\n";
             }
         }

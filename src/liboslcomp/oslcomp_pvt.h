@@ -33,6 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <set>
 #include <map>
 
+#include <OSL/oslconfig.h>
 #include <OSL/oslcomp.h>
 #include "ast.h"
 #include "symtab.h"
@@ -102,10 +103,10 @@ public:
     /// Error reporting
     template<typename... Args>
     void error (ustring filename, int line,
-                string_view format, const Args&... args) const
+                const char* format, const Args&... args) const
     {
-        ASSERT (format.size());
-        std::string msg = OIIO::Strutil::format (format, args...);
+        DASSERT (format && format[0]);
+        std::string msg = OIIO::Strutil::sprintf (format, args...);
         if (msg.size() && msg.back() == '\n')  // trim extra newline
             msg.pop_back();
         if (filename.size())
@@ -118,12 +119,12 @@ public:
     /// Warning reporting
     template<typename... Args>
     void warning (ustring filename, int line,
-                  string_view format, const Args&... args) const
+                  const char* format, const Args&... args) const
     {
-        ASSERT (format.size());
+        DASSERT (format && format[0]);
         if (nowarn(filename, line))
             return;    // skip if the filename/line is on the nowarn list
-        std::string msg = OIIO::Strutil::format (format, args...);
+        std::string msg = OIIO::Strutil::sprintf (format, args...);
         if (msg.size() && msg.back() == '\n')  // trim extra newline
             msg.pop_back();
         if (m_err_on_warning) {
@@ -139,10 +140,10 @@ public:
     /// Info reporting
     template<typename... Args>
     void info (ustring filename, int line,
-                  string_view format, const Args&... args) const
+                  const char* format, const Args&... args) const
     {
-        ASSERT (format.size());
-        std::string msg = OIIO::Strutil::format (format, args...);
+        DASSERT (format && format[0]);
+        std::string msg = OIIO::Strutil::sprintf (format, args...);
         if (msg.size() && msg.back() == '\n')  // trim extra newline
             msg.pop_back();
         if (filename.size())
@@ -154,10 +155,10 @@ public:
     /// message reporting
     template<typename... Args>
     void message (ustring filename, int line,
-                  string_view format, const Args&... args) const
+                  const char* format, const Args&... args) const
     {
-        ASSERT (format.size());
-        std::string msg = OIIO::Strutil::format (format, args...);
+        DASSERT (format && format[0]);
+        std::string msg = OIIO::Strutil::sprintf (format, args...);
         if (msg.size() && msg.back() == '\n')  // trim extra newline
             msg.pop_back();
         if (filename.size())
@@ -402,8 +403,8 @@ private:
     void write_oso_metadata (const ASTNode *metanode) const;
 
     template<typename... Args>
-    inline void oso (string_view fmt, const Args&... args) const {
-        (*m_osofile) << OIIO::Strutil::format (fmt, args...);
+    inline void oso (const char* fmt, const Args&... args) const {
+        (*m_osofile) << OIIO::Strutil::sprintf (fmt, args...);
     }
 
     void track_variable_lifetimes () {

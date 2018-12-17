@@ -64,5 +64,19 @@ test ()
     }
 
 
-    // FIXME -- try break/continue
+    // Regression test -- codegen problem made this an infinite loop, a
+    // problem when an int variable was directly used instead of a
+    // comparison.
+    {
+        int hit=1;
+        int i = 0;
+        printf ("\nTesting while(var) hit=%d\n", hit);
+        while (hit) {
+            printf ("  first loop, i=%d, hit=%d\n", i, hit);
+            hit = 0;
+            ++i;
+        }
+        printf ("  loop exited, hit is %d\n", hit);
+    }
+
 }

@@ -816,7 +816,9 @@ public:
         // Every element of the array is the same type
         TypeSpec elemtype = expected.elementtype();
 
-        int nelem = 0;
+        // Start at 1, as oslc would have already failed in either the case of
+        // an empty initializer list, or zero-length array.
+        int nelem = 1;
         ASTcompound_initializer* cinit = init;
 
         if (init->initlist()->nodetype() != compound_initializer_node) {

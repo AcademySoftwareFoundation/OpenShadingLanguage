@@ -1,0 +1,7 @@
+test.osl:7: error: Too many initializers for a 'struct athing[3]'
+test.osl:10: error: Too many initializers for a 'float[4]'
+test.osl:12: error: Too many initializers for a 'float[1]'
+test.osl:15: error: Too many initializers for a 'float[5]'
+test.osl:17: error: Invalid array length (0)
+test.osl:17: error: Invalid array length for toalfail
+test.osl:18: error: Syntax error: syntax error

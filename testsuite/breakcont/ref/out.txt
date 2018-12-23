@@ -43,3 +43,6 @@ start of outer, j=3
   i = 3
   i = 4
 
+Testing break in an infinite for loop:
+worked
+

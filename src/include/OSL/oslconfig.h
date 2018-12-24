@@ -164,8 +164,22 @@ using OIIO::string_view;
 #endif
 
 
-// Note: __has_cpp_attribute, __has_include, __has_attribute fallbacks
-// are defined in OpenImageIO/platform.h.
+// In C++20 (and some compilers before that), __has_cpp_attribute can
+// test for understand of [[attr]] tests.
+#ifndef __has_cpp_attribute
+#    define __has_cpp_attribute(x) 0
+#endif
+
+// On gcc & clang, __has_attribute can test for __attribute__((attr))
+#ifndef __has_attribute
+#    define __has_attribute(x) 0
+#endif
+
+// In C++17 (and some compilers before that), __has_include("blah.h") or
+// __has_include(<blah.h>) can test for presence of an include file.
+#ifndef __has_include
+#    define __has_include(x) 0
+#endif
 
 
 #if OSL_CPLUSPLUS_VERSION >= 14 || __has_cpp_attribute(deprecated)

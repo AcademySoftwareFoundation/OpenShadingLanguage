@@ -1,0 +1,26 @@
+shader test (output color Cout = 0)
+{
+    int spltype = int(clamp(v*4,0,3));
+    string basis[4] = { "linear", "catmull-rom", "bspline", "bezier" };
+    float cvsbezier[4] = { 0, 1.0/3, 2.0/3, 1 };
+    float cvslinear[4] = { -1, 0, 1, 2};
+    float vv = fmod (v*4, 1.0);
+    if (vv < 0.1 || vv > 0.9) {
+        Cout = 0.0;
+    } else {
+        float s, is, invs;
+        if (basis[spltype] == "bezier") {
+            s = spline(basis[spltype], u, cvsbezier);
+            is = splineinverse(basis[spltype], u, cvsbezier);
+            invs = splineinverse(basis[spltype], s, cvsbezier);
+        } else {
+            s = spline(basis[spltype], u, cvslinear);
+            is = splineinverse(basis[spltype], u, cvslinear);
+            invs = splineinverse(basis[spltype], s, cvslinear);
+        }
+        Cout = vv < 0.5 ? s : is;
+        // Color red if splineinverse(spline(u)) != u
+        if (abs(s-invs) > 0.001)
+            Cout[0] = abs(s-invs);
+    }
+}

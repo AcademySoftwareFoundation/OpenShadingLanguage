@@ -175,7 +175,7 @@ class NdfAutomata {
 
         /// Get the set of states that are reachable from the given state set using the given symbol
         void transitionsFrom(const IntSet &states, ustring symbol, IntSet &out_states)const;
-        /// Get the set of states that are reachable from the given state set by lambda
+        /// Get the set of states that are reachable from the given state set by wildcard
         void wildcardTransitionsFrom(const IntSet &states, IntSet &out_states)const;
 
         /// Perform a lambda closure of a state set

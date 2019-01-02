@@ -63,4 +63,4 @@ add_custom_target (shaders ALL
                    SOURCES ${shader_source} ${shader_headers})
 
 install (FILES ${shader_headers} ${shader_source} ${shader_objs}
-        DESTINATION shaders)
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/shaders)

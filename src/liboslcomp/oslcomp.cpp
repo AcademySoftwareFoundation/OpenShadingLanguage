@@ -434,86 +434,59 @@ OSLCompilerImpl::read_compile_options (const std::vector<std::string> &options,
 static string_view
 find_stdoslpath (const std::vector<std::string>& includepaths)
 {
-    // first look in $OSL_ROOT_DIR/shaders
-    std::string osl_root_dir = OIIO::Sysutil::getenv ("OSL_ROOT_DIR");
-    if (! osl_root_dir.empty()) {
-        std::string path = osl_root_dir + "/shaders";
-        if (OIIO::Filesystem::is_directory (path)) {
-            path = path + "/stdosl.h";
-            if (OIIO::Filesystem::exists (path))
-                return ustring(path);
-        }
-    }
-    // deprecated name: OSLHOME
-    osl_root_dir = OIIO::Sysutil::getenv ("OSLHOME");
-    if (! osl_root_dir.empty()) {
-        std::string path = osl_root_dir + "/shaders";
-        if (OIIO::Filesystem::is_directory (path)) {
-            path = path + "/stdosl.h";
-            if (OIIO::Filesystem::exists (path))
-                return ustring(path);
-        }
+    // Try the user-supplied include paths first
+    for (auto& dir : includepaths) {
+        std::string path = dir + "/stdosl.h";
+        if (OIIO::Filesystem::exists (path))
+            return ustring(path);
     }
 
-    // If not found in $OSL_ROOT_DIR, try looking wherever this program (the
-    // one running) lives, in a shaders or lib/osl/include directory.
-    std::string program = OIIO::Sysutil::this_program_path ();
-    if (program.size()) {
-        std::string path (program);  // our program
-        path = OIIO::Filesystem::parent_path(path);  // the bin dir of our program
-        path = OIIO::Filesystem::parent_path(path);  // now the parent dir
-        std::string savepath = path;
-        // We search two spots: ../../lib/osl/include, and ../shaders
-        path = savepath + "/lib/osl/include";
-        if (OIIO::Filesystem::is_directory (path)) {
-            path = path + "/stdosl.h";
-            if (OIIO::Filesystem::exists (path))
-                return ustring(path);
-        }
-        path = savepath + "/shaders";
-        if (OIIO::Filesystem::is_directory (path)) {
-            path = path + "/stdosl.h";
-            if (OIIO::Filesystem::exists (path))
-                return ustring(path);
-        }
-        path = OIIO::Filesystem::parent_path(savepath); // Try one level higher
-        path = path + "/shaders";
-        if (OIIO::Filesystem::is_directory (path)) {
-            path = path + "/stdosl.h";
-            if (OIIO::Filesystem::exists (path))
-                return ustring(path);
-        }
-    }
+    // If that doesn't work, look in a bunch of likely places.
 
-    // Try looking for "oslc" binary in the $PATH, and if so, look in
-    // ../../shaders/stdosl.h
-    std::vector<std::string> exec_path_dirs;
-    OIIO::Filesystem::searchpath_split (OIIO::Sysutil::getenv("PATH"),
-                                        exec_path_dirs, true);
-    if (exec_path_dirs.size()) {
-#ifdef WIN32
-        std::string oslcbin = "oslc.exe";
-#else
-        std::string oslcbin = "oslc";
-#endif
-        oslcbin = OIIO::Filesystem::searchpath_find (oslcbin, exec_path_dirs);
-        if (oslcbin.size()) {
-            std::string path = OIIO::Filesystem::parent_path(oslcbin);  // the bin dir of our program
-            path = OIIO::Filesystem::parent_path(path);  // now the parent dir
-            path += "/shaders";
-            if (OIIO::Filesystem::is_directory (path)) {
-                path = path + "/stdosl.h";
-                if (OIIO::Filesystem::exists (path))
-                    return ustring(path);
+    std::string myprefix = OIIO::Filesystem::parent_path(
+            OIIO::Filesystem::parent_path(OIIO::Sysutil::this_program_path()));
+
+    // List of likely prefixes and suffixes, in order of preference
+    std::string prefixes[] = { OIIO::Sysutil::getenv("OSL_ROOT_DIR"),
+                               OIIO::Sysutil::getenv("OSLHOME"),
+                               myprefix,
+                               OIIO::Filesystem::parent_path(myprefix) };
+    std::string suffixes[] = { "/share/shaders/stdosl.h",
+                               "/lib/OSL/include/std/stdosl.h",
+                               "/lib/osl/include/std/stdosl.h",
+                               "/shaders/stdosl.h" /*old*/ };
+    for (auto& dir : prefixes) {
+        if (! dir.empty() && OIIO::Filesystem::is_directory(dir)) {
+            // For each prefix, check likely suffixes, in order of preference
+            for (auto& s : suffixes) {
+                if (OIIO::Filesystem::exists (dir + s))
+                    return ustring(dir + s);
             }
         }
     }
 
-    // Try the include paths
-    for (const auto& incpath : includepaths) {
-        std::string path = incpath + "/stdosl.h";
-        if (OIIO::Filesystem::exists (path))
-            return ustring(path);
+    // Try looking for "oslc" binary in the $PATH (in case the executable
+    // running this code is not the actual oslc), and if so, look in places
+    // relative to that.
+    std::vector<std::string> exec_path_dirs;
+    OIIO::Filesystem::searchpath_split (OIIO::Sysutil::getenv("PATH"),
+                                        exec_path_dirs, true);
+#ifdef WIN32
+    std::string oslcbin = "oslc.exe";
+#else
+    std::string oslcbin = "oslc";
+#endif
+    oslcbin = OIIO::Filesystem::searchpath_find (oslcbin, exec_path_dirs);
+    if (oslcbin.size()) {
+        std::string dir = OIIO::Filesystem::parent_path(oslcbin);  // the bin dir of our program
+        dir = OIIO::Filesystem::parent_path(dir);  // now the parent dir
+        if (! dir.empty() && OIIO::Filesystem::is_directory(dir)) {
+            // For each prefix, check likely suffixes, in order of preference
+            for (auto& s : suffixes) {
+                if (OIIO::Filesystem::exists (dir + s))
+                    return ustring(dir + s);
+            }
+        }
     }
 
     // Give up

@@ -481,10 +481,9 @@ void make_optix_materials ()
         shadingsys->optimize_group (groupref.get());
 
         std::string group_name, init_name, entry_name;
-
-        shadingsys->getattribute (groupref.get(), "group_name",       OSL::TypeDesc::PTR, &group_name);
-        shadingsys->getattribute (groupref.get(), "group_init_name",  OSL::TypeDesc::PTR, &init_name);
-        shadingsys->getattribute (groupref.get(), "group_entry_name", OSL::TypeDesc::PTR, &entry_name);
+        shadingsys->getattribute (groupref.get(), "groupname",        group_name);
+        shadingsys->getattribute (groupref.get(), "group_init_name",  init_name);
+        shadingsys->getattribute (groupref.get(), "group_entry_name", entry_name);
 
         // Retrieve the compiled ShaderGroup PTX
         std::string osl_ptx;

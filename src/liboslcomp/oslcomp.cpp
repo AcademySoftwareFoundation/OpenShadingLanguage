@@ -772,10 +772,10 @@ OSLCompilerImpl::write_oso_const_value (const ConstantSymbol *sym) const
             oso ("%d%s", sym->intval(i), nelements>1 ? " " : "");
     else if (elemtype == TypeDesc::FLOAT)
         for (int i = 0;  i < nelements;  ++i)
-            oso ("%.8g%s", sym->floatval(i), nelements>1 ? " " : "");
+            oso ("%.9g%s", sym->floatval(i), nelements>1 ? " " : "");
     else if (equivalent (elemtype, TypeDesc::TypeVector))
         for (int i = 0;  i < nelements;  ++i)
-            oso ("%.8g %.8g %.8g%s", sym->vecval(i)[0], sym->vecval(i)[1],
+            oso ("%.9g %.9g %.9g%s", sym->vecval(i)[0], sym->vecval(i)[1],
                  sym->vecval(i)[2], nelements>1 ? " " : "");
     else {
         ASSERT (0 && "Don't know how to output this constant type");

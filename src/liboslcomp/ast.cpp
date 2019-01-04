@@ -318,11 +318,11 @@ ASTshader_declaration::ASTshader_declaration (OSLCompilerImpl *comp,
         ASSERT (arg->nodetype() == variable_declaration_node);
         ASTvariable_declaration *v = (ASTvariable_declaration *)arg;
         if (! v->init())
-            v->error ("shader parameter '%s' MUST have a default initializer",
-                      v->name().c_str());
+            v->error ("shader parameter '%s' requires a default initializer",
+                      v->name());
         if (v->is_output() && v->typespec().is_unsized_array())
             v->error ("shader output parameter '%s' can't be unsized array",
-                      v->name().c_str());
+                      v->name());
     }
 }
 

@@ -539,6 +539,8 @@ ShadingContext::ocio_transform (ustring fromspace, ustring tospace,
         tospace != m_last_colorproc_tospace) {
         OIIO::ColorConfig& cc (shadingsys().m_colorconfig);
         m_last_colorproc = cc.createColorProcessor (fromspace, tospace);
+        m_last_colorproc_fromspace = fromspace;
+        m_last_colorproc_tospace = tospace;
     }
     if (m_last_colorproc)
         m_last_colorproc->apply ((float *)&Cout);
@@ -563,13 +565,15 @@ ShadingContext::ocio_transform (ustring fromspace, ustring tospace,
         tospace != m_last_colorproc_tospace) {
         OIIO::ColorConfig& cc (shadingsys().m_colorconfig);
         m_last_colorproc = cc.createColorProcessor (fromspace, tospace);
+        m_last_colorproc_fromspace = fromspace;
+        m_last_colorproc_tospace = tospace;
     }
     if (m_last_colorproc) {
         // Use finite differencing to approximate the derivative. Make 3
         // color values to convert.
         const float eps = 0.001f;
         Color3 CC[3] = { C.val(), C.val() + eps*C.dx(), C.val() + eps*C.dy() };
-        m_last_colorproc->apply ((float *)&CC, 3, 1, 3, sizeof(Color3), 0, 0);
+        m_last_colorproc->apply ((float *)&CC, 3, 1, 3, sizeof(float), sizeof(Color3), 0);
         Cout.set (CC[0],
                   (CC[1] - CC[0]) * (1.0f / eps),
                   (CC[2] - CC[0]) * (1.0f / eps));

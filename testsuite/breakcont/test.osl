@@ -31,5 +31,11 @@ shader test ()
             break;
     }
 
+    printf ("\nTesting break in an infinite for loop:\n");
+    for ( ; ; ) {
+        break;
+        // N.B. This used to crash oslc, if this compiles, it's fine.
+    }
+    printf ("worked\n");
 }
 

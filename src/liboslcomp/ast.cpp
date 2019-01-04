@@ -859,6 +859,18 @@ ASTconditional_statement::childname (size_t i) const
 
 
 
+ASTloop_statement::ASTloop_statement (OSLCompilerImpl *comp, LoopType looptype,
+                                      ASTNode *init, ASTNode *cond,
+                                      ASTNode *iter, ASTNode *stmt)
+    : ASTNode (loop_statement_node, comp, looptype, init, cond, iter, stmt)
+{
+    // Handle empty comparison, for(;;), is same as for(;1;)
+    if (!cond)
+        m_children[1] = new ASTliteral(comp, 1);
+}
+
+
+
 const char *
 ASTloop_statement::childname (size_t i) const
 {

@@ -1404,6 +1404,7 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
 {
     if (! group)
         return false;
+
     if (name == "groupname" && type == TypeDesc::TypeString) {
         *(ustring *)val = group->name();
         return true;
@@ -1448,6 +1449,18 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
                 ((ustring *)val)[n++] = (*group)[i]->layername();
         for (size_t i = n;  i < type.numelements();  ++i)
             ((ustring *)val)[i] = ustring();
+        return true;
+    }
+    if (name == "group_init_name" && type.basetype == TypeDesc::STRING) {
+        *(ustring *)val = ustring::format ("group_%d_init", group->id());
+        return true;
+    }
+    if (name == "group_entry_name" && type.basetype == TypeDesc::STRING) {
+        int nlayers = group->nlayers ();
+        ShaderInstance *inst = (*group)[nlayers-1];
+        // This formuation mirrors OSOProcessorBase::layer_function_name()
+        *(ustring *)val = ustring::format ("%s_%s_%d", group->name(),
+                                           inst->layername(), inst->id());
         return true;
     }
     if (name == "num_textures_needed" && type == TypeDesc::TypeInt) {
@@ -1606,26 +1619,10 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
         *(std::string *)val = exists ? group->m_llvm_ptx_compiled_version : "";
         return true;
     }
-    if (name == "group_name" && type.basetype == TypeDesc::PTR) {
-        *(std::string *)val = group->name().string();
-        return true;
-    }
     if (name == "group_id" && type == TypeDesc::TypeInt) {
         if (! group->optimized())
             optimize_group (*group);
         *(int *)val = (int) group->id();
-        return true;
-    }
-    if (name == "group_init_name" && type.basetype == TypeDesc::PTR) {
-        *(std::string *)val = Strutil::format ("group_%d_init", group->id());
-        return true;
-    }
-    if (name == "group_entry_name" && type.basetype == TypeDesc::PTR) {
-        int nlayers = group->nlayers ();
-        ShaderInstance *inst = (*group)[nlayers-1];
-        // This formuation mirrors OSOProcessorBase::layer_function_name()
-        *(std::string *)val = Strutil::format ("%s_%s_%d", group->name(),
-                                               inst->layername(), inst->id());
         return true;
     }
     if (name == "layer_osofiles" && type.basetype == TypeDesc::STRING) {

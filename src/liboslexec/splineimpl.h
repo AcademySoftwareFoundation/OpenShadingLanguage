@@ -178,22 +178,24 @@ void spline_inverse (const SplineBasis *spline,
                      int knot_arraylen)
 {
     // account for out-of-range inputs, just clamp to the values we have
+    int lowindex = spline->basis_step == 1 ? 1 : 0;
+    int highindex = spline->basis_step == 1 ? knot_count-2 : knot_count-1;
     bool increasing = knots[1] < knots[knot_count-2];
     if (increasing) {
-        if (y <= knots[1]) {
+        if (y <= knots[lowindex]) {
             x = YTYPE(0);
             return;
         }
-        if (y >= knots[knot_count-2]) {
+        if (y >= knots[highindex]) {
             x = YTYPE(1);
             return;
         }
     } else {
-        if (y >= knots[1]) {
+        if (y >= knots[lowindex]) {
             x = YTYPE(0);
             return;
         }
-        if (y <= knots[knot_count-2]) {
+        if (y <= knots[highindex]) {
             x = YTYPE(1);
             return;
         }

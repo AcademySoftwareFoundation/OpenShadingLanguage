@@ -309,7 +309,7 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             render-background render-bumptest
             render-cornell render-furnace-diffuse
             render-microfacet render-oren-nayar render-veachmis render-ward
-            select shortcircuit spline splineinverse
+            select shortcircuit spline splineinverse splineinverse-ident
             spline-boundarybug spline-derivbug
             string
             struct struct-array struct-array-mixture

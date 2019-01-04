@@ -2557,6 +2557,7 @@ ShadingSystemImpl::get_context (PerThreadInfo *threadinfo,
 {
     if (! threadinfo) {
 #if OSL_VERSION < 20200
+        threadinfo = get_perthread_info ();
         warning ("ShadingSystem::get_context called without a PerThreadInfo");
 #else
         error ("ShadingSystem::get_context called without a PerThreadInfo");
@@ -2853,14 +2854,10 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group, ShadingContext *ctx)
 
     double locking_time = timer();
 
-    bool perthread_allocated = false;
     bool ctx_allocated = false;
     PerThreadInfo *thread_info = nullptr;
     if (! ctx) {
-        if (! thread_info) {
-            thread_info = create_thread_info();
-            perthread_allocated = true;
-        }
+        thread_info = create_thread_info();
         ctx = get_context(thread_info);
         ctx_allocated = true;
     }
@@ -2903,10 +2900,10 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group, ShadingContext *ctx)
 
     group_post_jit_cleanup (group);
 
-    if (ctx_allocated)
+    if (ctx_allocated) {
         release_context(ctx);
-    if (perthread_allocated)
         destroy_thread_info(thread_info);
+    }
 
     group.m_optimized = true;
     spin_lock stat_lock (m_stat_mutex);

@@ -655,9 +655,7 @@ public:
     };
 
     ASTloop_statement (OSLCompilerImpl *comp, LoopType looptype, ASTNode *init,
-                       ASTNode *cond, ASTNode *iter, ASTNode *stmt)
-        : ASTNode (loop_statement_node, comp, looptype, init, cond, iter, stmt)
-    { }
+                       ASTNode *cond, ASTNode *iter, ASTNode *stmt);
 
     const char *nodetypename () const { return "loop_statement"; }
     const char *childname (size_t i) const;

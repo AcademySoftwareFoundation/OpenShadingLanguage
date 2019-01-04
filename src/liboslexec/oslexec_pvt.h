@@ -566,11 +566,14 @@ public:
 
     void destroy_thread_info (PerThreadInfo *threadinfo);
 
-    ShadingContext *get_context (PerThreadInfo *threadinfo = NULL,
+    ShadingContext *get_context (PerThreadInfo *threadinfo,
                                  TextureSystem::Perthread *texture_threadinfo=NULL);
 
     void release_context (ShadingContext *ctx);
 
+    bool execute (ShadingContext &ctx, ShaderGroup &group,
+                  ShaderGlobals &ssg, bool run=true);
+    // DEPRECATED(2.0):
     bool execute (ShadingContext *ctx, ShaderGroup &group,
                   ShaderGlobals &ssg, bool run=true);
 
@@ -630,7 +633,7 @@ public:
     /// The group is set and won't be changed again; take advantage of
     /// this by optimizing the code knowing all our instance parameters
     /// (at least the ones that can't be overridden by the geometry).
-    void optimize_group (ShaderGroup &group, ShadingContext *ctx = nullptr);
+    void optimize_group (ShaderGroup &group, ShadingContext *ctx);
 
     /// After doing all optimization and code JIT, we can clean up by
     /// deleting the instances' code and arguments, and paring their
@@ -722,7 +725,9 @@ private:
                                string_view layername, ShaderInstance *inst);
 
     /// Get the per-thread info, create it if necessary.
-    ///
+    // N.B. This will be DEPRECATED (as will the m_perthread_info itself)
+    // in OSL 2.1 when we fully require the app to allocate the per-thread
+    // info data.
     PerThreadInfo *get_perthread_info () const {
         PerThreadInfo *p = m_perthread_info.get ();
         if (! p) {
@@ -1611,7 +1616,7 @@ private:
 ///
 class OSLEXECPUBLIC ShadingContext {
 public:
-    ShadingContext (ShadingSystemImpl &shadingsys, PerThreadInfo *threadinfo=NULL);
+    ShadingContext (ShadingSystemImpl &shadingsys, PerThreadInfo *threadinfo);
     ~ShadingContext ();
 
     /// Return a reference to the shading system for this context.

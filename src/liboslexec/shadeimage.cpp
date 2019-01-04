@@ -61,27 +61,20 @@ shade_image (ShadingSystem &shadingsys, ShaderGroup &group,
                    buf.spec().format);
         return false;
     }
-    shadingsys.optimize_group (&group);
 
     parallel_image (roi, popt, [&](OIIO::ROI roi){
 
-    // Optional: high-performance apps may request this thread-specific
-    // pointer in order to save a bit of time on each shade.  Just like
-    // the name implies, a multithreaded renderer would need to do this
-    // separately for each thread, and be careful to always use the same
-    // thread_info each time for that thread.
-    //
-    // There's nothing wrong with a simpler app just passing NULL for
-    // the thread_info; in such a case, the ShadingSystem will do the
-    // necessary calls to find the thread-specific pointer itself, but
-    // this will degrade performance just a bit.
+    // Request an OSL::PerThreadInfo for this thread.
     OSL::PerThreadInfo *thread_info = shadingsys.create_thread_info();
 
     // Request a shading context so that we can execute the shader.
-    // We could get_context/release_constext for each shading point,
+    // We could get_context/release_context for each shading point,
     // but to save overhead, it's more efficient to reuse a context
     // within a thread.
     ShadingContext *ctx = shadingsys.get_context (thread_info);
+
+    // Ensure the group has already been optimized
+    shadingsys.optimize_group (&group, ctx);
 
     Matrix44 Mshad, Mobj;  // just let these be identity for now
     OIIO::ROI roi_full = buf.roi_full();
@@ -165,7 +158,7 @@ shade_image (ShadingSystem &shadingsys, ShaderGroup &group,
         }
 
         // Actually run the shader for this point
-        shadingsys.execute (ctx, group, sg);
+        shadingsys.execute (*ctx, group, sg);
 
         // Save all the designated outputs.
         int chan = 0;
@@ -190,11 +183,6 @@ shade_image (ShadingSystem &shadingsys, ShaderGroup &group,
 
     // We're done shading with this context.
     shadingsys.release_context (ctx);
-
-    // Now that we're done rendering, release the thread-specific
-    // pointer we saved.  A simple app could skip this; but if the app
-    // asks for it (as we have in this example), then it should also
-    // destroy it when done with it.
     shadingsys.destroy_thread_info (thread_info);
 
     });   // end of parallel_image

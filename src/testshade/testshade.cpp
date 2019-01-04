@@ -665,7 +665,8 @@ setup_output_images (ShadingSystem *shadingsys,
     if (texoptions.size())
         shadingsys->texturesys()->attribute ("options", texoptions);
 
-    ShadingContext *ctx = shadingsys->get_context ();
+    OSL::PerThreadInfo *thread_info = shadingsys->create_thread_info();
+    ShadingContext *ctx = shadingsys->get_context(thread_info);
     // Because we can only call find_symbol or get_symbol on something that
     // has been set up to shade (or executed), we call execute() but tell it
     // not to actually run the shader.
@@ -673,8 +674,8 @@ setup_output_images (ShadingSystem *shadingsys,
     setup_shaderglobals (sg, shadingsys, 0, 0);
 
     if (raytype_opt)
-        shadingsys->optimize_group (shadergroup.get(), raytype_bit, ~raytype_bit);
-    shadingsys->execute (ctx, *shadergroup, sg, false);
+        shadingsys->optimize_group (shadergroup.get(), raytype_bit, ~raytype_bit, ctx);
+    shadingsys->execute (*ctx, *shadergroup, sg, false);
 
     if (entryoutputs.size()) {
         std::cout << "Entry outputs:";
@@ -743,6 +744,7 @@ setup_output_images (ShadingSystem *shadingsys,
     }
 
     shadingsys->release_context (ctx);  // don't need this anymore for now
+    shadingsys->destroy_thread_info(thread_info);
 }
 
 
@@ -910,16 +912,7 @@ test_group_attributes (ShaderGroup *group)
 void
 shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
 {
-    // Optional: high-performance apps may request this thread-specific
-    // pointer in order to save a bit of time on each shade.  Just like
-    // the name implies, a multithreaded renderer would need to do this
-    // separately for each thread, and be careful to always use the same
-    // thread_info each time for that thread.
-    //
-    // There's nothing wrong with a simpler app just passing NULL for
-    // the thread_info; in such a case, the ShadingSystem will do the
-    // necessary calls to find the thread-specific pointer itself, but
-    // this will degrade performance just a bit.
+    // Request an OSL::PerThreadInfo for this thread.
     OSL::PerThreadInfo *thread_info = shadingsys->create_thread_info();
 
     // Request a shading context so that we can execute the shader.
@@ -952,7 +945,7 @@ shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
             // Actually run the shader for this point
             if (entrylayer_index.empty()) {
                 // Sole entry point for whole group, default behavior
-                shadingsys->execute (ctx, *shadergroup, shaderglobals);
+                shadingsys->execute (*ctx, *shadergroup, shaderglobals);
             } else {
                 // Explicit list of entries to call in order
                 shadingsys->execute_init (*ctx, *shadergroup, shaderglobals);
@@ -977,11 +970,6 @@ shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
 
     // We're done shading with this context.
     shadingsys->release_context (ctx);
-
-    // Now that we're done rendering, release the thread-specific
-    // pointer we saved.  A simple app could skip this; but if the app
-    // asks for it (as we have in this example), then it should also
-    // destroy it when done with it.
     shadingsys->destroy_thread_info(thread_info);
 }
 

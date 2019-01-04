@@ -1414,7 +1414,8 @@ ASTloop_statement::codegen (Symbol *)
     codegen_list (init());
 
     int condlabel = m_compiler->next_op_label ();
-    Symbol *condvar = cond()->codegen_int ();
+    Symbol *condvar = cond()->codegen_int (/*dest=*/    nullptr,
+                                           /*boolify=*/ true);
 
     // Retroactively add the argument
     size_t argstart = m_compiler->add_op_args (1, &condvar);

@@ -65,64 +65,9 @@ Varying do...while(i<5):
   i = 4.5
 After loop, i = 5.5
 
-Count 0 to 4 using 'while':
-  i = 0
-  i = 1
-  i = 2
-  i = 3
-  i = 4
-After loop, i = 5
-
-Varying 'while', count up until < 5:
- Start with i = 1.5
- iteration:
-  i = 1.5
- iteration:
-  i = 2.5
- iteration:
-  i = 3.5
- iteration:
-  i = 4.5
-After loop, i = 5.5
-
-Count 0 to 4 using 'for':
-  i = 0
-  i = 1
-  i = 2
-  i = 3
-  i = 4
-
-Varying 'for', count up until < 5:
- outer scope i = 15
- iteration:
-  i = 1.5
- iteration:
-  i = 2.5
- iteration:
-  i = 3.5
- iteration:
-  i = 4.5
- outer scope i = 15
-
-Count using 'do...while(i<5)':
-  i = 0
-  i = 1
-  i = 2
-  i = 3
-  i = 4
-After loop, i = 5
-
-Varying do...while(i<5):
- Start with i = 1.5
- iteration:
-  i = 1.5
- iteration:
-  i = 2.5
- iteration:
-  i = 3.5
- iteration:
-  i = 4.5
-After loop, i = 5.5
+Testing while(var) hit=1
+  first loop, i=0, hit=1
+  loop exited, hit is 0
 
 Count 0 to 4 using 'while':
   i = 0
@@ -182,6 +127,73 @@ Varying do...while(i<5):
  iteration:
   i = 4.5
 After loop, i = 5.5
+
+Testing while(var) hit=1
+  first loop, i=0, hit=1
+  loop exited, hit is 0
+
+Count 0 to 4 using 'while':
+  i = 0
+  i = 1
+  i = 2
+  i = 3
+  i = 4
+After loop, i = 5
+
+Varying 'while', count up until < 5:
+ Start with i = 1.5
+ iteration:
+  i = 1.5
+ iteration:
+  i = 2.5
+ iteration:
+  i = 3.5
+ iteration:
+  i = 4.5
+After loop, i = 5.5
+
+Count 0 to 4 using 'for':
+  i = 0
+  i = 1
+  i = 2
+  i = 3
+  i = 4
+
+Varying 'for', count up until < 5:
+ outer scope i = 15
+ iteration:
+  i = 1.5
+ iteration:
+  i = 2.5
+ iteration:
+  i = 3.5
+ iteration:
+  i = 4.5
+ outer scope i = 15
+
+Count using 'do...while(i<5)':
+  i = 0
+  i = 1
+  i = 2
+  i = 3
+  i = 4
+After loop, i = 5
+
+Varying do...while(i<5):
+ Start with i = 1.5
+ iteration:
+  i = 1.5
+ iteration:
+  i = 2.5
+ iteration:
+  i = 3.5
+ iteration:
+  i = 4.5
+After loop, i = 5.5
+
+Testing while(var) hit=1
+  first loop, i=0, hit=1
+  loop exited, hit is 0
 
 Count 0 to 4 using 'while':
   i = 0
@@ -235,4 +247,8 @@ Varying do...while(i<5):
  iteration:
   i = 4.5
 After loop, i = 5.5
+
+Testing while(var) hit=1
+  first loop, i=0, hit=1
+  loop exited, hit is 0
 

@@ -312,7 +312,7 @@ OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
         new clang::DiagnosticsEngine(diagIDs, diagOptions, diagPrinter);
     inst.setDiagnostics(diagEngine);
 
-    const std::shared_ptr<clang::TargetOptions> &targetopts =
+    const std::shared_ptr<clang::TargetOptions> targetopts =
           std::make_shared<clang::TargetOptions>(inst.getTargetOpts());
     targetopts->Triple = llvm::sys::getDefaultTargetTriple();
     clang::TargetInfo *target =

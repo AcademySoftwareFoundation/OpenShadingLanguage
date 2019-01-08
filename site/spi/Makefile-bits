@@ -66,7 +66,7 @@ ifeq ($(SP_OS), rhel7)
     MY_CMAKE_FLAGS += \
 	-DOPENEXR_INCLUDE_DIR=/usr/include/OpenEXR2 \
 	-DOPENEXR_LIBRARY_DIR=/usr/lib64/OpenEXR2 \
-	-DPARTIO_HOME="/shots/spi/home/lib/SpComp2/partio/rhel7-gcc48m64/v1" \
+	-DPARTIO_HOME="/shots/spi/home/lib/SpComp2/partio/rhel7-gcc48m64/v2" \
 	-DLLVM_STATIC=1 \
         -DLLVM_VERSION=${LLVM_VERSION} \
         -DLLVM_DIRECTORY=${LLVM_DIRECTORY}

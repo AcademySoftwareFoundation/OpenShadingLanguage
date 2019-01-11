@@ -119,8 +119,13 @@ else ()
 endif ()
 
 
-# Set the default namespace
+# Set the default namespace. For symbol hiding reasons, it's important that
+# the project name is a subset of the namespace name.
 set (PROJ_NAMESPACE "${${PROJ_NAME}_NAMESPACE}")
+string(REGEX MATCH ${PROJECT_NAME} NAMESPACE_HAS_PROJECT_NAME ${PROJ_NAMESPACE})
+if (NOT NAMESPACE_HAS_PROJECT_NAME)
+    set (PROJ_NAMESPACE ${PROJECT_NAME}_${PROJ_NAMESPACE})
+endif ()
 set (PROJ_NAMESPACE_V "${PROJ_NAMESPACE}_v${PROJECT_VERSION_MAJOR}_${PROJECT_VERSION_MINOR}")
 message(STATUS "Setting Namespace to: ${PROJ_NAMESPACE_V}")
 

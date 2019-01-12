@@ -94,7 +94,7 @@ inline float abs (const Vec3& a) {
                     img.setpixel (x, y, &r[0]);                         \
                 }                                                       \
             }                                                           \
-            img.write (Strutil::format ("osl_%s_%d_%d.tif", #noisename, outdim, indim)); \
+            img.write (Strutil::sprintf ("osl_%s_%d_%d.tif", #noisename, outdim, indim)); \
         }                                                               \
     }
 

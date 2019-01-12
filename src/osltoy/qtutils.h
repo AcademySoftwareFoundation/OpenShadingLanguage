@@ -87,9 +87,9 @@ clear_layout (QLayout *lay)
 // render the 'blah' in italics.
 template<typename... Args>
 inline QLabel*
-make_qlabel (string_view fmt, const Args&... args)
+make_qlabel (const char* fmt, const Args&... args)
 {
-    std::string text = OIIO::Strutil::format (fmt, args...);
+    std::string text = OIIO::Strutil::sprintf (fmt, args...);
     auto label = new QLabel (text.c_str());
     label->setTextFormat (Qt::AutoText);
     return label;

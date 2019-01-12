@@ -648,16 +648,16 @@ ASTNode::one_default_literal (const Symbol *sym, ASTNode *init,
         completed = false;
     } else if (type.is_int()) {
         if (islit && lit->typespec().is_int())
-            out += Strutil::format ("%d", lit->intval());
+            out += Strutil::sprintf ("%d", lit->intval());
         else {
             out += "0";  // FIXME?
             completed = false;
         }
     } else if (type.is_float()) {
         if (islit && lit->typespec().is_int())
-            out += Strutil::format ("%d", lit->intval());
+            out += Strutil::sprintf ("%d", lit->intval());
         else if (islit && lit->typespec().is_float())
-            out += Strutil::format ("%.9g", lit->floatval());
+            out += Strutil::sprintf ("%.9g", lit->floatval());
         else {
             out += "0";  // FIXME?
             completed = false;
@@ -665,10 +665,10 @@ ASTNode::one_default_literal (const Symbol *sym, ASTNode *init,
     } else if (type.is_triple()) {
         if (islit && lit->typespec().is_int()) {
             float f = lit->intval();
-            out += Strutil::format ("%.9g%s%.9g%s%.9g", f, sep, f, sep, f);
+            out += Strutil::sprintf ("%.9g%s%.9g%s%.9g", f, sep, f, sep, f);
         } else if (islit && lit->typespec().is_float()) {
             float f = lit->floatval();
-            out += Strutil::format ("%.9g%s%.9g%s%.9g", f, sep, f, sep, f);
+            out += Strutil::sprintf ("%.9g%s%.9g%s%.9g", f, sep, f, sep, f);
         } else if (init && init->typespec() == type &&
                    (init->nodetype() == ASTNode::type_constructor_node ||
                    (init->nodetype() == ASTNode::compound_initializer_node &&
@@ -697,23 +697,23 @@ ASTNode::one_default_literal (const Symbol *sym, ASTNode *init,
                 }
             }
             if (nargs == 1)
-                out += Strutil::format ("%.9g%s%.9g%s%.9g", f[0], sep, f[0], sep, f[0]);
+                out += Strutil::sprintf ("%.9g%s%.9g%s%.9g", f[0], sep, f[0], sep, f[0]);
             else
-                out += Strutil::format ("%.9g%s%.9g%s%.9g", f[0], sep, f[1], sep, f[2]);
+                out += Strutil::sprintf ("%.9g%s%.9g%s%.9g", f[0], sep, f[1], sep, f[2]);
         } else {
-            out += Strutil::format ("0%s0%s0", sep, sep);
+            out += Strutil::sprintf ("0%s0%s0", sep, sep);
             completed = false;
         }
     } else if (type.is_matrix()) {
         if (islit && lit->typespec().is_int()) {
             float f = lit->intval();
             for (int c = 0; c < 16; ++c)
-               out += Strutil::format ("%.9g%s", (c/4)==(c%4) ? f : 0.0f,
+               out += Strutil::sprintf ("%.9g%s", (c/4)==(c%4) ? f : 0.0f,
                                        c<15 ? sep.c_str() : "");
         } else if (islit && lit->typespec().is_float()) {
             float f = lit->floatval();
             for (int c = 0; c < 16; ++c)
-               out += Strutil::format ("%.9g%s", (c/4)==(c%4) ? f : 0.0f,
+               out += Strutil::sprintf ("%.9g%s", (c/4)==(c%4) ? f : 0.0f,
                                        c<15 ? sep.c_str() : "");
         } else if (init && init->typespec() == type &&
                    init->nodetype() == ASTNode::type_constructor_node) {
@@ -741,20 +741,20 @@ ASTNode::one_default_literal (const Symbol *sym, ASTNode *init,
             }
             if (nargs == 1) {
                 for (int c = 0; c < 16; ++c)
-                   out += Strutil::format ("%.9g%s", (c/4)==(c%4) ? f[0] : 0.0f,
+                   out += Strutil::sprintf ("%.9g%s", (c/4)==(c%4) ? f[0] : 0.0f,
                                            c<15 ? sep.c_str() : "");
             } else {
                 for (int c = 0; c < 16; ++c)
-                    out += Strutil::format ("%.9g%s", f[c], c<15 ? sep.c_str() : "");
+                    out += Strutil::sprintf ("%.9g%s", f[c], c<15 ? sep.c_str() : "");
             }
         } else {
             for (int c = 0; c < 16; ++c)
-                out += Strutil::format ("0%s", c<15 ? sep.c_str() : "");
+                out += Strutil::sprintf ("0%s", c<15 ? sep.c_str() : "");
             completed = false;
         }
     } else if (type.is_string()) {
         if (islit && lit->typespec().is_string())
-            out += Strutil::format ("\"%s\"", Strutil::escape_chars(lit->strval()));
+            out += Strutil::sprintf ("\"%s\"", Strutil::escape_chars(lit->strval()));
         else {
             out += "\"\"";  // FIXME?
             completed = false;

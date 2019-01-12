@@ -148,7 +148,7 @@ matrix:
               - libboost-thread1.55
               - libboost-wave1.55
         env: WHICHGCC=4.8 USE_CPP=11 LLVM_VERSION=6.0.1 USE_SIMD=sse4.2 OIIOBRANCH=release
-      - name: "Older things: release OIIO, llvm 5, OIIO 1.8/oldest, boost 1.55"
+      - name: "Older things: OIIO 1.9, llvm 5, boost 1.55"
         os: linux
         compiler: gcc
         addons:

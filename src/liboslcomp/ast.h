@@ -186,34 +186,34 @@ public:
     void sourceline (int line) { m_sourceline = line; }
 
     template<typename... Args>
-    void error (string_view format, const Args&... args) const
+    void error (const char* format, const Args&... args) const
     {
-        DASSERT (format.size());
-        error_impl (OIIO::Strutil::format (format, args...));
+        DASSERT (format && format[0]);
+        error_impl (OIIO::Strutil::sprintf (format, args...));
     }
 
     /// Warning reporting
     template<typename... Args>
-    void warning (string_view format, const Args&... args) const
+    void warning (const char* format, const Args&... args) const
     {
-        DASSERT (format.size());
-        warning_impl (OIIO::Strutil::format (format, args...));
+        DASSERT (format && format[0]);
+        warning_impl (OIIO::Strutil::sprintf (format, args...));
     }
 
     /// info reporting
     template<typename... Args>
-    void info (string_view format, const Args&... args) const
+    void info (const char* format, const Args&... args) const
     {
-        DASSERT (format.size());
-        info_impl (OIIO::Strutil::format (format, args...));
+        DASSERT (format && format[0]);
+        info_impl (OIIO::Strutil::sprintf (format, args...));
     }
 
     /// message reporting
     template<typename... Args>
-    void message (string_view format, const Args&... args) const
+    void message (const char* format, const Args&... args) const
     {
-        DASSERT (format.size());
-        message_impl (OIIO::Strutil::format (format, args...));
+        DASSERT (format && format[0]);
+        message_impl (OIIO::Strutil::sprintf (format, args...));
     }
 
     bool is_lvalue () const { return m_is_lvalue; }

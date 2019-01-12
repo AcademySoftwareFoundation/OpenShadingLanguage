@@ -533,26 +533,26 @@ public:
     // Internal error, warning, info, and message reporting routines that
     // take printf-like arguments.
     template<typename T1, typename... Args>
-    inline void error (string_view fmt, const T1& v1, const Args&... args) const {
-        error (Strutil::format (fmt, v1, args...));
+    inline void error (const char* fmt, const T1& v1, const Args&... args) const {
+        error (Strutil::sprintf (fmt, v1, args...));
     }
     void error (const std::string &message) const;
 
     template<typename T1, typename... Args>
-    inline void warning (string_view fmt, const T1& v1, const Args&... args) const {
-        warning (Strutil::format (fmt, v1, args...));
+    inline void warning (const char* fmt, const T1& v1, const Args&... args) const {
+        warning (Strutil::sprintf (fmt, v1, args...));
     }
     void warning (const std::string &message) const;
 
     template<typename T1, typename... Args>
-    inline void info (string_view fmt, const T1& v1, const Args&... args) const {
-        info (Strutil::format (fmt, v1, args...));
+    inline void info (const char* fmt, const T1& v1, const Args&... args) const {
+        info (Strutil::sprintf (fmt, v1, args...));
     }
     void info (const std::string &message) const;
 
     template<typename T1, typename... Args>
-    inline void message (string_view fmt, const T1& v1, const Args&... args) const {
-        message (Strutil::format (fmt, v1, args...));
+    inline void message (const char* fmt, const T1& v1, const Args&... args) const {
+        message (Strutil::sprintf (fmt, v1, args...));
     }
     void message (const std::string &message) const;
 
@@ -1783,23 +1783,23 @@ public:
     void process_errors () const;
 
     template<typename... Args>
-    inline void error (string_view fmt, const Args&... args) const {
-        record_error(ErrorHandler::EH_ERROR, Strutil::format (fmt, args...));
+    inline void error (const char* fmt, const Args&... args) const {
+        record_error(ErrorHandler::EH_ERROR, Strutil::sprintf (fmt, args...));
     }
 
     template<typename... Args>
-    inline void warning (string_view fmt, const Args&... args) const {
-        record_error(ErrorHandler::EH_WARNING, Strutil::format (fmt, args...));
+    inline void warning (const char* fmt, const Args&... args) const {
+        record_error(ErrorHandler::EH_WARNING, Strutil::sprintf (fmt, args...));
     }
 
     template<typename... Args>
-    inline void info (string_view fmt, const Args&... args) const {
-        record_error(ErrorHandler::EH_INFO, Strutil::format (fmt, args...));
+    inline void info (const char* fmt, const Args&... args) const {
+        record_error(ErrorHandler::EH_INFO, Strutil::sprintf (fmt, args...));
     }
 
     template<typename... Args>
-    inline void message (string_view fmt, const Args&... args) const {
-        record_error(ErrorHandler::EH_MESSAGE, Strutil::format (fmt, args...));
+    inline void message (const char* fmt, const Args&... args) const {
+        record_error(ErrorHandler::EH_MESSAGE, Strutil::sprintf (fmt, args...));
     }
 
 private:
@@ -1998,7 +1998,7 @@ public:
     // Mangle the group and layer into a unique function name
     std::string layer_function_name (const ShaderGroup &group,
                                      const ShaderInstance &inst) {
-        return Strutil::format ("%s_%s_%d", group.name(),
+        return Strutil::sprintf ("%s_%s_%d", group.name(),
                                 inst.layername(), inst.id());
     }
     std::string layer_function_name () {

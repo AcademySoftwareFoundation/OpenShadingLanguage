@@ -73,18 +73,18 @@ TypeSpec::string () const
         if (is_unsized_array())
             str += "[]";
         else if (arraylength() > 0)
-            str += Strutil::format ("[%d]", arraylength());
+            str += Strutil::sprintf ("[%d]", arraylength());
     }
     else if (structure() > 0) {
         StructSpec *ss = structspec();
         if (ss)
-            str += Strutil::format ("struct %s", structspec()->name());
+            str += Strutil::sprintf ("struct %s", structspec()->name());
         else
-            str += Strutil::format ("struct %d", structure());
+            str += Strutil::sprintf ("struct %d", structure());
         if (is_unsized_array())
             str += "[]";
         else if (arraylength() > 0)
-            str += Strutil::format ("[%d]", arraylength());
+            str += Strutil::sprintf ("[%d]", arraylength());
     } else {
         str += simpletype().c_str();
     }

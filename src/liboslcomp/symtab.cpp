@@ -45,7 +45,7 @@ std::string
 Symbol::mangled () const
 {
     // FIXME: De-alias
-    return scope() ? Strutil::format ("___%d_%s", scope(), m_name.c_str())
+    return scope() ? Strutil::sprintf ("___%d_%s", scope(), m_name.c_str())
         : m_name.string();
 }
 
@@ -65,7 +65,7 @@ Symbol::symtype_shortname (SymType s)
 std::string
 StructSpec::mangled () const
 {
-    return scope() ? Strutil::format ("___%d_%s", scope(), m_name.c_str())
+    return scope() ? Strutil::sprintf ("___%d_%s", scope(), m_name.c_str())
         : m_name.string();
 }
 

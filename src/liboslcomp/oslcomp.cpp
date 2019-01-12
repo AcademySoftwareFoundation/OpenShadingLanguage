@@ -116,7 +116,8 @@ OSLCompiler::output_filename () const
 namespace pvt {   // OSL::pvt
 
 
-OSLCompilerImpl *oslcompiler = NULL;
+OSLCompilerImpl *oslcompiler = nullptr;
+static std::mutex oslcompiler_mutex;
 
 static ustring op_for("for");
 static ustring op_while("while");
@@ -558,6 +559,9 @@ OSLCompilerImpl::compile (string_view filename,
     } else if (m_preprocess_only) {
         std::cout << preprocess_result;
     } else {
+        // Thread safety with the lexer/parser
+        std::lock_guard<std::mutex> lock (oslcompiler_mutex);
+        oslcompiler = this;
         bool parseerr = osl_parse_buffer (preprocess_result);
         if (! parseerr) {
             if (shader())
@@ -600,7 +604,7 @@ OSLCompilerImpl::compile (string_view filename,
             ASSERT (m_osofile == NULL);
         }
 
-        oslcompiler = NULL;
+        oslcompiler = nullptr;
     }
 
     return ! error_encountered();
@@ -641,6 +645,9 @@ OSLCompilerImpl::compile_buffer (string_view sourcecode,
     } else if (m_preprocess_only) {
         std::cout << preprocess_result;
     } else {
+        // Thread safety with the lexer/parser
+        std::lock_guard<std::mutex> lock (oslcompiler_mutex);
+        oslcompiler = this;
         bool parseerr = osl_parse_buffer (preprocess_result);
         if (! parseerr) {
             if (shader())
@@ -679,7 +686,7 @@ OSLCompilerImpl::compile_buffer (string_view sourcecode,
             ASSERT (m_osofile == NULL);
         }
 
-        oslcompiler = NULL;
+        oslcompiler = nullptr;
     }
 
     return ! error_encountered();

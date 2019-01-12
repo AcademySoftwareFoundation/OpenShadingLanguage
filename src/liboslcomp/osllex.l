@@ -381,9 +381,8 @@ namespace pvt {   // OSL::pvt
 bool
 OSLCompilerImpl::osl_parse_buffer (const std::string &preprocessed_buffer)
 {
-    // Thread safety with the lexer/parser
-    static std::mutex oslcompiler_mutex;
-    std::lock_guard<std::mutex> lock (oslcompiler_mutex);
+    // N.B. This should only be called if oslcompiler_mutex is held.
+    ASSERT (oslcompiler == this);
 
 #ifndef OIIO_STRUTIL_HAS_STOF
     // Force classic "C" locale for correct '.' decimal parsing.
@@ -395,7 +394,6 @@ OSLCompilerImpl::osl_parse_buffer (const std::string &preprocessed_buffer)
 #endif
 
     osl_switch_to_buffer (osl_scan_string (preprocessed_buffer.c_str()));
-    oslcompiler = this;
     oslparse ();
     bool parseerr = error_encountered();
     osl_delete_buffer (YY_CURRENT_BUFFER);

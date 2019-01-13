@@ -29,6 +29,8 @@ else ()
 
 endif ()
 
+configure_file ( oslcomp_shaders_dir.h.in oslcomp_shaders_dir.h )
+
 TARGET_LINK_LIBRARIES ( oslcomp ${OPENIMAGEIO_LIBRARIES} ${ILMBASE_LIBRARIES}
                        ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
                        ${CLANG_LIBRARIES} ${LLVM_LIBRARIES} ${LLVM_LDFLAGS}

@@ -1,0 +1,7 @@
+#ifndef OSL_SHADERS_INSTALL_DIR
+
+// Keep this in sync with the DESTINATION in shaders/CMakeLists.txt
+// and shaders/MaterialX/CMakeLists.txt
+#define OSL_SHADERS_INSTALL_DIR "@INSTALL_FULL_SHADERDIR@/shaders/"
+
+#endif // OSL_SHADERS_INSTALL_DIR

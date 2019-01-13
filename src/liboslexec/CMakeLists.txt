@@ -41,6 +41,7 @@ if (NOT BUILDSTATIC)
 endif ()
 
 include_directories ( "${CMAKE_SOURCE_DIR}/src/liboslcomp" )
+include_directories ( "${CMAKE_BINARY_DIR}/src/liboslcomp" )
 
 FILE ( GLOB exec_headers "*.h" )
 FILE ( GLOB compiler_headers "../liboslcomp/*.h" )

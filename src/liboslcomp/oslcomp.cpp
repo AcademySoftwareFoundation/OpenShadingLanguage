@@ -36,6 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cerrno>
 
 #include "oslcomp_pvt.h"
+#include "oslcomp_shaders_dir.h"
 
 #include <OpenImageIO/platform.h>
 #include <OpenImageIO/sysutil.h>
@@ -484,6 +485,14 @@ find_stdoslpath (const std::vector<std::string>& includepaths)
             if (OIIO::Filesystem::exists (path))
                 return ustring(path);
         }
+    }
+
+    // Try the regular install directory
+    std::string install_path = OSL_SHADERS_INSTALL_DIR;
+    if (OIIO::Filesystem::is_directory (install_path)) {
+        install_path = install_path + "/stdosl.h";
+        if (OIIO::Filesystem::exists (install_path))
+            return ustring(install_path);
     }
 
     // Try looking for "oslc" binary in the $PATH, and if so, look in

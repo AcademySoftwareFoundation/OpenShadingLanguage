@@ -53,6 +53,15 @@ if (CMAKE_USE_FOLDERS)
     set_property (GLOBAL PROPERTY USE_FOLDERS ON)
 endif ()
 
+option (OSL_INSTALL_SHADERDIR "Shader install directory, absolute or relative (to CMAKE_INSTALL_PREFIX)" "")
+mark_as_advanced (OSL_INSTALL_SHADERDIR)
+if (IS_ABSOLUTE ${OSL_INSTALL_SHADERDIR})
+   set (INSTALL_FULL_SHADERDIR ${OSL_INSTALL_SHADERDIR})
+else()
+   set (INSTALL_FULL_SHADERDIR "${CMAKE_INSTALL_PREFIX}/${OSL_INSTALL_SHADERDIR}")
+endif()
+message (STATUS "Shader install dir  = ${INSTALL_FULL_SHADERDIR}")
+
 include (GNUInstallDirs)
 
 list (APPEND CMAKE_MODULE_PATH

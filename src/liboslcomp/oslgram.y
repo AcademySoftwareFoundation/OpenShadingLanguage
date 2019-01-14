@@ -498,6 +498,16 @@ compound_initializer
                     $$ = new ASTcompound_initializer (oslcompiler, $2);
                     $$->sourceline (@1.first_line);
                 }
+        | '{' '}'
+                {
+                    if (!oslcompiler->declaring_shader_formals())
+                        oslcompiler->error (oslcompiler->filename(),
+                                            oslcompiler->lineno(),
+                                            "Empty compound initializers '{ }' "
+                                            "only allowed for shader parameters.");
+                    $$ = new ASTcompound_initializer (oslcompiler, nullptr);
+                    $$->sourceline (@1.first_line);
+                }
         ;
 
 init_expression_list

@@ -36,7 +36,8 @@ void func_with_struct_output_param (output Astruct ap)
 
 shader
 test (
-    Astruct aparam = { 1.0, 0, point(3,4,5), "foo!" }
+    Astruct aparam = { 1.0, 0, point(3,4,5), "foo!" },
+    Bstruct eparam = {}
 )
 {
     printf ("test struct\n");
@@ -64,6 +65,9 @@ test (
     printf ("\n");
     printf ("struct param:  aparam == { %g, %i, [%g], %s }\n",
             aparam.f, aparam.i, aparam.p, aparam.s);
+
+    // Test that empty default initializer for eparam
+    printf ("Default init eparam == { %g, %g }\n", eparam.v, eparam.i);
 
     Bstruct b;
 

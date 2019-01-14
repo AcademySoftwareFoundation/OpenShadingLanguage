@@ -116,8 +116,9 @@ ASTvariable_declaration::typecheck (TypeSpec expected)
     if (init->nodetype() == compound_initializer_node) {
         if (init->nextptr())
             error ("compound_initializer should be the only initializer");
-        // init = ((ASTcompound_initializer *)init)->initlist().get();
-        return m_typespec;  // done
+        init = ((ASTcompound_initializer *)init)->initlist().get();
+        if (!init)
+            return m_typespec;
     }
 
     // Special case: ok to assign a literal 0 to a closure to
@@ -831,6 +832,8 @@ public:
     // Adjust the type for every element of an array
     void
     typecheck_array(ASTcompound_initializer* init, TypeSpec expected) {
+        if (! init->initlist())
+            return;    // early out for empty initializer { }
         ASSERT (expected.is_array());
         // Every element of the array is the same type
         TypeSpec elemtype = expected.elementtype();
@@ -955,8 +958,8 @@ public:
 
     TypeSpec type() const {
         // If succeeded, root type is at end of m_adjust
-        return (m_success || m_debug_successful) ? std::get<1>(m_adjust.back())
-                                                 : TypeSpec(TypeDesc::NONE);
+        return (m_success || m_debug_successful) && m_adjust.size()
+            ? std::get<1>(m_adjust.back()) : TypeSpec(TypeDesc::NONE);
     }
 
     bool success() const { return m_success; }

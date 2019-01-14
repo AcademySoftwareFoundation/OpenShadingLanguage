@@ -12,8 +12,11 @@ void print_array_contents (string name, vector v[])
         printf ("  [%d] = (%g)\n", i, v[i]);
 }
 
-shader test (float a[] = {0,1,2.3}, vector b[] = {9, vector(1,2.3,4)})
+shader test (float a[] = {0,1,2.3},
+             vector b[] = {9, vector(1,2.3,4)},
+             vector c[] = {})
 {
     print_array_contents ("a", a);
     print_array_contents ("b", b);
+    print_array_contents ("c", c);
 }

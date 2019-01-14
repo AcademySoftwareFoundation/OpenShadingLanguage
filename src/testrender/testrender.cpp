@@ -400,7 +400,7 @@ Vec3 eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx) {
     sg.I = dir.val();
     sg.dIdx = dir.dx();
     sg.dIdy = dir.dy();
-    shadingsys->execute(ctx, *shaders[backgroundShaderID], sg);
+    shadingsys->execute(*ctx, *shaders[backgroundShaderID], sg);
     return process_background_closure(sg.Ci);
 }
 
@@ -436,7 +436,7 @@ Color3 subpixel_radiance(float x, float y, Sampler& sampler, ShadingContext* ctx
         if (shaderID < 0 || !shaders[shaderID]) break; // no shader attached? done
 
         // execute shader and process the resulting list of closures
-        shadingsys->execute (ctx, *shaders[shaderID], sg);
+        shadingsys->execute (*ctx, *shaders[shaderID], sg);
         ShadingResult result;
         bool last_bounce = b == max_bounces;
         process_closure(result, sg.Ci, last_bounce);
@@ -501,7 +501,7 @@ Color3 subpixel_radiance(float x, float y, Sampler& sampler, ShadingContext* ctx
                     ShaderGlobals light_sg;
                     globals_from_hit(light_sg, shadow_ray, shadow_dist, lid, false);
                     // execute the light shader (for emissive closures only)
-                    shadingsys->execute (ctx, *shaders[shaderID], light_sg);
+                    shadingsys->execute (*ctx, *shaders[shaderID], light_sg);
                     ShadingResult light_result;
                     process_closure(light_result, light_sg.Ci, true);
                     // accumulate contribution
@@ -539,16 +539,7 @@ Color3 antialias_pixel(int x, int y, ShadingContext* ctx) {
 }
 
 void scanline_worker(Counter& counter, std::vector<Color3>& pixels) {
-    // Optional: high-performance apps may request this thread-specific
-    // pointer in order to save a bit of time on each shade.  Just like
-    // the name implies, a multithreaded renderer would need to do this
-    // separately for each thread, and be careful to always use the same
-    // thread_info each time for that thread.
-    //
-    // There's nothing wrong with a simpler app just passing NULL for
-    // the thread_info; in such a case, the ShadingSystem will do the
-    // necessary calls to find the thread-specific pointer itself, but
-    // this will degrade performance just a bit.
+    // Request an OSL::PerThreadInfo for this thread.
     OSL::PerThreadInfo *thread_info = shadingsys->create_thread_info();
 
     // Request a shading context so that we can execute the shader.
@@ -562,13 +553,9 @@ void scanline_worker(Counter& counter, std::vector<Color3>& pixels) {
         for (int x = 0, i = xres * y;  x < xres;  ++x, ++i)
             pixels[i] = antialias_pixel(x, y, ctx);
     }
+
     // We're done shading with this context.
     shadingsys->release_context (ctx);
-
-    // Now that we're done rendering, release the thread=specific
-    // pointer we saved.  A simple app could skip this; but if the app
-    // asks for it (as we have in this example), then it should also
-    // destroy it when done with it.
     shadingsys->destroy_thread_info(thread_info);
 }
 

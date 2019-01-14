@@ -76,11 +76,13 @@ ShadingContext::execute_init (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
     if (sgroup.nlayers()) {
         sgroup.start_running ();
         if (! sgroup.optimized()) {
-            shadingsys().optimize_group (sgroup);
+            auto ctx = shadingsys().get_context(thread_info());
+            shadingsys().optimize_group (sgroup, ctx);
             if (shadingsys().m_greedyjit && shadingsys().m_groups_to_compile_count) {
                 // If we are greedily JITing, optimize/JIT everything now
                 shadingsys().optimize_all_groups ();
             }
+            shadingsys().release_context(ctx);
         }
         if (sgroup.does_nothing())
             return false;

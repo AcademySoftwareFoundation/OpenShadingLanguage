@@ -239,6 +239,16 @@ ShadingSystem::release_context (ShadingContext *ctx)
 
 
 bool
+ShadingSystem::execute (ShadingContext &ctx, ShaderGroup &group,
+                        ShaderGlobals &globals, bool run)
+{
+    return m_impl->execute (ctx, group, globals, run);
+}
+
+
+
+// DEPRECATED(2.0)
+bool
 ShadingSystem::execute (ShadingContext *ctx, ShaderGroup &group,
                         ShaderGlobals &globals, bool run)
 {
@@ -516,7 +526,6 @@ ShadingSystem::optimize_group (ShaderGroup *group,
     // convenience function for backwards compatibility
     set_raytypes (group, raytypes_on, raytypes_off);
     optimize_group (group, ctx);
-
 }
 
 
@@ -1492,155 +1501,18 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
 #endif
         return true;
     }
-    if (name == "num_textures_needed" && type == TypeDesc::TypeInt) {
-        if (! group->optimized())
-            optimize_group (*group);
-        *(int *)val = (int)group->m_textures_needed.size();
-        return true;
-    }
-    if (name == "textures_needed" && type.basetype == TypeDesc::PTR) {
-        if (! group->optimized())
-            optimize_group (*group);
-        size_t n = group->m_textures_needed.size();
-        *(ustring **)val = n ? &group->m_textures_needed[0] : NULL;
-        return true;
-    }
-    if (name == "unknown_textures_needed" && type == TypeDesc::TypeInt) {
-        if (! group->optimized())
-            optimize_group (*group);
-        *(int *)val = (int)group->m_unknown_textures_needed;
-        return true;
-    }
-
-    if (name == "num_closures_needed" && type == TypeDesc::TypeInt) {
-        if (! group->optimized())
-            optimize_group (*group);
-        *(int *)val = (int)group->m_closures_needed.size();
-        return true;
-    }
-    if (name == "closures_needed" && type.basetype == TypeDesc::PTR) {
-        if (! group->optimized())
-            optimize_group (*group);
-        size_t n = group->m_closures_needed.size();
-        *(ustring **)val = n ? &group->m_closures_needed[0] : NULL;
-        return true;
-    }
-    if (name == "unknown_closures_needed" && type == TypeDesc::TypeInt) {
-        if (! group->optimized())
-            optimize_group (*group);
-        *(int *)val = (int)group->m_unknown_closures_needed;
-        return true;
-    }
-
-    if (name == "num_globals_needed" && type == TypeDesc::TypeInt) {
-        if (! group->optimized())
-            optimize_group (*group);
-        *(int *)val = (int)group->m_globals_needed.size();
-        return true;
-    }
-    if (name == "globals_needed" && type.basetype == TypeDesc::PTR) {
-        if (! group->optimized())
-            optimize_group (*group);
-        size_t n = group->m_globals_needed.size();
-        *(ustring **)val = n ? &group->m_globals_needed[0] : NULL;
-        return true;
-    }
-    if (name == "globals_read" && type.basetype == TypeDesc::INT) {
-        if (! group->optimized())
-            optimize_group (*group);
-        *(int *)val = group->m_globals_read;
-        return true;
-    }
-    if (name == "globals_write" && type.basetype == TypeDesc::INT) {
-        if (! group->optimized())
-            optimize_group (*group);
-        *(int *)val = group->m_globals_write;
-        return true;
-    }
-
-    if (name == "num_userdata" && type == TypeDesc::TypeInt) {
-        if (! group->optimized())
-            optimize_group (*group);
-        *(int *)val = (int)group->m_userdata_names.size();
-        return true;
-    }
-    if (name == "userdata_names" && type.basetype == TypeDesc::PTR) {
-        if (! group->optimized())
-            optimize_group (*group);
-        size_t n = group->m_userdata_names.size();
-        *(ustring **)val = n ? &group->m_userdata_names[0] : NULL;
-        return true;
-    }
-    if (name == "userdata_types" && type.basetype == TypeDesc::PTR) {
-        if (! group->optimized())
-            optimize_group (*group);
-        size_t n = group->m_userdata_types.size();
-        *(TypeDesc **)val = n ? &group->m_userdata_types[0] : NULL;
-        return true;
-    }
-    if (name == "userdata_offsets" && type.basetype == TypeDesc::PTR) {
-        if (! group->optimized())
-            optimize_group (*group);
-        size_t n = group->m_userdata_offsets.size();
-        *(int **)val = n ? &group->m_userdata_offsets[0] : NULL;
-        return true;
-    }
-    if (name == "userdata_derivs" && type.basetype == TypeDesc::PTR) {
-        if (! group->optimized())
-            optimize_group (*group);
-        size_t n = group->m_userdata_derivs.size();
-        *(char **)val = n ? &group->m_userdata_derivs[0] : NULL;
+    if (name == "layer_osofiles" && type.basetype == TypeDesc::STRING) {
+        size_t n = std::min (type.numelements(), (size_t)group->nlayers());
+        for (size_t i = 0;  i < n;  ++i)
+            ((ustring *)val)[i] =(*group)[i]->master()->osofilename();
         return true;
     }
     if (name == "pickle" && type == TypeDesc::STRING) {
         *(ustring *)val = ustring(group->serialize());
         return true;
     }
-
-    if (name == "num_attributes_needed" && type == TypeDesc::TypeInt) {
-        if (! group->optimized())
-            optimize_group (*group);
-        *(int *)val = (int)group->m_attributes_needed.size();
-        return true;
-    }
-    if (name == "attributes_needed" && type.basetype == TypeDesc::PTR) {
-        if (! group->optimized())
-            optimize_group (*group);
-        size_t n = group->m_attributes_needed.size();
-        *(ustring **)val = n ? &group->m_attributes_needed[0] : NULL;
-        return true;
-    }
-    if (name == "attribute_scopes" && type.basetype == TypeDesc::PTR) {
-        if (! group->optimized())
-            optimize_group (*group);
-        size_t n = group->m_attribute_scopes.size();
-        *(ustring **)val = n ? &group->m_attribute_scopes[0] : NULL;
-        return true;
-    }
-    if (name == "unknown_attributes_needed" && type == TypeDesc::TypeInt) {
-        if (! group->optimized())
-            optimize_group (*group);
-        *(int *)val = (int)group->m_unknown_attributes_needed;
-        return true;
-    }
     if (name == "exec_repeat" && type == TypeDesc::TypeInt) {
         *(int *)val = group->m_exec_repeat;
-        return true;
-    }
-
-    // Additional atttributes useful to OptiX-based renderers
-    if (name == "userdata_layers" && type.basetype == TypeDesc::PTR) {
-        if (! group->optimized())
-            optimize_group (*group);
-        size_t n = group->m_userdata_layers.size();
-        *(int **)val = n ? &group->m_userdata_layers[0] : NULL;
-        return true;
-    }
-    if (name == "userdata_init_vals" && type.basetype == TypeDesc::PTR) {
-        if (! group->optimized())
-            optimize_group (*group);
-        size_t n = group->m_userdata_init_vals.size();
-        *(void **)val = n ? &group->m_userdata_init_vals[0] : NULL;
         return true;
     }
     if (name == "ptx_compiled_version" && type.basetype == TypeDesc::PTR) {
@@ -1648,16 +1520,119 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
         *(std::string *)val = exists ? group->m_llvm_ptx_compiled_version : "";
         return true;
     }
+
+    // All the remaining attributes require the group to already be
+    // optimized.
+    if (! group->optimized()) {
+        auto threadinfo = create_thread_info();
+        auto ctx = get_context(threadinfo);
+        optimize_group (*group, ctx);
+        release_context(ctx);
+        destroy_thread_info (threadinfo);
+    }
+
+    if (name == "num_textures_needed" && type == TypeDesc::TypeInt) {
+        *(int *)val = (int)group->m_textures_needed.size();
+        return true;
+    }
+    if (name == "textures_needed" && type.basetype == TypeDesc::PTR) {
+        size_t n = group->m_textures_needed.size();
+        *(ustring **)val = n ? &group->m_textures_needed[0] : NULL;
+        return true;
+    }
+    if (name == "unknown_textures_needed" && type == TypeDesc::TypeInt) {
+        *(int *)val = (int)group->m_unknown_textures_needed;
+        return true;
+    }
+
+    if (name == "num_closures_needed" && type == TypeDesc::TypeInt) {
+        *(int *)val = (int)group->m_closures_needed.size();
+        return true;
+    }
+    if (name == "closures_needed" && type.basetype == TypeDesc::PTR) {
+        size_t n = group->m_closures_needed.size();
+        *(ustring **)val = n ? &group->m_closures_needed[0] : NULL;
+        return true;
+    }
+    if (name == "unknown_closures_needed" && type == TypeDesc::TypeInt) {
+        *(int *)val = (int)group->m_unknown_closures_needed;
+        return true;
+    }
+
+    if (name == "num_globals_needed" && type == TypeDesc::TypeInt) {
+        *(int *)val = (int)group->m_globals_needed.size();
+        return true;
+    }
+    if (name == "globals_needed" && type.basetype == TypeDesc::PTR) {
+        size_t n = group->m_globals_needed.size();
+        *(ustring **)val = n ? &group->m_globals_needed[0] : NULL;
+        return true;
+    }
+    if (name == "globals_read" && type.basetype == TypeDesc::INT) {
+        *(int *)val = group->m_globals_read;
+        return true;
+    }
+    if (name == "globals_write" && type.basetype == TypeDesc::INT) {
+        *(int *)val = group->m_globals_write;
+        return true;
+    }
+
+    if (name == "num_userdata" && type == TypeDesc::TypeInt) {
+        *(int *)val = (int)group->m_userdata_names.size();
+        return true;
+    }
+    if (name == "userdata_names" && type.basetype == TypeDesc::PTR) {
+        size_t n = group->m_userdata_names.size();
+        *(ustring **)val = n ? &group->m_userdata_names[0] : NULL;
+        return true;
+    }
+    if (name == "userdata_types" && type.basetype == TypeDesc::PTR) {
+        size_t n = group->m_userdata_types.size();
+        *(TypeDesc **)val = n ? &group->m_userdata_types[0] : NULL;
+        return true;
+    }
+    if (name == "userdata_offsets" && type.basetype == TypeDesc::PTR) {
+        size_t n = group->m_userdata_offsets.size();
+        *(int **)val = n ? &group->m_userdata_offsets[0] : NULL;
+        return true;
+    }
+    if (name == "userdata_derivs" && type.basetype == TypeDesc::PTR) {
+        size_t n = group->m_userdata_derivs.size();
+        *(char **)val = n ? &group->m_userdata_derivs[0] : NULL;
+        return true;
+    }
+    if (name == "num_attributes_needed" && type == TypeDesc::TypeInt) {
+        *(int *)val = (int)group->m_attributes_needed.size();
+        return true;
+    }
+    if (name == "attributes_needed" && type.basetype == TypeDesc::PTR) {
+        size_t n = group->m_attributes_needed.size();
+        *(ustring **)val = n ? &group->m_attributes_needed[0] : NULL;
+        return true;
+    }
+    if (name == "attribute_scopes" && type.basetype == TypeDesc::PTR) {
+        size_t n = group->m_attribute_scopes.size();
+        *(ustring **)val = n ? &group->m_attribute_scopes[0] : NULL;
+        return true;
+    }
+    if (name == "unknown_attributes_needed" && type == TypeDesc::TypeInt) {
+        *(int *)val = (int)group->m_unknown_attributes_needed;
+        return true;
+    }
     if (name == "group_id" && type == TypeDesc::TypeInt) {
-        if (! group->optimized())
-            optimize_group (*group);
         *(int *)val = (int) group->id();
         return true;
     }
-    if (name == "layer_osofiles" && type.basetype == TypeDesc::STRING) {
-        size_t n = std::min (type.numelements(), (size_t)group->nlayers());
-        for (size_t i = 0;  i < n;  ++i)
-            ((ustring *)val)[i] =(*group)[i]->master()->osofilename();
+
+    // Additional atttributes useful to OptiX-based renderers
+    if (name == "userdata_layers" && type.basetype == TypeDesc::PTR) {
+        size_t n = group->m_userdata_layers.size();
+        *(int **)val = n ? &group->m_userdata_layers[0] : NULL;
+        return true;
+    }
+    if (name == "userdata_init_vals" && type.basetype == TypeDesc::PTR) {
+        size_t n = group->m_userdata_init_vals.size();
+        *(void **)val = n ? &group->m_userdata_init_vals[0] : NULL;
         return true;
     }
 
@@ -2580,8 +2555,15 @@ ShadingContext *
 ShadingSystemImpl::get_context (PerThreadInfo *threadinfo,
                                 TextureSystem::Perthread *texture_threadinfo)
 {
-    if (! threadinfo)
+    if (! threadinfo) {
+#if OSL_VERSION < 20200
         threadinfo = get_perthread_info ();
+        warning ("ShadingSystem::get_context called without a PerThreadInfo");
+#else
+        error ("ShadingSystem::get_context called without a PerThreadInfo");
+        return nullptr;
+#endif
+    }
     ShadingContext *ctx = threadinfo->context_pool.empty()
                           ? new ShadingContext (*this, threadinfo)
                           : threadinfo->pop_context ();
@@ -2603,17 +2585,31 @@ ShadingSystemImpl::release_context (ShadingContext *ctx)
 
 
 bool
+ShadingSystemImpl::execute (ShadingContext &ctx, ShaderGroup &group,
+                            ShaderGlobals &ssg, bool run)
+{
+    return ctx.execute (group, ssg, run);
+}
+
+
+
+// Deprecated
+bool
 ShadingSystemImpl::execute (ShadingContext *ctx, ShaderGroup &group,
                             ShaderGlobals &ssg, bool run)
 {
     bool free_context = false;
+    OSL::PerThreadInfo *thread_info = nullptr;
     if (! ctx) {
-        ctx = get_context();
+        thread_info = create_thread_info();
+        ctx = get_context(thread_info);
         free_context = true;
     }
     bool result = ctx->execute (group, ssg, run);
-    if (free_context)
-        release_context (ctx);
+    if (free_context) {
+        release_context(ctx);
+        destroy_thread_info(thread_info);
+    }
     return result;
 }
 
@@ -2859,8 +2855,10 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group, ShadingContext *ctx)
     double locking_time = timer();
 
     bool ctx_allocated = false;
+    PerThreadInfo *thread_info = nullptr;
     if (! ctx) {
-        ctx = get_context ();
+        thread_info = create_thread_info();
+        ctx = get_context(thread_info);
         ctx_allocated = true;
     }
     RuntimeOptimizer rop (*this, group, ctx);
@@ -2902,8 +2900,10 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group, ShadingContext *ctx)
 
     group_post_jit_cleanup (group);
 
-    if (ctx_allocated)
-        release_context (ctx);
+    if (ctx_allocated) {
+        release_context(ctx);
+        destroy_thread_info(thread_info);
+    }
 
     group.m_optimized = true;
     spin_lock stat_lock (m_stat_mutex);
@@ -2957,6 +2957,8 @@ ShadingSystemImpl::optimize_all_groups (int nthreads, int mythread, int totalthr
         spin_lock lock (m_all_shader_groups_mutex);
         ngroups = m_all_shader_groups.size();
     }
+    PerThreadInfo* threadinfo = create_thread_info();
+    ShadingContext* ctx = get_context(threadinfo);
     for (size_t i = 0;  i < ngroups;  ++i) {
         // Assign to threads based on mod of totalthreads
         if ((i % totalthreads) == (unsigned)mythread) {
@@ -2966,9 +2968,11 @@ ShadingSystemImpl::optimize_all_groups (int nthreads, int mythread, int totalthr
                 group = m_all_shader_groups[i].lock();
             }
             if (group)
-                optimize_group (*group);
+                optimize_group (*group, ctx);
         }
     }
+    release_context(ctx);
+    destroy_thread_info(threadinfo);
 }
 
 

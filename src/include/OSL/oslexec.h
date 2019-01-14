@@ -443,26 +443,25 @@ public:
                       string_view layername, string_view paramname,
                       TypeDesc type, const void *val);
 
-    /// Optional: create the per-thread data needed for shader
-    /// execution.  Doing this and passing it to get_context speeds is a
-    /// bit faster than get_context having to do a thread-specific
-    /// lookup on its own, but if you do it, it's important for the app
-    /// to use one and only one PerThreadInfo per renderer thread, and
-    /// destroy it with destroy_thread_info when the thread terminates.
+    /// Create a per-thread data needed for shader execution.  It's very
+    /// important for the app to never use a PerThreadInfo from more than
+    /// one thread (and probably a good idea allocate only one PerThreadInfo
+    /// for each renderer thread), and destroy it with destroy_thread_info
+    /// when the thread terminates (and before the ShadingSystem is
+    /// destroyed).
     PerThreadInfo * create_thread_info();
 
     /// Destroy a PerThreadInfo that was allocated by
     /// create_thread_info().
     void destroy_thread_info (PerThreadInfo *threadinfo);
 
-    /// Get a ShadingContext that we can use.  The context is specific
-    /// to the renderer thread.  The 'threadinfo' parameter should be a
-    /// thread-specific pointer created by create_thread_info, or NULL,
-    /// in which case the ShadingSystem will do the thread-specific
-    /// lookup automatically (and at some additional cost).  The context
+    /// Get a ShadingContext that we can use.  The context is specific to a
+    /// renderer thread, and should never be passed between or shared by
+    /// more than one thread.  The 'threadinfo' parameter should be a
+    /// thread-specific pointer created by create_thread_info.  The context
     /// can be used to shade many points; a typical usage is to allocate
     /// just one context per thread and use it for the whole run.
-    ShadingContext *get_context (PerThreadInfo *threadinfo=NULL,
+    ShadingContext *get_context (PerThreadInfo *threadinfo,
                                  TextureSystem::Perthread *texture_threadinfo=NULL);
 
     /// Return a ShadingContext to the pool.
@@ -475,6 +474,10 @@ public:
     /// execute_init, execute_layer of the last (presumably group entry)
     /// layer, and execute_cleanup. If run==false, just do the binding and
     /// setup, don't actually run the shader.
+    bool execute (ShadingContext &ctx, ShaderGroup &group,
+                  ShaderGlobals &globals, bool run=true);
+
+    // DEPRECATED(2.0): ctx pointer
     bool execute (ShadingContext *ctx, ShaderGroup &group,
                   ShaderGlobals &globals, bool run=true);
 
@@ -597,16 +600,14 @@ public:
     void set_raytypes(ShaderGroup *group, int raytypes_on, int raytypes_off);
 
     /// Ensure that the group has been optimized and JITed. The ctx pointer
-    /// optionally supplies a ShadingContext to use; if one is not supplied,
-    /// one will be temporarily allocated if needed.
-    void optimize_group (ShaderGroup *group, ShadingContext *ctx = nullptr);
+    /// supplies a ShadingContext to use.
+    void optimize_group (ShaderGroup *group, ShadingContext *ctx);
 
     /// Ensure that the group has been optimized and JITed. This is a
     /// convenience function that simply calls set_raytypes followed by
-    /// optimize_group. The ctx optionally supplies a ShadingContext to use;
-    /// if not supplied, one will be temporarily allocated if needed.
+    /// optimize_group. The ctx supplies a ShadingContext to use.
     void optimize_group (ShaderGroup *group, int raytypes_on,
-                         int raytypes_off, ShadingContext *ctx = nullptr);
+                         int raytypes_off, ShadingContext *ctx);
 
     /// If option "greedyjit" was set, this call will trigger all
     /// shader groups that have not yet been compiled to do so with the

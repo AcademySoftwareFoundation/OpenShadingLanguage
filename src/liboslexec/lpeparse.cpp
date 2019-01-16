@@ -281,7 +281,7 @@ Parser::parseNegor()
     int pos = -1;
     next();
     while (hasInput() && head() != ']') {
-        bool iscustom;
+        bool iscustom = false;
         ustring sym = parseRawSymbol(iscustom);
         if (error()) return NULL;
         symlist.insert(sym);

@@ -9,6 +9,30 @@ Dependency and standards changes:
 OSL Language and oslc compiler:
 * oslc compilation speed-ups with faster retrieval of source lines when
   pasted into oso output. #938 (1.11.0)
+* Writing to function parameters not marked as `output` was only
+  recently properly recognized as an error (it was documented as illegal
+  all along). Now we demote to a warning, treating it as a full error was
+  too disruptive. #944 (1.10.3/1.11.0)
+* Improve oso output efficiency. #938 (1.10.3/1.11.0)
+* Fix bug related to counting the proper number of values used for
+  array default value initialization. #948 (1.10.3/1.11.0)
+* Slight modification to the formatting of floating point values in the oso
+  to ensure full precision preservation for float values. #949 (1.10.3/1.11.0)
+* Fix crash when encountering empty-expression `for (;;)`. #951 (1.10.3/1.11.0)
+* Fix bug in code generation of certain `while` loops that directly
+  tested a variable as a zero/nonzero test, such as:
+  ```
+      i = 3;
+      while (i)
+          --i;
+  ```
+  whereas the following had worked (they should have been identical):
+  ```
+      i = 3;
+      while (i != 0)
+          --i;
+  ```
+  #947 (1.10.3/1.11.0)
 
 OSL Standard library:
 
@@ -17,17 +41,75 @@ Shaders:
 API changes, new options, new ShadingSystem features (for renderer writers):
 *  `ShadingSystem::convert_value()` will now allow promotion of int or
    float to `float[4]`. #940 (1.11.0)
+* Removed the varieties of `RendererServices::texture()`, `texture3d()`, and
+  `environment()` that lack the `errormessage` parameter and had been marked
+  as deprecated since OSL 1.8. #945 (1.11.0)
+* Deprecate the auto-allocation of contexts and per-thread-info. Certain
+  calls that took a `Context*` pointer that were allowed to be NULL now
+  by convention require the renderer to pass a valid context. #958 (1.11.0)
 
 Bug fixes and other improvements (internals):
+* Fix bug in implementation of `splineinverse()` when computing with
+  Bezier interpolation. #954 (1.10.3/1.11.0)
+* Fix bug in implementation of `transformc` when relyin on OpenColorIO for
+  color transformation math, in cases were derivatives were needed (this
+  is a rare case probably nobody ran into). #960 (1.10.3/1.11.0)
+* Improve thread-safety of the OSLCompiler itself, in case an app wants
+  to be compiling several shaders to oso concurrently by different threads.
+  #953 (1.10.3/1.11.0)
 
 Build & test system improvements:
 * Testshade makes sure that no unreported errors accumulted in the texture
   system or image cache. #939 (1.11.0)
+* testshade: Check that no leftover errors are in the TextureSystem or
+  ImageCache at the end of the test (that would indicate that someplace in
+  OSL we are failing to check texture errors). #939 (1.10.3/1.11.0)
+* A new build-time CMake variable `OSL_LIBNAME_SUFFIX` lets you optionally
+  add a custom suffix to the main libraries that are built. (Use with
+  caution.) #970 (1.11.0)
 
 Documentation:
 
 
 
+Release 1.10.3 -- Feb 1, 2019 (compared to 1.10.2)
+--------------------------------------------------
+* oslc: Writing to function parameters not marked as `output` was only
+  recently properly recognized as an error (it was documented as illegal
+  all along). Now we demote to a warning, treating it as a full error was
+  too disruptive. #944 (1.10.3)
+* testshade: Check that no leftover errors are in the TextureSystem or
+  ImageCache at the end of the test (that would indicate that someplace in
+  OSL we are failing to check texture errors). #939 (1.10.3)
+* Improve oso output efficiency. #938 (1.10.3)
+* oslc: Fix bug related to counting the proper number of values used for
+  array default value initialization. #948 (1.10.3)
+* oslc: Slight modification to the formatting of floating point values in
+  the oso file to ensure full precision preservation for float values.
+  #949 (1.10.3)
+* oslc: Fix crash when encountering empty-expression `for (;;)`. #951 (1.10.3)
+* oslc: Fix bug in code generation of certain `while` loops that directly
+  tested a variable as a zero/nonzero test, such as:
+  ```
+      i = 3;
+      while (i)
+          --i;
+  ```
+  whereas the following had worked (they should have been identical):
+  ```
+      i = 3;
+      while (i != 0)
+          --i;
+  ```
+  #947 (1.10.3/1.11.0)
+* Fix bug in implementation of `splineinverse()` when computing with
+  Bezier interpolation. #954 (1.10.3)
+* Fix bug in implementation of `transformc` when relyin on OpenColorIO for
+  color transformation math, in cases were derivatives were needed (this
+  is a rare case probably nobody ran into). #960 (1.10.3)
+* Improve thread-safety of the OSLCompiler itself, in case an app wants
+  to be compiling several shaders to oso concurrently by different threads.
+  #953 (1.10.3)
 
 Release 1.10 -- Dec 1, 2018 (compared to 1.9)
 --------------------------------------------------

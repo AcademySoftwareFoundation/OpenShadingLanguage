@@ -107,7 +107,6 @@ ifeq ($(SP_OS), rhel7)
         -DBoost_LIBRARY_DIRS=/usr/lib64/boost_${BOOSTVERS}
     MY_CMAKE_FLAGS += \
         -DBoost_LIBRARIES:STRING="/usr/lib64/boost_${BOOSTVERSSP}/lib${BOOSTSPSUFFIX}boost_regex-gcc48-mt${BOOSTVERS_SUFFIX}.so;/usr/lib64/boost_${BOOSTVERSSP}/lib${BOOSTSPSUFFIX}boost_system-gcc48-mt${BOOSTVERS_SUFFIX}.so;/usr/lib64/boost_${BOOSTVERSSP}/lib${BOOSTSPSUFFIX}boost_thread-gcc48-mt${BOOSTVERS_SUFFIX}.so"
-# end rhel7
 
     # set up OpenImageIO distribution environment
     ifeq (${OSL_SPCOMP2},1)
@@ -125,6 +124,7 @@ ifeq ($(SP_OS), rhel7)
     SPARCH=${SP_OS}-$(SPCOMP2_COMPILER)$(CPPSTDSUFFIX)-boost$(subst .,,$(BOOSTVERSSP))
     SPPYARCH=$(SPARCH)-py$(PYVERNOSPACE)
 
+# end rhel7
 
 ## Generic OSX machines (including LG's laptop)
 else ifeq (${platform}, macosx)

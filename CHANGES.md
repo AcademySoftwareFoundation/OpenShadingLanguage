@@ -1,6 +1,40 @@
-Release 1.10.3 -- ??Jan 1?, 2019? (compared to 1.10.2)
+Release 1.10.3 -- Feb 1, 2019 (compared to 1.10.2)
 --------------------------------------------------
-
+* oslc: Writing to function parameters not marked as `output` was only
+  recently properly recognized as an error (it was documented as illegal
+  all along). Now we demote to a warning, treating it as a full error was
+  too disruptive. #944 (1.10.3)
+* testshade: Check that no leftover errors are in the TextureSystem or
+  ImageCache at the end of the test (that would indicate that someplace in
+  OSL we are failing to check texture errors). #939 (1.10.3)
+* Improve oso output efficiency. #938 (1.10.3)
+* oslc: Fix bug related to counting the proper number of values used for
+  array default value initialization. #948 (1.10.3)
+* oslc: Slight modification to the formatting of floating point values in
+  the oso file to ensure full precision preservation for float values.
+  #949 (1.10.3)
+* oslc: Fix crash when encountering empty-expression `for (;;)`. #951 (1.10.3)
+* oslc: Fix bug in code generation of certain `while` loops that directly
+  tested a variable as a zero/nonzero test, such as:
+  ```
+      i = 3;
+      while (i)
+          --i;
+  ```
+  whereas the following had worked (they should have been identical):
+  ```
+      i = 3;
+      while (i != 0)
+          --i;
+  ```
+* Fix bug in implementation of `splineinverse()` when computing with
+  Bezier interpolation. #954 (1.10.3)
+* Fix bug in implementation of `transformc` when relyin on OpenColorIO for
+  color transformation math, in cases were derivatives were needed (this
+  is a rare case probably nobody ran into). #960 (1.10.3)
+* Improve thread-safety of the OSLCompiler itself, in case an app wants
+  to be compiling several shaders to oso concurrently by different threads.
+  #953 (1.10.3)
 
 Release 1.10 -- Dec 1, 2018 (compared to 1.9)
 --------------------------------------------------

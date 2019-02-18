@@ -1,0 +1,5 @@
+surface test_userdata_string (string ud_str_1 = "default string", color Cs = 1)
+{
+    printf("str: %s\n", ud_str_1);
+    Ci = Cs * diffuse (N);
+}

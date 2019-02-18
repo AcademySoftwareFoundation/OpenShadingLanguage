@@ -568,6 +568,12 @@ void finalize_scene ()
     optix_ctx["invw"]->setFloat (camera.invw);
     optix_ctx["invh"]->setFloat (camera.invh);
 
+    // Make some device strings to test userdata parameters
+    uint64_t addr1 = rend.register_string ("ud_str_1", "");
+    uint64_t addr2 = rend.register_string ("userdata string", "");
+    optix_ctx["test_str_1"]->setUserData (sizeof(char*), &addr1);
+    optix_ctx["test_str_2"]->setUserData (sizeof(char*), &addr2);
+
     optix_ctx->validate();
 }
 

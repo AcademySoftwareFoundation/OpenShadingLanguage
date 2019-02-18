@@ -7,6 +7,8 @@
 
 rtDeclareVariable (uint2, launch_index, rtLaunchIndex, );
 rtDeclareVariable (uint2, launch_dim,   rtLaunchDim, );
+rtDeclareVariable (char*, test_str_1, , );
+rtDeclareVariable (char*, test_str_2, , );
 
 
 // These functions are declared extern to prevent name mangling.
@@ -168,8 +170,19 @@ extern "C" {
 
 
     __device__
-    int rend_get_userdata (char* name, void* data, int data_size)
+    int rend_get_userdata (char* name, void* data, int data_size,
+                           long long type, int index)
     {
+        // Perform a userdata lookup using the parameter name, type, and
+        // userdata index. If there is a match, memcpy the value into data and
+        // return 1.
+
+        // TODO: This is temporary code for initial testing and demonstration.
+        if (IS_STRING(type) && HDSTR(name) == HDSTR(test_str_1)) {
+            memcpy (data, &test_str_2, 8);
+            return 1;
+        }
+
         return 0;
     }
 
@@ -181,29 +194,30 @@ extern "C" {
                                      int symbol_data_size,
                                      char *userdata_initialized, int userdata_index)
     {
-        int layer = 0;
-        return rend_get_userdata ((char*)name, symbol_data, symbol_data_size);
+        int status = rend_get_userdata ((char*)name, userdata_data, symbol_data_size,
+                                        type, userdata_index);
+        return status;
     }
 
 
     __device__
     int osl_strlen_is (const char *str)
     {
-        return DEVSTR(str).length();
+        return HDSTR(str).length();
     }
 
 
     __device__
     int osl_hash_is (const char *str)
     {
-        return DEVSTR(str).hash();
+        return HDSTR(str).hash();
     }
 
 
     __device__
     int osl_getchar_isi (const char *str, int index)
     {
-        return (str && unsigned(index) < DEVSTR(str).length())
+        return (str && unsigned(index) < HDSTR(str).length())
             ? str[index] : 0;
     }
 

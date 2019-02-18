@@ -478,7 +478,7 @@ void make_optix_materials ()
     // OptiX Programs which can be called by the closest hit program in the wrapper
     // to execute the compiled OSL shader.
     for (const auto& groupref : shaders) {
-        shadingsys->optimize_group (groupref.get());
+        shadingsys->optimize_group (groupref.get(), nullptr);
 
         std::string group_name, init_name, entry_name;
         shadingsys->getattribute (groupref.get(), "groupname",        group_name);

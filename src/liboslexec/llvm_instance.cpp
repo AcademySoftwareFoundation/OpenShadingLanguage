@@ -441,27 +441,16 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
     // such userdata was available.
     llvm::BasicBlock *after_userdata_block = NULL;
     if (! sym.lockgeom() && ! sym.typespec().is_closure() && ! (sym.symtype() == SymTypeOutputParam)) {
-        int userdata_index = -1;
         ustring symname = sym.name();
         TypeDesc type = sym.typespec().simpletype();
-        for (int i = 0, e = (int)group().m_userdata_names.size(); i < e; ++i) {
-            if (symname == group().m_userdata_names[i] &&
-                    equivalent (type, group().m_userdata_types[i])) {
-                userdata_index = i;
-                break;
-            }
-        }
+
+        int userdata_index = find_userdata_index (sym);
         ASSERT (userdata_index >= 0);
 
-        std::vector<llvm::Value*> args;
-        args.push_back (sg_void_ptr());
-
         llvm::Value* name_arg = NULL;
-
         if (use_optix()) {
-            // In the OptiX case, we need to get the pointer to the string
-            // constant for the symbol name.
-            ustring arg_name = ustring::format ("$symname_%s_%d", symname, sym.layer());
+            // We need to make a DeviceString for the parameter name
+            ustring arg_name = ustring::sprintf ("osl_paramname_%s_%d", symname, sym.layer());
             Symbol symname_const (arg_name, TypeDesc::TypeString, SymTypeConst);
             symname_const.data (&symname);
             name_arg = llvm_load_device_string (symname_const);
@@ -469,6 +458,8 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
             name_arg = ll.constant (symname);
         }
 
+        std::vector<llvm::Value*> args;
+        args.push_back (sg_void_ptr());
         args.push_back (name_arg);
         args.push_back (ll.constant (type));
         args.push_back (ll.constant ((int) group().m_userdata_derivs[userdata_index]));
@@ -502,39 +493,36 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         ll.op_branch (cond_val, no_userdata_block, after_userdata_block);
     }
 
-    if (sym.has_init_ops() && sym.valuesource() == Symbol::DefaultVal) {
+    if (use_optix() && ! sym.typespec().is_string()) {
+        ASSERT (! sym.has_init_ops() && "Init ops are not currently supported in OptiX");
+
+        // If the call to osl_bind_interpolated_param returns 0, the default
+        // value needs to be loaded from a CUDA variable.
+        llvm::Value* cuda_var = getOrAllocateCUDAVariable (sym);
+
+        // memcpy the initial value from the CUDA variable
+        llvm::Value* src = ll.ptr_cast (ll.GEP (cuda_var, 0), ll.type_void_ptr());
+        llvm::Value* dst = llvm_void_ptr (sym);
+
+        TypeDesc t = sym.typespec().simpletype();
+        ll.op_memcpy (dst, src, t.size(), t.basesize());
+    } else if (use_optix()) {
+        // For convenience, we always pack string addresses into the groupdata
+        // struct.
+        int userdata_index = find_userdata_index (sym);
+        llvm::Value* init_val = getOrAllocateCUDAVariable (sym);
+        init_val = ll.ptr_cast (ll.GEP (init_val, 0), ll.type_void_ptr());
+        ll.op_memcpy (groupdata_field_ptr (2 + userdata_index), init_val, 8, 4);
+    } else if (sym.has_init_ops() && sym.valuesource() == Symbol::DefaultVal) {
         // Handle init ops.
         build_llvm_code (sym.initbegin(), sym.initend());
-    } else if (! sym.lockgeom() && ! sym.typespec().is_closure() &&
-               ! use_optix()) {
+    } else if (! sym.lockgeom() && ! sym.typespec().is_closure()) {
         // geometrically-varying param; memcpy its default value
         TypeDesc t = sym.typespec().simpletype();
         ll.op_memcpy (llvm_void_ptr (sym), ll.constant_ptr (sym.data()),
                       t.size(), t.basesize() /*align*/);
         if (sym.has_derivs())
             llvm_zero_derivs (sym);
-    } else if (use_optix() && ! sym.typespec().is_string()) {
-        // If the call to osl_bind_interpolated_param returns 0, the default
-        // value needs to be loaded from a corresponding OptiX variable, which
-        // we are creating here.
-        ustring var_name = ustring::format ("%s_%s_%s_%d", sym.name(),
-                                   inst()->layername(), group().name(), group().id());
-
-        // TODO: Make sure this works with string variables
-        llvm::Value* ud_var = createOptixVariable (var_name.string(),
-                                                   sym.typespec().simpletype().c_str(),
-                                                   sym.size(),
-                                                   sym.data());
-
-        // memcpy the value from the OptiX variable into the GroupData struct
-        llvm::Value* src = ll.ptr_cast (ll.GEP (ud_var, 0), ll.type_void_ptr());
-        llvm::Value* dst = llvm_void_ptr (sym);
-
-        TypeDesc t = sym.typespec().simpletype();
-        ll.op_memcpy (dst, src, t.size(), t.basesize());
-    } else if (use_optix() && sym.typespec().is_string()) {
-        llvm::Value* src = llvm_load_device_string (sym);
-        ll.op_memcpy (llvm_void_ptr (sym), src, 8, 4);
     } else {
         // Use default value
         int num_components = sym.typespec().simpletype().aggregate;

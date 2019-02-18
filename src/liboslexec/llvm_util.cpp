@@ -292,6 +292,7 @@ LLVM_Util::LLVM_Util (int debuglevel)
     m_llvm_type_char_ptr = (llvm::PointerType *) llvm::Type::getInt8PtrTy (*m_llvm_context);
     m_llvm_type_float_ptr = (llvm::PointerType *) llvm::Type::getFloatPtrTy (*m_llvm_context);
     m_llvm_type_ustring_ptr = (llvm::PointerType *) llvm::PointerType::get (m_llvm_type_char_ptr, 0);
+    m_llvm_type_longlong_ptr = (llvm::PointerType *) llvm::Type::getInt64PtrTy (*m_llvm_context);
     m_llvm_type_void_ptr = m_llvm_type_char_ptr;
 
     // A triple is a struct composed of 3 floats

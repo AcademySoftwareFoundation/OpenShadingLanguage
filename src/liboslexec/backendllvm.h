@@ -146,9 +146,9 @@ public:
         return llvm_load_value (sym, deriv, NULL, component, cast);
     }
 
-    /// Load the address of a global device-side string pointer, optionally
-    /// follow the pointer and cast the result to UINT64.
-    llvm::Value *llvm_load_device_string (const Symbol& sym, bool follow=true);
+    /// Load the address of a global device-side string pointer, which may
+    /// reside in a global variable, the groupdata struct, or a local value.
+    llvm::Value *llvm_load_device_string (const Symbol& sym);
 
     /// Legacy version
     ///
@@ -437,6 +437,11 @@ public:
 
     /// Return whether or not we are compiling for an OptiX-based renderer.
     bool use_optix() { return m_use_optix; }
+
+    /// Return the userdata index for the given Symbol.  Return -1 if the Symbol
+    /// is not an input parameter or is constant and therefore doesn't have an
+    /// entry in the groupdata struct.
+    int find_userdata_index (const Symbol& sym);
 
     LLVM_Util ll;
 

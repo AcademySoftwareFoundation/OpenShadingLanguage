@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2009-2018 Sony Pictures Imageworks Inc., et al.
+Copyright (c) 2009-2019 Sony Pictures Imageworks Inc., et al.
 All Rights Reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -39,6 +39,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 OSL_NAMESPACE_ENTER
 
+
 // Strings are stored in a block of CUDA device memory. String variables hold a
 // pointer to the start of the char array for each string. Each canonical string
 // has a unique entry in the table, so two strings can be tested for equality by
@@ -50,17 +51,17 @@ OSL_NAMESPACE_ENTER
 struct DeviceString {
     const char* m_chars;
 
-    OSL_HOSTDEVICE uint64_t hash()
+    OSL_HOSTDEVICE uint64_t hash() const
     {
         return *(uint64_t*)(m_chars - sizeof(uint64_t) - sizeof(uint64_t));
     }
 
-    OSL_HOSTDEVICE uint64_t length()
+    OSL_HOSTDEVICE uint64_t length() const
     {
         return *(uint64_t*)(m_chars - sizeof(uint64_t));
     }
 
-    OSL_HOSTDEVICE const char* c_str()
+    OSL_HOSTDEVICE const char* c_str() const
     {
         return m_chars;
     }
@@ -77,18 +78,41 @@ struct DeviceString {
 };
 
 
-// Handy re-casting macro
-#define DEVSTR(cstr) (*(OSL::DeviceString*)&cstr)
+// Choose the right cast for string parameters depending on the target. The
+// macro is the same as the USTR macro defined in oslexec_pvt.h when compiling
+// for the host.
+#ifndef __CUDA_ARCH__
+# define HDSTR(cstr) (*((ustring *)&cstr))
+#else
+# define HDSTR(cstr) (*(OSL::DeviceString*)&cstr)
+#endif
+
+
+// When compiling shadeops C++ sources for CUDA devices, we need to use
+// DeviceString instead of ustring for some input parameters, so we use this
+// typedef to select the correct type depending on the target.
+#ifndef __CUDA_ARCH__
+typedef OIIO::ustring StringParam;
+#else
+typedef DeviceString StringParam;
+#endif
+
+
+OSL_NAMESPACE_EXIT
 
 
 #ifdef __CUDA_ARCH__
-namespace DeviceStrings {
-#define STRDECL(str,var_name)                   \
-    extern __device__ DeviceString var_name;
+namespace OSLDeviceStrings {
+#define STRDECL(str,var_name)                       \
+    extern __device__ OSL::DeviceString var_name;
 #include <OSL/strdecls.h>
 #undef STRDECL
 }
 #endif
 
 
-OSL_NAMESPACE_EXIT
+#ifdef __CUDA_ARCH__
+namespace StringParams = OSLDeviceStrings;
+#else
+namespace StringParams = OSL::Strings;
+#endif

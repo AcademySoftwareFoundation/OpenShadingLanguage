@@ -396,6 +396,10 @@ LPexp *
 Parser::parseModifier(LPexp *e)
 {
     if (hasInput()) {
+        if (m_ingroup && (head() == '*' || head() == '{' || head() == '+')) {
+            m_error = std::string("Repetitions not allowed inside '<...>'");
+            return NULL;
+        }
         if (head() == '*') {
             next();
             return new lpexp::Repeat(e);

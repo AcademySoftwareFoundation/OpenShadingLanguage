@@ -1,3 +1,7 @@
+Release 1.10.4 -- ?? Mar 1, 2019 (compared to 1.10.3)
+--------------------------------------------------
+
+
 Release 1.10.3 -- Feb 1, 2019 (compared to 1.10.2)
 --------------------------------------------------
 * oslc: Writing to function parameters not marked as `output` was only

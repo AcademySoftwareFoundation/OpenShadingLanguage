@@ -41,186 +41,223 @@ namespace pvt {
 // namespaces with all these templated helper functions.
 namespace Spline {
 
-static ustring u_constant("constant");
-
-
-// We need to know explicitly whether the knots have
-// derivatives associated with them because of the way
-// Dual2<T> forms of arrays are stored..  Arrays with 
-// derivatives are stored:
-//   T T T... T.dx T.dx T.dx... T.dy T.dy T.dy...
-// This means, we need to explicitly construct the Dual2<T>
-// form of the knots on the fly.
-// if 'is_dual' == true, then OUTTYPE == Dual2<INTYPE>
-// if 'is_dual' == false, then OUTTYPE == INTYPE
-
-// This functor will extract a T or a Dual2<T> type from a VaryingRef array
-template <class OUTTYPE, class INTYPE, bool is_dual>
-struct extractValueFromArray
-{
-    OUTTYPE operator()(const INTYPE *value, int array_length, int idx);
-};
-
-template <class OUTTYPE, class INTYPE>
-struct extractValueFromArray<OUTTYPE, INTYPE, true> 
-{
-    OUTTYPE operator()(const INTYPE *value, int array_length, int idx)
-    {
-        return OUTTYPE( value[idx + 0*array_length], 
-                        value[idx + 1*array_length],
-                        value[idx + 2*array_length] );
-    }
-};
-
-template <class OUTTYPE, class INTYPE>
-struct extractValueFromArray<OUTTYPE, INTYPE, false> 
-{
-    OUTTYPE operator()(const INTYPE *value, int array_length, int idx)
-    {
-        return OUTTYPE( value[idx] );
-    }
-};
-
-
-
 struct SplineBasis {
-   ustring  basis_name;
    int      basis_step;
    Matrix44 basis;
 };
 
-const SplineBasis *getSplineBasis(const ustring &basis_name);
+// ========================================================
+//
+// Interpolation bases for splines
+//
+// ========================================================
 
-template <class RTYPE, class XTYPE, class CTYPE, class KTYPE, bool knot_derivs >
-void spline_evaluate(const SplineBasis *spline, 
-                     RTYPE &result, 
-                     XTYPE &xval, 
-                     const KTYPE *knots,
-                     int knot_count, int knot_arraylen)
-{
-    using OIIO::clamp;
-    XTYPE x = clamp(xval, XTYPE(0.0), XTYPE(1.0));
-    int nsegs = ((knot_count - 4) / spline->basis_step) + 1;
-    x = x*(float)nsegs;
-    float seg_x = removeDerivatives(x);
-    int segnum = (int)seg_x;
-    if (segnum < 0)
-        segnum = 0;
-    if (segnum > (nsegs-1))
-       segnum = nsegs-1;
-
-    if (spline->basis_name == u_constant) {
-        // Special case for "constant" basis
-        RTYPE P = removeDerivatives (knots[segnum+1]);
-        assignment (result, P);
-        return;
-    }
-
-    // x is the position along segment 'segnum'
-    x = x - float(segnum);
-    int s = segnum*spline->basis_step;
-
-    // create a functor so we can cleanly(!) extract
-    // the knot elements
-    extractValueFromArray<CTYPE, KTYPE, knot_derivs> myExtract;
-    CTYPE P[4];
-    for (int k = 0; k < 4; k++) {
-        P[k] = myExtract(knots, knot_arraylen, s + k);
-    }
-
-    CTYPE tk[4];
-    for (int k = 0; k < 4; k++) {
-        tk[k] = spline->basis[k][0] * P[0] +
-                spline->basis[k][1] * P[1] +
-                spline->basis[k][2] * P[2] + 
-                spline->basis[k][3] * P[3];
-    }
-
-    RTYPE tresult;
-    // The following is what we want, but this gives me template errors
-    // which I'm too lazy to decipher:
-    //    tresult = ((tk[0]*x + tk[1])*x + tk[2])*x + tk[3];
-    tresult = (tk[0]   * x + tk[1]);
-    tresult = (tresult * x + tk[2]);
-    tresult = (tresult * x + tk[3]);
-    assignment(result, tresult);
-}
-
-
-
-// Spline functor for use with the inverse function
-template <class RTYPE, class XTYPE>
-struct SplineFunctor {
-    SplineFunctor (const SplineBasis *spline, const float *knots,
-                   int knot_count, int knot_arraylen)
-        : spline(spline), knots(knots), knot_count(knot_count),
-          knot_arraylen(knot_arraylen) { }
-
-    RTYPE operator() (XTYPE x) {
-        RTYPE v;
-        spline_evaluate<RTYPE,XTYPE,float,float,false> (spline, v, x, knots,
-                                                 knot_count, knot_arraylen);
-        return v;
-    }
-private:
-    const SplineBasis *spline;
-    const float *knots;
-    int knot_count, knot_arraylen;
+static const int kNumSplineTypes = 6;
+static const int kConstantSpline = kNumSplineTypes - 1;
+static Spline::SplineBasis gBasisSet[kNumSplineTypes] = {
+   { 1, Matrix44( (-1.0f/2.0f),  ( 3.0f/2.0f), (-3.0f/2.0f), ( 1.0f/2.0f),
+                  ( 2.0f/2.0f),  (-5.0f/2.0f), ( 4.0f/2.0f), (-1.0f/2.0f),
+                  (-1.0f/2.0f),  ( 0.0f/2.0f), ( 1.0f/2.0f), ( 0.0f/2.0f),
+                  ( 0.0f/2.0f),  ( 2.0f/2.0f), ( 0.0f/2.0f), ( 0.0f/2.0f))  },
+   { 3, Matrix44(  -1,  3, -3,  1,
+                    3, -6,  3,  0,
+                   -3,  3,  0,  0,
+                    1,  0,  0,  0) }, 
+   { 1, Matrix44( (-1.0f/6.0f), ( 3.0f/6.0f),  (-3.0f/6.0f),  (1.0f/6.0f),
+                  ( 3.0f/6.0f), (-6.0f/6.0f),  ( 3.0f/6.0f),  (0.0f/6.0f),
+                  (-3.0f/6.0f), ( 0.0f/6.0f),  ( 3.0f/6.0f),  (0.0f/6.0f),
+                  ( 1.0f/6.0f), ( 4.0f/6.0f),  ( 1.0f/6.0f),  (0.0f/6.0f)) },
+   { 2, Matrix44(  2,  1, -2,  1,
+                  -3, -2,  3, -1,
+                   0,  1,  0,  0,
+                   1,  0,  0,  0) },
+   { 1, Matrix44(  0,  0,  0,  0,
+                   0,  0,  0,  0,
+                   0, -1,  1,  0,
+                   0,  1,  0,  0) },
+   { 1, Matrix44(0.0f) }  // special marker for constant
 };
 
+struct SplineInterp {
+    const SplineBasis& spline;
+    const bool         constant;
+
+    // We need to know explicitly whether the knots have
+    // derivatives associated with them because of the way
+    // Dual2<T> forms of arrays are stored..  Arrays with 
+    // derivatives are stored:
+    //   T T T... T.dx T.dx T.dx... T.dy T.dy T.dy...
+    // This means, we need to explicitly construct the Dual2<T>
+    // form of the knots on the fly.
+    // if 'is_dual' == true, then OUTTYPE == Dual2<INTYPE>
+    // if 'is_dual' == false, then OUTTYPE == INTYPE
+
+    // This functor will extract a T or a Dual2<T> type from a VaryingRef array
+    template <class OUTTYPE, class INTYPE, bool is_dual>
+    struct extractValueFromArray
+    {
+        OUTTYPE operator()(const INTYPE *value, int array_length, int idx);
+    };
+
+    template <class OUTTYPE, class INTYPE>
+    struct extractValueFromArray<OUTTYPE, INTYPE, true> 
+    {
+        OUTTYPE operator()(const INTYPE *value, int array_length, int idx)
+        {
+            return OUTTYPE( value[idx + 0*array_length], 
+                            value[idx + 1*array_length],
+                            value[idx + 2*array_length] );
+        }
+    };
+
+    template <class OUTTYPE, class INTYPE>
+    struct extractValueFromArray<OUTTYPE, INTYPE, false> 
+    {
+        OUTTYPE operator()(const INTYPE *value, int array_length, int idx)
+        {
+            return OUTTYPE( value[idx] );
+        }
+    };
+
+    // Spline functor for use with the inverse function
+    template <class RTYPE, class XTYPE>
+    struct SplineFunctor {
+        SplineFunctor (const SplineInterp& spline_, const float *knots_,
+                       int knot_count_, int knot_arraylen_)
+            : spline(spline_), knots(knots_), knot_count(knot_count_),
+              knot_arraylen(knot_arraylen_) { }
+
+        RTYPE operator() (XTYPE x) {
+            RTYPE v;
+            spline.evaluate<RTYPE,XTYPE,float,float,false> (v, x, knots, knot_count, knot_arraylen);
+            return v;
+        }
+    private:
+        const SplineInterp& spline;
+        const float *knots;
+        int knot_count, knot_arraylen;
+    };
+
+    template <class RTYPE, class XTYPE, class CTYPE, class KTYPE, bool knot_derivs >
+    void evaluate(RTYPE &result, XTYPE &xval, const KTYPE *knots,
+                  int knot_count, int knot_arraylen) const
+    {
+        using OIIO::clamp;
+        XTYPE x = clamp(xval, XTYPE(0.0), XTYPE(1.0));
+        int nsegs = ((knot_count - 4) / spline.basis_step) + 1;
+        x = x*(float)nsegs;
+        float seg_x = removeDerivatives(x);
+        int segnum = (int)seg_x;
+        if (segnum < 0)
+            segnum = 0;
+        if (segnum > (nsegs-1))
+           segnum = nsegs-1;
+
+        if (constant) {
+            // Special case for "constant" basis
+            RTYPE P = removeDerivatives (knots[segnum+1]);
+            assignment (result, P);
+            return;
+        }
+
+        // x is the position along segment 'segnum'
+        x = x - float(segnum);
+        int s = segnum * spline.basis_step;
+
+        // create a functor so we can cleanly(!) extract
+        // the knot elements
+        extractValueFromArray<CTYPE, KTYPE, knot_derivs> myExtract;
+        CTYPE P[4];
+        for (int k = 0; k < 4; k++) {
+            P[k] = myExtract(knots, knot_arraylen, s + k);
+        }
+
+        CTYPE tk[4];
+        for (int k = 0; k < 4; k++) {
+            tk[k] = spline.basis[k][0] * P[0] +
+                    spline.basis[k][1] * P[1] +
+                    spline.basis[k][2] * P[2] + 
+                    spline.basis[k][3] * P[3];
+        }
+
+        RTYPE tresult;
+        // The following is what we want, but this gives me template errors
+        // which I'm too lazy to decipher:
+        //    tresult = ((tk[0]*x + tk[1])*x + tk[2])*x + tk[3];
+        tresult = (tk[0]   * x + tk[1]);
+        tresult = (tresult * x + tk[2]);
+        tresult = (tresult * x + tk[3]);
+        assignment(result, tresult);
+    }
+
+    // Evaluate the inverse of a spline, i.e., solve for the x for which
+    // spline_evaluate(x) == y.
+    template <class YTYPE>
+    void inverse (YTYPE &x, YTYPE y, const float *knots, int knot_count,
+                  int knot_arraylen) const
+    {
+        // account for out-of-range inputs, just clamp to the values we have
+        int lowindex = spline.basis_step == 1 ? 1 : 0;
+        int highindex = spline.basis_step == 1 ? knot_count-2 : knot_count-1;
+        bool increasing = knots[1] < knots[knot_count-2];
+        if (increasing) {
+            if (y <= knots[lowindex]) {
+                x = YTYPE(0);
+                return;
+            }
+            if (y >= knots[highindex]) {
+                x = YTYPE(1);
+                return;
+            }
+        } else {
+            if (y >= knots[lowindex]) {
+                x = YTYPE(0);
+                return;
+            }
+            if (y <= knots[highindex]) {
+                x = YTYPE(1);
+                return;
+            }
+        }
 
 
-// Evaluate the inverse of a spline, i.e., solve for the x for which
-// spline_evaluate(x) == y.
-template <class YTYPE>
-void spline_inverse (const SplineBasis *spline,
-                     YTYPE &x, YTYPE y, const float *knots, int knot_count,
-                     int knot_arraylen)
+        SplineFunctor<YTYPE,YTYPE> S (*this, knots, knot_count, knot_arraylen);
+        // Because of the nature of spline interpolation, monotonic knots
+        // can still lead to a non-monotonic curve.  To deal with this,
+        // search separately on each spline segment and hope for the best.
+        int nsegs = (knot_count - 4) / spline.basis_step + 1;
+        float nseginv = 1.0f / nsegs;
+        YTYPE r0 = 0.0;
+        x = 0;
+        for (int s = 0;  s < nsegs;  ++s) {  // Search each interval
+            YTYPE r1 = nseginv * (s+1);
+            bool brack;
+            x = OIIO::invert (S, y, r0, r1, 32, YTYPE(1.0e-6), &brack);
+            if (brack)
+                return;
+            r0 = r1;  // Start of next interval is end of this one
+        }
+    }
+};
+
+static SplineInterp getSplineBasis(const ustring &basis_name)
 {
-    // account for out-of-range inputs, just clamp to the values we have
-    int lowindex = spline->basis_step == 1 ? 1 : 0;
-    int highindex = spline->basis_step == 1 ? knot_count-2 : knot_count-1;
-    bool increasing = knots[1] < knots[knot_count-2];
-    if (increasing) {
-        if (y <= knots[lowindex]) {
-            x = YTYPE(0);
-            return;
-        }
-        if (y >= knots[highindex]) {
-            x = YTYPE(1);
-            return;
-        }
-    } else {
-        if (y >= knots[lowindex]) {
-            x = YTYPE(0);
-            return;
-        }
-        if (y <= knots[highindex]) {
-            x = YTYPE(1);
-            return;
-        }
-    }
+    if (basis_name == ustring("catmull-rom"))
+        return { gBasisSet[0], false };
+    if (basis_name == ustring("bezier"))
+        return { gBasisSet[1], false };
+    if (basis_name == ustring("bspline"))
+        return { gBasisSet[2], false };
+    if (basis_name == ustring("hermite"))
+        return { gBasisSet[3], false };
 
+    // Default to linear ?
 
-    SplineFunctor<YTYPE,YTYPE> S (spline, knots, knot_count, knot_arraylen);
-    // Because of the nature of spline interpolation, monotonic knots
-    // can still lead to a non-monotonic curve.  To deal with this,
-    // search separately on each spline segment and hope for the best.
-    int nsegs = (knot_count - 4) / spline->basis_step + 1;
-    float nseginv = 1.0f / nsegs;
-    YTYPE r0 = 0.0;
-    x = 0;
-    for (int s = 0;  s < nsegs;  ++s) {  // Search each interval
-        YTYPE r1 = nseginv * (s+1);
-        bool brack;
-        x = OIIO::invert (S, y, r0, r1, 32, YTYPE(1.0e-6), &brack);
-        if (brack)
-            return;
-        r0 = r1;  // Start of next interval is end of this one
-    }
+    if (basis_name == ustring("constant"))
+        return { gBasisSet[5], true };
+
+    return { gBasisSet[4], false };
 }
-
-
 
 }; // namespace Spline
 }; // namespace pvt

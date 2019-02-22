@@ -36,19 +36,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/fmath.h>
 
-using namespace OSL;
-
 OSL_NAMESPACE_ENTER
 namespace pvt {
 
-#ifdef __CUDA_ARCH__
-namespace OSLDeviceStrings {
-#define STRDECL(str,var_name)                       \
-    extern __device__ OSL::DeviceString var_name;
-#include <OSL/strdecls.h>
-#undef STRDECL
-}
-#endif
 
 #if 0 // only when testing the statistics of perlin noise to normalize the range
 

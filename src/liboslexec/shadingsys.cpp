@@ -702,54 +702,10 @@ PerThreadInfo::pop_context ()
 
 
 namespace Strings {
-
-// Define static ustring symbols for very fast comparison
-ustring camera ("camera"), common ("common");
-ustring object ("object"), shader ("shader");
-ustring screen ("screen"), NDC ("NDC");
-ustring rgb ("rgb"), RGB ("RGB");
-ustring hsv ("hsv"), hsl ("hsl"), YIQ ("YIQ");
-ustring XYZ ("XYZ"), xyz ("xyz"), xyY("xyY");
-ustring null ("null"), default_("default");
-ustring label ("label");
-ustring sidedness ("sidedness"), front ("front"), back ("back"), both ("both");
-ustring P ("P"), I ("I"), N ("N"), Ng ("Ng");
-ustring dPdu ("dPdu"), dPdv ("dPdv"), u ("u"), v ("v"), Ps ("Ps");
-ustring time ("time"), dtime ("dtime"), dPdtime ("dPdtime");
-ustring Ci ("Ci");
-ustring width ("width"), swidth ("swidth"), twidth ("twidth"), rwidth ("rwidth");
-ustring blur ("blur"), sblur ("sblur"), tblur ("tblur"), rblur ("rblur");
-ustring wrap ("wrap"), swrap ("swrap"), twrap ("twrap"), rwrap ("rwrap");
-ustring black ("black"), clamp ("clamp");
-ustring periodic ("periodic"), mirror ("mirror");
-ustring firstchannel ("firstchannel"), fill ("fill"), alpha ("alpha");
-ustring errormessage ("errormessage");
-ustring interp("interp"), closest("closest"), linear("linear");
-ustring cubic("cubic"), smartcubic("smartcubic");
-ustring perlin("perlin"), uperlin("uperlin");
-ustring noise("noise"), snoise("snoise");
-ustring cell("cell"), cellnoise("cellnoise"), pcellnoise("pcellnoise");
-ustring hash("hash"), hashnoise("hashnoise"), phashnoise("phashnoise");
-ustring pnoise("pnoise"), psnoise("psnoise");
-ustring genericnoise("genericnoise"), genericpnoise("genericpnoise");
-ustring gabor("gabor"), gabornoise("gabornoise"), gaborpnoise("gaborpnoise");
-ustring simplex("simplex"), usimplex("usimplex");
-ustring simplexnoise("simplexnoise"), usimplexnoise("usimplexnoise");
-ustring anisotropic("anisotropic"), direction("direction");
-ustring do_filter("do_filter"), bandwidth("bandwidth"), impulses("impulses");
-ustring op_dowhile("dowhile"), op_for("for"), op_while("while");
-ustring op_exit("exit");
-ustring subimage("subimage"), subimagename("subimagename");
-ustring missingcolor("missingcolor"), missingalpha("missingalpha");
-ustring end("end"), useparam("useparam");
-ustring uninitialized_string("!!!uninitialized!!!");
-ustring unull("unull");
-ustring raytype("raytype");
-ustring color("color"), point("point"), vector("vector"), normal("normal");
-ustring matrix("matrix");
-ustring unknown ("unknown");
-ustring _emptystring_ ("");
-};
+#define STRDECL(str,var_name) const ustring var_name(str);
+#include <OSL/strdecls.h>
+#undef STRDECL
+}
 
 
 

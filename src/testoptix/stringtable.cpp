@@ -63,7 +63,7 @@ void StringTable::init (optix::Context ctx)
     // to work.
 
 #define STRDECL(str,var_name)                                           \
-    addString (ustring(str), ustring("OSLDeviceStrings::"#var_name));
+    addString (ustring(str), ustring(OSL_NAMESPACE_STRING "::DeviceStrings::" #var_name));
 #include <OSL/strdecls.h>
 #undef STRDECL
 }

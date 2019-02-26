@@ -450,7 +450,11 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         llvm::Value* name_arg = NULL;
         if (use_optix()) {
             // We need to make a DeviceString for the parameter name
+#ifdef OIIO_HAS_SPRINTF
             ustring arg_name = ustring::sprintf ("osl_paramname_%s_%d", symname, sym.layer());
+#else
+            ustring arg_name = ustring::format ("osl_paramname_%s_%d", symname, sym.layer());
+#endif
             Symbol symname_const (arg_name, TypeDesc::TypeString, SymTypeConst);
             symname_const.data (&symname);
             name_arg = llvm_load_device_string (symname_const);

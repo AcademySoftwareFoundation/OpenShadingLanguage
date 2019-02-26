@@ -499,20 +499,20 @@ BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym)
         }
     }
     else {
-        ustring var_name = ustring::format ("%s_%s_%d_%s_%d",
-                                            sym.name(),
-                                            group().name(),
-                                            group().id(),
-                                            inst()->layername(),
-                                            sym.layer());
+        std::string var_name = Strutil::sprintf ("%s_%s_%d_%s_%d",
+                                                 sym.name(),
+                                                 group().name(),
+                                                 group().id(),
+                                                 inst()->layername(),
+                                                 sym.layer());
 
         // Leading dollar signs are not allowed in PTX variable names,
         // so prepend an underscore.
-        if (var_name.string()[0] == '$') {
+        if (var_name[0] == '$') {
             ss << '_';
         }
 
-        ss << var_name.string();
+        ss << var_name;
     }
 
     const std::string name = ss.str();

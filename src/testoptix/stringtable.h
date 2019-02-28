@@ -34,8 +34,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/ustring.h>
 #include <OSL/oslexec.h>
 
-#include <cuda_runtime_api.h>
 #include <optix_world.h>
+
+using namespace optix;
+#include <cuda_runtime_api.h>
 
 
 // The StringTable manages a block of CUDA device memory designated to hold all

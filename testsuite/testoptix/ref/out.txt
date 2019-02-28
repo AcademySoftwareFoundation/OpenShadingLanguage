@@ -3,7 +3,9 @@ Compiled matte.osl -> matte.oso
 Compiled test_assign.osl -> test_assign.oso
 Compiled test_compare.osl -> test_compare.oso
 Compiled test_print.osl -> test_print.oso
+Compiled test_spline.osl -> test_spline.oso
 Compiled test_str_ops.osl -> test_str_ops.oso
+Compiled test_texture.osl -> test_texture.oso
 Compiled test_userdata_string.osl -> test_userdata_string.oso
 str: default
 non-default string

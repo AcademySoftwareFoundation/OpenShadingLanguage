@@ -237,4 +237,40 @@ extern "C" {
         new (opt) NoiseOptCUDA;
         return opt;
     }
+
+
+    __device__
+    void* osl_get_texture_options (void *sg_)
+    {
+        return 0;
+    }
+
+    __device__
+    void osl_texture_set_interp_code(void *opt, int mode)
+    {
+        // ((TextureOpt *)opt)->interpmode = (TextureOpt::InterpMode)mode;
+    }
+
+    __device__
+    void osl_texture_set_stwrap_code (void *opt, int mode)
+    {
+        //((TextureOpt *)opt)->swrap = (TextureOpt::Wrap)mode;
+        //((TextureOpt *)opt)->twrap = (TextureOpt::Wrap)mode;
+    }
+
+    __device__
+    int osl_texture (void *sg_, const char *name, void *handle,
+             void *opt_, float s, float t,
+             float dsdx, float dtdx, float dsdy, float dtdy,
+             int chans, void *result, void *dresultdx, void *dresultdy,
+             void *alpha, void *dalphadx, void *dalphady,
+             void *ustring_errormessage)
+    {
+        if (!handle)
+            return 0;
+        int64_t texID = int64_t(handle);
+        *((float3*)result) = make_float3(optix::rtTex2D<float4>(texID, s, t));
+        return 1;
+    }
+
 }

@@ -1,0 +1,5 @@
+<World>
+   <ShaderGroup>
+      shader test_texture layer1;
+   </ShaderGroup>
+</World>

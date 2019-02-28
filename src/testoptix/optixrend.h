@@ -28,16 +28,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-#include "stringtable.h"
-
 #include <OpenImageIO/ustring.h>
 #include <OSL/oslexec.h>
+#include <OSL/device_string.h>
 
 #include <optix_world.h>
 
+#include "stringtable.h"
 
 OSL_NAMESPACE_ENTER
 
+struct Scene;
 
 class OptixRenderer : public RendererServices
 {
@@ -47,11 +48,6 @@ public:
 
     OptixRenderer () { }
     ~OptixRenderer () { }
-
-    void init_string_table (optix::Context ctx)
-    {
-        m_str_table.init (ctx);
-    }
 
     uint64_t register_string (const std::string& str, const std::string& var_name)
     {
@@ -118,8 +114,53 @@ public:
     }
 
 
+    /// Return true if the texture handle (previously returned by
+    /// get_texture_handle()) is a valid texture that can be subsequently
+    /// read or sampled.
+    virtual bool good(TextureHandle *handle);
+
+    /// Given the name of a texture, return an opaque handle that can be
+    /// used with texture calls to avoid the name lookups.
+    virtual TextureHandle * get_texture_handle(ustring filename);
+
+    // Create the optix-program, for the given resolution
+    //
+    bool init(const std::string& progName, int xres, int yres, Scene* = nullptr);
+
+    // Convert the OSL ShaderGroups accumulated during scene parsing into
+    // OptiX Materials and set up the OptiX scene graph
+    //
+    bool finalize(ShadingSystem* shadingsys, bool saveptx, Scene* scene = nullptr);
+
+    // Copies the specified device buffer into an output vector, assuming that
+    // the buffer is in FLOAT3 format (and that Vec3 and float3 have the same
+    // underlying representation).
+    std::vector<OSL::Color3>
+    getPixelBuffer(const std::string& buffer_name, int width, int height);
+
+    bool
+    saveImage(const std::string& buffer_name, int width, int height,
+              const std::string& imagefile, OIIO::ErrorHandler* errHandler);
+
+    void clear();
+
+    // ShaderGroupRef storage
+    std::vector<ShaderGroupRef>& shaders() { return m_shaders; }
+
+    // Easy way to do Optix calls on the RendererServices
+    optix::Context& context()              { return m_context; }
+    optix::Context& operator -> ()         { return context(); }
+
 private:
-    StringTable m_str_table;
+
+    std::vector<ShaderGroupRef> m_shaders;
+    std::string                 m_materials_ptx;
+
+    StringTable           m_str_table;
+    optix::Context        m_context;
+    optix::Program        m_program;
+    std::unordered_map<OIIO::ustring, optix::TextureSampler, OIIO::ustringHash> m_samplers;
+    unsigned              m_width, m_height;
 };
 
 

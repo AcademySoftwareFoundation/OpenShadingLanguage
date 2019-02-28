@@ -40,7 +40,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 // Converts from Imath::Vec3 to optix::float3
-optix::float3 vec3_to_float3 (const OSL::Vec3& vec)
+static inline optix::float3 vec3_to_float3 (const OSL::Vec3& vec)
 {
     return optix::make_float3 (vec.x, vec.y, vec.z);
 }
@@ -57,8 +57,7 @@ struct Camera {
     Camera() {} // leave uninitialized
     Camera(Vec3 eye, Vec3 dir, Vec3 up, float fov, int w, int h) :
         eye(eye),
-        dir(dir.normalize()),
-        invw(1.0f / w), invh(1.0f / h) {
+        dir(dir.normalize()) {
         float k = OIIO::fast_tan(fov * float(M_PI / 360));
         Vec3 right = dir.cross(up).normalize();
         cx = right * (w * k / h);
@@ -66,7 +65,6 @@ struct Camera {
     }
 
     Vec3 eye, dir, cx, cy;
-    float invw, invh;
 };
 
 
@@ -142,6 +140,11 @@ struct Quad : public Primitive {
 
 
 struct Scene {
+    bool init (optix::Context optix_ctx, const std::string& renderer,
+               std::string& materials);
+
+    void finalize(optix::Context optix_ctx);
+
     void create_geom_programs (optix::Context optix_ctx, const std::string& sphere_ptx,
                                const std::string& quad_ptx)
     {
@@ -162,6 +165,12 @@ struct Scene {
     void add_quad(const Quad& q) {
         quads.push_back(q);
     }
+
+    Scene* valid() {
+        return spheres.empty() && quads.empty() ? nullptr : this;
+    }
+
+    Camera camera;
 
     std::vector<Sphere> spheres;
     std::vector<Quad> quads;

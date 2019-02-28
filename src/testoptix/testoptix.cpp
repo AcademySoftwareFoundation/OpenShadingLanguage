@@ -34,9 +34,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <cmath>
 
-#include <OpenImageIO/imageio.h>
-#include <OpenImageIO/imagebuf.h>
-#include <OpenImageIO/imagebufalgo.h>
 #include <OpenImageIO/argparse.h>
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/timer.h>
@@ -53,9 +50,6 @@ namespace pugi = OIIO::pugi;
 #include "optixrend.h"
 #include "raytracer.h"
 #include "shading.h"
-
-#include <optix_world.h>
-
 
 // The pre-compiled renderer support library LLVM bitcode is embedded into the
 // testoptix executable and made available through these variables.
@@ -86,7 +80,6 @@ static int num_threads = 0;
 static int iters = 1;
 static ErrorHandler errhandler;
 static OptixRenderer rend;  // RendererServices
-static Camera camera;
 static Scene scene;
 static int backgroundShaderID = -1;
 static int backgroundResolution = 0;
@@ -94,15 +87,11 @@ static std::vector<ShaderGroupRef> shaders;
 static std::string scenefile, imagefile;
 static std::string shaderpath;
 static bool shadingsys_options_set = false;
+static std::string ptx_renderer;
 
 // NB: Unused parameters are left in place so that the parse_scene() from
 //     testrender can be used as-is (and they will eventually be used, when
 //     path tracing is added to testoptix)
-
-optix::Context optix_ctx = NULL;
-
-static std::string renderer_ptx;  // ray generation, etc.
-static std::string wrapper_ptx;   // hit programs
 
 
 // Set shading system global attributes based on command line options.
@@ -169,6 +158,7 @@ void getargs(int argc, const char *argv[])
                 "--debugnan", &debugnan, "Turn on 'debugnan' mode",
                 "--path %s", &shaderpath, "Specify oso search path",
                 "--options %s", &extraoptions, "Set extra OSL options",
+                "--renderer %s", &ptx_renderer, "Set the Optix render program",
                 NULL);
     if (ap.parse(argc, argv) < 0) {
         std::cerr << ap.geterror() << std::endl;
@@ -255,9 +245,9 @@ private:
 };
 
 
-void parse_scene() {
+void parse_scene(OptixRenderer& renderer) {
     // setup default camera (now that resolution is finalized)
-    camera = Camera(Vec3(0,0,0), Vec3(0,0,-1), Vec3(0,1,0), 90.0f, xres, yres);
+    scene.camera = Camera(Vec3(0,0,0), Vec3(0,0,-1), Vec3(0,1,0), 90.0f, xres, yres);
 
     // load entire text file into a buffer
     std::ifstream file(scenefile.c_str(), std::ios::binary);
@@ -269,6 +259,9 @@ void parse_scene() {
         exit (EXIT_FAILURE);
     }
     text.push_back(0); // make sure text ends with trailing 0
+
+    // convenience
+    std::vector<ShaderGroupRef>& shaders = renderer.shaders();
 
     // build DOM tree
     pugi::xml_document doc;
@@ -317,7 +310,7 @@ void parse_scene() {
             if (fov_attr) fov = OIIO::Strutil::from_string<float>(fov_attr.value());
 
             // create actual camera
-            camera = Camera(eye, dir, up, fov, xres, yres);
+            scene.camera = Camera(eye, dir, up, fov, xres, yres);
         } else if (strcmp(node.name(), "Sphere") == 0) {
             // load sphere
             pugi::xml_attribute center_attr = node.attribute("center");
@@ -413,302 +406,108 @@ void parse_scene() {
     }
 }
 
-
-// Copies the specified device buffer into an output vector, assuming that
-// the buffer is in FLOAT3 format (and that Vec3 and float3 have the same
-// underlying representation).
-std::vector<OSL::Color3>
-get_pixel_buffer (const std::string& buffer_name, int width, int height)
-{
-    const OSL::Color3* buffer_ptr =
-        static_cast<OSL::Color3*>(optix_ctx[buffer_name]->getBuffer()->map());
-
-    if (! buffer_ptr) {
-        std::cerr << "Unable to map buffer " << buffer_name << std::endl;
-        exit (EXIT_FAILURE);
-    }
-
-    std::vector<OSL::Color3> pixels;
-    std::copy (&buffer_ptr[0], &buffer_ptr[width * height], back_inserter(pixels));
-
-    optix_ctx[buffer_name]->getBuffer()->unmap();
-
-    return pixels;
-}
-
-
-void load_ptx_from_file (std::string& ptx_string, const char* filename)
-{
-    if (! OIIO::Filesystem::read_text_file (filename, ptx_string)) {
-        std::cerr << "Unable to load " << filename << std::endl;
-        exit (EXIT_FAILURE);
-    }
-}
-
-
-void init_optix_context ()
-{
-    // Set up the OptiX context
-    optix_ctx = optix::Context::create();
-
-    ASSERT ((optix_ctx->getEnabledDeviceCount() == 1) &&
-            "Only one CUDA device is currently supported");
-
-    optix_ctx->setRayTypeCount (2);
-    optix_ctx->setEntryPointCount (1);
-    optix_ctx->setStackSize (2048);
-    optix_ctx->setPrintEnabled (true);
-
-    optix_ctx["radiance_ray_type"]->setUint  (0u);
-    optix_ctx["shadow_ray_type"  ]->setUint  (1u);
-    optix_ctx["bg_color"         ]->setFloat (0.0f, 0.0f, 0.0f);
-    optix_ctx["bad_color"        ]->setFloat (1.0f, 0.0f, 1.0f);
-
-    // Create the output buffer
-    optix::Buffer buffer = optix_ctx->createBuffer (RT_BUFFER_OUTPUT,
-                                                    RT_FORMAT_FLOAT3,
-                                                    xres, yres);
-    optix_ctx["output_buffer"]->set (buffer);
-
-    // Load the renderer CUDA source and generate PTX for it
-    std::string filename = std::string(PTX_PATH) + "/renderer.ptx";
-    load_ptx_from_file (renderer_ptx, filename.c_str());
-
-    // Create the OptiX programs and set them on the optix::Context
-    optix_ctx->setRayGenerationProgram (0, optix_ctx->createProgramFromPTXString (renderer_ptx, "raygen"));
-    optix_ctx->setMissProgram          (0, optix_ctx->createProgramFromPTXString (renderer_ptx, "miss"));
-    optix_ctx->setExceptionProgram     (0, optix_ctx->createProgramFromPTXString (renderer_ptx, "exception"));
-
-    // Load the PTX for the wrapper program. It will be used to create OptiX
-    // Materials from the OSL ShaderGroups
-    filename = std::string(PTX_PATH) + "/wrapper.ptx";
-    load_ptx_from_file (wrapper_ptx, filename.c_str());
-
-    // Load the PTX for the primitives
-    std::string sphere_ptx;
-    filename = std::string(PTX_PATH) + "/sphere.ptx";
-    load_ptx_from_file (sphere_ptx, filename.c_str());
-
-    std::string quad_ptx;
-    filename = std::string(PTX_PATH) + "/quad.ptx";
-    load_ptx_from_file (quad_ptx, filename.c_str());
-
-    // Create the sphere and quad intersection programs, and save them on the
-    // Scene so that they don't need to be regenerated for each primitive in the
-    // scene
-    scene.create_geom_programs (optix_ctx, sphere_ptx, quad_ptx);
-}
-
-
-void make_optix_materials ()
-{
-    optix::Program closest_hit = optix_ctx->createProgramFromPTXString(
-        wrapper_ptx, "closest_hit_osl");
-
-    optix::Program any_hit = optix_ctx->createProgramFromPTXString(
-        wrapper_ptx, "any_hit_shadow");
-
-    int mtl_id = 0;
-
-    // Optimize each ShaderGroup in the scene, and use the resulting PTX to create
-    // OptiX Programs which can be called by the closest hit program in the wrapper
-    // to execute the compiled OSL shader.
-    for (const auto& groupref : shaders) {
-        shadingsys->optimize_group (groupref.get(), nullptr);
-
-        std::string group_name, init_name, entry_name;
-        shadingsys->getattribute (groupref.get(), "groupname",        group_name);
-        shadingsys->getattribute (groupref.get(), "group_init_name",  init_name);
-        shadingsys->getattribute (groupref.get(), "group_entry_name", entry_name);
-
-        // Retrieve the compiled ShaderGroup PTX
-        std::string osl_ptx;
-        shadingsys->getattribute (groupref.get(), "ptx_compiled_version",
-                                  OSL::TypeDesc::PTR, &osl_ptx);
-
-        if (osl_ptx.empty()) {
-            std::cerr << "Failed to generate PTX for ShaderGroup "
-                      << group_name << std::endl;
-            exit (EXIT_FAILURE);
-        }
-
-        if (saveptx) {
-            std::ofstream out (group_name + "_" + std::to_string( mtl_id++ ) + ".ptx");
-            out << osl_ptx;
-            out.close();
-        }
-
-        // Create a new Material using the wrapper PTX
-        optix::Material mtl = optix_ctx->createMaterial();
-        mtl->setClosestHitProgram (0, closest_hit);
-        mtl->setAnyHitProgram (1, any_hit);
-
-        // Create Programs from the init and group_entry functions
-        optix::Program osl_init = optix_ctx->createProgramFromPTXString (
-            osl_ptx, init_name);
-
-        optix::Program osl_group = optix_ctx->createProgramFromPTXString (
-            osl_ptx, entry_name);
-
-        // Set the OSL functions as Callable Programs so that they can be
-        // executed by the closest hit program in the wrapper
-        mtl["osl_init_func" ]->setProgramId (osl_init );
-        mtl["osl_group_func"]->setProgramId (osl_group);
-
-        scene.optix_mtls.push_back(mtl);
-    }
-}
-
-
-void finalize_scene ()
-{
-    // Create a GeometryGroup to contain the scene geometry
-    optix::GeometryGroup geom_group = optix_ctx->createGeometryGroup();
-
-    optix_ctx["top_object"  ]->set (geom_group);
-    optix_ctx["top_shadower"]->set (geom_group);
-
-    // NB: Since the scenes in the test suite consist of only a few primitives,
-    //     using 'NoAccel' instead of 'Trbvh' might yield a slight performance
-    //     improvement. For more complex scenes (e.g., scenes with meshes),
-    //     using 'Trbvh' is recommended to achieve maximum performance.
-    geom_group->setAcceleration (optix_ctx->createAcceleration ("Trbvh"));
-
-    // Translate the primitives parsed from the scene description into OptiX scene
-    // objects
-    for (const auto& sphere : scene.spheres) {
-        optix::Geometry sphere_geom = optix_ctx->createGeometry();
-        sphere.setOptixVariables (sphere_geom, scene.sphere_bounds, scene.sphere_intersect);
-
-        optix::GeometryInstance sphere_gi = optix_ctx->createGeometryInstance (
-            sphere_geom, &scene.optix_mtls[sphere.shaderid()], &scene.optix_mtls[sphere.shaderid()]+1);
-
-        geom_group->addChild (sphere_gi);
-    }
-
-    for (const auto& quad : scene.quads) {
-        optix::Geometry quad_geom = optix_ctx->createGeometry();
-        quad.setOptixVariables (quad_geom, scene.quad_bounds, scene.quad_intersect);
-
-        optix::GeometryInstance quad_gi = optix_ctx->createGeometryInstance (
-            quad_geom, &scene.optix_mtls[quad.shaderid()], &scene.optix_mtls[quad.shaderid()]+1);
-
-        geom_group->addChild (quad_gi);
-    }
-
-    // Set the camera variables on the OptiX Context, to be used by the ray gen program
-    optix_ctx["eye" ]->setFloat (vec3_to_float3 (camera.eye));
-    optix_ctx["dir" ]->setFloat (vec3_to_float3 (camera.dir));
-    optix_ctx["cx"  ]->setFloat (vec3_to_float3 (camera.cx));
-    optix_ctx["cy"  ]->setFloat (vec3_to_float3 (camera.cy));
-    optix_ctx["invw"]->setFloat (camera.invw);
-    optix_ctx["invh"]->setFloat (camera.invh);
-
-    // Make some device strings to test userdata parameters
-    uint64_t addr1 = rend.register_string ("ud_str_1", "");
-    uint64_t addr2 = rend.register_string ("userdata string", "");
-    optix_ctx["test_str_1"]->setUserData (sizeof(char*), &addr1);
-    optix_ctx["test_str_2"]->setUserData (sizeof(char*), &addr2);
-
-    optix_ctx->validate();
-}
-
 } // anonymous namespace
 
 
 int main (int argc, const char *argv[])
 {
-    using namespace OIIO;
-    Timer timer;
+    try {
+        using namespace OIIO;
+        Timer timer;
 
-    // Read command line arguments
-    getargs (argc, argv);
+        // Read command line arguments
+        getargs (argc, argv);
 
-    shadingsys = new ShadingSystem (&rend, NULL, &errhandler);
-    register_closures(shadingsys);
+        OptixRenderer rend;
+        shadingsys = new ShadingSystem (&rend, NULL, &errhandler);
+        register_closures(shadingsys);
 
-    // Setup common attributes
-    set_shadingsys_options();
+        // Setup common attributes
+        set_shadingsys_options();
 
-    std::vector<char> lib_bitcode;
-    std::copy (&rend_llvm_compiled_ops_block[0],
-               &rend_llvm_compiled_ops_block[rend_llvm_compiled_ops_size],
-               back_inserter(lib_bitcode));
-    shadingsys->attribute ("lib_bitcode", OSL::TypeDesc::UINT8, &lib_bitcode);
+        std::vector<char> lib_bitcode;
+        std::copy (&rend_llvm_compiled_ops_block[0],
+                   &rend_llvm_compiled_ops_block[rend_llvm_compiled_ops_size],
+                   back_inserter(lib_bitcode));
+        shadingsys->attribute ("lib_bitcode", OSL::TypeDesc::UINT8, &lib_bitcode);
 
-
-    // Loads a scene, creating camera, geometry and assigning shaders
-    parse_scene();
-
-    // Set up the OptiX Context
-    init_optix_context();
-
-    // Set up the string table. This allocates a block of CUDA device memory to
-    // hold all of the static strings used by the OSL shaders. The strings can
-    // be accessed via OptiX variables that hold pointers to the table entries.
-    rend.init_string_table(optix_ctx);
-
-    // Convert the OSL ShaderGroups accumulated during scene parsing into
-    // OptiX Materials
-    make_optix_materials();
-
-    // Set up the OptiX scene graph
-    finalize_scene();
-
-    double setuptime = timer.lap ();
-
-    // Perform a tiny launch to warm up the OptiX context
-    if (warmup)
-        optix_ctx->launch (0, 1, 1);
-
-    double warmuptime = timer.lap ();
-
-    // Launch the GPU kernel to render the scene
-    for (int i = 0; i < iters; ++i)
-        optix_ctx->launch (0, xres, yres);
-    double runtime = timer.lap ();
-
-    // Copy the output image from the device buffer
-    std::vector<OSL::Color3> pixels = get_pixel_buffer ("output_buffer", xres, yres);
-
-    // Make an ImageBuf that wraps it ('pixels' still owns the memory)
-    ImageBuf pixelbuf (ImageSpec(xres, yres, 3, TypeDesc::FLOAT), pixels.data());
-    pixelbuf.set_write_format (TypeDesc::HALF);
-
-    // Write image to disk
-    if (Strutil::iends_with (imagefile, ".jpg") ||
-        Strutil::iends_with (imagefile, ".jpeg") ||
-        Strutil::iends_with (imagefile, ".gif") ||
-        Strutil::iends_with (imagefile, ".png")) {
-        // JPEG, GIF, and PNG images should be automatically saved as sRGB
-        // because they are almost certainly supposed to be displayed on web
-        // pages.
-        ImageBufAlgo::colorconvert (pixelbuf, pixelbuf,
-                                    "linear", "sRGB", false, "", "");
-    }
-    pixelbuf.set_write_format (TypeDesc::HALF);
-    if (! pixelbuf.write (imagefile))
-        errhandler.error ("Unable to write output image: %s",
-                          pixelbuf.geterror().c_str());
-
-    // Print some debugging info
-    if (debug1 || runstats || profile) {
-        double writetime = timer.lap();
-        std::cout << "\n";
-        std::cout << "Setup : " << OIIO::Strutil::timeintervalformat (setuptime,4) << "\n";
-        if (warmup) {
-            std::cout << "Warmup: " << OIIO::Strutil::timeintervalformat (warmuptime,4) << "\n";
+        // Loads a scene, creating camera, geometry and assigning shaders
+        parse_scene(rend);
+        if (rend.shaders().empty()) {
+            std::cout << "No shaders in scene\n";
+            return EXIT_FAILURE;
         }
-        std::cout << "Run   : " << OIIO::Strutil::timeintervalformat (runtime,4) << "\n";
-        std::cout << "Write : " << OIIO::Strutil::timeintervalformat (writetime,4) << "\n";
-        std::cout << "\n";
+
+        Scene* scene_ptr = scene.valid();
+        std::string renderer = ptx_renderer;
+        if (renderer.empty()) {
+            if (!scene_ptr) {
+                if (rend.shaders().size() != 1) {
+                    std::cout << "Only single shader is supported for texture mode";
+                    return EXIT_FAILURE;
+                }
+                renderer = "tex_renderer.ptx";
+            } else
+                renderer = "renderer.ptx";
+        }
+
+        // Set up the OptiX Context
+        if (!rend.init(renderer, xres, yres, scene_ptr))
+            return EXIT_FAILURE;
+
+        // Convert the OSL ShaderGroups accumulated during scene parsing into
+        // OptiX Materials and set up the OptiX scene graph
+        if (!rend.finalize(shadingsys, saveptx, scene_ptr))
+            return EXIT_FAILURE;
+
+        if (scene_ptr) {
+            // Make some device strings to test userdata parameters
+            uint64_t addr1 = rend.register_string ("ud_str_1", "");
+            uint64_t addr2 = rend.register_string ("userdata string", "");
+            rend.context()["test_str_1"]->setUserData (sizeof(char*), &addr1);
+            rend.context()["test_str_2"]->setUserData (sizeof(char*), &addr2);
+        }
+
+        double setuptime = timer.lap ();
+
+        // Perform a tiny launch to warm up the OptiX context
+        if (warmup)
+            rend->launch (0, 1, 1);
+
+        double warmuptime = timer.lap ();
+
+        // Launch the GPU kernel to render the scene
+        for (int i = 0; i < iters; ++i)
+            rend->launch (0, xres, yres);
+        double runtime = timer.lap ();
+
+        // Copy the output image from the device buffer
+        if (!rend.saveImage("output_buffer", xres, yres, imagefile, &errhandler))
+            return EXIT_FAILURE;
+
+        // Print some debugging info
+        if (debug1 || runstats || profile) {
+            double writetime = timer.lap();
+            std::cout << "\n";
+            std::cout << "Setup : " << OIIO::Strutil::timeintervalformat (setuptime,4) << "\n";
+            if (warmup) {
+                std::cout << "Warmup: " << OIIO::Strutil::timeintervalformat (warmuptime,4) << "\n";
+            }
+            std::cout << "Run   : " << OIIO::Strutil::timeintervalformat (runtime,4) << "\n";
+            std::cout << "Write : " << OIIO::Strutil::timeintervalformat (writetime,4) << "\n";
+            std::cout << "\n";
+        }
+
+        // Control destruction order
+        rend.clear ();
+        delete shadingsys;
+
+    } catch (optix::Exception e) {
+        printf("Optix Error: %s\n", e.what());
     }
-
-    shaders.clear ();
-    delete shadingsys;
-
-    if (optix_ctx)
-        optix_ctx->destroy();
+    catch (std::exception e) {
+        printf("Unknown Error: %s\n", e.what());
+    }
 
     return EXIT_SUCCESS;
 }

@@ -1,0 +1,9 @@
+
+surface test_texture
+(
+    string TexFile    = "../common/textures/mandrill.tif",
+    output color Cout = color(0),
+)
+{
+    Cout = texture(TexFile, u, v, "interp", "linear", "wrap", "clamp");
+}

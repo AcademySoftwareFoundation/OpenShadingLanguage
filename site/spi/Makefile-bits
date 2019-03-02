@@ -47,7 +47,7 @@ ifeq ($(SP_OS), rhel7)
     # Override lib64 and use SPI convention of lib
     MY_CMAKE_FLAGS += -DCMAKE_INSTALL_LIBDIR="${INSTALL_PREFIX}/lib"
     MY_CMAKE_FLAGS += -DCUDA_TOOLKIT_ROOT_DIR=/net/soft_scratch/apps/arnold/tools/nvidia/cuda9.1 -DOPTIX_EXTRA_LIBS=lzma
-    MY_CMAKE_FLAGS += -DOPTIXHOME=/net/soft_scratch/apps/arnold/tools/nvidia/NVIDIA-OptiX-SDK-6.0.0-linux64
+    MY_CMAKE_FLAGS += -DOPTIXHOME=/net/soft_scratch/apps/arnold/tools/nvidia/NVIDIA-OptiX-SDK-5.1.0-linux64
     ifneq (${OSL_ARNOLD},0)
         MY_CMAKE_FLAGS += -DOIIO_LIBNAME_SUFFIX=_Arnold
         MY_CMAKE_FLAGS += -DOSL_LIBNAME_SUFFIX=_Arnold

@@ -5,7 +5,7 @@
       param string noise_type "usimplex";
       param float scale 25;
       shader noisetest noise1;
-      param string noise_type "hash";
+      param string noise_type "simplex";
       param float scale 100;
       shader noisetest noise2;
       param float scale_s 20;

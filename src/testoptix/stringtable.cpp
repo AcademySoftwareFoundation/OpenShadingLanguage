@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2009-2018 Sony Pictures Imageworks Inc., et al.
+Copyright (c) 2009-2019 Sony Pictures Imageworks Inc., et al.
 All Rights Reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -56,14 +56,14 @@ void StringTable::init (optix::Context ctx)
     cudaMalloc (reinterpret_cast<void**>(&m_ptr), (m_size));
 
     // Add the statically-declared strings to the table, and create OptiX
-    // variables for them in the DeviceStrings namespace.
+    // variables for them in the OSL::DeviceStrings namespace.
     //
     // The names of the variables created here must match the extern variables
     // declared in OSL/device_string.h for OptiX's variable scoping mechanisms
     // to work.
 
-#define STRDECL(str,var_name)                                       \
-    addString (ustring(str), ustring("DeviceStrings::"#var_name));
+#define STRDECL(str,var_name)                                           \
+    addString (ustring(str), ustring("OSL::DeviceStrings::"#var_name));
 #include <OSL/strdecls.h>
 #undef STRDECL
 }

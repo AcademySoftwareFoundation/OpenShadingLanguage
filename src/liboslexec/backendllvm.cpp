@@ -499,12 +499,20 @@ BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym)
         }
     }
     else {
-        // PTX doesn't like leading dollar signs, so prepend an underscore
-        if (sym.name()[0] == '$') {
+        std::string var_name = Strutil::sprintf ("%s_%s_%d_%s_%d",
+                                                 sym.name(),
+                                                 group().name(),
+                                                 group().id(),
+                                                 inst()->layername(),
+                                                 sym.layer());
+
+        // Leading dollar signs are not allowed in PTX variable names,
+        // so prepend an underscore.
+        if (var_name[0] == '$') {
             ss << '_';
         }
 
-        ss << sym.name();
+        ss << var_name;
     }
 
     const std::string name = ss.str();
@@ -668,7 +676,7 @@ BackendLLVM::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
         result = ll.op_float_to_int (result);
     else if (type.is_int() && cast == TypeDesc::TypeFloat)
         result = ll.op_int_to_float (result);
-    else if (type.is_string() && cast == TypeDesc::UINT64)
+    else if (type.is_string() && cast == TypeDesc::LONGLONG)
         result = ll.ptr_to_cast (result, ll.type_longlong());
 
     return result;
@@ -677,19 +685,33 @@ BackendLLVM::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
 
 
 llvm::Value *
-BackendLLVM::llvm_load_device_string (const Symbol& sym, bool follow)
+BackendLLVM::llvm_load_device_string (const Symbol& sym)
 {
     // TODO: need to make this work with arrays of strings
     ASSERT (use_optix() && "This is only intended to be used with CUDA");
 
-    llvm::Value* val = (sym.is_constant() || sym.data())
-        ? getOrAllocateCUDAVariable (sym)
-        : llvm_load_value (sym, 0, nullptr, 0, TypeDesc(TypeDesc::UINT64));
+    // Recover the userdata index for non-constant parameters
+    int userdata_index = find_userdata_index (sym);
 
-    // Typically, the address of the string is held in a global variable, so we
-    // need to dereference the global to get to the char*.
-    if (follow)
-        val = ll.int_to_ptr_cast (ll.op_load (val));
+    llvm::Value* val = NULL;
+    if (sym.symtype() == SymTypeLocal) {
+        // Handle temporary local variables
+        val = getOrAllocateLLVMSymbol (sym);
+        val = ll.ptr_cast (val, ll.type_longlong_ptr());
+    }
+    else if (userdata_index < 0) {
+        // Handle non-varying variables
+        ASSERT (sym.data() && "NULL data in non-varying string");
+        val = getOrAllocateCUDAVariable (sym);
+    }
+    else {
+        // Handle potentially varying variables
+        val = ll.ptr_cast (groupdata_field_ptr (2 + userdata_index),
+                           ll.type_longlong_ptr());
+    }
+
+    // Follow the pointer value to get to the char*.
+    val = ll.int_to_ptr_cast (ll.op_load (val));
 
     return val;
 }
@@ -730,7 +752,7 @@ BackendLLVM::llvm_load_constant_value (const Symbol& sym,
         return ll.constant (val[ncomps*arrayindex + component]);
     }
     if (sym.typespec().is_string() && use_optix()) {
-        // TODO: This ignores arrayindex
+        ASSERT ((arrayindex == 0) && "String arrays are not currently supported in OptiX");
         return llvm_load_device_string (sym);
     }
     if (sym.typespec().is_string()) {
@@ -1080,9 +1102,7 @@ BackendLLVM::llvm_assign_impl (Symbol &Result, Symbol &Src,
     const int num_components = rt.aggregate;
     const bool singlechan = (srccomp != -1) || (dstcomp != -1);
     if (use_optix() && Src.typespec().is_string()) {
-        // We defer the loading of the char* until the assigned value is
-        // actually used, so just pass the value of the global variable.
-        llvm::Value* src = llvm_load_device_string (Src, false);
+        llvm::Value* src = llvm_load_device_string (Src);
         llvm_store_value (ll.ptr_cast (src, ll.type_void_ptr()), Result);
     }
     else if (!singlechan) {
@@ -1151,6 +1171,20 @@ BackendLLVM::llvm_assign_impl (Symbol &Result, Symbol &Src,
     return true;
 }
 
+
+
+int BackendLLVM::find_userdata_index (const Symbol& sym)
+{
+    int userdata_index = -1;
+    for (int i = 0, e = (int)group().m_userdata_names.size(); i < e; ++i) {
+        if (sym.name() == group().m_userdata_names[i] &&
+            equivalent (sym.typespec().simpletype(), group().m_userdata_types[i])) {
+            userdata_index = i;
+            break;
+        }
+    }
+    return userdata_index;
+}
 
 
 

@@ -443,18 +443,28 @@ find_stdoslpath (const std::vector<std::string>& includepaths)
 
     // If that doesn't work, look in a bunch of likely places.
 
+    std::string install_loc = OIIO::Strutil::sprintf("%s/stdosl.h",
+                                                     OSL_SHADER_INSTALL_DIR);
+    if (OIIO::Filesystem::exists(install_loc))
+        return ustring(install_loc);
+
     std::string myprefix = OIIO::Filesystem::parent_path(
             OIIO::Filesystem::parent_path(OIIO::Sysutil::this_program_path()));
 
     // List of likely prefixes and suffixes, in order of preference
-    std::string prefixes[] = { OIIO::Sysutil::getenv("OSL_ROOT_DIR"),
-                               OIIO::Sysutil::getenv("OSLHOME"),
-                               myprefix,
-                               OIIO::Filesystem::parent_path(myprefix) };
-    std::string suffixes[] = { "/share/shaders/stdosl.h",
-                               "/lib/OSL/include/std/stdosl.h",
-                               "/lib/osl/include/std/stdosl.h",
-                               "/shaders/stdosl.h" /*old*/ };
+    std::string prefixes[] = {
+        OIIO::Sysutil::getenv("OSL_ROOT_DIR"),
+        OIIO::Sysutil::getenv("OSLHOME"),
+        myprefix,
+        OIIO::Filesystem::parent_path(myprefix)
+    };
+    std::string suffixes[] = {
+        "/share/OSL/shaders/stdosl.h",
+        "/share/shaders/stdosl.h",
+        "/lib/OSL/include/std/stdosl.h",
+        "/lib/osl/include/std/stdosl.h",
+        "/shaders/stdosl.h" /*old*/
+    };
     for (auto& dir : prefixes) {
         if (! dir.empty() && OIIO::Filesystem::is_directory(dir)) {
             // For each prefix, check likely suffixes, in order of preference

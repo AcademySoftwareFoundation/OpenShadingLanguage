@@ -41,7 +41,14 @@ using namespace OSL;
 OSL_NAMESPACE_ENTER
 namespace pvt {
 
-
+#ifdef __CUDA_ARCH__
+namespace OSLDeviceStrings {
+#define STRDECL(str,var_name)                       \
+    extern __device__ OSL::DeviceString var_name;
+#include <OSL/strdecls.h>
+#undef STRDECL
+}
+#endif
 
 #if 0 // only when testing the statistics of perlin noise to normalize the range
 
@@ -739,6 +746,7 @@ struct GenericNoise {
     inline void operator() (StringParam name, Dual2<R> &result,
                             const Dual2<S> &s, const Dual2<T> &t,
                             ShaderGlobals *sg, const NoiseParams *opt) const {
+
         if (name == StringParams::uperlin || name == StringParams::noise) {
             Noise noise;
             noise(result, s, t);

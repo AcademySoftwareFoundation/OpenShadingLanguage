@@ -6,14 +6,12 @@
 
 // Create an OptiX variable for each of the 'standard' strings declared in
 // <OSL/strdecls.h>.
-OSL_NAMESPACE_ENTER
-namespace DeviceStrings {
+namespace OSLDeviceStrings {
 #define STRDECL(str,var_name)                           \
     rtDeclareVariable(OSL::DeviceString, var_name, , );
 #include <OSL/strdecls.h>
 #undef STRDECL
 }
-OSL_NAMESPACE_EXIT
 
 
 namespace {  // anonymous namespace

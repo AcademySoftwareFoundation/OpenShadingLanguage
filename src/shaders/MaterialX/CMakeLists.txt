@@ -61,7 +61,7 @@ macro (mx_oslc_compile)
         get_filename_component(mxfile_justname ${mxfile} NAME)
         get_filename_component(oslfile_justname ${oslfile} NAME)
         get_filename_component(osofile_justname ${osofile} NAME)
-        message (STATUS "oslc will make ${mxfile_justname} -> ${oslfile_justname} -> ${osofile_justname}")
+        # message (STATUS "oslc will make ${mxfile_justname} -> ${oslfile_justname} -> ${osofile_justname}")
     endif ()
     add_custom_command (OUTPUT ${osofile}
         COMMAND python "${CMAKE_CURRENT_SOURCE_DIR}/build_materialX_osl.py"

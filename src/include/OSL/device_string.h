@@ -108,4 +108,11 @@ namespace DeviceStrings {
 #endif
 
 
+#ifdef __CUDA_ARCH__
+namespace StringParams = OSL::DeviceStrings;
+#else
+namespace StringParams = OSL::Strings;
+#endif
+
+
 OSL_NAMESPACE_EXIT

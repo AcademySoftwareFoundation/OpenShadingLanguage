@@ -2649,11 +2649,6 @@ llvm_gen_noise_options (BackendLLVM &rop, int opnum,
     llvm::Value* opt = rop.ll.call_function ("osl_get_noise_options",
                                              rop.sg_void_ptr());
 
-    // TODO: implement noise options in OptiX
-    if (rop.use_optix()) {
-        return opt;
-    }
-
     Opcode &op (rop.inst()->ops()[opnum]);
     for (int a = first_optional_arg;  a < op.nargs();  ++a) {
         Symbol &Name (*rop.opargsym(op,a));

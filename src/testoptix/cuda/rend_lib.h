@@ -22,6 +22,54 @@ namespace {  // anonymous namespace
     typedef optix::float3 float3;
 #endif
 
+// These are CUDA variants of various OSL options structs. Their layouts and
+// default values are identical to the host versions, but they might differ in
+// how they are constructed. They are duplicated here as a convenience and to
+// avoid including additional host headers.
+
+struct NoiseOptCUDA {
+    int    anisotropic;
+    int    do_filter;
+    float3 direction;
+    float  bandwidth;
+    float  impulses;
+
+    __device__
+    NoiseOptCUDA ()
+        : anisotropic (0),
+          do_filter   (true),
+          direction   (make_float3(1.0f,0.0f,0.0f)),
+          bandwidth   (1.0f),
+          impulses    (16.0f)
+    {
+    }
+};
+
+
+struct TextureOptCUDA {
+    // TO BE IMPLEMENTED
+};
+
+
+struct TraceOptCUDA {
+    // TO BE IMPLEMENTED
+};
+
+
+// This isn't really a CUDA version of the host-side ShadingContext class;
+// instead, it is used as a container for a handful of pointers accessed during
+// shader executions that are accessed via the ShadingContext.
+struct ShadingContextCUDA {
+    NoiseOptCUDA*   m_noiseopt;
+    TextureOptCUDA* m_textureopt;
+    TraceOptCUDA*   m_traceopt;
+
+    __device__ void* noise_options_ptr ()   { return m_noiseopt; }
+    __device__ void* texture_options_ptr () { return m_textureopt; }
+    __device__ void* trace_options_ptr ()   { return m_traceopt; }
+};
+
+
 struct ShaderGlobals {
     float3 P, dPdx, dPdy;
     float3 dPdz;

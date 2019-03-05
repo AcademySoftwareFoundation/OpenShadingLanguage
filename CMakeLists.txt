@@ -135,6 +135,7 @@ include (util_macros)
 include (externalpackages)
 include (flexbison)
 include (install)          # installation options all implemented here
+include (cuda_macros)
 
 include_directories (
     BEFORE

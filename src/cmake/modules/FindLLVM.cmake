@@ -52,19 +52,10 @@ execute_process (COMMAND ${LLVM_CONFIG} --includedir
 execute_process (COMMAND ${LLVM_CONFIG} --targets-built
        OUTPUT_VARIABLE LLVM_TARGETS
        OUTPUT_STRIP_TRAILING_WHITESPACE)
-if (NOT ${LLVM_VERSION} VERSION_LESS 3.8)
-    execute_process (COMMAND ${LLVM_CONFIG} --system-libs
-                     OUTPUT_VARIABLE LLVM_SYSTEM_LIBRARIES
-                     OUTPUT_STRIP_TRAILING_WHITESPACE)
-    string (REPLACE " " ";" LLVM_SYSTEM_LIBRARIES "${LLVM_SYSTEM_LIBRARIES}")
-else ()
-    # Older LLVM did not have llvm-config --system-libs, but we know that
-    # on Linux, we'll need curses.
-    find_package (Curses)
-    if (CURSES_FOUND)
-        list (APPEND LLVM_SYSTEM_LIBRARIES ${CURSES_LIBRARIES})
-    endif ()
-endif ()
+execute_process (COMMAND ${LLVM_CONFIG} --system-libs
+                 OUTPUT_VARIABLE LLVM_SYSTEM_LIBRARIES
+                 OUTPUT_STRIP_TRAILING_WHITESPACE)
+string (REPLACE " " ";" LLVM_SYSTEM_LIBRARIES "${LLVM_SYSTEM_LIBRARIES}")
 
 find_library ( LLVM_LIBRARY
                NAMES LLVM-${LLVM_VERSION} LLVM
@@ -72,7 +63,6 @@ find_library ( LLVM_LIBRARY
 find_library ( LLVM_MCJIT_LIBRARY
                NAMES LLVMMCJIT
                PATHS ${LLVM_LIB_DIR})
-
 
 foreach (COMPONENT clangFrontend clangDriver clangSerialization
                    clangParse clangSema clangAnalysis clangAST clangBasic
@@ -85,12 +75,6 @@ foreach (COMPONENT clangFrontend clangDriver clangSerialization
     endif ()
 endforeach ()
 
-
-# if (NOT LLVM_LIBRARY)
-#     execute_process (COMMAND ${LLVM_CONFIG} --libfiles engine
-#                      OUTPUT_VARIABLE LLVM_LIBRARIES
-#                      OUTPUT_STRIP_TRAILING_WHITESPACE)
-# endif ()
 
 # shared llvm library may not be available, this is not an error if we use LLVM_STATIC.
 if ((LLVM_LIBRARY OR LLVM_LIBRARIES OR LLVM_STATIC) AND LLVM_INCLUDES AND LLVM_DIRECTORY AND LLVM_LIB_DIR)

@@ -796,7 +796,21 @@ expression
                         $$->sourceline (@1.first_line);
                     }
                 }
-        | '(' compound_expression ')'           { $$ = $2; }
+        | '(' compound_expression ')'
+                {
+                    if ($2->nodetype() == ASTNode::comma_operator_node) {
+                        // Warning for comma operator ïn parenthesized
+                        // expressions, which sometimes happens when somebody
+                        // forgets the proper syntax for triple constructors:
+                        //     color x = Cd * (a, b, c); // same as:  x = Cd * c
+                        // when they really meant
+                        //     color x = Cd * color(a, b, c);
+                        oslcompiler->warning(oslcompiler->filename(),
+                                             @1.first_line,
+                                             "Comma operator inside parenthesis is probably an error -- it is not a vector/color.");
+                    }
+                    $$ = $2;
+                }
         | function_call
         | assign_expression
         | ternary_expression

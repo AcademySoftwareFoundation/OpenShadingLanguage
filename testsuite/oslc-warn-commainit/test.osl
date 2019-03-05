@@ -2,4 +2,5 @@ shader test ( output color Cout = 0 )
 {
     vector x = (1, 2, 3);
     Cout = (u, v, 0);
+    Cout *= (0, 1, 2);
 }

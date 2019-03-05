@@ -113,19 +113,6 @@ ASTvariable_declaration::typecheck (TypeSpec expected)
         init = ((ASTcompound_initializer *)init.get())->initlist();
     }
 
-    // Warning to catch confusing comma operator in variable initializers.
-    // One place this comes up is when somebody forgets the proper syntax
-    // for constructors, for example
-    //     color x = (a, b, c);   // Sets x to (c,c,c)!
-    // when they really meant
-    //     color x = color(a, b, c);
-    if (init->nodetype() == comma_operator_node && !typespec().is_closure() &&
-        (typespec().is_triple() || typespec().is_matrix())) {
-        warning ("Comma operator is very confusing here. "
-                 "Did you mean to use a constructor: %s = %s(...)?",
-                 m_name.c_str(), typespec().c_str());
-    }
-
     return m_typespec;
 }
 
@@ -347,19 +334,6 @@ ASTassign_expression::typecheck (TypeSpec expected)
         error ("Cannot assign '%s' to '%s'", type_c_str(et), type_c_str(vt));
         // FIXME - can we print the variable in question?
         return TypeSpec();
-    }
-
-    // Warning to catch confusing comma operator in assignment.
-    // One place this comes up is when somebody forgets the proper syntax
-    // for constructors, for example
-    //     color x = (a, b, c);   // Sets x to (c,c,c)!
-    // when they really meant
-    //     color x = color(a, b, c);
-    if (expr()->nodetype() == comma_operator_node && !vt.is_closure() &&
-        (vt.is_triple() || vt.is_matrix())) {
-        warning ("Comma operator is very confusing here. "
-                 "Did you mean to use a constructor: = %s(...)?",
-                 vt.c_str());
     }
 
     return m_typespec = vt;

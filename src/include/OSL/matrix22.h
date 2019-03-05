@@ -40,11 +40,38 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pragma once
 
 
+#include <OSL/oslconfig.h>
+
+#ifndef __CUDA_ARCH__
 #include <OpenEXR/ImathMatrix.h>
+#else
+#include <OSL/ImathMatrix_cuda.h>
+#include <limits>
+#endif
 
 namespace Imathx {   // "extended" Imath
 
 enum Uninitialized {UNINITIALIZED};
+
+
+// TODO: It would be preferable to use the Imath versions of these functions in
+//       all cases, but these templates should suffice until a more complete
+//       device-friendly version of Imath is available.
+namespace hostdevice {
+template <typename T> inline OSL_HOSTDEVICE T abs (T x);
+template <typename T> inline OSL_HOSTDEVICE T smallest ();
+#ifndef __CUDA_ARCH__
+template <> inline OSL_HOSTDEVICE double abs<double>      (double x) { return Imath::abs (x); }
+template <> inline OSL_HOSTDEVICE float  abs<float>       (float x)  { return Imath::abs (x); }
+template <> inline OSL_HOSTDEVICE double smallest<double> ()         { return Imath::limits<double>::smallest(); }
+template <> inline OSL_HOSTDEVICE float  smallest<float>  ()         { return Imath::limits<float>::smallest();  }
+#else
+template <> inline OSL_HOSTDEVICE double abs<double>      (double x) { return std::abs (x); }
+template <> inline OSL_HOSTDEVICE float  abs<float>       (float x)  { return std::abs (x); }
+template <> inline OSL_HOSTDEVICE double smallest<double> ()         { return std::numeric_limits<double>::lowest(); }
+template <> inline OSL_HOSTDEVICE float  smallest<float>  ()         { return std::numeric_limits<float>::lowest();  }
+#endif
+}
 
 
 template <class T> class Matrix22
@@ -57,7 +84,10 @@ template <class T> class Matrix22
 
     T           x[2][2];
 
+    OSL_HOSTDEVICE
     T *         operator [] (int i);
+
+    OSL_HOSTDEVICE
     const T *   operator [] (int i) const;
 
 
@@ -65,20 +95,25 @@ template <class T> class Matrix22
     // Constructors
     //-------------
 
+    OSL_HOSTDEVICE
     Matrix22 (Uninitialized) {}
 
+    OSL_HOSTDEVICE
     Matrix22 ();
                                 // 1 0
                                 // 0 1
 
+    OSL_HOSTDEVICE
     Matrix22 (T a);
                                 // a a
                                 // a a
 
+    OSL_HOSTDEVICE
     Matrix22 (const T a[2][2]);
                                 // a[0][0] a[0][1]
                                 // a[1][0] a[1][1]
 
+    OSL_HOSTDEVICE
     Matrix22 (T a, T b, T c, T d);
                                 // a b
                                 // c d
@@ -88,10 +123,16 @@ template <class T> class Matrix22
     // Copy constructor and assignment
     //--------------------------------
 
+    OSL_HOSTDEVICE
     Matrix22 (const Matrix22 &v);
-    template <class S> explicit Matrix22 (const Matrix22<S> &v);
 
+    template <class S> OSL_HOSTDEVICE explicit
+    Matrix22 (const Matrix22<S> &v);
+
+    OSL_HOSTDEVICE
     const Matrix22 &    operator = (const Matrix22 &v);
+
+    OSL_HOSTDEVICE
     const Matrix22 &    operator = (T a);
 
 
@@ -99,15 +140,19 @@ template <class T> class Matrix22
     // Compatibility with Sb
     //----------------------
     
+    OSL_HOSTDEVICE
     T *                 getValue ();
+
+    OSL_HOSTDEVICE
     const T *           getValue () const;
 
-    template <class S>
+    template <class S> OSL_HOSTDEVICE
     void                getValue (Matrix22<S> &v) const;
-    template <class S>
+
+    template <class S> OSL_HOSTDEVICE
     Matrix22 &          setValue (const Matrix22<S> &v);
 
-    template <class S>
+    template <class S> OSL_HOSTDEVICE
     Matrix22 &          setTheMatrix (const Matrix22<S> &v);
 
 
@@ -115,6 +160,7 @@ template <class T> class Matrix22
     // Identity
     //---------
 
+    OSL_HOSTDEVICE
     void                makeIdentity();
 
 
@@ -122,7 +168,10 @@ template <class T> class Matrix22
     // Equality
     //---------
 
+    OSL_HOSTDEVICE
     bool                operator == (const Matrix22 &v) const;
+
+    OSL_HOSTDEVICE
     bool                operator != (const Matrix22 &v) const;
 
     //-----------------------------------------------------------------------
@@ -143,7 +192,10 @@ template <class T> class Matrix22
     //      abs (this[i] - v[i][j]) <= e * abs (this[i][j])
     //-----------------------------------------------------------------------
 
+    OSL_HOSTDEVICE
     bool                equalWithAbsError (const Matrix22<T> &v, T e) const;
+
+    OSL_HOSTDEVICE
     bool                equalWithRelError (const Matrix22<T> &v, T e) const;
 
 
@@ -151,8 +203,13 @@ template <class T> class Matrix22
     // Component-wise addition
     //------------------------
 
+    OSL_HOSTDEVICE
     const Matrix22 &    operator += (const Matrix22 &v);
+
+    OSL_HOSTDEVICE
     const Matrix22 &    operator += (T a);
+
+    OSL_HOSTDEVICE
     Matrix22            operator + (const Matrix22 &v) const;
 
 
@@ -160,8 +217,13 @@ template <class T> class Matrix22
     // Component-wise subtraction
     //---------------------------
 
+    OSL_HOSTDEVICE
     const Matrix22 &    operator -= (const Matrix22 &v);
+
+    OSL_HOSTDEVICE
     const Matrix22 &    operator -= (T a);
+
+    OSL_HOSTDEVICE
     Matrix22            operator - (const Matrix22 &v) const;
 
 
@@ -169,7 +231,10 @@ template <class T> class Matrix22
     // Component-wise multiplication by -1
     //------------------------------------
 
+    OSL_HOSTDEVICE
     Matrix22            operator - () const;
+
+    OSL_HOSTDEVICE
     const Matrix22 &    negate ();
 
 
@@ -177,7 +242,10 @@ template <class T> class Matrix22
     // Component-wise multiplication
     //------------------------------
 
+    OSL_HOSTDEVICE
     const Matrix22 &    operator *= (T a);
+
+    OSL_HOSTDEVICE
     Matrix22            operator * (T a) const;
 
 
@@ -185,7 +253,10 @@ template <class T> class Matrix22
     // Matrix-times-matrix multiplication
     //-----------------------------------
 
+    OSL_HOSTDEVICE
     const Matrix22 &    operator *= (const Matrix22 &v);
+
+    OSL_HOSTDEVICE
     Matrix22            operator * (const Matrix22 &v) const;
 
 
@@ -201,7 +272,7 @@ template <class T> class Matrix22
     // submatrix, ignoring the rest of matrix m.
     //-----------------------------------------------------------------
 
-    template <class S>
+    template <class S> OSL_HOSTDEVICE
     void                multMatrix(const Imath::Vec2<S> &src, Imath::Vec2<S> &dst) const;
 
 
@@ -210,7 +281,10 @@ template <class T> class Matrix22
     // Component-wise division
     //------------------------
 
+    OSL_HOSTDEVICE
     const Matrix22 &    operator /= (T a);
+
+    OSL_HOSTDEVICE
     Matrix22            operator / (T a) const;
 
 
@@ -218,7 +292,10 @@ template <class T> class Matrix22
     // Transposed matrix
     //------------------
 
+    OSL_HOSTDEVICE
     const Matrix22 &    transpose ();
+
+    OSL_HOSTDEVICE
     Matrix22            transposed () const;
 
 
@@ -231,8 +308,10 @@ template <class T> class Matrix22
     // 
     //------------------------------------------------------------
 
+    OSL_HOSTDEVICE
     const Matrix22 &    invert (bool singExc = false);
 
+    OSL_HOSTDEVICE
     Matrix22<T>         inverse (bool singExc = false) const;
 
 
@@ -240,7 +319,7 @@ template <class T> class Matrix22
     // Set matrix to rotation by r (in radians)
     //-----------------------------------------
 
-    template <class S>
+    template <class S> OSL_HOSTDEVICE
     const Matrix22 &    setRotation (S r);
 
 
@@ -248,7 +327,7 @@ template <class T> class Matrix22
     // Rotate the given matrix by r
     //-----------------------------
 
-    template <class S>
+    template <class S> OSL_HOSTDEVICE
     const Matrix22 &    rotate (S r);
 
 
@@ -256,6 +335,7 @@ template <class T> class Matrix22
     // Set matrix to scale by given uniform factor
     //--------------------------------------------
 
+    OSL_HOSTDEVICE
     const Matrix22 &    setScale (T s);
 
 
@@ -263,7 +343,7 @@ template <class T> class Matrix22
     // Set matrix to scale by given vector
     //------------------------------------
 
-    template <class S>
+    template <class S> OSL_HOSTDEVICE
     const Matrix22 &    setScale (const Imath::Vec2<S> &s);
 
 
@@ -271,7 +351,7 @@ template <class T> class Matrix22
     // Scale the matrix by s
     //----------------------
 
-    template <class S>
+    template <class S> OSL_HOSTDEVICE
     const Matrix22 &    scale (const Imath::Vec2<S> &s);
 
 
@@ -279,9 +359,16 @@ template <class T> class Matrix22
     // Limitations of type T (see also class limits<T>)
     //-------------------------------------------------
 
+    OSL_HOSTDEVICE
     static T            baseTypeMin()           {return Imath::limits<T>::min();}
+
+    OSL_HOSTDEVICE
     static T            baseTypeMax()           {return Imath::limits<T>::max();}
+
+    OSL_HOSTDEVICE
     static T            baseTypeSmallest()      {return Imath::limits<T>::smallest();}
+
+    OSL_HOSTDEVICE
     static T            baseTypeEpsilon()       {return Imath::limits<T>::epsilon();}
 
   private:
@@ -313,7 +400,7 @@ std::ostream &  operator << (std::ostream & s, const Matrix22<T> &m);
 // Vector-times-matrix multiplication operators
 //---------------------------------------------
 
-template <class S, class T>
+template <class S, class T> OSL_HOSTDEVICE
 Imath::Vec2<S> operator * (const Matrix22<T> &m, const Imath::Vec2<S> &v)
 {
     Imath::Vec2<S> tmp;
@@ -335,21 +422,21 @@ typedef Matrix22 <double> M22d;
 // Implementation of Matrix22
 //---------------------------
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 inline T *
 Matrix22<T>::operator [] (int i)
 {
     return x[i];
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 inline const T *
 Matrix22<T>::operator [] (int i) const
 {
     return x[i];
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 inline
 Matrix22<T>::Matrix22 ()
 {
@@ -359,7 +446,7 @@ Matrix22<T>::Matrix22 ()
     x[1][1] = 1;
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 inline
 Matrix22<T>::Matrix22 (T a)
 {
@@ -369,14 +456,14 @@ Matrix22<T>::Matrix22 (T a)
     x[1][1] = a;
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 inline
 Matrix22<T>::Matrix22 (const T a[2][2]) 
 {
     memcpy (x, a, sizeof (x));
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 inline
 Matrix22<T>::Matrix22 (T a, T b, T c, T d)
 {
@@ -386,7 +473,7 @@ Matrix22<T>::Matrix22 (T a, T b, T c, T d)
     x[1][1] = d;
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 inline
 Matrix22<T>::Matrix22 (const Matrix22 &v)
 {
@@ -394,7 +481,7 @@ Matrix22<T>::Matrix22 (const Matrix22 &v)
 }
 
 template <class T>
-template <class S>
+template <class S> OSL_HOSTDEVICE
 inline
 Matrix22<T>::Matrix22 (const Matrix22<S> &v)
 {
@@ -404,7 +491,7 @@ Matrix22<T>::Matrix22 (const Matrix22<S> &v)
     x[1][1] = T (v.x[1][1]);
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 inline const Matrix22<T> &
 Matrix22<T>::operator = (const Matrix22 &v)
 {
@@ -412,7 +499,7 @@ Matrix22<T>::operator = (const Matrix22 &v)
     return *this;
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 inline const Matrix22<T> &
 Matrix22<T>::operator = (T a)
 {
@@ -423,14 +510,14 @@ Matrix22<T>::operator = (T a)
     return *this;
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 inline T *
 Matrix22<T>::getValue ()
 {
     return (T *) &x[0][0];
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 inline const T *
 Matrix22<T>::getValue () const
 {
@@ -438,7 +525,7 @@ Matrix22<T>::getValue () const
 }
 
 template <class T>
-template <class S>
+template <class S> OSL_HOSTDEVICE
 inline void
 Matrix22<T>::getValue (Matrix22<S> &v) const
 {
@@ -456,7 +543,7 @@ Matrix22<T>::getValue (Matrix22<S> &v) const
 }
 
 template <class T>
-template <class S>
+template <class S> OSL_HOSTDEVICE
 inline Matrix22<T> &
 Matrix22<T>::setValue (const Matrix22<S> &v)
 {
@@ -476,7 +563,7 @@ Matrix22<T>::setValue (const Matrix22<S> &v)
 }
 
 template <class T>
-template <class S>
+template <class S> OSL_HOSTDEVICE
 inline Matrix22<T> &
 Matrix22<T>::setTheMatrix (const Matrix22<S> &v)
 {
@@ -495,7 +582,7 @@ Matrix22<T>::setTheMatrix (const Matrix22<S> &v)
     return *this;
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 inline void
 Matrix22<T>::makeIdentity()
 {
@@ -505,7 +592,7 @@ Matrix22<T>::makeIdentity()
     x[1][1] = 1;
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 bool
 Matrix22<T>::operator == (const Matrix22 &v) const
 {
@@ -515,7 +602,7 @@ Matrix22<T>::operator == (const Matrix22 &v) const
            x[1][1] == v.x[1][1];
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 bool
 Matrix22<T>::operator != (const Matrix22 &v) const
 {
@@ -525,7 +612,7 @@ Matrix22<T>::operator != (const Matrix22 &v) const
            x[1][1] != v.x[1][1];
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 bool
 Matrix22<T>::equalWithAbsError (const Matrix22<T> &m, T e) const
 {
@@ -537,7 +624,7 @@ Matrix22<T>::equalWithAbsError (const Matrix22<T> &m, T e) const
     return true;
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 bool
 Matrix22<T>::equalWithRelError (const Matrix22<T> &m, T e) const
 {
@@ -549,7 +636,7 @@ Matrix22<T>::equalWithRelError (const Matrix22<T> &m, T e) const
     return true;
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 const Matrix22<T> &
 Matrix22<T>::operator += (const Matrix22<T> &v)
 {
@@ -561,7 +648,7 @@ Matrix22<T>::operator += (const Matrix22<T> &v)
     return *this;
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 const Matrix22<T> &
 Matrix22<T>::operator += (T a)
 {
@@ -573,7 +660,7 @@ Matrix22<T>::operator += (T a)
     return *this;
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 Matrix22<T>
 Matrix22<T>::operator + (const Matrix22<T> &v) const
 {
@@ -583,7 +670,7 @@ Matrix22<T>::operator + (const Matrix22<T> &v) const
                      x[1][1] + v.x[1][1]);
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 const Matrix22<T> &
 Matrix22<T>::operator -= (const Matrix22<T> &v)
 {
@@ -595,7 +682,7 @@ Matrix22<T>::operator -= (const Matrix22<T> &v)
     return *this;
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 const Matrix22<T> &
 Matrix22<T>::operator -= (T a)
 {
@@ -607,7 +694,7 @@ Matrix22<T>::operator -= (T a)
     return *this;
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 Matrix22<T>
 Matrix22<T>::operator - (const Matrix22<T> &v) const
 {
@@ -617,7 +704,7 @@ Matrix22<T>::operator - (const Matrix22<T> &v) const
                      x[1][1] - v.x[1][1]);
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 Matrix22<T>
 Matrix22<T>::operator - () const
 {
@@ -627,7 +714,7 @@ Matrix22<T>::operator - () const
                      -x[1][1]);
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 const Matrix22<T> &
 Matrix22<T>::negate ()
 {
@@ -639,7 +726,7 @@ Matrix22<T>::negate ()
     return *this;
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 const Matrix22<T> &
 Matrix22<T>::operator *= (T a)
 {
@@ -651,7 +738,7 @@ Matrix22<T>::operator *= (T a)
     return *this;
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 Matrix22<T>
 Matrix22<T>::operator * (T a) const
 {
@@ -661,14 +748,14 @@ Matrix22<T>::operator * (T a) const
                      x[1][1] * a);
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 inline Matrix22<T>
 operator * (T a, const Matrix22<T> &v)
 {
     return v * a;
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 const Matrix22<T> &
 Matrix22<T>::operator *= (const Matrix22<T> &v)
 {
@@ -683,7 +770,7 @@ Matrix22<T>::operator *= (const Matrix22<T> &v)
     return *this;
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 Matrix22<T>
 Matrix22<T>::operator * (const Matrix22<T> &v) const
 {
@@ -698,7 +785,7 @@ Matrix22<T>::operator * (const Matrix22<T> &v) const
 }
 
 template <class T>
-template <class S>
+template <class S> OSL_HOSTDEVICE
 void
 Matrix22<T>::multMatrix(const Imath::Vec2<S> &src, Imath::Vec2<S> &dst) const
 {
@@ -711,7 +798,7 @@ Matrix22<T>::multMatrix(const Imath::Vec2<S> &src, Imath::Vec2<S> &dst) const
     dst.y = b;
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 const Matrix22<T> &
 Matrix22<T>::operator /= (T a)
 {
@@ -723,7 +810,7 @@ Matrix22<T>::operator /= (T a)
     return *this;
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 Matrix22<T>
 Matrix22<T>::operator / (T a) const
 {
@@ -733,7 +820,7 @@ Matrix22<T>::operator / (T a) const
                      x[1][1] / a);
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 const Matrix22<T> &
 Matrix22<T>::transpose ()
 {
@@ -745,7 +832,7 @@ Matrix22<T>::transpose ()
     return *this;
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 Matrix22<T>
 Matrix22<T>::transposed () const
 {
@@ -756,7 +843,7 @@ Matrix22<T>::transposed () const
 }
 
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 const Matrix22<T> &
 Matrix22<T>::invert (bool singExc)
 {
@@ -764,7 +851,7 @@ Matrix22<T>::invert (bool singExc)
     return *this;
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 Matrix22<T>
 Matrix22<T>::inverse (bool singExc) const
 {
@@ -772,27 +859,29 @@ Matrix22<T>::inverse (bool singExc) const
                 -x[1][0],   x[0][0]);
     T r = x[0][0] * x[1][1] - x[1][0] * x[0][1];  // determinant
 
-    if (Imath::abs (r) >= 1)
+    if (hostdevice::abs (r) >= 1)
     {
         s /= r;
     }
     else
     {
-        T mr = Imath::abs (r) / Imath::limits<T>::smallest();
+        T mr = hostdevice::abs (r) / hostdevice::smallest<T>();
 
         for (int i = 0; i < 2; ++i)
         {
             for (int j = 0; j < 2; ++j)
             {
-                if (mr > Imath::abs (s[i][j]))
+                if (mr > hostdevice::abs (s[i][j]))
                 {
                     s[i][j] /= r;
                 }
                 else
                 {
+#ifndef __CUDA_ARCH__
                     if (singExc)
                         throw Imath::SingMatrixExc ("Cannot invert "
                                              "singular matrix.");
+#endif
                     return Matrix22();
                 }
             }
@@ -803,7 +892,7 @@ Matrix22<T>::inverse (bool singExc) const
 }
 
 template <class T>
-template <class S>
+template <class S> OSL_HOSTDEVICE
 const Matrix22<T> &
 Matrix22<T>::setRotation (S r)
 {
@@ -822,7 +911,7 @@ Matrix22<T>::setRotation (S r)
 }
 
 template <class T>
-template <class S>
+template <class S> OSL_HOSTDEVICE
 const Matrix22<T> &
 Matrix22<T>::rotate (S r)
 {
@@ -830,7 +919,7 @@ Matrix22<T>::rotate (S r)
     return *this;
 }
 
-template <class T>
+template <class T> OSL_HOSTDEVICE
 const Matrix22<T> &
 Matrix22<T>::setScale (T s)
 {
@@ -842,7 +931,7 @@ Matrix22<T>::setScale (T s)
 }
 
 template <class T>
-template <class S>
+template <class S> OSL_HOSTDEVICE
 const Matrix22<T> &
 Matrix22<T>::setScale (const Imath::Vec2<S> &s)
 {
@@ -854,7 +943,7 @@ Matrix22<T>::setScale (const Imath::Vec2<S> &s)
 }
 
 template <class T>
-template <class S>
+template <class S> OSL_HOSTDEVICE
 const Matrix22<T> &
 Matrix22<T>::scale (const Imath::Vec2<S> &s)
 {

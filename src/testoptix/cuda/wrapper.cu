@@ -152,9 +152,13 @@ float3 process_closure(const ClosureColor* closure_tree)
         case MICROFACET_ID: {
 #if 0
             const char* mem = ((ClosureComponent*) cur)->mem;
-            const char* str = (const char*) &mem[0];
+            const char* dist_str = *(const char**) &mem[0];
             if (launch_index.x == launch_dim.x / 2 && launch_index.y == launch_dim.y / 2) {
-                printf ("microfacet, str: %s\n", DEVSTR(str).c_str());
+                printf ("microfacet, dist: %s\n", HDSTR(dist_str).c_str());
+                // Comparisons between the closure variable and "standard"
+                // strings are possible
+                if (HDSTR(dist_str) == OSLDeviceStrings::default_)
+                    printf("dist is default\n");
             }
 #endif
 

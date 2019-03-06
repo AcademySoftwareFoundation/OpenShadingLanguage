@@ -1,0 +1,45 @@
+<World>
+   <Camera eye="0, 100, 300" look_at="0,0,0" fov="70" />
+
+   <ShaderGroup>
+      param string noise_type "usimplex";
+      param float scale 25;
+      shader noisetest noise1;
+      param string noise_type "simplex";
+      param float scale 100;
+      shader noisetest noise2;
+      param float scale_s 20;
+      param float scale_t 20;
+      shader checkerboard tex;
+      shader matte layer1;
+      connect noise1.Cout tex.Ca;
+      connect noise2.Cout tex.Cb;
+      connect tex.Cout layer1.Cs;
+   </ShaderGroup>
+   <Quad corner="-200,0,0" edge_x="400,0,0" edge_y="0,400,0" /> <!-- Back -->
+   <Quad corner="-200,0,0" edge_x="0,0,400" edge_y="400,0,0" /> <!-- Botm -->
+
+   <ShaderGroup>
+      param float scale 10;
+      param string noise_type "uperlin";
+      shader noisetest tex;
+      shader matte layer1;
+      connect tex.Cout layer1.Cs;
+   </ShaderGroup>
+   <Sphere center="-60,30,120"        radius="30" />
+   <ShaderGroup>
+      param string noise_type "gabor" [[int lockgeom=0]];
+      shader noisetest tex;
+      shader matte layer1;
+      connect tex.Cout layer1.Cs;
+   </ShaderGroup>
+   <Sphere center="  0,30,120"        radius="30" />
+   <ShaderGroup>
+      param string noise_type "cell";
+      shader noisetest tex;
+      shader matte layer1;
+      connect tex.Cout layer1.Cs;
+   </ShaderGroup>
+   <Sphere center=" 60,30,120"        radius="30" />
+   
+</World>

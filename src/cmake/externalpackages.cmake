@@ -240,16 +240,7 @@ if (USE_CUDA OR USE_OPTIX)
         message (FATAL_ERROR "CUDA ${CUDA_VERSION} requires LLVM 6.0 or greater")
     endif ()
 
-    # TODO: When compiling for CUDA 9.0+ using clang, specifying the CUDA
-    #       path can result in multiply-defined symbol errors; for CUDA 8.0,
-    #       not defining it results in undefined symbols. It would be better
-    #       if there were a more robust and unified way to handle this, but
-    #       this will have to do for now.
-    if (${CUDA_VERSION_MAJOR} GREATER 8)
-        set (CUDA_LIB_FLAGS "")
-    else ()
-        set (CUDA_LIB_FLAGS "--cuda-path=${CUDA_TOOLKIT_ROOT_DIR}")
-    endif ()
+    set (CUDA_LIB_FLAGS "--cuda-path=${CUDA_TOOLKIT_ROOT_DIR}")
 endif ()
 
 # end CUDA setup

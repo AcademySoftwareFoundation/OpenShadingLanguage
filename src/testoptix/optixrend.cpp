@@ -200,6 +200,17 @@ bool OptixRenderer::init(const std::string& progName, int xres, int yres, Scene*
     // be accessed via OptiX variables that hold pointers to the table entries.
     m_str_table.init(m_context);
 
+    {
+        optix::Buffer buffer = m_context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER);
+        buffer->setElementSize(sizeof(pvt::Spline::SplineBasis));
+        buffer->setSize(sizeof(pvt::Spline::gBasisSet)/sizeof(pvt::Spline::SplineBasis));
+
+        pvt::Spline::SplineBasis* basis = (pvt::Spline::SplineBasis*) buffer->map();
+        ::memcpy(basis, &pvt::Spline::gBasisSet[0], sizeof(pvt::Spline::gBasisSet));
+        buffer->unmap();
+        m_context[OSL_NAMESPACE_STRING "::pvt::Spline::gBasisSet"]->setBuffer(buffer);
+    }
+
     if (scene && ! scene->init(m_context, rendererPTX, m_materials_ptx))
         return false;
 

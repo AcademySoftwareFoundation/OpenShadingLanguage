@@ -28,6 +28,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
+#ifdef __CUDACC__
+  #include <optix.h>
+#endif
+
 // avoid naming conflict with MSVC macro
 #ifdef BTYPE
 #undef BTYPE
@@ -43,44 +47,99 @@ namespace Spline {
 
 struct SplineBasis {
    int      basis_step;
-   Matrix44 basis;
+   float    basis[4][4];
 };
 
 // ========================================================
 //
 // Interpolation bases for splines
 //
+// The order here is very important for the SplineInterp::create
+// constructor below. Any additional modes should be added to
+// the end, or SplineInterp::create updated as well.
+//
 // ========================================================
 
-static const int kNumSplineTypes = 6;
-static const int kConstantSpline = kNumSplineTypes - 1;
-static Spline::SplineBasis gBasisSet[kNumSplineTypes] = {
-   { 1, Matrix44( (-1.0f/2.0f),  ( 3.0f/2.0f), (-3.0f/2.0f), ( 1.0f/2.0f),
-                  ( 2.0f/2.0f),  (-5.0f/2.0f), ( 4.0f/2.0f), (-1.0f/2.0f),
-                  (-1.0f/2.0f),  ( 0.0f/2.0f), ( 1.0f/2.0f), ( 0.0f/2.0f),
-                  ( 0.0f/2.0f),  ( 2.0f/2.0f), ( 0.0f/2.0f), ( 0.0f/2.0f))  },
-   { 3, Matrix44(  -1,  3, -3,  1,
-                    3, -6,  3,  0,
-                   -3,  3,  0,  0,
-                    1,  0,  0,  0) }, 
-   { 1, Matrix44( (-1.0f/6.0f), ( 3.0f/6.0f),  (-3.0f/6.0f),  (1.0f/6.0f),
-                  ( 3.0f/6.0f), (-6.0f/6.0f),  ( 3.0f/6.0f),  (0.0f/6.0f),
-                  (-3.0f/6.0f), ( 0.0f/6.0f),  ( 3.0f/6.0f),  (0.0f/6.0f),
-                  ( 1.0f/6.0f), ( 4.0f/6.0f),  ( 1.0f/6.0f),  (0.0f/6.0f)) },
-   { 2, Matrix44(  2,  1, -2,  1,
-                  -3, -2,  3, -1,
-                   0,  1,  0,  0,
-                   1,  0,  0,  0) },
-   { 1, Matrix44(  0,  0,  0,  0,
-                   0,  0,  0,  0,
-                   0, -1,  1,  0,
-                   0,  1,  0,  0) },
-   { 1, Matrix44(0.0f) }  // special marker for constant
+enum {
+    kCatmullRom,
+    kBezier,
+    kBSpline,
+    kHermite,
+    kLinear,
+    kConstant,
+    kNumSplineTypes
 };
+
+#ifdef __CUDACC__
+    rtBuffer<SplineBasis> gBasisSet;
+#else
+    const static SplineBasis gBasisSet[kNumSplineTypes] = {
+    //
+    // catmullrom
+    //
+       { 1, { {(-1.0f/2.0f),  ( 3.0f/2.0f), (-3.0f/2.0f), ( 1.0f/2.0f)},
+              {( 2.0f/2.0f),  (-5.0f/2.0f), ( 4.0f/2.0f), (-1.0f/2.0f)},
+              {(-1.0f/2.0f),  ( 0.0f/2.0f), ( 1.0f/2.0f), ( 0.0f/2.0f)},
+              {( 0.0f/2.0f),  ( 2.0f/2.0f), ( 0.0f/2.0f), ( 0.0f/2.0f)}  } },
+    //
+    // bezier
+    //
+       { 3, { {-1,  3, -3,  1},
+              { 3, -6,  3,  0},
+              {-3,  3,  0,  0},
+              { 1,  0,  0,  0} } },
+    //
+    // bspline
+    //
+       { 1, { {(-1.0f/6.0f), ( 3.0f/6.0f),  (-3.0f/6.0f),  (1.0f/6.0f)},
+              {( 3.0f/6.0f), (-6.0f/6.0f),  ( 3.0f/6.0f),  (0.0f/6.0f)},
+              {(-3.0f/6.0f), ( 0.0f/6.0f),  ( 3.0f/6.0f),  (0.0f/6.0f)},
+              {( 1.0f/6.0f), ( 4.0f/6.0f),  ( 1.0f/6.0f),  (0.0f/6.0f)} } },
+    //
+    // hermite
+    //
+       { 2, { { 2,  1, -2,  1},
+              {-3, -2,  3, -1},
+              { 0,  1,  0,  0},
+              { 1,  0,  0,  0} } },
+    //
+    // linear
+    //
+       { 1, { {0,  0,  0,  0},
+              {0,  0,  0,  0},
+              {0, -1,  1,  0},
+              {0,  1,  0,  0} } },
+    //
+    // constant
+    //
+       { 1, { {0,  0,  0,  0},
+              {0,  0,  0,  0},
+              {0,  0,  0,  0},
+              {0,  0,  0,  0} } }
+    };
+#endif
 
 struct SplineInterp {
     const SplineBasis& spline;
     const bool         constant;
+
+    OSL_HOSTDEVICE static SplineInterp create(StringParam basis_name)
+    {
+        if (basis_name == StringParams::catmullrom)
+            return { gBasisSet[kCatmullRom], false };
+        if (basis_name == StringParams::bezier)
+            return { gBasisSet[kBezier], false };
+        if (basis_name == StringParams::bspline)
+            return { gBasisSet[kBSpline], false };
+        if (basis_name == StringParams::hermite)
+            return { gBasisSet[kHermite], false };
+        if (basis_name == StringParams::constant)
+            return { gBasisSet[kConstant], true };
+
+        // Default to linear
+        return { gBasisSet[kLinear], false };
+    }
+
 
     // We need to know explicitly whether the knots have
     // derivatives associated with them because of the way
@@ -96,13 +155,13 @@ struct SplineInterp {
     template <class OUTTYPE, class INTYPE, bool is_dual>
     struct extractValueFromArray
     {
-        OUTTYPE operator()(const INTYPE *value, int array_length, int idx);
+        OSL_HOSTDEVICE OUTTYPE operator()(const INTYPE *value, int array_length, int idx);
     };
 
     template <class OUTTYPE, class INTYPE>
     struct extractValueFromArray<OUTTYPE, INTYPE, true> 
     {
-        OUTTYPE operator()(const INTYPE *value, int array_length, int idx)
+        OSL_HOSTDEVICE OUTTYPE operator()(const INTYPE *value, int array_length, int idx)
         {
             return OUTTYPE( value[idx + 0*array_length], 
                             value[idx + 1*array_length],
@@ -113,7 +172,7 @@ struct SplineInterp {
     template <class OUTTYPE, class INTYPE>
     struct extractValueFromArray<OUTTYPE, INTYPE, false> 
     {
-        OUTTYPE operator()(const INTYPE *value, int array_length, int idx)
+        OSL_HOSTDEVICE OUTTYPE operator()(const INTYPE *value, int array_length, int idx)
         {
             return OUTTYPE( value[idx] );
         }
@@ -122,12 +181,12 @@ struct SplineInterp {
     // Spline functor for use with the inverse function
     template <class RTYPE, class XTYPE>
     struct SplineFunctor {
-        SplineFunctor (const SplineInterp& spline_, const float *knots_,
-                       int knot_count_, int knot_arraylen_)
+        OSL_HOSTDEVICE SplineFunctor (const SplineInterp& spline_, const float *knots_,
+                                      int knot_count_, int knot_arraylen_)
             : spline(spline_), knots(knots_), knot_count(knot_count_),
               knot_arraylen(knot_arraylen_) { }
 
-        RTYPE operator() (XTYPE x) {
+        OSL_HOSTDEVICE RTYPE operator() (XTYPE x) {
             RTYPE v;
             spline.evaluate<RTYPE,XTYPE,float,float,false> (v, x, knots, knot_count, knot_arraylen);
             return v;
@@ -139,8 +198,9 @@ struct SplineInterp {
     };
 
     template <class RTYPE, class XTYPE, class CTYPE, class KTYPE, bool knot_derivs >
-    void evaluate(RTYPE &result, XTYPE &xval, const KTYPE *knots,
-                  int knot_count, int knot_arraylen) const
+    OSL_HOSTDEVICE void
+    evaluate(RTYPE &result, XTYPE &xval, const KTYPE *knots,
+             int knot_count, int knot_arraylen) const
     {
         using OIIO::clamp;
         XTYPE x = clamp(xval, XTYPE(0.0), XTYPE(1.0));
@@ -193,8 +253,9 @@ struct SplineInterp {
     // Evaluate the inverse of a spline, i.e., solve for the x for which
     // spline_evaluate(x) == y.
     template <class YTYPE>
-    void inverse (YTYPE &x, YTYPE y, const float *knots, int knot_count,
-                  int knot_arraylen) const
+    OSL_HOSTDEVICE void
+    inverse (YTYPE &x, YTYPE y, const float *knots,
+             int knot_count, int knot_arraylen) const
     {
         // account for out-of-range inputs, just clamp to the values we have
         int lowindex = spline.basis_step == 1 ? 1 : 0;
@@ -240,24 +301,6 @@ struct SplineInterp {
     }
 };
 
-static SplineInterp getSplineBasis(const ustring &basis_name)
-{
-    if (basis_name == ustring("catmull-rom"))
-        return { gBasisSet[0], false };
-    if (basis_name == ustring("bezier"))
-        return { gBasisSet[1], false };
-    if (basis_name == ustring("bspline"))
-        return { gBasisSet[2], false };
-    if (basis_name == ustring("hermite"))
-        return { gBasisSet[3], false };
-
-    // Default to linear ?
-
-    if (basis_name == ustring("constant"))
-        return { gBasisSet[5], true };
-
-    return { gBasisSet[4], false };
-}
 
 }; // namespace Spline
 }; // namespace pvt

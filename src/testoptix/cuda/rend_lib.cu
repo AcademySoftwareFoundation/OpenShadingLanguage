@@ -227,4 +227,14 @@ extern "C" {
     {
         printf (fmt_str, args);
     }
+
+
+    __device__
+    void* osl_get_noise_options (void *sg_)
+    {
+        ShaderGlobals* sg = ((ShaderGlobals*)sg_);
+        NoiseOptCUDA* opt = (NoiseOptCUDA*)((ShadingContextCUDA*)sg->context)->noise_options_ptr();
+        new (opt) NoiseOptCUDA;
+        return opt;
+    }
 }

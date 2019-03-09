@@ -682,5 +682,8 @@ int main (int argc, const char *argv[])
     shaders.clear ();
     delete shadingsys;
 
+    if (optix_ctx)
+        optix_ctx->destroy();
+
     return EXIT_SUCCESS;
 }

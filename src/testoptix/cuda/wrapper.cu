@@ -152,9 +152,13 @@ float3 process_closure(const ClosureColor* closure_tree)
         case MICROFACET_ID: {
 #if 0
             const char* mem = ((ClosureComponent*) cur)->mem;
-            const char* str = (const char*) &mem[0];
+            const char* dist_str = *(const char**) &mem[0];
             if (launch_index.x == launch_dim.x / 2 && launch_index.y == launch_dim.y / 2) {
-                printf ("microfacet, str: %s\n", DEVSTR(str).c_str());
+                printf ("microfacet, dist: %s\n", HDSTR(dist_str).c_str());
+                // Comparisons between the closure variable and "standard"
+                // strings are possible
+                if (HDSTR(dist_str) == OSLDeviceStrings::default_)
+                    printf("dist is default\n");
             }
 #endif
 
@@ -193,6 +197,20 @@ RT_PROGRAM void closest_hit_osl()
     // Pack the "closure pool" into one of the ShaderGlobals pointers
     *(int*) &closure_pool[0] = 0;
     sg.renderstate = &closure_pool[0];
+
+    // Create some run-time options structs. The OSL shader fills in the structs
+    // as it executes, based on the options specified in the shader source.
+    NoiseOptCUDA   noiseopt;
+    TextureOptCUDA textureopt;
+    TraceOptCUDA   traceopt;
+
+    // Pack the pointers to the options structs in a faux "context",
+    // which is a rough stand-in for the host ShadingContext.
+    ShadingContextCUDA shading_context = {
+        &noiseopt, &textureopt, &traceopt
+    };
+
+    sg.context = &shading_context;
 
     // Run the OSL group and init functions
     osl_init_func (&sg, params);

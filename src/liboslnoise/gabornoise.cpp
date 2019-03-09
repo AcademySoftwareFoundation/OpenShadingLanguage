@@ -41,15 +41,30 @@ OSL_NAMESPACE_ENTER
 namespace pvt {
 
 
-static const float Gabor_Frequency = 2.0;
-static const float Gabor_Impulse_Weight = 1;
+// TODO: It would be preferable to use the Imath versions of these functions in
+//       all cases, but these templates should suffice until a more complete
+//       device-friendly version of Imath is available.
+namespace hostdevice {
+template <typename T> inline OSL_HOSTDEVICE T clamp (T x, T lo, T hi);
+#ifndef __CUDA_ARCH__
+template <> inline OSL_HOSTDEVICE double clamp<double> (double x, double lo, double hi) { return Imath::clamp (x, lo, hi); }
+template <> inline OSL_HOSTDEVICE float  clamp<float>  (float x, float lo, float hi)    { return Imath::clamp (x, lo, hi); }
+#else
+template <> inline OSL_HOSTDEVICE double clamp<double> (double x, double lo, double hi) { return (x < lo) ? lo : ((x > hi) ? hi : x); }
+template <> inline OSL_HOSTDEVICE float  clamp<float>  (float x, float lo, float hi)    { return (x < lo) ? lo : ((x > hi) ? hi : x); }
+#endif
+}
+
+
+static OSL_DEVICE const float Gabor_Frequency = 2.0;
+static OSL_DEVICE const float Gabor_Impulse_Weight = 1;
 
 // The Gabor kernel in theory has infinite support (its envelope is
 // a Gaussian).  To restrict the distance at which we must sum the
 // kernels, we only consider those whose Gaussian envelopes are
 // above the truncation threshold, as a portion of the Gaussian's
 // peak value.
-static const float Gabor_Truncate = 0.02f;
+static OSL_DEVICE const float Gabor_Truncate = 0.02f;
 
 
 
@@ -58,6 +73,7 @@ static const float Gabor_Truncate = 0.02f;
 class fast_rng {
 public:
     // seed based on the cell containing P
+    OSL_DEVICE
     fast_rng (const Vec3 &p, int seed=0) {
         // Use guts of cellnoise
         unsigned int pi[4] = { unsigned(OIIO::ifloor(p[0])),
@@ -69,10 +85,12 @@ public:
             m_seed = 1;
     }
     // Return uniform on [0,1)
+    OSL_HOSTDEVICE
     float operator() () {
         return (m_seed *= 3039177861u) / float(UINT_MAX);
     }
     // Return poisson distribution with the given mean
+    OSL_HOSTDEVICE
     int poisson (float mean) {
         float g = expf (-mean);
         unsigned int em = 0;
@@ -106,12 +124,13 @@ struct GaborParams {
     float sqrt_lambda_inv;
     float radius, radius2, radius3, radius_inv;
 
+    OSL_HOSTDEVICE
     GaborParams (const NoiseParams &opt) :
         omega(opt.direction),  // anisotropy orientation
         anisotropic(opt.anisotropic),
         do_filter(opt.do_filter),
         weight(Gabor_Impulse_Weight),
-        bandwidth(Imath::clamp(opt.bandwidth,0.01f,100.0f)),
+        bandwidth(hostdevice::clamp(opt.bandwidth,0.01f,100.0f)),
         periodic(false)
     {
 #if OSL_FAST_MATH
@@ -119,7 +138,12 @@ struct GaborParams {
 #else
         float TWO_to_bandwidth = exp2f(bandwidth);
 #endif
+
+#ifndef __CUDA_ARCH__
         static const float SQRT_PI_OVER_LN2 = sqrtf (M_PI / M_LN2);
+#else
+        #define SQRT_PI_OVER_LN2 (2.12893403886245235863f)
+#endif
         a = Gabor_Frequency * ((TWO_to_bandwidth - 1.0) / (TWO_to_bandwidth + 1.0)) * SQRT_PI_OVER_LN2;
         // Calculate the maximum radius from which we consider the kernel
         // impulse centers -- derived from the threshold and bandwidth.
@@ -128,7 +152,7 @@ struct GaborParams {
         radius3 = radius2 * radius;
         radius_inv = 1.0f / radius;
         // Lambda is the impulse density.
-        float impulses = Imath::clamp (opt.impulses, 1.0f, 32.0f);
+        float impulses = hostdevice::clamp (opt.impulses, 1.0f, 32.0f);
         lambda = impulses / (float(1.33333 * M_PI) * radius3);
         sqrt_lambda_inv = 1.0f / sqrtf(lambda);
     }
@@ -145,7 +169,7 @@ struct GaborParams {
 //                          in [Lagae09].
 //   \param  x           the position being sampled
 template <class VEC>   // VEC should be Vec3 or Vec2
-inline Dual2<float>
+inline Dual2<float> OSL_HOSTDEVICE
 gabor_kernel (const Dual2<float> &weight, const VEC &omega,
               const Dual2<float> &phi, float bandwidth, const Dual2<VEC> &x)
 {
@@ -157,7 +181,7 @@ gabor_kernel (const Dual2<float> &weight, const VEC &omega,
 
 
 
-inline void
+inline OSL_HOSTDEVICE void
 slice_gabor_kernel_3d (const Dual2<float> &d, float w, float a,
                        const Vec3 &omega, float phi,
                        Dual2<float> &w_s, Vec2 &omega_s, Dual2<float> &phi_s)
@@ -171,7 +195,7 @@ slice_gabor_kernel_3d (const Dual2<float> &d, float w, float a,
 
 
 
-static void
+static OSL_HOSTDEVICE void
 filter_gabor_kernel_2d (const Matrix22 &filter, const Dual2<float> &w, float a,
                         const Vec2 &omega, const Dual2<float> &phi,
                         Dual2<float> &w_f, float &a_f,
@@ -203,7 +227,7 @@ filter_gabor_kernel_2d (const Matrix22 &filter, const Dual2<float> &w, float a,
 
 // Choose an omega and phi value for a particular gabor impulse,
 // based on the user-selected noise mode.
-static void
+static OSL_HOSTDEVICE void
 gabor_sample (GaborParams &gp, const Vec3 &x_c, fast_rng &rng,
               Vec3 &omega, float &phi)
 {
@@ -239,7 +263,7 @@ gabor_sample (GaborParams &gp, const Vec3 &x_c, fast_rng &rng,
 
 
 
-inline float
+inline OSL_HOSTDEVICE float
 wrap (float s, float period)
 {
     period = floorf (period);
@@ -250,7 +274,7 @@ wrap (float s, float period)
 
 
 
-static Vec3
+static OSL_HOSTDEVICE Vec3
 wrap (const Vec3 &s, const Vec3 &period)
 {
     return Vec3 (wrap (s[0], period[0]),
@@ -263,7 +287,7 @@ wrap (const Vec3 &s, const Vec3 &period)
 // Evaluate the summed contribution of all gabor impulses within the
 // cell whose corner is c_i.  x_c_i is vector from x (the point
 // we are trying to evaluate noise at) and c_i.
-Dual2<float>
+OSL_HOSTDEVICE Dual2<float>
 gabor_cell (GaborParams &gp, const Vec3 &c_i, const Dual2<Vec3> &x_c_i,
             int seed = 0)
 {
@@ -339,7 +363,7 @@ gabor_cell (GaborParams &gp, const Vec3 &c_i, const Dual2<Vec3> &x_c_i,
 // points roughly toward (1,0,0), in which case we cross with (0,1,0).
 // Either way, we get something orthogonal.  Then cross(v,a) is mutually
 // orthogonal to the other two.
-inline void
+inline OSL_HOSTDEVICE void
 make_orthonormals (Vec3 &v, Vec3 &a, Vec3 &b)
 {
     v.normalize();
@@ -355,7 +379,7 @@ make_orthonormals (Vec3 &v, Vec3 &a, Vec3 &b)
 
 
 // Helper function: per-component 'floor' of a Dual2<Vec3>.
-inline Vec3
+inline OSL_HOSTDEVICE Vec3
 floor (const Dual2<Vec3> &vd)
 {
     const Vec3 &v (vd.val());
@@ -366,7 +390,7 @@ floor (const Dual2<Vec3> &vd)
 
 // Sum the contributions of gabor impulses in all neighboring cells
 // surrounding position x_g.
-static Dual2<float>
+static OSL_HOSTDEVICE Dual2<float>
 gabor_grid (GaborParams &gp, const Dual2<Vec3> &x_g, int seed=0)
 {
     Vec3 floor_x_g (floor (x_g));  // Vec3 because floor has no derivs
@@ -388,7 +412,7 @@ gabor_grid (GaborParams &gp, const Dual2<Vec3> &x_g, int seed=0)
 
 
 
-inline Dual2<float>
+inline OSL_HOSTDEVICE Dual2<float>
 gabor_evaluate (GaborParams &gp, const Dual2<Vec3> &x, int seed=0)
 {
     Dual2<Vec3> x_g = x * gp.radius_inv;
@@ -397,7 +421,7 @@ gabor_evaluate (GaborParams &gp, const Dual2<Vec3> &x, int seed=0)
 
 
 
-inline Matrix33
+inline OSL_HOSTDEVICE Matrix33
 make_matrix33_rows (const Vec3 &a, const Vec3 &b, const Vec3 &c)
 {
     return Matrix33 (a[0], a[1], a[2],
@@ -407,7 +431,7 @@ make_matrix33_rows (const Vec3 &a, const Vec3 &b, const Vec3 &c)
 
 
 
-inline Matrix33
+inline OSL_HOSTDEVICE Matrix33
 make_matrix33_cols (const Vec3 &a, const Vec3 &b, const Vec3 &c)
 {
     return Matrix33 (a[0], b[0], c[0],
@@ -418,7 +442,7 @@ make_matrix33_cols (const Vec3 &a, const Vec3 &b, const Vec3 &c)
 
 
 // set up the filter matrix
-static void
+static OSL_HOSTDEVICE void
 gabor_setup_filter (const Dual2<Vec3> &P, GaborParams &gp)
 {
     // Make texture-space normal, tangent, bitangent
@@ -457,7 +481,7 @@ gabor_setup_filter (const Dual2<Vec3> &P, GaborParams &gp)
 
 
 
-Dual2<float>
+OSL_HOSTDEVICE Dual2<float>
 gabor (const Dual2<float> &x, const NoiseParams *opt)
 {
     // for now, just slice 3D
@@ -466,7 +490,7 @@ gabor (const Dual2<float> &x, const NoiseParams *opt)
 
 
 
-Dual2<float>
+OSL_HOSTDEVICE Dual2<float>
 gabor (const Dual2<float> &x, const Dual2<float> &y, const NoiseParams *opt)
 {
     // for now, just slice 3D
@@ -475,7 +499,7 @@ gabor (const Dual2<float> &x, const Dual2<float> &y, const NoiseParams *opt)
 
 
 
-Dual2<float>
+OSL_HOSTDEVICE Dual2<float>
 gabor (const Dual2<Vec3> &P, const NoiseParams *opt)
 {
     DASSERT (opt);
@@ -495,7 +519,7 @@ gabor (const Dual2<Vec3> &P, const NoiseParams *opt)
 
 
 
-Dual2<Vec3>
+OSL_HOSTDEVICE Dual2<Vec3>
 gabor3 (const Dual2<float> &x, const NoiseParams *opt)
 {
     // for now, just slice 3D
@@ -504,7 +528,7 @@ gabor3 (const Dual2<float> &x, const NoiseParams *opt)
 
 
 
-Dual2<Vec3>
+OSL_HOSTDEVICE Dual2<Vec3>
 gabor3 (const Dual2<float> &x, const Dual2<float> &y, const NoiseParams *opt)
 {
     // for now, just slice 3D
@@ -513,7 +537,7 @@ gabor3 (const Dual2<float> &x, const Dual2<float> &y, const NoiseParams *opt)
 
 
 
-Dual2<Vec3>
+OSL_HOSTDEVICE Dual2<Vec3>
 gabor3 (const Dual2<Vec3> &P, const NoiseParams *opt)
 {
     DASSERT (opt);
@@ -536,7 +560,7 @@ gabor3 (const Dual2<Vec3> &P, const NoiseParams *opt)
 
 
 
-Dual2<float>
+OSL_HOSTDEVICE Dual2<float>
 pgabor (const Dual2<float> &x, float xperiod, const NoiseParams *opt)
 {
     // for now, just slice 3D
@@ -545,7 +569,7 @@ pgabor (const Dual2<float> &x, float xperiod, const NoiseParams *opt)
 
 
 
-Dual2<float>
+OSL_HOSTDEVICE Dual2<float>
 pgabor (const Dual2<float> &x, const Dual2<float> &y,
         float xperiod, float yperiod, const NoiseParams *opt)
 {
@@ -555,7 +579,7 @@ pgabor (const Dual2<float> &x, const Dual2<float> &y,
 
 
 
-Dual2<float>
+OSL_HOSTDEVICE Dual2<float>
 pgabor (const Dual2<Vec3> &P, const Vec3 &Pperiod, const NoiseParams *opt)
 {
     DASSERT (opt);
@@ -576,7 +600,7 @@ pgabor (const Dual2<Vec3> &P, const Vec3 &Pperiod, const NoiseParams *opt)
 }
 
 
-Dual2<Vec3>
+OSL_HOSTDEVICE Dual2<Vec3>
 pgabor3 (const Dual2<float> &x, float xperiod, const NoiseParams *opt)
 {
     // for now, just slice 3D
@@ -585,7 +609,7 @@ pgabor3 (const Dual2<float> &x, float xperiod, const NoiseParams *opt)
 
 
 
-Dual2<Vec3>
+OSL_HOSTDEVICE Dual2<Vec3>
 pgabor3 (const Dual2<float> &x, const Dual2<float> &y,
         float xperiod, float yperiod, const NoiseParams *opt)
 {
@@ -595,7 +619,7 @@ pgabor3 (const Dual2<float> &x, const Dual2<float> &y,
 
 
 
-Dual2<Vec3>
+OSL_HOSTDEVICE Dual2<Vec3>
 pgabor3 (const Dual2<Vec3> &P, const Vec3 &Pperiod, const NoiseParams *opt)
 {
     DASSERT (opt);

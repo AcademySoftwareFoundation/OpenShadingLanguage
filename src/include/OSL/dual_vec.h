@@ -220,7 +220,7 @@ comp (const Dual<Imath::Vec2<T>,P> &v, int c)
 /// Multiply a 3x3 matrix by a 3-vector, with derivs.
 ///
 template <class S, class T, int P>
-inline void
+OSL_HOSTDEVICE inline void
 multMatrix (const Imath::Matrix33<T> &M, const Dual<Imath::Vec3<S>,P> &src,
             Dual<Imath::Vec3<S>,P> &dst)
 {

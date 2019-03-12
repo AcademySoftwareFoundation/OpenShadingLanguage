@@ -1,8 +1,8 @@
 Release 1.11/2.0? -- ?? 2019 (compared to 1.10)
 --------------------------------------------------
 Dependency and standards changes:
-* LLVM 4.0-7.0:  Alert: we are expecting this release of OSL to at some
-  point drop support for LLVM 4.0. Maybe 5.0?
+* LLVM 5.0-7.0:  This releases no longer supports LLVM 4.x. (And we may
+  at some point before release drop support for LLVM 5.0.)
 * OpenImageIO 1.8-2.0: Alert: by the time we release this version of OSL,
   we may drop support for OIIO 1.x.
 

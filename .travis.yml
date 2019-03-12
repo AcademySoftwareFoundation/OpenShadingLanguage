@@ -214,7 +214,7 @@ matrix:
               - libboost-thread1.55
               - libboost-wave1.55
         env: DEBUG=1 LLVM_VERSION=7.0.0 OIIOBRANCH=master
-      - name: "Oldest everything: LLVM 4, OIIO 1.8, no simd"
+      - name: "Oldest everything: LLVM 5, OIIO 1.8, no simd"
         os: linux
         compiler: gcc
         addons:
@@ -229,7 +229,7 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: USE_SIMD=0 LLVM_VERSION=4.0.0 OIIOBRANCH=RB-1.8
+        env: USE_SIMD=0 LLVM_VERSION=5.0.0 OIIOBRANCH=RB-1.8
         if: branch =~ /(master|RB|travis)/ OR type = pull_request
 
 notifications:

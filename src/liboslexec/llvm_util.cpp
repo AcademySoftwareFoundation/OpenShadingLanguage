@@ -35,8 +35,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/oslconfig.h>
 #include <OSL/llvm_util.h>
 
-#if OSL_LLVM_VERSION < 40
-#error "LLVM minimum version required for OSL is 4.0"
+#if OSL_LLVM_VERSION < 50
+#error "LLVM minimum version required for OSL is 5.0"
 #endif
 
 #include <llvm/IR/Constants.h>
@@ -215,15 +215,9 @@ public:
     virtual void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) {
         mm->registerEHFrames (Addr, LoadAddr, Size);
     }
-#if OSL_LLVM_VERSION < 50
-    virtual void deregisterEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) {
-        mm->deregisterEHFrames(Addr, LoadAddr, Size);
-    }
-#else
     virtual void deregisterEHFrames() {
         mm->deregisterEHFrames();
     }
-#endif
 
     virtual uint64_t getSymbolAddress(const std::string &Name) {
         return mm->getSymbolAddress (Name);

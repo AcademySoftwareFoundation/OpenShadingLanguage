@@ -39,7 +39,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     DYLD_LIBRARY_PATH on OS X) and then OSL's build scripts will be able
     to find it.
 
-* **[LLVM](http://www.llvm.org) 4.0, 5.0, 6.0, or 7.0**
+* **[LLVM](http://www.llvm.org) 5.0, 6.0, or 7.0**
 
    Optionally, if Clang libraries are installed alongside LLVM, OSL will
    in most circumstances use Clang's internals for C-style preprocessing of

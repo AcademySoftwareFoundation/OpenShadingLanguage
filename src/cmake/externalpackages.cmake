@@ -69,7 +69,7 @@ message (STATUS "Using OpenImageIO ${OPENIMAGEIO_VERSION}")
 ###########################################################################
 # LLVM library setup
 
-find_package (LLVM 4.0 REQUIRED)
+find_package (LLVM 5.0 REQUIRED)
 
 # ensure include directory is added (in case of non-standard locations
 include_directories (BEFORE SYSTEM "${LLVM_INCLUDES}")

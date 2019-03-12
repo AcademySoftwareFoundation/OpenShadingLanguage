@@ -42,6 +42,7 @@ before_build:
     $OSL_INSTALL_BEGIN=Get-Date
     Write-Output "Configuration: $env:CONFIGURATION"
     Write-Output "Platform: $env:PLATFORM"
+    ls C:\Libraries\llvm-5.0.0
     Get-ChildItem Env:
 
     [Array]$OSL_BUILD_FLAGS = "--", "/nologo", "/verbosity:minimal";
@@ -50,8 +51,8 @@ before_build:
     $DEP_DIR = "C:\projects\OSLdeps"
     $BOOST_ROOT = "C:\Libraries\boost_1_63_0"
     $PYTHON_DIR = "C:\Python27"
-    $LLVM_DIR = "C:\Libraries\llvm-4.0.0"
-    $LLVM_DIR = "$DEP_DIR"
+    $LLVM_DIR = "C:\Libraries\llvm-5.0.0"
+    #$LLVM_DIR = "$DEP_DIR"
     $env:Path += ";$DEP_DIR\lib;$DEP_DIR\bin"
     $OSL_INT_DIR = "build\windows$env:PLATFORM"
 
@@ -121,6 +122,14 @@ before_build:
         cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$DEP_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DCMAKE_CXX_FLAGS=" /W1 /EHsc /DWIN32=1 "
         cmake --build . --config $env:CONFIGURATION --target INSTALL $OSL_BUILD_FLAGS
 
+        # LLVM
+        # This shouldn't be necessary, we use the pre-installed LLVM
+        # cd $DWN_DIR
+        # git clone --depth 10 --branch release_40 https://github.com/llvm-mirror/llvm.git
+        # cd llvm; md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
+        # cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$DEP_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DLLVM_TARGETS_TO_BUILD="X86"
+        # cmake --build . --config $env:CONFIGURATION --target INSTALL $OSL_BUILD_FLAGS
+
         # OpenEXR
         cd $DWN_DIR
         Start-FileDownload http://download.savannah.nongnu.org/releases/openexr/openexr-2.2.1.tar.gz
@@ -128,12 +137,6 @@ before_build:
         cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$DEP_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DILMBASE_PACKAGE_PREFIX="$DEP_DIR" -DCMAKE_CXX_FLAGS=" /W1 /EHsc /DWIN32=1 "
         cmake --build . --config $env:CONFIGURATION --target INSTALL $OSL_BUILD_FLAGS
 
-        # LLVM
-        cd $DWN_DIR
-        git clone --depth 10 --branch release_40 https://github.com/llvm-mirror/llvm.git
-        cd llvm; md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
-        cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$DEP_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DLLVM_TARGETS_TO_BUILD="X86"
-        cmake --build . --config $env:CONFIGURATION --target INSTALL $OSL_BUILD_FLAGS
     }
 
     # Always do this

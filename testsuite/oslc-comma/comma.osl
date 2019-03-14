@@ -19,6 +19,7 @@ shader comma ()
     printf ("Lo = %d, hi = %d   (expect: 0,1)\n", lo, hi);
 
     // Test the return value of a commma expression
+    // Note: this will make a warning, because it's stupid.
     float x = 3.14;
     int y = 5;
     int z = (x, y);

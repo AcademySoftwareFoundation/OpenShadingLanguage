@@ -64,11 +64,11 @@ static std::vector<std::string> entrylayers;
 static std::vector<std::string> entryoutputs;
 static std::vector<int> entrylayer_index;
 static std::vector<const ShaderSymbol *> entrylayer_symbols;
-static bool debug = false;
+static bool debug1 = false;
 static bool debug2 = false;
 static bool verbose = false;
 static bool runstats = false;
-static int profile = 0;
+static bool profile = false;
 static bool O0 = false, O1 = false, O2 = false;
 static bool pixelcenters = false;
 static bool debugnan = false;
@@ -117,11 +117,12 @@ inject_params ()
 
 
 
+// Set shading system global attributes based on command line options.
 static void
 set_shadingsys_options ()
 {
-    shadingsys->attribute ("debug", debug2 ? 2 : (debug ? 1 : 0));
-    shadingsys->attribute ("compile_report", debug|debug2);
+    shadingsys->attribute ("debug", debug2 ? 2 : (debug1 ? 1 : 0));
+    shadingsys->attribute ("compile_report", debug1|debug2);
     int opt = 2;  // default
     if (O0) opt = 0;
     if (O1) opt = 1;
@@ -129,12 +130,17 @@ set_shadingsys_options ()
     if (const char *opt_env = getenv ("TESTSHADE_OPT"))  // overrides opt
         opt = atoi(opt_env);
     shadingsys->attribute ("optimize", opt);
+    shadingsys->attribute ("profile", int(profile));
     shadingsys->attribute ("lockgeom", 1);
     shadingsys->attribute ("debug_nan", debugnan);
     shadingsys->attribute ("debug_uninit", debug_uninit);
     shadingsys->attribute ("userdata_isconnected", userdata_isconnected);
     if (! shaderpath.empty())
         shadingsys->attribute ("searchpath:shader", shaderpath);
+    if (extraoptions.size())
+        shadingsys->attribute ("options", extraoptions);
+    if (texoptions.size())
+        shadingsys->texturesys()->attribute ("options", texoptions);
     shadingsys_options_set = true;
 }
 
@@ -428,15 +434,6 @@ action_groupspec (int argc, const char *argv[])
 
 
 static void
-set_profile (int argc, const char *argv[])
-{
-    profile = 1;
-    shadingsys->attribute ("profile", profile);
-}
-
-
-
-static void
 getargs (int argc, const char *argv[])
 {
     static bool help = false;
@@ -446,14 +443,14 @@ getargs (int argc, const char *argv[])
                 "--help", &help, "Print help message",
                 "-v", &verbose, "Verbose messages",
                 "-t %d", &num_threads, "Render using N threads (default: auto-detect)",
-                "--debug", &debug, "Lots of debugging info",
+                "--debug", &debug1, "Lots of debugging info",
                 "--debug2", &debug2, "Even more debugging info",
                 "--runstats", &runstats, "Print run statistics",
                 "--stats", &runstats, "",  // DEPRECATED 1.7
-                "--profile %@", &set_profile, NULL, "Print profile information",
+                "--profile", &profile, "Print profile information",
                 "--path %s", &shaderpath, "Specify oso search path",
-                "-g %d %d", &xres, &yres, "Make an X x Y grid of shading points",
-                "-res %d %d", &xres, &yres, "", // synonym for -g
+                "--res %d %d", &xres, &yres, "Make an W x H image",
+                "-g %d %d", &xres, &yres, "", // synonym for -res
                 "--options %s", &extraoptions, "Set extra OSL options",
                 "--texoptions %s", &texoptions, "Set extra TextureSystem options",
                 "-o %L %L", &outputvars, &outputfiles,
@@ -512,7 +509,7 @@ getargs (int argc, const char *argv[])
         exit (EXIT_SUCCESS);
     }
 
-    if (debug || verbose)
+    if (debug1 || verbose)
         errhandler.verbosity (ErrorHandler::VERBOSE);
     raytype_bit = shadingsys->raytype_bit (ustring (raytype));
 }
@@ -659,11 +656,6 @@ setup_output_images (ShadingSystem *shadingsys,
                                TypeDesc(TypeDesc::STRING,(int)entrylayers.size()),
                                &layers[0]);
     }
-
-    if (extraoptions.size())
-        shadingsys->attribute ("options", extraoptions);
-    if (texoptions.size())
-        shadingsys->texturesys()->attribute ("options", texoptions);
 
     OSL::PerThreadInfo *thread_info = shadingsys->create_thread_info();
     ShadingContext *ctx = shadingsys->get_context(thread_info);
@@ -1141,7 +1133,7 @@ test_shade (int argc, const char *argv[])
     // Set up the image outputs requested on the command line
     setup_output_images (shadingsys, shadergroup);
 
-    if (debug)
+    if (debug1)
         test_group_attributes (shadergroup.get());
 
     if (num_threads < 1)
@@ -1216,7 +1208,7 @@ test_shade (int argc, const char *argv[])
     }
 
     // Print some debugging info
-    if (debug || runstats || profile) {
+    if (debug1 || runstats || profile) {
         double writetime = timer.lap();
         std::cout << "\n";
         std::cout << "Setup: " << OIIO::Strutil::timeintervalformat (setuptime,2) << "\n";

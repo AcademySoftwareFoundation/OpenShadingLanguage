@@ -66,28 +66,34 @@ using namespace OSL;
 
 namespace { // anonymous namespace
 
-ShadingSystem *shadingsys = NULL;
-bool debug1 = false;
-bool debug2 = false;
-bool verbose = false;
-bool runstats = false;
-bool saveptx = false;
-bool warmup = false;
-int profile = 0;
-bool O0 = false, O1 = false, O2 = false;
-bool debugnan = false;
+static ShadingSystem *shadingsys = NULL;
+static bool debug1 = false;
+static bool debug2 = false;
+static bool verbose = false;
+static bool runstats = false;
+static bool saveptx = false;
+static bool warmup = false;
+static int profile = 0;
+static bool O0 = false, O1 = false, O2 = true;
+static bool debugnan = false;
+static bool debug_uninit = false;
+static bool userdata_isconnected = false;
 static std::string extraoptions;
-int xres = 640, yres = 480, aa = 1, max_bounces = 1000000, rr_depth = 5;
-int num_threads = 0;
-ErrorHandler errhandler;
-OptixRenderer rend;  // RendererServices
-Camera camera;
-Scene scene;
-int backgroundShaderID = -1;
-int backgroundResolution = 0;
-std::vector<ShaderGroupRef> shaders;
-std::string scenefile, imagefile;
+static std::string texoptions;
+static int xres = 640, yres = 480;
+static int aa = 1, max_bounces = 1000000, rr_depth = 5;
+static int num_threads = 0;
+static int iters = 1;
+static ErrorHandler errhandler;
+static OptixRenderer rend;  // RendererServices
+static Camera camera;
+static Scene scene;
+static int backgroundShaderID = -1;
+static int backgroundResolution = 0;
+static std::vector<ShaderGroupRef> shaders;
+static std::string scenefile, imagefile;
 static std::string shaderpath;
+static bool shadingsys_options_set = false;
 
 // NB: Unused parameters are left in place so that the parse_scene() from
 //     testrender can be used as-is (and they will eventually be used, when
@@ -97,6 +103,34 @@ optix::Context optix_ctx = NULL;
 
 static std::string renderer_ptx;  // ray generation, etc.
 static std::string wrapper_ptx;   // hit programs
+
+
+// Set shading system global attributes based on command line options.
+static void
+set_shadingsys_options ()
+{
+    shadingsys->attribute ("debug", debug2 ? 2 : (debug1 ? 1 : 0));
+    shadingsys->attribute ("compile_report", debug1|debug2);
+    int opt = 2;  // default
+    if (O0) opt = 0;
+    if (O1) opt = 1;
+    if (O2) opt = 2;
+    if (const char *opt_env = getenv ("TESTSHADE_OPT"))  // overrides opt
+       opt = atoi(opt_env);
+    shadingsys->attribute ("optimize", opt);
+    shadingsys->attribute ("profile", int(profile));
+    shadingsys->attribute ("lockgeom", 1);
+    shadingsys->attribute ("debug_nan", debugnan);
+    shadingsys->attribute ("debug_uninit", debug_uninit);
+    shadingsys->attribute ("userdata_isconnected", userdata_isconnected);
+    if (! shaderpath.empty())
+        shadingsys->attribute ("searchpath:shader", shaderpath);
+    if (extraoptions.size())
+        shadingsys->attribute ("options", extraoptions);
+    if (texoptions.size())
+        shadingsys->texturesys()->attribute ("options", texoptions);
+    shadingsys_options_set = true;
+}
 
 
 
@@ -124,9 +158,11 @@ void getargs(int argc, const char *argv[])
                 "--runstats", &runstats, "Print run statistics",
                 "--saveptx", &saveptx, "Save the generated PTX",
                 "--warmup", &warmup, "Perform a warmup launch",
-                "-r %d %d", &xres, &yres, "Render a WxH image",
+                "--res %d %d", &xres, &yres, "Make an W x H image",
+                "-r %d %d", &xres, &yres, "", // synonym for -res
                 "-aa %d", &aa, "Trace NxN rays per pixel",
                 "-t %d", &num_threads, "Render using N threads (default: auto-detect)",
+                "--iters %d", &iters, "Number of iterations",
                 "-O0", &O0, "Do no runtime shader optimization",
                 "-O1", &O1, "Do a little runtime shader optimization",
                 "-O2", &O2, "Do lots of runtime shader optimization",
@@ -591,27 +627,15 @@ int main (int argc, const char *argv[])
     shadingsys = new ShadingSystem (&rend, NULL, &errhandler);
     register_closures(shadingsys);
 
-    shadingsys->attribute ("lockgeom",           1);
-    shadingsys->attribute ("debug",              0);
-    shadingsys->attribute ("optimize",           2);
-    shadingsys->attribute ("opt_simplify_param", 1);
-    shadingsys->attribute ("range_checking",     0);
-
     // Setup common attributes
-    shadingsys->attribute ("debug", debug2 ? 2 : (debug1 ? 1 : 0));
-    shadingsys->attribute ("compile_report", debug1|debug2);
+    set_shadingsys_options();
 
     std::vector<char> lib_bitcode;
     std::copy (&rend_llvm_compiled_ops_block[0],
                &rend_llvm_compiled_ops_block[rend_llvm_compiled_ops_size],
                back_inserter(lib_bitcode));
-
     shadingsys->attribute ("lib_bitcode", OSL::TypeDesc::UINT8, &lib_bitcode);
 
-    if (! shaderpath.empty())
-        shadingsys->attribute ("searchpath:shader", shaderpath);
-    else
-        shadingsys->attribute ("searchpath:shader", OIIO::Filesystem::parent_path (scenefile));
 
     // Loads a scene, creating camera, geometry and assigning shaders
     parse_scene();
@@ -640,7 +664,8 @@ int main (int argc, const char *argv[])
     double warmuptime = timer.lap ();
 
     // Launch the GPU kernel to render the scene
-    optix_ctx->launch (0, xres, yres);
+    for (int i = 0; i < iters; ++i)
+        optix_ctx->launch (0, xres, yres);
     double runtime = timer.lap ();
 
     // Copy the output image from the device buffer

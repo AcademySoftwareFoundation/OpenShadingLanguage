@@ -60,34 +60,60 @@ using namespace OSL;
 
 namespace { // anonymous namespace
 
-ShadingSystem *shadingsys = NULL;
-bool debug1 = false;
-bool debug2 = false;
-bool verbose = false;
-bool runstats = false;
-int profile = 0;
-bool O0 = false, O1 = false, O2 = false;
-bool debugnan = false;
+static ShadingSystem *shadingsys = NULL;
+static bool debug1 = false;
+static bool debug2 = false;
+static bool verbose = false;
+static bool runstats = false;
+static bool profile = false;
+static bool O0 = false, O1 = false, O2 = false;
+static bool debugnan = false;
+static bool debug_uninit = false;
+static bool userdata_isconnected = false;
 static std::string extraoptions;
-int xres = 640, yres = 480, aa = 1, max_bounces = 1000000, rr_depth = 5;
-int num_threads = 0;
-ErrorHandler errhandler;
-SimpleRenderer rend;  // RendererServices
-Camera camera;
-Scene scene;
-int backgroundShaderID = -1;
-int backgroundResolution = 0;
-Background background;
-std::vector<ShaderGroupRef> shaders;
-std::string scenefile, imagefile;
+static std::string texoptions;
+static int xres = 640, yres = 480;
+static int aa = 1, max_bounces = 1000000, rr_depth = 5;
+static int num_threads = 0;
+static ErrorHandler errhandler;
+static SimpleRenderer rend;  // RendererServices
+static Camera camera;
+static Scene scene;
+static int backgroundShaderID = -1;
+static int backgroundResolution = 0;
+static Background background;
+static std::vector<ShaderGroupRef> shaders;
+static std::string scenefile, imagefile;
 static std::string shaderpath;
+static bool shadingsys_options_set = false;
 
 
+
+// Set shading system global attributes based on command line options.
 static void
-set_profile (int argc, const char *argv[])
+set_shadingsys_options ()
 {
-    profile = 1;
-    shadingsys->attribute ("profile", profile);
+    shadingsys->attribute ("debug", debug2 ? 2 : (debug1 ? 1 : 0));
+    shadingsys->attribute ("compile_report", debug1|debug2);
+    int opt = 2;  // default
+    if (O0) opt = 0;
+    if (O1) opt = 1;
+    if (O2) opt = 2;
+    if (const char *opt_env = getenv ("TESTSHADE_OPT"))  // overrides opt
+        opt = atoi(opt_env);
+    shadingsys->attribute ("optimize", opt);
+    shadingsys->attribute ("profile", int(profile));
+    shadingsys->attribute ("lockgeom", 1);
+    shadingsys->attribute ("debug_nan", debugnan);
+    shadingsys->attribute ("debug_uninit", debug_uninit);
+    shadingsys->attribute ("userdata_isconnected", userdata_isconnected);
+    if (! shaderpath.empty())
+        shadingsys->attribute ("searchpath:shader", shaderpath);
+    if (extraoptions.size())
+        shadingsys->attribute ("options", extraoptions);
+    if (texoptions.size())
+        shadingsys->texturesys()->attribute ("options", texoptions);
+    shadingsys_options_set = true;
 }
 
 
@@ -115,8 +141,9 @@ void getargs(int argc, const char *argv[])
                 "--debug2", &debug2, "Even more debugging info",
                 "--runstats", &runstats, "Print run statistics",
                 "--stats", &runstats, "", // DEPRECATED 1.7
-                "--profile %@", &set_profile, NULL, "Print profile information",
-                "-r %d %d", &xres, &yres, "Render a WxH image",
+                "--profile", &profile, "Print profile information",
+                "--res %d %d", &xres, &yres, "Make an W x H image",
+                "-r %d %d", &xres, &yres, "", // synonym for -res
                 "-aa %d", &aa, "Trace NxN rays per pixel",
                 "-t %d", &num_threads, "Render using N threads (default: auto-detect)",
                 "-O0", &O0, "Do no runtime shader optimization",
@@ -125,6 +152,7 @@ void getargs(int argc, const char *argv[])
                 "--debugnan", &debugnan, "Turn on 'debugnan' mode",
                 "--path %s", &shaderpath, "Specify oso search path",
                 "--options %s", &extraoptions, "Set extra OSL options",
+                "--texoptions %s", &texoptions, "Set extra TextureSystem options",
                 NULL);
     if (ap.parse(argc, argv) < 0) {
         std::cerr << ap.geterror() << std::endl;
@@ -595,17 +623,7 @@ int main (int argc, const char *argv[]) {
     getargs (argc, argv);
 
     // Setup common attributes
-    shadingsys->attribute ("debug", debug2 ? 2 : (debug1 ? 1 : 0));
-    shadingsys->attribute ("compile_report", debug1|debug2);
-    int opt = O2 ? 2 : (O1 ? 1 : 0);
-    if (const char *opt_env = getenv ("TESTSHADE_OPT"))  // overrides opt
-        opt = atoi(opt_env);
-    shadingsys->attribute ("optimize", opt);
-    shadingsys->attribute ("debugnan", debugnan);
-    if (! shaderpath.empty())
-        shadingsys->attribute ("searchpath:shader", shaderpath);
-    if (extraoptions.size())
-        shadingsys->attribute ("options", extraoptions);
+    set_shadingsys_options();
 
     // Loads a scene, creating camera, geometry and assigning shaders
     parse_scene();

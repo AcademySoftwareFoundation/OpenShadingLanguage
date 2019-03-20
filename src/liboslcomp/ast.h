@@ -911,7 +911,7 @@ public:
     /// Pointer to the ASTfunction_declaration node that defines the user
     /// function, or NULL if it's not a user-defined function.
     ASTfunction_declaration * user_function () const {
-        return (ASTfunction_declaration *) func()->node();
+        return func() ? (ASTfunction_declaration *) func()->node() : nullptr;
     }
 
 private:

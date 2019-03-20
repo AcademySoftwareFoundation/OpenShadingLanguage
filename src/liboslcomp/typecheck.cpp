@@ -754,8 +754,14 @@ public:
         // Commit infered types of all ASTcompound_initializers scanned.
         if (m_success) {
             for (auto&& initer : m_adjust) {
-                std::get<0>(initer)->m_typespec = std::get<1>(initer);
-                std::get<0>(initer)->m_ctor = std::get<2>(initer);
+                ASTcompound_initializer* ciptr = std::get<0>(initer);
+                TypeSpec type = std::get<1>(initer);
+                // Subtlety: don't reset an already-resolved-known-size
+                // array to an unlengthed one.
+                if (! (ciptr->m_typespec.is_sized_array()
+                       && type.is_unsized_array()))
+                    ciptr->m_typespec = type;
+                ciptr->m_ctor = std::get<2>(initer);
             }
         }
     }
@@ -1924,9 +1930,12 @@ ASTfunction_call::typecheck (TypeSpec expected)
     // Instead of typecheck_children, typecheck all arguments except for
     // initializer lists, who will be checked against each overload's formal
     // specification or each field's known type if is_struct_ctr.
+    bool any_args_are_compound_initializers = false;
     for (ref arg = args(); arg; arg = arg->next()) {
         if (arg->nodetype() != compound_initializer_node)
             typecheck_list (arg, expected);
+        else
+            any_args_are_compound_initializers = true;
     }
 
     // Save the currently choosen symbol for error reporting later
@@ -1961,6 +1970,23 @@ ASTfunction_call::typecheck (TypeSpec expected)
                 warning ("overload chosen differs from OSL 1.9\n%s", errmsg);
             else
                 warning ("overload chosen differs from OSL 1.9\n%s", errmsg);
+        }
+    }
+
+    // Fix up actual arguments compound initializiers that were paired with
+    // user function formal arguments that are unsigned arrays. They were
+    // not yet typechecked, do so now.
+    if (any_args_are_compound_initializers && is_user_function()) {
+        ASTNode* formal = user_function()->formals().get();
+        for (ASTNode* arg = args().get(); arg && formal;
+             arg = arg->nextptr(), formal = formal->nextptr()) {
+            if (arg->nodetype() == compound_initializer_node &&
+                formal->typespec().is_unsized_array()) {
+                auto ci_arg = (ASTcompound_initializer*)arg;
+                TypeSpec expected = formal->typespec();
+                expected.make_array (listlength(ci_arg->initlist()));
+                arg->typecheck(expected);
+            }
         }
     }
 

@@ -54,6 +54,19 @@ bcolor colorvalue() {
     return { {6,7,8}, 5 };
 }
 
+void receive_array_3 (float array[3]) {
+    printf ("passed array[3] = {%g, %g, %g}\n",
+            array[0], array[1], array[2]);
+}
+
+void receive_array_any (float array[]) {
+    printf ("passed array[] = {");
+    for (int i = 0; i < arraylength(array); ++i)
+        printf ("%s%g", i ? ", " : "", array[i]);
+    printf ("}\n");
+}
+
+
 
 shader test( // FIXME: custcolor4 cina[2] = {{color(1),1}, {color(1),1}},
              vector vin = { 1, 2, 3 },
@@ -127,4 +140,8 @@ shader test( // FIXME: custcolor4 cina[2] = {{color(1),1}, {color(1),1}},
 
     acolor cc = acolorcopy({10, {11,12,13}});
     printf("AC: ({%g})\n", cc.rgb);
+
+    // Test passing init list for fixed-length and un-lengthed array params
+    receive_array_3 ({1.0, 2.0, 3.0});
+    receive_array_any ({1.0, 2.0, 3.0});
 }

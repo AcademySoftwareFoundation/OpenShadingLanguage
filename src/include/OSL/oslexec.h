@@ -364,17 +364,20 @@ public:
     //    /* First layer - texture lookup shader: */
     //       /* Specify instance parameter values */
     //       const char *mapname = "colormap.exr";
-    //       ss->Parameter ("texturename", TypeDesc::TypeString, &mapname);
+    //       ss->Parameter (*group, "texturename", TypeDesc::TypeString,
+    //                      &mapname);
     //       float blur = 0.001;
-    //       ss->Parameter ("blur", TypeDesc::TypeFloat, &blur);
+    //       ss->Parameter (*group, "blur", TypeDesc::TypeFloat, &blur);
     //    ss->Shader ("surface", "texmap", "texturelayer");
     //    /* Second layer - generate the BSDF closure: */
     //       float roughness = 0.05;
-    //       ss->Parameter ("roughness", TypeDesc::TypeFloat, &roughness);
-    //    ss->Shader ("surface", "plastic", "illumlayer");
+    //       ss->Parameter (*group, "roughness", TypeDesc::TypeFloat,
+    //                      &roughness);
+    //    ss->Shader (*group, "surface", "plastic", "illumlayer");
     //    /* Make a connection between the layers */
-    //    ss->ConnectShaders ("texturelayer", "Cout", "illumlayer", "Cs");
-    // ss->ShaderGroupEnd ();
+    //    ss->ConnectShaders (*group, "texturelayer", "Cout",
+    //                       "illumlayer", "Cs");
+    // ss->ShaderGroupEnd (*group);
 
     /// Signal the start of a new shader group.  The return value is a
     /// reference-counted opaque handle to the ShaderGroup.
@@ -394,30 +397,26 @@ public:
 
     /// Signal the end of a new shader group.
     ///
-    bool ShaderGroupEnd (void);
+    bool ShaderGroupEnd (ShaderGroup& group);
 
-    /// Set a parameter of the next shader.
-    ///
-    bool Parameter (string_view name, TypeDesc t, const void *val);
+    /// Set a parameter of the next shader that will be added to the group,
+    /// optionally setting the 'lockgeom' metadata for that parameter
+    /// (despite how it may have been set in the shader).  If lockgeom is
+    /// false, it means that this parameter should NOT be considered locked
+    /// against changes by the geometry, and therefore the shader should not
+    /// optimize assuming that the instance value (the 'val' specified by
+    /// this call) is a constant.
+    bool Parameter (ShaderGroup& group, string_view name, TypeDesc t,
+                    const void *val, bool lockgeom=true);
 
-    /// Set a parameter of the next shader, and override the 'lockgeom'
-    /// metadata for that parameter (despite how it may have been set in
-    /// the shader).  If lockgeom is false, it means that this parameter
-    /// should NOT be considered locked against changes by the geometry,
-    /// and therefore the shader should not optimize assuming that the
-    /// instance value (the 'val' specified by this call) is a constant.
-    bool Parameter (string_view name, TypeDesc t, const void *val,
-                    bool lockgeom);
+    /// Append a new shader instance onto the specified group. The shader
+    /// instance will get any pending parameters that were set by
+    /// Parameter() calls since the last Shader() call for the group.
+    bool Shader (ShaderGroup& group, string_view shaderusage,
+                 string_view shadername, string_view layername);
 
-    /// Create a new shader instance, either replacing the current group (if
-    /// not within a group) or appending to the current group (if a group
-    /// has been started).
-    bool Shader (string_view shaderusage,
-                 string_view shadername,
-                 string_view layername);
-
-    /// Connect two shaders within the current group. The source layer must
-    /// be *upstream* of down destination layer (i.e. source must be
+    /// Connect two shaders within the specified group. The source layer
+    /// must be *upstream* of down destination layer (i.e. source must be
     /// declared earlier within the shader group). The named parameters must
     /// be of compatible type -- float to float, color to color, array to
     /// array of the same length and element type, etc. In general, it is
@@ -427,9 +426,11 @@ public:
     /// may be connected to a triple input (but not the other way around).
     /// It is permitted to connect a single component of an aggregate to a
     /// float and vice versa, for example,
-    ///   `ConnectShaders ("lay1", "mycolorout[2]", "lay2", "myfloatinput")`
+    ///   `ConnectShaders (group, "lay1", "mycolorout[2]",
+    ///                    "lay2", "myfloatinput")`
     ///
-    bool ConnectShaders (string_view srclayer, string_view srcparam,
+    bool ConnectShaders (ShaderGroup &group,
+                         string_view srclayer, string_view srcparam,
                          string_view dstlayer, string_view dstparam);
 
     /// Replace a parameter value in a previously-declared shader group.
@@ -442,6 +443,23 @@ public:
     bool ReParameter (ShaderGroup &group,
                       string_view layername, string_view paramname,
                       TypeDesc type, const void *val);
+
+    // Non-threadsafe versions of Parameter, Shader, ConnectShaders, and
+    // ShaderGroupEnd. These depend on some persistent state about which
+    // shader group is the "current" one being amended. It's fine to use
+    // that as long as all shader specification is done from one thread only
+    // (or at least that you are sure no two groups are being specified
+    // concurrently). If there is any doubt about that, use the versions
+    // above that take an explicit `ShaderGroup&`, which are thread-safe
+    // and re-entrant.
+    bool Parameter (string_view name, TypeDesc t, const void *val);
+    bool Parameter (string_view name, TypeDesc t, const void *val,
+                    bool lockgeom);
+    bool Shader (string_view shaderusage, string_view shadername,
+                 string_view layername);
+    bool ConnectShaders (string_view srclayer, string_view srcparam,
+                         string_view dstlayer, string_view dstparam);
+    bool ShaderGroupEnd (void);
 
     /// Create a per-thread data needed for shader execution.  It's very
     /// important for the app to never use a PerThreadInfo from more than
@@ -622,6 +640,9 @@ public:
 
     /// Archive the entire shader group so that it can be reconstituted
     /// later.
+    bool archive_shadergroup (ShaderGroup &group, string_view filename);
+
+    // DEPRECATED(2.0)
     bool archive_shadergroup (ShaderGroup *group, string_view filename);
 
     /// Helper function -- copy or convert a source value (described by

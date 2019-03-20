@@ -153,6 +153,13 @@ ShadingSystem::ShaderGroupBegin (string_view groupname, string_view usage,
 
 
 bool
+ShadingSystem::ShaderGroupEnd (ShaderGroup& group)
+{
+    return m_impl->ShaderGroupEnd(group);
+}
+
+
+bool
 ShadingSystem::ShaderGroupEnd (void)
 {
     return m_impl->ShaderGroupEnd();
@@ -161,9 +168,10 @@ ShadingSystem::ShaderGroupEnd (void)
 
 
 bool
-ShadingSystem::Parameter (string_view name, TypeDesc t, const void *val)
+ShadingSystem::Parameter (ShaderGroup& group, string_view name, TypeDesc t,
+                          const void *val, bool lockgeom)
 {
-    return m_impl->Parameter (name, t, val);
+    return m_impl->Parameter (group, name, t, val, lockgeom);
 }
 
 
@@ -178,10 +186,30 @@ ShadingSystem::Parameter (string_view name, TypeDesc t, const void *val,
 
 
 bool
+ShadingSystem::Shader (ShaderGroup& group, string_view shaderusage,
+                       string_view shadername, string_view layername)
+{
+    return m_impl->Shader (group, shaderusage, shadername, layername);
+}
+
+
+
+bool
 ShadingSystem::Shader (string_view shaderusage, string_view shadername,
                        string_view layername)
 {
     return m_impl->Shader (shaderusage, shadername, layername);
+}
+
+
+
+bool
+ShadingSystem::ConnectShaders (ShaderGroup& group,
+                               string_view srclayer, string_view srcparam,
+                               string_view dstlayer, string_view dstparam)
+{
+    return m_impl->ConnectShaders (group, srclayer, srcparam,
+                                   dstlayer, dstparam);
 }
 
 
@@ -497,6 +525,17 @@ ShadingSystem::renderer () const
 bool
 ShadingSystem::archive_shadergroup (ShaderGroup *group, string_view filename)
 {
+    if (!group) {
+        m_impl->error ("archive_shadergroup: passed nullptr as group");
+        return false;
+    }
+    return m_impl->archive_shadergroup (*group, filename);
+}
+
+
+bool
+ShadingSystem::archive_shadergroup (ShaderGroup& group, string_view filename)
+{
     return m_impl->archive_shadergroup (group, filename);
 }
 
@@ -759,7 +798,6 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_force_derivs(false),
       m_allow_shader_replacement(false),
       m_exec_repeat(1),
-      m_in_group (false),
       m_stat_opt_locking_time(0), m_stat_specialization_time(0),
       m_stat_total_llvm_time(0),
       m_stat_llvm_setup_time(0), m_stat_llvm_irgen_time(0),
@@ -1803,7 +1841,7 @@ ShadingSystemImpl::getstats (int level) const
         << Strutil::timeintervalformat (m_stat_master_load_time, 2) << "\n";
     out << "  Shading groups:   " << m_stat_groups << "\n";
     out << "    Total instances in all groups: " << m_stat_groupinstances << "\n";
-    float iperg = (float)m_stat_groupinstances/std::max(m_stat_groups,1);
+    float iperg = (float)m_stat_groupinstances/std::max((int)m_stat_groups,1);
     out << "    Avg instances per group: "
         << Strutil::sprintf ("%.1f", iperg) << "\n";
     out << "  Shading contexts: " << m_stat_contexts << "\n";
@@ -1973,24 +2011,25 @@ bool
 ShadingSystemImpl::Parameter (string_view name, TypeDesc t, const void *val,
                               bool lockgeom)
 {
-    // We work very hard not to do extra copies of the data.  First,
-    // grow the pending list by one (empty) slot...
-    m_pending_params.grow();
-    // ...then initialize it in place
-    m_pending_params.back().init (name, t, 1, val);
-    // If we have a possible geometric override (lockgeom=false), set the
-    // param's interpolation to VERTEX rather than the default CONSTANT.
-    if (lockgeom == false)
-        m_pending_params.back().interp (OIIO::ParamValue::INTERP_VERTEX);
-    return true;
+    return Parameter (*m_curgroup, name, t, val, lockgeom);
 }
 
 
 
 bool
-ShadingSystemImpl::Parameter (string_view name, TypeDesc t, const void *val)
+ShadingSystemImpl::Parameter (ShaderGroup& group, string_view name,
+                              TypeDesc t, const void *val, bool lockgeom)
 {
-    return Parameter (name, t, val, true);
+    // We work very hard not to do extra copies of the data.  First,
+    // grow the pending list by one (empty) slot...
+    group.m_pending_params.grow();
+    // ...then initialize it in place
+    group.m_pending_params.back().init (name, t, 1, val);
+    // If we have a possible geometric override (lockgeom=false), set the
+    // param's interpolation to VERTEX rather than the default CONSTANT.
+    if (lockgeom == false)
+        group.m_pending_params.back().interp (OIIO::ParamValue::INTERP_VERTEX);
+    return true;
 }
 
 
@@ -1998,15 +2037,16 @@ ShadingSystemImpl::Parameter (string_view name, TypeDesc t, const void *val)
 ShaderGroupRef
 ShadingSystemImpl::ShaderGroupBegin (string_view groupname)
 {
-    if (m_in_group) {
-        error ("Nested ShaderGroupBegin() calls");
-        return ShaderGroupRef();
+    ShaderGroupRef group (new ShaderGroup(groupname));
+    group->m_exec_repeat = m_exec_repeat;
+    {
+        // Record the group in the SS's census of all extant groups
+        spin_lock lock (m_all_shader_groups_mutex);
+        m_all_shader_groups.push_back (group);
+        ++m_groups_to_compile_count;
+        m_curgroup = group;
     }
-    m_in_group = true;
-    m_group_use.clear();   // unknown/unset group
-    m_curgroup.reset (new ShaderGroup(groupname));
-    m_curgroup->m_exec_repeat = m_exec_repeat;
-    return m_curgroup;
+    return group;
 }
 
 
@@ -2014,16 +2054,30 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname)
 bool
 ShadingSystemImpl::ShaderGroupEnd (void)
 {
-    if (! m_in_group) {
+    if (! m_curgroup) {
         error ("ShaderGroupEnd() was called without ShaderGroupBegin()");
         return false;
     }
+    bool ok = ShaderGroupEnd (*m_curgroup);
+    m_curgroup.reset();  // no currently active group
+    return ok;
+}
+
+
+
+bool
+ShadingSystemImpl::ShaderGroupEnd (ShaderGroup& group)
+{
+    // Lock just in case we do something not thread-safe within
+    // ShaderGroupEnd. This may be overly cautious, but unless it shows
+    // up as a major bottleneck, I'm inclined to play it safe.
+    lock_guard lock (m_mutex);
 
     // Mark the layers that can be run lazily
-    if (! m_group_use.empty()) {
-        int nlayers = m_curgroup->nlayers ();
+    if (! group.m_group_use.empty()) {
+        int nlayers = group.nlayers ();
         for (int layer = 0;  layer < nlayers;  ++layer) {
-            ShaderInstance *inst = (*m_curgroup)[layer];
+            ShaderInstance *inst = group[layer];
             if (! inst)
                 continue;
             inst->last_layer (layer == nlayers-1);
@@ -2032,36 +2086,28 @@ ShadingSystemImpl::ShaderGroupEnd (void)
         // Merge instances now if they really want it bad, otherwise wait
         // until we optimize the group.
         if (m_opt_merge_instances >= 2)
-            merge_instances (*m_curgroup);
+            merge_instances (group);
     }
 
     // Merge the raytype_queries of all the individual layers
-    m_curgroup->m_raytype_queries = 0;
-    for (int layer = 0, n = m_curgroup->nlayers();  layer < n;  ++layer) {
-        ASSERT ((*m_curgroup)[layer]);
-        if (ShaderInstance *inst = (*m_curgroup)[layer])
-            m_curgroup->m_raytype_queries |= inst->master()->raytype_queries();
+    group.m_raytype_queries = 0;
+    for (int layer = 0, n = group.nlayers(); layer < n; ++layer) {
+        ASSERT (group[layer]);
+        if (ShaderInstance *inst = group[layer])
+            group.m_raytype_queries |= inst->master()->raytype_queries();
     }
-    // std::cout << "Group " << m_curgroup->name() << " ray query bits "
-    //         << m_curgroup->m_raytype_queries << "\n";
+    // std::cout << "Group " << group.name() << " ray query bits "
+    //         << group.m_raytype_queries << "\n";
 
-    {
-        // Record the group in the SS's census of all extant groups
-        spin_lock lock (m_all_shader_groups_mutex);
-        m_all_shader_groups.push_back (m_curgroup);
-        ++m_groups_to_compile_count;
-    }
-
-    m_in_group = false;
-    m_group_use.clear();  // Mark use as unset/unknown
-
-    ustring groupname = m_curgroup->name();
+    ustring groupname = group.name();
     if (groupname.size() && groupname == m_archive_groupname) {
         std::string filename = m_archive_filename.string();
         if (! filename.size())
             filename = OIIO::Filesystem::filename (groupname.string()) + ".tar.gz";
-        archive_shadergroup (m_curgroup.get(), filename);
+        archive_shadergroup (group, filename);
     }
+
+    group.m_complete = true;
     return true;
 }
 
@@ -2077,6 +2123,15 @@ ShadingSystemImpl::Shader (string_view shaderusage,
     if (singleton)
         ShaderGroupBegin ("");
 
+    return Shader (*m_curgroup, shaderusage, shadername, layername);
+}
+
+
+
+bool
+ShadingSystemImpl::Shader (ShaderGroup& group, string_view shaderusage,
+                           string_view shadername, string_view layername)
+{
     ShaderMaster::ref master = loadshader (shadername);
     if (! master) {
         error ("Could not find shader \"%s\"", shadername);
@@ -2092,30 +2147,27 @@ ShadingSystemImpl::Shader (string_view shaderusage,
     std::string local_layername;
     if (layername.empty()) {
         local_layername = OIIO::Strutil::sprintf ("%s_%d", master->shadername(),
-                                                 m_curgroup->nlayers());
+                                                 group.nlayers());
         layername = string_view (local_layername);
     }
 
     ShaderInstanceRef instance (new ShaderInstance (master, layername));
-    instance->parameters (m_pending_params);
-    m_pending_params.clear ();
+    instance->parameters (group.m_pending_params);
+    group.m_pending_params.clear ();
+    group.m_pending_params.shrink_to_fit ();
 
-    if (singleton || m_group_use.empty()) {
-        // A singleton, or the first in a group
-        m_curgroup->clear ();
+    if (group.m_group_use.empty()) {
+        // First in a group
+        group.clear ();
         m_stat_groups += 1;
-    }
-    if (! singleton) {
-        if (m_group_use.empty()) {  // First shader in group
-            m_group_use = shaderusage;
-        } else if (shaderusage != m_group_use) {
-            error ("Shader usage \"%s\" does not match current group (%s)",
-                   shaderusage, m_group_use);
-            return false;
-        }
+        group.m_group_use = shaderusage;
+    } else if (shaderusage != group.m_group_use) {
+        error ("Shader usage \"%s\" does not match current group (%s)",
+               shaderusage, group.m_group_use);
+        return false;
     }
 
-    m_curgroup->append (instance);
+    group.append (instance);
     m_stat_groupinstances += 1;
 
     // FIXME -- check for duplicate layer name within the group?
@@ -2129,12 +2181,22 @@ bool
 ShadingSystemImpl::ConnectShaders (string_view srclayer, string_view srcparam,
                                    string_view dstlayer, string_view dstparam)
 {
-    // Basic sanity checks -- make sure it's a legal time to call
-    // ConnectShaders, and that the layer and parameter names are not empty.
-    if (! m_in_group) {
+    if (! m_curgroup) {
         error ("ConnectShaders can only be called within ShaderGroupBegin/End");
         return false;
     }
+    return ConnectShaders (*m_curgroup, srclayer, srcparam, dstlayer, dstparam);
+}
+
+
+
+bool
+ShadingSystemImpl::ConnectShaders (ShaderGroup& group,
+                                   string_view srclayer, string_view srcparam,
+                                   string_view dstlayer, string_view dstparam)
+{
+    // Basic sanity checks
+    // ConnectShaders, and that the layer and parameter names are not empty.
     if (! srclayer.size() || ! srcparam.size()) {
         error ("ConnectShaders: badly formed source layer/parameter");
         return false;
@@ -2148,8 +2210,8 @@ ShadingSystemImpl::ConnectShaders (string_view srclayer, string_view srcparam,
     // pointers to the instances.  Error and return if they are not found,
     // or if it's not connecting an earlier src to a later dst.
     ShaderInstance *srcinst, *dstinst;
-    int srcinstindex = find_named_layer_in_group (ustring(srclayer), srcinst);
-    int dstinstindex = find_named_layer_in_group (ustring(dstlayer), dstinst);
+    int srcinstindex = find_named_layer_in_group (group, ustring(srclayer), srcinst);
+    int dstinstindex = find_named_layer_in_group (group, ustring(dstlayer), dstinst);
     if (! srcinst) {
         error ("ConnectShaders: source layer \"%s\" not found", srclayer);
         return false;
@@ -2487,14 +2549,6 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
 
 
 
-std::string
-ShadingSystemImpl::serialize_group (ShaderGroup *group)
-{
-    return group->serialize ();
-}
-
-
-
 bool
 ShadingSystemImpl::ReParameter (ShaderGroup &group, string_view layername_,
                                 string_view paramname,
@@ -2631,13 +2685,13 @@ ShadingSystemImpl::get_symbol (ShadingContext &ctx, ustring layername,
 
 
 int
-ShadingSystemImpl::find_named_layer_in_group (ustring layername,
+ShadingSystemImpl::find_named_layer_in_group (ShaderGroup& group,
+                                              ustring layername,
                                               ShaderInstance * &inst)
 {
     inst = NULL;
-    if (m_group_use.empty())
+    if (group.m_group_use.empty())
         return -1;
-    ShaderGroup &group (*m_curgroup);
     for (int i = 0;  i < group.nlayers();  ++i) {
         if (group[i]->layername() == layername) {
             inst = group[i];
@@ -2651,7 +2705,7 @@ ShadingSystemImpl::find_named_layer_in_group (ustring layername,
 
 ConnectedParam
 ShadingSystemImpl::decode_connected_param (string_view connectionname,
-                                   string_view layername, ShaderInstance *inst)
+                                string_view layername, ShaderInstance *inst)
 {
     ConnectedParam c;  // initializes to "invalid"
 
@@ -2967,7 +3021,7 @@ ShadingSystemImpl::optimize_all_groups (int nthreads, int mythread, int totalthr
                 spin_lock lock (m_all_shader_groups_mutex);
                 group = m_all_shader_groups[i].lock();
             }
-            if (group)
+            if (group && group->m_complete)
                 optimize_group (*group, ctx);
         }
     }
@@ -3100,7 +3154,7 @@ ShadingSystemImpl::merge_instances (ShaderGroup &group, bool post_opt)
 
 
 bool
-ShadingSystemImpl::archive_shadergroup (ShaderGroup *group, string_view filename)
+ShadingSystemImpl::archive_shadergroup (ShaderGroup& group, string_view filename)
 {
     std::string filename_base = OIIO::Filesystem::filename(filename);
     std::string extension;
@@ -3139,7 +3193,7 @@ ShadingSystemImpl::archive_shadergroup (ShaderGroup *group, string_view filename
     std::ofstream groupfile;
     OIIO::Filesystem::open(groupfile, groupfilename);
     if (groupfile.good()) {
-        groupfile << group->serialize();
+        groupfile << group.serialize();
         groupfile.close ();
     } else {
         error ("archive_shadergroup: Could not open shadergroup file");
@@ -3148,10 +3202,10 @@ ShadingSystemImpl::archive_shadergroup (ShaderGroup *group, string_view filename
 
     std::string filename_list = "shadergroup";
     {
-        std::lock_guard<ShaderGroup> lock (*group);
+        std::lock_guard<ShaderGroup> lock (group);
         std::set<std::string> entries;   // to avoid duplicates
-        for (int i = 0, nl = group->nlayers(); i < nl; ++i) {
-            std::string osofile = (*group)[i]->master()->osofilename();
+        for (int i = 0, nl = group.nlayers(); i < nl; ++i) {
+            std::string osofile = group[i]->master()->osofilename();
             std::string osoname = OIIO::Filesystem::filename (osofile);
             if (entries.find(osoname) == entries.end()) {
                 entries.insert (osoname);

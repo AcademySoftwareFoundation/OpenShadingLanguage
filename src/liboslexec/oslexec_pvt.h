@@ -514,13 +514,20 @@ public:
                        TypeDesc type, void *val);
     bool LoadMemoryCompiledShader (string_view shadername,
                                    string_view buffer);
-    bool Parameter (string_view name, TypeDesc t, const void *val);
+    bool Parameter (ShaderGroup& group, string_view name, TypeDesc t,
+                    const void *val, bool lockgeom);
     bool Parameter (string_view name, TypeDesc t, const void *val,
                     bool lockgeom);
+    bool Shader (ShaderGroup& group, string_view shaderusage,
+                 string_view shadername, string_view layername);
     bool Shader (string_view shaderusage, string_view shadername,
                  string_view layername);
     ShaderGroupRef ShaderGroupBegin (string_view groupname = string_view());
+    bool ShaderGroupEnd (ShaderGroup& group);
     bool ShaderGroupEnd (void);
+    bool ConnectShaders (ShaderGroup& group,
+                         string_view srclayer, string_view srcparam,
+                         string_view dstlayer, string_view dstparam);
     bool ConnectShaders (string_view srclayer, string_view srcparam,
                          string_view dstlayer, string_view dstparam);
     ShaderGroupRef ShaderGroupBegin (string_view groupname,
@@ -696,12 +703,9 @@ public:
     bool is_renderer_output (ustring layername, ustring paramname,
                              ShaderGroup *group) const;
 
-    /// Serialize/pickle a group description into text.
-    std::string serialize_group (ShaderGroup *group);
-
     /// Serialize the entire group, including oso files, into a compressed
     /// archive.
-    bool archive_shadergroup (ShaderGroup *group, string_view filename);
+    bool archive_shadergroup (ShaderGroup& group, string_view filename);
 
     void count_noise () { m_stat_noise_calls += 1; }
 
@@ -711,11 +715,12 @@ public:
 private:
     void printstats () const;
 
-    /// Find the index of the named layer in the current shader group.
+    /// Find the index of the named layer in the shader group.
     /// If found, return the index >= 0 and put a pointer to the instance
     /// in inst; if not found, return -1 and set inst to NULL.
     /// (This is a helper for ConnectShaders.)
-    int find_named_layer_in_group (ustring layername, ShaderInstance * &inst);
+    int find_named_layer_in_group (ShaderGroup& group,
+                                   ustring layername, ShaderInstance * &inst);
 
     /// Turn a connectionname (such as "Kd" or "Cout[1]", etc.) into a
     /// ConnectedParam descriptor.  This routine is strictly a helper for
@@ -838,12 +843,8 @@ private:
     std::vector<Color3> m_blackbody_table; ///< Precomputed blackbody table
     OIIO::ColorConfig m_colorconfig;      ///< OIIO/OCIO color configuration
 
-    // State
-    bool m_in_group;                      ///< Are we specifying a group?
-    std::string m_group_use;              ///< "Use" of group
-    ParamValueList m_pending_params;      ///< Pending Parameter() values
-    ShaderGroupRef m_curgroup;            ///< Current shading attribute state
-    mutable mutex m_mutex;                ///< Thread safety
+    // Thread safety
+    mutable mutex m_mutex;
     mutable boost::thread_specific_ptr<PerThreadInfo> m_perthread_info;
 
     // Stats
@@ -851,8 +852,8 @@ private:
     atomic_int m_stat_shaders_requested;  ///< Stat: shaders requested
     PeakCounter<int> m_stat_instances;    ///< Stat: instances
     PeakCounter<int> m_stat_contexts;     ///< Stat: shading contexts
-    int m_stat_groups;                    ///< Stat: shading groups
-    int m_stat_groupinstances;            ///< Stat: total inst in all groups
+    atomic_int m_stat_groups;             ///< Stat: shading groups
+    atomic_int m_stat_groupinstances;     ///< Stat: total inst in all groups
     atomic_int m_stat_instances_compiled; ///< Stat: instances compiled
     atomic_int m_stat_groups_compiled;    ///< Stat: groups compiled
     atomic_int m_stat_empty_instances;    ///< Stat: shaders empty after opt
@@ -912,6 +913,12 @@ private:
     ClosureRegistry m_closure_registry;
     std::vector<std::weak_ptr<ShaderGroup> > m_all_shader_groups;
     mutable spin_mutex m_all_shader_groups_mutex;
+
+    // State for entering shader groups -- this is only for the
+    // non-threadsafe calls to Parameter/etc that don't take a group
+    // reference.
+    ShaderGroupRef m_curgroup;
+
     atomic_int m_groups_to_compile_count;
     atomic_int m_threads_currently_compiling;
     mutable std::map<ustring,long long> m_group_profile_times;
@@ -1604,6 +1611,10 @@ private:
 
     // PTX assembly for compiled ShaderGroup
     std::string m_llvm_ptx_compiled_version;
+
+    ParamValueList m_pending_params;      ///< Pending Parameter() values
+    ustring m_group_use;                  ///< "Usage" of group
+    bool m_complete = false;              ///< Successfully ShaderGroupEnd?
 
     friend class OSL::pvt::ShadingSystemImpl;
     friend class OSL::pvt::BackendLLVM;

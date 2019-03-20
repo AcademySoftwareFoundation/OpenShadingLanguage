@@ -479,8 +479,8 @@ ASTcompound_initializer::codegen (Symbol *sym)
         return sym;
     }
 
-    error("Possible bug: compound_initializer codegen does not know how "
-          "to handle type %s", typespec());
+    error("Possible compiler bug: compound_initializer codegen does not "
+          "know how to handle type %s", typespec());
     return nullptr;
 }
 

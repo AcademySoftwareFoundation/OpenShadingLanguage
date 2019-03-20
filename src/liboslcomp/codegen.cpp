@@ -472,8 +472,16 @@ ASTcompound_initializer::codegen (Symbol *sym)
         return codegen_struct_initializers (initlist(), sym, true /*is_constructor*/);
     }
 
-	ASSERT(0 && "compound codegen");
-    return NULL;
+    if (m_typespec.is_sized_array()) {
+        if (!sym)
+            sym = m_compiler->make_temporary (m_typespec);
+        codegen_initlist (initlist(), m_typespec, sym);
+        return sym;
+    }
+
+    error("Possible bug: compound_initializer codegen does not know how "
+          "to handle type %s", typespec());
+    return nullptr;
 }
 
 

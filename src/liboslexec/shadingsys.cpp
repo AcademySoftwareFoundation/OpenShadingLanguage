@@ -2250,7 +2250,7 @@ ShadingSystemImpl::ConnectShaders (ShaderGroup& group,
         for (size_t i = 0;  i < (size_t)srcstruct->numfields();  ++i) {
             std::string s = Strutil::sprintf("%s.%s", srcparam, srcstruct->field(i).name);
             std::string d = Strutil::sprintf("%s.%s", dstparam, dststruct->field(i).name);
-            ConnectShaders (srclayer, s, dstlayer, d);
+            ConnectShaders (group, srclayer, s, dstlayer, d);
         }
         return true;
     }

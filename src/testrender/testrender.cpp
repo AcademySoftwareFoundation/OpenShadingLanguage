@@ -352,17 +352,23 @@ void parse_scene() {
                     for (pugi::xml_attribute attr = gnode.first_attribute(); attr; attr = attr.next_attribute()) {
                         int i = 0; float x = 0, y = 0, z = 0;
                         if (sscanf(attr.value(), " int %d ", &i) == 1)
-                            shadingsys->Parameter(attr.name(), TypeDesc::TypeInt, store.Int(i));
+                            shadingsys->Parameter(*group, attr.name(),
+                                                  TypeDesc::TypeInt, store.Int(i));
                         else if (sscanf(attr.value(), " float %f ", &x) == 1)
-                            shadingsys->Parameter(attr.name(), TypeDesc::TypeFloat, store.Float(x));
+                            shadingsys->Parameter(*group, attr.name(),
+                                                  TypeDesc::TypeFloat, store.Float(x));
                         else if (sscanf(attr.value(), " vector %f %f %f", &x, &y, &z) == 3)
-                            shadingsys->Parameter(attr.name(), TypeDesc::TypeVector, store.Vec(x, y, z));
+                            shadingsys->Parameter(*group, attr.name(),
+                                                  TypeDesc::TypeVector, store.Vec(x, y, z));
                         else if (sscanf(attr.value(), " point %f %f %f", &x, &y, &z) == 3)
-                            shadingsys->Parameter(attr.name(), TypeDesc::TypePoint, store.Vec(x, y, z));
+                            shadingsys->Parameter(*group, attr.name(),
+                                                  TypeDesc::TypePoint, store.Vec(x, y, z));
                         else if (sscanf(attr.value(), " color %f %f %f", &x, &y, &z) == 3)
-                            shadingsys->Parameter(attr.name(), TypeDesc::TypeColor, store.Vec(x, y, z));
+                            shadingsys->Parameter(*group, attr.name(),
+                                                  TypeDesc::TypeColor, store.Vec(x, y, z));
                         else
-                            shadingsys->Parameter(attr.name(), TypeDesc::TypeString, store.Str(attr.value()));
+                            shadingsys->Parameter(*group, attr.name(),
+                                                  TypeDesc::TypeString, store.Str(attr.value()));
                     }
                 } else if (strcmp(gnode.name(), "Shader") == 0) {
                     pugi::xml_attribute  type_attr = gnode.attribute("type");
@@ -370,7 +376,8 @@ void parse_scene() {
                     pugi::xml_attribute layer_attr = gnode.attribute("layer");
                     const char* type = type_attr ? type_attr.value() : "surface";
                     if (name_attr && layer_attr)
-                        shadingsys->Shader(type, name_attr.value(), layer_attr.value());
+                        shadingsys->Shader(*group, type, name_attr.value(),
+                                           layer_attr.value());
                 } else if (strcmp(gnode.name(), "ConnectShaders") == 0) {
                     // FIXME: find a more elegant way to encode this
                     pugi::xml_attribute  sl = gnode.attribute("srclayer");
@@ -378,13 +385,14 @@ void parse_scene() {
                     pugi::xml_attribute  dl = gnode.attribute("dstlayer");
                     pugi::xml_attribute  dp = gnode.attribute("dstparam");
                     if (sl && sp && dl && dp)
-                        shadingsys->ConnectShaders(sl.value(), sp.value(),
+                        shadingsys->ConnectShaders(*group,
+                                                   sl.value(), sp.value(),
                                                    dl.value(), dp.value());
                 } else {
                     // unknow element?
                 }
             }
-            shadingsys->ShaderGroupEnd();
+            shadingsys->ShaderGroupEnd(*group);
             shaders.push_back (group);
         } else {
             // unknown element?

@@ -111,7 +111,7 @@ static void
 inject_params ()
 {
     for (auto&& pv : params)
-        shadingsys->Parameter (pv.name(), pv.type(), pv.data(),
+        shadingsys->Parameter (*shadergroup, pv.name(), pv.type(), pv.data(),
                                pv.interp() == ParamValue::INTERP_CONSTANT);
 }
 
@@ -220,7 +220,7 @@ add_shader (int argc, const char *argv[])
     for (int i = 0;  i < argc;  i++) {
         inject_params ();
         shadernames.push_back (shadername);
-        shadingsys->Shader ("surface", shadername, layername);
+        shadingsys->Shader (*shadergroup, "surface", shadername, layername);
         layername.clear ();
         params.clear ();
     }
@@ -275,7 +275,7 @@ specify_expr (int argc, const char *argv[])
 
     inject_params ();
     shadernames.push_back (shadername);
-    shadingsys->Shader ("surface", shadername, layername);
+    shadingsys->Shader (*shadergroup, "surface", shadername, layername);
     layername.clear ();
     params.clear ();
 }
@@ -417,7 +417,7 @@ action_reparam (int argc, const char *argv[])
 static void
 action_groupspec (int argc, const char *argv[])
 {
-    shadingsys->ShaderGroupEnd ();
+    shadingsys->ShaderGroupEnd (*shadergroup);
     std::string groupspec (argv[1]);
     if (OIIO::Filesystem::exists (groupspec)) {
         // If it names a file, use the contents of the file as the group
@@ -1022,16 +1022,16 @@ test_shade (int argc, const char *argv[])
     // 
     // A shader group declaration typically looks like this:
     //
-    //   ShaderGroupRef shadergroup = ss->ShaderGroupBegin ();
-    //   ss->Parameter ("paramname", TypeDesc paramtype, void *value);
+    //   ShaderGroupRef group = ss->ShaderGroupBegin ();
+    //   ss->Parameter (*group, "paramname", TypeDesc paramtype, void *value);
     //      ... and so on for all the other parameters of...
-    //   ss->Shader ("shadertype", "shadername", "layername");
+    //   ss->Shader (*group, "shadertype", "shadername", "layername");
     //      The Shader() call creates a new instance, which gets
     //      all the pending Parameter() values made right before it.
     //   ... and other shader instances in this group, interspersed with...
-    //   ss->ConnectShaders ("layer1", "param1", "layer2", "param2");
+    //   ss->ConnectShaders (*group, "layer1", "param1", "layer2", "param2");
     //   ... and other connections ...
-    //   ss->ShaderGroupEnd ();
+    //   ss->ShaderGroupEnd (*group);
     // 
     // It looks so simple, and it really is, except that the way this
     // testshade program works is that all the Parameter() and Shader()
@@ -1074,10 +1074,11 @@ test_shade (int argc, const char *argv[])
                       << " to " << connections[i+2] << "." << connections[i+3]
                       << "\n";
             synchio();
-            bool ok = shadingsys->ConnectShaders (connections[i].c_str(),
-                                                  connections[i+1].c_str(),
-                                                  connections[i+2].c_str(),
-                                                  connections[i+3].c_str());
+            bool ok = shadingsys->ConnectShaders (*shadergroup,
+                                                  connections[i],
+                                                  connections[i+1],
+                                                  connections[i+2],
+                                                  connections[i+3]);
             if (!ok) {
                 return EXIT_FAILURE;
             }
@@ -1085,7 +1086,7 @@ test_shade (int argc, const char *argv[])
     }
 
     // End the group
-    shadingsys->ShaderGroupEnd ();
+    shadingsys->ShaderGroupEnd (*shadergroup);
 
     if (verbose || do_oslquery) {
         std::string pickle;

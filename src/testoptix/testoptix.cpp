@@ -392,7 +392,7 @@ void parse_scene() {
                     pugi::xml_attribute layer_attr = gnode.attribute("layer");
                     const char* type = type_attr ? type_attr.value() : "surface";
                     if (name_attr && layer_attr)
-                        shadingsys->Shader(group, type, name_attr.value(),
+                        shadingsys->Shader(*group, type, name_attr.value(),
                                            layer_attr.value());
                 } else if (strcmp(gnode.name(), "ConnectShaders") == 0) {
                     // FIXME: find a more elegant way to encode this
@@ -401,7 +401,7 @@ void parse_scene() {
                     pugi::xml_attribute  dl = gnode.attribute("dstlayer");
                     pugi::xml_attribute  dp = gnode.attribute("dstparam");
                     if (sl && sp && dl && dp)
-                        shadingsys->ConnectShaders(group, sl.value(), sp.value(),
+                        shadingsys->ConnectShaders(*group, sl.value(), sp.value(),
                                                    dl.value(), dp.value());
                 } else {
                     // unknow element?

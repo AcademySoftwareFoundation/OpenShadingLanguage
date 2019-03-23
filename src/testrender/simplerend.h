@@ -31,10 +31,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <map>
 #include <memory>
 #include <unordered_map>
+
+#include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/ustring.h>
+
 #include <OSL/oslexec.h>
+#include "raytracer.h"
+#include "sampling.h"
+#include "background.h"
+
 
 OSL_NAMESPACE_ENTER
+
 
 class SimpleRenderer : public RendererServices
 {
@@ -43,9 +51,9 @@ public:
     typedef Matrix44 Transformation;
 
     SimpleRenderer ();
-    ~SimpleRenderer () { }
+    virtual ~SimpleRenderer () { }
 
-    virtual int supports (string_view feature) const;
+    // RendererServices support:
     virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
                              TransformationPtr xform,
                              float time);
@@ -57,24 +65,63 @@ public:
                              ustring from);
     virtual bool get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
                                      ustring to, float time);
-
-    void name_transform (const char *name, const Transformation &xform);
-
-    virtual bool get_array_attribute (ShaderGlobals *sg, bool derivatives, 
+    virtual bool get_array_attribute (ShaderGlobals *sg, bool derivatives,
                                       ustring object, TypeDesc type, ustring name,
                                       int index, void *val );
     virtual bool get_attribute (ShaderGlobals *sg, bool derivatives, ustring object,
                                 TypeDesc type, ustring name, void *val);
-    virtual bool get_userdata (bool derivatives, ustring name, TypeDesc type, 
+    virtual bool get_userdata (bool derivatives, ustring name, TypeDesc type,
                                ShaderGlobals *sg, void *val);
+
+    void name_transform (const char *name, const Transformation &xform);
+
+    void attribute (string_view name, TypeDesc type, const void *value);
+    void attribute (string_view name, int value) {
+        attribute (name, TypeDesc::INT, &value);
+    }
+    void attribute (string_view name, float value) {
+        attribute (name, TypeDesc::FLOAT, &value);
+    }
+    void attribute (string_view name, string_view value) {
+        const char *s = value.c_str();
+        attribute (name, TypeDesc::STRING, &s);
+    }
+
+    OIIO::ParamValue * find_attribute (string_view name,
+                                       TypeDesc searchtype=OIIO::TypeUnknown,
+                                       bool casesensitive=false);
+    const OIIO::ParamValue *find_attribute (string_view name,
+                                            TypeDesc searchtype=OIIO::TypeUnknown,
+                                            bool casesensitive=false) const;
 
     // Super simple camera and display parameters.  Many options not
     // available, no motion blur, etc.
-    void camera_params (const Matrix44 &world_to_camera, ustring projection,
-                        float hfov, float hither, float yon,
-                        int xres, int yres);
-                        
+    virtual void camera_params (const Matrix44 &world_to_camera, ustring projection,
+                                float hfov, float hither, float yon,
+                                int xres, int yres);
+
+    virtual void prepare_render ();
+    virtual void warmup () { }
+    virtual void render (int xres, int yres);
+
+    // After render, get the pixels into pixelbuf, if they aren't already.
+    virtual void finalize_pixel_buffer () { }
+
+    Camera camera;
+    Scene scene;
+    Background background;
+    std::vector<ShaderGroupRef> shaders;
+    ShadingSystem *shadingsys = nullptr;
+    OIIO::ParamValueList options;
+    OIIO::ImageBuf pixelbuf;
+    int backgroundShaderID = -1;
+    int backgroundResolution = 0;
+    int aa = 1;
+    int max_bounces = 1000000;
+    int rr_depth = 5;
+
 private:
+
     // Camera parameters
     Matrix44 m_world_to_camera;
     ustring m_projection;
@@ -124,6 +171,13 @@ private:
     bool get_camera_screen_window (ShaderGlobals *sg, bool derivs, ustring object,
                          TypeDesc type, ustring name, void *val);
 
+    // CPU renderer helpers
+    void globals_from_hit(ShaderGlobals& sg, const Ray& r,
+                          const Dual2<float>& t, int id, bool flip);
+    Vec3 eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx);
+    Color3 subpixel_radiance(float x, float y, Sampler& sampler,
+                             ShadingContext* ctx);
+    Color3 antialias_pixel(int x, int y, ShadingContext* ctx);
 };
 
 OSL_NAMESPACE_EXIT

@@ -32,13 +32,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/oslexec.h>
 #include <OSL/device_string.h>
 
-#include <optix_world.h>
+#include <OSL/optix_compat.h>
 
-#include "stringtable.h"
+#include "../testrender/raytracer.h"
+#include "../testrender/optix_stringtable.h"
 
 OSL_NAMESPACE_ENTER
 
-struct Scene;
+
 
 class OptixRenderer : public RendererServices
 {
@@ -151,12 +152,13 @@ public:
     optix::Context& context()              { return m_context; }
     optix::Context& operator -> ()         { return context(); }
 
+    Camera camera;
+    Scene scene;
 private:
-
     std::vector<ShaderGroupRef> m_shaders;
     std::string                 m_materials_ptx;
 
-    StringTable           m_str_table;
+    OptiXStringTable      m_str_table;
     optix::Context        m_context;
     optix::Program        m_program;
     std::unordered_map<OIIO::ustring, optix::TextureSampler, OIIO::ustringHash> m_samplers;

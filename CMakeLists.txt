@@ -120,6 +120,10 @@ else ()
     add_definitions ("-DOSL_FAST_MATH=0")
 endif ()
 
+if (USE_OPTIX)
+    add_definitions ("-DOSL_USE_OPTIX=1")
+endif ()
+
 
 # Set the default namespace. For symbol hiding reasons, it's important that
 # the project name is a subset of the namespace name.

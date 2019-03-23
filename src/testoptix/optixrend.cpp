@@ -31,7 +31,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/imagebufalgo.h>
 
 #include "optixrend.h"
-#include "raytracer.h"
 
 #include "../liboslexec/splineimpl.h"
 
@@ -75,7 +74,7 @@ bool Scene::init (optix::Context optix_ctx, const std::string& renderer, std::st
     return true;
 }
 
-void Scene::finalize(optix::Context optix_ctx) {
+void Scene::finalize(optix::Context optix_ctx, OptixRenderer *rend) {
     // Create a GeometryGroup to contain the scene geometry
     optix::GeometryGroup geom_group = optix_ctx->createGeometryGroup();
 
@@ -111,10 +110,10 @@ void Scene::finalize(optix::Context optix_ctx) {
     }
 
     // Set the camera variables on the OptiX Context, to be used by the ray gen program
-    optix_ctx["eye" ]->setFloat (vec3_to_float3 (camera.eye));
-    optix_ctx["dir" ]->setFloat (vec3_to_float3 (camera.dir));
-    optix_ctx["cx"  ]->setFloat (vec3_to_float3 (camera.cx));
-    optix_ctx["cy"  ]->setFloat (vec3_to_float3 (camera.cy));
+    optix_ctx["eye" ]->setFloat (vec3_to_float3 (rend->camera.eye));
+    optix_ctx["dir" ]->setFloat (vec3_to_float3 (rend->camera.dir));
+    optix_ctx["cx"  ]->setFloat (vec3_to_float3 (rend->camera.cx));
+    optix_ctx["cy"  ]->setFloat (vec3_to_float3 (rend->camera.cy));
 }
 
 /// Return true if the texture handle (previously returned by
@@ -291,7 +290,7 @@ bool OptixRenderer::finalize(ShadingSystem* shadingsys, bool saveptx, Scene* sce
     }
 
     if (scene)
-        scene->finalize(m_context);
+        scene->finalize(m_context, this);
 
     // Create the output buffer
     optix::Buffer buffer = m_context->createBuffer(RT_BUFFER_OUTPUT, RT_FORMAT_FLOAT3, m_width, m_height);

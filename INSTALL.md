@@ -13,7 +13,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
 
 * A suitable C++11 compiler to build OSL itself, which may be any of:
    - GCC 4.8.5 or newer (through gcc 8)
-   - Clang 3.4 or newer (through clang 7)
+   - Clang 3.4 or newer (through clang 8)
    - Microsoft Visual Studio 2015 or newer
    - Intel C++ compiler icc version 13 (?) or newer
 
@@ -39,7 +39,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     DYLD_LIBRARY_PATH on OS X) and then OSL's build scripts will be able
     to find it.
 
-* **[LLVM](http://www.llvm.org) 5.0, 6.0, or 7.0**
+* **[LLVM](http://www.llvm.org) 5.0, 6.0, 7.0, or 8.0**
 
    Optionally, if Clang libraries are installed alongside LLVM, OSL will
    in most circumstances use Clang's internals for C-style preprocessing of

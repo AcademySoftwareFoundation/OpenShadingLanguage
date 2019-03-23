@@ -3191,7 +3191,12 @@ LLVMGEN (llvm_gen_spline)
         name += "v";
 
     args.push_back (rop.llvm_void_ptr (Result));
-    args.push_back (rop.llvm_load_value (Spline));
+    if (rop.use_optix() && Spline.typespec().is_string()) {
+        args.push_back (rop.llvm_load_device_string (Spline));
+    }
+    else {
+        args.push_back (rop.llvm_load_value (Spline));
+    }
     args.push_back (rop.llvm_void_ptr (Value)); // make things easy
     args.push_back (rop.llvm_void_ptr (Knots));
     if (has_knot_count)

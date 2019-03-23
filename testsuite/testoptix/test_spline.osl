@@ -1,0 +1,11 @@
+shader test_spline (output color Cout = 0)
+{
+    color colors[9] = { color(0,0,0), color(0,0,1), color(0,1,0), color(0,1,1),
+                        color(1,0,0), color(1,0,1), color(1,1,0), color(1,1,1),
+                        color(0,0,0) };
+
+    if (v < 0.5)
+        Cout = spline("constant", u, colors);
+    else
+        Cout = spline("linear", u, colors);
+}

@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2009-2010 Sony Pictures Imageworks Inc., et al.
+Copyright (c) 2009-2018 Sony Pictures Imageworks Inc., et al.
 All Rights Reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -27,11 +27,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 
-#include <iostream>
+#include <algorithm>
+#include <cmath>
 #include <fstream>
+#include <iostream>
 #include <string>
 #include <vector>
-#include <cmath>
 
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagebuf.h>
@@ -39,7 +40,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/argparse.h>
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/timer.h>
+#include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/thread.h>
+#include <OpenImageIO/parallel.h>
 
 #include <pugixml.hpp>
 
@@ -48,13 +51,19 @@ namespace pugi = OIIO::pugi;
 #endif
 
 #include <OSL/oslexec.h>
-#include "simplerend.h"
+#include <OSL/optix_compat.h>
+#include "optixrend.h"
 #include "raytracer.h"
-#include "background.h"
-#include "shading.h"
 #include "sampling.h"
+#include "shading.h"
+#include "simplerend.h"
 #include "util.h"
 
+
+// The pre-compiled renderer support library LLVM bitcode is embedded into the
+// testoptix executable and made available through these variables.
+extern int rend_llvm_compiled_ops_size;
+extern char rend_llvm_compiled_ops_block[];
 
 using namespace OSL;
 
@@ -65,6 +74,8 @@ static bool debug1 = false;
 static bool debug2 = false;
 static bool verbose = false;
 static bool runstats = false;
+static bool saveptx = false;
+static bool warmup = false;
 static bool profile = false;
 static bool O0 = false, O1 = false, O2 = false;
 static bool debugnan = false;
@@ -75,17 +86,15 @@ static std::string texoptions;
 static int xres = 640, yres = 480;
 static int aa = 1, max_bounces = 1000000, rr_depth = 5;
 static int num_threads = 0;
+static int iters = 1;
 static ErrorHandler errhandler;
-static SimpleRenderer rend;  // RendererServices
-static Camera camera;
-static Scene scene;
-static int backgroundShaderID = -1;
-static int backgroundResolution = 0;
-static Background background;
-static std::vector<ShaderGroupRef> shaders;
+static SimpleRenderer *rend = nullptr;
+//static OptixRenderer *optixrend = nullptr;
 static std::string scenefile, imagefile;
 static std::string shaderpath;
 static bool shadingsys_options_set = false;
+static bool use_optix = false;
+
 
 
 
@@ -133,19 +142,23 @@ void getargs(int argc, const char *argv[])
 {
     bool help = false;
     OIIO::ArgParse ap;
-    ap.options ("Usage:  testrender [options] scene.xml output.exr",
+    ap.options ("Usage:  testrender [options] scene.xml outputfilename",
                 "%*", get_filenames, "",
                 "--help", &help, "Print help message",
                 "-v", &verbose, "Verbose messages",
+                "--optix", &use_optix, "Use OptiX if available",
                 "--debug", &debug1, "Lots of debugging info",
                 "--debug2", &debug2, "Even more debugging info",
                 "--runstats", &runstats, "Print run statistics",
                 "--stats", &runstats, "", // DEPRECATED 1.7
                 "--profile", &profile, "Print profile information",
+                "--saveptx", &saveptx, "Save the generated PTX",
+                "--warmup", &warmup, "Perform a warmup launch",
                 "--res %d %d", &xres, &yres, "Make an W x H image",
                 "-r %d %d", &xres, &yres, "", // synonym for -res
                 "-aa %d", &aa, "Trace NxN rays per pixel",
                 "-t %d", &num_threads, "Render using N threads (default: auto-detect)",
+                "--iters %d", &iters, "Number of iterations",
                 "-O0", &O0, "Do no runtime shader optimization",
                 "-O1", &O1, "Do a little runtime shader optimization",
                 "-O2", &O2, "Do lots of runtime shader optimization",
@@ -239,7 +252,11 @@ private:
 };
 
 
-void parse_scene() {
+
+void
+parse_scene(SimpleRenderer* rend, Camera &camera, Scene& scene,
+            std::vector<ShaderGroupRef>& shaders)
+{
     // setup default camera (now that resolution is finalized)
     camera = Camera(Vec3(0,0,0), Vec3(0,0,-1), Vec3(0,1,0), 90.0f, xres, yres);
 
@@ -331,12 +348,12 @@ void parse_scene() {
         } else if (strcmp(node.name(), "Background") == 0) {
             pugi::xml_attribute res_attr = node.attribute("resolution");
             if (res_attr)
-                backgroundResolution = OIIO::Strutil::from_string<int>(res_attr.value());
-            backgroundShaderID = int(shaders.size()) - 1;
+                rend->backgroundResolution = OIIO::Strutil::from_string<int>(res_attr.value());
+            rend->backgroundShaderID = int(shaders.size()) - 1;
         } else if (strcmp(node.name(), "ShaderGroup") == 0) {
             ShaderGroupRef group;
             pugi::xml_attribute name_attr = node.attribute("name");
-            std::string name = name_attr? name_attr.value() : "";
+            std::string name = name_attr? name_attr.value() : "group";
             pugi::xml_attribute type_attr = node.attribute("type");
             std::string shadertype = type_attr ? type_attr.value() : "surface";
             pugi::xml_attribute commands_attr = node.attribute("commands");
@@ -405,309 +422,116 @@ void parse_scene() {
     }
 }
 
-void globals_from_hit(ShaderGlobals& sg, const Ray& r, const Dual2<float>& t, int id, bool flip) {
-    memset((char *)&sg, 0, sizeof(ShaderGlobals));
-    Dual2<Vec3> P = r.point(t);
-    sg.P = P.val(); sg.dPdx = P.dx(); sg.dPdy = P.dy();
-    Dual2<Vec3> N = scene.normal(P, id);
-    sg.Ng = sg.N = N.val();
-    Dual2<Vec2> uv = scene.uv(P, N, sg.dPdu, sg.dPdv, id);
-    sg.u = uv.val().x; sg.dudx = uv.dx().x; sg.dudy = uv.dy().x;
-    sg.v = uv.val().y; sg.dvdx = uv.dx().y; sg.dvdy = uv.dy().y;
-    sg.surfacearea = scene.surfacearea(id);
-    sg.I = r.d.val();
-    sg.dIdx = r.d.dx();
-    sg.dIdy = r.d.dy();
-    sg.backfacing = sg.N.dot(sg.I) > 0;
-    if (sg.backfacing) {
-        sg.N = -sg.N;
-        sg.Ng = -sg.Ng;
-    }
-    sg.flipHandedness = flip;
 
-    // In our SimpleRenderer, the "renderstate" itself just a pointer to
-    // the ShaderGlobals.
-    sg.renderstate = &sg;
-}
-
-Vec3 eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx) {
-    ShaderGlobals sg;
-    memset((char *)&sg, 0, sizeof(ShaderGlobals));
-    sg.I = dir.val();
-    sg.dIdx = dir.dx();
-    sg.dIdy = dir.dy();
-    shadingsys->execute(*ctx, *shaders[backgroundShaderID], sg);
-    return process_background_closure(sg.Ci);
-}
-
-Color3 subpixel_radiance(float x, float y, Sampler& sampler, ShadingContext* ctx) {
-    Ray r = camera.get(x, y);
-    Color3 path_weight(1, 1, 1);
-    Color3 path_radiance(0, 0, 0);
-    int prev_id = -1;
-    float bsdf_pdf = std::numeric_limits<float>::infinity(); // camera ray has only one possible direction
-    bool flip = false;
-    for (int b = 0; b <= max_bounces; b++) {
-        // trace the ray against the scene
-        Dual2<float> t; int id = prev_id;
-        if (!scene.intersect(r, t, id)) {
-            // we hit nothing? check background shader
-            if (backgroundShaderID >= 0) {
-                if (backgroundResolution > 0) {
-                    float bg_pdf = 0;
-                    Vec3 bg = background.eval(r.d.val(), bg_pdf);
-                    path_radiance += path_weight * bg * MIS::power_heuristic<MIS::WEIGHT_WEIGHT>(bsdf_pdf, bg_pdf);
-                } else {
-                    // we aren't importance sampling the background - so just run it directly
-                    path_radiance += path_weight * eval_background(r.d, ctx);
-                }
-            }
-            break;
-        }
-
-        // construct a shader globals for the hit point
-        ShaderGlobals sg;
-        globals_from_hit(sg, r, t, id, flip);
-        int shaderID = scene.shaderid(id);
-        if (shaderID < 0 || !shaders[shaderID]) break; // no shader attached? done
-
-        // execute shader and process the resulting list of closures
-        shadingsys->execute (*ctx, *shaders[shaderID], sg);
-        ShadingResult result;
-        bool last_bounce = b == max_bounces;
-        process_closure(result, sg.Ci, last_bounce);
-
-        // add self-emission
-        float k = 1;
-        if (scene.islight(id)) {
-            // figure out the probability of reaching this point
-            float light_pdf = scene.shapepdf(id, r.o.val(), sg.P);
-            k = MIS::power_heuristic<MIS::WEIGHT_EVAL>(bsdf_pdf, light_pdf);
-        }
-        path_radiance += path_weight * k * result.Le;
-
-        // last bounce? nothing left to do
-        if (last_bounce) break;
-
-        // build internal pdf for sampling between bsdf closures
-        result.bsdf.prepare(sg, path_weight, b >= rr_depth);
-
-        // get two random numbers
-        Vec3 s = sampler.get();
-        float xi = s.x;
-        float yi = s.y;
-        float zi = s.z;
-
-        // trace one ray to the background
-        if (backgroundResolution > 0) {
-            Dual2<Vec3> bg_dir;
-            float bg_pdf = 0, bsdf_pdf = 0;
-            Vec3 bg = background.sample(xi, yi, bg_dir, bg_pdf);
-            Color3 bsdf_weight = result.bsdf.eval(sg, bg_dir.val(), bsdf_pdf);
-            Color3 contrib = path_weight * bsdf_weight * bg * MIS::power_heuristic<MIS::WEIGHT_WEIGHT>(bg_pdf, bsdf_pdf);
-            if ((contrib.x + contrib.y + contrib.z) > 0) {
-                int shadow_id = id;
-                Ray shadow_ray = Ray(sg.P, bg_dir);
-                Dual2<float> shadow_dist;
-                if (!scene.intersect(shadow_ray, shadow_dist, shadow_id)) // ray reached the background?
-                    path_radiance += contrib;
-            }
-        }
-
-        // trace one ray to each light
-        for (int lid = 0; lid < scene.num_prims(); lid++) {
-            if (lid == id) continue; // skip self
-            if (!scene.islight(lid)) continue; // doesn't want to be sampled as a light
-            int shaderID = scene.shaderid(lid);
-            if (shaderID < 0 || !shaders[shaderID]) continue; // no shader attached to this light
-            // sample a random direction towards the object
-            float light_pdf;
-            Vec3 ldir = scene.sample(lid, sg.P, xi, yi, light_pdf);
-            float bsdf_pdf = 0;
-            Color3 bsdf_weight = result.bsdf.eval(sg, ldir, bsdf_pdf);
-            Color3 contrib = path_weight * bsdf_weight * MIS::power_heuristic<MIS::EVAL_WEIGHT>(light_pdf, bsdf_pdf);
-            if ((contrib.x + contrib.y + contrib.z) > 0) {
-                Ray shadow_ray = Ray(sg.P, ldir);
-                // trace a shadow ray and see if we actually hit the target
-                // in this tiny renderer, tracing a ray is probably cheaper than evaluating the light shader
-                int shadow_id = id; // ignore self hit
-                Dual2<float> shadow_dist;
-                if (scene.intersect(shadow_ray, shadow_dist, shadow_id) && shadow_id == lid) {
-                    // setup a shader global for the point on the light
-                    ShaderGlobals light_sg;
-                    globals_from_hit(light_sg, shadow_ray, shadow_dist, lid, false);
-                    // execute the light shader (for emissive closures only)
-                    shadingsys->execute (*ctx, *shaders[shaderID], light_sg);
-                    ShadingResult light_result;
-                    process_closure(light_result, light_sg.Ci, true);
-                    // accumulate contribution
-                    path_radiance += contrib * light_result.Le;
-                }
-            }
-        }
-
-        // trace indirect ray and continue
-        path_weight *= result.bsdf.sample(sg, xi, yi, zi, r.d, bsdf_pdf);
-        if (!(path_weight.x > 0) && !(path_weight.y > 0) && !(path_weight.z > 0))
-            break; // filter out all 0's or NaNs
-        prev_id = id;
-        r.o = Dual2<Vec3>(sg.P, sg.dPdx, sg.dPdy);
-        flip ^= sg.Ng.dot(r.d.val()) > 0;
-    }
-    return path_radiance;
-}
-
-Color3 antialias_pixel(int x, int y, ShadingContext* ctx) {
-    Color3 result(0, 0, 0);
-    for (int ay = 0, si = 0; ay < aa; ay++) {
-        for (int ax = 0; ax < aa; ax++, si++) {
-        	Sampler sampler(x, y, si, aa);
-            // jitter pixel coordinate [0,1)^2
-        	Vec3 j = sampler.get();
-            // warp distribution to approximate a tent filter [-1,+1)^2
-            j.x *= 2; j.x = j.x < 1 ? sqrtf(j.x) - 1 : 1 - sqrtf(2 - j.x);
-            j.y *= 2; j.y = j.y < 1 ? sqrtf(j.y) - 1 : 1 - sqrtf(2 - j.y);
-            // trace eye ray (apply jitter from center of the pixel)
-            result += subpixel_radiance(x + 0.5f + j.x, y + 0.5f + j.y, sampler, ctx);
-        }
-    }
-    return result / float(aa * aa);
-}
-
-void scanline_worker(Counter& counter, std::vector<Color3>& pixels) {
-    // Request an OSL::PerThreadInfo for this thread.
-    OSL::PerThreadInfo *thread_info = shadingsys->create_thread_info();
-
-    // Request a shading context so that we can execute the shader.
-    // We could get_context/release_context for each shading point,
-    // but to save overhead, it's more efficient to reuse a context
-    // within a thread.
-    ShadingContext *ctx = shadingsys->get_context (thread_info);
-
-    int y;
-    while (counter.getnext(y)) {
-        for (int x = 0, i = xres * y;  x < xres;  ++x, ++i)
-            pixels[i] = antialias_pixel(x, y, ctx);
-    }
-
-    // We're done shading with this context.
-    shadingsys->release_context (ctx);
-    shadingsys->destroy_thread_info(thread_info);
-}
 
 
 } // anonymous namespace
 
-int main (int argc, const char *argv[]) {
-    using namespace OIIO;
-    Timer timer;
 
-    // Create a new shading system.  We pass it the RendererServices
-    // object that services callbacks from the shading system, NULL for
-    // the TextureSystem (which will create a default OIIO one), and
-    // an error handler.
-    shadingsys = new ShadingSystem (&rend, NULL, &errhandler);
 
-    // Register the layout of all closures known to this renderer
-    // Any closure used by the shader which is not registered, or
-    // registered with a different number of arguments will lead
-    // to a runtime error.
-    register_closures(shadingsys);
+int
+main (int argc, const char *argv[])
+{
+    try {
+        using namespace OIIO;
+        Timer timer;
 
-    // Remember that each shader parameter may optionally have a
-    // metadata hint [[int lockgeom=...]], where 0 indicates that the
-    // parameter may be overridden by the geometry itself, for example
-    // with data interpolated from the mesh vertices, and a value of 1
-    // means that it is "locked" with respect to the geometry (i.e. it
-    // will not be overridden with interpolated or
-    // per-geometric-primitive data).
-    // 
-    // In order to most fully optimize the shader, we typically want any
-    // shader parameter not explicitly specified to default to being
-    // locked (i.e. no per-geometry override):
-    shadingsys->attribute("lockgeom", 1);
+        // Read command line arguments
+        getargs (argc, argv);
 
-    // Read command line arguments
-    getargs (argc, argv);
+        if (use_optix)
+            rend = new OptixRenderer;
+        else
+            rend = new SimpleRenderer;
 
-    // Setup common attributes
-    set_shadingsys_options();
+        // Create a new shading system.  We pass it the RendererServices
+        // object that services callbacks from the shading system, NULL for
+        // the TextureSystem (which will create a default OIIO one), and
+        // an error handler.
+        shadingsys = new ShadingSystem (rend, NULL, &errhandler);
+        rend->shadingsys = shadingsys;
 
-    // Loads a scene, creating camera, geometry and assigning shaders
-    parse_scene();
+        // Other renderer and global options
+        rend->attribute("saveptx", (int)saveptx);
+        rend->attribute("max_bounces", max_bounces);
+        rend->attribute("rr_depth", rr_depth);
+        rend->attribute("aa", aa);
+        OIIO::attribute("threads", num_threads);
 
-    // validate options
-    if (aa < 1) aa = 1;
-    if (num_threads < 1)
-        num_threads = std::thread::hardware_concurrency();
+        // Register the layout of all closures known to this renderer
+        // Any closure used by the shader which is not registered, or
+        // registered with a different number of arguments will lead
+        // to a runtime error.
+        register_closures(shadingsys);
 
-    // prepare background importance table (if requested)
-    if (backgroundResolution > 0 && backgroundShaderID >= 0) {
-        // get a context so we can make several background shader calls
-        OSL::PerThreadInfo *thread_info = shadingsys->create_thread_info();
-        ShadingContext *ctx = shadingsys->get_context (thread_info);
+        // Setup common attributes
+        set_shadingsys_options();
 
-        // build importance table to optimize background sampling
-        background.prepare(backgroundResolution, eval_background, ctx);
+        // Loads a scene, creating camera, geometry and assigning shaders
+        parse_scene(rend, rend->camera, rend->scene, rend->shaders);
 
-        // release context
-        shadingsys->release_context (ctx);
-        shadingsys->destroy_thread_info(thread_info);
-    } else {
-        // we aren't directly evaluating the background
-        backgroundResolution = 0;
+        rend->prepare_render ();
+
+        rend->pixelbuf.reset (ImageSpec(xres, yres, 3, TypeDesc::FLOAT));
+
+        double setuptime = timer.lap ();
+
+        if (warmup)
+            rend->warmup();
+        double warmuptime = timer.lap ();
+
+        // Launch the kernel to render the scene
+        for (int i = 0; i < iters; ++i)
+            rend->render (xres, yres);
+        double runtime = timer.lap ();
+
+        rend->finalize_pixel_buffer ();
+
+        // Write image to disk
+        if (Strutil::iends_with (imagefile, ".jpg") ||
+            Strutil::iends_with (imagefile, ".jpeg") ||
+            Strutil::iends_with (imagefile, ".gif") ||
+            Strutil::iends_with (imagefile, ".png")) {
+            // JPEG, GIF, and PNG images should be automatically saved as sRGB
+            // because they are almost certainly supposed to be displayed on web
+            // pages.
+            ImageBufAlgo::colorconvert (rend->pixelbuf, rend->pixelbuf,
+                                        "linear", "sRGB", false, "", "");
+        }
+        rend->pixelbuf.set_write_format (TypeDesc::HALF);
+        if (! rend->pixelbuf.write (imagefile))
+            errhandler.error ("Unable to write output image: %s",
+                              rend->pixelbuf.geterror());
+
+        // Print some debugging info
+        if (debug1 || runstats || profile) {
+            double writetime = timer.lap();
+            std::cout << "\n";
+            std::cout << "Setup : " << OIIO::Strutil::timeintervalformat (setuptime,4) << "\n";
+            if (warmup) {
+                std::cout << "Warmup: " << OIIO::Strutil::timeintervalformat (warmuptime,4) << "\n";
+            }
+            std::cout << "Run   : " << OIIO::Strutil::timeintervalformat (runtime,4) << "\n";
+            std::cout << "Write : " << OIIO::Strutil::timeintervalformat (writetime,4) << "\n";
+            std::cout << "\n";
+            std::cout << shadingsys->getstats (5) << "\n";
+            OIIO::TextureSystem *texturesys = shadingsys->texturesys();
+            if (texturesys)
+                std::cout << texturesys->getstats (5) << "\n";
+            std::cout << ustring::getstats() << "\n";
+        }
+
+        // We're done with the shading system now, destroy it
+        rend->shaders.clear ();  // Must release the group refs first
+        delete shadingsys;
+        delete rend;
+#ifdef OSL_USE_OPTIX
+    } catch (const optix::Exception& e) {
+        printf("Optix Error: %s\n", e.what());
+#endif
+    } catch (const std::exception& e) {
+        printf("Unknown Error: %s\n", e.what());
     }
-
-    double setuptime = timer.lap ();
-
-    // Local memory for the pixels
-    std::vector<Color3> pixels(xres * yres, Color3(0,0,0));
-    // Make an ImageBuf that wraps it ('pixels' still owns the memory)
-    ImageBuf pixelbuf (ImageSpec(xres, yres, 3, TypeDesc::FLOAT), pixels.data());
-
-    // Create shared counter to iterate over one scanline at a time
-    Counter scanline_counter(errhandler, yres, "Rendering");
-    // launch a scanline worker for each thread
-    OIIO::thread_group workers;
-    for (int i = 0; i < num_threads; i++)
-        workers.add_thread(new std::thread (scanline_worker, std::ref(scanline_counter), std::ref(pixels)));
-    workers.join_all();
-    double runtime = timer.lap();
-
-    // Write image to disk
-    if (Strutil::iends_with (imagefile, ".jpg") ||
-        Strutil::iends_with (imagefile, ".jpeg") ||
-        Strutil::iends_with (imagefile, ".gif") ||
-        Strutil::iends_with (imagefile, ".png")) {
-        // JPEG, GIF, and PNG images should be automatically saved as sRGB
-        // because they are almost certainly supposed to be displayed on web
-        // pages.
-        ImageBufAlgo::colorconvert (pixelbuf, pixelbuf,
-                                    "linear", "sRGB", false, "", "");
-    }
-    pixelbuf.set_write_format (TypeDesc::HALF);
-    if (! pixelbuf.write (imagefile))
-        errhandler.error ("Unable to write output image: %s",
-                          pixelbuf.geterror().c_str());
-
-    // Print some debugging info
-    if (debug1 || runstats || profile) {
-        double writetime = timer.lap();
-        std::cout << "\n";
-        std::cout << "Setup: " << OIIO::Strutil::timeintervalformat (setuptime,2) << "\n";
-        std::cout << "Run  : " << OIIO::Strutil::timeintervalformat (runtime,2) << "\n";
-        std::cout << "Write: " << OIIO::Strutil::timeintervalformat (writetime,2) << "\n";
-        std::cout << "\n";
-        std::cout << shadingsys->getstats (5) << "\n";
-        OIIO::TextureSystem *texturesys = shadingsys->texturesys();
-        if (texturesys)
-            std::cout << texturesys->getstats (5) << "\n";
-        std::cout << ustring::getstats() << "\n";
-    }
-
-    // We're done with the shading system now, destroy it
-    shaders.clear ();  // Must release the group refs first
-    delete shadingsys;
 
     return EXIT_SUCCESS;
 }

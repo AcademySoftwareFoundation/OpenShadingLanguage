@@ -2,25 +2,25 @@
 
 set ( testoptix_srcs
     optixrend.cpp
-    shading.cpp
-    stringtable.cpp
+    ../testrender/shading.cpp
+    ../testrender/optix_stringtable.cpp
     testoptix.cpp
     )
 
 set ( testoptix_cuda_srcs
-    cuda/quad.cu
-    cuda/renderer.cu
-    cuda/sphere.cu
-    cuda/tex_renderer.cu
-    cuda/wrapper.cu
+    ../testrender/cuda/quad.cu
+    ../testrender/cuda/renderer.cu
+    ../testrender/cuda/sphere.cu
+    ../testrender/cuda/tex_renderer.cu
+    ../testrender/cuda/wrapper.cu
     )
 
 set ( testoptix_cuda_headers
-    cuda/rend_lib.h
+    ../testrender/cuda/rend_lib.h
     )
 
 LLVM_COMPILE_CUDA (
-    ${CMAKE_CURRENT_SOURCE_DIR}/cuda/rend_lib.cu
+    ${CMAKE_CURRENT_SOURCE_DIR}/../testrender/cuda/rend_lib.cu
     ${testoptix_cuda_headers}
     "rend_llvm_compiled_ops"
     rend_lib_bc_cpp

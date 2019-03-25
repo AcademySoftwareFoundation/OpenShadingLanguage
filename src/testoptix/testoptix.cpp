@@ -518,6 +518,7 @@ main (int argc, const char *argv[])
         // Control destruction order
         rend->clear ();
         delete shadingsys;
+        delete rend;
 
     } catch (const optix::Exception& e) {
         printf("Optix Error: %s\n", e.what());

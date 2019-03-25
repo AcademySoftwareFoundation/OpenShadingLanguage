@@ -77,6 +77,16 @@ public:
     virtual void render (int xres, int yres);
     virtual void finalize_pixel_buffer ();
 
+    // Create the optix-program, for the given resolution
+    //
+    virtual bool init(const std::string& progName, int xres, int yres, Scene* = nullptr);
+
+    // Convert the OSL ShaderGroups accumulated during scene parsing into
+    // OptiX Materials and set up the OptiX scene graph
+    virtual bool finalize(ShadingSystem* shadingsys, bool saveptx, Scene* scene = nullptr);
+
+    virtual void clear();
+
     // Easy way to do Optix calls on the OptixRenderer
     optix::Context& context()      { return optix_ctx; }
     optix::Context& operator -> () { return optix_ctx; }

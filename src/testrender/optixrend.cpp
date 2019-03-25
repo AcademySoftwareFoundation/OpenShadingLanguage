@@ -344,6 +344,148 @@ OptixRenderer::get_texture_handle (ustring filename)
 
 
 
+bool OptixRenderer::init(const std::string& progName, int xres, int yres, Scene* scene)
+{
+#ifdef OSL_USE_OPTIX
+    // Set up the OptiX context
+    m_context = optix::Context::create();
+    m_width  = xres;
+    m_height = yres;
+
+    ASSERT ((m_context->getEnabledDeviceCount() == 1) &&
+            "Only one CUDA device is currently supported");
+
+    m_context->setRayTypeCount (2);
+    m_context->setEntryPointCount (1);
+    m_context->setStackSize (2048);
+    m_context->setPrintEnabled (true);
+
+    // Load the renderer CUDA source and generate PTX for it
+    std::string rendererPTX;
+    if (! loadPtxFromFile(progName, rendererPTX))
+        return false;
+
+    // Create the OptiX programs and set them on the optix::Context
+    m_program = m_context->createProgramFromPTXString(rendererPTX, "raygen");
+    m_context->setRayGenerationProgram (0, m_program);
+
+    // Set up the string table. This allocates a block of CUDA device memory to
+    // hold all of the static strings used by the OSL shaders. The strings can
+    // be accessed via OptiX variables that hold pointers to the table entries.
+    m_str_table.init(m_context);
+
+    {
+        optix::Buffer buffer = m_context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER);
+        buffer->setElementSize(sizeof(pvt::Spline::SplineBasis));
+        buffer->setSize(sizeof(pvt::Spline::gBasisSet)/sizeof(pvt::Spline::SplineBasis));
+
+        pvt::Spline::SplineBasis* basis = (pvt::Spline::SplineBasis*) buffer->map();
+        ::memcpy(basis, &pvt::Spline::gBasisSet[0], sizeof(pvt::Spline::gBasisSet));
+        buffer->unmap();
+        m_context[OSL_NAMESPACE_STRING "::pvt::Spline::gBasisSet"]->setBuffer(buffer);
+    }
+
+    if (scene && ! scene->init(m_context, rendererPTX, m_materials_ptx))
+        return false;
+
+    return static_cast<bool>(m_program);
+#else
+    return true;
+#endif
+}
+
+
+bool
+OptixRenderer::finalize(ShadingSystem* shadingsys, bool saveptx, Scene* scene)
+{
+#ifdef OSL_USE_OPTIX
+    int curMtl = 0;
+    optix::Program closest_hit, any_hit;
+    if (scene) {
+        closest_hit = m_context->createProgramFromPTXString(m_materials_ptx, "closest_hit_osl");
+        any_hit = m_context->createProgramFromPTXString(m_materials_ptx, "any_hit_shadow");
+    }
+
+    const char* outputs = "Cout";
+
+    // Optimize each ShaderGroup in the scene, and use the resulting PTX to create
+    // OptiX Programs which can be called by the closest hit program in the wrapper
+    // to execute the compiled OSL shader.
+    for (auto&& groupref : m_shaders) {
+        if (!scene && outputs) {
+            shadingsys->attribute (groupref.get(), "renderer_outputs", TypeDesc(TypeDesc::STRING, 1), &outputs);
+        }
+
+        shadingsys->optimize_group (groupref.get(), nullptr);
+
+        if (!scene && outputs) {
+            if (!shadingsys->find_symbol (*groupref.get(), ustring(outputs))) {
+                std::cout << "Requested output '" << outputs << "', which wasn't found\n";
+            }
+        }
+
+        std::string group_name, init_name, entry_name;
+        shadingsys->getattribute (groupref.get(), "groupname",        group_name);
+        shadingsys->getattribute (groupref.get(), "group_init_name",  init_name);
+        shadingsys->getattribute (groupref.get(), "group_entry_name", entry_name);
+
+        // Retrieve the compiled ShaderGroup PTX
+        std::string osl_ptx;
+        shadingsys->getattribute (groupref.get(), "ptx_compiled_version",
+                                  OSL::TypeDesc::PTR, &osl_ptx);
+
+        if (osl_ptx.empty()) {
+            std::cerr << "Failed to generate PTX for ShaderGroup "
+                      << group_name << std::endl;
+            return false;
+        }
+
+        if (saveptx) {
+            std::ofstream out (group_name + "_" + std::to_string(curMtl++) + ".ptx");
+            out << osl_ptx;
+            out.close();
+        }
+
+        // Create Programs from the init and group_entry functions, and 
+        // set the OSL functions as Callable Programs so that they can be
+        // executed by the closest hit program in the wrapper
+        //
+        optix::Program osl_init = m_context->createProgramFromPTXString(osl_ptx, init_name);
+        optix::Program osl_group = m_context->createProgramFromPTXString(osl_ptx, entry_name);
+
+        if (scene) {
+            // Create a new Material using the wrapper PTX
+            scene->optix_mtls.emplace_back(m_context->createMaterial());
+
+            optix::Material& mtl = scene->optix_mtls.back();
+            mtl->setClosestHitProgram (0, closest_hit);
+            mtl->setAnyHitProgram (1, any_hit);
+
+            mtl["osl_init_func" ]->setProgramId (osl_init );
+            mtl["osl_group_func"]->setProgramId (osl_group);
+        } else {
+            m_program["osl_init_func" ]->setProgramId (osl_init );
+            m_program["osl_group_func"]->setProgramId (osl_group);
+        }
+    }
+
+    if (scene)
+        scene->finalize(m_context, this);
+
+    // Create the output buffer
+    optix::Buffer buffer = m_context->createBuffer(RT_BUFFER_OUTPUT, RT_FORMAT_FLOAT3, m_width, m_height);
+    m_context["output_buffer"]->set(buffer);
+
+    m_context["invw"]->setFloat (1.f / float(m_width));
+    m_context["invh"]->setFloat (1.f / float(m_height));
+    m_context->validate();
+#endif
+
+    return true;
+}
+
+
+
 void
 OptixRenderer::prepare_render()
 {
@@ -403,6 +545,19 @@ OptixRenderer::finalize_pixel_buffer ()
     pixelbuf.set_pixels (OIIO::ROI::All(), OIIO::TypeFloat, buffer_ptr);
 #endif
 }
+
+
+
+void
+OptixRenderer::clear()
+{
+    shaders.clear();
+#ifdef OSL_USE_OPTIX
+    if (optix_ctx)
+        optix_ctx->destroy();
+#endif
+}
+
 
 OSL_NAMESPACE_EXIT
 

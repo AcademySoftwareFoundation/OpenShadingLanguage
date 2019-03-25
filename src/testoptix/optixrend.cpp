@@ -172,6 +172,7 @@ RendererServices::TextureHandle* OptixRenderer::get_texture_handle (ustring file
 
 bool OptixRenderer::init(const std::string& progName, int xres, int yres, Scene* scene)
 {
+#ifdef OSL_USE_OPTIX
     // Set up the OptiX context
     m_context = optix::Context::create();
     m_width  = xres;
@@ -214,11 +215,16 @@ bool OptixRenderer::init(const std::string& progName, int xres, int yres, Scene*
         return false;
 
     return static_cast<bool>(m_program);
+#else
+    return true;
+#endif
 }
 
 
-bool OptixRenderer::finalize(ShadingSystem* shadingsys, bool saveptx, Scene* scene)
+bool
+OptixRenderer::finalize(ShadingSystem* shadingsys, bool saveptx, Scene* scene)
 {
+#ifdef OSL_USE_OPTIX
     int curMtl = 0;
     optix::Program closest_hit, any_hit;
     if (scene) {
@@ -299,9 +305,12 @@ bool OptixRenderer::finalize(ShadingSystem* shadingsys, bool saveptx, Scene* sce
     m_context["invw"]->setFloat (1.f / float(m_width));
     m_context["invh"]->setFloat (1.f / float(m_height));
     m_context->validate();
+#endif
 
     return true;
 }
+
+
 
 std::vector<OSL::Color3>
 OptixRenderer::getPixelBuffer(const std::string& buffer_name, int width, int height)
@@ -352,10 +361,34 @@ OptixRenderer::saveImage(const std::string& buffer_name, int width, int height,
     return false;
 }
 
+
+
 void
-OptixRenderer::clear() {
+OptixRenderer::warmup()
+{
+#ifdef OSL_USE_OPTIX
+    // Perform a tiny launch to warm up the OptiX context
+    optix_ctx->launch (0, 1, 1);
+#endif
+}
+
+
+
+void
+OptixRenderer::render(int xres, int yres)
+{
+#ifdef OSL_USE_OPTIX
+    optix_ctx->launch (0, xres, yres);
+#endif
+}
+
+
+
+void
+OptixRenderer::clear()
+{
     m_shaders.clear();
-    m_context->destroy();
+    context()->destroy();
 }
 
 OSL_NAMESPACE_EXIT

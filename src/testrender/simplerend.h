@@ -107,6 +107,16 @@ public:
     // After render, get the pixels into pixelbuf, if they aren't already.
     virtual void finalize_pixel_buffer () { }
 
+    // Create the optix-program, for the given resolution
+    //
+    virtual bool init(const std::string& progName, int xres, int yres, Scene* = nullptr) { return false; }
+
+    // Convert the OSL ShaderGroups accumulated during scene parsing into
+    // OptiX Materials and set up the OptiX scene graph
+    virtual bool finalize(ShadingSystem* shadingsys, bool saveptx, Scene* scene = nullptr) { return false; }
+
+    virtual void clear();
+
     Camera camera;
     Scene scene;
     Background background;

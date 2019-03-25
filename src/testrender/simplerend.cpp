@@ -723,4 +723,11 @@ SimpleRenderer::render (int xres, int yres)
 
 
 
+void
+SimpleRenderer::clear()
+{
+    shaders.clear();
+}
+
+
 OSL_NAMESPACE_EXIT

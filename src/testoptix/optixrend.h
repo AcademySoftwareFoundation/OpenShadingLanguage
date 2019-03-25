@@ -48,7 +48,7 @@ public:
     typedef Matrix44 Transformation;
 
     OptixRenderer () { }
-    ~OptixRenderer () { }
+    virtual ~OptixRenderer () { }
 
     uint64_t register_string (const std::string& str, const std::string& var_name)
     {
@@ -126,12 +126,12 @@ public:
 
     // Create the optix-program, for the given resolution
     //
-    bool init(const std::string& progName, int xres, int yres, Scene* = nullptr);
+    virtual bool init(const std::string& progName, int xres, int yres, Scene* = nullptr);
 
     // Convert the OSL ShaderGroups accumulated during scene parsing into
     // OptiX Materials and set up the OptiX scene graph
     //
-    bool finalize(ShadingSystem* shadingsys, bool saveptx, Scene* scene = nullptr);
+    virtual bool finalize(ShadingSystem* shadingsys, bool saveptx, Scene* scene = nullptr);
 
     // Copies the specified device buffer into an output vector, assuming that
     // the buffer is in FLOAT3 format (and that Vec3 and float3 have the same
@@ -143,7 +143,7 @@ public:
     saveImage(const std::string& buffer_name, int width, int height,
               const std::string& imagefile, OIIO::ErrorHandler* errHandler);
 
-    void clear();
+    virtual void clear();
 
     // ShaderGroupRef storage
     std::vector<ShaderGroupRef>& shaders() { return m_shaders; }

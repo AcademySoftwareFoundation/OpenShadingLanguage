@@ -89,7 +89,6 @@ static int num_threads = 0;
 static int iters = 1;
 static ErrorHandler errhandler;
 static SimpleRenderer *rend = nullptr;
-//static OptixRenderer *optixrend = nullptr;
 static std::string scenefile, imagefile;
 static std::string shaderpath;
 static bool shadingsys_options_set = false;
@@ -521,8 +520,7 @@ main (int argc, const char *argv[])
             std::cout << ustring::getstats() << "\n";
         }
 
-        // We're done with the shading system now, destroy it
-        rend->shaders.clear ();  // Must release the group refs first
+        rend->clear ();
         delete shadingsys;
         delete rend;
 #ifdef OSL_USE_OPTIX

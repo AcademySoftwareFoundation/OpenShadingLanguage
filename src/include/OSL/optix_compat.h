@@ -63,6 +63,7 @@ namespace optix {
 
 typedef void* Context;
 typedef void* Program;
+typedef void* Material;
 typedef void* TextureSampler;
 
 }  // end namespace optix

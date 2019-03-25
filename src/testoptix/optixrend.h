@@ -31,7 +31,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/ustring.h>
 #include <OSL/oslexec.h>
 #include <OSL/device_string.h>
-
 #include <OSL/optix_compat.h>
 
 #include "../testrender/raytracer.h"
@@ -124,6 +123,11 @@ public:
     /// used with texture calls to avoid the name lookups.
     virtual TextureHandle * get_texture_handle(ustring filename);
 
+    static bool load_ptx_from_file (std::string& ptx_string, const char* filename);
+
+    static bool load_ptx_from_file (const std::string& progName,
+                                    std::string& ptx_string);
+
     // Create the optix-program, for the given resolution
     //
     virtual bool init(const std::string& progName, int xres, int yres, Scene* = nullptr);
@@ -133,10 +137,13 @@ public:
     //
     virtual bool finalize(ShadingSystem* shadingsys, bool saveptx, Scene* scene = nullptr);
 
+    virtual void warmup ();
+    virtual void render (int xres, int yres);
+
     // Copies the specified device buffer into an output vector, assuming that
     // the buffer is in FLOAT3 format (and that Vec3 and float3 have the same
     // underlying representation).
-    std::vector<OSL::Color3>
+    virtual std::vector<OSL::Color3>
     getPixelBuffer(const std::string& buffer_name, int width, int height);
 
     bool
@@ -149,20 +156,24 @@ public:
     std::vector<ShaderGroupRef>& shaders() { return m_shaders; }
 
     // Easy way to do Optix calls on the RendererServices
-    optix::Context& context()              { return m_context; }
+    optix::Context& context()              { return optix_ctx; }
     optix::Context& operator -> ()         { return context(); }
 
     Camera camera;
     Scene scene;
 private:
-    std::vector<ShaderGroupRef> m_shaders;
+    optix::Context optix_ctx = nullptr;
+    optix::Program m_program = nullptr;
+    OptiXStringTable m_str_table;
     std::string                 m_materials_ptx;
-
-    OptiXStringTable      m_str_table;
-    optix::Context        m_context;
-    optix::Program        m_program;
     std::unordered_map<OIIO::ustring, optix::TextureSampler, OIIO::ustringHash> m_samplers;
     unsigned              m_width, m_height;
+    optix::Program sphere_intersect;
+    optix::Program sphere_bounds;
+    optix::Program quad_intersect;
+    optix::Program quad_bounds;
+    std::vector<optix::Material> optix_mtls;
+    std::vector<ShaderGroupRef> m_shaders;
 };
 
 

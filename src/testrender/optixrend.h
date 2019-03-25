@@ -31,8 +31,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/ustring.h>
 #include <OSL/oslexec.h>
-
+#include <OSL/device_string.h>
 #include <OSL/optix_compat.h>
+
 #include "simplerend.h"
 #include "optix_stringtable.h"
 
@@ -61,36 +62,6 @@ public:
         return SimpleRenderer::supports(feature);
     }
 
-    // Copies the specified device buffer into an output vector, assuming
-    // that the buffer is in FLOAT3 format (and that Vec3 and float3 have
-    // the same underlying representation).
-    virtual std::vector<OSL::Color3>
-    get_pixel_buffer (const std::string& buffer_name, int width, int height);
-
-    static void load_ptx_from_file (std::string& ptx_string, const char* filename);
-
-    virtual void init_optix_context (int xres, int yres);
-    virtual void make_optix_materials (std::vector<ShaderGroupRef>& shaders);
-    virtual void finalize_scene ();
-    virtual void prepare_render ();
-    virtual void warmup ();
-    virtual void render (int xres, int yres);
-    virtual void finalize_pixel_buffer ();
-
-    // Create the optix-program, for the given resolution
-    //
-    virtual bool init(const std::string& progName, int xres, int yres, Scene* = nullptr);
-
-    // Convert the OSL ShaderGroups accumulated during scene parsing into
-    // OptiX Materials and set up the OptiX scene graph
-    virtual bool finalize(ShadingSystem* shadingsys, bool saveptx, Scene* scene = nullptr);
-
-    virtual void clear();
-
-    // Easy way to do Optix calls on the OptixRenderer
-    optix::Context& context()      { return optix_ctx; }
-    optix::Context& operator -> () { return optix_ctx; }
-
     /// Return true if the texture handle (previously returned by
     /// get_texture_handle()) is a valid texture that can be subsequently
     /// read or sampled.
@@ -100,14 +71,53 @@ public:
     /// used with texture calls to avoid the name lookups.
     virtual TextureHandle * get_texture_handle(ustring filename);
 
+    static bool load_ptx_from_file (const std::string& progName,
+                                    std::string& ptx_string);
+
+    // Create the optix-program, for the given resolution
+    //
+    virtual bool init(const std::string& progName, int xres, int yres, Scene* = nullptr);
+
+    // Convert the OSL ShaderGroups accumulated during scene parsing into
+    // OptiX Materials and set up the OptiX scene graph
+    virtual bool finalize(ShadingSystem* shadingsys, bool saveptx, Scene* scene = nullptr);
+
+    virtual void init_optix_context (int xres, int yres);
+    virtual void make_optix_materials (std::vector<ShaderGroupRef>& shaders);
+    virtual void finalize_scene ();
+    virtual void prepare_render ();
+
+    virtual void warmup ();
+    virtual void render (int xres, int yres);
+    virtual void finalize_pixel_buffer ();
+
+    // Copies the specified device buffer into an output vector, assuming
+    // that the buffer is in FLOAT3 format (and that Vec3 and float3 have
+    // the same underlying representation).
+    virtual std::vector<OSL::Color3>
+    get_pixel_buffer (const std::string& buffer_name, int width, int height);
+
+    virtual void clear();
+
+    // Easy way to do Optix calls on the OptixRenderer
+    optix::Context& context()      { return optix_ctx; }
+    optix::Context& operator -> () { return optix_ctx; }
+
 
 private:
     optix::Context optix_ctx = nullptr;
-    // optix::Program m_program = nullptr;
+    optix::Program m_program = nullptr;
     OptiXStringTable m_str_table;
     std::string renderer_ptx;  // ray generation, etc.
     std::string wrapper_ptx;   // hit programs
+    std::string m_materials_ptx;
     std::unordered_map<OIIO::ustring, optix::TextureSampler, OIIO::ustringHash> m_samplers;
+    unsigned              m_width, m_height;
+    optix::Program sphere_intersect;
+    optix::Program sphere_bounds;
+    optix::Program quad_intersect;
+    optix::Program quad_bounds;
+    std::vector<optix::Material> optix_mtls;
 };
 
 

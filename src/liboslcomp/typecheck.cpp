@@ -2272,8 +2272,12 @@ OSLCompilerImpl::code_from_type (TypeSpec type) const
             out = 's';
         else if (elem == TypeDesc::NONE)
             out = 'x';
-        else
-            ASSERT (0);
+        else {
+            out = 'x';
+            // This only happens in error circumstances. Seems safe to
+            // return the code for 'void' and hope everything sorts itself
+            // out with the downstream errors.
+        }
     }
 
     if (type.is_array()) {

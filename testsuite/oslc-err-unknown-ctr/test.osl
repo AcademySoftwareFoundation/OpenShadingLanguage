@@ -1,0 +1,12 @@
+// No mat2 is known. This used to hit an assertion.
+// Correct behavior is understandable error message(s).
+
+mat2 rotmat(float a)
+{
+    return mat2(cos(a),sin(a),-sin(a),cos(a));
+}
+
+shader test ()
+{
+    printf ("Did not crash\n");
+}

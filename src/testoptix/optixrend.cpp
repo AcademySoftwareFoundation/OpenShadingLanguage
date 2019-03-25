@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2009-2018 Sony Pictures Imageworks Inc., et al.
+Copyright (c) 2019 Sony Pictures Imageworks Inc., et al.
 All Rights Reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,6 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
 
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/imagebuf.h>
@@ -145,16 +146,27 @@ void Scene::finalize(optix::Context optix_ctx, OptixRenderer *rend) {
 /// Return true if the texture handle (previously returned by
 /// get_texture_handle()) is a valid texture that can be subsequently
 /// read or sampled.
-bool OptixRenderer::good(TextureHandle *handle) {
+bool
+OptixRenderer::good(TextureHandle *handle)
+{
+#ifdef OSL_USE_OPTIX
     return intptr_t(handle) != RT_TEXTURE_ID_NULL;
+#else
+    return false;
+#endif
 }
+
+
 
 /// Given the name of a texture, return an opaque handle that can be
 /// used with texture calls to avoid the name lookups.
-RendererServices::TextureHandle* OptixRenderer::get_texture_handle (ustring filename) {
+RendererServices::TextureHandle*
+OptixRenderer::get_texture_handle (ustring filename)
+{
+#ifdef OSL_USE_OPTIX
     auto itr = m_samplers.find(filename);
     if (itr == m_samplers.end()) {
-        optix::TextureSampler sampler = optix_ctx->createTextureSampler();
+        optix::TextureSampler sampler = context()->createTextureSampler();
         sampler->setWrapMode(0, RT_WRAP_REPEAT);
         sampler->setWrapMode(1, RT_WRAP_REPEAT);
         sampler->setWrapMode(2, RT_WRAP_REPEAT);
@@ -177,7 +189,7 @@ RendererServices::TextureHandle* OptixRenderer::get_texture_handle (ustring file
         std::vector<float> pixels(width * height * nchan);
         image.get_pixels(roi, OIIO::TypeDesc::FLOAT, pixels.data());
 
-        optix::Buffer buffer = optix_ctx->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT4, width, height);
+        optix::Buffer buffer = context()->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT4, width, height);
 
         float* device_ptr = static_cast<float*>(buffer->map());
         unsigned int pixel_idx = 0;
@@ -194,6 +206,9 @@ RendererServices::TextureHandle* OptixRenderer::get_texture_handle (ustring file
 
     }
     return (RendererServices::TextureHandle*) intptr_t(itr->second->getId());
+#else
+    return nullptr;
+#endif
 }
 
 
@@ -281,6 +296,7 @@ bool OptixRenderer::init(const std::string& progName, int xres, int yres, Scene*
     return true;
 #endif
 }
+
 
 
 bool
@@ -488,8 +504,13 @@ OptixRenderer::render(int xres, int yres)
 void
 OptixRenderer::clear()
 {
-    m_shaders.clear();
-    context()->destroy();
+    shaders.clear();
+#ifdef OSL_USE_OPTIX
+    if (optix_ctx)
+        optix_ctx->destroy();
+#endif
 }
 
+
 OSL_NAMESPACE_EXIT
+

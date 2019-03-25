@@ -103,7 +103,6 @@ public:
     optix::Context& context()      { return optix_ctx; }
     optix::Context& operator -> () { return optix_ctx; }
 
-
 private:
     optix::Context optix_ctx = nullptr;
     optix::Program m_program = nullptr;

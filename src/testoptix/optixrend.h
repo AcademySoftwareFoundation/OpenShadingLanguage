@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2009-2018 Sony Pictures Imageworks Inc., et al.
+Copyright (c) 2019 Sony Pictures Imageworks Inc., et al.
 All Rights Reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #pragma once
+
 
 #include <OpenImageIO/ustring.h>
 #include <OSL/oslexec.h>
@@ -117,13 +118,11 @@ public:
     /// Return true if the texture handle (previously returned by
     /// get_texture_handle()) is a valid texture that can be subsequently
     /// read or sampled.
-    virtual bool good(TextureHandle *handle);
+    virtual bool good (TextureHandle *handle);
 
     /// Given the name of a texture, return an opaque handle that can be
     /// used with texture calls to avoid the name lookups.
     virtual TextureHandle * get_texture_handle(ustring filename);
-
-    static bool load_ptx_from_file (std::string& ptx_string, const char* filename);
 
     static bool load_ptx_from_file (const std::string& progName,
                                     std::string& ptx_string);
@@ -134,15 +133,14 @@ public:
 
     // Convert the OSL ShaderGroups accumulated during scene parsing into
     // OptiX Materials and set up the OptiX scene graph
-    //
     virtual bool finalize(ShadingSystem* shadingsys, bool saveptx, Scene* scene = nullptr);
 
     virtual void warmup ();
     virtual void render (int xres, int yres);
 
-    // Copies the specified device buffer into an output vector, assuming that
-    // the buffer is in FLOAT3 format (and that Vec3 and float3 have the same
-    // underlying representation).
+    // Copies the specified device buffer into an output vector, assuming
+    // that the buffer is in FLOAT3 format (and that Vec3 and float3 have
+    // the same underlying representation).
     virtual std::vector<OSL::Color3>
     getPixelBuffer(const std::string& buffer_name, int width, int height);
 
@@ -155,9 +153,9 @@ public:
     // ShaderGroupRef storage
     std::vector<ShaderGroupRef>& shaders() { return m_shaders; }
 
-    // Easy way to do Optix calls on the RendererServices
-    optix::Context& context()              { return optix_ctx; }
-    optix::Context& operator -> ()         { return context(); }
+    // Easy way to do Optix calls on the OptixRenderer
+    optix::Context& context()      { return optix_ctx; }
+    optix::Context& operator -> () { return optix_ctx; }
 
     Camera camera;
     Scene scene;
@@ -165,7 +163,9 @@ private:
     optix::Context optix_ctx = nullptr;
     optix::Program m_program = nullptr;
     OptiXStringTable m_str_table;
-    std::string                 m_materials_ptx;
+    std::string renderer_ptx;  // ray generation, etc.
+    std::string wrapper_ptx;   // hit programs
+    std::string m_materials_ptx;
     std::unordered_map<OIIO::ustring, optix::TextureSampler, OIIO::ustringHash> m_samplers;
     unsigned              m_width, m_height;
     optix::Program sphere_intersect;

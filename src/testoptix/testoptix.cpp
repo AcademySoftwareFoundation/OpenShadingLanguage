@@ -487,15 +487,13 @@ main (int argc, const char *argv[])
 
         double setuptime = timer.lap ();
 
-        // Perform a tiny launch to warm up the OptiX context
         if (warmup)
-            rend->context()->launch (0, 1, 1);
-
+            rend->warmup();
         double warmuptime = timer.lap ();
 
-        // Launch the GPU kernel to render the scene
+        // Launch the kernel to render the scene
         for (int i = 0; i < iters; ++i)
-            rend->context()->launch (0, xres, yres);
+            rend->render (xres, yres);
         double runtime = timer.lap ();
 
         // Copy the output image from the device buffer
@@ -513,17 +511,21 @@ main (int argc, const char *argv[])
             std::cout << "Run   : " << OIIO::Strutil::timeintervalformat (runtime,4) << "\n";
             std::cout << "Write : " << OIIO::Strutil::timeintervalformat (writetime,4) << "\n";
             std::cout << "\n";
+            std::cout << shadingsys->getstats (5) << "\n";
+            OIIO::TextureSystem *texturesys = shadingsys->texturesys();
+            if (texturesys)
+                std::cout << texturesys->getstats (5) << "\n";
+            std::cout << ustring::getstats() << "\n";
         }
 
-        // Control destruction order
         rend->clear ();
         delete shadingsys;
         delete rend;
-
+#ifdef OSL_USE_OPTIX
     } catch (const optix::Exception& e) {
         printf("Optix Error: %s\n", e.what());
-    }
-    catch (const std::exception& e) {
+#endif
+    } catch (const std::exception& e) {
         printf("Unknown Error: %s\n", e.what());
     }
 

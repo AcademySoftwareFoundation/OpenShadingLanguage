@@ -1,6 +1,8 @@
 # The 'testrender' executable
 FILE(GLOB testrender_srcs *.cpp)
 
+add_definitions ("-DPTX_PATH=\"${CMAKE_INSTALL_PREFIX}/ptx/testoptix\"")
+
 if (USE_OPTIX)
     set ( testrender_cuda_srcs
         cuda/quad.cu
@@ -29,6 +31,7 @@ if (USE_OPTIX)
     ADD_CUSTOM_TARGET ( testrender_ptx ALL
         DEPENDS ${ptx_list}
         SOURCES ${testrender_cuda_srcs} )
+    INSTALL ( FILES ${ptx_list} DESTINATION ${CMAKE_INSTALL_PREFIX}/ptx/testoptix )
 endif()
 
 
@@ -37,9 +40,3 @@ TARGET_LINK_LIBRARIES ( testrender oslexec oslquery
                        ${CUDA_LIBRARIES} ${OPTIX_LIBRARIES} ${OPTIX_EXTRA_LIBS}
                        ${OPENIMAGEIO_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
 INSTALL ( TARGETS testrender RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
-
-if (USE_OPTIX)
-    # Install the PTX files in a fixed location so that they can be loaded at run time
-    INSTALL ( FILES ${ptx_list} DESTINATION ${CMAKE_INSTALL_PREFIX}/ptx/testoptix )
-    add_definitions ("-DPTX_PATH=\"${CMAKE_INSTALL_PREFIX}/ptx/testoptix\"")
-endif ()

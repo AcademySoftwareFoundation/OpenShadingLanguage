@@ -306,7 +306,7 @@ Films using OSL (grouped by year of release date):
   Coco,
   Justice League,
   Thor: Ragnarok
-* **(2018) / upcoming**
+* **(2018)**
   Peter Rabbit,
   Black Panther,
   Annnihilation,
@@ -315,6 +315,7 @@ Films using OSL (grouped by year of release date):
   Avengers Infinity War,
   Deadpool 2,
   Incredibles 2,
+  Jurassic World: Fallen Kingdom,
   Hotel Transylvania 3: Summer Vacation,
   Ant Man and the Wasp,
   Skyscraper,
@@ -325,8 +326,17 @@ Films using OSL (grouped by year of release date):
   Alpha,
   Venom,
   First Man,
+  Bad Times at the El Royale,
   Fantastic Beasts: The Crimes of Grindelwald,
-  Spider-Man: Into the Spider-Verse,
+  Bohemian Rhapsody,
+  Holmes and Watson,
+  Spider-Man: Into the Spider-Verse
+* **(2019 / upcoming)**
+  The Kid Who Would Be King,
+  Alita: Battle Angel,
+  Lego Movie 2,
+  Lucky 13,
+  Captain Marvel,
   ...
 
 

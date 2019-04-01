@@ -1,8 +1,9 @@
 Release 1.11/2.0? -- ?? 2019 (compared to 1.10)
 --------------------------------------------------
 Dependency and standards changes:
-* LLVM 5.0-7.0:  This releases no longer supports LLVM 4.x. (And we may
-  at some point before release drop support for LLVM 5.0.)
+* **LLVM 5.0-8.0**: Support for LLVM 4 has been dropped. Support for LLVM 8
+  is added/verified. (Alert: we may also drop support for LLVM 5 by the time
+  we branch for the next major release.)
 * OpenImageIO 1.8-2.0: Alert: by the time we release this version of OSL,
   we may drop support for OIIO 1.x.
 
@@ -33,6 +34,14 @@ OSL Language and oslc compiler:
           --i;
   ```
   #947 (1.10.3/1.11.0)
+* Improve warnings about ill-advised use of the comma operator.
+  #978 (1.10.4/1.11.0)
+* Fix an assertion/crash when passing initialization-lists as parameters to
+  a function, where the function argument expected was as array. #983
+  (1.10.4/1.11.0)
+* Fix an assertion/crash for certain type constructors of structs, where the
+  struct name was not declared. (This is an incorrect shader, but of course
+  should have issued an error, not crashed.) #988 (1.10.4/1.11.0)
 
 OSL Standard library:
 
@@ -47,6 +56,18 @@ API changes, new options, new ShadingSystem features (for renderer writers):
 * Deprecate the auto-allocation of contexts and per-thread-info. Certain
   calls that took a `Context*` pointer that were allowed to be NULL now
   by convention require the renderer to pass a valid context. #958 (1.11.0)
+* ShadingSystem: thread-safe/reentrant shader specification via new
+  varieties of `Parameter()`, `Shader()`, `ConnectShaders()`, and
+  `ShaderGroupEnd()` that take an explicit `ShaderGroup` reference and are
+  therefore "stateless" and thread-safe. If you exclusively use these new
+  methods for shader specification, it's possible for multiple threads to
+  specify shader groups simultaneously. #984, #985, #986 (1.11.0)
+
+Experimental OptiX rendering:
+* Various fixes to how strings are represented on the Cuda side. #973 (1.11.0)
+* More complete support of all the noise varieties. #980 (1.11.0)
+* Got `spline()` function working. #974 (1.11.0)
+* Work towards getting texture calls working. #974 (1.11.0)
 
 Bug fixes and other improvements (internals):
 * Fix bug in implementation of `splineinverse()` when computing with
@@ -57,6 +78,7 @@ Bug fixes and other improvements (internals):
 * Improve thread-safety of the OSLCompiler itself, in case an app wants
   to be compiling several shaders to oso concurrently by different threads.
   #953 (1.10.3/1.11.0)
+* LPEs: forbid LPE repetitions inside groups. #972 (1.10.4/1.11.0)
 
 Build & test system improvements:
 * Testshade makes sure that no unreported errors accumulted in the texture
@@ -67,10 +89,37 @@ Build & test system improvements:
 * A new build-time CMake variable `OSL_LIBNAME_SUFFIX` lets you optionally
   add a custom suffix to the main libraries that are built. (Use with
   caution.) #970 (1.11.0)
+* Build cript finding of LLVM is now more robust to certain library
+  configurations of llvm, particularly where everything is bundled in just
+  one libLLVM without a separate libLLVMMCJIT. #976 (1.10.4/1.11.0)
+* Support for LLVM 4 has been dropped. #981 (1.11.0)
+* Simplified finding of flex/bison, rely more on CMake's built-in flex/bison
+  find packages. #977 (1.11.0)
+* Verified that OSL can be built with Clang 8 and LLVM 8.0.
 
 Documentation:
 
 
+Release 1.10.4 -- Apr 1, 2019 (compared to 1.10.3)
+--------------------------------------------------
+* LPEs: forbid LPE repetitions inside groups. #972
+* Build process: build script finding of LLVM is now more robust to certain
+  library configurations of llvm, particularly where everything is bundled
+  in just one libLLVM without a separate libLLVMMCJIT. #976
+* oslc: Improve warnings about ill-advised use of the comma operator. #978
+* oslc: Fix an assertion/crash when passing initialization-lists as
+  parameters to a function, where the function argument expected was as
+  array. #983
+* oslc: Fix an assertion/crash for certain type constructors of structs,
+  where the struct name was not declared. (This is an incorrect shader,
+  but of course should have issued an error, not crashed.) #988
+* Note: The experimental OptiX path is not expected to work in this branch!
+  Development has continued in the 'master' branch. If you are interested in
+  testing the OptiX support while it's under development, please do so with
+  the master branch, because fixes and improvements to the OptiX support
+  are not being backported to the 1.10 branch.
+* Tested and verified that everything builds and works correctly with
+  Clang 8 and LLVM 8.0.
 
 Release 1.10.3 -- Feb 1, 2019 (compared to 1.10.2)
 --------------------------------------------------
@@ -331,6 +380,12 @@ Documentation:
 * `osltoy` documentations in `doc/osltoy.md.html` (1.10.0).
 
 
+
+Release 1.9.13 -- 1 Dec 2018 (compared to 1.9.12)
+------------------------------------------------
+* Fix crash with texture3d lookups with derivatives. #932
+* Fix oslc crash when a struct parameter is initialized with a function call
+  that returns a structure. #934
 
 Release 1.9.12 -- 1 Nov 2018 (compared to 1.9.11)
 ------------------------------------------------

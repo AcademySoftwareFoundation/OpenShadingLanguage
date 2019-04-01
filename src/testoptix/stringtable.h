@@ -33,22 +33,23 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/ustring.h>
 #include <OSL/oslexec.h>
-#include <OSL/optix_compat.h>
 
-OSL_NAMESPACE_ENTER
+#include <optix_world.h>
+
+using namespace optix;
+#include <cuda_runtime_api.h>
 
 
-// The OptiXStringTable manages a block of CUDA device memory designated
-// to hold all of the string constants that a shader might access during
-// execution.
+// The StringTable manages a block of CUDA device memory designated to hold all
+// of the string constants that a shader might access during execution.
 //
 // Any string that needs to be visible on the device needs to be added using the
 // addString function.
-class OptiXStringTable {
+class StringTable {
 public:
-    OptiXStringTable(optix::Context ctx = nullptr);
+    StringTable();
 
-    ~OptiXStringTable();
+    ~StringTable();
 
     // Allocate CUDA device memory for the raw string table and add the
     // "standard" strings declared in strdecls.h.
@@ -68,8 +69,6 @@ public:
     // access the table is running, since it has the potential to invalidate
     // pointers if reallocation is triggered.
     uint64_t addString (OIIO::ustring str, OIIO::ustring var_name);
-
-    void freetable();
 
 private:
     // If a string has already been added to the table, return its offset in the
@@ -101,5 +100,3 @@ private:
     // The variable names associated with each canonical string.
     std::map<OIIO::ustring,OIIO::ustring> m_name_map;
 };
-
-OSL_NAMESPACE_EXIT

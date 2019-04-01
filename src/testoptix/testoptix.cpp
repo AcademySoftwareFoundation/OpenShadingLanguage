@@ -48,8 +48,8 @@ namespace pugi = OIIO::pugi;
 #include <OSL/oslexec.h>
 
 #include "optixrend.h"
-#include "../testrender/raytracer.h"
-#include "../testrender/shading.h"
+#include "raytracer.h"
+#include "shading.h"
 
 // The pre-compiled renderer support library LLVM bitcode is embedded into the
 // testoptix executable and made available through these variables.
@@ -79,9 +79,11 @@ static int aa = 1, max_bounces = 1000000, rr_depth = 5;
 static int num_threads = 0;
 static int iters = 1;
 static ErrorHandler errhandler;
-static OptixRenderer *rend;
+static OptixRenderer rend;  // RendererServices
+static Scene scene;
 static int backgroundShaderID = -1;
 static int backgroundResolution = 0;
+static std::vector<ShaderGroupRef> shaders;
 static std::string scenefile, imagefile;
 static std::string shaderpath;
 static bool shadingsys_options_set = false;
@@ -243,13 +245,9 @@ private:
 };
 
 
-
-void
-parse_scene(OptixRenderer* rend, Camera &camera, Scene& scene,
-            std::vector<ShaderGroupRef>& shaders)
-{
+void parse_scene(OptixRenderer& renderer) {
     // setup default camera (now that resolution is finalized)
-    camera = Camera(Vec3(0,0,0), Vec3(0,0,-1), Vec3(0,1,0), 90.0f, xres, yres);
+    scene.camera = Camera(Vec3(0,0,0), Vec3(0,0,-1), Vec3(0,1,0), 90.0f, xres, yres);
 
     // load entire text file into a buffer
     std::ifstream file(scenefile.c_str(), std::ios::binary);
@@ -261,6 +259,9 @@ parse_scene(OptixRenderer* rend, Camera &camera, Scene& scene,
         exit (EXIT_FAILURE);
     }
     text.push_back(0); // make sure text ends with trailing 0
+
+    // convenience
+    std::vector<ShaderGroupRef>& shaders = renderer.shaders();
 
     // build DOM tree
     pugi::xml_document doc;
@@ -309,7 +310,7 @@ parse_scene(OptixRenderer* rend, Camera &camera, Scene& scene,
             if (fov_attr) fov = OIIO::Strutil::from_string<float>(fov_attr.value());
 
             // create actual camera
-            camera = Camera(eye, dir, up, fov, xres, yres);
+            scene.camera = Camera(eye, dir, up, fov, xres, yres);
         } else if (strcmp(node.name(), "Sphere") == 0) {
             // load sphere
             pugi::xml_attribute center_attr = node.attribute("center");
@@ -320,7 +321,7 @@ parse_scene(OptixRenderer* rend, Camera &camera, Scene& scene,
                 if (radius > 0) {
                     pugi::xml_attribute light_attr = node.attribute("is_light");
                     bool is_light = light_attr ? strtobool(light_attr.value()) : false;
-                    scene.add_sphere(Sphere(center, radius, int(shaders.size()) - 1, is_light));
+                    scene.spheres.emplace_back (center, radius, int(shaders.size()) - 1, is_light);
                 }
             }
         } else if (strcmp(node.name(), "Quad") == 0) {
@@ -334,7 +335,7 @@ parse_scene(OptixRenderer* rend, Camera &camera, Scene& scene,
                 Vec3 co = strtovec(corner_attr.value());
                 Vec3 ex = strtovec(edge_x_attr.value());
                 Vec3 ey = strtovec(edge_y_attr.value());
-                scene.add_quad(Quad(co, ex, ey, int(shaders.size()) - 1, is_light));
+                scene.quads.emplace_back (co, ex, ey, int(shaders.size()) - 1, is_light);
             }
         } else if (strcmp(node.name(), "Background") == 0) {
             pugi::xml_attribute res_attr = node.attribute("resolution");
@@ -393,8 +394,7 @@ parse_scene(OptixRenderer* rend, Camera &camera, Scene& scene,
                     pugi::xml_attribute  dl = gnode.attribute("dstlayer");
                     pugi::xml_attribute  dp = gnode.attribute("dstparam");
                     if (sl && sp && dl && dp)
-                        shadingsys->ConnectShaders(*group,
-                                                   sl.value(), sp.value(),
+                        shadingsys->ConnectShaders(*group, sl.value(), sp.value(),
                                                    dl.value(), dp.value());
                 } else {
                     // unknow element?
@@ -413,15 +413,10 @@ parse_scene(OptixRenderer* rend, Camera &camera, Scene& scene,
     }
 }
 
-
-
-
 } // anonymous namespace
 
 
-
-int
-main (int argc, const char *argv[])
+int main (int argc, const char *argv[])
 {
     try {
         using namespace OIIO;
@@ -430,13 +425,8 @@ main (int argc, const char *argv[])
         // Read command line arguments
         getargs (argc, argv);
 
-        rend = new OptixRenderer;
-
-        // Create a new shading system.  We pass it the RendererServices
-        // object that services callbacks from the shading system, NULL for
-        // the TextureSystem (which will create a default OIIO one), and
-        // an error handler.
-        shadingsys = new ShadingSystem (rend, NULL, &errhandler);
+        OptixRenderer rend;
+        shadingsys = new ShadingSystem (&rend, NULL, &errhandler);
         register_closures(shadingsys);
 
         // Setup common attributes
@@ -449,17 +439,17 @@ main (int argc, const char *argv[])
         shadingsys->attribute ("lib_bitcode", OSL::TypeDesc::UINT8, &lib_bitcode);
 
         // Loads a scene, creating camera, geometry and assigning shaders
-        parse_scene(rend, rend->camera, rend->scene, rend->shaders());
-        if (rend->shaders().empty()) {
+        parse_scene(rend);
+        if (rend.shaders().empty()) {
             std::cout << "No shaders in scene\n";
             return EXIT_FAILURE;
         }
 
-        Scene* scene_ptr = rend->scene.num_prims() ? &rend->scene : nullptr;
+        Scene* scene_ptr = scene.valid();
         std::string renderer = ptx_renderer;
         if (renderer.empty()) {
             if (!scene_ptr) {
-                if (rend->shaders().size() != 1) {
+                if (rend.shaders().size() != 1) {
                     std::cout << "Only single shader is supported for texture mode";
                     return EXIT_FAILURE;
                 }
@@ -469,35 +459,37 @@ main (int argc, const char *argv[])
         }
 
         // Set up the OptiX Context
-        if (!rend->init(renderer, xres, yres, scene_ptr))
+        if (!rend.init(renderer, xres, yres, scene_ptr))
             return EXIT_FAILURE;
 
         // Convert the OSL ShaderGroups accumulated during scene parsing into
         // OptiX Materials and set up the OptiX scene graph
-        if (!rend->finalize(shadingsys, saveptx, scene_ptr))
+        if (!rend.finalize(shadingsys, saveptx, scene_ptr))
             return EXIT_FAILURE;
 
         if (scene_ptr) {
             // Make some device strings to test userdata parameters
-            uint64_t addr1 = rend->register_string ("ud_str_1", "");
-            uint64_t addr2 = rend->register_string ("userdata string", "");
-            rend->context()["test_str_1"]->setUserData (sizeof(char*), &addr1);
-            rend->context()["test_str_2"]->setUserData (sizeof(char*), &addr2);
+            uint64_t addr1 = rend.register_string ("ud_str_1", "");
+            uint64_t addr2 = rend.register_string ("userdata string", "");
+            rend.context()["test_str_1"]->setUserData (sizeof(char*), &addr1);
+            rend.context()["test_str_2"]->setUserData (sizeof(char*), &addr2);
         }
 
         double setuptime = timer.lap ();
 
+        // Perform a tiny launch to warm up the OptiX context
         if (warmup)
-            rend->warmup();
+            rend->launch (0, 1, 1);
+
         double warmuptime = timer.lap ();
 
-        // Launch the kernel to render the scene
+        // Launch the GPU kernel to render the scene
         for (int i = 0; i < iters; ++i)
-            rend->render (xres, yres);
+            rend->launch (0, xres, yres);
         double runtime = timer.lap ();
 
         // Copy the output image from the device buffer
-        if (!rend->saveImage("output_buffer", xres, yres, imagefile, &errhandler))
+        if (!rend.saveImage("output_buffer", xres, yres, imagefile, &errhandler))
             return EXIT_FAILURE;
 
         // Print some debugging info
@@ -511,21 +503,16 @@ main (int argc, const char *argv[])
             std::cout << "Run   : " << OIIO::Strutil::timeintervalformat (runtime,4) << "\n";
             std::cout << "Write : " << OIIO::Strutil::timeintervalformat (writetime,4) << "\n";
             std::cout << "\n";
-            std::cout << shadingsys->getstats (5) << "\n";
-            OIIO::TextureSystem *texturesys = shadingsys->texturesys();
-            if (texturesys)
-                std::cout << texturesys->getstats (5) << "\n";
-            std::cout << ustring::getstats() << "\n";
         }
 
-        rend->clear ();
+        // Control destruction order
+        rend.clear ();
         delete shadingsys;
-        delete rend;
-#ifdef OSL_USE_OPTIX
-    } catch (const optix::Exception& e) {
+
+    } catch (optix::Exception e) {
         printf("Optix Error: %s\n", e.what());
-#endif
-    } catch (const std::exception& e) {
+    }
+    catch (std::exception e) {
         printf("Unknown Error: %s\n", e.what());
     }
 

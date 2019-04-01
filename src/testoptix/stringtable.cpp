@@ -26,50 +26,34 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "optix_stringtable.h"
+#include "stringtable.h"
 
 using OIIO::ustring;
 
-OSL_NAMESPACE_ENTER
-
-
-OptiXStringTable::OptiXStringTable(optix::Context ctx)
-    : m_ptr (nullptr),
-      m_size (1 << 16),
-      m_offset (0),
-      m_optix_ctx (ctx)
+StringTable::StringTable()
+    : m_ptr    (nullptr),
+      m_size   (1 << 16),
+      m_offset (0)
 {
 }
 
 
-
-OptiXStringTable::~OptiXStringTable()
-{
-    freetable();
-}
-
-
-
-void
-OptiXStringTable::freetable()
+StringTable::~StringTable()
 {
     if (m_ptr)
-        OSL::cudaFree (m_ptr);
-    m_ptr = nullptr;
+        cudaFree (m_ptr);
 }
 
 
-
-void OptiXStringTable::init (OSL::optix::Context ctx)
+void StringTable::init (optix::Context ctx)
 {
-#ifdef OSL_USE_OPTIX
     ASSERT (! m_ptr && "StringTable should only be initialized once");
     m_optix_ctx = ctx;
 
     ASSERT ((m_optix_ctx->getEnabledDeviceCount() == 1) &&
             "Only one CUDA device is currently supported");
 
-    OSL::cudaMalloc (reinterpret_cast<void**>(&m_ptr), (m_size));
+    cudaMalloc (reinterpret_cast<void**>(&m_ptr), (m_size));
 
     // Add the statically-declared strings to the table, and create OptiX
     // variables for them in the OSL::DeviceStrings namespace.
@@ -82,13 +66,11 @@ void OptiXStringTable::init (OSL::optix::Context ctx)
     addString (ustring(str), ustring(OSL_NAMESPACE_STRING "::DeviceStrings::" #var_name));
 #include <OSL/strdecls.h>
 #undef STRDECL
-#endif
 }
 
 
-uint64_t OptiXStringTable::addString (ustring str, ustring var_name)
+uint64_t StringTable::addString (ustring str, ustring var_name)
 {
-#ifdef OSL_USE_OPTIX
     ASSERT (m_ptr && "StringTable has not been initialized");
 
     // The strings are laid out in the table as a struct:
@@ -142,28 +124,24 @@ uint64_t OptiXStringTable::addString (ustring str, ustring var_name)
     }
 
     return addr;
-#else
-    return 0;
-#endif
 }
 
 
-int OptiXStringTable::getOffset (const std::string& str) const
+int StringTable::getOffset (const std::string& str) const
 {
     auto it = m_offset_map.find (ustring(str));
     return (it != m_offset_map.end()) ? it->second : -1;
 }
 
 
-void OptiXStringTable::reallocTable()
+void StringTable::reallocTable()
 {
-#ifdef OSL_USE_OPTIX
     ASSERT ((m_optix_ctx->getEnabledDeviceCount() == 1) &&
             "Only one CUDA device is currently supported");
 
     m_size *= 2;
     cudaFree (m_ptr);
-    OSL::cudaMalloc (reinterpret_cast<void**>(&m_ptr), (m_size));
+    cudaMalloc (reinterpret_cast<void**>(&m_ptr), (m_size));
 
     // The offsets need to be recomputed
     m_offset = 0;
@@ -173,7 +151,4 @@ void OptiXStringTable::reallocTable()
     for (auto& entry : m_name_map) {
         addString (entry.first, entry.second);
     }
-#endif
 }
-
-OSL_NAMESPACE_EXIT

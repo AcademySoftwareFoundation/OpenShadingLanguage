@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 Sony Pictures Imageworks Inc., et al.
+Copyright (c) 2009-2018 Sony Pictures Imageworks Inc., et al.
 All Rights Reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -26,27 +26,18 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/imagebufalgo.h>
 
 #include "optixrend.h"
+#include "raytracer.h"
 
 #include "../liboslexec/splineimpl.h"
 
-// The pre-compiled renderer support library LLVM bitcode is embedded into the
-// testoptix executable and made available through these variables.
-extern int rend_llvm_compiled_ops_size;
-extern char rend_llvm_compiled_ops_block[];
-
-
 OSL_NAMESPACE_ENTER
 
-
-bool
-OptixRenderer::load_ptx_from_file (const std::string& progName,
-                                   std::string& ptx_string)
+bool loadPtxFromFile (const std::string& progName, std::string& ptx_string)
 {
     std::string filepath = std::string(PTX_PATH) + "/" + progName;
     if (OIIO::Filesystem::read_text_file (filepath, ptx_string))
@@ -56,9 +47,6 @@ OptixRenderer::load_ptx_from_file (const std::string& progName,
     return false;
 }
 
-
-
-#if 0
 bool Scene::init (optix::Context optix_ctx, const std::string& renderer, std::string& materials) {
     optix_ctx["radiance_ray_type"]->setUint  (0u);
     optix_ctx["shadow_ray_type"  ]->setUint  (1u);
@@ -71,35 +59,23 @@ bool Scene::init (optix::Context optix_ctx, const std::string& renderer, std::st
 
     // Load the PTX for the wrapper program. It will be used to create OptiX
     // Materials from the OSL ShaderGroups
-    if (! OptixRenderer::load_ptx_from_file("wrapper.ptx", materials))
+    if (! loadPtxFromFile("wrapper.ptx", materials))
         return false;
 
     std::string sphere_ptx, quad_ptx;
-    if (! OptixRenderer::load_ptx_from_file("sphere.ptx", sphere_ptx))
+    if (! loadPtxFromFile("sphere.ptx", sphere_ptx))
         return false;
-    if (! OptixRenderer::load_ptx_from_file("quad.ptx", quad_ptx))
+    if (! loadPtxFromFile("quad.ptx", quad_ptx))
         return false;
 
     // Create the sphere and quad intersection programs, and save them on the
     // Scene so that they don't need to be regenerated for each primitive in the
     // scene
-    // Was: create_geom_programs (optix_ctx, sphere_ptx, quad_ptx);
-    // The bounds program is used to construct axis-aligned bounding boxes
-    // for each primitive when the acceleration structure is being created.
-    sphere_bounds    = optix_ctx->createProgramFromPTXString (sphere_ptx, "bounds");
-    quad_bounds      = optix_ctx->createProgramFromPTXString (quad_ptx,   "bounds");
-
-    // The intersection program is used to perform ray-geometry intersections.
-    sphere_intersect = optix_ctx->createProgramFromPTXString (sphere_ptx, "intersect");
-    quad_intersect   = optix_ctx->createProgramFromPTXString (quad_ptx,   "intersect");
-
+    create_geom_programs (optix_ctx, sphere_ptx, quad_ptx);
     return true;
 }
-#endif
 
-
-#if 0
-void Scene::finalize(optix::Context optix_ctx, OptixRenderer *rend) {
+void Scene::finalize(optix::Context optix_ctx) {
     // Create a GeometryGroup to contain the scene geometry
     optix::GeometryGroup geom_group = optix_ctx->createGeometryGroup();
 
@@ -135,38 +111,25 @@ void Scene::finalize(optix::Context optix_ctx, OptixRenderer *rend) {
     }
 
     // Set the camera variables on the OptiX Context, to be used by the ray gen program
-    optix_ctx["eye" ]->setFloat (vec3_to_float3 (rend->camera.eye));
-    optix_ctx["dir" ]->setFloat (vec3_to_float3 (rend->camera.dir));
-    optix_ctx["cx"  ]->setFloat (vec3_to_float3 (rend->camera.cx));
-    optix_ctx["cy"  ]->setFloat (vec3_to_float3 (rend->camera.cy));
+    optix_ctx["eye" ]->setFloat (vec3_to_float3 (camera.eye));
+    optix_ctx["dir" ]->setFloat (vec3_to_float3 (camera.dir));
+    optix_ctx["cx"  ]->setFloat (vec3_to_float3 (camera.cx));
+    optix_ctx["cy"  ]->setFloat (vec3_to_float3 (camera.cy));
 }
-#endif
-
 
 /// Return true if the texture handle (previously returned by
 /// get_texture_handle()) is a valid texture that can be subsequently
 /// read or sampled.
-bool
-OptixRenderer::good(TextureHandle *handle)
-{
-#ifdef OSL_USE_OPTIX
+bool OptixRenderer::good(TextureHandle *handle) {
     return intptr_t(handle) != RT_TEXTURE_ID_NULL;
-#else
-    return false;
-#endif
 }
-
-
 
 /// Given the name of a texture, return an opaque handle that can be
 /// used with texture calls to avoid the name lookups.
-RendererServices::TextureHandle*
-OptixRenderer::get_texture_handle (ustring filename)
-{
-#ifdef OSL_USE_OPTIX
+RendererServices::TextureHandle* OptixRenderer::get_texture_handle (ustring filename) {
     auto itr = m_samplers.find(filename);
     if (itr == m_samplers.end()) {
-        optix::TextureSampler sampler = context()->createTextureSampler();
+        optix::TextureSampler sampler = m_context->createTextureSampler();
         sampler->setWrapMode(0, RT_WRAP_REPEAT);
         sampler->setWrapMode(1, RT_WRAP_REPEAT);
         sampler->setWrapMode(2, RT_WRAP_REPEAT);
@@ -189,7 +152,7 @@ OptixRenderer::get_texture_handle (ustring filename)
         std::vector<float> pixels(width * height * nchan);
         image.get_pixels(roi, OIIO::TypeDesc::FLOAT, pixels.data());
 
-        optix::Buffer buffer = context()->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT4, width, height);
+        optix::Buffer buffer = m_context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_FLOAT4, width, height);
 
         float* device_ptr = static_cast<float*>(buffer->map());
         unsigned int pixel_idx = 0;
@@ -206,108 +169,62 @@ OptixRenderer::get_texture_handle (ustring filename)
 
     }
     return (RendererServices::TextureHandle*) intptr_t(itr->second->getId());
-#else
-    return nullptr;
-#endif
 }
-
-
 
 bool OptixRenderer::init(const std::string& progName, int xres, int yres, Scene* scene)
 {
-#ifdef OSL_USE_OPTIX
     // Set up the OptiX context
-    optix_ctx = optix::Context::create();
+    m_context = optix::Context::create();
     m_width  = xres;
     m_height = yres;
 
-    ASSERT ((optix_ctx->getEnabledDeviceCount() == 1) &&
+    ASSERT ((m_context->getEnabledDeviceCount() == 1) &&
             "Only one CUDA device is currently supported");
 
-    optix_ctx->setRayTypeCount (2);
-    optix_ctx->setEntryPointCount (1);
-    optix_ctx->setStackSize (2048);
-    optix_ctx->setPrintEnabled (true);
+    m_context->setRayTypeCount (2);
+    m_context->setEntryPointCount (1);
+    m_context->setStackSize (2048);
+    m_context->setPrintEnabled (true);
 
     // Load the renderer CUDA source and generate PTX for it
     std::string rendererPTX;
-    if (! load_ptx_from_file(progName, rendererPTX))
+    if (! loadPtxFromFile(progName, rendererPTX))
         return false;
 
     // Create the OptiX programs and set them on the optix::Context
-    m_program = optix_ctx->createProgramFromPTXString(rendererPTX, "raygen");
-    optix_ctx->setRayGenerationProgram (0, m_program);
+    m_program = m_context->createProgramFromPTXString(rendererPTX, "raygen");
+    m_context->setRayGenerationProgram (0, m_program);
 
     // Set up the string table. This allocates a block of CUDA device memory to
     // hold all of the static strings used by the OSL shaders. The strings can
     // be accessed via OptiX variables that hold pointers to the table entries.
-    m_str_table.init(optix_ctx);
+    m_str_table.init(m_context);
 
     {
-        optix::Buffer buffer = optix_ctx->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER);
+        optix::Buffer buffer = m_context->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER);
         buffer->setElementSize(sizeof(pvt::Spline::SplineBasis));
         buffer->setSize(sizeof(pvt::Spline::gBasisSet)/sizeof(pvt::Spline::SplineBasis));
 
         pvt::Spline::SplineBasis* basis = (pvt::Spline::SplineBasis*) buffer->map();
         ::memcpy(basis, &pvt::Spline::gBasisSet[0], sizeof(pvt::Spline::gBasisSet));
         buffer->unmap();
-        optix_ctx[OSL_NAMESPACE_STRING "::pvt::Spline::gBasisSet"]->setBuffer(buffer);
+        m_context[OSL_NAMESPACE_STRING "::pvt::Spline::gBasisSet"]->setBuffer(buffer);
     }
 
-    // This was scene->init(m_context, rendererPTX, m_materials_ptx)
-    optix_ctx["radiance_ray_type"]->setUint  (0u);
-    optix_ctx["shadow_ray_type"  ]->setUint  (1u);
-    optix_ctx["bg_color"         ]->setFloat (0.0f, 0.0f, 0.0f);
-    optix_ctx["bad_color"        ]->setFloat (1.0f, 0.0f, 1.0f);
-
-    // Create the OptiX programs and set them on the optix::Context
-    optix_ctx->setMissProgram (0, optix_ctx->createProgramFromPTXString (rendererPTX, "miss"));
-    optix_ctx->setExceptionProgram (0, optix_ctx->createProgramFromPTXString (rendererPTX, "exception"));
-
-    // Load the PTX for the wrapper program. It will be used to create OptiX
-    // Materials from the OSL ShaderGroups
-    if (! OptixRenderer::load_ptx_from_file("wrapper.ptx", m_materials_ptx))
+    if (scene && ! scene->init(m_context, rendererPTX, m_materials_ptx))
         return false;
-    std::string sphere_ptx, quad_ptx;
-    if (! OptixRenderer::load_ptx_from_file("sphere.ptx", sphere_ptx))
-        return false;
-    if (! OptixRenderer::load_ptx_from_file("quad.ptx", quad_ptx))
-        return false;
-
-    // Create the sphere and quad intersection programs, and save them on the
-    // Scene so that they don't need to be regenerated for each primitive in the
-    // scene
-    // Was: create_geom_programs (optix_ctx, sphere_ptx, quad_ptx);
-    // The bounds program is used to construct axis-aligned bounding boxes
-    // for each primitive when the acceleration structure is being created.
-    sphere_bounds    = optix_ctx->createProgramFromPTXString (sphere_ptx, "bounds");
-    quad_bounds      = optix_ctx->createProgramFromPTXString (quad_ptx,   "bounds");
-
-    // The intersection program is used to perform ray-geometry intersections.
-    sphere_intersect = optix_ctx->createProgramFromPTXString (sphere_ptx, "intersect");
-    quad_intersect   = optix_ctx->createProgramFromPTXString (quad_ptx,   "intersect");
-
-
-    // ^^ scene::init
-
 
     return static_cast<bool>(m_program);
-#else
-    return true;
-#endif
 }
 
 
-
-bool
-OptixRenderer::finalize(ShadingSystem* shadingsys, bool saveptx, Scene* scene)
+bool OptixRenderer::finalize(ShadingSystem* shadingsys, bool saveptx, Scene* scene)
 {
-#ifdef OSL_USE_OPTIX
     int curMtl = 0;
     optix::Program closest_hit, any_hit;
     if (scene) {
-        closest_hit = optix_ctx->createProgramFromPTXString(m_materials_ptx, "closest_hit_osl");
-        any_hit = optix_ctx->createProgramFromPTXString(m_materials_ptx, "any_hit_shadow");
+        closest_hit = m_context->createProgramFromPTXString(m_materials_ptx, "closest_hit_osl");
+        any_hit = m_context->createProgramFromPTXString(m_materials_ptx, "any_hit_shadow");
     }
 
     const char* outputs = "Cout";
@@ -354,12 +271,12 @@ OptixRenderer::finalize(ShadingSystem* shadingsys, bool saveptx, Scene* scene)
         // set the OSL functions as Callable Programs so that they can be
         // executed by the closest hit program in the wrapper
         //
-        optix::Program osl_init = optix_ctx->createProgramFromPTXString(osl_ptx, init_name);
-        optix::Program osl_group = optix_ctx->createProgramFromPTXString(osl_ptx, entry_name);
+        optix::Program osl_init = m_context->createProgramFromPTXString(osl_ptx, init_name);
+        optix::Program osl_group = m_context->createProgramFromPTXString(osl_ptx, entry_name);
 
         if (scene) {
             // Create a new Material using the wrapper PTX
-            scene->optix_mtls.emplace_back(optix_ctx->createMaterial());
+            scene->optix_mtls.emplace_back(m_context->createMaterial());
 
             optix::Material& mtl = scene->optix_mtls.back();
             mtl->setClosestHitProgram (0, closest_hit);
@@ -373,67 +290,25 @@ OptixRenderer::finalize(ShadingSystem* shadingsys, bool saveptx, Scene* scene)
         }
     }
 
-    if (scene) {
-        // This was: scene->finalize(optix_ctx, this);
-
-
-        // Create a GeometryGroup to contain the scene geometry
-        optix::GeometryGroup geom_group = optix_ctx->createGeometryGroup();
-
-        optix_ctx["top_object"  ]->set (geom_group);
-        optix_ctx["top_shadower"]->set (geom_group);
-
-        // NB: Since the scenes in the test suite consist of only a few primitives,
-        //     using 'NoAccel' instead of 'Trbvh' might yield a slight performance
-        //     improvement. For more complex scenes (e.g., scenes with meshes),
-        //     using 'Trbvh' is recommended to achieve maximum performance.
-        geom_group->setAcceleration (optix_ctx->createAcceleration ("Trbvh"));
-
-        // Translate the primitives parsed from the scene description into OptiX scene
-        // objects
-        for (const auto& sphere : scene->spheres) {
-            optix::Geometry sphere_geom = optix_ctx->createGeometry();
-            sphere.setOptixVariables (sphere_geom, sphere_bounds, sphere_intersect);
-            optix::GeometryInstance sphere_gi = optix_ctx->createGeometryInstance (
-                sphere_geom, &optix_mtls[sphere.shaderid()], &optix_mtls[sphere.shaderid()]+1);
-            geom_group->addChild (sphere_gi);
-        }
-
-        for (const auto& quad : scene->quads) {
-            optix::Geometry quad_geom = optix_ctx->createGeometry();
-            quad.setOptixVariables (quad_geom, quad_bounds, quad_intersect);
-            optix::GeometryInstance quad_gi = optix_ctx->createGeometryInstance (
-                quad_geom, &optix_mtls[quad.shaderid()], &optix_mtls[quad.shaderid()]+1);
-            geom_group->addChild (quad_gi);
-        }
-
-        // Set the camera variables on the OptiX Context, to be used by
-        // the ray gen program
-        optix_ctx["eye" ]->setFloat (vec3_to_float3 (camera.eye));
-        optix_ctx["dir" ]->setFloat (vec3_to_float3 (camera.dir));
-        optix_ctx["cx"  ]->setFloat (vec3_to_float3 (camera.cx));
-        optix_ctx["cy"  ]->setFloat (vec3_to_float3 (camera.cy));
-    }
+    if (scene)
+        scene->finalize(m_context);
 
     // Create the output buffer
-    optix::Buffer buffer = optix_ctx->createBuffer(RT_BUFFER_OUTPUT, RT_FORMAT_FLOAT3, m_width, m_height);
-    optix_ctx["output_buffer"]->set(buffer);
+    optix::Buffer buffer = m_context->createBuffer(RT_BUFFER_OUTPUT, RT_FORMAT_FLOAT3, m_width, m_height);
+    m_context["output_buffer"]->set(buffer);
 
-    optix_ctx["invw"]->setFloat (1.f / float(m_width));
-    optix_ctx["invh"]->setFloat (1.f / float(m_height));
-    optix_ctx->validate();
-#endif
+    m_context["invw"]->setFloat (1.f / float(m_width));
+    m_context["invh"]->setFloat (1.f / float(m_height));
+    m_context->validate();
 
     return true;
 }
-
-
 
 std::vector<OSL::Color3>
 OptixRenderer::getPixelBuffer(const std::string& buffer_name, int width, int height)
 {
     const OSL::Color3* buffer_ptr =
-        static_cast<OSL::Color3*>(optix_ctx[buffer_name]->getBuffer()->map());
+        static_cast<OSL::Color3*>(m_context[buffer_name]->getBuffer()->map());
 
     if (! buffer_ptr) {
         std::cerr << "Unable to map buffer " << buffer_name << std::endl;
@@ -443,7 +318,7 @@ OptixRenderer::getPixelBuffer(const std::string& buffer_name, int width, int hei
     std::vector<OSL::Color3> pixels;
     std::copy (&buffer_ptr[0], &buffer_ptr[width * height], back_inserter(pixels));
 
-    optix_ctx[buffer_name]->getBuffer()->unmap();
+    m_context[buffer_name]->getBuffer()->unmap();
 
     return pixels;
 }
@@ -478,39 +353,10 @@ OptixRenderer::saveImage(const std::string& buffer_name, int width, int height,
     return false;
 }
 
-
-
 void
-OptixRenderer::warmup()
-{
-#ifdef OSL_USE_OPTIX
-    // Perform a tiny launch to warm up the OptiX context
-    optix_ctx->launch (0, 1, 1);
-#endif
+OptixRenderer::clear() {
+    m_shaders.clear();
+    m_context->destroy();
 }
-
-
-
-void
-OptixRenderer::render(int xres, int yres)
-{
-#ifdef OSL_USE_OPTIX
-    optix_ctx->launch (0, xres, yres);
-#endif
-}
-
-
-
-void
-OptixRenderer::clear()
-{
-    shaders.clear();
-#ifdef OSL_USE_OPTIX
-    if (optix_ctx)
-        optix_ctx->destroy();
-#endif
-}
-
 
 OSL_NAMESPACE_EXIT
-

@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2019 Sony Pictures Imageworks Inc., et al.
+Copyright (c) 2009-2018 Sony Pictures Imageworks Inc., et al.
 All Rights Reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -28,18 +28,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-
 #include <OpenImageIO/ustring.h>
 #include <OSL/oslexec.h>
 #include <OSL/device_string.h>
-#include <OSL/optix_compat.h>
 
-#include "../testrender/raytracer.h"
-#include "../testrender/optix_stringtable.h"
+#include <optix_world.h>
+
+#include "stringtable.h"
 
 OSL_NAMESPACE_ENTER
 
-
+struct Scene;
 
 class OptixRenderer : public RendererServices
 {
@@ -48,7 +47,7 @@ public:
     typedef Matrix44 Transformation;
 
     OptixRenderer () { }
-    virtual ~OptixRenderer () { }
+    ~OptixRenderer () { }
 
     uint64_t register_string (const std::string& str, const std::string& var_name)
     {
@@ -118,62 +117,50 @@ public:
     /// Return true if the texture handle (previously returned by
     /// get_texture_handle()) is a valid texture that can be subsequently
     /// read or sampled.
-    virtual bool good (TextureHandle *handle);
+    virtual bool good(TextureHandle *handle);
 
     /// Given the name of a texture, return an opaque handle that can be
     /// used with texture calls to avoid the name lookups.
     virtual TextureHandle * get_texture_handle(ustring filename);
 
-    static bool load_ptx_from_file (const std::string& progName,
-                                    std::string& ptx_string);
-
     // Create the optix-program, for the given resolution
     //
-    virtual bool init(const std::string& progName, int xres, int yres, Scene* = nullptr);
+    bool init(const std::string& progName, int xres, int yres, Scene* = nullptr);
 
     // Convert the OSL ShaderGroups accumulated during scene parsing into
     // OptiX Materials and set up the OptiX scene graph
-    virtual bool finalize(ShadingSystem* shadingsys, bool saveptx, Scene* scene = nullptr);
+    //
+    bool finalize(ShadingSystem* shadingsys, bool saveptx, Scene* scene = nullptr);
 
-    virtual void warmup ();
-    virtual void render (int xres, int yres);
-
-    // Copies the specified device buffer into an output vector, assuming
-    // that the buffer is in FLOAT3 format (and that Vec3 and float3 have
-    // the same underlying representation).
-    virtual std::vector<OSL::Color3>
+    // Copies the specified device buffer into an output vector, assuming that
+    // the buffer is in FLOAT3 format (and that Vec3 and float3 have the same
+    // underlying representation).
+    std::vector<OSL::Color3>
     getPixelBuffer(const std::string& buffer_name, int width, int height);
 
     bool
     saveImage(const std::string& buffer_name, int width, int height,
               const std::string& imagefile, OIIO::ErrorHandler* errHandler);
 
-    virtual void clear();
+    void clear();
 
     // ShaderGroupRef storage
     std::vector<ShaderGroupRef>& shaders() { return m_shaders; }
 
-    // Easy way to do Optix calls on the OptixRenderer
-    optix::Context& context()      { return optix_ctx; }
-    optix::Context& operator -> () { return optix_ctx; }
+    // Easy way to do Optix calls on the RendererServices
+    optix::Context& context()              { return m_context; }
+    optix::Context& operator -> ()         { return context(); }
 
-    Camera camera;
-    Scene scene;
 private:
-    optix::Context optix_ctx = nullptr;
-    optix::Program m_program = nullptr;
-    OptiXStringTable m_str_table;
-    std::string renderer_ptx;  // ray generation, etc.
-    std::string wrapper_ptx;   // hit programs
-    std::string m_materials_ptx;
+
+    std::vector<ShaderGroupRef> m_shaders;
+    std::string                 m_materials_ptx;
+
+    StringTable           m_str_table;
+    optix::Context        m_context;
+    optix::Program        m_program;
     std::unordered_map<OIIO::ustring, optix::TextureSampler, OIIO::ustringHash> m_samplers;
     unsigned              m_width, m_height;
-    optix::Program sphere_intersect;
-    optix::Program sphere_bounds;
-    optix::Program quad_intersect;
-    optix::Program quad_bounds;
-    std::vector<optix::Material> optix_mtls;
-    std::vector<ShaderGroupRef> m_shaders;
 };
 
 

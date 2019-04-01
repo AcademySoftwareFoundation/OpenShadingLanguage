@@ -1,6 +1,21 @@
-Release 1.10.4 -- ?? Mar 1, 2019 (compared to 1.10.3)
+Release 1.10.4 -- Apr 1, 2019 (compared to 1.10.3)
 --------------------------------------------------
-
+* LPEs: forbid LPE repetitions inside groups. #972
+* Build process: build script finding of LLVM is now more robust to certain
+  library configurations of llvm, particularly where everything is bundled
+  in just one libLLVM without a separate libLLVMMCJIT. #976
+* oslc: Improve warnings about ill-advised use of the comma operator. #978
+* oslc: Fix an assertion/crash when passing initialization-lists as
+  parameters to a function, where the function argument expected was as
+  array. #983
+* oslc: Fix an assertion/crash for certain type constructors of structs,
+  where the struct name was not declared. (This is an incorrect shader,
+  but of course should have issued an error, not crashed.) #988
+* Note: The experimental OptiX path is not expected to work in this branch!
+  Development has continued in the 'master' branch. If you are interested in
+  testing the OptiX support while it's under development, please do so with
+  the master branch, because fixes and improvements to the OptiX support
+  are not being backported to the 1.10 branch.
 
 Release 1.10.3 -- Feb 1, 2019 (compared to 1.10.2)
 --------------------------------------------------

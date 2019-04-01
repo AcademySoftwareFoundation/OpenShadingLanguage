@@ -1,3 +1,7 @@
+Release 1.10.5 -- May 1??, 2019 (compared to 1.10.3)
+--------------------------------------------------
+
+
 Release 1.10.4 -- Apr 1, 2019 (compared to 1.10.3)
 --------------------------------------------------
 * LPEs: forbid LPE repetitions inside groups. #972
@@ -16,6 +20,8 @@ Release 1.10.4 -- Apr 1, 2019 (compared to 1.10.3)
   testing the OptiX support while it's under development, please do so with
   the master branch, because fixes and improvements to the OptiX support
   are not being backported to the 1.10 branch.
+* Tested and verified that everything builds and works correctly with
+  Clang 8 and LLVM 8.0.
 
 Release 1.10.3 -- Feb 1, 2019 (compared to 1.10.2)
 --------------------------------------------------
@@ -46,6 +52,7 @@ Release 1.10.3 -- Feb 1, 2019 (compared to 1.10.2)
       while (i != 0)
           --i;
   ```
+  #947 (1.10.3/1.11.0)
 * Fix bug in implementation of `splineinverse()` when computing with
   Bezier interpolation. #954 (1.10.3)
 * Fix bug in implementation of `transformc` when relyin on OpenColorIO for
@@ -276,7 +283,7 @@ Documentation:
 
 
 
-Release 1.9.13 -- 1 Dec? 2018 (compared to 1.9.12)
+Release 1.9.13 -- 1 Dec 2018 (compared to 1.9.12)
 ------------------------------------------------
 * Fix crash with texture3d lookups with derivatives. #932
 * Fix oslc crash when a struct parameter is initialized with a function call

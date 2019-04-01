@@ -34,21 +34,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/device_string.h>
 #include <OSL/optix_compat.h>
 
-#include "../testrender/raytracer.h"
-#include "../testrender/optix_stringtable.h"
+#include "simplerend.h"
+#include "optix_stringtable.h"
+
 
 OSL_NAMESPACE_ENTER
 
 
-
-class OptixRenderer : public RendererServices
+class OptixRenderer : public SimpleRenderer
 {
 public:
     // Just use 4x4 matrix for transformations
     typedef Matrix44 Transformation;
 
     OptixRenderer () { }
-    virtual ~OptixRenderer () { }
+    virtual ~OptixRenderer ();
 
     uint64_t register_string (const std::string& str, const std::string& var_name)
     {
@@ -57,63 +57,10 @@ public:
 
     virtual int supports (string_view feature) const
     {
-        if (feature == "OptiX") {
-            return true;
-        }
-
-        return false;
+        if (feature == "OptiX")
+            return 1;
+        return SimpleRenderer::supports(feature);
     }
-
-    // Function stubs
-    virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
-                             TransformationPtr xform, float time)
-    {
-        return 0;
-    }
-
-    virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
-                             ustring from, float time)
-    {
-        return 0;
-    }
-
-    virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
-                             TransformationPtr xform)
-    {
-        return 0;
-    }
-
-    virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
-                             ustring from)
-    {
-        return 0;
-    }
-
-    virtual bool get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
-                                     ustring to, float time)
-    {
-        return 0;
-    }
-
-    virtual bool get_array_attribute (ShaderGlobals *sg, bool derivatives,
-                                      ustring object, TypeDesc type, ustring name,
-                                      int index, void *val)
-    {
-        return 0;
-    }
-
-    virtual bool get_attribute (ShaderGlobals *sg, bool derivatives, ustring object,
-                                TypeDesc type, ustring name, void *val)
-    {
-        return 0;
-    }
-
-    virtual bool get_userdata (bool derivatives, ustring name, TypeDesc type,
-                               ShaderGlobals *sg, void *val)
-    {
-        return 0;
-    }
-
 
     /// Return true if the texture handle (previously returned by
     /// get_texture_handle()) is a valid texture that can be subsequently
@@ -135,30 +82,27 @@ public:
     // OptiX Materials and set up the OptiX scene graph
     virtual bool finalize(ShadingSystem* shadingsys, bool saveptx, Scene* scene = nullptr);
 
+    virtual void init_optix_context (int xres, int yres);
+    virtual void make_optix_materials (std::vector<ShaderGroupRef>& shaders);
+    virtual void finalize_scene ();
+    virtual void prepare_render ();
+
     virtual void warmup ();
     virtual void render (int xres, int yres);
+    virtual void finalize_pixel_buffer ();
 
     // Copies the specified device buffer into an output vector, assuming
     // that the buffer is in FLOAT3 format (and that Vec3 and float3 have
     // the same underlying representation).
     virtual std::vector<OSL::Color3>
-    getPixelBuffer(const std::string& buffer_name, int width, int height);
-
-    bool
-    saveImage(const std::string& buffer_name, int width, int height,
-              const std::string& imagefile, OIIO::ErrorHandler* errHandler);
+    get_pixel_buffer (const std::string& buffer_name, int width, int height);
 
     virtual void clear();
-
-    // ShaderGroupRef storage
-    std::vector<ShaderGroupRef>& shaders() { return m_shaders; }
 
     // Easy way to do Optix calls on the OptixRenderer
     optix::Context& context()      { return optix_ctx; }
     optix::Context& operator -> () { return optix_ctx; }
 
-    Camera camera;
-    Scene scene;
 private:
     optix::Context optix_ctx = nullptr;
     optix::Program m_program = nullptr;
@@ -173,7 +117,6 @@ private:
     optix::Program quad_intersect;
     optix::Program quad_bounds;
     std::vector<optix::Material> optix_mtls;
-    std::vector<ShaderGroupRef> m_shaders;
 };
 
 

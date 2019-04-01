@@ -28,8 +28,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #include <OpenImageIO/filesystem.h>
-#include <OpenImageIO/imagebuf.h>
-#include <OpenImageIO/imagebufalgo.h>
+
+#include <OSL/oslconfig.h>
 
 #include "optixrend.h"
 
@@ -42,6 +42,46 @@ extern char rend_llvm_compiled_ops_block[];
 
 
 OSL_NAMESPACE_ENTER
+
+
+
+OptixRenderer::~OptixRenderer ()
+{
+#ifdef OSL_USE_OPTIX
+    m_str_table.freetable();
+    if (optix_ctx)
+        optix_ctx->destroy();
+#endif
+}
+
+
+
+// Copies the specified device buffer into an output vector, assuming that
+// the buffer is in FLOAT3 format (and that Vec3 and float3 have the same
+// underlying representation).
+std::vector<OSL::Color3>
+OptixRenderer::get_pixel_buffer (const std::string& buffer_name,
+                                 int width, int height)
+{
+#ifdef OSL_USE_OPTIX
+    const OSL::Color3* buffer_ptr =
+        static_cast<OSL::Color3*>(optix_ctx[buffer_name]->getBuffer()->map());
+
+    if (! buffer_ptr) {
+        std::cerr << "Unable to map buffer " << buffer_name << std::endl;
+        exit (EXIT_FAILURE);
+    }
+
+    std::vector<OSL::Color3> pixels;
+    std::copy (&buffer_ptr[0], &buffer_ptr[width * height], back_inserter(pixels));
+
+    optix_ctx[buffer_name]->getBuffer()->unmap();
+    return pixels;
+#else
+    return {};
+#endif
+}
+
 
 
 bool
@@ -58,48 +98,133 @@ OptixRenderer::load_ptx_from_file (const std::string& progName,
 
 
 
-#if 0
-bool Scene::init (optix::Context optix_ctx, const std::string& renderer, std::string& materials) {
+void
+OptixRenderer::init_optix_context (int xres, int yres)
+{
+#ifdef OSL_USE_OPTIX
+    // Set up the OptiX context
+    optix_ctx = optix::Context::create();
+    m_str_table.init (optix_ctx);
+
+    ASSERT ((optix_ctx->getEnabledDeviceCount() == 1) &&
+            "Only one CUDA device is currently supported");
+
+    optix_ctx->setRayTypeCount (2);
+    optix_ctx->setEntryPointCount (1);
+    optix_ctx->setStackSize (2048);
+    optix_ctx->setPrintEnabled (true);
+
     optix_ctx["radiance_ray_type"]->setUint  (0u);
     optix_ctx["shadow_ray_type"  ]->setUint  (1u);
     optix_ctx["bg_color"         ]->setFloat (0.0f, 0.0f, 0.0f);
     optix_ctx["bad_color"        ]->setFloat (1.0f, 0.0f, 1.0f);
 
+    // Create the output buffer
+    optix::Buffer buffer = optix_ctx->createBuffer (RT_BUFFER_OUTPUT,
+                                                    RT_FORMAT_FLOAT3,
+                                                    xres, yres);
+    optix_ctx["output_buffer"]->set (buffer);
+
+    // Load the renderer CUDA source and generate PTX for it
+    std::string filename = std::string(PTX_PATH) + "/renderer.ptx";
+    load_ptx_from_file (filename.c_str(), renderer_ptx);
+
     // Create the OptiX programs and set them on the optix::Context
-    optix_ctx->setMissProgram          (0, optix_ctx->createProgramFromPTXString (renderer, "miss"));
-    optix_ctx->setExceptionProgram     (0, optix_ctx->createProgramFromPTXString (renderer, "exception"));
+    optix_ctx->setRayGenerationProgram (0, optix_ctx->createProgramFromPTXString (renderer_ptx, "raygen"));
+    optix_ctx->setMissProgram          (0, optix_ctx->createProgramFromPTXString (renderer_ptx, "miss"));
+    optix_ctx->setExceptionProgram     (0, optix_ctx->createProgramFromPTXString (renderer_ptx, "exception"));
 
     // Load the PTX for the wrapper program. It will be used to create OptiX
     // Materials from the OSL ShaderGroups
-    if (! OptixRenderer::load_ptx_from_file("wrapper.ptx", materials))
-        return false;
+    filename = std::string(PTX_PATH) + "/wrapper.ptx";
+    load_ptx_from_file (filename, wrapper_ptx);
 
-    std::string sphere_ptx, quad_ptx;
-    if (! OptixRenderer::load_ptx_from_file("sphere.ptx", sphere_ptx))
-        return false;
-    if (! OptixRenderer::load_ptx_from_file("quad.ptx", quad_ptx))
-        return false;
+    // Load the PTX for the primitives
+    std::string sphere_ptx;
+    filename = std::string(PTX_PATH) + "/sphere.ptx";
+    load_ptx_from_file (filename, sphere_ptx);
+
+    std::string quad_ptx;
+    filename = std::string(PTX_PATH) + "/quad.ptx";
+    load_ptx_from_file (filename, quad_ptx);
 
     // Create the sphere and quad intersection programs, and save them on the
     // Scene so that they don't need to be regenerated for each primitive in the
     // scene
-    // Was: create_geom_programs (optix_ctx, sphere_ptx, quad_ptx);
-    // The bounds program is used to construct axis-aligned bounding boxes
-    // for each primitive when the acceleration structure is being created.
-    sphere_bounds    = optix_ctx->createProgramFromPTXString (sphere_ptx, "bounds");
-    quad_bounds      = optix_ctx->createProgramFromPTXString (quad_ptx,   "bounds");
-
-    // The intersection program is used to perform ray-geometry intersections.
-    sphere_intersect = optix_ctx->createProgramFromPTXString (sphere_ptx, "intersect");
-    quad_intersect   = optix_ctx->createProgramFromPTXString (quad_ptx,   "intersect");
-
-    return true;
-}
+    scene.create_geom_programs (optix_ctx, sphere_ptx, quad_ptx);
 #endif
+}
 
 
-#if 0
-void Scene::finalize(optix::Context optix_ctx, OptixRenderer *rend) {
+
+void
+OptixRenderer::make_optix_materials (std::vector<ShaderGroupRef>& shaders)
+{
+#ifdef OSL_USE_OPTIX
+    optix::Program closest_hit = optix_ctx->createProgramFromPTXString(
+        wrapper_ptx, "closest_hit_osl");
+
+    optix::Program any_hit = optix_ctx->createProgramFromPTXString(
+        wrapper_ptx, "any_hit_shadow");
+
+    int mtl_id = 0;
+
+    // Optimize each ShaderGroup in the scene, and use the resulting PTX to create
+    // OptiX Programs which can be called by the closest hit program in the wrapper
+    // to execute the compiled OSL shader.
+    for (const auto& groupref : shaders) {
+        shadingsys->optimize_group (groupref.get(), nullptr);
+
+        std::string group_name, init_name, entry_name;
+        shadingsys->getattribute (groupref.get(), "groupname",        group_name);
+        shadingsys->getattribute (groupref.get(), "group_init_name",  init_name);
+        shadingsys->getattribute (groupref.get(), "group_entry_name", entry_name);
+
+        // Retrieve the compiled ShaderGroup PTX
+        std::string osl_ptx;
+        shadingsys->getattribute (groupref.get(), "ptx_compiled_version",
+                                  OSL::TypeDesc::PTR, &osl_ptx);
+
+        if (osl_ptx.empty()) {
+            std::cerr << "Failed to generate PTX for ShaderGroup "
+                      << group_name << std::endl;
+            exit (EXIT_FAILURE);
+        }
+
+        if (options.get_int("saveptx")) {
+            std::ofstream out (group_name + "_" + std::to_string( mtl_id++ ) + ".ptx");
+            out << osl_ptx;
+            out.close();
+        }
+
+        // Create a new Material using the wrapper PTX
+        optix::Material mtl = optix_ctx->createMaterial();
+        mtl->setClosestHitProgram (0, closest_hit);
+        mtl->setAnyHitProgram (1, any_hit);
+
+        // Create Programs from the init and group_entry functions
+        optix::Program osl_init = optix_ctx->createProgramFromPTXString (
+            osl_ptx, init_name);
+
+        optix::Program osl_group = optix_ctx->createProgramFromPTXString (
+            osl_ptx, entry_name);
+
+        // Set the OSL functions as Callable Programs so that they can be
+        // executed by the closest hit program in the wrapper
+        mtl["osl_init_func" ]->setProgramId (osl_init );
+        mtl["osl_group_func"]->setProgramId (osl_group);
+
+        scene.optix_mtls.push_back(mtl);
+    }
+#endif
+}
+
+
+
+void
+OptixRenderer::finalize_scene ()
+{
+#ifdef OSL_USE_OPTIX
     // Create a GeometryGroup to contain the scene geometry
     optix::GeometryGroup geom_group = optix_ctx->createGeometryGroup();
 
@@ -114,33 +239,44 @@ void Scene::finalize(optix::Context optix_ctx, OptixRenderer *rend) {
 
     // Translate the primitives parsed from the scene description into OptiX scene
     // objects
-    for (const auto& sphere : spheres) {
+    for (const auto& sphere : scene.spheres) {
         optix::Geometry sphere_geom = optix_ctx->createGeometry();
-        sphere.setOptixVariables (sphere_geom, sphere_bounds, sphere_intersect);
+        sphere.setOptixVariables (sphere_geom, scene.sphere_bounds, scene.sphere_intersect);
 
         optix::GeometryInstance sphere_gi = optix_ctx->createGeometryInstance (
-            sphere_geom, &optix_mtls[sphere.shaderid()], &optix_mtls[sphere.shaderid()]+1);
+            sphere_geom, &scene.optix_mtls[sphere.shaderid()], &scene.optix_mtls[sphere.shaderid()]+1);
 
         geom_group->addChild (sphere_gi);
     }
 
-    for (const auto& quad : quads) {
+    for (const auto& quad : scene.quads) {
         optix::Geometry quad_geom = optix_ctx->createGeometry();
-        quad.setOptixVariables (quad_geom, quad_bounds, quad_intersect);
+        quad.setOptixVariables (quad_geom, scene.quad_bounds, scene.quad_intersect);
 
         optix::GeometryInstance quad_gi = optix_ctx->createGeometryInstance (
-            quad_geom, &optix_mtls[quad.shaderid()], &optix_mtls[quad.shaderid()]+1);
+            quad_geom, &scene.optix_mtls[quad.shaderid()], &scene.optix_mtls[quad.shaderid()]+1);
 
         geom_group->addChild (quad_gi);
     }
 
     // Set the camera variables on the OptiX Context, to be used by the ray gen program
-    optix_ctx["eye" ]->setFloat (vec3_to_float3 (rend->camera.eye));
-    optix_ctx["dir" ]->setFloat (vec3_to_float3 (rend->camera.dir));
-    optix_ctx["cx"  ]->setFloat (vec3_to_float3 (rend->camera.cx));
-    optix_ctx["cy"  ]->setFloat (vec3_to_float3 (rend->camera.cy));
-}
+    optix_ctx["eye" ]->setFloat (vec3_to_float3 (camera.eye));
+    optix_ctx["dir" ]->setFloat (vec3_to_float3 (camera.dir));
+    optix_ctx["cx"  ]->setFloat (vec3_to_float3 (camera.cx));
+    optix_ctx["cy"  ]->setFloat (vec3_to_float3 (camera.cy));
+    optix_ctx["invw"]->setFloat (camera.invw);
+    optix_ctx["invh"]->setFloat (camera.invh);
+
+    // Make some device strings to test userdata parameters
+    uint64_t addr1 = register_string ("ud_str_1", "");
+    uint64_t addr2 = register_string ("userdata string", "");
+    optix_ctx["test_str_1"]->setUserData (sizeof(char*), &addr1);
+    optix_ctx["test_str_2"]->setUserData (sizeof(char*), &addr2);
+
+    optix_ctx->validate();
 #endif
+}
+
 
 
 /// Return true if the texture handle (previously returned by
@@ -315,7 +451,7 @@ OptixRenderer::finalize(ShadingSystem* shadingsys, bool saveptx, Scene* scene)
     // Optimize each ShaderGroup in the scene, and use the resulting PTX to create
     // OptiX Programs which can be called by the closest hit program in the wrapper
     // to execute the compiled OSL shader.
-    for (auto&& groupref : m_shaders) {
+    for (auto&& groupref : shaders) {
         if (!scene && outputs) {
             shadingsys->attribute (groupref.get(), "renderer_outputs", TypeDesc(TypeDesc::STRING, 1), &outputs);
         }
@@ -429,53 +565,26 @@ OptixRenderer::finalize(ShadingSystem* shadingsys, bool saveptx, Scene* scene)
 
 
 
-std::vector<OSL::Color3>
-OptixRenderer::getPixelBuffer(const std::string& buffer_name, int width, int height)
+void
+OptixRenderer::prepare_render()
 {
-    const OSL::Color3* buffer_ptr =
-        static_cast<OSL::Color3*>(optix_ctx[buffer_name]->getBuffer()->map());
+#ifdef OSL_USE_OPTIX
+    std::vector<char> lib_bitcode;
+    std::copy (&rend_llvm_compiled_ops_block[0],
+               &rend_llvm_compiled_ops_block[rend_llvm_compiled_ops_size],
+               back_inserter(lib_bitcode));
+    shadingsys->attribute ("lib_bitcode", OSL::TypeDesc::UINT8, &lib_bitcode);
 
-    if (! buffer_ptr) {
-        std::cerr << "Unable to map buffer " << buffer_name << std::endl;
-        exit (EXIT_FAILURE);
-    }
+    // Set up the OptiX Context
+    init_optix_context(camera.xres, camera.yres);
 
-    std::vector<OSL::Color3> pixels;
-    std::copy (&buffer_ptr[0], &buffer_ptr[width * height], back_inserter(pixels));
+    // Convert the OSL ShaderGroups accumulated during scene parsing into
+    // OptiX Materials
+    make_optix_materials(shaders);
 
-    optix_ctx[buffer_name]->getBuffer()->unmap();
-
-    return pixels;
-}
-
-bool
-OptixRenderer::saveImage(const std::string& buffer_name, int width, int height,
-                         const std::string& imagefile, OIIO::ErrorHandler* errHandler)
-{
-    std::vector<OSL::Color3> pixels = getPixelBuffer("output_buffer", width, height);
-
-    // Make an ImageBuf that wraps it ('pixels' still owns the memory)
-    OIIO::ImageBuf pixelbuf(OIIO::ImageSpec(width, height, 3, TypeDesc::FLOAT), pixels.data());
-    pixelbuf.set_write_format(TypeDesc::HALF);
-
-    // Write image to disk
-    if (OIIO::Strutil::iends_with(imagefile, ".jpg") ||
-        OIIO::Strutil::iends_with(imagefile, ".jpeg") ||
-        OIIO::Strutil::iends_with(imagefile, ".gif") ||
-        OIIO::Strutil::iends_with(imagefile, ".png")) {
-        // JPEG, GIF, and PNG images should be automatically saved as sRGB
-        // because they are almost certainly supposed to be displayed on web
-        // pages.
-        OIIO::ImageBufAlgo::colorconvert(pixelbuf, pixelbuf, "linear", "sRGB", false, "", "");
-    }
-
-    pixelbuf.set_write_format (TypeDesc::HALF);
-    if (pixelbuf.write(imagefile))
-        return true;
-
-    if (errHandler)
-        errHandler->error("Unable to write output image: %s", pixelbuf.geterror().c_str());
-    return false;
+    // Set up the OptiX scene graph
+    finalize_scene ();
+#endif
 }
 
 
@@ -496,6 +605,23 @@ OptixRenderer::render(int xres, int yres)
 {
 #ifdef OSL_USE_OPTIX
     optix_ctx->launch (0, xres, yres);
+#endif
+}
+
+
+
+void
+OptixRenderer::finalize_pixel_buffer ()
+{
+#ifdef OSL_USE_OPTIX
+    std::string buffer_name = "output_buffer";
+    const void* buffer_ptr = optix_ctx[buffer_name]->getBuffer()->map();
+    if (! buffer_ptr) {
+        std::cerr << "Unable to map buffer " << buffer_name << std::endl;
+        exit (EXIT_FAILURE);
+    }
+
+    pixelbuf.set_pixels (OIIO::ROI::All(), OIIO::TypeFloat, buffer_ptr);
 #endif
 }
 

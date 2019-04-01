@@ -199,7 +199,8 @@ def testshade (args) :
 # Construct a command that run testrender with the specified arguments,
 # appending output to the file "out.txt".
 def testrender (args) :
-    return (osl_app("testrender") + " -v --stats " + args + " >> out.txt 2>&1 ;\n")
+    os.environ["optix_log_level"] = "0"
+    return (osl_app("testrender") + " " + args + " >> out.txt 2>&1 ;\n")
 
 
 # Construct a command that run testoptix with the specified arguments,

@@ -86,20 +86,36 @@ inline void ortho(const Vec3&n, Vec3& x, Vec3& y) {
 
 
 struct Camera {
-    Camera() {} // leave uninitialized
-    Camera(Vec3 eye, Vec3 dir, Vec3 up, float fov, int w, int h)
-        : eye(eye),
-          dir(dir.normalize()),
-          xres(w), yres(h),
-          invw(1.0f / w),
-          invh(1.0f / h)
-    {
+    Camera() {}
+
+    // Set where the camera sits and looks at.
+    void lookat (const Vec3& eye, const Vec3& dir, const Vec3& up,
+                 float fov) {
+        this->eye = eye;
+        this->dir = dir.normalized();
+        this->up = up;
+        this->fov = fov;
+        finalize();
+    }
+
+    // Set resolution
+    void resolution (int w, int h) {
+        xres = w;
+        yres = h;
+        invw = 1.0f / w;
+        invh = 1.0f / h;
+        finalize();
+    }
+
+    // Compute all derived values based on camera parametrs.
+    void finalize () {
         float k = OIIO::fast_tan(fov * float(M_PI / 360));
         Vec3 right = dir.cross(up).normalize();
-        cx = right * (w * k / h);
+        cx = right * (xres * k / yres);
         cy = (cx.cross(dir)).normalize() * k;
     }
 
+    // Get a ray for the given screen coordinates.
     Ray get(float x, float y) const {
         Dual2<Vec3> v = cx * (Dual2<float>(x, 1, 0) * invw - 0.5f) +
                         cy * (0.5f - Dual2<float>(y, 0, -1) * invh) +
@@ -107,8 +123,16 @@ struct Camera {
         return Ray(eye, normalize(v));
     }
 
-    Vec3 eye, dir, cx, cy;
-    int xres, yres;
+    // Specified by user:
+    Vec3 eye {0, 0, 0};
+    Vec3 dir {0, 0, -1};
+    Vec3 up {0, 1, 0};
+    float fov {90};
+    int xres {1};
+    int yres {1};
+
+    // Computed:
+    Vec3 cx, cy;
     float invw, invh;
 };
 
@@ -412,33 +436,9 @@ struct Scene {
         return quads[primID].islight();
     }
 
-#ifdef OSL_USE_OPTIX
-    bool init (optix::Context optix_ctx, const std::string& renderer,
-               std::string& materials);
-
-    void finalize(optix::Context optix_ctx, OptixRenderer *rend);
-
-    void create_geom_programs (optix::Context optix_ctx, const std::string& sphere_ptx,
-                               const std::string& quad_ptx)
-    {
-        // The bounds program is used to construct axis-aligned bounding boxes
-        // for each primitive when the acceleration structure is being created.
-        sphere_bounds    = optix_ctx->createProgramFromPTXString (sphere_ptx, "bounds");
-        quad_bounds      = optix_ctx->createProgramFromPTXString (quad_ptx,   "bounds");
-
-        // The intersection program is used to perform ray-geometry intersections.
-        sphere_intersect = optix_ctx->createProgramFromPTXString (sphere_ptx, "intersect");
-        quad_intersect   = optix_ctx->createProgramFromPTXString (quad_ptx,   "intersect");
-    }
-#endif
-
     std::vector<Sphere> spheres;
     std::vector<Quad> quads;
 #ifdef OSL_USE_OPTIX
-    optix::Program sphere_intersect;
-    optix::Program sphere_bounds;
-    optix::Program quad_intersect;
-    optix::Program quad_bounds;
     std::vector<optix::Material> optix_mtls;
 #endif
 };

@@ -174,10 +174,6 @@ add_subdirectory (src/testshade)
 add_subdirectory (src/testrender)
 endif ()
 
-if (OSL_BUILD_TESTS AND USE_OPTIX)
-add_subdirectory (src/testoptix)
-endif()
-
 if (OSL_BUILD_PLUGINS)
 add_subdirectory (src/osl.imageio)
 endif ()

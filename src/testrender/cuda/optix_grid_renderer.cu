@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2009-2018 Sony Pictures Imageworks Inc., et al.
+Copyright (c) 2019 Sony Pictures Imageworks Inc., et al.
 All Rights Reserved.
 
 Redistribution and use in source and binary forms, with or without

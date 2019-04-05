@@ -36,7 +36,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/refcnt.h>
 #include <OpenImageIO/ustring.h>
-#include <OpenImageIO/array_view.h>
 #if OPENIMAGEIO_VERSION <= 10902
 #include <OpenImageIO/imagebufalgo_util.h>
 #endif
@@ -722,7 +721,7 @@ enum ShadeImageLocations {
 OSLEXECPUBLIC
 bool shade_image (ShadingSystem &shadingsys, ShaderGroup &group,
                   const ShaderGlobals *defaultsg,
-                  OIIO::ImageBuf &buf, OIIO::array_view<ustring> outputs,
+                  OIIO::ImageBuf &buf, cspan<ustring> outputs,
                   ShadeImageLocations shadelocations = ShadePixelCenters,
                   OIIO::ROI roi = OIIO::ROI(),
                   OIIO::ImageBufAlgo::parallel_image_options popt = 0);

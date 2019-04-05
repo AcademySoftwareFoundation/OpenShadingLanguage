@@ -48,7 +48,7 @@ OSL_NAMESPACE_ENTER
 bool
 shade_image (ShadingSystem &shadingsys, ShaderGroup &group,
              const ShaderGlobals *defaultsg,
-             OIIO::ImageBuf &buf, OIIO::array_view<ustring> outputs,
+             OIIO::ImageBuf &buf, cspan<ustring> outputs,
              ShadeImageLocations shadelocations,
              OIIO::ROI roi, OIIO::ImageBufAlgo::parallel_image_options popt)
 {

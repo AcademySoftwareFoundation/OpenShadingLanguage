@@ -28,10 +28,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-
 #include <OpenImageIO/ustring.h>
 #include <OSL/oslexec.h>
-
+#include <OSL/device_string.h>
 #include <OSL/optix_compat.h>
 #include "simplerend.h"
 #include "optix_stringtable.h"
@@ -57,7 +56,7 @@ public:
     virtual int supports (string_view feature) const
     {
         if (feature == "OptiX")
-            return 1;
+            return true;
         return SimpleRenderer::supports(feature);
     }
 
@@ -67,19 +66,16 @@ public:
     virtual std::vector<OSL::Color3>
     get_pixel_buffer (const std::string& buffer_name, int width, int height);
 
-    static void load_ptx_from_file (std::string& ptx_string, const char* filename);
+    std::string load_ptx_file (string_view filename);
 
-    virtual void init_optix_context (int xres, int yres);
-    virtual void make_optix_materials (std::vector<ShaderGroupRef>& shaders);
-    virtual void finalize_scene ();
+    virtual bool init_optix_context (int xres, int yres);
+    virtual bool make_optix_materials ();
+    virtual bool finalize_scene ();
     virtual void prepare_render ();
     virtual void warmup ();
     virtual void render (int xres, int yres);
     virtual void finalize_pixel_buffer ();
-
-    // Easy way to do Optix calls on the OptixRenderer
-    optix::Context& context()      { return optix_ctx; }
-    optix::Context& operator -> () { return optix_ctx; }
+    virtual void clear ();
 
     /// Return true if the texture handle (previously returned by
     /// get_texture_handle()) is a valid texture that can be subsequently
@@ -90,13 +86,20 @@ public:
     /// used with texture calls to avoid the name lookups.
     virtual TextureHandle * get_texture_handle(ustring filename);
 
+    // Easy way to do Optix calls
+    optix::Context& optix_ctx()            { return m_optix_ctx; }
+    optix::Context& context()              { return m_optix_ctx; }
+    optix::Context& operator -> ()         { return context(); }
 
 private:
-    optix::Context optix_ctx = nullptr;
-    // optix::Program m_program = nullptr;
     OptiXStringTable m_str_table;
-    std::string renderer_ptx;  // ray generation, etc.
-    std::string wrapper_ptx;   // hit programs
+    optix::Context m_optix_ctx = nullptr;
+    optix::Program m_program = nullptr;
+    optix::Program sphere_intersect = nullptr;
+    optix::Program sphere_bounds = nullptr;
+    optix::Program quad_intersect = nullptr;
+    optix::Program quad_bounds = nullptr;
+    std::string m_materials_ptx;
     std::unordered_map<OIIO::ustring, optix::TextureSampler, OIIO::ustringHash> m_samplers;
 };
 

@@ -100,35 +100,41 @@ public:
                                 float hfov, float hither, float yon,
                                 int xres, int yres);
 
+    virtual void parse_scene_xml (const std::string& scenefile);
     virtual void prepare_render ();
     virtual void warmup () { }
     virtual void render (int xres, int yres);
+    virtual void clear () { }
 
     // After render, get the pixels into pixelbuf, if they aren't already.
     virtual void finalize_pixel_buffer () { }
 
+    // ShaderGroupRef storage
+    std::vector<ShaderGroupRef>& shaders() { return m_shaders; }
+
     Camera camera;
     Scene scene;
     Background background;
-    std::vector<ShaderGroupRef> shaders;
     ShadingSystem *shadingsys = nullptr;
     OIIO::ParamValueList options;
     OIIO::ImageBuf pixelbuf;
-    int backgroundShaderID = -1;
-    int backgroundResolution = 0;
-    int aa = 1;
-    int max_bounces = 1000000;
-    int rr_depth = 5;
+    ErrorHandler *errhandler { &m_default_errhandler };
 
 private:
-
     // Camera parameters
     Matrix44 m_world_to_camera;
     ustring m_projection;
     float m_fov, m_pixelaspect, m_hither, m_yon;
     float m_shutter[2];
     float m_screen_window[4];
-    int m_xres, m_yres;
+
+    int backgroundShaderID = -1;
+    int backgroundResolution = 0;
+    int aa = 1;
+    int max_bounces = 1000000;
+    int rr_depth = 5;
+    std::vector<ShaderGroupRef> m_shaders;
+    ErrorHandler m_default_errhandler;
 
     // Named transforms
     typedef std::map <ustring, std::shared_ptr<Transformation> > TransformMap;

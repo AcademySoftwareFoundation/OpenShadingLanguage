@@ -26,7 +26,14 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/parallel.h>
+
+#include <pugixml.hpp>
+
+#ifdef USING_OIIO_PUGI
+namespace pugi = OIIO::pugi;
+#endif
 
 #include "simplerend.h"
 #include "raytracer.h"
@@ -127,8 +134,233 @@ SimpleRenderer::camera_params (const Matrix44 &world_to_camera,
     m_screen_window[1] = -1.0f;
     m_screen_window[2] =  frame_aspect;
     m_screen_window[3] =  1.0f;
-    m_xres = xres;
-    m_yres = yres;
+    camera.xres = xres;
+    camera.yres = yres;
+}
+
+
+
+inline Vec3 strtovec(string_view str)
+{
+    Vec3 v(0, 0, 0);
+    OIIO::Strutil::parse_float (str, v[0]);
+    OIIO::Strutil::parse_char (str, ',');
+    OIIO::Strutil::parse_float (str, v[1]);
+    OIIO::Strutil::parse_char (str, ',');
+    OIIO::Strutil::parse_float (str, v[2]);
+    return v;
+}
+
+inline bool strtobool(const char* str)
+{
+    return strcmp(str, "1") == 0 ||
+           strcmp(str, "on") == 0 ||
+           strcmp(str, "yes") == 0;
+}
+
+
+template <int N>
+struct ParamStorage {
+    ParamStorage() : fparamindex(0), iparamindex(0), sparamindex(0) {}
+
+    void* Int(int i) {
+        ASSERT(iparamindex < N);
+        iparamdata[iparamindex] = i;
+        iparamindex++;
+        return &iparamdata[iparamindex - 1];
+    }
+
+    void* Float(float f) {
+        ASSERT(fparamindex < N);
+        fparamdata[fparamindex] = f;
+        fparamindex++;
+        return &fparamdata[fparamindex - 1];
+    }
+
+    void* Vec(float x, float y, float z) {
+        Float(x);
+        Float(y);
+        Float(z);
+        return &fparamdata[fparamindex - 3];
+    }
+
+    void* Str(const char* str) {
+        ASSERT(sparamindex < N);
+        sparamdata[sparamindex] = ustring(str);
+        sparamindex++;
+        return &sparamdata[sparamindex - 1];
+    }
+private:
+    // storage for shader parameters
+    float   fparamdata[N];
+    int     iparamdata[N];
+    ustring sparamdata[N];
+
+    int fparamindex;
+    int iparamindex;
+    int sparamindex;
+};
+
+
+
+void
+SimpleRenderer::parse_scene_xml(const std::string& scenefile)
+{
+    pugi::xml_document doc;
+    pugi::xml_parse_result parse_result;
+    if (OIIO::Strutil::ends_with(scenefile, ".xml")
+        && OIIO::Filesystem::exists(scenefile)) {
+        parse_result = doc.load_file(scenefile.c_str());
+    } else {
+        parse_result = doc.load_buffer(scenefile.c_str(), scenefile.size());
+    }
+    if (!parse_result) {
+        std::cerr << "XML parsed with errors: " << parse_result.description() << ", at offset " << parse_result.offset << "\n";
+        exit (EXIT_FAILURE);
+    }
+    pugi::xml_node root = doc.child("World");
+    if (!root) {
+        std::cerr << "Error reading scene: Root element <World> is missing\n";
+        exit (EXIT_FAILURE);
+    }
+
+    // loop over all children of world
+    for (auto node = root.first_child(); node; node = node.next_sibling()) {
+        if (strcmp(node.name(), "Option") == 0) {
+            for (auto attr = node.first_attribute(); attr; attr = attr.next_attribute()) {
+                int i = 0;
+                if (sscanf(attr.value(), " int %d ", &i) == 1) {
+                    attribute(attr.name(), i);
+                }
+                // TODO: pass any extra options to shading system (or texture system?)
+            }
+        } else if (strcmp(node.name(), "Camera") == 0) {
+            // defaults
+            Vec3 eye(0,0,0);
+            Vec3 dir(0,0,-1);
+            Vec3 up(0,1,0);
+            float fov = 90.f;
+
+            // load camera (only first attribute counts if duplicates)
+            pugi::xml_attribute eye_attr = node.attribute("eye");
+            pugi::xml_attribute dir_attr = node.attribute("dir");
+            pugi::xml_attribute  at_attr = node.attribute("look_at");
+            pugi::xml_attribute  up_attr = node.attribute("up");
+            pugi::xml_attribute fov_attr = node.attribute("fov");
+
+            if (eye_attr) eye = strtovec(eye_attr.value());
+            if (dir_attr) dir = strtovec(dir_attr.value()); else
+            if ( at_attr) dir = strtovec( at_attr.value()) - eye;
+            if ( up_attr)  up = strtovec( up_attr.value());
+            if (fov_attr) fov = OIIO::Strutil::from_string<float>(fov_attr.value());
+
+            camera.lookat(eye, dir, up, fov);
+        } else if (strcmp(node.name(), "Sphere") == 0) {
+            // load sphere
+            pugi::xml_attribute center_attr = node.attribute("center");
+            pugi::xml_attribute radius_attr = node.attribute("radius");
+            if (center_attr && radius_attr) {
+                Vec3  center = strtovec(center_attr.value());
+                float radius = OIIO::Strutil::from_string<float>(radius_attr.value());
+                if (radius > 0) {
+                    pugi::xml_attribute light_attr = node.attribute("is_light");
+                    bool is_light = light_attr ? strtobool(light_attr.value()) : false;
+                    scene.add_sphere(Sphere(center, radius, int(shaders().size()) - 1, is_light));
+                }
+            }
+        } else if (strcmp(node.name(), "Quad") == 0) {
+            // load quad
+            pugi::xml_attribute corner_attr = node.attribute("corner");
+            pugi::xml_attribute edge_x_attr = node.attribute("edge_x");
+            pugi::xml_attribute edge_y_attr = node.attribute("edge_y");
+            if (corner_attr && edge_x_attr && edge_y_attr) {
+                pugi::xml_attribute light_attr = node.attribute("is_light");
+                bool is_light = light_attr ? strtobool(light_attr.value()) : false;
+                Vec3 co = strtovec(corner_attr.value());
+                Vec3 ex = strtovec(edge_x_attr.value());
+                Vec3 ey = strtovec(edge_y_attr.value());
+                scene.add_quad(Quad(co, ex, ey, int(shaders().size()) - 1, is_light));
+            }
+        } else if (strcmp(node.name(), "Background") == 0) {
+            pugi::xml_attribute res_attr = node.attribute("resolution");
+            if (res_attr)
+                backgroundResolution = OIIO::Strutil::from_string<int>(res_attr.value());
+            backgroundShaderID = int(shaders().size()) - 1;
+        } else if (strcmp(node.name(), "ShaderGroup") == 0) {
+            ShaderGroupRef group;
+            pugi::xml_attribute name_attr = node.attribute("name");
+            std::string name = name_attr? name_attr.value() : "group";
+            pugi::xml_attribute type_attr = node.attribute("type");
+            std::string shadertype = type_attr ? type_attr.value() : "surface";
+            pugi::xml_attribute commands_attr = node.attribute("commands");
+            std::string commands = commands_attr ? commands_attr.value() : node.text().get();
+            if (commands.size())
+                group = shadingsys->ShaderGroupBegin (name, shadertype, commands);
+            else
+                group = shadingsys->ShaderGroupBegin (name);
+            ParamStorage<1024> store; // scratch space to hold parameters until they are read by Shader()
+            for (pugi::xml_node gnode = node.first_child(); gnode; gnode = gnode.next_sibling()) {
+                if (strcmp(gnode.name(), "Parameter") == 0) {
+                    // handle parameters
+                    for (auto attr = gnode.first_attribute(); attr; attr = attr.next_attribute()) {
+                        int i = 0; float x = 0, y = 0, z = 0;
+                        if (sscanf(attr.value(), " int %d ", &i) == 1)
+                            shadingsys->Parameter(*group, attr.name(),
+                                                  TypeDesc::TypeInt, store.Int(i));
+                        else if (sscanf(attr.value(), " float %f ", &x) == 1)
+                            shadingsys->Parameter(*group, attr.name(),
+                                                  TypeDesc::TypeFloat, store.Float(x));
+                        else if (sscanf(attr.value(), " vector %f %f %f", &x, &y, &z) == 3)
+                            shadingsys->Parameter(*group, attr.name(),
+                                                  TypeDesc::TypeVector, store.Vec(x, y, z));
+                        else if (sscanf(attr.value(), " point %f %f %f", &x, &y, &z) == 3)
+                            shadingsys->Parameter(*group, attr.name(),
+                                                  TypeDesc::TypePoint, store.Vec(x, y, z));
+                        else if (sscanf(attr.value(), " color %f %f %f", &x, &y, &z) == 3)
+                            shadingsys->Parameter(*group, attr.name(),
+                                                  TypeDesc::TypeColor, store.Vec(x, y, z));
+                        else
+                            shadingsys->Parameter(*group, attr.name(),
+                                                  TypeDesc::TypeString, store.Str(attr.value()));
+                    }
+                } else if (strcmp(gnode.name(), "Shader") == 0) {
+                    pugi::xml_attribute  type_attr = gnode.attribute("type");
+                    pugi::xml_attribute  name_attr = gnode.attribute("name");
+                    pugi::xml_attribute layer_attr = gnode.attribute("layer");
+                    const char* type = type_attr ? type_attr.value() : "surface";
+                    if (name_attr && layer_attr)
+                        shadingsys->Shader(*group, type, name_attr.value(),
+                                           layer_attr.value());
+                } else if (strcmp(gnode.name(), "ConnectShaders") == 0) {
+                    // FIXME: find a more elegant way to encode this
+                    pugi::xml_attribute  sl = gnode.attribute("srclayer");
+                    pugi::xml_attribute  sp = gnode.attribute("srcparam");
+                    pugi::xml_attribute  dl = gnode.attribute("dstlayer");
+                    pugi::xml_attribute  dp = gnode.attribute("dstparam");
+                    if (sl && sp && dl && dp)
+                        shadingsys->ConnectShaders(*group,
+                                                   sl.value(), sp.value(),
+                                                   dl.value(), dp.value());
+                } else {
+                    // unknow element?
+                }
+            }
+            shadingsys->ShaderGroupEnd(*group);
+            shaders().push_back (group);
+        } else {
+            // unknown element?
+        }
+    }
+    if (root.next_sibling()) {
+        std::cerr << "Error reading " << scenefile << "\n"
+                  << "Found multiple top-level elements\n";
+        exit (EXIT_FAILURE);
+    }
+    if (shaders().empty()) {
+        std::cout << "No shaders in scene\n";
+        exit (EXIT_FAILURE);
+    }
+    camera.finalize();
 }
 
 
@@ -221,8 +453,8 @@ SimpleRenderer::get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
                                         -screenleft/screenwidth, -screenbottom/screenheight, 0, 1);
                 M = M * screen_to_ndc;
                 if (to == u_raster) {
-                    Matrix44 ndc_to_raster (m_xres, 0, 0, 0,
-                                            0, m_yres, 0, 0,
+                    Matrix44 ndc_to_raster (camera.xres, 0, 0, 0,
+                                            0, camera.yres, 0, 0,
                                             0, 0, 1, 0,
                                             0, 0, 0, 1);
                     M = M * ndc_to_raster;
@@ -332,8 +564,8 @@ SimpleRenderer::get_camera_resolution (ShaderGlobals *sg, bool derivs, ustring o
                                     TypeDesc type, ustring name, void *val)
 {
     if (type == TypeIntArray2) {
-        ((int *)val)[0] = m_xres;
-        ((int *)val)[1] = m_yres;
+        ((int *)val)[0] = camera.xres;
+        ((int *)val)[1] = camera.yres;
         return true;
     }
     return false;
@@ -521,7 +753,7 @@ Vec3 SimpleRenderer::eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx
     sg.I = dir.val();
     sg.dIdx = dir.dx();
     sg.dIdy = dir.dy();
-    shadingsys->execute(*ctx, *shaders[backgroundShaderID], sg);
+    shadingsys->execute(*ctx, *m_shaders[backgroundShaderID], sg);
     return process_background_closure(sg.Ci);
 }
 
@@ -554,10 +786,10 @@ Color3 SimpleRenderer::subpixel_radiance(float x, float y, Sampler& sampler, Sha
         ShaderGlobals sg;
         globals_from_hit(sg, r, t, id, flip);
         int shaderID = scene.shaderid(id);
-        if (shaderID < 0 || !shaders[shaderID]) break; // no shader attached? done
+        if (shaderID < 0 || !m_shaders[shaderID]) break; // no shader attached? done
 
         // execute shader and process the resulting list of closures
-        shadingsys->execute (*ctx, *shaders[shaderID], sg);
+        shadingsys->execute (*ctx, *m_shaders[shaderID], sg);
         ShadingResult result;
         bool last_bounce = b == max_bounces;
         process_closure(result, sg.Ci, last_bounce);
@@ -604,7 +836,7 @@ Color3 SimpleRenderer::subpixel_radiance(float x, float y, Sampler& sampler, Sha
             if (lid == id) continue; // skip self
             if (!scene.islight(lid)) continue; // doesn't want to be sampled as a light
             int shaderID = scene.shaderid(lid);
-            if (shaderID < 0 || !shaders[shaderID]) continue; // no shader attached to this light
+            if (shaderID < 0 || !m_shaders[shaderID]) continue; // no shader attached to this light
             // sample a random direction towards the object
             float light_pdf;
             Vec3 ldir = scene.sample(lid, sg.P, xi, yi, light_pdf);
@@ -622,7 +854,7 @@ Color3 SimpleRenderer::subpixel_radiance(float x, float y, Sampler& sampler, Sha
                     ShaderGlobals light_sg;
                     globals_from_hit(light_sg, shadow_ray, shadow_dist, lid, false);
                     // execute the light shader (for emissive closures only)
-                    shadingsys->execute (*ctx, *shaders[shaderID], light_sg);
+                    shadingsys->execute (*ctx, *m_shaders[shaderID], light_sg);
                     ShadingResult light_result;
                     process_closure(light_result, light_sg.Ci, true);
                     // accumulate contribution

@@ -1,0 +1,36 @@
+// Test a variety of scenarios that should report type errors related to
+// assignments. We need to test both simple assignment as well as variable
+// declaration with initialization assignment, since they are different
+// grammatical constructs.
+
+#include "vector2.h"
+#include "vector4.h"
+
+
+
+shader
+test()
+{
+    // Assigning float to int is not allowed without a cast
+    {
+        float f = M_PI;
+        int i = f;                          // error
+        i = f;                              // error
+        i = (int)f;                         // ok
+    }
+
+    // Assigning scalar to closure, unless the scalar is 0
+    {
+        closure color cc = 0;               // ok
+        cc = 0;                             // ok
+        cc = 1;                             // error
+    }
+
+    // Assigning structs
+    {
+        vector2 v2 = {0.0};                 // ok
+        vector4 v4 = v2;                    // error -- incompatible structs
+        v4 = v4;                            // ok
+        v2 = v4;                            // error -- incompatible structs
+    }
+}

@@ -94,23 +94,46 @@ TypeSpec
 ASTvariable_declaration::typecheck (TypeSpec expected)
 {
     typecheck_children (m_typespec);
+    ASTNode* init = this->init().get();
 
-    if (! init())
+    if (! init)
         return m_typespec;
 
+    const TypeSpec& vt = m_typespec; // Type of the variable
+    const TypeSpec& et = init->typespec(); // Type of expression assigned
+
     if (m_typespec.is_structure() && ! m_initlist &&
-        init()->typespec().structure() != m_typespec.structure()) {
+        et.structure() != vt.structure()) {
         // Can't do:  struct foo = 1
-        error ("Cannot initialize structure '%s' with a scalar value",
-               name().c_str());
+        error ("Cannot initialize %s %s = %s", type_c_str(vt), name(),
+               type_c_str(et));
+        return m_typespec;
     }
 
-    // If it's a compound initializer, look at the individual pieces
-    ref init = this->init();
+    // If it's a compound initializer, the rest of the type checking of the
+    // individual piece would have already been checked in the child's
+    // typecheck method.
     if (init->nodetype() == compound_initializer_node) {
-        ASSERT (! init->nextptr() &&
-                "compound_initializer should be the only initializer");
-        init = ((ASTcompound_initializer *)init.get())->initlist();
+        if (init->nextptr())
+            error ("compound_initializer should be the only initializer");
+        // init = ((ASTcompound_initializer *)init)->initlist().get();
+        return m_typespec;  // done
+    }
+
+    // Special case: ok to assign a literal 0 to a closure to
+    // initialize it.
+    if (vt.is_closure() && ! et.is_closure() &&
+        (et.is_float() || et.is_int()) &&
+        init->nodetype() == literal_node &&
+        ((ASTliteral *)&(*init))->floatval() == 0.0f) {
+        return m_typespec; // it's ok
+    }
+
+    // Expression must be of a type assignable to the lvalue
+    if (! assignable (vt, et)) {
+        error ("Cannot assign %s %s = %s",
+               type_c_str(vt), name(), type_c_str(et));
+        return m_typespec;
     }
 
     return m_typespec;
@@ -283,8 +306,9 @@ ASTloopmod_statement::typecheck (TypeSpec expected)
 TypeSpec
 ASTassign_expression::typecheck (TypeSpec expected)
 {
-    TypeSpec vt = var()->typecheck ();
-    TypeSpec et = expr()->typecheck (vt);
+    TypeSpec vt = var()->typecheck ();  // Type of the variable
+    TypeSpec et = expr()->typecheck (vt);  // Type of the expression assigned
+    m_typespec = vt;
 
     if (! var()->is_lvalue()) {
         error ("Can't assign via %s to something that isn't an lvalue", opname());
@@ -292,21 +316,25 @@ ASTassign_expression::typecheck (TypeSpec expected)
     }
 
     ASSERT (m_op == Assign);  // all else handled by binary_op
+    ustring varname;
+    if (var()->nodetype() == variable_ref_node)
+        varname = ((ASTvariable_ref*)var().get())->name();
 
     // Handle array case
     if (vt.is_array() || et.is_array()) {
         if (vt.is_array() && et.is_array() &&
             vt.arraylength() >= et.arraylength()) {
             if (vt.structure() && (vt.structure() == et.structure())) {
-                return m_typespec = vt;
+                return m_typespec;
             }
             if (equivalent(vt.elementtype(), et.elementtype()) &&
                 !vt.structure() && !et.structure()) {
-                return m_typespec = vt;
+                return m_typespec;
             }
         }
-        error ("Cannot assign '%s' to '%s'", type_c_str(et), type_c_str(vt));
-        return TypeSpec();
+        error ("Cannot assign %s %s = %s", type_c_str(vt), varname,
+               type_c_str(et));
+        return m_typespec;
     }
 
     // Special case: ok to assign a literal 0 to a closure to
@@ -315,7 +343,7 @@ ASTassign_expression::typecheck (TypeSpec expected)
         (et.is_float() || et.is_int()) &&
         expr()->nodetype() == literal_node &&
         ((ASTliteral *)&(*expr()))->floatval() == 0.0f) {
-        return TypeSpec(); // it's ok
+        return m_typespec; // it's ok
     }
 
     // If either argument is a structure, they better both be the same
@@ -325,18 +353,19 @@ ASTassign_expression::typecheck (TypeSpec expected)
         if (vts == ets)
             return m_typespec = vt;
         // Otherwise, a structure mismatch
-        error ("Cannot assign '%s' to '%s'", type_c_str(et), type_c_str(vt));
-        return TypeSpec();
+        error ("Cannot assign %s %s = %s", type_c_str(vt), varname,
+               type_c_str(et));
+        return m_typespec;
     }
 
     // Expression must be of a type assignable to the lvalue
     if (! assignable (vt, et)) {
-        error ("Cannot assign '%s' to '%s'", type_c_str(et), type_c_str(vt));
-        // FIXME - can we print the variable in question?
-        return TypeSpec();
+        error ("Cannot assign %s %s = %s", type_c_str(vt), varname,
+               type_c_str(et));
+        return m_typespec;
     }
 
-    return m_typespec = vt;
+    return m_typespec;
 }
 
 

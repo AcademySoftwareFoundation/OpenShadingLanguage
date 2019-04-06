@@ -76,7 +76,6 @@ static int xres = 640, yres = 480;
 static int aa = 1, max_bounces = 1000000, rr_depth = 5;
 static int num_threads = 0;
 static int iters = 1;
-static ErrorHandler errhandler;
 static SimpleRenderer *rend = nullptr;
 static std::string scenefile, imagefile;
 static std::string shaderpath;
@@ -176,8 +175,6 @@ void getargs(int argc, const char *argv[])
         ap.usage();
         exit (EXIT_FAILURE);
     }
-    if (debug1 || verbose)
-        errhandler.verbosity (ErrorHandler::VERBOSE);
 }
 
 } // anonymous namespace
@@ -198,13 +195,14 @@ main (int argc, const char *argv[])
             rend = new OptixRenderer;
         else
             rend = new SimpleRenderer;
-        rend->errhandler = &errhandler;
+        if (debug1 || verbose)
+            rend->errhandler().verbosity (ErrorHandler::VERBOSE);
 
         // Create a new shading system.  We pass it the RendererServices
         // object that services callbacks from the shading system, NULL for
         // the TextureSystem (which will create a default OIIO one), and
         // an error handler.
-        shadingsys = new ShadingSystem (rend, NULL, &errhandler);
+        shadingsys = new ShadingSystem (rend, nullptr, &rend->errhandler());
         rend->shadingsys = shadingsys;
 
         // Other renderer and global options
@@ -257,8 +255,8 @@ main (int argc, const char *argv[])
         }
         rend->pixelbuf.set_write_format (TypeDesc::HALF);
         if (! rend->pixelbuf.write (imagefile))
-            errhandler.error ("Unable to write output image: %s",
-                              rend->pixelbuf.geterror());
+            rend->errhandler().error ("Unable to write output image: %s",
+                                      rend->pixelbuf.geterror());
         double writetime = timer.lap();
 
         // Print some debugging info

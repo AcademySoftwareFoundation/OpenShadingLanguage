@@ -112,13 +112,13 @@ public:
     // ShaderGroupRef storage
     std::vector<ShaderGroupRef>& shaders() { return m_shaders; }
 
+    OIIO::ErrorHandler& errhandler() const { return *m_errhandler; }
     Camera camera;
     Scene scene;
     Background background;
     ShadingSystem *shadingsys = nullptr;
     OIIO::ParamValueList options;
     OIIO::ImageBuf pixelbuf;
-    ErrorHandler *errhandler { &m_default_errhandler };
 
 private:
     // Camera parameters
@@ -134,7 +134,10 @@ private:
     int max_bounces = 1000000;
     int rr_depth = 5;
     std::vector<ShaderGroupRef> m_shaders;
-    ErrorHandler m_default_errhandler;
+
+    class ErrorHandler;  // subclass ErrorHandler for SimpleRenderer
+    std::unique_ptr<OIIO::ErrorHandler> m_errhandler;
+    bool m_had_error = false;
 
     // Named transforms
     typedef std::map <ustring, std::shared_ptr<Transformation> > TransformMap;
@@ -184,6 +187,8 @@ private:
     Color3 subpixel_radiance(float x, float y, Sampler& sampler,
                              ShadingContext* ctx);
     Color3 antialias_pixel(int x, int y, ShadingContext* ctx);
+
+    friend class ErrorHandler;
 };
 
 OSL_NAMESPACE_EXIT

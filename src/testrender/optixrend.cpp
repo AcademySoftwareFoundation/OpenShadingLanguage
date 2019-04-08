@@ -66,10 +66,8 @@ OptixRenderer::get_pixel_buffer (const std::string& buffer_name,
     const OSL::Color3* buffer_ptr =
         static_cast<OSL::Color3*>(m_optix_ctx[buffer_name]->getBuffer()->map());
 
-    if (! buffer_ptr) {
-        std::cerr << "Unable to map buffer " << buffer_name << std::endl;
-        exit (EXIT_FAILURE);
-    }
+    if (! buffer_ptr)
+        errhandler().severe ("Unable to map buffer %s", buffer_name);
 
     std::vector<OSL::Color3> pixels;
     std::copy (&buffer_ptr[0], &buffer_ptr[width * height], back_inserter(pixels));
@@ -91,7 +89,7 @@ OptixRenderer::load_ptx_file (string_view filename)
     if (! OIIO::Filesystem::exists(filepath))
         filepath = OIIO::Strutil::sprintf ("%s/%s", PTX_PATH, filename);
     if (! OIIO::Filesystem::read_text_file (filepath, ptx_string)) {
-        std::cerr << "Unable to load " << filename << std::endl;
+        errhandler().severe ("Unable to load %s", filename);
         ptx_string.clear();
     }
     return ptx_string;
@@ -221,7 +219,8 @@ OptixRenderer::make_optix_materials ()
 
         if (!scene.num_prims()) {
             if (!shadingsys->find_symbol (*groupref.get(), ustring(outputs[0]))) {
-                std::cout << "Requested output '" << outputs[0] << "', which wasn't found\n";
+                errhandler().warning ("Requested output '%s', which wasn't found",
+                                      outputs[0]);
             }
         }
 
@@ -236,8 +235,8 @@ OptixRenderer::make_optix_materials ()
                                   OSL::TypeDesc::PTR, &osl_ptx);
 
         if (osl_ptx.empty()) {
-            std::cerr << "Failed to generate PTX for ShaderGroup "
-                      << group_name << std::endl;
+            errhandler().error ("Failed to generate PTX for ShaderGroup %s",
+                                group_name);
             return false;
         }
 
@@ -379,7 +378,7 @@ OptixRenderer::get_texture_handle (ustring filename)
 
         OIIO::ImageBuf image;
         if (!image.init_spec(filename, 0, 0)) {
-            std::cerr << "Could not load:" << filename << "\n";
+            errhandler().error ("Could not load: %s", filename);
             return (TextureHandle*)(intptr_t(RT_TEXTURE_ID_NULL));
         }
         int nchan = image.spec().nchannels;
@@ -454,11 +453,8 @@ OptixRenderer::finalize_pixel_buffer ()
 #ifdef OSL_USE_OPTIX
     std::string buffer_name = "output_buffer";
     const void* buffer_ptr = m_optix_ctx[buffer_name]->getBuffer()->map();
-    if (! buffer_ptr) {
-        std::cerr << "Unable to map buffer " << buffer_name << std::endl;
-        exit (EXIT_FAILURE);
-    }
-
+    if (! buffer_ptr)
+        errhandler().severe ("Unable to map buffer %s", buffer_name);
     pixelbuf.set_pixels (OIIO::ROI::All(), OIIO::TypeFloat, buffer_ptr);
 #endif
 }

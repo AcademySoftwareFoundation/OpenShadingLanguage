@@ -52,9 +52,31 @@ static TypeDesc TypeIntArray2 (TypeDesc::INT, 2);
 
 
 
+// Subclass ErrorHandler
+class SimpleRenderer::ErrorHandler : public OIIO::ErrorHandler
+{
+public:
+    ErrorHandler (SimpleRenderer& rend) : m_rend(rend) { }
+
+    virtual void operator()(int errcode, const std::string& msg) {
+        OIIO::ErrorHandler::operator() (errcode, msg);
+        if (errcode & OIIO::ErrorHandler::EH_ERROR
+            || errcode & OIIO::ErrorHandler::EH_SEVERE)
+            m_rend.m_had_error = true;
+        if (errcode & OIIO::ErrorHandler::EH_SEVERE)
+            exit (EXIT_FAILURE);
+    }
+private:
+    SimpleRenderer& m_rend;
+};
+
+
+
 
 SimpleRenderer::SimpleRenderer ()
 {
+    m_errhandler.reset(new SimpleRenderer::ErrorHandler(*this));
+
     Matrix44 M;  M.makeIdentity();
     camera_params (M, u_perspective, 90.0f,
                    0.1f, 1000.0f, 256, 256);
@@ -214,15 +236,12 @@ SimpleRenderer::parse_scene_xml(const std::string& scenefile)
     } else {
         parse_result = doc.load_buffer(scenefile.c_str(), scenefile.size());
     }
-    if (!parse_result) {
-        std::cerr << "XML parsed with errors: " << parse_result.description() << ", at offset " << parse_result.offset << "\n";
-        exit (EXIT_FAILURE);
-    }
+    if (!parse_result)
+        errhandler().severe ("XML parsed with errors: %s at offset %d",
+                             parse_result.description(), parse_result.offset);
     pugi::xml_node root = doc.child("World");
-    if (!root) {
-        std::cerr << "Error reading scene: Root element <World> is missing\n";
-        exit (EXIT_FAILURE);
-    }
+    if (!root)
+        errhandler().severe ("Error reading scene: Root element <World> is missing");
 
     // loop over all children of world
     for (auto node = root.first_child(); node; node = node.next_sibling()) {
@@ -351,15 +370,11 @@ SimpleRenderer::parse_scene_xml(const std::string& scenefile)
             // unknown element?
         }
     }
-    if (root.next_sibling()) {
-        std::cerr << "Error reading " << scenefile << "\n"
-                  << "Found multiple top-level elements\n";
-        exit (EXIT_FAILURE);
-    }
-    if (shaders().empty()) {
-        std::cout << "No shaders in scene\n";
-        exit (EXIT_FAILURE);
-    }
+    if (root.next_sibling())
+        errhandler().severe ("Error reading %s: Found multiple top-level elements",
+                             scenefile);
+    if (shaders().empty())
+        errhandler().severe ("No shaders in scene");
     camera.finalize();
 }
 

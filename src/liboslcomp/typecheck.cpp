@@ -131,8 +131,13 @@ ASTvariable_declaration::typecheck (TypeSpec expected)
 
     // Expression must be of a type assignable to the lvalue
     if (! assignable (vt, et)) {
-        error ("Cannot assign %s %s = %s",
-               type_c_str(vt), name(), type_c_str(et));
+        // Special case: for int=float, it's just a warning.
+        if (vt.is_int() && et.is_float())
+            warning ("Assignment may lose precision: %s %s = %s",
+                     type_c_str(vt), name(), type_c_str(et));
+        else
+            error ("Cannot assign %s %s = %s",
+                   type_c_str(vt), name(), type_c_str(et));
         return m_typespec;
     }
 
@@ -360,8 +365,13 @@ ASTassign_expression::typecheck (TypeSpec expected)
 
     // Expression must be of a type assignable to the lvalue
     if (! assignable (vt, et)) {
-        error ("Cannot assign %s %s = %s", type_c_str(vt), varname,
-               type_c_str(et));
+        // Special case: for int=float, it's just a warning.
+        if (vt.is_int() && et.is_float())
+            warning ("Assignment may lose precision: %s %s = %s",
+                     type_c_str(vt), varname, type_c_str(et));
+        else
+            error ("Cannot assign %s %s = %s",
+                   type_c_str(vt), varname, type_c_str(et));
         return m_typespec;
     }
 

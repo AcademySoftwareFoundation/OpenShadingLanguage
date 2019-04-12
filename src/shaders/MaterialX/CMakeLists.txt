@@ -258,5 +258,5 @@ add_custom_target (mxshaders ALL
                    SOURCES ${shader_source} ${mx_shader_headers})
 
 install (FILES ${mx_shader_headers} ${mx_shader_objs} ${mx_shader_osls}
-         DESTINATION shaders/MaterialX)
+         DESTINATION ${OSL_SHADER_INSTALL_DIR}/MaterialX)
 

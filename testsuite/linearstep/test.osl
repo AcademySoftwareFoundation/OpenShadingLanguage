@@ -2,15 +2,27 @@ shader
 test (output color Cout = 0)
 {
     Cout = 0;
-    if (v < 0.2)    // degenerate linearstep with coincident edges
+    if (v < 0.1)    // degenerate linearstep with coincident edges
         Cout = linearstep (0.5, 0.5, u);
-    else if (v < 0.4)  // ordinary linearstep
+    else if (v < 0.2)  // ordinary linearstep
         Cout = linearstep (0.25, 0.75, u);
-    else if (v < 0.6)  // deginerate sls with eps==0
+    else if (v < 0.3)  // degenerate sls with eps==0
         Cout = smooth_linearstep (0.25, 0.75, u, 0.0);
-    else if (v < 0.8)  // regular sls
+    else if (v < 0.4)  // regular sls
         Cout = smooth_linearstep (0.25, 0.75, u, 0.05);
-    else if (v < 1.0)  // degenerate sls with coincident edges
+    else if (v < 0.5)  // degenerate sls with coincident edges
         Cout = smooth_linearstep (0.5, 0.5, u, 0.0);
+
+    else if (v < 0.6)    // degenerate linearstep with coincident edges
+        Cout = linearstep (color(0.5), color(0.5), u);
+    else if (v < 0.7)  // ordinary linearstep
+        Cout = linearstep (color(0.25), color(0.75), u);
+    else if (v < 0.8)  // degenerate sls with eps==0
+        Cout = smooth_linearstep (color(0.25), color(0.75), u, color(0.0));
+    else if (v < 0.9)  // regular sls
+        Cout = smooth_linearstep (color(0.25), color(0.75), u, color(0.05));
+    else if (v <= 1.0)  // degenerate sls with coincident edges
+        Cout = smooth_linearstep (color(0.5), color(0.5), u, color(0.0));
+
     Cout = 0.1 + Cout * 0.8;
 }

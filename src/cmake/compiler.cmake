@@ -21,6 +21,7 @@ option (CLANG_TIDY "Enable clang-tidy" OFF)
 set (CLANG_TIDY_CHECKS "-*" CACHE STRING "clang-tidy checks to perform")
 set (CLANG_TIDY_ARGS "" CACHE STRING "clang-tidy args")
 option (CLANG_TIDY_FIX "Have clang-tidy fix source" OFF)
+set (GLIBCXX_USE_CXX11_ABI "" CACHE STRING "For gcc, use the new C++11 library ABI (0|1)")
 
 
 # Figure out which compiler we're using
@@ -194,6 +195,18 @@ endif ()
 if (USE_LIBCPLUSPLUS AND CMAKE_COMPILER_IS_CLANG)
     message (STATUS "Using libc++")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+endif ()
+
+# GCC 5+: honor build-time option for whether or not to use new string ABI.
+# FIXME: In theory, this should also be needed for clang, if compiling with
+# the gcc libstdc++ toolchain. In practice, I could not get things to build
+# with clang properly when using this option, and I haven't yet seen a case
+# where it's needed. We can return to this and fix for clang if it becomes a
+# legit problem later.
+if (CMAKE_COMPILER_IS_GNUCC AND NOT ${GCC_VERSION} VERSION_LESS 5.0)
+    if (NOT ${GLIBCXX_USE_CXX11_ABI} STREQUAL "")
+        add_definitions ("-D_GLIBCXX_USE_CXX11_ABI=${GLIBCXX_USE_CXX11_ABI}")
+    endif ()
 endif ()
 
 

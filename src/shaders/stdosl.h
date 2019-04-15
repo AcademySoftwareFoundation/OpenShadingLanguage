@@ -343,17 +343,17 @@ normal step (normal edge, normal x) BUILTIN;
 float step (float edge, float x) BUILTIN;
 float smoothstep (float edge0, float edge1, float x) BUILTIN;
 
-color smoothstep (color edge0, color edge1, color in)
+color smoothstep (color edge0, color edge1, color x)
 {
-    return color (smoothstep(edge0[0], edge1[0], in[0]),
-                  smoothstep(edge0[1], edge1[1], in[1]),
-                  smoothstep(edge0[2], edge1[2], in[2]));
+    return color (smoothstep(edge0[0], edge1[0], x[0]),
+                  smoothstep(edge0[1], edge1[1], x[1]),
+                  smoothstep(edge0[2], edge1[2], x[2]));
 }
-vector smoothstep (vector edge0, vector edge1, vector in)
+vector smoothstep (vector edge0, vector edge1, vector x)
 {
-    return vector (smoothstep(edge0[0], edge1[0], in[0]),
-                   smoothstep(edge0[1], edge1[1], in[1]),
-                   smoothstep(edge0[2], edge1[2], in[2]));
+    return vector (smoothstep(edge0[0], edge1[0], x[0]),
+                   smoothstep(edge0[1], edge1[1], x[1]),
+                   smoothstep(edge0[2], edge1[2], x[2]));
 }
 
 float linearstep (float edge0, float edge1, float x) {
@@ -365,6 +365,18 @@ float linearstep (float edge0, float edge1, float x) {
         result = step (edge0, x);
     }
     return result;
+}
+color linearstep (color edge0, color edge1, color x)
+{
+    return color (linearstep(edge0[0], edge1[0], x[0]),
+                  linearstep(edge0[1], edge1[1], x[1]),
+                  linearstep(edge0[2], edge1[2], x[2]));
+}
+vector linearstep (vector edge0, vector edge1, vector x)
+{
+    return vector (linearstep(edge0[0], edge1[0], x[0]),
+                   linearstep(edge0[1], edge1[1], x[1]),
+                   linearstep(edge0[2], edge1[2], x[2]));
 }
 
 float smooth_linearstep (float edge0, float edge1, float x_, float eps_) {
@@ -383,6 +395,19 @@ float smooth_linearstep (float edge0, float edge1, float x_, float eps_) {
         result = step (edge0, x_);
     }
     return result;
+}
+
+color smooth_linearstep (color edge0, color edge1, color x, color eps)
+{
+    return color (smooth_linearstep(edge0[0], edge1[0], x[0], eps[0]),
+                  smooth_linearstep(edge0[1], edge1[1], x[1], eps[1]),
+                  smooth_linearstep(edge0[2], edge1[2], x[2], eps[2]));
+}
+vector smooth_linearstep (vector edge0, vector edge1, vector x, vector eps)
+{
+    return vector (smooth_linearstep(edge0[0], edge1[0], x[0], eps[0]),
+                   smooth_linearstep(edge0[1], edge1[1], x[1], eps[1]),
+                   smooth_linearstep(edge0[2], edge1[2], x[2], eps[2]));
 }
 
 float aastep (float edge, float s, float dedge, float ds) {

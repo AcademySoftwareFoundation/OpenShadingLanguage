@@ -61,7 +61,7 @@ Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
 \date{{\large Date: 31 Mar 2018 \\
- (with corrections, 1 Nov 2018)
+ (with corrections, 12 Apr 2019)
 }
 \bigskip
 \bigskip
@@ -3448,11 +3448,15 @@ The \emph{type} may be any of of \float, \color, \point, \vector, or
 performed component-by-component (separately for $x$, $y$, and $z$).
 \apiend
 
-\apiitem{float {\ce linearstep} (float edge0, float edge1, float x)}
+\apiitem{float {\ce linearstep} (float edge0, float edge1, float x) \\
+\emph{type} {\ce linearstep} (\emph{type} edge0, \emph{type} edge1, \emph{type} x)}
 \indexapi{linearstep()}
 Returns 0 if $x \le {\mathit edge0}$, and 1 if $x \ge {\mathit edge1}$,
 and performs a linear
 interpolation between 0 and 1 when ${\mathit edge0} < x < {\mathit edge1}$.
+This is equivalent to {\cf step(edge0, x)} when {\cf edge0 == edge1}.
+For \color and \point-like types, the computations are
+performed component-by-component (separately for $x$, $y$, and $z$).
 \apiend
 
 \apiitem{float {\ce smoothstep} (float edge0, float edge1, float x) \\
@@ -3466,10 +3470,11 @@ with a smooth transition.
 
 The \emph{type} may be any of of \float, \color, \point, \vector, or
 \normal.  For \color and \point-like types, the computations are
-performed component-by-component (separately for $x$, $y$, and $z$).
+performed component-by-component.
 \apiend
 
-\apiitem{float {\ce smooth_linearstep} (float edge0, float edge1, float x, float eps)}
+\apiitem{float {\ce smooth_linearstep} (float edge0, float edge1, float x, float eps) \\
+\emph{type} {\ce smooth_linearstep} (\emph{type} edge0, \emph{type} edge1, \emph{type} x, \emph{type} eps)}
 \indexapi{smooth_linearstep()}
 This function is strictly linear between ${\mathit edge0}+{\mathit eps}$ and ${\mathit edge1}-{\mathit eps}$
 but smoothly ramps to 0 between ${\mathit edge0}-{\mathit eps}$ and ${\mathit edge0}+{\mathit eps}$
@@ -3477,6 +3482,8 @@ and smoothly ramps to 1 between ${\mathit edge1}-{\mathit eps}$ and ${\mathit ed
 It is 0 when $x \le {\mathit edge0}-{\mathit eps}$, and 1 if $x \ge {\mathit edge1}+{\mathit eps}$,
 and performs a linear
 interpolation between 0 and 1 when ${\mathit edge0} < x < {\mathit edge1}$.
+For \color and \point-like types, the computations are
+performed component-by-component.
 \apiend
 
 

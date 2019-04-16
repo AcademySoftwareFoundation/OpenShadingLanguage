@@ -141,7 +141,7 @@ MACRO ( CUDA_SHADEOPS_COMPILE srclist )
     LIST ( APPEND ${srclist} ${shadeops_bc_cuda_cpp} )
 
     FOREACH ( shadeops_src ${shadeops_srcs} )
-        MAKE_CUDA_BITCODE ( ${shadeops_src} "_cuda" shadeops_bc )
+        MAKE_CUDA_BITCODE ( ${shadeops_src} "_cuda" shadeops_bc "" )
         LIST ( APPEND shadeops_bc_list ${shadeops_bc} )
     ENDFOREACH ()
 

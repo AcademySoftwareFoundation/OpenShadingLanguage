@@ -43,16 +43,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/parallel.h>
 
 #include <OSL/oslexec.h>
-#include <OSL/optix_compat.h>
-#include "optixrend.h"
+#include "optixraytracer.h"
 #include "shading.h"
-#include "simplerend.h"
+#include "simpleraytracer.h"
 
-
-// The pre-compiled renderer support library LLVM bitcode is embedded into the
-// testoptix executable and made available through these variables.
-extern int rend_llvm_compiled_ops_size;
-extern char rend_llvm_compiled_ops_block[];
 
 using namespace OSL;
 
@@ -76,7 +70,6 @@ static int xres = 640, yres = 480;
 static int aa = 1, max_bounces = 1000000, rr_depth = 5;
 static int num_threads = 0;
 static int iters = 1;
-static SimpleRenderer *rend = nullptr;
 static std::string scenefile, imagefile;
 static std::string shaderpath;
 static bool shadingsys_options_set = false;
@@ -132,18 +125,18 @@ void getargs(int argc, const char *argv[])
                 "%*", get_filenames, "",
                 "--help", &help, "Print help message",
                 "-v", &verbose, "Verbose messages",
+                "-t %d", &num_threads, "Render using N threads (default: auto-detect)",
                 "--optix", &use_optix, "Use OptiX if available",
                 "--debug", &debug1, "Lots of debugging info",
                 "--debug2", &debug2, "Even more debugging info",
                 "--runstats", &runstats, "Print run statistics",
                 "--stats", &runstats, "", // DEPRECATED 1.7
                 "--profile", &profile, "Print profile information",
-                "--saveptx", &saveptx, "Save the generated PTX",
+                "--saveptx", &saveptx, "Save the generated PTX (OptiX mode only)",
                 "--warmup", &warmup, "Perform a warmup launch",
                 "--res %d %d", &xres, &yres, "Make an W x H image",
                 "-r %d %d", &xres, &yres, "", // synonym for -res
                 "-aa %d", &aa, "Trace NxN rays per pixel",
-                "-t %d", &num_threads, "Render using N threads (default: auto-detect)",
                 "--iters %d", &iters, "Number of iterations",
                 "-O0", &O0, "Do no runtime shader optimization",
                 "-O1", &O1, "Do a little runtime shader optimization",
@@ -191,26 +184,27 @@ main (int argc, const char *argv[])
         // Read command line arguments
         getargs (argc, argv);
 
+        SimpleRaytracer *rend = nullptr;
         if (use_optix)
-            rend = new OptixRenderer;
+            rend = new OptixRaytracer;
         else
-            rend = new SimpleRenderer;
-        if (debug1 || verbose)
-            rend->errhandler().verbosity (ErrorHandler::VERBOSE);
-
-        // Create a new shading system.  We pass it the RendererServices
-        // object that services callbacks from the shading system, NULL for
-        // the TextureSystem (which will create a default OIIO one), and
-        // an error handler.
-        shadingsys = new ShadingSystem (rend, nullptr, &rend->errhandler());
-        rend->shadingsys = shadingsys;
+            rend = new SimpleRaytracer;
 
         // Other renderer and global options
+        if (debug1 || verbose)
+            rend->errhandler().verbosity (ErrorHandler::VERBOSE);
         rend->attribute("saveptx", (int)saveptx);
         rend->attribute("max_bounces", max_bounces);
         rend->attribute("rr_depth", rr_depth);
         rend->attribute("aa", aa);
         OIIO::attribute("threads", num_threads);
+
+        // Create a new shading system.  We pass it the RendererServices
+        // object that services callbacks from the shading system, the
+        // TextureSystem (note: passing nullptr just makes the ShadingSystem
+        // make its own TS), and an error handler.
+        shadingsys = new ShadingSystem (rend, nullptr, &rend->errhandler());
+        rend->shadingsys = shadingsys;
 
         // Register the layout of all closures known to this renderer
         // Any closure used by the shader which is not registered, or

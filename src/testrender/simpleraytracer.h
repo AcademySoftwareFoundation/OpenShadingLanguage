@@ -44,14 +44,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 OSL_NAMESPACE_ENTER
 
 
-class SimpleRenderer : public RendererServices
+class SimpleRaytracer : public RendererServices
 {
 public:
     // Just use 4x4 matrix for transformations
     typedef Matrix44 Transformation;
 
-    SimpleRenderer ();
-    virtual ~SimpleRenderer () { }
+    SimpleRaytracer ();
+    virtual ~SimpleRaytracer () { }
 
     // RendererServices support:
     virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
@@ -75,6 +75,7 @@ public:
 
     void name_transform (const char *name, const Transformation &xform);
 
+    // Set and get renderer attributes/options
     void attribute (string_view name, TypeDesc type, const void *value);
     void attribute (string_view name, int value) {
         attribute (name, TypeDesc::INT, &value);
@@ -86,7 +87,6 @@ public:
         const char *s = value.c_str();
         attribute (name, TypeDesc::STRING, &s);
     }
-
     OIIO::ParamValue * find_attribute (string_view name,
                                        TypeDesc searchtype=OIIO::TypeUnknown,
                                        bool casesensitive=false);
@@ -113,6 +113,7 @@ public:
     std::vector<ShaderGroupRef>& shaders() { return m_shaders; }
 
     OIIO::ErrorHandler& errhandler() const { return *m_errhandler; }
+
     Camera camera;
     Scene scene;
     Background background;
@@ -135,7 +136,7 @@ private:
     int rr_depth = 5;
     std::vector<ShaderGroupRef> m_shaders;
 
-    class ErrorHandler;  // subclass ErrorHandler for SimpleRenderer
+    class ErrorHandler;  // subclass ErrorHandler for SimpleRaytracer
     std::unique_ptr<OIIO::ErrorHandler> m_errhandler;
     bool m_had_error = false;
 
@@ -148,7 +149,7 @@ private:
     // imagine this to be fairly quick, but for a performance-critical
     // renderer, we would encourage benchmarking various methods and
     // alternate data structures.
-    typedef bool (SimpleRenderer::*AttrGetter)(ShaderGlobals *sg, bool derivs,
+    typedef bool (SimpleRaytracer::*AttrGetter)(ShaderGlobals *sg, bool derivs,
                                                ustring object, TypeDesc type,
                                                ustring name, void *val);
     typedef std::unordered_map<ustring, AttrGetter, ustringHash> AttrGetterMap;

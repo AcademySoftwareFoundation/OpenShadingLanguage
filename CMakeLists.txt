@@ -105,6 +105,8 @@ set (OPTIX_EXTRA_LIBS CACHE STRING "Extra lib targets needed for OptiX")
 set (CUDA_TARGET_ARCH "sm_35" CACHE STRING "CUDA GPU architecture (e.g. sm_35)")
 set (OSL_SHADER_INSTALL_DIR "${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME}/shaders"
      CACHE STRING "Directory where shaders will be installed")
+set (OSL_PTX_INSTALL_DIR "${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME}/ptx"
+     CACHE STRING "Directory where OptiX PTX files will be installed")
 
 # set (USE_OIIO_STATIC ON CACHE BOOL "If OIIO is built static")
 # if (USE_OIIO_STATIC)

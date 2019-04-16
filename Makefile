@@ -195,6 +195,10 @@ ifneq (${USE_LIBCPLUSPLUS},)
 MY_CMAKE_FLAGS += -DUSE_LIBCPLUSPLUS:BOOL=${USE_LIBCPLUSPLUS}
 endif
 
+ifneq (${GLIBCXX_USE_CXX11_ABI},)
+MY_CMAKE_FLAGS += -DGLIBCXX_USE_CXX11_ABI=${GLIBCXX_USE_CXX11_ABI}
+endif
+
 ifneq (${EXTRA_CPP_ARGS},)
 MY_CMAKE_FLAGS += -DEXTRA_CPP_ARGS:STRING="${EXTRA_CPP_ARGS}"
 endif
@@ -381,6 +385,7 @@ help:
 	@echo "      MYCC=xx MYCXX=yy         Use custom compilers"
 	@echo "      USE_CPP=14               Compile in C++14 mode (default is C++11)"
 	@echo "      USE_LIBCPLUSPLUS=1       Use clang libc++"
+	@echo "      GLIBCXX_USE_CXX11_ABI=1  For gcc, use the new string ABI"
 	@echo "      EXTRA_CPP_ARGS=          Additional args to the C++ command"
 	@echo "      USE_NINJA=1              Set up Ninja build (instead of make)"
 	@echo "      USE_CCACHE=0             Disable ccache (even if available)"

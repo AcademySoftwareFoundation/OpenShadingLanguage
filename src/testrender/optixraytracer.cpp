@@ -37,7 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // The pre-compiled renderer support library LLVM bitcode is embedded
 // into the executable and made available through these variables.
 extern int rend_llvm_compiled_ops_size;
-extern char rend_llvm_compiled_ops_block[];
+extern unsigned char rend_llvm_compiled_ops_block[];
 
 
 OSL_NAMESPACE_ENTER

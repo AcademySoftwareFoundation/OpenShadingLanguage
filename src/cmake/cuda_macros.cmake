@@ -95,8 +95,8 @@ FUNCTION ( LLVM_COMPILE_CUDA llvm_src headers prefix llvm_bc_cpp_generated extra
     MAKE_CUDA_BITCODE (${llvm_src} "" llvm_bc "${extra_clang_args}")
 
     ADD_CUSTOM_COMMAND (OUTPUT ${llvm_bc_cpp}
-        COMMAND "${CMAKE_SOURCE_DIR}/src/liboslexec/serialize-bc.bash" ${llvm_bc} ${llvm_bc_cpp} ${prefix}
+        COMMAND "${CMAKE_SOURCE_DIR}/src/liboslexec/serialize-bc.py" ${llvm_bc} ${llvm_bc_cpp} ${prefix}
         MAIN_DEPENDENCY ${llvm_src}
-        DEPENDS "${CMAKE_SOURCE_DIR}/src/liboslexec/serialize-bc.bash" ${llvm_src} ${headers} ${llvm_bc}
+        DEPENDS "${CMAKE_SOURCE_DIR}/src/liboslexec/serialize-bc.py" ${llvm_src} ${headers} ${llvm_bc}
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
 ENDFUNCTION ()

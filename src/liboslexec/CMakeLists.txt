@@ -117,9 +117,9 @@ MACRO ( LLVM_COMPILE llvm_src srclist )
           -Wno-deprecated-register
           -O3 -fno-math-errno -S -emit-llvm -o ${llvm_asm} ${llvm_src}
       COMMAND "${LLVM_DIRECTORY}/bin/llvm-as" -f -o ${llvm_bc} ${llvm_asm}
-      COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash" ${llvm_bc} ${llvm_bc_cpp} "osl_llvm_compiled_ops"
+      COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.py" ${llvm_bc} ${llvm_bc_cpp} "osl_llvm_compiled_ops"
       MAIN_DEPENDENCY ${llvm_src}
-      DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash"
+      DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.py"
               ${exec_headers} ${PROJECT_PUBLIC_HEADERS}
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
 
@@ -153,9 +153,9 @@ MACRO ( CUDA_SHADEOPS_COMPILE srclist )
 
     # Serialze the linked bitcode into a CPP file and add it to the list of liboslexec soures
     ADD_CUSTOM_COMMAND ( OUTPUT ${shadeops_bc_cuda_cpp}
-        COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash"
+        COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.py"
             ${linked_shadeops_bc} ${shadeops_bc_cuda_cpp} "osl_llvm_compiled_ops_cuda"
-        DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.bash" ${linked_shadeops_bc}
+        DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.py" ${linked_shadeops_bc}
         ${exec_headers} ${PROJECT_PUBLIC_HEADERS}
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
 ENDMACRO ( )

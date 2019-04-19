@@ -31,11 +31,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OSL/oslconfig.h>
 
-#include "optixrend.h"
+#include "optixraytracer.h"
 #include "../liboslexec/splineimpl.h"
 
-// The pre-compiled renderer support library LLVM bitcode is embedded into the
-// testoptix executable and made available through these variables.
+// The pre-compiled renderer support library LLVM bitcode is embedded
+// into the executable and made available through these variables.
 extern int rend_llvm_compiled_ops_size;
 extern char rend_llvm_compiled_ops_block[];
 
@@ -44,7 +44,7 @@ OSL_NAMESPACE_ENTER
 
 
 
-OptixRenderer::~OptixRenderer ()
+OptixRaytracer::~OptixRaytracer ()
 {
 #ifdef OSL_USE_OPTIX
     m_str_table.freetable();
@@ -55,34 +55,8 @@ OptixRenderer::~OptixRenderer ()
 
 
 
-// Copies the specified device buffer into an output vector, assuming that
-// the buffer is in FLOAT3 format (and that Vec3 and float3 have the same
-// underlying representation).
-std::vector<OSL::Color3>
-OptixRenderer::get_pixel_buffer (const std::string& buffer_name,
-                                 int width, int height)
-{
-#ifdef OSL_USE_OPTIX
-    const OSL::Color3* buffer_ptr =
-        static_cast<OSL::Color3*>(m_optix_ctx[buffer_name]->getBuffer()->map());
-
-    if (! buffer_ptr)
-        errhandler().severe ("Unable to map buffer %s", buffer_name);
-
-    std::vector<OSL::Color3> pixels;
-    std::copy (&buffer_ptr[0], &buffer_ptr[width * height], back_inserter(pixels));
-
-    m_optix_ctx[buffer_name]->getBuffer()->unmap();
-    return pixels;
-#else
-    return {};
-#endif
-}
-
-
-
 std::string
-OptixRenderer::load_ptx_file (string_view filename)
+OptixRaytracer::load_ptx_file (string_view filename)
 {
     std::string ptx_string;
     std::string filepath = filename;
@@ -98,7 +72,7 @@ OptixRenderer::load_ptx_file (string_view filename)
 
 
 bool
-OptixRenderer::init_optix_context (int xres, int yres)
+OptixRaytracer::init_optix_context (int xres, int yres)
 {
 #ifdef OSL_USE_OPTIX
     std::vector<char> lib_bitcode;
@@ -115,8 +89,8 @@ OptixRenderer::init_optix_context (int xres, int yres)
     // be accessed via OptiX variables that hold pointers to the table entries.
     m_str_table.init(m_optix_ctx);
 
-    ASSERT ((m_optix_ctx->getEnabledDeviceCount() == 1) &&
-            "Only one CUDA device is currently supported");
+    if (m_optix_ctx->getEnabledDeviceCount() != 1)
+        errhandler().warning ("Only one CUDA device is currently supported");
 
     m_optix_ctx->setRayTypeCount (2);
     m_optix_ctx->setEntryPointCount (1);
@@ -125,19 +99,11 @@ OptixRenderer::init_optix_context (int xres, int yres)
 
     // Load the renderer CUDA source and generate PTX for it
     std::string progName = "optix_raytracer.ptx";
-    if (! scene.num_prims()) {
-        // If there were no geometric primitives, switch to a
-        // different raygen program that directl shades a 2D grid
-        // instead of 3D raytracing.
-        // Note that this is behavior much like testshade, and so probably
-        // we will eventually optix-ify testshade and no longer need this
-        // behavior here.
-        progName = "optix_grid_renderer.ptx";
-    }
-
     std::string renderer_ptx = load_ptx_file(progName);
-    if (renderer_ptx.empty())
+    if (renderer_ptx.empty()) {
+        errhandler().severe ("Could not find PTX for the raygen program");
         return false;
+    }
 
     // Create the OptiX programs and set them on the optix::Context
     m_program = m_optix_ctx->createProgramFromPTXString(renderer_ptx, "raygen");
@@ -191,7 +157,7 @@ OptixRenderer::init_optix_context (int xres, int yres)
 
 
 bool
-OptixRenderer::make_optix_materials ()
+OptixRaytracer::make_optix_materials ()
 {
 #ifdef OSL_USE_OPTIX
     optix::Program closest_hit, any_hit;
@@ -277,7 +243,7 @@ OptixRenderer::make_optix_materials ()
 
 
 bool
-OptixRenderer::finalize_scene()
+OptixRaytracer::finalize_scene()
 {
 #ifdef OSL_USE_OPTIX
     make_optix_materials();
@@ -346,7 +312,7 @@ OptixRenderer::finalize_scene()
 /// get_texture_handle()) is a valid texture that can be subsequently
 /// read or sampled.
 bool
-OptixRenderer::good(TextureHandle *handle)
+OptixRaytracer::good(TextureHandle *handle)
 {
 #ifdef OSL_USE_OPTIX
     return intptr_t(handle) != RT_TEXTURE_ID_NULL;
@@ -360,7 +326,7 @@ OptixRenderer::good(TextureHandle *handle)
 /// Given the name of a texture, return an opaque handle that can be
 /// used with texture calls to avoid the name lookups.
 RendererServices::TextureHandle*
-OptixRenderer::get_texture_handle (ustring filename)
+OptixRaytracer::get_texture_handle (ustring filename)
 {
 #ifdef OSL_USE_OPTIX
     auto itr = m_samplers.find(filename);
@@ -413,7 +379,7 @@ OptixRenderer::get_texture_handle (ustring filename)
 
 
 void
-OptixRenderer::prepare_render()
+OptixRaytracer::prepare_render()
 {
 #ifdef OSL_USE_OPTIX
     // Set up the OptiX Context
@@ -427,7 +393,7 @@ OptixRenderer::prepare_render()
 
 
 void
-OptixRenderer::warmup()
+OptixRaytracer::warmup()
 {
 #ifdef OSL_USE_OPTIX
     // Perform a tiny launch to warm up the OptiX context
@@ -438,7 +404,7 @@ OptixRenderer::warmup()
 
 
 void
-OptixRenderer::render(int xres, int yres)
+OptixRaytracer::render(int xres, int yres)
 {
 #ifdef OSL_USE_OPTIX
     m_optix_ctx->launch (0, xres, yres);
@@ -448,7 +414,7 @@ OptixRenderer::render(int xres, int yres)
 
 
 void
-OptixRenderer::finalize_pixel_buffer ()
+OptixRaytracer::finalize_pixel_buffer ()
 {
 #ifdef OSL_USE_OPTIX
     std::string buffer_name = "output_buffer";
@@ -462,7 +428,7 @@ OptixRenderer::finalize_pixel_buffer ()
 
 
 void
-OptixRenderer::clear()
+OptixRaytracer::clear()
 {
     shaders().clear();
 #ifdef OSL_USE_OPTIX

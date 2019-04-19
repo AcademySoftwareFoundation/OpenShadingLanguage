@@ -27,6 +27,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 
+#include <OpenImageIO/imagebufalgo.h>
+
 #include <OSL/oslexec.h>
 #include <OSL/genclosure.h>
 #include "simplerend.h"
@@ -170,6 +172,46 @@ int
 SimpleRenderer::supports (string_view feature) const
 {
     return false;
+}
+
+
+
+OIIO::ParamValue*
+SimpleRenderer::find_attribute(string_view name, TypeDesc searchtype,
+                               bool casesensitive)
+{
+    auto iter = options.find(name, searchtype, casesensitive);
+    if (iter != options.end())
+        return &(*iter);
+    return nullptr;
+}
+
+
+
+const OIIO::ParamValue*
+SimpleRenderer::find_attribute(string_view name, TypeDesc searchtype,
+                               bool casesensitive) const
+{
+    auto iter = options.find(name, searchtype, casesensitive);
+    if (iter != options.end())
+        return &(*iter);
+    return nullptr;
+}
+
+
+
+void
+SimpleRenderer::attribute (string_view name, TypeDesc type, const void *value)
+{
+    if (name.empty())  // Guard against bogus empty names
+        return;
+    // Don't allow duplicates
+    auto f = find_attribute(name);
+    if (!f) {
+        options.resize(options.size() + 1);
+        f = &options.back();
+    }
+    f->init(name, type, 1, value);
 }
 
 
@@ -558,6 +600,19 @@ SimpleRenderer::get_camera_screen_window (ShaderGlobals *sg, bool derivs, ustrin
     return false;
 }
 
+
+
+bool
+SimpleRenderer::add_output (string_view varname, string_view filename,
+                            TypeDesc datatype, int nchannels)
+{
+    // FIXME: use name to figure out
+    OIIO::ImageSpec spec(m_xres, m_yres, nchannels, datatype);
+    m_outputvars.emplace_back(varname);
+    m_outputbufs.emplace_back(new OIIO::ImageBuf(filename, spec));
+    OIIO::ImageBufAlgo::zero (*m_outputbufs.back());
+    return true;
+}
 
 
 

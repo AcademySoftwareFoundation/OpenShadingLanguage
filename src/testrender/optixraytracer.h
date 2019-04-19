@@ -32,21 +32,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/oslexec.h>
 #include <OSL/device_string.h>
 #include <OSL/optix_compat.h>
-#include "simplerend.h"
+#include "simpleraytracer.h"
 #include "optix_stringtable.h"
 
 
 OSL_NAMESPACE_ENTER
 
 
-class OptixRenderer : public SimpleRenderer
+class OptixRaytracer : public SimpleRaytracer
 {
 public:
     // Just use 4x4 matrix for transformations
     typedef Matrix44 Transformation;
 
-    OptixRenderer () { }
-    virtual ~OptixRenderer ();
+    OptixRaytracer () { }
+    virtual ~OptixRaytracer ();
 
     uint64_t register_string (const std::string& str, const std::string& var_name)
     {
@@ -57,14 +57,8 @@ public:
     {
         if (feature == "OptiX")
             return true;
-        return SimpleRenderer::supports(feature);
+        return SimpleRaytracer::supports(feature);
     }
-
-    // Copies the specified device buffer into an output vector, assuming
-    // that the buffer is in FLOAT3 format (and that Vec3 and float3 have
-    // the same underlying representation).
-    virtual std::vector<OSL::Color3>
-    get_pixel_buffer (const std::string& buffer_name, int width, int height);
 
     std::string load_ptx_file (string_view filename);
 

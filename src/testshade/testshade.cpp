@@ -27,11 +27,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 
-#include <iostream>
+#include <cmath>
 #include <fstream>
+#include <iostream>
+#include <memory>
 #include <string>
 #include <vector>
-#include <cmath>
 
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagebuf.h>
@@ -46,7 +47,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/oslexec.h>
 #include <OSL/oslcomp.h>
 #include <OSL/oslquery.h>
+#include "optixgridrender.h"
 #include "simplerend.h"
+
 using namespace OSL;
 using OIIO::TypeDesc;
 using OIIO::ParamValue;
@@ -57,7 +60,6 @@ static std::vector<std::string> shadernames;
 static std::vector<std::string> outputfiles;
 static std::vector<std::string> outputvars;
 static std::vector<ustring> outputvarnames;
-static std::vector<OIIO::ImageBuf*> outputimgs;
 static std::string dataformatname = "";
 static std::string shaderpath;
 static std::vector<std::string> entrylayers;
@@ -68,6 +70,8 @@ static bool debug1 = false;
 static bool debug2 = false;
 static bool verbose = false;
 static bool runstats = false;
+static bool saveptx = false;
+static bool warmup = false;
 static bool profile = false;
 static bool O0 = false, O1 = false, O2 = false;
 static bool pixelcenters = false;
@@ -79,6 +83,7 @@ static bool inbuffer = false;
 static bool use_shade_image = false;
 static bool userdata_isconnected = false;
 static bool print_outputs = false;
+static bool use_optix = OIIO::Strutil::stoi(OIIO::Sysutil::getenv("TESTSHADE_OPTIX"));
 static int xres = 1, yres = 1;
 static int num_threads = 0;
 static std::string groupname;
@@ -95,7 +100,6 @@ static int raytype_bit = 0;
 static bool raytype_opt = false;
 static std::string extraoptions;
 static std::string texoptions;
-static SimpleRenderer rend;  // RendererServices
 static OSL::Matrix44 Mshad;  // "shader" space to "common" space matrix
 static OSL::Matrix44 Mobj;   // "object" space to "common" space matrix
 static ShaderGroupRef shadergroup;
@@ -443,11 +447,14 @@ getargs (int argc, const char *argv[])
                 "--help", &help, "Print help message",
                 "-v", &verbose, "Verbose messages",
                 "-t %d", &num_threads, "Render using N threads (default: auto-detect)",
+                "--optix", &use_optix, "Use OptiX if available",
                 "--debug", &debug1, "Lots of debugging info",
                 "--debug2", &debug2, "Even more debugging info",
                 "--runstats", &runstats, "Print run statistics",
                 "--stats", &runstats, "",  // DEPRECATED 1.7
                 "--profile", &profile, "Print profile information",
+                "--saveptx", &saveptx, "Save the generated PTX (OptiX mode only)",
+                "--warmup", &warmup, "Perform a warmup launch",
                 "--path %s", &shaderpath, "Specify oso search path",
                 "--res %d %d", &xres, &yres, "Make an W x H image",
                 "-g %d %d", &xres, &yres, "", // synonym for -res
@@ -618,7 +625,7 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
 
 
 static void
-setup_output_images (ShadingSystem *shadingsys,
+setup_output_images (SimpleRenderer *rend, ShadingSystem *shadingsys,
                      ShaderGroupRef &shadergroup)
 {
     // Tell the shading system which outputs we want
@@ -688,8 +695,6 @@ setup_output_images (ShadingSystem *shadingsys,
     for (size_t i = 0;  i < outputfiles.size();  ++i) {
         // Make a ustring version of the output name, for fast manipulation
         outputvarnames.emplace_back(outputvars[i]);
-        // Start with a NULL ImageBuf pointer
-        outputimgs.push_back (NULL);
 
         // Ask for a pointer to the symbol's data, as computed by this
         // shader.
@@ -724,15 +729,11 @@ setup_output_images (ShadingSystem *shadingsys,
 
         // Make an ImageBuf of the right type and size to hold this
         // symbol's output, and initially clear it to all black pixels.
-        OIIO::ImageSpec spec (xres, yres, nchans, TypeDesc::FLOAT);
-        outputimgs[i] = new OIIO::ImageBuf(outputfiles[i], spec);
-        outputimgs[i]->set_write_format (outtypebase);
-        OIIO::ImageBufAlgo::zero (*outputimgs[i]);
+        rend->add_output (outputvars[i], outputfiles[i], tbase, nchans);
     }
 
-    if (outputimgs.empty()) {
-        OIIO::ImageSpec spec (xres, yres, 3, TypeDesc::FLOAT);
-        outputimgs.push_back(new OIIO::ImageBuf(spec));
+    if (! rend->noutputs()) {
+        rend->add_output ("Cout", "Cout.tif", OIIO::TypeFloat, 3);
     }
 
     shadingsys->release_context (ctx);  // don't need this anymore for now
@@ -751,28 +752,30 @@ setup_output_images (ShadingSystem *shadingsys,
 // and integrate the lights using that BSDF to determine the radiance
 // in the direction of the camera for that pixel.
 static void
-save_outputs (ShadingSystem *shadingsys, ShadingContext *ctx, int x, int y)
+save_outputs (SimpleRenderer *rend, ShadingSystem *shadingsys,
+              ShadingContext *ctx, int x, int y)
 {
     if (print_outputs)
         printf ("Pixel (%d, %d):\n", x, y);
     // For each output requested on the command line...
-    for (size_t i = 0;  i < outputfiles.size();  ++i) {
+    for (size_t i = 0, e = rend->noutputs();  i < e;  ++i) {
         // Skip if we couldn't open the image or didn't match a known output
-        if (! outputimgs[i])
+        OIIO::ImageBuf* outputimg = rend->outputbuf(i);
+        if (! outputimg)
             continue;
 
         // Ask for a pointer to the symbol's data, as computed by this
         // shader.
         TypeDesc t;
-        const void *data = shadingsys->get_symbol (*ctx, outputvarnames[i], t);
+        const void *data = shadingsys->get_symbol (*ctx, rend->outputname(i), t);
         if (!data)
             continue;  // Skip if symbol isn't found
 
-        int nchans = outputimgs[i]->nchannels();
+        int nchans = outputimg->nchannels();
         if (t.basetype == TypeDesc::FLOAT) {
             // If the variable we are outputting is float-based, set it
             // directly in the output buffer.
-            outputimgs[i]->setpixel (x, y, (const float *)data);
+            outputimg->setpixel (x, y, (const float *)data);
             if (print_outputs) {
                 printf ("  %s :", outputvarnames[i].c_str());
                 for (int c = 0; c < nchans; ++c)
@@ -785,7 +788,7 @@ save_outputs (ShadingSystem *shadingsys, ShadingContext *ctx, int x, int y)
             float *pixel = (float *) alloca (nchans * sizeof(float));
             OIIO::convert_types (TypeDesc::BASETYPE(t.basetype), data,
                                  TypeDesc::FLOAT, pixel, nchans);
-            outputimgs[i]->setpixel (x, y, &pixel[0]);
+            outputimg->setpixel (x, y, &pixel[0]);
             if (print_outputs) {
                 printf ("  %s :", outputvarnames[i].c_str());
                 for (int c = 0; c < nchans; ++c)
@@ -902,7 +905,8 @@ test_group_attributes (ShaderGroup *group)
 
 
 void
-shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
+shade_region (SimpleRenderer *rend, ShaderGroup *shadergroup,
+              OIIO::ROI roi, bool save)
 {
     // Request an OSL::PerThreadInfo for this thread.
     OSL::PerThreadInfo *thread_info = shadingsys->create_thread_info();
@@ -956,7 +960,7 @@ shade_region (ShaderGroup *shadergroup, OIIO::ROI roi, bool save)
             // doing a bunch of iterations for time trials, we only
             // including the output pixel copying once in the timing.
             if (save)
-                save_outputs (shadingsys, ctx, x, y);
+                save_outputs (rend, shadingsys, ctx, x, y);
         }
     }
 
@@ -979,16 +983,30 @@ test_shade (int argc, const char *argv[])
 {
     OIIO::Timer timer;
 
+    SimpleRenderer *rend = nullptr;
+#ifdef OSL_USE_OPTIX
+    if (use_optix)
+        rend = new OptixGridRenderer;
+    else
+#endif
+        rend = new SimpleRenderer;
+
+    // Other renderer and global options
+    if (debug1 || verbose)
+        rend->errhandler().verbosity (ErrorHandler::VERBOSE);
+    rend->attribute("saveptx", (int)saveptx);
+
     // Request a TextureSystem (by default it will be the global shared
     // one). This isn't strictly necessary, if you pass nullptr to
     // ShadingSystem ctr, it will ask for the shared one internally.
     TextureSystem *texturesys = TextureSystem::create();
 
     // Create a new shading system.  We pass it the RendererServices
-    // object that services callbacks from the shading system, NULL for
-    // the TextureSystem (that just makes 'create' make its own TS), and
-    // an error handler.
-    shadingsys = new ShadingSystem (&rend, texturesys, &errhandler);
+    // object that services callbacks from the shading system, the
+    // TextureSystem (note: passing nullptr just makes the ShadingSystem
+    // make its own TS), and an error handler.
+    shadingsys = new ShadingSystem (rend, texturesys, &errhandler);
+    rend->init_shadingsys (shadingsys);
 
     // Register the layout of all closures known to this renderer
     // Any closure used by the shader which is not registered, or
@@ -1124,15 +1142,17 @@ test_shade (int argc, const char *argv[])
     if (outputfiles.size() != 0)
         std::cout << "\n";
 
+    rend->shaders().push_back (shadergroup);
+
     // Set up the named transformations, including shader and object.
     // For this test application, we just do this statically; in a real
     // renderer, the global named space (like "myspace") would probably
     // be static, but shader and object spaces may be different for each
     // object.
-    setup_transformations (rend, Mshad, Mobj);
+    setup_transformations (*rend, Mshad, Mobj);
 
     // Set up the image outputs requested on the command line
-    setup_output_images (shadingsys, shadergroup);
+    setup_output_images (rend, shadingsys, shadergroup);
 
     if (debug1)
         test_group_attributes (shadergroup.get());
@@ -1142,7 +1162,13 @@ test_shade (int argc, const char *argv[])
 
     synchio();
 
+    rend->prepare_render ();
+
     double setuptime = timer.lap ();
+
+    if (warmup)
+        rend->warmup();
+    double warmuptime = timer.lap ();
 
     // Allow a settable number of iterations to "render" the whole image,
     // which is useful for time trials of things that would be too quick
@@ -1150,18 +1176,20 @@ test_shade (int argc, const char *argv[])
     for (int iter = 0;  iter < iters;  ++iter) {
         OIIO::ROI roi (0, xres, 0, yres);
 
-        if (use_shade_image)
+        if (use_optix) {
+            rend->render (xres, yres);
+        } else if (use_shade_image) {
             OSL::shade_image (*shadingsys, *shadergroup, NULL,
-                              *outputimgs[0], outputvarnames,
+                              *rend->outputbuf(0), outputvarnames,
                               pixelcenters ? ShadePixelCenters : ShadePixelGrid,
                               roi, num_threads);
-        else {
+        } else {
             bool save = (iter == (iters-1));   // save on last iteration
 #if 0
-            shade_region (shadergroup.get(), roi, save);
+            shade_region (rend, shadergroup.get(), roi, save);
 #else
             OIIO::ImageBufAlgo::parallel_image (roi, num_threads,
-                    std::bind (shade_region, shadergroup.get(), std::placeholders::_1, save));
+                                                std::bind (shade_region, rend, shadergroup.get(), std::placeholders::_1, save));
 #endif
         }
 
@@ -1181,10 +1209,20 @@ test_shade (int argc, const char *argv[])
         std::cout << "\n";
 
     // Write the output images to disk
-    for (size_t i = 0;  i < outputimgs.size();  ++i) {
-        if (outputimgs[i]) {
+    rend->finalize_pixel_buffer ();
+    for (size_t i = 0;  i < rend->noutputs();  ++i) {
+        OIIO::ImageBuf* outputimg = rend->outputbuf(i);
+        if (outputimg) {
             if (! print_outputs) {
-                std::string filename = outputimgs[i]->name();
+                std::string filename = outputimg->name();
+                TypeDesc datatype = outputimg->spec().format;
+                if (dataformatname == "uint8")
+                    datatype = TypeDesc::UINT8;
+                else if (dataformatname == "half")
+                    datatype = TypeDesc::HALF;
+                else if (dataformatname == "float")
+                    datatype = TypeDesc::FLOAT;
+
                 // JPEG, GIF, and PNG images should be automatically saved
                 // as sRGB because they are almost certainly supposed to
                 // be displayed on web pages.
@@ -1194,17 +1232,17 @@ test_shade (int argc, const char *argv[])
                     Strutil::iends_with (filename, ".gif") ||
                     Strutil::iends_with (filename, ".png")) {
                     ImageBuf ccbuf;
-                    ImageBufAlgo::colorconvert (ccbuf, *outputimgs[i],
+                    ImageBufAlgo::colorconvert (ccbuf, *outputimg,
                                                 "linear", "sRGB", false,
                                                 "", "");
-                    ccbuf.set_write_format (outputimgs[i]->spec().format);
+                    ccbuf.set_write_format (datatype);
                     ccbuf.write (filename);
                 } else {
-                    outputimgs[i]->write (filename);
+                    outputimg->set_write_format (datatype);
+                    outputimg->write (filename);
                 }
             }
-            delete outputimgs[i];
-            outputimgs[i] = NULL;
+            // outputimg->reset();
         }
     }
 
@@ -1212,9 +1250,10 @@ test_shade (int argc, const char *argv[])
     if (debug1 || runstats || profile) {
         double writetime = timer.lap();
         std::cout << "\n";
-        std::cout << "Setup: " << OIIO::Strutil::timeintervalformat (setuptime,2) << "\n";
-        std::cout << "Run  : " << OIIO::Strutil::timeintervalformat (runtime,2) << "\n";
-        std::cout << "Write: " << OIIO::Strutil::timeintervalformat (writetime,2) << "\n";
+        std::cout << "Setup : " << OIIO::Strutil::timeintervalformat (setuptime,4) << "\n";
+        std::cout << "Warmup: " << OIIO::Strutil::timeintervalformat (warmuptime,4) << "\n";
+        std::cout << "Run   : " << OIIO::Strutil::timeintervalformat (runtime,4) << "\n";
+        std::cout << "Write : " << OIIO::Strutil::timeintervalformat (writetime,4) << "\n";
         std::cout << "\n";
         std::cout << shadingsys->getstats (5) << "\n";
         OIIO::TextureSystem *texturesys = shadingsys->texturesys();
@@ -1244,6 +1283,8 @@ test_shade (int argc, const char *argv[])
         retcode = EXIT_FAILURE;
     }
 #endif
+
+    delete rend;
 
     return retcode;
 }

@@ -35,7 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace pugi = OIIO::pugi;
 #endif
 
-#include "simplerend.h"
+#include "simpleraytracer.h"
 #include "raytracer.h"
 #include "shading.h"
 using namespace OSL;
@@ -53,10 +53,10 @@ static TypeDesc TypeIntArray2 (TypeDesc::INT, 2);
 
 
 // Subclass ErrorHandler
-class SimpleRenderer::ErrorHandler : public OIIO::ErrorHandler
+class SimpleRaytracer::ErrorHandler : public OIIO::ErrorHandler
 {
 public:
-    ErrorHandler (SimpleRenderer& rend) : m_rend(rend) { }
+    ErrorHandler (SimpleRaytracer& rend) : m_rend(rend) { }
 
     virtual void operator()(int errcode, const std::string& msg) {
         OIIO::ErrorHandler::operator() (errcode, msg);
@@ -67,39 +67,39 @@ public:
             exit (EXIT_FAILURE);
     }
 private:
-    SimpleRenderer& m_rend;
+    SimpleRaytracer& m_rend;
 };
 
 
 
 
-SimpleRenderer::SimpleRenderer ()
+SimpleRaytracer::SimpleRaytracer ()
 {
-    m_errhandler.reset(new SimpleRenderer::ErrorHandler(*this));
+    m_errhandler.reset(new SimpleRaytracer::ErrorHandler(*this));
 
     Matrix44 M;  M.makeIdentity();
     camera_params (M, u_perspective, 90.0f,
                    0.1f, 1000.0f, 256, 256);
 
     // Set up getters
-    m_attr_getters[ustring("osl:version")] = &SimpleRenderer::get_osl_version;
-    m_attr_getters[ustring("camera:resolution")] = &SimpleRenderer::get_camera_resolution;
-    m_attr_getters[ustring("camera:projection")] = &SimpleRenderer::get_camera_projection;
-    m_attr_getters[ustring("camera:pixelaspect")] = &SimpleRenderer::get_camera_pixelaspect;
-    m_attr_getters[ustring("camera:screen_window")] = &SimpleRenderer::get_camera_screen_window;
-    m_attr_getters[ustring("camera:fov")] = &SimpleRenderer::get_camera_fov;
-    m_attr_getters[ustring("camera:clip")] = &SimpleRenderer::get_camera_clip;
-    m_attr_getters[ustring("camera:clip_near")] = &SimpleRenderer::get_camera_clip_near;
-    m_attr_getters[ustring("camera:clip_far")] = &SimpleRenderer::get_camera_clip_far;
-    m_attr_getters[ustring("camera:shutter")] = &SimpleRenderer::get_camera_shutter;
-    m_attr_getters[ustring("camera:shutter_open")] = &SimpleRenderer::get_camera_shutter_open;
-    m_attr_getters[ustring("camera:shutter_close")] = &SimpleRenderer::get_camera_shutter_close;
+    m_attr_getters[ustring("osl:version")] = &SimpleRaytracer::get_osl_version;
+    m_attr_getters[ustring("camera:resolution")] = &SimpleRaytracer::get_camera_resolution;
+    m_attr_getters[ustring("camera:projection")] = &SimpleRaytracer::get_camera_projection;
+    m_attr_getters[ustring("camera:pixelaspect")] = &SimpleRaytracer::get_camera_pixelaspect;
+    m_attr_getters[ustring("camera:screen_window")] = &SimpleRaytracer::get_camera_screen_window;
+    m_attr_getters[ustring("camera:fov")] = &SimpleRaytracer::get_camera_fov;
+    m_attr_getters[ustring("camera:clip")] = &SimpleRaytracer::get_camera_clip;
+    m_attr_getters[ustring("camera:clip_near")] = &SimpleRaytracer::get_camera_clip_near;
+    m_attr_getters[ustring("camera:clip_far")] = &SimpleRaytracer::get_camera_clip_far;
+    m_attr_getters[ustring("camera:shutter")] = &SimpleRaytracer::get_camera_shutter;
+    m_attr_getters[ustring("camera:shutter_open")] = &SimpleRaytracer::get_camera_shutter_open;
+    m_attr_getters[ustring("camera:shutter_close")] = &SimpleRaytracer::get_camera_shutter_close;
 }
 
 
 
 OIIO::ParamValue*
-SimpleRenderer::find_attribute(string_view name, TypeDesc searchtype,
+SimpleRaytracer::find_attribute(string_view name, TypeDesc searchtype,
                                bool casesensitive)
 {
     auto iter = options.find(name, searchtype, casesensitive);
@@ -111,7 +111,7 @@ SimpleRenderer::find_attribute(string_view name, TypeDesc searchtype,
 
 
 const OIIO::ParamValue*
-SimpleRenderer::find_attribute(string_view name, TypeDesc searchtype,
+SimpleRaytracer::find_attribute(string_view name, TypeDesc searchtype,
                                bool casesensitive) const
 {
     auto iter = options.find(name, searchtype, casesensitive);
@@ -123,7 +123,7 @@ SimpleRenderer::find_attribute(string_view name, TypeDesc searchtype,
 
 
 void
-SimpleRenderer::attribute (string_view name, TypeDesc type, const void *value)
+SimpleRaytracer::attribute (string_view name, TypeDesc type, const void *value)
 {
     if (name.empty())  // Guard against bogus empty names
         return;
@@ -139,7 +139,7 @@ SimpleRenderer::attribute (string_view name, TypeDesc type, const void *value)
 
 
 void
-SimpleRenderer::camera_params (const Matrix44 &world_to_camera,
+SimpleRaytracer::camera_params (const Matrix44 &world_to_camera,
                                ustring projection, float hfov,
                                float hither, float yon,
                                int xres, int yres)
@@ -226,7 +226,7 @@ private:
 
 
 void
-SimpleRenderer::parse_scene_xml(const std::string& scenefile)
+SimpleRaytracer::parse_scene_xml(const std::string& scenefile)
 {
     pugi::xml_document doc;
     pugi::xml_parse_result parse_result;
@@ -381,11 +381,11 @@ SimpleRenderer::parse_scene_xml(const std::string& scenefile)
 
 
 bool
-SimpleRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
+SimpleRaytracer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
                             TransformationPtr xform,
                             float time)
 {
-    // SimpleRenderer doesn't understand motion blur and transformations
+    // SimpleRaytracer doesn't understand motion blur and transformations
     // are just simple 4x4 matrices.
     result = *reinterpret_cast<const Matrix44*>(xform);
     return true;
@@ -394,7 +394,7 @@ SimpleRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
 
 
 bool
-SimpleRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
+SimpleRaytracer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
                             ustring from, float time)
 {
     TransformMap::const_iterator found = m_named_xforms.find (from);
@@ -409,10 +409,10 @@ SimpleRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
 
 
 bool
-SimpleRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
+SimpleRaytracer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
                             TransformationPtr xform)
 {
-    // SimpleRenderer doesn't understand motion blur and transformations
+    // SimpleRaytracer doesn't understand motion blur and transformations
     // are just simple 4x4 matrices.
     result = *reinterpret_cast<const Matrix44*>(xform);
     return true;
@@ -421,10 +421,10 @@ SimpleRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
 
 
 bool
-SimpleRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
+SimpleRaytracer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
                             ustring from)
 {
-    // SimpleRenderer doesn't understand motion blur, so we never fail
+    // SimpleRaytracer doesn't understand motion blur, so we never fail
     // on account of time-varying transformations.
     TransformMap::const_iterator found = m_named_xforms.find (from);
     if (found != m_named_xforms.end()) {
@@ -438,7 +438,7 @@ SimpleRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
 
 
 bool
-SimpleRenderer::get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
+SimpleRaytracer::get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
                                     ustring to, float time)
 {
     if (to == u_camera || to == u_screen || to == u_NDC || to == u_raster) {
@@ -493,7 +493,7 @@ SimpleRenderer::get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
 
 
 void
-SimpleRenderer::name_transform (const char *name, const OSL::Matrix44 &xform)
+SimpleRaytracer::name_transform (const char *name, const OSL::Matrix44 &xform)
 {
     std::shared_ptr<Transformation> M (new OSL::Matrix44 (xform));
     m_named_xforms[ustring(name)] = M;
@@ -502,7 +502,7 @@ SimpleRenderer::name_transform (const char *name, const OSL::Matrix44 &xform)
 
 
 bool
-SimpleRenderer::get_array_attribute (ShaderGlobals *sg, bool derivatives, ustring object,
+SimpleRaytracer::get_array_attribute (ShaderGlobals *sg, bool derivatives, ustring object,
                                      TypeDesc type, ustring name,
                                      int index, void *val)
 {
@@ -523,7 +523,7 @@ SimpleRenderer::get_array_attribute (ShaderGlobals *sg, bool derivatives, ustrin
 
 
 bool
-SimpleRenderer::get_attribute (ShaderGlobals *sg, bool derivatives, ustring object,
+SimpleRaytracer::get_attribute (ShaderGlobals *sg, bool derivatives, ustring object,
                                TypeDesc type, ustring name, void *val)
 {
     return get_array_attribute (sg, derivatives, object,
@@ -533,7 +533,7 @@ SimpleRenderer::get_attribute (ShaderGlobals *sg, bool derivatives, ustring obje
 
 
 bool
-SimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type,
+SimpleRaytracer::get_userdata (bool derivatives, ustring name, TypeDesc type,
                               ShaderGlobals *sg, void *val)
 {
     // Just to illustrate how this works, respect s and t userdata, filled
@@ -563,7 +563,7 @@ SimpleRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type,
 
 
 bool
-SimpleRenderer::get_osl_version (ShaderGlobals *sg, bool derivs, ustring object,
+SimpleRaytracer::get_osl_version (ShaderGlobals *sg, bool derivs, ustring object,
                                     TypeDesc type, ustring name, void *val)
 {
     if (type == TypeDesc::TypeInt) {
@@ -575,7 +575,7 @@ SimpleRenderer::get_osl_version (ShaderGlobals *sg, bool derivs, ustring object,
 
 
 bool
-SimpleRenderer::get_camera_resolution (ShaderGlobals *sg, bool derivs, ustring object,
+SimpleRaytracer::get_camera_resolution (ShaderGlobals *sg, bool derivs, ustring object,
                                     TypeDesc type, ustring name, void *val)
 {
     if (type == TypeIntArray2) {
@@ -588,7 +588,7 @@ SimpleRenderer::get_camera_resolution (ShaderGlobals *sg, bool derivs, ustring o
 
 
 bool
-SimpleRenderer::get_camera_projection (ShaderGlobals *sg, bool derivs, ustring object,
+SimpleRaytracer::get_camera_projection (ShaderGlobals *sg, bool derivs, ustring object,
                                     TypeDesc type, ustring name, void *val)
 {
     if (type == TypeDesc::TypeString) {
@@ -600,7 +600,7 @@ SimpleRenderer::get_camera_projection (ShaderGlobals *sg, bool derivs, ustring o
 
 
 bool
-SimpleRenderer::get_camera_fov (ShaderGlobals *sg, bool derivs, ustring object,
+SimpleRaytracer::get_camera_fov (ShaderGlobals *sg, bool derivs, ustring object,
                                     TypeDesc type, ustring name, void *val)
 {
     // N.B. in a real rederer, this may be time-dependent
@@ -615,7 +615,7 @@ SimpleRenderer::get_camera_fov (ShaderGlobals *sg, bool derivs, ustring object,
 
 
 bool
-SimpleRenderer::get_camera_pixelaspect (ShaderGlobals *sg, bool derivs, ustring object,
+SimpleRaytracer::get_camera_pixelaspect (ShaderGlobals *sg, bool derivs, ustring object,
                                     TypeDesc type, ustring name, void *val)
 {
     if (type == TypeDesc::TypeFloat) {
@@ -629,7 +629,7 @@ SimpleRenderer::get_camera_pixelaspect (ShaderGlobals *sg, bool derivs, ustring 
 
 
 bool
-SimpleRenderer::get_camera_clip (ShaderGlobals *sg, bool derivs, ustring object,
+SimpleRaytracer::get_camera_clip (ShaderGlobals *sg, bool derivs, ustring object,
                                     TypeDesc type, ustring name, void *val)
 {
     if (type == TypeFloatArray2) {
@@ -644,7 +644,7 @@ SimpleRenderer::get_camera_clip (ShaderGlobals *sg, bool derivs, ustring object,
 
 
 bool
-SimpleRenderer::get_camera_clip_near (ShaderGlobals *sg, bool derivs, ustring object,
+SimpleRaytracer::get_camera_clip_near (ShaderGlobals *sg, bool derivs, ustring object,
                                     TypeDesc type, ustring name, void *val)
 {
     if (type == TypeDesc::TypeFloat) {
@@ -658,7 +658,7 @@ SimpleRenderer::get_camera_clip_near (ShaderGlobals *sg, bool derivs, ustring ob
 
 
 bool
-SimpleRenderer::get_camera_clip_far (ShaderGlobals *sg, bool derivs, ustring object,
+SimpleRaytracer::get_camera_clip_far (ShaderGlobals *sg, bool derivs, ustring object,
                                     TypeDesc type, ustring name, void *val)
 {
     if (type == TypeDesc::TypeFloat) {
@@ -673,7 +673,7 @@ SimpleRenderer::get_camera_clip_far (ShaderGlobals *sg, bool derivs, ustring obj
 
 
 bool
-SimpleRenderer::get_camera_shutter (ShaderGlobals *sg, bool derivs, ustring object,
+SimpleRaytracer::get_camera_shutter (ShaderGlobals *sg, bool derivs, ustring object,
                                     TypeDesc type, ustring name, void *val)
 {
     if (type == TypeFloatArray2) {
@@ -688,7 +688,7 @@ SimpleRenderer::get_camera_shutter (ShaderGlobals *sg, bool derivs, ustring obje
 
 
 bool
-SimpleRenderer::get_camera_shutter_open (ShaderGlobals *sg, bool derivs, ustring object,
+SimpleRaytracer::get_camera_shutter_open (ShaderGlobals *sg, bool derivs, ustring object,
                                     TypeDesc type, ustring name, void *val)
 {
     if (type == TypeDesc::TypeFloat) {
@@ -702,7 +702,7 @@ SimpleRenderer::get_camera_shutter_open (ShaderGlobals *sg, bool derivs, ustring
 
 
 bool
-SimpleRenderer::get_camera_shutter_close (ShaderGlobals *sg, bool derivs, ustring object,
+SimpleRaytracer::get_camera_shutter_close (ShaderGlobals *sg, bool derivs, ustring object,
                                     TypeDesc type, ustring name, void *val)
 {
     if (type == TypeDesc::TypeFloat) {
@@ -716,7 +716,7 @@ SimpleRenderer::get_camera_shutter_close (ShaderGlobals *sg, bool derivs, ustrin
 
 
 bool
-SimpleRenderer::get_camera_screen_window (ShaderGlobals *sg, bool derivs, ustring object,
+SimpleRaytracer::get_camera_screen_window (ShaderGlobals *sg, bool derivs, ustring object,
                                     TypeDesc type, ustring name, void *val)
 {
     // N.B. in a real rederer, this may be time-dependent
@@ -735,7 +735,7 @@ SimpleRenderer::get_camera_screen_window (ShaderGlobals *sg, bool derivs, ustrin
 
 
 void
-SimpleRenderer::globals_from_hit(ShaderGlobals& sg, const Ray& r,
+SimpleRaytracer::globals_from_hit(ShaderGlobals& sg, const Ray& r,
                                  const Dual2<float>& t, int id, bool flip)
 {
     memset((char *)&sg, 0, sizeof(ShaderGlobals));
@@ -757,12 +757,12 @@ SimpleRenderer::globals_from_hit(ShaderGlobals& sg, const Ray& r,
     }
     sg.flipHandedness = flip;
 
-    // In our SimpleRenderer, the "renderstate" itself just a pointer to
+    // In our SimpleRaytracer, the "renderstate" itself just a pointer to
     // the ShaderGlobals.
     sg.renderstate = &sg;
 }
 
-Vec3 SimpleRenderer::eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx) {
+Vec3 SimpleRaytracer::eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx) {
     ShaderGlobals sg;
     memset((char *)&sg, 0, sizeof(ShaderGlobals));
     sg.I = dir.val();
@@ -772,7 +772,7 @@ Vec3 SimpleRenderer::eval_background(const Dual2<Vec3>& dir, ShadingContext* ctx
     return process_background_closure(sg.Ci);
 }
 
-Color3 SimpleRenderer::subpixel_radiance(float x, float y, Sampler& sampler, ShadingContext* ctx) {
+Color3 SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler, ShadingContext* ctx) {
     Ray r = camera.get(x, y);
     Color3 path_weight(1, 1, 1);
     Color3 path_radiance(0, 0, 0);
@@ -889,7 +889,7 @@ Color3 SimpleRenderer::subpixel_radiance(float x, float y, Sampler& sampler, Sha
     return path_radiance;
 }
 
-Color3 SimpleRenderer::antialias_pixel(int x, int y, ShadingContext* ctx)
+Color3 SimpleRaytracer::antialias_pixel(int x, int y, ShadingContext* ctx)
 {
     Color3 result(0, 0, 0);
     for (int ay = 0, si = 0; ay < aa; ay++) {
@@ -909,7 +909,7 @@ Color3 SimpleRenderer::antialias_pixel(int x, int y, ShadingContext* ctx)
 
 
 void
-SimpleRenderer::prepare_render ()
+SimpleRaytracer::prepare_render ()
 {
     // Retrieve and validate options
     aa = std::max (1, options.get_int("aa"));
@@ -940,7 +940,7 @@ SimpleRenderer::prepare_render ()
 
 
 void
-SimpleRenderer::render (int xres, int yres)
+SimpleRaytracer::render (int xres, int yres)
 {
     ShadingSystem *shadingsys = this->shadingsys;
     OIIO::parallel_for_chunked (0, yres, 0,

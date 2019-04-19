@@ -18,3 +18,7 @@ hash(str):       3d6b922d
 strlen(str):     7
 getchar(str, 0): 100
 str: userdata string
+
+Output Cout to test_spline.exr
+
+Output Cout to test_texture.exr

@@ -1,5 +1,5 @@
 # Compile a CUDA file to PTX using NVCC
-FUNCTION ( NVCC_COMPILE cuda_src ptx_generated )
+FUNCTION ( NVCC_COMPILE cuda_src ptx_generated extra_nvcc_args )
     GET_FILENAME_COMPONENT ( cuda_src_we ${cuda_src} NAME_WE )
     GET_FILENAME_COMPONENT ( cuda_src_dir ${cuda_src} DIRECTORY )
     SET ( cuda_ptx "${CMAKE_CURRENT_BINARY_DIR}/${cuda_src_we}.ptx" )
@@ -22,6 +22,7 @@ FUNCTION ( NVCC_COMPILE cuda_src ptx_generated )
             -DOSL_USE_FAST_MATH=1
             -m64 -arch ${CUDA_TARGET_ARCH} -ptx
             --std=c++11 -O3 --use_fast_math --expt-relaxed-constexpr
+            ${extra_nvcc_args}
             ${cuda_src} -o ${cuda_ptx}
         MAIN_DEPENDENCY ${cuda_src}
         DEPENDS ${cuda_src} ${cuda_headers} oslexec
@@ -29,7 +30,7 @@ FUNCTION ( NVCC_COMPILE cuda_src ptx_generated )
 ENDFUNCTION ()
 
 # Function to compile a C++ source file to CUDA-compatible LLVM bitcode
-FUNCTION ( MAKE_CUDA_BITCODE src suffix generated_bc )
+FUNCTION ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
     GET_FILENAME_COMPONENT ( src_we ${src} NAME_WE )
     SET ( asm_cuda "${CMAKE_CURRENT_BINARY_DIR}/${src_we}${suffix}.s" )
     SET ( bc_cuda "${CMAKE_CURRENT_BINARY_DIR}/${src_we}${suffix}.bc" )
@@ -77,7 +78,7 @@ FUNCTION ( MAKE_CUDA_BITCODE src suffix generated_bc )
             -D__CUDACC__ -DOSL_COMPILING_TO_BITCODE=1 -DNDEBUG -DOIIO_NO_SSE
             --language=cuda --cuda-device-only --cuda-gpu-arch=${CUDA_TARGET_ARCH}
             -Wno-deprecated-register -Wno-format-security
-            -O3 -fno-math-errno -ffast-math -S -emit-llvm
+            -O3 -fno-math-errno -ffast-math -S -emit-llvm ${extra_clang_args}
             ${src} -o ${asm_cuda}
         COMMAND "${LLVM_DIRECTORY}/bin/llvm-as" -f -o ${bc_cuda} ${asm_cuda}
         DEPENDS ${exec_headers} ${PROJECT_PUBLIC_HEADERS} ${src}
@@ -86,12 +87,12 @@ ENDFUNCTION ()
 
 # Compile a CUDA source file to LLVM bitcode, and then serialize the bitcode to
 # a C++ file to be compiled into the target executable.
-FUNCTION ( LLVM_COMPILE_CUDA llvm_src headers prefix llvm_bc_cpp_generated)
+FUNCTION ( LLVM_COMPILE_CUDA llvm_src headers prefix llvm_bc_cpp_generated extra_clang_args )
     GET_FILENAME_COMPONENT (llvmsrc_we ${llvm_src} NAME_WE)
     SET (llvm_bc_cpp "${CMAKE_CURRENT_BINARY_DIR}/${llvmsrc_we}.bc.cpp")
     SET (${llvm_bc_cpp_generated} ${llvm_bc_cpp} PARENT_SCOPE)
 
-    MAKE_CUDA_BITCODE (${llvm_src} "" llvm_bc)
+    MAKE_CUDA_BITCODE (${llvm_src} "" llvm_bc "${extra_clang_args}")
 
     ADD_CUSTOM_COMMAND (OUTPUT ${llvm_bc_cpp}
         COMMAND "${CMAKE_SOURCE_DIR}/src/liboslexec/serialize-bc.bash" ${llvm_bc} ${llvm_bc_cpp} ${prefix}

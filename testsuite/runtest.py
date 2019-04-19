@@ -115,6 +115,9 @@ def text_diff (fromfile, tofile, diff_file=None):
     if diff_file:
         try:
             open (diff_file, 'w').writelines (diff_lines)
+            print ("Diff " + fromfile + " vs " + tofile + " was:\n-------")
+#            print (diff)
+            print ("".join(diff_lines))
         except:
             print ("Unexpected error:", sys.exc_info()[0])
     return 1

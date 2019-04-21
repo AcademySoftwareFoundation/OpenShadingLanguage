@@ -853,14 +853,14 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     const int nraytypes = sizeof(raytypes)/sizeof(raytypes[0]);
     attribute ("raytypes", TypeDesc(TypeDesc::STRING,nraytypes), raytypes);
 
-    attribute ("colorspace", TypeDesc::STRING, &m_colorspace);
-
     // Allow environment variable to override default options
     const char *options = getenv ("OSL_OPTIONS");
     if (options)
         attribute ("options", TypeDesc::STRING, &options);
 
     setup_op_descriptors ();
+
+    set_colorspace(m_colorspace);
 }
 
 
@@ -1199,7 +1199,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     }
     if (name == "colorspace" && type == TypeDesc::STRING) {
         ustring c = ustring (*(const char **)val);
-        if (set_colorspace (m_colorspace))
+        if (set_colorspace (c))
             m_colorspace = c;
         else
             error ("Unknown color space \"%s\"", c.c_str());

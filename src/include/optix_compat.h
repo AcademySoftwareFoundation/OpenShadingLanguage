@@ -34,6 +34,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifdef OSL_USE_OPTIX
 #  include <cuda_runtime_api.h>
 #  include <optix_world.h>
+#else
+#  include <stdlib.h>
 #endif
 
 
@@ -67,6 +69,9 @@ struct Exception {
 };
 
 }  // end namespace optix
+
+inline void cudaMalloc (void** p, size_t s) { *p = malloc(s); }
+inline void cudaFree (void* p) { free(p); }
 
 
 #endif

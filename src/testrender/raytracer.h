@@ -35,7 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OSL/dual_vec.h>
 #include <OSL/oslconfig.h>
-#include <OSL/optix_compat.h>
+#include "optix_compat.h"
 
 
 #ifdef OSL_USE_OPTIX

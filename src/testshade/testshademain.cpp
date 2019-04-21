@@ -26,7 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <OSL/optix_compat.h> // Also tests this header can be included first
+#include "optix_compat.h" // Also tests this header can be included first
 #include <stdio.h>
 #include <stdlib.h>
 #include <exception>

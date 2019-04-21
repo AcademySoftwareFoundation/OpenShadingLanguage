@@ -53,10 +53,8 @@ OptiXStringTable::~OptiXStringTable()
 void
 OptiXStringTable::freetable()
 {
-#ifdef OSL_USE_OPTIX
     if (m_ptr)
         OSL::cudaFree (m_ptr);
-#endif
     m_ptr = nullptr;
 }
 
@@ -164,7 +162,7 @@ void OptiXStringTable::reallocTable()
             "Only one CUDA device is currently supported");
 
     m_size *= 2;
-    cudaFree (m_ptr);
+    OSL::cudaFree (m_ptr);
     OSL::cudaMalloc (reinterpret_cast<void**>(&m_ptr), (m_size));
 
     // The offsets need to be recomputed

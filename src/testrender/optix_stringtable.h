@@ -33,7 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/ustring.h>
 #include <OSL/oslexec.h>
-#include <OSL/optix_compat.h>
+#include "optix_compat.h"
 
 OSL_NAMESPACE_ENTER
 

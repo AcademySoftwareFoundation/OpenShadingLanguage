@@ -459,9 +459,8 @@ public:
     // concurrently). If there is any doubt about that, use the versions
     // above that take an explicit `ShaderGroup&`, which are thread-safe
     // and re-entrant.
-    bool Parameter (string_view name, TypeDesc t, const void *val);
     bool Parameter (string_view name, TypeDesc t, const void *val,
-                    bool lockgeom);
+                    bool lockgeom=true);
     bool Shader (string_view shaderusage, string_view shadername,
                  string_view layername);
     bool ConnectShaders (string_view srclayer, string_view srcparam,

@@ -56,6 +56,7 @@ OptixRaytracer::~OptixRaytracer ()
 }
 
 
+#ifdef OSL_USE_OPTIX
 
 std::string
 OptixRaytracer::load_ptx_file (string_view filename)
@@ -77,7 +78,7 @@ OptixRaytracer::load_ptx_file (string_view filename)
     return ptx_string;
 }
 
-
+#endif // OSL_USE_OPTIX
 
 bool
 OptixRaytracer::init_optix_context (int xres, int yres)

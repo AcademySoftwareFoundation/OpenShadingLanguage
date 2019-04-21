@@ -64,6 +64,34 @@ OptixGridRenderer::OptixGridRenderer ()
 
 
 
+#ifdef OSL_USE_OPTIX
+//
+// Seems calling load_ptx_file should be a compile error otherwise
+//
+std::string
+OptixGridRenderer::load_ptx_file (string_view filename)
+{
+    std::string ptx_string;
+    std::vector<std::string> paths = {
+        OIIO::Filesystem::parent_path(
+            llvm::sys::fs::getMainExecutable("testshade",
+                                             &rend_llvm_compiled_ops_size)),
+        PTX_PATH
+    };
+    std::string filepath = OIIO::Filesystem::searchpath_find (filename, paths,
+                                                              false);
+    if (! OIIO::Filesystem::exists(filepath) ||
+        ! OIIO::Filesystem::read_text_file (filepath, ptx_string)) {
+        errhandler().severe ("Unable to load %s", filename);
+        ptx_string.clear();
+    }
+    return ptx_string;
+}
+
+#endif // OSL_USE_OPTIX
+
+
+
 OptixGridRenderer::~OptixGridRenderer ()
 {
 #ifdef OSL_USE_OPTIX
@@ -87,28 +115,6 @@ OptixGridRenderer::init_shadingsys (ShadingSystem *ss)
                back_inserter(lib_bitcode));
     shadingsys->attribute ("lib_bitcode", OSL::TypeDesc::UINT8, &lib_bitcode);
 #endif
-}
-
-
-
-std::string
-OptixGridRenderer::load_ptx_file (string_view filename)
-{
-    std::string ptx_string;
-    std::vector<std::string> paths = {
-        OIIO::Filesystem::parent_path(
-            llvm::sys::fs::getMainExecutable("testshade",
-                                             &rend_llvm_compiled_ops_size)),
-        PTX_PATH
-    };
-    std::string filepath = OIIO::Filesystem::searchpath_find (filename, paths,
-                                                              false);
-    if (! OIIO::Filesystem::exists(filepath) ||
-        ! OIIO::Filesystem::read_text_file (filepath, ptx_string)) {
-        errhandler().severe ("Unable to load %s", filename);
-        ptx_string.clear();
-    }
-    return ptx_string;
 }
 
 
@@ -394,3 +400,4 @@ OptixGridRenderer::clear()
 }
 
 OSL_NAMESPACE_EXIT
+

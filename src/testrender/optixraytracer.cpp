@@ -82,11 +82,8 @@ bool
 OptixRaytracer::init_optix_context (int xres, int yres)
 {
 #ifdef OSL_USE_OPTIX
-    std::vector<char> lib_bitcode;
-    std::copy (&rend_llvm_compiled_ops_block[0],
-               &rend_llvm_compiled_ops_block[rend_llvm_compiled_ops_size],
-               back_inserter(lib_bitcode));
-    shadingsys->attribute ("lib_bitcode", OSL::TypeDesc::UINT8, &lib_bitcode);
+    shadingsys->attribute ("lib_bitcode", {OSL::TypeDesc::UINT8, rend_llvm_compiled_ops_size},
+                           rend_llvm_compiled_ops_block);
 
     // Set up the OptiX context
     m_optix_ctx = optix::Context::create();

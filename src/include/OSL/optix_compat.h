@@ -36,8 +36,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #  include <optix_world.h>
 #endif
 
-namespace optix {}
-
 
 OSL_NAMESPACE_ENTER
 
@@ -64,12 +62,12 @@ namespace optix {
 typedef void* Context;
 typedef void* Program;
 typedef void* TextureSampler;
+struct Exception {
+    static const char* what() { return "OSL compiled without Optix."; }
+};
 
 }  // end namespace optix
 
-
-inline void cudaMalloc (void** p, size_t s) { *p = malloc(s); }
-inline void cudaFree (void* p) { free(p); }
 
 #endif
 

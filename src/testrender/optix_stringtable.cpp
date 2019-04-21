@@ -53,8 +53,10 @@ OptiXStringTable::~OptiXStringTable()
 void
 OptiXStringTable::freetable()
 {
+#ifdef OSL_USE_OPTIX
     if (m_ptr)
         OSL::cudaFree (m_ptr);
+#endif
     m_ptr = nullptr;
 }
 

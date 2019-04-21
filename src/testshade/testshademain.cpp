@@ -26,7 +26,12 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <OSL/optix_compat.h> // Also tests this header can be included first
+#include <stdio.h>
+#include <stdlib.h>
+#include <exception>
 
+using namespace OSL;         // For OSL::optix when OSL_USE_OPTIX=0
 
 extern "C" int test_shade (int argc, const char *argv[]);
 
@@ -34,5 +39,13 @@ extern "C" int test_shade (int argc, const char *argv[]);
 int
 main (int argc, const char *argv[])
 {
-    return test_shade (argc, argv);
+    int result = EXIT_FAILURE;
+    try {
+        result = test_shade (argc, argv);
+    } catch (const optix::Exception& e) {
+        printf("Optix Error: %s\n", e.what());
+    } catch (const std::exception& e) {
+        printf("Unknown Error: %s\n", e.what());
+    }
+    return result;
 }

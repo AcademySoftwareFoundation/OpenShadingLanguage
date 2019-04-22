@@ -10,6 +10,11 @@ rtDeclareVariable (uint2, launch_dim,   rtLaunchDim, );
 rtDeclareVariable (char*, test_str_1, , );
 rtDeclareVariable (char*, test_str_2, , );
 
+OSL_NAMESPACE_ENTER
+namespace pvt {
+    rtBuffer<char,1> s_color_system;
+}
+OSL_NAMESPACE_EXIT
 
 // These functions are declared extern to prevent name mangling.
 extern "C" {
@@ -168,17 +173,24 @@ extern "C" {
         return ret;
     }
 
+#define IS_STRING(type) (type.basetype == OSL::TypeDesc::STRING)
+#define IS_PTR(type)    (type.basetype == OSL::TypeDesc::PTR)
 
     __device__
-    int rend_get_userdata (char* name, void* data, int data_size,
-                           long long type, int index)
+    int rend_get_userdata (OSL::StringParam name, void* data, int data_size,
+                           const OSL::TypeDesc& type, int index)
     {
         // Perform a userdata lookup using the parameter name, type, and
         // userdata index. If there is a match, memcpy the value into data and
         // return 1.
 
+        if (IS_PTR(type) && name == StringParams::colorsystem) {
+            *(void**)data = &OSL::pvt::s_color_system[0];
+            return 1;
+        }
+
         // TODO: This is temporary code for initial testing and demonstration.
-        if (IS_STRING(type) && HDSTR(name) == HDSTR(test_str_1)) {
+        if (IS_STRING(type) && name == HDSTR(test_str_1)) {
             memcpy (data, &test_str_2, 8);
             return 1;
         }
@@ -186,6 +198,8 @@ extern "C" {
         return 0;
     }
 
+#undef IS_STRING
+#undef IS_PTR
 
     __device__
     int osl_bind_interpolated_param (void *sg_, const void *name, long long type,
@@ -194,8 +208,8 @@ extern "C" {
                                      int symbol_data_size,
                                      char *userdata_initialized, int userdata_index)
     {
-        int status = rend_get_userdata ((char*)name, userdata_data, symbol_data_size,
-                                        type, userdata_index);
+        int status = rend_get_userdata (HDSTR(name), userdata_data, symbol_data_size,
+                                        (*(OSL::TypeDesc*)&type), userdata_index);
         return status;
     }
 
@@ -276,4 +290,29 @@ extern "C" {
         return 1;
     }
 
+    __device__
+    int osl_range_check_err (int indexvalue, int length,
+                         const char *symname, void *sg,
+                         const void *sourcefile, int sourceline,
+                         const char *groupname, int layer,
+                         const char *layername, const char *shadername) {
+        if (indexvalue < 0 || indexvalue >= length) {
+            return indexvalue < 0 ? 0 : length-1;
+        }
+        return indexvalue;
+    }
+
+    __device__
+    int osl_range_check (int indexvalue, int length, const char *symname,
+                         void *sg, const void *sourcefile, int sourceline,
+                         const char *groupname, int layer, const char *layername,
+                         const char *shadername)
+    {
+        if (indexvalue < 0 || indexvalue >= length) {
+            indexvalue = osl_range_check_err (indexvalue, length, symname, sg,
+                                              sourcefile, sourceline, groupname,
+                                              layer, layername, shadername);
+        }
+        return indexvalue;
+    }
 }

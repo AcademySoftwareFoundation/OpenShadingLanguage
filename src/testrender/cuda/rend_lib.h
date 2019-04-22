@@ -151,9 +151,4 @@ struct ClosureAdd : public ClosureColor {
 };
 
 
-// This macro is useful for interpreting the type parameter passed to
-// osl_bind_interpolated_param.
-#define IS_STRING(type) ((*(OSL::TypeDesc*)&type).basetype == OSL::TypeDesc::STRING)
-
-
 }  // anonymous namespace

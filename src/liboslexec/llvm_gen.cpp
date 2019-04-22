@@ -1461,7 +1461,7 @@ LLVMGEN (llvm_gen_construct_color)
         llvm::Value *args[3];
         args[0] = rop.sg_void_ptr ();  // shader globals
         args[1] = rop.llvm_void_ptr (Result, 0);  // color
-        args[2] = rop.llvm_load_value (Space); // from
+        args[2] = rop.llvm_load_string (Space); // from
         rop.ll.call_function ("osl_prepend_color_from", args, 3);
         // FIXME(deriv): Punt on derivs for color ctrs with space names.
         // We should try to do this right, but we never had it right for
@@ -1687,10 +1687,12 @@ LLVMGEN (llvm_gen_transformc)
     Symbol *To = rop.opargsym (op, 2);
     Symbol *C = rop.opargsym (op, 3);
 
-    llvm::Value *args[] = { rop.sg_void_ptr(),
+    llvm::Value *args[7] = { rop.sg_void_ptr(),
         rop.llvm_void_ptr(*C), rop.ll.constant(C->has_derivs()),
         rop.llvm_void_ptr(*Result), rop.ll.constant(Result->has_derivs()),
-        rop.llvm_load_value(*From), rop.llvm_load_value(*To) };
+        rop.llvm_load_string (*From), rop.llvm_load_string (*To)
+    };
+
     rop.ll.call_function ("osl_transformc", args);
     return true;
 }

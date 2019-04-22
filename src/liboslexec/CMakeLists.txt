@@ -131,6 +131,7 @@ MACRO ( CUDA_SHADEOPS_COMPILE srclist )
         llvm_ops.cpp
         opnoise.cpp
         opspline.cpp
+        opcolor.cpp
         ../liboslnoise/gabornoise.cpp
         ../liboslnoise/simplexnoise.cpp
         )

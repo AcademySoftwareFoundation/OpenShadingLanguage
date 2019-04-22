@@ -33,6 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/oslconfig.h>
 
 #include "optixraytracer.h"
+#include "../liboslexec/opcolor.h"
 
 // The pre-compiled renderer support library LLVM bitcode is embedded
 // into the executable and made available through these variables.
@@ -149,6 +150,67 @@ OptixRaytracer::init_optix_context (int xres, int yres)
 
 
 bool
+OptixRaytracer::synch_attributes ()
+{
+#ifdef OSL_USE_OPTIX
+    // FIXME -- this is for testing only
+    // Make some device strings to test userdata parameters
+    uint64_t addr1 = register_string ("ud_str_1", "");
+    uint64_t addr2 = register_string ("userdata string", "");
+    m_optix_ctx["test_str_1"]->setUserData (sizeof(char*), &addr1);
+    m_optix_ctx["test_str_2"]->setUserData (sizeof(char*), &addr2);
+
+    {
+        const char* name = OSL_NAMESPACE_STRING "::pvt::s_color_system";
+
+        pvt::ColorSystem* colorSys = nullptr;
+        shadingsys->getattribute("colorsystem", TypeDesc::PTR, (void*)&colorSys);
+        if (colorSys == nullptr) {
+            errhandler().error ("No colorsystem available.");
+            return false;
+        }
+
+        // Get the size data-size, minus the ustring size
+        const size_t dataSize = sizeof(pvt::ColorSystem) - sizeof(StringParam);
+
+        optix::Buffer buffer = m_optix_ctx->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER);
+        if (!buffer) {
+            errhandler().error ("Could not create buffer for '%s'.", name);
+            return false;
+        }
+
+        // set the elemet size to char
+        buffer->setElementSize(sizeof(char));
+
+        // and number of elements to the actual size needed.
+        buffer->setSize(dataSize + sizeof(DeviceString));
+
+        // copy the base data
+        char* dstData = (char*) buffer->map();
+        if (!dstData) {
+            errhandler().error ("Could not map buffer for '%s' (size: %lu).",
+                                 name, dataSize);
+            return false;
+        }
+        ::memcpy(dstData, colorSys, dataSize);
+
+        // convert the ustring to a device string
+        uint64_t devStr = register_string (colorSys->colorspace().string(), "");
+
+        // FIXME -- Should probably handle alignment better.
+        // then copy the device string to the end
+        ::memcpy(dstData+dataSize, &devStr, sizeof(devStr));
+
+        buffer->unmap();
+        m_optix_ctx[name]->setBuffer(buffer);
+    }
+#endif
+    return true;
+}
+
+
+
+bool
 OptixRaytracer::make_optix_materials ()
 {
 #ifdef OSL_USE_OPTIX
@@ -228,6 +290,8 @@ OptixRaytracer::make_optix_materials ()
             m_program["osl_group_func"]->setProgramId (osl_group);
         }
     }
+    if (!synch_attributes())
+        return false;
 #endif
     return true;
 }
@@ -285,13 +349,6 @@ OptixRaytracer::finalize_scene()
     // Create the output buffer
     optix::Buffer buffer = m_optix_ctx->createBuffer(RT_BUFFER_OUTPUT, RT_FORMAT_FLOAT3, camera.xres, camera.yres);
     m_optix_ctx["output_buffer"]->set(buffer);
-
-    // FIXME -- this is for testing only
-    // Make some device strings to test userdata parameters
-    uint64_t addr1 = register_string ("ud_str_1", "");
-    uint64_t addr2 = register_string ("userdata string", "");
-    m_optix_ctx["test_str_1"]->setUserData (sizeof(char*), &addr1);
-    m_optix_ctx["test_str_2"]->setUserData (sizeof(char*), &addr2);
 
     m_optix_ctx->validate();
 #endif

@@ -61,6 +61,7 @@ public:
     }
 
     std::string load_ptx_file (string_view filename);
+    bool synch_attributes ();
 
     virtual void init_shadingsys (ShadingSystem *ss);
     virtual bool init_optix_context (int xres, int yres);

@@ -46,6 +46,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/optparser.h>
 #include <OpenImageIO/fmath.h>
 
+#include "opcolor.h"
+
 using namespace OSL;
 using namespace OSL::pvt;
 
@@ -745,7 +747,6 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_llvm_debug_layers(0), m_llvm_debug_ops(0),
       m_llvm_output_bitcode(0),
       m_commonspace_synonym("world"),
-      m_colorspace("Rec709"),
       m_max_local_mem_KB(2048),
       m_compile_report(false),
       m_buffer_printf(true),
@@ -756,6 +757,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_exec_repeat(1),
       m_opt_warnings(0),
       m_gpu_opt_error(0),
+      m_colorspace("Rec709"),
       m_stat_opt_locking_time(0), m_stat_specialization_time(0),
       m_stat_total_llvm_time(0),
       m_stat_llvm_setup_time(0), m_stat_llvm_irgen_time(0),
@@ -862,7 +864,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
 
     setup_op_descriptors ();
 
-    set_colorspace(m_colorspace);
+    colorsystem().set_colorspace(m_colorspace);
+    ASSERT(colorsystem().set_colorspace(m_colorspace) && "Invalid colorspace");
 }
 
 
@@ -1203,7 +1206,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     }
     if (name == "colorspace" && type == TypeDesc::STRING) {
         ustring c = ustring (*(const char **)val);
-        if (set_colorspace (c))
+        if (colorsystem().set_colorspace(c))
             m_colorspace = c;
         else
             error ("Unknown color space \"%s\"", c.c_str());
@@ -1394,6 +1397,11 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("stat:mem_inst_paramvals_peak", long long, m_stat_mem_inst_paramvals.peak());
     ATTR_DECODE ("stat:mem_inst_connections_current", long long, m_stat_mem_inst_connections.current());
     ATTR_DECODE ("stat:mem_inst_connections_peak", long long, m_stat_mem_inst_connections.peak());
+
+    if (name == "colorsystem" && type.basetype == TypeDesc::PTR) {
+        *(void**)val = &colorsystem();
+        return true;
+    }
 
     return false;
 #undef ATTR_DECODE
@@ -3122,6 +3130,71 @@ ShadingSystemImpl::merge_instances (ShaderGroup &group, bool post_opt)
     }
 
     return merges;
+}
+
+
+
+#if OIIO_HAS_COLORPROCESSOR
+
+OIIO::ColorProcessorHandle
+OCIOColorSystem::load_transform (StringParam fromspace, StringParam tospace)
+{
+    if (fromspace != m_last_colorproc_fromspace ||
+        tospace != m_last_colorproc_tospace) {
+        m_last_colorproc = m_colorconfig.createColorProcessor (fromspace, tospace);
+        m_last_colorproc_fromspace = fromspace;
+        m_last_colorproc_tospace = tospace;
+    }
+    return m_last_colorproc;
+}
+
+#endif
+
+
+
+template <> bool
+ShadingSystemImpl::ocio_transform (StringParam fromspace, StringParam tospace,
+                                   const Color3& C, Color3& Cout) {
+#if OIIO_HAS_COLORPROCESSOR
+    OIIO::ColorProcessorHandle cp;
+    {
+        lock_guard lock (m_mutex);
+        cp = m_ocio_system.load_transform(fromspace, tospace);
+    }
+    if (cp) {
+        Cout = C;
+        cp->apply ((float *)&Cout);
+        return true;
+    }
+#endif
+    return false;
+}
+
+
+
+template <> bool
+ShadingSystemImpl::ocio_transform (StringParam fromspace, StringParam tospace,
+                                   const Dual2<Color3>& C, Dual2<Color3>& Cout) {
+#if OIIO_HAS_COLORPROCESSOR
+    OIIO::ColorProcessorHandle cp;
+    {
+        lock_guard lock (m_mutex);
+        cp = m_ocio_system.load_transform(fromspace, tospace);
+    }
+
+    if (cp) {
+        // Use finite differencing to approximate the derivative. Make 3
+        // color values to convert.
+        const float eps = 0.001f;
+        Color3 CC[3] = { C.val(), C.val() + eps*C.dx(), C.val() + eps*C.dy() };
+        cp->apply ((float *)&CC, 3, 1, 3, sizeof(float), sizeof(Color3), 0);
+        Cout.set (CC[0],
+                  (CC[1] - CC[0]) * (1.0f / eps),
+                  (CC[2] - CC[0]) * (1.0f / eps));
+        return true;
+    }
+#endif
+    return false;
 }
 
 

@@ -247,14 +247,20 @@ macro ( TESTSUITE )
             NOT _testname MATCHES "^oslinfo" AND
             NOT _testname MATCHES "^getattribute-shader" AND
             NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
-          set (_env TESTSHADE_OPT=0 OPENIMAGEIO_ROOT_DIR=${OPENIMAGEIO_ROOT_DIR})
+          set (_env TESTSHADE_OPT=0
+                    OPENIMAGEIO_ROOT_DIR=${OPENIMAGEIO_ROOT_DIR}
+                    OSL_SOURCE_DIR=${CMAKE_SOURCE_DIR}
+                    OSL_BUILD_DIR=${CMAKE_BINARY_DIR} )
           add_test ( NAME ${_testname}
                      COMMAND env ${_env} ${_runtest} )
         endif ()
+        set (ALL_TEST_LIST "${ALL_TEST_LIST} ${_testname}")
         # Run the same test again with aggressive -O2 runtime
         # optimization, triggered by setting TESTSHADE_OPT env variable
-        set (_env TESTSHADE_OPT=2 OPENIMAGEIO_ROOT_DIR=${OPENIMAGEIO_ROOT_DIR})
-        set (ALL_TEST_LIST "${ALL_TEST_LIST} ${_testname}")
+        set (_env TESTSHADE_OPT=2
+                  OPENIMAGEIO_ROOT_DIR=${OPENIMAGEIO_ROOT_DIR}
+                  OSL_SOURCE_DIR=${CMAKE_SOURCE_DIR}
+                  OSL_BUILD_DIR=${CMAKE_BINARY_DIR} )
         add_test ( NAME ${_testname}.opt
                    COMMAND env ${_env} ${_runtest} )
     endforeach ()

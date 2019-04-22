@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #include <OpenImageIO/filesystem.h>
+#include <OpenImageIO/sysutil.h>
 
 #include <OSL/oslconfig.h>
 
@@ -58,15 +59,21 @@ OptixRaytracer::~OptixRaytracer ()
 std::string
 OptixRaytracer::load_ptx_file (string_view filename)
 {
-    std::string ptx_string;
-    std::string filepath = filename;
-    if (! OIIO::Filesystem::exists(filepath))
-        filepath = OIIO::Strutil::sprintf ("%s/%s", PTX_PATH, filename);
-    if (! OIIO::Filesystem::read_text_file (filepath, ptx_string)) {
-        errhandler().severe ("Unable to load %s", filename);
-        ptx_string.clear();
+#ifdef OSL_USE_OPTIX
+    std::vector<std::string> paths = {
+        OIIO::Filesystem::parent_path(OIIO::Sysutil::this_program_path()),
+        PTX_PATH
+    };
+    std::string filepath = OIIO::Filesystem::searchpath_find (filename, paths,
+                                                              false);
+    if (OIIO::Filesystem::exists(filepath)) {
+        std::string ptx_string;
+        if (OIIO::Filesystem::read_text_file (filepath, ptx_string))
+            return ptx_string;
     }
-    return ptx_string;
+#endif
+    errhandler().severe ("Unable to load %s", filename);
+    return {};
 }
 
 

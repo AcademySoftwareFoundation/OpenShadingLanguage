@@ -19,7 +19,13 @@ from optparse import OptionParser
 
 srcdir = "."
 tmpdir = "."
-path = "../.."
+
+OSL_BUILD_DIR = os.environ.get("OSL_BUILD_DIR", "../..")
+OSL_SOURCE_DIR = os.environ.get("OSL_SOURCE_DIR", "../../../../testsuite")
+OSL_TESTSUITE_DIR = os.path.join(OSL_SOURCE_DIR, "testsuite")
+OPENIMAGEIO_ROOT_DIR = os.environ.get("OPENIMAGEIO_ROOT_DIR", None)
+
+os.environ['OSLHOME'] = os.path.join(OSL_SOURCE_DIR, "src")
 
 # Options for the command line
 parser = OptionParser()
@@ -36,15 +42,15 @@ if args and len(args) > 0 :
     srcdir = os.path.abspath (srcdir) + "/"
     os.chdir (srcdir)
 if args and len(args) > 1 :
-    path = args[1]
-path = os.path.normpath (path)
+    OSL_BUILD_DIR = args[1]
+OSL_BUILD_DIR = os.path.normpath (OSL_BUILD_DIR)
 
 tmpdir = "."
 tmpdir = os.path.abspath (tmpdir)
 
 refdir = "ref/"
-parent = "../../../../../"
-test_source_dir = "../../../../testsuite/" + os.path.basename(os.path.abspath(srcdir))
+test_source_dir = os.path.join(OSL_TESTSUITE_DIR,
+                               os.path.basename(os.path.abspath(srcdir)))
 
 command = ""
 outputs = [ "out.txt" ]    # default
@@ -74,7 +80,7 @@ if platform.system() == 'Windows' :
     if not os.path.exists(os.path.abspath("data")) :
         shutil.copytree (test_source_dir, os.path.abspath("data"))
     if not os.path.exists(os.path.abspath("../common")) :
-        shutil.copytree (os.path.abspath("../../../../testsuite/common"),
+        shutil.copytree (os.path.abspath(os.path.join(OSL_TESTSUITE_DIR, "common")),
                          os.path.abspath("../common"))
 else :
     if not os.path.exists("./ref") :
@@ -84,7 +90,7 @@ else :
     if not os.path.exists("./data") :
         os.symlink (test_source_dir, "./data")
     if not os.path.exists("../common") :
-        os.symlink ("../../../testsuite/common", "../common")
+        os.symlink (os.path.join(OSL_TESTSUITE_DIR, "common"), "../common")
 
 ###########################################################################
 
@@ -125,7 +131,7 @@ def text_diff (fromfile, tofile, diff_file=None):
 
 
 def osl_app (app):
-    apath = os.path.join(path, "src", app)
+    apath = os.path.join(OSL_BUILD_DIR, "src", app)
     if (platform.system () == 'Windows'):
         # when we use Visual Studio, built applications are stored
         # in the app/$(OutDir)/ directory, e.g., Release or Debug.
@@ -140,8 +146,8 @@ def oiio_relpath (path, start=os.curdir):
 
 
 def oiio_app (app):
-    if os.environ.__contains__('OPENIMAGEIO_ROOT_DIR') :
-        return os.path.join (os.environ['OPENIMAGEIO_ROOT_DIR'], "bin", app) + " "
+    if OPENIMAGEIO_ROOT_DIR :
+        return os.path.join (OPENIMAGEIO_ROOT_DIR, "bin", app) + " "
     else :
         return app + " "
 

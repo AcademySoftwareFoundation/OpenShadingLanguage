@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Turn an LLVM-compiled bitfile into a C++ source file where the compiled
 # bitcode is in a huge array.
 

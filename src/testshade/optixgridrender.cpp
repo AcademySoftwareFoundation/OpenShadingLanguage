@@ -203,30 +203,8 @@ OptixGridRenderer::finalize_scene()
 #ifdef OSL_USE_OPTIX
     make_optix_materials();
 
-    // Create a GeometryGroup to contain the scene geometry
-    optix::GeometryGroup geom_group = m_optix_ctx->createGeometryGroup();
-
-    m_optix_ctx["top_object"  ]->set (geom_group);
-    m_optix_ctx["top_shadower"]->set (geom_group);
-
-    // NB: Since the scenes in the test suite consist of only a few primitives,
-    //     using 'NoAccel' instead of 'Trbvh' might yield a slight performance
-    //     improvement. For more complex scenes (e.g., scenes with meshes),
-    //     using 'Trbvh' is recommended to achieve maximum performance.
-    geom_group->setAcceleration (m_optix_ctx->createAcceleration ("Trbvh"));
-
-    // Set the camera variables on the OptiX Context, to be used by the ray gen program
-#if 0
-    m_optix_ctx["eye" ]->setFloat (vec3_to_float3 (camera.eye));
-    m_optix_ctx["dir" ]->setFloat (vec3_to_float3 (camera.dir));
-    m_optix_ctx["cx"  ]->setFloat (vec3_to_float3 (camera.cx));
-    m_optix_ctx["cy"  ]->setFloat (vec3_to_float3 (camera.cy));
-    m_optix_ctx["invw"]->setFloat (camera.invw);
-    m_optix_ctx["invh"]->setFloat (camera.invh);
-#else
     m_optix_ctx["invw"]->setFloat (1.0f/m_xres);
     m_optix_ctx["invh"]->setFloat (1.0f/m_yres);
-#endif
 
     // Create the output buffer
     optix::Buffer buffer = m_optix_ctx->createBuffer(RT_BUFFER_OUTPUT, RT_FORMAT_FLOAT3, m_xres, m_yres);

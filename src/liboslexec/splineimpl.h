@@ -28,15 +28,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
-#ifdef __CUDACC__
-  #include <optix.h>
-#endif
-
-// avoid naming conflict with MSVC macro
-#ifdef BTYPE
-#undef BTYPE
-#endif
-
 OSL_NAMESPACE_ENTER
 
 namespace pvt {
@@ -70,54 +61,50 @@ enum {
     kNumSplineTypes
 };
 
-#ifdef __CUDACC__
-    rtBuffer<SplineBasis> gBasisSet;
-#else
-    const static SplineBasis gBasisSet[kNumSplineTypes] = {
-    //
-    // catmullrom
-    //
-       { 1, { {(-1.0f/2.0f),  ( 3.0f/2.0f), (-3.0f/2.0f), ( 1.0f/2.0f)},
-              {( 2.0f/2.0f),  (-5.0f/2.0f), ( 4.0f/2.0f), (-1.0f/2.0f)},
-              {(-1.0f/2.0f),  ( 0.0f/2.0f), ( 1.0f/2.0f), ( 0.0f/2.0f)},
-              {( 0.0f/2.0f),  ( 2.0f/2.0f), ( 0.0f/2.0f), ( 0.0f/2.0f)}  } },
-    //
-    // bezier
-    //
-       { 3, { {-1,  3, -3,  1},
-              { 3, -6,  3,  0},
-              {-3,  3,  0,  0},
-              { 1,  0,  0,  0} } },
-    //
-    // bspline
-    //
-       { 1, { {(-1.0f/6.0f), ( 3.0f/6.0f),  (-3.0f/6.0f),  (1.0f/6.0f)},
-              {( 3.0f/6.0f), (-6.0f/6.0f),  ( 3.0f/6.0f),  (0.0f/6.0f)},
-              {(-3.0f/6.0f), ( 0.0f/6.0f),  ( 3.0f/6.0f),  (0.0f/6.0f)},
-              {( 1.0f/6.0f), ( 4.0f/6.0f),  ( 1.0f/6.0f),  (0.0f/6.0f)} } },
-    //
-    // hermite
-    //
-       { 2, { { 2,  1, -2,  1},
-              {-3, -2,  3, -1},
-              { 0,  1,  0,  0},
-              { 1,  0,  0,  0} } },
-    //
-    // linear
-    //
-       { 1, { {0,  0,  0,  0},
-              {0,  0,  0,  0},
-              {0, -1,  1,  0},
-              {0,  1,  0,  0} } },
-    //
-    // constant
-    //
-       { 1, { {0,  0,  0,  0},
-              {0,  0,  0,  0},
-              {0,  0,  0,  0},
-              {0,  0,  0,  0} } }
-    };
-#endif
+OSL_CONSTANT_DATA const static SplineBasis gBasisSet[kNumSplineTypes] = {
+//
+// catmullrom
+//
+   { 1, { {(-1.0f/2.0f),  ( 3.0f/2.0f), (-3.0f/2.0f), ( 1.0f/2.0f)},
+          {( 2.0f/2.0f),  (-5.0f/2.0f), ( 4.0f/2.0f), (-1.0f/2.0f)},
+          {(-1.0f/2.0f),  ( 0.0f/2.0f), ( 1.0f/2.0f), ( 0.0f/2.0f)},
+          {( 0.0f/2.0f),  ( 2.0f/2.0f), ( 0.0f/2.0f), ( 0.0f/2.0f)}  } },
+//
+// bezier
+//
+   { 3, { {-1,  3, -3,  1},
+          { 3, -6,  3,  0},
+          {-3,  3,  0,  0},
+          { 1,  0,  0,  0} } },
+//
+// bspline
+//
+   { 1, { {(-1.0f/6.0f), ( 3.0f/6.0f),  (-3.0f/6.0f),  (1.0f/6.0f)},
+          {( 3.0f/6.0f), (-6.0f/6.0f),  ( 3.0f/6.0f),  (0.0f/6.0f)},
+          {(-3.0f/6.0f), ( 0.0f/6.0f),  ( 3.0f/6.0f),  (0.0f/6.0f)},
+          {( 1.0f/6.0f), ( 4.0f/6.0f),  ( 1.0f/6.0f),  (0.0f/6.0f)} } },
+//
+// hermite
+//
+   { 2, { { 2,  1, -2,  1},
+          {-3, -2,  3, -1},
+          { 0,  1,  0,  0},
+          { 1,  0,  0,  0} } },
+//
+// linear
+//
+   { 1, { {0,  0,  0,  0},
+          {0,  0,  0,  0},
+          {0, -1,  1,  0},
+          {0,  1,  0,  0} } },
+//
+// constant
+//
+   { 1, { {0,  0,  0,  0},
+          {0,  0,  0,  0},
+          {0,  0,  0,  0},
+          {0,  0,  0,  0} } }
+};
 
 struct SplineInterp {
     const SplineBasis& spline;

@@ -33,7 +33,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/oslconfig.h>
 
 #include "optixgridrender.h"
-#include "../liboslexec/splineimpl.h"
 
 
 // The pre-compiled renderer support library LLVM bitcode is embedded
@@ -129,17 +128,6 @@ OptixGridRenderer::init_optix_context (int xres, int yres)
     // Create the OptiX programs and set them on the optix::Context
     m_program = m_optix_ctx->createProgramFromPTXString(renderer_ptx, "raygen");
     m_optix_ctx->setRayGenerationProgram(0, m_program);
-
-    {
-        optix::Buffer buffer = m_optix_ctx->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER);
-        buffer->setElementSize(sizeof(pvt::Spline::SplineBasis));
-        buffer->setSize(sizeof(pvt::Spline::gBasisSet)/sizeof(pvt::Spline::SplineBasis));
-
-        pvt::Spline::SplineBasis* basis = (pvt::Spline::SplineBasis*) buffer->map();
-        ::memcpy(basis, &pvt::Spline::gBasisSet[0], sizeof(pvt::Spline::gBasisSet));
-        buffer->unmap();
-        m_optix_ctx[OSL_NAMESPACE_STRING "::pvt::Spline::gBasisSet"]->setBuffer(buffer);
-    }
 #endif
     return true;
 }

@@ -224,6 +224,7 @@ macro ( TESTSUITE )
     if (_ats_FOUNDVAR AND NOT ${_ats_FOUNDVAR})
         set (_ats_LABEL "broken")
     endif ()
+    set (test_all_optix $ENV{TESTSUITE_OPTIX})
     # Add the tests if all is well.
     set (ALL_TEST_LIST "")
     foreach (_testname ${_ats_UNPARSED_ARGUMENTS})
@@ -239,30 +240,59 @@ macro ( TESTSUITE )
                                       --solution-path "${CMAKE_BINARY_DIR}" )
         endif ()
 
+        set (ALL_TEST_LIST "${ALL_TEST_LIST} ${_testname}")
         file (MAKE_DIRECTORY "${_testdir}")
 
-        # Run the test unoptimized, unless it's a "render_*" or "oslinfo_*"
-        # test, which we don't bother testing unoptimized.
-        if (NOT _testname MATCHES "^render" AND
-            NOT _testname MATCHES "^oslinfo" AND
-            NOT _testname MATCHES "^getattribute-shader" AND
+        # Run the test unoptimized, unless it matches a few patterns that
+        # we don't test unoptimized (or has an OPTIMIZEONLY marker file).
+        if (NOT _testname MATCHES "^getattribute-shader" AND
+            NOT _testname MATCHES "optix" AND
             NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
-          set (_env TESTSHADE_OPT=0
-                    OPENIMAGEIO_ROOT_DIR=${OPENIMAGEIO_ROOT_DIR}
-                    OSL_SOURCE_DIR=${CMAKE_SOURCE_DIR}
-                    OSL_BUILD_DIR=${CMAKE_BINARY_DIR} )
-          add_test ( NAME ${_testname}
-                     COMMAND env ${_env} ${_runtest} )
+            set (_env TESTSHADE_OPT=0
+                      OPENIMAGEIO_ROOT_DIR=${OPENIMAGEIO_ROOT_DIR}
+                      OSL_SOURCE_DIR=${CMAKE_SOURCE_DIR}
+                      OSL_BUILD_DIR=${CMAKE_BINARY_DIR} )
+            add_test ( NAME ${_testname}
+                       COMMAND env ${_env} ${_runtest} )
         endif ()
-        set (ALL_TEST_LIST "${ALL_TEST_LIST} ${_testname}")
         # Run the same test again with aggressive -O2 runtime
-        # optimization, triggered by setting TESTSHADE_OPT env variable
-        set (_env TESTSHADE_OPT=2
-                  OPENIMAGEIO_ROOT_DIR=${OPENIMAGEIO_ROOT_DIR}
-                  OSL_SOURCE_DIR=${CMAKE_SOURCE_DIR}
-                  OSL_BUILD_DIR=${CMAKE_BINARY_DIR} )
-        add_test ( NAME ${_testname}.opt
-                   COMMAND env ${_env} ${_runtest} )
+        # optimization, triggered by setting TESTSHADE_OPT env variable.
+        # Skip OptiX-only tests and those with a NOOPTIMIZE marker file.
+        if (NOT _testname MATCHES "optix"
+            AND NOT EXISTS "${_testsrcdir}/NOOPTIMIZE")
+            set (_env TESTSHADE_OPT=2
+                      OPENIMAGEIO_ROOT_DIR=${OPENIMAGEIO_ROOT_DIR}
+                      OSL_SOURCE_DIR=${CMAKE_SOURCE_DIR}
+                      OSL_BUILD_DIR=${CMAKE_BINARY_DIR} )
+            add_test ( NAME ${_testname}.opt
+                       COMMAND env ${_env} ${_runtest} )
+        endif ()
+        # When building for OptiX support, also run it in OptiX mode
+        # if there is an OPTIX marker file in the directory.
+        # If an environment variable $TESTSUITE_OPTIX is nonzero, then
+        # run all tests with OptiX, even if there's no OPTIX marker.
+        if (USE_OPTIX
+            AND (EXISTS "${_testsrcdir}/OPTIX" OR test_all_optix OR _testname MATCHES "optix")
+            AND NOT EXISTS "${_testsrcdir}/NOOPTIX"
+            AND NOT EXISTS "${_testsrcdir}/NOOPTIX-FIXME")
+            # FIXME! Don't run unoptimized yet because we know optix tests
+            # almost all fail on anything with init ops. Will fix soon.
+            #if (NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
+            #    set (_env TESTSHADE_OPT=0 TESTSHADE_OPTIX=1
+            #              OPENIMAGEIO_ROOT_DIR=${OPENIMAGEIO_ROOT_DIR}
+            #              OSL_SOURCE_DIR=${CMAKE_SOURCE_DIR}
+            #              OSL_BUILD_DIR=${CMAKE_BINARY_DIR} )
+            #    add_test ( NAME ${_testname}.optix
+            #               COMMAND env ${_env} ${_runtest} )
+            #endif ()
+            # and optimized
+            set (_env TESTSHADE_OPT=2 TESTSHADE_OPTIX=1
+                      OPENIMAGEIO_ROOT_DIR=${OPENIMAGEIO_ROOT_DIR}
+                      OSL_SOURCE_DIR=${CMAKE_SOURCE_DIR}
+                      OSL_BUILD_DIR=${CMAKE_BINARY_DIR} )
+            add_test ( NAME ${_testname}.optix.opt
+                       COMMAND env ${_env} ${_runtest} )
+        endif ()
     endforeach ()
     if (VERBOSE)
         message (STATUS "Added tests: ${ALL_TEST_LIST}")

@@ -41,6 +41,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/thread.h>
 #include <OpenImageIO/parallel.h>
+#include <OpenImageIO/sysutil.h>
 
 #include <OSL/oslexec.h>
 #include "optixraytracer.h"
@@ -73,7 +74,7 @@ static int iters = 1;
 static std::string scenefile, imagefile;
 static std::string shaderpath;
 static bool shadingsys_options_set = false;
-static bool use_optix = false;
+static bool use_optix = OIIO::Strutil::stoi(OIIO::Sysutil::getenv("TESTSHADE_OPTIX"));
 
 
 

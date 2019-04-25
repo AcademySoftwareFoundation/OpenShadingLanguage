@@ -112,10 +112,10 @@ Schematically, we want to create code that resembles the following:
 */
 
 extern int osl_llvm_compiled_ops_size;
-extern char osl_llvm_compiled_ops_block[];
+extern unsigned char osl_llvm_compiled_ops_block[];
 
 extern int osl_llvm_compiled_ops_cuda_size;
-extern char osl_llvm_compiled_ops_cuda_block[];
+extern unsigned char osl_llvm_compiled_ops_cuda_block[];
 
 using namespace OSL::pvt;
 
@@ -1112,12 +1112,12 @@ BackendLLVM::run ()
     ll.module (ll.new_module ("llvm_ops"));
 #else
     if (! use_optix()) {
-        ll.module (ll.module_from_bitcode (osl_llvm_compiled_ops_block,
+        ll.module (ll.module_from_bitcode ((char*)osl_llvm_compiled_ops_block,
                                            osl_llvm_compiled_ops_size,
                                            "llvm_ops", &err));
     } else {
 #ifdef OSL_LLVM_CUDA_BITCODE
-        ll.module (ll.module_from_bitcode (osl_llvm_compiled_ops_cuda_block,
+        ll.module (ll.module_from_bitcode ((char*)osl_llvm_compiled_ops_cuda_block,
                                            osl_llvm_compiled_ops_cuda_size,
                                            "llvm_ops", &err));
 #else

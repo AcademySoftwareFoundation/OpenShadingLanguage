@@ -169,8 +169,11 @@ OptixGridRenderer::make_optix_materials ()
         shadingsys->optimize_group (groupref.get(), nullptr);
 
         if (!shadingsys->find_symbol (*groupref.get(), ustring(outputs[0]))) {
-            errhandler().warning ("Requested output '%s', which wasn't found",
-                                  outputs[0]);
+            // Asume a 1 x 1 image maybe testing things other than Cout 
+            if (m_xres > 1 || m_yres > 1) {
+                errhandler().warning ("Requested output '%s', which wasn't found",
+                                      outputs[0]);
+            }
         }
 
         std::string group_name, init_name, entry_name;

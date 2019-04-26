@@ -295,6 +295,7 @@ LLVMGEN (llvm_gen_printf)
     const char* format = format_ustring.c_str();
     std::string s;
     int arg = format_arg + 1;
+    size_t optix_size = 0;
     while (*format != '\0') {
         if (*format == '%') {
             if (format[1] == '%') {
@@ -360,23 +361,27 @@ LLVMGEN (llvm_gen_printf)
 
                     llvm::Value* loaded = nullptr;
                     if (rop.use_optix() && simpletype.basetype == TypeDesc::STRING) {
-                        // TODO: make this work with arrind
-                        // In the OptiX case, we use the device-side string.
-                        loaded = rop.llvm_load_device_string (sym);
+                        // In the OptiX case, we register each string separately.
+                        if (simpletype.arraylen >= 1) {
+                            ustring name = ustring::format("%s[%d]", sym.name(), a);
+                            Symbol lsym(name, TypeDesc::TypeString, sym.symtype());
+                            lsym.data(&((ustring*)sym.data())[a]);
+                            loaded = rop.llvm_load_device_string (lsym);
+                        } else {
+                            loaded = rop.llvm_load_device_string (sym);
+                        }
+                        optix_size += sizeof(uint64_t);
                     }
                     else {
                         loaded = rop.llvm_load_value (sym, 0, arrind, c);
-                    }
 
-                    if (simpletype.basetype == TypeDesc::FLOAT) {
-                        // C varargs convention upconverts float->double.
-                        loaded = rop.ll.op_float_to_double(loaded);
-                    }
-
-                    if (simpletype.basetype == TypeDesc::INT && rop.use_optix()) {
-                        // The printf supported by OptiX expects 8-byte arguments,
-                        // so promote int to long long
-                        loaded = rop.ll.op_int_to_longlong(loaded);
+                        if (simpletype.basetype == TypeDesc::FLOAT) {
+                            // C varargs convention upconverts float->double.
+                            loaded = rop.ll.op_float_to_double(loaded);
+                            optix_size += sizeof(double);
+                        }
+                        else if (simpletype.basetype == TypeDesc::INT)
+                            optix_size += sizeof(int);
                     }
 
                     call_args.push_back (loaded);
@@ -389,12 +394,6 @@ LLVMGEN (llvm_gen_printf)
         }
     }
 
-    if (rop.use_optix() && arg > (format_arg + 2)) {
-        std::cerr << "WARNING: "
-                  << "OptiX only supports 0 or 1 printf arguments at this time. "
-                  << "Ignoring printf call in " << op.sourcefile() << std::endl;
-        return true;
-    }
 
     // In OptiX, printf currently supports 0 or 1 arguments, and the signature
     // requires 1 argument, so push a null pointer onto the call args if there
@@ -416,8 +415,39 @@ LLVMGEN (llvm_gen_printf)
         call_args[new_format_slot] = rop.ll.constant (s.c_str());
     }
     else {
-        // In the OptiX case, we use the pointer to the device-side string
-        call_args[new_format_slot] = rop.llvm_load_device_string (format_sym);
+        // In the OptiX case, we do this:
+        // void* args = { arg0, arg1, arg2 };
+        // osl_printf(sg, fmt, args);
+        //   vprintf(fmt, args);
+        //
+        Symbol sym(format_sym.name(), format_sym.typespec(), format_sym.symtype());
+        format_ustring = s;
+        sym.data(&format_ustring);
+        call_args[new_format_slot] = rop.llvm_load_device_string (sym);
+
+        size_t nargs = call_args.size() - (new_format_slot+1);
+        llvm::Value *voids = rop.ll.op_alloca (rop.ll.type_char(), optix_size);
+        optix_size = 0;
+        for (size_t i = 0; i < nargs; ++i) {
+            llvm::Value* memptr = rop.ll.offset_ptr (voids, optix_size);
+            llvm::Value* arg = call_args[new_format_slot+1+i];
+            if (arg->getType()->isIntegerTy()) {
+                llvm::Value* iptr = rop.ll.ptr_cast(memptr, rop.ll.type_int_ptr());
+                rop.ll.op_store (arg, iptr);
+                optix_size += sizeof(int);
+            } else if (arg->getType()->isFloatingPointTy()) {
+                llvm::Value* fptr = rop.ll.ptr_cast(memptr, rop.ll.type_double_ptr());
+                rop.ll.op_store (arg, fptr);
+                optix_size += sizeof(double);
+            }
+            else {
+                llvm::Value* vptr = rop.ll.ptr_to_cast(memptr, rop.ll.type_void_ptr());
+                rop.ll.op_store (arg, vptr);
+                optix_size += sizeof(uint64_t);
+            }
+        }
+        call_args.resize(new_format_slot+2);
+        call_args.back() = rop.ll.void_ptr(voids);
     }
 
     // Construct the function name and call it.

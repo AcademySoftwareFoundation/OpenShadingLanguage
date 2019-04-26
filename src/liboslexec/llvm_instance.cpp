@@ -1060,6 +1060,10 @@ BackendLLVM::initialize_llvm_group ()
             }
             types += advance;
         }
+        if (varargs && use_optix()) {
+            varargs = false;
+            params.push_back (ll.type_void_ptr());
+        }
         llvm::Function *f = ll.make_function (funcname, false, llvm_type(rettype), params, varargs);
 
         // Skipping this in the non-JIT OptiX case suppresses an LLVM warning

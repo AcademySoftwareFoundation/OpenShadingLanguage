@@ -363,7 +363,8 @@ LLVMGEN (llvm_gen_printf)
                     if (rop.use_optix() && simpletype.basetype == TypeDesc::STRING) {
                         // In the OptiX case, we register each string separately.
                         if (simpletype.arraylen >= 1) {
-                            ustring name = ustring::format("%s[%d]", sym.name(), a);
+                            // Mangle the element's name in case llvm_load_device_string calls getOrAllocateLLVMSymbol
+                            ustring name = ustring::format("__symname__%s[%d]", sym.mangled(), a);
                             Symbol lsym(name, TypeDesc::TypeString, sym.symtype());
                             lsym.data(&((ustring*)sym.data())[a]);
                             loaded = rop.llvm_load_device_string (lsym);

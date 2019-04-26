@@ -169,7 +169,8 @@ OptixGridRenderer::make_optix_materials ()
         shadingsys->optimize_group (groupref.get(), nullptr);
 
         if (!shadingsys->find_symbol (*groupref.get(), ustring(outputs[0]))) {
-            // Asume a 1 x 1 image maybe testing things other than Cout 
+            // FIXME: This is for cases where testshade is run with 1x1 resolution
+            //        Those tests may not have a Cout parameter to write to.
             if (m_xres > 1 || m_yres > 1) {
                 errhandler().warning ("Requested output '%s', which wasn't found",
                                       outputs[0]);

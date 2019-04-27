@@ -754,6 +754,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_force_derivs(false),
       m_allow_shader_replacement(false),
       m_exec_repeat(1),
+      m_opt_warnings(0),
+      m_gpu_opt_error(0),
       m_stat_opt_locking_time(0), m_stat_specialization_time(0),
       m_stat_total_llvm_time(0),
       m_stat_llvm_setup_time(0), m_stat_llvm_irgen_time(0),
@@ -1183,6 +1185,8 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("force_derivs", int, m_force_derivs);
     ATTR_SET ("allow_shader_replacement", int, m_allow_shader_replacement);
     ATTR_SET ("exec_repeat", int, m_exec_repeat);
+    ATTR_SET ("opt_warnings", int, m_opt_warnings);
+    ATTR_SET ("gpu_opt_error", int, m_gpu_opt_error);
     ATTR_SET_STRING ("commonspace", m_commonspace_synonym);
     ATTR_SET_STRING ("debug_groupname", m_debug_groupname);
     ATTR_SET_STRING ("debug_layername", m_debug_layername);
@@ -1318,6 +1322,8 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("force_derivs", int, m_force_derivs);
     ATTR_DECODE ("allow_shader_replacement", int, m_allow_shader_replacement);
     ATTR_DECODE ("exec_repeat", int, m_exec_repeat);
+    ATTR_DECODE ("opt_warnings", int, m_opt_warnings);
+    ATTR_DECODE ("gpu_opt_error", int, m_gpu_opt_error);
 
     ATTR_DECODE ("stat:masters", int, m_stat_shaders_loaded);
     ATTR_DECODE ("stat:groups", int, m_stat_groups);
@@ -1779,6 +1785,8 @@ ShadingSystemImpl::getstats (int level) const
     INTOPT (force_derivs);
     INTOPT (allow_shader_replacement);
     INTOPT (exec_repeat);
+    INTOPT (opt_warnings);
+    INTOPT (gpu_opt_error);
     STROPT (debug_groupname);
     STROPT (debug_layername);
     STROPT (archive_groupname);
@@ -2873,8 +2881,9 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group, ShadingContext *ctx)
     }
     RuntimeOptimizer rop (*this, group, ctx);
     rop.run ();
+    rop.police_failed_optimizations();
 
-    // Copy some info recorted by the RuntimeOptimizer into the group
+    // Copy some info recorded by the RuntimeOptimizer into the group
     group.m_unknown_textures_needed = rop.m_unknown_textures_needed;
     for (auto&& f : rop.m_textures_needed)
         group.m_textures_needed.push_back (f);

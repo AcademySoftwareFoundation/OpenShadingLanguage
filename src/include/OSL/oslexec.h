@@ -109,6 +109,10 @@ public:
     ///    int no_noise           Replace noise with constant value. (0)
     ///    int no_pointcloud      Skip pointcloud lookups. (0)
     ///    int exec_repeat        How many times to run each group (1).
+    ///    int opt_warnings       Warn on certain failure to runtime-optimize
+    ///                              cetain shader constructs. (0)
+    ///    int gpu_opt_error      Consider a hard error if certain shader
+    ///                              constructs cannot be optimized away. (0)
     /// 2. Attributes that should be set by applications/renderers that
     /// incorporate OSL:
     ///    string commonspace     Name of "common" coord system ("world")

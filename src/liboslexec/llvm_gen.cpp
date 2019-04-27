@@ -2987,6 +2987,7 @@ LLVMGEN (llvm_gen_gettextureinfo)
     /* Do not leave derivs uninitialized */
     if (Data.has_derivs())
         rop.llvm_zero_derivs (Data);
+    rop.generated_texture_call (texture_handle != NULL);
 
     return true;
 }

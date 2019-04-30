@@ -21,7 +21,7 @@ srcdir = "."
 tmpdir = "."
 
 OSL_BUILD_DIR = os.environ.get("OSL_BUILD_DIR", "../..")
-OSL_SOURCE_DIR = os.environ.get("OSL_SOURCE_DIR", "../../../../testsuite")
+OSL_SOURCE_DIR = os.environ.get("OSL_SOURCE_DIR", "../../../..")
 OSL_TESTSUITE_DIR = os.path.join(OSL_SOURCE_DIR, "testsuite")
 OPENIMAGEIO_ROOT_DIR = os.environ.get("OPENIMAGEIO_ROOT_DIR", None)
 
@@ -47,6 +47,10 @@ OSL_BUILD_DIR = os.path.normpath (OSL_BUILD_DIR)
 
 tmpdir = "."
 tmpdir = os.path.abspath (tmpdir)
+if platform.system() == 'Windows' :
+    redirect = " >> out.txt 2>&1 "
+else :
+    redirect = " >> out.txt 2>>out.txt "
 
 refdir = "ref/"
 test_source_dir = os.path.join(OSL_TESTSUITE_DIR,
@@ -155,25 +159,25 @@ def oiio_app (app):
 # Construct a command that will compile the shader file, appending output to
 # the file "out.txt".
 def oslc (args) :
-    return (osl_app("oslc") + oslcargs + " " + args + " >> out.txt 2>&1 ;\n")
+    return (osl_app("oslc") + oslcargs + " " + args + redirect + " ;\n")
 
 
 # Construct a command that will run oslinfo, appending output to
 # the file "out.txt".
 def oslinfo (args) :
-    return (osl_app("oslinfo") + args + " >> out.txt 2>&1 ;\n")
+    return (osl_app("oslinfo") + args + redirect + " ;\n")
 
 
 # Construct a command that runs oiiotool, appending console output
 # to the file "out.txt".
 def oiiotool (args) :
-    return (oiio_app("oiiotool") + args + " >> out.txt 2>&1 ;\n")
+    return (oiio_app("oiiotool") + args + redirect + " ;\n")
 
 
 # Construct a command that runs maketx, appending console output
 # to the file "out.txt".
 def maketx (args) :
-    return (oiio_app("maketx") + args + " >> out.txt 2>&1 ;\n")
+    return (oiio_app("maketx") + args + redirect + " ;\n")
 
 # Construct a command that will compare two images, appending output to
 # the file "out.txt".  We allow a small number of pixels to have up to
@@ -189,7 +193,7 @@ def oiiodiff (fileA, fileB, extraargs="", silent=True, concat=True) :
                + " " + extraargs + " " + oiio_relpath(fileA,tmpdir)
                + " " + oiio_relpath(fileB,tmpdir))
     if not silent :
-        command += " >> out.txt 2>&1 "
+        command += redirect
     if concat:
         command += " ;\n"
     return command
@@ -202,14 +206,14 @@ def testshade (args) :
         testshadename = os.environ['OSL_TESTSHADE_NAME'] + " "
     else :
         testshadename = osl_app("testshade")
-    return (testshadename + args + " >> out.txt 2>&1 ;\n")
+    return (testshadename + args + redirect + " ;\n")
 
 
 # Construct a command that run testrender with the specified arguments,
 # appending output to the file "out.txt".
 def testrender (args) :
     os.environ["optix_log_level"] = "0"
-    return (osl_app("testrender") + " " + args + " >> out.txt 2>&1 ;\n")
+    return (osl_app("testrender") + " " + args + redirect + " ;\n")
 
 
 # Construct a command that run testoptix with the specified arguments,
@@ -218,7 +222,7 @@ def testoptix (args) :
     # Disable OptiX logging to prevent messages from the library from
     # appearing in the program output.
     os.environ["optix_log_level"] = "0"
-    return (osl_app("testoptix") + " " + args + " >> out.txt 2>&1 ;\n")
+    return (osl_app("testoptix") + " " + args + redirect + " ;\n")
 
 
 # Run 'command'.  For each file in 'outputs', compare it to the copy

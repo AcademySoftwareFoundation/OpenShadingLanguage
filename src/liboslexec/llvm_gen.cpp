@@ -2817,12 +2817,7 @@ LLVMGEN (llvm_gen_noise)
     std::string funcname = "osl_" + name.string() + "_" + arg_typecode(&Result,derivs);
     std::vector<llvm::Value *> args;
     if (pass_name) {
-        if (! rop.use_optix()) {
-            args.push_back (rop.llvm_load_value(*Name));
-        }
-        else {
-            args.push_back (rop.llvm_load_device_string (*Name));
-        }
+        args.push_back (rop.llvm_load_string (*Name));
     }
     llvm::Value *tmpresult = NULL;
     // triple return, or float return with derivs, passes result pointer
@@ -3191,12 +3186,7 @@ LLVMGEN (llvm_gen_spline)
         name += "v";
 
     args.push_back (rop.llvm_void_ptr (Result));
-    if (rop.use_optix() && Spline.typespec().is_string()) {
-        args.push_back (rop.llvm_load_device_string (Spline));
-    }
-    else {
-        args.push_back (rop.llvm_load_value (Spline));
-    }
+    args.push_back (rop.llvm_load_string (Spline));
     args.push_back (rop.llvm_void_ptr (Value)); // make things easy
     args.push_back (rop.llvm_void_ptr (Knots));
     if (has_knot_count)

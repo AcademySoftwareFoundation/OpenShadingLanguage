@@ -44,7 +44,7 @@
 //----------------------------------------------------
 
 #include <OpenEXR/ImathExc.h>
-#include <OpenEXR/ImathLimits.h>
+#include <OSL/ImathLimits_cuda.h>
 #include <OpenEXR/ImathMath.h>
 #include <OpenEXR/ImathNamespace.h>
 
@@ -58,11 +58,7 @@
 #endif
 
 #ifndef IMATH_HOSTDEVICE
-#  ifdef __CUDACC__
-#    define IMATH_HOSTDEVICE __host__ __device__
-#  else
-#    define IMATH_HOSTDEVICE
-#  endif
+  #error "This should be included with the proper IMATH_HOSTDEVICE define"
 #endif
 
 

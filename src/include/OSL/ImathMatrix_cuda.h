@@ -44,7 +44,7 @@
 //----------------------------------------------------------------
 
 #include <OpenEXR/ImathPlatform.h>
-#include <OpenEXR/ImathFun.h>
+#include <OSL/ImathFun_cuda.h>
 #include <OpenEXR/ImathExc.h>
 #include <OSL/ImathVec_cuda.h>
 #include <OpenEXR/ImathShear.h>
@@ -60,14 +60,15 @@
 #pragma warning(disable:4290)
 #endif
 
-#ifdef __CUDACC__
-#define IMATH_HOSTDEVICE __host__ __device__
-#else
-#define IMATH_HOSTDEVICE
+#ifndef IMATH_HOSTDEVICE
+  #error "This should be included with the proper IMATH_HOSTDEVICE define"
 #endif
 
 
 IMATH_INTERNAL_NAMESPACE_HEADER_ENTER
+
+template <> IMATH_HOSTDEVICE inline float  abs(float f)  { return fabs(f); }
+template <> IMATH_HOSTDEVICE inline double abs(double d) { return fabs(d); }
 
 enum Uninitialized {UNINITIALIZED};
 
@@ -1598,9 +1599,11 @@ Matrix33<T>::inverse (bool singExc) const throw (IEX_NAMESPACE::MathExc)
                     }
                     else
                     {
+#ifndef __CUDACC__
                         if (singExc)
                             throw SingMatrixExc ("Cannot invert "
                                                  "singular matrix.");
+#endif
                         return Matrix33();
                     }
                 }
@@ -1649,9 +1652,11 @@ Matrix33<T>::inverse (bool singExc) const throw (IEX_NAMESPACE::MathExc)
                     }
                     else
                     {
+#ifndef __CUDACC__
                         if (singExc)
                             throw SingMatrixExc ("Cannot invert "
                                                  "singular matrix.");
+#endif
                         return Matrix33();
                     }
                 }
@@ -2876,8 +2881,10 @@ Matrix44<T>::inverse (bool singExc) const throw (IEX_NAMESPACE::MathExc)
                 }
                 else
                 {
+#ifndef __CUDACC__
                     if (singExc)
                         throw SingMatrixExc ("Cannot invert singular matrix.");
+#endif
 
                     return Matrix44();
                 }

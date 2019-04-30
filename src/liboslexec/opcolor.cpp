@@ -36,9 +36,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/fmath.h>
 
-#include <iostream>
-#include <cmath>
-
 #include "oslexec_pvt.h"
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>

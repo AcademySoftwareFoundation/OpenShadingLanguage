@@ -411,8 +411,8 @@ public:
     /// After optimization, check for things that should not be left
     /// unoptimized.
     bool police_failed_optimizations ();
-    enum { police_warn_only = 0, police_gpu_err = 1 };
-    bool police(const Opcode& op, string_view msg, int type = police_warn_only);
+    enum { police_opt_warn = 1, police_gpu_err = 3, police_gpu_err_only = 2 };  // bit field
+    bool police(const Opcode& op, string_view msg, int type = police_opt_warn);
 
 private:
     int m_optimize;                   ///< Current optimization level

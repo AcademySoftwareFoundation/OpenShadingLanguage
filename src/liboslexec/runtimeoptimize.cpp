@@ -3300,19 +3300,21 @@ RuntimeOptimizer::run ()
 bool
 RuntimeOptimizer::police(const Opcode& op, string_view msg, int type)
 {
-    if (type == police_gpu_err && shadingsys().m_gpu_opt_error) {
+    if ((type & police_gpu_err) && shadingsys().m_gpu_opt_error) {
         shadingcontext()->error ("Optimization error for GPUs:\n"
-                                 "  group: %s\n"
-                                 "  layer: %s\n"
-                                 "  %s:%d: %s",
+                                 "  group:  %s\n"
+                                 "  layer:  %s\n"
+                                 "  source: %s:%d\n"
+                                 "  issue:  %s",
                                  group().name(), inst()->layername(),
                                  op.sourcefile(), op.sourceline(), msg);
         return true;
-    } else {
+    } else if ((type & police_opt_warn) && shadingsys().m_opt_warnings) {
         shadingcontext()->warning ("Optimization warning:\n"
-                                 "  group: %s\n"
-                                 "  layer: %s\n"
-                                 "  %s:%d: %s",
+                                 "  group:  %s\n"
+                                 "  layer:  %s\n"
+                                 "  source: %s:%d\n"
+                                 "  issue:  %s",
                                  group().name(), inst()->layername(),
                                  op.sourcefile(), op.sourceline(), msg);
     }

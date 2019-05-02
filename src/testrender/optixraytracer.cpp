@@ -33,7 +33,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/oslconfig.h>
 
 #include "optixraytracer.h"
-#include "../liboslexec/splineimpl.h"
 
 // The pre-compiled renderer support library LLVM bitcode is embedded
 // into the executable and made available through these variables.
@@ -82,11 +81,8 @@ bool
 OptixRaytracer::init_optix_context (int xres, int yres)
 {
 #ifdef OSL_USE_OPTIX
-    std::vector<char> lib_bitcode;
-    std::copy (&rend_llvm_compiled_ops_block[0],
-               &rend_llvm_compiled_ops_block[rend_llvm_compiled_ops_size],
-               back_inserter(lib_bitcode));
-    shadingsys->attribute ("lib_bitcode", OSL::TypeDesc::UINT8, &lib_bitcode);
+    shadingsys->attribute ("lib_bitcode", {OSL::TypeDesc::UINT8, rend_llvm_compiled_ops_size},
+                           rend_llvm_compiled_ops_block);
 
     // Set up the OptiX context
     m_optix_ctx = optix::Context::create();
@@ -115,17 +111,6 @@ OptixRaytracer::init_optix_context (int xres, int yres)
     // Create the OptiX programs and set them on the optix::Context
     m_program = m_optix_ctx->createProgramFromPTXString(renderer_ptx, "raygen");
     m_optix_ctx->setRayGenerationProgram(0, m_program);
-
-    {
-        optix::Buffer buffer = m_optix_ctx->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER);
-        buffer->setElementSize(sizeof(pvt::Spline::SplineBasis));
-        buffer->setSize(sizeof(pvt::Spline::gBasisSet)/sizeof(pvt::Spline::SplineBasis));
-
-        pvt::Spline::SplineBasis* basis = (pvt::Spline::SplineBasis*) buffer->map();
-        ::memcpy(basis, &pvt::Spline::gBasisSet[0], sizeof(pvt::Spline::gBasisSet));
-        buffer->unmap();
-        m_optix_ctx[OSL_NAMESPACE_STRING "::pvt::Spline::gBasisSet"]->setBuffer(buffer);
-    }
 
     if (scene.num_prims()) {
         m_optix_ctx["radiance_ray_type"]->setUint  (0u);

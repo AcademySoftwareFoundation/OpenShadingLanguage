@@ -150,6 +150,12 @@ public:
     /// reside in a global variable, the groupdata struct, or a local value.
     llvm::Value *llvm_load_device_string (const Symbol& sym);
 
+    /// Convenience function to load a string for CPU or GPU device
+    llvm::Value *llvm_load_string (const Symbol& sym) {
+        DASSERT(sym.typespec().is_string());
+        return use_optix() ? llvm_load_device_string(sym) : llvm_load_value(sym);
+    }
+
     /// Legacy version
     ///
     llvm::Value *loadLLVMValue (const Symbol& sym, int component=0,

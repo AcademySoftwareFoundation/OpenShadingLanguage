@@ -1224,8 +1224,16 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
         return true;
     }
     if (name == "lib_bitcode" && type.basetype == TypeDesc::UINT8) {
+        if (type.arraylen < 0) {
+            error ("Invalid bitcode size: %d", type.arraylen);
+            return false;
+        }
         m_lib_bitcode.clear();
-        m_lib_bitcode = *static_cast<const std::vector<char>*>(val);
+        if (type.arraylen) {
+            const char* bytes = static_cast<const char*>(val);
+            std::copy(bytes, bytes + type.arraylen,
+                      back_inserter(m_lib_bitcode));
+        }
         return true;
     }
     if (name == "error_repeats") {

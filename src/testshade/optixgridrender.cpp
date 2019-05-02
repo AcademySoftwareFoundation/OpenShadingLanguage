@@ -33,7 +33,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/oslconfig.h>
 
 #include "optixgridrender.h"
-#include "../liboslexec/splineimpl.h"
 
 
 // The pre-compiled renderer support library LLVM bitcode is embedded
@@ -102,11 +101,8 @@ OptixGridRenderer::init_shadingsys (ShadingSystem *ss)
     shadingsys = ss;
 
 #ifdef OSL_USE_OPTIX
-    std::vector<char> lib_bitcode;
-    std::copy (&rend_llvm_compiled_ops_block[0],
-               &rend_llvm_compiled_ops_block[rend_llvm_compiled_ops_size],
-               back_inserter(lib_bitcode));
-    shadingsys->attribute ("lib_bitcode", OSL::TypeDesc::UINT8, &lib_bitcode);
+    shadingsys->attribute ("lib_bitcode", {OSL::TypeDesc::UINT8, rend_llvm_compiled_ops_size},
+                           rend_llvm_compiled_ops_block);
 #endif
 }
 
@@ -132,17 +128,6 @@ OptixGridRenderer::init_optix_context (int xres, int yres)
     // Create the OptiX programs and set them on the optix::Context
     m_program = m_optix_ctx->createProgramFromPTXString(renderer_ptx, "raygen");
     m_optix_ctx->setRayGenerationProgram(0, m_program);
-
-    {
-        optix::Buffer buffer = m_optix_ctx->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER);
-        buffer->setElementSize(sizeof(pvt::Spline::SplineBasis));
-        buffer->setSize(sizeof(pvt::Spline::gBasisSet)/sizeof(pvt::Spline::SplineBasis));
-
-        pvt::Spline::SplineBasis* basis = (pvt::Spline::SplineBasis*) buffer->map();
-        ::memcpy(basis, &pvt::Spline::gBasisSet[0], sizeof(pvt::Spline::gBasisSet));
-        buffer->unmap();
-        m_optix_ctx[OSL_NAMESPACE_STRING "::pvt::Spline::gBasisSet"]->setBuffer(buffer);
-    }
 #endif
     return true;
 }
@@ -222,30 +207,8 @@ OptixGridRenderer::finalize_scene()
 #ifdef OSL_USE_OPTIX
     make_optix_materials();
 
-    // Create a GeometryGroup to contain the scene geometry
-    optix::GeometryGroup geom_group = m_optix_ctx->createGeometryGroup();
-
-    m_optix_ctx["top_object"  ]->set (geom_group);
-    m_optix_ctx["top_shadower"]->set (geom_group);
-
-    // NB: Since the scenes in the test suite consist of only a few primitives,
-    //     using 'NoAccel' instead of 'Trbvh' might yield a slight performance
-    //     improvement. For more complex scenes (e.g., scenes with meshes),
-    //     using 'Trbvh' is recommended to achieve maximum performance.
-    geom_group->setAcceleration (m_optix_ctx->createAcceleration ("Trbvh"));
-
-    // Set the camera variables on the OptiX Context, to be used by the ray gen program
-#if 0
-    m_optix_ctx["eye" ]->setFloat (vec3_to_float3 (camera.eye));
-    m_optix_ctx["dir" ]->setFloat (vec3_to_float3 (camera.dir));
-    m_optix_ctx["cx"  ]->setFloat (vec3_to_float3 (camera.cx));
-    m_optix_ctx["cy"  ]->setFloat (vec3_to_float3 (camera.cy));
-    m_optix_ctx["invw"]->setFloat (camera.invw);
-    m_optix_ctx["invh"]->setFloat (camera.invh);
-#else
     m_optix_ctx["invw"]->setFloat (1.0f/m_xres);
     m_optix_ctx["invh"]->setFloat (1.0f/m_yres);
-#endif
 
     // Create the output buffer
     optix::Buffer buffer = m_optix_ctx->createBuffer(RT_BUFFER_OUTPUT, RT_FORMAT_FLOAT3, m_xres, m_yres);

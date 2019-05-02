@@ -79,6 +79,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #  endif
 #endif
 
+#ifndef OSL_CONSTANT_DATA
+#  ifdef __CUDA_ARCH__
+#    define OSL_CONSTANT_DATA __constant__
+#  else
+#    define OSL_CONSTANT_DATA
+#  endif
+#endif
+
 // Symbol export defines
 #include "export.h"
 

@@ -7,5 +7,9 @@ shader test (
     printf ("iarray = %i\n", iarray);
     printf ("sarray = %s\n", sarray);
     printf ("farray = %f\n", farray);
-}
 
+    // Make sure the elements are reachable
+    printf ("ielems reversed = %d %d %d %d %d\n", iarray[4], iarray[3], iarray[2], iarray[1], iarray[0]);
+    printf ("selems reversed = %s %s %s %s %s\n", sarray[4], sarray[3], sarray[2], sarray[1], sarray[0]);
+    printf ("felems reversed = %f %f %f %f %f\n", farray[4], farray[3], farray[2], farray[1], farray[0]);
+}

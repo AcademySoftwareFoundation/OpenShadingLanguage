@@ -225,7 +225,10 @@ extern "C" {
     __device__
     void osl_printf (void* sg_, char* fmt_str, void* args)
     {
-        printf (fmt_str, args);
+        // This can be used to limit printing to one Cuda thread for debugging
+        // if (launch_index.x == 0 && launch_index.y == 0)
+        //
+        vprintf(fmt_str, (const char*) args);
     }
 
 

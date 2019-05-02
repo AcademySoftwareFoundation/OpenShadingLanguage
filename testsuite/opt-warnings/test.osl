@@ -1,0 +1,23 @@
+// This tests shader idioms that don't runtime-optimize well.
+
+
+shader test (
+    // Purposefully make a param that can't be constant-folded
+    int frame = 1 [[ int lockgeom = 0 ]],
+    output color Cout = 0)
+{
+    string varying_name = format("foo%04d.tif", frame);
+
+    // texture of a non-constant filename
+    {
+        color C = texture (varying_name, u, v, "missingcolor", color(1,0,0));
+        printf ("C = %g\n", C);
+    }
+
+    // gettextureinfo of a non-constant filename
+    {
+        int exists = 0;
+        gettextureinfo (varying_name, "exists", exists);
+        printf ("exists = %d", exists);
+    }
+}

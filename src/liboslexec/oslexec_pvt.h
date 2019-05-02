@@ -802,6 +802,9 @@ private:
     bool m_force_derivs;                  ///< Force derivs on everything
     bool m_allow_shader_replacement;      ///< Allow shader masters to replace
     int m_exec_repeat;                    ///< How many times to execute group
+    int m_opt_warnings;                   ///< Warn on inability to optimize
+    int m_gpu_opt_error;                  ///< Error on inability to optimize
+                                          ///<   away things that can't GPU.
 
     // Derived/cached calculations from options:
     Color3 m_Red, m_Green, m_Blue;        ///< Color primaries (xyY)

@@ -3296,5 +3296,66 @@ RuntimeOptimizer::run ()
 }
 
 
+
+bool
+RuntimeOptimizer::police(const Opcode& op, string_view msg, int type)
+{
+    if ((type & police_gpu_err) && shadingsys().m_gpu_opt_error) {
+        shadingcontext()->error ("Optimization error for GPUs:\n"
+                                 "  group:  %s\n"
+                                 "  layer:  %s\n"
+                                 "  source: %s:%d\n"
+                                 "  issue:  %s",
+                                 group().name(), inst()->layername(),
+                                 op.sourcefile(), op.sourceline(), msg);
+        return true;
+    } else if ((type & police_opt_warn) && shadingsys().m_opt_warnings) {
+        shadingcontext()->warning ("Optimization warning:\n"
+                                 "  group:  %s\n"
+                                 "  layer:  %s\n"
+                                 "  source: %s:%d\n"
+                                 "  issue:  %s",
+                                 group().name(), inst()->layername(),
+                                 op.sourcefile(), op.sourceline(), msg);
+    }
+    return false;
+}
+
+
+
+bool
+RuntimeOptimizer::police_failed_optimizations()
+{
+    using OIIO::Strutil::format;
+    bool err = false;
+    bool do_warn = shadingsys().m_opt_warnings;
+    bool do_gpu_err = shadingsys().m_gpu_opt_error;
+    if (!do_warn && !do_gpu_err)
+        return false;  // no need for any of this expense
+
+    int nlayers = (int) group().nlayers ();
+    for (int layer = 0;  layer < nlayers;  ++layer) {
+        set_inst (layer);
+        if (inst()->unused())
+            continue;  // no need to print or gather stats for unused layers
+        for (auto&& op : inst()->ops()) {
+            const OpDescriptor *opd = shadingsys().op_descriptor (op.opname());
+            if (! opd)
+                continue;
+            if (opd->flags & OpDescriptor::Tex) {
+                Symbol *sym = opargsym (op, 1);  // arg 1 is texture name
+                DASSERT (sym && sym->typespec().is_string());
+                if (! sym->is_constant()) {
+                    err |= police (op, format("%s(): texture name cannot be reduced to a constant.",
+                                              op.opname()),
+                                   police_gpu_err);
+                }
+            }
+            // FIXME: Will add more tests and warnings as we go
+        }
+    }
+    return err;
+}
+
 }; // namespace pvt
 OSL_NAMESPACE_EXIT

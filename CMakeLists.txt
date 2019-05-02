@@ -335,6 +335,7 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             noise-perlin noise-simplex
             pnoise pnoise-cell pnoise-gabor pnoise-perlin
             operator-overloading
+            opt-warnings
             oslc-comma oslc-D
             oslc-err-arrayindex oslc-err-assignmenttypes
             oslc-err-closuremul oslc-err-field

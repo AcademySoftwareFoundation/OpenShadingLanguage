@@ -152,11 +152,8 @@ public:
 
     /// Convenience function to load a string for CPU or GPU device
     llvm::Value *llvm_load_string (const Symbol& sym) {
-        if (!use_optix())
-            return llvm_load_value (sym);
-
-        ASSERT(sym.typespec().is_string());
-        return llvm_load_device_string(sym);
+        DASSERT(sym.typespec().is_string());
+        return use_optix() ? llvm_load_device_string(sym) : llvm_load_value(sym);
     }
 
     /// Legacy version

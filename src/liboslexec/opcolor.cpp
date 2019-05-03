@@ -708,6 +708,22 @@ ColorSystem::transformc (StringParam fromspace, StringParam tospace,
 
 
 
+OSL_HOSTDEVICE Dual2<Color3>
+ColorSystem::transformc (StringParam fromspace, StringParam tospace,
+                         const Dual2<Color3>& color, Context ctx) {
+    return transformc<Dual2<Color3>>(fromspace, tospace, color, ctx);
+}
+
+
+
+OSL_HOSTDEVICE Color3
+ColorSystem::transformc (StringParam fromspace, StringParam tospace,
+                         const Color3& color, Context ctx) {
+    return transformc<Color3>(fromspace, tospace, color, ctx);
+}
+
+
+
 OSL_HOSTDEVICE Color3
 ColorSystem::blackbody_rgb (float T)
 {

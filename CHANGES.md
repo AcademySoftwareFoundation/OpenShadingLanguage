@@ -1,6 +1,13 @@
-Release 1.10.5 -- May 1??, 2019 (compared to 1.10.3)
+Release 1.10.5 -- May 1, 2019 (compared to 1.10.4)
 --------------------------------------------------
-
+* Extend linearstep() and smooth_linearstep() to work with color, point,
+  vector, and normal types (previously restricted to float). #994
+* Improve oslc type error detection for variable declarations with init
+  expressions. Note that this may flag some warnings and errors that went
+  undetected before, involving initialization assignments of incompatible
+  types. #991, #993
+* Add a build-time option GLIBCXX_USE_CXX11_ABI to force the "new/old string
+  ABI" to something other than the default for your version of gcc. #995
 
 Release 1.10.4 -- Apr 1, 2019 (compared to 1.10.3)
 --------------------------------------------------

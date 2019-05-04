@@ -1310,6 +1310,9 @@ test_shade (int argc, const char *argv[])
         std::cout << ustring::getstats() << "\n";
     }
 
+    // Give the renderer a chance to do initial cleanup while everything is still alive
+    rend->clear();
+
     // We're done with the shading system now, destroy it
     shadergroup.reset ();  // Must release this before destroying shadingsys
 

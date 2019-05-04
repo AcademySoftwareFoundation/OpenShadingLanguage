@@ -61,6 +61,7 @@ public:
     }
 
     std::string load_ptx_file (string_view filename);
+    bool synch_attributes ();
 
     virtual bool init_optix_context (int xres, int yres);
     virtual bool make_optix_materials ();

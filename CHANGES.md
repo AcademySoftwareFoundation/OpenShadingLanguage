@@ -42,8 +42,15 @@ OSL Language and oslc compiler:
 * Fix an assertion/crash for certain type constructors of structs, where the
   struct name was not declared. (This is an incorrect shader, but of course
   should have issued an error, not crashed.) #988 (1.10.4/1.11.0)
+* Improve oslc type error detection for variable declarations with init
+  expressions. Note that this may flag some warnings and errors that went
+  undetected before, involving initialization assignments of incompatible
+  types. #991, #993 (1.10.5/1.11.0)
 
 OSL Standard library:
+* Extend linearstep() and smooth_linearstep() to work with color, point,
+  vector, and normal types (previously restricted to float). #994
+  (1.10.5/1.11.0)
 
 Shaders:
 
@@ -61,13 +68,24 @@ API changes, new options, new ShadingSystem features (for renderer writers):
   `ShaderGroupEnd()` that take an explicit `ShaderGroup` reference and are
   therefore "stateless" and thread-safe. If you exclusively use these new
   methods for shader specification, it's possible for multiple threads to
-  specify shader groups simultaneously. #984, #985, #986 (1.11.0)
+  specify shader groups simultaneously. #984, #985, #986, #1000 (1.11.0)
+* New ShadingSystem option: "opt_warnings" enables warnings about things
+  that couldn't be optimized and may be performance issues. #1010 (1.11.0)
+* New ShadingSystem option: "gpu_opt_error" enables full error status of the
+  subset of those warnings that are also hard no-go's when executing on
+  GPUs. #1010 (1.11.0)
 
 Experimental OptiX rendering:
+* Build option `USE_OPTIX=1` enable experimental OptiX support.
+* testshade and testrender now take `--optix` flags to run tests on OptiX.
+  You can also force either to run in OptiX mode with environment variable
+  `TESTSHADE_OPTIX=1`. #996 #1001 #1003
 * Various fixes to how strings are represented on the Cuda side. #973 (1.11.0)
 * More complete support of all the noise varieties. #980 (1.11.0)
-* Got `spline()` function working. #974 (1.11.0)
+* Got `spline()` function working. #974 #1011 (1.11.0)
 * Work towards getting texture calls working. #974 (1.11.0)
+* printf works for multiple values. #1007 (1.11.0)
+* Work on color-related functions. #1012 (1.11.0)
 
 Bug fixes and other improvements (internals):
 * Fix bug in implementation of `splineinverse()` when computing with
@@ -96,9 +114,34 @@ Build & test system improvements:
 * Simplified finding of flex/bison, rely more on CMake's built-in flex/bison
   find packages. #977 (1.11.0)
 * Verified that OSL can be built with Clang 8 and LLVM 8.0.
+* Add a build-time option GLIBCXX_USE_CXX11_ABI to force the "new/old string
+  ABI" to something other than the default for your version of gcc. #995
+  (1.10.5/1.11.0)
+* stdosl.h and shaders are now installed in PREFIX/share/OSL/shaders. This
+  should not need any changes to shaders, oslc will know where to find them.
+  The location can be overridden by build-time option `OSL_SHADER_INSTALL_DIR`.
+  #956 (1.10.0)
+* When OptiX mode is enabled (USE_OPTIX=1), the testsuite will some tests in
+  an additional time forcing OptiX mode: any test containing a file named
+  `OPTIX` in its test directory; or all tests if enviroment variable
+  `TESTSUITE_OPTIX=1` (except tests that contain a file named `NOOPTIX` in
+  their directory. #1004 (1.10.0)
+* Allow OSL to build with `USE_LLVM_BITCODE` enabled on Windows. #998 (1.10.0)
 
 Documentation:
 
+
+
+Release 1.10.5 -- May 1, 2019 (compared to 1.10.4)
+--------------------------------------------------
+* Extend linearstep() and smooth_linearstep() to work with color, point,
+  vector, and normal types (previously restricted to float). #994
+* Improve oslc type error detection for variable declarations with init
+  expressions. Note that this may flag some warnings and errors that went
+  undetected before, involving initialization assignments of incompatible
+  types. #991, #993
+* Add a build-time option GLIBCXX_USE_CXX11_ABI to force the "new/old string
+  ABI" to something other than the default for your version of gcc. #995
 
 Release 1.10.4 -- Apr 1, 2019 (compared to 1.10.3)
 --------------------------------------------------

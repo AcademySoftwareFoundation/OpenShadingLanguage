@@ -73,24 +73,12 @@ public:
     OSL_HOSTDEVICE static const Chroma* fromString(StringParam colorspace);
 
     /// Convert an XYZ color to RGB in our preferred color space.
-    OSL_HOSTDEVICE Color3
-    XYZ_to_RGB (const Color3 &XYZ)         { return XYZ * m_XYZ2RGB; }
-
-    OSL_HOSTDEVICE Dual2<Vec3>
-    XYZ_to_RGB (const Dual2<Vec3> &XYZ)    { return XYZ * m_XYZ2RGB; }
-
-    OSL_HOSTDEVICE Color3
-    XYZ_to_RGB (float X, float Y, float Z) { return Color3(X,Y,Z) * m_XYZ2RGB; }
+    template <typename T> OSL_HOSTDEVICE T
+    XYZ_to_RGB (const T &XYZ) { return XYZ * m_XYZ2RGB; }
 
     /// Convert an RGB color in our preferred color space to XYZ.
-    OSL_HOSTDEVICE Color3
-    RGB_to_XYZ (const Color3 &RGB)         { return RGB * m_RGB2XYZ; }
-
-    OSL_HOSTDEVICE Dual2<Vec3>
-    RGB_to_XYZ (const Dual2<Vec3> &RGB)    { return RGB * m_RGB2XYZ; }
-
-    OSL_HOSTDEVICE Color3
-    RGB_to_XYZ (float R, float G, float B) { return Color3(R,G,B) * m_RGB2XYZ; }
+    template <typename T> OSL_HOSTDEVICE T
+    RGB_to_XYZ (const T &RGB) { return RGB * m_RGB2XYZ; }
 
     /// Return the luminance of an RGB color in the current color space.
     OSL_HOSTDEVICE float

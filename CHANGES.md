@@ -1,3 +1,7 @@
+Release 1.10.6 -- Jun 1??, 2019 (compared to 1.10.5)
+--------------------------------------------------
+
+
 Release 1.10.5 -- May 1, 2019 (compared to 1.10.4)
 --------------------------------------------------
 * Extend linearstep() and smooth_linearstep() to work with color, point,

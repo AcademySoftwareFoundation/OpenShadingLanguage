@@ -701,7 +701,7 @@ ColorSystem::transformc (StringParam fromspace, StringParam tospace,
     bool use_colorconfig = false;
     COLOR Crgb;
     if (fromspace == StringParams::RGB || fromspace == StringParams::rgb
-         || fromspace == m_colorspace)
+         || fromspace == StringParams::linear || fromspace == m_colorspace)
         Crgb = C;
     else if (fromspace == StringParams::hsv)
         Crgb = hsv_to_rgb (C);
@@ -724,7 +724,7 @@ ColorSystem::transformc (StringParam fromspace, StringParam tospace,
         // do things the ColorConfig way, so skip all these other clauses...
     }
     else if (tospace == StringParams::RGB || tospace == StringParams::rgb
-         || tospace == m_colorspace)
+         || tospace == StringParams::linear || tospace == m_colorspace)
         Cto = Crgb;
     else if (tospace == StringParams::hsv)
         Cto = rgb_to_hsv (Crgb);

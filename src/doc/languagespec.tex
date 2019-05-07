@@ -233,7 +233,7 @@ find are different in OSL compared to other languages:
 \subsubsection*{Surface and volume shaders compute radiance closures, not final colors.}
 
   OSL's surface and volume shaders compute an explicit symbolic
-  description, called a "closure", of the way a surface or volume
+  description, called a ``closure'', of the way a surface or volume
   scatters light, in units of radiance.  These radiance closures may be
   evaluated in particular directions, sampled to find important
   directions, or saved for later evaluation and re-evaluation.
@@ -242,7 +242,7 @@ find are different in OSL compared to other languages:
 
   In contrast, other shading languages usually compute just a surface
   color as visible from a particular direction.  These old shaders are
-  "black boxes" that a renderer can do little with but execute to for
+  ``black boxes'' that a renderer can do little with but execute to for
   this once piece of information (for example, there is no effective way
   to discover from them which directions are important to sample).
   Furthermore, the physical units of lights and surfaces are often
@@ -251,17 +251,17 @@ find are different in OSL compared to other languages:
 
 \subsubsection*{Surface and volume shaders do not loop over lights or shoot rays.}
 
-  There are no "light loops" or explicitly traced rays in OSL surface
+  There are no ``light loops'' or explicitly traced rays in OSL surface
   shaders.  Instead, surface shaders compute a radiance closure
   describing how the surface scatters light, and a part of the renderer
-  called an "integrator" evaluates the closures for a particular set of
+  called an ``integrator'' evaluates the closures for a particular set of
   light sources and determines in which directions rays should be
   traced.  Effects that would ordinarily require explicit ray tracing,
   such as reflection and refraction, are simply part of the radiance
   closure and look like any other BSDF.
 
   Advantages of this approach include that integration and sampling may
-  be batched or re-ordered to increase ray coherence; a "ray budget" can
+  be batched or re-ordered to increase ray coherence; a ``ray budget'' can
   be allocated to optimally sample the BSDF; the closures may be used by
   for bidirectional ray tracing or Metropolis light transport; and the
   closures may be rapidly re-evaluated with new lighting without having
@@ -284,7 +284,7 @@ find are different in OSL compared to other languages:
   Sometimes it is desirable to output images containing individual
   lighting components such as specular, diffuse, reflection, individual
   lights, etc.  In other languages, this is usually accomplished by
-  adding a plethora of "output variables" to the shaders that collect
+  adding a plethora of ``output variables'' to the shaders that collect
   these individual quantities.
 
   OSL shaders need not be cluttered with any code or output variables to
@@ -303,7 +303,7 @@ find are different in OSL compared to other languages:
   other nodes within the network.  These connections may be done
   dynamically at render time, and do not affect compilation of
   individual shader nodes.  Furthermore, the individual nodes are
-  evaluated lazily, only their outputs are "pulled" from the later nodes
+  evaluated lazily, only their outputs are ``pulled'' from the later nodes
   that depend on them (shader writers may remain blissfully unaware of
   these details, and write shaders as if everything is evaluated
   normally).
@@ -325,11 +325,11 @@ find are different in OSL compared to other languages:
   and use arbitrary quantities as texture coordinates and expect correct
   filtering.  This does not require that shaded points be arranged in a
   rectangular grid, or have any particular connectivity, or that any
-  "extra points" be shaded.  
+  ``extra points'' be shaded.  
 
   In the open source OSL implementation, this is possible because
   derivatives are not computed by finite differences with neighboring
-  points, but rather by "automatic differentiation", computing partial
+  points, but rather by ``automatic differentiation'', computing partial
   differentials for the variables that lead to derivatives, without any
   intervention required by the shader writer.
 
@@ -709,7 +709,7 @@ So you can write a shader to achieve some effect in real world units,
 and that shader is totally reusable on another show that used different
 modeling units.
 
-It knows all the standard names like \qkw{cm}, \qkw{in}, \qkw{km}",
+It knows all the standard names like \qkw{cm}, \qkw{in}, \qkw{km},
 etc., and can convert among any of those, as well as between named
 coordinate systems.  For example,
 
@@ -1238,7 +1238,7 @@ numbers, 0 and 1 are used.
 \apiitem{"checkBox"}
 \vspace{12pt}
 A boolean widget displayed as a checkbox. Works on strings or
-numbers. With strings, "Yes" and "No" values are used, with numbers,
+numbers. With strings, ``Yes'' and ``No'' values are used, with numbers,
 0 and 1 are used.
 \apiend
 \vspace{-12pt}
@@ -4683,7 +4683,7 @@ U, \\ \bigspc\bigspc float xalpha, float yalpha, float eta, int refract)}
 \indexapi{microfacet()}
 
 Returns a \colorclosure that represents scattering on the
-surface using some microfacet distribution such as "beckmann" or "ggx" (as
+surface using some microfacet distribution such as ``beckmann'' or ``ggx'' (as
 described in Walter et al., ``Microfacet Models for Refraction through Rough
 Surfaces,'' Eurographics Symposium on Rendering, 2007).
 Both {\cf xalpha} and {\cf yalpha} control how rough the microstructure of the
@@ -4699,7 +4699,7 @@ refractive ({\cf 1}) or both at once ({\cf 2}). The implementation must not rely
 The list of supported distributions will change from renderer to renderer, and
 also the behavior when an unsupported distribution is requested. It is up to the
 implementation to issue an error or to default to a supported one. Also it is
-expected that the alias "default" must work as a distribution in any renderer.
+expected that the alias ``default'' must work as a distribution in any renderer.
 
 \apiend
 
@@ -5143,7 +5143,7 @@ int {\ce dict_find} (int nodeID, string query)}
     of a file containing the dictionary.  (The system can easily
     distinguish between them.)  XML dictionaries are currently
     supported, and additional formats may be supported in the future.
-    The query is expressed in "XPath 1.0" syntax (or a reasonable subset
+    The query is expressed in ``XPath 1.0'' syntax (or a reasonable subset
     therof).
 
     The return value is a \emph{Node ID}, an opaque integer identifier

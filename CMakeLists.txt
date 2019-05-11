@@ -275,16 +275,15 @@ macro ( TESTSUITE )
             AND (EXISTS "${_testsrcdir}/OPTIX" OR test_all_optix OR _testname MATCHES "optix")
             AND NOT EXISTS "${_testsrcdir}/NOOPTIX"
             AND NOT EXISTS "${_testsrcdir}/NOOPTIX-FIXME")
-            # FIXME! Don't run unoptimized yet because we know optix tests
-            # almost all fail on anything with init ops. Will fix soon.
-            #if (NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
-            #    set (_env TESTSHADE_OPT=0 TESTSHADE_OPTIX=1
-            #              OPENIMAGEIO_ROOT_DIR=${OPENIMAGEIO_ROOT_DIR}
-            #              OSL_SOURCE_DIR=${CMAKE_SOURCE_DIR}
-            #              OSL_BUILD_DIR=${CMAKE_BINARY_DIR} )
-            #    add_test ( NAME ${_testname}.optix
-            #               COMMAND env ${_env} ${_runtest} )
-            #endif ()
+            # Unoptimized
+            if (NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
+                set (_env TESTSHADE_OPT=0 TESTSHADE_OPTIX=1
+                          OPENIMAGEIO_ROOT_DIR=${OPENIMAGEIO_ROOT_DIR}
+                          OSL_SOURCE_DIR=${CMAKE_SOURCE_DIR}
+                          OSL_BUILD_DIR=${CMAKE_BINARY_DIR} )
+                add_test ( NAME ${_testname}.optix
+                           COMMAND env ${_env} ${_runtest} )
+            endif ()
             # and optimized
             set (_env TESTSHADE_OPT=2 TESTSHADE_OPTIX=1
                       OPENIMAGEIO_ROOT_DIR=${OPENIMAGEIO_ROOT_DIR}

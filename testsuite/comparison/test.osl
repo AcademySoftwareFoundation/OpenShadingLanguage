@@ -12,17 +12,6 @@ test ()
         printf ("  %g <= %g = %d\n", a, b, a<=b);
         printf ("  %g > %g = %d\n", a, b, a>b);
         printf ("  %g >= %g = %d\n", a, b, a>=b);
-
-        printf (" varying:\n");
-        a = u+0.5;
-        b = v+0.5;
-        printf ("  %g == %g = %d\n", a, b, a==b);
-        printf ("  %g != %g = %d\n", a, b, a!=b);
-        printf ("  %g < %g = %d\n", a, b, a<b);
-        printf ("  %g <= %g = %d\n", a, b, a<=b);
-        printf ("  %g > %g = %d\n", a, b, a>b);
-        printf ("  %g >= %g = %d\n", a, b, a>=b);
-        printf ("\n");
     }
 
     // int
@@ -36,20 +25,6 @@ test ()
         printf ("  %d <= %d = %d\n", a, b, a<=b);
         printf ("  %d > %d = %d\n", a, b, a>b);
         printf ("  %d >= %d = %d\n", a, b, a>=b);
-
-#if 0
-        // FIXME - restore this once we get float-to-int casts
-        printf (" varying:\n");
-        a = u+0.5;
-        b = v+0.5;
-        printf ("  %d == %d = %d\n", a, b, a==b);
-        printf ("  %d != %d = %d\n", a, b, a!=b);
-        printf ("  %d < %d = %d\n", a, b, a<b);
-        printf ("  %d <= %d = %d\n", a, b, a<=b);
-        printf ("  %d > %d = %d\n", a, b, a>b);
-        printf ("  %d >= %d = %d\n", a, b, a>=b);
-        printf ("\n");
-#endif
     }
 
     // triple
@@ -68,19 +43,6 @@ test ()
         printf ("  %g != %g = %d\n", a, f, a!=f);
         printf ("  %g != %g = %d\n", b, f, b!=f);
 
-        printf (" varying:\n");
-        a = u+0.5;
-        b = v+0.5;
-        f = 0.5;
-        printf ("  %g == %g = %d\n", a, b, a==b);
-        printf ("  %g == %g = %d\n", a, c, a==c);
-        printf ("  %g == %g = %d\n", a, f, a==f);
-        printf ("  %g == %g = %d\n", b, f, b==f);
-        printf ("  %g != %g = %d\n", a, b, a!=b);
-        printf ("  %g != %g = %d\n", a, c, a!=c);
-        printf ("  %g != %g = %d\n", a, f, a!=f);
-        printf ("  %g != %g = %d\n", b, f, b!=f);
-        printf ("\n");
     }
 
     // matrix
@@ -95,17 +57,6 @@ test ()
         printf ("  %g != %g = %d\n", a, b, a!=b);
         printf ("  %g != %g = %d\n", a, f, a!=f);
         printf ("  %g != %g = %d\n", b, f, b!=f);
-#if 0
-        printf (" varying:\n");
-        a = a * u;
-        printf ("  %g == %g = %d\n", a, b, a==b);
-        printf ("  %g == %g = %d\n", a, f, a==f);
-        printf ("  %g == %g = %d\n", b, f, b==f);
-        printf ("  %g != %g = %d\n", a, b, a!=b);
-        printf ("  %g != %g = %d\n", a, f, a!=f);
-        printf ("  %g != %g = %d\n", b, f, b!=f);
-        printf ("\n");
-#endif
     }
 
     // string
@@ -118,11 +69,5 @@ test ()
         printf ("  \"%s\" != \"%s\" = %d\n", a, b, a!=b);
         printf ("  \"%s\" == \"%s\" = %d\n", a, c, a==c);
         printf ("  \"%s\" != \"%s\" = %d\n", a, c, a!=c);
-
-#if 0
-        // FIXME - test varying strings
-        printf (" varying:\n");
-        printf ("\n");
-#endif
     }
 }

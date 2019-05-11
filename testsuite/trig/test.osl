@@ -194,38 +194,4 @@ test ()
         printf ("  degrees (%g) = %g\n", a, degrees(a));
         printf ("  radians (%g) = %g\n", a, radians(a));
     }
-
-    printf (" varying:\n");
-    {
-        float a = u;
-        float b = v;
-        float s, c;
-        sincos(a, s, c);
-        printf ("  cos (%g) = %g\n", a, cos(a));
-        printf ("  sin (%g) = %g\n", a, sin(a));
-        printf ("  sincos (%g) = %g %g\n", a, s, c);
-        printf ("  tan (%g) = %g\n", a, tan(a));
-        printf ("  acos (%g) = %g\n", a, acos(a));
-        printf ("  asin (%g) = %g\n", a, asin(a));
-        printf ("  atan (%g) = %g\n", a, atan(a));
-        printf ("  atan2 (%g, %g) = %g\n", a, b, atan2(a,b));
-        printf ("  degrees (%g) = %g\n", a, degrees(a));
-        printf ("  radians (%g) = %g\n", a, radians(a));
-    }
-    {
-        color a = u;
-        color b = v;
-        color s, c;
-        sincos(a, s, c);
-        printf ("  cos (%g) = %g\n", a, cos(a));
-        printf ("  sin (%g) = %g\n", a, sin(a));
-        printf ("  sincos (%g) = %g %g\n", a, s, c);
-        printf ("  tan (%g) = %g\n", a, tan(a));
-        printf ("  acos (%g) = %g\n", a, acos(a));
-        printf ("  asin (%g) = %g\n", a, asin(a));
-        printf ("  atan (%g) = %g\n", a, atan(a));
-        printf ("  atan2 (%g, %g) = %g\n", a, b, atan2(a,b));
-        printf ("  degrees (%g) = %g\n", a, degrees(a));
-        printf ("  radians (%g) = %g\n", a, radians(a));
-    }
 }

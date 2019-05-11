@@ -13,16 +13,6 @@ test (color cparam = color (.1, .7, .2),
         printf ("  color (%g, %g, %g) = %g\n", a, b, c, color(a,b,c));
     }
 
-    {
-        printf (" varying:\n");
-        float a = u;
-        float b = v;
-        float c = 0.5;
-
-        printf ("  color (%g) = %g\n", a, color(a));
-        printf ("  color (%g, %g, %g) = %g\n", a, b, c, color(a,b,c));
-    }
-
     { 
         float a = 0.1, b = 0.2, c = 0.5;
         printf ("\ntesting with spaces:\n");

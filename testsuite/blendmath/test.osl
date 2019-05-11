@@ -30,7 +30,7 @@ test ()
     }
 
     // triple versions
-    { 
+    {
         vector a = 1;
         vector b = 3;
         vector c = 5;
@@ -58,60 +58,5 @@ test ()
                 smoothstep (point(a),point(c),point(b)));
         printf ("  point/float smoothstep (%g, %g, %g) = %g\n", a, c, b,
                 smoothstep (point(a),point(c),b[0]));
-    }
-
-    printf (" varying:\n");
-    {
-        float a = u;
-        float b = v;
-        float c = u+v;
-        printf ("  clamp (%g, %g, %g) = %g\n", a, b, c, clamp (a,b,c));
-        printf ("  clamp (%g, %g, %g) = %g\n", b, a, c, clamp (b,a,c));
-        printf ("  clamp (%g, %g, %g) = %g\n", c, a, b, clamp (c,a,b));
-        printf ("  clamp (%g, %g, %g) = %g\n", a, c, b, clamp (a,c,b));
-        printf ("  min (%g, %g) = %g\n", a, b, min (a,b));
-        printf ("  min (%g, %g) = %g\n", b, c, min (b,c));
-        printf ("  min (%g, %g) = %g\n", c, a, min (c,a));
-        printf ("  max (%g, %g) = %g\n", a, b, max (a,b));
-        printf ("  max (%g, %g) = %g\n", b, c, max (b,c));
-        printf ("  max (%g, %g) = %g\n", c, a, max (c,a));
-        printf ("  step (%g, %g) = %g\n", b, a, step (b,a));
-        printf ("  step (%g, %g) = %g\n", b, c, step (b,c));
-        float t = 0.0;
-        float m = mix (b,c,t);
-        printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
-        t = 0.25;
-        m = mix (b,c,t);
-        printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
-        t = 1.0;
-        m = mix (b,c,t);
-        printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
-        printf ("  smoothstep (%g, %g, %g) = %g\n", a, c, b, smoothstep (a,c,b));
-    }
-
-    {
-        color a = u;
-        color b = v;
-        color c = u+v;
-        printf ("  clamp (%g, %g, %g) = %g\n", a, b, c, clamp (a,b,c));
-        printf ("  clamp (%g, %g, %g) = %g\n", b, a, c, clamp (b,a,c));
-        printf ("  clamp (%g, %g, %g) = %g\n", c, a, b, clamp (c,a,b));
-        printf ("  clamp (%g, %g, %g) = %g\n", a, c, b, clamp (a,c,b));
-        printf ("  min (%g, %g) = %g\n", a, b, min (a,b));
-        printf ("  min (%g, %g) = %g\n", b, c, min (b,c));
-        printf ("  min (%g, %g) = %g\n", c, a, min (c,a));
-        printf ("  max (%g, %g) = %g\n", a, b, max (a,b));
-        printf ("  max (%g, %g) = %g\n", b, c, max (b,c));
-        printf ("  max (%g, %g) = %g\n", c, a, max (c,a));
-        float t = 0.0;
-        color m = mix (b,c,t);
-        printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
-        t = 0.25;
-        m = mix (b,c,t);
-        printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
-        t = 1.0;
-        m = mix (b,c,t);
-        printf ("  mix (%g, %g, %g) = %g [%g, %g]\n", b, c, t, m, Dx(m), Dy(m));
-        printf ("  smoothstep (%g, %g, %g) = %g\n", a, c, b, smoothstep (a,c,b));
     }
 }

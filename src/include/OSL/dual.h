@@ -491,9 +491,9 @@ getYDerivative (const Dual<T,P> &x) { return x.partial(1); }
 
 // Simple templated "copy" function
 template<class T> OSL_HOSTDEVICE inline void
-assignment (T &a, T &b) { a = b; }
+assignment (T &a, const T &b) { a = b; }
 template<class T, int P> OSL_HOSTDEVICE inline void
-assignment (T &a, Dual<T,P> &b) { a = b.val(); }
+assignment (T &a, const Dual<T,P> &b) { a = b.val(); }
 
 // Templated value equality. For scalars, it's the same as regular ==.
 // For Dual's, this only tests the value, not the derivatives. This solves
@@ -775,6 +775,24 @@ OSL_HOSTDEVICE inline Dual<T,P> fast_atan2(const Dual<T,P> &y, const Dual<T,P> &
     return dualfunc (y, x, atan2xy, -x.val()*denom, y.val()*denom);
 }
 
+// f(x) = log(a), f'(x) = 1/x
+// (log base e)
+template<class T, int P>
+OSL_HOSTDEVICE inline Dual<T,P> safe_log (const Dual<T,P> &a)
+{
+    T f = OIIO::safe_log(a.val());
+    T df = a.val() < std::numeric_limits<T>::min() ? T(0) : T(1) / a.val();
+    return dualfunc (a, f, df);
+}
+
+template<class T, int P>
+OSL_HOSTDEVICE inline Dual<T,P> fast_log(const Dual<T,P> &a)
+{
+    T f = OIIO::fast_log(a.val());
+    T df = a.val() < std::numeric_limits<float>::min() ? 0.0f : 1.0f / a.val();
+    return dualfunc (a, f, df);
+}
+
 
 // to compute pow(u,v), we need the dual-form representation of
 // the pow() operator.  In general, the dual-form of the primitive
@@ -788,11 +806,13 @@ OSL_HOSTDEVICE inline Dual<T,P> safe_pow (const Dual<T,P> &u, const Dual<T,P> &v
     // NOTE: this function won't return exactly the same as pow(x,y) because we
     // use the identity u^v=u * u^(v-1) which does not hold in all cases for our
     // "safe" variant (nor does it hold in general in floating point arithmetic).
-    T powuvm1 = safe_pow(u.val(), v.val() - T(1));
+    T powuvm1 = OIIO::safe_pow(u.val(), v.val() - T(1));
     T powuv   = powuvm1 * u.val();
-    T logu    = u.val() > 0 ? safe_log(u.val()) : T(0);
+    T logu    = u.val() > 0 ? OIIO::safe_log(u.val()) : T(0);
     return dualfunc (u, v, powuv, v.val()*powuvm1, logu*powuv);
 }
+// Fallthrough to OIIO::safe_pow for floats and vectors
+using OIIO::safe_pow;
 
 template<class T, int P>
 OSL_HOSTDEVICE inline Dual<T,P> fast_safe_pow(const Dual<T,P> &u, const Dual<T,P> &v)
@@ -802,24 +822,6 @@ OSL_HOSTDEVICE inline Dual<T,P> fast_safe_pow(const Dual<T,P> &u, const Dual<T,P
     T powuv   = powuvm1 * u.val();
     T logu    = u.val() > 0 ? OIIO::fast_log(u.val()) : 0.0f;
     return dualfunc (u, v, powuv, v.val()*powuvm1, logu*powuv);
-}
-
-// f(x) = log(a), f'(x) = 1/x
-// (log base e)
-template<class T, int P>
-OSL_HOSTDEVICE inline Dual<T,P> safe_log (const Dual<T,P> &a)
-{
-    T f = safe_log(a.val());
-    T df = a.val() < std::numeric_limits<T>::min() ? T(0) : T(1) / a.val();
-    return dualfunc (a, f, df);
-}
-
-template<class T, int P>
-OSL_HOSTDEVICE inline Dual<T,P> fast_log(const Dual<T,P> &a)
-{
-    T f = OIIO::fast_log(a.val());
-    T df = a.val() < std::numeric_limits<float>::min() ? 0.0f : 1.0f / a.val();
-    return dualfunc (a, f, df);
 }
 
 // f(x) = log2(x), f'(x) = 1/(x*log2)

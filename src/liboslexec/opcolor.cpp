@@ -296,6 +296,45 @@ xyY_to_XYZ (const COLOR3 &xyY)
 
 
 
+template <typename COLOR3> OSL_HOSTDEVICE
+static COLOR3
+sRGB_to_linear (const COLOR3& srgb)
+{
+    // See Foley & van Dam
+    using FLOAT = typename ScalarFromVec<COLOR3>::type;
+    using namespace OIIO;
+    //using safe_pow = std::conditional<is_Dual<COLOR3>::value, OSL::safe_pow, OIIO::safe_pow>::type;
+    FLOAT r = comp(srgb,0), g = comp(srgb,1), b = comp(srgb,2);
+    auto convert = [] (FLOAT x) -> FLOAT {
+        return (x <= 0.04045f) ?
+                     (x * (1.0f / 12.92f)) :
+                     safe_pow((x + 0.055f) * (1.0f / 1.055f), FLOAT(2.4f));
+    };
+    return make_Color3 (convert(r), convert(g), convert(b));
+}
+
+
+
+template <typename COLOR3> OSL_HOSTDEVICE
+static COLOR3
+linear_to_sRGB (const COLOR3& rgb)
+{
+    // See Foley & van Dam
+    using FLOAT = typename ScalarFromVec<COLOR3>::type;
+    using namespace OIIO;
+    //using safe_pow = std::conditional<is_Dual<COLOR3>::value, OSL::safe_pow, OIIO::safe_pow>::type;
+    FLOAT r = comp(rgb,0), g = comp(rgb,1), b = comp(rgb,2);
+    auto convert = [] (FLOAT x) -> FLOAT {
+        return (x <= 0.0031308f) ?
+                      (12.92f * x)           :
+                      (1.055f * safe_pow(x, FLOAT(1.f / 2.4f)) - 0.055f);
+    };
+
+    return make_Color3 (convert(r), convert(g), convert(b));
+}
+
+
+
 
 // Spectral rendering routines inspired by those found at:
 //   http://www.fourmilab.ch/documents/specrend/specrend.c
@@ -662,7 +701,7 @@ ColorSystem::transformc (StringParam fromspace, StringParam tospace,
     bool use_colorconfig = false;
     COLOR Crgb;
     if (fromspace == StringParams::RGB || fromspace == StringParams::rgb
-         || fromspace == m_colorspace)
+         || fromspace == StringParams::linear || fromspace == m_colorspace)
         Crgb = C;
     else if (fromspace == StringParams::hsv)
         Crgb = hsv_to_rgb (C);
@@ -674,6 +713,8 @@ ColorSystem::transformc (StringParam fromspace, StringParam tospace,
         Crgb = XYZ_to_RGB (C);
     else if (fromspace == StringParams::xyY)
         Crgb = XYZ_to_RGB (xyY_to_XYZ (C));
+    else if (fromspace == StringParams::sRGB)
+        Crgb = sRGB_to_linear (C);
     else {
         use_colorconfig = true;
     }
@@ -683,7 +724,7 @@ ColorSystem::transformc (StringParam fromspace, StringParam tospace,
         // do things the ColorConfig way, so skip all these other clauses...
     }
     else if (tospace == StringParams::RGB || tospace == StringParams::rgb
-         || tospace == m_colorspace)
+         || tospace == StringParams::linear || tospace == m_colorspace)
         Cto = Crgb;
     else if (tospace == StringParams::hsv)
         Cto = rgb_to_hsv (Crgb);
@@ -695,6 +736,8 @@ ColorSystem::transformc (StringParam fromspace, StringParam tospace,
         Cto = RGB_to_XYZ (Crgb);
     else if (tospace == StringParams::xyY)
         Cto = RGB_to_XYZ (xyY_to_XYZ (Crgb));
+    else if (tospace == StringParams::sRGB)
+        Cto = linear_to_sRGB (Crgb);
     else {
         use_colorconfig = true;
     }

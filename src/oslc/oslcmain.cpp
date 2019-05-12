@@ -117,6 +117,12 @@ main (int argc, const char *argv[])
     // internationalization, for the entire oslc application.
     std::locale::global (std::locale::classic());
 
+#ifdef OIIO_HAS_STACKTRACE
+    // Helpful for debugging to make sure that any crashes dump a stack
+    // trace.
+    OIIO::Sysutil::setup_crash_stacktrace("stdout");
+#endif
+
     OIIO::Filesystem::convert_native_arguments (argc, (const char **)argv);
 
     if (argc <= 1) {

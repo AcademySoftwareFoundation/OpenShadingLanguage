@@ -51,10 +51,11 @@ Sony Pictures Imageworks terms, above.
 #include <string>
 #include <cstring>
 
-#include <OpenImageIO/strutil.h>
 #include <OpenImageIO/argparse.h>
-#include <OpenImageIO/timer.h>
 #include <OpenImageIO/filesystem.h>
+#include <OpenImageIO/timer.h>
+#include <OpenImageIO/strutil.h>
+#include <OpenImageIO/sysutil.h>
 
 #include <OSL/oslquery.h>
 using namespace OSL;
@@ -255,6 +256,12 @@ main (int argc, char *argv[])
     // Globally force classic "C" locale, and turn off all formatting
     // internationalization, for the entire oslinfo application.
     std::locale::global (std::locale::classic());
+
+#ifdef OIIO_HAS_STACKTRACE
+    // Helpful for debugging to make sure that any crashes dump a stack
+    // trace.
+    OIIO::Sysutil::setup_crash_stacktrace("stdout");
+#endif
 
     OIIO::Filesystem::convert_native_arguments (argc, (const char **)argv);
 

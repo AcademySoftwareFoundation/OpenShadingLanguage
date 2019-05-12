@@ -254,6 +254,9 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
         if cmdret != 0 and failureok == 0 :
             print ("#### Error: this command failed: ", sub_command)
             print ("FAIL")
+            print ("Output was:\n--------")
+            print (open ("out.txt", 'rU').read())
+            print ("--------")
             return (1)
 
     err = 0

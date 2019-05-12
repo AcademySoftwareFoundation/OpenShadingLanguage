@@ -101,6 +101,12 @@ getargs (int argc, char *argv[])
 int
 main (int argc, char* argv[])
 {
+#ifdef OIIO_HAS_STACKTRACE
+    // Helpful for debugging to make sure that any crashes dump a stack
+    // trace.
+    OIIO::Sysutil::setup_crash_stacktrace("stdout");
+#endif
+
     OIIO::Filesystem::convert_native_arguments (argc, (const char **)argv);
 
     getargs (argc, argv);

@@ -41,8 +41,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //#define SKIP_KNOT_DERIVS 1
 
 
-#include <iostream>
-
 #include "oslexec_pvt.h"
 #include <OSL/dual_vec.h>
 #include <OSL/Imathx.h>

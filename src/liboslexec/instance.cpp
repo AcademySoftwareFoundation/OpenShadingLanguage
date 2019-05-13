@@ -312,8 +312,7 @@ ShaderInstance::parameters (const ParamValueList &params)
                 // END of the ordinary param storage, since when we assigned
                 // data offsets to each parameter, we didn't know the length
                 // needed to allocate this param in its proper spot.
-                ASSERT (valuetype.arraylen > 0);
-                int nelements = valuetype.arraylen * valuetype.aggregate;
+                int nelements = valuetype.basevalues();
                 // Store the actual length in the shader instance parameter
                 // override info. Compute the length this way to account for relaxed
                 // parameter checking (for example passing an array of floats to an array of colors)

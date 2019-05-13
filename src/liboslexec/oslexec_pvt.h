@@ -63,6 +63,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/dual_vec.h>
 #include "osl_pvt.h"
 #include "constantpool.h"
+#include "opcolor.h"
 
 
 using namespace OSL;
@@ -631,22 +632,6 @@ public:
         return m_closure_registry.get_entry(id);
     }
 
-    /// Convert an XYZ color to RGB in our preferred color space.
-    Color3 XYZ_to_RGB (const Color3 &XYZ) { return XYZ * m_XYZ2RGB; }
-    Dual2<Vec3> XYZ_to_RGB (const Dual2<Vec3> &XYZ) { return XYZ * m_XYZ2RGB; }
-    Color3 XYZ_to_RGB (float X, float Y, float Z) { return Color3(X,Y,Z) * m_XYZ2RGB; }
-    /// Convert an RGB color in our preferred color space to XYZ.
-    Color3 RGB_to_XYZ (const Color3 &RGB) { return RGB * m_RGB2XYZ; }
-    Dual2<Vec3> RGB_to_XYZ (const Dual2<Vec3> &RGB) { return RGB * m_RGB2XYZ; }
-    Color3 RGB_to_XYZ (float R, float G, float B) { return Color3(R,G,B) * m_RGB2XYZ; }
-
-    /// Return the luminance of an RGB color in the current color space.
-    float luminance (const Color3 &RGB) { return RGB.dot(m_luminance_scale); }
-
-    /// Return the RGB in the current color space for blackbody radiation
-    /// at temperature T (in Kelvin).
-    Color3 blackbody_rgb (float T /*Kelvin*/);
-
     /// Set the current color space.
     bool set_colorspace (ustring colorspace);
 
@@ -678,8 +663,11 @@ public:
 
     void count_noise () { m_stat_noise_calls += 1; }
 
-    ustring colorspace () const { return m_colorspace; }
-    OIIO::ColorConfig& colorconfig () { return m_colorconfig; }
+    ColorSystem& colorsystem() { return m_colorsystem; }
+
+    template <typename Color> bool
+    ocio_transform (StringParam fromspace, StringParam tospace,
+                    const Color& C, Color& Cout);
 
 private:
     void printstats () const;
@@ -793,7 +781,6 @@ private:
     ustring m_commonspace_synonym;        ///< Synonym for "common" space
     std::vector<ustring> m_raytypes;      ///< Names of ray types
     std::vector<ustring> m_renderer_outputs; ///< Names of renderer outputs
-    ustring m_colorspace;                 ///< What RGB colors mean
     int m_max_local_mem_KB;               ///< Local storage can a shader use
     bool m_compile_report;                ///< Print compilation report?
     bool m_buffer_printf;                 ///< Buffer/batch printf output?
@@ -802,15 +789,13 @@ private:
     bool m_force_derivs;                  ///< Force derivs on everything
     bool m_allow_shader_replacement;      ///< Allow shader masters to replace
     int m_exec_repeat;                    ///< How many times to execute group
+    int m_opt_warnings;                   ///< Warn on inability to optimize
+    int m_gpu_opt_error;                  ///< Error on inability to optimize
+                                          ///<   away things that can't GPU.
 
-    // Derived/cached calculations from options:
-    Color3 m_Red, m_Green, m_Blue;        ///< Color primaries (xyY)
-    Color3 m_White;                       ///< White point (xyY)
-    Matrix33 m_XYZ2RGB;                   ///< XYZ to RGB conversion matrix
-    Matrix33 m_RGB2XYZ;                   ///< RGB to XYZ conversion matrix
-    Color3 m_luminance_scale;             ///< Scaling for RGB->luma
-    std::vector<Color3> m_blackbody_table; ///< Precomputed blackbody table
-    OIIO::ColorConfig m_colorconfig;      ///< OIIO/OCIO color configuration
+    ustring m_colorspace;                 ///< What RGB colors mean
+    ColorSystem m_colorsystem;            ///< Data for current colorspace
+    OCIOColorSystem m_ocio_system;        ///< OCIO color system (when OIIO_HAS_COLORPROCESSOR=1)
 
     // Thread safety
     mutable mutex m_mutex;
@@ -1590,8 +1575,6 @@ private:
     friend class ShadingContext;
 };
 
-
-
 /// The full context for executing a shader group.
 ///
 class OSLEXECPUBLIC ShadingContext {
@@ -1702,15 +1685,6 @@ public:
                             ustring obj_name, ustring attr_name,
                             int array_lookup, int index,
                             TypeDesc attr_type, void *attr_dest);
-
-    /// Convert a color in the named space to RGB.
-    ///
-    Color3 to_rgb (ustring fromspace, const Color3& C);
-    Color3 from_rgb (ustring fromspace, const Color3& C);
-    Color3 transformc (ustring fromspace, ustring tospace, const Color3& C);
-    Dual2<Color3> transformc (ustring fromspace, ustring tospace, const Dual2<Color3>& C);
-    Color3 ocio_transform (ustring fromspace, ustring tospace, const Color3& C);
-    Dual2<Color3> ocio_transform (ustring fromspace, ustring tospace, const Dual2<Color3>& C);
 
     PerThreadInfo *thread_info () const { return m_threadinfo; }
 
@@ -1826,13 +1800,6 @@ private:
     static const int FAILED_ATTRIBS = 16;
     GetAttribQuery m_failed_attribs[FAILED_ATTRIBS];
     int m_next_failed_attrib;
-
-#if OIIO_HAS_COLORPROCESSOR
-    // 1-item cache for the last requested custom color conversion processor
-    OIIO::ColorProcessorHandle m_last_colorproc;
-    ustring m_last_colorproc_fromspace;
-    ustring m_last_colorproc_tospace;
-#endif
 
     // Buffering of error messages and printfs
     typedef std::pair<ErrorHandler::ErrCode, std::string> ErrorItem;

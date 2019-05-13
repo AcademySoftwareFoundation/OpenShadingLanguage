@@ -28,11 +28,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #include <OpenImageIO/filesystem.h>
+#include <OpenImageIO/sysutil.h>
 
 #include <OSL/oslconfig.h>
 
 #include "optixgridrender.h"
-#include "../liboslexec/splineimpl.h"
+#include "../liboslexec/opcolor.h"
 
 
 // The pre-compiled renderer support library LLVM bitcode is embedded
@@ -62,6 +63,28 @@ OptixGridRenderer::OptixGridRenderer ()
 
 
 
+std::string
+OptixGridRenderer::load_ptx_file (string_view filename)
+{
+#ifdef OSL_USE_OPTIX
+    std::vector<std::string> paths = {
+        OIIO::Filesystem::parent_path(OIIO::Sysutil::this_program_path()),
+        PTX_PATH
+    };
+    std::string filepath = OIIO::Filesystem::searchpath_find (filename, paths,
+                                                              false);
+    if (OIIO::Filesystem::exists(filepath)) {
+        std::string ptx_string;
+        if (OIIO::Filesystem::read_text_file (filepath, ptx_string))
+            return ptx_string;
+    }
+#endif
+    errhandler().severe ("Unable to load %s", filename);
+    return {};
+}
+
+
+
 OptixGridRenderer::~OptixGridRenderer ()
 {
 #ifdef OSL_USE_OPTIX
@@ -79,28 +102,9 @@ OptixGridRenderer::init_shadingsys (ShadingSystem *ss)
     shadingsys = ss;
 
 #ifdef OSL_USE_OPTIX
-    std::vector<char> lib_bitcode;
-    std::copy (&rend_llvm_compiled_ops_block[0],
-               &rend_llvm_compiled_ops_block[rend_llvm_compiled_ops_size],
-               back_inserter(lib_bitcode));
-    shadingsys->attribute ("lib_bitcode", OSL::TypeDesc::UINT8, &lib_bitcode);
+    shadingsys->attribute ("lib_bitcode", {OSL::TypeDesc::UINT8, rend_llvm_compiled_ops_size},
+                           rend_llvm_compiled_ops_block);
 #endif
-}
-
-
-
-std::string
-OptixGridRenderer::load_ptx_file (string_view filename)
-{
-    std::string ptx_string;
-    std::string filepath = filename;
-    if (! OIIO::Filesystem::exists(filepath))
-        filepath = OIIO::Strutil::sprintf ("%s/%s", PTX_PATH, filename);
-    if (! OIIO::Filesystem::read_text_file (filepath, ptx_string)) {
-        errhandler().severe ("Unable to load %s", filename);
-        ptx_string.clear();
-    }
-    return ptx_string;
 }
 
 
@@ -125,16 +129,66 @@ OptixGridRenderer::init_optix_context (int xres, int yres)
     // Create the OptiX programs and set them on the optix::Context
     m_program = m_optix_ctx->createProgramFromPTXString(renderer_ptx, "raygen");
     m_optix_ctx->setRayGenerationProgram(0, m_program);
+#endif
+    return true;
+}
+
+
+
+bool
+OptixGridRenderer::synch_attributes ()
+{
+#ifdef OSL_USE_OPTIX
+    // FIXME -- this is for testing only
+    // Make some device strings to test userdata parameters
+    uint64_t addr1 = register_string ("ud_str_1", "");
+    uint64_t addr2 = register_string ("userdata string", "");
+    m_optix_ctx["test_str_1"]->setUserData (sizeof(char*), &addr1);
+    m_optix_ctx["test_str_2"]->setUserData (sizeof(char*), &addr2);
 
     {
-        optix::Buffer buffer = m_optix_ctx->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER);
-        buffer->setElementSize(sizeof(pvt::Spline::SplineBasis));
-        buffer->setSize(sizeof(pvt::Spline::gBasisSet)/sizeof(pvt::Spline::SplineBasis));
+        const char* name = OSL_NAMESPACE_STRING "::pvt::s_color_system";
 
-        pvt::Spline::SplineBasis* basis = (pvt::Spline::SplineBasis*) buffer->map();
-        ::memcpy(basis, &pvt::Spline::gBasisSet[0], sizeof(pvt::Spline::gBasisSet));
+        pvt::ColorSystem* colorSys = nullptr;
+        shadingsys->getattribute("colorsystem", TypeDesc::PTR, (void*)&colorSys);
+        if (colorSys == nullptr) {
+            errhandler().error ("No colorsystem available.");
+            return false;
+        }
+
+        // Get the size data-size, minus the ustring size
+        const size_t dataSize = sizeof(pvt::ColorSystem) - sizeof(StringParam);
+
+        optix::Buffer buffer = m_optix_ctx->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER);
+        if (!buffer) {
+            errhandler().error ("Could not create buffer for '%s'.", name);
+            return false;
+        }
+
+        // set the elemet size to char
+        buffer->setElementSize(sizeof(char));
+
+        // and number of elements to the actual size needed.
+        buffer->setSize(dataSize + sizeof(DeviceString));
+
+        // copy the base data
+        char* dstData = (char*) buffer->map();
+        if (!dstData) {
+            errhandler().error ("Could not map buffer for '%s' (size: %lu).",
+                                 name, dataSize);
+            return false;
+        }
+        ::memcpy(dstData, colorSys, dataSize);
+
+        // convert the ustring to a device string
+        uint64_t devStr = register_string (colorSys->colorspace().string(), "");
+
+        // FIXME -- Should probably handle alignment better.
+        // then copy the device string to the end
+        ::memcpy(dstData+dataSize, &devStr, sizeof(devStr));
+
         buffer->unmap();
-        m_optix_ctx[OSL_NAMESPACE_STRING "::pvt::Spline::gBasisSet"]->setBuffer(buffer);
+        m_optix_ctx[name]->setBuffer(buffer);
     }
 #endif
     return true;
@@ -162,8 +216,12 @@ OptixGridRenderer::make_optix_materials ()
         shadingsys->optimize_group (groupref.get(), nullptr);
 
         if (!shadingsys->find_symbol (*groupref.get(), ustring(outputs[0]))) {
-            errhandler().warning ("Requested output '%s', which wasn't found",
-                                  outputs[0]);
+            // FIXME: This is for cases where testshade is run with 1x1 resolution
+            //        Those tests may not have a Cout parameter to write to.
+            if (m_xres > 1 || m_yres > 1) {
+                errhandler().warning ("Requested output '%s', which wasn't found",
+                                      outputs[0]);
+            }
         }
 
         std::string group_name, init_name, entry_name;
@@ -211,41 +269,15 @@ OptixGridRenderer::finalize_scene()
 #ifdef OSL_USE_OPTIX
     make_optix_materials();
 
-    // Create a GeometryGroup to contain the scene geometry
-    optix::GeometryGroup geom_group = m_optix_ctx->createGeometryGroup();
-
-    m_optix_ctx["top_object"  ]->set (geom_group);
-    m_optix_ctx["top_shadower"]->set (geom_group);
-
-    // NB: Since the scenes in the test suite consist of only a few primitives,
-    //     using 'NoAccel' instead of 'Trbvh' might yield a slight performance
-    //     improvement. For more complex scenes (e.g., scenes with meshes),
-    //     using 'Trbvh' is recommended to achieve maximum performance.
-    geom_group->setAcceleration (m_optix_ctx->createAcceleration ("Trbvh"));
-
-    // Set the camera variables on the OptiX Context, to be used by the ray gen program
-#if 0
-    m_optix_ctx["eye" ]->setFloat (vec3_to_float3 (camera.eye));
-    m_optix_ctx["dir" ]->setFloat (vec3_to_float3 (camera.dir));
-    m_optix_ctx["cx"  ]->setFloat (vec3_to_float3 (camera.cx));
-    m_optix_ctx["cy"  ]->setFloat (vec3_to_float3 (camera.cy));
-    m_optix_ctx["invw"]->setFloat (camera.invw);
-    m_optix_ctx["invh"]->setFloat (camera.invh);
-#else
     m_optix_ctx["invw"]->setFloat (1.0f/m_xres);
     m_optix_ctx["invh"]->setFloat (1.0f/m_yres);
-#endif
 
     // Create the output buffer
     optix::Buffer buffer = m_optix_ctx->createBuffer(RT_BUFFER_OUTPUT, RT_FORMAT_FLOAT3, m_xres, m_yres);
     m_optix_ctx["output_buffer"]->set(buffer);
 
-    // FIXME -- this is for testing only
-    // Make some device strings to test userdata parameters
-    uint64_t addr1 = register_string ("ud_str_1", "");
-    uint64_t addr2 = register_string ("userdata string", "");
-    m_optix_ctx["test_str_1"]->setUserData (sizeof(char*), &addr1);
-    m_optix_ctx["test_str_2"]->setUserData (sizeof(char*), &addr2);
+    if (!synch_attributes ())
+        return false;
 
     m_optix_ctx->validate();
 #endif
@@ -386,3 +418,4 @@ OptixGridRenderer::clear()
 }
 
 OSL_NAMESPACE_EXIT
+

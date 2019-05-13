@@ -96,7 +96,6 @@ static std::string reparam_layer;
 static ErrorHandler errhandler;
 static int iters = 1;
 static std::string raytype = "camera";
-static int raytype_bit = 0;
 static bool raytype_opt = false;
 static std::string extraoptions;
 static std::string texoptions;
@@ -108,6 +107,7 @@ static int exprcount = 0;
 static bool shadingsys_options_set = false;
 static float uscale = 1, vscale = 1;
 static float uoffset = 0, voffset = 0;
+static std::vector<const char*> shader_setup_args;
 
 
 
@@ -438,12 +438,29 @@ action_groupspec (int argc, const char *argv[])
 
 
 static void
+stash_shader_arg (int argc, const char* argv[])
+{
+    for (int i = 0; i < argc; ++i)
+        shader_setup_args.push_back (argv[i]);
+}
+
+
+
+static void
 getargs (int argc, const char *argv[])
 {
     static bool help = false;
+
+    // We have a bit of a chicken-and-egg problem here, where some arguments
+    // set up the shader instances, but other args and housekeeping are
+    // needed first. Untangle by just storing the shader setup args until
+    // they can be later processed in full.
+    shader_setup_args.clear();
+    shader_setup_args.push_back("testshade"); // seed with 'program'
+
     OIIO::ArgParse ap;
     ap.options ("Usage:  testshade [options] shader...",
-                "%*", add_shader, "",
+                "%*", stash_shader_arg, "",
                 "--help", &help, "Print help message",
                 "-v", &verbose, "Verbose messages",
                 "-t %d", &num_threads, "Render using N threads (default: auto-detect)",
@@ -467,17 +484,17 @@ getargs (int argc, const char *argv[])
                 "-od %s", &dataformatname, "", // old name
                 "--print", &print_outputs, "Print values of all -o outputs to console instead of saving images",
                 "--groupname %s", &groupname, "Set shader group name",
-                "--layer %s", &layername, "Set next layer name",
-                "--param %@ %s %s", &action_param, NULL, NULL,
+                "--layer %@ %s", stash_shader_arg, NULL, "Set next layer name",
+                "--param %@ %s %s", stash_shader_arg, NULL, NULL,
                         "Add a parameter (args: name value) (options: type=%s, lockgeom=%d)",
-                "--shader %@ %s %s", &action_shaderdecl, NULL, NULL,
+                "--shader %@ %s %s", stash_shader_arg, NULL, NULL,
                         "Declare a shader node (args: shader layername)",
-                "--connect %L %L %L %L",
-                    &connections, &connections, &connections, &connections,
+                "--connect %@ %s %s %s %s",
+                    stash_shader_arg, NULL, NULL, NULL, NULL,
                     "Connect fromlayer fromoutput tolayer toinput",
-                "--reparam %@ %s %s %s", &action_reparam, NULL, NULL, NULL,
+                "--reparam %@ %s %s %s", stash_shader_arg, NULL, NULL, NULL,
                         "Change a parameter (args: layername paramname value) (options: type=%s)",
-                "--group %@ %s", &action_groupspec, &groupspec,
+                "--group %@ %s", stash_shader_arg, NULL,
                         "Specify a full group command",
                 "--archivegroup %s", &archivegroup,
                         "Archive the group to a given filename",
@@ -497,14 +514,14 @@ getargs (int argc, const char *argv[])
                 "--inbuffer", &inbuffer, "Compile osl source from and to buffer",
                 "--shadeimage", &use_shade_image, "Use shade_image utility",
                 "--noshadeimage %!", &use_shade_image, "Don't use shade_image utility",
-                "--expr %@ %s", &specify_expr, NULL, "Specify an OSL expression to evaluate",
+                "--expr %@ %s", stash_shader_arg, NULL, "Specify an OSL expression to evaluate",
                 "--offsetuv %f %f", &uoffset, &voffset, "Offset s & t texture coordinates (default: 0 0)",
                 "--offsetst %f %f", &uoffset, &voffset, "", // old name
                 "--scaleuv %f %f", &uscale, &vscale, "Scale s & t texture lookups (default: 1, 1)",
                 "--scalest %f %f", &uscale, &vscale, "", // old name
                 "--userdata_isconnected", &userdata_isconnected, "Consider lockgeom=0 to be isconnected()",
                 NULL);
-    if (ap.parse(argc, argv) < 0 || (shadernames.empty() && groupspec.empty())) {
+    if (ap.parse(argc, argv) < 0 /*|| (shadernames.empty() && groupspec.empty())*/) {
         std::cerr << ap.geterror() << std::endl;
         ap.usage ();
         exit (EXIT_FAILURE);
@@ -515,10 +532,36 @@ getargs (int argc, const char *argv[])
         ap.usage ();
         exit (EXIT_SUCCESS);
     }
+}
 
-    if (debug1 || verbose)
-        errhandler.verbosity (ErrorHandler::VERBOSE);
-    raytype_bit = shadingsys->raytype_bit (ustring (raytype));
+
+
+static void
+process_shader_setup_args (int argc, const char *argv[])
+{
+    OIIO::ArgParse ap;
+    ap.options ("Usage:  testshade [options] shader...",
+                "%*", add_shader, "",
+                "--layer %s", &layername, "Set next layer name",
+                "--param %@ %s %s", &action_param, NULL, NULL,
+                        "Add a parameter (args: name value) (options: type=%s, lockgeom=%d)",
+                "--shader %@ %s %s", &action_shaderdecl, NULL, NULL,
+                        "Declare a shader node (args: shader layername)",
+                "--connect %L %L %L %L",
+                    &connections, &connections, &connections, &connections,
+                    "Connect fromlayer fromoutput tolayer toinput",
+                "--reparam %@ %s %s %s", &action_reparam, NULL, NULL, NULL,
+                        "Change a parameter (args: layername paramname value) (options: type=%s)",
+                "--group %@ %s", &action_groupspec, &groupspec,
+                        "Specify a full group command",
+                "--expr %@ %s", &specify_expr, NULL, "Specify an OSL expression to evaluate",
+                NULL);
+    if (ap.parse(argc, argv) < 0 || (shadernames.empty() && groupspec.empty())) {
+        std::cerr << "ERROR: No shader or group was specified.\n";
+        std::cerr << ap.geterror() << std::endl;
+        std::cerr << "Try `testshade --help` for an explanation of all arguments\n";
+        exit (EXIT_FAILURE);
+    }
 }
 
 
@@ -581,7 +624,7 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
     sg.object2common = OSL::TransformationPtr (&Mobj);
 
     // Just make it look like all shades are the result of 'raytype' rays.
-    sg.raytype = raytype_bit;
+    sg.raytype = shadingsys->raytype_bit (ustring (raytype));
 
     // Set up u,v to vary across the "patch", and also their derivatives.
     // Note that since u & x, and v & y are aligned, we only need to set
@@ -672,6 +715,7 @@ setup_output_images (SimpleRenderer *rend, ShadingSystem *shadingsys,
     ShaderGlobals sg;
     setup_shaderglobals (sg, shadingsys, 0, 0);
 
+    int raytype_bit = shadingsys->raytype_bit (ustring (raytype));
     if (raytype_opt)
         shadingsys->optimize_group (shadergroup.get(), raytype_bit, ~raytype_bit, ctx);
     shadingsys->execute (*ctx, *shadergroup, sg, false);
@@ -983,6 +1027,10 @@ test_shade (int argc, const char *argv[])
 {
     OIIO::Timer timer;
 
+    // Get the command line arguments.  Those that set up the shader
+    // instances are queued up in shader_setup_args for later handling.
+    getargs (argc, argv);
+
     SimpleRenderer *rend = nullptr;
 #ifdef OSL_USE_OPTIX
     if (use_optix)
@@ -1060,10 +1108,10 @@ test_shade (int argc, const char *argv[])
     // Start the shader group and grab a reference to it.
     shadergroup = shadingsys->ShaderGroupBegin (groupname);
 
-    // Get the command line arguments.  That will set up all the shader
-    // instances and their parameters for the group.
-    getargs (argc, argv);
-
+    // Revisit the command line arguments that we stashed to set up the
+    // shader itself.
+    process_shader_setup_args ((int)shader_setup_args.size(),
+                               shader_setup_args.data());
     if (params.size()) {
         std::cerr << "ERROR: Pending parameters without a shader:";
         for (auto&& pv : params)
@@ -1261,6 +1309,9 @@ test_shade (int argc, const char *argv[])
             std::cout << texturesys->getstats (5) << "\n";
         std::cout << ustring::getstats() << "\n";
     }
+
+    // Give the renderer a chance to do initial cleanup while everything is still alive
+    rend->clear();
 
     // We're done with the shading system now, destroy it
     shadergroup.reset ();  // Must release this before destroying shadingsys

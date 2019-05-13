@@ -236,8 +236,8 @@ multMatrix (const Imath::Matrix33<T> &M, const Dual<Imath::Vec3<S>,P> &src,
 
 /// Multiply a row 3-vector (with derivatives) by a 3x3 matrix (no derivs).
 ///
-template <class S, class T, int P>
-inline OIIO_CONSTEXPR14 Dual<Imath::Vec3<S>,P>
+template <class S, class T, int P> OSL_HOSTDEVICE inline OIIO_CONSTEXPR14
+Dual<Imath::Vec3<S>,P>
 operator* (const Dual<Imath::Vec3<S>,P> &src, const Imath::Matrix33<T> &M)
 {
     // The simplest way to express this is to break up the Dual<Vec> into
@@ -252,8 +252,8 @@ operator* (const Dual<Imath::Vec3<S>,P> &src, const Imath::Matrix33<T> &M)
 
 /// Multiply a row 3-vector (with derivatives) by a 3x3 matrix (no derivs).
 ///
-template <class S, class T, int P>
-inline OIIO_CONSTEXPR14 Dual<Imath::Color3<S>,P>
+template <class S, class T, int P> OSL_HOSTDEVICE inline OIIO_CONSTEXPR14
+Dual<Imath::Color3<S>,P>
 operator* (const Dual<Imath::Color3<S>,P> &src, const Imath::Matrix33<T> &M)
 {
     // The simplest way to express this is to break up the Dual<Vec> into
@@ -267,7 +267,8 @@ operator* (const Dual<Imath::Color3<S>,P> &src, const Imath::Matrix33<T> &M)
 
 
 template <class S, class T>
-inline void robust_multVecMatrix(const Imath::Matrix44<S>& x, const Imath::Vec3<T>& src, Imath::Vec3<T>& dst)
+OSL_HOSTDEVICE inline void
+robust_multVecMatrix(const Imath::Matrix44<S>& x, const Imath::Vec3<T>& src, Imath::Vec3<T>& dst)
 {
     auto a = src[0] * x[0][0] + src[1] * x[1][0] + src[2] * x[2][0] + x[3][0];
     auto b = src[0] * x[0][1] + src[1] * x[1][1] + src[2] * x[2][1] + x[3][1];
@@ -289,7 +290,7 @@ inline void robust_multVecMatrix(const Imath::Matrix44<S>& x, const Imath::Vec3<
 /// Multiply a matrix times a vector with derivatives to obtain
 /// a transformed vector with derivatives.
 template <class S, class T, int P>
-inline void
+OSL_HOSTDEVICE inline void
 robust_multVecMatrix (const Imath::Matrix44<S> &M,
                       const Dual<Imath::Vec3<T>,P> &in, Dual<Imath::Vec3<T>,P> &out)
 {
@@ -321,7 +322,7 @@ robust_multVecMatrix (const Imath::Matrix44<S> &M,
 /// Multiply a matrix times a direction with derivatives to obtain
 /// a transformed direction with derivatives.
 template <class S, class T, int P>
-inline void
+OSL_HOSTDEVICE inline void
 multDirMatrix (const Imath::Matrix44<S> &M,
                const Dual<Imath::Vec3<T>,P> &in, Dual<Imath::Vec3<T>,P> &out)
 {

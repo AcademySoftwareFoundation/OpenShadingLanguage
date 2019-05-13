@@ -28,11 +28,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #include <OpenImageIO/filesystem.h>
+#include <OpenImageIO/sysutil.h>
 
 #include <OSL/oslconfig.h>
 
 #include "optixraytracer.h"
-#include "../liboslexec/splineimpl.h"
+#include "../liboslexec/opcolor.h"
 
 // The pre-compiled renderer support library LLVM bitcode is embedded
 // into the executable and made available through these variables.
@@ -58,15 +59,21 @@ OptixRaytracer::~OptixRaytracer ()
 std::string
 OptixRaytracer::load_ptx_file (string_view filename)
 {
-    std::string ptx_string;
-    std::string filepath = filename;
-    if (! OIIO::Filesystem::exists(filepath))
-        filepath = OIIO::Strutil::sprintf ("%s/%s", PTX_PATH, filename);
-    if (! OIIO::Filesystem::read_text_file (filepath, ptx_string)) {
-        errhandler().severe ("Unable to load %s", filename);
-        ptx_string.clear();
+#ifdef OSL_USE_OPTIX
+    std::vector<std::string> paths = {
+        OIIO::Filesystem::parent_path(OIIO::Sysutil::this_program_path()),
+        PTX_PATH
+    };
+    std::string filepath = OIIO::Filesystem::searchpath_find (filename, paths,
+                                                              false);
+    if (OIIO::Filesystem::exists(filepath)) {
+        std::string ptx_string;
+        if (OIIO::Filesystem::read_text_file (filepath, ptx_string))
+            return ptx_string;
     }
-    return ptx_string;
+#endif
+    errhandler().severe ("Unable to load %s", filename);
+    return {};
 }
 
 
@@ -75,11 +82,8 @@ bool
 OptixRaytracer::init_optix_context (int xres, int yres)
 {
 #ifdef OSL_USE_OPTIX
-    std::vector<char> lib_bitcode;
-    std::copy (&rend_llvm_compiled_ops_block[0],
-               &rend_llvm_compiled_ops_block[rend_llvm_compiled_ops_size],
-               back_inserter(lib_bitcode));
-    shadingsys->attribute ("lib_bitcode", OSL::TypeDesc::UINT8, &lib_bitcode);
+    shadingsys->attribute ("lib_bitcode", {OSL::TypeDesc::UINT8, rend_llvm_compiled_ops_size},
+                           rend_llvm_compiled_ops_block);
 
     // Set up the OptiX context
     m_optix_ctx = optix::Context::create();
@@ -108,17 +112,6 @@ OptixRaytracer::init_optix_context (int xres, int yres)
     // Create the OptiX programs and set them on the optix::Context
     m_program = m_optix_ctx->createProgramFromPTXString(renderer_ptx, "raygen");
     m_optix_ctx->setRayGenerationProgram(0, m_program);
-
-    {
-        optix::Buffer buffer = m_optix_ctx->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER);
-        buffer->setElementSize(sizeof(pvt::Spline::SplineBasis));
-        buffer->setSize(sizeof(pvt::Spline::gBasisSet)/sizeof(pvt::Spline::SplineBasis));
-
-        pvt::Spline::SplineBasis* basis = (pvt::Spline::SplineBasis*) buffer->map();
-        ::memcpy(basis, &pvt::Spline::gBasisSet[0], sizeof(pvt::Spline::gBasisSet));
-        buffer->unmap();
-        m_optix_ctx[OSL_NAMESPACE_STRING "::pvt::Spline::gBasisSet"]->setBuffer(buffer);
-    }
 
     if (scene.num_prims()) {
         m_optix_ctx["radiance_ray_type"]->setUint  (0u);
@@ -149,6 +142,67 @@ OptixRaytracer::init_optix_context (int xres, int yres)
         quad_bounds      = m_optix_ctx->createProgramFromPTXString (quad_ptx,   "bounds");
         sphere_intersect = m_optix_ctx->createProgramFromPTXString (sphere_ptx, "intersect");
         quad_intersect   = m_optix_ctx->createProgramFromPTXString (quad_ptx,   "intersect");
+    }
+#endif
+    return true;
+}
+
+
+
+bool
+OptixRaytracer::synch_attributes ()
+{
+#ifdef OSL_USE_OPTIX
+    // FIXME -- this is for testing only
+    // Make some device strings to test userdata parameters
+    uint64_t addr1 = register_string ("ud_str_1", "");
+    uint64_t addr2 = register_string ("userdata string", "");
+    m_optix_ctx["test_str_1"]->setUserData (sizeof(char*), &addr1);
+    m_optix_ctx["test_str_2"]->setUserData (sizeof(char*), &addr2);
+
+    {
+        const char* name = OSL_NAMESPACE_STRING "::pvt::s_color_system";
+
+        pvt::ColorSystem* colorSys = nullptr;
+        shadingsys->getattribute("colorsystem", TypeDesc::PTR, (void*)&colorSys);
+        if (colorSys == nullptr) {
+            errhandler().error ("No colorsystem available.");
+            return false;
+        }
+
+        // Get the size data-size, minus the ustring size
+        const size_t dataSize = sizeof(pvt::ColorSystem) - sizeof(StringParam);
+
+        optix::Buffer buffer = m_optix_ctx->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER);
+        if (!buffer) {
+            errhandler().error ("Could not create buffer for '%s'.", name);
+            return false;
+        }
+
+        // set the elemet size to char
+        buffer->setElementSize(sizeof(char));
+
+        // and number of elements to the actual size needed.
+        buffer->setSize(dataSize + sizeof(DeviceString));
+
+        // copy the base data
+        char* dstData = (char*) buffer->map();
+        if (!dstData) {
+            errhandler().error ("Could not map buffer for '%s' (size: %lu).",
+                                 name, dataSize);
+            return false;
+        }
+        ::memcpy(dstData, colorSys, dataSize);
+
+        // convert the ustring to a device string
+        uint64_t devStr = register_string (colorSys->colorspace().string(), "");
+
+        // FIXME -- Should probably handle alignment better.
+        // then copy the device string to the end
+        ::memcpy(dstData+dataSize, &devStr, sizeof(devStr));
+
+        buffer->unmap();
+        m_optix_ctx[name]->setBuffer(buffer);
     }
 #endif
     return true;
@@ -236,6 +290,8 @@ OptixRaytracer::make_optix_materials ()
             m_program["osl_group_func"]->setProgramId (osl_group);
         }
     }
+    if (!synch_attributes())
+        return false;
 #endif
     return true;
 }
@@ -293,13 +349,6 @@ OptixRaytracer::finalize_scene()
     // Create the output buffer
     optix::Buffer buffer = m_optix_ctx->createBuffer(RT_BUFFER_OUTPUT, RT_FORMAT_FLOAT3, camera.xres, camera.yres);
     m_optix_ctx["output_buffer"]->set(buffer);
-
-    // FIXME -- this is for testing only
-    // Make some device strings to test userdata parameters
-    uint64_t addr1 = register_string ("ud_str_1", "");
-    uint64_t addr2 = register_string ("userdata string", "");
-    m_optix_ctx["test_str_1"]->setUserData (sizeof(char*), &addr1);
-    m_optix_ctx["test_str_2"]->setUserData (sizeof(char*), &addr2);
 
     m_optix_ctx->validate();
 #endif

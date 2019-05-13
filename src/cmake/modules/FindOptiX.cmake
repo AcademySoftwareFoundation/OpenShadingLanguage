@@ -39,13 +39,14 @@ macro(OPTIX_find_api_library name version)
     find_library(${name}_LIBRARY
         NAMES ${name}.${version} ${name}
         )
+    if (${name}_LIBRARY STREQUAL "${name}_LIBRARY-NOTFOUND")
+        if (WIN32)
+            set (${name}_LIBRARY "${OPTIXHOME}/lib64/${name}.${version}.lib")
+        else ()
+            set (${name}_LIBRARY "${OPTIXHOME}/lib64/lib${name}.so")
+        endif ()
+    endif()
 endmacro()
-
-OPTIX_find_api_library(optix 1)
-OPTIX_find_api_library(optixu 1)
-OPTIX_find_api_library(optix_prime 1)
-
-set (OPTIX_LIBRARIES ${optix_LIBRARY} ${optixu_LIBRARY} ${optix_prime_LIBRARY})
 
 # Pull out the API version from optix.h
 file(STRINGS ${OPTIX_INCLUDE_DIR}/optix.h OPTIX_VERSION_LINE LIMIT_COUNT 1 REGEX OPTIX_VERSION)
@@ -54,6 +55,12 @@ math(EXPR OPTIX_VERSION_MAJOR "${OPTIX_VERSION_STRING}/10000")
 math(EXPR OPTIX_VERSION_MINOR "(${OPTIX_VERSION_STRING}%10000)/100")
 math(EXPR OPTIX_VERSION_MICRO "${OPTIX_VERSION_STRING}%100")
 set(OPTIX_VERSION "${OPTIX_VERSION_MAJOR}.${OPTIX_VERSION_MINOR}.${OPTIX_VERSION_MICRO}")
+
+OPTIX_find_api_library(optix ${OPTIX_VERSION})
+OPTIX_find_api_library(optixu ${OPTIX_VERSION})
+OPTIX_find_api_library(optix_prime ${OPTIX_VERSION})
+
+set (OPTIX_LIBRARIES ${optix_LIBRARY})
 
 message (STATUS "OptiX version = ${OPTIX_VERSION}")
 if (NOT OptiX_FIND_QUIETLY)

@@ -295,6 +295,7 @@ LLVMGEN (llvm_gen_printf)
     const char* format = format_ustring.c_str();
     std::string s;
     int arg = format_arg + 1;
+    size_t optix_size = 0;
     while (*format != '\0') {
         if (*format == '%') {
             if (format[1] == '%') {
@@ -360,23 +361,28 @@ LLVMGEN (llvm_gen_printf)
 
                     llvm::Value* loaded = nullptr;
                     if (rop.use_optix() && simpletype.basetype == TypeDesc::STRING) {
-                        // TODO: make this work with arrind
-                        // In the OptiX case, we use the device-side string.
-                        loaded = rop.llvm_load_device_string (sym);
+                        // In the OptiX case, we register each string separately.
+                        if (simpletype.arraylen >= 1) {
+                            // Mangle the element's name in case llvm_load_device_string calls getOrAllocateLLVMSymbol
+                            ustring name = ustring::format("__symname__%s[%d]", sym.mangled(), a);
+                            Symbol lsym(name, TypeDesc::TypeString, sym.symtype());
+                            lsym.data(&((ustring*)sym.data())[a]);
+                            loaded = rop.llvm_load_device_string (lsym);
+                        } else {
+                            loaded = rop.llvm_load_device_string (sym);
+                        }
+                        optix_size += sizeof(uint64_t);
                     }
                     else {
                         loaded = rop.llvm_load_value (sym, 0, arrind, c);
-                    }
 
-                    if (simpletype.basetype == TypeDesc::FLOAT) {
-                        // C varargs convention upconverts float->double.
-                        loaded = rop.ll.op_float_to_double(loaded);
-                    }
-
-                    if (simpletype.basetype == TypeDesc::INT && rop.use_optix()) {
-                        // The printf supported by OptiX expects 8-byte arguments,
-                        // so promote int to long long
-                        loaded = rop.ll.op_int_to_longlong(loaded);
+                        if (simpletype.basetype == TypeDesc::FLOAT) {
+                            // C varargs convention upconverts float->double.
+                            loaded = rop.ll.op_float_to_double(loaded);
+                            optix_size += sizeof(double);
+                        }
+                        else if (simpletype.basetype == TypeDesc::INT)
+                            optix_size += sizeof(int);
                     }
 
                     call_args.push_back (loaded);
@@ -389,12 +395,6 @@ LLVMGEN (llvm_gen_printf)
         }
     }
 
-    if (rop.use_optix() && arg > (format_arg + 2)) {
-        std::cerr << "WARNING: "
-                  << "OptiX only supports 0 or 1 printf arguments at this time. "
-                  << "Ignoring printf call in " << op.sourcefile() << std::endl;
-        return true;
-    }
 
     // In OptiX, printf currently supports 0 or 1 arguments, and the signature
     // requires 1 argument, so push a null pointer onto the call args if there
@@ -416,8 +416,39 @@ LLVMGEN (llvm_gen_printf)
         call_args[new_format_slot] = rop.ll.constant (s.c_str());
     }
     else {
-        // In the OptiX case, we use the pointer to the device-side string
-        call_args[new_format_slot] = rop.llvm_load_device_string (format_sym);
+        // In the OptiX case, we do this:
+        // void* args = { arg0, arg1, arg2 };
+        // osl_printf(sg, fmt, args);
+        //   vprintf(fmt, args);
+        //
+        Symbol sym(format_sym.name(), format_sym.typespec(), format_sym.symtype());
+        format_ustring = s;
+        sym.data(&format_ustring);
+        call_args[new_format_slot] = rop.llvm_load_device_string (sym);
+
+        size_t nargs = call_args.size() - (new_format_slot+1);
+        llvm::Value *voids = rop.ll.op_alloca (rop.ll.type_char(), optix_size);
+        optix_size = 0;
+        for (size_t i = 0; i < nargs; ++i) {
+            llvm::Value* memptr = rop.ll.offset_ptr (voids, optix_size);
+            llvm::Value* arg = call_args[new_format_slot+1+i];
+            if (arg->getType()->isIntegerTy()) {
+                llvm::Value* iptr = rop.ll.ptr_cast(memptr, rop.ll.type_int_ptr());
+                rop.ll.op_store (arg, iptr);
+                optix_size += sizeof(int);
+            } else if (arg->getType()->isFloatingPointTy()) {
+                llvm::Value* fptr = rop.ll.ptr_cast(memptr, rop.ll.type_double_ptr());
+                rop.ll.op_store (arg, fptr);
+                optix_size += sizeof(double);
+            }
+            else {
+                llvm::Value* vptr = rop.ll.ptr_to_cast(memptr, rop.ll.type_void_ptr());
+                rop.ll.op_store (arg, vptr);
+                optix_size += sizeof(uint64_t);
+            }
+        }
+        call_args.resize(new_format_slot+2);
+        call_args.back() = rop.ll.void_ptr(voids);
     }
 
     // Construct the function name and call it.
@@ -1430,7 +1461,7 @@ LLVMGEN (llvm_gen_construct_color)
         llvm::Value *args[3];
         args[0] = rop.sg_void_ptr ();  // shader globals
         args[1] = rop.llvm_void_ptr (Result, 0);  // color
-        args[2] = rop.llvm_load_value (Space); // from
+        args[2] = rop.llvm_load_string (Space); // from
         rop.ll.call_function ("osl_prepend_color_from", args, 3);
         // FIXME(deriv): Punt on derivs for color ctrs with space names.
         // We should try to do this right, but we never had it right for
@@ -1656,10 +1687,12 @@ LLVMGEN (llvm_gen_transformc)
     Symbol *To = rop.opargsym (op, 2);
     Symbol *C = rop.opargsym (op, 3);
 
-    llvm::Value *args[] = { rop.sg_void_ptr(),
+    llvm::Value *args[7] = { rop.sg_void_ptr(),
         rop.llvm_void_ptr(*C), rop.ll.constant(C->has_derivs()),
         rop.llvm_void_ptr(*Result), rop.ll.constant(Result->has_derivs()),
-        rop.llvm_load_value(*From), rop.llvm_load_value(*To) };
+        rop.llvm_load_string (*From), rop.llvm_load_string (*To)
+    };
+
     rop.ll.call_function ("osl_transformc", args);
     return true;
 }
@@ -2817,12 +2850,7 @@ LLVMGEN (llvm_gen_noise)
     std::string funcname = "osl_" + name.string() + "_" + arg_typecode(&Result,derivs);
     std::vector<llvm::Value *> args;
     if (pass_name) {
-        if (! rop.use_optix()) {
-            args.push_back (rop.llvm_load_value(*Name));
-        }
-        else {
-            args.push_back (rop.llvm_load_device_string (*Name));
-        }
+        args.push_back (rop.llvm_load_string (*Name));
     }
     llvm::Value *tmpresult = NULL;
     // triple return, or float return with derivs, passes result pointer
@@ -2987,6 +3015,7 @@ LLVMGEN (llvm_gen_gettextureinfo)
     /* Do not leave derivs uninitialized */
     if (Data.has_derivs())
         rop.llvm_zero_derivs (Data);
+    rop.generated_texture_call (texture_handle != NULL);
 
     return true;
 }
@@ -3191,12 +3220,7 @@ LLVMGEN (llvm_gen_spline)
         name += "v";
 
     args.push_back (rop.llvm_void_ptr (Result));
-    if (rop.use_optix() && Spline.typespec().is_string()) {
-        args.push_back (rop.llvm_load_device_string (Spline));
-    }
-    else {
-        args.push_back (rop.llvm_load_value (Spline));
-    }
+    args.push_back (rop.llvm_load_string (Spline));
     args.push_back (rop.llvm_void_ptr (Value)); // make things easy
     args.push_back (rop.llvm_void_ptr (Knots));
     if (has_knot_count)

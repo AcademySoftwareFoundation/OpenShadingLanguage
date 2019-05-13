@@ -109,6 +109,10 @@ public:
     ///    int no_noise           Replace noise with constant value. (0)
     ///    int no_pointcloud      Skip pointcloud lookups. (0)
     ///    int exec_repeat        How many times to run each group (1).
+    ///    int opt_warnings       Warn on certain failure to runtime-optimize
+    ///                              cetain shader constructs. (0)
+    ///    int gpu_opt_error      Consider a hard error if certain shader
+    ///                              constructs cannot be optimized away. (0)
     /// 2. Attributes that should be set by applications/renderers that
     /// incorporate OSL:
     ///    string commonspace     Name of "common" coord system ("world")
@@ -459,9 +463,8 @@ public:
     // concurrently). If there is any doubt about that, use the versions
     // above that take an explicit `ShaderGroup&`, which are thread-safe
     // and re-entrant.
-    bool Parameter (string_view name, TypeDesc t, const void *val);
     bool Parameter (string_view name, TypeDesc t, const void *val,
-                    bool lockgeom);
+                    bool lockgeom=true);
     bool Shader (string_view shaderusage, string_view shadername,
                  string_view layername);
     bool ConnectShaders (string_view srclayer, string_view srcparam,

@@ -2,4 +2,7 @@ Compiled test.osl -> test.oso
 iarray = 1 2 3 4 5
 sarray = a b c d e
 farray = 1.000000 2.000000 3.000000 4.000000 5.000000
+ielems reversed = 5 4 3 2 1
+selems reversed = e d c b a
+felems reversed = 5.000000 4.000000 3.000000 2.000000 1.000000
 

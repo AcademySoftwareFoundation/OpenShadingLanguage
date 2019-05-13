@@ -42,6 +42,7 @@ rtDeclareVariable (uint2, launch_dim,   rtLaunchDim,   );
 // Scene/Shading variables
 rtDeclareVariable (float, invw, , );
 rtDeclareVariable (float, invh, , );
+rtDeclareVariable (int,   flipv, , );
 
 // Buffers
 rtBuffer<float3,2> output_buffer;
@@ -59,8 +60,8 @@ RT_PROGRAM void raygen()
     //       networks, so there should be (at least) some mechanism to issue a
     //       warning or error if the closure or param storage can possibly be
     //       exceeded.
-    __attribute__((aligned(8))) char closure_pool[256];
-    __attribute__((aligned(8))) char params      [256];
+    alignas(8) char closure_pool[256];
+    alignas(8) char params      [256];
 
     ShaderGlobals sg;
     // Setup the ShaderGlobals
@@ -70,6 +71,8 @@ RT_PROGRAM void raygen()
     sg.P           = make_float3(d.x, d.y, 0);
     sg.u           = d.x * invw;
     sg.v           = d.y * invh;
+    if (flipv)
+         sg.v      = 1.f - sg.v;
 
     sg.dudx        = invw;
     sg.dudy        = 0;

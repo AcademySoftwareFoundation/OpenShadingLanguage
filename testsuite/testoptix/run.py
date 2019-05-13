@@ -11,8 +11,5 @@ command += testrender("-optix -res 1 1 test_assign_02.xml dummy.exr")
 command += testrender("-optix -res 1 1 test_str_ops.xml dummy.exr")
 command += testrender("-optix -res 1 1 test_userdata_string.xml dummy.exr")
 
-# FIXME
-command += "TESTSHADE_OPTIX=1 "
 command += testshade("-optix -res 256 256 test_spline -o Cout test_spline.exr")
-command += "TESTSHADE_OPTIX=1 "
 command += testshade("-optix -res 512 512 test_texture -o Cout test_texture.exr")

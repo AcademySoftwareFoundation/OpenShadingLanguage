@@ -46,6 +46,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/optparser.h>
 #include <OpenImageIO/fmath.h>
 
+#include "opcolor.h"
+
 using namespace OSL;
 using namespace OSL::pvt;
 
@@ -745,7 +747,6 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_llvm_debug_layers(0), m_llvm_debug_ops(0),
       m_llvm_output_bitcode(0),
       m_commonspace_synonym("world"),
-      m_colorspace("Rec709"),
       m_max_local_mem_KB(2048),
       m_compile_report(false),
       m_buffer_printf(true),
@@ -754,6 +755,9 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_force_derivs(false),
       m_allow_shader_replacement(false),
       m_exec_repeat(1),
+      m_opt_warnings(0),
+      m_gpu_opt_error(0),
+      m_colorspace("Rec709"),
       m_stat_opt_locking_time(0), m_stat_specialization_time(0),
       m_stat_total_llvm_time(0),
       m_stat_llvm_setup_time(0), m_stat_llvm_irgen_time(0),
@@ -853,14 +857,15 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     const int nraytypes = sizeof(raytypes)/sizeof(raytypes[0]);
     attribute ("raytypes", TypeDesc(TypeDesc::STRING,nraytypes), raytypes);
 
-    attribute ("colorspace", TypeDesc::STRING, &m_colorspace);
-
     // Allow environment variable to override default options
     const char *options = getenv ("OSL_OPTIONS");
     if (options)
         attribute ("options", TypeDesc::STRING, &options);
 
     setup_op_descriptors ();
+
+    colorsystem().set_colorspace(m_colorspace);
+    ASSERT(colorsystem().set_colorspace(m_colorspace) && "Invalid colorspace");
 }
 
 
@@ -1183,6 +1188,8 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("force_derivs", int, m_force_derivs);
     ATTR_SET ("allow_shader_replacement", int, m_allow_shader_replacement);
     ATTR_SET ("exec_repeat", int, m_exec_repeat);
+    ATTR_SET ("opt_warnings", int, m_opt_warnings);
+    ATTR_SET ("gpu_opt_error", int, m_gpu_opt_error);
     ATTR_SET_STRING ("commonspace", m_commonspace_synonym);
     ATTR_SET_STRING ("debug_groupname", m_debug_groupname);
     ATTR_SET_STRING ("debug_layername", m_debug_layername);
@@ -1199,7 +1206,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     }
     if (name == "colorspace" && type == TypeDesc::STRING) {
         ustring c = ustring (*(const char **)val);
-        if (set_colorspace (m_colorspace))
+        if (colorsystem().set_colorspace(c))
             m_colorspace = c;
         else
             error ("Unknown color space \"%s\"", c.c_str());
@@ -1220,8 +1227,16 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
         return true;
     }
     if (name == "lib_bitcode" && type.basetype == TypeDesc::UINT8) {
+        if (type.arraylen < 0) {
+            error ("Invalid bitcode size: %d", type.arraylen);
+            return false;
+        }
         m_lib_bitcode.clear();
-        m_lib_bitcode = *static_cast<const std::vector<char>*>(val);
+        if (type.arraylen) {
+            const char* bytes = static_cast<const char*>(val);
+            std::copy(bytes, bytes + type.arraylen,
+                      back_inserter(m_lib_bitcode));
+        }
         return true;
     }
     if (name == "error_repeats") {
@@ -1318,6 +1333,8 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("force_derivs", int, m_force_derivs);
     ATTR_DECODE ("allow_shader_replacement", int, m_allow_shader_replacement);
     ATTR_DECODE ("exec_repeat", int, m_exec_repeat);
+    ATTR_DECODE ("opt_warnings", int, m_opt_warnings);
+    ATTR_DECODE ("gpu_opt_error", int, m_gpu_opt_error);
 
     ATTR_DECODE ("stat:masters", int, m_stat_shaders_loaded);
     ATTR_DECODE ("stat:groups", int, m_stat_groups);
@@ -1380,6 +1397,11 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("stat:mem_inst_paramvals_peak", long long, m_stat_mem_inst_paramvals.peak());
     ATTR_DECODE ("stat:mem_inst_connections_current", long long, m_stat_mem_inst_connections.current());
     ATTR_DECODE ("stat:mem_inst_connections_peak", long long, m_stat_mem_inst_connections.peak());
+
+    if (name == "colorsystem" && type.basetype == TypeDesc::PTR) {
+        *(void**)val = &colorsystem();
+        return true;
+    }
 
     return false;
 #undef ATTR_DECODE
@@ -1779,6 +1801,8 @@ ShadingSystemImpl::getstats (int level) const
     INTOPT (force_derivs);
     INTOPT (allow_shader_replacement);
     INTOPT (exec_repeat);
+    INTOPT (opt_warnings);
+    INTOPT (gpu_opt_error);
     STROPT (debug_groupname);
     STROPT (debug_layername);
     STROPT (archive_groupname);
@@ -2873,8 +2897,9 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group, ShadingContext *ctx)
     }
     RuntimeOptimizer rop (*this, group, ctx);
     rop.run ();
+    rop.police_failed_optimizations();
 
-    // Copy some info recorted by the RuntimeOptimizer into the group
+    // Copy some info recorded by the RuntimeOptimizer into the group
     group.m_unknown_textures_needed = rop.m_unknown_textures_needed;
     for (auto&& f : rop.m_textures_needed)
         group.m_textures_needed.push_back (f);
@@ -3105,6 +3130,71 @@ ShadingSystemImpl::merge_instances (ShaderGroup &group, bool post_opt)
     }
 
     return merges;
+}
+
+
+
+#if OIIO_HAS_COLORPROCESSOR
+
+OIIO::ColorProcessorHandle
+OCIOColorSystem::load_transform (StringParam fromspace, StringParam tospace)
+{
+    if (fromspace != m_last_colorproc_fromspace ||
+        tospace != m_last_colorproc_tospace) {
+        m_last_colorproc = m_colorconfig.createColorProcessor (fromspace, tospace);
+        m_last_colorproc_fromspace = fromspace;
+        m_last_colorproc_tospace = tospace;
+    }
+    return m_last_colorproc;
+}
+
+#endif
+
+
+
+template <> bool
+ShadingSystemImpl::ocio_transform (StringParam fromspace, StringParam tospace,
+                                   const Color3& C, Color3& Cout) {
+#if OIIO_HAS_COLORPROCESSOR
+    OIIO::ColorProcessorHandle cp;
+    {
+        lock_guard lock (m_mutex);
+        cp = m_ocio_system.load_transform(fromspace, tospace);
+    }
+    if (cp) {
+        Cout = C;
+        cp->apply ((float *)&Cout);
+        return true;
+    }
+#endif
+    return false;
+}
+
+
+
+template <> bool
+ShadingSystemImpl::ocio_transform (StringParam fromspace, StringParam tospace,
+                                   const Dual2<Color3>& C, Dual2<Color3>& Cout) {
+#if OIIO_HAS_COLORPROCESSOR
+    OIIO::ColorProcessorHandle cp;
+    {
+        lock_guard lock (m_mutex);
+        cp = m_ocio_system.load_transform(fromspace, tospace);
+    }
+
+    if (cp) {
+        // Use finite differencing to approximate the derivative. Make 3
+        // color values to convert.
+        const float eps = 0.001f;
+        Color3 CC[3] = { C.val(), C.val() + eps*C.dx(), C.val() + eps*C.dy() };
+        cp->apply ((float *)&CC, 3, 1, 3, sizeof(float), sizeof(Color3), 0);
+        Cout.set (CC[0],
+                  (CC[1] - CC[0]) * (1.0f / eps),
+                  (CC[2] - CC[0]) * (1.0f / eps));
+        return true;
+    }
+#endif
+    return false;
 }
 
 

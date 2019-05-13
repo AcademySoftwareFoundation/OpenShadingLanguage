@@ -188,8 +188,8 @@ RT_PROGRAM void closest_hit_osl()
     //       networks, so there should be (at least) some mechanism to issue a
     //       warning or error if the closure or param storage can possibly be
     //       exceeded.
-    __attribute__((aligned(8))) char closure_pool[256];
-    __attribute__((aligned(8))) char params      [256];
+    alignas(8) char closure_pool[256];
+    alignas(8) char params      [256];
 
     ShaderGlobals sg;
     globals_from_hit (sg);

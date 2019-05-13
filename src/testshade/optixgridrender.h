@@ -31,7 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/ustring.h>
 #include <OSL/oslexec.h>
 #include <OSL/device_string.h>
-#include <OSL/optix_compat.h>
+#include "optix_compat.h"
 #include "simplerend.h"
 #include "../testrender/optix_stringtable.h"
 
@@ -61,6 +61,7 @@ public:
     }
 
     std::string load_ptx_file (string_view filename);
+    bool synch_attributes ();
 
     virtual void init_shadingsys (ShadingSystem *ss);
     virtual bool init_optix_context (int xres, int yres);

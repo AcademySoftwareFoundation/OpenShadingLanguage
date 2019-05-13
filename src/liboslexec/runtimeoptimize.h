@@ -408,6 +408,12 @@ public:
                              const FastIntSet *excluded=NULL,
                              bool copy_temps=false);
 
+    /// After optimization, check for things that should not be left
+    /// unoptimized.
+    bool police_failed_optimizations ();
+    enum { police_opt_warn = 1, police_gpu_err = 3, police_gpu_err_only = 2 };  // bit field
+    bool police(const Opcode& op, string_view msg, int type = police_opt_warn);
+
 private:
     int m_optimize;                   ///< Current optimization level
     bool m_opt_simplify_param;            ///< Turn instance params into const?

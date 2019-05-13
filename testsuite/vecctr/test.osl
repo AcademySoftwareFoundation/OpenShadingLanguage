@@ -15,20 +15,6 @@ test ()
     }
 
     {
-        printf (" varying:\n");
-        float a = u;
-        float b = 1.0 + v;
-        float c = 0.5;
-
-        printf ("  point (%g, %g, %g) = %g\n",
-                pretty(a), pretty(b), pretty(c), pretty(point(a,b,c)));
-        printf ("  vector (%g, %g, %g) = %g\n",
-                pretty(a), pretty(b), pretty(c), pretty(vector(a,b,c)));
-        printf ("  normal (%g, %g, %g) = %g\n",
-                pretty(a), pretty(b), pretty(c), pretty(normal(a,b,c)));
-    }
-
-    { 
         float a = 1, b = 1, c = 0;
         printf ("\ntesting with spaces:\n");
         printf ("  point (\"shader\", %g, %g, %g) = %g\n",

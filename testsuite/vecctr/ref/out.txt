@@ -2,64 +2,6 @@ Compiled test.osl -> test.oso
   point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
   vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
   normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
- varying:
-  point (0, 1, 0.5) = 0 1 0.5
-  vector (0, 1, 0.5) = 0 1 0.5
-  normal (0, 1, 0.5) = 0 1 0.5
-
-testing with spaces:
-  point ("shader", 1, 1, 0) = 1 1.41421 0
-  vector ("shader", 1, 1, 0) = 0 1.41421 0
-  normal ("shader", 1, 1, 0) = 0 1.41421 0
-  point ("object", 1, 1, 0) = -1 2 0
-  vector ("object", 1, 1, 0) = -1 1 0
-  normal ("object", 1, 1, 0) = -1 1 0
-  point ("myspace", 1, 1, 0) = 1 2 0
-  vector ("myspace", 1, 1, 0) = 1 2 0
-  normal ("myspace", 1, 1, 0) = 1 0.5 0
-  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
-  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
-  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
- varying:
-  point (1, 1, 0.5) = 1 1 0.5
-  vector (1, 1, 0.5) = 1 1 0.5
-  normal (1, 1, 0.5) = 1 1 0.5
-
-testing with spaces:
-  point ("shader", 1, 1, 0) = 1 1.41421 0
-  vector ("shader", 1, 1, 0) = 0 1.41421 0
-  normal ("shader", 1, 1, 0) = 0 1.41421 0
-  point ("object", 1, 1, 0) = -1 2 0
-  vector ("object", 1, 1, 0) = -1 1 0
-  normal ("object", 1, 1, 0) = -1 1 0
-  point ("myspace", 1, 1, 0) = 1 2 0
-  vector ("myspace", 1, 1, 0) = 1 2 0
-  normal ("myspace", 1, 1, 0) = 1 0.5 0
-  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
-  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
-  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
- varying:
-  point (0, 2, 0.5) = 0 2 0.5
-  vector (0, 2, 0.5) = 0 2 0.5
-  normal (0, 2, 0.5) = 0 2 0.5
-
-testing with spaces:
-  point ("shader", 1, 1, 0) = 1 1.41421 0
-  vector ("shader", 1, 1, 0) = 0 1.41421 0
-  normal ("shader", 1, 1, 0) = 0 1.41421 0
-  point ("object", 1, 1, 0) = -1 2 0
-  vector ("object", 1, 1, 0) = -1 1 0
-  normal ("object", 1, 1, 0) = -1 1 0
-  point ("myspace", 1, 1, 0) = 1 2 0
-  vector ("myspace", 1, 1, 0) = 1 2 0
-  normal ("myspace", 1, 1, 0) = 1 0.5 0
-  point (0.1, 0.2, 0.5) = 0.1 0.2 0.5
-  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
-  normal (0.1, 0.2, 0.5) = 0.1 0.2 0.5
- varying:
-  point (1, 2, 0.5) = 1 2 0.5
-  vector (1, 2, 0.5) = 1 2 0.5
-  normal (1, 2, 0.5) = 1 2 0.5
 
 testing with spaces:
   point ("shader", 1, 1, 0) = 1 1.41421 0

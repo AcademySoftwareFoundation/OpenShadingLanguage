@@ -126,36 +126,4 @@ test ()
         b = 0.0;
         printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
     }
-
-    printf (" varying:\n");
-    {
-        float a = u;
-        float b = 27.0;
-        printf ("  log (%g) = %g\n", a, log(a));
-        printf ("  log (%g, %g) = %g\n", a, b, log(a,b));
-        printf ("  log2 (%g) = %g\n", a, log2 (a));
-        printf ("  log10 (%g) = %g\n", a, log10(a));
-        printf ("  logb (%g) = %g\n", a, logb(a));
-        printf ("  exp (%g) = %g\n", a, exp(a));
-        printf ("  exp2 (%g) = %g\n", a, exp2(a));
-        printf ("  expm1 (%g) = %g\n", a, expm1(a));
-        printf ("  erf (%g) = %g\n", a, erf(a));
-        printf ("  erfc (%g) = %g\n", a, erfc(a));
-        b = 1.5;
-        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
-    }
-    {
-        color a = u;
-        float b = 27.0;
-        printf ("  log (%g) = %g\n", a, log(a));
-        printf ("  log (%g, %g) = %g\n", a, b, log(a,b));
-        printf ("  log2 (%g) = %g\n", a, log2(a));
-        printf ("  log10 (%g) = %g\n", a, log10(a));
-        printf ("  logb (%g) = %g\n", a, logb(a));
-        printf ("  exp (%g) = %g\n", a, exp(a));
-        printf ("  exp2 (%g) = %g\n", a, exp2(a));
-        printf ("  expm1 (%g) = %g\n", a, expm1(a));
-        b = 1.5;
-        printf ("  pow (%g, %g) = %g\n", a, b, pow(a,b));
-    }
 }

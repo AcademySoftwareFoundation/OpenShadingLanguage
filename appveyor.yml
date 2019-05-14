@@ -49,7 +49,7 @@ before_build:
 
     $DWN_DIR = "C:\projects\OSLdownloads"
     $DEP_DIR = "C:\projects\OSLdeps"
-    $BOOST_ROOT = "C:\Libraries\boost_1_63_0"
+    $BOOST_ROOT = "C:\Libraries\boost_1_69_0"
     $PYTHON_DIR = "C:\Python27"
     $LLVM_DIR = "C:\Libraries\llvm-5.0.0"
     #$LLVM_DIR = "$DEP_DIR"

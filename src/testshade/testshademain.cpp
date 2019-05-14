@@ -31,6 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <exception>
 
+#include <OpenImageIO/sysutil.h>
+
 using namespace OSL;         // For OSL::optix when OSL_USE_OPTIX=0
 
 extern "C" int test_shade (int argc, const char *argv[]);
@@ -39,6 +41,12 @@ extern "C" int test_shade (int argc, const char *argv[]);
 int
 main (int argc, const char *argv[])
 {
+#ifdef OIIO_HAS_STACKTRACE
+    // Helpful for debugging to make sure that any crashes dump a stack
+    // trace.
+    OIIO::Sysutil::setup_crash_stacktrace("stdout");
+#endif
+
     int result = EXIT_FAILURE;
     try {
         result = test_shade (argc, argv);

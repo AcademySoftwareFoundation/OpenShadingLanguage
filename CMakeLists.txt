@@ -314,7 +314,8 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             debugnan debug-uninit
             derivs derivs-muldiv-clobber
             draw_string
-            error-dupes exit exponential
+            error-dupes error-serialized
+            exit exponential
             fprintf
             function-earlyreturn function-simple function-outputelem
             function-overloads function-redef

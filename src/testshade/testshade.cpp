@@ -1130,7 +1130,8 @@ test_shade (int argc, const char *argv[])
     // options change their values.
     set_shadingsys_options ();
 
-    shadingsys->attribute (shadergroup.get(), "groupname", groupname);
+    if (groupname.size())
+        shadingsys->attribute (shadergroup.get(), "groupname", groupname);
 
     // Now set up the connections
     for (size_t i = 0;  i < connections.size();  i += 4) {

@@ -1,7 +1,7 @@
 Compiled test.osl -> test.oso
 
 Output Cout to Cout.tif
-ERROR: Detected possible use of uninitialized value in int i_uninit at test.osl:10 (group <unnamed group>, layer 0 test_0, shader test, op 0 'assign', arg 1)
-ERROR: Detected possible use of uninitialized value in float f_uninit at test.osl:10 (group <unnamed group>, layer 0 test_0, shader test, op 1 'color', arg 1)
-ERROR: Detected possible use of uninitialized value in string s_uninit at test.osl:11 (group <unnamed group>, layer 0 test_0, shader test, op 2 'texture', arg 1)
+ERROR: Detected possible use of uninitialized value in int i_uninit at test.osl:10 (group unnamed_group_1, layer 0 test_0, shader test, op 0 'assign', arg 1)
+ERROR: Detected possible use of uninitialized value in float f_uninit at test.osl:10 (group unnamed_group_1, layer 0 test_0, shader test, op 1 'color', arg 1)
+ERROR: Detected possible use of uninitialized value in string s_uninit at test.osl:11 (group unnamed_group_1, layer 0 test_0, shader test, op 2 'texture', arg 1)
 ERROR: [RendererServices::texture] ImageInput::create() called with no filename

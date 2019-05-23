@@ -1,0 +1,5 @@
+shader
+test ()
+{
+    // I am a totally harmless shader
+}

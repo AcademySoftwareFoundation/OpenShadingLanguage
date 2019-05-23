@@ -1,4 +1,5 @@
 ERROR: Parsing shader "test": instruction "blahblah" is not known. Maybe compiled with a too-new oslc?
 ERROR: Unable to read "data/test.oso"
 ERROR: Could not find shader "data/test"
+        group: unnamed_group_1
 

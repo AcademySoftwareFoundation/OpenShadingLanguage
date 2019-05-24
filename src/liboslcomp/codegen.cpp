@@ -968,7 +968,7 @@ ASTNode::codegen_initlist (ref init, TypeSpec type, Symbol *sym)
                 break;
             }
         }
-        if (all_const) {
+        if (all_const && init) {
             std::vector<char> arrayvals (type.simpletype().size());
             for (int i = 0;  init;  init = init->next(), ++i) {
                 ASTliteral *lit = (ASTliteral *)init.get();

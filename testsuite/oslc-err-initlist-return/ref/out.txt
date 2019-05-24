@@ -4,5 +4,9 @@ test.osl:14: warning: Function 'struct bcolor badreturn ()' redefined in the sam
   Previous definitions:
     test.osl:13
 test.osl:14: error: Cannot return a 'struct acolor' from 'struct bcolor badreturn()'
-test.osl:17: error: Syntax error: syntax error
+test.osl:17: error: Empty compound initializers '{ }' only allowed for shader parameters.
+test.osl:17: warning: Function 'struct bcolor badreturn ()' redefined in the same scope
+  Previous definitions:
+    test.osl:14
+    test.osl:13
 FAILED test.osl

@@ -5,6 +5,7 @@ a == { 3.14159, 42, [0 1 2], foobar }
 constructed x == { 6.28319, 21, [1 2 3], constructed }
 
 struct param:  aparam == { 1, 0, [3 4 5], foo! }
+Default init eparam == { 0 0 0, 0 }
 
 after c=a, c == { 3.14159, 42, [0 1 2], foobar }
 
@@ -32,6 +33,7 @@ a == { 3.14159, 42, [0 1 2], foobar }
 constructed x == { 6.28319, 21, [1 2 3], constructed }
 
 struct param:  aparam == { 1, 0, [3 4 5], foo! }
+Default init eparam == { 0 0 0, 0 }
 
 after c=a, c == { 3.14159, 42, [0 1 2], foobar }
 
@@ -59,6 +61,7 @@ a == { 3.14159, 42, [0 1 2], foobar }
 constructed x == { 6.28319, 21, [1 2 3], constructed }
 
 struct param:  aparam == { 1, 0, [3 4 5], foo! }
+Default init eparam == { 0 0 0, 0 }
 
 after c=a, c == { 3.14159, 42, [0 1 2], foobar }
 
@@ -86,6 +89,7 @@ a == { 3.14159, 42, [0 1 2], foobar }
 constructed x == { 6.28319, 21, [1 2 3], constructed }
 
 struct param:  aparam == { 1, 0, [3 4 5], foo! }
+Default init eparam == { 0 0 0, 0 }
 
 after c=a, c == { 3.14159, 42, [0 1 2], foobar }
 

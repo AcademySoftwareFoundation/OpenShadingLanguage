@@ -17,7 +17,7 @@ shader expr_0 expr_0_0 ;
 
 ---
 
-Shader group "" layers are:
+Shader group "unnamed_group_1" layers are:
     expr_0_0
 
 

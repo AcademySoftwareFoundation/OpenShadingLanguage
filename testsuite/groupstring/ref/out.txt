@@ -13,7 +13,7 @@ connect alayer.c_out blayer.c_in ;
 
 ---
 
-Shader group "" layers are:
+Shader group "unnamed_group_2" layers are:
     alayer
 	float Kd
 	output float f_out

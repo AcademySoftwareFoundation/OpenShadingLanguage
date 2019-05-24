@@ -1,0 +1,2 @@
+shader test;
+connect a.b c.d;

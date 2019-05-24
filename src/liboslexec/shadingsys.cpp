@@ -2114,12 +2114,16 @@ ShadingSystemImpl::Shader (ShaderGroup& group, string_view shaderusage,
 {
     ShaderMaster::ref master = loadshader (shadername);
     if (! master) {
-        error ("Could not find shader \"%s\"", shadername);
+        error ("Could not find shader \"%s\"\n"
+               "        group: %s",
+               shadername, group.name());
         return false;
     }
 
     if (shaderusage.empty()) {
-        error ("Shader usage required");
+        error ("Shader usage required\n"
+               "        group: %s",
+               shadername, group.name());
         return false;
     }
 
@@ -2142,8 +2146,9 @@ ShadingSystemImpl::Shader (ShaderGroup& group, string_view shaderusage,
         m_stat_groups += 1;
         group.m_group_use = shaderusage;
     } else if (shaderusage != group.m_group_use) {
-        error ("Shader usage \"%s\" does not match current group (%s)",
-               shaderusage, group.m_group_use);
+        error ("Shader usage \"%s\" does not match current group (%s)\n"
+               "        group: %s",
+               shaderusage, group.m_group_use, group.name());
         return false;
     }
 
@@ -2178,11 +2183,13 @@ ShadingSystemImpl::ConnectShaders (ShaderGroup& group,
     // Basic sanity checks
     // ConnectShaders, and that the layer and parameter names are not empty.
     if (! srclayer.size() || ! srcparam.size()) {
-        error ("ConnectShaders: badly formed source layer/parameter");
+        error ("ConnectShaders: badly formed source layer/parameter\n"
+               "        group: %s", group.name());
         return false;
     }
     if (! dstlayer.size() || ! dstparam.size()) {
-        error ("ConnectShaders: badly formed destination layer/parameter");
+        error ("ConnectShaders: badly formed destination layer/parameter\n"
+               "        group: %s", group.name());
         return false;
     }
 
@@ -2193,15 +2200,19 @@ ShadingSystemImpl::ConnectShaders (ShaderGroup& group,
     int srcinstindex = find_named_layer_in_group (group, ustring(srclayer), srcinst);
     int dstinstindex = find_named_layer_in_group (group, ustring(dstlayer), dstinst);
     if (! srcinst) {
-        error ("ConnectShaders: source layer \"%s\" not found", srclayer);
+        error ("ConnectShaders: source layer \"%s\" not found\n"
+               "        group: %s", srclayer, group.name());
         return false;
     }
     if (! dstinst) {
-        error ("ConnectShaders: destination layer \"%s\" not found", dstlayer);
+        error ("ConnectShaders: destination layer \"%s\" not found\n"
+               "        group: %s", dstlayer, group.name());
         return false;
     }
     if (dstinstindex <= srcinstindex) {
-        error ("ConnectShaders: destination layer must follow source layer (tried to connect %s.%s -> %s.%s)\n", srclayer, srcparam, dstlayer, dstparam);
+        error ("ConnectShaders: destination layer must follow source layer (tried to connect %s.%s -> %s.%s)\n"
+               "        group: %s", srclayer, srcparam, dstlayer, dstparam,
+               group.name());
         return false;
     }
 
@@ -2212,11 +2223,13 @@ ShadingSystemImpl::ConnectShaders (ShaderGroup& group,
     ConnectedParam dstcon = decode_connected_param(dstparam, dstlayer, dstinst);
     if (! (srccon.valid() && dstcon.valid())) {
         if (connection_error())
-            error ("ConnectShaders: cannot connect a %s (%s) to a %s (%s), invalid connection",
-                   srccon.type, srcparam, dstcon.type, dstparam);
+            error ("ConnectShaders: cannot connect a %s (%s) to a %s (%s), invalid connection\n"
+                   "        group: %s",
+                   srccon.type, srcparam, dstcon.type, dstparam, group.name());
         else
-            warning ("ConnectShaders: cannot connect a %s (%s) to a %s (%s), invalid connection",
-                     srccon.type, srcparam, dstcon.type, dstparam);
+            warning ("ConnectShaders: cannot connect a %s (%s) to a %s (%s), invalid connection\n"
+                     "        group: %s",
+                     srccon.type, srcparam, dstcon.type, dstparam, group.name());
         return false;
     }
 
@@ -2237,11 +2250,13 @@ ShadingSystemImpl::ConnectShaders (ShaderGroup& group,
 
     if (! assignable (dstcon.type, srccon.type)) {
         if (connection_error())
-            error ("ConnectShaders: cannot connect a %s (%s) to a %s (%s)",
-                   srccon.type.c_str(), srcparam, dstcon.type.c_str(), dstparam);
+            error ("ConnectShaders: cannot connect a %s (%s) to a %s (%s)\n"
+                   "        group: %s",
+                   srccon.type, srcparam, dstcon.type, dstparam, group.name());
         else
-            warning ("ConnectShaders: cannot connect a %s (%s) to a %s (%s)",
-                     srccon.type.c_str(), srcparam, dstcon.type.c_str(), dstparam);
+            warning ("ConnectShaders: cannot connect a %s (%s) to a %s (%s)\n"
+                     "        group: %s",
+                     srccon.type, srcparam, dstcon.type, dstparam, group.name());
         return false;
     }
 
@@ -2250,8 +2265,8 @@ ShadingSystemImpl::ConnectShaders (ShaderGroup& group,
     if (dstsym && !dstsym->allowconnect()) {
         std::string name = dstlayer.size() ? Strutil::sprintf("%s.%s", dstlayer, dstparam)
                                            : std::string(dstparam);
-        error ("ConnectShaders: cannot connect to %s because it has metadata allowconnect=0",
-               name);
+        error ("ConnectShaders: cannot connect to %s because it has metadata allowconnect=0\n"
+               "        group: %s", name, group.name());
         return false;
     }
 
@@ -2277,12 +2292,14 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
     ShaderGroupRef g = ShaderGroupBegin (groupname);
     bool err = false;
     std::string errdesc;
+    string_view errstatement;
     std::vector<int> intvals;
     std::vector<float> floatvals;
     std::vector<ustring> stringvals;
     string_view p = groupspec;   // parse view
     // std::cout << "!!!!!\n---\n" << groupspec << "\n---\n\n";
     while (p.size()) {
+        string_view pstart = p;  // save where we were for error reporting
         Strutil::skip_whitespace (p);
         if (! p.size())
             break;
@@ -2294,7 +2311,12 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
             string_view shadername = Strutil::parse_identifier (p);
             Strutil::skip_whitespace (p);
             string_view layername = Strutil::parse_until (p, " \t\r\n,;");
-            Shader (usage, shadername, layername);
+            bool ok = Shader (usage, shadername, layername);
+            if (!ok) {
+                errstatement = pstart;
+                err = true;
+                break;
+            }
             Strutil::parse_char (p, ';') || Strutil::parse_char (p, ',');
             Strutil::skip_whitespace (p);
             continue;
@@ -2309,7 +2331,12 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
             string_view lay2 = Strutil::parse_until (p, " \t\r\n.");
             Strutil::parse_char (p, '.');
             string_view param2 = Strutil::parse_until (p, " \t\r\n,;");
-            ConnectShaders (lay1, param1, lay2, param2);
+            bool ok = ConnectShaders (lay1, param1, lay2, param2);
+            if (!ok) {
+                errstatement = pstart;
+                err = true;
+                break;
+            }
             Strutil::parse_char (p, ';') || Strutil::parse_char (p, ',');
             Strutil::skip_whitespace (p);
             continue;
@@ -2485,12 +2512,18 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
             }
         }
 
+        bool ok = true;
         if (type.basetype == TypeDesc::INT) {
-            Parameter (paramname, type, &intvals[0], lockgeom);
+            ok = Parameter (paramname, type, &intvals[0], lockgeom);
         } else if (type.basetype == TypeDesc::FLOAT) {
-            Parameter (paramname, type, &floatvals[0], lockgeom);
+            ok = Parameter (paramname, type, &floatvals[0], lockgeom);
         } else if (type.basetype == TypeDesc::STRING) {
-            Parameter (paramname, type, &stringvals[0], lockgeom);
+            ok = Parameter (paramname, type, &stringvals[0], lockgeom);
+        }
+        if (!ok) {
+            errstatement = pstart;
+            err = true;
+            break;
         }
 
         Strutil::skip_whitespace (p);
@@ -2508,17 +2541,21 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
     }
 
     if (err) {
-        if (! groupname.size())
-            groupname = "<unknown>";
-        size_t offset = p.data() - groupspec.data();
-        size_t begin_stmt = std::min (groupspec.find_last_of (';', offset),
-                                      groupspec.find_last_of (',', offset));
-        size_t end_stmt = groupspec.find_first_of (';', begin_stmt+1);
-        string_view statement = groupspec.substr (begin_stmt+1, end_stmt-begin_stmt);
-        error ("ShaderGroupBegin: error parsing group description: %s\n"
-               "        group: \"%s\"\n"
-               "        problem might be here: %s\n",
-               errdesc, groupname, statement);
+        std::string msg = Strutil::format (
+                "ShaderGroupBegin: error parsing group description: %s\n"
+                "        group: %s",
+                errdesc, g->name());
+        if (errstatement.empty()) {
+            size_t offset = p.data() - groupspec.data();
+            size_t begin_stmt = std::min (groupspec.find_last_of (';', offset),
+                                          groupspec.find_last_of (',', offset));
+            size_t end_stmt = groupspec.find_first_of (';', begin_stmt+1);
+            errstatement = groupspec.substr (begin_stmt+1, end_stmt-begin_stmt);
+        }
+        if (errstatement.size())
+            msg += Strutil::format ("\n        problem might be here: %s",
+                                    errstatement);
+        error ("%s", msg);
         if (debug())
             info ("Broken group was:\n---%s\n---\n", groupspec);
         return ShaderGroupRef();

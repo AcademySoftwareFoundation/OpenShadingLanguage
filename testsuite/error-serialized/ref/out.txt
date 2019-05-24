@@ -1,0 +1,8 @@
+Compiled test.osl -> test.oso
+ERROR: ConnectShaders: source layer "a" not found
+        group: unnamed_group_2
+ERROR: ShaderGroupBegin: error parsing group description: 
+        group: unnamed_group_2
+        problem might be here: connect a.b c.d;
+
+ERROR: Invalid shader group. Exiting testshade.

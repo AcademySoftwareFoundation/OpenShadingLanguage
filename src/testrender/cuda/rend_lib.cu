@@ -3,6 +3,7 @@
 #include <optix_math.h>
 
 #include "rend_lib.h"
+#include <OSL/oslclosure.h>
 
 
 rtDeclareVariable (uint2, launch_index, rtLaunchIndex, );
@@ -20,12 +21,12 @@ OSL_NAMESPACE_EXIT
 extern "C" {
 
     __device__
-    void* closure_component_allot (void* pool, int id, size_t prim_size, const float3& w)
+    void* closure_component_allot (void* pool, int id, size_t prim_size, const OSL::Color3& w)
     {
-        ((ClosureComponent*) pool)->id = id;
-        ((ClosureComponent*) pool)->w  = w;
+        ((OSL::ClosureComponent*) pool)->id = id;
+        ((OSL::ClosureComponent*) pool)->w  = w;
 
-        size_t needed   = (sizeof(ClosureComponent) - sizeof(void*) + prim_size + 0x7) & ~0x7;
+        size_t needed   = (sizeof(OSL::ClosureComponent) - sizeof(void*) + prim_size + 0x7) & ~0x7;
         char*  char_ptr = (char*) pool;
 
         return (void*) &char_ptr[needed];
@@ -33,13 +34,13 @@ extern "C" {
 
 
     __device__
-    void* closure_mul_allot (void* pool, const float3& w, ClosureColor* c)
+    void* closure_mul_allot (void* pool, const OSL::Color3& w, OSL::ClosureColor* c)
     {
-        ((ClosureMul*) pool)->id      = ClosureColor::MUL;
-        ((ClosureMul*) pool)->weight  = w;
-        ((ClosureMul*) pool)->closure = c;
+        ((OSL::ClosureMul*) pool)->id      = OSL::ClosureColor::MUL;
+        ((OSL::ClosureMul*) pool)->weight  = w;
+        ((OSL::ClosureMul*) pool)->closure = c;
 
-        size_t needed   = (sizeof(ClosureMul) + 0x7) & ~0x7;
+        size_t needed   = (sizeof(OSL::ClosureMul) + 0x7) & ~0x7;
         char*  char_ptr = (char*) pool;
 
         return &char_ptr[needed];
@@ -47,15 +48,15 @@ extern "C" {
 
 
     __device__
-    void* closure_mul_float_allot (void* pool, const float& w, ClosureColor* c)
+    void* closure_mul_float_allot (void* pool, const float& w, OSL::ClosureColor* c)
     {
-        ((ClosureMul*) pool)->id       = ClosureColor::MUL;
-        ((ClosureMul*) pool)->weight.x = w;
-        ((ClosureMul*) pool)->weight.y = w;
-        ((ClosureMul*) pool)->weight.z = w;
-        ((ClosureMul*) pool)->closure  = c;
+        ((OSL::ClosureMul*) pool)->id       = OSL::ClosureColor::MUL;
+        ((OSL::ClosureMul*) pool)->weight.x = w;
+        ((OSL::ClosureMul*) pool)->weight.y = w;
+        ((OSL::ClosureMul*) pool)->weight.z = w;
+        ((OSL::ClosureMul*) pool)->closure  = c;
 
-        size_t needed   = (sizeof(ClosureMul) + 0x7) & ~0x7;
+        size_t needed   = (sizeof(OSL::ClosureMul) + 0x7) & ~0x7;
         char*  char_ptr = (char*) pool;
 
         return &char_ptr[needed];
@@ -63,13 +64,13 @@ extern "C" {
 
 
     __device__
-    void* closure_add_allot (void* pool, ClosureColor* a, ClosureColor* b)
+    void* closure_add_allot (void* pool, OSL::ClosureColor* a, OSL::ClosureColor* b)
     {
-        ((ClosureAdd*) pool)->id       = ClosureColor::ADD;
-        ((ClosureAdd*) pool)->closureA = a;
-        ((ClosureAdd*) pool)->closureB = b;
+        ((OSL::ClosureAdd*) pool)->id       = OSL::ClosureColor::ADD;
+        ((OSL::ClosureAdd*) pool)->closureA = a;
+        ((OSL::ClosureAdd*) pool)->closureB = b;
 
-        size_t needed   = (sizeof(ClosureAdd) + 0x7) & ~0x7;
+        size_t needed   = (sizeof(OSL::ClosureAdd) + 0x7) & ~0x7;
         char*  char_ptr = (char*) pool;
 
         return &char_ptr[needed];
@@ -81,7 +82,7 @@ extern "C" {
     {
         ShaderGlobals* sg_ptr = (ShaderGlobals*) sg_;
 
-        float3 w   = make_float3 (1.0f);
+        OSL::Color3 w   = OSL::Color3 (1, 1, 1);
         void*  ret = sg_ptr->renderstate;
 
         size = max (4, size);
@@ -93,7 +94,7 @@ extern "C" {
 
 
     __device__
-    void* osl_allocate_weighted_closure_component (void* sg_, int id, int size, const float3* w)
+    void* osl_allocate_weighted_closure_component (void* sg_, int id, int size, const OSL::Color3* w)
     {
         ShaderGlobals* sg_ptr = (ShaderGlobals*) sg_;
 
@@ -111,7 +112,7 @@ extern "C" {
 
 
     __device__
-    void* osl_mul_closure_color (void* sg_, ClosureColor* a, float3* w)
+    void* osl_mul_closure_color (void* sg_, OSL::ClosureColor* a, const OSL::Color3* w)
     {
         ShaderGlobals* sg_ptr = (ShaderGlobals*) sg_;
 
@@ -135,7 +136,7 @@ extern "C" {
 
 
     __device__
-    void* osl_mul_closure_float (void* sg_, ClosureColor* a, float w)
+    void* osl_mul_closure_float (void* sg_, OSL::ClosureColor* a, float w)
     {
         ShaderGlobals* sg_ptr = (ShaderGlobals*) sg_;
 
@@ -155,7 +156,7 @@ extern "C" {
 
 
     __device__
-    void* osl_add_closure_closure (void* sg_, ClosureColor* a, ClosureColor* b)
+    void* osl_add_closure_closure (void* sg_, OSL::ClosureColor* a, OSL::ClosureColor* b)
     {
         ShaderGlobals* sg_ptr = (ShaderGlobals*) sg_;
 

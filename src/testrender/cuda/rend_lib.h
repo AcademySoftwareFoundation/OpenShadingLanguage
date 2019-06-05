@@ -126,29 +126,4 @@ enum ClosureIDs {
     HOLDOUT_ID,
 };
 
-
-struct ClosureColor {
-    enum ClosureID { COMPONENT_BASE_ID = 0, MUL = -1, ADD = -2 };
-    int id;
-};
-
-
-struct ClosureComponent : public ClosureColor {
-    float3 w;
-    char   mem[8];
-};
-
-
-struct ClosureMul : public ClosureColor {
-    float3        weight;
-    ClosureColor* closure;
-};
-
-
-struct ClosureAdd : public ClosureColor {
-    ClosureColor* closureA;
-    ClosureColor* closureB;
-};
-
-
 }  // anonymous namespace

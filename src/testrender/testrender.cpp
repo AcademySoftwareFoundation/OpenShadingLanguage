@@ -279,7 +279,7 @@ main (int argc, const char *argv[])
         rend->clear();
         delete shadingsys;
         delete rend;
-    } catch (const optix::Exception& e) {
+    } catch (const OSL::optix::Exception& e) {
         printf("Optix Error: %s\n", e.what());
     } catch (const std::exception& e) {
         printf("Unknown Error: %s\n", e.what());

@@ -31,9 +31,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <optixu/optixu_math_namespace.h>
 
 #include <OSL/device_string.h>
+#include <OSL/oslclosure.h>
 
 #include "rend_lib.h"
-#include <OSL/oslclosure.h>
 #include "util.h"
 
 // Ray payload

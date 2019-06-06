@@ -1,9 +1,9 @@
 #include <optix.h>
 #include <optix_device.h>
 #include <optix_math.h>
+#include <OSL/oslclosure.h>
 
 #include "rend_lib.h"
-#include <OSL/oslclosure.h>
 
 
 rtDeclareVariable (uint2, launch_index, rtLaunchIndex, );

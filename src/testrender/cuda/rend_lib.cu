@@ -17,6 +17,15 @@ namespace pvt {
 }
 OSL_NAMESPACE_EXIT
 
+// Taken from the SimplePool class
+__device__
+static inline size_t alignment_offset_calc(void* ptr, size_t alignment)
+{
+    uintptr_t ptrbits = reinterpret_cast<uintptr_t>(ptr);
+    uintptr_t offset = ((ptrbits + alignment - 1) & -alignment) - ptrbits;
+    return offset;
+}
+
 // These functions are declared extern to prevent name mangling.
 extern "C" {
 
@@ -26,7 +35,7 @@ extern "C" {
         ((OSL::ClosureComponent*) pool)->id = id;
         ((OSL::ClosureComponent*) pool)->w  = w;
 
-        size_t needed   = (sizeof(OSL::ClosureComponent) - sizeof(void*) + prim_size + 0x7) & ~0x7;
+        size_t needed   = (sizeof(OSL::ClosureComponent) - sizeof(void*) + prim_size + (alignof(OSL::ClosureComponent) - 1)) & ~(alignof(OSL::ClosureComponent) - 1);
         char*  char_ptr = (char*) pool;
 
         return (void*) &char_ptr[needed];
@@ -40,7 +49,7 @@ extern "C" {
         ((OSL::ClosureMul*) pool)->weight  = w;
         ((OSL::ClosureMul*) pool)->closure = c;
 
-        size_t needed   = (sizeof(OSL::ClosureMul) + 0x7) & ~0x7;
+        size_t needed   = (sizeof(OSL::ClosureMul) + (alignof(OSL::ClosureComponent) - 1)) & ~(alignof(OSL::ClosureComponent) - 1);
         char*  char_ptr = (char*) pool;
 
         return &char_ptr[needed];
@@ -56,7 +65,7 @@ extern "C" {
         ((OSL::ClosureMul*) pool)->weight.z = w;
         ((OSL::ClosureMul*) pool)->closure  = c;
 
-        size_t needed   = (sizeof(OSL::ClosureMul) + 0x7) & ~0x7;
+        size_t needed   = (sizeof(OSL::ClosureMul) + (alignof(OSL::ClosureComponent) - 1)) & ~(alignof(OSL::ClosureComponent) - 1);
         char*  char_ptr = (char*) pool;
 
         return &char_ptr[needed];
@@ -70,7 +79,7 @@ extern "C" {
         ((OSL::ClosureAdd*) pool)->closureA = a;
         ((OSL::ClosureAdd*) pool)->closureB = b;
 
-        size_t needed   = (sizeof(OSL::ClosureAdd) + 0x7) & ~0x7;
+        size_t needed   = (sizeof(OSL::ClosureAdd) + (alignof(OSL::ClosureComponent) - 1)) & ~(alignof(OSL::ClosureComponent) - 1);
         char*  char_ptr = (char*) pool;
 
         return &char_ptr[needed];
@@ -83,11 +92,12 @@ extern "C" {
         ShaderGlobals* sg_ptr = (ShaderGlobals*) sg_;
 
         OSL::Color3 w   = OSL::Color3 (1, 1, 1);
-        void*  ret = sg_ptr->renderstate;
+        // Fix up the alignment
+        void* ret = ((char*) sg_ptr->renderstate) + alignment_offset_calc (sg_ptr->renderstate, alignof(OSL::ClosureComponent));
 
         size = max (4, size);
 
-        sg_ptr->renderstate = closure_component_allot (sg_ptr->renderstate, id, size, w);
+        sg_ptr->renderstate = closure_component_allot (ret, id, size, w);
 
         return ret;
     }
@@ -104,8 +114,9 @@ extern "C" {
 
         size = max (4, size);
 
-        void* ret = sg_ptr->renderstate;
-        sg_ptr->renderstate = closure_component_allot (sg_ptr->renderstate, id, size, *w);
+        // Fix up the alignment
+        void* ret = ((char*) sg_ptr->renderstate) + alignment_offset_calc (sg_ptr->renderstate, alignof(OSL::ClosureComponent));
+        sg_ptr->renderstate = closure_component_allot (ret, id, size, *w);
 
         return ret;
     }
@@ -128,8 +139,9 @@ extern "C" {
             return a;
         }
 
-        void* ret = sg_ptr->renderstate;
-        sg_ptr->renderstate = closure_mul_allot (sg_ptr->renderstate, *w, a);
+        // Fix up the alignment
+        void* ret = ((char*) sg_ptr->renderstate) + alignment_offset_calc (sg_ptr->renderstate, alignof(OSL::ClosureComponent));
+        sg_ptr->renderstate = closure_mul_allot (ret, *w, a);
 
         return ret;
     }
@@ -148,8 +160,9 @@ extern "C" {
             return a;
         }
 
-        void* ret = sg_ptr->renderstate;
-        sg_ptr->renderstate = closure_mul_float_allot (sg_ptr->renderstate, w, a);
+        // Fix up the alignment
+        void* ret = ((char*) sg_ptr->renderstate) + alignment_offset_calc (sg_ptr->renderstate, alignof(OSL::ClosureComponent));
+        sg_ptr->renderstate = closure_mul_float_allot (ret, w, a);
 
         return ret;
     }
@@ -168,8 +181,9 @@ extern "C" {
             return a;
         }
 
-        void* ret = sg_ptr->renderstate;
-        sg_ptr->renderstate = closure_add_allot (sg_ptr->renderstate, a, b);
+        // Fix up the alignment
+        void* ret = ((char*) sg_ptr->renderstate) + alignment_offset_calc (sg_ptr->renderstate, alignof(OSL::ClosureComponent));
+        sg_ptr->renderstate = closure_add_allot (ret, a, b);
 
         return ret;
     }

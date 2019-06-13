@@ -31,6 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <optixu/optixu_math_namespace.h>
 
 #include <OSL/device_string.h>
+#include <OSL/oslclosure.h>
 
 #include "rend_lib.h"
 #include "util.h"
@@ -95,12 +96,12 @@ void globals_from_hit(ShaderGlobals& sg)
 
 
 static __device__
-float3 process_closure(const ClosureColor* closure_tree)
+float3 process_closure(const OSL::ClosureColor* closure_tree)
 {
-    float3 result = make_float3 (0.0f);
+    OSL::Color3 result = OSL::Color3 (0.0f);
 
     if (!closure_tree) {
-        return result;
+        return make_float3(result.x, result.y, result.z);
     }
 
     // The depth of the closure tree must not exceed the stack size.
@@ -110,25 +111,25 @@ float3 process_closure(const ClosureColor* closure_tree)
 
     // Non-recursive traversal stack
     int    stack_idx = 0;
-    void*  ptr_stack   [STACK_SIZE];
-    float3 weight_stack[STACK_SIZE];
+    const OSL::ClosureColor* ptr_stack[STACK_SIZE];
+    OSL::Color3 weight_stack[STACK_SIZE];
 
     // Shading accumlator
-    float3 weight = make_float3(1.0f);
+    OSL::Color3 weight = OSL::Color3(1.0f);
 
     const void* cur = closure_tree;
     while (cur) {
-        switch (((ClosureColor*)cur)->id) {
-        case ClosureColor::ADD: {
-            ptr_stack   [stack_idx  ] = ((ClosureAdd*) cur)->closureB;
+        switch (((OSL::ClosureColor*)cur)->id) {
+        case OSL::ClosureColor::ADD: {
+            ptr_stack   [stack_idx  ] = ((OSL::ClosureAdd*) cur)->closureB;
             weight_stack[stack_idx++] = weight;
-            cur = ((ClosureAdd*) cur)->closureA;
+            cur = ((OSL::ClosureAdd*) cur)->closureA;
             break;
         }
 
-        case ClosureColor::MUL: {
-            weight *= ((ClosureMul*) cur)->weight;
-            cur     = ((ClosureMul*) cur)->closure;
+        case OSL::ClosureColor::MUL: {
+            weight *= ((OSL::ClosureMul*) cur)->weight;
+            cur     = ((OSL::ClosureMul*) cur)->closure;
             break;
         }
 
@@ -144,14 +145,14 @@ float3 process_closure(const ClosureColor* closure_tree)
         case REFLECTION_ID:
         case REFRACTION_ID:
         case FRESNEL_REFLECTION_ID: {
-            result += ((ClosureComponent*) cur)->w * weight;
+            result += ((OSL::ClosureComponent*) cur)->w * weight;
             cur = NULL;
             break;
         }
 
         case MICROFACET_ID: {
 #if 0
-            const char* mem = ((ClosureComponent*) cur)->mem;
+            const char* mem = ((OSL::ClosureComponent*) cur)->mem;
             const char* dist_str = *(const char**) &mem[0];
             if (launch_index.x == launch_dim.x / 2 && launch_index.y == launch_dim.y / 2) {
                 printf ("microfacet, dist: %s\n", HDSTR(dist_str).c_str());
@@ -162,7 +163,7 @@ float3 process_closure(const ClosureColor* closure_tree)
             }
 #endif
 
-            result += ((ClosureComponent*) cur)->w * weight;
+            result += ((OSL::ClosureComponent*) cur)->w * weight;
             cur = NULL;
             break;
         }
@@ -178,7 +179,7 @@ float3 process_closure(const ClosureColor* closure_tree)
         }
     }
 
-    return result;
+    return make_float3(result.x, result.y, result.z);
 }
 
 
@@ -216,5 +217,5 @@ RT_PROGRAM void closest_hit_osl()
     osl_init_func (&sg, params);
     osl_group_func(&sg, params);
 
-    prd_radiance.result = process_closure ((ClosureColor*) sg.Ci);
+    prd_radiance.result = process_closure ((OSL::ClosureColor*) sg.Ci);
 }

@@ -30,7 +30,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cstring>
 #include <OSL/oslconfig.h>
-#include <OpenImageIO/ustring.h>
 
 OSL_NAMESPACE_ENTER
 

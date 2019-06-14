@@ -497,7 +497,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         ll.op_branch (cond_val, no_userdata_block, after_userdata_block);
     }
 
-    if (use_optix() && ! sym.typespec().is_string()) {
+    if (use_optix() && ! sym.typespec().is_closure() && ! sym.typespec().is_string()) {
         ASSERT (! sym.has_init_ops() && "Init ops are not currently supported in OptiX");
 
         // If the call to osl_bind_interpolated_param returns 0, the default
@@ -510,7 +510,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
 
         TypeDesc t = sym.typespec().simpletype();
         ll.op_memcpy (dst, src, t.size(), t.basesize());
-    } else if (use_optix()) {
+    } else if (use_optix() && ! sym.typespec().is_closure()) {
         // For convenience, we always pack string addresses into the groupdata
         // struct.
         int userdata_index = find_userdata_index (sym);

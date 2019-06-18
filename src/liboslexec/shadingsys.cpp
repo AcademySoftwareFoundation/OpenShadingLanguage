@@ -3456,7 +3456,7 @@ OSL::OSLQuery::init (const ShaderGroup *group, int layernum)
 
     m_meta.clear();   // no metadata available at this point
 
-    return false;
+    return true;
 }
 
 

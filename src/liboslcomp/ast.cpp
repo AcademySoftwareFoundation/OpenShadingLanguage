@@ -186,6 +186,29 @@ ASTNode::ASTNode (NodeType nodetype, OSLCompilerImpl *compiler, int op,
 
 ASTNode::~ASTNode ()
 {
+    // For sufficiently deep trees, the recursive deletion of nodes could
+    // overflow the stack. So do it sequentially.
+    while (m_next) {
+        // Currently:
+        //     m_next -->  A  --> B --> ...
+        ref n = m_next;
+        // Now:
+        //     n --> A --> B --> ...
+        //     m_next -->  A  --> B --> ...
+        m_next = n->m_next;
+        // Now:
+        //     n --> A --> B --> ...
+        //     m_next -->  B --> ...
+        n->m_next.reset();
+        // Now:
+        //     n --> A
+        //     m_next -->  B --> ...
+        // When we loop, n will exit scope and we will have
+        //     m_next --> B --> ...
+        // A will have been freed, next time through the loop we will free
+        // B, and there was no recursion.
+    }
+
 #ifndef NDEBUG
     node_counts[nodetype()] -= 1;
 #endif

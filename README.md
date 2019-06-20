@@ -337,6 +337,13 @@ Films using OSL (grouped by year of release date):
   Lego Movie 2,
   Lucky 13,
   Captain Marvel,
+  Avengers: Endgame,
+  Pokémon Detective Pikachu,
+  Godzilla: King of Monsters,
+  Rim of the World,
+  Men in Black International,
+  Toy Story 4,
+  Spider-Man: Far From Home,
   ...
 
 

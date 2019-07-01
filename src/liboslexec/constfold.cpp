@@ -55,7 +55,10 @@ static ustring u_nop    ("nop"),
                u_inversesqrt ("inversesqrt"),
                u_if     ("if"),
                u_eq     ("eq"),
-               u_return ("return");
+               u_return ("return"),
+               u_error  ("error"),
+               u_fmterror("%s");
+
 static ustring u_cell ("cell"), u_cellnoise ("cellnoise");
 
 
@@ -2403,23 +2406,27 @@ DECLFOLDER(constfold_gettextureinfo)
     ASSERT (Result.typespec().is_int() && Filename.typespec().is_string() &&
             Dataname.typespec().is_string());
 
-    if (Filename.is_constant() && Dataname.is_constant() &&
-            ! Data.typespec().is_array() /* N.B. we punt on arrays */) {
+    if (Filename.is_constant() && Dataname.is_constant()) {
         ustring filename = *(ustring *)Filename.data();
         ustring dataname = *(ustring *)Dataname.data();
         TypeDesc t = Data.typespec().simpletype();
         void *mydata = alloca (t.size ());
         // FIXME(ptex) -- exclude folding of ptex, since these things
         // can vary per face.
-        int result = rop.renderer()->get_texture_info (NULL, filename, NULL, 0,
-                                                       dataname, t, mydata);
+        ustring errormessage;
+        int result = rop.renderer()->get_texture_info (filename, nullptr,
+                                                       rop.shadingcontext()->texture_thread_info(),
+                                                       rop.shadingcontext(),
+                                                       0 /* TODO: subimage? */,
+                                                       dataname, t, mydata, &errormessage);
         // Now we turn
         //       gettextureinfo result filename dataname data
         // into this for success:
-        //       assign result 1
         //       assign data [retrieved values]
-        // but if it fails, don't change anything, because we want it to
-        // issue errors at runtime.
+        //       assign result 1
+        // into this for failure:
+        //       error "%s" errormesage
+        //       assign result 0
         if (result) {
             int oldresultarg = rop.inst()->args()[op.firstarg()+0];
             int dataarg = rop.inst()->args()[op.firstarg()+3];
@@ -2432,23 +2439,31 @@ DECLFOLDER(constfold_gettextureinfo)
             // Now insert a new instruction that assigns 1 to the
             // original return result of gettextureinfo.
             int one = 1;
-            std::vector<int> args_to_add;
-            args_to_add.push_back (oldresultarg);
-            args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &one));
-            rop.insert_code (opnum, u_assign, args_to_add,
+            const int args_to_add[2] = {
+                oldresultarg,
+                rop.add_constant (TypeDesc::TypeInt, &one)
+            };
+            rop.insert_code (opnum, u_assign, args_to_add, args_to_add + 2,
                              RuntimeOptimizer::RecomputeRWRanges,
                              RuntimeOptimizer::GroupWithNext);
-            Opcode &newop (rop.inst()->ops()[opnum]);
-            newop.argwriteonly (0);
-            newop.argread (1, true);
-            newop.argwrite (1, false);
             return 1;
         } else {
-            // Return without constant folding gettextureinfo -- because
-            // we WANT the shader to fail and issue error messages at
-            // the appropriate time.
-            (void) rop.texturesys()->geterror (); // eat the error
-            return 0;
+            // Constant fold to 0
+            rop.turn_into_assign_zero (op, "const fold gettextureinfo");
+            if (errormessage.size()) {
+                // display the error message if control flow ever reaches here
+                const int args_to_add[2] = {
+                    rop.add_constant(u_fmterror),
+                    rop.add_constant(errormessage)
+                };
+                rop.insert_code(opnum, u_error, args_to_add, args_to_add + 2,
+                                 RuntimeOptimizer::RecomputeRWRanges,
+                                 RuntimeOptimizer::GroupWithNext);
+                Opcode &newop (rop.inst()->ops()[opnum]);
+                newop.argreadonly(0);
+                newop.argreadonly(1);
+            }
+            return 1;
         }
     }
     return 0;

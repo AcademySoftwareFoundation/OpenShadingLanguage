@@ -304,7 +304,7 @@ OptixGridRenderer::good(TextureHandle *handle)
 /// Given the name of a texture, return an opaque handle that can be
 /// used with texture calls to avoid the name lookups.
 RendererServices::TextureHandle*
-OptixGridRenderer::get_texture_handle (ustring filename)
+OptixGridRenderer::get_texture_handle (ustring filename, ShadingContext* shading_context)
 {
 #ifdef OSL_USE_OPTIX
     auto itr = m_samplers.find(filename);

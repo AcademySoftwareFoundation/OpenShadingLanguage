@@ -388,7 +388,7 @@ DECL (osl_texture_set_missingcolor_alpha, "xXif")
 DECL (osl_texture, "iXXXXffffffiXXXXXXX")
 DECL (osl_texture3d, "iXXXXXXXiXXXXXXX")
 DECL (osl_environment, "iXXXXXXXiXXXXXXX")
-DECL (osl_get_textureinfo, "iXXXXiiiX")
+DECL (osl_get_textureinfo, "iXXXXiiiXX")
 
 DECL (osl_trace_set_mindist, "xXf")
 DECL (osl_trace_set_maxdist, "xXf")

@@ -2417,9 +2417,7 @@ LLVMGEN (llvm_gen_texture)
     args.push_back (rop.sg_void_ptr());
     RendererServices::TextureHandle *texture_handle = NULL;
     if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
-        texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data());
-        if (! rop.renderer()->good (texture_handle))
-            texture_handle = NULL;
+        texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data(), rop.shadingcontext());
     }
     args.push_back (rop.llvm_load_value (Filename));
     args.push_back (rop.ll.constant_ptr (texture_handle));
@@ -2483,9 +2481,7 @@ LLVMGEN (llvm_gen_texture3d)
     args.push_back (rop.sg_void_ptr());
     RendererServices::TextureHandle *texture_handle = NULL;
     if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
-        texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data());
-        if (! rop.renderer()->good (texture_handle))
-            texture_handle = NULL;
+        texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data(), rop.shadingcontext());
     }
     args.push_back (rop.llvm_load_value (Filename));
     args.push_back (rop.ll.constant_ptr (texture_handle));
@@ -2543,9 +2539,7 @@ LLVMGEN (llvm_gen_environment)
     args.push_back (rop.sg_void_ptr());
     RendererServices::TextureHandle *texture_handle = NULL;
     if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
-        texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data());
-        if (! rop.renderer()->good (texture_handle))
-            texture_handle = NULL;
+        texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data(), rop.shadingcontext());
     }
     args.push_back (rop.llvm_load_value (Filename));
     args.push_back (rop.ll.constant_ptr (texture_handle));
@@ -2995,9 +2989,7 @@ LLVMGEN (llvm_gen_gettextureinfo)
     args.push_back (rop.sg_void_ptr());
     RendererServices::TextureHandle *texture_handle = NULL;
     if (Filename.is_constant() && rop.shadingsys().opt_texture_handle()) {
-        texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data());
-        if (! rop.renderer()->good (texture_handle))
-            texture_handle = NULL;
+        texture_handle = rop.renderer()->get_texture_handle (*(ustring *)Filename.data(), rop.shadingcontext());
     }
     args.push_back (rop.llvm_load_value (Filename));
     args.push_back (rop.ll.constant_ptr (texture_handle));
@@ -3008,6 +3000,8 @@ LLVMGEN (llvm_gen_gettextureinfo)
     args.push_back (rop.ll.constant((int) Data.typespec().simpletype().aggregate));
     // destination
     args.push_back (rop.llvm_void_ptr (Data));
+    // errormessage
+    args.push_back (rop.ll.void_ptr_null());
 
     llvm::Value *r = rop.ll.call_function ("osl_get_textureinfo",
                                            &args[0], args.size());

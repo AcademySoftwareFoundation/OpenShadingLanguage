@@ -602,8 +602,8 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
                                RecomputeRWRangesOption recompute_rw_ranges,
                                InsertRelation relation)
 {
-    const int *argsbegin = (args_to_add.size())? &args_to_add[0]: NULL;
-    const int *argsend = argsbegin + args_to_add.size();
+    const int *argsbegin = args_to_add.data();
+    const int *argsend   = argsbegin + args_to_add.size();
 
     insert_code (opnum, opname, argsbegin, argsend,
                  recompute_rw_ranges, relation);

@@ -495,17 +495,17 @@ RuntimeOptimizer::turn_into_nop (int begin, int end, string_view why)
 
 void
 RuntimeOptimizer::insert_code (int opnum, ustring opname,
-                               const int *argsbegin, const int *argsend,
+                               const OIIO::cspan<int> args_to_add,
                                RecomputeRWRangesOption recompute_rw_ranges,
                                InsertRelation relation)
 {
     OpcodeVec &code (inst()->ops());
     std::vector<int> &opargs (inst()->args());
     ustring method = (opnum < (int)code.size()) ? code[opnum].method() : OSLCompilerImpl::main_method_name();
-    int nargs = argsend - argsbegin;
+    int nargs = args_to_add.size();
     Opcode op (opname, method, opargs.size(), nargs);
     code.insert (code.begin()+opnum, op);
-    opargs.insert (opargs.end(), argsbegin, argsend);
+    opargs.insert (opargs.end(), args_to_add.begin(), args_to_add.end());
     if (opnum < inst()->m_maincodebegin)
         ++inst()->m_maincodebegin;
     ++inst()->m_maincodeend;
@@ -582,7 +582,7 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
 
     if (opname == u_if) {
         // special case for 'if' -- the arg is read, not written
-        inst()->symbol(argsbegin[0])->mark_rw (opnum, true, false);
+        inst()->symbol(args_to_add[0])->mark_rw (opnum, true, false);
     }
     else if (opname != u_useparam) {
         // Mark the args as being used for this op (assume that the
@@ -590,26 +590,9 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
         // DASSERT to be sure we only use insert_code for the couple of
         // instructions that we think it is used for.
         for (int a = 0;  a < nargs;  ++a)
-            inst()->symbol(argsbegin[a])->mark_rw (opnum, a>0, a==0);
+            inst()->symbol(args_to_add[a])->mark_rw (opnum, a>0, a==0);
     }
 }
-
-
-
-void
-RuntimeOptimizer::insert_code (int opnum, ustring opname,
-                               const std::vector<int> &args_to_add,
-                               RecomputeRWRangesOption recompute_rw_ranges,
-                               InsertRelation relation)
-{
-    const int *argsbegin = args_to_add.data();
-    const int *argsend   = argsbegin + args_to_add.size();
-
-    insert_code (opnum, opname, argsbegin, argsend,
-                 recompute_rw_ranges, relation);
-}
-
-
 
 void
 RuntimeOptimizer::insert_code (int opnum, ustring opname,
@@ -622,7 +605,7 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
     if (arg1 >= 0) args[nargs++] = arg1;
     if (arg2 >= 0) args[nargs++] = arg2;
     if (arg3 >= 0) args[nargs++] = arg3;
-    insert_code (opnum, opname, args, args+nargs, RecomputeRWRanges, relation);
+    insert_code (opnum, opname, OIIO::cspan<int>(args, args + nargs), RecomputeRWRanges, relation);
 }
 
 

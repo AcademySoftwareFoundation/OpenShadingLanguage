@@ -1298,12 +1298,10 @@ DECLFOLDER(constfold_split)
         for (int i = 0;  i < n;  ++i)
             usplits[i] = ustring(splits[i]);
         int cind = rop.add_constant (TypeDesc(TypeDesc::STRING,resultslen),
-                                     &usplits[0]);
+                                     usplits.data());
         // And insert an instruction copying our constant array to the
         // user's results array.
-        std::vector<int> args;
-        args.push_back (resultsarg);
-        args.push_back (cind);
+        const int args[] = { resultsarg, cind };
         rop.insert_code (opnum, u_assign, args,
                          RuntimeOptimizer::RecomputeRWRanges,
                          RuntimeOptimizer::GroupWithNext);
@@ -1924,15 +1922,10 @@ DECLFOLDER(constfold_sincos)
         rop.turn_into_new_op (op, u_assign, sinarg, rop.add_constant (s), -1,
                               "const fold sincos");
         // And insert a new op for the cos assignment
-        std::vector<int> args_to_add;
-        args_to_add.push_back (cosarg);
-        args_to_add.push_back (rop.add_constant (c));
+        const int args_to_add[] = { cosarg, rop.add_constant (c) };
         rop.insert_code (opnum, u_assign, args_to_add,
                          RuntimeOptimizer::RecomputeRWRanges,
                          RuntimeOptimizer::GroupWithNext);
-        Opcode &newop (rop.inst()->ops()[opnum]);
-        newop.argwriteonly (0);
-        newop.argreadonly (1);
         return 1;
     }
     return 0;
@@ -2150,17 +2143,11 @@ DECLFOLDER(constfold_getmatrix)
 
         // Now insert a new instruction that assigns 1 to the
         // original return result of getmatrix.
-        int one = 1;
-        std::vector<int> args_to_add;
-        args_to_add.push_back (resultarg);
-        args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &one));
+        const int one = 1;
+        const int args_to_add[] = { resultarg, rop.add_constant (TypeDesc::TypeInt, &one) };
         rop.insert_code (opnum, u_assign, args_to_add,
                          RuntimeOptimizer::RecomputeRWRanges,
                          RuntimeOptimizer::GroupWithNext);
-        Opcode &newop (rop.inst()->ops()[opnum]);
-        newop.argwriteonly (0);
-        newop.argread (1, true);
-        newop.argwrite (1, false);
         return 1;
     }
     return 0;
@@ -2377,17 +2364,11 @@ DECLFOLDER(constfold_getattribute)
         rop.turn_into_assign (op, cind, "const fold getattribute");
         // Now insert a new instruction that assigns 1 to the
         // original return result of getattribute.
-        int one = 1;
-        std::vector<int> args_to_add;
-        args_to_add.push_back (oldresultarg);
-        args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &one));
+        const int one = 1;
+        const int args_to_add[] = { oldresultarg, rop.add_constant (TypeDesc::TypeInt, &one) };
         rop.insert_code (opnum, u_assign, args_to_add,
                          RuntimeOptimizer::RecomputeRWRanges,
                          RuntimeOptimizer::GroupWithNext);
-        Opcode &newop (rop.inst()->ops()[opnum]);
-        newop.argwriteonly (0);
-        newop.argread (1, true);
-        newop.argwrite (1, false);
         return 1;
     } else {
         return 0;
@@ -2439,11 +2420,11 @@ DECLFOLDER(constfold_gettextureinfo)
             // Now insert a new instruction that assigns 1 to the
             // original return result of gettextureinfo.
             int one = 1;
-            const int args_to_add[2] = {
+            const int args_to_add[] = {
                 oldresultarg,
                 rop.add_constant (TypeDesc::TypeInt, &one)
             };
-            rop.insert_code (opnum, u_assign, args_to_add, args_to_add + 2,
+            rop.insert_code (opnum, u_assign, args_to_add,
                              RuntimeOptimizer::RecomputeRWRanges,
                              RuntimeOptimizer::GroupWithNext);
             return 1;
@@ -2452,11 +2433,11 @@ DECLFOLDER(constfold_gettextureinfo)
             rop.turn_into_assign_zero (op, "const fold gettextureinfo");
             if (errormessage.size()) {
                 // display the error message if control flow ever reaches here
-                const int args_to_add[2] = {
+                const int args_to_add[] = {
                     rop.add_constant(u_fmterror),
                     rop.add_constant(errormessage)
                 };
-                rop.insert_code(opnum, u_error, args_to_add, args_to_add + 2,
+                rop.insert_code(opnum, u_error, args_to_add,
                                  RuntimeOptimizer::RecomputeRWRanges,
                                  RuntimeOptimizer::GroupWithNext);
                 Opcode &newop (rop.inst()->ops()[opnum]);
@@ -2727,9 +2708,7 @@ DECLFOLDER(constfold_pointcloud_search)
         int const_array_sym = rop.add_constant (const_valtype, const_data);
         // ... and add an instruction to copy the constant into the
         // original destination for the query.
-        std::vector<int> args_to_add;
-        args_to_add.push_back (value_args[i]);
-        args_to_add.push_back (const_array_sym);
+        const int args_to_add[] = { value_args[i], const_array_sym };
         rop.insert_code (opnum, u_assign, args_to_add,
                          RuntimeOptimizer::RecomputeRWRanges,
                          RuntimeOptimizer::GroupWithNext);
@@ -2737,9 +2716,7 @@ DECLFOLDER(constfold_pointcloud_search)
 
     // Query results all copied.  The only thing left to do is to assign
     // status (query result count) to the original "result".
-    std::vector<int> args_to_add;
-    args_to_add.push_back (result_sym);
-    args_to_add.push_back (rop.add_constant (TypeDesc::TypeInt, &count));
+    const int args_to_add[] = { result_sym, rop.add_constant (TypeDesc::TypeInt, &count) };
     rop.insert_code (opnum, u_assign, args_to_add,
                      RuntimeOptimizer::RecomputeRWRanges,
                      RuntimeOptimizer::GroupWithNext);
@@ -2795,9 +2772,7 @@ DECLFOLDER(constfold_pointcloud_get)
     int const_array_sym = rop.add_constant (valtype, &data[0]);
     // ... and add an instruction to copy the constant into the
     // original destination for the query.
-    std::vector<int> args_to_add;
-    args_to_add.push_back (rop.oparg(op,5) /* Data symbol*/);
-    args_to_add.push_back (const_array_sym);
+    const int args_to_add[] = { rop.oparg(op,5) /* Data symbol*/, const_array_sym };
     rop.insert_code (opnum, u_assign, args_to_add,
                      RuntimeOptimizer::RecomputeRWRanges,
                      RuntimeOptimizer::GroupWithNext);

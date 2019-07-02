@@ -403,7 +403,8 @@ osl_environment (void *sg_, const char *name, void *handle,
 OSL_SHADEOP int
 osl_get_textureinfo (void *sg_, const char *name, void *handle,
                      void *dataname,  int type,
-                     int arraylen, int aggregate, void *data)
+                     int arraylen, int aggregate, void *data,
+                     ustring *errormessage)
 {
     // recreate TypeDesc
     TypeDesc typedesc;
@@ -413,10 +414,13 @@ osl_get_textureinfo (void *sg_, const char *name, void *handle,
 
     ShaderGlobals *sg   = (ShaderGlobals *)sg_;
 
-    return sg->renderer->get_texture_info (sg, USTR(name),
+    return sg->renderer->get_texture_info (USTR(name),
                                            (RendererServices::TextureHandle *)handle,
+                                           sg->context->texture_thread_info(),
+                                           sg->context,
                                            0 /*FIXME-ptex*/,
-                                           USTR(dataname), typedesc, data);
+                                           USTR(dataname), typedesc, data,
+                                           errormessage);
 }
 
 

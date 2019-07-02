@@ -200,16 +200,13 @@ public:
 
     /// Given the name of a texture, return an opaque handle that can be
     /// used with texture calls to avoid the name lookups.
-    virtual TextureHandle * get_texture_handle (ustring filename);
+    virtual TextureHandle * get_texture_handle (ustring filename,
+                                                ShadingContext *context);
 
     /// Return true if the texture handle (previously returned by
     /// get_texture_handle()) is a valid texture that can be subsequently
     /// read or sampled.
     virtual bool good (TextureHandle *texture_handle);
-
-    /// Return a thread-specific opaque pointer to the texture system.
-    /// Knowing the context may help this go faster.
-    virtual TexturePerthread * get_texture_perthread (ShadingContext *context=NULL);
 
     /// Filtered 2D texture lookup for a single point.
     ///
@@ -322,14 +319,20 @@ public:
     /// can) use that extra information to perform a less expensive texture
     /// lookup.
     ///
-    /// Note to renderers: if sg is NULL, that means get_texture_info is
-    /// being called speculatively by the runtime optimizer, and it doesn't
-    /// know which object the shader will be run on.
-    virtual bool get_texture_info (ShaderGlobals *sg, ustring filename,
+    /// If the errormessage parameter is NULL, this method is expected to
+    /// handle the errors fully, including forwarding them to the renderer
+    /// or shading system. If errormessage is non-NULL, any resulting error
+    /// messages (in case of failure, when the function returns false) will
+    /// be stored there, leaving it up to the caller/shader to handle the
+    /// error.
+    virtual bool get_texture_info (ustring filename,
                                    TextureHandle *texture_handle,
+                                   TexturePerthread *texture_thread_info,
+                                   ShadingContext *shading_context,
                                    int subimage,
                                    ustring dataname, TypeDesc datatype,
-                                   void *data);
+                                   void *data,
+                                   ustring *errormessage);
 
 
     /// Lookup nearest points in a point cloud. It will search for

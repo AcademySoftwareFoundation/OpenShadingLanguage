@@ -57,7 +57,8 @@ static ustring u_nop    ("nop"),
                u_eq     ("eq"),
                u_return ("return"),
                u_error  ("error"),
-               u_fmterror("%s");
+               u_fmterror("%s"),
+               u_fmt_range_check("Index [%d] out of range %s[0..%d]: %s:%d (group %s, layer %d %s, shader %s)");
 
 static ustring u_cell ("cell"), u_cellnoise ("cellnoise");
 
@@ -778,19 +779,32 @@ DECLFOLDER(constfold_aref)
     if (A.is_constant() && Index.is_constant()) {
         TypeSpec elemtype = A.typespec().elementtype();
         ASSERT (equivalent(elemtype, R.typespec()));
-        int index = *(int *)Index.data();
-        if (index < 0 || index >= A.typespec().arraylength()) {
-            // We are indexing a const array out of range.  But this
-            // isn't necessarily a reportable error, because it may be a
-            // code path that will never be taken.  Punt -- don't
-            // optimize this op, leave it to the execute-time range
-            // check to catch, if indeed it is a problem.
-            return 0;
-        }
-        ASSERT (index < A.typespec().arraylength());
+        const int length = A.typespec().arraylength();
+        const int orig_index = *(int *)Index.data(), index = OIIO::clamp(orig_index, 0, length - 1);
+        DASSERT(index >=0 && index < length);
         int cind = rop.add_constant (elemtype,
                         (char *)A.data() + index*elemtype.simpletype().size());
         rop.turn_into_assign (op, cind, "aref const fold: const_array[const]");
+        if (rop.shadingsys().range_checking() && index != orig_index) {
+            // the original index was out of range, and the user cares about reporting errors
+            const int args_to_add[] = {
+                    rop.add_constant(u_fmt_range_check),
+                    rop.add_constant(orig_index),
+                    rop.add_constant(A.name()),
+                    rop.add_constant(length - 1),
+                    rop.add_constant(op.sourcefile()),
+                    rop.add_constant(op.sourceline()),
+                    rop.add_constant(rop.group().name()),
+                    rop.add_constant(rop.layer()),
+                    rop.add_constant(rop.inst()->layername()),
+                    rop.add_constant(ustring(rop.inst()->shadername()))
+            };
+            rop.insert_code(opnum, u_error, args_to_add,
+                         RuntimeOptimizer::RecomputeRWRanges,
+                         RuntimeOptimizer::GroupWithNext);
+            Opcode &newop (rop.inst()->ops()[opnum]);
+            newop.argreadonly(0);
+        }
         return 1;
     }
     // Even if the index isn't constant, we still know the answer if all

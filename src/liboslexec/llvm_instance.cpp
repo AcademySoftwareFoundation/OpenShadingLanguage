@@ -462,20 +462,20 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
             name_arg = ll.constant (symname);
         }
 
-        std::vector<llvm::Value*> args;
-        args.push_back (sg_void_ptr());
-        args.push_back (name_arg);
-        args.push_back (ll.constant (type));
-        args.push_back (ll.constant ((int) group().m_userdata_derivs[userdata_index]));
-        args.push_back (groupdata_field_ptr (2 + userdata_index)); // userdata data ptr
-        args.push_back (ll.constant ((int) sym.has_derivs()));
-        args.push_back (llvm_void_ptr (sym));
-        args.push_back (ll.constant (sym.derivsize()));
-        args.push_back (ll.void_ptr (userdata_initialized_ref(userdata_index)));
-        args.push_back (ll.constant (userdata_index));
+        llvm::Value* args[] = {
+            sg_void_ptr(),
+            name_arg,
+            ll.constant (type),
+            ll.constant ((int) group().m_userdata_derivs[userdata_index]),
+            groupdata_field_ptr (2 + userdata_index), // userdata data ptr
+            ll.constant ((int) sym.has_derivs()),
+            llvm_void_ptr (sym),
+            ll.constant (sym.derivsize()),
+            ll.void_ptr (userdata_initialized_ref(userdata_index)),
+            ll.constant (userdata_index),
+        };
         llvm::Value *got_userdata =
-            ll.call_function ("osl_bind_interpolated_param",
-                              &args[0], args.size());
+            ll.call_function ("osl_bind_interpolated_param", args);
         if (shadingsys().debug_nan() && type.basetype == TypeDesc::FLOAT) {
             // check for NaN/Inf for float-based types
             int ncomps = type.numelements() * type.aggregate;
@@ -486,7 +486,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
                                     ll.constant(0), ll.constant(ncomps),
                                     ll.constant("<get_userdata>")
             };
-            ll.call_function ("osl_naninf_check", args, 10);
+            ll.call_function ("osl_naninf_check", args);
         }
         // We will enclose the subsequent initialization of default values
         // or init ops in an "if" so that the extra copies or code don't
@@ -600,7 +600,7 @@ BackendLLVM::llvm_generate_debugnan (const Opcode &op)
                                 ncheck,
                                 ll.constant(op.opname())
                               };
-        ll.call_function ("osl_naninf_check", args, 10);
+        ll.call_function ("osl_naninf_check", args);
     }
 }
 
@@ -664,7 +664,7 @@ BackendLLVM::llvm_generate_debug_uninit (const Opcode &op)
                                 offset,
                                 ncheck
                               };
-        ll.call_function ("osl_uninit_check", args, 15);
+        ll.call_function ("osl_uninit_check", args);
     }
 }
 
@@ -891,7 +891,7 @@ BackendLLVM::build_llvm_instance (bool groupentry)
                      ll.constant(0), ll.constant(ncomps),
                      ll.constant("<none>")
                 };
-                ll.call_function ("osl_naninf_check", args, 10);
+                ll.call_function ("osl_naninf_check", args);
             }
         }
     }

@@ -284,7 +284,7 @@ public:
     /// subsequent instruction; NoRelation means we have no information,
     /// so don't copy that info from anywhere.
     void insert_code (int opnum, ustring opname,
-                      const OIIO::cspan<int> args_to_add,
+                      const cspan<int> args_to_add,
                       RecomputeRWRangesOption recompute_rw_ranges,
                       InsertRelation relation=GroupWithNext);
     /// insert_code with explicit arguments (up to 4, a value of -1 means

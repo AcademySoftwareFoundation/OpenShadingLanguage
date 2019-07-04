@@ -495,7 +495,7 @@ RuntimeOptimizer::turn_into_nop (int begin, int end, string_view why)
 
 void
 RuntimeOptimizer::insert_code (int opnum, ustring opname,
-                               const OIIO::cspan<int> args_to_add,
+                               const cspan<int> args_to_add,
                                RecomputeRWRangesOption recompute_rw_ranges,
                                InsertRelation relation)
 {
@@ -605,7 +605,7 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
     if (arg1 >= 0) args[nargs++] = arg1;
     if (arg2 >= 0) args[nargs++] = arg2;
     if (arg3 >= 0) args[nargs++] = arg3;
-    insert_code (opnum, opname, OIIO::cspan<int>(args, args + nargs), RecomputeRWRanges, relation);
+    insert_code (opnum, opname, cspan<int>(args, args + nargs), RecomputeRWRanges, relation);
 }
 
 

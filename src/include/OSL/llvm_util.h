@@ -30,6 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OSL/export.h>
 #include <OSL/oslversion.h>
+#include <OSL/oslconfig.h>
 
 #include <vector>
 
@@ -354,36 +355,27 @@ public:
     /// Generate code for a call to the function pointer, with the given
     /// arg list.  Return an llvm::Value* corresponding to the return
     /// value of the function, if any.
-    llvm::Value *call_function (llvm::Value *func,
-                                llvm::Value **args, int nargs);
+    llvm::Value *call_function (llvm::Value *func, cspan<llvm::Value *> args);
     /// Generate code for a call to the named function with the given arg
     /// list.  Return an llvm::Value* corresponding to the return value of
     /// the function, if any.
-    llvm::Value *call_function (const char *name,
-                                llvm::Value **args, int nargs);
-    template<size_t N>
-    llvm::Value* call_function (const char *name, llvm::Value* (&args)[N]) {
-        return call_function (name, &args[0], int(N));
-    }
+    llvm::Value *call_function (const char *name, cspan<llvm::Value *> args);
 
     llvm::Value *call_function (const char *name, llvm::Value *arg0) {
-        return call_function (name, &arg0, 1);
+        return call_function (name, cspan<llvm::Value*>(&arg0, 1));
     }
     llvm::Value *call_function (const char *name, llvm::Value *arg0,
                                 llvm::Value *arg1) {
-        llvm::Value *args[2] = { arg0, arg1 };
-        return call_function (name, args, 2);
+        return call_function (name, { arg0, arg1 });
     }
     llvm::Value *call_function (const char *name, llvm::Value *arg0,
                                 llvm::Value *arg1, llvm::Value *arg2) {
-        llvm::Value *args[3] = { arg0, arg1, arg2 };
-        return call_function (name, args, 3);
+        return call_function (name, { arg0, arg1, arg2 });
     }
     llvm::Value *call_function (const char *name, llvm::Value *arg0,
                                 llvm::Value *arg1, llvm::Value *arg2,
                                 llvm::Value *arg3) {
-        llvm::Value *args[4] = { arg0, arg1, arg2, arg3 };
-        return call_function (name, args, 4);
+        return call_function (name, { arg0, arg1, arg2, arg3 });
     }
 
     /// Mark the function call (which MUST be the value returned by a

@@ -376,15 +376,21 @@ public:
     /// is true, pass pointers even for floats if they have derivs.
     /// Return an llvm::Value* corresponding to the return value of the
     /// function, if any.
-    llvm::Value *llvm_call_function (const char *name,  const Symbol **args,
-                                     int nargs, bool deriv_ptrs=false);
-    llvm::Value *llvm_call_function (const char *name, const Symbol &A,
+    llvm::Value *llvm_call_function (const char *name, cspan<const Symbol *> args,
                                      bool deriv_ptrs=false);
     llvm::Value *llvm_call_function (const char *name, const Symbol &A,
-                                     const Symbol &B, bool deriv_ptrs=false);
+                                     bool deriv_ptrs=false) {
+        return llvm_call_function (name, { &A }, deriv_ptrs);
+    }
+    llvm::Value *llvm_call_function (const char *name, const Symbol &A,
+                                     const Symbol &B, bool deriv_ptrs=false) {
+        return llvm_call_function (name, { &A, &B }, deriv_ptrs);
+    }
     llvm::Value *llvm_call_function (const char *name, const Symbol &A,
                                      const Symbol &B, const Symbol &C,
-                                     bool deriv_ptrs=false);
+                                     bool deriv_ptrs=false) {
+        return llvm_call_function (name, { &A, &B, &C }, deriv_ptrs);
+    }
 
     TypeDesc llvm_typedesc (const TypeSpec &typespec) {
         return typespec.is_closure_based()

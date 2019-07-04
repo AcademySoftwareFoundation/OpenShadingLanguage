@@ -949,13 +949,21 @@ BackendLLVM::userdata_initialized_ref (int userdata_index)
 
 llvm::Value *
 BackendLLVM::llvm_call_function (const char *name, 
-                                      const Symbol **symargs, int nargs,
-                                      bool deriv_ptrs)
+                                 cspan<const Symbol *> args,
+                                 bool deriv_ptrs)
 {
-    std::vector<llvm::Value *> valargs;
-    valargs.resize ((size_t)nargs);
-    for (int i = 0;  i < nargs;  ++i) {
-        const Symbol &s = *(symargs[i]);
+    // most invocations of this function will only need a handful of args
+    // so avoid dynamic allocation where possible
+    constexpr int SHORT_NUM_ARGS = 16;
+    llvm::Value *short_valargs[SHORT_NUM_ARGS];
+    std::vector<llvm::Value*> long_valargs;
+    llvm::Value **valargs = short_valargs;
+    if (args.size() > SHORT_NUM_ARGS) {
+        long_valargs.resize(args.size());
+        valargs = long_valargs.data();
+    }
+    for (int i = 0, nargs = args.size();  i < nargs; ++i) {
+        const Symbol &s = *(args[i]);
         if (s.typespec().is_closure())
             valargs[i] = llvm_load_value (s);
         else if (use_optix() && s.typespec().is_string())
@@ -966,48 +974,8 @@ BackendLLVM::llvm_call_function (const char *name,
         else
             valargs[i] = llvm_load_value (s);
     }
-    return ll.call_function (name, (valargs.size())? &valargs[0]: NULL,
-                             (int)valargs.size());
+    return ll.call_function (name, cspan<llvm::Value*>(valargs, args.size()));
 }
-
-
-
-llvm::Value *
-BackendLLVM::llvm_call_function (const char *name, const Symbol &A,
-                                 bool deriv_ptrs)
-{
-    const Symbol *args[1];
-    args[0] = &A;
-    return llvm_call_function (name, args, 1, deriv_ptrs);
-}
-
-
-
-llvm::Value *
-BackendLLVM::llvm_call_function (const char *name, const Symbol &A,
-                                 const Symbol &B, bool deriv_ptrs)
-{
-    const Symbol *args[2];
-    args[0] = &A;
-    args[1] = &B;
-    return llvm_call_function (name, args, 2, deriv_ptrs);
-}
-
-
-
-llvm::Value *
-BackendLLVM::llvm_call_function (const char *name, const Symbol &A,
-                                 const Symbol &B, const Symbol &C,
-                                 bool deriv_ptrs)
-{
-    const Symbol *args[3];
-    args[0] = &A;
-    args[1] = &B;
-    args[2] = &C;
-    return llvm_call_function (name, args, 3, deriv_ptrs);
-}
-
-
 
 llvm::Value *
 BackendLLVM::llvm_test_nonzero (Symbol &val, bool test_derivs)

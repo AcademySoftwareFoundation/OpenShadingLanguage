@@ -1073,17 +1073,17 @@ LLVM_Util::op_alloca (const TypeDesc &type, int n, const std::string &name)
 
 
 llvm::Value *
-LLVM_Util::call_function (llvm::Value *func, llvm::Value **args, int nargs)
+LLVM_Util::call_function (llvm::Value *func, cspan<llvm::Value *> args)
 {
-    ASSERT (func);
+    DASSERT (func);
 #if 0
     llvm::outs() << "llvm_call_function " << *func << "\n";
     llvm::outs() << nargs << " args:\n";
-    for (int i = 0;  i < nargs;  ++i)
+    for (int i = 0, nargs = args.size();  i < nargs;  ++i)
         llvm::outs() << "\t" << *(args[i]) << "\n";
 #endif
     //llvm_gen_debug_printf (std::string("start ") + std::string(name));
-    llvm::Value *r = builder().CreateCall (func, llvm::ArrayRef<llvm::Value *>(args, nargs));
+    llvm::Value *r = builder().CreateCall (func, llvm::ArrayRef<llvm::Value *>(args.data(), args.size()));
     //llvm_gen_debug_printf (std::string(" end  ") + std::string(name));
     return r;
 }
@@ -1091,12 +1091,10 @@ LLVM_Util::call_function (llvm::Value *func, llvm::Value **args, int nargs)
 
 
 llvm::Value *
-LLVM_Util::call_function (const char *name, llvm::Value **args, int nargs)
+LLVM_Util::call_function (const char *name, cspan<llvm::Value *> args)
 {
     llvm::Function *func = module()->getFunction (name);
-    if (! func)
-        std::cerr << "Couldn't find function " << name << "\n";
-    return call_function (func, args, nargs);
+    return call_function (func, args);
 }
 
 

@@ -104,13 +104,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/typedesc.h>
 #include <OpenImageIO/ustring.h>
 #include <OpenImageIO/platform.h>
-
-// Make sure we can use OIIO::cspan
-#if OIIO_VERSION >= 10904
-#  include <OpenImageIO/span.h>
-#else
-#  include <OpenImageIO/array_view.h>
-#endif
+#include <OpenImageIO/span.h>
 
 // If we're using an old version of OIIO prior to the introduction of
 // Strutil::sprintf, define it ourselves to be a synonym for format.
@@ -166,13 +160,8 @@ using OIIO::TypeDesc;
 using OIIO::ustring;
 using OIIO::ustringHash;
 using OIIO::string_view;
-
-// Make sure we can use OIIO::cspan
-#if OIIO_VERSION >= 10904
-  using OIIO::cspan;
-#else
-  template<typename T> using cspan = OIIO::array_view<const T>;
-#endif
+using OIIO::span;
+using OIIO::cspan;
 
 
 // In C++20 (and some compilers before that), __has_cpp_attribute can

@@ -1123,13 +1123,7 @@ OSLToyMainWindow::set_param_diddle (ParamRec *param, int diddle)
 void
 OSLToyMainWindow::set_param_instance_value (ParamRec *param)
 {
-#if OPENIMAGEIO_VERSION >= 10903
     m_shaderparam_instvalues.remove (param->name);
-#else
-    auto&& found = m_shaderparam_instvalues.find (param->name);
-    if (found != m_shaderparam_instvalues.end())
-        m_shaderparam_instvalues.erase (found);
-#endif
 
     if (param->type == TypeDesc::INT) {
         int v = reinterpret_cast<QSpinBox*>(param->widgets[0])->value();

@@ -57,7 +57,7 @@ endif ()
 
 set (OIIO_LIBNAME_SUFFIX "" CACHE STRING
      "Optional name appended to OIIO libraries that are built")
-find_package (OpenImageIO 1.8.5 REQUIRED)
+find_package (OpenImageIO 2.0 REQUIRED)
 include_directories ("${OPENIMAGEIO_INCLUDE_DIR}")
 link_directories ("${OPENIMAGEIO_LIBRARY_DIRS}")
 message (STATUS "Using OpenImageIO ${OPENIMAGEIO_VERSION}")

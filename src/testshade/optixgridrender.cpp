@@ -336,8 +336,8 @@ OptixGridRenderer::get_texture_handle (ustring filename, ShadingContext* shading
 
         float* device_ptr = static_cast<float*>(buffer->map());
         unsigned int pixel_idx = 0;
-        for (unsigned y = 0; y < height; ++y) {
-            for (unsigned x = 0; x < width; ++x) {
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
                 memcpy(device_ptr, &pixels[pixel_idx], sizeof(float) * nchan);
                 device_ptr += 4;
                 pixel_idx += nchan;

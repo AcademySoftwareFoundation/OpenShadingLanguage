@@ -331,12 +331,19 @@ Films using OSL (grouped by year of release date):
   Bohemian Rhapsody,
   Holmes and Watson,
   Spider-Man: Into the Spider-Verse
-* **(2019) / upcoming**
+* **(2019 / upcoming)**
   The Kid Who Would Be King,
   Alita: Battle Angel,
   Lego Movie 2,
   Lucky 13,
   Captain Marvel,
+  Avengers: Endgame,
+  Pokémon Detective Pikachu,
+  Godzilla: King of Monsters,
+  Rim of the World,
+  Men in Black International,
+  Toy Story 4,
+  Spider-Man: Far From Home,
   ...
 
 

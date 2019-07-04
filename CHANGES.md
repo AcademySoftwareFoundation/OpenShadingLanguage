@@ -1,6 +1,8 @@
-Release 1.10.6 -- Jun 1??, 2019 (compared to 1.10.5)
+Release 1.10.6 -- Jul 4, 2019 (compared to 1.10.5)
 --------------------------------------------------
-
+* Build: Fixes to FindOpenEXR.cmake. #1022
+* ShadingSystem: when building a shader group from serialized commands,
+  respect the global lockgeom default. #1032
 
 Release 1.10.5 -- May 1, 2019 (compared to 1.10.4)
 --------------------------------------------------

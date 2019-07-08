@@ -174,7 +174,6 @@ test_perlin ()
         OIIO_CHECK_EQUAL_THRESH (vs4, vresults_4d[i], eps);
     }
 
-#if OPENIMAGEIO_VERSION >= 10904
     // Make sure the right thing happens at integer cell boundaries.
     // Perlin noise should be continuous everywhere.
     OIIO_CHECK_EQUAL_APPROX (noise( 0.9999f), noise( 1.0f));
@@ -185,7 +184,6 @@ test_perlin ()
     OIIO_CHECK_EQUAL_APPROX (noise(-0.9999f), noise(-1.0f));
     Strutil::printf ("noise around -1: %g %g %g\n", 
                      noise(-0.9999f), noise(-1.0f), noise(-1.0001f));
-#endif
 
     if (make_images) {
         MAKE_IMAGE (noise);
@@ -262,7 +260,6 @@ test_cell ()
         OIIO_CHECK_EQUAL_THRESH (vs4, vresults_4d[i], eps);
     }
 
-#if OPENIMAGEIO_VERSION >= 10904
     // Make sure the right thing happens at integer cell boundaries
     OIIO_CHECK_EQUAL (cellnoise( 1.0001f), cellnoise( 1.0f));
     OIIO_CHECK_NE    (cellnoise( 0.9999f), cellnoise( 1.0f));
@@ -272,7 +269,6 @@ test_cell ()
     OIIO_CHECK_EQUAL (cellnoise(-0.0001f), cellnoise(-1.0f));
     OIIO_CHECK_EQUAL (cellnoise(-0.9999f), cellnoise(-1.0f));
     OIIO_CHECK_EQUAL (cellnoise(-1.0001f), cellnoise(-2.0f));
-#endif
 
     if (make_images) {
         MAKE_IMAGE (cellnoise);
@@ -350,7 +346,6 @@ test_hash ()
         OIIO_CHECK_EQUAL_THRESH (vs4, vresults_4d[i], eps);
     }
 
-#if OPENIMAGEIO_VERSION >= 10904
     // Make sure the right thing happens at integer cell boundaries.
     // hashnoise should be discontinuous everywhere!
     OIIO_CHECK_NE (hashnoise( 0.9999f), hashnoise( 1.0f));
@@ -359,7 +354,6 @@ test_hash ()
     OIIO_CHECK_NE (hashnoise( 0.0001f), hashnoise( 0.0f));
     OIIO_CHECK_NE (hashnoise(-1.0001f), hashnoise(-1.0f));
     OIIO_CHECK_NE (hashnoise(-0.9999f), hashnoise(-1.0f));
-#endif
 
     if (make_images) {
         MAKE_IMAGE (hashnoise);

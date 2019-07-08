@@ -36,9 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/refcnt.h>
 #include <OpenImageIO/ustring.h>
-#if OPENIMAGEIO_VERSION <= 10902
-#include <OpenImageIO/imagebufalgo_util.h>
-#endif
+
 
 OSL_NAMESPACE_ENTER
 

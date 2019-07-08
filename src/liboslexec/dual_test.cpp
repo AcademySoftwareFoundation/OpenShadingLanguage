@@ -37,11 +37,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace OSL;
 
-// Fix namespace problem with OIIO unit tests in older versions.
-#if OIIO_VERSION < 10901
-using namespace OIIO;
-#endif
-
 typedef Dual<float,1> Dualf;
 typedef Dual2<float> Dual2f;
 

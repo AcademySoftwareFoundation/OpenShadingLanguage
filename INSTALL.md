@@ -20,7 +20,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
   OSL should compile also properly with C++14 or C++17, but they are not
   required.
 
-* **[OpenImageIO](http://openimageio.org) 1.8.5 or newer**
+* **[OpenImageIO](http://openimageio.org) 2.0 or newer**
 
     OSL uses OIIO both for its texture mapping functionality as well as
     numerous utility classes.  If you are integrating OSL into an existing

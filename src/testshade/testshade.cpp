@@ -1320,7 +1320,6 @@ test_shade (int argc, const char *argv[])
     delete shadingsys;
     int retcode = EXIT_SUCCESS;
 
-#if OPENIMAGEIO_VERSION >= 10904
     // Double check that there were no uncaught errors in the texture
     // system and image cache.
     std::string err = texturesys->geterror();
@@ -1334,7 +1333,6 @@ test_shade (int argc, const char *argv[])
         std::cout << "ERRORS left in ImageCache:\n" << err << "\n";
         retcode = EXIT_FAILURE;
     }
-#endif
 
     delete rend;
 

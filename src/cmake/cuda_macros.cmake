@@ -18,6 +18,7 @@ FUNCTION ( NVCC_COMPILE cuda_src ptx_generated extra_nvcc_args )
             "-I${OPENIMAGEIO_INCLUDE_DIR}"
             "-I${ILMBASE_INCLUDE_DIR}"
             "-I${Boost_INCLUDE_DIRS}"
+            "-DFMT_DEPRECATED=\"\""
             ${LLVM_COMPILE_FLAGS}
             -DOSL_USE_FAST_MATH=1
             -m64 -arch ${CUDA_TARGET_ARCH} -ptx

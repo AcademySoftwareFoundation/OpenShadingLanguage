@@ -529,6 +529,7 @@ BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym)
         (sym.typespec().is_scalarnum()) ? 4 :
         (sym.typespec().is_triple()   ) ? 8 :
         (sym.typespec().is_array()    ) ? 8 :
+        (sym.typespec().is_matrix()   ) ? 8 :
         (sym.typespec().is_string()   ) ? 8 : -1;
 
     if (alignment < 1) {

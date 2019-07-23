@@ -443,35 +443,35 @@ template <class T> class Matrix44
 
     T           x[4][4];
 
-    T *         operator [] (int i);
-    const T *   operator [] (int i) const;
+    IMATH_HOSTDEVICE T *         operator [] (int i);
+    IMATH_HOSTDEVICE const T *   operator [] (int i) const;
 
 
     //-------------
     // Constructors
     //-------------
 
-    Matrix44 (Uninitialized) {}
+    IMATH_HOSTDEVICE Matrix44 (Uninitialized) {}
 
-    Matrix44 ();
+    IMATH_HOSTDEVICE Matrix44 ();
                                 // 1 0 0 0
                                 // 0 1 0 0
                                 // 0 0 1 0
                                 // 0 0 0 1
 
-    Matrix44 (T a);
+    IMATH_HOSTDEVICE Matrix44 (T a);
                                 // a a a a
                                 // a a a a
                                 // a a a a
                                 // a a a a
 
-    Matrix44 (const T a[4][4]) ;
+    IMATH_HOSTDEVICE Matrix44 (const T a[4][4]) ;
                                 // a[0][0] a[0][1] a[0][2] a[0][3]
                                 // a[1][0] a[1][1] a[1][2] a[1][3]
                                 // a[2][0] a[2][1] a[2][2] a[2][3]
                                 // a[3][0] a[3][1] a[3][2] a[3][3]
 
-    Matrix44 (T a, T b, T c, T d, T e, T f, T g, T h,
+    IMATH_HOSTDEVICE Matrix44 (T a, T b, T c, T d, T e, T f, T g, T h,
               T i, T j, T k, T l, T m, T n, T o, T p);
 
                                 // a b c d
@@ -479,7 +479,7 @@ template <class T> class Matrix44
                                 // i j k l
                                 // m n o p
 
-    Matrix44 (Matrix33<T> r, Vec3<T> t);
+    IMATH_HOSTDEVICE Matrix44 (Matrix33<T> r, Vec3<T> t);
                                 // r r r 0
                                 // r r r 0
                                 // r r r 0
@@ -490,41 +490,41 @@ template <class T> class Matrix44
     // Copy constructor and assignment
     //--------------------------------
 
-    Matrix44 (const Matrix44 &v);
-    template <class S> explicit Matrix44 (const Matrix44<S> &v);
+    IMATH_HOSTDEVICE Matrix44 (const Matrix44 &v);
+    template <class S> explicit IMATH_HOSTDEVICE Matrix44 (const Matrix44<S> &v);
 
-    const Matrix44 &    operator = (const Matrix44 &v);
-    const Matrix44 &    operator = (T a);
+    IMATH_HOSTDEVICE const Matrix44 &    operator = (const Matrix44 &v);
+    IMATH_HOSTDEVICE const Matrix44 &    operator = (T a);
 
 
     //----------------------
     // Compatibility with Sb
     //----------------------
 
-    T *                 getValue ();
-    const T *           getValue () const;
+    IMATH_HOSTDEVICE T *                 getValue ();
+    IMATH_HOSTDEVICE const T *           getValue () const;
 
     template <class S>
-    void                getValue (Matrix44<S> &v) const;
+    IMATH_HOSTDEVICE void                getValue (Matrix44<S> &v) const;
     template <class S>
-    Matrix44 &          setValue (const Matrix44<S> &v);
+    IMATH_HOSTDEVICE Matrix44 &          setValue (const Matrix44<S> &v);
 
     template <class S>
-    Matrix44 &          setTheMatrix (const Matrix44<S> &v);
+    IMATH_HOSTDEVICE Matrix44 &          setTheMatrix (const Matrix44<S> &v);
 
     //---------
     // Identity
     //---------
 
-    void                makeIdentity();
+    IMATH_HOSTDEVICE void                makeIdentity();
 
 
     //---------
     // Equality
     //---------
 
-    bool                operator == (const Matrix44 &v) const;
-    bool                operator != (const Matrix44 &v) const;
+    IMATH_HOSTDEVICE bool                operator == (const Matrix44 &v) const;
+    IMATH_HOSTDEVICE bool                operator != (const Matrix44 &v) const;
 
     //-----------------------------------------------------------------------
     // Compare two matrices and test if they are "approximately equal":
@@ -544,52 +544,52 @@ template <class T> class Matrix44
     //      abs (this[i] - v[i][j]) <= e * abs (this[i][j])
     //-----------------------------------------------------------------------
 
-    bool                equalWithAbsError (const Matrix44<T> &v, T e) const;
-    bool                equalWithRelError (const Matrix44<T> &v, T e) const;
+    IMATH_HOSTDEVICE bool                equalWithAbsError (const Matrix44<T> &v, T e) const;
+    IMATH_HOSTDEVICE bool                equalWithRelError (const Matrix44<T> &v, T e) const;
 
 
     //------------------------
     // Component-wise addition
     //------------------------
 
-    const Matrix44 &    operator += (const Matrix44 &v);
-    const Matrix44 &    operator += (T a);
-    Matrix44            operator + (const Matrix44 &v) const;
+    IMATH_HOSTDEVICE const Matrix44 &    operator += (const Matrix44 &v);
+    IMATH_HOSTDEVICE const Matrix44 &    operator += (T a);
+    IMATH_HOSTDEVICE Matrix44            operator + (const Matrix44 &v) const;
 
 
     //---------------------------
     // Component-wise subtraction
     //---------------------------
 
-    const Matrix44 &    operator -= (const Matrix44 &v);
-    const Matrix44 &    operator -= (T a);
-    Matrix44            operator - (const Matrix44 &v) const;
+    IMATH_HOSTDEVICE const Matrix44 &    operator -= (const Matrix44 &v);
+    IMATH_HOSTDEVICE const Matrix44 &    operator -= (T a);
+    IMATH_HOSTDEVICE Matrix44            operator - (const Matrix44 &v) const;
 
 
     //------------------------------------
     // Component-wise multiplication by -1
     //------------------------------------
 
-    Matrix44            operator - () const;
-    const Matrix44 &    negate ();
+    IMATH_HOSTDEVICE Matrix44            operator - () const;
+    IMATH_HOSTDEVICE const Matrix44 &    negate ();
 
 
     //------------------------------
     // Component-wise multiplication
     //------------------------------
 
-    const Matrix44 &    operator *= (T a);
-    Matrix44            operator * (T a) const;
+    IMATH_HOSTDEVICE const Matrix44 &    operator *= (T a);
+    IMATH_HOSTDEVICE Matrix44            operator * (T a) const;
 
 
     //-----------------------------------
     // Matrix-times-matrix multiplication
     //-----------------------------------
 
-    const Matrix44 &    operator *= (const Matrix44 &v);
-    Matrix44            operator * (const Matrix44 &v) const;
+    IMATH_HOSTDEVICE const Matrix44 &    operator *= (const Matrix44 &v);
+    IMATH_HOSTDEVICE Matrix44            operator * (const Matrix44 &v) const;
 
-    static void         multiply (const Matrix44 &a,    // assumes that
+    IMATH_HOSTDEVICE static void         multiply (const Matrix44 &a,    // assumes that
                                   const Matrix44 &b,    // &a != &c and
                                   Matrix44 &c);         // &b != &c.
 
@@ -607,26 +607,26 @@ template <class T> class Matrix44
     //-----------------------------------------------------------------
 
     template <class S>
-    void                multVecMatrix(const Vec3<S> &src, Vec3<S> &dst) const;
+    IMATH_HOSTDEVICE void                multVecMatrix(const Vec3<S> &src, Vec3<S> &dst) const;
 
     template <class S>
-    void                multDirMatrix(const Vec3<S> &src, Vec3<S> &dst) const;
+    IMATH_HOSTDEVICE void                multDirMatrix(const Vec3<S> &src, Vec3<S> &dst) const;
 
 
     //------------------------
     // Component-wise division
     //------------------------
 
-    const Matrix44 &    operator /= (T a);
-    Matrix44            operator / (T a) const;
+    IMATH_HOSTDEVICE const Matrix44 &    operator /= (T a);
+    IMATH_HOSTDEVICE Matrix44            operator / (T a) const;
 
 
     //------------------
     // Transposed matrix
     //------------------
 
-    const Matrix44 &    transpose ();
-    Matrix44            transposed () const;
+    IMATH_HOSTDEVICE const Matrix44 &    transpose ();
+    IMATH_HOSTDEVICE Matrix44            transposed () const;
 
 
     //------------------------------------------------------------
@@ -643,16 +643,16 @@ template <class T> class Matrix44
     //
     //------------------------------------------------------------
 
-    const Matrix44 &    invert (bool singExc = false)
+    IMATH_HOSTDEVICE const Matrix44 &    invert (bool singExc = false)
                         throw (IEX_NAMESPACE::MathExc);
 
-    Matrix44<T>         inverse (bool singExc = false) const
+    IMATH_HOSTDEVICE Matrix44<T>         inverse (bool singExc = false) const
                         throw (IEX_NAMESPACE::MathExc);
 
-    const Matrix44 &    gjInvert (bool singExc = false)
+    IMATH_HOSTDEVICE const Matrix44 &    gjInvert (bool singExc = false)
                         throw (IEX_NAMESPACE::MathExc);
 
-    Matrix44<T>         gjInverse (bool singExc = false) const
+    IMATH_HOSTDEVICE Matrix44<T>         gjInverse (bool singExc = false) const
                         throw (IEX_NAMESPACE::MathExc);
 
 
@@ -660,27 +660,27 @@ template <class T> class Matrix44
     // Calculate the matrix minor of the (r,c) element
     //------------------------------------------------
 
-    T                   minorOf (const int r, const int c) const;
+    IMATH_HOSTDEVICE T                   minorOf (const int r, const int c) const;
 
     //---------------------------------------------------
     // Build a minor using the specified rows and columns
     //---------------------------------------------------
 
-    T                   fastMinor (const int r0, const int r1, const int r2,
+    IMATH_HOSTDEVICE T                   fastMinor (const int r0, const int r1, const int r2,
                                    const int c0, const int c1, const int c2) const;
 
     //------------
     // Determinant
     //------------
 
-    T                   determinant() const;
+    IMATH_HOSTDEVICE T                   determinant() const;
 
     //--------------------------------------------------------
     // Set matrix to rotation by XYZ euler angles (in radians)
     //--------------------------------------------------------
 
     template <class S>
-    const Matrix44 &    setEulerAngles (const Vec3<S>& r);
+    IMATH_HOSTDEVICE const Matrix44 &    setEulerAngles (const Vec3<S>& r);
 
 
     //--------------------------------------------------------
@@ -688,7 +688,7 @@ template <class T> class Matrix44
     //--------------------------------------------------------
 
     template <class S>
-    const Matrix44 &    setAxisAngle (const Vec3<S>& ax, S ang);
+    IMATH_HOSTDEVICE const Matrix44 &    setAxisAngle (const Vec3<S>& ax, S ang);
 
 
     //-------------------------------------------
@@ -696,14 +696,14 @@ template <class T> class Matrix44
     //-------------------------------------------
 
     template <class S>
-    const Matrix44 &    rotate (const Vec3<S> &r);
+    IMATH_HOSTDEVICE const Matrix44 &    rotate (const Vec3<S> &r);
 
 
     //--------------------------------------------
     // Set matrix to scale by given uniform factor
     //--------------------------------------------
 
-    const Matrix44 &    setScale (T s);
+    IMATH_HOSTDEVICE const Matrix44 &    setScale (T s);
 
 
     //------------------------------------
@@ -711,7 +711,7 @@ template <class T> class Matrix44
     //------------------------------------
 
     template <class S>
-    const Matrix44 &    setScale (const Vec3<S> &s);
+    IMATH_HOSTDEVICE const Matrix44 &    setScale (const Vec3<S> &s);
 
 
     //----------------------
@@ -719,7 +719,7 @@ template <class T> class Matrix44
     //----------------------
 
     template <class S>
-    const Matrix44 &    scale (const Vec3<S> &s);
+    IMATH_HOSTDEVICE const Matrix44 &    scale (const Vec3<S> &s);
 
 
     //------------------------------------------
@@ -727,14 +727,14 @@ template <class T> class Matrix44
     //------------------------------------------
 
     template <class S>
-    const Matrix44 &    setTranslation (const Vec3<S> &t);
+    IMATH_HOSTDEVICE const Matrix44 &    setTranslation (const Vec3<S> &t);
 
 
     //-----------------------------
     // Return translation component
     //-----------------------------
 
-    const Vec3<T>       translation () const;
+    IMATH_HOSTDEVICE const Vec3<T>       translation () const;
 
 
     //--------------------------
@@ -742,7 +742,7 @@ template <class T> class Matrix44
     //--------------------------
 
     template <class S>
-    const Matrix44 &    translate (const Vec3<S> &t);
+    IMATH_HOSTDEVICE const Matrix44 &    translate (const Vec3<S> &t);
 
 
     //-------------------------------------------------------------
@@ -753,7 +753,7 @@ template <class T> class Matrix44
     //-------------------------------------------------------------
 
     template <class S>
-    const Matrix44 &    setShear (const Vec3<S> &h);
+    IMATH_HOSTDEVICE const Matrix44 &    setShear (const Vec3<S> &h);
 
 
     //------------------------------------------------------------
@@ -767,7 +767,7 @@ template <class T> class Matrix44
     //------------------------------------------------------------
 
     template <class S>
-    const Matrix44 &    setShear (const Shear6<S> &h);
+    IMATH_HOSTDEVICE const Matrix44 &    setShear (const Shear6<S> &h);
 
 
     //--------------------------------------------------------
@@ -779,14 +779,14 @@ template <class T> class Matrix44
     //--------------------------------------------------------
 
     template <class S>
-    const Matrix44 &    shear (const Vec3<S> &h);
+    IMATH_HOSTDEVICE const Matrix44 &    shear (const Vec3<S> &h);
 
     //--------------------------------------------------------
     // Number of the row and column dimensions, since
     // Matrix44 is a square matrix.
     //--------------------------------------------------------
 
-    static unsigned int	dimensions() {return 4;}
+    IMATH_HOSTDEVICE static unsigned int	dimensions() {return 4;}
 
 
     //------------------------------------------------------------
@@ -801,17 +801,17 @@ template <class T> class Matrix44
     //------------------------------------------------------------
 
     template <class S>
-    const Matrix44 &    shear (const Shear6<S> &h);
+    IMATH_HOSTDEVICE const Matrix44 &    shear (const Shear6<S> &h);
 
 
     //-------------------------------------------------
     // Limitations of type T (see also class limits<T>)
     //-------------------------------------------------
 
-    static T            baseTypeMin()           {return limits<T>::min();}
-    static T            baseTypeMax()           {return limits<T>::max();}
-    static T            baseTypeSmallest()      {return limits<T>::smallest();}
-    static T            baseTypeEpsilon()       {return limits<T>::epsilon();}
+    IMATH_HOSTDEVICE static T            baseTypeMin()           {return limits<T>::min();}
+    IMATH_HOSTDEVICE static T            baseTypeMax()           {return limits<T>::max();}
+    IMATH_HOSTDEVICE static T            baseTypeSmallest()      {return limits<T>::smallest();}
+    IMATH_HOSTDEVICE static T            baseTypeEpsilon()       {return limits<T>::epsilon();}
 
     typedef T		BaseType;
     typedef Vec4<T>	BaseVecType;
@@ -1895,21 +1895,21 @@ Matrix33<T>::shear (const Vec2<S> &h)
 //---------------------------
 
 template <class T>
-inline T *
+IMATH_HOSTDEVICE inline T *
 Matrix44<T>::operator [] (int i)
 {
     return x[i];
 }
 
 template <class T>
-inline const T *
+IMATH_HOSTDEVICE inline const T *
 Matrix44<T>::operator [] (int i) const
 {
     return x[i];
 }
 
 template <class T>
-inline
+IMATH_HOSTDEVICE inline
 Matrix44<T>::Matrix44 ()
 {
     memset (x, 0, sizeof (x));
@@ -1920,7 +1920,7 @@ Matrix44<T>::Matrix44 ()
 }
 
 template <class T>
-inline
+IMATH_HOSTDEVICE inline
 Matrix44<T>::Matrix44 (T a)
 {
     x[0][0] = a;
@@ -1942,14 +1942,14 @@ Matrix44<T>::Matrix44 (T a)
 }
 
 template <class T>
-inline
+IMATH_HOSTDEVICE inline
 Matrix44<T>::Matrix44 (const T a[4][4])
 {
     memcpy (x, a, sizeof (x));
 }
 
 template <class T>
-inline
+IMATH_HOSTDEVICE inline
 Matrix44<T>::Matrix44 (T a, T b, T c, T d, T e, T f, T g, T h,
                        T i, T j, T k, T l, T m, T n, T o, T p)
 {
@@ -1973,7 +1973,7 @@ Matrix44<T>::Matrix44 (T a, T b, T c, T d, T e, T f, T g, T h,
 
 
 template <class T>
-inline
+IMATH_HOSTDEVICE inline
 Matrix44<T>::Matrix44 (Matrix33<T> r, Vec3<T> t)
 {
     x[0][0] = r[0][0];
@@ -1995,7 +1995,7 @@ Matrix44<T>::Matrix44 (Matrix33<T> r, Vec3<T> t)
 }
 
 template <class T>
-inline
+IMATH_HOSTDEVICE inline
 Matrix44<T>::Matrix44 (const Matrix44 &v)
 {
     x[0][0] = v.x[0][0];
@@ -2018,7 +2018,7 @@ Matrix44<T>::Matrix44 (const Matrix44 &v)
 
 template <class T>
 template <class S>
-inline
+IMATH_HOSTDEVICE inline
 Matrix44<T>::Matrix44 (const Matrix44<S> &v)
 {
     x[0][0] = T (v.x[0][0]);
@@ -2040,7 +2040,7 @@ Matrix44<T>::Matrix44 (const Matrix44<S> &v)
 }
 
 template <class T>
-inline const Matrix44<T> &
+IMATH_HOSTDEVICE inline const Matrix44<T> &
 Matrix44<T>::operator = (const Matrix44 &v)
 {
     x[0][0] = v.x[0][0];
@@ -2063,7 +2063,7 @@ Matrix44<T>::operator = (const Matrix44 &v)
 }
 
 template <class T>
-inline const Matrix44<T> &
+IMATH_HOSTDEVICE inline const Matrix44<T> &
 Matrix44<T>::operator = (T a)
 {
     x[0][0] = a;
@@ -2086,14 +2086,14 @@ Matrix44<T>::operator = (T a)
 }
 
 template <class T>
-inline T *
+IMATH_HOSTDEVICE inline T *
 Matrix44<T>::getValue ()
 {
     return (T *) &x[0][0];
 }
 
 template <class T>
-inline const T *
+IMATH_HOSTDEVICE inline const T *
 Matrix44<T>::getValue () const
 {
     return (const T *) &x[0][0];
@@ -2101,7 +2101,7 @@ Matrix44<T>::getValue () const
 
 template <class T>
 template <class S>
-inline void
+IMATH_HOSTDEVICE inline void
 Matrix44<T>::getValue (Matrix44<S> &v) const
 {
     if (isSameType<S,T>::value)
@@ -2131,7 +2131,7 @@ Matrix44<T>::getValue (Matrix44<S> &v) const
 
 template <class T>
 template <class S>
-inline Matrix44<T> &
+IMATH_HOSTDEVICE inline Matrix44<T> &
 Matrix44<T>::setValue (const Matrix44<S> &v)
 {
     if (isSameType<S,T>::value)
@@ -2163,7 +2163,7 @@ Matrix44<T>::setValue (const Matrix44<S> &v)
 
 template <class T>
 template <class S>
-inline Matrix44<T> &
+IMATH_HOSTDEVICE inline Matrix44<T> &
 Matrix44<T>::setTheMatrix (const Matrix44<S> &v)
 {
     if (isSameType<S,T>::value)
@@ -2194,7 +2194,7 @@ Matrix44<T>::setTheMatrix (const Matrix44<S> &v)
 }
 
 template <class T>
-inline void
+IMATH_HOSTDEVICE inline void
 Matrix44<T>::makeIdentity()
 {
     memset (x, 0, sizeof (x));
@@ -2205,7 +2205,7 @@ Matrix44<T>::makeIdentity()
 }
 
 template <class T>
-bool
+IMATH_HOSTDEVICE bool
 Matrix44<T>::operator == (const Matrix44 &v) const
 {
     return x[0][0] == v.x[0][0] &&
@@ -2227,7 +2227,7 @@ Matrix44<T>::operator == (const Matrix44 &v) const
 }
 
 template <class T>
-bool
+IMATH_HOSTDEVICE bool
 Matrix44<T>::operator != (const Matrix44 &v) const
 {
     return x[0][0] != v.x[0][0] ||
@@ -2249,7 +2249,7 @@ Matrix44<T>::operator != (const Matrix44 &v) const
 }
 
 template <class T>
-bool
+IMATH_HOSTDEVICE bool
 Matrix44<T>::equalWithAbsError (const Matrix44<T> &m, T e) const
 {
     for (int i = 0; i < 4; i++)
@@ -2261,7 +2261,7 @@ Matrix44<T>::equalWithAbsError (const Matrix44<T> &m, T e) const
 }
 
 template <class T>
-bool
+IMATH_HOSTDEVICE bool
 Matrix44<T>::equalWithRelError (const Matrix44<T> &m, T e) const
 {
     for (int i = 0; i < 4; i++)
@@ -2273,7 +2273,7 @@ Matrix44<T>::equalWithRelError (const Matrix44<T> &m, T e) const
 }
 
 template <class T>
-const Matrix44<T> &
+IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::operator += (const Matrix44<T> &v)
 {
     x[0][0] += v.x[0][0];
@@ -2297,7 +2297,7 @@ Matrix44<T>::operator += (const Matrix44<T> &v)
 }
 
 template <class T>
-const Matrix44<T> &
+IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::operator += (T a)
 {
     x[0][0] += a;
@@ -2321,7 +2321,7 @@ Matrix44<T>::operator += (T a)
 }
 
 template <class T>
-Matrix44<T>
+IMATH_HOSTDEVICE Matrix44<T>
 Matrix44<T>::operator + (const Matrix44<T> &v) const
 {
     return Matrix44 (x[0][0] + v.x[0][0],
@@ -2343,7 +2343,7 @@ Matrix44<T>::operator + (const Matrix44<T> &v) const
 }
 
 template <class T>
-const Matrix44<T> &
+IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::operator -= (const Matrix44<T> &v)
 {
     x[0][0] -= v.x[0][0];
@@ -2367,7 +2367,7 @@ Matrix44<T>::operator -= (const Matrix44<T> &v)
 }
 
 template <class T>
-const Matrix44<T> &
+IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::operator -= (T a)
 {
     x[0][0] -= a;
@@ -2391,7 +2391,7 @@ Matrix44<T>::operator -= (T a)
 }
 
 template <class T>
-Matrix44<T>
+IMATH_HOSTDEVICE Matrix44<T>
 Matrix44<T>::operator - (const Matrix44<T> &v) const
 {
     return Matrix44 (x[0][0] - v.x[0][0],
@@ -2413,7 +2413,7 @@ Matrix44<T>::operator - (const Matrix44<T> &v) const
 }
 
 template <class T>
-Matrix44<T>
+IMATH_HOSTDEVICE Matrix44<T>
 Matrix44<T>::operator - () const
 {
     return Matrix44 (-x[0][0],
@@ -2435,7 +2435,7 @@ Matrix44<T>::operator - () const
 }
 
 template <class T>
-const Matrix44<T> &
+IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::negate ()
 {
     x[0][0] = -x[0][0];
@@ -2459,7 +2459,7 @@ Matrix44<T>::negate ()
 }
 
 template <class T>
-const Matrix44<T> &
+IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::operator *= (T a)
 {
     x[0][0] *= a;
@@ -2483,7 +2483,7 @@ Matrix44<T>::operator *= (T a)
 }
 
 template <class T>
-Matrix44<T>
+IMATH_HOSTDEVICE Matrix44<T>
 Matrix44<T>::operator * (T a) const
 {
     return Matrix44 (x[0][0] * a,
@@ -2505,14 +2505,14 @@ Matrix44<T>::operator * (T a) const
 }
 
 template <class T>
-inline Matrix44<T>
+IMATH_HOSTDEVICE inline Matrix44<T>
 operator * (T a, const Matrix44<T> &v)
 {
     return v * a;
 }
 
 template <class T>
-inline const Matrix44<T> &
+IMATH_HOSTDEVICE inline const Matrix44<T> &
 Matrix44<T>::operator *= (const Matrix44<T> &v)
 {
     Matrix44 tmp (T (0));
@@ -2523,7 +2523,7 @@ Matrix44<T>::operator *= (const Matrix44<T> &v)
 }
 
 template <class T>
-inline Matrix44<T>
+IMATH_HOSTDEVICE inline Matrix44<T>
 Matrix44<T>::operator * (const Matrix44<T> &v) const
 {
     Matrix44 tmp (T (0));
@@ -2533,7 +2533,7 @@ Matrix44<T>::operator * (const Matrix44<T> &v) const
 }
 
 template <class T>
-void
+IMATH_HOSTDEVICE void
 Matrix44<T>::multiply (const Matrix44<T> &a,
                        const Matrix44<T> &b,
                        Matrix44<T> &c)
@@ -2586,7 +2586,7 @@ Matrix44<T>::multiply (const Matrix44<T> &a,
 }
 
 template <class T> template <class S>
-void
+IMATH_HOSTDEVICE void
 Matrix44<T>::multVecMatrix(const Vec3<S> &src, Vec3<S> &dst) const
 {
     S a, b, c, w;
@@ -2602,7 +2602,7 @@ Matrix44<T>::multVecMatrix(const Vec3<S> &src, Vec3<S> &dst) const
 }
 
 template <class T> template <class S>
-void
+IMATH_HOSTDEVICE void
 Matrix44<T>::multDirMatrix(const Vec3<S> &src, Vec3<S> &dst) const
 {
     S a, b, c;
@@ -2617,7 +2617,7 @@ Matrix44<T>::multDirMatrix(const Vec3<S> &src, Vec3<S> &dst) const
 }
 
 template <class T>
-const Matrix44<T> &
+IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::operator /= (T a)
 {
     x[0][0] /= a;
@@ -2641,7 +2641,7 @@ Matrix44<T>::operator /= (T a)
 }
 
 template <class T>
-Matrix44<T>
+IMATH_HOSTDEVICE Matrix44<T>
 Matrix44<T>::operator / (T a) const
 {
     return Matrix44 (x[0][0] / a,
@@ -2663,7 +2663,7 @@ Matrix44<T>::operator / (T a) const
 }
 
 template <class T>
-const Matrix44<T> &
+IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::transpose ()
 {
     Matrix44 tmp (x[0][0],
@@ -2687,7 +2687,7 @@ Matrix44<T>::transpose ()
 }
 
 template <class T>
-Matrix44<T>
+IMATH_HOSTDEVICE Matrix44<T>
 Matrix44<T>::transposed () const
 {
     return Matrix44 (x[0][0],
@@ -2709,7 +2709,7 @@ Matrix44<T>::transposed () const
 }
 
 template <class T>
-const Matrix44<T> &
+IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::gjInvert (bool singExc) throw (IEX_NAMESPACE::MathExc)
 {
     *this = gjInverse (singExc);
@@ -2717,7 +2717,7 @@ Matrix44<T>::gjInvert (bool singExc) throw (IEX_NAMESPACE::MathExc)
 }
 
 template <class T>
-Matrix44<T>
+IMATH_HOSTDEVICE Matrix44<T>
 Matrix44<T>::gjInverse (bool singExc) const throw (IEX_NAMESPACE::MathExc)
 {
     int i, j, k;
@@ -2751,8 +2751,10 @@ Matrix44<T>::gjInverse (bool singExc) const throw (IEX_NAMESPACE::MathExc)
 
         if (pivotsize == 0)
         {
+#ifndef __CUDACC__
             if (singExc)
                 throw ::IMATH_INTERNAL_NAMESPACE::SingMatrixExc ("Cannot invert singular matrix.");
+#endif
 
             return Matrix44();
         }
@@ -2793,8 +2795,10 @@ Matrix44<T>::gjInverse (bool singExc) const throw (IEX_NAMESPACE::MathExc)
 
         if ((f = t[i][i]) == 0)
         {
+#ifndef __CUDACC__
             if (singExc)
                 throw ::IMATH_INTERNAL_NAMESPACE::SingMatrixExc ("Cannot invert singular matrix.");
+#endif
 
             return Matrix44();
         }
@@ -2821,7 +2825,7 @@ Matrix44<T>::gjInverse (bool singExc) const throw (IEX_NAMESPACE::MathExc)
 }
 
 template <class T>
-const Matrix44<T> &
+IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::invert (bool singExc) throw (IEX_NAMESPACE::MathExc)
 {
     *this = inverse (singExc);
@@ -2829,7 +2833,7 @@ Matrix44<T>::invert (bool singExc) throw (IEX_NAMESPACE::MathExc)
 }
 
 template <class T>
-Matrix44<T>
+IMATH_HOSTDEVICE Matrix44<T>
 Matrix44<T>::inverse (bool singExc) const throw (IEX_NAMESPACE::MathExc)
 {
     if (x[0][3] != 0 || x[1][3] != 0 || x[2][3] != 0 || x[3][3] != 1)
@@ -2900,7 +2904,7 @@ Matrix44<T>::inverse (bool singExc) const throw (IEX_NAMESPACE::MathExc)
 }
 
 template <class T>
-inline T
+IMATH_HOSTDEVICE inline T
 Matrix44<T>::fastMinor( const int r0, const int r1, const int r2,
                         const int c0, const int c1, const int c2) const
 {
@@ -2910,7 +2914,7 @@ Matrix44<T>::fastMinor( const int r0, const int r1, const int r2,
 }
 
 template <class T>
-inline T
+IMATH_HOSTDEVICE inline T
 Matrix44<T>::minorOf (const int r, const int c) const
 {
     int r0 = 0 + (r < 1 ? 1 : 0);
@@ -2928,7 +2932,7 @@ Matrix44<T>::minorOf (const int r, const int c) const
 }
 
 template <class T>
-inline T
+IMATH_HOSTDEVICE inline T
 Matrix44<T>::determinant () const
 {
     T sum = (T)0;
@@ -2943,7 +2947,7 @@ Matrix44<T>::determinant () const
 
 template <class T>
 template <class S>
-const Matrix44<T> &
+IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::setEulerAngles (const Vec3<S>& r)
 {
     S cos_rz, sin_rz, cos_ry, sin_ry, cos_rx, sin_rx;
@@ -2981,7 +2985,7 @@ Matrix44<T>::setEulerAngles (const Vec3<S>& r)
 
 template <class T>
 template <class S>
-const Matrix44<T> &
+IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::setAxisAngle (const Vec3<S>& axis, S angle)
 {
     Vec3<S> unit (axis.normalized());
@@ -3013,7 +3017,7 @@ Matrix44<T>::setAxisAngle (const Vec3<S>& axis, S angle)
 
 template <class T>
 template <class S>
-const Matrix44<T> &
+IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::rotate (const Vec3<S> &r)
 {
     S cos_rz, sin_rz, cos_ry, sin_ry, cos_rx, sin_rx;
@@ -3060,7 +3064,7 @@ Matrix44<T>::rotate (const Vec3<S> &r)
 }
 
 template <class T>
-const Matrix44<T> &
+IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::setScale (T s)
 {
     memset (x, 0, sizeof (x));
@@ -3074,7 +3078,7 @@ Matrix44<T>::setScale (T s)
 
 template <class T>
 template <class S>
-const Matrix44<T> &
+IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::setScale (const Vec3<S> &s)
 {
     memset (x, 0, sizeof (x));
@@ -3088,7 +3092,7 @@ Matrix44<T>::setScale (const Vec3<S> &s)
 
 template <class T>
 template <class S>
-const Matrix44<T> &
+IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::scale (const Vec3<S> &s)
 {
     x[0][0] *= s[0];
@@ -3111,7 +3115,7 @@ Matrix44<T>::scale (const Vec3<S> &s)
 
 template <class T>
 template <class S>
-const Matrix44<T> &
+IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::setTranslation (const Vec3<S> &t)
 {
     x[0][0] = 1;
@@ -3138,7 +3142,7 @@ Matrix44<T>::setTranslation (const Vec3<S> &t)
 }
 
 template <class T>
-inline const Vec3<T>
+IMATH_HOSTDEVICE inline const Vec3<T>
 Matrix44<T>::translation () const
 {
     return Vec3<T> (x[3][0], x[3][1], x[3][2]);
@@ -3146,7 +3150,7 @@ Matrix44<T>::translation () const
 
 template <class T>
 template <class S>
-const Matrix44<T> &
+IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::translate (const Vec3<S> &t)
 {
     x[3][0] += t[0] * x[0][0] + t[1] * x[1][0] + t[2] * x[2][0];
@@ -3159,7 +3163,7 @@ Matrix44<T>::translate (const Vec3<S> &t)
 
 template <class T>
 template <class S>
-const Matrix44<T> &
+IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::setShear (const Vec3<S> &h)
 {
     x[0][0] = 1;
@@ -3187,7 +3191,7 @@ Matrix44<T>::setShear (const Vec3<S> &h)
 
 template <class T>
 template <class S>
-const Matrix44<T> &
+IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::setShear (const Shear6<S> &h)
 {
     x[0][0] = 1;
@@ -3215,7 +3219,7 @@ Matrix44<T>::setShear (const Shear6<S> &h)
 
 template <class T>
 template <class S>
-const Matrix44<T> &
+IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::shear (const Vec3<S> &h)
 {
     //
@@ -3235,7 +3239,7 @@ Matrix44<T>::shear (const Vec3<S> &h)
 
 template <class T>
 template <class S>
-const Matrix44<T> &
+IMATH_HOSTDEVICE const Matrix44<T> &
 Matrix44<T>::shear (const Shear6<S> &h)
 {
     Matrix44<T> P (*this);

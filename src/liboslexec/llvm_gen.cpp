@@ -2355,7 +2355,7 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
                 // function that points the TextureOpt.missingcolor to it.
                 missingcolor = rop.ll.op_alloca(rop.ll.type_float(), 4);
                 rop.ll.call_function ("osl_texture_set_missingcolor_arena",
-                                      opt, missingcolor);
+                                      opt, rop.ll.void_ptr(missingcolor));
             }
             llvm::Value *val = rop.llvm_load_value (Val);
             rop.ll.call_function ("osl_texture_set_missingcolor_alpha",

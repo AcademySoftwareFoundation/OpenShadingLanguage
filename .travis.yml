@@ -52,7 +52,7 @@ install:
     -   export EXRREPO=https://github.com/lgritz/openexr.git ;
     -   export EXRBRANCH=lg-cpp11 ;
     - if [ $TRAVIS_OS_NAME == osx ] ; then
-          src/build-scripts/install_homebrew_deps.bash ;
+          source src/build-scripts/install_homebrew_deps.bash ;
       elif [ $TRAVIS_OS_NAME == linux ] ; then
           CXX="ccache $CXX" CCACHE_CPP2=1 src/build-scripts/build_openexr.bash ;
           export ILMBASE_ROOT_DIR=$PWD/ext/openexr-install ;

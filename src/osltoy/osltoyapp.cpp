@@ -448,8 +448,13 @@ OSLToyMainWindow::OSLToyMainWindow (OSLToyRenderer *rend, int xr, int yr)
 
     auto editorarea = new QWidget;
     QFontMetrics fontmetrics (CodeEditor::fixedFont());
-    editorarea->setMinimumSize (85*fontmetrics.width(QLatin1Char('M')),
-                                40*fontmetrics.lineSpacing());
+#if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
+    int Mwidth = fontmetrics.horizontalAdvance(QLatin1Char('M'));
+#else
+    // QFontMetric.width() deprecated from 5.11, marked as such in 5.13
+    int Mwidth = fontmetrics.width(QLatin1Char('M'));
+#endif
+    editorarea->setMinimumSize (85*Mwidth, 40*fontmetrics.lineSpacing());
     auto editorarea_layout = new QVBoxLayout;
     editorarea->setLayout (editorarea_layout);
     editorarea_layout->addWidget (textTabs);

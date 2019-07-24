@@ -42,7 +42,7 @@ before_build:
     $OSL_INSTALL_BEGIN=Get-Date
     Write-Output "Configuration: $env:CONFIGURATION"
     Write-Output "Platform: $env:PLATFORM"
-    ls C:\Libraries\llvm-5.0.0
+    ls C:\Program Files\LLVM
     Get-ChildItem Env:
 
     [Array]$OSL_BUILD_FLAGS = "--", "/nologo", "/verbosity:minimal";
@@ -51,7 +51,7 @@ before_build:
     $DEP_DIR = "C:\projects\OSLdeps"
     $BOOST_ROOT = "C:\Libraries\boost_1_69_0"
     $PYTHON_DIR = "C:\Python27"
-    $LLVM_DIR = "C:\Libraries\llvm-5.0.0"
+    $LLVM_DIR = "C:\Program Files\LLVM\bin"
     #$LLVM_DIR = "$DEP_DIR"
     $env:Path += ";$DEP_DIR\lib;$DEP_DIR\bin"
     $OSL_INT_DIR = "build\windows$env:PLATFORM"

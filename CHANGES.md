@@ -1,9 +1,8 @@
 Release 1.11/2.0? -- ?? 2019 (compared to 1.10)
 --------------------------------------------------
 Dependency and standards changes:
-* **LLVM 5.0-9.0**: Support for LLVM 4 has been dropped. Support for LLVM 8
-  and 9 have been added. (Alert: we may also drop support for LLVM 5 by the
-  time we branch for the next major release.)
+* **LLVM 5.0-9.0**: Support for LLVM 4 and 5 have been dropped. Support for
+  LLVM 8 and 9 have been added.
 * OpenImageIO 2.0-2.1: Support for OIIO 1.8 has been dropped; a minimum
   of OIIO 2.0 is needed to build OSL. #1038 (1.11.0)
 * CMake minimum is now 3.12. #1072 (1.11.1)

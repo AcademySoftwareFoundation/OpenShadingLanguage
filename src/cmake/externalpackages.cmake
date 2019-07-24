@@ -205,7 +205,7 @@ checked_find_package (PugiXML REQUIRED)
 
 
 # LLVM library setup
-checked_find_package (LLVM 5.0 REQUIRED
+checked_find_package (LLVM 6.0 REQUIRED
                       PRINT LLVM_SYSTEM_LIBRARIES CLANG_LIBRARIES)
 # ensure include directory is added (in case of non-standard locations
 include_directories (BEFORE SYSTEM "${LLVM_INCLUDES}")

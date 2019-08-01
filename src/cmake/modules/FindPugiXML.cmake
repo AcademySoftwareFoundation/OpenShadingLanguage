@@ -12,12 +12,12 @@ find_path (PUGIXML_INCLUDE_DIR
            NAMES pugixml.hpp
            PATHS ${PUGIXML_HOME}/include
            /usr/local/include
-           /usr/local/include/pugixml-1.8)
+           PATH_SUFFIXES pugixml-1.8 pugixml-1.9)
 find_library (PUGIXML_LIBRARY
               NAMES pugixml
               PATHS ${PUGIXML_HOME}/lib
               /usr/local/lib
-              /usr/local/lib/pugixml-1.8)
+              PATH_SUFFIXES pugixml-1.8 pugixml-1.9)
 
 # Second chance -- if not found, look in the OIIO distro
 if (NOT PUGIXML_INCLUDE_DIR AND OPENIMAGEIO_INCLUDE_DIR)

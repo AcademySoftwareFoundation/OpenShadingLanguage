@@ -86,7 +86,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-#if defined(oslcomp_EXPORTS)
+#if defined(oslcomp_EXPORTS) || defined(oslexec_EXPORTS)
 #  define OSLCOMPPUBLIC OSL_DLL_EXPORT
 #else
 #  define OSLCOMPPUBLIC OSL_DLL_IMPORT

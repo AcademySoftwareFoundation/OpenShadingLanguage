@@ -65,7 +65,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// dependencies, and so what is exported for one may be imported for
 /// another.
 
-#if defined(_MSC_VER) || defined(__CYGWIN__)
+#if defined(_WIN32) || defined(__CYGWIN__)
   #if defined(OSL_STATIC_BUILD)
     #define OSL_DLL_IMPORT
     #define OSL_DLL_EXPORT
@@ -86,7 +86,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-#if defined(oslcomp_EXPORTS)
+#if defined(oslcomp_EXPORTS) || defined(oslexec_EXPORTS)
 #  define OSLCOMPPUBLIC OSL_DLL_EXPORT
 #else
 #  define OSLCOMPPUBLIC OSL_DLL_IMPORT

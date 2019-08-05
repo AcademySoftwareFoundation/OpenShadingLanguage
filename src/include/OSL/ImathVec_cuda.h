@@ -51,7 +51,7 @@
 #include <iostream>
 #include <limits>
 
-#if (defined _WIN32 || defined _WIN64) && defined _MSC_VER
+#if defined(_MSC_VER)
 // suppress exception specification warnings
 #pragma warning(push)
 #pragma warning(disable:4290)
@@ -2229,7 +2229,7 @@ operator * (T a, const Vec4<T> &v)
 }
 
 
-#if (defined _WIN32 || defined _WIN64) && defined _MSC_VER
+#if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
 

@@ -33,7 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifdef OSL_USE_OPTIX
 #  include <cuda_runtime_api.h>
-#  ifdef WIN32
+#  ifdef _WIN32
 #    define NOMINMAX
 #  endif
 #  include <optix_world.h>

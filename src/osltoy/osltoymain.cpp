@@ -43,7 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using namespace OSL;
 
 
-#ifdef WIN32
+#ifdef _MSC_VER
     // if we are not in DEBUG mode this code switch the app to
     // full windowed mode (no console and no need to define WinMain)
     // FIXME: this should be done in CMakeLists.txt but first we have to

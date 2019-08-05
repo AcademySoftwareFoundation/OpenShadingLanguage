@@ -481,7 +481,7 @@ find_stdoslpath (const std::vector<std::string>& includepaths)
     std::vector<std::string> exec_path_dirs;
     OIIO::Filesystem::searchpath_split (OIIO::Sysutil::getenv("PATH"),
                                         exec_path_dirs, true);
-#ifdef WIN32
+#ifdef _WIN32
     std::string oslcbin = "oslc.exe";
 #else
     std::string oslcbin = "oslc";

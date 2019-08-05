@@ -51,7 +51,7 @@
 // In Windows, min and max are macros.  Yay.
 //------------------------------------------
 
-#if defined _WIN32 || defined _WIN64
+#if defined(_WIN32)
     #ifdef min
         #undef min
     #endif

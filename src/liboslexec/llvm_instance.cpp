@@ -497,9 +497,10 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         ll.op_branch (cond_val, no_userdata_block, after_userdata_block);
     }
 
-    if (use_optix() && ! sym.typespec().is_closure() && ! sym.typespec().is_string()) {
-        ASSERT (! sym.has_init_ops() && "Init ops are not currently supported in OptiX");
-
+    if (sym.has_init_ops() && sym.valuesource() == Symbol::DefaultVal) {
+        // Handle init ops.
+        build_llvm_code (sym.initbegin(), sym.initend());
+    } else if (use_optix() && ! sym.typespec().is_closure() && ! sym.typespec().is_string()) {
         // If the call to osl_bind_interpolated_param returns 0, the default
         // value needs to be loaded from a CUDA variable.
         llvm::Value* cuda_var = getOrAllocateCUDAVariable (sym);
@@ -507,7 +508,6 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         // memcpy the initial value from the CUDA variable
         llvm::Value* src = ll.ptr_cast (ll.GEP (cuda_var, 0), ll.type_void_ptr());
         llvm::Value* dst = llvm_void_ptr (sym);
-
         TypeDesc t = sym.typespec().simpletype();
         ll.op_memcpy (dst, src, t.size(), t.basesize());
     } else if (use_optix() && ! sym.typespec().is_closure()) {
@@ -517,9 +517,6 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         llvm::Value* init_val = getOrAllocateCUDAVariable (sym);
         init_val = ll.ptr_cast (ll.GEP (init_val, 0), ll.type_void_ptr());
         ll.op_memcpy (groupdata_field_ptr (2 + userdata_index), init_val, 8, 4);
-    } else if (sym.has_init_ops() && sym.valuesource() == Symbol::DefaultVal) {
-        // Handle init ops.
-        build_llvm_code (sym.initbegin(), sym.initend());
     } else if (! sym.lockgeom() && ! sym.typespec().is_closure()) {
         // geometrically-varying param; memcpy its default value
         TypeDesc t = sym.typespec().simpletype();

@@ -751,9 +751,7 @@ BackendLLVM::build_llvm_init ()
         ll.op_memset (ll.void_ptr(layer_run_ref(0)), 0, sz, 4 /*align*/);
     }
     int num_userdata = (int) group().m_userdata_names.size();
-    if (num_userdata && ! use_optix()) {
-        // NB: we don't need these flags in the OptiX case because userdata is
-        //     accessed through rtVariables, which are guaranteed to be initialized
+    if (num_userdata) {
         int sz = (num_userdata + 3) & (~3);  // round up to 32 bits
         ll.op_memset (ll.void_ptr(userdata_initialized_ref(0)), 0, sz, 4 /*align*/);
     }

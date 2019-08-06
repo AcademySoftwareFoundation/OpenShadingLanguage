@@ -394,11 +394,10 @@ BackendLLVM::createOptixVariable (const std::string& name, const std::string& ty
         return it->second;
     }
 
-    int alignment =
-        (type == "float" ) ? 4 :
-        (type == "int"   ) ? 4 :
-        (type == "color" ) ? 8 :
-        (type == "string") ? 8 : 8;
+    // TODO: Figure out the actual CUDA alignment requirements for the various
+    //       OSL types. For now, be somewhat conservative and assume 8 for
+    //       non-scalar types. See: getOrAllocateCUDAVariable()
+    int alignment = (type == "float" || type == "int" ) ? 4 : 8;
 
     // Create a global variable with the name, type, and initializer. This is
     // the value that will be accessed when the shader executes.
@@ -525,16 +524,10 @@ BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym)
         return it->second;
     }
 
-    int alignment =
-        (sym.typespec().is_scalarnum()) ? 4 :
-        (sym.typespec().is_triple()   ) ? 8 :
-        (sym.typespec().is_array()    ) ? 8 :
-        (sym.typespec().is_matrix()   ) ? 8 :
-        (sym.typespec().is_string()   ) ? 8 : -1;
-
-    if (alignment < 1) {
-        return nullptr;
-    }
+    // TODO: Figure out the actual CUDA alignment requirements for the various
+    //       OSL types. For now, be somewhat conservative and assume 8 for
+    //       non-scalar types. See: createOptixVariable()
+    int alignment = (sym.typespec().is_scalarnum()) ? 4 : 8;
 
     return addCUDAVariable (name, sym.size(), alignment, sym.data(),
                             sym.typespec().string());

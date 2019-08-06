@@ -497,7 +497,11 @@ ASTassign_expression::codegen (Symbol *dest)
         index = (ASTindex *) var().get();
         dest = NULL;
     } else if (var()->nodetype() == structselect_node) {
-        dest = var()->codegen();
+        if (! ((ASTstructselect*)var().get())->compindex())
+            dest = var()->codegen();
+        // ^^ N.B. don't do the extra codegen of the destination if this
+        // is the kind of structselect that is really an assignment to a
+        // named component (P.x = ...).
     } else {
         dest = var()->codegen();
     }
@@ -1305,6 +1309,11 @@ ASTindex::codegen_assign (Symbol *src, Symbol *ind,
 Symbol *
 ASTstructselect::codegen (Symbol *dest)
 {
+    if (compindex()) {
+        // Redirected codegen to ASTIndex for named component (e.g., point.x)
+        return compindex()->codegen(dest);
+    }
+
     // Must account for array indices farther up the chain.
     Symbol *indexsym = codegen_index ();
 
@@ -1323,6 +1332,13 @@ void
 ASTstructselect::codegen_assign (Symbol *dest, Symbol *src)
 {
     ASSERT (src);
+
+    if (compindex()) {
+        // Redirected codegen to ASTIndex for named component (e.g., point.x)
+        compindex()->codegen_assign(src);
+        return;
+    }
+
     src = coerce (src, typespec());
 
     // Must account for array indices farther up the chain.
@@ -1930,8 +1946,11 @@ ASTfunction_call::codegen (Symbol *dest)
         a = args().get();
         for (int i = 0;  a;  a = a->nextptr(), ++i) {
             if (index[i]) {
-                ASSERT (a->nodetype() == ASTNode::index_node);
-                ASTindex *indexnode = static_cast<ASTindex *> (a);
+                ASSERT (a->nodetype() == ASTNode::index_node ||
+                        a->nodetype() == ASTNode::structselect_node);
+                ASTindex *indexnode = (a->nodetype() == index_node)
+                            ? static_cast<ASTindex*>(a)
+                            : static_cast<ASTstructselect*>(a)->compindex();
                 indexnode->codegen_assign (argdest[i+argdest_return_offset],
                                            index[i], index2[i], index3[i]);
             }
@@ -1961,12 +1980,17 @@ ASTfunction_call::codegen_arg (SymbolPtrVec &argdest, SymbolPtrVec &index1,
     if (is_struct) {
         // Structure arguments
         thisarg = arg->codegen ();
-    } else if (arg && arg->nodetype() == index_node && writearg) {
+    } else if (arg && writearg &&
+               (arg->nodetype() == index_node
+                || (arg->nodetype() == structselect_node
+                    && ((ASTstructselect*)arg)->compindex()))) {
         // Special case for individual array elements or vec/col/matrix
         // components being passed as output params of the function --
         // these aren't really lvalues, so we need to restore their
         // values.  We save the indices we genearate code for here...
-        ASTindex *indexnode = static_cast<ASTindex *> (arg);
+        ASTindex *indexnode = (arg->nodetype() == index_node)
+                            ? static_cast<ASTindex*>(arg)
+                            : static_cast<ASTstructselect*>(arg)->compindex();
         thisarg = indexnode->codegen (NULL, ind1, ind2, ind3);
         indexed_output_params = true;
     } else {

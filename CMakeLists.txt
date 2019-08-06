@@ -330,6 +330,7 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             logic loop matrix message
             mergeinstances-nouserdata mergeinstances-vararray
             metadata-braces miscmath missing-shader
+            named-components
             noise noise-cell
             noise-gabor noise-gabor2d-filter noise-gabor3d-filter
             noise-perlin noise-simplex
@@ -343,6 +344,7 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             oslc-err-intoverflow oslc-err-write-nonoutput
             oslc-err-noreturn oslc-err-notfunc
             oslc-err-initlist-args oslc-err-initlist-return
+            oslc-err-named-components
             oslc-err-outputparamvararray oslc-err-paramdefault
             oslc-err-struct-array-init oslc-err-struct-ctr
             oslc-err-struct-dup oslc-err-struct-print

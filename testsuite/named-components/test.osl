@@ -1,0 +1,34 @@
+float retrieve(float q) { return q; }
+
+void set(output float q, float r) { q = r; }
+
+
+// Rather than replicate test functions for each type, we put the test
+// function in test_named_comp.h, but it relies on TYPE being defined
+// (and also has X, Y, Z macros defaulting to x, y, z). So we make multipe
+// functions by including the header several times with different macro
+// definitions. (The header clears the macro defs at its end.)
+
+#define TYPE point
+#include "test_named_comp.h"
+
+#define TYPE vector
+#include "test_named_comp.h"
+
+#define TYPE normal
+#include "test_named_comp.h"
+
+#define TYPE color
+#define X r
+#define Y g
+#define Z b
+#include "test_named_comp.h"
+
+shader
+test ()
+{
+    test_named_comp(point(0));
+    test_named_comp(vector(0));
+    test_named_comp(normal(0));
+    test_named_comp(color(0));
+}

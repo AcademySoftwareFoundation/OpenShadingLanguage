@@ -60,8 +60,8 @@ Language Specification
 Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
-\date{{\large Date: 31 Mar 2018 \\
- (with corrections, 23 Jul 2019)
+\date{{\large Date: 3 Aug 2019 \\
+% (with corrections, 23 Jul 2019)
 }
 \bigskip
 \bigskip
@@ -1620,6 +1620,16 @@ Colors can have their individual components examined and set using the
 It is an error to access a color component with an index outside the
 $[0...2]$ range.
 
+Color variables may also have their components referenced using
+``named components'' that look like accessing structure fields named
+{\cf r}, {\cf g}, and {\cf b}, as synonyms for {\cf [0]}, {\cf [1]}, and
+{\cf [2]}, respectively:
+
+\begin{code}
+    float green = C.g;   // get the green component
+    C.r = 0.5;           // set the red component
+\end{code}
+
 The following operators may be used with \color values (in order of
 decreasing precedence, with each box holding operators of the same
 precedence):
@@ -1780,6 +1790,16 @@ the {\cf []} array access notation.  For example:
 \noindent Components 0, 1, and 2 are $x$, $y$, and $z$, respectively.
 It is an error to access a point component with an index outside the
 $[0...2]$ range.
+
+Point-like variables may also have their components referenced using
+``named components'' that look like accessing structure fields named
+{\cf x}, {\cf y}, and {\cf z}, as synonyms for {\cf [0]}, {\cf [1]}, and
+{\cf [2]}, respectively:
+
+\begin{code}
+    float yval = P.y;    // get the [1] or y component
+    P.x = 0.5;           // set the [0] or x component
+\end{code}
 
 The following operators may be used with point-like values (in order of
 decreasing precedence, with each box holding operators of the same
@@ -5462,6 +5482,13 @@ nothing (empty, no token).
 \alt <variable_lvalue> "." <identifier>
 
 <variable-ref> ::= <identifier> <array-deref-opt> 
+
+<array-deref> ::= "[" <expression> "]"
+
+<component-deref> ::= "[" <expression> "]"
+\alt "." <component-field>
+
+<component-field> ::= "x" | "y" | "z" | "r" | "g" | "b"
 
 <binary-op> ::= "*" | "/" | "\%"
 \alt "+" | "-" 

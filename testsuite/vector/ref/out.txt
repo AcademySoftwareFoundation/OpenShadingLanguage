@@ -1,9 +1,19 @@
 Compiled test.osl -> test.oso
+  parameter initialization test: vparam = 0.1 0.7 0.2
+  parameter initialization test2: vparam2 = 0.1 0.1 0.1
+
 Test vector functions
 
+  vector (0.1) = 0.1 0.1 0.1
+  vector (0.1, 0.2, 0.5) = 0.1 0.2 0.5
   V = vector (0 1 2) has components 0, 1, 2
   After V[1] = 8, V = (0 8 2)
   After V[2] = 0.5, V = (0 8 0.5)
+  V = vector (0 8 0.5) has xyz components 0, 8, 0.5
+  After V.x = 14.5, V = (14.5 8 0.5)
+  After V.y = 15.5, V = (14.5 15.5 0.5)
+  After V.z = 16.5, V = (14.5 15.5 16.5)
+ V = 0 8 0.5
   dot ((0 8 0.5), (0 8 0.5)) = 64.25
   dot ((0 8 0.5), (0 1 0)) = 8
   cross ((1 0 0), (0 1 0)) = 0 0 1

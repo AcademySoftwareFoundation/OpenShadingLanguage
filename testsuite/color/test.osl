@@ -13,7 +13,25 @@ test (color cparam = color (.1, .7, .2),
         printf ("  color (%g, %g, %g) = %g\n", a, b, c, color(a,b,c));
     }
 
-    { 
+    {
+        color C = color (0, 1, 2);
+        printf ("  C = color (%g) has components %g, %g, %g\n",
+                C, C[0], C[1], C[2]);
+        C[1] = 8;
+        printf ("  After C[1] = 8, V = (%g)\n", C);
+        C[2] = 0.5;
+        printf ("  After C[2] = 0.5, V = (%g)\n", C);
+        printf ("  C = color (%g) has rgb components %g, %g, %g\n",
+                C, C.r, C.g, C.b);
+        C.r = 14.5;
+        printf ("  After C.r = 14.5, C = (%g)\n", C);
+        C.g = 15.5;
+        printf ("  After C.g = 15.5, C = (%g)\n", C);
+        C.b = 16.5;
+        printf ("  After C.b = 16.5, C = (%g)\n", C);
+    }
+
+    {
         float a = 0.1, b = 0.2, c = 0.5;
         printf ("\ntesting with spaces:\n");
         printf ("  color (\"rgb\", %g, %g, %g) = %g\n",

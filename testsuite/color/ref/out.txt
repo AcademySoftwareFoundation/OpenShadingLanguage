@@ -4,6 +4,13 @@ Compiled test.osl -> test.oso
 
   color (0.1) = 0.1 0.1 0.1
   color (0.1, 0.2, 0.5) = 0.1 0.2 0.5
+  C = color (0 1 2) has components 0, 1, 2
+  After C[1] = 8, V = (0 8 2)
+  After C[2] = 0.5, V = (0 8 0.5)
+  C = color (0 8 0.5) has rgb components 0, 8, 0.5
+  After C.r = 14.5, C = (14.5 8 0.5)
+  After C.g = 15.5, C = (14.5 15.5 0.5)
+  After C.b = 16.5, C = (14.5 15.5 16.5)
 
 testing with spaces:
   color ("rgb", 0.1, 0.2, 0.5) = 0.1 0.2 0.5

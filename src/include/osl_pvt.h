@@ -134,6 +134,11 @@ public:
     /// reliable if it's not a struct, a struct will return an UNKNOWN type.
     const TypeDesc &simpletype () const { return m_simple; }
 
+    /// Is the type unknown/uninitialized?
+    bool is_unknown () const noexcept {
+        return m_simple == OIIO::TypeUnknown && !m_structure && !m_closure;
+    }
+
     /// Is this typespec a closure?  (N.B. if so, you can find out what
     /// kind of closure it is with simpletype()).
     bool is_closure () const { return m_closure && !is_array(); }

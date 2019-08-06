@@ -244,6 +244,11 @@ ASTindex::typecheck (TypeSpec expected)
 TypeSpec
 ASTstructselect::typecheck (TypeSpec expected)
 {
+    if (compindex()) {
+        // Redirected codegen to ASTIndex for named component (e.g., point.x)
+        return compindex()->typecheck(expected);
+    }
+
     // The ctr already figured out if this was a valid structure selection
     if (m_fieldid < 0 || m_fieldsym == NULL) {
         return TypeSpec();
@@ -338,8 +343,7 @@ ASTassign_expression::typecheck (TypeSpec expected)
                 return m_typespec;
             }
         }
-        error ("Cannot assign %s %s = %s", type_c_str(vt), varname,
-               type_c_str(et));
+        error ("Cannot assign %s %s = %s", vt, varname, et);
         return m_typespec;
     }
 
@@ -359,8 +363,7 @@ ASTassign_expression::typecheck (TypeSpec expected)
         if (vts == ets)
             return m_typespec = vt;
         // Otherwise, a structure mismatch
-        error ("Cannot assign %s %s = %s", type_c_str(vt), varname,
-               type_c_str(et));
+        error ("Cannot assign %s %s = %s", vt, varname, et);
         return m_typespec;
     }
 
@@ -369,10 +372,9 @@ ASTassign_expression::typecheck (TypeSpec expected)
         // Special case: for int=float, it's just a warning.
         if (vt.is_int() && et.is_float())
             warning ("Assignment may lose precision: %s %s = %s",
-                     type_c_str(vt), varname, type_c_str(et));
+                     vt, varname, et);
         else
-            error ("Cannot assign %s %s = %s",
-                   type_c_str(vt), varname, type_c_str(et));
+            error ("Cannot assign %s %s = %s", vt, varname, et);
         return m_typespec;
     }
 

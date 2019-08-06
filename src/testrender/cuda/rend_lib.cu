@@ -190,10 +190,11 @@ extern "C" {
 
 #define IS_STRING(type) (type.basetype == OSL::TypeDesc::STRING)
 #define IS_PTR(type)    (type.basetype == OSL::TypeDesc::PTR)
+#define IS_COLOR(type)  (type.vecsemantics == OSL::TypeDesc::COLOR)
 
     __device__
-    int rend_get_userdata (OSL::StringParam name, void* data, int data_size,
-                           const OSL::TypeDesc& type, int index)
+    bool rend_get_userdata (OSL::StringParam name, void* data, int data_size,
+                            const OSL::TypeDesc& type, int index)
     {
         // Perform a userdata lookup using the parameter name, type, and
         // userdata index. If there is a match, memcpy the value into data and
@@ -201,18 +202,19 @@ extern "C" {
 
         if (IS_PTR(type) && name == StringParams::colorsystem) {
             *(void**)data = &OSL::pvt::s_color_system[0];
-            return 1;
+            return true;
         }
 
         // TODO: This is temporary code for initial testing and demonstration.
         if (IS_STRING(type) && name == HDSTR(test_str_1)) {
             memcpy (data, &test_str_2, 8);
-            return 1;
+            return true;
         }
 
-        return 0;
+        return false;
     }
 
+#undef IS_COLOR
 #undef IS_STRING
 #undef IS_PTR
 
@@ -223,9 +225,17 @@ extern "C" {
                                      int symbol_data_size,
                                      char *userdata_initialized, int userdata_index)
     {
-        int status = rend_get_userdata (HDSTR(name), userdata_data, symbol_data_size,
-                                        (*(OSL::TypeDesc*)&type), userdata_index);
-        return status;
+        char status = *userdata_initialized;
+        if (status == 0) {
+            bool ok = rend_get_userdata (HDSTR(name), userdata_data, symbol_data_size,
+                                         (*(OSL::TypeDesc*)&type), userdata_index);
+            *userdata_initialized = status = 1 + ok;
+        }
+        if (status == 2) {
+            memcpy (symbol_data, userdata_data, symbol_data_size );
+            return 1;
+        }
+        return 0;
     }
 
 

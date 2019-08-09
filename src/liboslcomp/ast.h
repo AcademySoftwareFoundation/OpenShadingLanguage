@@ -114,6 +114,10 @@ public:
     ///
     virtual const char *opname () const { return NULL; }
 
+    /// Return the number of child nodes.
+    ///
+    size_t nchildren () const { return m_children.size(); }
+
     /// Name of the child node
     ///
     virtual const char *childname (size_t i) const = 0;
@@ -269,23 +273,24 @@ protected:
     /// by node (for example, "float, int, string").
     static std::string list_to_types_string (const ASTNode *node);
 
-    /// Return the number of child nodes.
-    ///
-    size_t nchildren () const { return m_children.size(); }
-
-    /// Return the i-th child node, or NULL if there is no such node
-    ///
+    /// Return a pointer for the i-th child node, or nullptr if there is no
+    /// such node.
     ASTNode *child (size_t i) const {
         return (i < m_children.size()) ? m_children[i].get() : NULL;
     }
 
     /// Add a new node to the list of children.
-    ///
     void addchild (ASTNode *n) { m_children.emplace_back(n); }
+
+    /// Add a new node to the list of children.
+    void addchild (ref& n) { m_children.emplace_back(n); }
 
     /// Call the print() method of all the children of this node.
     ///
     void printchildren (std::ostream &out, int indentlevel = 0) const;
+
+    /// Clear the children. Use with caution!
+    void clearchildren () { m_children.clear(); }
 
     /// Follow a list of nodes, type checking each in turn, and return
     /// the type of the last one.
@@ -559,10 +564,10 @@ public:
 class ASTindex : public ASTNode
 {
 public:
-    ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index);
-    ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index, ASTNode *index2);
+    // ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index);
+    // ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index, ASTNode *index2);
     ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index,
-              ASTNode *index2, ASTNode *index3);
+              ASTNode *index2 = nullptr, ASTNode *index3 = nullptr);
     const char *nodetypename () const { return "index"; }
     const char *childname (size_t i) const;
     TypeSpec typecheck (TypeSpec expected = TypeSpec());
@@ -573,8 +578,9 @@ public:
     Symbol *codegen (Symbol *dest, Symbol * &ind,
                      Symbol * &ind2, Symbol *&ind3);
 
-    /// Special code generation of assignment of src to this indexed location
-    ///
+    /// Special code generation of assignment of src to this indexed
+    /// location. The ind1, ind2, ind3 symbols are overrides; if not
+    /// provided, it will use index(), index2(), index3().
     void codegen_assign (Symbol *src, Symbol *ind = NULL,
                          Symbol *ind2 = NULL, Symbol *ind3 = NULL);
 
@@ -610,6 +616,8 @@ public:
     ustring field () const { return m_field; }
     ustring fieldname () const { return m_fieldname; }
     Symbol *fieldsym () const { return m_fieldsym; }
+    int fieldid () const { return m_fieldid; }
+    ASTindex* compindex() const { return (ASTindex*)m_compindex.get(); }
 
 private:
     Symbol *find_fieldsym (int &structid, int &fieldid);
@@ -622,6 +630,7 @@ private:
     int m_fieldid;           ///< index of the field within the structure
     ustring m_fieldname;     ///< Name of the field variable
     Symbol *m_fieldsym;      ///< Symbol of the field variable
+    ref m_compindex;         ///< Redirection of named component index
 };
 
 

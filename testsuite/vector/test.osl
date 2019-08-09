@@ -1,11 +1,25 @@
 shader
-test ()
+test (vector vparam = vector (.1, .7, .2),
+      vector vparam2 = vector (.1),
+      vector vparam3 = vector ("object", .1, .2, .3))
 {
-    printf ("Test vector functions\n\n");
     vector X = vector (1, 0, 0);
+
+    printf ("  parameter initialization test: vparam = %g\n", vparam);
+    printf ("  parameter initialization test2: vparam2 = %g\n", vparam2);
+    printf ("\n");
+
+    printf ("Test vector functions\n\n");
     vector Y = vector (0, 1, 0);
     vector XY = X + Y;
     vector Zero = 0;
+
+    {
+        float a = 0.1, b = 0.2, c = 0.5;
+        printf ("  vector (%g) = %g\n", a, vector(a));
+        printf ("  vector (%g, %g, %g) = %g\n", a, b, c, vector(a,b,c));
+    }
+
     {
         vector V = vector (0, 1, 2);
         printf ("  V = vector (%g) has components %g, %g, %g\n",
@@ -14,6 +28,19 @@ test ()
         printf ("  After V[1] = 8, V = (%g)\n", V);
         V[2] = 0.5;
         printf ("  After V[2] = 0.5, V = (%g)\n", V);
+        printf ("  V = vector (%g) has xyz components %g, %g, %g\n",
+                V, V.x, V.y, V.z);
+        V.x = 14.5;
+        printf ("  After V.x = 14.5, V = (%g)\n", V);
+        V.y = 15.5;
+        printf ("  After V.y = 15.5, V = (%g)\n", V);
+        V.z = 16.5;
+        printf ("  After V.z = 16.5, V = (%g)\n", V);
+    }
+
+    {
+        vector V = vector (0, 8, 0.5);
+        printf (" V = %g\n", V);
         printf ("  dot ((%g), (%g)) = %g\n", V, V, dot(V,V));
         printf ("  dot ((%g), (%g)) = %g\n", V, Y, dot(V,Y));
         printf ("  cross ((%g), (%g)) = %g\n", X, Y, cross(X,Y));

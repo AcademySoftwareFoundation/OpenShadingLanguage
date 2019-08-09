@@ -1,0 +1,22 @@
+struct Foo {
+   color alice;
+   float bob;
+};
+
+
+shader test ()
+{
+    color C;
+    C.r = 1;  // ok
+    C.x = 1;  // not ok
+    C.err = 1; // not ok
+
+    vector V;
+    V.x = 1;  // ok
+    V.r = 1;  // not ok
+    V.oops = 1;  // not ok
+
+    Foo foo;
+    foo.bob = 1;  // ok
+    foo.r = 1;  // not ok
+}

@@ -8,6 +8,9 @@ Dependency and standards changes:
   we may drop support for OIIO 1.x.
 
 OSL Language and oslc compiler:
+* New syntax to reference color and point/vector/normal components as
+  named struct components, such as C.r, C.g, C.b, or P.x, P.y, P.z.
+  #1049 (1.11.0)
 * oslc compilation speed-ups with faster retrieval of source lines when
   pasted into oso output. #938 (1.11.0)
 * Writing to function parameters not marked as `output` was only

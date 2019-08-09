@@ -693,51 +693,61 @@ ASTpostincdec::childname (size_t i) const
 
 
 
-ASTindex::ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index)
-    : ASTNode (index_node, comp, 0, expr, index)
-{
-    ASSERT (expr->nodetype() == variable_ref_node ||
-            expr->nodetype() == structselect_node);
-    if (expr->typespec().is_array())       // array dereference
-        m_typespec = expr->typespec().elementtype();
-    else if (!expr->typespec().is_closure() &&
-             expr->typespec().is_triple()) // component access
-        m_typespec = TypeDesc::FLOAT;
-    else {
-        error ("indexing into non-array or non-component type");
-    }
-}
-
-
-
-ASTindex::ASTindex (OSLCompilerImpl *comp, ASTNode *expr,
-                    ASTNode *index, ASTNode *index2)
-    : ASTNode (index_node, comp, 0, expr, index, index2)
-{
-    ASSERT (expr->nodetype() == variable_ref_node ||
-            expr->nodetype() == structselect_node);
-    if (expr->typespec().is_matrix())  // matrix component access
-        m_typespec = TypeDesc::FLOAT;
-    else if (expr->typespec().is_array() &&   // triplearray[][]
-             expr->typespec().elementtype().is_triple())
-        m_typespec = TypeDesc::FLOAT;
-    else {
-        error ("indexing into non-array or non-component type");
-    }
-}
-
-
-
 ASTindex::ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index,
           ASTNode *index2, ASTNode *index3)
-    : ASTNode (index_node, comp, 0, expr, index, index2, index3)
+    : ASTNode (index_node, comp, 0, expr, index /*NO: index2, index3*/)
 {
-    ASSERT (expr->nodetype() == variable_ref_node ||
-            expr->nodetype() == structselect_node);
-    if (expr->typespec().is_array() &&   // matrixarray[][]
-             expr->typespec().elementtype().is_matrix())
-        m_typespec = TypeDesc::FLOAT;
-    else {
+    // We only initialized the first child. Add more if additional arguments
+    // were supplied.
+    DASSERT (index);
+    if (index2)
+        addchild(index2);
+    if (index3)
+        addchild(index3);
+
+    // Special case: an ASTindex where the `expr` is itself an ASTindex.
+    // This construction results from named-component access of array
+    // elements, e.g., `colorarray[i].r`. In that case, what we want to do
+    // is rearrange to turn this into the two-index variety and discard the
+    // child index.
+    if (!index2 && expr->nodetype() == index_node && expr->nchildren() == 2) {
+        ref newexpr = static_cast<ASTindex*>(expr)->lvalue();
+        ref newindex = static_cast<ASTindex*>(expr)->index();
+        ref newindex2 = index;
+        clearchildren();
+        addchild(newexpr);      expr   = newexpr.get();
+        addchild(newindex);     index  = newindex.get();
+        addchild(newindex2);    index2 = newindex2.get();
+    }
+
+    DASSERT (expr->nodetype() == variable_ref_node ||
+             expr->nodetype() == structselect_node);
+    DASSERT (m_typespec.is_unknown());
+
+    if (!index2) {
+        // 1-argument: simple array a[i] or component dereference triple[c]
+        if (expr->typespec().is_array())       // array dereference
+            m_typespec = expr->typespec().elementtype();
+        else if (!expr->typespec().is_closure() &&
+                 expr->typespec().is_triple()) // component access
+            m_typespec = TypeDesc::FLOAT;
+    } else if (!index3) {
+        // 2-argument: matrix dereference m[r][c], or component of a
+        // triple array colorarray[i][c].
+        if (expr->typespec().is_matrix())  // matrix component access
+            m_typespec = TypeDesc::FLOAT;
+        else if (expr->typespec().is_array() &&   // triplearray[][]
+                 expr->typespec().elementtype().is_triple())
+            m_typespec = TypeDesc::FLOAT;
+    } else {
+        // 3-argument: one component of an array of matrices
+        // matrixarray[i][r][c]
+        if (expr->typespec().is_array() &&   // matrixarray[][]
+                 expr->typespec().elementtype().is_matrix())
+            m_typespec = TypeDesc::FLOAT;
+    }
+
+    if (m_typespec.is_unknown()) {
         error ("indexing into non-array or non-component type");
     }
 }
@@ -756,12 +766,15 @@ ASTindex::childname (size_t i) const
 ASTstructselect::ASTstructselect (OSLCompilerImpl *comp, ASTNode *expr,
                                   ustring field)
     : ASTNode (structselect_node, comp, 0, expr), m_field(field),
-      m_structid(-1), m_fieldid(-1), m_fieldsym(NULL)
+      m_structid(-1), m_fieldid(-1), m_fieldname(field), m_fieldsym(NULL)
 {
     m_fieldsym = find_fieldsym (m_structid, m_fieldid);
     if (m_fieldsym) {
         m_fieldname = m_fieldsym->name();
         m_typespec = m_fieldsym->typespec();
+    } else if (m_compindex) {
+        // It's a named component, like point.x
+        m_typespec = OIIO::TypeFloat;  // These cases are always single floats
     }
 }
 
@@ -773,10 +786,30 @@ ASTstructselect::ASTstructselect (OSLCompilerImpl *comp, ASTNode *expr,
 Symbol *
 ASTstructselect::find_fieldsym (int &structid, int &fieldid)
 {
-    if (! lvalue()->typespec().is_structure() &&
-        ! lvalue()->typespec().is_structure_array()) {
-        error ("type '%s' does not have a member '%s'",
-               type_c_str(lvalue()->typespec()), m_field);
+    auto lv = lvalue().get();
+    auto lvtype = lv->typespec();
+
+    if (lvtype.is_color()
+        && (fieldname() == "r" || fieldname() == "g" || fieldname() == "b")) {
+        ASSERT(fieldid == -1 && !m_compindex);
+        fieldid = fieldname() == "r" ? 0 : (fieldname() == "g" ? 1 : 2);
+        m_compindex.reset(new ASTindex(m_compiler, lv,
+                                       new ASTliteral(oslcompiler, fieldid)));
+        m_is_lvalue = true;
+        return nullptr;
+    }
+    else if (lvtype.is_vectriple()
+         && (fieldname() == "x" || fieldname() == "y" || fieldname() == "z")) {
+        ASSERT(fieldid == -1 && !m_compindex);
+        fieldid = fieldname() == "x" ? 0 : (fieldname() == "y" ? 1 : 2);
+        m_compindex.reset(new ASTindex(m_compiler, lv,
+                                       new ASTliteral(oslcompiler, fieldid)));
+        m_is_lvalue = true;
+        return nullptr;
+    }
+
+    if (! lvtype.is_structure() && ! lvtype.is_structure_array()) {
+        error ("type '%s' does not have a member '%s'", lvtype, m_field);
         return NULL;
     }
 

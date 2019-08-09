@@ -373,7 +373,7 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             texture-alpha texture-blur texture-connected-options
             texture-derivs texture-errormsg
             texture-firstchannel texture-interp
-            texture-missingcolor texture-simple
+            texture-missingalpha texture-missingcolor texture-simple
             texture-smallderivs texture-swirl texture-udim
             texture-width texture-withderivs texture-wrap
             trailing-commas

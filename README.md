@@ -344,6 +344,8 @@ Films using OSL (grouped by year of release date):
   Men in Black International,
   Toy Story 4,
   Spider-Man: Far From Home,
+  Hobbs & Shaw,
+  Angry Birds 2,
   ...
 
 

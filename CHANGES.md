@@ -4,8 +4,8 @@ Dependency and standards changes:
 * **LLVM 5.0-8.0**: Support for LLVM 4 has been dropped. Support for LLVM 8
   is added/verified. (Alert: we may also drop support for LLVM 5 by the time
   we branch for the next major release.)
-* OpenImageIO 1.8-2.0: Alert: by the time we release this version of OSL,
-  we may drop support for OIIO 1.x.
+* OpenImageIO 2.0-2.1: Support for OIIO 1.8 has been dropped; a minimum
+  of OIIO 2.0 is needed to build OSL. #1038 (1.11.0)
 
 OSL Language and oslc compiler:
 * New syntax to reference color and point/vector/normal components as
@@ -49,11 +49,21 @@ OSL Language and oslc compiler:
   expressions. Note that this may flag some warnings and errors that went
   undetected before, involving initialization assignments of incompatible
   types. #991, #993 (1.10.5/1.11.0)
+* Allow shader parameters with empty brace initializers, such as:
+  ```
+      shader foo ( float myarray[] = {} )
+  ```
+  Un-lengthed arrays, if they aren't connected or given a concrete instance
+  value, still default to length 1 (we don't allow 0-length arrays, that's a
+  whole other can of worms), but this is now treated as equivalent to
+  `= { default_value }` (0 for int or float, "" for string). #967 (1.11.0)
 
 OSL Standard library:
 * Extend linearstep() and smooth_linearstep() to work with color, point,
   vector, and normal types (previously restricted to float). #994
   (1.10.5/1.11.0)
+* Extend `transformc()` to understand translating between linear and sRGB
+  color spaces. #1013 (1.11.0)
 
 Shaders:
 
@@ -77,6 +87,11 @@ API changes, new options, new ShadingSystem features (for renderer writers):
 * New ShadingSystem option: "gpu_opt_error" enables full error status of the
   subset of those warnings that are also hard no-go's when executing on
   GPUs. #1010 (1.11.0)
+* `RendererServices::get_texture_handle()` has changed slightly to require
+  a `ShadingConntext*` parameter, and `get_texture_info()` has changed to
+  have a parameter allowing the caller to provide a `texture_thread_info`
+  handle and a context, as well as to provide a pointer to a ustring where
+  error messages should be placed. #1033 (1.11.0)
 
 Experimental OptiX rendering:
 * Build option `USE_OPTIX=1` enable experimental OptiX support.
@@ -89,6 +104,11 @@ Experimental OptiX rendering:
 * Work towards getting texture calls working. #974 (1.11.0)
 * printf works for multiple values. #1007 (1.11.0)
 * Work on color-related functions. #1012 (1.11.0)
+* Support for native OSL closures. #1028 #1029 (1.11.0)
+
+Performance improvements:
+* Constant fold array accesses even if they are out of bounnds. #1035
+  (1.11.0)
 
 Bug fixes and other improvements (internals):
 * Fix bug in implementation of `splineinverse()` when computing with
@@ -100,6 +120,16 @@ Bug fixes and other improvements (internals):
   to be compiling several shaders to oso concurrently by different threads.
   #953 (1.10.3/1.11.0)
 * LPEs: forbid LPE repetitions inside groups. #972 (1.10.4/1.11.0)
+* Improve error detection and messages for badly formed serialized shaders.
+  #1026 (1.11.0)
+* Fix OSLQuery::init() return value, which was false when it should have
+  been true. #1030 (1.11.0)
+* Change the way oslc frees long chaines of nodes, which fixes a possible
+  stack overflow crash for extremely complicated parse trees. #1031 (1.11.0)
+* Properly respect the `lockgeom` default when building a shading group
+  from serialized commands. #1032 (1.11.0)
+* Fix runtime crash when optional texture argument "missingalpha" was used.
+  #1044 (1.11.0)
 
 Build & test system improvements:
 * Testshade makes sure that no unreported errors accumulted in the texture
@@ -130,6 +160,15 @@ Build & test system improvements:
   `TESTSUITE_OPTIX=1` (except tests that contain a file named `NOOPTIX` in
   their directory. #1004 (1.10.0)
 * Allow OSL to build with `USE_LLVM_BITCODE` enabled on Windows. #998 (1.10.0)
+* Various Windows compilation improvements. #1017 #1020
+* When building against recent OIIO versions whose Sysutil supports stack
+  dumps, crashes in the command line tools (including testshade) will
+  print stack traces to aid debugging. #1019 (1.11.0)
+* Improve finding of OpenEXR/IlmBase. #1022 (1.11.0)
+* Fix signed/unsigned comparison warnings. #1037 (1.11.0)
+* Fix problems when building against Qt 5.13 due to deprecated calls. #1043
+  (1.11.0)
+* Fixes for MinGW compiler on Windows. #1047 #1048 (1.11.0)
 
 Documentation:
 

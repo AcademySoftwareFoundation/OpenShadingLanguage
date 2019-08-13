@@ -457,7 +457,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
 #endif
             Symbol symname_const (arg_name, TypeDesc::TypeString, SymTypeConst);
             symname_const.data (&symname);
-            name_arg = llvm_load_device_string (symname_const);
+            name_arg = llvm_load_device_string (symname_const, /*follow*/ true);
         } else {
             name_arg = ll.constant (symname);
         }
@@ -520,7 +520,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         // struct.
         int userdata_index = find_userdata_index (sym);
         llvm::Value* init_val = getOrAllocateCUDAVariable (sym);
-        init_val = ll.ptr_cast (ll.GEP (init_val, 0), ll.type_void_ptr());
+        init_val = ll.ptr_cast (init_val, ll.type_void_ptr());
         ll.op_memcpy (groupdata_field_ptr (2 + userdata_index), init_val, 8, 4);
     } else if (! sym.lockgeom() && ! sym.typespec().is_closure()) {
         // geometrically-varying param; memcpy its default value

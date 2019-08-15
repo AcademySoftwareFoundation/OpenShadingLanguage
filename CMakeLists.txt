@@ -304,8 +304,8 @@ if (OSL_BUILD_TESTS)
 TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             array array-derivs array-range array-aassign
             blackbody blendmath breakcont
-            bug-array-heapoffsets
-            bug-locallifetime bug-outputinit bug-param-duplicate bug-peep
+            bug-array-heapoffsets bug-locallifetime bug-outputinit
+            bug-param-duplicate bug-peep bug-return
             cellnoise closure closure-array color comparison
             compile-buffer
             component-range

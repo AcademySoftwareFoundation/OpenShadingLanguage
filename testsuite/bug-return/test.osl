@@ -1,0 +1,11 @@
+// Regression for a early return bug which nops the first assignment in favor of an unreachable one
+
+shader
+test (output color Cout = 0)
+{
+    Cout = color (0, 1, 0);
+    return;
+
+    Cout = color(1, 0, 0);
+    return;
+}

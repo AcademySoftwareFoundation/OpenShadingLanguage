@@ -43,6 +43,7 @@ using namespace OSL::pvt;
 
 // names of ops we'll be using frequently
 static ustring u_nop    ("nop"),
+               u_exit   ("exit"),
                u_assign ("assign"),
                u_add    ("add"),
                u_sub    ("sub"),
@@ -1081,10 +1082,10 @@ OSOProcessorBase::find_basic_blocks ()
         // any jump targets at all, it must be a conditional or loop.
         if (op.jump(0) >= 0)
             block_begin[opnum+1] = true;
-        // 'break', 'continue', and 'return' also cause the next
+        // 'break', 'continue', 'return', and 'exit' also cause the next
         // statement to begin a new basic block.
         if (op.opname() == u_break || op.opname() == u_continue ||
-                op.opname() == u_return)
+            op.opname() == u_return || op.opname() == u_exit)
             block_begin[opnum+1] = true;
     }
 

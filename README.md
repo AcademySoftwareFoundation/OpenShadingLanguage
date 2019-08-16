@@ -8,18 +8,11 @@ Open Shading Language
 
 Build status:
 
+[![License](https://img.shields.io/badge/license-BSD%203--Clause-blue.svg?style=flat-square)](https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE)
 [![Build Status](https://travis-ci.org/imageworks/OpenShadingLanguage.svg?branch=master)](https://travis-ci.org/imageworks/OpenShadingLanguage)
 [![Appveyor status](https://ci.appveyor.com/api/projects/status/github/imageworks/openshadinglanguage?svg=true&branch=master)](https://ci.appveyor.com/project/lgritz/openshadinglanguage)
+[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/3061/badge)](https://bestpractices.coreinfrastructure.org/projects/3061)
 
-**Table of contents**
-
-* [Introduction](#introduction)
-* [How OSL is different](#how-osl-is-different)
-* [What OSL consists of](#what-osl-consists-of)
-* [Where OSL has been used](#where-osl-has-been-used)
-* [Building OSL](#building-osl)
-* [Contacts, Links, and References](#contacts-links-and-references)
-* [Credits](#credits)
 
 
 Introduction
@@ -349,11 +342,48 @@ Films using OSL (grouped by year of release date):
   ...
 
 
-Building OSL
+Building and Installation
+-------------------------
+
+Please read the [INSTALL.md](INSTALL.md) file for detailed instructions on
+how to build and install OSL.
+
+
+Documentation
+-------------
+
+The OSL language specification can be found at
+[src/doc/osl-languagespec.pdf](src/doc/osl-languagespec.pdf) (in a source
+distribution) or in the share/doc/OSL/osl-languagespec.pdf file of an
+installed binary distribution.
+
+
+Contact & reporting problems
+----------------------------
+
+Simple "how do I...", "I'm having trouble", or "is this a bug" questions are
+best asked on the [osl-dev developer mail
+list](http://groups.google.com/group/osl-dev).
+That's where the most people will see it and potentially be able to answer
+your question quickly (moreso than a GH "issue").
+
+Bugs, build problems, and discovered vulnerabilities that you are relatively
+certain is a legit problem in the code, and for which you can give clear
+instructions for how to reproduce, should be [reported as
+issues](https://github.com/imageworks/OpenShadingLanguage/issues).
+
+If confidentiality precludes a public question or issue, you may contact the
+project administrator privately at [lg@imageworks.com](lg@imageworks.com),
+including for security-related issues.
+
+
+Contributing
 ------------
 
-Please see the [INSTALL.md](INSTALL.md) file in the OSL distribution for
-instructions for building the OSL source code.
+OSL welcomes code contributions, and nearly 50 people
+have done so over the years. We take code contributions via the usual GitHub
+pull request (PR) mechanism. Please see [CONTRIBUTING](CONTRIBUTING.md) for
+detailed instructions.
 
 
 Contacts, Links, and References

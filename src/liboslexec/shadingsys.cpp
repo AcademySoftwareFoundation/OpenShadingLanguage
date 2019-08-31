@@ -1252,23 +1252,6 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
 #undef ATTR_SET_STRING
 }
 
-    
-
-template <typename T> static bool
-getAttributePtr (T* obj, void** val, int arraylen = 1) {
-    using DataType = typename std::remove_pointer<T>::type;
-    static_assert(!std::is_pointer<DataType>::value, "Requesting a pointer to a pointer!");
-
-    // arraylen is TypeDesc:arraylen which means 0 and 1 are [kind-of] the same
-    DASSERT(arraylen >= 0 && arraylen <= 2 && "Invalid pointer request");
-
-    val[0] = obj;
-    // Interpret array len of two as a request for the data and size
-    if (arraylen == 2)
-        ((uintptr_t*)val)[1] = sizeof(DataType);
-    return true;
-}
-
 
 
 bool
@@ -1415,11 +1398,12 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("stat:mem_inst_connections_current", long long, m_stat_mem_inst_connections.current());
     ATTR_DECODE ("stat:mem_inst_connections_peak", long long, m_stat_mem_inst_connections.peak());
 
-    ATTR_DECODE_STRING ("colorsystem:colorspace", colorsystem().colorspace());
-    if (type.basetype == TypeDesc::PTR) {
-        if (name == "colorsystem")
-            return getAttributePtr(&colorsystem(), (void**)val, type.arraylen);
+    if (name == "colorsystem" && type.basetype == TypeDesc::PTR) {
+        *(void**)val = &colorsystem();
+        return true;
     }
+    ATTR_DECODE ("colorsystem:size", long long, sizeof(colorsystem()));
+    ATTR_DECODE_STRING ("colorsystem:colorspace", colorsystem().colorspace());
 
     return false;
 #undef ATTR_DECODE

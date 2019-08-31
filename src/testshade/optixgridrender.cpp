@@ -147,8 +147,8 @@ OptixGridRenderer::synch_attributes ()
 
     {
         // FIXME -- This requires knowing the last field of osl::pvt::ColorSystem is a StringParam so the CPU->GPU:
-        //  1. Uploads the pod-data of size (osl::pvt::ColorSystem) - sizeof(StringParam)
-        //  2. Then registers the string at *((osl::pvt::ColorSystem) - sizeof(StringParam))
+        //  1. Uploads the pod-data of size (osl::pvt::ColorSystem) - sizeof(DeviceString)
+        //  2. Then registers the string at *((osl::pvt::ColorSystem) - sizeof(DeviceString))
         
         const char* name = OSL_NAMESPACE_STRING "::pvt::s_color_system";
         
@@ -158,14 +158,14 @@ OptixGridRenderer::synch_attributes ()
             return false;
         }
         
-        void* colorSysData[2] = { nullptr, nullptr };
-        shadingsys->getattribute("colorsystem", TypeDesc(TypeDesc::PTR, 2), (void*)&colorSysData);
-        if (!colorSysData[0] || !colorSysData[1]) {
+        void* colorSys = nullptr;
+        long long cpuDataSize = 0;
+        if (!shadingsys->getattribute("colorsystem", TypeDesc::PTR, (void*)&colorSys) ||
+            !shadingsys->getattribute("colorsystem:size", TypeDesc::LONGLONG, (void*)&cpuDataSize) ||
+            !colorSys || !cpuDataSize) {
             errhandler().error ("No colorsystem available.");
             return false;
         }
-        void* colorSys = colorSysData[0];
-        uintptr_t cpuDataSize = (uintptr_t) colorSysData[1];
         
         // Get the size data-size, minus the ustring size
         const size_t podDataSize = cpuDataSize - sizeof(StringParam);

@@ -33,7 +33,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/oslconfig.h>
 
 #include "optixgridrender.h"
-#include "../liboslexec/opcolor.h"
 
 
 // The pre-compiled renderer support library LLVM bitcode is embedded
@@ -147,46 +146,58 @@ OptixGridRenderer::synch_attributes ()
     m_optix_ctx["test_str_2"]->setUserData (sizeof(char*), &addr2);
 
     {
+        // FIXME -- This requires knowing the last field of osl::pvt::ColorSystem is a StringParam so the CPU->GPU:
+        //  1. Uploads the pod-data of size (osl::pvt::ColorSystem) - sizeof(StringParam)
+        //  2. Then registers the string at *((osl::pvt::ColorSystem) - sizeof(StringParam))
+        
         const char* name = OSL_NAMESPACE_STRING "::pvt::s_color_system";
-
-        pvt::ColorSystem* colorSys = nullptr;
-        shadingsys->getattribute("colorsystem", TypeDesc::PTR, (void*)&colorSys);
-        if (colorSys == nullptr) {
+        
+        ustring colorspace;
+        if (!shadingsys->getattribute("colorsystem:colorspace", colorspace)) {
+            errhandler().error ("No colorspace available.");
+            return false;
+        }
+        
+        void* colorSysData[2] = { nullptr, nullptr };
+        shadingsys->getattribute("colorsystem", TypeDesc(TypeDesc::PTR, 2), (void*)&colorSysData);
+        if (!colorSysData[0] || !colorSysData[1]) {
             errhandler().error ("No colorsystem available.");
             return false;
         }
-
+        void* colorSys = colorSysData[0];
+        uintptr_t cpuDataSize = (uintptr_t) colorSysData[1];
+        
         // Get the size data-size, minus the ustring size
-        const size_t dataSize = sizeof(pvt::ColorSystem) - sizeof(StringParam);
-
+        const size_t podDataSize = cpuDataSize - sizeof(StringParam);
+        
         optix::Buffer buffer = m_optix_ctx->createBuffer(RT_BUFFER_INPUT, RT_FORMAT_USER);
         if (!buffer) {
             errhandler().error ("Could not create buffer for '%s'.", name);
             return false;
         }
-
+        
         // set the elemet size to char
         buffer->setElementSize(sizeof(char));
-
+        
         // and number of elements to the actual size needed.
-        buffer->setSize(dataSize + sizeof(DeviceString));
-
+        buffer->setSize(podDataSize + sizeof(DeviceString));
+        
         // copy the base data
-        char* dstData = (char*) buffer->map();
-        if (!dstData) {
+        char* gpuData = (char*) buffer->map();
+        if (!gpuData) {
             errhandler().error ("Could not map buffer for '%s' (size: %lu).",
-                                 name, dataSize);
+                                name, podDataSize + sizeof(DeviceString));
             return false;
         }
-        ::memcpy(dstData, colorSys, dataSize);
-
+        ::memcpy(gpuData, colorSys, podDataSize);
+        
         // convert the ustring to a device string
-        uint64_t devStr = register_string (colorSys->colorspace().string(), "");
-
+        uint64_t devStr = register_string (colorspace.string(), "");
+        
         // FIXME -- Should probably handle alignment better.
         // then copy the device string to the end
-        ::memcpy(dstData+dataSize, &devStr, sizeof(devStr));
-
+        ::memcpy(gpuData+podDataSize, &devStr, sizeof(devStr));
+        
         buffer->unmap();
         m_optix_ctx[name]->setBuffer(buffer);
     }

@@ -1402,8 +1402,20 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
         *(void**)val = &colorsystem();
         return true;
     }
-    ATTR_DECODE ("colorsystem:size", long long, sizeof(colorsystem()));
-    ATTR_DECODE_STRING ("colorsystem:colorspace", colorsystem().colorspace());
+    if (name == "colorsystem:sizes" && type.basetype == TypeDesc::LONGLONG) {
+        if (type.arraylen != 2) {
+            error ("Must request two colorsystem:sizes, [sizeof(pvt::ColorSystem), num-strings]");
+            return false;
+        }
+        long long* lptr = (long long*) val;
+        lptr[0] = sizeof(pvt::ColorSystem);
+        lptr[1] = 1; // 1 string (pvt::ColorSystem::m_colorspace)
+
+        // Make sure everything adds up!
+        ASSERT((((char*)&colorsystem() + lptr[0]) - sizeof(ustring)*lptr[1]) ==
+               (char*)&colorsystem().colorspace());
+        return true;
+    }
 
     return false;
 #undef ATTR_DECODE

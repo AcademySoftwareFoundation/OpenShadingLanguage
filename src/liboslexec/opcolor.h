@@ -110,7 +110,7 @@ public:
     template <typename Color> OSL_HOSTDEVICE Color
     ocio_transform (StringParam fromspace, StringParam tospace, const Color& C, Context);
 
-    OSL_HOSTDEVICE StringParam colorspace() const { return m_colorspace; }
+    OSL_HOSTDEVICE const StringParam& colorspace() const { return m_colorspace; }
 
     OSL_HOSTDEVICE void error(StringParam src, StringParam dst, Context);
 

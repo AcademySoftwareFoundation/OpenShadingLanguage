@@ -1516,7 +1516,7 @@ LLVMGEN (llvm_gen_construct_triple)
         llvm::Value *args[] = { rop.sg_void_ptr(),
             rop.llvm_void_ptr(Result), rop.ll.constant(Result.has_derivs()),
             rop.llvm_void_ptr(Result), rop.ll.constant(Result.has_derivs()),
-            rop.llvm_load_string(Space), rop.ll.constant(Strings::common),,
+            rop.llvm_load_string(Space), rop.ll.constant(Strings::common),
             rop.ll.constant((int)vectype) };
         RendererServices *rend (rop.shadingsys().renderer());
         if (rend->transform_points (NULL, from, to, 0.0f, NULL, NULL, 0, vectype)) {

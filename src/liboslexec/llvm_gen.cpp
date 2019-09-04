@@ -1516,7 +1516,7 @@ LLVMGEN (llvm_gen_construct_triple)
         llvm::Value *args[] = { rop.sg_void_ptr(),
             rop.llvm_void_ptr(Result), rop.ll.constant(Result.has_derivs()),
             rop.llvm_void_ptr(Result), rop.ll.constant(Result.has_derivs()),
-            rop.llvm_load_value(Space), rop.ll.constant(Strings::common),
+            rop.llvm_load_string(Space), rop.ll.constant(Strings::common),,
             rop.ll.constant((int)vectype) };
         RendererServices *rend (rop.shadingsys().renderer());
         if (rend->transform_points (NULL, from, to, 0.0f, NULL, NULL, 0, vectype)) {
@@ -1556,8 +1556,8 @@ LLVMGEN (llvm_gen_matrix)
         llvm::Value *args[] = {
                 rop.sg_void_ptr(),  // shader globals
                 rop.llvm_void_ptr(Result),  // result
-                rop.llvm_load_value(*rop.opargsym (op, 1)),  // from
-                rop.llvm_load_value(*rop.opargsym (op, 2)),  // to
+                rop.llvm_load_string(*rop.opargsym (op, 1)),  // from
+                rop.llvm_load_string(*rop.opargsym (op, 2)),  // to
         };
         rop.ll.call_function ("osl_get_from_to_matrix", args);
     } else {
@@ -1580,7 +1580,7 @@ LLVMGEN (llvm_gen_matrix)
             llvm::Value *args[] = {
                 rop.sg_void_ptr(),  // shader globals
                 rop.llvm_void_ptr(Result),  // result
-                rop.llvm_load_value(*rop.opargsym (op, 1)),  // from
+                rop.llvm_load_string(*rop.opargsym (op, 1)),  // from
             };
             rop.ll.call_function ("osl_prepend_matrix_from", args);
         }
@@ -1606,8 +1606,8 @@ LLVMGEN (llvm_gen_getmatrix)
     llvm::Value *args[] = {
         rop.sg_void_ptr(),  // shader globals
         rop.llvm_void_ptr(M),  // matrix result
-        rop.llvm_load_value(From),
-        rop.llvm_load_value(To),
+        rop.llvm_load_string(From),
+        rop.llvm_load_string(To),
     };
     llvm::Value *result = rop.ll.call_function ("osl_get_from_to_matrix", args);
     rop.llvm_store_value (result, Result);
@@ -1661,7 +1661,7 @@ LLVMGEN (llvm_gen_transform)
     llvm::Value *args[] = { rop.sg_void_ptr(),
         rop.llvm_void_ptr(*P), rop.ll.constant(P->has_derivs()),
         rop.llvm_void_ptr(*Result), rop.ll.constant(Result->has_derivs()),
-        rop.llvm_load_value(*From), rop.llvm_load_value(*To),
+        rop.llvm_load_string(*From), rop.llvm_load_string(*To),
         rop.ll.constant((int)vectype) };
     RendererServices *rend (rop.shadingsys().renderer());
     if (rend->transform_points (NULL, from, to, 0.0f, NULL, NULL, 0, vectype)) {

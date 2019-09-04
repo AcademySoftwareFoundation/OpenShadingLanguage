@@ -37,6 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec_pvt.h"
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
+#include <OSL/device_string.h>
 
 #include <OpenImageIO/fmath.h>
 #include <OpenImageIO/simd.h>
@@ -212,27 +213,37 @@ osl_get_inverse_matrix (void *sg_, void *r, const char *to)
     }
     return ok;
 }
+#else
+// Implemented by the renderer
+#define OSL_SHADEOP_EXPORT extern "C" OSL_DLL_EXPORT
+OSL_SHADEOP_EXPORT OSL_HOSTDEVICE int osl_get_matrix (void *sg_, void *r, const char *from);
+OSL_SHADEOP_EXPORT OSL_HOSTDEVICE int osl_get_inverse_matrix (void *sg_, void *r, const char *to);
+#undef OSL_SHADEOP_EXPORT
+#endif // __CUDACC__
 
 
 
-OSL_SHADEOP int
+OSL_SHADEOP OSL_HOSTDEVICE int
 osl_prepend_matrix_from (void *sg, void *r, const char *from)
 {
     Matrix44 m;
     bool ok = osl_get_matrix ((ShaderGlobals *)sg, &m, from);
     if (ok)
         MAT(r) = m * MAT(r);
+#ifndef __CUDACC__
+    // TODO: How do we manage this in OptiX?
     else {
         ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
         if (ctx->shadingsys().unknown_coordsys_error())
             ctx->error ("Unknown transformation \"%s\"", from);
     }
+#endif
     return ok;
 }
 
 
 
-OSL_SHADEOP int
+OSL_SHADEOP OSL_HOSTDEVICE int
 osl_get_from_to_matrix (void *sg, void *r, const char *from, const char *to)
 {
     Matrix44 Mfrom, Mto;
@@ -244,19 +255,18 @@ osl_get_from_to_matrix (void *sg, void *r, const char *from, const char *to)
 
 
 
-OSL_SHADEOP int
+OSL_SHADEOP OSL_HOSTDEVICE int
 osl_transform_triple (void *sg_, void *Pin, int Pin_derivs,
                       void *Pout, int Pout_derivs,
                       void *from, void *to, int vectype)
 {
-    static ustring u_common ("common");
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     Matrix44 M;
     int ok;
     Pin_derivs &= Pout_derivs;   // ignore derivs if output doesn't need it
-    if (USTR(from) == u_common)
+    if (HDSTR(from) == StringParams::common)
         ok = osl_get_inverse_matrix (sg, &M, (const char *)to);
-    else if (USTR(to) == u_common)
+    else if (HDSTR(to) == StringParams::common)
         ok = osl_get_matrix (sg, &M, (const char *)from);
     else
         ok = osl_get_from_to_matrix (sg, &M, (const char *)from,
@@ -278,7 +288,12 @@ osl_transform_triple (void *sg_, void *Pin, int Pin_derivs,
             else
                 osl_transformn_vmv(Pout, &M, Pin);
         }
+#ifndef __CUDACC__
         else ASSERT(0);
+#else
+        // TBR: Is the ok?
+        else ok = false;
+#endif
     } else {
         *(Vec3 *)Pout = *(Vec3 *)Pin;
         if (Pin_derivs) {
@@ -295,13 +310,14 @@ osl_transform_triple (void *sg_, void *Pin, int Pin_derivs,
 
 
 
-OSL_SHADEOP int
+OSL_SHADEOP OSL_HOSTDEVICE int
 osl_transform_triple_nonlinear (void *sg_, void *Pin, int Pin_derivs,
                                 void *Pout, int Pout_derivs,
                                 void *from, void *to,
                                 int vectype)
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
+#ifndef __CUDACC__
     RendererServices *rend = sg->renderer;
     if (rend->transform_points (sg, USTR(from), USTR(to), sg->time,
                                 (const Vec3 *)Pin, (Vec3 *)Pout, 1,
@@ -320,12 +336,14 @@ osl_transform_triple_nonlinear (void *sg_, void *Pin, int Pin_derivs,
         }
         return true;
     }
+#endif // __CUDACC__
 
     // Renderer couldn't or wouldn't transform directly
+    // Except in OptiX we're the renderer will directly implement
+    // the transform in osl_transform_triple.
     return osl_transform_triple (sg, Pin, Pin_derivs, Pout, Pout_derivs,
                                  from, to, vectype);
 }
-#endif // __CUDACC__
 
 
 // Calculate the determinant of a 2x2 matrix.

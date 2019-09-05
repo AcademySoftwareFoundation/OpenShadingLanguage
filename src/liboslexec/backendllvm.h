@@ -143,7 +143,7 @@ public:
     llvm::Value *llvm_load_value (const Symbol& sym, int deriv = 0,
                                   int component = 0,
                                   TypeDesc cast=TypeDesc::UNKNOWN) {
-        return llvm_load_value (sym, deriv, NULL, component, cast);
+        return (use_optix() && ! sym.typespec().is_closure() && sym.typespec().is_string()) ? llvm_load_device_string(sym) : llvm_load_value (sym, deriv, NULL, component, cast);
     }
 
     /// Load the address of a global device-side string pointer, which may

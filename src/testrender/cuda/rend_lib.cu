@@ -330,4 +330,58 @@ extern "C" {
         }
         return indexvalue;
     }
+
+#define MAT(m) (*(OSL::Matrix44 *)m)
+    __device__
+    int osl_get_matrix (void *sg_, void *r, const char *from)
+    {
+        ShaderGlobals *sg = (ShaderGlobals *)sg_;
+        //ShadingContext *ctx = (ShadingContext *)sg->context;
+        if (HDSTR(from) == StringParams::common ||
+            //HDSTR(from) == ctx->shadingsys().commonspace_synonym() ||
+            HDSTR(from) == StringParams::shader)
+        {
+            MAT(r).makeIdentity ();
+            return true;
+        }
+        if (HDSTR(from) == StringParams::object)
+        {
+            // TODO: Implement transform
+            return false;
+        }
+        int ok = false; // TODO: Implement transform
+        if (!ok)
+        {
+            MAT(r).makeIdentity();
+            // TBR: OSL would throw an error here, what should we do?
+        }
+        return ok;
+    }
+
+    __device__
+    int osl_get_inverse_matrix (void *sg_, void *r, const char *to)
+    {
+        ShaderGlobals *sg = (ShaderGlobals *)sg_;
+        //ShadingContext *ctx = (ShadingContext *)sg->context;
+        if (HDSTR(to) == StringParams::common ||
+            //HDSTR(to) == ctx->shadingsys().commonspace_synonym() ||
+            HDSTR(to) == StringParams::shader)
+        {
+            MAT(r).makeIdentity ();
+            return true;
+        }
+        if (HDSTR(to) == StringParams::object)
+        {
+            // TODO: Implement transform
+            return false;
+        }
+        int ok = false; // TODO: Implement transform
+        if (!ok)
+        {
+            MAT(r).makeIdentity();
+            // TBR: OSL would throw an error here, what should we do?
+        }
+        return ok;
+    }
+#undef MAT
 }

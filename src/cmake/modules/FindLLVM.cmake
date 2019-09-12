@@ -64,6 +64,17 @@ find_library ( LLVM_MCJIT_LIBRARY
                NAMES LLVMMCJIT
                PATHS ${LLVM_LIB_DIR})
 
+if (NOT LLVM_LIBRARY)
+    # if no single library was found, use llvm-config to generate the list
+    # of what libraries we need, and substitute that in the right way for
+    # LLVM_LIBRARY.
+    execute_process (COMMAND ${LLVM_CONFIG} --libfiles
+                     OUTPUT_VARIABLE LLVM_LIBRARIES
+                     OUTPUT_STRIP_TRAILING_WHITESPACE)
+    string (REPLACE " " ";" LLVM_LIBRARIES "${LLVM_LIBRARIES}")
+    set (LLVM_LIBRARY "${LLVM_LIBRARIES}")
+endif ()
+
 foreach (COMPONENT clangFrontend clangDriver clangSerialization
                    clangParse clangSema clangAnalysis clangAST clangBasic
                    clangEdit clangLex)

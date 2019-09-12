@@ -6,7 +6,9 @@ set (osltoy_srcs
      osltoymain.cpp osltoyapp.cpp codeeditor.cpp osltoyrenderer.cpp)
 add_executable (osltoy ${osltoy_srcs})
 set_target_properties (osltoy PROPERTIES FOLDER "Tools")
-target_link_libraries (osltoy oslexec
+target_link_libraries (osltoy oslexec oslquery oslcomp
                        Qt5::Core Qt5::Gui Qt5::Widgets
-                       ${OPENIMAGEIO_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+                       ${OPENIMAGEIO_LIBRARIES} ${OCIO_LIBRARIES} ${OPENEXR_ILMIMF_LIBRARY}
+                       ${TIFF_LIBRARIES} ${JPEG_LIBRARIES} ${PNG_LIBRARIES}
+                       ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
 install_targets (osltoy)

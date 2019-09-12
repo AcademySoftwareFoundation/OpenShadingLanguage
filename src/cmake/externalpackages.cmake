@@ -67,6 +67,67 @@ message (STATUS "Using OpenImageIO ${OPENIMAGEIO_VERSION}")
 
 
 ###########################################################################
+# OpenColorIO Setup
+
+if (OSL_BUILD_TESTS)
+
+    find_package (OpenColorIO REQUIRED)
+
+    if (OCIO_FOUND AND LINKSTATIC)
+        find_library (TINYXML_LIBRARY NAMES tinyxml PATHS ${OCIO_PATH}/lib/)
+        if (TINYXML_LIBRARY)
+            set (OCIO_LIBRARIES ${OCIO_LIBRARIES} ${TINYXML_LIBRARY})
+        endif ()
+        find_library (YAML_LIBRARY NAMES yaml-cpp libyaml-cppmd libyaml-cppmdd PATHS ${OCIO_PATH}/lib/)
+        if (YAML_LIBRARY)
+            set (OCIO_LIBRARIES ${OCIO_LIBRARIES} ${YAML_LIBRARY})
+        endif ()
+    endif ()
+endif ()
+
+# end OpenColorIO setup
+###########################################################################
+
+###########################################################################
+# TIFF
+
+if (OSL_BUILD_TESTS)
+    find_package (TIFF 3.9 REQUIRED)
+endif ()
+
+###########################################################################
+
+
+###########################################################################
+# PNG
+
+if (OSL_BUILD_TESTS)
+    find_package (PNG REQUIRED)
+endif ()
+
+###########################################################################
+
+
+###########################################################################
+# JPEG
+
+if (OSL_BUILD_TESTS)
+    if (USE_JPEGTURBO)
+        find_package (JPEGTurbo)
+    endif ()
+    if (JPEG_FOUND)
+        add_definitions ("-DUSE_JPEG_TURBO=1")
+        set (JPEG_TURBO_FOUND 1)
+    else ()
+        find_package (JPEG REQUIRED)
+    endif ()
+endif ()
+
+# end JPEG
+###########################################################################
+
+
+###########################################################################
 # LLVM library setup
 
 find_package (LLVM 5.0 REQUIRED)

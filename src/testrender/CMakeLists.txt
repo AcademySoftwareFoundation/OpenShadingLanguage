@@ -38,7 +38,9 @@ endif()
 add_definitions ("-DPTX_PATH=\"${OSL_PTX_INSTALL_DIR}\"")
 
 ADD_EXECUTABLE ( testrender ${testrender_srcs} )
-TARGET_LINK_LIBRARIES ( testrender oslexec oslquery
-                       ${CUDA_LIBRARIES} ${OPTIX_LIBRARIES} ${OPTIX_EXTRA_LIBS}
-                       ${OPENIMAGEIO_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+TARGET_LINK_LIBRARIES ( testrender oslexec oslquery oslcomp
+                        ${OPENEXR_ILMIMF_LIBRARY} ${OCIO_LIBRARIES}
+                        ${TIFF_LIBRARIES} ${JPEG_LIBRARIES} ${PNG_LIBRARIES}
+                        ${CUDA_LIBRARIES} ${OPTIX_LIBRARIES} ${OPTIX_EXTRA_LIBS}
+                        ${OPENIMAGEIO_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
 INSTALL ( TARGETS testrender RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )

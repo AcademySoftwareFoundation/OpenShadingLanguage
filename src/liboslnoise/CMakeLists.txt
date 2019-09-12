@@ -16,7 +16,11 @@ set_target_properties (oslnoise
                        OUTPUT_NAME oslnoise${OSL_LIBNAME_SUFFIX}
                        )
 
-TARGET_LINK_LIBRARIES ( oslnoise ${OPENIMAGEIO_LIBRARIES} ${ILMBASE_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} )
+TARGET_LINK_LIBRARIES ( oslnoise 
+                        ${OPENIMAGEIO_LIBRARIES} ${ILMBASE_LIBRARIES}
+                        ${OPENEXR_ILMIMF_LIBRARY}
+                        ${TIFF_LIBRARIES} ${JPEG_LIBRARIES} ${PNG_LIBRARIES}
+                        ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} )
 
 install_targets (oslnoise)
 

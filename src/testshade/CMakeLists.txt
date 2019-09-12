@@ -37,10 +37,13 @@ endif()
 add_definitions ("-DPTX_PATH=\"${OSL_PTX_INSTALL_DIR}\"")
 
 ADD_EXECUTABLE ( testshade ${testshade_srcs} testshademain.cpp )
-TARGET_LINK_LIBRARIES (testshade oslexec oslquery
-                       ${OPENIMAGEIO_LIBRARIES} ${OPENEXR_LIBRARIES}
-                       ${CUDA_LIBRARIES} ${OPTIX_LIBRARIES} ${OPTIX_EXTRA_LIBS}
-                       ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+TARGET_LINK_LIBRARIES (testshade oslexec oslquery oslcomp
+                       ${OPENIMAGEIO_LIBRARIES} ${OCIO_LIBRARIES}
+                       ${OPENEXR_LIBRARIES} ${CUDA_LIBRARIES}
+                       ${OPTIX_LIBRARIES} ${OPTIX_EXTRA_LIBS}
+                       ${Boost_LIBRARIES}
+                       ${TIFF_LIBRARIES} ${JPEG_LIBRARIES} ${PNG_LIBRARIES}
+                       ${CMAKE_DL_LIBS})
 INSTALL ( TARGETS testshade RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
 
 # The 'libtestshade' library

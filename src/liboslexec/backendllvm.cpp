@@ -393,9 +393,6 @@ BackendLLVM::createOptixMetadata (const std::string& name, const Symbol& sym)
     // Refer to the OptiX API documentation and optix_defines.h in the OptiX SDK
     // for more information.
 
-    std::string type = sym.typespec().simpletype().c_str();
-    int         size = sym.size();
-
     ASSERT (use_optix() && "This function is only supported when using OptiX!");
 
     auto mangle_name = [](const std::string& name, const std::string& prefix) {
@@ -404,15 +401,23 @@ BackendLLVM::createOptixMetadata (const std::string& name, const Symbol& sym)
     };
 
     std::string optix_type;
+    const TypeDesc type = sym.typespec().simpletype();
     if (! sym.typespec().is_array()) {
         optix_type =
-            (type == "color"  ) ? "float3"   :
-            (type == "point"  ) ? "float3"   :
-            (type == "vector" ) ? "float3"   :
-            (type == "normal" ) ? "float3"   :
-            (type == "matrix" ) ? "float16"  : // TODO: This needs to be revisited!
-            (type == "string" ) ? "uint64_t" :
-            type;
+            // Documented built-in types
+            (type == TypeDesc::TypeInt   ) ? "int"      :
+            (type == TypeDesc::TypeFloat ) ? "float"    :
+            (type == TypeDesc::TypePoint ) ? "float3"   :
+            (type == TypeDesc::TypeVector) ? "float3"   :
+            (type == TypeDesc::TypeNormal) ? "float3"   :
+            (type == TypeDesc::TypeColor ) ? "float3"   :
+            (type == TypeDesc::TypeMatrix) ? "matrix"   :
+            (type == TypeDesc::TypeString) ? "uint64_t" :
+            // Catch-all for types that fall through, if there are any.
+            type.c_str();
+
+        // NB: TypeMatrix is assumed to be 4x4 and will be treated by OptiX as a
+        //     user datatype (i.e., a generic struct).
     }
     else {
         // OptiX should handle int and float vectors between 2 and 4 dimensions
@@ -427,7 +432,7 @@ BackendLLVM::createOptixMetadata (const std::string& name, const Symbol& sym)
         unsigned int kind = 0x796152; // _OPTIX_VARIABLE
         unsigned int size;
     } type_info;
-    type_info.size = size;
+    type_info.size = sym.size();
 
     int  type_enum = 0x1337;          // _OPTIX_TYPE_ENUM_UNKNOWN
     char zero      = 0;

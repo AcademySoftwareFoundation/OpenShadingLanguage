@@ -325,30 +325,26 @@ BackendLLVM::getOrAllocateLLVMSymbol (const Symbol& sym)
 
 
 llvm::Value*
-BackendLLVM::addCUDAVariable(const std::string& name, const Symbol& sym,
-                             int size, int alignment, const void* data,
-                             const std::string& type)
+BackendLLVM::addCUDAVariable(const std::string& name, int size, int alignment,
+                             const void* data, TypeDesc type)
 {
     ASSERT (use_optix() && "This function is only supposed to be used with OptiX!");
 
     llvm::Constant* constant = nullptr;
 
-    if (type == "float") {
+    if (type == TypeDesc::TypeFloat) {
         constant = llvm::ConstantFP::get (
             llvm::Type::getFloatTy (ll.module()->getContext()), *(float*) data);
     }
-    else if (type == "int") {
+    else if (type == TypeDesc::TypeInt) {
         constant = llvm::ConstantInt::get (
             llvm::Type::getInt32Ty (ll.module()->getContext()), *(int*) data);
     }
-    else if (type == "string") {
+    else if (type == TypeDesc::TypeString) {
         // Register the string with the OptiX renderer. The renderer will add
         // the string to a global table and create an OptiX variable to hold the
         // char*.
         shadingsys().renderer()->register_string (((ustring*)data)->string(), name);
-
-        // Add the metadata needed by OptiX to access the variable.
-        createOptixMetadata (name, sym);
 
         // Leave the variable uninitialized to prevent raw pointers from
         // appearing in the generated code. The OptiX renderer will set the
@@ -437,11 +433,11 @@ BackendLLVM::createOptixMetadata (const std::string& name, const Symbol& sym)
     int  type_enum = 0x1337;          // _OPTIX_TYPE_ENUM_UNKNOWN
     char zero      = 0;
 
-    addCUDAVariable (mangle_name (name, "typeinfo"  ), sym, 8, 4, &type_info, "");
-    addCUDAVariable (mangle_name (name, "typename"  ), sym, optix_type.size() + 1, 16, optix_type.data(), "");
-    addCUDAVariable (mangle_name (name, "typeenum"  ), sym, 4, 4, &type_enum, "int");
-    addCUDAVariable (mangle_name (name, "semantic"  ), sym, 1, 1, &zero, "");
-    addCUDAVariable (mangle_name (name, "annotation"), sym, 1, 1, &zero, "");
+    addCUDAVariable (mangle_name (name, "typeinfo"  ), 8, 4, &type_info);
+    addCUDAVariable (mangle_name (name, "typename"  ), optix_type.size() + 1, 16, optix_type.data());
+    addCUDAVariable (mangle_name (name, "typeenum"  ), 4, 4, &type_enum, TypeDesc::TypeInt);
+    addCUDAVariable (mangle_name (name, "semantic"  ), 1, 1, &zero);
+    addCUDAVariable (mangle_name (name, "annotation"), 1, 1, &zero);
 }
 
 
@@ -509,7 +505,7 @@ BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym, bool addMetadata)
     }
 
     // Add the extra metadata needed to make the variable visible to OptiX.
-    if (addMetadata)
+    if (addMetadata || sym.typespec().is_string())
         createOptixMetadata (name, sym);
 
     // TODO: Figure out the actual CUDA alignment requirements for the various
@@ -517,8 +513,9 @@ BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym, bool addMetadata)
     //       non-scalar types. See: createOptixVariable()
     int alignment = (sym.typespec().is_scalarnum()) ? 4 : 8;
 
-    llvm::Value* cuda_var = addCUDAVariable (name, sym, sym.size(), alignment, sym.data(),
-                                             sym.typespec().string());
+    llvm::Value* cuda_var = addCUDAVariable (name, sym.size(), alignment, sym.data(),
+                                             sym.typespec().simpletype());
+
     return cuda_var;
 }
 

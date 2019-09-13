@@ -231,9 +231,8 @@ public:
     llvm::Value *getOrAllocateCUDAVariable (const Symbol& sym, bool addMetadata=false);
 
     /// Create a CUDA global variable and add it to the current Module
-    llvm::Value *addCUDAVariable (const std::string& name, const Symbol& sym,
-                                  int size, int alignment, const void* data,
-                                  const std::string& type="");
+    llvm::Value *addCUDAVariable (const std::string& name, int size, int alignment,
+                                  const void* data, TypeDesc type=TypeDesc::UNKNOWN);
 
     /// Create the extra semantic information needed for OptiX variables
     void createOptixMetadata (const std::string& name, const Symbol& sym );

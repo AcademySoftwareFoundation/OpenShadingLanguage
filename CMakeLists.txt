@@ -249,6 +249,7 @@ macro ( TESTSUITE )
             NOT _testname MATCHES "optix" AND
             NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
             set (_env TESTSHADE_OPT=0
+                      PATH=${PATH}${PNG_LIBRARIES}
                       OPENIMAGEIO_ROOT_DIR=${OPENIMAGEIO_ROOT_DIR}
                       OSL_SOURCE_DIR=${CMAKE_SOURCE_DIR}
                       OSL_BUILD_DIR=${CMAKE_BINARY_DIR} )
@@ -261,6 +262,7 @@ macro ( TESTSUITE )
         if (NOT _testname MATCHES "optix"
             AND NOT EXISTS "${_testsrcdir}/NOOPTIMIZE")
             set (_env TESTSHADE_OPT=2
+                      PATH=${PATH}${PNG_LIBRARIES}
                       OPENIMAGEIO_ROOT_DIR=${OPENIMAGEIO_ROOT_DIR}
                       OSL_SOURCE_DIR=${CMAKE_SOURCE_DIR}
                       OSL_BUILD_DIR=${CMAKE_BINARY_DIR} )

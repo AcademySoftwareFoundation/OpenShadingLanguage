@@ -19,6 +19,11 @@
 #include <OpenImageIO/parallel.h>
 #include <OpenImageIO/sysutil.h>
 
+#ifdef OSL_USE_OPTIX
+// purely to get optix version -- once optix 7.0 is required this can go away
+#include <optix.h>
+#endif
+
 #include <OSL/oslexec.h>
 #include "optixraytracer.h"
 #include "shading.h"
@@ -160,7 +165,9 @@ main (int argc, const char *argv[])
     OIIO::Sysutil::setup_crash_stacktrace("stdout");
 #endif
 
+#if (OPTIX_VERSION < 70000)
     try {
+#endif
         using namespace OIIO;
         Timer timer;
 
@@ -197,6 +204,13 @@ main (int argc, const char *argv[])
 
         // Setup common attributes
         set_shadingsys_options();
+
+#ifdef OSL_USE_OPTIX
+#if (OPTIX_VERSION >= 70000)
+    if (use_optix)
+        reinterpret_cast<OptixRaytracer *> (rend)->synch_attributes();
+#endif
+#endif
 
         // Loads a scene, creating camera, geometry and assigning shaders
         rend->camera.resolution (xres, yres);
@@ -255,11 +269,12 @@ main (int argc, const char *argv[])
         rend->clear();
         delete shadingsys;
         delete rend;
+#if (OPTIX_VERSION < 70000)
     } catch (const OSL::optix::Exception& e) {
         printf("Optix Error: %s\n", e.what());
     } catch (const std::exception& e) {
         printf("Unknown Error: %s\n", e.what());
     }
-
+#endif
     return EXIT_SUCCESS;
 }

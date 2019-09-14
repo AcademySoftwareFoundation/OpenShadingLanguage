@@ -26,8 +26,12 @@ public:
 
     uint64_t register_string (const std::string& str, const std::string& var_name)
     {
-        return m_str_table.addString (ustring(str), ustring(var_name));
+        uint64_t val = m_str_table.addString (ustring(str), ustring(var_name));
+        return val;
     }
+
+    uint64_t register_global (const std::string& str, uint64_t value);
+    bool     fetch_global (const std::string& str, uint64_t *value);
 
     virtual int supports (string_view feature) const
     {
@@ -58,18 +62,43 @@ public:
     /// used with texture calls to avoid the name lookups.
     virtual TextureHandle * get_texture_handle(ustring filename, ShadingContext* shading_context);
 
+#if (OPTIX_VERSION < 70000)
     // Easy way to do Optix calls
     optix::Context& optix_ctx()            { return m_optix_ctx; }
     optix::Context& context()              { return m_optix_ctx; }
     optix::Context& operator -> ()         { return context(); }
+#else
+    OptixDeviceContext optix_ctx()         { return m_optix_ctx; }
+    OptixDeviceContext context()           { return m_optix_ctx; }
+    OptixDeviceContext operator -> ()      { return context(); }
+#endif
 
 private:
-    OptiXStringTable m_str_table;
+
     optix::Context m_optix_ctx = nullptr;
+    OptiXStringTable m_str_table;
+
+#if (OPTIX_VERSION < 70000)
     optix::Program m_program = nullptr;
+#else
+    CUstream                m_cuda_stream;
+    OptixShaderBindingTable m_optix_sbt = {};
+    OptixPipeline           m_optix_pipeline = {};
+    CUdeviceptr             d_output_buffer;
+    CUdeviceptr             d_launch_params = 0;
+    int                     m_xres, m_yres;
+#endif
     std::string m_materials_ptx;
     std::unordered_map<OIIO::ustring, optix::TextureSampler, OIIO::ustringHash> m_samplers;
+    std::unordered_map<OIIO::ustring, uint64_t, OIIO::ustringHash> m_globals_map;
 };
 
+#if (OPTIX_VERSION >= 70000)
+struct EmptyRecord
+{
+    __align__( OPTIX_SBT_RECORD_ALIGNMENT ) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
+    void *data;
+};
+#endif
 
 OSL_NAMESPACE_EXIT

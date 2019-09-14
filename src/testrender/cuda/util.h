@@ -6,8 +6,14 @@
 #pragma once
 
 #include <optix.h>
+
+#if (OPTIX_VERSION < 70000)
 #include <optixu/optixu_math_namespace.h>
 #include <optixu/optixu_vector_types.h>
+typedef optix::float3 float3;
+typedef optix::uchar4 uchar4;
+#endif
+
 #include <stdint.h>
 
 
@@ -18,16 +24,17 @@ struct PRD_radiance
 
 
 struct RayGeometry {
-    optix::float3 origin;
-    optix::float3 direction;
+    float3 origin;
+    float3 direction;
 };
 
 
 static __device__ __inline__
-optix::uchar4 make_color (const optix::float3& c)
+uchar4 make_color (const float3& c)
 {
-    return optix::make_uchar4 (static_cast<unsigned char>(__saturatef(c.z)*255.99f),  /* B */
-                               static_cast<unsigned char>(__saturatef(c.y)*255.99f),  /* G */
-                               static_cast<unsigned char>(__saturatef(c.x)*255.99f),  /* R */
-                               255u);                                                 /* A */
+    return make_uchar4 (static_cast<unsigned char>(__saturatef(c.z)*255.99f),  /* B */
+                        static_cast<unsigned char>(__saturatef(c.y)*255.99f),  /* G */
+                        static_cast<unsigned char>(__saturatef(c.x)*255.99f),  /* R */
+                        255u);                                                 /* A */
 }
+

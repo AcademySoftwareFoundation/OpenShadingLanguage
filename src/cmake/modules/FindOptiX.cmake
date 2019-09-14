@@ -53,18 +53,20 @@ macro(OPTIX_find_api_library name version)
 endmacro()
 
 # Pull out the API version from optix.h
-file(STRINGS ${OPTIX_INCLUDE_DIR}/optix.h OPTIX_VERSION_LINE LIMIT_COUNT 1 REGEX OPTIX_VERSION)
+file(STRINGS ${OPTIX_INCLUDE_DIR}/optix.h OPTIX_VERSION_LINE LIMIT_COUNT 1 REGEX "define OPTIX_VERSION")
 string(REGEX MATCH "([0-9]+)" OPTIX_VERSION_STRING "${OPTIX_VERSION_LINE}")
 math(EXPR OPTIX_VERSION_MAJOR "${OPTIX_VERSION_STRING}/10000")
 math(EXPR OPTIX_VERSION_MINOR "(${OPTIX_VERSION_STRING}%10000)/100")
 math(EXPR OPTIX_VERSION_MICRO "${OPTIX_VERSION_STRING}%100")
 set(OPTIX_VERSION "${OPTIX_VERSION_MAJOR}.${OPTIX_VERSION_MINOR}.${OPTIX_VERSION_MICRO}")
 
-OPTIX_find_api_library(optix ${OPTIX_VERSION})
-OPTIX_find_api_library(optixu ${OPTIX_VERSION})
-OPTIX_find_api_library(optix_prime ${OPTIX_VERSION})
-
-set (OPTIX_LIBRARIES ${optix_LIBRARY})
+# OptiX 7 doesn't link to any libraries
+if (${OPTIX_VERSION_MAJOR} LESS 7)
+    OPTIX_find_api_library(optix ${OPTIX_VERSION})
+    OPTIX_find_api_library(optixu ${OPTIX_VERSION})
+    OPTIX_find_api_library(optix_prime ${OPTIX_VERSION})
+    set (OPTIX_LIBRARIES ${optix_LIBRARY})
+endif ()
 
 mark_as_advanced (
     OPTIX_INCLUDE_DIR
@@ -73,11 +75,21 @@ mark_as_advanced (
     )
 
 include (FindPackageHandleStandardArgs)
-find_package_handle_standard_args (OptiX
-    FOUND_VAR     OPTIX_FOUND
-    REQUIRED_VARS OPTIX_INCLUDE_DIR OPTIX_LIBRARIES OPTIX_VERSION
-    VERSION_VAR   OPTIX_VERSION
-    )
+
+
+if (${OPTIX_VERSION_MAJOR} LESS 7)
+    find_package_handle_standard_args (OptiX
+        FOUND_VAR     OPTIX_FOUND
+        REQUIRED_VARS OPTIX_INCLUDE_DIR OPTIX_LIBRARIES OPTIX_VERSION
+        VERSION_VAR   OPTIX_VERSION
+        )
+else ()
+    find_package_handle_standard_args (OptiX
+        FOUND_VAR     OPTIX_FOUND
+        REQUIRED_VARS OPTIX_INCLUDE_DIR OPTIX_VERSION
+        VERSION_VAR   OPTIX_VERSION
+        )
+endif()
 
 if (OPTIX_FOUND)
     set (OPTIX_INCLUDES ${OPTIX_INCLUDE_DIR})

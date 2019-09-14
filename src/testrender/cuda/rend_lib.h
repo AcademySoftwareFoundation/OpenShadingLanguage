@@ -4,15 +4,23 @@
 
 #pragma once
 
+#if (OPTIX_VERSION < 70000)
 #include <optix_math.h>
+#endif
 #include <OSL/device_string.h>
 
 OSL_NAMESPACE_ENTER
 // Create an OptiX variable for each of the 'standard' strings declared in
 // <OSL/strdecls.h>.
 namespace DeviceStrings {
+#if (OPTIX_VERSION < 70000)
 #define STRDECL(str,var_name)                           \
     rtDeclareVariable(OSL_NAMESPACE::DeviceString, var_name, , );
+#else
+#define STRDECL(str,var_name)                           \
+    extern __device__ __constant__ OSL_NAMESPACE::DeviceString var_name;
+#endif
+
 #include <OSL/strdecls.h>
 #undef STRDECL
 }
@@ -20,8 +28,10 @@ OSL_NAMESPACE_EXIT
 
 namespace {  // anonymous namespace
 
+#if (OPTIX_VERSION < 70000)
 #ifdef __cplusplus
     typedef optix::float3 float3;
+#endif
 #endif
 
 // These are CUDA variants of various OSL options structs. Their layouts and
@@ -97,6 +107,7 @@ struct ShaderGlobals {
     int    raytype;
     int    flipHandedness;
     int    backfacing;
+    int    shaderID;
 };
 
 
@@ -129,5 +140,49 @@ enum ClosureIDs {
     DEBUG_ID,
     HOLDOUT_ID,
 };
+
+#if (OPTIX_VERSION >= 70000)
+// ========================================
+//
+// Some helper vector functions
+//
+static __forceinline__ __device__ float3 operator*(const float a, const float3& b)
+{
+      return make_float3(a * b.x, a * b.y, a * b.z);
+}
+
+static __forceinline__ __device__ float3 operator*(const float3 & a, const float b)
+{
+      return make_float3(a.x * b, a.y * b, a.z * b);
+}
+
+static __forceinline__ __device__ float3 operator+(const float3& a, const float3& b)
+{
+      return make_float3(a.x + b.x, a.y + b.y, a.z + b.z);
+}
+
+static __forceinline__ __device__ float3 operator-(const float3& a, const float3& b)
+{
+      return make_float3(a.x - b.x, a.y - b.y, a.z - b.z);
+}
+
+static __forceinline__ __device__ float3 operator-(const float3& a)
+{
+      return make_float3(-a.x, -a.y, -a.z);
+}
+
+static __forceinline__ __device__ float dot(const float3& a, const float3& b)
+{
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+static __forceinline__ __device__ float3 normalize(const float3& v)
+{
+    float invLen = 1.0f / sqrtf(dot(v, v));
+    return invLen * v;
+}
+//
+// ========================================
+#endif //#if (OPTIX_VERSION >= 70000)
 
 }  // anonymous namespace

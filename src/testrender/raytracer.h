@@ -12,16 +12,20 @@
 #include <OSL/dual_vec.h>
 #include <OSL/oslconfig.h>
 #include "optix_compat.h"
+#include "render_params.h"
 
 
 #ifdef OSL_USE_OPTIX
+#include <optix.h>
 
+#if (OPTIX_VERSION < 70000)
 // Converts from Imath::Vec3 to optix::float3
 inline optix::float3 vec3_to_float3 (const OSL::Vec3& vec)
 {
     return optix::make_float3 (vec.x, vec.y, vec.z);
 }
-
+#endif
+#include <vector_functions.h>  // from CUDA
 #endif
 
 // The primitives don't included the intersection routines, etc., from the
@@ -125,10 +129,15 @@ struct Primitive {
 
     int shaderid() const { return shaderID; }
     bool islight() const { return isLight; }
+    void getBounds(float &minx, float &miny, float &minz, float &maxx, float &maxy, float &maxz) const;
 
 #ifdef OSL_USE_OPTIX
+#if (OPTIX_VERSION < 70000)
     virtual void setOptixVariables (optix::Geometry geom, optix::Program bounds,
                                     optix::Program intersect) const = 0;
+#else
+    virtual void setOptixVariables (void *data) const = 0;
+#endif
 #endif
 
 private:
@@ -141,6 +150,17 @@ struct Sphere : public Primitive {
     Sphere(Vec3 c, float r, int shaderID, bool isLight)
         : Primitive(shaderID, isLight), c(c), r2(r * r) {
         OSL_DASSERT(r > 0);
+    }
+
+    void getBounds (float &minx, float &miny, float &minz,
+                    float &maxx, float &maxy, float &maxz) const {
+        const float r = sqrtf(r2);
+        minx = c.x - r;
+        miny = c.y - r;
+        minz = c.z - r;
+        maxx = c.x + r;
+        maxy = c.y + r;
+        maxz = c.z + r;
     }
 
     // returns distance to nearest hit or 0
@@ -223,6 +243,7 @@ struct Sphere : public Primitive {
     }
 
 #ifdef OSL_USE_OPTIX
+#if (OPTIX_VERSION < 70000)
     virtual void setOptixVariables (optix::Geometry geom, optix::Program bounds,
                                     optix::Program intersect) const
     {
@@ -234,6 +255,16 @@ struct Sphere : public Primitive {
         geom["r2"]->setFloat (r2);
         geom["a" ]->setFloat (M_PIf * (r2 * r2));
     }
+#else
+    virtual void setOptixVariables (void *data) const
+    {
+        SphereParams* sphere_data = reinterpret_cast<SphereParams *>(data);
+        sphere_data->c  = make_float3(c.x, c.y, c.z);
+        sphere_data->r2 = r2;
+        sphere_data->a  = M_PI * (r2 * r2);
+        sphere_data->shaderID = shaderid();
+    }
+#endif
 #endif
 
 private:
@@ -251,6 +282,20 @@ struct Quad : public Primitive {
         n = n.normalize();
         eu = 1 / ex.length2();
         ev = 1 / ey.length2();
+    }
+
+    void getBounds (float &minx, float &miny, float &minz,
+                    float &maxx, float &maxy, float &maxz) const {
+        const Vec3 p0 = p;
+        const Vec3 p1 = p + ex;
+        const Vec3 p2 = p + ex + ey;
+        const Vec3 p3 = p + ey;
+        minx = std::min(p0.x, std::min(p1.x, std::min(p2.x, p3.x)));
+        miny = std::min(p0.y, std::min(p1.y, std::min(p2.y, p3.y)));
+        minz = std::min(p0.z, std::min(p1.z, std::min(p2.z, p3.z)));
+        maxx = std::max(p0.x, std::max(p1.x, std::max(p2.x, p3.x)));
+        maxy = std::max(p0.y, std::max(p1.y, std::max(p2.y, p3.y)));
+        maxz = std::max(p0.z, std::max(p1.z, std::max(p2.z, p3.z)));
     }
 
     // returns distance to nearest hit or 0
@@ -303,6 +348,7 @@ struct Quad : public Primitive {
     }
 
 #ifdef OSL_USE_OPTIX
+#if (OPTIX_VERSION < 70000)
     virtual void setOptixVariables (optix::Geometry geom, optix::Program bounds,
                                     optix::Program intersect) const
     {
@@ -318,6 +364,20 @@ struct Quad : public Primitive {
         geom["ev"]->setFloat (ev);
         geom["a" ]->setFloat (a);
     }
+#else
+    virtual void setOptixVariables (void *data) const
+    {
+        QuadParams* quad_data = reinterpret_cast<QuadParams *>(data);
+        quad_data->p  = make_float3 ( p.x,  p.y,  p.z);
+        quad_data->ex = make_float3 (ex.x, ex.y, ex.z);
+        quad_data->ey = make_float3 (ey.x, ey.y, ey.z);
+        quad_data->n  = make_float3 ( n.x,  n.y,  n.z);
+        quad_data->eu = eu;
+        quad_data->ev = ev;
+        quad_data->a  = a ;
+        quad_data->shaderID = shaderid();
+    }
+#endif
 #endif
 
 private:
@@ -415,7 +475,9 @@ struct Scene {
     std::vector<Sphere> spheres;
     std::vector<Quad> quads;
 #ifdef OSL_USE_OPTIX
+#if (OPTIX_VERSION < 70000)
     std::vector<optix::Material> optix_mtls;
+#endif
 #endif
 };
 

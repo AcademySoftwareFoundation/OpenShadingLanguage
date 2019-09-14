@@ -319,13 +319,9 @@ BackendLLVM::addCUDAVariable(const std::string& name, int size, int alignment,
         // Register the string with the OptiX renderer. The renderer will add
         // the string to a global table and create an OptiX variable to hold the
         // char*.
-        shadingsys().renderer()->register_string (((ustring*)data)->string(), name);
-
-        // Leave the variable uninitialized to prevent raw pointers from
-        // appearing in the generated code. The OptiX renderer will set the
-        // variable to the string address before the kernel is launched.
+        int64_t addr = shadingsys().renderer()->register_string (((ustring*)data)->string(), name);
         constant = llvm::ConstantInt::get (
-            llvm::Type::getInt64Ty (ll.module()->getContext()), 0);
+            llvm::Type::getInt64Ty (ll.module()->getContext()), addr);
 
         m_varname_map [name] = ((ustring*)data)->string();
     }
@@ -348,6 +344,8 @@ BackendLLVM::addCUDAVariable(const std::string& name, int size, int alignment,
     g_var->setLinkage    (llvm::GlobalValue::ExternalLinkage);
     g_var->setVisibility (llvm::GlobalValue::DefaultVisibility);
     g_var->setInitializer(constant);
+    if (type == TypeDesc::TypeString)
+        g_var->setConstant(true);
 
     m_const_map[name] = g_var;
 

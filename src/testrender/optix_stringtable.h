@@ -6,12 +6,15 @@
 
 #include <map>
 #include <utility>
+#include <unordered_map>
 
 #include <OpenImageIO/ustring.h>
 #include <OSL/oslexec.h>
 #include "optix_compat.h"
 
 OSL_NAMESPACE_ENTER
+
+typedef std::unordered_map<OIIO::ustring, int64_t, OIIO::ustringHash> StringTableMap;
 
 
 // The OptiXStringTable manages a block of CUDA device memory designated
@@ -29,6 +32,10 @@ public:
     // Allocate CUDA device memory for the raw string table and add the
     // "standard" strings declared in strdecls.h.
     void init (optix::Context ctx);
+
+    const StringTableMap &contents() const {
+        return m_addr_table;
+    }
 
     // Add a string to the table (if it hasn't already been added), and return
     // its address in device memory. Also, create an OptiX variable to hold the
@@ -76,6 +83,8 @@ private:
 
     // The variable names associated with each canonical string.
     std::map<OIIO::ustring,OIIO::ustring> m_name_map;
+
+    StringTableMap m_addr_table;
 };
 
 OSL_NAMESPACE_EXIT

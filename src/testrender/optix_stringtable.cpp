@@ -36,14 +36,16 @@ OptiXStringTable::freetable()
 
 
 
-void OptiXStringTable::init (OSL::optix::Context ctx OSL_MAYBE_UNUSED)
+void OptiXStringTable::init (optix::Context ctx OSL_MAYBE_UNUSED)
 {
 #ifdef OSL_USE_OPTIX
     OSL_ASSERT (! m_ptr && "StringTable should only be initialized once");
     m_optix_ctx = ctx;
 
+#if (OPTIX_VERSION < 70000)
     OSL_ASSERT ((m_optix_ctx->getEnabledDeviceCount() == 1) &&
             "Only one CUDA device is currently supported");
+#endif
 
     OSL::cudaMalloc (reinterpret_cast<void**>(&m_ptr), (m_size));
 
@@ -108,16 +110,23 @@ uint64_t OptiXStringTable::addString (ustring str OSL_MAYBE_UNUSED,
         // Align the offset for the next entry to 8-byte boundaries
         m_offset = (m_offset + 0x7u) & ~0x7u;
     }
+    else if (!var_name.empty()) {
+        // update what str points to
+        m_name_map[str] = var_name;
+    }
 
     uint64_t addr = reinterpret_cast<uint64_t>(m_ptr + offset);
 
     // Optionally create an OptiX variable for the string. It's not necessary to
     // create a variable for strings that do not appear by name in compiled code
     // (in either the OSL library functions or in the renderer).
-    if (! var_name.empty()) {
+#if (OPTIX_VERSION < 70000)
+    if (! var_name.empty())
         m_optix_ctx [var_name.string()]->setUserData (8, &addr);
-    }
-
+#else
+    if (! var_name.empty())
+        m_addr_table [var_name] = addr;
+#endif
     return addr;
 #else
     return 0;
@@ -135,8 +144,11 @@ int OptiXStringTable::getOffset (const std::string& str) const
 void OptiXStringTable::reallocTable()
 {
 #ifdef OSL_USE_OPTIX
+
+#if (OPTIX_VERSION < 70000)
     OSL_ASSERT ((m_optix_ctx->getEnabledDeviceCount() == 1) &&
-                "Only one CUDA device is currently supported");
+            "Only one CUDA device is currently supported");
+#endif
 
     m_size *= 2;
     OSL::cudaFree (m_ptr);

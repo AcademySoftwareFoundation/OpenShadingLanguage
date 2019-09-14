@@ -26,7 +26,7 @@ function ( NVCC_COMPILE cuda_src ptx_generated extra_nvcc_args )
             ${LLVM_COMPILE_FLAGS}
             -DOSL_USE_FAST_MATH=1
             -m64 -arch ${CUDA_TARGET_ARCH} -ptx
-            --std=c++11 -O3 --use_fast_math --expt-relaxed-constexpr
+            --std=c++11 -dc -O3 --use_fast_math --expt-relaxed-constexpr
             ${extra_nvcc_args}
             ${cuda_src} -o ${cuda_ptx}
         MAIN_DEPENDENCY ${cuda_src}

@@ -385,6 +385,20 @@ public:
         return 0;
     }
 
+    virtual uint64_t register_global (const std::string& var_name,
+                                      uint64_t           value)
+    {
+        return 0;
+    }
+
+    virtual bool fetch_global (const std::string& var_name,
+                               uint64_t*          value)
+    {
+        return false;
+    }
+
+
+
     /// Options we use for noise calls.
     struct NoiseOpt {
         int anisotropic;

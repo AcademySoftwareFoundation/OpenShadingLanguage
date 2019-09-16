@@ -1,0 +1,11 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/include
+
+Name: oslquery
+Description: oslquery Query parameters of OSL compiled shaders
+URL: https://github.com/imageworks/OpenShadingLanguage
+Version: @PACKAGE_VERSION_MAJOR@.@PACKAGE_VERSION_MINOR@.@PACKAGE_VERSION_PATCH@
+Libs: -L${libdir} -loslquery
+Cflags: -I${includedir}

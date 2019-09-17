@@ -228,22 +228,14 @@ public:
     /// Allocate a CUDA variable for the given OSL symbol and return a pointer
     /// to the corresponding LLVM GlobalVariable, or return the pointer if it
     /// has already been allocated.
-    llvm::Value *getOrAllocateCUDAVariable (const Symbol& sym);
+    llvm::Value *getOrAllocateCUDAVariable (const Symbol& sym, bool addMetadata=false);
 
     /// Create a CUDA global variable and add it to the current Module
-    llvm::Value *addCUDAVariable (const std::string& name, int size,
-                                  int alignment, void* data,
-                                  const std::string& type="");
-
-    /// Create a CUDA variable, along with the extra semantic information needed
-    /// by OptiX.
-    llvm::Value *createOptixVariable (const std::string& name,
-                                      const std::string& type,
-                                      int size, void* data );
+    llvm::Value *addCUDAVariable (const std::string& name, int size, int alignment,
+                                  const void* data, TypeDesc type=TypeDesc::UNKNOWN);
 
     /// Create the extra semantic information needed for OptiX variables
-    void createOptixMetadata (const std::string& name,
-                              const std::string& type, int size );
+    void createOptixMetadata (const std::string& name, const Symbol& sym );
 
     /// Retrieve an llvm::Value that is a pointer holding the start address
     /// of the specified symbol. This always works for globals and params;

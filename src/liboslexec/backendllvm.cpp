@@ -326,28 +326,25 @@ BackendLLVM::getOrAllocateLLVMSymbol (const Symbol& sym)
 
 llvm::Value*
 BackendLLVM::addCUDAVariable(const std::string& name, int size, int alignment,
-                             void* data, const std::string& type)
+                             const void* data, TypeDesc type)
 {
     ASSERT (use_optix() && "This function is only supposed to be used with OptiX!");
 
     llvm::Constant* constant = nullptr;
 
-    if (type == "float") {
+    if (type == TypeDesc::TypeFloat) {
         constant = llvm::ConstantFP::get (
             llvm::Type::getFloatTy (ll.module()->getContext()), *(float*) data);
     }
-    else if (type == "int") {
+    else if (type == TypeDesc::TypeInt) {
         constant = llvm::ConstantInt::get (
             llvm::Type::getInt32Ty (ll.module()->getContext()), *(int*) data);
     }
-    else if (type == "string") {
+    else if (type == TypeDesc::TypeString) {
         // Register the string with the OptiX renderer. The renderer will add
         // the string to a global table and create an OptiX variable to hold the
         // char*.
         shadingsys().renderer()->register_string (((ustring*)data)->string(), name);
-
-        // Add the metadata needed by OptiX to access the variable.
-        createOptixMetadata (name, "string", 8);
 
         // Leave the variable uninitialized to prevent raw pointers from
         // appearing in the generated code. The OptiX renderer will set the
@@ -380,43 +377,8 @@ BackendLLVM::addCUDAVariable(const std::string& name, int size, int alignment,
 
 
 
-llvm::Value*
-BackendLLVM::createOptixVariable (const std::string& name, const std::string& type,
-                                  int size, void* data)
-{
-    ASSERT (use_optix() && "This function is only supported when using OptiX!");
-
-    // Return the Value if it has already been allocated
-    std::map<std::string, llvm::GlobalVariable*>::iterator it =
-        get_const_map().find (name);
-
-    if (it != get_const_map().end()) {
-        return it->second;
-    }
-
-    // TODO: Figure out the actual CUDA alignment requirements for the various
-    //       OSL types. For now, be somewhat conservative and assume 8 for
-    //       non-scalar types. See: getOrAllocateCUDAVariable()
-    int alignment = (type == "float" || type == "int" ) ? 4 : 8;
-
-    // Create a global variable with the name, type, and initializer. This is
-    // the value that will be accessed when the shader executes.
-    llvm::Value* g_var = addCUDAVariable (name, size, alignment, data, type);
-
-    if (g_var == nullptr) {
-        ASSERT (0 && "Unable to create OptiX variable");
-    }
-
-    createOptixMetadata (name, type, size);
-
-    return g_var;
-}
-
-
-
 void
-BackendLLVM::createOptixMetadata (const std::string& name, const std::string& type,
-                                  int size)
+BackendLLVM::createOptixMetadata (const std::string& name, const Symbol& sym)
 {
     // Create additional variables with the semantic information needed by OptiX
     // to access the global variable created above.
@@ -434,36 +396,54 @@ BackendLLVM::createOptixMetadata (const std::string& name, const std::string& ty
                                       prefix.size()+13, prefix, name.size(), name);
     };
 
-    const std::string optix_type =
-        (type == "color" ) ? "float3"   :
-        (type == "string") ? "uint64_t" :
-        type;
+    std::string optix_type;
+    const TypeDesc type = sym.typespec().simpletype();
+    if (! sym.typespec().is_array()) {
+        optix_type =
+            // Documented built-in types
+            (type == TypeDesc::TypeInt   ) ? "int"      :
+            (type == TypeDesc::TypeFloat ) ? "float"    :
+            (type == TypeDesc::TypePoint ) ? "float3"   :
+            (type == TypeDesc::TypeVector) ? "float3"   :
+            (type == TypeDesc::TypeNormal) ? "float3"   :
+            (type == TypeDesc::TypeColor ) ? "float3"   :
+            (type == TypeDesc::TypeMatrix) ? "matrix"   :
+            (type == TypeDesc::TypeString) ? "uint64_t" :
+            // Catch-all for types that fall through, if there are any.
+            type.c_str();
 
-    // Copy the OptiX typename contents into a temporary vector
-    std::vector<char> type_name (optix_type.c_str(),
-                                 optix_type.c_str() + optix_type.size() + 1);
+        // NB: TypeMatrix is assumed to be 4x4 and will be treated by OptiX as a
+        //     user datatype (i.e., a generic struct).
+    }
+    else {
+        // OptiX should handle int and float vectors between 2 and 4 dimensions
+        // with no problem. Larger arrays, or arrays of other element types,
+        // will be treated as a user datatype and will not work natively with
+        // OptiX's variable mechanism.
+        optix_type = OIIO::Strutil::sprintf ("%s%d", sym.typespec().elementtype().c_str(),
+                                             sym.typespec().arraylength());
+    }
 
     struct rti_typeinfo {
         unsigned int kind = 0x796152; // _OPTIX_VARIABLE
         unsigned int size;
     } type_info;
-    type_info.size = size;
+    type_info.size = sym.size();
 
-    int type_enum = 0x1337;           // _OPTIX_TYPE_ENUM_UNKNOWN
+    int  type_enum = 0x1337;          // _OPTIX_TYPE_ENUM_UNKNOWN
+    char zero      = 0;
 
-    char empty = 0;
-
-    addCUDAVariable (mangle_name (name, "typeinfo"  ), 8, 4, &type_info, "");
-    addCUDAVariable (mangle_name (name, "typename"  ), type_name.size(), 16, type_name.data(), "");
-    addCUDAVariable (mangle_name (name, "typeenum"  ), 4, 4, &type_enum, "int");
-    addCUDAVariable (mangle_name (name, "semantic"  ), 1, 1, &empty, "");
-    addCUDAVariable (mangle_name (name, "annotation"), 1, 1, &empty, "");
+    addCUDAVariable (mangle_name (name, "typeinfo"  ), 8, 4, &type_info);
+    addCUDAVariable (mangle_name (name, "typename"  ), optix_type.size() + 1, 16, optix_type.data());
+    addCUDAVariable (mangle_name (name, "typeenum"  ), 4, 4, &type_enum, TypeDesc::TypeInt);
+    addCUDAVariable (mangle_name (name, "semantic"  ), 1, 1, &zero);
+    addCUDAVariable (mangle_name (name, "annotation"), 1, 1, &zero);
 }
 
 
 
 llvm::Value *
-BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym)
+BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym, bool addMetadata)
 {
     ASSERT (use_optix() && "This function is only supported when using OptiX!");
 
@@ -524,13 +504,19 @@ BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym)
         return it->second;
     }
 
+    // Add the extra metadata needed to make the variable visible to OptiX.
+    if (addMetadata || sym.typespec().is_string())
+        createOptixMetadata (name, sym);
+
     // TODO: Figure out the actual CUDA alignment requirements for the various
     //       OSL types. For now, be somewhat conservative and assume 8 for
     //       non-scalar types. See: createOptixVariable()
     int alignment = (sym.typespec().is_scalarnum()) ? 4 : 8;
 
-    return addCUDAVariable (name, sym.size(), alignment, sym.data(),
-                            sym.typespec().string());
+    llvm::Value* cuda_var = addCUDAVariable (name, sym.size(), alignment, sym.data(),
+                                             sym.typespec().simpletype());
+
+    return cuda_var;
 }
 
 

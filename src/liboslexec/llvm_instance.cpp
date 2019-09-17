@@ -503,7 +503,12 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
     } else if (use_optix() && ! sym.typespec().is_closure() && ! sym.typespec().is_string()) {
         // If the call to osl_bind_interpolated_param returns 0, the default
         // value needs to be loaded from a CUDA variable.
-        llvm::Value* cuda_var = getOrAllocateCUDAVariable (sym);
+        ustring var_name = ustring::format ("%s_%s_%s_%d", sym.name(),
+                                            inst()->layername(), group().name(), group().id());
+
+        // The "true" argument triggers the creation of the metadata needed to
+        // make the variable visible to OptiX.
+        llvm::Value* cuda_var = getOrAllocateCUDAVariable (sym, true);
 
         // memcpy the initial value from the CUDA variable
         llvm::Value* src = ll.ptr_cast (ll.GEP (cuda_var, 0), ll.type_void_ptr());

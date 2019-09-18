@@ -1,5 +1,6 @@
 Compiled checkerboard.osl -> checkerboard.oso
 Compiled matte.osl -> matte.oso
+Compiled microfacet_test.osl -> microfacet_test.oso
 Compiled test_assign.osl -> test_assign.oso
 Compiled test_compare.osl -> test_compare.oso
 Compiled test_print.osl -> test_print.oso

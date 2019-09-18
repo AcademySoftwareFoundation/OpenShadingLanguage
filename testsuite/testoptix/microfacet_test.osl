@@ -1,0 +1,4 @@
+surface microfacet_test ( string dist = "default" [[ int lockgeom=0 ]])
+{
+    Ci = microfacet(dist, N, N, 0.01, 0.01, 1.5, 1);
+}

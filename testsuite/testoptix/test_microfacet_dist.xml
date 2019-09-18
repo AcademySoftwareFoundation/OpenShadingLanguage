@@ -1,0 +1,33 @@
+<World>
+   <Camera eye="0, 100, 300" look_at="0,0,0" fov="70" />
+
+   <ShaderGroup>
+      param float scale_s 20;
+      param float scale_t 20;
+      param color Ca 0.1 0.1 0.1;
+      param color Cb 0.5 0.5 0.5;
+      shader checkerboard tex;
+      shader matte layer1;
+      connect tex.Cout layer1.Cs;
+   </ShaderGroup>
+   <Quad corner="-200,0,0" edge_x="400,0,0" edge_y="0,400,0" /> <!-- Back -->
+   <Quad corner="-200,0,0" edge_x="0,0,400" edge_y="400,0,0" /> <!-- Botm -->
+
+
+   <ShaderGroup>
+     param string dist "default" [[int lockgeom=0]];
+     shader microfacet_test layer1;
+   </ShaderGroup>
+   <Sphere center="-60,30,120"        radius="30" />
+   <ShaderGroup>
+     string dist "ggx";
+     shader microfacet_test layer1;
+   </ShaderGroup>
+   <Sphere center="  0,30,120"        radius="30" />
+   <ShaderGroup>
+     param string dist "default" [[int lockgeom=1]];
+     shader microfacet_test layer1;
+   </ShaderGroup>
+   <Sphere center=" 60,30,120"        radius="30" />
+   
+</World>

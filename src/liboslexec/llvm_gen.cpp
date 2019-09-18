@@ -365,9 +365,9 @@ LLVMGEN (llvm_gen_printf)
                             ustring name = ustring::format("__symname__%s[%d]", sym.mangled(), a);
                             Symbol lsym(name, TypeDesc::TypeString, sym.symtype());
                             lsym.data(&((ustring*)sym.data())[a]);
-                            loaded = rop.llvm_load_device_string (lsym);
+                            loaded = rop.llvm_load_device_string (lsym, /*follow*/ true);
                         } else {
-                            loaded = rop.llvm_load_device_string (sym);
+                            loaded = rop.llvm_load_device_string (sym, /*follow*/ true);
                         }
                         optix_size += sizeof(uint64_t);
                     }
@@ -422,7 +422,7 @@ LLVMGEN (llvm_gen_printf)
         Symbol sym(format_sym.name(), format_sym.typespec(), format_sym.symtype());
         format_ustring = s;
         sym.data(&format_ustring);
-        call_args[new_format_slot] = rop.llvm_load_device_string (sym);
+        call_args[new_format_slot] = rop.llvm_load_device_string (sym, /*follow*/ true);
 
         size_t nargs = call_args.size() - (new_format_slot+1);
         llvm::Value *voids = rop.ll.op_alloca (rop.ll.type_char(), optix_size);
@@ -1808,8 +1808,8 @@ LLVMGEN (llvm_gen_compare_op)
     if (rop.use_optix() && A.typespec().is_string()) {
         ASSERT (B.typespec().is_string() && "Only string-to-string comparison is supported");
 
-        llvm::Value* a = rop.llvm_load_device_string (A);
-        llvm::Value* b = rop.llvm_load_device_string (B);
+        llvm::Value* a = rop.llvm_load_device_string (A, /*follow*/ true);
+        llvm::Value* b = rop.llvm_load_device_string (B, /*follow*/ true);
 
         if (opname == op_eq) {
             final_result = rop.ll.op_eq (a, b);
@@ -3332,9 +3332,8 @@ LLVMGEN (llvm_gen_closure)
 
         if (rop.use_optix() && sym.typespec().is_string()) {
             llvm::Value* dst = rop.ll.offset_ptr (mem_void_ptr, p.offset);
-            llvm::Value* src = rop.llvm_load_device_string (sym);
-            rop.ll.op_memcpy (dst, src, (int)p.type.size(),
-                              4 /* use 4 byte alignment for now */);
+            llvm::Value* src = rop.llvm_load_device_string (sym, /*follow*/ false);
+            rop.ll.op_memcpy (dst, src, 8, 8);
         }
         else if (!sym.typespec().is_closure_array() && !sym.typespec().is_structure()
                  && equivalent(t,p.type)) {

@@ -510,7 +510,7 @@ BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym, bool addMetadata)
 
     // TODO: Figure out the actual CUDA alignment requirements for the various
     //       OSL types. For now, be somewhat conservative and assume 8 for
-    //       non-scalar types. See: createOptixVariable()
+    //       non-scalar types.
     int alignment = (sym.typespec().is_scalarnum()) ? 4 : 8;
 
     llvm::Value* cuda_var = addCUDAVariable (name, sym.size(), alignment, sym.data(),
@@ -665,7 +665,7 @@ BackendLLVM::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
 
 
 llvm::Value *
-BackendLLVM::llvm_load_device_string (const Symbol& sym)
+BackendLLVM::llvm_load_device_string (const Symbol& sym, bool follow)
 {
     // TODO: need to make this work with arrays of strings
     ASSERT (use_optix() && "This is only intended to be used with CUDA");
@@ -690,8 +690,12 @@ BackendLLVM::llvm_load_device_string (const Symbol& sym)
                            ll.type_longlong_ptr());
     }
 
-    // Follow the pointer value to get to the char*.
-    val = ll.int_to_ptr_cast (ll.op_load (val));
+    // It's preferable to deal with device strings "symbolically" through the
+    // CUDA variable (essentially a char**), which helps keep the code
+    // portable. But sometimes it's necessary to handle the underlying char*
+    // directly, e.g. when printing or writing out a closure param.
+    if (follow)
+        val = ll.int_to_ptr_cast (ll.op_load (val));
 
     return val;
 }
@@ -733,7 +737,7 @@ BackendLLVM::llvm_load_constant_value (const Symbol& sym,
     }
     if (sym.typespec().is_string() && use_optix()) {
         ASSERT ((arrayindex == 0) && "String arrays are not currently supported in OptiX");
-        return llvm_load_device_string (sym);
+        return llvm_load_device_string (sym, /*follow*/ false);
     }
     if (sym.typespec().is_string()) {
         const ustring *val = (const ustring *)sym.data();
@@ -947,7 +951,7 @@ BackendLLVM::llvm_call_function (const char *name,
         if (s.typespec().is_closure())
             valargs[i] = llvm_load_value (s);
         else if (use_optix() && s.typespec().is_string())
-            valargs[i] = llvm_load_device_string (s);
+            valargs[i] = llvm_load_device_string (s, /*follow*/ true);
         else if (s.typespec().simpletype().aggregate > 1 ||
                  (deriv_ptrs && s.has_derivs()))
             valargs[i] = llvm_void_ptr (s);
@@ -1050,7 +1054,7 @@ BackendLLVM::llvm_assign_impl (Symbol &Result, Symbol &Src,
     const int num_components = rt.aggregate;
     const bool singlechan = (srccomp != -1) || (dstcomp != -1);
     if (use_optix() && Src.typespec().is_string()) {
-        llvm::Value* src = llvm_load_device_string (Src);
+        llvm::Value* src = llvm_load_device_string (Src, /*follow*/ true);
         llvm_store_value (ll.ptr_cast (src, ll.type_void_ptr()), Result);
     }
     else if (!singlechan) {

@@ -1,7 +1,6 @@
 cmake_minimum_required (VERSION 3.2.2)
 cmake_policy (SET CMP0048 NEW)  # Allow VERSION specifier in project()
-project (OSL
-         VERSION 1.11.1
+project (OSL VERSION 1.11.1.0
          LANGUAGES CXX C)
 set (PROJ_NAME ${PROJECT_NAME})    # short name
 string (TOLOWER ${PROJ_NAME} PROJ_NAME_LOWER)  # short name lower case
@@ -18,12 +17,16 @@ message (STATUS "CMake version is ${CMAKE_VERSION}")
 cmake_policy (SET CMP0017 NEW)  # Prefer files from the CMake module directory when including from there.
 cmake_policy (SET CMP0025 NEW)  # Detect AppleClang for new CMake
 cmake_policy (SET CMP0046 OLD)  # Don't error on non-existent dependency in add_dependencies.
+if (NOT ${CMAKE_VERSION} VERSION_LESS 3.12)
+    cmake_policy (SET CMP0074 NEW)  # Auto search <pkg>_ROOT env for find_* inside find_package(<pkg>)
+endif ()
 set (CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)
 
 # Deprecated names
-set (OSL_LIBRARY_VERSION_PATCH ${PROJECT_VERSION_PATCH})
-set (OSL_LIBRARY_VERSION_MINOR ${PROJECT_VERSION_MINOR})
 set (OSL_LIBRARY_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+set (OSL_LIBRARY_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+set (OSL_LIBRARY_VERSION_PATCH ${PROJECT_VERSION_PATCH})
+set (OSL_LIBRARY_VERSION_TWEAK ${PROJECT_VERSION_TWEAK})
 set (OSL_LIBRARY_VERSION_RELEASE_TYPE ${PROJECT_VERSION_RELEASE_TYPE})
 
 # Version of the OSO file format and instruction set
@@ -80,8 +83,10 @@ endif()
 
 
 option (VERBOSE "Print lots of messages while compiling" OFF)
-set (${PROJ_NAME}_NAMESPACE ${PROJECT_NAME} CACHE STRING "Customized outer namespace base name (version will be added)")
-set (SOVERSION ${OSL_VERSION_MAJOR}.${OSL_VERSION_MINOR}
+set (${PROJ_NAME}_NAMESPACE ${PROJECT_NAME} CACHE STRING
+     "Customized outer namespace base name (version will be added)")
+option (${PROJ_NAME}_NAMESPACE_INCLUDE_PATCH "Should the inner namespace include the patch number" OFF)
+set (SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
      CACHE STRING "Set the SO version in the SO name of the output library")
 set (OSL_LIBNAME_SUFFIX "" CACHE STRING
      "Optional name appended to ${PROJECT_NAME} libraries that are built")
@@ -137,6 +142,9 @@ if (NOT NAMESPACE_HAS_PROJECT_NAME)
     set (PROJ_NAMESPACE ${PROJECT_NAME}_${PROJ_NAMESPACE})
 endif ()
 set (PROJ_NAMESPACE_V "${PROJ_NAMESPACE}_v${PROJECT_VERSION_MAJOR}_${PROJECT_VERSION_MINOR}")
+if (OIIO_NAMESPACE_INCLUDE_PATCH)
+    set (PROJ_NAMESPACE_V "${PROJ_NAMESPACE_V}_${PROJECT_VERSION_PATCH}")
+endif ()
 message(STATUS "Setting Namespace to: ${PROJ_NAMESPACE_V}")
 
 include (util_macros)
@@ -196,6 +204,23 @@ endif ()
 if (INSTALL_DOCS)
 add_subdirectory (src/doc)
 endif ()
+
+# Last minute site-specific instructions, if they exist
+if (OSL_SITE AND EXISTS "${PROJECT_SOURCE_DIR}/site/${OSL_SITE}/cmake/sitecustom.cmake")
+    include ("${PROJECT_SOURCE_DIR}/site/${OSL_SITE}/cmake/sitecustom.cmake")
+endif ()
+
+# install pkgconfig files
+if ( NOT MSVC )
+   configure_file(src/build-scripts/oslexec.pc.in "${CMAKE_BINARY_DIR}/oslexec.pc" @ONLY)
+   configure_file(src/build-scripts/oslcomp.pc.in "${CMAKE_BINARY_DIR}/oslcomp.pc" @ONLY)
+   configure_file(src/build-scripts/oslquery.pc.in "${CMAKE_BINARY_DIR}/oslquery.pc" @ONLY)
+   install (FILES "${CMAKE_BINARY_DIR}/oslexec.pc"
+                  "${CMAKE_BINARY_DIR}/oslcomp.pc"
+                  "${CMAKE_BINARY_DIR}/oslquery.pc"
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+            COMPONENT developer)
+endif()
 
 # Oddball: install the FindOSL.cmake file
 # install (FILES src/cmake/modules/FindOSL.cmake

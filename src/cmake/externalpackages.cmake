@@ -40,9 +40,6 @@ find_package (OpenEXR 2.0 REQUIRED)
 include_directories ("${OPENEXR_INCLUDE_DIR}"
                      "${ILMBASE_INCLUDE_DIR}"
                      "${ILMBASE_INCLUDE_DIR}/OpenEXR")
-if (${OPENEXR_VERSION} VERSION_LESS 2.0.0)
-    message (FATAL_ERROR "OpenEXR/Ilmbase is too old")
-endif ()
 if (NOT OpenEXR_FIND_QUIETLY)
     message (STATUS "OPENEXR_INCLUDE_DIR = ${OPENEXR_INCLUDE_DIR}")
     message (STATUS "OPENEXR_LIBRARIES = ${OPENEXR_LIBRARIES}")
@@ -259,5 +256,39 @@ if (USE_OPTIX)
 endif ()
 
 # end OptiX setup
+###########################################################################
+
+
+###########################################################################
+# Python setup
+# NOTE -- eventually, when we add python bindings for real, transfer this
+# to src/python. For now, it's a placeholder.
+
+# Attempt to find the desired version, but fall back to other
+# additional versions.
+if (NOT PYTHONINTERP_FOUND)
+find_package (PythonInterp ${PYTHON_VERSION}
+              # REQUIRED
+              )
+endif ()
+
+# The version that was found may not be the default or user
+# defined one.
+set (PYTHON_VERSION_FOUND ${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR})
+
+#if (NOT ${PYTHON_VERSION} EQUAL ${PYTHON_VERSION_FOUND} )
+#    message (WARNING "The requested version ${PYTHON_VERSION} was not found.")
+#    message (WARNING "Using ${PYTHON_VERSION_FOUND} instead.")
+#endif ()
+
+find_package (PythonLibs ${PYTHON_VERSION_FOUND}
+              # REQUIRED
+              )
+
+if (NOT DEFINED PYTHON_SITE_DIR)
+    set (PYTHON_SITE_DIR "${CMAKE_INSTALL_LIBDIR}/python${PYTHON_VERSION_FOUND}/site-packages")
+endif ()
+
+# end Python setup
 ###########################################################################
 

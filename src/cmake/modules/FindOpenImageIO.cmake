@@ -1,6 +1,6 @@
 ###########################################################################
 # OpenImageIO   https://www.openimageio.org
-# Copyright 2008-2018 Larry Gritz et al. All rights reserved.
+# Copyright 2008-present Contributors to the OpenImageIO project.
 # BSD 3-clause license:
 #   https://github.com/OpenImageIO/oiio/blob/master/LICENSE
 # For an up-to-date version of this file, see:
@@ -15,10 +15,11 @@
 #   OPENIMAGEIO_INCLUDE_DIR    directory where headers are found
 #   OPENIMAGEIO_LIBRARIES      libraries for OIIO
 #   OPENIMAGEIO_LIBRARY_DIRS   library dirs for OIIO
-#   OPENIMAGEIO_VERSION        Version ("major.minor.patch")
+#   OPENIMAGEIO_VERSION        Version ("major.minor.patch.tweak")
 #   OPENIMAGEIO_VERSION_MAJOR  Version major number
 #   OPENIMAGEIO_VERSION_MINOR  Version minor number
 #   OPENIMAGEIO_VERSION_PATCH  Version minor patch
+#   OPENIMAGEIO_VERSION_TWEAK  Version minor tweak
 #   OIIOTOOL_BIN               Path to oiiotool executable
 #
 # Special inputs:
@@ -34,7 +35,7 @@
 if (NOT OPENIMAGEIO_ROOT_DIR AND NOT $ENV{OPENIMAGEIO_ROOT_DIR} STREQUAL "")
     set (OPENIMAGEIO_ROOT_DIR $ENV{OPENIMAGEIO_ROOT_DIR})
 endif ()
-message(STATUS "Looking for library: OpenImageIO${OIIO_LIBNAME_SUFFIX}")
+
 
 if (NOT OpenImageIO_FIND_QUIETLY)
     message ( STATUS "OPENIMAGEIO_ROOT_DIR = ${OPENIMAGEIO_ROOT_DIR}" )
@@ -63,7 +64,13 @@ if (EXISTS "${OIIO_VERSION_HEADER}")
     string (REGEX MATCHALL "[0-9]+" OPENIMAGEIO_VERSION_MINOR ${TMP})
     file (STRINGS "${OIIO_VERSION_HEADER}" TMP REGEX "^#define OIIO_VERSION_PATCH .*$")
     string (REGEX MATCHALL "[0-9]+" OPENIMAGEIO_VERSION_PATCH ${TMP})
-    set (OPENIMAGEIO_VERSION "${OPENIMAGEIO_VERSION_MAJOR}.${OPENIMAGEIO_VERSION_MINOR}.${OPENIMAGEIO_VERSION_PATCH}")
+    file (STRINGS "${OIIO_VERSION_HEADER}" TMP REGEX "^#define OIIO_VERSION_TWEAK .*$")
+    if (TMP)
+        string (REGEX MATCHALL "[0-9]+" OPENIMAGEIO_VERSION_TWEAK ${TMP})
+    else ()
+        set (OPENIMAGEIO_VERSION_TWEAK 0)
+    endif ()
+    set (OPENIMAGEIO_VERSION "${OPENIMAGEIO_VERSION_MAJOR}.${OPENIMAGEIO_VERSION_MINOR}.${OPENIMAGEIO_VERSION_PATCH}.${OPENIMAGEIO_VERSION_TWEAK}")
 endif ()
 
 set ( OPENIMAGEIO_LIBRARIES ${OPENIMAGEIO_LIBRARY})

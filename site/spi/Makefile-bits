@@ -1,87 +1,137 @@
 # SPI-specific settings
+ifneq (${VERBOSE},)
+$(info Including spi/Makefile-bits)
+endif
 
-# For SpComp2 builds, set env OSL_SPCOMP2=1, and either
+# For SpComp2 builds, do:
+#
 #     make OSL_SPCOMP2=1 spcomp2_install
 # or
 #     make OSL_SPCOMP2=1 SPCOMP2_LOCAL_PATH=/test/path spcomp2_install_local
 #
-# For Arnold builds, set env OSL_ARNOLD=1 and just do a regular
-# "make". We make this the default, so if you want neither an Arnold nor
-# a SpComp2, you have to set OSL_ARNOLD=0.  If both are set, SpComp2
-# takes precedence.
+# For Arnold builds, do:
+#
+#     make OSL_ARNOLD=1
+#
+# For a Rez-bound build, do:
+#
+#     make OSL_SPIREZ=1
+#
+#     (Options: OSL_REZ_NAME=blah REZ_PACKAGE_ROOT=path)
+#
+# Otherwise a default 'make' will make a fully generic OSL build.
+
 OSL_SPCOMP2 ?= 0
-OSL_ARNOLD ?= 1
+OSL_ARNOLD ?= 0
+OSL_SPIREZ ?= 0
+OSL_REZ_NAME ?= OSL
+OSL_VERS = $(shell grep "OSL VERSION" CMakeLists.txt | egrep -o "[0-9.]+")
+ONEVERS = $(shell site/spi/format_version.py ${OSL_VERS})
+OSL_SPCOMP2_VERSION ?= ${ONEVERS}
+
 ifeq (${OSL_SPCOMP2},1)
+    $(info Building for SpComp2)
     OSL_ARNOLD := 0
     NAMESPACE ?= 'OSL_SpComp2'
-    SPI_FLAVOR := SpComp2
-    OSL_SPCOMP2_VERSION ?= 1
     SOVERSION ?= ${OSL_SPCOMP2_VERSION}
-    OPENIMAGEIO_SPCOMP2_VERSION ?= 47
-    $(info Building for SpComp2)
+    PYLIB_LIB_PREFIX ?= 1
+    PYLIB_INCLUDE_SONAME ?= 1
+    OPENIMAGEIO_SPCOMP2_VERSION ?= 20103
 else ifeq (${OSL_ARNOLD},1)
-    NAMESPACE ?= 'OSL_Arnold'
-    SPI_FLAVOR := Arnold
     $(info Building for Arnold)
+    NAMESPACE ?= 'OSL_Arnold'
+    PYLIB_LIB_PREFIX ?= 0
+    PYLIB_INCLUDE_SONAME ?= 0
+else ifeq (${OSL_SPIREZ},1)
+    $(info Building for Rez distribution)
+    NAMESPACE ?= 'OpenImageIO'
+    PYLIB_LIB_PREFIX ?= 0
+    PYLIB_INCLUDE_SONAME ?= 0
+    MY_CMAKE_FLAGS += -DOSL_SPIREZ=1 -DOSL_REZ_PACKAGE_NAME=${OSL_REZ_NAME}
+else
+    $(info Building generic OSL)
+    NAMESPACE ?= 'OSL'
+    PYLIB_LIB_PREFIX ?= 0
+    PYLIB_INCLUDE_SONAME ?= 0
 endif
 #$(info MAKECMDGOALS = $(MAKECMDGOALS))
 
+
+## Detect which SPI platform and set $platform, $COMPILER, $SPCOMP2_COMPILER,
+## and PYTHON_VERSION. Lots of other decisions are based on these.
+ifeq (${SP_OS}, rhel7)
+    # Rhel7 (current)
+    platform := rhel7
+    SPCOMP2_COMPILER ?= gcc48m64
+    SP_PLATFORM ?= linux
+    SP_PROC ?= x86_64
+    SP_REZ_OS ?= CentOS-7
+else ifeq (${platform}, macosx)
+    # Generic OSX machines (including LG's laptop)
+    COMPILER ?= clang
+    SPCOMP2_COMPILER ?= clang
+    SP_OS ?= macosx
+    SP_PLATFORM ?= macosx
+    SP_PROC ?= x86_64
+    SP_REZ_OS ?= MacOS
+else
+    $(error Unknown SP_OS=${SP_OS} platform=${platform})
+endif  # endif ${SP_OS}
+
+PYTHON_VERSION ?= 2.7
+SPI_COMPILER_PLATFORM ?= gcc-4.8
+MY_CMAKE_FLAGS += -DSP_OS=${SP_OS} -DSP_PLATFORM=${SP_PLATFORM}
+MY_CMAKE_FLAGS += -DSP_PROC=${SP_PROC} -DSP_REZ_OS=${SP_REZ_OS}
+MY_CMAKE_FLAGS += -DSPI_COMPILER_PLATFORM=${SPI_COMPILER_PLATFORM}
+MY_CMAKE_FLAGS += -DEXTRA_CPP_ARGS:STRING="-DOSL_SPI=1" -DOSL_SITE:STRING=spi
+MY_CMAKE_FLAGS += -DSPI_TESTS=1
+MY_CMAKE_FLAGS += -DOSL_NAMESPACE_INCLUDE_PATCH=1
+REZ_PACKAGE_ROOT ?= /shots/spi/home/software/packages
 SPCOMP2_ROOT ?= /shots/spi/home/lib/SpComp2
-SPCOMP2_INSTALL_ROOT = $(SPCOMP2_ROOT)
-MY_CMAKE_FLAGS += -DEXTRA_CPP_ARGS="-DOSL_SPI=1"
+
 
 ## Rhel7 (current)
-ifeq ($(SP_OS), rhel7)
-    platform=rhel7
+ifeq (${SP_OS}, rhel7)
     USE_CPP ?= 11
-    USE_SIMD = sse4.1
+    USE_SIMD ?= sse4.1,aes
     CMAKE ?= cmake
     USE_NINJA ?= 1
     NINJA ?= ninja
     ifeq ($(USE_NINJA),1)
         MY_CMAKE_FLAGS += -DCMAKE_MAKE_PROGRAM=${NINJA}
     endif
-    PYTHON_VERSION ?= 2.7
-    PYVERNOSPACE=${shell echo ${PYTHON_VERSION} | sed "s/\\.//"}
-    PYTHON_LIBRARY_DIR ?= /usr/lib64
-    PYTHON_LIBRARY ?= ${PYTHON_LIBRARY_DIR}/libpython${PYTHON_VERSION}.so
-    PYTHON_INCLUDE_DIR ?= /usr/include/python${PYTHON_VERSION}
+    export CCACHE_CPP2 ?= 1
     # Override lib64 and use SPI convention of lib
     MY_CMAKE_FLAGS += -DCMAKE_INSTALL_LIBDIR="${INSTALL_PREFIX}/lib"
     MY_CMAKE_FLAGS += -DCUDA_TOOLKIT_ROOT_DIR=/net/soft_scratch/apps/arnold/tools/nvidia/cuda9.1 -DOPTIX_EXTRA_LIBS=lzma
     MY_CMAKE_FLAGS += -DOPTIXHOME=/net/soft_scratch/apps/arnold/tools/nvidia/NVIDIA-OptiX-SDK-6.0.0-linux64
-    ifneq (${OSL_ARNOLD},0)
-        MY_CMAKE_FLAGS += -DOIIO_LIBNAME_SUFFIX=_Arnold
-        MY_CMAKE_FLAGS += -DOSL_LIBNAME_SUFFIX=_Arnold
+    ifeq (${OSL_SPCOMP2},1)
+        MY_CMAKE_FLAGS += -DPYTHON_SITE_DIR="${INSTALL_PREFIX}/python"
+    else ifeq (${OSL_SPIREZ},1)
+        MY_CMAKE_FLAGS += -DPYTHON_SITE_DIR="${INSTALL_PREFIX}/python"
+    else ifeq (${OSL_ARNOLD},1)
+        OIIO_LIBNAME_SUFFIX ?= _Arnold
+        OSL_LIBNAME_SUFFIX ?= _Arnold
     endif
 
-    ## If not overridden, here is our preferred LLVM installation
-    ## (may be changed as new versions are rolled out to the facility)
-    LLVM_DIRECTORY ?= /shots/spi/home/lib/arnold/rhel7/llvm_8.0.0
-
+    #
+    # Compilers:
+    #
     # A variety of tags can be used to try specific versions of gcc or
     # clang from the site-specific places we have installed them.
-    ifeq (${COMPILER}, clang6)
-        MY_CMAKE_FLAGS += \
-           -DCMAKE_C_COMPILER=/shots/spi/home/lib/arnold/rhel7/llvm_6.0.1/bin/clang \
-           -DCMAKE_CXX_COMPILER=/shots/spi/home/lib/arnold/rhel7/llvm_6.0.1/bin/clang++
-        MY_CMAKE_FLAGS += -DCMAKE_C_FLAGS="--gcc-toolchain=/usr" \
-                          -DCMAKE_CXX_FLAGS="--gcc-toolchain=/usr" \
-			  -DTOOLCHAIN_FLAGS="--gcc-toolchain=/usr"
-    else ifeq (${COMPILER}, clang7)
-        MY_CMAKE_FLAGS += \
-           -DCMAKE_C_COMPILER=/shots/spi/home/lib/arnold/rhel7/llvm_7.0.1/bin/clang \
-           -DCMAKE_CXX_COMPILER=/shots/spi/home/lib/arnold/rhel7/llvm_7.0.1/bin/clang++
-        MY_CMAKE_FLAGS += -DCMAKE_C_FLAGS="--gcc-toolchain=/usr" \
-                          -DCMAKE_CXX_FLAGS="--gcc-toolchain=/usr" \
-			  -DTOOLCHAIN_FLAGS="--gcc-toolchain=/usr"
-    else ifeq (${COMPILER}, clang8)
-        MY_CMAKE_FLAGS += \
-           -DCMAKE_C_COMPILER=/shots/spi/home/lib/arnold/rhel7/llvm_8.0.0/bin/clang \
-           -DCMAKE_CXX_COMPILER=/shots/spi/home/lib/arnold/rhel7/llvm_8.0.0/bin/clang++
-        MY_CMAKE_FLAGS += -DCMAKE_C_FLAGS="--gcc-toolchain=/usr" \
-                          -DCMAKE_CXX_FLAGS="--gcc-toolchain=/usr" \
-			  -DTOOLCHAIN_FLAGS="--gcc-toolchain=/usr"
+    LLVM_DIRECTORY ?= /shots/spi/home/lib/arnold/rhel7/llvm_8.0.0
+    ifeq (${COMPILER},clang6)
+	    LLVM_DIRECTORY := /shots/spi/home/lib/arnold/rhel7/llvm_6.0.1
+        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=${LLVM_DIRECTORY}/bin/clang -DCMAKE_CXX_COMPILER=${LLVM_DIRECTORY}/bin/clang++
+        MY_CMAKE_FLAGS += -DCMAKE_C_FLAGS="--gcc-toolchain=/usr" -DCMAKE_CXX_FLAGS="--gcc-toolchain=/usr"
+    else ifeq (${COMPILER},clang7)
+        LLVM_DIRECTORY := /shots/spi/home/lib/arnold/rhel7/llvm_7.0.1
+        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=${LLVM_DIRECTORY}/bin/clang -DCMAKE_CXX_COMPILER=${LLVM_DIRECTORY}/bin/clang++
+        MY_CMAKE_FLAGS += -DCMAKE_C_FLAGS="--gcc-toolchain=/usr" -DCMAKE_CXX_FLAGS="--gcc-toolchain=/usr"
+    else ifeq (${COMPILER},clang8)
+        LLVM_DIRECTORY := /shots/spi/home/lib/arnold/rhel7/llvm_8.0.0
+        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=${LLVM_DIRECTORY}/bin/clang -DCMAKE_CXX_COMPILER=${LLVM_DIRECTORY}/bin/clang++
+        MY_CMAKE_FLAGS += -DCMAKE_C_FLAGS="--gcc-toolchain=/usr" -DCMAKE_CXX_FLAGS="--gcc-toolchain=/usr"
     else ifeq (${COMPILER}, clang9)
         MY_CMAKE_FLAGS += \
            -DCMAKE_C_COMPILER=/shots/spi/home/lib/arnold/rhel7/llvm_9.0.0_rc4/bin/clang \
@@ -91,10 +141,11 @@ ifeq ($(SP_OS), rhel7)
 			  -DTOOLCHAIN_FLAGS="--gcc-toolchain=/usr"
     else ifeq (${COMPILER},clang)
         MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+        MY_CMAKE_FLAGS += -DCMAKE_C_FLAGS="--gcc-toolchain=/usr" -DCMAKE_CXX_FLAGS="--gcc-toolchain=/usr"
     else ifeq (${COMPILER}, gcc6)
-      MY_CMAKE_FLAGS += \
-         -DCMAKE_C_COMPILER=/opt/rh/devtoolset-6/root/usr/bin/gcc \
-         -DCMAKE_CXX_COMPILER=/opt/rh/devtoolset-6/root/usr/bin/g++
+        MY_CMAKE_FLAGS += \
+           -DCMAKE_C_COMPILER=/opt/rh/devtoolset-6/root/usr/bin/gcc \
+           -DCMAKE_CXX_COMPILER=/opt/rh/devtoolset-6/root/usr/bin/g++
     else ifeq (${COMPILER},gcc)
         MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
     else ifeq (${COMPILER},)
@@ -107,31 +158,101 @@ ifeq ($(SP_OS), rhel7)
 			  -DTOOLCHAIN_FLAGS="--gcc-toolchain=/usr"
     endif
 
-    MY_CMAKE_FLAGS += \
-	-DOPENEXR_INCLUDE_DIR=/usr/include/OpenEXR2 \
-	-DOPENEXR_LIBRARY_DIR=/usr/lib64/OpenEXR2 \
-	-DLLVM_STATIC=1 \
+    MY_CMAKE_FLAGS +=
+        -DLLVM_STATIC=1 \
         -DLLVM_VERSION=${LLVM_VERSION} \
         -DLLVM_DIRECTORY=${LLVM_DIRECTORY}
 
+    #
+    # Boost
+    #
     BOOSTVERS ?= 1.55
-    BOOSTSPSUFFIX ?= 
+    BOOSTSPSUFFIX ?=
     BOOSTVERSSP=${BOOSTVERS}${BOOSTSPSUFFIX}
-    BOOSTVERS_SUFFIX = -${shell echo ${BOOSTVERS} | sed "s/\\./_/"}
-    BOOSTVERS_PREFIX = ${shell echo ${BOOSTVERS} | sed "s/\\./_/"}_0
-    CONSTRUCTED_BOOSTVERS = ${shell echo ${BOOSTVERS} | sed "s/\\./0/"}00
+    MY_CMAKE_FLAGS += -DBOOST_VERS_SP=${BOOSTVERSSP}
+    # $(info BOOSTVERSSP ${BOOSTVERSSP})
+    ifeq (${BOOSTVERS},1.55)
+        SPBOOST_INC_DIR ?= /usr/include/boost_${BOOSTVERSSP}
+        SPBOOST_LIB_DIR ?= /usr/lib64/boost_${BOOSTVERSSP}
+        ifeq (${BOOSTSPSUFFIX}, sp)
+            SPBOOST_LIBNAMESTART ?= lib${BOOSTSPSUFFIX}boost_${shell echo ${BOOSTVERS} | sed "s/\\./_/"}_0
+        else
+            SPBOOST_LIBNAMESTART ?= lib${BOOSTSPSUFFIX}boost
+        endif
+        SPBOOST_LIBNAMEEND ?= -gcc48-mt-${shell echo ${BOOSTVERS} | sed "s/\\./_/"}
+        MY_CMAKE_FLAGS += \
+            -DBOOST_CUSTOM=1 \
+            -DBoost_VERSION=${BOOSTVERS} \
+            -DBoost_INCLUDE_DIRS=${SPBOOST_INC_DIR} \
+            -DBoost_LIBRARY_DIRS=${SPBOOST_LIB_DIR} \
+            -DBoost_LIBRARIES:STRING="${SPBOOST_LIB_DIR}/${SPBOOST_LIBNAMESTART}_filesystem${SPBOOST_LIBNAMEEND}.so;${SPBOOST_LIB_DIR}/${SPBOOST_LIBNAMESTART}_regex${SPBOOST_LIBNAMEEND}.so;${SPBOOST_LIB_DIR}/${SPBOOST_LIBNAMESTART}_system${SPBOOST_LIBNAMEEND}.so;${SPBOOST_LIB_DIR}/${SPBOOST_LIBNAMESTART}_thread${SPBOOST_LIBNAMEEND}.so"
+    else
+        # Our Boost >= 1.61 setup is MUCH simpler and more standard
+	SPBOOST_INC_DIR := /usr/include/boostroot/boost${BOOSTVERSSP}.0
+	SPBOOST_LIB_DIR := /usr/lib64/boostroot/boost${BOOSTVERSSP}.0
+        MY_CMAKE_FLAGS += \
+            -DBOOST_INCLUDEDIR=${SPBOOST_INC_DIR} \
+            -DBOOST_LIBRARYDIR=${SPBOOST_LIB_DIR}
+    endif
+
+    #
+    # Python
+    #
+    PYTHON_INCLUDE_DIR ?= /usr/include/python${PYTHON_VERSION}
+    PYTHON_LIBRARY_DIR ?= /usr/lib64
+    PYTHON_LIBRARY ?= ${PYTHON_LIBRARY_DIR}/libpython${PYTHON_VERSION}.so
+    ifeq (${PYTHON_VERSION},3.6)
+        # Special sauce for Python 3.6
+        PYTHON_INCLUDE_DIR := /usr/include/python${PYTHON_VERSION}m
+        PYTHON_LIBRARY := ${PYTHON_LIBRARY_DIR}/libpython${PYTHON_VERSION}m.so
+        MY_CMAKE_FLAGS += \
+            -DPYTHONINTERP_FOUND=1 \
+            -DPYTHON_VERSION_STRING=3.6.3 \
+            -DPYTHON_VERSION_MAJOR=3 \
+            -DPYTHON_VERSION_MINOR=6 \
+            -DPYTHON_VERSION_PATCH=3 \
+            -DPython_ADDITIONAL_VERSIONS="${PYTHON_VERSION}"
+    else ifeq (${PYTHON_VERSION},3.7)
+        # Special sauce for Python 3.7
+        PYTHON_INCLUDE_DIR := /usr/include/python${PYTHON_VERSION}m
+        PYTHON_LIBRARY := ${PYTHON_LIBRARY_DIR}/libpython${PYTHON_VERSION}m.so
+        MY_CMAKE_FLAGS += \
+            -DPYTHONINTERP_FOUND=1 \
+            -DPYTHON_VERSION_STRING=3.7.3 \
+            -DPYTHON_VERSION_MAJOR=3 \
+            -DPYTHON_VERSION_MINOR=7 \
+            -DPYTHON_VERSION_PATCH=3 \
+            -DPython_ADDITIONAL_VERSIONS="${PYTHON_VERSION}"
+    else ifeq (${PYTHON_VERSION},2.7)
+        # Special sauce for Python 2.7
+        PYTHON_INCLUDE_DIR := /usr/include/python${PYTHON_VERSION}
+        PYTHON_LIBRARY := ${PYTHON_LIBRARY_DIR}/libpython${PYTHON_VERSION}.so
+        MY_CMAKE_FLAGS += \
+            -DPYTHONINTERP_FOUND=1 \
+            -DPYTHON_VERSION_STRING=2.7.5 \
+            -DPYTHON_VERSION_MAJOR=2 \
+            -DPYTHON_VERSION_MINOR=7 \
+            -DPYTHON_VERSION_PATCH=5 \
+            -DPython_ADDITIONAL_VERSIONS="${PYTHON_VERSION}"
+    endif
     MY_CMAKE_FLAGS += \
-        -DBOOST_CUSTOM=1 \
-        -DBoost_VERSION=${CONSTRUCTED_BOOSTVERS} \
-        -DBoost_INCLUDE_DIRS=/usr/include/boost_${BOOSTVERSSP} \
-        -DBoost_LIBRARY_DIRS=/usr/lib64/boost_${BOOSTVERS}
-    MY_CMAKE_FLAGS += \
-        -DBoost_LIBRARIES:STRING="/usr/lib64/boost_${BOOSTVERSSP}/lib${BOOSTSPSUFFIX}boost_regex-gcc48-mt${BOOSTVERS_SUFFIX}.so;/usr/lib64/boost_${BOOSTVERSSP}/lib${BOOSTSPSUFFIX}boost_system-gcc48-mt${BOOSTVERS_SUFFIX}.so;/usr/lib64/boost_${BOOSTVERSSP}/lib${BOOSTSPSUFFIX}boost_thread-gcc48-mt${BOOSTVERS_SUFFIX}.so"
+        -DPYTHON_INCLUDE_DIR:STRING=${PYTHON_INCLUDE_DIR} \
+        -DPYTHON_LIBRARY:STRING=${PYTHON_LIBRARY}
+
+    # Set our preferred OpenEXR path, but allow env variable to override
+    # with custom/test version.
+    ifeq (${OPENEXR_ROOT_DIR},)
+        MY_CMAKE_FLAGS += \
+            -DOPENEXR_INCLUDE_DIR=/usr/include/OpenEXR2 \
+            -DOPENEXR_LIBRARY_DIR=/usr/lib64/OpenEXR2
+    endif
 
     PARTIO_HOME := ${SPCOMP2_ROOT}/partio/rhel7-gcc48m64-boost155/v3
     MY_CMAKE_FLAGS += -DPARTIO_HOME="${PARTIO_HOME}"
 
-    # set up OpenImageIO distribution environment
+    # set up OSL distribution environment
+    SPARCH=${SP_OS}-$(SPCOMP2_COMPILER)$(CPPSTDSUFFIX)-boost$(subst .,,$(BOOSTVERSSP))
+
     ifeq (${OSL_SPCOMP2},1)
         OPENIMAGEIO_ROOT_DIR=$(SPCOMP2_ROOT)/OpenImageIO/$(SPARCH)/v$(OPENIMAGEIO_SPCOMP2_VERSION)
     else ifneq (${OPENIMAGEIO_ROOT_DIR},)
@@ -143,25 +264,27 @@ ifeq ($(SP_OS), rhel7)
         MY_CMAKE_FLAGS += -DOPENIMAGEIO_ROOT_DIR:STRING=$(OPENIMAGEIO_ROOT_DIR)
     endif
 
-    SPCOMP2_COMPILER ?= gcc48m64
-    SPARCH=${SP_OS}-$(SPCOMP2_COMPILER)$(CPPSTDSUFFIX)-boost$(subst .,,$(BOOSTVERSSP))
-    SPPYARCH=$(SPARCH)-py$(PYVERNOSPACE)
-
-# end rhel7
+    # end rhel7
 
 ## Generic OSX machines (including LG's laptop)
 else ifeq (${platform}, macosx)
-    USE_CPP ?= 11
     USE_SIMD ?= sse4.2
     MY_CMAKE_FLAGS += \
         -DCMAKE_BUILD_WITH_INSTALL_RPATH=1 \
         -DCMAKE_INSTALL_NAME_DIR="${working_dir}/dist/${platform}${variant}/lib"
 
+    BOOSTVERS ?= 1.55
+    BOOSTSPSUFFIX ?=
+    BOOSTVERSSP=${BOOSTVERS}${BOOSTSPSUFFIX}
     LLVM_DIRECTORY ?= /usr/local/opt/llvm
 
     # A variety of tags can be used to try specific versions of gcc or
     # clang from the site-specific places we have installed them.
-    ifeq (${COMPILER}, gcc5)
+    ifeq (${COMPILER}, gcc48)
+        MY_CMAKE_FLAGS += \
+           -DCMAKE_C_COMPILER=gcc-4.8 -DCMAKE_CXX_COMPILER=g++-4.8
+        USE_LIBCPLUSPLUS := 0
+    else ifeq (${COMPILER}, gcc5)
         MY_CMAKE_FLAGS += \
            -DCMAKE_C_COMPILER=gcc-5 -DCMAKE_CXX_COMPILER=g++-5
         USE_LIBCPLUSPLUS := 0
@@ -169,8 +292,16 @@ else ifeq (${platform}, macosx)
         MY_CMAKE_FLAGS += \
            -DCMAKE_C_COMPILER=gcc-6 -DCMAKE_CXX_COMPILER=g++-6
         USE_LIBCPLUSPLUS := 0
+    else ifeq (${COMPILER}, gcc8)
+        MY_CMAKE_FLAGS += \
+           -DCMAKE_C_COMPILER=gcc-8 -DCMAKE_CXX_COMPILER=g++-8
+        USE_LIBCPLUSPLUS := 0
+    else ifeq (${COMPILER},clang6)
+        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm@6/6.0.1_1/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm@6/6.0.1_1/bin/clang++
     else ifeq (${COMPILER},clang7)
-        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/7.0.1/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/7.0.1/bin/clang++
+        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm@7/7.0.1/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm@7/7.0.1/bin/clang++
+    else ifeq (${COMPILER},clang8)
+        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/8.0.1/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/8.0.1/bin/clang++
     else ifeq (${COMPILER},clang)
         MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
     else ifeq (${COMPILER},gcc)
@@ -178,7 +309,8 @@ else ifeq (${platform}, macosx)
     else ifeq (${COMPILER},)
         # default compiler is clang, taken from the LLVM directory
         MY_CMAKE_FLAGS += \
-           -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+           -DCMAKE_C_COMPILER=${LLVM_DIRECTORY}/bin/clang \
+           -DCMAKE_CXX_COMPILER=${LLVM_DIRECTORY}/bin/clang++
     else ifeq (${COMPILER},llvm)
         # "llvm" means "use the clang from our llvm"
         MY_CMAKE_FLAGS += \
@@ -189,9 +321,19 @@ else ifeq (${platform}, macosx)
     # end generic OSX
 
 else
-    $(error Unknown SP_OS)
-endif  # endif $(SP_OS)
+    $(error Unknown SP_OS=${SP_OS} platform=${platform})
+endif  # endif ${SP_OS}
 
+
+
+ifeq (${OSL_SPIREZ},1)
+    # Rpath touch-ups
+    # NOTE: This MUST match the order and naming of the Rez variants
+    # set in rez/package.py.in
+    REZ_INSTALL_PATH := ${REZ_PACKAGE_ROOT}/${OSL_REZ_NAME}/${OSL_VERS}/${SPI_COMPILER_PLATFORM}/python-${PYTHON_VERSION}/boost-${BOOSTVERSSP}
+    MY_CMAKE_FLAGS += -DOSL_REZ_INSTALL_PATH=${REZ_INSTALL_PATH}
+    MY_CMAKE_FLAGS += -DCMAKE_INSTALL_RPATH=${REZ_INSTALL_PATH}/lib
+endif
 
 
 ifneq (${VERBOSE},)
@@ -201,11 +343,25 @@ endif
 
 
 ############################################################################
-# SpComp2 magic incantations follow. Here be dragons
+# SpComp2 magic incantations follow. Here be dragons.
 ############################################################################
 
 
+CPPSTDSUFFIX=
+SPCOMP2_INSTALL_ROOT ?= $(SPCOMP2_ROOT)
+BOOSTVERSSP?=${BOOSTVERS}${BOOSTSPSUFFIX}
+SPARCH=${SP_OS}-$(SPCOMP2_COMPILER)$(CPPSTDSUFFIX)-boost$(subst .,,$(BOOSTVERSSP))
+OIIO_SPCOMP2_PATH := ${SPCOMP2_INSTALL_ROOT}/OpenImageIO/${SPARCH}/v${OPENIMAGEIO_SPCOMP2_VERSION}
+# $(info New rhel7 OIIO_SPCOMP2_PATH is ${OIIO_SPCOMP2_PATH})
+
+PYVERNOSPACE=${shell echo ${PYTHON_VERSION} | sed "s/\\.//"}
+SPPYARCH=$(SPARCH)-py$(PYVERNOSPACE)
+
+
+
 all: dist
+
+local: dist
 
 .PHONY: spcomp2_install spcomp2_install_local clean all
 
@@ -229,8 +385,6 @@ SPCOMP2_RPATH_DEBUG ?= ${OPENIMAGEIO_ROOT_DIR}/lib:${PARTIO_HOME}/lib/debug
 
 
 
-local: dist
-
 spcomp2: MY_CMAKE_FLAGS += \
 		-DCMAKE_SKIP_BUILD_RPATH:BOOL=ON \
 		-DCMAKE_INSTALL_RPATH=$(SPCOMP2_INSTALL_ROOT)/OSL/$(SPARCH)/v$(OSL_SPCOMP2_VERSION)/lib \
@@ -253,11 +407,11 @@ spcomp2_debug: debug
 
 spcomp2_install_fixup_rhel7: spcomp2 spcomp2_debug
 	echo $(SPCOMP2_INSTALL_ROOT)
-	patchelf --set-rpath ${SPCOMP2_RPATH_OPT} ${dist_dir}/lib/liboslexec.so
+	patchelf --set-rpath ${SPCOMP2_RPATH_OPT} ${dist_dir}/lib/liboslexec${OSL_LIBNAME_SUFFIX}.so
 	patchelf --set-rpath ${SPCOMP2_RPATH_DEBUG} ${dist_dir}.debug/lib/liboslexec.so
-	patchelf --set-rpath ${SPCOMP2_RPATH_OPT} ${dist_dir}/lib/liboslcomp.so
+	patchelf --set-rpath ${SPCOMP2_RPATH_OPT} ${dist_dir}/lib/liboslcomp${OSL_LIBNAME_SUFFIX}.so
 	patchelf --set-rpath ${SPCOMP2_RPATH_DEBUG} ${dist_dir}.debug/lib/liboslcomp.so
-	patchelf --set-rpath ${SPCOMP2_RPATH_OPT} ${dist_dir}/lib/liboslquery.so
+	patchelf --set-rpath ${SPCOMP2_RPATH_OPT} ${dist_dir}/lib/liboslquery${OSL_LIBNAME_SUFFIX}.so
 	patchelf --set-rpath ${SPCOMP2_RPATH_DEBUG} ${dist_dir}.debug/lib/liboslquery.so
 #	patchelf --set-rpath ${PYSPCOMP2_RPATH_OPT} ${dist_dir}/python/libPyOSL.so
 #	patchelf --set-rpath ${PYSPCOMP2_RPATH_DEBUG} ${dist_dir}.debug/python/libPyOSL.so

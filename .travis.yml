@@ -46,19 +46,13 @@ install:
     - if [ "$CXX" == "g++" ]; then export CXX="g++-${WHICHGCC}" ; fi
     - export USE_CCACHE=1
     - export CCACHE_CPP2=1
-    # Temporary fix: Use LG's private openexr branch, until the
-    # fixes are merged into the OpenEXR project that will address
-    # the warnings for gcc7 and C++17 compatibility.
-    -   export EXRREPO=https://github.com/lgritz/openexr.git ;
-    -   export EXRBRANCH=lg-cpp11 ;
     - if [ $TRAVIS_OS_NAME == osx ] ; then
           source src/build-scripts/install_homebrew_deps.bash ;
       elif [ $TRAVIS_OS_NAME == linux ] ; then
-          CXX="ccache $CXX" CCACHE_CPP2=1 src/build-scripts/build_openexr.bash ;
-          export ILMBASE_ROOT_DIR=$PWD/ext/openexr-install ;
-          export OPENEXR_ROOT_DIR=$PWD/ext/openexr-install ;
-          export ILMBASE_HOME=$PWD/ext/openexr-install ;
-          export OPENEXR_HOME=$PWD/ext/openexr-install ;
+          if [ "$BUILD_CMAKE" == "1" ] ; then
+              source src/build-scripts/build_cmake.bash ;
+          fi ;
+          CXX="ccache $CXX" source src/build-scripts/build_openexr.bash ;
           if [ "$LLVM_VERSION" == "" ]; then export LLVM_VERSION="error" ; fi ;
           if [ "$LLVM_VERSION" == "5.0.0" ]; then export LLVMTAR=clang+llvm-${LLVM_VERSION}-linux-x86_64-ubuntu14.04.tar.xz ; else export LLVMTAR=clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-14.04.tar.xz ; fi;
           echo LLVMTAR = $LLVMTAR ;
@@ -128,7 +122,7 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: WHICHGCC=6 USE_CPP=14 LLVM_VERSION=7.0.0 OIIOBRANCH=master USE_SIMD=avx,f16c
+        env: WHICHGCC=6 USE_CPP=14 LLVM_VERSION=7.0.0 OIIOBRANCH=master USE_SIMD=avx,f16c BUILD_CMAKE=1
       - name: "MacOS (latest Apple clang, llvm 7, OIIO master, latest homebrew libs"
         os: osx
         compiler: clang
@@ -180,7 +174,7 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: WHICHGCC=7 USE_CPP=14 LLVM_VERSION=7.0.0
+        env: WHICHGCC=7 USE_CPP=14 LLVM_VERSION=7.0.0 BUILD_CMAKE=1
         if: branch =~ /(master|RB|travis)/ OR type = pull_request
       - name: "Future: gcc8, C++14, LLVM 7, OIIO master, AVX/f16c"
         os: linux
@@ -197,7 +191,7 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: WHICHGCC=8 USE_CPP=14 LLVM_VERSION=7.0.0 USE_SIMD=avx,f16c
+        env: WHICHGCC=8 USE_CPP=14 LLVM_VERSION=7.0.0 USE_SIMD=avx,f16c BUILD_CMAKE=1
       - name: "DEBUG build, LLVM 7, OIIO master"
         os: linux
         compiler: gcc
@@ -213,7 +207,7 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: DEBUG=1 LLVM_VERSION=7.0.0 OIIOBRANCH=master
+        env: DEBUG=1 LLVM_VERSION=7.0.0 OIIOBRANCH=master BUILD_CMAKE=1
       - name: "Oldest everything: LLVM 4, OIIO 1.8, no simd"
         os: linux
         compiler: gcc

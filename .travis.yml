@@ -157,7 +157,7 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: WHICHGCC=4.8 USE_CPP=11 LLVM_VERSION=5.0.0 USE_SIMD=sse4.2 OIIOBRANCH=RB-1.9
+        env: WHICHGCC=4.8 USE_CPP=11 LLVM_VERSION=5.0.0 USE_SIMD=sse4.2 OIIOBRANCH=RB-1.8
         if: branch =~ /(master|RB|travis)/ OR type = pull_request
       - name: "gcc7, llvm7, C++14"
         os: linux

@@ -10,7 +10,7 @@ OSL requires the following dependencies or tools.
 NEW or CHANGED dependencies since the last major release are **bold**.
 
 * Build system: [CMake](https://cmake.org/) 3.2.2 or newer (tested through
-  3.14)
+  3.15)
 
 * A suitable C++11 compiler to build OSL itself, which may be any of:
    - GCC 4.8.5 or newer (through gcc 8)
@@ -40,14 +40,14 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     DYLD_LIBRARY_PATH on OS X) and then OSL's build scripts will be able
     to find it.
 
-* **[LLVM](http://www.llvm.org) 4.0, 5.0, 6.0, 7.0, or 8.0**
+* **[LLVM](http://www.llvm.org) 4.0, 5.0, 6.0, 7.0, 8.0, or 9.0**
 
    Optionally, if Clang libraries are installed alongside LLVM, OSL will
    in most circumstances use Clang's internals for C-style preprocessing of
    OSL source. If not found, it will fall back on Boost Wave (but on many
    platforms, that requires that Boost has been built in C++11 mode).
 
-* [Boost](www.boost.org) 1.55 or newer (tested through 1.69).
+* [Boost](www.boost.org) 1.55 or newer (tested through 1.71).
 * [Ilmbase/OpenEXR](http://openexr.com/downloads.html) 2.0 or newer
 * [Flex](https://github.com/westes/flex) and
   [GNU Bison](https://www.gnu.org/software/bison/)

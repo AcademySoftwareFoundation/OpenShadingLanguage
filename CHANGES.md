@@ -1,6 +1,14 @@
-Release 1.10.7 -- Aug?? ??, 2019 (compared to 1.10.6)
+Release 1.10.7 -- Oct 1, 2019 (compared to 1.10.6)
 --------------------------------------------------
-
+* Adjust for deprecated material in more recent Qt releases. #1043
+* Fixes for MinGW compiler. #1047
+* Texture "missingalpha" optional parameter generated incorrect code and
+  crashed. #1044
+* Fix incorrect optimizations surrounding 'exit()' calls in the middle
+  of certain shader code blocks. #1051
+* LLVM 9 / clang 9 compatibility. #1058
+* Fixes to Travis CI system to keep up with OIIO master recently upgrading
+  its minimum required CMake. #1065
 
 Release 1.10.6 -- Jul 4, 2019 (compared to 1.10.5)
 --------------------------------------------------

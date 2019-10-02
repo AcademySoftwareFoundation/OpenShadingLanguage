@@ -14,7 +14,6 @@ cd $OIIOINSTALLDIR
 git fetch --all -p
 git checkout $OIIOBRANCH --force
 make nuke
-make ${OIIOMAKEFLAGS} VERBOSE=1 cmakesetup
 make ${OIIOMAKEFLAGS}
 
 echo "OIIOINSTALLDIR $OIIOINSTALLDIR"

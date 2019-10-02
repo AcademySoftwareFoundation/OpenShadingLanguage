@@ -446,15 +446,17 @@ template<class T, int P>
 OSL_HOSTDEVICE inline Dual<Imath::Vec3<T>,P>
 normalize (const Dual<Imath::Vec3<T>,P> &a)
 {
+    // NOTE: math must be consistent with osl_normalize_vv
+    // TODO: math for derivative elements could be further optimized ...
     auto ax = comp (a, 0);
     auto ay = comp (a, 1);
     auto az = comp (a, 2);
-    auto length = sqrt(ax * ax + ay * ay + az * az);
-    if (length > 0.0f) {
-        // NOTE: do a full division here to match what OpenEXR Imath does in the non-dual case
-        ax = ax / length;
-        ay = ay / length;
-        az = az / length;
+    auto len = sqrt(ax * ax + ay * ay + az * az);
+    if (len > T(0)) {
+        auto invlen = T(1) / len;
+        ax = ax * invlen;
+        ay = ay * invlen;
+        az = az * invlen;
         return make_Vec3 (ax, ay, az);
     } else {
         return Vec3(0,0,0);

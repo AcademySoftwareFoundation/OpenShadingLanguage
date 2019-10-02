@@ -386,8 +386,8 @@ operator* (const S &b, const Dual<T,P> &a) -> Dual<decltype(a.elem(0)*b),P>
 template<class T, int P>
 OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P> operator/ (const Dual<T,P> &a, const Dual<T,P> &b)
 {
-    T bvalinv = 1.0f / b.val();
-    T aval_bval = a.val() * bvalinv;
+    T bvalinv = T(1) / b.val();
+    T aval_bval = a.val() / b.val();
     Dual<T,P> result;
     result.val() = aval_bval;
     for (int i = 1; i <= P; ++i)
@@ -401,8 +401,13 @@ OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P> operator/ (const Dual<T,P> &a, 
 template<class T, int P>
 OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P> operator/ (const Dual<T,P> &a, const T &b)
 {
-    T binv = 1.0f / b;
-    return a * binv;
+    T bvalinv = T(1) / b;
+    T aval_bval = a.val() / b;
+    Dual<T,P> result;
+    result.val() = aval_bval;
+    for (int i = 1; i <= P; ++i)
+        result.elem(i) = bvalinv * a.elem(i);
+    return result;
 }
 
 
@@ -411,8 +416,8 @@ OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P> operator/ (const Dual<T,P> &a, 
 template<class T, int P>
 OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P> operator/ (const T &aval, const Dual<T,P> &b)
 {
-    T bvalinv = 1.0f / b.val();
-    T aval_bval = aval * bvalinv;
+    T bvalinv = T(1) / b.val();
+    T aval_bval = aval / b.val();
     Dual<T,P> result;
     result.val() = aval_bval;
     for (int i = 1; i <= P; ++i)

@@ -1,3 +1,7 @@
+Release 1.10.8 -- ???, 2019 (compared to 1.10.7)
+--------------------------------------------------
+
+
 Release 1.10.7 -- Oct 1, 2019 (compared to 1.10.6)
 --------------------------------------------------
 * Adjust for deprecated material in more recent Qt releases. #1043

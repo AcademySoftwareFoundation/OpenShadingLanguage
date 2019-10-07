@@ -1,9 +1,9 @@
 Release 1.11/2.0? -- ?? 2019 (compared to 1.10)
 --------------------------------------------------
 Dependency and standards changes:
-* **LLVM 5.0-8.0**: Support for LLVM 4 has been dropped. Support for LLVM 8
-  is added/verified. (Alert: we may also drop support for LLVM 5 by the time
-  we branch for the next major release.)
+* **LLVM 5.0-9.0**: Support for LLVM 4 has been dropped. Support for LLVM 8
+  and 9 have been added. (Alert: we may also drop support for LLVM 5 by the
+  time we branch for the next major release.)
 * OpenImageIO 2.0-2.1: Support for OIIO 1.8 has been dropped; a minimum
   of OIIO 2.0 is needed to build OSL. #1038 (1.11.0)
 
@@ -68,8 +68,8 @@ OSL Standard library:
 Shaders:
 
 API changes, new options, new ShadingSystem features (for renderer writers):
-*  `ShadingSystem::convert_value()` will now allow promotion of int or
-   float to `float[4]`. #940 (1.11.0)
+* `ShadingSystem::convert_value()` will now allow promotion of int or
+  float to `float[4]`. #940 (1.11.0)
 * Removed the varieties of `RendererServices::texture()`, `texture3d()`, and
   `environment()` that lack the `errormessage` parameter and had been marked
   as deprecated since OSL 1.8. #945 (1.11.0)
@@ -105,6 +105,9 @@ Experimental OptiX rendering:
 * printf works for multiple values. #1007 (1.11.0)
 * Work on color-related functions. #1012 (1.11.0)
 * Support for native OSL closures. #1028 #1029 (1.11.0)
+* Work on matrix ops. #1054 (1.11.1)
+* Allow init ops. #1059 (1.11.1)
+* Fixes to string closure params. #1061 (1.11.1)
 
 Performance improvements:
 * Constant fold array accesses even if they are out of bounnds. #1035
@@ -130,6 +133,9 @@ Bug fixes and other improvements (internals):
   from serialized commands. #1032 (1.11.0)
 * Fix runtime crash when optional texture argument "missingalpha" was used.
   #1044 (1.11.0)
+* Fix the implementation of division-with-derivs so that the main value
+  always exactly matches the results of division of values without derivs.
+  Previously there could be some LSB differences. #1066 (1.11.1)
 
 Build & test system improvements:
 * Testshade makes sure that no unreported errors accumulted in the texture
@@ -169,10 +175,30 @@ Build & test system improvements:
 * Fix problems when building against Qt 5.13 due to deprecated calls. #1043
   (1.11.0)
 * Fixes for MinGW compiler on Windows. #1047 #1048 (1.11.0)
+* Fixes for CI when using OIIO 2.1 master that has changed its own cmake
+  minimum to 3.12. #1065 (1.11.1)
 
 Documentation:
 
 
+
+Release 1.10.7 -- Oct 1, 2019 (compared to 1.10.6)
+--------------------------------------------------
+* Adjust for deprecated material in more recent Qt releases. #1043
+* Fixes for MinGW compiler. #1047
+* Texture "missingalpha" optional parameter generated incorrect code and
+  crashed. #1044
+* Fix incorrect optimizations surrounding 'exit()' calls in the middle
+  of certain shader code blocks. #1051
+* LLVM 9 / clang 9 compatibility. #1058
+* Fixes to Travis CI system to keep up with OIIO master recently upgrading
+  its minimum required CMake. #1065
+
+Release 1.10.6 -- Jul 4, 2019 (compared to 1.10.5)
+--------------------------------------------------
+* Build: Fixes to FindOpenEXR.cmake. #1022
+* ShadingSystem: when building a shader group from serialized commands,
+  respect the global lockgeom default. #1032
 
 Release 1.10.5 -- May 1, 2019 (compared to 1.10.4)
 --------------------------------------------------

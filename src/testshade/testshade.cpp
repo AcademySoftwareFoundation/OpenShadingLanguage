@@ -832,7 +832,7 @@ save_outputs (SimpleRenderer *rend, ShadingSystem *shadingsys,
         } else if (t.basetype == TypeDesc::INT) {
             // We are outputting an integer variable, so we need to
             // convert it to floating point.
-            float *pixel = (float *) alloca (nchans * sizeof(float));
+            float *pixel = OIIO_ALLOCA(float, nchans);
             OIIO::convert_types (TypeDesc::BASETYPE(t.basetype), data,
                                  TypeDesc::FLOAT, pixel, nchans);
             outputimg->setpixel (x, y, &pixel[0]);

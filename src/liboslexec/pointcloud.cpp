@@ -495,7 +495,7 @@ osl_pointcloud_search (ShaderGlobals *sg, const char *filename, void *center, fl
     if (sizeof(int) == sizeof(size_t) && out_indices)
         indices = (size_t *)out_indices;
     else
-        indices = (size_t *)alloca (sizeof(size_t) * max_points);
+        indices = OIIO_ALLOCA(size_t, max_points);
 
     int count = sg->renderer->pointcloud_search (sg, USTR(filename),
                                                  *((Vec3 *)center), radius, max_points, sort,
@@ -532,7 +532,7 @@ osl_pointcloud_get (ShaderGlobals *sg, const char *filename, void *in_indices, i
     if (shadingsys.no_pointcloud()) // Debug mode to skip pointcloud expense
         return 0;
 
-    size_t *indices = (size_t *)alloca (sizeof(size_t) * count);
+    size_t *indices = OIIO_ALLOCA(size_t, count);
     for (int i = 0; i < count; ++i)
         indices[i] = ((int *)in_indices)[i];
 

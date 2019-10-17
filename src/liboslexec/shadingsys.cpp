@@ -2325,7 +2325,7 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
             string_view shadername = Strutil::parse_identifier (p);
             Strutil::skip_whitespace (p);
             string_view layername = Strutil::parse_until (p, " \t\r\n,;");
-            bool ok = Shader (usage, shadername, layername);
+            bool ok = Shader (*g, usage, shadername, layername);
             if (!ok) {
                 errstatement = pstart;
                 err = true;
@@ -2345,7 +2345,7 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
             string_view lay2 = Strutil::parse_until (p, " \t\r\n.");
             Strutil::parse_char (p, '.');
             string_view param2 = Strutil::parse_until (p, " \t\r\n,;");
-            bool ok = ConnectShaders (lay1, param1, lay2, param2);
+            bool ok = ConnectShaders (*g, lay1, param1, lay2, param2);
             if (!ok) {
                 errstatement = pstart;
                 err = true;
@@ -2528,11 +2528,11 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
 
         bool ok = true;
         if (type.basetype == TypeDesc::INT) {
-            ok = Parameter (paramname, type, &intvals[0], lockgeom);
+            ok = Parameter (*g, paramname, type, &intvals[0], lockgeom);
         } else if (type.basetype == TypeDesc::FLOAT) {
-            ok = Parameter (paramname, type, &floatvals[0], lockgeom);
+            ok = Parameter (*g, paramname, type, &floatvals[0], lockgeom);
         } else if (type.basetype == TypeDesc::STRING) {
-            ok = Parameter (paramname, type, &stringvals[0], lockgeom);
+            ok = Parameter (*g, paramname, type, &stringvals[0], lockgeom);
         }
         if (!ok) {
             errstatement = pstart;

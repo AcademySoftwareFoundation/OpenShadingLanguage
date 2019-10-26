@@ -39,7 +39,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     DYLD_LIBRARY_PATH on OS X) and then OSL's build scripts will be able
     to find it.
 
-* **[LLVM](http://www.llvm.org) 5.0, 6.0, 7.0, or 8.0**
+* **[LLVM](http://www.llvm.org) 5.0, 6.0, 7.0, 8.0, or 9.0**
 
    Optionally, if Clang libraries are installed alongside LLVM, OSL will
    in most circumstances use Clang's internals for C-style preprocessing of
@@ -47,7 +47,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
    platforms, that requires that Boost has been built in C++11 mode).
 
 * [Boost](www.boost.org) 1.55 or newer.
-* [Ilmbase/OpenEXR](http://openexr.com/downloads.html) 2.0 or newer
+* [Ilmbase](http://openexr.com/downloads.html) 2.0 or newer
 * [Flex](https://github.com/westes/flex) and
   [GNU Bison](https://www.gnu.org/software/bison/)
 * [PugiXML](http://pugixml.org/)

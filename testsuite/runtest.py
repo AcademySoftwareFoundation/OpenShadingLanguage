@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 import os
 import glob
 import sys
@@ -109,8 +109,8 @@ def text_diff (fromfile, tofile, diff_file=None):
     try:
         fromdate = time.ctime (os.stat (fromfile).st_mtime)
         todate = time.ctime (os.stat (tofile).st_mtime)
-        fromlines = open (fromfile, 'rU').readlines()
-        tolines   = open (tofile, 'rU').readlines()
+        fromlines = open (fromfile, 'r').readlines()
+        tolines   = open (tofile, 'r').readlines()
     except:
         print ("Unexpected error:", sys.exc_info()[0])
         return -1
@@ -255,7 +255,7 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
             print ("#### Error: this command failed: ", sub_command)
             print ("FAIL")
             print ("Output was:\n--------")
-            print (open ("out.txt", 'rU').read())
+            print (open ("out.txt", 'r').read())
             print ("--------")
             return (1)
 
@@ -298,7 +298,7 @@ def runtest (command, outputs, failureok=0, failthresh=0, failpercent=0) :
                 print ("-----" + out + "----->")
                 print (open(out,'r').read() + "<----------")
                 print ("Diff was:\n-------")
-                print (open (out+".diff", 'rU').read())
+                print (open (out+".diff", 'r').read())
             if extension == ".tif" or extension == ".exr" or extension == ".jpg" or extension == ".png":
                 # If we failed to get a match for an image, send the idiff
                 # results to the console

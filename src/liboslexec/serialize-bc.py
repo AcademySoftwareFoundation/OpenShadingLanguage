@@ -15,7 +15,7 @@ f_out.write('unsigned char ' + prefix + '_block[] = {\n')
 f_in.read
 if (sys.version_info > (3, 0)):
     for c in f_in.read():
-        f_out.write(hex(c) + '\n')
+        f_out.write(hex(c) + ',\n')
 else:
     for c in f_in.read():
         f_out.write('0x{},\n'.format(c.encode('hex')))

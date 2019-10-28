@@ -19,9 +19,7 @@ requires = [
         'OpenImageIO-@OPENIMAGEIO_VERSION_MAJOR@.@OPENIMAGEIO_VERSION_MINOR@.@OPENIMAGEIO_VERSION_PATCH@'
     ]
 
-build_command = 'python {root}/build.py'
-
-build_requires = ['buildTools']
+#build_command = 'python {root}/build.py'
 
 # Rez has a limitation where it is not possible to add variants to a package that
 # does not have any: https://github.com/nerdvegas/rez/wiki/Variants#single-variants.
@@ -31,7 +29,9 @@ variants = [
     [
         '@SPI_COMPILER_PLATFORM@',
         'python-@PYTHON_VERSION_MAJOR@.@PYTHON_VERSION_MINOR@',
-        'boost-@BOOST_VERS_SP@'
+        'boost-@BOOST_VERS_SP@',
+        'cuda-@CUDA_VERSION@',
+        'optix-@OPTIX_VERSION@'
     ],
 ]
 

@@ -111,17 +111,3 @@ find_package_handle_standard_args (LLVM
         LLVM_LIBRARIES
     VERSION_VAR LLVM_VERSION
   )
-
-if (LLVM_FOUND)
-    message (STATUS "LLVM version  = ${LLVM_VERSION}")
-    if (NOT LLVM_FIND_QUIETLY)
-        message (STATUS "LLVM dir        = ${LLVM_DIRECTORY}")
-        message (STATUS "LLVM includes   = ${LLVM_INCLUDES}")
-        message (STATUS "LLVM lib dir    = ${LLVM_LIB_DIR}")
-        message (STATUS "LLVM libraries  = ${LLVM_LIBRARIES}")
-        message (STATUS "LLVM sys libs   = ${LLVM_SYSTEM_LIBRARIES}")
-        message (STATUS "Clang libraries = ${CLANG_LIBRARIES}")
-    endif ()
-else()
-    message (STATUS "LLVM not found. Specify LLVM_DIRECTORY to locate it.")
-endif()

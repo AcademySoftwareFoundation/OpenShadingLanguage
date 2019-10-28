@@ -146,23 +146,23 @@ before_build:
 build_script:
 - ps: |
     # OpenImageIO
-    $env:OPENIMAGEIO_ROOT_DIR = "C:\projects\oiio"
+    $env:OpenImageIO_ROOT = "C:\projects\oiio"
     $env:FREETYPE_DIR = "$DEP_DIR"
     $FREETYPE_LIBRARY = "$DEP_DIR\lib\freetype28.lib"
     cd $DWN_DIR
     git clone --depth 10 https://github.com/OpenImageIO/oiio.git oiiosrc
     cd .\oiiosrc; md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
-    cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_INSTALL_PREFIX="$env:OPENIMAGEIO_ROOT_DIR" -DCMAKE_PREFIX_PATH="$DEP_DIR;$BOOST_ROOT" -DBOOST_LIBRARYDIR="$BOOST_LIBRARYDIR" -DFREETYPE_LIBRARY="$FREETYPE_LIBRARY" -DUSE_PYTHON=OFF -DOIIO_BUILD_TESTS=OFF -DUSE_NUKE=OFF
+    cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_INSTALL_PREFIX="$env:OpenImageIO_ROOT" -DCMAKE_PREFIX_PATH="$DEP_DIR;$BOOST_ROOT" -DBOOST_LIBRARYDIR="$BOOST_LIBRARYDIR" -DFREETYPE_LIBRARY="$FREETYPE_LIBRARY" -DUSE_PYTHON=OFF -DOIIO_BUILD_TESTS=OFF -DUSE_NUKE=OFF
     cmake --build . --config $env:CONFIGURATION --target INSTALL $OSL_BUILD_FLAGS
 
     # Build OSL
     cd $env:APPVEYOR_BUILD_FOLDER
     md "$OSL_INT_DIR" -Force | Out-Null; cd "$OSL_INT_DIR"
-    cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$env:OPENIMAGEIO_ROOT_DIR;$DEP_DIR;$BOOST_ROOT;$LLVM_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DLLVM_DIRECTORY="$LLVM_DIR" -DLLVM_STATIC=ON -DOPENIMAGEIO_ROOT_DIR="$env:OPENIMAGEIO_ROOT_DIR" -DBOOST_LIBRARYDIR="$BOOST_LIBRARYDIR" -DFLEX_EXECUTABLE="C:\ProgramData\chocolatey\lib\winflexbison\tools\win_flex.exe" -DBISON_EXECUTABLE="C:\ProgramData\chocolatey\lib\winflexbison\tools\win_bison.exe" -DUSE_QT=OFF -DBUILDSTATIC=OFF -DLINKSTATIC=OFF
+    cmake ..\.. -G "$GENERATOR" -DCMAKE_CONFIGURATION_TYPES="$env:CONFIGURATION" -DCMAKE_PREFIX_PATH="$env:OpenImageIO_ROOT;$DEP_DIR;$BOOST_ROOT;$LLVM_DIR" -DCMAKE_INSTALL_PREFIX="$DEP_DIR" -DLLVM_DIRECTORY="$LLVM_DIR" -DLLVM_STATIC=ON -DOpenImageIO_ROOT="$env:OpenImageIO_ROOT" -DBOOST_LIBRARYDIR="$BOOST_LIBRARYDIR" -DFLEX_EXECUTABLE="C:\ProgramData\chocolatey\lib\winflexbison\tools\win_flex.exe" -DBISON_EXECUTABLE="C:\ProgramData\chocolatey\lib\winflexbison\tools\win_bison.exe" -DUSE_QT=OFF -DBUILD_SHARED_LIBS=ON -DLINKSTATIC=OFF
 
     # OSL's CMake should probably be handling Windows config better...
     $OSL_BUILD_DIR = "$env:APPVEYOR_BUILD_FOLDER\$OSL_INT_DIR"
-    $env:OSL_ROOT_DIR = "$env:APPVEYOR_BUILD_FOLDER\src"
+    $env:OSL_ROOT = "$env:APPVEYOR_BUILD_FOLDER\src"
     $env:OIIO_LIBRARY_PATH = "$OSL_BUILD_DIR\src\osl.imageio\$env:CONFIGURATION"
     $env:Path += ";$OSL_BUILD_DIR\src\oslc\$env:CONFIGURATION"
     $env:Path += ";$OSL_BUILD_DIR\src\oslinfo\$env:CONFIGURATION"
@@ -170,7 +170,7 @@ build_script:
     $env:Path += ";$OSL_BUILD_DIR\src\liboslexec\$env:CONFIGURATION"
     $env:Path += ";$OSL_BUILD_DIR\src\liboslnoise\$env:CONFIGURATION"
     $env:Path += ";$OSL_BUILD_DIR\src\liboslquery\$env:CONFIGURATION"
-    $env:Path += ";$env:OPENIMAGEIO_ROOT_DIR\lib;$env:OPENIMAGEIO_ROOT_DIR\bin"
+    $env:Path += ";$env:OpenImageIO_ROOT\lib;$env:OpenImageIO_ROOT\bin"
     $env:Path += ";$BOOST_LIBRARYDIR"
 
     cmake --build . --config $env:CONFIGURATION $OSL_BUILD_FLAGS

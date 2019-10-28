@@ -123,6 +123,11 @@ using namespace OSL::pvt;
 #pragma GCC diagnostic ignored "-Wsign-compare"
 #endif
 
+// flex uses the 'register' keyword, warned because it's deprecated in C++17.
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-register"
+#endif
+
 %}
 
 /* Declare modes */

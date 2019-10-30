@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 
 # Copyright (c) 2018 Sony Pictures Imageworks Inc., et al.
 # BSD 3-clause license.

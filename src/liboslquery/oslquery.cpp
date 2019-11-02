@@ -195,11 +195,11 @@ OSOReaderQuery::hint (string_view hintstring)
         // std::cerr << "    " << name << " : " << type << "\n";
         OSLQuery::Parameter p;
         p.name = name;
-        p.type = TypeDesc (type.c_str());
+        p.type = TypeDesc (type);
         if (p.type.basetype == TypeDesc::STRING) {
             string_view val;
             while (Strutil::parse_string (hintstring, val)) {
-                p.sdefault.emplace_back(val);
+                p.sdefault.emplace_back(OIIO::Strutil::unescape_chars(val));
                 if (Strutil::parse_char (hintstring, '}'))
                     break;
                 Strutil::parse_char (hintstring, ',');

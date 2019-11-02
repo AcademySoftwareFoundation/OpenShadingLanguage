@@ -4,7 +4,9 @@ surface metadata
     int myparam1 = 1 [[ int i = 0, float f = 1.0, string s = "foo" ]],
     int myparam2 = 2 [[ string s[2] = { "foo", "bar" } ]],
     int myparam3 = 3 [[ float minmax[2] = { 42, 44 } ]],
-    int myparam4 = 4 [[ color c = color(1,2,3) ]]
+    int myparam4 = 4 [[ color c = color(1,2,3) ]],
+    int myparam5 = 5 [[ string s = "I have\n\"Escape\"\tsequences\n" ]]
     )
 {
+    string ss = "I have\n\"Escape\"\tsequences\n";
 }

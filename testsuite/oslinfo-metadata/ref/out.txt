@@ -15,3 +15,6 @@ surface "metadata"
     "myparam4" "int"
 		Default value: 4
 		metadata: color c = 1 2 3
+    "myparam5" "int"
+		Default value: 5
+		metadata: string s = "I have\n\"Escape\"\tsequences\n"

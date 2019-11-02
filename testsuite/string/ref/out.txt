@@ -65,4 +65,5 @@ getchar("Hello World!", 12) = 0
 
 hash("Hello World!") = -16050688
 hash("") = 0
+strlen newline: param 1 local 1 literal 1
 

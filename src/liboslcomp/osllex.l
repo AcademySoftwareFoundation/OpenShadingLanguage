@@ -242,9 +242,16 @@ void preprocess (const char *yytext);
 
 {STR}                   {
                             // grab the material between the quotes
-                            ustring s (yytext, 1, yyleng-2);
-                            yylval.s = s.c_str();
+                            string_view s(yytext + 1, yyleng - 2);
+                            std::string unescaped;
+                            if (s.find('\\') != string_view::npos) {
+                                // Only make a new string if we must unescape
+                                unescaped = OIIO::Strutil::unescape_chars(s);
+                                s = string_view(unescaped);
+                            }
+                            yylval.s = ustring(s).c_str();
                             SETLINE;
+                            // std::cerr << "osllex string '" << yylval.s << "'\n";
                             return STRING_LITERAL;
                         }
 

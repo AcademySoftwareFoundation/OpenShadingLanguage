@@ -74,7 +74,7 @@ FLT2            [-+]?{DIGIT}*\.{DIGIT}+{E}?
 FLT3            [-+]?{DIGIT}+{E}
 FLT             {FLT1}|{FLT2}|{FLT3}
  /* string literal */
-STR     \"(\\.|[^\\"])*\"
+STR     \"(\\.|[^\\"\n])*\"
  /* Identifier: alphanumeric, may contain digits after the first character.
   * Also '$' and '.' are allowed!
   */
@@ -217,9 +217,16 @@ using namespace OSL::pvt;
                         }
 
 {STR}                   {
-                            ustring s (yytext, yyleng);
-                            yylval.s = s.c_str();
-                            // std::cerr << "lex string '" << yylval.s << "'\n";
+                            // grab the material between the quotes
+                            string_view s(yytext + 1, yyleng - 2);
+                            std::string unescaped;
+                            if (s.find('\\') != string_view::npos) {
+                                // Only make a new string if we must unescape
+                                unescaped = OIIO::Strutil::unescape_chars(s);
+                                s = string_view(unescaped);
+                            }
+                            yylval.s = ustring(s).c_str();
+                            // std::cerr << "osolex string '" << yylval.s << "'\n";
                             return STRING_LITERAL;
                         }
 

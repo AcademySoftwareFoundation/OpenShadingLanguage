@@ -121,7 +121,7 @@ Symbol::print_vals (std::ostream &out, int maxvals) const
     } else if (t.basetype == TypeDesc::STRING) {
         for (int j = 0;  j < n;  ++j)
             out << (j ? " " : "") << "\""
-                << Strutil::escape_chars(((ustring *)data())[j].string())
+                << Strutil::escape_chars(((ustring *)data())[j])
                 << "\"";
     }
     if (int(t.aggregate * t.numelements()) > maxvals)

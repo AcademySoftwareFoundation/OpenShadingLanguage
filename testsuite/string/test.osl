@@ -72,7 +72,7 @@ void test_split (string s, string sep)
 
 
 shader
-test ()
+test (string param_newline = "\n")
 {
     printf ("test string operations:\n\n");
 
@@ -81,11 +81,14 @@ test ()
             "foo" "bar" "baz");
 
     // Test escape sequences
+    string local_newline = "\n";
     printf ("\n");
     printf ("foo\\nbar\n");  // should print:  foo\bar
     printf ("blah '%s'\n", "foo\\nbar\n");  // should print: blah 'foo\bar
                                             //                    '
     printf ("blah2 '%s'\n", "foo\\\\");     // should print: blah2 'foo\\'
+    if (local_newline != param_newline)
+        error ("escaped strings don't match params vs locals\n");
 
     // Test format
     printf ("\n");
@@ -164,4 +167,9 @@ test ()
     printf("\n");
     printf("hash(\"%s\") = %d\n", a, hash(a));
     printf("hash(\"\") = %d\n", hash(""));
+
+    // Regression test for bugs with understanding length of strings having
+    // embedded escape sequences:
+    printf ("strlen newline: param %d local %d literal %d\n",
+            strlen(param_newline), strlen(local_newline), strlen("\n"));
 }

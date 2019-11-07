@@ -80,10 +80,12 @@ print_default_string_vals (const OSLQuery::Parameter *p, bool verbose)
         ne = p->type.numelements();
     if (verbose) {
         for (size_t a = 0;  a < ne;  ++a)
-            std::cout << "\t\tDefault value: \"" << p->sdefault[a] << "\"\n";
+            std::cout << "\t\tDefault value: \""
+                      << OIIO::Strutil::escape_chars(p->sdefault[a]) << "\"\n";
     } else {
         for (size_t a = 0;  a < ne;  ++a)
-            std::cout << "\"" << p->sdefault[a] << "\" ";
+            std::cout << "\"" << OIIO::Strutil::escape_chars(p->sdefault[a])
+                      << "\" ";
         std::cout << "\n";
     }
 }

@@ -757,7 +757,8 @@ OSLCompilerImpl::write_oso_const_value (const ConstantSymbol *sym) const
     int nelements = std::max (1, type.arraylen);
     if (elemtype == TypeDesc::STRING)
         for (int i = 0;  i < nelements;  ++i)
-            oso ("\"%s\"%s", sym->strval(i), nelements>1 ? " " : "");
+            oso ("\"%s\"%s", OIIO::Strutil::escape_chars(sym->strval(i)),
+                 nelements>1 ? " " : "");
     else if (elemtype == TypeDesc::INT)
         for (int i = 0;  i < nelements;  ++i)
             oso ("%d%s", sym->intval(i), nelements>1 ? " " : "");

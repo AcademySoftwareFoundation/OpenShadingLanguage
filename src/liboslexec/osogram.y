@@ -258,16 +258,7 @@ initial_value
                 }
         | STRING_LITERAL
                 {
-                    string_view s ($1);
-                    // remove the quotes
-                    s.remove_prefix(1); s.remove_suffix(1);
-                    std::string unescaped;
-                    if (s.find('\\') != string_view::npos) {
-                        // Only make a new string if we must unescape
-                        unescaped = OIIO::Strutil::unescape_chars(s);
-                        s = string_view(unescaped);
-                    }
-                    OSOReader::osoreader->symdefault (s.c_str());
+                    OSOReader::osoreader->symdefault ($1);
                     $$ = 0;
                 }
         ;

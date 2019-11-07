@@ -66,7 +66,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// another.
 
 #if defined(_WIN32) || defined(__CYGWIN__)
-  #if defined(OSL_STATIC_BUILD)
+  #if defined(OSL_STATIC_BUILD) || defined(OSL_STATIC_DEFINE)
     #define OSL_DLL_IMPORT
     #define OSL_DLL_EXPORT
     #define OSL_DLL_LOCAL
@@ -86,25 +86,25 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-#if defined(oslcomp_EXPORTS) || defined(oslexec_EXPORTS)
+#if defined(oslcomp_EXPORTS) || defined(oslexec_EXPORTS) || defined(OSL_EXPORTS)
 #  define OSLCOMPPUBLIC OSL_DLL_EXPORT
 #else
 #  define OSLCOMPPUBLIC OSL_DLL_IMPORT
 #endif
 
-#if defined(oslexec_EXPORTS)
+#if defined(oslexec_EXPORTS) || defined(OSL_EXPORTS)
 #  define OSLEXECPUBLIC OSL_DLL_EXPORT
 #else
 #  define OSLEXECPUBLIC OSL_DLL_IMPORT
 #endif
 
-#if defined(oslquery_EXPORTS) || defined(oslexec_EXPORTS)
+#if defined(oslquery_EXPORTS) || defined(oslexec_EXPORTS) || defined(OSL_EXPORTS)
 #  define OSLQUERYPUBLIC OSL_DLL_EXPORT
 #else
 #  define OSLQUERYPUBLIC OSL_DLL_IMPORT
 #endif
 
-#if defined(oslnoise_EXPORTS) || defined(oslexec_EXPORTS)
+#if defined(oslnoise_EXPORTS) || defined(oslexec_EXPORTS) || defined(OSL_EXPORTS)
 #  define OSLNOISEPUBLIC OSL_DLL_EXPORT
 #else
 #  define OSLNOISEPUBLIC OSL_DLL_IMPORT

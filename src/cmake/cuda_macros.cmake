@@ -1,22 +1,22 @@
 # Compile a CUDA file to PTX using NVCC
-FUNCTION ( NVCC_COMPILE cuda_src ptx_generated extra_nvcc_args )
-    GET_FILENAME_COMPONENT ( cuda_src_we ${cuda_src} NAME_WE )
-    GET_FILENAME_COMPONENT ( cuda_src_dir ${cuda_src} DIRECTORY )
-    SET ( cuda_ptx "${CMAKE_CURRENT_BINARY_DIR}/${cuda_src_we}.ptx" )
-    SET ( ${ptxlist} ${${ptxlist}} ${cuda_ptx} )
-    SET ( ${ptx_generated} ${cuda_ptx} PARENT_SCOPE)
-    FILE ( GLOB cuda_headers "${cuda_src_dir}/*.h" )
+function ( NVCC_COMPILE cuda_src ptx_generated extra_nvcc_args )
+    get_filename_component ( cuda_src_we ${cuda_src} NAME_WE )
+    get_filename_component ( cuda_src_dir ${cuda_src} DIRECTORY )
+    set (cuda_ptx "${CMAKE_CURRENT_BINARY_DIR}/${cuda_src_we}.ptx" )
+    set (${ptxlist} ${${ptxlist}} ${cuda_ptx} )
+    set (${ptx_generated} ${cuda_ptx} PARENT_SCOPE)
+    file ( GLOB cuda_headers "${cuda_src_dir}/*.h" )
 
-    ADD_CUSTOM_COMMAND ( OUTPUT ${cuda_ptx}
+    add_custom_command ( OUTPUT ${cuda_ptx}
         COMMAND ${CUDA_NVCC_EXECUTABLE}
-            "-I${OPTIX_INCLUDE_DIR}"
-            "-I${CUDA_INCLUDE_DIR}"
+            "-I${OPTIX_INCLUDES}"
+            "-I${CUDA_INCLUDES}"
             "-I${CMAKE_CURRENT_SOURCE_DIR}"
             "-I${CMAKE_BINARY_DIR}/include"
             "-I${PROJECT_SOURCE_DIR}/src/include"
             "-I${PROJECT_SOURCE_DIR}/src/cuda_common"
-            "-I${OPENIMAGEIO_INCLUDE_DIR}"
-            "-I${ILMBASE_INCLUDE_DIR}"
+            "-I${OPENIMAGEIO_INCLUDES}"
+            "-I${ILMBASE_INCLUDES}"
             "-I${Boost_INCLUDE_DIRS}"
             "-DFMT_DEPRECATED=\"\""
             ${LLVM_COMPILE_FLAGS}
@@ -28,24 +28,24 @@ FUNCTION ( NVCC_COMPILE cuda_src ptx_generated extra_nvcc_args )
         MAIN_DEPENDENCY ${cuda_src}
         DEPENDS ${cuda_src} ${cuda_headers} oslexec
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
-ENDFUNCTION ()
+endfunction ()
 
 # Function to compile a C++ source file to CUDA-compatible LLVM bitcode
-FUNCTION ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
-    GET_FILENAME_COMPONENT ( src_we ${src} NAME_WE )
-    SET ( asm_cuda "${CMAKE_CURRENT_BINARY_DIR}/${src_we}${suffix}.s" )
-    SET ( bc_cuda "${CMAKE_CURRENT_BINARY_DIR}/${src_we}${suffix}.bc" )
-    SET ( ${generated_bc} ${bc_cuda} PARENT_SCOPE )
+function ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
+    get_filename_component ( src_we ${src} NAME_WE )
+    set (asm_cuda "${CMAKE_CURRENT_BINARY_DIR}/${src_we}${suffix}.s" )
+    set (bc_cuda "${CMAKE_CURRENT_BINARY_DIR}/${src_we}${suffix}.bc" )
+    set (${generated_bc} ${bc_cuda} PARENT_SCOPE )
 
     # Setup the compile flags
     get_property (CURRENT_DEFINITIONS DIRECTORY PROPERTY COMPILE_DEFINITIONS)
     if (VERBOSE)
-        MESSAGE (STATUS "Current #defines are ${CURRENT_DEFINITIONS}")
+        message (STATUS "Current #defines are ${CURRENT_DEFINITIONS}")
     endif ()
     foreach (def ${CURRENT_DEFINITIONS})
-        SET (LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS} "-D${def}")
+        set (LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS} "-D${def}")
     endforeach()
-    SET (LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS} ${SIMD_COMPILE_FLAGS} ${CSTD_FLAGS})
+    set (LLVM_COMPILE_FLAGS ${LLVM_COMPILE_FLAGS} ${SIMD_COMPILE_FLAGS} ${CSTD_FLAGS})
 
     # Setup the bitcode generator
     if (NOT LLVM_BC_GENERATOR)
@@ -58,16 +58,16 @@ FUNCTION ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
     endif ()
 
     if (NOT LLVM_BC_GENERATOR)
-        MESSAGE (FATAL_ERROR "You must have a valid llvm bitcode generator (clang++) somewhere.")
+        message (FATAL_ERROR "You must have a valid llvm bitcode generator (clang++) somewhere.")
     endif ()
     if (VERBOSE)
-        MESSAGE (STATUS "Using ${LLVM_BC_GENERATOR} to generate bitcode.")
+        message (STATUS "Using LLVM_BC_GENERATOR ${LLVM_BC_GENERATOR} to generate bitcode.")
     endif()
 
-    ADD_CUSTOM_COMMAND (OUTPUT ${bc_cuda}
+    add_custom_command (OUTPUT ${bc_cuda}
         COMMAND ${LLVM_BC_GENERATOR}
-            "-I${OPTIX_INCLUDE_DIR}"
-            "-I${CUDA_INCLUDE_DIR}"
+            "-I${OPTIX_INCLUDES}"
+            "-I${CUDA_INCLUDES}"
             "-I${CMAKE_CURRENT_SOURCE_DIR}"
             "-I${CMAKE_BINARY_DIR}/include"
             "-I${PROJECT_SOURCE_DIR}/src/include"
@@ -84,20 +84,20 @@ FUNCTION ( MAKE_CUDA_BITCODE src suffix generated_bc extra_clang_args )
         COMMAND "${LLVM_DIRECTORY}/bin/llvm-as" -f -o ${bc_cuda} ${asm_cuda}
         DEPENDS ${exec_headers} ${PROJECT_PUBLIC_HEADERS} ${src}
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
-ENDFUNCTION ()
+endfunction ()
 
 # Compile a CUDA source file to LLVM bitcode, and then serialize the bitcode to
 # a C++ file to be compiled into the target executable.
-FUNCTION ( LLVM_COMPILE_CUDA llvm_src headers prefix llvm_bc_cpp_generated extra_clang_args )
-    GET_FILENAME_COMPONENT (llvmsrc_we ${llvm_src} NAME_WE)
-    SET (llvm_bc_cpp "${CMAKE_CURRENT_BINARY_DIR}/${llvmsrc_we}.bc.cpp")
-    SET (${llvm_bc_cpp_generated} ${llvm_bc_cpp} PARENT_SCOPE)
+function ( LLVM_COMPILE_CUDA llvm_src headers prefix llvm_bc_cpp_generated extra_clang_args )
+    get_filename_component (llvmsrc_we ${llvm_src} NAME_WE)
+    set (llvm_bc_cpp "${CMAKE_CURRENT_BINARY_DIR}/${llvmsrc_we}.bc.cpp")
+    set (${llvm_bc_cpp_generated} ${llvm_bc_cpp} PARENT_SCOPE)
 
     MAKE_CUDA_BITCODE (${llvm_src} "" llvm_bc "${extra_clang_args}")
 
-    ADD_CUSTOM_COMMAND (OUTPUT ${llvm_bc_cpp}
+    add_custom_command (OUTPUT ${llvm_bc_cpp}
         COMMAND python "${CMAKE_SOURCE_DIR}/src/liboslexec/serialize-bc.py" ${llvm_bc} ${llvm_bc_cpp} ${prefix}
         MAIN_DEPENDENCY ${llvm_src}
         DEPENDS "${CMAKE_SOURCE_DIR}/src/liboslexec/serialize-bc.py" ${llvm_src} ${headers} ${llvm_bc}
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
-ENDFUNCTION ()
+endfunction ()

@@ -453,6 +453,7 @@ find_stdoslpath (const std::vector<std::string>& includepaths)
 
     // List of likely prefixes and suffixes, in order of preference
     std::string prefixes[] = {
+        OIIO::Sysutil::getenv("OSL_ROOT"),
         OIIO::Sysutil::getenv("OSL_ROOT_DIR"),
         OIIO::Sysutil::getenv("OSLHOME"),
         myprefix,

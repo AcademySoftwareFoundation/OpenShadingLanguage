@@ -1,36 +1,40 @@
-SET ( liboslcomp_srcs ast.cpp codegen.cpp oslcomp.cpp symtab.cpp typecheck.cpp
-    )
+set (local_lib oslcomp)
+file (GLOB lib_src "*.cpp")
+file (GLOB compiler_headers "*.h")
 
 # oslexec symbols used in oslcomp
-if (NOT BUILDSTATIC)
-    LIST(APPEND liboslcomp_srcs
+if (BUILD_SHARED_LIBS)
+    list(APPEND lib_src
         ../liboslexec/oslexec.cpp
         ../liboslexec/typespec.cpp
         )
 endif ()
 
-FILE ( GLOB compiler_headers "*.h" )
+FLEX_BISON (osllex.l oslgram.y osl lib_src compiler_headers)
 
-FLEX_BISON ( osllex.l oslgram.y osl liboslcomp_srcs compiler_headers )
+add_library (${local_lib} ${lib_src})
+target_compile_definitions (${local_lib} PRIVATE OSL_EXPORTS)
+target_link_libraries (${local_lib}
+    PUBLIC
+        ${OPENIMAGEIO_LIBRARIES} ${ILMBASE_LIBRARIES}
+    PRIVATE
+        ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
+        ${CLANG_LIBRARIES} ${LLVM_LIBRARIES} ${LLVM_LDFLAGS}
+        ${LLVM_SYSTEM_LIBRARIES})
 
-if (BUILDSTATIC)
-    ADD_LIBRARY ( oslcomp STATIC ${liboslcomp_srcs} )
-    ADD_DEFINITIONS ( -DBUILD_STATIC=1 )
-else ()
-    ADD_LIBRARY ( oslcomp SHARED ${liboslcomp_srcs} )
+set_target_properties (${local_lib}
+    PROPERTIES
+        VERSION     ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}
+        SOVERSION   ${SOVERSION}
+        OUTPUT_NAME oslcomp${OSL_LIBNAME_SUFFIX}
+        POSITION_INDEPENDENT_CODE ON
+    )
+
+
+if (VISIBILITY_COMMAND)
+    set_property (TARGET ${local_lib}
+                  APPEND PROPERTY LINK_FLAGS ${VISIBILITY_MAP_COMMAND})
 endif ()
 
-set_target_properties (oslcomp
-                       PROPERTIES
-                       VERSION ${OSL_VERSION_MAJOR}.${OSL_VERSION_MINOR}.${OSL_VERSION_PATCH}
-                       SOVERSION ${SOVERSION}
-                       OUTPUT_NAME oslcomp${OSL_LIBNAME_SUFFIX}
-                       )
-
-TARGET_LINK_LIBRARIES ( oslcomp ${OPENIMAGEIO_LIBRARIES} ${ILMBASE_LIBRARIES}
-                       ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
-                       ${CLANG_LIBRARIES} ${LLVM_LIBRARIES} ${LLVM_LDFLAGS}
-                       ${LLVM_SYSTEM_LIBRARIES})
-
-install_targets (oslcomp)
+install_targets (${local_lib})
 

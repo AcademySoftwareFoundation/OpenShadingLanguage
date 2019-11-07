@@ -13,8 +13,8 @@
 #             for the .y and .l files.
 
 
-find_package (BISON REQUIRED)
-find_package (FLEX REQUIRED)
+checked_find_package (BISON REQUIRED)
+checked_find_package (FLEX REQUIRED)
 
 if ( FLEX_EXECUTABLE AND BISON_EXECUTABLE )
     macro ( FLEX_BISON flexsrc bisonsrc prefix srclist compiler_headers )

@@ -23,7 +23,7 @@ tmpdir = "."
 OSL_BUILD_DIR = os.environ.get("OSL_BUILD_DIR", "../..")
 OSL_SOURCE_DIR = os.environ.get("OSL_SOURCE_DIR", "../../../..")
 OSL_TESTSUITE_DIR = os.path.join(OSL_SOURCE_DIR, "testsuite")
-OPENIMAGEIO_ROOT_DIR = os.environ.get("OPENIMAGEIO_ROOT_DIR", None)
+OpenImageIO_ROOT = os.environ.get("OpenImageIO_ROOT", None)
 
 os.environ['OSLHOME'] = os.path.join(OSL_SOURCE_DIR, "src")
 
@@ -150,8 +150,8 @@ def oiio_relpath (path, start=os.curdir):
 
 
 def oiio_app (app):
-    if OPENIMAGEIO_ROOT_DIR :
-        return os.path.join (OPENIMAGEIO_ROOT_DIR, "bin", app) + " "
+    if OpenImageIO_ROOT :
+        return os.path.join (OpenImageIO_ROOT, "bin", app) + " "
     else :
         return app + " "
 

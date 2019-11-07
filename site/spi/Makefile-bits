@@ -44,10 +44,14 @@ else ifeq (${OSL_ARNOLD},1)
     PYLIB_INCLUDE_SONAME ?= 0
 else ifeq (${OSL_SPIREZ},1)
     $(info Building for Rez distribution)
-    NAMESPACE ?= 'OpenImageIO'
+    NAMESPACE ?= 'OSL'
     PYLIB_LIB_PREFIX ?= 0
     PYLIB_INCLUDE_SONAME ?= 0
     MY_CMAKE_FLAGS += -DOSL_SPIREZ=1 -DOSL_REZ_PACKAGE_NAME=${OSL_REZ_NAME}
+    MY_CMAKE_FLAGS += -DCMAKE_DEBUG_POSTFIX=_d
+    OPENIMAGEIO_VERSION ?= 2.1.5.0
+    OPENEXR_VERSION ?= 2.2.0
+    $(info Building against OpenImageIO ${OPENIMAGEIO_VERSION})
 else
     $(info Building generic OSL)
     NAMESPACE ?= 'OSL'
@@ -62,7 +66,12 @@ endif
 ifeq (${SP_OS}, rhel7)
     # Rhel7 (current)
     platform := rhel7
-    SPCOMP2_COMPILER ?= gcc48m64
+    SPI_COMPILER_PLATFORM ?= gcc-4.8
+    ifeq (${SPI_COMPILER_PLATFORM},gcc-6.3)
+        SPCOMP2_COMPILER ?= gcc63
+    else
+        SPCOMP2_COMPILER ?= gcc48m64
+    endif
     SP_PLATFORM ?= linux
     SP_PROC ?= x86_64
     SP_REZ_OS ?= CentOS-7
@@ -79,7 +88,6 @@ else
 endif  # endif ${SP_OS}
 
 PYTHON_VERSION ?= 2.7
-SPI_COMPILER_PLATFORM ?= gcc-4.8
 MY_CMAKE_FLAGS += -DSP_OS=${SP_OS} -DSP_PLATFORM=${SP_PLATFORM}
 MY_CMAKE_FLAGS += -DSP_PROC=${SP_PROC} -DSP_REZ_OS=${SP_REZ_OS}
 MY_CMAKE_FLAGS += -DSPI_COMPILER_PLATFORM=${SPI_COMPILER_PLATFORM}
@@ -92,7 +100,7 @@ SPCOMP2_ROOT ?= /shots/spi/home/lib/SpComp2
 
 ## Rhel7 (current)
 ifeq (${SP_OS}, rhel7)
-    USE_CPP ?= 11
+    CMAKE_CXX_STANDARD ?= 11
     USE_SIMD ?= sse4.1,aes
     CMAKE ?= cmake
     USE_NINJA ?= 1
@@ -103,8 +111,6 @@ ifeq (${SP_OS}, rhel7)
     export CCACHE_CPP2 ?= 1
     # Override lib64 and use SPI convention of lib
     MY_CMAKE_FLAGS += -DCMAKE_INSTALL_LIBDIR="${INSTALL_PREFIX}/lib"
-    MY_CMAKE_FLAGS += -DCUDA_TOOLKIT_ROOT_DIR=/net/soft_scratch/apps/arnold/tools/nvidia/cuda9.1 -DOPTIX_EXTRA_LIBS=lzma
-    MY_CMAKE_FLAGS += -DOPTIXHOME=/net/soft_scratch/apps/arnold/tools/nvidia/NVIDIA-OptiX-SDK-6.0.0-linux64
     ifeq (${OSL_SPCOMP2},1)
         MY_CMAKE_FLAGS += -DPYTHON_SITE_DIR="${INSTALL_PREFIX}/python"
     else ifeq (${OSL_SPIREZ},1)
@@ -132,13 +138,10 @@ ifeq (${SP_OS}, rhel7)
         LLVM_DIRECTORY := /shots/spi/home/lib/arnold/rhel7/llvm_8.0.0
         MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=${LLVM_DIRECTORY}/bin/clang -DCMAKE_CXX_COMPILER=${LLVM_DIRECTORY}/bin/clang++
         MY_CMAKE_FLAGS += -DCMAKE_C_FLAGS="--gcc-toolchain=/usr" -DCMAKE_CXX_FLAGS="--gcc-toolchain=/usr"
-    else ifeq (${COMPILER}, clang9)
-        MY_CMAKE_FLAGS += \
-           -DCMAKE_C_COMPILER=/shots/spi/home/lib/arnold/rhel7/llvm_9.0.0_rc4/bin/clang \
-           -DCMAKE_CXX_COMPILER=/shots/spi/home/lib/arnold/rhel7/llvm_9.0.0_rc4/bin/clang++
-        MY_CMAKE_FLAGS += -DCMAKE_C_FLAGS="--gcc-toolchain=/usr" \
-                          -DCMAKE_CXX_FLAGS="--gcc-toolchain=/usr" \
-			  -DTOOLCHAIN_FLAGS="--gcc-toolchain=/usr"
+    else ifeq (${COMPILER},clang9)
+        LLVM_DIRECTORY := /shots/spi/home/software/packages/llvm/9.0.0/${SPI_COMPILER_PLATFORM}
+        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=${LLVM_DIRECTORY}/bin/clang -DCMAKE_CXX_COMPILER=${LLVM_DIRECTORY}/bin/clang++
+        MY_CMAKE_FLAGS += -DCMAKE_C_FLAGS="--gcc-toolchain=/usr" -DCMAKE_CXX_FLAGS="--gcc-toolchain=/usr"
     else ifeq (${COMPILER},clang)
         MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
         MY_CMAKE_FLAGS += -DCMAKE_C_FLAGS="--gcc-toolchain=/usr" -DCMAKE_CXX_FLAGS="--gcc-toolchain=/usr"
@@ -241,40 +244,55 @@ ifeq (${SP_OS}, rhel7)
 
     # Set our preferred OpenEXR path, but allow env variable to override
     # with custom/test version.
-    ifeq (${OPENEXR_ROOT_DIR},)
+    ifneq (${OPENEXR_VERSION},)
+        # If OPENEXR_VERSION is set, grab from the rez area
+        OpenEXR_ROOT ?= ${REZ_PACKAGE_ROOT}/OpenEXR/${OPENEXR_VERSION}/${SPI_COMPILER_PLATFORM}/python-${PYTHON_VERSION}
+        MY_CMAKE_FLAGS += -DOpenEXR_ROOT=${OpenEXR_ROOT}
+    else ifeq (${OpenEXR_ROOT},)
+        # If not getting from rez, get from the system install
         MY_CMAKE_FLAGS += \
             -DOPENEXR_INCLUDE_DIR=/usr/include/OpenEXR2 \
             -DOPENEXR_LIBRARY_DIR=/usr/lib64/OpenEXR2
     endif
 
-    PARTIO_HOME := ${SPCOMP2_ROOT}/partio/rhel7-gcc48m64-boost155/v3
-    MY_CMAKE_FLAGS += -DPARTIO_HOME="${PARTIO_HOME}"
+    Partio_ROOT := ${SPCOMP2_ROOT}/partio/rhel7-gcc48m64-boost155/v3
+    MY_CMAKE_FLAGS += -DPartio_ROOT="${Partio_ROOT}"
 
     # set up OSL distribution environment
     SPARCH=${SP_OS}-$(SPCOMP2_COMPILER)$(CPPSTDSUFFIX)-boost$(subst .,,$(BOOSTVERSSP))
 
-    ifeq (${OSL_SPCOMP2},1)
-        OPENIMAGEIO_ROOT_DIR=$(SPCOMP2_ROOT)/OpenImageIO/$(SPARCH)/v$(OPENIMAGEIO_SPCOMP2_VERSION)
-    else ifneq (${OPENIMAGEIO_ROOT_DIR},)
-        # User supplied something
+    ifeq (${OSL_SPIREZ},1)
+        OpenImageIO_ROOT := ${REZ_PACKAGE_ROOT}/OpenImageIO/${OPENIMAGEIO_VERSION}/${SPI_COMPILER_PLATFORM}/python-${PYTHON_VERSION}/boost-${BOOSTVERSSP}
+    else ifeq (${OSL_SPCOMP2},1)
+        OpenImageIO_ROOT := $(SPCOMP2_ROOT)/OpenImageIO/$(SPARCH)/v$(OPENIMAGEIO_SPCOMP2_VERSION)
     else ifeq (${OSL_ARNOLD},1)
-        OPENIMAGEIO_ROOT_DIR=${working_dir}/../OpenImageIO_local/dist/${platform}${variant}/
+        OpenImageIO_ROOT ?= ${working_dir}/../OpenImageIO_local/dist/${platform}${variant}/
+    else ifneq (${OpenImageIO_ROOT},)
+        # User supplied something
     endif
-    ifneq ($(OPENIMAGEIO_ROOT_DIR),)
-        MY_CMAKE_FLAGS += -DOPENIMAGEIO_ROOT_DIR:STRING=$(OPENIMAGEIO_ROOT_DIR)
+    ifneq ($(OpenImageIO_ROOT),)
+        MY_CMAKE_FLAGS += -DOpenImageIO_ROOT=${OpenImageIO_ROOT}
     endif
+
+    # Cuda/OptiX
+    USE_OPTIX ?= 1
+    CUDA_VERSION ?= 10.1
+    OPTIX_VERSION ?= 6.0.0
+    # CUDA_TOOLKIT_ROOT_DIR = $(shell rez-env -b cuda-${CUDA_VERSION} ${SPI_COMPILER_PLATFORM} -c "echo '$CUDA_TOOLKIT_ROOT'")
+    CUDA_TOOLKIT_ROOT_DIR ?= /shots/spi/home/lib/arnold/rhel7/cuda_${CUDA_VERSION}
+    OPTIXHOME ?= /shots/spi/home/lib/arnold/rhel7/optix_${OPTIX_VERSION}
+    MY_CMAKE_FLAGS += -DUSE_OPTIX=${USE_OPTIX} \
+        -DCUDA_TOOLKIT_ROOT_DIR=${CUDA_TOOLKIT_ROOT_DIR} \
+        -DOPTIXHOME=${OPTIXHOME} -DOPTIX_EXTRA_LIBS=lzma
 
     # end rhel7
 
 ## Generic OSX machines (including LG's laptop)
 else ifeq (${platform}, macosx)
     USE_SIMD ?= sse4.2
-    MY_CMAKE_FLAGS += \
-        -DCMAKE_BUILD_WITH_INSTALL_RPATH=1 \
-        -DCMAKE_INSTALL_NAME_DIR="${working_dir}/dist/${platform}${variant}/lib"
+    # MY_CMAKE_FLAGS += -DCMAKE_BUILD_WITH_INSTALL_RPATH=1
+    # MY_CMAKE_FLAGS += -DCMAKE_INSTALL_NAME_DIR="${working_dir}/dist/${platform}${variant}/lib"
 
-    BOOSTVERS ?= 1.55
-    BOOSTSPSUFFIX ?=
     BOOSTVERSSP=${BOOSTVERS}${BOOSTSPSUFFIX}
     LLVM_DIRECTORY ?= /usr/local/opt/llvm
 
@@ -302,6 +320,8 @@ else ifeq (${platform}, macosx)
         MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm@7/7.0.1/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm@7/7.0.1/bin/clang++
     else ifeq (${COMPILER},clang8)
         MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/8.0.1/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/8.0.1/bin/clang++
+    else ifeq (${COMPILER},clang9)
+        MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang++
     else ifeq (${COMPILER},clang)
         MY_CMAKE_FLAGS += -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
     else ifeq (${COMPILER},gcc)
@@ -330,9 +350,10 @@ ifeq (${OSL_SPIREZ},1)
     # Rpath touch-ups
     # NOTE: This MUST match the order and naming of the Rez variants
     # set in rez/package.py.in
-    REZ_INSTALL_PATH := ${REZ_PACKAGE_ROOT}/${OSL_REZ_NAME}/${OSL_VERS}/${SPI_COMPILER_PLATFORM}/python-${PYTHON_VERSION}/boost-${BOOSTVERSSP}
+    REZ_INSTALL_PATH := ${REZ_PACKAGE_ROOT}/${OSL_REZ_NAME}/${OSL_VERS}/${SPI_COMPILER_PLATFORM}/python-${PYTHON_VERSION}/boost-${BOOSTVERSSP}/cuda-${CUDA_VERSION}/optix-${OPTIX_VERSION}
     MY_CMAKE_FLAGS += -DOSL_REZ_INSTALL_PATH=${REZ_INSTALL_PATH}
-    MY_CMAKE_FLAGS += -DCMAKE_INSTALL_RPATH=${REZ_INSTALL_PATH}/lib
+    MY_CMAKE_FLAGS += -DCMAKE_INSTALL_RPATH="${REZ_INSTALL_PATH}/lib;@executable_path/../lib;${OpenImageIO_ROOT}/lib"
+    INSTALL_PREFIX := ${working_dir}/dist/${platform}
 endif
 
 
@@ -365,6 +386,11 @@ local: dist
 
 .PHONY: spcomp2_install spcomp2_install_local clean all
 
+spi: MY_CMAKE_FLAGS += -DCMAKE_DEBUG_POSTFIX=_d
+spi: debug dist
+
+
+
 spcomp2_install_local: SPCOMP2_INSTALL_ROOT = $(SPCOMP2_LOCAL_PATH)
 spcomp2_install_local: spcomp2_install
 
@@ -378,8 +404,8 @@ space:= $(empty) $(empty)
 #INSTALL_SPCOMP2_CURRENT = $(SPCOMP2_INSTALL_ROOT)/OSL/$(SPARCH)/v$(OSL_SPCOMP2_VERSION)
 #INSTALL_BIN_LOCATION = $(INSTALL_SPCOMP2_CURRENT)/bin
 
-SPCOMP2_RPATH_OPT ?= ${OPENIMAGEIO_ROOT_DIR}/lib:${PARTIO_HOME}/lib
-SPCOMP2_RPATH_DEBUG ?= ${OPENIMAGEIO_ROOT_DIR}/lib:${PARTIO_HOME}/lib/debug
+SPCOMP2_RPATH_OPT ?= ${OpenImageIO_ROOT}/lib:${Partio_ROOT}/lib
+SPCOMP2_RPATH_DEBUG ?= ${OpenImageIO_ROOT}/lib:${Partio_ROOT}/lib/debug
 #PYSPCOMP2_RPATH_OPT ?= ${SPCOMP2_RPATH_OPT}:${OSL_SPCOMP2_PATH}/lib:${PYTHON_LIBRARY_DIR}
 #PYSPCOMP2_RPATH_DEBUG ?= ${SPCOMP2_RPATH_DEBUG}:${OSL_SPCOMP2_PATH}/lib/debug:${PYTHON_LIBRARY_DIR}
 

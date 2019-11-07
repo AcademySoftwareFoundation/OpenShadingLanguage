@@ -62,12 +62,6 @@ OPTIX_find_api_library(optix_prime ${OPTIX_VERSION})
 
 set (OPTIX_LIBRARIES ${optix_LIBRARY})
 
-message (STATUS "OptiX version = ${OPTIX_VERSION}")
-if (NOT OptiX_FIND_QUIETLY)
-    message (STATUS "OptiX includes  = ${OPTIX_INCLUDE_DIR}")
-    message (STATUS "OptiX libraries = ${OPTIX_LIBRARIES}")
-endif ()
-
 mark_as_advanced (
     OPTIX_INCLUDE_DIR
     OPTIX_LIBRARIES
@@ -81,3 +75,6 @@ find_package_handle_standard_args (OptiX
     VERSION_VAR   OPTIX_VERSION
     )
 
+if (OPTIX_FOUND)
+    set (OPTIX_INCLUDES ${OPTIX_INCLUDE_DIR})
+endif ()

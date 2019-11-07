@@ -23,4 +23,5 @@ rez_install_cmake(
     INCLUDE_DIRS include
     LIBRARY_DIRS lib
     LIBRARIES oslexec oslcomp oslquery
+              oslexec_d oslcomp_d oslquery_d
 )

@@ -32,7 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using namespace OSL;
 using namespace OSL::pvt;
 
-#if USE_PARTIO
+#ifdef USE_PARTIO
 #include <Partio.h>
 #include <unordered_map>
 #endif
@@ -41,7 +41,7 @@ using namespace OSL::pvt;
 
 namespace { // anon
 
-#if USE_PARTIO
+#ifdef USE_PARTIO
 
 class PointCloud {
 public:
@@ -237,7 +237,7 @@ RendererServices::pointcloud_search (ShaderGlobals *sg,
                                      size_t *out_indices,
                                      float *out_distances, int derivs_offset)
 {
-#if USE_PARTIO
+#ifdef USE_PARTIO
     if (filename.empty())
         return 0;
     PointCloud *pc = PointCloud::get(filename);
@@ -340,7 +340,7 @@ RendererServices::pointcloud_get (ShaderGlobals *sg,
                                   ustring attr_name, TypeDesc attr_type,
                                   void *out_data)
 {
-#if USE_PARTIO
+#ifdef USE_PARTIO
     if (! count)
         return 1;  // always succeed if not asking for any data
 
@@ -407,7 +407,7 @@ RendererServices::pointcloud_write (ShaderGlobals *sg,
                                     const TypeDesc *types,
                                     const void **data)
 {
-#if USE_PARTIO
+#ifdef USE_PARTIO
     if (filename.empty())
         return false;
     PointCloud *pc = PointCloud::get(filename, true /* create file to write */);

@@ -1,27 +1,42 @@
+# Copyright 2009-present Sony Pictures Imageworks, et al.
+# SPDX-License-Identifier: BSD-3-Clause
+# https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+
 # .travis.yml for OSL
 
 language: cpp
 osx_image: xcode10
-dist: trusty
+dist: xenial
 
 
 # Add-ons: specify apt packages for Linux
-# Currently, we do this per-matrix-entry so it can be finely customized
-# so that each entry only get the packages it needs.
-#addons:
-#  apt:
-#   sources:
-#      - ubuntu-toolchain-r-test
-#   packages:
-#      - g++-4.8
-#      - g++-6
-#      - g++-7
-#      - libboost-filesystem1.55
-#      - libboost-python1.55
-#      - libboost-regex1.55
-#      - libboost-system1.55
-#      - libboost-thread1.55
-#      - libboost-wave1.55
+# We actaully specify packages per-matrix-entry, so these don't do anything
+# except to tag them (&add-sources, &common-packages, &common-boost-packages)
+# so they can be referened later ('*') to save repetition.
+addons:
+  apt:
+   sources: &add-sources
+      - ubuntu-toolchain-r-test
+   packages: &common-packages
+      - libgif-dev
+      - libfreetype6-dev
+      - python-numpy
+      - ninja-build
+      - libfreetype6-dev
+   packages: &common-boost-packages
+      - libboost1.58-dev
+      - libboost-filesystem1.58
+      - libboost-regex1.58
+      - libboost-system1.58
+      - libboost-thread1.58
+      - libboost-wave1.58
+   packages: &old-boost-packages
+      - libboost1.55-dev
+      - libboost-filesystem1.55
+      - libboost-regex1.55
+      - libboost-system1.55
+      - libboost-thread1.55
+      - libboost-wave1.55
 
 cache:
     ccache: true
@@ -30,52 +45,27 @@ cache:
       - $HOME/.ccache
 
 before_install:
-    - if [ "$WHICHGCC" == "" ]; then export WHICHGCC="4.8" ; fi
-    - if [ $TRAVIS_OS_NAME == osx ] ; then
-          export PLATFORM=macosx ;
-          sysctl machdep.cpu.features ;
-      elif [ $TRAVIS_OS_NAME == linux ] ; then
-          export PLATFORM=linux64 ;
-          cat /proc/cpuinfo | head -26 ;
-      fi
-    - export OIIOPLATFORM=$PLATFORM
-    - if [ "$DEBUG" == 1 ] ; then export PLATFORM=${PLATFORM}.debug ; fi
-    - echo "Build platform name is $PLATFORM"
+    - source src/build-scripts/ci-startup.bash
+    - export WHICHGCC=${WHICHGCC:="4.8"}
+    - if [ "$CXX" == "g++" ]; then export CXX="g++-${WHICHGCC}" ; fi
 
 install:
-    - if [ "$CXX" == "g++" ]; then export CXX="g++-${WHICHGCC}" ; fi
-    - export USE_CCACHE=1
-    - export CCACHE_CPP2=1
-    - if [ $TRAVIS_OS_NAME == osx ] ; then
-          source src/build-scripts/install_homebrew_deps.bash ;
-      elif [ $TRAVIS_OS_NAME == linux ] ; then
-          if [ "$BUILD_CMAKE" == "1" ] ; then
-              source src/build-scripts/build_cmake.bash ;
-          fi ;
-          CXX="ccache $CXX" source src/build-scripts/build_openexr.bash ;
-          if [ "$LLVM_VERSION" == "" ]; then export LLVM_VERSION="error" ; fi ;
-          if [ "$LLVM_VERSION" == "5.0.0" ]; then export LLVMTAR=clang+llvm-${LLVM_VERSION}-linux-x86_64-ubuntu14.04.tar.xz ; else export LLVMTAR=clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-14.04.tar.xz ; fi;
-          echo LLVMTAR = $LLVMTAR ;
-          wget http://releases.llvm.org/${LLVM_VERSION}/${LLVMTAR} ;
-          tar xf $LLVMTAR ;
-          rm -f $LLVMTAR ;
-          echo "Installed ${LLVM_VERSION}" ;
-          mv clang+llvm* llvm-install ;
-          export LLVM_DIRECTORY=$PWD/llvm-install ;
-          ls -a $LLVM_DIRECTORY ;
-      fi
+    - if [ $TRAVIS_OS_NAME == osx ] ; then source src/build-scripts/install_homebrew_deps.bash ; fi
+    - if [ "$BUILD_CMAKE" == "1" ] ; then source src/build-scripts/build_cmake.bash ; fi
+    - source src/build-scripts/build_llvm.bash ;
+    - if [ $TRAVIS_OS_NAME == linux ] ; then CXX="ccache $CXX" source src/build-scripts/build_openexr.bash ; fi
+
       # Note: can remove the ILMBASE_HOME/OPENEXR_HOME when OIIO 2.x is floor
-    - export OIIOMAKEFLAGS="$OIIOMAKEFLAGS -j2 DEBUG= USE_PYTHON=0 OIIO_BUILD_TESTS=0"
+    - export OPENIMAGEIO_MAKEFLAGS="$OPENIMAGEIO_MAKEFLAGS -j2 DEBUG= USE_PYTHON=0 OIIO_BUILD_TESTS=0"
+    - export ENABLE_iinfo=0 ENABLE_iv=0 ENABLE_igrep=0 ENABLE_iconvert=0 ENABLE_testtex=0
+    - export ENABLE_cineon=0 ENABLE_DDS=0 ENABLE_DPX=0 ENABLE_FITS=0
+    - export ENABLE_iff=0 ENABLE_jpeg2000=0 ENABLE_PNM=0 ENABLE_PSD=0
+    - export ENABLE_RLA=0 ENABLE_SGI=0 ENABLE_SOCKET=0 ENABLE_SOFTIMAGE=0
+    - export ENABLE_TARGA=0 ENABLE_WEBP=0 ENABLE_TARGA=0
     - export OPENIMAGEIO_SITE=travis
+    - export OPENIMAGEIO_INSTALLDIR=$PWD/ext/OpenImageIO/dist/$ARCH
     - export OSL_SITE=travis
-    - src/build-scripts/build_openimageio.bash
-    - export OPENIMAGEIO_ROOT_DIR=$PWD/OpenImageIO/dist/$OIIOPLATFORM
-    - export OPENIMAGEIO_ROOT=$PWD/OpenImageIO/dist/$OIIOPLATFORM
-    - export OPENIMAGEIOHOME=$OPENIMAGEIO_ROOT_DIR
-    - export PATH=$OPENIMAGEIO_ROOT_DIR/bin:$PATH
-    - export DYLD_LIBRARY_PATH=$OPENIMAGEIO_ROOT_DIR/lib:$DYLD_LIBRARY_PATH
-    - export LD_LIBRARY_PATH=$OPENIMAGEIO_ROOT_DIR/lib:$LD_LIBRARY_PATH
-    - export PYTHONPATH=$OPENIMAGEIO_ROOT_DIR/python:$PYTHONPATH
+    - source src/build-scripts/build_openimageio.bash
     - if [ $TRAVIS_OS_NAME == linux ] ; then
           export BUILD_FLAGS="$BUILD_FLAGS LLVM_STATIC=1" ;
           export TEST_FLAGS="-E broken\|render-cornell\|render-oren-nayar\|render-veachmis\|render-ward" ;
@@ -85,19 +75,11 @@ install:
 # before_script:
 
 script:
-    - make VERBOSE=1 $BUILD_FLAGS cmakesetup
-    - make -j2 $BUILD_FLAGS
-    - export LSAN_OPTIONS=suppressions=$PWD/src/build-scripts/nosanitize.txt
-    - export OSL_ROOT_DIR=$PWD/dist/$PLATFORM
-    - export OIIO_LIBRARY_PATH=${OSL_ROOT_DIR}/lib:${OIIO_LIBRARY_PATH}
-    - make $BUILD_FLAGS test
+    - export LD_LIBRARY_PATH=$OpenImageIO_ROOT/lib:$OSL_ROOT/lib:$LD_LIBRARY_PATH
+    - export DYLD_LIBRARY_PATH=$OpenImageIO_ROOT/lib:$OSL_ROOT/lib:$DYLD_LIBRARY_PATH
+    - source src/build-scripts/ci-build-and-test.bash
 
 
-after_success:
-    - if [ "$CODECOV" == 1 ]; then bash <(curl -s https://codecov.io/bash) ; fi
-
-after_failure:
-# FIXME: find failed logs, stash them or send them to lg?
 
 branches:
   only:
@@ -113,68 +95,49 @@ matrix:
         compiler: gcc
         addons:
           apt:
-            sources:
-              - ubuntu-toolchain-r-test
+            sources: *add-sources
             packages:
+              - *common-packages
+              - *common-boost-packages
               - g++-6
-              - libboost1.55-dev
-              - libboost-filesystem1.55
-              - libboost-python1.55
-              - libboost-system1.55
-              - libboost-thread1.55
-              - libboost-wave1.55
-        env: WHICHGCC=6 USE_CPP=14 LLVM_VERSION=7.0.0 OIIOBRANCH=master USE_SIMD=avx,f16c BUILD_CMAKE=1
+        env: WHICHGCC=6 USE_CPP=14 LLVM_VERSION=7.0.1 OPENIMAGEIO_BRANCH=master USE_SIMD=avx,f16c BUILD_CMAKE=1
       - name: "MacOS (latest Apple clang, llvm 7, OIIO master, latest homebrew libs"
         os: osx
         compiler: clang
+        env: PYTHON_VERSION=3.7
       - name: "VFX Platform 2017 (gcc48, c++11), llvm 6, OIIO release, sse4.2"
         os: linux
+        dist: trusty
         compiler: gcc
         addons:
           apt:
-            sources:
-              - ubuntu-toolchain-r-test
+            sources: *add-sources
             packages:
-              - libboost1.55-dev
-              - libboost-filesystem1.55
-              - libboost-python1.55
-              - libboost-regex1.55
-              - libboost-system1.55
-              - libboost-thread1.55
-              - libboost-wave1.55
-        env: WHICHGCC=4.8 USE_CPP=11 LLVM_VERSION=6.0.1 USE_SIMD=sse4.2 OIIOBRANCH=release
-      - name: "Older things: OIIO 2.0, llvm 5, boost 1.55"
+              - *common-packages
+              - *old-boost-packages
+        env: WHICHGCC=4.8 USE_CPP=11 LLVM_VERSION=6.0.1 USE_SIMD=sse4.2 OPENIMAGEIO_BRANCH=release BUILD_CMAKE=1
+      - name: "Older things: OIIO 2.0, llvm 5, boost 1.58"
         os: linux
+        dist: trusty
         compiler: gcc
         addons:
           apt:
-            sources:
-              - ubuntu-toolchain-r-test
+            sources: *add-sources
             packages:
-              - libboost1.55-dev
-              - libboost-filesystem1.55
-              - libboost-python1.55
-              - libboost-regex1.55
-              - libboost-system1.55
-              - libboost-thread1.55
-              - libboost-wave1.55
-        env: WHICHGCC=4.8 USE_CPP=11 LLVM_VERSION=5.0.0 USE_SIMD=sse4.2 OIIOBRANCH=RB-2.0
+              - *common-packages
+              - *old-boost-packages
+        env: WHICHGCC=4.8 USE_CPP=11 LLVM_VERSION=5.0.1 USE_SIMD=sse4.2 OPENIMAGEIO_BRANCH=RB-2.0 BUILD_CMAKE=1
         if: branch =~ /(master|RB|travis)/ OR type = pull_request
       - name: "gcc7, llvm7, C++14"
         os: linux
         compiler: gcc
         addons:
           apt:
-            sources:
-              - ubuntu-toolchain-r-test
+            sources: *add-sources
             packages:
+              - *common-packages
+              - *common-boost-packages
               - g++-7
-              - libboost1.55-dev
-              - libboost-filesystem1.55
-              - libboost-python1.55
-              - libboost-system1.55
-              - libboost-thread1.55
-              - libboost-wave1.55
         env: WHICHGCC=7 USE_CPP=14 LLVM_VERSION=7.0.0 BUILD_CMAKE=1
         if: branch =~ /(master|RB|travis)/ OR type = pull_request
       - name: "Future: gcc8, C++14, LLVM 7, OIIO master, AVX/f16c"
@@ -182,49 +145,34 @@ matrix:
         compiler: gcc
         addons:
           apt:
-            sources:
-              - ubuntu-toolchain-r-test
+            sources: *add-sources
             packages:
+              - *common-packages
+              - *common-boost-packages
               - g++-8
-              - libboost1.55-dev
-              - libboost-filesystem1.55
-              - libboost-python1.55
-              - libboost-system1.55
-              - libboost-thread1.55
-              - libboost-wave1.55
         env: WHICHGCC=8 USE_CPP=14 LLVM_VERSION=7.0.0 USE_SIMD=avx,f16c BUILD_CMAKE=1
       - name: "DEBUG build, LLVM 7, OIIO master"
         os: linux
         compiler: gcc
         addons:
           apt:
-            sources:
-              - ubuntu-toolchain-r-test
+            sources: *add-sources
             packages:
-              - libboost1.55-dev
-              - libboost-filesystem1.55
-              - libboost-python1.55
-              - libboost-regex1.55
-              - libboost-system1.55
-              - libboost-thread1.55
-              - libboost-wave1.55
-        env: DEBUG=1 LLVM_VERSION=7.0.0 OIIOBRANCH=master BUILD_CMAKE=1
-      - name: "Oldest everything: LLVM 5, OIIO 2.0, no simd"
+              - *common-packages
+              - *common-boost-packages
+              - g++-6
+        env: DEBUG=1 WHICHGCC=6 LLVM_VERSION=7.0.0 OPENIMAGEIO_BRANCH=master BUILD_CMAKE=1
+      - name: "Oldest everything: gcc4.8, LLVM 5, OIIO 2.0, no simd"
         os: linux
+        dist: trusty
         compiler: gcc
         addons:
           apt:
-            sources:
-              - ubuntu-toolchain-r-test
+            sources: *add-sources
             packages:
-              - libboost1.55-dev
-              - libboost-filesystem1.55
-              - libboost-python1.55
-              - libboost-regex1.55
-              - libboost-system1.55
-              - libboost-thread1.55
-              - libboost-wave1.55
-        env: USE_SIMD=0 LLVM_VERSION=5.0.0 OIIOBRANCH=RB-2.0
+              - *common-packages
+              - *old-boost-packages
+        env: USE_SIMD=0 LLVM_VERSION=5.0.1 OPENIMAGEIO_BRANCH=RB-2.0 BUILD_CMAKE=1
         if: branch =~ /(master|RB|travis)/ OR type = pull_request
 
 notifications:

@@ -13,24 +13,38 @@
 # keyword.
 #
 macro (add_oiio_plugin)
-    cmake_parse_arguments (_plugin "" "" "LINK_LIBRARIES" ${ARGN})
-    set (_target_name ${CMAKE_CURRENT_SOURCE_DIR})
-    # Get the name of the current directory and use it as the target name.
-    get_filename_component (_target_name ${CMAKE_CURRENT_SOURCE_DIR} NAME)
-    add_library (${_target_name} SHARED ${_plugin_UNPARSED_ARGUMENTS})
-    target_link_libraries (${_target_name} ${OPENIMAGEIO_LIBRARIES} ${_plugin_LINK_LIBRARIES})
-    set_target_properties (${_target_name} PROPERTIES PREFIX "" FOLDER "Plugins")
-    if (VERBOSE)
-        message(STATUS "Setting SOVERSION to: ${SOVERSION}")
+    cmake_parse_arguments (_plugin "" "NAME" "SRC;INCLUDE_DIRS;LINK_LIBRARIES;DEFINITIONS" ${ARGN})
+       # Arguments: <prefix> <options> <one_value_keywords> <multi_value_keywords> args...
+    get_filename_component (_plugin_name ${CMAKE_CURRENT_SOURCE_DIR} NAME_WE)
+    if (NOT _plugin_NAME)
+        # If NAME is not supplied, infer target name (and therefore the
+        # executable name) from the directory name.
+        get_filename_component (_plugin_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
     endif ()
-    set_target_properties( ${_target_name}
-                          PROPERTIES
-                          VERSION ${OSL_VERSION_MAJOR}.${OSL_VERSION_MINOR}.${OSL_VERSION_PATCH}
-                          SOVERSION ${SOVERSION} )
+    # if (NOT _plugin_SRC)
+    #     # If SRC is not supplied, assume local cpp files are its source.
+    #     file (GLOB _plugin_SRC *.cpp)
+    # endif ()
 
-    install_targets (${_target_name})
+    # Get the name of the current directory and use it as the target name.
+    get_filename_component (_plugin_name ${CMAKE_CURRENT_SOURCE_DIR} NAME)
+    add_library (${_plugin_name} MODULE ${_plugin_UNPARSED_ARGUMENTS})
+    target_compile_definitions (${_plugin_name} PRIVATE
+                                ${_plugin_DEFINITIONS})
+    target_include_directories (${_plugin_name} PRIVATE ${_plugin_INCLUDE_DIRS}
+                                                        ${OPENIMAGEIO_INCLUDES})
+    target_link_libraries (${_plugin_name} PUBLIC ${OPENIMAGEIO_LIBRARIES}
+                                           PRIVATE ${_plugin_LINK_LIBRARIES})
+    set_target_properties (${_plugin_name}
+                           PROPERTIES
+                               PREFIX ""
+                               FOLDER "Plugins")
+    if (VISIBILITY_COMMAND)
+        set_property (TARGET ${_plugin_name}
+                      APPEND PROPERTY LINK_FLAGS ${VISIBILITY_MAP_COMMAND})
+    endif ()
+    install_targets (${_plugin_name})
 endmacro ()
-
 
 
 add_oiio_plugin (oslinput.cpp

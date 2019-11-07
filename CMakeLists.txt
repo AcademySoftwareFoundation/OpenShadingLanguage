@@ -1,54 +1,35 @@
-cmake_minimum_required (VERSION 3.2.2)
-cmake_policy (SET CMP0048 NEW)  # Allow VERSION specifier in project()
+cmake_minimum_required (VERSION 3.12)
 project (OSL VERSION 1.11.1.0
-         LANGUAGES CXX C)
+         LANGUAGES CXX C
+         HOMEPAGE_URL "https://github.com/imageworks/OpenShadingLanguage")
 set (PROJ_NAME ${PROJECT_NAME})    # short name
 string (TOLOWER ${PROJ_NAME} PROJ_NAME_LOWER)  # short name lower case
+string (TOUPPER ${PROJ_NAME} PROJ_NAME_UPPER)  # short name upper case
 set (PROJECT_VERSION_RELEASE_TYPE "dev")   # "dev", "betaX", "RCY", ""
 set (${PROJECT_NAME}_VERSION_RELEASE_TYPE ${PROJECT_VERSION_RELEASE_TYPE})
-set (PROJECT_COPYRIGHTYEARS "2008-2019")
 set (PROJECT_AUTHORS "Sony Pictures Imageworks, et al")
-set (PROJECT_URL "https://github.com/imageworks/OpenShadingLanguage")
 
-set (PROJECT_VERSION_MAJORMINOR
-     "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}")
 message (STATUS "Building ${PROJECT_NAME} ${PROJECT_VERSION}")
 message (STATUS "CMake version is ${CMAKE_VERSION}")
-cmake_policy (SET CMP0017 NEW)  # Prefer files from the CMake module directory when including from there.
-cmake_policy (SET CMP0025 NEW)  # Detect AppleClang for new CMake
-cmake_policy (SET CMP0046 OLD)  # Don't error on non-existent dependency in add_dependencies.
-if (NOT ${CMAKE_VERSION} VERSION_LESS 3.12)
-    cmake_policy (SET CMP0074 NEW)  # Auto search <pkg>_ROOT env for find_* inside find_package(<pkg>)
+
+if (NOT CMAKE_BUILD_TYPE)
+    set (CMAKE_BUILD_TYPE "Release")
 endif ()
-set (CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)
 
-# Deprecated names
-set (OSL_LIBRARY_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
-set (OSL_LIBRARY_VERSION_MINOR ${PROJECT_VERSION_MINOR})
-set (OSL_LIBRARY_VERSION_PATCH ${PROJECT_VERSION_PATCH})
-set (OSL_LIBRARY_VERSION_TWEAK ${PROJECT_VERSION_TWEAK})
-set (OSL_LIBRARY_VERSION_RELEASE_TYPE ${PROJECT_VERSION_RELEASE_TYPE})
-
-# Version of the OSO file format and instruction set
-set (OSO_FILE_VERSION_MAJOR 1)
-set (OSO_FILE_VERSION_MINOR 0)
-
-if (VERBOSE)
-    message (STATUS "Project source dir = ${PROJECT_SOURCE_DIR}")
-endif ()
-message (STATUS "Project build dir   = ${CMAKE_BINARY_DIR}")
-message (STATUS "Project install dir = ${CMAKE_INSTALL_PREFIX}")
+message (STATUS "Configuring ${PROJECT_NAME} ${PROJECT_VERSION}")
+message (STATUS "CMake ${CMAKE_VERSION}")
+message (STATUS "CMake system           = ${CMAKE_SYSTEM}")
+message (STATUS "CMake system name      = ${CMAKE_SYSTEM_NAME}")
+message (STATUS "Project source dir     = ${PROJECT_SOURCE_DIR}")
+message (STATUS "Project build dir      = ${CMAKE_BINARY_DIR}")
+message (STATUS "Project install prefix = ${CMAKE_INSTALL_PREFIX}")
+message (STATUS "Configuration types    = ${CMAKE_CONFIGURATION_TYPES}")
+message (STATUS "Build type             = ${CMAKE_BUILD_TYPE}")
 
 if ("${PROJECT_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
     message (FATAL_ERROR "Not allowed to run in-source build!")
 endif ()
 
-if (NOT CMAKE_BUILD_TYPE)
-    set (CMAKE_BUILD_TYPE "Release")
-endif ()
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set (DEBUGMODE ON)
-endif ()
 
 option (CMAKE_USE_FOLDERS "Use the FOLDER target property to organize targets into folders." ON)
 mark_as_advanced (CMAKE_USE_FOLDERS)
@@ -56,30 +37,14 @@ if (CMAKE_USE_FOLDERS)
     set_property (GLOBAL PROPERTY USE_FOLDERS ON)
 endif ()
 
+
+# Version of the OSO file format and instruction set
+set (OSO_FILE_VERSION_MAJOR 1)
+set (OSO_FILE_VERSION_MINOR 0)
+
+
+# This needs to be early, for CMAKE_INSTALL_FULL_DATADIR
 include (GNUInstallDirs)
-
-list (APPEND CMAKE_MODULE_PATH
-      "${PROJECT_SOURCE_DIR}/src/cmake/modules"
-      "${PROJECT_SOURCE_DIR}/src/cmake")
-
-include (platform)
-include (compiler)   # All the C++ and compiler related options live here
-
-
-## enable RTTI
-##   NOTE: LLVM builds without RTTI by default so beware
-##   if you find the need to turn this on, to use OSL in a
-##   project that requires RTTI for example, you need to build
-##   LLVM with RRTI, otherwise OSL classes extending LLVM ones
-##   will cause linker errors.
-set (ENABLERTTI OFF CACHE BOOL "Build with RTTI. Requires a LLVM build with RTTI enabled.")
-if (NOT ENABLERTTI)
-    if (MSVC)
-        set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR-" )
-    else ()
-        set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti" )
-    endif()
-endif()
 
 
 option (VERBOSE "Print lots of messages while compiling" OFF)
@@ -96,15 +61,10 @@ if (WIN32)
 else ()
     option (USE_LLVM_BITCODE "Generate embedded LLVM bitcode" ON)
 endif ()
-option (USE_PARTIO "Use Partio if found" ON)
-set (PARTIO_HOME "" CACHE STRING "Search path for Partio components")
-set (PUGIXML_HOME "" CACHE STRING "Hint about where to find external PugiXML library")
-option (USE_FAST_MATH "Use fast math approximations (if no, then use system math library)" ON)
 option (OSL_BUILD_PLUGINS "Bool OSL plugins, for example OIIO plugin" ON)
 option (OSL_BUILD_SHADERS "Build shaders" ON)
 option (OSL_BUILD_MATERIALX "Build MaterialX shaders" ON)
 option (USE_BOOST_WAVE "Use Boost Wave for C preprocessor (alternative is to use clang)" OFF)
-option (USE_QT "Include Qt support" ON)
 option (USE_OPTIX "Include OptiX support" OFF)
 set (OPTIX_EXTRA_LIBS CACHE STRING "Extra lib targets needed for OptiX")
 set (CUDA_TARGET_ARCH "sm_35" CACHE STRING "CUDA GPU architecture (e.g. sm_35)")
@@ -112,17 +72,15 @@ set (OSL_SHADER_INSTALL_DIR "${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME}/shade
      CACHE STRING "Directory where shaders will be installed")
 set (OSL_PTX_INSTALL_DIR "${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME}/ptx"
      CACHE STRING "Directory where OptiX PTX files will be installed")
+set (CMAKE_DEBUG_POSTFIX "" CACHE STRING "Library naming postfix for Debug builds (e.g., '_debug')")
 
-# set (USE_OIIO_STATIC ON CACHE BOOL "If OIIO is built static")
-# if (USE_OIIO_STATIC)
-#     add_definitions ("-DOIIO_STATIC_BUILD=1")
-# endif ()
 
 set (OSL_NO_DEFAULT_TEXTURESYSTEM OFF CACHE BOOL "Do not use create a raw OIIO::TextureSystem")
 if (OSL_NO_DEFAULT_TEXTURESYSTEM)
     add_definitions ("-DOSL_NO_DEFAULT_TEXTURESYSTEM=1")
 endif ()
 
+option (USE_FAST_MATH "Use fast math approximations (if no, then use system math library)" ON)
 if (USE_FAST_MATH)
     add_definitions ("-DOSL_FAST_MATH=1")
 else ()
@@ -147,28 +105,33 @@ if (OIIO_NAMESPACE_INCLUDE_PATCH)
 endif ()
 message(STATUS "Setting Namespace to: ${PROJ_NAMESPACE_V}")
 
-include (util_macros)
+
+list (APPEND CMAKE_MODULE_PATH
+      "${PROJECT_SOURCE_DIR}/src/cmake/modules"
+      "${PROJECT_SOURCE_DIR}/src/cmake")
+
+# Helpful functions and macros for our project
+include (colors)
+include (check_is_enabled)
+
+# All the C++ and compiler related options and adjustments live here
+include (compiler)
+
 include (externalpackages)
 include (flexbison)
-include (install)          # installation options all implemented here
 include (cuda_macros)
+
+# We want CTest for testing, so this must be added before all the calls to
+# add_subdirectory, or their add_test commands will not register.
+include (CTest)
+
 
 include_directories (
     BEFORE
     "${CMAKE_SOURCE_DIR}/src/include"
+    "${CMAKE_BINARY_DIR}/src/include"
     "${CMAKE_BINARY_DIR}/include"
   )
-
-
-
-
-###########################################################################
-
-
-# We want CTest for testing
-# N.B. This needs to be added before any of the subdirectories, or
-# their add_test commands will not register.
-include (CTest)
 
 
 # Tell CMake to process the sub-directories
@@ -177,21 +140,20 @@ add_subdirectory (src/liboslcomp)
 add_subdirectory (src/liboslquery)
 add_subdirectory (src/liboslexec)
 add_subdirectory (src/liboslnoise)
-
 add_subdirectory (src/oslc)
 add_subdirectory (src/oslinfo)
 
 if (OSL_BUILD_TESTS)
-add_subdirectory (src/testshade)
-add_subdirectory (src/testrender)
+    add_subdirectory (src/testshade)
+    add_subdirectory (src/testrender)
 endif ()
 
 if (OSL_BUILD_PLUGINS)
-add_subdirectory (src/osl.imageio)
+    add_subdirectory (src/osl.imageio)
 endif ()
 
 if (USE_QT AND Qt5_FOUND)
-add_subdirectory (src/osltoy)
+    add_subdirectory (src/osltoy)
 endif ()
 
 if (OSL_BUILD_SHADERS)
@@ -201,8 +163,9 @@ if (OSL_BUILD_SHADERS)
     endif ()
 endif ()
 
+option (INSTALL_DOCS "Install documentation" ON)
 if (INSTALL_DOCS)
-add_subdirectory (src/doc)
+    add_subdirectory (src/doc)
 endif ()
 
 # Last minute site-specific instructions, if they exist
@@ -274,7 +237,7 @@ macro ( TESTSUITE )
             NOT _testname MATCHES "optix" AND
             NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
             set (_env TESTSHADE_OPT=0
-                      OPENIMAGEIO_ROOT_DIR=${OPENIMAGEIO_ROOT_DIR}
+                      OpenImageIO_ROOT=${OpenImageIO_ROOT}
                       OSL_SOURCE_DIR=${CMAKE_SOURCE_DIR}
                       OSL_BUILD_DIR=${CMAKE_BINARY_DIR} )
             add_test ( NAME ${_testname}
@@ -286,7 +249,7 @@ macro ( TESTSUITE )
         if (NOT _testname MATCHES "optix"
             AND NOT EXISTS "${_testsrcdir}/NOOPTIMIZE")
             set (_env TESTSHADE_OPT=2
-                      OPENIMAGEIO_ROOT_DIR=${OPENIMAGEIO_ROOT_DIR}
+                      OpenImageIO_ROOT=${OpenImageIO_ROOT}
                       OSL_SOURCE_DIR=${CMAKE_SOURCE_DIR}
                       OSL_BUILD_DIR=${CMAKE_BINARY_DIR} )
             add_test ( NAME ${_testname}.opt
@@ -303,7 +266,7 @@ macro ( TESTSUITE )
             # Unoptimized
             if (NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
                 set (_env TESTSHADE_OPT=0 TESTSHADE_OPTIX=1
-                          OPENIMAGEIO_ROOT_DIR=${OPENIMAGEIO_ROOT_DIR}
+                          OpenImageIO_ROOT=${OpenImageIO_ROOT}
                           OSL_SOURCE_DIR=${CMAKE_SOURCE_DIR}
                           OSL_BUILD_DIR=${CMAKE_BINARY_DIR} )
                 add_test ( NAME ${_testname}.optix
@@ -311,7 +274,7 @@ macro ( TESTSUITE )
             endif ()
             # and optimized
             set (_env TESTSHADE_OPT=2 TESTSHADE_OPTIX=1
-                      OPENIMAGEIO_ROOT_DIR=${OPENIMAGEIO_ROOT_DIR}
+                      OpenImageIO_ROOT=${OpenImageIO_ROOT}
                       OSL_SOURCE_DIR=${CMAKE_SOURCE_DIR}
                       OSL_BUILD_DIR=${CMAKE_BINARY_DIR} )
             add_test ( NAME ${_testname}.optix.opt

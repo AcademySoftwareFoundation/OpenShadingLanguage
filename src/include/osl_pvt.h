@@ -705,7 +705,10 @@ public:
         return ((const ustring *)data())[index];
     }
 
-    /// Stream output
+    // Stream output. Note that print/print_vals assume that any string
+    // values are "raw" and they will be converted to C source code "escaped
+    // string" notation for printing. For example, a newline characer will
+    // be rendered into the stream as the two character sequence '\n'.
     std::ostream& print (std::ostream& out, int maxvals=100000000) const;
     std::ostream& print_vals (std::ostream& out, int maxvals=100000000) const;
 

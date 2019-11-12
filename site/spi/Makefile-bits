@@ -290,8 +290,8 @@ ifeq (${SP_OS}, rhel7)
 ## Generic OSX machines (including LG's laptop)
 else ifeq (${platform}, macosx)
     USE_SIMD ?= sse4.2
-    # MY_CMAKE_FLAGS += -DCMAKE_BUILD_WITH_INSTALL_RPATH=1
-    # MY_CMAKE_FLAGS += -DCMAKE_INSTALL_NAME_DIR="${working_dir}/dist/${platform}${variant}/lib"
+    MY_CMAKE_FLAGS += -DCMAKE_BUILD_WITH_INSTALL_RPATH=1
+    MY_CMAKE_FLAGS += -DCMAKE_INSTALL_NAME_DIR="${working_dir}/dist/${platform}${variant}/lib"
 
     BOOSTVERSSP=${BOOSTVERS}${BOOSTSPSUFFIX}
     LLVM_DIRECTORY ?= /usr/local/opt/llvm

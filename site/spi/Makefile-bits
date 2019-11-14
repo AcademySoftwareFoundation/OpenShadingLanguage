@@ -255,7 +255,7 @@ ifeq (${SP_OS}, rhel7)
             -DOPENEXR_LIBRARY_DIR=/usr/lib64/OpenEXR2
     endif
 
-    Partio_ROOT := ${SPCOMP2_ROOT}/partio/rhel7-gcc48m64-boost155/v3
+    Partio_ROOT := ${SPCOMP2_ROOT}/partio/rhel7-gcc48m64-boost155/v4
     MY_CMAKE_FLAGS += -DPartio_ROOT="${Partio_ROOT}"
 
     # set up OSL distribution environment

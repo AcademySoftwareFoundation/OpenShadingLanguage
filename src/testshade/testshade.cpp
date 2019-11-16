@@ -30,6 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cmath>
 #include <fstream>
 #include <iostream>
+#include <locale>
 #include <memory>
 #include <string>
 #include <vector>
@@ -108,6 +109,7 @@ static bool shadingsys_options_set = false;
 static float uscale = 1, vscale = 1;
 static float uoffset = 0, voffset = 0;
 static std::vector<const char*> shader_setup_args;
+static std::string localename = OIIO::Sysutil::getenv("TESTSHADE_LOCALE");
 
 
 
@@ -520,6 +522,7 @@ getargs (int argc, const char *argv[])
                 "--scaleuv %f %f", &uscale, &vscale, "Scale s & t texture lookups (default: 1, 1)",
                 "--scalest %f %f", &uscale, &vscale, "", // old name
                 "--userdata_isconnected", &userdata_isconnected, "Consider lockgeom=0 to be isconnected()",
+                "--locale %s", &localename, "Set a different locale",
                 NULL);
     if (ap.parse(argc, argv) < 0 /*|| (shadernames.empty() && groupspec.empty())*/) {
         std::cerr << ap.geterror() << std::endl;
@@ -1030,6 +1033,14 @@ test_shade (int argc, const char *argv[])
     // Get the command line arguments.  Those that set up the shader
     // instances are queued up in shader_setup_args for later handling.
     getargs (argc, argv);
+
+    // For testing purposes, allow user to set global locale
+    if (localename.size()) {
+        std::locale::global (std::locale(localename));
+        if (debug1 || verbose)
+            printf("testshade: locale '%s', floats look like: %g\n",
+                   localename.c_str(), 3.5);
+    }
 
     SimpleRenderer *rend = nullptr;
 #ifdef OSL_USE_OPTIX

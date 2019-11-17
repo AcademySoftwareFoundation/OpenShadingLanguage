@@ -682,6 +682,7 @@ void
 BackendLLVM::llvm_generate_debug_op_printf (const Opcode &op)
 {
     std::ostringstream msg;
+    msg.imbue (std::locale::classic());  // force C locale
     msg << op.sourcefile() << ':' << op.sourceline() << ' ' << op.opname();
     for (int i = 0;  i < op.nargs();  ++i)
         msg << ' ' << opargsym (op, i)->mangled();

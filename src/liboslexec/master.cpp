@@ -222,7 +222,8 @@ ShaderMaster::resolve_syms ()
 std::string
 ShaderMaster::print ()
 {
-    std::stringstream out;
+    std::ostringstream out;
+    out.imbue (std::locale::classic());  // force C locale
     out << "Shader " << m_shadername << " type=" 
               << shadertypename() << "\n";
     out << "  path = " << m_osofilename << "\n";

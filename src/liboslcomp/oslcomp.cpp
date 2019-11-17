@@ -188,6 +188,7 @@ OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
                                     std::string &result)
 {
     std::ostringstream ss;
+    ss.imbue (std::locale::classic());  // force C locale
     boost::wave::util::file_position_type current_position;
 
     std::string instring;

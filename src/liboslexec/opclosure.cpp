@@ -92,7 +92,8 @@ OSL_SHADEOP const char *
 osl_closure_to_string (ShaderGlobals *sg, ClosureColor *c)
 {
     // Special case for printing closures
-    std::stringstream stream;
+    std::ostringstream stream;
+    stream.imbue (std::locale::classic());  // force C locale
     print_closure(stream, c, &sg->context->shadingsys());
     return ustring(stream.str ()).c_str();
 }

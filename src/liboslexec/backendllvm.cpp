@@ -468,7 +468,8 @@ BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym)
 {
     ASSERT (use_optix() && "This function is only supported when using OptiX!");
 
-    std::stringstream ss;
+    std::ostringstream ss;
+    ss.imbue (std::locale::classic());  // force C locale
     if (sym.typespec().is_string()) {
         // Use the ustring hash to create a name for the symbol that's based on
         // the string contents

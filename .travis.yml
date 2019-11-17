@@ -115,7 +115,7 @@ matrix:
             packages:
               - *common-packages
               - *old-boost-packages
-        env: WHICHGCC=4.8 USE_CPP=11 LLVM_VERSION=6.0.1 USE_SIMD=sse4.2 OPENIMAGEIO_BRANCH=release BUILD_CMAKE=1
+        env: WHICHGCC=4.8 USE_CPP=11 LLVM_VERSION=6.0.0 USE_SIMD=sse4.2 OPENIMAGEIO_BRANCH=release BUILD_CMAKE=1
       - name: "Older things: OIIO 2.0, llvm 5, boost 1.58"
         os: linux
         dist: trusty

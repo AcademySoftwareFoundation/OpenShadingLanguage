@@ -102,7 +102,7 @@ public:
 
     /// Error reporting
     template<typename... Args>
-    void error (ustring filename, int line,
+    void errorf(ustring filename, int line,
                 const char* format, const Args&... args) const
     {
         DASSERT (format && format[0]);
@@ -110,15 +110,15 @@ public:
         if (msg.size() && msg.back() == '\n')  // trim extra newline
             msg.pop_back();
         if (filename.size())
-            m_errhandler->error ("%s:%d: error: %s", filename, line, msg);
+            m_errhandler->errorf("%s:%d: error: %s", filename, line, msg);
         else
-            m_errhandler->error ("error: %s", msg);
+            m_errhandler->errorf("error: %s", msg);
         m_err = true;
     }
 
     /// Warning reporting
     template<typename... Args>
-    void warning (ustring filename, int line,
+    void warningf(ustring filename, int line,
                   const char* format, const Args&... args) const
     {
         DASSERT (format && format[0]);
@@ -128,33 +128,33 @@ public:
         if (msg.size() && msg.back() == '\n')  // trim extra newline
             msg.pop_back();
         if (m_err_on_warning) {
-            error (filename, line, "%s", msg);
+            errorf(filename, line, "%s", msg);
             return;
         }
         if (filename.size())
-            m_errhandler->warning ("%s:%d: warning: %s", filename, line, msg);
+            m_errhandler->warningf("%s:%d: warning: %s", filename, line, msg);
         else
-            m_errhandler->warning ("warning: %s", msg);
+            m_errhandler->warningf("warning: %s", msg);
     }
 
     /// Info reporting
     template<typename... Args>
-    void info (ustring filename, int line,
-                  const char* format, const Args&... args) const
+    void infof(ustring filename, int line,
+               const char* format, const Args&... args) const
     {
         DASSERT (format && format[0]);
         std::string msg = OIIO::Strutil::sprintf (format, args...);
         if (msg.size() && msg.back() == '\n')  // trim extra newline
             msg.pop_back();
         if (filename.size())
-            m_errhandler->info ("%s:%d: info: %s", filename, line, msg);
+            m_errhandler->infof("%s:%d: info: %s", filename, line, msg);
         else
-            m_errhandler->info ("info: %s", msg);
+            m_errhandler->infof("info: %s", msg);
     }
 
     /// message reporting
     template<typename... Args>
-    void message (ustring filename, int line,
+    void messagef(ustring filename, int line,
                   const char* format, const Args&... args) const
     {
         DASSERT (format && format[0]);
@@ -162,9 +162,9 @@ public:
         if (msg.size() && msg.back() == '\n')  // trim extra newline
             msg.pop_back();
         if (filename.size())
-            m_errhandler->message ("%s:%d: %s", filename, line, msg);
+            m_errhandler->messagef("%s:%d: %s", filename, line, msg);
         else
-            m_errhandler->message ("%s", msg);
+            m_errhandler->messagef("%s", msg);
     }
 
     /// Have we hit an error?

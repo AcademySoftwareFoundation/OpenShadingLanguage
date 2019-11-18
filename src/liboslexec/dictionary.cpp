@@ -182,7 +182,7 @@ Dictionary::get_document_index (ustring dictionaryname)
                                              dictionaryname.length());
         }
         if (! parse_result) {
-            m_context->error ("XML parsed with errors: %s, at offset %d",
+            m_context->errorf("XML parsed with errors: %s, at offset %d",
                               parse_result.description(),
                               parse_result.offset);
             m_document_map[dictionaryname] = -1;
@@ -221,7 +221,7 @@ Dictionary::dict_find (ustring dictionaryname, ustring query)
         matches = doc->select_nodes (query.c_str());
     }
     catch (const pugi::xpath_exception& e) {
-        m_context->error ("Invalid dict_find query '%s': %s",
+        m_context->errorf("Invalid dict_find query '%s': %s",
                           query.c_str(), e.what());
         return 0;
     }
@@ -268,7 +268,7 @@ Dictionary::dict_find (int nodeID, ustring query)
         matches = m_nodes[nodeID].node.select_nodes (query.c_str());
     }
     catch (const pugi::xpath_exception& e) {
-        m_context->error ("Invalid dict_find query '%s': %s",
+        m_context->errorf("Invalid dict_find query '%s': %s",
                           query.c_str(), e.what());
         return 0;
     }

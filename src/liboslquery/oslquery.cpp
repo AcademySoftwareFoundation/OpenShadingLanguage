@@ -440,7 +440,7 @@ OSLQuery::open (string_view shadername,
         filename = Filesystem::searchpath_find (filename, dirs);
     }
     if (filename.empty()) {
-        error ("File \"%s\" could not be found.", shadername);
+        errorf("File \"%s\" could not be found.", shadername);
         return false;
     }
 

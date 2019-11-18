@@ -453,7 +453,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
 #ifdef OIIO_HAS_SPRINTF
             ustring arg_name = ustring::sprintf ("osl_paramname_%s_%d", symname, sym.layer());
 #else
-            ustring arg_name = ustring::format ("osl_paramname_%s_%d", symname, sym.layer());
+            ustring arg_name = ustring::sprintf ("osl_paramname_%s_%d", symname, sym.layer());
 #endif
             Symbol symname_const (arg_name, TypeDesc::TypeString, SymTypeConst);
             symname_const.data (&symname);
@@ -503,7 +503,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
     } else if (use_optix() && ! sym.typespec().is_closure() && ! sym.typespec().is_string()) {
         // If the call to osl_bind_interpolated_param returns 0, the default
         // value needs to be loaded from a CUDA variable.
-        ustring var_name = ustring::format ("%s_%s_%s_%d", sym.name(),
+        ustring var_name = ustring::sprintf ("%s_%s_%s_%d", sym.name(),
                                             inst()->layername(), group().name(), group().id());
 
         // The "true" argument triggers the creation of the metadata needed to
@@ -710,7 +710,7 @@ BackendLLVM::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
                    op.opname() == op_end) {
             // Skip this op, it does nothing...
         } else {
-            shadingcontext()->error ("LLVMOSL: Unsupported op %s in layer %s\n",
+            shadingcontext()->errorf("LLVMOSL: Unsupported op %s in layer %s\n",
                                      op.opname(), inst()->layername());
             return false;
         }
@@ -1130,14 +1130,14 @@ BackendLLVM::run ()
 #endif
     }
     if (err.length())
-        shadingcontext()->error ("ParseBitcodeFile returned '%s'\n", err.c_str());
+        shadingcontext()->errorf("ParseBitcodeFile returned '%s'\n", err);
     ASSERT (ll.module());
 #endif
 
     // Create the ExecutionEngine. We don't create an ExecutionEngine in the
     // OptiX case, because we are using the NVPTX backend and not MCJIT
     if (! use_optix() && ! ll.make_jit_execengine (&err)) {
-        shadingcontext()->error ("Failed to create engine: %s\n", err.c_str());
+        shadingcontext()->errorf("Failed to create engine: %s\n", err);
         ASSERT (0);
         return;
     }
@@ -1190,7 +1190,7 @@ BackendLLVM::run ()
 
     if (shadingsys().m_max_local_mem_KB &&
         m_llvm_local_mem/1024 > shadingsys().m_max_local_mem_KB) {
-        shadingcontext()->error ("Shader group \"%s\" needs too much local storage: %d KB",
+        shadingcontext()->errorf("Shader group \"%s\" needs too much local storage: %d KB",
                                  group().name(), m_llvm_local_mem/1024);
     }
 
@@ -1224,7 +1224,7 @@ BackendLLVM::run ()
         if (out.good()) {
             out << ll.bitcode_string (ll.module());
         } else {
-            shadingcontext()->error ("Could not write to '%s'", name);
+            shadingcontext()->errorf("Could not write to '%s'", name);
         }
     }
 
@@ -1253,7 +1253,7 @@ BackendLLVM::run ()
         if (out.good()) {
             out << ll.bitcode_string (ll.module());
         } else {
-            shadingcontext()->error ("Could not write to '%s'", name);
+            shadingcontext()->errorf("Could not write to '%s'", name);
         }
     }
 
@@ -1311,13 +1311,11 @@ BackendLLVM::run ()
     m_stat_total_llvm_time = timer();
 
     if (shadingsys().m_compile_report) {
-        shadingcontext()->info ("JITed shader group %s:", group().name());
-        shadingcontext()->info ("    (%1.2fs = %1.2f setup, %1.2f ir, %1.2f opt, %1.2f jit; local mem %dKB)",
-                           m_stat_total_llvm_time, 
-                           m_stat_llvm_setup_time,
-                           m_stat_llvm_irgen_time, m_stat_llvm_opt_time,
-                           m_stat_llvm_jit_time,
-                           m_llvm_local_mem/1024);
+        shadingcontext()->infof("JITed shader group %s:", group().name());
+        shadingcontext()->infof("    (%1.2fs = %1.2f setup, %1.2f ir, %1.2f opt, %1.2f jit; local mem %dKB)",
+                                m_stat_total_llvm_time, m_stat_llvm_setup_time,
+                                m_stat_llvm_irgen_time, m_stat_llvm_opt_time,
+                                m_stat_llvm_jit_time, m_llvm_local_mem/1024);
     }
 }
 

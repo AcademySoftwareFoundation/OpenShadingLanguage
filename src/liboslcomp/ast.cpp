@@ -219,7 +219,7 @@ ASTNode::~ASTNode ()
 void
 ASTNode::error_impl (string_view msg) const
 {
-    m_compiler->error (sourcefile(), sourceline(), "%s", msg);
+    m_compiler->errorf(sourcefile(), sourceline(), "%s", msg);
 }
 
 
@@ -227,7 +227,7 @@ ASTNode::error_impl (string_view msg) const
 void
 ASTNode::warning_impl (string_view msg) const
 {
-    m_compiler->warning (sourcefile(), sourceline(), "%s", msg);
+    m_compiler->warningf(sourcefile(), sourceline(), "%s", msg);
 }
 
 
@@ -235,7 +235,7 @@ ASTNode::warning_impl (string_view msg) const
 void
 ASTNode::info_impl (string_view msg) const
 {
-    m_compiler->info (sourcefile(), sourceline(), "%s", msg);
+    m_compiler->infof(sourcefile(), sourceline(), "%s", msg);
 }
 
 
@@ -243,7 +243,7 @@ ASTNode::info_impl (string_view msg) const
 void
 ASTNode::message_impl (string_view msg) const
 {
-    m_compiler->message (sourcefile(), sourceline(), "%s", msg);
+    m_compiler->messagef(sourcefile(), sourceline(), "%s", msg);
 }
 
 
@@ -341,10 +341,10 @@ ASTshader_declaration::ASTshader_declaration (OSLCompilerImpl *comp,
         ASSERT (arg->nodetype() == variable_declaration_node);
         ASTvariable_declaration *v = (ASTvariable_declaration *)arg;
         if (! v->init())
-            v->error ("shader parameter '%s' requires a default initializer",
+            v->errorf("shader parameter '%s' requires a default initializer",
                       v->name());
         if (v->is_output() && v->typespec().is_unsized_array())
-            v->error ("shader output parameter '%s' can't be unsized array",
+            v->errorf("shader output parameter '%s' can't be unsized array",
                       v->name());
     }
 }
@@ -395,12 +395,12 @@ ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
         m_sourceline = sourceline_start;
 
     if (Strutil::starts_with (name, "___"))
-        error ("\"%s\" : sorry, can't start with three underscores", name);
+        errorf("\"%s\" : sorry, can't start with three underscores", name);
 
     // Get a pointer to the first of the existing symbols of that name.
     Symbol *existing_syms = comp->symtab().clash (name);
     if (existing_syms && existing_syms->symtype() != SymTypeFunction) {
-        error ("\"%s\" already declared in this scope as a %s",
+        errorf("\"%s\" already declared in this scope as a %s",
                name, existing_syms->typespec());
         // FIXME -- print the file and line of the other definition
         existing_syms = NULL;
@@ -419,8 +419,8 @@ ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
         ASSERT (arg->nodetype() == variable_declaration_node);
         ASTvariable_declaration *v = (ASTvariable_declaration *)arg;
         if (v->init())
-            v->error ("function parameter '%s' may not have a default initializer.",
-                      v->name().c_str());
+            v->errorf("function parameter '%s' may not have a default initializer.",
+                      v->name());
     }
 
     // Allow multiple function declarations, but only if they aren't the
@@ -453,7 +453,7 @@ ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
             }
         }
         if (!err.empty())
-            warning ("%s", err);
+            warningf("%s", err);
     }
 
 
@@ -561,13 +561,13 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
         }
         if (f->scope() == 0 && f->symtype() == SymTypeFunction && isparam) {
             // special case: only a warning for param to mask global function
-            warning ("%s", e);
+            warningf("%s", e);
         } else {
-            error ("%s", e);
+            errorf("%s", e);
         }
     }
     if (OIIO::Strutil::starts_with (name, "___")) {
-        error ("\"%s\" : sorry, can't start with three underscores", name);
+        errorf("\"%s\" : sorry, can't start with three underscores", name);
     }
     SymType symtype = isparam ? (isoutput ? SymTypeOutputParam : SymTypeParam)
                               : SymTypeLocal;
@@ -633,13 +633,13 @@ ASTvariable_ref::ASTvariable_ref (OSLCompilerImpl *comp, ustring name)
 {
     m_sym = comp->symtab().find (name);
     if (! m_sym) {
-        error ("'%s' was not declared in this scope", name.c_str());
+        errorf("'%s' was not declared in this scope", name);
         // FIXME -- would be fun to troll through the symtab and try to
         // find the things that almost matched and offer suggestions.
         return;
     }
     if (m_sym->symtype() == SymTypeFunction) {
-        error ("function '%s' can't be used as a variable", name.c_str());
+        errorf("function '%s' can't be used as a variable", name);
         return;
     }
     m_typespec = m_sym->typespec();
@@ -748,7 +748,7 @@ ASTindex::ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index,
     }
 
     if (m_typespec.is_unknown()) {
-        error ("indexing into non-array or non-component type");
+        errorf("indexing into non-array or non-component type");
     }
 }
 
@@ -809,7 +809,7 @@ ASTstructselect::find_fieldsym (int &structid, int &fieldid)
     }
 
     if (! lvtype.is_structure() && ! lvtype.is_structure_array()) {
-        error ("type '%s' does not have a member '%s'", lvtype, m_field);
+        errorf("type '%s' does not have a member '%s'", lvtype, m_field);
         return NULL;
     }
 
@@ -828,13 +828,13 @@ ASTstructselect::find_fieldsym (int &structid, int &fieldid)
     }
 
     if (fieldid < 0) {
-        error ("struct type '%s' does not have a member '%s'",
+        errorf("struct type '%s' does not have a member '%s'",
                structspec->name(), m_field);
         return NULL;
     }
 
     const StructSpec::FieldSpec &fieldrec (structspec->field(fieldid));
-    ustring fieldsymname = ustring::format ("%s.%s", structsymname,
+    ustring fieldsymname = ustring::sprintf ("%s.%s", structsymname,
                                             fieldrec.name);
     Symbol *sym = m_compiler->symtab().find (fieldsymname);
     return sym;
@@ -1011,7 +1011,7 @@ ASTNode::check_symbol_writeability (ASTNode *var)
 
     if (dest) {
         if (dest->readonly()) {
-            warning ("cannot write to non-output parameter \"%s\"", dest->name());
+            warningf("cannot write to non-output parameter \"%s\"", dest->name());
             // Note: Consider it only a warning to write to a non-output
             // parameter. Users who want it to be a hard error can use
             // -Werror. Writing to any other readonly symbols is a full
@@ -1096,7 +1096,7 @@ ASTunary_expression::ASTunary_expression (OSLCompilerImpl *comp, int op,
     : ASTNode (unary_expression_node, comp, op, expr)
 {
     // Check for a user-overloaded function for this operator
-    Symbol *sym = comp->symtab().find (ustring::format ("__operator__%s__", opword()));
+    Symbol *sym = comp->symtab().find (ustring::sprintf ("__operator__%s__", opword()));
     if (sym && sym->symtype() == SymTypeFunction)
         m_function_overload = (FunctionSymbol *)sym;
 }
@@ -1147,7 +1147,7 @@ ASTbinary_expression::ASTbinary_expression (OSLCompilerImpl *comp, Operator op,
     // Check for a user-overloaded function for this operator.
     // Disallow a few ops from overloading.
     if (op != And && op != Or) {
-        ustring funcname = ustring::format ("__operator__%s__", opword());
+        ustring funcname = ustring::sprintf ("__operator__%s__", opword());
         Symbol *sym = comp->symtab().find (funcname);
         if (sym && sym->symtype() == SymTypeFunction)
             m_function_overload = (FunctionSymbol *)sym;
@@ -1259,7 +1259,7 @@ ASTfunction_call::ASTfunction_call (OSLCompilerImpl *comp, ustring name,
       m_argtakesderivs(0) // Default - doesn't take derivs
 {
     if (! m_sym) {
-        error ("function '%s' was not declared in this scope", name);
+        errorf("function '%s' was not declared in this scope", name);
         // FIXME -- would be fun to troll through the symtab and try to
         // find the things that almost matched and offer suggestions.
         return;
@@ -1268,7 +1268,7 @@ ASTfunction_call::ASTfunction_call (OSLCompilerImpl *comp, ustring name,
         return;  // It's a struct constructor
     }
     if (m_sym->symtype() != SymTypeFunction) {
-        error ("'%s' is not a function", name.c_str());
+        errorf("'%s' is not a function", name);
         m_sym = NULL;
         return;
     }
@@ -1279,7 +1279,7 @@ ASTfunction_call::ASTfunction_call (OSLCompilerImpl *comp, ustring name,
 const char *
 ASTfunction_call::childname (size_t i) const
 {
-    return ustring::format ("param%d", (int)i).c_str();
+    return ustring::sprintf ("param%d", (int)i).c_str();
 }
 
 

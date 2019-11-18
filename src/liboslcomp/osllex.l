@@ -186,7 +186,7 @@ void preprocess (const char *yytext);
 "protected"|"short"|"signed"|"sizeof"|"static"|"struct" |    \
 "switch"|"template"|"this"|"true"|"typedef"|"uniform" |      \
 "union"|"unsigned"|"varying"|"virtual" {
-                            oslcompiler->error (oslcompiler->filename(),
+                            oslcompiler->errorf(oslcompiler->filename(),
                                                 oslcompiler->lineno(),
                                                 "'%s' is a reserved word",
                                                 yytext);
@@ -208,7 +208,7 @@ void preprocess (const char *yytext);
                             // we do not detect overflow when the value is INT_MAX+1,
                             // because negation happens later and -(INT_MAX+1) == INT_MIN
                             if (llval > ((long long)INT_MAX)+1) {
-                                oslcompiler->error (oslcompiler->filename(),
+                                oslcompiler->errorf(oslcompiler->filename(),
                                                     oslcompiler->lineno(),
                                                     "integer overflow, value must be between %d and %d.",
                                                     INT_MIN, INT_MAX);
@@ -222,7 +222,7 @@ void preprocess (const char *yytext);
                             // we do not detect overflow when the value is INT_MAX+1,
                             // because negation happens later and -(INT_MAX+1) == INT_MIN
                             if (llval > ((long long)UINT_MAX)+1) {
-                                oslcompiler->error (oslcompiler->filename(),
+                                oslcompiler->errorf(oslcompiler->filename(),
                                                     oslcompiler->lineno(),
                                                     "integer overflow, value must be between %d and %d.",
                                                     INT_MIN, INT_MAX);
@@ -308,7 +308,7 @@ preprocess (const char *yytext)
     while (*p == ' ' || *p == '\t')
         p++;
     if (*p != '#') {
-        oslcompiler->error (oslcompiler->filename(), oslcompiler->lineno(),
+        oslcompiler->errorf(oslcompiler->filename(), oslcompiler->lineno(),
                             "Possible bug in shader preprocess");
         SETLINE;
         return;
@@ -325,7 +325,7 @@ preprocess (const char *yytext)
             if (pragmaname == "nowarn") {
                 oslcompiler->pragma_nowarn ();
             } else {
-                oslcompiler->warning (oslcompiler->filename(), oslcompiler->lineno(),
+                oslcompiler->warningf(oslcompiler->filename(), oslcompiler->lineno(),
                                       "Unknown pragma '%s'", pragmaname);
             }
         }
@@ -377,7 +377,7 @@ preprocess (const char *yytext)
             }
             oslcompiler->lineno (line);
         } else {
-            oslcompiler->error (oslcompiler->filename(), oslcompiler->lineno(),
+            oslcompiler->errorf(oslcompiler->filename(), oslcompiler->lineno(),
                                 "Unrecognized preprocessor command: #%s", p);
         }
     }

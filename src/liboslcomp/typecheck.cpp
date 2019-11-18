@@ -105,8 +105,7 @@ ASTvariable_declaration::typecheck (TypeSpec expected)
     if (m_typespec.is_structure() && ! m_initlist &&
         et.structure() != vt.structure()) {
         // Can't do:  struct foo = 1
-        error ("Cannot initialize %s %s = %s", type_c_str(vt), name(),
-               type_c_str(et));
+        errorf("Cannot initialize %s %s = %s", vt, name(), et);
         return m_typespec;
     }
 
@@ -115,7 +114,7 @@ ASTvariable_declaration::typecheck (TypeSpec expected)
     // typecheck method.
     if (init->nodetype() == compound_initializer_node) {
         if (init->nextptr())
-            error ("compound_initializer should be the only initializer");
+            errorf("compound_initializer should be the only initializer");
         init = ((ASTcompound_initializer *)init)->initlist().get();
         if (!init)
             return m_typespec;
@@ -134,11 +133,10 @@ ASTvariable_declaration::typecheck (TypeSpec expected)
     if (! assignable (vt, et)) {
         // Special case: for int=float, it's just a warning.
         if (vt.is_int() && et.is_float())
-            warning ("Assignment may lose precision: %s %s = %s",
-                     type_c_str(vt), name(), type_c_str(et));
+            warningf("Assignment may lose precision: %s %s = %s",
+                     vt, name(), et);
         else
-            error ("Cannot assign %s %s = %s",
-                   type_c_str(vt), name(), type_c_str(et));
+            errorf("Cannot assign %s %s = %s", vt, name(), et);
         return m_typespec;
     }
 
@@ -172,7 +170,7 @@ ASTpostincdec::typecheck (TypeSpec expected)
 {
     typecheck_children ();
     if (! var()->is_lvalue())
-        error ("%s can only be applied to an lvalue", nodetypename());
+        errorf("%s can only be applied to an lvalue", nodetypename());
     m_is_lvalue = false;
     m_typespec = var()->typespec();
     return m_typespec;
@@ -187,23 +185,23 @@ ASTindex::typecheck (TypeSpec expected)
     const char *indextype = "";
     TypeSpec t = lvalue()->typespec();
     if (t.is_structure()) {
-        error ("Cannot use [] indexing on a struct");
+        errorf("Cannot use [] indexing on a struct");
         return TypeSpec();
     }
     if (t.is_closure()) {
-        error ("Cannot use [] indexing on a closure");
+        errorf("Cannot use [] indexing on a closure");
         return TypeSpec();
     }
     if (index3()) {
         if (! t.is_array() && ! t.elementtype().is_matrix())
-            error ("[][][] only valid for a matrix array");
+            errorf("[][][] only valid for a matrix array");
         m_typespec = TypeDesc::FLOAT;
     } else if (t.is_array()) {
         indextype = "array";
         m_typespec = t.elementtype();
         if (index2()) {
             if (t.aggregate() == TypeDesc::SCALAR)
-                error ("can't use [][] on a simple array");
+                errorf("can't use [][] on a simple array");
             m_typespec = TypeDesc::FLOAT;
         }
     } else if (t.aggregate() == TypeDesc::VEC3) {
@@ -213,7 +211,7 @@ ASTindex::typecheck (TypeSpec expected)
         tnew.vecsemantics = TypeDesc::NOXFORM;
         m_typespec = tnew;
         if (index2())
-            error ("can't use [][] on a %s", type_c_str(t));
+            errorf("can't use [][] on a %s", t);
     } else if (t.aggregate() == TypeDesc::MATRIX44) {
         indextype = "component";
         TypeDesc tnew = t.simpletype();
@@ -221,17 +219,17 @@ ASTindex::typecheck (TypeSpec expected)
         tnew.vecsemantics = TypeDesc::NOXFORM;
         m_typespec = tnew;
         if (! index2())
-            error ("must use [][] on a matrix, not just []");
+            errorf("must use [][] on a matrix, not just []");
     } else {
-        error ("can only use [] indexing for arrays or multi-component types");
+        errorf("can only use [] indexing for arrays or multi-component types");
         return TypeSpec();
     }
 
     // Make sure the indices (children 1+) are integers
     for (size_t c = 1;  c < nchildren();  ++c)
         if (! child(c)->typespec().is_int())
-            error ("%s index must be an integer, not a %s",
-                   indextype, type_c_str(index()->typespec()));
+            errorf("%s index must be an integer, not a %s", indextype,
+                   index()->typespec());
 
     // If the thing we're indexing is an lvalue, so is the indexed element
     m_is_lvalue = lvalue()->is_lvalue();
@@ -274,9 +272,9 @@ ASTconditional_statement::typecheck (TypeSpec expected)
 
     TypeSpec c = cond()->typespec();
     if (c.is_structure())
-        error ("Cannot use a struct as an 'if' condition");
+        errorf("Cannot use a struct as an 'if' condition");
     if (c.is_array())
-        error ("Cannot use an array as an 'if' condition");
+        errorf("Cannot use an array as an 'if' condition");
     return m_typespec = TypeDesc (TypeDesc::NONE);
 }
 
@@ -294,11 +292,11 @@ ASTloop_statement::typecheck (TypeSpec expected)
 
     TypeSpec c = cond()->typespec();
     if (c.is_closure())
-        error ("Cannot use a closure as an '%s' condition", opname());
+        errorf("Cannot use a closure as an '%s' condition", opname());
     if (c.is_structure())
-        error ("Cannot use a struct as an '%s' condition", opname());
+        errorf("Cannot use a struct as an '%s' condition", opname());
     if (c.is_array())
-        error ("Cannot use an array as an '%s' condition", opname());
+        errorf("Cannot use an array as an '%s' condition", opname());
     return m_typespec = TypeDesc (TypeDesc::NONE);
 }
 
@@ -308,7 +306,7 @@ TypeSpec
 ASTloopmod_statement::typecheck (TypeSpec expected)
 {
     if (oslcompiler->nesting_level(true/*loops*/) < 1)
-        error ("Cannot '%s' here -- not inside a loop.", opname());
+        errorf("Cannot '%s' here -- not inside a loop.", opname());
     return m_typespec = TypeDesc (TypeDesc::NONE);
 }
 
@@ -322,7 +320,7 @@ ASTassign_expression::typecheck (TypeSpec expected)
     m_typespec = vt;
 
     if (! var()->is_lvalue()) {
-        error ("Can't assign via %s to something that isn't an lvalue", opname());
+        errorf("Can't assign via %s to something that isn't an lvalue", opname());
         return TypeSpec();
     }
 
@@ -343,7 +341,7 @@ ASTassign_expression::typecheck (TypeSpec expected)
                 return m_typespec;
             }
         }
-        error ("Cannot assign %s %s = %s", vt, varname, et);
+        errorf("Cannot assign %s %s = %s", vt, varname, et);
         return m_typespec;
     }
 
@@ -363,7 +361,7 @@ ASTassign_expression::typecheck (TypeSpec expected)
         if (vts == ets)
             return m_typespec = vt;
         // Otherwise, a structure mismatch
-        error ("Cannot assign %s %s = %s", vt, varname, et);
+        errorf("Cannot assign %s %s = %s", vt, varname, et);
         return m_typespec;
     }
 
@@ -371,10 +369,10 @@ ASTassign_expression::typecheck (TypeSpec expected)
     if (! assignable (vt, et)) {
         // Special case: for int=float, it's just a warning.
         if (vt.is_int() && et.is_float())
-            warning ("Assignment may lose precision: %s %s = %s",
+            warningf("Assignment may lose precision: %s %s = %s",
                      vt, varname, et);
         else
-            error ("Cannot assign %s %s = %s", vt, varname, et);
+            errorf("Cannot assign %s %s = %s", vt, varname, et);
         return m_typespec;
     }
 
@@ -395,16 +393,14 @@ ASTreturn_statement::typecheck (TypeSpec expected)
             // will also catch returning a value from a void function.
             TypeSpec et = expr()->typecheck (myfunc->typespec());
             if (! assignable (myfunc->typespec(), et)) {
-                error ("Cannot return a '%s' from '%s %s()'",
-                       type_c_str(et), type_c_str(myfunc->typespec()),
-                       myfunc->name().c_str());
+                errorf("Cannot return a '%s' from '%s %s()'",
+                       et, myfunc->typespec(), myfunc->name());
             }
         } else {
             // If we are not returning a value, it must be a void function.
             if (! myfunc->typespec().is_void ())
-                error ("You must return a '%s' from function '%s'",
-                       type_c_str(myfunc->typespec()),
-                       myfunc->name().c_str());
+                errorf("You must return a '%s' from function '%s'",
+                       myfunc->typespec(), myfunc->name());
         }
         myfunc->encountered_return ();
     } else {
@@ -412,7 +408,7 @@ ASTreturn_statement::typecheck (TypeSpec expected)
         // be from the main shader body.  That's fine (it's equivalent
         // to calling exit()), but it can't return a value.
         if (expr())
-            error ("Cannot return a value from a shader body");
+            errorf("Cannot return a value from a shader body");
     }
     return TypeSpec(); // TODO: what should be returned here?
 }
@@ -442,14 +438,14 @@ ASTunary_expression::typecheck (TypeSpec expected)
     }
 
     if (t.is_structure() || t.is_array()) {
-        error ("Can't do '%s' to a %s.", opname(), type_c_str(t));
+        errorf("Can't do '%s' to a %s.", opname(), t);
         return TypeSpec ();
     }
     switch (m_op) {
     case Sub :
     case Add :
         if (! (t.is_closure() || t.is_numeric())) {
-            error ("Can't do '%s' to a %s.", opname(), type_c_str(t));
+            errorf("Can't do '%s' to a %s.", opname(), t);
             return TypeSpec ();
         }
         m_typespec = t;
@@ -459,13 +455,13 @@ ASTunary_expression::typecheck (TypeSpec expected)
         break;
     case Compl :
         if (! t.is_int()) {
-            error ("Operator '~' can only be done to an int");
+            errorf("Operator '~' can only be done to an int");
             return TypeSpec ();
         }
         m_typespec = t;
         break;
     default:
-        error ("unknown unary operator");
+        errorf("unknown unary operator");
     }
     return m_typespec;
 }
@@ -518,8 +514,7 @@ ASTbinary_expression::typecheck (TypeSpec expected)
 
     // No binary ops work on structs or arrays
     if (l.is_structure() || r.is_structure() || l.is_array() || r.is_array()) {
-        error ("Not allowed: '%s %s %s'",
-               type_c_str(l), opname(), type_c_str(r));
+        errorf("Not allowed: '%s %s %s'", l, opname(), r);
         return TypeSpec ();
     }
 
@@ -547,8 +542,7 @@ ASTbinary_expression::typecheck (TypeSpec expected)
             return m_typespec = TypeDesc::TypeInt;
         }
         // If we got this far, it's an op that's not allowed
-        error ("Not allowed: '%s %s %s'",
-               type_c_str(l), opname(), type_c_str(r));
+        errorf("Not allowed: '%s %s %s'", l, opname(), r);
         return TypeSpec ();
     }
 
@@ -624,12 +618,11 @@ ASTbinary_expression::typecheck (TypeSpec expected)
         return m_typespec = TypeDesc::TypeInt;
 
     default:
-        error ("unknown binary operator");
+        errorf("unknown binary operator");
     }
 
     // If we got this far, it's an op that's not allowed
-    error ("Not allowed: '%s %s %s'",
-           type_c_str(l), opname(), type_c_str(r));
+    errorf("Not allowed: '%s %s %s'", l, opname(), r);
     return TypeSpec ();
 }
 
@@ -644,16 +637,15 @@ ASTternary_expression::typecheck (TypeSpec expected)
     TypeSpec f = typecheck_list (falseexpr(), expected);
 
     if (c.is_closure())
-        error ("Cannot use a closure as a condition");
+        errorf("Cannot use a closure as a condition");
     if (c.is_structure())
-        error ("Cannot use a struct as a condition");
+        errorf("Cannot use a struct as a condition");
     if (c.is_array())
-        error ("Cannot use an array as a condition");
+        errorf("Cannot use an array as a condition");
 
     // No arrays
     if (t.is_array() || t.is_array()) {
-        error ("Not allowed: '%s ? %s : %s'",
-               type_c_str(c), type_c_str(t), type_c_str(f));
+        errorf("Not allowed: '%s ? %s : %s'", c, t, f);
         return TypeSpec ();
     }
 
@@ -662,8 +654,7 @@ ASTternary_expression::typecheck (TypeSpec expected)
     if (assignable (t, f) || assignable (f, t))
         m_typespec = higherprecision (t.simpletype(), f.simpletype());
     else
-        error ("Not allowed: '%s ? %s : %s'",
-               type_c_str(c), type_c_str(t), type_c_str(f));
+        errorf("Not allowed: '%s ? %s : %s'", c, t, f);
 
     return m_typespec;
 }
@@ -689,8 +680,7 @@ ASTtypecast_expression::typecheck (TypeSpec expected)
     if (! assignable (m_typespec, t) &&
         ! (m_typespec.is_int() && t.is_float()) && // (int)float is ok
         ! (m_typespec.is_triple() && t.is_triple()))
-        error ("Cannot cast '%s' to '%s'", type_c_str(t),
-               type_c_str(m_typespec));
+        errorf("Cannot cast '%s' to '%s'", t, m_typespec);
     return m_typespec;
 }
 
@@ -734,7 +724,7 @@ ASTtype_constructor::typecheck (TypeSpec expected, bool report, bool bind)
         patterns = int_patterns;
     } else {
         if (report)
-            error ("Cannot construct type '%s'", type_c_str(expected));
+            errorf("Cannot construct type '%s'", expected);
         return TypeSpec();
     }
 
@@ -755,14 +745,14 @@ ASTtype_constructor::typecheck (TypeSpec expected, bool report, bool bind)
     // If we made it this far, no match could be found.
     if (report) {
         std::string err = OIIO::Strutil::sprintf ("Cannot construct %s (",
-                                                  type_c_str(expected));
+                                                  expected);
         for (ref a = args();  a;  a = a->next()) {
             err += a->typespec().string();
             if (a->next())
                 err += ", ";
         }
         err += ")";
-        error ("%s", err.c_str());
+        errorf("%s", err);
         // FIXME -- it might be nice here to enumerate for the user all the
         // valid combinations.
     }
@@ -818,8 +808,8 @@ public:
             if (m_mode & must_init_all) {
                 m_success = false;
                 if (errors()) {
-                    cinit->error ("Empty initializer list not allowed to"
-                                  "represent '%' here", cinit->type_c_str(to));
+                    cinit->errorf("Empty initializer list not allowed to"
+                                  "represent '%' here", to);
                 }
             }
             return;
@@ -879,9 +869,9 @@ public:
 
         m_success = false;
         if (errors()) {
-            init->error ("Too %s initializers for a '%s'",
+            init->errorf("Too %s initializers for a '%s'",
                          nelem < expected.arraylength() ? "few" : "many",
-                         init->type_c_str(expected));
+                         expected);
         }
     }
 
@@ -926,7 +916,7 @@ public:
 
         m_success = false;
         if (errors() && (arg || nfields > ninits)) {
-            parent->error ("Too %s initializers for struct '%s'",
+            parent->errorf("Too %s initializers for struct '%s'",
                            ninits < nfields ? "few" : "many",
                            structspec->name());
         }
@@ -1023,9 +1013,8 @@ private:
                 return false;
 
             ASSERT (!spec || field);
-            node->error ("Can't assign '%s' to '%s%s'",
-                         m_compiler->type_c_str(node->typespec()),
-                         m_compiler->type_c_str(expected),
+            node->errorf("Can't assign '%s' to '%s%s'",
+                         node->typespec(), expected,
                          !spec ? "" :
                          Strutil::sprintf(" %s.%s", spec->name(), field->name));
         }
@@ -1041,7 +1030,7 @@ ASTcompound_initializer::typecheck (TypeSpec expected, unsigned mode)
     if (m_ctor || m_typespec.is_structure_based() ||
         m_typespec.simpletype().basetype != TypeDesc::UNKNOWN ) {
         if (m_typespec != expected)
-            error ("Cannot construct type '%s'", type_c_str(expected));
+            errorf("Cannot construct type '%s'", expected);
         return m_typespec;
     }
 
@@ -1219,12 +1208,12 @@ ASTfunction_call::typecheck_printf_args (const char *format, ASTNode *arg)
                 ++format;
             char formatchar = *format++;  // Also eat the format char
             if (! arg) {
-                error ("%s has mismatched format string and arguments (not enough args)",
-                       m_name.c_str());
+                errorf("%s has mismatched format string and arguments (not enough args)",
+                       m_name);
                 return false;
             }
             if (arg->typespec().is_structure_based()) {
-                error ("struct '%s' is not a valid argument",
+                errorf("struct '%s' is not a valid argument",
                        arg->typespec().structspec()->name());
                 return false;
             }
@@ -1235,23 +1224,23 @@ ASTfunction_call::typecheck_printf_args (const char *format, ASTNode *arg)
             if ((arg->typespec().is_closure_based() ||
                  simpletype.basetype == TypeDesc::STRING)
                 && formatchar != 's') {
-                error ("%s has mismatched format string and arguments (arg %d needs %%s)",
-                       m_name.c_str());
+                errorf("%s has mismatched format string and arguments (arg %d needs %%s)",
+                       m_name);
                 return false;
             }
             if (simpletype.basetype == TypeDesc::INT && formatchar != 'd' &&
                 formatchar != 'i' && formatchar != 'o' &&
                 formatchar != 'x' && formatchar != 'X') {
-                error ("%s has mismatched format string and arguments (arg %d needs %%d, %%i, %%o, %%x, or %%X)",
-                       m_name.c_str(), argnum);
+                errorf("%s has mismatched format string and arguments (arg %d needs %%d, %%i, %%o, %%x, or %%X)",
+                       m_name, argnum);
                 return false;
             }
             if (simpletype.basetype == TypeDesc::FLOAT && formatchar != 'f' &&
                 formatchar != 'g' && formatchar != 'c' && formatchar != 'e' &&
                 formatchar != 'm' && formatchar != 'n' && formatchar != 'p' &&
                 formatchar != 'v') {
-                error ("%s has mismatched format string and arguments (arg %d needs %%f, %%g, or %%e)",
-                       m_name.c_str(), argnum);
+                errorf("%s has mismatched format string and arguments (arg %d needs %%f, %%g, or %%e)",
+                       m_name, argnum);
                 return false;
             }
 
@@ -1263,8 +1252,8 @@ ASTfunction_call::typecheck_printf_args (const char *format, ASTNode *arg)
         }
     }
     if (arg) {
-        error ("%s has mismatched format string and arguments (too many args)",
-               m_name.c_str());
+        errorf("%s has mismatched format string and arguments (too many args)",
+               m_name);
         return false;
     }
     return true;  // all ok
@@ -1330,8 +1319,8 @@ ASTfunction_call::typecheck_builtin_specialcase ()
             arg = arg->nextptr ();
             typecheck_printf_args (format, arg);
         } else {
-            warning ("%s() uses a format string that is not a constant.",
-                     m_name.c_str());
+            warningf("%s() uses a format string that is not a constant.",
+                     m_name);
         }
     }
 
@@ -1405,7 +1394,7 @@ ASTfunction_call::typecheck_struct_constructor ()
     m_typespec = m_sym->typespec();
     if (structspec->numfields() != (int)listlength(args())) {
         // Support a single argument which is an init-list of proper type?
-        error ("Constructor for '%s' has the wrong number of arguments (expected %d, got %d)",
+        errorf("Constructor for '%s' has the wrong number of arguments (expected %d, got %d)",
                structspec->name(), structspec->numfields(), listlength(args()));
     }
 
@@ -1693,8 +1682,8 @@ public:
         std::string msg = "    ";
         if (ASTNode* decl = sym->node())
             msg += Strutil::sprintf("%s:%d\t", decl->sourcefile(), decl->sourceline());
-        msg += Strutil::sprintf("%s %s (%s)\n", m_compiler->type_c_str(returntype),
-                               sym->name(), m_compiler->typelist_from_code(formals));
+        msg += Strutil::sprintf("%s %s (%s)\n", returntype, sym->name(),
+                                m_compiler->typelist_from_code(formals));
         return msg;
     }
 
@@ -1719,7 +1708,7 @@ public:
                                           "No matching function call to");
                 for (FunctionSymbol* f = m_called; f; f = f->nextpoly())
                     errmsg += reportFunction (f);
-                caller->error ("%s", errmsg);
+                caller->errorf("%s", errmsg);
                 return { nullptr, TypeSpec() };
 
             case 1: // Success
@@ -1845,11 +1834,11 @@ public:
                 for (auto& candidate : m_candidates)
                     if (candidate.sym != c.first->sym)
                         errmsg += reportFunction (candidate.sym);
-                caller->warning ("%s", errmsg);
+                caller->warningf ("%s", errmsg);
             } else {
                 for (auto& candidate : m_candidates)
                     errmsg += reportFunction (candidate.sym);
-                caller->error ("%s", errmsg);
+                caller->errorf ("%s", errmsg);
             }
         }
 
@@ -2011,9 +2000,9 @@ ASTfunction_call::typecheck (TypeSpec expected)
             if (Strutil::iequals(OSL_LEGACY, "use"))
                 m_sym = legacy;
             if (as_warning)
-                warning ("overload chosen differs from OSL 1.9\n%s", errmsg);
+                warningf("overload chosen differs from OSL 1.9\n%s", errmsg);
             else
-                warning ("overload chosen differs from OSL 1.9\n%s", errmsg);
+                errorf("overload chosen differs from OSL 1.9\n%s", errmsg);
         }
     }
 
@@ -2038,7 +2027,7 @@ ASTfunction_call::typecheck (TypeSpec expected)
         if (is_user_function()) {
             if (func()->number_of_returns() == 0 &&
                 ! func()->typespec().is_void()) {
-                error ("non-void function \"%s\" had no 'return' statement.",
+                errorf("non-void function \"%s\" had no 'return' statement.",
                        func()->name());
             }
         } else {

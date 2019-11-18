@@ -230,7 +230,7 @@ ShaderInstance::parameters (const ParamValueList &params)
             TypeSpec sm_typespec = sm->typespec(); // Type of the master's param
             if (sm_typespec.is_closure_based()) {
                 // Can't assign a closure instance value.
-                shadingsys().warning ("skipping assignment of closure: %s", sm->name());
+                shadingsys().warningf("skipping assignment of closure: %s", sm->name());
                 continue;
             }
             if (sm_typespec.is_structure())
@@ -250,7 +250,7 @@ ShaderInstance::parameters (const ParamValueList &params)
                     int val = *static_cast<const int*>(p.data());
                     float conv = float(val);
                     if (val != int(conv))
-                        shadingsys().error ("attempting to set parameter from wrong type would change the value: %s (set %.9g from %d)",
+                        shadingsys().errorf("attempting to set parameter from wrong type would change the value: %s (set %.9g from %d)",
                             sm->name(), conv, val);
                     tmpdata[0] = conv;
                     data = tmpdata;
@@ -271,12 +271,12 @@ ShaderInstance::parameters (const ParamValueList &params)
                        ( paramtype.is_vec3()          && valuetype == TypeDesc::FLOAT) ) )) {
                     // We are being very relaxed in this mode, so if the user _still_ got it wrong
                     // something more serious is at play and we should treat it as an error.
-                    shadingsys().error ("attempting to set parameter from incompatible type: %s (expected '%s', received '%s')",
+                    shadingsys().errorf("attempting to set parameter from incompatible type: %s (expected '%s', received '%s')",
                                           sm->name(), paramtype, valuetype);
                     continue;
                 }
             } else if (!compatible_param(paramtype, valuetype)) {
-                shadingsys().warning ("attempting to set parameter with wrong type: %s (expected '%s', received '%s')",
+                shadingsys().warningf("attempting to set parameter with wrong type: %s (expected '%s', received '%s')",
                                       sm->name(), paramtype, valuetype);
                 continue;
             }
@@ -355,7 +355,7 @@ ShaderInstance::parameters (const ParamValueList &params)
             memcpy (param_storage(i), data, valuetype.size());
         }
         else {
-            shadingsys().warning ("attempting to set nonexistent parameter: %s", p.name());
+            shadingsys().warningf("attempting to set nonexistent parameter: %s", p.name());
         }
     }
 
@@ -736,7 +736,7 @@ ShaderGroup::ShaderGroup (string_view name)
         m_name = name;
     } else {
         // No name -- make one up using the unique
-        m_name = ustring::format ("unnamed_group_%d", m_id);
+        m_name = ustring::sprintf ("unnamed_group_%d", m_id);
     }
 }
 

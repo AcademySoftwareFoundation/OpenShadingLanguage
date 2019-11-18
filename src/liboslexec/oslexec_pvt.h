@@ -510,25 +510,25 @@ public:
     // Internal error, warning, info, and message reporting routines that
     // take printf-like arguments.
     template<typename T1, typename... Args>
-    inline void error (const char* fmt, const T1& v1, const Args&... args) const {
+    inline void errorf (const char* fmt, const T1& v1, const Args&... args) const {
         error (Strutil::sprintf (fmt, v1, args...));
     }
     void error (const std::string &message) const;
 
     template<typename T1, typename... Args>
-    inline void warning (const char* fmt, const T1& v1, const Args&... args) const {
+    inline void warningf (const char* fmt, const T1& v1, const Args&... args) const {
         warning (Strutil::sprintf (fmt, v1, args...));
     }
     void warning (const std::string &message) const;
 
     template<typename T1, typename... Args>
-    inline void info (const char* fmt, const T1& v1, const Args&... args) const {
+    inline void infof (const char* fmt, const T1& v1, const Args&... args) const {
         info (Strutil::sprintf (fmt, v1, args...));
     }
     void info (const std::string &message) const;
 
     template<typename T1, typename... Args>
-    inline void message (const char* fmt, const T1& v1, const Args&... args) const {
+    inline void messagef (const char* fmt, const T1& v1, const Args&... args) const {
         message (Strutil::sprintf (fmt, v1, args...));
     }
     void message (const std::string &message) const;
@@ -1742,22 +1742,22 @@ public:
     void process_errors () const;
 
     template<typename... Args>
-    inline void error (const char* fmt, const Args&... args) const {
+    inline void errorf(const char* fmt, const Args&... args) const {
         record_error(ErrorHandler::EH_ERROR, Strutil::sprintf (fmt, args...));
     }
 
     template<typename... Args>
-    inline void warning (const char* fmt, const Args&... args) const {
+    inline void warningf(const char* fmt, const Args&... args) const {
         record_error(ErrorHandler::EH_WARNING, Strutil::sprintf (fmt, args...));
     }
 
     template<typename... Args>
-    inline void info (const char* fmt, const Args&... args) const {
+    inline void infof(const char* fmt, const Args&... args) const {
         record_error(ErrorHandler::EH_INFO, Strutil::sprintf (fmt, args...));
     }
 
     template<typename... Args>
-    inline void message (const char* fmt, const Args&... args) const {
+    inline void messagef(const char* fmt, const Args&... args) const {
         record_error(ErrorHandler::EH_MESSAGE, Strutil::sprintf (fmt, args...));
     }
 

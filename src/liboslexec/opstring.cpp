@@ -37,6 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdarg>
 
 #include <OpenImageIO/strutil.h>
+#include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/fmath.h>
 
 #include "oslexec_pvt.h"
@@ -52,7 +53,7 @@ namespace pvt {
 OSL_SHADEOP const char *
 osl_concat_sss (const char *s, const char *t)
 {
-    return ustring::format("%s%s", s, t).c_str();
+    return ustring::sprintf("%s%s", s, t).c_str();
 }
 
 OSL_SHADEOP int
@@ -184,7 +185,7 @@ osl_printf (ShaderGlobals *sg, const char* format_str, ...)
 #endif
     std::string s = Strutil::vformat (format_str, args);
     va_end (args);
-    sg->context->message ("%s", s);
+    sg->context->messagef("%s", s);
 }
 
 
@@ -195,7 +196,7 @@ osl_error (ShaderGlobals *sg, const char* format_str, ...)
     va_start (args, format_str);
     std::string s = Strutil::vformat (format_str, args);
     va_end (args);
-    sg->context->error ("%s", s);
+    sg->context->errorf("%s", s);
 }
 
 
@@ -207,7 +208,7 @@ osl_warning (ShaderGlobals *sg, const char* format_str, ...)
         va_start (args, format_str);
         std::string s = Strutil::vformat (format_str, args);
         va_end (args);
-        sg->context->warning ("%s", s);
+        sg->context->warningf("%s", s);
     }
 }
 
@@ -224,7 +225,7 @@ osl_fprintf (ShaderGlobals *sg, const char *filename,
 
     static OIIO::mutex fprintf_mutex;
     OIIO::lock_guard lock (fprintf_mutex);
-    FILE *file = fopen (filename, "a");
+    FILE *file = OIIO::Filesystem::fopen (filename, "a");
     fputs (s.c_str(), file);
     fclose (file);
 }

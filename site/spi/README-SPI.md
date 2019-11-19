@@ -14,9 +14,9 @@ to the `make` commands of any of the variants listed below. For example,
 Variants:
 
     # C++11/gcc4.8 compat, Python 2.7, Boost 1.55, OptiX 6, Cuda 10.1
-    # OIIO 2.1.5.0, OpenEXR 2.2
+    # OIIO 2.1.5.1, OpenEXR 2.2
     make nuke
-    make spi OSL_SPIREZ=1 BOOSTVERS=1.55 USE_OPTIX=1 CUDA_VERSION=10.1 OPTIX_VERSION=6.0.0 OPENIMAGEIO_VERSION=2.1.5.0 OPENEXR_VERSION=2.2.0 PYTHON_VERSION=2.7
+    make spi OSL_SPIREZ=1 BOOSTVERS=1.55 USE_OPTIX=1 CUDA_VERSION=10.1 OPTIX_VERSION=6.0.0 OPENIMAGEIO_VERSION=2.1.5.1 OPENEXR_VERSION=2.2.0 PYTHON_VERSION=2.7
 
 
 

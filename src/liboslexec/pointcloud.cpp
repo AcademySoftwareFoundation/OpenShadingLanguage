@@ -242,13 +242,13 @@ RendererServices::pointcloud_search (ShaderGlobals *sg,
         return 0;
     PointCloud *pc = PointCloud::get(filename);
     if (pc == NULL) { // The file failed to load
-        sg->context->error ("pointcloud_search: could not open \"%s\"", filename.c_str());
+        sg->context->errorf("pointcloud_search: could not open \"%s\"", filename);
         return 0;
     }
 
     const Partio::ParticlesData *cloud = pc->read_access();
     if (cloud == NULL) { // The file failed to load
-        sg->context->error ("pointcloud_search: could not open \"%s\"", filename.c_str());
+        sg->context->errorf("pointcloud_search: could not open \"%s\"", filename);
         return 0;
     }
 
@@ -346,20 +346,20 @@ RendererServices::pointcloud_get (ShaderGlobals *sg,
 
     PointCloud *pc = PointCloud::get(filename);
     if (pc == NULL) { // The file failed to load
-        sg->context->error ("pointcloud_get: could not open \"%s\"", filename);
+        sg->context->errorf("pointcloud_get: could not open \"%s\"", filename);
         return 0;
     }
 
     const Partio::ParticlesData *cloud = pc->read_access();
     if (cloud == NULL) { // The file failed to load
-        sg->context->error ("pointcloud_get: could not open \"%s\"", filename);
+        sg->context->errorf("pointcloud_get: could not open \"%s\"", filename);
         return 0;
     }
 
     // lookup the ParticleAttribute pointer needed for a query
     Partio::ParticleAttribute *attr = pc->m_attributes[attr_name].get();
     if (! attr) {
-        sg->context->error ("Accessing unexisting attribute %s in pointcloud \"%s\"", attr_name, filename);
+        sg->context->errorf("Accessing unexisting attribute %s in pointcloud \"%s\"", attr_name, filename);
         return 0;
     }
 
@@ -370,7 +370,7 @@ RendererServices::pointcloud_get (ShaderGlobals *sg,
 
     // Finally check for some equivalent types like float3 and vector
     if (!compatiblePartioType(partio_type, element_type)) {
-        sg->context->error ("Type of attribute \"%s\" : %s not compatible with OSL's %s in \"%s\" pointcloud",
+        sg->context->errorf("Type of attribute \"%s\" : %s not compatible with OSL's %s in \"%s\" pointcloud",
                             attr_name, partio_type, element_type, filename);
         return 0;
     }
@@ -378,7 +378,7 @@ RendererServices::pointcloud_get (ShaderGlobals *sg,
     // For safety, clamp the count to the most that will fit in the output
     int maxn = basevals(attr_type) / basevals(partio_type);
     if (maxn < count) {
-        sg->context->error ("Point cloud attribute \"%s\" : %s with retrieval count %d will not fit in %s",
+        sg->context->errorf("Point cloud attribute \"%s\" : %s with retrieval count %d will not fit in %s",
                             attr_name, partio_type, count, attr_type);
         count = maxn;
     }

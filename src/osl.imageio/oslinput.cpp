@@ -516,7 +516,7 @@ OSLInput::open (const std::string &name, ImageSpec &newspec,
                                    pv.interp() == ParamValue::INTERP_CONSTANT);
         }
         if (! shadingsys->Shader ("surface", shadername, "" /*layername*/ )) {
-            error ("y %s", errhandler.haserror() ? errhandler.geterror() : std::string("OSL error"));
+            errorf("y %s", errhandler.haserror() ? errhandler.geterror() : std::string("OSL error"));
             ok = false;
         }
         shadingsys->ShaderGroupEnd ();
@@ -544,7 +544,7 @@ OSLInput::open (const std::string &name, ImageSpec &newspec,
         //           << sourcecode << "---\n";
         std::string err;
         if (! compile_buffer (sourcecode, exprname, err)) {
-            error ("%s", err);
+            errorf("%s", err);
             return false;
         }
         m_group = shadingsys->ShaderGroupBegin ();

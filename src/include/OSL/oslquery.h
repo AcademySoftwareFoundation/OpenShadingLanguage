@@ -218,7 +218,7 @@ private:
 
     // Internal error reporting routine, with printf-like arguments.
     template<typename... Args>
-    inline void error (const char* fmt, const Args&... args) const {
+    inline void errorf(const char* fmt, const Args&... args) const {
         append_error(OIIO::Strutil::sprintf (fmt, args...));
     }
 

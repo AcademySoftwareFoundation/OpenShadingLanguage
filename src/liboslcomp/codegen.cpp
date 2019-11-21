@@ -126,7 +126,7 @@ OSLCompilerImpl::insert_code (int opnum, const char *opname,
 Symbol *
 OSLCompilerImpl::make_temporary (const TypeSpec &type)
 {
-    ustring name = ustring::format ("$tmp%d", ++m_next_temp);
+    ustring name = ustring::sprintf ("$tmp%d", ++m_next_temp);
     Symbol *s = new Symbol (name, type, SymTypeTemp);
     symtab().insert (s);
 
@@ -157,14 +157,14 @@ OSLCompilerImpl::add_struct_fields (StructSpec *structspec,
     // arraylen is the length of the array of the surrounding data type
     for (int i = 0;  i < (int)structspec->numfields();  ++i) {
         const StructSpec::FieldSpec &field (structspec->field(i));
-        ustring fieldname = ustring::format ("%s.%s", basename, field.name);
+        ustring fieldname = ustring::sprintf ("%s.%s", basename, field.name);
         TypeSpec type = field.type;
         int arr = type.arraylength();
         if (arr && arraylen) {
-            error (node ? node->sourcefile() : ustring(),
+            errorf(node ? node->sourcefile() : ustring(),
                    node ? node->sourceline() : 1,
                    "Nested structs with >1 levels of arrays are not allowed: %s",
-                   structspec->name().c_str());
+                   structspec->name());
         }
         if (arraylen || arr) {
             // Translate an outer array into an inner array
@@ -199,7 +199,7 @@ OSLCompilerImpl::make_constant (ustring val)
             return sym;
     }
     // It's not a constant we've added before
-    ustring name = ustring::format ("$const%d", ++m_next_const);
+    ustring name = ustring::sprintf ("$const%d", ++m_next_const);
     ConstantSymbol *s = new ConstantSymbol (name, val);
     symtab().insert (s);
     m_const_syms.push_back (s);
@@ -218,7 +218,7 @@ OSLCompilerImpl::make_constant (TypeDesc type, const void *val)
             return sym;
     }
     // It's not a constant we've added before
-    ustring name = ustring::format ("$const%d", ++m_next_const);
+    ustring name = ustring::sprintf ("$const%d", ++m_next_const);
     ConstantSymbol *s = new ConstantSymbol (name, type);
     memcpy (s->data(), val, typesize);
     symtab().insert (s);
@@ -236,7 +236,7 @@ OSLCompilerImpl::make_constant (int val)
             return sym;
     }
     // It's not a constant we've added before
-    ustring name = ustring::format ("$const%d", ++m_next_const);
+    ustring name = ustring::sprintf ("$const%d", ++m_next_const);
     ConstantSymbol *s = new ConstantSymbol (name, val);
     symtab().insert (s);
     m_const_syms.push_back (s);
@@ -253,7 +253,7 @@ OSLCompilerImpl::make_constant (float val)
             return sym;
     }
     // It's not a constant we've added before
-    ustring name = ustring::format ("$const%d", ++m_next_const);
+    ustring name = ustring::sprintf ("$const%d", ++m_next_const);
     ConstantSymbol *s = new ConstantSymbol (name, val);
     symtab().insert (s);
     m_const_syms.push_back (s);
@@ -271,7 +271,7 @@ OSLCompilerImpl::make_constant (TypeDesc type, float x, float y, float z)
             return sym;
     }
     // It's not a constant we've added before
-    ustring name = ustring::format ("$const%d", ++m_next_const);
+    ustring name = ustring::sprintf ("$const%d", ++m_next_const);
     ConstantSymbol *s = new ConstantSymbol (name, type, x, y, z);
     symtab().insert (s);
     m_const_syms.push_back (s);
@@ -479,8 +479,8 @@ ASTcompound_initializer::codegen (Symbol *sym)
         return sym;
     }
 
-    error("Possible compiler bug: compound_initializer codegen does not "
-          "know how to handle type %s", typespec());
+    errorf("Possible compiler bug: compound_initializer codegen does not "
+           "know how to handle type %s", typespec());
     return nullptr;
 }
 
@@ -577,8 +577,8 @@ ASTNode::codegen_assign_struct (StructSpec *structspec,
             // struct within struct -- recurse
             ustring fieldname (structspec->field(i).name);
             codegen_assign_struct (fieldtype.structspec(),
-                                   ustring::format ("%s.%s", dstsym, fieldname),
-                                   ustring::format ("%s.%s", srcsym, fieldname),
+                                   ustring::sprintf ("%s.%s", dstsym, fieldname),
+                                   ustring::sprintf ("%s.%s", srcsym, fieldname),
                                    arrayindex, copywholearrays, 0, paraminit);
             continue;
         }
@@ -587,8 +587,8 @@ ASTNode::codegen_assign_struct (StructSpec *structspec,
             // struct array within struct -- loop over indices and recurse
             ASSERT (! arrayindex && "two levels of arrays not allowed");
             ustring fieldname (structspec->field(i).name);
-            ustring dstfield = ustring::format ("%s.%s", dstsym, fieldname);
-            ustring srcfield = ustring::format ("%s.%s", srcsym, fieldname);
+            ustring dstfield = ustring::sprintf ("%s.%s", dstsym, fieldname);
+            ustring srcfield = ustring::sprintf ("%s.%s", srcsym, fieldname);
             for (int i = 0;  i < fieldtype.arraylength();  ++i) {
                 codegen_assign_struct (fieldtype.structspec(),
                                        dstfield, srcfield,
@@ -920,7 +920,7 @@ ASTNode::codegen_initlist (ref init, TypeSpec type, Symbol *sym)
         StructSpec *structspec (type.structspec());
         for (int i = 0;  init && i < structspec->numfields();  init = init->next(), ++i) {
             const StructSpec::FieldSpec &field (structspec->field(i));
-            ustring fieldname = ustring::format ("%s.%s", sym->mangled(),
+            ustring fieldname = ustring::sprintf ("%s.%s", sym->mangled(),
                                                  field.name);
             Symbol *fieldsym = m_compiler->symtab().find_exact (fieldname);
             if (paraminit) {
@@ -939,7 +939,7 @@ ASTNode::codegen_initlist (ref init, TypeSpec type, Symbol *sym)
         // Warn early about struct array paramters.
         // Handling this will likely need changes to oso format.
         if (type.is_structure_array()) {
-            error ("array of struct are not allowed as parameters");
+            errorf("array of struct are not allowed as parameters");
             return;
         }
         // For parameter initialization, don't really generate ops if it
@@ -1088,8 +1088,8 @@ ASTNode::codegen_struct_initializers (ref init, Symbol *sym,
     for (int i = 0; init && i < structspec->numfields(); init = init->next(), ++i) {
         // Structure element -- assign to the i-th member field
         const StructSpec::FieldSpec &field (structspec->field(i));
-        ustring fieldname = ustring::format ("%s.%s", sym->mangled().c_str(),
-                                             field.name.c_str());
+        ustring fieldname = ustring::sprintf ("%s.%s", sym->mangled(),
+                                             field.name);
         Symbol *fieldsym = m_compiler->symtab().find_exact (fieldname);
         if (fieldsym->typespec().is_structure_based() &&
             (init->nodetype() == type_constructor_node ||
@@ -1249,10 +1249,9 @@ ASTindex::codegen_copy_struct_array_element (StructSpec *structspec,
         const TypeSpec &type (field.type);
         if (type.is_structure()) {
             // struct within struct -- recurse!
-            const char *fieldname = field.name.c_str();
             codegen_copy_struct_array_element (type.structspec(),
-                     ustring::format ("%s.%s", destname.c_str(), fieldname),
-                     ustring::format ("%s.%s", srcname.c_str(), fieldname),
+                     ustring::sprintf("%s.%s", destname, field.name),
+                     ustring::sprintf("%s.%s", srcname, field.name),
                      index);
         } else {
             ASSERT (! type.is_array());
@@ -1481,7 +1480,7 @@ ASTunary_expression::codegen (Symbol *dest)
     if (m_function_overload) {
         // A little crazy, but we temporarily construct an ASTfunction_call
         // in order to codegen this overloaded operator.
-        ustring funcname = ustring::format ("__operator__%s__", opword());
+        ustring funcname = ustring::sprintf ("__operator__%s__", opword());
         ASTfunction_call fc (m_compiler, funcname, expr().get(), m_function_overload);
         fc.typecheck (typespec());
         return dest = fc.codegen (dest);
@@ -1528,9 +1527,9 @@ ASTbinary_expression::codegen (Symbol *dest)
         // in order to codegen this overloaded operator. Slightly tricky
         // is that we need to concatenate our left and right arguments into
         // an arg list.
-        ustring funcname = ustring::format ("__operator__%s__", opword());
+        ustring funcname = ustring::sprintf ("__operator__%s__", opword());
         if (left()->nextptr() || right()->nextptr()) {
-            error ("Overloaded %s cannot be passed arguments %s and %s",
+            errorf("Overloaded %s cannot be passed arguments %s and %s",
                    funcname, left()->nodetypename(), right()->nodetypename());
             return dest;
         }
@@ -2007,11 +2006,10 @@ ASTfunction_call::codegen_arg (SymbolPtrVec &argdest, SymbolPtrVec &index1,
             ! equivalent (origarg->typespec(), form->typespec()) &&
             form->nodetype() == variable_declaration_node &&
             ((ASTvariable_declaration *)form)->is_output()) {
-            error ("Cannot pass '%s %s' as argument %d to %s\n\t"
+            errorf("Cannot pass '%s %s' as argument %d to %s\n\t"
                    "because it is an output parameter that must be a %s",
-                   origarg->typespec().c_str(), origarg->name().c_str(),
-                   argnum+1, user_function()->func()->name().c_str(),
-                   form->typespec().c_str());
+                   origarg->typespec(), origarg->name(), argnum+1,
+                   user_function()->func()->name(), form->typespec());
         }
     }
     if (thisarg) {
@@ -2020,7 +2018,7 @@ ASTfunction_call::codegen_arg (SymbolPtrVec &argdest, SymbolPtrVec &index1,
         index2.push_back (ind2);
         index3.push_back (ind3);
     } else
-        arg->error("Invalid argument to function");
+        arg->errorf("Invalid argument to function");
 }
 
 
@@ -2036,8 +2034,8 @@ ASTfunction_call::struct_pair_all_fields (StructSpec *structspec,
         if (type.is_structure() || type.is_structure_array()) {
             // struct within struct -- recurse!
             struct_pair_all_fields (type.structspec(),
-                                    ustring::format ("%s.%s", formal.c_str(), field.name.c_str()),
-                                    ustring::format ("%s.%s", actual.c_str(), field.name.c_str()),
+                                    ustring::sprintf ("%s.%s", formal, field.name),
+                                    ustring::sprintf ("%s.%s", actual, field.name),
                                     arrayindex);
         } else {
             Symbol *fsym, *asym;

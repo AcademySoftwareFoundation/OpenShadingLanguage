@@ -619,8 +619,8 @@ ColorSystem::set_colorspace (StringParam colorspace)
 #else
     void
     ColorSystem::error(StringParam src, StringParam dst, Context context) {
-        context->error("Unknown color space transformation"
-                       " \"%s\" -> \"%s\"", src, dst);
+        context->errorf("Unknown color space transformation"
+                        " \"%s\" -> \"%s\"", src, dst);
     }
 
     static inline ColorSystem& op_color_colorsystem (void *sg) {

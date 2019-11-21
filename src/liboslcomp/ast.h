@@ -190,7 +190,7 @@ public:
     void sourceline (int line) { m_sourceline = line; }
 
     template<typename... Args>
-    void error (const char* format, const Args&... args) const
+    void errorf (const char* format, const Args&... args) const
     {
         DASSERT (format && format[0]);
         error_impl (OIIO::Strutil::sprintf (format, args...));
@@ -198,7 +198,7 @@ public:
 
     /// Warning reporting
     template<typename... Args>
-    void warning (const char* format, const Args&... args) const
+    void warningf (const char* format, const Args&... args) const
     {
         DASSERT (format && format[0]);
         warning_impl (OIIO::Strutil::sprintf (format, args...));
@@ -206,7 +206,7 @@ public:
 
     /// info reporting
     template<typename... Args>
-    void info (const char* format, const Args&... args) const
+    void infof (const char* format, const Args&... args) const
     {
         DASSERT (format && format[0]);
         info_impl (OIIO::Strutil::sprintf (format, args...));
@@ -214,7 +214,7 @@ public:
 
     /// message reporting
     template<typename... Args>
-    void message (const char* format, const Args&... args) const
+    void messagef (const char* format, const Args&... args) const
     {
         DASSERT (format && format[0]);
         message_impl (OIIO::Strutil::sprintf (format, args...));

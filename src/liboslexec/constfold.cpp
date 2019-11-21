@@ -1338,7 +1338,7 @@ DECLFOLDER(constfold_concat)
             return 0;  // something non-constant
         ustring old = result;
         ustring s = *(ustring *)S.data();
-        result = ustring::format ("%s%s", old.c_str() ? old.c_str() : "",
+        result = ustring::sprintf ("%s%s", old.c_str() ? old.c_str() : "",
                                   s.c_str() ? s.c_str() : "");
     }
     // If we made it this far, all args were constants, and the

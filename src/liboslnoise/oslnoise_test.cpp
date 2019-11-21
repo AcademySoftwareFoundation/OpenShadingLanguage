@@ -388,7 +388,7 @@ getargs (int argc, const char *argv[])
                 "-v", &verbose, "Verbose mode",
                 "--img", &make_images, "Make test images",
                 "--iterations %d", &iterations,
-                    ustring::format("Number of iterations (default: %d)", iterations).c_str(),
+                    ustring::sprintf("Number of iterations (default: %d)", iterations).c_str(),
                 "--trials %d", &ntrials, "Number of trials",
                 NULL);
     if (ap.parse (argc, (const char**)argv) < 0) {

@@ -179,7 +179,7 @@ osl_get_matrix (void *sg_, void *r, const char *from)
         MAT(r).makeIdentity();
         ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
         if (ctx->shadingsys().unknown_coordsys_error())
-            ctx->error ("Unknown transformation \"%s\"", from);
+            ctx->errorf("Unknown transformation \"%s\"", from);
     }
     return ok;
 }
@@ -209,7 +209,7 @@ osl_get_inverse_matrix (void *sg_, void *r, const char *to)
         MAT(r).makeIdentity ();
         ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
         if (ctx->shadingsys().unknown_coordsys_error())
-            ctx->error ("Unknown transformation \"%s\"", to);
+            ctx->errorf("Unknown transformation \"%s\"", to);
     }
     return ok;
 }
@@ -235,7 +235,7 @@ osl_prepend_matrix_from (void *sg, void *r, const char *from)
     else {
         ShadingContext *ctx = (ShadingContext *)((ShaderGlobals *)sg)->context;
         if (ctx->shadingsys().unknown_coordsys_error())
-            ctx->error ("Unknown transformation \"%s\"", from);
+            ctx->errorf("Unknown transformation \"%s\"", from);
     }
 #endif
     return ok;

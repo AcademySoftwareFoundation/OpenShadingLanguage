@@ -244,7 +244,7 @@ RuntimeOptimizer::add_constant (const TypeSpec &type, const void *data,
         if (type.is_unsized_array())
             newtype.make_array (datatype.numelements());
 
-        Symbol newconst (ustring::format ("$newconst%d", m_next_newconst++),
+        Symbol newconst (ustring::sprintf ("$newconst%d", m_next_newconst++),
                          newtype, SymTypeConst);
         void *newdata;
         TypeDesc t (newtype.simpletype());
@@ -299,7 +299,7 @@ RuntimeOptimizer::add_constant (const TypeSpec &type, const void *data,
 int
 RuntimeOptimizer::add_temp (const TypeSpec &type)
 {
-    return add_symbol (Symbol (ustring::format ("$opttemp%d", m_next_newtemp++),
+    return add_symbol (Symbol (ustring::sprintf ("$opttemp%d", m_next_newtemp++),
                                type, SymTypeTemp));
 }
 
@@ -3021,7 +3021,7 @@ RuntimeOptimizer::run ()
     Timer rop_timer;
     int nlayers = (int) group().nlayers ();
     if (debug())
-        shadingcontext()->info ("About to optimize shader group %s (%d layers):",
+        shadingcontext()->infof("About to optimize shader group %s (%d layers):",
                            group().name(), nlayers);
     if (debug())
         std::cout << "About to optimize shader group " << group().name() << "\n";
@@ -3248,33 +3248,33 @@ RuntimeOptimizer::run ()
             ss.m_stat_empty_groups += 1;
     }
     if (shadingsys().m_compile_report) {
-        shadingcontext()->info ("Optimized shader group %s:", group().name());
-        shadingcontext()->info (" spec %1.2fs, New syms %llu/%llu (%5.1f%%), ops %llu/%llu (%5.1f%%)",
+        shadingcontext()->infof("Optimized shader group %s:", group().name());
+        shadingcontext()->infof(" spec %1.2fs, New syms %llu/%llu (%5.1f%%), ops %llu/%llu (%5.1f%%)",
               m_stat_specialization_time, new_nsyms, old_nsyms,
               100.0*double((long long)new_nsyms-(long long)old_nsyms)/double(old_nsyms),
               new_nops, old_nops,
               100.0*double((long long)new_nops-(long long)old_nops)/double(old_nops));
         if (does_nothing)
-            shadingcontext()->info ("Group does nothing");
+            shadingcontext()->infof("Group does nothing");
         if (m_textures_needed.size()) {
-            shadingcontext()->info ("Group needs textures:");
+            shadingcontext()->infof("Group needs textures:");
             for (auto&& f : m_textures_needed)
-                shadingcontext()->info ("    %s", f);
+                shadingcontext()->infof("    %s", f);
             if (m_unknown_textures_needed)
-                shadingcontext()->info ("    Also may construct texture names on the fly.");
+                shadingcontext()->infof("    Also may construct texture names on the fly.");
         }
         if (m_userdata_needed.size()) {
-            shadingcontext()->info ("Group potentially needs userdata:");
+            shadingcontext()->infof("Group potentially needs userdata:");
             for (auto&& f : m_userdata_needed)
-                shadingcontext()->info ("    %s %s %s", f.name, f.type,
+                shadingcontext()->infof("    %s %s %s", f.name, f.type,
                                         f.derivs ? "(derivs)" : "");
         }
         if (m_attributes_needed.size()) {
-            shadingcontext()->info ("Group needs attributes:");
+            shadingcontext()->infof("Group needs attributes:");
             for (auto&& f : m_attributes_needed)
-                shadingcontext()->info ("    %s %s", f.name, f.scope);
+                shadingcontext()->infof("    %s %s", f.name, f.scope);
             if (m_unknown_attributes_needed)
-                shadingcontext()->info ("    Also may construct attribute names on the fly.");
+                shadingcontext()->infof("    Also may construct attribute names on the fly.");
         }
     }
 }
@@ -3285,7 +3285,7 @@ bool
 RuntimeOptimizer::police(const Opcode& op, string_view msg, int type)
 {
     if ((type & police_gpu_err) && shadingsys().m_gpu_opt_error) {
-        shadingcontext()->error ("Optimization error for GPUs:\n"
+        shadingcontext()->errorf("Optimization error for GPUs:\n"
                                  "  group:  %s\n"
                                  "  layer:  %s\n"
                                  "  source: %s:%d\n"
@@ -3294,13 +3294,13 @@ RuntimeOptimizer::police(const Opcode& op, string_view msg, int type)
                                  op.sourcefile(), op.sourceline(), msg);
         return true;
     } else if ((type & police_opt_warn) && shadingsys().m_opt_warnings) {
-        shadingcontext()->warning ("Optimization warning:\n"
-                                 "  group:  %s\n"
-                                 "  layer:  %s\n"
-                                 "  source: %s:%d\n"
-                                 "  issue:  %s",
-                                 group().name(), inst()->layername(),
-                                 op.sourcefile(), op.sourceline(), msg);
+        shadingcontext()->warningf("Optimization warning:\n"
+                                   "  group:  %s\n"
+                                   "  layer:  %s\n"
+                                   "  source: %s:%d\n"
+                                   "  issue:  %s",
+                                   group().name(), inst()->layername(),
+                                   op.sourcefile(), op.sourceline(), msg);
     }
     return false;
 }
@@ -3310,7 +3310,6 @@ RuntimeOptimizer::police(const Opcode& op, string_view msg, int type)
 bool
 RuntimeOptimizer::police_failed_optimizations()
 {
-    using OIIO::Strutil::format;
     bool err = false;
     bool do_warn = shadingsys().m_opt_warnings;
     bool do_gpu_err = shadingsys().m_gpu_opt_error;
@@ -3330,7 +3329,7 @@ RuntimeOptimizer::police_failed_optimizations()
                 Symbol *sym = opargsym (op, 1);  // arg 1 is texture name
                 DASSERT (sym && sym->typespec().is_string());
                 if (! sym->is_constant()) {
-                    err |= police (op, format("%s(): texture name cannot be reduced to a constant.",
+                    err |= police (op, OIIO::Strutil::sprintf("%s(): texture name cannot be reduced to a constant.",
                                               op.opname()),
                                    police_gpu_err);
                 }

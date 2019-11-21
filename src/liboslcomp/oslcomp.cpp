@@ -162,7 +162,7 @@ OSLCompilerImpl::preprocess_file (const std::string &filename,
     std::ifstream instream;
     OIIO::Filesystem::open(instream, filename);
     if (! instream.is_open()) {
-        error (ustring(filename), 0, "Could not open \"%s\"\n", filename.c_str());
+        errorf(ustring(filename), 0, "Could not open \"%s\"\n", filename);
         return false;
     }
 
@@ -260,18 +260,18 @@ OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
             ss << "\n";
         }
         else {
-            error (ustring(e.file_name()), e.line_no(), "%s\n", e.description());
+            errorf(ustring(e.file_name()), e.line_no(), "%s\n", e.description());
             return false;
         }
     } catch (std::exception const& e) {
         // STL exception
-        error (ustring(current_position.get_file().c_str()),
+        errorf(ustring(current_position.get_file().c_str()),
                current_position.get_line(),
                "preprocessor exception caught: %s\n", e.what());
         return false;
     } catch (...) {
         // Other exception
-        error (ustring(current_position.get_file().c_str()),
+        errorf(ustring(current_position.get_file().c_str()),
                current_position.get_line(),
                "unexpected exception caught\n");
         return false;
@@ -378,7 +378,7 @@ OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
         while (preproc_errors.size() &&
                preproc_errors[preproc_errors.size()-1] == '\n')
             preproc_errors.erase (preproc_errors.size()-1);
-        error (ustring(), -1, "%s", preproc_errors.c_str());
+        errorf(ustring(), -1, "%s", preproc_errors);
         return false;
     }
     return true;
@@ -513,7 +513,7 @@ OSLCompilerImpl::compile (string_view filename,
                           string_view stdoslpath)
 {
     if (! OIIO::Filesystem::exists (filename)) {
-        error (ustring(), 0, "Input file \"%s\" not found", filename.c_str());
+        errorf(ustring(), 0, "Input file \"%s\" not found", filename);
         return false;
     }
 
@@ -531,7 +531,7 @@ OSLCompilerImpl::compile (string_view filename,
         stdoslpath = find_stdoslpath(includepaths);
     }
     if (stdoslpath.empty() || ! OIIO::Filesystem::exists(stdoslpath))
-        warning (ustring(filename), 0, "Unable to find \"stdosl.h\"");
+        warningf(ustring(filename), 0, "Unable to find \"stdosl.h\"");
     else {
         // Add the directory of stdosl.h to the include paths
         includepaths.push_back (OIIO::Filesystem::parent_path (stdoslpath));
@@ -552,7 +552,7 @@ OSLCompilerImpl::compile (string_view filename,
             if (shader())
                 shader()->typecheck ();
             else
-                error (ustring(), 0, "No shader function defined");
+                errorf(ustring(), 0, "No shader function defined");
         }
 
         // Print the parse tree if there were no errors
@@ -578,7 +578,7 @@ OSLCompilerImpl::compile (string_view filename,
             std::ofstream oso_output;
             OIIO::Filesystem::open (oso_output, m_output_filename);
             if (! oso_output.good()) {
-                error (ustring(), 0, "Could not open \"%s\"",
+                errorf(ustring(), 0, "Could not open \"%s\"",
                        m_output_filename);
                 return false;
             }
@@ -621,7 +621,7 @@ OSLCompilerImpl::compile_buffer (string_view sourcecode,
         stdoslpath = find_stdoslpath(includepaths);
     }
     if (stdoslpath.empty() || ! OIIO::Filesystem::exists(stdoslpath))
-        warning (ustring(filename), 0, "Unable to find \"stdosl.h\"");
+        warningf(ustring(filename), 0, "Unable to find \"stdosl.h\"");
 
     std::string preprocess_result;
     if (! preprocess_buffer (sourcecode, filename, stdoslpath,
@@ -638,7 +638,7 @@ OSLCompilerImpl::compile_buffer (string_view sourcecode,
             if (shader())
                 shader()->typecheck ();
             else
-                error (ustring(), 0, "No shader function defined");
+                errorf(ustring(), 0, "No shader function defined");
         }
 
         // Print the parse tree if there were no errors
@@ -740,10 +740,9 @@ OSLCompilerImpl::write_oso_metadata (const ASTNode *metanode) const
     if (ok) {
         oso ("%%meta{%s,%s,%s} ", ts.string().c_str(), metasym->name(), pdl);
     } else {
-        error (metanode->sourcefile(), metanode->sourceline(),
+        errorf(metanode->sourcefile(), metanode->sourceline(),
                "Don't know how to print metadata %s (%s) with node type %s",
-               metasym->name().c_str(), ts.string().c_str(),
-               metavar->init()->nodetypename());
+               metasym->name(), ts, metavar->init()->nodetypename());
     }
 }
 
@@ -1131,7 +1130,7 @@ const char *
 OSLCompilerImpl::type_c_str (const TypeSpec &type) const
 {
     if (type.is_structure())
-        return ustring::format ("struct %s", type.structspec()->name().c_str()).c_str();
+        return ustring::sprintf ("struct %s", type.structspec()->name()).c_str();
     else
         return type.c_str();
 }
@@ -1152,10 +1151,8 @@ OSLCompilerImpl::struct_field_pair (Symbol *sym1, Symbol *sym2, int fieldnum,
     const StructSpec::FieldSpec &field (structspec->field(fieldnum));
     // Construct mangled names that describe the symbols for the
     // individual fields
-    ustring name1 = ustring::format ("%s.%s", sym1->mangled().c_str(),
-                                     field.name.c_str());
-    ustring name2 = ustring::format ("%s.%s", sym2->mangled().c_str(),
-                                     field.name.c_str());
+    ustring name1 = ustring::sprintf ("%s.%s", sym1->mangled(), field.name);
+    ustring name2 = ustring::sprintf ("%s.%s", sym2->mangled(), field.name);
     // Retrieve the symbols
     field1 = symtab().find_exact (name1);
     field2 = symtab().find_exact (name2);
@@ -1171,10 +1168,8 @@ OSLCompilerImpl::struct_field_pair (const StructSpec *structspec, int fieldnum,
 {
     // Find the FieldSpec for the field we are interested in
     const StructSpec::FieldSpec &field (structspec->field(fieldnum));
-    ustring name1 = ustring::format ("%s.%s", sym1.c_str(),
-                                     field.name.c_str());
-    ustring name2 = ustring::format ("%s.%s", sym2.c_str(),
-                                     field.name.c_str());
+    ustring name1 = ustring::sprintf ("%s.%s", sym1, field.name);
+    ustring name2 = ustring::sprintf ("%s.%s", sym2, field.name);
     // Retrieve the symbols
     field1 = symtab().find_exact (name1);
     field2 = symtab().find_exact (name2);
@@ -1192,14 +1187,14 @@ OSLCompilerImpl::check_write_legality (const Opcode &op, int opnum,
 {
     // We can never write to constant symbols
     if (sym->symtype() == SymTypeConst) {
-        error (op.sourcefile(), op.sourceline(),
+        errorf(op.sourcefile(), op.sourceline(),
                "Attempted to write to a constant value");
     }
 
     // Params can only write if it's part of their initialization
     if (sym->symtype() == SymTypeParam && 
         (opnum < sym->initbegin() || opnum >= sym->initend())) {
-        error (op.sourcefile(), op.sourceline(),
+        errorf(op.sourcefile(), op.sourceline(),
                "cannot write to non-output parameter \"%s\"",
                sym->name());
     }

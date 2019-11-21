@@ -159,7 +159,7 @@ RendererServices::texture (ustring filename, TextureHandle *texture_handle,
             if (errormessage) {
                 *errormessage = ustring(err);
             } else {
-                context->error ("[RendererServices::texture] %s", err);
+                context->errorf("[RendererServices::texture] %s", err);
             }
         } else if (errormessage) {
             *errormessage = Strings::unknown;
@@ -195,7 +195,7 @@ RendererServices::texture3d (ustring filename, TextureHandle *texture_handle,
             if (errormessage) {
                 *errormessage = ustring(err);
             } else {
-                sg->context->error ("[RendererServices::texture3d] %s", err);
+                sg->context->errorf("[RendererServices::texture3d] %s", err);
             }
         } else if (errormessage) {
             *errormessage = Strings::unknown;
@@ -229,7 +229,7 @@ RendererServices::environment (ustring filename, TextureHandle *texture_handle,
             if (errormessage) {
                 *errormessage = ustring(err);
             } else {
-                sg->context->error ("[RendererServices::environment] %s", err);
+                sg->context->errorf("[RendererServices::environment] %s", err);
             }
         } else if (errormessage) {
             *errormessage = Strings::unknown;
@@ -261,7 +261,7 @@ RendererServices::get_texture_info (ustring filename,
             if (errormessage) {
                 *errormessage = ustring(err);
             } else {
-                shading_context->error ("[RendererServices::get_texture_info] %s", err);
+                shading_context->errorf("[RendererServices::get_texture_info] %s", err);
             }
         } else if (errormessage) {
             // gettextureinfo failed but did not provide an error, so none should be emitted

@@ -1003,7 +1003,7 @@ test_shade (int argc, const char *argv[])
 
     // For testing purposes, allow user to set global locale
     if (localename.size()) {
-        std::locale::global (std::locale(localename));
+        std::locale::global (std::locale(localename.c_str()));
         if (debug || verbose)
             printf("testshade: locale '%s', floats look like: %g\n",
                    localename.c_str(), 3.5);

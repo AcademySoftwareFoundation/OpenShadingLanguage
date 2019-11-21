@@ -6,6 +6,7 @@ Dependency and standards changes:
   time we branch for the next major release.)
 * OpenImageIO 2.0-2.1: Support for OIIO 1.8 has been dropped; a minimum
   of OIIO 2.0 is needed to build OSL. #1038 (1.11.0)
+* CMake minimum is now 3.12. #1072 (1.11.1)
 
 OSL Language and oslc compiler:
 * New syntax to reference color and point/vector/normal components as
@@ -57,6 +58,8 @@ OSL Language and oslc compiler:
   value, still default to length 1 (we don't allow 0-length arrays, that's a
   whole other can of worms), but this is now treated as equivalent to
   `= { default_value }` (0 for int or float, "" for string). #967 (1.11.0)
+* More correct handling of escaped string literals (such as "\tfoo\n")
+  in string and also in string metadata. #1073 (1.11.1)
 
 OSL Standard library:
 * Extend linearstep() and smooth_linearstep() to work with color, point,
@@ -82,6 +85,7 @@ API changes, new options, new ShadingSystem features (for renderer writers):
   therefore "stateless" and thread-safe. If you exclusively use these new
   methods for shader specification, it's possible for multiple threads to
   specify shader groups simultaneously. #984, #985, #986, #1000 (1.11.0)
+  #1067 (1.11.1)
 * New ShadingSystem option: "opt_warnings" enables warnings about things
   that couldn't be optimized and may be performance issues. #1010 (1.11.0)
 * New ShadingSystem option: "gpu_opt_error" enables full error status of the
@@ -136,8 +140,34 @@ Bug fixes and other improvements (internals):
 * Fix the implementation of division-with-derivs so that the main value
   always exactly matches the results of division of values without derivs.
   Previously there could be some LSB differences. #1066 (1.11.1)
+* Fix a number of places that weren't properly "locale-independent".
+  #1075 (1.11.1)
 
 Build & test system improvements:
+* Major overhaul of the CMake build system to upgrade minimum of CMake 3.12
+  and us many features that this makes available. #1072 #1074 (1.11.1)
+  Highlights:
+    - All optional dependencies (e.g. "Pkg") now can be disabled (even if
+      found) with cmake -DUSE_PKG=0 or environment variable USE_PKG=0.
+      Previously, some packages supported this, others did not.
+    - All dependencies can be given find hints via -DPkg_ROOT=path or by
+      setting environment variable Pkg_ROOT=path. Previously, some did, some
+      didn't, and the ones that did had totally inconsistent names for the
+      path hint variable (PKG_HOME, PKG_ROOT_DIR, PKG_PATH, etc).
+    - Nice color coded status messages making it much more clear which
+      dependencies were found, which were not, which were disabled.
+    - Use standard BUILD_SHARED_LIBS to control shared vs static libraries,
+      replacing the old nonstandard BUILDSTATIC name.
+    - Use correct PUBLIC/PRIVATE marks with target_link_libraries and
+      target_include_directories, and rely on cmake properly understanding
+      the transitive dependencies.
+    - CMAKE_DEBUG_POSTFIX adds an optional suffix to debug libraries.
+    - CMAKE_CXX_STANDARD to control C++ standard (instead of our nonstandard
+      USE_CPP).
+    - CXX_VISIBILITY_PRESET controls symbol visibility defaults now, not
+      our nonstandard HIDE_SYMBOLS. And the default is to keep everything
+      hidden that is not part of the public API.
+    - Config based install and usage.
 * Testshade makes sure that no unreported errors accumulted in the texture
   system or image cache. #939 (1.11.0)
 * testshade: Check that no leftover errors are in the TextureSystem or
@@ -177,6 +207,10 @@ Build & test system improvements:
 * Fixes for MinGW compiler on Windows. #1047 #1048 (1.11.0)
 * Fixes for CI when using OIIO 2.1 master that has changed its own cmake
   minimum to 3.12. #1065 (1.11.1)
+* Scripts and tests utilizing Python have all been visited to make sure they
+  are compatible with both Python 2.x and Python 3.x. #1071 (1.11.1)
+* Improvement for how the build system figures out which LLVM static
+  libraries are needed. #1070 (1.11.1)
 
 Documentation:
 

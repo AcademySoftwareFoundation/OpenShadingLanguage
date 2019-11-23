@@ -187,4 +187,63 @@ using OIIO::cspan;
 #  define OSL_ALIGNAS(size) alignas(size)
 #endif
 
+
+// OSL_PRETTY_FUNCTION gives a text string of the current function
+// declaration.
+#if defined(__PRETTY_FUNCTION__)
+#    define OSL_PRETTY_FUNCTION __PRETTY_FUNCTION__ /* gcc, clang */
+#elif defined(__FUNCSIG__)
+#    define OSL_PRETTY_FUNCTION __FUNCSIG__ /* MS gotta be different */
+#else
+#    define OSL_PRETTY_FUNCTION __FUNCTION__
+#endif
+
+
+
+/// OSL_ABORT_IF_DEBUG is a call to abort() for debug builds, but does
+/// nothing for release builds.
+#ifndef NDEBUG
+#    define OSL_ABORT_IF_DEBUG abort()
+#else
+#    define OSL_ABORT_IF_DEBUG (void)0
+#endif
+
+/// OSL_ASSERT(condition) checks if the condition is met, and if not,
+/// prints an error message indicating the module and line where the error
+/// occurred, and additionally aborts if in debug mode. When in release
+/// mode, it prints the error message if the condition fails, but does not
+/// abort.
+///
+/// OSL_ASSERT_MSG(condition,msg,...) lets you add formatted output (a la
+/// printf) to the failure message.
+#define OSL_ASSERT(x)                                                          \
+    (OIIO_LIKELY(x)                                                            \
+         ? ((void)0)                                                           \
+         : (std::fprintf(stderr, "%s:%u: %s: Assertion '%s' failed.\n",        \
+                         __FILE__, __LINE__, OSL_PRETTY_FUNCTION, #x),         \
+            OSL_ABORT_IF_DEBUG))
+#define OSL_ASSERT_MSG(x, msg, ...)                                             \
+    (OIIO_LIKELY(x)                                                             \
+         ? ((void)0)                                                            \
+         : (std::fprintf(stderr, "%s:%u: %s: Assertion '%s' failed: " msg "\n", \
+                         __FILE__, __LINE__, OSL_PRETTY_FUNCTION, #x,           \
+                         __VA_ARGS__),                                          \
+            OSL_ABORT_IF_DEBUG))
+
+/// OSL_DASSERT and OSL_DASSERT_MSG are the same as OSL_ASSERT for debug
+/// builds (test, print error, abort), but do nothing at all in release
+/// builds (not even perform the test). This is similar to C/C++ assert(),
+/// but gives us flexibility in improving our error messages. It is also ok
+/// to use regular assert() for this purpose if you need to eliminate the
+/// dependency on this header from a particular place (and don't mind that
+/// assert won't format identically on all platforms).
+#ifndef NDEBUG
+#    define OSL_DASSERT OSL_ASSERT
+#    define OSL_DASSERT_MSG OSL_ASSERT_MSG
+#else
+#    define OSL_DASSERT(x) ((void)sizeof(x))          /*NOLINT*/
+#    define OSL_DASSERT_MSG(x, ...) ((void)sizeof(x)) /*NOLINT*/
+#endif
+
+
 OSL_NAMESPACE_EXIT

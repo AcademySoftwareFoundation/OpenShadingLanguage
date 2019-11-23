@@ -28,7 +28,21 @@ macro (add_oiio_plugin)
 
     # Get the name of the current directory and use it as the target name.
     get_filename_component (_plugin_name ${CMAKE_CURRENT_SOURCE_DIR} NAME)
-    add_library (${_plugin_name} MODULE ${_plugin_UNPARSED_ARGUMENTS})
+    if (OPENIMAGEIO_VERSION VERSION_LESS 2.1)
+        # Prior to OIIO 2.1, OIIO built plugin modules as shared libs rather
+        # than "modules". On OSX, that changed its extension from ".dylib"
+        # to ".so". If building against OIIO < 2.1, do it the old way.
+        # This clause can disappear when OIIO 2.1 is the minimum that OSL
+        # supports.
+        add_library (${_plugin_name} SHARED ${_plugin_UNPARSED_ARGUMENTS})
+        set_target_properties (${_plugin_name}
+                               PROPERTIES
+                               VERSION ${OSL_VERSION_MAJOR}.${OSL_VERSION_MINOR}.${OSL_VERSION_PATCH}
+                               SOVERSION ${SOVERSION} )
+    else ()
+        add_library (${_plugin_name} MODULE ${_plugin_UNPARSED_ARGUMENTS})
+    endif ()
+
     target_compile_definitions (${_plugin_name} PRIVATE
                                 ${_plugin_DEFINITIONS})
     target_include_directories (${_plugin_name} PRIVATE ${_plugin_INCLUDE_DIRS}

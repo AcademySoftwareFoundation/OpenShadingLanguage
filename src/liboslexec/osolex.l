@@ -230,6 +230,10 @@ using namespace OSL::pvt;
                             return STRING_LITERAL;
                         }
 
+\%preprocessed_source\n(.*\n)* {
+                            /* skip remainder of file */
+                        }
+
 {HINTPATTERN}           {
                             ustring s (yytext);
                             yylval.s = s.c_str();

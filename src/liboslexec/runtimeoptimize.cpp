@@ -352,7 +352,7 @@ RuntimeOptimizer::debug_opt_ops (int opbegin, int opend, string_view message) co
         oprange = Strutil::sprintf ("ops %d-%d ", opbegin, opend);
     else if (opbegin >= 0)
         oprange = Strutil::sprintf ("op %d ", opbegin);
-    debug_opt ("%s%s (@ %s:%d)\n", oprange, message,
+    debug_optf("%s%s (@ %s:%d)\n", oprange, message,
                op.sourcefile(), op.sourceline());
 }
 
@@ -932,7 +932,7 @@ RuntimeOptimizer::simplify_params ()
                     auto f = g.find (srcsym->name());
                     if (f != g.end()) {
                         if (debug() > 1)
-                            debug_opt ("Remapping %s.%s because it's connected to "
+                            debug_optf("Remapping %s.%s because it's connected to "
                                        "%s.%s, which is known to be %s\n",
                                        inst()->layername(), s->name(),
                                        uplayer->layername(), srcsym->name(),
@@ -1011,7 +1011,7 @@ RuntimeOptimizer::find_params_holding_globals ()
             continue;   // only interested in global assignments
 
         if (debug() > 1)
-            debug_opt ("I think that %s.%s will always be %s\n",
+            debug_optf("I think that %s.%s will always be %s\n",
                        inst()->layername(), s.name(), src->name());
         m_params_holding_globals[layer()][s.name()] = src->name();
     }
@@ -2304,7 +2304,7 @@ RuntimeOptimizer::optimize_instance ()
             break;
 
         if (debug() > 1)
-            debug_opt ("layer %d \"%s\", pass %d:\n",
+            debug_optf("layer %d \"%s\", pass %d:\n",
                        layer(), inst()->layername(), m_pass);
 
         // Track basic blocks and conditional states

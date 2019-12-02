@@ -397,7 +397,8 @@ private:
     void initialize_globals ();
     void initialize_builtin_funcs ();
     std::string default_output_filename ();
-    void write_oso_file (const std::string &outfilename, string_view options);
+    void write_oso_file (const std::string &outfilename, string_view options,
+                         string_view preprocessed_source="");
     void write_oso_const_value (const ConstantSymbol *sym) const;
     void write_oso_symbol (const Symbol *sym);
     void write_oso_metadata (const ASTNode *metanode) const;
@@ -478,6 +479,7 @@ private:
     bool m_quiet;             ///< Quiet mode
     bool m_debug;             ///< Debug mode
     bool m_preprocess_only;   ///< Preprocess only?
+    bool m_embed_source = false; ///< Embed preprocessed source in oso?
     bool m_err_on_warning;    ///< Treat warnings as errors?
     int m_optimizelevel;      ///< Optimization level
     OpcodeVec m_ircode;       ///< Generated IR code

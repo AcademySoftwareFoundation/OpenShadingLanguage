@@ -62,6 +62,7 @@ usage ()
         "\t-d             Debug mode\n"
         "\t-E             Only preprocess the input and output to stdout\n"
         "\t-Werror        Treat all warnings as errors\n"
+        "\t-embed-source  Embed preprocessed source in the oso file\n"
         "\t-buffer        (debugging) Force compile from buffer\n"
         ;
 }
@@ -147,7 +148,9 @@ main (int argc, const char *argv[])
                  ! strcmp (argv[a], "-E") ||
                  ! strcmp (argv[a], "-O") || ! strcmp (argv[a], "-O0") ||
                  ! strcmp (argv[a], "-O1") || ! strcmp (argv[a], "-O2") ||
-                 ! strcmp (argv[a], "-Werror")
+                 ! strcmp (argv[a], "-Werror") ||
+                 ! strcmp (argv[a], "-embed-source") ||
+                 ! strcmp (argv[a], "--embed-source")
                  ) {
             // Valid command-line argument
             args.emplace_back(argv[a]);

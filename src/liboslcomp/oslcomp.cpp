@@ -418,6 +418,8 @@ OSLCompilerImpl::read_compile_options (const std::vector<std::string> &options,
             m_optimizelevel = 2;
         } else if (options[i] == "-Werror") {
             m_err_on_warning = true;
+        } else if (options[i] == "-embed-source" || options[i] == "--embed-source") {
+            m_embed_source = true;
         } else if (options[i].c_str()[0] == '-' && options[i].size() > 2) {
             // options meant for the preprocessor
             if (options[i].c_str()[1] == 'D' || options[i].c_str()[1] == 'U')
@@ -585,7 +587,9 @@ OSLCompilerImpl::compile (string_view filename,
             ASSERT (m_osofile == NULL);
             m_osofile = &oso_output;
 
-            write_oso_file (m_output_filename, OIIO::Strutil::join(options," "));
+            write_oso_file (m_output_filename,
+                            OIIO::Strutil::join(options," "),
+                            preprocess_result);
             ASSERT (m_osofile == NULL);
         }
 
@@ -666,7 +670,9 @@ OSLCompilerImpl::compile_buffer (string_view sourcecode,
             ASSERT (m_osofile == NULL);
             m_osofile = &oso_output;
 
-            write_oso_file (m_output_filename, OIIO::Strutil::join(options," "));
+            write_oso_file (m_output_filename,
+                            OIIO::Strutil::join(options," "),
+                            preprocess_result);
             osobuffer = oso_output.str();
             ASSERT (m_osofile == NULL);
         }
@@ -897,7 +903,8 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym)
 
 void
 OSLCompilerImpl::write_oso_file (const std::string &outfilename,
-                                 string_view options)
+                                 string_view options,
+                                 string_view preprocessed_source)
 {
     ASSERT (m_osofile != NULL && m_osofile->good());
     oso ("OpenShadingLanguage %d.%02d\n",
@@ -1028,6 +1035,10 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename,
         oso ("code %s\n", main_method_name().c_str());
 
     oso ("\tend\n");
+
+    if (m_embed_source)
+        oso ("%%preprocessed_source\n%s\n", preprocessed_source);
+
     m_osofile = NULL;
 }
 

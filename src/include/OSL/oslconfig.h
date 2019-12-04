@@ -97,6 +97,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // headers are included before the stock versions.
 #include <OSL/Imathx.h>
 
+// Temporary bug fix: having trouble with cuda complaining about {fmt} lib.
+// Work around by disabling it from oiio headers.
+#ifdef __CUDA_ARCH__
+#    define OIIO_USE_FMT 0
+#endif
+
 // All the things we need from OpenImageIO
 #include <OpenImageIO/oiioversion.h>
 #include <OpenImageIO/errorhandler.h>

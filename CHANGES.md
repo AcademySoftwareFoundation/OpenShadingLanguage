@@ -1,3 +1,6 @@
+Release 1.10.9 -- ??? (compared to 1.10.8)
+--------------------------------------------------
+
 Release 1.10.8 -- 1 Dec 2019 (compared to 1.10.7)
 --------------------------------------------------
 * Fix dual implementation of division so that the value is consistent with

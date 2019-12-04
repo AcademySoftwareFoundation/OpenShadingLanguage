@@ -60,6 +60,9 @@ OSL Language and oslc compiler:
   `= { default_value }` (0 for int or float, "" for string). #967 (1.11.0)
 * More correct handling of escaped string literals (such as "\tfoo\n")
   in string and also in string metadata. #1073 (1.11.1)
+* New command line argument `oslc --embed-source` embeds the preprocessed
+  source code in the `.oso` file itself (helpful for certain debugging
+  situations). #1081 (1.11.3)
 
 OSL Standard library:
 * Extend linearstep() and smooth_linearstep() to work with color, point,
@@ -142,6 +145,16 @@ Bug fixes and other improvements (internals):
   Previously there could be some LSB differences. #1066 (1.11.1)
 * Fix a number of places that weren't properly "locale-independent".
   #1075 (1.11.1)
+* Switch much of the internals where we do string formatting using printf-like
+  conventions to errorf(), etc., naming convention, reserving the non-f
+  names for future use with C++20 std::format/python convenetions. #1076
+  (1.11.3)
+* Remove pointless assertions from the TypeSpec class. #1079
+* Assertion overhaul: use OSL_ASSERT/OSL_DASSERT instead of borrowing from
+  OIIO's dassert.h. Note that OSL_ASSERT always tests, prints error if the
+  test fails, but then only aborts for debug builds (no abort for release
+  builds). In ocntrast, OSL_DASSERT does all for debug builds, and none
+  (not even the test) for release builds. #1080 (1.11.3)
 
 Build & test system improvements:
 * Major overhaul of the CMake build system to upgrade minimum of CMake 3.12
@@ -211,10 +224,23 @@ Build & test system improvements:
   are compatible with both Python 2.x and Python 3.x. #1071 (1.11.1)
 * Improvement for how the build system figures out which LLVM static
   libraries are needed. #1070 (1.11.1)
+* Build: on OSX, better logic about the OIIO plugin must be built as a
+  module or as a shared library. #1078 (1.11.3/1.10.8)
 
 Documentation:
 
 
+
+Release 1.10.8 -- 1 Dec 2019 (compared to 1.10.7)
+--------------------------------------------------
+* Fix dual implementation of division so that the value is consistent with
+  regular division (#1066)
+* Python3 safety of tests and scripts. #1071
+* Handle escaped string literals (like "\tfoo\n") more correctly. #1073
+* Fixes to ensure locale independence. #1075
+* Build: on OSX, better logic about the OIIO plugin must be built as a
+  module or as a shared library. #1078
+* Remove pointless assertions from the TypeSpec class. #1079
 
 Release 1.10.7 -- Oct 1, 2019 (compared to 1.10.6)
 --------------------------------------------------

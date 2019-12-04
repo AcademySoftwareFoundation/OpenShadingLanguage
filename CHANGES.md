@@ -1,6 +1,13 @@
-Release 1.10.8 -- ???, 2019 (compared to 1.10.7)
+Release 1.10.8 -- 1 Dec 2019 (compared to 1.10.7)
 --------------------------------------------------
-
+* Fix dual implementation of division so that the value is consistent with
+  regular division (#1066)
+* Python3 safety of tests and scripts. #1071
+* Handle escaped string literals (like "\tfoo\n") more correctly. #1073
+* Fixes to ensure locale independence. #1075
+* Build: on OSX, better logic about the OIIO plugin must be built as a
+  module or as a shared library. #1078
+* Remove pointless assertions from the TypeSpec class. #1079
 
 Release 1.10.7 -- Oct 1, 2019 (compared to 1.10.6)
 --------------------------------------------------

@@ -374,7 +374,7 @@ help:
 	@echo "  Dependency hints:"
 	@echo "      For each dependeny Foo, defining ENABLE_Foo=0 disables it, even"
 	@echo "      if found. And you can hint where to find it with Foo_ROOT=path"
-	@echo "      Note that it is case sensitive!
+	@echo "      Note that it is case sensitive!"
 	@echo "  Finding and Using Dependencies:"
 	@echo "      BOOST_ROOT=path          Custom Boost installation"
 	@echo "      USE_QT=0                 Skip anything that needs Qt"

@@ -84,7 +84,10 @@ public:
 
     /// Set the name of the file we're currently parsing (should only
     /// be called by the lexer!)
-    void filename (ustring f) { m_filename = f; }
+    void filename (ustring f) {
+        m_filename = f;
+        m_file_dependencies.emplace(f);
+    }
 
     /// The line we're currently parsing
     ///
@@ -371,7 +374,7 @@ public:
                                           std::vector<int> *bblock_ids=NULL);
     static void coalesce_temporaries (SymbolPtrVec &symtab);
 
-    const std::string main_filename () const { return m_main_filename; }
+    ustring main_filename () const { return m_main_filename; }
     const std::string cwd () const { return m_cwd; }
 
     bool debug () const { return m_debug; }
@@ -402,6 +405,7 @@ private:
     void write_oso_const_value (const ConstantSymbol *sym) const;
     void write_oso_symbol (const Symbol *sym);
     void write_oso_metadata (const ASTNode *metanode) const;
+    void write_dependency_file (string_view filename);
 
     template<typename... Args>
     inline void osof(const char* fmt, const Args&... args) const {
@@ -466,7 +470,7 @@ private:
     ustring m_filename;       ///< Current file we're parsing
     int m_lineno;             ///< Current line we're parsing
     std::string m_output_filename; ///< Output filename
-    std::string m_main_filename; ///< Main input filename
+    ustring m_main_filename;  ///< Main input filename
     std::string m_cwd;        ///< Current working directory
     ASTNode::ref m_shader;    ///< The shader's syntax tree
     ErrorHandler *m_errhandler; ///< Error handler
@@ -479,6 +483,8 @@ private:
     bool m_quiet;             ///< Quiet mode
     bool m_debug;             ///< Debug mode
     bool m_preprocess_only;   ///< Preprocess only?
+    bool m_generate_deps = false; ///< Generate dependencies? -MD or -MMD?
+    bool m_generate_system_deps = false; ///< Generate system header deps? -MD
     bool m_embed_source = false; ///< Embed preprocessed source in oso?
     bool m_err_on_warning;    ///< Treat warnings as errors?
     int m_optimizelevel;      ///< Optimization level
@@ -503,6 +509,8 @@ private:
     std::string* m_last_filecontents = nullptr; //< Last file contents
     int m_last_sourceline;
     size_t m_last_sourceline_offset;
+    std::string m_deps_filename; ///< Where to write deps? -MF
+    std::set<ustring> m_file_dependencies; ///< All include file dependencies
 };
 
 

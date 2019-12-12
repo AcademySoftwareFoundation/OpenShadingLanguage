@@ -64,6 +64,9 @@ usage ()
         "\t-Werror        Treat all warnings as errors\n"
         "\t-embed-source  Embed preprocessed source in the oso file\n"
         "\t-buffer        (debugging) Force compile from buffer\n"
+        "\t-MD, -MMD      Write a depfile containing headers used, to a file\n"
+        "\t-M, -MM        Like -MD, but write depfile to stdout\n"
+        "\t-MF<file>      Specify the name of the depfile to output (for -MD, -MMD)\n"
         ;
 }
 
@@ -142,19 +145,29 @@ main (int argc, const char *argv[])
             usage ();
             return EXIT_SUCCESS;
         }
-        else if (! strcmp (argv[a], "-v") ||
-                 ! strcmp (argv[a], "-q") ||
-                 ! strcmp (argv[a], "-d") ||
-                 ! strcmp (argv[a], "-E") ||
-                 ! strcmp (argv[a], "-O") || ! strcmp (argv[a], "-O0") ||
-                 ! strcmp (argv[a], "-O1") || ! strcmp (argv[a], "-O2") ||
-                 ! strcmp (argv[a], "-Werror") ||
-                 ! strcmp (argv[a], "-embed-source") ||
-                 ! strcmp (argv[a], "--embed-source")
+        else if (!strcmp(argv[a], "-q") || !strcmp(argv[a], "-v")) {
+            args.emplace_back(argv[a]);
+            quiet = (strcmp(argv[a], "-q") == 0);
+        }
+        else if (!strcmp(argv[a], "-E")
+                 || ! strcmp(argv[a], "-M") || !strcmp(argv[a], "--dependencies")
+                 || ! strcmp(argv[a], "-MM") || !strcmp(argv[a], "--user-dependencies")) {
+            args.emplace_back(argv[a]);
+            quiet = true;
+        }
+        else if (!strcmp(argv[a], "-v")
+                 || ! strcmp(argv[a], "-d")
+                 || ! strcmp(argv[a], "-O") || !strcmp(argv[a], "-O0")
+                 || ! strcmp(argv[a], "-O1") || !strcmp(argv[a], "-O2")
+                 || ! strcmp(argv[a], "-Werror")
+                 || ! strcmp(argv[a], "-embed-source")
+                 || ! strcmp(argv[a], "--embed-source")
+                 || ! strcmp(argv[a], "-MD") || !strcmp(argv[a], "--write-dependencies")
+                 || ! strcmp(argv[a], "-MMD") || !strcmp(argv[a], "--write-user-dependencies")
+                 || OIIO::Strutil::starts_with(argv[a], "-MF")
                  ) {
             // Valid command-line argument
             args.emplace_back(argv[a]);
-            quiet |= (strcmp (argv[a], "-q") == 0);
         }
         else if (! strcmp (argv[a], "-o") && a < argc-1) {
             // Output filepath

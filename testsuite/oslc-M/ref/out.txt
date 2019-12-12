@@ -1,0 +1,3 @@
+Compiled test.osl -> test.oso
+test.oso: test.osl \
+  myheader.h

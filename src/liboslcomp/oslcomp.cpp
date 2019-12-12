@@ -179,6 +179,8 @@ OSLCompilerImpl::preprocess_file (const std::string &filename,
 
 #if USE_BOOST_WAVE
 
+#error "We should no longer be using boost wave"
+
 bool
 OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
                                     const std::string &filename,
@@ -351,13 +353,13 @@ OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
     clang::PreprocessorOptions &preprocOpts = inst.getPreprocessorOpts();
     preprocOpts.UsePredefines = 0;
     preprocOpts.addMacroDef (OIIO::Strutil::sprintf("OSL_VERSION_MAJOR=%d",
-                                             OSL_LIBRARY_VERSION_MAJOR).c_str());
+                                             OSL_LIBRARY_VERSION_MAJOR));
     preprocOpts.addMacroDef (OIIO::Strutil::sprintf("OSL_VERSION_MINOR=%d",
-                                             OSL_LIBRARY_VERSION_MINOR).c_str());
+                                             OSL_LIBRARY_VERSION_MINOR));
     preprocOpts.addMacroDef (OIIO::Strutil::sprintf("OSL_VERSION_PATCH=%d",
-                                             OSL_LIBRARY_VERSION_PATCH).c_str());
+                                             OSL_LIBRARY_VERSION_PATCH));
     preprocOpts.addMacroDef (OIIO::Strutil::sprintf("OSL_VERSION=%d",
-                                             OSL_LIBRARY_VERSION_CODE).c_str());
+                                             OSL_LIBRARY_VERSION_CODE));
     for (auto&& d : defines) {
         if (d[1] == 'D')
             preprocOpts.addMacroDef (d.c_str()+2);
@@ -420,6 +422,28 @@ OSLCompilerImpl::read_compile_options (const std::vector<std::string> &options,
             m_err_on_warning = true;
         } else if (options[i] == "-embed-source" || options[i] == "--embed-source") {
             m_embed_source = true;
+        } else if (options[i] == "-MD" || options[i] == "--write-dependencies") {
+            // write depfile w/ user and system headers
+            m_generate_deps = true;
+            m_generate_system_deps = true;
+        } else if (options[i] == "-MMD" || options[i] == "--write-user-dependencies") {
+            // write depfile w/ user headers only
+            m_generate_deps = true;
+        } else if (options[i] == "-M" || options[i] == "--dependencies") {
+            // write depfile w/ user headers, implies -E and write to stdout
+            m_generate_deps = true;
+            m_preprocess_only = true;
+            m_generate_system_deps = true;
+            if (m_deps_filename.empty())
+                m_deps_filename = "stdout";
+        } else if (options[i] == "-MM" || options[i] == "--user-dependencies") {
+            // write depfile w/ user and system headers, implies -E and write to stdout
+            m_generate_deps = true;
+            m_preprocess_only = true;
+            if (m_deps_filename.empty())
+                m_deps_filename = "stdout";
+        } else if (OIIO::Strutil::starts_with(options[i], "-MF")) {
+            m_deps_filename = options[i].substr(3);
         } else if (options[i].c_str()[0] == '-' && options[i].size() > 2) {
             // options meant for the preprocessor
             if (options[i].c_str()[1] == 'D' || options[i].c_str()[1] == 'U')
@@ -522,7 +546,7 @@ OSLCompilerImpl::compile (string_view filename,
     std::vector<std::string> defines;
     std::vector<std::string> includepaths;
     m_cwd = OIIO::Filesystem::current_path();
-    m_main_filename = filename;
+    m_main_filename = ustring(filename);
     clear_filecontents_cache();
 
     read_compile_options (options, defines, includepaths);
@@ -543,7 +567,9 @@ OSLCompilerImpl::compile (string_view filename,
     if (! preprocess_file (filename, stdoslpath,
                            defines, includepaths, preprocess_result)) {
         return false;
-    } else if (m_preprocess_only) {
+    }
+
+    if (m_preprocess_only && !m_generate_deps) {
         std::cout << preprocess_result;
     } else {
         // Thread safety with the lexer/parser
@@ -563,6 +589,9 @@ OSLCompilerImpl::compile (string_view filename,
             if (shader())
                 shader()->print (std::cout);
         }
+
+        if (m_generate_deps)
+            write_dependency_file (filename);
 
         if (! error_encountered()) {
             shader()->codegen ();
@@ -616,7 +645,7 @@ OSLCompilerImpl::compile_buffer (string_view sourcecode,
     read_compile_options (options, defines, includepaths);
 
     m_cwd = OIIO::Filesystem::current_path();
-    m_main_filename = filename;
+    m_main_filename = ustring(filename);
     clear_filecontents_cache();
 
     // Determine where the installed shader include directory is, and
@@ -631,7 +660,9 @@ OSLCompilerImpl::compile_buffer (string_view sourcecode,
     if (! preprocess_buffer (sourcecode, filename, stdoslpath,
                              defines, includepaths, preprocess_result)) {
         return false;
-    } else if (m_preprocess_only) {
+    }
+
+    if (m_preprocess_only) {
         std::cout << preprocess_result;
     } else {
         // Thread safety with the lexer/parser
@@ -681,6 +712,41 @@ OSLCompilerImpl::compile_buffer (string_view sourcecode,
     }
 
     return ! error_encountered();
+}
+
+
+
+void
+OSLCompilerImpl::write_dependency_file (string_view filename)
+{
+    if (m_deps_filename.empty())
+        m_deps_filename = OIIO::Filesystem::replace_extension(filename, ".d");
+    std::string target = m_output_filename;
+    if (target.empty())
+        target = OIIO::Filesystem::replace_extension(filename, ".oso");
+
+    OIIO::debugf("Writing '%s' deps to '%s'\n", target, m_deps_filename);
+    FILE* depfile = (m_deps_filename == "stdout" ? stdout
+                     : OIIO::Filesystem::fopen (m_deps_filename, "w"));
+    if (depfile) {
+        OIIO::Strutil::fprintf(depfile, "%s: %s", target, filename);
+        for (const auto& dep : m_file_dependencies) {
+            if (OIIO::Strutil::ends_with(dep, "stdosl.h")
+                && !m_generate_system_deps)
+                continue;  // skip system headers if so instructed
+            if (OIIO::Strutil::starts_with(dep, "<"))
+                continue;  // skip pseudo files
+            if (dep == filename)
+                continue;  // skip this file, since we already put it first
+            OIIO::Strutil::fprintf(depfile, " \\\n  %s", dep);
+        }
+        OIIO::Strutil::fprintf(depfile, "\n");
+        if (depfile != stdout)
+            fclose (depfile);
+    } else {
+        errorf(ustring(), 0, "Could not open dependency file '%s' for writing",
+               m_deps_filename);
+    }
 }
 
 

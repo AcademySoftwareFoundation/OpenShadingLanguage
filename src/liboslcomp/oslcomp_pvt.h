@@ -404,7 +404,7 @@ private:
     void write_oso_metadata (const ASTNode *metanode) const;
 
     template<typename... Args>
-    inline void oso (const char* fmt, const Args&... args) const {
+    inline void osof(const char* fmt, const Args&... args) const {
         (*m_osofile) << OIIO::Strutil::sprintf (fmt, args...);
     }
 

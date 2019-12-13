@@ -998,7 +998,7 @@ OSLToyMainWindow::make_param_adjustment_row (ParamRec *param,
         typetext = OIIO::Strutil::sprintf("struct %s", param->structname);
     if (param->isoutput)
         typetext = OIIO::Strutil::sprintf("output %s", typetext);
-//    auto typeLabel = QtUtils::make_qlabel ("<i>%s</i>", typetext);
+//    auto typeLabel = QtUtils::make_qlabelf ("<i>%s</i>", typetext);
 //    layout->addWidget (typeLabel, row, 1);
     auto nameLabel = new QLabel (OIIO::Strutil::sprintf("<i>%s</i>&nbsp;  <b>%s</b>",
                                                        typetext, param->name).c_str());
@@ -1038,7 +1038,7 @@ OSLToyMainWindow::make_param_adjustment_row (ParamRec *param,
                 labeltext = string_view(&("RGB"[c]), 1);
             else
                 labeltext = string_view(&("xyz"[c]), 1);
-            auto channellabel = QtUtils::make_qlabel("%s", labeltext);
+            auto channellabel = QtUtils::make_qlabelf("%s", labeltext);
             label_and_adjust_layout->addWidget (channellabel);
             auto adjustWidget = new QtUtils::DoubleSpinBox (param->fdefault[c]);
             if (param->type == TypeDesc::TypeColor) {

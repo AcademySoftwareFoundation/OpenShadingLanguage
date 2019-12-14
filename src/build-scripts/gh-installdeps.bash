@@ -16,7 +16,6 @@ time sudo apt-get -q install -y \
     ccache \
     libboost-dev libboost-thread-dev \
     libboost-filesystem-dev libboost-regex-dev \
-    libboost-wave-dev \
     libtiff-dev \
     libilmbase-dev libopenexr-dev \
     python-dev python-numpy \

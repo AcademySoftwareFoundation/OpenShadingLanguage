@@ -43,27 +43,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/thread.h>
 
-#ifndef USE_BOOST_WAVE
-# define USE_BOOST_WAVE 0
+#if !defined(__STDC_CONSTANT_MACROS)
+#  define __STDC_CONSTANT_MACROS 1
 #endif
-#if USE_BOOST_WAVE
-# include <boost/wave.hpp>
-# include <boost/wave/cpplexer/cpp_lex_token.hpp>
-# include <boost/wave/cpplexer/cpp_lex_iterator.hpp>
-#else
-# if !defined(__STDC_CONSTANT_MACROS)
-#   define __STDC_CONSTANT_MACROS 1
-# endif
-# include <clang/Frontend/CompilerInstance.h>
-# include <clang/Frontend/TextDiagnosticPrinter.h>
-# include <clang/Frontend/Utils.h>
-# include <clang/Basic/TargetInfo.h>
-# include <clang/Lex/PreprocessorOptions.h>
-# include <llvm/Support/ToolOutputFile.h>
-# include <llvm/Support/Host.h>
-# include <llvm/Support/MemoryBuffer.h>
-# include <llvm/Support/raw_ostream.h>
-#endif
+#include <clang/Frontend/CompilerInstance.h>
+#include <clang/Frontend/TextDiagnosticPrinter.h>
+#include <clang/Frontend/Utils.h>
+#include <clang/Basic/TargetInfo.h>
+#include <clang/Lex/PreprocessorOptions.h>
+#include <llvm/Support/ToolOutputFile.h>
+#include <llvm/Support/Host.h>
+#include <llvm/Support/MemoryBuffer.h>
+#include <llvm/Support/raw_ostream.h>
 
 
 OSL_NAMESPACE_ENTER
@@ -176,116 +167,6 @@ OSLCompilerImpl::preprocess_file (const std::string &filename,
 
 
 
-#if USE_BOOST_WAVE
-
-#error "We should no longer be using boost wave"
-
-bool
-OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
-                                    const std::string &filename,
-                                    const std::string &stdoslpath,
-                                    const std::vector<std::string> &defines,
-                                    const std::vector<std::string> &includepaths,
-                                    std::string &result)
-{
-    std::ostringstream ss;
-    ss.imbue (std::locale::classic());  // force C locale
-    boost::wave::util::file_position_type current_position;
-
-    std::string instring;
-    if (!stdoslpath.empty())
-        instring = OIIO::Strutil::sprintf("#include \"%s\"\n", stdoslpath);
-    else
-        instring = "\n";
-    instring += buffer;
-
-    try {
-        typedef boost::wave::cpplexer::lex_token<> token_type;
-        typedef boost::wave::cpplexer::lex_iterator<token_type> lex_iterator_type;
-        typedef boost::wave::context<std::string::iterator, lex_iterator_type> context_type;
-
-        // Setup wave context
-        context_type ctx (instring.begin(), instring.end(), filename.c_str());
-
-        // Turn on support of variadic macros, e.g. #define FOO(...) __VA_ARGS__
-        // Turn off whitespace insertion.
-        boost::wave::language_support lang = boost::wave::language_support (
-                (ctx.get_language() | boost::wave::support_option_variadics)
-                & ~boost::wave::language_support::support_option_insert_whitespace);
-        ctx.set_language (lang);
-
-        ctx.add_macro_definition (OIIO::Strutil::sprintf("OSL_VERSION_MAJOR=%d",
-                                                  OSL_LIBRARY_VERSION_MAJOR).c_str());
-        ctx.add_macro_definition (OIIO::Strutil::sprintf("OSL_VERSION_MINOR=%d",
-                                                  OSL_LIBRARY_VERSION_MINOR).c_str());
-        ctx.add_macro_definition (OIIO::Strutil::sprintf("OSL_VERSION_PATCH=%d",
-                                                  OSL_LIBRARY_VERSION_PATCH).c_str());
-        ctx.add_macro_definition (OIIO::Strutil::sprintf("OSL_VERSION=%d",
-                                                  OSL_LIBRARY_VERSION_CODE).c_str());
-        for (size_t i = 0; i < defines.size(); ++i) {
-            if (defines[i][1] == 'D')
-                ctx.add_macro_definition (defines[i].c_str()+2);
-            else if (defines[i][1] == 'U')
-                ctx.remove_macro_definition (defines[i].c_str()+2);
-        }
-        for (size_t i = 0; i < includepaths.size(); ++i) {
-            ctx.add_sysinclude_path (includepaths[i].c_str());
-            ctx.add_include_path (includepaths[i].c_str());
-        }
-
-        context_type::iterator_type first = ctx.begin();
-        context_type::iterator_type last = ctx.end();
-
-#if 0
-        // N.B. The force_include() method is buggy, see
-        // https://svn.boost.org/trac/boost/ticket/6838
-        // It turns out that it screws up all file/line tracking therafter.
-        // So instead, we simply force a '#include "stdosl.h"' as the first
-        // line (see above) and then doctor the subsequent line numbers to
-        // subtract one in osllex.h.  Oh, the tangled web we weave when 
-        // we attempt to work around boost bugs.
-
-        // Add standard include
-        first.force_include (stdinclude.c_str(), true);
-#endif
-
-        // Get result
-        while (first != last) {
-            current_position = (*first).get_position();
-            ss << (*first).get_value();
-            ++first;
-        }
-    } catch (boost::wave::cpp_exception const& e) {
-        // Processing error, ignore pedantic last line not terminated warning
-        if (e.get_errorcode() == boost::wave::preprocess_exception::last_line_not_terminated) {
-            ss << "\n";
-        }
-        else {
-            errorf(ustring(e.file_name()), e.line_no(), "%s\n", e.description());
-            return false;
-        }
-    } catch (std::exception const& e) {
-        // STL exception
-        errorf(ustring(current_position.get_file().c_str()),
-               current_position.get_line(),
-               "preprocessor exception caught: %s\n", e.what());
-        return false;
-    } catch (...) {
-        // Other exception
-        errorf(ustring(current_position.get_file().c_str()),
-               current_position.get_line(),
-               "unexpected exception caught\n");
-        return false;
-    }
-
-    result = ss.str();
-
-    return true;
-}
-
-
-#else /* LLVM: vvvvvvvvvv */
-
 bool
 OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
                                     const std::string &filename,
@@ -384,8 +265,6 @@ OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
     }
     return true;
 }
-
-#endif
 
 
 

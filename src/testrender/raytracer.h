@@ -164,7 +164,7 @@ private:
 struct Sphere : public Primitive {
     Sphere(Vec3 c, float r, int shaderID, bool isLight)
         : Primitive(shaderID, isLight), c(c), r2(r * r) {
-        ASSERT(r > 0);
+        OSL_DASSERT(r > 0);
     }
 
     // returns distance to nearest hit or 0

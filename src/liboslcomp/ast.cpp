@@ -38,7 +38,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "osl_pvt.h"
 #include "oslcomp_pvt.h"
 
-#include <OpenImageIO/dassert.h>
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/atomic.h>
@@ -338,7 +337,7 @@ ASTshader_declaration::ASTshader_declaration (OSLCompilerImpl *comp,
 {
     // Double check some requirements of shader parameters
     for (ASTNode *arg = form;  arg;  arg = arg->nextptr()) {
-        ASSERT (arg->nodetype() == variable_declaration_node);
+        OSL_ASSERT (arg->nodetype() == variable_declaration_node);
         ASTvariable_declaration *v = (ASTvariable_declaration *)arg;
         if (! v->init())
             v->errorf("shader parameter '%s' requires a default initializer",
@@ -416,7 +415,7 @@ ASTfunction_declaration::ASTfunction_declaration (OSLCompilerImpl *comp,
             return;
         }
         argcodes += oslcompiler->code_from_type (t);
-        ASSERT (arg->nodetype() == variable_declaration_node);
+        OSL_ASSERT (arg->nodetype() == variable_declaration_node);
         ASTvariable_declaration *v = (ASTvariable_declaration *)arg;
         if (v->init())
             v->errorf("function parameter '%s' may not have a default initializer.",
@@ -473,7 +472,7 @@ void
 ASTfunction_declaration::add_meta (ref metaref)
 {
     for (ASTNode *meta = metaref.get();  meta;  meta = meta->nextptr()) {
-        ASSERT (meta->nodetype() == ASTNode::variable_declaration_node);
+        OSL_ASSERT (meta->nodetype() == ASTNode::variable_declaration_node);
         const ASTvariable_declaration *metavar = static_cast<const ASTvariable_declaration *>(meta);
         Symbol *metasym = metavar->sym();
         if (metasym->name() == "builtin") {
@@ -485,7 +484,7 @@ ASTfunction_declaration::add_meta (ref metaref)
             // For built-in functions, if any of the params are output,
             // also automatically mark it as readwrite_special_case.
             for (ASTNode *f = formals().get(); f; f = f->nextptr()) {
-                ASSERT (f->nodetype() == variable_declaration_node);
+                OSL_ASSERT (f->nodetype() == variable_declaration_node);
                 ASTvariable_declaration *v = (ASTvariable_declaration *)f;
                 if (v->is_output())
                     func()->readwrite_special_case (true);
@@ -546,7 +545,7 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
 
     if (m_initlist && init) {
         // Typecheck the init list early.
-        ASSERT (init->nodetype() == compound_initializer_node);
+        OSL_ASSERT (init->nodetype() == compound_initializer_node);
         static_cast<ASTcompound_initializer*>(init)->typecheck(type);
     }
 
@@ -581,7 +580,7 @@ ASTvariable_declaration::ASTvariable_declaration (OSLCompilerImpl *comp,
 
     // A struct really makes several subvariables
     if (type.is_structure() || type.is_structure_array()) {
-        ASSERT (! m_ismetadata);
+        OSL_ASSERT (! m_ismetadata);
         // Add the fields as individual declarations
         m_compiler->add_struct_fields (type.structspec(), m_sym->name(), symtype,
                                        type.is_unsized_array() ? -1 : type.arraylength(),
@@ -654,7 +653,7 @@ ASTvariable_ref::print (std::ostream &out, int indentlevel) const
     out << "(" << nodetypename() << " (type: "
         << (m_sym ? m_sym->typespec().string() : "unknown") << ") "
         << (m_sym ? m_sym->mangled() : m_name.string()) << ")\n";
-    DASSERT (nchildren() == 0);
+    OSL_DASSERT(nchildren() == 0);
 }
 
 
@@ -699,7 +698,7 @@ ASTindex::ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index,
 {
     // We only initialized the first child. Add more if additional arguments
     // were supplied.
-    DASSERT (index);
+    OSL_DASSERT(index);
     if (index2)
         addchild(index2);
     if (index3)
@@ -720,9 +719,9 @@ ASTindex::ASTindex (OSLCompilerImpl *comp, ASTNode *expr, ASTNode *index,
         addchild(newindex2);    index2 = newindex2.get();
     }
 
-    DASSERT (expr->nodetype() == variable_ref_node ||
+    OSL_DASSERT(expr->nodetype() == variable_ref_node ||
              expr->nodetype() == structselect_node);
-    DASSERT (m_typespec.is_unknown());
+    OSL_DASSERT(m_typespec.is_unknown());
 
     if (!index2) {
         // 1-argument: simple array a[i] or component dereference triple[c]
@@ -791,7 +790,7 @@ ASTstructselect::find_fieldsym (int &structid, int &fieldid)
 
     if (lvtype.is_color()
         && (fieldname() == "r" || fieldname() == "g" || fieldname() == "b")) {
-        ASSERT(fieldid == -1 && !m_compindex);
+        OSL_DASSERT(fieldid == -1 && !m_compindex);
         fieldid = fieldname() == "r" ? 0 : (fieldname() == "g" ? 1 : 2);
         m_compindex.reset(new ASTindex(m_compiler, lv,
                                        new ASTliteral(oslcompiler, fieldid)));
@@ -800,7 +799,7 @@ ASTstructselect::find_fieldsym (int &structid, int &fieldid)
     }
     else if (lvtype.is_vectriple()
          && (fieldname() == "x" || fieldname() == "y" || fieldname() == "z")) {
-        ASSERT(fieldid == -1 && !m_compindex);
+        OSL_DASSERT(fieldid == -1 && !m_compindex);
         fieldid = fieldname() == "x" ? 0 : (fieldname() == "y" ? 1 : 2);
         m_compindex.reset(new ASTindex(m_compiler, lv,
                                        new ASTliteral(oslcompiler, fieldid)));
@@ -857,8 +856,8 @@ ASTstructselect::find_structsym (ASTNode *structnode, ustring &structname,
     // or array of structs) down to a symbol that represents the
     // particular field.  In the process, we set structname and its
     // type structtype.
-    ASSERT (structnode->typespec().is_structure() ||
-            structnode->typespec().is_structure_array());
+    OSL_DASSERT (structnode->typespec().is_structure() ||
+                 structnode->typespec().is_structure_array());
     if (structnode->nodetype() == variable_ref_node) {
         // The structnode is a top-level struct variable
         ASTvariable_ref *var = (ASTvariable_ref *) structnode;
@@ -880,7 +879,7 @@ ASTstructselect::find_structsym (ASTNode *structnode, ustring &structname,
         structtype.make_array (0);  // clear its arrayness
     }
     else {
-        ASSERT (0 && "Malformed ASTstructselect");
+        OSL_ASSERT (0 && "Malformed ASTstructselect");
     }
 }
 
@@ -944,7 +943,9 @@ ASTloop_statement::opname () const
     case LoopWhile : return "while";
     case LoopDo    : return "dowhile";
     case LoopFor   : return "for";
-    default: ASSERT(0);
+    default:
+        OSL_ASSERT(0 && "unknown loop type");
+        return "unknown";
     }
 }
 
@@ -964,7 +965,9 @@ ASTloopmod_statement::opname () const
     switch (m_op) {
     case LoopModBreak    : return "break";
     case LoopModContinue : return "continue";
-    default: ASSERT(0);
+    default:
+        OSL_ASSERT(0 && "unknown loop modifier");
+        return "unknown";
     }
 }
 
@@ -1065,7 +1068,9 @@ ASTassign_expression::opname () const
     case Xor        : return "^=";
     case ShiftLeft  : return "<<=";
     case ShiftRight : return ">>=";
-    default: ASSERT (0 && "unknown assignment expression");
+    default:
+        OSL_ASSERT (0 && "unknown assignment expression");
+        return "="; // punt
     }
 }
 
@@ -1085,7 +1090,9 @@ ASTassign_expression::opword () const
     case Xor        : return "xor";
     case ShiftLeft  : return "shl";
     case ShiftRight : return "shr";
-    default: ASSERT (0 && "unknown assignment expression");
+    default:
+        OSL_ASSERT (0 && "unknown assignment expression");
+        return "assign"; // punt
     }
 }
 
@@ -1120,7 +1127,9 @@ ASTunary_expression::opname () const
     case Sub   : return "-";
     case Not   : return "!";
     case Compl : return "~";
-    default: ASSERT (0 && "unknown unary expression");
+    default:
+        OSL_ASSERT (0 && "unknown unary expression");
+        return "unknown";
     }
 }
 
@@ -1134,7 +1143,9 @@ ASTunary_expression::opword () const
     case Sub   : return "neg";
     case Not   : return "not";
     case Compl : return "compl";
-    default: ASSERT (0 && "unknown unary expression");
+    default:
+        OSL_ASSERT (0 && "unknown unary expression");
+        return "unknown";
     }
 }
 
@@ -1187,7 +1198,9 @@ ASTbinary_expression::opname () const
     case Or           : return "||";
     case ShiftLeft    : return "<<";
     case ShiftRight   : return ">>";
-    default: ASSERT (0 && "unknown binary expression");
+    default:
+        OSL_ASSERT (0 && "unknown binary expression");
+        return "unknown";
     }
 }
 
@@ -1215,7 +1228,9 @@ ASTbinary_expression::opword () const
     case Or           : return "or";
     case ShiftLeft    : return "shl";
     case ShiftRight   : return "shr";
-    default: ASSERT (0 && "unknown binary expression");
+    default:
+        OSL_ASSERT (0 && "unknown binary expression");
+        return "unknown";
     }
 }
 

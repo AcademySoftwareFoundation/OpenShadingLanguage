@@ -32,7 +32,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
 
-#include <OpenImageIO/dassert.h>
 #include <OpenImageIO/unittest.h>
 
 using namespace OSL;
@@ -142,5 +141,5 @@ int main(int argc, char *argv[])
 
     // FIXME: Some day, expand to more exhaustive tests of Dual
 
-    return 0;
+    return unit_test_failures;
 }

@@ -502,7 +502,7 @@ gabor (const Dual2<float> &x, const Dual2<float> &y, const NoiseParams *opt)
 OSL_HOSTDEVICE Dual2<float>
 gabor (const Dual2<Vec3> &P, const NoiseParams *opt)
 {
-    DASSERT (opt);
+    OSL_DASSERT(opt);
     GaborParams gp (*opt);
 
     if (gp.do_filter)
@@ -540,7 +540,7 @@ gabor3 (const Dual2<float> &x, const Dual2<float> &y, const NoiseParams *opt)
 OSL_HOSTDEVICE Dual2<Vec3>
 gabor3 (const Dual2<Vec3> &P, const NoiseParams *opt)
 {
-    DASSERT (opt);
+    OSL_DASSERT(opt);
     GaborParams gp (*opt);
 
     if (gp.do_filter)
@@ -582,7 +582,7 @@ pgabor (const Dual2<float> &x, const Dual2<float> &y,
 OSL_HOSTDEVICE Dual2<float>
 pgabor (const Dual2<Vec3> &P, const Vec3 &Pperiod, const NoiseParams *opt)
 {
-    DASSERT (opt);
+    OSL_DASSERT(opt);
     GaborParams gp (*opt);
 
     gp.periodic = true;
@@ -622,7 +622,7 @@ pgabor3 (const Dual2<float> &x, const Dual2<float> &y,
 OSL_HOSTDEVICE Dual2<Vec3>
 pgabor3 (const Dual2<Vec3> &P, const Vec3 &Pperiod, const NoiseParams *opt)
 {
-    DASSERT (opt);
+    OSL_DASSERT(opt);
     GaborParams gp (*opt);
 
     gp.periodic = true;

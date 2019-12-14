@@ -126,17 +126,17 @@ private:
     }
 
     static float sample_cdf(const float* data, unsigned int n, float x, unsigned int *idx, float* pdf) {
-        DASSERT(x >= 0);
-        DASSERT(x < 1);
+        OSL_DASSERT(x >= 0);
+        OSL_DASSERT(x < 1);
         *idx = std::upper_bound(data, data + n, x) - data;
-        DASSERT(*idx < n);
-        DASSERT(x < data[*idx]);
+        OSL_DASSERT(*idx < n);
+        OSL_DASSERT(x < data[*idx]);
         float scaled_sample;
         if (*idx == 0) {
             *pdf = data[0];
             scaled_sample = x / data[0];
         } else {
-            DASSERT(x >= data[*idx - 1]);
+            OSL_DASSERT(x >= data[*idx - 1]);
             *pdf = data[*idx] - data[*idx - 1];
             scaled_sample = (x - data[*idx - 1]) / (data[*idx] - data[*idx - 1]);
         }

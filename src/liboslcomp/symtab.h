@@ -162,7 +162,7 @@ public:
         else if (equivalent(type,TypeDesc::TypeVector))
             m_data = &m_val.v;
         else {
-            ASSERT (m_data == NULL);
+            OSL_DASSERT (m_data == nullptr);
             m_data = new char [type.size()];
             m_free_data = true;
         }

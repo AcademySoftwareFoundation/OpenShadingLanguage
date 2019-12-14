@@ -192,7 +192,7 @@ public:
     template<typename... Args>
     void errorf (const char* format, const Args&... args) const
     {
-        DASSERT (format && format[0]);
+        OSL_DASSERT(format && format[0]);
         error_impl (OIIO::Strutil::sprintf (format, args...));
     }
 
@@ -200,7 +200,7 @@ public:
     template<typename... Args>
     void warningf (const char* format, const Args&... args) const
     {
-        DASSERT (format && format[0]);
+        OSL_DASSERT(format && format[0]);
         warning_impl (OIIO::Strutil::sprintf (format, args...));
     }
 
@@ -208,7 +208,7 @@ public:
     template<typename... Args>
     void infof (const char* format, const Args&... args) const
     {
-        DASSERT (format && format[0]);
+        OSL_DASSERT(format && format[0]);
         info_impl (OIIO::Strutil::sprintf (format, args...));
     }
 
@@ -216,7 +216,7 @@ public:
     template<typename... Args>
     void messagef (const char* format, const Args&... args) const
     {
-        DASSERT (format && format[0]);
+        OSL_DASSERT(format && format[0]);
         message_impl (OIIO::Strutil::sprintf (format, args...));
     }
 

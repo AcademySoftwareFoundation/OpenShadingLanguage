@@ -31,7 +31,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdio>
 
 #include <OpenImageIO/strutil.h>
-#include <OpenImageIO/dassert.h>
 #include <OpenImageIO/thread.h>
 
 #include "oslexec_pvt.h"
@@ -54,7 +53,8 @@ shadertypename (ShaderType s)
     case ShaderType::Volume :       return ("volume");
     case ShaderType::Light :        return ("light");
     default:
-        ASSERT (0 && "Invalid shader type");
+        OSL_DASSERT (0 && "Invalid shader type");
+        return "unknown";
     }
 }
 

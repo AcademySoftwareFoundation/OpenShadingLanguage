@@ -154,7 +154,7 @@ public:
 
     /// Convenience function to load a string for CPU or GPU device
     llvm::Value *llvm_load_string (const Symbol& sym) {
-        DASSERT(sym.typespec().is_string());
+        OSL_DASSERT(sym.typespec().is_string());
         return use_optix()
             ? llvm_load_device_string(sym, /*follow*/ true)
             : llvm_load_value(sym);

@@ -132,7 +132,7 @@ public:
         if (!m_renderview)
             return;
 
-        ASSERT( m_image->width() == m_image->height() );
+        OSL_DASSERT( m_image->width() == m_image->height() );
         using namespace OIIO;
 
         int res = m_image->width();
@@ -253,7 +253,7 @@ class OSLToyRenderView : public QLabel {
                 lastParent = parent;
                 parent = parent->parentWidget();
             } while (parent);
-            ASSERT( lastParent != nullptr );
+            OSL_DASSERT( lastParent != nullptr );
             m_magnifier = new Magnifier(lastParent);
         }
 
@@ -971,7 +971,7 @@ OSLToyMainWindow::inventory_params ()
         OSLQuery oslquery (group.get(), i);
         for (size_t p = 0; p < oslquery.nparams(); ++p) {
             auto param = oslquery.getparam (p);
-            ASSERT (param);
+            OSL_DASSERT (param);
             m_shaderparams.push_back (std::make_shared<ParamRec>(*param));
             m_shaderparams.back()->layername = layernames[i];
         }
@@ -1196,7 +1196,7 @@ OSLToyMainWindow::rebuild_param_area ()
 void
 OSLToyMainWindow::set_error_message (int tab, const std::string& msg)
 {
-    ASSERT (tab >= 0 && tab < ntabs());
+    OSL_DASSERT (tab >= 0 && tab < ntabs());
     if (msg.size()) {
         error_displays[tab]->setTextColor (Qt::red);
         error_displays[tab]->setPlainText (msg.c_str());

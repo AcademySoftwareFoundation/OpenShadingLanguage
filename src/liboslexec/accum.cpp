@@ -29,7 +29,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/accum.h>
 #include <OSL/oslclosure.h>
 #include "lpeparse.h"
-#include <OpenImageIO/dassert.h>
 
 
 OSL_NAMESPACE_ENTER
@@ -147,7 +146,7 @@ Accumulator::Accumulator(const AccumAutomata *accauto):m_accum_automata(accauto)
 void
 Accumulator::setAov(int outidx, Aov *aov, bool neg_color, bool neg_alpha)
 {
-    ASSERT (0 <= outidx && outidx < (int) m_outputs.size());
+    OSL_ASSERT (0 <= outidx && outidx < (int) m_outputs.size());
     m_outputs[outidx].aov = aov;
     m_outputs[outidx].neg_color = neg_color;
     m_outputs[outidx].neg_alpha = neg_alpha;
@@ -158,7 +157,7 @@ Accumulator::setAov(int outidx, Aov *aov, bool neg_color, bool neg_alpha)
 void
 Accumulator::pushState()
 {
-    ASSERT (m_state >= 0);
+    OSL_ASSERT (m_state >= 0);
     m_stack.push(m_state);
 }
 
@@ -167,7 +166,7 @@ Accumulator::pushState()
 void
 Accumulator::popState()
 {
-    ASSERT (m_stack.size());
+    OSL_ASSERT (m_stack.size());
     m_state = m_stack.top();
     m_stack.pop();
 }

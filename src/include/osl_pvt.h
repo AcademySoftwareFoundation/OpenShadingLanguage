@@ -29,7 +29,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pragma once
 
 #include <memory>
-#include <OpenImageIO/dassert.h>
 
 #include <OSL/oslconfig.h>
 
@@ -202,7 +201,7 @@ public:
 
     /// Returns the length of the array, or 0 if not an array.
     int arraylength () const {
-        DASSERT_MSG (m_simple.arraylen >= 0, "Called arraylength() on "
+        OSL_DASSERT_MSG (m_simple.arraylen >= 0, "Called arraylength() on "
                      "TypeSpec of array with unspecified length (%d)", m_simple.arraylen);
         return m_simple.arraylen;
     }
@@ -210,7 +209,7 @@ public:
     /// Number of elements
     ///
     int numelements() const {
-        DASSERT_MSG (m_simple.arraylen >= 0, "Called numelements() on "
+        OSL_DASSERT_MSG (m_simple.arraylen >= 0, "Called numelements() on "
                      "TypeSpec of array with unspecified length (%d)", m_simple.arraylen);
         return std::max (1, m_simple.arraylen);
     }
@@ -520,7 +519,7 @@ public:
     /// Establish that this symbol is really an alias for another symbol.
     ///
     void alias (Symbol *other) {
-        DASSERT (other != this);  // circular alias would be bad
+        OSL_DASSERT(other != this);  // circular alias would be bad
         m_alias = other;
     }
 
@@ -671,21 +670,21 @@ public:
     bool is_constant () const { return symtype() == SymTypeConst; }
     bool is_temp () const { return symtype() == SymTypeTemp; }
 
-    // Retrieve the const float value (will ASSERT if not a const float!)
+    // Retrieve the const float value (must be a const float!)
     float get_float (int index = 0) const {
-        ASSERT (data() && typespec().is_float_based());
+        OSL_DASSERT (data() && typespec().is_float_based());
         return ((const float *)data())[index];
     }
 
-    // Retrieve the const int value (will ASSERT if not a const int!)
+    // Retrieve the const int value (must be a const int!)
     int get_int (int index = 0) const {
-        ASSERT (data() && typespec().is_int_based());
+        OSL_DASSERT (data() && typespec().is_int_based());
         return ((const int *)data())[index];
     }
 
-    // Retrieve the const string value (will ASSERT if not a const string!)
+    // Retrieve the const string value (must be a const string!)
     ustring get_string (int index = 0) const {
-        ASSERT (data() && typespec().is_string());
+        OSL_DASSERT (data() && typespec().is_string());
         return ((const ustring *)data())[index];
     }
 

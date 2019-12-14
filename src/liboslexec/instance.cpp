@@ -31,7 +31,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdio>
 #include <algorithm>
 
-#include <OpenImageIO/dassert.h>
 #include <OpenImageIO/strutil.h>
 
 #include "oslexec_pvt.h"
@@ -93,7 +92,7 @@ ShaderInstance::~ShaderInstance ()
 {
     shadingsys().m_stat_instances -= 1;
 
-    ASSERT (m_instops.size() == 0 && m_instargs.size() == 0);
+    OSL_DASSERT (m_instops.size() == 0 && m_instargs.size() == 0);
     ShadingSystemImpl &ss (shadingsys());
     off_t symmem = vectorbytes (m_instsymbols) + vectorbytes(m_instoverrides);
     off_t parammem = vectorbytes (m_iparams)
@@ -292,7 +291,7 @@ ShaderInstance::parameters (const ParamValueList &params)
                              p.interp() == ParamValue::INTERP_CONSTANT);
             so->lockgeom (lockgeom);
 
-            DASSERT (so->dataoffset() == sm->dataoffset());
+            OSL_DASSERT(so->dataoffset() == sm->dataoffset());
             so->dataoffset (sm->dataoffset());
 
             if (paramtype.is_vec3() && valuetype == TypeDesc::FLOAT) {
@@ -330,7 +329,7 @@ ShaderInstance::parameters (const ParamValueList &params)
                     so->dataoffset((int) m_sparams.size());
                     expand (m_sparams, nelements);
                 } else {
-                    ASSERT (0 && "unexpected type");
+                    OSL_DASSERT (0 && "unexpected type");
                 }
                 // FIXME: There's a tricky case that we overlook here, where
                 // an indefinite-length-array parameter is given DIFFERENT
@@ -426,7 +425,7 @@ ShaderInstance::add_connection (int srclayer, const ConnectedParam &srccon,
             so->dataoffset((int) m_sparams.size());
             expand (m_sparams, type.size());
         }*/ else {
-            ASSERT (0 && "unexpected type");
+            OSL_DASSERT (0 && "unexpected type");
         }
     }
 
@@ -478,7 +477,7 @@ ShaderInstance::evaluate_writes_globals_and_userdata_params ()
 void
 ShaderInstance::copy_code_from_master (ShaderGroup &group)
 {
-    ASSERT (m_instops.empty() && m_instargs.empty());
+    OSL_ASSERT (m_instops.empty() && m_instargs.empty());
     // reserve with enough room for a few insertions
     m_instops.reserve (master()->m_ops.size()+10);
     m_instargs.reserve (master()->m_args.size()+10);
@@ -486,14 +485,14 @@ ShaderInstance::copy_code_from_master (ShaderGroup &group)
     m_instargs = master()->m_args;
 
     // Copy the symbols from the master
-    ASSERT (m_instsymbols.size() == 0 &&
-            "should not have copied m_instsymbols yet");
+    OSL_ASSERT (m_instsymbols.size() == 0 &&
+                "should not have copied m_instsymbols yet");
     m_instsymbols = m_master->m_symbols;
 
     // Copy the instance override data
     // Also set the renderer_output flags where needed.
-    ASSERT (m_instoverrides.size() == (size_t)std::max(0,lastparam()));
-    ASSERT (m_instsymbols.size() >= (size_t)std::max(0,lastparam()));
+    OSL_ASSERT (m_instoverrides.size() == (size_t)std::max(0,lastparam()));
+    OSL_ASSERT (m_instsymbols.size() >= (size_t)std::max(0,lastparam()));
     if (m_instoverrides.size()) {
         for (size_t i = 0, e = lastparam();  i < e;  ++i) {
             Symbol *si = &m_instsymbols[i];
@@ -621,8 +620,8 @@ ShaderInstance::mergeable (const ShaderInstance &b, const ShaderGroup &g) const
 
     // Same instance overrides
     if (m_instoverrides.size() || b.m_instoverrides.size()) {
-        ASSERT (! optimized);  // should not be post-opt
-        ASSERT (m_instoverrides.size() == b.m_instoverrides.size());
+        OSL_ASSERT (! optimized);  // should not be post-opt
+        OSL_ASSERT (m_instoverrides.size() == b.m_instoverrides.size());
         for (size_t i = 0, e = m_instoverrides.size();  i < e;  ++i) {
             if ((m_instoverrides[i].valuesource() == Symbol::DefaultVal ||
                  m_instoverrides[i].valuesource() == Symbol::InstanceVal) &&
@@ -830,8 +829,8 @@ ShaderGroup::serialize () const
         bool dstsyms_exist = inst->symbols().size();
         for (int p = 0;  p < inst->lastparam(); ++p) {
             const Symbol *s = dstsyms_exist ? inst->symbol(p) : inst->mastersymbol(p);
-            ASSERT (s);
-            if (s->symtype() != SymTypeParam && s->symtype() != SymTypeOutputParam)
+            OSL_ASSERT (s);
+            if (!s || (s->symtype() != SymTypeParam && s->symtype() != SymTypeOutputParam))
                 continue;
             Symbol::ValueSource vs = dstsyms_exist ? s->valuesource()
                                                    : inst->instoverride(p)->valuesource();
@@ -861,8 +860,8 @@ ShaderGroup::serialize () const
                     for (int i = 0; i < nvals; ++i)
                         out << ' ' << '\"' << Strutil::escape_chars(vals[i]) << '\"';
                 } else {
-                    ASSERT_MSG (0, "unknown type for serialization: %s (%s)",
-                                   type.c_str(), s->typespec().c_str());
+                    OSL_ASSERT_MSG (0, "unknown type for serialization: %s (%s)",
+                                    type.c_str(), s->typespec().c_str());
                 }
                 bool lockgeom = dstsyms_exist ? s->lockgeom()
                                               : inst->instoverride(p)->lockgeom();
@@ -874,11 +873,11 @@ ShaderGroup::serialize () const
         out << "shader " << inst->shadername() << ' ' << inst->layername() << " ;\n";
         for (int c = 0, nc = inst->nconnections(); c < nc; ++c) {
             const Connection &con (inst->connection(c));
-            ASSERT (con.srclayer >= 0);
+            OSL_ASSERT (con.srclayer >= 0);
             const ShaderInstance *srclayer = m_layers[con.srclayer].get();
-            ASSERT (srclayer);
+            OSL_ASSERT (srclayer);
             ustring srclayername = srclayer->layername();
-            ASSERT (con.src.param >= 0 && con.dst.param >= 0);
+            OSL_ASSERT (con.src.param >= 0 && con.dst.param >= 0);
             bool srcsyms_exist = srclayer->symbols().size();
             ustring srcparam = srcsyms_exist ? srclayer->symbol(con.src.param)->name()
                                              : srclayer->mastersymbol(con.src.param)->name();
@@ -886,8 +885,8 @@ ShaderGroup::serialize () const
                                              : inst->mastersymbol(con.dst.param)->name();
             // FIXME: Assertions to be sure we don't yet support individual
             // channel or array element connections. Fix eventually.
-            ASSERT (con.src.arrayindex == -1 && con.src.channel == -1);
-            ASSERT (con.dst.arrayindex == -1 && con.dst.channel == -1);
+            OSL_ASSERT (con.src.arrayindex == -1 && con.src.channel == -1);
+            OSL_ASSERT (con.dst.arrayindex == -1 && con.dst.channel == -1);
             out << "connect " <<  srclayername << '.' << srcparam << ' '
                 << inst->layername() << '.' << dstparam << " ;\n";
         }

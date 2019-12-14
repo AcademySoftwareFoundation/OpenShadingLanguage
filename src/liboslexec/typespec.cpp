@@ -32,7 +32,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <memory>
 
 #include <OpenImageIO/strutil.h>
-#include <OpenImageIO/dassert.h>
 #include <OpenImageIO/thread.h>
 
 #include "oslexec_pvt.h"
@@ -108,12 +107,14 @@ TypeSpec::structure_id (const char *name, bool add)
     std::vector<std::shared_ptr<StructSpec> > & m_structs (struct_list());
     ustring n (name);
     for (int i = (int)m_structs.size()-1;  i > 0;  --i) {
-        ASSERT ((int)m_structs.size() > i);
         if (m_structs[i] && m_structs[i]->name() == n)
             return i;
     }
     if (add) {
-        ASSERT (m_structs.size() < 0x8000 && "more struct id's than fit in a short!");
+        if (m_structs.size() >= 0x8000) {
+            OSL_ASSERT(0 && "more struct id's than fit in a short!");
+            return 0;
+        }
         int id = new_struct (new StructSpec (n, 0));
         return id;
     }
@@ -137,7 +138,7 @@ TypeSpec::new_struct (StructSpec *n)
 bool
 equivalent (const StructSpec *a, const StructSpec *b)
 {
-    ASSERT (a && b);
+    OSL_DASSERT (a && b);
     if (a->numfields() != b->numfields())
         return false;
     for (size_t i = 0;  i < (size_t)a->numfields();  ++i)

@@ -30,7 +30,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <cstdio>
 
-#include <OpenImageIO/dassert.h>
 #include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/timer.h>
 #include <OpenImageIO/thread.h>
@@ -119,12 +118,12 @@ ShadingContext::execute_init (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
     clear_runtime_stats ();
 
     if (run) {
+        RunLLVMGroupFunc run_func = sgroup.llvm_compiled_init();
+        if (!run_func)
+            return false;
         ssg.context = this;
         ssg.renderer = renderer();
         ssg.Ci = NULL;
-        RunLLVMGroupFunc run_func = sgroup.llvm_compiled_init();
-        DASSERT (run_func);
-        DASSERT (sgroup.llvm_groupdata_size() <= m_heap.size());
         run_func (&ssg, &m_heap[0]);
     }
 
@@ -138,8 +137,9 @@ ShadingContext::execute_init (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
 bool
 ShadingContext::execute_layer (ShaderGlobals &ssg, int layernumber)
 {
-    DASSERT (group() && group()->nlayers() && !group()->does_nothing());
-    DASSERT (ssg.context == this && ssg.renderer == renderer());
+    if (!group() || group()->nlayers() == 0 || group()->does_nothing())
+        return false;
+    OSL_DASSERT(ssg.context == this && ssg.renderer == renderer());
 
     int profile = shadingsys().m_profile;
     OIIO::Timer timer (profile ? OIIO::Timer::StartNow : OIIO::Timer::DontStartNow);
@@ -289,7 +289,6 @@ ShadingContext::symbol_data (const Symbol &sym) const
     // doesn't live on the heap
     if ((sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) &&
         (sym.valuesource() == Symbol::DefaultVal || sym.valuesource() == Symbol::InstanceVal)) {
-        ASSERT (sym.data());
         return sym.data() ? sym.data() : NULL;
     }
 

@@ -186,14 +186,14 @@ struct ParamStorage {
     ParamStorage() : fparamindex(0), iparamindex(0), sparamindex(0) {}
 
     void* Int(int i) {
-        ASSERT(iparamindex < N);
+        OSL_DASSERT(iparamindex < N);
         iparamdata[iparamindex] = i;
         iparamindex++;
         return &iparamdata[iparamindex - 1];
     }
 
     void* Float(float f) {
-        ASSERT(fparamindex < N);
+        OSL_DASSERT(fparamindex < N);
         fparamdata[fparamindex] = f;
         fparamindex++;
         return &fparamdata[fparamindex - 1];
@@ -207,7 +207,7 @@ struct ParamStorage {
     }
 
     void* Str(const char* str) {
-        ASSERT(sparamindex < N);
+        OSL_DASSERT(sparamindex < N);
         sparamdata[sparamindex] = ustring(str);
         sparamindex++;
         return &sparamdata[sparamindex - 1];

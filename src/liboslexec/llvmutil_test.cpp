@@ -28,11 +28,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/typedesc.h>
 #include <OpenImageIO/ustring.h>
-#include <OpenImageIO/dassert.h>
 
 #include <OpenImageIO/argparse.h>
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/sysutil.h>
+#include <OpenImageIO/unittest.h>
 #include <OSL/llvm_util.h>
 
 
@@ -115,7 +115,7 @@ test_int_func ()
     // Call it:
     int result = myadd (13, 29);
     std::cout << "The result is " << result << "\n";
-    ASSERT (result == 42);
+    OIIO_CHECK_EQUAL (result, 42);
 }
 
 
@@ -172,7 +172,9 @@ test_triple_func ()
     float r[3], a[3] = { 1.0, 2.0, 3.0 }, b = 42.0;
     f (r, a, b);
     std::cout << "The result is " << r[0] << ' ' << r[1] << ' ' << r[2] << "\n";
-    ASSERT (r[0] == 42.0 && r[1] == 84.0 && r[2] == 126.0);
+    OIIO_CHECK_EQUAL (r[0], 42.0);
+    OIIO_CHECK_EQUAL (r[1], 84.0);
+    OIIO_CHECK_EQUAL (r[2], 126.0);
     }
 }
 
@@ -247,12 +249,12 @@ main (int argc, char *argv[])
         for (int i = 0; i < memtest; ++i) {
             IntFuncOfTwoInts f = test_big_func (i==0);
             int r = f (42, 42);
-            ASSERT (r == 84);
+            OIIO_CHECK_EQUAL (r, 84);
         }
         std::cout << "After " << memtest << " stupid functions compiled:\n";
         std::cout << "   RSS memory = "
                   << OIIO::Strutil::memformat(OIIO::Sysutil::memory_used()) << "\n";
     }
 
-    return 0;
+    return unit_test_failures;
 }

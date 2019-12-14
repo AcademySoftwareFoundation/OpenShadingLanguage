@@ -55,8 +55,8 @@ public:
     // standard containers.  When C++11 is uniquitous, unique_ptr is the
     // one that should really be used.
 
-    const Partio::ParticlesData* read_access() const { DASSERT(!m_write); return m_partio_cloud; }
-    Partio::ParticlesDataMutable* write_access() const { DASSERT(m_write); return m_partio_cloud; }
+    const Partio::ParticlesData* read_access() const { OSL_DASSERT(!m_write); return m_partio_cloud; }
+    Partio::ParticlesDataMutable* write_access() const { OSL_DASSERT(m_write); return m_partio_cloud; }
 
     ustring m_filename;
 private:
@@ -265,8 +265,8 @@ RendererServices::pointcloud_search (ShaderGlobals *sg,
             return 0;   // No "position" attribute -- fail
     }
 
-    ASSERT (sizeof(size_t) == sizeof(Partio::ParticleIndex) &&
-            "Only will work if Partio ParticleIndex is the size of a size_t");
+    static_assert (sizeof(size_t) == sizeof(Partio::ParticleIndex),
+                   "Partio ParticleIndex should be the size of a size_t");
     // FIXME -- if anybody cares about an architecture in which that is not
     // the case, we can easily allocate local space to retrieve the indices,
     // then copy them back to the caller's indices.
@@ -384,7 +384,7 @@ RendererServices::pointcloud_get (ShaderGlobals *sg,
     }
 
     static_assert (sizeof(size_t) == sizeof(Partio::ParticleIndex),
-            "Only will work if Partio ParticleIndex is the size of a size_t");
+                   "Partio ParticleIndex should be the size of a size_t");
     // FIXME -- if anybody cares about an architecture in which that is not
     // the case, we can easily allocate local space to retrieve the indices,
     // then copy them back to the caller's indices.

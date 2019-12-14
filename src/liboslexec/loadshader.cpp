@@ -35,7 +35,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "osoreader.h"
 
 #include <OpenImageIO/strutil.h>
-#include <OpenImageIO/dassert.h>
 #include <OpenImageIO/timer.h>
 #include <OpenImageIO/thread.h>
 #include <OpenImageIO/filesystem.h>
@@ -172,7 +171,7 @@ OSOReaderToMaster::symbol (SymType symtype, TypeSpec typespec, const char *name_
             sym.dataoffset ((int) m_master->m_sdefaults.size());
             expand (m_master->m_sdefaults, nvals);
         } else {
-            ASSERT (0 && "unexpected type");
+            OSL_DASSERT (0 && "unexpected type");
         }
     }
     if (sym.symtype() == SymTypeConst) {
@@ -186,7 +185,7 @@ OSOReaderToMaster::symbol (SymType symtype, TypeSpec typespec, const char *name_
             sym.dataoffset ((int) m_master->m_sconsts.size());
             expand (m_master->m_sconsts, nvals);
         } else {
-            ASSERT (0 && "unexpected type");
+            OSL_DASSERT (0 && "unexpected type");
         }
     }
 #if 0
@@ -241,7 +240,7 @@ OSOReaderToMaster::add_param_default (const char *def, size_t offset, const Symb
 void
 OSOReaderToMaster::symdefault (int def)
 {
-    ASSERT (m_master->m_symbols.size() && "symdefault but no sym");
+    OSL_DASSERT (m_master->m_symbols.size() && "symdefault but no sym");
     Symbol &sym (m_master->m_symbols.back());
     size_t offset = sym.dataoffset() + m_sym_default_index;
     ++m_sym_default_index;
@@ -252,7 +251,8 @@ OSOReaderToMaster::symdefault (int def)
         else if (sym.typespec().simpletype().basetype == TypeDesc::INT)
             add_param_default (def, offset, sym);
         else {
-            ASSERT (0 && "unexpected type");
+            OSL_DASSERT_MSG (0, "unexpected type: %s (%s)",
+                             sym.typespec().c_str(), sym.name().c_str());
         }
     } else if (sym.symtype() == SymTypeConst) {
         if (sym.typespec().simpletype().basetype == TypeDesc::FLOAT)
@@ -260,7 +260,8 @@ OSOReaderToMaster::symdefault (int def)
         else if (sym.typespec().simpletype().basetype == TypeDesc::INT)
             m_master->m_iconsts[offset] = def;
         else {
-            ASSERT (0 && "unexpected type");
+            OSL_DASSERT_MSG (0, "unexpected type: %s (%s)",
+                             sym.typespec().c_str(), sym.name().c_str());
         }
     }
 }
@@ -270,7 +271,7 @@ OSOReaderToMaster::symdefault (int def)
 void
 OSOReaderToMaster::symdefault (float def)
 {
-    ASSERT (m_master->m_symbols.size() && "symdefault but no sym");
+    OSL_DASSERT (m_master->m_symbols.size() && "symdefault but no sym");
     Symbol &sym (m_master->m_symbols.back());
     size_t offset = sym.dataoffset() + m_sym_default_index;
     ++m_sym_default_index;
@@ -278,14 +279,15 @@ OSOReaderToMaster::symdefault (float def)
         if (sym.typespec().simpletype().basetype == TypeDesc::FLOAT)
             add_param_default (def, offset, sym);
         else {
-            ASSERT (0 && "unexpected type");
+            OSL_DASSERT_MSG (0, "unexpected type: %s (%s)",
+                             sym.typespec().c_str(), sym.name().c_str());
         }
     } else if (sym.symtype() == SymTypeConst) {
         if (sym.typespec().simpletype().basetype == TypeDesc::FLOAT)
             m_master->m_fconsts[offset] = def;
         else {
-            ASSERTMSG (0, "unexpected type: %s (%s)",
-                       sym.typespec().c_str(), sym.name().c_str());
+            OSL_DASSERT_MSG (0, "unexpected type: %s (%s)",
+                             sym.typespec().c_str(), sym.name().c_str());
         }
     }
 }
@@ -295,7 +297,7 @@ OSOReaderToMaster::symdefault (float def)
 void
 OSOReaderToMaster::symdefault (const char *def)
 {
-    ASSERT (m_master->m_symbols.size() && "symdefault but no sym");
+    OSL_DASSERT (m_master->m_symbols.size() && "symdefault but no sym");
     Symbol &sym (m_master->m_symbols.back());
     size_t offset = sym.dataoffset() + m_sym_default_index;
     ++m_sym_default_index;
@@ -303,15 +305,15 @@ OSOReaderToMaster::symdefault (const char *def)
         if (sym.typespec().simpletype().basetype == TypeDesc::STRING)
             add_param_default (def, offset, sym);
         else {
-            ASSERTMSG (0, "unexpected type: %s (%s)",
-                       sym.typespec().c_str(), sym.name().c_str());
+            OSL_DASSERT_MSG (0, "unexpected type: %s (%s)",
+                             sym.typespec().c_str(), sym.name().c_str());
         }
     } else if (sym.symtype() == SymTypeConst) {
         if (sym.typespec().simpletype().basetype == TypeDesc::STRING)
             m_master->m_sconsts[offset] = ustring(def);
         else {
-            ASSERTMSG (0, "unexpected type: %s (%s)",
-                       sym.typespec().c_str(), sym.name().c_str());
+            OSL_DASSERT_MSG (0, "unexpected type: %s (%s)",
+                             sym.typespec().c_str(), sym.name().c_str());
         }
     }
 }
@@ -321,7 +323,7 @@ OSOReaderToMaster::symdefault (const char *def)
 void
 OSOReaderToMaster::parameter_done ()
 {
-  ASSERT (m_master->m_symbols.size() && "parameter_done but no sym");
+  OSL_DASSERT (m_master->m_symbols.size() && "parameter_done but no sym");
   Symbol &sym (m_master->m_symbols.back());
 
   // set length of unsized array parameters
@@ -586,7 +588,7 @@ ShadingSystemImpl::loadshader (string_view cname)
         ++m_stat_shaders_loaded;
         infof("Loaded \"%s\" (took %s)", filename,
               Strutil::timeintervalformat(loadtime, 2));
-        ASSERT (r);
+        OSL_DASSERT (r);
         r->resolve_syms ();
         // if (debug()) {
         //     std::string s = r->print ();
@@ -639,7 +641,7 @@ ShadingSystemImpl::LoadMemoryCompiledShader (string_view shadername,
         ++m_stat_shaders_loaded;
         infof("Loaded \"%s\" (took %s)", shadername,
               Strutil::timeintervalformat(loadtime, 2));
-        ASSERT (r);
+        OSL_DASSERT (r);
         r->resolve_syms ();
         // if (debug()) {
         //     std::string s = r->print ();

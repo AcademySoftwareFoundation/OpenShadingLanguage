@@ -227,8 +227,8 @@ LLVMGEN (llvm_gen_nop)
 
 LLVMGEN (llvm_gen_useparam)
 {
-    ASSERT (! rop.inst()->unused() &&
-            "oops, thought this layer was unused, why do we call it?");
+    OSL_DASSERT (! rop.inst()->unused() &&
+                 "oops, thought this layer was unused, why do we call it?");
 
     // If we have multiple params needed on this statement, don't waste
     // time checking the same upstream layer more than once.
@@ -320,7 +320,7 @@ LLVMGEN (llvm_gen_printf)
             std::string ourformat (oldfmt, format);  // straddle the format
             // Doctor it to fix mismatches between format and data
             Symbol& sym (*rop.opargsym (op, arg));
-            ASSERT (! sym.typespec().is_structure_based());
+            OSL_ASSERT (! sym.typespec().is_structure_based());
 
             TypeDesc simpletype (sym.typespec().simpletype());
             int num_elements = simpletype.numelements();
@@ -468,9 +468,9 @@ LLVMGEN (llvm_gen_add)
     Symbol& A = *rop.opargsym (op, 1);
     Symbol& B = *rop.opargsym (op, 2);
 
-    ASSERT (! A.typespec().is_array() && ! B.typespec().is_array());
+    OSL_DASSERT (! A.typespec().is_array() && ! B.typespec().is_array());
     if (Result.typespec().is_closure()) {
-        ASSERT (A.typespec().is_closure() && B.typespec().is_closure());
+        OSL_DASSERT (A.typespec().is_closure() && B.typespec().is_closure());
         llvm::Value *valargs[] = {
             rop.sg_void_ptr(),
             rop.llvm_load_value (A),
@@ -525,7 +525,7 @@ LLVMGEN (llvm_gen_sub)
     TypeDesc type = Result.typespec().simpletype();
     int num_components = type.aggregate;
 
-    ASSERT (! Result.typespec().is_closure_based() &&
+    OSL_DASSERT (! Result.typespec().is_closure_based() &&
             "subtraction of closures not supported");
 
     // The following should handle f-f, v-v, v-f, f-v, i-i
@@ -597,14 +597,14 @@ LLVMGEN (llvm_gen_mul)
                 rop.llvm_call_function ("osl_mul_m_ff", Result, A, B);
             else if (B.typespec().is_matrix())
                 rop.llvm_call_function ("osl_mul_mf", Result, B, A);
-            else ASSERT(0);
+            else OSL_DASSERT(0);
         } else if (A.typespec().is_matrix()) {
             if (B.typespec().is_float())
                 rop.llvm_call_function ("osl_mul_mf", Result, A, B);
             else if (B.typespec().is_matrix())
                 rop.llvm_call_function ("osl_mul_mm", Result, A, B);
-            else ASSERT(0);
-        } else ASSERT (0);
+            else OSL_DASSERT(0);
+        } else OSL_DASSERT (0);
         if (Result.has_derivs())
             rop.llvm_zero_derivs (Result);
         return true;
@@ -622,7 +622,7 @@ LLVMGEN (llvm_gen_mul)
 
         if (Result.has_derivs() && (A.has_derivs() || B.has_derivs())) {
             // Multiplication of duals: (a*b, a*b.dx + a.dx*b, a*b.dy + a.dy*b)
-            ASSERT (is_float);
+            OSL_DASSERT (is_float);
             llvm::Value *ax = rop.llvm_load_value (A, 1, i, type);
             llvm::Value *bx = rop.llvm_load_value (B, 1, i, type);
             llvm::Value *abx = rop.ll.op_mul (a, bx);
@@ -659,7 +659,7 @@ LLVMGEN (llvm_gen_div)
     bool is_float = Result.typespec().is_floatbased();
     int num_components = type.aggregate;
 
-    ASSERT (! Result.typespec().is_closure_based());
+    OSL_DASSERT (! Result.typespec().is_closure_based());
 
     // division involving matrices
     if (Result.typespec().is_matrix()) {
@@ -668,14 +668,14 @@ LLVMGEN (llvm_gen_div)
                 rop.llvm_call_function ("osl_div_m_ff", Result, A, B);
             else if (B.typespec().is_matrix())
                 rop.llvm_call_function ("osl_div_fm", Result, A, B);
-            else ASSERT (0);
+            else OSL_DASSERT (0);
         } else if (A.typespec().is_matrix()) {
             if (B.typespec().is_float())
                 rop.llvm_call_function ("osl_div_mf", Result, A, B);
             else if (B.typespec().is_matrix())
                 rop.llvm_call_function ("osl_div_mm", Result, A, B);
-            else ASSERT (0);
-        } else ASSERT (0);
+            else OSL_DASSERT (0);
+        } else OSL_DASSERT (0);
         if (Result.has_derivs())
             rop.llvm_zero_derivs (Result);
         return true;
@@ -699,7 +699,7 @@ LLVMGEN (llvm_gen_div)
 
         if (deriv) {
             // Division of duals: (a/b, 1/b*(ax-a/b*bx), 1/b*(ay-a/b*by))
-            ASSERT (is_float);
+            OSL_DASSERT (is_float);
             llvm::Value *binv;
             if (B.is_constant() && ! rop.is_zero(B))
                 binv = rop.ll.op_div (rop.ll.constant(1.0f), b);
@@ -769,7 +769,7 @@ LLVMGEN (llvm_gen_modulus)
     }
 
     if (Result.has_derivs()) {
-        ASSERT (is_float);
+        OSL_DASSERT (is_float);
         if (A.has_derivs()) {
             // Modulus of duals: (a mod b, ax, ay)
             for (int d = 1;  d <= 2;  ++d) {
@@ -863,8 +863,8 @@ LLVMGEN (llvm_gen_mix)
     Symbol& B = *rop.opargsym (op, 2);
     Symbol& X = *rop.opargsym (op, 3);
     TypeDesc type = Result.typespec().simpletype();
-    ASSERT (!Result.typespec().is_closure_based() &&
-            Result.typespec().is_floatbased());
+    OSL_DASSERT (!Result.typespec().is_closure_based() &&
+                 Result.typespec().is_floatbased());
     int num_components = type.aggregate;
     int x_components = X.typespec().aggregate();
     bool derivs = (Result.has_derivs() &&
@@ -947,7 +947,7 @@ LLVMGEN (llvm_gen_select)
     Symbol& B = *rop.opargsym (op, 2);
     Symbol& X = *rop.opargsym (op, 3);
     TypeDesc type = Result.typespec().simpletype();
-    ASSERT (!Result.typespec().is_closure_based() &&
+    OSL_DASSERT (!Result.typespec().is_closure_based() &&
             Result.typespec().is_floatbased());
     int num_components = type.aggregate;
     int x_components = X.typespec().aggregate();
@@ -1031,7 +1031,7 @@ LLVMGEN (llvm_gen_bitwise_binary_op)
     Symbol& Result = *rop.opargsym (op, 0);
     Symbol& A = *rop.opargsym (op, 1);
     Symbol& B = *rop.opargsym (op, 2);
-    ASSERT (Result.typespec().is_int() && A.typespec().is_int() && 
+    OSL_DASSERT (Result.typespec().is_int() && A.typespec().is_int() && 
             B.typespec().is_int());
 
     llvm::Value *a = rop.loadLLVMValue (A);
@@ -1081,7 +1081,7 @@ LLVMGEN (llvm_gen_unary_op)
         ustring opname = op.opname();
 
         if (opname == op_compl) {
-            ASSERT (dst.typespec().is_int());
+            OSL_DASSERT (dst.typespec().is_int());
             result = rop.ll.op_not (src_val);
         } else {
             // Don't know how to handle this.
@@ -1158,7 +1158,6 @@ LLVMGEN (llvm_gen_compref)
                                     rop.ll.constant(rop.inst()->layername()),
                                     rop.ll.constant(rop.inst()->shadername()) };
             c = rop.ll.call_function ("osl_range_check", args);
-            ASSERT (c);
         }
     }
 
@@ -1316,7 +1315,7 @@ LLVMGEN (llvm_gen_arraylength)
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol& Result = *rop.opargsym (op, 0);
     Symbol& A = *rop.opargsym (op, 1);
-    DASSERT (Result.typespec().is_int() && A.typespec().is_array());
+    OSL_DASSERT(Result.typespec().is_int() && A.typespec().is_array());
 
     int len = A.typespec().is_unsized_array() ? A.initializers()
                                               : A.typespec().arraylength();
@@ -1411,8 +1410,8 @@ LLVMGEN (llvm_gen_aassign)
     } else {
         // Try to warn before llvm_fatal_error is called which provides little
         // context as to what went wrong.
-        ASSERT (Result.typespec().simpletype().basetype ==
-                Src.typespec().simpletype().basetype);
+        OSL_ASSERT (Result.typespec().simpletype().basetype ==
+                    Src.typespec().simpletype().basetype);
     }
 
     for (int d = 0;  d <= 2;  ++d) {
@@ -1440,9 +1439,9 @@ LLVMGEN (llvm_gen_construct_color)
     Symbol& X = *rop.opargsym (op, 1+using_space);
     Symbol& Y = *rop.opargsym (op, 2+using_space);
     Symbol& Z = *rop.opargsym (op, 3+using_space);
-    ASSERT (Result.typespec().is_triple() && X.typespec().is_float() &&
-            Y.typespec().is_float() && Z.typespec().is_float() &&
-            (using_space == false || Space.typespec().is_string()));
+    OSL_DASSERT (Result.typespec().is_triple() && X.typespec().is_float() &&
+                 Y.typespec().is_float() && Z.typespec().is_float() &&
+                 (using_space == false || Space.typespec().is_string()));
 
     // First, copy the floats into the vector
     int dmax = Result.has_derivs() ? 3 : 1;
@@ -1485,9 +1484,9 @@ LLVMGEN (llvm_gen_construct_triple)
     Symbol& X = *rop.opargsym (op, 1+using_space);
     Symbol& Y = *rop.opargsym (op, 2+using_space);
     Symbol& Z = *rop.opargsym (op, 3+using_space);
-    ASSERT (Result.typespec().is_triple() && X.typespec().is_float() &&
-            Y.typespec().is_float() && Z.typespec().is_float() &&
-            (using_space == false || Space.typespec().is_string()));
+    OSL_DASSERT (Result.typespec().is_triple() && X.typespec().is_float() &&
+                 Y.typespec().is_float() && Z.typespec().is_float() &&
+                 (using_space == false || Space.typespec().is_string()));
 
     // First, copy the floats into the vector
     int dmax = Result.has_derivs() ? 3 : 1;
@@ -1550,7 +1549,7 @@ LLVMGEN (llvm_gen_matrix)
     bool using_space = (nargs == 3 || nargs == 18);
     bool using_two_spaces = (nargs == 3 && rop.opargsym(op,2)->typespec().is_string());
     int nfloats = nargs - 1 - (int)using_space;
-    ASSERT (nargs == 2 || nargs == 3 || nargs == 17 || nargs == 18);
+    OSL_DASSERT (nargs == 2 || nargs == 3 || nargs == 17 || nargs == 18);
 
     if (using_two_spaces) {
         llvm::Value *args[] = {
@@ -1574,7 +1573,7 @@ LLVMGEN (llvm_gen_matrix)
                 rop.llvm_store_value (src_val, Result, 0, i);
             }
         } else {
-            ASSERT (0);
+            OSL_ASSERT (0);
         }
         if (using_space) {
             llvm::Value *args[] = {
@@ -1597,7 +1596,7 @@ LLVMGEN (llvm_gen_getmatrix)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
     int nargs = op.nargs();
-    ASSERT (nargs == 4);
+    OSL_DASSERT (nargs == 4);
     Symbol& Result = *rop.opargsym (op, 0);
     Symbol& From = *rop.opargsym (op, 1);
     Symbol& To = *rop.opargsym (op, 2);
@@ -1683,7 +1682,7 @@ LLVMGEN (llvm_gen_transform)
 LLVMGEN (llvm_gen_transformc)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
-    ASSERT (op.nargs() == 4);
+    OSL_DASSERT (op.nargs() == 4);
     Symbol *Result = rop.opargsym (op, 0);
     Symbol *From = rop.opargsym (op, 1);
     Symbol *To = rop.opargsym (op, 2);
@@ -1753,7 +1752,7 @@ LLVMGEN (llvm_gen_filterwidth)
     Symbol& Result (*rop.opargsym (op, 0));
     Symbol& Src (*rop.opargsym (op, 1));
 
-    ASSERT (Src.typespec().is_float() || Src.typespec().is_triple());
+    OSL_DASSERT (Src.typespec().is_float() || Src.typespec().is_triple());
     if (Src.has_derivs()) {
         if (Src.typespec().is_float()) {
             llvm::Value *r = rop.ll.call_function ("osl_filterwidth_fdf",
@@ -1783,11 +1782,11 @@ LLVMGEN (llvm_gen_compare_op)
     Symbol &Result (*rop.opargsym (op, 0));
     Symbol &A (*rop.opargsym (op, 1));
     Symbol &B (*rop.opargsym (op, 2));
-    ASSERT (Result.typespec().is_int() && ! Result.has_derivs());
+    OSL_DASSERT (Result.typespec().is_int() && ! Result.has_derivs());
 
     if (A.typespec().is_closure()) {
-        ASSERT (B.typespec().is_int() &&
-                "Only closure==0 and closure!=0 allowed");
+        OSL_ASSERT (B.typespec().is_int() &&
+                    "Only closure==0 and closure!=0 allowed");
         llvm::Value *a = rop.llvm_load_value (A);
         llvm::Value *b = rop.ll.void_ptr_null ();
         llvm::Value *r = (op.opname()==op_eq) ? rop.ll.op_eq(a,b)
@@ -1806,7 +1805,8 @@ LLVMGEN (llvm_gen_compare_op)
     ustring opname = op.opname();
 
     if (rop.use_optix() && A.typespec().is_string()) {
-        ASSERT (B.typespec().is_string() && "Only string-to-string comparison is supported");
+        OSL_DASSERT (B.typespec().is_string()
+                     && "Only string-to-string comparison is supported");
 
         llvm::Value* a = rop.llvm_load_device_string (A, /*follow*/ true);
         llvm::Value* b = rop.llvm_load_device_string (B, /*follow*/ true);
@@ -1817,9 +1817,9 @@ LLVMGEN (llvm_gen_compare_op)
             final_result = rop.ll.op_ne (a, b);
         } else {
             // Don't know how to handle this.
-            ASSERT (0 && "OptiX only supports equality testing for strings");
+            OSL_ASSERT (0 && "OptiX only supports equality testing for strings");
         }
-        ASSERT (final_result);
+        OSL_ASSERT (final_result);
 
         final_result = rop.ll.op_bool_to_int (final_result);
         rop.storeLLVMValue (final_result, Result, 0, 0);
@@ -1859,9 +1859,9 @@ LLVMGEN (llvm_gen_compare_op)
             result = rop.ll.op_ne (a, b);
         } else {
             // Don't know how to handle this.
-            ASSERT (0 && "Comparison error");
+            OSL_ASSERT (0 && "Comparison error");
         }
-        ASSERT (result);
+        OSL_DASSERT (result);
 
         if (final_result) {
             // Combine the component bool based on the op
@@ -1873,7 +1873,7 @@ LLVMGEN (llvm_gen_compare_op)
             final_result = result;
         }
     }
-    ASSERT (final_result);
+    OSL_ASSERT (final_result);
 
     // Convert the single bit bool into an int for now.
     final_result = rop.ll.op_bool_to_int (final_result);
@@ -1891,18 +1891,18 @@ LLVMGEN (llvm_gen_regex)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
     int nargs = op.nargs();
-    ASSERT (nargs == 3 || nargs == 4);
+    OSL_DASSERT (nargs == 3 || nargs == 4);
     Symbol &Result (*rop.opargsym (op, 0));
     Symbol &Subject (*rop.opargsym (op, 1));
     bool do_match_results = (nargs == 4);
     bool fullmatch = (op.opname() == "regex_match");
     Symbol &Match (*rop.opargsym (op, 2));
     Symbol &Pattern (*rop.opargsym (op, 2+do_match_results));
-    ASSERT (Result.typespec().is_int() && Subject.typespec().is_string() &&
-            Pattern.typespec().is_string());
-    ASSERT (!do_match_results || 
-            (Match.typespec().is_array() &&
-             Match.typespec().elementtype().is_int()));
+    OSL_DASSERT (Result.typespec().is_int() && Subject.typespec().is_string() &&
+                 Pattern.typespec().is_string());
+    OSL_DASSERT (!do_match_results || 
+                 (Match.typespec().is_array() &&
+                  Match.typespec().elementtype().is_int()));
 
     llvm::Value* call_args[] = {
         rop.sg_void_ptr(),              // First arg is ShaderGlobals ptr
@@ -1983,7 +1983,7 @@ LLVMGEN (llvm_gen_generic)
             name += "s";
         else if (s->typespec().is_int())
             name += "i";
-        else ASSERT (0);
+        else OSL_ASSERT (0);
     }
 
     if (! Result.has_derivs() || ! any_deriv_args) {
@@ -1997,7 +1997,7 @@ LLVMGEN (llvm_gen_generic)
         rop.llvm_zero_derivs (Result);
     } else {
         // Cases with derivs
-        ASSERT (Result.has_derivs() && any_deriv_args);
+        OSL_ASSERT (Result.has_derivs() && any_deriv_args);
         rop.llvm_call_function (name.c_str(),
                                 cspan<const Symbol*>(args, op.nargs()),
                                 true);
@@ -2025,7 +2025,7 @@ LLVMGEN (llvm_gen_sincos)
             name += "f";
         else if (s->typespec().is_triple())
             name += "v";
-        else ASSERT (0);
+        else OSL_ASSERT (0);
     }
     // push back llvm arguments
     llvm::Value* valargs[] = {
@@ -2162,7 +2162,7 @@ LLVMGEN (llvm_gen_loop_op)
 LLVMGEN (llvm_gen_loopmod_op)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
-    DASSERT (op.nargs() == 0);
+    OSL_DASSERT(op.nargs() == 0);
     if (op.opname() == op_break) {
         rop.ll.op_branch (rop.ll.loop_after_block());
     } else {  // continue
@@ -2194,9 +2194,9 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
     Opcode &op (rop.inst()->ops()[opnum]);
     for (int a = first_optional_arg;  a < op.nargs();  ++a) {
         Symbol &Name (*rop.opargsym(op,a));
-        ASSERT (Name.typespec().is_string() &&
-                "optional texture token must be a string");
-        ASSERT (a+1 < op.nargs() && "malformed argument list for texture");
+        OSL_DASSERT (Name.typespec().is_string() &&
+                     "optional texture token must be a string");
+        OSL_DASSERT (a+1 < op.nargs() && "malformed argument list for texture");
         ustring name = *(ustring *)Name.data();
         ++a;  // advance to next argument
 
@@ -2401,9 +2401,9 @@ LLVMGEN (llvm_gen_texture)
     if (op.nargs() > 4 && rop.opargsym(op,4)->typespec().is_float()) {
         user_derivs = true;
         first_optional_arg = 8;
-        DASSERT (rop.opargsym(op,5)->typespec().is_float());
-        DASSERT (rop.opargsym(op,6)->typespec().is_float());
-        DASSERT (rop.opargsym(op,7)->typespec().is_float());
+        OSL_DASSERT(rop.opargsym(op,5)->typespec().is_float());
+        OSL_DASSERT(rop.opargsym(op,6)->typespec().is_float());
+        OSL_DASSERT(rop.opargsym(op,7)->typespec().is_float());
     }
 
     llvm::Value* opt;   // TextureOpt
@@ -2460,8 +2460,8 @@ LLVMGEN (llvm_gen_texture3d)
     if (op.nargs() > 3 && rop.opargsym(op,3)->typespec().is_triple()) {
         user_derivs = true;
         first_optional_arg = 5;
-        DASSERT (rop.opargsym(op,3)->typespec().is_triple());
-        DASSERT (rop.opargsym(op,4)->typespec().is_triple());
+        OSL_DASSERT(rop.opargsym(op,3)->typespec().is_triple());
+        OSL_DASSERT(rop.opargsym(op,4)->typespec().is_triple());
     }
 
     llvm::Value* opt;   // TextureOpt
@@ -2516,7 +2516,7 @@ LLVMGEN (llvm_gen_environment)
     if (op.nargs() > 3 && rop.opargsym(op,3)->typespec().is_triple()) {
         user_derivs = true;
         first_optional_arg = 5;
-        DASSERT (rop.opargsym(op,4)->typespec().is_triple());
+        OSL_DASSERT(rop.opargsym(op,4)->typespec().is_triple());
     }
 
     llvm::Value* opt;   // TextureOpt
@@ -2566,9 +2566,9 @@ llvm_gen_trace_options (BackendLLVM &rop, int opnum,
     Opcode &op (rop.inst()->ops()[opnum]);
     for (int a = first_optional_arg;  a < op.nargs();  ++a) {
         Symbol &Name (*rop.opargsym(op,a));
-        ASSERT (Name.typespec().is_string() &&
-                "optional trace token must be a string");
-        ASSERT (a+1 < op.nargs() && "malformed argument list for trace");
+        OSL_DASSERT (Name.typespec().is_string() &&
+                     "optional trace token must be a string");
+        OSL_DASSERT (a+1 < op.nargs() && "malformed argument list for trace");
         ustring name = *(ustring *)Name.data();
 
         ++a;  // advance to next argument
@@ -2646,7 +2646,7 @@ arg_typecode (Symbol *sym, bool derivs)
         name += "f";
     else if (t.is_triple())
         name += "v";
-    else ASSERT (0);
+    else OSL_ASSERT (0);
     return name;
 }
 
@@ -2662,9 +2662,9 @@ llvm_gen_noise_options (BackendLLVM &rop, int opnum,
     Opcode &op (rop.inst()->ops()[opnum]);
     for (int a = first_optional_arg;  a < op.nargs();  ++a) {
         Symbol &Name (*rop.opargsym(op,a));
-        ASSERT (Name.typespec().is_string() &&
-                "optional noise token must be a string");
-        ASSERT (a+1 < op.nargs() && "malformed argument list for noise");
+        OSL_DASSERT (Name.typespec().is_string() &&
+                     "optional noise token must be a string");
+        OSL_DASSERT (a+1 < op.nargs() && "malformed argument list for noise");
         ustring name = *(ustring *)Name.data();
 
         ++a;  // advance to next argument
@@ -2859,7 +2859,7 @@ LLVMGEN (llvm_gen_noise)
     if (pass_options)
         args[nargs++] = opt;
 
-    DASSERT(nargs < int(sizeof(args) / sizeof(args[0])));
+    OSL_DASSERT(nargs < int(sizeof(args) / sizeof(args[0])));
 
 #if 0
     llvm::outs() << "About to push " << funcname << "\n";
@@ -2907,7 +2907,7 @@ LLVMGEN (llvm_gen_getattribute)
     //   * getattribute (object, attribute_name, index, value[])
     Opcode &op (rop.inst()->ops()[opnum]);
     int nargs = op.nargs();
-    DASSERT (nargs >= 3 && nargs <= 5);
+    OSL_DASSERT(nargs >= 3 && nargs <= 5);
 
     bool array_lookup = rop.opargsym(op,nargs-2)->typespec().is_int();
     bool object_lookup = rop.opargsym(op,2)->typespec().is_string() && nargs >= 4;
@@ -2920,7 +2920,7 @@ LLVMGEN (llvm_gen_getattribute)
     Symbol& Attribute   = *rop.opargsym (op, attrib_slot);
     Symbol& Index       = *rop.opargsym (op, index_slot);  // only valid if array_lookup is true
     Symbol& Destination = *rop.opargsym (op, nargs-1);
-    DASSERT (!Result.typespec().is_closure_based() &&
+    OSL_DASSERT(!Result.typespec().is_closure_based() &&
              !ObjectName.typespec().is_closure_based() && 
              !Attribute.typespec().is_closure_based() &&
              !Index.typespec().is_closure_based() && 
@@ -2953,14 +2953,14 @@ LLVMGEN (llvm_gen_gettextureinfo)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
 
-    DASSERT (op.nargs() == 4);
+    OSL_DASSERT(op.nargs() == 4);
 
     Symbol& Result   = *rop.opargsym (op, 0);
     Symbol& Filename = *rop.opargsym (op, 1);
     Symbol& Dataname = *rop.opargsym (op, 2);
     Symbol& Data     = *rop.opargsym (op, 3);
 
-    DASSERT (!Result.typespec().is_closure_based() &&
+    OSL_DASSERT(!Result.typespec().is_closure_based() &&
              Filename.typespec().is_string() && 
              Dataname.typespec().is_string() &&
              !Data.typespec().is_closure_based() && 
@@ -3006,14 +3006,14 @@ LLVMGEN (llvm_gen_getmessage)
     //   * getmessage (source, attribute_name, value[])
     Opcode &op (rop.inst()->ops()[opnum]);
 
-    DASSERT (op.nargs() == 3 || op.nargs() == 4);
+    OSL_DASSERT(op.nargs() == 3 || op.nargs() == 4);
     int has_source = (op.nargs() == 4);
     Symbol& Result = *rop.opargsym (op, 0);
     Symbol& Source = *rop.opargsym (op, 1);
     Symbol& Name   = *rop.opargsym (op, 1+has_source);
     Symbol& Data   = *rop.opargsym (op, 2+has_source);
-    DASSERT (Result.typespec().is_int() && Name.typespec().is_string());
-    DASSERT (has_source == 0 || Source.typespec().is_string());
+    OSL_DASSERT(Result.typespec().is_int() && Name.typespec().is_string());
+    OSL_DASSERT(has_source == 0 || Source.typespec().is_string());
 
     llvm::Value *args[9];
     args[0] = rop.sg_void_ptr();
@@ -3048,10 +3048,10 @@ LLVMGEN (llvm_gen_setmessage)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
 
-    DASSERT (op.nargs() == 2);
+    OSL_DASSERT(op.nargs() == 2);
     Symbol& Name   = *rop.opargsym (op, 0);
     Symbol& Data   = *rop.opargsym (op, 1);
-    DASSERT (Name.typespec().is_string());
+    OSL_DASSERT(Name.typespec().is_string());
 
     llvm::Value *args[7];
     args[0] = rop.sg_void_ptr();
@@ -3081,11 +3081,11 @@ LLVMGEN (llvm_gen_get_simple_SG_field)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
 
-    DASSERT (op.nargs() == 1);
+    OSL_DASSERT(op.nargs() == 1);
 
     Symbol& Result = *rop.opargsym (op, 0);
     int sg_index = rop.ShaderGlobalNameToIndex (op.opname());
-    ASSERT (sg_index >= 0);
+    OSL_DASSERT (sg_index >= 0);
     llvm::Value *sg_field = rop.ll.GEP (rop.sg_ptr(), 0, sg_index);
     llvm::Value* r = rop.ll.op_load(sg_field);
     rop.llvm_store_value (r, Result);
@@ -3099,12 +3099,12 @@ LLVMGEN (llvm_gen_calculatenormal)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
 
-    DASSERT (op.nargs() == 2);
+    OSL_DASSERT(op.nargs() == 2);
 
     Symbol& Result = *rop.opargsym (op, 0);
     Symbol& P      = *rop.opargsym (op, 1);
 
-    DASSERT (Result.typespec().is_triple() && P.typespec().is_triple());
+    OSL_DASSERT(Result.typespec().is_triple() && P.typespec().is_triple());
     if (! P.has_derivs()) {
         rop.llvm_assign_zero (Result);
         return true;
@@ -3127,12 +3127,12 @@ LLVMGEN (llvm_gen_area)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
 
-    DASSERT (op.nargs() == 2);
+    OSL_DASSERT(op.nargs() == 2);
 
     Symbol& Result = *rop.opargsym (op, 0);
     Symbol& P      = *rop.opargsym (op, 1);
 
-    DASSERT (Result.typespec().is_float() && P.typespec().is_triple());
+    OSL_DASSERT(Result.typespec().is_float() && P.typespec().is_triple());
     if (! P.has_derivs()) {
         rop.llvm_assign_zero (Result);
         return true;
@@ -3151,7 +3151,7 @@ LLVMGEN (llvm_gen_spline)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
 
-    DASSERT (op.nargs() >= 4 && op.nargs() <= 5);
+    OSL_DASSERT(op.nargs() >= 4 && op.nargs() <= 5);
 
     bool has_knot_count = (op.nargs() == 5);
     Symbol& Result   = *rop.opargsym (op, 0);
@@ -3161,7 +3161,7 @@ LLVMGEN (llvm_gen_spline)
     Symbol& Knots    = has_knot_count ? *rop.opargsym (op, 4) :
                                         *rop.opargsym (op, 3);
 
-    DASSERT (!Result.typespec().is_closure_based() &&
+    OSL_DASSERT(!Result.typespec().is_closure_based() &&
              Spline.typespec().is_string()  && 
              Value.typespec().is_float() &&
              !Knots.typespec().is_closure_based() &&
@@ -3217,7 +3217,7 @@ LLVMGEN (llvm_gen_spline)
 static void
 llvm_gen_keyword_fill(BackendLLVM &rop, Opcode &op, const ClosureRegistry::ClosureEntry *clentry, ustring clname, llvm::Value *mem_void_ptr, int argsoffset)
 {
-    DASSERT(((op.nargs() - argsoffset) % 2) == 0);
+    OSL_DASSERT(((op.nargs() - argsoffset) % 2) == 0);
 
     int Nattrs = (op.nargs() - argsoffset) / 2;
 
@@ -3225,8 +3225,8 @@ llvm_gen_keyword_fill(BackendLLVM &rop, Opcode &op, const ClosureRegistry::Closu
         int argno = attr_i * 2 + argsoffset;
         Symbol &Key     = *rop.opargsym (op, argno);
         Symbol &Value   = *rop.opargsym (op, argno + 1);
-        ASSERT(Key.typespec().is_string());
-        ASSERT(Key.is_constant());
+        OSL_DASSERT(Key.typespec().is_string());
+        OSL_ASSERT(Key.is_constant());
         ustring *key = (ustring *)Key.data();
         TypeDesc ValueType = Value.typespec().simpletype();
 
@@ -3238,7 +3238,7 @@ llvm_gen_keyword_fill(BackendLLVM &rop, Opcode &op, const ClosureRegistry::Closu
             // but in this part of the code is not a big deal
             if (equivalent(p.type,ValueType) && !strcmp(key->c_str(), p.key)) {
             	// store data
-            	DASSERT(p.offset + p.field_size <= clentry->struct_size);
+            	OSL_DASSERT(p.offset + p.field_size <= clentry->struct_size);
                 llvm::Value* dst = rop.ll.offset_ptr (mem_void_ptr, p.offset);
                 llvm::Value* src = rop.llvm_void_ptr (Value);
                 rop.ll.op_memcpy (dst, src, (int)p.type.size(),
@@ -3258,14 +3258,14 @@ llvm_gen_keyword_fill(BackendLLVM &rop, Opcode &op, const ClosureRegistry::Closu
 LLVMGEN (llvm_gen_closure)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
-    ASSERT (op.nargs() >= 2); // at least the result and the ID
+    OSL_DASSERT (op.nargs() >= 2); // at least the result and the ID
 
     Symbol &Result = *rop.opargsym (op, 0);
     int weighted   = rop.opargsym(op,1)->typespec().is_string() ? 0 : 1;
     Symbol *weight = weighted ? rop.opargsym (op, 1) : NULL;
     Symbol &Id     = *rop.opargsym (op, 1+weighted);
-    DASSERT(Result.typespec().is_closure());
-    DASSERT(Id.typespec().is_string());
+    OSL_DASSERT(Result.typespec().is_closure());
+    OSL_DASSERT(Id.typespec().is_string());
     ustring closure_name = *((ustring *)Id.data());
 
     const ClosureRegistry::ClosureEntry * clentry = rop.shadingsys().find_closure(closure_name);
@@ -3277,7 +3277,7 @@ LLVMGEN (llvm_gen_closure)
         return false;
     }
 
-    ASSERT (op.nargs() >= (2 + weighted + clentry->nformal));
+    OSL_DASSERT (op.nargs() >= (2 + weighted + clentry->nformal));
 
     // Call osl_allocate_closure_component(closure, id, size).  It returns
     // the memory for the closure parameter data.
@@ -3324,7 +3324,7 @@ LLVMGEN (llvm_gen_closure)
     for (int carg = 0; carg < clentry->nformal; ++carg) {
         const ClosureParam &p = clentry->params[carg];
         if (p.key != NULL) break;
-        DASSERT(p.offset + p.field_size <= clentry->struct_size);
+        OSL_DASSERT(p.offset + p.field_size <= clentry->struct_size);
         Symbol &sym = *rop.opargsym (op, carg + 2 + weighted);
         TypeDesc t = sym.typespec().simpletype();
 
@@ -3374,14 +3374,14 @@ LLVMGEN (llvm_gen_pointcloud_search)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
 
-    DASSERT (op.nargs() >= 5);
+    OSL_DASSERT(op.nargs() >= 5);
     Symbol& Result     = *rop.opargsym (op, 0);
     Symbol& Filename   = *rop.opargsym (op, 1);
     Symbol& Center     = *rop.opargsym (op, 2);
     Symbol& Radius     = *rop.opargsym (op, 3);
     Symbol& Max_points = *rop.opargsym (op, 4);
 
-    DASSERT (Result.typespec().is_int() && Filename.typespec().is_string() &&
+    OSL_DASSERT(Result.typespec().is_int() && Filename.typespec().is_string() &&
              Center.typespec().is_triple() && Radius.typespec().is_float() &&
              Max_points.typespec().is_int());
 
@@ -3416,7 +3416,7 @@ LLVMGEN (llvm_gen_pointcloud_search)
         Symbol& Name  = *rop.opargsym (op, attr_arg_offset + i*2);
         Symbol& Value = *rop.opargsym (op, attr_arg_offset + i*2 + 1);
 
-        ASSERT (Name.typespec().is_string());
+        OSL_DASSERT (Name.typespec().is_string());
         TypeDesc simpletype = Value.typespec().simpletype();
         if (Name.is_constant() && *((ustring *)Name.data()) == u_index &&
             simpletype.elementtype() == TypeDesc::INT) {
@@ -3488,7 +3488,7 @@ LLVMGEN (llvm_gen_pointcloud_get)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
 
-    DASSERT (op.nargs() >= 6);
+    OSL_DASSERT(op.nargs() >= 6);
 
     Symbol& Result     = *rop.opargsym (op, 0);
     Symbol& Filename   = *rop.opargsym (op, 1);
@@ -3548,13 +3548,13 @@ LLVMGEN (llvm_gen_pointcloud_write)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
 
-    DASSERT (op.nargs() >= 3);
+    OSL_DASSERT(op.nargs() >= 3);
     Symbol& Result   = *rop.opargsym (op, 0);
     Symbol& Filename = *rop.opargsym (op, 1);
     Symbol& Pos      = *rop.opargsym (op, 2);
-    DASSERT (Result.typespec().is_int() && Filename.typespec().is_string() &&
+    OSL_DASSERT(Result.typespec().is_int() && Filename.typespec().is_string() &&
              Pos.typespec().is_triple());
-    DASSERT ((op.nargs() & 1) && "must have an even number of attribs");
+    OSL_DASSERT((op.nargs() & 1) && "must have an even number of attribs");
 
     int nattrs = (op.nargs() - 3) / 2;
 
@@ -3604,11 +3604,11 @@ LLVMGEN (llvm_gen_dict_find)
     //     dict_find (string dict, string query)
     //     dict_find (int nodeID, string query)
     Opcode &op (rop.inst()->ops()[opnum]);
-    DASSERT (op.nargs() == 3);
+    OSL_DASSERT(op.nargs() == 3);
     Symbol& Result = *rop.opargsym (op, 0);
     Symbol& Source = *rop.opargsym (op, 1);
     Symbol& Query  = *rop.opargsym (op, 2);
-    DASSERT (Result.typespec().is_int() && Query.typespec().is_string() &&
+    OSL_DASSERT(Result.typespec().is_int() && Query.typespec().is_string() &&
              (Source.typespec().is_int() || Source.typespec().is_string()));
     bool sourceint = Source.typespec().is_int();  // is it an int?
     llvm::Value *args[] = {
@@ -3628,10 +3628,10 @@ LLVMGEN (llvm_gen_dict_next)
 {
     // dict_net is very straightforward -- just insert sg ptr as first arg
     Opcode &op (rop.inst()->ops()[opnum]);
-    DASSERT (op.nargs() == 2);
+    OSL_DASSERT(op.nargs() == 2);
     Symbol& Result = *rop.opargsym (op, 0);
     Symbol& NodeID = *rop.opargsym (op, 1);
-    DASSERT (Result.typespec().is_int() && NodeID.typespec().is_int());
+    OSL_DASSERT(Result.typespec().is_int() && NodeID.typespec().is_int());
     llvm::Value *ret = rop.ll.call_function ("osl_dict_next",
                                                rop.sg_void_ptr(),
                                                rop.llvm_load_value(NodeID));
@@ -3645,12 +3645,12 @@ LLVMGEN (llvm_gen_dict_value)
 {
     // int dict_value (int nodeID, string attribname, output TYPE value)
     Opcode &op (rop.inst()->ops()[opnum]);
-    DASSERT (op.nargs() == 4);
+    OSL_DASSERT(op.nargs() == 4);
     Symbol& Result = *rop.opargsym (op, 0);
     Symbol& NodeID = *rop.opargsym (op, 1);
     Symbol& Name   = *rop.opargsym (op, 2);
     Symbol& Value  = *rop.opargsym (op, 3);
-    DASSERT (Result.typespec().is_int() && NodeID.typespec().is_int() &&
+    OSL_DASSERT(Result.typespec().is_int() && NodeID.typespec().is_int() &&
              Name.typespec().is_string());
     llvm::Value *args[] = {
         rop.sg_void_ptr(),                              // arg 0: shaderglobals ptr
@@ -3670,11 +3670,11 @@ LLVMGEN (llvm_gen_split)
 {
     // int split (string str, output string result[], string sep, int maxsplit)
     Opcode &op (rop.inst()->ops()[opnum]);
-    DASSERT (op.nargs() >= 3 && op.nargs() <= 5);
+    OSL_DASSERT(op.nargs() >= 3 && op.nargs() <= 5);
     Symbol& R       = *rop.opargsym (op, 0);
     Symbol& Str     = *rop.opargsym (op, 1);
     Symbol& Results = *rop.opargsym (op, 2);
-    DASSERT (R.typespec().is_int() && Str.typespec().is_string() &&
+    OSL_DASSERT(R.typespec().is_int() && Str.typespec().is_string() &&
              Results.typespec().is_array() &&
              Results.typespec().is_string_based());
 
@@ -3683,14 +3683,14 @@ LLVMGEN (llvm_gen_split)
     args[1] = rop.llvm_void_ptr (Results);
     if (op.nargs() >= 4) {
         Symbol& Sep = *rop.opargsym (op, 3);
-        DASSERT (Sep.typespec().is_string());
+        OSL_DASSERT(Sep.typespec().is_string());
         args[2] = rop.llvm_load_value (Sep);
     } else {
         args[2] = rop.ll.constant ("");
     }
     if (op.nargs() >= 5) {
         Symbol& Maxsplit = *rop.opargsym (op, 4);
-        DASSERT (Maxsplit.typespec().is_int());
+        OSL_DASSERT(Maxsplit.typespec().is_int());
         args[3] = rop.llvm_load_value (Maxsplit);
     } else {
         args[3] = rop.ll.constant (Results.typespec().arraylength());
@@ -3707,7 +3707,7 @@ LLVMGEN (llvm_gen_raytype)
 {
     // int raytype (string name)
     Opcode &op (rop.inst()->ops()[opnum]);
-    DASSERT (op.nargs() == 2);
+    OSL_DASSERT(op.nargs() == 2);
     Symbol& Result = *rop.opargsym (op, 0);
     Symbol& Name = *rop.opargsym (op, 1);
     llvm::Value *args[2] = { rop.sg_void_ptr(), NULL };
@@ -3734,10 +3734,10 @@ LLVMGEN (llvm_gen_raytype)
 LLVMGEN (llvm_gen_blackbody)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
-    ASSERT (op.nargs() == 2);
+    OSL_DASSERT (op.nargs() == 2);
     Symbol &Result (*rop.opargsym (op, 0));
     Symbol &Temperature (*rop.opargsym (op, 1));
-    ASSERT (Result.typespec().is_triple() && Temperature.typespec().is_float());
+    OSL_DASSERT (Result.typespec().is_triple() && Temperature.typespec().is_float());
 
     llvm::Value* args[] = { rop.sg_void_ptr(), rop.llvm_void_ptr(Result),
                             rop.llvm_load_value(Temperature) };
@@ -3758,10 +3758,10 @@ LLVMGEN (llvm_gen_blackbody)
 LLVMGEN (llvm_gen_luminance)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
-    ASSERT (op.nargs() == 2);
+    OSL_DASSERT (op.nargs() == 2);
     Symbol &Result (*rop.opargsym (op, 0));
     Symbol &C (*rop.opargsym (op, 1));
-    ASSERT (Result.typespec().is_float() && C.typespec().is_triple());
+    OSL_DASSERT (Result.typespec().is_float() && C.typespec().is_triple());
 
     bool deriv = C.has_derivs() && Result.has_derivs();
     llvm::Value* args[] = { rop.sg_void_ptr(), rop.llvm_void_ptr(Result),
@@ -3779,9 +3779,9 @@ LLVMGEN (llvm_gen_luminance)
 LLVMGEN (llvm_gen_isconstant)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
-    ASSERT (op.nargs() == 2);
+    OSL_DASSERT (op.nargs() == 2);
     Symbol &Result (*rop.opargsym (op, 0));
-    ASSERT (Result.typespec().is_int());
+    OSL_DASSERT (Result.typespec().is_int());
     Symbol &A (*rop.opargsym (op, 1));
     rop.llvm_store_value (rop.ll.constant(A.is_constant() ? 1 : 0), Result);
     return true;
@@ -3792,7 +3792,7 @@ LLVMGEN (llvm_gen_isconstant)
 LLVMGEN (llvm_gen_functioncall)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
-    ASSERT (op.nargs() == 1);
+    OSL_DASSERT (op.nargs() == 1);
 
     llvm::BasicBlock* after_block = rop.ll.push_function ();
 
@@ -3811,7 +3811,7 @@ LLVMGEN (llvm_gen_functioncall)
 LLVMGEN (llvm_gen_return)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
-    ASSERT (op.nargs() == 0);
+    OSL_DASSERT (op.nargs() == 0);
     if (op.opname() == Strings::op_exit) {
         // If it's a real "exit", totally jump out of the shader instance.
         // The exit instance block will be created if it doesn't yet exist.

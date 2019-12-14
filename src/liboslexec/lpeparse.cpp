@@ -28,7 +28,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "lpeparse.h"
 #include <OSL/oslclosure.h>
-#include <OpenImageIO/dassert.h>
 
 
 OSL_NAMESPACE_ENTER
@@ -233,7 +232,7 @@ Parser::parseCat()
 LPexp *
 Parser::parseGroup()
 {
-    ASSERT(head() == '<');
+    OSL_DASSERT(head() == '<');
     if (m_ingroup) {
         m_error = "No groups allowed inside of groups";
         return NULL;
@@ -275,7 +274,7 @@ Parser::parseGroup()
 LPexp *
 Parser::parseNegor()
 {
-    ASSERT (head() == '^');
+    OSL_DASSERT (head() == '^');
     SymbolSet symlist;
     symlist.insert(Labels::STOP); // never allowed
     int pos = -1;
@@ -333,7 +332,7 @@ Parser::parseNegor()
 LPexp *
 Parser::parseOrlist()
 {
-    ASSERT(head() == '[');
+    OSL_DASSERT(head() == '[');
     next();
     if (hasInput() && head() == '^')
         return parseNegor();
@@ -362,7 +361,7 @@ Parser::parseOrlist()
 std::pair<int, int>
 Parser::parseRange()
 {
-    ASSERT(head() == '{');
+    OSL_DASSERT(head() == '{');
     next();
     std::string firstnum = "";
     while (hasInput() && '0' <= head() && head() <= '9') {

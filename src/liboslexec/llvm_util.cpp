@@ -248,7 +248,7 @@ LLVM_Util::LLVM_Util (int debuglevel)
 {
     SetupLLVM ();
     m_thread = PerThreadInfo::get();
-    ASSERT (m_thread);
+    OSL_ASSERT (m_thread);
 
     {
         OIIO::spin_lock lock (llvm_global_mutex);
@@ -257,7 +257,7 @@ LLVM_Util::LLVM_Util (int debuglevel)
 
         if (! m_thread->llvm_jitmm) {
             m_thread->llvm_jitmm = new LLVMMemoryManager(&llvm_default_mapper);
-            ASSERT (m_thread->llvm_jitmm);
+            OSL_DASSERT (m_thread->llvm_jitmm);
             jitmm_hold.emplace_back (m_thread->llvm_jitmm);
         }
         // Hold the REAL manager and use it as an argument later
@@ -485,11 +485,11 @@ LLVM_Util::execengine (llvm::ExecutionEngine *exec)
 void *
 LLVM_Util::getPointerToFunction (llvm::Function *func)
 {
-    DASSERT (func && "passed NULL to getPointerToFunction");
+    OSL_DASSERT(func && "passed NULL to getPointerToFunction");
     llvm::ExecutionEngine *exec = execengine();
     exec->finalizeObject ();
     void *f = exec->getPointerToFunction (func);
-    ASSERT (f && "could not getPointerToFunction");
+    OSL_ASSERT (f && "could not getPointerToFunction");
     return f;
 }
 
@@ -507,7 +507,7 @@ LLVM_Util::InstallLazyFunctionCreator (void* (*P)(const std::string &))
 void
 LLVM_Util::setup_optimization_passes (int optlevel)
 {
-    ASSERT (m_llvm_module_passes == NULL && m_llvm_func_passes == NULL);
+    OSL_DASSERT (m_llvm_module_passes == NULL && m_llvm_func_passes == NULL);
 
     // Construct the per-function passes and module-wide (interprocedural
     // optimization) passes.
@@ -566,7 +566,7 @@ LLVM_Util::setup_optimization_passes (int optlevel)
 void
 LLVM_Util::do_optimize (std::string *out_err)
 {
-    ASSERT(m_llvm_module && "No module to optimize!");
+    OSL_ASSERT (m_llvm_module && "No module to optimize!");
 
 #if !defined(OSL_FORCE_BITCODE_PARSE)
     LLVMErr err = m_llvm_module->materializeAll();
@@ -683,9 +683,9 @@ LLVM_Util::make_function (const std::string &name, bool fastcall,
 #else
     llvm::Constant *c = module()->getOrInsertFunction (name, functype);
 #endif
-    ASSERT (c && "getOrInsertFunction returned NULL");
-    ASSERT_MSG (llvm::isa<llvm::Function>(c),
-                "Declaration for %s is wrong, LLVM had to make a cast", name.c_str());
+    OSL_ASSERT (c && "getOrInsertFunction returned NULL");
+    OSL_ASSERT_MSG (llvm::isa<llvm::Function>(c),
+                    "Declaration for %s is wrong, LLVM had to make a cast", name.c_str());
     llvm::Function *func = llvm::cast<llvm::Function>(c);
     if (fastcall)
         func->setCallingConv(llvm::CallingConv::Fast);
@@ -735,7 +735,7 @@ LLVM_Util::push_function (llvm::BasicBlock *after)
 void
 LLVM_Util::pop_function ()
 {
-    ASSERT (! m_return_block.empty());
+    OSL_DASSERT (! m_return_block.empty());
     builder().SetInsertPoint (m_return_block.back());
     m_return_block.pop_back ();
 }
@@ -745,7 +745,7 @@ LLVM_Util::pop_function ()
 llvm::BasicBlock *
 LLVM_Util::return_block () const
 {
-    ASSERT (! m_return_block.empty());
+    OSL_DASSERT (! m_return_block.empty());
     return m_return_block.back();
 }
 
@@ -763,7 +763,7 @@ LLVM_Util::push_loop (llvm::BasicBlock *step, llvm::BasicBlock *after)
 void 
 LLVM_Util::pop_loop ()
 {
-    ASSERT (! m_loop_step_block.empty() && ! m_loop_after_block.empty());
+    OSL_DASSERT (! m_loop_step_block.empty() && ! m_loop_after_block.empty());
     m_loop_step_block.pop_back ();
     m_loop_after_block.pop_back ();
 }
@@ -773,7 +773,7 @@ LLVM_Util::pop_loop ()
 llvm::BasicBlock *
 LLVM_Util::loop_step_block () const
 {
-    ASSERT (! m_loop_step_block.empty());
+    OSL_DASSERT (! m_loop_step_block.empty());
     return m_loop_step_block.back();
 }
 
@@ -782,7 +782,7 @@ LLVM_Util::loop_step_block () const
 llvm::BasicBlock *
 LLVM_Util::loop_after_block () const
 {
-    ASSERT (! m_loop_after_block.empty());
+    OSL_DASSERT (! m_loop_after_block.empty());
     return m_loop_after_block.back();
 }
 
@@ -1031,12 +1031,11 @@ LLVM_Util::llvm_type (const TypeDesc &typedesc)
     else if (t == TypeDesc::PTR)
         lt = type_void_ptr();
     else {
-        std::cerr << "Bad llvm_type(" << typedesc << ")\n";
-        ASSERT (0 && "not handling this type yet");
+        OSL_ASSERT_MSG (0, "not handling type %s yet", typedesc.c_str());
     }
     if (typedesc.arraylen)
         lt = llvm::ArrayType::get (lt, typedesc.arraylen);
-    DASSERT (lt);
+    OSL_DASSERT(lt);
     return lt;
 }
 
@@ -1075,7 +1074,7 @@ LLVM_Util::op_alloca (const TypeDesc &type, int n, const std::string &name)
 llvm::Value *
 LLVM_Util::call_function (llvm::Value *func, cspan<llvm::Value *> args)
 {
-    DASSERT (func);
+    OSL_DASSERT(func);
 #if 0
     llvm::outs() << "llvm_call_function " << *func << "\n";
     llvm::outs() << nargs << " args:\n";
@@ -1234,7 +1233,8 @@ LLVM_Util::op_add (llvm::Value *a, llvm::Value *b)
         return builder().CreateFAdd (a, b);
     if (a->getType() == type_int() && b->getType() == type_int())
         return builder().CreateAdd (a, b);
-    ASSERT (0 && "Op has bad value type combination");
+    OSL_ASSERT (0 && "Op has bad value type combination");
+    return nullptr;
 }
 
 
@@ -1246,7 +1246,8 @@ LLVM_Util::op_sub (llvm::Value *a, llvm::Value *b)
         return builder().CreateFSub (a, b);
     if (a->getType() == type_int() && b->getType() == type_int())
         return builder().CreateSub (a, b);
-    ASSERT (0 && "Op has bad value type combination");
+    OSL_ASSERT (0 && "Op has bad value type combination");
+    return nullptr;
 }
 
 
@@ -1258,7 +1259,8 @@ LLVM_Util::op_neg (llvm::Value *a)
         return builder().CreateFNeg (a);
     if (a->getType() == type_int())
         return builder().CreateNeg (a);
-    ASSERT (0 && "Op has bad value type combination");
+    OSL_ASSERT (0 && "Op has bad value type combination");
+    return nullptr;
 }
 
 
@@ -1270,7 +1272,8 @@ LLVM_Util::op_mul (llvm::Value *a, llvm::Value *b)
         return builder().CreateFMul (a, b);
     if (a->getType() == type_int() && b->getType() == type_int())
         return builder().CreateMul (a, b);
-    ASSERT (0 && "Op has bad value type combination");
+    OSL_ASSERT (0 && "Op has bad value type combination");
+    return nullptr;
 }
 
 
@@ -1282,7 +1285,8 @@ LLVM_Util::op_div (llvm::Value *a, llvm::Value *b)
         return builder().CreateFDiv (a, b);
     if (a->getType() == type_int() && b->getType() == type_int())
         return builder().CreateSDiv (a, b);
-    ASSERT (0 && "Op has bad value type combination");
+    OSL_ASSERT (0 && "Op has bad value type combination");
+    return nullptr;
 }
 
 
@@ -1294,7 +1298,8 @@ LLVM_Util::op_mod (llvm::Value *a, llvm::Value *b)
         return builder().CreateFRem (a, b);
     if (a->getType() == type_int() && b->getType() == type_int())
         return builder().CreateSRem (a, b);
-    ASSERT (0 && "Op has bad value type combination");
+    OSL_ASSERT (0 && "Op has bad value type combination");
+    return nullptr;
 }
 
 
@@ -1306,7 +1311,8 @@ LLVM_Util::op_float_to_int (llvm::Value* a)
         return builder().CreateFPToSI(a, type_int());
     if (a->getType() == type_int())
         return a;
-    ASSERT (0 && "Op has bad value type combination");
+    OSL_ASSERT (0 && "Op has bad value type combination");
+    return nullptr;
 }
 
 
@@ -1314,7 +1320,7 @@ LLVM_Util::op_float_to_int (llvm::Value* a)
 llvm::Value *
 LLVM_Util::op_float_to_double (llvm::Value* a)
 {
-    ASSERT (a->getType() == type_float());
+    OSL_DASSERT (a->getType() == type_float());
     return builder().CreateFPExt(a, llvm::Type::getDoubleTy(context()));
 }
 
@@ -1323,7 +1329,7 @@ LLVM_Util::op_float_to_double (llvm::Value* a)
 llvm::Value *
 LLVM_Util::op_int_to_longlong (llvm::Value* a)
 {
-    ASSERT (a->getType() == type_int());
+    OSL_DASSERT (a->getType() == type_int());
     return builder().CreateSExt(a, llvm::Type::getInt64Ty(context()));
 }
 
@@ -1335,7 +1341,8 @@ LLVM_Util::op_int_to_float (llvm::Value* a)
         return builder().CreateSIToFP(a, type_float());
     if (a->getType() == type_float())
         return a;
-    ASSERT (0 && "Op has bad value type combination");
+    OSL_ASSERT (0 && "Op has bad value type combination");
+    return nullptr;
 }
 
 
@@ -1347,7 +1354,8 @@ LLVM_Util::op_bool_to_int (llvm::Value* a)
         return builder().CreateZExt (a, type_int());
     if (a->getType() == type_int())
         return a;
-    ASSERT (0 && "Op has bad value type combination");
+    OSL_ASSERT (0 && "Op has bad value type combination");
+    return nullptr;
 }
 
 
@@ -1383,9 +1391,7 @@ LLVM_Util::op_shl (llvm::Value *a, llvm::Value *b)
 llvm::Value *
 LLVM_Util::op_shr (llvm::Value *a, llvm::Value *b)
 {
-    if (a->getType() == type_int() && b->getType() == type_int())
-        return builder().CreateAShr (a, b);  // signed int -> arithmetic shift
-    ASSERT (0 && "Op has bad value type combination");
+    return builder().CreateAShr (a, b);  // signed int -> arithmetic shift
 }
 
 
@@ -1409,7 +1415,7 @@ LLVM_Util::op_select (llvm::Value *cond, llvm::Value *a, llvm::Value *b)
 llvm::Value *
 LLVM_Util::op_eq (llvm::Value *a, llvm::Value *b, bool ordered)
 {
-    ASSERT (a->getType() == b->getType());
+    OSL_DASSERT (a->getType() == b->getType());
     if (a->getType() == type_float())
         return ordered ? builder().CreateFCmpOEQ (a, b) : builder().CreateFCmpUEQ (a, b);
     else
@@ -1421,7 +1427,7 @@ LLVM_Util::op_eq (llvm::Value *a, llvm::Value *b, bool ordered)
 llvm::Value *
 LLVM_Util::op_ne (llvm::Value *a, llvm::Value *b, bool ordered)
 {
-    ASSERT (a->getType() == b->getType());
+    OSL_DASSERT (a->getType() == b->getType());
     if (a->getType() == type_float())
         return ordered ? builder().CreateFCmpONE (a, b) : builder().CreateFCmpUNE (a, b);
     else
@@ -1433,7 +1439,7 @@ LLVM_Util::op_ne (llvm::Value *a, llvm::Value *b, bool ordered)
 llvm::Value *
 LLVM_Util::op_gt (llvm::Value *a, llvm::Value *b, bool ordered)
 {
-    ASSERT (a->getType() == b->getType());
+    OSL_DASSERT (a->getType() == b->getType());
     if (a->getType() == type_float())
         return ordered ? builder().CreateFCmpOGT (a, b) : builder().CreateFCmpUGT (a, b);
     else
@@ -1445,7 +1451,7 @@ LLVM_Util::op_gt (llvm::Value *a, llvm::Value *b, bool ordered)
 llvm::Value *
 LLVM_Util::op_lt (llvm::Value *a, llvm::Value *b, bool ordered)
 {
-    ASSERT (a->getType() == b->getType());
+    OSL_DASSERT (a->getType() == b->getType());
     if (a->getType() == type_float())
         return ordered ? builder().CreateFCmpOLT (a, b) : builder().CreateFCmpULT (a, b);
     else
@@ -1457,7 +1463,7 @@ LLVM_Util::op_lt (llvm::Value *a, llvm::Value *b, bool ordered)
 llvm::Value *
 LLVM_Util::op_ge (llvm::Value *a, llvm::Value *b, bool ordered)
 {
-    ASSERT (a->getType() == b->getType());
+    OSL_DASSERT (a->getType() == b->getType());
     if (a->getType() == type_float())
         return ordered ? builder().CreateFCmpOGE (a, b) : builder().CreateFCmpUGE (a, b);
     else
@@ -1469,7 +1475,7 @@ LLVM_Util::op_ge (llvm::Value *a, llvm::Value *b, bool ordered)
 llvm::Value *
 LLVM_Util::op_le (llvm::Value *a, llvm::Value *b, bool ordered)
 {
-    ASSERT (a->getType() == b->getType());
+    OSL_DASSERT (a->getType() == b->getType());
     if (a->getType() == type_float())
         return ordered ? builder().CreateFCmpOLE (a, b) : builder().CreateFCmpULE (a, b);
     else
@@ -1501,7 +1507,7 @@ LLVM_Util::ptx_compile_group (llvm::Module* lib_module, const std::string& name,
                               std::string& out)
 {
     std::string target_triple = module()->getTargetTriple();
-    ASSERT (lib_module->getTargetTriple() == target_triple &&
+    OSL_ASSERT (lib_module->getTargetTriple() == target_triple &&
             "PTX compile error: Shader and renderer bitcode library targets do not match");
 
     // Create a new empty module to hold the linked shadeops and compiled
@@ -1515,9 +1521,7 @@ LLVM_Util::ptx_compile_group (llvm::Module* lib_module, const std::string& name,
     std::unique_ptr<llvm::Module> mod_ptr = llvm::CloneModule (module());
 #endif
     bool failed = llvm::Linker::linkModules (*linked_module, std::move (mod_ptr));
-    if (failed) {
-        ASSERT (0 && "PTX compile error: Unable to link group module");
-    }
+    OSL_ASSERT (!failed && "PTX compile error: Unable to link group module");
 
     // Second, link in the shadeops library, keeping only the functions that are needed
     std::unique_ptr<llvm::Module> lib_ptr (lib_module);
@@ -1532,9 +1536,7 @@ LLVM_Util::ptx_compile_group (llvm::Module* lib_module, const std::string& name,
     std::string error;
     const llvm::Target* llvm_target =
         llvm::TargetRegistry::lookupTarget (target_triple, error);
-    if(! llvm_target) {
-        ASSERT (0 && "PTX compile error: LLVM Target is not initialized");
-    }
+    OSL_ASSERT (llvm_target && "PTX compile error: LLVM Target is not initialized");
 
     llvm::TargetOptions  options;
     options.AllowFPOpFusion                        = llvm::FPOpFusion::Standard;
@@ -1552,9 +1554,7 @@ LLVM_Util::ptx_compile_group (llvm::Module* lib_module, const std::string& name,
     llvm::TargetMachine* target_machine = llvm_target->createTargetMachine(
         target_triple, "sm_35", "+ptx50", options,
         llvm::Reloc::Static, llvm::CodeModel::Small, llvm::CodeGenOpt::Aggressive);
-    if (! target_machine) {
-        ASSERT(0 && "PTX compile error: Unable to create target machine -- is NVPTX enabled in LLVM?");
-    }
+    OSL_ASSERT (target_machine && "PTX compile error: Unable to create target machine -- is NVPTX enabled in LLVM?");
 
     // Setup the optimzation passes
     llvm::legacy::FunctionPassManager fn_pm (linked_module);

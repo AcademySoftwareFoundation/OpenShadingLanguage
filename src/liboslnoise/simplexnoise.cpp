@@ -305,7 +305,7 @@ OSL_HOSTDEVICE float simplexnoise2 (float x, float y, int seed,
     // Compute derivative, if requested by supplying non-null pointers
     // for the last two arguments
     if (dnoise_dx) {
-        DASSERT (dnoise_dy);
+        OSL_DASSERT(dnoise_dy);
 	/*  A straight, unoptimised calculation would be like:
      *    *dnoise_dx = -8.0f * t20 * t0 * x0 * ( g0[0] * x0 + g0[1] * y0 ) + t40 * g0[0];
      *    *dnoise_dy = -8.0f * t20 * t0 * y0 * ( g0[0] * x0 + g0[1] * y0 ) + t40 * g0[1];
@@ -474,7 +474,7 @@ simplexnoise3 (float x, float y, float z, int seed,
     // Compute derivative, if requested by supplying non-null pointers
     // for the last three arguments
     if (dnoise_dx) {
-        DASSERT (dnoise_dy && dnoise_dz);
+        OSL_DASSERT(dnoise_dy && dnoise_dz);
 	/*  A straight, unoptimised calculation would be like:
      *     *dnoise_dx = -8.0f * t20 * t0 * x0 * dot(g0[0], g0[1], g0[2], x0, y0, z0) + t40 * g0[0];
      *    *dnoise_dy = -8.0f * t20 * t0 * y0 * dot(g0[0], g0[1], g0[2], x0, y0, z0) + t40 * g0[1];
@@ -671,7 +671,7 @@ simplexnoise4 (float x, float y, float z, float w, int seed,
     // Compute derivative, if requested by supplying non-null pointers
     // for the last four arguments
     if (dnoise_dx) {
-        DASSERT (dnoise_dy && dnoise_dz && dnoise_dw);
+        OSL_DASSERT(dnoise_dy && dnoise_dz && dnoise_dw);
 	/*  A straight, unoptimised calculation would be like:
      *     *dnoise_dx = -8.0f * t20 * t0 * x0 * dot(g0[0], g0[1], g0[2], g0[3], x0, y0, z0, w0) + t40 * g0[0];
      *    *dnoise_dy = -8.0f * t20 * t0 * y0 * dot(g0[0], g0[1], g0[2], g0[3], x0, y0, z0, w0) + t40 * g0[1];

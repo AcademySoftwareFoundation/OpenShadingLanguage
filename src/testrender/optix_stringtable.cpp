@@ -63,10 +63,10 @@ OptiXStringTable::freetable()
 void OptiXStringTable::init (OSL::optix::Context ctx)
 {
 #ifdef OSL_USE_OPTIX
-    ASSERT (! m_ptr && "StringTable should only be initialized once");
+    OSL_ASSERT (! m_ptr && "StringTable should only be initialized once");
     m_optix_ctx = ctx;
 
-    ASSERT ((m_optix_ctx->getEnabledDeviceCount() == 1) &&
+    OSL_ASSERT ((m_optix_ctx->getEnabledDeviceCount() == 1) &&
             "Only one CUDA device is currently supported");
 
     OSL::cudaMalloc (reinterpret_cast<void**>(&m_ptr), (m_size));
@@ -89,7 +89,7 @@ void OptiXStringTable::init (OSL::optix::Context ctx)
 uint64_t OptiXStringTable::addString (ustring str, ustring var_name)
 {
 #ifdef OSL_USE_OPTIX
-    ASSERT (m_ptr && "StringTable has not been initialized");
+    OSL_ASSERT (m_ptr && "StringTable has not been initialized");
 
     // The strings are laid out in the table as a struct:
     //
@@ -107,7 +107,7 @@ uint64_t OptiXStringTable::addString (ustring str, ustring var_name)
 
     // It should be hard to trigger this assert, unless the table size is
     // very small and the string is very large.
-    ASSERT (m_offset + size <= m_size && "String table allocation error");
+    OSL_ASSERT (m_offset + size <= m_size && "String table allocation error");
 
     int offset = getOffset(str.string());
     if (offset < 0) {
@@ -158,8 +158,8 @@ int OptiXStringTable::getOffset (const std::string& str) const
 void OptiXStringTable::reallocTable()
 {
 #ifdef OSL_USE_OPTIX
-    ASSERT ((m_optix_ctx->getEnabledDeviceCount() == 1) &&
-            "Only one CUDA device is currently supported");
+    OSL_ASSERT ((m_optix_ctx->getEnabledDeviceCount() == 1) &&
+                "Only one CUDA device is currently supported");
 
     m_size *= 2;
     OSL::cudaFree (m_ptr);

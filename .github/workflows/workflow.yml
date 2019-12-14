@@ -23,7 +23,7 @@ jobs:
             source src/build-scripts/ci-build-and-test.bash
 
   linux-2019:
-    name: "Linux VFX 2019-ish: gcc6, C++14, llvm8, OIIO master, sse4, exr2.3"
+    name: "Linux VFX 2019-ish: gcc6, C++14, llvm8, OIIO 2.1, sse4, exr2.3"
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v1
@@ -34,7 +34,7 @@ jobs:
           CMAKE_CXX_STANDARD: 14
           LLVM_VERSION: 8.0.0
           OPENEXR_BRANCH: v2.3.0
-          OPENIMAGEIO_BRANCH: master
+          OPENIMAGEIO_BRANCH: RB-2.1
           USE_SIMD: sse4.2
         run: |
             source src/build-scripts/ci-startup.bash

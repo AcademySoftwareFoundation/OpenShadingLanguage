@@ -112,6 +112,29 @@ jobs:
             source src/build-scripts/gh-installdeps.bash
             source src/build-scripts/ci-build-and-test.bash
 
+  linux-oldest:
+    name: "Linux oldest everything: gcc6, C++11, llvm7, oiio 2.0, no simd, exr2.2"
+    # Unfortunately, this isn't the oldest of everything we support, but
+    # rather, the oldest of everything we can easily get on GH CI.
+    # Should be gcc 4.8 if we can figure out how to make that work.
+    # Should be llvm 6, but precompiled binaries for ubuntu 18 are llvm 7+.
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v1
+      - name: all
+        env:
+          CXX: g++-6
+          USE_CPP: 11
+          CMAKE_CXX_STANDARD: 11
+          LLVM_VERSION: 7.0.1
+          USE_SIMD: 0
+          OPENEXR_BRANCH: v2.2.0
+          OPENIMAGEIO_BRANCH: RB-2.0
+        run: |
+            source src/build-scripts/ci-startup.bash
+            source src/build-scripts/gh-installdeps.bash
+            source src/build-scripts/ci-build-and-test.bash
+
   macos-py37:
     name: "Mac py37"
     runs-on: macOS-latest

@@ -35,8 +35,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/oslconfig.h>
 #include <OSL/llvm_util.h>
 
-#if OSL_LLVM_VERSION < 50
-#error "LLVM minimum version required for OSL is 5.0"
+#if OSL_LLVM_VERSION < 60
+#error "LLVM minimum version required for OSL is 6.0"
 #endif
 
 #include <llvm/IR/Constants.h>
@@ -94,11 +94,11 @@ typedef llvm::Error LLVMErr;
 
 namespace {
 
-#if OSL_LLVM_VERSION >= 60
-// NOTE: This is a COPY of something internal to LLVM, but since we destroy our LLVMMemoryManager
-//       via global variables we can't rely on the LLVM copy sticking around.
-//       Because of this, the variable must be declared _before_ jitmm_hold so that the object stays
-//       valid until after we have destroyed all our memory managers.
+// NOTE: This is a COPY of something internal to LLVM, but since we destroy
+// our LLVMMemoryManager via global variables we can't rely on the LLVM copy
+// sticking around. Because of this, the variable must be declared _before_
+// jitmm_hold so that the object stays valid until after we have destroyed
+// all our memory managers.
 struct DefaultMMapper final : public llvm::SectionMemoryManager::MemoryMapper {
     llvm::sys::MemoryBlock
     allocateMappedMemory(llvm::SectionMemoryManager::AllocationPurpose Purpose,
@@ -117,7 +117,6 @@ struct DefaultMMapper final : public llvm::SectionMemoryManager::MemoryMapper {
     }
 };
 static DefaultMMapper llvm_default_mapper;
-#endif
 
 static OIIO::spin_mutex llvm_global_mutex;
 static bool setup_done = false;
@@ -257,11 +256,7 @@ LLVM_Util::LLVM_Util (int debuglevel)
             m_thread->llvm_context = new llvm::LLVMContext();
 
         if (! m_thread->llvm_jitmm) {
-#if OSL_LLVM_VERSION >= 60
             m_thread->llvm_jitmm = new LLVMMemoryManager(&llvm_default_mapper);
-#else
-            m_thread->llvm_jitmm = new LLVMMemoryManager();
-#endif
             ASSERT (m_thread->llvm_jitmm);
             jitmm_hold.emplace_back (m_thread->llvm_jitmm);
         }

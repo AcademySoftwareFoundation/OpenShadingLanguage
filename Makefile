@@ -379,7 +379,7 @@ help:
 	@echo "      BOOST_ROOT=path          Custom Boost installation"
 	@echo "      USE_QT=0                 Skip anything that needs Qt"
 	@echo "  LLVM-related options:"
-	@echo "      LLVM_VERSION=6.0         Specify which LLVM version to use"
+	@echo "      LLVM_VERSION=7.0         Specify which LLVM version to use"
 	@echo "      LLVM_DIRECTORY=xx        Specify where LLVM lives"
 	@echo "      LLVM_NAMESPACE=xx        Specify custom LLVM namespace"
 	@echo "      LLVM_STATIC=1            Use static LLVM libraries"

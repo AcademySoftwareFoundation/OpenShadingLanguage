@@ -47,10 +47,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OSL/oslconfig.h>
 #include <OSL/dual.h>
+#include "Imathx.h"
 
 OSL_NAMESPACE_ENTER
 
-
+#if 0 // appears unused
 /// Templated trick to be able to derive what type we use to represent
 /// a vector, given a scalar, automatically using the right kind of Dual.
 template<class T> struct Vec3FromScalar { typedef Imath::Vec3<T> type; };
@@ -60,20 +61,12 @@ template<class T, int P> struct Vec3FromScalar<Dual<T,P>> { typedef Dual<Imath::
 /// a color, given a scalar, automatically using the right kind of Dual2.
 template<class T> struct Color3FromScalar { typedef Imath::Color3<T> type; };
 template<class T, int P> struct Color3FromScalar<Dual<T,P>> { typedef Dual<Imath::Color3<T>,P> type; };
+#endif
 
 /// Templated trick to be able to derive the scalar component type of
 /// a vector, whether a VecN or a Dual2<VecN>.
-template<class T> struct ScalarFromVec {};
-template<> struct ScalarFromVec<Vec2> { typedef Float type; };
-template<> struct ScalarFromVec<Vec3> { typedef Float type; };
-template<> struct ScalarFromVec<Color3> { typedef Float type; };
-template<> struct ScalarFromVec<Dual<Vec2>> { typedef Dual<Float> type; };
-template<> struct ScalarFromVec<Dual<Vec3>> { typedef Dual<Float> type; };
-template<> struct ScalarFromVec<Dual<Color3>> { typedef Dual<Float> type; };
-template<> struct ScalarFromVec<Dual2<Vec2>> { typedef Dual2<Float> type; };
-template<> struct ScalarFromVec<Dual2<Vec3>> { typedef Dual2<Float> type; };
-template<> struct ScalarFromVec<Dual2<Color3>> { typedef Dual2<Float> type; };
-
+template<class T> struct ScalarFromVec { typedef typename T::BaseType type; };
+template<class T, int P> struct ScalarFromVec<Dual<T,P>> { typedef Dual<typename T::BaseType,P> type; };
 
 
 /// A uniform way to assemble a Vec3 from float and a Dual<Vec3>
@@ -84,40 +77,42 @@ make_Vec3 (float x, float y, float z)
     return Vec3 (x, y, z);
 }
 
-template<class T, int P>
-OSL_HOSTDEVICE inline Dual<Imath::Vec3<T>,P>
-make_Vec3 (const Dual<T,P> &x, const Dual<T,P> &y, const Dual<T,P> &z)
+template<int P>
+OSL_HOSTDEVICE inline Dual<Vec3,P>
+make_Vec3 (const Dual<Vec3::BaseType,P> &x, const Dual<Vec3::BaseType,P> &y, const Dual<Vec3::BaseType,P> &z)
 {
-    Dual<Imath::Vec3<T>,P> result;
-    for (int i = 0; i <= P; ++i)
+    Dual<Vec3,P> result;
+    OSL_INDEX_LOOP(i, P+1, {
         result.elem(i).setValue (x.elem(i), y.elem(i), z.elem(i));
+    });
     return result;
 }
 
 
 /// Make a Dual<Vec3> from a single Dual<Float> x coordinate, and 0
 /// for the other components.
-template<class T, int P>
-OSL_HOSTDEVICE inline Dual<Imath::Vec3<T>,P>
-make_Vec3 (const Dual<T,P> &x)
+template<int P>
+OSL_HOSTDEVICE inline Dual<Vec3,P>
+make_Vec3 (const Dual<Vec3::BaseType,P> &x)
 {
-    Dual<Imath::Vec3<T>,P> result;
-    for (int i = 0; i <= P; ++i)
+    Dual<Vec3,P> result;
+    OSL_INDEX_LOOP(i, P+1, {
         result.elem(i).setValue (x.elem(i), 0.0f, 0.0f);
+    });
     return result;
 }
 
 
-template<class T, int P>
-OSL_HOSTDEVICE inline Dual<Imath::Vec3<T>,P>
-make_Vec3 (const Dual<T,P> &x, const Dual<T,P> &y)
+template<int P>
+OSL_HOSTDEVICE inline Dual<Vec3,P>
+make_Vec3 (const Dual<Vec3::BaseType,P> &x, const Dual<Vec3::BaseType,P> &y)
 {
-    Dual<Imath::Vec3<T>,P> result;
-    for (int i = 0; i <= P; ++i)
+    Dual<Vec3,P> result;
+    OSL_INDEX_LOOP(i, P+1, {
         result.elem(i).setValue (x.elem(i), y.elem(i), 0.0f);
+    });
     return result;
 }
-
 
 
 /// A uniform way to assemble a Color3 from float and a Dual<Color3>
@@ -128,17 +123,16 @@ make_Color3 (float x, float y, float z)
     return Color3 (x, y, z);
 }
 
-template<class T, int P>
-OSL_HOSTDEVICE inline Dual<Imath::Color3<T>,P>
-make_Color3 (const Dual<T,P> &x, const Dual<T,P> &y, const Dual<T,P> &z)
+template<int P>
+OSL_HOSTDEVICE inline Dual<Color3,P>
+make_Color3 (const Dual<Color3::BaseType,P> &x, const Dual<Color3::BaseType,P> &y, const Dual<Color3::BaseType,P> &z)
 {
-    Dual<Imath::Color3<T>,P> result;
-    for (int i = 0; i <= P; ++i)
+    Dual<Color3, P> result;
+    OSL_INDEX_LOOP(i, P+1, {
         result.elem(i).setValue (x.elem(i), y.elem(i), z.elem(i));
+    });
     return result;
 }
-
-
 
 /// A uniform way to assemble a Vec2 from float and a Dual<Vec2>
 /// from Dual<float>.
@@ -148,69 +142,164 @@ make_Vec2 (float x, float y)
     return Vec2 (x, y);
 }
 
-template<class T, int P>
-OSL_HOSTDEVICE inline Dual<Imath::Vec2<T>,P>
-make_Vec2 (const Dual<T,P> &x, const Dual<T,P> &y)
+template<int P>
+OSL_HOSTDEVICE inline Dual<Vec2,P>
+make_Vec2 (const Dual<Vec2::BaseType,P> &x, const Dual<Vec2::BaseType,P> &y)
 {
-    Dual<Imath::Vec2<T>,P> result;
-    for (int i = 0; i <= P; ++i)
+    Dual<Vec2,P> result;
+    OSL_INDEX_LOOP(i, P+1, {
         result.elem(i).setValue (x.elem(i), y.elem(i));
+    });
     return result;
 }
 
 
-
-/// comp(X,c) is a uniform way to extract a single component from a Vec3 or
+/// Instead of index based access, explicitly use _x, _y, _z suffixes to
+/// avoid Vec3::operator[] that uses non-conforming code creating aliasing issues
+/// comp_x(X) comp_y(X) comp_z(X) is a uniform way to extract a single component from a Vec3 or
 /// Dual<Vec3>.
 ///
-/// comp(Vec3,c) returns a float as the c-th component of the vector.
-/// comp(Dual<Vec3>,c) returns a Dual<float> of the c-th component (with
+/// comp_x(Vec3,c) returns a float as the x component of the vector.
+/// comp_x(Dual<Vec3>) returns a Dual<float> of the x component (with
 /// derivs).
 
-OSL_HOSTDEVICE inline float
-comp (const Vec3 &v, int c)
+OSL_HOSTDEVICE OSL_INLINE float
+comp_x (const Vec3 &v)
 {
-    return v[c];
+    return v.x;
+}
+
+template<int P>
+OSL_HOSTDEVICE OSL_INLINE OIIO_CONSTEXPR14 Dual<Vec3::BaseType, P>
+comp_x (const Dual<Vec3,P> &v)
+{
+    Dual<Vec3::BaseType, P> result;
+    OSL_INDEX_LOOP(i, P+1, {
+        result.elem(i) = v.elem(i).x;
+    });
+    return result;
+}
+
+OSL_HOSTDEVICE OSL_INLINE float
+comp_y (const Vec3 &v)
+{
+    return v.y;
+}
+
+template<int P>
+OSL_HOSTDEVICE OSL_INLINE OIIO_CONSTEXPR14 Dual<Vec3::BaseType,P>
+comp_y (const Dual<Vec3,P> &v)
+{
+    Dual<Vec3::BaseType,P> result;
+    OSL_INDEX_LOOP(i, P+1, {
+        result.elem(i) = v.elem(i).y;
+    });
+    return result;
 }
 
 
-template<class T, int P>
-OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P>
-comp (const Dual<Imath::Vec3<T>,P> &v, int c)
+OSL_HOSTDEVICE OSL_INLINE float
+comp_z (const Vec3 &v)
 {
-    Dual<T,P> result;
-    for (int i = 0; i <= P; ++i)
-        result.elem(i) = v.elem(i)[c];
+    return v.z;
+}
+
+template<int P>
+OSL_HOSTDEVICE OSL_INLINE OIIO_CONSTEXPR14 Dual<Vec3::BaseType,P>
+comp_z (const Dual<Vec3,P> &v)
+{
+    Dual<Vec3::BaseType,P> result;
+    OSL_INDEX_LOOP(i, P+1, {
+        result.elem(i) = v.elem(i).z;
+    });
+    return result;
+}
+
+OSL_HOSTDEVICE OSL_INLINE float
+comp_x (const Color3 &v)
+{
+    return v.x;
+}
+
+OSL_HOSTDEVICE OSL_INLINE float
+comp_y (const Color3 &v)
+{
+    return v.y;
+}
+
+OSL_HOSTDEVICE OSL_INLINE float
+comp_z (const Color3 &v)
+{
+    return v.z;
+}
+
+template<int P>
+OSL_HOSTDEVICE OSL_INLINE OIIO_CONSTEXPR14 Dual<Color3::BaseType,P>
+comp_x (const Dual<Color3,P> &v)
+{
+    Dual<Color3::BaseType, P> result;
+    OSL_INDEX_LOOP(i, P+1, {
+        result.elem(i) = v.elem(i).x;
+    });
+    return result;
+}
+
+template<int P>
+OSL_HOSTDEVICE OSL_INLINE OIIO_CONSTEXPR14 Dual<Color3::BaseType,P>
+comp_y (const Dual<Color3,P> &v)
+{
+    Dual<Color3::BaseType,P> result;
+    OSL_INDEX_LOOP(i, P+1, {
+        result.elem(i) = v.elem(i).y;
+    });
+    return result;
+}
+
+template<int P>
+OSL_HOSTDEVICE OSL_INLINE OIIO_CONSTEXPR14 Dual<Color3::BaseType,P>
+comp_z (const Dual<Color3,P> &v)
+{
+    Dual<Color3::BaseType,P> result;
+    OSL_INDEX_LOOP(i, P+1, {
+        result.elem(i) = v.elem(i).z;
+    });
     return result;
 }
 
 
 
-template<class T, int P>
-OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P>
-comp (const Dual<Imath::Color3<T>,P> &v, int c)
+OSL_HOSTDEVICE OSL_INLINE float
+comp_x (const Vec2 &v)
 {
-    Dual<T,P> result;
-    for (int i = 0; i <= P; ++i)
-        result.elem(i) = v.elem(i)[c];
+    return v.x;
+}
+
+template<int P>
+OSL_HOSTDEVICE OSL_INLINE OIIO_CONSTEXPR14 Dual<Vec2::BaseType,P>
+comp_x (const Dual<Vec2,P> &v)
+{
+    Dual<Vec2::BaseType,P> result;
+    OSL_INDEX_LOOP(i, P+1, {
+        result.elem(i) = v.elem(i).x;
+    });
     return result;
 }
 
 
-OSL_HOSTDEVICE inline float
-comp (const Vec2 &v, int c)
+OSL_HOSTDEVICE OSL_INLINE float
+comp_y (const Vec2 &v)
 {
-    return v[c];
+    return v.y;
 }
 
-
-template<class T, int P>
-OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P>
-comp (const Dual<Imath::Vec2<T>,P> &v, int c)
+template<int P>
+OSL_HOSTDEVICE OSL_INLINE OIIO_CONSTEXPR14 Dual<Vec2::BaseType,P>
+comp_y (const Dual<Vec2,P> &v)
 {
-    Dual<T,P> result;
-    for (int i = 0; i <= P; ++i)
-        result.elem(i) = v.elem(i)[c];
+    Dual<Vec2::BaseType,P> result;
+    OSL_INDEX_LOOP(i, P+1, {
+        result.elem(i) = v.elem(i).y;
+    });
     return result;
 }
 
@@ -219,209 +308,216 @@ comp (const Dual<Imath::Vec2<T>,P> &v, int c)
 
 /// Multiply a 3x3 matrix by a 3-vector, with derivs.
 ///
-template <class S, class T, int P>
+template <class T, int P>
 OSL_HOSTDEVICE inline void
-multMatrix (const Imath::Matrix33<T> &M, const Dual<Imath::Vec3<S>,P> &src,
-            Dual<Imath::Vec3<S>,P> &dst)
+multMatrix (const Imath::Matrix33<T> &M, const Dual<Vec3,P> &src,
+            Dual<Vec3,P> &dst)
 {
     // The simplest way to express this is to break up the Dual<Vec> into
     // Vec<Dual>, do the usual matrix math, then reshuffle again.
-    Dual<S,P> src0 = comp(src,0), src1 = comp(src,1), src2 = comp(src,2);
-    Dual<S,P> a = src0 * M[0][0] + src1 * M[1][0] + src2 * M[2][0];
-    Dual<S,P> b = src0 * M[0][1] + src1 * M[1][1] + src2 * M[2][1];
-    Dual<S,P> c = src0 * M[0][2] + src1 * M[1][2] + src2 * M[2][2];
+    Dual<Vec3::BaseType,P> src0 = comp_x(src), src1 = comp_y(src), src2 = comp_z(src);
+    Dual<Vec3::BaseType,P> a = src0 * M.x[0][0] + src1 * M.x[1][0] + src2 * M.x[2][0];
+    Dual<Vec3::BaseType,P> b = src0 * M.x[0][1] + src1 * M.x[1][1] + src2 * M.x[2][1];
+    Dual<Vec3::BaseType,P> c = src0 * M.x[0][2] + src1 * M.x[1][2] + src2 * M.x[2][2];
     dst = make_Vec3 (a, b, c);
 }
 
 
 /// Multiply a row 3-vector (with derivatives) by a 3x3 matrix (no derivs).
 ///
-template <class S, class T, int P> OSL_HOSTDEVICE inline OIIO_CONSTEXPR14
-Dual<Imath::Vec3<S>,P>
-operator* (const Dual<Imath::Vec3<S>,P> &src, const Imath::Matrix33<T> &M)
+template <class T, int P> OSL_HOSTDEVICE inline OIIO_CONSTEXPR14
+Dual<Vec3,P>
+operator* (const Dual<Vec3,P> &src, const Imath::Matrix33<T> &M)
 {
     // The simplest way to express this is to break up the Dual<Vec> into
     // Vec<Dual>, do the usual matrix math, then reshuffle again.
-    Dual<S,P> src0 = comp(src,0), src1 = comp(src,1), src2 = comp(src,2);
-    Dual<S,P> a = src0 * M[0][0] + src1 * M[1][0] + src2 * M[2][0];
-    Dual<S,P> b = src0 * M[0][1] + src1 * M[1][1] + src2 * M[2][1];
-    Dual<S,P> c = src0 * M[0][2] + src1 * M[1][2] + src2 * M[2][2];
+    Dual<Vec3::BaseType,P> src0 = comp_x(src), src1 = comp_y(src), src2 = comp_z(src);
+    Dual<Vec3::BaseType,P> a = src0 * M[0][0] + src1 * M[1][0] + src2 * M[2][0];
+    Dual<Vec3::BaseType,P> b = src0 * M[0][1] + src1 * M[1][1] + src2 * M[2][1];
+    Dual<Vec3::BaseType,P> c = src0 * M[0][2] + src1 * M[1][2] + src2 * M[2][2];
     return make_Vec3 (a, b, c);
 }
 
 
 /// Multiply a row 3-vector (with derivatives) by a 3x3 matrix (no derivs).
 ///
-template <class S, class T, int P> OSL_HOSTDEVICE inline OIIO_CONSTEXPR14
-Dual<Imath::Color3<S>,P>
-operator* (const Dual<Imath::Color3<S>,P> &src, const Imath::Matrix33<T> &M)
+template <class T, int P> OSL_HOSTDEVICE inline OIIO_CONSTEXPR14
+Dual<Color3,P>
+operator* (const Dual<Color3,P> &src, const Imath::Matrix33<T> &M)
 {
     // The simplest way to express this is to break up the Dual<Vec> into
     // Vec<Dual>, do the usual matrix math, then reshuffle again.
-    Dual<S,P> src0 = comp(src,0), src1 = comp(src,1), src2 = comp(src,2);
-    Dual<S,P> a = src0 * M[0][0] + src1 * M[1][0] + src2 * M[2][0];
-    Dual<S,P> b = src0 * M[0][1] + src1 * M[1][1] + src2 * M[2][1];
-    Dual<S,P> c = src0 * M[0][2] + src1 * M[1][2] + src2 * M[2][2];
+    Dual<Color3::BaseType,P> src0 = comp_x(src), src1 = comp_y(src), src2 = comp_z(src);
+    Dual<Color3::BaseType,P> a = src0 * M[0][0] + src1 * M[1][0] + src2 * M[2][0];
+    Dual<Color3::BaseType,P> b = src0 * M[0][1] + src1 * M[1][1] + src2 * M[2][1];
+    Dual<Color3::BaseType,P> c = src0 * M[0][2] + src1 * M[1][2] + src2 * M[2][2];
     return make_Color3 (a, b, c);
 }
 
-
-template <class S, class T>
+template <class S>
 OSL_HOSTDEVICE inline void
-robust_multVecMatrix(const Imath::Matrix44<S>& x, const Imath::Vec3<T>& src, Imath::Vec3<T>& dst)
+robust_multVecMatrix(const Imath::Matrix44<S>& M, const Vec3& src, Vec3& dst)
 {
-    auto a = src[0] * x[0][0] + src[1] * x[1][0] + src[2] * x[2][0] + x[3][0];
-    auto b = src[0] * x[0][1] + src[1] * x[1][1] + src[2] * x[2][1] + x[3][1];
-    auto c = src[0] * x[0][2] + src[1] * x[1][2] + src[2] * x[2][2] + x[3][2];
-    auto w = src[0] * x[0][3] + src[1] * x[1][3] + src[2] * x[2][3] + x[3][3];
+    auto a = src.x * M.x[0][0] + src.y * M.x[1][0] + src.z * M.x[2][0] + M.x[3][0];
+    auto b = src.x * M.x[0][1] + src.y * M.x[1][1] + src.z * M.x[2][1] + M.x[3][1];
+    auto c = src.x * M.x[0][2] + src.y * M.x[1][2] + src.z * M.x[2][2] + M.x[3][2];
+    auto w = src.x * M.x[0][3] + src.y * M.x[1][3] + src.z * M.x[2][3] + M.x[3][3];
 
-    if (! equalVal (w, T(0))) {
+    if (OSL_EXPECT_TRUE(! equalVal (w, Vec3::BaseType(0)))) {
         dst.x = a / w;
         dst.y = b / w;
         dst.z = c / w;
     } else {
-        dst.x = 0;
-        dst.y = 0;
-        dst.z = 0;
+        dst.x = Vec3::BaseType(0);
+        dst.y = Vec3::BaseType(0);
+        dst.z = Vec3::BaseType(0);
     }
 }
 
 
 /// Multiply a matrix times a vector with derivatives to obtain
 /// a transformed vector with derivatives.
-template <class S, class T, int P>
+template <class S, int P>
 OSL_HOSTDEVICE inline void
 robust_multVecMatrix (const Imath::Matrix44<S> &M,
-                      const Dual<Imath::Vec3<T>,P> &in, Dual<Imath::Vec3<T>,P> &out)
+                      const Dual<Vec3,P> &in, Dual<Vec3,P> &out)
 {
     // Rearrange into a Vec3<Dual<float>>
-    Imath::Vec3<Dual<T,P>> din, dout;
-    for (int i = 0;  i < 3;  ++i) {
-        din[i] = comp (in, i);
-    }
+    // Avoid aliasing issues by not using Vec3::operator[]
+    Imath::Vec3<Dual<Vec3::BaseType,P>> din(comp_x(in), comp_y(in), comp_z(in)), dout;
 
-    auto a = din[0] * M[0][0] + din[1] * M[1][0] + din[2] * M[2][0] + M[3][0];
-    auto b = din[0] * M[0][1] + din[1] * M[1][1] + din[2] * M[2][1] + M[3][1];
-    auto c = din[0] * M[0][2] + din[1] * M[1][2] + din[2] * M[2][2] + M[3][2];
-    auto w = din[0] * M[0][3] + din[1] * M[1][3] + din[2] * M[2][3] + M[3][3];
+    auto a = din.x * M.x[0][0] + din.y * M.x[1][0] + din.z * M.x[2][0] + M.x[3][0];
+    auto b = din.x * M.x[0][1] + din.y * M.x[1][1] + din.z * M.x[2][1] + M.x[3][1];
+    auto c = din.x * M.x[0][2] + din.y * M.x[1][2] + din.z * M.x[2][2] + M.x[3][2];
+    auto w = din.x * M.x[0][3] + din.y * M.x[1][3] + din.z * M.x[2][3] + M.x[3][3];
 
-    if (! equalVal (w, T(0))) {
+    if (OSL_EXPECT_TRUE(!equalVal (w, Vec3::BaseType(0)))) {
        dout.x = a / w;
        dout.y = b / w;
        dout.z = c / w;
     } else {
-       dout.x = T(0);
-       dout.y = T(0);
-       dout.z = T(0);
+       dout.x = Vec3::BaseType(0);
+       dout.y = Vec3::BaseType(0);
+       dout.z = Vec3::BaseType(0);
     }
 
     // Rearrange back into Dual<Vec3>
-    out = make_Vec3 (dout[0], dout[1], dout[2]);
+    out = make_Vec3 (dout.x, dout.y, dout.z);
 }
 
 /// Multiply a matrix times a direction with derivatives to obtain
 /// a transformed direction with derivatives.
-template <class S, class T, int P>
+template <class S, int P>
 OSL_HOSTDEVICE inline void
 multDirMatrix (const Imath::Matrix44<S> &M,
-               const Dual<Imath::Vec3<T>,P> &in, Dual<Imath::Vec3<T>,P> &out)
+               const Dual<Vec3,P> &in, Dual<Vec3,P> &out)
 {
-    for (int i = 0; i <= P; ++i)
+    OSL_INDEX_LOOP(i, P+1, {
         M.multDirMatrix (in.elem(i), out.elem(i));
+    });
 }
 
-
-
-
-
-template<class T, int P>
-OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P>
-dot (const Dual<Imath::Vec3<T>,P> &a, const Dual<Imath::Vec3<T>,P> &b)
+// Return value version multDirMatrix
+template <class S, int P>
+OSL_HOSTDEVICE inline Dual<Vec3,P>
+multiplyDirByMatrix (const Imath::Matrix44<S> &M,
+               const Dual<Vec3,P> &in)
 {
-    auto ax = comp (a, 0);
-    auto ay = comp (a, 1);
-    auto az = comp (a, 2);
-    auto bx = comp (b, 0);
-    auto by = comp (b, 1);
-    auto bz = comp (b, 2);
+    Dual<Vec3,P> out;
+    OSL_INDEX_LOOP(i, P+1, {
+        out.elem(i) = multiplyDirByMatrix(M, in.elem(i));
+    });
+    return out;
+}
+
+template<int P>
+OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<Vec3::BaseType, P>
+dot (const Dual<Vec3,P> &a, const Dual<Vec3,P> &b)
+{
+    auto ax = comp_x (a);
+    auto ay = comp_y (a);
+    auto az = comp_z (a);
+    auto bx = comp_x (b);
+    auto by = comp_y (b);
+    auto bz = comp_z (b);
     return ax*bx + ay*by + az*bz;
 }
 
 
 
-template<class T, int P>
-OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P>
-dot (const Dual<Imath::Vec3<T>,P> &a, const Imath::Vec3<T> &b)
+template<int P>
+OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<Vec3::BaseType,P>
+dot (const Dual<Vec3,P> &a, const Vec3 &b)
 {
-    auto ax = comp (a, 0);
-    auto ay = comp (a, 1);
-    auto az = comp (a, 2);
-    auto bx = comp (b, 0);
-    auto by = comp (b, 1);
-    auto bz = comp (b, 2);
+    auto ax = comp_x (a);
+    auto ay = comp_y (a);
+    auto az = comp_z (a);
+    auto bx = comp_x (b);
+    auto by = comp_y (b);
+    auto bz = comp_z (b);
     return ax*bx + ay*by + az*bz;
 }
 
 
 
-template<class T, int P>
-OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P>
-dot (const Imath::Vec3<T> &a, const Dual<Imath::Vec3<T>,P> &b)
+template<int P>
+OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<Vec3::BaseType,P>
+dot (const Vec3 &a, const Dual<Vec3,P> &b)
 {
     return dot (b, a);
 }
 
 
 
-template<class T, int P>
-OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P>
-dot (const Dual<Imath::Vec2<T>,P> &a, const Dual<Imath::Vec2<T>,P> &b)
+template<int P>
+OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<Vec2::BaseType,P>
+dot (const Dual<Vec2,P> &a, const Dual<Vec2,P> &b)
 {
-    auto ax = comp (a, 0);
-    auto ay = comp (a, 1);
-    auto bx = comp (b, 0);
-    auto by = comp (b, 1);
+    auto ax = comp_x (a);
+    auto ay = comp_y (a);
+    auto bx = comp_x (b);
+    auto by = comp_y (b);
     return ax*bx + ay*by;
 }
 
 
 
-template<class T, int P>
-OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P>
-dot (const Dual<Imath::Vec2<T>,P> &a, const Vec2 &b)
+template<int P>
+OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<Vec2::BaseType,P>
+dot (const Dual<Vec2,P> &a, const Vec2 &b)
 {
-    auto ax = comp (a, 0);
-    auto ay = comp (a, 1);
-    auto bx = comp (b, 0);
-    auto by = comp (b, 1);
+    auto ax = comp_x (a);
+    auto ay = comp_y (a);
+    auto bx = comp_x (b);
+    auto by = comp_y (b);
     return ax*bx + ay*by;
 }
 
 
 
-template<class T, int P>
-OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P>
-dot (const Vec2 &a, const Dual<Imath::Vec2<T>,P> &b)
+template<int P>
+OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<Vec2::BaseType,P>
+dot (const Vec2 &a, const Dual<Vec2,P> &b)
 {
-    auto ax = comp (a, 0);
-    auto ay = comp (a, 1);
-    auto bx = comp (b, 0);
-    auto by = comp (b, 1);
+    auto ax = comp_x (a);
+    auto ay = comp_y (a);
+    auto bx = comp_x (b);
+    auto by = comp_y (b);
     return ax*bx + ay*by;
 }
 
 
 
-template<class T, int P>
-OSL_HOSTDEVICE inline Dual<Imath::Vec3<T>,P>
-cross (const Dual<Imath::Vec3<T>,P> &a, const Dual<Imath::Vec3<T>,P> &b)
+template<int P>
+OSL_HOSTDEVICE inline Dual<Vec3,P>
+cross (const Dual<Vec3,P> &a, const Dual<Vec3,P> &b)
 {
-    auto ax = comp (a, 0);
-    auto ay = comp (a, 1);
-    auto az = comp (a, 2);
-    auto bx = comp (b, 0);
-    auto by = comp (b, 1);
-    auto bz = comp (b, 2);
+    auto ax = comp_x (a);
+    auto ay = comp_y (a);
+    auto az = comp_z (a);
+    auto bx = comp_x (b);
+    auto by = comp_y (b);
+    auto bz = comp_z (b);
     auto nx = ay*bz - az*by;
     auto ny = az*bx - ax*bz;
     auto nz = ax*by - ay*bx;
@@ -430,34 +526,32 @@ cross (const Dual<Imath::Vec3<T>,P> &a, const Dual<Imath::Vec3<T>,P> &b)
 
 
 
-template<class T, int P>
-OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<T,P>
-length (const Dual<Imath::Vec3<T>,P> &a)
+template<int P>
+OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<Vec3::BaseType,P>
+length (const Dual<Vec3,P> &a)
 {
-    auto ax = comp (a, 0);
-    auto ay = comp (a, 1);
-    auto az = comp (a, 2);
+    auto ax = comp_x (a);
+    auto ay = comp_y (a);
+    auto az = comp_z (a);
     return sqrt(ax*ax + ay*ay + az*az);
 }
 
 
 
-template<class T, int P>
-OSL_HOSTDEVICE inline Dual<Imath::Vec3<T>,P>
-normalize (const Dual<Imath::Vec3<T>,P> &a)
+template<int P>
+OSL_HOSTDEVICE inline Dual<Vec3,P>
+normalize (const Dual<Vec3,P> &a)
 {
-    // NOTE: math must be consistent with osl_normalize_vv
-    // TODO: math for derivative elements could be further optimized ...
-    auto ax = comp (a, 0);
-    auto ay = comp (a, 1);
-    auto az = comp (a, 2);
+    auto ax = comp_x (a);
+    auto ay = comp_y (a);
+    auto az = comp_z (a);
     auto len = sqrt(ax * ax + ay * ay + az * az);
-    if (len > T(0)) {
-        auto invlen = T(1) / len;
-        ax = ax * invlen;
-        ay = ay * invlen;
-        az = az * invlen;
-        return make_Vec3 (ax, ay, az);
+    if (OSL_EXPECT_TRUE(len > Vec3::BaseType(0))) {
+        auto invlen = Vec3::BaseType(1) / len;
+        auto nax = ax * invlen;
+        auto nay = ay * invlen;
+        auto naz = az * invlen;
+        return make_Vec3 (nax, nay, naz);
     } else {
         return Vec3(0,0,0);
     }
@@ -465,29 +559,27 @@ normalize (const Dual<Imath::Vec3<T>,P> &a)
 
 
 
-template<class T, int P>
-OSL_HOSTDEVICE inline Dual<T,P>
-distance (const Dual<Imath::Vec3<T>,P> &a, const Dual<Imath::Vec3<T>,P> &b)
+template<int P>
+OSL_HOSTDEVICE inline Dual<Vec3::BaseType,P>
+distance (const Dual<Vec3,P> &a, const Dual<Vec3,P> &b)
 {
     return length (a - b);
 }
 
 
-template<class T, int P>
-OSL_HOSTDEVICE inline Dual<T,P>
-distance (const Dual<Imath::Vec3<T>,P> &a, const Imath::Vec3<T> &b)
+template<int P>
+OSL_HOSTDEVICE inline Dual<Vec3::BaseType,P>
+distance (const Dual<Vec3,P> &a, const Vec3 &b)
 {
     return length (a - b);
 }
 
 
-template<class T, int P>
-OSL_HOSTDEVICE inline Dual<T,P>
-distance (const Imath::Vec3<T> &a, const Dual<Imath::Vec3<T>,P> &b)
+template<int P>
+OSL_HOSTDEVICE inline Dual<Vec3::BaseType,P>
+distance (const Vec3 &a, const Dual<Vec3,P> &b)
 {
     return length (a - b);
 }
-
-
 
 OSL_NAMESPACE_EXIT

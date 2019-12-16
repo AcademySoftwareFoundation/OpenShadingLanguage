@@ -63,6 +63,46 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #    error "This version of OSL requires C++11"
 #endif
 
+#ifndef OSL_DEBUG
+    #ifdef NDEBUG
+        #define OSL_DEBUG 0
+    #else
+        #ifdef _DEBUG
+            #define OSL_DEBUG _DEBUG
+        #else
+            #define OSL_DEBUG 0
+        #endif
+    #endif
+#endif // OSL_DEBUG
+
+#ifndef OSL_INLINE
+    #if OSL_DEBUG
+        #define OSL_INLINE inline
+    #else
+        #if __INTEL_COMPILER >= 1100 || (defined(_WIN32) || defined(_WIN64))
+            #define OSL_INLINE __forceinline
+        #else
+            #define OSL_INLINE inline __attribute__((always_inline))
+        #endif
+    #endif
+#endif
+
+#ifndef OSL_NOINLINE
+    #if (defined(_WIN32) || defined(_WIN64))
+        #define OSL_NOINLINE __declspec(noinline)
+    #else
+        #define OSL_NOINLINE __attribute__((noinline))
+    #endif
+#endif
+
+#if defined(_MSC_VER) && !defined(__INTEL_COMPILER)
+    #define OSL_EXPECT_FALSE(EXPRESSION) EXPRESSION
+    #define OSL_EXPECT_TRUE(EXPRESSION) EXPRESSION
+#else
+    #define OSL_EXPECT_FALSE(EXPRESSION) __builtin_expect(EXPRESSION, false)
+    #define OSL_EXPECT_TRUE(EXPRESSION) __builtin_expect(EXPRESSION, true)
+#endif
+
 #ifndef OSL_HOSTDEVICE
 #  ifdef __CUDACC__
 #    define OSL_HOSTDEVICE __host__ __device__
@@ -112,9 +152,86 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/platform.h>
 #include <OpenImageIO/span.h>
 
+#if OSL_CPLUSPLUS_VERSION >= 17
+    // fold expression to expand
+    #define __OSL_EXPAND_PARAMETER_PACKS(EXPRESSION) \
+        (void((EXPRESSION)) , ... );
+#else
+    // Choose to use initializer list to expand our parameter pack so that
+    // the order they are evaluated in the order they appear
+    #define __OSL_EXPAND_PARAMETER_PACKS(EXPRESSION) \
+        { \
+            using expander = int [sizeof...(IntListT)]; \
+            (void)expander{((EXPRESSION),0)...}; \
+        }
+#endif
 
 OSL_NAMESPACE_ENTER
 
+namespace pvt {
+
+#if (__cplusplus >= 201402L)
+    template<int... IntegerListT>
+    using int_sequence = std::integer_sequence<int, IntegerListT...>;
+
+    template<int EndBeforeT>
+    using make_int_sequence =  std::make_integer_sequence<int, EndBeforeT>;
+#else
+    // std::integer_sequence requires c++14 library support,
+    // we have our own version here in case the environment is c++14 compiler
+    // building against c++11 library.
+    template<int... IntegerListT>
+    struct int_sequence
+    {
+    };
+
+    template<int StartAtT, int EndBeforeT, typename IntSequenceT>
+    struct int_sequence_generator;
+
+    template<int StartAtT, int EndBeforeT, int... IntegerListT>
+    struct int_sequence_generator<StartAtT, EndBeforeT, int_sequence<IntegerListT...>>
+    {
+        typedef typename int_sequence_generator<StartAtT+1, EndBeforeT, int_sequence<IntegerListT..., StartAtT>>::type type;
+    };
+
+    template<int EndBeforeT, int... IntegerListT>
+    struct int_sequence_generator<EndBeforeT, EndBeforeT, int_sequence<IntegerListT...>>
+    {
+        typedef int_sequence<IntegerListT...> type;
+    };
+
+    template<int EndBeforeT>
+    using make_int_sequence = typename int_sequence_generator<0, EndBeforeT, int_sequence<> >::type;
+#endif
+} // namespace pvt
+
+// Instead of relying on compiler loop unrolling, we can statically call functor
+// for each integer in a sequence
+template <template<int> class ConstantWrapperT, int... IntListT, typename FunctorT>
+static OSL_INLINE void static_foreach(pvt::int_sequence<IntListT...>, const FunctorT &iFunctor) {
+     __OSL_EXPAND_PARAMETER_PACKS( iFunctor(ConstantWrapperT<IntListT>{}) );
+}
+
+template <template<int> class ConstantWrapperT, int N, typename FunctorT>
+static OSL_INLINE void static_foreach(const FunctorT &iFunctor) {
+    static_foreach<ConstantWrapperT>(pvt::make_int_sequence<N>(), iFunctor);
+}
+
+#if (__cplusplus >= 201402L)
+    template<int N>
+    using ConstIndex = std::integral_constant<int, N>;
+#else
+    template<int N>
+    struct ConstIndex : public std::integral_constant<int, N>
+    {
+        // C++14 adds this conversion operator we need to allow non-generic
+        // lambda functions (pre C++14) to accept an "int" instead of a
+        // typed ConstIndex<N> with "auto"
+        constexpr int operator()() const noexcept {
+            return N;
+        }
+    };
+#endif
 
 /// By default, we operate with single precision float.  Change this
 /// definition to make a shading system that fundamentally operates

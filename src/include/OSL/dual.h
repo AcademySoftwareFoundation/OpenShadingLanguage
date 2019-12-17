@@ -69,7 +69,7 @@ OSL_NAMESPACE_ENTER
 // NOTE:  To improve compile times and reduce compiler memory usage,
 // we may choose not to use the generic lambda based version for
 // certain compilers/versions.
-#if (__cplusplus >= 201402L) && !defined(__INTEL_COMPILER)
+#if (__cplusplus >= 201402L) && !defined(__INTEL_COMPILER) && !defined(__GNUC__)
     // explanation of passing code block as macro argument to handle
     // nested comma operators that might break up the code block into
     // multiple macro arguments
@@ -385,9 +385,8 @@ public:
     ///
     friend std::ostream& operator<< (std::ostream &out, const Dual &x) {
         out << x.val() << "[";
-        constexpr int partial_count = PARTIALS;
         OSL_INDEX_LOOP(i, PARTIALS, {
-            out << (x.partial(i)) << ((i < partial_count) ? ',' : ']');
+            out << (x.partial(i)) << ((i < PARTIALS) ? ',' : ']');
         });
         return out;
     }

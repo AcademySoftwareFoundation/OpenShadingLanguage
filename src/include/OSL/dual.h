@@ -90,9 +90,10 @@ OSL_NAMESPACE_ENTER
 #else
     namespace pvt {
         template<typename T>
-        static constexpr T static_min(T a, T b) { return (b < a) ? b : a; }
-    } // namespace pvt
-    // explanation of passing code block as macro argument to handle
+        static OSL_HOSTDEVICE constexpr T static_min(T a, T b) {
+            return (b < a) ? b : a;
+        }
+    }    // explanation of passing code block as macro argument to handle
     // nested comma operators that might break up the code block into
     // multiple macro arguments
     // https://mort.coffee/home/obscure-c-features/
@@ -153,12 +154,12 @@ public:
     // To better enable Scalar Replacement of Aggregates and other
     // transformations, CLANG has easier time if the per element
     // constructors declared.
-    OIIO_CONSTEXPR14 DualStorage() {}
-    OIIO_CONSTEXPR14 DualStorage(const T & val, const T & dx)
+    OSL_HOSTDEVICE OIIO_CONSTEXPR14 DualStorage() {}
+    OSL_HOSTDEVICE OIIO_CONSTEXPR14 DualStorage(const T & val, const T & dx)
     : m_val(val)
     , m_dx(dx)
     {}
-    OIIO_CONSTEXPR14 DualStorage(const DualStorage &other)
+    OSL_HOSTDEVICE OIIO_CONSTEXPR14 DualStorage(const DualStorage &other)
     : m_val(other.m_val)
     , m_dx(other.m_dx)
     {}
@@ -182,13 +183,13 @@ public:
     // To better enable Scalar Replacement of Aggregates and other
     // transformations, CLANG has easier time if the per element
     // constructors declared.
-    OIIO_CONSTEXPR14 DualStorage() {}
-    OIIO_CONSTEXPR14 DualStorage(const T & val, const T & dx, const T & dy)
+    OSL_HOSTDEVICE OIIO_CONSTEXPR14 DualStorage() {}
+    OSL_HOSTDEVICE OIIO_CONSTEXPR14 DualStorage(const T & val, const T & dx, const T & dy)
     : m_val(val)
     , m_dx(dx)
     , m_dy(dy)
     {}
-    OIIO_CONSTEXPR14 DualStorage(const DualStorage &other)
+    OSL_HOSTDEVICE OIIO_CONSTEXPR14 DualStorage(const DualStorage &other)
     : m_val(other.m_val)
     , m_dx(other.m_dx)
     , m_dy(other.m_dy)
@@ -215,15 +216,15 @@ public:
     // To better enable Scalar Replacement of Aggregates and other
     // transformations, CLANG has easier time if the per element
     // constructors declared.
-    OIIO_CONSTEXPR14 DualStorage() {}
-    OIIO_CONSTEXPR14 DualStorage(const T & val, const T & dx, const T & dy, const T & dz)
+    OSL_HOSTDEVICE OIIO_CONSTEXPR14 DualStorage() {}
+    OSL_HOSTDEVICE OIIO_CONSTEXPR14 DualStorage(const T & val, const T & dx, const T & dy, const T & dz)
     : m_val(val)
     , m_dx(dx)
     , m_dy(dy)
     , m_dz(dz)
     {}
 
-    OIIO_CONSTEXPR14 DualStorage(const DualStorage &other)
+    OSL_HOSTDEVICE OIIO_CONSTEXPR14 DualStorage(const DualStorage &other)
     : m_val(other.m_val)
     , m_dx(other.m_dx)
     , m_dy(other.m_dy)

@@ -289,7 +289,7 @@ ShadingContext::symbol_data (const Symbol &sym) const
     // doesn't live on the heap
     if ((sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam) &&
         (sym.valuesource() == Symbol::DefaultVal || sym.valuesource() == Symbol::InstanceVal)) {
-        return sym.data() ? sym.data() : NULL;
+        return sym.data();
     }
 
     return NULL;  // not something we can retrieve

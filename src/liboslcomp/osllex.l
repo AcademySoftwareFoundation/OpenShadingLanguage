@@ -336,11 +336,11 @@ preprocess (const char *yytext)
             p += 4;
         int line = atoi (p);
         if (line > 0) {
-            const char *f = strchr (yytext, '\"');
+            const char *f = strchr (yytext, '\"'); // " undo syntax highlight
             if (f) {
                 ++f;  // increment to past the quote
                 int len = 0;  // count of chars within quotes
-                while (f[len] && f[len] != '\"')
+                while (f[len] && f[len] != '\"') // " undo syntax highlight
                     ++len;
                 std::string filename (f, len);
 #if defined(_WIN32) && defined(USE_BOOST_WAVE) && (USE_BOOST_WAVE != 0)
@@ -365,14 +365,15 @@ preprocess (const char *yytext)
                         (filename[0] == '/' || filename[0] == '\\'))
                         filename.erase (0, 1);
                 }
-                oslcompiler->filename (ustring (filename));
+                ustring ufilename(filename);
+                oslcompiler->filename (ufilename);
                 // Spooky workaround for Boost Wave bug: force_include
                 // is broken and doesn't give us the right lines/files, so
                 // instead we forcefully insert a '#include "stdosl.h"' into
                 // the stream ourselves, but this in turn makes the rest
                 // of the main file all have line counts one line off!
                 // So we fix it here, ugh.
-                if (filename == oslcompiler->main_filename())
+                if (ufilename == oslcompiler->main_filename())
                     --line;
             }
             oslcompiler->lineno (line);

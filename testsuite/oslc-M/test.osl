@@ -1,0 +1,8 @@
+#include "myheader.h"
+
+shader test ()
+{
+    int bar = 42;
+    printf ("foo is %d\n", foo(bar));
+}
+

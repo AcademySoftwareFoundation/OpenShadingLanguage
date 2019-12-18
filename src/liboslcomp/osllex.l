@@ -395,7 +395,7 @@ bool
 OSLCompilerImpl::osl_parse_buffer (const std::string &preprocessed_buffer)
 {
     // N.B. This should only be called if oslcompiler_mutex is held.
-    ASSERT (oslcompiler == this);
+    OSL_ASSERT (oslcompiler == this);
 
 #ifndef OIIO_STRUTIL_HAS_STOF
     // Force classic "C" locale for correct '.' decimal parsing.

@@ -30,7 +30,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <cstdio>
 
-#include <OpenImageIO/dassert.h>
 #include <OpenImageIO/sysutil.h>
 
 #include <OSL/oslconfig.h>
@@ -86,9 +85,9 @@ print_component_value(std::ostream &out, ShadingSystemImpl *ss,
 static void
 print_component (std::ostream &out, const ClosureComponent *comp, ShadingSystemImpl *ss, const Color3 &weight)
 {
-    out << "(" << weight[0]*comp->w[0] << ", " << weight[1]*comp->w[1] << ", " << weight[2]*comp->w[2] << ") * ";
     const ClosureRegistry::ClosureEntry *clentry = ss->find_closure(comp->id);
-    ASSERT(clentry);
+    OSL_ASSERT(clentry);
+    out << "(" << weight[0]*comp->w[0] << ", " << weight[1]*comp->w[1] << ", " << weight[2]*comp->w[2] << ") * ";
     out << clentry->name.c_str() << " (";
     for (int i = 0, nparams = clentry->params.size() - 1; i < nparams; ++i) {
         if (i) out << ", ";

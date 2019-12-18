@@ -364,11 +364,11 @@ public:
     /// Return a pointer to the symbol (specified by integer index),
     /// or NULL (if index was -1, as returned by 'findsymbol').
     Symbol *symbol (int index) {
-        DASSERT (index < (int)m_symbols.size());
+        OSL_DASSERT(index < (int)m_symbols.size());
         return index >= 0 ? &m_symbols[index] : NULL;
     }
     const Symbol *symbol (int index) const {
-        DASSERT (index < (int)m_symbols.size());
+        OSL_DASSERT(index < (int)m_symbols.size());
         return index >= 0 ? &m_symbols[index] : NULL;
     }
 
@@ -442,7 +442,7 @@ public:
 
     const ClosureEntry *get_entry (ustring name) const;
     const ClosureEntry *get_entry (int id) const {
-        DASSERT((size_t)id < m_closure_table.size());
+        OSL_DASSERT((size_t)id < m_closure_table.size());
         return &m_closure_table[id];
     }
 
@@ -1301,10 +1301,10 @@ public:
 
     char * alloc(size_t size, size_t alignment=1) {
         // Alignment must be power of two
-        DASSERT ((alignment & (alignment - 1)) == 0);
+        OSL_DASSERT((alignment & (alignment - 1)) == 0);
 
         // Assume sizes are never larger than the configured BlockSize
-        DASSERT(size + alignment - 1 <= BlockSize);
+        OSL_DASSERT(size + alignment - 1 <= BlockSize);
 
         // Fix up alignment
         m_block_offset += alignment_offset_calc(m_blocks[m_current_block].get() + m_block_offset, alignment);
@@ -1318,7 +1318,7 @@ public:
             m_block_offset = alignment_offset_calc(m_blocks[m_current_block].get(), alignment);
         }
         char* ptr = m_blocks[m_current_block].get() + m_block_offset;
-        DASSERT(reinterpret_cast<uintptr_t>(ptr) % alignment == 0);
+        OSL_DASSERT(reinterpret_cast<uintptr_t>(ptr) % alignment == 0);
         m_block_offset += size;
         return ptr;
     }
@@ -1332,7 +1332,7 @@ private:
     static inline size_t alignment_offset_calc(void* ptr, size_t alignment) {
         uintptr_t ptrbits = reinterpret_cast<uintptr_t>(ptr);
         uintptr_t offset = ((ptrbits + alignment - 1) & -alignment) - ptrbits;
-        DASSERT((ptrbits + offset) % alignment == 0);
+        OSL_DASSERT((ptrbits + offset) % alignment == 0);
         return offset;
     }
 
@@ -1411,7 +1411,7 @@ public:
     /// Append a new shader instance on to the end of this group
     ///
     void append (ShaderInstanceRef newlayer) {
-        ASSERT (! m_optimized && "should not append to optimized group");
+        OSL_ASSERT (! m_optimized && "should not append to optimized group");
         m_layers.push_back (newlayer);
     }
 

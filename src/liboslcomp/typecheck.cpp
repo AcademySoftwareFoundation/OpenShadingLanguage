@@ -31,7 +31,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslcomp_pvt.h"
 
-#include <OpenImageIO/dassert.h>
 #include <OpenImageIO/strutil.h>
 namespace Strutil = OIIO::Strutil;
 
@@ -324,7 +323,7 @@ ASTassign_expression::typecheck (TypeSpec expected)
         return TypeSpec();
     }
 
-    ASSERT (m_op == Assign);  // all else handled by binary_op
+    OSL_DASSERT (m_op == Assign);  // all else handled by binary_op
     ustring varname;
     if (var()->nodetype() == variable_ref_node)
         varname = ((ASTvariable_ref*)var().get())->name();
@@ -826,7 +825,7 @@ public:
     typecheck_array(ASTcompound_initializer* init, TypeSpec expected) {
         if (! init->initlist())
             return;    // early out for empty initializer { }
-        ASSERT (expected.is_array());
+        OSL_DASSERT (expected.is_array());
         // Every element of the array is the same type
         TypeSpec elemtype = expected.elementtype();
 
@@ -844,7 +843,7 @@ public:
             // Remove the outer brackets:
             //  type a[3] = { {0}, {1}, {2} };
             cinit = static_cast<ASTcompound_initializer*>(cinit->initlist().get());
-            ASSERT (!cinit || cinit->nodetype() == compound_initializer_node);
+            OSL_DASSERT (!cinit || cinit->nodetype() == compound_initializer_node);
         }
 
         if (!elemtype.is_structure()) {
@@ -878,7 +877,7 @@ public:
     // Adjust the type for every field that has an initializer list
     void
     typecheck_fields(ASTNode* parent, ref arg, TypeSpec expected) {
-        ASSERT (expected.is_structure_based());
+        OSL_DASSERT (expected.is_structure_based());
         StructSpec* structspec = expected.structspec();
         int ninits = 0, nfields = structspec->numfields();
         while (arg && ninits < nfields) {
@@ -936,7 +935,7 @@ public:
 
     // Turn off the automatic binding on destruction
     TypeSpec nobind() {
-        ASSERT (!m_success || m_adjust.size());
+        OSL_DASSERT (!m_success || m_adjust.size());
         m_debug_successful = m_success;
         m_success = false; // Turn off the binding in destructor
         return type();
@@ -944,7 +943,7 @@ public:
 
     // Turn automatic binding back on.
     void bind() {
-        ASSERT (m_success || m_debug_successful);
+        OSL_DASSERT (m_success || m_debug_successful);
         m_success = true;
     }
 
@@ -1012,7 +1011,7 @@ private:
             if (!errors())
                 return false;
 
-            ASSERT (!spec || field);
+            OSL_DASSERT (!spec || field);
             node->errorf("Can't assign '%s' to '%s%s'",
                          node->typespec(), expected,
                          !spec ? "" :
@@ -1114,7 +1113,7 @@ ASTNode::check_arglist (const char *funcname, ASTNode::ref arg,
             TypeSpec itype = ta.typecheck(
                 static_cast<ASTcompound_initializer*>(arg.get()), formaltype);
 
-            ASSERT (!ta.success() || (formaltype == itype));
+            OSL_DASSERT (!ta.success() || (formaltype == itype));
 
             // ~TypeAdjuster will set the proper type for the list on success.
             // This will overwrite the prior binding simillar to how legacy
@@ -1379,7 +1378,7 @@ ASTfunction_call::typecheck_builtin_specialcase ()
                 }
             }
         } else {
-            ASSERT (0 && "Missed a takes_derivs case!");
+            OSL_ASSERT (0 && "Missed a takes_derivs case!");
         }
     }
 }
@@ -1390,7 +1389,7 @@ TypeSpec
 ASTfunction_call::typecheck_struct_constructor ()
 {
     StructSpec *structspec = m_sym->typespec().structspec();
-    ASSERT (structspec);
+    OSL_DASSERT (structspec);
     m_typespec = m_sym->typespec();
     if (structspec->numfields() != (int)listlength(args())) {
         // Support a single argument which is an init-list of proper type?
@@ -1533,13 +1532,13 @@ class CandidateFunctions {
             switch (*formals) {
                 case '*':  // Will match anything left
                     formals = scoreWildcard(argscore, fargs, formals);
-                    ASSERT (*formals == 0);
+                    OSL_DASSERT (*formals == 0);
                     continue;
 
                 case '.':  // Token/value pairs
                     if (arg->typespec().is_string() && arg->next()) {
                         formals = scoreWildcard(argscore, fargs, formals);
-                        ASSERT (*formals == 0);
+                        OSL_DASSERT (*formals == 0);
                         continue;
                     }
                     return kNoMatch;
@@ -1613,7 +1612,7 @@ class CandidateFunctions {
                 // Curently an unused formal argument, so no match at all.
                 return kNoMatch;
         }
-        ASSERT (*formals == 0);
+        OSL_DASSERT (*formals == 0);
 
         int highscore = m_candidates.empty() ? 0 : m_candidates.front().ascore;
         if (argscore < highscore)
@@ -1689,7 +1688,7 @@ public:
 
     std::pair<FunctionSymbol*, TypeSpec>
     best(ASTNode* caller, const ustring& funcname) {
-        ASSERT (caller);  // Assertion that passed ASTNode::ref was not empty
+        OSL_DASSERT (caller);  // Assertion that passed ASTNode::ref was not empty
 
         // When successful, bind all the initializer list types.
         auto best = [](Candidate* c) -> std::pair<FunctionSymbol*, TypeSpec> {
@@ -1728,15 +1727,15 @@ public:
                 ambiguity = candidate.rscore;
         }
 
-        ASSERT (c.first && c.first->sym);
+        OSL_DASSERT (c.first && c.first->sym);
 
         if (ambiguity != -1) {
             unsigned userstructs = 0;
 
             auto rank = [&userstructs] (const TypeSpec& s) -> int {
                 // Arrays are currently not ranked as they cannot be returned.
-                ASSERT (!s.is_array());
-                ASSERT (!s.is_closure() || s.is_color_closure());
+                OSL_DASSERT (!s.is_array());
+                OSL_DASSERT (!s.is_closure() || s.is_color_closure());
 
                 const TypeDesc& td = s.simpletype();
                 if (td == TypeDesc::TypeFloat)
@@ -1765,7 +1764,7 @@ public:
                 if (s.is_void())
                     return 10;
 
-                ASSERT (0 && "Unranked type");
+                OSL_DASSERT (0 && "Unranked type");
                 return std::numeric_limits<int>::max();
             };
 
@@ -1813,7 +1812,7 @@ public:
                         continue;
                     }
                     // Number of bindings should match, otherwise score shouldn't
-                    ASSERT (candidate.bindings.size() == bindings->size());
+                    OSL_ASSERT (candidate.bindings.size() == bindings->size());
                     for (auto a = bindings->cbegin(),
                               b = candidate.bindings.cbegin(),
                               e = bindings->cend(); a != e; ++a, ++b) {
@@ -2167,7 +2166,7 @@ OSLCompilerImpl::initialize_builtin_funcs ()
                 continue;
             ustring poly (builtin_func_args[i+j]);
             Symbol *last = symtab().clash (funcname);
-            ASSERT (last == NULL || last->symtype() == SymTypeFunction);
+            OSL_DASSERT (last == NULL || last->symtype() == SymTypeFunction);
             TypeSpec rettype = type_from_code (poly.c_str());
             FunctionSymbol *f = new FunctionSymbol (funcname, rettype);
             f->nextpoly ((FunctionSymbol *)last);
@@ -2215,7 +2214,7 @@ OSLCompilerImpl::type_from_code (const char *code, int *advance)
     case '*' : break; // anything will match, so keep 'UNKNOWN'
     case '.' : break; // anything will match, so keep 'UNKNOWN'
     default:
-        ASSERTMSG (0, "Don't know how to decode type code '%d'", (int)code[0]);
+        OSL_DASSERT_MSG (0, "Don't know how to decode type code '%d'", (int)code[0]);
         if (advance)
             *advance = 1;
         return TypeSpec();

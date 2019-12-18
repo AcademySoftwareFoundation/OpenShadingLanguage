@@ -215,7 +215,7 @@ shader_from_buffers (std::string shadername)
 static int
 add_shader (int argc, const char *argv[])
 {
-    ASSERT (argc == 1);
+    OSL_DASSERT(argc == 1);
     string_view shadername (argv[0]);
 
     set_shadingsys_options ();
@@ -258,7 +258,7 @@ action_shaderdecl (int argc, const char *argv[])
 static void
 specify_expr (int argc, const char *argv[])
 {
-    ASSERT (argc == 2);
+    OSL_DASSERT(argc == 2);
     std::string shadername = OIIO::Strutil::sprintf("expr_%d", exprcount++);
     std::string sourcecode =
         "shader " + shadername + " (\n"
@@ -918,7 +918,7 @@ test_group_attributes (ShaderGroup *group)
                                   TypeDesc::PTR, &userdata_offsets);
         shadingsys->getattribute (group, "userdata_derivs",
                                   TypeDesc::PTR, &userdata_derivs);
-        DASSERT (userdata_names && userdata_types && userdata_offsets);
+        OSL_DASSERT(userdata_names && userdata_types && userdata_offsets);
         for (int i = 0; i < nuser; ++i)
             std::cout << "    " << userdata_names[i] << ' '
                       << userdata_types[i] << "  offset="
@@ -934,7 +934,7 @@ test_group_attributes (ShaderGroup *group)
                                   TypeDesc::PTR, &names);
         shadingsys->getattribute (group, "attribute_scopes",
                                   TypeDesc::PTR, &scopes);
-        DASSERT (names && scopes);
+        OSL_DASSERT(names && scopes);
         for (int i = 0; i < nattr; ++i)
             std::cout << "    " << names[i] << ' '
                       << scopes[i] << "\n";

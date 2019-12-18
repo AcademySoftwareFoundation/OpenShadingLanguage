@@ -289,7 +289,7 @@ osl_transform_triple (void *sg_, void *Pin, int Pin_derivs,
                 osl_transformn_vmv(Pout, &M, Pin);
         }
 #ifndef __CUDACC__
-        else ASSERT(0);
+        else OSL_DASSERT(0 && "Unknown transform type");
 #else
         // TBR: Is the ok?
         else ok = false;

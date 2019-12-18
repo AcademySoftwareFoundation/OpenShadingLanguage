@@ -35,7 +35,6 @@ using namespace OSL;
 using namespace OSL::pvt;
 
 #include <OpenImageIO/strutil.h>
-#include <OpenImageIO/dassert.h>
 #include <OpenImageIO/filesystem.h>
 
 
@@ -52,7 +51,7 @@ RendererServices::RendererServices (TextureSystem *texsys)
         // itself. (Most likely reason: this build of OSL is for a renderer
         // that replaces OIIO's TextureSystem with its own, and therefore
         // wouldn't want to accidentally make an OIIO one here.
-        ASSERT (0 && "RendererServices was not passed a working TextureSystem*");
+        OSL_ASSERT (0 && "RendererServices was not passed a working TextureSystem*");
 #else
         m_texturesys = TextureSystem::create (true /* shared */);
         // Make some good guesses about default options

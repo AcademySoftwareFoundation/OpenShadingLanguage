@@ -32,7 +32,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslcomp_pvt.h"
 
 #include <OpenImageIO/strutil.h>
-#include <OpenImageIO/dassert.h>
 namespace Strutil = OIIO::Strutil;
 
 
@@ -45,7 +44,7 @@ std::string
 Symbol::mangled () const
 {
     // FIXME: De-alias
-    return scope() ? Strutil::sprintf ("___%d_%s", scope(), m_name.c_str())
+    return scope() ? Strutil::sprintf ("___%d_%s", scope(), m_name)
         : m_name.string();
 }
 
@@ -54,7 +53,7 @@ Symbol::mangled () const
 const char *
 Symbol::symtype_shortname (SymType s)
 {
-    ASSERT ((int)s >= 0 && (int)s < (int)SymTypeType);
+    OSL_DASSERT ((int)s >= 0 && (int)s < (int)SymTypeType);
     static const char *names[] = { "param", "oparam", "local", "temp",
                                    "global", "const", "func" };
     return names[(int)s];
@@ -65,7 +64,7 @@ Symbol::symtype_shortname (SymType s)
 std::string
 StructSpec::mangled () const
 {
-    return scope() ? Strutil::sprintf ("___%d_%s", scope(), m_name.c_str())
+    return scope() ? Strutil::sprintf ("___%d_%s", scope(), m_name)
         : m_name.string();
 }
 
@@ -91,7 +90,7 @@ Symbol::valuesourcename (ValueSource v)
     case GeomVal      : return "geom";
     case ConnectedVal : return "connected";
     }
-    ASSERT(0 && "unknown valuesource");
+    OSL_DASSERT(0 && "unknown valuesource");
     return NULL;
 }
 
@@ -225,7 +224,7 @@ SymbolTable::clash (ustring name) const
 void
 SymbolTable::insert (Symbol *sym)
 {
-    DASSERT (sym != NULL);
+    OSL_DASSERT(sym != NULL);
     sym->scope (scopeid ());
     m_scopetables.back()[sym->name()] = sym;
     m_allsyms.push_back (sym);
@@ -256,7 +255,7 @@ void
 SymbolTable::add_struct_field (const TypeSpec &type, ustring name)
 {
     StructSpec *s = current_struct();
-    ASSERT (s && "add_struct_field couldn't find a current struct");
+    OSL_DASSERT (s && "add_struct_field couldn't find a current struct");
     s->add_field (type, name);
 }
 
@@ -276,7 +275,7 @@ void
 SymbolTable::pop ()
 {
     m_scopetables.resize (m_scopetables.size()-1);
-    ASSERT (! m_scopestack.empty());
+    OSL_DASSERT (! m_scopestack.empty());
     m_scopeid = m_scopestack.top ();
     m_scopestack.pop ();
 }

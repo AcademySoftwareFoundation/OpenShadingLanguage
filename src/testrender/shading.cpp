@@ -729,7 +729,7 @@ void process_closure (ShadingResult& result, const ClosureColor* closure, const 
                    case REFRACTION_ID:         ok = result.bsdf.add_bsdf<Refraction , RefractionParams>(cw, *comp->as<RefractionParams>()); break;
                    case TRANSPARENT_ID:        ok = result.bsdf.add_bsdf<Transparent, int             >(cw, 0); break;
                }
-               ASSERT(ok && "Invalid closure invoked in surface shader");
+               OSL_ASSERT(ok && "Invalid closure invoked in surface shader");
            }
            break;
        }
@@ -759,7 +759,7 @@ Vec3 process_background_closure(const ClosureColor* closure) {
            }
     }
     // should never happen
-    ASSERT(false && "Invalid closure invoked in background shader");
+    OSL_ASSERT(false && "Invalid closure invoked in background shader");
     return Vec3(0, 0, 0);
 }
 

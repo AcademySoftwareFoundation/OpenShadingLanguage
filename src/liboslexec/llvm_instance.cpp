@@ -430,8 +430,8 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         llvm_assign_zero (sym);
         return;  // we're done, the parts below are just for params
     }
-    ASSERT_MSG (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam,
-                "symtype was %d, data type was %s", (int)sym.symtype(), sym.typespec().c_str());
+    OSL_ASSERT_MSG (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam,
+                    "symtype was %d, data type was %s", (int)sym.symtype(), sym.typespec().c_str());
 
     // Handle interpolated params by calling osl_bind_interpolated_param,
     // which will check if userdata is already retrieved, if not it will
@@ -445,7 +445,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         TypeDesc type = sym.typespec().simpletype();
 
         int userdata_index = find_userdata_index (sym);
-        ASSERT (userdata_index >= 0);
+        OSL_DASSERT (userdata_index >= 0);
 
         llvm::Value* name_arg = NULL;
         if (use_optix()) {
@@ -546,7 +546,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
                     init_val = ll.constant (((ustring*)sym.data())[c]);
                 else if (elemtype.is_int())
                     init_val = ll.constant (((int*)sym.data())[c]);
-                ASSERT (init_val);
+                OSL_DASSERT (init_val);
                 llvm_store_value (init_val, sym, 0, arrind, i);
             }
         }
@@ -578,14 +578,14 @@ BackendLLVM::llvm_generate_debugnan (const Opcode &op)
         llvm::Value *ncheck = ncomps;
         if (op.opname() == op_aassign) {
             // Special case -- array assignment -- only check one element
-            ASSERT (i == 0 && "only arg 0 is written for aassign");
+            OSL_DASSERT (i == 0 && "only arg 0 is written for aassign");
             llvm::Value *ind = llvm_load_value (*opargsym (op, 1));
             llvm::Value *agg = ll.constant(t.aggregate);
             offset = t.aggregate == 1 ? ind : ll.op_mul (ind, agg);
             ncheck = agg;
         } else if (op.opname() == op_compassign) {
             // Special case -- component assignment -- only check one channel
-            ASSERT (i == 0 && "only arg 0 is written for compassign");
+            OSL_DASSERT (i == 0 && "only arg 0 is written for compassign");
             llvm::Value *ind = llvm_load_value (*opargsym (op, 1));
             offset = ind;
             ncheck = ll.constant(1);
@@ -950,13 +950,13 @@ BackendLLVM::build_llvm_instance (bool groupentry)
         for (int c = 0, Nc = child->nconnections();  c < Nc;  ++c) {
             const Connection &con (child->connection (c));
             if (con.srclayer == this->layer()) {
-                ASSERT (con.src.arrayindex == -1 && con.dst.arrayindex == -1 &&
-                        "no support for individual array element connections");
+                OSL_ASSERT (con.src.arrayindex == -1 && con.dst.arrayindex == -1 &&
+                            "no support for individual array element connections");
                 // Validate unsupported connection vecSrc -> vecDst[j]
-                ASSERT ((con.dst.channel == -1 ||
-                         con.src.type.aggregate() == TypeDesc::SCALAR ||
-                         con.src.channel != -1) &&
-                        "no support for vector -> vector[i] connections");
+                OSL_ASSERT ((con.dst.channel == -1 ||
+                             con.src.type.aggregate() == TypeDesc::SCALAR ||
+                             con.src.channel != -1) &&
+                            "no support for vector -> vector[i] connections");
 
                 Symbol *srcsym (inst()->symbol (con.src.param));
                 Symbol *dstsym (child->symbol (con.dst.param));
@@ -966,7 +966,7 @@ BackendLLVM::build_llvm_instance (bool groupentry)
                 if (con.dst.channel != -1 && initedsyms.count(dstsym) == 0) {
                     initedsyms.insert(dstsym);
                     std::bitset<32> inited(0); // Only need to be 16 (matrix4)
-                    assert(dstsym->typespec().aggregate() <= inited.size());
+                    OSL_DASSERT(dstsym->typespec().aggregate() <= inited.size());
                     unsigned ninit = dstsym->typespec().aggregate() - 1;
                     for (int rc = c+1;  rc < Nc && ninit;  ++rc) {
                         const Connection &next (child->connection (rc));
@@ -976,7 +976,7 @@ BackendLLVM::build_llvm_instance (bool groupentry)
                             // 2.  connect layer.value connect layer.value
                             if (child->symbol (next.dst.param) == dstsym) {
                                 if (next.dst.channel != -1) {
-                                    assert(next.dst.channel < (int)inited.size());
+                                    OSL_DASSERT(next.dst.channel < (int)inited.size());
                                     if (!inited[next.dst.channel]) {
                                         inited[next.dst.channel] = true;
                                         --ninit;
@@ -1052,10 +1052,9 @@ BackendLLVM::initialize_llvm_group ()
         while (*types) {
             TypeSpec t = OSLCompilerImpl::type_from_code (types, &advance);
             if (t.simpletype().basetype == TypeDesc::UNKNOWN) {
+                OSL_DASSERT (*types == '*');
                 if (*types == '*')
                     varargs = true;
-                else
-                    ASSERT (0);
             } else {
                 params.push_back (llvm_pass_type (t));
             }
@@ -1126,19 +1125,19 @@ BackendLLVM::run ()
                                            osl_llvm_compiled_ops_cuda_size,
                                            "llvm_ops", &err));
 #else
-        ASSERT (0 && "Must generate LLVM CUDA bitcode for OptiX");
+        OSL_ASSERT (0 && "Must generate LLVM CUDA bitcode for OptiX");
 #endif
     }
     if (err.length())
         shadingcontext()->errorf("ParseBitcodeFile returned '%s'\n", err);
-    ASSERT (ll.module());
+    OSL_ASSERT (ll.module());
 #endif
 
     // Create the ExecutionEngine. We don't create an ExecutionEngine in the
     // OptiX case, because we are using the NVPTX backend and not MCJIT
     if (! use_optix() && ! ll.make_jit_execengine (&err)) {
         shadingcontext()->errorf("Failed to create engine: %s\n", err);
-        ASSERT (0);
+        OSL_ASSERT (0);
         return;
     }
 
@@ -1260,7 +1259,7 @@ BackendLLVM::run ()
     if (use_optix()) {
         // Create an llvm::Module from the renderer-supplied library bitcode
         std::vector<char>& bitcode = shadingsys().m_lib_bitcode;
-        ASSERT (bitcode.size() && "Library bitcode is empty");
+        OSL_ASSERT (bitcode.size() && "Library bitcode is empty");
 
         // TODO: Is it really necessary to build this Module for every ShaderGroup
         llvm::Module* lib_module =
@@ -1271,7 +1270,7 @@ BackendLLVM::run ()
         ll.ptx_compile_group (lib_module, name, group().m_llvm_ptx_compiled_version);
 
         if (group().m_llvm_ptx_compiled_version.empty()) {
-             ASSERT (0 && "Unable to generate PTX");
+             OSL_ASSERT (0 && "Unable to generate PTX");
         }
     }
     else {

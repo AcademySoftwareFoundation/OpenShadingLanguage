@@ -33,7 +33,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sstream>
 
 #include <OpenImageIO/strutil.h>
-#include <OpenImageIO/dassert.h>
 #include <OpenImageIO/thread.h>
 
 #include "oslexec_pvt.h"

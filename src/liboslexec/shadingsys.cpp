@@ -39,7 +39,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/oslquery.h>
 
 #include <OpenImageIO/strutil.h>
-#include <OpenImageIO/dassert.h>
 #include <OpenImageIO/thread.h>
 #include <OpenImageIO/timer.h>
 #include <OpenImageIO/filesystem.h>
@@ -77,7 +76,6 @@ ShadingSystem::ShadingSystem (RendererServices *renderer,
 {
     if (! err) {
         err = & ErrorHandler::default_handler ();
-        ASSERT (err != NULL && "Can't create default ErrorHandler");
     }
     m_impl = new ShadingSystemImpl (renderer, texturesystem, err);
 #ifndef NDEBUG
@@ -319,7 +317,8 @@ bool
 ShadingSystem::execute_layer (ShadingContext &ctx, ShaderGlobals &globals,
                               const ShaderSymbol *symbol)
 {
-    ASSERT (symbol);
+    if (! symbol)
+        return false;
     const Symbol *sym = reinterpret_cast<const Symbol *>(symbol);
     int layernumber = sym->layer();
     return layernumber >= 0 ? ctx.execute_layer (globals, layernumber) : false;
@@ -545,16 +544,16 @@ ShadingSystem::archive_shadergroup (ShaderGroup& group, string_view filename)
 void
 ShadingSystem::set_raytypes (ShaderGroup *group, int raytypes_on, int raytypes_off)
 {
-    DASSERT (group);
-    group->set_raytypes(raytypes_on, raytypes_off);
+    if (group)
+        group->set_raytypes(raytypes_on, raytypes_off);
 }
 
 
 void
 ShadingSystem::optimize_group (ShaderGroup *group, ShadingContext *ctx)
 {
-    DASSERT (group);
-    m_impl->optimize_group (*group, ctx);
+    if (group)
+        m_impl->optimize_group (*group, ctx);
 }
 
 
@@ -811,14 +810,6 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
         m_err = & ErrorHandler::default_handler ();
     }
 
-#if 0
-    // If client didn't supply renderer services, create a default one
-    if (! m_renderer) {
-        m_renderer = NULL;
-        ASSERT (m_renderer);
-    }
-#endif
-
     // If client didn't supply a texture system, use the one already held
     // by the renderer (if it returns one).
     if (! m_texturesys)
@@ -831,10 +822,9 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
         // itself. (Most likely reason: this build of OSL is for a renderer
         // that replaces OIIO's TextureSystem with its own, and therefore
         // wouldn't want to accidentally make an OIIO one here.
-        ASSERT (0 && "ShadingSystem was not passed a working TextureSystem*");
+        OSL_ASSERT (0 && "ShadingSystem was not passed a working TextureSystem*");
 #else
         m_texturesys = TextureSystem::create (true /* shared */);
-        ASSERT (m_texturesys);
         // Make some good guesses about default options
         m_texturesys->attribute ("automip",  1);
         m_texturesys->attribute ("autotile", 64);
@@ -865,7 +855,6 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     setup_op_descriptors ();
 
     colorsystem().set_colorspace(m_colorspace);
-    ASSERT(colorsystem().set_colorspace(m_colorspace) && "Invalid colorspace");
 }
 
 
@@ -1080,7 +1069,8 @@ bool
 ShadingSystemImpl::query_closure(const char **name, int *id,
                                  const ClosureParam **params)
 {
-    ASSERT(name || id);
+    if (!name && !id)
+        return false;
     const ClosureRegistry::ClosureEntry *entry =
         (name && *name) ? m_closure_registry.get_entry(ustring(*name))
                         : m_closure_registry.get_entry(*id);
@@ -1213,8 +1203,8 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
         return true;
     }
     if (name == "raytypes" && type.basetype == TypeDesc::STRING) {
-        ASSERT (type.numelements() <= 32 &&
-                "ShaderGlobals.raytype is an int, max of 32 raytypes");
+        OSL_ASSERT (type.numelements() <= 32 &&
+                    "ShaderGlobals.raytype is an int, max of 32 raytypes");
         m_raytypes.clear ();
         for (size_t i = 0;  i < type.numelements();  ++i)
             m_raytypes.emplace_back(((const char **)val)[i]);
@@ -1412,8 +1402,8 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
         lptr[1] = 1; // 1 string (pvt::ColorSystem::m_colorspace)
 
         // Make sure everything adds up!
-        ASSERT((((char*)&colorsystem() + lptr[0]) - sizeof(ustring)*lptr[1]) ==
-               (char*)&colorsystem().colorspace());
+        OSL_ASSERT((((char*)&colorsystem() + lptr[0]) - sizeof(ustring)*lptr[1]) ==
+                   (char*)&colorsystem().colorspace());
         return true;
     }
 
@@ -2086,7 +2076,6 @@ ShadingSystemImpl::ShaderGroupEnd (ShaderGroup& group)
     // Merge the raytype_queries of all the individual layers
     group.m_raytype_queries = 0;
     for (int layer = 0, n = group.nlayers(); layer < n; ++layer) {
-        ASSERT (group[layer]);
         if (ShaderInstance *inst = group[layer])
             group.m_raytype_queries |= inst->master()->raytype_queries();
     }
@@ -2275,7 +2264,6 @@ ShadingSystemImpl::ConnectShaders (ShaderGroup& group,
     }
 
     const Symbol *dstsym = dstinst->mastersymbol(dstcon.param);
-    ASSERT (dstsym);
     if (dstsym && !dstsym->allowconnect()) {
         std::string name = dstlayer.size() ? Strutil::sprintf("%s.%s", dstlayer, dstparam)
                                            : std::string(dstparam);
@@ -2437,7 +2425,7 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
             }
             // Zero-pad if we parsed fewer values than we needed
             intvals.resize (type.numelements()*type.aggregate, 0);
-            ASSERT (int(type.numelements())*type.aggregate == int(intvals.size()));
+            OSL_DASSERT (int(type.numelements())*type.aggregate == int(intvals.size()));
         } else if (type.basetype == TypeDesc::FLOAT) {
             floatvals.clear ();
             floatvals.reserve (vals_to_preallocate);
@@ -2456,7 +2444,7 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
             }
             // Zero-pad if we parsed fewer values than we needed
             floatvals.resize (type.numelements()*type.aggregate, 0);
-            ASSERT (int(type.numelements())*type.aggregate == int(floatvals.size()));
+            OSL_DASSERT (int(type.numelements())*type.aggregate == int(floatvals.size()));
         } else if (type.basetype == TypeDesc::STRING) {
             stringvals.clear ();
             stringvals.reserve (vals_to_preallocate);
@@ -2485,7 +2473,7 @@ ShadingSystemImpl::ShaderGroupBegin (string_view groupname,
             }
             // Zero-pad if we parsed fewer values than we needed
             stringvals.resize (type.numelements()*type.aggregate, ustring());
-            ASSERT (int(type.numelements())*type.aggregate == int(stringvals.size()));
+            OSL_DASSERT (int(type.numelements())*type.aggregate == int(stringvals.size()));
         }
 
         if (Strutil::parse_prefix (p, "[[")) {  // hints
@@ -2605,7 +2593,7 @@ ShadingSystemImpl::ReParameter (ShaderGroup &group, string_view layername_,
     Symbol *sym = layer->symbol (paramindex);
     if (!sym) {
         // Can have a paramindex >= 0, but no symbol when it's a master-symbol
-        DASSERT(layer->mastersymbol(paramindex) && "No symbol for paramindex");
+        OSL_DASSERT(layer->mastersymbol(paramindex) && "No symbol for paramindex");
         return false;
     }
 
@@ -2764,7 +2752,7 @@ ShadingSystemImpl::decode_connected_param (string_view connectionname,
     }
 
     const Symbol *sym = inst->mastersymbol (c.param);
-    ASSERT (sym);
+    OSL_ASSERT (sym);
 
     // Only params, output params, and globals are legal for connections
     if (! (sym->symtype() == SymTypeParam ||
@@ -3147,8 +3135,8 @@ ShadingSystemImpl::merge_instances (ShaderGroup &group, bool post_opt)
                         con.srclayer = a;
                         A->outgoing_connections (true);
                         if (A->symbols().size() && B->symbols().size()) {
-                            ASSERT (A->symbol(con.src.param)->name() ==
-                                    B->symbol(con.src.param)->name());
+                            OSL_DASSERT (A->symbol(con.src.param)->name() ==
+                                         B->symbol(con.src.param)->name());
                         }
                     }
                 }
@@ -3164,11 +3152,11 @@ ShadingSystemImpl::merge_instances (ShaderGroup &group, bool post_opt)
             // B won't be used, so mark it as having no outgoing
             // connections and clear its incoming connections (which are
             // no longer used).
-            ASSERT (B->merged_unused() == false);
+            OSL_DASSERT (B->merged_unused() == false);
             B->outgoing_connections (false);
             connectionmem += B->clear_connections ();
             B->m_merged_unused = true;
-            ASSERT (B->unused());
+            OSL_DASSERT (B->unused());
         }
     }
 
@@ -3372,7 +3360,7 @@ ClosureRegistry::register_closure (string_view name, int id,
             /* CLOSURE_FINISH_PARAM stashes the real struct alignement here
              * make sure that the closure struct doesn't want more alignment than ClosureComponent
              * because we will be allocating the real struct inside it. */
-            ASSERT_MSG(params[i].field_size <= int(alignof(ClosureComponent)),
+            OSL_ASSERT_MSG(params[i].field_size <= int(alignof(ClosureComponent)),
                 "Closure %s wants alignment of %d which is larger than that of ClosureComponent",
                 name.c_str(),
                 params[i].field_size);
@@ -3396,7 +3384,7 @@ ClosureRegistry::get_entry(ustring name) const
     std::map<ustring, int>::const_iterator i = m_closure_name_to_id.find(name);
     if (i != m_closure_name_to_id.end())
     {
-        ASSERT((size_t)i->second < m_closure_table.size());
+        OSL_DASSERT((size_t)i->second < m_closure_table.size());
         return &m_closure_table[i->second];
     }
     else

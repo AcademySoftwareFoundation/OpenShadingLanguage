@@ -351,7 +351,7 @@ DECLFOLDER(constfold_dot)
 
     // dot(const,const) -> const
     if (A.is_constant() && B.is_constant()) {
-        DASSERT (A.typespec().is_triple() && B.typespec().is_triple());
+        OSL_DASSERT(A.typespec().is_triple() && B.typespec().is_triple());
         float result = (*(Vec3 *)A.data()).dot (*(Vec3 *)B.data());
         int cind = rop.add_constant (TypeDesc::TypeFloat, &result);
         rop.turn_into_assign (op, cind, "dot(const,const)");
@@ -610,7 +610,7 @@ DECLFOLDER(constfold_or)
     Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
     if (A.is_constant() && B.is_constant()) {
-        DASSERT (A.typespec().is_int() && B.typespec().is_int());
+        OSL_DASSERT(A.typespec().is_int() && B.typespec().is_int());
         bool val = *(int *)A.data() || *(int *)B.data();
         // Turn the 'or R A B' into 'assign R X' where X is 0 or 1.
         static const int int_zero = 0, int_one = 1;
@@ -631,7 +631,7 @@ DECLFOLDER(constfold_and)
     Symbol &B (*rop.inst()->argsymbol(op.firstarg()+2));
     if (A.is_constant() && B.is_constant()) {
         // Turn the 'and R A B' into 'assign R X' where X is 0 or 1.
-        DASSERT (A.typespec().is_int() && B.typespec().is_int());
+        OSL_DASSERT(A.typespec().is_int() && B.typespec().is_int());
         bool val = *(int *)A.data() && *(int *)B.data();
         static const int int_zero = 0, int_one = 1;
         int cind = rop.add_constant (TypeDesc::TypeInt,
@@ -651,7 +651,7 @@ DECLFOLDER(constfold_bitand)
     Symbol &B (*rop.opargsym(op, 2));
     if (A.is_constant() && B.is_constant()) {
         // Turn the 'bitand R A B' into 'assign R X'.
-        DASSERT (A.typespec().is_int() && B.typespec().is_int());
+        OSL_DASSERT(A.typespec().is_int() && B.typespec().is_int());
         int cind = rop.add_constant (A.get_int() & B.get_int());
         rop.turn_into_assign (op, cind, "const & const");
         return 1;
@@ -668,7 +668,7 @@ DECLFOLDER(constfold_bitor)
     Symbol &B (*rop.opargsym(op, 2));
     if (A.is_constant() && B.is_constant()) {
         // Turn the 'bitor R A B' into 'assign R X'.
-        DASSERT (A.typespec().is_int() && B.typespec().is_int());
+        OSL_DASSERT(A.typespec().is_int() && B.typespec().is_int());
         int cind = rop.add_constant (A.get_int() | B.get_int());
         rop.turn_into_assign (op, cind, "const | const");
         return 1;
@@ -685,7 +685,7 @@ DECLFOLDER(constfold_xor)
     Symbol &B (*rop.opargsym(op, 2));
     if (A.is_constant() && B.is_constant()) {
         // Turn the 'xor R A B' into 'assign R X'.
-        DASSERT (A.typespec().is_int() && B.typespec().is_int());
+        OSL_DASSERT(A.typespec().is_int() && B.typespec().is_int());
         int cind = rop.add_constant (A.get_int() ^ B.get_int());
         rop.turn_into_assign (op, cind, "const ^ const");
         return 1;
@@ -701,7 +701,7 @@ DECLFOLDER(constfold_compl)
     Symbol &A (*rop.opargsym(op, 1));
     if (A.is_constant()) {
         // Turn the 'compl R A' into 'assign R X'.
-        DASSERT (A.typespec().is_int());
+        OSL_DASSERT(A.typespec().is_int());
         int cind = rop.add_constant (~(A.get_int()));
         rop.turn_into_assign (op, cind, "~const");
         return 1;
@@ -773,15 +773,15 @@ DECLFOLDER(constfold_aref)
     Symbol &R (*rop.inst()->argsymbol(op.firstarg()+0));
     Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &Index (*rop.inst()->argsymbol(op.firstarg()+2));
-    DASSERT (A.typespec().is_array() && Index.typespec().is_int());
+    OSL_DASSERT(A.typespec().is_array() && Index.typespec().is_int());
 
     // Try to turn R=A[I] into R=C if A and I are const.
     if (A.is_constant() && Index.is_constant()) {
         TypeSpec elemtype = A.typespec().elementtype();
-        ASSERT (equivalent(elemtype, R.typespec()));
+        OSL_ASSERT (equivalent(elemtype, R.typespec()));
         const int length = A.typespec().arraylength();
         const int orig_index = *(int *)Index.data(), index = OIIO::clamp(orig_index, 0, length - 1);
-        DASSERT(index >=0 && index < length);
+        OSL_DASSERT(index >=0 && index < length);
         int cind = rop.add_constant (elemtype,
                         (char *)A.data() + index*elemtype.simpletype().size());
         rop.turn_into_assign (op, cind, "aref const fold: const_array[const]");
@@ -811,7 +811,7 @@ DECLFOLDER(constfold_aref)
     // the array elements are equal!
     if (A.is_constant() && array_all_elements_equal(A)) {
         TypeSpec elemtype = A.typespec().elementtype();
-        ASSERT (equivalent(elemtype, R.typespec()));
+        OSL_ASSERT (equivalent(elemtype, R.typespec()));
         int cind = rop.add_constant (elemtype, (char *)A.data());
         rop.turn_into_assign (op, cind, "aref of elements-equal array");
         return 1;
@@ -826,7 +826,7 @@ DECLFOLDER(constfold_arraylength)
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol &R (*rop.inst()->argsymbol(op.firstarg()+0));
     Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
-    ASSERT (R.typespec().is_int() && A.typespec().is_array());
+    OSL_DASSERT (R.typespec().is_int() && A.typespec().is_array());
 
     // Try to turn R=arraylength(A) into R=C if the array length is known
     int len = A.typespec().is_unsized_array() ? A.initializers()
@@ -850,7 +850,7 @@ DECLFOLDER(constfold_aassign)
     Symbol *C (rop.inst()->argsymbol(op.firstarg()+2));
     if (! I->is_constant() || !C->is_constant())
         return 0;  // not much we can do if not assigning constants
-    ASSERT (R->typespec().is_array() && I->typespec().is_int());
+    OSL_DASSERT (R->typespec().is_array() && I->typespec().is_int());
 
     TypeSpec elemtype = R->typespec().elementtype();
     if (elemtype.is_closure())
@@ -927,8 +927,8 @@ DECLFOLDER(constfold_compassign)
     Symbol *C (rop.inst()->argsymbol(op.firstarg()+2));
     if (! I->is_constant() || !C->is_constant())
         return 0;  // not much we can do if not assigning constants
-    ASSERT (R->typespec().is_triple() && I->typespec().is_int() &&
-            (C->typespec().is_float() || C->typespec().is_int()));
+    OSL_DASSERT (R->typespec().is_triple() && I->typespec().is_int() &&
+                 (C->typespec().is_float() || C->typespec().is_int()));
 
     // We are obviously not assigning to a constant, but it could be
     // that at this point in our current block, the value of A is known,
@@ -943,7 +943,7 @@ DECLFOLDER(constfold_compassign)
     // and thus the assignment doesn't change A's value, we can eliminate
     // the assignment entirely.
     if (AA && AA->is_constant()) {
-        ASSERT (AA->typespec().is_triple());
+        OSL_DASSERT (AA->typespec().is_triple());
         int index = *(int *)I->data();
         if (index < 0 || index >= 3) {
             // We are indexing a const triple out of range.  But this
@@ -1031,9 +1031,9 @@ DECLFOLDER(constfold_mxcompassign)
     Symbol *C (rop.inst()->argsymbol(op.firstarg()+3));
     if (! J->is_constant() || ! I->is_constant() || !C->is_constant())
         return 0;  // not much we can do if not assigning constants
-    ASSERT (R->typespec().is_matrix() &&
-            J->typespec().is_int() && I->typespec().is_int() &&
-            (C->typespec().is_float() || C->typespec().is_int()));
+    OSL_DASSERT (R->typespec().is_matrix() &&
+                 J->typespec().is_int() && I->typespec().is_int() &&
+                 (C->typespec().is_float() || C->typespec().is_int()));
 
     // We are obviously not assigning to a constant, but it could be
     // that at this point in our current block, the value of A is known,
@@ -1048,7 +1048,7 @@ DECLFOLDER(constfold_mxcompassign)
     // A[J,I] == C, and thus the assignment doesn't change A's value, we can
     // eliminate the assignment entirely.
     if (AA && AA->is_constant()) {
-        ASSERT (AA->typespec().is_matrix());
+        OSL_DASSERT (AA->typespec().is_matrix());
         int jndex = *(int *)J->data();
         int index = *(int *)I->data();
         if (index < 0 || index >= 3 || jndex < 0 || jndex >= 3) {
@@ -1138,7 +1138,7 @@ DECLFOLDER(constfold_compref)
     Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &Index (*rop.inst()->argsymbol(op.firstarg()+2));
     if (A.is_constant() && Index.is_constant()) {
-        ASSERT (A.typespec().is_triple() && Index.typespec().is_int());
+        OSL_DASSERT (A.typespec().is_triple() && Index.typespec().is_int());
         int index = *(int *)Index.data();
         if (index < 0 || index >= 3) {
             // We are indexing a const triple out of range.  But this
@@ -1163,7 +1163,7 @@ DECLFOLDER(constfold_strlen)
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol &S (*rop.inst()->argsymbol(op.firstarg()+1));
     if (S.is_constant()) {
-        ASSERT (S.typespec().is_string());
+        OSL_DASSERT (S.typespec().is_string());
         int result = (int) (*(ustring *)S.data()).length();
         int cind = rop.add_constant (result);
         rop.turn_into_assign (op, cind, "const fold strlen");
@@ -1212,8 +1212,7 @@ DECLFOLDER(constfold_getchar)
     Symbol &S (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &I (*rop.inst()->argsymbol(op.firstarg()+2));
     if (S.is_constant() && I.is_constant()) {
-        ASSERT (S.typespec().is_string());
-        ASSERT (I.typespec().is_int());
+        OSL_DASSERT (S.typespec().is_string() && I.typespec().is_int());
         int idx = (int) (*(int *)I.data());
         int len = (int) (*(ustring *)S.data()).length();
         int result = idx >= 0 && idx < len ? (*(ustring *)S.data()).c_str()[idx] : 0;
@@ -1233,7 +1232,7 @@ DECLFOLDER(constfold_endswith)
     Symbol &S (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &E (*rop.inst()->argsymbol(op.firstarg()+2));
     if (S.is_constant() && E.is_constant()) {
-        ASSERT (S.typespec().is_string() && E.typespec().is_string());
+        OSL_DASSERT (S.typespec().is_string() && E.typespec().is_string());
         ustring s = *(ustring *)S.data();
         ustring e = *(ustring *)E.data();
         size_t elen = e.length(), slen = s.length();
@@ -1255,7 +1254,7 @@ DECLFOLDER(constfold_stoi)
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol &S (*rop.inst()->argsymbol(op.firstarg()+1));
     if (S.is_constant()) {
-        ASSERT (S.typespec().is_string());
+        OSL_DASSERT (S.typespec().is_string());
         ustring s = *(ustring *)S.data();
         int cind = rop.add_constant (Strutil::from_string<int>(s));
         rop.turn_into_assign (op, cind, "const fold stoi");
@@ -1272,7 +1271,7 @@ DECLFOLDER(constfold_stof)
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol &S (*rop.inst()->argsymbol(op.firstarg()+1));
     if (S.is_constant()) {
-        ASSERT (S.typespec().is_string());
+        OSL_DASSERT (S.typespec().is_string());
         ustring s = *(ustring *)S.data();
         int cind = rop.add_constant (Strutil::from_string<float>(s));
         rop.turn_into_assign (op, cind, "const fold stof");
@@ -1396,7 +1395,7 @@ DECLFOLDER(constfold_format)
                 return 0;
             }
         }
-        ASSERT (pos < prefix.length() && prefix[pos] == '%');
+        OSL_ASSERT (pos < prefix.length() && prefix[pos] == '%');
 
         // cleave off the last format specification into mid
         std::string mid = std::string (prefix, pos);
@@ -1456,8 +1455,8 @@ DECLFOLDER(constfold_substr)
     Symbol &Start (*rop.opargsym (op, 2));
     Symbol &Len (*rop.opargsym (op, 3));
     if (S.is_constant() && Start.is_constant() && Len.is_constant()) {
-        ASSERT (S.typespec().is_string() && Start.typespec().is_int() &&
-                Len.typespec().is_int());
+        OSL_DASSERT (S.typespec().is_string() && Start.typespec().is_int() &&
+                     Len.typespec().is_int());
         ustring s = *(ustring *)S.data();
         int start = *(int *)Start.data();
         int len = *(int *)Len.data();
@@ -1484,7 +1483,7 @@ DECLFOLDER(constfold_regex_search)
     Symbol &Reg (*rop.inst()->argsymbol(op.firstarg()+2));
     if (op.nargs() == 3 // only the 2-arg version without search results
           && Subj.is_constant() && Reg.is_constant()) {
-        DASSERT (Subj.typespec().is_string() && Reg.typespec().is_string());
+        OSL_DASSERT(Subj.typespec().is_string() && Reg.typespec().is_string());
         const ustring &s (*(ustring *)Subj.data());
         const ustring &r (*(ustring *)Reg.data());
         regex reg (r.string());
@@ -1952,7 +1951,7 @@ DECLFOLDER(constfold_normalize)
     // Try to turn R=normalze(x) into R=C
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));
-    DASSERT (X.typespec().is_triple());
+    OSL_DASSERT(X.typespec().is_triple());
     if (X.is_constant()) {
         Vec3 result = *(const Vec3 *)X.data();
         result.normalize();
@@ -1969,7 +1968,7 @@ DECLFOLDER(constfold_triple)
 {
     // Turn R=triple(a,b,c) into R=C if the components are all constants
     Opcode &op (rop.inst()->ops()[opnum]);
-    DASSERT (op.nargs() == 4 || op.nargs() == 5);
+    OSL_DASSERT(op.nargs() == 4 || op.nargs() == 5);
     bool using_space = (op.nargs() == 5);
     Symbol &R (*rop.inst()->argsymbol(op.firstarg()+0));
     Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1+using_space));
@@ -1985,7 +1984,7 @@ DECLFOLDER(constfold_triple)
     }
     if (A.is_constant() && A.typespec().is_float() &&
             B.is_constant() && C.is_constant() && !using_space) {
-        DASSERT (A.typespec().is_float() &&
+        OSL_DASSERT(A.typespec().is_float() &&
                  B.typespec().is_float() && C.typespec().is_float());
         float result[3];
         result[0] = *(const float *)A.data();
@@ -2008,7 +2007,7 @@ DECLFOLDER(constfold_matrix)
     if (using_space && nargs > 2 && rop.opargsym(op,2)->typespec().is_string())
         using_space = 2;
     int nfloats = nargs - 1 - using_space;
-    ASSERT (nfloats == 1 || nfloats == 16 || (nfloats == 0 && using_space == 2));
+    OSL_DASSERT (nfloats == 1 || nfloats == 16 || (nfloats == 0 && using_space == 2));
     if (nargs == 3 && using_space == 2) {
         // Try to simplify R=matrix(from,to) in cases of an identify
         // transform: if From and To are the same variable (even if not a
@@ -2182,7 +2181,7 @@ DECLFOLDER(constfold_transform)
     if (op.nargs() == 4) {
         Symbol &T (*rop.inst()->argsymbol(op.firstarg()+2));
         if (M.is_constant() && T.is_constant()) {
-            DASSERT (M.typespec().is_string() && T.typespec().is_string());
+            OSL_DASSERT(M.typespec().is_string() && T.typespec().is_string());
             ustring from = *(ustring *)M.data();
             ustring to = *(ustring *)T.data();
             ustring syn = rop.shadingsys().commonspace_synonym();
@@ -2242,7 +2241,7 @@ DECLFOLDER(constfold_setmessage)
 
     // Record that the inst set a message
     if (Name.is_constant()) {
-        ASSERT (Name.typespec().is_string());
+        OSL_DASSERT (Name.typespec().is_string());
         rop.register_message (*(ustring *)Name.data());
     } else {
         rop.register_unknown_message ();
@@ -2262,7 +2261,7 @@ DECLFOLDER(constfold_getmessage)
         return 0;    // Don't optimize away sourced getmessage
     Symbol &Name (*rop.inst()->argsymbol(op.firstarg()+1+(int)has_source));
     if (Name.is_constant()) {
-        ASSERT (Name.typespec().is_string());
+        OSL_DASSERT (Name.typespec().is_string());
         if (! rop.message_possibly_set (*(ustring *)Name.data())) {
             // If the messages could not have been sent, get rid of the
             // getmessage op, leave the destination value alone, and
@@ -2293,7 +2292,7 @@ DECLFOLDER(constfold_getattribute)
     //   * getattribute (object, attribute_name, index, value[])
     Opcode &op (rop.inst()->ops()[opnum]);
     int nargs = op.nargs();
-    DASSERT (nargs >= 3 && nargs <= 5);
+    OSL_DASSERT(nargs >= 3 && nargs <= 5);
     bool array_lookup = rop.opargsym(op,nargs-2)->typespec().is_int();
     bool object_lookup = rop.opargsym(op,2)->typespec().is_string() && nargs >= 4;
     int object_slot = (int)object_lookup;
@@ -2398,8 +2397,9 @@ DECLFOLDER(constfold_gettextureinfo)
     Symbol &Filename (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &Dataname (*rop.inst()->argsymbol(op.firstarg()+2));
     Symbol &Data (*rop.inst()->argsymbol(op.firstarg()+3));
-    ASSERT (Result.typespec().is_int() && Filename.typespec().is_string() &&
-            Dataname.typespec().is_string());
+    OSL_DASSERT (Result.typespec().is_int() &&
+                 Filename.typespec().is_string() &&
+                 Dataname.typespec().is_string());
 
     if (Filename.is_constant() && Dataname.is_constant()) {
         ustring filename = *(ustring *)Filename.data();
@@ -2480,9 +2480,9 @@ DECLFOLDER(constfold_texture)
     if (op.nargs() > 4 && rop.opargsym(op,4)->typespec().is_float()) {
         //user_derivs = true;
         first_optional_arg = 8;
-        DASSERT (rop.opargsym(op,5)->typespec().is_float());
-        DASSERT (rop.opargsym(op,6)->typespec().is_float());
-        DASSERT (rop.opargsym(op,7)->typespec().is_float());
+        OSL_DASSERT(rop.opargsym(op,5)->typespec().is_float());
+        OSL_DASSERT(rop.opargsym(op,6)->typespec().is_float());
+        OSL_DASSERT(rop.opargsym(op,7)->typespec().is_float());
     }
 
     TextureOpt opt;  // So we can check the defaults
@@ -2494,7 +2494,7 @@ DECLFOLDER(constfold_texture)
     for (int i = first_optional_arg;  i < op.nargs()-1;  i += 2) {
         Symbol &Name = *rop.opargsym (op, i);
         Symbol &Value = *rop.opargsym (op, i+1);
-        DASSERT (Name.typespec().is_string());
+        OSL_DASSERT(Name.typespec().is_string());
         if (Name.is_constant() && Value.is_constant()) {
             ustring name = *(ustring *)Name.data();
             bool elide = false;
@@ -2596,13 +2596,13 @@ DECLFOLDER(constfold_texture)
 DECLFOLDER(constfold_pointcloud_search)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
-    DASSERT (op.nargs() >= 5);
+    OSL_DASSERT(op.nargs() >= 5);
     int result_sym     = rop.oparg (op, 0);
     Symbol& Filename   = *rop.opargsym (op, 1);
     Symbol& Center     = *rop.opargsym (op, 2);
     Symbol& Radius     = *rop.opargsym (op, 3);
     Symbol& Max_points = *rop.opargsym (op, 4);
-    DASSERT (Filename.typespec().is_string() &&
+    OSL_DASSERT(Filename.typespec().is_string() &&
              Center.typespec().is_triple() && Radius.typespec().is_float() &&
              Max_points.typespec().is_int());
 
@@ -2632,7 +2632,7 @@ DECLFOLDER(constfold_pointcloud_search)
     for (int i = 0, num_queries = 0; i < nattrs; ++i) {
         Symbol& Name  = *rop.opargsym (op, attr_arg_offset + i*2);
         Symbol& Value = *rop.opargsym (op, attr_arg_offset + i*2 + 1);
-        ASSERT (Name.typespec().is_string());
+        OSL_ASSERT (Name.typespec().is_string());
         if (!Name.is_constant())
             return 0;  // unknown optional argument, punt
         if (++num_queries > RuntimeOptimizer::max_new_consts_per_fold)
@@ -2834,7 +2834,7 @@ DECLFOLDER(constfold_noise)
             // on whatever values were previously passed.
             if (rop.opargsym(op,a)->typespec().is_string()) {
                 for ( ; a < op.nargs(); a += 2) {
-                    ASSERT (a+1 < op.nargs());
+                    OSL_ASSERT (a+1 < op.nargs());
                     int cind = rop.add_constant (ustring());
                     rop.inst()->args()[op.firstarg()+a] = cind;
                     rop.inst()->args()[op.firstarg()+a+1] = cind;
@@ -2884,7 +2884,7 @@ DECLFOLDER(constfold_noise)
             rop.turn_into_assign (op, cind, "const fold cellnoise");
             return 1;
         } else {
-            ASSERT (outdim == 3);
+            OSL_DASSERT (outdim == 3);
             Vec3 n;
             if (indim == 1)
                 cell (n, input[0]);
@@ -3042,7 +3042,7 @@ DECLFOLDER(constfold_raytype)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol& Name = *rop.opargsym (op, 1);
-    DASSERT (Name.typespec().is_string());
+    OSL_DASSERT(Name.typespec().is_string());
     if (! Name.is_constant())
         return 0;   // Can't optimize non-constant raytype name
 

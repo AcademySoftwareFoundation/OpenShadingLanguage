@@ -94,17 +94,17 @@ struct OSLEXECPUBLIC ClosureColor {
     int id;
 
     OSL_HOSTDEVICE const ClosureComponent* as_comp() const {
-        DASSERT(id >= COMPONENT_BASE_ID);
+        OSL_DASSERT(id >= COMPONENT_BASE_ID);
         return reinterpret_cast<const ClosureComponent*>(this);
     }
 
     OSL_HOSTDEVICE const ClosureMul* as_mul() const {
-        DASSERT(id == MUL);
+        OSL_DASSERT(id == MUL);
         return reinterpret_cast<const ClosureMul*>(this);
     }
 
     OSL_HOSTDEVICE const ClosureAdd* as_add() const {
-        DASSERT(id == ADD);
+        OSL_DASSERT(id == ADD);
         return reinterpret_cast<const ClosureAdd*>(this);
     }
 };

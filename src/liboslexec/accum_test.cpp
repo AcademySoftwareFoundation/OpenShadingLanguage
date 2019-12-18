@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OSL/accum.h>
 #include <OSL/oslclosure.h>
+#include <OpenImageIO/unittest.h>
 
 using namespace OSL;
 
@@ -156,16 +157,16 @@ int main()
     automata.addEventType(ustring("U"));
     automata.addScatteringType(ustring("Y"));
 
-    ASSERT(automata.addRule("C[SG]*D*L",        beauty));
-    ASSERT(automata.addRule("C[SG]*D{2,3}L",    diffuse2_3));
-    ASSERT(automata.addRule("C[SG]*D*<L.'3'>",  light3));
-    ASSERT(automata.addRule("C[SG]*<.D'1'>D*L", object_1));
-    ASSERT(automata.addRule("C<.[SG]>+D*L",     specular));
-    ASSERT(automata.addRule("CD+L",             diffuse));
-    ASSERT(automata.addRule("CD+<Ts>L",         transpshadow));
-    ASSERT(automata.addRule("C<R[^D]>+D*L",     reflections));
-    ASSERT(automata.addRule("C([SG]*D){1,2}L",  nocaustic));
-    ASSERT(automata.addRule("CDY+U",            custom));
+    OIIO_CHECK_ASSERT(automata.addRule("C[SG]*D*L",        beauty));
+    OIIO_CHECK_ASSERT(automata.addRule("C[SG]*D{2,3}L",    diffuse2_3));
+    OIIO_CHECK_ASSERT(automata.addRule("C[SG]*D*<L.'3'>",  light3));
+    OIIO_CHECK_ASSERT(automata.addRule("C[SG]*<.D'1'>D*L", object_1));
+    OIIO_CHECK_ASSERT(automata.addRule("C<.[SG]>+D*L",     specular));
+    OIIO_CHECK_ASSERT(automata.addRule("CD+L",             diffuse));
+    OIIO_CHECK_ASSERT(automata.addRule("CD+<Ts>L",         transpshadow));
+    OIIO_CHECK_ASSERT(automata.addRule("C<R[^D]>+D*L",     reflections));
+    OIIO_CHECK_ASSERT(automata.addRule("C([SG]*D){1,2}L",  nocaustic));
+    OIIO_CHECK_ASSERT(automata.addRule("CDY+U",            custom));
 
     automata.compile();
 
@@ -182,15 +183,16 @@ int main()
 
     // And check. We unroll this loop for boost to give us a useful
     // error in case they fail
-    ASSERT(aovs[beauty      ].check());
-    ASSERT(aovs[diffuse2_3  ].check());
-    ASSERT(aovs[light3      ].check());
-    ASSERT(aovs[object_1    ].check());
-    ASSERT(aovs[specular    ].check());
-    ASSERT(aovs[diffuse     ].check());
-    ASSERT(aovs[transpshadow].check());
-    ASSERT(aovs[reflections ].check());
-    ASSERT(aovs[nocaustic   ].check());
+    OIIO_CHECK_ASSERT(aovs[beauty      ].check());
+    OIIO_CHECK_ASSERT(aovs[diffuse2_3  ].check());
+    OIIO_CHECK_ASSERT(aovs[light3      ].check());
+    OIIO_CHECK_ASSERT(aovs[object_1    ].check());
+    OIIO_CHECK_ASSERT(aovs[specular    ].check());
+    OIIO_CHECK_ASSERT(aovs[diffuse     ].check());
+    OIIO_CHECK_ASSERT(aovs[transpshadow].check());
+    OIIO_CHECK_ASSERT(aovs[reflections ].check());
+    OIIO_CHECK_ASSERT(aovs[nocaustic   ].check());
 
     std::cout << "Light expressions check OK" << std::endl;
+    return unit_test_failures;
 }

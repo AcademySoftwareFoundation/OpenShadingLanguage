@@ -33,7 +33,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cctype>
 #include <unordered_map>
 
-#include <OpenImageIO/dassert.h>
 #include <OpenImageIO/strutil.h>
 
 #include <pugixml.hpp>
@@ -192,7 +191,7 @@ Dictionary::get_document_index (ustring dictionaryname)
         dindex = dm->second;
     }
 
-    DASSERT (dindex < (int)m_documents.size());
+    OSL_DASSERT(dindex < (int)m_documents.size());
     return dindex;
 }
 
@@ -204,7 +203,6 @@ Dictionary::dict_find (ustring dictionaryname, ustring query)
     int dindex = get_document_index (dictionaryname);
     if (dindex < 0)
         return dindex;
-    ASSERT (dindex >= 0 && dindex < (int)m_documents.size());
 
     Query q (dindex, 0, query);
     QueryMap::iterator qfound = m_cache.find (q);
@@ -321,7 +319,7 @@ Dictionary::dict_value (int nodeID, ustring attribname,
         int offset = qfound->second.valueoffset;
         int n = type.numelements() * type.aggregate;
         if (type.basetype == TypeDesc::STRING) {
-            ASSERT (n == 1 && "no string arrays in XML");
+            OSL_DASSERT (n == 1 && "no string arrays in XML");
             ((ustring *)data)[0] = m_stringdata[offset];
             return 1;
         }

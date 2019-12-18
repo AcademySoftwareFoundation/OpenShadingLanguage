@@ -33,7 +33,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdio>
 #include <cstdlib>
 
-#include <OpenImageIO/dassert.h>
 #include <OpenImageIO/typedesc.h>
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/strutil.h>
@@ -638,6 +637,10 @@ OSLInput::read_native_scanlines (
     if (! seek_subimage (subimage, miplevel))
         return false;
 #endif
+    if (! m_group.get()) {
+        error("read_native_scanlines called with missing shading group");
+        return false;
+    }
 
     // Create an ImageBuf wrapper of the user's data
     ImageSpec spec = m_spec; // Make a spec that describes just this scanline
@@ -649,7 +652,6 @@ OSLInput::read_native_scanlines (
 
     // Now run the shader on the ImageBuf pixels, which really point to
     // the caller's data buffer.
-    ASSERT (m_group.get());
     ROI roi (spec.x, spec.x+spec.width, spec.y, spec.y+spec.height,
              spec.z, spec.z+spec.depth);
     return shade_image (*shadingsys, *m_group, NULL, ibwrapper, m_outputs,
@@ -687,6 +689,10 @@ OSLInput::read_native_tiles (
     if (! seek_subimage (subimage, miplevel))
         return false;
 #endif
+    if (! m_group.get()) {
+        error("read_native_scanlines called with missing shading group");
+        return false;
+    }
 
     // Create an ImageBuf wrapper of the user's data
     ImageSpec spec = m_spec; // Make a spec that describes just this scanline
@@ -700,7 +706,6 @@ OSLInput::read_native_tiles (
 
     // Now run the shader on the ImageBuf pixels, which really point to
     // the caller's data buffer.
-    ASSERT (m_group.get());
     ROI roi (spec.x, spec.x+spec.width, spec.y, spec.y+spec.height,
              spec.z, spec.z+spec.depth);
     return shade_image (*shadingsys, *m_group, NULL, ibwrapper, m_outputs,

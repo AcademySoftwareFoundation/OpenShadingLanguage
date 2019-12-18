@@ -157,11 +157,10 @@ BackendLLVM::llvm_pass_type (const TypeSpec &typespec)
     else if (t == TypeDesc::LONGLONG)
         lt = ll.type_longlong();
     else {
-        std::cerr << "Bad llvm_pass_type(" << typespec.c_str() << ")\n";
-        ASSERT (0 && "not handling this type yet");
+        OSL_ASSERT_MSG (0, "not handling %s type yet", typespec.c_str());
     }
     if (t.arraylen) {
-        ASSERT (0 && "should never pass an array directly as a parameter");
+        OSL_ASSERT (0 && "should never pass an array directly as a parameter");
     }
     return lt;
 }
@@ -256,7 +255,7 @@ BackendLLVM::llvm_global_symbol_ptr (ustring name)
     // we use the name of the global to find the index of the field within
     // the ShaderGlobals struct.
     int sg_index = ShaderGlobalNameToIndex (name);
-    ASSERT (sg_index >= 0);
+    OSL_ASSERT (sg_index >= 0);
     return ll.void_ptr (ll.GEP (sg_ptr(), 0, sg_index));
 }
 
@@ -269,7 +268,7 @@ BackendLLVM::getLLVMSymbolBase (const Symbol &sym)
 
     if (sym.symtype() == SymTypeGlobal) {
         llvm::Value *result = llvm_global_symbol_ptr (sym.name());
-        ASSERT (result);
+        OSL_ASSERT (result);
         result = ll.ptr_to_cast (result, llvm_type(sym.typespec().elementtype()));
         return result;
     }
@@ -307,7 +306,7 @@ BackendLLVM::llvm_alloca (const TypeSpec &type, bool derivs,
 llvm::Value *
 BackendLLVM::getOrAllocateLLVMSymbol (const Symbol& sym)
 {
-    DASSERT ((sym.symtype() == SymTypeLocal || sym.symtype() == SymTypeTemp ||
+    OSL_DASSERT((sym.symtype() == SymTypeLocal || sym.symtype() == SymTypeTemp ||
               sym.symtype() == SymTypeConst)
              && "getOrAllocateLLVMSymbol should only be for local, tmp, const");
     Symbol* dealiased = sym.dealias();
@@ -328,7 +327,7 @@ llvm::Value*
 BackendLLVM::addCUDAVariable(const std::string& name, int size, int alignment,
                              const void* data, TypeDesc type)
 {
-    ASSERT (use_optix() && "This function is only supposed to be used with OptiX!");
+    OSL_ASSERT (use_optix() && "This function is only supposed to be used with OptiX!");
 
     llvm::Constant* constant = nullptr;
 
@@ -363,7 +362,7 @@ BackendLLVM::addCUDAVariable(const std::string& name, int size, int alignment,
     llvm::GlobalVariable* g_var = reinterpret_cast<llvm::GlobalVariable*>(
         ll.module()->getOrInsertGlobal (name, constant->getType()));
 
-    ASSERT (g_var && "Unable to create GlobalVariable");
+    OSL_DASSERT (g_var && "Unable to create GlobalVariable");
 
     g_var->setAlignment  (alignment);
     g_var->setLinkage    (llvm::GlobalValue::ExternalLinkage);
@@ -389,7 +388,7 @@ BackendLLVM::createOptixMetadata (const std::string& name, const Symbol& sym)
     // Refer to the OptiX API documentation and optix_defines.h in the OptiX SDK
     // for more information.
 
-    ASSERT (use_optix() && "This function is only supported when using OptiX!");
+    OSL_ASSERT (use_optix() && "This function is only supported when using OptiX!");
 
     auto mangle_name = [](const std::string& name, const std::string& prefix) {
         return OIIO::Strutil::sprintf ("_ZN%drti_internal_%s%d%sE",
@@ -445,7 +444,7 @@ BackendLLVM::createOptixMetadata (const std::string& name, const Symbol& sym)
 llvm::Value *
 BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym, bool addMetadata)
 {
-    ASSERT (use_optix() && "This function is only supported when using OptiX!");
+    OSL_ASSERT (use_optix() && "This function is only supported when using OptiX!");
 
     std::ostringstream ss;
     ss.imbue (std::locale::classic());  // force C locale
@@ -591,7 +590,7 @@ BackendLLVM::llvm_load_value (const Symbol& sym, int deriv,
     }
 
     // arrayindex should be non-NULL if and only if sym is an array
-    ASSERT (sym.typespec().is_array() == (arrayindex != NULL));
+    OSL_DASSERT (sym.typespec().is_array() == (arrayindex != NULL));
 
     if (sym.is_constant() && !sym.typespec().is_array() && !arrayindex) {
         // Shortcut for simple constants
@@ -613,7 +612,7 @@ BackendLLVM::llvm_load_value (const Symbol& sym, int deriv,
         if (sym.typespec().is_string()) {
             return ll.constant (*(ustring *)sym.data());
         }
-        ASSERT (0 && "unhandled constant type");
+        OSL_ASSERT (0 && "unhandled constant type");
     }
 
     return llvm_load_value (llvm_get_pointer (sym), sym.typespec(),
@@ -669,7 +668,7 @@ llvm::Value *
 BackendLLVM::llvm_load_device_string (const Symbol& sym, bool follow)
 {
     // TODO: need to make this work with arrays of strings
-    ASSERT (use_optix() && "This is only intended to be used with CUDA");
+    OSL_ASSERT (use_optix() && "This is only intended to be used with CUDA");
 
     // Recover the userdata index for non-constant parameters
     int userdata_index = find_userdata_index (sym);
@@ -682,7 +681,7 @@ BackendLLVM::llvm_load_device_string (const Symbol& sym, bool follow)
     }
     else if (userdata_index < 0) {
         // Handle non-varying variables
-        ASSERT (sym.data() && "NULL data in non-varying string");
+        OSL_DASSERT (sym.data() && "NULL data in non-varying string");
         val = getOrAllocateCUDAVariable (sym);
     }
     else {
@@ -708,14 +707,14 @@ BackendLLVM::llvm_load_constant_value (const Symbol& sym,
                                        int arrayindex, int component,
                                        TypeDesc cast)
 {
-    ASSERT (sym.is_constant() &&
-            "Called llvm_load_constant_value for a non-constant symbol");
+    OSL_DASSERT (sym.is_constant() &&
+                 "Called llvm_load_constant_value for a non-constant symbol");
 
     // set array indexing to zero for non-arrays
     if (! sym.typespec().is_array())
         arrayindex = 0;
-    ASSERT (arrayindex >= 0 &&
-            "Called llvm_load_constant_value with negative array index");
+    OSL_DASSERT (arrayindex >= 0 &&
+                 "Called llvm_load_constant_value with negative array index");
 
     if (sym.typespec().is_float()) {
         const float *val = (const float *)sym.data();
@@ -737,7 +736,7 @@ BackendLLVM::llvm_load_constant_value (const Symbol& sym,
         return ll.constant (val[ncomps*arrayindex + component]);
     }
     if (sym.typespec().is_string() && use_optix()) {
-        ASSERT ((arrayindex == 0) && "String arrays are not currently supported in OptiX");
+        OSL_DASSERT ((arrayindex == 0) && "String arrays are not currently supported in OptiX");
         return llvm_load_device_string (sym, /*follow*/ false);
     }
     if (sym.typespec().is_string()) {
@@ -745,7 +744,7 @@ BackendLLVM::llvm_load_constant_value (const Symbol& sym,
         return ll.constant (val[arrayindex]);
     }
 
-    ASSERT (0 && "unhandled constant type");
+    OSL_ASSERT (0 && "unhandled constant type");
     return NULL;
 }
 
@@ -760,8 +759,8 @@ BackendLLVM::llvm_load_component_value (const Symbol& sym, int deriv,
         // Regardless of what object this is, if it doesn't have derivs but
         // we're asking for them, return 0.  Integers don't have derivs
         // so we don't need to worry about that case.
-        ASSERT (sym.typespec().is_floatbased() && 
-                "can't ask for derivs of an int");
+        OSL_DASSERT (sym.typespec().is_floatbased() &&
+                     "can't ask for derivs of an int");
         return ll.constant (0.0f);
     }
 
@@ -771,7 +770,7 @@ BackendLLVM::llvm_load_component_value (const Symbol& sym, int deriv,
         return NULL;  // Error
 
     TypeDesc t = sym.typespec().simpletype();
-    ASSERT (t.aggregate != TypeDesc::SCALAR);
+    OSL_DASSERT (t.aggregate != TypeDesc::SCALAR);
     // cast the Vec* to a float*
     result = ll.ptr_cast (result, ll.type_float_ptr());
     result = ll.GEP (result, component);  // get the component
@@ -785,7 +784,7 @@ BackendLLVM::llvm_load_component_value (const Symbol& sym, int deriv,
 llvm::Value *
 BackendLLVM::llvm_load_arg (const Symbol& sym, bool derivs)
 {
-    ASSERT (sym.typespec().is_floatbased());
+    OSL_DASSERT (sym.typespec().is_floatbased());
     if (sym.typespec().is_int() ||
         (sym.typespec().is_float() && !derivs)) {
         // Scalar case
@@ -883,7 +882,7 @@ BackendLLVM::llvm_store_component_value (llvm::Value* new_val,
         return false;  // Error
 
     TypeDesc t = sym.typespec().simpletype();
-    ASSERT (t.aggregate != TypeDesc::SCALAR);
+    OSL_DASSERT (t.aggregate != TypeDesc::SCALAR);
     // cast the Vec* to a float*
     result = ll.ptr_cast (result, ll.type_float_ptr());
     result = ll.GEP (result, component);  // get the component
@@ -966,7 +965,7 @@ llvm::Value *
 BackendLLVM::llvm_test_nonzero (Symbol &val, bool test_derivs)
 {
     const TypeSpec &ts (val.typespec());
-    ASSERT (! ts.is_array() && ! ts.is_closure() && ! ts.is_string());
+    OSL_DASSERT (! ts.is_array() && ! ts.is_closure() && ! ts.is_string());
     TypeDesc t = ts.simpletype();
 
     // Handle int case -- guaranteed no derivs, no multi-component
@@ -996,8 +995,8 @@ bool
 BackendLLVM::llvm_assign_impl (Symbol &Result, Symbol &Src,
                                     int arrayindex, int srccomp, int dstcomp)
 {
-    ASSERT (! Result.typespec().is_structure());
-    ASSERT (! Src.typespec().is_structure());
+    OSL_DASSERT (! Result.typespec().is_structure());
+    OSL_DASSERT (! Src.typespec().is_structure());
 
     const TypeSpec &result_t (Result.typespec());
     const TypeSpec &src_t (Src.typespec());
@@ -1032,7 +1031,7 @@ BackendLLVM::llvm_assign_impl (Symbol &Result, Symbol &Src,
     // will ensure they are the same size, except for certain cases where
     // the size difference is intended (by the optimizer).
     if (result_t.is_array() && src_t.is_array() && arrayindex == -1) {
-        ASSERT (assignable(result_t.elementtype(), src_t.elementtype()));
+        OSL_DASSERT (assignable(result_t.elementtype(), src_t.elementtype()));
         llvm::Value *resultptr = llvm_void_ptr (Result);
         llvm::Value *srcptr = llvm_void_ptr (Src);
         int len = std::min (Result.size(), Src.size());

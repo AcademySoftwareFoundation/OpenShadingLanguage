@@ -143,7 +143,7 @@ OSOProcessorBase::set_inst (int newlayer)
 {
     m_layer = newlayer;
     m_inst = group()[m_layer];
-    ASSERT (m_inst != NULL);
+    OSL_DASSERT (m_inst != NULL);
     set_debug ();
 }
 
@@ -222,7 +222,7 @@ RuntimeOptimizer::find_constant (const TypeSpec &type, const void *data)
 {
     for (int c : m_all_consts) {
         const Symbol &s (*inst()->symbol(c));
-        ASSERT (s.symtype() == SymTypeConst);
+        OSL_DASSERT (s.symtype() == SymTypeConst);
         if (equivalent (s.typespec(), type) &&
               !memcmp (s.data(), data, s.typespec().simpletype().size())) {
             return c;
@@ -246,7 +246,7 @@ RuntimeOptimizer::add_constant (const TypeSpec &type, const void *data,
 
         Symbol newconst (ustring::sprintf ("$newconst%d", m_next_newconst++),
                          newtype, SymTypeConst);
-        void *newdata;
+        void *newdata = nullptr;
         TypeDesc t (newtype.simpletype());
         size_t n = t.aggregate * t.numelements();
         if (datatype == TypeDesc::UNKNOWN)
@@ -266,7 +266,7 @@ RuntimeOptimizer::add_constant (const TypeSpec &type, const void *data,
                 for (size_t i = 0;  i < n;  ++i)
                     ((float *)newdata)[i] = ((const float *)data)[0];
             else {
-                ASSERT (0 && "unsupported type for add_constant");
+                OSL_ASSERT (0 && "unsupported type for add_constant");
             }
         } else if (t.basetype == TypeDesc::FLOAT &&
                    datatype.basetype == TypeDesc::INT) {
@@ -278,14 +278,14 @@ RuntimeOptimizer::add_constant (const TypeSpec &type, const void *data,
                 for (size_t i = 0;  i < n;  ++i)
                     ((float *)newdata)[i] = ((const int *)data)[0];
             else {
-                ASSERT (0 && "unsupported type for add_constant");
+                OSL_ASSERT (0 && "unsupported type for add_constant");
             }
         } else if (t.basetype == TypeDesc::STRING &&
                    datatype.basetype == TypeDesc::STRING && n == datan) {
             newdata = inst()->shadingsys().alloc_string_constants (n);
             memcpy (newdata, data, t.size());
         } else {
-            ASSERT (0 && "unsupported type for add_constant");
+            OSL_ASSERT (0 && "unsupported type for add_constant");
         }
         newconst.data (newdata);
         ind = add_symbol (newconst);
@@ -320,8 +320,8 @@ int
 RuntimeOptimizer::add_symbol (const Symbol &sym)
 {
     size_t index = inst()->symbols().size ();
-    ASSERT (inst()->symbols().capacity() > index &&
-            "we shouldn't have to realloc here");
+    OSL_ASSERT (inst()->symbols().capacity() > index &&
+                "we shouldn't have to realloc here");
     inst()->symbols().push_back (sym);
     // Mark the symbol as always read.  Next time we recompute symbol
     // lifetimes, it'll get the correct range for when it's read and
@@ -389,7 +389,7 @@ RuntimeOptimizer::turn_into_new_op (Opcode &op, ustring newop, int newarg0,
                                     int newarg1, int newarg2, string_view why)
 {
     int opnum = &op - &(inst()->ops()[0]);
-    DASSERT (opnum >= 0 && opnum < (int)inst()->ops().size());
+    OSL_DASSERT(opnum >= 0 && opnum < (int)inst()->ops().size());
     if (debug() > 1)
         debug_turn_into (op, 1, newop, newarg0, newarg1, newarg2, why);
     op.reset (newop, newarg2<0 ? 2 : 3);
@@ -422,7 +422,7 @@ RuntimeOptimizer::turn_into_assign (Opcode &op, int newarg, string_view why)
     op.argwrite (1, false);
     // Need to make sure the symbol we're assigning is marked as read
     // for this op.
-    DASSERT (opnum >= 0 && opnum < (int)inst()->ops().size());
+    OSL_DASSERT(opnum >= 0 && opnum < (int)inst()->ops().size());
     Symbol *arg = opargsym (op, 1);
     arg->mark_rw (opnum, true, false);
 }
@@ -452,7 +452,7 @@ RuntimeOptimizer::turn_into_assign_one (Opcode &op, string_view why)
         int cind = add_constant (R.typespec(), &one);
         turn_into_assign (op, cind, why);
     } else {
-        ASSERT (R.typespec().is_triple() || R.typespec().is_float());
+        OSL_DASSERT (R.typespec().is_triple() || R.typespec().is_float());
         static float one[3] = { 1, 1, 1 };
         int cind = add_constant (R.typespec(), &one);
         turn_into_assign (op, cind, why);
@@ -564,16 +564,16 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
     // Adjust the basic block IDs and which instructions are inside
     // conditionals.
     if (m_bblockids.size()) {
-        ASSERT (m_bblockids.size() == code.size()-1);
+        OSL_DASSERT (m_bblockids.size() == code.size()-1);
         m_bblockids.insert (m_bblockids.begin()+opnum, 1, m_bblockids[opnum]);
     }
     if (m_in_conditional.size()) {
-        ASSERT (m_in_conditional.size() == code.size()-1);
+        OSL_DASSERT (m_in_conditional.size() == code.size()-1);
         m_in_conditional.insert (m_in_conditional.begin()+opnum, 1,
                                  m_in_conditional[opnum]);
     }
     if (m_in_loop.size()) {
-        ASSERT (m_in_loop.size() == code.size()-1);
+        OSL_DASSERT (m_in_loop.size() == code.size()-1);
         m_in_loop.insert (m_in_loop.begin()+opnum, 1,
                           m_in_loop[opnum]);
     }
@@ -587,9 +587,7 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
     }
     else if (opname != u_useparam) {
         // Mark the args as being used for this op (assume that the
-        // first is written, the others are read).  Enforce that with an
-        // DASSERT to be sure we only use insert_code for the couple of
-        // instructions that we think it is used for.
+        // first is written, the others are read).
         for (int a = 0;  a < nargs;  ++a)
             inst()->symbol(args_to_add[a])->mark_rw (opnum, a>0, a==0);
     }
@@ -617,7 +615,7 @@ void
 RuntimeOptimizer::insert_useparam (size_t opnum,
                                    const std::vector<int> &params_to_use)
 {
-    ASSERT (params_to_use.size() > 0);
+    OSL_DASSERT (params_to_use.size() > 0);
     OpcodeVec &code (inst()->ops());
     insert_code (opnum, u_useparam, params_to_use,
                  RecomputeRWRanges, GroupWithNext);
@@ -682,7 +680,7 @@ RuntimeOptimizer::add_useparam (SymbolPtrVec &allsyms)
         for (int a = 0;  a < op.nargs();  ++a) {
             int argind = op.firstarg() + a;
             SymbolPtr s = inst()->argsymbol (argind);
-            DASSERT (s->dealias() == s);
+            OSL_DASSERT(s->dealias() == s);
             // If this arg is a param and is read, remember it
             if (s->symtype() != SymTypeParam && s->symtype() != SymTypeOutputParam)
                 continue;  // skip non-params
@@ -1106,7 +1104,7 @@ OSOProcessorBase::find_basic_blocks ()
 bool
 RuntimeOptimizer::coerce_assigned_constant (Opcode &op)
 {
-    ASSERT (op.opname() == u_assign);
+    OSL_DASSERT (op.opname() == u_assign);
     Symbol *R (inst()->argsymbol(op.firstarg()+0));
     Symbol *A (inst()->argsymbol(op.firstarg()+1));
 
@@ -1266,9 +1264,9 @@ void
 RuntimeOptimizer::replace_param_value (Symbol *R, const void *newdata,
                                        const TypeSpec &newdata_type)
 {
-    ASSERT (R->symtype() == SymTypeParam || R->symtype() == SymTypeOutputParam);
+    OSL_DASSERT (R->symtype() == SymTypeParam || R->symtype() == SymTypeOutputParam);
     TypeDesc Rtype = R->typespec().simpletype();
-    DASSERT (R->dataoffset() >= 0);
+    OSL_DASSERT(R->dataoffset() >= 0);
     int Rnvals = int(Rtype.aggregate * Rtype.numelements());
     TypeDesc Ntype = newdata_type.simpletype();
     if (Ntype == TypeDesc::UNKNOWN)
@@ -1277,7 +1275,7 @@ RuntimeOptimizer::replace_param_value (Symbol *R, const void *newdata,
     if (Rtype.basetype == TypeDesc::FLOAT &&
           Ntype.basetype == TypeDesc::FLOAT) {
         float *Rdefault = &inst()->m_fparams[R->dataoffset()];
-        DASSERT ((R->dataoffset()+Rnvals) <= (int)inst()->m_fparams.size());
+        OSL_DASSERT((R->dataoffset()+Rnvals) <= (int)inst()->m_fparams.size());
         if (Rnvals == Nnvals)   // straight copy
             for (int i = 0;  i < Rnvals;  ++i)
                 Rdefault[i] = ((const float *)newdata)[i];
@@ -1285,14 +1283,14 @@ RuntimeOptimizer::replace_param_value (Symbol *R, const void *newdata,
             for (int i = 0;  i < Rnvals;  ++i)
                 Rdefault[i] = ((const float *)newdata)[0];
         else {
-            ASSERT (0 && "replace_param_value: unexpected types");
+            OSL_ASSERT (0 && "replace_param_value: unexpected types");
         }
     }
     else if (Rtype.basetype == TypeDesc::FLOAT &&
              Ntype.basetype == TypeDesc::INT) {
         // Careful, this is an int-to-float conversion
         float *Rdefault = &inst()->m_fparams[R->dataoffset()];
-        DASSERT ((R->dataoffset()+Rnvals) <= (int)inst()->m_fparams.size());
+        OSL_DASSERT((R->dataoffset()+Rnvals) <= (int)inst()->m_fparams.size());
         if (Rnvals == Nnvals)   // straight copy
             for (int i = 0;  i < Rnvals;  ++i)
                 Rdefault[i] = ((const int *)newdata)[i];
@@ -1300,24 +1298,24 @@ RuntimeOptimizer::replace_param_value (Symbol *R, const void *newdata,
             for (int i = 0;  i < Rnvals;  ++i)
                 Rdefault[i] = ((const int *)newdata)[0];
         else {
-            ASSERT (0 && "replace_param_value: unexpected types");
+            OSL_ASSERT (0 && "replace_param_value: unexpected types");
         }
     }
     else if (Rtype.basetype == TypeDesc::INT &&
              Ntype.basetype == TypeDesc::INT && Rnvals == Nnvals) {
         int *Rdefault = &inst()->m_iparams[R->dataoffset()];
-        DASSERT ((R->dataoffset()+Rnvals) <= (int)inst()->m_iparams.size());
+        OSL_DASSERT((R->dataoffset()+Rnvals) <= (int)inst()->m_iparams.size());
         for (int i = 0;  i < Rnvals;  ++i)
             Rdefault[i] = ((const int *)newdata)[i];
     }
     else if (Rtype.basetype == TypeDesc::STRING &&
              Ntype.basetype == TypeDesc::STRING && Rnvals == Nnvals) {
         ustring *Rdefault = &inst()->m_sparams[R->dataoffset()];
-        DASSERT ((R->dataoffset()+Rnvals) <= (int)inst()->m_sparams.size());
+        OSL_DASSERT((R->dataoffset()+Rnvals) <= (int)inst()->m_sparams.size());
         for (int i = 0;  i < Rnvals;  ++i)
             Rdefault[i] = ((const ustring *)newdata)[i];
     } else {
-        ASSERT (0 && "replace_param_value: unexpected types");
+        OSL_ASSERT (0 && "replace_param_value: unexpected types");
     }
 }
 
@@ -1358,7 +1356,7 @@ RuntimeOptimizer::make_param_use_instanceval (Symbol *R, string_view why)
     // Point the symbol's data pointer to its instance value
     // uniform
     void *Rdefault = NULL;
-    DASSERT (R->dataoffset() >= 0);
+    OSL_DASSERT(R->dataoffset() >= 0);
     TypeDesc Rtype = R->typespec().simpletype();
     if (Rtype.basetype == TypeDesc::FLOAT)
         Rdefault = &inst()->m_fparams[R->dataoffset()];
@@ -1366,7 +1364,7 @@ RuntimeOptimizer::make_param_use_instanceval (Symbol *R, string_view why)
         Rdefault = &inst()->m_iparams[R->dataoffset()];
     else if (Rtype.basetype == TypeDesc::STRING)
         Rdefault = &inst()->m_sparams[R->dataoffset()];
-    DASSERT (Rdefault != NULL);
+    OSL_DASSERT(Rdefault != NULL);
     R->data (Rdefault);
 
     // Get rid of any init ops
@@ -1388,7 +1386,7 @@ RuntimeOptimizer::make_param_use_instanceval (Symbol *R, string_view why)
 bool
 RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
 {
-    ASSERT (op.opname() == u_assign);
+    OSL_DASSERT (op.opname() == u_assign);
     Symbol *R (inst()->argsymbol(op.firstarg()+0));
     Symbol *A (inst()->argsymbol(op.firstarg()+1));
 
@@ -1783,8 +1781,8 @@ RuntimeOptimizer::peephole2 (int opnum, int op2num)
 void
 RuntimeOptimizer::mark_outgoing_connections ()
 {
-    ASSERT (! inst()->m_instoverrides.size() &&
-            "don't call this before copy_code_from_master");
+    OSL_ASSERT (! inst()->m_instoverrides.size() &&
+               "don't call this before copy_code_from_master");
     inst()->outgoing_connections (false);
     FOREACH_PARAM (auto&& s, inst())
         s.connected_down (false);
@@ -1936,7 +1934,7 @@ RuntimeOptimizer::eliminate_middleman ()
                         const Symbol *usym = upinst->symbol(upstream_symbol);
                         if (! usym)
                             usym = upinst->mastersymbol(upstream_symbol);
-                        ASSERT (dsym && usym);
+                        OSL_DASSERT (dsym && usym);
                         std::cout << "Removed " << inst()->layername() << "."
                                   << s.name() << " middleman for " 
                                   << downinst->layername() << "."
@@ -1957,7 +1955,7 @@ int
 RuntimeOptimizer::optimize_assignment (Opcode &op, int opnum)
 {
     // Various optimizations specific to assignment statements
-    ASSERT (op.opname() == u_assign);
+    OSL_DASSERT (op.opname() == u_assign);
     int changed = 0;
     Symbol *R (inst()->argsymbol(op.firstarg()+0));
     Symbol *A (inst()->argsymbol(op.firstarg()+1));
@@ -2034,8 +2032,8 @@ RuntimeOptimizer::copy_block_aliases (const FastIntMap &old_block_aliases,
                                       const FastIntSet *excluded,
                                       bool copy_temps)
 {
-    ASSERT (&old_block_aliases != &new_block_aliases &&
-            "copy_block_aliases does not work in-place");
+    OSL_ASSERT (&old_block_aliases != &new_block_aliases &&
+                "copy_block_aliases does not work in-place");
     // Find all symbols written anywhere in the instruction range
     new_block_aliases.clear ();
     new_block_aliases.reserve (old_block_aliases.size());
@@ -2076,9 +2074,9 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop,
     size_t num_ops = inst()->ops().size();
     size_t old_num_ops = num_ops;   // track when it changes
     for (int opnum = beginop;  opnum < endop;  opnum += 1) {
-        ASSERT (old_num_ops == num_ops); // better not happen unknowingly
-        DASSERT (num_ops == inst()->ops().size());
-        DASSERT (size_t(opnum) < inst()->ops().size());
+        OSL_DASSERT (old_num_ops == num_ops); // better not happen unknowingly
+        OSL_DASSERT(num_ops == inst()->ops().size());
+        OSL_DASSERT(size_t(opnum) < inst()->ops().size());
         if (m_stop_optimizing)
             break;
         Opcode *op = &inst()->ops()[opnum];
@@ -2089,8 +2087,8 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop,
             // all subsequent optimizations until we run down the
             // skipops counter.
             block_unalias_written_args (*op);
-            ASSERT (lastblock == m_bblockids[opnum] &&
-                    "this should not be a new basic block");
+            OSL_ASSERT (lastblock == m_bblockids[opnum] &&
+                        "this should not be a new basic block");
             --skipops;
             continue;   // Move along to the next op, no opimization here
         }
@@ -2276,8 +2274,8 @@ RuntimeOptimizer::optimize_instance ()
     // Confirm that the symbols between [firstparam,lastparam] are all
     // input or output params.
     FOREACH_PARAM (const Symbol &s, inst()) {
-        ASSERT (s.symtype() == SymTypeParam ||
-                s.symtype() == SymTypeOutputParam);
+        OSL_DASSERT (s.symtype() == SymTypeParam ||
+                     s.symtype() == SymTypeOutputParam);
     }
 #endif
 
@@ -2400,11 +2398,11 @@ RuntimeOptimizer::resolve_isconnected ()
                 // FIXME -- if we ever allow separate layer connection of
                 // individual struct members, this will need something more
                 // sophisticated.
-                ASSERT (structspec && structspec->numfields() >= 1);
+                OSL_DASSERT (structspec && structspec->numfields() >= 1);
                 std::string fieldname = (s->name().string() + "." +
                                          structspec->field(0).name.string());
                 int fieldsymid = inst()->findparam (ustring(fieldname));
-                ASSERT (fieldsymid >= 0);
+                OSL_DASSERT (fieldsymid >= 0);
                 s = inst()->symbol(fieldsymid);
             }
             bool upconnected = s->connected();
@@ -2455,8 +2453,8 @@ RuntimeOptimizer::track_variable_lifetimes ()
 void
 RuntimeOptimizer::add_dependency (SymDependency &dmap, int A, int B)
 {
-    ASSERT (A < (int)inst()->symbols().size());
-    ASSERT (B < (int)inst()->symbols().size());
+    OSL_DASSERT (A < (int)inst()->symbols().size());
+    OSL_DASSERT (B < (int)inst()->symbols().size());
     dmap[A].insert (B);
 
 #ifdef DEBUG_SYMBOL_DEPENDENCIES
@@ -2859,8 +2857,8 @@ RuntimeOptimizer::collapse_syms ()
     // Confirm that the symbols between [firstparam,lastparam] are all
     // input or output params.
     FOREACH_PARAM (const Symbol &s, inst()) {
-        ASSERT (s.symtype() == SymTypeParam ||
-                s.symtype() == SymTypeOutputParam);
+        OSL_DASSERT (s.symtype() == SymTypeParam ||
+                     s.symtype() == SymTypeOutputParam);
     }
 #endif
 }
@@ -3181,7 +3179,7 @@ RuntimeOptimizer::run ()
             if (opd->flags & OpDescriptor::Tex) {
                 // for all the texture ops, arg 1 is the texture name
                 Symbol *sym = opargsym (op, 1);
-                ASSERT (sym && sym->typespec().is_string());
+                OSL_DASSERT (sym && sym->typespec().is_string());
                 if (sym->is_constant()) {
                     ustring texname = *(ustring *)sym->data();
                     m_textures_needed.insert (texname);
@@ -3194,7 +3192,7 @@ RuntimeOptimizer::run ()
                 Symbol *sym = opargsym (op, 1); // arg 1 is the closure name
                 if (sym && !sym->typespec().is_string())
                     sym = opargsym (op, 2);
-                ASSERT (sym && sym->typespec().is_string());
+                OSL_DASSERT (sym && sym->typespec().is_string());
                 if (sym->is_constant()) {
                     ustring closurename = *(ustring *)sym->data();
                     m_closures_needed.insert (closurename);
@@ -3203,13 +3201,13 @@ RuntimeOptimizer::run ()
                 }
             } else if (op.opname() == u_getattribute) {
                 Symbol *sym1 = opargsym (op, 1);
-                ASSERT (sym1 && sym1->typespec().is_string());
+                OSL_DASSERT (sym1 && sym1->typespec().is_string());
                 if (sym1->is_constant()) {
                     if (op.nargs() == 3) {
                         // getattribute( attributename, result )
                         m_attributes_needed.insert( AttributeNeeded( *(ustring *)sym1->data() ) );
                     } else {
-                        ASSERT (op.nargs() == 4 || op.nargs() == 5);
+                        OSL_DASSERT (op.nargs() == 4 || op.nargs() == 5);
                         Symbol *sym2 = opargsym (op, 2);
                         if (sym2->typespec().is_string()) {
                             // getattribute( scopename, attributename, result ) or
@@ -3327,7 +3325,7 @@ RuntimeOptimizer::police_failed_optimizations()
                 continue;
             if (opd->flags & OpDescriptor::Tex) {
                 Symbol *sym = opargsym (op, 1);  // arg 1 is texture name
-                DASSERT (sym && sym->typespec().is_string());
+                OSL_DASSERT(sym && sym->typespec().is_string());
                 if (! sym->is_constant()) {
                     err |= police (op, OIIO::Strutil::sprintf("%s(): texture name cannot be reduced to a constant.",
                                               op.opname()),

@@ -40,7 +40,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OpenImageIO/platform.h>
 #include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/strutil.h>
-#include <OpenImageIO/dassert.h>
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/thread.h>
 
@@ -613,13 +612,13 @@ OSLCompilerImpl::compile (string_view filename,
                        m_output_filename);
                 return false;
             }
-            ASSERT (m_osofile == NULL);
+            OSL_DASSERT (m_osofile == nullptr);
             m_osofile = &oso_output;
 
             write_oso_file (m_output_filename,
                             OIIO::Strutil::join(options," "),
                             preprocess_result);
-            ASSERT (m_osofile == NULL);
+            OSL_DASSERT (m_osofile == nullptr);
         }
 
         oslcompiler = nullptr;
@@ -698,14 +697,14 @@ OSLCompilerImpl::compile_buffer (string_view sourcecode,
 
             std::ostringstream oso_output;
             oso_output.imbue (std::locale::classic());  // force C locale
-            ASSERT (m_osofile == NULL);
+            OSL_DASSERT (m_osofile == nullptr);
             m_osofile = &oso_output;
 
             write_oso_file (m_output_filename,
                             OIIO::Strutil::join(options," "),
                             preprocess_result);
             osobuffer = oso_output.str();
-            ASSERT (m_osofile == NULL);
+            OSL_DASSERT (m_osofile == nullptr);
         }
 
         oslcompiler = nullptr;
@@ -802,10 +801,10 @@ OSLCompilerImpl::default_output_filename ()
 void
 OSLCompilerImpl::write_oso_metadata (const ASTNode *metanode) const
 {
-    ASSERT (metanode->nodetype() == ASTNode::variable_declaration_node);
+    OSL_DASSERT (metanode->nodetype() == ASTNode::variable_declaration_node);
     const ASTvariable_declaration *metavar = static_cast<const ASTvariable_declaration *>(metanode);
     Symbol *metasym = metavar->sym();
-    ASSERT (metasym);
+    OSL_DASSERT (metasym);
     TypeSpec ts = metasym->typespec();
     std::string pdl;
     bool ok = metavar->param_default_literals (metasym, metavar->init().get(), pdl, ",");
@@ -823,7 +822,7 @@ OSLCompilerImpl::write_oso_metadata (const ASTNode *metanode) const
 void
 OSLCompilerImpl::write_oso_const_value (const ConstantSymbol *sym) const
 {
-    ASSERT (sym);
+    OSL_ASSERT (sym);
     TypeDesc type = sym->typespec().simpletype();
     TypeDesc elemtype = type.elementtype();
     int nelements = std::max (1, type.arraylen);
@@ -842,7 +841,7 @@ OSLCompilerImpl::write_oso_const_value (const ConstantSymbol *sym) const
             osof("%.9g %.9g %.9g%s", sym->vecval(i)[0], sym->vecval(i)[1],
                  sym->vecval(i)[2], nelements>1 ? " " : "");
     else {
-        ASSERT (0 && "Don't know how to output this constant type");
+        OSL_ASSERT (0 && "Don't know how to output this constant type");
     }
 }
 
@@ -880,7 +879,6 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym)
 
     // %meta{} encodes metadata (handled by write_oso_metadata)
     if (v) {
-        ASSERT (v);
         for (ASTNode::ref m = v->meta();  m;  m = m->next()) {
             if (hints++ == 0)
                 osof("\t");
@@ -971,7 +969,7 @@ OSLCompilerImpl::write_oso_file (const std::string &outfilename,
                                  string_view options,
                                  string_view preprocessed_source)
 {
-    ASSERT (m_osofile != NULL && m_osofile->good());
+    OSL_DASSERT (m_osofile && m_osofile->good());
     osof("OpenShadingLanguage %d.%02d\n",
          OSO_FILE_VERSION_MAJOR, OSO_FILE_VERSION_MINOR);
     osof("# Compiled by oslc %s\n", OSL_LIBRARY_VERSION_STRING);
@@ -1217,11 +1215,11 @@ void
 OSLCompilerImpl::struct_field_pair (Symbol *sym1, Symbol *sym2, int fieldnum,
                                     Symbol * &field1, Symbol * &field2)
 {
-    ASSERT (sym1 && sym2 && sym1->typespec().is_structure() &&
-            sym1->typespec().structure() && sym2->typespec().structure());
+    OSL_DASSERT (sym1 && sym2 && sym1->typespec().is_structure() &&
+                 sym1->typespec().structure() && sym2->typespec().structure());
     // Find the StructSpec for the type of struct that the symbols are
     StructSpec *structspec (sym1->typespec().structspec());
-    ASSERT (structspec && fieldnum < (int)structspec->numfields());
+    OSL_DASSERT (structspec && fieldnum < (int)structspec->numfields());
     // Find the FieldSpec for the field we are interested in
     const StructSpec::FieldSpec &field (structspec->field(fieldnum));
     // Construct mangled names that describe the symbols for the
@@ -1231,7 +1229,7 @@ OSLCompilerImpl::struct_field_pair (Symbol *sym1, Symbol *sym2, int fieldnum,
     // Retrieve the symbols
     field1 = symtab().find_exact (name1);
     field2 = symtab().find_exact (name2);
-    ASSERT (field1 && field2);
+    OSL_DASSERT (field1 && field2);
 }
 
 
@@ -1248,7 +1246,7 @@ OSLCompilerImpl::struct_field_pair (const StructSpec *structspec, int fieldnum,
     // Retrieve the symbols
     field1 = symtab().find_exact (name1);
     field2 = symtab().find_exact (name2);
-    ASSERT (field1 && field2);
+    OSL_ASSERT (field1 && field2);
 }
 
 
@@ -1321,7 +1319,7 @@ OSLCompilerImpl::track_variable_lifetimes (const OpcodeVec &code,
                 op.opname() == op_dowhile) {
             // If this is a loop op, we need to mark its control variable
             // (the only arg) as used for the duration of the loop!
-            ASSERT (op.nargs() == 1);  // loops should have just one arg
+            OSL_DASSERT (op.nargs() == 1);  // loops should have just one arg
             SymbolPtr s = opargs[op.firstarg()];
             int loopcond = op.jump (0); // after initialization, before test
             int loopend = op.farthest_jump() - 1;   // inclusive end
@@ -1334,7 +1332,7 @@ OSLCompilerImpl::track_variable_lifetimes (const OpcodeVec &code,
         // Some work to do for each argument to the op...
         for (int a = 0;  a < op.nargs();  ++a) {
             SymbolPtr s = opargs[op.firstarg()+a];
-            ASSERT (s->dealias() == s);  // Make sure it's de-aliased
+            OSL_DASSERT (s->dealias() == s);  // Make sure it's de-aliased
 
             // Mark that it's read and/or written for this op
             bool readhere = op.argread(a);
@@ -1346,7 +1344,7 @@ OSLCompilerImpl::track_variable_lifetimes (const OpcodeVec &code,
             for (auto oprange : loop_bounds) {
                 int loopcond = oprange.first;
                 int loopend = oprange.second;
-                DASSERT (s->firstuse() <= loopend);
+                OSL_DASSERT(s->firstuse() <= loopend);
                 // Special case: a temp or local, even if written inside a
                 // loop, if it's entire lifetime is within one basic block
                 // and it's strictly written before being read, then its

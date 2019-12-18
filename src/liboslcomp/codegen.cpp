@@ -32,7 +32,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "oslcomp_pvt.h"
 
-#include <OpenImageIO/dassert.h>
 #include <OpenImageIO/strutil.h>
 namespace Strutil = OIIO::Strutil;
 
@@ -47,7 +46,7 @@ OSLCompilerImpl::add_op_args (size_t nargs, Symbol **args)
 {
     size_t n = m_opargs.size ();
     for (size_t i = 0;  i < nargs;  ++i) {
-        ASSERT (args[i]);
+        OSL_DASSERT (args[i]);
         m_opargs.push_back (args[i]->dealias());
     }
     return n;
@@ -402,9 +401,9 @@ Symbol *
 ASTshader_declaration::codegen (Symbol *)
 {
     for (ref f = formals();  f;  f = f->next()) {
-        ASSERT (f->nodetype() == ASTNode::variable_declaration_node);
+        OSL_DASSERT (f->nodetype() == ASTNode::variable_declaration_node);
         ASTvariable_declaration *v = (ASTvariable_declaration *) f.get();
-        ASSERT (v->init());  // Shader formals MUST have initializers
+        OSL_DASSERT (v->init());  // Shader formals MUST have initializers
         // If the initializer is a literal and we output it as a
         // constant in the symbol definition, no need for ops.
         std::string out;
@@ -430,13 +429,13 @@ ASTreturn_statement::codegen (Symbol *dest)
             // try to put it in the designated function return location,
             // but if that's not possible, let it go wherever and then
             // copy it.
-            ASSERT (myfunc->return_location() != NULL);
+            OSL_DASSERT (myfunc->return_location() != NULL);
             Symbol *retloc = myfunc->return_location ();
             dest = expr()->codegen (retloc);
             if (dest != retloc) {
                 if (retloc->typespec().is_structure()) {
                     StructSpec *structspec = retloc->typespec().structspec ();
-                    ASSERT (dest && structspec);
+                    OSL_DASSERT (dest && structspec);
                     codegen_assign_struct (structspec, ustring(retloc->mangled()),
                                            ustring(dest->mangled()), NULL,
                                            true, 0,
@@ -489,7 +488,7 @@ ASTcompound_initializer::codegen (Symbol *sym)
 Symbol *
 ASTassign_expression::codegen (Symbol *dest)
 {
-    ASSERT (m_op == Assign);  // all else handled by binary_op
+    OSL_DASSERT (m_op == Assign);  // all else handled by binary_op
 
     ASTindex *index = NULL;
     if (var()->nodetype() == index_node) {
@@ -507,7 +506,7 @@ ASTassign_expression::codegen (Symbol *dest)
     }
 
     Symbol *operand = expr()->codegen (dest);
-    ASSERT (operand != NULL);
+    OSL_DASSERT (operand != NULL);
 
     if (typespec().is_structure_array()) {
         // Assign entire array-of-struct to another array-of-struct
@@ -536,7 +535,7 @@ ASTassign_expression::codegen (Symbol *dest)
                                        false /*not a shader param init*/);
             } else {
                 // Assignment of one scalar struct to another scalar struct
-                ASSERT (dest);
+                OSL_DASSERT (dest);
                 codegen_assign_struct (structspec, ustring(dest->mangled()),
                                        ustring(operand->mangled()), NULL,
                                        true, 0,
@@ -585,7 +584,7 @@ ASTNode::codegen_assign_struct (StructSpec *structspec,
 
         if (fieldtype.is_structure_array() && !arrayindex) {
             // struct array within struct -- loop over indices and recurse
-            ASSERT (! arrayindex && "two levels of arrays not allowed");
+            OSL_ASSERT (! arrayindex && "two levels of arrays not allowed");
             ustring fieldname (structspec->field(i).name);
             ustring dstfield = ustring::sprintf ("%s.%s", dstsym, fieldname);
             ustring srcfield = ustring::sprintf ("%s.%s", srcsym, fieldname);
@@ -733,7 +732,7 @@ ASTNode::one_default_literal (const Symbol *sym, ASTNode *init,
             ASTNode::ref val = ctr->args();
             float f[16];
             int nargs = 0;
-            DASSERT (val.get());
+            OSL_DASSERT(val.get());
             if (val->nodetype() == ASTNode::literal_node && val->typespec().is_string()) {
                 val = val->next();
                 completed = false;
@@ -773,7 +772,7 @@ ASTNode::one_default_literal (const Symbol *sym, ASTNode *init,
         }
     }
     else {
-        ASSERT (0 && "help with initializer");
+        OSL_ASSERT (0 && "help with initializer");
     }
     return completed;
 }
@@ -844,7 +843,7 @@ ASTvariable_declaration::codegen_initializer (ref init, Symbol *sym)
     if (typespec().is_structure()) {
         codegen_struct_initializers (init, sym);
     } else if (typespec().is_array()) {
-        ASSERT (init->nodetype() == compound_initializer_node);
+        OSL_DASSERT (init->nodetype() == compound_initializer_node);
         init = ((ASTcompound_initializer *)init.get())->initlist();
         codegen_initlist (init, typespec(), sym);
     } else {
@@ -924,7 +923,7 @@ ASTNode::codegen_initlist (ref init, TypeSpec type, Symbol *sym)
                                                  field.name);
             Symbol *fieldsym = m_compiler->symtab().find_exact (fieldname);
             if (paraminit) {
-                ASSERT (nodetype() == variable_declaration_node);
+                OSL_DASSERT (nodetype() == variable_declaration_node);
                 ASTvariable_declaration *v = (ASTvariable_declaration *)this;
                 std::string out;
                 if (v->param_default_literals(fieldsym, init.get(), out))
@@ -950,7 +949,7 @@ ASTNode::codegen_initlist (ref init, TypeSpec type, Symbol *sym)
 
     // Special case for arrays initialized by only constants of the
     // right type.
-    ASSERT (sym->typespec() == type);
+    OSL_DASSERT (sym->typespec() == type);
     if (type.is_array() && ! type.is_closure_based() &&
         ! type.is_structure_array()) {
         TypeDesc elemtype = type.simpletype().elementtype();
@@ -982,7 +981,7 @@ ASTNode::codegen_initlist (ref init, TypeSpec type, Symbol *sym)
                     ((float *)&arrayvals[0])[i] = lit->floatval();
                 else if (elemtype == TypeDesc::STRING)
                     ((ustring *)&arrayvals[0])[i] = lit->ustrval();
-                else { ASSERT(0); }
+                else { OSL_DASSERT(0); }
             }
             Symbol *c = m_compiler->make_constant (type.simpletype(),
                                                    &arrayvals[0]);
@@ -1003,7 +1002,7 @@ ASTNode::codegen_initlist (ref init, TypeSpec type, Symbol *sym)
                     ASTfunction_call* fcall = static_cast<ASTfunction_call*>(expr);
                     if ((ctor = fcall->is_struct_ctr())) {
                         expr = fcall->args().get();
-                        ASSERT (expr != nullptr);
+                        OSL_DASSERT (expr != nullptr);
                     }
                 }
                     break;
@@ -1067,7 +1066,7 @@ ASTNode::codegen_struct_initializers (ref init, Symbol *sym,
                       (sym->symtype() == SymTypeParam ||
                        sym->symtype() == SymTypeOutputParam));
 
-    ASSERT (sym->typespec().is_structure_based());
+    OSL_ASSERT (sym->typespec().is_structure_based());
     if (init->nodetype() != compound_initializer_node && !is_constructor) {
         // Just one initializer, it's a whole struct of the right type.
         Symbol *initsym = init->codegen (sym);
@@ -1232,7 +1231,7 @@ ASTindex::codegen (Symbol *dest, Symbol * &ind,
     } else if (lv->typespec().is_matrix()) {
         emitcode ("mxcompref", dest, lv, ind, ind2);
     } else {
-        ASSERT (0);
+        OSL_ASSERT (0);
     }
     return dest;
 }
@@ -1254,7 +1253,7 @@ ASTindex::codegen_copy_struct_array_element (StructSpec *structspec,
                      ustring::sprintf("%s.%s", srcname, field.name),
                      index);
         } else {
-            ASSERT (! type.is_array());
+            OSL_ASSERT (! type.is_array());
             Symbol *dfield, *sfield;
             m_compiler->struct_field_pair (structspec, fi, destname, srcname,
                                            dfield, sfield);
@@ -1299,7 +1298,7 @@ ASTindex::codegen_assign (Symbol *src, Symbol *ind,
     } else if (lv->typespec().is_matrix()) {
         emitcode ("mxcompassign", lv, ind, ind2, src);
     } else {
-        ASSERT (0);
+        OSL_ASSERT (0);
     }
 }
 
@@ -1330,7 +1329,7 @@ ASTstructselect::codegen (Symbol *dest)
 void
 ASTstructselect::codegen_assign (Symbol *dest, Symbol *src)
 {
-    ASSERT (src);
+    OSL_DASSERT (src);
 
     if (compindex()) {
         // Redirected codegen to ASTIndex for named component (e.g., point.x)
@@ -1382,7 +1381,7 @@ ASTstructselect::codegen_index ()
             node = arrayref->lvalue().get();
         }
         else {
-            ASSERT (0);
+            OSL_ASSERT (0);
         }
     }
 
@@ -1506,7 +1505,7 @@ ASTunary_expression::codegen (Symbol *dest)
 
     // Negation of closures: turn into multiplication by -1.0
     if (esym->typespec().is_closure()) {
-        ASSERT (m_op == Sub);
+        OSL_DASSERT (m_op == Sub);
         emitcode ("mul", dest, esym, m_compiler->make_constant (-1.0f));
         return dest;
     }
@@ -1554,7 +1553,7 @@ ASTbinary_expression::codegen (Symbol *dest)
 
     // Special case for closure operations
     if (typespec().is_closure()) {
-        ASSERT (m_op == Mul || m_op == Div || m_op == Add);
+        OSL_DASSERT (m_op == Mul || m_op == Div || m_op == Add);
         if (m_op == Mul || m_op == Div) {
             // Need to coerce the weight into a color.
             // N.B. The typecheck always reorders c=k*c into c=c*k.
@@ -1893,7 +1892,7 @@ ASTfunction_call::codegen (Symbol *dest)
                                             ustring(argdest[i]->mangled()),
                                             arrayindex);
                 } else {
-                    ASSERT (0 && "unhandled structure designation");
+                    OSL_ASSERT (0 && "unhandled structure designation");
                 }
             }
             f->sym()->alias (argdest[i]);
@@ -1945,8 +1944,8 @@ ASTfunction_call::codegen (Symbol *dest)
         a = args().get();
         for (int i = 0;  a;  a = a->nextptr(), ++i) {
             if (index[i]) {
-                ASSERT (a->nodetype() == ASTNode::index_node ||
-                        a->nodetype() == ASTNode::structselect_node);
+                OSL_ASSERT (a->nodetype() == ASTNode::index_node ||
+                            a->nodetype() == ASTNode::structselect_node);
                 ASTindex *indexnode = (a->nodetype() == index_node)
                             ? static_cast<ASTindex*>(a)
                             : static_cast<ASTstructselect*>(a)->compindex();
@@ -2058,8 +2057,8 @@ ASTliteral::codegen (Symbol *dest)
         return m_compiler->make_constant (intval());
     if (t.is_float())
         return m_compiler->make_constant (floatval());
-    ASSERT (0 && "Don't know how to generate code for this literal");
-    return NULL;
+    OSL_DASSERT (0 && "Don't know how to generate code for this literal");
+    return nullptr;
 }
 
 

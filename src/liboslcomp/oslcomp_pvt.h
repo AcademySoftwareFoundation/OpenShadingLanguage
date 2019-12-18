@@ -108,7 +108,7 @@ public:
     void errorf(ustring filename, int line,
                 const char* format, const Args&... args) const
     {
-        DASSERT (format && format[0]);
+        OSL_DASSERT(format && format[0]);
         std::string msg = OIIO::Strutil::sprintf (format, args...);
         if (msg.size() && msg.back() == '\n')  // trim extra newline
             msg.pop_back();
@@ -124,7 +124,7 @@ public:
     void warningf(ustring filename, int line,
                   const char* format, const Args&... args) const
     {
-        DASSERT (format && format[0]);
+        OSL_DASSERT(format && format[0]);
         if (nowarn(filename, line))
             return;    // skip if the filename/line is on the nowarn list
         std::string msg = OIIO::Strutil::sprintf (format, args...);
@@ -145,7 +145,7 @@ public:
     void infof(ustring filename, int line,
                const char* format, const Args&... args) const
     {
-        DASSERT (format && format[0]);
+        OSL_DASSERT(format && format[0]);
         std::string msg = OIIO::Strutil::sprintf (format, args...);
         if (msg.size() && msg.back() == '\n')  // trim extra newline
             msg.pop_back();
@@ -160,7 +160,7 @@ public:
     void messagef(ustring filename, int line,
                   const char* format, const Args&... args) const
     {
-        DASSERT (format && format[0]);
+        OSL_DASSERT(format && format[0]);
         std::string msg = OIIO::Strutil::sprintf (format, args...);
         if (msg.size() && msg.back() == '\n')  // trim extra newline
             msg.pop_back();

@@ -88,10 +88,6 @@ ifneq (${USE_LLVM_BITCODE},)
 MY_CMAKE_FLAGS += -DUSE_LLVM_BITCODE:BOOL=${USE_LLVM_BITCODE}
 endif
 
-ifneq (${USE_BOOST_WAVE},)
-MY_CMAKE_FLAGS += -DUSE_BOOST_WAVE:BOOL=${USE_BOOST_WAVE}
-endif
-
 ifneq (${USE_FAST_MATH},)
 MY_CMAKE_FLAGS += -DUSE_FAST_MATH:BOOL=${USE_FAST_MATH}
 endif
@@ -384,7 +380,6 @@ help:
 	@echo "      LLVM_NAMESPACE=xx        Specify custom LLVM namespace"
 	@echo "      LLVM_STATIC=1            Use static LLVM libraries"
 	@echo "      USE_LLVM_BITCODE=0       Don't generate embedded LLVM bitcode"
-	@echo "      USE_BOOST_WAVE=1         Force boost wave rather than clang preprocessor"
 	@echo "  OSL build-time options:"
 	@echo "      INSTALL_PREFIX=path      Set installation prefix (default: ${INSTALL_PREFIX})"
 	@echo "      NAMESPACE=name           Override namespace base name (default: OSL)"

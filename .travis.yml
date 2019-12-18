@@ -29,14 +29,12 @@ addons:
       - libboost-regex1.58
       - libboost-system1.58
       - libboost-thread1.58
-      - libboost-wave1.58
    packages: &old-boost-packages
       - libboost1.55-dev
       - libboost-filesystem1.55
       - libboost-regex1.55
       - libboost-system1.55
       - libboost-thread1.55
-      - libboost-wave1.55
 
 cache:
     ccache: true

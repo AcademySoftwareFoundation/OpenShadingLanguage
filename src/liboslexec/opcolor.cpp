@@ -153,7 +153,7 @@ hsv_to_rgb (const COLOR3& hsv)
 {
     // Reference for this technique: Foley & van Dam
     using FLOAT = typename ScalarFromVec<COLOR3>::type;
-    FLOAT h = comp(hsv,0), s = comp(hsv,1), v = comp(hsv,2);
+    FLOAT h = comp_x(hsv), s = comp_y(hsv), v = comp_z(hsv);
     if (s < 0.0001f) {
       return make_Color3 (v, v, v);
     } else {
@@ -183,7 +183,7 @@ rgb_to_hsv (const COLOR3& rgb)
 {
     // See Foley & van Dam
     using FLOAT = typename ScalarFromVec<COLOR3>::type;
-    FLOAT r = comp(rgb,0), g = comp(rgb,1), b = comp(rgb,2);
+    FLOAT r = comp_x(rgb), g = comp_y(rgb), b = comp_z(rgb);
     FLOAT mincomp = std::min (r, std::min (g, b));
     FLOAT maxcomp = std::max (r, std::max (g, b));
     FLOAT delta = maxcomp - mincomp;  // chroma
@@ -212,7 +212,7 @@ static COLOR3
 hsl_to_rgb (const COLOR3& hsl)
 {
     using FLOAT = typename ScalarFromVec<COLOR3>::type;
-    FLOAT h = comp(hsl,0), s = comp(hsl,1), l = comp(hsl,2);
+    FLOAT h = comp_x(hsl), s = comp_y(hsl), l = comp_z(hsl);
     // Easiest to convert hsl -> hsv, then hsv -> RGB (per Foley & van Dam)
     FLOAT v = (l <= 0.5f) ? (l * (1.0f + s)) : (l * (1.0f - s) + s);
     if (v <= 0.0f) {
@@ -233,10 +233,10 @@ rgb_to_hsl (const COLOR3& rgb)
     // See Foley & van Dam
     // First convert rgb to hsv, then to hsl
     using FLOAT = typename ScalarFromVec<COLOR3>::type;
-    FLOAT minval = std::min (comp(rgb,0), std::min (comp(rgb,1), comp(rgb,2)));
+    FLOAT minval = std::min (comp_x(rgb), std::min (comp_y(rgb), comp_z(rgb)));
     COLOR3 hsv = rgb_to_hsv (rgb);
-    FLOAT maxval = comp(hsv,2);   // v == maxval
-    FLOAT h = comp(hsv,0), s, l = (minval+maxval) / 2.0f;
+    FLOAT maxval = comp_z(hsv);   // v == maxval
+    FLOAT h = comp_x(hsv), s, l = (minval+maxval) / 2.0f;
     if (equalVal (minval, maxval))
         s = 0.0f;  // special 'achromatic' case, hue is 0
     else if (l <= 0.5f)
@@ -287,10 +287,10 @@ static COLOR3
 xyY_to_XYZ (const COLOR3 &xyY)
 {
     using FLOAT = typename ScalarFromVec<COLOR3>::type;
-    FLOAT Y = comp(xyY,2);
-    FLOAT Y_y = (comp(xyY,1) > 1.0e-6f ? Y/comp(xyY,1) : 0.0f);
-    FLOAT X = Y_y * comp(xyY,0);
-    FLOAT Z = Y_y * (1.0f - comp(xyY,0) - comp(xyY,1));
+    FLOAT Y = comp_z(xyY);
+    FLOAT Y_y = (comp_y(xyY) > 1.0e-6f ? Y/comp_y(xyY) : 0.0f);
+    FLOAT X = Y_y * comp_x(xyY);
+    FLOAT Z = Y_y * (1.0f - comp_x(xyY) - comp_y(xyY));
     return make_Color3 (X, Y, Z);
 }
 
@@ -304,7 +304,7 @@ sRGB_to_linear (const COLOR3& srgb)
     using FLOAT = typename ScalarFromVec<COLOR3>::type;
     using namespace OIIO;
     //using safe_pow = std::conditional<is_Dual<COLOR3>::value, OSL::safe_pow, OIIO::safe_pow>::type;
-    FLOAT r = comp(srgb,0), g = comp(srgb,1), b = comp(srgb,2);
+    FLOAT r = comp_x(srgb), g = comp_y(srgb), b = comp_z(srgb);
     auto convert = [] (FLOAT x) -> FLOAT {
         return (x <= 0.04045f) ?
                      (x * (1.0f / 12.92f)) :
@@ -323,7 +323,7 @@ linear_to_sRGB (const COLOR3& rgb)
     using FLOAT = typename ScalarFromVec<COLOR3>::type;
     using namespace OIIO;
     //using safe_pow = std::conditional<is_Dual<COLOR3>::value, OSL::safe_pow, OIIO::safe_pow>::type;
-    FLOAT r = comp(rgb,0), g = comp(rgb,1), b = comp(rgb,2);
+    FLOAT r = comp_x(rgb), g = comp_y(rgb), b = comp_z(rgb);
     auto convert = [] (FLOAT x) -> FLOAT {
         return (x <= 0.0031308f) ?
                       (12.92f * x)           :
@@ -342,7 +342,7 @@ linear_to_sRGB (const COLOR3& rgb)
 //                Colour Rendering of Spectra
 //                     by John Walker
 //                  http://www.fourmilab.ch/
-//		 Last updated: March 9, 2003
+//         Last updated: March 9, 2003
 //           This program is in the public domain.
 //    For complete information about the techniques employed in
 //    this program, see the World-Wide Web document:
@@ -425,14 +425,14 @@ constrain_rgb (Color3 &rgb)
 {
     // Amount of white needed is w = - min(0,r,g,b)
     float w = 0.0f;
-    w = (0 < rgb[0]) ? w : rgb[0];
-    w = (w < rgb[1]) ? w : rgb[1];
-    w = (w < rgb[2]) ? w : rgb[2];
+    w = (0 < rgb.x) ? w : rgb.x;
+    w = (w < rgb.y) ? w : rgb.y;
+    w = (w < rgb.z) ? w : rgb.z;
     w = -w;
 
     // Add just enough white to make r, g, b all positive.
     if (w > 0) {
-        rgb[0] += w;  rgb[1] += w;  rgb[2] += w;
+        rgb.x += w;  rgb.y += w;  rgb.z += w;
         return true;   // Color modified to fit RGB gamut
     }
 
@@ -446,7 +446,7 @@ constrain_rgb (Color3 &rgb)
 OSL_HOSTDEVICE inline float
 norm_rgb (Color3 &rgb)
 {
-    float greatest = std::max(rgb[0], std::max(rgb[1], rgb[2]));
+    float greatest = std::max(rgb.x, std::max(rgb.y, rgb.z));
     if (greatest > 1.0e-12f)
         rgb *= 1.0f/greatest;
     return greatest;
@@ -456,12 +456,12 @@ norm_rgb (Color3 &rgb)
 
 OSL_HOSTDEVICE inline void clamp_zero (Color3 &c)
 {
-    if (c[0] < 0.0f)
-        c[0] = 0.0f;
-    if (c[1] < 0.0f)
-        c[1] = 0.0f;
-    if (c[2] < 0.0f)
-        c[2] = 0.0f;
+    if (c.x < 0.0f)
+        c.x = 0.0f;
+    if (c.y < 0.0f)
+        c.y = 0.0f;
+    if (c.z < 0.0f)
+        c.z = 0.0f;
 }
 
 
@@ -469,7 +469,7 @@ OSL_HOSTDEVICE inline void clamp_zero (Color3 &c)
 OSL_HOSTDEVICE inline Color3
 colpow (const Color3 &c, float p)
 {
-    return Color3 (powf(c[0],p), powf(c[1],p), powf(c[2],p));
+    return Color3 (powf(c.x,p), powf(c.y,p), powf(c.z,p));
 }
 
 
@@ -531,35 +531,35 @@ ColorSystem::set_colorspace (StringParam colorspace)
     m_Blue.setValue (chroma->xBlue, chroma->yBlue, 0.0f);
     m_White.setValue (chroma->xWhite, chroma->yWhite, 0.0f);
     // set z values to normalize
-    m_Red[2]   = 1.0f - (m_Red[0]   + m_Red[1]);
-    m_Green[2] = 1.0f - (m_Green[0] + m_Green[1]);
-    m_Blue[2]  = 1.0f - (m_Blue[0]  + m_Blue[1]);
-    m_White[2] = 1.0f - (m_White[0] + m_White[1]);
+    m_Red.z   = 1.0f - (m_Red.x   + m_Red.y);
+    m_Green.z = 1.0f - (m_Green.x + m_Green.y);
+    m_Blue.z  = 1.0f - (m_Blue.x  + m_Blue.y);
+    m_White.z = 1.0f - (m_White.x + m_White.y);
 
     const Color3 &R(m_Red), &G(m_Green), &B(m_Blue), &W(m_White);
     // xyz -> rgb matrix, before scaling to white.
-    Color3 r (G[1]*B[2] - B[1]*G[2], B[0]*G[2] - G[0]*B[2], G[0]*B[1] - B[0]*G[1]);
-    Color3 g (B[1]*R[2] - R[1]*B[2], R[0]*B[2] - B[0]*R[2], B[0]*R[1] - R[0]*B[1]);
-    Color3 b (R[1]*G[2] - G[1]*R[2], G[0]*R[2] - R[0]*G[2], R[0]*G[1] - G[0]*R[1]);
+    Color3 r (G.y*B.z - B.y*G.z, B.x*G.z - G.x*B.z, G.x*B.y - B.x*G.y);
+    Color3 g (B.y*R.z - R.y*B.z, R.x*B.z - B.x*R.z, B.x*R.y - R.x*B.y);
+    Color3 b (R.y*G.z - G.y*R.z, G.x*R.z - R.x*G.z, R.x*G.y - G.x*R.y);
     Color3 w (r.dot(W), g.dot(W), b.dot(W));  // White scaling factor
-    if (W[1] != 0.0f)  // divide by W[1] to scale luminance to 1.0
-        w *= 1.0f/W[1];
+    if (W.y != 0.0f)  // divide by W.y to scale luminance to 1.0
+        w *= 1.0f/W.y;
     // xyz -> rgb matrix, correctly scaled to white.
-    r /= w[0];
-    g /= w[1];
-    b /= w[2];
-    m_XYZ2RGB = Matrix33 (r[0], g[0], b[0],
-                          r[1], g[1], b[1],
-                          r[2], g[2], b[2]);
+    r /= w.x;
+    g /= w.y;
+    b /= w.z;
+    m_XYZ2RGB = Matrix33 (r.x, g.x, b.x,
+                          r.y, g.y, b.y,
+                          r.z, g.z, b.z);
     m_RGB2XYZ = m_XYZ2RGB.inverse();
-    m_luminance_scale = Color3 (m_RGB2XYZ[0][1], m_RGB2XYZ[1][1], m_RGB2XYZ[2][1]);
+    m_luminance_scale = Color3 (m_RGB2XYZ.x[0][1], m_RGB2XYZ.x[1][1], m_RGB2XYZ.x[2][1]);
 
     // Mathematical imprecision can lead to the luminance scale not
     // quite summing to 1.0.  If it's very close, adjust to make it
     // exact.
-    float lum2 = (1.0f - m_luminance_scale[0] - m_luminance_scale[1]);
-    if (fabsf(lum2 - m_luminance_scale[2]) < 0.001f)
-        m_luminance_scale[2] = lum2;
+    float lum2 = (1.0f - m_luminance_scale.x - m_luminance_scale.y);
+    if (fabsf(lum2 - m_luminance_scale.z) < 0.001f)
+        m_luminance_scale.z = lum2;
 
     // Precompute a table of blackbody values
     // FIXME: With c++14 and constexpr cbrtf, this could be static_assert

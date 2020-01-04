@@ -21,8 +21,10 @@ echo ""
 echo "Before my brew installs:"
 brew list --versions
 
-brew install --display-times gcc ccache cmake ninja boost && true
+brew install --display-times gcc ccache ninja boost python && true
 brew link --overwrite gcc
+brew upgrade --display-times python cmake && true
+brew link --overwrite python
 brew install --display-times flex bison
 brew install --display-times libtiff ilmbase openexr
 brew install --display-times opencolorio partio

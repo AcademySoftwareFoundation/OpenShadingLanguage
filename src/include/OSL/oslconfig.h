@@ -339,18 +339,24 @@ using OIIO::cspan;
 ///
 /// OSL_ASSERT_MSG(condition,msg,...) lets you add formatted output (a la
 /// printf) to the failure message.
+#ifndef __CUDA_ARCH__
+#    define OSL_ASSERT_PRINT(...) (std::fprintf(stderr, __VA_ARGS__))
+#else
+#    define OSL_ASSERT_PRINT(...) (printf(__VA_ARGS__))
+#endif
+
 #define OSL_ASSERT(x)                                                          \
     (OIIO_LIKELY(x)                                                            \
          ? ((void)0)                                                           \
-         : (std::fprintf(stderr, "%s:%u: %s: Assertion '%s' failed.\n",        \
-                         __FILE__, __LINE__, OSL_PRETTY_FUNCTION, #x),         \
+         : (OSL_ASSERT_PRINT("%s:%u: %s: Assertion '%s' failed.\n",            \
+                             __FILE__, __LINE__, OSL_PRETTY_FUNCTION, #x),     \
             OSL_ABORT_IF_DEBUG))
-#define OSL_ASSERT_MSG(x, msg, ...)                                             \
-    (OIIO_LIKELY(x)                                                             \
-         ? ((void)0)                                                            \
-         : (std::fprintf(stderr, "%s:%u: %s: Assertion '%s' failed: " msg "\n", \
-                         __FILE__, __LINE__, OSL_PRETTY_FUNCTION, #x,           \
-                         __VA_ARGS__),                                          \
+#define OSL_ASSERT_MSG(x, msg, ...)                                            \
+    (OIIO_LIKELY(x)                                                            \
+         ? ((void)0)                                                           \
+         : (OSL_ASSERT_PRINT("%s:%u: %s: Assertion '%s' failed: " msg "\n",    \
+                             __FILE__, __LINE__, OSL_PRETTY_FUNCTION, #x,      \
+                             __VA_ARGS__),                                     \
             OSL_ABORT_IF_DEBUG))
 
 /// OSL_DASSERT and OSL_DASSERT_MSG are the same as OSL_ASSERT for debug

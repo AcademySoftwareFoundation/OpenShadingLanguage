@@ -184,10 +184,49 @@ if ( NOT MSVC )
             COMPONENT developer)
 endif()
 
-# Oddball: install the FindOSL.cmake file
-# install (FILES src/cmake/modules/FindOSL.cmake
-#          DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/cmake/Modules
-#          COMPONENT cmake)
+
+
+#########################################################################
+# Export the configuration files. There are also library-specific config
+# exports in the CMakeLists.txt of libOpenImageIO.
+include (CMakePackageConfigHelpers)
+
+# the file containing the exported targets
+set (OSL_TARGETS_EXPORT_NAME "${PROJECT_NAME}Targets.cmake")
+# the version file
+set (OSL_VERSION_CONFIG "${CMAKE_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake")
+# the config file that is actually looked for by find_package
+set (OSL_PROJECT_CONFIG "${CMAKE_BINARY_DIR}/${PROJECT_NAME}Config.cmake")
+# where all these files will be installed
+set (OSL_CONFIG_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
+
+# first generate the version file in the binary dir
+write_basic_package_version_file (
+        ${OSL_VERSION_CONFIG}
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion)
+
+# generate the Targets file in the binary dir using the targets collected in
+# OSL_EXPORTED_TARGETS each target is added to OSL_EXPORTED_TARGETS through
+# the macro install_target().
+export (EXPORT OSL_EXPORTED_TARGETS FILE "${CMAKE_BINARY_DIR}/${OSL_TARGETS_EXPORT_NAME}")
+
+# generate the config file from the template in the binary dir
+configure_package_config_file ("${PROJECT_SOURCE_DIR}/src/cmake/Config.cmake.in"
+        "${OSL_PROJECT_CONFIG}"
+        INSTALL_DESTINATION "${OSL_CONFIG_INSTALL_DIR}")
+
+# generate the config file from the template in the binary dir
+install (FILES "${OSL_PROJECT_CONFIG}" "${OSL_VERSION_CONFIG}"
+        DESTINATION "${OSL_CONFIG_INSTALL_DIR}")
+
+# install targets files
+install (EXPORT OSL_EXPORTED_TARGETS
+        DESTINATION ${OSL_CONFIG_INSTALL_DIR}
+        FILE ${OSL_TARGETS_EXPORT_NAME}
+        NAMESPACE ${PROJECT_NAME}::)
+
+
 
 
 

@@ -153,7 +153,7 @@ inline OSL_HOSTDEVICE float bits_to_01 (unsigned int bits) {
 
 #ifndef __CUDA_ARCH__
 // Perform a bjmix (see OpenImageIO/hash.h) on 4 sets of values at once.
-OIIO_FORCEINLINE void
+OSL_FORCEINLINE void
 bjmix (int4 &a, int4 &b, int4 &c)
 {
     using OIIO::simd::rotl32;
@@ -166,7 +166,7 @@ bjmix (int4 &a, int4 &b, int4 &c)
 }
 
 // Perform a bjfinal (see OpenImageIO/hash.h) on 4 sets of values at once.
-OIIO_FORCEINLINE int4
+OSL_FORCEINLINE int4
 bjfinal (const int4& a_, const int4& b_, const int4& c_)
 {
     using OIIO::simd::rotl32;
@@ -661,22 +661,22 @@ private:
 // variety of types that we can use for both scalars and vectors. Because ?:
 // won't work properly in template code with vector ops.
 template <typename B, typename F> OSL_HOSTDEVICE
-OIIO_FORCEINLINE F select (const B& b, const F& t, const F& f) { return b ? t : f; }
+OSL_FORCEINLINE F select (const B& b, const F& t, const F& f) { return b ? t : f; }
 
 #ifndef __CUDA_ARCH__
-template <> OIIO_FORCEINLINE int4 select (const bool4& b, const int4& t, const int4& f) {
+template <> OSL_FORCEINLINE int4 select (const bool4& b, const int4& t, const int4& f) {
     return blend (f, t, b);
 }
 
-template <> OIIO_FORCEINLINE float4 select (const bool4& b, const float4& t, const float4& f) {
+template <> OSL_FORCEINLINE float4 select (const bool4& b, const float4& t, const float4& f) {
     return blend (f, t, b);
 }
 
-template <> OIIO_FORCEINLINE float4 select (const int4& b, const float4& t, const float4& f) {
+template <> OSL_FORCEINLINE float4 select (const int4& b, const float4& t, const float4& f) {
     return blend (f, t, bool4(b));
 }
 
-template <> OIIO_FORCEINLINE Dual2<float4>
+template <> OSL_FORCEINLINE Dual2<float4>
 select (const bool4& b, const Dual2<float4>& t, const Dual2<float4>& f) {
     return Dual2<float4> (blend (f.val(), t.val(), b),
                           blend (f.dx(),  t.dx(),  b),
@@ -684,7 +684,7 @@ select (const bool4& b, const Dual2<float4>& t, const Dual2<float4>& f) {
 }
 
 template <>
-OIIO_FORCEINLINE Dual2<float4> select (const int4& b, const Dual2<float4>& t, const Dual2<float4>& f) {
+OSL_FORCEINLINE Dual2<float4> select (const int4& b, const Dual2<float4>& t, const Dual2<float4>& f) {
     return select (bool4(b), t, f);
 }
 #endif
@@ -694,19 +694,19 @@ OIIO_FORCEINLINE Dual2<float4> select (const int4& b, const Dual2<float4>& t, co
 // Define negate_if(value,bool) that will work for both scalars and vectors,
 // as well as Dual2's of both.
 template<typename FLOAT, typename BOOL> OSL_HOSTDEVICE
-OIIO_FORCEINLINE FLOAT negate_if (const FLOAT& val, const BOOL& b) {
+OSL_FORCEINLINE FLOAT negate_if (const FLOAT& val, const BOOL& b) {
     return b ? -val : val;
 }
 
 #ifndef __CUDA_ARCH__
-template<> OIIO_FORCEINLINE float4 negate_if (const float4& val, const int4& b) {
+template<> OSL_FORCEINLINE float4 negate_if (const float4& val, const int4& b) {
     // Special case negate_if for SIMD -- can do it with bit tricks, no branches
     int4 highbit (0x80000000);
     return bitcast_to_float4 (bitcast_to_int4(val) ^ (blend0 (highbit, bool4(b))));
 }
 
 // Special case negate_if for SIMD -- can do it with bit tricks, no branches
-template<> OIIO_FORCEINLINE Dual2<float4> negate_if (const Dual2<float4>& val, const int4& b)
+template<> OSL_FORCEINLINE Dual2<float4> negate_if (const Dual2<float4>& val, const int4& b)
 {
     return Dual2<float4> (negate_if (val.val(), b),
                           negate_if (val.dx(),  b),
@@ -719,7 +719,7 @@ template<> OIIO_FORCEINLINE Dual2<float4> negate_if (const Dual2<float4>& val, c
 // Define shuffle<> template that works with Dual2<float4> analogously to
 // how it works for float4.
 template<int i0, int i1, int i2, int i3>
-OIIO_FORCEINLINE Dual2<float4> shuffle (const Dual2<float4>& a)
+OSL_FORCEINLINE Dual2<float4> shuffle (const Dual2<float4>& a)
 {
     return Dual2<float4> (OIIO::simd::shuffle<i0,i1,i2,i3>(a.val()),
                           OIIO::simd::shuffle<i0,i1,i2,i3>(a.dx()),
@@ -727,7 +727,7 @@ OIIO_FORCEINLINE Dual2<float4> shuffle (const Dual2<float4>& a)
 }
 
 template<int i>
-OIIO_FORCEINLINE Dual2<float4> shuffle (const Dual2<float4>& a)
+OSL_FORCEINLINE Dual2<float4> shuffle (const Dual2<float4>& a)
 {
     return Dual2<float4> (OIIO::simd::shuffle<i>(a.val()),
                           OIIO::simd::shuffle<i>(a.dx()),
@@ -737,7 +737,7 @@ OIIO_FORCEINLINE Dual2<float4> shuffle (const Dual2<float4>& a)
 // Define extract<> that works with Dual2<float4> analogously to how it
 // works for float4.
 template<int i>
-OIIO_FORCEINLINE Dual2<float> extract (const Dual2<float4>& a)
+OSL_FORCEINLINE Dual2<float> extract (const Dual2<float4>& a)
 {
     return Dual2<float> (OIIO::simd::extract<i>(a.val()),
                          OIIO::simd::extract<i>(a.dx()),
@@ -751,7 +751,7 @@ OIIO_FORCEINLINE Dual2<float> extract (const Dual2<float4>& a)
 // packed into a float4. We assume T is float and VECTYPE is float4,
 // but it also works if T is Dual2<float> and VECTYPE is Dual2<float4>.
 template<typename T, typename VECTYPE> OSL_HOSTDEVICE
-OIIO_FORCEINLINE T bilerp (VECTYPE abcd, T u, T v) {
+OSL_FORCEINLINE T bilerp (VECTYPE abcd, T u, T v) {
     VECTYPE xx = OIIO::lerp (abcd, OIIO::simd::shuffle<1,1,3,3>(abcd), u);
     return OIIO::simd::extract<0>(OIIO::lerp (xx,OIIO::simd::shuffle<2>(xx), v));
 }
@@ -761,7 +761,7 @@ OIIO_FORCEINLINE T bilerp (VECTYPE abcd, T u, T v) {
 // packed into a float4 and uv are already packed into the first two
 // elements of a float4. We assume VECTYPE is float4, but it also works if
 // VECTYPE is Dual2<float4>.
-OIIO_FORCEINLINE Dual2<float> bilerp (const Dual2<float4>& abcd, const Dual2<float4>& uv) {
+OSL_FORCEINLINE Dual2<float> bilerp (const Dual2<float4>& abcd, const Dual2<float4>& uv) {
     Dual2<float4> xx = OIIO::lerp (abcd, shuffle<1,1,3,3>(abcd), shuffle<0>(uv));
     return extract<0>(OIIO::lerp (xx,shuffle<2>(xx), shuffle<1>(uv)));
 }
@@ -770,7 +770,7 @@ OIIO_FORCEINLINE Dual2<float> bilerp (const Dual2<float4>& abcd, const Dual2<flo
 // Equivalent to OIIO::trilerp (a, b, c, d, e, f, g, h, u, v, w), but if
 // abcd and efgh are already packed into float4's and uvw are packed into
 // the first 3 elements of a float4.
-OIIO_FORCEINLINE float trilerp (const float4& abcd, const float4& efgh, const float4& uvw) {
+OSL_FORCEINLINE float trilerp (const float4& abcd, const float4& efgh, const float4& uvw) {
     // Interpolate along z axis by w
     float4 xy = OIIO::lerp (abcd, efgh, OIIO::simd::shuffle<2>(uvw));
     // Interpolate along x axis by u
@@ -989,17 +989,17 @@ struct HashScalar {
 
 #ifndef __CUDA_ARCH__
     // 4 2D hashes at once!
-    OIIO_FORCEINLINE int4 operator() (const int4& x, const int4& y) const {
+    OSL_FORCEINLINE int4 operator() (const int4& x, const int4& y) const {
         return inthash_simd (x, y);
     }
 
     // 4 3D hashes at once!
-    OIIO_FORCEINLINE int4 operator() (const int4& x, const int4& y, const int4& z) const {
+    OSL_FORCEINLINE int4 operator() (const int4& x, const int4& y, const int4& z) const {
         return inthash_simd (x, y, z);
     }
 
     // 4 3D hashes at once!
-    OIIO_FORCEINLINE int4 operator() (const int4& x, const int4& y, const int4& z, const int4& w) const {
+    OSL_FORCEINLINE int4 operator() (const int4& x, const int4& y, const int4& z, const int4& w) const {
         return inthash_simd (x, y, z, w);
     }
 #endif
@@ -1051,7 +1051,7 @@ struct HashVector {
 
 #ifndef __CUDA_ARCH__
     // Vector hash of 4 3D points at once
-    OIIO_FORCEINLINE void operator() (int4 *result, const int4& x, const int4& y) const {
+    OSL_FORCEINLINE void operator() (int4 *result, const int4& x, const int4& y) const {
         int4 h = inthash_simd (x, y);
         result[0] = (h        ) & 0xFF;
         result[1] = (srl(h,8 )) & 0xFF;
@@ -1059,7 +1059,7 @@ struct HashVector {
     }
 
     // Vector hash of 4 3D points at once
-    OIIO_FORCEINLINE void operator() (int4 *result, const int4& x, const int4& y, const int4& z) const {
+    OSL_FORCEINLINE void operator() (int4 *result, const int4& x, const int4& y, const int4& z) const {
         int4 h = inthash_simd (x, y, z);
         result[0] = (h        ) & 0xFF;
         result[1] = (srl(h,8 )) & 0xFF;
@@ -1067,7 +1067,7 @@ struct HashVector {
     }
 
     // Vector hash of 4 3D points at once
-    OIIO_FORCEINLINE void operator() (int4 *result, const int4& x, const int4& y, const int4& z, const int4& w) const {
+    OSL_FORCEINLINE void operator() (int4 *result, const int4& x, const int4& y, const int4& z, const int4& w) const {
         int4 h = inthash_simd (x, y, z, w);
         result[0] = (h        ) & 0xFF;
         result[1] = (srl(h,8 )) & 0xFF;

@@ -63,6 +63,83 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #    error "This version of OSL requires C++11"
 #endif
 
+
+
+// In C++20 (and some compilers before that), __has_cpp_attribute can
+// test for understand of [[attr]] tests.
+#ifndef __has_cpp_attribute
+#    define __has_cpp_attribute(x) 0
+#endif
+
+// On gcc & clang, __has_attribute can test for __attribute__((attr))
+#ifndef __has_attribute
+#    define __has_attribute(x) 0
+#endif
+
+// In C++17 (and some compilers before that), __has_include("blah.h") or
+// __has_include(<blah.h>) can test for presence of an include file.
+#ifndef __has_include
+#    define __has_include(x) 0
+#endif
+
+
+
+// Define OSL_GNUC_VERSION to hold an encoded gcc version (e.g. 40802 for
+// 4.8.2), or 0 if not a GCC release. N.B.: This will be 0 for clang.
+#if defined(__GNUC__) && !defined(__clang__)
+#  define OSL_GNUC_VERSION (10000*__GNUC__ + 100*__GNUC_MINOR__ + __GNUC_PATCHLEVEL__)
+#else
+#  define OSL_GNUC_VERSION 0
+#endif
+
+// Define OSL_CLANG_VERSION to hold an encoded generic Clang version (e.g.
+// 30402 for clang 3.4.2), or 0 if not a generic Clang release.
+// N.B. This will be 0 for the clang Apple distributes (which has different
+// version numbers entirely).
+#if defined(__clang__) && !defined(__apple_build_version__)
+#  define OSL_CLANG_VERSION (10000*__clang_major__ + 100*__clang_minor__ + __clang_patchlevel__)
+#else
+#  define OSL_CLANG_VERSION 0
+#endif
+
+// Define OSL_APPLE_CLANG_VERSION to hold an encoded Apple Clang version
+// (e.g. 70002 for clang 7.0.2), or 0 if not an Apple Clang release.
+#if defined(__clang__) && defined(__apple_build_version__)
+#  define OSL_APPLE_CLANG_VERSION (10000*__clang_major__ + 100*__clang_minor__ + __clang_patchlevel__)
+#else
+#  define OSL_APPLE_CLANG_VERSION 0
+#endif
+
+// Define OSL_INTEL_COMPILER to hold an encoded Intel compiler version
+// (e.g. 1900), or 0 if not an Intel compiler.
+#if defined(__INTEL_COMPILER)
+#  define OSL_INTEL_COMPILER __INTEL_COMPILER
+#else
+#  define OSL_INTEL_COMPILER 0
+#endif
+
+// Tests for MSVS versions, always 0 if not MSVS at all.
+#if defined(_MSC_VER)
+#  if _MSC_VER < 1900
+#    error "This version of OSL is meant to work only with Visual Studio 2015 or later"
+#  endif
+#  define OSL_MSVS_AT_LEAST_2013 (_MSC_VER >= 1800)
+#  define OSL_MSVS_BEFORE_2013   (_MSC_VER <  1800)
+#  define OSL_MSVS_AT_LEAST_2015 (_MSC_VER >= 1900)
+#  define OSL_MSVS_BEFORE_2015   (_MSC_VER <  1900)
+#  define OSL_MSVS_AT_LEAST_2017 (_MSC_VER >= 1910)
+#  define OSL_MSVS_BEFORE_2017   (_MSC_VER <  1910)
+#else
+#  define OSL_MSVS_AT_LEAST_2013 0
+#  define OSL_MSVS_BEFORE_2013   0
+#  define OSL_MSVS_AT_LEAST_2015 0
+#  define OSL_MSVS_BEFORE_2015   0
+#  define OSL_MSVS_AT_LEAST_2017 0
+#  define OSL_MSVS_BEFORE_2017   0
+#endif
+
+
+
 #ifndef OSL_DEBUG
     #ifdef NDEBUG
         #define OSL_DEBUG 0
@@ -75,33 +152,54 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     #endif
 #endif // OSL_DEBUG
 
-#ifndef OSL_INLINE
-    #if OSL_DEBUG
-        #define OSL_INLINE inline
-    #else
-        #if __INTEL_COMPILER >= 1100 || (defined(_WIN32) || defined(_WIN64))
-            #define OSL_INLINE __forceinline
-        #else
-            #define OSL_INLINE inline __attribute__((always_inline))
-        #endif
-    #endif
-#endif
 
-#ifndef OSL_NOINLINE
-    #if (defined(_WIN32) || defined(_WIN64))
-        #define OSL_NOINLINE __declspec(noinline)
-    #else
-        #define OSL_NOINLINE __attribute__((noinline))
-    #endif
-#endif
-
-#if defined(_MSC_VER) && !defined(__INTEL_COMPILER)
-    #define OSL_EXPECT_FALSE(EXPRESSION) EXPRESSION
-    #define OSL_EXPECT_TRUE(EXPRESSION) EXPRESSION
+// OSL_FORCEINLINE is a function attribute that attempts to make the
+// function always inline. On many compilers regular 'inline' is only
+// advisory. Put this attribute before the function return type, just like
+// you would use 'inline'. Note that if OSL_DEBUG is true, it just becomes
+// ordinary inline.
+#if OSL_DEBUG
+#    define OSL_FORCEINLINE inline
+#elif defined(__CUDACC__)
+#    define OSL_FORCEINLINE __inline__
+#elif defined(__GNUC__) || defined(__clang__) || __has_attribute(always_inline)
+#    define OSL_FORCEINLINE inline __attribute__((always_inline))
+#elif defined(_MSC_VER) || defined(__INTEL_COMPILER)
+#    define OSL_FORCEINLINE __forceinline
 #else
-    #define OSL_EXPECT_FALSE(EXPRESSION) __builtin_expect(EXPRESSION, false)
-    #define OSL_EXPECT_TRUE(EXPRESSION) __builtin_expect(EXPRESSION, true)
+#    define OSL_FORCEINLINE inline
 #endif
+
+
+// OSL_NOINLINE hints to the compiler that the functions should never be
+// inlined.
+#if defined(__GNUC__) || defined(__clang__) || __has_attribute(noinline)
+#    define OSL_NOINLINE __attribute__((noinline))
+#elif defined(_MSC_VER) || defined(__INTEL_COMPILER)
+#    define OSL_NOINLINE __declspec(noinline)
+#else
+#    define OSL_NOINLINE
+#endif
+
+
+// Some compilers define a special intrinsic to use in conditionals that can
+// speed up extremely performance-critical spots if the conditional is
+// usually (or rarely) is true.  You use it by replacing
+//     if (x) ...
+// with
+//     if (OSL_LIKELY(x)) ...     // if you think x will usually be true
+// or
+//     if (OSL_UNLIKELY(x)) ...   // if you think x will rarely be true
+// Caveat: Programmers are notoriously bad at guessing this, so it
+// should be used only with thorough benchmarking.
+#if defined(__GNUC__) || defined(__clang__) || defined(__INTEL_COMPILER)
+#    define OSL_LIKELY(x) (__builtin_expect(bool(x), true))
+#    define OSL_UNLIKELY(x) (__builtin_expect(bool(x), false))
+#else
+#    define OSL_LIKELY(x) (x)
+#    define OSL_UNLIKELY(x) (x)
+#endif
+
 
 #ifndef OSL_HOSTDEVICE
 #  ifdef __CUDACC__
@@ -208,12 +306,12 @@ namespace pvt {
 // Instead of relying on compiler loop unrolling, we can statically call functor
 // for each integer in a sequence
 template <template<int> class ConstantWrapperT, int... IntListT, typename FunctorT>
-static OSL_INLINE void static_foreach(pvt::int_sequence<IntListT...>, const FunctorT &iFunctor) {
+static OSL_FORCEINLINE void static_foreach(pvt::int_sequence<IntListT...>, const FunctorT &iFunctor) {
      __OSL_EXPAND_PARAMETER_PACKS( iFunctor(ConstantWrapperT<IntListT>{}) );
 }
 
 template <template<int> class ConstantWrapperT, int N, typename FunctorT>
-static OSL_INLINE void static_foreach(const FunctorT &iFunctor) {
+static OSL_FORCEINLINE void static_foreach(const FunctorT &iFunctor) {
     static_foreach<ConstantWrapperT>(pvt::make_int_sequence<N>(), iFunctor);
 }
 
@@ -346,17 +444,17 @@ using OIIO::cspan;
 #endif
 
 #define OSL_ASSERT(x)                                                          \
-    (OIIO_LIKELY(x)                                                            \
+    (OSL_LIKELY(x)                                                             \
          ? ((void)0)                                                           \
          : (OSL_ASSERT_PRINT("%s:%u: %s: Assertion '%s' failed.\n",            \
                              __FILE__, __LINE__, OSL_PRETTY_FUNCTION, #x),     \
             OSL_ABORT_IF_DEBUG))
-#define OSL_ASSERT_MSG(x, msg, ...)                                            \
-    (OIIO_LIKELY(x)                                                            \
-         ? ((void)0)                                                           \
-         : (OSL_ASSERT_PRINT("%s:%u: %s: Assertion '%s' failed: " msg "\n",    \
-                             __FILE__, __LINE__, OSL_PRETTY_FUNCTION, #x,      \
-                             __VA_ARGS__),                                     \
+#define OSL_ASSERT_MSG(x, msg, ...)                                             \
+    (OSL_LIKELY(x)                                                              \
+         ? ((void)0)                                                            \
+         : (std::fprintf(stderr, "%s:%u: %s: Assertion '%s' failed: " msg "\n", \
+                         __FILE__, __LINE__, OSL_PRETTY_FUNCTION, #x,           \
+                         __VA_ARGS__),                                          \
             OSL_ABORT_IF_DEBUG))
 
 /// OSL_DASSERT and OSL_DASSERT_MSG are the same as OSL_ASSERT for debug

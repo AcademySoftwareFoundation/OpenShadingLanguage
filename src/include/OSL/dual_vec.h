@@ -163,14 +163,14 @@ make_Vec2 (const Dual<Vec2::BaseType,P> &x, const Dual<Vec2::BaseType,P> &y)
 /// comp_x(Dual<Vec3>) returns a Dual<float> of the x component (with
 /// derivs).
 
-OSL_HOSTDEVICE OSL_INLINE float
+OSL_HOSTDEVICE OSL_FORCEINLINE float
 comp_x (const Vec3 &v)
 {
     return v.x;
 }
 
 template<int P>
-OSL_HOSTDEVICE OSL_INLINE OIIO_CONSTEXPR14 Dual<Vec3::BaseType, P>
+OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<Vec3::BaseType, P>
 comp_x (const Dual<Vec3,P> &v)
 {
     Dual<Vec3::BaseType, P> result;
@@ -180,14 +180,14 @@ comp_x (const Dual<Vec3,P> &v)
     return result;
 }
 
-OSL_HOSTDEVICE OSL_INLINE float
+OSL_HOSTDEVICE OSL_FORCEINLINE float
 comp_y (const Vec3 &v)
 {
     return v.y;
 }
 
 template<int P>
-OSL_HOSTDEVICE OSL_INLINE OIIO_CONSTEXPR14 Dual<Vec3::BaseType,P>
+OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<Vec3::BaseType,P>
 comp_y (const Dual<Vec3,P> &v)
 {
     Dual<Vec3::BaseType,P> result;
@@ -198,14 +198,14 @@ comp_y (const Dual<Vec3,P> &v)
 }
 
 
-OSL_HOSTDEVICE OSL_INLINE float
+OSL_HOSTDEVICE OSL_FORCEINLINE float
 comp_z (const Vec3 &v)
 {
     return v.z;
 }
 
 template<int P>
-OSL_HOSTDEVICE OSL_INLINE OIIO_CONSTEXPR14 Dual<Vec3::BaseType,P>
+OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<Vec3::BaseType,P>
 comp_z (const Dual<Vec3,P> &v)
 {
     Dual<Vec3::BaseType,P> result;
@@ -215,26 +215,26 @@ comp_z (const Dual<Vec3,P> &v)
     return result;
 }
 
-OSL_HOSTDEVICE OSL_INLINE float
+OSL_HOSTDEVICE OSL_FORCEINLINE float
 comp_x (const Color3 &v)
 {
     return v.x;
 }
 
-OSL_HOSTDEVICE OSL_INLINE float
+OSL_HOSTDEVICE OSL_FORCEINLINE float
 comp_y (const Color3 &v)
 {
     return v.y;
 }
 
-OSL_HOSTDEVICE OSL_INLINE float
+OSL_HOSTDEVICE OSL_FORCEINLINE float
 comp_z (const Color3 &v)
 {
     return v.z;
 }
 
 template<int P>
-OSL_HOSTDEVICE OSL_INLINE OIIO_CONSTEXPR14 Dual<Color3::BaseType,P>
+OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<Color3::BaseType,P>
 comp_x (const Dual<Color3,P> &v)
 {
     Dual<Color3::BaseType, P> result;
@@ -245,7 +245,7 @@ comp_x (const Dual<Color3,P> &v)
 }
 
 template<int P>
-OSL_HOSTDEVICE OSL_INLINE OIIO_CONSTEXPR14 Dual<Color3::BaseType,P>
+OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<Color3::BaseType,P>
 comp_y (const Dual<Color3,P> &v)
 {
     Dual<Color3::BaseType,P> result;
@@ -256,7 +256,7 @@ comp_y (const Dual<Color3,P> &v)
 }
 
 template<int P>
-OSL_HOSTDEVICE OSL_INLINE OIIO_CONSTEXPR14 Dual<Color3::BaseType,P>
+OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<Color3::BaseType,P>
 comp_z (const Dual<Color3,P> &v)
 {
     Dual<Color3::BaseType,P> result;
@@ -268,14 +268,14 @@ comp_z (const Dual<Color3,P> &v)
 
 
 
-OSL_HOSTDEVICE OSL_INLINE float
+OSL_HOSTDEVICE OSL_FORCEINLINE float
 comp_x (const Vec2 &v)
 {
     return v.x;
 }
 
 template<int P>
-OSL_HOSTDEVICE OSL_INLINE OIIO_CONSTEXPR14 Dual<Vec2::BaseType,P>
+OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<Vec2::BaseType,P>
 comp_x (const Dual<Vec2,P> &v)
 {
     Dual<Vec2::BaseType,P> result;
@@ -286,14 +286,14 @@ comp_x (const Dual<Vec2,P> &v)
 }
 
 
-OSL_HOSTDEVICE OSL_INLINE float
+OSL_HOSTDEVICE OSL_FORCEINLINE float
 comp_y (const Vec2 &v)
 {
     return v.y;
 }
 
 template<int P>
-OSL_HOSTDEVICE OSL_INLINE OIIO_CONSTEXPR14 Dual<Vec2::BaseType,P>
+OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<Vec2::BaseType,P>
 comp_y (const Dual<Vec2,P> &v)
 {
     Dual<Vec2::BaseType,P> result;
@@ -325,7 +325,7 @@ multMatrix (const Imath::Matrix33<T> &M, const Dual<Vec3,P> &src,
 
 /// Multiply a row 3-vector (with derivatives) by a 3x3 matrix (no derivs).
 ///
-template <class T, int P> OSL_HOSTDEVICE inline OIIO_CONSTEXPR14
+template <class T, int P> OSL_HOSTDEVICE inline OSL_CONSTEXPR14
 Dual<Vec3,P>
 operator* (const Dual<Vec3,P> &src, const Imath::Matrix33<T> &M)
 {
@@ -341,7 +341,7 @@ operator* (const Dual<Vec3,P> &src, const Imath::Matrix33<T> &M)
 
 /// Multiply a row 3-vector (with derivatives) by a 3x3 matrix (no derivs).
 ///
-template <class T, int P> OSL_HOSTDEVICE inline OIIO_CONSTEXPR14
+template <class T, int P> OSL_HOSTDEVICE inline OSL_CONSTEXPR14
 Dual<Color3,P>
 operator* (const Dual<Color3,P> &src, const Imath::Matrix33<T> &M)
 {
@@ -363,7 +363,7 @@ robust_multVecMatrix(const Imath::Matrix44<S>& M, const Vec3& src, Vec3& dst)
     auto c = src.x * M.x[0][2] + src.y * M.x[1][2] + src.z * M.x[2][2] + M.x[3][2];
     auto w = src.x * M.x[0][3] + src.y * M.x[1][3] + src.z * M.x[2][3] + M.x[3][3];
 
-    if (OSL_EXPECT_TRUE(! equalVal (w, Vec3::BaseType(0)))) {
+    if (OSL_LIKELY(! equalVal (w, Vec3::BaseType(0)))) {
         dst.x = a / w;
         dst.y = b / w;
         dst.z = c / w;
@@ -391,7 +391,7 @@ robust_multVecMatrix (const Imath::Matrix44<S> &M,
     auto c = din.x * M.x[0][2] + din.y * M.x[1][2] + din.z * M.x[2][2] + M.x[3][2];
     auto w = din.x * M.x[0][3] + din.y * M.x[1][3] + din.z * M.x[2][3] + M.x[3][3];
 
-    if (OSL_EXPECT_TRUE(!equalVal (w, Vec3::BaseType(0)))) {
+    if (OSL_LIKELY(!equalVal (w, Vec3::BaseType(0)))) {
        dout.x = a / w;
        dout.y = b / w;
        dout.z = c / w;
@@ -431,7 +431,7 @@ multiplyDirByMatrix (const Imath::Matrix44<S> &M,
 }
 
 template<int P>
-OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<Vec3::BaseType, P>
+OSL_HOSTDEVICE inline OSL_CONSTEXPR14 Dual<Vec3::BaseType, P>
 dot (const Dual<Vec3,P> &a, const Dual<Vec3,P> &b)
 {
     auto ax = comp_x (a);
@@ -446,7 +446,7 @@ dot (const Dual<Vec3,P> &a, const Dual<Vec3,P> &b)
 
 
 template<int P>
-OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<Vec3::BaseType,P>
+OSL_HOSTDEVICE inline OSL_CONSTEXPR14 Dual<Vec3::BaseType,P>
 dot (const Dual<Vec3,P> &a, const Vec3 &b)
 {
     auto ax = comp_x (a);
@@ -461,7 +461,7 @@ dot (const Dual<Vec3,P> &a, const Vec3 &b)
 
 
 template<int P>
-OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<Vec3::BaseType,P>
+OSL_HOSTDEVICE inline OSL_CONSTEXPR14 Dual<Vec3::BaseType,P>
 dot (const Vec3 &a, const Dual<Vec3,P> &b)
 {
     return dot (b, a);
@@ -470,7 +470,7 @@ dot (const Vec3 &a, const Dual<Vec3,P> &b)
 
 
 template<int P>
-OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<Vec2::BaseType,P>
+OSL_HOSTDEVICE inline OSL_CONSTEXPR14 Dual<Vec2::BaseType,P>
 dot (const Dual<Vec2,P> &a, const Dual<Vec2,P> &b)
 {
     auto ax = comp_x (a);
@@ -483,7 +483,7 @@ dot (const Dual<Vec2,P> &a, const Dual<Vec2,P> &b)
 
 
 template<int P>
-OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<Vec2::BaseType,P>
+OSL_HOSTDEVICE inline OSL_CONSTEXPR14 Dual<Vec2::BaseType,P>
 dot (const Dual<Vec2,P> &a, const Vec2 &b)
 {
     auto ax = comp_x (a);
@@ -496,7 +496,7 @@ dot (const Dual<Vec2,P> &a, const Vec2 &b)
 
 
 template<int P>
-OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<Vec2::BaseType,P>
+OSL_HOSTDEVICE inline OSL_CONSTEXPR14 Dual<Vec2::BaseType,P>
 dot (const Vec2 &a, const Dual<Vec2,P> &b)
 {
     auto ax = comp_x (a);
@@ -527,7 +527,7 @@ cross (const Dual<Vec3,P> &a, const Dual<Vec3,P> &b)
 
 
 template<int P>
-OSL_HOSTDEVICE inline OIIO_CONSTEXPR14 Dual<Vec3::BaseType,P>
+OSL_HOSTDEVICE inline OSL_CONSTEXPR14 Dual<Vec3::BaseType,P>
 length (const Dual<Vec3,P> &a)
 {
     auto ax = comp_x (a);
@@ -546,7 +546,7 @@ normalize (const Dual<Vec3,P> &a)
     auto ay = comp_y (a);
     auto az = comp_z (a);
     auto len = sqrt(ax * ax + ay * ay + az * az);
-    if (OSL_EXPECT_TRUE(len > Vec3::BaseType(0))) {
+    if (OSL_LIKELY(len > Vec3::BaseType(0))) {
         auto invlen = Vec3::BaseType(1) / len;
         auto nax = ax * invlen;
         auto nay = ay * invlen;

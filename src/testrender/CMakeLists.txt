@@ -44,5 +44,6 @@ target_include_directories (testrender PRIVATE ${PUGIXML_INCLUDES})
 target_link_libraries (testrender
     PRIVATE
         oslexec oslquery
+        ${PUGIXML_LIBRARIES}
         ${CUDA_LIBRARIES} ${OPTIX_LIBRARIES} ${OPTIX_EXTRA_LIBS})
 install ( TARGETS testrender RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )

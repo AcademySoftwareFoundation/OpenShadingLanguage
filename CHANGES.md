@@ -179,6 +179,7 @@ Build & test system improvements:
     - CXX_VISIBILITY_PRESET controls symbol visibility defaults now, not
       our nonstandard HIDE_SYMBOLS. And the default is to keep everything
       hidden that is not part of the public API.
+    - `ENABLERTTI` build option has been renamed `ENABLE_RTTI`.
     - Config based install and usage.
 * Testshade makes sure that no unreported errors accumulted in the texture
   system or image cache. #939 (1.11.0)

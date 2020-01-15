@@ -105,7 +105,8 @@ osl_div_m_ff (void *r, float a, float b)
 OSL_SHADEOP OSL_HOSTDEVICE void
 osl_transpose_mm (void *r, void *m)
 {
-    MAT(r) = MAT(m).transposed();
+    //MAT(r) = MAT(m).transposed();
+	MAT(r) = inlinedTransposed(MAT(m));
 }
 
 
@@ -129,7 +130,8 @@ OSL_SHADEOP OSL_HOSTDEVICE void osl_transformv_vmv(void *result, void* M_, void*
 {
    const Vec3 &v = VEC(v_);
    const Matrix44 &M = MAT(M_);
-   M.multDirMatrix (v, VEC(result));
+   //M.multDirMatrix (v, VEC(result));
+   multDirMatrix (M, v, VEC(result));
 }
 
 OSL_SHADEOP OSL_HOSTDEVICE void osl_transformv_dvmdv(void *result, void* M_, void* v_)
@@ -145,14 +147,16 @@ OSL_SHADEOP OSL_HOSTDEVICE void osl_transformn_vmv(void *result, void* M_, void*
 {
    const Vec3 &v = VEC(v_);
    const Matrix44 &M = MAT(M_);
-   M.inverse().transposed().multDirMatrix (v, VEC(result));
+   //M.inverse().transposed().multDirMatrix (v, VEC(result));
+   multDirMatrix(inlinedTransposed(M.inverse()), v, VEC(result));
 }
 
 OSL_SHADEOP OSL_HOSTDEVICE void osl_transformn_dvmdv(void *result, void* M_, void* v_)
 {
    const Dual2<Vec3> &v = DVEC(v_);
    const Matrix44    &M = MAT(M_);
-   multDirMatrix (M.inverse().transposed(), v, DVEC(result));
+   //multDirMatrix (M.inverse().transposed(), v, DVEC(result));
+   multDirMatrix (inlinedTransposed(M.inverse()), v, DVEC(result));
 }
 
 #ifndef __CUDACC__
@@ -370,10 +374,10 @@ template <typename F>
 OSL_HOSTDEVICE inline F det4x4(const Imath::Matrix44<F> &m)
 {
     // assign to individual variable names to aid selecting correct elements
-    F a1 = m[0][0], b1 = m[0][1], c1 = m[0][2], d1 = m[0][3];
-    F a2 = m[1][0], b2 = m[1][1], c2 = m[1][2], d2 = m[1][3];
-    F a3 = m[2][0], b3 = m[2][1], c3 = m[2][2], d3 = m[2][3];
-    F a4 = m[3][0], b4 = m[3][1], c4 = m[3][2], d4 = m[3][3];
+    F a1 = m.x[0][0], b1 = m.x[0][1], c1 = m.x[0][2], d1 = m.x[0][3];
+    F a2 = m.x[1][0], b2 = m.x[1][1], c2 = m.x[1][2], d2 = m.x[1][3];
+    F a3 = m.x[2][0], b3 = m.x[2][1], c3 = m.x[2][2], d3 = m.x[2][3];
+    F a4 = m.x[3][0], b4 = m.x[3][1], c4 = m.x[3][2], d4 = m.x[3][3];
     return a1 * det3x3( b2, b3, b4, c2, c3, c4, d2, d3, d4)
          - b1 * det3x3( a2, a3, a4, c2, c3, c4, d2, d3, d4)
          + c1 * det3x3( a2, a3, a4, b2, b3, b4, d2, d3, d4)

@@ -152,6 +152,25 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     #endif
 #endif // OSL_DEBUG
 
+#if defined(_MSC_VER)
+    #define OSL_PRAGMA(aUnQuotedPragma) __pragma(aUnQuotedPragma)
+#else
+    #define OSL_PRAGMA(aUnQuotedPragma) _Pragma(#aUnQuotedPragma)
+#endif
+
+#if __INTEL_COMPILER >= 1100
+    #define OSL_INTEL_PRAGMA(aUnQuotedPragma) OSL_PRAGMA(aUnQuotedPragma)
+#else
+    #define OSL_INTEL_PRAGMA(aUnQuotedPragma)
+#endif
+
+#ifdef __clang__
+    #define OSL_CLANG_PRAGMA(aUnQuotedPragma) OSL_PRAGMA(aUnQuotedPragma)
+    #define OSL_CLANG_ATTRIBUTE(value) __attribute__((value))
+#else
+    #define OSL_CLANG_PRAGMA(aUnQuotedPragma)
+    #define OSL_CLANG_ATTRIBUTE(value)
+#endif
 
 // OSL_FORCEINLINE is a function attribute that attempts to make the
 // function always inline. On many compilers regular 'inline' is only
@@ -233,7 +252,23 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // All the things we need from Imath
 // When compiling for CUDA, we need to make sure the modified Imath
 // headers are included before the stock versions.
-#include <OSL/Imathx.h>
+//
+// Might be worth trying to use #pragma clang force_cuda_host_device_[begin/end]
+// and include the real _cuda.h.
+#ifndef __CUDACC__
+#include <OpenEXR/ImathVec.h>
+#include <OpenEXR/ImathMatrix.h>
+#include <OpenEXR/ImathColor.h>
+#else
+#define IMATH_HOSTDEVICE __host__ __device__
+#include <OSL/ImathLimits_cuda.h>
+#include <OSL/ImathVec_cuda.h>
+#include <OSL/ImathMatrix_cuda.h>
+#include <OSL/ImathColor_cuda.h>
+#endif
+
+// Extensions to Imath
+#include "matrix22.h"
 
 // Temporary bug fix: having trouble with cuda complaining about {fmt} lib.
 // Work around by disabling it from oiio headers.

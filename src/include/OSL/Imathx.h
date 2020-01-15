@@ -151,10 +151,10 @@ makeIdentity(Matrix44 &m)
 //                    handle any non-affine matrices
 static OSL_FORCEINLINE bool test_if_affine(const Matrix44 & m) {
 	using ScalarT = typename Matrix44::BaseType;
-    return m.x[0][3] == ScalarT(0) &
-           m.x[1][3] == ScalarT(0) &
-           m.x[2][3] == ScalarT(0) &
-           m.x[3][3] == ScalarT(1);
+    return (m.x[0][3] == ScalarT(0)) &
+           (m.x[1][3] == ScalarT(0)) &
+           (m.x[2][3] == ScalarT(0)) &
+           (m.x[3][3] == ScalarT(1));
 }
 
 static OSL_FORCEINLINE OSL_HOSTDEVICE Matrix44
@@ -208,15 +208,15 @@ affineInverse(const Matrix44 &m)
         // NOTE: using bitwise OR to avoid C++ semantics that cannot evaluate
         // the right hand side of logical OR unless left hand side is false
         if (
-            mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[0][0]) |
-            mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[0][1]) |
-            mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[0][2]) |
-            mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[1][0]) |
-            mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[1][1]) |
-            mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[1][2]) |
-            mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[2][0]) |
-            mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[2][1]) |
-            mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[2][2])
+            (mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[0][0])) |
+            (mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[0][1])) |
+            (mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[0][2])) |
+            (mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[1][0])) |
+            (mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[1][1])) |
+            (mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[1][2])) |
+            (mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[2][0])) |
+            (mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[2][1])) |
+            (mr <= IMATH_INTERNAL_NAMESPACE::abs (s.x[2][2]))
             ) {
             may_have_divided_by_zero = 1;
         }

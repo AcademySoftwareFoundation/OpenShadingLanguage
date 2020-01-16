@@ -7,11 +7,14 @@ uname
 if [[ `uname` == "Linux" ]] ; then
     LLVM_VERSION=${LLVM_VERSION:=8.0.0}
     LLVM_INSTALL_DIR=${LLVM_INSTALL_DIR:=${PWD}/llvm-install}
-    echo "TRAVIS_DIST = $TRAVIS_DIST"
-    if [[ "$TRAVIS_DIST" == "trusty" ]] ; then
+    if [[ "$GITHUB_WORKFLOW" != "" ]] ; then
+        LLVM_DISTRO_NAME=${LLVM_DISTRO_NAME:=ubuntu-18.04}
+    elif [[ "$TRAVIS_DIST" == "trusty" ]] ; then
         LLVM_DISTRO_NAME=${LLVM_DISTRO_NAME:=ubuntu-14.04}
     elif [[ "$TRAVIS_DIST" == "xenial" ]] ; then
         LLVM_DISTRO_NAME=${LLVM_DISTRO_NAME:=ubuntu-16.04}
+    elif [[ "$TRAVIS_DIST" == "bionic" ]] ; then
+        LLVM_DISTRO_NAME=${LLVM_DISTRO_NAME:=ubuntu-18.04}
     else
         LLVM_DISTRO_NAME=${LLVM_DISTRO_NAME:=error}
     fi

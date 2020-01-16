@@ -25,13 +25,7 @@ time sudo apt-get -q install -y \
     opencolorio-tools
 
 
-# Disable libheif on CI for now... seems to make crashes in CI tests.
-# Works fine for me in real life. Investigate.
-#if [[ "$USE_LIBHEIF" != "0" ]] ; then
-#    sudo add-apt-repository ppa:strukturag/libde265
-#    sudo add-apt-repository ppa:strukturag/libheif
-#    time sudo apt-get -q install -y libheif-dev
-#fi
+export CMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu:$CMAKE_PREFIX_PATH
 
 if [[ "$CXX" == "g++-4.8" ]] ; then
     time sudo apt-get install -y g++-4.8
@@ -52,10 +46,7 @@ fi
 
 #dpkg --list
 
-export CMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu:$CMAKE_PREFIX_PATH
-
 # Build or download LLVM
-export LLVM_DISTRO_NAME=ubuntu-18.04
 source src/build-scripts/build_llvm.bash
 
 # Build OpenEXR

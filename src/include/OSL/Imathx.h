@@ -273,7 +273,8 @@ affineInverse(const Matrix44 &m)
 // for this function.  Not ideal, but this is already a slow path
 // for exceptional situations.
 // GCC could use __attribute__((optimize("-fno-fast-math")))
-static OSL_NOINLINE OSL_HOSTDEVICE Matrix44
+// NOTE:  only using "inline" to get ODR (One Definition Rule) behavior
+static inline OSL_HOSTDEVICE Matrix44
 nonAffineInverse(const Matrix44 &source) OSL_CLANG_ATTRIBUTE(optnone)
 {
     OSL_INTEL_PRAGMA(float_control(strict,on,push))

@@ -22,7 +22,10 @@ time sudo apt-get -q install -y \
     libgif-dev \
     libpng-dev \
     flex bison libbison-dev \
-    opencolorio-tools
+    opencolorio-tools \
+    libsquish-dev \
+    qt5-default
+
 
 
 # Disable libheif on CI for now... seems to make crashes in CI tests.

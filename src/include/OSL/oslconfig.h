@@ -35,21 +35,27 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// renderer that wanted things a different way.
 /////////////////////////////////////////////////////////////////////////
 
-// Detect if we're C++11.
+// Detect which C++ standard we're using, and handy macros.
+// See https://en.cppreference.com/w/cpp/compiler_support
 //
 // Note: oslversion.h defined OSL_BUILD_CPP11 to be 1 if OSL was built
 // using C++11. In contrast, OSL_CPLUSPLUS_VERSION defined below will be set
 // to the right number for the C++ standard being compiled RIGHT NOW. These
 // two things may be the same when compiling OSL, but they may not be the
-// same if another packages is compiling against OSL and using these headers
-// (OSL may be C++11 but the client package may be older, or vice versa --
+// same if another package is compiling against OSL and using these headers
+// (OSL may be C++11 but the client package may be newer, or vice versa --
 // use these two symbols to differentiate these cases, when important).
-#if (__cplusplus >= 201703L)
+#if (__cplusplus >= 202001L)
+#    define OSL_CPLUSPLUS_VERSION 20
+#    define OSL_CONSTEXPR14 constexpr
+#    define OSL_CONSTEXPR17 constexpr
+#    define OSL_CONSTEXPR20 constexpr
+#elif (__cplusplus >= 201703L)
 #    define OSL_CPLUSPLUS_VERSION 17
 #    define OSL_CONSTEXPR14 constexpr
 #    define OSL_CONSTEXPR17 constexpr
 #    define OSL_CONSTEXPR20 /* not constexpr before C++20 */
-#elif (__cplusplus >= 201402L)
+#elif (__cplusplus >= 201402L) || (defined(_MSC_VER) && _MSC_VER >= 1914)
 #    define OSL_CPLUSPLUS_VERSION 14
 #    define OSL_CONSTEXPR14 constexpr
 #    define OSL_CONSTEXPR17 /* not constexpr before C++17 */

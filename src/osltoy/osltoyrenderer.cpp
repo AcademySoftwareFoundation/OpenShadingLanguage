@@ -79,7 +79,7 @@ OSLToyRenderer::OSLToyRenderer ()
 
     // Set up default shaderglobals
     ShaderGlobals &sg (m_shaderglobals_template);
-    memset (&sg, 0, sizeof(ShaderGlobals));
+    memset ((char *)&sg, 0, sizeof(ShaderGlobals));
     Matrix44 Mshad, Mobj;  // just let these be identity for now
     // Set "shader" space to be Mshad.  In a real renderer, this may be
     // different for each shader group.

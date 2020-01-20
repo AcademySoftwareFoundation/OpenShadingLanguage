@@ -77,19 +77,21 @@ template <> inline OSL_HOSTDEVICE float  smallest<float>  ()         { return st
 template <class T> class Matrix22
 {
   public:
+    typedef T		        BaseType;
+    typedef Imath::Vec2<T>	BaseVecType;
 
     //-------------------
     // Access to elements
     //-------------------
 
     T           x[2][2];
-
+#if 0 // deprecate operator [] usage to force use of data member vs. 2 function calls that loose type info along the way
     OSL_HOSTDEVICE
     T *         operator [] (int i);
 
     OSL_HOSTDEVICE
     const T *   operator [] (int i) const;
-
+#endif
 
     //-------------
     // Constructors
@@ -311,9 +313,12 @@ template <class T> class Matrix22
     OSL_HOSTDEVICE
     const Matrix22 &    invert (bool singExc = false);
 
-    OSL_HOSTDEVICE
-    Matrix22<T>         inverse (bool singExc = false) const;
+    OSL_HOSTDEVICE    
+    Matrix22<T>         inverse () const noexcept;
 
+    OSL_HOSTDEVICE
+    Matrix22<T>         inverse (bool singExc) const;
+    
 
     //-----------------------------------------
     // Set matrix to rotation by r (in radians)
@@ -421,7 +426,7 @@ typedef Matrix22 <double> M22d;
 //---------------------------
 // Implementation of Matrix22
 //---------------------------
-
+#if 0 // deprecated
 template <class T> OSL_HOSTDEVICE
 inline T *
 Matrix22<T>::operator [] (int i)
@@ -435,6 +440,7 @@ Matrix22<T>::operator [] (int i) const
 {
     return x[i];
 }
+#endif
 
 template <class T> OSL_HOSTDEVICE
 inline
@@ -458,9 +464,15 @@ Matrix22<T>::Matrix22 (T a)
 
 template <class T> OSL_HOSTDEVICE
 inline
-Matrix22<T>::Matrix22 (const T a[2][2]) 
+Matrix22<T>::Matrix22 (const T a[2][2])
+: x{{a[0][0],
+     a[0][1]},
+    {a[1][0],
+     a[1][1]}}
 {
-    memcpy (x, a, sizeof (x));
+    // function calls and aliasing issues can inhibit vectorization
+    // versus straight assignment of data members
+    //memcpy (x, a, sizeof (x));
 }
 
 template <class T> OSL_HOSTDEVICE
@@ -476,8 +488,14 @@ Matrix22<T>::Matrix22 (T a, T b, T c, T d)
 template <class T> OSL_HOSTDEVICE
 inline
 Matrix22<T>::Matrix22 (const Matrix22 &v)
+: x{{v.x[0][0],
+     v.x[0][1]},
+    {v.x[1][0],
+     v.x[1][1]}}
 {
-    memcpy (x, v.x, sizeof (x));
+    // function calls and aliasing issues can inhibit vectorization
+    // versus straight assignment of data members
+    //memcpy (x, v.x, sizeof (x));
 }
 
 template <class T>
@@ -495,7 +513,11 @@ template <class T> OSL_HOSTDEVICE
 inline const Matrix22<T> &
 Matrix22<T>::operator = (const Matrix22 &v)
 {
-    memcpy (x, v.x, sizeof (x));
+    //memcpy (x, v.x, sizeof (x));
+    x[0][0] = v.x[0][0];
+    x[0][1] = v.x[0][1];
+    x[1][0] = v.x[1][0];
+    x[1][1] = v.x[1][1];
     return *this;
 }
 
@@ -529,11 +551,15 @@ template <class S> OSL_HOSTDEVICE
 inline void
 Matrix22<T>::getValue (Matrix22<S> &v) const
 {
+    // function calls and aliasing issues can inhibit vectorization
+    // versus straight assignment of data members
+#if 0
     if (isSameType<S,T>::value)
     {
         memcpy (v.x, x, sizeof (x));
     }
     else
+#endif
     {
         v.x[0][0] = x[0][0];
         v.x[0][1] = x[0][1];
@@ -547,11 +573,15 @@ template <class S> OSL_HOSTDEVICE
 inline Matrix22<T> &
 Matrix22<T>::setValue (const Matrix22<S> &v)
 {
+    // function calls and aliasing issues can inhibit vectorization
+    // versus straight assignment of data members
+#if 0
     if (isSameType<S,T>::value)
     {
         memcpy (x, v.x, sizeof (x));
     }
     else
+#endif
     {
         x[0][0] = v.x[0][0];
         x[0][1] = v.x[0][1];
@@ -567,11 +597,15 @@ template <class S> OSL_HOSTDEVICE
 inline Matrix22<T> &
 Matrix22<T>::setTheMatrix (const Matrix22<S> &v)
 {
+    // function calls and aliasing issues can inhibit vectorization
+    // versus straight assignment of data members
+#if 0
     if (isSameType<S,T>::value)
     {
         memcpy (x, v.x, sizeof (x));
     }
     else
+#endif
     {
         x[0][0] = v.x[0][0];
         x[0][1] = v.x[0][1];
@@ -616,24 +650,40 @@ template <class T> OSL_HOSTDEVICE
 bool
 Matrix22<T>::equalWithAbsError (const Matrix22<T> &m, T e) const
 {
+    // Simplify control flow by unrolling loop completely
+#if 0
     for (int i = 0; i < 2; i++)
         for (int j = 0; j < 2; j++)
-            if (!Imath::equalWithAbsError ((*this)[i][j], m[i][j], e))
+            if (!Imath::equalWithAbsError ((*this).x[i][j], m.x[i][j], e))
                 return false;
 
     return true;
+#else
+    return  Imath::equalWithAbsError ((*this).x[0][0], m.x[0][0], e) &&
+            Imath::equalWithAbsError ((*this).x[0][1], m.x[0][1], e) &&
+            Imath::equalWithAbsError ((*this).x[1][0], m.x[1][0], e) &&
+            Imath::equalWithAbsError ((*this).x[1][1], m.x[1][1], e);
+#endif
 }
 
 template <class T> OSL_HOSTDEVICE
 bool
 Matrix22<T>::equalWithRelError (const Matrix22<T> &m, T e) const
 {
+    // Simplify control flow by unrolling loop completely
+#if 0
     for (int i = 0; i < 2; i++)
         for (int j = 0; j < 2; j++)
-            if (!Imath::equalWithRelError ((*this)[i][j], m[i][j], e))
+            if (!Imath::equalWithRelError ((*this).x[i][j], m.x[i][j], e))
                 return false;
 
     return true;
+#else
+    return  Imath::equalWithRelError ((*this).x[0][0], m.x[0][0], e) &&
+            Imath::equalWithRelError ((*this).x[0][1], m.x[0][1], e) &&
+            Imath::equalWithRelError ((*this).x[1][0], m.x[1][0], e) &&
+            Imath::equalWithRelError ((*this).x[1][1], m.x[1][1], e);
+#endif
 }
 
 template <class T> OSL_HOSTDEVICE
@@ -759,12 +809,25 @@ template <class T> OSL_HOSTDEVICE
 const Matrix22<T> &
 Matrix22<T>::operator *= (const Matrix22<T> &v)
 {
+    // Manually unroll loops and avoid writing to
+    // the data members twice by using the uninitialized
+    // version of the constructor
+#if 0
     Matrix22 tmp (T (0));
 
     for (int i = 0; i < 2; i++)
         for (int j = 0; j < 2; j++)
             for (int k = 0; k < 2; k++)
                 tmp.x[i][j] += x[i][k] * v.x[k][j];
+#else
+    Matrix22 tmp (Imathx::UNINITIALIZED);
+
+    tmp.x[0][0] = x[0][0] * v.x[0][0] + x[0][1] * v.x[1][0];
+    tmp.x[0][1] = x[0][0] * v.x[0][1] + x[0][1] * v.x[1][1];
+
+    tmp.x[1][0] = x[1][0] * v.x[0][0] + x[1][1] * v.x[1][0];
+    tmp.x[1][1] = x[1][0] * v.x[0][1] + x[1][1] * v.x[1][1];
+#endif
 
     *this = tmp;
     return *this;
@@ -774,12 +837,28 @@ template <class T> OSL_HOSTDEVICE
 Matrix22<T>
 Matrix22<T>::operator * (const Matrix22<T> &v) const
 {
-    Matrix22 tmp (T (0));
 
+    // Manually unroll loops and avoid writing to
+    // the data members twice by using the uninitialized
+    // version of the constructor
+#if 0
+    Matrix22 tmp (T (0));
     for (int i = 0; i < 2; i++)
         for (int j = 0; j < 2; j++)
             for (int k = 0; k < 2; k++)
                 tmp.x[i][j] += x[i][k] * v.x[k][j];
+#else
+    Matrix22 tmp (Imathx::UNINITIALIZED);
+    
+    tmp.x[0][0] = x[0][0] * v.x[0][0] + x[0][1] * v.x[1][0];
+    tmp.x[0][1] = x[0][0] * v.x[0][1] + x[0][1] * v.x[1][1];
+    
+    tmp.x[1][0] = x[1][0] * v.x[0][0] + x[1][1] * v.x[1][0];
+    tmp.x[1][1] = x[1][0] * v.x[0][1] + x[1][1] * v.x[1][1];
+    
+    
+#endif
+    
 
     return tmp;
 }
@@ -789,10 +868,9 @@ template <class S> OSL_HOSTDEVICE
 void
 Matrix22<T>::multMatrix(const Imath::Vec2<S> &src, Imath::Vec2<S> &dst) const
 {
-    S a, b;
-
-    a = src[0] * x[0][0] + src[1] * x[1][0];
-    b = src[0] * x[0][1] + src[1] * x[1][1];
+    // Non-aliasing by avoiding [int] operator on Vec2
+    S a = src.x * x[0][0] + src.y * x[1][0];
+    S b = src.x * x[0][1] + src.y * x[1][1];
 
     dst.x = a;
     dst.y = b;
@@ -853,6 +931,45 @@ Matrix22<T>::invert (bool singExc)
 
 template <class T> OSL_HOSTDEVICE
 Matrix22<T>
+Matrix22<T>::inverse () const noexcept
+{
+    Matrix22 s ( x[1][1],  -x[0][1],
+                -x[1][0],   x[0][0]);
+    T r = x[0][0] * x[1][1] - x[1][0] * x[0][1];  // determinant
+
+    T abs_r = Imath::abs (r);
+    
+    int may_have_divided_by_zero = 0;
+    if (OSL_UNLIKELY(abs_r < T(1)))
+    {
+        float mr = abs_r / Imath::limits<T>::smallest();
+
+        if ((mr <= Imath::abs (s.x[0][0])) ||
+            (mr <= Imath::abs (s.x[0][1])) ||
+            (mr <= Imath::abs (s.x[1][0])) ||
+            (mr <= Imath::abs (s.x[1][1])))
+        {
+            may_have_divided_by_zero = 1;
+        }
+    }
+
+    if (OSL_UNLIKELY(may_have_divided_by_zero == 1))
+    {
+        //s = Matrix22();
+        s.x[0][0] = T(1);
+        s.x[0][1] = T(0);
+        s.x[1][0] = T(0);
+        s.x[1][1] = T(1);
+    } else {
+        s /= r;
+    }
+
+    return s;
+}
+
+
+template <class T> OSL_HOSTDEVICE
+Matrix22<T>
 Matrix22<T>::inverse (bool singExc) const
 {
     Matrix22 s ( x[1][1],  -x[0][1],
@@ -867,13 +984,15 @@ Matrix22<T>::inverse (bool singExc) const
     {
         T mr = hostdevice::abs (r) / hostdevice::smallest<T>();
 
+        OSL_INTEL_PRAGMA(unroll)
         for (int i = 0; i < 2; ++i)
         {
+            OSL_INTEL_PRAGMA(unroll)
             for (int j = 0; j < 2; ++j)
             {
-                if (mr > hostdevice::abs (s[i][j]))
+                if (mr > hostdevice::abs (s.x[i][j]))
                 {
-                    s[i][j] /= r;
+                    s.x[i][j] /= r;
                 }
                 else
                 {
@@ -898,6 +1017,8 @@ Matrix22<T>::setRotation (S r)
 {
     S cos_r, sin_r;
 
+    // TODO: consider calling std::cos/sin to allow compiler to use its own
+    // optimized version.
     cos_r = Imath::Math<T>::cos (r);
     sin_r = Imath::Math<T>::sin (r);
 
@@ -923,8 +1044,12 @@ template <class T> OSL_HOSTDEVICE
 const Matrix22<T> &
 Matrix22<T>::setScale (T s)
 {
-    memset (x, 0, sizeof (x));
+    // function calls and aliasing issues can inhibit vectorization
+    // versus straight assignment of data members
+//    memset (x, 0, sizeof (x));
+    x[0][1] = static_cast<T>(0);
     x[0][0] = s;
+    x[1][0] = static_cast<T>(0);
     x[1][1] = s;
 
     return *this;
@@ -935,9 +1060,16 @@ template <class S> OSL_HOSTDEVICE
 const Matrix22<T> &
 Matrix22<T>::setScale (const Imath::Vec2<S> &s)
 {
-    memset (x, 0, sizeof (x));
-    x[0][0] = s[0];
-    x[1][1] = s[1];
+    // function calls and aliasing issues can inhibit vectorization
+    // versus straight assignment of data members
+    //memset (x, 0, sizeof (x));
+    //x[0][0] = s[0];
+    //x[1][1] = s[1];
+    x[0][0] = s.x;
+    x[0][1] = static_cast<T>(0);
+
+    x[1][0] = static_cast<T>(0);
+    x[1][1] = s.y;
 
     return *this;
 }
@@ -947,11 +1079,12 @@ template <class S> OSL_HOSTDEVICE
 const Matrix22<T> &
 Matrix22<T>::scale (const Imath::Vec2<S> &s)
 {
-    x[0][0] *= s[0];
-    x[0][1] *= s[0];
+    // avoid aliasing of Vec2::operator[](int)
+    x[0][0] *= s.x;
+    x[0][1] *= s.x;
 
-    x[1][0] *= s[1];
-    x[1][1] *= s[1];
+    x[1][0] *= s.y;
+    x[1][1] *= s.y;
 
     return *this;
 }
@@ -980,11 +1113,11 @@ operator << (std::ostream &s, const Matrix22<T> &m)
         width = s.precision() + 8;
     }
 
-    s << "(" << std::setw (width) << m[0][0] <<
-         " " << std::setw (width) << m[0][1] << "\n" <<
+    s << "(" << std::setw (width) << m.x[0][0] <<
+         " " << std::setw (width) << m.x[0][1] << "\n" <<
 
-         " " << std::setw (width) << m[1][0] <<
-         " " << std::setw (width) << m[1][1] << ")\n";
+         " " << std::setw (width) << m.x[1][0] <<
+         " " << std::setw (width) << m.x[1][1] << ")\n";
 
     s.flags (oldFlags);
     return s;

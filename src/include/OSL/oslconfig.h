@@ -153,7 +153,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         #ifdef _DEBUG
             #define OSL_DEBUG _DEBUG
         #else
-            #define OSL_DEBUG 0
+            #define OSL_DEBUG 1
         #endif
     #endif
 #endif // OSL_DEBUG

@@ -88,7 +88,7 @@ branches:
 matrix:
     fast_finish: true
     include:
-      - name: "VFX Platform 2018 (gcc6, c++14), llvm 7, OIIO master, avx/f16c"
+      - name: "VFX Platform 2018 (gcc6, c++14), llvm 7, OIIO master, OpenEXR 2.3, avx/f16c"
         os: linux
         compiler: gcc
         addons:
@@ -98,12 +98,12 @@ matrix:
               - *common-packages
               - *common-boost-packages
               - g++-6
-        env: WHICHGCC=6 USE_CPP=14 LLVM_VERSION=7.0.1 OPENIMAGEIO_BRANCH=master USE_SIMD=avx,f16c BUILD_CMAKE=1
+        env: WHICHGCC=6 USE_CPP=14 LLVM_VERSION=7.0.1 OPENIMAGEIO_BRANCH=master OPENEXR_VERSION=2.3.0 USE_SIMD=avx,f16c BUILD_CMAKE=1
       - name: "MacOS (latest Apple clang, llvm 7, OIIO master, latest homebrew libs"
         os: osx
         compiler: clang
         env: PYTHON_VERSION=3.7
-      - name: "VFX Platform 2017 (gcc48, c++11), llvm 6, OIIO release, sse4.2"
+      - name: "VFX Platform 2017 (gcc48, c++11), llvm 6, OIIO release, OpenEXR 2.3, sse4.2"
         os: linux
         dist: trusty
         compiler: gcc
@@ -113,8 +113,8 @@ matrix:
             packages:
               - *common-packages
               - *old-boost-packages
-        env: WHICHGCC=4.8 USE_CPP=11 LLVM_VERSION=6.0.0 USE_SIMD=sse4.2 OPENIMAGEIO_BRANCH=release BUILD_CMAKE=1
-      - name: "Older things: OIIO 2.0, llvm 6, boost 1.58"
+        env: WHICHGCC=4.8 USE_CPP=11 LLVM_VERSION=6.0.0 USE_SIMD=sse4.2 OPENIMAGEIO_BRANCH=release OPENEXR_VERSION=2.3.0 BUILD_CMAKE=1
+      - name: "Older things: OIIO 2.0, llvm 6, boost 1.58, OpenEXR 2.2"
         os: linux
         dist: trusty
         compiler: gcc
@@ -124,7 +124,7 @@ matrix:
             packages:
               - *common-packages
               - *old-boost-packages
-        env: WHICHGCC=4.8 USE_CPP=11 LLVM_VERSION=6.0.1 USE_SIMD=sse4.2 OPENIMAGEIO_BRANCH=RB-2.0 BUILD_CMAKE=1
+        env: WHICHGCC=4.8 USE_CPP=11 LLVM_VERSION=6.0.1 USE_SIMD=sse4.2 OPENIMAGEIO_BRANCH=RB-2.0 OPENEXR_VERSION=2.2.0 BUILD_CMAKE=1
         if: branch =~ /(master|RB|travis)/ OR type = pull_request
       - name: "gcc7, llvm7, C++14"
         os: linux
@@ -160,7 +160,7 @@ matrix:
               - *common-boost-packages
               - g++-6
         env: DEBUG=1 WHICHGCC=6 LLVM_VERSION=7.0.0 OPENIMAGEIO_BRANCH=master BUILD_CMAKE=1
-      - name: "Oldest everything: gcc4.8, LLVM 6, OIIO 2.0, no simd"
+      - name: "Oldest everything: gcc4.8, LLVM 6, OIIO 2.0, OpenEXR 2.2, no simd"
         os: linux
         dist: trusty
         compiler: gcc
@@ -170,7 +170,7 @@ matrix:
             packages:
               - *common-packages
               - *old-boost-packages
-        env: USE_SIMD=0 LLVM_VERSION=6.0.1 OPENIMAGEIO_BRANCH=RB-2.0 BUILD_CMAKE=1
+        env: USE_SIMD=0 LLVM_VERSION=6.0.1 OPENIMAGEIO_BRANCH=RB-2.0 OPENEXR_VERSION=2.2.0 BUILD_CMAKE=1
         if: branch =~ /(master|RB|travis)/ OR type = pull_request
 
 notifications:

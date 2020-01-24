@@ -78,7 +78,8 @@ OptixRaytracer::load_ptx_file (string_view filename)
 
 
 bool
-OptixRaytracer::init_optix_context (int xres, int yres)
+OptixRaytracer::init_optix_context (int xres OSL_MAYBE_UNUSED,
+                                    int yres OSL_MAYBE_UNUSED)
 {
 #ifdef OSL_USE_OPTIX
     shadingsys->attribute ("lib_bitcode", {OSL::TypeDesc::UINT8, rend_llvm_compiled_ops_size},
@@ -368,7 +369,7 @@ OptixRaytracer::finalize_scene()
 /// get_texture_handle()) is a valid texture that can be subsequently
 /// read or sampled.
 bool
-OptixRaytracer::good(TextureHandle *handle)
+OptixRaytracer::good(TextureHandle *handle OSL_MAYBE_UNUSED)
 {
 #ifdef OSL_USE_OPTIX
     return intptr_t(handle) != RT_TEXTURE_ID_NULL;
@@ -382,7 +383,8 @@ OptixRaytracer::good(TextureHandle *handle)
 /// Given the name of a texture, return an opaque handle that can be
 /// used with texture calls to avoid the name lookups.
 RendererServices::TextureHandle*
-OptixRaytracer::get_texture_handle (ustring filename, ShadingContext* shading_context)
+OptixRaytracer::get_texture_handle (ustring filename OSL_MAYBE_UNUSED,
+                                    ShadingContext* shading_context OSL_MAYBE_UNUSED)
 {
 #ifdef OSL_USE_OPTIX
     auto itr = m_samplers.find(filename);
@@ -460,7 +462,7 @@ OptixRaytracer::warmup()
 
 
 void
-OptixRaytracer::render(int xres, int yres)
+OptixRaytracer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
 {
 #ifdef OSL_USE_OPTIX
     m_optix_ctx->launch (0, xres, yres);

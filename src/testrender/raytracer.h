@@ -190,7 +190,7 @@ struct Sphere : public Primitive {
         return normalize(p - c);
     }
 
-    Dual2<Vec2> uv(const Dual2<Vec3>& p, const Dual2<Vec3>& n, Vec3& dPdu, Vec3& dPdv) const {
+    Dual2<Vec2> uv(const Dual2<Vec3>& /*p*/, const Dual2<Vec3>& n, Vec3& dPdu, Vec3& dPdv) const {
         Dual2<float> nx(n.val().x, n.dx().x, n.dy().x);
         Dual2<float> ny(n.val().y, n.dx().y, n.dy().y);
         Dual2<float> nz(n.val().z, n.dx().z, n.dy().z);
@@ -239,7 +239,7 @@ struct Sphere : public Primitive {
                 sw * cos_a).normalize();
     }
 
-    float shapepdf(const Vec3& x, const Vec3& p) const {
+    float shapepdf(const Vec3& x, const Vec3& /*p*/) const {
         const float TWOPI = float(2 * M_PI);
         float cmax2 = 1 - r2 / (c - x).length2();
         float cmax = cmax2>0 ? sqrtf(cmax2) : 0;
@@ -297,11 +297,11 @@ struct Quad : public Primitive {
         return a;
     }
 
-    Dual2<Vec3> normal(const Dual2<Vec3>& p) const {
+    Dual2<Vec3> normal(const Dual2<Vec3>& /*p*/) const {
         return Dual2<Vec3>(n, Vec3(0, 0, 0), Vec3(0, 0, 0));
     }
 
-    Dual2<Vec2> uv(const Dual2<Vec3>& p, const Dual2<Vec3>& n, Vec3& dPdu, Vec3& dPdv) const {
+    Dual2<Vec2> uv(const Dual2<Vec3>& p, const Dual2<Vec3>& /*n*/, Vec3& dPdu, Vec3& dPdv) const {
         Dual2<Vec3>  h = p - this->p;
         Dual2<float> u = dot(h, ex) * eu;
         Dual2<float> v = dot(h, ey) * ev;

@@ -439,8 +439,8 @@ public:
     const char *childname (size_t i) const;
     void print (std::ostream &out, int indentlevel=0) const;
     TypeSpec typecheck (TypeSpec expected);
-    Symbol *codegen (Symbol *dest = NULL) {
-        return NULL; // generates no code on its own
+    Symbol *codegen (Symbol* /*dest*/) {
+        return nullptr; // generates no code on its own
     }
 
     ref metadata () const { return child (0); }
@@ -519,7 +519,7 @@ class ASTvariable_ref : public ASTNode
 public:
     ASTvariable_ref (OSLCompilerImpl *comp, ustring name);
     const char *nodetypename () const { return "variable_ref"; }
-    const char *childname (size_t i) const { return ""; } // no children
+    const char *childname (size_t /*i*/) const { return ""; } // no children
     void print (std::ostream &out, int indentlevel=0) const;
     TypeSpec typecheck (TypeSpec expected);
     Symbol *codegen (Symbol *dest = NULL);
@@ -740,7 +740,7 @@ public:
     TypeSpec typecheck (TypeSpec expected, bool error, bool bind = true);
 
     // Typecheck construction of m_typespec against args()
-    TypeSpec typecheck (TypeSpec expected) {
+    TypeSpec typecheck (TypeSpec /*expected*/) {
         return typecheck (m_typespec, true, true);
     }
 };
@@ -863,7 +863,7 @@ public:
     { }
 
     const char *nodetypename () const { return "comma_operator"; }
-    const char *childname (size_t i) const { return "expression_list"; }
+    const char *childname (size_t /*i*/) const { return "expression_list"; }
     TypeSpec typecheck (TypeSpec expected);
     Symbol *codegen (Symbol *dest = NULL);
 
@@ -1024,7 +1024,7 @@ public:
     const char *nodetypename () const { return "literal"; }
     const char *childname (size_t i) const;
     void print (std::ostream &out, int indentlevel) const;
-    TypeSpec typecheck (TypeSpec expected) { return m_typespec; }
+    TypeSpec typecheck (TypeSpec /*expected*/) { return m_typespec; }
     Symbol *codegen (Symbol *dest = NULL);
 
     const char *strval () const { return m_s.c_str(); }

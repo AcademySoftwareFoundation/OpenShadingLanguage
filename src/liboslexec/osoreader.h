@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
 
+#include <OSL/platform.h>
 #include "osl_pvt.h"
 
 #include <OpenImageIO/thread.h>
@@ -40,6 +41,11 @@ extern int osoparse ();
 OSL_NAMESPACE_ENTER
 
 namespace pvt {
+
+// Turn off warnings about unused params, since we have lots of declarations
+// with stub function bodies.
+OSL_PRAGMA_WARNING_PUSH
+OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wunused-parameter")
 
 
 /// Base class for OSO (OpenShadingLanguage object code) file reader.
@@ -146,6 +152,7 @@ private:
     int m_lineno;
 };
 
+OSL_PRAGMA_WARNING_POP
 
 
 }; // namespace pvt

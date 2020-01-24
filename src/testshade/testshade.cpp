@@ -236,7 +236,7 @@ add_shader (int argc, const char *argv[])
 
 
 static void
-action_shaderdecl (int argc, const char *argv[])
+action_shaderdecl (int /*argc*/, const char *argv[])
 {
     // `--shader shadername layername` is exactly equivalent to:
     // `--layer layername` followed by naming the shader.
@@ -256,7 +256,7 @@ action_shaderdecl (int argc, const char *argv[])
 //   testshade -v -g 64 64 -o result out.exr -expr 'result=color(u,v,0);'
 //
 static void
-specify_expr (int argc, const char *argv[])
+specify_expr (int argc OSL_MAYBE_UNUSED, const char *argv[])
 {
     OSL_DASSERT(argc == 2);
     std::string shadername = OIIO::Strutil::sprintf("expr_%d", exprcount++);
@@ -289,7 +289,7 @@ specify_expr (int argc, const char *argv[])
 
 
 static void
-action_param (int argc, const char *argv[])
+action_param (int /*argc*/, const char *argv[])
 {
     std::string command = argv[0];
     bool use_reparam = false;
@@ -411,7 +411,7 @@ action_param (int argc, const char *argv[])
 // reparam -- just set reparam_layer and then let action_param do all the
 // hard work.
 static void
-action_reparam (int argc, const char *argv[])
+action_reparam (int /*argc*/, const char *argv[])
 {
     reparam_layer = argv[1];
     const char *newargv[] = { argv[0], argv[2], argv[3] };
@@ -421,7 +421,7 @@ action_reparam (int argc, const char *argv[])
 
 
 static void
-action_groupspec (int argc, const char *argv[])
+action_groupspec (int /*argc*/, const char *argv[])
 {
     shadingsys->ShaderGroupEnd (*shadergroup);
     std::string groupspec (argv[1]);

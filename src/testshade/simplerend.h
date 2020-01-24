@@ -118,7 +118,7 @@ public:
     }
     virtual void prepare_render () { }
     virtual void warmup () { }
-    virtual void render (int xres, int yres) { }
+    virtual void render (int /*xres*/, int /*yres*/) { }
     virtual void clear () { }
 
     // After render, get the pixel data into the output buffers, if

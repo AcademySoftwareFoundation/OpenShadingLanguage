@@ -128,7 +128,7 @@ OSOReaderToMaster::parse_memory (const std::string &oso)
 
 
 void
-OSOReaderToMaster::version (const char *specid, int major, int minor)
+OSOReaderToMaster::version (const char* /*specid*/, int major, int minor)
 {
     m_oso_major = major;
     m_oso_minor = minor;
@@ -489,7 +489,7 @@ OSOReaderToMaster::codeend ()
 
 
 void
-OSOReaderToMaster::instruction (int label, const char *opcode)
+OSOReaderToMaster::instruction (int /*label*/, const char *opcode)
 {
     ustring uopcode (opcode);
     Opcode op (uopcode, m_codesection);

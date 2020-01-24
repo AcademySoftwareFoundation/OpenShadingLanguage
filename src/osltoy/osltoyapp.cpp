@@ -110,15 +110,18 @@ static void setBackground(QWidget* widget, QColor bg, QColor fg) {
     widget->setAutoFillBackground(true);
 }
 
+
 struct PixelInfo {
     // The image and where to magnify
     const OIIO::ImageBuf& full;
     int    x, y;
-
     Color3 Cd;
     Vec3   P;
     Vec2   uv;
+
+    PixelInfo(const OIIO::ImageBuf& full) : full(full) {}
 };
+
 
 class Magnifier : public QWidget {
     QLabel* m_image;
@@ -295,16 +298,16 @@ public:
             m_magnifier->hide();
     }
 
-    void mouseMoveEvent(QMouseEvent* event) override {
+    void mouseMoveEvent(QMouseEvent* /*event*/) override {
         magnifierEvent();
     }
 
-    void enterEvent(QEvent* event) override {
+    void enterEvent(QEvent* /*event*/) override {
         if (shouldShowMagnifier())
             showMagnifier();
     }
 
-    void leaveEvent(QEvent* event) override {
+    void leaveEvent(QEvent* /*event*/) override {
         if (m_magnifier && !m_magnifier->underMouse())
             m_magnifier->hide();
     }
@@ -776,7 +779,7 @@ OSLToyMainWindow::timed_rerender_trigger (void)
 
 
 void
-OSLToyMainWindow::osl_do_rerender (float frametime)
+OSLToyMainWindow::osl_do_rerender (float /*frametime*/)
 {
     using namespace OIIO;
     m_rerender_needed = 0;
@@ -812,7 +815,7 @@ class MyOSLCErrorHandler : public OIIO::ErrorHandler {
 public:
     MyOSLCErrorHandler (OSLToyMainWindow *osltoy)
         : osltoy(osltoy) { }
-    virtual void operator () (int errcode, const std::string &msg) {
+    virtual void operator () (int /*errcode*/, const std::string &msg) {
         errors.emplace_back (msg);
     }
     void clear () { errors.clear(); }

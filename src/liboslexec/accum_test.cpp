@@ -62,8 +62,8 @@ class MyAov : public Aov
         }
         virtual ~MyAov() {}
 
-        virtual void write(void *flush_data, Color3 &color, float alpha,
-                                 bool has_color, bool has_alpha)
+        virtual void write(void *flush_data, Color3 &color, float /*alpha*/,
+                                 bool has_color, bool /*has_alpha*/)
         {
             // our custom argument to write is the rule's number so we
             // can check what. But you normally would pass information

@@ -336,13 +336,11 @@ ASTNode::coerce (Symbol *sym, const TypeSpec &type, bool acceptfloat)
 
 
 Symbol *
-ASTNode::codegen (Symbol *dest)
+ASTNode::codegen (Symbol* /*dest*/)
 {
-    codegen_children ();
-    // FIXME -- nobody should ever call this
-    std::cout << "codegen " << nodetypename() << " : " 
-              << (opname() ? opname() : "") << "\n";
-    return NULL;
+    OSL_ASSERT_MSG (0, "Unimplemented codegen for %s (%s)",
+                    nodetypename(), opname() ? opname() : "");
+    return nullptr;
 }
 
 
@@ -827,7 +825,7 @@ ASTvariable_declaration::param_default_literals (const Symbol *sym,
 
 
 Symbol *
-ASTvariable_declaration::codegen (Symbol *dst)
+ASTvariable_declaration::codegen (Symbol* /*dst*/)
 {
     if (init())
         codegen_initializer (init(), m_sym);
@@ -2048,7 +2046,7 @@ ASTfunction_call::struct_pair_all_fields (StructSpec *structspec,
 
 
 Symbol *
-ASTliteral::codegen (Symbol *dest)
+ASTliteral::codegen (Symbol* /*dest*/)
 {
     TypeSpec t = typespec();
     if (t.is_string())

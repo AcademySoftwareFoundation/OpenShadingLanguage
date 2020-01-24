@@ -90,7 +90,7 @@ ASTfunction_declaration::typecheck (TypeSpec expected)
 
 
 TypeSpec
-ASTvariable_declaration::typecheck (TypeSpec expected)
+ASTvariable_declaration::typecheck (TypeSpec /*expected*/)
 {
     typecheck_children (m_typespec);
     ASTNode* init = this->init().get();
@@ -145,7 +145,7 @@ ASTvariable_declaration::typecheck (TypeSpec expected)
 
 
 TypeSpec
-ASTvariable_ref::typecheck (TypeSpec expected)
+ASTvariable_ref::typecheck (TypeSpec /*expected*/)
 {
     m_is_lvalue = true;             // A var ref is an lvalue
     return m_typespec;
@@ -154,7 +154,7 @@ ASTvariable_ref::typecheck (TypeSpec expected)
 
 
 TypeSpec
-ASTpreincdec::typecheck (TypeSpec expected)
+ASTpreincdec::typecheck (TypeSpec /*expected*/)
 {
     typecheck_children ();
     m_is_lvalue = var()->is_lvalue();
@@ -165,7 +165,7 @@ ASTpreincdec::typecheck (TypeSpec expected)
 
 
 TypeSpec
-ASTpostincdec::typecheck (TypeSpec expected)
+ASTpostincdec::typecheck (TypeSpec /*expected*/)
 {
     typecheck_children ();
     if (! var()->is_lvalue())
@@ -178,7 +178,7 @@ ASTpostincdec::typecheck (TypeSpec expected)
 
 
 TypeSpec
-ASTindex::typecheck (TypeSpec expected)
+ASTindex::typecheck (TypeSpec /*expected*/)
 {
     typecheck_children ();
     const char *indextype = "";
@@ -261,7 +261,7 @@ ASTstructselect::typecheck (TypeSpec expected)
 
 
 TypeSpec
-ASTconditional_statement::typecheck (TypeSpec expected)
+ASTconditional_statement::typecheck (TypeSpec /*expected*/)
 {
     typecheck_list (cond ());
     oslcompiler->push_nesting (false);
@@ -280,7 +280,7 @@ ASTconditional_statement::typecheck (TypeSpec expected)
 
 
 TypeSpec
-ASTloop_statement::typecheck (TypeSpec expected)
+ASTloop_statement::typecheck (TypeSpec /*expected*/)
 {
     typecheck_list (init ());
     oslcompiler->push_nesting (true);
@@ -302,7 +302,7 @@ ASTloop_statement::typecheck (TypeSpec expected)
 
 
 TypeSpec
-ASTloopmod_statement::typecheck (TypeSpec expected)
+ASTloopmod_statement::typecheck (TypeSpec /*expected*/)
 {
     if (oslcompiler->nesting_level(true/*loops*/) < 1)
         errorf("Cannot '%s' here -- not inside a loop.", opname());
@@ -312,7 +312,7 @@ ASTloopmod_statement::typecheck (TypeSpec expected)
 
 
 TypeSpec
-ASTassign_expression::typecheck (TypeSpec expected)
+ASTassign_expression::typecheck (TypeSpec /*expected*/)
 {
     TypeSpec vt = var()->typecheck ();  // Type of the variable
     TypeSpec et = expr()->typecheck (vt);  // Type of the expression assigned
@@ -381,7 +381,7 @@ ASTassign_expression::typecheck (TypeSpec expected)
 
 
 TypeSpec
-ASTreturn_statement::typecheck (TypeSpec expected)
+ASTreturn_statement::typecheck (TypeSpec /*expected*/)
 {
     FunctionSymbol *myfunc = oslcompiler->current_function ();
     if (myfunc) {
@@ -671,7 +671,7 @@ ASTcomma_operator::typecheck (TypeSpec expected)
 
 
 TypeSpec
-ASTtypecast_expression::typecheck (TypeSpec expected)
+ASTtypecast_expression::typecheck (TypeSpec /*expected*/)
 {
     // FIXME - closures
     typecheck_children (m_typespec);
@@ -1069,7 +1069,7 @@ ASTNode::check_simple_arg (const TypeSpec &argtype,
 
 
 bool
-ASTNode::check_arglist (const char *funcname, ASTNode::ref arg,
+ASTNode::check_arglist (const char * /*funcname*/, ASTNode::ref arg,
                         const char *formals, bool coerce, bool bind)
 {
     // std::cerr << "ca " << funcname << " formals='" << formals << "\n";

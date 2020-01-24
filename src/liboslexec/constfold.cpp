@@ -87,7 +87,7 @@ unequal_consts (const Symbol &A, const Symbol &B)
 
 
 
-DECLFOLDER(constfold_none)
+int constfold_none(RuntimeOptimizer& /*rop*/, int /*opnum*/)
 {
     return 0;
 }

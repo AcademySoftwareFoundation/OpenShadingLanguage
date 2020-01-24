@@ -218,10 +218,15 @@ BackendLLVM::llvm_run_connected_layers (Symbol &sym, int symindex,
 
 
 
+OSL_PRAGMA_WARNING_PUSH
+OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wunused-parameter")
+
 LLVMGEN (llvm_gen_nop)
 {
     return true;
 }
+
+OSL_PRAGMA_WARNING_POP
 
 
 
@@ -3827,12 +3832,16 @@ LLVMGEN (llvm_gen_return)
 
 
 
+OSL_PRAGMA_WARNING_PUSH
+OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wunused-parameter")
+
 LLVMGEN (llvm_gen_end)
 {
     // Dummy routine needed only for the op_descriptor table
     return false;
 }
 
+OSL_PRAGMA_WARNING_POP
 
 
 }; // namespace pvt

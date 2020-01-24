@@ -60,7 +60,7 @@ OptiXStringTable::freetable()
 
 
 
-void OptiXStringTable::init (OSL::optix::Context ctx)
+void OptiXStringTable::init (OSL::optix::Context ctx OSL_MAYBE_UNUSED)
 {
 #ifdef OSL_USE_OPTIX
     OSL_ASSERT (! m_ptr && "StringTable should only be initialized once");
@@ -86,7 +86,8 @@ void OptiXStringTable::init (OSL::optix::Context ctx)
 }
 
 
-uint64_t OptiXStringTable::addString (ustring str, ustring var_name)
+uint64_t OptiXStringTable::addString (ustring str OSL_MAYBE_UNUSED,
+                                      ustring var_name OSL_MAYBE_UNUSED)
 {
 #ifdef OSL_USE_OPTIX
     OSL_ASSERT (m_ptr && "StringTable has not been initialized");

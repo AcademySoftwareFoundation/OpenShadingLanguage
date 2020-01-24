@@ -400,7 +400,7 @@ private:
     void initialize_globals ();
     void initialize_builtin_funcs ();
     std::string default_output_filename ();
-    void write_oso_file (const std::string &outfilename, string_view options,
+    void write_oso_file (string_view options,
                          string_view preprocessed_source="");
     void write_oso_const_value (const ConstantSymbol *sym) const;
     void write_oso_symbol (const Symbol *sym);

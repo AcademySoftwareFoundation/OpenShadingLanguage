@@ -227,8 +227,10 @@ filter_gabor_kernel_2d (const Matrix22 &filter, const Dual2<float> &w, float a,
 
 // Choose an omega and phi value for a particular gabor impulse,
 // based on the user-selected noise mode.
+//
+// FIXME: x_c parameter seems unused. Is that correct?
 static OSL_HOSTDEVICE void
-gabor_sample (GaborParams &gp, const Vec3 &x_c, fast_rng &rng,
+gabor_sample (GaborParams &gp, const Vec3 &/*x_c*/, fast_rng &rng,
               Vec3 &omega, float &phi)
 {
     // section 3.3, solid random-phase gabor noise

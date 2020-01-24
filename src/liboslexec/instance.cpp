@@ -604,7 +604,7 @@ equivalent (const Symbol &a, const Symbol &b)
 
 
 bool
-ShaderInstance::mergeable (const ShaderInstance &b, const ShaderGroup &g) const
+ShaderInstance::mergeable (const ShaderInstance &b, const ShaderGroup& /*g*/) const
 {
     // Must both be instances of the same master -- very fast early-out
     // for most potential pair comparisons.

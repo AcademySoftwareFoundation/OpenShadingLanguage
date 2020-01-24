@@ -42,7 +42,7 @@ OSL_NAMESPACE_ENTER
 /// Actual implementations of this class are private
 struct BSDF {
     BSDF() {}
-    virtual float albedo(const ShaderGlobals& sg) const { return 1; }
+    virtual float albedo(const ShaderGlobals& /*sg*/) const { return 1; }
     virtual float eval  (const ShaderGlobals& sg, const Vec3& wi, float& pdf) const = 0;
     virtual float sample(const ShaderGlobals& sg, float rx, float ry, float rz, Dual2<Vec3>& wi, float& pdf) const = 0;
 };

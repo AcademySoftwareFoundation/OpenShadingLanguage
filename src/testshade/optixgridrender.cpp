@@ -109,7 +109,8 @@ OptixGridRenderer::init_shadingsys (ShadingSystem *ss)
 
 
 bool
-OptixGridRenderer::init_optix_context (int xres, int yres)
+OptixGridRenderer::init_optix_context (int xres OSL_MAYBE_UNUSED,
+                                       int yres OSL_MAYBE_UNUSED)
 {
 #ifdef OSL_USE_OPTIX
     m_optix_ctx->setRayTypeCount (2);
@@ -297,7 +298,7 @@ OptixGridRenderer::finalize_scene()
 /// get_texture_handle()) is a valid texture that can be subsequently
 /// read or sampled.
 bool
-OptixGridRenderer::good(TextureHandle *handle)
+OptixGridRenderer::good(TextureHandle *handle OSL_MAYBE_UNUSED)
 {
 #ifdef OSL_USE_OPTIX
     return intptr_t(handle) != RT_TEXTURE_ID_NULL;
@@ -311,7 +312,8 @@ OptixGridRenderer::good(TextureHandle *handle)
 /// Given the name of a texture, return an opaque handle that can be
 /// used with texture calls to avoid the name lookups.
 RendererServices::TextureHandle*
-OptixGridRenderer::get_texture_handle (ustring filename, ShadingContext* shading_context)
+OptixGridRenderer::get_texture_handle (ustring filename OSL_MAYBE_UNUSED,
+                                       ShadingContext* shading_context OSL_MAYBE_UNUSED)
 {
 #ifdef OSL_USE_OPTIX
     auto itr = m_samplers.find(filename);
@@ -389,7 +391,7 @@ OptixGridRenderer::warmup()
 
 
 void
-OptixGridRenderer::render(int xres, int yres)
+OptixGridRenderer::render(int xres OSL_MAYBE_UNUSED, int yres OSL_MAYBE_UNUSED)
 {
 #ifdef OSL_USE_OPTIX
     m_optix_ctx->launch (0, xres, yres);

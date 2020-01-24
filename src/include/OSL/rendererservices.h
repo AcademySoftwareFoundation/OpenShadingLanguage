@@ -51,6 +51,10 @@ typedef const void * TransformationPtr;
 typedef void (*PrepareClosureFunc)(RendererServices *, int id, void *data);
 typedef void (*SetupClosureFunc)(RendererServices *, int id, void *data);
 
+// Turn off warnings about unused params for this file, since we have lots
+// of declarations with stub function bodies.
+OSL_PRAGMA_WARNING_PUSH
+OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wunused-parameter")
 
 
 
@@ -421,4 +425,5 @@ protected:
 };
 
 
+OSL_PRAGMA_WARNING_POP
 OSL_NAMESPACE_EXIT

@@ -159,7 +159,7 @@ struct SplineInterp {
     template <class OUTTYPE, class INTYPE>
     struct extractValueFromArray<OUTTYPE, INTYPE, false> 
     {
-        OSL_HOSTDEVICE OUTTYPE operator()(const INTYPE *value, int array_length, int idx)
+        OSL_HOSTDEVICE OUTTYPE operator()(const INTYPE *value, int /*array_length*/, int idx)
         {
             return OUTTYPE( value[idx] );
         }

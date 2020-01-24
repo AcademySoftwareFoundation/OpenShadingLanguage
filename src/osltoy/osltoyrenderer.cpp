@@ -138,7 +138,7 @@ OSLToyRenderer::render_image ()
 
 
 int
-OSLToyRenderer::supports (string_view feature) const
+OSLToyRenderer::supports (string_view /*feature*/) const
 {
     return false;
 }
@@ -170,9 +170,9 @@ OSLToyRenderer::camera_params (const Matrix44 &world_to_camera,
 
 
 bool
-OSLToyRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
+OSLToyRenderer::get_matrix (ShaderGlobals* /*sg*/, Matrix44 &result,
                             TransformationPtr xform,
-                            float time)
+                            float /*time*/)
 {
     // OSLToyRenderer doesn't understand motion blur and transformations
     // are just simple 4x4 matrices.
@@ -183,8 +183,8 @@ OSLToyRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
 
 
 bool
-OSLToyRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
-                            ustring from, float time)
+OSLToyRenderer::get_matrix (ShaderGlobals* /*sg*/, Matrix44 &result,
+                            ustring from, float /*time*/)
 {
     TransformMap::const_iterator found = m_named_xforms.find (from);
     if (found != m_named_xforms.end()) {
@@ -198,7 +198,7 @@ OSLToyRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
 
 
 bool
-OSLToyRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
+OSLToyRenderer::get_matrix (ShaderGlobals* /*sg*/, Matrix44 &result,
                             TransformationPtr xform)
 {
     // OSLToyRenderer doesn't understand motion blur and transformations
@@ -210,7 +210,7 @@ OSLToyRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
 
 
 bool
-OSLToyRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
+OSLToyRenderer::get_matrix (ShaderGlobals* /*sg*/, Matrix44 &result,
                             ustring from)
 {
     // OSLToyRenderer doesn't understand motion blur, so we never fail
@@ -227,8 +227,8 @@ OSLToyRenderer::get_matrix (ShaderGlobals *sg, Matrix44 &result,
 
 
 bool
-OSLToyRenderer::get_inverse_matrix (ShaderGlobals *sg, Matrix44 &result,
-                                    ustring to, float time)
+OSLToyRenderer::get_inverse_matrix (ShaderGlobals* /*sg*/, Matrix44 &result,
+                                    ustring to, float /*time*/)
 {
     if (to == u_camera || to == u_screen || to == u_NDC || to == u_raster) {
         Matrix44 M = m_world_to_camera;
@@ -371,8 +371,8 @@ OSLToyRenderer::get_userdata (bool derivatives, ustring name, TypeDesc type,
 
 
 bool
-OSLToyRenderer::get_osl_version (ShaderGlobals *sg, bool derivs, ustring object,
-                                 TypeDesc type, ustring name, void *val)
+OSLToyRenderer::get_osl_version (ShaderGlobals* /*sg*/, bool /*derivs*/, ustring /*object*/,
+                                 TypeDesc type, ustring /*name*/, void *val)
 {
     if (type == TypeDesc::TypeInt) {
         ((int *)val)[0] = OSL_VERSION;
@@ -383,8 +383,8 @@ OSLToyRenderer::get_osl_version (ShaderGlobals *sg, bool derivs, ustring object,
 
 
 bool
-OSLToyRenderer::get_camera_resolution (ShaderGlobals *sg, bool derivs, ustring object,
-                                       TypeDesc type, ustring name, void *val)
+OSLToyRenderer::get_camera_resolution (ShaderGlobals* /*sg*/, bool /*derivs*/, ustring /*object*/,
+                                       TypeDesc type, ustring /*name*/, void *val)
 {
     if (type == TypeIntArray2) {
         ((int *)val)[0] = m_xres;
@@ -396,8 +396,8 @@ OSLToyRenderer::get_camera_resolution (ShaderGlobals *sg, bool derivs, ustring o
 
 
 bool
-OSLToyRenderer::get_camera_projection (ShaderGlobals *sg, bool derivs, ustring object,
-                                       TypeDesc type, ustring name, void *val)
+OSLToyRenderer::get_camera_projection (ShaderGlobals* /*sg*/, bool /*derivs*/, ustring /*object*/,
+                                       TypeDesc type, ustring /*name*/, void *val)
 {
     if (type == TypeDesc::TypeString) {
         ((ustring *)val)[0] = m_projection;
@@ -408,8 +408,8 @@ OSLToyRenderer::get_camera_projection (ShaderGlobals *sg, bool derivs, ustring o
 
 
 bool
-OSLToyRenderer::get_camera_fov (ShaderGlobals *sg, bool derivs, ustring object,
-                                TypeDesc type, ustring name, void *val)
+OSLToyRenderer::get_camera_fov (ShaderGlobals* /*sg*/, bool derivs, ustring /*object*/,
+                                TypeDesc type, ustring /*name*/, void *val)
 {
     // N.B. in a real rederer, this may be time-dependent
     if (type == TypeDesc::TypeFloat) {
@@ -423,8 +423,8 @@ OSLToyRenderer::get_camera_fov (ShaderGlobals *sg, bool derivs, ustring object,
 
 
 bool
-OSLToyRenderer::get_camera_pixelaspect (ShaderGlobals *sg, bool derivs, ustring object,
-                                        TypeDesc type, ustring name, void *val)
+OSLToyRenderer::get_camera_pixelaspect (ShaderGlobals* /*sg*/, bool derivs, ustring /*object*/,
+                                        TypeDesc type, ustring /*name*/, void *val)
 {
     if (type == TypeDesc::TypeFloat) {
         ((float *)val)[0] = m_pixelaspect;
@@ -437,8 +437,8 @@ OSLToyRenderer::get_camera_pixelaspect (ShaderGlobals *sg, bool derivs, ustring 
 
 
 bool
-OSLToyRenderer::get_camera_clip (ShaderGlobals *sg, bool derivs, ustring object,
-                                 TypeDesc type, ustring name, void *val)
+OSLToyRenderer::get_camera_clip (ShaderGlobals* /*sg*/, bool derivs, ustring /*object*/,
+                                 TypeDesc type, ustring /*name*/, void *val)
 {
     if (type == TypeFloatArray2) {
         ((float *)val)[0] = m_hither;
@@ -452,8 +452,8 @@ OSLToyRenderer::get_camera_clip (ShaderGlobals *sg, bool derivs, ustring object,
 
 
 bool
-OSLToyRenderer::get_camera_clip_near (ShaderGlobals *sg, bool derivs, ustring object,
-                                      TypeDesc type, ustring name, void *val)
+OSLToyRenderer::get_camera_clip_near (ShaderGlobals* /*sg*/, bool derivs, ustring /*object*/,
+                                      TypeDesc type, ustring /*name*/, void *val)
 {
     if (type == TypeDesc::TypeFloat) {
         ((float *)val)[0] = m_hither;
@@ -466,8 +466,8 @@ OSLToyRenderer::get_camera_clip_near (ShaderGlobals *sg, bool derivs, ustring ob
 
 
 bool
-OSLToyRenderer::get_camera_clip_far (ShaderGlobals *sg, bool derivs, ustring object,
-                                     TypeDesc type, ustring name, void *val)
+OSLToyRenderer::get_camera_clip_far (ShaderGlobals* /*sg*/, bool derivs, ustring /*object*/,
+                                     TypeDesc type, ustring /*name*/, void *val)
 {
     if (type == TypeDesc::TypeFloat) {
         ((float *)val)[0] = m_yon;
@@ -481,8 +481,8 @@ OSLToyRenderer::get_camera_clip_far (ShaderGlobals *sg, bool derivs, ustring obj
 
 
 bool
-OSLToyRenderer::get_camera_shutter (ShaderGlobals *sg, bool derivs, ustring object,
-                                    TypeDesc type, ustring name, void *val)
+OSLToyRenderer::get_camera_shutter (ShaderGlobals* /*sg*/, bool derivs, ustring /*object*/,
+                                    TypeDesc type, ustring /*name*/, void *val)
 {
     if (type == TypeFloatArray2) {
         ((float *)val)[0] = m_shutter[0];
@@ -496,8 +496,8 @@ OSLToyRenderer::get_camera_shutter (ShaderGlobals *sg, bool derivs, ustring obje
 
 
 bool
-OSLToyRenderer::get_camera_shutter_open (ShaderGlobals *sg, bool derivs, ustring object,
-                                         TypeDesc type, ustring name, void *val)
+OSLToyRenderer::get_camera_shutter_open (ShaderGlobals* /*sg*/, bool derivs, ustring /*object*/,
+                                         TypeDesc type, ustring /*name*/, void *val)
 {
     if (type == TypeDesc::TypeFloat) {
         ((float *)val)[0] = m_shutter[0];
@@ -510,8 +510,8 @@ OSLToyRenderer::get_camera_shutter_open (ShaderGlobals *sg, bool derivs, ustring
 
 
 bool
-OSLToyRenderer::get_camera_shutter_close (ShaderGlobals *sg, bool derivs, ustring object,
-                                          TypeDesc type, ustring name, void *val)
+OSLToyRenderer::get_camera_shutter_close (ShaderGlobals* /*sg*/, bool derivs, ustring /*object*/,
+                                          TypeDesc type, ustring /*name*/, void *val)
 {
     if (type == TypeDesc::TypeFloat) {
         ((float *)val)[0] = m_shutter[1];
@@ -524,8 +524,8 @@ OSLToyRenderer::get_camera_shutter_close (ShaderGlobals *sg, bool derivs, ustrin
 
 
 bool
-OSLToyRenderer::get_camera_screen_window (ShaderGlobals *sg, bool derivs, ustring object,
-                                          TypeDesc type, ustring name, void *val)
+OSLToyRenderer::get_camera_screen_window (ShaderGlobals* /*sg*/, bool derivs, ustring /*object*/,
+                                          TypeDesc type, ustring /*name*/, void *val)
 {
     // N.B. in a real rederer, this may be time-dependent
     if (type == TypeFloatArray4) {

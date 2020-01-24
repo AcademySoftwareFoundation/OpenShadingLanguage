@@ -492,59 +492,59 @@ struct GaborNoise {
     // Gabor always uses derivatives, so dual versions only
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam noisename, Dual2<float> &result,
+    inline void operator() (StringParam /*noisename*/, Dual2<float> &result,
                             const Dual2<float> &x,
-                            ShaderGlobals *sg, const NoiseParams *opt) const {
+                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
         result = gabor (x, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam noisename, Dual2<float> &result,
+    inline void operator() (StringParam /*noisename*/, Dual2<float> &result,
                             const Dual2<float> &x, const Dual2<float> &y,
-                            ShaderGlobals *sg, const NoiseParams *opt) const {
+                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
         result = gabor (x, y, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam noisename, Dual2<float> &result,
+    inline void operator() (StringParam /*noisename*/, Dual2<float> &result,
                             const Dual2<Vec3> &p,
-                            ShaderGlobals *sg, const NoiseParams *opt) const {
+                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
         result = gabor (p, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam noisename, Dual2<float> &result,
-                            const Dual2<Vec3> &p, const Dual2<float> &t,
-                            ShaderGlobals *sg, const NoiseParams *opt) const {
+    inline void operator() (StringParam /*noisename*/, Dual2<float> &result,
+                            const Dual2<Vec3> &p, const Dual2<float>& /*t*/,
+                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
         // FIXME -- This is very broken, we are ignoring 4D!
         result = gabor (p, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam noisename, Dual2<Vec3> &result,
+    inline void operator() (StringParam /*noisename*/, Dual2<Vec3> &result,
                             const Dual2<float> &x,
-                            ShaderGlobals *sg, const NoiseParams *opt) const {
+                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
         result = gabor3 (x, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam noisename, Dual2<Vec3> &result,
+    inline void operator() (StringParam /*noisename*/, Dual2<Vec3> &result,
                             const Dual2<float> &x, const Dual2<float> &y,
-                            ShaderGlobals *sg, const NoiseParams *opt) const {
+                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
         result = gabor3 (x, y, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam noisename, Dual2<Vec3> &result,
+    inline void operator() (StringParam /*noisename*/, Dual2<Vec3> &result,
                             const Dual2<Vec3> &p,
-                            ShaderGlobals *sg, const NoiseParams *opt) const {
+                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
         result = gabor3 (p, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam noisename, Dual2<Vec3> &result,
-                            const Dual2<Vec3> &p, const Dual2<float> &t,
-                            ShaderGlobals *sg, const NoiseParams *opt) const {
+    inline void operator() (StringParam /*noisename*/, Dual2<Vec3> &result,
+                            const Dual2<Vec3> &p, const Dual2<float>& /*t*/,
+                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
         // FIXME -- This is very broken, we are ignoring 4D!
         result = gabor3 (p, opt);
     }
@@ -558,63 +558,63 @@ struct GaborPNoise {
     // Gabor always uses derivatives, so dual versions only
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam noisename, Dual2<float> &result,
+    inline void operator() (StringParam /*noisename*/, Dual2<float> &result,
                             const Dual2<float> &x, float px,
-                            ShaderGlobals *sg, const NoiseParams *opt) const {
+                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
         result = pgabor (x, px, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam noisename, Dual2<float> &result,
+    inline void operator() (StringParam /*noisename*/, Dual2<float> &result,
                             const Dual2<float> &x, const Dual2<float> &y,
                             float px, float py,
-                            ShaderGlobals *sg, const NoiseParams *opt) const {
+                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
         result = pgabor (x, y, px, py, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam noisename, Dual2<float> &result,
+    inline void operator() (StringParam /*noisename*/, Dual2<float> &result,
                             const Dual2<Vec3> &p, const Vec3 &pp,
-                            ShaderGlobals *sg, const NoiseParams *opt) const {
+                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
         result = pgabor (p, pp, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam noisename, Dual2<float> &result,
-                            const Dual2<Vec3> &p, const Dual2<float> &t,
-                            const Vec3 &pp, float tp,
-                            ShaderGlobals *sg, const NoiseParams *opt) const {
+    inline void operator() (StringParam /*noisename*/, Dual2<float> &result,
+                            const Dual2<Vec3> &p, const Dual2<float>& /*t*/,
+                            const Vec3 &pp, float /*tp*/,
+                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
         // FIXME -- This is very broken, we are ignoring 4D!
         result = pgabor (p, pp, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam noisename, Dual2<Vec3> &result,
+    inline void operator() (StringParam /*noisename*/, Dual2<Vec3> &result,
                             const Dual2<float> &x, float px,
-                            ShaderGlobals *sg, const NoiseParams *opt) const {
+                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
         result = pgabor3 (x, px, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam noisename, Dual2<Vec3> &result,
+    inline void operator() (StringParam /*noisename*/, Dual2<Vec3> &result,
                             const Dual2<float> &x, const Dual2<float> &y,
                             float px, float py,
-                            ShaderGlobals *sg, const NoiseParams *opt) const {
+                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
         result = pgabor3 (x, y, px, py, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam noisename, Dual2<Vec3> &result,
+    inline void operator() (StringParam /*noisename*/, Dual2<Vec3> &result,
                             const Dual2<Vec3> &p, const Vec3 &pp,
-                            ShaderGlobals *sg, const NoiseParams *opt) const {
+                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
         result = pgabor3 (p, pp, opt);
     }
 
     OSL_HOSTDEVICE
-    inline void operator() (StringParam noisename, Dual2<Vec3> &result,
-                            const Dual2<Vec3> &p, const Dual2<float> &t,
-                            const Vec3 &pp, float tp,
-                            ShaderGlobals *sg, const NoiseParams *opt) const {
+    inline void operator() (StringParam /*noisename*/, Dual2<Vec3> &result,
+                            const Dual2<Vec3> &p, const Dual2<float>& /*t*/,
+                            const Vec3 &pp, float /*tp*/,
+                            ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
         // FIXME -- This is very broken, we are ignoring 4D!
         result = pgabor3 (p, pp, opt);
     }
@@ -625,6 +625,10 @@ struct GaborPNoise {
 NOISE_IMPL_DERIV_OPT (gabornoise, GaborNoise)
 PNOISE_IMPL_DERIV_OPT (gaborpnoise, GaborPNoise)
 
+
+// Turn off warnings about unused params, since the NullNoise methods are stubs.
+OSL_PRAGMA_WARNING_PUSH
+OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wunused-parameter")
 
 
 struct NullNoise {
@@ -682,6 +686,7 @@ NOISE_IMPL_DERIV (nullnoise, NullNoise)
 NOISE_IMPL (unullnoise, UNullNoise)
 NOISE_IMPL_DERIV (unullnoise, UNullNoise)
 
+OSL_PRAGMA_WARNING_POP
 
 
 

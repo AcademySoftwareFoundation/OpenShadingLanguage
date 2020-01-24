@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   linux-2018:
-    name: "Linux VFX 2018-ish: gcc6, C++11, llvm7, OIIO 2.0, sse2, exr2.2"
+    name: "Linux VFX 2018-ish: gcc6, C++11, llvm7, OIIO 2.0, sse2, exr2.3"
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v1
@@ -14,7 +14,7 @@ jobs:
           USE_CPP: 11
           CMAKE_CXX_STANDARD: 11
           LLVM_VERSION: 7.0.1
-          OPENEXR_BRANCH: v2.2.0
+          OPENEXR_VERSION: 2.3.0
           OPENIMAGEIO_BRANCH: RB-2.0
           USE_SIMD: sse2
         run: |
@@ -33,7 +33,7 @@ jobs:
           USE_CPP: 14
           CMAKE_CXX_STANDARD: 14
           LLVM_VERSION: 8.0.0
-          OPENEXR_BRANCH: v2.3.0
+          OPENEXR_VERSION: 2.3.0
           OPENIMAGEIO_BRANCH: RB-2.1
           USE_SIMD: sse4.2
         run: |
@@ -67,7 +67,6 @@ jobs:
 #          CXX: g++-8
 #          CMAKE_CXX_STANDARD: 14
 #          USE_SIMD: avx2,f16c
-#          OPENEXR_BRANCH: v2.4.0
 #        run: |
 #            source src/build-scripts/ci-startup.bash
 #            source src/build-scripts/gh-installdeps.bash
@@ -86,7 +85,7 @@ jobs:
           CMAKE_CXX_STANDARD: 14
           LLVM_VERSION: 9.0.0
           USE_SIMD: avx2,f16c
-          OPENEXR_BRANCH: v2.4.0
+          OPENEXR_VERSION: 2.4.0
           OPENIMAGEIO_BRANCH: master
         run: |
             source src/build-scripts/ci-startup.bash
@@ -105,7 +104,7 @@ jobs:
           CMAKE_CXX_STANDARD: 14
           LLVM_VERSION: 9.0.0
           USE_SIMD: avx2,f16c
-          OPENEXR_BRANCH: v2.4.0
+          OPENEXR_VERSION: 2.4.0
           OPENIMAGEIO_BRANCH: master
         run: |
             source src/build-scripts/ci-startup.bash
@@ -124,7 +123,7 @@ jobs:
           CMAKE_CXX_STANDARD: 17
           LLVM_VERSION: 9.0.0
           USE_SIMD: avx2,f16c
-          OPENEXR_BRANCH: v2.4.0
+          OPENEXR_VERSION: 2.4.0
           OPENIMAGEIO_BRANCH: master
         run: |
             source src/build-scripts/ci-startup.bash
@@ -132,7 +131,7 @@ jobs:
             source src/build-scripts/ci-build-and-test.bash
 
   linux-oldest:
-    name: "Linux oldest everything: gcc6, C++11, llvm7, oiio 2.0, no simd, exr2.2"
+    name: "Linux oldest everything: gcc6, C++11, llvm7, oiio 2.0, no simd, exr2.3"
     # Unfortunately, this isn't the oldest of everything we support, but
     # rather, the oldest of everything we can easily get on GH CI.
     # Should be gcc 4.8 if we can figure out how to make that work.
@@ -147,7 +146,7 @@ jobs:
           CMAKE_CXX_STANDARD: 11
           LLVM_VERSION: 7.0.1
           USE_SIMD: 0
-          OPENEXR_BRANCH: v2.2.0
+          OPENEXR_VERSION: 2.3.0
           OPENIMAGEIO_BRANCH: RB-2.0
         run: |
             source src/build-scripts/ci-startup.bash
@@ -186,7 +185,7 @@ jobs:
   #       env:
   #         PYTHON_VERSION: 3.6
   #         CMAKE_GENERATOR: "Visual Studio 16 2019"
-  #         OPENEXR_BRANCH: v2.4.0
+  #         OPENEXR_VERSION: 2.4.0
   #       run: |
   #           source src/build-scripts/ci-startup.bash
   #           source src/build-scripts/gh-win-installdeps.bash

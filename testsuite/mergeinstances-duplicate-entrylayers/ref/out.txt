@@ -1,0 +1,4 @@
+Compiled a.osl -> a.oso
+Compiled b.osl -> b.oso
+Entry layers: b1(1) b2(3) b3(5)
+

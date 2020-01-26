@@ -1,0 +1,9 @@
+shader b
+(
+    color in  = 0,
+
+    output color out = 0
+)
+{
+    out = in;
+}

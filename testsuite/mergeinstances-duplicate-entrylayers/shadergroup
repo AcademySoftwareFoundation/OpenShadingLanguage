@@ -1,0 +1,11 @@
+shader a a1 ;
+shader b b1 ;
+connect a1.out b1.in ;
+
+shader a a2 ;
+shader b b2 ;
+connect a2.out b2.in ;
+
+shader a a3 ;
+shader b b3 ;
+connect a3.out b3.in ;

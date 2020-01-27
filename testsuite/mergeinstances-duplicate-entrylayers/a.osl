@@ -1,0 +1,12 @@
+shader a
+(
+    float frequency = 1,
+    string noiseType = "perlin",
+    color amplitude = 1,
+    int seed = 0,
+    output color out = 0
+)
+{
+    point domain = point(u + seed, v + seed, 0) * frequency;
+    out = noise(noiseType, domain[0], domain[1]) * amplitude;
+}

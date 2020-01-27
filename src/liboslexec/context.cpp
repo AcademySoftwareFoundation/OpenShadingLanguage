@@ -136,7 +136,8 @@ ShadingContext::execute_init (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
 bool
 ShadingContext::execute_layer (ShaderGlobals &ssg, int layernumber)
 {
-    DASSERT (group() && group()->nlayers() && !group()->does_nothing());
+    if (!group() || group()->nlayers() == 0 || group()->does_nothing())
+        return false;
     DASSERT (ssg.context == this && ssg.renderer == renderer());
 
     int profile = shadingsys().m_profile;

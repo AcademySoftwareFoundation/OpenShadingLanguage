@@ -3102,8 +3102,8 @@ ShadingSystemImpl::merge_instances (ShaderGroup &group, bool post_opt)
 
     // Loop over all layers...
     for (int a = 0;  a < nlayers-1;  ++a) {
-        if (group[a]->unused())    // Don't merge a layer that's not used
-            continue;
+        if (group[a]->unused() || group[a]->entry_layer()) // Don't merge a layer that's not used
+            continue;                                      // or if it's an entry layer
         // Check all later layers...
         for (int b = a+1;  b < nlayers;  ++b) {
             if (group[b]->unused())    // Don't merge a layer that's not used

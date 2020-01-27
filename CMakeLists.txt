@@ -354,6 +354,7 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             layers-nonlazycopy layers-repeatedoutputs
             linearstep
             logic loop matrix message
+            mergeinstances-duplicate-entrylayers
             mergeinstances-nouserdata mergeinstances-vararray
             metadata-braces miscmath missing-shader
             named-components

@@ -53,7 +53,19 @@ namespace pvt {
 OSL_SHADEOP const char *
 osl_concat_sss (const char *s, const char *t)
 {
-    return ustring::sprintf("%s%s", s, t).c_str();
+    size_t sl = USTR(s).length();
+    size_t tl = USTR(t).length();
+    size_t len = sl + tl;
+    std::unique_ptr<char[]> heap_buf;
+    char local_buf[256];
+    char* buf = local_buf;
+    if (len > sizeof(local_buf)) {
+        heap_buf.reset(new char[len]);
+        buf = heap_buf.get();
+    }
+    memcpy(buf     , s, sl);
+    memcpy(buf + sl, t, tl);
+    return ustring(local_buf, len).c_str();
 }
 
 OSL_SHADEOP int

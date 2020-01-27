@@ -176,10 +176,17 @@ OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
                                     std::string &result)
 {
     std::string instring;
-    if (!stdoslpath.empty())
-        instring = OIIO::Strutil::sprintf("#include \"%s\"\n", stdoslpath);
-    else
+    if (!stdoslpath.empty()) {
+        instring = OIIO::Strutil::sprintf("#include \"%s\"\n",
+                                          OIIO::Strutil::escape_chars(stdoslpath));
+        // Note: because we're turning this from a regular string into a
+        // double-quoted string injected into the OSL parse stream, we need
+        // to fully escape any backslashes used in Windows file paths. We
+        // don't want "c:\path\to\new\osl" to be interpreted as
+        // "c:\path<tab>o<newline>ew\osl" !
+    } else {
         instring = "\n";
+    }
     instring += buffer;
     std::unique_ptr<llvm::MemoryBuffer> mbuf (llvm::MemoryBuffer::getMemBuffer(instring, filename));
 

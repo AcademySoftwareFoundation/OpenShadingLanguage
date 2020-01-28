@@ -1,8 +1,8 @@
 Release 1.11/2.0? -- ?? 2019 (compared to 1.10)
 --------------------------------------------------
 Dependency and standards changes:
-* **LLVM 5.0-9.0**: Support for LLVM 4 and 5 have been dropped. Support for
-  LLVM 8 and 9 have been added.
+* **LLVM 6.0-9.0**: Support for LLVM 4 and 5 have been dropped. Support for
+  LLVM 8 and 9 have been added. #981 #1046 #1058
 * OpenImageIO 2.0-2.1: Support for OIIO 1.8 has been dropped; a minimum
   of OIIO 2.0 is needed to build OSL. #1038 (1.11.0)
 * CMake minimum is now 3.12. #1072 (1.11.1)
@@ -62,6 +62,17 @@ OSL Language and oslc compiler:
 * New command line argument `oslc --embed-source` embeds the preprocessed
   source code in the `.oso` file itself (helpful for certain debugging
   situations). #1081 (1.11.3)
+* oslc can generate dependency files, honoring the -M, -MM, -MD, -MMD, and
+  -MF flags with similar meanings to gcc and clang. #1085 (1.11.3)
+  Example:
+  ```
+      $ oslc -MMD test.osl
+      Compiled test.osl -> test.oso
+      $ cat test.d
+      test.oso: test.osl \
+          dist/macosx/share/OSL/shaders/color2.h \
+          dist/macosx/share/OSL/shaders/stdosl.h
+  ```
 
 OSL Standard library:
 * Extend linearstep() and smooth_linearstep() to work with color, point,
@@ -116,8 +127,10 @@ Experimental OptiX rendering:
 * Fixes to string closure params. #1061 (1.11.1)
 
 Performance improvements:
-* Constant fold array accesses even if they are out of bounnds. #1035
-  (1.11.0)
+* Constant fold array accesses even if they are out of bounds. #1035 (1.11.0)
+* Speed up the `concat()` OSL function, the new implementation is very
+  careful to avoid extra copies and unnecessary allocations. #1104,#1105
+  (1.11.3)
 
 Bug fixes and other improvements (internals):
 * Fix bug in implementation of `splineinverse()` when computing with
@@ -144,6 +157,14 @@ Bug fixes and other improvements (internals):
   Previously there could be some LSB differences. #1066 (1.11.1)
 * Fix a number of places that weren't properly "locale-independent".
   #1075 (1.11.1)
+* Bug fix: fix bug/assertion in cases where layer merging tried to combine
+  layers that were "entry layers." #1103 (1.11.3)
+* Fix Windows bug where stdosl.h would not be found properly if oslc.exe
+  was in a file path containing a directory name starting with "n". (Because
+  of interplay between Windows use of backslash for directory separtors and
+  C/C++/OSL use of backslash as escape sequences in strings.) #1101 (1.11.3)
+
+Internals/developer concerns:
 * Switch much of the internals where we do string formatting using printf-like
   conventions to errorf(), etc., naming convention, reserving the non-f
   names for future use with C++20 std::format/python convenetions. #1076
@@ -153,7 +174,14 @@ Bug fixes and other improvements (internals):
   OIIO's dassert.h. Note that OSL_ASSERT always tests, prints error if the
   test fails, but then only aborts for debug builds (no abort for release
   builds). In ocntrast, OSL_DASSERT does all for debug builds, and none
-  (not even the test) for release builds. #1080 (1.11.3)
+  (not even the test) for release builds. #1080 #1087 (1.11.3)
+* Refactor the implementation of the `Dual` template to support more
+  efficient code generation when used in vectorized loops (this will be
+  important for the upcoming batch shading extensions). #1088 (1.11.3)
+* Refactor of much of the Imath replicated code to support better code
+  generation when used in vectorized loops. #1096 (1.11.3)
+* Refactor oslconfig.h, split all the compiler/C++version detection and
+  differing macros into platform.h. #1102 (1.11.3)
 
 Build & test system improvements:
 * Major overhaul of the CMake build system to upgrade minimum of CMake 3.12
@@ -179,7 +207,7 @@ Build & test system improvements:
     - CXX_VISIBILITY_PRESET controls symbol visibility defaults now, not
       our nonstandard HIDE_SYMBOLS. And the default is to keep everything
       hidden that is not part of the public API.
-    - `ENABLERTTI` build option has been renamed `ENABLE_RTTI`.
+    - The ENABLERTTI build option has been renamed `ENABLE_RTTI`.
     - Config based install and usage.
 * Testshade makes sure that no unreported errors accumulted in the texture
   system or image cache. #939 (1.11.0)
@@ -226,6 +254,11 @@ Build & test system improvements:
   libraries are needed. #1070 (1.11.1)
 * Build: on OSX, better logic about the OIIO plugin must be built as a
   module or as a shared library. #1078 (1.11.3/1.10.8)
+* Removed support for Boost Wave for preprocessing osl input. We now always
+  use clang library components for preprocessing. #1089 (1.11.3)
+* Add an optional build-time `EXTRA_WARNINGS` option (default: OFF) that
+  enables even more picky than usual warnings. Fix many warnings that cropped
+  up during testing, mostly related to unused function paramters. #1106 (1.11.3)
 
 Documentation:
 

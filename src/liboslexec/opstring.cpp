@@ -64,7 +64,7 @@ osl_concat_sss (const char *s, const char *t)
     }
     memcpy(buf     , s, sl);
     memcpy(buf + sl, t, tl);
-    return ustring(local_buf, len).c_str();
+    return ustring(buf, len).c_str();
 }
 
 OSL_SHADEOP int

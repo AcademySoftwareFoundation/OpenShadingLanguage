@@ -39,7 +39,7 @@ using namespace OSL;
 
 
 bool
-OSLQuery::init (const ShaderGroup *group, int layernum)
+OSLQuery::init (const ShaderGroup* /*group*/, int /*layernum*/)
 {
     return false;
 }

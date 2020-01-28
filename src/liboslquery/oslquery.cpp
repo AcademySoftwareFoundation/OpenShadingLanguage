@@ -55,7 +55,7 @@ public:
     OSOReaderQuery (OSLQuery &query) : m_query(query), m_reading_param(false), m_default_values(0)
     { }
     virtual ~OSOReaderQuery () { }
-    virtual void version (const char *specid, int major, int minor) { }
+    virtual void version (const char* /*specid*/, int /*major*/, int /*minor*/) { }
     virtual void shader (const char *shadertype, const char *name);
     virtual void symbol (SymType symtype, TypeSpec typespec, const char *name);
     virtual void symdefault (int def);
@@ -306,7 +306,7 @@ OSOReaderQuery::hint (string_view hintstring)
 
 
 void
-OSOReaderQuery::codemarker (const char *name)
+OSOReaderQuery::codemarker (const char* /*name*/)
 {
     m_reading_param = false;
 }

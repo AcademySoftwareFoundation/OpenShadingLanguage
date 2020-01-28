@@ -101,7 +101,7 @@ namespace {
 // all our memory managers.
 struct DefaultMMapper final : public llvm::SectionMemoryManager::MemoryMapper {
     llvm::sys::MemoryBlock
-    allocateMappedMemory(llvm::SectionMemoryManager::AllocationPurpose Purpose,
+    allocateMappedMemory(llvm::SectionMemoryManager::AllocationPurpose /*Purpose*/,
                          size_t NumBytes, const llvm::sys::MemoryBlock *const NearBlock,
                          unsigned Flags, std::error_code &EC) override {
         return llvm::sys::Memory::allocateMappedMemory(NumBytes, NearBlock, Flags, EC);

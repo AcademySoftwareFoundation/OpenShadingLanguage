@@ -133,11 +133,11 @@ namespace { // anonymous namespace
 template <int trans>
 struct Diffuse : public BSDF, DiffuseParams {
     Diffuse(const DiffuseParams& params) : BSDF(), DiffuseParams(params) { if (trans) N = -N; }
-    virtual float eval  (const OSL::ShaderGlobals& sg, const OSL::Vec3& wi, float& pdf) const {
+    virtual float eval  (const OSL::ShaderGlobals& /*sg*/, const OSL::Vec3& wi, float& pdf) const {
         pdf = std::max(N.dot(wi), 0.0f) * float(M_1_PI);
         return 1.0f;
     }
-    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, float rz, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const {
+    virtual float sample(const OSL::ShaderGlobals& /*sg*/, float rx, float ry, float /*rz*/, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const {
         Vec3 out_dir;
         Sampling::sample_cosine_hemisphere(N, rx, ry, out_dir, pdf);
         wi = out_dir; // FIXME: leave derivs 0?
@@ -170,7 +170,7 @@ struct OrenNayar : public BSDF, OrenNayarParams {
       }
       return pdf = 0;
    }
-   virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, float rz, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const {
+   virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, float /*rz*/, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const {
        Vec3 out_dir;
        Sampling::sample_cosine_hemisphere(N, rx, ry, out_dir, pdf);
        wi = out_dir; // leave derivs 0?
@@ -204,7 +204,7 @@ struct Phong : public BSDF, PhongParams {
         }
         return pdf = 0;
     }
-    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, float rz, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const {
+    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, float /*rz*/, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const {
         float cosNO = -N.dot(sg.I);
         if (cosNO > 0) {
             // reflect the view vector
@@ -252,7 +252,7 @@ struct Ward : public BSDF, WardParams {
         }
         return 0;
     }
-    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, float rz, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const {
+    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, float /*rz*/, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const {
         float cosNO = -N.dot(sg.I);
         if (cosNO > 0) {
             // get x,y basis on the surface for anisotropy
@@ -631,10 +631,10 @@ struct Reflection : public BSDF, ReflectionParams {
             return fresnel_dielectric(cosNO, eta);
         return 1;
     }
-    virtual float eval  (const OSL::ShaderGlobals& sg, const OSL::Vec3& wi, float& pdf) const {
+    virtual float eval  (const OSL::ShaderGlobals& /*sg*/, const OSL::Vec3& /*wi*/, float& pdf) const {
         return pdf = 0;
     }
-    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, float rz, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const {
+    virtual float sample(const OSL::ShaderGlobals& sg, float /*rx*/, float /*ry*/, float /*rz*/, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const {
         // only one direction is possible
         OSL::Dual2<OSL::Vec3> I = OSL::Dual2<OSL::Vec3>(sg.I, sg.dIdx, sg.dIdy);
         OSL::Dual2<float> cosNO = -dot(N, I);
@@ -653,10 +653,10 @@ struct Refraction : public BSDF, RefractionParams {
         float cosNO = -N.dot(sg.I);
         return 1 - fresnel_dielectric(cosNO, eta);
     }
-    virtual float eval  (const OSL::ShaderGlobals& sg, const OSL::Vec3& wi, float& pdf) const {
+    virtual float eval  (const OSL::ShaderGlobals& /*sg*/, const OSL::Vec3& /*wi*/, float& pdf) const {
         return pdf = 0;
     }
-    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, float rz, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const {
+    virtual float sample(const OSL::ShaderGlobals& sg, float /*rx*/, float /*ry*/, float /*rz*/, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const {
         OSL::Dual2<OSL::Vec3> I = OSL::Dual2<OSL::Vec3>(sg.I, sg.dIdx, sg.dIdy);
         pdf = std::numeric_limits<float>::infinity();
         return fresnel_refraction(I, N, eta, wi);
@@ -664,11 +664,11 @@ struct Refraction : public BSDF, RefractionParams {
 };
 
 struct Transparent : public BSDF {
-    Transparent(const int& dummy) : BSDF() {}
-    virtual float eval  (const OSL::ShaderGlobals& sg, const OSL::Vec3& wi, float& pdf) const {
+    Transparent(const int& /*dummy*/) : BSDF() {}
+    virtual float eval  (const OSL::ShaderGlobals& /*sg*/, const OSL::Vec3& /*wi*/, float& pdf) const {
         return pdf = 0;
     }
-    virtual float sample(const OSL::ShaderGlobals& sg, float rx, float ry, float rz, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const {
+    virtual float sample(const OSL::ShaderGlobals& sg, float /*rx*/, float /*ry*/, float /*rz*/, OSL::Dual2<OSL::Vec3>& wi, float& pdf) const {
         wi = OSL::Dual2<OSL::Vec3>(sg.I, sg.dIdx, sg.dIdy);
         pdf = std::numeric_limits<float>::infinity();
         return 1;

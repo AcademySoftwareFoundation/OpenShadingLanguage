@@ -227,7 +227,7 @@ osl_warning (ShaderGlobals *sg, const char* format_str, ...)
 
 
 OSL_SHADEOP void
-osl_fprintf (ShaderGlobals *sg, const char *filename,
+osl_fprintf (ShaderGlobals* /*sg*/, const char *filename,
              const char* format_str, ...)
 {
     va_list args;

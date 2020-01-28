@@ -162,38 +162,38 @@ public:
         : RendererServices (texsys) { }
     virtual ~OIIO_RendererServices () { }
 
-    virtual int supports (string_view feature) const { return false; }
+    virtual int supports (string_view /*feature*/) const { return false; }
 
-    virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
-                             TransformationPtr xform, float time) {
+    virtual bool get_matrix (ShaderGlobals* /*sg*/, Matrix44 &/*result*/,
+                             TransformationPtr /*xform*/, float /*time*/) {
         return false;   // FIXME?
     }
-    virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
-                             TransformationPtr xform) {
+    virtual bool get_matrix (ShaderGlobals* /*sg*/, Matrix44 &/*result*/,
+                             TransformationPtr /*xform*/) {
         return false;   // FIXME?
     }
-    virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
-                             ustring from, float time) {
+    virtual bool get_matrix (ShaderGlobals* /*sg*/, Matrix44 &/*result*/,
+                             ustring /*from*/, float /*time*/) {
         return false;   // FIXME?
     }
-    virtual bool get_matrix (ShaderGlobals *sg, Matrix44 &result,
-                             ustring from) {
-        return false;   // FIXME?
-    }
-
-    virtual bool get_attribute (ShaderGlobals *sg, bool derivatives,
-                                ustring object, TypeDesc type, ustring name,
-                                void *val) {
-        return false;   // FIXME?
-    }
-    virtual bool get_array_attribute (ShaderGlobals *sg, bool derivatives,
-                                      ustring object, TypeDesc type,
-                                      ustring name, int index, void *val) {
+    virtual bool get_matrix (ShaderGlobals* /*sg*/, Matrix44 &/*result*/,
+                             ustring /*from*/) {
         return false;   // FIXME?
     }
 
-    virtual bool get_userdata (bool derivatives, ustring name, TypeDesc type,
-                               ShaderGlobals *sg, void *val) {
+    virtual bool get_attribute (ShaderGlobals* /*sg*/, bool /*derivatives*/,
+                                ustring /*object*/, TypeDesc /*type*/, ustring /*name*/,
+                                void* /*val*/) {
+        return false;   // FIXME?
+    }
+    virtual bool get_array_attribute (ShaderGlobals* /*sg*/, bool /*derivatives*/,
+                                      ustring /*object*/, TypeDesc /*type*/,
+                                      ustring /*name*/, int /*index*/, void* /*val*/) {
+        return false;   // FIXME?
+    }
+
+    virtual bool get_userdata (bool /*derivatives*/, ustring /*name*/, TypeDesc /*type*/,
+                               ShaderGlobals* /*sg*/, void* /*val*/) {
         return false;   // FIXME?
     }
 };
@@ -442,7 +442,7 @@ parse_param (string_view paramname, string_view val, ImageSpec &spec)
 
 bool
 OSLInput::open (const std::string &name, ImageSpec &newspec,
-                const ImageSpec &config)
+                const ImageSpec &/*config*/)
 {
     // std::cout << "OSLInput::open \"" << name << "\"\n";
     setup_shadingsys ();

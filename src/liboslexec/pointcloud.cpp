@@ -401,7 +401,7 @@ RendererServices::pointcloud_get (ShaderGlobals *sg,
 
 
 bool
-RendererServices::pointcloud_write (ShaderGlobals *sg,
+RendererServices::pointcloud_write (ShaderGlobals* /*sg*/,
                                     ustring filename, const OSL::Vec3 &pos,
                                     int nattribs, const ustring *names,
                                     const TypeDesc *types,

@@ -501,8 +501,7 @@ OSLCompilerImpl::compile (string_view filename,
             OSL_DASSERT (m_osofile == nullptr);
             m_osofile = &oso_output;
 
-            write_oso_file (m_output_filename,
-                            OIIO::Strutil::join(options," "),
+            write_oso_file (OIIO::Strutil::join(options," "),
                             preprocess_result);
             OSL_DASSERT (m_osofile == nullptr);
         }
@@ -586,8 +585,7 @@ OSLCompilerImpl::compile_buffer (string_view sourcecode,
             OSL_DASSERT (m_osofile == nullptr);
             m_osofile = &oso_output;
 
-            write_oso_file (m_output_filename,
-                            OIIO::Strutil::join(options," "),
+            write_oso_file (OIIO::Strutil::join(options," "),
                             preprocess_result);
             osobuffer = oso_output.str();
             OSL_DASSERT (m_osofile == nullptr);
@@ -851,8 +849,7 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym)
 
 
 void
-OSLCompilerImpl::write_oso_file (const std::string &outfilename,
-                                 string_view options,
+OSLCompilerImpl::write_oso_file (string_view options,
                                  string_view preprocessed_source)
 {
     OSL_DASSERT (m_osofile && m_osofile->good());

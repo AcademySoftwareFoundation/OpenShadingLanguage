@@ -304,7 +304,8 @@ public:
 
 protected:
     template<int... IntListT, typename... ValueListT>
-    OSL_HOSTDEVICE OSL_FORCEINLINE void set_expander (pvt::int_sequence<IntListT...> indices, const ValueListT & ...values)
+    OSL_HOSTDEVICE OSL_FORCEINLINE void
+    set_expander (pvt::int_sequence<IntListT...> /*indices*/, const ValueListT & ...values)
     {
         __OSL_EXPAND_PARAMETER_PACKS( elem(ConstIndex<IntListT>()) = values );
     }
@@ -694,7 +695,7 @@ removeDerivatives (const Dual<T,P> &x) { return x.val(); }
 
 // Get the x derivative (or 0 for a non-Dual)
 template<class T> OSL_HOSTDEVICE OSL_FORCEINLINE constexpr const T&
-getXDerivative (const T &x) { return T(0); }
+getXDerivative (const T & /*x*/) { return T(0); }
 
 template<class T, int P> OSL_HOSTDEVICE OSL_FORCEINLINE constexpr const T&
 getXDerivative (const Dual<T,P> &x) { return x.dx(); }
@@ -702,7 +703,7 @@ getXDerivative (const Dual<T,P> &x) { return x.dx(); }
 
 // Get the y derivative (or 0 for a non-Dual)
 template<class T> OSL_HOSTDEVICE OSL_FORCEINLINE constexpr const T&
-getYDerivative (const T &x) { return T(0); }
+getYDerivative (const T & /*x*/) { return T(0); }
 
 template<class T, int P> OSL_HOSTDEVICE OSL_FORCEINLINE constexpr const T&
 getYDerivative (const Dual<T,P> &x) { return x.dy(); }

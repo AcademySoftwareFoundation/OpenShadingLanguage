@@ -3613,9 +3613,9 @@ OSL_SHADEOP int osl_get_attribute(void *sg_,
 OSL_SHADEOP int
 osl_bind_interpolated_param (void *sg_, const void *name, long long type,
                              int userdata_has_derivs, void *userdata_data,
-                             int symbol_has_derivs, void *symbol_data,
+                             int /*symbol_has_derivs*/, void *symbol_data,
                              int symbol_data_size,
-                             char *userdata_initialized, int userdata_index)
+                             char *userdata_initialized, int /*userdata_index*/)
 {
     char status = *userdata_initialized;
     if (status == 0) {

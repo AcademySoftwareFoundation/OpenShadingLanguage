@@ -118,7 +118,7 @@ private:
         int valueoffset;  // Offset into one of the 'data' vectors, or nodeID
         bool is_valid;    // true: query found
         QueryResult (bool valid=true) : valueoffset(0), is_valid(valid) { }
-        QueryResult (bool isnode, int value)
+        QueryResult (bool /*isnode*/, int value)
             : valueoffset(value), is_valid(true) { }
     };
 

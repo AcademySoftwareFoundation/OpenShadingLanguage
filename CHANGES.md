@@ -1,5 +1,9 @@
-Release 1.10.9 -- ??? (compared to 1.10.8)
+Release 1.10.9 -- 1 Feb 2020 (compared to 1.10.8)
 --------------------------------------------------
+* Windows fix for incorrectly interpreting paths to oslc.exe as if they were
+  "escaped" strings -- for example, `"c:\path\to\new\oslc"` should not be
+  interpreted as `"c:\path<tab>o<newline>ewoslc"`. #1101
+* Speed up OSL `concat()` function. #1103
 
 Release 1.10.8 -- 1 Dec 2019 (compared to 1.10.7)
 --------------------------------------------------

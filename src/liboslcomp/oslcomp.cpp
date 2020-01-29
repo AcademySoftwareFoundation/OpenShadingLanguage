@@ -327,8 +327,14 @@ OSLCompilerImpl::read_compile_options (const std::vector<std::string> &options,
             m_preprocess_only = true;
             if (m_deps_filename.empty())
                 m_deps_filename = "stdout";
+        } else if (options[i] == "-MF") {
+            m_deps_filename = options[++i];
         } else if (OIIO::Strutil::starts_with(options[i], "-MF")) {
             m_deps_filename = options[i].substr(3);
+        } else if (options[i] == "-MT") {
+            m_deps_target = options[++i];
+        } else if (OIIO::Strutil::starts_with(options[i], "-MT")) {
+            m_deps_target = options[i].substr(3);
         } else if (options[i].c_str()[0] == '-' && options[i].size() > 2) {
             // options meant for the preprocessor
             if (options[i].c_str()[1] == 'D' || options[i].c_str()[1] == 'U')
@@ -604,10 +610,11 @@ OSLCompilerImpl::write_dependency_file (string_view filename)
 {
     if (m_deps_filename.empty())
         m_deps_filename = OIIO::Filesystem::replace_extension(filename, ".d");
-    std::string target = m_output_filename;
+    std::string target = m_deps_target;
     if (target.empty())
-        target = OIIO::Filesystem::replace_extension(filename, ".oso");
-
+        target = m_output_filename.size()
+               ? m_output_filename
+               : OIIO::Filesystem::replace_extension(filename, ".oso");
     OIIO::debugf("Writing '%s' deps to '%s'\n", target, m_deps_filename);
     FILE* depfile = (m_deps_filename == "stdout" ? stdout
                      : OIIO::Filesystem::fopen (m_deps_filename, "w"));

@@ -62,8 +62,8 @@ OSL Language and oslc compiler:
 * New command line argument `oslc --embed-source` embeds the preprocessed
   source code in the `.oso` file itself (helpful for certain debugging
   situations). #1081 (1.11.3)
-* oslc can generate dependency files, honoring the -M, -MM, -MD, -MMD, and
-  -MF flags with similar meanings to gcc and clang. #1085 (1.11.3)
+* oslc can generate dependency files, honoring the -M, -MM, -MD, -MMD, -MF,
+  and -MT flags with similar meanings to gcc and clang. #1085 #1107 (1.11.3)
   Example:
   ```
       $ oslc -MMD test.osl

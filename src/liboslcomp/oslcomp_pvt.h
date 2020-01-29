@@ -510,6 +510,7 @@ private:
     int m_last_sourceline;
     size_t m_last_sourceline_offset;
     std::string m_deps_filename; ///< Where to write deps? -MF
+    std::string m_deps_target; ///< Custom target: -MF
     std::set<ustring> m_file_dependencies; ///< All include file dependencies
 };
 

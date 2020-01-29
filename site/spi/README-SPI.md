@@ -14,9 +14,14 @@ to the `make` commands of any of the variants listed below. For example,
 Variants:
 
     # C++11/gcc4.8 compat, Python 2.7, Boost 1.55, OptiX 6, Cuda 10.1
-    # OIIO 2.1.5.1, OpenEXR 2.2
+    # OIIO 2.2.0.0, OpenEXR 2.2
     make nuke
-    make spi OSL_SPIREZ=1 BOOSTVERS=1.55 USE_OPTIX=1 CUDA_VERSION=10.1 OPTIX_VERSION=6.0.0 OPENIMAGEIO_VERSION=2.1.5.1 OPENEXR_VERSION=2.2.0 PYTHON_VERSION=2.7
+    make spi OSL_SPIREZ=1 BOOSTVERS=1.55 USE_OPTIX=1 CUDA_VERSION=10.1 OPTIX_VERSION=6.0.0 OPENIMAGEIO_VERSION=2.2.0.0 OPENEXR_VERSION=2.2.0 PYTHON_VERSION=2.7
+
+    # C++11/gcc6.3 compat, Python 2.7, Boost 1.70, OptiX 6, Cuda 10.1
+    # OIIO 2.2.0.0, OpenEXR 2.4
+    make nuke
+    make spi OSL_SPIREZ=1 SPI_COMPILER_PLATFORM=gcc-6.3 BOOSTVERS=1.70 USE_OPTIX=1 CUDA_VERSION=10.1 OPTIX_VERSION=6.0.0 OPENIMAGEIO_VERSION=2.2.0.0 OPENEXR_VERSION=2.4.0 PYTHON_VERSION=2.7
 
 
 
@@ -39,8 +44,11 @@ That command will release the dist to the studio.
 Appwrapper binary releases
 --------------------------
 
+We don't currently do this.
+
+<!---
 This step is for the ONE general/rez variant that we believe is the
-canonical source of command line oiiotool and maketx. After building and
+canonical source of command line oslc and oslinfo. After building and
 releasing as above,
 
     cp dist/rhel7/OSL_*.xml /shots/spi/home/lib/app_cfg/OSL
@@ -52,9 +60,10 @@ To also make this release the new facility default:
     db-any spi/home/OSL.bin highest /shots/spi/home/lib/app_cfg/OSL/OSL_A.B.C.D.xml
 
 where A.B.C.D is the version.
+--->
 
 
 SpComp2 build and release
 -------------------------
 
-TBD
+Phasing out support for this.

@@ -49,7 +49,7 @@ else ifeq (${OSL_SPIREZ},1)
     PYLIB_INCLUDE_SONAME ?= 0
     MY_CMAKE_FLAGS += -DOSL_SPIREZ=1 -DOSL_REZ_PACKAGE_NAME=${OSL_REZ_NAME}
     MY_CMAKE_FLAGS += -DCMAKE_DEBUG_POSTFIX=_d
-    OPENIMAGEIO_VERSION ?= 2.1.5.1
+    OPENIMAGEIO_VERSION ?= 2.2.0.0
     OPENEXR_VERSION ?= 2.2.0
     $(info Building against OpenImageIO ${OPENIMAGEIO_VERSION})
 else
@@ -191,8 +191,8 @@ ifeq (${SP_OS}, rhel7)
             -DBoost_LIBRARIES:STRING="${SPBOOST_LIB_DIR}/${SPBOOST_LIBNAMESTART}_filesystem${SPBOOST_LIBNAMEEND}.so;${SPBOOST_LIB_DIR}/${SPBOOST_LIBNAMESTART}_regex${SPBOOST_LIBNAMEEND}.so;${SPBOOST_LIB_DIR}/${SPBOOST_LIBNAMESTART}_system${SPBOOST_LIBNAMEEND}.so;${SPBOOST_LIB_DIR}/${SPBOOST_LIBNAMESTART}_thread${SPBOOST_LIBNAMEEND}.so"
     else
         # Our Boost >= 1.61 setup is MUCH simpler and more standard
-	SPBOOST_INC_DIR := /usr/include/boostroot/boost${BOOSTVERSSP}.0
-	SPBOOST_LIB_DIR := /usr/lib64/boostroot/boost${BOOSTVERSSP}.0
+        SPBOOST_INC_DIR := /usr/include/boostroot/boost${BOOSTVERSSP}.0
+        SPBOOST_LIB_DIR := /usr/lib64/boostroot/boost${BOOSTVERSSP}.0
         MY_CMAKE_FLAGS += \
             -DBOOST_INCLUDEDIR=${SPBOOST_INC_DIR} \
             -DBOOST_LIBRARYDIR=${SPBOOST_LIB_DIR}
@@ -263,6 +263,9 @@ ifeq (${SP_OS}, rhel7)
 
     ifeq (${OSL_SPIREZ},1)
         OpenImageIO_ROOT := ${REZ_PACKAGE_ROOT}/OpenImageIO/${OPENIMAGEIO_VERSION}/${SPI_COMPILER_PLATFORM}/python-${PYTHON_VERSION}/boost-${BOOSTVERSSP}
+        $(info OpenImageIO_ROOT ${OpenImageIO_ROOT})
+
+
     else ifeq (${OSL_SPCOMP2},1)
         OpenImageIO_ROOT := $(SPCOMP2_ROOT)/OpenImageIO/$(SPARCH)/v$(OPENIMAGEIO_SPCOMP2_VERSION)
     else ifeq (${OSL_ARNOLD},1)

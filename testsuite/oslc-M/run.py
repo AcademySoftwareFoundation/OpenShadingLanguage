@@ -13,5 +13,8 @@ command += oslc ("-q -MMD -MFmydep.d test.osl")
 # Test deps to stdout
 command += oslc ("-MM test.osl")
 
-outputs = [ "test.d", "mydep.d", "out.txt" ]
+# Test deps with custom target
+command += oslc ("-q -MMD -MF mycustom.d -MT customtarget test.osl")
+
+outputs = [ "test.d", "mydep.d", "mycustom.d", "out.txt" ]
 

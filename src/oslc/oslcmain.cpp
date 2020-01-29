@@ -66,7 +66,8 @@ usage ()
         "\t-buffer        (debugging) Force compile from buffer\n"
         "\t-MD, -MMD      Write a depfile containing headers used, to a file\n"
         "\t-M, -MM        Like -MD, but write depfile to stdout\n"
-        "\t-MF<file>      Specify the name of the depfile to output (for -MD, -MMD)\n"
+        "\t-MF filename   Specify the name of the depfile to output (for -MD, -MMD)\n"
+        "\t-MT target     Specify a custom dependency target name for -M...\n"
         ;
 }
 
@@ -165,9 +166,15 @@ main (int argc, const char *argv[])
                  || ! strcmp(argv[a], "-MD") || !strcmp(argv[a], "--write-dependencies")
                  || ! strcmp(argv[a], "-MMD") || !strcmp(argv[a], "--write-user-dependencies")
                  || OIIO::Strutil::starts_with(argv[a], "-MF")
+                 || OIIO::Strutil::starts_with(argv[a], "-MT")
                  ) {
             // Valid command-line argument
             args.emplace_back(argv[a]);
+            if (a < argc-1 &&
+                (!strcmp(argv[a], "-MF") || !strcmp(argv[a], "-MT"))) {
+                ++a;
+                args.emplace_back(argv[a]);
+            }
         }
         else if (! strcmp (argv[a], "-o") && a < argc-1) {
             // Output filepath

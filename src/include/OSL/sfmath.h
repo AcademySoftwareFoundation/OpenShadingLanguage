@@ -827,7 +827,7 @@ namespace sfm
     {
         float atan2xy = sfm::atan2(y.val(), x.val());
         // NOTE: using bitwise & to avoid branches
-        float denom = (x.val() == 0 & y.val() == 0) ? 0.0f : 1.0f / (x.val() * x.val() + y.val() * y.val());
+        float denom = ((x.val() == 0) & (y.val() == 0)) ? 0.0f : 1.0f / (x.val() * x.val() + y.val() * y.val());
         return Dual2<float> ( atan2xy, (y.val()*x.dx() - x.val()*y.dx())*denom,
                                        (y.val()*x.dy() - x.val()*y.dy())*denom );
     }
@@ -973,7 +973,7 @@ namespace sfm
     normalize (const Dual2<Vec3> &a)
     {
         // NOTE: using bitwise & to avoid branches
-        if (OSL_UNLIKELY(a.val().x == 0.0f & a.val().y == 0.0f & a.val().z == 0.0f)) {
+        if (OSL_UNLIKELY((a.val().x == 0.0f) & (a.val().y == 0.0f) & (a.val().z == 0.0f))) {
             return Dual2<Vec3> (Vec3(0.0f, 0.0f, 0.0f),
                                 Vec3(0.0f, 0.0f, 0.0f),
                                 Vec3(0.0f, 0.0f, 0.0f));

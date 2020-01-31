@@ -26,86 +26,18 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <limits>
+#include <OSL/sfmath.h>
 
-#include "oslexec_pvt.h"
-#include <OSL/oslnoise.h>
-#include <OSL/dual_vec.h>
-#include <OSL/Imathx.h>
-
-#include <OpenImageIO/fmath.h>
-
+#include "gabornoise.h"
 
 OSL_NAMESPACE_ENTER
 
 namespace pvt {
 
-
-// TODO: It would be preferable to use the Imath versions of these functions in
-//       all cases, but these templates should suffice until a more complete
-//       device-friendly version of Imath is available.
-namespace hostdevice {
-template <typename T> inline OSL_HOSTDEVICE T clamp (T x, T lo, T hi);
-#ifndef __CUDA_ARCH__
-template <> inline OSL_HOSTDEVICE double clamp<double> (double x, double lo, double hi) { return Imath::clamp (x, lo, hi); }
-template <> inline OSL_HOSTDEVICE float  clamp<float>  (float x, float lo, float hi)    { return Imath::clamp (x, lo, hi); }
-#else
-template <> inline OSL_HOSTDEVICE double clamp<double> (double x, double lo, double hi) { return (x < lo) ? lo : ((x > hi) ? hi : x); }
-template <> inline OSL_HOSTDEVICE float  clamp<float>  (float x, float lo, float hi)    { return (x < lo) ? lo : ((x > hi) ? hi : x); }
-#endif
-}
-
-
-static OSL_DEVICE const float Gabor_Frequency = 2.0;
-static OSL_DEVICE const float Gabor_Impulse_Weight = 1;
-
-// The Gabor kernel in theory has infinite support (its envelope is
-// a Gaussian).  To restrict the distance at which we must sum the
-// kernels, we only consider those whose Gaussian envelopes are
-// above the truncation threshold, as a portion of the Gaussian's
-// peak value.
-static OSL_DEVICE const float Gabor_Truncate = 0.02f;
-
-
-
-// Very fast random number generator based on [Borosh & Niederreiter 1983]
-// linear congruential generator.
-class fast_rng {
-public:
-    // seed based on the cell containing P
-    OSL_DEVICE
-    fast_rng (const Vec3 &p, int seed=0) {
-        // Use guts of cellnoise
-        unsigned int pi[4] = { unsigned(OIIO::ifloor(p[0])),
-                               unsigned(OIIO::ifloor(p[1])),
-                               unsigned(OIIO::ifloor(p[2])),
-                               unsigned(seed) };
-        m_seed = inthash<4>(pi);
-        if (! m_seed)
-            m_seed = 1;
-    }
-    // Return uniform on [0,1)
-    OSL_HOSTDEVICE
-    float operator() () {
-        return (m_seed *= 3039177861u) / float(UINT_MAX);
-    }
-    // Return poisson distribution with the given mean
-    OSL_HOSTDEVICE
-    int poisson (float mean) {
-        float g = expf (-mean);
-        unsigned int em = 0;
-        float t = (*this)();
-        while (t > g) {
-            ++em;
-            t *= (*this)();
-        }
-        return em;
-    }
-private:
-    unsigned int m_seed;
-};
-
-
+// Use some helpers to avoid aliasing issues when mixing data member
+// access vs. reinterpret casted array based access (non-conforming C++).
+using sfm::Matrix33;
+using sfm::make_matrix33_cols;
 
 struct GaborParams {
     Vec3 omega;
@@ -140,7 +72,9 @@ struct GaborParams {
 #endif
 
 #ifndef __CUDA_ARCH__
-        static const float SQRT_PI_OVER_LN2 = sqrtf (M_PI / M_LN2);
+        //static const float SQRT_PI_OVER_LN2 = sqrtf (M_PI / M_LN2);
+        // To match GCC result of sqrtf (M_PI / M_LN2)
+        static constexpr float SQRT_PI_OVER_LN2 = 2.128934e+00f;
 #else
         #define SQRT_PI_OVER_LN2 (2.12893403886245235863f)
 #endif
@@ -157,73 +91,6 @@ struct GaborParams {
         sqrt_lambda_inv = 1.0f / sqrtf(lambda);
     }
 };
-
-
-
-// The Gabor kernel is a harmonic (cosine) modulated by a Gaussian
-// envelope.  This version is augmented with a phase, per [Lagae2011].
-//   \param  weight      magnitude of the pulse
-//   \param  omega       orientation of the harmonic
-//   \param  phi         phase of the harmonic.
-//   \param  bandwidth   width of the gaussian envelope (called 'a'
-//                          in [Lagae09].
-//   \param  x           the position being sampled
-template <class VEC>   // VEC should be Vec3 or Vec2
-inline Dual2<float> OSL_HOSTDEVICE
-gabor_kernel (const Dual2<float> &weight, const VEC &omega,
-              const Dual2<float> &phi, float bandwidth, const Dual2<VEC> &x)
-{
-    // see Equation 1
-    Dual2<float> g = exp (float(-M_PI) * (bandwidth * bandwidth) * dot(x,x));
-    Dual2<float> h = cos (float(M_TWO_PI) * dot(omega,x) + phi);
-    return weight * g * h;
-}
-
-
-
-inline OSL_HOSTDEVICE void
-slice_gabor_kernel_3d (const Dual2<float> &d, float w, float a,
-                       const Vec3 &omega, float phi,
-                       Dual2<float> &w_s, Vec2 &omega_s, Dual2<float> &phi_s)
-{
-    // Equation 6
-    w_s = w * exp(float(-M_PI) * (a*a)*(d*d));
-    omega_s[0] = omega[0];
-    omega_s[1] = omega[1];
-    phi_s = phi - float(M_TWO_PI) * d * omega[2];
-}
-
-
-
-static OSL_HOSTDEVICE void
-filter_gabor_kernel_2d (const Matrix22 &filter, const Dual2<float> &w, float a,
-                        const Vec2 &omega, const Dual2<float> &phi,
-                        Dual2<float> &w_f, float &a_f,
-                        Vec2 &omega_f, Dual2<float> &phi_f)
-{
-    //  Equation 10
-    Matrix22 Sigma_f = filter;
-    Dual2<float> c_G = w;
-    Vec2 mu_G = omega;
-    Matrix22 Sigma_G = (a * a / float(M_TWO_PI)) * Matrix22();
-    float c_F = 1.0f / (float(M_TWO_PI) * sqrtf(determinant(Sigma_f)));
-    Matrix22 Sigma_F = float(1.0 / (4.0 * M_PI * M_PI)) * Sigma_f.inverse();
-    Matrix22 Sigma_G_Sigma_F = Sigma_G + Sigma_F;
-    Dual2<float> c_GF = c_F * c_G
-        * (1.0f / (float(M_TWO_PI) * sqrtf(determinant(Sigma_G_Sigma_F))))
-        * expf(-0.5f * dot(Sigma_G_Sigma_F.inverse()*mu_G, mu_G));
-    Matrix22 Sigma_G_i = Sigma_G.inverse();
-    Matrix22 Sigma_GF = (Sigma_F.inverse() + Sigma_G_i).inverse();
-    Vec2 mu_GF;
-    Matrix22 Sigma_GF_Gi = Sigma_GF * Sigma_G_i;
-    Sigma_GF_Gi.multMatrix (mu_G, mu_GF);
-    w_f = c_GF;
-    a_f = sqrtf(M_TWO_PI * sqrtf(determinant(Sigma_GF)));
-    omega_f = mu_GF;
-    phi_f = phi;
-}
-
-
 
 // Choose an omega and phi value for a particular gabor impulse,
 // based on the user-selected noise mode.
@@ -264,32 +131,10 @@ gabor_sample (GaborParams &gp, const Vec3 &/*x_c*/, fast_rng &rng,
 }
 
 
-
-inline OSL_HOSTDEVICE float
-wrap (float s, float period)
-{
-    period = floorf (period);
-    if (period < 1.0f)
-        period = 1.0f;
-    return s - period * floorf (s / period);
-}
-
-
-
-static OSL_HOSTDEVICE Vec3
-wrap (const Vec3 &s, const Vec3 &period)
-{
-    return Vec3 (wrap (s[0], period[0]),
-                 wrap (s[1], period[1]),
-                 wrap (s[2], period[2]));
-}
-
-
-
 // Evaluate the summed contribution of all gabor impulses within the
 // cell whose corner is c_i.  x_c_i is vector from x (the point
 // we are trying to evaluate noise at) and c_i.
-OSL_HOSTDEVICE Dual2<float>
+static OSL_HOSTDEVICE Dual2<float>
 gabor_cell (GaborParams &gp, const Vec3 &c_i, const Dual2<Vec3> &x_c_i,
             int seed = 0)
 {
@@ -358,38 +203,6 @@ gabor_cell (GaborParams &gp, const Vec3 &c_i, const Dual2<Vec3> &x_c_i,
 }
 
 
-
-// Normalize v and set a and b to be unit vectors (any two unit vectors)
-// that are orthogonal to v and each other.  We get the first
-// orthonormal by taking the cross product of v and (1,0,0), unless v
-// points roughly toward (1,0,0), in which case we cross with (0,1,0).
-// Either way, we get something orthogonal.  Then cross(v,a) is mutually
-// orthogonal to the other two.
-inline OSL_HOSTDEVICE void
-make_orthonormals (Vec3 &v, Vec3 &a, Vec3 &b)
-{
-    v.normalize();
-    if (fabsf(v[0]) < 0.9f)
-	a.setValue (0.0f, v[2], -v[1]);   // v X (1,0,0)
-    else
-        a.setValue (-v[2], 0.0f, v[0]);   // v X (0,1,0)
-    a.normalize ();
-    b = v.cross (a);
-//    b.normalize ();  // note: not necessary since v is unit length
-}
-
-
-
-// Helper function: per-component 'floor' of a Dual2<Vec3>.
-inline OSL_HOSTDEVICE Vec3
-floor (const Dual2<Vec3> &vd)
-{
-    const Vec3 &v (vd.val());
-    return Vec3 (floorf(v[0]), floorf(v[1]), floorf(v[2]));
-}
-
-
-
 // Sum the contributions of gabor impulses in all neighboring cells
 // surrounding position x_g.
 static OSL_HOSTDEVICE Dual2<float>
@@ -421,25 +234,6 @@ gabor_evaluate (GaborParams &gp, const Dual2<Vec3> &x, int seed=0)
     return gabor_grid (gp, x_g, seed);
 }
 
-
-
-inline OSL_HOSTDEVICE Matrix33
-make_matrix33_rows (const Vec3 &a, const Vec3 &b, const Vec3 &c)
-{
-    return Matrix33 (a[0], a[1], a[2],
-                     b[0], b[1], b[2],
-                     c[0], c[1], c[2]);
-}
-
-
-
-inline OSL_HOSTDEVICE Matrix33
-make_matrix33_cols (const Vec3 &a, const Vec3 &b, const Vec3 &c)
-{
-    return Matrix33 (a[0], b[0], c[0],
-                     a[1], b[1], c[1],
-                     a[2], b[2], c[2]);
-}
 
 
 
@@ -490,8 +284,6 @@ gabor (const Dual2<float> &x, const NoiseParams *opt)
     return gabor (make_Vec3(x), opt);
 }
 
-
-
 OSL_HOSTDEVICE Dual2<float>
 gabor (const Dual2<float> &x, const Dual2<float> &y, const NoiseParams *opt)
 {
@@ -500,11 +292,10 @@ gabor (const Dual2<float> &x, const Dual2<float> &y, const NoiseParams *opt)
 }
 
 
-
 OSL_HOSTDEVICE Dual2<float>
 gabor (const Dual2<Vec3> &P, const NoiseParams *opt)
 {
-    OSL_DASSERT(opt);
+    OSL_DASSERT (opt);
     GaborParams gp (*opt);
 
     if (gp.do_filter)
@@ -518,16 +309,12 @@ gabor (const Dual2<Vec3> &P, const NoiseParams *opt)
     return result * scale;
 }
 
-
-
-
 OSL_HOSTDEVICE Dual2<Vec3>
 gabor3 (const Dual2<float> &x, const NoiseParams *opt)
 {
     // for now, just slice 3D
     return gabor3 (make_Vec3(x), opt);
 }
-
 
 
 OSL_HOSTDEVICE Dual2<Vec3>
@@ -538,11 +325,10 @@ gabor3 (const Dual2<float> &x, const Dual2<float> &y, const NoiseParams *opt)
 }
 
 
-
 OSL_HOSTDEVICE Dual2<Vec3>
 gabor3 (const Dual2<Vec3> &P, const NoiseParams *opt)
 {
-    OSL_DASSERT(opt);
+    OSL_DASSERT (opt);
     GaborParams gp (*opt);
 
     if (gp.do_filter)
@@ -558,7 +344,6 @@ gabor3 (const Dual2<Vec3> &P, const NoiseParams *opt)
 
     return result * scale;
 }
-
 
 
 
@@ -584,12 +369,12 @@ pgabor (const Dual2<float> &x, const Dual2<float> &y,
 OSL_HOSTDEVICE Dual2<float>
 pgabor (const Dual2<Vec3> &P, const Vec3 &Pperiod, const NoiseParams *opt)
 {
-    OSL_DASSERT(opt);
+    OSL_DASSERT (opt);
     GaborParams gp (*opt);
 
     gp.periodic = true;
     gp.period = Pperiod;
-    
+
     if (gp.do_filter)
         gabor_setup_filter (P, gp);
 
@@ -609,8 +394,6 @@ pgabor3 (const Dual2<float> &x, float xperiod, const NoiseParams *opt)
     return pgabor3 (make_Vec3(x), Vec3(xperiod,0.0f,0.0f), opt);
 }
 
-
-
 OSL_HOSTDEVICE Dual2<Vec3>
 pgabor3 (const Dual2<float> &x, const Dual2<float> &y,
         float xperiod, float yperiod, const NoiseParams *opt)
@@ -619,17 +402,15 @@ pgabor3 (const Dual2<float> &x, const Dual2<float> &y,
     return pgabor3 (make_Vec3(x,y), Vec3(xperiod,yperiod,0.0f), opt);
 }
 
-
-
 OSL_HOSTDEVICE Dual2<Vec3>
 pgabor3 (const Dual2<Vec3> &P, const Vec3 &Pperiod, const NoiseParams *opt)
 {
-    OSL_DASSERT(opt);
+    OSL_DASSERT (opt);
     GaborParams gp (*opt);
 
     gp.periodic = true;
     gp.period = Pperiod;
-    
+
     if (gp.do_filter)
         gabor_setup_filter (P, gp);
 
@@ -646,4 +427,5 @@ pgabor3 (const Dual2<Vec3> &P, const Vec3 &Pperiod, const NoiseParams *opt)
 
 
 }; // namespace pvt
+
 OSL_NAMESPACE_EXIT

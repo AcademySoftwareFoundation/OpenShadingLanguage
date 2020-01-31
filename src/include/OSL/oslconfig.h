@@ -185,7 +185,7 @@ namespace pvt {
 #endif
 
 #if (OSL_CPLUSPLUS_VERSION >= 17)
-    template<class... Ts>
+    template<class... ListT>
     using conjunction = std::conjunction<ListT...>;
 #else
     template<class... ListT>

@@ -1,3 +1,7 @@
+Release 1.10.10 -- ? Mar 2020 (compared to 1.10.9)
+--------------------------------------------------
+
+
 Release 1.10.9 -- 1 Feb 2020 (compared to 1.10.8)
 --------------------------------------------------
 * Windows fix for incorrectly interpreting paths to oslc.exe as if they were

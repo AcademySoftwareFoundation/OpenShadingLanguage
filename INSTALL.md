@@ -99,3 +99,8 @@ Here are the steps to check out, build, and test the OSL distribution:
    test suite with:
 
         make test
+        
+Troubleshooting
+----------------
+
+- [Build issues on macOS Catalina (fatal error: 'wchar.h' file not found)](https://github.com/imageworks/OpenShadingLanguage/issues/1055#issuecomment-581920327)

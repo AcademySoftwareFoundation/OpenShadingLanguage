@@ -1788,19 +1788,6 @@ private:
 
     Dictionary *m_dictionary;
 
-    // Struct for holding a record of getattributes we've tried and
-    // failed, to speed up subsequent getattributes calls.
-    struct GetAttribQuery {
-        void *objdata;
-        ustring obj_name, attr_name;
-        TypeDesc attr_type;
-        int array_lookup, index;
-        GetAttribQuery () : objdata(NULL), array_lookup(0), index(0) { }
-    };
-    static const int FAILED_ATTRIBS = 16;
-    GetAttribQuery m_failed_attribs[FAILED_ATTRIBS];
-    int m_next_failed_attrib;
-
     // Buffering of error messages and printfs
     typedef std::pair<ErrorHandler::ErrCode, std::string> ErrorItem;
     mutable std::vector<ErrorItem> m_buffered_errors;

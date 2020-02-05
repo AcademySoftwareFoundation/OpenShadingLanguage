@@ -45,7 +45,7 @@ static mutex buffered_errors_mutex;
 ShadingContext::ShadingContext (ShadingSystemImpl &shadingsys,
                                 PerThreadInfo *threadinfo)
     : m_shadingsys(shadingsys), m_renderer(m_shadingsys.renderer()),
-      m_group(NULL), m_max_warnings(shadingsys.max_warnings_per_thread()), m_dictionary(NULL), m_next_failed_attrib(0)
+      m_group(NULL), m_max_warnings(shadingsys.max_warnings_per_thread()), m_dictionary(NULL)
 {
     m_shadingsys.m_stat_contexts += 1;
     m_threadinfo = threadinfo ? threadinfo : shadingsys.get_perthread_info ();
@@ -325,21 +325,6 @@ ShadingContext::osl_get_attribute (ShaderGlobals *sg, void *objdata,
 #endif
     bool ok;
 
-    for (auto& f : m_failed_attribs) {
-        if ((!obj_name.empty() || f.objdata == objdata) &&
-            f.attr_name == attr_name && f.obj_name == obj_name &&
-            f.attr_type == attr_type && f.array_lookup == array_lookup &&
-            f.index == index && f.objdata) {
-#if 0
-            double time = timer();
-            shadingsys().m_stat_getattribute_time += time;
-            shadingsys().m_stat_getattribute_fail_time += time;
-            shadingsys().m_stat_getattribute_calls += 1;
-#endif
-            return false;
-        }
-    }
-
     if (array_lookup)
         ok = renderer()->get_array_attribute (sg, dest_derivs,
                                               obj_name, attr_type,
@@ -348,16 +333,6 @@ ShadingContext::osl_get_attribute (ShaderGlobals *sg, void *objdata,
         ok = renderer()->get_attribute (sg, dest_derivs,
                                         obj_name, attr_type,
                                         attr_name, attr_dest);
-    if (!ok) {
-        int i = m_next_failed_attrib;
-        m_failed_attribs[i].objdata = objdata;
-        m_failed_attribs[i].obj_name = obj_name;
-        m_failed_attribs[i].attr_name = attr_name;
-        m_failed_attribs[i].attr_type = attr_type;
-        m_failed_attribs[i].array_lookup = array_lookup;
-        m_failed_attribs[i].index = index;
-        m_next_failed_attrib = (i == FAILED_ATTRIBS-1) ? 0 : (i+1);
-    }
 
 #if 0
     double time = timer();

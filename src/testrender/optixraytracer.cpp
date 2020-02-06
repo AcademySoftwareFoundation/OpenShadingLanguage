@@ -82,10 +82,14 @@ OSL_NAMESPACE_ENTER
     }                                                                   \
 }
 
+#ifdef OSL_USE_OPTIX
+#if (OPTIX_VERSION >= 70000)
 static void context_log_cb( unsigned int level, const char* tag, const char* message, void* /*cbdata */ )
 {
-//    std::cerr << "[ ** LOGCALLBACK** " << std::setw( 2 ) << level << "][" << std::setw( 12 ) << tag << "]: " << message << "\n";
+    std::cerr << "[ ** LOGCALLBACK** " << std::setw( 2 ) << level << "][" << std::setw( 12 ) << tag << "]: " << message << "\n";
 }
+#endif
+#endif
 
 OptixRaytracer::OptixRaytracer ()
 {

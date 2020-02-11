@@ -9,7 +9,7 @@ Dependencies
 OSL requires the following dependencies or tools.
 NEW or CHANGED dependencies since the last major release are **bold**.
 
-* Build system: [CMake](https://cmake.org/) 3.2.2 or newer
+* Build system: [CMake](https://cmake.org/) 3.12 or newer
 
 * A suitable C++11 compiler to build OSL itself, which may be any of:
    - GCC 4.8.5 or newer (through gcc 8)
@@ -39,7 +39,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
     DYLD_LIBRARY_PATH on OS X) and then OSL's build scripts will be able
     to find it.
 
-* **[LLVM](http://www.llvm.org) 5.0, 6.0, 7.0, 8.0, or 9.0**, including
+* **[LLVM](http://www.llvm.org) 6.0, 7.0, 8.0, or 9.0**, including
   clang libraries.
 
 * [Boost](www.boost.org) 1.55 or newer.

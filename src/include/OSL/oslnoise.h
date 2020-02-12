@@ -198,8 +198,8 @@ bjfinal (const int4& a_, const int4& b_, const int4& c_)
 /// hash an array of N 32 bit values into a pseudo-random value
 /// based on my favorite hash: http://burtleburtle.net/bob/c/lookup3.c
 /// templated so that the compiler can unroll the loops for us
-template <int N> OSL_HOSTDEVICE
-OSL_FORCEINLINE unsigned int
+template <int N>
+OSL_FORCEINLINE OSL_HOSTDEVICE unsigned int
 reference_inthash (const unsigned int k[N]) {
     // now hash the data!
     unsigned int a, b, c, len = N;
@@ -232,7 +232,7 @@ using RequireAllSame = typename std::enable_if<conjunction<std::is_same<ListT, H
 // NOTE: only accept unsigned int's so that overloads with unsigned int's will be chosen.
 // Callers with "int" parameters will need to static_cast<unsigned int>(param)
 template<typename ...ListT, typename = RequireAllSame<unsigned int, ListT...> >
-OSL_HOSTDEVICE OSL_FORCEINLINE unsigned int
+OSL_FORCEINLINE OSL_HOSTDEVICE unsigned int
 inthash (ListT... uintList)  {
     const int count = sizeof...(uintList);
 	const unsigned int iv[count] = {uintList...};
@@ -251,7 +251,7 @@ inthash (ListT... uintList)  {
 	// The upshot is no need to create a k[N] on the stack and hopefully
 	// simpler time for optimizer as it has no need to deal with while
 	// loop and switch statement.
-	OSL_HOSTDEVICE OSL_FORCEINLINE unsigned int
+	OSL_FORCEINLINE OSL_HOSTDEVICE unsigned int
 	inthash (const unsigned int k0) {
 		// now hash the data!
 		unsigned int start_val = 0xdeadbeef + (1 << 2) + 13;
@@ -261,7 +261,7 @@ inthash (ListT... uintList)  {
 		return c;
 	}
 
-	OSL_HOSTDEVICE OSL_FORCEINLINE unsigned int
+	OSL_FORCEINLINE OSL_HOSTDEVICE unsigned int
 	inthash (const unsigned int k0, const unsigned int k1) {
 		// now hash the data!
 		unsigned int start_val = 0xdeadbeef + (2 << 2) + 13;
@@ -272,7 +272,7 @@ inthash (ListT... uintList)  {
 		return c;
 	}
 
-	OSL_HOSTDEVICE OSL_FORCEINLINE unsigned int
+	OSL_FORCEINLINE OSL_HOSTDEVICE unsigned int
 	inthash (const unsigned int k0, const unsigned int k1, const unsigned int k2) {
 		// now hash the data!
 		unsigned int start_val = 0xdeadbeef + (3 << 2) + 13;
@@ -284,7 +284,7 @@ inthash (ListT... uintList)  {
 		return c;
 	}
 
-	OSL_HOSTDEVICE OSL_FORCEINLINE unsigned int
+	OSL_FORCEINLINE OSL_HOSTDEVICE unsigned int
 	inthash (const unsigned int k0, const unsigned int k1, const unsigned int k2, const unsigned int k3) {
 		// now hash the data!
 		unsigned int start_val = 0xdeadbeef + (4 << 2) + 13;
@@ -298,7 +298,7 @@ inthash (ListT... uintList)  {
 		return c;
 	}
 
-	OSL_HOSTDEVICE OSL_FORCEINLINE unsigned int
+	OSL_FORCEINLINE OSL_HOSTDEVICE unsigned int
 	inthash (const unsigned int k0, const unsigned int k1, const unsigned int k2, const unsigned int k3, const unsigned int k4) {
 		// now hash the data!
 		unsigned int start_val = 0xdeadbeef + (5 << 2) + 13;
@@ -361,7 +361,7 @@ inthash_simd (const int4& key_x, const int4& key_y, const int4& key_z, const int
 // controlling how the float inputs are transformed
 template<typename DerivedT>
 struct IntHashNoiseBase  {
-	IntHashNoiseBase () { }
+	OSL_FORCEINLINE OSL_HOSTDEVICE IntHashNoiseBase () { }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x) const {
     	result = hashFloat(x);
@@ -399,13 +399,13 @@ struct IntHashNoiseBase  {
 
 private:
     template<typename ...ListT>
-    OSL_HOSTDEVICE OSL_FORCEINLINE float
+    OSL_FORCEINLINE OSL_HOSTDEVICE float
     hashFloat (ListT... floatList) const {
         return bits_to_01(inthash(DerivedT::transformToUint(floatList)...));
     }
 
     template<typename ...ListT>
-    OSL_HOSTDEVICE OSL_FORCEINLINE Vec3
+    OSL_FORCEINLINE OSL_HOSTDEVICE Vec3
     hashVec (ListT... floatList) const {
     	return inthashVec(DerivedT::transformToUint(floatList)...);
     }
@@ -418,7 +418,7 @@ private:
     // and extra seed values, but leave door open for overloads of inthashVec
     // for specific parameter combinations
     template<typename ...ListT>
-    OSL_HOSTDEVICE OSL_FORCEINLINE Vec3
+    OSL_FORCEINLINE OSL_HOSTDEVICE Vec3
     inthashVec (ListT... uintList) const {
         constexpr int N = sizeof...(uintList) + 1;
     	unsigned int k[N] = {uintList...};
@@ -434,7 +434,7 @@ private:
     // extra seed values, but leave door open for overloads of inthashVec
     // for specific parameter combinations
     template<typename ...ListT>
-    OSL_HOSTDEVICE OSL_FORCEINLINE Vec3
+    OSL_FORCEINLINE OSL_HOSTDEVICE Vec3
 	inthashVec (ListT... uintList) const  {
         return Vec3(bits_to_01(inthash(uintList..., 0u)),
         			bits_to_01(inthash(uintList..., 1u)),
@@ -485,9 +485,9 @@ private:
 };
 
 struct CellNoise: public IntHashNoiseBase<CellNoise>  {
-    CellNoise () { }
+	OSL_FORCEINLINE OSL_HOSTDEVICE CellNoise () { }
 
-    static OSL_HOSTDEVICE OSL_FORCEINLINE unsigned int
+    static OSL_FORCEINLINE OSL_HOSTDEVICE unsigned int
 	transformToUint(float val)
     {
     	return OIIO::ifloor(val);
@@ -495,9 +495,9 @@ struct CellNoise: public IntHashNoiseBase<CellNoise>  {
 };
 
 struct HashNoise: public IntHashNoiseBase<HashNoise>  {
-	HashNoise () { }
+	OSL_FORCEINLINE OSL_HOSTDEVICE HashNoise () { }
 
-    static OSL_HOSTDEVICE OSL_FORCEINLINE unsigned int
+    static OSL_FORCEINLINE OSL_HOSTDEVICE unsigned int
 	transformToUint(float val)
     {
     	return sfm::bit_cast<float,unsigned int>(val);
@@ -510,7 +510,7 @@ struct HashNoise: public IntHashNoiseBase<HashNoise>  {
 // its underlying implementation.
 template <typename BaseNoiseT>
 struct PeriodicAdaptionOf {
-	PeriodicAdaptionOf () { }
+	OSL_FORCEINLINE OSL_HOSTDEVICE PeriodicAdaptionOf () { }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x, float px) const {
     	m_impl(result, wrap (x, px));
@@ -640,9 +640,9 @@ inthashf (const float *x, float y)
 // combinations be specified using polymorphism.  Main reason is so that
 // different versions can pass parameters by value vs. reference.
 //template <typename B, typename F>
-//OSL_FORCEINLINE F select (B b, const F& t, const F& f) { return b ? t : f; }
+//OSL_FORCEINLINE OSL_HOSTDEVICE F select (B b, const F& t, const F& f) { return b ? t : f; }
 
-OSL_FORCEINLINE float select(const bool b, float t, float f) {
+OSL_FORCEINLINE OSL_HOSTDEVICE float select(const bool b, float t, float f) {
     // NOTE:  parameters must NOT be references, to avoid inlining caller's creation of
     // these values down inside the conditional assignments which can create to complex
     // of a code flow for Clang's vectorizer to handle
@@ -652,7 +652,7 @@ OSL_FORCEINLINE float select(const bool b, float t, float f) {
     return b ? t : f;
 }
 
-OSL_FORCEINLINE Dual2<float> select(const bool b, const Dual2<float> &t, const Dual2<float> &f) {
+OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float> select(const bool b, const Dual2<float> &t, const Dual2<float> &f) {
     // Because t & f are a references, we don't want inlining to expand t.val(), t.dx(), or t.dy()
     // inside the conditional branch creating a more complex flow by forcing the inlined
     // abstract syntax tree to only be evaluated when the condition is true.
@@ -733,11 +733,11 @@ OSL_FORCEINLINE Dual2<float4> select (const int4& b, const Dual2<float4>& t, con
 // different versions can pass parameters by value vs. reference.
 //template <typename B, typename F>
 //template<typename FLOAT, typename BOOL>
-//OSL_FORCEINLINE FLOAT negate_if (const FLOAT& val, const BOOL& b) {
+//OSL_FORCEINLINE OSL_HOSTDEVICE FLOAT negate_if (const FLOAT& val, const BOOL& b) {
 //    return b ? -val : val;
 //}
 
-OSL_FORCEINLINE float negate_if (const float val, const bool cond) {
+OSL_FORCEINLINE OSL_HOSTDEVICE float negate_if (const float val, const bool cond) {
     // NOTE:  parameters must NOT be references, to avoid inlining caller's creation of
     // these values down inside the conditional assignments which can create to complex
     // of a code flow for vectorizer to handle
@@ -746,7 +746,7 @@ OSL_FORCEINLINE float negate_if (const float val, const bool cond) {
 }
 
 
-OSL_FORCEINLINE Dual2<float> negate_if(const Dual2<float> &val, const bool cond) {
+OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float> negate_if(const Dual2<float> &val, const bool cond) {
     // NOTE: negation happens outside of conditional, then is blended based on the condition
     Dual2<float> neg_val(-val);
 
@@ -837,8 +837,8 @@ OSL_FORCEINLINE Dual2<float> extract (const Dual2<float4>& a)
 // Equivalent to OIIO::bilerp (a, b, c, d, u, v), but if abcd are already
 // packed into a float4. We assume T is float and VECTYPE is float4,
 // but it also works if T is Dual2<float> and VECTYPE is Dual2<float4>.
-template<typename T, typename VECTYPE> OSL_HOSTDEVICE
-OSL_FORCEINLINE T bilerp (VECTYPE abcd, T u, T v) {
+template<typename T, typename VECTYPE>
+OSL_FORCEINLINE OSL_HOSTDEVICE T bilerp (VECTYPE abcd, T u, T v) {
     VECTYPE xx = OIIO::lerp (abcd, OIIO::simd::shuffle<1,1,3,3>(abcd), u);
     return OIIO::simd::extract<0>(OIIO::lerp (xx,OIIO::simd::shuffle<2>(xx), v));
 }
@@ -870,7 +870,7 @@ OSL_FORCEINLINE float trilerp (const float4& abcd, const float4& efgh, const flo
 
 
 // always return a value inside [0,b) - even for negative numbers
-inline OSL_HOSTDEVICE int imod(int a, int b) {
+OSL_FORCEINLINE OSL_HOSTDEVICE int imod(int a, int b) {
 #if 0
     a %= b;
     return a < 0 ? a + b : a;
@@ -895,13 +895,13 @@ inline int4 imod(const int4& a, int b) {
 // floorfrac return ifloor as well as the fractional remainder
 // FIXME: already implemented inside OIIO but can't easily override it for duals
 //        inside a different namespace
-inline OSL_HOSTDEVICE float floorfrac(float x, int* i) {
+OSL_FORCEINLINE OSL_HOSTDEVICE float floorfrac(float x, int* i) {
     *i = OIIO::ifloor(x);
     return x - *i;
 }
 
 // floorfrac with derivs
-inline OSL_HOSTDEVICE Dual2<float> floorfrac(const Dual2<float> &x, int* i) {
+OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float> floorfrac(const Dual2<float> &x, int* i) {
     float frac = floorfrac(x.val(), i);
     // slope of x is not affected by this operation
     return Dual2<float>(frac, x.dx(), x.dy());
@@ -932,8 +932,8 @@ inline Dual2<float4> floorfrac(const Dual2<float4> &x, int4* i) {
 
 // Perlin 'fade' function. Can be overloaded for float, Dual2, as well
 // as float4 / Dual2<float4>.
-template <typename T> OSL_HOSTDEVICE
-OSL_FORCEINLINE T fade (const T &t) {
+template <typename T>
+OSL_HOSTDEVICE OSL_FORCEINLINE T fade (const T &t) {
    return t * t * t * (t * (t * T(6.0f) - T(15.0f)) + T(10.0f));
 }
 
@@ -949,16 +949,16 @@ OSL_FORCEINLINE T fade (const T &t) {
 //    3D:   0.936
 //    4D:   0.870
 
-template <typename T> OSL_HOSTDEVICE
-OSL_FORCEINLINE T grad (int hash, const T &x) {
+template <typename T>
+OSL_FORCEINLINE OSL_HOSTDEVICE T grad (int hash, const T &x) {
     int h = hash & 15;
     float g = 1 + (h & 7);  // 1, 2, .., 8
     if (h&8) g = -g;        // random sign
     return g * x;           // dot-product
 }
 
-template <typename I, typename T> OSL_HOSTDEVICE
-OSL_FORCEINLINE T grad (const I &hash, const T &x, const T &y) {
+template <typename I, typename T>
+OSL_FORCEINLINE OSL_HOSTDEVICE T grad (const I &hash, const T &x, const T &y) {
     // 8 possible directions (+-1,+-2) and (+-2,+-1)
     I h = hash & 7;
     T u = select (h<4, x, y);
@@ -967,8 +967,8 @@ OSL_FORCEINLINE T grad (const I &hash, const T &x, const T &y) {
     return negate_if(u, h&1) + negate_if(v, h&2);
 }
 
-template <typename I, typename T> OSL_HOSTDEVICE
-OSL_FORCEINLINE T grad (const I &hash, const T &x, const T &y, const T &z) {
+template <typename I, typename T>
+OSL_FORCEINLINE OSL_HOSTDEVICE T grad (const I &hash, const T &x, const T &y, const T &z) {
     // use vectors pointing to the edges of the cube
     I h = hash & 15;
     T u = select (h<8, x, y);
@@ -976,8 +976,8 @@ OSL_FORCEINLINE T grad (const I &hash, const T &x, const T &y, const T &z) {
     return negate_if(u,h&1) + negate_if(v,h&2);
 }
 
-template <typename T> OSL_HOSTDEVICE
-OSL_FORCEINLINE T grad (const int hash, const T &x, const T &y, const T &z) {
+template <typename T>
+OSL_FORCEINLINE OSL_HOSTDEVICE T grad (const int hash, const T &x, const T &y, const T &z) {
     // use vectors pointing to the edges of the cube
     int h = hash & 15;
     T u = select (h<8, x, y);
@@ -992,8 +992,8 @@ OSL_FORCEINLINE T grad (const int hash, const T &x, const T &y, const T &z) {
     return negate_if(u,h&1) + negate_if(v,h&2);
 }
 
-template <typename I, typename T> OSL_HOSTDEVICE
-OSL_FORCEINLINE T grad (const I &hash, const T &x, const T &y, const T &z, const T &w) {
+template <typename I, typename T>
+OSL_FORCEINLINE OSL_HOSTDEVICE T grad (const I &hash, const T &x, const T &y, const T &z, const T &w) {
     // use vectors pointing to the edges of the hypercube
     I h = hash & 31;
     T u = select (h<24, x, y);
@@ -1057,14 +1057,14 @@ OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<Vec3> grad (const Vec3i &hash, Dual2<float>
     return make_Vec3 (rx, ry, rz);
 }
 
-template <typename T> OSL_HOSTDEVICE
-OSL_FORCEINLINE T scale1 (const T &result) { return 0.2500f * result; }
-template <typename T> OSL_HOSTDEVICE
-OSL_FORCEINLINE T scale2 (const T &result) { return 0.6616f * result; }
-template <typename T> OSL_HOSTDEVICE
-OSL_FORCEINLINE T scale3 (const T &result) { return 0.9820f * result; }
-template <typename T> OSL_HOSTDEVICE
-OSL_FORCEINLINE T scale4 (const T &result) { return 0.8344f * result; }
+template <typename T>
+OSL_FORCEINLINE OSL_HOSTDEVICE T scale1 (const T &result) { return 0.2500f * result; }
+template <typename T>
+OSL_FORCEINLINE OSL_HOSTDEVICE T scale2 (const T &result) { return 0.6616f * result; }
+template <typename T>
+OSL_FORCEINLINE OSL_HOSTDEVICE T scale3 (const T &result) { return 0.9820f * result; }
+template <typename T>
+OSL_FORCEINLINE OSL_HOSTDEVICE T scale4 (const T &result) { return 0.8344f * result; }
 
 
 struct HashScalar {
@@ -1129,7 +1129,7 @@ OSL_FORCEINLINE OSL_HOSTDEVICE Vec3i sliceup (unsigned int h) {
 }
 
 struct HashVector {
-    static OSL_FORCEINLINE HashScalar convertToScalar() { return HashScalar(); }
+    static OSL_FORCEINLINE OSL_HOSTDEVICE HashScalar convertToScalar() { return HashScalar(); }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE Vec3i operator() (int x) const {
         return sliceup(inthash(static_cast<unsigned int>(x)));
@@ -1184,21 +1184,21 @@ struct HashVector {
 struct HashScalarPeriodic {
 private:
     friend struct HashVectorPeriodic;
-    OSL_FORCEINLINE HashScalarPeriodic () {}
+    OSL_FORCEINLINE OSL_HOSTDEVICE HashScalarPeriodic () {}
 public:
-    OSL_HOSTDEVICE HashScalarPeriodic (float px) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE HashScalarPeriodic (float px) {
         m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
     }
-    OSL_HOSTDEVICE HashScalarPeriodic (float px, float py) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE HashScalarPeriodic (float px, float py) {
         m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
         m_py = OIIO::ifloor(py); if (m_py < 1) m_py = 1;
     }
-    OSL_HOSTDEVICE HashScalarPeriodic (float px, float py, float pz) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE HashScalarPeriodic (float px, float py, float pz) {
         m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
         m_py = OIIO::ifloor(py); if (m_py < 1) m_py = 1;
         m_pz = OIIO::ifloor(pz); if (m_pz < 1) m_pz = 1;
     }
-    OSL_HOSTDEVICE HashScalarPeriodic (float px, float py, float pz, float pw) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE HashScalarPeriodic (float px, float py, float pz, float pw) {
         m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
         m_py = OIIO::ifloor(py); if (m_py < 1) m_py = 1;
         m_pz = OIIO::ifloor(pz); if (m_pz < 1) m_pz = 1;
@@ -1257,19 +1257,19 @@ public:
 };
 
 struct HashVectorPeriodic {
-    OSL_HOSTDEVICE HashVectorPeriodic (float px) {
+	OSL_FORCEINLINE OSL_HOSTDEVICE HashVectorPeriodic (float px) {
         m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
     }
-    OSL_HOSTDEVICE HashVectorPeriodic (float px, float py) {
+	OSL_FORCEINLINE OSL_HOSTDEVICE HashVectorPeriodic (float px, float py) {
         m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
         m_py = OIIO::ifloor(py); if (m_py < 1) m_py = 1;
     }
-    OSL_HOSTDEVICE HashVectorPeriodic (float px, float py, float pz) {
+	OSL_FORCEINLINE OSL_HOSTDEVICE HashVectorPeriodic (float px, float py, float pz) {
         m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
         m_py = OIIO::ifloor(py); if (m_py < 1) m_py = 1;
         m_pz = OIIO::ifloor(pz); if (m_pz < 1) m_pz = 1;
     }
-    OSL_HOSTDEVICE HashVectorPeriodic (float px, float py, float pz, float pw) {
+	OSL_FORCEINLINE OSL_HOSTDEVICE HashVectorPeriodic (float px, float py, float pz, float pw) {
         m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
         m_py = OIIO::ifloor(py); if (m_py < 1) m_py = 1;
         m_pz = OIIO::ifloor(pz); if (m_pz < 1) m_pz = 1;
@@ -1278,7 +1278,7 @@ struct HashVectorPeriodic {
 
     int m_px, m_py, m_pz, m_pw;
 
-    OSL_FORCEINLINE HashScalarPeriodic convertToScalar() const {
+    OSL_FORCEINLINE OSL_HOSTDEVICE HashScalarPeriodic convertToScalar() const {
         HashScalarPeriodic r;
         r.m_px = m_px;
         r.m_py = m_py;
@@ -1350,8 +1350,8 @@ struct CGScalar
     static constexpr bool allowSIMD = false;
 };
 
-template <typename CGPolicyT = CGDefault, typename V, typename H, typename T> OSL_HOSTDEVICE
-OSL_FORCEINLINE void perlin (V& result, H& hash, const T &x) {
+template <typename CGPolicyT = CGDefault, typename V, typename H, typename T>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (V& result, H& hash, const T &x) {
     int X; T fx = floorfrac(x, &X);
     T u = fade(fx);
 
@@ -1360,8 +1360,8 @@ OSL_FORCEINLINE void perlin (V& result, H& hash, const T &x) {
     result = scale1 (lerp_result);
 }
 
-template <typename CGPolicyT = CGDefault, typename H> OSL_HOSTDEVICE
-OSL_FORCEINLINE void perlin (float &result, const H &hash, const float &x, const float &y)
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (float &result, const H &hash, const float &x, const float &y)
 {
 #if OIIO_SIMD
     if (CGPolicyT::allowSIMD)
@@ -1402,8 +1402,8 @@ OSL_FORCEINLINE void perlin (float &result, const H &hash, const float &x, const
     }
 }
 
-template <typename CGPolicyT = CGDefault, typename H> OSL_HOSTDEVICE
-OSL_FORCEINLINE void perlin (float &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (float &result, const H &hash,
                     const float &x, const float &y, const float &z)
 {
 #if OIIO_SIMD
@@ -1479,8 +1479,8 @@ OSL_FORCEINLINE void perlin (float &result, const H &hash,
 
 
 
-template <typename CGPolicyT = CGDefault, typename H> OSL_HOSTDEVICE
-OSL_FORCEINLINE void perlin (float &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (float &result, const H &hash,
                     const float &x, const float &y, const float &z, const float &w)
 {
 #if OIIO_SIMD
@@ -1563,8 +1563,8 @@ OSL_FORCEINLINE void perlin (float &result, const H &hash,
     }
 }
 
-template <typename CGPolicyT = CGDefault, typename H> OSL_HOSTDEVICE
-OSL_FORCEINLINE void perlin (Dual2<float> &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<float> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y)
 {
 #if OIIO_SIMD
@@ -1608,8 +1608,8 @@ OSL_FORCEINLINE void perlin (Dual2<float> &result, const H &hash,
     }
 }
 
-template <typename CGPolicyT = CGDefault, typename H> OSL_HOSTDEVICE
-OSL_FORCEINLINE void perlin (Dual2<float> &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<float> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z)
 {
 #if OIIO_SIMD
@@ -1673,8 +1673,8 @@ OSL_FORCEINLINE void perlin (Dual2<float> &result, const H &hash,
     }
 }
 
-template <typename CGPolicyT = CGDefault, typename H> OSL_HOSTDEVICE
-OSL_FORCEINLINE void perlin (Dual2<float> &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<float> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y,
                     const Dual2<float> &z, const Dual2<float> &w)
 {
@@ -1768,8 +1768,8 @@ OSL_FORCEINLINE void perlin (Dual2<float> &result, const H &hash,
 }
 
 
-template <typename CGPolicyT = CGDefault, typename H> OSL_HOSTDEVICE
-OSL_FORCEINLINE void perlin (Vec3 &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Vec3 &result, const H &hash,
                     const float &x, const float &y)
 {
 #if OIIO_SIMD
@@ -1825,8 +1825,8 @@ OSL_FORCEINLINE void perlin (Vec3 &result, const H &hash,
 
 
 
-template <typename CGPolicyT = CGDefault, typename H> OSL_HOSTDEVICE
-OSL_FORCEINLINE void perlin (Vec3 &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Vec3 &result, const H &hash,
                     const float &x, const float &y, const float &z)
 {
 #if OIIO_SIMD
@@ -1971,8 +1971,8 @@ OSL_FORCEINLINE void perlin (Vec3 &result, const H &hash,
     }
 }
 
-template <typename CGPolicyT = CGDefault, typename H> OSL_HOSTDEVICE
-OSL_FORCEINLINE void perlin (Vec3 &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Vec3 &result, const H &hash,
                     const float &x, const float &y, const float &z, const float &w)
 {
 #if OIIO_SIMD
@@ -2060,8 +2060,8 @@ OSL_FORCEINLINE void perlin (Vec3 &result, const H &hash,
 }
 
 
-template <typename CGPolicyT = CGDefault, typename H> OSL_HOSTDEVICE
-OSL_FORCEINLINE void perlin (Dual2<Vec3> &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<Vec3> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y)
 {
 #if OIIO_SIMD
@@ -2121,8 +2121,8 @@ OSL_FORCEINLINE void perlin (Dual2<Vec3> &result, const H &hash,
 }
 
 
-template <typename CGPolicyT = CGDefault, typename H> OSL_HOSTDEVICE
-OSL_FORCEINLINE void perlin (Dual2<Vec3> &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<Vec3> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z)
 {
 #if OIIO_SIMD
@@ -2197,8 +2197,8 @@ OSL_FORCEINLINE void perlin (Dual2<Vec3> &result, const H &hash,
 }
 
 
-template <typename CGPolicyT = CGDefault, typename H> OSL_HOSTDEVICE
-OSL_FORCEINLINE void perlin (Dual2<Vec3> &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<Vec3> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y,
                     const Dual2<float> &z, const Dual2<float> &w)
 {
@@ -2307,7 +2307,7 @@ OSL_FORCEINLINE void perlin (Dual2<Vec3> &result, const H &hash,
 
 template<typename CGPolicyT = CGDefault>
 struct NoiseImpl {
-    NoiseImpl () { }
+	OSL_FORCEINLINE OSL_HOSTDEVICE NoiseImpl () { }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x) const {
         HashScalar h;
@@ -2445,7 +2445,7 @@ struct NoiseScalar : NoiseImpl<CGScalar> {};
 
 template<typename CGPolicyT = CGDefault>
 struct SNoiseImpl {
-    OSL_HOSTDEVICE SNoiseImpl () { }
+	OSL_FORCEINLINE OSL_HOSTDEVICE SNoiseImpl () { }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x) const {
         HashScalar h;
@@ -2553,7 +2553,7 @@ struct SNoiseScalar : SNoiseImpl<CGScalar> {};
 
 template<typename CGPolicyT = CGDefault>
 struct PeriodicNoiseImpl {
-    OSL_HOSTDEVICE PeriodicNoiseImpl () { }
+	OSL_FORCEINLINE OSL_HOSTDEVICE PeriodicNoiseImpl () { }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x, float px) const {
         HashScalarPeriodic h(px);
@@ -2678,7 +2678,7 @@ struct PeriodicNoiseScalar : PeriodicNoiseImpl<CGScalar> {};
 
 template<typename CGPolicyT = CGDefault>
 struct PeriodicSNoiseImpl {
-    OSL_HOSTDEVICE PeriodicSNoiseImpl () { }
+	OSL_FORCEINLINE OSL_HOSTDEVICE PeriodicSNoiseImpl () { }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x, float px) const {
         HashScalarPeriodic h(px);
@@ -3144,7 +3144,7 @@ struct USimplexNoise {
 // Scalar version of USimplexNoise that is SIMD friendly suitable to be
 // inlined inside of a SIMD loops
 struct USimplexNoiseScalar {
-    USimplexNoiseScalar () { }
+	OSL_FORCEINLINE USimplexNoiseScalar () { }
 
     OSL_FORCEINLINE void operator() (float &result, float x) const {
         result = 0.5f * (sfm::simplexnoise1<0/* seed */>(x) + 1.0f);

@@ -137,7 +137,7 @@ namespace sfm
     */
 
 	/// return the greatest integer <= x
-	OSL_FORCEINLINE int ifloor (float x) {
+	OSL_FORCEINLINE OSL_HOSTDEVICE int ifloor (float x) {
 		//    return (int) x - ((x < 0) ? 1 : 0);
 
 		// std::floor is another option, however that appears to be
@@ -151,7 +151,7 @@ namespace sfm
 	}
 
     /// Fused multiply and add: (a*b + c)
-    OSL_FORCEINLINE float madd (float a, float b, float c) {
+	OSL_FORCEINLINE OSL_HOSTDEVICE float madd (float a, float b, float c) {
         // Avoid simulating FMA on non-FMA hardware
         // This can result in differences between FMA and non-FMA hardware
         // but a simulated result is really slow
@@ -161,7 +161,7 @@ namespace sfm
     /// Identical to OIIO::lerp(a,b,u), but always inlined
     /// to not inhibit CLANG vectorization
     template <class T, class Q>
-    OSL_FORCEINLINE T
+    OSL_FORCEINLINE OSL_HOSTDEVICE T
     lerp (const T& v0, const T& v1, const Q& x)
     {
         // NOTE: a*(1-x) + b*x is much more numerically stable than a+x*(b-a)
@@ -171,7 +171,7 @@ namespace sfm
     /// Identical to OIIO::bilerp(a,b,c,d,u,v), but always inlined
     /// to not inhibit CLANG vectorization
     template <class T, class Q>
-    OSL_FORCEINLINE T
+    OSL_FORCEINLINE OSL_HOSTDEVICE T
     bilerp(const T& v0, const T& v1, const T& v2, const T& v3, const Q& s, const Q& t)
     {
         // NOTE: a*(t-1) + b*t is much more numerically stable than a+t*(b-a)
@@ -182,7 +182,7 @@ namespace sfm
     /// Identical to OIIO::trilerp(a,b,c,d,e,f,g,h,u,v,w), but always inlined
     /// to not inhibit CLANG vectorization
     template <class T, class Q>
-    OSL_FORCEINLINE T
+    OSL_FORCEINLINE OSL_HOSTDEVICE T
     trilerp (const T & v0, const T & v1, const T & v2, const T & v3, const T & v4, const T & v5, const T & v6, const T & v7, const Q &s, const Q &t, const Q & r)
     {
         // NOTE: a*(t-1) + b*t is much more numerically stable than a+t*(b-a)
@@ -197,7 +197,7 @@ namespace sfm
     // Native OIIO::isinf wasn't vectorizing and was branchy
     // this slightly perturbed version fairs better and is branch free
     // when vectorized
-    OSL_FORCEINLINE int isinf (float x) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE int isinf (float x) {
 
         // Based on algorithm in OIIO missing_math.h for _MSC_VER < 1800
         int r = 0;
@@ -210,7 +210,7 @@ namespace sfm
 
     // Exists mainly to allow the same function name to work
     // with Dual2 and float
-    OSL_FORCEINLINE float absf (float x)
+    OSL_FORCEINLINE OSL_HOSTDEVICE float absf (float x)
     {
 #if 0
         //return x >= 0.0f ? x : -x;
@@ -225,7 +225,9 @@ namespace sfm
 #endif
     }
 
-    template<typename T> OSL_FORCEINLINE T negate(const T &x) {
+    template<typename T>
+    OSL_FORCEINLINE OSL_HOSTDEVICE T
+	negate(const T &x) {
         #if OSL_FAST_MATH
             // Compiler using a constant bit mask to perform negation,
             // and reading a constant involves accessing its memory location.
@@ -241,7 +243,8 @@ namespace sfm
         #endif
     }
 
-    OSL_FORCEINLINE Dual2<float> absf (const Dual2<float> &x)
+    OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float>
+    absf (const Dual2<float> &x)
     {
         // Avoid ternary ops whose operands have side effects
         // in favor of code that executes both sides masked
@@ -279,7 +282,7 @@ namespace sfm
     }
 #if 0
     template <typename IN_TYPE, typename OUT_TYPE>
-    OSL_FORCEINLINE OUT_TYPE bit_cast (const IN_TYPE val) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE OUT_TYPE bit_cast (const IN_TYPE val) {
         static_assert(sizeof(IN_TYPE) == sizeof(OUT_TYPE), "when casting between types they must be the same size");
         union {
             IN_TYPE inVal;
@@ -292,7 +295,7 @@ namespace sfm
     // C++20 has std::bit_cast, although explicit SIMD may still
     // be unhappy
     template <typename IN_TYPE, typename OUT_TYPE>
-    OSL_FORCEINLINE OUT_TYPE bit_cast (const IN_TYPE val) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE OUT_TYPE bit_cast (const IN_TYPE val) {
         static_assert(sizeof(IN_TYPE) == sizeof(OUT_TYPE), "when casting between types they must be the same size");
         OUT_TYPE r;
         memcpy(&r, &val, sizeof(OUT_TYPE));
@@ -354,12 +357,12 @@ namespace sfm
     }
 #endif
 
-    OSL_FORCEINLINE int bitcast_to_int (float x) { return bit_cast<float,int>(x); }
-    OSL_FORCEINLINE float bitcast_to_float (int x) { return bit_cast<int,float>(x); }
+    OSL_FORCEINLINE OSL_HOSTDEVICE int bitcast_to_int (float x) { return bit_cast<float,int>(x); }
+    OSL_FORCEINLINE OSL_HOSTDEVICE float bitcast_to_float (int x) { return bit_cast<int,float>(x); }
 
     /// clamp a to bounds [low,high].
     template <class T>
-    OSL_FORCEINLINE T
+    OSL_FORCEINLINE OSL_HOSTDEVICE T
     clamp (T a, T low, T high)
     {
         // OIIO clamp only does the 2nd comparison in the else
@@ -377,10 +380,10 @@ namespace sfm
     }
 
     template<typename T>
-    T log2 (const T& xval); // undefined
+    OSL_HOSTDEVICE T log2 (const T& xval); // undefined
 
     template<>
-    OSL_FORCEINLINE float log2<float> (const float& xval) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE float log2<float> (const float& xval) {
         // NOTE: clamp to avoid special cases and make result "safe" from large negative values/nans
         float x = clamp (xval, std::numeric_limits<float>::min(), std::numeric_limits<float>::max());
         // based on https://github.com/LiraNuna/glsl-sse2/blob/master/source/vec4.h
@@ -404,7 +407,7 @@ namespace sfm
     }
 
     template<>
-    OSL_FORCEINLINE Dual2<float> log2<Dual2<float>>(const Dual2<float> &a)
+    OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float> log2<Dual2<float>>(const Dual2<float> &a)
     {
         float loga = log2(a.val());
         float aln2 = a.val() * float(M_LN2);
@@ -413,18 +416,18 @@ namespace sfm
     }
 
     template<typename T>
-    OSL_FORCEINLINE T log (const T& x) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE T log (const T& x) {
         // Examined 2130706432 values of logf on [1.17549435e-38,3.40282347e+38]: 0.313865375 avg ulp diff, 5148137 max ulp, 7.62939e-06 max error
         return log2(x) * T(M_LN2);
     }
 
     template<typename T>
-    OSL_FORCEINLINE T log10 (const T& x) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE T log10 (const T& x) {
         // Examined 2130706432 values of log10f on [1.17549435e-38,3.40282347e+38]: 0.631237033 avg ulp diff, 4471615 max ulp, 3.8147e-06 max error
         return log2(x) * T(M_LN2 / M_LN10);
     }
 
-    OSL_FORCEINLINE float logb (float x) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE float logb (float x) {
         // don't bother with denormals
         x = absf(x);
         if (x < std::numeric_limits<float>::min()) x = std::numeric_limits<float>::min();
@@ -434,10 +437,10 @@ namespace sfm
     }
 
     template<typename T>
-    OSL_FORCEINLINE T exp2 (const T & xval); // undefined
+    OSL_FORCEINLINE OSL_HOSTDEVICE T exp2 (const T & xval); // undefined
 
     template<>
-    OSL_FORCEINLINE float exp2<float> (const float & xval) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE float exp2<float> (const float & xval) {
 #if OSL_NON_INTEL_CLANG
         // Not ideal, but CLANG was unhappy using the bitcast/memcpy/reinter_cast/union
         // inside an explicit SIMD loop, so revert to calling the standard version
@@ -477,19 +480,19 @@ namespace sfm
     }
 
     template<>
-    OSL_FORCEINLINE Dual2<float> exp2<Dual2<float>>(const Dual2<float> &a)
+    OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float> exp2<Dual2<float>>(const Dual2<float> &a)
     {
         float exp2a = sfm::template exp2(a.val());
         return Dual2<float> (exp2a, exp2a*float(M_LN2)*a.dx(), exp2a*float(M_LN2)*a.dy());
     }
 
     template <typename T>
-    OSL_FORCEINLINE T exp (const T& x) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE T exp (const T& x) {
         // Examined 2237485550 values of exp on [-87.3300018,87.3300018]: 2.6666452 avg ulp diff, 230 max ulp
         return sfm::exp2(x * T(1 / M_LN2));
     }
 
-    OSL_FORCEINLINE float expm1 (float x) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE float expm1 (float x) {
         if (absf(x) < 0.03f) {
             float y = 1.0f - (1.0f - x); // crush denormals
             return copysignf(madd(0.5f, y * y, y), x);
@@ -497,14 +500,14 @@ namespace sfm
             return exp(x) - 1.0f;
     }
 
-    OSL_FORCEINLINE Dual2<float> expm1(const Dual2<float> &a)
+    OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float> expm1(const Dual2<float> &a)
     {
         float expm1a = expm1(a.val());
         float expa   = exp  (a.val());
         return Dual2<float> (expm1a, expa * a.dx(), expa * a.dy());
     }
 
-    OSL_FORCEINLINE float erf(const float x)
+    OSL_FORCEINLINE OSL_HOSTDEVICE float erf(const float x)
     {
         // Examined 1082130433 values of erff on [0,4]: 1.93715e-06 max error
         // Abramowitz and Stegun, 7.1.28
@@ -524,7 +527,7 @@ namespace sfm
         return copysign(1.0f - 1.0f / v, x);
     }
 
-    OSL_FORCEINLINE Dual2<float> erf(const Dual2<float> &a)
+    OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float> erf(const Dual2<float> &a)
     {
         float erfa = erf (a.val());
         float two_over_sqrt_pi = 1.128379167095512573896158903f;
@@ -532,7 +535,7 @@ namespace sfm
         return Dual2<float> (erfa, derfadx * a.dx(), derfadx * a.dy());
     }
 
-    OSL_FORCEINLINE float erfc (float x)
+    OSL_FORCEINLINE OSL_HOSTDEVICE float erfc (float x)
     {
         // Examined 2164260866 values of erfcf on [-4,4]: 1.90735e-06 max error
         // ulp histogram:
@@ -540,7 +543,7 @@ namespace sfm
         return 1.0f - erf(x);
     }
 
-    OSL_FORCEINLINE Dual2<float> erfc(const Dual2<float> &a)
+    OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float> erfc(const Dual2<float> &a)
     {
         float erfa = erfc (a.val());
         float two_over_sqrt_pi = -1.128379167095512573896158903f;
@@ -551,7 +554,7 @@ namespace sfm
 
 
 
-    OSL_FORCEINLINE float safe_pow (float x, float y) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE float safe_pow (float x, float y) {
         if (y == 0) return 1.0f; // x^0=1
         if (x == 0) return 0.0f; // 0^y=0
         // be cheap & exact for special case of squaring and identity
@@ -582,7 +585,7 @@ namespace sfm
 
     }
 
-    OSL_FORCEINLINE Dual2<float> safe_pow(const Dual2<float> &u, const Dual2<float> &v)
+    OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float> safe_pow(const Dual2<float> &u, const Dual2<float> &v)
     {
         // NOTE: same issue as above (fast_safe_pow does even more clamping)
         float powuvm1 = sfm::safe_pow (u.val(), v.val() - 1.0f);
@@ -592,7 +595,7 @@ namespace sfm
                                      v.val()*powuvm1 * u.dy() + logu*powuv * v.dy() );
     }
 
-    OSL_FORCEINLINE float safe_fmod (float a, float b) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE float safe_fmod (float a, float b) {
         //return (b != 0.0f) ? std::fmod (a,b) : 0.0f;
         if (OSL_LIKELY(b != 0.0f)) {
             // return std::fmod (a,b);
@@ -608,23 +611,23 @@ namespace sfm
         return 0.0f;
     }
 
-    OSL_FORCEINLINE Dual2<float> safe_fmod (const Dual2<float> &a, const Dual2<float> &b) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float> safe_fmod (const Dual2<float> &a, const Dual2<float> &b) {
         return Dual2<float> (safe_fmod (a.val(), b.val()), a.dx(), a.dy());
     }
 
 #if 0 // emitted directly by llvm_gen_wide.cpp
-    OSL_FORCEINLINE float safe_div(float a, float b) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE float safe_div(float a, float b) {
         return (b != 0.0f) ? (a / b) : 0.0f;
     }
 
-    OSL_FORCEINLINE int safe_div(int a, int b) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE int safe_div(int a, int b) {
         return (b != 0) ? (a / b) : 0;
     }
 #endif
 
 
     /// Round to nearest integer, returning as an int.
-    OSL_FORCEINLINE int fast_rint (float x) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE int fast_rint (float x) {
         // used by sin/cos/tan range reduction
     #if 0
         // single roundps instruction on SSE4.1+ (for gcc/clang at least)
@@ -644,7 +647,7 @@ namespace sfm
     }
 
 
-    OSL_FORCEINLINE float sin (float x) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE float sin (float x) {
         // very accurate argument reduction from SLEEF
         // starts failing around x=262000
         // Results on: [-2pi,2pi]
@@ -677,7 +680,7 @@ namespace sfm
          */
         return clamp(u,-1.0f, 1.0f);
     }
-    OSL_FORCEINLINE float cos (float x) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE float cos (float x) {
         // same argument reduction as fast_sin
         int q = fast_rint (x * float(M_1_PI));
         float qf = q;
@@ -704,7 +707,7 @@ namespace sfm
          */
         return clamp(u,-1.0f, 1.0f);
     }
-    OSL_FORCEINLINE void sincos (float x, float & sine, float& cosine) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE void sincos (float x, float & sine, float& cosine) {
         // same argument reduction as fast_sin
         int q = fast_rint (x * float(M_1_PI));
         float qf = q;
@@ -741,7 +744,7 @@ namespace sfm
 
     // NOTE: this approximation is only valid on [-8192.0,+8192.0], it starts becoming
     // really poor outside of this range because the reciprocal amplifies errors
-    OSL_FORCEINLINE float tan (float x) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE float tan (float x) {
         // derived from SLEEF implementation
         // note that we cannot apply the "denormal crush" trick everywhere because
         // we sometimes need to take the reciprocal of the polynomial
@@ -765,7 +768,7 @@ namespace sfm
         return u;
     }
 
-    OSL_FORCEINLINE Dual2<float> tan(const Dual2<float> &a)
+    OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float> tan(const Dual2<float> &a)
     {
         float tana  = sfm::tan (a.val());
         float cosa  = sfm::cos (a.val());
@@ -773,7 +776,7 @@ namespace sfm
         return Dual2<float> (tana, sec2a * a.dx(), sec2a * a.dy());
     }
 
-    OSL_FORCEINLINE float atan (float x) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE float atan (float x) {
         const float a = absf(x);
         const float k = a > 1.0f ? 1 / a : a;
         const float s = 1.0f - (1.0f - k); // crush denormals
@@ -786,7 +789,7 @@ namespace sfm
         return copysignf(r, x);
     }
 
-    OSL_FORCEINLINE Dual2<float> atan(const Dual2<float> &a)
+    OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float> atan(const Dual2<float> &a)
     {
         float arctana = sfm::atan(a.val());
         float denom   = 1.0f / (1.0f + a.val() * a.val());
@@ -794,7 +797,7 @@ namespace sfm
 
     }
 
-    OSL_FORCEINLINE float atan2 (float y, float x) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE float atan2 (float y, float x) {
         // based on atan approximation above
         // the special cases around 0 and infinity were tested explicitly
         // the only case not handled correctly is x=NaN,y=0 which returns 0 instead of nan
@@ -823,7 +826,7 @@ namespace sfm
         return copysignf(r, y);
     }
 
-    OSL_FORCEINLINE Dual2<float> atan2(const Dual2<float> &y, const Dual2<float> &x)
+    OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float> atan2(const Dual2<float> &y, const Dual2<float> &x)
     {
         float atan2xy = sfm::atan2(y.val(), x.val());
         // NOTE: using bitwise & to avoid branches
@@ -832,13 +835,13 @@ namespace sfm
                                        (y.val()*x.dy() - x.val()*y.dy())*denom );
     }
 
-    OSL_FORCEINLINE float cosh (float x) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE float cosh (float x) {
         // Examined 2237485550 values of cosh on [-87.3300018,87.3300018]: 1.78256726 avg ulp diff, 178 max ulp
         float e = sfm::exp(absf(x));
         return 0.5f * e + 0.5f / e;
     }
 
-    OSL_FORCEINLINE float sinh (float x) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE float sinh (float x) {
         float a = absf(x);
         if (OSL_UNLIKELY(a > 1.0f)) {
             // Examined 53389559 values of sinh on [1,87.3300018]: 33.6886442 avg ulp diff, 178 max ulp
@@ -857,28 +860,28 @@ namespace sfm
         }
     }
 
-    inline float tanh (float x) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE float tanh (float x) {
         // Examined 4278190080 values of tanh on [-3.40282347e+38,3.40282347e+38]: 3.12924e-06 max error
         // NOTE: ulp error is high because of sub-optimal handling around the origin
         float e = sfm::exp(2.0f * absf(x));
         return copysignf(1 - 2 / (1 + e), x);
     }
 
-    OSL_FORCEINLINE Dual2<float> cosh(const Dual2<float> &a)
+    OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float> cosh(const Dual2<float> &a)
     {
         float cosha = sfm::cosh(a.val());
         float sinha = sfm::sinh(a.val());
         return Dual2<float> (cosha, sinha * a.dx(), sinha * a.dy());
     }
 
-    OSL_FORCEINLINE Dual2<float> sinh(const Dual2<float> &a)
+    OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float> sinh(const Dual2<float> &a)
     {
         float cosha = sfm::cosh(a.val());
         float sinha = sfm::sinh(a.val());
         return Dual2<float> (sinha, cosha * a.dx(), cosha * a.dy());
     }
 
-    OSL_FORCEINLINE Dual2<float> tanh(const Dual2<float> &a)
+    OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float> tanh(const Dual2<float> &a)
     {
         float tanha = sfm::tanh(a.val());
         float cosha = sfm::cosh(a.val());
@@ -886,14 +889,14 @@ namespace sfm
         return Dual2<float> (tanha, sech2a * a.dx(), sech2a * a.dy());
     }
 
-    OSL_FORCEINLINE Dual2<float> sin(const Dual2<float> &a)
+    OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float> sin(const Dual2<float> &a)
     {
         float sina, cosa;
         sfm::sincos (a.val(), sina, cosa);
         return Dual2<float> (sina, cosa * a.dx(), cosa * a.dy());
     }
 
-    OSL_FORCEINLINE Dual2<float> cos(const Dual2<float> &a)
+    OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float> cos(const Dual2<float> &a)
     {
         float sina, cosa;
         sfm::sincos (a.val(), sina, cosa);
@@ -912,7 +915,7 @@ namespace sfm
 
     // Imath::Vec3::lengthTiny is private
     // local copy here no changes
-    OSL_FORCEINLINE float accessibleTinyLength(const Vec3 &N)
+    OSL_FORCEINLINE OSL_HOSTDEVICE float accessibleTinyLength(const Vec3 &N)
     {
 //        float absX = (N.x >= float (0))? N.x: -N.x;
 //        float absY = (N.y >= float (0))? N.y: -N.y;
@@ -946,7 +949,7 @@ namespace sfm
         return max * Imath::Math<float>::sqrt (absX * absX + absY * absY + absZ * absZ);
     }
 
-    OSL_FORCEINLINE
+    OSL_FORCEINLINE OSL_HOSTDEVICE
     float length(const Vec3 &N)
     {
         float length2 = N.dot (N);
@@ -957,7 +960,7 @@ namespace sfm
         return Imath::Math<float>::sqrt (length2);
     }
 
-    OSL_FORCEINLINE Vec3
+    OSL_FORCEINLINE OSL_HOSTDEVICE Vec3
     normalize(const Vec3 &N)
     {
         float l = length(N);
@@ -969,7 +972,7 @@ namespace sfm
     }
 
 
-    OSL_FORCEINLINE Dual2<Vec3>
+    OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<Vec3>
     normalize (const Dual2<Vec3> &a)
     {
         // NOTE: using bitwise & to avoid branches
@@ -993,7 +996,7 @@ namespace sfm
 
 
     template<typename T>
-    OSL_FORCEINLINE
+    OSL_FORCEINLINE OSL_HOSTDEVICE
     T max_val(T left, T right)
     {
         return (right > left)? right: left;
@@ -1004,28 +1007,28 @@ namespace sfm
     public:
         typedef Imath::Matrix33<float> parent;
 
-        OSL_FORCEINLINE Matrix33 (Imath::Uninitialized uninit)
+        OSL_FORCEINLINE OSL_HOSTDEVICE Matrix33 (Imath::Uninitialized uninit)
         : parent(uninit)
         {}
 
         // Avoid the memset that is part of the Imath::Matrix33
         // default constructor
-        OSL_FORCEINLINE Matrix33 ()
+        OSL_FORCEINLINE OSL_HOSTDEVICE Matrix33 ()
         : parent(1.0f, 0.0f, 0.0f,
                                  0.0f, 1.0f, 0.0f,
                                  0.0f, 0.0f, 1.0f)
         {}
 
-        OSL_FORCEINLINE Matrix33 (float a, float b, float c, float d, float e, float f, float g, float h, float i)
+        OSL_FORCEINLINE OSL_HOSTDEVICE Matrix33 (float a, float b, float c, float d, float e, float f, float g, float h, float i)
         : parent(a,b,c,d,e,f,g,h,i)
         {}
 
-        OSL_FORCEINLINE Matrix33 (const Imath::Matrix33<float> &a)
+        OSL_FORCEINLINE OSL_HOSTDEVICE Matrix33 (const Imath::Matrix33<float> &a)
         : parent(a)
         {}
 
         // Avoid the memcpy that is part of the Imath::Matrix33
-        OSL_FORCEINLINE
+        OSL_FORCEINLINE OSL_HOSTDEVICE
         Matrix33 (const float a[3][3])
         : Imath::Matrix33<float>(
             a[0][0], a[0][1], a[0][2],
@@ -1035,7 +1038,7 @@ namespace sfm
 
 
         // Avoid the memcpy that is part of Imath::Matrix33::operator=
-        OSL_FORCEINLINE Matrix33 &
+        OSL_FORCEINLINE OSL_HOSTDEVICE Matrix33 &
         operator = (const Matrix33 &v)
         {
             parent::x[0][0] = v.x[0][0];
@@ -1057,7 +1060,7 @@ namespace sfm
         // Avoid Imath::Matrix33::operator * that
         // initializing values to 0 before overwriting them
         // Also manually unroll its nested loops
-        OSL_FORCEINLINE Matrix33
+        OSL_FORCEINLINE OSL_HOSTDEVICE Matrix33
         operator * (const Matrix33 &v) const
         {
             Matrix33 tmp(Imath::UNINITIALIZED);
@@ -1097,7 +1100,7 @@ namespace sfm
     };
 
 
-    OSL_FORCEINLINE sfm::Matrix33
+    OSL_FORCEINLINE OSL_HOSTDEVICE sfm::Matrix33
     make_matrix33_cols (const Vec3 &a, const Vec3 &b, const Vec3 &c)
     {
         return sfm::Matrix33 (a.x, b.x, c.x,

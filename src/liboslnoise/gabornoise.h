@@ -213,8 +213,8 @@ make_orthonormals (Vec3 &v, Vec3 &a, Vec3 &b)
 
 
 // Helper function: per-component 'floor' of a Dual2<Vec3>.
-inline Vec3
-floor OSL_HOSTDEVICE (const Dual2<Vec3> &vd)
+inline OSL_HOSTDEVICE Vec3
+floor (const Dual2<Vec3> &vd)
 {
     // avoid aliasing issues by not using the [] operator
     const Vec3 &v (vd.val());

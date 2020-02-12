@@ -342,7 +342,7 @@ inline void stlfree (T &v)
 class ShaderMaster : public RefCnt {
 public:
     typedef OIIO::intrusive_ptr<ShaderMaster> ref;
-    ShaderMaster (ShadingSystemImpl &shadingsys) : m_shadingsys(shadingsys) { }
+    ShaderMaster (ShadingSystemImpl &shadingsys);
     ~ShaderMaster ();
 
     std::string print ();  // Debugging
@@ -389,6 +389,9 @@ public:
 
     int raytype_queries () const { return m_raytype_queries; }
 
+    bool range_checking() const { return m_range_checking; }
+    void range_checking(bool b) { m_range_checking = b; }
+
 private:
     ShadingSystemImpl &m_shadingsys;    ///< Back-ptr to the shading system
     ShaderType m_shadertype;            ///< Type of shader
@@ -407,6 +410,7 @@ private:
     int m_firstparam, m_lastparam;      ///< Subset of symbols that are params
     int m_maincodebegin, m_maincodeend; ///< Main shader code range
     int m_raytype_queries;              ///< Bitmask of raytypes queried
+    bool m_range_checking;              ///< Is range checking enabled for this shader?
 
     friend class OSOReaderToMaster;
     friend class ShaderInstance;

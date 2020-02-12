@@ -42,7 +42,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 OSL_NAMESPACE_ENTER
 namespace pvt {   // OSL::pvt
 
-
+ShaderMaster::ShaderMaster(ShadingSystemImpl& shadingsys)
+    : m_shadingsys(shadingsys),
+      m_range_checking(shadingsys.range_checking()) {
+}
 
 ShaderMaster::~ShaderMaster ()
 {

@@ -815,6 +815,70 @@ LLVMGEN (llvm_gen_neg)
 
 
 
+LLVMGEN (llvm_gen_dot)
+{
+    Opcode &op (rop.inst()->ops()[opnum]);
+    Symbol& Result = *rop.opargsym (op, 0);
+    Symbol& A = *rop.opargsym (op, 1);
+    Symbol& B = *rop.opargsym (op, 2);
+
+    OSL_DASSERT (! A.typespec().is_array() && ! B.typespec().is_array());
+
+    // simple case: Result = ax * bx + ay * by + az * bz
+    llvm::Value *ax = rop.loadLLVMValue (A, 0);
+    llvm::Value *bx = rop.loadLLVMValue (B, 0);
+    llvm::Value *rx = rop.ll.op_mul (ax, bx);
+
+    llvm::Value *ay = rop.loadLLVMValue (A, 1);
+    llvm::Value *by = rop.loadLLVMValue (B, 1);
+    llvm::Value *ry = rop.ll.op_mul (ay, by);
+
+    llvm::Value *az = rop.loadLLVMValue (A, 2);
+    llvm::Value *bz = rop.loadLLVMValue (B, 2);
+    llvm::Value *rz = rop.ll.op_mul (az, bz);
+
+    rop.storeLLVMValue (rop.ll.op_add(rop.ll.op_add(rx, ry), rz), Result);
+
+    // handle derivatives
+    if (Result.has_derivs()) {
+        if (A.has_derivs() || B.has_derivs()) {
+            // Multiplication of duals: (a*b, a*b.dx + a.dx*b, a*b.dy + a.dy*b)
+            llvm::Value* ax_dx = rop.llvm_load_value(A, 1, 0);
+            llvm::Value* bx_dx = rop.llvm_load_value(B, 1, 0);
+            llvm::Value* ax_dy = rop.llvm_load_value(A, 2, 0);
+            llvm::Value* bx_dy = rop.llvm_load_value(B, 2, 0);
+
+            llvm::Value* rx_dx = rop.ll.op_add(rop.ll.op_mul(ax, bx_dx), rop.ll.op_mul(ax_dx, bx));
+            llvm::Value* rx_dy = rop.ll.op_add(rop.ll.op_mul(ax, bx_dy), rop.ll.op_mul(ax_dy, bx));
+
+            llvm::Value* ay_dx = rop.llvm_load_value(A, 1, 1);
+            llvm::Value* by_dx = rop.llvm_load_value(B, 1, 1);
+            llvm::Value* ay_dy = rop.llvm_load_value(A, 2, 1);
+            llvm::Value* by_dy = rop.llvm_load_value(B, 2, 1);
+
+            llvm::Value* ry_dx = rop.ll.op_add(rop.ll.op_mul(ay, by_dx), rop.ll.op_mul(ay_dx, by));
+            llvm::Value* ry_dy = rop.ll.op_add(rop.ll.op_mul(ay, by_dy), rop.ll.op_mul(ay_dy, by));
+
+            llvm::Value* az_dx = rop.llvm_load_value(A, 1, 2);
+            llvm::Value* bz_dx = rop.llvm_load_value(B, 1, 2);
+            llvm::Value* az_dy = rop.llvm_load_value(A, 2, 2);
+            llvm::Value* bz_dy = rop.llvm_load_value(B, 2, 2);
+
+            llvm::Value* rz_dx = rop.ll.op_add(rop.ll.op_mul(az, bz_dx), rop.ll.op_mul(az_dx, bz));
+            llvm::Value* rz_dy = rop.ll.op_add(rop.ll.op_mul(az, bz_dy), rop.ll.op_mul(az_dy, bz));
+
+            rop.storeLLVMValue (rop.ll.op_add(rop.ll.op_add(rx_dx, ry_dx), rz_dx), Result, 0, 1);
+            rop.storeLLVMValue (rop.ll.op_add(rop.ll.op_add(rx_dy, ry_dy), rz_dy), Result, 0, 2);
+        } else {
+            // Result has derivs, operands do not
+            rop.llvm_zero_derivs (Result);
+        }
+    }
+
+    return true;
+}
+
+
 // Implementation for clamp
 LLVMGEN (llvm_gen_clamp)
 {

@@ -911,7 +911,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (dict_value,  dict_value,          none,          false,     0);
     OP (distance,    generic,             none,          true,      0);
     OP (div,         div,                 div,           true,      0);
-    OP (dot,         generic,             dot,           true,      0);
+    OP (dot,         dot,                 dot,           true,      0);
     OP (Dx,          DxDy,                deriv,         true,      0);
     OP (Dy,          DxDy,                deriv,         true,      0);
     OP (Dz,          Dz,                  deriv,         true,      0);

@@ -619,33 +619,6 @@ OSL_SHADEOP void osl_smoothstep_dfdfdfdf(void *result, void* e0_, void* e1_, voi
 
 // Vector ops
 
-OSL_SHADEOP float
-osl_dot_fvv (void *a, void *b)
-{
-    return VEC(a).dot (VEC(b));
-}
-
-OSL_SHADEOP void
-osl_dot_dfdvdv (void *result, void *a, void *b)
-{
-    DFLOAT(result) = dot (DVEC(a), DVEC(b));
-}
-
-OSL_SHADEOP void
-osl_dot_dfdvv (void *result, void *a, void *b_)
-{
-    Dual2<Vec3> b (VEC(b_));
-    osl_dot_dfdvdv (result, a, &b);
-}
-
-OSL_SHADEOP void
-osl_dot_dfvdv (void *result, void *a_, void *b)
-{
-    Dual2<Vec3> a (VEC(a_));
-    osl_dot_dfdvdv (result, &a, b);
-}
-
-
 OSL_SHADEOP void
 osl_cross_vvv (void *result, void *a, void *b)
 {

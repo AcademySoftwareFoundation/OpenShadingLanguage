@@ -785,7 +785,7 @@ DECLFOLDER(constfold_aref)
         int cind = rop.add_constant (elemtype,
                         (char *)A.data() + index*elemtype.simpletype().size());
         rop.turn_into_assign (op, cind, "aref const fold: const_array[const]");
-        if (rop.shadingsys().range_checking() && index != orig_index) {
+        if (rop.inst()->master()->range_checking() && index != orig_index) {
             // the original index was out of range, and the user cares about reporting errors
             const int args_to_add[] = {
                     rop.add_constant(u_fmt_range_check),

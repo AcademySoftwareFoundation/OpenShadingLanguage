@@ -1150,7 +1150,7 @@ LLVMGEN (llvm_gen_compref)
     Symbol& Index = *rop.opargsym (op, 2);
 
     llvm::Value *c = rop.llvm_load_value(Index);
-    if (rop.shadingsys().range_checking()) {
+    if (rop.inst()->master()->range_checking()) {
         if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
                *(int *)Index.data() < 3)) {
             llvm::Value *args[] = { c, rop.ll.constant(3),
@@ -1193,7 +1193,7 @@ LLVMGEN (llvm_gen_compassign)
     Symbol& Val = *rop.opargsym (op, 2);
 
     llvm::Value *c = rop.llvm_load_value(Index);
-    if (rop.shadingsys().range_checking()) {
+    if (rop.inst()->master()->range_checking()) {
         if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
                *(int *)Index.data() < 3)) {
             llvm::Value *args[] = { c, rop.ll.constant(3),
@@ -1237,7 +1237,7 @@ LLVMGEN (llvm_gen_mxcompref)
 
     llvm::Value *row = rop.llvm_load_value (Row);
     llvm::Value *col = rop.llvm_load_value (Col);
-    if (rop.shadingsys().range_checking()) {
+    if (rop.inst()->master()->range_checking()) {
         llvm::Value *args[] = { row, rop.ll.constant(4),
                                 rop.ll.constant(M.name()),
                                 rop.sg_void_ptr(),
@@ -1282,7 +1282,7 @@ LLVMGEN (llvm_gen_mxcompassign)
 
     llvm::Value *row = rop.llvm_load_value (Row);
     llvm::Value *col = rop.llvm_load_value (Col);
-    if (rop.shadingsys().range_checking()) {
+    if (rop.inst()->master()->range_checking()) {
         llvm::Value *args[] = { row, rop.ll.constant(4),
                                 rop.ll.constant(Result.name()),
                                 rop.sg_void_ptr(),
@@ -1342,7 +1342,7 @@ LLVMGEN (llvm_gen_aref)
     llvm::Value *index = rop.loadLLVMValue (Index);
     if (! index)
         return false;
-    if (rop.shadingsys().range_checking()) {
+    if (rop.inst()->master()->range_checking()) {
         if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
                *(int *)Index.data() < Src.typespec().arraylength())) {
             llvm::Value *args[] = { index,
@@ -1386,7 +1386,7 @@ LLVMGEN (llvm_gen_aassign)
     llvm::Value *index = rop.loadLLVMValue (Index);
     if (! index)
         return false;
-    if (rop.shadingsys().range_checking()) {
+    if (rop.inst()->master()->range_checking()) {
         if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
                *(int *)Index.data() < Result.typespec().arraylength())) {
             llvm::Value *args[] = { index,

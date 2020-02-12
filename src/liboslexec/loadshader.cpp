@@ -422,19 +422,28 @@ OSOReaderToMaster::hint (string_view hintstring)
         }
         return;
     }
-    if (Strutil::parse_prefix (h, "%meta{") && m_master->m_symbols.size()) {
-        Symbol &sym (m_master->m_symbols.back());
+    if (Strutil::parse_prefix (h, "%meta{")) {
+        // parse type and name
         int ival = -1;
-        TypeDesc type (Strutil::parse_identifier (h, "", true));
-        Strutil::parse_char (h, ',');
-        string_view ident = Strutil::parse_identifier (h, "", true);
-        Strutil::parse_char (h, ',');
-        if (type == TypeDesc::TypeInt && ident == "lockgeom"
-                && Strutil::parse_int (h, ival) && ival >= 0)
-            sym.lockgeom (ival);
-        else if (type == TypeDesc::TypeInt && ident == "allowconnect"
-                && Strutil::parse_int (h, ival) && ival >= 0)
-            sym.allowconnect (ival);
+        TypeDesc type(Strutil::parse_identifier(h, "", true));
+        Strutil::parse_char(h, ',');
+        string_view ident = Strutil::parse_identifier(h, "", true);
+        Strutil::parse_char(h, ',');
+        if (m_master->m_symbols.size()) {
+            // metadata is attached to a particular symbol
+            Symbol& sym(m_master->m_symbols.back());
+            if (type == TypeDesc::TypeInt && ident == "lockgeom"
+                && Strutil::parse_int(h, ival) && ival >= 0)
+                sym.lockgeom(ival);
+            else if (type == TypeDesc::TypeInt && ident == "allowconnect"
+                     && Strutil::parse_int(h, ival) && ival >= 0)
+                sym.allowconnect(ival);
+        } else {
+            // metadata is attached at the shader level
+            if (type == TypeDesc::TypeInt && ident == "range_checking"
+                && Strutil::parse_int(h, ival) && ival >= 0)
+                m_master->range_checking(ival != 0);
+        }
         return;
     }
 }

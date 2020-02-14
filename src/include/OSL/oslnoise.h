@@ -29,12 +29,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pragma once
 
 #include <limits>
+#include <type_traits>
 
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
+#include <OSL/sfm_simplex.h>
+#include <OSL/sfmath.h>
 #include <OpenImageIO/fmath.h>
 #include <OpenImageIO/hash.h>
 #include <OpenImageIO/simd.h>
+
 
 OSL_NAMESPACE_ENTER
 
@@ -147,7 +151,10 @@ namespace {
 // convert a 32 bit integer into a floating point number in [0,1]
 inline OSL_HOSTDEVICE float bits_to_01 (unsigned int bits) {
     // divide by 2^32-1
-    return bits * (1.0f / std::numeric_limits<unsigned int>::max());
+	// Calculate inverse constant with double precision to avoid
+	//     warning: implicit conversion from 'unsigned int' to 'float' changes value from 4294967295 to 4294967296
+    constexpr float convertFactor = static_cast<float>(static_cast<double>(1.0) / static_cast<double>(std::numeric_limits<unsigned int>::max()));
+    return bits * convertFactor;
 }
 
 
@@ -170,7 +177,7 @@ OSL_FORCEINLINE int4
 bjfinal (const int4& a_, const int4& b_, const int4& c_)
 {
     using OIIO::simd::rotl32;
-	int4 a(a_), b(b_), c(c_);
+    int4 a(a_), b(b_), c(c_);
     c ^= b; c -= rotl32(b,14);
     a ^= c; a -= rotl32(c,11);
     b ^= a; b -= rotl32(a,25);
@@ -182,13 +189,18 @@ bjfinal (const int4& a_, const int4& b_, const int4& c_)
 }
 #endif
 
+#ifndef __OSL_USE_REFERENCE_INT_HASH
+	// Warning the reference hash may cause incorrect results when
+	// used inside a SIMD loop due to its complexity
+	#define __OSL_USE_REFERENCE_INT_HASH 0
+#endif
 
 /// hash an array of N 32 bit values into a pseudo-random value
 /// based on my favorite hash: http://burtleburtle.net/bob/c/lookup3.c
 /// templated so that the compiler can unroll the loops for us
-template <int N> OSL_HOSTDEVICE
-inline unsigned int
-inthash (const unsigned int k[N]) {
+template <int N>
+OSL_FORCEINLINE OSL_HOSTDEVICE unsigned int
+reference_inthash (const unsigned int k[N]) {
     // now hash the data!
     unsigned int a, b, c, len = N;
     a = b = c = 0xdeadbeef + (len << 2) + 13;
@@ -211,6 +223,96 @@ inthash (const unsigned int k[N]) {
     return c;
 }
 
+
+template<typename HeadT, typename... ListT>
+using RequireAllSame = typename std::enable_if<conjunction<std::is_same<ListT, HeadT>...>::value>::type;
+
+// Allow any number of arguments to be adapted to the array based reference_inthash
+// and leave door open for overloads of inthash with specific parameters.
+// NOTE: only accept unsigned int's so that overloads with unsigned int's will be chosen.
+// Callers with "int" parameters will need to static_cast<unsigned int>(param)
+template<typename ...ListT, typename = RequireAllSame<unsigned int, ListT...> >
+OSL_FORCEINLINE OSL_HOSTDEVICE unsigned int
+inthash (ListT... uintList)  {
+    const int count = sizeof...(uintList);
+	const unsigned int iv[count] = {uintList...};
+	return reference_inthash<count>(iv);
+}
+
+#if (__OSL_USE_REFERENCE_INT_HASH == 0)
+	// Do not rely on compilers to fully optimizing the
+	// reference_inthash<int N> template above.
+	// The fact it takes an array parameter
+	// could cause confusion and extra work for a compiler to convert
+	// from x,y,z,w -> k[4] then index them.  So to simplify things
+	// for compilers and avoid requiring actual stack space for the k[N]
+	// array versus tracking builtin integer types in registers,
+	// here are hand unrolled versions of inthash for 1-5 parameters.
+	// The upshot is no need to create a k[N] on the stack and hopefully
+	// simpler time for optimizer as it has no need to deal with while
+	// loop and switch statement.
+	OSL_FORCEINLINE OSL_HOSTDEVICE unsigned int
+	inthash (const unsigned int k0) {
+		// now hash the data!
+		unsigned int start_val = 0xdeadbeef + (1 << 2) + 13;
+
+		unsigned int a = start_val + k0;
+		unsigned int c = OIIO::bjhash::bjfinal(a, start_val, start_val);
+		return c;
+	}
+
+	OSL_FORCEINLINE OSL_HOSTDEVICE unsigned int
+	inthash (const unsigned int k0, const unsigned int k1) {
+		// now hash the data!
+		unsigned int start_val = 0xdeadbeef + (2 << 2) + 13;
+
+		unsigned int a = start_val + k0;
+		unsigned int b = start_val + k1;
+		unsigned int c = OIIO::bjhash::bjfinal(a, b, start_val);
+		return c;
+	}
+
+	OSL_FORCEINLINE OSL_HOSTDEVICE unsigned int
+	inthash (const unsigned int k0, const unsigned int k1, const unsigned int k2) {
+		// now hash the data!
+		unsigned int start_val = 0xdeadbeef + (3 << 2) + 13;
+
+		unsigned int a = start_val + k0;
+		unsigned int b = start_val + k1;
+		unsigned int c = start_val + k2;
+		c = OIIO::bjhash::bjfinal(a, b, c);
+		return c;
+	}
+
+	OSL_FORCEINLINE OSL_HOSTDEVICE unsigned int
+	inthash (const unsigned int k0, const unsigned int k1, const unsigned int k2, const unsigned int k3) {
+		// now hash the data!
+		unsigned int start_val = 0xdeadbeef + (4 << 2) + 13;
+
+		unsigned int a = start_val + k0;
+		unsigned int b = start_val + k1;
+		unsigned int c = start_val + k2;
+		OIIO::bjhash::bjmix(a, b, c);
+		a += k3;
+		c = OIIO::bjhash::bjfinal(a, b, c);
+		return c;
+	}
+
+	OSL_FORCEINLINE OSL_HOSTDEVICE unsigned int
+	inthash (const unsigned int k0, const unsigned int k1, const unsigned int k2, const unsigned int k3, const unsigned int k4) {
+		// now hash the data!
+		unsigned int start_val = 0xdeadbeef + (5 << 2) + 13;
+
+		unsigned int a = start_val + k0;
+		unsigned int b = start_val + k1;
+		unsigned int c = start_val + k2;
+		OIIO::bjhash::bjmix(a, b, c);
+		b += k4;
+		a += k3;
+		c = OIIO::bjhash::bjfinal(a, b, c);
+		return c;
+	}
+#endif
 
 #ifndef __CUDA_ARCH__
 // Do four 2D hashes simultaneously.
@@ -253,437 +355,370 @@ inthash_simd (const int4& key_x, const int4& key_y, const int4& key_z, const int
 #endif
 
 
+// Cell and Hash noise only differ in how they transform their inputs from
+// float to unsigned int for use in the inthash function.
+// IntHashNoiseBase serves as base class with DerivedT::transformToUint
+// controlling how the float inputs are transformed
+template<typename DerivedT>
+struct IntHashNoiseBase  {
+	OSL_FORCEINLINE OSL_HOSTDEVICE IntHashNoiseBase () { }
 
-struct CellNoise {
-    OSL_HOSTDEVICE CellNoise () { }
-
-    inline OSL_HOSTDEVICE void operator() (float &result, float x) const {
-        unsigned int iv[1];
-        iv[0] = OIIO::ifloor (x);
-        hash1<1> (result, iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x) const {
+    	result = hashFloat(x);
     }
 
-    inline OSL_HOSTDEVICE void operator() (float &result, float x, float y) const {
-        unsigned int iv[2];
-        iv[0] = OIIO::ifloor (x);
-        iv[1] = OIIO::ifloor (y);
-        hash1<2> (result, iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x, float y) const {
+    	result = hashFloat(x, y);
     }
 
-    inline OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p) const {
-        unsigned int iv[3];
-        iv[0] = OIIO::ifloor (p.x);
-        iv[1] = OIIO::ifloor (p.y);
-        iv[2] = OIIO::ifloor (p.z);
-        hash1<3> (result, iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p) const {
+    	result = hashFloat(p.x, p.y, p.z);
     }
 
-    inline OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, float t) const {
-        unsigned int iv[4];
-        iv[0] = OIIO::ifloor (p.x);
-        iv[1] = OIIO::ifloor (p.y);
-        iv[2] = OIIO::ifloor (p.z);
-        iv[3] = OIIO::ifloor (t);
-        hash1<4> (result, iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, float t) const {
+    	result = hashFloat(p.x, p.y, p.z, t);
     }
 
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, float x) const {
-        unsigned int iv[2];
-        iv[0] = OIIO::ifloor (x);
-        hash3<2> (result, iv);
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, float x) const {
+    	result = hashVec(x);
     }
 
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float y) const {
-        unsigned int iv[3];
-        iv[0] = OIIO::ifloor (x);
-        iv[1] = OIIO::ifloor (y);
-        hash3<3> (result, iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float y) const {
+    	result = hashVec(x, y);
     }
 
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p) const {
-        unsigned int iv[4];
-        iv[0] = OIIO::ifloor (p.x);
-        iv[1] = OIIO::ifloor (p.y);
-        iv[2] = OIIO::ifloor (p.z);
-        hash3<4> (result, iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p) const {
+    	result = hashVec(p.x, p.y, p.z);
     }
 
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, float t) const {
-        unsigned int iv[5];
-        iv[0] = OIIO::ifloor (p.x);
-        iv[1] = OIIO::ifloor (p.y);
-        iv[2] = OIIO::ifloor (p.z);
-        iv[3] = OIIO::ifloor (t);
-        hash3<5> (result, iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, float t) const {
+    	result = hashVec(p.x, p.y, p.z, t);
     }
+
 
 private:
-    template <int N> OSL_HOSTDEVICE
-    inline void hash1 (float &result, const unsigned int k[N]) const {
-        result = bits_to_01(inthash<N>(k));
+    template<typename ...ListT>
+    OSL_FORCEINLINE OSL_HOSTDEVICE float
+    hashFloat (ListT... floatList) const {
+        return bits_to_01(inthash(DerivedT::transformToUint(floatList)...));
     }
 
-    template <int N> OSL_HOSTDEVICE
-    inline void hash3 (Vec3 &result, unsigned int k[N]) const {
-        k[N-1] = 0; result.x = bits_to_01 (inthash<N> (k));
-        k[N-1] = 1; result.y = bits_to_01 (inthash<N> (k));
-        k[N-1] = 2; result.z = bits_to_01 (inthash<N> (k));
+    template<typename ...ListT>
+    OSL_FORCEINLINE OSL_HOSTDEVICE Vec3
+    hashVec (ListT... floatList) const {
+    	return inthashVec(DerivedT::transformToUint(floatList)...);
+    }
+
+#if __OSL_USE_REFERENCE_INT_HASH
+    // Allow any number of arguments to be adapted to the array based reference_inthash
+    // and leave door open for overloads of hash3 with specific parameters
+
+    // Produce Vec3 result from any number of arguments with array based reference_inthash
+    // and extra seed values, but leave door open for overloads of inthashVec
+    // for specific parameter combinations
+    template<typename ...ListT>
+    OSL_FORCEINLINE OSL_HOSTDEVICE Vec3
+    inthashVec (ListT... uintList) const {
+        constexpr int N = sizeof...(uintList) + 1;
+    	unsigned int k[N] = {uintList...};
+
+    	Vec3 result;
+        k[N-1] = 0u; result.x = bits_to_01 (reference_inthash<N> (k));
+        k[N-1] = 1u; result.y = bits_to_01 (reference_inthash<N> (k));
+        k[N-1] = 2u; result.z = bits_to_01 (reference_inthash<N> (k));
+        return result;
+    }
+#else
+    // Produce Vec3 result from any number of arguments with inthash and
+    // extra seed values, but leave door open for overloads of inthashVec
+    // for specific parameter combinations
+    template<typename ...ListT>
+    OSL_FORCEINLINE OSL_HOSTDEVICE Vec3
+	inthashVec (ListT... uintList) const  {
+        return Vec3(bits_to_01(inthash(uintList..., 0u)),
+        			bits_to_01(inthash(uintList..., 1u)),
+					bits_to_01(inthash(uintList..., 2u)));
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE Vec3
+	inthashVec (const unsigned int k0, const unsigned int k1, const unsigned int k2) const {
+        // combine implementations of reference_inthash<3> and reference_inthash<4>
+    	// so that we can only perform the bjmix once because k0,k1,k2 are the
+    	// same values passed to reference_inthash<4>, only k3 differs
+        // and if we unroll the work it can be separated
+
+        // now hash the data!
+        unsigned int start_val = 0xdeadbeef + (4 << 2) + 13;
+
+        unsigned int a = start_val + k0;
+        unsigned int b = start_val + k1;
+        unsigned int c = start_val + k2;
+        OIIO::bjhash::bjmix(a, b, c);
+
+        return Vec3(bits_to_01( OIIO::bjhash::bjfinal(a+0, b, c) ),
+                    bits_to_01( OIIO::bjhash::bjfinal(a+1, b, c) ),
+                    bits_to_01( OIIO::bjhash::bjfinal(a+2, b, c) ));
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE Vec3
+	inthashVec (const unsigned int k0, const unsigned int k1, const unsigned int k2, const unsigned int k3) const {
+        // combine implementations of reference_inthash<3> and reference_inthash<5>
+    	// so that we can only perform the bjmix once because k0,k1,k2,k3 are the
+    	// same values passed to reference_inthash<5>, only k4 differs
+        // and if we unroll the work it can be separated
+
+        // now hash the data!
+        unsigned int start_val = 0xdeadbeef + (5 << 2) + 13;
+
+        unsigned int a = start_val + k0;
+        unsigned int b = start_val + k1;
+        unsigned int c = start_val + k2;
+        OIIO::bjhash::bjmix(a, b, c);
+        unsigned int a2 = a + k3;
+
+        return Vec3(bits_to_01( OIIO::bjhash::bjfinal(a2, b+0, c) ),
+                    bits_to_01( OIIO::bjhash::bjfinal(a2, b+1, c) ),
+                    bits_to_01( OIIO::bjhash::bjfinal(a2, b+2, c) ));
+    }
+#endif
+};
+
+struct CellNoise: public IntHashNoiseBase<CellNoise>  {
+	OSL_FORCEINLINE OSL_HOSTDEVICE CellNoise () { }
+
+    static OSL_FORCEINLINE OSL_HOSTDEVICE unsigned int
+	transformToUint(float val)
+    {
+    	return OIIO::ifloor(val);
     }
 };
 
+struct HashNoise: public IntHashNoiseBase<HashNoise>  {
+	OSL_FORCEINLINE OSL_HOSTDEVICE HashNoise () { }
 
+    static OSL_FORCEINLINE OSL_HOSTDEVICE unsigned int
+	transformToUint(float val)
+    {
+    	return sfm::bit_cast<float,unsigned int>(val);
+    }
+};
 
-struct PeriodicCellNoise {
-    OSL_HOSTDEVICE PeriodicCellNoise () { }
+// Periodic Cell and Hash Noise simply wraps its inputs before
+// performing the same conversions and hashing as the non-periodic version.
+// We define a wrapper on top of Cell or Hash Noise to reuse
+// its underlying implementation.
+template <typename BaseNoiseT>
+struct PeriodicAdaptionOf {
+	OSL_FORCEINLINE OSL_HOSTDEVICE PeriodicAdaptionOf () { }
 
-    inline OSL_HOSTDEVICE void operator() (float &result, float x, float px) const {
-        unsigned int iv[1];
-        iv[0] = OIIO::ifloor (wrap (x, px));
-        hash1<1> (result, iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x, float px) const {
+    	m_impl(result, wrap (x, px));
     }
 
-    inline OSL_HOSTDEVICE void operator() (float &result, float x, float y,
-                                           float px, float py) const {
-        unsigned int iv[2];
-        iv[0] = OIIO::ifloor (wrap (x, px));
-        iv[1] = OIIO::ifloor (wrap (y, py));
-        hash1<2> (result, iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x, float y,
+                            float px, float py) const {
+    	m_impl(result, wrap (x, px),
+                       wrap (y, py));
     }
 
-    inline OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p,
-                                           const Vec3 &pp) const {
-        unsigned int iv[3];
-        iv[0] = OIIO::ifloor (wrap (p.x, pp.x));
-        iv[1] = OIIO::ifloor (wrap (p.y, pp.y));
-        iv[2] = OIIO::ifloor (wrap (p.z, pp.z));
-        hash1<3> (result, iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p,
+                            const Vec3 &pp) const {
+    	m_impl(result, wrap (p, pp));
     }
 
-    inline OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, float t,
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, float t,
                             const Vec3 &pp, float tt) const {
-        unsigned int iv[4];
-        iv[0] = OIIO::ifloor (wrap (p.x, pp.x));
-        iv[1] = OIIO::ifloor (wrap (p.y, pp.y));
-        iv[2] = OIIO::ifloor (wrap (p.z, pp.z));
-        iv[3] = OIIO::ifloor (wrap (t, tt));
-        hash1<4> (result, iv);
+    	m_impl(result, wrap (p, pp),
+					   wrap (t, tt));
     }
 
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float px) const {
-        unsigned int iv[2];
-        iv[0] = OIIO::ifloor (wrap (x, px));
-        hash3<2> (result, iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float px) const {
+    	m_impl(result, wrap (x, px));
     }
 
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float y,
-                                           float px, float py) const {
-        unsigned int iv[3];
-        iv[0] = OIIO::ifloor (wrap (x, px));
-        iv[1] = OIIO::ifloor (wrap (y, py));
-        hash3<3> (result, iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float y,
+                            float px, float py) const {
+    	m_impl(result, wrap (x, px),
+    				   wrap (y, py));
     }
 
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, const Vec3 &pp) const {
-        unsigned int iv[4];
-        iv[0] = OIIO::ifloor (wrap (p.x, pp.x));
-        iv[1] = OIIO::ifloor (wrap (p.y, pp.y));
-        iv[2] = OIIO::ifloor (wrap (p.z, pp.z));
-        hash3<4> (result, iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, const Vec3 &pp) const {
+    	m_impl(result, wrap (p, pp));
     }
 
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, float t,
-                                           const Vec3 &pp, float tt) const {
-        unsigned int iv[5];
-        iv[0] = OIIO::ifloor (wrap (p.x, pp.x));
-        iv[1] = OIIO::ifloor (wrap (p.y, pp.y));
-        iv[2] = OIIO::ifloor (wrap (p.z, pp.z));
-        iv[3] = OIIO::ifloor (wrap (t, tt));
-        hash3<5> (result, iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, float t,
+                            const Vec3 &pp, float tt) const {
+    	m_impl(result, wrap (p, pp),
+					   wrap (t, tt));
     }
 
 private:
-    template <int N> OSL_HOSTDEVICE
-    inline void hash1 (float &result, const unsigned int k[N]) const {
-        result = bits_to_01(inthash<N>(k));
-    }
-
-    template <int N> OSL_HOSTDEVICE
-    inline void hash3 (Vec3 &result, unsigned int k[N]) const {
-        k[N-1] = 0; result.x = bits_to_01 (inthash<N> (k));
-        k[N-1] = 1; result.y = bits_to_01 (inthash<N> (k));
-        k[N-1] = 2; result.z = bits_to_01 (inthash<N> (k));
-    }
-
-    inline OSL_HOSTDEVICE float wrap (float s, float period) const {
+    OSL_FORCEINLINE OSL_HOSTDEVICE float wrap (float s, float period) const {
+        // TODO: investigate if quick_floor is legal here
+        // and or beneficial
         period = floorf (period);
         if (period < 1.0f)
             period = 1.0f;
         return s - period * floorf (s / period);
     }
 
-    inline OSL_HOSTDEVICE Vec3 wrap (const Vec3 &s, const Vec3 &period) {
-        return Vec3 (wrap (s[0], period[0]),
-                     wrap (s[1], period[1]),
-                     wrap (s[2], period[2]));
+    OSL_FORCEINLINE OSL_HOSTDEVICE Vec3 wrap (const Vec3 &s, const Vec3 &period) const {
+    	return Vec3(wrap(s.x, period.x),
+    			    wrap(s.y, period.y),
+					wrap(s.z, period.z));
     }
+
+    BaseNoiseT m_impl;
 };
+
+using PeriodicCellNoise = PeriodicAdaptionOf<CellNoise>;
+using PeriodicHashNoise = PeriodicAdaptionOf<HashNoise>;
+
 
 
 
 inline OSL_HOSTDEVICE int
 inthashi (int x)
 {
-    unsigned int i[1];
-    i[0] = (unsigned int)x;
-    return (int) inthash<1>(i);
+    return static_cast<int>(inthash(
+		static_cast<unsigned int>(x)
+	));
 }
 
 inline OSL_HOSTDEVICE int
 inthashf (float x)
 {
-    unsigned int i[1];
-    i[0] = OIIO::bit_cast<float,unsigned int>(x);
-    return (int) inthash<1>(i);
+    return static_cast<int>(
+		inthash(sfm::bit_cast<float,unsigned int>(x))
+	);
 }
 
 inline OSL_HOSTDEVICE int
 inthashf (float x, float y)
 {
-    unsigned int i[2];
-    i[0] = OIIO::bit_cast<float,unsigned int>(x);
-    i[1] = OIIO::bit_cast<float,unsigned int>(y);
-    return (int) inthash<2>(i);
+    return static_cast<int>(
+		inthash(
+			sfm::bit_cast<float,unsigned int>(x),
+			sfm::bit_cast<float,unsigned int>(y)
+		)
+	);
 }
 
 
 inline OSL_HOSTDEVICE int
 inthashf (const float *x)
 {
-    unsigned int i[3];
-    i[0] = OIIO::bit_cast<float,unsigned int>(x[0]);
-    i[1] = OIIO::bit_cast<float,unsigned int>(x[1]);
-    i[2] = OIIO::bit_cast<float,unsigned int>(x[2]);
-    return (int) inthash<3>(i);
+    return static_cast<int>(
+		inthash(
+			sfm::bit_cast<float,unsigned int>(x[0]),
+			sfm::bit_cast<float,unsigned int>(x[1]),
+			sfm::bit_cast<float,unsigned int>(x[2])
+		)
+	);
 }
 
 
 inline OSL_HOSTDEVICE int
 inthashf (const float *x, float y)
 {
-    unsigned int i[4];
-    i[0] = OIIO::bit_cast<float,unsigned int>(x[0]);
-    i[1] = OIIO::bit_cast<float,unsigned int>(x[1]);
-    i[2] = OIIO::bit_cast<float,unsigned int>(x[2]);
-    i[3] = OIIO::bit_cast<float,unsigned int>(y);
-    return (int) inthash<4>(i);
+    return static_cast<int>(
+		inthash(
+			sfm::bit_cast<float,unsigned int>(x[0]),
+			sfm::bit_cast<float,unsigned int>(x[1]),
+			sfm::bit_cast<float,unsigned int>(x[2]),
+			sfm::bit_cast<float,unsigned int>(y)
+		)
+	);
 }
-
-
-
-struct HashNoise {
-    OSL_HOSTDEVICE HashNoise () { }
-
-    inline OSL_HOSTDEVICE void operator() (float &result, float x) const {
-        unsigned int iv[1];
-        iv[0] = OIIO::bit_cast<float,unsigned int> (x);
-        hash1<1> (result, iv);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (float &result, float x, float y) const {
-        unsigned int iv[2];
-        iv[0] = OIIO::bit_cast<float,unsigned int> (x);
-        iv[1] = OIIO::bit_cast<float,unsigned int> (y);
-        hash1<2> (result, iv);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p) const {
-        unsigned int iv[3];
-        iv[0] = OIIO::bit_cast<float,unsigned int> (p.x);
-        iv[1] = OIIO::bit_cast<float,unsigned int> (p.y);
-        iv[2] = OIIO::bit_cast<float,unsigned int> (p.z);
-        hash1<3> (result, iv);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, float t) const {
-        unsigned int iv[4];
-        iv[0] = OIIO::bit_cast<float,unsigned int> (p.x);
-        iv[1] = OIIO::bit_cast<float,unsigned int> (p.y);
-        iv[2] = OIIO::bit_cast<float,unsigned int> (p.z);
-        iv[3] = OIIO::bit_cast<float,unsigned int> (t);
-        hash1<4> (result, iv);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, float x) const {
-        unsigned int iv[2];
-        iv[0] = OIIO::bit_cast<float,unsigned int> (x);
-        hash3<2> (result, iv);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float y) const {
-        unsigned int iv[3];
-        iv[0] = OIIO::bit_cast<float,unsigned int> (x);
-        iv[1] = OIIO::bit_cast<float,unsigned int> (y);
-        hash3<3> (result, iv);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p) const {
-        unsigned int iv[4];
-        iv[0] = OIIO::bit_cast<float,unsigned int> (p.x);
-        iv[1] = OIIO::bit_cast<float,unsigned int> (p.y);
-        iv[2] = OIIO::bit_cast<float,unsigned int> (p.z);
-        hash3<4> (result, iv);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, float t) const {
-        unsigned int iv[5];
-        iv[0] = OIIO::bit_cast<float,unsigned int> (p.x);
-        iv[1] = OIIO::bit_cast<float,unsigned int> (p.y);
-        iv[2] = OIIO::bit_cast<float,unsigned int> (p.z);
-        iv[3] = OIIO::bit_cast<float,unsigned int> (t);
-        hash3<5> (result, iv);
-    }
-
-private:
-    template <int N> OSL_HOSTDEVICE
-    inline void hash1 (float &result, const unsigned int k[N]) const {
-        result = bits_to_01(inthash<N>(k));
-    }
-
-    template <int N> OSL_HOSTDEVICE
-    inline void hash3 (Vec3 &result, unsigned int k[N]) const {
-        k[N-1] = 0; result.x = bits_to_01 (inthash<N> (k));
-        k[N-1] = 1; result.y = bits_to_01 (inthash<N> (k));
-        k[N-1] = 2; result.z = bits_to_01 (inthash<N> (k));
-    }
-};
-
-
-
-struct PeriodicHashNoise {
-    OSL_HOSTDEVICE PeriodicHashNoise () { }
-
-    inline OSL_HOSTDEVICE void operator() (float &result, float x, float px) const {
-        unsigned int iv[1];
-        iv[0] = OIIO::bit_cast<float,unsigned int> (wrap (x, px));
-        hash1<1> (result, iv);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (float &result, float x, float y,
-                                           float px, float py) const {
-        unsigned int iv[2];
-        iv[0] = OIIO::bit_cast<float,unsigned int> (wrap (x, px));
-        iv[1] = OIIO::bit_cast<float,unsigned int> (wrap (y, py));
-        hash1<2> (result, iv);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p,
-                                           const Vec3 &pp) const {
-        unsigned int iv[3];
-        iv[0] = OIIO::bit_cast<float,unsigned int> (wrap (p.x, pp.x));
-        iv[1] = OIIO::bit_cast<float,unsigned int> (wrap (p.y, pp.y));
-        iv[2] = OIIO::bit_cast<float,unsigned int> (wrap (p.z, pp.z));
-        hash1<3> (result, iv);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, float t,
-                                           const Vec3 &pp, float tt) const {
-        unsigned int iv[4];
-        iv[0] = OIIO::bit_cast<float,unsigned int> (wrap (p.x, pp.x));
-        iv[1] = OIIO::bit_cast<float,unsigned int> (wrap (p.y, pp.y));
-        iv[2] = OIIO::bit_cast<float,unsigned int> (wrap (p.z, pp.z));
-        iv[3] = OIIO::bit_cast<float,unsigned int> (wrap (t, tt));
-        hash1<4> (result, iv);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float px) const {
-        unsigned int iv[2];
-        iv[0] = OIIO::bit_cast<float,unsigned int> (wrap (x, px));
-        hash3<2> (result, iv);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float y,
-                                           float px, float py) const {
-        unsigned int iv[3];
-        iv[0] = OIIO::bit_cast<float,unsigned int> (wrap (x, px));
-        iv[1] = OIIO::bit_cast<float,unsigned int> (wrap (y, py));
-        hash3<3> (result, iv);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, const Vec3 &pp) const {
-        unsigned int iv[4];
-        iv[0] = OIIO::bit_cast<float,unsigned int> (wrap (p.x, pp.x));
-        iv[1] = OIIO::bit_cast<float,unsigned int> (wrap (p.y, pp.y));
-        iv[2] = OIIO::bit_cast<float,unsigned int> (wrap (p.z, pp.z));
-        hash3<4> (result, iv);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, float t,
-                                           const Vec3 &pp, float tt) const {
-        unsigned int iv[5];
-        iv[0] = OIIO::bit_cast<float,unsigned int> (wrap (p.x, pp.x));
-        iv[1] = OIIO::bit_cast<float,unsigned int> (wrap (p.y, pp.y));
-        iv[2] = OIIO::bit_cast<float,unsigned int> (wrap (p.z, pp.z));
-        iv[3] = OIIO::bit_cast<float,unsigned int> (wrap (t, tt));
-        hash3<5> (result, iv);
-    }
-
-private:
-    template <int N> OSL_HOSTDEVICE
-    inline void hash1 (float &result, const unsigned int k[N]) const {
-        result = bits_to_01(inthash<N>(k));
-    }
-
-    template <int N> OSL_HOSTDEVICE
-    inline void hash3 (Vec3 &result, unsigned int k[N]) const {
-        k[N-1] = 0; result.x = bits_to_01 (inthash<N> (k));
-        k[N-1] = 1; result.y = bits_to_01 (inthash<N> (k));
-        k[N-1] = 2; result.z = bits_to_01 (inthash<N> (k));
-    }
-
-    inline OSL_HOSTDEVICE float wrap (float s, float period) const {
-        period = floorf (period);
-        if (period < 1.0f)
-            period = 1.0f;
-        return s - period * floorf (s / period);
-    }
-
-    inline OSL_HOSTDEVICE Vec3 wrap (const Vec3 &s, const Vec3 &period) {
-        return Vec3 (wrap (s[0], period[0]),
-                     wrap (s[1], period[1]),
-                     wrap (s[2], period[2]));
-    }
-};
-
-
 
 
 // Define select(bool,truevalue,falsevalue) template that works for a
 // variety of types that we can use for both scalars and vectors. Because ?:
 // won't work properly in template code with vector ops.
-template <typename B, typename F> OSL_HOSTDEVICE
-OSL_FORCEINLINE F select (const B& b, const F& t, const F& f) { return b ? t : f; }
+// NOTE: Removing template and require explicit functions for different
+// combinations be specified using polymorphism.  Main reason is so that
+// different versions can pass parameters by value vs. reference.
+//template <typename B, typename F>
+//OSL_FORCEINLINE OSL_HOSTDEVICE F select (B b, const F& t, const F& f) { return b ? t : f; }
+
+OSL_FORCEINLINE OSL_HOSTDEVICE float select(const bool b, float t, float f) {
+    // NOTE:  parameters must NOT be references, to avoid inlining caller's creation of
+    // these values down inside the conditional assignments which can create to complex
+    // of a code flow for Clang's vectorizer to handle
+    static_assert(!std::is_reference<decltype(b)>::value, "parameters to select cannot be references");
+    static_assert(!std::is_reference<decltype(t)>::value, "parameters to select cannot be references");
+    static_assert(!std::is_reference<decltype(f)>::value, "parameters to select cannot be references");
+    return b ? t : f;
+}
+
+OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float> select(const bool b, const Dual2<float> &t, const Dual2<float> &f) {
+    // Because t & f are a references, we don't want inlining to expand t.val(), t.dx(), or t.dy()
+    // inside the conditional branch creating a more complex flow by forcing the inlined
+    // abstract syntax tree to only be evaluated when the condition is true.
+    // To avoid this we assign t.val(), t.dx(), t.dy() to local values outside the
+    // conditional to insulate it.
+    // NOTE:  This technique was also necessary to enable vectorization of nested select calls
+    float val(f.val());
+    float tval(t.val());
+
+    float dx(f.dx());
+    float tdx(t.dx());
+
+    float dy(f.dy());
+    float tdy(t.dy());
+
+    // Blend per builtin component to allow
+    // the compiler to track builtins and privatize the data layout
+    // versus requiring a stack location.
+    // Without this work per component, gathers & scatters were being emitted
+    // when used inside SIMD loops.
+#if OSL_NON_INTEL_CLANG
+    // Clang's vectorizor was really insistent that a select operation could not be replaced
+    // with control flow, so had to re-introduce the ? operator to make it happy
+    return Dual2<float> (
+        b ? tval : val,
+        b ? tdx : dx,
+        b ? tdy : dy);
+#else
+    if (b)
+        val = tval;
+
+    if (b)
+        dx = tdx;
+
+    if (b)
+        dy = tdy;
+
+    return Dual2<float> (
+            val,
+            dx,
+            dy);
+#endif
+}
 
 #ifndef __CUDA_ARCH__
-template <> OSL_FORCEINLINE int4 select (const bool4& b, const int4& t, const int4& f) {
-    return blend (f, t, b);
-}
+// Already provided by oiio/simd.h
+//OSL_FORCEINLINE int4 select (const bool4& b, const int4& t, const int4& f) {
+//    return blend (f, t, b);
+//}
 
-template <> OSL_FORCEINLINE float4 select (const bool4& b, const float4& t, const float4& f) {
-    return blend (f, t, b);
-}
+// Already provided by oiio/simd.h
+//OSL_FORCEINLINE float4 select (const bool4& b, const float4& t, const float4& f) {
+//    return blend (f, t, b);
+//}
 
-template <> OSL_FORCEINLINE float4 select (const int4& b, const float4& t, const float4& f) {
+OSL_FORCEINLINE float4 select (const int4& b, const float4& t, const float4& f) {
     return blend (f, t, bool4(b));
 }
 
-template <> OSL_FORCEINLINE Dual2<float4>
+OSL_FORCEINLINE Dual2<float4>
 select (const bool4& b, const Dual2<float4>& t, const Dual2<float4>& f) {
     return Dual2<float4> (blend (f.val(), t.val(), b),
                           blend (f.dx(),  t.dx(),  b),
                           blend (f.dy(),  t.dy(),  b));
 }
 
-template <>
 OSL_FORCEINLINE Dual2<float4> select (const int4& b, const Dual2<float4>& t, const Dual2<float4>& f) {
     return select (bool4(b), t, f);
 }
@@ -693,20 +728,72 @@ OSL_FORCEINLINE Dual2<float4> select (const int4& b, const Dual2<float4>& t, con
 
 // Define negate_if(value,bool) that will work for both scalars and vectors,
 // as well as Dual2's of both.
-template<typename FLOAT, typename BOOL> OSL_HOSTDEVICE
-OSL_FORCEINLINE FLOAT negate_if (const FLOAT& val, const BOOL& b) {
-    return b ? -val : val;
+// NOTE: Removing template and require explicit functions for different
+// combinations be specified using polymorphism.  Main reason is so that
+// different versions can pass parameters by value vs. reference.
+//template <typename B, typename F>
+//template<typename FLOAT, typename BOOL>
+//OSL_FORCEINLINE OSL_HOSTDEVICE FLOAT negate_if (const FLOAT& val, const BOOL& b) {
+//    return b ? -val : val;
+//}
+
+OSL_FORCEINLINE OSL_HOSTDEVICE float negate_if (const float val, const bool cond) {
+    // NOTE:  parameters must NOT be references, to avoid inlining caller's creation of
+    // these values down inside the conditional assignments which can create to complex
+    // of a code flow for vectorizer to handle
+    static_assert(!std::is_reference<decltype(val)>::value, "parameters to negate_if cannot be references");
+    return cond ? -val : val;
 }
 
+
+OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float> negate_if(const Dual2<float> &val, const bool cond) {
+    // NOTE: negation happens outside of conditional, then is blended based on the condition
+    Dual2<float> neg_val(-val);
+
+    // Blend per builtin component to allow
+    // the compiler to track builtins and privatize the data layout
+    // versus requiring a stack location.
+    float v = val.val();
+    if (cond) {
+        v = neg_val.val();
+    }
+
+    float dx = val.dx();
+    if (cond) {
+        dx = neg_val.dx();
+    }
+
+    float dy = val.dy();
+    if (cond) {
+        dy = neg_val.dy();
+    }
+
+    return Dual2<float>(v, dx, dy);
+}
+
+#if 0 // Unneeded currently
+template <> OSL_FORCEINLINE Dual2<Vec3> negate_if(const Dual2<Vec3> &val, const bool &b) {
+    Dual2<Vec3> r;
+    // Use a ternary operation per builtin component to allow
+    // the compiler to track builtins and privatize the data layout
+    // versus requiring a stack location.
+    Dual2<Vec3> neg_val(-val);
+    r.val() = b ? neg_val.val() : val.val();
+    r.dx() = b ? neg_val.dx() : val.dx();
+    r.dy() = b ? neg_val.dy() : val.dy();
+    return r;
+}
+#endif
+
 #ifndef __CUDA_ARCH__
-template<> OSL_FORCEINLINE float4 negate_if (const float4& val, const int4& b) {
+OSL_FORCEINLINE float4 negate_if (const float4& val, const int4& b) {
     // Special case negate_if for SIMD -- can do it with bit tricks, no branches
     int4 highbit (0x80000000);
     return bitcast_to_float4 (bitcast_to_int4(val) ^ (blend0 (highbit, bool4(b))));
 }
 
 // Special case negate_if for SIMD -- can do it with bit tricks, no branches
-template<> OSL_FORCEINLINE Dual2<float4> negate_if (const Dual2<float4>& val, const int4& b)
+OSL_FORCEINLINE Dual2<float4> negate_if (const Dual2<float4>& val, const int4& b)
 {
     return Dual2<float4> (negate_if (val.val(), b),
                           negate_if (val.dx(),  b),
@@ -750,8 +837,8 @@ OSL_FORCEINLINE Dual2<float> extract (const Dual2<float4>& a)
 // Equivalent to OIIO::bilerp (a, b, c, d, u, v), but if abcd are already
 // packed into a float4. We assume T is float and VECTYPE is float4,
 // but it also works if T is Dual2<float> and VECTYPE is Dual2<float4>.
-template<typename T, typename VECTYPE> OSL_HOSTDEVICE
-OSL_FORCEINLINE T bilerp (VECTYPE abcd, T u, T v) {
+template<typename T, typename VECTYPE>
+OSL_FORCEINLINE OSL_HOSTDEVICE T bilerp (VECTYPE abcd, T u, T v) {
     VECTYPE xx = OIIO::lerp (abcd, OIIO::simd::shuffle<1,1,3,3>(abcd), u);
     return OIIO::simd::extract<0>(OIIO::lerp (xx,OIIO::simd::shuffle<2>(xx), v));
 }
@@ -783,9 +870,18 @@ OSL_FORCEINLINE float trilerp (const float4& abcd, const float4& efgh, const flo
 
 
 // always return a value inside [0,b) - even for negative numbers
-inline OSL_HOSTDEVICE int imod(int a, int b) {
+OSL_FORCEINLINE OSL_HOSTDEVICE int imod(int a, int b) {
+#if 0
     a %= b;
     return a < 0 ? a + b : a;
+#else
+    // Avoid confusing vectorizor by returning a single value
+    int remainder = a % b;
+    if (remainder < 0) {
+        remainder += b;
+    }
+    return remainder;
+#endif
 }
 
 #ifndef __CUDA_ARCH__
@@ -799,13 +895,13 @@ inline int4 imod(const int4& a, int b) {
 // floorfrac return ifloor as well as the fractional remainder
 // FIXME: already implemented inside OIIO but can't easily override it for duals
 //        inside a different namespace
-inline OSL_HOSTDEVICE float floorfrac(float x, int* i) {
+OSL_FORCEINLINE OSL_HOSTDEVICE float floorfrac(float x, int* i) {
     *i = OIIO::ifloor(x);
     return x - *i;
 }
 
 // floorfrac with derivs
-inline OSL_HOSTDEVICE Dual2<float> floorfrac(const Dual2<float> &x, int* i) {
+OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float> floorfrac(const Dual2<float> &x, int* i) {
     float frac = floorfrac(x.val(), i);
     // slope of x is not affected by this operation
     return Dual2<float>(frac, x.dx(), x.dy());
@@ -836,8 +932,8 @@ inline Dual2<float4> floorfrac(const Dual2<float4> &x, int4* i) {
 
 // Perlin 'fade' function. Can be overloaded for float, Dual2, as well
 // as float4 / Dual2<float4>.
-template <typename T> OSL_HOSTDEVICE
-inline T fade (const T &t) {
+template <typename T>
+OSL_HOSTDEVICE OSL_FORCEINLINE T fade (const T &t) {
    return t * t * t * (t * (t * T(6.0f) - T(15.0f)) + T(10.0f));
 }
 
@@ -845,7 +941,7 @@ inline T fade (const T &t) {
 
 // 1,2,3 and 4 dimensional gradient functions - perform a dot product against a
 // randomly chosen vector. Note that the gradient vector is not normalized, but
-// this only affects the overal "scale" of the result, so we simply account for
+// this only affects the overall "scale" of the result, so we simply account for
 // the scale by multiplying in the corresponding "perlin" function.
 // These factors were experimentally calculated to be:
 //    1D:   0.188
@@ -853,16 +949,16 @@ inline T fade (const T &t) {
 //    3D:   0.936
 //    4D:   0.870
 
-template <typename T> OSL_HOSTDEVICE
-inline T grad (int hash, const T &x) {
+template <typename T>
+OSL_FORCEINLINE OSL_HOSTDEVICE T grad (int hash, const T &x) {
     int h = hash & 15;
     float g = 1 + (h & 7);  // 1, 2, .., 8
     if (h&8) g = -g;        // random sign
     return g * x;           // dot-product
 }
 
-template <typename I, typename T> OSL_HOSTDEVICE
-inline T grad (const I &hash, const T &x, const T &y) {
+template <typename I, typename T>
+OSL_FORCEINLINE OSL_HOSTDEVICE T grad (const I &hash, const T &x, const T &y) {
     // 8 possible directions (+-1,+-2) and (+-2,+-1)
     I h = hash & 7;
     T u = select (h<4, x, y);
@@ -871,8 +967,8 @@ inline T grad (const I &hash, const T &x, const T &y) {
     return negate_if(u, h&1) + negate_if(v, h&2);
 }
 
-template <typename I, typename T> OSL_HOSTDEVICE
-inline T grad (const I &hash, const T &x, const T &y, const T &z) {
+template <typename I, typename T>
+OSL_FORCEINLINE OSL_HOSTDEVICE T grad (const I &hash, const T &x, const T &y, const T &z) {
     // use vectors pointing to the edges of the cube
     I h = hash & 15;
     T u = select (h<8, x, y);
@@ -880,8 +976,24 @@ inline T grad (const I &hash, const T &x, const T &y, const T &z) {
     return negate_if(u,h&1) + negate_if(v,h&2);
 }
 
-template <typename I, typename T> OSL_HOSTDEVICE
-inline T grad (const I &hash, const T &x, const T &y, const T &z, const T &w) {
+template <typename T>
+OSL_FORCEINLINE OSL_HOSTDEVICE T grad (const int hash, const T &x, const T &y, const T &z) {
+    // use vectors pointing to the edges of the cube
+    int h = hash & 15;
+    T u = select (h<8, x, y);
+    // Changed from bitwise | to logical || to avoid conversions
+    // to integer from native boolean that was causing gather + scatters
+    // to be generated when used with the select vs.
+    // simple masking or blending.
+    // TODO: couldn't change the grad version above because OpenImageIO::v1_7::simd::bool4
+    // has no || operator defined.  Would be preferable to implement bool4::operator||
+    // and not have this version of grad separate
+    T v = select (h<4, y, select ((h==int(12))||(h==int(14)), x, z));
+    return negate_if(u,h&1) + negate_if(v,h&2);
+}
+
+template <typename I, typename T>
+OSL_FORCEINLINE OSL_HOSTDEVICE T grad (const I &hash, const T &x, const T &y, const T &z, const T &w) {
     // use vectors pointing to the edges of the hypercube
     I h = hash & 31;
     T u = select (h<24, x, y);
@@ -892,13 +1004,13 @@ inline T grad (const I &hash, const T &x, const T &y, const T &z, const T &w) {
 
 typedef Imath::Vec3<int> Vec3i;
 
-inline OSL_HOSTDEVICE Vec3 grad (const Vec3i &hash, float x) {
+OSL_FORCEINLINE OSL_HOSTDEVICE Vec3 grad (const Vec3i &hash, float x) {
     return Vec3 (grad (hash.x, x),
                  grad (hash.y, x),
                  grad (hash.z, x));
 }
 
-inline OSL_HOSTDEVICE Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x) {
+OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x) {
     Dual2<float> rx = grad (hash.x, x);
     Dual2<float> ry = grad (hash.y, x);
     Dual2<float> rz = grad (hash.z, x);
@@ -906,85 +1018,85 @@ inline OSL_HOSTDEVICE Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x) {
 }
 
 
-inline OSL_HOSTDEVICE Vec3 grad (const Vec3i &hash, float x, float y) {
+OSL_FORCEINLINE OSL_HOSTDEVICE Vec3 grad (const Vec3i &hash, float x, float y) {
     return Vec3 (grad (hash.x, x, y),
                  grad (hash.y, x, y),
                  grad (hash.z, x, y));
 }
 
-inline OSL_HOSTDEVICE Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x, Dual2<float> y) {
+OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x, Dual2<float> y) {
     Dual2<float> rx = grad (hash.x, x, y);
     Dual2<float> ry = grad (hash.y, x, y);
     Dual2<float> rz = grad (hash.z, x, y);
     return make_Vec3 (rx, ry, rz);
 }
 
-inline OSL_HOSTDEVICE Vec3 grad (const Vec3i &hash, float x, float y, float z) {
+OSL_FORCEINLINE OSL_HOSTDEVICE Vec3 grad (const Vec3i &hash, float x, float y, float z) {
     return Vec3 (grad (hash.x, x, y, z),
                  grad (hash.y, x, y, z),
                  grad (hash.z, x, y, z));
 }
 
-inline OSL_HOSTDEVICE Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x, Dual2<float> y, Dual2<float> z) {
+OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x, Dual2<float> y, Dual2<float> z) {
     Dual2<float> rx = grad (hash.x, x, y, z);
     Dual2<float> ry = grad (hash.y, x, y, z);
     Dual2<float> rz = grad (hash.z, x, y, z);
     return make_Vec3 (rx, ry, rz);
 }
 
-inline OSL_HOSTDEVICE Vec3 grad (const Vec3i &hash, float x, float y, float z, float w) {
+OSL_FORCEINLINE OSL_HOSTDEVICE Vec3 grad (const Vec3i &hash, float x, float y, float z, float w) {
     return Vec3 (grad (hash.x, x, y, z, w),
                  grad (hash.y, x, y, z, w),
                  grad (hash.z, x, y, z, w));
 }
 
-inline OSL_HOSTDEVICE Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x, Dual2<float> y, Dual2<float> z, Dual2<float> w) {
+OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<Vec3> grad (const Vec3i &hash, Dual2<float> x, Dual2<float> y, Dual2<float> z, Dual2<float> w) {
     Dual2<float> rx = grad (hash.x, x, y, z, w);
     Dual2<float> ry = grad (hash.y, x, y, z, w);
     Dual2<float> rz = grad (hash.z, x, y, z, w);
     return make_Vec3 (rx, ry, rz);
 }
 
-template <typename T> OSL_HOSTDEVICE
-inline T scale1 (const T &result) { return 0.2500f * result; }
-template <typename T> OSL_HOSTDEVICE
-inline T scale2 (const T &result) { return 0.6616f * result; }
-template <typename T> OSL_HOSTDEVICE
-inline T scale3 (const T &result) { return 0.9820f * result; }
-template <typename T> OSL_HOSTDEVICE
-inline T scale4 (const T &result) { return 0.8344f * result; }
-
+template <typename T>
+OSL_FORCEINLINE OSL_HOSTDEVICE T scale1 (const T &result) { return 0.2500f * result; }
+template <typename T>
+OSL_FORCEINLINE OSL_HOSTDEVICE T scale2 (const T &result) { return 0.6616f * result; }
+template <typename T>
+OSL_FORCEINLINE OSL_HOSTDEVICE T scale3 (const T &result) { return 0.9820f * result; }
+template <typename T>
+OSL_FORCEINLINE OSL_HOSTDEVICE T scale4 (const T &result) { return 0.8344f * result; }
 
 
 struct HashScalar {
-    OSL_HOSTDEVICE int operator() (int x) const {
-        unsigned int iv[1];
-        iv[0] = x;
-        return inthash<1> (iv);
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE int operator() (int x) const {
+        return static_cast<int>(
+			inthash(static_cast<unsigned int>(x))
+		);
     }
 
-    OSL_HOSTDEVICE int operator() (int x, int y) const {
-        unsigned int iv[2];
-        iv[0] = x;
-        iv[1] = y;
-        return inthash<2> (iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE int operator() (int x, int y) const {
+    	return static_cast<int>(
+			inthash(static_cast<unsigned int>(x),
+        	        static_cast<unsigned int>(y))
+		);
     }
 
-    OSL_HOSTDEVICE int operator() (int x, int y, int z) const {
-        unsigned int iv[3];
-        iv[0] = x;
-        iv[1] = y;
-        iv[2] = z;
-        return inthash<3> (iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE int operator() (int x, int y, int z) const {
+    	return static_cast<int>(
+			inthash(static_cast<unsigned int>(x),
+        	        static_cast<unsigned int>(y),
+			 	    static_cast<unsigned int>(z))
+		);
     }
 
-    OSL_HOSTDEVICE int operator() (int x, int y, int z, int w) const {
-        unsigned int iv[4];
-        iv[0] = x;
-        iv[1] = y;
-        iv[2] = z;
-        iv[3] = w;
-        return inthash<4> (iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE int operator() (int x, int y, int z, int w) const {
+    	return static_cast<int>(
+			inthash(static_cast<unsigned int>(x),
+        	        static_cast<unsigned int>(y),
+			  	    static_cast<unsigned int>(z),
+					static_cast<unsigned int>(w))
+		);
     }
 
 #ifndef __CUDA_ARCH__
@@ -1006,47 +1118,38 @@ struct HashScalar {
 
 };
 
+
+OSL_FORCEINLINE OSL_HOSTDEVICE Vec3i sliceup (unsigned int h) {
+    // we only need the low-order bits to be random, so split out
+    // the 32 bit result into 3 parts for each channel
+    return Vec3i(
+		(h      ) & 0xFF,
+		(h >> 8 ) & 0xFF,
+		(h >> 16) & 0xFF);
+}
+
 struct HashVector {
-    OSL_HOSTDEVICE Vec3i operator() (int x) const {
-        unsigned int iv[1];
-        iv[0] = x;
-        return hash3<1> (iv);
+    static OSL_FORCEINLINE OSL_HOSTDEVICE HashScalar convertToScalar() { return HashScalar(); }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE Vec3i operator() (int x) const {
+        return sliceup(inthash(static_cast<unsigned int>(x)));
     }
 
-    OSL_HOSTDEVICE Vec3i operator() (int x, int y) const {
-        unsigned int iv[2];
-        iv[0] = x;
-        iv[1] = y;
-        return hash3<2> (iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE Vec3i operator() (int x, int y) const {
+        return sliceup(inthash(static_cast<unsigned int>(x),
+        		               static_cast<unsigned int>(y)));
     }
 
-    OSL_HOSTDEVICE Vec3i operator() (int x, int y, int z) const {
-        unsigned int iv[3];
-        iv[0] = x;
-        iv[1] = y;
-        iv[2] = z;
-        return hash3<3> (iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE Vec3i operator() (int x, int y, int z) const {
+        return sliceup(inthash(static_cast<unsigned int>(x),
+        		               static_cast<unsigned int>(y),
+							   static_cast<unsigned int>(z)));
     }
-
-    OSL_HOSTDEVICE Vec3i operator() (int x, int y, int z, int w) const {
-        unsigned int iv[4];
-        iv[0] = x;
-        iv[1] = y;
-        iv[2] = z;
-        iv[3] = w;
-        return hash3<4> (iv);
-    }
-
-    template <int N> OSL_HOSTDEVICE
-    Vec3i hash3 (unsigned int k[N]) const {
-        Vec3i result;
-        unsigned int h = inthash<N> (k);
-        // we only need the low-order bits to be random, so split out
-        // the 32 bit result into 3 parts for each channel
-        result.x = (h      ) & 0xFF;
-        result.y = (h >> 8 ) & 0xFF;
-        result.z = (h >> 16) & 0xFF;
-        return result;
+    OSL_FORCEINLINE OSL_HOSTDEVICE Vec3i operator() (int x, int y, int z, int w) const {
+        return sliceup(inthash(static_cast<unsigned int>(x),
+        		               static_cast<unsigned int>(y),
+							   static_cast<unsigned int>(z),
+							   static_cast<unsigned int>(w)));
     }
 
 #ifndef __CUDA_ARCH__
@@ -1077,20 +1180,25 @@ struct HashVector {
 
 };
 
+
 struct HashScalarPeriodic {
-    OSL_HOSTDEVICE HashScalarPeriodic (float px) {
+private:
+    friend struct HashVectorPeriodic;
+    OSL_FORCEINLINE OSL_HOSTDEVICE HashScalarPeriodic () {}
+public:
+    OSL_FORCEINLINE OSL_HOSTDEVICE HashScalarPeriodic (float px) {
         m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
     }
-    OSL_HOSTDEVICE HashScalarPeriodic (float px, float py) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE HashScalarPeriodic (float px, float py) {
         m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
         m_py = OIIO::ifloor(py); if (m_py < 1) m_py = 1;
     }
-    OSL_HOSTDEVICE HashScalarPeriodic (float px, float py, float pz) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE HashScalarPeriodic (float px, float py, float pz) {
         m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
         m_py = OIIO::ifloor(py); if (m_py < 1) m_py = 1;
         m_pz = OIIO::ifloor(pz); if (m_pz < 1) m_pz = 1;
     }
-    OSL_HOSTDEVICE HashScalarPeriodic (float px, float py, float pz, float pw) {
+    OSL_FORCEINLINE OSL_HOSTDEVICE HashScalarPeriodic (float px, float py, float pz, float pw) {
         m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
         m_py = OIIO::ifloor(py); if (m_py < 1) m_py = 1;
         m_pz = OIIO::ifloor(pz); if (m_pz < 1) m_pz = 1;
@@ -1099,34 +1207,34 @@ struct HashScalarPeriodic {
 
     int m_px, m_py, m_pz, m_pw;
 
-    OSL_HOSTDEVICE int operator() (int x) const {
-        unsigned int iv[1];
-        iv[0] = imod (x, m_px);
-        return inthash<1> (iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE int operator() (int x) const {
+        return static_cast<int>(
+			inthash (static_cast<unsigned int>(imod (x, m_px)))
+		);
     }
 
-    OSL_HOSTDEVICE int operator() (int x, int y) const {
-        unsigned int iv[2];
-        iv[0] = imod (x, m_px);
-        iv[1] = imod (y, m_py);
-        return inthash<2> (iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE int operator() (int x, int y) const {
+        return static_cast<int>(
+			inthash(static_cast<unsigned int>(imod (x, m_px)),
+        	        static_cast<unsigned int>(imod (y, m_py)))
+		);
     }
 
-    OSL_HOSTDEVICE int operator() (int x, int y, int z) const {
-        unsigned int iv[3];
-        iv[0] = imod (x, m_px);
-        iv[1] = imod (y, m_py);
-        iv[2] = imod (z, m_pz);
-        return inthash<3> (iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE int operator() (int x, int y, int z) const {
+        return static_cast<int>(
+			inthash(static_cast<unsigned int>(imod (x, m_px)),
+        	        static_cast<unsigned int>(imod (y, m_py)),
+			 	    static_cast<unsigned int>(imod (z, m_pz)))
+		);
     }
 
-    OSL_HOSTDEVICE int operator() (int x, int y, int z, int w) const {
-        unsigned int iv[4];
-        iv[0] = imod (x, m_px);
-        iv[1] = imod (y, m_py);
-        iv[2] = imod (z, m_pz);
-        iv[3] = imod (w, m_pw);
-        return inthash<4> (iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE int operator() (int x, int y, int z, int w) const {
+        return static_cast<int>(
+			inthash(static_cast<unsigned int>(imod (x, m_px)),
+        	        static_cast<unsigned int>(imod (y, m_py)),
+			  	    static_cast<unsigned int>(imod (z, m_pz)),
+					static_cast<unsigned int>(imod (w, m_pw)))
+		);
     }
 
 #ifndef __CUDA_ARCH__
@@ -1149,19 +1257,19 @@ struct HashScalarPeriodic {
 };
 
 struct HashVectorPeriodic {
-    OSL_HOSTDEVICE HashVectorPeriodic (float px) {
+	OSL_FORCEINLINE OSL_HOSTDEVICE HashVectorPeriodic (float px) {
         m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
     }
-    OSL_HOSTDEVICE HashVectorPeriodic (float px, float py) {
+	OSL_FORCEINLINE OSL_HOSTDEVICE HashVectorPeriodic (float px, float py) {
         m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
         m_py = OIIO::ifloor(py); if (m_py < 1) m_py = 1;
     }
-    OSL_HOSTDEVICE HashVectorPeriodic (float px, float py, float pz) {
+	OSL_FORCEINLINE OSL_HOSTDEVICE HashVectorPeriodic (float px, float py, float pz) {
         m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
         m_py = OIIO::ifloor(py); if (m_py < 1) m_py = 1;
         m_pz = OIIO::ifloor(pz); if (m_pz < 1) m_pz = 1;
     }
-    OSL_HOSTDEVICE HashVectorPeriodic (float px, float py, float pz, float pw) {
+	OSL_FORCEINLINE OSL_HOSTDEVICE HashVectorPeriodic (float px, float py, float pz, float pw) {
         m_px = OIIO::ifloor(px); if (m_px < 1) m_px = 1;
         m_py = OIIO::ifloor(py); if (m_py < 1) m_py = 1;
         m_pz = OIIO::ifloor(pz); if (m_pz < 1) m_pz = 1;
@@ -1170,47 +1278,35 @@ struct HashVectorPeriodic {
 
     int m_px, m_py, m_pz, m_pw;
 
-    OSL_HOSTDEVICE Vec3i operator() (int x) const {
-        unsigned int iv[1];
-        iv[0] = imod (x, m_px);
-        return hash3<1> (iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE HashScalarPeriodic convertToScalar() const {
+        HashScalarPeriodic r;
+        r.m_px = m_px;
+        r.m_py = m_py;
+        r.m_pz = m_pz;
+        r.m_pw = m_pw;
+        return r;
     }
 
-    OSL_HOSTDEVICE Vec3i operator() (int x, int y) const {
-        unsigned int iv[2];
-        iv[0] = imod (x, m_px);
-        iv[1] = imod (y, m_py);
-        return hash3<2> (iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE Vec3i operator() (int x) const {
+        return sliceup(inthash(static_cast<unsigned int>(imod (x, m_px))));
     }
 
-    OSL_HOSTDEVICE Vec3i operator() (int x, int y, int z) const {
-        unsigned int iv[3];
-        iv[0] = imod (x, m_px);
-        iv[1] = imod (y, m_py);
-        iv[2] = imod (z, m_pz);
-        return hash3<3> (iv);
-
+    OSL_FORCEINLINE OSL_HOSTDEVICE Vec3i operator() (int x, int y) const {
+        return sliceup(inthash(static_cast<unsigned int>(imod (x, m_px)),
+        		               static_cast<unsigned int>(imod (y, m_py))));
     }
 
-    OSL_HOSTDEVICE Vec3i operator() (int x, int y, int z, int w) const {
-        unsigned int iv[4];
-        iv[0] = imod (x, m_px);
-        iv[1] = imod (y, m_py);
-        iv[2] = imod (z, m_pz);
-        iv[3] = imod (w, m_pw);
-        return hash3<4> (iv);
+    OSL_FORCEINLINE OSL_HOSTDEVICE Vec3i operator() (int x, int y, int z) const {
+        return sliceup(inthash(static_cast<unsigned int>(imod (x, m_px)),
+        		               static_cast<unsigned int>(imod (y, m_py)),
+							   static_cast<unsigned int>(imod (z, m_pz))));
     }
 
-    template <int N> OSL_HOSTDEVICE
-    Vec3i hash3 (unsigned int k[N]) const {
-        Vec3i result;
-        unsigned int h = inthash<N> (k);
-        // we only need the low-order bits to be random, so split out
-        // the 32 bit result into 3 parts for each channel
-        result.x = (h      ) & 0xFF;
-        result.y = (h >> 8 ) & 0xFF;
-        result.z = (h >> 16) & 0xFF;
-        return result;
+    OSL_FORCEINLINE OSL_HOSTDEVICE Vec3i operator() (int x, int y, int z, int w) const {
+        return sliceup(inthash(static_cast<unsigned int>(imod (x, m_px)),
+        		               static_cast<unsigned int>(imod (y, m_py)),
+							   static_cast<unsigned int>(imod (z, m_pz)),
+							   static_cast<unsigned int>(imod (w, m_pw))));
     }
 
 #ifndef __CUDA_ARCH__
@@ -1240,24 +1336,36 @@ struct HashVectorPeriodic {
 #endif
 };
 
+// Code Generation Policies
+// main intent is to allow top level classes to share implementation and carry
+// the policy down into helper functions who might diverge in implementation
+// or conditionally emit different code paths
+struct CGDefault
+{
+    static constexpr bool allowSIMD = true;
+};
 
+struct CGScalar
+{
+    static constexpr bool allowSIMD = false;
+};
 
-template <typename V, typename H, typename T> OSL_HOSTDEVICE
-inline void perlin (V& result, H& hash, const T &x) {
+template <typename CGPolicyT = CGDefault, typename V, typename H, typename T>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (V& result, H& hash, const T &x) {
     int X; T fx = floorfrac(x, &X);
     T u = fade(fx);
 
-    result = OIIO::lerp(grad (hash (X  ), fx     ),
+    auto lerp_result = sfm::lerp(grad (hash (X  ), fx     ),
                         grad (hash (X+1), fx-1.0f), u);
-    result = scale1 (result);
+    result = scale1 (lerp_result);
 }
 
-
-template <typename H> OSL_HOSTDEVICE
-inline void perlin (float &result, const H &hash, const float &x, const float &y)
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (float &result, const H &hash, const float &x, const float &y)
 {
-    // result = 0.0f; return;
 #if OIIO_SIMD
+    if (CGPolicyT::allowSIMD)
+    {
     int4 XY;
     float4 fxy = floorfrac (float4(x,y,0.0f), &XY);
     float4 uv = fade(fxy);  // Note: will be (fade(fx), fade(fy), 0, 0)
@@ -1276,7 +1384,9 @@ inline void perlin (float &result, const H &hash, const float &x, const float &y
     float4 corner_grad = grad (corner_hash, remainderx, remaindery);
     result = scale2 (bilerp (corner_grad, uv[0], uv[1]));
 
-#else
+    } else
+#endif
+    {
     // ORIGINAL, non-SIMD
     int X; float fx = floorfrac(x, &X);
     int Y; float fy = floorfrac(y, &Y);
@@ -1284,21 +1394,21 @@ inline void perlin (float &result, const H &hash, const float &x, const float &y
     float u = fade(fx);
     float v = fade(fy);
 
-    result = OIIO::bilerp (grad (hash (X  , Y  ), fx     , fy     ),
+    float bilerp_result = sfm::bilerp (grad (hash (X  , Y  ), fx     , fy     ),
                            grad (hash (X+1, Y  ), fx-1.0f, fy     ),
                            grad (hash (X  , Y+1), fx     , fy-1.0f),
                            grad (hash (X+1, Y+1), fx-1.0f, fy-1.0f), u, v);
-    result = scale2 (result);
-#endif
+    result = scale2 (bilerp_result);
+    }
 }
 
-
-template <typename H> OSL_HOSTDEVICE
-inline void perlin (float &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (float &result, const H &hash,
                     const float &x, const float &y, const float &z)
 {
 #if OIIO_SIMD
-    // result = 0; return;
+    if (CGPolicyT::allowSIMD)
+    {
 #if 0
     // You'd think it would be faster to do the floorfrac in parallel, but
     // according to my timings, it is not. I don't understand exactly why.
@@ -1344,8 +1454,9 @@ inline void perlin (float &result, const H &hash,
     float4 corner_grad_z1 = grad (corner_hash_z1, remainderx, remaindery, remainderz-float4::One());
 
     result = scale3 (trilerp (corner_grad_z0, corner_grad_z1, uvw));
-
-#else
+    } else
+#endif
+    {
     // ORIGINAL -- non-SIMD
     int X; float fx = floorfrac(x, &X);
     int Y; float fy = floorfrac(y, &Y);
@@ -1353,7 +1464,7 @@ inline void perlin (float &result, const H &hash,
     float u = fade(fx);
     float v = fade(fy);
     float w = fade(fz);
-    result = OIIO::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz     ),
+    float trilerp_result = sfm::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz     ),
                             grad (hash (X+1, Y  , Z  ), fx-1.0f, fy     , fz     ),
                             grad (hash (X  , Y+1, Z  ), fx     , fy-1.0f, fz     ),
                             grad (hash (X+1, Y+1, Z  ), fx-1.0f, fy-1.0f, fz     ),
@@ -1362,18 +1473,19 @@ inline void perlin (float &result, const H &hash,
                             grad (hash (X  , Y+1, Z+1), fx     , fy-1.0f, fz-1.0f),
                             grad (hash (X+1, Y+1, Z+1), fx-1.0f, fy-1.0f, fz-1.0f),
                             u, v, w);
-    result = scale3 (result);
-#endif
+    result = scale3 (trilerp_result);
+    }
 }
 
 
 
-template <typename H> OSL_HOSTDEVICE
-inline void perlin (float &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (float &result, const H &hash,
                     const float &x, const float &y, const float &z, const float &w)
 {
 #if OIIO_SIMD
-    // result = 0; return;
+    if (CGPolicyT::allowSIMD)
+    {
 
     int4 XYZW;
     float4 fxyzw = floorfrac (float4(x,y,z,w), &XYZW);
@@ -1413,8 +1525,9 @@ inline void perlin (float &result, const H &hash,
     result = scale4 (OIIO::lerp (trilerp (corner_grad_z0, corner_grad_z1, uvts),
                                  trilerp (corner_grad_z2, corner_grad_z3, uvts),
                                  OIIO::simd::extract<3>(uvts)));
-
-#else
+    } else
+#endif
+    {
     // ORIGINAL -- non-SIMD
     int X; float fx = floorfrac(x, &X);
     int Y; float fy = floorfrac(y, &Y);
@@ -1426,8 +1539,8 @@ inline void perlin (float &result, const H &hash,
     float t = fade(fz);
     float s = fade(fw);
 
-    result = OIIO::lerp (
-               OIIO::trilerp (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
+    float lerp_result = sfm::lerp (
+               sfm::trilerp (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
                               grad (hash (X+1, Y  , Z  , W  ), fx-1.0f, fy     , fz     , fw     ),
                               grad (hash (X  , Y+1, Z  , W  ), fx     , fy-1.0f, fz     , fw     ),
                               grad (hash (X+1, Y+1, Z  , W  ), fx-1.0f, fy-1.0f, fz     , fw     ),
@@ -1436,7 +1549,7 @@ inline void perlin (float &result, const H &hash,
                               grad (hash (X  , Y+1, Z+1, W  ), fx     , fy-1.0f, fz-1.0f, fw     ),
                               grad (hash (X+1, Y+1, Z+1, W  ), fx-1.0f, fy-1.0f, fz-1.0f, fw     ),
                               u, v, t),
-               OIIO::trilerp (grad (hash (X  , Y  , Z  , W+1), fx     , fy     , fz     , fw-1.0f),
+               sfm::trilerp (grad (hash (X  , Y  , Z  , W+1), fx     , fy     , fz     , fw-1.0f),
                               grad (hash (X+1, Y  , Z  , W+1), fx-1.0f, fy     , fz     , fw-1.0f),
                               grad (hash (X  , Y+1, Z  , W+1), fx     , fy-1.0f, fz     , fw-1.0f),
                               grad (hash (X+1, Y+1, Z  , W+1), fx-1.0f, fy-1.0f, fz     , fw-1.0f),
@@ -1446,18 +1559,17 @@ inline void perlin (float &result, const H &hash,
                               grad (hash (X+1, Y+1, Z+1, W+1), fx-1.0f, fy-1.0f, fz-1.0f, fw-1.0f),
                               u, v, t),
                s);
-    result = scale4 (result);
-#endif
+    result = scale4 (lerp_result);
+    }
 }
 
-
-
-template <typename H> OSL_HOSTDEVICE
-inline void perlin (Dual2<float> &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<float> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y)
 {
 #if OIIO_SIMD
-    // result = 0; return;
+    if (CGPolicyT::allowSIMD)
+    {
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
     Dual2<float4> fxy (float4(fx.val(), fy.val(), 0.0f),
@@ -1480,30 +1592,29 @@ inline void perlin (Dual2<float> &result, const H &hash,
     Dual2<float4> corner_grad = grad (corner_hash, remainderx, remaindery);
 
     result = scale2 (bilerp (corner_grad, uv));
-#else
+    } else
+#endif
+    {
     // Non-SIMD case
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
     Dual2<float> u = fade(fx);
     Dual2<float> v = fade(fy);
-    result = OIIO::bilerp (grad (hash (X  , Y  ), fx     , fy     ),
+    auto bilerp_result = sfm::bilerp (grad (hash (X  , Y  ), fx     , fy     ),
                            grad (hash (X+1, Y  ), fx-1.0f, fy     ),
                            grad (hash (X  , Y+1), fx     , fy-1.0f),
                            grad (hash (X+1, Y+1), fx-1.0f, fy-1.0f), u, v);
-    result = scale2 (result);
-#endif
+    result = scale2 (bilerp_result);
+    }
 }
 
-
-
-
-template <typename H> OSL_HOSTDEVICE
-inline void perlin (Dual2<float> &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<float> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z)
 {
 #if OIIO_SIMD
-    // result = 0; return;
-
+    if (CGPolicyT::allowSIMD)
+    {
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
     int Z; Dual2<float> fz = floorfrac(z, &Z);
@@ -1539,8 +1650,9 @@ inline void perlin (Dual2<float> &result, const H &hash,
     Dual2<float4> xx = OIIO::lerp (xy, shuffle<1,1,3,3>(xy), shuffle<0>(uvw));
     // interpolate along y axis
     result = scale3 (extract<0>(OIIO::lerp (xx,shuffle<2>(xx), shuffle<1>(uvw))));
-
-#else
+    } else
+#endif
+    {
     // Non-SIMD case
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
@@ -1548,7 +1660,7 @@ inline void perlin (Dual2<float> &result, const H &hash,
     Dual2<float> u = fade(fx);
     Dual2<float> v = fade(fy);
     Dual2<float> w = fade(fz);
-    result = OIIO::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz     ),
+    auto tril_result = sfm::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz     ),
                             grad (hash (X+1, Y  , Z  ), fx-1.0f, fy     , fz     ),
                             grad (hash (X  , Y+1, Z  ), fx     , fy-1.0f, fz     ),
                             grad (hash (X+1, Y+1, Z  ), fx-1.0f, fy-1.0f, fz     ),
@@ -1557,21 +1669,18 @@ inline void perlin (Dual2<float> &result, const H &hash,
                             grad (hash (X  , Y+1, Z+1), fx     , fy-1.0f, fz-1.0f),
                             grad (hash (X+1, Y+1, Z+1), fx-1.0f, fy-1.0f, fz-1.0f),
                             u, v, w);
-    result = scale3 (result);
-#endif
+    result = scale3 (tril_result);
+    }
 }
 
-
-
-
-template <typename H> OSL_HOSTDEVICE
-inline void perlin (Dual2<float> &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<float> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y,
                     const Dual2<float> &z, const Dual2<float> &w)
 {
 #if OIIO_SIMD
-    // result = 0; return;
-
+    if (CGPolicyT::allowSIMD)
+    {
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
     int Z; Dual2<float> fz = floorfrac(z, &Z);
@@ -1620,8 +1729,9 @@ inline void perlin (Dual2<float> &result, const H &hash,
     Dual2<float4> xx = OIIO::lerp (xy, shuffle<1,1,3,3>(xy), shuffle<0>(uvts));
     // interpolate along y axis
     result = scale4 (extract<0>(OIIO::lerp (xx,shuffle<2>(xx), shuffle<1>(uvts))));
-
-#else
+    } else
+#endif
+    {
     // ORIGINAL -- non-SIMD
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
@@ -1633,8 +1743,8 @@ inline void perlin (Dual2<float> &result, const H &hash,
     Dual2<float> t = fade(fz);
     Dual2<float> s = fade(fw);
 
-    result = OIIO::lerp (
-               OIIO::trilerp (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
+    auto lerp_result = sfm::lerp (
+               sfm::trilerp (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
                               grad (hash (X+1, Y  , Z  , W  ), fx-1.0f, fy     , fz     , fw     ),
                               grad (hash (X  , Y+1, Z  , W  ), fx     , fy-1.0f, fz     , fw     ),
                               grad (hash (X+1, Y+1, Z  , W  ), fx-1.0f, fy-1.0f, fz     , fw     ),
@@ -1643,7 +1753,7 @@ inline void perlin (Dual2<float> &result, const H &hash,
                               grad (hash (X  , Y+1, Z+1, W  ), fx     , fy-1.0f, fz-1.0f, fw     ),
                               grad (hash (X+1, Y+1, Z+1, W  ), fx-1.0f, fy-1.0f, fz-1.0f, fw     ),
                               u, v, t),
-               OIIO::trilerp (grad (hash (X  , Y  , Z  , W+1), fx     , fy     , fz     , fw-1.0f),
+               sfm::trilerp (grad (hash (X  , Y  , Z  , W+1), fx     , fy     , fz     , fw-1.0f),
                               grad (hash (X+1, Y  , Z  , W+1), fx-1.0f, fy     , fz     , fw-1.0f),
                               grad (hash (X  , Y+1, Z  , W+1), fx     , fy-1.0f, fz     , fw-1.0f),
                               grad (hash (X+1, Y+1, Z  , W+1), fx-1.0f, fy-1.0f, fz     , fw-1.0f),
@@ -1653,19 +1763,18 @@ inline void perlin (Dual2<float> &result, const H &hash,
                               grad (hash (X+1, Y+1, Z+1, W+1), fx-1.0f, fy-1.0f, fz-1.0f, fw-1.0f),
                               u, v, t),
                s);
-    result = scale4 (result);
-#endif
+    result = scale4 (lerp_result);
+    }
 }
 
 
-
-
-template <typename H> OSL_HOSTDEVICE
-inline void perlin (Vec3 &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Vec3 &result, const H &hash,
                     const float &x, const float &y)
 {
 #if OIIO_SIMD
-    // result.setValue(0,0,0); return;
+    if (CGPolicyT::allowSIMD)
+    {
     int4 XYZ;
     float4 fxyz = floorfrac (float4(x,y,0), &XYZ);
     float4 uv = fade (fxyz);
@@ -1688,36 +1797,41 @@ inline void perlin (Vec3 &result, const H &hash,
     static const OIIO_SIMD4_ALIGN float f0011[4] = {0,0,1,1};
     float4 remainderx = OIIO::simd::shuffle<0>(fxyz) - (*(float4*)f0101);
     float4 remaindery = OIIO::simd::shuffle<1>(fxyz) - (*(float4*)f0011);
+    float result_comp[3];
     for (int i = 0; i < 3; ++i) {
         float4 corner_grad = grad (corner_hash[i], remainderx, remaindery);
         // Do the bilinear interpolation with SIMD. Here's the fastest way
         // I've found to do it.
         float4 xx = OIIO::lerp (corner_grad, OIIO::simd::shuffle<1,1,3,3>(corner_grad), uv[0]);
-        result[i] = scale2 (OIIO::simd::extract<0>(OIIO::lerp (xx,OIIO::simd::shuffle<2>(xx), uv[1])));
+        result_comp[i] = scale2 (OIIO::simd::extract<0>(OIIO::lerp (xx,OIIO::simd::shuffle<2>(xx), uv[1])));
     }
-#else
+    result = Vec3(result_comp[0], result_comp[1], result_comp[2]);
+    } else
+#endif
+    {
     // Non-SIMD case
     typedef float T;
     int X; T fx = floorfrac(x, &X);
     int Y; T fy = floorfrac(y, &Y);
     T u = fade(fx);
     T v = fade(fy);
-    result = OIIO::bilerp (grad (hash (X  , Y  ), fx     , fy     ),
+    auto bil_result = sfm::bilerp (grad (hash (X  , Y  ), fx     , fy     ),
                            grad (hash (X+1, Y  ), fx-1.0f, fy     ),
                            grad (hash (X  , Y+1), fx     , fy-1.0f),
                            grad (hash (X+1, Y+1), fx-1.0f, fy-1.0f), u, v);
-    result = scale2 (result);
-#endif
+    result = scale2 (bil_result);
+    }
 }
 
 
 
-template <typename H> OSL_HOSTDEVICE
-inline void perlin (Vec3 &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Vec3 &result, const H &hash,
                     const float &x, const float &y, const float &z)
 {
 #if OIIO_SIMD
-    // result.setValue(0,0,0); return;
+    if (CGPolicyT::allowSIMD)
+    {
 #if 0
     // You'd think it would be faster to do the floorfrac in parallel, but
     // according to my timings, it is not. Come back and understand why.
@@ -1762,6 +1876,7 @@ inline void perlin (Vec3 &result, const H &hash,
     float4 remaindery = OIIO::simd::shuffle<1>(fxyz) - (*(float4*)f0011);
     float4 remainderz0 = OIIO::simd::shuffle<2>(fxyz);
     float4 remainderz1 = OIIO::simd::shuffle<2>(fxyz) - float4::One();
+    float result_comp[3];
     for (int i = 0; i < 3; ++i) {
         float4 corner_grad_z0 = grad (corner_hash_z0[i], remainderx, remaindery, remainderz0);
         float4 corner_grad_z1 = grad (corner_hash_z1[i], remainderx, remaindery, remainderz1);
@@ -1771,9 +1886,12 @@ inline void perlin (Vec3 &result, const H &hash,
         // Interpolate along x axis
         float4 xx = OIIO::lerp (xy, OIIO::simd::shuffle<1,1,3,3>(xy), OIIO::simd::shuffle<0>(uvw));
         // interpolate along y axis
-        result[i] = scale3 (OIIO::simd::extract<0>(OIIO::lerp (xx,OIIO::simd::shuffle<2>(xx), OIIO::simd::shuffle<1>(uvw))));
+        result_comp[i] = scale3 (OIIO::simd::extract<0>(OIIO::lerp (xx,OIIO::simd::shuffle<2>(xx), OIIO::simd::shuffle<1>(uvw))));
     }
-#else
+    result = Vec3(result_comp[0],result_comp[1],result_comp[2]);
+    } else
+#endif
+    {
     // ORIGINAL -- non-SIMD
     int X; float fx = floorfrac(x, &X);
     int Y; float fy = floorfrac(y, &Y);
@@ -1781,7 +1899,11 @@ inline void perlin (Vec3 &result, const H &hash,
     float u = fade(fx);
     float v = fade(fy);
     float w = fade(fz);
-    result = OIIO::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz      ),
+
+    // A.W. the OIIO_SIMD above differs from the original results
+    // so we are re-implementing the non-SIMD version to match below
+#if 0
+    result = sfm::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz      ),
                             grad (hash (X+1, Y  , Z  ), fx-1.0f, fy     , fz      ),
                             grad (hash (X  , Y+1, Z  ), fx     , fy-1.0f, fz      ),
                             grad (hash (X+1, Y+1, Z  ), fx-1.0f, fy-1.0f, fz      ),
@@ -1791,18 +1913,71 @@ inline void perlin (Vec3 &result, const H &hash,
                             grad (hash (X+1, Y+1, Z+1), fx-1.0f, fy-1.0f, fz-1.0f ),
                             u, v, w);
     result = scale3 (result);
+#else
+    static_assert(std::is_same<Vec3i, decltype(hash(X, Y, Z))>::value, "This re-implementation was developed for Hashs returning a vector type only");
+    // Want to avoid repeating the same hash work 3 times in a row
+    // so rather than executing the vector version, we will use HashScalar
+    // and directly mask its results on a per component basis
+    auto hash_scalar = hash.convertToScalar();
+    int h000 = hash_scalar (X  , Y  , Z  );
+    int h100 = hash_scalar (X+1, Y  , Z  );
+    int h010 = hash_scalar (X  , Y+1, Z  );
+    int h110 = hash_scalar (X+1, Y+1, Z  );
+    int h001 = hash_scalar (X  , Y  , Z+1);
+    int h101 = hash_scalar (X+1, Y  , Z+1);
+    int h011 = hash_scalar (X  , Y+1, Z+1);
+    int h111 = hash_scalar (X+1, Y+1, Z+1);
+
+    // We are mimicking the OIIO_SSE behavior
+    //      result[0] = (h        ) & 0xFF;
+    //      result[1] = (srl(h,8 )) & 0xFF;
+    //      result[2] = (srl(h,16)) & 0xFF;
+    // skipping masking the 0th version, perhaps that is a mistake
+
+    float result0 = sfm::trilerp (grad (h000, fx     , fy     , fz      ),
+                            grad (h100, fx-1.0f, fy     , fz      ),
+                            grad (h010, fx     , fy-1.0f, fz      ),
+                            grad (h110, fx-1.0f, fy-1.0f, fz      ),
+                            grad (h001, fx     , fy     , fz-1.0f ),
+                            grad (h101, fx-1.0f, fy     , fz-1.0f ),
+                            grad (h011, fx     , fy-1.0f, fz-1.0f ),
+                            grad (h111, fx-1.0f, fy-1.0f, fz-1.0f ),
+                            u, v, w);
+
+    float result1 = sfm::trilerp (
+        grad ((h000>>8) & 0xFF, fx     , fy     , fz      ),
+        grad ((h100>>8) & 0xFF, fx-1.0f, fy     , fz      ),
+        grad ((h010>>8) & 0xFF, fx     , fy-1.0f, fz      ),
+        grad ((h110>>8) & 0xFF, fx-1.0f, fy-1.0f, fz      ),
+        grad ((h001>>8) & 0xFF, fx     , fy     , fz-1.0f ),
+        grad ((h101>>8) & 0xFF, fx-1.0f, fy     , fz-1.0f ),
+        grad ((h011>>8) & 0xFF, fx     , fy-1.0f, fz-1.0f ),
+        grad ((h111>>8) & 0xFF, fx-1.0f, fy-1.0f, fz-1.0f ),
+        u, v, w);
+
+    float result2 = sfm::trilerp (
+        grad ((h000>>16) & 0xFF, fx     , fy     , fz      ),
+        grad ((h100>>16) & 0xFF, fx-1.0f, fy     , fz      ),
+        grad ((h010>>16) & 0xFF, fx     , fy-1.0f, fz      ),
+        grad ((h110>>16) & 0xFF, fx-1.0f, fy-1.0f, fz      ),
+        grad ((h001>>16) & 0xFF, fx     , fy     , fz-1.0f ),
+        grad ((h101>>16) & 0xFF, fx-1.0f, fy     , fz-1.0f ),
+        grad ((h011>>16) & 0xFF, fx     , fy-1.0f, fz-1.0f ),
+        grad ((h111>>16) & 0xFF, fx-1.0f, fy-1.0f, fz-1.0f ),
+        u, v, w);
+
+    result = Vec3(scale3 (result0), scale3 (result1), scale3 (result2));
 #endif
+    }
 }
 
-
-
-template <typename H> OSL_HOSTDEVICE
-inline void perlin (Vec3 &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Vec3 &result, const H &hash,
                     const float &x, const float &y, const float &z, const float &w)
 {
 #if OIIO_SIMD
-    // result.setValue(0,0,0); return;
-
+    if (CGPolicyT::allowSIMD)
+    {
     int4 XYZW;
     float4 fxyzw = floorfrac (float4(x,y,z,w), &XYZW);
     float4 uvts = fade (fxyzw);
@@ -1835,16 +2010,20 @@ inline void perlin (Vec3 &result, const H &hash,
     float4 remainderw = OIIO::simd::shuffle<3>(fxyzw);
 //    float4 remainderz0 = shuffle<2>(fxyz);
 //    float4 remainderz1 = shuffle<2>(fxyz) - 1.0f;
+    float result_comp[3];
     for (int i = 0; i < 3; ++i) {
         float4 corner_grad_z0 = grad (corner_hash_z0[i], remainderx, remaindery, remainderz, remainderw);
         float4 corner_grad_z1 = grad (corner_hash_z1[i], remainderx, remaindery, remainderz-float4::One(), remainderw);
         float4 corner_grad_z2 = grad (corner_hash_z2[i], remainderx, remaindery, remainderz, remainderw-float4::One());
         float4 corner_grad_z3 = grad (corner_hash_z3[i], remainderx, remaindery, remainderz-float4::One(), remainderw-float4::One());
-        result[i] = scale4 (OIIO::lerp (trilerp (corner_grad_z0, corner_grad_z1, uvts),
+        result_comp[i] = scale4 (OIIO::lerp (trilerp (corner_grad_z0, corner_grad_z1, uvts),
                                         trilerp (corner_grad_z2, corner_grad_z3, uvts),
                                         OIIO::simd::extract<3>(uvts)));
     }
-#else
+    result = Vec3(result_comp[0],result_comp[1],result_comp[2]);
+    } else
+#endif
+    {
     // ORIGINAL -- non-SIMD
     int X; float fx = floorfrac(x, &X);
     int Y; float fy = floorfrac(y, &Y);
@@ -1856,8 +2035,8 @@ inline void perlin (Vec3 &result, const H &hash,
     float t = fade(fz);
     float s = fade(fw);
 
-    result = OIIO::lerp (
-               OIIO::trilerp (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
+    auto l_result = sfm::lerp (
+               sfm::trilerp (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
                               grad (hash (X+1, Y  , Z  , W  ), fx-1.0f, fy     , fz     , fw     ),
                               grad (hash (X  , Y+1, Z  , W  ), fx     , fy-1.0f, fz     , fw     ),
                               grad (hash (X+1, Y+1, Z  , W  ), fx-1.0f, fy-1.0f, fz     , fw     ),
@@ -1866,7 +2045,7 @@ inline void perlin (Vec3 &result, const H &hash,
                               grad (hash (X  , Y+1, Z+1, W  ), fx     , fy-1.0f, fz-1.0f, fw     ),
                               grad (hash (X+1, Y+1, Z+1, W  ), fx-1.0f, fy-1.0f, fz-1.0f, fw     ),
                               u, v, t),
-               OIIO::trilerp (grad (hash (X  , Y  , Z  , W+1), fx     , fy     , fz     , fw-1.0f),
+               sfm::trilerp (grad (hash (X  , Y  , Z  , W+1), fx     , fy     , fz     , fw-1.0f),
                               grad (hash (X+1, Y  , Z  , W+1), fx-1.0f, fy     , fz     , fw-1.0f),
                               grad (hash (X  , Y+1, Z  , W+1), fx     , fy-1.0f, fz     , fw-1.0f),
                               grad (hash (X+1, Y+1, Z  , W+1), fx-1.0f, fy-1.0f, fz     , fw-1.0f),
@@ -1876,18 +2055,18 @@ inline void perlin (Vec3 &result, const H &hash,
                               grad (hash (X+1, Y+1, Z+1, W+1), fx-1.0f, fy-1.0f, fz-1.0f, fw-1.0f),
                               u, v, t),
                s);
-    result = scale4 (result);
-#endif
+    result = scale4 (l_result);
+    }
 }
 
 
-
-template <typename H> OSL_HOSTDEVICE
-inline void perlin (Dual2<Vec3> &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<Vec3> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y)
 {
-    // result = Vec3(0,0,0); return;
 #if OIIO_SIMD
+    if (CGPolicyT::allowSIMD)
+    {
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
     Dual2<float4> fxyz (float4(fx.val(), fy.val(), 0.0f),
@@ -1924,30 +2103,31 @@ inline void perlin (Dual2<Vec3> &result, const H &hash,
     result.set (Vec3 (r[0].val(), r[1].val(), r[2].val()),
                 Vec3 (r[0].dx(),  r[1].dx(),  r[2].dx()),
                 Vec3 (r[0].dy(),  r[1].dy(),  r[2].dy()));
-
-#else
+    } else
+#endif
+    {
     // ORIGINAL -- non-SIMD
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
     Dual2<float> u = fade(fx);
     Dual2<float> v = fade(fy);
-    result = OIIO::bilerp (grad (hash (X  , Y  ), fx     , fy     ),
+    auto bil_result = sfm::bilerp (grad (hash (X  , Y  ), fx     , fy     ),
                            grad (hash (X+1, Y  ), fx-1.0f, fy     ),
                            grad (hash (X  , Y+1), fx     , fy-1.0f),
                            grad (hash (X+1, Y+1), fx-1.0f, fy-1.0f),
                            u, v);
-    result = scale2 (result);
-#endif
+    result = scale2 (bil_result);
+    }
 }
 
 
-
-template <typename H> OSL_HOSTDEVICE
-inline void perlin (Dual2<Vec3> &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<Vec3> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z)
 {
-    // result = Vec3(0,0,0); return;
 #if OIIO_SIMD
+    if (CGPolicyT::allowSIMD)
+    {
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
     int Z; Dual2<float> fz = floorfrac(z, &Z);
@@ -1993,8 +2173,9 @@ inline void perlin (Dual2<Vec3> &result, const H &hash,
     result.set (Vec3 (r[0].val(), r[1].val(), r[2].val()),
                 Vec3 (r[0].dx(),  r[1].dx(),  r[2].dx()),
                 Vec3 (r[0].dy(),  r[1].dy(),  r[2].dy()));
-
-#else
+    } else
+#endif
+    {
     // ORIGINAL -- non-SIMD
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
@@ -2002,7 +2183,7 @@ inline void perlin (Dual2<Vec3> &result, const H &hash,
     Dual2<float> u = fade(fx);
     Dual2<float> v = fade(fy);
     Dual2<float> w = fade(fz);
-    result = OIIO::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz      ),
+    auto til_result = sfm::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz      ),
                             grad (hash (X+1, Y  , Z  ), fx-1.0f, fy     , fz      ),
                             grad (hash (X  , Y+1, Z  ), fx     , fy-1.0f, fz      ),
                             grad (hash (X+1, Y+1, Z  ), fx-1.0f, fy-1.0f, fz      ),
@@ -2011,20 +2192,19 @@ inline void perlin (Dual2<Vec3> &result, const H &hash,
                             grad (hash (X  , Y+1, Z+1), fx     , fy-1.0f, fz-1.0f ),
                             grad (hash (X+1, Y+1, Z+1), fx-1.0f, fy-1.0f, fz-1.0f ),
                             u, v, w);
-    result = scale3 (result);
-#endif
+    result = scale3 (til_result);
+    }
 }
 
 
-
-template <typename H> OSL_HOSTDEVICE
-inline void perlin (Dual2<Vec3> &result, const H &hash,
+template <typename CGPolicyT = CGDefault, typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<Vec3> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y,
                     const Dual2<float> &z, const Dual2<float> &w)
 {
-    // result = Vec3(0,0,0); return;
 #if OIIO_SIMD
-
+    if (CGPolicyT::allowSIMD)
+    {
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
     int Z; Dual2<float> fz = floorfrac(z, &Z);
@@ -2084,8 +2264,9 @@ inline void perlin (Dual2<Vec3> &result, const H &hash,
     result.set (Vec3 (r[0].val(), r[1].val(), r[2].val()),
                 Vec3 (r[0].dx(),  r[1].dx(),  r[2].dx()),
                 Vec3 (r[0].dy(),  r[1].dy(),  r[2].dy()));
-
-#else
+    } else
+#endif
+    {
     // ORIGINAL -- non-SIMD
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
@@ -2097,8 +2278,8 @@ inline void perlin (Dual2<Vec3> &result, const H &hash,
     Dual2<float> t = fade(fz);
     Dual2<float> s = fade(fw);
 
-    result = OIIO::lerp (
-               OIIO::trilerp (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
+    auto l_result = sfm::lerp (
+               sfm::trilerp (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
                               grad (hash (X+1, Y  , Z  , W  ), fx-1.0f, fy     , fz     , fw     ),
                               grad (hash (X  , Y+1, Z  , W  ), fx     , fy-1.0f, fz     , fw     ),
                               grad (hash (X+1, Y+1, Z  , W  ), fx-1.0f, fy-1.0f, fz     , fw     ),
@@ -2107,7 +2288,7 @@ inline void perlin (Dual2<Vec3> &result, const H &hash,
                               grad (hash (X  , Y+1, Z+1, W  ), fx     , fy-1.0f, fz-1.0f, fw     ),
                               grad (hash (X+1, Y+1, Z+1, W  ), fx-1.0f, fy-1.0f, fz-1.0f, fw     ),
                               u, v, t),
-               OIIO::trilerp (grad (hash (X  , Y  , Z  , W+1), fx     , fy     , fz     , fw-1.0f),
+               sfm::trilerp (grad (hash (X  , Y  , Z  , W+1), fx     , fy     , fz     , fw-1.0f),
                               grad (hash (X+1, Y  , Z  , W+1), fx-1.0f, fy     , fz     , fw-1.0f),
                               grad (hash (X  , Y+1, Z  , W+1), fx     , fy-1.0f, fz     , fw-1.0f),
                               grad (hash (X+1, Y+1, Z  , W+1), fx-1.0f, fy-1.0f, fz     , fw-1.0f),
@@ -2117,447 +2298,492 @@ inline void perlin (Dual2<Vec3> &result, const H &hash,
                               grad (hash (X+1, Y+1, Z+1, W+1), fx-1.0f, fy-1.0f, fz-1.0f, fw-1.0f),
                               u, v, t),
                s);
-    result = scale4 (result);
-#endif
+
+    result = scale4 (l_result);
+    }
 }
 
 
 
-struct Noise {
-    OSL_HOSTDEVICE Noise () { }
+template<typename CGPolicyT = CGDefault>
+struct NoiseImpl {
+	OSL_FORCEINLINE OSL_HOSTDEVICE NoiseImpl () { }
 
-    inline OSL_HOSTDEVICE void operator() (float &result, float x) const {
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x) const {
         HashScalar h;
-        perlin(result, h, x);
-        result = 0.5f * (result + 1);
+        float perlin_result;
+        perlin<CGPolicyT>(perlin_result, h, x);
+        result = 0.5f * (perlin_result + 1.0f);
     }
 
-    inline OSL_HOSTDEVICE void operator() (float &result, float x, float y) const {
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x, float y) const {
         HashScalar h;
-        perlin(result, h, x, y);
-        result = 0.5f * (result + 1);
+        float perlin_result;
+        perlin<CGPolicyT>(perlin_result, h, x, y);
+        result = 0.5f * (perlin_result + 1.0f);
     }
 
-    inline OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p) const {
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p) const {
         HashScalar h;
-        perlin(result, h, p.x, p.y, p.z);
-        result = 0.5f * (result + 1);
+        float perlin_result;
+        perlin<CGPolicyT>(perlin_result, h, p.x, p.y, p.z);
+        result = 0.5f * (perlin_result + 1.0f);
     }
 
-    inline OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, float t) const {
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, float t) const {
         HashScalar h;
-        perlin(result, h, p.x, p.y, p.z, t);
-        result = 0.5f * (result + 1);
+        float perlin_result;
+        perlin<CGPolicyT>(perlin_result, h, p.x, p.y, p.z, t);
+        result = 0.5f * (perlin_result + 1.0f);
     }
 
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, float x) const {
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, float x) const {
         HashVector h;
-        perlin(result, h, x);
-        result = 0.5f * (result + Vec3(1, 1, 1));
+        Vec3 perlin_result;
+        perlin<CGPolicyT>(perlin_result, h, x);
+        result = 0.5f * (perlin_result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float y) const {
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float y) const {
         HashVector h;
-        perlin(result, h, x, y);
-        result = 0.5f * (result + Vec3(1, 1, 1));
+        Vec3 perlin_result;
+        perlin<CGPolicyT>(perlin_result, h, x, y);
+        result = 0.5f * (perlin_result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p) const {
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p) const {
         HashVector h;
-        perlin(result, h, p.x, p.y, p.z);
-        result = 0.5f * (result + Vec3(1, 1, 1));
+        Vec3 perlin_result;
+        perlin<CGPolicyT>(perlin_result, h, p.x, p.y, p.z);
+        result = 0.5f * (perlin_result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, float t) const {
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, float t) const {
         HashVector h;
-        perlin(result, h, p.x, p.y, p.z, t);
-        result = 0.5f * (result + Vec3(1, 1, 1));
+        Vec3 perlin_result;
+        perlin<CGPolicyT>(perlin_result, h, p.x, p.y, p.z, t);
+        result = 0.5f * (perlin_result + Vec3(1.0f, 1.0f, 1.0f));
+    }
+
+    
+    // dual versions
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<float> &x) const {
+        HashScalar h;
+        Dual2<float> perlin_result;
+        perlin<CGPolicyT>(perlin_result, h, x);
+        result = 0.5f * (perlin_result + 1.0f);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y) const {
+        HashScalar h;
+        Dual2<float> perlin_result;
+        perlin<CGPolicyT>(perlin_result, h, x, y);
+        result = 0.5f * (perlin_result + 1.0f);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<Vec3> &p) const {
+        HashScalar h;
+        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+        Dual2<float> perlin_result;
+        perlin<CGPolicyT>(perlin_result, h, px, py, pz);
+        result = 0.5f * (perlin_result + 1.0f);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
+        HashScalar h;        
+        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+        Dual2<float> perlin_result;
+        perlin<CGPolicyT>(perlin_result, h, px, py, pz, t);
+        result = 0.5f * (perlin_result + 1.0f);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const {
+        HashVector h;
+        Dual2<Vec3> perlin_result;
+        perlin<CGPolicyT>(perlin_result, h, x);
+        result = Vec3(0.5f, 0.5f, 0.5f) * (perlin_result + Vec3(1, 1, 1));
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {
+        HashVector h;
+        Dual2<Vec3> perlin_result;
+        perlin<CGPolicyT>(perlin_result, h, x, y);
+        result = Vec3(0.5f, 0.5f, 0.5f) * (perlin_result + Vec3(1, 1, 1));
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {
+        HashVector h;
+        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+        Dual2<Vec3> perlin_result;
+        perlin<CGPolicyT>(perlin_result, h, px, py, pz);
+        result = Vec3(0.5f, 0.5f, 0.5f) * (perlin_result + Vec3(1, 1, 1));
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
+        HashVector h;
+        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+        Dual2<Vec3> perlin_result;
+        perlin<CGPolicyT>(perlin_result, h, px, py, pz, t);
+        result = Vec3(0.5f, 0.5f, 0.5f) * (perlin_result + Vec3(1, 1, 1));
+    }
+};
+
+struct Noise : NoiseImpl<CGDefault> {};
+// Scalar version of Noise that is SIMD friendly suitable to be
+// inlined inside of a SIMD loops
+struct NoiseScalar : NoiseImpl<CGScalar> {};
+
+
+template<typename CGPolicyT = CGDefault>
+struct SNoiseImpl {
+	OSL_FORCEINLINE OSL_HOSTDEVICE SNoiseImpl () { }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x) const {
+        HashScalar h;
+        perlin<CGPolicyT>(result, h, x);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x, float y) const {
+        HashScalar h;
+        perlin<CGPolicyT>(result, h, x, y);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p) const {
+        HashScalar h;
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z);
+    }
+    
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, float t) const {
+        HashScalar h;
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z, t);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, float x) const {
+        HashVector h;
+        perlin<CGPolicyT>(result, h, x);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float y) const {
+        HashVector h;
+        perlin<CGPolicyT>(result, h, x, y);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p) const {
+        HashVector h;
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, float t) const {
+        HashVector h;
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z, t);
+    }
+
+
+    // dual versions
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<float> &x) const {
+        HashScalar h;
+        perlin<CGPolicyT>(result, h, x);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y) const {
+        HashScalar h;
+        perlin<CGPolicyT>(result, h, x, y);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<Vec3> &p) const {
+        HashScalar h;
+        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+        perlin<CGPolicyT>(result, h, px, py, pz);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
+        HashScalar h;
+        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+        perlin<CGPolicyT>(result, h, px, py, pz, t);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const {
+        HashVector h;
+        perlin<CGPolicyT>(result, h, x);
+    }
+
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {
+        HashVector h;
+        perlin<CGPolicyT>(result, h, x, y);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {
+        HashVector h;
+        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+        perlin<CGPolicyT>(result, h, px, py, pz);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
+        HashVector h;
+        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+        perlin<CGPolicyT>(result, h, px, py, pz, t);
+    }
+};
+
+struct SNoise : SNoiseImpl<CGDefault> {};
+// Scalar version of SNoise that is SIMD friendly suitable to be
+// inlined inside of a SIMD loops
+struct SNoiseScalar : SNoiseImpl<CGScalar> {};
+
+
+
+template<typename CGPolicyT = CGDefault>
+struct PeriodicNoiseImpl {
+	OSL_FORCEINLINE OSL_HOSTDEVICE PeriodicNoiseImpl () { }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x, float px) const {
+        HashScalarPeriodic h(px);
+        perlin<CGPolicyT>(result, h, x);
+        result = 0.5f * (result + 1.0f);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x, float y, float px, float py) const {
+        HashScalarPeriodic h(px, py);
+        perlin<CGPolicyT>(result, h, x, y);
+        result = 0.5f * (result + 1.0f);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, const Vec3 &pp) const {
+        HashScalarPeriodic h(pp.x, pp.y, pp.z);
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z);
+        result = 0.5f * (result + 1.0f);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
+        HashScalarPeriodic h(pp.x, pp.y, pp.z, pt);
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z, t);
+        result = 0.5f * (result + 1.0f);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float px) const {
+        HashVectorPeriodic h(px);
+        perlin<CGPolicyT>(result, h, x);
+        result = 0.5f * (result + Vec3(1.0f, 1.0f, 1.0f));
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float y, float px, float py) const {
+        HashVectorPeriodic h(px, py);
+        perlin<CGPolicyT>(result, h, x, y);
+        result = 0.5f * (result + Vec3(1.0f, 1.0f, 1.0f));
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, const Vec3 &pp) const {
+        HashVectorPeriodic h(pp.x, pp.y, pp.z);
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z);
+        result = 0.5f * (result + Vec3(1.0f, 1.0f, 1.0f));
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
+        HashVectorPeriodic h(pp.x, pp.y, pp.z, pt);
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z, t);
+        result = 0.5f * (result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
     // dual versions
 
-    inline OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<float> &x) const {
-        HashScalar h;
-        perlin(result, h, x);
-        result = 0.5f * (result + 1.0f);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y) const {
-        HashScalar h;
-        perlin(result, h, x, y);
-        result = 0.5f * (result + 1.0f);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<Vec3> &p) const {
-        HashScalar h;
-        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
-        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
-        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz);
-        result = 0.5f * (result + 1.0f);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
-        HashScalar h;
-        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
-        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
-        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz, t);
-        result = 0.5f * (result + 1.0f);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const {
-        HashVector h;
-        perlin(result, h, x);
-        result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {
-        HashVector h;
-        perlin(result, h, x, y);
-        result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {
-        HashVector h;
-        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
-        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
-        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz);
-        result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
-        HashVector h;
-        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
-        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
-        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz, t);
-        result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));
-    }
-};
-
-struct SNoise {
-    OSL_HOSTDEVICE SNoise () { }
-
-    inline OSL_HOSTDEVICE void operator() (float &result, float x) const {
-        HashScalar h;
-        perlin(result, h, x);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (float &result, float x, float y) const {
-        HashScalar h;
-        perlin(result, h, x, y);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p) const {
-        HashScalar h;
-        perlin(result, h, p.x, p.y, p.z);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, float t) const {
-        HashScalar h;
-        perlin(result, h, p.x, p.y, p.z, t);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, float x) const {
-        HashVector h;
-        perlin(result, h, x);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float y) const {
-        HashVector h;
-        perlin(result, h, x, y);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p) const {
-        HashVector h;
-        perlin(result, h, p.x, p.y, p.z);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, float t) const {
-        HashVector h;
-        perlin(result, h, p.x, p.y, p.z, t);
-    }
-
-
-    // dual versions
-
-    inline OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<float> &x) const {
-        HashScalar h;
-        perlin(result, h, x);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y) const {
-        HashScalar h;
-        perlin(result, h, x, y);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<Vec3> &p) const {
-        HashScalar h;
-        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
-        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
-        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
-        HashScalar h;
-        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
-        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
-        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz, t);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const {
-        HashVector h;
-        perlin(result, h, x);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {
-        HashVector h;
-        perlin(result, h, x, y);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {
-        HashVector h;
-        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
-        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
-        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
-        HashVector h;
-        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
-        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
-        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz, t);
-    }
-};
-
-
-
-struct PeriodicNoise {
-    OSL_HOSTDEVICE PeriodicNoise () { }
-
-    inline OSL_HOSTDEVICE void operator() (float &result, float x, float px) const {
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<float> &x, float px) const {
         HashScalarPeriodic h(px);
-        perlin(result, h, x);
-        result = 0.5f * (result + 1);
+        perlin<CGPolicyT>(result, h, x);
+        result = 0.5f * (result + 1.0f);
     }
 
-    inline OSL_HOSTDEVICE void operator() (float &result, float x, float y, float px, float py) const {
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y,
+            float px, float py) const {
         HashScalarPeriodic h(px, py);
-        perlin(result, h, x, y);
-        result = 0.5f * (result + 1);
+        perlin<CGPolicyT>(result, h, x, y);
+        result = 0.5f * (result + 1.0f);
     }
 
-    inline OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, const Vec3 &pp) const {
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Vec3 &pp) const {
         HashScalarPeriodic h(pp.x, pp.y, pp.z);
-        perlin(result, h, p.x, p.y, p.z);
-        result = 0.5f * (result + 1);
+        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+        perlin<CGPolicyT>(result, h, px, py, pz);
+        result = 0.5f * (result + 1.0f);
     }
 
-    inline OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
-        HashScalarPeriodic h(pp.x, pp.y, pp.z, pt);
-        perlin(result, h, p.x, p.y, p.z, t);
-        result = 0.5f * (result + 1);
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t,
+            const Vec3 &pp, float pt) const {
+        HashScalarPeriodic h(pp.x, pp.y, pp.z, pt);        
+        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+        perlin<CGPolicyT>(result, h, px, py, pz, t);
+        result = 0.5f * (result + 1.0f);
     }
 
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float px) const {
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, float px) const {
         HashVectorPeriodic h(px);
-        perlin(result, h, x);
-        result = 0.5f * (result + Vec3(1, 1, 1));
+        perlin<CGPolicyT>(result, h, x);
+        result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float y, float px, float py) const {
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y,
+            float px, float py) const {
         HashVectorPeriodic h(px, py);
-        perlin(result, h, x, y);
-        result = 0.5f * (result + Vec3(1, 1, 1));
+        perlin<CGPolicyT>(result, h, x, y);
+        result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, const Vec3 &pp) const {
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Vec3 &pp) const {
         HashVectorPeriodic h(pp.x, pp.y, pp.z);
-        perlin(result, h, p.x, p.y, p.z);
-        result = 0.5f * (result + Vec3(1, 1, 1));
+        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+        perlin<CGPolicyT>(result, h, px, py, pz);
+        result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t,
+            const Vec3 &pp, float pt) const {
         HashVectorPeriodic h(pp.x, pp.y, pp.z, pt);
-        perlin(result, h, p.x, p.y, p.z, t);
-        result = 0.5f * (result + Vec3(1, 1, 1));
+        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
+        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
+        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
+        perlin<CGPolicyT>(result, h, px, py, pz, t);
+        result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1.0f, 1.0f, 1.0f));
+    }
+
+};
+
+struct PeriodicNoise : PeriodicNoiseImpl<CGDefault> {};
+// Scalar version of PeriodicNoise that is SIMD friendly suitable to be
+// inlined inside of a SIMD loops
+struct PeriodicNoiseScalar : PeriodicNoiseImpl<CGScalar> {};
+
+template<typename CGPolicyT = CGDefault>
+struct PeriodicSNoiseImpl {
+	OSL_FORCEINLINE OSL_HOSTDEVICE PeriodicSNoiseImpl () { }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x, float px) const {
+        HashScalarPeriodic h(px);
+        perlin<CGPolicyT>(result, h, x);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x, float y, float px, float py) const {
+        HashScalarPeriodic h(px, py);
+        perlin<CGPolicyT>(result, h, x, y);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, const Vec3 &pp) const {
+        HashScalarPeriodic h(pp.x, pp.y, pp.z);
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
+        HashScalarPeriodic h(pp.x, pp.y, pp.z, pt);
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z, t);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float px) const {
+        HashVectorPeriodic h(px);
+        perlin<CGPolicyT>(result, h, x);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float y, float px, float py) const {
+        HashVectorPeriodic h(px, py);
+        perlin<CGPolicyT>(result, h, x, y);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, const Vec3 &pp) const {
+        HashVectorPeriodic h(pp.x, pp.y, pp.z);
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z);
+    }
+
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
+        HashVectorPeriodic h(pp.x, pp.y, pp.z, pt);
+        perlin<CGPolicyT>(result, h, p.x, p.y, p.z, t);
     }
 
     // dual versions
 
-    inline OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<float> &x, float px) const {
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<float> &x, float px) const {
         HashScalarPeriodic h(px);
-        perlin(result, h, x);
-        result = 0.5f * (result + 1.0f);
+        perlin<CGPolicyT>(result, h, x);
     }
 
-    inline OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y,
-                                           float px, float py) const {
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y,
+            float px, float py) const {
         HashScalarPeriodic h(px, py);
-        perlin(result, h, x, y);
-        result = 0.5f * (result + 1.0f);
+        perlin<CGPolicyT>(result, h, x, y);
     }
 
-    inline OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Vec3 &pp) const {
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Vec3 &pp) const {
         HashScalarPeriodic h(pp.x, pp.y, pp.z);
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz);
-        result = 0.5f * (result + 1.0f);
+        perlin<CGPolicyT>(result, h, px, py, pz);
     }
 
-    inline OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t,
-                                           const Vec3 &pp, float pt) const {
-        HashScalarPeriodic h(pp.x, pp.y, pp.z, pt);
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t,
+            const Vec3 &pp, float pt) const {
+        HashScalarPeriodic h(pp.x, pp.y, pp.z, pt);        
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz, t);
-        result = 0.5f * (result + 1.0f);
+        perlin<CGPolicyT>(result, h, px, py, pz, t);
     }
 
-    inline OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, float px) const {
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, float px) const {
         HashVectorPeriodic h(px);
-        perlin(result, h, x);
-        result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));
+        perlin<CGPolicyT>(result, h, x);
     }
 
-    inline OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y,
-                                           float px, float py) const {
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y,
+            float px, float py) const {
         HashVectorPeriodic h(px, py);
-        perlin(result, h, x, y);
-        result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));
+        perlin<CGPolicyT>(result, h, x, y);
     }
 
-    inline OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Vec3 &pp) const {
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Vec3 &pp) const {
         HashVectorPeriodic h(pp.x, pp.y, pp.z);
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz);
-        result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));
+        perlin<CGPolicyT>(result, h, px, py, pz);
     }
 
-    inline OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t,
-                                           const Vec3 &pp, float pt) const {
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t,
+            const Vec3 &pp, float pt) const {
         HashVectorPeriodic h(pp.x, pp.y, pp.z, pt);
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz, t);
-        result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1, 1, 1));
+        perlin<CGPolicyT>(result, h, px, py, pz, t);
     }
+
 };
 
-struct PeriodicSNoise {
-    OSL_HOSTDEVICE PeriodicSNoise () { }
-
-    inline OSL_HOSTDEVICE void operator() (float &result, float x, float px) const {
-        HashScalarPeriodic h(px);
-        perlin(result, h, x);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (float &result, float x, float y, float px, float py) const {
-        HashScalarPeriodic h(px, py);
-        perlin(result, h, x, y);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, const Vec3 &pp) const {
-        HashScalarPeriodic h(pp.x, pp.y, pp.z);
-        perlin(result, h, p.x, p.y, p.z);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
-        HashScalarPeriodic h(pp.x, pp.y, pp.z, pt);
-        perlin(result, h, p.x, p.y, p.z, t);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float px) const {
-        HashVectorPeriodic h(px);
-        perlin(result, h, x);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float y, float px, float py) const {
-        HashVectorPeriodic h(px, py);
-        perlin(result, h, x, y);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, const Vec3 &pp) const {
-        HashVectorPeriodic h(pp.x, pp.y, pp.z);
-        perlin(result, h, p.x, p.y, p.z);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
-        HashVectorPeriodic h(pp.x, pp.y, pp.z, pt);
-        perlin(result, h, p.x, p.y, p.z, t);
-    }
-
-    // dual versions
-
-    inline OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<float> &x, float px) const {
-        HashScalarPeriodic h(px);
-        perlin(result, h, x);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y,
-                                           float px, float py) const {
-        HashScalarPeriodic h(px, py);
-        perlin(result, h, x, y);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Vec3 &pp) const {
-        HashScalarPeriodic h(pp.x, pp.y, pp.z);
-        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
-        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
-        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t,
-                                           const Vec3 &pp, float pt) const {
-        HashScalarPeriodic h(pp.x, pp.y, pp.z, pt);
-        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
-        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
-        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz, t);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, float px) const {
-        HashVectorPeriodic h(px);
-        perlin(result, h, x);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y,
-                                           float px, float py) const {
-        HashVectorPeriodic h(px, py);
-        perlin(result, h, x, y);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Vec3 &pp) const {
-        HashVectorPeriodic h(pp.x, pp.y, pp.z);
-        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
-        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
-        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz);
-    }
-
-    inline OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t,
-                                           const Vec3 &pp, float pt) const {
-        HashVectorPeriodic h(pp.x, pp.y, pp.z, pt);
-        Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
-        Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
-        Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin(result, h, px, py, pz, t);
-    }
-};
-
+struct PeriodicSNoise : PeriodicSNoiseImpl<CGDefault> {};
+// Scalar version of PeriodicSNoise that is SIMD friendly suitable to be
+// inlined inside of a SIMD loops
+struct PeriodicSNoiseScalar : PeriodicSNoiseImpl<CGScalar> {};
 
 
 struct SimplexNoise {
@@ -2579,28 +2805,28 @@ struct SimplexNoise {
         result = simplexnoise4 (p.x, p.y, p.z, t);
     }
 
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, float x) const {
-        result[0] = simplexnoise1 (x, 0);
-        result[1] = simplexnoise1 (x, 1);
-        result[2] = simplexnoise1 (x, 2);
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, float x) const {
+        result.x = simplexnoise1 (x, 0);
+        result.y = simplexnoise1 (x, 1);
+        result.z = simplexnoise1 (x, 2);
     }
 
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float y) const {
-        result[0] = simplexnoise2 (x, y, 0);
-        result[1] = simplexnoise2 (x, y, 1);
-        result[2] = simplexnoise2 (x, y, 2);
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float y) const {
+        result.x = simplexnoise2 (x, y, 0);
+        result.y = simplexnoise2 (x, y, 1);
+        result.z = simplexnoise2 (x, y, 2);
     }
 
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p) const {
-        result[0] = simplexnoise3 (p.x, p.y, p.z, 0);
-        result[1] = simplexnoise3 (p.x, p.y, p.z, 1);
-        result[2] = simplexnoise3 (p.x, p.y, p.z, 2);
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p) const {
+        result.x = simplexnoise3 (p.x, p.y, p.z, 0);
+        result.y = simplexnoise3 (p.x, p.y, p.z, 1);
+        result.z = simplexnoise3 (p.x, p.y, p.z, 2);
     }
-
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, float t) const {
-        result[0] = simplexnoise4 (p.x, p.y, p.z, t, 0);
-        result[1] = simplexnoise4 (p.x, p.y, p.z, t, 1);
-        result[2] = simplexnoise4 (p.x, p.y, p.z, t, 2);
+    
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, float t) const {
+        result.x = simplexnoise4 (p.x, p.y, p.z, t, 0);
+        result.y = simplexnoise4 (p.x, p.y, p.z, t, 1);
+        result.z = simplexnoise4 (p.x, p.y, p.z, t, 2);
     }
 
 
@@ -2624,19 +2850,19 @@ struct SimplexNoise {
     inline OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
                                            int seed=0) const {
         float r, dndx, dndy, dndz;
-        r = simplexnoise3 (p.val()[0], p.val()[1], p.val()[2],
+        r = simplexnoise3 (p.val().x, p.val().y, p.val().z,
                            seed, &dndx, &dndy, &dndz);
-        result.set (r, dndx * p.dx()[0] + dndy * p.dx()[1] + dndz * p.dx()[2],
-                       dndx * p.dy()[0] + dndy * p.dy()[1] + dndz * p.dy()[2]);
+        result.set (r, dndx * p.dx().x + dndy * p.dx().y + dndz * p.dx().z,
+                       dndx * p.dy().x + dndy * p.dy().y + dndz * p.dy().z);
     }
 
     inline OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
                                            const Dual2<float> &t, int seed=0) const {
         float r, dndx, dndy, dndz, dndt;
-        r = simplexnoise4 (p.val()[0], p.val()[1], p.val()[2], t.val(),
+        r = simplexnoise4 (p.val().x, p.val().y, p.val().z, t.val(),
                            seed, &dndx, &dndy, &dndz, &dndt);
-        result.set (r, dndx * p.dx()[0] + dndy * p.dx()[1] + dndz * p.dx()[2] + dndt * t.dx(),
-                       dndx * p.dy()[0] + dndy * p.dy()[1] + dndz * p.dy()[2] + dndt * t.dy());
+        result.set (r, dndx * p.dx().x + dndy * p.dx().y + dndz * p.dx().z + dndt * t.dx(),
+                       dndx * p.dy().x + dndy * p.dy().y + dndz * p.dy().z + dndt * t.dy());
     }
 
     inline OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const {
@@ -2673,6 +2899,119 @@ struct SimplexNoise {
 };
 
 
+// Scalar version of SimplexNoise that is SIMD friendly suitable to be
+// inlined inside of a SIMD loops
+struct SimplexNoiseScalar {
+    SimplexNoiseScalar () { }
+
+    OSL_FORCEINLINE void operator() (float &result, float x) const {
+        result = sfm::simplexnoise1<0/* seed */>(x);
+    }
+
+    OSL_FORCEINLINE void operator() (float &result, float x, float y) const {
+        result = sfm::simplexnoise2<0/* seed */>(x, y);
+    }
+
+    OSL_FORCEINLINE void operator()(float &result, const Vec3 &p) const {
+        result = sfm::simplexnoise3<0/* seed */>(p.x, p.y, p.z);
+    }
+
+    OSL_FORCEINLINE void operator()(float &result, const Vec3 &p, float t) const {
+        result = sfm::simplexnoise4<0/* seed */>(p.x, p.y, p.z, t);
+    }
+
+    OSL_FORCEINLINE void operator() (Vec3 &result, float x) const {
+        result.x = sfm::simplexnoise1<0/* seed */>(x);
+        result.y = sfm::simplexnoise1<1/* seed */>(x);
+        result.z = sfm::simplexnoise1<2/* seed */>(x);
+    }
+
+    OSL_FORCEINLINE void operator() (Vec3 &result, float x, float y) const {
+        result.x = sfm::simplexnoise2<0/* seed */>(x, y);
+        result.y = sfm::simplexnoise2<1/* seed */>(x, y);
+        result.z = sfm::simplexnoise2<2/* seed */>(x, y);
+    }
+
+    OSL_FORCEINLINE void operator() (Vec3 &result, const Vec3 &p) const {
+        result.x = sfm::simplexnoise3<0/* seed */>(p.x, p.y, p.z);
+        result.y = sfm::simplexnoise3<1/* seed */>(p.x, p.y, p.z);
+        result.z = sfm::simplexnoise3<2/* seed */>(p.x, p.y, p.z);
+    }
+
+    OSL_FORCEINLINE void operator() (Vec3 &result, const Vec3 &p, float t) const {
+        result.x = sfm::simplexnoise4<0/* seed */>(p.x, p.y, p.z, t);
+        result.y = sfm::simplexnoise4<1/* seed */>(p.x, p.y, p.z, t);
+        result.z = sfm::simplexnoise4<2/* seed */>(p.x, p.y, p.z, t);
+    }
+
+
+    // dual versions
+    template<int seed=0>
+    OSL_FORCEINLINE void operator() (Dual2<float> &result, const Dual2<float> &x) const {
+        float r, dndx;
+        r = sfm::simplexnoise1<seed>(x.val(), sfm::DxRef(dndx));
+        result.set (r, dndx * x.dx(), dndx * x.dy());
+    }
+
+    template<int seedT=0>
+    OSL_FORCEINLINE void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y) const {
+        float r, dndx, dndy;
+        r = sfm::simplexnoise2<seedT> (x.val(), y.val(), sfm::DxDyRef(dndx, dndy));
+        result.set (r, dndx * x.dx() + dndy * y.dx(),
+                       dndx * x.dy() + dndy * y.dy());
+    }
+
+    template<int seed=0>
+    OSL_FORCEINLINE void operator() (Dual2<float> &result, const Dual2<Vec3> &p) const {
+        float dndx, dndy, dndz;
+        const Vec3 &p_val = p.val();
+        float r = sfm::simplexnoise3<seed>(p_val.x, p_val.y, p_val.z, sfm::DxDyDzRef(dndx, dndy, dndz));
+        result.set (r, dndx * p.dx().x + dndy * p.dx().y + dndz * p.dx().z,
+                       dndx * p.dy().x + dndy * p.dy().y + dndz * p.dy().z);
+    }
+
+    template<int seed=0>
+    OSL_FORCEINLINE void operator()(Dual2<float> &result, const Dual2<Vec3> &p,
+                            const Dual2<float> &t) const {
+        float dndx, dndy, dndz, dndt;
+        float r = sfm::simplexnoise4<seed> (p.val().x, p.val().y, p.val().z, t.val(),
+                           sfm::DxDyDzDwRef(dndx, dndy, dndz, dndt));
+        result.set (r, dndx * p.dx().x + dndy * p.dx().y + dndz * p.dx().z + dndt * t.dx(),
+                       dndx * p.dy().x + dndy * p.dy().y + dndz * p.dy().z + dndt * t.dy());
+    }
+
+    OSL_FORCEINLINE void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const {
+        Dual2<float> r0, r1, r2;
+        operator()<0>(r0, x);
+        operator()<1>(r1, x);
+        operator()<2>(r2, x);
+        result = make_Vec3 (r0, r1, r2);
+    }
+
+    OSL_FORCEINLINE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {
+        Dual2<float> r0, r1, r2;
+        operator()<0>(r0, x, y);
+        operator()<1>(r1, x, y);
+        operator()<2>(r2, x, y);
+        result = make_Vec3 (r0, r1, r2);
+    }
+
+    OSL_FORCEINLINE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {
+        Dual2<float> r0, r1, r2;
+        operator()<0>(r0, p);
+        operator()<1>(r1, p);
+        operator()<2>(r2, p);
+        result = make_Vec3 (r0, r1, r2);
+    }
+
+    OSL_FORCEINLINE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
+        Dual2<float> r0, r1, r2;
+        operator()<0>(r0, p, t);
+        operator()<1>(r1, p, t);
+        operator()<2>(r2, p, t);
+        result = make_Vec3 (r0, r1, r2);
+    }
+};
 
 // Unsigned simplex noise
 struct USimplexNoise {
@@ -2694,29 +3033,30 @@ struct USimplexNoise {
         result = 0.5f * (simplexnoise4 (p.x, p.y, p.z, t) + 1.0f);
     }
 
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, float x) const {
-        result[0] = 0.5f * (simplexnoise1 (x, 0) + 1.0f);
-        result[1] = 0.5f * (simplexnoise1 (x, 1) + 1.0f);
-        result[2] = 0.5f * (simplexnoise1 (x, 2) + 1.0f);
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, float x) const {
+        result.x = 0.5f * (simplexnoise1 (x, 0) + 1.0f);
+        result.y = 0.5f * (simplexnoise1 (x, 1) + 1.0f);
+        result.z = 0.5f * (simplexnoise1 (x, 2) + 1.0f);
     }
 
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float y) const {
-        result[0] = 0.5f * (simplexnoise2 (x, y, 0) + 1.0f);
-        result[1] = 0.5f * (simplexnoise2 (x, y, 1) + 1.0f);
-        result[2] = 0.5f * (simplexnoise2 (x, y, 2) + 1.0f);
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float y) const {
+        result.x = 0.5f * (simplexnoise2 (x, y, 0) + 1.0f);
+        result.y = 0.5f * (simplexnoise2 (x, y, 1) + 1.0f);
+        result.z = 0.5f * (simplexnoise2 (x, y, 2) + 1.0f);
     }
 
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p) const {
-        result[0] = 0.5f * (simplexnoise3 (p.x, p.y, p.z, 0) + 1.0f);
-        result[1] = 0.5f * (simplexnoise3 (p.x, p.y, p.z, 1) + 1.0f);
-        result[2] = 0.5f * (simplexnoise3 (p.x, p.y, p.z, 2) + 1.0f);
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p) const {
+        result.x = 0.5f * (simplexnoise3 (p.x, p.y, p.z, 0) + 1.0f);
+        result.y = 0.5f * (simplexnoise3 (p.x, p.y, p.z, 1) + 1.0f);
+        result.z = 0.5f * (simplexnoise3 (p.x, p.y, p.z, 2) + 1.0f);
     }
 
-    inline OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, float t) const {
-        result[0] = 0.5f * (simplexnoise4 (p.x, p.y, p.z, t, 0) + 1.0f);
-        result[1] = 0.5f * (simplexnoise4 (p.x, p.y, p.z, t, 1) + 1.0f);
-        result[2] = 0.5f * (simplexnoise4 (p.x, p.y, p.z, t, 2) + 1.0f);
+    OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, float t) const {
+        result.x = 0.5f * (simplexnoise4 (p.x, p.y, p.z, t, 0) + 1.0f);
+        result.y = 0.5f * (simplexnoise4 (p.x, p.y, p.z, t, 1) + 1.0f);
+        result.z = 0.5f * (simplexnoise4 (p.x, p.y, p.z, t, 2) + 1.0f);
     }
+
 
     // dual versions
 
@@ -2743,28 +3083,28 @@ struct USimplexNoise {
     inline OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
                                            int seed=0) const {
         float r, dndx, dndy, dndz;
-        r = simplexnoise3 (p.val()[0], p.val()[1], p.val()[2],
+        r = simplexnoise3 (p.val().x, p.val().y, p.val().z,
                            seed, &dndx, &dndy, &dndz);
         r = 0.5f * (r + 1.0f);
         dndx *= 0.5f;
         dndy *= 0.5f;
         dndz *= 0.5f;
-        result.set (r, dndx * p.dx()[0] + dndy * p.dx()[1] + dndz * p.dx()[2],
-                       dndx * p.dy()[0] + dndy * p.dy()[1] + dndz * p.dy()[2]);
+        result.set (r, dndx * p.dx().x + dndy * p.dx().y + dndz * p.dx().z,
+                       dndx * p.dy().x + dndy * p.dy().y + dndz * p.dy().z);
     }
 
     inline OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
                                            const Dual2<float> &t, int seed=0) const {
         float r, dndx, dndy, dndz, dndt;
-        r = simplexnoise4 (p.val()[0], p.val()[1], p.val()[2], t.val(),
+        r = simplexnoise4 (p.val().x, p.val().y, p.val().z, t.val(),
                            seed, &dndx, &dndy, &dndz, &dndt);
         r = 0.5f * (r + 1.0f);
         dndx *= 0.5f;
         dndy *= 0.5f;
         dndz *= 0.5f;
         dndt *= 0.5f;
-        result.set (r, dndx * p.dx()[0] + dndy * p.dx()[1] + dndz * p.dx()[2] + dndt * t.dx(),
-                       dndx * p.dy()[0] + dndy * p.dy()[1] + dndz * p.dy()[2] + dndt * t.dy());
+        result.set (r, dndx * p.dx().x + dndy * p.dx().y + dndz * p.dx().z + dndt * t.dx(),
+                       dndx * p.dy().x + dndy * p.dy().y + dndz * p.dy().z + dndt * t.dy());
     }
 
     inline OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const {
@@ -2798,14 +3138,145 @@ struct USimplexNoise {
         (*this)(r2, p, t, 2);
         result = make_Vec3 (r0, r1, r2);
     }
+
 };
 
+// Scalar version of USimplexNoise that is SIMD friendly suitable to be
+// inlined inside of a SIMD loops
+struct USimplexNoiseScalar {
+	OSL_FORCEINLINE USimplexNoiseScalar () { }
+
+    OSL_FORCEINLINE void operator() (float &result, float x) const {
+        result = 0.5f * (sfm::simplexnoise1<0/* seed */>(x) + 1.0f);
+    }
+
+    OSL_FORCEINLINE void operator() (float &result, float x, float y) const {
+        result = 0.5f * (sfm::simplexnoise2<0/* seed */>(x, y) + 1.0f);
+    }
+
+    OSL_FORCEINLINE void operator() (float &result, const Vec3 &p) const {
+        result = 0.5f * (sfm::simplexnoise3<0/* seed */>(p.x, p.y, p.z) + 1.0f);
+    }
+
+    OSL_FORCEINLINE void operator() (float &result, const Vec3 &p, float t) const {
+        result = 0.5f * (sfm::simplexnoise4<0/* seed */> (p.x, p.y, p.z, t) + 1.0f);
+    }
+
+    OSL_FORCEINLINE void operator() (Vec3 &result, float x) const {
+        result.x = 0.5f * (sfm::simplexnoise1<0/* seed */>(x) + 1.0f);
+        result.y = 0.5f * (sfm::simplexnoise1<1/* seed */>(x) + 1.0f);
+        result.z = 0.5f * (sfm::simplexnoise1<2/* seed */>(x) + 1.0f);
+    }
+
+    OSL_FORCEINLINE void operator() (Vec3 &result, float x, float y) const {
+        result.x = 0.5f * (sfm::simplexnoise2<0>(x, y) + 1.0f);
+        result.y = 0.5f * (sfm::simplexnoise2<1>(x, y) + 1.0f);
+        result.z = 0.5f * (sfm::simplexnoise2<2>(x, y) + 1.0f);
+    }
+
+    OSL_FORCEINLINE void operator() (Vec3 &result, const Vec3 &p) const {
+        result.x = 0.5f * (sfm::simplexnoise3<0/* seed */>(p.x, p.y, p.z) + 1.0f);
+        result.y = 0.5f * (sfm::simplexnoise3<1/* seed */>(p.x, p.y, p.z) + 1.0f);
+        result.z = 0.5f * (sfm::simplexnoise3<2/* seed */>(p.x, p.y, p.z) + 1.0f);
+    }
+
+    OSL_FORCEINLINE void operator() (Vec3 &result, const Vec3 &p, float t) const {
+        result.x = 0.5f * (sfm::simplexnoise4<0/* seed */>(p.x, p.y, p.z, t) + 1.0f);
+        result.y = 0.5f * (sfm::simplexnoise4<1/* seed */>(p.x, p.y, p.z, t) + 1.0f);
+        result.z = 0.5f * (sfm::simplexnoise4<2/* seed */>(p.x, p.y, p.z, t) + 1.0f);
+    }
+
+    // dual versions
+    template<int seed=0>
+    OSL_FORCEINLINE void operator() (Dual2<float> &result, const Dual2<float> &x) const {
+        float r, dndx;
+        r = sfm::simplexnoise1<seed>(x.val(), sfm::DxRef(dndx));
+        r = 0.5f * (r + 1.0f);
+        dndx *= 0.5f;
+        result.set (r, dndx * x.dx(), dndx * x.dy());
+    }
+
+    template<int seedT=0>
+    OSL_FORCEINLINE void operator() (Dual2<float> &result, const Dual2<float> &x,
+                             const Dual2<float> &y) const {
+        float r, dndx, dndy;
+        r = sfm::simplexnoise2<seedT> (x.val(), y.val(), sfm::DxDyRef(dndx, dndy));
+        r = 0.5f * (r + 1.0f);
+        dndx *= 0.5f;
+        dndy *= 0.5f;
+        result.set (r, dndx * x.dx() + dndy * y.dx(),
+                       dndx * x.dy() + dndy * y.dy());
+    }
+
+    template<int seed=0>
+    OSL_FORCEINLINE void operator() (Dual2<float> &result, const Dual2<Vec3> &p) const {
+        float r, dndx, dndy, dndz;
+        const Vec3 &p_val = p.val();
+        r = sfm::simplexnoise3<seed>(p_val.x, p_val.y, p_val.z, sfm::DxDyDzRef(dndx, dndy, dndz));
+        r = 0.5f * (r + 1.0f);
+        dndx *= 0.5f;
+        dndy *= 0.5f;
+        dndz *= 0.5f;
+        result.set (r, dndx * p.dx().x + dndy * p.dx().y + dndz * p.dx().z,
+                       dndx * p.dy().x + dndy * p.dy().y + dndz * p.dy().z);
+    }
+
+    template<int seed=0>
+    OSL_FORCEINLINE void operator()(Dual2<float> &result, const Dual2<Vec3> &p,
+                            const Dual2<float> &t) const {
+        float dndx, dndy, dndz, dndt;
+        float r = sfm::simplexnoise4<seed> (p.val().x, p.val().y, p.val().z, t.val(),
+                           sfm::DxDyDzDwRef(dndx, dndy, dndz, dndt));
+        r = 0.5f * (r + 1.0f);
+        dndx *= 0.5f;
+        dndy *= 0.5f;
+        dndz *= 0.5f;
+        dndt *= 0.5f;
+        result.set (r, dndx * p.dx().x + dndy * p.dx().y + dndz * p.dx().z + dndt * t.dx(),
+                       dndx * p.dy().x + dndy * p.dy().y + dndz * p.dy().z + dndt * t.dy());
+    }
+
+    OSL_FORCEINLINE void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const {
+        Dual2<float> r0, r1, r2;
+        operator()<0>(r0, x);
+        operator()<1>(r1, x);
+        operator()<2>(r2, x);
+        result = make_Vec3 (r0, r1, r2);
+    }
+
+    OSL_FORCEINLINE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {
+        Dual2<float> r0, r1, r2;
+        operator()<0>(r0, x, y);
+        operator()<1>(r1, x, y);
+        operator()<2>(r2, x, y);
+        result = make_Vec3 (r0, r1, r2);
+    }
+
+    OSL_FORCEINLINE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {
+        Dual2<float> r0, r1, r2;
+        operator()<0>(r0, p);
+        operator()<1>(r1, p);
+        operator()<2>(r2, p);
+        result = make_Vec3 (r0, r1, r2);
+    }
+
+    OSL_FORCEINLINE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
+        Dual2<float> r0, r1, r2;
+        operator()<0>(r0, p, t);
+        operator()<1>(r1, p, t);
+        operator()<2>(r2, p, t);
+        result = make_Vec3 (r0, r1, r2);
+    }
+
+};
 } // anonymous namespace
 
 
 
 OSLNOISEPUBLIC OSL_HOSTDEVICE
 Dual2<float> gabor (const Dual2<Vec3> &P, const NoiseParams *opt);
+
+
 
 OSLNOISEPUBLIC OSL_HOSTDEVICE
 Dual2<float> gabor (const Dual2<float> &x, const Dual2<float> &y,
@@ -2894,7 +3365,6 @@ DECLNOISE (cellnoise, CellNoise)
 DECLNOISE (hashnoise, HashNoise)
 
 #undef DECLNOISE
-
 }   // namespace oslnoise
 
 

@@ -148,6 +148,9 @@ namespace pvt {
 
     template<int EndBeforeT>
     using make_int_sequence =  std::make_integer_sequence<int, EndBeforeT>;
+
+    template<bool... BoolListT >
+    using bool_sequence = std::integer_sequence<bool, BoolListT... >;
 #else
     // std::integer_sequence requires c++14 library support,
     // we have our own version here in case the environment is c++14 compiler
@@ -174,7 +177,31 @@ namespace pvt {
 
     template<int EndBeforeT>
     using make_int_sequence = typename int_sequence_generator<0, EndBeforeT, int_sequence<> >::type;
+
+    template<bool... BoolListT >
+    struct bool_sequence
+	{
+	};
 #endif
+
+#if (OSL_CPLUSPLUS_VERSION >= 17)
+    template<class... ListT>
+    using conjunction = std::conjunction<ListT...>;
+#else
+    template<class... ListT>
+    using conjunction = std::is_same<bool_sequence<true,ListT::value...>, bool_sequence<ListT::value..., true>>;
+#endif
+
+    // We need the SFINAE type to be different for
+    // enable_if_type from disable_if_type so that we can apply both to
+    // the same template signature to avoid
+    // "error: invalid redeclaration of member function template"
+    // NOTE: std::enable_if_t is a c++14 library feature, our baseline
+    // and we wish to remain compatible with c++11 header libraries.
+    // Also we are using std::true_type vs. void as the default type
+    template <bool TestT, typename TypeT = std::true_type>
+    using enable_if_type = typename std::enable_if<TestT, TypeT>::type;
+
 } // namespace pvt
 
 // Instead of relying on compiler loop unrolling, we can statically call functor

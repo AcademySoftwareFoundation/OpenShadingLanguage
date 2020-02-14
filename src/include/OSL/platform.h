@@ -81,6 +81,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #  define OSL_INTEL_COMPILER 0
 #endif
 
+// Intel's compiler on OSX may still define __clang__
+// and we have need to know when using a true clang compiler
+#if !defined(__INTEL_COMPILER) && defined(__clang__)
+    #define OSL_NON_INTEL_CLANG  __clang__
+#else
+	#define OSL_NON_INTEL_CLANG  0
+#endif
+
 // Tests for MSVS versions, always 0 if not MSVS at all.
 #if defined(_MSC_VER)
 #  if _MSC_VER < 1900
@@ -118,21 +126,25 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #    define OSL_CONSTEXPR14 constexpr
 #    define OSL_CONSTEXPR17 constexpr
 #    define OSL_CONSTEXPR20 constexpr
+#    define OSL_NODISCARD [[nodiscard]]
 #elif (__cplusplus >= 201703L)
 #    define OSL_CPLUSPLUS_VERSION 17
 #    define OSL_CONSTEXPR14 constexpr
 #    define OSL_CONSTEXPR17 constexpr
 #    define OSL_CONSTEXPR20 /* not constexpr before C++20 */
+#    define OSL_NODISCARD [[nodiscard]]
 #elif (__cplusplus >= 201402L) || (defined(_MSC_VER) && _MSC_VER >= 1914)
 #    define OSL_CPLUSPLUS_VERSION 14
 #    define OSL_CONSTEXPR14 constexpr
 #    define OSL_CONSTEXPR17 /* not constexpr before C++17 */
 #    define OSL_CONSTEXPR20 /* not constexpr before C++20 */
+#    define OSL_NODISCARD /* not nodiscard attribute before C++17 */
 #elif (__cplusplus >= 201103L) || _MSC_VER >= 1900
 #    define OSL_CPLUSPLUS_VERSION 11
 #    define OSL_CONSTEXPR14 /* not constexpr before C++14 */
 #    define OSL_CONSTEXPR17 /* not constexpr before C++17 */
 #    define OSL_CONSTEXPR20 /* not constexpr before C++20 */
+#    define OSL_NODISCARD /* not nodiscard attribute before C++17 */
 #else
 #    error "This version of OSL requires C++11"
 #endif
@@ -229,6 +241,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif // OSL_DEBUG
 
 
+#if OSL_DEBUG
+	// Disable OPENMP_SIMD when debugging
+	#undef OSL_OPENMP_SIMD
+#endif
+
+#ifdef OSL_OPENMP_SIMD
+    #define OSL_OMP_PRAGMA(aUnQuotedPragma) OSL_PRAGMA(aUnQuotedPragma)
+#else
+    #define OSL_OMP_PRAGMA(aUnQuotedPragma)
+#endif
+
 // OSL_FORCEINLINE is a function attribute that attempts to make the
 // function always inline. On many compilers regular 'inline' is only
 // advisory. Put this attribute before the function return type, just like
@@ -257,6 +280,51 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #    define OSL_NOINLINE
 #endif
 
+// OSL_FORCEINLINE_BLOCK tells the compiler that any calls in the next
+// statement (or compound statement/code block)should be inlined whenever
+// the compiler is capable of doing so.  Furthermore, any calls made by those
+// calls should be inlined, and so on recursively.  Has no affect on function calls to
+// whose definition exists in different translation units or calls that are not
+// legal to inline (possibly by OSL_NOINLINE).  Intent is to ensure that entire
+// contents of a SIMD loop body is are fully inlined avoiding compiler hueristcs.
+// However if any debugging code exists inside the code block, then the amount
+// of code inlined could explode.  So great care should be used when placing
+// code inside one of these forced inline blocks.  Note that if OSL_DEBUG is true,
+// it does nothing to avoid over-inlining.
+// NOTE:  only supported by Intel C++ compiler.
+// Unsupported compilers may instead use command line flags to increase their inlining
+// limits/thresholds
+#if OSL_DEBUG
+	#define OSL_FORCEINLINE_BLOCK
+#else
+	#define OSL_FORCEINLINE_BLOCK OSL_INTEL_PRAGMA(forceinline recursive)
+#endif
+
+// Until we have c++20, we can provide our own version of std::assume_aligned
+// http://open-std.org/JTC1/SC22/WG21/docs/papers/2018/p1007r0.pdf
+template<int AlignmentT, class DataT >
+OSL_NODISCARD
+#ifndef __INTEL_COMPILER // constexpr not compatible with ICC's __assume_aligned
+    constexpr
+#endif
+DataT* osl_assume_aligned(DataT* ptr)
+{
+    #ifdef __INTEL_COMPILER
+        __assume_aligned(ptr, AlignmentT);
+        return ptr;
+    #elif defined(__clang__) || defined(__GNUC__)
+        return reinterpret_cast<DataT*>(__builtin_assume_aligned(ptr, AlignmentT));
+    #elif defined(_MSC_VER)
+        constexpr std::uintptr_t unaligned_bit_mask = ((1 << N) - 1);
+        if ((reinterpret_cast<std::uintptr_t>(ptr) & unaligned_bit_mask) == 0)
+            return ptr;
+        else
+            __assume(0); // let compiler know we should never reach this branch
+    #else
+        #error unknown compiler, update osl_assume_aligned to handle (or explicitly ignore) emitting a pointer alignment hint
+        return ptr;
+    #endif
+}
 
 // OSL_MAYBE_UNUSED is a function or variable attribute that assures the
 // compiler that it's fine for the item to appear to be unused.

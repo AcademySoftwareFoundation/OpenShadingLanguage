@@ -32,6 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
 
+#include <OpenImageIO/benchmark.h>
 #include <OpenImageIO/unittest.h>
 
 using namespace OSL;
@@ -138,6 +139,16 @@ int main(int /*argc*/, char * /*argv*/[])
     test_metaprogramming ();
     test_derivs1 ();
     test_derivs2 ();
+
+    // Some benchmarking
+    std::cout << "\nBenchmarks:\n";
+    using namespace OIIO;
+    Benchmarker bench;
+    Dual2f v(1.5f, 0.01f, 0.01f);
+    clobber(v);
+    bench("-Dual2f", [&](const Dual2f& v) { return DoNotOptimize(-v); }, v);
+    bench("fast_neg(Dual2f)", [&](const Dual2f& v) { return DoNotOptimize(fast_neg(v)); }, v);
+    bench("log2(Dual2f)", [&](const Dual2f& v) { return DoNotOptimize(fast_log2(v)); }, v);
 
     // FIXME: Some day, expand to more exhaustive tests of Dual
 

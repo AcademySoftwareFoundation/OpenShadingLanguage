@@ -98,8 +98,8 @@ gabor_kernel (const Dual2<float> &weight, const VEC &omega,
 {
     // see Equation 1
 
-    Dual2<float> g = exp (float(-M_PI) * (bandwidth * bandwidth) * dot(x,x));
-    Dual2<float> h = cos (float(M_TWO_PI) * dot(omega,x) + phi);
+    Dual2<float> g = OIIO::fast_exp (float(-M_PI) * (bandwidth * bandwidth) * dot(x,x));
+    Dual2<float> h = OIIO::fast_cos (float(M_TWO_PI) * dot(omega,x) + phi);
     return weight * g * h;
 }
 
@@ -110,7 +110,7 @@ slice_gabor_kernel_3d (const Dual2<float> &d, float w, float a,
                        Dual2<float> &w_s, Vec2 &omega_s, Dual2<float> &phi_s)
 {
     // Equation 6
-    w_s = w * exp(float(-M_PI) * (a*a)*(d*d));
+    w_s = w * OIIO::fast_exp(float(-M_PI) * (a*a)*(d*d));
     //omega_s[0] = omega[0];
     //omega_s[1] = omega[1];
     //phi_s = phi - float(M_TWO_PI) * d * omega[2];
@@ -132,11 +132,11 @@ slice_gabor_kernel_3d (const Dual2<float> &d, float w, float a,
             float bandwidth = Imath::clamp(opt.bandwidth,0.01f,100.0f);
             // NOTE: this could be a source of numerical differences
             // between the single point vs. batched
-    //#if OSL_FAST_MATH
-    //        float TWO_to_bandwidth = OIIO::fast_exp2(bandwidth);
-    //#else
+    #if OSL_FAST_MATH
+            float TWO_to_bandwidth = OIIO::fast_exp2(bandwidth);
+    #else
             float TWO_to_bandwidth = exp2f(bandwidth);
-    //#endif
+    #endif
             //static const float SQRT_PI_OVER_LN2 = sqrtf (M_PI / M_LN2);
             // To match GCC result of sqrtf (M_PI / M_LN2)
             static constexpr float SQRT_PI_OVER_LN2 = 2.128934e+00f;
@@ -252,7 +252,7 @@ slice_gabor_kernel_3d (const Dual2<float> &d, float w, float a,
 #else
     #if OSL_FAST_MATH
             float sin_omega_t, cos_omega_t;
-            sfm::sincos (omega_t, sin_omega_t, cos_omega_t);
+            OIIO::sincos (omega_t, sin_omega_t, cos_omega_t);
     #else
             // NOTE: optimizing compilers will see sin & cos
             // on the same value and call a single sincos function
@@ -276,7 +276,7 @@ slice_gabor_kernel_3d (const Dual2<float> &d, float w, float a,
 #else
     #if OSL_FAST_MATH
             float sin_omega_t, cos_omega_t;
-            sfm::sincos (omega_t, sin_omega_t, cos_omega_t);
+            OIIO::sincos (omega_t, sin_omega_t, cos_omega_t);
     #else
             // NOTE: optimizing compilers will see sin & cos
             // on the same value and call a single sincos function

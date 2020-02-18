@@ -86,6 +86,11 @@ else ()
     add_definitions ("-DOSL_FAST_MATH=0")
 endif ()
 
+option (OIIO_FMATH_SIMD_FRIENDLY "Make sure OIIO fmath functions are SIMD-friendly" OFF)
+if (OIIO_FMATH_SIMD_FRIENDLY)
+    add_definitions (-DOIIO_FMATH_SIMD_FRIENDLY=1)
+endif ()
+
 if (USE_OPTIX)
     add_definitions ("-DOSL_USE_OPTIX=1")
 endif ()

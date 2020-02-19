@@ -388,7 +388,7 @@ public:
     friend std::ostream& operator<< (std::ostream &out, const Dual &x) {
         out << x.val() << "[";
         OSL_INDEX_LOOP(i, PARTIALS, {
-            out << (x.partial(i)) << ((i < PARTIALS) ? ',' : ']');
+            out << (x.partial(i)) << ((i < PARTIALS-1) ? ',' : ']');
         });
         return out;
     }
@@ -654,6 +654,11 @@ OSL_HOSTDEVICE OSL_FORCEINLINE constexpr bool operator< (const Dual<T,P> &a, con
 }
 
 template<class T, int P>
+OSL_HOSTDEVICE OSL_FORCEINLINE constexpr bool operator< (const T &a, const Dual<T,P> &b) {
+    return a < b.val();
+}
+
+template<class T, int P>
 OSL_HOSTDEVICE OSL_FORCEINLINE constexpr bool operator> (const Dual<T,P> &a, const Dual<T,P> &b) {
     return a.val() > b.val();
 }
@@ -661,6 +666,11 @@ OSL_HOSTDEVICE OSL_FORCEINLINE constexpr bool operator> (const Dual<T,P> &a, con
 template<class T, int P>
 OSL_HOSTDEVICE OSL_FORCEINLINE constexpr bool operator> (const Dual<T,P> &a, const T &b) {
     return a.val() > b;
+}
+
+template<class T, int P>
+OSL_HOSTDEVICE OSL_FORCEINLINE constexpr bool operator> (const T &a, const Dual<T,P> &b) {
+    return a > b.val();
 }
 
 template<class T, int P>
@@ -674,6 +684,11 @@ OSL_HOSTDEVICE OSL_FORCEINLINE constexpr bool operator<= (const Dual<T,P> &a, co
 }
 
 template<class T, int P>
+OSL_HOSTDEVICE OSL_FORCEINLINE constexpr bool operator<= (const T &a, const Dual<T,P> &b) {
+    return a <= b.val();
+}
+
+template<class T, int P>
 OSL_HOSTDEVICE OSL_FORCEINLINE constexpr bool operator>= (const Dual<T,P> &a, const Dual<T,P> &b) {
     return a.val() >= b.val();
 }
@@ -681,6 +696,11 @@ OSL_HOSTDEVICE OSL_FORCEINLINE constexpr bool operator>= (const Dual<T,P> &a, co
 template<class T, int P>
 OSL_HOSTDEVICE OSL_FORCEINLINE constexpr bool operator>= (const Dual<T,P> &a, const T &b) {
     return a.val() >= b;
+}
+
+template<class T, int P>
+OSL_HOSTDEVICE OSL_FORCEINLINE constexpr bool operator>= (const T &a, const Dual<T,P> &b) {
+    return a >= b.val();
 }
 
 
@@ -739,6 +759,25 @@ template<class T, int P>
 OSL_HOSTDEVICE OSL_FORCEINLINE constexpr bool equalVal (const T &x, const Dual<T,P> &y) {
     return x == y.val();
 }
+
+
+
+/// equalAll is the same as equalVal generally, but for two Duals of the same
+/// type, they also compare derivs.
+template<class T>
+OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 bool equalAll (const T &x, const T &y) {
+    return equalVal(x, y);
+}
+
+template<class T, int P>
+OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 bool equalAll (const Dual<T,P> &x, const Dual<T,P> &y) {
+    bool r = true;
+    OSL_INDEX_LOOP(i, P+1, {
+        r &= (x.elem(i) == y.elem(i));
+    });
+    return r;
+}
+
 
 
 

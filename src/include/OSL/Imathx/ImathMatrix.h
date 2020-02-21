@@ -44,9 +44,9 @@
 //----------------------------------------------------------------
 
 #include <OpenEXR/ImathPlatform.h>
-#include <OSL/ImathFun_cuda.h>
+#include "ImathFun.h"
 #include <OpenEXR/ImathExc.h>
-#include <OSL/ImathVec_cuda.h>
+#include "ImathVec.h"
 #include <OpenEXR/ImathShear.h>
 #include <OpenEXR/ImathNamespace.h>
 
@@ -61,7 +61,11 @@
 #endif
 
 #ifndef IMATH_HOSTDEVICE
-  #error "This should be included with the proper IMATH_HOSTDEVICE define"
+    #ifdef __CUDACC__
+        #define IMATH_HOSTDEVICE __host__ __device__
+    #else
+        #define IMATH_HOSTDEVICE
+    #endif
 #endif
 
 
@@ -126,6 +130,12 @@ template <class T> class Matrix33
     IMATH_HOSTDEVICE const Matrix33 &    operator = (T a);
 
 
+    //------------
+    // Destructor
+    //------------
+
+    ~Matrix33 () = default;
+	
     //----------------------
     // Compatibility with Sb
     //----------------------
@@ -269,17 +279,13 @@ template <class T> class Matrix33
     //
     //------------------------------------------------------------
 
-    IMATH_HOSTDEVICE const Matrix33 &    invert (bool singExc = false)
-                                         throw (IEX_NAMESPACE::MathExc);
+    IMATH_HOSTDEVICE const Matrix33 &    invert (bool singExc = false);
 
-    IMATH_HOSTDEVICE Matrix33<T>         inverse (bool singExc = false) const
-                                         throw (IEX_NAMESPACE::MathExc);
+    IMATH_HOSTDEVICE Matrix33<T>         inverse (bool singExc = false) const;
 
-    IMATH_HOSTDEVICE const Matrix33 &    gjInvert (bool singExc = false)
-                                         throw (IEX_NAMESPACE::MathExc);
+    IMATH_HOSTDEVICE const Matrix33 &    gjInvert (bool singExc = false);
 
-    IMATH_HOSTDEVICE Matrix33<T>         gjInverse (bool singExc = false) const
-                                         throw (IEX_NAMESPACE::MathExc);
+    IMATH_HOSTDEVICE Matrix33<T>         gjInverse (bool singExc = false) const;
 
 
     //------------------------------------------------
@@ -313,7 +319,7 @@ template <class T> class Matrix33
     // Rotate the given matrix by r
     //-----------------------------
 
-    template <class S> IMATH_HOSTDEVICE
+    template <class S>
     IMATH_HOSTDEVICE const Matrix33 &    rotate (S r);
 
 
@@ -328,7 +334,7 @@ template <class T> class Matrix33
     // Set matrix to scale by given vector
     //------------------------------------
 
-    template <class S> IMATH_HOSTDEVICE
+    template <class S>
     IMATH_HOSTDEVICE const Matrix33 &    setScale (const Vec2<S> &s);
 
 
@@ -336,7 +342,7 @@ template <class T> class Matrix33
     // Scale the matrix by s
     //----------------------
 
-    template <class S> IMATH_HOSTDEVICE
+    template <class S>
     IMATH_HOSTDEVICE const Matrix33 &    scale (const Vec2<S> &s);
 
 
@@ -485,6 +491,11 @@ template <class T> class Matrix44
                                 // r r r 0
                                 // t t t 1
 
+    //------------
+    // Destructor
+    //------------
+
+    ~Matrix44 () = default;
 
     //--------------------------------
     // Copy constructor and assignment
@@ -643,17 +654,13 @@ template <class T> class Matrix44
     //
     //------------------------------------------------------------
 
-    IMATH_HOSTDEVICE const Matrix44 &    invert (bool singExc = false)
-                        throw (IEX_NAMESPACE::MathExc);
+    IMATH_HOSTDEVICE const Matrix44 &    invert (bool singExc = false);
 
-    IMATH_HOSTDEVICE Matrix44<T>         inverse (bool singExc = false) const
-                        throw (IEX_NAMESPACE::MathExc);
+    IMATH_HOSTDEVICE Matrix44<T>         inverse (bool singExc = false) const;
 
-    IMATH_HOSTDEVICE const Matrix44 &    gjInvert (bool singExc = false)
-                        throw (IEX_NAMESPACE::MathExc);
+    IMATH_HOSTDEVICE const Matrix44 &    gjInvert (bool singExc = false);
 
-    IMATH_HOSTDEVICE Matrix44<T>         gjInverse (bool singExc = false) const
-                        throw (IEX_NAMESPACE::MathExc);
+    IMATH_HOSTDEVICE Matrix44<T>         gjInverse (bool singExc = false) const;
 
 
     //------------------------------------------------
@@ -1437,7 +1444,7 @@ Matrix33<T>::transposed () const
 
 template <class T>
 IMATH_HOSTDEVICE const Matrix33<T> &
-Matrix33<T>::gjInvert (bool singExc) throw (IEX_NAMESPACE::MathExc)
+Matrix33<T>::gjInvert (bool singExc)
 {
     *this = gjInverse (singExc);
     return *this;
@@ -1445,7 +1452,7 @@ Matrix33<T>::gjInvert (bool singExc) throw (IEX_NAMESPACE::MathExc)
 
 template <class T>
 IMATH_HOSTDEVICE Matrix33<T>
-Matrix33<T>::gjInverse (bool singExc) const throw (IEX_NAMESPACE::MathExc)
+Matrix33<T>::gjInverse (bool singExc) const
 {
     int i, j, k;
     Matrix33 s;
@@ -1549,7 +1556,7 @@ Matrix33<T>::gjInverse (bool singExc) const throw (IEX_NAMESPACE::MathExc)
 
 template <class T>
 IMATH_HOSTDEVICE const Matrix33<T> &
-Matrix33<T>::invert (bool singExc) throw (IEX_NAMESPACE::MathExc)
+Matrix33<T>::invert (bool singExc)
 {
     *this = inverse (singExc);
     return *this;
@@ -1557,7 +1564,7 @@ Matrix33<T>::invert (bool singExc) throw (IEX_NAMESPACE::MathExc)
 
 template <class T>
 IMATH_HOSTDEVICE Matrix33<T>
-Matrix33<T>::inverse (bool singExc) const throw (IEX_NAMESPACE::MathExc)
+Matrix33<T>::inverse (bool singExc) const
 {
     if (x[0][2] != 0 || x[1][2] != 0 || x[2][2] != 1)
     {
@@ -2538,11 +2545,11 @@ Matrix44<T>::multiply (const Matrix44<T> &a,
                        const Matrix44<T> &b,
                        Matrix44<T> &c)
 {
-    register const T * IMATH_RESTRICT ap = &a.x[0][0];
-    register const T * IMATH_RESTRICT bp = &b.x[0][0];
-    register       T * IMATH_RESTRICT cp = &c.x[0][0];
+    const T * IMATH_RESTRICT ap = &a.x[0][0];
+    const T * IMATH_RESTRICT bp = &b.x[0][0];
+          T * IMATH_RESTRICT cp = &c.x[0][0];
 
-    register T a0, a1, a2, a3;
+    T a0, a1, a2, a3;
 
     a0 = ap[0];
     a1 = ap[1];
@@ -2710,7 +2717,7 @@ Matrix44<T>::transposed () const
 
 template <class T>
 IMATH_HOSTDEVICE const Matrix44<T> &
-Matrix44<T>::gjInvert (bool singExc) throw (IEX_NAMESPACE::MathExc)
+Matrix44<T>::gjInvert (bool singExc)
 {
     *this = gjInverse (singExc);
     return *this;
@@ -2718,7 +2725,7 @@ Matrix44<T>::gjInvert (bool singExc) throw (IEX_NAMESPACE::MathExc)
 
 template <class T>
 IMATH_HOSTDEVICE Matrix44<T>
-Matrix44<T>::gjInverse (bool singExc) const throw (IEX_NAMESPACE::MathExc)
+Matrix44<T>::gjInverse (bool singExc) const
 {
     int i, j, k;
     Matrix44 s;
@@ -2826,7 +2833,7 @@ Matrix44<T>::gjInverse (bool singExc) const throw (IEX_NAMESPACE::MathExc)
 
 template <class T>
 IMATH_HOSTDEVICE const Matrix44<T> &
-Matrix44<T>::invert (bool singExc) throw (IEX_NAMESPACE::MathExc)
+Matrix44<T>::invert (bool singExc)
 {
     *this = inverse (singExc);
     return *this;
@@ -2834,7 +2841,7 @@ Matrix44<T>::invert (bool singExc) throw (IEX_NAMESPACE::MathExc)
 
 template <class T>
 IMATH_HOSTDEVICE Matrix44<T>
-Matrix44<T>::inverse (bool singExc) const throw (IEX_NAMESPACE::MathExc)
+Matrix44<T>::inverse (bool singExc) const
 {
     if (x[0][3] != 0 || x[1][3] != 0 || x[2][3] != 0 || x[3][3] != 1)
         return gjInverse(singExc);
@@ -3269,13 +3276,13 @@ operator << (std::ostream &s, const Matrix33<T> &m)
     if (s.flags() & std::ios_base::fixed)
     {
         s.setf (std::ios_base::showpoint);
-        width = s.precision() + 5;
+        width = static_cast<int>(s.precision()) + 5;
     }
     else
     {
         s.setf (std::ios_base::scientific);
         s.setf (std::ios_base::showpoint);
-        width = s.precision() + 8;
+        width = static_cast<int>(s.precision()) + 8;
     }
 
     s << "(" << std::setw (width) << m[0][0] <<
@@ -3304,13 +3311,13 @@ operator << (std::ostream &s, const Matrix44<T> &m)
     if (s.flags() & std::ios_base::fixed)
     {
         s.setf (std::ios_base::showpoint);
-        width = s.precision() + 5;
+        width = static_cast<int>(s.precision()) + 5;
     }
     else
     {
         s.setf (std::ios_base::scientific);
         s.setf (std::ios_base::showpoint);
-        width = s.precision() + 8;
+        width = static_cast<int>(s.precision()) + 8;
     }
 
     s << "(" << std::setw (width) << m[0][0] <<

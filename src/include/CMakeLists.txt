@@ -3,6 +3,7 @@
 # https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
 
 file (GLOB public_headers OSL/*.h)
+file (GLOB public_headers_imathx OSL/Imathx/*.h)
 
 
 option (USE_GENERATED_EXPORT_HEADER "Use CMake-generated export header" OFF)
@@ -37,5 +38,8 @@ list (APPEND public_headers "${CMAKE_BINARY_DIR}/include/${PROJECT_NAME}/${versi
 install (FILES ${public_headers}
          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}
          COMPONENT developer)
+install (FILES ${public_headers_imathx}
+         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}/Imathx
+         COMPONENT developer)
 
-set (PROJECT_PUBLIC_HEADERS ${public_headers} PARENT_SCOPE)
+set (PROJECT_PUBLIC_HEADERS ${public_headers} ${public_headers_imathx} PARENT_SCOPE)

@@ -35,7 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "dual.h"
 #include "dual_vec.h"
-#include "Imathx.h"
+#include <OSL/Imathx/Imathx.h>
 
 #include <OpenEXR/ImathFun.h>
 #include <OpenEXR/ImathMatrix.h>

@@ -36,7 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/oslconfig.h>
 //#include "mask.h"
 #include "dual_vec.h"
-#include "Imathx.h"
+#include <OSL/Imathx/Imathx.h>
 
 OSL_NAMESPACE_ENTER
 

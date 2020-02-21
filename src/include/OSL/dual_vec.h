@@ -47,7 +47,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OSL/oslconfig.h>
 #include <OSL/dual.h>
-#include "Imathx.h"
+#include <OSL/Imathx/Imathx.h>
 
 OSL_NAMESPACE_ENTER
 

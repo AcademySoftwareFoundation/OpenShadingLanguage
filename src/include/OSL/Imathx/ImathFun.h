@@ -44,14 +44,18 @@
 //-----------------------------------------------------------------------------
 
 #include <OpenEXR/ImathExport.h>
-#include <OSL/ImathLimits_cuda.h>
+#include "ImathLimits.h"
 #include <OpenEXR/ImathInt64.h>
 #include <OpenEXR/ImathNamespace.h>
 
 IMATH_INTERNAL_NAMESPACE_HEADER_ENTER
 
 #ifndef IMATH_HOSTDEVICE
-  #error "This should be included with the proper IMATH_HOSTDEVICE define"
+    #ifdef __CUDACC__
+        #define IMATH_HOSTDEVICE __host__ __device__
+    #else
+        #define IMATH_HOSTDEVICE
+    #endif
 #endif
 
 template <class T> IMATH_HOSTDEVICE

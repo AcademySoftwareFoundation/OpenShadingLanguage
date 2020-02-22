@@ -13,6 +13,12 @@ import shutil
 from optparse import OptionParser
 
 
+def make_relpath (path, start=os.curdir):
+    "Wrapper around os.path.relpath which always uses '/' as the separator."
+    p = os.path.relpath (path, start)
+    return p if sys.platform != "win32" else p.replace ('\\', '/')
+
+
 #
 # Get standard testsuite test arguments: srcdir exepath
 #
@@ -24,8 +30,10 @@ OSL_BUILD_DIR = os.environ.get("OSL_BUILD_DIR", "../..")
 OSL_SOURCE_DIR = os.environ.get("OSL_SOURCE_DIR", "../../../..")
 OSL_TESTSUITE_DIR = os.path.join(OSL_SOURCE_DIR, "testsuite")
 OpenImageIO_ROOT = os.environ.get("OpenImageIO_ROOT", None)
-
+OSL_TESTSUITE_ROOT = make_relpath(os.getenv('OSL_TESTSUITE_ROOT',
+                                             '../../../../testsuite'))
 os.environ['OSLHOME'] = os.path.join(OSL_SOURCE_DIR, "src")
+
 
 # Options for the command line
 parser = OptionParser()
@@ -53,8 +61,13 @@ else :
     redirect = " >> out.txt 2>>out.txt "
 
 refdir = "ref/"
-test_source_dir = os.path.join(OSL_TESTSUITE_DIR,
-                               os.path.basename(os.path.abspath(srcdir)))
+mytest = os.path.split(os.path.abspath(os.getcwd()))[-1]
+if str(mytest).endswith('.opt') or str(mytest).endswith('.optix') :
+    mytest = mytest.split('.')[0]
+test_source_dir = os.getenv('OSL_TESTSUITE_SRC',
+                            os.path.join(OSL_TESTSUITE_ROOT, mytest))
+#test_source_dir = os.path.join(OSL_TESTSUITE_DIR,
+#                               os.path.basename(os.path.abspath(srcdir)))
 
 command = ""
 outputs = [ "out.txt" ]    # default
@@ -83,9 +96,6 @@ if platform.system() == 'Windows' :
         shutil.copytree (os.path.join (test_source_dir, "src"), "./src")
     if not os.path.exists(os.path.abspath("data")) :
         shutil.copytree (test_source_dir, os.path.abspath("data"))
-    if not os.path.exists(os.path.abspath("../common")) :
-        shutil.copytree (os.path.abspath(os.path.join(OSL_TESTSUITE_DIR, "common")),
-                         os.path.abspath("../common"))
 else :
     if not os.path.exists("./ref") :
         os.symlink (os.path.join (test_source_dir, "ref"), "./ref")
@@ -93,8 +103,6 @@ else :
         os.symlink (os.path.join (test_source_dir, "src"), "./src")
     if not os.path.exists("./data") :
         os.symlink (test_source_dir, "./data")
-    if not os.path.exists("../common") :
-        os.symlink (os.path.join(OSL_TESTSUITE_DIR, "common"), "../common")
 
 ###########################################################################
 
@@ -143,12 +151,6 @@ def osl_app (app):
     return os.path.join(apath, app) + " "
 
 
-def oiio_relpath (path, start=os.curdir):
-    "Wrapper around os.path.relpath which always uses '/' as the separator."
-    p = os.path.relpath (path, start)
-    return p if sys.platform != "win32" else p.replace ('\\', '/')
-
-
 def oiio_app (app):
     if OpenImageIO_ROOT :
         return os.path.join (OpenImageIO_ROOT, "bin", app) + " "
@@ -190,8 +192,8 @@ def oiiodiff (fileA, fileB, extraargs="", silent=True, concat=True) :
                + " -hardfail " + str(hardfail)
                + " -warn " + str(2*failthresh)
                + " -warnpercent " + str(failpercent)
-               + " " + extraargs + " " + oiio_relpath(fileA,tmpdir)
-               + " " + oiio_relpath(fileB,tmpdir))
+               + " " + extraargs + " " + make_relpath(fileA,tmpdir)
+               + " " + make_relpath(fileB,tmpdir))
     if not silent :
         command += redirect
     if concat:

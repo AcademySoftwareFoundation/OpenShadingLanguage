@@ -43,12 +43,6 @@ fi
 
 if [[ "$SKIP_TESTS" == "" ]] ; then
     $OSL_ROOT/bin/testshade --help
-    # pushd build/$PLATFORM
-    # PYTHONPATH=${PWD}/src/python:$PYTHONPATH
-    # TEST_FLAGS=--force-new-ctest-process --output-on-failure
-    # ctest -C ${CMAKE_BUILD_TYPE} -E broken ${TEST_FLAGS}
-    # popd
-    export CTEST_PARALLEL_LEVEL=1
     make $BUILD_FLAGS test
 fi
 

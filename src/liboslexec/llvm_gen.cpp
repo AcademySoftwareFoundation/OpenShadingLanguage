@@ -382,6 +382,8 @@ LLVMGEN (llvm_gen_printf)
                         if (simpletype.basetype == TypeDesc::FLOAT) {
                             // C varargs convention upconverts float->double.
                             loaded = rop.ll.op_float_to_double(loaded);
+                            // Ensure that 64-bit values are aligned to 8-byte boundaries
+                            optix_size = (optix_size + sizeof(double) - 1) & ~(sizeof(double) - 1);
                             optix_size += sizeof(double);
                         }
                         else if (simpletype.basetype == TypeDesc::INT)
@@ -430,11 +432,15 @@ LLVMGEN (llvm_gen_printf)
         call_args[new_format_slot] = rop.llvm_load_device_string (sym, /*follow*/ true);
 
         size_t nargs = call_args.size() - (new_format_slot+1);
-        llvm::Value *voids = rop.ll.op_alloca (rop.ll.type_char(), optix_size);
+        llvm::Value *voids = rop.ll.op_alloca (rop.ll.type_char(), optix_size, std::string(), 8);
         optix_size = 0;
         for (size_t i = 0; i < nargs; ++i) {
-            llvm::Value* memptr = rop.ll.offset_ptr (voids, optix_size);
             llvm::Value* arg = call_args[new_format_slot+1+i];
+            if (arg->getType()->isFloatingPointTy()) {
+                // Ensure that 64-bit values are aligned to 8-byte boundaries
+                optix_size = (optix_size + sizeof(double) - 1) & ~(sizeof(double)-1);
+            }
+            llvm::Value* memptr = rop.ll.offset_ptr (voids, optix_size);
             if (arg->getType()->isIntegerTy()) {
                 llvm::Value* iptr = rop.ll.ptr_cast(memptr, rop.ll.type_int_ptr());
                 rop.ll.op_store (arg, iptr);

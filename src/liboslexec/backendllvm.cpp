@@ -293,12 +293,12 @@ BackendLLVM::getLLVMSymbolBase (const Symbol &sym)
 
 llvm::Value *
 BackendLLVM::llvm_alloca (const TypeSpec &type, bool derivs,
-                          const std::string &name)
+                          const std::string &name, int align)
 {
     TypeDesc t = llvm_typedesc (type);
     int n = derivs ? 3 : 1;
     m_llvm_local_mem += t.size() * n;
-    return ll.op_alloca (t, n, name);
+    return ll.op_alloca (t, n, name, align);
 }
 
 

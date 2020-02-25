@@ -518,47 +518,16 @@ LLVM_Util::setup_optimization_passes (int optlevel)
     m_llvm_module_passes = new llvm::legacy::PassManager;
     llvm::legacy::PassManager &mpm = (*m_llvm_module_passes);
 
-    if (optlevel >= 1 && optlevel <= 3) {
-        // For LLVM 3.0 and higher, llvm_optimize 1-3 means to use the
-        // same set of optimizations as clang -O1, -O2, -O3
-        llvm::PassManagerBuilder builder;
-        builder.OptLevel = optlevel;
-        builder.Inliner = llvm::createFunctionInliningPass();
-        // builder.DisableUnrollLoops = true;
-        builder.populateFunctionPassManager (fpm);
-        builder.populateModulePassManager (mpm);
-    } else {
-        // Unknown choices for llvm_optimize: use the same basic
-        // set of passes that we always have.
-
-        // Always add verifier?
-        mpm.add (llvm::createVerifierPass());
-        // Simplify the call graph if possible (deleting unreachable blocks, etc.)
-        mpm.add (llvm::createCFGSimplificationPass());
-        // Change memory references to registers
-        //  mpm.add (llvm::createPromoteMemoryToRegisterPass());
-
-        // Combine instructions where possible -- peephole opts & bit-twiddling
-        mpm.add (llvm::createInstructionCombiningPass());
-        // Inline small functions
-        mpm.add (llvm::createFunctionInliningPass());  // 250?
-        // Eliminate early returns
-        mpm.add (llvm::createUnifyFunctionExitNodesPass());
-        // resassociate exprssions (a = x + (3 + y) -> a = x + y + 3)
-        mpm.add (llvm::createReassociatePass());
-        // Eliminate common sub-expressions
-        mpm.add (llvm::createGVNPass());
-        // Constant propagation with SCCP
-        mpm.add (llvm::createSCCPPass());
-        // More dead code elimination
-        mpm.add (llvm::createAggressiveDCEPass());
-        // Combine instructions where possible -- peephole opts & bit-twiddling
-        mpm.add (llvm::createInstructionCombiningPass());
-        // Simplify the call graph if possible (deleting unreachable blocks, etc.)
-        mpm.add (llvm::createCFGSimplificationPass());
-        // Try to make stuff into registers one last time.
-        mpm.add (llvm::createPromoteMemoryToRegisterPass());
-    }
+    // llvm_optimize 0-3 corresponds to the same set of optimizations
+    // as clang: -O0, -O1, -O2, -O3
+    // Tests on production shaders suggest the sweet spot
+    // between JIT time and runtime performance is O1.
+    llvm::PassManagerBuilder builder;
+    builder.OptLevel = optlevel;
+    builder.Inliner = llvm::createFunctionInliningPass();
+    // builder.DisableUnrollLoops = true;
+    builder.populateFunctionPassManager (fpm);
+    builder.populateModulePassManager (mpm);
 }
 
 
@@ -1055,18 +1024,21 @@ LLVM_Util::offset_ptr (llvm::Value *ptr, int offset, llvm::Type *ptrtype)
 
 
 llvm::Value *
-LLVM_Util::op_alloca (llvm::Type *llvmtype, int n, const std::string &name)
+LLVM_Util::op_alloca (llvm::Type *llvmtype, int n, const std::string &name, int align)
 {
     llvm::ConstantInt* numalloc = (llvm::ConstantInt*)constant(n);
-    return builder().CreateAlloca (llvmtype, numalloc, name);
+    llvm::AllocaInst* allocainst = builder().CreateAlloca (llvmtype, numalloc, name);
+    if (align > 0)
+        allocainst->setAlignment (align);
+    return allocainst;
 }
 
 
 
 llvm::Value *
-LLVM_Util::op_alloca (const TypeDesc &type, int n, const std::string &name)
+LLVM_Util::op_alloca (const TypeDesc &type, int n, const std::string &name, int align)
 {
-    return op_alloca (llvm_type(type.elementtype()), n*type.numelements(), name);
+    return op_alloca (llvm_type(type.elementtype()), n*type.numelements(), name, align);
 }
 
 

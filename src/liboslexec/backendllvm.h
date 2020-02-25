@@ -220,7 +220,7 @@ public:
     /// Generate an alloca instruction to allocate space for the given
     /// type, with derivs if derivs==true, and return the its pointer.
     llvm::Value *llvm_alloca (const TypeSpec &type, bool derivs,
-                              const std::string &name="");
+                              const std::string &name="", int align=0);
 
     /// Given the OSL symbol, return the llvm::Value* corresponding to the
     /// address of the start of that symbol (first element, first component,

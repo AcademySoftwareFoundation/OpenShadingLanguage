@@ -341,16 +341,16 @@ public:
     /// Generate an alloca instruction to allocate space for n copies of the
     /// given llvm type, and return its pointer.
     llvm::Value *op_alloca (llvm::Type *llvmtype, int n=1,
-                            const std::string &name=std::string());
+                            const std::string &name=std::string(), int align=0);
     llvm::Value *op_alloca (llvm::PointerType *llvmtype, int n=1,
-                            const std::string &name=std::string()) {
-        return op_alloca ((llvm::Type *)llvmtype, n, name);
+                            const std::string &name=std::string(), int align=0) {
+        return op_alloca ((llvm::Type *)llvmtype, n, name, align);
     }
 
     /// Generate an alloca instruction to allocate space for n copies of the
     /// given type, and return its pointer.
     llvm::Value *op_alloca (const OIIO::TypeDesc &type, int n=1,
-                            const std::string &name=std::string());
+                            const std::string &name=std::string(), int align=0);
 
     /// Generate code for a call to the function pointer, with the given
     /// arg list.  Return an llvm::Value* corresponding to the return

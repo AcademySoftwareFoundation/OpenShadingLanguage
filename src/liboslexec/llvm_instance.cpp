@@ -1215,15 +1215,18 @@ BackendLLVM::run ()
     if (llvm_debug() >= 2 || shadingsys().llvm_output_bitcode()) {
         // Make a safe group name that doesn't have "/" in it! Also beware
         // filename length limits.
-        std::string safegroup = Strutil::replace (group().name(), "/", ".", true);
+        std::string safegroup;
+        safegroup = Strutil::replace (group().name(), "/", "_", true);
+        safegroup = Strutil::replace (safegroup     , ":", "_", true);
         if (safegroup.size() > 235)
             safegroup = Strutil::sprintf ("TRUNC_%s_%d", safegroup.substr(safegroup.size()-235), group().id());
         std::string name = Strutil::sprintf ("%s.ll", safegroup);
         std::ofstream out (name, std::ios_base::out | std::ios_base::trunc);
         if (out.good()) {
             out << ll.bitcode_string (ll.module());
+            shadingsys().infof("Wrote  pre-optimized bitcode to '%s'", name);
         } else {
-            shadingcontext()->errorf("Could not write to '%s'", name);
+            shadingsys().errorf("Could not write to '%s'", name);
         }
     }
 
@@ -1244,15 +1247,18 @@ BackendLLVM::run ()
     if (llvm_debug() >= 2 || shadingsys().llvm_output_bitcode()) {
         // Make a safe group name that doesn't have "/" in it! Also beware
         // filename length limits.
-        std::string safegroup = Strutil::replace (group().name(), "/", ".", true);
+        std::string safegroup;
+        safegroup = Strutil::replace (group().name(), "/", "_", true);
+        safegroup = Strutil::replace (safegroup     , ":", "_", true);
         if (safegroup.size() > 235)
             safegroup = Strutil::sprintf ("TRUNC_%s_%d", safegroup.substr(safegroup.size()-235), group().id());
-        std::string name = Strutil::sprintf ("%s_opt.ll", safegroup);
+        std::string name = Strutil::sprintf ("%s_O%d.ll", safegroup, shadingsys().llvm_optimize());
         std::ofstream out (name, std::ios_base::out | std::ios_base::trunc);
         if (out.good()) {
             out << ll.bitcode_string (ll.module());
+            shadingsys().infof("Wrote post-optimized bitcode to '%s'", name);
         } else {
-            shadingcontext()->errorf("Could not write to '%s'", name);
+            shadingsys().errorf("Could not write to '%s'", name);
         }
     }
 

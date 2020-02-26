@@ -236,6 +236,8 @@ install (EXPORT OSL_EXPORTED_TARGETS
 # Make a build/platform/testsuite directory, and copy the master runtest.py
 # there. The rest is up to the tests themselves.
 file (MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/testsuite")
+file (COPY "${CMAKE_CURRENT_SOURCE_DIR}/testsuite/common"
+      DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/testsuite")
 add_custom_command (OUTPUT "${CMAKE_BINARY_DIR}/testsuite/runtest.py"
                     COMMAND ${CMAKE_COMMAND} -E copy_if_different
                         "${CMAKE_SOURCE_DIR}/testsuite/runtest.py"
@@ -243,8 +245,62 @@ add_custom_command (OUTPUT "${CMAKE_BINARY_DIR}/testsuite/runtest.py"
                     MAIN_DEPENDENCY "${CMAKE_SOURCE_DIR}/testsuite/runtest.py")
 add_custom_target ( CopyFiles ALL DEPENDS "${CMAKE_BINARY_DIR}/testsuite/runtest.py" )
 
+# add_one_testsuite() - set up one testsuite entry
+#
+# Usage:
+#   add_one_testsuite ( testname
+#                  testsrcdir - Current test directory in ${CMAKE_SOURCE_DIR}
+#                  testdir    - Current test sandbox in ${CMAKE_BINARY_DIR}
+#                  [ENV env1=val1 env2=val2 ... ]  - env vars to set
+#                  [COMMAND cmd...] - optional override of launch command
+#                 )
+#
+macro (add_one_testsuite testname testsrcdir)
+    cmake_parse_arguments (_tst "" "" "ENV;COMMAND" ${ARGN})
+    set (testsuite "${CMAKE_SOURCE_DIR}/testsuite")
+    set (testdir "${CMAKE_BINARY_DIR}/testsuite/${testname}")
+    if (NOT _tst_COMMAND)
+        set (_tst_COMMAND python "${testsuite}/runtest.py" ${testdir})
+        if (MSVC_IDE)
+            list (APPEND _tst_COMMAND --devenv-config $<CONFIGURATION>
+                                      --solution-path "${CMAKE_BINARY_DIR}" )
+        endif ()
+    endif ()
+    list (APPEND _tst_ENV
+              OpenImageIO_ROOT=${OpenImageIO_ROOT}
+              OSL_SOURCE_DIR=${CMAKE_SOURCE_DIR}
+              OSL_BUILD_DIR=${CMAKE_BINARY_DIR}
+              OSL_TESTSUITE_ROOT=${testsuite}
+              OSL_TESTSUITE_SRC=${testsrcdir}
+              OSL_TESTSUITE_CUR=${testdir}
+         )
+    file (MAKE_DIRECTORY "${testdir}")
+    add_test ( NAME ${testname} COMMAND ${_tst_COMMAND} )
+    # message ("Test -- env ${_tst_ENV} cmd ${_tst_COMMAND}")
+    set_tests_properties (${testname} PROPERTIES ENVIRONMENT "${_tst_ENV}" )
+    # Certain tests are already internally multi-threaded, so to keep them
+    # from piling up together, allocate a few cores each.
+    if (${testname} MATCHES "^render-")
+        set_tests_properties (${testname} PROPERTIES LABELS render
+                              PROCESSORS 4 COST 10)
+    endif ()
+    # Some labeling for fun
+    if (${testname} MATCHES "^texture-")
+        set_tests_properties (${testname} PROPERTIES LABELS texture
+                              PROCESSORS 2 COST 4)
+    endif ()
+    if (${testname} MATCHES "noise")
+        set_tests_properties (${testname} PROPERTIES LABELS noise
+                              PROCESSORS 2 COST 4)
+    endif ()
+    if (${testname} MATCHES "optix")
+        set_tests_properties (${testname} PROPERTIES LABELS optix)
+    endif ()
+endmacro ()
+
+
 macro ( TESTSUITE )
-    cmake_parse_arguments (_ats "" "LABEL" "" ${ARGN})
+    cmake_parse_arguments (_ats "" "LABEL;FOUNDVAR;TESTNAME" "" ${ARGN})
     # If there was a FOUNDVAR param specified and that variable name is
     # not defined, mark the test as broken.
     if (_ats_FOUNDVAR AND NOT ${_ats_FOUNDVAR})
@@ -253,45 +309,33 @@ macro ( TESTSUITE )
     set (test_all_optix $ENV{TESTSUITE_OPTIX})
     # Add the tests if all is well.
     set (ALL_TEST_LIST "")
+    set (_testsuite "${CMAKE_SOURCE_DIR}/testsuite")
     foreach (_testname ${_ats_UNPARSED_ARGUMENTS})
-        set (_testsrcdir "${CMAKE_SOURCE_DIR}/testsuite/${_testname}")
-        set (_testdir "${CMAKE_BINARY_DIR}/testsuite/${_testname}")
+        set (_testsrcdir "${_testsuite}/${_testname}")
+        if (_ats_TESTNAME)
+            set (_testname "${_ats_TESTNAME}")
+        endif ()
         if (_ats_LABEL MATCHES "broken")
             set (_testname "${_testname}-broken")
         endif ()
-        set (_runtest python "${CMAKE_BINARY_DIR}/testsuite/runtest.py"
-                             ${_testdir} ${_extra_test_args})
-        if (MSVC_IDE)
-            set (_runtest ${_runtest} --devenv-config $<CONFIGURATION>
-                                      --solution-path "${CMAKE_BINARY_DIR}" )
-        endif ()
 
         set (ALL_TEST_LIST "${ALL_TEST_LIST} ${_testname}")
-        file (MAKE_DIRECTORY "${_testdir}")
 
         # Run the test unoptimized, unless it matches a few patterns that
         # we don't test unoptimized (or has an OPTIMIZEONLY marker file).
         if (NOT _testname MATCHES "^getattribute-shader" AND
             NOT _testname MATCHES "optix" AND
             NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
-            set (_env TESTSHADE_OPT=0
-                      OpenImageIO_ROOT=${OpenImageIO_ROOT}
-                      OSL_SOURCE_DIR=${CMAKE_SOURCE_DIR}
-                      OSL_BUILD_DIR=${CMAKE_BINARY_DIR} )
-            add_test ( NAME ${_testname}
-                       COMMAND env ${_env} ${_runtest} )
+            add_one_testsuite ("${_testname}" "${_testsrcdir}"
+                               ENV TESTSHADE_OPT=0 )
         endif ()
         # Run the same test again with aggressive -O2 runtime
         # optimization, triggered by setting TESTSHADE_OPT env variable.
         # Skip OptiX-only tests and those with a NOOPTIMIZE marker file.
         if (NOT _testname MATCHES "optix"
-            AND NOT EXISTS "${_testsrcdir}/NOOPTIMIZE")
-            set (_env TESTSHADE_OPT=2
-                      OpenImageIO_ROOT=${OpenImageIO_ROOT}
-                      OSL_SOURCE_DIR=${CMAKE_SOURCE_DIR}
-                      OSL_BUILD_DIR=${CMAKE_BINARY_DIR} )
-            add_test ( NAME ${_testname}.opt
-                       COMMAND env ${_env} ${_runtest} )
+                AND NOT EXISTS "${_testsrcdir}/NOOPTIMIZE")
+            add_one_testsuite ("${_testname}.opt" "${_testsrcdir}"
+                               ENV TESTSHADE_OPT=2 )
         endif ()
         # When building for OptiX support, also run it in OptiX mode
         # if there is an OPTIX marker file in the directory.
@@ -303,20 +347,12 @@ macro ( TESTSUITE )
             AND NOT EXISTS "${_testsrcdir}/NOOPTIX-FIXME")
             # Unoptimized
             if (NOT EXISTS "${_testsrcdir}/OPTIMIZEONLY")
-                set (_env TESTSHADE_OPT=0 TESTSHADE_OPTIX=1
-                          OpenImageIO_ROOT=${OpenImageIO_ROOT}
-                          OSL_SOURCE_DIR=${CMAKE_SOURCE_DIR}
-                          OSL_BUILD_DIR=${CMAKE_BINARY_DIR} )
-                add_test ( NAME ${_testname}.optix
-                           COMMAND env ${_env} ${_runtest} )
+                add_one_testsuite ("${_testname}.optix" "${_testsrcdir}"
+                                   ENV TESTSHADE_OPT=0 TESTSHADE_OPTIX=1 )
             endif ()
             # and optimized
-            set (_env TESTSHADE_OPT=2 TESTSHADE_OPTIX=1
-                      OpenImageIO_ROOT=${OpenImageIO_ROOT}
-                      OSL_SOURCE_DIR=${CMAKE_SOURCE_DIR}
-                      OSL_BUILD_DIR=${CMAKE_BINARY_DIR} )
-            add_test ( NAME ${_testname}.optix.opt
-                       COMMAND env ${_env} ${_runtest} )
+            add_one_testsuite ("${_testname}.optix.opt" "${_testsrcdir}"
+                               ENV TESTSHADE_OPT=2 TESTSHADE_OPTIX=1 )
         endif ()
     endforeach ()
     if (VERBOSE)

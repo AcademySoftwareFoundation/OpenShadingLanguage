@@ -44,21 +44,25 @@
 //----------------------------------------------------
 
 #include <OpenEXR/ImathExc.h>
-#include <OSL/ImathLimits_cuda.h>
+#include "ImathLimits.h"
 #include <OpenEXR/ImathMath.h>
 #include <OpenEXR/ImathNamespace.h>
 
 #include <iostream>
 #include <limits>
 
-#if defined(_MSC_VER)
+#if (defined _WIN32 || defined _WIN64) && defined _MSC_VER
 // suppress exception specification warnings
 #pragma warning(push)
 #pragma warning(disable:4290)
 #endif
 
 #ifndef IMATH_HOSTDEVICE
-  #error "This should be included with the proper IMATH_HOSTDEVICE define"
+    #ifdef __CUDACC__
+        #define IMATH_HOSTDEVICE __host__ __device__
+    #else
+        #define IMATH_HOSTDEVICE
+    #endif
 #endif
 
 
@@ -72,9 +76,9 @@ enum InfException {INF_EXCEPTION};
 
 namespace {
 // Define a host/device-compatible sqrt template that matches Math<T>::sqrt.
-template <typename T> IMATH_HOSTDEVICE T hostdevice_sqrt (T x);
-template <> IMATH_HOSTDEVICE double hostdevice_sqrt<double> (double x) { return sqrt (x); }
-template <> IMATH_HOSTDEVICE float  hostdevice_sqrt<float> (float x)  { return sqrtf (x); }
+template <typename T> IMATH_HOSTDEVICE inline T hostdevice_sqrt (T x);
+template <> IMATH_HOSTDEVICE inline double hostdevice_sqrt<double> (double x) { return sqrt (x); }
+template <> IMATH_HOSTDEVICE inline float  hostdevice_sqrt<float> (float x)  { return sqrtf (x); }
 };
 
 
@@ -110,6 +114,11 @@ template <class T> class Vec2
 
     IMATH_HOSTDEVICE const Vec2 & operator = (const Vec2 &v);
 
+    //------------
+    // Destructor
+    //------------
+	
+    ~Vec2 () = default;
 
     //----------------------
     // Compatibility with Sb
@@ -237,11 +246,11 @@ template <class T> class Vec2
     IMATH_HOSTDEVICE T length2 () const;
 
     IMATH_HOSTDEVICE const Vec2 & normalize ();           // modifies *this
-    IMATH_HOSTDEVICE const Vec2 & normalizeExc () throw (IEX_NAMESPACE::MathExc);
+    IMATH_HOSTDEVICE const Vec2 & normalizeExc ();
     IMATH_HOSTDEVICE const Vec2 & normalizeNonNull ();
 
     IMATH_HOSTDEVICE Vec2<T> normalized () const;        // does not modify *this
-    IMATH_HOSTDEVICE Vec2<T> normalizedExc () const throw (IEX_NAMESPACE::MathExc);
+    IMATH_HOSTDEVICE Vec2<T> normalizedExc () const;
     IMATH_HOSTDEVICE Vec2<T> normalizedNonNull () const;
 
 
@@ -308,6 +317,11 @@ template <class T> class Vec3
 
     IMATH_HOSTDEVICE const Vec3 & operator = (const Vec3 &v);
 
+    //-----------
+    // Destructor
+    //-----------
+	
+    ~Vec3 () = default;
 
     //---------------------------------------------------------
     // Vec4 to Vec3 conversion, divides x, y and z by w:
@@ -449,11 +463,11 @@ template <class T> class Vec3
     IMATH_HOSTDEVICE T length2 () const;
 
     IMATH_HOSTDEVICE const Vec3 & normalize ();           // modifies *this
-    IMATH_HOSTDEVICE const Vec3 & normalizeExc () throw (IEX_NAMESPACE::MathExc);
+    IMATH_HOSTDEVICE const Vec3 & normalizeExc ();
     IMATH_HOSTDEVICE const Vec3 & normalizeNonNull ();
 
     IMATH_HOSTDEVICE Vec3<T> normalized () const; // does not modify *this
-    IMATH_HOSTDEVICE Vec3<T> normalizedExc () const throw (IEX_NAMESPACE::MathExc);
+    IMATH_HOSTDEVICE Vec3<T> normalizedExc () const;
     IMATH_HOSTDEVICE Vec3<T> normalizedNonNull () const;
 
 
@@ -521,6 +535,11 @@ template <class T> class Vec4
 
     IMATH_HOSTDEVICE const Vec4 & operator = (const Vec4 &v);
 
+    //-----------
+    // Destructor
+    //-----------
+	
+    ~Vec4 () = default;
 
     //-------------------------------------
     // Vec3 to Vec4 conversion, sets w to 1
@@ -533,10 +552,10 @@ template <class T> class Vec4
     // Equality
     //---------
 
-    template <class S> IMATH_HOSTDEVICE
+    template <class S>
     IMATH_HOSTDEVICE bool operator == (const Vec4<S> &v) const;
 
-    template <class S> IMATH_HOSTDEVICE
+    template <class S>
     IMATH_HOSTDEVICE bool operator != (const Vec4<S> &v) const;
 
 
@@ -631,11 +650,11 @@ template <class T> class Vec4
     IMATH_HOSTDEVICE T               length2 () const;
 
     IMATH_HOSTDEVICE const Vec4 &    normalize ();           // modifies *this
-    IMATH_HOSTDEVICE const Vec4 &    normalizeExc () throw (IEX_NAMESPACE::MathExc);
+    IMATH_HOSTDEVICE const Vec4 &    normalizeExc ();
     IMATH_HOSTDEVICE const Vec4 &    normalizeNonNull ();
 
     IMATH_HOSTDEVICE Vec4<T>         normalized () const;    // does not modify *this
-    IMATH_HOSTDEVICE Vec4<T>         normalizedExc () const throw (IEX_NAMESPACE::MathExc);
+    IMATH_HOSTDEVICE Vec4<T>         normalizedExc () const;
     IMATH_HOSTDEVICE Vec4<T>         normalizedNonNull () const;
 
     //--------------------------------------------------------
@@ -721,7 +740,7 @@ template <> IMATH_HOSTDEVICE const Vec2<short> &
 Vec2<short>::normalize ();
 
 template <> IMATH_HOSTDEVICE const Vec2<short> &
-Vec2<short>::normalizeExc () throw (IEX_NAMESPACE::MathExc);
+Vec2<short>::normalizeExc ();
 
 template <> IMATH_HOSTDEVICE const Vec2<short> &
 Vec2<short>::normalizeNonNull ();
@@ -730,7 +749,7 @@ template <> IMATH_HOSTDEVICE Vec2<short>
 Vec2<short>::normalized () const;
 
 template <> IMATH_HOSTDEVICE Vec2<short>
-Vec2<short>::normalizedExc () const throw (IEX_NAMESPACE::MathExc);
+Vec2<short>::normalizedExc () const;
 
 template <> IMATH_HOSTDEVICE Vec2<short>
 Vec2<short>::normalizedNonNull () const;
@@ -745,7 +764,7 @@ template <> IMATH_HOSTDEVICE const Vec2<int> &
 Vec2<int>::normalize ();
 
 template <> IMATH_HOSTDEVICE const Vec2<int> &
-Vec2<int>::normalizeExc () throw (IEX_NAMESPACE::MathExc);
+Vec2<int>::normalizeExc ();
 
 template <> IMATH_HOSTDEVICE const Vec2<int> &
 Vec2<int>::normalizeNonNull ();
@@ -754,7 +773,7 @@ template <> IMATH_HOSTDEVICE Vec2<int>
 Vec2<int>::normalized () const;
 
 template <> IMATH_HOSTDEVICE Vec2<int>
-Vec2<int>::normalizedExc () const throw (IEX_NAMESPACE::MathExc);
+Vec2<int>::normalizedExc () const;
 
 template <> IMATH_HOSTDEVICE Vec2<int>
 Vec2<int>::normalizedNonNull () const;
@@ -769,7 +788,7 @@ template <> IMATH_HOSTDEVICE const Vec3<short> &
 Vec3<short>::normalize ();
 
 template <> IMATH_HOSTDEVICE const Vec3<short> &
-Vec3<short>::normalizeExc () throw (IEX_NAMESPACE::MathExc);
+Vec3<short>::normalizeExc ();
 
 template <> IMATH_HOSTDEVICE const Vec3<short> &
 Vec3<short>::normalizeNonNull ();
@@ -778,7 +797,7 @@ template <> IMATH_HOSTDEVICE Vec3<short>
 Vec3<short>::normalized () const;
 
 template <> IMATH_HOSTDEVICE Vec3<short>
-Vec3<short>::normalizedExc () const throw (IEX_NAMESPACE::MathExc);
+Vec3<short>::normalizedExc () const;
 
 template <> IMATH_HOSTDEVICE Vec3<short>
 Vec3<short>::normalizedNonNull () const;
@@ -793,7 +812,7 @@ template <> IMATH_HOSTDEVICE const Vec3<int> &
 Vec3<int>::normalize ();
 
 template <> IMATH_HOSTDEVICE const Vec3<int> &
-Vec3<int>::normalizeExc () throw (IEX_NAMESPACE::MathExc);
+Vec3<int>::normalizeExc ();
 
 template <> IMATH_HOSTDEVICE const Vec3<int> &
 Vec3<int>::normalizeNonNull ();
@@ -802,7 +821,7 @@ template <> IMATH_HOSTDEVICE Vec3<int>
 Vec3<int>::normalized () const;
 
 template <> IMATH_HOSTDEVICE Vec3<int>
-Vec3<int>::normalizedExc () const throw (IEX_NAMESPACE::MathExc);
+Vec3<int>::normalizedExc () const;
 
 template <> IMATH_HOSTDEVICE Vec3<int>
 Vec3<int>::normalizedNonNull () const;
@@ -817,7 +836,7 @@ template <> IMATH_HOSTDEVICE const Vec4<short> &
 Vec4<short>::normalize ();
 
 template <> IMATH_HOSTDEVICE const Vec4<short> &
-Vec4<short>::normalizeExc () throw (IEX_NAMESPACE::MathExc);
+Vec4<short>::normalizeExc ();
 
 template <> IMATH_HOSTDEVICE const Vec4<short> &
 Vec4<short>::normalizeNonNull ();
@@ -826,7 +845,7 @@ template <> IMATH_HOSTDEVICE Vec4<short>
 Vec4<short>::normalized () const;
 
 template <> IMATH_HOSTDEVICE Vec4<short>
-Vec4<short>::normalizedExc () const throw (IEX_NAMESPACE::MathExc);
+Vec4<short>::normalizedExc () const;
 
 template <> IMATH_HOSTDEVICE Vec4<short>
 Vec4<short>::normalizedNonNull () const;
@@ -841,7 +860,7 @@ template <> IMATH_HOSTDEVICE const Vec4<int> &
 Vec4<int>::normalize ();
 
 template <> IMATH_HOSTDEVICE const Vec4<int> &
-Vec4<int>::normalizeExc () throw (IEX_NAMESPACE::MathExc);
+Vec4<int>::normalizeExc ();
 
 template <> IMATH_HOSTDEVICE const Vec4<int> &
 Vec4<int>::normalizeNonNull ();
@@ -850,7 +869,7 @@ template <> IMATH_HOSTDEVICE Vec4<int>
 Vec4<int>::normalized () const;
 
 template <> IMATH_HOSTDEVICE Vec4<int>
-Vec4<int>::normalizedExc () const throw (IEX_NAMESPACE::MathExc);
+Vec4<int>::normalizedExc () const;
 
 template <> IMATH_HOSTDEVICE Vec4<int>
 Vec4<int>::normalizedNonNull () const;
@@ -864,14 +883,14 @@ template <class T> IMATH_HOSTDEVICE
 inline T &
 Vec2<T>::operator [] (int i)
 {
-    return (&x)[i];
+    return (&x)[i]; // NOSONAR - suppress SonarCloud bug report.
 }
 
 template <class T> IMATH_HOSTDEVICE
 inline const T &
 Vec2<T>::operator [] (int i) const
 {
-    return (&x)[i];
+    return (&x)[i]; // NOSONAR - suppress SonarCloud bug report.
 }
 
 template <class T> IMATH_HOSTDEVICE
@@ -1220,7 +1239,7 @@ Vec2<T>::normalize ()
 
 template <class T> IMATH_HOSTDEVICE
 const Vec2<T> &
-Vec2<T>::normalizeExc () throw (IEX_NAMESPACE::MathExc)
+Vec2<T>::normalizeExc ()
 {
     T l = length();
 
@@ -1257,7 +1276,7 @@ Vec2<T>::normalized () const
 
 template <class T> IMATH_HOSTDEVICE
 Vec2<T>
-Vec2<T>::normalizedExc () const throw (IEX_NAMESPACE::MathExc)
+Vec2<T>::normalizedExc () const
 {
     T l = length();
 
@@ -1285,14 +1304,14 @@ template <class T> IMATH_HOSTDEVICE
 inline T &
 Vec3<T>::operator [] (int i)
 {
-    return (&x)[i];
+    return (&x)[i]; // NOSONAR - suppress SonarCloud bug report.
 }
 
 template <class T> IMATH_HOSTDEVICE
 inline const T &
 Vec3<T>::operator [] (int i) const
 {
-    return (&x)[i];
+    return (&x)[i]; // NOSONAR - suppress SonarCloud bug report.
 }
 
 template <class T> IMATH_HOSTDEVICE
@@ -1492,8 +1511,8 @@ inline Vec3<T>
 Vec3<T>::cross (const Vec3 &v) const
 {
     return Vec3 (y * v.z - z * v.y,
-         z * v.x - x * v.z,
-         x * v.y - y * v.x);
+		 z * v.x - x * v.z,
+		 x * v.y - y * v.x);
 }
 
 template <class T> IMATH_HOSTDEVICE
@@ -1514,8 +1533,8 @@ inline Vec3<T>
 Vec3<T>::operator % (const Vec3 &v) const
 {
     return Vec3 (y * v.z - z * v.y,
-         z * v.x - x * v.z,
-         x * v.y - y * v.x);
+		 z * v.x - x * v.z,
+		 x * v.y - y * v.x);
 }
 
 template <class T> IMATH_HOSTDEVICE
@@ -1712,7 +1731,7 @@ Vec3<T>::normalize ()
 
 template <class T> IMATH_HOSTDEVICE
 const Vec3<T> &
-Vec3<T>::normalizeExc () throw (IEX_NAMESPACE::MathExc)
+Vec3<T>::normalizeExc ()
 {
     T l = length();
 
@@ -1751,7 +1770,7 @@ Vec3<T>::normalized () const
 
 template <class T> IMATH_HOSTDEVICE
 Vec3<T>
-Vec3<T>::normalizedExc () const throw (IEX_NAMESPACE::MathExc)
+Vec3<T>::normalizedExc () const
 {
     T l = length();
 
@@ -1779,14 +1798,14 @@ template <class T> IMATH_HOSTDEVICE
 inline T &
 Vec4<T>::operator [] (int i)
 {
-    return (&x)[i];
+    return (&x)[i]; // NOSONAR - suppress SonarCloud bug report.
 }
 
 template <class T> IMATH_HOSTDEVICE
 inline const T &
 Vec4<T>::operator [] (int i) const
 {
-    return (&x)[i];
+    return (&x)[i]; // NOSONAR - suppress SonarCloud bug report.
 }
 
 template <class T> IMATH_HOSTDEVICE
@@ -2117,7 +2136,7 @@ Vec4<T>::normalize ()
 
 template <class T> IMATH_HOSTDEVICE
 const Vec4<T> &
-Vec4<T>::normalizeExc () throw (IEX_NAMESPACE::MathExc)
+Vec4<T>::normalizeExc ()
 {
     T l = length();
 
@@ -2158,7 +2177,7 @@ Vec4<T>::normalized () const
 
 template <class T> IMATH_HOSTDEVICE
 Vec4<T>
-Vec4<T>::normalizedExc () const throw (IEX_NAMESPACE::MathExc)
+Vec4<T>::normalizedExc () const
 {
     T l = length();
 
@@ -2229,7 +2248,7 @@ operator * (T a, const Vec4<T> &v)
 }
 
 
-#if defined(_MSC_VER)
+#if (defined _WIN32 || defined _WIN64) && defined _MSC_VER
 #pragma warning(pop)
 #endif
 

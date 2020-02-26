@@ -51,7 +51,7 @@
 // In Windows, min and max are macros.  Yay.
 //------------------------------------------
 
-#if defined(_WIN32)
+#if defined _WIN32 || defined _WIN64
     #ifdef min
         #undef min
     #endif
@@ -61,7 +61,11 @@
 #endif
 
 #ifndef IMATH_HOSTDEVICE
-  #error "This should be included with the proper IMATH_HOSTDEVICE define"
+    #ifdef __CUDACC__
+        #define IMATH_HOSTDEVICE __host__ __device__
+    #else
+        #define IMATH_HOSTDEVICE
+    #endif
 #endif
 
 IMATH_INTERNAL_NAMESPACE_HEADER_ENTER
@@ -137,45 +141,45 @@ template <class T> struct limits
 template <>
 struct limits <char>
 {
-    IMATH_HOSTDEVICE constexpr static char min()		{return CHAR_MIN;}
-    IMATH_HOSTDEVICE constexpr static char max()		{return CHAR_MAX;}
-    IMATH_HOSTDEVICE constexpr static char smallest()	{return 1;}
-    IMATH_HOSTDEVICE constexpr static char epsilon()	{return 1;}
-    IMATH_HOSTDEVICE constexpr static bool isIntegral()	{return true;}
-    IMATH_HOSTDEVICE constexpr static bool isSigned()	{return (char) ~0 < 0;}
+    IMATH_HOSTDEVICE constexpr static char min()        {return CHAR_MIN;}
+    IMATH_HOSTDEVICE constexpr static char max()        {return CHAR_MAX;}
+    IMATH_HOSTDEVICE constexpr static char smallest()   {return 1;}
+    IMATH_HOSTDEVICE constexpr static char epsilon()    {return 1;}
+    IMATH_HOSTDEVICE constexpr static bool isIntegral() {return true;}
+    IMATH_HOSTDEVICE constexpr static bool isSigned()   {return (char) ~0 < 0;}
 };
 
 template <>
 struct limits <signed char>
 {
-    IMATH_HOSTDEVICE constexpr static signed char	min()		 {return SCHAR_MIN;}
-    IMATH_HOSTDEVICE constexpr static signed char	max()		 {return SCHAR_MAX;}
-    IMATH_HOSTDEVICE constexpr static signed char	smallest()	 {return 1;}
-    IMATH_HOSTDEVICE constexpr static signed char	epsilon()	 {return 1;}
-    IMATH_HOSTDEVICE constexpr static bool			isIntegral() {return true;}
-    IMATH_HOSTDEVICE constexpr static bool			isSigned()	 {return true;}
+    IMATH_HOSTDEVICE constexpr static signed char   min()        {return SCHAR_MIN;}
+    IMATH_HOSTDEVICE constexpr static signed char   max()        {return SCHAR_MAX;}
+    IMATH_HOSTDEVICE constexpr static signed char   smallest()	 {return 1;}
+    IMATH_HOSTDEVICE constexpr static signed char   epsilon()	 {return 1;}
+    IMATH_HOSTDEVICE constexpr static bool          isIntegral() {return true;}
+    IMATH_HOSTDEVICE constexpr static bool          isSigned()	 {return true;}
 };
 
 template <>
 struct limits <unsigned char>
 {
-    IMATH_HOSTDEVICE constexpr static unsigned char	min()		 {return 0;}
-    IMATH_HOSTDEVICE constexpr static unsigned char	max()		 {return UCHAR_MAX;}
-    IMATH_HOSTDEVICE constexpr static unsigned char	smallest()	 {return 1;}
-    IMATH_HOSTDEVICE constexpr static unsigned char	epsilon()	 {return 1;}
-    IMATH_HOSTDEVICE constexpr static bool			isIntegral() {return true;}
-    IMATH_HOSTDEVICE constexpr static bool			isSigned()	 {return false;}
+    IMATH_HOSTDEVICE constexpr static unsigned char min()        {return 0;}
+    IMATH_HOSTDEVICE constexpr static unsigned char max()        {return UCHAR_MAX;}
+    IMATH_HOSTDEVICE constexpr static unsigned char smallest()   {return 1;}
+    IMATH_HOSTDEVICE constexpr static unsigned char epsilon()    {return 1;}
+    IMATH_HOSTDEVICE constexpr static bool          isIntegral() {return true;}
+    IMATH_HOSTDEVICE constexpr static bool          isSigned()   {return false;}
 };
 
 template <>
 struct limits <short>
 {
-    IMATH_HOSTDEVICE constexpr static short min()		 {return SHRT_MIN;}
-    IMATH_HOSTDEVICE constexpr static short max()		 {return SHRT_MAX;}
-    IMATH_HOSTDEVICE constexpr static short smallest()	 {return 1;}
-    IMATH_HOSTDEVICE constexpr static short epsilon()	 {return 1;}
+    IMATH_HOSTDEVICE constexpr static short min()        {return SHRT_MIN;}
+    IMATH_HOSTDEVICE constexpr static short max()        {return SHRT_MAX;}
+    IMATH_HOSTDEVICE constexpr static short smallest()   {return 1;}
+    IMATH_HOSTDEVICE constexpr static short epsilon()    {return 1;}
     IMATH_HOSTDEVICE constexpr static bool  isIntegral() {return true;}
-    IMATH_HOSTDEVICE constexpr static bool  isSigned()	 {return true;}
+    IMATH_HOSTDEVICE constexpr static bool  isSigned()   {return true;}
 };
 
 template <>
@@ -192,12 +196,12 @@ struct limits <unsigned short>
 template <>
 struct limits <int>
 {
-    IMATH_HOSTDEVICE constexpr static int  min()		{return INT_MIN;}
-    IMATH_HOSTDEVICE constexpr static int  max()		{return INT_MAX;}
-    IMATH_HOSTDEVICE constexpr static int  smallest()	{return 1;}
-    IMATH_HOSTDEVICE constexpr static int  epsilon()	{return 1;}
+    IMATH_HOSTDEVICE constexpr static int  min()        {return INT_MIN;}
+    IMATH_HOSTDEVICE constexpr static int  max()        {return INT_MAX;}
+    IMATH_HOSTDEVICE constexpr static int  smallest()   {return 1;}
+    IMATH_HOSTDEVICE constexpr static int  epsilon()    {return 1;}
     IMATH_HOSTDEVICE constexpr static bool isIntegral() {return true;}
-    IMATH_HOSTDEVICE constexpr static bool isSigned()	{return true;}
+    IMATH_HOSTDEVICE constexpr static bool isSigned()   {return true;}
 };
 
 template <>

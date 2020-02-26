@@ -34,25 +34,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/oslversion.h>
 
 
-// All the things we need from Imath
-// When compiling for CUDA, we need to make sure the modified Imath
-// headers are included before the stock versions.
-//
-// Might be worth trying to use #pragma clang force_cuda_host_device_[begin/end]
-// and include the real _cuda.h.
-#ifndef __CUDACC__
-#include <OpenEXR/ImathVec.h>
-#include <OpenEXR/ImathMatrix.h>
-#include <OpenEXR/ImathColor.h>
-#else
-#define IMATH_HOSTDEVICE __host__ __device__
-#include <OSL/ImathLimits_cuda.h>
-#include <OSL/ImathVec_cuda.h>
-#include <OSL/ImathMatrix_cuda.h>
-#include <OSL/ImathColor_cuda.h>
-#endif
-
-// Extensions to Imath
+// All the things we need from Imath.
+// We've replicated some Imath files in OSL/Imathx, adding the decorations
+// needed for them to be safe to compile with Cuda (and sometimes other
+// improvements). We will eventually push all of these fixes to OpenEXR.
+#include <OSL/Imathx/ImathLimits.h>
+#include <OSL/Imathx/ImathVec.h>
+#include <OSL/Imathx/ImathMatrix.h>
+#include <OSL/Imathx/ImathColor.h>
 #include <OSL/matrix22.h>
 
 // Temporary bug fix: having trouble with cuda complaining about {fmt} lib.

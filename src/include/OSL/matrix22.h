@@ -42,36 +42,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OSL/oslconfig.h>
 
-#ifndef __CUDA_ARCH__
-#include <OpenEXR/ImathMatrix.h>
-#else
-#include <OSL/ImathMatrix_cuda.h>
+#include <OSL/Imathx/ImathMatrix.h>
 #include <limits>
-#endif
+
 
 namespace Imathx {   // "extended" Imath
 
 enum Uninitialized {UNINITIALIZED};
 
-
-// TODO: It would be preferable to use the Imath versions of these functions in
-//       all cases, but these templates should suffice until a more complete
-//       device-friendly version of Imath is available.
-namespace hostdevice {
-template <typename T> inline OSL_HOSTDEVICE T abs (T x);
-template <typename T> inline OSL_HOSTDEVICE T smallest ();
-#ifndef __CUDA_ARCH__
-template <> inline OSL_HOSTDEVICE double abs<double>      (double x) { return Imath::abs (x); }
-template <> inline OSL_HOSTDEVICE float  abs<float>       (float x)  { return Imath::abs (x); }
-template <> inline OSL_HOSTDEVICE double smallest<double> ()         { return Imath::limits<double>::smallest(); }
-template <> inline OSL_HOSTDEVICE float  smallest<float>  ()         { return Imath::limits<float>::smallest();  }
-#else
-template <> inline OSL_HOSTDEVICE double abs<double>      (double x) { return std::abs (x); }
-template <> inline OSL_HOSTDEVICE float  abs<float>       (float x)  { return std::abs (x); }
-template <> inline OSL_HOSTDEVICE double smallest<double> ()         { return std::numeric_limits<double>::lowest(); }
-template <> inline OSL_HOSTDEVICE float  smallest<float>  ()         { return std::numeric_limits<float>::lowest();  }
-#endif
-}
 
 
 template <class T> class Matrix22
@@ -137,6 +115,12 @@ template <class T> class Matrix22
     OSL_HOSTDEVICE
     const Matrix22 &    operator = (T a);
 
+
+    //------------
+    // Destructor
+    //------------
+
+    ~Matrix22 () = default;
 
     //----------------------
     // Compatibility with Sb
@@ -976,13 +960,13 @@ Matrix22<T>::inverse (bool singExc) const
                 -x[1][0],   x[0][0]);
     T r = x[0][0] * x[1][1] - x[1][0] * x[0][1];  // determinant
 
-    if (hostdevice::abs (r) >= 1)
+    if (IMATH_INTERNAL_NAMESPACE::abs (r) >= 1)
     {
         s /= r;
     }
     else
     {
-        T mr = hostdevice::abs (r) / hostdevice::smallest<T>();
+        T mr = IMATH_INTERNAL_NAMESPACE::abs (r) / Imath::limits<T>::smallest();
 
         OSL_INTEL_PRAGMA(unroll)
         for (int i = 0; i < 2; ++i)
@@ -990,7 +974,7 @@ Matrix22<T>::inverse (bool singExc) const
             OSL_INTEL_PRAGMA(unroll)
             for (int j = 0; j < 2; ++j)
             {
-                if (mr > hostdevice::abs (s.x[i][j]))
+                if (mr > IMATH_INTERNAL_NAMESPACE::abs (s.x[i][j]))
                 {
                     s.x[i][j] /= r;
                 }

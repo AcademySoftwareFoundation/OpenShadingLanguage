@@ -31,7 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "oslexec_pvt.h"
 #include <OSL/oslnoise.h>
 #include <OSL/dual_vec.h>
-#include <OSL/Imathx.h>
+#include <OSL/Imathx/Imathx.h>
 #include <OSL/device_string.h>
 
 #include <OpenImageIO/fmath.h>

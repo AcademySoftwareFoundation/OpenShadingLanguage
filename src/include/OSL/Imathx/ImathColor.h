@@ -43,12 +43,16 @@
 //
 //----------------------------------------------------
 
-#include <OSL/ImathVec_cuda.h>
+#include "ImathVec.h"
 #include <OpenEXR/ImathNamespace.h>
 // #include "half.h"
 
 #ifndef IMATH_HOSTDEVICE
-  #error "This should be included with the proper IMATH_HOSTDEVICE define"
+    #ifdef __CUDACC__
+        #define IMATH_HOSTDEVICE __host__ __device__
+    #else
+        #define IMATH_HOSTDEVICE
+    #endif
 #endif
 
 IMATH_INTERNAL_NAMESPACE_HEADER_ENTER
@@ -66,7 +70,7 @@ class Color3: public Vec3 <T>
     IMATH_HOSTDEVICE Color3 ();			// no initialization
     IMATH_HOSTDEVICE explicit Color3 (T a);	// (a a a)
     IMATH_HOSTDEVICE Color3 (T a, T b, T c);	// (a b c)
-
+    ~Color3 () = default;
 
     //---------------------------------
     // Copy constructors and assignment
@@ -143,7 +147,7 @@ template <class T> class Color4
     IMATH_HOSTDEVICE Color4 ();			    	// no initialization
     IMATH_HOSTDEVICE explicit Color4 (T a);		// (a a a a)
     IMATH_HOSTDEVICE Color4 (T a, T b, T c, T d);	// (a b c d)
-
+    ~Color4 () = default;
 
     //---------------------------------
     // Copy constructors and assignment

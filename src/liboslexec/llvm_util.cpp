@@ -544,8 +544,11 @@ LLVM_Util::do_optimize (std::string *out_err)
 #endif
 
     m_llvm_func_passes->doInitialization();
-    m_llvm_module_passes->run (*m_llvm_module);
+    for (auto&& I : m_llvm_module->functions())
+        if (!I.isDeclaration())
+            m_llvm_func_passes->run(I);
     m_llvm_func_passes->doFinalization();
+    m_llvm_module_passes->run (*m_llvm_module);
 }
 
 

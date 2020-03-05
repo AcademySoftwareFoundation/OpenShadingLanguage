@@ -517,7 +517,7 @@ OSL_HOSTDEVICE OSL_FORCEINLINE Dual<T,P>& operator-= (Dual<T,P> &a, const Dual<T
 template<class T, int P>
 OSL_HOSTDEVICE OSL_FORCEINLINE Dual<T,P>& operator-= (Dual<T,P> &a, const T &b)
 {
-    a.val() -= b.val();
+    a.val() -= b;
     return a;
 }
 

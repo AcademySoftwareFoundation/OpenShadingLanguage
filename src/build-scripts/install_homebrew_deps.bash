@@ -21,7 +21,7 @@ echo ""
 echo "Before my brew installs:"
 brew list --versions
 
-brew install --display-times gcc ccache ninja boost python && true
+brew install --display-times gcc ccache ninja boost python pybind11 && true
 brew link --overwrite gcc
 brew upgrade --display-times python cmake && true
 brew link --overwrite python

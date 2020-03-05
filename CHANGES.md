@@ -3,8 +3,10 @@ Release 1.11/2.0? -- ?? 2019 (compared to 1.10)
 Dependency and standards changes:
 * **LLVM 6.0-9.0**: Support for LLVM 4 and 5 have been dropped. Support for
   LLVM 8 and 9 have been added. #981 #1046 #1058
-* OpenImageIO 2.0-2.1: Support for OIIO 1.8 has been dropped; a minimum
-  of OIIO 2.0 is needed to build OSL. #1038 (1.11.0)
+* OpenImageIO 2.0-2.1: Support for OIIO 1.8 has been dropped; a minimum of
+  OIIO 2.0 is needed to build OSL. (Additionally, a minimum of OIIO 2.1 is
+  strongly recommended for anyone using the SIMD batch shading mode.) #1038
+  (1.11.0)
 * CMake minimum is now 3.12. #1072 (1.11.1)
 
 OSL Language and oslc compiler:
@@ -73,6 +75,8 @@ OSL Language and oslc compiler:
           dist/macosx/share/OSL/shaders/color2.h \
           dist/macosx/share/OSL/shaders/stdosl.h
   ```
+* New shader-level metadata: `[[ int range_checking=0 ]]` disables the
+  automatic generation of range checking code for the shader. #1112 (1.11.4)
 
 OSL Standard library:
 * Extend linearstep() and smooth_linearstep() to work with color, point,
@@ -109,6 +113,12 @@ API changes, new options, new ShadingSystem features (for renderer writers):
   have a parameter allowing the caller to provide a `texture_thread_info`
   handle and a context, as well as to provide a pointer to a ustring where
   error messages should be placed. #1033 (1.11.0)
+* The LLVM JIT optimization level (controlled by the `llvm_optimize` shading
+  system attribute) now defaults to 1, not 0. That should be the best
+  performance while still having reasonable JIT times. #1114 (1.11.4)
+
+Experimental SIMD batched shading mode:
+* Continued work: #1108
 
 Experimental OptiX rendering:
 * Build option `USE_OPTIX=1` enable experimental OptiX support.
@@ -131,6 +141,8 @@ Performance improvements:
 * Speed up the `concat()` OSL function, the new implementation is very
   careful to avoid extra copies and unnecessary allocations. #1104,#1105
   (1.11.3)
+* Shader performance improved slightly by better inlining during the JIT.
+  #1114 (1.11.4)
 
 Bug fixes and other improvements (internals):
 * Fix bug in implementation of `splineinverse()` when computing with
@@ -163,6 +175,8 @@ Bug fixes and other improvements (internals):
   was in a file path containing a directory name starting with "n". (Because
   of interplay between Windows use of backslash for directory separtors and
   C/C++/OSL use of backslash as escape sequences in strings.) #1101 (1.11.3)
+* Remove the internal attribute query cache, in practice it seemed to be
+  slowing things down. #1109 (1.11.4)
 
 Internals/developer concerns:
 * Switch much of the internals where we do string formatting using printf-like
@@ -259,6 +273,8 @@ Build & test system improvements:
 * Add an optional build-time `EXTRA_WARNINGS` option (default: OFF) that
   enables even more picky than usual warnings. Fix many warnings that cropped
   up during testing, mostly related to unused function paramters. #1106 (1.11.3)
+* The testsuite can run in parallel, with a number of threads set by the
+  environment variable `CTEST_PARALLEL_LEVEL`. #1119 (1.11.4)
 
 Documentation:
 

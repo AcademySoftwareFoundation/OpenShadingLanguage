@@ -86,7 +86,7 @@ OSL_NAMESPACE_ENTER
 #if (OPTIX_VERSION >= 70000)
 static void context_log_cb( unsigned int level, const char* tag, const char* message, void* /*cbdata */ )
 {
-    std::cerr << "[ ** LOGCALLBACK** " << std::setw( 2 ) << level << "][" << std::setw( 12 ) << tag << "]: " << message << "\n";
+//    std::cerr << "[ ** LOGCALLBACK** " << std::setw( 2 ) << level << "][" << std::setw( 12 ) << tag << "]: " << message << "\n";
 }
 #endif
 #endif
@@ -837,12 +837,17 @@ OptixRaytracer::make_optix_materials ()
     std::vector<OptixProgramGroup> final_groups = {
          strlib_group,     // string globals
          raygen_group,
-         miss_group,
-         quad_hitgroup,
-         sphere_hitgroup,
-         quad_fillSG_dc,
-         sphere_fillSG_dc,
+         miss_group
     };
+
+    if (scene.quads.size() > 0)
+        final_groups.push_back (quad_hitgroup);
+    if (scene.spheres.size() > 0)
+        final_groups.push_back (sphere_hitgroup);
+
+    final_groups.push_back (quad_fillSG_dc);
+    final_groups.push_back (sphere_fillSG_dc);
+
     // append the shader groups to our "official" list of program groups
     final_groups.insert (final_groups.end(), shader_groups.begin(), shader_groups.end());
 
@@ -872,27 +877,40 @@ OptixRaytracer::make_optix_materials ()
         OPTIX_CHECK (optixSbtRecordPackHeader (final_groups[i], &sbt_records[i]));
     }
 
+    int       sbtIndex       = 3;
+    const int hitRecordStart = sbtIndex;
+
     // Copy geometry data to appropriate SBT records
-    sbt_records[3].data        = reinterpret_cast<void *>(d_quads_list);
-    sbt_records[3].sbtGeoIndex = 0;   // DC index for filling in Quad ShaderGlobals
-    sbt_records[4].data        = reinterpret_cast<void *>(d_spheres_list);
-    sbt_records[4].sbtGeoIndex = 1;   // DC index for filling in Sphere ShaderGlobals
+    if (scene.quads.size() > 0 ) {
+        sbt_records[sbtIndex].data        = reinterpret_cast<void *>(d_quads_list);
+        sbt_records[sbtIndex].sbtGeoIndex = 0;   // DC index for filling in Quad ShaderGlobals
+        ++sbtIndex;
+    }
+
+    if (scene.spheres.size() > 0 ) {
+        sbt_records[sbtIndex].data        = reinterpret_cast<void *>(d_spheres_list);
+        sbt_records[sbtIndex].sbtGeoIndex = 1;   // DC index for filling in Sphere ShaderGlobals
+        ++sbtIndex;
+    }
+
+    const int callableRecordStart = sbtIndex;
 
     // Copy geometry data to our DC (direct-callable) funcs that fill ShaderGlobals
-    sbt_records[5].data = reinterpret_cast<void *>(d_quads_list);
-    sbt_records[6].data = reinterpret_cast<void *>(d_spheres_list);
+    sbt_records[sbtIndex++].data = reinterpret_cast<void *>(d_quads_list);
+    sbt_records[sbtIndex++].data = reinterpret_cast<void *>(d_spheres_list);
 
-    const int nshaders = int(shader_groups.size());
+    const int nshaders   = int(shader_groups.size());
+    const int nhitgroups = (scene.quads.size() > 0) + (scene.spheres.size() > 0);
 
     CUDA_CHECK (cudaMalloc (reinterpret_cast<void **>(&d_raygen_record)    ,     sizeof(GenericRecord)));
     CUDA_CHECK (cudaMalloc (reinterpret_cast<void **>(&d_miss_record)      ,     sizeof(GenericRecord)));
-    CUDA_CHECK (cudaMalloc (reinterpret_cast<void **>(&d_hitgroup_records) , 2 * sizeof(GenericRecord)));
+    CUDA_CHECK (cudaMalloc (reinterpret_cast<void **>(&d_hitgroup_records) , nhitgroups * sizeof(GenericRecord)));
     CUDA_CHECK (cudaMalloc (reinterpret_cast<void **>(&d_callable_records) , (2 + nshaders) * sizeof(GenericRecord)));
 
     CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_raygen_record)   , &sbt_records[1],     sizeof(GenericRecord), cudaMemcpyHostToDevice));
     CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_miss_record)     , &sbt_records[2],     sizeof(GenericRecord), cudaMemcpyHostToDevice));
-    CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_hitgroup_records), &sbt_records[3], 2 * sizeof(GenericRecord), cudaMemcpyHostToDevice));
-    CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_callable_records), &sbt_records[5], (2 + nshaders) * sizeof(GenericRecord), cudaMemcpyHostToDevice));
+    CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_hitgroup_records), &sbt_records[hitRecordStart], nhitgroups * sizeof(GenericRecord), cudaMemcpyHostToDevice));
+    CUDA_CHECK (cudaMemcpy (reinterpret_cast<void *>(d_callable_records), &sbt_records[callableRecordStart], (2 + nshaders) * sizeof(GenericRecord), cudaMemcpyHostToDevice));
 
     // Looks like OptixShadingTable needs to be filled out completely
     m_optix_sbt.raygenRecord                 = d_raygen_record;
@@ -901,10 +919,10 @@ OptixRaytracer::make_optix_materials ()
     m_optix_sbt.missRecordCount              = 1;
     m_optix_sbt.hitgroupRecordBase           = d_hitgroup_records;
     m_optix_sbt.hitgroupRecordStrideInBytes  = sizeof(GenericRecord);
-    m_optix_sbt.hitgroupRecordCount          = 2;
+    m_optix_sbt.hitgroupRecordCount          = nhitgroups;
     m_optix_sbt.callablesRecordBase          = d_callable_records;
     m_optix_sbt.callablesRecordStrideInBytes = sizeof(GenericRecord);
-    m_optix_sbt.callablesRecordCount         = nshaders;
+    m_optix_sbt.callablesRecordCount         = 2 + nshaders;
 
     // Pipeline has been created so we can clean some things up
     for (auto &&i : final_groups) {
@@ -1019,18 +1037,22 @@ OptixRaytracer::finalize_scene()
     CUdeviceptr d_quadsIndexOffsetBuffer;
     CUDA_CHECK (cudaMalloc (reinterpret_cast<void **>(&d_quadsIndexOffsetBuffer), scene.quads.size() * sizeof(int)));
 
+    int numBuildInputs = 0;
+
     unsigned int  quadSbtRecord;
     quadSbtRecord = OPTIX_GEOMETRY_FLAG_NONE;
-
-    OptixBuildInputCustomPrimitiveArray& quadsInput = buildInputs[0].aabbArray;
-    buildInputs[0].type        = OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES;
-    quadsInput.flags           = &quadSbtRecord;
-    quadsInput.aabbBuffers     = reinterpret_cast<CUdeviceptr *>(&d_quadsAabb);
-    quadsInput.numPrimitives   = scene.quads.size();
-    quadsInput.numSbtRecords   = 1;
-    quadsInput.sbtIndexOffsetSizeInBytes   = sizeof(int);
-    quadsInput.sbtIndexOffsetStrideInBytes = sizeof(int);
-    quadsInput.sbtIndexOffsetBuffer        = d_quadsIndexOffsetBuffer;
+    if (scene.quads.size() > 0) {
+        OptixBuildInputCustomPrimitiveArray& quadsInput = buildInputs[numBuildInputs].aabbArray;
+        buildInputs[numBuildInputs].type       = OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES;
+        quadsInput.flags                       = &quadSbtRecord;
+        quadsInput.aabbBuffers                 = reinterpret_cast<CUdeviceptr *>(&d_quadsAabb);
+        quadsInput.numPrimitives               = scene.quads.size();
+        quadsInput.numSbtRecords               = 1;
+        quadsInput.sbtIndexOffsetSizeInBytes   = sizeof(int);
+        quadsInput.sbtIndexOffsetStrideInBytes = sizeof(int);
+        quadsInput.sbtIndexOffsetBuffer        = 0; // d_quadsIndexOffsetBuffer;
+        ++numBuildInputs;
+    }
 
     //  Set up spheres input
     void* d_spheresAabb;
@@ -1056,7 +1078,7 @@ OptixRaytracer::finalize_scene()
 
     // Copy Spheres to cuda device
     CUDA_CHECK (cudaMalloc (reinterpret_cast<void **>(&d_spheres_list),                       sizeof(SphereParams) * scene.spheres.size()));
-    CUDA_CHECK (cudaMemcpy (reinterpret_cast<void  *>( d_spheres_list), spheresParams.data(), sizeof(SphereParams  ) * scene.spheres.size(), cudaMemcpyHostToDevice));
+    CUDA_CHECK (cudaMemcpy (reinterpret_cast<void  *>( d_spheres_list), spheresParams.data(), sizeof(SphereParams) * scene.spheres.size(), cudaMemcpyHostToDevice));
 
     // Fill in Sphere shaders
     CUdeviceptr d_spheresIndexOffsetBuffer;
@@ -1064,33 +1086,54 @@ OptixRaytracer::finalize_scene()
 
     unsigned int sphereSbtRecord;
     sphereSbtRecord = OPTIX_GEOMETRY_FLAG_NONE;
+    if (scene.spheres.size() > 0) {
+        OptixBuildInputCustomPrimitiveArray& spheresInput = buildInputs[numBuildInputs].aabbArray;
+        buildInputs[numBuildInputs].type         = OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES;
+        spheresInput.flags                       = &sphereSbtRecord;
+        spheresInput.aabbBuffers                 = reinterpret_cast<CUdeviceptr *>(&d_spheresAabb);
+        spheresInput.numPrimitives               = scene.spheres.size();
+        spheresInput.numSbtRecords               = 1;
+        spheresInput.sbtIndexOffsetSizeInBytes   = sizeof(int);
+        spheresInput.sbtIndexOffsetStrideInBytes = sizeof(int);
+        spheresInput.sbtIndexOffsetBuffer        = 0; // d_spheresIndexOffsetBuffer;
+        ++numBuildInputs;
+    }
 
-    OptixBuildInputCustomPrimitiveArray& spheresInput = buildInputs[1].aabbArray;
-    buildInputs[1].type        = OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES;
-    spheresInput.flags         = &sphereSbtRecord;
-    spheresInput.aabbBuffers   = reinterpret_cast<CUdeviceptr *>(&d_spheresAabb);
-    spheresInput.numPrimitives = scene.spheres.size();
-    spheresInput.numSbtRecords = 1;
-    spheresInput.sbtIndexOffsetSizeInBytes   = sizeof(int);
-    spheresInput.sbtIndexOffsetStrideInBytes = sizeof(int);
-    spheresInput.sbtIndexOffsetBuffer        = d_spheresIndexOffsetBuffer;
     // Compute memory usage by acceleration structures
     OptixAccelBufferSizes bufferSizes;
-    optixAccelComputeMemoryUsage(m_optix_ctx, &accelOptions, buildInputs, scene.spheres.size() == 0 ? 1 : 2, &bufferSizes);
+    optixAccelComputeMemoryUsage(m_optix_ctx, &accelOptions, buildInputs, numBuildInputs, &bufferSizes);
 
     void *d_output, *d_temp;
     CUDA_CHECK (cudaMalloc (&d_output, bufferSizes.outputSizeInBytes));
     CUDA_CHECK (cudaMalloc (&d_temp  , bufferSizes.tempSizeInBytes  ));
 
+    // Get the bounding box for the AS
+    void *d_aabb;
+    CUDA_CHECK (cudaMalloc (&d_aabb, sizeof(OptixAabb)));
+
+    OptixAccelEmitDesc property;
+    property.type = OPTIX_PROPERTY_TYPE_AABBS;
+    property.result = (CUdeviceptr) d_aabb;
+
     OPTIX_CHECK (optixAccelBuild (m_optix_ctx,
                                   m_cuda_stream,
                                   &accelOptions,
-                                  buildInputs, scene.spheres.size() == 0 ? 1 : 2,
+                                  buildInputs,
+                                  numBuildInputs,
                                   reinterpret_cast<CUdeviceptr>(d_temp),   bufferSizes.tempSizeInBytes,
                                   reinterpret_cast<CUdeviceptr>(d_output), bufferSizes.outputSizeInBytes,
                                   &m_travHandle,
-                                  nullptr,
-                                  0));
+                                  &property,
+                                  1));
+
+    OptixAabb h_aabb;
+    CUDA_CHECK (cudaMemcpy ((void*)&h_aabb, reinterpret_cast<void *>(d_aabb), sizeof(OptixAabb), cudaMemcpyDeviceToHost));
+    cudaFree (d_aabb);
+
+    // Sanity check the AS bounds
+    // printf ("AABB min: [%0.6f, %0.6f, %0.6f], max: [%0.6f, %0.6f, %0.6f]\n",
+    //         h_aabb.minX, h_aabb.minY, h_aabb.minZ,
+    //         h_aabb.maxX, h_aabb.maxY, h_aabb.maxZ );
 
     make_optix_materials();
 

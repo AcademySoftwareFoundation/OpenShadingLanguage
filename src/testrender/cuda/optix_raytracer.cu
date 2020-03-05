@@ -115,7 +115,6 @@ extern "C" __global__ void __raygen__()
     uint3 launch_dims  = optixGetLaunchDimensions();
     uint3 launch_index = optixGetLaunchIndex();
 
-
     const float3 eye = render_params.eye;
     const float3 dir = render_params.dir;
     const float3 cx  = render_params.cx ;
@@ -138,7 +137,7 @@ extern "C" __global__ void __raygen__()
                 1e13f,
                 0,
                 OptixVisibilityMask(1),
-                OPTIX_RAY_FLAG_NONE,
+                OPTIX_RAY_FLAG_DISABLE_ANYHIT,
                 0,
                 1,
                 0);

@@ -16,7 +16,6 @@
 #include <OSL/dual_vec.h>
 #include <OpenImageIO/fmath.h>
 
-
 using namespace optix;
 using OSL::Dual2;
 using OSL::Vec3;
@@ -122,6 +121,7 @@ RT_PROGRAM void bounds (int, float result[6])
 
 #else //#if (OPTIX_VERSION < 70000)
 
+#include "wrapper.h"
 #include "rend_lib.h"
 #include "render_params.h"
 
@@ -205,7 +205,7 @@ extern "C" __global__ void __intersection__sphere ()
         float t = (x > 0) ? x : ((y > 0) ? y : 0);
 
         if (t < optixGetRayTmax()) 
-            optixReportIntersection(t, 1);
+            optixReportIntersection(t, RAYTRACER_HIT_SPHERE);
     }
 }
 

@@ -74,8 +74,8 @@ RT_PROGRAM void bounds (int, float result[6])
 
 #else //#if (OPTIX_VERSION < 70000)
 
+#include "wrapper.h"
 #include "rend_lib.h"
-
 #include "render_params.h"
 
 extern "C" __device__
@@ -121,7 +121,7 @@ void __intersection__quad ()
         float  dy = dot(h, quad.ey) * quad.ev;
 
         if (dx >= 0 && dx < 1.0f && dy >= 0 && dy < 1.0f && t < optixGetRayTmax())
-            optixReportIntersection (t, 0);
+            optixReportIntersection (t, RAYTRACER_HIT_QUAD);
     }
 }
 

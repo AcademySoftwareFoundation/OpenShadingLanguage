@@ -220,7 +220,7 @@ if (LLVM_NAMESPACE)
 endif ()
 
 
-checked_find_package (Partio)
+checked_find_package (partio)
 
 
 # Qt -- used for osltoy

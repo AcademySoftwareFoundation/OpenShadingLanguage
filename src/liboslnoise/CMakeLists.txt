@@ -3,7 +3,11 @@ set (liboslnoise_srcs gabornoise.cpp simplexnoise.cpp)
 #file ( GLOB compiler_headers "../liboslexec/*.h" )
 
 add_library (oslnoise ${liboslnoise_srcs})
-target_include_directories (oslnoise PRIVATE ../liboslexec)
+target_include_directories (oslnoise
+    PUBLIC
+        ${CMAKE_INSTALL_FULL_INCLUDEDIR}
+    PRIVATE
+        ../liboslexec)
 target_link_libraries (oslnoise
     PUBLIC
         ${OPENIMAGEIO_LIBRARIES} ${ILMBASE_LIBRARIES}

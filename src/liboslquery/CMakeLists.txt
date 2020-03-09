@@ -5,7 +5,11 @@ file (GLOB compiler_headers "../liboslexec/*.h")
 FLEX_BISON (../liboslexec/osolex.l ../liboslexec/osogram.y oso lib_src compiler_headers)
 
 add_library (${local_lib} ${lib_src})
-target_include_directories (${local_lib} PRIVATE ../liboslexec)
+target_include_directories (${local_lib}
+    PUBLIC
+        ${CMAKE_INSTALL_FULL_INCLUDEDIR}
+    PRIVATE
+        ../liboslexec)
 target_compile_definitions (${local_lib} PRIVATE OSL_EXPORTS)
 target_link_libraries (${local_lib}
     PUBLIC

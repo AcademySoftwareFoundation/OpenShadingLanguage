@@ -174,13 +174,12 @@ add_library (${local_lib} ${lib_src})
 target_include_directories (${local_lib}
     PRIVATE
         "${CMAKE_SOURCE_DIR}/src/liboslcomp"
-        ${PARTIO_INCLUDES}
         ${PUGIXML_INCLUDES}
     )
 target_compile_definitions (${local_lib} PRIVATE OSL_EXPORTS)
 if (PARTIO_FOUND)
-    target_compile_definitions (${local_lib}
-                                PRIVATE USE_PARTIO=1)
+    target_link_libraries(${local_lib} PRIVATE partio::partio)
+    target_compile_definitions (${local_lib} PRIVATE USE_PARTIO=1)
 endif ()
 
 target_link_libraries (${local_lib}
@@ -188,7 +187,7 @@ target_link_libraries (${local_lib}
         ${OPENIMAGEIO_LIBRARIES} ${ILMBASE_LIBRARIES}
     PRIVATE
         ${PUGIXML_LIBRARIES}
-        ${PARTIO_LIBRARIES} ${ZLIB_LIBRARIES}
+        ${ZLIB_LIBRARIES}
         ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
         ${CLANG_LIBRARIES}
         ${LLVM_LIBRARIES} ${LLVM_LDFLAGS} ${LLVM_SYSTEM_LIBRARIES}

@@ -174,6 +174,7 @@ add_library (${local_lib} ${lib_src})
 target_include_directories (${local_lib}
     PUBLIC
         ${CMAKE_INSTALL_FULL_INCLUDEDIR}
+        ${OPENIMAGEIO_INCLUDES}
         ${ILMBASE_INCLUDES}
     PRIVATE
         "${CMAKE_SOURCE_DIR}/src/liboslcomp"

@@ -61,7 +61,7 @@ install:
     - export ENABLE_RLA=0 ENABLE_SGI=0 ENABLE_SOCKET=0 ENABLE_SOFTIMAGE=0
     - export ENABLE_TARGA=0 ENABLE_WEBP=0 ENABLE_TARGA=0
     - export OPENIMAGEIO_SITE=travis
-    - export OPENIMAGEIO_INSTALLDIR=$PWD/ext/OpenImageIO/dist/$ARCH
+    - export OPENIMAGEIO_INSTALLDIR=$HOME/ext/OpenImageIO/dist/$ARCH
     - export OSL_SITE=travis
     - source src/build-scripts/build_openimageio.bash
     - if [ $TRAVIS_OS_NAME == linux ] ; then

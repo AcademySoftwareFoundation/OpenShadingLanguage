@@ -35,6 +35,11 @@ message (STATUS "*   - To exclude an optional dependency (even if found),")
 message (STATUS "*     -DUSE_Package=OFF or set environment var USE_Package=OFF ")
 message (STATUS "${ColorReset}")
 
+set (OSL_LOCAL_DEPS_PATH "${CMAKE_SOURCE_DIR}/ext/dist" CACHE STRING
+     "Local area for dependencies added to CMAKE_PREFIX_PATH")
+list (APPEND CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/ext/dist)
+
+
 
 # checked_find_package(pkgname ..) is a wrapper for find_package, with the
 # following extra features:

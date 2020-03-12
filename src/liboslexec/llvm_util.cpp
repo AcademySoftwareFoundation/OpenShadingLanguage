@@ -1032,7 +1032,11 @@ LLVM_Util::op_alloca (llvm::Type *llvmtype, int n, const std::string &name, int 
     llvm::ConstantInt* numalloc = (llvm::ConstantInt*)constant(n);
     llvm::AllocaInst* allocainst = builder().CreateAlloca (llvmtype, numalloc, name);
     if (align > 0)
+#if OSL_LLVM_VERSION >= 100
+        allocainst->setAlignment (llvm::MaybeAlign(align));
+#else
         allocainst->setAlignment (align);
+#endif
     return allocainst;
 }
 
@@ -1123,8 +1127,12 @@ LLVM_Util::op_return (llvm::Value *retval)
 void
 LLVM_Util::op_memset (llvm::Value *ptr, int val, int len, int align)
 {
-    builder().CreateMemSet (ptr, builder().getInt8((unsigned char)val),
-                            uint64_t(len), (unsigned)align);
+    builder().CreateMemSet (ptr, builder().getInt8((unsigned char)val), uint64_t(len),
+#if OSL_LLVM_VERSION >= 100
+        llvm::MaybeAlign(align));
+#else
+        unsigned(align));
+#endif
 }
 
 
@@ -1132,8 +1140,12 @@ LLVM_Util::op_memset (llvm::Value *ptr, int val, int len, int align)
 void
 LLVM_Util::op_memset (llvm::Value *ptr, int val, llvm::Value *len, int align)
 {
-    builder().CreateMemSet (ptr, builder().getInt8((unsigned char)val),
-                            len, (unsigned)align);
+    builder().CreateMemSet (ptr, builder().getInt8((unsigned char)val), len,
+#if OSL_LLVM_VERSION >= 100
+        llvm::MaybeAlign(align));
+#else
+        unsigned(align));
+#endif
 }
 
 
@@ -1150,7 +1162,10 @@ void
 LLVM_Util::op_memcpy (llvm::Value *dst, int dstalign,
                       llvm::Value *src, int srcalign, int len)
 {
-#if OSL_LLVM_VERSION >= 70
+#if OSL_LLVM_VERSION >= 100
+    builder().CreateMemCpy (dst, llvm::MaybeAlign(dstalign), src, llvm::MaybeAlign(srcalign),
+                            uint64_t(len));
+#elif OSL_LLVM_VERSION >= 70
     builder().CreateMemCpy (dst, (unsigned)dstalign, src, (unsigned)srcalign,
                             uint64_t(len));
 #else
@@ -1552,7 +1567,11 @@ LLVM_Util::ptx_compile_group (llvm::Module* lib_module, const std::string& name,
     llvm::raw_svector_ostream assembly_stream (assembly);
 
     // TODO: Make sure rounding modes, etc., are set correctly
-#if OSL_LLVM_VERSION >= 70
+#if OSL_LLVM_VERSION >= 100
+    target_machine->addPassesToEmitFile (mod_pm, assembly_stream,
+                                         nullptr,  // FIXME: Correct?
+                                         llvm::CGFT_AssemblyFile);
+#elif OSL_LLVM_VERSION >= 70
     target_machine->addPassesToEmitFile (mod_pm, assembly_stream,
                                          nullptr,  // FIXME: Correct?
                                          llvm::TargetMachine::CGFT_AssemblyFile);

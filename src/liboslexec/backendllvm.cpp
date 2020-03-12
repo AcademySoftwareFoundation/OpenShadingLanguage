@@ -368,7 +368,11 @@ BackendLLVM::addCUDAVariable(const std::string& name, int size, int alignment,
 
     ASSERT (g_var && "Unable to create GlobalVariable");
 
+#if OSL_LLVM_VERSION >= 100
+    g_var->setAlignment  (llvm::MaybeAlign(alignment));
+#else
     g_var->setAlignment  (alignment);
+#endif
     g_var->setLinkage    (llvm::GlobalValue::ExternalLinkage);
     g_var->setVisibility (llvm::GlobalValue::DefaultVisibility);
     g_var->setInitializer(constant);

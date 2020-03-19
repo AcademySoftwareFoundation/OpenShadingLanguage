@@ -533,14 +533,6 @@ OSL_SHADEOP int osl_safe_mod_iii (int a, int b) {
     return (b != 0) ? (a % b) : 0;
 }
 
-OSL_HOSTDEVICE inline float safe_fmod (float a, float b) {
-    return (b != 0.0f) ? std::fmod (a,b) : 0.0f;
-}
-
-OSL_HOSTDEVICE inline Dual2<float> safe_fmod (const Dual2<float> &a, const Dual2<float> &b) {
-    return Dual2<float> (safe_fmod (a.val(), b.val()), a.dx(), a.dy());
-}
-
 MAKE_BINARY_PERCOMPONENT_OP (fmod, safe_fmod, safe_fmod);
 MAKE_BINARY_PERCOMPONENT_VF_OP (fmod, safe_fmod, safe_fmod)
 

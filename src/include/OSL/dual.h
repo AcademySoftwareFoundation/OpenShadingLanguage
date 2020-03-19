@@ -241,6 +241,8 @@ public:
     OSL_HOSTDEVICE T& elem (ConstIndex<3>)  { return m_dz; }
 };
 
+
+
 // Single generic implementation of Dual can handle any number of partials
 // delegating access to element storage to the DualStorage base class
 template<
@@ -380,7 +382,6 @@ public:
         });
         return *this;
     }
-
 
 
     /// Stream output.  Format as: "val[dx,dy,...]"
@@ -833,6 +834,21 @@ dualfunc (const Dual<T,P>& u, const Dual<T,P>& v, const Dual<T,P>& w,
 
 
 
+/// Fast negation of duals, in cases where you aren't too picky about the
+/// difference between +0 and -0. (Courtesy of Alex Wells, Intel) Please see
+/// OIIO's fast_math.h fast_neg for a more full explanation of why this is
+/// faster.
+template<class T, int P>
+OSL_HOSTDEVICE OSL_FORCEINLINE OSL_CONSTEXPR14 Dual<T,P> fast_neg (const Dual<T,P> &a)
+{
+    Dual<T,P> result;
+    OSL_INDEX_LOOP(i, P+1, {
+        result.elem(i) = T(0) - a.elem(i);
+    });
+    return result;
+}
+
+
 // f(x) = cos(x), f'(x) = -sin(x)
 template<class T, int P>
 OSL_HOSTDEVICE OSL_FORCEINLINE Dual<T,P> cos (const Dual<T,P> &a)
@@ -1259,6 +1275,39 @@ template<class T, int P>
 OSL_HOSTDEVICE OSL_FORCEINLINE Dual<T,P> fabs (const Dual<T,P> &x)
 {
     return x.val() >= T(0) ? x : -x;
+}
+
+
+#ifdef OIIO_FMATH_HAS_SAFE_FMOD
+using OIIO::safe_fmod;
+#else
+OSL_FORCEINLINE OSL_HOSTDEVICE float safe_fmod (float a, float b)
+{
+    if (OSL_LIKELY(b != 0.0f)) {
+#if 0
+        return std::fmod (a,b);
+        // std::fmod was getting called serially instead of vectorizing, so
+        // we will just do the calculation ourselves
+#else
+        // This formulation is equivalent but much faster in our benchmarks,
+        // also vectorizes better.
+        // The floating-point remainder of the division operation
+        // a/b is a - N*b, where N = a/b with its fractional part truncated.
+        int N = static_cast<int>(a/b);
+        return a - N*b;
+#endif
+    }
+    return 0.0f;
+}
+#endif
+
+template<class T, int P>
+OSL_FORCEINLINE OSL_HOSTDEVICE Dual<T,P>
+safe_fmod (const Dual<T,P>& a, const Dual<T,P>& b)
+{
+    Dual<T,P> result = a;
+    result.val() = safe_fmod(a.val(), b.val());
+    return result;
 }
 
 

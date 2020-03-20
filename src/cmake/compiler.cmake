@@ -101,7 +101,7 @@ endif ()
 #
 # We try hard to make default symbol visibility be "hidden", except for
 # symbols that are part of the public API, which should be marked in the
-# source code with a special decorator, OIIO_API.
+# source code with a special decorator, OSL_API.
 #
 # Additionally, there is a hidesymbols.map file that on some platforms may
 # give more fine-grained control for hiding symbols, because sometimes
@@ -305,12 +305,12 @@ check_cxx_source_runs("
           return r == \"a c\" ? 0 : -1;
       }"
       USE_STD_REGEX)
+cmake_pop_check_state ()
 if (USE_STD_REGEX)
     add_definitions (-DUSE_STD_REGEX)
 else ()
     add_definitions (-DUSE_BOOST_REGEX)
 endif ()
-cmake_pop_check_state ()
 
 
 ###########################################################################
@@ -475,6 +475,25 @@ set (EXTRA_DSO_LINK_ARGS "" CACHE STRING "Extra command line definitions when bu
 
 
 ###########################################################################
+# Set the versioning for shared libraries.
+#
+if (${PROJECT_NAME}_SUPPORTED_RELEASE)
+    # Supported releases guarantee ABI back-compatibility within the release
+    # family, so SO versioning is major.minor.
+    set (SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+         CACHE STRING "Set the SO version for dynamic libraries")
+else ()
+    # Development master makes no ABI stability guarantee, so we make the
+    # SO naming capture down to the major.minor.patch level.
+    set (SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}
+         CACHE STRING "Set the SO version for dynamic libraries")
+endif ()
+if (VERBOSE)
+    message(STATUS "Setting SOVERSION to: ${SOVERSION}")
+endif ()
+
+
+###########################################################################
 # BUILD_SHARED_LIBS, if turned off, will disable building of .so/.dll
 # dynamic libraries and instead only build static libraries.
 #
@@ -544,8 +563,9 @@ set (CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 
 
 ###########################################################################
-# Macro to install targets to the appropriate locations.  Use this instead of
-# the install(TARGETS ...) signature.
+# Macro to install targets to the appropriate locations.  Use this instead
+# of the install(TARGETS ...) signature. Note that it adds it to the
+# export targets list for when we generate config files.
 #
 # Usage:
 #

@@ -48,6 +48,8 @@ Contributor License Agreement (CLA) and Intellectual Property
 To protect the project -- and the contributors! -- we do require a
 Contributor License Agreement (CLA) for anybody submitting changes.
 
+**While the repo is still under github.com/imageworks**
+
 * If you are an individual writing the code on your own time and you're SURE
 you are the sole owner of any intellectual property you contribute, use the
 [Individual CLA](http://opensource.imageworks.com/cla/pdf/Imageworks_Contributor_License_Agreement_Individual.pdf).
@@ -63,6 +65,45 @@ opensource@imageworks.com
 
 Our CLA's are based on those used by Apache and many other open source
 projects.
+
+**After the repo is moved to github.com/AcademySoftwareFoundation**
+
+OSL uses EasyCLA for managing CLAs, which automatically checks to ensure
+CLAs are signed by a contributor before a commit can be merged.
+
+* If you are an individual writing the code on your own time and
+  you're SURE you are the sole owner of any intellectual property you
+  contribute, you can [sign the CLA as an individual contributor](https://github.com/communitybridge/easycla/blob/master/contributors/sign-a-cla-as-an-individual-contributor-to-github.md).
+
+* If you are writing the code as part of your job, or if there is any
+  possibility that your employers might think they own any intellectual
+  property you create, then you should use the [Corporate Contributor
+  Licence Agreement](https://github.com/communitybridge/easycla/blob/master/contributors/contribute-to-a-github-company-project.md).
+
+The OSL CLAs may be previewed here:
+[Corporate](https://github.com/imageworks/OpenShadingLanguage/ASWF/OSL-CLA-corporate.md),
+[Individual]((https://github.com/imageworks/OpenShadingLanguage/ASWF/OSL-CLA-individual.md)).
+
+** Contribution sign off
+
+ASWF requires the use of the [Developer’s Certificate of Origin 1.1
+(DCO)](https://developercertificate.org/), which is the same mechanism that
+the [Linux®
+Kernel](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/Documentation/process/submitting-patches.rst#n416)
+and many other communities use to manage code contributions. The DCO is
+considered one of the simplest tools for sign offs from contributors as the
+representations are meant to be easy to read and indicating signoff is done
+as a part of the commit message.
+
+Here is an example Signed-off-by line, which indicates that the submitter
+accepts the DCO:
+
+`Signed-off-by: John Doe <john.doe@example.com>`
+
+You can include this automatically when you commit a change to your local
+git repository using <code>git commit -s</code>. You might also want to
+leverage this [command line tool](https://github.com/coderanger/dco) for
+automatically adding the signoff message on commits.
 
 
 Pull Requests and Code Review

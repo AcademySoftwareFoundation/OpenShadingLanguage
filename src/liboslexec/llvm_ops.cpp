@@ -145,13 +145,18 @@ void * __dso_handle = 0; // necessary to avoid linkage issues in bitcode
 #define COL(x) (*(Color3 *)x)
 #define DCOL(x) (*(Dual2<Color3> *)x)
 
-
 #ifndef OSL_SHADEOP
 #  ifdef __CUDACC__
 #    define OSL_SHADEOP extern "C" __device__ OSL_LLVM_EXPORT __attribute__((always_inline))
-#  else
+#  elif defined(OSL_COMPILING_TO_BITCODE)
 #    define OSL_SHADEOP extern "C" OSL_LLVM_EXPORT __attribute__((always_inline))
+#  else
+#    define OSL_SHADEOP extern "C" OSL_LLVM_EXPORT
 #  endif
+#endif
+
+#ifndef OSL_SHADEOP_NOINLINE
+#  define OSL_SHADEOP_NOINLINE extern "C" OSL_DEVICE OSL_LLVM_EXPORT
 #endif
 
 
@@ -789,7 +794,7 @@ OSL_SHADEOP int osl_raytype_bit (void *sg_, int bit)
 
 
 // extern declaration
-OSL_SHADEOP int osl_range_check_err (int indexvalue, int length,
+OSL_SHADEOP_NOINLINE int osl_range_check_err (int indexvalue, int length,
                          const char *symname, void *sg,
                          const void *sourcefile, int sourceline,
                          const char *groupname, int layer,

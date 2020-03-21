@@ -132,6 +132,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     DECL (osl_ ## name ## _dvvdv,  "xXXX")         \
     DECL (osl_ ## name ## _dvdvv,  "xXXX")
 
+#define BINARY_VF_OP_IMPL(name)                    \
+    DECL (osl_ ## name ## _vvf, "xXXf")            \
+    DECL (osl_ ## name ## _dvdvdf, "xXXX")         \
+    DECL (osl_ ## name ## _dvvdf, "xXXX")          \
+    DECL (osl_ ## name ## _dvdvf, "xXXf")          
 
 
 
@@ -274,13 +279,9 @@ UNARY_OP_IMPL(exp)
 UNARY_OP_IMPL(exp2)
 UNARY_OP_IMPL(expm1)
 BINARY_OP_IMPL(pow)
+BINARY_VF_OP_IMPL(pow)
 UNARY_OP_IMPL(erf)
 UNARY_OP_IMPL(erfc)
-
-DECL (osl_pow_vvf, "xXXf")
-DECL (osl_pow_dvdvdf, "xXXX")
-DECL (osl_pow_dvvdf, "xXXX")
-DECL (osl_pow_dvdvf, "xXXf")
 
 UNARY_OP_IMPL(sqrt)
 UNARY_OP_IMPL(inversesqrt)
@@ -310,6 +311,7 @@ DECL (osl_fabs_ii, "ii")
 UNARY_OP_IMPL(abs)
 UNARY_OP_IMPL(fabs)
 BINARY_OP_IMPL(fmod)
+BINARY_VF_OP_IMPL(fmod)
 
 DECL (osl_smoothstep_ffff, "ffff")
 DECL (osl_smoothstep_dfffdf, "xXffX")

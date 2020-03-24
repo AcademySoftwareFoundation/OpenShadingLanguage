@@ -169,7 +169,7 @@ endif ()
 
 # On Linux, Boost 1.55 and higher seems to need to link against -lrt
 if (CMAKE_SYSTEM_NAME MATCHES "Linux"
-      AND ${Boost_VERSION} VERSION_GREATER_EQUAL 105500)
+      AND "${Boost_VERSION}" VERSION_GREATER_EQUAL 105500)
     list (APPEND Boost_LIBRARIES "rt")
 endif ()
 

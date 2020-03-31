@@ -35,8 +35,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/oslconfig.h>
 #include <OSL/llvm_util.h>
 
-#if OSL_LLVM_VERSION < 60
-#error "LLVM minimum version required for OSL is 6.0"
+#if OSL_LLVM_VERSION < 70
+#error "LLVM minimum version required for OSL is 7.0"
 #endif
 
 #include <llvm/IR/Constants.h>
@@ -71,12 +71,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm/Transforms/Utils/UnifyFunctionExitNodes.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
-#include <llvm/Transforms/Scalar/GVN.h>
-
-#if OSL_LLVM_VERSION >= 70
-#include <llvm/Transforms/Utils.h>
 #include <llvm/Transforms/InstCombine/InstCombine.h>
-#endif
+#include <llvm/Transforms/Scalar/GVN.h>
+#include <llvm/Transforms/Utils.h>
 
 // additional includes for PTX generation
 #include <llvm/Transforms/Utils/SymbolRewriter.h>
@@ -1165,12 +1162,9 @@ LLVM_Util::op_memcpy (llvm::Value *dst, int dstalign,
 #if OSL_LLVM_VERSION >= 100
     builder().CreateMemCpy (dst, llvm::MaybeAlign(dstalign), src, llvm::MaybeAlign(srcalign),
                             uint64_t(len));
-#elif OSL_LLVM_VERSION >= 70
+#else
     builder().CreateMemCpy (dst, (unsigned)dstalign, src, (unsigned)srcalign,
                             uint64_t(len));
-#else
-    builder().CreateMemCpy (dst, src, uint64_t(len),
-                            std::min ((unsigned)dstalign, (unsigned)srcalign));
 #endif
 }
 
@@ -1480,11 +1474,7 @@ LLVM_Util::write_bitcode_file (const char *filename, std::string *err)
     std::error_code local_error;
     llvm::raw_fd_ostream out (filename, local_error, llvm::sys::fs::F_None);
     if (! out.has_error()) {
-#if OSL_LLVM_VERSION >= 70
         llvm::WriteBitcodeToFile (*module(), out);
-#else
-        llvm::WriteBitcodeToFile (module(), out);
-#endif
         if (err && local_error)
             *err = local_error.message ();
     }
@@ -1505,11 +1495,7 @@ LLVM_Util::ptx_compile_group (llvm::Module* lib_module, const std::string& name,
     llvm::Module* linked_module = new_module (name.c_str());
 
     // First, link in the cloned ShaderGroup module
-#if OSL_LLVM_VERSION >= 70
     std::unique_ptr<llvm::Module> mod_ptr = llvm::CloneModule (*module());
-#else
-    std::unique_ptr<llvm::Module> mod_ptr = llvm::CloneModule (module());
-#endif
     bool failed = llvm::Linker::linkModules (*linked_module, std::move (mod_ptr));
     OSL_ASSERT (!failed && "PTX compile error: Unable to link group module");
 
@@ -1571,12 +1557,9 @@ LLVM_Util::ptx_compile_group (llvm::Module* lib_module, const std::string& name,
     target_machine->addPassesToEmitFile (mod_pm, assembly_stream,
                                          nullptr,  // FIXME: Correct?
                                          llvm::CGFT_AssemblyFile);
-#elif OSL_LLVM_VERSION >= 70
-    target_machine->addPassesToEmitFile (mod_pm, assembly_stream,
-                                         nullptr,  // FIXME: Correct?
-                                         llvm::TargetMachine::CGFT_AssemblyFile);
 #else
     target_machine->addPassesToEmitFile (mod_pm, assembly_stream,
+                                         nullptr,  // FIXME: Correct?
                                          llvm::TargetMachine::CGFT_AssemblyFile);
 #endif
 

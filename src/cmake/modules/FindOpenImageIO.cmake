@@ -23,6 +23,10 @@
 #   OPENIMAGEIO_VERSION_TWEAK  Version minor tweak
 #   OIIOTOOL_BIN               Path to oiiotool executable
 #
+# Imported targets:
+#   OpenImageIO::OpenImageIO   The libOpenImageIO library.
+#   OpenImageIO::oiiotool      The oiiotool executable.
+#
 # Special inputs:
 #   OpenImageIO_ROOT - if using CMake >= 3.12, will automatically search
 #                          this area for OIIO components.
@@ -31,6 +35,16 @@
 #                          This is deprecated, but will work for a while.
 #   OpenImageIO_FIND_QUIETLY - if set, print minimal console output
 #   OIIO_LIBNAME_SUFFIX - if set, optional nonstandard library suffix
+#
+###########################################################################
+#
+# NOTE: This file is deprecated.
+#
+# In OIIO 2.1+, we generate OpenImageIOConfig.cmake files that are now the
+# preferred way for downstream projecs to find an installed OIIO. There
+# should be no need to copy this FindOpenImageIO.cmake file into downstream
+# projects, *unless* they need to work with a range of OIIO vesions that
+# may include <2.1, which would lack the generated config files.
 #
 ###########################################################################
 
@@ -47,9 +61,7 @@ find_library ( OPENIMAGEIO_LIBRARY
                PATH_SUFFIXES lib64 lib )
 find_path ( OPENIMAGEIO_INCLUDE_DIR
             NAMES OpenImageIO/imageio.h
-            HINTS ${OPENIMAGEIO_ROOT_DIR}
-                  ${OPENIMAGEIO_ROOT_DIR}/include
-             )
+            HINTS ${OPENIMAGEIO_ROOT_DIR} )
 find_program ( OIIOTOOL_BIN
                NAMES oiiotool
                HINTS ${OPENIMAGEIO_ROOT_DIR} )
@@ -85,6 +97,12 @@ if (OPENIMAGEIO_FOUND)
     set (OPENIMAGEIO_INCLUDES ${OPENIMAGEIO_INCLUDE_DIR})
     set (OPENIMAGEIO_LIBRARIES ${OPENIMAGEIO_LIBRARY})
     get_filename_component (OPENIMAGEIO_LIBRARY_DIRS "${OPENIMAGEIO_LIBRARY}" DIRECTORY)
+    if (NOT OpenImageIO_FIND_QUIETLY)
+        message ( STATUS "OpenImageIO includes     = ${OPENIMAGEIO_INCLUDE_DIR}" )
+        message ( STATUS "OpenImageIO libraries    = ${OPENIMAGEIO_LIBRARIES}" )
+        message ( STATUS "OpenImageIO library_dirs = ${OPENIMAGEIO_LIBRARY_DIRS}" )
+        message ( STATUS "OpenImageIO oiiotool     = ${OIIOTOOL_BIN}" )
+    endif ()
 
     if (NOT TARGET OpenImageIO::OpenImageIO)
         add_library(OpenImageIO::OpenImageIO UNKNOWN IMPORTED)

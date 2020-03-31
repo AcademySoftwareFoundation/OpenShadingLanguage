@@ -2,6 +2,9 @@
 
 # Install OpenImageIO
 
+# Exit the whole script if any command fails.
+set -ex
+
 OPENIMAGEIO_REPO=${OPENIMAGEIO_REPO:=OpenImageIO/oiio}
 OPENIMAGEIO_BRANCH=${OPENIMAGEIO_BRANCH:=master}
 LOCAL_DEPS_DIR=${LOCAL_DEPS_DIR:=${PWD}/ext}

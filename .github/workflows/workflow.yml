@@ -111,8 +111,26 @@ jobs:
             source src/build-scripts/gh-installdeps.bash
             source src/build-scripts/ci-build-and-test.bash
 
+  linux-2021ish-gcc8-llvm9:
+    name: "Linux gcc8, C++17, llvm10, oiio master, avx2, exr2.4"
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v1
+      - name: all
+        env:
+          CXX: g++-8
+          CMAKE_CXX_STANDARD: 17
+          LLVM_VERSION: 10.0.0
+          USE_SIMD: avx2,f16c
+          OPENEXR_VERSION: 2.4.0
+          OPENIMAGEIO_BRANCH: master
+        run: |
+            source src/build-scripts/ci-startup.bash
+            source src/build-scripts/gh-installdeps.bash
+            source src/build-scripts/ci-build-and-test.bash
+
   linux-bleeding:
-    name: "Linux bleeding edge: gcc8, C++17, llvm9, oiio master, avx2, exr2.4"
+    name: "Linux bleeding edge: gcc8, C++17, llvm10, oiio master, avx2, exr2.4"
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v1
@@ -121,7 +139,7 @@ jobs:
           CXX: g++-8
           USE_CPP: 17
           CMAKE_CXX_STANDARD: 17
-          LLVM_VERSION: 9.0.0
+          LLVM_VERSION: 10.0.0
           USE_SIMD: avx2,f16c
           OPENEXR_VERSION: 2.4.0
           OPENIMAGEIO_BRANCH: master

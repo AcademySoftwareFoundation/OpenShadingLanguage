@@ -114,6 +114,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 
+// Note about __CUDACC__ versus __CUDA_ARCH__:
+//
+// __CUDACC__     defined any time we are compiling a module for Cuda
+//                (both for the host pass and the device pass). "Do this
+//                when using nvcc or clang with ptx target."
+// __CUDA_ARCH__  is only defined when doing the device pass. "Do this only
+//                for code that will actually run on the GPU."
+
+
 /////////////////////////////////////////////////////////////////////////
 // Detect which C++ standard we're using, and handy macros.
 // See https://en.cppreference.com/w/cpp/compiler_support
@@ -340,7 +349,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #ifndef OSL_DEVICE
-#  ifdef __CUDA_ARCH__
+#  ifdef __CUDACC__
 #    define OSL_DEVICE __device__
 #  else
 #    define OSL_DEVICE
@@ -348,7 +357,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #ifndef OSL_CONSTANT_DATA
-#  ifdef __CUDA_ARCH__
+#  ifdef __CUDACC__
 #    define OSL_CONSTANT_DATA __constant__
 #  else
 #    define OSL_CONSTANT_DATA

@@ -1,6 +1,9 @@
-Release 1.10.10 -- ? Mar 2020 (compared to 1.10.9)
+Release 1.10.10 -- 2 Apr 2020 (compared to 1.10.9)
 --------------------------------------------------
-
+* Change default of `OSL_BUILD_MATERIALX` to OFF. This will probably be
+  deprecated entirely for 1.11's (or 2.0's) final release. But in the mean
+  time, we have drifted out of sync with MX, which has their own copies of
+  this now, so we're disabling building of these shaders by default.
 
 Release 1.10.9 -- 1 Feb 2020 (compared to 1.10.8)
 --------------------------------------------------

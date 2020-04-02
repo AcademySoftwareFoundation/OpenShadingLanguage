@@ -143,6 +143,7 @@ jobs:
           USE_SIMD: avx2,f16c
           OPENEXR_VERSION: 2.4.0
           OPENIMAGEIO_BRANCH: master
+          OSL_BUILD_MATERIALX: 1
         run: |
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/gh-installdeps.bash

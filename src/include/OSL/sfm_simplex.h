@@ -204,7 +204,7 @@ namespace fast_grad3 {
 //static fast_grad3::mask_validator the_fast_grad3_mask_validator;
 
 namespace fast_grad4 {
-    alignas(64) static const OSL::Block<Vec4,32> lut_wide(
+    static const OSL::Block<Vec4,32> lut_wide(
       Vec4( 0.0f, 1.0f, 1.0f, 1.0f ),  Vec4( 0.0f, 1.0f, 1.0f, -1.0f ),  Vec4( 0.0f, 1.0f, -1.0f, 1.0f ),  Vec4( 0.0f, 1.0f, -1.0f, -1.0f ), // 32 tesseract edges
       Vec4( 0.0f, -1.0f, 1.0f, 1.0f ), Vec4( 0.0f, -1.0f, 1.0f, -1.0f ), Vec4( 0.0f, -1.0f, -1.0f, 1.0f ), Vec4( 0.0f, -1.0f, -1.0f, -1.0f ),
       Vec4( 1.0f, 0.0f, 1.0f, 1.0f ),  Vec4( 1.0f, 0.0f, 1.0f, -1.0f ),  Vec4( 1.0f, 0.0f, -1.0f, 1.0f ),  Vec4( 1.0f, 0.0f, -1.0f, -1.0f ),
@@ -591,7 +591,7 @@ static fast_simplex::mask_emitter the_fast_simplex_mask_emitter;
     static OSL_FORCEINLINE float
     simplexnoise1 (float x, OptionalDerivsT derivPolicy = OptionalDerivsT())
     {
-        int i0 = sfm::ifloor(x);
+        int i0 = OIIO::ifloor(x);
         int i1 = i0 + 1;
         float x0 = x - i0;
         float x1 = x0 - 1.0f;
@@ -647,8 +647,8 @@ static fast_simplex::mask_emitter the_fast_simplex_mask_emitter;
         float s = ( x + y ) * F2; /* Hairy factor for 2D */
         float xs = x + s;
         float ys = y + s;
-        int i = sfm::ifloor(xs);
-        int j = sfm::ifloor(ys);
+        int i = OIIO::ifloor(xs);
+        int j = OIIO::ifloor(ys);
 
         float t = (float) (i + j) * G2;
         float X0 = i - t; /* Unskew the cell origin back to (x,y) space */
@@ -761,9 +761,9 @@ static fast_simplex::mask_emitter the_fast_simplex_mask_emitter;
         float ys = y+s;
         float zs = z+s;
 
-        int i = sfm::ifloor(xs);
-        int j = sfm::ifloor(ys);
-        int k = sfm::ifloor(zs);
+        int i = OIIO::ifloor(xs);
+        int j = OIIO::ifloor(ys);
+        int k = OIIO::ifloor(zs);
 
         float t = (float)(i+j+k)*G3;
         float X0 = i-t; // Unskew the cell origin back to (x,y,z) space
@@ -989,10 +989,10 @@ static fast_simplex::mask_emitter the_fast_simplex_mask_emitter;
         float ys = y + s;
         float zs = z + s;
         float ws = w + s;
-        int i = sfm::ifloor(xs);
-        int j = sfm::ifloor(ys);
-        int k = sfm::ifloor(zs);
-        int l = sfm::ifloor(ws);
+        int i = OIIO::ifloor(xs);
+        int j = OIIO::ifloor(ys);
+        int k = OIIO::ifloor(zs);
+        int l = OIIO::ifloor(ws);
 
         float t = (i + j + k + l) * G4; // Factor for 4D unskewing
         float X0 = i - t; // Unskew the cell origin back to (x,y,z,w) space

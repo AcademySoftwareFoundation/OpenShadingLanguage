@@ -180,6 +180,22 @@ osl_texture_set_time (void *opt, float x)
     ((TextureOpt *)opt)->time = x;
 }
 
+OSL_SHADEOP int
+osl_texture_decode_wrapmode(void * name)
+{
+    const ustring & uname = USTR(name);
+    // std::cout << "osl_texture_decode_wrapmode = " << uname.c_str() << std::endl;
+    return OIIO::TextureOpt::decode_wrapmode(uname);
+}
+
+OSL_SHADEOP int
+osl_texture_decode_interpmode(void * name)
+{
+    const ustring & uname = USTR(name);
+    // std::cout << "osl_texture_decode_interpmode = " << uname.c_str() << std::endl;
+    return ::tex_interp_to_code(uname);
+}
+
 inline int
 tex_interp_to_code (ustring modename)
 {
@@ -260,12 +276,18 @@ osl_texture (void *sg_, const char *name, void *handle,
     OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd;
     bool ok = sg->renderer->texture (USTR(name),
                                      (TextureSystem::TextureHandle *)handle, sg->context->texture_thread_info(),
-                                     *opt, sg, s, t, dsdx, dtdx, dsdy, dtdy, 4,
+                                     *opt, sg, s, t, dsdx, dtdx, dsdy, dtdy,
+#ifdef OSL_ONLY_TEXTURE_REQUIRED_CHANNELS
+                                     chans + (alpha ? 1 : 0),
+#else
+                                     4,
+#endif
                                      (float *)&result_simd,
                                      derivs ? (float *)&dresultds_simd : NULL,
                                      derivs ? (float *)&dresultdt_simd : NULL,
                                      errormessage);
-
+    // NOTE: regardless of the value of "ok" we will always copy over the texture system's results.
+    // We are relying on the texture system properly filling in missing or fill colors
     for (int i = 0;  i < chans;  ++i)
         ((float *)result)[i] = result_simd[i];
     if (alpha)
@@ -312,12 +334,19 @@ osl_texture3d (void *sg_, const char *name, void *handle,
     bool ok = sg->renderer->texture3d (USTR(name),
                                        (TextureSystem::TextureHandle *)handle, sg->context->texture_thread_info(),
                                        *opt, sg, P, dPdx, dPdy, Vec3(0),
-                                       4, (float *)&result_simd,
+#ifdef OSL_ONLY_TEXTURE_REQUIRED_CHANNELS
+                                       chans + (alpha ? 1 : 0),
+#else
+                                       4,
+#endif
+                                       (float *)&result_simd,
                                        derivs ? (float *)&dresultds_simd : nullptr,
                                        derivs ? (float *)&dresultdt_simd : nullptr,
                                        derivs ? (float *)&dresultdr_simd : nullptr,
                                        errormessage);
 
+    // NOTE: regardless of the value of "ok" we will always copy over the texture system's results.
+    // We are relying on the texture system properly filling in missing or fill colors
     for (int i = 0;  i < chans;  ++i)
         ((float *)result)[i] = result_simd[i];
     if (alpha)
@@ -325,8 +354,8 @@ osl_texture3d (void *sg_, const char *name, void *handle,
 
     // Correct our str texture space gradients into xyz-space gradients
     if (derivs) {
-        OIIO::simd::float4 dresultdx_simd = dresultds_simd * dPdx[0] + dresultdt_simd * dPdx[1] + dresultdr_simd * dPdx[2];
-        OIIO::simd::float4 dresultdy_simd = dresultds_simd * dPdy[0] + dresultdt_simd * dPdy[1] + dresultdr_simd * dPdy[2];
+        OIIO::simd::float4 dresultdx_simd = dresultds_simd * dPdx.x + dresultdt_simd * dPdx.y + dresultdr_simd * dPdx.z;
+        OIIO::simd::float4 dresultdy_simd = dresultds_simd * dPdy.x + dresultdt_simd * dPdy.y + dresultdr_simd * dPdy.z;
         if (dresultdx) {
             for (int i = 0;  i < chans;  ++i)
                 ((float *)dresultdx)[i] = dresultdx_simd[i];

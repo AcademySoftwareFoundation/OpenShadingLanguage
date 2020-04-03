@@ -129,9 +129,12 @@ static ustring op_end("end");
 static ustring op_nop("nop");
 static ustring op_aassign("aassign");
 static ustring op_compassign("compassign");
+static ustring op_mxcompassign("mxcompassign");
+static ustring op_mxcompref("mxcompref");
 static ustring op_aref("aref");
 static ustring op_compref("compref");
 static ustring op_useparam("useparam");
+static ustring unknown_shader_group_name("<Unknown Shader Group Name>");
 
 
 struct HelperFuncRecord {
@@ -141,12 +144,10 @@ struct HelperFuncRecord {
         : argtypes(argtypes), function(function) {}
 };
 
-typedef std::unordered_map<std::string,HelperFuncRecord> HelperFuncMap;
-HelperFuncMap llvm_helper_function_map;
-atomic_int llvm_helper_function_map_initialized (0);
-spin_mutex llvm_helper_function_map_mutex;
-std::vector<std::string> external_function_names;
-
+typedef unordered_map<std::string,HelperFuncRecord> HelperFuncMap;
+static HelperFuncMap llvm_helper_function_map;
+static atomic_int llvm_helper_function_map_initialized (0);
+static spin_mutex llvm_helper_function_map_mutex;
 
 
 static void
@@ -158,8 +159,7 @@ initialize_llvm_helper_function_map ()
     if (llvm_helper_function_map_initialized)
         return;
 #define DECL(name,signature) \
-    llvm_helper_function_map[#name] = HelperFuncRecord(signature,name); \
-    external_function_names.push_back (#name);
+    llvm_helper_function_map[#name] = HelperFuncRecord(signature,name);
 #include "builtindecl.h"
 #undef DECL
 
@@ -168,7 +168,7 @@ initialize_llvm_helper_function_map ()
 
 
 
-void *
+static void *
 helper_function_lookup (const std::string &name)
 {
     HelperFuncMap::const_iterator i = llvm_helper_function_map.find (name);
@@ -190,7 +190,7 @@ BackendLLVM::llvm_type_sg ()
     // Derivs look like arrays of 3 values
     llvm::Type *float_deriv = llvm_type (TypeDesc(TypeDesc::FLOAT, TypeDesc::SCALAR, 3));
     llvm::Type *triple_deriv = llvm_type (TypeDesc(TypeDesc::FLOAT, TypeDesc::VEC3, 3));
-    std::vector<llvm::Type*> sg_types;
+    vector<llvm::Type*> sg_types;
     sg_types.push_back (triple_deriv);      // P, dPdx, dPdy
     sg_types.push_back (ll.type_triple());  // dPdz
     sg_types.push_back (triple_deriv);      // I, dIdx, dIdy
@@ -240,7 +240,7 @@ BackendLLVM::llvm_type_groupdata ()
     if (m_llvm_type_groupdata)
         return m_llvm_type_groupdata;
 
-    std::vector<llvm::Type*> fields;
+    vector<llvm::Type*> fields;
     int offset = 0;
     int order = 0;
 
@@ -357,7 +357,7 @@ BackendLLVM::llvm_type_closure_component ()
     if (m_llvm_type_closure_component)
         return m_llvm_type_closure_component;
 
-    std::vector<llvm::Type*> comp_types;
+    vector<llvm::Type*> comp_types;
     comp_types.push_back (ll.type_int());     // id
     comp_types.push_back (ll.type_triple());  // w
     comp_types.push_back (ll.type_int());     // fake field for char mem[4]
@@ -472,7 +472,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
             llvm_void_ptr (sym),
             ll.constant (sym.derivsize()),
             ll.void_ptr (userdata_initialized_ref(userdata_index)),
-            ll.constant (userdata_index),
+            ll.constant (userdata_index)
         };
         llvm::Value *got_userdata =
             ll.call_function ("osl_bind_interpolated_param", args);
@@ -589,6 +589,17 @@ BackendLLVM::llvm_generate_debugnan (const Opcode &op)
             llvm::Value *ind = llvm_load_value (*opargsym (op, 1));
             offset = ind;
             ncheck = ll.constant(1);
+        } else if (op.opname() == op_mxcompassign) {
+            // Special case -- matrix component assignment -- only check one channel
+            ASSERT (i == 0 && "only arg 0 is written for compassign");
+            Symbol &row_sym = *opargsym (op, 1);
+            Symbol &col_sym = *opargsym (op, 2);
+            llvm::Value *row_ind = llvm_load_value (row_sym);
+            llvm::Value *col_ind = llvm_load_value (col_sym);
+            llvm::Value *comp = ll.op_mul (row_ind, ll.constant(4));
+            comp = ll.op_add (comp, col_ind);
+            offset = comp;
+            ncheck = ll.constant(1);
         }
 
         llvm::Value *args[] = { ncomps,
@@ -637,6 +648,14 @@ BackendLLVM::llvm_generate_debug_uninit (const Opcode &op)
             // don't generate uninit test code for it.
             continue;
         }
+        if (op.opname() == Strings::op_dowhile && i == 0) {
+            // The first argument of 'dowhile' is the condition temp, but
+            // it most likely its initializer run yet.
+            // Unless there is no "condition" code block, in that
+            // case we should still test it for uninit
+            if (op.jump(0) != op.jump(1))
+                continue;
+        }
         if (op.opname() == op_aref && i == 1) {
             // Special case -- array assignment -- only check one element
             llvm::Value *ind = llvm_load_value (*opargsym (op, 2));
@@ -647,6 +666,17 @@ BackendLLVM::llvm_generate_debug_uninit (const Opcode &op)
             // Special case -- component assignment -- only check one channel
             llvm::Value *ind = llvm_load_value (*opargsym (op, 2));
             offset = ind;
+            ncheck = ll.constant(1);
+        } else if (op.opname() == op_mxcompref && i == 1) {
+            // Special case -- matrix component reference -- only check one channel
+            Symbol &row_sym = *opargsym (op, 2);
+            Symbol &col_sym = *opargsym (op, 3);
+            llvm::Value *row_ind = llvm_load_value (row_sym);
+            llvm::Value *col_ind = llvm_load_value (col_sym);
+
+            llvm::Value *comp = ll.op_mul (row_ind, ll.constant(4));
+            comp = ll.op_add (comp, col_ind);
+            offset = comp;
             ncheck = ll.constant(1);
         }
 
@@ -699,6 +729,9 @@ BackendLLVM::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
                 llvm_generate_debug_uninit (op);
             if (shadingsys().llvm_debug_ops())
                 llvm_generate_debug_op_printf (op);
+            if (ll.debug_is_enabled()) {
+                ll.debug_set_location(op.sourcefile(), op.sourceline() <= 0 ? 1 : op.sourceline());
+            }
             bool ok = (*opd->llvmgen) (*this, opnum);
             if (! ok)
                 return false;
@@ -736,6 +769,13 @@ BackendLLVM::build_llvm_init ()
            ll.make_function (unique_name, false,
                              ll.type_void(), // return type
                              llvm_type_sg_ptr(), llvm_type_groupdata_ptr()));
+
+    if (ll.debug_is_enabled())
+    {
+        ustring file_name = group()[0]->op(group()[0]->maincodebegin()).sourcefile();
+        unsigned int method_line = 0;
+        ll.debug_push_function(unique_name, file_name, method_line);
+    }
 
     // Get shader globals and groupdata pointers
     m_llvm_shaderglobals_ptr = ll.current_function_arg(0); //arg_it++;
@@ -794,6 +834,10 @@ BackendLLVM::build_llvm_init ()
                   << " after llvm  = " 
                   << ll.bitcode_string(ll.current_function()) << "\n";
 
+    if (ll.debug_is_enabled()) {
+        ll.debug_pop_function();
+    }
+
     ll.end_builder();  // clear the builder
 
     return ll.current_function();
@@ -813,6 +857,14 @@ BackendLLVM::build_llvm_instance (bool groupentry)
                              !is_entry_layer, // fastcall for non-entry layer functions
                              ll.type_void(), // return type
                              llvm_type_sg_ptr(), llvm_type_groupdata_ptr()));
+
+    if (ll.debug_is_enabled())
+    {
+        ustring file_name = inst()->op(inst()->maincodebegin()).sourcefile();
+
+        unsigned int method_line = inst()->op(inst()->maincodebegin()).sourceline();
+        ll.debug_push_function(unique_layer_name, file_name, method_line);
+    }
 
     // Get shader globals and groupdata pointers
     m_llvm_shaderglobals_ptr = ll.current_function_arg(0); //arg_it++;
@@ -946,6 +998,11 @@ BackendLLVM::build_llvm_instance (bool groupentry)
     // Transfer all of this layer's outputs into the downstream shader's
     // inputs.
     for (int layer = this->layer()+1;  layer < group().nlayers();  ++layer) {
+        // If connection is to a node not used in the next layer
+        // then it may not have been analyzed properly
+        // and more importantly can be skipped
+        if(m_layer_remap[layer] == -1)
+            continue;
         ShaderInstance *child = group()[layer];
         for (int c = 0, Nc = child->nconnections();  c < Nc;  ++c) {
             const Connection &con (child->connection (c));
@@ -961,7 +1018,7 @@ BackendLLVM::build_llvm_instance (bool groupentry)
                 Symbol *srcsym (inst()->symbol (con.src.param));
                 Symbol *dstsym (child->symbol (con.dst.param));
 
-                // Check remining connections to see if any channels of this
+                // Check remaining connections to see if any channels of this
                 // aggregate need to be initialize.
                 if (con.dst.channel != -1 && initedsyms.count(dstsym) == 0) {
                     initedsyms.insert(dstsym);
@@ -1016,6 +1073,10 @@ BackendLLVM::build_llvm_instance (bool groupentry)
                   << "/" << group().nlayers() << " after llvm  = " 
                   << ll.bitcode_string(ll.current_function()) << "\n";
 
+    if (ll.debug_is_enabled()) {
+        ll.debug_pop_function();
+    }
+
     ll.end_builder();  // clear the builder
 
     return ll.current_function();
@@ -1026,7 +1087,14 @@ BackendLLVM::build_llvm_instance (bool groupentry)
 void
 BackendLLVM::initialize_llvm_group ()
 {
-    ll.setup_optimization_passes (shadingsys().llvm_optimize());
+    if (ll.debug_is_enabled()) {
+        const char * compile_unit_name = m_group.m_name.empty() ? unknown_shader_group_name.c_str() : m_group.m_name.c_str();
+
+        ll.debug_setup_compilation_unit(compile_unit_name);
+    }
+
+    const bool targetHost = !use_optix();
+    ll.setup_optimization_passes (shadingsys().llvm_optimize(), targetHost);
 
     // Clear the shaderglobals and groupdata types -- they will be
     // created on demand.
@@ -1048,7 +1116,7 @@ BackendLLVM::initialize_llvm_group ()
         int advance;
         TypeSpec rettype = OSLCompilerImpl::type_from_code (types, &advance);
         types += advance;
-        std::vector<llvm::Type*> params;
+        vector<llvm::Type*> params;
         while (*types) {
             TypeSpec t = OSLCompilerImpl::type_from_code (types, &advance);
             if (t.simpletype().basetype == TypeDesc::UNKNOWN) {
@@ -1072,7 +1140,7 @@ BackendLLVM::initialize_llvm_group ()
     }
 
     // Needed for closure setup
-    std::vector<llvm::Type*> params(3);
+    vector<llvm::Type*> params(3);
     params[0] = (llvm::Type *) ll.type_char_ptr();
     params[1] = ll.type_int();
     params[2] = (llvm::Type *) ll.type_char_ptr();
@@ -1135,7 +1203,13 @@ BackendLLVM::run ()
 
     // Create the ExecutionEngine. We don't create an ExecutionEngine in the
     // OptiX case, because we are using the NVPTX backend and not MCJIT
-    if (! use_optix() && ! ll.make_jit_execengine (&err)) {
+    if (! use_optix() &&
+        ! ll.make_jit_execengine (&err,
+                                  shadingsys().llvm_debugging_symbols(),
+                                  shadingsys().llvm_profiling_events(),
+                                  OIIO::ustring(),
+                                  true /*no_fma*/ // no_fma to match unit test results
+                                  )) {
         shadingcontext()->errorf("Failed to create engine: %s\n", err);
         OSL_ASSERT (0);
         return;
@@ -1174,7 +1248,7 @@ BackendLLVM::run ()
     // Generate the LLVM IR for each layer.  Skip unused layers.
     m_llvm_local_mem = 0;
     llvm::Function* init_func = build_llvm_init ();
-    std::vector<llvm::Function*> funcs (nlayers, NULL);
+    vector<llvm::Function*> funcs (nlayers, NULL);
     for (int layer = 0; layer < nlayers; ++layer) {
         set_inst (layer);
         if (m_layer_remap[layer] != -1) {
@@ -1195,21 +1269,25 @@ BackendLLVM::run ()
 
     // The module contains tons of "library" functions that our generated
     // IR might call. But probably not. We don't want to incur the overhead
-    // of fully compiling those, so we tell LLVM_Util to turn them into
-    // non-externally-visible symbols (allowing them to be discarded if not
-    // used internal to the module). We need to make exceptions for our
-    // entry points, as well as for all the external functions that are
-    // just declarations (not definitions) in the module (which we have
-    // conveniently stashed in external_function_names).
-    std::vector<std::string> entry_function_names;
-    entry_function_names.push_back (ll.func_name(init_func));
+    // of fully compiling those, so let LLVM_Util prune all functions which are
+    // not called directly or indirectly by our init or shader layer functions.
+    // It turns out to be much faster to prune these from the IR ahead of time
+    // versus letting the optimizer figure it out as the optimizer would have
+    // run many passes over functions which we later will be dropped.
+    // Only the external_functions will have external linkage all other
+    // remaining functions will be set to internal linkage
+    unordered_set<llvm::Function*> external_functions;
+    external_functions.insert(init_func);
     for (int layer = 0; layer < nlayers; ++layer) {
         // set_inst (layer);
         llvm::Function* f = funcs[layer];
-        if (f && group().is_entry_layer(layer))
-            entry_function_names.push_back (ll.func_name(f));
+        // If we plan to call bitcode_string of a layer's function after optimization
+        // it may not exist after optimization unless we treat it as external.
+        if (f && (group().is_entry_layer(layer) || llvm_debug())) {
+            external_functions.insert(f);
+        }
     }
-    ll.internalize_module_functions ("osl_", external_function_names, entry_function_names);
+    ll.prune_and_internalize_module(external_functions);
 
     // Debug code to dump the pre-optimized bitcode to a file
     if (llvm_debug() >= 2 || shadingsys().llvm_output_bitcode()) {
@@ -1237,9 +1315,14 @@ BackendLLVM::run ()
     m_stat_llvm_opt_time += timer.lap();
 
     if (llvm_debug()) {
-        for (int layer = 0; layer < nlayers; ++layer)
-            if (funcs[layer])
-                std::cout << "func after opt  = " << ll.bitcode_string (funcs[layer]) << "\n";
+        // Feel it is more useful to get a dump of the entire optimized module
+        // vs. individual layer functions.  Especially now because we have pruned all
+        // unused function declarations and functions out of the the module.
+        // Big benefit is that the module output can be cut and pasted into
+        // https://godbolt.org/ compiler explorer as LLVM IR with a LLC target
+        // and -mcpu= options to see what machine code will be generated by
+        // different LLC versions and cpu targets
+        std::cout << "module after opt  = \n" << ll.module_string() << "\n";
         std::cout.flush();
     }
 
@@ -1294,15 +1377,8 @@ BackendLLVM::run ()
             group().llvm_compiled_version (group().llvm_compiled_layer(nlayers-1));
     }
 
-    // Remove the IR for the group layer functions, we've already JITed it
-    // and will never need the IR again.  This saves memory, and also saves
-    // a huge amount of time since we won't re-optimize it again and again
-    // if we keep adding new shader groups to the same Module.
-    for (int i = 0; i < nlayers; ++i) {
-        if (funcs[i])
-            ll.delete_func_body (funcs[i]);
-    }
-    ll.delete_func_body (init_func);
+    // We are destroying the entire module below,
+    // no reason to bother destroying individual functions
 
     // Free the exec and module to reclaim all the memory.  This definitely
     // saves memory, and has almost no effect on runtime.

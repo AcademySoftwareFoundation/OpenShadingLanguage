@@ -85,8 +85,8 @@ public:
     }
 
 private:
-    typedef std::vector<T> block_t;   ///< Type of block
-    std::list<block_t> m_block_list;  ///< List of memory blocks
+    typedef vector<T> block_t;   ///< Type of block
+    list<block_t> m_block_list;  ///< List of memory blocks
     size_t m_quanta;   ///< How big each memory block is (in T's, not bytes)
     size_t m_total;    ///< Total memory allocated (bytes!)
     OIIO::mutex m_mutex;  ///< Thread-safe lock

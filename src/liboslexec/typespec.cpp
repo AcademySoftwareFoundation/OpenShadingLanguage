@@ -44,10 +44,10 @@ namespace pvt {   // OSL::pvt
 
 
 
-std::vector<std::shared_ptr<StructSpec> > &
+vector<std::shared_ptr<StructSpec> > &
 TypeSpec::struct_list ()
 {
-    static std::vector<std::shared_ptr<StructSpec> > m_structs;
+    static vector<std::shared_ptr<StructSpec> > m_structs;
     return m_structs;
 }
 
@@ -104,7 +104,7 @@ TypeSpec::c_str () const
 int
 TypeSpec::structure_id (const char *name, bool add)
 {
-    std::vector<std::shared_ptr<StructSpec> > & m_structs (struct_list());
+    vector<std::shared_ptr<StructSpec> > & m_structs (struct_list());
     ustring n (name);
     for (int i = (int)m_structs.size()-1;  i > 0;  --i) {
         if (m_structs[i] && m_structs[i]->name() == n)
@@ -126,7 +126,7 @@ TypeSpec::structure_id (const char *name, bool add)
 int
 TypeSpec::new_struct (StructSpec *n)
 {
-    std::vector<std::shared_ptr<StructSpec> > & m_structs (struct_list());
+    vector<std::shared_ptr<StructSpec> > & m_structs (struct_list());
     if (m_structs.size() == 0)
         m_structs.resize (1);   // Allocate an empty one
     m_structs.push_back (std::shared_ptr<StructSpec>(n));

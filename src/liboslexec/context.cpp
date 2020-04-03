@@ -74,9 +74,9 @@ ShadingContext::execute_init (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
     // Optimize if we haven't already
     if (sgroup.nlayers()) {
         sgroup.start_running ();
-        if (! sgroup.optimized()) {
+        if (! sgroup.jitted()) {
             auto ctx = shadingsys().get_context(thread_info());
-            shadingsys().optimize_group (sgroup, ctx);
+            shadingsys().optimize_group (sgroup, ctx, true /*do_jit*/);
             if (shadingsys().m_greedyjit && shadingsys().m_groups_to_compile_count) {
                 // If we are greedily JITing, optimize/JIT everything now
                 shadingsys().optimize_all_groups ();
@@ -242,20 +242,20 @@ ShadingContext::process_errors () const
     lock_guard lock (buffered_errors_mutex);
 
     for (size_t i = 0;  i < nerrors;  ++i) {
-        switch (m_buffered_errors[i].first) {
+        switch (m_buffered_errors[i].err_code) {
         case ErrorHandler::EH_MESSAGE :
         case ErrorHandler::EH_DEBUG :
-           shadingsys().message (m_buffered_errors[i].second);
+           shadingsys().message (m_buffered_errors[i].msgString);
             break;
         case ErrorHandler::EH_INFO :
-            shadingsys().info (m_buffered_errors[i].second);
+            shadingsys().info (m_buffered_errors[i].msgString);
             break;
         case ErrorHandler::EH_WARNING :
-            shadingsys().warning (m_buffered_errors[i].second);
+            shadingsys().warning (m_buffered_errors[i].msgString);
             break;
         case ErrorHandler::EH_ERROR :
         case ErrorHandler::EH_SEVERE :
-            shadingsys().error (m_buffered_errors[i].second);
+            shadingsys().error (m_buffered_errors[i].msgString);
             break;
         default:
             break;
@@ -343,6 +343,14 @@ ShadingContext::osl_get_attribute (ShaderGlobals *sg, void *objdata,
 #endif
 //    std::cout << "getattribute! '" << obj_name << "' " << attr_name << ' ' << attr_type.c_str() << " ok=" << ok << ", objdata was " << objdata << "\n";
     return ok;
+}
+
+
+
+int
+ShadingContext::raytype_bit (ustring name)
+{
+    return shadingsys().raytype_bit(name);
 }
 
 

@@ -555,11 +555,11 @@ Connection::str (const ShaderGroup &group, const ShaderInstance *dstinst)
 // Are the two vectors equivalent(a[i],b[i]) in each of their members?
 template<class T>
 inline bool
-equivalent (const std::vector<T> &a, const std::vector<T> &b)
+equivalent (const vector<T> &a, const vector<T> &b)
 {
     if (a.size() != b.size())
         return false;
-    typename std::vector<T>::const_iterator ai, ae, bi;
+    typename vector<T>::const_iterator ai, ae, bi;
     for (ai = a.begin(), ae = a.end(), bi = b.begin();  ai != ae;  ++ai, ++bi)
         if (! equivalent(*ai, *bi))
             return false;

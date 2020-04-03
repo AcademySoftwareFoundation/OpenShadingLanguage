@@ -169,7 +169,7 @@ BackendLLVM::llvm_call_layer (int layer, bool unconditional)
 void
 BackendLLVM::llvm_run_connected_layers (Symbol &sym, int symindex,
                                              int opnum,
-                                             std::set<int> *already_run)
+                                             set<int> *already_run)
 {
     if (sym.valuesource() != Symbol::ConnectedVal)
         return;  // Nothing to do
@@ -237,7 +237,7 @@ LLVMGEN (llvm_gen_useparam)
 
     // If we have multiple params needed on this statement, don't waste
     // time checking the same upstream layer more than once.
-    std::set<int> already_run;
+    set<int> already_run;
 
     Opcode &op (rop.inst()->ops()[opnum]);
     for (int i = 0;  i < op.nargs();  ++i) {
@@ -270,7 +270,7 @@ LLVMGEN (llvm_gen_printf)
     int format_arg = (op.opname() == "format" || op.opname() == "fprintf") ? 1 : 0;
     Symbol& format_sym = *rop.opargsym (op, format_arg);
 
-    std::vector<llvm::Value*> call_args;
+    vector<llvm::Value*> call_args;
     if (!format_sym.is_constant()) {
         rop.shadingcontext()->warningf("%s must currently have constant format\n",
                                        op.opname());
@@ -578,7 +578,7 @@ LLVMGEN (llvm_gen_mul)
     Symbol& B = *rop.opargsym (op, 2);
 
     TypeDesc type = Result.typespec().simpletype();
-    bool is_float = !Result.typespec().is_closure_based() && Result.typespec().is_floatbased();
+    OSL_MAYBE_UNUSED bool is_float = !Result.typespec().is_closure_based() && Result.typespec().is_floatbased();
     int num_components = type.aggregate;
 
     // multiplication involving closures
@@ -601,21 +601,21 @@ LLVMGEN (llvm_gen_mul)
         return true;
     }
 
+
     // multiplication involving matrices
     if (Result.typespec().is_matrix()) {
         if (A.typespec().is_float()) {
-            if (B.typespec().is_float())
-                rop.llvm_call_function ("osl_mul_m_ff", Result, A, B);
-            else if (B.typespec().is_matrix())
-                rop.llvm_call_function ("osl_mul_mf", Result, B, A);
-            else OSL_DASSERT(0);
+            OSL_ASSERT (!B.typespec().is_float() && "frontend should not allow");
+            if (B.typespec().is_matrix())
+                rop.llvm_call_function ("osl_mul_mmf", Result, B, A);
+            else OSL_ASSERT(0);
         } else if (A.typespec().is_matrix()) {
             if (B.typespec().is_float())
-                rop.llvm_call_function ("osl_mul_mf", Result, A, B);
+                rop.llvm_call_function ("osl_mul_mmf", Result, A, B);
             else if (B.typespec().is_matrix())
-                rop.llvm_call_function ("osl_mul_mm", Result, A, B);
-            else OSL_DASSERT(0);
-        } else OSL_DASSERT (0);
+                rop.llvm_call_function ("osl_mul_mmm", Result, A, B);
+            else OSL_ASSERT(0);
+        } else OSL_ASSERT (0);
         if (Result.has_derivs())
             rop.llvm_zero_derivs (Result);
         return true;
@@ -675,18 +675,17 @@ LLVMGEN (llvm_gen_div)
     // division involving matrices
     if (Result.typespec().is_matrix()) {
         if (A.typespec().is_float()) {
-            if (B.typespec().is_float())
-                rop.llvm_call_function ("osl_div_m_ff", Result, A, B);
-            else if (B.typespec().is_matrix())
-                rop.llvm_call_function ("osl_div_fm", Result, A, B);
-            else OSL_DASSERT (0);
+            OSL_ASSERT (!B.typespec().is_float() && "frontend should not allow");
+            if (B.typespec().is_matrix())
+                rop.llvm_call_function ("osl_div_mfm", Result, A, B);
+            else OSL_ASSERT (0);
         } else if (A.typespec().is_matrix()) {
             if (B.typespec().is_float())
-                rop.llvm_call_function ("osl_div_mf", Result, A, B);
+                rop.llvm_call_function ("osl_div_mmf", Result, A, B);
             else if (B.typespec().is_matrix())
-                rop.llvm_call_function ("osl_div_mm", Result, A, B);
-            else OSL_DASSERT (0);
-        } else OSL_DASSERT (0);
+                rop.llvm_call_function ("osl_div_mmm", Result, A, B);
+            else OSL_ASSERT (0);
+        } else OSL_ASSERT (0);
         if (Result.has_derivs())
             rop.llvm_zero_derivs (Result);
         return true;
@@ -1244,18 +1243,26 @@ LLVMGEN (llvm_gen_mxcompref)
     llvm::Value *row = rop.llvm_load_value (Row);
     llvm::Value *col = rop.llvm_load_value (Col);
     if (rop.inst()->master()->range_checking()) {
-        llvm::Value *args[] = { row, rop.ll.constant(4),
-                                rop.ll.constant(M.name()),
-                                rop.sg_void_ptr(),
-                                rop.ll.constant(op.sourcefile()),
-                                rop.ll.constant(op.sourceline()),
-                                rop.ll.constant(rop.group().name()),
-                                rop.ll.constant(rop.layer()),
-                                rop.ll.constant(rop.inst()->layername()),
-                                rop.ll.constant(rop.inst()->shadername()) };
-        row = rop.ll.call_function ("osl_range_check", args);
-        args[0] = col;
-        col = rop.ll.call_function ("osl_range_check", args);
+        if (! (Row.is_constant() &&
+               *(int *)Row.data() >= 0 &&
+               *(int *)Row.data() < 4 &&
+                Col.is_constant() &&
+                *(int *)Col.data() >= 0 &&
+                *(int *)Col.data() < 4)) {
+
+            llvm::Value *args[] = { row, rop.ll.constant(4),
+                                    rop.ll.constant(M.name()),
+                                    rop.sg_void_ptr(),
+                                    rop.ll.constant(op.sourcefile()),
+                                    rop.ll.constant(op.sourceline()),
+                                    rop.ll.constant(rop.group().name()),
+                                    rop.ll.constant(rop.layer()),
+                                    rop.ll.constant(rop.inst()->layername()),
+                                    rop.ll.constant(rop.inst()->shadername()) };
+            row = rop.ll.call_function ("osl_range_check", args);
+            args[0] = col;
+            col = rop.ll.call_function ("osl_range_check", args);
+        }
     }
 
     llvm::Value *val = NULL; 
@@ -1289,18 +1296,25 @@ LLVMGEN (llvm_gen_mxcompassign)
     llvm::Value *row = rop.llvm_load_value (Row);
     llvm::Value *col = rop.llvm_load_value (Col);
     if (rop.inst()->master()->range_checking()) {
-        llvm::Value *args[] = { row, rop.ll.constant(4),
-                                rop.ll.constant(Result.name()),
-                                rop.sg_void_ptr(),
-                                rop.ll.constant(op.sourcefile()),
-                                rop.ll.constant(op.sourceline()),
-                                rop.ll.constant(rop.group().name()),
-                                rop.ll.constant(rop.layer()),
-                                rop.ll.constant(rop.inst()->layername()),
-                                rop.ll.constant(rop.inst()->shadername()) };
-        row = rop.ll.call_function ("osl_range_check", args);
-        args[0] = col;
-        col = rop.ll.call_function ("osl_range_check", args);
+        if (! (Row.is_constant() &&
+               *(int *)Row.data() >= 0 &&
+               *(int *)Row.data() < 4 &&
+                Col.is_constant() &&
+                *(int *)Col.data() >= 0 &&
+                *(int *)Col.data() < 4)) {
+            llvm::Value *args[] = { row, rop.ll.constant(4),
+                                    rop.ll.constant(Result.name()),
+                                    rop.sg_void_ptr(),
+                                    rop.ll.constant(op.sourcefile()),
+                                    rop.ll.constant(op.sourceline()),
+                                    rop.ll.constant(rop.group().name()),
+                                    rop.ll.constant(rop.layer()),
+                                    rop.ll.constant(rop.inst()->layername()),
+                                    rop.ll.constant(rop.inst()->shadername()) };
+            row = rop.ll.call_function ("osl_range_check", args);
+            args[0] = col;
+            col = rop.ll.call_function ("osl_range_check", args);
+        }
     }
 
     llvm::Value *val = rop.llvm_load_value (Val, 0, 0, TypeDesc::TypeFloat);
@@ -1447,9 +1461,9 @@ LLVMGEN (llvm_gen_construct_color)
     Symbol& Result = *rop.opargsym (op, 0);
     bool using_space = (op.nargs() == 5);
     Symbol& Space = *rop.opargsym (op, 1);
-    Symbol& X = *rop.opargsym (op, 1+using_space);
-    Symbol& Y = *rop.opargsym (op, 2+using_space);
-    Symbol& Z = *rop.opargsym (op, 3+using_space);
+    OSL_MAYBE_UNUSED Symbol& X = *rop.opargsym (op, 1+using_space);
+    OSL_MAYBE_UNUSED Symbol& Y = *rop.opargsym (op, 2+using_space);
+    OSL_MAYBE_UNUSED Symbol& Z = *rop.opargsym (op, 3+using_space);
     OSL_DASSERT (Result.typespec().is_triple() && X.typespec().is_float() &&
                  Y.typespec().is_float() && Z.typespec().is_float() &&
                  (using_space == false || Space.typespec().is_string()));
@@ -1492,9 +1506,9 @@ LLVMGEN (llvm_gen_construct_triple)
     Symbol& Result = *rop.opargsym (op, 0);
     bool using_space = (op.nargs() == 5);
     Symbol& Space = *rop.opargsym (op, 1);
-    Symbol& X = *rop.opargsym (op, 1+using_space);
-    Symbol& Y = *rop.opargsym (op, 2+using_space);
-    Symbol& Z = *rop.opargsym (op, 3+using_space);
+    OSL_MAYBE_UNUSED Symbol& X = *rop.opargsym (op, 1+using_space);
+    OSL_MAYBE_UNUSED Symbol& Y = *rop.opargsym (op, 2+using_space);
+    OSL_MAYBE_UNUSED Symbol& Z = *rop.opargsym (op, 3+using_space);
     OSL_DASSERT (Result.typespec().is_triple() && X.typespec().is_float() &&
                  Y.typespec().is_float() && Z.typespec().is_float() &&
                  (using_space == false || Space.typespec().is_string()));
@@ -1606,8 +1620,7 @@ LLVMGEN (llvm_gen_matrix)
 LLVMGEN (llvm_gen_getmatrix)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
-    int nargs = op.nargs();
-    OSL_DASSERT (nargs == 4);
+    OSL_DASSERT (op.nargs() == 4);
     Symbol& Result = *rop.opargsym (op, 0);
     Symbol& From = *rop.opargsym (op, 1);
     Symbol& To = *rop.opargsym (op, 2);
@@ -1955,7 +1968,7 @@ LLVMGEN (llvm_gen_generic)
     // so avoid dynamic allocation where possible
     constexpr int SHORT_NUM_ARGS = 16;
     const Symbol* short_args[SHORT_NUM_ARGS];
-    std::vector<const Symbol*> long_args;
+    vector<const Symbol*> long_args;
     Opcode &op (rop.inst()->ops()[opnum]);
     const Symbol** args = short_args;
     if (op.nargs() > SHORT_NUM_ARGS) {
@@ -2587,15 +2600,13 @@ llvm_gen_trace_options (BackendLLVM &rop, int opnum,
         TypeDesc valtype = Val.typespec().simpletype ();
         
         llvm::Value *val = rop.llvm_load_value (Val);
-        static ustring kmindist("mindist"), kmaxdist("maxdist");
-        static ustring kshade("shade"), ktraceset("traceset");
-        if (name == kmindist && valtype == TypeDesc::FLOAT) {
+        if (name == Strings::mindist && valtype == TypeDesc::FLOAT) {
             rop.ll.call_function ("osl_trace_set_mindist", opt, val);
-        } else if (name == kmaxdist && valtype == TypeDesc::FLOAT) {
+        } else if (name == Strings::maxdist && valtype == TypeDesc::FLOAT) {
             rop.ll.call_function ("osl_trace_set_maxdist", opt, val);
-        } else if (name == kshade && valtype == TypeDesc::INT) {
+        } else if (name == Strings::shade && valtype == TypeDesc::INT) {
             rop.ll.call_function ("osl_trace_set_shade", opt, val);
-        } else if (name == ktraceset && valtype == TypeDesc::STRING) {
+        } else if (name == Strings::traceset && valtype == TypeDesc::STRING) {
             rop.ll.call_function ("osl_trace_set_traceset", opt, val);
         } else {
             rop.shadingcontext()->errorf("Unknown trace() optional argument: \"%s\", <%s> (%s:%d)",
@@ -3253,7 +3264,7 @@ llvm_gen_keyword_fill(BackendLLVM &rop, Opcode &op, const ClosureRegistry::Closu
                 llvm::Value* dst = rop.ll.offset_ptr (mem_void_ptr, p.offset);
                 llvm::Value* src = rop.llvm_void_ptr (Value);
                 rop.ll.op_memcpy (dst, src, (int)p.type.size(),
-                					4 /* use 4 byte alignment for now */);
+                                    4 /* use 4 byte alignment for now */);
                 legal = true;
                 break;
             }
@@ -3396,7 +3407,7 @@ LLVMGEN (llvm_gen_pointcloud_search)
              Center.typespec().is_triple() && Radius.typespec().is_float() &&
              Max_points.typespec().is_int());
 
-    std::vector<Symbol *> clear_derivs_of; // arguments whose derivs we need to zero at the end
+    vector<Symbol *> clear_derivs_of; // arguments whose derivs we need to zero at the end
     int attr_arg_offset = 5; // where the opt attrs begin
     Symbol *Sort = NULL;
     if (op.nargs() > 5 && rop.opargsym(op,5)->typespec().is_int()) {
@@ -3405,7 +3416,7 @@ LLVMGEN (llvm_gen_pointcloud_search)
     }
     int nattrs = (op.nargs() - attr_arg_offset) / 2;
 
-    std::vector<llvm::Value *> args;
+    vector<llvm::Value *> args;
     args.push_back (rop.sg_void_ptr());                // 0 sg
     args.push_back (rop.llvm_load_value (Filename));   // 1 filename
     args.push_back (rop.llvm_void_ptr   (Center));     // 2 center
@@ -3805,18 +3816,62 @@ LLVMGEN (llvm_gen_functioncall)
     Opcode &op (rop.inst()->ops()[opnum]);
     OSL_DASSERT (op.nargs() == 1);
 
+
     llvm::BasicBlock* after_block = rop.ll.push_function ();
 
+    unsigned int op_num_function_starts_at = opnum+1;
+    unsigned int op_num_function_ends_at = op.jump(0);
+    if (rop.ll.debug_is_enabled()) {
+        Symbol &functionNameSymbol(*rop.opargsym (op, 0));
+        OSL_DASSERT(functionNameSymbol.is_constant());
+        OSL_DASSERT(functionNameSymbol.typespec().is_string());
+        ustring functionName = *(ustring *)functionNameSymbol.data();
+        ustring file_name = rop.inst()->op(op_num_function_starts_at).sourcefile();
+        unsigned int method_line = rop.inst()->op(op_num_function_starts_at).sourceline();
+        rop.ll.debug_push_inlined_function(functionName, file_name, method_line);
+    }
+
     // Generate the code for the body of the function
-    rop.build_llvm_code (opnum+1, op.jump(0));
+    rop.build_llvm_code (op_num_function_starts_at, op_num_function_ends_at);
     rop.ll.op_branch (after_block);
 
     // Continue on with the previous flow
+    if (rop.ll.debug_is_enabled()) {
+        rop.ll.debug_pop_inlined_function();
+    }
     rop.ll.pop_function ();
 
     return true;
 }
 
+LLVMGEN (llvm_gen_functioncall_nr)
+{
+    OSL_ASSERT(rop.ll.debug_is_enabled()  && "no return version should only exist when debug is enabled");
+    Opcode &op (rop.inst()->ops()[opnum]);
+    OSL_ASSERT (op.nargs() == 1);
+
+    Symbol &functionNameSymbol(*rop.opargsym (op, 0));
+    OSL_ASSERT(functionNameSymbol.is_constant());
+    OSL_ASSERT(functionNameSymbol.typespec().is_string());
+    ustring functionName = *(ustring *)functionNameSymbol.data();
+
+    int op_num_function_starts_at = opnum+1;
+    int op_num_function_ends_at = op.jump(0);
+    OSL_ASSERT(op.farthest_jump() == op_num_function_ends_at && "As we are not doing any branching, we should ensure that the inlined function truly ends at the farthest jump");
+    {
+        ustring file_name = rop.inst()->op(op_num_function_starts_at).sourcefile();
+        unsigned int method_line = rop.inst()->op(op_num_function_starts_at).sourceline();
+        rop.ll.debug_push_inlined_function(functionName, file_name, method_line);
+    }
+
+    // Generate the code for the body of the function
+    rop.build_llvm_code (op_num_function_starts_at, op_num_function_ends_at);
+
+    // Continue on with the previous flow
+    rop.ll.debug_pop_inlined_function();
+
+    return true;
+}
 
 
 LLVMGEN (llvm_gen_return)

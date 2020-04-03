@@ -824,7 +824,7 @@ DECLFOLDER(constfold_aref)
 DECLFOLDER(constfold_arraylength)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &R (*rop.inst()->argsymbol(op.firstarg()+0));
+    OSL_MAYBE_UNUSED Symbol &R (*rop.inst()->argsymbol(op.firstarg()+0));
     Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
     OSL_DASSERT (R.typespec().is_int() && A.typespec().is_array());
 
@@ -864,8 +864,8 @@ DECLFOLDER(constfold_aassign)
     if (len <= 0)
         return 0;  // don't handle arrays of unknown length
     int elemsize = (int)elemsimpletype.size();
-    std::vector<int> index_assigned (len, -1);
-    std::vector<char> filled_values (elemsize * len);  // constant storage
+    vector<int> index_assigned (len, -1);
+    vector<char> filled_values (elemsize * len);  // constant storage
     char *fill = (char *)&filled_values[0];
     int num_assigned = 0;
     int opindex = opnum;
@@ -966,8 +966,9 @@ DECLFOLDER(constfold_compassign)
         // assigning a new constant to one component (and the index is
         // also a constant), just turn it into an assignment of a new
         // constant triple.
-        Vec3 newval (aa[0], aa[1], aa[2]);
-        newval[index] = c;
+        float newval_comp[3] = {aa[0], aa[1], aa[2]};
+        newval_comp[index] = c;
+        Vec3 newval (newval_comp[0], newval_comp[1], newval_comp[2]);
         int cind = rop.add_constant (AA->typespec(), &newval);
         rop.turn_into_assign (op, cind, "fold compassign");
         return 1;
@@ -1307,7 +1308,7 @@ DECLFOLDER(constfold_split)
         // Turn the 'split' into a straight assignment of the return value...
         rop.turn_into_assign (op, rop.add_constant(n));
         // Create a constant array holding the split results
-        std::vector<ustring> usplits (resultslen);
+        vector<ustring> usplits (resultslen);
         for (int i = 0;  i < n;  ++i)
             usplits[i] = ustring(splits[i]);
         int cind = rop.add_constant (TypeDesc(TypeDesc::STRING,resultslen),
@@ -1433,11 +1434,11 @@ DECLFOLDER(constfold_format)
         // Grab the previous arguments, drop the ones we folded, and
         // replace the format string with our new one.
         int *argstart = &rop.inst()->args()[0] + op.firstarg();
-        std::vector<int> newargs (argstart, argstart + op.nargs() - args_expanded);
+        vector<int> newargs (argstart, argstart + op.nargs() - args_expanded);
         newargs[1] = rop.add_constant (ustring(prefix + suffix));
         ustring opname = op.opname();
         rop.turn_into_nop (op, "partial constant fold format()");
-        rop.insert_code (opnum, opname, newargs,
+        rop.insert_code (opnum, opname, make_cspan(newargs),
                          RuntimeOptimizer::RecomputeRWRanges);
         return 1;
     }
@@ -2351,7 +2352,7 @@ DECLFOLDER(constfold_getattribute)
             obj_name = *(const ustring *)ObjectName.data();
         if (obj_name.empty())
             return 0;
-
+        
         found = array_lookup
             ? rop.renderer()->get_array_attribute (NULL, false,
                                                    obj_name, attr_type, attr_name,
@@ -2393,7 +2394,7 @@ DECLFOLDER(constfold_getattribute)
 DECLFOLDER(constfold_gettextureinfo)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &Result (*rop.inst()->argsymbol(op.firstarg()+0));
+    OSL_MAYBE_UNUSED Symbol &Result (*rop.inst()->argsymbol(op.firstarg()+0));
     Symbol &Filename (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &Dataname (*rop.inst()->argsymbol(op.firstarg()+2));
     Symbol &Data (*rop.inst()->argsymbol(op.firstarg()+3));
@@ -2626,9 +2627,9 @@ DECLFOLDER(constfold_pointcloud_search)
     // First pass through the optional arguments: gather the query names,
     // types, and destinations.  If any of the query names are not known
     // constants, we can't optimize this call so just return.
-    std::vector<ustring> names;
-    std::vector<int> value_args;
-    std::vector<TypeDesc> value_types;
+    vector<ustring> names;
+    vector<int> value_args;
+    vector<TypeDesc> value_types;
     for (int i = 0, num_queries = 0; i < nattrs; ++i) {
         Symbol& Name  = *rop.opargsym (op, attr_arg_offset + i*2);
         Symbol& Value = *rop.opargsym (op, attr_arg_offset + i*2 + 1);
@@ -2682,7 +2683,7 @@ DECLFOLDER(constfold_pointcloud_search)
     // results to go.  (This assignment can be further optimized later
     // on as well, depending on how it's used.)  If any of the individual
     // queries fail now, we will return a failed result in the end.
-    std::vector<char> tmp;  // temporary data
+    vector<char> tmp;  // temporary data
     for (int i = 0; i < nattrs; ++i) {
         // We had stashed names, data types, and destinations earlier.
         // Retrieve them now to build a query.
@@ -2772,7 +2773,7 @@ DECLFOLDER(constfold_pointcloud_get)
         indices[i] = ((int *)Indices.data())[i];
 
     TypeDesc valtype = Data.typespec().simpletype();
-    std::vector<char> data (valtype.size());
+    vector<char> data (valtype.size());
     int ok = rop.renderer()->pointcloud_get (rop.shaderglobals(), filename,
                                              indices, count,
                                              *(ustring *)Attr_name.data(),
@@ -2933,7 +2934,11 @@ DECLFOLDER(constfold_functioncall)
     } else if (! has_return) {
         // The function is just a straight-up execution, no return
         // statement, so kill the "function" op.
-        rop.turn_into_nop (op, "'function' not necessary");
+        if (rop.keep_no_return_function_calls()) {
+            rop.turn_into_functioncall_nr (op, "'functioncall' transmuted to 'no return' version");
+        } else {
+            rop.turn_into_nop (op, "'function' not necessary");
+        }
         ++changed;
     }
 

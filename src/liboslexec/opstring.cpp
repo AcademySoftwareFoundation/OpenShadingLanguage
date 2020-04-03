@@ -83,37 +83,47 @@ osl_hash_is (const char *s)
 OSL_SHADEOP int
 osl_getchar_isi (const char *str, int index)
 {
-    return str && unsigned(index) < USTR(str).length() ? str[index] : 0;
+    return (str && (unsigned(index) < USTR(str).length())) ? str[index] : 0;
 }
 
-
-    OSL_SHADEOP int
-osl_startswith_iss (const char *s_, const char *substr_)
+static OSL_FORCEINLINE int
+startswith_iss_impl (ustring s, ustring substr)
 {
-    ustring substr (USTR(substr_));
     size_t substr_len = substr.length();
     if (substr_len == 0)         // empty substr always matches
         return 1;
-    ustring s (USTR(s_));
     size_t s_len = s.length();
     if (substr_len > s_len)      // longer needle than haystack can't
         return 0;                // match (including empty s)
     return strncmp (s.c_str(), substr.c_str(), substr_len) == 0;
 }
 
+
 OSL_SHADEOP int
-osl_endswith_iss (const char *s_, const char *substr_)
+osl_startswith_iss (const char *s_, const char *substr_)
 {
-    ustring substr (USTR(substr_));
+    return startswith_iss_impl(USTR(s_), USTR(substr_));
+}
+
+static OSL_FORCEINLINE int
+endswith_iss_impl (ustring s, ustring substr)
+{
     size_t substr_len = substr.length();
     if (substr_len == 0)         // empty substr always matches
         return 1;
-    ustring s (USTR(s_));
     size_t s_len = s.length();
     if (substr_len > s_len)      // longer needle than haystack can't
         return 0;                // match (including empty s)
     return strncmp (s.c_str()+s_len-substr_len, substr.c_str(), substr_len) == 0;
 }
+
+
+OSL_SHADEOP int
+osl_endswith_iss (const char *s_, const char *substr_)
+{
+    return endswith_iss_impl(USTR(s_), USTR(substr_));
+}
+
 
 OSL_SHADEOP int
 osl_stoi_is (const char *str)
@@ -127,20 +137,25 @@ osl_stof_fs (const char *str)
     return str ? Strutil::from_string<float>(str) : 0.0f;
 }
 
-OSL_SHADEOP const char *
-osl_substr_ssii (const char *s_, int start, int length)
+OSL_FORCEINLINE ustring
+substr_ssii_impl (ustring s, int start, int length)
 {
-    ustring s (USTR(s_));
     int slen = int (s.length());
-    if (slen == 0)
-        return NULL;  // No substring of empty string
+    if (slen == 0){
+        return ustring(NULL);  // No substring of empty string
+    }
     int b = start;
     if (b < 0)
         b += slen;
     b = Imath::clamp (b, 0, slen);
-    return ustring(s, b, Imath::clamp (length, 0, slen)).c_str();
+    return ustring(s, b, Imath::clamp (length, 0, slen));
 }
 
+OSL_SHADEOP const char *
+osl_substr_ssii (const char *s_, int start, int length)
+{
+    return substr_ssii_impl (USTR(s_), start, length).c_str();
+}
 
 OSL_SHADEOP int
 osl_regex_impl (void *sg_, const char *subject_, void *results, int nresults,

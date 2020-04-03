@@ -174,9 +174,9 @@ osl_##name##_vv (void *r_, void *a_)                                \
 {                                                                   \
     Vec3 &r (VEC(r_));                                              \
     Vec3 &a (VEC(a_));                                              \
-    r[0] = floatfunc (a[0]);                                        \
-    r[1] = floatfunc (a[1]);                                        \
-    r[2] = floatfunc (a[2]);                                        \
+    r.x = floatfunc (a.x);                                        \
+    r.y = floatfunc (a.y);                                        \
+    r.z = floatfunc (a.z);                                        \
 }                                                                   \
                                                                     \
 OSL_SHADEOP void                                                    \
@@ -217,9 +217,9 @@ OSL_SHADEOP void osl_##name##_vvv (void *r_, void *a_, void *b_) {  \
     Vec3 &r (VEC(r_));                                              \
     Vec3 &a (VEC(a_));                                              \
     Vec3 &b (VEC(b_));                                              \
-    r[0] = floatfunc (a[0], b[0]);                                  \
-    r[1] = floatfunc (a[1], b[1]);                                  \
-    r[2] = floatfunc (a[2], b[2]);                                  \
+    r.x = floatfunc (a.x, b.x);                                     \
+    r.y = floatfunc (a.y, b.y);                                     \
+    r.z = floatfunc (a.z, b.z);                                     \
 }                                                                   \
                                                                     \
 OSL_SHADEOP void osl_##name##_dvdvdv (void *r_, void *a_, void *b_) \
@@ -259,9 +259,9 @@ OSL_SHADEOP void osl_##name##_dvdvv (void *r_, void *a_, void *b_)  \
 OSL_SHADEOP void osl_##name##_vvf (void *r_, void *a_, float b) {       \
     Vec3 &r (VEC(r_));                                                  \
     Vec3 &a (VEC(a_));                                                  \
-    r[0] = floatfunc (a[0], b);                                         \
-    r[1] = floatfunc (a[1], b);                                         \
-    r[2] = floatfunc (a[2], b);                                         \
+    r.x = floatfunc (a.x, b);                                         \
+    r.y = floatfunc (a.y, b);                                         \
+    r.z = floatfunc (a.z, b);                                         \
 }                                                                       \
                                                                         \
 OSL_SHADEOP void osl_##name##_dvdvdf (void *r_, void *a_, void *b_)     \
@@ -379,11 +379,14 @@ OSL_SHADEOP void osl_sincos_dfdfdf(void *x_, void *s_, void *c_)
 
 OSL_SHADEOP void osl_sincos_vvv(void *x_, void *s_, void *c_)
 {
-    for (int i = 0; i < 3; i++)
 #if OSL_FAST_MATH
-        OIIO::fast_sincos(VEC(x_)[i], &VEC(s_)[i], &VEC(c_)[i]);
+        OIIO::fast_sincos(VEC(x_).x, &VEC(s_).x, &VEC(c_).x);
+        OIIO::fast_sincos(VEC(x_).y, &VEC(s_).y, &VEC(c_).y);
+        OIIO::fast_sincos(VEC(x_).z, &VEC(s_).z, &VEC(c_).z);
 #else
-        OIIO::sincos(VEC(x_)[i], &VEC(s_)[i], &VEC(c_)[i]);
+        OIIO::sincos(VEC(x_).x, &VEC(s_).x, &VEC(c_).x);
+        OIIO::sincos(VEC(x_).y, &VEC(s_).y, &VEC(c_).y);
+        OIIO::sincos(VEC(x_).z, &VEC(s_).z, &VEC(c_).z);
 #endif
 }
 
@@ -393,6 +396,7 @@ OSL_SHADEOP void osl_sincos_dvdvv(void *x_, void *s_, void *c_)
     Dual2<Vec3> &sine   = DVEC(s_);
     Vec3        &cosine = VEC(c_);
 
+#if 0 // older version using [i] deprecated to avoid potential aliasing issues
     for (int i = 0; i < 3; i++) {
         float s_f, c_f;
 #if OSL_FAST_MATH
@@ -404,6 +408,22 @@ OSL_SHADEOP void osl_sincos_dvdvv(void *x_, void *s_, void *c_)
         sine.val()[i] = s_f; sine.dx()[i] =  c_f * xdx; sine.dy()[i] =  c_f * xdy;
         cosine[i] = c_f;
     }
+#else
+    auto sincos_comp = [](const Dual2<float> & x, float &sine_val, float &sine_dx, float &sine_dy, float &cosine_val) {
+        float s_f, c_f;
+#if OSL_FAST_MATH
+        OIIO::fast_sincos(x.val(), &s_f, &c_f);
+#else
+        OIIO::sincos(x.val(), &s_f, &c_f);
+#endif
+        sine_val = s_f; sine_dx =  c_f * x.dx(); sine_dy =  c_f * x.dy();
+        cosine_val = c_f;
+    };
+
+    sincos_comp(comp_x(x), sine.val().x, sine.dx().x, sine.dy().x, cosine.x);
+    sincos_comp(comp_y(x), sine.val().y, sine.dx().y, sine.dy().y, cosine.y);
+    sincos_comp(comp_z(x), sine.val().z, sine.dx().z, sine.dy().z, cosine.z);
+#endif
 }
 
 OSL_SHADEOP void osl_sincos_dvvdv(void *x_, void *s_, void *c_)
@@ -412,6 +432,7 @@ OSL_SHADEOP void osl_sincos_dvvdv(void *x_, void *s_, void *c_)
     Vec3        &sine   = VEC(s_);
     Dual2<Vec3> &cosine = DVEC(c_);
 
+#if 0  // older version using [i] deprecated to avoid potential aliasing issues
     for (int i = 0; i < 3; i++) {
         float s_f, c_f;
 #if OSL_FAST_MATH
@@ -423,6 +444,23 @@ OSL_SHADEOP void osl_sincos_dvvdv(void *x_, void *s_, void *c_)
         sine[i] = s_f;
         cosine.val()[i] = c_f; cosine.dx()[i] = -s_f * xdx; cosine.dy()[i] = -s_f * xdy;
     }
+#else
+    auto sincos_comp = [](const Dual2<float> & x, float &sine_val, float &cosine_val, float &cosine_dx, float &cosine_dy) {
+        float s_f, c_f;
+#if OSL_FAST_MATH
+        OIIO::fast_sincos(x.val(), &s_f, &c_f);
+#else
+        OIIO::sincos(x.val(), &s_f, &c_f);
+#endif
+        sine_val = s_f;
+        cosine_val = c_f; cosine_dx = -s_f * x.dx(); cosine_dy = -s_f * x.dy();
+    };
+
+    sincos_comp(comp_x(x), sine.x, cosine.val().x, cosine.dx().x, cosine.dy().x);
+    sincos_comp(comp_y(x), sine.y, cosine.val().y, cosine.dx().y, cosine.dy().y);
+    sincos_comp(comp_z(x), sine.z, cosine.val().z, cosine.dx().z, cosine.dy().z);
+
+#endif
 }
 
 OSL_SHADEOP void osl_sincos_dvdvdv(void *x_, void *s_, void *c_)
@@ -431,6 +469,7 @@ OSL_SHADEOP void osl_sincos_dvdvdv(void *x_, void *s_, void *c_)
     Dual2<Vec3> &sine   = DVEC(s_);
     Dual2<Vec3> &cosine = DVEC(c_);
 
+#if 0  // older version using [i] deprecated to avoid potential aliasing issues
     for (int i = 0; i < 3; i++) {
         float s_f, c_f;
 #if OSL_FAST_MATH
@@ -442,6 +481,24 @@ OSL_SHADEOP void osl_sincos_dvdvdv(void *x_, void *s_, void *c_)
           sine.val()[i] = s_f;   sine.dx()[i] =  c_f * xdx;   sine.dy()[i] =  c_f * xdy;
         cosine.val()[i] = c_f; cosine.dx()[i] = -s_f * xdx; cosine.dy()[i] = -s_f * xdy;
     }
+#else
+    auto sincos_comp = [](const Dual2<float> & x, float &sine_val, float &sine_dx, float &sine_dy, float &cosine_val, float &cosine_dx, float &cosine_dy) {
+        float s_f, c_f;
+#if OSL_FAST_MATH
+        OIIO::fast_sincos(x.val(), &s_f, &c_f);
+#else
+        OIIO::sincos(x.val(), &s_f, &c_f);
+#endif
+        sine_val = s_f;     sine_dx =  c_f * x.dx();   sine_dy =  c_f * x.dy();
+        cosine_val = c_f; cosine_dx = -s_f * x.dx(); cosine_dy = -s_f * x.dy();
+    };
+
+    sincos_comp(comp_x(x), sine.val().x, sine.dx().x, sine.dy().x, cosine.val().x, cosine.dx().x, cosine.dy().x);
+    sincos_comp(comp_y(x), sine.val().y, sine.dx().y, sine.dy().y, cosine.val().y, cosine.dx().y, cosine.dy().y);
+    sincos_comp(comp_z(x), sine.val().z, sine.dx().z, sine.dy().z, cosine.val().z, cosine.dx().z, cosine.dy().z);
+
+
+#endif
 }
 
 #if OSL_FAST_MATH
@@ -474,35 +531,35 @@ MAKE_UNARY_PERCOMPONENT_OP     (inversesqrt, OIIO::safe_inversesqrt, inversesqrt
 OSL_SHADEOP float osl_logb_ff (float x) { return OIIO::fast_logb(x); }
 OSL_SHADEOP void osl_logb_vv (void *r, void *x_) {
     const Vec3 &x (VEC(x_));
-    VEC(r).setValue (OIIO::fast_logb(x[0]), OIIO::fast_logb(x[1]), OIIO::fast_logb(x[2]));
+    VEC(r).setValue (OIIO::fast_logb(x.x), OIIO::fast_logb(x.y), OIIO::fast_logb(x.z));
 }
 
 OSL_SHADEOP float osl_floor_ff (float x) { return floorf(x); }
 OSL_SHADEOP void osl_floor_vv (void *r, void *x_) {
     const Vec3 &x (VEC(x_));
-    VEC(r).setValue (floorf(x[0]), floorf(x[1]), floorf(x[2]));
+    VEC(r).setValue (floorf(x.x), floorf(x.y), floorf(x.z));
 }
 OSL_SHADEOP float osl_ceil_ff (float x) { return ceilf(x); }
 OSL_SHADEOP void osl_ceil_vv (void *r, void *x_) {
     const Vec3 &x (VEC(x_));
-    VEC(r).setValue (ceilf(x[0]), ceilf(x[1]), ceilf(x[2]));
+    VEC(r).setValue (ceilf(x.x), ceilf(x.y), ceilf(x.z));
 }
 OSL_SHADEOP float osl_round_ff (float x) { return roundf(x); }
 OSL_SHADEOP void osl_round_vv (void *r, void *x_) {
     const Vec3 &x (VEC(x_));
-    VEC(r).setValue (roundf(x[0]), roundf(x[1]), roundf(x[2]));
+    VEC(r).setValue (roundf(x.x), roundf(x.y), roundf(x.z));
 }
 OSL_SHADEOP float osl_trunc_ff (float x) { return truncf(x); }
 OSL_SHADEOP void osl_trunc_vv (void *r, void *x_) {
     const Vec3 &x (VEC(x_));
-    VEC(r).setValue (truncf(x[0]), truncf(x[1]), truncf(x[2]));
+    VEC(r).setValue (truncf(x.x), truncf(x.y), truncf(x.z));
 }
 OSL_SHADEOP float osl_sign_ff (float x) {
     return x < 0.0f ? -1.0f : (x==0.0f ? 0.0f : 1.0f);
 }
 OSL_SHADEOP void osl_sign_vv (void *r, void *x_) {
     const Vec3 &x (VEC(x_));
-    VEC(r).setValue (osl_sign_ff(x[0]), osl_sign_ff(x[1]), osl_sign_ff(x[2]));
+    VEC(r).setValue (osl_sign_ff(x.x), osl_sign_ff(x.y), osl_sign_ff(x.z));
 }
 OSL_SHADEOP float osl_step_fff (float edge, float x) {
     return x < edge ? 0.0f : 1.0f;
@@ -529,6 +586,8 @@ OSL_HOSTDEVICE inline Dual2<float> fabsf (const Dual2<float> &x) {
 MAKE_UNARY_PERCOMPONENT_OP (abs, fabsf, fabsf);
 MAKE_UNARY_PERCOMPONENT_OP (fabs, fabsf, fabsf);
 
+// TODO: see if we can remove this as it appears to be handled in stdosl.h
+// thus this will never be called
 OSL_SHADEOP int osl_safe_mod_iii (int a, int b) {
     return (b != 0) ? (a % b) : 0;
 }
@@ -691,9 +750,9 @@ osl_distance_fvv (void *a_, void *b_)
 {
     const Vec3 &a (VEC(a_));
     const Vec3 &b (VEC(b_));
-    float x = a[0] - b[0];
-    float y = a[1] - b[1];
-    float z = a[2] - b[2];
+    float x = a.x - b.x;
+    float y = a.y - b.y;
+    float z = a.z - b.z;
     return sqrtf (x*x + y*y + z*z);
 }
 
@@ -722,13 +781,13 @@ osl_normalize_vv (void *result, void *a)
     // NOTE: must match with the Dual version of normalize used below
     Vec3 v = VEC(a);
     float len = sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
-    if (len > 0) {
-        float invlen = 1 / len;
+    if (len > 0.0f) {
+        float invlen = 1.0f / len;
         v.x *= invlen;
         v.y *= invlen;
         v.z *= invlen;
     } else
-        v.x = v.y = v.z = 0;
+        v.x = v.y = v.z = 0.0f;
     VEC(result) = v;
 }
 

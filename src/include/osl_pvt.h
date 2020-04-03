@@ -31,6 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <memory>
 
 #include <OSL/oslconfig.h>
+#include <OSL/oslcontainers.h>
 
 
 OSL_NAMESPACE_ENTER
@@ -187,7 +188,7 @@ public:
 
     /// Return a reference to the structure list.
     ///
-    static std::vector<std::shared_ptr<StructSpec> > & struct_list ();
+    static vector<std::shared_ptr<StructSpec> > & struct_list ();
 
     /// Is this an array (either a simple array, or an array of structs)?
     ///
@@ -424,7 +425,7 @@ public:
 private:
     ustring m_name;                    ///< Structure name (unmangled)
     int m_scope;                       ///< Structure's scope id
-    std::vector<FieldSpec> m_fields;   ///< List of fields of the struct
+    vector<FieldSpec> m_fields;        ///< List of fields of the struct
 };
 
 
@@ -725,9 +726,9 @@ protected:
 
 
 
-typedef std::vector<Symbol> SymbolVec;
+typedef vector<Symbol> SymbolVec;
 typedef Symbol * SymbolPtr;
-typedef std::vector<Symbol *> SymbolPtrVec;
+typedef vector<Symbol *> SymbolPtrVec;
 
 
 
@@ -889,6 +890,13 @@ public:
             std::equal(&a.m_jump[0], &a.m_jump[max_jumps], &b.m_jump[0]);
     }
 
+    /// Runtime optimizer may have case to transmute an op to a
+    /// different form.  Only opname is changed.
+    void transmute_opname (ustring opname)
+    {
+        m_op = opname;
+    }
+
 private:
     ustring m_op;                   ///< Name of opcode
     int m_firstarg;                 ///< Index of first argument
@@ -908,7 +916,7 @@ private:
 };
 
 
-typedef std::vector<Opcode> OpcodeVec;
+typedef vector<Opcode> OpcodeVec;
 
 
 

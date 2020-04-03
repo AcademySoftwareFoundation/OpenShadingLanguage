@@ -970,7 +970,7 @@ ASTNode::codegen_initlist (ref init, TypeSpec type, Symbol *sym)
             }
         }
         if (all_const && init) {
-            std::vector<char> arrayvals (type.simpletype().size());
+            vector<char> arrayvals (type.simpletype().size());
             for (int i = 0;  init;  init = init->next(), ++i) {
                 ASTliteral *lit = (ASTliteral *)init.get();
                 if (elemtype == TypeDesc::INT)
@@ -1726,7 +1726,7 @@ ASTtype_constructor::codegen (Symbol *dest)
         argevaldest = dest;
     }
 
-    std::vector<Symbol *> argdest;
+    vector<Symbol *> argdest;
     argdest.push_back (dest);
     int nargs = 0;
     for (ref a = args();  a;  a = a->next(), ++nargs) {
@@ -1820,7 +1820,7 @@ ASTfunction_call::codegen (Symbol *dest)
             dest = m_compiler->make_temporary (typespec());
     }
 
-    std::vector<TypeSpec> polyargs;
+    vector<TypeSpec> polyargs;
     const char *param_argcodes = func()->argcodes().c_str();
     int len;
     m_compiler->type_from_code (param_argcodes, &len);  // skip ret type

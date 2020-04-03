@@ -71,7 +71,7 @@ AccumRule::accum(const Color3 &color, std::vector<AovOutput> &outputs)const
 
 AccumAutomata::~AccumAutomata()
 {
-    for (std::list<lpexp::Rule *>::iterator i = m_rules.begin(); i != m_rules.end(); ++i)
+    for (auto i = m_rules.begin(); i != m_rules.end(); ++i)
         delete *i;
 }
 
@@ -101,7 +101,7 @@ void
 AccumAutomata::compile()
 {
     NdfAutomata ndfautomata;
-    for (std::list<lpexp::Rule *>::const_iterator i = m_rules.begin(); i != m_rules.end(); ++i) {
+    for (auto i = m_rules.begin(); i != m_rules.end(); ++i) {
         (*i)->genAuto(ndfautomata);
         delete *i;
     }
@@ -130,10 +130,10 @@ AccumAutomata::accum(int state, const Color3 &color, std::vector<AovOutput> &out
 
 Accumulator::Accumulator(const AccumAutomata *accauto):m_accum_automata(accauto)
 {
-    const std::list<AccumRule> &rules = m_accum_automata->getRuleList();
+    const auto &rules = m_accum_automata->getRuleList();
     // Make sure we have as many outputs as the rules need
     int maxouts = 0;
-    for (std::list<AccumRule>::const_iterator i =  rules.begin(); i != rules.end(); ++i)
+    for (auto i =  rules.cbegin(); i != rules.cend(); ++i)
         maxouts = i->getOutputIndex() > maxouts ? i->getOutputIndex() : maxouts;
     m_outputs.resize(maxouts+1);
 

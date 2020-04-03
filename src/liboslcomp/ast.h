@@ -263,11 +263,11 @@ protected:
 
     /// Flatten a list of nodes (headed by A) into a vector of node refs
     /// (vec).
-    static void list_to_vec (const ref &A, std::vector<ref> &vec);
+    static void list_to_vec (const ref &A, vector<ref> &vec);
 
     /// Turn a vector of node refs into a list of nodes, returning its
     /// head.
-    static ref vec_to_list (std::vector<ref> &vec);
+    static ref vec_to_list (vector<ref> &vec);
 
     /// Generate a comma-separated string of data types of the list headed
     /// by node (for example, "float, int, string").
@@ -396,7 +396,7 @@ protected:
     OSLCompilerImpl *m_compiler;  ///< Back-pointer to the compiler
     ustring m_sourcefile;   ///< Filename of source where the node came from
     int m_sourceline;       ///< Line number in source where the node came from
-    std::vector<ref> m_children;  ///< Child nodes
+    vector<ref> m_children;  ///< Child nodes
     int m_op;                     ///< Operator selection
     TypeSpec m_typespec;          ///< Data type of this node
     bool m_is_lvalue;             ///< Is it an lvalue (assignable?)
@@ -509,7 +509,7 @@ private:
     // For structures, map the field names (even recursively!) to the
     // specific initializers.
     typedef std::pair<ustring,ASTNode *> NamedInit;
-    std::vector<NamedInit> m_struct_field_inits;
+    vector<NamedInit> m_struct_field_inits;
 };
 
 

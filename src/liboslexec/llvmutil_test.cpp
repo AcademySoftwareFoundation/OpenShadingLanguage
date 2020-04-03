@@ -84,7 +84,8 @@ void
 test_int_func ()
 {
     // Setup
-    OSL::pvt::LLVM_Util ll;
+    OSL::pvt::LLVM_Util::PerThreadInfo  pti;
+    OSL::pvt::LLVM_Util ll(0,pti);
 
     // Make a function with prototype:   int myadd (int arg1, int arg2)
     // and make it the current function.
@@ -102,7 +103,7 @@ test_int_func ()
     ll.op_return (sum);
 
     // Optimize it
-    ll.setup_optimization_passes (0);
+    ll.setup_optimization_passes (0, true /*targetHost*/);
     ll.do_optimize ();
 
     // Print the optimized bitcode
@@ -131,7 +132,8 @@ void
 test_triple_func ()
 {
     // Setup
-    OSL::pvt::LLVM_Util ll;
+    OSL::pvt::LLVM_Util::PerThreadInfo  pti;
+    OSL::pvt::LLVM_Util ll(0,pti);
 
     // Make a function with prototype:   int myadd (int arg1, int arg2)
     // and make it the current function.
@@ -156,7 +158,7 @@ test_triple_func ()
     ll.op_return ();
 
     // Optimize it
-    ll.setup_optimization_passes (0);
+    ll.setup_optimization_passes (0, true /*targetHost*/);
     ll.do_optimize ();
 
     // Print the optimized bitcode
@@ -188,7 +190,8 @@ IntFuncOfTwoInts
 test_big_func (bool do_print=false)
 {
     // Setup
-    OSL::pvt::LLVM_Util ll;
+    OSL::pvt::LLVM_Util::PerThreadInfo  pti;
+    OSL::pvt::LLVM_Util ll(0,pti);
 
     // Make a function with prototype:  int myadd (int arg1, int arg2)
     // and make it the current function in the current module.
@@ -215,7 +218,7 @@ test_big_func (bool do_print=false)
     //     std::cout << "Generated the following bitcode:\n"
     //               << ll.bitcode_string(func) << "\n";
 
-    ll.setup_optimization_passes (0);
+    ll.setup_optimization_passes (0, true /*targetHost*/);
     ll.do_optimize ();
 
     if (do_print)
@@ -240,6 +243,8 @@ int
 main (int argc, char *argv[])
 {
     getargs (argc, argv);
+
+    OSL::pvt::LLVM_Util::ScopedJitMemoryUser llvm_jit_memory_user;
 
     // Test simple functions
     test_int_func();

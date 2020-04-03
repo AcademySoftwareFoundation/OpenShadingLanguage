@@ -194,10 +194,13 @@ slice_gabor_kernel_3d (const Dual2<float> &d, float w, float a,
         Vec3 n, t, b;
         n = P.dx().cross (P.dy());  // normal to P
         int do_filter = 1;
-        if (n.dot(n) < 1.0e-6f) {  /* length of deriv < 1/1000 */
+        if (OSL_UNLIKELY(n.dot(n) < 1.0e-6f)) {  /* length of deriv < 1/1000 */
             // No way to do filter if we have no derivs, and no reason to
             // do it if it's too small to have any effect.
             do_filter = 0;
+            // Just to get rid of "may be used uninitialized in this function [-Werror=maybe-uninitialized]"
+            gp.local = sfm::Matrix33();
+            gp.N = Vec3(0.0f);
         } else {
             make_orthonormals (n, t, b);
 
@@ -227,8 +230,8 @@ slice_gabor_kernel_3d (const Dual2<float> &d, float w, float a,
         gp.do_filter = do_filter;
     }
 
-// Choose an omega and phi value for a particular gabor impulse,
-// based on the user-selected noise mode.
+    // Choose an omega and phi value for a particular gabor impulse,
+    // based on the user-selected noise mode.
     template<int AnisotropicT>
     static OSL_FORCEINLINE void
     gabor_sample (const sfm::GaborParams &gp, const Vec3 &x_c, sfm::fast_rng &rng,

@@ -195,6 +195,7 @@ target_link_libraries (${local_lib}
         ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
         ${CLANG_LIBRARIES}
         ${LLVM_LIBRARIES} ${LLVM_LDFLAGS} ${LLVM_SYSTEM_LIBRARIES}
+        ${TBBMALLOC_LIB}
     )
 
 set_target_properties (${local_lib}
@@ -216,7 +217,7 @@ install_targets (${local_lib})
 # Unit tests
 if (OSL_BUILD_TESTS)
     add_executable (accum_test accum_test.cpp)
-    target_link_libraries ( accum_test PRIVATE oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+    target_link_libraries ( accum_test PRIVATE oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} ${TBBMALLOC_LIB})
     add_test (unit_accum "${CMAKE_BINARY_DIR}/src/liboslexec/accum_test")
 
     add_executable (dual_test dual_test.cpp)
@@ -224,6 +225,6 @@ if (OSL_BUILD_TESTS)
     add_test (unit_dual "${CMAKE_BINARY_DIR}/src/liboslexec/dual_test")
 
     add_executable (llvmutil_test llvmutil_test.cpp)
-    target_link_libraries ( llvmutil_test PRIVATE oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+    target_link_libraries ( llvmutil_test PRIVATE oslexec ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} ${TBBMALLOC_LIB})
     add_test (unit_llvmutil "${CMAKE_BINARY_DIR}/src/liboslexec/llvmutil_test")
 endif ()

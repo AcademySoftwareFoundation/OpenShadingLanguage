@@ -37,6 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <OSL/oslcomp.h>
 #include "ast.h"
 #include "symtab.h"
+#include <OSL/oslcontainers.h>
 #include <OSL/genclosure.h>
 
 
@@ -51,11 +52,11 @@ namespace pvt {
 
 /// Set of symbols, identified by pointers.
 ///
-typedef std::set<const Symbol *> SymPtrSet;
+typedef set<const Symbol *> SymPtrSet;
 
 /// For each symbol, have a list of the symbols it depends on (or that
 /// depends on it).
-typedef std::map<const Symbol *, SymPtrSet> SymDependencyMap;
+typedef map<const Symbol *, SymPtrSet> SymDependencyMap;
 
 
 
@@ -177,20 +178,20 @@ public:
     /// Look at the compile options, setting defines, includepaths, and
     /// a variety of other private options.
     void read_compile_options (const std::vector<std::string> &options,
-                               std::vector<std::string> &defines,
-                               std::vector<std::string> &includepaths);
+                               vector<std::string> &defines,
+                               vector<std::string> &includepaths);
 
     bool preprocess_file (const std::string &filename,
                           const std::string &stdoslpath,
-                          const std::vector<std::string> &defines,
-                          const std::vector<std::string> &includepaths,
+                          const vector<std::string> &defines,
+                          const vector<std::string> &includepaths,
                           std::string &result);
 
     bool preprocess_buffer (const std::string &buffer,
                             const std::string &filename,
                             const std::string &stdoslpath,
-                            const std::vector<std::string> &defines,
-                            const std::vector<std::string> &includepaths,
+                            const vector<std::string> &defines,
+                            const vector<std::string> &includepaths,
                             std::string &result);
 
     /// Has a shader already been defined?
@@ -236,7 +237,7 @@ public:
     /// Take a type code string (possibly containing many types) and
     /// turn it into a TypeSpec vector.
     void typespecs_from_codes (const char *code,
-                               std::vector<TypeSpec> &types) const;
+                               vector<TypeSpec> &types) const;
 
     /// Emit a single IR opcode -- append one op to the list of
     /// intermediate code, returning the label (address) of the new op.
@@ -371,7 +372,7 @@ public:
     static void track_variable_lifetimes (const OpcodeVec &ircode,
                                           const SymbolPtrVec &opargs,
                                           const SymbolPtrVec &allsyms,
-                                          std::vector<int> *bblock_ids=NULL);
+                                          vector<int> *bblock_ids=NULL);
     static void coalesce_temporaries (SymbolPtrVec &symtab);
 
     ustring main_filename () const { return m_main_filename; }
@@ -452,8 +453,8 @@ private:
     /// writes recorded to the same place.
     void syms_used_in_op_range (OpcodeVec::const_iterator opbegin,
                                 OpcodeVec::const_iterator opend,
-                                std::vector<Symbol *> *rsyms,
-                                std::vector<Symbol *> *wsyms);
+                                vector<Symbol *> *rsyms,
+                                vector<Symbol *> *wsyms);
 
     ASTshader_declaration *shader_decl () const {
         if (m_shader.get()->nodetype() != ASTNode::shader_declaration_node)
@@ -492,10 +493,10 @@ private:
     SymbolPtrVec m_opargs;    ///< Arguments for all instructions
     int m_next_temp;          ///< Next temporary symbol index
     int m_next_const;         ///< Next const symbol index
-    std::vector<ConstantSymbol *> m_const_syms;  ///< All consts we've made
+    vector<ConstantSymbol *> m_const_syms;  ///< All consts we've made
     std::ostream *m_osofile;  ///< Open .oso stream for output
     ustring m_codegenmethod;  ///< Current method we're generating code for
-    std::stack<FunctionSymbol *> m_function_stack; ///< Stack of called funcs
+    stack<FunctionSymbol *> m_function_stack; ///< Stack of called funcs
     int m_total_nesting;      ///< total conditional nesting level (0 == none)
     int m_loop_nesting;       ///< just loop nesting level (0 == none)
     SymDependencyMap m_symdeps; ///< Symbol-to-symbol dependencies

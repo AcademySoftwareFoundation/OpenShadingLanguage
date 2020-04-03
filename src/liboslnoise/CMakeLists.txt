@@ -12,7 +12,7 @@ target_link_libraries (oslnoise
     PUBLIC
         ${OPENIMAGEIO_LIBRARIES} ${ILMBASE_LIBRARIES}
     PRIVATE
-        ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
+        ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} ${TBBMALLOC_LIB}
     )
 
 set_target_properties (oslnoise

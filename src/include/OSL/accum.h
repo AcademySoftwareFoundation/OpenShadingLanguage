@@ -29,6 +29,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pragma once
 
 #include <OSL/oslconfig.h>
+#include <OSL/oslcontainers.h>
 #include <OSL/optautomata.h>
 #include <list>
 #include <stack>
@@ -163,15 +164,15 @@ class OSLEXECPUBLIC AccumAutomata
 
         // Compiled lpexp's we save while creating the rules with addRule.
         // It gets nuked after you call compile()
-        std::list<lpexp::Rule *> m_rules;
+        pvt::list<lpexp::Rule *> m_rules;
         // The famous so called DF automata
         DfOptimizedAutomata      m_dfoptautomata;
         // List of rules linked as void * from the automata's states
         std::list<AccumRule>     m_accumrules;
         // Custom symbols to support on expressions as events
-        std::vector<ustring>     m_user_events;
+        pvt::vector<ustring>     m_user_events;
         // Custom symbols to support on expressions as scattering
-        std::vector<ustring>     m_user_scatterings;
+        pvt::vector<ustring>     m_user_scatterings;
 };
 
 
@@ -246,7 +247,7 @@ class OSLEXECPUBLIC Accumulator
         // by rules and NULL for the rest
         std::vector<AovOutput>  m_outputs;
         // Current state stack, this is state information
-        std::stack<int>         m_stack;
+        pvt::stack<int>         m_stack;
         // And the current state
         int                     m_state;
 };

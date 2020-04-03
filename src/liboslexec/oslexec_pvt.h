@@ -35,6 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <memory>
 #include <list>
 #include <set>
+#include <type_traits>
 #include <unordered_map>
 
 #include <boost/thread/tss.hpp>   /* for thread_specific_ptr */
@@ -57,12 +58,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #include <OSL/genclosure.h>
+#include "OSL/llvm_util.h"
 #include <OSL/oslexec.h>
 #include <OSL/oslclosure.h>
+#include "OSL/oslcontainers.h"
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
 #include "osl_pvt.h"
 #include "constantpool.h"
+#include "aligned_allocator.h"
 #include "opcolor.h"
 
 
@@ -104,7 +108,8 @@ struct PerThreadInfo
     ~PerThreadInfo ();
     ShadingContext *pop_context ();  ///< Get the pool top and then pop
 
-    std::stack<ShadingContext *> context_pool;
+    pvt::stack<ShadingContext *> context_pool;
+    LLVM_Util::PerThreadInfo llvm_thread_info;
 };
 
 
@@ -156,7 +161,7 @@ struct OpDescriptor {
 // Helper function to expand vec by 'size' elements, initializing them to 0.
 template<class T>
 inline void
-expand (std::vector<T> &vec, size_t size)
+expand (vector<T> &vec, size_t size)
 {
     vec.resize (vec.size() + size, T(0));
 }
@@ -315,7 +320,7 @@ private:
 /// Template to count a vector's allocated size, in bytes.
 ///
 template<class T>
-inline off_t vectorbytes (const std::vector<T> &v)
+inline off_t vectorbytes (const vector<T> &v)
 {
     return v.capacity() * sizeof(T);
 }
@@ -398,15 +403,15 @@ private:
     std::string m_shadername;           ///< Shader name
     std::string m_osofilename;          ///< Full path of oso file
     OpcodeVec m_ops;                    ///< Actual code instructions
-    std::vector<int> m_args;            ///< Arguments for all the ops
+    vector<int> m_args;            ///< Arguments for all the ops
     // Need the code offsets for each code block
     SymbolVec m_symbols;                ///< Symbols used by the shader
-    std::vector<int> m_idefaults;       ///< int default param values
-    std::vector<float> m_fdefaults;     ///< float default param values
-    std::vector<ustring> m_sdefaults;   ///< string default param values
-    std::vector<int> m_iconsts;         ///< int constant values
-    std::vector<float> m_fconsts;       ///< float constant values
-    std::vector<ustring> m_sconsts;     ///< string constant values
+    vector<int> m_idefaults;       ///< int default param values
+    vector<float> m_fdefaults;     ///< float default param values
+    vector<ustring> m_sdefaults;   ///< string default param values
+    vector<int> m_iconsts;         ///< int constant values
+    vector<float> m_fconsts;       ///< float constant values
+    vector<ustring> m_sconsts;     ///< string constant values
     int m_firstparam, m_lastparam;      ///< Subset of symbols that are params
     int m_maincodebegin, m_maincodeend; ///< Main shader code range
     int m_raytype_queries;              ///< Bitmask of raytypes queried
@@ -433,7 +438,7 @@ public:
         // Number of keyword arguments
         int                       nkeyword;
         // The parameters
-        std::vector<ClosureParam> params;
+        vector<ClosureParam> params;
         // the needed size for the structure
         int                       struct_size;
         // Creation callbacks
@@ -454,10 +459,10 @@ public:
 
 private:
     // A mapping from name to ID for the compiler
-    std::map<ustring, int>    m_closure_name_to_id;
+    map<ustring, int>    m_closure_name_to_id;
     // And the internal global table, indexed
     // by the internal ID for fast dispatching
-    std::vector<ClosureEntry> m_closure_table;
+    vector<ClosureEntry> m_closure_table;
 };
 
 
@@ -588,6 +593,8 @@ public:
     int llvm_debug () const { return m_llvm_debug; }
     int llvm_debug_layers () const { return m_llvm_debug_layers; }
     int llvm_debug_ops () const { return m_llvm_debug_ops; }
+    int llvm_debugging_symbols () const { return m_llvm_debugging_symbols; }
+    int llvm_profiling_events () const { return m_llvm_profiling_events; }
     int llvm_output_bitcode () const { return m_llvm_output_bitcode; }
     bool fold_getattribute () const { return m_opt_fold_getattribute; }
     bool opt_texture_handle () const { return m_opt_texture_handle; }
@@ -614,7 +621,7 @@ public:
     /// The group is set and won't be changed again; take advantage of
     /// this by optimizing the code knowing all our instance parameters
     /// (at least the ones that can't be overridden by the geometry).
-    void optimize_group (ShaderGroup &group, ShadingContext *ctx);
+    void optimize_group (ShaderGroup &group, ShadingContext *ctx, bool do_jit);
 
     /// After doing all optimization and code JIT, we can clean up by
     /// deleting the instances' code and arguments, and paring their
@@ -641,9 +648,9 @@ public:
 
     int raytype_bit (ustring name);
 
-    void optimize_all_groups (int nthreads=0, int mythread=0, int totalthreads=1);
+    void optimize_all_groups (int nthreads=0, int mythread=0, int totalthreads=1, bool do_jit=true);
 
-    typedef std::unordered_map<ustring,OpDescriptor,ustringHash> OpDescriptorMap;
+    typedef unordered_map<ustring,OpDescriptor,ustringHash> OpDescriptorMap;
 
     /// Look up OpDescriptor for the named op, return NULL for unknown op.
     ///
@@ -713,11 +720,11 @@ private:
     TextureSystem *m_texturesys;          ///< Texture system
 
     ErrorHandler *m_err;                  ///< Error handler
-    mutable std::list<std::string> m_errseen, m_warnseen;
+    mutable list<std::string> m_errseen, m_warnseen;
     static const int m_errseenmax = 32;
     mutable mutex m_errmutex;
 
-    typedef std::map<ustring,ShaderMaster::ref> ShaderNameMap;
+    typedef map<ustring,ShaderMaster::ref> ShaderNameMap;
     ShaderNameMap m_shader_masters;       ///< name -> shader masters map
 
     ConstantPool<int> m_int_pool;
@@ -773,6 +780,8 @@ private:
     int m_llvm_debug;                     ///< More LLVM debugging output
     int m_llvm_debug_layers;              ///< Add layer enter/exit printfs
     int m_llvm_debug_ops;                 ///< Add printfs to every op
+    int m_llvm_debugging_symbols;         ///< Generate GDB compatible debug info during JIT
+    int m_llvm_profiling_events;          ///< Emit Intel profiling events during JIT
     int m_llvm_output_bitcode;            ///< Output bitcode for each group
     ustring m_debug_groupname;            ///< Name of sole group to debug
     ustring m_debug_layername;            ///< Name of sole layer to debug
@@ -783,8 +792,8 @@ private:
     std::string m_searchpath;             ///< Shader search path
     std::vector<std::string> m_searchpath_dirs; ///< All searchpath dirs
     ustring m_commonspace_synonym;        ///< Synonym for "common" space
-    std::vector<ustring> m_raytypes;      ///< Names of ray types
-    std::vector<ustring> m_renderer_outputs; ///< Names of renderer outputs
+    vector<ustring> m_raytypes;      ///< Names of ray types
+    vector<ustring> m_renderer_outputs; ///< Names of renderer outputs
     int m_max_local_mem_KB;               ///< Local storage can a shader use
     bool m_compile_report;                ///< Print compilation report?
     bool m_buffer_printf;                 ///< Buffer/batch printf output?
@@ -869,7 +878,7 @@ private:
 
     mutable spin_mutex m_stat_mutex;     ///< Mutex for non-atomic stats
     ClosureRegistry m_closure_registry;
-    std::vector<std::weak_ptr<ShaderGroup> > m_all_shader_groups;
+    vector<std::weak_ptr<ShaderGroup> > m_all_shader_groups;
     mutable spin_mutex m_all_shader_groups_mutex;
 
     // State for entering shader groups -- this is only for the
@@ -879,8 +888,10 @@ private:
 
     atomic_int m_groups_to_compile_count;
     atomic_int m_threads_currently_compiling;
-    mutable std::map<ustring,long long> m_group_profile_times;
+    mutable map<ustring,long long> m_group_profile_times;
     // N.B. group_profile_times is protected by m_stat_mutex.
+
+    LLVM_Util::ScopedJitMemoryUser m_llvm_jit_memory_user;
 
     friend class OSL::ShadingContext;
     friend class ShaderMaster;
@@ -953,7 +964,7 @@ struct Connection {
 
 
 
-typedef std::vector<Connection> ConnectionVec;
+typedef vector<Connection> ConnectionVec;
 
 
 /// Macro to loop over just the params & output params of an instance,
@@ -1168,8 +1179,8 @@ public:
     int Psym () const { return m_Psym; }
     int Nsym () const { return m_Nsym; }
 
-    const std::vector<int> & args () const { return m_instargs; }
-    std::vector<int> & args () { return m_instargs; }
+    const vector<int> & args () const { return m_instargs; }
+    vector<int> & args () { return m_instargs; }
     int arg (int argnum) const { return args()[argnum]; }
     const Symbol *argsymbol (int argnum) const { return symbol(arg(argnum)); }
     Symbol *argsymbol (int argnum) { return symbol(arg(argnum)); }
@@ -1245,7 +1256,7 @@ public:
                    a.arraylen()    == b.arraylen();
         }
     };
-    typedef std::vector<SymOverrideInfo> SymOverrideInfoVec;
+    typedef vector<SymOverrideInfo> SymOverrideInfoVec;
 
     SymOverrideInfo *instoverride (int i) { return &m_instoverrides[i]; }
     const SymOverrideInfo *instoverride (int i) const { return &m_instoverrides[i]; }
@@ -1259,11 +1270,11 @@ private:
     SymOverrideInfoVec m_instoverrides; ///< Instance parameter info
     SymbolVec m_instsymbols;            ///< Symbols used by the instance
     OpcodeVec m_instops;                ///< Actual code instructions
-    std::vector<int> m_instargs;        ///< Arguments for all the ops
+    vector<int> m_instargs;        ///< Arguments for all the ops
     ustring m_layername;                ///< Name of this layer
-    std::vector<int> m_iparams;         ///< int param values
-    std::vector<float> m_fparams;       ///< float param values
-    std::vector<ustring> m_sparams;     ///< string param values
+    vector<int> m_iparams;         ///< int param values
+    vector<float> m_fparams;       ///< float param values
+    vector<ustring> m_sparams;     ///< string param values
     int m_id;                           ///< Unique ID for the instance
     bool m_writes_globals;              ///< Do I have side effects?
     bool m_userdata_params;             ///< Might I read userdata for params?
@@ -1340,7 +1351,7 @@ private:
         return offset;
     }
 
-    std::vector<std::unique_ptr<char[]>> m_blocks; ///< Hold blocks of BlockSize bytes
+    vector<std::unique_ptr<char[]>> m_blocks; ///< Hold blocks of BlockSize bytes
     size_t  m_current_block;    ///< Index into the m_blocks array
     size_t  m_block_offset;     ///< Offset from the start of the current block
 };
@@ -1410,7 +1421,7 @@ public:
 
     /// Clear the layers
     ///
-    void clear () { m_layers.clear ();  m_optimized = 0;  m_executions = 0; }
+    void clear () { m_layers.clear ();  m_optimized = 0;  m_jitted = 0; m_executions = 0; }
 
     /// Append a new shader instance on to the end of this group
     ///
@@ -1430,6 +1441,9 @@ public:
 
     int optimized () const { return m_optimized; }
     void optimized (int opt) { m_optimized = opt; }
+
+    int jitted () const { return m_jitted; }
+    void jitted (int jitted) { m_jitted = jitted; }
 
     size_t llvm_groupdata_size () const { return m_llvm_groupdata_size; }
     void llvm_groupdata_size (size_t size) { m_llvm_groupdata_size = size; }
@@ -1533,14 +1547,15 @@ private:
     // needed on every shade execution at the front of the struct, as much
     // together on one cache line as possible.
     volatile int m_optimized = 0;    ///< Is it already optimized?
+    volatile int m_jitted = 0;       ///< Is it already jitted?
     bool m_does_nothing = false;     ///< Is the shading group just func() { return; }
     size_t m_llvm_groupdata_size = 0;///< Heap size needed for its groupdata
     int m_id;                        ///< Unique ID for the group
     int m_num_entry_layers = 0;      ///< Number of marked entry layers
     RunLLVMGroupFunc m_llvm_compiled_version = nullptr;
     RunLLVMGroupFunc m_llvm_compiled_init = nullptr;
-    std::vector<RunLLVMGroupFunc> m_llvm_compiled_layers;
-    std::vector<ShaderInstanceRef> m_layers;
+    vector<RunLLVMGroupFunc> m_llvm_compiled_layers;
+    vector<ShaderInstanceRef> m_layers;
     ustring m_name;
     int m_exec_repeat = 1;           ///< How many times to execute group
     int m_raytype_queries = -1;      ///< Bitmask of raytypes queried
@@ -1549,18 +1564,18 @@ private:
     mutable mutex m_mutex;           ///< Thread-safe optimization
     int m_globals_read = 0;
     int m_globals_write = 0;
-    std::vector<ustring> m_textures_needed;
-    std::vector<ustring> m_closures_needed;
-    std::vector<ustring> m_globals_needed;  // semi-deprecated
-    std::vector<ustring> m_userdata_names;
-    std::vector<TypeDesc> m_userdata_types;
-    std::vector<int> m_userdata_offsets;
-    std::vector<char> m_userdata_derivs;
-    std::vector<int> m_userdata_layers;
-    std::vector<void*> m_userdata_init_vals;
-    std::vector<ustring> m_attributes_needed;
-    std::vector<ustring> m_attribute_scopes;
-    std::vector<ustring> m_renderer_outputs; ///< Names of renderer outputs
+    vector<ustring> m_textures_needed;
+    vector<ustring> m_closures_needed;
+    vector<ustring> m_globals_needed;  // semi-deprecated
+    vector<ustring> m_userdata_names;
+    vector<TypeDesc> m_userdata_types;
+    vector<int> m_userdata_offsets;
+    vector<char> m_userdata_derivs;
+    vector<int> m_userdata_layers;
+    vector<void*> m_userdata_init_vals;
+    vector<ustring> m_attributes_needed;
+    vector<ustring> m_attribute_scopes;
+    vector<ustring> m_renderer_outputs; ///< Names of renderer outputs
     bool m_unknown_textures_needed;
     bool m_unknown_closures_needed;
     bool m_unknown_attributes_needed;
@@ -1685,6 +1700,8 @@ public:
     /// attribname is "", return the value of the node itself.
     int dict_value (int nodeID, ustring attribname, TypeDesc type, void *data);
 
+    int raytype_bit (ustring name);
+
     bool osl_get_attribute (ShaderGlobals *sg, void *objdata, int dest_derivs,
                             ustring obj_name, ustring attr_name,
                             int array_lookup, int index,
@@ -1700,6 +1717,10 @@ public:
 
     void texture_thread_info (TextureSystem::Perthread *t) {
         m_texture_thread_info = t;
+    }
+
+    const LLVM_Util::PerThreadInfo &llvm_thread_info () const {
+        return thread_info()->llvm_thread_info;
     }
 
     TextureOpt *texture_options_ptr () { return &m_textureopt; }
@@ -1774,8 +1795,8 @@ private:
     PerThreadInfo *m_threadinfo;        ///< Ptr to our thread's info
     mutable TextureSystem::Perthread *m_texture_thread_info; ///< Ptr to texture thread info
     ShaderGroup *m_group;               ///< Ptr to shader group
-    std::vector<char> m_heap;           ///< Heap memory
-    typedef std::unordered_map<ustring, std::unique_ptr<regex>, ustringHash> RegexMap;
+    vector<char, aligned_allocator<char>> m_heap;           ///< Heap memory
+    typedef unordered_map<ustring, std::unique_ptr<regex>, ustringHash> RegexMap;
     RegexMap m_regex_map;               ///< Compiled regex's
     MessageList m_messages;             ///< Message blackboard
     int m_max_warnings;                 ///< To avoid processing too many warnings
@@ -1793,8 +1814,18 @@ private:
     Dictionary *m_dictionary;
 
     // Buffering of error messages and printfs
-    typedef std::pair<ErrorHandler::ErrCode, std::string> ErrorItem;
-    mutable std::vector<ErrorItem> m_buffered_errors;
+    struct ErrorItem
+    {
+        ErrorItem() = default;
+        ErrorItem(ErrorHandler::ErrCode err_code_, std::string msgString_)
+        : err_code(err_code_)
+        , msgString(msgString_)
+        {}
+
+        ErrorHandler::ErrCode err_code;
+        std::string msgString;
+    };
+    mutable vector<ErrorItem> m_buffered_errors;
 };
 
 
@@ -1957,9 +1988,9 @@ protected:
     // All below is just for the one inst we're optimizing at the moment:
     ShaderInstance *m_inst;           ///< Instance we're optimizing
     int m_layer;                      ///< Layer we're optimizing
-    std::vector<int> m_bblockids;       ///< Basic block IDs for each op
-    std::vector<char> m_in_conditional; ///< Whether each op is in a cond
-    std::vector<char> m_in_loop;        ///< Whether each op is in a loop
+    vector<int> m_bblockids;       ///< Basic block IDs for each op
+    vector<char> m_in_conditional; ///< Whether each op is in a cond
+    vector<char> m_in_loop;        ///< Whether each op is in a loop
     int m_first_return;                 ///< Op number of first return or exit
 };
 

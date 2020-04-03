@@ -30,11 +30,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <limits>
 #include <type_traits>
+#include <utility>
 
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
 #include <OSL/sfm_simplex.h>
 #include <OSL/sfmath.h>
+#include <OSL/wide.h>
 #include <OpenImageIO/fmath.h>
 #include <OpenImageIO/hash.h>
 #include <OpenImageIO/simd.h>
@@ -121,6 +123,9 @@ struct NoiseParams;
 namespace pvt {
 using namespace OIIO::simd;
 using namespace OIIO::bjhash;
+#ifdef __OSL_WIDE_PVT
+    namespace sfm = OSL::__OSL_WIDE_PVT::sfm;
+#endif
 
 typedef void (*NoiseGenericFunc)(int outdim, float *out, bool derivs,
                                  int indim, const float *in,
@@ -1340,18 +1345,28 @@ struct HashVectorPeriodic {
 // main intent is to allow top level classes to share implementation and carry
 // the policy down into helper functions who might diverge in implementation
 // or conditionally emit different code paths
-struct CGDefault
-{
-    static constexpr bool allowSIMD = true;
-};
+struct CodeGenSIMD {};
+struct CodeGenScalar {};
 
-struct CGScalar
-{
-    static constexpr bool allowSIMD = false;
-};
+#if OIIO_SIMD
+    typedef CodeGenSIMD CodeGenDefault;
+#else
+    typedef CodeGenScalar CodeGenDefault;
+#endif
 
-template <typename CGPolicyT = CGDefault, typename V, typename H, typename T>
-OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (V& result, H& hash, const T &x) {
+// Enables calling perlin with explicit template parameter to identify the CodeGen.
+// If not CodeGen is specified, the default is used.
+template <typename CodeGenT = CodeGenDefault, typename... ArgListT>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin(ArgListT&&... args)
+{
+    // 1st parameter to identify the code gen
+    // to allow specialization using function overloads
+    return perlin_impl(CodeGenT(), std::forward<ArgListT>(args)...);
+}
+
+
+template <typename CodeGenT, typename V, typename H, typename T>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenT,V& result, H& hash, const T &x) {
     int X; T fx = floorfrac(x, &X);
     T u = fade(fx);
 
@@ -1360,12 +1375,10 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (V& result, H& hash, const T &x) {
     result = scale1 (lerp_result);
 }
 
-template <typename CGPolicyT = CGDefault, typename H>
-OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (float &result, const H &hash, const float &x, const float &y)
-{
 #if OIIO_SIMD
-    if (CGPolicyT::allowSIMD)
-    {
+template <typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenSIMD, float &result, const H &hash, const float &x, const float &y)
+{
     int4 XY;
     float4 fxy = floorfrac (float4(x,y,0.0f), &XY);
     float4 uv = fade(fxy);  // Note: will be (fade(fx), fade(fy), 0, 0)
@@ -1383,10 +1396,11 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (float &result, const H &hash, const 
     float4 remaindery = OIIO::simd::shuffle<1>(fxy) - (*(float4*)f0011);
     float4 corner_grad = grad (corner_hash, remainderx, remaindery);
     result = scale2 (bilerp (corner_grad, uv[0], uv[1]));
-
-    } else
+}
 #endif
-    {
+template <typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, float &result, const H &hash, const float &x, const float &y)
+{
     // ORIGINAL, non-SIMD
     int X; float fx = floorfrac(x, &X);
     int Y; float fy = floorfrac(y, &Y);
@@ -1399,16 +1413,13 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (float &result, const H &hash, const 
                            grad (hash (X  , Y+1), fx     , fy-1.0f),
                            grad (hash (X+1, Y+1), fx-1.0f, fy-1.0f), u, v);
     result = scale2 (bilerp_result);
-    }
 }
 
-template <typename CGPolicyT = CGDefault, typename H>
-OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (float &result, const H &hash,
+#if OIIO_SIMD
+template <typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenSIMD, float &result, const H &hash,
                     const float &x, const float &y, const float &z)
 {
-#if OIIO_SIMD
-    if (CGPolicyT::allowSIMD)
-    {
 #if 0
     // You'd think it would be faster to do the floorfrac in parallel, but
     // according to my timings, it is not. I don't understand exactly why.
@@ -1454,9 +1465,12 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (float &result, const H &hash,
     float4 corner_grad_z1 = grad (corner_hash_z1, remainderx, remaindery, remainderz-float4::One());
 
     result = scale3 (trilerp (corner_grad_z0, corner_grad_z1, uvw));
-    } else
+}
 #endif
-    {
+template <typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, float &result, const H &hash,
+                    const float &x, const float &y, const float &z)
+{
     // ORIGINAL -- non-SIMD
     int X; float fx = floorfrac(x, &X);
     int Y; float fy = floorfrac(y, &Y);
@@ -1474,19 +1488,14 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (float &result, const H &hash,
                             grad (hash (X+1, Y+1, Z+1), fx-1.0f, fy-1.0f, fz-1.0f),
                             u, v, w);
     result = scale3 (trilerp_result);
-    }
 }
 
 
-
-template <typename CGPolicyT = CGDefault, typename H>
-OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (float &result, const H &hash,
+#if OIIO_SIMD
+template <typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenSIMD, float &result, const H &hash,
                     const float &x, const float &y, const float &z, const float &w)
 {
-#if OIIO_SIMD
-    if (CGPolicyT::allowSIMD)
-    {
-
     int4 XYZW;
     float4 fxyzw = floorfrac (float4(x,y,z,w), &XYZW);
     float4 uvts = fade (fxyzw);
@@ -1525,9 +1534,12 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (float &result, const H &hash,
     result = scale4 (OIIO::lerp (trilerp (corner_grad_z0, corner_grad_z1, uvts),
                                  trilerp (corner_grad_z2, corner_grad_z3, uvts),
                                  OIIO::simd::extract<3>(uvts)));
-    } else
+}
 #endif
-    {
+template <typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, float &result, const H &hash,
+                    const float &x, const float &y, const float &z, const float &w)
+{
     // ORIGINAL -- non-SIMD
     int X; float fx = floorfrac(x, &X);
     int Y; float fy = floorfrac(y, &Y);
@@ -1560,16 +1572,13 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (float &result, const H &hash,
                               u, v, t),
                s);
     result = scale4 (lerp_result);
-    }
 }
 
-template <typename CGPolicyT = CGDefault, typename H>
-OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<float> &result, const H &hash,
+#if OIIO_SIMD
+template <typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenSIMD, Dual2<float> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y)
 {
-#if OIIO_SIMD
-    if (CGPolicyT::allowSIMD)
-    {
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
     Dual2<float4> fxy (float4(fx.val(), fy.val(), 0.0f),
@@ -1592,9 +1601,12 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<float> &result, const H &hash,
     Dual2<float4> corner_grad = grad (corner_hash, remainderx, remaindery);
 
     result = scale2 (bilerp (corner_grad, uv));
-    } else
+}
 #endif
-    {
+template <typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, Dual2<float> &result, const H &hash,
+                    const Dual2<float> &x, const Dual2<float> &y)
+{
     // Non-SIMD case
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
@@ -1605,16 +1617,13 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<float> &result, const H &hash,
                            grad (hash (X  , Y+1), fx     , fy-1.0f),
                            grad (hash (X+1, Y+1), fx-1.0f, fy-1.0f), u, v);
     result = scale2 (bilerp_result);
-    }
 }
 
-template <typename CGPolicyT = CGDefault, typename H>
-OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<float> &result, const H &hash,
+#if OIIO_SIMD
+template <typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenSIMD, Dual2<float> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z)
 {
-#if OIIO_SIMD
-    if (CGPolicyT::allowSIMD)
-    {
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
     int Z; Dual2<float> fz = floorfrac(z, &Z);
@@ -1650,9 +1659,12 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<float> &result, const H &hash,
     Dual2<float4> xx = OIIO::lerp (xy, shuffle<1,1,3,3>(xy), shuffle<0>(uvw));
     // interpolate along y axis
     result = scale3 (extract<0>(OIIO::lerp (xx,shuffle<2>(xx), shuffle<1>(uvw))));
-    } else
+}
 #endif
-    {
+template <typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, Dual2<float> &result, const H &hash,
+                    const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z)
+{
     // Non-SIMD case
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
@@ -1670,17 +1682,14 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<float> &result, const H &hash,
                             grad (hash (X+1, Y+1, Z+1), fx-1.0f, fy-1.0f, fz-1.0f),
                             u, v, w);
     result = scale3 (tril_result);
-    }
 }
 
-template <typename CGPolicyT = CGDefault, typename H>
-OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<float> &result, const H &hash,
+#if OIIO_SIMD
+template <typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenSIMD, Dual2<float> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y,
                     const Dual2<float> &z, const Dual2<float> &w)
 {
-#if OIIO_SIMD
-    if (CGPolicyT::allowSIMD)
-    {
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
     int Z; Dual2<float> fz = floorfrac(z, &Z);
@@ -1729,9 +1738,13 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<float> &result, const H &hash,
     Dual2<float4> xx = OIIO::lerp (xy, shuffle<1,1,3,3>(xy), shuffle<0>(uvts));
     // interpolate along y axis
     result = scale4 (extract<0>(OIIO::lerp (xx,shuffle<2>(xx), shuffle<1>(uvts))));
-    } else
+}
 #endif
-    {
+template <typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, Dual2<float> &result, const H &hash,
+                    const Dual2<float> &x, const Dual2<float> &y,
+                    const Dual2<float> &z, const Dual2<float> &w)
+{
     // ORIGINAL -- non-SIMD
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
@@ -1764,17 +1777,14 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<float> &result, const H &hash,
                               u, v, t),
                s);
     result = scale4 (lerp_result);
-    }
 }
 
 
-template <typename CGPolicyT = CGDefault, typename H>
-OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Vec3 &result, const H &hash,
+#if OIIO_SIMD
+template <typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenSIMD, Vec3 &result, const H &hash,
                     const float &x, const float &y)
 {
-#if OIIO_SIMD
-    if (CGPolicyT::allowSIMD)
-    {
     int4 XYZ;
     float4 fxyz = floorfrac (float4(x,y,0), &XYZ);
     float4 uv = fade (fxyz);
@@ -1806,9 +1816,12 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Vec3 &result, const H &hash,
         result_comp[i] = scale2 (OIIO::simd::extract<0>(OIIO::lerp (xx,OIIO::simd::shuffle<2>(xx), uv[1])));
     }
     result = Vec3(result_comp[0], result_comp[1], result_comp[2]);
-    } else
+}
 #endif
-    {
+template <typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, Vec3 &result, const H &hash,
+                    const float &x, const float &y)
+{
     // Non-SIMD case
     typedef float T;
     int X; T fx = floorfrac(x, &X);
@@ -1820,18 +1833,14 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Vec3 &result, const H &hash,
                            grad (hash (X  , Y+1), fx     , fy-1.0f),
                            grad (hash (X+1, Y+1), fx-1.0f, fy-1.0f), u, v);
     result = scale2 (bil_result);
-    }
 }
 
 
-
-template <typename CGPolicyT = CGDefault, typename H>
-OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Vec3 &result, const H &hash,
+#if OIIO_SIMD
+template <typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenSIMD, Vec3 &result, const H &hash,
                     const float &x, const float &y, const float &z)
 {
-#if OIIO_SIMD
-    if (CGPolicyT::allowSIMD)
-    {
 #if 0
     // You'd think it would be faster to do the floorfrac in parallel, but
     // according to my timings, it is not. Come back and understand why.
@@ -1889,9 +1898,12 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Vec3 &result, const H &hash,
         result_comp[i] = scale3 (OIIO::simd::extract<0>(OIIO::lerp (xx,OIIO::simd::shuffle<2>(xx), OIIO::simd::shuffle<1>(uvw))));
     }
     result = Vec3(result_comp[0],result_comp[1],result_comp[2]);
-    } else
+}
 #endif
-    {
+template <typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, Vec3 &result, const H &hash,
+                    const float &x, const float &y, const float &z)
+{
     // ORIGINAL -- non-SIMD
     int X; float fx = floorfrac(x, &X);
     int Y; float fy = floorfrac(y, &Y);
@@ -1968,16 +1980,13 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Vec3 &result, const H &hash,
 
     result = Vec3(scale3 (result0), scale3 (result1), scale3 (result2));
 #endif
-    }
 }
 
-template <typename CGPolicyT = CGDefault, typename H>
-OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Vec3 &result, const H &hash,
+#if OIIO_SIMD
+template <typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenSIMD, Vec3 &result, const H &hash,
                     const float &x, const float &y, const float &z, const float &w)
 {
-#if OIIO_SIMD
-    if (CGPolicyT::allowSIMD)
-    {
     int4 XYZW;
     float4 fxyzw = floorfrac (float4(x,y,z,w), &XYZW);
     float4 uvts = fade (fxyzw);
@@ -2021,9 +2030,12 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Vec3 &result, const H &hash,
                                         OIIO::simd::extract<3>(uvts)));
     }
     result = Vec3(result_comp[0],result_comp[1],result_comp[2]);
-    } else
+}
 #endif
-    {
+template <typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, Vec3 &result, const H &hash,
+                    const float &x, const float &y, const float &z, const float &w)
+{
     // ORIGINAL -- non-SIMD
     int X; float fx = floorfrac(x, &X);
     int Y; float fy = floorfrac(y, &Y);
@@ -2056,17 +2068,13 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Vec3 &result, const H &hash,
                               u, v, t),
                s);
     result = scale4 (l_result);
-    }
 }
 
-
-template <typename CGPolicyT = CGDefault, typename H>
-OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<Vec3> &result, const H &hash,
+#if OIIO_SIMD
+template <typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenSIMD, Dual2<Vec3> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y)
 {
-#if OIIO_SIMD
-    if (CGPolicyT::allowSIMD)
-    {
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
     Dual2<float4> fxyz (float4(fx.val(), fy.val(), 0.0f),
@@ -2103,9 +2111,12 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<Vec3> &result, const H &hash,
     result.set (Vec3 (r[0].val(), r[1].val(), r[2].val()),
                 Vec3 (r[0].dx(),  r[1].dx(),  r[2].dx()),
                 Vec3 (r[0].dy(),  r[1].dy(),  r[2].dy()));
-    } else
+}
 #endif
-    {
+template <typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, Dual2<Vec3> &result, const H &hash,
+                    const Dual2<float> &x, const Dual2<float> &y)
+{
     // ORIGINAL -- non-SIMD
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
@@ -2117,17 +2128,14 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<Vec3> &result, const H &hash,
                            grad (hash (X+1, Y+1), fx-1.0f, fy-1.0f),
                            u, v);
     result = scale2 (bil_result);
-    }
 }
 
 
-template <typename CGPolicyT = CGDefault, typename H>
-OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<Vec3> &result, const H &hash,
+#if OIIO_SIMD
+template <typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenSIMD, Dual2<Vec3> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z)
 {
-#if OIIO_SIMD
-    if (CGPolicyT::allowSIMD)
-    {
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
     int Z; Dual2<float> fz = floorfrac(z, &Z);
@@ -2173,9 +2181,12 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<Vec3> &result, const H &hash,
     result.set (Vec3 (r[0].val(), r[1].val(), r[2].val()),
                 Vec3 (r[0].dx(),  r[1].dx(),  r[2].dx()),
                 Vec3 (r[0].dy(),  r[1].dy(),  r[2].dy()));
-    } else
+}
 #endif
-    {
+template <typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, Dual2<Vec3> &result, const H &hash,
+                    const Dual2<float> &x, const Dual2<float> &y, const Dual2<float> &z)
+{
     // ORIGINAL -- non-SIMD
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
@@ -2193,18 +2204,15 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<Vec3> &result, const H &hash,
                             grad (hash (X+1, Y+1, Z+1), fx-1.0f, fy-1.0f, fz-1.0f ),
                             u, v, w);
     result = scale3 (til_result);
-    }
 }
 
 
-template <typename CGPolicyT = CGDefault, typename H>
-OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<Vec3> &result, const H &hash,
+#if OIIO_SIMD
+template <typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenSIMD, Dual2<Vec3> &result, const H &hash,
                     const Dual2<float> &x, const Dual2<float> &y,
                     const Dual2<float> &z, const Dual2<float> &w)
 {
-#if OIIO_SIMD
-    if (CGPolicyT::allowSIMD)
-    {
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
     int Z; Dual2<float> fz = floorfrac(z, &Z);
@@ -2264,9 +2272,14 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<Vec3> &result, const H &hash,
     result.set (Vec3 (r[0].val(), r[1].val(), r[2].val()),
                 Vec3 (r[0].dx(),  r[1].dx(),  r[2].dx()),
                 Vec3 (r[0].dy(),  r[1].dy(),  r[2].dy()));
-    } else
+}
 #endif
-    {
+template <typename H>
+OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, Dual2<Vec3> &result, const H &hash,
+                    const Dual2<float> &x, const Dual2<float> &y,
+                    const Dual2<float> &z, const Dual2<float> &w)
+{
+
     // ORIGINAL -- non-SIMD
     int X; Dual2<float> fx = floorfrac(x, &X);
     int Y; Dual2<float> fy = floorfrac(y, &Y);
@@ -2300,68 +2313,67 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin (Dual2<Vec3> &result, const H &hash,
                s);
 
     result = scale4 (l_result);
-    }
 }
 
 
 
-template<typename CGPolicyT = CGDefault>
+template<typename CodeGenT>
 struct NoiseImpl {
 	OSL_FORCEINLINE OSL_HOSTDEVICE NoiseImpl () { }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x) const {
         HashScalar h;
         float perlin_result;
-        perlin<CGPolicyT>(perlin_result, h, x);
+        perlin<CodeGenT>(perlin_result, h, x);
         result = 0.5f * (perlin_result + 1.0f);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x, float y) const {
         HashScalar h;
         float perlin_result;
-        perlin<CGPolicyT>(perlin_result, h, x, y);
+        perlin<CodeGenT>(perlin_result, h, x, y);
         result = 0.5f * (perlin_result + 1.0f);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p) const {
         HashScalar h;
         float perlin_result;
-        perlin<CGPolicyT>(perlin_result, h, p.x, p.y, p.z);
+        perlin<CodeGenT>(perlin_result, h, p.x, p.y, p.z);
         result = 0.5f * (perlin_result + 1.0f);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, float t) const {
         HashScalar h;
         float perlin_result;
-        perlin<CGPolicyT>(perlin_result, h, p.x, p.y, p.z, t);
+        perlin<CodeGenT>(perlin_result, h, p.x, p.y, p.z, t);
         result = 0.5f * (perlin_result + 1.0f);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, float x) const {
         HashVector h;
         Vec3 perlin_result;
-        perlin<CGPolicyT>(perlin_result, h, x);
+        perlin<CodeGenT>(perlin_result, h, x);
         result = 0.5f * (perlin_result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float y) const {
         HashVector h;
         Vec3 perlin_result;
-        perlin<CGPolicyT>(perlin_result, h, x, y);
+        perlin<CodeGenT>(perlin_result, h, x, y);
         result = 0.5f * (perlin_result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p) const {
         HashVector h;
         Vec3 perlin_result;
-        perlin<CGPolicyT>(perlin_result, h, p.x, p.y, p.z);
+        perlin<CodeGenT>(perlin_result, h, p.x, p.y, p.z);
         result = 0.5f * (perlin_result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, float t) const {
         HashVector h;
         Vec3 perlin_result;
-        perlin<CGPolicyT>(perlin_result, h, p.x, p.y, p.z, t);
+        perlin<CodeGenT>(perlin_result, h, p.x, p.y, p.z, t);
         result = 0.5f * (perlin_result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
@@ -2371,14 +2383,14 @@ struct NoiseImpl {
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<float> &x) const {
         HashScalar h;
         Dual2<float> perlin_result;
-        perlin<CGPolicyT>(perlin_result, h, x);
+        perlin<CodeGenT>(perlin_result, h, x);
         result = 0.5f * (perlin_result + 1.0f);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y) const {
         HashScalar h;
         Dual2<float> perlin_result;
-        perlin<CGPolicyT>(perlin_result, h, x, y);
+        perlin<CodeGenT>(perlin_result, h, x, y);
         result = 0.5f * (perlin_result + 1.0f);
     }
 
@@ -2388,7 +2400,7 @@ struct NoiseImpl {
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
         Dual2<float> perlin_result;
-        perlin<CGPolicyT>(perlin_result, h, px, py, pz);
+        perlin<CodeGenT>(perlin_result, h, px, py, pz);
         result = 0.5f * (perlin_result + 1.0f);
     }
 
@@ -2398,21 +2410,21 @@ struct NoiseImpl {
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
         Dual2<float> perlin_result;
-        perlin<CGPolicyT>(perlin_result, h, px, py, pz, t);
+        perlin<CodeGenT>(perlin_result, h, px, py, pz, t);
         result = 0.5f * (perlin_result + 1.0f);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const {
         HashVector h;
         Dual2<Vec3> perlin_result;
-        perlin<CGPolicyT>(perlin_result, h, x);
+        perlin<CodeGenT>(perlin_result, h, x);
         result = Vec3(0.5f, 0.5f, 0.5f) * (perlin_result + Vec3(1, 1, 1));
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {
         HashVector h;
         Dual2<Vec3> perlin_result;
-        perlin<CGPolicyT>(perlin_result, h, x, y);
+        perlin<CodeGenT>(perlin_result, h, x, y);
         result = Vec3(0.5f, 0.5f, 0.5f) * (perlin_result + Vec3(1, 1, 1));
     }
 
@@ -2422,7 +2434,7 @@ struct NoiseImpl {
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
         Dual2<Vec3> perlin_result;
-        perlin<CGPolicyT>(perlin_result, h, px, py, pz);
+        perlin<CodeGenT>(perlin_result, h, px, py, pz);
         result = Vec3(0.5f, 0.5f, 0.5f) * (perlin_result + Vec3(1, 1, 1));
     }
 
@@ -2432,59 +2444,59 @@ struct NoiseImpl {
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
         Dual2<Vec3> perlin_result;
-        perlin<CGPolicyT>(perlin_result, h, px, py, pz, t);
+        perlin<CodeGenT>(perlin_result, h, px, py, pz, t);
         result = Vec3(0.5f, 0.5f, 0.5f) * (perlin_result + Vec3(1, 1, 1));
     }
 };
 
-struct Noise : NoiseImpl<CGDefault> {};
+struct Noise : NoiseImpl<CodeGenDefault> {};
 // Scalar version of Noise that is SIMD friendly suitable to be
 // inlined inside of a SIMD loops
-struct NoiseScalar : NoiseImpl<CGScalar> {};
+struct NoiseScalar : NoiseImpl<CodeGenScalar> {};
 
 
-template<typename CGPolicyT = CGDefault>
+template<typename CodeGenT>
 struct SNoiseImpl {
 	OSL_FORCEINLINE OSL_HOSTDEVICE SNoiseImpl () { }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x) const {
         HashScalar h;
-        perlin<CGPolicyT>(result, h, x);
+        perlin<CodeGenT>(result, h, x);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x, float y) const {
         HashScalar h;
-        perlin<CGPolicyT>(result, h, x, y);
+        perlin<CodeGenT>(result, h, x, y);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p) const {
         HashScalar h;
-        perlin<CGPolicyT>(result, h, p.x, p.y, p.z);
+        perlin<CodeGenT>(result, h, p.x, p.y, p.z);
     }
     
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, float t) const {
         HashScalar h;
-        perlin<CGPolicyT>(result, h, p.x, p.y, p.z, t);
+        perlin<CodeGenT>(result, h, p.x, p.y, p.z, t);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, float x) const {
         HashVector h;
-        perlin<CGPolicyT>(result, h, x);
+        perlin<CodeGenT>(result, h, x);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float y) const {
         HashVector h;
-        perlin<CGPolicyT>(result, h, x, y);
+        perlin<CodeGenT>(result, h, x, y);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p) const {
         HashVector h;
-        perlin<CGPolicyT>(result, h, p.x, p.y, p.z);
+        perlin<CodeGenT>(result, h, p.x, p.y, p.z);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, float t) const {
         HashVector h;
-        perlin<CGPolicyT>(result, h, p.x, p.y, p.z, t);
+        perlin<CodeGenT>(result, h, p.x, p.y, p.z, t);
     }
 
 
@@ -2492,12 +2504,12 @@ struct SNoiseImpl {
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<float> &x) const {
         HashScalar h;
-        perlin<CGPolicyT>(result, h, x);
+        perlin<CodeGenT>(result, h, x);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y) const {
         HashScalar h;
-        perlin<CGPolicyT>(result, h, x, y);
+        perlin<CodeGenT>(result, h, x, y);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<Vec3> &p) const {
@@ -2505,7 +2517,7 @@ struct SNoiseImpl {
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin<CGPolicyT>(result, h, px, py, pz);
+        perlin<CodeGenT>(result, h, px, py, pz);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
@@ -2513,18 +2525,18 @@ struct SNoiseImpl {
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin<CGPolicyT>(result, h, px, py, pz, t);
+        perlin<CodeGenT>(result, h, px, py, pz, t);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const {
         HashVector h;
-        perlin<CGPolicyT>(result, h, x);
+        perlin<CodeGenT>(result, h, x);
     }
 
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {
         HashVector h;
-        perlin<CGPolicyT>(result, h, x, y);
+        perlin<CodeGenT>(result, h, x, y);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {
@@ -2532,7 +2544,7 @@ struct SNoiseImpl {
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin<CGPolicyT>(result, h, px, py, pz);
+        perlin<CodeGenT>(result, h, px, py, pz);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const {
@@ -2540,66 +2552,66 @@ struct SNoiseImpl {
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin<CGPolicyT>(result, h, px, py, pz, t);
+        perlin<CodeGenT>(result, h, px, py, pz, t);
     }
 };
 
-struct SNoise : SNoiseImpl<CGDefault> {};
+struct SNoise : SNoiseImpl<CodeGenDefault> {};
 // Scalar version of SNoise that is SIMD friendly suitable to be
 // inlined inside of a SIMD loops
-struct SNoiseScalar : SNoiseImpl<CGScalar> {};
+struct SNoiseScalar : SNoiseImpl<CodeGenScalar> {};
 
 
 
-template<typename CGPolicyT = CGDefault>
+template<typename CodeGenT>
 struct PeriodicNoiseImpl {
 	OSL_FORCEINLINE OSL_HOSTDEVICE PeriodicNoiseImpl () { }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x, float px) const {
         HashScalarPeriodic h(px);
-        perlin<CGPolicyT>(result, h, x);
+        perlin<CodeGenT>(result, h, x);
         result = 0.5f * (result + 1.0f);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x, float y, float px, float py) const {
         HashScalarPeriodic h(px, py);
-        perlin<CGPolicyT>(result, h, x, y);
+        perlin<CodeGenT>(result, h, x, y);
         result = 0.5f * (result + 1.0f);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, const Vec3 &pp) const {
         HashScalarPeriodic h(pp.x, pp.y, pp.z);
-        perlin<CGPolicyT>(result, h, p.x, p.y, p.z);
+        perlin<CodeGenT>(result, h, p.x, p.y, p.z);
         result = 0.5f * (result + 1.0f);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
         HashScalarPeriodic h(pp.x, pp.y, pp.z, pt);
-        perlin<CGPolicyT>(result, h, p.x, p.y, p.z, t);
+        perlin<CodeGenT>(result, h, p.x, p.y, p.z, t);
         result = 0.5f * (result + 1.0f);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float px) const {
         HashVectorPeriodic h(px);
-        perlin<CGPolicyT>(result, h, x);
+        perlin<CodeGenT>(result, h, x);
         result = 0.5f * (result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float y, float px, float py) const {
         HashVectorPeriodic h(px, py);
-        perlin<CGPolicyT>(result, h, x, y);
+        perlin<CodeGenT>(result, h, x, y);
         result = 0.5f * (result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, const Vec3 &pp) const {
         HashVectorPeriodic h(pp.x, pp.y, pp.z);
-        perlin<CGPolicyT>(result, h, p.x, p.y, p.z);
+        perlin<CodeGenT>(result, h, p.x, p.y, p.z);
         result = 0.5f * (result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
         HashVectorPeriodic h(pp.x, pp.y, pp.z, pt);
-        perlin<CGPolicyT>(result, h, p.x, p.y, p.z, t);
+        perlin<CodeGenT>(result, h, p.x, p.y, p.z, t);
         result = 0.5f * (result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
@@ -2607,14 +2619,14 @@ struct PeriodicNoiseImpl {
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<float> &x, float px) const {
         HashScalarPeriodic h(px);
-        perlin<CGPolicyT>(result, h, x);
+        perlin<CodeGenT>(result, h, x);
         result = 0.5f * (result + 1.0f);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y,
             float px, float py) const {
         HashScalarPeriodic h(px, py);
-        perlin<CGPolicyT>(result, h, x, y);
+        perlin<CodeGenT>(result, h, x, y);
         result = 0.5f * (result + 1.0f);
     }
 
@@ -2623,7 +2635,7 @@ struct PeriodicNoiseImpl {
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin<CGPolicyT>(result, h, px, py, pz);
+        perlin<CodeGenT>(result, h, px, py, pz);
         result = 0.5f * (result + 1.0f);
     }
 
@@ -2633,20 +2645,20 @@ struct PeriodicNoiseImpl {
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin<CGPolicyT>(result, h, px, py, pz, t);
+        perlin<CodeGenT>(result, h, px, py, pz, t);
         result = 0.5f * (result + 1.0f);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, float px) const {
         HashVectorPeriodic h(px);
-        perlin<CGPolicyT>(result, h, x);
+        perlin<CodeGenT>(result, h, x);
         result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y,
             float px, float py) const {
         HashVectorPeriodic h(px, py);
-        perlin<CGPolicyT>(result, h, x, y);
+        perlin<CodeGenT>(result, h, x, y);
         result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
@@ -2655,7 +2667,7 @@ struct PeriodicNoiseImpl {
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin<CGPolicyT>(result, h, px, py, pz);
+        perlin<CodeGenT>(result, h, px, py, pz);
         result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
@@ -2665,72 +2677,72 @@ struct PeriodicNoiseImpl {
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin<CGPolicyT>(result, h, px, py, pz, t);
+        perlin<CodeGenT>(result, h, px, py, pz, t);
         result = Vec3(0.5f, 0.5f, 0.5f) * (result + Vec3(1.0f, 1.0f, 1.0f));
     }
 
 };
 
-struct PeriodicNoise : PeriodicNoiseImpl<CGDefault> {};
+struct PeriodicNoise : PeriodicNoiseImpl<CodeGenDefault> {};
 // Scalar version of PeriodicNoise that is SIMD friendly suitable to be
 // inlined inside of a SIMD loops
-struct PeriodicNoiseScalar : PeriodicNoiseImpl<CGScalar> {};
+struct PeriodicNoiseScalar : PeriodicNoiseImpl<CodeGenScalar> {};
 
-template<typename CGPolicyT = CGDefault>
+template<typename CodeGenT>
 struct PeriodicSNoiseImpl {
 	OSL_FORCEINLINE OSL_HOSTDEVICE PeriodicSNoiseImpl () { }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x, float px) const {
         HashScalarPeriodic h(px);
-        perlin<CGPolicyT>(result, h, x);
+        perlin<CodeGenT>(result, h, x);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, float x, float y, float px, float py) const {
         HashScalarPeriodic h(px, py);
-        perlin<CGPolicyT>(result, h, x, y);
+        perlin<CodeGenT>(result, h, x, y);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, const Vec3 &pp) const {
         HashScalarPeriodic h(pp.x, pp.y, pp.z);
-        perlin<CGPolicyT>(result, h, p.x, p.y, p.z);
+        perlin<CodeGenT>(result, h, p.x, p.y, p.z);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (float &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
         HashScalarPeriodic h(pp.x, pp.y, pp.z, pt);
-        perlin<CGPolicyT>(result, h, p.x, p.y, p.z, t);
+        perlin<CodeGenT>(result, h, p.x, p.y, p.z, t);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float px) const {
         HashVectorPeriodic h(px);
-        perlin<CGPolicyT>(result, h, x);
+        perlin<CodeGenT>(result, h, x);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, float x, float y, float px, float py) const {
         HashVectorPeriodic h(px, py);
-        perlin<CGPolicyT>(result, h, x, y);
+        perlin<CodeGenT>(result, h, x, y);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, const Vec3 &pp) const {
         HashVectorPeriodic h(pp.x, pp.y, pp.z);
-        perlin<CGPolicyT>(result, h, p.x, p.y, p.z);
+        perlin<CodeGenT>(result, h, p.x, p.y, p.z);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Vec3 &result, const Vec3 &p, float t, const Vec3 &pp, float pt) const {
         HashVectorPeriodic h(pp.x, pp.y, pp.z, pt);
-        perlin<CGPolicyT>(result, h, p.x, p.y, p.z, t);
+        perlin<CodeGenT>(result, h, p.x, p.y, p.z, t);
     }
 
     // dual versions
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<float> &x, float px) const {
         HashScalarPeriodic h(px);
-        perlin<CGPolicyT>(result, h, x);
+        perlin<CodeGenT>(result, h, x);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<float> &x, const Dual2<float> &y,
             float px, float py) const {
         HashScalarPeriodic h(px, py);
-        perlin<CGPolicyT>(result, h, x, y);
+        perlin<CodeGenT>(result, h, x, y);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Vec3 &pp) const {
@@ -2738,7 +2750,7 @@ struct PeriodicSNoiseImpl {
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin<CGPolicyT>(result, h, px, py, pz);
+        perlin<CodeGenT>(result, h, px, py, pz);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<float> &result, const Dual2<Vec3> &p, const Dual2<float> &t,
@@ -2747,18 +2759,18 @@ struct PeriodicSNoiseImpl {
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin<CGPolicyT>(result, h, px, py, pz, t);
+        perlin<CodeGenT>(result, h, px, py, pz, t);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, float px) const {
         HashVectorPeriodic h(px);
-        perlin<CGPolicyT>(result, h, x);
+        perlin<CodeGenT>(result, h, x);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y,
             float px, float py) const {
         HashVectorPeriodic h(px, py);
-        perlin<CGPolicyT>(result, h, x, y);
+        perlin<CodeGenT>(result, h, x, y);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Vec3 &pp) const {
@@ -2766,7 +2778,7 @@ struct PeriodicSNoiseImpl {
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin<CGPolicyT>(result, h, px, py, pz);
+        perlin<CodeGenT>(result, h, px, py, pz);
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t,
@@ -2775,15 +2787,15 @@ struct PeriodicSNoiseImpl {
         Dual2<float> px(p.val().x, p.dx().x, p.dy().x);
         Dual2<float> py(p.val().y, p.dx().y, p.dy().y);
         Dual2<float> pz(p.val().z, p.dx().z, p.dy().z);
-        perlin<CGPolicyT>(result, h, px, py, pz, t);
+        perlin<CodeGenT>(result, h, px, py, pz, t);
     }
 
 };
 
-struct PeriodicSNoise : PeriodicSNoiseImpl<CGDefault> {};
+struct PeriodicSNoise : PeriodicSNoiseImpl<CodeGenDefault> {};
 // Scalar version of PeriodicSNoise that is SIMD friendly suitable to be
 // inlined inside of a SIMD loops
-struct PeriodicSNoiseScalar : PeriodicSNoiseImpl<CGScalar> {};
+struct PeriodicSNoiseScalar : PeriodicSNoiseImpl<CodeGenScalar> {};
 
 
 struct SimplexNoise {

@@ -36,6 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <unordered_set>
 
 #include <OSL/oslconfig.h>
+#include <OSL/oslcontainers.h>
 
 
 OSL_NAMESPACE_ENTER
@@ -44,20 +45,20 @@ OSL_NAMESPACE_ENTER
 // General container for all symbol sets
 
 // General container for integer sets
-typedef std::set<int> IntSet; // probably faster to test for equality, unions and so
+typedef pvt::set<int> IntSet; // probably faster to test for equality, unions and so
 
-typedef std::unordered_set<ustring, ustringHash> SymbolSet;
+typedef pvt::unordered_set<ustring, ustringHash> SymbolSet;
 // This is for the transition table used in DfAutomata::State
-typedef std::unordered_map<ustring, int, ustringHash> SymbolToInt;
+typedef pvt::unordered_map<ustring, int, ustringHash> SymbolToInt;
 // And this is for the transition table in NdfAutomata which
 // has several movements for each symbol
-typedef std::unordered_map<ustring, IntSet, ustringHash> SymbolToIntList;
-typedef std::unordered_map<int, int> HashIntInt;
+typedef pvt::unordered_map<ustring, IntSet, ustringHash> SymbolToIntList;
+typedef pvt::unordered_map<int, int> HashIntInt;
 
 // For the rules in the deterministic states, we don't need a real set
 // cause when converting from the NDF automata we will never find the same
 // rule twice
-typedef std::vector<void *> RuleSet;
+typedef pvt::vector<void *> RuleSet;
 
 // The lambda symbol (empty word)
 extern ustring lambda;
@@ -189,7 +190,7 @@ class NdfAutomata {
 
     protected:
         /// Vector of states
-        std::vector<State *> m_states;
+        pvt::vector<State *> m_states;
 };
 
 
@@ -198,7 +199,7 @@ class NdfAutomata {
 // we need a unique key for a single set, which is going to be the list
 // of state ids sorted by value. And this is the type that is going to hold
 // that. Legal to use in a std::set
-typedef std::vector<int> StateSetKey;
+typedef pvt::vector<int> StateSetKey;
 
 // Compute the unique key for the given set of states
 void keyFromStateSet(const IntSet &states, StateSetKey &out_key);
@@ -289,7 +290,7 @@ class DfAutomata {
         bool equivalent(const State *dfstateA, const State *dfstateB);
 
         // State vector with the automata
-        std::vector<State *> m_states;
+        pvt::vector<State *> m_states;
 };
 
 
@@ -307,12 +308,12 @@ class StateSetRecord {
         // for it and the state(int) set in the original automata
         typedef std::pair<DfAutomata::State *, IntSet> Discovery;
         // The type that will index our new created states indexed by the set key
-        typedef std::map<StateSetKey, DfAutomata::State *> StateSetMap;
+        typedef pvt::map<StateSetKey, DfAutomata::State *> StateSetMap;
 
         /// Take a state set and build a new df state (or return existing one)
         /// Also, if it was newly created, append it to the discovered list so we
         /// can iterate over it later
-        DfAutomata::State *ensureState(const IntSet &newstates, std::list<Discovery> &discovered);
+        DfAutomata::State *ensureState(const IntSet &newstates, pvt::list<Discovery> &discovered);
 
     private:
 

@@ -136,20 +136,6 @@ namespace sfm
        OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     */
 
-	/// return the greatest integer <= x
-	OSL_FORCEINLINE OSL_HOSTDEVICE int ifloor (float x) {
-		//    return (int) x - ((x < 0) ? 1 : 0);
-
-		// std::floor is another option, however that appears to be
-		// a function call right now, and this sequence appears cheaper
-		//return static_cast<int>(x - ((x < 0.0f) ? 1.0f : 0.0f));
-
-		// This factoring should allow the expensive float to integer
-		// conversion to happen at the same time the comparison is
-		// in an out of order CPU
-		return (static_cast<int>(x)) - ((x < 0.0f) ? 1 : 0);
-	}
-
     /// Fused multiply and add: (a*b + c)
 	OSL_FORCEINLINE OSL_HOSTDEVICE float madd (float a, float b, float c) {
         // Avoid simulating FMA on non-FMA hardware
@@ -208,23 +194,6 @@ namespace sfm
         return r;
     }
 
-    // Exists mainly to allow the same function name to work
-    // with Dual2 and float
-    OSL_FORCEINLINE OSL_HOSTDEVICE float absf (float x)
-    {
-#if 0
-        //return x >= 0.0f ? x : -x;
-#elif 0
-        // Move negation operation out of conditional
-        // so result should be masked blend or ternary
-        float neg_x = -x;
-        return (x >= 0.0f) ? x : neg_x;
-#else
-        // gcc header use builtin abs that does bit twiddling 2 instructions
-        return std::abs(x);
-#endif
-    }
-
     template<typename T>
     OSL_FORCEINLINE OSL_HOSTDEVICE T
 	negate(const T &x) {
@@ -241,38 +210,6 @@ namespace sfm
         #else
             return -x;
         #endif
-    }
-
-    OSL_FORCEINLINE OSL_HOSTDEVICE Dual2<float>
-    absf (const Dual2<float> &x)
-    {
-        // Avoid ternary ops whose operands have side effects
-        // in favor of code that executes both sides masked
-        // return x.val() >= 0.0f ? x : -x;
-
-        // NOTE: negation happens outside of conditional, then is blended based on the condition
-        Dual2<float> neg_x = negate(x);
-
-        bool cond = x.val() < 0.0f;
-        // Blend per builtin component to allow
-        // the compiler to track builtins and privatize the data layout
-        // versus requiring a stack location.
-        float val = x.val();
-        if (cond) {
-            val = neg_x.val();
-        }
-
-        float dx = x.dx();
-        if (cond) {
-            dx = neg_x.dx();
-        }
-
-        float dy = x.dy();
-        if (cond) {
-            dy = neg_x.dy();
-        }
-
-        return Dual2<float>(val, dx, dy);
     }
 
     OSL_FORCEINLINE int absi (int x)
@@ -429,7 +366,7 @@ namespace sfm
 
     OSL_FORCEINLINE OSL_HOSTDEVICE float logb (float x) {
         // don't bother with denormals
-        x = absf(x);
+        x = fabsf(x);
         if (x < std::numeric_limits<float>::min()) x = std::numeric_limits<float>::min();
         if (x > std::numeric_limits<float>::max()) x = std::numeric_limits<float>::max();
         unsigned bits = bit_cast<float, unsigned>(x);
@@ -493,7 +430,7 @@ namespace sfm
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE float expm1 (float x) {
-        if (absf(x) < 0.03f) {
+        if (fabsf(x) < 0.03f) {
             float y = 1.0f - (1.0f - x); // crush denormals
             return copysignf(madd(0.5f, y * y, y), x);
         } else
@@ -517,7 +454,7 @@ namespace sfm
         const float a4 = 0.0001520143f;
         const float a5 = 0.0002765672f;
         const float a6 = 0.0000430638f;
-        const float a = absf(x);
+        const float a = fabsf(x);
         const float b = 1.0f - (1.0f - a); // crush denormals
         const float r = madd(madd(madd(madd(madd(madd(a6, b, a5), b, a4), b, a3), b, a2), b, a1), b, 1.0f);
         const float s = r * r; // ^2
@@ -615,44 +552,12 @@ namespace sfm
         return Dual2<float> (safe_fmod (a.val(), b.val()), a.dx(), a.dy());
     }
 
-#if 0 // emitted directly by llvm_gen_wide.cpp
-    OSL_FORCEINLINE OSL_HOSTDEVICE float safe_div(float a, float b) {
-        return (b != 0.0f) ? (a / b) : 0.0f;
-    }
-
-    OSL_FORCEINLINE OSL_HOSTDEVICE int safe_div(int a, int b) {
-        return (b != 0) ? (a / b) : 0;
-    }
-#endif
-
-
-    /// Round to nearest integer, returning as an int.
-    OSL_FORCEINLINE OSL_HOSTDEVICE int fast_rint (float x) {
-        // used by sin/cos/tan range reduction
-    #if 0
-        // single roundps instruction on SSE4.1+ (for gcc/clang at least)
-        //return static_cast<int>(rintf(x));
-        return rintf(x);
-    #else
-        // emulate rounding by adding/substracting 0.5
-        return static_cast<int>(x + copysignf(0.5f, x));
-
-        // Other possible factorings
-        //return (x >= 0.0f) ? static_cast<int>(x + 0.5f) : static_cast<int>(x - 0.5f);
-        //return static_cast<int>(x +  (x >= 0.0f) ? 0.5f : - 0.5f);
-        //float pad = (x >= 0.0f) ? 0.5f : - 0.5f;
-        //return static_cast<int>(x + pad);
-        //return nearbyint(x);
-#endif
-    }
-
-
     OSL_FORCEINLINE OSL_HOSTDEVICE float sin (float x) {
         // very accurate argument reduction from SLEEF
         // starts failing around x=262000
         // Results on: [-2pi,2pi]
         // Examined 2173837240 values of sin: 0.00662760244 avg ulp diff, 2 max ulp, 1.19209e-07 max error
-        int q = fast_rint (x * float(M_1_PI));
+        int q = OIIO::fast_rint (x * float(M_1_PI));
         float qf = q;
         x = madd(qf, -0.78515625f*4, x);
         x = madd(qf, -0.00024187564849853515625f*4, x);
@@ -682,7 +587,7 @@ namespace sfm
     }
     OSL_FORCEINLINE OSL_HOSTDEVICE float cos (float x) {
         // same argument reduction as fast_sin
-        int q = fast_rint (x * float(M_1_PI));
+        int q = OIIO::fast_rint (x * float(M_1_PI));
         float qf = q;
         x = madd(qf, -0.78515625f*4, x);
         x = madd(qf, -0.00024187564849853515625f*4, x);
@@ -709,7 +614,7 @@ namespace sfm
     }
     OSL_FORCEINLINE OSL_HOSTDEVICE void sincos (float x, float & sine, float& cosine) {
         // same argument reduction as fast_sin
-        int q = fast_rint (x * float(M_1_PI));
+        int q = OIIO::fast_rint (x * float(M_1_PI));
         float qf = q;
         x = madd(qf, -0.78515625f*4, x);
         x = madd(qf, -0.00024187564849853515625f*4, x);
@@ -748,7 +653,7 @@ namespace sfm
         // derived from SLEEF implementation
         // note that we cannot apply the "denormal crush" trick everywhere because
         // we sometimes need to take the reciprocal of the polynomial
-        int q = fast_rint (x * float(2 * M_1_PI));
+        int q = OIIO::fast_rint (x * float(2 * M_1_PI));
         float qf = q;
         x = madd(qf, -0.78515625f*2, x);
         x = madd(qf, -0.00024187564849853515625f*2, x);
@@ -777,7 +682,7 @@ namespace sfm
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE float atan (float x) {
-        const float a = absf(x);
+        const float a = fabsf(x);
         const float k = a > 1.0f ? 1 / a : a;
         const float s = 1.0f - (1.0f - k); // crush denormals
         const float t = s * s;
@@ -801,8 +706,8 @@ namespace sfm
         // based on atan approximation above
         // the special cases around 0 and infinity were tested explicitly
         // the only case not handled correctly is x=NaN,y=0 which returns 0 instead of nan
-        const float a = absf(x);
-        const float b = absf(y);
+        const float a = fabsf(x);
+        const float b = fabsf(y);
 
         //const float k = (b == 0) ? 0.0f : ((a == b) ? 1.0f : (b > a ? a / b : b / a));
         // When applying to all lanes in SIMD, we end up doing extra masking and 2 divides.
@@ -837,12 +742,12 @@ namespace sfm
 
     OSL_FORCEINLINE OSL_HOSTDEVICE float cosh (float x) {
         // Examined 2237485550 values of cosh on [-87.3300018,87.3300018]: 1.78256726 avg ulp diff, 178 max ulp
-        float e = sfm::exp(absf(x));
+        float e = sfm::exp(fabsf(x));
         return 0.5f * e + 0.5f / e;
     }
 
     OSL_FORCEINLINE OSL_HOSTDEVICE float sinh (float x) {
-        float a = absf(x);
+        float a = fabsf(x);
         if (OSL_UNLIKELY(a > 1.0f)) {
             // Examined 53389559 values of sinh on [1,87.3300018]: 33.6886442 avg ulp diff, 178 max ulp
             float e = sfm::exp(a);
@@ -863,7 +768,7 @@ namespace sfm
     OSL_FORCEINLINE OSL_HOSTDEVICE float tanh (float x) {
         // Examined 4278190080 values of tanh on [-3.40282347e+38,3.40282347e+38]: 3.12924e-06 max error
         // NOTE: ulp error is high because of sub-optimal handling around the origin
-        float e = sfm::exp(2.0f * absf(x));
+        float e = sfm::exp(2.0f * fabsf(x));
         return copysignf(1 - 2 / (1 + e), x);
     }
 
@@ -921,9 +826,9 @@ namespace sfm
 //        float absY = (N.y >= float (0))? N.y: -N.y;
 //        float absZ = (N.z >= float (0))? N.z: -N.z;
         // gcc builtin for abs is 2 instructions using bit twiddling vs. compares
-        float absX = absf(N.x);
-        float absY = absf(N.y);
-        float absZ = absf(N.z);
+        float absX = fabsf(N.x);
+        float absY = fabsf(N.y);
+        float absZ = fabsf(N.z);
 
         float max = absX;
 

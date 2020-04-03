@@ -69,12 +69,18 @@ static std::vector<int> entrylayer_index;
 static std::vector<const ShaderSymbol *> entrylayer_symbols;
 static bool debug1 = false;
 static bool debug2 = false;
+static bool llvm_debug = false;
 static bool verbose = false;
 static bool runstats = false;
+static bool vary_Pdxdy = false;
+static bool vary_Udxdy = false;
+static bool vary_Vdxdy = false;
 static bool saveptx = false;
 static bool warmup = false;
 static bool profile = false;
 static bool O0 = false, O1 = false, O2 = false;
+static bool llvm_O0 = false, llvm_O1 = false, llvm_O2 = false, llvm_O3 = false;
+static bool llvm_O10 = false, llvm_O11 = false, llvm_O12 = false, llvm_O13 = false;
 static bool pixelcenters = false;
 static bool debugnan = false;
 static bool debug_uninit = false;
@@ -127,6 +133,22 @@ inject_params ()
 static void
 set_shadingsys_options ()
 {
+    // If benchmarking it isn't necessary to clear the memory.
+    // however for unit tests and tracking down early exit issues
+    // we may no want the previous sample's group data masquerading as correct
+    // values for the next sample, who due to a bug, may not have correct control flow
+    // and not actually write to those values
+    OSL_DEV_ONLY(shadingsys->attribute ("clearmemory", 1));
+
+    // Always generate llvm debugging info
+    shadingsys->attribute ("llvm_debugging_symbols", 1);
+
+    // Always emit llvm Intel profiling events
+    shadingsys->attribute ("llvm_profiling_events", 1);
+
+    OSL_DEV_ONLY(llvm_debug = true);
+    shadingsys->attribute ("llvm_debug", (llvm_debug ? 2 : 0));
+
     shadingsys->attribute ("debug", debug2 ? 2 : (debug1 ? 1 : 0));
     shadingsys->attribute ("compile_report", debug1|debug2);
     int opt = 2;  // default
@@ -136,13 +158,51 @@ set_shadingsys_options ()
     if (const char *opt_env = getenv ("TESTSHADE_OPT"))  // overrides opt
         opt = atoi(opt_env);
     shadingsys->attribute ("optimize", opt);
+
+    // The cost of more optimization passes usually pays for
+    // itself by reducing the number of instructions JIT ultimately
+    // has to lower to the target ISA
+    int llvm_opt = 3;  // default,
+    if (llvm_O0) llvm_opt = 0;
+    if (llvm_O1) llvm_opt = 1;
+    if (llvm_O2) llvm_opt = 2;
+    if (llvm_O3) llvm_opt = 3;
+    // Experimental hand tuned/pruned passes
+    if (llvm_O10) llvm_opt = 10;
+    if (llvm_O11) llvm_opt = 11;
+    if (llvm_O12) llvm_opt = 12;
+    if (llvm_O13) llvm_opt = 13;
+    if (const char *llvm_opt_env = getenv ("TESTSHADE_LLVM_OPT"))  // overrides llvm_opt
+        llvm_opt = atoi(llvm_opt_env);
+    shadingsys->attribute ("llvm_optimize", llvm_opt);
+
     shadingsys->attribute ("profile", int(profile));
     shadingsys->attribute ("lockgeom", 1);
+
+    if (const char *opt_env = getenv ("TESTSHADE_DEBUG_NAN"))
+        debugnan = atoi(opt_env);
     shadingsys->attribute ("debug_nan", debugnan);
+
+    if (const char *opt_env = getenv ("TESTSHADE_DEBUG_UNINIT"))
+        debug_uninit = atoi(opt_env);
     shadingsys->attribute ("debug_uninit", debug_uninit);
+
     shadingsys->attribute ("userdata_isconnected", userdata_isconnected);
     if (! shaderpath.empty())
         shadingsys->attribute ("searchpath:shader", shaderpath);
+
+    int do_range_checking = 1;
+    if (const char *opt_env = getenv ("TESTSHADE_RANGE_CHECK"))
+        do_range_checking = atoi(opt_env);
+    shadingsys->attribute ("range_checking", do_range_checking);
+
+    int no_noise = 0;
+    if (const char *opt_env = getenv ("TESTSHADE_NO_NOISE"))
+        no_noise = atoi(opt_env);
+    if (no_noise != 0) {
+        shadingsys->attribute ("no_noise", 1);
+    }
+
     if (extraoptions.size())
         shadingsys->attribute ("options", extraoptions);
     if (texoptions.size())
@@ -217,6 +277,7 @@ add_shader (int argc, const char *argv[])
 {
     OSL_DASSERT(argc == 1);
     string_view shadername (argv[0]);
+    OSL_DEV_ONLY(std::cout << "SHADER NAME=" << shadername << std::endl);
 
     set_shadingsys_options ();
 
@@ -469,8 +530,12 @@ getargs (int argc, const char *argv[])
                 "--optix", &use_optix, "Use OptiX if available",
                 "--debug", &debug1, "Lots of debugging info",
                 "--debug2", &debug2, "Even more debugging info",
+                "--llvm_debug", &llvm_debug, "Turn on LLVM debugging info",
                 "--runstats", &runstats, "Print run statistics",
                 "--stats", &runstats, "",  // DEPRECATED 1.7
+                "--vary_pdxdy", &vary_Pdxdy, "populate Dx(P) & Dy(P) with varying values (vs. uniform)",
+                "--vary_udxdy", &vary_Udxdy, "populate Dx(U) & Dy(U) with varying values (vs. uniform)",
+                "--vary_vdxdy", &vary_Vdxdy, "populate Dx(V) & Dy(V) with varying values (vs. uniform)",
                 "--profile", &profile, "Print profile information",
                 "--saveptx", &saveptx, "Save the generated PTX (OptiX mode only)",
                 "--warmup", &warmup, "Perform a warmup launch",
@@ -506,6 +571,14 @@ getargs (int argc, const char *argv[])
                 "-O0", &O0, "Do no runtime shader optimization",
                 "-O1", &O1, "Do a little runtime shader optimization",
                 "-O2", &O2, "Do lots of runtime shader optimization",
+                "-llvm_O0", &llvm_O0, "Do no JIT shader optimization",
+                "-llvm_O1", &llvm_O1, "Do a little JIT shader optimization",
+                "-llvm_O2", &llvm_O2, "Do lots of JIT shader optimization",
+                "-llvm_O3", &llvm_O3, "Do lots more of JIT shader optimization",
+                "-llvm_O10", &llvm_O10, "Experimental:  Do no JIT shader optimization",
+                "-llvm_O11", &llvm_O11, "Experimental:  Do a little JIT shader optimization",
+                "-llvm_O12", &llvm_O12, "Experimental:  Do lots of JIT shader optimization",
+                "-llvm_O13", &llvm_O13, "Experimental:  Do lots more of JIT shader optimization",
                 "--entry %L", &entrylayers, "Add layer to the list of entry points",
                 "--entryoutput %L", &entryoutputs, "Add output symbol to the list of entry points",
                 "--center", &pixelcenters, "Shade at output pixel 'centers' rather than corners",
@@ -638,23 +711,48 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
         // centers of each pixel.
         sg.u = uscale * (float)(x+0.5f) / xres + uoffset;
         sg.v = vscale * (float)(y+0.5f) / yres + voffset;
-        sg.dudx = uscale / xres;
-        sg.dvdy = vscale / yres;
+        if (vary_Udxdy) {
+            sg.dudx = 1.0f - sg.u;
+            sg.dudy = sg.u;
+        } else {
+            sg.dudx = uscale / xres;
+        }
+        if (vary_Vdxdy) {
+            sg.dvdx = 1.0f - sg.v;
+            sg.dvdy = sg.v;
+        } else {
+            sg.dvdy = vscale / yres;
+        }
     } else {
         // Our patch is like a Reyes grid of points, with the border
         // samples being exactly on u,v == 0 or 1.
         sg.u = uscale * ((xres == 1) ? 0.5f : (float) x / (xres - 1)) + uoffset;
         sg.v = vscale * ((yres == 1) ? 0.5f : (float) y / (yres - 1)) + voffset;
-        sg.dudx = uscale / std::max (1, xres-1);
-        sg.dvdy = vscale / std::max (1, yres-1);
+        if (vary_Udxdy) {
+            sg.dudx = 1.0f - sg.u;
+            sg.dudy = sg.u;
+        } else {
+            sg.dudx = uscale / std::max (1, xres-1);
+        }
+        if (vary_Vdxdy) {
+            sg.dvdx = 1.0f - sg.v;
+            sg.dvdy = sg.v;
+        } else {
+            sg.dvdy = vscale / std::max (1, yres-1);
+        }
     }
 
     // Assume that position P is simply (u,v,1), that makes the patch lie
     // on [0,1] at z=1.
     sg.P = Vec3 (sg.u, sg.v, 1.0f);
     // Derivatives with respect to x,y
-    sg.dPdx = Vec3 (sg.dudx, sg.dudy, 0.0f);
-    sg.dPdy = Vec3 (sg.dvdx, sg.dvdy, 0.0f);
+    if (vary_Pdxdy) {
+        sg.dPdx = Vec3 (1.0f - sg.u, 1.0f - sg.v, sg.u*0.5);
+        sg.dPdy = Vec3 (1.0f - sg.v, 1.0f - sg.u, sg.v*0.5);
+    } else {
+        sg.dPdx = Vec3 (uscale / std::max (1, xres-1), 0.0f, 0.0f);
+        sg.dPdy = Vec3 (0.0f, vscale / std::max (1, yres-1), 0.0f);
+    }
     sg.dPdz = Vec3 (0.0f, 0.0f, 0.0f);  // just use 0 for volume tangent
     // Tangents of P with respect to surface u,v
     sg.dPdu = Vec3 (1.0f, 0.0f, 0.0f);
@@ -669,8 +767,10 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
 }
 
 
-
-static void
+static OSL_NOINLINE  void
+setup_output_images (SimpleRenderer *rend, ShadingSystem *shadingsys,
+                     ShaderGroupRef &shadergroup);
+void
 setup_output_images (SimpleRenderer *rend, ShadingSystem *shadingsys,
                      ShaderGroupRef &shadergroup)
 {
@@ -715,7 +815,7 @@ setup_output_images (SimpleRenderer *rend, ShadingSystem *shadingsys,
     // Because we can only call find_symbol or get_symbol on something that
     // has been set up to shade (or executed), we call execute() but tell it
     // not to actually run the shader.
-    ShaderGlobals sg;
+    alignas(64) ShaderGlobals sg;
     setup_shaderglobals (sg, shadingsys, 0, 0);
 
     int raytype_bit = shadingsys->raytype_bit (ustring (raytype));
@@ -950,6 +1050,8 @@ test_group_attributes (ShaderGroup *group)
 }
 
 
+static void OSL_NOINLINE
+shade_region (SimpleRenderer *rend, ShaderGroup *shadergroup, OIIO::ROI roi, bool save);
 
 void
 shade_region (SimpleRenderer *rend, ShaderGroup *shadergroup,
@@ -1086,6 +1188,11 @@ test_shade (int argc, const char *argv[])
     // locked (i.e. no per-geometry override):
     shadingsys->attribute("lockgeom", 1);
 
+    // Normally want to buffer output so it shows up in same
+    // order as a non-batched run, but for debugging it can
+    // be useful to see immediately
+    shadingsys->attribute("buffer_printf", 1);
+
     // Now we declare our shader.
     // 
     // Each material in the scene is comprised of a "shader group."
@@ -1211,14 +1318,26 @@ test_shade (int argc, const char *argv[])
     // object.
     setup_transformations (*rend, Mshad, Mobj);
 
-    // Set up the image outputs requested on the command line
+    if (num_threads < 1) {
+        // TODO:  number of logical cores isn't a good choice
+        // as taskset or numactl or mpi may have launched this process with
+        // fewer threads.  This can lead to oversubscription.
+        num_threads = OIIO::Sysutil::hardware_concurrency();
+    }
+    OSL_DEV_ONLY(std::cout << "num_threads = " << num_threads << std::endl);
+
+    // We need to set the global attribute so any helper functions
+    // respect our thread count, especially if we wanted only 1
+    // thread, we want to avoid spinning up a thread pool or
+    // OS overhead of destroying threads (like clearing virtual
+    // memory pages they occupied)
+    OIIO::attribute("threads",num_threads);
+
+        // Set up the image outputs requested on the command line
     setup_output_images (rend, shadingsys, shadergroup);
 
     if (debug1)
         test_group_attributes (shadergroup.get());
-
-    if (num_threads < 1)
-        num_threads = OIIO::Sysutil::hardware_concurrency();
 
     synchio();
 
@@ -1245,12 +1364,10 @@ test_shade (int argc, const char *argv[])
                               roi, num_threads);
         } else {
             bool save = (iter == (iters-1));   // save on last iteration
-#if 0
-            shade_region (rend, shadergroup.get(), roi, save);
-#else
-            OIIO::ImageBufAlgo::parallel_image (roi, num_threads,
-                                                std::bind (shade_region, rend, shadergroup.get(), std::placeholders::_1, save));
-#endif
+            OIIO::ImageBufAlgo::parallel_image (
+                [&](OIIO::ROI sub_roi)->void {
+                    shade_region (rend, shadergroup.get(), sub_roi, save);
+                }, roi, num_threads);
         }
 
         // If any reparam was requested, do it now

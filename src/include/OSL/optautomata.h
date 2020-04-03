@@ -30,7 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/ustring.h>
 
-#include <vector>
+#include "oslcontainers.h"
 
 OSL_NAMESPACE_ENTER
 
@@ -88,9 +88,9 @@ class DfOptimizedAutomata
             ustring symbol;
             int      state;
         };
-        std::vector<Transition> m_trans;
-        std::vector<void *>     m_rules;
-        std::vector<State>      m_states;
+        pvt::vector<Transition> m_trans;
+        pvt::vector<void *>     m_rules;
+        pvt::vector<State>      m_states;
 };
 
 OSL_NAMESPACE_EXIT

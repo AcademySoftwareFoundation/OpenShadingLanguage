@@ -36,6 +36,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <OpenImageIO/fmath.h>
 
+#include "null_noise.h"
+
 OSL_NAMESPACE_ENTER
 namespace pvt {
 
@@ -277,12 +279,16 @@ OSL_SHADEOP OSL_HOSTDEVICE void osl_ ##opname## _dvdvdf (char *name, char *r, ch
 
 NOISE_IMPL (cellnoise, CellNoise)
 NOISE_IMPL (hashnoise, HashNoise)
+
 NOISE_IMPL (noise, Noise)
 NOISE_IMPL_DERIV (noise, Noise)
+
 NOISE_IMPL (snoise, SNoise)
 NOISE_IMPL_DERIV (snoise, SNoise)
+
 NOISE_IMPL (simplexnoise, SimplexNoise)
 NOISE_IMPL_DERIV (simplexnoise, SimplexNoise)
+
 NOISE_IMPL (usimplexnoise, USimplexNoise)
 NOISE_IMPL_DERIV (usimplexnoise, USimplexNoise)
 
@@ -511,7 +517,7 @@ struct GaborNoise {
                             ShaderGlobals* /*sg*/, const NoiseParams *opt) const {
         result = gabor (p, opt);
     }
-
+    
     OSL_HOSTDEVICE
     inline void operator() (StringParam /*noisename*/, Dual2<float> &result,
                             const Dual2<Vec3> &p, const Dual2<float>& /*t*/,
@@ -625,68 +631,11 @@ struct GaborPNoise {
 NOISE_IMPL_DERIV_OPT (gabornoise, GaborNoise)
 PNOISE_IMPL_DERIV_OPT (gaborpnoise, GaborPNoise)
 
-
-// Turn off warnings about unused params, since the NullNoise methods are stubs.
-OSL_PRAGMA_WARNING_PUSH
-OSL_GCC_PRAGMA(GCC diagnostic ignored "-Wunused-parameter")
-
-
-struct NullNoise {
-    OSL_HOSTDEVICE NullNoise () { }
-    OSL_HOSTDEVICE inline void operator() (float &result, float x) const { result = 0.0f; }
-    OSL_HOSTDEVICE inline void operator() (float &result, float x, float y) const { result = 0.0f; }
-    OSL_HOSTDEVICE inline void operator() (float &result, const Vec3 &p) const { result = 0.0f; }
-    OSL_HOSTDEVICE inline void operator() (float &result, const Vec3 &p, float t) const { result = 0.0f; }
-    OSL_HOSTDEVICE inline void operator() (Vec3 &result, float x) const { result = v(); }
-    OSL_HOSTDEVICE inline void operator() (Vec3 &result, float x, float y) const { result = v(); }
-    OSL_HOSTDEVICE inline void operator() (Vec3 &result, const Vec3 &p) const { result = v(); }
-    OSL_HOSTDEVICE inline void operator() (Vec3 &result, const Vec3 &p, float t) const { result = v(); }
-    OSL_HOSTDEVICE inline void operator() (Dual2<float> &result, const Dual2<float> &x,
-                                           int seed=0) const { result.set (0.0f, 0.0f, 0.0f); }
-    OSL_HOSTDEVICE inline void operator() (Dual2<float> &result, const Dual2<float> &x,
-                                           const Dual2<float> &y, int seed=0) const { result.set (0.0f, 0.0f, 0.0f); }
-    OSL_HOSTDEVICE inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
-                                           int seed=0) const { result.set (0.0f, 0.0f, 0.0f); }
-    OSL_HOSTDEVICE inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
-                                           const Dual2<float> &t, int seed=0) const { result.set (0.0f, 0.0f, 0.0f); }
-    OSL_HOSTDEVICE inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const { result.set (v(), v(), v()); }
-    OSL_HOSTDEVICE inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {  result.set (v(), v(), v()); }
-    OSL_HOSTDEVICE inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {  result.set (v(), v(), v()); }
-    OSL_HOSTDEVICE inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const { result.set (v(), v(), v()); }
-    OSL_HOSTDEVICE inline Vec3 v () const { return Vec3(0.0f, 0.0f, 0.0f); };
-};
-
-struct UNullNoise {
-    OSL_HOSTDEVICE UNullNoise () { }
-    OSL_HOSTDEVICE inline void operator() (float &result, float x) const { result = 0.5f; }
-    OSL_HOSTDEVICE inline void operator() (float &result, float x, float y) const { result = 0.5f; }
-    OSL_HOSTDEVICE inline void operator() (float &result, const Vec3 &p) const { result = 0.5f; }
-    OSL_HOSTDEVICE inline void operator() (float &result, const Vec3 &p, float t) const { result = 0.5f; }
-    OSL_HOSTDEVICE inline void operator() (Vec3 &result, float x) const { result = v(); }
-    OSL_HOSTDEVICE inline void operator() (Vec3 &result, float x, float y) const { result = v(); }
-    OSL_HOSTDEVICE inline void operator() (Vec3 &result, const Vec3 &p) const { result = v(); }
-    OSL_HOSTDEVICE inline void operator() (Vec3 &result, const Vec3 &p, float t) const { result = v(); }
-    OSL_HOSTDEVICE inline void operator() (Dual2<float> &result, const Dual2<float> &x,
-                                           int seed=0) const { result.set (0.5f, 0.5f, 0.5f); }
-    OSL_HOSTDEVICE inline void operator() (Dual2<float> &result, const Dual2<float> &x,
-                                           const Dual2<float> &y, int seed=0) const { result.set (0.5f, 0.5f, 0.5f); }
-    OSL_HOSTDEVICE inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
-                                           int seed=0) const { result.set (0.5f, 0.5f, 0.5f); }
-    OSL_HOSTDEVICE inline void operator() (Dual2<float> &result, const Dual2<Vec3> &p,
-                                           const Dual2<float> &t, int seed=0) const { result.set (0.5f, 0.5f, 0.5f); }
-    OSL_HOSTDEVICE inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x) const { result.set (v(), v(), v()); }
-    OSL_HOSTDEVICE inline void operator() (Dual2<Vec3> &result, const Dual2<float> &x, const Dual2<float> &y) const {  result.set (v(), v(), v()); }
-    OSL_HOSTDEVICE inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p) const {  result.set (v(), v(), v()); }
-    OSL_HOSTDEVICE inline void operator() (Dual2<Vec3> &result, const Dual2<Vec3> &p, const Dual2<float> &t) const { result.set (v(), v(), v()); }
-    OSL_HOSTDEVICE inline Vec3 v () const { return Vec3(0.5f, 0.5f, 0.5f); };
-};
-
+// moved struct NullNoise and UNullNoise to null_noise.h
 NOISE_IMPL (nullnoise, NullNoise)
 NOISE_IMPL_DERIV (nullnoise, NullNoise)
 NOISE_IMPL (unullnoise, UNullNoise)
 NOISE_IMPL_DERIV (unullnoise, UNullNoise)
-
-OSL_PRAGMA_WARNING_POP
 
 
 

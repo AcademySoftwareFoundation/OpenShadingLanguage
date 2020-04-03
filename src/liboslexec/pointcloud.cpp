@@ -49,7 +49,7 @@ public:
     ~PointCloud ();
     static PointCloud *get (ustring filename, bool write = false);
 
-    typedef std::unordered_map<ustring, std::shared_ptr<Partio::ParticleAttribute>, ustringHash> AttributeMap;
+    typedef unordered_map<ustring, std::shared_ptr<Partio::ParticleAttribute>, ustringHash> AttributeMap;
     // N.B./FIXME(C++11): shared_ptr is probably overkill, but
     // scoped_ptr is not copyable and therefore can't be used in
     // standard containers.  When C++11 is uniquitous, unique_ptr is the
@@ -71,7 +71,7 @@ public:
 };
 
 
-typedef std::unordered_map<ustring, std::shared_ptr<PointCloud>, ustringHash> PointCloudMap;
+typedef unordered_map<ustring, std::shared_ptr<PointCloud>, ustringHash> PointCloudMap;
 // See above note about shared_ptr vs unique_ptr.
 static PointCloudMap pointclouds;
 static spin_mutex pointcloudmap_mutex;
@@ -425,7 +425,7 @@ RendererServices::pointcloud_write (ShaderGlobals* /*sg*/,
 
     // Make sure all the attributes mentioned have been added properly
     bool ok = true;
-    std::vector<Partio::ParticleAttribute *> partattrs;
+    vector<Partio::ParticleAttribute *> partattrs;
     partattrs.reserve (nattribs);
     for (int i = 0;  i < nattribs;  ++i) {
         Partio::ParticleAttribute *a = pc->m_attributes[names[i]].get();

@@ -92,6 +92,10 @@ ifneq (${USE_FAST_MATH},)
 MY_CMAKE_FLAGS += -DUSE_FAST_MATH:BOOL=${USE_FAST_MATH}
 endif
 
+ifneq (${USE_TBB_SCALABLE_MALLOC},)
+MY_CMAKE_FLAGS += -DUSE_TBB_SCALABLE_MALLOC:BOOL=${USE_TBB_SCALABLE_MALLOC}
+endif
+
 ifneq (${STOP_ON_WARNING},)
 MY_CMAKE_FLAGS += -DSTOP_ON_WARNING:BOOL=${STOP_ON_WARNING}
 endif
@@ -391,6 +395,10 @@ help:
 	@echo "                                  0, sse2, sse3, ssse3, sse4.1, sse4.2, f16c,"
 	@echo "                                  avx, avx2, avx512f)"
 	@echo "      USE_OPTIX=1              Build the OptiX test renderer"
+	@echo "      USE_TBB_SCALABLE_MALLOC=1   Utilize Intel(r) Threading Building Blocks'"	
+	@echo "                                     scalable allocator to manage per thread"	
+	@echo "                                     memory pools providing reuse and avoiding"	
+	@echo "                                     thread contention for the OS allocator"	
 	@echo "  make test, extra options:"
 	@echo "      TEST=regex               Run only tests matching the regex"
 	@echo ""

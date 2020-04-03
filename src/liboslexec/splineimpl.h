@@ -106,25 +106,33 @@ OSL_CONSTANT_DATA const static SplineBasis gBasisSet[kNumSplineTypes] = {
           {0,  0,  0,  0} } }
 };
 
+OSL_HOSTDEVICE static int basis_type_of(StringParam basis_name)
+{
+    if (basis_name == StringParams::catmullrom)
+        return kCatmullRom;
+    if (basis_name == StringParams::bezier)
+        return kBezier;
+    if (basis_name == StringParams::bspline)
+        return kBSpline;
+    if (basis_name == StringParams::hermite)
+        return kHermite;
+    if (basis_name == StringParams::constant)
+        return kConstant;
+
+    // Default to linear
+    return kLinear;
+}
+
 struct SplineInterp {
     const SplineBasis& spline;
     const bool         constant;
 
     OSL_HOSTDEVICE static SplineInterp create(StringParam basis_name)
     {
-        if (basis_name == StringParams::catmullrom)
-            return { gBasisSet[kCatmullRom], false };
-        if (basis_name == StringParams::bezier)
-            return { gBasisSet[kBezier], false };
-        if (basis_name == StringParams::bspline)
-            return { gBasisSet[kBSpline], false };
-        if (basis_name == StringParams::hermite)
-            return { gBasisSet[kHermite], false };
-        if (basis_name == StringParams::constant)
-            return { gBasisSet[kConstant], true };
+        int splineType = basis_type_of(basis_name);
 
-        // Default to linear
-        return { gBasisSet[kLinear], false };
+        bool is_constant = (splineType == kConstant);
+        return { gBasisSet[splineType], is_constant };
     }
 
 

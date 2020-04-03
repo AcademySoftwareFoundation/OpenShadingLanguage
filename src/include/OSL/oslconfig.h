@@ -222,4 +222,13 @@ static OSL_FORCEINLINE void static_foreach(const FunctorT &iFunctor) {
 #endif
 
 
+// During development it can be useful to output extra information
+// NOTE:  internal use only
+#ifdef OSL_DEV
+    #define OSL_DEV_ONLY(STUFF) STUFF
+#else
+    #define OSL_DEV_ONLY(STUFF)
+#endif
+
+
 OSL_NAMESPACE_EXIT

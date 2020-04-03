@@ -87,7 +87,7 @@ public:
     /// current basic block if bb==NULL).
     bool build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb=NULL);
 
-    typedef std::map<std::string, llvm::Value*> AllocationMap;
+    typedef map<std::string, llvm::Value*> AllocationMap;
 
     void llvm_assign_initial_value (const Symbol& sym, bool force = false);
     llvm::LLVMContext &llvm_context () const { return ll.context(); }
@@ -260,7 +260,7 @@ public:
     /// Implementaiton of Simple assignment.  If arrayindex >= 0, in
     /// designates a particular array index to assign.
     bool llvm_assign_impl (Symbol &Result, Symbol &Src, int arrayindex = -1,
-                           int srcomp = -1, int dstcomp = -1);
+                           int srccomp = -1, int dstcomp = -1);
 
 
     /// Convert the name of a global (and its derivative index) into the
@@ -364,7 +364,7 @@ public:
     /// run -- those can be skipped without dynamically checking their
     /// execution status.
     void llvm_run_connected_layers (Symbol &sym, int symindex, int opnum = -1,
-                                    std::set<int> *already_run = NULL);
+                                    set<int> *already_run = NULL);
 
     /// Generate code for a call to the named function with the given
     /// arg list as symbols -- float & ints will be passed by value,
@@ -454,8 +454,8 @@ public:
     LLVM_Util ll;
 
 private:
-    std::vector<int> m_layer_remap;     ///< Remapping of layer ordering
-    std::set<int> m_layers_already_run; ///< List of layers run
+    vector<int> m_layer_remap;     ///< Remapping of layer ordering
+    set<int> m_layers_already_run; ///< List of layers run
     int m_num_used_layers;              ///< Number of layers actually used
 
     double m_stat_total_llvm_time;        ///<   total time spent on LLVM
@@ -466,7 +466,7 @@ private:
 
     // LLVM stuff
     AllocationMap m_named_values;
-    std::map<const Symbol*,int> m_param_order_map;
+    map<const Symbol*,int> m_param_order_map;
     llvm::Value *m_llvm_shaderglobals_ptr;
     llvm::Value *m_llvm_groupdata_ptr;
     llvm::BasicBlock * m_exit_instance_block;  // exit point for the instance

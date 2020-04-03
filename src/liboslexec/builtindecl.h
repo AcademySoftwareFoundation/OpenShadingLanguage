@@ -154,27 +154,37 @@ NOISE_IMPL(cellnoise)
 NOISE_IMPL(hashnoise)
 NOISE_IMPL(noise)
 NOISE_DERIV_IMPL(noise)
+
 NOISE_IMPL(snoise)
 NOISE_DERIV_IMPL(snoise)
+
 NOISE_IMPL(simplexnoise)
 NOISE_DERIV_IMPL(simplexnoise)
+
 NOISE_IMPL(usimplexnoise)
 NOISE_DERIV_IMPL(usimplexnoise)
+
 GENERIC_NOISE_DERIV_IMPL(gabornoise)
+
 GENERIC_NOISE_DERIV_IMPL(genericnoise)
 NOISE_IMPL(nullnoise)
 NOISE_DERIV_IMPL(nullnoise)
+
 NOISE_IMPL(unullnoise)
 NOISE_DERIV_IMPL(unullnoise)
 PNOISE_IMPL(pcellnoise)
+
 //PNOISE_DERIV_IMPL(pcellnoise)
 PNOISE_IMPL(phashnoise)
 PNOISE_IMPL(pnoise)
 PNOISE_DERIV_IMPL(pnoise)
+
 PNOISE_IMPL(psnoise)
 PNOISE_DERIV_IMPL(psnoise)
+
 GENERIC_PNOISE_DERIV_IMPL(gaborpnoise)
 GENERIC_PNOISE_DERIV_IMPL(genericpnoise)
+
 DECL (osl_noiseparams_set_anisotropic, "xXi")
 DECL (osl_noiseparams_set_do_filter, "xXi")
 DECL (osl_noiseparams_set_direction, "xXv")
@@ -195,10 +205,12 @@ DECL (osl_spline_vfv, "xXXXXii")
 DECL (osl_spline_dvdfdv, "xXXXXii")
 DECL (osl_spline_dvdfv, "xXXXXii")
 DECL (osl_spline_dvfdv, "xXXXXii")
+
 DECL (osl_splineinverse_fff, "xXXXXii")
 DECL (osl_splineinverse_dfdfdf, "xXXXXii")
 DECL (osl_splineinverse_dfdff, "xXXXXii")
 DECL (osl_splineinverse_dffdf, "xXXXXii")
+
 DECL (osl_setmessage, "xXsLXisi")
 DECL (osl_getmessage, "iXssLXiisi")
 DECL (osl_pointcloud_search, "iXsXfiiXXii*")
@@ -207,8 +219,10 @@ DECL (osl_pointcloud_write, "iXsXiXXX")
 DECL (osl_pointcloud_write_helper, "xXXXisLX")
 DECL (osl_blackbody_vf, "xXXf")
 DECL (osl_wavelength_color_vf, "xXXf")
+
 DECL (osl_luminance_fv, "xXXX")
 DECL (osl_luminance_dfdv, "xXXX")
+
 DECL (osl_prepend_color_from, "xXXs")
 DECL (osl_prepend_matrix_from, "iXXs")
 DECL (osl_get_matrix, "iXXs")
@@ -239,7 +253,6 @@ DECL (osl_bind_interpolated_param, "iXXLiXiXiXi")
 DECL (osl_get_texture_options, "XX");
 DECL (osl_get_noise_options, "XX");
 DECL (osl_get_trace_options, "XX");
-
 
 // The following are defined inside llvm_ops.cpp. Only include these
 // declarations in the OSL_LLVM_NO_BITCODE case.
@@ -338,13 +351,14 @@ DECL (osl_normalize_vv, "xXX")
 DECL (osl_normalize_dvdv, "xXX")
 #endif
 
-DECL (osl_mul_mm, "xXXX")
-DECL (osl_mul_mf, "xXXf")
-DECL (osl_mul_m_ff, "xXff")
-DECL (osl_div_mm, "xXXX")
-DECL (osl_div_mf, "xXXf")
-DECL (osl_div_fm, "xXfX")
-DECL (osl_div_m_ff, "xXff")
+
+DECL (osl_mul_mmm, "xXXX")
+DECL (osl_mul_mmf, "xXXf")
+
+DECL (osl_div_mmm, "xXXX")
+DECL (osl_div_mmf, "xXXf")
+DECL (osl_div_mfm, "xXfX")
+
 DECL (osl_get_from_to_matrix, "iXXss")
 DECL (osl_transpose_mm, "xXX")
 DECL (osl_determinant_fm, "fX")
@@ -414,3 +428,4 @@ DECL (osl_raytype_bit, "iXi")
 #undef GENERIC_PNOISE_DERIV_IMPL
 #undef UNARY_OP_IMPL
 #undef BINARY_OP_IMPL
+

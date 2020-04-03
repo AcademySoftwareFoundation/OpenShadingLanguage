@@ -130,6 +130,33 @@ gabor_sample (GaborParams &gp, const Vec3 &/*x_c*/, fast_rng &rng,
     phi = float(M_TWO_PI) * rng();
 }
 
+static  OSL_HOSTDEVICE void
+filter_gabor_kernel_2d (const Matrix22 &filter, const Dual2<float> &w, float a,
+                        const Vec2 &omega, const Dual2<float> &phi,
+                        Dual2<float> &w_f, float &a_f,
+                        Vec2 &omega_f, Dual2<float> &phi_f)
+{
+    //  Equation 10
+    Matrix22 Sigma_f = filter;
+    Dual2<float> c_G = w;
+    Vec2 mu_G = omega;
+    Matrix22 Sigma_G = (a * a / float(M_TWO_PI)) * Matrix22();
+    float c_F = 1.0f / (float(M_TWO_PI) * sqrtf(determinant(Sigma_f)));
+    Matrix22 Sigma_F = float(1.0 / (4.0 * M_PI * M_PI)) * Sigma_f.inverse();
+    Matrix22 Sigma_G_Sigma_F = Sigma_G + Sigma_F;
+    Dual2<float> c_GF = c_F * c_G
+        * (1.0f / (float(M_TWO_PI) * sqrtf(determinant(Sigma_G_Sigma_F))))
+        * expf(-0.5f * dot(Sigma_G_Sigma_F.inverse()*mu_G, mu_G));
+    Matrix22 Sigma_G_i = Sigma_G.inverse();
+    Matrix22 Sigma_GF = (Sigma_F.inverse() + Sigma_G_i).inverse();
+    Vec2 mu_GF;
+    Matrix22 Sigma_GF_Gi = Sigma_GF * Sigma_G_i;
+    Sigma_GF_Gi.multMatrix (mu_G, mu_GF);
+    w_f = c_GF;
+    a_f = sqrtf(M_TWO_PI * sqrtf(determinant(Sigma_GF)));
+    omega_f = mu_GF;
+    phi_f = phi;
+}
 
 // Evaluate the summed contribution of all gabor impulses within the
 // cell whose corner is c_i.  x_c_i is vector from x (the point
@@ -295,7 +322,7 @@ gabor (const Dual2<float> &x, const Dual2<float> &y, const NoiseParams *opt)
 OSL_HOSTDEVICE Dual2<float>
 gabor (const Dual2<Vec3> &P, const NoiseParams *opt)
 {
-    OSL_DASSERT (opt);
+    OSL_DASSERT(opt);
     GaborParams gp (*opt);
 
     if (gp.do_filter)
@@ -328,7 +355,7 @@ gabor3 (const Dual2<float> &x, const Dual2<float> &y, const NoiseParams *opt)
 OSL_HOSTDEVICE Dual2<Vec3>
 gabor3 (const Dual2<Vec3> &P, const NoiseParams *opt)
 {
-    OSL_DASSERT (opt);
+    OSL_DASSERT(opt);
     GaborParams gp (*opt);
 
     if (gp.do_filter)
@@ -369,7 +396,7 @@ pgabor (const Dual2<float> &x, const Dual2<float> &y,
 OSL_HOSTDEVICE Dual2<float>
 pgabor (const Dual2<Vec3> &P, const Vec3 &Pperiod, const NoiseParams *opt)
 {
-    OSL_DASSERT (opt);
+    OSL_DASSERT(opt);
     GaborParams gp (*opt);
 
     gp.periodic = true;
@@ -405,7 +432,7 @@ pgabor3 (const Dual2<float> &x, const Dual2<float> &y,
 OSL_HOSTDEVICE Dual2<Vec3>
 pgabor3 (const Dual2<Vec3> &P, const Vec3 &Pperiod, const NoiseParams *opt)
 {
-    OSL_DASSERT (opt);
+    OSL_DASSERT(opt);
     GaborParams gp (*opt);
 
     gp.periodic = true;

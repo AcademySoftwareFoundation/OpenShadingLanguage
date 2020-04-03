@@ -51,7 +51,7 @@ class ASTNode;  // forward declaration
 
 /// Handy typedef for a vector of pointers to StructSpec's.
 ///
-typedef std::vector<std::shared_ptr<StructSpec> > StructList;
+typedef vector<std::shared_ptr<StructSpec> > StructList;
 
 
 
@@ -202,8 +202,8 @@ private:
 ///
 class SymbolTable {
 public:
-    typedef std::unordered_map<ustring, Symbol *,ustringHash> ScopeTable;
-    typedef std::vector<ScopeTable> ScopeTableStack;
+    typedef unordered_map<ustring, Symbol *,ustringHash> ScopeTable;
+    typedef vector<ScopeTable> ScopeTableStack;
     typedef SymbolPtrVec::iterator iterator;
     typedef SymbolPtrVec::const_iterator const_iterator;
 
@@ -279,7 +279,7 @@ private:
     OSLCompilerImpl &m_comp;         ///< Back-reference to compiler
     SymbolPtrVec m_allsyms;          ///< Master list of all symbols
     ScopeTableStack m_scopetables;   ///< Stack of symbol scopes
-    std::stack<int> m_scopestack;    ///< Stack of current scope IDs
+    stack<int> m_scopestack;    ///< Stack of current scope IDs
     ScopeTable m_allmangled;         ///< All syms, mangled, in a hash table
     int m_scopeid;                   ///< Current scope ID
     int m_nextscopeid;               ///< Next unique scope ID

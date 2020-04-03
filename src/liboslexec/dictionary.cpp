@@ -132,13 +132,13 @@ private:
             : document(d), node(n), next(0) { }
     };
 
-    typedef std::unordered_map <Query, QueryResult, QueryHash> QueryMap;
-    typedef std::unordered_map<ustring, int, ustringHash> DocMap;
+    typedef unordered_map <Query, QueryResult, QueryHash> QueryMap;
+    typedef unordered_map<ustring, int, ustringHash> DocMap;
 
     ShadingContext *m_context;  // back-pointer to shading context
 
     // List of XML documents we've read in.
-    std::vector<pugi::xml_document *> m_documents;
+    vector<pugi::xml_document *> m_documents;
 
     // Map xml strings and/or filename to indices in m_documents.
     DocMap m_document_map;
@@ -147,13 +147,13 @@ private:
     Dictionary::QueryMap m_cache;  // query cache
 
     // List of all the nodes we've found by queries.
-    std::vector<Dictionary::Node> m_nodes;
+    vector<Dictionary::Node> m_nodes;
 
     // m_floatdata, m_intdata, and m_stringdata hold the decoded data
     // results (including type conversion) of cached queries.
-    std::vector<float>   m_floatdata;
-    std::vector<int>     m_intdata;
-    std::vector<ustring> m_stringdata;
+    vector<float>   m_floatdata;
+    vector<int>     m_intdata;
+    vector<ustring> m_stringdata;
 
     // Helper function: return the document index given dictionary name.
     int get_document_index (ustring dictionaryname);

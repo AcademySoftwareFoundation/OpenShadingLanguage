@@ -291,7 +291,7 @@ ASTNode::type_c_str (const TypeSpec &type) const
 
 
 void
-ASTNode::list_to_vec (const ref &A, std::vector<ref> &vec)
+ASTNode::list_to_vec (const ref &A, vector<ref> &vec)
 {
     vec.clear ();
     for (ref node = A; node; node = node->next())
@@ -301,7 +301,7 @@ ASTNode::list_to_vec (const ref &A, std::vector<ref> &vec)
 
 
 ASTNode::ref
-ASTNode::vec_to_list (std::vector<ref> &vec)
+ASTNode::vec_to_list (vector<ref> &vec)
 {
     if (vec.size()) {
         for (size_t i = 0;  i < vec.size()-1;  ++i)

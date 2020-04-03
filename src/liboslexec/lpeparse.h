@@ -61,8 +61,8 @@ class Parser
 {
     public:
 
-        Parser(const std::vector<ustring> *user_events = NULL,
-               const std::vector<ustring> *user_scatterings = NULL);
+        Parser(const pvt::vector<ustring> *user_events = NULL,
+               const pvt::vector<ustring> *user_scatterings = NULL);
 
         /// Parse a string and return the resulting light path expression tree or NULL if failed
         LPexp *parse(const char *text);
@@ -100,7 +100,7 @@ class Parser
         ///
         /// And the function will automatically add a "[^stop_mark]*stop_mark" at the end.
         ///
-        LPexp *buildStop(LPexp *etype, LPexp *scatter, const std::list<LPexp*> &custom);
+        LPexp *buildStop(LPexp *etype, LPexp *scatter, const pvt::list<LPexp*> &custom);
         /// Gicen that a symbol is ready in head() to parse, parse it
         LPexp *parseSymbol();
         /// Gicen that a symbol is ready in head() to parse, parse it as a ustring

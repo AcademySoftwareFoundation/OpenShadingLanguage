@@ -62,7 +62,7 @@ check_cwd (ShadingSystemImpl &shadingsys)
                           OIIO::Filesystem::exists(pwdenv) ? "exists" : "does NOT exist");
                 err += Strutil::sprintf ("That %s a directory.\n",
                           OIIO::Filesystem::is_directory(pwdenv) ? "is" : "is NOT");
-                std::vector<std::string> pieces;
+                vector<std::string> pieces;
                 Strutil::split (pwdenv, pieces, "/");
                 std::string p;
                 for (size_t i = 0;  i < pieces.size();  ++i) {
@@ -87,7 +87,7 @@ check_cwd (ShadingSystemImpl &shadingsys)
 BackendLLVM::BackendLLVM (ShadingSystemImpl &shadingsys,
                           ShaderGroup &group, ShadingContext *ctx)
     : OSOProcessorBase (shadingsys, group, ctx),
-      ll(llvm_debug()),
+      ll(llvm_debug(), ctx->llvm_thread_info()),
       m_stat_total_llvm_time(0), m_stat_llvm_setup_time(0),
       m_stat_llvm_irgen_time(0), m_stat_llvm_opt_time(0),
       m_stat_llvm_jit_time(0)
@@ -773,7 +773,7 @@ BackendLLVM::llvm_load_component_value (const Symbol& sym, int deriv,
     if (!result)
         return NULL;  // Error
 
-    TypeDesc t = sym.typespec().simpletype();
+    OSL_MAYBE_UNUSED TypeDesc t = sym.typespec().simpletype();
     OSL_DASSERT (t.aggregate != TypeDesc::SCALAR);
     // cast the Vec* to a float*
     result = ll.ptr_cast (result, ll.type_float_ptr());
@@ -885,7 +885,7 @@ BackendLLVM::llvm_store_component_value (llvm::Value* new_val,
     if (!result)
         return false;  // Error
 
-    TypeDesc t = sym.typespec().simpletype();
+    OSL_MAYBE_UNUSED TypeDesc t = sym.typespec().simpletype();
     OSL_DASSERT (t.aggregate != TypeDesc::SCALAR);
     // cast the Vec* to a float*
     result = ll.ptr_cast (result, ll.type_float_ptr());
@@ -944,7 +944,7 @@ BackendLLVM::llvm_call_function (const char *name,
     // so avoid dynamic allocation where possible
     constexpr int SHORT_NUM_ARGS = 16;
     llvm::Value *short_valargs[SHORT_NUM_ARGS];
-    std::vector<llvm::Value*> long_valargs;
+    vector<llvm::Value*> long_valargs;
     llvm::Value **valargs = short_valargs;
     if (args.size() > SHORT_NUM_ARGS) {
         long_valargs.resize(args.size());

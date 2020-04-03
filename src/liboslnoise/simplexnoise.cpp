@@ -306,14 +306,14 @@ OSL_HOSTDEVICE float simplexnoise2 (float x, float y, int seed,
     // for the last two arguments
     if (dnoise_dx) {
         OSL_DASSERT(dnoise_dy);
-	/*  A straight, unoptimised calculation would be like:
+    /*  A straight, unoptimized calculation would be like:
      *    *dnoise_dx = -8.0f * t20 * t0 * x0 * ( g0[0] * x0 + g0[1] * y0 ) + t40 * g0[0];
      *    *dnoise_dy = -8.0f * t20 * t0 * y0 * ( g0[0] * x0 + g0[1] * y0 ) + t40 * g0[1];
      *    *dnoise_dx += -8.0f * t21 * t1 * x1 * ( g1[0] * x1 + g1[1] * y1 ) + t41 * g1[0];
      *    *dnoise_dy += -8.0f * t21 * t1 * y1 * ( g1[0] * x1 + g1[1] * y1 ) + t41 * g1[1];
      *    *dnoise_dx += -8.0f * t22 * t2 * x2 * ( g2[0] * x2 + g2[1] * y2 ) + t42 * g2[0];
      *    *dnoise_dy += -8.0f * t22 * t2 * y2 * ( g2[0] * x2 + g2[1] * y2 ) + t42 * g2[1];
-	 */
+     */
         float temp0 = t20 * t0 * (g0[0]* x0 + g0[1] * y0);
         *dnoise_dx = temp0 * x0;
         *dnoise_dy = temp0 * y0;
@@ -475,7 +475,7 @@ simplexnoise3 (float x, float y, float z, int seed,
     // for the last three arguments
     if (dnoise_dx) {
         OSL_DASSERT(dnoise_dy && dnoise_dz);
-	/*  A straight, unoptimised calculation would be like:
+    /*  A straight, unoptimized calculation would be like:
      *     *dnoise_dx = -8.0f * t20 * t0 * x0 * dot(g0[0], g0[1], g0[2], x0, y0, z0) + t40 * g0[0];
      *    *dnoise_dy = -8.0f * t20 * t0 * y0 * dot(g0[0], g0[1], g0[2], x0, y0, z0) + t40 * g0[1];
      *    *dnoise_dz = -8.0f * t20 * t0 * z0 * dot(g0[0], g0[1], g0[2], x0, y0, z0) + t40 * g0[2];
@@ -672,7 +672,7 @@ simplexnoise4 (float x, float y, float z, float w, int seed,
     // for the last four arguments
     if (dnoise_dx) {
         OSL_DASSERT(dnoise_dy && dnoise_dz && dnoise_dw);
-	/*  A straight, unoptimised calculation would be like:
+    /*  A straight, unoptimized calculation would be like:
      *     *dnoise_dx = -8.0f * t20 * t0 * x0 * dot(g0[0], g0[1], g0[2], g0[3], x0, y0, z0, w0) + t40 * g0[0];
      *    *dnoise_dy = -8.0f * t20 * t0 * y0 * dot(g0[0], g0[1], g0[2], g0[3], x0, y0, z0, w0) + t40 * g0[1];
      *    *dnoise_dz = -8.0f * t20 * t0 * z0 * dot(g0[0], g0[1], g0[2], g0[3], x0, y0, z0, w0) + t40 * g0[2];

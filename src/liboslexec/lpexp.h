@@ -98,7 +98,7 @@ class Cat : public LPexp {
         virtual LPexp * clone()const;
 
     protected:
-        std::list<LPexp *> m_children;
+        pvt::list<LPexp *> m_children;
 };
 
 
@@ -149,7 +149,7 @@ class Orlist : public LPexp {
         virtual LPexp * clone()const;
 
     protected:
-        std::list<LPexp *> m_children;
+        pvt::list<LPexp *> m_children;
 };
 
 

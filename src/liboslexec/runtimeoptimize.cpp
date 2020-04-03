@@ -53,6 +53,7 @@ static ustring u_nop    ("nop"),
                u_while  ("while"),
                u_dowhile("dowhile"),
                u_functioncall ("functioncall"),
+               u_functioncall_nr("functioncall_nr"),
                u_break ("break"),
                u_continue ("continue"),
                u_return ("return"),
@@ -120,6 +121,7 @@ RuntimeOptimizer::RuntimeOptimizer (ShadingSystemImpl &shadingsys,
       m_opt_assign(shadingsys.m_opt_assign),
       m_opt_mix(shadingsys.m_opt_mix),
       m_opt_middleman(shadingsys.m_opt_middleman),
+      m_keep_no_return_function_calls(shadingsys.m_llvm_debugging_symbols),
       m_pass(0),
       m_next_newconst(0), m_next_newtemp(0),
       m_stat_opt_locking_time(0), m_stat_specialization_time(0),
@@ -492,6 +494,20 @@ RuntimeOptimizer::turn_into_nop (int begin, int end, string_view why)
     return changed;
 }
 
+// Turn the op into a no-op functioncall
+// We keep want to keep the jumps indices so we can correctly
+// model an inlined function call for the debugger
+int
+RuntimeOptimizer::turn_into_functioncall_nr (Opcode &op, string_view why)
+{
+    if (op.opname() == u_functioncall) {
+        if (debug() > 1)
+            debug_turn_into (op, 1, "functioncall_nr", -1, -1, -1, why);
+        op.transmute_opname (u_functioncall_nr);
+        return 1;
+    }
+    return 0;
+}
 
 
 void
@@ -501,7 +517,7 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
                                InsertRelation relation)
 {
     OpcodeVec &code (inst()->ops());
-    std::vector<int> &opargs (inst()->args());
+    vector<int> &opargs (inst()->args());
     ustring method = (opnum < (int)code.size()) ? code[opnum].method() : OSLCompilerImpl::main_method_name();
     int nargs = args_to_add.size();
     Opcode op (opname, method, opargs.size(), nargs);
@@ -613,11 +629,11 @@ RuntimeOptimizer::insert_code (int opnum, ustring opname,
 /// reference the symbols in 'params'.
 void
 RuntimeOptimizer::insert_useparam (size_t opnum,
-                                   const std::vector<int> &params_to_use)
+                                   const vector<int> &params_to_use)
 {
     OSL_DASSERT (params_to_use.size() > 0);
     OpcodeVec &code (inst()->ops());
-    insert_code (opnum, u_useparam, params_to_use,
+    insert_code (opnum, u_useparam, make_cspan(params_to_use),
                  RecomputeRWRanges, GroupWithNext);
 
     // All ops are "read"
@@ -642,7 +658,7 @@ void
 RuntimeOptimizer::add_useparam (SymbolPtrVec &allsyms)
 {
     OpcodeVec &code (inst()->ops());
-    std::vector<int> &opargs (inst()->args());
+    vector<int> &opargs (inst()->args());
 
     // Mark all symbols as un-initialized
     for (auto&& s : inst()->symbols())
@@ -653,7 +669,7 @@ RuntimeOptimizer::add_useparam (SymbolPtrVec &allsyms)
 
     // Take care of the output params right off the bat -- as soon as the
     // shader starts running 'main'.
-    std::vector<int> outputparams;
+    vector<int> outputparams;
     for (int i = 0;  i < (int)inst()->symbols().size();  ++i) {
         Symbol *s = inst()->symbol(i);
         if (s->symtype() == SymTypeOutputParam &&
@@ -675,7 +691,7 @@ RuntimeOptimizer::add_useparam (SymbolPtrVec &allsyms)
             continue;  // skip useparam ops themselves, if we hit one
         bool simple_assign = is_simple_assign(op);
         bool in_main_code = (opnum >= inst()->m_maincodebegin);
-        std::vector<int> params;   // list of params referenced by this op
+        vector<int> params;   // list of params referenced by this op
         // For each argument...
         for (int a = 0;  a < op.nargs();  ++a) {
             int argind = op.firstarg() + a;
@@ -1055,7 +1071,7 @@ OSOProcessorBase::find_basic_blocks ()
     m_bblockids.resize (code.size(), 0);
 
     // First, keep track of all the spots where blocks begin
-    std::vector<bool> block_begin (code.size(), false);
+    vector<bool> block_begin (code.size(), false);
 
     // Init ops start basic blocks
     FOREACH_PARAM (const Symbol &s, inst()) {
@@ -1068,6 +1084,11 @@ OSOProcessorBase::find_basic_blocks ()
 
     for (size_t opnum = 0;  opnum < code.size();  ++opnum) {
         Opcode &op (code[opnum]);
+        if (op.opname() == u_functioncall_nr)
+        {   // Treat the 'no return' function call as if it were a nop.
+            // we use later to generate correct inline debug information.
+            continue;
+        }
         // Anyplace that's the target of a jump instruction starts a basic block
         for (int j = 0;  j < (int)Opcode::max_jumps;  ++j) {
             if (op.jump(j) >= 0)
@@ -1221,7 +1242,7 @@ RuntimeOptimizer::simple_sym_assign (int sym, int opnum)
         FastIntMap::iterator i = m_stale_syms.find(sym);
         if (i != m_stale_syms.end()) {
             Opcode &uselessop (inst()->ops()[i->second]);
-            if (uselessop.opname() != u_nop)
+            if (uselessop.opname() != u_nop && uselessop.opname() != u_functioncall_nr)
                 turn_into_nop (uselessop,
                            debug() > 1 ? Strutil::sprintf("remove stale value assignment to %s, reassigned on op %d",
                                                          opargsym(uselessop,0)->name(), opnum).c_str() : "");
@@ -1577,7 +1598,7 @@ RuntimeOptimizer::next_block_instruction (int opnum)
 {
     int end = (int)inst()->ops().size();
     for (int n = opnum+1; n < end && m_bblockids[n] == m_bblockids[opnum]; ++n)
-        if (inst()->ops()[n].opname() != u_nop)
+        if (inst()->ops()[n].opname() != u_nop && inst()->ops()[n].opname() != u_functioncall_nr)
             return n;   // Found it!
     return 0;   // End of ops or end of basic block
 }
@@ -1753,7 +1774,7 @@ RuntimeOptimizer::peephole2 (int opnum, int op2num)
                 return 1;
             }
             // FIXME - handle weight being a float as well
-            std::vector<int> newargs;
+            vector<int> newargs;
             newargs.push_back (oparg(next,0)); // B
             if (! is_one(*weight))
                 newargs.push_back (oparg(next,weightarg)); // weight
@@ -1761,7 +1782,7 @@ RuntimeOptimizer::peephole2 (int opnum, int op2num)
                 newargs.push_back (oparg(op,i));
             turn_into_nop (op, "combine closure+mul");
             turn_into_nop (next, "combine closure+mul");
-            insert_code (opnum, u_closure, newargs,
+            insert_code (opnum, u_closure, make_cspan(newargs),
                          RecomputeRWRanges, GroupWithNext);
             if (debug() > 1)
                 std::cout << "op " << opnum << "-" << (op2num) 
@@ -2118,7 +2139,7 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop,
             }
         }
         // Nothing below here to do for no-ops, take early out.
-        if (op->opname() == u_nop)
+        if (op->opname() == u_nop || op->opname() == u_functioncall_nr)
             continue;
         // De-alias the readable args to the op and figure out if
         // there are any constants involved.
@@ -2171,7 +2192,7 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop,
             break;
         // Peephole optimization involving pair of instructions (the second
         // instruction will be in the same basic block.
-        if (optimize() >= 2 && m_opt_peephole && op->opname() != u_nop) {
+        if (optimize() >= 2 && m_opt_peephole && op->opname() != u_nop && op->opname() != u_functioncall_nr) {
             // Find the next instruction in the same basic block
             int op2num = next_block_instruction (opnum);
             if (op2num) {
@@ -2466,8 +2487,8 @@ RuntimeOptimizer::add_dependency (SymDependency &dmap, int A, int B)
 
 
 void
-RuntimeOptimizer::syms_used_in_op (Opcode &op, std::vector<int> &rsyms,
-                                   std::vector<int> &wsyms)
+RuntimeOptimizer::syms_used_in_op (Opcode &op, vector<int> &rsyms,
+                                   vector<int> &wsyms)
 {
     rsyms.clear ();
     wsyms.clear ();
@@ -2548,7 +2569,7 @@ RuntimeOptimizer::track_variable_dependencies ()
 
     symdeps.clear ();
 
-    std::vector<int> read, written;
+    vector<int> read, written;
     bool forcederivs = shadingsys().force_derivs();
     // Loop over all ops...
     for (auto&& op : inst()->ops()) {
@@ -2789,7 +2810,7 @@ RuntimeOptimizer::collapse_syms ()
     mark_outgoing_connections ();
 
     SymbolVec new_symbols;          // buffer for new symbol table
-    std::vector<int> symbol_remap;  // mapping of old sym index to new
+    vector<int> symbol_remap;  // mapping of old sym index to new
     int total_syms = 0;             // number of new symbols we'll need
     SymNeverUsed never_used (*this, inst());  // handy predicate
 
@@ -2872,7 +2893,7 @@ RuntimeOptimizer::collapse_ops ()
     // Make new code that removes all the nops
     //
     OpcodeVec new_ops;              // buffer for new code
-    std::vector<int> op_remap;      // mapping of old opcode indices to new
+    vector<int> op_remap;      // mapping of old opcode indices to new
     int total_ops = 0;              // number of new ops we'll need
 
     // First, just count how many we need and set up the mapping
@@ -3149,7 +3170,7 @@ RuntimeOptimizer::run ()
                 && ! s.lockgeom()) {
                 UserDataNeeded udn (s.name(), layer, s.typespec().simpletype(),
                                     s.data(), s.has_derivs());
-                std::set<UserDataNeeded>::iterator found;
+                set<UserDataNeeded>::iterator found;
                 found = m_userdata_needed.find (udn);
                 if (found == m_userdata_needed.end())
                     m_userdata_needed.insert (udn);

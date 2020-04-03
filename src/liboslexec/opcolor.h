@@ -84,6 +84,9 @@ public:
     OSL_HOSTDEVICE float
     luminance (const Color3 &RGB) { return RGB.dot(m_luminance_scale); }
 
+    /// Return the luminance scale  of the current color space.
+    const Color3 & luminance_scale() const { return m_luminance_scale; }
+
     /// Return the RGB in the current color space for blackbody radiation
     /// at temperature T (in Kelvin).
     OSL_HOSTDEVICE Color3

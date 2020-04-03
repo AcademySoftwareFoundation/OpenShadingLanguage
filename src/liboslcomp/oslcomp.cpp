@@ -144,8 +144,8 @@ OSLCompilerImpl::~OSLCompilerImpl ()
 bool
 OSLCompilerImpl::preprocess_file (const std::string &filename,
                                   const std::string &stdoslpath,
-                                  const std::vector<std::string> &defines,
-                                  const std::vector<std::string> &includepaths,
+                                  const vector<std::string> &defines,
+                                  const vector<std::string> &includepaths,
                                   std::string &result)
 {
     // Read file contents into a string
@@ -171,8 +171,8 @@ bool
 OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
                                     const std::string &filename,
                                     const std::string &stdoslpath,
-                                    const std::vector<std::string> &defines,
-                                    const std::vector<std::string> &includepaths,
+                                    const vector<std::string> &defines,
+                                    const vector<std::string> &includepaths,
                                     std::string &result)
 {
     std::string instring;
@@ -277,8 +277,8 @@ OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
 
 void
 OSLCompilerImpl::read_compile_options (const std::vector<std::string> &options,
-                                       std::vector<std::string> &defines,
-                                       std::vector<std::string> &includepaths)
+                                       vector<std::string> &defines,
+                                       vector<std::string> &includepaths)
 {
     m_output_filename.clear ();
     m_preprocess_only = false;
@@ -350,7 +350,7 @@ OSLCompilerImpl::read_compile_options (const std::vector<std::string> &options,
 // Guess the path for stdosl.h. This is only called if no explicit
 // stdoslpath is given to the compile command.
 static string_view
-find_stdoslpath (const std::vector<std::string>& includepaths)
+find_stdoslpath (const vector<std::string>& includepaths)
 {
     // Try the user-supplied include paths first
     for (auto& dir : includepaths) {
@@ -434,8 +434,8 @@ OSLCompilerImpl::compile (string_view filename,
         return false;
     }
 
-    std::vector<std::string> defines;
-    std::vector<std::string> includepaths;
+    vector<std::string> defines;
+    vector<std::string> includepaths;
     m_cwd = OIIO::Filesystem::current_path();
     m_main_filename = ustring(filename);
     clear_filecontents_cache();
@@ -530,8 +530,8 @@ OSLCompilerImpl::compile_buffer (string_view sourcecode,
     if (filename.empty())
         filename = string_view("<buffer>");
 
-    std::vector<std::string> defines;
-    std::vector<std::string> includepaths;
+    vector<std::string> defines;
+    vector<std::string> includepaths;
     read_compile_options (options, defines, includepaths);
 
     m_cwd = OIIO::Filesystem::current_path();
@@ -729,8 +729,8 @@ OSLCompilerImpl::write_oso_const_value (const ConstantSymbol *sym) const
             osof("%.9g%s", sym->floatval(i), nelements>1 ? " " : "");
     else if (equivalent (elemtype, TypeDesc::TypeVector))
         for (int i = 0;  i < nelements;  ++i)
-            osof("%.9g %.9g %.9g%s", sym->vecval(i)[0], sym->vecval(i)[1],
-                 sym->vecval(i)[2], nelements>1 ? " " : "");
+            osof("%.9g %.9g %.9g%s", sym->vecval(i).x, sym->vecval(i).y,
+                 sym->vecval(i).z, nelements>1 ? " " : "");
     else {
         OSL_ASSERT (0 && "Don't know how to output this constant type");
     }
@@ -825,7 +825,7 @@ OSLCompilerImpl::write_oso_symbol (const Symbol *sym)
     if (isparam || sym->symtype() == SymTypeGlobal) {
         // FIXME
         const SymPtrSet &deps (m_symdeps[sym]);
-        std::vector<const Symbol *> inputdeps;
+        vector<const Symbol *> inputdeps;
         for (auto&& d : deps)
             if (d->symtype() == SymTypeParam ||
                   d->symtype() == SymTypeOutputParam ||
@@ -1189,7 +1189,7 @@ void
 OSLCompilerImpl::track_variable_lifetimes (const OpcodeVec &code,
                                            const SymbolPtrVec &opargs,
                                            const SymbolPtrVec &allsyms,
-                                           std::vector<int> *bblockids)
+                                           vector<int> *bblockids)
 {
     // Clear the lifetimes for all symbols
     for (auto&& s : allsyms)
@@ -1200,7 +1200,7 @@ OSLCompilerImpl::track_variable_lifetimes (const OpcodeVec &code,
     // conditional evaluation (skip the initialization). Note that the end
     // is inclusive. We use this vector of ranges as a stack.
     typedef std::pair<int,int> intpair;
-    std::vector<intpair> loop_bounds;
+    vector<intpair> loop_bounds;
 
     // For each op, mark its arguments as being used at that op
     int opnum = 0;
@@ -1289,14 +1289,14 @@ static void
 mark_symbol_derivatives (SymDependencyMap &dmap, SymPtrSet &visited, const Symbol *sym)
 {
     for (auto&& r : dmap[sym]) {
-		if (visited.find(r) == visited.end()) {
-			visited.insert(r);
+        if (visited.find(r) == visited.end()) {
+            visited.insert(r);
 
-			const_cast<Symbol *>(r)->has_derivs (true);
+            const_cast<Symbol *>(r)->has_derivs (true);
 
-			mark_symbol_derivatives(dmap, visited, r);
-		}
-	}
+            mark_symbol_derivatives(dmap, visited, r);
+        }
+    }
 }
 
 
@@ -1337,7 +1337,7 @@ OSLCompilerImpl::track_variable_dependencies ()
     // analysis).
 
     m_symdeps.clear ();
-    std::vector<Symbol *> read, written;
+    vector<Symbol *> read, written;
     int opnum = 0;
     // We define a pseudo-symbol just for tracking derivatives.  This
     // symbol "depends on" whatever things have derivs taken of them.
@@ -1495,8 +1495,8 @@ OSLCompilerImpl::op_uses_sym (const Opcode &op, const Symbol *sym,
 void
 OSLCompilerImpl::syms_used_in_op_range (OpcodeVec::const_iterator opbegin,
                                         OpcodeVec::const_iterator opend,
-                                        std::vector<Symbol *> *rsyms,
-                                        std::vector<Symbol *> *wsyms)
+                                        vector<Symbol *> *rsyms,
+                                        vector<Symbol *> *wsyms)
 {
     for (OpcodeVec::const_iterator op = opbegin; op != opend;  ++op) {
         for (int i = 0;  i < op->nargs();  ++i) {

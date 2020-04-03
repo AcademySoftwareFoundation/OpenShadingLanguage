@@ -1110,7 +1110,8 @@ ASTNode::check_arglist (const char * /*funcname*/, ASTNode::ref arg,
             ASTcompound_initializer::TypeAdjuster ta(
                 m_compiler, ASTcompound_initializer::TypeAdjuster::no_errors);
 
-            TypeSpec itype = ta.typecheck(
+            OSL_MAYBE_UNUSED TypeSpec itype =
+                    ta.typecheck(
                 static_cast<ASTcompound_initializer*>(arg.get()), formaltype);
 
             OSL_DASSERT (!ta.success() || (formaltype == itype));
@@ -1140,7 +1141,7 @@ void
 ASTfunction_call::mark_optional_output (int firstopt, const char **tags)
 {
    bool mark_all = *tags && **tags == '*';
-   std::vector<ASTNode::ref> argvec;
+   vector<ASTNode::ref> argvec;
    list_to_vec (args(), argvec);
 
    // Find the beginning of the optional arguments
@@ -2326,7 +2327,7 @@ OSLCompilerImpl::code_from_type (TypeSpec type) const
 
 void
 OSLCompilerImpl::typespecs_from_codes (const char *code,
-                                       std::vector<TypeSpec> &types) const
+                                       vector<TypeSpec> &types) const
 {
     types.clear ();
     while (code && *code) {

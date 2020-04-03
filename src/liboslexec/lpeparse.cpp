@@ -36,8 +36,8 @@ OSL_NAMESPACE_ENTER
 
 static ustring udot(".");
 
-Parser::Parser(const std::vector<ustring> *user_events,
-               const std::vector<ustring> *user_scatterings)
+Parser::Parser(const pvt::vector<ustring> *user_events,
+               const pvt::vector<ustring> *user_scatterings)
 {
     m_ingroup = false;
     m_error = "";
@@ -86,12 +86,12 @@ Parser::Parser(const std::vector<ustring> *user_events,
 
 
 LPexp *
-Parser::buildStop(LPexp *etype, LPexp *scatter, const std::list<LPexp*> &custom)
+Parser::buildStop(LPexp *etype, LPexp *scatter, const pvt::list<LPexp*> &custom)
 {
     lpexp::Cat *cat = new lpexp::Cat();
     cat->append(etype);
     cat->append(scatter);
-    for (std::list<LPexp*>::const_iterator i = custom.begin(); i != custom.end(); ++i)
+    for (auto i = custom.begin(); i != custom.end(); ++i)
         cat->append(*i);
 
     if (custom.size() < 5)
@@ -114,7 +114,7 @@ Parser::parseSymbol()
             return new lpexp::Symbol(sym);
     } else {
         if (iscustom) {
-            std::list<LPexp *> custom;
+            pvt::list<LPexp *> custom;
             custom.push_back(new lpexp::Symbol(sym));
             return buildStop(new lpexp::Wildexp(m_minus_stop), new lpexp::Wildexp(m_minus_stop), custom);
         } else {
@@ -131,7 +131,7 @@ Parser::parseSymbol()
             for (int k = 0; k < 2; ++k)
                 if (!basics[k])
                     basics[k] = new lpexp::Wildexp(m_minus_stop);
-            std::list<LPexp *> empty;
+            pvt::list<LPexp *> empty;
             return buildStop (basics[0], basics[1], empty);
         }
     }
@@ -172,7 +172,7 @@ LPexp *
 Parser::parseCat()
 {
     //lpexp::Cat *cat = new lpexp::Cat();
-    std::vector<LPexp *> explist;
+    pvt::vector<LPexp *> explist;
     char endchar;
     if (head() == '(') {
         next();
@@ -239,10 +239,10 @@ Parser::parseGroup()
     }
     int basicpos = 0;
     LPexp *basics[2] = {NULL, NULL};
-    std::list<LPexp *> custom;
+    pvt::list<LPexp *> custom;
 #define THROWAWAY() do{\
     for (int i=0;i<2;++i) if(basics[i]) delete basics[i];\
-    for (std::list<LPexp *>::iterator i = custom.begin();i!=custom.end();++i) delete *i;\
+    for (auto i = custom.begin();i!=custom.end();++i) delete *i;\
     m_ingroup = false;\
     return NULL;\
     }while(0)
@@ -312,7 +312,7 @@ Parser::parseNegor()
     if (m_ingroup)
         return wildcard;
     else {
-        std::list<LPexp *> custom;
+        pvt::list<LPexp *> custom;
         if (pos < 0) { // is a custom label
             custom.push_back(wildcard);
             return buildStop(new lpexp::Wildexp(m_minus_stop), new lpexp::Wildexp(m_minus_stop), custom);

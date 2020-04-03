@@ -220,7 +220,7 @@ NdfAutomata::lambdaClosure(IntSet &states)const
     // This algorithm basically keeps expanding the set until no new states appear
     // to avoid checking over and over the same states we keep a frontier pair of sets
     // so we only expand newly discovered states
-    std::vector<int> frontier, discovered;
+    pvt::vector<int> frontier, discovered;
     // First iterate all the states in the given set
     // and see what lambda transitions are there
     for (IntSet::const_iterator i = states.begin(); i != states.end(); ++i) {
@@ -240,7 +240,7 @@ NdfAutomata::lambdaClosure(IntSet &states)const
     while (discovered.size()) { // as long as there are new found states
         frontier.clear();
         // we do the same as in the above loop but with discovered instead of states
-        for (std::vector<int>::iterator i = discovered.begin(); i != discovered.end(); ++i) {
+        for (auto i = discovered.begin(); i != discovered.end(); ++i) {
             const State *state = m_states[*i];
             std::pair <IntSet::const_iterator, IntSet::const_iterator> lr;
             for (lr = state->getLambdaTransitions(); lr.first != lr.second; lr.first++) {
@@ -273,7 +273,7 @@ NdfAutomata::tostr()const
 
 NdfAutomata::~NdfAutomata()
 {
-    for (std::vector<State *>::iterator i = m_states.begin(); i != m_states.end(); ++i)
+    for (auto i = m_states.begin(); i != m_states.end(); ++i)
         delete *i;
 }
 
@@ -333,13 +333,13 @@ void
 DfAutomata::State::removeUselessTransitions()
 {
     if (m_wildcard_trans >= 0) {
-        std::list<SymbolToInt::iterator> toremove;
+        pvt::list<SymbolToInt::iterator> toremove;
         for (SymbolToInt::iterator i = m_symbol_trans.begin(); i != m_symbol_trans.end(); ++i)
             // If there is a transition to the same state as the wildcard, we better nuke it
             // and just add that symbol to the wildcard be removing it from the map itself
             if (i->second == m_wildcard_trans)
                 toremove.push_back(i);
-        for (std::list<SymbolToInt::iterator>::iterator i = toremove.begin(); i != toremove.end(); ++i)
+        for (auto i = toremove.begin(); i != toremove.end(); ++i)
             m_symbol_trans.erase(*i);
     }
 }
@@ -453,7 +453,7 @@ DfAutomata::equivalent(const State *dfstateA, const State *dfstateB)
 void
 DfAutomata::removeEquivalentStates()
 {
-    std::vector<State *> newstatelist;
+    pvt::vector<State *> newstatelist;
     HashIntInt newfromold;
 
     // First go through all states and delete all those
@@ -515,7 +515,7 @@ DfAutomata::removeUselessTransitions()
 void
 DfAutomata::clear()
 {
-    for (std::vector<State *>::iterator i = m_states.begin(); i != m_states.end(); ++i)
+    for (auto i = m_states.begin(); i != m_states.end(); ++i)
         delete *i;
     m_states.clear();
 }
@@ -530,7 +530,7 @@ DfAutomata::~DfAutomata()
 
 
 DfAutomata::State *
-StateSetRecord::ensureState(const IntSet &newstates, std::list<StateSetRecord::Discovery> &discovered)
+StateSetRecord::ensureState(const IntSet &newstates, pvt::list<StateSetRecord::Discovery> &discovered)
 {
     // create the key
     StateSetKey newkey;
@@ -567,7 +567,7 @@ StateSetRecord::getRulesFromSet(DfAutomata::State *dfstate, const NdfAutomata &n
 void
 ndfautoToDfauto(const NdfAutomata &ndfautomata, DfAutomata &dfautomata)
 {
-    std::list<StateSetRecord::Discovery> toexplore, discovered;
+    pvt::list<StateSetRecord::Discovery> toexplore, discovered;
     // our initial state is the lambda closure
     // of the initial state in the NDF automata
     IntSet initial;
@@ -580,7 +580,7 @@ ndfautoToDfauto(const NdfAutomata &ndfautomata, DfAutomata &dfautomata)
         // new states that we may find when calculating transitions
         // make sure it is empty
         discovered.clear();
-        for (std::list<StateSetRecord::Discovery>::iterator i = toexplore.begin(); i != toexplore.end(); ++i) {
+        for (auto i = toexplore.begin(); i != toexplore.end(); ++i) {
             // get the available symbols to move from this state
             // set (originalset) in the original automata. Plus
             // a wildcard movement that is guaranteed to match all

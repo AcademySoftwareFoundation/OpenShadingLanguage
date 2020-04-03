@@ -42,7 +42,7 @@ target_include_directories (testshade
 target_link_libraries (testshade
                        PRIVATE
                            oslexec oslquery
-                           ${CUDA_LIBRARIES} ${OPTIX_LIBRARIES} ${OPTIX_EXTRA_LIBS})
+                           ${CUDA_LIBRARIES} ${OPTIX_LIBRARIES} ${OPTIX_EXTRA_LIBS} ${TBBMALLOC_LIB})
 install (TARGETS testshade RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
 
 # The 'libtestshade' library
@@ -58,7 +58,7 @@ set_target_properties (libtestshade
 target_link_libraries (libtestshade
                        PRIVATE
                            oslexec oslquery
-                           ${CUDA_LIBRARIES} ${OPTIX_LIBRARIES} ${OPTIX_EXTRA_LIBS})
+                           ${CUDA_LIBRARIES} ${OPTIX_LIBRARIES} ${OPTIX_EXTRA_LIBS} ${TBBMALLOC_LIB})
 set_target_properties (libtestshade PROPERTIES PREFIX "")
 
 install_targets ( libtestshade )
@@ -68,6 +68,6 @@ add_executable ( testshade_dso testshade_dso.cpp )
 target_link_libraries (testshade_dso
                        PRIVATE
                            ${OPENIMAGEIO_LIBRARIES} ${OPENEXR_LIBRARIES}
-                           ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} )
+                           ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} ${TBBMALLOC_LIB})
 install (TARGETS testshade_dso RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
 

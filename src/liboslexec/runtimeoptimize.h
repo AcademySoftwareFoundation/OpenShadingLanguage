@@ -46,11 +46,11 @@ OSL_NAMESPACE_ENTER
 namespace pvt {   // OSL::pvt
 
 #if USE_FLAT_MAP
-typedef boost::container::flat_map<int,int> FastIntMap;
-typedef boost::container::flat_set<int> FastIntSet;
+    typedef boost::container::flat_map<int,int, std::less<int>, CustomAllocator<std::pair<int,int>>> FastIntMap;
+    typedef boost::container::flat_set<int, std::less<int>, CustomAllocator<int>> FastIntSet;
 #else
-typedef std::map<int,int> FastIntMap;
-typedef std::set<int> FastIntSet;
+    typedef map<int,int> FastIntMap;
+    typedef set<int> FastIntSet;
 #endif
 
 
@@ -152,6 +152,13 @@ public:
     /// Turn the whole range [begin,end) into no-ops.  Return the number
     /// of instructions that were altered.
     int turn_into_nop (int begin, int end, string_view why=NULL);
+
+
+    /// Transmute regulare function call into a 'no return' function call
+    /// The funcationcall_nr is useful to generate debug info for the inlined
+    /// function call.  Its existence shouldn't otherwise modify resulting
+    /// code generation.
+    int turn_into_functioncall_nr (Opcode &op, string_view why=nullptr);
 
     void debug_opt_impl (string_view message) const;
 
@@ -292,7 +299,7 @@ public:
     void insert_code (int opnum, ustring opname, InsertRelation relation,
                       int arg0=-1, int arg1=-1, int arg2=-1, int arg3=-1);
 
-    void insert_useparam (size_t opnum, const std::vector<int> &params_to_use);
+    void insert_useparam (size_t opnum, const vector<int> &params_to_use);
 
     /// Add a 'useparam' before any op that reads parameters.  This is what
     /// tells the runtime that it needs to run the layer it came from, if
@@ -308,11 +315,11 @@ public:
 
     /// For each symbol, have a list of the symbols it depends on (or that
     /// depends on it).
-    typedef std::set<int> SymIntSet;
-    typedef std::map<int, SymIntSet> SymDependency;
+    typedef set<int> SymIntSet;
+    typedef map<int, SymIntSet> SymDependency;
 
     void syms_used_in_op (Opcode &op,
-                          std::vector<int> &rsyms, std::vector<int> &wsyms);
+                          vector<int> &rsyms, vector<int> &wsyms);
 
     void track_variable_dependencies ();
 
@@ -369,6 +376,10 @@ public:
     /// Are special optimizations to 'mix' requested?
     bool opt_mix () const { return m_opt_mix; }
 
+    /// Should no return function calls be kept in order to
+    /// generate correct inline function debug info
+    bool keep_no_return_function_calls() const { return m_keep_no_return_function_calls; }
+
     /// Which optimization pass are we on?
     int optimization_pass () const { return m_pass; }
 
@@ -421,35 +432,36 @@ private:
     bool m_opt_assign;                    ///< Do various assign optimizations?
     bool m_opt_mix;                       ///< Do mix optimizations?
     bool m_opt_middleman;                 ///< Do middleman optimizations?
+    bool m_keep_no_return_function_calls; ///< To generate debug info, keep no return function calls
     ShaderGlobals m_shaderglobals;        ///< Dummy ShaderGlobals
 
     // Keep track of some things for the whole shader group:
-    typedef std::unordered_map<ustring,ustring,ustringHash> ustringmap_t;
-    std::vector<ustringmap_t> m_params_holding_globals;
+    typedef unordered_map<ustring,ustring,ustringHash> ustringmap_t;
+    vector<ustringmap_t> m_params_holding_globals;
                    ///< Which params of each layer really just hold globals
 
     // All below is just for the one inst we're optimizing at the moment:
     int m_pass;                       ///< Optimization pass we're on now
-    std::vector<int> m_all_consts;    ///< All const symbol indices for inst
+    vector<int> m_all_consts;    ///< All const symbol indices for inst
     int m_next_newconst;              ///< Unique ID for next new const we add
     int m_next_newtemp;               ///< Unique ID for next new temp we add
     FastIntMap m_symbol_aliases;      ///< Global symbol aliases
     FastIntMap m_block_aliases;         ///< Local block aliases
-    std::vector<FastIntMap *> m_block_aliases_stack; ///< Stack of saved local block aliases
+    vector<FastIntMap *> m_block_aliases_stack; ///< Stack of saved local block aliases
     FastIntMap m_param_aliases;         ///< Params aliasing to params/globals
     FastIntMap m_stale_syms;            ///< Stale symbols for this block
     int m_local_unknown_message_sent;   ///< Non-const setmessage in this inst
-    std::vector<ustring> m_local_messages_sent; ///< Messages set in this inst
-    std::set<ustring> m_textures_needed;
-    std::set<ustring> m_closures_needed;
-    std::set<ustring> m_globals_needed;
+    vector<ustring> m_local_messages_sent; ///< Messages set in this inst
+    set<ustring> m_textures_needed;
+    set<ustring> m_closures_needed;
+    set<ustring> m_globals_needed;
     int m_globals_read = 0;
     int m_globals_write = 0;
-    std::set<AttributeNeeded> m_attributes_needed;
+    set<AttributeNeeded> m_attributes_needed;
     bool m_unknown_textures_needed;
     bool m_unknown_closures_needed;
     bool m_unknown_attributes_needed;
-    std::set<UserDataNeeded> m_userdata_needed;
+    set<UserDataNeeded> m_userdata_needed;
     double m_stat_opt_locking_time;       ///<   locking time
     double m_stat_specialization_time;    ///<   specialization time
     bool m_stop_optimizing;           ///< for debugging
@@ -458,7 +470,7 @@ private:
 
     // Persistant data shared between layers
     bool m_unknown_message_sent;      ///< Somebody did a non-const setmessage
-    std::vector<ustring> m_messages_sent;  ///< Names of messages set
+    vector<ustring> m_messages_sent;  ///< Names of messages set
 
     friend class ShadingSystemImpl;
 };

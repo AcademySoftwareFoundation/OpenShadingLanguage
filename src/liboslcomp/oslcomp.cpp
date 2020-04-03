@@ -203,6 +203,7 @@ OSLCompilerImpl::preprocess_buffer (const std::string &buffer,
     headerOpts.UseBuiltinIncludes = 0;
     headerOpts.UseStandardSystemIncludes = 0;
     headerOpts.UseStandardCXXIncludes = 0;
+    // headerOpts.Verbose = 1;
     std::string directory = OIIO::Filesystem::parent_path(filename);
     if (directory.empty())
         directory = OIIO::Filesystem::current_path();

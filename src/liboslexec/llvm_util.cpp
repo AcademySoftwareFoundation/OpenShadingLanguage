@@ -58,6 +58,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Intrinsics.h>
+#if OSL_LLVM_VERSION >= 100
+#include <llvm/IR/IntrinsicsX86.h>
+#endif
 #include <llvm/IR/Module.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/IRBuilder.h>
@@ -1203,7 +1206,9 @@ LLVM_Util::make_jit_execengine (
     engine_builder.setErrorStr (err);
     //engine_builder.setRelocationModel(llvm::Reloc::PIC_);
     //engine_builder.setCodeModel(llvm::CodeModel::Default);
+#if OSL_LLVM_VERSION > 70
     engine_builder.setVerifyModules(true);
+#endif
 
     // We are actually holding a LLVMMemoryManager
     engine_builder.setMCJITMemoryManager (std::unique_ptr<llvm::RTDyldMemoryManager>
@@ -1501,6 +1506,19 @@ LLVM_Util::supports_isa(TargetISA target)
     return true;
 }
 
+namespace /*anonymous*/ {
+// The return value of llvm::StructLayout::getAlignment()
+// changed from an int to llvm::Align, hide with accessor function
+#if OSL_LLVM_VERSION < 100
+    uint64_t get_alignment(const llvm::StructLayout * layout) {
+        return layout->getAlignment();
+    }
+#else
+    uint64_t get_alignment(const llvm::StructLayout * layout) {
+        return layout->getAlignment().value();
+    }
+#endif
+} // namespace anonymous
 
 void
 LLVM_Util::dump_struct_data_layout(llvm::Type *Ty)
@@ -1516,7 +1534,7 @@ LLVM_Util::dump_struct_data_layout(llvm::Type *Ty)
 
     const llvm::StructLayout * layout = data_layout.getStructLayout (structTy);
     std::cout << "dump_struct_data_layout: getSizeInBytes(" << layout->getSizeInBytes() << ") "
-        << " getAlignment(" << layout->getAlignment() << ")"
+        << " getAlignment(" << get_alignment(layout) << ")"
         << " hasPadding(" << layout->hasPadding() << ")" << std::endl;
     for(int index=0; index < number_of_elements; ++index) {
         llvm::Type * et = structTy->getElementType(index);
@@ -1545,7 +1563,7 @@ LLVM_Util::validate_struct_data_layout(llvm::Type *Ty, const vector<unsigned int
 
     const llvm::StructLayout * layout = data_layout.getStructLayout (structTy);
     OSL_DEV_ONLY(std::cout << "dump_struct_data_layout: getSizeInBytes(" << layout->getSizeInBytes() << ") ")
-    OSL_DEV_ONLY(    << " getAlignment(" << layout->getAlignment() << ")")
+    OSL_DEV_ONLY(    << " getAlignment(" << get_alignment(layout) << ")")
     OSL_DEV_ONLY(    << " hasPadding(" << layout->hasPadding() << ")" << std::endl);
 
     for(int index=0; index < number_of_elements; ++index) {
@@ -2139,7 +2157,7 @@ LLVM_Util::prune_and_internalize_module (unordered_set<llvm::Function*> external
     switch (default_linkage) {
     default:
         OSL_ASSERT(0 && "Unhandled default_linkage value");
-        break;
+        // fallthrough so llvm_default_linkage is not uninitialized
     case Linkage::External:
         llvm_default_linkage = llvm::GlobalValue::ExternalLinkage;
         break;

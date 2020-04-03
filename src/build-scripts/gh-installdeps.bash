@@ -52,6 +52,9 @@ fi
 # Build or download LLVM
 source src/build-scripts/build_llvm.bash
 
+# Build pybind11
+CXX="ccache $CXX" source src/build-scripts/build_pybind11.bash
+
 # Build OpenEXR
 CXX="ccache $CXX" source src/build-scripts/build_openexr.bash
 
@@ -63,6 +66,6 @@ export ENABLE_iinfo=0 ENABLE_iv=0 ENABLE_igrep=0 ENABLE_iconvert=0 ENABLE_testte
 export ENABLE_cineon=0 ENABLE_DDS=0 ENABLE_DPX=0 ENABLE_FITS=0
 export ENABLE_iff=0 ENABLE_jpeg2000=0 ENABLE_PNM=0 ENABLE_PSD=0
 export ENABLE_RLA=0 ENABLE_SGI=0 ENABLE_SOCKET=0 ENABLE_SOFTIMAGE=0
-export ENABLE_TARGA=0 ENABLE_WEBP=0 ENABLE_TARGA=0
+export ENABLE_TARGA=0 ENABLE_WEBP=0
 export OPENIMAGEIO_MAKEFLAGS="OIIO_BUILD_TESTS=0 USE_PYTHON=0 USE_OPENGL=0"
 source src/build-scripts/build_openimageio.bash

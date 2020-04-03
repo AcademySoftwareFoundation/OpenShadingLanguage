@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Utility script to download and build LLVM & clang
+
+# Exit the whole script if any command fails.
+set -ex
+
 echo "Building LLVM"
 uname
 
@@ -24,7 +29,12 @@ if [[ `uname` == "Linux" ]] ; then
         LLVMTAR=clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-${LLVM_DISTRO_NAME}.tar.xz
     fi
     echo LLVMTAR = $LLVMTAR
-    curl --location http://releases.llvm.org/${LLVM_VERSION}/${LLVMTAR} -o $LLVMTAR
+    if [ "$LLVM_VERSION" == "10.0.0" ] ; then
+        # new
+        curl --location https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/${LLVMTAR} -o $LLVMTAR
+    else
+        curl --location http://releases.llvm.org/${LLVM_VERSION}/${LLVMTAR} -o $LLVMTAR
+    fi
     ls -l $LLVMTAR
     tar xf $LLVMTAR
     rm -f $LLVMTAR

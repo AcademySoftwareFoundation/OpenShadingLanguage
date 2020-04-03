@@ -31,6 +31,7 @@ message (STATUS "${ColorBoldWhite}")
 message (STATUS "* Checking for dependencies...")
 message (STATUS "*   - Missing a dependency 'Package'?")
 message (STATUS "*     Try cmake -DPackage_ROOT=path or set environment var Package_ROOT=path")
+message (STATUS "*     For many dependencies, we supply src/build-scripts/build_Package.bash")
 message (STATUS "*   - To exclude an optional dependency (even if found),")
 message (STATUS "*     -DUSE_Package=OFF or set environment var USE_Package=OFF ")
 message (STATUS "${ColorReset}")
@@ -39,17 +40,21 @@ set (OSL_LOCAL_DEPS_PATH "${CMAKE_SOURCE_DIR}/ext/dist" CACHE STRING
      "Local area for dependencies added to CMAKE_PREFIX_PATH")
 list (APPEND CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/ext/dist)
 
+set (REQUIED_DEPS "" CACHE STRING
+     "Additional dependencies to consider required (semicolon-separated list, or ALL)")
+set (OPTIONAL_DEPS "" CACHE STRING
+     "Additional dependencies to consider optional (semicolon-separated list, or ALL)")
 
 
 # checked_find_package(pkgname ..) is a wrapper for find_package, with the
 # following extra features:
-#   * If either USE_<pkgname> or the all-uppercase USE_PKGNAME exists as
-#     either a CMake or environment variable, is nonempty by contains a
-#     non-true/nonnzero value, do not search for or use the package. The
-#     optional ENABLE <var> arguments allow you to override the name of the
-#     enabling variable. In other words, support for the dependency is
-#     presumed to be ON, unless turned off explicitly from one of these
-#     sources.
+#   * If either `USE_pkgname` or the all-uppercase `USE_PKGNAME` (or
+#     `ENABLE_pkgname` or `ENABLE_PKGNAME`) exists as either a CMake or
+#     environment variable, is nonempty by contains a non-true/nonnzero
+#     value, do not search for or use the package. The optional ENABLE <var>
+#     arguments allow you to override the name of the enabling variable. In
+#     other words, support for the dependency is presumed to be ON, unless
+#     turned off explicitly from one of these sources.
 #   * Print a message if the package is enabled but not found. This is based
 #     on ${pkgname}_FOUND or $PKGNNAME_FOUND.
 #   * Optional DEFINITIONS <string> are passed to add_definitions if the
@@ -67,12 +72,18 @@ list (APPEND CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/ext/dist)
 # will set(blah val PARENT_SCOPE) and we need that to be the global scope,
 # not merely the scope for this function.
 macro (checked_find_package pkgname)
-    cmake_parse_arguments(_pkg "" "ENABLE;ISDEPOF" "DEFINITIONS;PRINT;DEPS" ${ARGN})
+    cmake_parse_arguments(_pkg "REQUIRED" "ENABLE;ISDEPOF" "DEFINITIONS;PRINT;DEPS" ${ARGN})
         # Arguments: <prefix> noValueKeywords singleValueKeywords multiValueKeywords argsToParse
     string (TOUPPER ${pkgname} pkgname_upper)
     if (NOT VERBOSE)
         set (${pkgname}_FIND_QUIETLY true)
         set (${pkgname_upper}_FIND_QUIETLY true)
+    endif ()
+    if ("${pkgname}" IN_LIST REQUIRED_DEPS OR "ALL" IN_LIST REQUIRED_DEPS)
+        set (_pkg_REQUIRED 1)
+    endif ()
+    if ("${pkgname}" IN_LIST OPTIONAL_DEPS OR "ALL" IN_LIST OPTIONAL_DEPS)
+        set (_pkg_REQUIRED 0)
     endif ()
     set (_quietskip false)
     check_is_enabled (${pkgname} _enable)
@@ -80,6 +91,7 @@ macro (checked_find_package pkgname)
     foreach (_dep ${_pkg_DEPS})
         if (_enable AND NOT ${_dep}_FOUND)
             set (_enable false)
+            set (ENABLE_${pkgname} OFF PARENT_SCOPE)
             set (_disablereason "(because ${_dep} was not found)")
         endif ()
     endforeach ()
@@ -90,7 +102,7 @@ macro (checked_find_package pkgname)
             set (_quietskip true)
         endif ()
     endif ()
-    if (_enable)
+    if (_enable OR _pkg_REQUIRED)
         find_package (${pkgname} ${_pkg_UNPARSED_ARGUMENTS})
         if (${pkgname}_FOUND OR ${pkgname_upper}_FOUND)
             foreach (_vervar ${pkgname_upper}_VERSION ${pkgname}_VERSION_STRING
@@ -102,7 +114,8 @@ macro (checked_find_package pkgname)
             message (STATUS "${ColorGreen}Found ${pkgname} ${${pkgname}_VERSION} ${ColorReset}")
             if (VERBOSE)
                 set (_vars_to_print ${pkgname}_INCLUDES ${pkgname_upper}_INCLUDES
-                                    ${pkgname_upper}_INCLUDE_DIRS
+                                    ${pkgname}_INCLUDE_DIR ${pkgname_upper}_INCLUDE_DIR
+                                    ${pkgname}_INCLUDE_DIRS ${pkgname_upper}_INCLUDE_DIRS
                                     ${pkgname}_LIBRARIES ${pkgname_upper}_LIBRARIES
                                     ${_pkg_PRINT})
                 list (REMOVE_DUPLICATES _vars_to_print)
@@ -121,6 +134,12 @@ macro (checked_find_package pkgname)
                 message (STATUS "${ColorRed}    ENV ${pkgname}_ROOT was: ${${pkgname}_ROOT} ${ColorReset}")
             else ()
                 message (STATUS "${ColorRed}    Try setting ${pkgname}_ROOT ? ${ColorReset}")
+            endif ()
+            if (EXISTS "${PROJECT_SOURCE_DIR}/src/build-scripts/build_${pkgname}.bash")
+                message (STATUS "${ColorRed}    Maybe this will help:  src/build-scripts/build_${pkgname}.bash ${ColorReset}")
+            endif ()
+            if (_pkg_REQUIRED)
+                message (FATAL_ERROR "${ColorRed}${pkgname} is required, aborting.${ColorReset}")
             endif ()
         endif()
     else ()
@@ -223,7 +242,10 @@ add_definitions (-DOSL_LLVM_FULL_VERSION="${LLVM_VERSION}")
 if (LLVM_NAMESPACE)
     add_definitions ("-DLLVM_NAMESPACE=${LLVM_NAMESPACE}")
 endif ()
-
+if (LLVM_VERSION VERSION_GREATER_EQUAL 10.0.0 AND
+    CMAKE_CXX_STANDARD VERSION_LESS 14)
+    message (FATAL_ERROR "LLVM 10+ requires C++14 or higher.")
+endif ()
 
 checked_find_package (partio)
 

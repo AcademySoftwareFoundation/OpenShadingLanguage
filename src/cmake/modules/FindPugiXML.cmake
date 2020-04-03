@@ -14,15 +14,15 @@ find_library (PUGIXML_LIBRARY
               HINTS /usr/local/lib/pugixml-1.8)
 
 # Second chance -- if not found, look in the OIIO distro
-if (NOT PUGIXML_INCLUDE_DIR AND OPENIMAGEIO_INCLUDES)
+if (NOT PUGIXML_INCLUDE_DIR AND (OPENIMAGEIO_INCLUDES OR OpenImageIO_ROOT))
     find_path (PUGIXML_INCLUDE_DIR
                NAMES pugixml.hpp
-               HINTS ${OPENIMAGEIO_INCLUDES}
+               PATHS ${OpenImageIO_ROOT}/include/OpenImageIO
+                     ${OPENIMAGEIO_INCLUDES}
                PATH_SUFFIXES OpenImageIO)
-endif ()
-
-if ("${PUGIXML_INCLUDE_DIR}" STREQUAL "${OPENIMAGEIO_INCLUDES}/OpenImageIO")
-    set (PUGIXML_LIBRARY ${OPENIMAGEIO_LIBRARIES})
+    if (PUGIXML_INCLUDE_DIR)
+        set (PUGIXML_LIBRARY ${OPENIMAGEIO_LIBRARIES})
+    endif ()
 endif ()
 
 

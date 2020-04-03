@@ -490,22 +490,22 @@ private:
 };
 
 struct CellNoise: public IntHashNoiseBase<CellNoise>  {
-	OSL_FORCEINLINE OSL_HOSTDEVICE CellNoise () { }
+    OSL_FORCEINLINE OSL_HOSTDEVICE CellNoise () { }
 
     static OSL_FORCEINLINE OSL_HOSTDEVICE unsigned int
-	transformToUint(float val)
+    transformToUint(float val)
     {
-    	return OIIO::ifloor(val);
+        return OIIO::ifloor(val);
     }
 };
 
 struct HashNoise: public IntHashNoiseBase<HashNoise>  {
-	OSL_FORCEINLINE OSL_HOSTDEVICE HashNoise () { }
+    OSL_FORCEINLINE OSL_HOSTDEVICE HashNoise () { }
 
     static OSL_FORCEINLINE OSL_HOSTDEVICE unsigned int
-	transformToUint(float val)
+    transformToUint(float val)
     {
-    	return sfm::bit_cast<float,unsigned int>(val);
+        return OIIO::bit_cast<float,unsigned int>(val);
     }
 };
 
@@ -595,7 +595,7 @@ inline OSL_HOSTDEVICE int
 inthashf (float x)
 {
     return static_cast<int>(
-		inthash(sfm::bit_cast<float,unsigned int>(x))
+		inthash(OIIO::bit_cast<float,unsigned int>(x))
 	);
 }
 
@@ -604,8 +604,8 @@ inthashf (float x, float y)
 {
     return static_cast<int>(
 		inthash(
-			sfm::bit_cast<float,unsigned int>(x),
-			sfm::bit_cast<float,unsigned int>(y)
+			OIIO::bit_cast<float,unsigned int>(x),
+			OIIO::bit_cast<float,unsigned int>(y)
 		)
 	);
 }
@@ -616,9 +616,9 @@ inthashf (const float *x)
 {
     return static_cast<int>(
 		inthash(
-			sfm::bit_cast<float,unsigned int>(x[0]),
-			sfm::bit_cast<float,unsigned int>(x[1]),
-			sfm::bit_cast<float,unsigned int>(x[2])
+			OIIO::bit_cast<float,unsigned int>(x[0]),
+			OIIO::bit_cast<float,unsigned int>(x[1]),
+			OIIO::bit_cast<float,unsigned int>(x[2])
 		)
 	);
 }
@@ -629,10 +629,10 @@ inthashf (const float *x, float y)
 {
     return static_cast<int>(
 		inthash(
-			sfm::bit_cast<float,unsigned int>(x[0]),
-			sfm::bit_cast<float,unsigned int>(x[1]),
-			sfm::bit_cast<float,unsigned int>(x[2]),
-			sfm::bit_cast<float,unsigned int>(y)
+			OIIO::bit_cast<float,unsigned int>(x[0]),
+			OIIO::bit_cast<float,unsigned int>(x[1]),
+			OIIO::bit_cast<float,unsigned int>(x[2]),
+			OIIO::bit_cast<float,unsigned int>(y)
 		)
 	);
 }
@@ -1370,7 +1370,7 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenT,V& result, H& hash, co
     int X; T fx = floorfrac(x, &X);
     T u = fade(fx);
 
-    auto lerp_result = sfm::lerp(grad (hash (X  ), fx     ),
+    auto lerp_result = OIIO::lerp(grad (hash (X  ), fx     ),
                         grad (hash (X+1), fx-1.0f), u);
     result = scale1 (lerp_result);
 }
@@ -1408,7 +1408,7 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, float &result, c
     float u = fade(fx);
     float v = fade(fy);
 
-    float bilerp_result = sfm::bilerp (grad (hash (X  , Y  ), fx     , fy     ),
+    float bilerp_result = OIIO::bilerp (grad (hash (X  , Y  ), fx     , fy     ),
                            grad (hash (X+1, Y  ), fx-1.0f, fy     ),
                            grad (hash (X  , Y+1), fx     , fy-1.0f),
                            grad (hash (X+1, Y+1), fx-1.0f, fy-1.0f), u, v);
@@ -1478,7 +1478,7 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, float &result, c
     float u = fade(fx);
     float v = fade(fy);
     float w = fade(fz);
-    float trilerp_result = sfm::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz     ),
+    float trilerp_result = OIIO::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz     ),
                             grad (hash (X+1, Y  , Z  ), fx-1.0f, fy     , fz     ),
                             grad (hash (X  , Y+1, Z  ), fx     , fy-1.0f, fz     ),
                             grad (hash (X+1, Y+1, Z  ), fx-1.0f, fy-1.0f, fz     ),
@@ -1551,8 +1551,8 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, float &result, c
     float t = fade(fz);
     float s = fade(fw);
 
-    float lerp_result = sfm::lerp (
-               sfm::trilerp (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
+    float lerp_result = OIIO::lerp (
+               OIIO::trilerp (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
                               grad (hash (X+1, Y  , Z  , W  ), fx-1.0f, fy     , fz     , fw     ),
                               grad (hash (X  , Y+1, Z  , W  ), fx     , fy-1.0f, fz     , fw     ),
                               grad (hash (X+1, Y+1, Z  , W  ), fx-1.0f, fy-1.0f, fz     , fw     ),
@@ -1561,7 +1561,7 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, float &result, c
                               grad (hash (X  , Y+1, Z+1, W  ), fx     , fy-1.0f, fz-1.0f, fw     ),
                               grad (hash (X+1, Y+1, Z+1, W  ), fx-1.0f, fy-1.0f, fz-1.0f, fw     ),
                               u, v, t),
-               sfm::trilerp (grad (hash (X  , Y  , Z  , W+1), fx     , fy     , fz     , fw-1.0f),
+               OIIO::trilerp (grad (hash (X  , Y  , Z  , W+1), fx     , fy     , fz     , fw-1.0f),
                               grad (hash (X+1, Y  , Z  , W+1), fx-1.0f, fy     , fz     , fw-1.0f),
                               grad (hash (X  , Y+1, Z  , W+1), fx     , fy-1.0f, fz     , fw-1.0f),
                               grad (hash (X+1, Y+1, Z  , W+1), fx-1.0f, fy-1.0f, fz     , fw-1.0f),
@@ -1612,7 +1612,7 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, Dual2<float> &re
     int Y; Dual2<float> fy = floorfrac(y, &Y);
     Dual2<float> u = fade(fx);
     Dual2<float> v = fade(fy);
-    auto bilerp_result = sfm::bilerp (grad (hash (X  , Y  ), fx     , fy     ),
+    auto bilerp_result = OIIO::bilerp (grad (hash (X  , Y  ), fx     , fy     ),
                            grad (hash (X+1, Y  ), fx-1.0f, fy     ),
                            grad (hash (X  , Y+1), fx     , fy-1.0f),
                            grad (hash (X+1, Y+1), fx-1.0f, fy-1.0f), u, v);
@@ -1672,7 +1672,7 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, Dual2<float> &re
     Dual2<float> u = fade(fx);
     Dual2<float> v = fade(fy);
     Dual2<float> w = fade(fz);
-    auto tril_result = sfm::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz     ),
+    auto tril_result = OIIO::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz     ),
                             grad (hash (X+1, Y  , Z  ), fx-1.0f, fy     , fz     ),
                             grad (hash (X  , Y+1, Z  ), fx     , fy-1.0f, fz     ),
                             grad (hash (X+1, Y+1, Z  ), fx-1.0f, fy-1.0f, fz     ),
@@ -1756,8 +1756,8 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, Dual2<float> &re
     Dual2<float> t = fade(fz);
     Dual2<float> s = fade(fw);
 
-    auto lerp_result = sfm::lerp (
-               sfm::trilerp (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
+    auto lerp_result = OIIO::lerp (
+               OIIO::trilerp (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
                               grad (hash (X+1, Y  , Z  , W  ), fx-1.0f, fy     , fz     , fw     ),
                               grad (hash (X  , Y+1, Z  , W  ), fx     , fy-1.0f, fz     , fw     ),
                               grad (hash (X+1, Y+1, Z  , W  ), fx-1.0f, fy-1.0f, fz     , fw     ),
@@ -1766,7 +1766,7 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, Dual2<float> &re
                               grad (hash (X  , Y+1, Z+1, W  ), fx     , fy-1.0f, fz-1.0f, fw     ),
                               grad (hash (X+1, Y+1, Z+1, W  ), fx-1.0f, fy-1.0f, fz-1.0f, fw     ),
                               u, v, t),
-               sfm::trilerp (grad (hash (X  , Y  , Z  , W+1), fx     , fy     , fz     , fw-1.0f),
+               OIIO::trilerp (grad (hash (X  , Y  , Z  , W+1), fx     , fy     , fz     , fw-1.0f),
                               grad (hash (X+1, Y  , Z  , W+1), fx-1.0f, fy     , fz     , fw-1.0f),
                               grad (hash (X  , Y+1, Z  , W+1), fx     , fy-1.0f, fz     , fw-1.0f),
                               grad (hash (X+1, Y+1, Z  , W+1), fx-1.0f, fy-1.0f, fz     , fw-1.0f),
@@ -1828,7 +1828,7 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, Vec3 &result, co
     int Y; T fy = floorfrac(y, &Y);
     T u = fade(fx);
     T v = fade(fy);
-    auto bil_result = sfm::bilerp (grad (hash (X  , Y  ), fx     , fy     ),
+    auto bil_result = OIIO::bilerp (grad (hash (X  , Y  ), fx     , fy     ),
                            grad (hash (X+1, Y  ), fx-1.0f, fy     ),
                            grad (hash (X  , Y+1), fx     , fy-1.0f),
                            grad (hash (X+1, Y+1), fx-1.0f, fy-1.0f), u, v);
@@ -1915,7 +1915,7 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, Vec3 &result, co
     // A.W. the OIIO_SIMD above differs from the original results
     // so we are re-implementing the non-SIMD version to match below
 #if 0
-    result = sfm::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz      ),
+    result = OIIO::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz      ),
                             grad (hash (X+1, Y  , Z  ), fx-1.0f, fy     , fz      ),
                             grad (hash (X  , Y+1, Z  ), fx     , fy-1.0f, fz      ),
                             grad (hash (X+1, Y+1, Z  ), fx-1.0f, fy-1.0f, fz      ),
@@ -1946,7 +1946,7 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, Vec3 &result, co
     //      result[2] = (srl(h,16)) & 0xFF;
     // skipping masking the 0th version, perhaps that is a mistake
 
-    float result0 = sfm::trilerp (grad (h000, fx     , fy     , fz      ),
+    float result0 = OIIO::trilerp (grad (h000, fx     , fy     , fz      ),
                             grad (h100, fx-1.0f, fy     , fz      ),
                             grad (h010, fx     , fy-1.0f, fz      ),
                             grad (h110, fx-1.0f, fy-1.0f, fz      ),
@@ -1956,7 +1956,7 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, Vec3 &result, co
                             grad (h111, fx-1.0f, fy-1.0f, fz-1.0f ),
                             u, v, w);
 
-    float result1 = sfm::trilerp (
+    float result1 = OIIO::trilerp (
         grad ((h000>>8) & 0xFF, fx     , fy     , fz      ),
         grad ((h100>>8) & 0xFF, fx-1.0f, fy     , fz      ),
         grad ((h010>>8) & 0xFF, fx     , fy-1.0f, fz      ),
@@ -1967,7 +1967,7 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, Vec3 &result, co
         grad ((h111>>8) & 0xFF, fx-1.0f, fy-1.0f, fz-1.0f ),
         u, v, w);
 
-    float result2 = sfm::trilerp (
+    float result2 = OIIO::trilerp (
         grad ((h000>>16) & 0xFF, fx     , fy     , fz      ),
         grad ((h100>>16) & 0xFF, fx-1.0f, fy     , fz      ),
         grad ((h010>>16) & 0xFF, fx     , fy-1.0f, fz      ),
@@ -2047,8 +2047,8 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, Vec3 &result, co
     float t = fade(fz);
     float s = fade(fw);
 
-    auto l_result = sfm::lerp (
-               sfm::trilerp (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
+    auto l_result = OIIO::lerp (
+               OIIO::trilerp (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
                               grad (hash (X+1, Y  , Z  , W  ), fx-1.0f, fy     , fz     , fw     ),
                               grad (hash (X  , Y+1, Z  , W  ), fx     , fy-1.0f, fz     , fw     ),
                               grad (hash (X+1, Y+1, Z  , W  ), fx-1.0f, fy-1.0f, fz     , fw     ),
@@ -2057,7 +2057,7 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, Vec3 &result, co
                               grad (hash (X  , Y+1, Z+1, W  ), fx     , fy-1.0f, fz-1.0f, fw     ),
                               grad (hash (X+1, Y+1, Z+1, W  ), fx-1.0f, fy-1.0f, fz-1.0f, fw     ),
                               u, v, t),
-               sfm::trilerp (grad (hash (X  , Y  , Z  , W+1), fx     , fy     , fz     , fw-1.0f),
+               OIIO::trilerp (grad (hash (X  , Y  , Z  , W+1), fx     , fy     , fz     , fw-1.0f),
                               grad (hash (X+1, Y  , Z  , W+1), fx-1.0f, fy     , fz     , fw-1.0f),
                               grad (hash (X  , Y+1, Z  , W+1), fx     , fy-1.0f, fz     , fw-1.0f),
                               grad (hash (X+1, Y+1, Z  , W+1), fx-1.0f, fy-1.0f, fz     , fw-1.0f),
@@ -2122,7 +2122,7 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, Dual2<Vec3> &res
     int Y; Dual2<float> fy = floorfrac(y, &Y);
     Dual2<float> u = fade(fx);
     Dual2<float> v = fade(fy);
-    auto bil_result = sfm::bilerp (grad (hash (X  , Y  ), fx     , fy     ),
+    auto bil_result = OIIO::bilerp (grad (hash (X  , Y  ), fx     , fy     ),
                            grad (hash (X+1, Y  ), fx-1.0f, fy     ),
                            grad (hash (X  , Y+1), fx     , fy-1.0f),
                            grad (hash (X+1, Y+1), fx-1.0f, fy-1.0f),
@@ -2194,7 +2194,7 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, Dual2<Vec3> &res
     Dual2<float> u = fade(fx);
     Dual2<float> v = fade(fy);
     Dual2<float> w = fade(fz);
-    auto til_result = sfm::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz      ),
+    auto til_result = OIIO::trilerp (grad (hash (X  , Y  , Z  ), fx     , fy     , fz      ),
                             grad (hash (X+1, Y  , Z  ), fx-1.0f, fy     , fz      ),
                             grad (hash (X  , Y+1, Z  ), fx     , fy-1.0f, fz      ),
                             grad (hash (X+1, Y+1, Z  ), fx-1.0f, fy-1.0f, fz      ),
@@ -2291,8 +2291,8 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, Dual2<Vec3> &res
     Dual2<float> t = fade(fz);
     Dual2<float> s = fade(fw);
 
-    auto l_result = sfm::lerp (
-               sfm::trilerp (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
+    auto l_result = OIIO::lerp (
+               OIIO::trilerp (grad (hash (X  , Y  , Z  , W  ), fx     , fy     , fz     , fw     ),
                               grad (hash (X+1, Y  , Z  , W  ), fx-1.0f, fy     , fz     , fw     ),
                               grad (hash (X  , Y+1, Z  , W  ), fx     , fy-1.0f, fz     , fw     ),
                               grad (hash (X+1, Y+1, Z  , W  ), fx-1.0f, fy-1.0f, fz     , fw     ),
@@ -2301,7 +2301,7 @@ OSL_FORCEINLINE OSL_HOSTDEVICE void perlin_impl (CodeGenScalar, Dual2<Vec3> &res
                               grad (hash (X  , Y+1, Z+1, W  ), fx     , fy-1.0f, fz-1.0f, fw     ),
                               grad (hash (X+1, Y+1, Z+1, W  ), fx-1.0f, fy-1.0f, fz-1.0f, fw     ),
                               u, v, t),
-               sfm::trilerp (grad (hash (X  , Y  , Z  , W+1), fx     , fy     , fz     , fw-1.0f),
+               OIIO::trilerp (grad (hash (X  , Y  , Z  , W+1), fx     , fy     , fz     , fw-1.0f),
                               grad (hash (X+1, Y  , Z  , W+1), fx-1.0f, fy     , fz     , fw-1.0f),
                               grad (hash (X  , Y+1, Z  , W+1), fx     , fy-1.0f, fz     , fw-1.0f),
                               grad (hash (X+1, Y+1, Z  , W+1), fx-1.0f, fy-1.0f, fz     , fw-1.0f),

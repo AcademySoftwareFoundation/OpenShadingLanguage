@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.12)
-project (OSL VERSION 1.11.4.0
+project (OSL VERSION 1.11.5.0
          LANGUAGES CXX C
          HOMEPAGE_URL "https://github.com/imageworks/OpenShadingLanguage")
 set (PROJ_NAME ${PROJECT_NAME})    # short name
@@ -72,7 +72,7 @@ else ()
 endif ()
 option (OSL_BUILD_PLUGINS "Bool OSL plugins, for example OIIO plugin" ON)
 option (OSL_BUILD_SHADERS "Build shaders" ON)
-option (OSL_BUILD_MATERIALX "Build MaterialX shaders" ON)
+option (OSL_BUILD_MATERIALX "Build MaterialX shaders" OFF)
 option (USE_OPTIX "Include OptiX support" OFF)
 set (OPTIX_EXTRA_LIBS CACHE STRING "Extra lib targets needed for OptiX")
 set (CUDA_TARGET_ARCH "sm_35" CACHE STRING "CUDA GPU architecture (e.g. sm_35)")
@@ -93,6 +93,11 @@ if (USE_FAST_MATH)
     add_definitions ("-DOSL_FAST_MATH=1")
 else ()
     add_definitions ("-DOSL_FAST_MATH=0")
+endif ()
+
+option (OIIO_FMATH_SIMD_FRIENDLY "Make sure OIIO fmath functions are SIMD-friendly" OFF)
+if (OIIO_FMATH_SIMD_FRIENDLY)
+    add_definitions (-DOIIO_FMATH_SIMD_FRIENDLY=1)
 endif ()
 
 if (USE_OPTIX)

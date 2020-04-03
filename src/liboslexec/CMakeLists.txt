@@ -181,7 +181,7 @@ target_include_directories (${local_lib}
         ${PUGIXML_INCLUDES}
     )
 target_compile_definitions (${local_lib} PRIVATE OSL_EXPORTS)
-if (PARTIO_FOUND)
+if (partio_FOUND)
     target_link_libraries(${local_lib} PRIVATE partio::partio)
     target_compile_definitions (${local_lib} PRIVATE USE_PARTIO=1)
 endif ()

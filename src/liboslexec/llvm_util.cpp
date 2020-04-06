@@ -515,6 +515,7 @@ LLVM_Util::debug_setup_compilation_unit(const char * compile_unit_name) {
 
     OSL_DEV_ONLY(std::cout << "debug_setup_compilation_unit"<< std::endl);
 
+    constexpr const char * osl_identity = "OSL_v" OSL_LIBRARY_VERSION_STRING;
 
     mDebugCU = m_llvm_debug_builder->createCompileUnit(
         /*llvm::dwarf::DW_LANG_C*/
@@ -523,10 +524,10 @@ LLVM_Util::debug_setup_compilation_unit(const char * compile_unit_name) {
         m_llvm_debug_builder->createFile(compile_unit_name, // filename
                 "." // directory
                 ),
-        "OSLv1.9", // Identify the producer of debugging information and code. Usually this is a compiler version string.
+        osl_identity, // Identify the producer of debugging information and code. Usually this is a compiler version string.
         true /*false*/ , // isOptimized
-        "", // This string lists command line options. This string is directly embedded in debug info output which may be used by a tool analyzing generated debugging information.
-        1900, // This indicates runtime version for languages like Objective-C
+        "<todo>", // This string lists command line options. This string is directly embedded in debug info output which may be used by a tool analyzing generated debugging information.
+        OSL_VERSION, // This indicates runtime version for languages like Objective-C
         llvm::StringRef(), // SplitName = he name of the file that we'll split debug info out into.
         llvm::DICompileUnit::DebugEmissionKind::LineTablesOnly, // DICompileUnit::DebugEmissionKind
         0, // The DWOId if this is a split skeleton compile unit.
@@ -1197,6 +1198,18 @@ LLVM_Util::make_jit_execengine (
 {
     OSL_DEV_ONLY(std::cout << "LLVM_Util::make_jit_execengine" << std::endl);
 
+#if OSL_GNUC_VERSION && OSL_LLVM_VERSION < 71
+    // Due to ABI breakage in LLVM 7.0.[0-1] for llvm::Optional with GCC,
+    // calling any llvm API's that accept an llvm::Optional parameter will break
+    // ABI causing issues.
+    // https://bugs.llvm.org/show_bug.cgi?id=39427
+    // Fixed in llvm 7.1.0+
+    // Workaround force debugging_symbols off, ABI code will still be there
+    // but should never be executed.
+    debugging_symbols = false;
+#endif
+
+    debugging_symbols
     execengine (NULL);   // delete and clear any existing engine
     if (err)
         err->clear ();
@@ -1206,9 +1219,7 @@ LLVM_Util::make_jit_execengine (
     engine_builder.setErrorStr (err);
     //engine_builder.setRelocationModel(llvm::Reloc::PIC_);
     //engine_builder.setCodeModel(llvm::CodeModel::Default);
-#if OSL_LLVM_VERSION > 70
     engine_builder.setVerifyModules(true);
-#endif
 
     // We are actually holding a LLVMMemoryManager
     engine_builder.setMCJITMemoryManager (std::unique_ptr<llvm::RTDyldMemoryManager>

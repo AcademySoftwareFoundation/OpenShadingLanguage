@@ -37,11 +37,13 @@ ifeq (${OSL_SPCOMP2},1)
     PYLIB_LIB_PREFIX ?= 1
     PYLIB_INCLUDE_SONAME ?= 1
     OPENIMAGEIO_SPCOMP2_VERSION ?= 20103
+    OPENEXR_VERSION ?= 2.2.0
 else ifeq (${OSL_ARNOLD},1)
     $(info Building for Arnold)
     NAMESPACE ?= 'OSL_Arnold'
     PYLIB_LIB_PREFIX ?= 0
     PYLIB_INCLUDE_SONAME ?= 0
+    OPENEXR_VERSION ?= 2.4.0
 else ifeq (${OSL_SPIREZ},1)
     $(info Building for Rez distribution)
     NAMESPACE ?= 'OSL'
@@ -50,7 +52,7 @@ else ifeq (${OSL_SPIREZ},1)
     MY_CMAKE_FLAGS += -DOSL_SPIREZ=1 -DOSL_REZ_PACKAGE_NAME=${OSL_REZ_NAME}
     MY_CMAKE_FLAGS += -DCMAKE_DEBUG_POSTFIX=_d
     OPENIMAGEIO_VERSION ?= 2.2.0.0
-    OPENEXR_VERSION ?= 2.2.0
+    OPENEXR_VERSION ?= 2.4.0
     $(info Building against OpenImageIO ${OPENIMAGEIO_VERSION})
 else
     $(info Building generic OSL)
@@ -171,7 +173,7 @@ ifeq (${SP_OS}, rhel7)
     #
     # Boost
     #
-    BOOSTVERS ?= 1.55
+    BOOSTVERS ?= 1.70
     BOOSTSPSUFFIX ?=
     BOOSTVERSSP=${BOOSTVERS}${BOOSTSPSUFFIX}
     MY_CMAKE_FLAGS += -DBOOST_VERS_SP=${BOOSTVERSSP}

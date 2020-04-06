@@ -845,7 +845,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     // https://bugs.llvm.org/show_bug.cgi?id=39427
     // Fixed in llvm 7.1.0+
     // Workaround don't enable debug symbols which would use llvm::Optional API's
-#if (!OSL_GNUC_VERSION) && (OSL_LLVM_VERSION >= 71)
+#if (!OSL_GNUC_VERSION) || (OSL_LLVM_VERSION >= 71)
     // Alternate way of generating LLVM debugging symbols (temporary/experimental)
     const char *llvm_debugging_symbols_env = getenv ("OSL_LLVM_DEBUGGING_SYMBOLS");
     if (llvm_debugging_symbols_env && *llvm_debugging_symbols_env)
@@ -1202,7 +1202,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     // https://bugs.llvm.org/show_bug.cgi?id=39427
     // Fixed in llvm 7.1.0+
     // Workaround don't enable debug symbols which would use llvm::Optional API's
-#if (!OSL_GNUC_VERSION) && (OSL_LLVM_VERSION >= 71)
+#if (!OSL_GNUC_VERSION) || (OSL_LLVM_VERSION >= 71)
     ATTR_SET ("llvm_debugging_symbols", int, m_llvm_debugging_symbols);
 #endif
 

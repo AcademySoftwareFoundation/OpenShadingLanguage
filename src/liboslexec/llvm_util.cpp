@@ -1209,7 +1209,6 @@ LLVM_Util::make_jit_execengine (
     debugging_symbols = false;
 #endif
 
-    debugging_symbols
     execengine (NULL);   // delete and clear any existing engine
     if (err)
         err->clear ();

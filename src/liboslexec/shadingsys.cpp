@@ -839,10 +839,18 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
     if (llvm_debug_env && *llvm_debug_env)
         m_llvm_debug = atoi(llvm_debug_env);
 
+    // Due to ABI breakage in LLVM 7.0.[0-1] for llvm::Optional with GCC,
+    // calling any llvm API's that accept an llvm::Optional parameter will break
+    // ABI causing issues.
+    // https://bugs.llvm.org/show_bug.cgi?id=39427
+    // Fixed in llvm 7.1.0+
+    // Workaround don't enable debug symbols which would use llvm::Optional API's
+#if (!OSL_GNUC_VERSION) && (OSL_LLVM_VERSION >= 71)
     // Alternate way of generating LLVM debugging symbols (temporary/experimental)
     const char *llvm_debugging_symbols_env = getenv ("OSL_LLVM_DEBUGGING_SYMBOLS");
     if (llvm_debugging_symbols_env && *llvm_debugging_symbols_env)
         m_llvm_debugging_symbols = atoi(llvm_debugging_symbols_env);
+#endif
 
     // Alternate way of generating LLVM profiling events (temporary/experimental)
     const char *llvm_profiling_events_env = getenv ("OSL_LLVM_PROFILING_EVENTS");
@@ -1187,7 +1195,17 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("llvm_debug", int, m_llvm_debug);
     ATTR_SET ("llvm_debug_layers", int, m_llvm_debug_layers);
     ATTR_SET ("llvm_debug_ops", int, m_llvm_debug_ops);
+
+    // Due to ABI breakage in LLVM 7.0.[0-1] for llvm::Optional with GCC,
+    // calling any llvm API's that accept an llvm::Optional parameter will break
+    // ABI causing issues.
+    // https://bugs.llvm.org/show_bug.cgi?id=39427
+    // Fixed in llvm 7.1.0+
+    // Workaround don't enable debug symbols which would use llvm::Optional API's
+#if (!OSL_GNUC_VERSION) && (OSL_LLVM_VERSION >= 71)
     ATTR_SET ("llvm_debugging_symbols", int, m_llvm_debugging_symbols);
+#endif
+
     ATTR_SET ("llvm_profiling_events", int, m_llvm_profiling_events);
     ATTR_SET ("llvm_output_bitcode", int, m_llvm_output_bitcode);
     ATTR_SET ("strict_messages", int, m_strict_messages);

@@ -1204,9 +1204,7 @@ LLVM_Util::make_jit_execengine (
     // ABI causing issues.
     // https://bugs.llvm.org/show_bug.cgi?id=39427
     // Fixed in llvm 7.1.0+
-    // Workaround force debugging_symbols off, ABI code will still be there
-    // but should never be executed.
-    debugging_symbols = false;
+    OSL_ASSERT(debugging_symbols == false && "To enable llvm debug symbols with GCC you must use LLVM 7.1.0 or higher");
 #endif
 
     execengine (NULL);   // delete and clear any existing engine

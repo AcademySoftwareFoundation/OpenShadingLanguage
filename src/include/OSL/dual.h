@@ -66,10 +66,7 @@ OSL_NAMESPACE_ENTER
 // sequences with compile time known ConstIndex.  Otherwise for c++11,
 // a more limited manually unrolled loop to a fixed maximum __COUNT
 // works because dead code elimination prunes extraneous iterations.
-// NOTE:  To improve compile times and reduce compiler memory usage,
-// we may choose not to use the generic lambda based version for
-// certain compilers/versions.
-#if OSL_CPLUSPLUS_VERSION >= 14 && !defined(__INTEL_COMPILER) && !defined(__GNUC__)
+#if (OSL_CPLUSPLUS_VERSION >= 14) && !defined(__GNUC__)
     // explanation of passing code block as macro argument to handle
     // nested comma operators that might break up the code block into
     // multiple macro arguments
@@ -93,7 +90,8 @@ OSL_NAMESPACE_ENTER
         static OSL_HOSTDEVICE constexpr T static_min(T a, T b) {
             return (b < a) ? b : a;
         }
-    }    // explanation of passing code block as macro argument to handle
+    }
+    // explanation of passing code block as macro argument to handle
     // nested comma operators that might break up the code block into
     // multiple macro arguments
     // https://mort.coffee/home/obscure-c-features/

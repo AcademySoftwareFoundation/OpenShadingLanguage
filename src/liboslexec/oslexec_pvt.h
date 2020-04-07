@@ -13,6 +13,7 @@
 #include <set>
 #include <unordered_map>
 
+#include <boost/version.hpp>
 #include <boost/thread/tss.hpp>   /* for thread_specific_ptr */
 
 // Pull in the modified Imath headers and the OSL_HOSTDEVICE macro
@@ -30,6 +31,13 @@
 # include <boost/regex.hpp>
 #else
 # include <regex>
+#endif
+
+#if BOOST_VERSION >= 105600
+#  define USE_BOOST_ALIGNED_ALLOCATOR
+#  include <boost/align/aligned_allocator.hpp>
+#else
+#  include "aligned_allocator.h"
 #endif
 
 #include <OSL/genclosure.h>
@@ -85,10 +93,11 @@ struct PerThreadInfo
 
 
 
-
-
-
 namespace pvt {
+
+#ifdef USE_BOOST_ALIGNED_ALLOCATOR
+  using boost::alignment::aligned_allocator;
+#endif
 
 // forward definitions
 class ShadingSystemImpl;
@@ -1750,7 +1759,8 @@ private:
     PerThreadInfo *m_threadinfo;        ///< Ptr to our thread's info
     mutable TextureSystem::Perthread *m_texture_thread_info; ///< Ptr to texture thread info
     ShaderGroup *m_group;               ///< Ptr to shader group
-    std::vector<char> m_heap;           ///< Heap memory
+    /// Heap memory
+    std::vector<char, pvt::aligned_allocator<char,OIIO_CACHE_LINE_SIZE>> m_heap;
     typedef std::unordered_map<ustring, std::unique_ptr<regex>, ustringHash> RegexMap;
     RegexMap m_regex_map;               ///< Compiled regex's
     MessageList m_messages;             ///< Message blackboard

@@ -240,10 +240,9 @@ NdfAutomata::lambdaClosure(IntSet &states)const
     while (discovered.size()) { // as long as there are new found states
         frontier.clear();
         // we do the same as in the above loop but with discovered instead of states
-        for (std::vector<int>::iterator i = discovered.begin(); i != discovered.end(); ++i) {
-            const State *state = m_states[*i];
-            std::pair <IntSet::const_iterator, IntSet::const_iterator> lr;
-            for (lr = state->getLambdaTransitions(); lr.first != lr.second; lr.first++) {
+        for (auto i : discovered) {
+            const State *state = m_states[i];
+            for (auto lr = state->getLambdaTransitions(); lr.first != lr.second; lr.first++) {
                 std::pair<IntSet::iterator, bool> rec = states.insert(*(lr.first));
                 if (rec.second)
                     frontier.push_back(*(lr.first));
@@ -273,8 +272,8 @@ NdfAutomata::tostr()const
 
 NdfAutomata::~NdfAutomata()
 {
-    for (std::vector<State *>::iterator i = m_states.begin(); i != m_states.end(); ++i)
-        delete *i;
+    for (auto& i : m_states)
+        delete i;
 }
 
 
@@ -339,8 +338,8 @@ DfAutomata::State::removeUselessTransitions()
             // and just add that symbol to the wildcard be removing it from the map itself
             if (i->second == m_wildcard_trans)
                 toremove.push_back(i);
-        for (std::list<SymbolToInt::iterator>::iterator i = toremove.begin(); i != toremove.end(); ++i)
-            m_symbol_trans.erase(*i);
+        for (auto& i : toremove)
+            m_symbol_trans.erase(i);
     }
 }
 
@@ -515,8 +514,8 @@ DfAutomata::removeUselessTransitions()
 void
 DfAutomata::clear()
 {
-    for (std::vector<State *>::iterator i = m_states.begin(); i != m_states.end(); ++i)
-        delete *i;
+    for (auto& i : m_states)
+        delete i;
     m_states.clear();
 }
 
@@ -580,31 +579,31 @@ ndfautoToDfauto(const NdfAutomata &ndfautomata, DfAutomata &dfautomata)
         // new states that we may find when calculating transitions
         // make sure it is empty
         discovered.clear();
-        for (std::list<StateSetRecord::Discovery>::iterator i = toexplore.begin(); i != toexplore.end(); ++i) {
+        for (auto& i : toexplore) {
             // get the available symbols to move from this state
             // set (originalset) in the original automata. Plus
             // a wildcard movement that is guaranteed to match all
             // the wildcard transitions in the set (if any)
             SymbolSet symbols;
             Wildcard *wildcard = NULL;
-            ndfautomata.symbolsFrom(i->second, symbols, wildcard);
+            ndfautomata.symbolsFrom(i.second, symbols, wildcard);
             for (SymbolSet::iterator j = symbols.begin(); j != symbols.end(); ++j) {
                 IntSet newstates;
                 // get all the states reachable with this symbol
-                ndfautomata.transitionsFrom(i->second, *j, newstates);
+                ndfautomata.transitionsFrom(i.second, *j, newstates);
                 // build or recover the associated DF state
                 DfAutomata::State *next_state = record.ensureState(newstates, discovered);
                 // and store a transition
-                i->first->addTransition(*j, next_state);
+                i.first->addTransition(*j, next_state);
             }
             if (wildcard) {
                 IntSet newstates;
                 // we know they all match whatever ours match
-                ndfautomata.wildcardTransitionsFrom(i->second, newstates);
+                ndfautomata.wildcardTransitionsFrom(i.second, newstates);
                 // build or recover the associated DF state
                 DfAutomata::State *next_state = record.ensureState(newstates, discovered);
                 // and store a transition
-                i->first->addWildcardTransition(wildcard, next_state);
+                i.first->addWildcardTransition(wildcard, next_state);
             }
         }
         // swap toexplore and discovered

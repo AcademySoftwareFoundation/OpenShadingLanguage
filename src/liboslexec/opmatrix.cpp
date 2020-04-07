@@ -55,40 +55,32 @@ namespace pvt {
 // Matrix ops
 
 OSL_SHADEOP OSL_HOSTDEVICE void
-osl_mul_mm (void *r, void *a, void *b)
+osl_mul_mmm (void *r, void *a, void *b)
 {
     MAT(r) = MAT(a) * MAT(b);
 }
 
 OSL_SHADEOP OSL_HOSTDEVICE void
-osl_mul_mf (void *r, void *a, float b)
+osl_mul_mmf (void *r, void *a, float b)
 {
     MAT(r) = MAT(a) * b;
 }
 
-OSL_SHADEOP OSL_HOSTDEVICE void
-osl_mul_m_ff (void *r, float a, float b)
-{
-    float f = a * b;
-    MAT(r) = Matrix44 (f,0,0,0, 0,f,0,0, 0,0,f,0, 0,0,0,f);
-}
-
-
 
 OSL_SHADEOP OSL_HOSTDEVICE void
-osl_div_mm (void *r, void *a, void *b)
+osl_div_mmm (void *r, void *a, void *b)
 {
     MAT(r) = MAT(a) * MAT(b).inverse();
 }
 
 OSL_SHADEOP OSL_HOSTDEVICE void
-osl_div_mf (void *r, void *a, float b)
+osl_div_mmf (void *r, void *a, float b)
 {
     MAT(r) = MAT(a) * (1.0f/b);
 }
 
 OSL_SHADEOP OSL_HOSTDEVICE void
-osl_div_fm (void *r, float a, void *b)
+osl_div_mfm (void *r, float a, void *b)
 {
     MAT(r) = a * MAT(b).inverse();
 }

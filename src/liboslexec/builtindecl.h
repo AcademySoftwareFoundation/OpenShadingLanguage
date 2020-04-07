@@ -338,13 +338,14 @@ DECL (osl_normalize_vv, "xXX")
 DECL (osl_normalize_dvdv, "xXX")
 #endif
 
-DECL (osl_mul_mm, "xXXX")
-DECL (osl_mul_mf, "xXXf")
-DECL (osl_mul_m_ff, "xXff")
-DECL (osl_div_mm, "xXXX")
-DECL (osl_div_mf, "xXXf")
-DECL (osl_div_fm, "xXfX")
-DECL (osl_div_m_ff, "xXff")
+
+DECL (osl_mul_mmm, "xXXX")
+DECL (osl_mul_mmf, "xXXf")
+
+DECL (osl_div_mmm, "xXXX")
+DECL (osl_div_mmf, "xXXf")
+DECL (osl_div_mfm, "xXfX")
+
 DECL (osl_get_from_to_matrix, "iXXss")
 DECL (osl_transpose_mm, "xXX")
 DECL (osl_determinant_fm, "fX")

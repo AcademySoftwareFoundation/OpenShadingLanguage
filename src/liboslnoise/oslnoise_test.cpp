@@ -56,7 +56,7 @@ const Vec3 veps (eps,eps,eps);
 
 namespace std {   // hack!
 inline float abs (const Vec3& a) {
-    return std::max (std::max (abs(a[0]), abs(a[1])), abs(a[2]));
+    return std::max (std::max (abs(a.x), abs(a.y)), abs(a.z));
 }
 }
 
@@ -71,27 +71,31 @@ inline float abs (const Vec3& a) {
                 float t = float(y)/imgres * imgscale;                   \
                 for (int x = 0; x < imgres; ++x) {                      \
                     float s = float(x)/imgres * imgscale;               \
-                    Vec3 r;                                             \
+                    float r_comp[3];                                    \
                     if (outdim == 1) {                                  \
                         if (indim == 1)                                 \
-                            r[0] = noisename(s);                        \
+                            r_comp[0] = noisename(s);                   \
                         else if (indim == 2)                            \
-                            r[0] = noisename(s,t);                      \
+                            r_comp[0] = noisename(s,t);                 \
                         else if (indim == 3)                            \
-                            r[0] = noisename(Vec3(s,t,1.0));            \
+                            r_comp[0] = noisename(Vec3(s,t,1.0));       \
                         else                                            \
-                            r[0] = noisename(Vec3(s,t,1.0),2.0);        \
+                            r_comp[0] = noisename(Vec3(s,t,1.0),2.0);   \
                     } else {                                            \
+                        Vec3 r_color;                                   \
                         if (indim == 1)                                 \
-                            r = v ## noisename(s);                      \
+                            r_color = v ## noisename(s);                \
                         else if (indim == 2)                            \
-                            r = v ## noisename(s,t);                    \
+                            r_color = v ## noisename(s,t);              \
                         else if (indim == 3)                            \
-                            r = v ## noisename(Vec3(s,t,1.0));          \
+                            r_color = v ## noisename(Vec3(s,t,1.0));    \
                         else                                            \
-                            r = v ## noisename(Vec3(s,t,1.0),2.0);      \
+                            r_color = v ## noisename(Vec3(s,t,1.0),2.0);\
+                        r_comp[0]=r_color.x;                            \
+                        r_comp[1]=r_color.y;                            \
+                        r_comp[2]=r_color.z;                            \
                     }                                                   \
-                    img.setpixel (x, y, &r[0]);                         \
+                    img.setpixel (x, y, r_comp);                        \
                 }                                                       \
             }                                                           \
             img.write (Strutil::sprintf ("osl_%s_%d_%d.tif", #noisename, outdim, indim)); \

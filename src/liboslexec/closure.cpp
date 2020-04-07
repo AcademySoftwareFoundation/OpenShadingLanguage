@@ -87,13 +87,13 @@ print_component (std::ostream &out, const ClosureComponent *comp, ShadingSystemI
 {
     const ClosureRegistry::ClosureEntry *clentry = ss->find_closure(comp->id);
     OSL_ASSERT(clentry);
-    out << "(" << weight[0]*comp->w[0] << ", " << weight[1]*comp->w[1] << ", " << weight[2]*comp->w[2] << ") * ";
+    out << "(" << weight.x*comp->w.x << ", " << weight.y*comp->w.y << ", " << weight.z*comp->w.z << ") * ";
     out << clentry->name.c_str() << " (";
     for (int i = 0, nparams = clentry->params.size() - 1; i < nparams; ++i) {
         if (i) out << ", ";
         const ClosureParam& param = clentry->params[i];
         if (param.key != 0)
-        	out << "\"" << param.key << "\", ";
+            out << "\"" << param.key << "\", ";
         if (param.type.numelements() > 1) out << "[";
         for (size_t j = 0; j < param.type.numelements(); ++j) {
             if (j) out << ", ";

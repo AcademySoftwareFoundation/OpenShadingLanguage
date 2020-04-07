@@ -325,8 +325,8 @@ osl_texture3d (void *sg_, const char *name, void *handle,
 
     // Correct our str texture space gradients into xyz-space gradients
     if (derivs) {
-        OIIO::simd::float4 dresultdx_simd = dresultds_simd * dPdx[0] + dresultdt_simd * dPdx[1] + dresultdr_simd * dPdx[2];
-        OIIO::simd::float4 dresultdy_simd = dresultds_simd * dPdy[0] + dresultdt_simd * dPdy[1] + dresultdr_simd * dPdy[2];
+        OIIO::simd::float4 dresultdx_simd = dresultds_simd * dPdx.x + dresultdt_simd * dPdx.y + dresultdr_simd * dPdx.z;
+        OIIO::simd::float4 dresultdy_simd = dresultds_simd * dPdy.x + dresultdt_simd * dPdy.y + dresultdr_simd * dPdy.z;
         if (dresultdx) {
             for (int i = 0;  i < chans;  ++i)
                 ((float *)dresultdx)[i] = dresultdx_simd[i];

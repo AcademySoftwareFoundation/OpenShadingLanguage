@@ -260,7 +260,7 @@ public:
     /// Implementaiton of Simple assignment.  If arrayindex >= 0, in
     /// designates a particular array index to assign.
     bool llvm_assign_impl (Symbol &Result, Symbol &Src, int arrayindex = -1,
-                           int srcomp = -1, int dstcomp = -1);
+                           int srccomp = -1, int dstcomp = -1);
 
 
     /// Convert the name of a global (and its derivative index) into the

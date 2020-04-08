@@ -961,7 +961,7 @@ BackendLLVM::build_llvm_instance (bool groupentry)
                 Symbol *srcsym (inst()->symbol (con.src.param));
                 Symbol *dstsym (child->symbol (con.dst.param));
 
-                // Check remining connections to see if any channels of this
+                // Check remaining connections to see if any channels of this
                 // aggregate need to be initialize.
                 if (con.dst.channel != -1 && initedsyms.count(dstsym) == 0) {
                     initedsyms.insert(dstsym);

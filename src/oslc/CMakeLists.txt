@@ -9,5 +9,4 @@ endif ()
 
 add_executable ( oslc ${oslc_srcs} )
 target_link_libraries ( oslc PRIVATE oslcomp ${OPENIMAGEIO_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
-install ( TARGETS oslc RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
-
+install_targets (oslc)

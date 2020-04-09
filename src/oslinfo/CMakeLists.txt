@@ -1,4 +1,6 @@
-SET ( oslinfo_srcs oslinfo.cpp )
-ADD_EXECUTABLE ( oslinfo ${oslinfo_srcs} )
-TARGET_LINK_LIBRARIES ( oslinfo oslquery ${OPENIMAGEIO_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
-INSTALL ( TARGETS oslinfo RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
+set ( oslinfo_srcs oslinfo.cpp )
+add_executable ( oslinfo ${oslinfo_srcs} )
+target_link_libraries (oslinfo
+                       PRIVATE oslquery ${OPENIMAGEIO_LIBRARIES}
+                               ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+install_targets (oslinfo)

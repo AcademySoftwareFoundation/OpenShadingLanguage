@@ -1,4 +1,4 @@
-test.osl:4: error: Unknown struct name: mat2
-test.osl:6: error: function 'mat2' was not declared in this scope
-test.osl:6: error: No matching function call to 'mat2 (float, float, float, float)'
+test.osl:8: error: Unknown struct name: mat2
+test.osl:10: error: function 'mat2' was not declared in this scope
+test.osl:10: error: No matching function call to 'mat2 (float, float, float, float)'
 FAILED test.osl

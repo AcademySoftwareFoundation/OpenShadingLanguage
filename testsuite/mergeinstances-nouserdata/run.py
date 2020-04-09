@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+# Copyright Contributors to the Open Shading Language project.
+# SPDX-License-Identifier: BSD-3-Clause
+# https://github.com/imageworks/OpenShadingLanguage
+
 # This test is specifically to test the opt_merge_instances_with_userdata
 # option. If working correctly when set to zero, the a1 and a2 layers should
 # NOT merge, and thus you will see two printf output line from "a".

@@ -2,12 +2,12 @@ Compiled test.osl -> test.oso
 WARNING: Optimization warning:
   group:  MyGroup
   layer:  TestLayer
-  source: test.osl:13
+  source: test.osl:17
   issue:  texture(): texture name cannot be reduced to a constant.
 WARNING: Optimization warning:
   group:  MyGroup
   layer:  TestLayer
-  source: test.osl:20
+  source: test.osl:24
   issue:  gettextureinfo(): texture name cannot be reduced to a constant.
 C = 1 0 0
 exists = 0

@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
+#
+# Copyright Contributors to the Open Shading Language project.
+# SPDX-License-Identifier: BSD-3-Clause
+# https://github.com/imageworks/OpenShadingLanguage
+#
 # Documentation on packages and available attributes can be found at:
 # https://github.com/nerdvegas/rez/wiki/Package-Definition-Guide
+
 
 name = '@OSL_REZ_PACKAGE_NAME@'
 

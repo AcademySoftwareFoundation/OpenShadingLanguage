@@ -1,4 +1,4 @@
-test.osl:3: warning: Comma operator inside parenthesis is probably an error -- it is not a vector/color.
-test.osl:4: warning: Comma operator inside parenthesis is probably an error -- it is not a vector/color.
-test.osl:5: warning: Comma operator inside parenthesis is probably an error -- it is not a vector/color.
+test.osl:7: warning: Comma operator inside parenthesis is probably an error -- it is not a vector/color.
+test.osl:8: warning: Comma operator inside parenthesis is probably an error -- it is not a vector/color.
+test.osl:9: warning: Comma operator inside parenthesis is probably an error -- it is not a vector/color.
 Compiled test.osl -> test.oso

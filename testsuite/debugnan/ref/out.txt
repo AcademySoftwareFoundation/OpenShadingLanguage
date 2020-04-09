@@ -1,4 +1,4 @@
 Compiled test.osl -> test.oso
 
 Output Cout to Cout.tif
-ERROR: Detected nan value in Cout at test.osl:5 (op texture)
+ERROR: Detected nan value in Cout at test.osl:9 (op texture)

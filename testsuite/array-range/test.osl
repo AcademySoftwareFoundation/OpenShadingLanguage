@@ -1,3 +1,7 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/imageworks/OpenShadingLanguage
+
 shader test ()
 {
     int array[5] = { 0, 1, 2, 3, 4 };

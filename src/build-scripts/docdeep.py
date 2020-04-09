@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 from __future__ import print_function, absolute_import
 
-# Copyright (c) 2018 Sony Pictures Imageworks Inc., et al.
-# BSD 3-clause license.
-# Distributed as part of Open Shading Language.
+# Copyright Contributors to the Open Shading Language project.
+# SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/imageworks/OpenShadingLanguage
 
 

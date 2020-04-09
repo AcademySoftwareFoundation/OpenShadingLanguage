@@ -1,3 +1,7 @@
+# Copyright Contributors to the Open Shading Language project.
+# SPDX-License-Identifier: BSD-3-Clause
+# https://github.com/imageworks/OpenShadingLanguage
+
 # Macro to add a build target for an IO plugin.
 #
 # Note: the original is in OIIO's src/cmake/oiio_macros.cmake

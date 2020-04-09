@@ -1,3 +1,7 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/imageworks/OpenShadingLanguage
+
 void print_array_contents (string name, int arr[])
 {
     printf ("%s array length %d\n", name, arraylength(arr));

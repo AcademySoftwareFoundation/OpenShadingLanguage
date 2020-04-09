@@ -2,10 +2,10 @@ Compiled test.osl -> test.oso
 constant index:
  reading:
   array[1] = 1
-ERROR: Shader error [test]: Index [10] out of range $const1[0..4]: test.osl:8 (group unnamed_group_1, layer 0 test_0, shader test)
+ERROR: Shader error [test]: Index [10] out of range $const1[0..4]: test.osl:12 (group unnamed_group_1, layer 0 test_0, shader test)
   array[10] = 4
  writing:
-ERROR: Index [10] out of range array[0..4]: test.osl:10 (group unnamed_group_1, layer 0 test_0, shader test)
+ERROR: Index [10] out of range array[0..4]: test.osl:14 (group unnamed_group_1, layer 0 test_0, shader test)
 variable index:
  reading:
   array[0] = 0
@@ -13,8 +13,8 @@ variable index:
   array[2] = 2
   array[3] = 3
   array[4] = 42
-ERROR: Index [5] out of range array[0..4]: test.osl:15 (group unnamed_group_1, layer 0 test_0, shader test)
+ERROR: Index [5] out of range array[0..4]: test.osl:19 (group unnamed_group_1, layer 0 test_0, shader test)
   array[5] = 42
  writing:
-ERROR: Index [5] out of range array[0..4]: test.osl:19 (group unnamed_group_1, layer 0 test_0, shader test)
+ERROR: Index [5] out of range array[0..4]: test.osl:23 (group unnamed_group_1, layer 0 test_0, shader test)
 

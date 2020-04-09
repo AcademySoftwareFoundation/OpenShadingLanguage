@@ -1,3 +1,7 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/imageworks/OpenShadingLanguage
+
 shader
 test (color cparam = color (.1, .7, .2),
       color cparam2 = color (.1),

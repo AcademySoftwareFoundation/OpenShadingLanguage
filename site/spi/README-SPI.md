@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: CC-BY-4.0 -->
+<!-- Copyright Contributors to the Open Shading Language Project. -->
+
 Build a variant for Rez/general use
 -----------------------------------
 

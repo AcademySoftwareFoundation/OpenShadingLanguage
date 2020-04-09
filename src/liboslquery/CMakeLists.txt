@@ -1,3 +1,7 @@
+# Copyright Contributors to the Open Shading Language project.
+# SPDX-License-Identifier: BSD-3-Clause
+# https://github.com/imageworks/OpenShadingLanguage
+
 set (local_lib oslquery)
 file (GLOB lib_src "*.cpp" ../liboslexec/typespec.cpp)
 file (GLOB compiler_headers "../liboslexec/*.h")

@@ -1,3 +1,7 @@
+# Copyright Contributors to the Open Shading Language project.
+# SPDX-License-Identifier: BSD-3-Clause
+# https://github.com/imageworks/OpenShadingLanguage
+
 # Compile a CUDA file to PTX using NVCC
 function ( NVCC_COMPILE cuda_src ptx_generated extra_nvcc_args )
     get_filename_component ( cuda_src_we ${cuda_src} NAME_WE )

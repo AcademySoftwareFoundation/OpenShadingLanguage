@@ -1,5 +1,5 @@
-test.osl:5: error: indexing into non-array or non-component type
 test.osl:9: error: indexing into non-array or non-component type
-test.osl:12: error: indexing into non-array or non-component type
-test.osl:14: error: indexing into non-array or non-component type
+test.osl:13: error: indexing into non-array or non-component type
+test.osl:16: error: indexing into non-array or non-component type
+test.osl:18: error: indexing into non-array or non-component type
 FAILED test.osl

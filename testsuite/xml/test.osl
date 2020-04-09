@@ -1,3 +1,7 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/imageworks/OpenShadingLanguage
+
 shader test (string xml = "test.xml")
 {
     for (int cp = dict_find (xml, "//camerapack"); cp;  cp = dict_next (cp)) {

@@ -1,6 +1,6 @@
-test.osl:11: error: type 'color' does not have a member 'x'
-test.osl:12: error: type 'color' does not have a member 'err'
-test.osl:16: error: type 'vector' does not have a member 'r'
-test.osl:17: error: type 'vector' does not have a member 'oops'
-test.osl:21: error: struct type 'Foo' does not have a member 'r'
+test.osl:15: error: type 'color' does not have a member 'x'
+test.osl:16: error: type 'color' does not have a member 'err'
+test.osl:20: error: type 'vector' does not have a member 'r'
+test.osl:21: error: type 'vector' does not have a member 'oops'
+test.osl:25: error: struct type 'Foo' does not have a member 'r'
 FAILED test.osl

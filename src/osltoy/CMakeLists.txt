@@ -1,3 +1,7 @@
+# Copyright Contributors to the Open Shading Language project.
+# SPDX-License-Identifier: BSD-3-Clause
+# https://github.com/imageworks/OpenShadingLanguage
+
 set (CMAKE_AUTOMOC ON)
 if (Qt5_POSITION_INDEPENDENT_CODE)
     set (CMAKE_POSITION_INDEPENDENT_CODE ON)

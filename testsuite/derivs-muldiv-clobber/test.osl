@@ -1,3 +1,7 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/imageworks/OpenShadingLanguage
+
 // Test for regression of a bug we had were mul and div could clobber
 // derivatives if the result went to the operand itself (like x=x*x).
 //

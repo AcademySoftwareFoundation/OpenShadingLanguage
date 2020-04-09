@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+# Copyright Contributors to the Open Shading Language project.
+# SPDX-License-Identifier: BSD-3-Clause
+# https://github.com/imageworks/OpenShadingLanguage
+
 # This helper script takes a major.minor.patch semantic version string
 # ("2.1.1") and reformats it into the dot-less zero-padded version like
 # "20101".  This is necessary to turn external release designations into

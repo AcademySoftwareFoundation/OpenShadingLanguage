@@ -1,3 +1,7 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/imageworks/OpenShadingLanguage
+
 shader b (color in = color(0,1,0))
 {
     printf ("b start, Ci = '%s'\n", Ci);

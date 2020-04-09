@@ -1,3 +1,7 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/imageworks/OpenShadingLanguage
+
 // This is a regression test for a bug wherein the lifetime of the
 // 'done' variable was miscomputed, and as a result optimized away --
 // erroneously believing that the 'done=1' could be elided because it

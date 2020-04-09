@@ -1,3 +1,7 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/imageworks/OpenShadingLanguage
+
 // This test fills out triples, matrices, and arrays, in order to test
 // optimizations wherein the runtime recognizes that all elements are
 // filled in with constants and replaces it all with a constant array.

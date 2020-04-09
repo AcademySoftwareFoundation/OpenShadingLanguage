@@ -1,3 +1,7 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/imageworks/OpenShadingLanguage
+
 void test_unspecified_length (string s[])
 {
     printf ("Verify compile of functions with array parameters of unspecified length:\n");

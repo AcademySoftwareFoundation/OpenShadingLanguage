@@ -34,6 +34,13 @@ endif ()
 configure_file (${PROJECT_NAME}/${versionfile}.in "${CMAKE_BINARY_DIR}/include/${PROJECT_NAME}/${versionfile}" @ONLY)
 list (APPEND public_headers "${CMAKE_BINARY_DIR}/include/${PROJECT_NAME}/${versionfile}")
 
+set (oslconfighfile oslconfig.h)
+if (VERBOSE)
+    message (STATUS "Create ${oslconfighfile} from ${oslconfighfile}.in")
+endif ()
+configure_file (${PROJECT_NAME}/${oslconfighfile}.in "${CMAKE_BINARY_DIR}/include/${PROJECT_NAME}/${oslconfighfile}" @ONLY)
+list (APPEND public_headers "${CMAKE_BINARY_DIR}/include/${PROJECT_NAME}/${oslconfighfile}")
+
 
 install (FILES ${public_headers}
          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}

@@ -1,13 +1,13 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-# TSC meeting DATE
+# OSL TSC meeting DATE
 
-Host: NAME
+[Video link](https://zoom.us/j/100511909)
 
 ### Attendees:
 
-TSC members:
+TSC voting members:
   * [ ] Luke Emrose, Animal Logic
   * [ ] Eric Enderton, NVIDIA
   * [ ] Stephen Friedman, Pixar
@@ -38,6 +38,13 @@ Additional attendees:
 * Topic 2
     - info
     - info
+
+
+### Next steps
+
+* New action items:
+    -
+    -
 
 * Items for next TSC meeting agenda:
     - xxx

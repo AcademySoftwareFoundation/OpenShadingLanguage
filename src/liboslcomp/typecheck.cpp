@@ -1110,9 +1110,8 @@ ASTNode::check_arglist (const char * /*funcname*/, ASTNode::ref arg,
             ASTcompound_initializer::TypeAdjuster ta(
                 m_compiler, ASTcompound_initializer::TypeAdjuster::no_errors);
 
-            TypeSpec itype = ta.typecheck(
-                static_cast<ASTcompound_initializer*>(arg.get()), formaltype);
-
+            OSL_MAYBE_UNUSED TypeSpec itype =
+                ta.typecheck(static_cast<ASTcompound_initializer*>(arg.get()), formaltype);
             OSL_DASSERT (!ta.success() || (formaltype == itype));
 
             // ~TypeAdjuster will set the proper type for the list on success.

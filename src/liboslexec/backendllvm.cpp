@@ -773,8 +773,7 @@ BackendLLVM::llvm_load_component_value (const Symbol& sym, int deriv,
     if (!result)
         return NULL;  // Error
 
-    TypeDesc t = sym.typespec().simpletype();
-    OSL_DASSERT (t.aggregate != TypeDesc::SCALAR);
+    OSL_DASSERT (sym.typespec().simpletype().aggregate != TypeDesc::SCALAR);
     // cast the Vec* to a float*
     result = ll.ptr_cast (result, ll.type_float_ptr());
     result = ll.GEP (result, component);  // get the component
@@ -885,8 +884,7 @@ BackendLLVM::llvm_store_component_value (llvm::Value* new_val,
     if (!result)
         return false;  // Error
 
-    TypeDesc t = sym.typespec().simpletype();
-    OSL_DASSERT (t.aggregate != TypeDesc::SCALAR);
+    OSL_DASSERT (sym.typespec().simpletype().aggregate != TypeDesc::SCALAR);
     // cast the Vec* to a float*
     result = ll.ptr_cast (result, ll.type_float_ptr());
     result = ll.GEP (result, component);  // get the component

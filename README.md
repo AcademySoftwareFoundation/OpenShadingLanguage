@@ -225,7 +225,7 @@ project leader or submit a PR with edits to this file.*
 Renderers and other tools with OSL support (in approximate order of
 adding OSL support):
 * Sony Pictures Imageworks: in-house "Arnold" renderer
-* [Blender/Cycles](https://docs.blender.org/manual/en/dev/render/cycles/nodes/osl.html)
+* [Blender/Cycles](https://docs.blender.org/manual/en/dev/render/shader_nodes/osl.html)
 * [Chaos Group: V-Ray](https://www.chaosgroup.com/)
 * [Pixar: PhotoRealistic RenderMan RIS](https://renderman.pixar.com)
 * [Isotropix: Clarisse](http://www.isotropix.com/clarisse)

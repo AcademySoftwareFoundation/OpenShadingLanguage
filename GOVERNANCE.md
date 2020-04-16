@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: CC-BY-4.0 -->
+<!-- Copyright Contributors to the Open Shading Language Project. -->
+
 # OSL Project Governance
 
 OSL is a project of the Academy Software Foundation and relies on the ASWF

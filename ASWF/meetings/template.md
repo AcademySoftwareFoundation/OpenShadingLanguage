@@ -4,6 +4,7 @@
 # OSL TSC meeting DATE
 
 [Video link](https://zoom.us/j/100511909)
+[Agenda link](https://docs.google.com/document/d/1yf0bG6eoE2EvKZBNZX3nskdTvu99ADTDTNOknCDJd1I/)
 
 ### Attendees:
 

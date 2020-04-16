@@ -1,103 +1,103 @@
-test.osl:226: warning: Ambiguous call to 'freturn ()'
+test.osl:230: warning: Ambiguous call to 'freturn ()'
   Chosen function is:
-    test.osl:73	float freturn ()
+    test.osl:77	float freturn ()
   Other candidates are:
-    test.osl:70	int freturn ()
-    test.osl:74	color freturn ()
-    test.osl:76	vector freturn ()
-    test.osl:71	point freturn ()
-    test.osl:77	normal freturn ()
-    test.osl:78	matrix freturn ()
-    test.osl:72	string freturn ()
-    test.osl:75	closure color freturn ()
-    test.osl:80	struct A freturn ()
-    test.osl:79	void freturn ()
-test.osl:227: warning: Ambiguous call to 'ireturn ()'
+    test.osl:74	int freturn ()
+    test.osl:78	color freturn ()
+    test.osl:80	vector freturn ()
+    test.osl:75	point freturn ()
+    test.osl:81	normal freturn ()
+    test.osl:82	matrix freturn ()
+    test.osl:76	string freturn ()
+    test.osl:79	closure color freturn ()
+    test.osl:84	struct A freturn ()
+    test.osl:83	void freturn ()
+test.osl:231: warning: Ambiguous call to 'ireturn ()'
   Chosen function is:
-    test.osl:87	int ireturn ()
+    test.osl:91	int ireturn ()
   Other candidates are:
-    test.osl:84	color ireturn ()
-    test.osl:88	vector ireturn ()
-    test.osl:85	point ireturn ()
-    test.osl:89	normal ireturn ()
-    test.osl:91	matrix ireturn ()
-    test.osl:86	string ireturn ()
-    test.osl:83	closure color ireturn ()
-    test.osl:82	struct A ireturn ()
-    test.osl:90	void ireturn ()
-test.osl:228: warning: Ambiguous call to 'creturn ()'
+    test.osl:88	color ireturn ()
+    test.osl:92	vector ireturn ()
+    test.osl:89	point ireturn ()
+    test.osl:93	normal ireturn ()
+    test.osl:95	matrix ireturn ()
+    test.osl:90	string ireturn ()
+    test.osl:87	closure color ireturn ()
+    test.osl:86	struct A ireturn ()
+    test.osl:94	void ireturn ()
+test.osl:232: warning: Ambiguous call to 'creturn ()'
   Chosen function is:
-    test.osl:98	color creturn ()
+    test.osl:102	color creturn ()
   Other candidates are:
-    test.osl:93	vector creturn ()
-    test.osl:97	point creturn ()
-    test.osl:94	normal creturn ()
-    test.osl:100	matrix creturn ()
-    test.osl:99	string creturn ()
-    test.osl:101	closure color creturn ()
-    test.osl:96	struct A creturn ()
-    test.osl:95	void creturn ()
-test.osl:229: warning: Ambiguous call to 'vreturn ()'
+    test.osl:97	vector creturn ()
+    test.osl:101	point creturn ()
+    test.osl:98	normal creturn ()
+    test.osl:104	matrix creturn ()
+    test.osl:103	string creturn ()
+    test.osl:105	closure color creturn ()
+    test.osl:100	struct A creturn ()
+    test.osl:99	void creturn ()
+test.osl:233: warning: Ambiguous call to 'vreturn ()'
   Chosen function is:
-    test.osl:105	vector vreturn ()
+    test.osl:109	vector vreturn ()
   Other candidates are:
-    test.osl:103	point vreturn ()
-    test.osl:109	normal vreturn ()
-    test.osl:106	matrix vreturn ()
-    test.osl:110	string vreturn ()
-    test.osl:104	closure color vreturn ()
-    test.osl:107	struct A vreturn ()
-    test.osl:108	void vreturn ()
-test.osl:230: warning: Ambiguous call to 'preturn ()'
+    test.osl:107	point vreturn ()
+    test.osl:113	normal vreturn ()
+    test.osl:110	matrix vreturn ()
+    test.osl:114	string vreturn ()
+    test.osl:108	closure color vreturn ()
+    test.osl:111	struct A vreturn ()
+    test.osl:112	void vreturn ()
+test.osl:234: warning: Ambiguous call to 'preturn ()'
   Chosen function is:
-    test.osl:118	point preturn ()
+    test.osl:122	point preturn ()
   Other candidates are:
-    test.osl:114	normal preturn ()
-    test.osl:116	matrix preturn ()
-    test.osl:112	string preturn ()
-    test.osl:115	closure color preturn ()
-    test.osl:117	struct A preturn ()
-    test.osl:113	void preturn ()
-test.osl:231: warning: Ambiguous call to 'nreturn ()'
+    test.osl:118	normal preturn ()
+    test.osl:120	matrix preturn ()
+    test.osl:116	string preturn ()
+    test.osl:119	closure color preturn ()
+    test.osl:121	struct A preturn ()
+    test.osl:117	void preturn ()
+test.osl:235: warning: Ambiguous call to 'nreturn ()'
   Chosen function is:
-    test.osl:122	normal nreturn ()
+    test.osl:126	normal nreturn ()
   Other candidates are:
-    test.osl:120	matrix nreturn ()
-    test.osl:123	string nreturn ()
-    test.osl:124	closure color nreturn ()
-    test.osl:121	struct A nreturn ()
-    test.osl:125	void nreturn ()
-test.osl:232: warning: Ambiguous call to 'mreturn ()'
+    test.osl:124	matrix nreturn ()
+    test.osl:127	string nreturn ()
+    test.osl:128	closure color nreturn ()
+    test.osl:125	struct A nreturn ()
+    test.osl:129	void nreturn ()
+test.osl:236: warning: Ambiguous call to 'mreturn ()'
   Chosen function is:
-    test.osl:130	matrix mreturn ()
+    test.osl:134	matrix mreturn ()
   Other candidates are:
-    test.osl:131	string mreturn ()
-    test.osl:128	closure color mreturn ()
-    test.osl:129	struct A mreturn ()
-    test.osl:127	void mreturn ()
-test.osl:233: warning: Ambiguous call to 'strreturn ()'
+    test.osl:135	string mreturn ()
+    test.osl:132	closure color mreturn ()
+    test.osl:133	struct A mreturn ()
+    test.osl:131	void mreturn ()
+test.osl:237: warning: Ambiguous call to 'strreturn ()'
   Chosen function is:
-    test.osl:136	string strreturn ()
+    test.osl:140	string strreturn ()
   Other candidates are:
-    test.osl:134	closure color strreturn ()
-    test.osl:133	struct A strreturn ()
-    test.osl:135	void strreturn ()
-test.osl:234: warning: Ambiguous call to 'ccreturn ()'
+    test.osl:138	closure color strreturn ()
+    test.osl:137	struct A strreturn ()
+    test.osl:139	void strreturn ()
+test.osl:238: warning: Ambiguous call to 'ccreturn ()'
   Chosen function is:
-    test.osl:138	closure color ccreturn ()
+    test.osl:142	closure color ccreturn ()
   Other candidates are:
-    test.osl:140	struct A ccreturn ()
-    test.osl:139	void ccreturn ()
-test.osl:235: warning: Ambiguous call to 'structreturn ()'
+    test.osl:144	struct A ccreturn ()
+    test.osl:143	void ccreturn ()
+test.osl:239: warning: Ambiguous call to 'structreturn ()'
   Chosen function is:
-    test.osl:142	struct A structreturn ()
+    test.osl:146	struct A structreturn ()
   Other candidates are:
-    test.osl:143	void structreturn ()
-test.osl:236: warning: Ambiguous call to 'structreturn1 ()'
+    test.osl:147	void structreturn ()
+test.osl:240: warning: Ambiguous call to 'structreturn1 ()'
   Chosen function is:
-    test.osl:146	struct A structreturn1 ()
+    test.osl:150	struct A structreturn1 ()
   Other candidates are:
-    test.osl:145	void structreturn1 ()
+    test.osl:149	void structreturn1 ()
 Compiled test.osl -> test.oso
 testA int
 testB int

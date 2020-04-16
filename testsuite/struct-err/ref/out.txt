@@ -1,4 +1,4 @@
-test.osl:29: error: Cannot assign struct Astruct a = struct Bstruct
-test.osl:32: error: Cannot assign struct Bstruct b = int
-test.osl:35: error: Cannot initialize struct Astruct c = int
+test.osl:33: error: Cannot assign struct Astruct a = struct Bstruct
+test.osl:36: error: Cannot assign struct Bstruct b = int
+test.osl:39: error: Cannot initialize struct Astruct c = int
 FAILED test.osl

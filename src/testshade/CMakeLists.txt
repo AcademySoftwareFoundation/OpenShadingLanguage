@@ -1,3 +1,7 @@
+# Copyright Contributors to the Open Shading Language project.
+# SPDX-License-Identifier: BSD-3-Clause
+# https://github.com/imageworks/OpenShadingLanguage
+
 # The 'testshade' executable
 set ( testshade_srcs testshade.cpp simplerend.cpp optixgridrender.cpp
                      ../testrender/optix_stringtable.cpp )

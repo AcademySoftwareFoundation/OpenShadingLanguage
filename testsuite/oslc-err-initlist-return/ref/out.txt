@@ -1,12 +1,12 @@
-test.osl:13: error: Cannot construct float (int, int, int)
-test.osl:13: error: Cannot return a 'unknown' from 'struct bcolor badreturn()'
-test.osl:14: warning: Function 'struct bcolor badreturn ()' redefined in the same scope
+test.osl:17: error: Cannot construct float (int, int, int)
+test.osl:17: error: Cannot return a 'unknown' from 'struct bcolor badreturn()'
+test.osl:18: warning: Function 'struct bcolor badreturn ()' redefined in the same scope
   Previous definitions:
-    test.osl:13
-test.osl:14: error: Cannot return a 'struct acolor' from 'struct bcolor badreturn()'
-test.osl:17: error: Empty compound initializers '{ }' only allowed for shader parameters.
-test.osl:17: warning: Function 'struct bcolor badreturn ()' redefined in the same scope
+    test.osl:17
+test.osl:18: error: Cannot return a 'struct acolor' from 'struct bcolor badreturn()'
+test.osl:21: error: Empty compound initializers '{ }' only allowed for shader parameters.
+test.osl:21: warning: Function 'struct bcolor badreturn ()' redefined in the same scope
   Previous definitions:
-    test.osl:14
-    test.osl:13
+    test.osl:18
+    test.osl:17
 FAILED test.osl

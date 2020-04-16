@@ -1,5 +1,6 @@
-// Open Shading Language : Copyright (c) 2009-2017 Sony Pictures Imageworks Inc., et al.
-// https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/imageworks/OpenShadingLanguage
 
 #pragma once
 #define VECTOR4_H

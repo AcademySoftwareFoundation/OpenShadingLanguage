@@ -8,7 +8,7 @@ Open Shading Language
 
 Build status:
 
-[![License](https://img.shields.io/badge/license-BSD%203--Clause-blue.svg?style=flat-square)](https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE)
+[![License](https://img.shields.io/badge/license-BSD%203--Clause-blue.svg?style=flat-square)](https://github.com/imageworks/OpenShadingLanguage)
 [![Build Status](https://travis-ci.org/imageworks/OpenShadingLanguage.svg?branch=master)](https://travis-ci.org/imageworks/OpenShadingLanguage)
 [![Appveyor status](https://ci.appveyor.com/api/projects/status/github/imageworks/openshadinglanguage?svg=true&branch=master)](https://ci.appveyor.com/project/lgritz/openshadinglanguage)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/3061/badge)](https://bestpractices.coreinfrastructure.org/projects/3061)
@@ -39,9 +39,9 @@ renderers used for high-end VFX and animation work. For a full list of films
 and products, see the [filmography](#where-osl-has-been-used).
 
 The OSL code is distributed under the
-["New BSD" license](https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE),
-and the documentation under the [Creative Commons Attribution 3.0 Unported
-License](http://creativecommons.org/licenses/by/3.0/).  In short, you are
+["New/3-clause BSD" license](https://github.com/imageworks/OpenShadingLanguage),
+and the documentation under the [Creative Commons Attribution 4.0 International
+License](https://creativecommons.org/licenses/by/4.0/).  In short, you are
 free to use OSL in your own applications, whether they are free or
 commercial, open or proprietary, as well as to modify the OSL code and
 documentation as you desire, provided that you retain the original copyright

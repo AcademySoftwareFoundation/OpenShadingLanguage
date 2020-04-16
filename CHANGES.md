@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: CC-BY-4.0 -->
+<!-- Copyright Contributors to the Open Shading Language Project. -->
+
 Release 1.11/2.0? -- ?? 2019 (compared to 1.10)
 --------------------------------------------------
 Dependency and standards changes:
@@ -277,7 +280,8 @@ Build & test system improvements:
   environment variable `CTEST_PARALLEL_LEVEL`. #1119 (1.11.4)
 
 Documentation:
-
+* Make it clear that the documentation is licensed under the CC-BY-4.0
+  license.
 
 
 Release 1.10.8 -- 1 Dec 2019 (compared to 1.10.7)

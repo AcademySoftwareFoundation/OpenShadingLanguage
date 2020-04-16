@@ -1,3 +1,7 @@
+# Copyright Contributors to the Open Shading Language project.
+# SPDX-License-Identifier: BSD-3-Clause
+# https://github.com/imageworks/OpenShadingLanguage
+
 cmake_minimum_required (VERSION 3.12)
 project (OSL VERSION 1.11.5.0
          LANGUAGES CXX C

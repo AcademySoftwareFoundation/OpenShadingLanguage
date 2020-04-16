@@ -1,3 +1,7 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/imageworks/OpenShadingLanguage
+
 shader test (output color Cout = 0)
 {
     float T = 10000.0*u;    // map u range from 0K to 10,000K

@@ -1,3 +1,7 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/imageworks/OpenShadingLanguage
+
 // Test a variety of scenarios that should report type errors related to
 // assignments. We need to test both simple assignment as well as variable
 // declaration with initialization assignment, since they are different

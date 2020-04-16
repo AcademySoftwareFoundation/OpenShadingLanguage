@@ -1,5 +1,5 @@
-test.osl:6: error: Field "c" already exists in struct "testStruct"
-test.osl:7: error: Field "i" already exists in struct "testStruct"
-test.osl:8: error: Field "f" already exists in struct "testStruct"
-test.osl:14: error: Too many initializers for struct 'testStruct'
+test.osl:10: error: Field "c" already exists in struct "testStruct"
+test.osl:11: error: Field "i" already exists in struct "testStruct"
+test.osl:12: error: Field "f" already exists in struct "testStruct"
+test.osl:18: error: Too many initializers for struct 'testStruct'
 FAILED test.osl

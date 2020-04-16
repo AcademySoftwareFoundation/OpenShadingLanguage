@@ -1,3 +1,3 @@
-test.osl:7: error: integer overflow, value must be between -2147483648 and 2147483647.
-test.osl:9: error: integer overflow, value must be between -2147483648 and 2147483647.
+test.osl:11: error: integer overflow, value must be between -2147483648 and 2147483647.
+test.osl:13: error: integer overflow, value must be between -2147483648 and 2147483647.
 FAILED test.osl

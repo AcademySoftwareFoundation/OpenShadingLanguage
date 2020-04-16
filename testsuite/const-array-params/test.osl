@@ -1,3 +1,7 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/imageworks/OpenShadingLanguage
+
 shader test (int i[3] = { 10, 11, 12 },
              string s[3] = { "foo0", "bar1", "baz2" })
 {

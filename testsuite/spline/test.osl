@@ -1,3 +1,7 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/imageworks/OpenShadingLanguage
+
 shader test (output color Cspline = 0, output color DxCspline = 0,
              output float Fspline = 0, output float DxFspline = 0,
              output float NumKnots = 0)

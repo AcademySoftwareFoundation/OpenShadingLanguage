@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# Copyright Contributors to the Open Shading Language project.
+# SPDX-License-Identifier: BSD-3-Clause
+# https://github.com/imageworks/OpenShadingLanguage
+
 # Important: set -ex causes this whole script to terminate with error if
 # any command in it fails. This is crucial for CI tests.
 set -ex

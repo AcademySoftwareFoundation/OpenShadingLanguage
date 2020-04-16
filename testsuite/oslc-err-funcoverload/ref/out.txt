@@ -1,27 +1,27 @@
-test.osl:17: error: No matching function call to 'funca ()'
+test.osl:21: error: No matching function call to 'funca ()'
   Candidates are:
-    test.osl:3	void funca (int, int)
-    test.osl:2	void funca (int)
-test.osl:18: error: No matching function call to 'funca (int, int, int)'
+    test.osl:7	void funca (int, int)
+    test.osl:6	void funca (int)
+test.osl:22: error: No matching function call to 'funca (int, int, int)'
   Candidates are:
-    test.osl:3	void funca (int, int)
-    test.osl:2	void funca (int)
-test.osl:19: error: No matching function call to 'funca (float, int)'
+    test.osl:7	void funca (int, int)
+    test.osl:6	void funca (int)
+test.osl:23: error: No matching function call to 'funca (float, int)'
   Candidates are:
-    test.osl:3	void funca (int, int)
-    test.osl:2	void funca (int)
-test.osl:20: error: No matching function call to 'funca (int, float)'
+    test.osl:7	void funca (int, int)
+    test.osl:6	void funca (int)
+test.osl:24: error: No matching function call to 'funca (int, float)'
   Candidates are:
-    test.osl:3	void funca (int, int)
-    test.osl:2	void funca (int)
-test.osl:21: warning: Ambiguous call to 'funcb ()'
+    test.osl:7	void funca (int, int)
+    test.osl:6	void funca (int)
+test.osl:25: warning: Ambiguous call to 'funcb ()'
   Chosen function is:
-    test.osl:6	float funcb ()
+    test.osl:10	float funcb ()
   Other candidates are:
-    test.osl:5	int funcb ()
-    test.osl:7	color funcb ()
-test.osl:25: error: Ambiguous call to 'ambig_struct_return ()'
+    test.osl:9	int funcb ()
+    test.osl:11	color funcb ()
+test.osl:29: error: Ambiguous call to 'ambig_struct_return ()'
   Candidates are:
-    test.osl:13	struct B ambig_struct_return ()
-    test.osl:12	struct A ambig_struct_return ()
+    test.osl:17	struct B ambig_struct_return ()
+    test.osl:16	struct A ambig_struct_return ()
 FAILED test.osl

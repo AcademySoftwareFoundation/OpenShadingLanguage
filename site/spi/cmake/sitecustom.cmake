@@ -1,3 +1,7 @@
+# Copyright Contributors to the Open Shading Language project.
+# SPDX-License-Identifier: BSD-3-Clause
+# https://github.com/imageworks/OpenShadingLanguage
+
 option (${PROJ_NAME}_SPIREZ "Enable extra bits for building for SPI Rez install" OFF)
 set (${PROJ_NAME}_REZ_PACKAGE_NAME CACHE STRING "${PROJECT_NAME}")
 

@@ -1,3 +1,7 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/imageworks/OpenShadingLanguage
+
 surface a ( output closure color CCout = 0 )
 {
     CCout = diffuse(N) * color(0,0.18,0);

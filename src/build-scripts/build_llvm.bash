@@ -1,6 +1,10 @@
 #!/bin/bash
 
 # Utility script to download and build LLVM & clang
+#
+# Copyright Contributors to the Open Shading Language project.
+# SPDX-License-Identifier: BSD-3-Clause
+# https://github.com/imageworks/OpenShadingLanguage
 
 # Exit the whole script if any command fails.
 set -ex

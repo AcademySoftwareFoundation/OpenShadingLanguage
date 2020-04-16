@@ -1,6 +1,6 @@
-# Copyright 2009-present Sony Pictures Imageworks, et al.
+# Copyright Contributors to the Open Shading Language project.
 # SPDX-License-Identifier: BSD-3-Clause
-# https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE
+# https://github.com/imageworks/OpenShadingLanguage
 
 # Python-related options.
 option (USE_PYTHON "Build the Python bindings" ON)

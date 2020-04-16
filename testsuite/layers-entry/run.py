@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+# Copyright Contributors to the Open Shading Language project.
+# SPDX-License-Identifier: BSD-3-Clause
+# https://github.com/imageworks/OpenShadingLanguage
+
 
 # This test verifies the execution order for both the default lazy
 # execution, and the explicit entry points.

@@ -1,3 +1,7 @@
+# Copyright Contributors to the Open Shading Language project.
+# SPDX-License-Identifier: BSD-3-Clause
+# https://github.com/imageworks/OpenShadingLanguage
+
 set ( oslc_srcs oslcmain.cpp )
 
 # don't want to link oslexec but oslcomp uses these symbols

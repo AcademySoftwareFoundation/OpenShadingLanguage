@@ -1,4 +1,4 @@
-comma.osl:25: warning: Comma operator inside parenthesis is probably an error -- it is not a vector/color.
+comma.osl:29: warning: Comma operator inside parenthesis is probably an error -- it is not a vector/color.
 Compiled comma.osl -> comma.oso
 for loop: amp = 0.03125, freq = 16, sum = 0
 Lo = 0, hi = 1   (expect: 0,1)

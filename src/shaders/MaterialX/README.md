@@ -1,3 +1,7 @@
+<!-- SPDX-License-Identifier: CC-BY-4.0 -->
+<!-- Copyright Contributors to the Open Shading Language Project. -->
+
+
 README for MaterialX Shader Nodes
 =================================
 

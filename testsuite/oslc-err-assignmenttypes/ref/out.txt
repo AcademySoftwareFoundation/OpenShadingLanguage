@@ -1,6 +1,6 @@
-test.osl:17: warning: Assignment may lose precision: int i = float
-test.osl:18: warning: Assignment may lose precision: int i = float
-test.osl:26: error: Cannot assign closure color cc = int
-test.osl:32: error: Cannot initialize struct vector4 v4 = struct vector2
-test.osl:34: error: Cannot assign struct vector2 v2 = struct vector4
+test.osl:21: warning: Assignment may lose precision: int i = float
+test.osl:22: warning: Assignment may lose precision: int i = float
+test.osl:30: error: Cannot assign closure color cc = int
+test.osl:36: error: Cannot initialize struct vector4 v4 = struct vector2
+test.osl:38: error: Cannot assign struct vector2 v2 = struct vector4
 FAILED test.osl

@@ -27,11 +27,7 @@ if [[ `uname` == "Linux" ]] ; then
     else
         LLVM_DISTRO_NAME=${LLVM_DISTRO_NAME:=error}
     fi
-    if [ "$LLVM_VERSION" == "5.0.0" ] ; then
-        LLVMTAR=clang+llvm-${LLVM_VERSION}-linux-x86_64-${LLVM_DISTRO_NAME}.tar.xz
-    else
-        LLVMTAR=clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-${LLVM_DISTRO_NAME}.tar.xz
-    fi
+    LLVMTAR=clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-${LLVM_DISTRO_NAME}.tar.xz
     echo LLVMTAR = $LLVMTAR
     if [ "$LLVM_VERSION" == "10.0.0" ] ; then
         # new

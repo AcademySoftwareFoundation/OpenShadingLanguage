@@ -371,9 +371,9 @@ RendererServices::pointcloud_get (ShaderGlobals *sg,
     // Actual data query
     if (partio_type == OIIO::TypeString) {
         // strings are special cases because they are stored as int index
-        std::unique_ptr<int[]> strindices(new int[count]);
+        int* strindices = OIIO_ALLOCA(int, count);
         const_cast<Partio::ParticlesData*>(cloud)->data (*attr, count,
-                    (const Partio::ParticleIndex *)indices, true, (void*)strindices.get());
+                    (const Partio::ParticleIndex *)indices, true, (void*)strindices);
         const auto& strings = cloud->indexedStrs(*attr);
         int sicount = int(strings.size());
         for (size_t i = 0; i < count; ++i) {
@@ -384,8 +384,13 @@ RendererServices::pointcloud_get (ShaderGlobals *sg,
                 ((ustring *)out_data)[i] = ustring();
         }
     } else {
+        // All cases aside from strings are simple.
         const_cast<Partio::ParticlesData*>(cloud)->data (*attr, count,
                     (const Partio::ParticleIndex *)indices, true, out_data);
+        // FIXME: it is regrettable that we need this const_cast (and the
+        // one a few lines above). It's to work around a bug in partio where
+        // they fail to declare this method as const, even though it could
+        // be. We should submit a patch to partio to fix this.
     }
     return 1;
 #else

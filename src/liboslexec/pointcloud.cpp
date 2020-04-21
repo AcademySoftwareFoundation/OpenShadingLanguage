@@ -194,6 +194,9 @@ TypeDescOfPartioType (const Partio::ParticleAttribute *ptype)
         if (ptype->count != 3)
             type = TypeDesc::UNKNOWN;  // Must be 3: punt
         break;
+    case Partio::INDEXEDSTR:
+        type = TypeDesc::STRING;
+        break;
     default:
         break;   // Any other future types -- return UNKNOWN
     }
@@ -366,8 +369,24 @@ RendererServices::pointcloud_get (ShaderGlobals *sg,
     // then copy them back to the caller's indices.
 
     // Actual data query
-    const_cast<Partio::ParticlesData *>(cloud)->data (*attr, count, (Partio::ParticleIndex *)indices,
-                 true, out_data);
+    if (partio_type == OIIO::TypeString) {
+        // strings are special cases because they are stored as int index
+        std::unique_ptr<int[]> strindices(new int[count]);
+        const_cast<Partio::ParticlesData*>(cloud)->data (*attr, count,
+                    (const Partio::ParticleIndex *)indices, true, (void*)strindices.get());
+        const auto& strings = cloud->indexedStrs(*attr);
+        int sicount = int(strings.size());
+        for (size_t i = 0; i < count; ++i) {
+            int ind = strindices[i];
+            if (ind >= 0 && ind < sicount)
+                ((ustring *)out_data)[i] = ustring(strings[ind]);
+            else
+                ((ustring *)out_data)[i] = ustring();
+        }
+    } else {
+        const_cast<Partio::ParticlesData*>(cloud)->data (*attr, count,
+                    (const Partio::ParticleIndex *)indices, true, out_data);
+    }
     return 1;
 #else
     return 0;
@@ -435,8 +454,13 @@ RendererServices::pointcloud_write (ShaderGlobals* /*sg*/,
             case Partio::INT :
                 *(int *)cloud->dataWrite<int>(*a, p) = *(int *)(data[i]);
                 break;
-            case Partio::INDEXEDSTR :
-                // FIXME? do we care?
+            case Partio::INDEXEDSTR : {
+                const char* s = *(const char**)(data[i]);
+                int index = cloud->lookupIndexedStr(*a, s);
+                if (index == -1)
+                    index = cloud->registerIndexedStr(*a, s);
+                *(int *)cloud->dataWrite<int>(*a, p) = index;
+                }
                 break;
             case Partio::NONE :
                 break;

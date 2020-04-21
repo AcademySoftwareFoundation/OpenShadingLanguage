@@ -6,6 +6,10 @@
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/strutil.h>
 
+#ifdef OSL_USE_OPTIX
+#include <optix.h>
+#endif
+
 #include "oslexec_pvt.h"
 #include "backendllvm.h"
 
@@ -319,10 +323,20 @@ BackendLLVM::addCUDAVariable(const std::string& name, int size, int alignment,
         // Register the string with the OptiX renderer. The renderer will add
         // the string to a global table and create an OptiX variable to hold the
         // char*.
+#if (OPTIX_VERSION < 70000)
+        shadingsys().renderer()->register_string (((ustring*)data)->string(), name);
+
+        // Leave the variable uninitialized to prevent raw pointers from
+        // appearing in the generated code. The OptiX renderer will set the
+        // variable to the string address before the kernel is launched.
+        constant = llvm::ConstantInt::get (
+            llvm::Type::getInt64Ty (ll.module()->getContext()), 0);
+#else
+        // TODO:  don't perform variable assignment in generated PTX code
         int64_t addr = shadingsys().renderer()->register_string (((ustring*)data)->string(), name);
         constant = llvm::ConstantInt::get (
             llvm::Type::getInt64Ty (ll.module()->getContext()), addr);
-
+#endif
         m_varname_map [name] = ((ustring*)data)->string();
     }
     else {
@@ -344,9 +358,10 @@ BackendLLVM::addCUDAVariable(const std::string& name, int size, int alignment,
     g_var->setLinkage    (llvm::GlobalValue::ExternalLinkage);
     g_var->setVisibility (llvm::GlobalValue::DefaultVisibility);
     g_var->setInitializer(constant);
+#if (OPTIX_VERSION >= 70000)
     if (type == TypeDesc::TypeString)
         g_var->setConstant(true);
-
+#endif
     m_const_map[name] = g_var;
 
     return g_var;

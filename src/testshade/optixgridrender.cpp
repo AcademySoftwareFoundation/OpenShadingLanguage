@@ -255,7 +255,10 @@ OptixGridRenderer::synch_attributes ()
     uint64_t addr2 = register_string ("userdata string", "");
     m_optix_ctx["test_str_1"]->setUserData (sizeof(char*), &addr1);
     m_optix_ctx["test_str_2"]->setUserData (sizeof(char*), &addr2);
+
     {
+        const char* name = OSL_NAMESPACE_STRING "::pvt::s_color_system";
+
         char* colorSys = nullptr;
         long long cpuDataSizes[2] = {0,0};
         if (!shadingsys->getattribute("colorsystem", TypeDesc::PTR, (void*)&colorSys) ||
@@ -264,8 +267,6 @@ OptixGridRenderer::synch_attributes ()
             errhandler().error ("No colorsystem available.");
             return false;
         }
-
-        const char* name = OSL_NAMESPACE_STRING "::pvt::s_color_system";
 
         auto cpuDataSize = cpuDataSizes[0];
         auto numStrings = cpuDataSizes[1];

@@ -216,7 +216,7 @@ public:
 
 
 
-LLVM_Util::LLVM_Util ( int debuglevel)
+LLVM_Util::LLVM_Util (int debuglevel)
     : m_debug(debuglevel), m_thread(NULL),
       m_llvm_context(NULL), m_llvm_module(NULL),
       m_builder(NULL), m_llvm_jitmm(NULL),

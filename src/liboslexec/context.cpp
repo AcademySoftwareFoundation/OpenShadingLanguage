@@ -98,7 +98,7 @@ ShadingContext::execute_init (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
     if (heap_size_needed > m_heap.size()) {
         if (shadingsys().debug())
             infof("  ShadingContext %p growing heap to %d",
-                  this, heap_size_needed);
+                  static_cast<void*>(this), heap_size_needed);
         m_heap.resize (heap_size_needed);
     }
     // Zero out the heap memory we will be using

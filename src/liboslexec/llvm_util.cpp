@@ -8,16 +8,11 @@
 #include <OpenImageIO/thread.h>
 #include <boost/thread/tss.hpp>   /* for thread_specific_ptr */
 
-#ifdef OSL_USE_OPTIX
-#include <optix.h>
-#endif
-
 #include <OSL/oslconfig.h>
 #include <OSL/llvm_util.h>
 
 #if OSL_LLVM_VERSION < 70
 #error "LLVM minimum version required for OSL is 7.0"
-#include "oslexec_pvt.h"
 #endif
 
 #include <llvm/IR/Constants.h>

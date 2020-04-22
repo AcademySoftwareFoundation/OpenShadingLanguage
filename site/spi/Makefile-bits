@@ -266,7 +266,6 @@ ifeq (${SP_OS}, rhel7)
     Partio_VERSION ?= 1.10.3
     partio_ROOT ?= ${REZ_PACKAGE_ROOT}/partio/${Partio_VERSION}/${SPI_COMPILER_PLATFORM}/python-${PYTHON_VERSION}/boost-${BOOSTVERSSP}
     MY_CMAKE_FLAGS += -Dpartio_ROOT="${partio_ROOT}"
-    $(info -Dpartio_ROOT="${partio_ROOT}")
 
     # set up OSL distribution environment
     SPARCH=${SP_OS}-$(SPCOMP2_COMPILER)$(CPPSTDSUFFIX)-boost$(subst .,,$(BOOSTVERSSP))

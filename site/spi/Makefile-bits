@@ -263,8 +263,10 @@ ifeq (${SP_OS}, rhel7)
             -DOPENEXR_LIBRARY_DIR=/usr/lib64/OpenEXR2
     endif
 
-    Partio_ROOT := ${SPCOMP2_ROOT}/partio/rhel7-gcc48m64-boost155/v4
-    MY_CMAKE_FLAGS += -DPartio_ROOT="${Partio_ROOT}"
+    Partio_VERSION ?= 1.10.3
+    partio_ROOT ?= ${REZ_PACKAGE_ROOT}/partio/${Partio_VERSION}/${SPI_COMPILER_PLATFORM}/python-${PYTHON_VERSION}/boost-${BOOSTVERSSP}
+    MY_CMAKE_FLAGS += -Dpartio_ROOT="${partio_ROOT}"
+    $(info -Dpartio_ROOT="${partio_ROOT}")
 
     # set up OSL distribution environment
     SPARCH=${SP_OS}-$(SPCOMP2_COMPILER)$(CPPSTDSUFFIX)-boost$(subst .,,$(BOOSTVERSSP))
@@ -432,8 +434,8 @@ space:= $(empty) $(empty)
 #INSTALL_SPCOMP2_CURRENT = $(SPCOMP2_INSTALL_ROOT)/OSL/$(SPARCH)/v$(OSL_SPCOMP2_VERSION)
 #INSTALL_BIN_LOCATION = $(INSTALL_SPCOMP2_CURRENT)/bin
 
-SPCOMP2_RPATH_OPT ?= ${OpenImageIO_ROOT}/lib:${Partio_ROOT}/lib
-SPCOMP2_RPATH_DEBUG ?= ${OpenImageIO_ROOT}/lib:${Partio_ROOT}/lib/debug
+SPCOMP2_RPATH_OPT ?= ${OpenImageIO_ROOT}/lib:${partio_ROOT}/lib
+SPCOMP2_RPATH_DEBUG ?= ${OpenImageIO_ROOT}/lib:${partio_ROOT}/lib/debug
 #PYSPCOMP2_RPATH_OPT ?= ${SPCOMP2_RPATH_OPT}:${OSL_SPCOMP2_PATH}/lib:${PYTHON_LIBRARY_DIR}
 #PYSPCOMP2_RPATH_DEBUG ?= ${SPCOMP2_RPATH_DEBUG}:${OSL_SPCOMP2_PATH}/lib/debug:${PYTHON_LIBRARY_DIR}
 

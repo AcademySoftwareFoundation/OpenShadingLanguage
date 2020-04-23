@@ -1741,6 +1741,13 @@ public:
         record_error(ErrorHandler::EH_MESSAGE, Strutil::sprintf (fmt, args...));
     }
 
+    void reserve_heap(size_t size) {
+        if (size > m_heapsize) {
+            m_heap.reset((char *)OIIO::aligned_malloc(size, OIIO_CACHE_LINE_SIZE));
+            m_heapsize = size;
+        }
+    }
+
 private:
 
     void free_dict_resources ();
@@ -1750,7 +1757,9 @@ private:
     PerThreadInfo *m_threadinfo;        ///< Ptr to our thread's info
     mutable TextureSystem::Perthread *m_texture_thread_info; ///< Ptr to texture thread info
     ShaderGroup *m_group;               ///< Ptr to shader group
-    std::vector<char> m_heap;           ///< Heap memory
+    // Heap memory
+    std::unique_ptr<char, decltype(&OIIO::aligned_free)> m_heap { nullptr, &OIIO::aligned_free };
+    size_t m_heapsize = 0;
     typedef std::unordered_map<ustring, std::unique_ptr<regex>, ustringHash> RegexMap;
     RegexMap m_regex_map;               ///< Compiled regex's
     MessageList m_messages;             ///< Message blackboard

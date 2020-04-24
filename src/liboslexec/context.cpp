@@ -71,15 +71,10 @@ ShadingContext::execute_init (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
 
     // Allocate enough space on the heap
     size_t heap_size_needed = sgroup.llvm_groupdata_size();
-    if (heap_size_needed > m_heap.size()) {
-        if (shadingsys().debug())
-            infof("  ShadingContext %p growing heap to %d",
-                  static_cast<void*>(this), heap_size_needed);
-        m_heap.resize (heap_size_needed);
-    }
+    reserve_heap(heap_size_needed);
     // Zero out the heap memory we will be using
     if (shadingsys().m_clearmemory)
-        memset (&m_heap[0], 0, heap_size_needed);
+        memset (m_heap.get(), 0, heap_size_needed);
 
     // Set up closure storage
     m_closure_pool.clear();
@@ -100,7 +95,7 @@ ShadingContext::execute_init (ShaderGroup &sgroup, ShaderGlobals &ssg, bool run)
         ssg.context = this;
         ssg.renderer = renderer();
         ssg.Ci = NULL;
-        run_func (&ssg, &m_heap[0]);
+        run_func (&ssg, m_heap.get());
     }
 
     if (profile)
@@ -124,7 +119,7 @@ ShadingContext::execute_layer (ShaderGlobals &ssg, int layernumber)
     if (! run_func)
         return false;
 
-    run_func (&ssg, &m_heap[0]);
+    run_func (&ssg, m_heap.get());
 
     if (profile)
         m_ticks += timer.ticks();
@@ -257,9 +252,9 @@ ShadingContext::symbol_data (const Symbol &sym) const
     if (! sgroup.optimized())
         return NULL;   // can't retrieve symbol if we didn't optimize it
 
-    if (sym.dataoffset() >= 0 && (int)m_heap.size() > sym.dataoffset()) {
+    if (sym.dataoffset() >= 0 && (int)m_heapsize > sym.dataoffset()) {
         // lives on the heap
-        return &m_heap[sym.dataoffset()];
+        return m_heap.get() + sym.dataoffset();
     }
 
     // doesn't live on the heap

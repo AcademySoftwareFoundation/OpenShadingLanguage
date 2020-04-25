@@ -3,7 +3,22 @@
 # https://github.com/imageworks/OpenShadingLanguage
 
 name: CI
-on: [push, pull_request]
+
+on:
+  push:
+    # Skip jobs when only documentation files are changed
+    paths-ignore:
+      - '**.md'
+      - '**.rst'
+      - '**.tex'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - '**.rst'
+      - '**.tex'
+  schedule:
+    # Full nightly build
+    - cron: "0 4 * * *"
 
 
 jobs:
@@ -184,6 +199,7 @@ jobs:
       - name: all
         env:
           CXX: clang++
+          USE_CPP: 14
           PYTHON_VERSION: 3.7
           LLVM_BC_GENERATOR: /usr/bin/clang++
             # ^^ Force bitcode compiles to use the system clang compiler by

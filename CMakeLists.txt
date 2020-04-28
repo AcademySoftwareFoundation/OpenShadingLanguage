@@ -3,7 +3,7 @@
 # https://github.com/imageworks/OpenShadingLanguage
 
 cmake_minimum_required (VERSION 3.12)
-project (OSL VERSION 1.11.5.0
+project (OSL VERSION 1.11.6.0
          LANGUAGES CXX C
          HOMEPAGE_URL "https://github.com/imageworks/OpenShadingLanguage")
 set (PROJ_NAME ${PROJECT_NAME})    # short name

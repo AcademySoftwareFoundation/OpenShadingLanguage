@@ -91,6 +91,25 @@ foreach (COMPONENT clangFrontend clangDriver clangSerialization
 endforeach ()
 
 
+############ HACK ##############
+# On OSX, the Homebrew (and maybe any build) of LLVM 10.0 seems to have a
+# link conflict with its dependency on the llvm libc++ and the system
+# libc++, both can end up dynamically linked and lead to very subtle and
+# frustrating behavior failures (in particular, osl's use of libclang will
+# botch include file parsing any time LD_LIBRARY_PATH doesn't have the llvm
+# libc++ first).
+#
+# It seems that this is not a problem when linking against the llvm and
+# libclang libraries statically. So on apple and when LLVM 10+ are involved,
+# just force that choice. Other than larger execubales, it seems harmless,
+# and in any case a better choice than this beastly bug.
+#
+# We can periodically revisit this with new version of LLVM, maybe they will
+# fix things and we won't require this preemptive static linking.
+if (APPLE AND LLVM_VERSION VERSION_GREATER_EQUAL 10.0)
+    set (LLVM_STATIC ON)
+endif ()
+
 # shared llvm library may not be available, this is not an error if we use LLVM_STATIC.
 if ((LLVM_LIBRARY OR LLVM_LIBRARIES OR LLVM_STATIC) AND LLVM_INCLUDES AND LLVM_DIRECTORY AND LLVM_LIB_DIR)
   if (LLVM_STATIC)
@@ -100,8 +119,10 @@ if ((LLVM_LIBRARY OR LLVM_LIBRARIES OR LLVM_STATIC) AND LLVM_INCLUDES AND LLVM_D
     execute_process (COMMAND ${LLVM_CONFIG} --libfiles --link-static
                      OUTPUT_VARIABLE LLVM_LIBRARIES
                      OUTPUT_STRIP_TRAILING_WHITESPACE)
-    string (REPLACE " " ";" LLVM_LIBRARIES "${LLVM_LIBRARIES}")
-    set (LLVM_LIBRARY "")
+    if (LLVM_LIBRARIES)
+        string (REPLACE " " ";" LLVM_LIBRARIES "${LLVM_LIBRARIES}")
+        set (LLVM_LIBRARY "")
+    endif ()
   else ()
     set (LLVM_LIBRARIES "${LLVM_LIBRARY}")
   endif ()

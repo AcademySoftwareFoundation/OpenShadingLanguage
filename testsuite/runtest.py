@@ -147,7 +147,7 @@ def text_diff (fromfile, tofile, diff_file=None):
 
 
 def osl_app (app):
-    apath = os.path.join(OSL_BUILD_DIR, "src", app)
+    apath = os.path.join(OSL_BUILD_DIR, "bin")
     if (platform.system () == 'Windows'):
         # when we use Visual Studio, built applications are stored
         # in the app/$(OutDir)/ directory, e.g., Release or Debug.

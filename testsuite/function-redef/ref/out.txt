@@ -1,6 +1,6 @@
 test.osl:5: warning: Function 'point abs (point)' redefined in the same scope
   Previous definitions:
-    stdosl.h:102
+    stdosl.h:103
 test.osl:15: warning: Function 'int redclfunc (int)' redefined in the same scope
   Previous definitions:
     test.osl:14

@@ -29,6 +29,7 @@ static ustring u_nop    ("nop"),
                u_mul    ("mul"),
                u_sqrt   ("sqrt"),
                u_inversesqrt ("inversesqrt"),
+               u_cbrt   ("cbrt"),
                u_if     ("if"),
                u_eq     ("eq"),
                u_return ("return"),
@@ -1811,6 +1812,7 @@ AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (expm1  , OIIO::fast_expm1)
 AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (log    , OIIO::fast_log)
 AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (log10  , OIIO::fast_log10)
 AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (log2   , OIIO::fast_log2)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (cbrt   , OIIO::fast_cbrt)
 #else
 AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (cos    , cosf)
 AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (sin    , sinf)
@@ -1822,6 +1824,7 @@ AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (expm1  , expm1f)
 AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (log    , OIIO::safe_log)
 AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (log10  , OIIO::safe_log10)
 AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (log2   , OIIO::safe_log2)
+AUTO_DECLFOLDER_FLOAT_OR_TRIPLE (cbrt   , cbrtf)
 #endif
 
 DECLFOLDER(constfold_pow)
@@ -1883,6 +1886,11 @@ DECLFOLDER(constfold_pow)
         if (yval == -0.5f) {
             rop.turn_into_new_op (op, u_inversesqrt, resultarg, xarg, -1,
                                   "pow(x,-0.5) => inversesqrt(x)");
+            return 1;
+        }
+        if (yval == 1.0f / 3.0f)  {
+            rop.turn_into_new_op (op, u_cbrt, resultarg, xarg, -1,
+                                  "pow(x,1.0/3.0) => cbrt(x)");
             return 1;
         }
     }

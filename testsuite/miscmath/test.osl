@@ -27,6 +27,7 @@ test ()
         printf ("  sign (%g) = %g\n", a, sign(a));
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
+        printf ("  cbrt (%g) = %g\n", a, cbrt(a));
         printf ("  fmod (%g, %g) = %g\n", a, b, fmod(a, b));
         a = -137.59;
         b = 1.5*a;
@@ -38,6 +39,7 @@ test ()
         printf ("  sign (%g) = %g\n", a, sign(a));
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
+        printf ("  cbrt (%g) = %g\n", a, cbrt(a));
 
         i = 16;
         int j = 7;
@@ -62,6 +64,7 @@ test ()
         printf ("  sign (%g) = %g\n", a, sign(a));
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
+        printf ("  cbrt (%g) = %g\n", a, cbrt(a));
         printf ("  fmod (%g, %g) = %g\n", a, b, fmod(a, b));
         a = -137.59;
         b = 1.5*a;
@@ -73,6 +76,7 @@ test ()
         printf ("  sign (%g) = %g\n", a, sign(a));
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
+        printf ("  cbrt (%g) = %g\n", a, cbrt(a));
         printf ("  fmod (%g, %g) = %g\n", a, b, fmod(a, b));
         printf ("  mod (%g, %g) = %g\n", a, b, mod(a, b));
     }
@@ -89,6 +93,7 @@ test ()
         printf ("  sign (%g) = %g\n", a, sign(a));
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
+        printf ("  cbrt (%g) = %g\n", a, cbrt(a));
         printf ("  fmod (%g, %g) = %g\n", a, b, fmod(a, b));
         printf ("  mod (%g, %g) = %g\n", a, b, mod(a, b));
     }
@@ -104,6 +109,7 @@ test ()
         printf ("  sign (%g) = %g\n", a, sign(a));
         printf ("  sqrt (%g) = %g\n", a, sqrt(a));
         printf ("  inversesqrt (%g) = %g\n", a, inversesqrt(a));
+        printf ("  cbrt (%g) = %g\n", a, cbrt(a));
         printf ("  fmod (%g, %g) = %g\n", a, b, fmod(a, b));
         printf ("  mod (%g, %g) = %g\n", a, b, mod(a, b));
     }

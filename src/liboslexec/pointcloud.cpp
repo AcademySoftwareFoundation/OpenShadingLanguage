@@ -376,7 +376,7 @@ RendererServices::pointcloud_get (ShaderGlobals *sg,
                     (const Partio::ParticleIndex *)indices, true, (void*)strindices);
         const auto& strings = cloud->indexedStrs(*attr);
         int sicount = int(strings.size());
-        for (size_t i = 0; i < count; ++i) {
+        for (int i = 0; i < count; ++i) {
             int ind = strindices[i];
             if (ind >= 0 && ind < sicount)
                 ((ustring *)out_data)[i] = ustring(strings[ind]);

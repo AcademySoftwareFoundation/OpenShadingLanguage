@@ -260,6 +260,7 @@ DECL (osl_pow_dvdvf, "xXXf")
 
 UNARY_OP_IMPL(sqrt)
 UNARY_OP_IMPL(inversesqrt)
+UNARY_OP_IMPL(cbrt)
 
 DECL (osl_logb_ff, "ff")
 DECL (osl_logb_vv, "xXX")

@@ -97,6 +97,7 @@ PERCOMP1 (log10)
 PERCOMP1 (logb)
 PERCOMP1 (sqrt)
 PERCOMP1 (inversesqrt)
+PERCOMP1 (cbrt)
 float hypot (float a, float b) { return sqrt (a*a + b*b); }
 float hypot (float a, float b, float c) { return sqrt (a*a + b*b + c*c); }
 PERCOMP1 (abs)

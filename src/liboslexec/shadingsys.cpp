@@ -867,6 +867,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (blackbody,   blackbody,           none,          true,      0);
     OP (break,       loopmod_op,          none,          false,     0);
     OP (calculatenormal, calculatenormal, none,          true,      0);
+    OP (cbrt,        generic,             cbrt,          true,      0);
     OP (ceil,        generic,             ceil,          true,      0);
     OP (cellnoise,   noise,               noise,         true,      0);
     OP (clamp,       clamp,               clamp,         true,      0);

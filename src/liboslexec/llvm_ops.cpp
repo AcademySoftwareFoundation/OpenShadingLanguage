@@ -493,6 +493,7 @@ MAKE_BINARY_PERCOMPONENT_OP    (pow        , OIIO::fast_safe_pow  , fast_safe_po
 MAKE_BINARY_PERCOMPONENT_VF_OP (pow        , OIIO::fast_safe_pow  , fast_safe_pow)
 MAKE_UNARY_PERCOMPONENT_OP     (erf        , OIIO::fast_erf       , fast_erf)
 MAKE_UNARY_PERCOMPONENT_OP     (erfc       , OIIO::fast_erfc      , fast_erfc)
+MAKE_UNARY_PERCOMPONENT_OP     (cbrt       , OIIO::fast_cbrt      , fast_cbrt)
 #else
 MAKE_UNARY_PERCOMPONENT_OP     (log        , OIIO::safe_log       , safe_log)
 MAKE_UNARY_PERCOMPONENT_OP     (log2       , OIIO::safe_log2      , safe_log2)
@@ -504,6 +505,7 @@ MAKE_BINARY_PERCOMPONENT_OP    (pow        , OIIO::safe_pow       , safe_pow)
 MAKE_BINARY_PERCOMPONENT_VF_OP (pow        , OIIO::safe_pow       , safe_pow)
 MAKE_UNARY_PERCOMPONENT_OP     (erf        , erff                 , erf)
 MAKE_UNARY_PERCOMPONENT_OP     (erfc       , erfcf                , erfc)
+MAKE_UNARY_PERCOMPONENT_OP     (cbrt       , cbrtf                , cbrt)
 #endif
 
 MAKE_UNARY_PERCOMPONENT_OP     (sqrt       , OIIO::safe_sqrt      , sqrt)

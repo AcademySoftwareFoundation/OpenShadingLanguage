@@ -1237,13 +1237,13 @@ OSL_HOSTDEVICE OSL_FORCEINLINE Dual<T,P> inversesqrt (const Dual<T,P> &a)
     return result;
 }
 
-// f(x) = cbrt(x), f'(x) = -1/(3*x^(2/3))
+// f(x) = cbrt(x), f'(x) = 1/(3*x^(2/3))
 template<class T, int P>
 OSL_HOSTDEVICE OSL_FORCEINLINE Dual<T,P> cbrt (const Dual<T,P> &a)
 {
     if (OSL_LIKELY(a.val() != T(0))) {
         T f = std::cbrt(a.val());
-        T df = T(-1) / (T(3) * f * f);
+        T df = T(1) / (T(3) * f * f);
         return dualfunc(a, f, df);
     }
     return Dual<T,P> (T(0));
@@ -1254,7 +1254,7 @@ OSL_HOSTDEVICE OSL_FORCEINLINE Dual<T,P> fast_cbrt (const Dual<T,P> &a)
 {
     if (OSL_LIKELY(a.val() != T(0))) {
         T f = OIIO::fast_cbrt(float(a.val())); // float version!
-        T df = T(-1) / (T(3) * f * f);
+        T df = T(1) / (T(3) * f * f);
         return dualfunc(a, f, df);
     }
     return Dual<T,P> (T(0));

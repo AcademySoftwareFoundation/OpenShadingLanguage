@@ -1,0 +1,62 @@
+Compiled test.osl -> test.oso
+Executing...
+../common/textures/grid.tx resolution: 1024 1024 (1)
+../common/textures/grid.tx channels: 4 (1)
+../common/textures/grid.tx texturetype: Plain Texture (1)
+../common/textures/grid.tx textureformat: Plain Texture (1)
+../common/textures/grid.tx datawindow: 0 0 1023 1023 (1)
+../common/textures/grid.tx displaywindow: 0 0 1023 1023 (1)
+../common/textures/grid.tx datetime: 2014:11:29 23:20:23 (1)
+../common/textures/grid.tx averagecolor: 0.608983 0.608434 0.608728
+../common/textures/grid.tx averagealpha: 1
+../common/textures/grid.tx unknown constantcolor
+../common/textures/grid.tx unknown constantalpha
+../common/textures/grid.tx foobar: not found (0)
+ERROR: Shader error [test]: Image "badfile" does not exist. Also, it is not the name of an image format that OpenImageIO recognizes.
+
+Invalid image file "badfile": Image "badfile" does not exist. Also, it is not the name of an image format that OpenImageIO recognizes.
+
+badfile data: not found (0)
+../common/textures/grid.tx exists? 1 (return 1)
+badfile3 exists? 0 (return 1)
+
+Executing...
+win.exr resolution: 100 50 (1)
+win.exr channels: 3 (1)
+win.exr texturetype: Plain Texture (1)
+win.exr textureformat: Plain Texture (1)
+win.exr datawindow: 10 20 109 69 (1)
+win.exr displaywindow: 0 0 299 199 (1)
+win.exr averagecolor: 0 0 0
+win.exr unknown averagealpha
+win.exr unknown constantcolor
+win.exr unknown constantalpha
+win.exr foobar: not found (0)
+ERROR: Shader error [test]: Image "badfile" does not exist. Also, it is not the name of an image format that OpenImageIO recognizes.
+
+Invalid image file "badfile": Image "badfile" does not exist. Also, it is not the name of an image format that OpenImageIO recognizes.
+
+badfile data: not found (0)
+win.exr exists? 1 (return 1)
+badfile3 exists? 0 (return 1)
+
+Executing...
+green.tx resolution: 128 128 (1)
+green.tx channels: 4 (1)
+green.tx texturetype: Plain Texture (1)
+green.tx textureformat: Plain Texture (1)
+green.tx datawindow: 0 0 127 127 (1)
+green.tx displaywindow: 0 0 127 127 (1)
+green.tx averagecolor: 0.101961 0.501961 0.101961
+green.tx averagealpha: 1
+green.tx constantcolor: 0.101961 0.501961 0.101961
+green.tx constantalpha: 1
+green.tx foobar: not found (0)
+ERROR: Shader error [test]: Image "badfile" does not exist. Also, it is not the name of an image format that OpenImageIO recognizes.
+
+Invalid image file "badfile": Image "badfile" does not exist. Also, it is not the name of an image format that OpenImageIO recognizes.
+
+badfile data: not found (0)
+green.tx exists? 1 (return 1)
+badfile3 exists? 0 (return 1)
+

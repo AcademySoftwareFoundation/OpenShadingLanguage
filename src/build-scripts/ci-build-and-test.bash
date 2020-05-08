@@ -16,37 +16,32 @@ if [[ -e src/build-scripts/ci-setenv.bash ]] ; then
     source src/build-scripts/ci-setenv.bash
 fi
 
-if [[ ! -e build/$PLATFORM ]] ; then
-    mkdir -p build/$PLATFORM
+mkdir -p build/$PLATFORM dist/$PLATFORM && true
+
+if [[ "$USE_SIMD" != "" ]] ; then
+    MY_CMAKE_FLAGS="$MY_CMAKE_FLAGS -DUSE_SIMD=$USE_SIMD"
 fi
-if [[ ! -e dist/$PLATFORM ]] ; then
-    mkdir -p dist/$PLATFORM
+if [[ "$DEBUG" == "1" ]] ; then
+    MY_CMAKE_FLAGS="$MY_CMAKE_FLAGS -DCMAKE_BUILD_TYPE=Debug"
 fi
 
-if [[ "$ARCH" == "windows64" ]] ; then
-    pushd build/$PLATFORM
-    cmake ../.. -G "$CMAKE_GENERATOR" \
-        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} \
+pushd build/$PLATFORM
+cmake ../.. -G "$CMAKE_GENERATOR" \
+        -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" \
         -DCMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH" \
         -DCMAKE_INSTALL_PREFIX="$OSL_ROOT" \
         -DPYTHON_VERSION="$PYTHON_VERSION" \
+        -DCMAKE_INSTALL_LIBDIR="$OSL_ROOT/lib" \
+        -DCMAKE_CXX_STANDARD="$CMAKE_CXX_STANDARD" \
         $MY_CMAKE_FLAGS -DVERBOSE=1
-    echo "Parallel build $CMAKE_BUILD_PARALLEL_LEVEL"
-    export VERBOSE=1
-    time cmake --build . --target install --config ${CMAKE_BUILD_TYPE}
-    popd
-else
-    make $MAKEFLAGS VERBOSE=1 $BUILD_FLAGS config
-    make $MAKEFLAGS $PAR_MAKEFLAGS $BUILD_FLAGS $BUILDTARGET
-fi
-
-if [[ -e ./build/$PLATFORM/src/include/export.h ]] ; then
-    echo "export.h is:"
-    cat ./build/$PLATFORM/src/include/export.h
-fi
+time cmake --build . --target install --config ${CMAKE_BUILD_TYPE}
+popd
+#make $MAKEFLAGS VERBOSE=1 $BUILD_FLAGS config
+#make $MAKEFLAGS $PAR_MAKEFLAGS $BUILD_FLAGS $BUILDTARGET
 
 if [[ "$SKIP_TESTS" == "" ]] ; then
     $OSL_ROOT/bin/testshade --help
+    export OIIO_LIBRARY_PATH=$OSL_ROOT/lib:$OIIO_LIBRARY_PATH
     make $BUILD_FLAGS test
 fi
 
@@ -59,6 +54,6 @@ if [[ "$BUILDTARGET" == clang-format ]] ; then
     fi
 fi
 
-if [[ "$CODECOV" == 1 ]] ; then
-    bash <(curl -s https://codecov.io/bash)
-fi
+#if [[ "$CODECOV" == 1 ]] ; then
+#    bash <(curl -s https://codecov.io/bash)
+#fi

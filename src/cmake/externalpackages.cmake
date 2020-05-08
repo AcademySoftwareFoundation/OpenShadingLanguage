@@ -244,7 +244,7 @@ if (LLVM_NAMESPACE)
 endif ()
 if (LLVM_VERSION VERSION_GREATER_EQUAL 10.0.0 AND
     CMAKE_CXX_STANDARD VERSION_LESS 14)
-    message (FATAL_ERROR "LLVM 10+ requires C++14 or higher.")
+    message (FATAL_ERROR "LLVM 10+ requires C++14 or higher (was ${CMAKE_CXX_STANDARD}).")
 endif ()
 
 checked_find_package (partio)

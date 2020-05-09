@@ -25,8 +25,8 @@ This is a checklist for TSC's to review as part of the intake process. The TSC s
   - [X] Source Control ( https://github.com/imageworks/OpenShadingLanguage )	
 	- [X] Issue/feature tracker ( https://github.com/imageworks/OpenShadingLanguage/issues )
   - Collaboration tools 
-    - [X] Mailing lists ( http://groups.google.com/group/osl-dev )
-      - [ ] Move to groups.io ( create [issue on foundation repo](https://github.com/AcademySoftwareFoundation/foundation/issues/new ) to setup/transfer
+    - [X] Mailing lists (old: http://groups.google.com/group/osl-dev )
+      - [X] Move to groups.io ( create [issue on foundation repo](https://github.com/AcademySoftwareFoundation/foundation/issues/new ) to setup/transfer
     - [X] Slack or IRC ( #openshadinglanguage )
   - [ ] CI/build environment
     - Already using GitHub Actions CI

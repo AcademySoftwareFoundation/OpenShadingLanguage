@@ -48,8 +48,7 @@ Typical activities of a Committer include:
 * Helping users and novice contributors.
 
 * Ensuring a response to questions posted to the
-  [osl-dev developer mail list](http://groups.google.com/group/osl-dev)
-  (to eventually become osl-dev@lists.aswf.io).
+  [osl-dev developer mail list](https://lists.aswf.io/g/osl-dev)
 
 * Contributing code and documentation changes that improve the project.
 

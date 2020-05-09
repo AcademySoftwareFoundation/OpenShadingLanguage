@@ -15,7 +15,7 @@ Mail List
 
 Contributors should be reading the osl-dev mail list:
 
-* [osl-dev](http://groups.google.com/group/osl-dev)
+* [osl-dev](https://lists.aswf.io/g/osl-dev)
 
 You can sign up for the mail list on your own using the link above.
 
@@ -28,7 +28,7 @@ https://github.com/imageworks/OpenShadingLanguage/issues
 
 **If you are merely asking a question ("how do I...")**, please do not file an
 issue, but instead ask the question on the [OSL developer mail
-list](http://groups.google.com/group/osl-dev).
+list](https://lists.aswf.io/g/osl-dev).
 
 If you are submitting a bug report, please be sure to note which version of
 OSL you are using, on what platform (OS/version, which compiler you used,

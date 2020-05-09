@@ -374,7 +374,7 @@ Contact & reporting problems
 
 Simple "how do I...", "I'm having trouble", or "is this a bug" questions are
 best asked on the [osl-dev developer mail
-list](http://groups.google.com/group/osl-dev).
+list](https://lists.aswf.io/g/osl-dev).
 That's where the most people will see it and potentially be able to answer
 your question quickly (moreso than a GH "issue").
 
@@ -402,7 +402,7 @@ Contacts, Links, and References
 
 [OSL GitHub page](https://github.com/imageworks/OpenShadingLanguage)
 
-[Read or subscribe to the OSL development mail list](http://groups.google.com/group/osl-dev)
+[Read or subscribe to the OSL development mail list](https://lists.aswf.io/g/osl-dev)
 
 Email the lead architect:  lg AT imageworks DOT com
 

@@ -1,5 +1,5 @@
 <!--
-Please ask questions ("how do I...?" "why doesn't this work?") on the [osl-dev mail list](http://groups.google.com/group/osl-dev), not by filing issues.
+Please ask questions ("how do I...?" "why doesn't this work?") on the [osl-dev mail list](https://lists.aswf.io/g/osl-dev), not by filing issues.
 
 Make concrete suggestions for fixing the code ("here is a patch") by filing
 a pull request, not an issue.

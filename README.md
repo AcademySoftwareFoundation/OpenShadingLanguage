@@ -8,6 +8,7 @@ Open Shading Language
 
 Build status:
 
+[![License](https://img.shields.io/badge/license-BSD%203--Clause-blue.svg?style=flat-square)](https://github.com/imageworks/OpenShadingLanguage)
 [![Build Status](https://travis-ci.org/imageworks/OpenShadingLanguage.svg?branch=master)](https://travis-ci.org/imageworks/OpenShadingLanguage)
 [![Appveyor status](https://ci.appveyor.com/api/projects/status/github/imageworks/openshadinglanguage?svg=true&branch=master)](https://ci.appveyor.com/project/lgritz/openshadinglanguage)
 
@@ -46,9 +47,9 @@ renderers used for high-end VFX and animation work. For a full list of films
 and products, see the [filmography](#where-osl-has-been-used).
 
 The OSL code is distributed under the
-["New BSD" license](https://github.com/imageworks/OpenShadingLanguage/blob/master/LICENSE),
-and the documentation under the [Creative Commons Attribution 3.0 Unported
-License](http://creativecommons.org/licenses/by/3.0/).  In short, you are
+["New/3-clause BSD" license](https://github.com/imageworks/OpenShadingLanguage),
+and the documentation under the [Creative Commons Attribution 4.0 International
+License](https://creativecommons.org/licenses/by/4.0/).  In short, you are
 free to use OSL in your own applications, whether they are free or
 commercial, open or proprietary, as well as to modify the OSL code and
 documentation as you desire, provided that you retain the original copyright
@@ -331,27 +332,77 @@ Films using OSL (grouped by year of release date):
   Bohemian Rhapsody,
   Holmes and Watson,
   Spider-Man: Into the Spider-Verse
-* **(2019 / upcoming)**
+* **(2019)**
   The Kid Who Would Be King,
   Alita: Battle Angel,
   Lego Movie 2,
   Lucky 13,
   Captain Marvel,
+  Triple Frontier,
   Avengers: Endgame,
   Pokémon Detective Pikachu,
   Godzilla: King of Monsters,
   Rim of the World,
+  John Wick 3 Parabellum,
   Men in Black International,
   Toy Story 4,
   Spider-Man: Far From Home,
+  Hobbs & Shaw,
+  Angry Birds 2,
+  Secret Life of Pets,
+  The Mandalorian,
+  The Dark Crystal: Age of Resistance,
+  The King,
+  Jumanji: The Next Level,
+  Richard Jewell,
+  Game of Thrones,
+  Lost in Space,
+* **(2020 / upcoming)**
   ...
 
 
-Building OSL
+Building and Installation
+-------------------------
+
+Please read the [INSTALL.md](INSTALL.md) file for detailed instructions on
+how to build and install OSL.
+
+
+Documentation
+-------------
+
+The OSL language specification can be found at
+[src/doc/osl-languagespec.pdf](src/doc/osl-languagespec.pdf) (in a source
+distribution) or in the share/doc/OSL/osl-languagespec.pdf file of an
+installed binary distribution.
+
+
+Contact & reporting problems
+----------------------------
+
+Simple "how do I...", "I'm having trouble", or "is this a bug" questions are
+best asked on the [osl-dev developer mail
+list](https://lists.aswf.io/g/osl-dev).
+That's where the most people will see it and potentially be able to answer
+your question quickly (moreso than a GH "issue").
+
+Bugs, build problems, and discovered vulnerabilities that you are relatively
+certain is a legit problem in the code, and for which you can give clear
+instructions for how to reproduce, should be [reported as
+issues](https://github.com/imageworks/OpenShadingLanguage/issues).
+
+If confidentiality precludes a public question or issue, you may contact the
+project administrator privately at [lg@imageworks.com](lg@imageworks.com),
+including for security-related issues.
+
+
+Contributing
 ------------
 
-Please see the [INSTALL.md](INSTALL.md) file in the OSL distribution for
-instructions for building the OSL source code.
+OSL welcomes code contributions, and nearly 50 people
+have done so over the years. We take code contributions via the usual GitHub
+pull request (PR) mechanism. Please see [CONTRIBUTING](CONTRIBUTING.md) for
+detailed instructions.
 
 
 Contacts, Links, and References
@@ -359,7 +410,7 @@ Contacts, Links, and References
 
 [OSL GitHub page](https://github.com/imageworks/OpenShadingLanguage)
 
-[Read or subscribe to the OSL development mail list](http://groups.google.com/group/osl-dev)
+[Read or subscribe to the OSL development mail list](https://lists.aswf.io/g/osl-dev)
 
 Email the lead architect:  lg AT imageworks DOT com
 
@@ -389,8 +440,9 @@ Final, Henri Fousse, Syoyo Fujita, Tim Grant, Derek Haase, Sven-Hendrik
 Haase, John Haddon, Daniel Heckenberg, Matt Johnson, Ronan Keryell, Elvic
 Liang, Max Liani, Bastien Montagne, Alexis Oblet, Erich Ocean, Mikko
 Ohtamaa, Alex Schworer, Jonathan Scruggs, Sergey Sharybin, Stephan
-Steinbach, Esteban Tovagliari, Alexander von Knorring, Roman Zulak. (Listed
-alphabetically; if we've left anybody out, please let us know.)
+Steinbach, Esteban Tovagliari, Alexander von Knorring, Alex Wells, Roman
+Zulak. (Listed alphabetically; if we've left anybody out, please let us
+know.)
 
 We cannot possibly express sufficient gratitude to the managers at Sony
 Pictures Imageworks who allowed this project to proceed, supported it

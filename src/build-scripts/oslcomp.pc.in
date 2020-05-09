@@ -6,6 +6,6 @@ includedir=${prefix}/include
 Name: oslcomp
 Description: oslcomp Compile OSL shaders from source
 URL: https://github.com/imageworks/OpenShadingLanguage
-Version: @PACKAGE_VERSION_MAJOR@.@PACKAGE_VERSION_MINOR@.@PACKAGE_VERSION_PATCH@
+Version: @PROJECT_VERSION_MAJOR@.@PROJECT_VERSION_MINOR@.@PROJECT_VERSION_PATCH@
 Libs: -L${libdir} -loslcomp
 Cflags: -I${includedir}

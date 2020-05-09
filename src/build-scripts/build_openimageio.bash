@@ -29,21 +29,25 @@ pushd $OPENIMAGEIO_SRCDIR
 git fetch --all -p
 git checkout $OPENIMAGEIO_BRANCH --force
 
-if [[ "$ARCH" == "windows64" ]] ; then
-    pushd ${OPENIMAGEIO_BUILD_DIR}
-    cmake ../.. -G "$CMAKE_GENERATOR" \
-        -DCMAKE_BUILD_TYPE=${OPENIMAGEIO_BUILD_TYPE} \
-        -DCMAKE_INSTALL_PREFIX="$OPENIMAGEIO_INSTALLDIR" \
-        -DPYTHON_VERSION="$PYTHON_VERSION" \
-        $OPENIMAGEIO_CMAKE_FLAGS -DVERBOSE=1
-    echo "Parallel build $CMAKE_BUILD_PARALLEL_LEVEL"
-    time cmake --build . --target install --config ${OPENIMAGEIO_BUILD_TYPE}
-    popd
-    uname -a
-else
-    make nuke
-    make $OPENIMAGEIO_MAKEFLAGS $PAR_MAKEFLAGS $BUILD_FLAGS
+if [[ "$USE_SIMD" != "" ]] ; then
+    OPENIMAGEIO_CMAKE_FLAGS="$OPENIMAGEIO_CMAKE_FLAGS -DUSE_SIMD=$USE_SIMD"
 fi
+if [[ "$DEBUG" == "1" ]] ; then
+    OPENIMAGEIO_CMAKE_FLAGS="$OPENIMAGEIO_CMAKE_FLAGS -DCMAKE_BUILD_TYPE=Debug"
+fi
+
+# if [[ "$ARCH" == "windows64" ]] ; then
+pushd ${OPENIMAGEIO_BUILD_DIR}
+cmake ../.. -G "$CMAKE_GENERATOR" \
+    -DCMAKE_BUILD_TYPE="$OPENIMAGEIO_BUILD_TYPE" \
+    -DCMAKE_INSTALL_PREFIX="$OPENIMAGEIO_INSTALLDIR" \
+    -DPYTHON_VERSION="$PYTHON_VERSION" \
+    -DCMAKE_INSTALL_LIBDIR="$OPENIMAGEIO_INSTALLDIR/lib" \
+    -DCMAKE_CXX_STANDARD="$CMAKE_CXX_STANDARD" \
+    $OPENIMAGEIO_CMAKE_FLAGS -DVERBOSE=1
+echo "Parallel build $CMAKE_BUILD_PARALLEL_LEVEL"
+time cmake --build . --target install --config ${OPENIMAGEIO_BUILD_TYPE}
+popd
 
 popd
 

@@ -31,7 +31,7 @@ This is a checklist for TSC's to review as part of the intake process. The TSC s
   - [ ] CI/build environment
     - Already using GitHub Actions CI
     - [ ] Needs work on Windows
-    - [ ] Needs to use ASWF docker images for more complete VFXPlatform coverage
+    - [X] Needs to use ASWF docker images for more complete VFXPlatform coverage
     - [ ] Longer term: needs GPU tests
 - Project assets
   - [X] Domain name

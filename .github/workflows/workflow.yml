@@ -22,107 +22,75 @@ on:
 
 
 jobs:
-  linux-2018:
-    name: "Linux VFX 2018-ish: gcc6, C++11, llvm7, OIIO 2.0, sse2, exr2.3"
-    runs-on: ubuntu-18.04
+  vfxplatform-2019:
+    name: "Linux VFXP-2019: gcc6 C++11 llvm7 py2.7 boost-1.66 exr-2.3 OIIO-2.0 sse2"
+    runs-on: ubuntu-latest
+    container:
+      image: aswftesting/ci-osl:2019
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: all
         env:
-          CXX: g++-6
-          USE_CPP: 11
+          CXX: g++
+          CC: gcc
           CMAKE_CXX_STANDARD: 11
-          LLVM_VERSION: 7.0.1
-          OPENEXR_VERSION: 2.3.0
-          OPENIMAGEIO_BRANCH: RB-2.0
-          USE_SIMD: sse2
+          PYTHON_VERSION: 2.7
         run: |
             source src/build-scripts/ci-startup.bash
-            source src/build-scripts/gh-installdeps.bash
+            source src/build-scripts/gh-installdeps-centos.bash
             source src/build-scripts/ci-build-and-test.bash
 
-  linux-2019:
-    name: "Linux VFX 2019-ish: gcc6, C++14, llvm8, OIIO 2.1, sse4, exr2.3"
-    runs-on: ubuntu-18.04
+  vfxplatform-2020:
+    name: "Linux VFXP-2020 gcc6/C++14 llvm7 py3.7 boost-1.70 exr-2.4 OIIO-2.1 sse4"
+    runs-on: ubuntu-latest
+    container:
+      image: aswftesting/ci-osl:2020
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: all
         env:
-          CXX: g++-6
-          USE_CPP: 14
+          CXX: g++
+          CC: gcc
           CMAKE_CXX_STANDARD: 14
-          LLVM_VERSION: 8.0.0
-          OPENEXR_VERSION: 2.3.0
-          OPENIMAGEIO_BRANCH: RB-2.1
+          PYTHON_VERSION: 3.7
           USE_SIMD: sse4.2
         run: |
             source src/build-scripts/ci-startup.bash
-            source src/build-scripts/gh-installdeps.bash
+            source src/build-scripts/gh-installdeps-centos.bash
             source src/build-scripts/ci-build-and-test.bash
 
-#  linux-debug-gcc7:
-#    name: "Linux debug, gcc7, C++14, avx, exr2.3"
-#    runs-on: ubuntu-18.04
-#    steps:
-#      - uses: actions/checkout@v1
-#      - name: all
-#        env:
-#          CXX: g++-7
-#          CMAKE_CXX_STANDARD: 14
-#          USE_SIMD: avx
-#          DEBUG: 1
-#        run: |
-#            source src/build-scripts/ci-startup.bash
-#            source src/build-scripts/gh-installdeps.bash
-#            source src/build-scripts/ci-build-and-test.bash
-#
-#  linux-gcc8-llvm8:
-#    name: "Linux next: gcc8, C++14, avx2, exr2.4"
-#    runs-on: ubuntu-18.04
-#    steps:
-#      - uses: actions/checkout@v1
-#      - name: all
-#        env:
-#          CXX: g++-8
-#          CMAKE_CXX_STANDARD: 14
-#          USE_SIMD: avx2,f16c
-#        run: |
-#            source src/build-scripts/ci-startup.bash
-#            source src/build-scripts/gh-installdeps.bash
-#            source src/build-scripts/ci-build-and-test.bash
-
-
-  linux-2020ish-gcc8-llvm9:
-    name: "Linux gcc8, C++14, llvm9, oiio master, avx2, exr2.4"
+  linux-debug-gcc7-llvm8:
+    name: "Linux Debug gcc7, C++14, llvm8, OIIO master, sse4, exr2.4"
     runs-on: ubuntu-18.04
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: all
         env:
-          CXX: g++-8
+          CXX: g++-7
           USE_CPP: 14
           CMAKE_CXX_STANDARD: 14
-          LLVM_VERSION: 9.0.0
-          USE_SIMD: avx2,f16c
+          LLVM_VERSION: 8.0.0
           OPENEXR_VERSION: 2.4.0
           OPENIMAGEIO_BRANCH: master
+          USE_SIMD: sse4.2
+          MY_CMAKE_FLAGS: -DCMAKE_BUILD_TYPE=Debug
         run: |
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/gh-installdeps.bash
             source src/build-scripts/ci-build-and-test.bash
 
   linux-2020ish-clang9-llvm9:
-    name: "Linux clang9, C++14, llvm9, oiio master, avx2, exr2.4"
+    name: "Linux clang9, C++14, llvm9, oiio master, avx, exr2.4, avx"
     runs-on: ubuntu-18.04
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: all
         env:
           CXX: clang++
           USE_CPP: 14
           CMAKE_CXX_STANDARD: 14
           LLVM_VERSION: 9.0.0
-          USE_SIMD: avx2,f16c
+          USE_SIMD: avx
           OPENEXR_VERSION: 2.4.0
           OPENIMAGEIO_BRANCH: master
         run: |
@@ -130,29 +98,29 @@ jobs:
             source src/build-scripts/gh-installdeps.bash
             source src/build-scripts/ci-build-and-test.bash
 
-  linux-2021ish-gcc8-llvm9:
-    name: "Linux gcc8, C++17, llvm10, oiio master, avx2, exr2.4"
+  linux-2021ish-gcc8-llvm10:
+    name: "Linux gcc8, C++17, llvm10, oiio master, avx2, exr2.5, avx2"
     runs-on: ubuntu-18.04
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: all
         env:
           CXX: g++-8
           CMAKE_CXX_STANDARD: 17
           LLVM_VERSION: 10.0.0
           USE_SIMD: avx2,f16c
-          OPENEXR_VERSION: 2.4.0
+          OPENEXR_VERSION: 2.5.0
           OPENIMAGEIO_BRANCH: master
         run: |
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/gh-installdeps.bash
             source src/build-scripts/ci-build-and-test.bash
 
-  linux-bleeding:
-    name: "Linux bleeding edge: gcc8, C++17, llvm10, oiio master, avx2, exr2.4"
+  linux-bleeding-edge:
+    name: "Linux bleeding edge: gcc8, C++17, llvm10, oiio/exr/pybind-master, avx2"
     runs-on: ubuntu-18.04
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: all
         env:
           CXX: g++-8
@@ -160,8 +128,10 @@ jobs:
           CMAKE_CXX_STANDARD: 17
           LLVM_VERSION: 10.0.0
           USE_SIMD: avx2,f16c
-          OPENEXR_VERSION: 2.4.0
+          OPENEXR_BRANCH: master
           OPENIMAGEIO_BRANCH: master
+          OCIO_BRANCH: master
+          PYBIND11_BRANCH: master
           OSL_BUILD_MATERIALX: 1
         run: |
             source src/build-scripts/ci-startup.bash
@@ -169,39 +139,37 @@ jobs:
             source src/build-scripts/ci-build-and-test.bash
 
   linux-oldest:
-    name: "Linux oldest everything: gcc6, C++11, llvm7, oiio 2.0, no simd, exr2.3"
-    # Unfortunately, this isn't the oldest of everything we support, but
-    # rather, the oldest of everything we can easily get on GH CI.
-    # Should be gcc 4.8 if we can figure out how to make that work.
-    # Should be llvm 6, but precompiled binaries for ubuntu 18 are llvm 7+.
-    runs-on: ubuntu-18.04
+    name: "Linux oldest everything: gcc6 C++11 llvm7 py2.7 boost-1.66 oiio-2.0 no-simd exr2.3"
+    runs-on: ubuntu-latest
+    container:
+      image: aswftesting/ci-osl:2019
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: all
         env:
-          CXX: g++-6
-          USE_CPP: 11
+          CXX: g++
+          CC: gcc
           CMAKE_CXX_STANDARD: 11
-          LLVM_VERSION: 7.0.1
+          PYTHON_VERSION: 2.7
           USE_SIMD: 0
-          OPENEXR_VERSION: 2.3.0
-          OPENIMAGEIO_BRANCH: RB-2.0
         run: |
             source src/build-scripts/ci-startup.bash
-            source src/build-scripts/gh-installdeps.bash
+            source src/build-scripts/gh-installdeps-centos.bash
             source src/build-scripts/ci-build-and-test.bash
 
   macos-py37:
     name: "Mac py37"
     runs-on: macOS-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: all
         env:
           CXX: clang++
           USE_CPP: 14
+          CMAKE_CXX_STANDARD: 14
           PYTHON_VERSION: 3.7
           LLVM_BC_GENERATOR: /usr/bin/clang++
+          MY_CMAKE_FLAGS: -DLLVM_BC_GENERATOR=/usr/bin/clang++
             # ^^ Force bitcode compiles to use the system clang compiler by
             # preemptively telling it the LLVM_BC_GENERATOR, to avoid some
             # library mismatches we tend to see on GH CI's Mac images.
@@ -216,7 +184,7 @@ jobs:
   #   name: "Windows"
   #   runs-on: windows-2019
   #   steps:
-  #     - uses: actions/checkout@v1
+  #     - uses: actions/checkout@v2
   #     - name: Setup Nuget.exe
   #       uses: warrenbuckley/Setup-Nuget@v1
   #     - name: all
@@ -235,7 +203,7 @@ jobs:
   #   runs-on: ubuntu-18.04
   #   if: github.event_name == 'pull_request' || contains(github.ref, 'san') || contains(github.ref, 'RB') || contains(github.ref, 'release') || contains(github.ref, 'master') || contains(github.ref, 'gh')
   #   steps:
-  #     - uses: actions/checkout@v1
+  #     - uses: actions/checkout@v2
   #     #- uses: docker://aswfstaging/ci-base:2019
   #     - name: all
   #       env:
@@ -252,7 +220,7 @@ jobs:
   #   name: "Linux static libs: gcc7, C++14, exr2.3"
   #   runs-on: ubuntu-18.04
   #   steps:
-  #     - uses: actions/checkout@v1
+  #     - uses: actions/checkout@v2
   #     #- uses: docker://aswfstaging/ci-base:2019
   #     - name: all
   #       env:
@@ -269,7 +237,7 @@ jobs:
   #   name: "clang-format verification"
   #   runs-on: macOS-latest
   #   steps:
-  #     - uses: actions/checkout@v1
+  #     - uses: actions/checkout@v2
   #     - name: all
   #       env:
   #         CXX: clang++

@@ -592,7 +592,6 @@ OSLCompilerImpl::write_dependency_file (string_view filename)
         target = m_output_filename.size()
                ? m_output_filename
                : OIIO::Filesystem::replace_extension(filename, ".oso");
-    OIIO::debugf("Writing '%s' deps to '%s'\n", target, m_deps_filename);
     FILE* depfile = (m_deps_filename == "stdout" ? stdout
                      : OIIO::Filesystem::fopen (m_deps_filename, "w"));
     if (depfile) {

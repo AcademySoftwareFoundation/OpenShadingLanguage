@@ -1,6 +1,8 @@
-Release 1.10.10 -- 2 Apr 2020 (compared to 1.10.9)
+Release 1.10.10 -- 9 May 2020 (compared to 1.10.9)
 --------------------------------------------------
-* Support for building against LLVM 10.0. #1128
+* Support for building against LLVM 10.0. #1128 #1162
+  Note that LLVM 10 can only be used if you are building OSL with C++14
+  or newer.
 * Change default of `OSL_BUILD_MATERIALX` to OFF. This will probably be
   deprecated entirely for 1.11's (or 2.0's) final release. But in the mean
   time, we have drifted out of sync with MX, which has their own copies of

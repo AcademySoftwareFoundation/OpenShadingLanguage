@@ -26,7 +26,7 @@ jobs:
     name: "Linux VFXP-2019: gcc6 C++11 llvm7 py2.7 boost-1.66 exr-2.3 OIIO-2.0 sse2"
     runs-on: ubuntu-latest
     container:
-      image: aswftesting/ci-osl:2019
+      image: aswf/ci-osl:2019
     steps:
       - uses: actions/checkout@v2
       - name: all
@@ -44,7 +44,7 @@ jobs:
     name: "Linux VFXP-2020 gcc6/C++14 llvm7 py3.7 boost-1.70 exr-2.4 OIIO-2.1 sse4"
     runs-on: ubuntu-latest
     container:
-      image: aswftesting/ci-osl:2020
+      image: aswf/ci-osl:2020
     steps:
       - uses: actions/checkout@v2
       - name: all
@@ -142,7 +142,7 @@ jobs:
     name: "Linux oldest everything: gcc6 C++11 llvm7 py2.7 boost-1.66 oiio-2.0 no-simd exr2.3"
     runs-on: ubuntu-latest
     container:
-      image: aswftesting/ci-osl:2019
+      image: aswf/ci-osl:2019
     steps:
       - uses: actions/checkout@v2
       - name: all

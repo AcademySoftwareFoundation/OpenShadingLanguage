@@ -1,0 +1,30 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
+
+shader upstream (float fin[4] = {9, 8, 7, 6},
+                 output float fout[4] = { 0, 0, 0, 0 },
+                 output float fout1 = 0,
+                 output float fout2 = 0,
+                 output float fout3 = 0,
+                 output float fout4 = 0)
+{
+    if (1)
+    {
+        fout[0] = fin[0];
+        fout[1] = fin[1];
+        fout[2] = fin[2];
+        fout[3] = fin[3];
+    }
+    else
+    {
+        fout[0] = 2.1;
+        fout[1] = 2.2;
+        fout[2] = 2.3;
+        fout[3] = 2.4;
+    }
+    fout1 = fout[0];
+    fout2 = fout[1];
+    fout3 = fout[2];
+    fout4 = fout[3];
+}

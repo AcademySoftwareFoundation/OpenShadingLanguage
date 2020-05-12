@@ -994,8 +994,14 @@ BatchedBackendLLVM::llvm_type_closure_component_wide_ptr()
 
 void
 BatchedBackendLLVM::llvm_assign_initial_value(
-    const Symbol& sym, llvm::Value* llvm_initial_shader_mask_value, bool force)
+    const Symbol& sym, llvm::Value* llvm_initial_shader_mask_value, bool force,
+    int arrayindex)
 {
+    // the array-index is intended for sparse param connections and we use
+    // force to explicitly initialize them, so we expect that anything with a
+    // valid array index will be a param and is forced.
+    OSL_DASSERT((sym.symtype() == SymTypeParam && force) || arrayindex == -1);
+
     // Don't write over connections!  Connection values are written into
     // our layer when the earlier layer is run, as part of its code.  So
     // we just don't need to initialize it here at all.
@@ -1263,8 +1269,15 @@ BatchedBackendLLVM::llvm_assign_initial_value(
 
             OSL_ASSERT((!sym.is_uniform() || !sym.renderer_output())
                        && "All render outputs should be varying");
-
-            for (int a = 0, c = 0; a < arraylen; ++a) {
+            int a = 0, c = 0;
+            if (arrayindex != -1) {
+                // If we have an array index, setup the loop variables to only
+                // execute that index
+                a        = arrayindex;
+                c        = num_components * arrayindex;
+                arraylen = arrayindex + 1;
+            }
+            for (; a < arraylen; ++a) {
                 llvm::Value* arrind = sym.typespec().is_array() ? ll.constant(a)
                                                                 : NULL;
                 if (sym.typespec().is_closure_based())
@@ -2132,6 +2145,78 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
         llvm_assign_initial_value(s, llvm_initial_shader_mask_value);
     }
 
+    // Track all symbols who needed 'partial' initialization
+    tsl::robin_set<Symbol*> initedsyms;
+
+    // Make a third pass for sparsely connected array parameters.
+    // Only init the unconnected elements, upstream shaders are responsible for
+    // initing and overwritting any connected elements.
+    for (int c = 0, Nc = inst()->nconnections(); c < Nc; ++c) {
+        const Connection& con(inst()->connection(c));
+
+
+        Symbol* dstsym(inst()->symbol(con.dst.param));
+        // Find any sparse connections, and then find any remaining
+        // unconnected entries to initialize their values here, upstream
+        // will have handled all the connected ones.
+        if (con.dst.arrayindex != -1 && con.src.arrayindex == -1
+            && initedsyms.count(dstsym) == 0) {
+            initedsyms.insert(dstsym);
+            int arraylen     = 0;
+            TypeSpec dstType = dstsym->typespec();
+            if (dstType.is_unsized_array()) {
+                const ShaderInstance::SymOverrideInfo* sym_override
+                    = inst()->instoverride(con.dst.param);
+
+                OSL_DASSERT(sym_override);
+
+                if (sym_override
+                    && (sym_override->valuesource() == Symbol::InstanceVal
+                        || sym_override->valuesource()
+                               == Symbol::ConnectedVal)) {
+                    arraylen = sym_override->arraylen();
+                } else {
+                    arraylen = 0;
+                }
+
+            } else {
+                arraylen = dstType.numelements();
+            }
+
+            std::vector<bool> inited(arraylen, false);
+            unsigned ninit = arraylen;
+
+            if (con.dst.arrayindex < arraylen) {
+                inited[con.dst.arrayindex] = true;
+                ninit--;
+            }
+            for (int rc = c + 1; rc < Nc && ninit; ++rc) {
+                const Connection& next(inst()->connection(rc));
+                // Allow redundant/overwriting connections, i.e:
+                // 1.  connect layer.value[i] connect layer.value[j]
+                // 2.  connect layer.value connect layer.value
+                if (inst()->symbol(next.dst.param) == dstsym) {
+                    if (next.dst.arrayindex != -1) {
+                        if (next.dst.arrayindex < arraylen
+                            && !inited[next.dst.arrayindex]) {
+                            inited[next.dst.arrayindex] = true;
+                            --ninit;
+                        }
+                    } else
+                        ninit = 0;
+                }
+            }
+            if (ninit) {
+                for (int e = 0; e < arraylen; ++e) {
+                    if (!inited[e]) {
+                        llvm_assign_initial_value(*dstsym, initial_shader_mask,
+                                                  true, e);
+                    }
+                }
+            }
+        }
+    }
+
     // All the symbols are stack allocated now.
 
     if (groupentry) {
@@ -2157,9 +2242,6 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
         ll.op_branch(m_exit_instance_block);  // also sets insert point
     }
 
-    // Track all symbols who needed 'partial' initialization
-    tsl::robin_set<Symbol*> initedsyms;
-
     {
         // The current mask could be altered by early returns or exit
         // But for copying output parameters to connected shaders,
@@ -2183,9 +2265,6 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
                 for (int c = 0, Nc = child->nconnections(); c < Nc; ++c) {
                     const Connection& con(child->connection(c));
                     if (con.srclayer == this->layer()) {
-                        OSL_ASSERT(
-                            con.src.arrayindex == -1 && con.dst.arrayindex == -1
-                            && "no support for individual array element connections");
                         // Validate unsupported connection vecSrc -> vecDst[j]
                         OSL_ASSERT(
                             (con.dst.channel == -1
@@ -2234,12 +2313,80 @@ BatchedBackendLLVM::build_llvm_instance(bool groupentry)
                             }
                         }
 
+                        if (con.dst.arrayindex != -1 && con.src.arrayindex == -1
+                            && initedsyms.count(dstsym) == 0) {
+                            initedsyms.insert(dstsym);
+                            // This may just be a sparse set of connections, so we go
+                            // ahead and run the initializers if any would otherwise
+                            // be left out
+                            int initArrayIndex = con.dst.arrayindex;
+
+                            int arraylen     = 0;
+                            TypeSpec dstType = dstsym->typespec();
+                            if (dstType.is_unsized_array()) {
+                                const ShaderInstance::SymOverrideInfo*
+                                    sym_override
+                                    = child->instoverride(con.dst.param);
+
+                                OSL_DASSERT(sym_override);
+
+                                if (sym_override
+                                    && (sym_override->valuesource()
+                                            == Symbol::InstanceVal
+                                        || sym_override->valuesource()
+                                               == Symbol::ConnectedVal)) {
+                                    arraylen = sym_override->arraylen();
+                                } else {
+                                    arraylen = 0;
+                                }
+
+                            } else {
+                                arraylen = dstType.numelements();
+                            }
+
+                            std::vector<bool> inited(arraylen, false);
+                            inited[con.dst.arrayindex] = true;
+                            unsigned ninit             = arraylen - 1;
+                            llvm_assign_initial_value(*dstsym,
+                                                      initial_shader_mask, true,
+                                                      initArrayIndex);
+                            for (int rc = c + 1; rc < Nc && ninit; ++rc) {
+                                const Connection& next(child->connection(rc));
+                                if (next.srclayer == this->layer()) {
+                                    // Allow redundant/overwriting connections, i.e:
+                                    // 1.  connect layer.value[i] connect layer.value[j]
+                                    // 2.  connect layer.value connect layer.value
+                                    if (child->symbol(next.dst.param)
+                                        == dstsym) {
+                                        if (next.dst.arrayindex != -1) {
+                                            initArrayIndex = next.dst.arrayindex;
+                                            if (!inited[initArrayIndex]) {
+                                                inited[initArrayIndex] = true;
+                                                llvm_assign_initial_value(
+                                                    *dstsym,
+                                                    initial_shader_mask, true,
+                                                    initArrayIndex);
+                                            }
+                                        } else {
+                                            llvm_assign_initial_value(
+                                                *dstsym, initial_shader_mask,
+                                                true);
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         // llvm_run_connected_layers tracks layers that have been run,
                         // so no need to do it here as well
                         llvm_run_connected_layers(*srcsym, con.src.param);
 
-                        // Perform actual copy assignment from src to dest sym
-                        llvm_assign_impl(*dstsym, *srcsym, -1, con.src.channel,
+                        // The upstream run will write the value to it's local output
+                        // parameter location, now we just have to copy it to the
+                        // destination layer's input location.
+                        llvm_assign_impl(*dstsym, *srcsym, con.src.arrayindex,
+                                         con.dst.arrayindex, con.src.channel,
                                          con.dst.channel);
                     }
                 }

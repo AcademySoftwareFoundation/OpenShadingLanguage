@@ -75,6 +75,18 @@ if (NOT LLVM_LIBRARY)
     set (LLVM_LIBRARY "${LLVM_LIBRARIES}")
 endif ()
 
+execute_process (COMMAND ${LLVM_CONFIG} --shared-mode
+       OUTPUT_VARIABLE LLVM_SHARED_MODE
+       OUTPUT_STRIP_TRAILING_WHITESPACE)
+if (LLVM_VERSION VERSION_GREATER_EQUAL 9.0 AND (LLVM_SHARED_MODE STREQUAL "shared"))
+    find_library ( _CLANG_CPP_LIBRARY
+		  NAMES "clang-cpp"
+		  PATHS ${LLVM_LIB_DIR})
+    if (_CLANG_CPP_LIBRARY)
+        list (APPEND CLANG_LIBRARIES ${_CLANG_CPP_LIBRARY})
+    endif ()
+endif ()
+
 foreach (COMPONENT clangFrontend clangDriver clangSerialization
                    clangParse clangSema clangAnalysis clangAST clangBasic
                    clangEdit clangLex)

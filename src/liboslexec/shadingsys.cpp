@@ -1139,6 +1139,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("llvm_debug_layers", int, m_llvm_debug_layers);
     ATTR_SET ("llvm_debug_ops", int, m_llvm_debug_ops);
     ATTR_SET ("llvm_output_bitcode", int, m_llvm_output_bitcode);
+    ATTR_SET_STRING ("llvm_prune_ir_strategy", m_llvm_prune_ir_strategy);
     ATTR_SET ("strict_messages", int, m_strict_messages);
     ATTR_SET ("range_checking", int, m_range_checking);
     ATTR_SET ("unknown_coordsys_error", int, m_unknown_coordsys_error);

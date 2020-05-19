@@ -27,6 +27,7 @@
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/ErrorOr.h>
 #include <llvm/IR/LegacyPassManager.h>
+#include <llvm/IR/ValueSymbolTable.h>
 #include <llvm/Support/TargetRegistry.h>
 
 #include <llvm/Bitcode/BitcodeReader.h>
@@ -555,6 +556,259 @@ LLVM_Util::do_optimize (std::string *out_err)
 
 
 
+// llvm::Value::getNumUses requires that the entire module be materialized
+// which defeats the purpose of the materialize & prune unneeded below we
+// need to avoid getNumUses and use the materialized_* iterators to count
+// uses of what is "currently" in use.
+static bool anyMaterializedUses(llvm::Value &val)
+{
+    // NOTE: any uses from unmaterialized functions will not be included in
+    // this count!
+    return val.materialized_use_begin() != val.use_end();
+}
+
+
+#ifdef OSL_DEV
+static unsigned numberOfMaterializedUses(llvm::Value &val) {
+    return static_cast<unsigned>(std::distance(val.materialized_use_begin(),val.use_end()));
+}
+#endif
+
+
+void
+LLVM_Util::prune_and_internalize_module (std::unordered_set<llvm::Function*> external_functions,
+                    Linkage default_linkage, std::string *out_err)
+{
+    // Turn tracing for pruning on locally
+    #if defined(OSL_DEV)
+        #define __OSL_PRUNE_ONLY(...) __VA_ARGS__
+    #else
+        #define __OSL_PRUNE_ONLY(...)
+    #endif
+
+    bool materialized_at_least_once;
+    __OSL_PRUNE_ONLY(int materialization_pass_count = 0);
+    do {
+        // Materializing a function may caused other unmaterialized
+        // functions to be used, so we will continue to check for used
+        // functions that need to be materialized until none are.
+        //
+        // An alternative algorithm could scan the instructions of a
+        // materialized function and recursively look for calls to
+        // non-materialized functions. We think the top end of the current
+        // approach to be 2-3 passes and its simple.
+        materialized_at_least_once = false;
+        __OSL_PRUNE_ONLY(std::cout << ">>>>>>>>>>>>>>>>>>materialize used globals & funcs pass#: " << ++materialization_pass_count << std::endl);
+        for (llvm::Function& func : *m_llvm_module) {
+            if (func.isMaterializable()) {
+                if (anyMaterializedUses(func)) {
+                    __OSL_PRUNE_ONLY(std::cout << "materialized function "<< func.getName().data() << " for " << numberOfMaterializedUses(func) << " uses" << std::endl);
+                    LLVMErr err = func.materialize();
+                    if (error_string(std::move(err), out_err))
+                        return;
+                    materialized_at_least_once = true;
+                }
+            }
+        }
+        for (llvm::GlobalAlias& global_alias : m_llvm_module->aliases()) {
+            if (global_alias.isMaterializable()) {
+                if (anyMaterializedUses(global_alias)) {
+                    __OSL_PRUNE_ONLY(std::cout << "materialized global alias"<< global_alias.getName().data() << " for " << numberOfMaterializedUses(global_alias) << " uses" << std::endl);
+                    LLVMErr err = global_alias.materialize();
+                    if (error_string(std::move(err), out_err))
+                        return;
+                    materialized_at_least_once = true;
+                }
+            }
+        }
+        for (llvm::GlobalVariable& global : m_llvm_module->globals()) {
+            if (global.isMaterializable()) {
+                if (anyMaterializedUses(global)) {
+                    __OSL_PRUNE_ONLY(std::cout << "materialized global "<< global.getName().data() << " for " << numberOfMaterializedUses(global) << " uses" << std::endl);
+                    LLVMErr err = global.materialize();
+                    if (error_string(std::move(err), out_err))
+                        return;
+                    materialized_at_least_once = true;
+                }
+            }
+        }
+    } while (materialized_at_least_once);
+
+    __OSL_PRUNE_ONLY(std::cout << ">>>>>>>>>>>>>>>>>>After: materialize used globals & funcs<<<<<<<<<<<<<<<<<<<<<<<" << std::endl);
+
+//
+//    for (llvm::Module::iterator i = m_llvm_module->begin(); i != m_llvm_module->end(); ++i)
+//    {
+//        llvm::Function & func = *i;
+//        if (func.isMaterializable()) {
+//            auto func_name = func.getName();
+//            std::cout << func_name.data() << " isMaterializable with use count " << numberOfMaterializedUses(func) << std::endl;
+//        }
+//    }
+
+    std::vector<llvm::Function *> unneeded_funcs;
+    std::vector<llvm::GlobalVariable *> unneeded_globals;
+    std::vector<llvm::GlobalAlias *> unneeded_global_aliases;
+
+    // NOTE: the algorithm below will drop all globals, global aliases and
+    // functions not explicitly identified in the "exception" list or  by
+    // llvm as having internal uses. As unneeded functions are erased, this
+    // causes llvm's internal use counts to drop. During the next pass, more
+    // globals and functions may become needed and be erased. NOTE: As we
+    // aren't linking this module, just pulling out function pointer to
+    // execute, some normal behavior is skipped.  Most notably any GLOBAL
+    // CONSTRUCTORS or DESTRUCTORS that exist in the modules bit code WILL
+    // NOT BE CALLED.
+    //
+    // We notice that the GlobalVariable llvm.global_ctors gets erased.  To
+    // remedy, one could add an function (with external linkage) that uses
+    // the llvm.global_ctors global variable and calls each function.  One
+    // would then need to get a pointer to that function and call it,
+    // presumably only once before calling any other functions out of the
+    // module.  Effectively mimicking what would happen in a normal
+    // binary/linker loader (the module class has a helper to do just
+    // that).
+    //
+    // Currently the functions being compiled out of the bitcode doesn't
+    // really need it, so we are choosing not to further complicate things,
+    // but thought this omission should be noted.
+    __OSL_PRUNE_ONLY(int remove_unused_pass_count = 0);
+    for (;;) {
+        __OSL_PRUNE_ONLY(std::cout << ">>>>>>>>>>>>>>>>>>remove unused globals & funcs pass#: " << ++remove_unused_pass_count << std::endl);
+
+        for (llvm::GlobalAlias& global_alias : m_llvm_module->aliases()) {
+            if (!anyMaterializedUses(global_alias)) {
+                unneeded_global_aliases.push_back(&global_alias);
+            } else {
+                __OSL_PRUNE_ONLY(std::cout << "keep used (" << numberOfMaterializedUses(global_alias) << ") global alias:" << global_alias.getName().data() << std::endl);
+            }
+        }
+        for (llvm::GlobalAlias* global_alias : unneeded_global_aliases) {
+            __OSL_PRUNE_ONLY(std::cout << "Erasing unneeded global alias :" << global_alias->getName().data() << std::endl);
+            global_alias->eraseFromParent();
+        }
+
+        for (llvm::GlobalVariable& global : m_llvm_module->globals()) {
+            // Cuda target might have included RTI globals that are not used
+            // by anything in the module but Optix will expect to exist.  So
+            // keep any globals whose mangled name contains the rti_internal
+            // substring.
+            if (!anyMaterializedUses(global) &&
+                (global.getName().find("rti_internal_") == llvm::StringRef::npos)) {
+                unneeded_globals.push_back(&global);
+            } else {
+                __OSL_PRUNE_ONLY(std::cout << "keep used (" << numberOfMaterializedUses(global) << ") global :" << global.getName().data() << std::endl);
+            }
+        }
+        for (llvm::GlobalVariable* global : unneeded_globals) {
+            __OSL_PRUNE_ONLY(std::cout << "Erasing unneeded global :" << global->getName().data() << std::endl);
+            global->eraseFromParent();
+        }
+
+        for (llvm::Function & func : *m_llvm_module) {
+            __OSL_PRUNE_ONLY(auto func_name = func.getName());
+            if (!anyMaterializedUses(func)) {
+                bool is_external = external_functions.count(&func);
+                if (!is_external) {
+                    unneeded_funcs.push_back(&func);
+                } else {
+                    __OSL_PRUNE_ONLY(std::cout << "keep external func :" << func_name.data() << std::endl);
+                }
+            } else {
+                __OSL_PRUNE_ONLY(std::cout << "keep used (" << numberOfMaterializedUses(func) << ") func :" << func_name.data() << std::endl);
+            }
+        }
+        for (llvm::Function* func : unneeded_funcs) {
+            __OSL_PRUNE_ONLY(std::cout << "Erasing unneeded func :" << func->getName().data() << std::endl);
+            func->eraseFromParent();
+        }
+
+        if (unneeded_funcs.empty() && unneeded_globals.empty() && unneeded_global_aliases.empty())
+            break;
+        unneeded_funcs.clear();
+        unneeded_globals.clear();
+        unneeded_global_aliases.clear();
+    }
+    __OSL_PRUNE_ONLY(std::cout << ">>>>>>>>>>>>>>>>>>After: unused globals & funcs" << std::endl);
+    __OSL_PRUNE_ONLY(std::cout << ">>>>>>>>>>>>>>>>>>internalize non-external functions" << std::endl);
+    __OSL_PRUNE_ONLY(std::cout << ">>>>>>>>>>>>>>>>>>debug()=" << debug() << std::endl);
+
+    llvm::GlobalValue::LinkageTypes llvm_default_linkage;
+    switch (default_linkage) {
+    default:
+        OSL_ASSERT(0 && "Unhandled default_linkage value");
+        // fallthrough so llvm_default_linkage is not uninitialized
+    case Linkage::External:
+        llvm_default_linkage = llvm::GlobalValue::ExternalLinkage;
+        break;
+    case Linkage::LinkOnceODR:
+        llvm_default_linkage = llvm::GlobalValue::LinkOnceODRLinkage;
+        break;
+    case Linkage::Internal:
+        llvm_default_linkage = llvm::GlobalValue::InternalLinkage;
+        break;
+    case Linkage::Private:
+        llvm_default_linkage = llvm::GlobalValue::PrivateLinkage;
+        break;
+    };
+
+    for (llvm::Function& func : *m_llvm_module) {
+        if (func.isDeclaration())
+            continue;
+
+        bool is_external = external_functions.count(&func);
+        __OSL_PRUNE_ONLY(OSL_ASSERT(is_external || anyMaterializedUses(func)));
+
+        __OSL_PRUNE_ONLY(auto existingLinkage = func.getLinkage());
+        if (is_external) {
+            __OSL_PRUNE_ONLY(std::cout << "setLinkage to " << func.getName().data() << " from " << existingLinkage << " to external"<< std::endl);
+            func.setLinkage (llvm::GlobalValue::ExternalLinkage);
+        } else {
+            __OSL_PRUNE_ONLY(std::cout << "setLinkage to " << func.getName().data() << " from " << existingLinkage << " to " << llvm_default_linkage << std::endl);
+            func.setLinkage (llvm_default_linkage);
+            if (default_linkage == Linkage::Private) {
+                // private symbols do not participate in linkage verifier
+                // could fail with "comdat global value has private
+                // linkage"
+                func.setName("");
+                if (auto* sym_tab = func.getValueSymbolTable()) {
+                    for (auto symbol = sym_tab->begin(), end_of_symbols = sym_tab->end();
+                         symbol != end_of_symbols;
+                         ++symbol)
+                    {
+                        llvm::Value *val = symbol->getValue();
+
+                        if (!llvm::isa<llvm::GlobalValue>(val) || llvm::cast<llvm::GlobalValue>(val)->hasLocalLinkage()) {
+                            if (!debug() ||
+                                !val->getName().startswith("llvm.dbg")) {
+                                __OSL_PRUNE_ONLY(std::cout << "remove symbol table for value:  " << val->getName().data() << std::endl);
+                                // Remove from symbol table by setting name to ""
+                                val->setName("");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    }
+    __OSL_PRUNE_ONLY(std::cout << ">>>>>>>>>>>>>>>>>>After: internalize non-external functions" << std::endl);
+
+    // At this point everything should already be materialized, but we need
+    // to materialze the module itself to avoid asserts checking for the
+    // module's materialization when using a DEBUG version of LLVM
+    LLVMErr err = m_llvm_module->materializeAll();
+    if (error_string(std::move(err), out_err))
+        return;
+
+    #undef __OSL_PRUNE_ONLY
+
+    m_ModuleIsPruned = true;
+}
+
+
+
+// Soon to be deprecated
 void
 LLVM_Util::internalize_module_functions (const std::string &prefix,
                                          const std::vector<std::string> &exceptions,

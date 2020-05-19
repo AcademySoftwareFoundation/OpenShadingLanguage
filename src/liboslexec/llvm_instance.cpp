@@ -1272,23 +1272,53 @@ BackendLLVM::run ()
                                  group().name(), m_llvm_local_mem/1024);
     }
 
-    // The module contains tons of "library" functions that our generated
-    // IR might call. But probably not. We don't want to incur the overhead
-    // of fully compiling those, so we tell LLVM_Util to turn them into
-    // non-externally-visible symbols (allowing them to be discarded if not
-    // used internal to the module). We need to make exceptions for our
-    // entry points, as well as for all the external functions that are
-    // just declarations (not definitions) in the module (which we have
-    // conveniently stashed in external_function_names).
-    std::vector<std::string> entry_function_names;
-    entry_function_names.push_back (ll.func_name(init_func));
-    for (int layer = 0; layer < nlayers; ++layer) {
-        // set_inst (layer);
-        llvm::Function* f = funcs[layer];
-        if (f && group().is_entry_layer(layer))
-            entry_function_names.push_back (ll.func_name(f));
+    // The module contains tons of "library" functions that our generated IR
+    // might call. But probably not. We don't want to incur the overhead of
+    // fully compiling those, so we want to get rid of all functions not
+    // called directly or indirectly by our init or shader layer functions.
+    // It turns out to be much faster to prune these from the IR ahead of
+    // time versus letting the optimizer figure it out as the optimizer
+    // would have run many passes over functions which we later will be
+    // dropped. Only the external_functions will have external linkage all
+    // other remaining functions will be set to internal linkage.
+    if (shadingsys().llvm_prune_ir_strategy() == "none") {
+        // Do nothing! This is only useful for testing how much we reduce
+        // optimization and JIT time with the other strategies.
     }
-    ll.internalize_module_functions ("osl_", external_function_names, entry_function_names);
+    else if (shadingsys().llvm_prune_ir_strategy() == "internalize") {
+        // Mark as 'internal' all functions that start with "osl_" but are
+        // but are not among the known entry points. LLVM can then quickly
+        // realize that any 'internal' functions not called can be
+        // discarded. This was our original stab at this strategy.
+        std::vector<std::string> entry_function_names;
+        entry_function_names.push_back (ll.func_name(init_func));
+        for (int layer = 0; layer < nlayers; ++layer) {
+            // set_inst (layer);
+            llvm::Function* f = funcs[layer];
+            if (f && group().is_entry_layer(layer))
+                entry_function_names.push_back (ll.func_name(f));
+        }
+        ll.internalize_module_functions ("osl_", external_function_names, entry_function_names);
+    }
+    else /* if (shadingsys().llvm_prune_ir_strategy() == "prune") */ {
+        // New (2020) and default behavior, from Alex Wells:
+        // Full prune of uncalled functions, and marking as 'internal' to
+        // the module all but our known entry points from the outside. This
+        // seems to yield about another 5-10% opt+JIT speed gain versus
+        // merely internalizing.
+        std::unordered_set<llvm::Function*> external_functions;
+        external_functions.insert(init_func);
+        for (int layer = 0; layer < nlayers; ++layer) {
+            llvm::Function* f = funcs[layer];
+            // If we plan to call bitcode_string of a layer's function after
+            // optimization it may not exist after optimization unless we
+            // treat it as external.
+            if (f && (group().is_entry_layer(layer) || llvm_debug())) {
+                external_functions.insert(f);
+            }
+        }
+        ll.prune_and_internalize_module(external_functions);
+    }
 
     // Debug code to dump the pre-optimized bitcode to a file
     if (llvm_debug() >= 2 || shadingsys().llvm_output_bitcode()) {
@@ -1392,6 +1422,9 @@ BackendLLVM::run ()
             group().llvm_compiled_version (group().llvm_compiled_layer(nlayers-1));
     }
 
+    // We are destroying the entire module below,
+    // no reason to bother destroying individual functions
+#if 0
     // Remove the IR for the group layer functions, we've already JITed it
     // and will never need the IR again.  This saves memory, and also saves
     // a huge amount of time since we won't re-optimize it again and again
@@ -1401,6 +1434,7 @@ BackendLLVM::run ()
             ll.delete_func_body (funcs[i]);
     }
     ll.delete_func_body (init_func);
+#endif
 
     // Free the exec and module to reclaim all the memory.  This definitely
     // saves memory, and has almost no effect on runtime.

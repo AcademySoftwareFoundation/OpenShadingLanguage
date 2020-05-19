@@ -1479,9 +1479,9 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
     }
     if (name == "group_init_name" && type.basetype == TypeDesc::STRING) {
 #ifdef OIIO_HAS_SPRINTF
-        *(ustring *)val = ustring::sprintf ("group_%d_init", group->id());
+        *(ustring *)val = ustring::sprintf ("__direct_callable__group_%d_init", group->id());
 #else
-        *(ustring *)val = ustring::sprintf ("group_%d_init", group->id());
+        *(ustring *)val = ustring::format ("__direct_callable__group_%d_init", group->id());
 #endif
         return true;
     }
@@ -1490,10 +1490,10 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
         ShaderInstance *inst = (*group)[nlayers-1];
         // This formuation mirrors OSOProcessorBase::layer_function_name()
 #ifdef OIIO_HAS_SPRINTF
-        *(ustring *)val = ustring::sprintf ("%s_%s_%d", group->name(),
+        *(ustring *)val = ustring::sprintf ("__direct_callable__%s_%s_%d", group->name(),
                                            inst->layername(), inst->id());
 #else
-        *(ustring *)val = ustring::sprintf ("%s_%s_%d", group->name(),
+        *(ustring *)val = ustring::format ("__direct_callable__%s_%s_%d", group->name(),
                                            inst->layername(), inst->id());
 #endif
         return true;

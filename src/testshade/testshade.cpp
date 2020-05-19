@@ -21,6 +21,11 @@
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/timer.h>
 
+#ifdef OSL_USE_OPTIX
+// purely to get optix version -- once optix 7.0 is required this can go away
+#include <optix.h>
+#endif
+
 #include <OSL/oslexec.h>
 #include <OSL/oslcomp.h>
 #include <OSL/oslquery.h>
@@ -1186,6 +1191,13 @@ test_shade (int argc, const char *argv[])
     // be static, but shader and object spaces may be different for each
     // object.
     setup_transformations (*rend, Mshad, Mobj);
+
+#ifdef OSL_USE_OPTIX
+#if (OPTIX_VERSION >= 70000)
+    if (use_optix)
+        reinterpret_cast<OptixGridRenderer *> (rend)->synch_attributes();
+#endif
+#endif
 
     // Set up the image outputs requested on the command line
     setup_output_images (rend, shadingsys, shadergroup);

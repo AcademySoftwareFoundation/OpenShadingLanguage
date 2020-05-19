@@ -46,7 +46,7 @@ target_include_directories (testshade
 target_link_libraries (testshade
                        PRIVATE
                            oslexec oslquery
-                           ${CUDA_LIBRARIES} ${OPTIX_LIBRARIES} ${OPTIX_EXTRA_LIBS})
+                           ${CUDA_LIBRARIES} ${CUDA_EXTRA_LIBS}  ${OPTIX_LIBRARIES} ${OPTIX_EXTRA_LIBS})
 install (TARGETS testshade RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
 
 # The 'libtestshade' library

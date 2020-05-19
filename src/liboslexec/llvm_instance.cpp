@@ -7,12 +7,17 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <bitset>
+#include <cxxabi.h>
 
 #include <OpenImageIO/timer.h>
 #include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/strutil.h>
 #include <OpenImageIO/fmath.h>
+
+#ifdef OSL_USE_OPTIX
+#include <optix.h>
+#endif
 
 #include "oslexec_pvt.h"
 #include "../liboslcomp/oslcomp_pvt.h"
@@ -707,7 +712,7 @@ BackendLLVM::build_llvm_init ()
 {
     // Make a group init function: void group_init(ShaderGlobals*, GroupData*)
     // Note that the GroupData* is passed as a void*.
-    std::string unique_name = Strutil::sprintf ("group_%d_init", group().id());
+    std::string unique_name = Strutil::sprintf ("__direct_callable__group_%d_init", group().id());
     ll.current_function (
            ll.make_function (unique_name, false,
                              ll.type_void(), // return type
@@ -782,7 +787,7 @@ BackendLLVM::build_llvm_instance (bool groupentry)
 {
     // Make a layer function: void layer_func(ShaderGlobals*, GroupData*)
     // Note that the GroupData* is passed as a void*.
-    std::string unique_layer_name = layer_function_name();
+    std::string unique_layer_name = (groupentry ? "__direct_callable__" : "") + layer_function_name();
     bool is_entry_layer = group().is_entry_layer(layer());
     ll.current_function (
            ll.make_function (unique_layer_name,
@@ -1067,6 +1072,34 @@ static void empty_group_func (void*, void*)
 void
 BackendLLVM::run ()
 {
+
+#if (OPTIX_VERSION >= 70000)
+    auto SetGlobal = [&] (llvm::GlobalVariable &g_var, llvm::Module *module) {
+
+        // Our globals/value hashmap is indexed by 'demangled' variable names
+        // so we'll need to demangled the GlobalVariable names
+        size_t demangle_buf_size = 1024;
+        char * demangled_name = reinterpret_cast<char *> (malloc (demangle_buf_size));
+        int status = -1;
+        demangled_name = abi::__cxa_demangle (g_var.getGlobalIdentifier().c_str(), demangled_name, &demangle_buf_size, &status);
+        const char * substr="llvm-link:";
+        if (strncmp(g_var.getGlobalIdentifier().c_str(), substr, strlen(substr)) == 0)
+            return;
+
+        uint64_t value = 0;
+        if (status)
+            shadingsys().renderer()->fetch_global (g_var.getGlobalIdentifier().c_str(), &value);
+        else
+            shadingsys().renderer()->fetch_global (demangled_name, &value);
+
+        llvm::Constant * constant = llvm::ConstantInt::get (llvm::Type::getInt64Ty (module->getContext()), value);
+        g_var.setConstant (true);
+        g_var.setInitializer (constant);
+        free (demangled_name);
+    };
+
+#endif
+
     if (group().does_nothing()) {
         group().llvm_compiled_init ((RunLLVMGroupFunc)empty_group_func);
         group().llvm_compiled_version ((RunLLVMGroupFunc)empty_group_func);
@@ -1238,6 +1271,13 @@ BackendLLVM::run ()
         }
     }
 
+#if (OPTIX_VERSION >= 70000)
+    // FIXME:  I'm thinking this probably shouldn't be necessary, but I'm having
+    // trouble linking in shadeops multiple times.  So, only allow it to be
+    // linked in once.
+    static bool added_library = false;
+#endif
+
     if (use_optix()) {
         // Create an llvm::Module from the renderer-supplied library bitcode
         std::vector<char>& bitcode = shadingsys().m_lib_bitcode;
@@ -1248,12 +1288,24 @@ BackendLLVM::run ()
             ll.module_from_bitcode (static_cast<const char*>(bitcode.data()),
                                     bitcode.size(), "cuda_lib");
 
+        // Set global variables
+#if (OPTIX_VERSION >= 70000)
+        for (auto& g_var : lib_module->globals())
+            SetGlobal (g_var, lib_module);
+#endif
         std::string name = Strutil::sprintf ("%s_%d", group().name(), group().id());
+#if (OPTIX_VERSION < 70000)
         ll.ptx_compile_group (lib_module, name, group().m_llvm_ptx_compiled_version);
+#else
+        ll.ptx_compile_group (added_library ? nullptr : lib_module, name, group().m_llvm_ptx_compiled_version);
+#endif
 
         if (group().m_llvm_ptx_compiled_version.empty()) {
              OSL_ASSERT (0 && "Unable to generate PTX");
         }
+#if (OPTIX_VERSION >= 70000)
+        added_library = true;
+#endif
     }
     else {
         // Force the JIT to happen now and retrieve the JITed function pointers

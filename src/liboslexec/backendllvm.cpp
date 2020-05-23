@@ -263,7 +263,7 @@ BackendLLVM::getLLVMSymbolBase (const Symbol &sym)
     AllocationMap::iterator map_iter = named_values().find (mangled_name);
     if (map_iter == named_values().end()) {
         shadingcontext()->errorf("Couldn't find symbol '%s' (unmangled = '%s'). Did you forget to allocate it?",
-                                 mangled_name, dealiased->name());
+                                 mangled_name, dealiased->unmangled());
         return 0;
     }
     return (llvm::Value*) map_iter->second;

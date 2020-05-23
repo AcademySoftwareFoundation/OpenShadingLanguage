@@ -767,7 +767,7 @@ DECLFOLDER(constfold_aref)
             const int args_to_add[] = {
                     rop.add_constant(u_fmt_range_check),
                     rop.add_constant(orig_index),
-                    rop.add_constant(A.name()),
+                    rop.add_constant(A.unmangled()),
                     rop.add_constant(length - 1),
                     rop.add_constant(op.sourcefile()),
                     rop.add_constant(op.sourceline()),

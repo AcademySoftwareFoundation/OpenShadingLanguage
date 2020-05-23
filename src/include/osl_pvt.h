@@ -450,6 +450,13 @@ public:
     /// a globally unique name.
     std::string mangled () const;
 
+    /// Return an unmangled version of the symbol name. This should be the
+    /// same as name() in the compiler, but in the runtime, everything has
+    /// been mangled by their scopes, and this will restore the unmangled
+    /// name by removing the scope prefix. Human readable error messages at
+    /// render time should always use the unmangled version for clarity.
+    string_view unmangled() const;
+
     /// Data type of this symbol.
     ///
     const TypeSpec &typespec () const { return m_typespec; }

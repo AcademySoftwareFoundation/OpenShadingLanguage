@@ -897,7 +897,7 @@ struct ConnectedParam {
     }
 
     // Debug output of ConnectedParam
-    std::string str (const ShaderInstance *inst);
+    std::string str (const ShaderInstance *inst, bool unmangle);
 };
 
 
@@ -924,7 +924,8 @@ struct Connection {
     bool is_complete () const { return src.is_complete() && dst.is_complete(); }
 
     // Debug output of ConnectedParam
-    std::string str (const ShaderGroup &group, const ShaderInstance *dstinst);
+    std::string str (const ShaderGroup &group, const ShaderInstance *dstinst,
+                     bool unmangle);
 };
 
 

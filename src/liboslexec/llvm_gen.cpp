@@ -1133,7 +1133,7 @@ LLVMGEN (llvm_gen_compref)
         if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
                *(int *)Index.data() < 3)) {
             llvm::Value *args[] = { c, rop.ll.constant(3),
-                                    rop.ll.constant(Val.name()),
+                                    rop.ll.constant(Val.unmangled()),
                                     rop.sg_void_ptr(),
                                     rop.ll.constant(op.sourcefile()),
                                     rop.ll.constant(op.sourceline()),
@@ -1176,7 +1176,7 @@ LLVMGEN (llvm_gen_compassign)
         if (! (Index.is_constant() &&  *(int *)Index.data() >= 0 &&
                *(int *)Index.data() < 3)) {
             llvm::Value *args[] = { c, rop.ll.constant(3),
-                                    rop.ll.constant(Result.name()),
+                                    rop.ll.constant(Result.unmangled()),
                                     rop.sg_void_ptr(),
                                     rop.ll.constant(op.sourcefile()),
                                     rop.ll.constant(op.sourceline()),
@@ -1346,7 +1346,7 @@ LLVMGEN (llvm_gen_aref)
                *(int *)Index.data() < Src.typespec().arraylength())) {
             llvm::Value *args[] = { index,
                                     rop.ll.constant(Src.typespec().arraylength()),
-                                    rop.ll.constant(Src.name()),
+                                    rop.ll.constant(Src.unmangled()),
                                     rop.sg_void_ptr(),
                                     rop.ll.constant(op.sourcefile()),
                                     rop.ll.constant(op.sourceline()),
@@ -1390,7 +1390,7 @@ LLVMGEN (llvm_gen_aassign)
                *(int *)Index.data() < Result.typespec().arraylength())) {
             llvm::Value *args[] = { index,
                                     rop.ll.constant(Result.typespec().arraylength()),
-                                    rop.ll.constant(Result.name()),
+                                    rop.ll.constant(Result.unmangled()),
                                     rop.sg_void_ptr(),
                                     rop.ll.constant(op.sourcefile()),
                                     rop.ll.constant(op.sourceline()),
@@ -3346,7 +3346,7 @@ LLVMGEN (llvm_gen_closure)
         } else {
             rop.shadingcontext()->errorf("Incompatible formal argument %d to '%s' closure (%s %s, expected %s). Prototypes don't match renderer registry (%s:%d).",
                                          carg + 1, closure_name,
-                                         sym.typespec(), sym.name(), p.type,
+                                         sym.typespec(), sym.unmangled(), p.type,
                                          op.sourcefile(), op.sourceline());
         }
     }

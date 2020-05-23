@@ -465,7 +465,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
             llvm::Value *args[] = { ll.constant(ncomps), llvm_void_ptr(sym),
                                     ll.constant((int)sym.has_derivs()), sg_void_ptr(),
                                     ll.constant(ustring(inst()->shadername())),
-                                    ll.constant(0), ll.constant(sym.name()),
+                                    ll.constant(0), ll.constant(sym.unmangled()),
                                     ll.constant(0), ll.constant(ncomps),
                                     ll.constant("<get_userdata>")
             };
@@ -609,7 +609,7 @@ BackendLLVM::llvm_generate_debugnan (const Opcode &op)
                                 sg_void_ptr(),
                                 ll.constant(op.sourcefile()),
                                 ll.constant(op.sourceline()),
-                                ll.constant(sym.name()),
+                                ll.constant(sym.unmangled()),
                                 offset,
                                 ncheck,
                                 ll.constant(op.opname())
@@ -713,7 +713,7 @@ BackendLLVM::llvm_generate_debug_uninit (const Opcode &op)
                                 ll.constant(int(&op - &inst()->ops()[0])),
                                 ll.constant(op.opname()),
                                 ll.constant(i),
-                                ll.constant(sym.name()),
+                                ll.constant(sym.unmangled()),
                                 offset,
                                 ncheck
                               };
@@ -939,7 +939,7 @@ BackendLLVM::build_llvm_instance (bool groupentry)
                 llvm::Value *args[] = { ll.constant(ncomps), llvm_void_ptr(s),
                      ll.constant((int)s.has_derivs()), sg_void_ptr(), 
                      ll.constant(ustring(inst()->shadername())),
-                     ll.constant(0), ll.constant(s.name()),
+                     ll.constant(0), ll.constant(s.unmangled()),
                      ll.constant(0), ll.constant(ncomps),
                      ll.constant("<none>")
                 };

@@ -508,10 +508,11 @@ ShaderInstance::copy_code_from_master (ShaderGroup &group)
 
 
 std::string
-ConnectedParam::str (const ShaderInstance *inst)
+ConnectedParam::str (const ShaderInstance *inst, bool unmangle)
 {
     const Symbol *s = inst->symbol(param);
-    return Strutil::sprintf ("%s%s%s (%s)", s->name(),
+    return Strutil::sprintf ("%s%s%s (%s)",
+                            unmangle ? s->unmangled() : string_view(s->name()),
                             arrayindex >= 0 ? Strutil::sprintf("[%d]", arrayindex) : std::string(),
                             channel >= 0 ? Strutil::sprintf("[%d]", channel) : std::string(),
                             type);
@@ -520,10 +521,11 @@ ConnectedParam::str (const ShaderInstance *inst)
 
 
 std::string
-Connection::str (const ShaderGroup &group, const ShaderInstance *dstinst)
+Connection::str (const ShaderGroup &group, const ShaderInstance *dstinst,
+                 bool unmangle)
 {
-    return Strutil::sprintf ("%s -> %s", src.str (group[srclayer]),
-                            dst.str (dstinst));
+    return Strutil::sprintf ("%s -> %s", src.str(group[srclayer], unmangle),
+                             dst.str(dstinst, unmangle));
 }
 
 

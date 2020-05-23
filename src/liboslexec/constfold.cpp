@@ -801,7 +801,7 @@ DECLFOLDER(constfold_aref)
 DECLFOLDER(constfold_arraylength)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &R (*rop.inst()->argsymbol(op.firstarg()+0));
+    OSL_MAYBE_UNUSED Symbol &R (*rop.inst()->argsymbol(op.firstarg()+0));
     Symbol &A (*rop.inst()->argsymbol(op.firstarg()+1));
     OSL_DASSERT (R.typespec().is_int() && A.typespec().is_array());
 
@@ -2377,7 +2377,7 @@ DECLFOLDER(constfold_getattribute)
 DECLFOLDER(constfold_gettextureinfo)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
-    Symbol &Result (*rop.inst()->argsymbol(op.firstarg()+0));
+    OSL_MAYBE_UNUSED Symbol &Result (*rop.inst()->argsymbol(op.firstarg()+0));
     Symbol &Filename (*rop.inst()->argsymbol(op.firstarg()+1));
     Symbol &Dataname (*rop.inst()->argsymbol(op.firstarg()+2));
     Symbol &Data (*rop.inst()->argsymbol(op.firstarg()+3));

@@ -554,7 +554,7 @@ LLVMGEN (llvm_gen_mul)
     Symbol& B = *rop.opargsym (op, 2);
 
     TypeDesc type = Result.typespec().simpletype();
-    bool is_float = !Result.typespec().is_closure_based() && Result.typespec().is_float_based();
+    OSL_MAYBE_UNUSED bool is_float = !Result.typespec().is_closure_based() && Result.typespec().is_float_based();
     int num_components = type.aggregate;
 
     // multiplication involving closures
@@ -1440,9 +1440,9 @@ LLVMGEN (llvm_gen_construct_color)
     Symbol& Result = *rop.opargsym (op, 0);
     bool using_space = (op.nargs() == 5);
     Symbol& Space = *rop.opargsym (op, 1);
-    Symbol& X = *rop.opargsym (op, 1+using_space);
-    Symbol& Y = *rop.opargsym (op, 2+using_space);
-    Symbol& Z = *rop.opargsym (op, 3+using_space);
+    OSL_MAYBE_UNUSED Symbol& X = *rop.opargsym (op, 1+using_space);
+    OSL_MAYBE_UNUSED Symbol& Y = *rop.opargsym (op, 2+using_space);
+    OSL_MAYBE_UNUSED Symbol& Z = *rop.opargsym (op, 3+using_space);
     OSL_DASSERT (Result.typespec().is_triple() && X.typespec().is_float() &&
                  Y.typespec().is_float() && Z.typespec().is_float() &&
                  (using_space == false || Space.typespec().is_string()));
@@ -1485,9 +1485,9 @@ LLVMGEN (llvm_gen_construct_triple)
     Symbol& Result = *rop.opargsym (op, 0);
     bool using_space = (op.nargs() == 5);
     Symbol& Space = *rop.opargsym (op, 1);
-    Symbol& X = *rop.opargsym (op, 1+using_space);
-    Symbol& Y = *rop.opargsym (op, 2+using_space);
-    Symbol& Z = *rop.opargsym (op, 3+using_space);
+    OSL_MAYBE_UNUSED Symbol& X = *rop.opargsym (op, 1+using_space);
+    OSL_MAYBE_UNUSED Symbol& Y = *rop.opargsym (op, 2+using_space);
+    OSL_MAYBE_UNUSED Symbol& Z = *rop.opargsym (op, 3+using_space);
     OSL_DASSERT (Result.typespec().is_triple() && X.typespec().is_float() &&
                  Y.typespec().is_float() && Z.typespec().is_float() &&
                  (using_space == false || Space.typespec().is_string()));
@@ -1599,8 +1599,7 @@ LLVMGEN (llvm_gen_matrix)
 LLVMGEN (llvm_gen_getmatrix)
 {
     Opcode &op (rop.inst()->ops()[opnum]);
-    int nargs = op.nargs();
-    OSL_DASSERT (nargs == 4);
+    OSL_DASSERT (op.nargs() == 4);
     Symbol& Result = *rop.opargsym (op, 0);
     Symbol& From = *rop.opargsym (op, 1);
     Symbol& To = *rop.opargsym (op, 2);

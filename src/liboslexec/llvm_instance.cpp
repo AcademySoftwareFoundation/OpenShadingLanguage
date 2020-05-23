@@ -126,10 +126,10 @@ struct HelperFuncRecord {
 };
 
 typedef std::unordered_map<std::string,HelperFuncRecord> HelperFuncMap;
-HelperFuncMap llvm_helper_function_map;
-atomic_int llvm_helper_function_map_initialized (0);
-spin_mutex llvm_helper_function_map_mutex;
-std::vector<std::string> external_function_names;
+static HelperFuncMap llvm_helper_function_map;
+static atomic_int llvm_helper_function_map_initialized (0);
+static spin_mutex llvm_helper_function_map_mutex;
+static std::vector<std::string> external_function_names; // used for internalize_module_functions
 
 
 
@@ -152,7 +152,7 @@ initialize_llvm_helper_function_map ()
 
 
 
-void *
+static void *
 helper_function_lookup (const std::string &name)
 {
     HelperFuncMap::const_iterator i = llvm_helper_function_map.find (name);

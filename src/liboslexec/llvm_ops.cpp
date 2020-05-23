@@ -750,17 +750,16 @@ osl_distance_dfvdv (void *result, void *a, void *b)
 OSL_SHADEOP void
 osl_normalize_vv (void *result, void *a)
 {
-    using std::sqrt;
     // NOTE: must match with the Dual version of normalize used below
     Vec3 v = VEC(a);
-    float len = sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
-    if (len > 0) {
-        float invlen = 1 / len;
+    float len = sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
+    if (OSL_LIKELY(len > 0.0f)) {
+        float invlen = 1.0f / len;
         v.x *= invlen;
         v.y *= invlen;
         v.z *= invlen;
     } else
-        v.x = v.y = v.z = 0;
+        v.x = v.y = v.z = 0.0f;
     VEC(result) = v;
 }
 

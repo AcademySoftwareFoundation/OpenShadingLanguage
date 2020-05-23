@@ -99,43 +99,77 @@ static DefaultMMapper llvm_default_mapper;
 
 static OIIO::spin_mutex llvm_global_mutex;
 static bool setup_done = false;
-static boost::thread_specific_ptr<LLVM_Util::PerThreadInfo> perthread_infos;
-static std::vector<std::shared_ptr<LLVMMemoryManager> > jitmm_hold;
-};
+static std::unique_ptr<std::vector<std::shared_ptr<LLVMMemoryManager> >> jitmm_hold;
+static int jit_mem_hold_users = 0;
+}; // end anon namespace
 
+
+
+// ScopedJitMemoryUser will keep jitmm_hold alive until the last instance
+// is gone then the it will be freed.
+LLVM_Util::ScopedJitMemoryUser::ScopedJitMemoryUser()
+{
+    OIIO::spin_lock lock (llvm_global_mutex);
+    if (jit_mem_hold_users == 0) {
+        OSL_ASSERT(!jitmm_hold);
+        jitmm_hold.reset(new std::vector<std::shared_ptr<LLVMMemoryManager> >());
+    }
+    ++jit_mem_hold_users;
+}
+
+
+LLVM_Util::ScopedJitMemoryUser::~ScopedJitMemoryUser()
+{
+    OIIO::spin_lock lock (llvm_global_mutex);
+    OSL_ASSERT(jit_mem_hold_users > 0);
+    --jit_mem_hold_users;
+    if (jit_mem_hold_users == 0) {
+        jitmm_hold.reset();
+    }
+}
 
 
 
 // We hold certain things (LLVM context and custom JIT memory manager)
-// per thread and retained across LLVM_Util invocations.  We are
-// intentionally "leaking" them.
-struct LLVM_Util::PerThreadInfo {
-    PerThreadInfo () : llvm_context(NULL), llvm_jitmm(NULL) {}
-    ~PerThreadInfo () {
+// per thread and retained across LLVM_Util invocations.
+struct LLVM_Util::PerThreadInfo::Impl {
+    Impl() {}
+    ~Impl() {
         delete llvm_context;
         // N.B. Do NOT delete the jitmm -- another thread may need the
         // code! Don't worry, we stashed a pointer in jitmm_hold.
     }
-    static void destroy (PerThreadInfo *threadinfo) { delete threadinfo; }
-    static PerThreadInfo *get () {
-        PerThreadInfo *p = perthread_infos.get ();
-        if (! p) {
-            p = new PerThreadInfo();
-            perthread_infos.reset (p);
-        }
-        return p;
-    }
 
-    llvm::LLVMContext *llvm_context;
-    LLVMMemoryManager *llvm_jitmm;
+    llvm::LLVMContext* llvm_context = nullptr;
+    LLVMMemoryManager* llvm_jitmm = nullptr;
 };
 
+
+
+LLVM_Util::PerThreadInfo::~PerThreadInfo()
+{
+    // Make sure destructor to PerThreadInfoImpl is only called here
+    // where we know the definition of the owned PerThreadInfoImpl;
+    delete m_thread_info;
+}
+
+
+
+LLVM_Util::PerThreadInfo::Impl *
+LLVM_Util::PerThreadInfo::get() const
+{
+    if (!m_thread_info)
+        m_thread_info = new Impl();
+    return m_thread_info;
+}
 
 
 
 size_t
 LLVM_Util::total_jit_memory_held ()
 {
+    // FIXME: This can't possibly be correct. It will always return 0,
+    // since jitmem is a local variable.
     size_t jitmem = 0;
     OIIO::spin_lock lock (llvm_global_mutex);
     return jitmem;
@@ -232,7 +266,8 @@ public:
 
 
 
-LLVM_Util::LLVM_Util (int debuglevel, int vector_width)
+LLVM_Util::LLVM_Util (const PerThreadInfo &per_thread_info,
+                      int debuglevel, int vector_width)
     : m_debug(debuglevel), m_thread(NULL),
       m_llvm_context(NULL), m_llvm_module(NULL),
       m_builder(NULL), m_llvm_jitmm(NULL),
@@ -242,7 +277,7 @@ LLVM_Util::LLVM_Util (int debuglevel, int vector_width)
       m_vector_width(vector_width)
 {
     SetupLLVM ();
-    m_thread = PerThreadInfo::get();
+    m_thread = per_thread_info.get();
     OSL_ASSERT (m_thread);
 
     {
@@ -253,12 +288,15 @@ LLVM_Util::LLVM_Util (int debuglevel, int vector_width)
         if (! m_thread->llvm_jitmm) {
             m_thread->llvm_jitmm = new LLVMMemoryManager(&llvm_default_mapper);
             OSL_DASSERT (m_thread->llvm_jitmm);
-            jitmm_hold.emplace_back (m_thread->llvm_jitmm);
+            OSL_ASSERT (jitmm_hold &&
+                "An instance of OSL::pvt::LLVM_Util::ScopedJitMemoryUser must exist with a longer lifetime than this LLVM_Util object");
+            jitmm_hold->emplace_back (m_thread->llvm_jitmm);
         }
         // Hold the REAL manager and use it as an argument later
         m_llvm_jitmm = m_thread->llvm_jitmm;
     }
 
+    OSL_ASSERT(m_thread->llvm_context);
     m_llvm_context = m_thread->llvm_context;
 
     // Set up aliases for types we use over and over

@@ -60,7 +60,8 @@ void
 test_int_func ()
 {
     // Setup
-    OSL::pvt::LLVM_Util ll;
+    OSL::pvt::LLVM_Util::PerThreadInfo  pti;
+    OSL::pvt::LLVM_Util ll(pti);
 
     // Make a function with prototype:   int myadd (int arg1, int arg2)
     // and make it the current function.
@@ -107,7 +108,8 @@ void
 test_triple_func ()
 {
     // Setup
-    OSL::pvt::LLVM_Util ll;
+    OSL::pvt::LLVM_Util::PerThreadInfo pti;
+    OSL::pvt::LLVM_Util ll(pti);
 
     // Make a function with prototype:   int myadd (int arg1, int arg2)
     // and make it the current function.
@@ -164,7 +166,8 @@ IntFuncOfTwoInts
 test_big_func (bool do_print=false)
 {
     // Setup
-    OSL::pvt::LLVM_Util ll;
+    OSL::pvt::LLVM_Util::PerThreadInfo pti;
+    OSL::pvt::LLVM_Util ll(pti);
 
     // Make a function with prototype:  int myadd (int arg1, int arg2)
     // and make it the current function in the current module.
@@ -214,7 +217,9 @@ test_big_func (bool do_print=false)
 void
 test_isa_features()
 {
-    OSL::pvt::LLVM_Util ll;
+    OSL::pvt::LLVM_Util::PerThreadInfo pti;
+    OSL::pvt::LLVM_Util ll(pti);
+
     ll.detect_cpu_features();
 
     // Make sure it matches what OIIO's cpuid queries reveal
@@ -234,6 +239,10 @@ int
 main (int argc, char *argv[])
 {
     getargs (argc, argv);
+
+    // This dummy object is the "owner" of the memory holding JITed code.
+    // It must outlive any LLVM_Util (and its PerThreadInfo).
+    OSL::pvt::LLVM_Util::ScopedJitMemoryUser llvm_jit_memory_user;
 
     test_isa_features();
 

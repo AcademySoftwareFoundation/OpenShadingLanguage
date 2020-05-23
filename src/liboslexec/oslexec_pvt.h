@@ -33,6 +33,7 @@
 #endif
 
 #include <OSL/genclosure.h>
+#include <OSL/llvm_util.h>
 #include <OSL/oslexec.h>
 #include <OSL/oslclosure.h>
 #include <OSL/dual.h>
@@ -81,6 +82,7 @@ struct PerThreadInfo
     ShadingContext *pop_context ();  ///< Get the pool top and then pop
 
     std::stack<ShadingContext *> context_pool;
+    LLVM_Util::PerThreadInfo llvm_thread_info;
 };
 
 
@@ -854,6 +856,8 @@ private:
     atomic_int m_threads_currently_compiling;
     mutable std::map<ustring,long long> m_group_profile_times;
     // N.B. group_profile_times is protected by m_stat_mutex.
+
+    LLVM_Util::ScopedJitMemoryUser m_llvm_jit_memory_user;
 
     friend class OSL::ShadingContext;
     friend class ShaderMaster;
@@ -1686,6 +1690,10 @@ public:
 
     void texture_thread_info (TextureSystem::Perthread *t) {
         m_texture_thread_info = t;
+    }
+
+    const LLVM_Util::PerThreadInfo &llvm_thread_info () const {
+        return thread_info()->llvm_thread_info;
     }
 
     TextureOpt *texture_options_ptr () { return &m_textureopt; }

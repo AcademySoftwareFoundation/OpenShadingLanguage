@@ -67,10 +67,29 @@ enum class TargetISA
 /// tied to OSL internals at all.
 class OSLEXECPUBLIC LLVM_Util {
 public:
-    LLVM_Util (int debuglevel=0, int vector_width = 4);
+    struct PerThreadInfo {
+        PerThreadInfo() {}
+        ~PerThreadInfo();
+    private:
+        friend class LLVM_Util;
+        struct Impl;
+        mutable Impl* m_thread_info = nullptr;
+        Impl* get() const;
+    };
+
+    LLVM_Util (const PerThreadInfo &per_thread_info,
+               int debuglevel = 0, int vector_width = 4);
     ~LLVM_Util ();
 
-    struct PerThreadInfo;
+    // JIT'd code needs to exist with a longer lifetime than the LLVM_Util object.
+    // To enable better cleanup at shutdown, the lifetime of all JIT'd code is
+    // controlled by the the existence of ScopedJitMemoryUser objects.
+    // When the last ScopedJitMemoryUser goes out of scope or is deleted,
+    // then the underlying memory managers will be deleted
+    struct ScopedJitMemoryUser {
+        ScopedJitMemoryUser();
+        ~ScopedJitMemoryUser();
+    };
 
     /// Set debug level
     void debug (int d) { m_debug = d; }
@@ -632,7 +651,7 @@ private:
     bool m_dumpasm = false;
     bool m_jit_fma = false;
     bool m_jit_aggressive = false;
-    PerThreadInfo *m_thread;
+    PerThreadInfo::Impl *m_thread;
     llvm::LLVMContext *m_llvm_context;
     llvm::Module *m_llvm_module;
     IRBuilder *m_builder;

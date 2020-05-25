@@ -276,14 +276,6 @@ public:
              m_simple == TypeDesc::TypeNormal);
     }
 
-    /// Is this a simple type based on floats (including color/vector/etc)?  
-    /// This will return false for a closure or array (even if of floats)
-    /// or struct.
-    bool is_floatbased () const {
-        return ! is_closure() && ! is_array() &&
-            m_simple.basetype == TypeDesc::FLOAT;
-    }
-
     /// Is it a simple numeric type (based on float or int, even if an
     /// aggregate)?  This is false for a closure or array (even if of
     /// an underlying numeric type) or struct.
@@ -312,9 +304,10 @@ public:
     /// Is it based on a vector-like triple (point, vector, or normal)?
     /// (It's ok for it to be an array or closure.)
     bool is_vectriple_based () const {
-        return (m_simple.elementtype() == TypeDesc::TypePoint ||
-                m_simple.elementtype() == TypeDesc::TypeVector ||
-                m_simple.elementtype() == TypeDesc::TypeNormal);
+        auto elem = m_simple.elementtype();
+        return (elem == TypeDesc::TypePoint ||
+                elem == TypeDesc::TypeVector ||
+                elem == TypeDesc::TypeNormal);
     }
 
     /// Is it a simple matrix (but not an array or closure)?
@@ -339,8 +332,9 @@ public:
     friend bool assignable (const TypeSpec &dst, const TypeSpec &src) {
         if (dst.is_closure() || src.is_closure())
             return (dst.is_closure() && src.is_closure());
-        return equivalent (dst, src) || 
-            (dst.is_floatbased() && (src.is_float() || src.is_int()));
+        return equivalent (dst, src) ||
+            (dst.is_float_based() && !dst.is_array()
+             && (src.is_float() || src.is_int()));
     }
 
 private:

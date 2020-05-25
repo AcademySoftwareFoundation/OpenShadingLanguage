@@ -523,7 +523,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
             for (int i = 0; i < num_components; ++i, ++c) {
                 // Fill in the constant val
                 llvm::Value* init_val = 0;
-                if (elemtype.is_floatbased())
+                if (elemtype.is_float_based())
                     init_val = ll.constant (((float*)sym.data())[c]);
                 else if (elemtype.is_string())
                     init_val = ll.constant (((ustring*)sym.data())[c]);

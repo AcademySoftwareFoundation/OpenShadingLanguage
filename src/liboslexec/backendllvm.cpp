@@ -172,7 +172,7 @@ BackendLLVM::llvm_zero_derivs (const Symbol &sym)
         return; // Closures don't have derivs
     // Just memset the derivs to zero, let LLVM sort it out.
     TypeSpec elemtype = sym.typespec().elementtype();
-    if (sym.has_derivs() && elemtype.is_floatbased()) {
+    if (sym.has_derivs() && elemtype.is_float_based()) {
         int len = sym.size();
         size_t align = sym.typespec().simpletype().basesize();
         ll.op_memset (llvm_void_ptr(sym,1), /* point to start of x deriv */
@@ -189,7 +189,7 @@ BackendLLVM::llvm_zero_derivs (const Symbol &sym, llvm::Value *count)
         return; // Closures don't have derivs
     // Same thing as the above version but with just the first count derivs
     TypeSpec elemtype = sym.typespec().elementtype();
-    if (sym.has_derivs() && elemtype.is_floatbased()) {
+    if (sym.has_derivs() && elemtype.is_float_based()) {
         size_t esize = sym.typespec().simpletype().elementsize();
         size_t align = sym.typespec().simpletype().basesize();
         count = ll.op_mul (count, ll.constant((int)esize));
@@ -645,7 +645,7 @@ BackendLLVM::llvm_load_value (llvm::Value *ptr, const TypeSpec &type,
         return result;
 
     // Handle int<->float type casting
-    if (type.is_floatbased() && cast == TypeDesc::TypeInt)
+    if (type.is_float_based() && !type.is_array() && cast == TypeDesc::TypeInt)
         result = ll.op_float_to_int (result);
     else if (type.is_int() && cast == TypeDesc::TypeFloat)
         result = ll.op_int_to_float (result);
@@ -752,7 +752,7 @@ BackendLLVM::llvm_load_component_value (const Symbol& sym, int deriv,
         // Regardless of what object this is, if it doesn't have derivs but
         // we're asking for them, return 0.  Integers don't have derivs
         // so we don't need to worry about that case.
-        OSL_DASSERT (sym.typespec().is_floatbased() &&
+        OSL_DASSERT (sym.typespec().is_float_based() &&
                      "can't ask for derivs of an int");
         return ll.constant (0.0f);
     }
@@ -776,7 +776,7 @@ BackendLLVM::llvm_load_component_value (const Symbol& sym, int deriv,
 llvm::Value *
 BackendLLVM::llvm_load_arg (const Symbol& sym, bool derivs)
 {
-    OSL_DASSERT (sym.typespec().is_floatbased());
+    OSL_DASSERT (sym.typespec().is_float_based());
     if (sym.typespec().is_int() ||
         (sym.typespec().is_float() && !derivs)) {
         // Scalar case
@@ -1101,7 +1101,7 @@ BackendLLVM::llvm_assign_impl (Symbol &Result, Symbol &Src,
             // Result wants derivs but src didn't have them -- zero them
             if (dstcomp != -1) {
                 // memset the single deriv component's to zero
-                if (Result.has_derivs() && Result.typespec().elementtype().is_floatbased()) {
+                if (Result.has_derivs() && Result.typespec().elementtype().is_float_based()) {
                     // dx
                     ll.op_memset (ll.GEP(llvm_void_ptr(Result,1), dstcomp), 0, 1, rt.basesize());
                     // dy

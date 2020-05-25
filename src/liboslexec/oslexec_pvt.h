@@ -297,19 +297,6 @@ inline off_t vectorbytes (const std::vector<T> &v)
 }
 
 
-/// Template to fully deallocate a stl container using the swap trick.
-///
-template<class T>
-inline void stlfree (T &v)
-{
-    T tmp;
-    std::swap (tmp, v);
-    // Now v is no allocated space, and tmp has v's old allocated space.
-    // When tmp leaves scope as we return, that space will be freed.
-}
-
-
-
 
 /// ShaderMaster is the full internal representation of a complete
 /// shader that would be a .oso file on disk: symbols, instructions,

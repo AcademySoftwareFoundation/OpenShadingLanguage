@@ -1217,18 +1217,28 @@ LLVMGEN (llvm_gen_mxcompref)
     llvm::Value *row = rop.llvm_load_value (Row);
     llvm::Value *col = rop.llvm_load_value (Col);
     if (rop.inst()->master()->range_checking()) {
-        llvm::Value *args[] = { row, rop.ll.constant(4),
-                                rop.ll.constant(M.name()),
-                                rop.sg_void_ptr(),
-                                rop.ll.constant(op.sourcefile()),
-                                rop.ll.constant(op.sourceline()),
-                                rop.ll.constant(rop.group().name()),
-                                rop.ll.constant(rop.layer()),
-                                rop.ll.constant(rop.inst()->layername()),
-                                rop.ll.constant(rop.inst()->shadername()) };
-        row = rop.ll.call_function ("osl_range_check", args);
-        args[0] = col;
-        col = rop.ll.call_function ("osl_range_check", args);
+        if (! (Row.is_constant() && Col.is_constant() &&
+               *(int *)Row.data() >= 0 && *(int *)Row.data() < 4 &&
+               *(int *)Col.data() >= 0 && *(int *)Col.data() < 4)) {
+            llvm::Value *args[] = { row, rop.ll.constant(4),
+                                    rop.ll.constant(M.name()),
+                                    rop.sg_void_ptr(),
+                                    rop.ll.constant(op.sourcefile()),
+                                    rop.ll.constant(op.sourceline()),
+                                    rop.ll.constant(rop.group().name()),
+                                    rop.ll.constant(rop.layer()),
+                                    rop.ll.constant(rop.inst()->layername()),
+                                    rop.ll.constant(rop.inst()->shadername()) };
+            if (! (Row.is_constant() &&
+                   *(int *)Row.data() >= 0 && *(int *)Row.data() < 4)) {
+                row = rop.ll.call_function ("osl_range_check", args);
+            }
+            if (! (Col.is_constant() &&
+                   *(int *)Col.data() >= 0 && *(int *)Col.data() < 4)) {
+                args[0] = col;
+                col = rop.ll.call_function ("osl_range_check", args);
+            }
+        }
     }
 
     llvm::Value *val = NULL; 
@@ -1262,18 +1272,28 @@ LLVMGEN (llvm_gen_mxcompassign)
     llvm::Value *row = rop.llvm_load_value (Row);
     llvm::Value *col = rop.llvm_load_value (Col);
     if (rop.inst()->master()->range_checking()) {
-        llvm::Value *args[] = { row, rop.ll.constant(4),
-                                rop.ll.constant(Result.name()),
-                                rop.sg_void_ptr(),
-                                rop.ll.constant(op.sourcefile()),
-                                rop.ll.constant(op.sourceline()),
-                                rop.ll.constant(rop.group().name()),
-                                rop.ll.constant(rop.layer()),
-                                rop.ll.constant(rop.inst()->layername()),
-                                rop.ll.constant(rop.inst()->shadername()) };
-        row = rop.ll.call_function ("osl_range_check", args);
-        args[0] = col;
-        col = rop.ll.call_function ("osl_range_check", args);
+        if (! (Row.is_constant() && Col.is_constant() &&
+               *(int *)Row.data() >= 0 && *(int *)Row.data() < 4 &&
+               *(int *)Col.data() >= 0 && *(int *)Col.data() < 4)) {
+            llvm::Value *args[] = { row, rop.ll.constant(4),
+                                    rop.ll.constant(Result.name()),
+                                    rop.sg_void_ptr(),
+                                    rop.ll.constant(op.sourcefile()),
+                                    rop.ll.constant(op.sourceline()),
+                                    rop.ll.constant(rop.group().name()),
+                                    rop.ll.constant(rop.layer()),
+                                    rop.ll.constant(rop.inst()->layername()),
+                                    rop.ll.constant(rop.inst()->shadername()) };
+            if (! (Row.is_constant() &&
+                   *(int *)Row.data() >= 0 && *(int *)Row.data() < 4)) {
+                row = rop.ll.call_function ("osl_range_check", args);
+            }
+            if (! (Col.is_constant() &&
+                   *(int *)Col.data() >= 0 && *(int *)Col.data() < 4)) {
+                args[0] = col;
+                col = rop.ll.call_function ("osl_range_check", args);
+            }
+        }
     }
 
     llvm::Value *val = rop.llvm_load_value (Val, 0, 0, TypeDesc::TypeFloat);

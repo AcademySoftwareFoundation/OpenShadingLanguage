@@ -27,6 +27,8 @@ namespace llvm {
   class PointerType;
   class Type;
   class Value;
+  class VectorType;
+
   namespace legacy {
     class FunctionPassManager;
     class PassManager;
@@ -49,7 +51,7 @@ namespace pvt {   // OSL::pvt
 /// tied to OSL internals at all.
 class OSLEXECPUBLIC LLVM_Util {
 public:
-    LLVM_Util (int debuglevel=0);
+    LLVM_Util (int debuglevel=0, int vector_width = 8);
     ~LLVM_Util ();
 
     struct PerThreadInfo;
@@ -194,7 +196,10 @@ public:
 
 
     llvm::Type *type_float() const { return m_llvm_type_float; }
+    llvm::Type *type_double() const { return m_llvm_type_double; }
     llvm::Type *type_int() const { return m_llvm_type_int; }
+    llvm::Type *type_int8() const { return m_llvm_type_int8; }
+    llvm::Type *type_int16() const { return m_llvm_type_int16; }
     llvm::Type *type_addrint() const { return m_llvm_type_addrint; }
     llvm::Type *type_bool() const { return m_llvm_type_bool; }
     llvm::Type *type_char() const { return m_llvm_type_char; }
@@ -207,6 +212,7 @@ public:
     llvm::PointerType *type_string() { return m_llvm_type_char_ptr; }
     llvm::PointerType *type_ustring_ptr() const { return m_llvm_type_ustring_ptr; }
     llvm::PointerType *type_char_ptr() const { return m_llvm_type_char_ptr; }
+    llvm::PointerType *type_bool_ptr() const { return m_llvm_type_bool_ptr; }
     llvm::PointerType *type_int_ptr() const { return m_llvm_type_int_ptr; }
     llvm::PointerType *type_float_ptr() const { return m_llvm_type_float_ptr; }
     llvm::PointerType *type_longlong_ptr() const { return m_llvm_type_longlong_ptr; }
@@ -214,9 +220,28 @@ public:
     llvm::PointerType *type_matrix_ptr() const { return m_llvm_type_matrix_ptr; }
     llvm::PointerType *type_double_ptr() const { return m_llvm_type_double_ptr; }
 
+    llvm::Type *type_wide_float() const { return m_llvm_type_wide_float; }
+    llvm::Type *type_wide_double() const { return m_llvm_type_wide_double; }
+    llvm::Type *type_wide_int() const { return m_llvm_type_wide_int; }
+    llvm::Type *type_wide_bool() const { return m_llvm_type_wide_bool; }
+    llvm::Type *type_wide_char() const { return m_llvm_type_wide_char; }
+    llvm::Type *type_wide_longlong() const { return m_llvm_type_wide_longlong; }
+    llvm::Type *type_wide_triple() const { return m_llvm_type_wide_triple; }
+    llvm::Type *type_wide_matrix() const { return m_llvm_type_wide_matrix; }
+    llvm::Type *type_wide_void_ptr() const { return m_llvm_type_wide_void_ptr; }
+    llvm::Type *type_wide_string() const { return m_llvm_type_wide_ustring_ptr; }
+    llvm::PointerType *type_wide_char_ptr() const { return m_llvm_type_wide_char_ptr; }
+    llvm::PointerType *type_wide_bool_ptr() const { return m_llvm_type_wide_bool_ptr; }
+    llvm::PointerType *type_wide_int_ptr() const { return m_llvm_type_wide_int_ptr; }
+    llvm::PointerType *type_wide_float_ptr() const { return m_llvm_type_wide_float_ptr; }
+
     /// Generate the appropriate llvm type definition for a TypeDesc
     /// (this is the actual type, for example when we allocate it).
     llvm::Type *llvm_type (const OIIO::TypeDesc &typedesc);
+
+    /// Generate the appropriate llvm vector type definition for a TypeDesc
+    /// (this is the actual type, for example when we allocate it).
+    llvm::Type *llvm_vector_type (const OIIO::TypeDesc &typedesc);
 
     /// This will return a llvm::Type that is the same as a C union of
     /// the given types[].
@@ -262,6 +287,13 @@ public:
     /// Return an llvm::Value holding the given integer constant.
     llvm::Value *constant (int i);
 
+    /// Return an llvm::Value holding the given integer constant.
+    llvm::Value *constant8 (int i);
+    llvm::Value *constant16 (uint16_t i);
+    llvm::Value *constant64 (uint64_t i);
+    llvm::Value *constant128 (uint64_t i);
+    llvm::Value *constant128 (uint64_t left, uint64_t right);
+
     /// Return an llvm::Value holding the given size_t constant.
     llvm::Value *constant (size_t i);
 
@@ -274,14 +306,28 @@ public:
     llvm::Value *constant_ptr (void *p, llvm::PointerType *type=NULL);
 
     /// Return an llvm::Value holding the given string constant.
-    llvm::Value *constant (OIIO::ustring s);
-    llvm::Value *constant (OIIO::string_view s) {
-        return constant(OIIO::ustring(s));
+    llvm::Value *constant (ustring s);
+    llvm::Value *constant (string_view s) {
+        return constant(ustring(s));
     }
 
     /// Return an llvm::Value for a long long that is a packed
     /// representation of a TypeDesc.
     llvm::Value *constant (const OIIO::TypeDesc &type);
+
+    // Return "wide" (SIMD vector) constants of various types.
+    llvm::Value *wide_constant (float f);
+    llvm::Value *wide_constant (int i);
+    llvm::Value *wide_constant (size_t i);
+    llvm::Value *wide_constant_bool (bool b);
+    llvm::Value *wide_constant (ustring s);
+    llvm::Value *wide_constant (string_view s) {
+        return wide_constant(ustring(s));
+    }
+
+    /// Return an llvm::Value holding wide version of the given scalar
+    /// constant.
+    llvm::Value *wide_constant (llvm::Value *constant_val);
 
     /// Return an llvm::Value for a void* variable with value NULL.
     llvm::Value *void_ptr_null ();
@@ -300,6 +346,8 @@ public:
     /// Cast the pointer variable specified by val to a pointer to the given
     /// data type, return the llvm::Value of the new pointer.
     llvm::Value *ptr_cast (llvm::Value* val, const OIIO::TypeDesc &type);
+
+    llvm::Value *wide_ptr_cast (llvm::Value* val, const OIIO::TypeDesc &type);
 
     /// Cast the variable specified by val to a pointer of type void*,
     /// return the llvm::Value of the new pointer.
@@ -327,6 +375,11 @@ public:
     /// given type, and return its pointer.
     llvm::Value *op_alloca (const OIIO::TypeDesc &type, int n=1,
                             const std::string &name=std::string(), int align=0);
+
+    /// Generate an alloca instruction to allocate space for n copies of the
+    /// given type, and return its pointer.
+    llvm::Value *wide_op_alloca (const OIIO::TypeDesc &type, int n=1,
+                                 const std::string &name=std::string(), int align=0);
 
     /// Generate code for a call to the function pointer, with the given
     /// arg list.  Return an llvm::Value* corresponding to the return
@@ -425,6 +478,8 @@ public:
     llvm::Value *op_float_to_int (llvm::Value *a);
     llvm::Value *op_int_to_float (llvm::Value *a);
     llvm::Value *op_bool_to_int (llvm::Value *a);
+    llvm::Value *op_bool_to_float (llvm::Value *a);
+    llvm::Value *op_int_to_bool (llvm::Value *a);
     llvm::Value *op_float_to_double (llvm::Value *a);
     llvm::Value *op_int_to_longlong (llvm::Value *a);
 
@@ -438,6 +493,11 @@ public:
     /// Generate IR for (cond ? a : b).  Cond should be a bool.
     llvm::Value *op_select (llvm::Value *cond, llvm::Value *a, llvm::Value *b);
 
+    /// Extracts a scalar value from a vector type
+    llvm::Value *op_extract(llvm::Value *a, int index);
+    llvm::Value *op_extract(llvm::Value *a, llvm::Value * index);
+    llvm::Value *op_insert(llvm::Value *v, llvm::Value *a, int index);
+
     // Comparison ops.  It auto-detects the type (int vs float).
     // ordered only applies to float comparisons -- ordered means the
     // comparison will succeed only if neither arg is NaN.
@@ -448,6 +508,9 @@ public:
     llvm::Value *op_lt (llvm::Value *a, llvm::Value *b, bool ordered=false);
     llvm::Value *op_ge (llvm::Value *a, llvm::Value *b, bool ordered=false);
     llvm::Value *op_le (llvm::Value *a, llvm::Value *b, bool ordered=false);
+
+    llvm::Value *op_fabs(llvm::Value *v);
+    llvm::Value *op_is_not_finite(llvm::Value *v);
 
     /// Write the module's bitcode (after compilation/optimization) to a
     /// file.  If err is not NULL, errors will be deposited there.
@@ -496,7 +559,10 @@ private:
     std::vector<llvm::BasicBlock *> m_loop_step_block;  // stack for continue
 
     llvm::Type *m_llvm_type_float;
+    llvm::Type *m_llvm_type_double;
     llvm::Type *m_llvm_type_int;
+    llvm::Type *m_llvm_type_int8;
+    llvm::Type *m_llvm_type_int16;
     llvm::Type *m_llvm_type_addrint;
     llvm::Type *m_llvm_type_bool;
     llvm::Type *m_llvm_type_char;
@@ -507,6 +573,7 @@ private:
     llvm::PointerType *m_llvm_type_void_ptr;
     llvm::PointerType *m_llvm_type_ustring_ptr;
     llvm::PointerType *m_llvm_type_char_ptr;
+    llvm::PointerType *m_llvm_type_bool_ptr;
     llvm::PointerType *m_llvm_type_int_ptr;
     llvm::PointerType *m_llvm_type_float_ptr;
     llvm::PointerType *m_llvm_type_longlong_ptr;
@@ -514,6 +581,21 @@ private:
     llvm::PointerType *m_llvm_type_matrix_ptr;
     llvm::PointerType *m_llvm_type_double_ptr;
 
+    int m_vector_width;
+    llvm::Type * m_llvm_type_wide_float;
+    llvm::Type * m_llvm_type_wide_double;
+    llvm::Type * m_llvm_type_wide_int;
+    llvm::Type * m_llvm_type_wide_bool;
+    llvm::Type * m_llvm_type_wide_char;
+    llvm::Type * m_llvm_type_wide_longlong;
+    llvm::Type * m_llvm_type_wide_triple;
+    llvm::Type * m_llvm_type_wide_matrix;
+    llvm::Type * m_llvm_type_wide_void_ptr;
+    llvm::Type * m_llvm_type_wide_ustring_ptr;
+    llvm::PointerType * m_llvm_type_wide_char_ptr;
+    llvm::PointerType * m_llvm_type_wide_int_ptr;
+    llvm::PointerType * m_llvm_type_wide_bool_ptr;
+    llvm::PointerType * m_llvm_type_wide_float_ptr;
 };
 
 

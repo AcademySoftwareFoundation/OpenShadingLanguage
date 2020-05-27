@@ -201,9 +201,9 @@ static OSL_FORCEINLINE void static_foreach(const FunctorT &iFunctor) {
 // During development it can be useful to output extra information
 // NOTE:  internal use only
 #ifdef OSL_DEV
-    #define OSL_DEV_ONLY(STUFF) STUFF
+    #define OSL_DEV_ONLY(...) __VA_ARGS__
 #else
-    #define OSL_DEV_ONLY(STUFF)
+    #define OSL_DEV_ONLY(...)
 #endif
 
 

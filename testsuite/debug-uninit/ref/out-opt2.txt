@@ -5,3 +5,6 @@ ERROR: Detected possible use of uninitialized value in int i_uninit at test.osl:
 ERROR: Detected possible use of uninitialized value in float f_uninit at test.osl:14 (group unnamed_group_1, layer 0 test_0, shader test, op 1 'color', arg 1)
 ERROR: Detected possible use of uninitialized value in string s_uninit at test.osl:15 (group unnamed_group_1, layer 0 test_0, shader test, op 2 'texture', arg 1)
 ERROR: [RendererServices::texture] ImageInput::create() called with no filename
+ERROR: Detected possible use of uninitialized value in float[3] ___330_A at test.osl:22 (group unnamed_group_1, layer 0 test_0, shader test, op 6 'aref', arg 1)
+ERROR: Detected possible use of uninitialized value in color ___331_C at test.osl:28 (group unnamed_group_1, layer 0 test_0, shader test, op 11 'compref', arg 1)
+ERROR: Detected possible use of uninitialized value in matrix ___332_M at test.osl:34 (group unnamed_group_1, layer 0 test_0, shader test, op 16 'mxcompref', arg 1)

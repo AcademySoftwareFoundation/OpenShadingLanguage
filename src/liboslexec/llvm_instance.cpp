@@ -110,8 +110,10 @@ static ustring op_end("end");
 static ustring op_nop("nop");
 static ustring op_aassign("aassign");
 static ustring op_compassign("compassign");
+static ustring op_mxcompassign("mxcompassign");
 static ustring op_aref("aref");
 static ustring op_compref("compref");
+static ustring op_mxcompref("mxcompref");
 static ustring op_useparam("useparam");
 
 
@@ -388,7 +390,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         if (sym.typespec().is_closure_based()) {
             // skip closures
         }
-        else if (sym.typespec().is_floatbased())
+        else if (sym.typespec().is_float_based())
             u = ll.constant (std::numeric_limits<float>::quiet_NaN());
         else if (sym.typespec().is_int_based())
             u = ll.constant (std::numeric_limits<int>::min());
@@ -547,35 +549,64 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
 void
 BackendLLVM::llvm_generate_debugnan (const Opcode &op)
 {
+    // This function inserts extra debugging code to make sure that this op
+    // did not produce any NaN values.
+
+    // Check each argument to the op...
     for (int i = 0;  i < op.nargs();  ++i) {
-        Symbol &sym (*opargsym (op, i));
+        // Only consider the arguments that this op WRITES to
         if (! op.argwrite(i))
             continue;
+
+        Symbol &sym (*opargsym (op, i));
         TypeDesc t = sym.typespec().simpletype();
+
+        // Only consider floats, because nothing else can be a NaN
         if (t.basetype != TypeDesc::FLOAT)
-            continue;  // just check float-based types
+            continue;
+
+        // Default: Check all elements of the variable being written
         llvm::Value *ncomps = ll.constant (int(t.numelements() * t.aggregate));
         llvm::Value *offset = ll.constant(0);
         llvm::Value *ncheck = ncomps;
+
+        // There are a few special cases where an op writes a partial value:
+        // one element of an array, aggregate (like a point), or matrix. In
+        // those cases, don't check the other pieces that haven't been
+        // touched by this op, because (a) it's unnecessary work and code
+        // generation, and (b) they might generate a false positive error.
+        // An example would be:
+        //     float A[3];     // 1   Elements could be anything
+        //     A[1] = x;       // 2   <-- this is where we are
+        // Line 2 only wrote element [1], so we do not need to check the
+        // current values of [0] or [2].
         if (op.opname() == op_aassign) {
-            // Special case -- array assignment -- only check one element
             OSL_DASSERT (i == 0 && "only arg 0 is written for aassign");
             llvm::Value *ind = llvm_load_value (*opargsym (op, 1));
             llvm::Value *agg = ll.constant(t.aggregate);
             offset = t.aggregate == 1 ? ind : ll.op_mul (ind, agg);
             ncheck = agg;
         } else if (op.opname() == op_compassign) {
-            // Special case -- component assignment -- only check one channel
             OSL_DASSERT (i == 0 && "only arg 0 is written for compassign");
             llvm::Value *ind = llvm_load_value (*opargsym (op, 1));
             offset = ind;
+            ncheck = ll.constant(1);
+        } else if (op.opname() == op_mxcompassign) {
+            OSL_DASSERT (i == 0 && "only arg 0 is written for mxcompassign");
+            Symbol &row_sym = *opargsym (op, 1);
+            Symbol &col_sym = *opargsym (op, 2);
+            llvm::Value *row_ind = llvm_load_value (row_sym);
+            llvm::Value *col_ind = llvm_load_value (col_sym);
+            llvm::Value *comp = ll.op_mul (row_ind, ll.constant(4));
+            comp = ll.op_add (comp, col_ind);
+            offset = comp;
             ncheck = ll.constant(1);
         }
 
         llvm::Value *args[] = { ncomps,
                                 llvm_void_ptr(sym),
                                 ll.constant((int)sym.has_derivs()),
-                                sg_void_ptr(), 
+                                sg_void_ptr(),
                                 ll.constant(op.sourcefile()),
                                 ll.constant(op.sourceline()),
                                 ll.constant(sym.name()),
@@ -592,25 +623,33 @@ BackendLLVM::llvm_generate_debugnan (const Opcode &op)
 void
 BackendLLVM::llvm_generate_debug_uninit (const Opcode &op)
 {
+    // This function inserts extra debugging code to make sure that this op
+    // did not read an uninitialized value.
+
     if (op.opname() == op_useparam) {
         // Don't check the args of a useparam before the op; they are by
-        // definition potentially net yet set before the useparam action
+        // definition potentially not yet set before the useparam action
         // itself puts values into them. Checking them for uninitialized
         // values will result in false positives.
         return;
     }
+
+    // Check each argument to the op...
     for (int i = 0;  i < op.nargs();  ++i) {
-        Symbol &sym (*opargsym (op, i));
+        // Only consider the arguments that this op READS
         if (! op.argread(i))
             continue;
+
+        Symbol &sym (*opargsym (op, i));
+
+        // just check float, int, string based types.
         if (sym.typespec().is_closure_based())
             continue;
         TypeDesc t = sym.typespec().simpletype();
         if (t.basetype != TypeDesc::FLOAT && t.basetype != TypeDesc::INT &&
             t.basetype != TypeDesc::STRING)
-            continue;  // just check float, int, string based types
-        llvm::Value *ncheck = ll.constant (int(t.numelements() * t.aggregate));
-        llvm::Value *offset = ll.constant(0);
+            continue;
+
         // Some special cases...
         if (op.opname() == Strings::op_for && i == 0) {
             // The first argument of 'for' is the condition temp, but
@@ -618,6 +657,26 @@ BackendLLVM::llvm_generate_debug_uninit (const Opcode &op)
             // don't generate uninit test code for it.
             continue;
         }
+
+        // Default: Check all elements of the variable being read
+        llvm::Value *ncheck = ll.constant (int(t.numelements() * t.aggregate));
+        llvm::Value *offset = ll.constant(0);
+
+        // There are a few special cases where an op reads a partial value:
+        // one element of an array, aggregate (like a point), or matrix. In
+        // those cases, don't check the other pieces that haven't been
+        // touched by this op, because (a) it's unnecessary work and code
+        // generation, and (b) they might generate a false positive error.
+        // An example would be:
+        //     float A[3];     // 1   Elements are uninitialized
+        //     A[1] = 1;       // 2
+        //     float x = A[1]; // 3   <--- this is where we are
+        // Line 3 only reads element [1]. It is NOT an uninitialized read,
+        // even though other parts of array A are uninitialized. And even if
+        // they were initialized, it's unnecessary to check the status of
+        // the other elements that we didn't just read. Even if [2] is
+        // uninitialized for the whole shader, that doesn't matter as long
+        // as we don't try to read it.
         if (op.opname() == op_aref && i == 1) {
             // Special case -- array assignment -- only check one element
             llvm::Value *ind = llvm_load_value (*opargsym (op, 2));
@@ -629,11 +688,22 @@ BackendLLVM::llvm_generate_debug_uninit (const Opcode &op)
             llvm::Value *ind = llvm_load_value (*opargsym (op, 2));
             offset = ind;
             ncheck = ll.constant(1);
+        } else if (op.opname() == op_mxcompref && i == 1) {
+            // Special case -- matrix component reference -- only check one channel
+            Symbol &row_sym = *opargsym (op, 2);
+            Symbol &col_sym = *opargsym (op, 3);
+            llvm::Value *row_ind = llvm_load_value (row_sym);
+            llvm::Value *col_ind = llvm_load_value (col_sym);
+
+            llvm::Value *comp = ll.op_mul (row_ind, ll.constant(4));
+            comp = ll.op_add (comp, col_ind);
+            offset = comp;
+            ncheck = ll.constant(1);
         }
 
         llvm::Value *args[] = { ll.constant(t),
                                 llvm_void_ptr(sym),
-                                sg_void_ptr(), 
+                                sg_void_ptr(),
                                 ll.constant(op.sourcefile()),
                                 ll.constant(op.sourceline()),
                                 ll.constant(group().name()),

@@ -1320,7 +1320,7 @@ RuntimeOptimizer::make_param_use_instanceval (Symbol *R, string_view why)
 {
     if (debug() > 1)
         std::cout << "Turning " << R->valuesourcename() << ' '
-                  << R->typespec().c_str() << ' ' << R->name()
+                  << R->typespec() << ' ' << R->name()
                   << " into an instance value "
                   << why << "\n";
 
@@ -1394,7 +1394,7 @@ RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
                 m_opt_elide_unconnected_outputs) {
             make_param_use_instanceval (R, Strutil::sprintf("- written once, with a constant (%s), before any reads", const_value_as_string(*A)));
             replace_param_value (R, A->data(), A->typespec());
-            turn_into_nop (op, debug() > 1 ? Strutil::sprintf("oparam %s never subsequently read or connected", R->name().c_str()).c_str() : "");
+            turn_into_nop (op, debug() > 1 ? Strutil::sprintf("oparam %s never subsequently read or connected", R->name()).c_str() : "");
             return true;
         }
     }
@@ -1404,7 +1404,7 @@ RuntimeOptimizer::outparam_assign_elision (int opnum, Opcode &op)
     // assignment at all. Note that unread_after() does take into
     // consideration whether it's a renderer output.
     if (unread_after(R,opnum)) {
-        turn_into_nop (op, debug() > 1 ? Strutil::sprintf("oparam %s never subsequently read or connected", R->name().c_str()).c_str() : "");
+        turn_into_nop (op, debug() > 1 ? Strutil::sprintf("oparam %s never subsequently read or connected", R->name()).c_str() : "");
         return true;
     }
 
@@ -1789,7 +1789,7 @@ RuntimeOptimizer::remove_unused_params ()
         if (param_never_used(s) && s.has_init_ops()) {
             std::string why;
             if (debug() > 1)
-                why = Strutil::sprintf ("remove init ops of unused param %s %s", s.typespec().c_str(), s.name());
+                why = Strutil::sprintf ("remove init ops of unused param %s %s", s.typespec(), s.name());
             turn_into_nop (s.initbegin(), s.initend(), why);
             s.set_initrange (0, 0);
             s.clear_rw();   // mark as totally unused

@@ -19,9 +19,24 @@ namespace pvt {   // OSL::pvt
 std::string
 Symbol::mangled () const
 {
-    // FIXME: De-alias
-    return scope() ? Strutil::sprintf ("___%d_%s", scope(), m_name)
+    std::string result = scope()
+        ? Strutil::sprintf ("___%d_%s", scope(), m_name)
         : m_name.string();
+    return result;  // Force NRVO (named value return optimization)
+}
+
+
+
+string_view
+Symbol::unmangled () const
+{
+    string_view result(m_name);
+    if (Strutil::parse_prefix(result, "___")) {
+        int val;
+        Strutil::parse_int(result, val);
+        Strutil::parse_char(result, '_');
+    }
+    return result;
 }
 
 

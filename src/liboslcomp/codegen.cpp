@@ -295,7 +295,7 @@ ASTNode::coerce (Symbol *sym, const TypeSpec &type, bool acceptfloat)
     }
 
     if (sym->symtype() == SymTypeConst && sym->typespec().is_int() &&
-            type.is_floatbased()) {
+            type.is_float_based() && !type.is_array()) {
         // It's not only the wrong type, it's a constant of the wrong
         // type. We need a new constant of the right type.
         ConstantSymbol *constsym = (ConstantSymbol *) sym;
@@ -1539,7 +1539,7 @@ ASTbinary_expression::codegen (Symbol *dest)
 
     // Promote ints to float-like types, for mixed arithmetic
     if ((m_op == Mul || m_op == Div || m_op == Add || m_op == Sub)) {
-        if (lsym->typespec().is_floatbased() && rsym->typespec().is_int()) {
+        if (lsym->typespec().is_float_based() && rsym->typespec().is_int()) {
             if (rsym->symtype() == SymTypeConst) {
                 float val = ((ConstantSymbol *)rsym)->floatval();
                 rsym = m_compiler->make_constant (val);
@@ -1548,7 +1548,7 @@ ASTbinary_expression::codegen (Symbol *dest)
                 rsym = m_compiler->make_temporary (lsym->typespec());
                 emitcode ("assign", rsym, tmp);  // type coercion
             }
-        } else if (lsym->typespec().is_int() && rsym->typespec().is_floatbased()) {
+        } else if (lsym->typespec().is_int() && rsym->typespec().is_float_based()) {
             if (lsym->symtype() == SymTypeConst) {
                 float val = ((ConstantSymbol *)lsym)->floatval();
                 lsym = m_compiler->make_constant (val);

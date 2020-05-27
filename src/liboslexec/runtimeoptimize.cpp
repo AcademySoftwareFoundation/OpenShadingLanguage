@@ -1583,7 +1583,7 @@ RuntimeOptimizer::peephole2 (int opnum, int op2num)
         Symbol *d = opargsym(next,1);
         if (a == d && b == c) {
             // Exclude the integer truncation case
-            if (! (a->typespec().is_int() && b->typespec().is_floatbased())) {
+            if (! (a->typespec().is_int() && b->typespec().is_float_based())) {
                 // std::cerr << "ping-pong assignment " << opnum << " of " 
                 //           << opargsym(op,0)->mangled() << " and "
                 //           << opargsym(op,1)->mangled() << "\n";
@@ -1609,8 +1609,8 @@ RuntimeOptimizer::peephole2 (int opnum, int op2num)
         Symbol *d = opargsym(next,1);
         if (a == d && assignable (c->typespec(), b->typespec())) {
             // Exclude the float=int=float case
-            if (! (a->typespec().is_int() && b->typespec().is_floatbased() &&
-                   c->typespec().is_floatbased())) {
+            if (! (a->typespec().is_int() && b->typespec().is_float_based() &&
+                   c->typespec().is_float_based() && !c->typespec().is_array())) {
                 turn_into_assign (next, inst()->arg(op.firstarg()+1),
                                   "daisy-chain assignments");
                 return 1;
@@ -2474,8 +2474,7 @@ RuntimeOptimizer::mark_symbol_derivatives (SymDependency &symdeps, SymIntSet &vi
             
             Symbol *s = inst()->symbol(r);
 
-            if (! s->typespec().is_closure_based() && 
-                    s->typespec().elementtype().is_floatbased())
+            if (s->typespec().elementtype().is_float_based())
                 s->has_derivs (true);
 
             mark_symbol_derivatives(symdeps, visited, r);
@@ -3064,10 +3063,8 @@ RuntimeOptimizer::run ()
         for (auto&& c : inst()->m_connections) {
             if (inst()->symbol(c.dst.param)->has_derivs()) {
                 Symbol *source = group()[c.srclayer]->symbol(c.src.param);
-                if (! source->typespec().is_closure_based() &&
-                    source->typespec().elementtype().is_floatbased()) {
+                if (source->typespec().elementtype().is_float_based())
                     source->has_derivs (true);
-                }
             }
         }
     }

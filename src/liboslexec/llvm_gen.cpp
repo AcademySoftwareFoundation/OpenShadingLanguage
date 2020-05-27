@@ -554,7 +554,7 @@ LLVMGEN (llvm_gen_mul)
     Symbol& B = *rop.opargsym (op, 2);
 
     TypeDesc type = Result.typespec().simpletype();
-    bool is_float = !Result.typespec().is_closure_based() && Result.typespec().is_floatbased();
+    bool is_float = !Result.typespec().is_closure_based() && Result.typespec().is_float_based();
     int num_components = type.aggregate;
 
     // multiplication involving closures
@@ -641,7 +641,7 @@ LLVMGEN (llvm_gen_div)
     Symbol& B = *rop.opargsym (op, 2);
 
     TypeDesc type = Result.typespec().simpletype();
-    bool is_float = Result.typespec().is_floatbased();
+    bool is_float = Result.typespec().is_float_based();
     int num_components = type.aggregate;
 
     OSL_DASSERT (! Result.typespec().is_closure_based());
@@ -726,7 +726,7 @@ LLVMGEN (llvm_gen_modulus)
     Symbol& B = *rop.opargsym (op, 2);
 
     TypeDesc type = Result.typespec().simpletype();
-    bool is_float = Result.typespec().is_floatbased();
+    bool is_float = Result.typespec().is_float_based();
     int num_components = type.aggregate;
 
 #ifdef OSL_LLVM_NO_BITCODE
@@ -848,7 +848,7 @@ LLVMGEN (llvm_gen_mix)
     Symbol& X = *rop.opargsym (op, 3);
     TypeDesc type = Result.typespec().simpletype();
     OSL_DASSERT (!Result.typespec().is_closure_based() &&
-                 Result.typespec().is_floatbased());
+                 Result.typespec().is_float_based());
     int num_components = type.aggregate;
     int x_components = X.typespec().aggregate();
     bool derivs = (Result.has_derivs() &&
@@ -932,7 +932,7 @@ LLVMGEN (llvm_gen_select)
     Symbol& X = *rop.opargsym (op, 3);
     TypeDesc type = Result.typespec().simpletype();
     OSL_DASSERT (!Result.typespec().is_closure_based() &&
-            Result.typespec().is_floatbased());
+            Result.typespec().is_float_based());
     int num_components = type.aggregate;
     int x_components = X.typespec().aggregate();
     bool derivs = (Result.has_derivs() &&
@@ -1050,8 +1050,8 @@ LLVMGEN (llvm_gen_unary_op)
     bool dst_derivs = dst.has_derivs();
     int num_components = dst.typespec().simpletype().aggregate;
 
-    bool dst_float = dst.typespec().is_floatbased();
-    bool src_float = src.typespec().is_floatbased();
+    bool dst_float = dst.typespec().is_float_based();
+    bool src_float = src.typespec().is_float_based();
 
     for (int i = 0; i < num_components; i++) {
         // Get src1/2 component i
@@ -1802,7 +1802,7 @@ LLVMGEN (llvm_gen_compare_op)
     }
 
     int num_components = std::max (A.typespec().aggregate(), B.typespec().aggregate());
-    bool float_based = A.typespec().is_floatbased() || B.typespec().is_floatbased();
+    bool float_based = A.typespec().is_float_based() || B.typespec().is_float_based();
     TypeDesc cast (float_based ? TypeDesc::FLOAT : TypeDesc::UNKNOWN);
 
     llvm::Value* final_result = 0;

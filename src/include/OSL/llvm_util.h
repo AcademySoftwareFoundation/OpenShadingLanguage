@@ -272,7 +272,8 @@ public:
     /// This will return a llvm::Type that is the same as a C struct
     /// comprised fields of the given types[], in order.
     llvm::Type *type_struct (const std::vector<llvm::Type *> &types,
-                             const std::string &name="");
+                             const std::string &name="", bool is_packed=false);
+
 
     /// Return the llvm::Type that is a pointer to the given llvm type.
     llvm::Type *type_ptr (llvm::Type *type);

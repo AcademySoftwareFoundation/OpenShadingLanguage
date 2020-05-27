@@ -1052,9 +1052,9 @@ LLVM_Util::type_union(const std::vector<llvm::Type *> &types)
 
 llvm::Type *
 LLVM_Util::type_struct (const std::vector<llvm::Type *> &types,
-                        const std::string &name)
+                        const std::string &name, bool is_packed)
 {
-    return llvm::StructType::create(context(), types, name);
+    return llvm::StructType::create(context(), types, name, is_packed);
 }
 
 

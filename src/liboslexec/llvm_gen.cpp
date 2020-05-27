@@ -2579,15 +2579,13 @@ llvm_gen_trace_options (BackendLLVM &rop, int opnum,
         TypeDesc valtype = Val.typespec().simpletype ();
         
         llvm::Value *val = rop.llvm_load_value (Val);
-        static ustring kmindist("mindist"), kmaxdist("maxdist");
-        static ustring kshade("shade"), ktraceset("traceset");
-        if (name == kmindist && valtype == TypeDesc::FLOAT) {
+        if (name == Strings::mindist && valtype == TypeDesc::FLOAT) {
             rop.ll.call_function ("osl_trace_set_mindist", opt, val);
-        } else if (name == kmaxdist && valtype == TypeDesc::FLOAT) {
+        } else if (name == Strings::maxdist && valtype == TypeDesc::FLOAT) {
             rop.ll.call_function ("osl_trace_set_maxdist", opt, val);
-        } else if (name == kshade && valtype == TypeDesc::INT) {
+        } else if (name == Strings::shade && valtype == TypeDesc::INT) {
             rop.ll.call_function ("osl_trace_set_shade", opt, val);
-        } else if (name == ktraceset && valtype == TypeDesc::STRING) {
+        } else if (name == Strings::traceset && valtype == TypeDesc::STRING) {
             rop.ll.call_function ("osl_trace_set_traceset", opt, val);
         } else {
             rop.shadingcontext()->errorf("Unknown trace() optional argument: \"%s\", <%s> (%s:%d)",

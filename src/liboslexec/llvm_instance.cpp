@@ -115,6 +115,7 @@ static ustring op_aref("aref");
 static ustring op_compref("compref");
 static ustring op_mxcompref("mxcompref");
 static ustring op_useparam("useparam");
+static ustring unknown_shader_group_name("<Unknown Shader Group Name>");
 
 
 struct HelperFuncRecord {

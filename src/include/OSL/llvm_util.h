@@ -9,6 +9,7 @@
 #include <OSL/oslconfig.h>
 
 #include <vector>
+#include <unordered_set>
 
 #ifdef LLVM_NAMESPACE
 namespace llvm = LLVM_NAMESPACE;
@@ -72,7 +73,10 @@ public:
     }
 
     /// Set the current module to m.
-    void module (llvm::Module *m) { m_llvm_module = m; }
+    void module (llvm::Module *m) {
+        m_llvm_module = m;
+        m_ModuleIsPruned = false;
+    }
 
     /// Create a new empty module.
     llvm::Module *new_module (const char *id = "default");
@@ -140,6 +144,24 @@ public:
     /// current one).
     void execengine (llvm::ExecutionEngine *exec);
 
+    enum class Linkage {
+        External, // Externally visible
+        LinkOnceODR, // One Definition Rule:  Inline version, but allow replacement by equivalent.
+        Internal, // Treat as static functions.
+        Private // Treat as static functions, but omit from symbol table.
+    };
+
+    /// Identify exactly which functions need to exist in the module based
+    /// on actual usage from a set of external_functions. All unneeded
+    /// functions are removed before we move to optimization which is much
+    /// faster.  The external_functions will be set to have external linkage
+    /// and the remaining functions set to internal linkage.
+    void prune_and_internalize_module (
+        std::unordered_set<llvm::Function*> external_functions,
+        Linkage default_linkage = Linkage::Internal,
+        std::string *out_err = nullptr);
+
+    // OLD, might deprecate later
     /// Change symbols in the module that are marked as having external
     /// linkage to an alternate linkage that allows them to be discarded if
     /// not used within the module. Only do this for functions that start
@@ -596,6 +618,8 @@ private:
     llvm::PointerType * m_llvm_type_wide_int_ptr;
     llvm::PointerType * m_llvm_type_wide_bool_ptr;
     llvm::PointerType * m_llvm_type_wide_float_ptr;
+
+    bool m_ModuleIsPruned;
 };
 
 

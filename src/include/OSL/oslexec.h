@@ -152,6 +152,9 @@ public:
     ///                              for devs to find crashes)
     ///    int llvm_output_bitcode  Output the full bitcode for each group,
     ///                              for debugging. (0)
+    ///    string llvm_prune_ir_strategy  Strategy for pruning unnecessary
+    ///                              IR (choices: "prune" [default],
+    ///                              "internalize", or "none").
     ///    int max_local_mem_KB   Error if shader group needs more than this
     ///                              much local storage to execute (1024K)
     ///    string debug_groupname Name of shader group -- debug only this one

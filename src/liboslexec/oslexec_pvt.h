@@ -565,6 +565,7 @@ public:
     int llvm_debug_layers () const { return m_llvm_debug_layers; }
     int llvm_debug_ops () const { return m_llvm_debug_ops; }
     int llvm_output_bitcode () const { return m_llvm_output_bitcode; }
+    ustring llvm_prune_ir_strategy () const { return m_llvm_prune_ir_strategy; }
     bool fold_getattribute () const { return m_opt_fold_getattribute; }
     bool opt_texture_handle () const { return m_opt_texture_handle; }
     int opt_passes() const { return m_opt_passes; }
@@ -750,6 +751,7 @@ private:
     int m_llvm_debug_layers;              ///< Add layer enter/exit printfs
     int m_llvm_debug_ops;                 ///< Add printfs to every op
     int m_llvm_output_bitcode;            ///< Output bitcode for each group
+    ustring m_llvm_prune_ir_strategy;     ///< LLVM IR pruning strategy
     ustring m_debug_groupname;            ///< Name of sole group to debug
     ustring m_debug_layername;            ///< Name of sole layer to debug
     ustring m_opt_layername;              ///< Name of sole layer to optimize

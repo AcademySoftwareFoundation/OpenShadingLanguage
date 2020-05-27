@@ -191,7 +191,7 @@ test_big_func (bool do_print=false)
     //     std::cout << "Generated the following bitcode:\n"
     //               << ll.bitcode_string(func) << "\n";
 
-    ll.setup_optimization_passes (0);
+    ll.setup_optimization_passes (0, true /*targetHost*/);
     ll.do_optimize ();
 
     if (do_print)

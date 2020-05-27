@@ -551,6 +551,7 @@ public:
     int llvm_debug () const { return m_llvm_debug; }
     int llvm_debug_layers () const { return m_llvm_debug_layers; }
     int llvm_debug_ops () const { return m_llvm_debug_ops; }
+    int llvm_target_host () const { return m_llvm_target_host; }
     int llvm_output_bitcode () const { return m_llvm_output_bitcode; }
     ustring llvm_prune_ir_strategy () const { return m_llvm_prune_ir_strategy; }
     bool fold_getattribute () const { return m_opt_fold_getattribute; }
@@ -737,6 +738,7 @@ private:
     int m_llvm_debug;                     ///< More LLVM debugging output
     int m_llvm_debug_layers;              ///< Add layer enter/exit printfs
     int m_llvm_debug_ops;                 ///< Add printfs to every op
+    int m_llvm_target_host;               ///< Target specific host architecture
     int m_llvm_output_bitcode;            ///< Output bitcode for each group
     ustring m_llvm_prune_ir_strategy;     ///< LLVM IR pruning strategy
     ustring m_debug_groupname;            ///< Name of sole group to debug

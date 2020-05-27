@@ -508,8 +508,9 @@ LLVM_Util::InstallLazyFunctionCreator (void* (*P)(const std::string &))
 
 
 void
-LLVM_Util::setup_optimization_passes (int optlevel)
+LLVM_Util::setup_optimization_passes (int optlevel, bool target_host)
 {
+    OSL_DEV_ONLY(std::cout << "setup_optimization_passes " << optlevel);
     OSL_DASSERT (m_llvm_module_passes == NULL && m_llvm_func_passes == NULL);
 
     // Construct the per-function passes and module-wide (interprocedural
@@ -520,6 +521,18 @@ LLVM_Util::setup_optimization_passes (int optlevel)
 
     m_llvm_module_passes = new llvm::legacy::PassManager;
     llvm::legacy::PassManager &mpm = (*m_llvm_module_passes);
+
+    if (target_host) {
+        llvm::TargetMachine* target_machine = execengine()->getTargetMachine();
+        llvm::Triple ModuleTriple(module()->getTargetTriple());
+        // Add an appropriate TargetLibraryInfo pass for the module's triple.
+        llvm::TargetLibraryInfoImpl TLII(ModuleTriple);
+        mpm.add(new llvm::TargetLibraryInfoWrapperPass(TLII));
+        mpm.add(createTargetTransformInfoWrapperPass(target_machine ? target_machine->getTargetIRAnalysis()
+                                                     : llvm::TargetIRAnalysis()));
+        fpm.add(createTargetTransformInfoWrapperPass(
+          target_machine  ? target_machine->getTargetIRAnalysis() : llvm::TargetIRAnalysis()));
+    }
 
     // llvm_optimize 0-3 corresponds to the same set of optimizations
     // as clang: -O0, -O1, -O2, -O3

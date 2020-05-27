@@ -150,6 +150,7 @@ public:
     ///                              layer functions.
     ///    int llvm_debug_ops     Extra printfs for each OSL op (helpful
     ///                              for devs to find crashes)
+    //     int llvm_target_host   Target the specific host architecture. (1)
     ///    int llvm_output_bitcode  Output the full bitcode for each group,
     ///                              for debugging. (0)
     ///    string llvm_prune_ir_strategy  Strategy for pruning unnecessary

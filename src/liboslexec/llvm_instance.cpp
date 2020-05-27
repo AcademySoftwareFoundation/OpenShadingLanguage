@@ -1077,7 +1077,10 @@ BackendLLVM::build_llvm_instance (bool groupentry)
 void
 BackendLLVM::initialize_llvm_group ()
 {
-    ll.setup_optimization_passes (shadingsys().llvm_optimize());
+    // Set up optimization passes. Don't target the host if we're building
+    // for OptiX.
+    ll.setup_optimization_passes (shadingsys().llvm_optimize(),
+                                  shadingsys().llvm_target_host() && !use_optix());
 
     // Clear the shaderglobals and groupdata types -- they will be
     // created on demand.

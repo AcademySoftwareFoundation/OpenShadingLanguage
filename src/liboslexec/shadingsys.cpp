@@ -720,6 +720,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_llvm_optimize(1),
       m_debug(0), m_llvm_debug(0),
       m_llvm_debug_layers(0), m_llvm_debug_ops(0),
+      m_llvm_target_host(1),
       m_llvm_output_bitcode(0),
       m_commonspace_synonym("world"),
       m_max_local_mem_KB(2048),
@@ -1138,6 +1139,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("llvm_debug", int, m_llvm_debug);
     ATTR_SET ("llvm_debug_layers", int, m_llvm_debug_layers);
     ATTR_SET ("llvm_debug_ops", int, m_llvm_debug_ops);
+    ATTR_SET ("llvm_target_host", int, m_llvm_target_host);
     ATTR_SET ("llvm_output_bitcode", int, m_llvm_output_bitcode);
     ATTR_SET_STRING ("llvm_prune_ir_strategy", m_llvm_prune_ir_strategy);
     ATTR_SET ("strict_messages", int, m_strict_messages);
@@ -1275,6 +1277,7 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("llvm_debug", int, m_llvm_debug);
     ATTR_DECODE ("llvm_debug_layers", int, m_llvm_debug_layers);
     ATTR_DECODE ("llvm_debug_ops", int, m_llvm_debug_ops);
+    ATTR_DECODE ("llvm_target_host", int, m_llvm_target_host);
     ATTR_DECODE ("llvm_output_bitcode", int, m_llvm_output_bitcode);
     ATTR_DECODE ("strict_messages", int, m_strict_messages);
     ATTR_DECODE ("error_repeats", int, m_error_repeats);
@@ -1747,7 +1750,9 @@ ShadingSystemImpl::getstats (int level) const
     INTOPT (llvm_debug);
     BOOLOPT (llvm_debug_layers);
     BOOLOPT (llvm_debug_ops);
+    BOOLOPT (llvm_target_host);
     BOOLOPT (llvm_output_bitcode);
+    BOOLOPT (llvm_prune_ir_strategy);
     BOOLOPT (lazylayers);
     BOOLOPT (lazyglobals);
     BOOLOPT (lazyunconnected);

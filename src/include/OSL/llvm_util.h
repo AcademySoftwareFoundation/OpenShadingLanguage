@@ -172,7 +172,8 @@ public:
                                        const std::vector<std::string> &moreexceptions);
 
     /// Setup LLVM optimization passes.
-    void setup_optimization_passes (int optlevel);
+    /// if targetHost is true, passes to target the host will be added
+    void setup_optimization_passes (int optlevel, bool target_host=true);
 
     /// Run the optimization passes.
     void do_optimize (std::string *err = NULL);

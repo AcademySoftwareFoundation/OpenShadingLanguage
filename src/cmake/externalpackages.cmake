@@ -80,6 +80,10 @@ add_definitions (-DOSL_LLVM_FULL_VERSION="${LLVM_VERSION}")
 if (LLVM_NAMESPACE)
     add_definitions ("-DLLVM_NAMESPACE=${LLVM_NAMESPACE}")
 endif ()
+if (LLVM_VERSION VERSION_GREATER_EQUAL 10.0.0 AND
+    CMAKE_CXX_STANDARD VERSION_LESS 14)
+    message (FATAL_ERROR "LLVM 10+ requires C++14 or higher (was ${CMAKE_CXX_STANDARD}).")
+endif ()
 
 # end LLVM library setup
 ###########################################################################

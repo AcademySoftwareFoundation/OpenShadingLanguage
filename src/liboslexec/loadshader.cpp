@@ -404,7 +404,7 @@ OSOReaderToMaster::hint (string_view hintstring)
         // This was a bug prior to 1.10.
         static ustring regex_search("regex_search");
         static ustring regex_match("regex_match");
-        if (opname == regex_search || opname == regex_search)
+        if ((opname == regex_search || opname == regex_match) && m_nargs > 3)
             m_master->m_ops.back().argwriteonly (2);
         return;
     }

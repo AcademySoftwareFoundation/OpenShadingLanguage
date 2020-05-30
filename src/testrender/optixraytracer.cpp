@@ -482,9 +482,11 @@ OptixRaytracer::make_optix_materials ()
         }
 
         if (options.get_int("saveptx")) {
-            std::ofstream out (group_name + "_" + std::to_string(mtl_id++) + ".ptx");
+            std::string filename = Strutil::sprintf("%s_%d.ptx", group_name,
+                                                    mtl_id++);
+            OIIO::ofstream out;
+            OIIO::Filesystem::open (out, filename);
             out << osl_ptx;
-            out.close();
         }
 
         // Create Programs from the init and group_entry functions,
@@ -636,9 +638,8 @@ OptixRaytracer::make_optix_materials ()
     create_optix_pg(&sphere_fillSG_desc, 1, &program_options, &sphere_fillSG_dc);
 
     // Create materials
+    int mtl_id = 0;
     for (const auto& groupref : shaders()) {
-        const int mtl_id = shader_groups.size()/2;
-
         std::string group_name, init_name, entry_name;
         shadingsys->getattribute (groupref.get(), "groupname",        group_name);
         shadingsys->getattribute (groupref.get(), "group_init_name",  init_name);
@@ -670,9 +671,11 @@ OptixRaytracer::make_optix_materials ()
         }
 
         if (options.get_int ("saveptx")) {
-            std::ofstream out (group_name + "_" + std::to_string(mtl_id) + ".ptx");
+            std::string filename = Strutil::sprintf("%s_%d.ptx", group_name,
+                                                    mtl_id++);
+            OIIO::ofstream out;
+            OIIO::Filesystem::open (out, filename);
             out << osl_ptx;
-            out.close();
         }
 
         OptixModule optix_module;

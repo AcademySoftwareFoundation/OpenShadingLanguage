@@ -411,9 +411,11 @@ OptixGridRenderer::make_optix_materials ()
         }
 
         if (options.get_int("saveptx")) {
-            std::ofstream out (group_name + "_" + std::to_string(mtl_id++) + ".ptx");
+            std::string filename = OIIO::Strutil::sprintf("%s_%d.ptx",
+                                                          group_name, mtl_id++);
+            OIIO::ofstream out;
+            OIIO::Filesystem::open (out, filename);
             out << osl_ptx;
-            out.close();
         }
 
         // Create Programs from the init and group_entry functions,
@@ -570,9 +572,11 @@ OptixGridRenderer::make_optix_materials ()
         }
 
         if (options.get_int("saveptx")) {
-            std::ofstream out (group_name + "_" + std::to_string(mtl_id++) + ".ptx");
+            std::string filename = Strutil::sprintf("%s_%d.ptx", group_name,
+                                                    mtl_id++);
+            OIIO::ofstream out;
+            OIIO::Filesystem::open (out, filename);
             out << osl_ptx;
-            out.close();
         }
 
         OptixModule optix_module;

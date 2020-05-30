@@ -1334,10 +1334,11 @@ BackendLLVM::run ()
         if (safegroup.size() > 235)
             safegroup = Strutil::sprintf ("TRUNC_%s_%d", safegroup.substr(safegroup.size()-235), group().id());
         std::string name = Strutil::sprintf ("%s.ll", safegroup);
-        std::ofstream out (name, std::ios_base::out | std::ios_base::trunc);
-        if (out.good()) {
+        OIIO::ofstream out;
+        OIIO::Filesystem::open(out, name);
+        if (out) {
             out << ll.bitcode_string (ll.module());
-            shadingsys().infof("Wrote  pre-optimized bitcode to '%s'", name);
+            shadingsys().infof("Wrote pre-optimized bitcode to '%s'", name);
         } else {
             shadingsys().errorf("Could not write to '%s'", name);
         }
@@ -1366,8 +1367,9 @@ BackendLLVM::run ()
         if (safegroup.size() > 235)
             safegroup = Strutil::sprintf ("TRUNC_%s_%d", safegroup.substr(safegroup.size()-235), group().id());
         std::string name = Strutil::sprintf ("%s_O%d.ll", safegroup, shadingsys().llvm_optimize());
-        std::ofstream out (name, std::ios_base::out | std::ios_base::trunc);
-        if (out.good()) {
+        OIIO::ofstream out;
+        OIIO::Filesystem::open(out, name);
+        if (out) {
             out << ll.bitcode_string (ll.module());
             shadingsys().infof("Wrote post-optimized bitcode to '%s'", name);
         } else {

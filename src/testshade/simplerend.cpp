@@ -105,18 +105,11 @@ void register_closures(OSL::ShadingSystem* shadingsys) {
         { "transparent", TRANSPARENT_ID,        { CLOSURE_FINISH_PARAM(EmptyParams) } },
         { "debug"      , DEBUG_ID,              { CLOSURE_STRING_PARAM(DebugParams, tag),
                                                   CLOSURE_FINISH_PARAM(DebugParams) } },
-        { "holdout"    , HOLDOUT_ID,            { CLOSURE_FINISH_PARAM(EmptyParams) } },
-        // mark end of the array
-        { NULL, 0, {} }
+        { "holdout"    , HOLDOUT_ID,            { CLOSURE_FINISH_PARAM(EmptyParams) } }
     };
 
-    for (int i = 0; builtins[i].name; i++) {
-        shadingsys->register_closure(
-            builtins[i].name,
-            builtins[i].id,
-            builtins[i].params,
-            NULL, NULL);
-    }
+    for (const auto& b : builtins)
+        shadingsys->register_closure(b.name, b.id, b.params, nullptr, nullptr);
 }
 
 

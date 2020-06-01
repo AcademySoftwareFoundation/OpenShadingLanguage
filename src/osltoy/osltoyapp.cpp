@@ -707,12 +707,10 @@ OSLToyMainWindow::action_save ()
     }
     std::string text = texteditor->text_string();
 
-    std::ofstream out (filename, std::ios_base::out | std::ios_base::trunc);
-    if (out.good()) {
+    OIIO::ofstream out;
+    OIIO::Filesystem::open (out, filename);
+    if (out)
         out << text;
-        out.close ();
-    }
-
     if (out.fail()) {
         std::string msg = OIIO::Strutil::sprintf ("Could not write %s", filename);
         QErrorMessage err (nullptr);

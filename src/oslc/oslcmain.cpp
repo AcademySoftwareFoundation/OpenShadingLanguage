@@ -188,12 +188,11 @@ main (int argc, const char *argv[])
             ok = compiler.compile_buffer (sourcecode, osobuffer, args, "",
                                           shader_path);
         if (ok) {
-            std::ofstream file;
+            OIIO::ofstream file;
             OIIO::Filesystem::open (file, compiler.output_filename());
-            if (file.good()) {
+            if (file)
                 file << osobuffer;
-                file.close ();
-            }
+            ok = file.good();
         }
     } else {
         // Ordinary compile from file

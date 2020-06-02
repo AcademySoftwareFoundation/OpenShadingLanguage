@@ -694,7 +694,7 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
                                       ErrorHandler *err)
     : m_renderer(renderer), m_texturesys(texturesystem), m_err(err),
       m_statslevel (0), m_lazylayers (true),
-      m_lazyglobals (true), m_lazyunconnected(true),
+      m_lazyglobals (true), m_lazyunconnected(true), m_lazyerror(true),
       m_lazy_userdata(false), m_userdata_isconnected(false),
       m_clearmemory (false), m_debugnan (false), m_debug_uninit(false),
       m_lockgeom_default (true), m_strict_messages(true),
@@ -1109,6 +1109,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("lazylayers", int, m_lazylayers);
     ATTR_SET ("lazyglobals", int, m_lazyglobals);
     ATTR_SET ("lazyunconnected", int, m_lazyunconnected);
+    ATTR_SET ("lazyerror", int, m_lazyerror);
     ATTR_SET ("lazy_userdata", int, m_lazy_userdata);
     ATTR_SET ("userdata_isconnected", int, m_userdata_isconnected);
     ATTR_SET ("clearmemory", int, m_clearmemory);
@@ -1756,6 +1757,7 @@ ShadingSystemImpl::getstats (int level) const
     BOOLOPT (lazylayers);
     BOOLOPT (lazyglobals);
     BOOLOPT (lazyunconnected);
+    BOOLOPT (lazyerror);
     BOOLOPT (lazy_userdata);
     BOOLOPT (userdata_isconnected);
     BOOLOPT (clearmemory);
@@ -3263,7 +3265,7 @@ ShadingSystemImpl::archive_shadergroup (ShaderGroup& group, string_view filename
 
     bool ok = true;
     std::string groupfilename = tmpdir + "/shadergroup";
-    OIIO::ofstream groupfile;
+    std::ofstream groupfile;
     OIIO::Filesystem::open(groupfile, groupfilename);
     if (groupfile.good()) {
         groupfile << group.serialize();

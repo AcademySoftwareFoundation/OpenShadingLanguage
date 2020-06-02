@@ -699,6 +699,7 @@ private:
     bool m_lazylayers;                    ///< Evaluate layers on demand?
     bool m_lazyglobals;                   ///< Run lazily even if globals write?
     bool m_lazyunconnected;               ///< Run lazily even if not connected?
+    bool m_lazyerror;                     ///< Run lazily even if it has error op
     bool m_lazy_userdata;                 ///< Retrieve userdata lazily?
     bool m_userdata_isconnected;          ///< Userdata params isconnected()?
     bool m_clearmemory;                   ///< Zero mem before running shader?
@@ -888,7 +889,7 @@ struct ConnectedParam {
     }
 
     // Debug output of ConnectedParam
-    std::string str (const ShaderInstance *inst, bool unmangle);
+    std::string str (const ShaderInstance *inst, bool unmangle) const;
 };
 
 
@@ -916,7 +917,7 @@ struct Connection {
 
     // Debug output of ConnectedParam
     std::string str (const ShaderGroup &group, const ShaderInstance *dstinst,
-                     bool unmangle);
+                     bool unmangle = true) const;
 };
 
 
@@ -1038,6 +1039,11 @@ public:
     bool userdata_params () const { return m_userdata_params; }
     void userdata_params (bool val) { m_userdata_params = val; }
 
+    /// Does this instance potentially read userdata to initialize any of
+    /// its parameters?
+    bool has_error_op () const { return m_has_error_op; }
+    void has_error_op (bool val) { m_has_error_op = val; }
+
     /// Should this instance only be run lazily (i.e., not
     /// unconditionally)?
     bool run_lazily () const {
@@ -1056,6 +1062,10 @@ public:
         // Shaders without any downstream connections are not lazy unless
         // lazyunconnected is on.
         if (!outgoing_connections() && !shadingsys().m_lazyunconnected)
+            return false;
+        // Shaders without any downstream connections are not lazy unless
+        // lazyunconnected is on.
+        if (!shadingsys().m_lazyerror && has_error_op())
             return false;
         return true;
     }
@@ -1162,9 +1172,12 @@ public:
         // outputs, or if it sets globals (but only if lazyglobals is off),
         // or if it has no downstream connections (but only if
         // lazyunconnected is off).
-        bool used = (outgoing_connections() || renderer_outputs() ||
-                     (writes_globals() && !shadingsys().m_lazyglobals) ||
-                     (!outgoing_connections() && !shadingsys().m_lazyunconnected));
+        bool used = (outgoing_connections()
+                     || renderer_outputs()
+                     || (writes_globals() && !shadingsys().m_lazyglobals)
+                     || (!outgoing_connections() && !shadingsys().m_lazyunconnected)
+                     || (!shadingsys().m_lazyerror && has_error_op())
+                     );
         return !used || merged_unused();
     }
 
@@ -1237,6 +1250,7 @@ private:
     bool m_userdata_params;             ///< Might I read userdata for params?
     bool m_outgoing_connections;        ///< Any outgoing connections?
     bool m_renderer_outputs;            ///< Any outputs params render outputs?
+    bool m_has_error_op;                ///< Any error ops in the code?
     bool m_merged_unused;               ///< Unused because of a merge
     bool m_last_layer;                  ///< Is it the group's last layer?
     bool m_entry_layer;                 ///< Is it an entry layer?

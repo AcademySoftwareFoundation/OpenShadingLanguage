@@ -401,7 +401,7 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             group-outputs groupstring
             hash hashnoise hex hyperb
             ieee_fp if incdec initlist initops intbits isconnected isconstant
-            layers layers-Ciassign layers-entry layers-lazy
+            layers layers-Ciassign layers-entry layers-lazy layers-lazyerror
             layers-nonlazycopy layers-repeatedoutputs
             linearstep
             logic loop matrix message

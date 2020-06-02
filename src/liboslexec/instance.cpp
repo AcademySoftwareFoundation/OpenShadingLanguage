@@ -33,7 +33,7 @@ ShaderInstance::ShaderInstance (ShaderMaster::ref master,
       m_layername(layername),
       m_writes_globals(false),
       m_outgoing_connections(false),
-      m_renderer_outputs(false), m_merged_unused(false),
+      m_renderer_outputs(false), m_has_error_op(false), m_merged_unused(false),
       m_last_layer(false), m_entry_layer(false),
       m_firstparam(m_master->m_firstparam), m_lastparam(m_master->m_lastparam),
       m_maincodebegin(m_master->m_maincodebegin),
@@ -508,7 +508,7 @@ ShaderInstance::copy_code_from_master (ShaderGroup &group)
 
 
 std::string
-ConnectedParam::str (const ShaderInstance *inst, bool unmangle)
+ConnectedParam::str (const ShaderInstance *inst, bool unmangle) const
 {
     const Symbol *s = inst->symbol(param);
     return Strutil::sprintf ("%s%s%s (%s)",
@@ -522,7 +522,7 @@ ConnectedParam::str (const ShaderInstance *inst, bool unmangle)
 
 std::string
 Connection::str (const ShaderGroup &group, const ShaderInstance *dstinst,
-                 bool unmangle)
+                 bool unmangle) const
 {
     return Strutil::sprintf ("%s -> %s", src.str(group[srclayer], unmangle),
                              dst.str(dstinst, unmangle));

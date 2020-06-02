@@ -383,6 +383,11 @@ public:
                              const FastIntSet *excluded=NULL,
                              bool copy_temps=false);
 
+    // Check for any error() calls, mark has_error_op if found and if
+    // lazyerrors == 0. If `warn` is true, presumably only after
+    // optimization is finished, warn if any error messages are left.
+    bool check_for_error_calls (bool warn = false);
+
     /// After optimization, check for things that should not be left
     /// unoptimized.
     bool police_failed_optimizations ();

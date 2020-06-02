@@ -328,7 +328,7 @@ RuntimeOptimizer::debug_opt_ops (int opbegin, int opend, string_view message) co
         oprange = Strutil::sprintf ("ops %d-%d ", opbegin, opend);
     else if (opbegin >= 0)
         oprange = Strutil::sprintf ("op %d ", opbegin);
-    debug_optf("%s%s (@ %s:%d)\n", oprange, message,
+    debug_optf("  %s%s (@ %s:%d)\n", oprange, message,
                op.sourcefile(), op.sourceline());
 }
 
@@ -1798,6 +1798,15 @@ RuntimeOptimizer::remove_unused_params ()
     }
 
     // Get rid of the Connections themselves
+    if (debug() > 1) {
+        for (auto&& c : inst()->connections()) {
+            if (param_never_used(c)) {
+                debug_optf("  Connection no longer needed: %s %s\n",
+                           group()[c.srclayer]->layername(),
+                           c.str(group(), inst()));
+            }
+        }
+    }
     erase_if (inst()->connections(), param_never_used);
 
     return alterations;
@@ -3027,6 +3036,10 @@ RuntimeOptimizer::run ()
 
     m_params_holding_globals.resize (nlayers);
 
+    // Inventory for error calls so that if lazyerror=0 we don't incorrectly
+    // assume the layer is unused.
+    check_for_error_calls(false);
+
     // Optimize each layer, from first to last
     for (int layer = 0;  layer < nlayers;  ++layer) {
         set_inst (layer);
@@ -3038,6 +3051,7 @@ RuntimeOptimizer::run ()
         resolve_isconnected ();
         optimize_instance ();
     }
+    check_for_error_calls(false);  // re-check
 
     // Optimize each layer again, from last to first (because some
     // optimizations are only apparent when the subsequent shaders have
@@ -3077,6 +3091,9 @@ RuntimeOptimizer::run ()
 
     // Last chance to eliminate duplicate instances
     shadingsys().merge_instances (group(), true);
+
+    // Last inventory of error() calls, issue warnings if needed.
+    check_for_error_calls(true);
 
     // Get rid of nop instructions and unused symbols.
     size_t new_nsyms = 0, new_nops = 0, new_deriv_syms = 0;
@@ -3274,6 +3291,35 @@ RuntimeOptimizer::police(const Opcode& op, string_view msg, int type)
                                    op.sourcefile(), op.sourceline(), msg);
     }
     return false;
+}
+
+
+
+bool
+RuntimeOptimizer::check_for_error_calls(bool warn)
+{
+    // If the "lazyerror" option is set, there's nothing to do.
+    if (shadingsys().m_lazyerror)
+        return false;
+
+    // Check all the layers (even ones we think are unused) for `error()`
+    // calls that still remain after runtime optimization. If found, warn
+    // and mark the layer as having error calls.
+    bool err = false;
+    int nlayers = (int) group().nlayers ();
+    for (int layer = 0;  layer < nlayers;  ++layer) {
+        set_inst (layer);
+        inst()->has_error_op(false);
+        for (auto&& op : inst()->ops()) {
+            if (op.opname() == Strings::error) {
+                inst()->has_error_op(true);
+                if (warn)
+                    err |= police (op, "error() call present in optimized shader.",
+                                   police_opt_warn);
+            }
+        }
+    }
+    return err;
 }
 
 

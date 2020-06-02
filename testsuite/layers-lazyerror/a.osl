@@ -1,0 +1,17 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/imageworks/OpenShadingLanguage
+
+surface a ( int ever = 0,
+            output closure color CCout = 0 )
+{
+    printf ("a: uv = %g %g\n", u, v);
+    if (ever)
+        error("This error should be optimzed away.\n");
+    if (u > 0.5)
+        error("u should never be > 0.5!\n");
+    CCout = diffuse(N) * color(0,0.18,0);
+    Ci = CCout;
+    printf ("a: CCout = %s\n", CCout);
+    printf ("a: Ci = %s\n", Ci);
+}

@@ -336,6 +336,7 @@ test: cmake
 	    DYLD_LIBRARY_PATH=${INSTALL_PREFIX}/lib:${DYLD_LIBRARY_PATH} \
 	    OIIO_LIBRARY_PATH=${INSTALL_PREFIX}/lib:${OIIO_LIBRARY_PATH} \
 	    PYTHONPATH=${working_dir}/${build_dir}/src/python:${PYTHONPATH} \
+	    CTEST_PARALLEL_LEVEL=1 \
 	    ctest -E broken ${TEST_FLAGS} ;\
 	  )
 	@ ( if [ "${CODECOV}" == "1" ] ; then \
@@ -344,6 +345,8 @@ test: cmake
 	      lcov --remove cov.info "/usr*" -o cov.info ; \
 	      genhtml -o ./cov -t "OSL test coverage" --num-spaces 4 cov.info ; \
 	  fi )
+# Note: we force CTEST_PARALLEL_LEVEL=1 because this version of OSL does not
+# have its testsuite set up to allow parallel execution f tests.
 
 # 'make clean' clears out the build directory for this platform
 clean:

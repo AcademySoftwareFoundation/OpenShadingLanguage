@@ -141,24 +141,6 @@ set_shadingsys_options ()
 
 
 
-/// Read the entire contents of the named file and place it in str,
-/// returning true on success, false on failure.
-inline bool
-read_text_file (string_view filename, std::string &str)
-{
-    std::ifstream in (filename.c_str(), std::ios::in | std::ios::binary);
-    if (in) {
-        std::ostringstream contents;
-        contents << in.rdbuf();
-        in.close ();
-        str = contents.str();
-        return true;
-    }
-    return false;
-}
-
-
-
 static void
 compile_buffer (const std::string &sourcecode,
                 const std::string &shadername)
@@ -190,7 +172,7 @@ shader_from_buffers (std::string shadername)
     if (! OIIO::Strutil::ends_with (oslfilename, ".osl"))
         oslfilename += ".osl";
     std::string sourcecode;
-    if (! read_text_file (oslfilename, sourcecode)) {
+    if (! OIIO::Filesystem::read_text_file (oslfilename, sourcecode)) {
         std::cerr << "Could not open \"" << oslfilename << "\"\n";
         exit (EXIT_FAILURE);
     }

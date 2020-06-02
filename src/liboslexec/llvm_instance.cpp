@@ -1224,8 +1224,9 @@ BackendLLVM::run ()
         if (safegroup.size() > 235)
             safegroup = Strutil::format ("TRUNC_%s_%d", safegroup.substr(safegroup.size()-235), group().id());
         std::string name = Strutil::format ("%s.ll", safegroup);
-        std::ofstream out (name, std::ios_base::out | std::ios_base::trunc);
-        if (out.good()) {
+        OIIO::ofstream out;
+        OIIO::Filesystem::open(out, name);
+        if (out) {
             out << ll.bitcode_string (ll.module());
         } else {
             shadingcontext()->error ("Could not write to '%s'", name);
@@ -1253,8 +1254,9 @@ BackendLLVM::run ()
         if (safegroup.size() > 235)
             safegroup = Strutil::format ("TRUNC_%s_%d", safegroup.substr(safegroup.size()-235), group().id());
         std::string name = Strutil::format ("%s_opt.ll", safegroup);
-        std::ofstream out (name, std::ios_base::out | std::ios_base::trunc);
-        if (out.good()) {
+        OIIO::ofstream out;
+        OIIO::Filesystem::open(out, name);
+        if (out) {
             out << ll.bitcode_string (ll.module());
         } else {
             shadingcontext()->error ("Could not write to '%s'", name);

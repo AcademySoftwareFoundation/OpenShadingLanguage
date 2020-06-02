@@ -159,7 +159,7 @@ OSLCompilerImpl::preprocess_file (const std::string &filename,
                                   std::string &result)
 {
     // Read file contents into a string
-    std::ifstream instream;
+    OIIO::ifstream instream;
     OIIO::Filesystem::open(instream, filename);
     if (! instream.is_open()) {
         error (ustring(filename), 0, "Could not open \"%s\"\n", filename.c_str());
@@ -599,7 +599,7 @@ OSLCompilerImpl::compile (string_view filename,
             if (m_output_filename.size() == 0)
                 m_output_filename = default_output_filename ();
 
-            std::ofstream oso_output;
+            OIIO::ofstream oso_output;
             OIIO::Filesystem::open (oso_output, m_output_filename);
             if (! oso_output.good()) {
                 error (ustring(), 0, "Could not open \"%s\"",

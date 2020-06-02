@@ -1,3 +1,7 @@
+Release 1.10.12 -- ?? 2020 (compared to 1.10.11)
+---------------------------------------------------
+
+
 Release 1.10.11 -- 1 Jun 2020 (compared to 1.10.10)
 ---------------------------------------------------
 * Fixes to support building against LLVM 9 on some distributions. #1171

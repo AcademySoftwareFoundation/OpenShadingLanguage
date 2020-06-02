@@ -113,6 +113,8 @@ public:
     ///                              globals (1)
     ///    int lazyunconnected    Run layers lazily even if they have no
     ///                              output connections (1). For debugging.
+    ///    int lazyerror          Run layers lazily even if they have error
+    ///                              ops after optimization (1).
     ///    int lazy_userdata      Retrieve userdata lazily (0).
     ///    int userdata_isconnected  Should lockgeom=0 params (that may
     ///                              receive userdata) return true from

@@ -1,0 +1,11 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/imageworks/OpenShadingLanguage
+
+surface b ( closure color CCin = 0 )
+{
+    printf ("\nb: uv = %g %g\n", u, v);
+    printf("b: CCin = %s\n", CCin);
+    Ci = CCin + diffuse(N) * color(.18,0,0);
+    printf("b: Ci = %s\n",Ci);
+}

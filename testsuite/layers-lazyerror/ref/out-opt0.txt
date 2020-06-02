@@ -1,0 +1,40 @@
+Compiled a.osl -> a.oso
+Compiled b.osl -> b.oso
+lazyerror=1:
+
+b: uv = 0 0.5
+b: CCin = 
+b: Ci = (0.18, 0, 0) * diffuse ((0, 0, 1), "label", "")
+
+b: uv = 1 0.5
+b: CCin = 
+b: Ci = (0.18, 0, 0) * diffuse ((0, 0, 1), "label", "")
+
+lazyerror=0:
+WARNING: Optimization warning:
+  group:  unnamed_group_1
+  layer:  alayer
+  source: a.osl:10
+  issue:  error() call present in optimized shader.
+WARNING: Optimization warning:
+  group:  unnamed_group_1
+  layer:  alayer
+  source: a.osl:12
+  issue:  error() call present in optimized shader.
+a: uv = 0 0.5
+a: CCout = (0, 0.18, 0) * diffuse ((0, 0, 1), "label", "")
+a: Ci = (0, 0.18, 0) * diffuse ((0, 0, 1), "label", "")
+
+b: uv = 0 0.5
+b: CCin = 
+b: Ci = (0.18, 0, 0) * diffuse ((0, 0, 1), "label", "")
+a: uv = 1 0.5
+ERROR: Shader error [a]: u should never be > 0.5!
+
+a: CCout = (0, 0.18, 0) * diffuse ((0, 0, 1), "label", "")
+a: Ci = (0, 0.18, 0) * diffuse ((0, 0, 1), "label", "")
+
+b: uv = 1 0.5
+b: CCin = 
+b: Ci = (0.18, 0, 0) * diffuse ((0, 0, 1), "label", "")
+

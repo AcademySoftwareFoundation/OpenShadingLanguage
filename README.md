@@ -435,14 +435,14 @@ Van Lommel.
 
 Additionally, many others have contributed features, bug fixes, and other
 changes: Steve Agland, Shane Ambler, Martijn Berger, Farchad Bidgolirad,
-Nicholas Bishop, Stefan Büttner, Matthaus G. Chajdas, Thomas Dinges, Mark
-Final, Henri Fousse, Syoyo Fujita, Tim Grant, Derek Haase, Sven-Hendrik
-Haase, John Haddon, Daniel Heckenberg, Matt Johnson, Ronan Keryell, Elvic
-Liang, Max Liani, Bastien Montagne, Alexis Oblet, Erich Ocean, Mikko
-Ohtamaa, Alex Schworer, Jonathan Scruggs, Sergey Sharybin, Stephan
-Steinbach, Esteban Tovagliari, Alexander von Knorring, Alex Wells, Roman
-Zulak. (Listed alphabetically; if we've left anybody out, please let us
-know.)
+Nicholas Bishop, Stefan Bruens, Stefan Büttner, Matthaus G. Chajdas, Thomas
+Dinges, Mark Final, Henri Fousse, Syoyo Fujita, Tim Grant, Derek Haase,
+Sven-Hendrik Haase, John Haddon, Daniel Heckenberg, Matt Johnson, Ronan
+Keryell, Elvic Liang, Max Liani, Bastien Montagne, Alexis Oblet, Erich
+Ocean, Mikko Ohtamaa, Alex Schworer, Jonathan Scruggs, Sergey Sharybin,
+Stephan Steinbach, Esteban Tovagliari, Alexander von Knorring, Alex Wells,
+Roman Zulak. (Listed alphabetically; if we've left anybody out, please let
+us know.)
 
 We cannot possibly express sufficient gratitude to the managers at Sony
 Pictures Imageworks who allowed this project to proceed, supported it

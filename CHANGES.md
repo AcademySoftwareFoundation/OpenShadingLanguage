@@ -1,6 +1,12 @@
-Release 1.10.11 -- ?? 2020 (compared to 1.10.10)
+Release 1.10.11 -- 1 Jun 2020 (compared to 1.10.10)
 ---------------------------------------------------
-
+* Fixes to support building against LLVM 9 on some distributions. #1171
+* When building against LLVM 10, enforce requirement for C++14 with
+  appropriate warning when using C++11. #1135
+* Switch to using CMAKE_CXX_STANDARD as the main way to request particular
+  C++ standard versions. (USE_CPP should continue to work, though.)
+* Fixes to MINGW compile, and make sure all stream file I/O is UTF-8 safe.
+  #1188
 
 Release 1.10.10 -- 9 May 2020 (compared to 1.10.9)
 --------------------------------------------------

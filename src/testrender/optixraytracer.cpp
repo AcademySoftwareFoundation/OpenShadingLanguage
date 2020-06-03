@@ -482,8 +482,8 @@ OptixRaytracer::make_optix_materials ()
         }
 
         if (options.get_int("saveptx")) {
-            std::string filename = Strutil::sprintf("%s_%d.ptx", group_name,
-                                                    mtl_id++);
+            std::string filename = OIIO::Strutil::sprintf("%s_%d.ptx", group_name,
+                                                          mtl_id++);
             OIIO::ofstream out;
             OIIO::Filesystem::open (out, filename);
             out << osl_ptx;
@@ -671,8 +671,8 @@ OptixRaytracer::make_optix_materials ()
         }
 
         if (options.get_int ("saveptx")) {
-            std::string filename = Strutil::sprintf("%s_%d.ptx", group_name,
-                                                    mtl_id++);
+            std::string filename = OIIO::Strutil::sprintf("%s_%d.ptx", group_name,
+                                                          mtl_id++);
             OIIO::ofstream out;
             OIIO::Filesystem::open (out, filename);
             out << osl_ptx;

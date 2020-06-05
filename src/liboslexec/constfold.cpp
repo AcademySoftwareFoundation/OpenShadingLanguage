@@ -2852,6 +2852,10 @@ DECLFOLDER(constfold_noise)
             return 0;  // optional args starting, we don't fold them yet
     }
 
+#if OSL_GNUC_VERSION >= 90000
+#    pragma GCC diagnostic push
+#    pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
     if (name == u_cellnoise || name == u_cell) {
         CellNoise cell;
         if (outdim == 1) {
@@ -2883,6 +2887,9 @@ DECLFOLDER(constfold_noise)
             return 1;
         }
     }
+#if OSL_GNUC_VERSION >= 90000
+#    pragma GCC diagnostic pop
+#endif
 
     return 0;
 }

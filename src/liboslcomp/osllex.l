@@ -125,6 +125,14 @@ using namespace OSL::pvt;
 #pragma GCC diagnostic ignored "-Wsign-compare"
 #endif
 
+// flex uses the 'register' keyword, warned because it's deprecated in C++17.
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-register"
+#endif
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ >= 9
+#pragma GCC diagnostic ignored "-Wregister"
+#endif
+
 void preprocess (const char *yytext);
 
 // Macro that sets the yylloc line variables to the current parse line.

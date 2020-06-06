@@ -59,6 +59,26 @@ jobs:
             source src/build-scripts/gh-installdeps-centos.bash
             source src/build-scripts/ci-build-and-test.bash
 
+  vfxplatform-2021:
+    name: "Linux VFXP-2021 gcc9/C++17 llvm10 py3.7 boost-1.70 exr-2.5 OIIO-master avx2"
+    runs-on: ubuntu-latest
+    container:
+      image: aswf/ci-osl:2021
+    steps:
+      - uses: actions/checkout@v2
+      - name: all
+        env:
+          CXX: g++
+          CC: gcc
+          CMAKE_CXX_STANDARD: 17
+          PYTHON_VERSION: 3.7
+          USE_SIMD: avx2,f16c
+          OPENEXR_VERSION: 2.5.0
+        run: |
+            source src/build-scripts/ci-startup.bash
+            source src/build-scripts/gh-installdeps-centos.bash
+            source src/build-scripts/ci-build-and-test.bash
+
   linux-debug-gcc7-llvm8:
     name: "Linux Debug gcc7, C++14, llvm8, OIIO master, sse4, exr2.4"
     runs-on: ubuntu-18.04
@@ -117,13 +137,15 @@ jobs:
             source src/build-scripts/ci-build-and-test.bash
 
   linux-bleeding-edge:
-    name: "Linux bleeding edge: gcc8, C++17, llvm10, oiio/exr/pybind-master, avx2"
+    # Test against development master for relevant dependencies, latest
+    # supported releases of everything else.
+    name: "Linux bleeding edge: gcc10, C++17, llvm10, oiio/ocio/exr/pybind-master, avx2"
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
       - name: all
         env:
-          CXX: g++-8
+          CXX: g++-10
           USE_CPP: 17
           CMAKE_CXX_STANDARD: 17
           LLVM_VERSION: 10.0.0
@@ -139,6 +161,8 @@ jobs:
             source src/build-scripts/ci-build-and-test.bash
 
   linux-oldest:
+    # Oldest versions of the dependencies that we can muster, and various
+    # things disabled.
     name: "Linux oldest everything: gcc6 C++11 llvm7 py2.7 boost-1.66 oiio-2.0 no-simd exr2.3"
     runs-on: ubuntu-latest
     container:

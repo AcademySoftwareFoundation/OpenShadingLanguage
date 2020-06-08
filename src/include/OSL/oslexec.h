@@ -359,15 +359,16 @@ public:
     //    /* First layer - texture lookup shader: */
     //       /* Specify instance parameter values */
     //       const char *mapname = "colormap.exr";
-    //       ss->Parameter (*group, "texturename", TypeDesc::TypeString,
-    //                      &mapname);
+    //       ss->Parameter (*group, "texturename", mapname);
     //       float blur = 0.001;
-    //       ss->Parameter (*group, "blur", TypeDesc::TypeFloat, &blur);
+    //       ss->Parameter (*group, "blur", blur);
+    //       Vec3 colorfilter (0.5f, 0.5f, 1.0f);
+    //       ss->Parameter (*group, "colorfilter", TypeDesc::TypeColor,
+    //                      &colorfilter);
     //    ss->Shader ("surface", "texmap", "texturelayer");
     //    /* Second layer - generate the BSDF closure: */
     //       float roughness = 0.05;
-    //       ss->Parameter (*group, "roughness", TypeDesc::TypeFloat,
-    //                      &roughness);
+    //       ss->Parameter (*group, "roughness", roughness);
     //    ss->Shader (*group, "surface", "plastic", "illumlayer");
     //    /* Make a connection between the layers */
     //    ss->ConnectShaders (*group, "texturelayer", "Cout",
@@ -403,6 +404,24 @@ public:
     /// this call) is a constant.
     bool Parameter (ShaderGroup& group, string_view name, TypeDesc t,
                     const void *val, bool lockgeom=true);
+    // Shortcuts for param passing a single int, float, or string.
+    bool Parameter (ShaderGroup& group, string_view name,
+                    int val, bool lockgeom=true) {
+        return Parameter (name, TypeDesc::INT, &val, lockgeom);
+    }
+    bool Parameter (ShaderGroup& group, string_view name,
+                    float val, bool lockgeom=true) {
+        return Parameter (name, TypeDesc::FLOAT, &val, lockgeom);
+    }
+    bool Parameter (ShaderGroup& group, string_view name,
+                    const std::string& val, bool lockgeom=true) {
+        const char *s = val.c_str();
+        return Parameter (name, TypeDesc::STRING, &s, lockgeom);
+    }
+    bool Parameter (ShaderGroup& group, string_view name,
+                    ustring val, bool lockgeom=true) {
+        return Parameter (name, TypeDesc::STRING, (const char**)&val, lockgeom);
+    }
 
     /// Append a new shader instance onto the specified group. The shader
     /// instance will get any pending parameters that were set by
@@ -438,6 +457,25 @@ public:
     bool ReParameter (ShaderGroup &group,
                       string_view layername, string_view paramname,
                       TypeDesc type, const void *val);
+    // Shortcuts for param passing a single int, float, or string.
+    bool ReParameter (ShaderGroup &group, string_view layername,
+                      string_view paramname, int val) {
+        return ReParameter (group, layername, paramname, TypeDesc::INT, &val);
+    }
+    bool ReParameter (ShaderGroup &group, string_view layername,
+                      string_view paramname, float val) {
+        return ReParameter (group, layername, paramname, TypeDesc::FLOAT, &val);
+    }
+    bool ReParameter (ShaderGroup &group, string_view layername,
+                      string_view paramname, const std::string& val) {
+        const char *s = val.c_str();
+        return ReParameter (group, layername, paramname, TypeDesc::STRING, &s);
+    }
+    bool ReParameter (ShaderGroup &group, string_view layername,
+                      string_view paramname, ustring val) {
+        return ReParameter (group, layername, paramname, TypeDesc::STRING,
+                            (const char**)&val);
+    }
 
     // Non-threadsafe versions of Parameter, Shader, ConnectShaders, and
     // ShaderGroupEnd. These depend on some persistent state about which

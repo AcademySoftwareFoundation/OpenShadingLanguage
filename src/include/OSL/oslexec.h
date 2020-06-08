@@ -407,20 +407,20 @@ public:
     // Shortcuts for param passing a single int, float, or string.
     bool Parameter (ShaderGroup& group, string_view name,
                     int val, bool lockgeom=true) {
-        return Parameter (name, TypeDesc::INT, &val);
+        return Parameter (name, TypeDesc::INT, &val, lockgeom);
     }
     bool Parameter (ShaderGroup& group, string_view name,
                     float val, bool lockgeom=true) {
-        return Parameter (name, TypeDesc::FLOAT, &val);
+        return Parameter (name, TypeDesc::FLOAT, &val, lockgeom);
     }
     bool Parameter (ShaderGroup& group, string_view name,
                     const std::string& val, bool lockgeom=true) {
         const char *s = val.c_str();
-        return Parameter (name, TypeDesc::STRING, &s);
+        return Parameter (name, TypeDesc::STRING, &s, lockgeom);
     }
     bool Parameter (ShaderGroup& group, string_view name,
                     ustring val, bool lockgeom=true) {
-        return Parameter (name, TypeDesc::STRING, (const char**)&val);
+        return Parameter (name, TypeDesc::STRING, (const char**)&val, lockgeom);
     }
 
     /// Append a new shader instance onto the specified group. The shader

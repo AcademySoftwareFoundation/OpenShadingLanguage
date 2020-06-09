@@ -1063,8 +1063,7 @@ public:
         // lazyunconnected is on.
         if (!outgoing_connections() && !shadingsys().m_lazyunconnected)
             return false;
-        // Shaders without any downstream connections are not lazy unless
-        // lazyunconnected is on.
+        // Shaders with error ops are not lazy unless lazyerror is on.
         if (!shadingsys().m_lazyerror && has_error_op())
             return false;
         return true;

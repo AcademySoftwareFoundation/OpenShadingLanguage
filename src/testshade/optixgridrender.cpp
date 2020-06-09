@@ -388,7 +388,7 @@ OptixGridRenderer::make_optix_materials ()
         if (!shadingsys->find_symbol (*groupref.get(), ustring(outputs[0]))) {
             // FIXME: This is for cases where testshade is run with 1x1 resolution
             //        Those tests may not have a Cout parameter to write to.
-            if (m_xres > 1 || m_yres > 1) {
+            if (m_xres > 1 && m_yres > 1) {
                 errhandler().warning ("Requested output '%s', which wasn't found",
                                       outputs[0]);
             }
@@ -549,7 +549,7 @@ OptixGridRenderer::make_optix_materials ()
         if (!shadingsys->find_symbol (*groupref.get(), ustring(outputs[0]))) {
             // FIXME: This is for cases where testshade is run with 1x1 resolution
             //        Those tests may not have a Cout parameter to write to.
-            if (m_xres > 1 || m_yres > 1) {
+            if (m_xres > 1 && m_yres > 1) {
                 errhandler().warning ("Requested output '%s', which wasn't found",
                                       outputs[0]);
             }

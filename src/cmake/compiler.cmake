@@ -454,12 +454,14 @@ endif ()
 # ones will cause linker errors.
 #
 set (ENABLE_RTTI OFF CACHE BOOL "Build with RTTI. Requires a LLVM build with RTTI enabled.")
+set (${PROJECT_NAME}_RTTI_OPTIONS "")
 if (NOT ENABLE_RTTI)
     if (MSVC)
-        add_compile_options (/GR-)
+        set (${PROJECT_NAME}_RTTI_OPTIONS /GR-)
     else ()
-        add_compile_options (-fno-rtti)
+        set (${PROJECT_NAME}_RTTI_OPTIONS -fno-rtti)
     endif()
+    add_compile_options (${${PROJECT_NAME}_RTTI_OPTIONS})
 endif()
 
 

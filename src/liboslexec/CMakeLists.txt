@@ -190,6 +190,10 @@ if (partio_FOUND)
     target_compile_definitions (${local_lib} PRIVATE USE_PARTIO=1)
 endif ()
 
+# Propagate our library's RTTI options to downstream clients of this library
+# This is very important for proper linkage with LLVM.
+target_compile_options(${local_lib} PUBLIC ${${PROJECT_NAME}_RTTI_OPTIONS})
+
 target_link_libraries (${local_lib}
     PUBLIC
         ${OPENIMAGEIO_LIBRARIES} ${ILMBASE_LIBRARIES}

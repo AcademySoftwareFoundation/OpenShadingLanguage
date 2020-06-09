@@ -443,7 +443,7 @@ getargs (int argc, const char *argv[])
                 "--options %s", &extraoptions, "Set extra OSL options",
                 "--texoptions %s", &texoptions, "Set extra TextureSystem options",
                 "-o %L %L", &outputvars, &outputfiles,
-                        "Output (variable, filename)",
+                        "Output (variable, filename)   [filename='null' means don't save]",
                 "-d %s", &dataformatname, "Set the output data format to one of: "
                         "uint8, half, float",
                 "-od %s", &dataformatname, "", // old name
@@ -717,6 +717,12 @@ setup_output_images (SimpleRenderer *rend, ShadingSystem *shadingsys,
         }
         std::cout << "Output " << outputvars[i] << " to "
                   << outputfiles[i] << "\n";
+
+        if (outputfiles[i] == "null") {
+            // Filename "null" means to consider this a "renderer output",
+            // but not save it in an image file.
+            continue;
+        }
 
         // And the "base" type, i.e. the type of each element or channel
         TypeDesc tbase = TypeDesc ((TypeDesc::BASETYPE)t.basetype);

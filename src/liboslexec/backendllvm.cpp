@@ -471,8 +471,12 @@ BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym, bool addMetadata)
         }
     }
     else {
+        // We need to sanitize the symbol name for PTX compatibility
+        std::string sym_name = sym.name().c_str();
+        std::replace (sym_name.begin(), sym_name.end(), '.', '_');
+
         std::string var_name = Strutil::sprintf ("%s_%s_%d_%s_%d",
-                                                 sym.name(),
+                                                 sym_name,
                                                  group().name(),
                                                  group().id(),
                                                  inst()->layername(),

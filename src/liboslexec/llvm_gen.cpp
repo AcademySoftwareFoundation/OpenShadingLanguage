@@ -6,6 +6,11 @@
 
 #include <OpenImageIO/fmath.h>
 
+#ifdef OSL_USE_OPTIX
+#include <optix.h>
+#endif
+
+
 #include "oslexec_pvt.h"
 #include <OSL/genclosure.h>
 #include "backendllvm.h"
@@ -382,6 +387,10 @@ LLVMGEN (llvm_gen_printf)
     // is no argument.
     if (rop.use_optix() && arg == format_arg + 1) {
         call_args.push_back(rop.ll.void_ptr_null());
+#if OPTIX_VERSION >= 70000
+        // we push the size of the arguments on the stack
+        optix_size += sizeof(uint64_t);
+#endif
     }
 
     // Some ops prepend things
@@ -397,22 +406,51 @@ LLVMGEN (llvm_gen_printf)
         call_args[new_format_slot] = rop.ll.constant (s.c_str());
     }
     else {
-        // In the OptiX case, we do this:
+        // In OptiX 6 we do this:
         // void* args = { arg0, arg1, arg2 };
         // osl_printf(sg, fmt, args);
         //   vprintf(fmt, args);
+        // However, in the OptiX7+ case, we do this:
+        // void* args = { args_size, arg0, arg1, arg2 };
+        // (where args_size is the size of arg0 + arg1 + arg2...)
         //
+#if !defined(OSL_USE_OPTIX) || OPTIX_VERSION < 70000
+
         Symbol sym(format_sym.name(), format_sym.typespec(), format_sym.symtype());
         format_ustring = s;
         sym.data(&format_ustring);
-        call_args[new_format_slot] = rop.llvm_load_device_string (sym, /*follow*/ true);
 
+        call_args[new_format_slot] = rop.llvm_load_device_string (sym, /*follow*/ true);
+#else
+        // Make sure host has the format string so it can print it
+        format_ustring = s;
+        rop.shadingsys().renderer()->register_string (format_ustring.string(), "");
+        call_args[new_format_slot] = rop.ll.constant64 (format_ustring.hash());
+#endif
         size_t nargs = call_args.size() - (new_format_slot+1);
+        // Allocate space to store the arguments to osl_printf().
+#if !defined(OSL_USE_OPTIX) || OPTIX_VERSION < 70000 
         llvm::Value *voids = rop.ll.op_alloca (rop.ll.type_char(), optix_size, std::string(), 8);
+#else
+        //  Don't forget to pad a little extra to hold the size of the arguments itself.
+        llvm::Value *voids = rop.ll.op_alloca (rop.ll.type_char(), optix_size + sizeof(uint64_t), std::string(), 8);
+#endif
+
+#if defined(OSL_USE_OPTIX) && OPTIX_VERSION >= 70000 
+        // Size of the collection of arguments comes before all the arguments
+        {
+            llvm::Value* args_size = rop.ll.constant64(optix_size);
+            llvm::Value* memptr = rop.ll.offset_ptr (voids, 0);
+            llvm::Value* iptr = rop.ll.ptr_cast(memptr, rop.ll.type_int_ptr());
+            rop.ll.op_store (args_size, iptr);
+        }
+        optix_size = sizeof(uint64_t);  // first 'args' element is the size of the argument list
+#else
         optix_size = 0;
+#endif
         for (size_t i = 0; i < nargs; ++i) {
             llvm::Value* arg = call_args[new_format_slot+1+i];
-            if (arg->getType()->isFloatingPointTy()) {
+            if (arg->getType()->isFloatingPointTy() || arg->getType()->isIntegerTy(64) ) {
                 // Ensure that 64-bit values are aligned to 8-byte boundaries
                 optix_size = (optix_size + sizeof(double) - 1) & ~(sizeof(double)-1);
             }
@@ -420,7 +458,12 @@ LLVMGEN (llvm_gen_printf)
             if (arg->getType()->isIntegerTy()) {
                 llvm::Value* iptr = rop.ll.ptr_cast(memptr, rop.ll.type_int_ptr());
                 rop.ll.op_store (arg, iptr);
-                optix_size += sizeof(int);
+                if (arg->getType()->isIntegerTy(64)) {
+                    optix_size += sizeof(uint64_t);
+                }
+                else {
+                    optix_size += sizeof(int);
+                }
             } else if (arg->getType()->isFloatingPointTy()) {
                 llvm::Value* fptr = rop.ll.ptr_cast(memptr, rop.ll.type_double_ptr());
                 rop.ll.op_store (arg, fptr);

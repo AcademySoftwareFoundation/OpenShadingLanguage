@@ -135,6 +135,7 @@ if (CMAKE_COMPILER_IS_CLANG OR CMAKE_COMPILER_IS_APPLECLANG)
     add_compile_options ("-Wno-unused-private-field")
     add_compile_options ("-Wno-tautological-compare")
     add_compile_options ("-Wno-unknown-pragmas")
+    add_compile_options ("-Wno-format-security")
     # disable warning about unused command line arguments
     add_compile_options ("-Qunused-arguments")
     # Don't warn if we ask it not to warn about warnings it doesn't know

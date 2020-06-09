@@ -2,6 +2,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/AcademySoftwareFoundation/OpenShadingLanguage
 
+#ifdef OSL_USE_OPTIX
+#include <optix.h>
+#endif
+
+#if OPTIX_VERSION < 70000
+
 #include "optix_stringtable.h"
 
 using OIIO::ustring;
@@ -42,10 +48,8 @@ void OptiXStringTable::init (optix::Context ctx OSL_MAYBE_UNUSED)
     OSL_ASSERT (! m_ptr && "StringTable should only be initialized once");
     m_optix_ctx = ctx;
 
-#if (OPTIX_VERSION < 70000)
     OSL_ASSERT ((m_optix_ctx->getEnabledDeviceCount() == 1) &&
             "Only one CUDA device is currently supported");
-#endif
 
     OSL::cudaMalloc (reinterpret_cast<void**>(&m_ptr), (m_size));
 
@@ -120,13 +124,8 @@ uint64_t OptiXStringTable::addString (ustring str OSL_MAYBE_UNUSED,
     // Optionally create an OptiX variable for the string. It's not necessary to
     // create a variable for strings that do not appear by name in compiled code
     // (in either the OSL library functions or in the renderer).
-#if (OPTIX_VERSION < 70000)
     if (! var_name.empty())
         m_optix_ctx [var_name.string()]->setUserData (8, &addr);
-#else
-    if (! var_name.empty())
-        m_addr_table [var_name] = addr;
-#endif
     return addr;
 #else
     return 0;
@@ -145,10 +144,8 @@ void OptiXStringTable::reallocTable()
 {
 #ifdef OSL_USE_OPTIX
 
-#if (OPTIX_VERSION < 70000)
     OSL_ASSERT ((m_optix_ctx->getEnabledDeviceCount() == 1) &&
             "Only one CUDA device is currently supported");
-#endif
 
     m_size *= 2;
     OSL::cudaFree (m_ptr);
@@ -166,3 +163,5 @@ void OptiXStringTable::reallocTable()
 }
 
 OSL_NAMESPACE_EXIT
+
+#endif 

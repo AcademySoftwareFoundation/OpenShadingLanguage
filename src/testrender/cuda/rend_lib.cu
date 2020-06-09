@@ -211,7 +211,7 @@ extern "C" {
         // userdata index. If there is a match, memcpy the value into data and
         // return 1.
 
-        if (IS_PTR(type) && name == StringParams::colorsystem) {
+        if (IS_PTR(type) && name == STRING_PARAMS(colorsystem)) {
             *(void**)data = &OSL::pvt::s_color_system[0];
             return true;
         }
@@ -358,14 +358,14 @@ extern "C" {
     {
         ShaderGlobals *sg = (ShaderGlobals *)sg_;
         //ShadingContext *ctx = (ShadingContext *)sg->context;
-        if (HDSTR(from) == StringParams::common ||
+        if (HDSTR(from) == STRING_PARAMS(common) ||
             //HDSTR(from) == ctx->shadingsys().commonspace_synonym() ||
-            HDSTR(from) == StringParams::shader)
+            HDSTR(from) == STRING_PARAMS(shader))
         {
             MAT(r).makeIdentity ();
             return true;
         }
-        if (HDSTR(from) == StringParams::object)
+        if (HDSTR(from) == STRING_PARAMS(object))
         {
             // TODO: Implement transform
             return false;
@@ -384,14 +384,14 @@ extern "C" {
     {
         ShaderGlobals *sg = (ShaderGlobals *)sg_;
         //ShadingContext *ctx = (ShadingContext *)sg->context;
-        if (HDSTR(to) == StringParams::common ||
+        if (HDSTR(to) == STRING_PARAMS(common) ||
             //HDSTR(to) == ctx->shadingsys().commonspace_synonym() ||
-            HDSTR(to) == StringParams::shader)
+            HDSTR(to) == STRING_PARAMS(shader))
         {
             MAT(r).makeIdentity ();
             return true;
         }
-        if (HDSTR(to) == StringParams::object)
+        if (HDSTR(to) == STRING_PARAMS(object))
         {
             // TODO: Implement transform
             return false;
@@ -409,12 +409,14 @@ extern "C" {
 
 #else //#if (OPTIX_VERSION < 70000)
 
-extern __device__ char* test_str_1;
-extern __device__ char* test_str_2;
 
 OSL_NAMESPACE_ENTER
 namespace pvt {
-extern __device__ char* s_color_system;
+__device__ CUdeviceptr s_color_system           = 0;
+__device__ CUdeviceptr osl_printf_buffer_start  = 0;
+__device__ CUdeviceptr osl_printf_buffer_end    = 0;
+__device__ uint64_t test_str_1 = 0;
+__device__ uint64_t test_str_2 = 0;
 }
 OSL_NAMESPACE_EXIT
 
@@ -601,14 +603,13 @@ extern "C" {
         // userdata index. If there is a match, memcpy the value into data and
         // return 1.
 
-        if (IS_PTR(type) && name == StringParams::colorsystem) {
-            //*(void**)data = &OSL::pvt::s_color_system[0];
-            *(void**)data = (void *) OSL::pvt::s_color_system;
+        if (IS_PTR(type) && name.hash() == STRING_PARAMS(colorsystem)) {
+            *(void**)data = *reinterpret_cast<void **>(&OSL::pvt::s_color_system);
             return true;
         }
         // TODO: This is temporary code for initial testing and demonstration.
-        if (IS_STRING(type) && name == HDSTR(test_str_1)) {
-            memcpy (data, &test_str_2, 8);
+        if (IS_STRING(type) && name == HDSTR(OSL::pvt::test_str_1)) {
+            memcpy (data, &OSL::pvt::test_str_2, 8);
             return true;
         }
 
@@ -643,32 +644,46 @@ extern "C" {
     __device__
     int osl_strlen_is (const char *str)
     {
-        return HDSTR(str).length();
+        //return HDSTR(str).length();
+        return 0;
     }
 
 
     __device__
     int osl_hash_is (const char *str)
     {
-        return HDSTR(str).hash();
+        return HDSTR(str);
     }
 
 
     __device__
     int osl_getchar_isi (const char *str, int index)
     {
-        return (str && unsigned(index) < HDSTR(str).length())
-            ? str[index] : 0;
+//        return (str && unsigned(index) < HDSTR(str).length())
+//            ? str[index] : 0;
+          return 0;
     }
 
-
+    // Printing is handled by the host.  Copy format string's hash and
+    // all the arguments to our print buffer.
+    // Note:  the first element of 'args' is the size of the argument list
     __device__
     void osl_printf (void* sg_, char* fmt_str, void* args)
     {
+        uint64_t fmt_str_hash = HDSTR(fmt_str).hash();
+        uint64_t args_size = reinterpret_cast<uint64_t*>(args)[0];
+
         // This can be used to limit printing to one Cuda thread for debugging
         // if (launch_index.x == 0 && launch_index.y == 0)
-        //
-        vprintf(fmt_str, (const char*) args);
+
+        CUdeviceptr copy_start = atomicAdd(&OSL::pvt::osl_printf_buffer_start, args_size + sizeof(args_size) + sizeof(fmt_str_hash));
+
+        // Only perform copy if there's enough space
+        if (copy_start + args_size + sizeof(args_size) + sizeof(fmt_str_hash) < OSL::pvt::osl_printf_buffer_end) {
+            memcpy(reinterpret_cast<void *>(copy_start), &fmt_str_hash, sizeof(fmt_str_hash) );
+            memcpy(reinterpret_cast<void *>(copy_start + sizeof(fmt_str_hash)), &args_size, sizeof(args_size) );
+            memcpy(reinterpret_cast<void *>(copy_start + sizeof(fmt_str_hash) + sizeof(args_size)), reinterpret_cast<char *>(args) + sizeof(args_size), args_size);
+        }
     }
 
 
@@ -764,14 +779,14 @@ extern "C" {
     {
         ShaderGlobals *sg = (ShaderGlobals *)sg_;
         //ShadingContext *ctx = (ShadingContext *)sg->context;
-        if (HDSTR(from) == StringParams::common ||
+        if (HDSTR(from) == STRING_PARAMS(common) ||
             //HDSTR(from) == ctx->shadingsys().commonspace_synonym() ||
-            HDSTR(from) == StringParams::shader)
+            HDSTR(from) == STRING_PARAMS(shader))
         {
             MAT(r).makeIdentity ();
             return true;
         }
-        if (HDSTR(from) == StringParams::object)
+        if (HDSTR(from) == STRING_PARAMS(object))
         {
             // TODO: Implement transform
             return false;
@@ -789,14 +804,14 @@ extern "C" {
     int osl_get_inverse_matrix (void *sg_, void *r, const char *to)
     {
         ShaderGlobals *sg = (ShaderGlobals *)sg_;
-        if (HDSTR(to) == StringParams::common ||
+        if (HDSTR(to) == STRING_PARAMS(common) ||
             //HDSTR(to) == ctx->shadingsys().commonspace_synonym() ||
-            HDSTR(to) == StringParams::shader)
+            HDSTR(to) == STRING_PARAMS(shader))
         {
             MAT(r).makeIdentity ();
             return true;
         }
-        if (HDSTR(to) == StringParams::object)
+        if (HDSTR(to) == STRING_PARAMS(object))
         {
             // TODO: Implement transform
             return false;

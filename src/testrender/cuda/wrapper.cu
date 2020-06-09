@@ -317,7 +317,7 @@ float3 process_closure (const OSL::ClosureColor* closure_tree)
             const char* mem = (const char*)((OSL::ClosureComponent*) cur)->data();
             const char* dist_str = *(const char**) &mem[0];
 
-            if (HDSTR(dist_str) == OSL::DeviceStrings::default_)
+            if (HDSTR(dist_str) == STRING_PARAMS(default))
                 return make_float3(0.0f, 1.0f, 1.0f);
             else
                 return make_float3(1.0f, 0.0f, 1.0f);

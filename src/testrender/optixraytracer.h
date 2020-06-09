@@ -9,7 +9,9 @@
 #include <OSL/device_string.h>
 #include "optix_compat.h"
 #include "simpleraytracer.h"
+#if OPTIX_VERSION < 70000
 #include "optix_stringtable.h"
+#endif
 #include "render_params.h"
 
 OSL_NAMESPACE_ENTER
@@ -26,10 +28,16 @@ public:
 
     uint64_t register_string (const std::string& str, const std::string& var_name)
     {
-        uint64_t addr = m_str_table.addString (ustring(str), ustring(var_name));
+        ustring ustr = ustring(str);
+#if OPTIX_VERSION < 70000
+        uint64_t addr = m_str_table.addString (ustr, ustring(var_name));
         if (!var_name.empty())
             register_global (var_name, addr);
         return addr;
+#else
+        m_hash_map[ustr.hash()] = ustr.c_str();
+        return 0;
+#endif
     }
 
     uint64_t register_global (const std::string& str, uint64_t value);
@@ -68,11 +76,15 @@ public:
     optix::Context& context()              { return m_optix_ctx; }
     optix::Context& operator -> ()         { return context(); }
 
+#if (OPTIX_VERSION >= 70000)
+    void processPrintfBuffer(void *buffer_data, size_t buffer_size);
+#endif
+
 private:
     optix::Context m_optix_ctx = nullptr;
-    OptiXStringTable m_str_table;
 
 #if (OPTIX_VERSION < 70000)
+    OptiXStringTable m_str_table;
     optix::Program m_program = nullptr;
     optix::Program sphere_intersect = nullptr;
     optix::Program sphere_bounds = nullptr;
@@ -82,12 +94,19 @@ private:
     CUstream                m_cuda_stream;
     OptixTraversableHandle  m_travHandle;
     OptixShaderBindingTable m_optix_sbt = {};
+    OptixShaderBindingTable m_setglobals_optix_sbt = {};
     OptixPipeline           m_optix_pipeline = {};
     CUdeviceptr             d_output_buffer;
     CUdeviceptr             d_launch_params = 0;
     CUdeviceptr             d_quads_list    = 0;
     CUdeviceptr             d_spheres_list  = 0;
     int                     m_xres, m_yres;
+    CUdeviceptr             d_osl_printf_buffer;
+    CUdeviceptr             d_color_system;
+    uint64_t                test_str_1;
+    uint64_t                test_str_2;
+    const unsigned long     OSL_PRINTF_BUFFER_SIZE = 8 * 1024 * 1024;
+    std::unordered_map<uint64_t, const char *> m_hash_map;
 
     bool load_optix_module (const char*                        filename,
                             const OptixModuleCompileOptions*   module_compile_options,

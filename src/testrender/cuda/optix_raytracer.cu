@@ -110,11 +110,24 @@ extern "C" __global__ void __miss__()
 }
 
 
+extern __device__ char *test_str_1;
+extern __device__ char *test_str_2;
+
+extern "C" __global__ void __raygen__setglobals()
+{
+    // Set global variables
+    OSL::pvt::osl_printf_buffer_start    = render_params.osl_printf_buffer_start;
+    OSL::pvt::osl_printf_buffer_end      = render_params.osl_printf_buffer_end;
+    OSL::pvt::s_color_system             = render_params.color_system;
+    OSL::pvt::test_str_1                 = render_params.test_str_1;
+    OSL::pvt::test_str_2                 = render_params.test_str_2;
+}
+extern "C" __global__ void __miss__setglobals() { }
+
 extern "C" __global__ void __raygen__()
 {
     uint3 launch_dims  = optixGetLaunchDimensions();
     uint3 launch_index = optixGetLaunchIndex();
-
     const float3 eye = render_params.eye;
     const float3 dir = render_params.dir;
     const float3 cx  = render_params.cx ;
@@ -142,11 +155,6 @@ extern "C" __global__ void __raygen__()
                 1,
                 0);
 }
-
-
-extern __device__ char *test_str_1;
-extern __device__ char *test_str_2;
-
 
 // Because clang++ 9.0 seems to have trouble with some of the texturing "intrinsics"
 // let's do the texture look-ups in this file.

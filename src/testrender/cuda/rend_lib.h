@@ -6,6 +6,9 @@
 
 #if (OPTIX_VERSION < 70000)
 #include <optix_math.h>
+#else
+#include <OSL/oslexec.h>
+#include "../../liboslexec/string_hash.h"
 #endif
 #include <OSL/device_string.h>
 
@@ -13,17 +16,32 @@ OSL_NAMESPACE_ENTER
 // Create an OptiX variable for each of the 'standard' strings declared in
 // <OSL/strdecls.h>.
 namespace DeviceStrings {
-#if (OPTIX_VERSION < 70000)
+#if OPTIX_VERSION < 70000
 #define STRDECL(str,var_name)                           \
     rtDeclareVariable(OSL_NAMESPACE::DeviceString, var_name, , );
+#   define STRING_PARAMS(x)  StringParams::x
 #else
-#define STRDECL(str,var_name)                           \
-    extern __device__ OSL_NAMESPACE::DeviceString var_name;
+#   define STRINGIFY(x) XSTR(x)
+#   define XSTR(x) #x
+#   define STRING_PARAMS(x)  UStringHash::Hash(STRINGIFY(x))
+// Don't declare anything
+#   define STRDECL(str,var_name) 
+
 #endif
 
 #include <OSL/strdecls.h>
 #undef STRDECL
 }
+
+#if OPTIX_VERSION >= 70000
+namespace pvt {
+extern __device__ CUdeviceptr s_color_system;
+extern __device__ CUdeviceptr osl_printf_buffer_start;
+extern __device__ CUdeviceptr osl_printf_buffer_end;
+extern __device__ uint64_t test_str_1;
+extern __device__ uint64_t test_str_2;
+}
+#endif
 OSL_NAMESPACE_EXIT
 
 namespace {  // anonymous namespace

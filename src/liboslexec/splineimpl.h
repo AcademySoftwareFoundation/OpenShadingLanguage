@@ -88,15 +88,15 @@ struct SplineInterp {
 
     OSL_HOSTDEVICE static SplineInterp create(StringParam basis_name)
     {
-        if (basis_name == StringParams::catmullrom)
+        if (basis_name == STRING_PARAMS(catmullrom))
             return { gBasisSet[kCatmullRom], false };
-        if (basis_name == StringParams::bezier)
+        if (basis_name == STRING_PARAMS(bezier))
             return { gBasisSet[kBezier], false };
-        if (basis_name == StringParams::bspline)
+        if (basis_name == STRING_PARAMS(bspline))
             return { gBasisSet[kBSpline], false };
-        if (basis_name == StringParams::hermite)
+        if (basis_name == STRING_PARAMS(hermite))
             return { gBasisSet[kHermite], false };
-        if (basis_name == StringParams::constant)
+        if (basis_name == STRING_PARAMS(constant))
             return { gBasisSet[kConstant], true };
 
         // Default to linear

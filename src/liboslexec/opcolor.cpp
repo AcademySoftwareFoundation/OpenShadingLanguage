@@ -93,27 +93,27 @@ OSL_CONSTANT_DATA const static ColorSystem::Chroma k_color_systems[11] = {
 
 OSL_HOSTDEVICE const ColorSystem::Chroma*
 ColorSystem::fromString(StringParam colorspace) {
-    if (colorspace == StringParams::Rec709)
+    if (colorspace == STRING_PARAMS(Rec709))
         return &k_color_systems[0];
-    if (colorspace == StringParams::sRGB)
+    if (colorspace == STRING_PARAMS(sRGB))
         return &k_color_systems[1];
-    if (colorspace == StringParams::NTSC)
+    if (colorspace == STRING_PARAMS(NTSC))
         return &k_color_systems[2];
-    if (colorspace == StringParams::EBU)
+    if (colorspace == STRING_PARAMS(EBU))
         return &k_color_systems[3];
-    if (colorspace == StringParams::PAL)
+    if (colorspace == STRING_PARAMS(PAL))
         return &k_color_systems[4];
-    if (colorspace == StringParams::SECAM)
+    if (colorspace == STRING_PARAMS(SECAM))
         return &k_color_systems[5];
-    if (colorspace == StringParams::SMPTE)
+    if (colorspace == STRING_PARAMS(SMPTE))
         return &k_color_systems[6];
-    if (colorspace == StringParams::HDTV)
+    if (colorspace == STRING_PARAMS(HDTV))
         return &k_color_systems[7];
-    if (colorspace == StringParams::CIE)
+    if (colorspace == STRING_PARAMS(CIE))
         return &k_color_systems[8];
-    if (colorspace == StringParams::AdobeRGB)
+    if (colorspace == STRING_PARAMS(AdobeRGB))
         return &k_color_systems[9];
-    if (colorspace == StringParams::XYZ)
+    if (colorspace == STRING_PARAMS(XYZ))
         return &k_color_systems[10];
     return nullptr;
 }
@@ -576,16 +576,25 @@ ColorSystem::set_colorspace (StringParam colorspace)
 
     OSL_HOSTDEVICE void
     ColorSystem::error(StringParam src, StringParam dst, Context sg) {
+#if !defined(__CUDA_ARCH__) || OPTIX_VERSION < 70000
         const char* args[2] = { src.c_str(), dst.c_str() };
         osl_printf (sg,
             (char*) // FIXME!
             "ERROR: Unknown color space transformation \"%s\" -> \"%s\"\n",
             args);
+#else
+        uint64_t fmt_hash = UStringHash::Hash("ERROR: Unknown color space transformation \"%s\" -> \"%s\"\n");
+        uint64_t args[3]  = { 2 * sizeof(uint64_t), dst, src };
+        osl_printf (sg,
+        (char *)
+         fmt_hash,
+            args);
+#endif
     }
 
     __device__ static inline ColorSystem& op_color_colorsystem (void *sg) {
         void* ptr;
-        rend_get_userdata(StringParams::colorsystem, &ptr, 8, OSL::TypeDesc::PTR, 0);
+        rend_get_userdata(STRING_PARAMS(colorsystem), &ptr, 8, OSL::TypeDesc::PTR, 0);
         return *((ColorSystem*)ptr);
     }
 
@@ -629,21 +638,21 @@ ColorSystem::ocio_transform (StringParam fromspace, StringParam tospace,
 OSL_HOSTDEVICE Color3
 ColorSystem::to_rgb (StringParam fromspace, const Color3& C, Context context)
 {
-    if (fromspace == StringParams::RGB || fromspace == StringParams::rgb
+    if (fromspace == STRING_PARAMS(RGB) || fromspace == STRING_PARAMS(rgb)
          || fromspace == m_colorspace)
         return C;
-    if (fromspace == StringParams::hsv)
+    if (fromspace == STRING_PARAMS(hsv))
         return hsv_to_rgb (C);
-    if (fromspace == StringParams::hsl)
+    if (fromspace == STRING_PARAMS(hsl))
         return hsl_to_rgb (C);
-    if (fromspace == StringParams::YIQ)
+    if (fromspace == STRING_PARAMS(YIQ))
         return YIQ_to_rgb (C);
-    if (fromspace == StringParams::XYZ)
+    if (fromspace == STRING_PARAMS(XYZ))
         return XYZ_to_RGB (C);
-    if (fromspace == StringParams::xyY)
+    if (fromspace == STRING_PARAMS(xyY))
         return XYZ_to_RGB (xyY_to_XYZ (C));
     else
-        return ocio_transform (fromspace, StringParams::RGB, C, context);
+        return ocio_transform (fromspace, STRING_PARAMS(RGB), C, context);
 }
 
 
@@ -651,21 +660,21 @@ ColorSystem::to_rgb (StringParam fromspace, const Color3& C, Context context)
 OSL_HOSTDEVICE Color3
 ColorSystem::from_rgb (StringParam tospace, const Color3& C, Context context)
 {
-    if (tospace == StringParams::RGB || tospace == StringParams::rgb
+    if (tospace == STRING_PARAMS(RGB) || tospace == STRING_PARAMS(rgb)
          || tospace == m_colorspace)
         return C;
-    if (tospace == StringParams::hsv)
+    if (tospace == STRING_PARAMS(hsv))
         return rgb_to_hsv (C);
-    if (tospace == StringParams::hsl)
+    if (tospace == STRING_PARAMS(hsl))
         return rgb_to_hsl (C);
-    if (tospace == StringParams::YIQ)
+    if (tospace == STRING_PARAMS(YIQ))
         return rgb_to_YIQ (C);
-    if (tospace == StringParams::XYZ)
+    if (tospace == STRING_PARAMS(XYZ))
         return RGB_to_XYZ (C);
-    if (tospace == StringParams::xyY)
+    if (tospace == STRING_PARAMS(xyY))
         return RGB_to_XYZ (xyY_to_XYZ (C));
     else
-        return ocio_transform (StringParams::RGB, tospace, C, context);
+        return ocio_transform (STRING_PARAMS(RGB), tospace, C, context);
 }
 
 
@@ -676,20 +685,20 @@ ColorSystem::transformc (StringParam fromspace, StringParam tospace,
 {
     bool use_colorconfig = false;
     COLOR Crgb;
-    if (fromspace == StringParams::RGB || fromspace == StringParams::rgb
-         || fromspace == StringParams::linear || fromspace == m_colorspace)
+    if (fromspace == STRING_PARAMS(RGB) || fromspace == STRING_PARAMS(rgb)
+         || fromspace == STRING_PARAMS(linear) || fromspace == m_colorspace)
         Crgb = C;
-    else if (fromspace == StringParams::hsv)
+    else if (fromspace == STRING_PARAMS(hsv))
         Crgb = hsv_to_rgb (C);
-    else if (fromspace == StringParams::hsl)
+    else if (fromspace == STRING_PARAMS(hsl))
         Crgb = hsl_to_rgb (C);
-    else if (fromspace == StringParams::YIQ)
+    else if (fromspace == STRING_PARAMS(YIQ))
         Crgb = YIQ_to_rgb (C);
-    else if (fromspace == StringParams::XYZ)
+    else if (fromspace == STRING_PARAMS(XYZ))
         Crgb = XYZ_to_RGB (C);
-    else if (fromspace == StringParams::xyY)
+    else if (fromspace == STRING_PARAMS(xyY))
         Crgb = XYZ_to_RGB (xyY_to_XYZ (C));
-    else if (fromspace == StringParams::sRGB)
+    else if (fromspace == STRING_PARAMS(sRGB))
         Crgb = sRGB_to_linear (C);
     else {
         use_colorconfig = true;
@@ -699,20 +708,20 @@ ColorSystem::transformc (StringParam fromspace, StringParam tospace,
     if (use_colorconfig) {
         // do things the ColorConfig way, so skip all these other clauses...
     }
-    else if (tospace == StringParams::RGB || tospace == StringParams::rgb
-         || tospace == StringParams::linear || tospace == m_colorspace)
+    else if (tospace == STRING_PARAMS(RGB) || tospace == STRING_PARAMS(rgb)
+         || tospace == STRING_PARAMS(linear) || tospace == m_colorspace)
         Cto = Crgb;
-    else if (tospace == StringParams::hsv)
+    else if (tospace == STRING_PARAMS(hsv))
         Cto = rgb_to_hsv (Crgb);
-    else if (tospace == StringParams::hsl)
+    else if (tospace == STRING_PARAMS(hsl))
         Cto = rgb_to_hsl (Crgb);
-    else if (tospace == StringParams::YIQ)
+    else if (tospace == STRING_PARAMS(YIQ))
         Cto = rgb_to_YIQ (Crgb);
-    else if (tospace == StringParams::XYZ)
+    else if (tospace == STRING_PARAMS(XYZ))
         Cto = RGB_to_XYZ (Crgb);
-    else if (tospace == StringParams::xyY)
+    else if (tospace == STRING_PARAMS(xyY))
         Cto = RGB_to_XYZ (xyY_to_XYZ (Crgb));
-    else if (tospace == StringParams::sRGB)
+    else if (tospace == STRING_PARAMS(sRGB))
         Cto = linear_to_sRGB (Crgb);
     else {
         use_colorconfig = true;

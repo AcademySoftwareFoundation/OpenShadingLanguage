@@ -144,8 +144,8 @@ extern "C" __global__ void __raygen__()
 }
 
 
-extern __device__ __constant__ char *test_str_1;
-extern __device__ __constant__ char *test_str_2;
+extern __device__ char *test_str_1;
+extern __device__ char *test_str_2;
 
 
 // Because clang++ 9.0 seems to have trouble with some of the texturing "intrinsics"

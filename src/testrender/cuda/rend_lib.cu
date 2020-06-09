@@ -409,8 +409,8 @@ extern "C" {
 
 #else //#if (OPTIX_VERSION < 70000)
 
-extern __device__ __constant__ char* test_str_1;
-extern __device__ __constant__ char* test_str_2;
+extern __device__ char* test_str_1;
+extern __device__ char* test_str_2;
 
 OSL_NAMESPACE_ENTER
 namespace pvt {

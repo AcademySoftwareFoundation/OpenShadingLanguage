@@ -165,121 +165,90 @@ struct MIS {
     }
 };
 
-// Simple deep stratified sampling using randomly shuffled LP points.
-// There are better ways to apply such constructions, but this is
-// reasonably compact and better than pure monte carlo sampling.
+// Simple stratified progressive sampling using owen scrambled sobol points.
+// Code is written for clarity and simplicity over maximum speed.
 struct Sampler {
-	Sampler(int px, int py, int si, int AA) : px(px), py(py), si(si), AA(AA), depth(0) {}
+    Sampler(int px, int py, int si) :
+        seed(((px & 2047) << 22) | ((py & 2047) << 11)), si(si) { assert(si < (1 << 24)); }
 
-	Vec3 get() {
-	    const uint32_t scramble_x = depth ? scramble(px, py, depth + 0) : 0;
-	    const uint32_t scramble_y = depth ? scramble(px, py, depth + 1) : 0;
-	    const uint32_t scramble_z = depth ? scramble(px, py, depth + 2) : 0;
-	    const uint32_t sample_idx = depth ? cmj_permute(si, AA * AA,
-	    									scramble(px, py, depth + 3)) : si;
-	    depth += 4; // advance depth for next call
-	    // fetch offset of scrambled LP pattern over the frame
-	    const int sx = sample_idx % AA;
-	    const int sy = sample_idx / AA;
-	    const uint32_t ex = (px * AA + sx) & 65535;
-	    const uint32_t ey = (py * AA + sy) & 65535;
-	    const uint32_t upper = (ex ^ (scramble_x >> 16)) << 16;
-	    const uint32_t lpUpper = ri_LP(upper) ^ scramble_y;
-	    const uint32_t delta = (ey << 16) ^ (lpUpper & 0xFFFF0000u);
-	    const uint32_t lower = ri_LP_inv(delta);
-	    const uint32_t index = upper | lower;
-	    const uint32_t x = index ^ scramble_x;
-	    const uint32_t y = lpUpper ^ delta;
-	    const float jx = (x - (ex << 16)) * (1 / 65536.0f);
-	    const float jy = (y - (ey << 16)) * (1 / 65536.0f);
-        uint32_t rz = scramble_z, ii = index;
-        for (uint64_t v2 = uint64_t(3) << 62; ii; ii >>= 1, v2 ^= v2 >> 1)
-            if (ii & 1)
-                rz ^= uint32_t(v2 >> 31);
-
-        return Vec3((sx + jx) / AA, (sy + jy) / AA, rz * 2.3283063e-10f);
-	}
+    Vec3 get() {
+        static const uint32_t zmatrix[24] = { // 2^24 precision
+            0x800000u, 0xc00000u, 0x600000u, 0x900000u, 0xe80000u, 0x5c0000u, 0x8e0000u, 0xc50000u,
+            0x688000u, 0x9cc000u, 0xee6000u, 0x559000u, 0x806800u, 0xc09c00u, 0x60ee00u, 0x905500u,
+            0xe88080u, 0x5cc0c0u, 0x8e6060u, 0xc59090u, 0x6868e8u, 0x9c9c5cu, 0xeeee8eu, 0x5555c5u,
+        };
+        seed += 4; // advance depth for next call
+        uint32_t index = progressive_permute(si, hash(seed - 4));
+        uint32_t px = 0, py = 0, pz = 0, dx = 0x800000u, dy = 0x800000u;
+        for (int c = 0; index; c++, index >>= 1) {
+            if (index & 1) {
+                px ^= dx;
+                py ^= dy;
+                pz ^= zmatrix[c];
+            }
+            dx >>= 1; dy ^= dy >> 1;
+        } // scramble and scale by 2^-24
+        return { owen_scramble(px, seed - 3) * 5.96046448e-08f,
+                 owen_scramble(py, seed - 2) * 5.96046448e-08f,
+                 owen_scramble(pz, seed - 1) * 5.96046448e-08f };
+    }
 
 private:
-	int px, py, si, AA, depth;
+    uint32_t seed, si;
 
-	static inline uint32_t cmj_permute(uint32_t i, uint32_t l, uint32_t p) {
-		// in-place permuation generator
-		// "Correlated Multi-Jittered Sampling" by "Andrew Kensler"
-	    uint32_t w = l - 1;
-	    if ((l & w) == 0) {
-	        /* l is a power of two (fast) */
-	        i ^= p;
-	        i *= 0xe170893d;
-	        i ^= p >> 16;
-	        i ^= (i & w) >> 4;
-	        i ^= p >> 8;
-	        i *= 0x0929eb3f;
-	        i ^= p >> 23;
-	        i ^= (i & w) >> 1;
-	        i *= 1 | p >> 27;
-	        i *= 0x6935fa69;
-	        i ^= (i & w) >> 11;
-	        i *= 0x74dcb303;
-	        i ^= (i & w) >> 2;
-	        i *= 0x9e501cc3;
-	        i ^= (i & w) >> 2;
-	        i *= 0xc860a3df;
-	        i &= w;
-	        i ^= i >> 5;
-	        return (i + p) & w;
-	    } else {
-	        /* l is not a power of two (slow) */
-	        w |= w >> 1;
-	        w |= w >> 2;
-	        w |= w >> 4;
-	        w |= w >> 8;
-	        w |= w >> 16;
-	        do {
-	            i ^= p;
-	            i *= 0xe170893d;
-	            i ^= p >> 16;
-	            i ^= (i & w) >> 4;
-	            i ^= p >> 8;
-	            i *= 0x0929eb3f;
-	            i ^= p >> 23;
-	            i ^= (i & w) >> 1;
-	            i *= 1 | p >> 27;
-	            i *= 0x6935fa69;
-	            i ^= (i & w) >> 11;
-	            i *= 0x74dcb303;
-	            i ^= (i & w) >> 2;
-	            i *= 0x9e501cc3;
-	            i ^= (i & w) >> 2;
-	            i *= 0xc860a3df;
-	            i &= w;
-	            i ^= i >> 5;
-	        } while (i >= l);
-	        return (i + p) % l;
-	    }
-	}
-
-	static inline uint32_t ri_LP(uint32_t i) {
-	    uint32_t r = 0;
-	    for (uint32_t v = 1U << 31; i; i >>= 1, v |= v >> 1)
-	        if (i & 1)
-	            r ^= v;
-	    return r;
-	}
-
-	static inline uint32_t ri_LP_inv(uint32_t i) {
-	    uint32_t r = 0;
-	    for (uint32_t v = 3U << 30; i; i >>= 1, v >>= 1)
-	        if (i & 1)
-	            r ^= v;
-	    return r;
-	}
-
-	static inline uint32_t scramble(uint32_t a, uint32_t b, uint32_t c) {
-	    const int len = 3;
-	    const int seed = (0xdeadbeef + (len << 2) + 13);
-	    return OIIO::bjhash::bjfinal(a + seed, b + seed, c + seed);
-	}
+    static uint32_t hash(uint32_t s) {
+        // https://nullprogram.com/blog/2018/07/31/
+        s ^= s >> 16;
+        s *= 0x7feb352du;
+        s ^= s >> 15;
+        s *= 0x846ca68bu;
+        s ^= s >> 16;
+        return s;
+    }
+    static uint32_t progressive_permute(uint32_t si, uint32_t p) {
+        // shuffle order of points in power of 2 blocks
+        if (si < 4) return cmj_permute(si, 4, p);
+        uint32_t l = si;
+        l = l | (l >> 1);
+        l = l | (l >> 2);
+        l = l | (l >> 4);
+        l = l | (l >> 8);
+        l = l | (l >> 16);
+        l = l - (l >> 1);
+        return cmj_permute(si - l, l, p) + l;
+    }
+    static inline uint32_t cmj_permute(uint32_t i, uint32_t l, uint32_t p) {
+        // in-place random permutation (power of 2), see:
+        // "Correlated Multi-Jittered Sampling" by "Andrew Kensler"
+        const uint32_t w = l - 1; assert((l & w) == 0);
+        i ^= p;
+        i *= 0xe170893d;
+        i ^= p >> 16;
+        i ^= (i & w) >> 4;
+        i ^= p >> 8;
+        i *= 0x0929eb3f;
+        i ^= p >> 23;
+        i ^= (i & w) >> 1;
+        i *= 1 | p >> 27;
+        i *= 0x6935fa69;
+        i ^= (i & w) >> 11;
+        i *= 0x74dcb303;
+        i ^= (i & w) >> 2;
+        i *= 0x9e501cc3;
+        i ^= (i & w) >> 2;
+        i *= 0xc860a3df;
+        i &= w;
+        i ^= i >> 5;
+        return (i + p) & w;
+    }
+    static uint32_t owen_scramble(uint32_t p, uint32_t s) {
+        for (uint32_t m = 1u << 23; m; m >>= 1) {
+            s = hash(s); // randomize state
+            p ^= s & m;  // flip output (depending on state)
+            s ^= p & m;  // flip state  (depending on output)
+        }
+        return p;
+    }
 };
 
 

@@ -800,7 +800,7 @@ Color3 SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler, Sh
         // build internal pdf for sampling between bsdf closures
         result.bsdf.prepare(sg, path_weight, b >= rr_depth);
 
-        // get two random numbers
+        // get three random numbers
         Vec3 s = sampler.get();
         float xi = s.x;
         float yi = s.y;
@@ -868,19 +868,19 @@ Color3 SimpleRaytracer::subpixel_radiance(float x, float y, Sampler& sampler, Sh
 Color3 SimpleRaytracer::antialias_pixel(int x, int y, ShadingContext* ctx)
 {
     Color3 result(0, 0, 0);
-    for (int ay = 0, si = 0; ay < aa; ay++) {
-        for (int ax = 0; ax < aa; ax++, si++) {
-            Sampler sampler(x, y, si, aa);
-            // jitter pixel coordinate [0,1)^2
-            Vec3 j = sampler.get();
-            // warp distribution to approximate a tent filter [-1,+1)^2
-            j.x *= 2; j.x = j.x < 1 ? sqrtf(j.x) - 1 : 1 - sqrtf(2 - j.x);
-            j.y *= 2; j.y = j.y < 1 ? sqrtf(j.y) - 1 : 1 - sqrtf(2 - j.y);
-            // trace eye ray (apply jitter from center of the pixel)
-            result += subpixel_radiance(x + 0.5f + j.x, y + 0.5f + j.y, sampler, ctx);
-        }
+    for (int si = 0, n = aa * aa; si < n; si++) {
+        Sampler sampler(x, y, si);
+        // jitter pixel coordinate [0,1)^2
+        Vec3 j = sampler.get();
+        // warp distribution to approximate a tent filter [-1,+1)^2
+        j.x *= 2; j.x = j.x < 1 ? sqrtf(j.x) - 1 : 1 - sqrtf(2 - j.x);
+        j.y *= 2; j.y = j.y < 1 ? sqrtf(j.y) - 1 : 1 - sqrtf(2 - j.y);
+        // trace eye ray (apply jitter from center of the pixel)
+        Color3 r = subpixel_radiance(x + 0.5f + j.x, y + 0.5f + j.y, sampler, ctx);
+        // mix in result via lerp for numerical stability
+        result = OIIO::lerp(result, r, 1.0f / (si + 1));
     }
-    return result / float(aa * aa);
+    return result;
 }
 
 

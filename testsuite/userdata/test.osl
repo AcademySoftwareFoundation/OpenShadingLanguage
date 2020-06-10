@@ -1,0 +1,9 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/imageworks/OpenShadingLanguage
+
+shader test (float s = 0 [[ int lockgeom=0 ]],
+             output float t = 0 [[ int lockgeom=0 ]])
+{
+    printf ("u = %g, v = %g  =>  s = %g, t = %g\n", u, v, s, t);
+}

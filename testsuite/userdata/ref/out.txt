@@ -1,0 +1,6 @@
+Compiled test.osl -> test.oso
+u = 0, v = 0  =>  s = 0, t = 0
+u = 1, v = 0  =>  s = 1, t = 0
+u = 0, v = 1  =>  s = 0, t = 1
+u = 1, v = 1  =>  s = 1, t = 1
+

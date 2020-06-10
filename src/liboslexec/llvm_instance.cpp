@@ -414,6 +414,9 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         llvm_assign_zero (sym);
         return;  // we're done, the parts below are just for params
     }
+
+    // From here on, everything we are dealing with is a shader parameter
+    // (either ordinary or output).
     OSL_ASSERT_MSG (sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam,
                     "symtype was %d, data type was %s", (int)sym.symtype(), sym.typespec().c_str());
 
@@ -424,7 +427,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
     // retrieved de novo or copied from a previous retrieval), or 0 if no
     // such userdata was available.
     llvm::BasicBlock *after_userdata_block = NULL;
-    if (! sym.lockgeom() && ! sym.typespec().is_closure() && ! (sym.symtype() == SymTypeOutputParam)) {
+    if (! sym.lockgeom() && ! sym.typespec().is_closure()) {
         ustring symname = sym.name();
         TypeDesc type = sym.typespec().simpletype();
 
@@ -434,11 +437,7 @@ BackendLLVM::llvm_assign_initial_value (const Symbol& sym, bool force)
         llvm::Value* name_arg = NULL;
         if (use_optix()) {
             // We need to make a DeviceString for the parameter name
-#ifdef OIIO_HAS_SPRINTF
             ustring arg_name = ustring::sprintf ("osl_paramname_%s_%d", symname, sym.layer());
-#else
-            ustring arg_name = ustring::sprintf ("osl_paramname_%s_%d", symname, sym.layer());
-#endif
             Symbol symname_const (arg_name, TypeDesc::TypeString, SymTypeConst);
             symname_const.data (&symname);
             name_arg = llvm_load_device_string (symname_const, /*follow*/ true);

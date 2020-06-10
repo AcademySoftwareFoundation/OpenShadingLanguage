@@ -197,9 +197,6 @@ class OSLToyRenderView : public QLabel {
     bool getPixel(QPoint pos, PixelInfo& info) {
         if (! m_framebuffer.initialized())
             return false;
-        const auto* pmap = pixmap();
-        if (! pmap )
-            return false;
         const auto& spec = m_framebuffer.spec();
         info.x = pos.x();
         info.y = pos.y();

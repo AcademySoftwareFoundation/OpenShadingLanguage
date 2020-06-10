@@ -42,7 +42,7 @@ OSL_NAMESPACE_ENTER
 // sequences with compile time known ConstIndex.  Otherwise for c++11,
 // a more limited manually unrolled loop to a fixed maximum __COUNT
 // works because dead code elimination prunes extraneous iterations.
-#if (OSL_CPLUSPLUS_VERSION >= 14) && !defined(__GNUC__) && !defined(__CUDACC__)
+#if (OSL_CPLUSPLUS_VERSION >= 14) && !defined(__GNUC__)
     // explanation of passing code block as macro argument to handle
     // nested comma operators that might break up the code block into
     // multiple macro arguments

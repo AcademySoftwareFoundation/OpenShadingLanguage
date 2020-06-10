@@ -172,12 +172,12 @@ namespace pvt {
 // Instead of relying on compiler loop unrolling, we can statically call functor
 // for each integer in a sequence
 template <template<int> class ConstantWrapperT, int... IntListT, typename FunctorT>
-static OSL_FORCEINLINE void static_foreach(pvt::int_sequence<IntListT...>, const FunctorT &iFunctor) {
+static OSL_FORCEINLINE OSL_HOSTDEVICE void static_foreach(pvt::int_sequence<IntListT...>, const FunctorT &iFunctor) {
      __OSL_EXPAND_PARAMETER_PACKS( iFunctor(ConstantWrapperT<IntListT>{}) );
 }
 
 template <template<int> class ConstantWrapperT, int N, typename FunctorT>
-static OSL_FORCEINLINE void static_foreach(const FunctorT &iFunctor) {
+static OSL_FORCEINLINE OSL_HOSTDEVICE void static_foreach(const FunctorT &iFunctor) {
     static_foreach<ConstantWrapperT>(pvt::make_int_sequence<N>(), iFunctor);
 }
 

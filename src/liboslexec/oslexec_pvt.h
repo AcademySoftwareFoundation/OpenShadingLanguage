@@ -1776,18 +1776,18 @@ private:
 
 
 
-
+OSL_HOSTDEVICE
 inline int
-tex_interp_to_code (ustring modename)
+tex_interp_to_code (StringParam modename)
 {
     int mode = -1;
-    if (modename == Strings::smartcubic)
+    if (modename == StringParams::smartcubic)
         mode = TextureOpt::InterpSmartBicubic;
-    else if (modename == Strings::linear)
+    else if (modename == StringParams::linear)
         mode = TextureOpt::InterpBilinear;
-    else if (modename == Strings::cubic)
+    else if (modename == StringParams::cubic)
         mode = TextureOpt::InterpBicubic;
-    else if (modename == Strings::closest)
+    else if (modename == StringParams::closest)
         mode = TextureOpt::InterpClosest;
     return mode;
 }

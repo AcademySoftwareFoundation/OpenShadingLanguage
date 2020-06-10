@@ -79,13 +79,8 @@ typedef DeviceString StringParam;
 
 #ifdef __CUDA_ARCH__
 namespace DeviceStrings {
-#if (OPTIX_VERSION < 70000)
 #define STRDECL(str,var_name)                       \
     extern __device__ OSL_NAMESPACE::DeviceString var_name;
-#else
-#define STRDECL(str,var_name)                       \
-    extern __device__ __constant__ OSL_NAMESPACE::DeviceString var_name;
-#endif
 #include <OSL/strdecls.h>
 #undef STRDECL
 }

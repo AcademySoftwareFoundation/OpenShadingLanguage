@@ -26,8 +26,10 @@ public:
 
     uint64_t register_string (const std::string& str, const std::string& var_name)
     {
-        uint64_t val = m_str_table.addString (ustring(str), ustring(var_name));
-        return val;
+        uint64_t addr = m_str_table.addString (ustring(str), ustring(var_name));
+        if (!var_name.empty())
+            register_global (var_name, addr);
+        return addr;
     }
 
     uint64_t register_global (const std::string& str, uint64_t value);

@@ -323,7 +323,6 @@ BackendLLVM::addCUDAVariable(const std::string& name, int size, int alignment,
         // Register the string with the OptiX renderer. The renderer will add
         // the string to a global table and create an OptiX variable to hold the
         // char*.
-#if (OPTIX_VERSION < 70000)
         shadingsys().renderer()->register_string (((ustring*)data)->string(), name);
 
         // Leave the variable uninitialized to prevent raw pointers from
@@ -331,12 +330,6 @@ BackendLLVM::addCUDAVariable(const std::string& name, int size, int alignment,
         // variable to the string address before the kernel is launched.
         constant = llvm::ConstantInt::get (
             llvm::Type::getInt64Ty (ll.module()->getContext()), 0);
-#else
-        // TODO:  don't perform variable assignment in generated PTX code
-        int64_t addr = shadingsys().renderer()->register_string (((ustring*)data)->string(), name);
-        constant = llvm::ConstantInt::get (
-            llvm::Type::getInt64Ty (ll.module()->getContext()), addr);
-#endif
         m_varname_map [name] = ((ustring*)data)->string();
     }
     else {
@@ -355,12 +348,19 @@ BackendLLVM::addCUDAVariable(const std::string& name, int size, int alignment,
 #else
     g_var->setAlignment  (alignment);
 #endif
+
+#if (OPTIX_VERSION < 70000)
     g_var->setLinkage    (llvm::GlobalValue::ExternalLinkage);
     g_var->setVisibility (llvm::GlobalValue::DefaultVisibility);
     g_var->setInitializer(constant);
-#if (OPTIX_VERSION >= 70000)
-    if (type == TypeDesc::TypeString)
-        g_var->setConstant(true);
+#else
+    if (type != TypeDesc::TypeString) {
+        g_var->setVisibility (llvm::GlobalValue::DefaultVisibility);
+        g_var->setInitializer(constant);
+    }
+    else {
+        g_var->setExternallyInitialized(true);
+    }
 #endif
     m_const_map[name] = g_var;
 
@@ -471,8 +471,12 @@ BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym, bool addMetadata)
         }
     }
     else {
+        // We need to sanitize the symbol name for PTX compatibility
+        std::string sym_name = sym.name().c_str();
+        std::replace (sym_name.begin(), sym_name.end(), '.', '_');
+
         std::string var_name = Strutil::sprintf ("%s_%s_%d_%s_%d",
-                                                 sym.name(),
+                                                 sym_name,
                                                  group().name(),
                                                  group().id(),
                                                  inst()->layername(),
@@ -497,9 +501,11 @@ BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym, bool addMetadata)
         return it->second;
     }
 
+#if (OPTIX_VERSION < 70000)
     // Add the extra metadata needed to make the variable visible to OptiX.
     if (addMetadata || sym.typespec().is_string())
         createOptixMetadata (name, sym);
+#endif
 
     // TODO: Figure out the actual CUDA alignment requirements for the various
     //       OSL types. For now, be somewhat conservative and assume 8 for

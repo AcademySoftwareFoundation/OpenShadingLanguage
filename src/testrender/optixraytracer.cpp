@@ -653,7 +653,7 @@ OptixRaytracer::make_optix_materials ()
         if (!shadingsys->find_symbol (*groupref.get(), ustring(outputs[0]))) {
             // FIXME: This is for cases where testshade is run with 1x1 resolution
             //        Those tests may not have a Cout parameter to write to.
-            if (m_xres > 1 || m_yres > 1) {
+            if (m_xres > 1 && m_yres > 1) {
                 errhandler().warning ("Requested output '%s', which wasn't found",
                                       outputs[0]);
             }
@@ -762,7 +762,7 @@ OptixRaytracer::make_optix_materials ()
         for (size_t i = 0; i < var_ns.size() - 1; i++)
             strlib_ss << "namespace " << var_ns[i] << " {\n";
 
-        strlib_ss << "__device__ __constant__ DeviceString " << var_ns.back() << " = { (const char *)" << gvar.second << "};\n";
+        strlib_ss << "__device__ DeviceString " << var_ns.back() << " = { (const char *)" << gvar.second << "};\n";
         // close namespace up
         for (size_t i = 0; i < var_ns.size() - 1; i++)
             strlib_ss << "}\n";

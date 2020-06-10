@@ -409,25 +409,14 @@ extern "C" {
 
 #else //#if (OPTIX_VERSION < 70000)
 
-extern __device__ __constant__ char* test_str_1;
-extern __device__ __constant__ char* test_str_2;
+extern __device__ char* test_str_1;
+extern __device__ char* test_str_2;
 
 OSL_NAMESPACE_ENTER
 namespace pvt {
 extern __device__ char* s_color_system;
 }
 OSL_NAMESPACE_EXIT
-
-
-// FIXME:  this seems to be required otherwise this module won't pick up
-// the global DeviceString pointers.
-__device__ void DummyFunction()
-{
-#define STRDECL(str,var_name) \
-    printf("%ld\n", *(long *)&StringParams::var_name);
-#include <OSL/strdecls.h>
-#undef STRDECL
-}
 
 // Taken from the SimplePool class
 __device__

@@ -1146,34 +1146,6 @@ static void empty_group_func (void*, void*)
 void
 BackendLLVM::run ()
 {
-
-#if (OPTIX_VERSION >= 70000)
-    auto SetGlobal = [&] (llvm::GlobalVariable &g_var, llvm::Module *module) {
-
-        // Our globals/value hashmap is indexed by 'demangled' variable names
-        // so we'll need to demangled the GlobalVariable names
-        size_t demangle_buf_size = 1024;
-        char * demangled_name = reinterpret_cast<char *> (malloc (demangle_buf_size));
-        int status = -1;
-        demangled_name = abi::__cxa_demangle (g_var.getGlobalIdentifier().c_str(), demangled_name, &demangle_buf_size, &status);
-        const char * substr="llvm-link:";
-        if (strncmp(g_var.getGlobalIdentifier().c_str(), substr, strlen(substr)) == 0)
-            return;
-
-        uint64_t value = 0;
-        if (status)
-            shadingsys().renderer()->fetch_global (g_var.getGlobalIdentifier().c_str(), &value);
-        else
-            shadingsys().renderer()->fetch_global (demangled_name, &value);
-
-        llvm::Constant * constant = llvm::ConstantInt::get (llvm::Type::getInt64Ty (module->getContext()), value);
-        g_var.setConstant (true);
-        g_var.setInitializer (constant);
-        free (demangled_name);
-    };
-
-#endif
-
     if (group().does_nothing()) {
         group().llvm_compiled_init ((RunLLVMGroupFunc)empty_group_func);
         group().llvm_compiled_version ((RunLLVMGroupFunc)empty_group_func);
@@ -1394,11 +1366,6 @@ BackendLLVM::run ()
             ll.module_from_bitcode (static_cast<const char*>(bitcode.data()),
                                     bitcode.size(), "cuda_lib");
 
-        // Set global variables
-#if (OPTIX_VERSION >= 70000)
-        for (auto& g_var : lib_module->globals())
-            SetGlobal (g_var, lib_module);
-#endif
         std::string name = Strutil::sprintf ("%s_%d", group().name(), group().id());
 #if (OPTIX_VERSION < 70000)
         ll.ptx_compile_group (lib_module, name, group().m_llvm_ptx_compiled_version);

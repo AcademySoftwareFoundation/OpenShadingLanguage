@@ -1,0 +1,29 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/imageworks/OpenShadingLanguage
+
+
+// Note: the metadata [[int lockgeom = 0]] says that a particular parameter
+// is expected to be a per-point varying value (such as for an interpolted
+// variable or a per-point retrievable "user data" value), and therefore
+// should not be constant-folded away at runtime.
+
+shader vfBm3d (point position = P [[ int lockgeom = 0 ]],
+               float frequency = 1,
+               float amplitude = 1 [[ int lockgeom = 0 ]],
+               int octaves = 1,
+               float lacunarity = 2,
+               float gain = 0.5,
+               string noisetype = "snoise",
+               output vector out = 0)
+{
+    vector r = 0;
+    point p = position * frequency;
+    float amp = amplitude;
+    for (int i = 0; i < octaves; ++i) {
+        r += amp * (vector)noise (noisetype, p);
+        p *= lacunarity;
+        amp *= gain;
+    }
+    out = r;
+}

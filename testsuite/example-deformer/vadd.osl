@@ -1,0 +1,14 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/imageworks/OpenShadingLanguage
+
+
+// Simple shader node that just adds two inputs `a` and `b`, yielding output
+// `out`.
+
+shader vadd (vector a = 0,
+             vector b = 0,
+             output vector out = 0)
+{
+    out = a + b;
+}

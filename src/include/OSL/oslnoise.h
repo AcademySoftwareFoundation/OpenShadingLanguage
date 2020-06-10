@@ -201,7 +201,7 @@ reference_inthash (const unsigned int k[N]) {
 
 
 template<typename HeadT, typename... ListT>
-using RequireAllSame = typename std::enable_if<conjunction<std::is_same<ListT, HeadT>...>::value>::type;
+using RequireAllSame = typename std::enable_if<conjunction<std::is_same<ListT, HeadT> >::value...>::type;
 
 // Allow any number of arguments to be adapted to the array based reference_inthash
 // and leave door open for overloads of inthash with specific parameters.

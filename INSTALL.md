@@ -53,9 +53,11 @@ NEW or CHANGED dependencies since the last major release are **bold**.
 * [Flex](https://github.com/westes/flex) and
   [GNU Bison](https://www.gnu.org/software/bison/)
 * [PugiXML](http://pugixml.org/)
-* [Partio](https://www.disneyanimation.com/technology/partio.html) --
-  optional, but if it is not found at build time, the OSL `pointcloud`
-  functions will not be operative.
+* (optional) [Partio](https://www.disneyanimation.com/technology/partio.html)
+  If it is not found at build time, the OSL `pointcloud` functions will not
+  be operative.
+* (optional) Qt >= 5.6 (tested through 5.15).  If not found at build time,
+  the `osltoy` application will be disabled.
 
 
 

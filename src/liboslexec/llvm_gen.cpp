@@ -222,7 +222,7 @@ LLVMGEN (llvm_gen_useparam)
         rop.llvm_run_connected_layers (sym, symindex, opnum, &already_run);
         // If it's an interpolated (userdata) parameter and we're
         // initializing them lazily, now we have to do it.
-        if (sym.symtype() == SymTypeParam
+        if ((sym.symtype() == SymTypeParam || sym.symtype() == SymTypeOutputParam)
                 && ! sym.lockgeom() && ! sym.typespec().is_closure()
                 && ! sym.connected() && ! sym.connected_down()
                 && rop.shadingsys().lazy_userdata()) {

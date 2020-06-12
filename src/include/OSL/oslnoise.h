@@ -199,15 +199,20 @@ reference_inthash (const unsigned int k[N]) {
     return c;
 }
 
-
+#if defined(_MSC_VER) && (_MSC_VER >= 1920)
 template<typename HeadT, typename... ListT>
-using RequireAllSame = typename std::enable_if<conjunction<std::is_same<ListT, HeadT> >::value...>::type;
+using RequireAllSame = typename std::enable_if<conjunction<std::is_same<ListT, HeadT>...>::value>::type;
+#endif
 
 // Allow any number of arguments to be adapted to the array based reference_inthash
 // and leave door open for overloads of inthash with specific parameters.
 // NOTE: only accept unsigned int's so that overloads with unsigned int's will be chosen.
 // Callers with "int" parameters will need to static_cast<unsigned int>(param)
+#if defined(_MSC_VER) && (_MSC_VER >= 1920)
 template<typename ...ListT, typename = RequireAllSame<unsigned int, ListT...> >
+#else
+template<typename ...ListT, typename = typename std::enable_if<conjunction<std::is_same<ListT, unsigned int>...>::value>::type >
+#endif
 OSL_FORCEINLINE OSL_HOSTDEVICE unsigned int
 inthash (ListT... uintList)  {
     const int count = sizeof...(uintList);

@@ -244,7 +244,13 @@ if (LLVM_NAMESPACE)
 endif ()
 if (LLVM_VERSION VERSION_GREATER_EQUAL 10.0.0 AND
     CMAKE_CXX_STANDARD VERSION_LESS 14)
-    message (FATAL_ERROR "LLVM 10+ requires C++14 or higher (was ${CMAKE_CXX_STANDARD}).")
+    message (FATAL_ERROR
+             "LLVM 10+ requires C++14 or higher (was ${CMAKE_CXX_STANDARD}). "
+             "To build against this LLVM ${LLVM_VERSION}, you need to set "
+             "build option CMAKE_CXX_STANDARD=14. The minimum requirements "
+             "for that are gcc >= 5.1, clang >= 3.5, Apple clang >= 7, "
+             "icc >= 7, MSVS >= 2017. "
+             "If you must use C++11, you need to build against LLVM 9 or earlier.")
 endif ()
 
 checked_find_package (partio)

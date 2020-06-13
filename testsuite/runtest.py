@@ -79,6 +79,9 @@ failureok = 0
 failthresh = 0.004
 hardfail = 0.01
 failpercent = 0.02
+cleanup_on_success = False
+if int(os.getenv('TESTSUITE_CLEANUP_ON_SUCCESS', '0')) :
+    cleanup_on_success = True;
 oslcargs = "-Wall"
 
 image_extensions = [ ".tif", ".tx", ".exr", ".jpg", ".png", ".rla",
@@ -371,4 +374,11 @@ if (os.path.exists("ref/out.tif") and ("out.tif" not in outputs)) :
 # Run the test and check the outputs
 ret = runtest (command, outputs, failureok=failureok,
                failthresh=failthresh, failpercent=failpercent)
+
+if ret == 0 and cleanup_on_success :
+    for ext in image_extensions + [ ".txt", ".diff" ] :
+        for f in glob.iglob (srcdir + '/*' + ext) :
+            os.remove(f)
+            #print('REMOVED ', f)
+
 sys.exit (ret)

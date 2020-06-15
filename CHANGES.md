@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.11/2.0? -- ?? 2019 (compared to 1.10)
+Release 1.11 -- ?? 2020 (compared to 1.10)
 --------------------------------------------------
 ASWF adoption changes:
 * GOVERNANCE.md and ASWF/Technical-Charter.md document the project
@@ -11,12 +11,14 @@ ASWF adoption changes:
   Shading Language Project," all files now have proper SPDX identifiers
   instead of long boilerplate notices, and 3rd party included code now has
   its licenses documented in the LICENSE-THIRD-PARTY.md file. #1145 (1.11.5)
+* The official mail list has switched to https://lists.aswf.io/g/osl-dev
+  #1167
 
 Dependency and standards changes:
 * **LLVM 7.0-10.0**: Support for LLVM 4, 5, and 6 have been dropped. Support
   for LLVM 8, 9, and 10 have been added. Note that using LLVM 10 *requires*
   building for C++14 or later, because LLVM 10's APIs no longer support
-  C++11. #981 #1046 #1058 #1128 #1152
+  C++11. #981 #1046 #1058 #1128 #1152 #1162 #1206
 * OpenImageIO 2.0-2.1: Support for OIIO 1.8 has been dropped; a minimum of
   OIIO 2.0 is needed to build OSL. (Additionally, a minimum of OIIO 2.1 is
   strongly recommended for anyone using the SIMD batch shading mode.) #1038
@@ -93,6 +95,9 @@ OSL Language and oslc compiler:
   automatic generation of range checking code for the shader. #1112 (1.11.4)
 * Support has been added for `pointcloud_get()` to be able to retrieve
   per-point string data from point clouds. #1157 (1.11.5)
+* Shader `output` parameters that are marked `[[ int lockgeom=1 ]]` will
+  automatically bind to any identically-named userdata, just like non-output
+  parameters have always done. #1200 (1.11.6)
 
 OSL Standard library:
 * Extend linearstep() and smooth_linearstep() to work with color, point,
@@ -100,6 +105,7 @@ OSL Standard library:
   (1.10.5/1.11.0)
 * Extend `transformc()` to understand translating between linear and sRGB
   color spaces. #1013 (1.11.0)
+* `cbrt()` cube root was added to the standard library. #1164 #1166 (1.11.6)
 
 Shaders:
 
@@ -119,11 +125,20 @@ API changes, new options, new ShadingSystem features (for renderer writers):
   methods for shader specification, it's possible for multiple threads to
   specify shader groups simultaneously. #984, #985, #986, #1000 (1.11.0)
   #1067 (1.11.1)
-* New ShadingSystem option: "opt_warnings" enables warnings about things
-  that couldn't be optimized and may be performance issues. #1010 (1.11.0)
-* New ShadingSystem option: "gpu_opt_error" enables full error status of the
-  subset of those warnings that are also hard no-go's when executing on
-  GPUs. #1010 (1.11.0)
+* New ShadingSystem options:
+    - "opt_warnings" enables warnings about things that couldn't be
+      optimized and may be performance issues. #1010 (1.11.0)
+    - "gpu_opt_error" enables full error status of the subset of those
+      warnings that are also hard no-go's when executing on GPUs. #1010
+      (1.11.0)
+    - "lazyerror", if set to 0, will unconditionally (and non-lazily) run
+      any shader layers that still contain `error()` calls after
+      optimization, so that error messages can't be elided by optimizations
+      causing the layer to be eliminated or never run. When "opt_warnings"
+      is enabled, warnings will be issued about shaders that couldn't
+      optimize away all of their error calls. Note that the default value is
+      1, giving the old behavior or lazily evaluating shader layers that
+      contain error calls. #1191 (1.11.5)
 * `RendererServices::get_texture_handle()` has changed slightly to require
   a `ShadingConntext*` parameter, and `get_texture_info()` has changed to
   have a parameter allowing the caller to provide a `texture_thread_info`
@@ -135,11 +150,15 @@ API changes, new options, new ShadingSystem features (for renderer writers):
 * We no longer automatically build the MaterialX shaders (you need to set
   build option OSL_BUILD_MATRIALX to ON). This will eventually be deprecated
   entirely. #1136 (1.11.5)
+* Helper varieties of ShadingSystem::Parameter() and ReParameter() that
+  handele the common cases of a single float, int, or string. #1195 #1196
+  (1.11.6)
 
-Experimental SIMD batched shading mode:
-* Continued work: #1108
+Continued work on experimental SIMD batched shading mode:
+* Continued work on SIMD-friendly math and noise: #1108 (1.11.4)
+* Support in LLVM_Util for various wide (SIMD) data types. #1175 (1.11.6)
 
-Experimental OptiX rendering:
+Continued work on experimental OptiX rendering:
 * Build option `USE_OPTIX=1` enable experimental OptiX support.
 * testshade and testrender now take `--optix` flags to run tests on OptiX.
   You can also force either to run in OptiX mode with environment variable
@@ -154,6 +173,7 @@ Experimental OptiX rendering:
 * Work on matrix ops. #1054 (1.11.1)
 * Allow init ops. #1059 (1.11.1)
 * Fixes to string closure params. #1061 (1.11.1)
+# Add support for OptiX 7 #1111 #1203 (1.11.6)
 
 Performance improvements:
 * Constant fold array accesses even if they are out of bounds. #1035 (1.11.0)
@@ -162,6 +182,11 @@ Performance improvements:
   (1.11.3)
 * Shader performance improved slightly by better inlining during the JIT.
   #1114 (1.11.4)
+* Range checking of matrix component access is skipped for certain cases
+  where it was unnecessary. #1174 (1.11.6)
+* LLVM JIT+optimize time has been sped up around 10% by doing a better job
+  of pruning unused functions and symbols in the generated modul. #1172
+  (1.11.6)
 
 Bug fixes and other improvements (internals):
 * Fix bug in implementation of `splineinverse()` when computing with
@@ -196,6 +221,10 @@ Bug fixes and other improvements (internals):
   C/C++/OSL use of backslash as escape sequences in strings.) #1101 (1.11.3)
 * Remove the internal attribute query cache, in practice it seemed to be
   slowing things down. #1109 (1.11.4)
+* `debug_nan` and `debug_uninit` work more accurately for matrices --
+  fewer false positives. #1174 (1.11.6)
+* Fix bug that sometimes caused the optimizer to misunderstand which
+  arguments to `regex_search` and `regex_match` were written. #1186 (1.11.6)
 
 Internals/developer concerns:
 * Switch much of the internals where we do string formatting using printf-like
@@ -215,6 +244,12 @@ Internals/developer concerns:
   generation when used in vectorized loops. #1096 (1.11.3)
 * Refactor oslconfig.h, split all the compiler/C++version detection and
   differing macros into platform.h. #1102 (1.11.3)
+* Certain runtime error messages have been improved by demangling the names
+  of involved variables and their scopes. #1179 (1.11.6)
+* LLVM now JITs code for the specific host architecture. #1182 (1.11.6)
+* Change all bare std::ofstream and ifstream to OIIO::ofstream/ifstream.
+  This ensures that they are UTF-8 safe and compile properly on MINGW.
+  #1188 (1.11.6)
 
 Build & test system improvements:
 * Major overhaul of the CMake build system to upgrade minimum of CMake 3.12
@@ -251,7 +286,7 @@ Build & test system improvements:
 * A new build-time CMake variable `OSL_LIBNAME_SUFFIX` lets you optionally
   add a custom suffix to the main libraries that are built. (Use with
   caution.) #970 (1.11.0)
-* Build cript finding of LLVM is now more robust to certain library
+* Build script finding of LLVM is now more robust to certain library
   configurations of llvm, particularly where everything is bundled in just
   one libLLVM without a separate libLLVMMCJIT. #976 (1.10.4/1.11.0)
 * Support for LLVM 4 has been dropped. #981 (1.11.0)
@@ -298,10 +333,25 @@ Build & test system improvements:
 * Improvements in finding Partio. #1125 (1.11.5)
 * oslconfig.h is now generated by a cmake configure_file step, from
   oslconfig.h.in. #1141 (1.11.5)
+* Use ASWF docker images to speed up many of the CI matrix entries, as well
+  as to excactly test several VFX Platform specs. #1169 (1.11.6)
+* Fix typo that botched the version in the .pc pkgconfig file. #1168 (1.11.6)
+* CI test against gcc9 and gcc10. #1192 (1.11.6)
+* Propagate RTTI compile options to exported cmake config. #1194 (1.11.6)
+* `testshade -o` : now `null` as the filename will not produce any output.
+  This is handy to mark a renderer output but without storing the results
+  as an image. #1193 (1.11.6)
+* Fixes to support Qt 5.15 (currently, osltoy is the only component that
+  uses Qt). #1204 (1.11.6)
 
 Documentation:
 * Make it clear that the documentation is licensed under the CC-BY-4.0
   license.
+* testsuite/example-deformer contains an example of using OSL on a
+  collection of points in a manner that you might use to implement a
+  deformer. #1199 (1.11.6)
+* `testrender` now contains a progressive sampler, which might be a good
+  example for others writing renderers. #1202 (1.11.6)
 
 
 Release 1.10.8 -- 1 Dec 2019 (compared to 1.10.7)

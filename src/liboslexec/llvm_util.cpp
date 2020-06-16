@@ -1876,14 +1876,30 @@ LLVM_Util::offset_ptr (llvm::Value *ptr, int offset, llvm::Type *ptrtype)
 llvm::Value *
 LLVM_Util::op_alloca (llvm::Type *llvmtype, int n, const std::string &name, int align)
 {
+    // We must avoid emitting any alloca's inside loops and we wish to reuse
+    // temporaries across the body of a function, which means we should not
+    // emit them in conditional branches either. So always place alloca's at
+    // the very beginning of a function. To do that we save the current
+    // insertion point, change it to the beginning of the function, emit the
+    // alloca, then restore the insertion point to where it was previously.
+    auto previousIP = m_builder->saveIP();
+
+    llvm::BasicBlock * entry_block = &current_function()->getEntryBlock();
+    m_builder->SetInsertPoint(entry_block, entry_block->begin());
+
     llvm::ConstantInt* numalloc = (llvm::ConstantInt*)constant(n);
-    llvm::AllocaInst* allocainst = builder().CreateAlloca (llvmtype, numalloc, name);
-    if (align > 0)
+    llvm::AllocaInst* allocainst = builder().CreateAlloca (llvmtype, numalloc,
+                                    debug() ? name : llvm::Twine::createNull());
+    if (align > 0) {
 #if OSL_LLVM_VERSION >= 100
         allocainst->setAlignment (llvm::MaybeAlign(align));
 #else
         allocainst->setAlignment (align);
 #endif
+    }
+    OSL_ASSERT(previousIP.isSet());
+    m_builder->restoreIP(previousIP);
+
     return allocainst;
 }
 

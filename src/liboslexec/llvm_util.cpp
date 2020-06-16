@@ -151,55 +151,70 @@ protected:
 public:
 
     MemoryManager(LLVMMemoryManager *realmm) : mm(realmm) {}
-    
-    virtual void notifyObjectLoaded(llvm::ExecutionEngine *EE, const llvm::object::ObjectFile &oi) {
+
+    void notifyObjectLoaded(llvm::ExecutionEngine *EE, const llvm::object::ObjectFile &oi) override {
         mm->notifyObjectLoaded (EE, oi);
     }
 
-    virtual void reserveAllocationSpace(uintptr_t CodeSize, uint32_t CodeAlign,
-                                        uintptr_t RODataSize,
-                                        uint32_t RODataAlign,
-                                        uintptr_t RWDataSize,
-                                        uint32_t RWDataAlign) {
+    void notifyObjectLoaded (llvm::RuntimeDyld &RTDyld, const llvm::object::ObjectFile &Obj) override {
+        mm->notifyObjectLoaded(RTDyld, Obj);
+    }
+
+    void reserveAllocationSpace(uintptr_t CodeSize, uint32_t CodeAlign,
+                                uintptr_t RODataSize, uint32_t RODataAlign,
+                                uintptr_t RWDataSize, uint32_t RWDataAlign) override {
         return mm->reserveAllocationSpace(CodeSize, CodeAlign, RODataSize, RODataAlign, RWDataSize, RWDataAlign);
     }
 
-    virtual bool needsToReserveAllocationSpace() {
+    bool needsToReserveAllocationSpace() override {
         return mm->needsToReserveAllocationSpace();
     }
 
-    virtual void invalidateInstructionCache() {
+    void invalidateInstructionCache() override {
         mm->invalidateInstructionCache();
+    }
+    
+    llvm::JITSymbol findSymbol(const std::string &Name) override {
+        return mm->findSymbol(Name);
+    }
+
+    uint64_t getSymbolAddressInLogicalDylib (const std::string &Name) override {
+        return mm->getSymbolAddressInLogicalDylib(Name);
+    }
+
+    llvm::JITSymbol findSymbolInLogicalDylib (const std::string &Name) override {
+        return mm->findSymbolInLogicalDylib(Name);
     }
 
     // Common
     virtual ~MemoryManager() {}
 
-    virtual void *getPointerToNamedFunction(const std::string &Name,
-                                            bool AbortOnFailure = true) {
+    void *getPointerToNamedFunction(const std::string &Name,
+                                    bool AbortOnFailure) override {
         return mm->getPointerToNamedFunction (Name, AbortOnFailure);
     }
-    virtual uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment,
-                             unsigned SectionID, llvm::StringRef SectionName) {
+    uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment,
+                                 unsigned SectionID, llvm::StringRef SectionName) override {
         return mm->allocateCodeSection(Size, Alignment, SectionID, SectionName);
     }
-    virtual uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment,
-                             unsigned SectionID, llvm::StringRef SectionName,
-                             bool IsReadOnly) {
+    uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment,
+                                 unsigned SectionID, llvm::StringRef SectionName,
+                                 bool IsReadOnly) override {
         return mm->allocateDataSection(Size, Alignment, SectionID,
                                        SectionName, IsReadOnly);
     }
-    virtual void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) {
+    void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr, size_t Size) override {
         mm->registerEHFrames (Addr, LoadAddr, Size);
     }
-    virtual void deregisterEHFrames() {
+    void deregisterEHFrames() override {
         mm->deregisterEHFrames();
     }
 
-    virtual uint64_t getSymbolAddress(const std::string &Name) {
+    uint64_t getSymbolAddress(const std::string &Name) override {
         return mm->getSymbolAddress (Name);
     }
-    virtual bool finalizeMemory(std::string *ErrMsg = 0) {
+
+    bool finalizeMemory(std::string *ErrMsg) override {
         return mm->finalizeMemory (ErrMsg);
     }
 };

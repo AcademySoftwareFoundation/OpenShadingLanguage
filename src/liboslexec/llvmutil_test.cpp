@@ -211,11 +211,26 @@ test_big_func (bool do_print=false)
 
 
 
+void
+test_isa_features()
+{
+    OSL::pvt::LLVM_Util ll;
+    ll.detect_cpu_features();
+
+    // Make sure it matches what OIIO's cpuid queries reveal
+    OIIO_CHECK_EQUAL(ll.supports_avx(), OIIO::cpu_has_avx());
+    OIIO_CHECK_EQUAL(ll.supports_avx2(), OIIO::cpu_has_avx2());
+    OIIO_CHECK_EQUAL(ll.supports_avx512f(), OIIO::cpu_has_avx512f());
+}
+
+
 
 int
 main (int argc, char *argv[])
 {
     getargs (argc, argv);
+
+    test_isa_features();
 
     // Test simple functions
     test_int_func();

@@ -43,6 +43,18 @@ OSL_NAMESPACE_ENTER
 namespace pvt {   // OSL::pvt
 
 
+enum class TargetISA
+{
+    UNKNOWN,
+    x64,
+    SSE4_2,
+    AVX,
+    AVX2,
+    AVX2_noFMA,
+    AVX512,
+    AVX512_noFMA,
+    COUNT
+};
 
 
 
@@ -131,6 +143,31 @@ public:
     /// Return a pointer to the new engine.  If err is not NULL, put any
     /// errors there.
     llvm::ExecutionEngine *make_jit_execengine (std::string *err=NULL);
+
+    /// Report the host's TargetISA as chosen by the last call to
+    /// make_jit_execengine() or to detect_cpu_features(). Don't call
+    /// target_isa() unless one of those has previously been called.
+    TargetISA target_isa() const { return m_target_isa; }
+
+    // Check support for certain CPU ISA features. These are only valid
+    // after detect_cpu_features() (or make_jit_execengine()) has been
+    // called.
+    bool supports_avx() const { return m_supports_avx; }
+    bool supports_avx2() const { return m_supports_avx2; }
+    bool supports_avx512f() const { return m_supports_avx512f; }
+    bool supports_llvm_bit_masks_natively() const { return m_supports_llvm_bit_masks_natively; }
+    bool supports_masked_stores() const { return m_supports_masked_stores; }
+
+    static bool supports_isa(TargetISA target);
+    static TargetISA lookup_isa_by_name(string_view target_name);
+    static const char* target_isa_name(TargetISA isa);
+
+    // For CPU compilation, inventory the host CPU capabilities. You can
+    // optionally request a specific ISA by name. If `no_fma` is true,
+    // specifically pretend there is no FMA capability, even if the hardware
+    // supports it. Return true if ok, false if it couldn't figure it out.
+    bool detect_cpu_features(TargetISA requestedISA = TargetISA::UNKNOWN,
+                             bool no_fma = false);
 
     /// Return a pointer to the current ExecutionEngine.  Create a JITing
     /// ExecutionEngine if one isn't already set up.
@@ -578,6 +615,7 @@ private:
     llvm::legacy::PassManager *m_llvm_module_passes;
     llvm::legacy::FunctionPassManager *m_llvm_func_passes;
     llvm::ExecutionEngine *m_llvm_exec;
+    TargetISA m_target_isa = TargetISA::UNKNOWN;
     std::vector<llvm::BasicBlock *> m_return_block;     // stack for func call
     std::vector<llvm::BasicBlock *> m_loop_after_block; // stack for break
     std::vector<llvm::BasicBlock *> m_loop_step_block;  // stack for continue
@@ -620,6 +658,12 @@ private:
     llvm::PointerType * m_llvm_type_wide_int_ptr;
     llvm::PointerType * m_llvm_type_wide_bool_ptr;
     llvm::PointerType * m_llvm_type_wide_float_ptr;
+
+    bool m_supports_masked_stores = false;
+    bool m_supports_llvm_bit_masks_natively = false;
+    bool m_supports_avx512f = false;
+    bool m_supports_avx2 = false;
+    bool m_supports_avx = false;
 
     bool m_ModuleIsPruned;
 };

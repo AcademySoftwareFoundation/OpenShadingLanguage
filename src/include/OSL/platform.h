@@ -355,7 +355,7 @@
 #endif
 
 // OSL_FALLTHROUGH at the end of a `case` label's statements documents that
-// he switch statement case is intentionally falling through to the code for
+// the switch statement case is intentionally falling through to the code for
 // the next case.
 #if OSL_CPLUSPLUS_VERSION >= 17 || __has_cpp_attribute(fallthrough)
 #    define OSL_FALLTHROUGH [[fallthrough]]

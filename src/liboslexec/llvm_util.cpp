@@ -452,7 +452,369 @@ LLVM_Util::end_builder ()
 }
 
 
+static llvm::StringMap<bool> sCpuFeatures;
 
+static bool populateCpuFeatures()
+{
+    return llvm::sys::getHostCPUFeatures(sCpuFeatures);
+}
+
+
+static bool initCpuFeatures()
+{
+    // Lazy singleton behavior, populateCpuFeatures() should
+    // only get called once by 1 thread per C++ static initialization rules
+    static bool is_initialized = populateCpuFeatures();
+    return is_initialized;
+}
+
+
+// The list of cpu features should correspond to the target architecture
+// or feature set that the corresponding wide library.
+// So if you change the target cpu or features in liboslexec/CMakeList.txt
+// for any of the wide libraries, please update here to match
+static const char * target_isa_names[] = {
+    "UNKNOWN", "x64", "SSE4.2", "AVX", "AVX2", "AVX2_noFMA", "AVX512", "AVX512_noFMA"
+};
+
+
+// clang: default
+// icc: default
+static const char * required_cpu_features_by_x64[] = {
+    "fxsr", "mmx", "sse", "sse2", "x87"
+};
+
+// clang: -march=nehalem
+// icc: -xSSE4.2
+static const char * required_cpu_features_by_SSE4_2[] = {
+    "cx16","fxsr","mmx","popcnt",
+    // "sahf", // we shouldn't need/require this feature
+    "sse","sse2","sse3","sse4.1",
+    "sse4.2","ssse3", "x87"
+};
+
+// clang: -march=corei7-avx
+// icc: -xAVX
+static const char * required_cpu_features_by_AVX[] = {
+    "aes", "avx", "cx16", "fxsr", "mmx", "pclmul", "popcnt",
+    // "sahf", // we shouldn't need/require this feature
+    "sse",
+    "sse2", "sse3", "sse4.1", "sse4.2", "ssse3", "x87"
+    // ,"xsave","xsaveopt" // Save Processor Extended States, we don't use
+};
+
+// clang: -march=core-avx2
+// icc: -xCORE-AVX2
+static const char * required_cpu_features_by_AVX2[] = {
+    "aes", "avx", "avx2", "bmi", "bmi2", "cx16", "f16c", "fma",
+    // "fsgsbase", // we shouldn't need/require this feature
+    "fxsr",
+    // "invpcid", // Invalidate Process-Context Identifier, we don't use
+    "lzcnt", "mmx", "movbe", "pclmul", "popcnt",
+    // "rdrnd", // random # don't require unless we make use of it
+    // "sahf", // we shouldn't need/require this feature
+    "sse",
+    "sse2", "sse3", "sse4.1", "sse4.2", "ssse3", "x87"
+    // ,"xsave","xsaveopt" // // Save Processor Extended States, we don't use
+};
+
+// clang: -march=core-avx2 -mno-fma
+// icc: -xCORE-AVX2 -no-fma
+static const char * required_cpu_features_by_AVX2_noFMA[] = {
+    "aes", "avx", "avx2", "bmi", "bmi2", "cx16", "f16c",
+    // "fsgsbase", // we shouldn't need/require this feature
+    "fxsr",
+    // "invpcid", // Invalidate Process-Context Identifier, we don't use
+    "lzcnt", "mmx", "movbe", "pclmul", "popcnt",
+    // "rdrnd", // random # don't require unless we make use of it
+    // "sahf", // we shouldn't need/require this feature
+    "sse",
+    "sse2", "sse3", "sse4.1", "sse4.2", "ssse3", "x87"
+    // , "xsave", "xsaveopt" // Save Processor Extended States, we don't use
+};
+
+// clang: -march=skylake-avx512
+// icc: -xCORE-AVX512
+static const char * required_cpu_features_by_AVX512[] = {
+    "adx", "aes", "avx", "avx2", "avx512bw", "avx512cd", "avx512dq",
+    "avx512f", "avx512vl", "bmi", "bmi2",
+    // "clflushopt", "clwb", flushing for volatile/persistent memory we shouldn't need
+    "cx16",
+    "f16c", "fma",
+    // "fsgsbase", // we shouldn't need/require this feature,
+    "fxsr",
+    // "invpcid", // Invalidate Process-Context Identifier, we don't use
+    "lzcnt", "mmx", "movbe",
+    //"mpx", // Memory Protection Extensions, we don't use
+    "pclmul",
+    // "pku"//  Memory Protection Keys we shouldn't need/require this feature,
+    "popcnt",
+    // "prfchw", // prefetch wide we shouldn't need/require this feature,
+    // "rdrnd", "rdseed", // random # don't require unless we make use of it
+    // "rtm", // transaction memory we shouldn't need/require this feature,
+    // "sahf", // we shouldn't need/require this feature
+    "sse", "sse2", "sse3", "sse4.1", "sse4.2", "ssse3", "x87"
+    // , "xsave", "xsavec", "xsaveopt", "xsaves" // Save Processor Extended States, we don't use
+};
+// clang: -march=skylake-avx512 -mno-fma
+// icc: -xCORE-AVX512 -no-fma
+static const char * required_cpu_features_by_AVX512_noFMA[] = {
+    "adx", "aes", "avx", "avx2", "avx512bw", "avx512cd", "avx512dq",
+    "avx512f", "avx512vl", "bmi", "bmi2",
+    // "clflushopt", "clwb", flushing for volatile/persistent memory we shouldn't need
+    "cx16",
+    "f16c",
+    // "fsgsbase", // we shouldn't need/require this feature
+    "fxsr",
+    // "invpcid", // Invalidate Process-Context Identifier, we don't use
+    "lzcnt", "mmx", "movbe",
+    //"mpx", // Memory Protection Extensions, we don't use
+    "pclmul",
+    // "pku"//  Memory Protection Keys we shouldn't need/require this feature,
+    "popcnt",
+    // "prfchw", // prefetch wide we shouldn't need/require this feature,
+    // "rdrnd", "rdseed", // random # don't require unless we make use of it
+    // "rtm", // transaction memory we shouldn't need/require this feature,
+    // "sahf", // we shouldn't need/require this feature
+    "sse", "sse2", "sse3", "sse4.1", "sse4.2", "ssse3", "x87"
+    // , "xsave", "xsavec", "xsaveopt", "xsaves" // Save Processor Extended States, we don't use
+};
+
+
+static void
+get_required_cpu_features_for(TargetISA target, const char ** &features, int &feature_count)
+{
+    OSL_ASSERT(target > TargetISA::UNKNOWN && target < TargetISA::COUNT);
+
+    switch(target) {
+    case TargetISA::x64:
+        features = required_cpu_features_by_x64;
+        feature_count = std::extent<decltype(required_cpu_features_by_x64)>::value;
+        break;
+    case TargetISA::SSE4_2:
+        features = required_cpu_features_by_SSE4_2;
+        feature_count = std::extent<decltype(required_cpu_features_by_SSE4_2)>::value;
+        break;
+    case TargetISA::AVX:
+        features = required_cpu_features_by_AVX;
+        feature_count = std::extent<decltype(required_cpu_features_by_AVX)>::value;
+        break;
+    case TargetISA::AVX2:
+        features = required_cpu_features_by_AVX2;
+        feature_count = std::extent<decltype(required_cpu_features_by_AVX2)>::value;
+        break;
+    case TargetISA::AVX2_noFMA:
+        features = required_cpu_features_by_AVX2_noFMA;
+        feature_count = std::extent<decltype(required_cpu_features_by_AVX2_noFMA)>::value;
+        break;
+    case TargetISA::AVX512:
+        features = required_cpu_features_by_AVX512;
+        feature_count = std::extent<decltype(required_cpu_features_by_AVX512)>::value;
+        break;
+    case TargetISA::AVX512_noFMA:
+        features = required_cpu_features_by_AVX512_noFMA;
+        feature_count = std::extent<decltype(required_cpu_features_by_AVX512_noFMA)>::value;
+        break;
+    default:
+        OSL_ASSERT(0 && "incomplete required cpu features for target are not specified");
+    }
+    OSL_ASSERT(features);
+    OSL_ASSERT(feature_count > 0);
+}
+
+
+
+/*static*/ TargetISA
+LLVM_Util::lookup_isa_by_name(string_view target_name)
+{
+    OSL_DEV_ONLY(std::cout << "lookup_isa_by_name(" << target_name << ")" << std::endl);
+    TargetISA requestedISA = TargetISA::UNKNOWN;
+    if (target_name != NULL) {
+        for (int i = static_cast<int>(TargetISA::UNKNOWN); i < static_cast<int>(TargetISA::COUNT); ++i) {
+            if (OIIO::Strutil::iequals(target_name, target_isa_names[i])) {
+                requestedISA = static_cast<TargetISA>(i);
+                OSL_DEV_ONLY(std::cout << "REQUESTED ISA:" << target_isa_names[i] << std::endl);
+                break;
+            }
+        }
+        // NOTE: we are ignoring unrecognized target strings
+    }
+    return requestedISA;
+}
+
+
+
+const char*
+LLVM_Util::target_isa_name(TargetISA isa)
+{
+    return target_isa_names[static_cast<int>(isa)];
+}
+
+
+
+bool
+LLVM_Util::detect_cpu_features(TargetISA requestedISA, bool no_fma)
+{
+    m_target_isa = TargetISA::UNKNOWN;
+    m_supports_masked_stores = false;
+    m_supports_llvm_bit_masks_natively = false;
+    m_supports_avx512f = false;
+    m_supports_avx2 = false;
+    m_supports_avx = false;
+
+    if (! initCpuFeatures()) {
+        return false;  // Could not figure it out
+    }
+
+    bool target_requested = (requestedISA != TargetISA::UNKNOWN);
+    switch (requestedISA) {
+    case TargetISA::UNKNOWN:
+        OSL_FALLTHROUGH;
+    case TargetISA::AVX512:
+        if (!no_fma) {
+            if (supports_isa(TargetISA::AVX512)) {
+                m_target_isa = TargetISA::AVX512;
+                m_supports_masked_stores = true;
+                m_supports_llvm_bit_masks_natively = true;
+                m_supports_avx512f = true;
+                m_supports_avx2 = true;
+                m_supports_avx = true;
+                break;
+            }
+            if (target_requested)
+                break;
+        }
+        OSL_FALLTHROUGH;
+    case TargetISA::AVX512_noFMA:
+        if (supports_isa(TargetISA::AVX512_noFMA)) {
+            m_target_isa = TargetISA::AVX512_noFMA;
+            m_supports_masked_stores = true;
+            m_supports_llvm_bit_masks_natively = true;
+            m_supports_avx512f = true;
+            m_supports_avx2 = true;
+            m_supports_avx = true;
+            break;
+        }
+        if (target_requested)
+            break;
+        OSL_FALLTHROUGH;
+    case TargetISA::AVX2:
+        if (!no_fma) {
+            if (supports_isa(TargetISA::AVX2)) {
+                m_target_isa = TargetISA::AVX2;
+                m_supports_masked_stores = true;
+                m_supports_avx2 = true;
+                m_supports_avx = true;
+                break;
+            }
+            if (target_requested)
+                break;
+        }
+        OSL_FALLTHROUGH;
+    case TargetISA::AVX2_noFMA:
+        if (supports_isa(TargetISA::AVX2_noFMA)) {
+            m_target_isa = TargetISA::AVX2_noFMA;
+            m_supports_masked_stores = true;
+            m_supports_avx2 = true;
+            m_supports_avx = true;
+            break;
+        }
+        if (target_requested)
+            break;
+        OSL_FALLTHROUGH;
+    case TargetISA::AVX:
+        if (supports_isa(TargetISA::AVX)) {
+            m_target_isa = TargetISA::AVX;
+            m_supports_avx = true;
+            break;
+        }
+        if (target_requested)
+            break;
+        OSL_FALLTHROUGH;
+    case TargetISA::SSE4_2:
+        if (supports_isa(TargetISA::SSE4_2)) {
+            m_target_isa = TargetISA::SSE4_2;
+            break;
+        }
+        if (target_requested)
+            break;
+        OSL_FALLTHROUGH;
+    case TargetISA::x64:
+        if (supports_isa(TargetISA::x64)) {
+            m_target_isa = TargetISA::x64;
+            break;
+        }
+        break;
+    default:
+        OSL_ASSERT(0 && "Unknown TargetISA");
+    }
+    // std::cout << "m_supports_masked_stores = " << m_supports_masked_stores << "\n";
+    // std::cout << "m_supports_llvm_bit_masks_natively = " << m_supports_llvm_bit_masks_natively << "\n";
+    // std::cout << "m_supports_avx512f = " << m_supports_avx512f << "\n";
+    // std::cout << "m_supports_avx2 = " << m_supports_avx2 << "\n";
+    // std::cout << "m_supports_avx = " << m_supports_avx << "\n";
+
+    return true;
+}
+
+
+
+bool
+LLVM_Util::supports_isa(TargetISA target)
+{
+    if(!initCpuFeatures())
+        return false;
+
+#ifdef OSL_DEV
+    {
+        auto iter = sCpuFeatures.begin();
+        auto end_of_features = sCpuFeatures.end();
+        for(;iter != end_of_features; ++iter) {
+            std::cout << "Featuremap[" << iter->getKey().str() << "]=" << iter->getValue() << std::endl;
+        }
+    }
+#endif
+
+    if (target <= TargetISA::UNKNOWN || target >= TargetISA::COUNT) {
+        return false;
+    }
+
+    const char ** features = nullptr;
+    int feature_count = 0;
+    get_required_cpu_features_for(target,features,feature_count);
+
+    OSL_DEV_ONLY(std::cout << "Inspecting features for " << target_isa_names[static_cast<int>(target)] << std::endl);
+    for (int i=0; i < feature_count; ++i) {
+        const char * feature_str = features[i];
+        // Bug in llvm::sys::getHostCPUFeatures does not add "x87","fxsr","mpx"
+        // LLVM release 9.0+ should fix "fxsr"
+        // We want to leave the features in our required_cpu_features_by_XXX so we can use
+        // it to enable JIT features (even though its doubtful to be useful).
+        // So we will skip testing of missing features from the sCpuFeatures
+        if ((strncmp(feature_str, "x87", 3) == 0)
+            || (strncmp(feature_str, "mpx", 3) == 0)
+#if OSL_LLVM_VERSION < 90
+            ||(strncmp(feature_str, "fxsr", 4) == 0)
+#endif
+            ) {
+            continue;
+        }
+        OSL_DEV_ONLY(std::cout << "Testing for cpu feature[" << i << "]:" << feature_str << std::endl);
+        if (sCpuFeatures[feature_str] == false) {
+            OSL_DEV_ONLY(std::cout << "MISSING cpu feature[" << i << "]:" << feature_str << std::endl);
+            return false;
+        }
+    }
+
+    // All cpu features of the requested target are supported
+    OSL_DEV_ONLY(std::cout << "All required features exist to execute code compiled for target: " << target_isa_names[static_cast<int>(target)] << std::endl);
+    return true;
+}
+
+
+
+// N.B. This method is never called for PTX generation, so don't be alarmed
+// if it's doing x86 specific things.
 llvm::ExecutionEngine *
 LLVM_Util::make_jit_execengine (std::string *err)
 {
@@ -469,6 +831,10 @@ LLVM_Util::make_jit_execengine (std::string *err)
         (new MemoryManager(m_llvm_jitmm)));
 
     engine_builder.setOptLevel (llvm::CodeGenOpt::Default);
+
+    /* Future site of target options setting */
+
+    detect_cpu_features();  // FIXME: eventually pass requested_isa, no_fma
 
     m_llvm_exec = engine_builder.create();
     if (! m_llvm_exec)

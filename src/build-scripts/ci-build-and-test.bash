@@ -42,6 +42,7 @@ popd
 if [[ "$SKIP_TESTS" == "" ]] ; then
     $OSL_ROOT/bin/testshade --help
     export OIIO_LIBRARY_PATH=$OSL_ROOT/lib:$OIIO_LIBRARY_PATH
+    TESTSUITE_CLEANUP_ON_SUCCESS=1
     make $BUILD_FLAGS test
 fi
 

@@ -39,6 +39,11 @@ jobs:
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/gh-installdeps-centos.bash
             source src/build-scripts/ci-build-and-test.bash
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: ${{ github.job }}
+          path: build/*/testsuite/*/*.*
 
   vfxplatform-2020:
     name: "Linux VFXP-2020 gcc6/C++14 llvm7 py3.7 boost-1.70 exr-2.4 OIIO-2.1 sse4"
@@ -58,6 +63,11 @@ jobs:
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/gh-installdeps-centos.bash
             source src/build-scripts/ci-build-and-test.bash
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: ${{ github.job }}
+          path: build/*/testsuite/*/*.*
 
   vfxplatform-2021:
     name: "Linux VFXP-2021 gcc9/C++17 llvm10 py3.7 boost-1.70 exr-2.5 OIIO-master avx2"
@@ -78,6 +88,11 @@ jobs:
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/gh-installdeps-centos.bash
             source src/build-scripts/ci-build-and-test.bash
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: ${{ github.job }}
+          path: build/*/testsuite/*/*.*
 
   linux-debug-gcc7-llvm8:
     name: "Linux Debug gcc7, C++14, llvm8, OIIO master, sse4, exr2.4"
@@ -98,6 +113,11 @@ jobs:
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/gh-installdeps.bash
             source src/build-scripts/ci-build-and-test.bash
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: ${{ github.job }}
+          path: build/*/testsuite/*/*.*
 
   linux-2020ish-clang9-llvm9:
     name: "Linux clang9, C++14, llvm9, oiio master, avx, exr2.4, avx"
@@ -117,6 +137,11 @@ jobs:
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/gh-installdeps.bash
             source src/build-scripts/ci-build-and-test.bash
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: ${{ github.job }}
+          path: build/*/testsuite/*/*.*
 
   linux-2021ish-gcc8-llvm10:
     name: "Linux gcc8, C++17, llvm10, oiio master, avx2, exr2.5, avx2"
@@ -135,6 +160,11 @@ jobs:
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/gh-installdeps.bash
             source src/build-scripts/ci-build-and-test.bash
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: ${{ github.job }}
+          path: build/*/testsuite/*/*.*
 
   linux-bleeding-edge:
     # Test against development master for relevant dependencies, latest
@@ -159,6 +189,11 @@ jobs:
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/gh-installdeps.bash
             source src/build-scripts/ci-build-and-test.bash
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: ${{ github.job }}
+          path: build/*/testsuite/*/*.*
 
   linux-oldest:
     # Oldest versions of the dependencies that we can muster, and various
@@ -180,6 +215,11 @@ jobs:
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/gh-installdeps-centos.bash
             source src/build-scripts/ci-build-and-test.bash
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: ${{ github.job }}
+          path: build/*/testsuite/*/*.*
 
   macos-py37:
     name: "Mac py37"
@@ -203,6 +243,11 @@ jobs:
             OPENIMAGEIO_CMAKE_FLAGS="-DOIIO_BUILD_TESTS=0 -DUSE_PYTHON=0 -DUSE_OPENGL=0"
             source src/build-scripts/build_openimageio.bash
             source src/build-scripts/ci-build-and-test.bash
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: ${{ github.job }}
+          path: build/*/testsuite/*/*.*
 
   # windows:
   #   name: "Windows"
@@ -221,6 +266,11 @@ jobs:
   #           source src/build-scripts/ci-startup.bash
   #           source src/build-scripts/gh-win-installdeps.bash
   #           source src/build-scripts/ci-build-and-test.bash
+  #    - uses: actions/upload-artifact@v2
+  #      if: failure()
+  #      with:
+  #        name: ${{ github.job }}
+  #        path: build/*/testsuite/*/*.*
 
   # sanitizer:
   #   name: "Sanitizers"
@@ -239,6 +289,11 @@ jobs:
   #           source src/build-scripts/ci-startup.bash
   #           source src/build-scripts/gh-installdeps.bash
   #           source src/build-scripts/ci-build-and-test.bash
+  #    - uses: actions/upload-artifact@v2
+  #      if: failure()
+  #      with:
+  #        name: ${{ github.job }}
+  #        path: build/*/testsuite/*/*.*
 
   # linux-static:
   #   name: "Linux static libs: gcc7, C++14, exr2.3"
@@ -255,6 +310,11 @@ jobs:
   #           source src/build-scripts/ci-startup.bash
   #           source src/build-scripts/gh-installdeps.bash
   #           source src/build-scripts/ci-build-and-test.bash
+  #    - uses: actions/upload-artifact@v2
+  #      if: failure()
+  #      with:
+  #        name: ${{ github.job }}
+  #        path: build/*/testsuite/*/*.*
 
   # We don't clang-format this project... yet
   # clang-format:
@@ -273,3 +333,8 @@ jobs:
   #           source src/build-scripts/install_homebrew_deps.bash
   #           source src/build-scripts/build_openimageio.bash
   #           source src/build-scripts/ci-build-and-test.bash
+  #    - uses: actions/upload-artifact@v2
+  #      if: failure()
+  #      with:
+  #        name: ${{ github.job }}
+  #        path: build/*/testsuite/*/*.*

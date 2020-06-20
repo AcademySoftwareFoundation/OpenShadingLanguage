@@ -190,9 +190,16 @@ if (partio_FOUND)
     target_compile_definitions (${local_lib} PRIVATE USE_PARTIO=1)
 endif ()
 
-# Propagate our library's RTTI options to downstream clients of this library
-# This is very important for proper linkage with LLVM.
-target_compile_options(${local_lib} PUBLIC ${${PROJECT_NAME}_RTTI_OPTIONS})
+# Disable RTTI from just the one module where we have classes that inherit
+# from LLVM classes.
+if (MSVC)
+    set_source_files_properties (llvm_util.cpp
+                                 PROPERTIES COMPILE_FLAGS "/GR-")
+else ()
+    set_source_files_properties (llvm_util.cpp
+                                 PROPERTIES COMPILE_FLAGS "-fno-rtti")
+endif()
+
 
 target_link_libraries (${local_lib}
     PUBLIC

@@ -111,6 +111,11 @@ else :
     if not os.path.exists("./data") :
         os.symlink (test_source_dir, "./data")
 
+pythonbin = 'python'
+if os.getenv("PYTHON_VERSION") :
+    pythonbin += os.getenv("PYTHON_VERSION")
+#print ("pythonbin = ", pythonbin)
+
 ###########################################################################
 
 # Handy functions...

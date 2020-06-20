@@ -25,9 +25,13 @@ echo ""
 echo "Before my brew installs:"
 brew list --versions
 
-brew install --display-times gcc ccache ninja boost python pybind11 && true
+if [[ $PYTHON_VERSION != "2.7" ]] ; then
+    brew uninstall python@2 && true
+fi
+brew install --display-times gcc ccache cmake ninja boost && true
 brew link --overwrite gcc
-brew upgrade --display-times python cmake && true
+brew install --display-times python pybind11 && true
+brew upgrade --display-times python && true
 brew link --overwrite python
 brew install --display-times flex bison
 brew install --display-times libtiff ilmbase openexr
@@ -41,7 +45,11 @@ echo "After brew installs:"
 brew list --versions
 
 # Needed on some systems
-pip install numpy
+if [[ $PYTHON_VERSION != "2.7" ]] ; then
+    pip3 install numpy
+else
+    pip install numpy
+fi
 
 # Set up paths. These will only affect the caller if this script is
 # run with 'source' rather than in a separate shell.

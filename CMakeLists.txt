@@ -135,6 +135,9 @@ include (externalpackages)
 include (flexbison)
 include (cuda_macros)
 
+# Utilities related to finding python and making python bindings
+include (pythonutils)
+
 # We want CTest for testing, so this must be added before all the calls to
 # add_subdirectory, or their add_test commands will not register.
 include (CTest)
@@ -466,6 +469,14 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             vararray-deserialize vararray-param
             vecctr vector
             wavelength_color Werror xml )
+
+# Add tests that require the Python bindings if we built them.
+# We also exclude these tests if this is a sanitizer build on Linux,
+# because the Python interpreter itself won't be linked with the right asan
+# libraries to run correctly.
+if (USE_PYTHON AND NOT SANITIZE_ON_LINUX)
+    TESTSUITE ( python-oslquery )
+endif ()
 
 # Only run field3d-related tests if the local OIIO was built with f3d support.
 EXECUTE_PROCESS ( COMMAND ${OPENIMAGEIO_BIN} --help

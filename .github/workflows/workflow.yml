@@ -35,6 +35,7 @@ jobs:
           CC: gcc
           CMAKE_CXX_STANDARD: 11
           PYTHON_VERSION: 2.7
+          USE_PYTHON: 0
         run: |
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/gh-installdeps-centos.bash
@@ -211,6 +212,7 @@ jobs:
           CMAKE_CXX_STANDARD: 11
           PYTHON_VERSION: 2.7
           USE_SIMD: 0
+          USE_PYTHON: 0
         run: |
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/gh-installdeps-centos.bash
@@ -240,7 +242,7 @@ jobs:
         run: |
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/install_homebrew_deps.bash
-            OPENIMAGEIO_CMAKE_FLAGS="-DOIIO_BUILD_TESTS=0 -DUSE_PYTHON=0 -DUSE_OPENGL=0"
+            OPENIMAGEIO_CMAKE_FLAGS="-DOIIO_BUILD_TESTS=0 -DUSE_OPENGL=0"
             source src/build-scripts/build_openimageio.bash
             source src/build-scripts/ci-build-and-test.bash
       - uses: actions/upload-artifact@v2

@@ -1,0 +1,35 @@
+Compiled test.osl -> test.oso
+Shader:  shader test
+  meta:  string author = 'Jane Doe'
+  Parameters:
+     float f = 3.14159274101
+     string s = 'hello'
+     int i = 42
+     point p = (1.0, 2.0, 3.0)
+     color foo = (0.25, 0.5, 0.75)
+     color bar = (0.75, 0.75, 0.75)
+     struct myvec mv with fields ('x', 'y', 'z') ...
+     float mv.x = 0.25
+     float mv.y = 1.0
+     float mv.z = 2.0
+     output color Cout = (0.0, 0.0, 0.0)
+     output closure color bsdf = None
+     float[1] farrayparam = (1.0,)
+     float[] farrayparamunsized = (7.0, 8.0, 9.0)
+     vector[3] varrayparam = (1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0)
+     vector[] varrayparamunsized = (1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0, 2.0, 1.0)
+     int myparam1 = 1
+        meta:  int i = 0
+        meta:  float f = 1.0
+        meta:  string s = 'foo'
+     int myparam2 = 2
+        meta:  string[2] s = ('foo', 'bar')
+     int myparam3 = 3
+        meta:  float[2] minmax = (42.0, 44.0)
+     int myparam4 = 4
+        meta:  color c = (1.0, 2.0, 3.0)
+     int myparam5 = 5
+        meta:  string s = 'I have
+"Escape"	sequences
+'
+Done.

@@ -446,26 +446,6 @@ endif ()
 
 
 ###########################################################################
-# Enable/disable RTTI
-#
-# NOTE: LLVM builds without RTTI by default so beware if you find the need
-# to turn this on, to use OSL in a project that requires RTTI for example,
-# you need to build LLVM with RRTI, otherwise OSL classes extending LLVM
-# ones will cause linker errors.
-#
-set (ENABLE_RTTI OFF CACHE BOOL "Build with RTTI. Requires a LLVM build with RTTI enabled.")
-set (${PROJECT_NAME}_RTTI_OPTIONS "")
-if (NOT ENABLE_RTTI)
-    if (MSVC)
-        set (${PROJECT_NAME}_RTTI_OPTIONS /GR-)
-    else ()
-        set (${PROJECT_NAME}_RTTI_OPTIONS -fno-rtti)
-    endif()
-    add_compile_options (${${PROJECT_NAME}_RTTI_OPTIONS})
-endif()
-
-
-###########################################################################
 # Another way to sneak in custom compiler and DSO linking flags.
 #
 set (EXTRA_CPP_ARGS "" CACHE STRING "Extra C++ command line definitions")

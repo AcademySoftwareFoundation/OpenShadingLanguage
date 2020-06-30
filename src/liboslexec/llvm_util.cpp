@@ -237,7 +237,7 @@ LLVM_Util::LLVM_Util (int debuglevel, int vector_width)
       m_builder(NULL), m_llvm_jitmm(NULL),
       m_current_function(NULL),
       m_llvm_module_passes(NULL), m_llvm_func_passes(NULL),
-      m_llvm_exec(NULL),
+      m_llvm_exec(NULL), m_vtune_profiler(NULL),
       m_vector_width(vector_width)
 {
     SetupLLVM ();
@@ -847,9 +847,9 @@ LLVM_Util::make_jit_execengine (std::string *err)
     // in code quality or JIT time. It is only enabled, however, if your copy
     // of LLVM was build with -DLLVM_USE_INTEL_JITEVENTS=ON, otherwise
     // createIntelJITEventListener() is a stub that just returns nullptr.
-    auto vtuneProfiler = llvm::JITEventListener::createIntelJITEventListener();
-    if (vtuneProfiler)
-        m_llvm_exec->RegisterJITEventListener (vtuneProfiler);
+    m_vtune_profiler = llvm::JITEventListener::createIntelJITEventListener();
+    if (m_vtune_profiler)
+        m_llvm_exec->RegisterJITEventListener(m_vtune_profiler);
 
     // Force it to JIT as soon as we ask it for the code pointer,
     // don't take any chances that it might JIT lazily, since we
@@ -866,6 +866,9 @@ LLVM_Util::execengine (llvm::ExecutionEngine *exec)
 {
     delete m_llvm_exec;
     m_llvm_exec = exec;
+
+    delete m_vtune_profiler;
+    m_vtune_profiler = nullptr;
 }
 
 

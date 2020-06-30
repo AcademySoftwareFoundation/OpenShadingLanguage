@@ -22,6 +22,7 @@ namespace llvm {
   class Function;
   class FunctionType;
   class SectionMemoryManager;
+  class JITEventListener;
   class Linker;
   class LLVMContext;
   class Module;
@@ -615,6 +616,7 @@ private:
     llvm::legacy::PassManager *m_llvm_module_passes;
     llvm::legacy::FunctionPassManager *m_llvm_func_passes;
     llvm::ExecutionEngine *m_llvm_exec;
+    llvm::JITEventListener *m_vtune_profiler;
     TargetISA m_target_isa = TargetISA::UNKNOWN;
     std::vector<llvm::BasicBlock *> m_return_block;     // stack for func call
     std::vector<llvm::BasicBlock *> m_loop_after_block; // stack for break

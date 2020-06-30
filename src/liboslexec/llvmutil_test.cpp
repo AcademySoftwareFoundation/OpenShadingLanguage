@@ -220,7 +220,12 @@ test_isa_features()
     // Make sure it matches what OIIO's cpuid queries reveal
     OIIO_CHECK_EQUAL(ll.supports_avx(), OIIO::cpu_has_avx());
     OIIO_CHECK_EQUAL(ll.supports_avx2(), OIIO::cpu_has_avx2());
+#if OSL_LLVM_VERSION >= 80
     OIIO_CHECK_EQUAL(ll.supports_avx512f(), OIIO::cpu_has_avx512f());
+    // N.B. Skip this check because for LLVM < 8, we intentionally disable
+    // AVX512 support in order to avoid a performance problem, so we
+    // expect this to potentially not match.
+#endif
 }
 
 

@@ -294,7 +294,9 @@ LLVM_Util::LLVM_Util (int debuglevel, int vector_width)
     m_llvm_type_matrix_ptr = (llvm::PointerType *) llvm::PointerType::get (m_llvm_type_matrix, 0);
 
     // Setup up wide aliases
-    // TODO:  why are there casts to the base class llvm::Type *?  
+    // TODO:  why are there casts to the base class llvm::Type *?
+    if (m_vector_width != 4 && m_vector_width != 8 && m_vector_width != 16)
+        m_vector_width = 4;
     m_llvm_type_wide_float = llvm::VectorType::get(m_llvm_type_float, m_vector_width);
     m_llvm_type_wide_double = llvm::VectorType::get(m_llvm_type_double, m_vector_width);
     m_llvm_type_wide_int = llvm::VectorType::get(m_llvm_type_int, m_vector_width);
@@ -302,7 +304,7 @@ LLVM_Util::LLVM_Util (int debuglevel, int vector_width)
     m_llvm_type_wide_char = llvm::VectorType::get(m_llvm_type_char, m_vector_width);
     m_llvm_type_wide_longlong = llvm::VectorType::get(m_llvm_type_longlong, m_vector_width);
     
-    m_llvm_type_wide_char_ptr = llvm::PointerType::get(m_llvm_type_wide_char, 0);    
+    m_llvm_type_wide_char_ptr = llvm::PointerType::get(m_llvm_type_wide_char, 0);
     m_llvm_type_wide_ustring_ptr = llvm::VectorType::get(m_llvm_type_char_ptr, m_vector_width);
     m_llvm_type_wide_void_ptr = llvm::VectorType::get(m_llvm_type_void_ptr, m_vector_width);
     m_llvm_type_wide_int_ptr = llvm::PointerType::get(m_llvm_type_wide_int, 0);
@@ -452,6 +454,7 @@ LLVM_Util::end_builder ()
 }
 
 
+
 static llvm::StringMap<bool> sCpuFeatures;
 
 static bool populateCpuFeatures()
@@ -474,7 +477,8 @@ static bool initCpuFeatures()
 // So if you change the target cpu or features in liboslexec/CMakeList.txt
 // for any of the wide libraries, please update here to match
 static const char * target_isa_names[] = {
-    "UNKNOWN", "x64", "SSE4.2", "AVX", "AVX2", "AVX2_noFMA", "AVX512", "AVX512_noFMA"
+    "UNKNOWN", "none", "x64", "SSE4.2", "AVX", "AVX2", "AVX2_noFMA",
+    "AVX512", "AVX512_noFMA", "host"
 };
 
 
@@ -556,6 +560,7 @@ static const char * required_cpu_features_by_AVX512[] = {
     "sse", "sse2", "sse3", "sse4.1", "sse4.2", "ssse3", "x87"
     // , "xsave", "xsavec", "xsaveopt", "xsaves" // Save Processor Extended States, we don't use
 };
+
 // clang: -march=skylake-avx512 -mno-fma
 // icc: -xCORE-AVX512 -no-fma
 static const char * required_cpu_features_by_AVX512_noFMA[] = {
@@ -581,45 +586,22 @@ static const char * required_cpu_features_by_AVX512_noFMA[] = {
 };
 
 
-static void
-get_required_cpu_features_for(TargetISA target, const char ** &features, int &feature_count)
+static cspan<const char*>
+get_required_cpu_features_for(TargetISA target)
 {
-    OSL_ASSERT(target > TargetISA::UNKNOWN && target < TargetISA::COUNT);
-
     switch(target) {
-    case TargetISA::x64:
-        features = required_cpu_features_by_x64;
-        feature_count = std::extent<decltype(required_cpu_features_by_x64)>::value;
-        break;
-    case TargetISA::SSE4_2:
-        features = required_cpu_features_by_SSE4_2;
-        feature_count = std::extent<decltype(required_cpu_features_by_SSE4_2)>::value;
-        break;
-    case TargetISA::AVX:
-        features = required_cpu_features_by_AVX;
-        feature_count = std::extent<decltype(required_cpu_features_by_AVX)>::value;
-        break;
-    case TargetISA::AVX2:
-        features = required_cpu_features_by_AVX2;
-        feature_count = std::extent<decltype(required_cpu_features_by_AVX2)>::value;
-        break;
-    case TargetISA::AVX2_noFMA:
-        features = required_cpu_features_by_AVX2_noFMA;
-        feature_count = std::extent<decltype(required_cpu_features_by_AVX2_noFMA)>::value;
-        break;
-    case TargetISA::AVX512:
-        features = required_cpu_features_by_AVX512;
-        feature_count = std::extent<decltype(required_cpu_features_by_AVX512)>::value;
-        break;
-    case TargetISA::AVX512_noFMA:
-        features = required_cpu_features_by_AVX512_noFMA;
-        feature_count = std::extent<decltype(required_cpu_features_by_AVX512_noFMA)>::value;
-        break;
+    case TargetISA::NONE:         return {};
+    case TargetISA::x64:          return required_cpu_features_by_x64;
+    case TargetISA::SSE4_2:       return required_cpu_features_by_SSE4_2;
+    case TargetISA::AVX:          return required_cpu_features_by_AVX;
+    case TargetISA::AVX2:         return required_cpu_features_by_AVX2;
+    case TargetISA::AVX2_noFMA:   return required_cpu_features_by_AVX2_noFMA;
+    case TargetISA::AVX512:       return required_cpu_features_by_AVX512;
+    case TargetISA::AVX512_noFMA: return required_cpu_features_by_AVX512_noFMA;
     default:
         OSL_ASSERT(0 && "incomplete required cpu features for target are not specified");
+        return {};
     }
-    OSL_ASSERT(features);
-    OSL_ASSERT(feature_count > 0);
 }
 
 
@@ -629,7 +611,7 @@ LLVM_Util::lookup_isa_by_name(string_view target_name)
 {
     OSL_DEV_ONLY(std::cout << "lookup_isa_by_name(" << target_name << ")" << std::endl);
     TargetISA requestedISA = TargetISA::UNKNOWN;
-    if (target_name != NULL) {
+    if (target_name != "") {
         for (int i = static_cast<int>(TargetISA::UNKNOWN); i < static_cast<int>(TargetISA::COUNT); ++i) {
             if (OIIO::Strutil::iequals(target_name, target_isa_names[i])) {
                 requestedISA = static_cast<TargetISA>(i);
@@ -666,13 +648,19 @@ LLVM_Util::detect_cpu_features(TargetISA requestedISA, bool no_fma)
         return false;  // Could not figure it out
     }
 
-    bool target_requested = (requestedISA != TargetISA::UNKNOWN);
+    // Try to match features to the combination of the requested ISA and
+    // what the host CPU is able to support. Note that we intentionally
+    // disable AVX512 ISA support on AVX512 hardware unless LLVM >= 8.0,
+    // to avoid some performance issues that we can't fix without LLVM 8+
+    // features.
     switch (requestedISA) {
     case TargetISA::UNKNOWN:
         OSL_FALLTHROUGH;
+    case TargetISA::HOST:
+        OSL_FALLTHROUGH;
     case TargetISA::AVX512:
         if (!no_fma) {
-            if (supports_isa(TargetISA::AVX512)) {
+            if (supports_isa(TargetISA::AVX512) && OSL_LLVM_VERSION >= 80) {
                 m_target_isa = TargetISA::AVX512;
                 m_supports_masked_stores = true;
                 m_supports_llvm_bit_masks_natively = true;
@@ -681,12 +669,10 @@ LLVM_Util::detect_cpu_features(TargetISA requestedISA, bool no_fma)
                 m_supports_avx = true;
                 break;
             }
-            if (target_requested)
-                break;
         }
         OSL_FALLTHROUGH;
     case TargetISA::AVX512_noFMA:
-        if (supports_isa(TargetISA::AVX512_noFMA)) {
+        if (supports_isa(TargetISA::AVX512_noFMA) && OSL_LLVM_VERSION >= 80) {
             m_target_isa = TargetISA::AVX512_noFMA;
             m_supports_masked_stores = true;
             m_supports_llvm_bit_masks_natively = true;
@@ -695,8 +681,6 @@ LLVM_Util::detect_cpu_features(TargetISA requestedISA, bool no_fma)
             m_supports_avx = true;
             break;
         }
-        if (target_requested)
-            break;
         OSL_FALLTHROUGH;
     case TargetISA::AVX2:
         if (!no_fma) {
@@ -707,8 +691,6 @@ LLVM_Util::detect_cpu_features(TargetISA requestedISA, bool no_fma)
                 m_supports_avx = true;
                 break;
             }
-            if (target_requested)
-                break;
         }
         OSL_FALLTHROUGH;
     case TargetISA::AVX2_noFMA:
@@ -719,8 +701,6 @@ LLVM_Util::detect_cpu_features(TargetISA requestedISA, bool no_fma)
             m_supports_avx = true;
             break;
         }
-        if (target_requested)
-            break;
         OSL_FALLTHROUGH;
     case TargetISA::AVX:
         if (supports_isa(TargetISA::AVX)) {
@@ -728,22 +708,21 @@ LLVM_Util::detect_cpu_features(TargetISA requestedISA, bool no_fma)
             m_supports_avx = true;
             break;
         }
-        if (target_requested)
-            break;
         OSL_FALLTHROUGH;
     case TargetISA::SSE4_2:
         if (supports_isa(TargetISA::SSE4_2)) {
             m_target_isa = TargetISA::SSE4_2;
             break;
         }
-        if (target_requested)
-            break;
         OSL_FALLTHROUGH;
     case TargetISA::x64:
         if (supports_isa(TargetISA::x64)) {
             m_target_isa = TargetISA::x64;
             break;
         }
+        break;
+    case TargetISA::NONE:
+        m_target_isa = TargetISA::NONE;
         break;
     default:
         OSL_ASSERT(0 && "Unknown TargetISA");
@@ -766,42 +745,33 @@ LLVM_Util::supports_isa(TargetISA target)
         return false;
 
 #ifdef OSL_DEV
-    {
-        auto iter = sCpuFeatures.begin();
-        auto end_of_features = sCpuFeatures.end();
-        for(;iter != end_of_features; ++iter) {
-            std::cout << "Featuremap[" << iter->getKey().str() << "]=" << iter->getValue() << std::endl;
-        }
-    }
+    for (auto f : sCpuFeatures)
+        std::cout << "Featuremap[" << f.getKey().str() << "]=" << f.getValue() << std::endl;
 #endif
 
     if (target <= TargetISA::UNKNOWN || target >= TargetISA::COUNT) {
         return false;
     }
 
-    const char ** features = nullptr;
-    int feature_count = 0;
-    get_required_cpu_features_for(target,features,feature_count);
-
+    auto features = get_required_cpu_features_for(target);
     OSL_DEV_ONLY(std::cout << "Inspecting features for " << target_isa_names[static_cast<int>(target)] << std::endl);
-    for (int i=0; i < feature_count; ++i) {
-        const char * feature_str = features[i];
+    for (auto f : features) {
         // Bug in llvm::sys::getHostCPUFeatures does not add "x87","fxsr","mpx"
-        // LLVM release 9.0+ should fix "fxsr"
-        // We want to leave the features in our required_cpu_features_by_XXX so we can use
-        // it to enable JIT features (even though its doubtful to be useful).
-        // So we will skip testing of missing features from the sCpuFeatures
-        if ((strncmp(feature_str, "x87", 3) == 0)
-            || (strncmp(feature_str, "mpx", 3) == 0)
+        // LLVM release 9.0+ should fix "fxsr".
+        // We want to leave the features in our required_cpu_features_by_XXX
+        // so we can use it to enable JIT features (even though its doubtful
+        // to be useful). So we will skip testing of missing features from
+        // the sCpuFeatures
+        if ((strncmp(f, "x87", 3) == 0) || (strncmp(f, "mpx", 3) == 0)
 #if OSL_LLVM_VERSION < 90
-            ||(strncmp(feature_str, "fxsr", 4) == 0)
+            || (strncmp(f, "fxsr", 4) == 0)
 #endif
             ) {
             continue;
         }
-        OSL_DEV_ONLY(std::cout << "Testing for cpu feature[" << i << "]:" << feature_str << std::endl);
-        if (sCpuFeatures[feature_str] == false) {
-            OSL_DEV_ONLY(std::cout << "MISSING cpu feature[" << i << "]:" << feature_str << std::endl);
+        OSL_DEV_ONLY(std::cout << "Testing for cpu feature[" << i << "]:" << f << std::endl);
+        if (sCpuFeatures[f] == false) {
+            OSL_DEV_ONLY(std::cout << "MISSING cpu feature[" << i << "]:" << f << std::endl);
             return false;
         }
     }
@@ -816,7 +786,8 @@ LLVM_Util::supports_isa(TargetISA target)
 // N.B. This method is never called for PTX generation, so don't be alarmed
 // if it's doing x86 specific things.
 llvm::ExecutionEngine *
-LLVM_Util::make_jit_execengine (std::string *err)
+LLVM_Util::make_jit_execengine (std::string *err,
+                                TargetISA requestedISA)
 {
     execengine (NULL);   // delete and clear any existing engine
     if (err)
@@ -825,16 +796,67 @@ LLVM_Util::make_jit_execengine (std::string *err)
 
     engine_builder.setEngineKind (llvm::EngineKind::JIT);
     engine_builder.setErrorStr (err);
+    //engine_builder.setRelocationModel(llvm::Reloc::PIC_);
+    //engine_builder.setCodeModel(llvm::CodeModel::Default);
+    engine_builder.setVerifyModules(true);
 
     // We are actually holding a LLVMMemoryManager
     engine_builder.setMCJITMemoryManager (std::unique_ptr<llvm::RTDyldMemoryManager>
         (new MemoryManager(m_llvm_jitmm)));
 
-    engine_builder.setOptLevel (llvm::CodeGenOpt::Default);
+    engine_builder.setOptLevel (jit_aggressive()
+                                ? llvm::CodeGenOpt::Aggressive
+                                : llvm::CodeGenOpt::Default);
 
-    /* Future site of target options setting */
+    llvm::TargetOptions options;
+    // Enables FMA's in IR generation.
+    // However cpu feature set may or may not support FMA's independently
+    options.AllowFPOpFusion = jit_fma() ? llvm::FPOpFusion::Fast :
+                                          llvm::FPOpFusion::Standard;
+    // Unfortunately enabling UnsafeFPMath allows reciprocols, which we don't want for divides
+    // To match results for existing unit tests we might need to disable UnsafeFPMath
+    // TODO: investigate if reciprocols can be disabled by other means.
+    // Perhaps enable UnsafeFPMath, then modify creation of DIV instructions
+    // to remove the arcp (allow reciprocol) flag on that instructions
+    options.UnsafeFPMath = false;
+    // Since there are OSL langauge functions isinf and isnan,
+    // we cannot assume there will not be infs and NANs
+    options.NoInfsFPMath = false;
+    options.NoNaNsFPMath = false;
+    // We will not be setting up any exception handling for FP math
+    options.NoTrappingFPMath = true;
+    // Debatable, but peraps some tests care about the sign of +0 vs. -0
+    options.NoSignedZerosFPMath = false;
+    // We will NOT be changing rounding mode dynamically
+    options.HonorSignDependentRoundingFPMathOption = false;
 
-    detect_cpu_features();  // FIXME: eventually pass requested_isa, no_fma
+    options.NoZerosInBSS = false;
+    options.GuaranteedTailCallOpt = false;
+    options.StackAlignmentOverride = 0;
+    options.FunctionSections = true;
+    options.UseInitArray = false;
+    options.FloatABIType = llvm::FloatABI::Default;
+    options.RelaxELFRelocations = false;
+    //options.DebuggerTuning = llvm::DebuggerKind::GDB;
+
+    options.PrintMachineCode = dumpasm();
+    engine_builder.setTargetOptions(options);
+
+    detect_cpu_features(requestedISA, !jit_fma());
+
+    if (initCpuFeatures()) {
+        OSL_DEV_ONLY(std::cout << "Building LLVM Engine for target:" << target_isa_name(m_target_isa) << std::endl);
+        std::vector<std::string> attrvec;
+        auto features = get_required_cpu_features_for(m_target_isa);
+        for (auto f : features) {
+            OSL_DEV_ONLY(std::cout << ">>>Requesting Feature:" << f << std::endl);
+            attrvec.push_back(f);
+        }
+        engine_builder.setMAttrs(attrvec);
+    }
+
+    m_llvm_type_native_mask = m_supports_avx512f ? m_llvm_type_wide_bool
+                : llvm::VectorType::get(m_llvm_type_int, m_vector_width);
 
     m_llvm_exec = engine_builder.create();
     if (! m_llvm_exec)
@@ -1306,16 +1328,30 @@ LLVM_Util::make_function (const std::string &name, bool fastcall,
                           bool varargs)
 {
     llvm::FunctionType *functype = type_function (rettype, params, varargs);
-#if OSL_LLVM_VERSION >= 90
-    auto funccallee = module()->getOrInsertFunction(name, functype);
-    llvm::Value* c = funccallee.getCallee();
+#if OSL_LLVM_VERSION < 90
+    auto maybe_func = module()->getOrInsertFunction(name, functype);
 #else
-    llvm::Constant *c = module()->getOrInsertFunction (name, functype);
+    auto maybe_func = module()->getOrInsertFunction(name, functype).getCallee();
 #endif
-    OSL_ASSERT (c && "getOrInsertFunction returned NULL");
-    OSL_ASSERT_MSG (llvm::isa<llvm::Function>(c),
+    OSL_ASSERT (maybe_func && "getOrInsertFunction returned NULL");
+    OSL_ASSERT_MSG (llvm::isa<llvm::Function>(maybe_func),
                     "Declaration for %s is wrong, LLVM had to make a cast", name.c_str());
-    llvm::Function *func = llvm::cast<llvm::Function>(c);
+    llvm::Function *func = llvm::cast<llvm::Function>(maybe_func);
+
+#if OSL_LLVM_VERSION >= 80
+    // We have found that when running on AVX512 hardware and targeting
+    // AVX512 (and to a lesser degree targeting AVX2), performance with
+    // single-point shading can suffer significantly. This is ameliorated by
+    // restricting the largest vector width that it will use. It doesn't
+    // seem to matter when running on AVX2 hardware. Note also that because
+    // we can't fix this with LLVM < 8, in detect_cpu_features we disable
+    // support for AVX512 ISA for older LLVM.
+    int vectorRegisterBitWidth = 8 * sizeof(float) * m_vector_width;
+    std::string vectorRegisterBitWidthString = std::to_string(vectorRegisterBitWidth);
+    func->addFnAttr ("prefer-vector-width", vectorRegisterBitWidthString);
+    func->addFnAttr ("min-legal-vector-width", vectorRegisterBitWidthString);
+#endif
+
     if (fastcall)
         func->setCallingConv(llvm::CallingConv::Fast);
     return func;

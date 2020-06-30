@@ -67,7 +67,7 @@ check_cwd (ShadingSystemImpl &shadingsys)
 BackendLLVM::BackendLLVM (ShadingSystemImpl &shadingsys,
                           ShaderGroup &group, ShadingContext *ctx)
     : OSOProcessorBase (shadingsys, group, ctx),
-      ll(llvm_debug()),
+      ll(llvm_debug(), shadingsys.m_vector_width),
       m_stat_total_llvm_time(0), m_stat_llvm_setup_time(0),
       m_stat_llvm_irgen_time(0), m_stat_llvm_opt_time(0),
       m_stat_llvm_jit_time(0)
@@ -78,6 +78,9 @@ BackendLLVM::BackendLLVM (ShadingSystemImpl &shadingsys,
     check_cwd (shadingsys);
 #endif
     m_use_optix = shadingsys.renderer()->supports ("OptiX");
+    ll.dumpasm(shadingsys.m_llvm_dumpasm);
+    ll.jit_fma(shadingsys.m_llvm_jit_fma);
+    ll.jit_aggressive(shadingsys.m_llvm_jit_aggressive);
 }
 
 

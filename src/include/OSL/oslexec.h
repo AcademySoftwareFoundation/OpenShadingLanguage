@@ -121,6 +121,19 @@ public:
     ///                              isconnected()? (0)
     ///    int greedyjit          Optimize and compile all shaders up front,
     ///                              versus only as needed (0).
+    ///    int llvm_target_host   Target the specific host architecture for
+    ///                              LLVM IR generation. (1)
+    ///    int llvm_jit_fma       Allow fused mul/add (0). This can increase
+    ///                              speed but can change rounding accuracy
+    ///                              (generally by being better), and might
+    ///                              differ by hardware platform.
+    ///    string llvm_jit_target  JIT to a specific ISA: "" or "none" means
+    ///                              no special ops, "x64", "SSE4.2", "AVX",
+    ///                              "AVX2", "AVX2_noFMA", "AVX512",
+    ///                              "AVX512_noFMA", or "host" means to
+    ///                              figure out what the host can do. ("")
+    ///    int llvm_jit_aggressive  Use LLVM "aggressive" JIT mode. (0)
+    ///    int vector_width       Vector width to allow for SIMD ops (4).
     ///    int lockgeom           Default 'lockgeom' value for shader params
     ///                              that don't specify it (1).  Lockgeom
     ///                              means a param CANNOT be overridden by
@@ -152,9 +165,9 @@ public:
     ///                              layer functions.
     ///    int llvm_debug_ops     Extra printfs for each OSL op (helpful
     ///                              for devs to find crashes)
-    //     int llvm_target_host   Target the specific host architecture. (1)
     ///    int llvm_output_bitcode  Output the full bitcode for each group,
     ///                              for debugging. (0)
+    ///    int llvm_dumpasm       Print the CPU assembly code from the JIT (0)
     ///    string llvm_prune_ir_strategy  Strategy for pruning unnecessary
     ///                              IR (choices: "prune" [default],
     ///                              "internalize", or "none").

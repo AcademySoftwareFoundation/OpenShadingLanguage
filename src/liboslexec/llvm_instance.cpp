@@ -1189,7 +1189,8 @@ BackendLLVM::run ()
 
     // Create the ExecutionEngine. We don't create an ExecutionEngine in the
     // OptiX case, because we are using the NVPTX backend and not MCJIT
-    if (! use_optix() && ! ll.make_jit_execengine (&err)) {
+    if (! use_optix() &&
+        ! ll.make_jit_execengine (&err, ll.lookup_isa_by_name(shadingsys().m_llvm_jit_target))) {
         shadingcontext()->errorf("Failed to create engine: %s\n", err);
         OSL_ASSERT (0);
         return;

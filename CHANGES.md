@@ -1,3 +1,6 @@
+Release 1.10.13 -- ??? 2020 (compared to 1.10.12)
+---------------------------------------------------
+
 Release 1.10.12 -- 1 Jul 2020 (compared to 1.10.11)
 ---------------------------------------------------
 * Fix bug in regex_search and regex_match where the optimizer could

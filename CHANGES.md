@@ -1,6 +1,9 @@
-Release 1.10.12 -- ?? 2020 (compared to 1.10.11)
+Release 1.10.12 -- 1 Jul 2020 (compared to 1.10.11)
 ---------------------------------------------------
-
+* Fix bug in regex_search and regex_match where the optimizer could
+  misunderstand which parameters were written. #1186
+* Fix warnings when building with gcc9 or gcc10.
+* Build cleanly against Qt5.15. #1204
 
 Release 1.10.11 -- 1 Jun 2020 (compared to 1.10.10)
 ---------------------------------------------------

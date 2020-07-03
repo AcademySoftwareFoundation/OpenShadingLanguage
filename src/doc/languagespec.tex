@@ -4971,7 +4971,10 @@ wish to make queryable.
 \hline
 {\bf Name} & {\bf Type} & {\bf Description} \\
 \hline
-{\cf "osl:version"}           & {\cf int}       & Major*10000 + Minor*100 + patch. \\
+{\cf "osl:version"}           & {\cf int}       & Major*10000 + Minor*100 + patch. \\[1ex]
+{\cf "renderer:name"}         & {\cf string}    & Name of the renderer. \\
+{\cf "renderer:version"}      & {\cf int[4]}    & Version of renderer (major, minor, release, patch). \\
+{\cf "renderer:versionstring"} & {\cf string}    & Version of renderer as a string (e.g. \qkw{1.2.7.0}).\\[1ex]
 {\cf "shader:shadername"}     & {\cf string}    & Name of the shader master. \\
 {\cf "shader:layername"}      & {\cf string}    & Name of the layer instance. \\
 {\cf "shader:groupname"}      & {\cf string}    & Name of the shader group. \\
@@ -5001,6 +5004,7 @@ camera is implied.
 {\cf "camera:shutter_open"}   & {\cf float}     & Shutter open time. \\
 {\cf "camera:shutter_close"}  & {\cf float}     & Shutter close time. \\
 {\cf "camera:shutter"}        & {\cf float[2]}  & Shutter open and close times. \\
+{\cf "camera:frame"}          & {\cf int}       & Frame number within the shot. \\
 {\cf "camera:screen_window"}  & {\cf float[4]}  & Screen window (xmin, ymin, xmax, ymax). \\
 \hline
 \end{tabular}

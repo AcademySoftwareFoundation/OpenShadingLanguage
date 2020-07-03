@@ -56,6 +56,7 @@ static ustring u_s("s"), u_t("t");
 static TypeDesc TypeFloatArray2 (TypeDesc::FLOAT, 2);
 static TypeDesc TypeFloatArray4 (TypeDesc::FLOAT, 4);
 static TypeDesc TypeIntArray2 (TypeDesc::INT, 2);
+static TypeDesc TypeIntArray4 (TypeDesc::INT, 4);
 
 
 void register_closures(OSL::ShadingSystem* shadingsys) {
@@ -119,6 +120,7 @@ SimpleRenderer::SimpleRenderer ()
     Matrix44 M;  M.makeIdentity();
     camera_params (M, u_perspective, 90.0f,
                    0.1f, 1000.0f, 256, 256);
+    shutter (0.0f, 1.0f/48, 0);
 
     // Set up getters
     m_attr_getters[ustring("osl:version")] = &SimpleRenderer::get_osl_version;
@@ -133,6 +135,7 @@ SimpleRenderer::SimpleRenderer ()
     m_attr_getters[ustring("camera:shutter")] = &SimpleRenderer::get_camera_shutter;
     m_attr_getters[ustring("camera:shutter_open")] = &SimpleRenderer::get_camera_shutter_open;
     m_attr_getters[ustring("camera:shutter_close")] = &SimpleRenderer::get_camera_shutter_close;
+    m_attr_getters[ustring("camera:frame")] = &SimpleRenderer::get_camera_frame;
 }
 
 
@@ -205,6 +208,16 @@ SimpleRenderer::camera_params (const Matrix44 &world_to_camera,
     m_screen_window[3] =  1.0f;
     m_xres = xres;
     m_yres = yres;
+}
+
+
+
+void
+SimpleRenderer::shutter (float open, float close, int framenumber)
+{
+    m_shutter[0] = open;
+    m_shutter[1] = close;
+    m_frame = framenumber;
 }
 
 
@@ -335,6 +348,25 @@ SimpleRenderer::get_array_attribute (ShaderGlobals *sg, bool derivatives, ustrin
                                      TypeDesc type, ustring name,
                                      int index, void *val)
 {
+    if (OIIO::Strutil::starts_with (name, "renderer:")) {
+        if (name == "renderer:name" && type == OIIO::TypeString) {
+            *(ustring *)val = ustring("OSL testshade");
+            return true;
+        }
+        if (name == "renderer:version" && type == TypeIntArray4) {
+            int *ival = (int *)val;
+            ival[0] = OSL_VERSION_MAJOR;
+            ival[1] = OSL_VERSION_MINOR;
+            ival[2] = OSL_VERSION_PATCH;
+            ival[3] = 0;
+            return true;
+        }
+        if (name == "renderer:versionstring" && type == OIIO::TypeString) {
+            *(ustring *)val = ustring(OSL_LIBRARY_VERSION_STRING);
+            return true;
+        }
+    }
+
     AttrGetterMap::const_iterator g = m_attr_getters.find (name);
     if (g != m_attr_getters.end()) {
         AttrGetter getter = g->second;
@@ -583,6 +615,18 @@ SimpleRenderer::add_output (string_view varname, string_view filename,
     return true;
 }
 
+
+
+bool
+SimpleRenderer::get_camera_frame (ShaderGlobals *sg, bool derivs, ustring object,
+                           TypeDesc type, ustring name, void *val)
+{
+    if (type == TypeDesc::TypeInt) {
+        ((int *)val)[0] = m_frame;
+        return true;
+    }
+    return false;
+}
 
 
 OSL_NAMESPACE_EXIT

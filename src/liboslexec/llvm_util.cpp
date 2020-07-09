@@ -295,8 +295,7 @@ LLVM_Util::LLVM_Util (int debuglevel, int vector_width)
 
     // Setup up wide aliases
     // TODO:  why are there casts to the base class llvm::Type *?
-    if (m_vector_width != 4 && m_vector_width != 8 && m_vector_width != 16)
-        m_vector_width = 4;
+    m_vector_width = OIIO::floor2(OIIO::clamp(m_vector_width, 4, 16));
     m_llvm_type_wide_float = llvm::VectorType::get(m_llvm_type_float, m_vector_width);
     m_llvm_type_wide_double = llvm::VectorType::get(m_llvm_type_double, m_vector_width);
     m_llvm_type_wide_int = llvm::VectorType::get(m_llvm_type_int, m_vector_width);
@@ -500,7 +499,8 @@ static const char * required_cpu_features_by_SSE4_2[] = {
 // clang: -march=corei7-avx
 // icc: -xAVX
 static const char * required_cpu_features_by_AVX[] = {
-    "aes", "avx", "cx16", "fxsr", "mmx", "pclmul", "popcnt",
+    // "aes", // we shouldn't need/require this feature
+    "avx", "cx16", "fxsr", "mmx", "pclmul", "popcnt",
     // "sahf", // we shouldn't need/require this feature
     "sse",
     "sse2", "sse3", "sse4.1", "sse4.2", "ssse3", "x87"
@@ -510,7 +510,8 @@ static const char * required_cpu_features_by_AVX[] = {
 // clang: -march=core-avx2
 // icc: -xCORE-AVX2
 static const char * required_cpu_features_by_AVX2[] = {
-    "aes", "avx", "avx2", "bmi", "bmi2", "cx16", "f16c", "fma",
+    // "aes", // we shouldn't need/require this feature
+    "avx", "avx2", "bmi", "bmi2", "cx16", "f16c", "fma",
     // "fsgsbase", // we shouldn't need/require this feature
     "fxsr",
     // "invpcid", // Invalidate Process-Context Identifier, we don't use
@@ -525,7 +526,8 @@ static const char * required_cpu_features_by_AVX2[] = {
 // clang: -march=core-avx2 -mno-fma
 // icc: -xCORE-AVX2 -no-fma
 static const char * required_cpu_features_by_AVX2_noFMA[] = {
-    "aes", "avx", "avx2", "bmi", "bmi2", "cx16", "f16c",
+    // "aes", // we shouldn't need/require this feature
+    "avx", "avx2", "bmi", "bmi2", "cx16", "f16c",
     // "fsgsbase", // we shouldn't need/require this feature
     "fxsr",
     // "invpcid", // Invalidate Process-Context Identifier, we don't use
@@ -540,7 +542,8 @@ static const char * required_cpu_features_by_AVX2_noFMA[] = {
 // clang: -march=skylake-avx512
 // icc: -xCORE-AVX512
 static const char * required_cpu_features_by_AVX512[] = {
-    "adx", "aes", "avx", "avx2", "avx512bw", "avx512cd", "avx512dq",
+    // "aes", // we shouldn't need/require this feature
+    "adx", "avx", "avx2", "avx512bw", "avx512cd", "avx512dq",
     "avx512f", "avx512vl", "bmi", "bmi2",
     // "clflushopt", "clwb", flushing for volatile/persistent memory we shouldn't need
     "cx16",
@@ -564,7 +567,8 @@ static const char * required_cpu_features_by_AVX512[] = {
 // clang: -march=skylake-avx512 -mno-fma
 // icc: -xCORE-AVX512 -no-fma
 static const char * required_cpu_features_by_AVX512_noFMA[] = {
-    "adx", "aes", "avx", "avx2", "avx512bw", "avx512cd", "avx512dq",
+    // "aes", // we shouldn't need/require this feature
+    "adx", "avx", "avx2", "avx512bw", "avx512cd", "avx512dq",
     "avx512f", "avx512vl", "bmi", "bmi2",
     // "clflushopt", "clwb", flushing for volatile/persistent memory we shouldn't need
     "cx16",
@@ -649,10 +653,7 @@ LLVM_Util::detect_cpu_features(TargetISA requestedISA, bool no_fma)
     }
 
     // Try to match features to the combination of the requested ISA and
-    // what the host CPU is able to support. Note that we intentionally
-    // disable AVX512 ISA support on AVX512 hardware unless LLVM >= 8.0,
-    // to avoid some performance issues that we can't fix without LLVM 8+
-    // features.
+    // what the host CPU is able to support.
     switch (requestedISA) {
     case TargetISA::UNKNOWN:
         OSL_FALLTHROUGH;
@@ -660,7 +661,7 @@ LLVM_Util::detect_cpu_features(TargetISA requestedISA, bool no_fma)
         OSL_FALLTHROUGH;
     case TargetISA::AVX512:
         if (!no_fma) {
-            if (supports_isa(TargetISA::AVX512) && OSL_LLVM_VERSION >= 80) {
+            if (supports_isa(TargetISA::AVX512)) {
                 m_target_isa = TargetISA::AVX512;
                 m_supports_masked_stores = true;
                 m_supports_llvm_bit_masks_natively = true;
@@ -672,7 +673,7 @@ LLVM_Util::detect_cpu_features(TargetISA requestedISA, bool no_fma)
         }
         OSL_FALLTHROUGH;
     case TargetISA::AVX512_noFMA:
-        if (supports_isa(TargetISA::AVX512_noFMA) && OSL_LLVM_VERSION >= 80) {
+        if (supports_isa(TargetISA::AVX512_noFMA)) {
             m_target_isa = TargetISA::AVX512_noFMA;
             m_supports_masked_stores = true;
             m_supports_llvm_bit_masks_natively = true;
@@ -1343,9 +1344,9 @@ LLVM_Util::make_function (const std::string &name, bool fastcall,
     // AVX512 (and to a lesser degree targeting AVX2), performance with
     // single-point shading can suffer significantly. This is ameliorated by
     // restricting the largest vector width that it will use. It doesn't
-    // seem to matter when running on AVX2 hardware. Note also that because
-    // we can't fix this with LLVM < 8, in detect_cpu_features we disable
-    // support for AVX512 ISA for older LLVM.
+    // seem to matter when running on AVX2 hardware. We therefore do not
+    // advise choosing a wide vector width on AVX512 hardware unless you
+    // are using LLVM >= 8.0.
     int vectorRegisterBitWidth = 8 * sizeof(float) * m_vector_width;
     std::string vectorRegisterBitWidthString = std::to_string(vectorRegisterBitWidth);
     func->addFnAttr ("prefer-vector-width", vectorRegisterBitWidthString);
@@ -2436,7 +2437,10 @@ LLVM_Util::ptx_compile_group (llvm::Module* lib_module, const std::string& name,
     OSL_ASSERT (llvm_target && "PTX compile error: LLVM Target is not initialized");
 
     llvm::TargetOptions  options;
-    options.AllowFPOpFusion                        = llvm::FPOpFusion::Standard;
+    options.AllowFPOpFusion = llvm::FPOpFusion::Standard;
+    // N.B. 'Standard' only allow fusion of 'blessed' ops (currently just
+    // fmuladd). To truly disable FMA and never fuse FP-ops, we need to
+    // instead use llvm::FPOpFusion::Strict.
     options.UnsafeFPMath                           = 1;
     options.NoInfsFPMath                           = 1;
     options.NoNaNsFPMath                           = 1;

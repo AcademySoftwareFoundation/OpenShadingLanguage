@@ -3,7 +3,7 @@
 # https://github.com/imageworks/OpenShadingLanguage
 
 set (local_lib oslquery)
-file (GLOB lib_src "*.cpp" ../liboslexec/typespec.cpp)
+set (lib_src oslquery.cpp querystub.cpp ../liboslexec/typespec.cpp)
 file (GLOB compiler_headers "../liboslexec/*.h")
 
 FLEX_BISON (../liboslexec/osolex.l ../liboslexec/osogram.y oso lib_src compiler_headers)
@@ -38,3 +38,17 @@ if (VISIBILITY_COMMAND)
 endif ()
 
 install_targets (${local_lib})
+
+
+# from pythonutils.cmake
+find_python ()
+if (USE_PYTHON)
+    checked_find_package (pybind11 2.4.2 REQUIRED)
+
+    file (GLOB python_srcs py_*.cpp)
+    setup_python_module (TARGET    pyoslquery
+                         MODULE    oslquery
+                         SOURCES   ${python_srcs}
+                         LIBS      oslquery
+                         )
+endif ()

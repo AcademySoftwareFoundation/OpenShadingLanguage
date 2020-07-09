@@ -173,6 +173,9 @@ public:
     ///< Retrieve a parameter, either by index or by name. Return nullptr if
     /// the index is out of range, or if the named parameter is not found.
 
+    const std::vector<Parameter> &parameters (void) const { return m_params; }
+    ///< Retrieve a reference to the list of the shader's parameters.
+
     const std::vector<Parameter> &metadata (void) const { return m_meta; }
     ///< Retrieve a reference to the metadata about the shader.
 
@@ -184,6 +187,12 @@ public:
             m_error.clear ();
         return e;
     }
+
+    // begin/end of the OSLQuery iterates over the parameters.
+    std::vector<Parameter>::iterator begin() { return m_params.begin(); }
+    std::vector<Parameter>::iterator end() { return m_params.end(); }
+    std::vector<Parameter>::const_iterator cbegin() const { return m_params.cbegin(); }
+    std::vector<Parameter>::const_iterator cend() const { return m_params.cend(); }
 
 private:
     ustring m_shadername;              //< Name of shader

@@ -37,7 +37,10 @@ export OIIO_LIBRARY_PATH=$OSL_ROOT/lib:${OIIO_LIBRARY_PATH}
 export LSAN_OPTIONS=suppressions=$PWD/src/build-scripts/nosanitize.txt
 export ASAN_OPTIONS=print_suppressions=0
 
+export USE_PYTHON=${USE_PYTHON:=1}
 export PYTHON_VERSION=${PYTHON_VERSION:="2.7"}
+export PYTHONPATH=/usr/local/lib/python${PYTHON_VERSION}/site-packages:$PYTHONPATH
+export PYTHONPATH=/usr/local/lib64/python${PYTHON_VERSION}/site-packages:$PYTHONPATH
 export PYTHONPATH=$OSL_ROOT/lib/python${PYTHON_VERSION}/site-packages:$PYTHONPATH
 export BUILD_MISSING_DEPS=${BUILD_MISSING_DEPS:=1}
 export COMPILER=${COMPILER:=gcc}

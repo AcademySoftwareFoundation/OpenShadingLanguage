@@ -1,0 +1,39 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/imageworks/OpenShadingLanguage
+
+struct myvec {
+    float x, y, z;
+};
+
+
+shader test (
+    // Test boring params
+    float f = M_PI,
+    string s = "hello",
+    int i = 42,
+    point p = point(1, 2, 3),
+    color foo = color(0.25, 0.5, 0.75),
+    color bar = color(0.75),
+    myvec mv = { 0.25, 1.0, 2.0 },
+    output color Cout = 0,
+    output closure color bsdf = 0,
+
+    // Test array params
+    float farrayparam[1] = {1},
+    float farrayparamunsized[] = {7,8,9},
+    vector varrayparam[3] = {vector(1,2,3), vector(4,5,6), vector(7,8,9)},
+    vector varrayparamunsized[] = {vector(1,1,1), vector(2,2,2), vector(3,3,3), vector(3,2,1)},
+
+    // Test metadata retrieval
+    int myparam1 = 1 [[ int i = 0, float f = 1.0, string s = "foo" ]],
+    int myparam2 = 2 [[ string s[2] = { "foo", "bar" } ]],
+    int myparam3 = 3 [[ float minmax[2] = { 42, 44 } ]],
+    int myparam4 = 4 [[ color c = color(1,2,3) ]],
+    int myparam5 = 5 [[ string s = "I have\n\"Escape\"\tsequences\n" ]]
+    )
+    [[ string author = "Jane Doe" ]]
+{
+    float localvariable = 0;  // should not be reported, of course
+    printf ("foo=%f, bar=%f\n", foo, bar);
+}

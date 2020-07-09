@@ -2,18 +2,21 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/imageworks/OpenShadingLanguage
 
+// clang-format off
+
 #pragma once
 
 #include <limits>
 #include <type_traits>
 
+#include <OpenImageIO/fmath.h>
+#include <OpenImageIO/hash.h>
+#include <OpenImageIO/simd.h>
+
 #include <OSL/dual.h>
 #include <OSL/dual_vec.h>
 #include <OSL/sfm_simplex.h>
 #include <OSL/sfmath.h>
-#include <OpenImageIO/fmath.h>
-#include <OpenImageIO/hash.h>
-#include <OpenImageIO/simd.h>
 
 
 OSL_NAMESPACE_ENTER

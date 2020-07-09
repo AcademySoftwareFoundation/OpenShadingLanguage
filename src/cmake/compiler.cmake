@@ -419,9 +419,24 @@ set (CLANG_FORMAT_INCLUDES # "src/*.h" "src/*.cpp"
                             "src/include/*.h"
     CACHE STRING "Glob patterns to include for clang-format")
 set (CLANG_FORMAT_EXCLUDES
-        "src/liboslexec/*llvm*"
+        # Files "imported and modified" that we don't want to reformat, so
+        # they continue to match their upstream versions.
+        "src/include/OSL/Imathx/*"
+        "src/include/OSL/matrix22.h"
+        # Files that are currently being modified with the SIMD batch
+        # shading -- we'll reformat those only after that project work is
+        # completed, to avoid nasty merge conflicts.
+        "src/include/OSL/rendererservices.h"
         "src/include/OSL/*llvm*"
-        "src/include/OSL/Imathx/*" "src/include/OSL/matrix22.h"
+        "src/liboslexec/*llvm*"
+        "src/liboslexec/oslexec_pvt.h"
+        # Files that are currently being modified with the OptiX work --
+        # we'll reformat those only after that project work is completed, to
+        # avoid nasty merge conflicts.
+        "src/include/OSL/device_string.h"
+        "src/include/OSL/oslexec.h"
+        "src/testrender/cuda/*"
+        ""
      CACHE STRING "Glob patterns to exclude for clang-format")
 find_program (CLANG_FORMAT_EXE
               NAMES clang-format bin/clang-format

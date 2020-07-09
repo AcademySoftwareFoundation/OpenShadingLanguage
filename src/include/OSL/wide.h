@@ -3,6 +3,8 @@
 // https://github.com/imageworks/OpenShadingLanguage
 // Contributions Copyright (c) 2017 Intel Inc., et al.
 
+// clang-format off
+
 #pragma once
 
 #include <type_traits>

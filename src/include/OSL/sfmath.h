@@ -3,6 +3,8 @@
 // https://github.com/imageworks/OpenShadingLanguage
 // Contributions Copyright (c) 2017 Intel Inc., et al.
 
+// clang-format off
+
 #pragma once
 
 #include <cmath>
@@ -353,10 +355,9 @@ namespace sfm
     // with slight modifications to inlining and implementation to avoid aliasing and
     // improve likelyhood of proper privation of local variables within a SIMD loop
 
-} // namespace sfm
+}  // namespace sfm
 
-} // namespace __OSL_WIDE_PVT or pvt
-
+}  // namespace __OSL_WIDE_PVT or pvt
 
 
 

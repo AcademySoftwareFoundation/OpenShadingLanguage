@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/imageworks/OpenShadingLanguage
 
+// clang-format off
 
 
 /// \file

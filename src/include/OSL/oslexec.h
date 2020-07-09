@@ -28,16 +28,16 @@ class ShaderSymbol;
 
 /// Opaque pointer to whatever the renderer uses to represent a
 /// (potentially motion-blurred) coordinate transformation.
-typedef const void * TransformationPtr;
+typedef const void* TransformationPtr;
 
 
 // Callbacks for closure creation
-typedef void (*PrepareClosureFunc)(RendererServices *, int id, void *data);
-typedef void (*SetupClosureFunc)(RendererServices *, int id, void *data);
+typedef void (*PrepareClosureFunc)(RendererServices*, int id, void* data);
+typedef void (*SetupClosureFunc)(RendererServices*, int id, void* data);
 
 
 namespace pvt {
-    class ShadingSystemImpl;
+class ShadingSystemImpl;
 }
 
 namespace Strings {
@@ -704,11 +704,11 @@ public:
     ///
     /// Observation: none of the supported conversions require more
     /// storage for src than for dst.
-    static bool convert_value (void *dst, TypeDesc dsttype,
-                               const void *src, TypeDesc srctype);
+    static bool convert_value(void* dst, TypeDesc dsttype, const void* src,
+                              TypeDesc srctype);
 
 private:
-    pvt::ShadingSystemImpl *m_impl;
+    pvt::ShadingSystemImpl* m_impl;
 };
 
 
@@ -719,8 +719,8 @@ private:
 
 // enum describing where shades are located for shade_image().
 enum ShadeImageLocations {
-    ShadePixelCenters,   // locate shades at pixel centers: (i+0.5)/res
-    ShadePixelGrid       // locate shades at grid nodes: i/(res-1)
+    ShadePixelCenters,  // locate shades at pixel centers: (i+0.5)/res
+    ShadePixelGrid      // locate shades at grid nodes: i/(res-1)
 };
 
 
@@ -744,12 +744,13 @@ enum ShadeImageLocations {
 /// as if it were a grid that is shaded at exact endpoints (position
 /// i/(res+1)). In either case, derivatives will be set appropriately.
 OSLEXECPUBLIC
-bool shade_image (ShadingSystem &shadingsys, ShaderGroup &group,
-                  const ShaderGlobals *defaultsg,
-                  OIIO::ImageBuf &buf, cspan<ustring> outputs,
-                  ShadeImageLocations shadelocations = ShadePixelCenters,
-                  OIIO::ROI roi = OIIO::ROI(),
-                  OIIO::ImageBufAlgo::parallel_image_options popt = 0);
+bool
+shade_image(ShadingSystem& shadingsys, ShaderGroup& group,
+            const ShaderGlobals* defaultsg, OIIO::ImageBuf& buf,
+            cspan<ustring> outputs,
+            ShadeImageLocations shadelocations              = ShadePixelCenters,
+            OIIO::ROI roi                                   = OIIO::ROI(),
+            OIIO::ImageBufAlgo::parallel_image_options popt = 0);
 
 #endif
 

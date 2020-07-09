@@ -15,8 +15,7 @@ class RendererServices;
 
 /// Type for an opaque pointer to whatever the renderer uses to represent a
 /// coordinate transformation.
-typedef const void * TransformationPtr;
-
+typedef const void* TransformationPtr;
 
 
 
@@ -35,7 +34,6 @@ typedef const void * TransformationPtr;
 /// All points, vectors and normals are given in "common" space.
 ///
 struct ShaderGlobals {
-
     /// Surface position (and its x & y differentials).
     Vec3 P, dPdx, dPdy;
     /// P's z differential, used for volume shading only.
@@ -104,7 +102,7 @@ struct ShaderGlobals {
     /// initialize this to NULL before shading execution, and this is where
     /// it can retrieve the output closure from after shader execution has
     /// completed.
-    ClosureColor *Ci;
+    ClosureColor* Ci;
 
     /// Surface area of the emissive object (used by light shaders for
     /// energy normalization).
@@ -126,16 +124,16 @@ struct ShaderGlobals {
 /// of which "global" variables are needed or written to by the shader.
 enum class SGBits {
     None    = 0,
-    P       = 1 <<  0,
-    I       = 1 <<  1,
-    N       = 1 <<  2,
-    Ng      = 1 <<  3,
-    u       = 1 <<  4,
-    v       = 1 <<  5,
-    dPdu    = 1 <<  6,
-    dPdv    = 1 <<  7,
-    time    = 1 <<  8,
-    dtime   = 1 <<  9,
+    P       = 1 << 0,
+    I       = 1 << 1,
+    N       = 1 << 2,
+    Ng      = 1 << 3,
+    u       = 1 << 4,
+    v       = 1 << 5,
+    dPdu    = 1 << 6,
+    dPdv    = 1 << 7,
+    time    = 1 << 8,
+    dtime   = 1 << 9,
     dPdtime = 1 << 10,
     Ps      = 1 << 11,
     Ci      = 1 << 12,

@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/imageworks/OpenShadingLanguage
 
+// clang-format off
+
 #pragma once
 
 
@@ -20,12 +22,12 @@ struct ShaderGlobals;
 
 /// Opaque pointer to whatever the renderer uses to represent a
 /// (potentially motion-blurred) coordinate transformation.
-typedef const void * TransformationPtr;
+typedef const void* TransformationPtr;
 
 
 // Callbacks for closure creation
-typedef void (*PrepareClosureFunc)(RendererServices *, int id, void *data);
-typedef void (*SetupClosureFunc)(RendererServices *, int id, void *data);
+typedef void (*PrepareClosureFunc)(RendererServices*, int id, void* data);
+typedef void (*SetupClosureFunc)(RendererServices*, int id, void* data);
 
 // Turn off warnings about unused params for this file, since we have lots
 // of declarations with stub function bodies.
@@ -42,7 +44,7 @@ public:
     typedef TextureSystem::Perthread TexturePerthread;
 
 
-    RendererServices (TextureSystem *texsys=NULL);
+    RendererServices(TextureSystem* texsys = NULL);
     virtual ~RendererServices () { }
 
     /// Given the name of a 'feature', return whether this RendererServices

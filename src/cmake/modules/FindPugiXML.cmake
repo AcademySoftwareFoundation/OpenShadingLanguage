@@ -24,11 +24,10 @@ if (NOT PUGIXML_INCLUDE_DIR AND (OPENIMAGEIO_INCLUDES OR OpenImageIO_ROOT))
                PATHS ${OpenImageIO_ROOT}/include/OpenImageIO
                      ${OPENIMAGEIO_INCLUDES}
                PATH_SUFFIXES OpenImageIO)
-    if (PUGIXML_INCLUDE_DIR)
-        set (PUGIXML_LIBRARY ${OPENIMAGEIO_LIBRARIES})
-    endif ()
 endif ()
-
+if (NOT PUGIXML_LIBRARY AND (OPENIMAGEIO_INCLUDES OR OpenImageIO_ROOT) AND PUGIXML_INCLUDE_DIR)
+    set (PUGIXML_LIBRARY ${OPENIMAGEIO_LIBRARIES})
+endif ()
 
 # Support the REQUIRED and QUIET arguments, and set PUGIXML_FOUND if found.
 include (FindPackageHandleStandardArgs)

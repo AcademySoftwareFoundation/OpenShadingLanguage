@@ -42,46 +42,48 @@
 /// another.
 
 #if defined(_WIN32) || defined(__CYGWIN__)
-  #if defined(OSL_STATIC_BUILD) || defined(OSL_STATIC_DEFINE)
-    #define OSL_DLL_IMPORT
-    #define OSL_DLL_EXPORT
-    #define OSL_DLL_LOCAL
-  #else
-    #define OSL_DLL_IMPORT __declspec(dllimport)
-    #define OSL_DLL_EXPORT __declspec(dllexport)
-    #define OSL_DLL_LOCAL
-  #endif
-  //#define OSL_LLVM_EXPORT __declspec(dllexport)
-  #define OSL_LLVM_EXPORT OSL_DLL_LOCAL
+#    if defined(OSL_STATIC_BUILD) || defined(OSL_STATIC_DEFINE)
+#        define OSL_DLL_IMPORT
+#        define OSL_DLL_EXPORT
+#        define OSL_DLL_LOCAL
+#    else
+#        define OSL_DLL_IMPORT __declspec(dllimport)
+#        define OSL_DLL_EXPORT __declspec(dllexport)
+#        define OSL_DLL_LOCAL
+#    endif
+//#define OSL_LLVM_EXPORT __declspec(dllexport)
+#    define OSL_LLVM_EXPORT OSL_DLL_LOCAL
 #else
-  #define OSL_DLL_IMPORT __attribute__ ((visibility ("default")))
-  #define OSL_DLL_EXPORT __attribute__ ((visibility ("default")))
-  #define OSL_DLL_LOCAL  __attribute__ ((visibility ("hidden")))
-  #define OSL_LLVM_EXPORT OSL_DLL_LOCAL
+#    define OSL_DLL_IMPORT __attribute__((visibility("default")))
+#    define OSL_DLL_EXPORT __attribute__((visibility("default")))
+#    define OSL_DLL_LOCAL __attribute__((visibility("hidden")))
+#    define OSL_LLVM_EXPORT OSL_DLL_LOCAL
 #endif
 
 
 
 #if defined(oslcomp_EXPORTS) || defined(oslexec_EXPORTS) || defined(OSL_EXPORTS)
-#  define OSLCOMPPUBLIC OSL_DLL_EXPORT
+#    define OSLCOMPPUBLIC OSL_DLL_EXPORT
 #else
-#  define OSLCOMPPUBLIC OSL_DLL_IMPORT
+#    define OSLCOMPPUBLIC OSL_DLL_IMPORT
 #endif
 
 #if defined(oslexec_EXPORTS) || defined(OSL_EXPORTS)
-#  define OSLEXECPUBLIC OSL_DLL_EXPORT
+#    define OSLEXECPUBLIC OSL_DLL_EXPORT
 #else
-#  define OSLEXECPUBLIC OSL_DLL_IMPORT
+#    define OSLEXECPUBLIC OSL_DLL_IMPORT
 #endif
 
-#if defined(oslquery_EXPORTS) || defined(oslexec_EXPORTS) || defined(OSL_EXPORTS)
-#  define OSLQUERYPUBLIC OSL_DLL_EXPORT
+#if defined(oslquery_EXPORTS) || defined(oslexec_EXPORTS)                      \
+    || defined(OSL_EXPORTS)
+#    define OSLQUERYPUBLIC OSL_DLL_EXPORT
 #else
-#  define OSLQUERYPUBLIC OSL_DLL_IMPORT
+#    define OSLQUERYPUBLIC OSL_DLL_IMPORT
 #endif
 
-#if defined(oslnoise_EXPORTS) || defined(oslexec_EXPORTS) || defined(OSL_EXPORTS)
-#  define OSLNOISEPUBLIC OSL_DLL_EXPORT
+#if defined(oslnoise_EXPORTS) || defined(oslexec_EXPORTS)                      \
+    || defined(OSL_EXPORTS)
+#    define OSLNOISEPUBLIC OSL_DLL_EXPORT
 #else
-#  define OSLNOISEPUBLIC OSL_DLL_IMPORT
+#    define OSLNOISEPUBLIC OSL_DLL_IMPORT
 #endif

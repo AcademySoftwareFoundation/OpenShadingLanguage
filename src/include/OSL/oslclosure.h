@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <cstring>
 #include <OSL/oslconfig.h>
+#include <cstring>
 
 OSL_NAMESPACE_ENTER
 
@@ -19,7 +19,6 @@ OSL_NAMESPACE_ENTER
 ///       primitives.
 class OSLEXECPUBLIC Labels {
 public:
-
     static const ustring NONE;
     // Event type
     static const ustring CAMERA;
@@ -30,13 +29,12 @@ public:
     static const ustring VOLUME;
     static const ustring OBJECT;
     // Scattering
-    static const ustring DIFFUSE;  // typical 2PI hemisphere
-    static const ustring GLOSSY;   // blurry reflections and transmissions
-    static const ustring SINGULAR; // perfect mirrors and glass
-    static const ustring STRAIGHT; // Special case for transparent shadows
+    static const ustring DIFFUSE;   // typical 2PI hemisphere
+    static const ustring GLOSSY;    // blurry reflections and transmissions
+    static const ustring SINGULAR;  // perfect mirrors and glass
+    static const ustring STRAIGHT;  // Special case for transparent shadows
 
-    static const ustring STOP;     // end of a surface description
-
+    static const ustring STOP;  // end of a surface description
 };
 
 // Forward declarations
@@ -56,7 +54,7 @@ struct ClosureAdd;
 /// are a single primitive component, and internal nodes of the tree are
 /// are either 'add' (two closures) or 'mul' (of a closure with a
 /// weight) and just reference their operands by pointers.
-/// 
+///
 /// We are extremely careful to make these classes resemble POD (plain
 /// old data) so they can be easily "placed" anywhere, including a memory
 /// pool.  So no virtual functions!
@@ -69,17 +67,20 @@ struct OSLEXECPUBLIC ClosureColor {
 
     int id;
 
-    OSL_HOSTDEVICE const ClosureComponent* as_comp() const {
+    OSL_HOSTDEVICE const ClosureComponent* as_comp() const
+    {
         OSL_DASSERT(id >= COMPONENT_BASE_ID);
         return reinterpret_cast<const ClosureComponent*>(this);
     }
 
-    OSL_HOSTDEVICE const ClosureMul* as_mul() const {
+    OSL_HOSTDEVICE const ClosureMul* as_mul() const
+    {
         OSL_DASSERT(id == MUL);
         return reinterpret_cast<const ClosureMul*>(this);
     }
 
-    OSL_HOSTDEVICE const ClosureAdd* as_add() const {
+    OSL_HOSTDEVICE const ClosureAdd* as_add() const
+    {
         OSL_DASSERT(id == ADD);
         return reinterpret_cast<const ClosureAdd*>(this);
     }
@@ -98,41 +99,45 @@ struct OSLEXECPUBLIC ClosureColor {
 #ifdef __CUDACC__
 /// Notice in the OptiX implementation we align this to 8 bytes
 /// so that it matches the alignment of the memory pools.
-struct OSLEXECPUBLIC OSL_ALIGNAS(8) ClosureComponent : public ClosureColor
+struct OSLEXECPUBLIC
+OSL_ALIGNAS(8) ClosureComponent : public ClosureColor
 #else
-struct OSLEXECPUBLIC OSL_ALIGNAS(16) ClosureComponent : public ClosureColor
+struct OSLEXECPUBLIC
+OSL_ALIGNAS(16) ClosureComponent : public ClosureColor
 #endif
 {
-    Vec3 w;                     ///< Weight of this component
+    Vec3 w;  ///< Weight of this component
 
     /// Handy method for getting the parameter memory as a void*.
-    OSL_HOSTDEVICE void *data () { return (char*)(this + 1); }
-    OSL_HOSTDEVICE const void *data () const { return (const char*)(this + 1); }
+    OSL_HOSTDEVICE void* data() { return (char*)(this + 1); }
+    OSL_HOSTDEVICE const void* data() const { return (const char*)(this + 1); }
 
     /// Handy methods for extracting the underlying parameters as a struct
-    template <typename T>
-    OSL_HOSTDEVICE const T* as() const { return reinterpret_cast<const T*>(data()); }
+    template<typename T> OSL_HOSTDEVICE const T* as() const
+    {
+        return reinterpret_cast<const T*>(data());
+    }
 
-    template <typename T>
-    OSL_HOSTDEVICE T* as() { return reinterpret_cast<const T*>(data()); }
+    template<typename T> OSL_HOSTDEVICE T* as()
+    {
+        return reinterpret_cast<const T*>(data());
+    }
 };
 
 
 /// ClosureMul is a subclass of ClosureColor that provides a lightweight
 /// way to represent a closure multiplied by a scalar or color weight.
-struct OSLEXECPUBLIC ClosureMul : public ClosureColor
-{
+struct OSLEXECPUBLIC ClosureMul : public ClosureColor {
     Color3 weight;
-    const ClosureColor *closure;
+    const ClosureColor* closure;
 };
 
 
 /// ClosureAdd is a subclass of ClosureColor that provides a lightweight
 /// way to represent a closure that is a sum of two other closures.
-struct OSLEXECPUBLIC ClosureAdd : public ClosureColor
-{
-    const ClosureColor *closureA;
-    const ClosureColor *closureB;
+struct OSLEXECPUBLIC ClosureAdd : public ClosureColor {
+    const ClosureColor* closureA;
+    const ClosureColor* closureB;
 };
 
 OSL_NAMESPACE_EXIT

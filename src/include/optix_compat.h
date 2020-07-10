@@ -8,16 +8,16 @@
 #include <OSL/oslversion.h>
 
 #ifdef OSL_USE_OPTIX
-#  include <optix.h>
-#  include <cuda_runtime_api.h>
-#  ifdef _WIN32
-#    define NOMINMAX
-#  endif
-#  if (OPTIX_VERSION < 70000)
-#    include <optix_world.h>
-#  endif
+#    include <cuda_runtime_api.h>
+#    include <optix.h>
+#    ifdef _WIN32
+#        define NOMINMAX
+#    endif
+#    if (OPTIX_VERSION < 70000)
+#        include <optix_world.h>
+#    endif
 #else
-#  include <stdlib.h>
+#    include <stdlib.h>
 #endif
 
 
@@ -31,17 +31,17 @@ OSL_NAMESPACE_ENTER
 
 
 // TODO clean this up once OptiX6 support is dropped
-#if (OPTIX_VERSION < 70000)
+#    if (OPTIX_VERSION < 70000)
 namespace optix = ::optix;
-#else
+#    else
 namespace optix {
-typedef OptixDeviceContext  Context;
+typedef OptixDeviceContext Context;
 typedef cudaTextureObject_t TextureSampler;
-}
-#endif
+}  // namespace optix
+#    endif
 
-using ::cudaMalloc;
 using ::cudaFree;
+using ::cudaMalloc;
 
 
 #else
@@ -62,8 +62,16 @@ struct Exception {
 
 }  // end namespace optix
 
-inline void cudaMalloc (void** p, size_t s) { *p = malloc(s); }
-inline void cudaFree (void* p) { free(p); }
+inline void
+cudaMalloc(void** p, size_t s)
+{
+    *p = malloc(s);
+}
+inline void
+cudaFree(void* p)
+{
+    free(p);
+}
 
 
 #endif

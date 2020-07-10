@@ -415,9 +415,28 @@ endif ()
 # "clang-format" build target will trigger a reformatting.
 #
 set (CLANG_FORMAT_EXE_HINT "" CACHE PATH "clang-format executable's directory (will search if not specified")
-set (CLANG_FORMAT_INCLUDES "src/*.h" "src/*.cpp"
+set (CLANG_FORMAT_INCLUDES # "src/*.h" "src/*.cpp"
+                            "src/include/*.h"
     CACHE STRING "Glob patterns to include for clang-format")
-set (CLANG_FORMAT_EXCLUDES ""
+set (CLANG_FORMAT_EXCLUDES
+        # Files "imported and modified" that we don't want to reformat, so
+        # they continue to match their upstream versions.
+        "src/include/OSL/Imathx/*"
+        "src/include/OSL/matrix22.h"
+        # Files that are currently being modified with the SIMD batch
+        # shading -- we'll reformat those only after that project work is
+        # completed, to avoid nasty merge conflicts.
+        "src/include/OSL/rendererservices.h"
+        "src/include/OSL/*llvm*"
+        "src/liboslexec/*llvm*"
+        "src/liboslexec/oslexec_pvt.h"
+        # Files that are currently being modified with the OptiX work --
+        # we'll reformat those only after that project work is completed, to
+        # avoid nasty merge conflicts.
+        "src/include/OSL/device_string.h"
+        "src/include/OSL/oslexec.h"
+        "src/testrender/cuda/*"
+        ""
      CACHE STRING "Glob patterns to exclude for clang-format")
 find_program (CLANG_FORMAT_EXE
               NAMES clang-format bin/clang-format
@@ -435,7 +454,7 @@ if (CLANG_FORMAT_EXE)
         file (GLOB_RECURSE _excl ${_pat})
         list (REMOVE_ITEM FILES_TO_FORMAT ${_excl})
     endforeach ()
-    #message (STATUS "clang-format file list: ${FILES_TO_FORMAT}")
+    # message (STATUS "clang-format file list: ${FILES_TO_FORMAT}")
     file (COPY ${CMAKE_CURRENT_SOURCE_DIR}/.clang-format
           DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
     add_custom_target (clang-format

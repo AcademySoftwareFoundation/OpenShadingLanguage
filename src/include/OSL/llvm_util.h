@@ -47,6 +47,7 @@ namespace pvt {   // OSL::pvt
 enum class TargetISA
 {
     UNKNOWN,
+    NONE,
     x64,
     SSE4_2,
     AVX,
@@ -54,6 +55,7 @@ enum class TargetISA
     AVX2_noFMA,
     AVX512,
     AVX512_noFMA,
+    HOST,
     COUNT
 };
 
@@ -65,7 +67,7 @@ enum class TargetISA
 /// tied to OSL internals at all.
 class OSLEXECPUBLIC LLVM_Util {
 public:
-    LLVM_Util (int debuglevel=0, int vector_width = 8);
+    LLVM_Util (int debuglevel=0, int vector_width = 4);
     ~LLVM_Util ();
 
     struct PerThreadInfo;
@@ -73,6 +75,12 @@ public:
     /// Set debug level
     void debug (int d) { m_debug = d; }
     int debug () const { return m_debug; }
+    void dumpasm(bool val) { m_dumpasm = val; }
+    bool dumpasm() const { return m_dumpasm; }
+    void jit_fma(bool val) { m_jit_fma = val; }
+    bool jit_fma() const { return m_jit_fma; }
+    void jit_aggressive(bool val) { m_jit_aggressive = val; }
+    bool jit_aggressive() const { return m_jit_aggressive; }
 
     /// Return a reference to the current context.
     llvm::LLVMContext &context () const { return *m_llvm_context; }
@@ -143,7 +151,8 @@ public:
     /// Create a new JITing ExecutionEngine and make it the current one.
     /// Return a pointer to the new engine.  If err is not NULL, put any
     /// errors there.
-    llvm::ExecutionEngine *make_jit_execengine (std::string *err=NULL);
+    llvm::ExecutionEngine* make_jit_execengine (std::string *err = nullptr,
+                         TargetISA requestedISA = TargetISA::NONE);
 
     /// Report the host's TargetISA as chosen by the last call to
     /// make_jit_execengine() or to detect_cpu_features(). Don't call
@@ -159,8 +168,15 @@ public:
     bool supports_llvm_bit_masks_natively() const { return m_supports_llvm_bit_masks_natively; }
     bool supports_masked_stores() const { return m_supports_masked_stores; }
 
+    // Does this host support the requested target ISA?
     static bool supports_isa(TargetISA target);
-    static TargetISA lookup_isa_by_name(string_view target_name);
+
+    // Look up the TargetISA enum by name. Special names: "host" means
+    // figure out what this host is, "none" or "" mean to use the baseline
+    // or no special ops not availabe on all flavors of this family of CPUs.
+    static TargetISA lookup_isa_by_name(string_view target_name = "");
+
+    // Name for this TargetISA enum.
     static const char* target_isa_name(TargetISA isa);
 
     // For CPU compilation, inventory the host CPU capabilities. You can
@@ -295,6 +311,12 @@ public:
     llvm::PointerType *type_wide_bool_ptr() const { return m_llvm_type_wide_bool_ptr; }
     llvm::PointerType *type_wide_int_ptr() const { return m_llvm_type_wide_int_ptr; }
     llvm::PointerType *type_wide_float_ptr() const { return m_llvm_type_wide_float_ptr; }
+
+    // Different ISA's may have different representations of a mask from
+    // llvm's vector of bits that comparison operations emit. And we need
+    // varying boolean symbols to have the correct data type (size) on the
+    // stack and in data structures.
+    llvm::Type *type_native_mask() const { return m_llvm_type_native_mask; }
 
     /// Generate the appropriate llvm type definition for a TypeDesc
     /// (this is the actual type, for example when we allocate it).
@@ -607,6 +629,9 @@ private:
     IRBuilder& builder();
 
     int m_debug;
+    bool m_dumpasm = false;
+    bool m_jit_fma = false;
+    bool m_jit_aggressive = false;
     PerThreadInfo *m_thread;
     llvm::LLVMContext *m_llvm_context;
     llvm::Module *m_llvm_module;
@@ -660,6 +685,7 @@ private:
     llvm::PointerType * m_llvm_type_wide_int_ptr;
     llvm::PointerType * m_llvm_type_wide_bool_ptr;
     llvm::PointerType * m_llvm_type_wide_float_ptr;
+    llvm::Type * m_llvm_type_native_mask;
 
     bool m_supports_masked_stores = false;
     bool m_supports_llvm_bit_masks_natively = false;

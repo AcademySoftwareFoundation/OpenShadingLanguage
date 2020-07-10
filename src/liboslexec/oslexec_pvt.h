@@ -732,7 +732,11 @@ private:
     bool m_opt_middleman;                 ///< Middle-man optimization?
     bool m_opt_texture_handle;            ///< Use texture handles?
     bool m_opt_seed_bblock_aliases;       ///< Turn on basic block alias seeds
+    bool m_llvm_jit_fma;                  ///< Allow fused multiply/add in JIT
+    bool m_llvm_jit_aggressive;           ///< Turn on llvm "aggressive" JIT
     bool m_optimize_nondebug;             ///< Fully optimize non-debug!
+    ustring m_llvm_jit_target;            ///< JIT based on host target
+    int m_vector_width;                   ///< SIMD width maximum (8)
     int m_opt_passes;                     ///< Opt passes per layer
     int m_llvm_optimize;                  ///< OSL optimization strategy
     int m_debug;                          ///< Debugging output
@@ -741,6 +745,7 @@ private:
     int m_llvm_debug_ops;                 ///< Add printfs to every op
     int m_llvm_target_host;               ///< Target specific host architecture
     int m_llvm_output_bitcode;            ///< Output bitcode for each group
+    int m_llvm_dumpasm;                   ///< Output CPU asm of the JIT
     ustring m_llvm_prune_ir_strategy;     ///< LLVM IR pruning strategy
     ustring m_debug_groupname;            ///< Name of sole group to debug
     ustring m_debug_layername;            ///< Name of sole layer to debug

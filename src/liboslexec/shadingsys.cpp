@@ -715,13 +715,17 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_opt_fold_getattribute(true),
       m_opt_middleman(true), m_opt_texture_handle(true),
       m_opt_seed_bblock_aliases(true),
+      m_llvm_jit_fma(false),
+      m_llvm_jit_aggressive(false),
       m_optimize_nondebug(false),
+      m_vector_width(4),
       m_opt_passes(10),
       m_llvm_optimize(1),
       m_debug(0), m_llvm_debug(0),
       m_llvm_debug_layers(0), m_llvm_debug_ops(0),
       m_llvm_target_host(1),
       m_llvm_output_bitcode(0),
+      m_llvm_dumpasm(0),
       m_commonspace_synonym("world"),
       m_max_local_mem_KB(2048),
       m_compile_report(false),
@@ -1134,6 +1138,10 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("opt_middleman", int, m_opt_middleman);
     ATTR_SET ("opt_texture_handle", int, m_opt_texture_handle);
     ATTR_SET ("opt_seed_bblock_aliases", int, m_opt_seed_bblock_aliases);
+    ATTR_SET ("llvm_jit_fma", int, m_llvm_jit_fma);
+    ATTR_SET ("llvm_jit_aggressive", int, m_llvm_jit_aggressive);
+    ATTR_SET_STRING ("llvm_jit_target", m_llvm_jit_target);
+    ATTR_SET ("vector_width", int, m_vector_width);
     ATTR_SET ("opt_passes", int, m_opt_passes);
     ATTR_SET ("optimize_nondebug", int, m_optimize_nondebug);
     ATTR_SET ("llvm_optimize", int, m_llvm_optimize);
@@ -1142,6 +1150,7 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("llvm_debug_ops", int, m_llvm_debug_ops);
     ATTR_SET ("llvm_target_host", int, m_llvm_target_host);
     ATTR_SET ("llvm_output_bitcode", int, m_llvm_output_bitcode);
+    ATTR_SET ("llvm_dumpasm", int, m_llvm_dumpasm);
     ATTR_SET_STRING ("llvm_prune_ir_strategy", m_llvm_prune_ir_strategy);
     ATTR_SET ("strict_messages", int, m_strict_messages);
     ATTR_SET ("range_checking", int, m_range_checking);
@@ -1271,6 +1280,10 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("opt_middleman", int, m_opt_middleman);
     ATTR_DECODE ("opt_texture_handle", int, m_opt_texture_handle);
     ATTR_DECODE ("opt_seed_bblock_aliases", int, m_opt_seed_bblock_aliases);
+    ATTR_DECODE ("llvm_jit_fma", int, m_llvm_jit_fma);
+    ATTR_DECODE ("llvm_jit_aggressive", int, m_llvm_jit_aggressive);
+    ATTR_DECODE_STRING ("llvm_jit_target", m_llvm_jit_target);
+    ATTR_DECODE ("vector_width", int, m_vector_width);
     ATTR_DECODE ("opt_passes", int, m_opt_passes);
     ATTR_DECODE ("optimize_nondebug", int, m_optimize_nondebug);
     ATTR_DECODE ("llvm_optimize", int, m_llvm_optimize);
@@ -1280,6 +1293,7 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("llvm_debug_ops", int, m_llvm_debug_ops);
     ATTR_DECODE ("llvm_target_host", int, m_llvm_target_host);
     ATTR_DECODE ("llvm_output_bitcode", int, m_llvm_output_bitcode);
+    ATTR_DECODE ("llvm_dumpasm", int, m_llvm_dumpasm);
     ATTR_DECODE ("strict_messages", int, m_strict_messages);
     ATTR_DECODE ("error_repeats", int, m_error_repeats);
     ATTR_DECODE ("range_checking", int, m_range_checking);
@@ -1753,6 +1767,7 @@ ShadingSystemImpl::getstats (int level) const
     BOOLOPT (llvm_debug_ops);
     BOOLOPT (llvm_target_host);
     BOOLOPT (llvm_output_bitcode);
+    BOOLOPT (llvm_dumpasm);
     BOOLOPT (llvm_prune_ir_strategy);
     BOOLOPT (lazylayers);
     BOOLOPT (lazyglobals);
@@ -1784,6 +1799,10 @@ ShadingSystemImpl::getstats (int level) const
     BOOLOPT (opt_middleman);
     BOOLOPT (opt_texture_handle);
     BOOLOPT (opt_seed_bblock_aliases);
+    BOOLOPT (llvm_jit_fma);
+    BOOLOPT (llvm_jit_aggressive);
+    INTOPT (vector_width);
+    STROPT (llvm_jit_target);
     INTOPT  (opt_passes);
     INTOPT (no_noise);
     INTOPT (no_pointcloud);

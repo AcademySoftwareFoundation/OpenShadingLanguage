@@ -58,6 +58,11 @@ NEW or CHANGED dependencies since the last major release are **bold**.
 * (optional) [Partio](https://www.disneyanimation.com/technology/partio.html)
   If it is not found at build time, the OSL `pointcloud` functions will not
   be operative.
+* (optional) Python: If you are building the Python bindings or running the
+   testsuite:
+     * Python >= 2.7 (tested against 2.7, 3.6, 3.7, 3.8)
+     * pybind11 >= 2.4.2 (Tested through 2.5)
+     * NumPy
 * (optional) Qt >= 5.6 (tested through 5.15).  If not found at build time,
   the `osltoy` application will be disabled.
 

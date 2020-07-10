@@ -53,7 +53,7 @@ fi
 
 # Set up paths. These will only affect the caller if this script is
 # run with 'source' rather than in a separate shell.
-export PATH=/usr/local/opt/qt5/bin:$PATH ;
-export PATH=/usr/local/opt/python/libexec/bin:$PATH ;
-export PYTHONPATH=/usr/local/lib/python${PYTHON_VERSION}/site-packages:$PYTHONPATH ;
-export PATH=/usr/local/Cellar/llvm/9.0.0*/bin:$PATH ;
+export PATH=/usr/local/opt/qt5/bin:$PATH
+export PATH=/usr/local/opt/python/libexec/bin:$PATH
+export PYTHONPATH=/usr/local/lib/python${PYTHON_VERSION}/site-packages:$PYTHONPATH
+export PATH=/usr/local/opt/llvm/bin:$PATH

@@ -3549,7 +3549,7 @@ osl_uninit_check (long long typedesc_, void *vals_,
     }
     if (uninit) {
         ctx->errorf("Detected possible use of uninitialized value in %s %s at %s:%d (group %s, layer %d %s, shader %s, op %d '%s', arg %d)",
-                    typedesc, USTR(symbolname), USTR(sourcefile), sourceline,
+                    typedesc.c_str(), USTR(symbolname), USTR(sourcefile), sourceline,
                     (groupname && groupname[0]) ? groupname: "<unnamed group>",
                     layer, (layername && layername[0]) ? layername : "<unnamed layer>",
                     shadername, opnum, USTR(opname), argnum);

@@ -417,6 +417,8 @@ endif ()
 set (CLANG_FORMAT_EXE_HINT "" CACHE PATH "clang-format executable's directory (will search if not specified")
 set (CLANG_FORMAT_INCLUDES # "src/*.h" "src/*.cpp"
                             "src/include/*.h"
+                            "src/liboslcomp/*.cpp"
+                            "src/liboslcomp/*.h"
     CACHE STRING "Glob patterns to include for clang-format")
 set (CLANG_FORMAT_EXCLUDES
         # Files "imported and modified" that we don't want to reformat, so

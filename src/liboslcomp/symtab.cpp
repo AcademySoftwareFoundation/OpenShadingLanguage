@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/imageworks/OpenShadingLanguage
 
-#include <vector>
 #include <string>
+#include <vector>
 
 #include "oslcomp_pvt.h"
 
@@ -13,22 +13,21 @@ namespace Strutil = OIIO::Strutil;
 
 OSL_NAMESPACE_ENTER
 
-namespace pvt {   // OSL::pvt
+namespace pvt {  // OSL::pvt
 
 
 std::string
-Symbol::mangled () const
+Symbol::mangled() const
 {
-    std::string result = scope()
-        ? Strutil::sprintf ("___%d_%s", scope(), m_name)
-        : m_name.string();
+    std::string result = scope() ? Strutil::sprintf("___%d_%s", scope(), m_name)
+                                 : m_name.string();
     return result;  // Force NRVO (named value return optimization)
 }
 
 
 
 string_view
-Symbol::unmangled () const
+Symbol::unmangled() const
 {
     string_view result(m_name);
     if (Strutil::parse_prefix(result, "___")) {
@@ -41,30 +40,30 @@ Symbol::unmangled () const
 
 
 
-const char *
-Symbol::symtype_shortname (SymType s)
+const char*
+Symbol::symtype_shortname(SymType s)
 {
-    OSL_DASSERT ((int)s >= 0 && (int)s < (int)SymTypeType);
-    static const char *names[] = { "param", "oparam", "local", "temp",
-                                   "global", "const", "func" };
+    OSL_DASSERT((int)s >= 0 && (int)s < (int)SymTypeType);
+    static const char* names[] = { "param",  "oparam", "local", "temp",
+                                   "global", "const",  "func" };
     return names[(int)s];
 }
 
 
 
 std::string
-StructSpec::mangled () const
+StructSpec::mangled() const
 {
-    return scope() ? Strutil::sprintf ("___%d_%s", scope(), m_name)
-        : m_name.string();
+    return scope() ? Strutil::sprintf("___%d_%s", scope(), m_name)
+                   : m_name.string();
 }
 
 
 
 int
-StructSpec::lookup_field (ustring name) const
+StructSpec::lookup_field(ustring name) const
 {
-    for (int i = 0, e = numfields();  i < e;  ++i)
+    for (int i = 0, e = numfields(); i < e; ++i)
         if (field(i).name == name)
             return i;
     return -1;
@@ -72,14 +71,14 @@ StructSpec::lookup_field (ustring name) const
 
 
 
-const char *
-Symbol::valuesourcename (ValueSource v)
+const char*
+Symbol::valuesourcename(ValueSource v)
 {
     switch (v) {
-    case DefaultVal   : return "default";
-    case InstanceVal  : return "instance";
-    case GeomVal      : return "geom";
-    case ConnectedVal : return "connected";
+    case DefaultVal: return "default";
+    case InstanceVal: return "instance";
+    case GeomVal: return "geom";
+    case ConnectedVal: return "connected";
     }
     OSL_DASSERT(0 && "unknown valuesource");
     return NULL;
@@ -87,32 +86,31 @@ Symbol::valuesourcename (ValueSource v)
 
 
 
-const char *
-Symbol::valuesourcename () const
+const char*
+Symbol::valuesourcename() const
 {
-    return valuesourcename (valuesource());
+    return valuesourcename(valuesource());
 }
 
 
 
-std::ostream &
-Symbol::print_vals (std::ostream &out, int maxvals) const
+std::ostream&
+Symbol::print_vals(std::ostream& out, int maxvals) const
 {
-    if (! data())
+    if (!data())
         return out;
     TypeDesc t = typespec().simpletype();
-    int n = std::min (int(t.aggregate * t.numelements()), maxvals);
+    int n      = std::min(int(t.aggregate * t.numelements()), maxvals);
     if (t.basetype == TypeDesc::FLOAT) {
-        for (int j = 0;  j < n;  ++j)
-            out << (j ? " " : "") << ((float *)data())[j];
+        for (int j = 0; j < n; ++j)
+            out << (j ? " " : "") << ((float*)data())[j];
     } else if (t.basetype == TypeDesc::INT) {
-        for (int j = 0;  j < n;  ++j)
-            out << (j ? " " : "") << ((int *)data())[j];
+        for (int j = 0; j < n; ++j)
+            out << (j ? " " : "") << ((int*)data())[j];
     } else if (t.basetype == TypeDesc::STRING) {
-        for (int j = 0;  j < n;  ++j)
+        for (int j = 0; j < n; ++j)
             out << (j ? " " : "") << "\""
-                << Strutil::escape_chars(((ustring *)data())[j])
-                << "\"";
+                << Strutil::escape_chars(((ustring*)data())[j]) << "\"";
     }
     if (int(t.aggregate * t.numelements()) > maxvals)
         out << "...";
@@ -121,15 +119,15 @@ Symbol::print_vals (std::ostream &out, int maxvals) const
 
 
 
-std::ostream &
-Symbol::print (std::ostream &out, int maxvals) const
+std::ostream&
+Symbol::print(std::ostream& out, int maxvals) const
 {
-    out << Symbol::symtype_shortname(symtype())
-        << " " << typespec().string() << " " << name();
+    out << Symbol::symtype_shortname(symtype()) << " " << typespec().string()
+        << " " << name();
     if (everused())
-        out << " (used " << firstuse() << ' ' << lastuse()
-            << " read " << firstread() << ' ' << lastread()
-            << " write " << firstwrite() << ' ' << lastwrite();
+        out << " (used " << firstuse() << ' ' << lastuse() << " read "
+            << firstread() << ' ' << lastread() << " write " << firstwrite()
+            << ' ' << lastwrite();
     else
         out << " (unused";
     out << (has_derivs() ? " derivs" : "") << ")";
@@ -144,22 +142,22 @@ Symbol::print (std::ostream &out, int maxvals) const
             out << " unconnected";
         if (renderer_output())
             out << " renderer-output";
-        if (symtype() == SymTypeParam && ! lockgeom())
+        if (symtype() == SymTypeParam && !lockgeom())
             out << " lockgeom=0";
     }
     out << "\n";
     if (symtype() == SymTypeConst) {
         out << "\tconst: ";
-        print_vals (out, maxvals);
+        print_vals(out, maxvals);
         out << "\n";
     } else if (symtype() == SymTypeParam || symtype() == SymTypeOutputParam) {
         if (valuesource() == Symbol::DefaultVal && !has_init_ops()) {
             out << "\tdefault: ";
-            print_vals (out, maxvals);
+            print_vals(out, maxvals);
             out << "\n";
         } else if (valuesource() == Symbol::InstanceVal) {
             out << "\tvalue: ";
-            print_vals (out, maxvals);
+            print_vals(out, maxvals);
             out << "\n";
         }
     }
@@ -168,24 +166,24 @@ Symbol::print (std::ostream &out, int maxvals) const
 
 
 
-Symbol *
-SymbolTable::find (ustring name, Symbol *last) const
+Symbol*
+SymbolTable::find(ustring name, Symbol* last) const
 {
     ScopeTableStack::const_reverse_iterator scopelevel;
     scopelevel = m_scopetables.rbegin();
     if (last) {
         // We only want to match OUTSIDE the scope of 'last'.  So first
         // search for last.  Then advance to the next outer scope.
-        for ( ;  scopelevel != m_scopetables.rend();  ++scopelevel) {
-            ScopeTable::const_iterator s = scopelevel->find (name);
+        for (; scopelevel != m_scopetables.rend(); ++scopelevel) {
+            ScopeTable::const_iterator s = scopelevel->find(name);
             if (s != scopelevel->end() && s->second == last) {
                 ++scopelevel;
                 break;
             }
         }
     }
-    for ( ;  scopelevel != m_scopetables.rend();  ++scopelevel) {
-        ScopeTable::const_iterator s = scopelevel->find (name);
+    for (; scopelevel != m_scopetables.rend(); ++scopelevel) {
+        ScopeTable::const_iterator s = scopelevel->find(name);
         if (s != scopelevel->end())
             return s->second;
     }
@@ -194,48 +192,48 @@ SymbolTable::find (ustring name, Symbol *last) const
 
 
 
-Symbol *
-SymbolTable::find_exact (ustring mangled_name) const
+Symbol*
+SymbolTable::find_exact(ustring mangled_name) const
 {
-    ScopeTable::const_iterator s = m_allmangled.find (mangled_name);
+    ScopeTable::const_iterator s = m_allmangled.find(mangled_name);
     return (s != m_allmangled.end()) ? s->second : NULL;
 }
 
 
 
-Symbol *
-SymbolTable::clash (ustring name) const
+Symbol*
+SymbolTable::clash(ustring name) const
 {
-    Symbol *s = find (name);
+    Symbol* s = find(name);
     return (s && s->scope() == scopeid()) ? s : NULL;
 }
 
 
 
 void
-SymbolTable::insert (Symbol *sym)
+SymbolTable::insert(Symbol* sym)
 {
     OSL_DASSERT(sym != NULL);
-    sym->scope (scopeid ());
+    sym->scope(scopeid());
     m_scopetables.back()[sym->name()] = sym;
-    m_allsyms.push_back (sym);
+    m_allsyms.push_back(sym);
     m_allmangled[ustring(sym->mangled())] = sym;
 }
 
 
 
 int
-SymbolTable::new_struct (ustring name)
+SymbolTable::new_struct(ustring name)
 {
-    int structid = TypeSpec::new_struct (new StructSpec (name, scopeid()));
-    insert (new Symbol (name, TypeSpec ("",structid), SymTypeType));
+    int structid = TypeSpec::new_struct(new StructSpec(name, scopeid()));
+    insert(new Symbol(name, TypeSpec("", structid), SymTypeType));
     return structid;
 }
 
 
 
-StructSpec *
-SymbolTable::current_struct ()
+StructSpec*
+SymbolTable::current_struct()
 {
     return TypeSpec::struct_list().back().get();
 }
@@ -243,66 +241,64 @@ SymbolTable::current_struct ()
 
 
 void
-SymbolTable::add_struct_field (const TypeSpec &type, ustring name)
+SymbolTable::add_struct_field(const TypeSpec& type, ustring name)
 {
-    StructSpec *s = current_struct();
-    OSL_DASSERT (s && "add_struct_field couldn't find a current struct");
-    s->add_field (type, name);
+    StructSpec* s = current_struct();
+    OSL_DASSERT(s && "add_struct_field couldn't find a current struct");
+    s->add_field(type, name);
 }
 
 
 
 void
-SymbolTable::push ()
+SymbolTable::push()
 {
-    m_scopestack.push (m_scopeid);  // push old scope id on the scope stack
-    m_scopeid = m_nextscopeid++;    // set to new scope id
-    m_scopetables.resize (m_scopetables.size()+1); // push scope table
+    m_scopestack.push(m_scopeid);  // push old scope id on the scope stack
+    m_scopeid = m_nextscopeid++;   // set to new scope id
+    m_scopetables.resize(m_scopetables.size() + 1);  // push scope table
 }
 
 
 
 void
-SymbolTable::pop ()
+SymbolTable::pop()
 {
-    m_scopetables.resize (m_scopetables.size()-1);
-    OSL_DASSERT (! m_scopestack.empty());
-    m_scopeid = m_scopestack.top ();
-    m_scopestack.pop ();
+    m_scopetables.resize(m_scopetables.size() - 1);
+    OSL_DASSERT(!m_scopestack.empty());
+    m_scopeid = m_scopestack.top();
+    m_scopestack.pop();
 }
 
 
 
 void
-SymbolTable::delete_syms ()
+SymbolTable::delete_syms()
 {
     for (auto& sym : m_allsyms)
         delete sym;
-    m_allsyms.clear ();
-    TypeSpec::struct_list().clear ();
+    m_allsyms.clear();
+    TypeSpec::struct_list().clear();
 }
 
 
 
-
 void
-SymbolTable::print ()
+SymbolTable::print()
 {
     if (TypeSpec::struct_list().size()) {
         std::cout << "Structure table:\n";
         int structid = 1;
         for (auto&& s : TypeSpec::struct_list()) {
-            if (! s)
+            if (!s)
                 continue;
             std::cout << "    " << structid << ": struct " << s->mangled();
             if (s->scope())
-                std::cout << " (" << s->name()
-                          << " in scope " << s->scope() << ")";
+                std::cout << " (" << s->name() << " in scope " << s->scope()
+                          << ")";
             std::cout << " :\n";
-            for (size_t i = 0;  i < (size_t)s->numfields();  ++i) {
-                const StructSpec::FieldSpec & f (s->field(i));
-                std::cout << "\t" << f.name << " : "
-                          << f.type.string() << "\n";
+            for (size_t i = 0; i < (size_t)s->numfields(); ++i) {
+                const StructSpec::FieldSpec& f(s->field(i));
+                std::cout << "\t" << f.name << " : " << f.type.string() << "\n";
             }
             ++structid;
         }
@@ -321,14 +317,14 @@ SymbolTable::print ()
             std::cout << s->typespec().string();
         }
         if (s->scope())
-            std::cout << " (" << s->name() << " in scope "
-                      << s->scope() << ")";
+            std::cout << " (" << s->name() << " in scope " << s->scope() << ")";
         if (s->is_function()) {
-            const FunctionSymbol *f = (const FunctionSymbol *) s;
-            const char *args = f->argcodes().c_str();
-            int advance = 0;
+            const FunctionSymbol* f = (const FunctionSymbol*)s;
+            const char* args        = f->argcodes().c_str();
+            int advance             = 0;
             args += advance;
-            std::cout << " function (" << m_comp.typelist_from_code(args) << ") ";
+            std::cout << " function (" << m_comp.typelist_from_code(args)
+                      << ") ";
         }
         std::cout << "\n";
     }
@@ -337,6 +333,6 @@ SymbolTable::print ()
 
 
 
-}; // namespace pvt
+};  // namespace pvt
 
 OSL_NAMESPACE_EXIT

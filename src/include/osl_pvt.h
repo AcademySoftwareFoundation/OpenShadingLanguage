@@ -62,19 +62,14 @@ class TypeSpec {
 public:
     /// Default ctr of TypeSpec (unknown type)
     ///
-    TypeSpec()
-        : m_simple(TypeDesc::UNKNOWN)
-        , m_structure(0)
-        , m_closure(false)
+    TypeSpec() : m_simple(TypeDesc::UNKNOWN), m_structure(0), m_closure(false)
     {
     }
 
     /// Construct a TypeSpec that represents an ordinary simple type
     /// (including arrays of simple types).
     TypeSpec(TypeDesc simple)
-        : m_simple(simple)
-        , m_structure(0)
-        , m_closure(false)
+        : m_simple(simple), m_structure(0), m_closure(false)
     {
     }
 
@@ -402,20 +397,12 @@ class StructSpec {
 public:
     /// Construct a new struct with the given name, in the given scope.
     ///
-    StructSpec(ustring name, int scope)
-        : m_name(name)
-        , m_scope(scope)
-    {
-    }
+    StructSpec(ustring name, int scope) : m_name(name), m_scope(scope) {}
 
     /// Description of a single structure field -- just a type and name.
     ///
     struct FieldSpec {
-        FieldSpec(const TypeSpec& t, ustring n)
-            : type(t)
-            , name(n)
-        {
-        }
+        FieldSpec(const TypeSpec& t, ustring n) : type(t), name(n) {}
         TypeSpec type;
         ustring name;
     };
@@ -496,11 +483,7 @@ public:
         , m_lastwrite(-1)
     {
     }
-    Symbol()
-        : m_data(NULL)
-        , m_free_data(false)
-    {
-    }
+    Symbol() : m_data(NULL), m_free_data(false) {}
     ~Symbol()
     {
         if (m_free_data)
@@ -814,9 +797,7 @@ typedef std::vector<Symbol*> SymbolPtrVec;
 class Opcode {
 public:
     Opcode(ustring op, ustring method, size_t firstarg = 0, size_t nargs = 0)
-        : m_firstarg((int)firstarg)
-        , m_method(method)
-        , m_sourceline(0)
+        : m_firstarg((int)firstarg), m_method(method), m_sourceline(0)
     {
         reset(op, nargs);  // does most of the heavy lifting
     }

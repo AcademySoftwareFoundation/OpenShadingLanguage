@@ -26,10 +26,7 @@ public:
 /// active AOV. These objects should be reset before the
 /// integration ray walk for a pixel and flushed at the end
 struct AovOutput {
-    AovOutput()
-        : neg_color(false)
-        , neg_alpha(false)
-        , aov(NULL) {};
+    AovOutput() : neg_color(false), neg_alpha(false), aov(NULL) {};
 
     // Accumulated values
     Color3 color;
@@ -73,8 +70,7 @@ public:
     ///  \param neg            Invert (1 - v) the value before sending to the AOV
     ///
     AccumRule(int outidx, bool toalpha)
-        : m_outidx(outidx)
-        , m_save_to_alpha(toalpha) {};
+        : m_outidx(outidx), m_save_to_alpha(toalpha) {};
 
     /// Called to accumulate from AccumAutomata. It will select the right ouput from
     /// the given vector based in the AOV index number (they are guaranteed to match)

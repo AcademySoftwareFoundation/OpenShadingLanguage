@@ -54,9 +54,9 @@
 //#define OSL_LLVM_EXPORT __declspec(dllexport)
 #    define OSL_LLVM_EXPORT OSL_DLL_LOCAL
 #else
-#    define OSL_DLL_IMPORT __attribute__((visibility("default")))
-#    define OSL_DLL_EXPORT __attribute__((visibility("default")))
-#    define OSL_DLL_LOCAL __attribute__((visibility("hidden")))
+#    define OSL_DLL_IMPORT  __attribute__((visibility("default")))
+#    define OSL_DLL_EXPORT  __attribute__((visibility("default")))
+#    define OSL_DLL_LOCAL   __attribute__((visibility("hidden")))
 #    define OSL_LLVM_EXPORT OSL_DLL_LOCAL
 #endif
 
@@ -74,14 +74,14 @@
 #    define OSLEXECPUBLIC OSL_DLL_IMPORT
 #endif
 
-#if defined(oslquery_EXPORTS) || defined(oslexec_EXPORTS)                      \
+#if defined(oslquery_EXPORTS) || defined(oslexec_EXPORTS) \
     || defined(OSL_EXPORTS)
 #    define OSLQUERYPUBLIC OSL_DLL_EXPORT
 #else
 #    define OSLQUERYPUBLIC OSL_DLL_IMPORT
 #endif
 
-#if defined(oslnoise_EXPORTS) || defined(oslexec_EXPORTS)                      \
+#if defined(oslnoise_EXPORTS) || defined(oslexec_EXPORTS) \
     || defined(OSL_EXPORTS)
 #    define OSLNOISEPUBLIC OSL_DLL_EXPORT
 #else

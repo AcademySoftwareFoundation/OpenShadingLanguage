@@ -157,6 +157,7 @@ jobs:
           USE_SIMD: avx2,f16c
           OPENEXR_VERSION: 2.5.0
           OPENIMAGEIO_BRANCH: master
+          OPENIMAGEIO_CMAKE_FLAGS: -DBUILD_FMT_VERSION=7.0.1
           PYBIND11_VERSION: 2.5.0
         run: |
             source src/build-scripts/ci-startup.bash
@@ -184,6 +185,7 @@ jobs:
           USE_SIMD: avx2,f16c
           OPENEXR_BRANCH: master
           OPENIMAGEIO_BRANCH: master
+          OPENIMAGEIO_CMAKE_FLAGS: -DBUILD_FMT_VERSION=master
           OCIO_BRANCH: master
           PYBIND11_BRANCH: master
           OSL_BUILD_MATERIALX: 1

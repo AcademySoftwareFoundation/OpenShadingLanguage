@@ -157,6 +157,7 @@ jobs:
           USE_SIMD: avx2,f16c
           OPENEXR_VERSION: 2.5.0
           OPENIMAGEIO_BRANCH: master
+          PYBIND11_VERSION: 2.5.0
         run: |
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/gh-installdeps.bash
@@ -223,8 +224,8 @@ jobs:
           name: ${{ github.job }}
           path: build/*/testsuite/*/*.*
 
-  macos-py37:
-    name: "Mac py37"
+  macos-py38:
+    name: "Mac py38"
     runs-on: macOS-latest
     steps:
       - uses: actions/checkout@v2
@@ -233,7 +234,7 @@ jobs:
           CXX: clang++
           USE_CPP: 14
           CMAKE_CXX_STANDARD: 14
-          PYTHON_VERSION: 3.7
+          PYTHON_VERSION: 3.8
           LLVM_BC_GENERATOR: /usr/bin/clang++
           MY_CMAKE_FLAGS: -DLLVM_BC_GENERATOR=/usr/bin/clang++
             # ^^ Force bitcode compiles to use the system clang compiler by

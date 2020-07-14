@@ -419,6 +419,13 @@ set (CLANG_FORMAT_INCLUDES # "src/*.h" "src/*.cpp"
                             "src/include/*.h"
                             "src/liboslcomp/*.cpp"
                             "src/liboslcomp/*.h"
+                            "src/liboslquery/*.cpp"
+                            "src/liboslquery/*.h"
+                            "src/oslinfo/*.cpp"
+                            "src/oslc/*.cpp"
+                            "src/osl.imageio/*.cpp"
+                            "src/osltoy/*.cpp"
+                            "src/osltoy/*.h"
     CACHE STRING "Glob patterns to include for clang-format")
 set (CLANG_FORMAT_EXCLUDES
         # Files "imported and modified" that we don't want to reformat, so

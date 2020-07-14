@@ -14,9 +14,20 @@
 #include <OpenImageIO/strutil.h>
 
 OIIO_NAMESPACE_BEGIN
+
 namespace Strutil {
-template<typename T> inline std::string to_string (const T& value);
-template<> inline std::string to_string (const QString& value) { return value.toUtf8().data(); }
+
+template<typename T>
+inline std::string
+to_string(const T& value);
+
+template<>
+inline std::string
+to_string(const QString& value)
+{
+    return value.toUtf8().data();
+}
+
 }  // end namespace Strutil
 OIIO_NAMESPACE_END
 
@@ -26,17 +37,17 @@ OSL_NAMESPACE_ENTER
 namespace QtUtils {
 
 
-template <typename OBJ, typename ACT>
-QAction* add_action (OBJ *obj, const std::string &name,
-                     const std::string &label,
-                     const std::string &hotkey="",
-                     ACT trigger_action=nullptr)
+template<typename OBJ, typename ACT>
+QAction*
+add_action(OBJ* obj, const std::string& name, const std::string& label,
+           const std::string& hotkey = "", ACT trigger_action = nullptr)
 {
-    QAction *act = new QAction (label.size() ? label.c_str() : name.c_str(), obj);
+    QAction* act = new QAction(label.size() ? label.c_str() : name.c_str(),
+                               obj);
     if (hotkey.size())
-        act->setShortcut (QString(hotkey.c_str()));
+        act->setShortcut(QString(hotkey.c_str()));
     if (trigger_action)
-        connect (act, &QAction::triggered, obj, trigger_action);
+        connect(act, &QAction::triggered, obj, trigger_action);
     return act;
 }
 
@@ -44,9 +55,9 @@ QAction* add_action (OBJ *obj, const std::string &name,
 
 // Remove and delete any widgets within the layout.
 inline void
-clear_layout (QLayout *lay)
+clear_layout(QLayout* lay)
 {
-    QLayoutItem *child;
+    QLayoutItem* child;
     while ((child = lay->takeAt(0)) != 0) {
         delete (child->widget());
         delete child;
@@ -61,11 +72,11 @@ clear_layout (QLayout *lay)
 // render the 'blah' in italics.
 template<typename... Args>
 inline QLabel*
-make_qlabelf (const char* fmt, const Args&... args)
+make_qlabelf(const char* fmt, const Args&... args)
 {
-    std::string text = OIIO::Strutil::sprintf (fmt, args...);
-    auto label = new QLabel (text.c_str());
-    label->setTextFormat (Qt::AutoText);
+    std::string text = OIIO::Strutil::sprintf(fmt, args...);
+    auto label       = new QLabel(text.c_str());
+    label->setTextFormat(Qt::AutoText);
     return label;
 }
 
@@ -76,13 +87,13 @@ make_qlabelf (const char* fmt, const Args&... args)
 //  * Outlive the lifetime of the QImage, without having anything done
 //    to it that will reallocate its memory.
 inline QImage
-ImageBuf_to_QImage (const OIIO::ImageBuf& ib)
+ImageBuf_to_QImage(const OIIO::ImageBuf& ib)
 {
     using namespace OIIO;
     if (ib.storage() == ImageBuf::UNINITIALIZED)
         return {};
 
-    const ImageSpec &spec (ib.spec());
+    const ImageSpec& spec(ib.spec());
     QImage::Format format = QImage::Format_Invalid;
     if (spec.format == TypeDesc::UINT8) {
         if (spec.nchannels == 3)
@@ -94,9 +105,9 @@ ImageBuf_to_QImage (const OIIO::ImageBuf& ib)
         return {};
 
     if (ib.cachedpixels())
-        const_cast<ImageBuf*>(&ib)->make_writeable (true);
-    return QImage ((const uchar*)ib.localpixels(), spec.width, spec.height,
-                   (int)spec.scanline_bytes(), format);
+        const_cast<ImageBuf*>(&ib)->make_writeable(true);
+    return QImage((const uchar*)ib.localpixels(), spec.width, spec.height,
+                  (int)spec.scanline_bytes(), format);
 }
 
 
@@ -115,64 +126,71 @@ class DoubleSpinBox : public QDoubleSpinBox {
 public:
     typedef QDoubleSpinBox parent_t;
 
-    DoubleSpinBox (double val, QWidget *parent=nullptr) : QDoubleSpinBox(parent) {
-        setValue (val);
-        setDecimals (3);
-        setMaximumWidth (100);
-        setRange (-1e6, 1e6);
-        setAccelerated (true);
-        setKeyboardTracking (false);
-        variable_step_size ();  // defaults
-        set_step_size (value());
+    DoubleSpinBox(double val, QWidget* parent = nullptr)
+        : QDoubleSpinBox(parent)
+    {
+        setValue(val);
+        setDecimals(3);
+        setMaximumWidth(100);
+        setRange(-1e6, 1e6);
+        setAccelerated(true);
+        setKeyboardTracking(false);
+        variable_step_size();  // defaults
+        set_step_size(value());
     }
 
 #if 1
-    virtual void stepBy (int steps) { // override to adjust step size
-        set_step_size (value());
-        parent_t::stepBy (steps);
+    virtual void stepBy(int steps)
+    {  // override to adjust step size
+        set_step_size(value());
+        parent_t::stepBy(steps);
     }
 #endif
 
-    void fixed_step_size (double step = 1.0) {
+    void fixed_step_size(double step = 1.0)
+    {
         m_variable_step_digits = 1;
-        m_fixed_step = step;
+        m_fixed_step           = step;
     }
 
-    void variable_step_size (int digits = 1, double minstep = 1e-3) {
+    void variable_step_size(int digits = 1, double minstep = 1e-3)
+    {
         m_variable_step_digits = digits;
-        m_variable_min_step = minstep;
+        m_variable_min_step    = minstep;
     }
 
-    void valueChanged (double v) {
-        set_step_size (v);
-        parent_t::valueChanged (v);
+    void valueChanged(double v)
+    {
+        set_step_size(v);
+        parent_t::valueChanged(v);
     }
 
 private:
-    void set_step_size (double valsize) {
+    void set_step_size(double valsize)
+    {
         double ss = m_fixed_step;
         if (m_variable_step_digits) {
-            ss = m_variable_min_step;
+            ss        = m_variable_min_step;
             double av = fabs(valsize);
             for (int d = 6; d > -4; --d) {
-                double p = pow (10.0, double(d));
-                if (av > p*1.1) {
-                    ss = p*pow(0.1,double(m_variable_step_digits));
-                    setDecimals (abs(d)+3);
+                double p = pow(10.0, double(d));
+                if (av > p * 1.1) {
+                    ss = p * pow(0.1, double(m_variable_step_digits));
+                    setDecimals(abs(d) + 3);
                     break;
                 }
             }
-            ss = std::max (ss, m_variable_min_step);
+            ss = std::max(ss, m_variable_min_step);
         }
-        setSingleStep (ss);
+        setSingleStep(ss);
     }
 
-    double m_fixed_step = 1.0;
+    double m_fixed_step        = 1.0;
     double m_variable_min_step = 1e-3;
     int m_variable_step_digits = 1;
 };
 
 
 
-} // end namespace QtUtils
+}  // end namespace QtUtils
 OSL_NAMESPACE_EXIT

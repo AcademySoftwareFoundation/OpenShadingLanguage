@@ -134,6 +134,11 @@ public:
     ///                              figure out what the host can do. ("")
     ///    int llvm_jit_aggressive  Use LLVM "aggressive" JIT mode. (0)
     ///    int vector_width       Vector width to allow for SIMD ops (4).
+    ///    int llvm_debugging_symbols  When JITing, generate debug symbols
+    ///                             that associate machine code with shader
+    ///                             source and lines. (0)
+    ///    int llvm_profiling_events  When JITing, generate events to enable
+    ///                             full profiling of shaders. (0)
     ///    int lockgeom           Default 'lockgeom' value for shader params
     ///                              that don't specify it (1).  Lockgeom
     ///                              means a param CANNOT be overridden by

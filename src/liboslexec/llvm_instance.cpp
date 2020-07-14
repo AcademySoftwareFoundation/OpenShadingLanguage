@@ -750,6 +750,8 @@ BackendLLVM::build_llvm_code (int beginop, int endop, llvm::BasicBlock *bb)
                 llvm_generate_debug_uninit (op);
             if (shadingsys().llvm_debug_ops())
                 llvm_generate_debug_op_printf (op);
+            if (ll.debug_is_enabled())
+                ll.debug_set_location(op.sourcefile(), std::max(op.sourceline(), 1));
             bool ok = (*opd->llvmgen) (*this, opnum);
             if (! ok)
                 return false;
@@ -782,11 +784,17 @@ BackendLLVM::build_llvm_init ()
 {
     // Make a group init function: void group_init(ShaderGlobals*, GroupData*)
     // Note that the GroupData* is passed as a void*.
-    std::string unique_name = Strutil::sprintf ("__direct_callable__group_%d_init", group().id());
+    std::string unique_name = Strutil::sprintf ("__direct_callable__group_%s_%d_init",
+                                                group().name(), group().id());
     ll.current_function (
            ll.make_function (unique_name, false,
                              ll.type_void(), // return type
                              llvm_type_sg_ptr(), llvm_type_groupdata_ptr()));
+
+    if (ll.debug_is_enabled()) {
+        ustring sourcefile = group()[0]->op(group()[0]->maincodebegin()).sourcefile();
+        ll.debug_push_function(unique_name, sourcefile, 0);
+    }
 
     // Get shader globals and groupdata pointers
     m_llvm_shaderglobals_ptr = ll.current_function_arg(0); //arg_it++;
@@ -798,7 +806,8 @@ BackendLLVM::build_llvm_init ()
 #if 0 /* helpful for debugging */
     if (llvm_debug()) {
         llvm_gen_debug_printf (Strutil::sprintf("\n\n\n\nGROUP! %s",group().name()));
-        llvm_gen_debug_printf ("enter group initlayer %d %s %s");                               this->layer(), inst()->layername(), inst()->shadername()));
+        llvm_gen_debug_printf ("enter group initlayer %d %s %s",
+                               this->layer(), inst()->layername(), inst()->shadername()));
     }
 #endif
 
@@ -845,6 +854,9 @@ BackendLLVM::build_llvm_init ()
                   << " after llvm  = " 
                   << ll.bitcode_string(ll.current_function()) << "\n";
 
+    if (ll.debug_is_enabled())
+        ll.debug_pop_function();
+
     ll.end_builder();  // clear the builder
 
     return ll.current_function();
@@ -864,6 +876,12 @@ BackendLLVM::build_llvm_instance (bool groupentry)
                              !is_entry_layer, // fastcall for non-entry layer functions
                              ll.type_void(), // return type
                              llvm_type_sg_ptr(), llvm_type_groupdata_ptr()));
+
+    if (ll.debug_is_enabled()) {
+        const Opcode& mainbegin (inst()->op(inst()->maincodebegin()));
+        ll.debug_push_function(unique_layer_name, mainbegin.sourcefile(),
+                               mainbegin.sourceline());
+    }
 
     // Get shader globals and groupdata pointers
     m_llvm_shaderglobals_ptr = ll.current_function_arg(0); //arg_it++;
@@ -1067,6 +1085,10 @@ BackendLLVM::build_llvm_instance (bool groupentry)
                   << "/" << group().nlayers() << " after llvm  = " 
                   << ll.bitcode_string(ll.current_function()) << "\n";
 
+    if (ll.debug_is_enabled()) {
+        ll.debug_pop_function();
+    }
+
     ll.end_builder();  // clear the builder
 
     return ll.current_function();
@@ -1077,6 +1099,11 @@ BackendLLVM::build_llvm_instance (bool groupentry)
 void
 BackendLLVM::initialize_llvm_group ()
 {
+    if (ll.debug_is_enabled()) {
+        const char* compile_unit_name = m_group.m_name.empty() ? unknown_shader_group_name.c_str() : m_group.m_name.c_str();
+        ll.debug_setup_compilation_unit(compile_unit_name);
+    }
+
     // Set up optimization passes. Don't target the host if we're building
     // for OptiX.
     ll.setup_optimization_passes (shadingsys().llvm_optimize(),
@@ -1190,7 +1217,9 @@ BackendLLVM::run ()
     // Create the ExecutionEngine. We don't create an ExecutionEngine in the
     // OptiX case, because we are using the NVPTX backend and not MCJIT
     if (! use_optix() &&
-        ! ll.make_jit_execengine (&err, ll.lookup_isa_by_name(shadingsys().m_llvm_jit_target))) {
+        ! ll.make_jit_execengine (&err, ll.lookup_isa_by_name(shadingsys().m_llvm_jit_target),
+                                  shadingsys().llvm_debugging_symbols(),
+                                  shadingsys().llvm_profiling_events())) {
         shadingcontext()->errorf("Failed to create engine: %s\n", err);
         OSL_ASSERT (0);
         return;

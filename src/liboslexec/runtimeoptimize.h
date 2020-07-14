@@ -133,6 +133,13 @@ public:
     /// of instructions that were altered.
     int turn_into_nop (int begin, int end, string_view why=NULL);
 
+
+    /// Transmute regulare function call into a 'no return' function call
+    /// The funcationcall_nr is useful to generate debug info for the inlined
+    /// function call.  Its existence shouldn't otherwise modify resulting
+    /// code generation.
+    int turn_into_functioncall_nr (Opcode &op, string_view why=nullptr);
+
     void debug_opt_impl (string_view message) const;
 
     template<typename... Args>
@@ -349,6 +356,10 @@ public:
     /// Are special optimizations to 'mix' requested?
     bool opt_mix () const { return m_opt_mix; }
 
+    /// Should no return function calls be kept in order to
+    /// generate correct inline function debug info
+    bool keep_no_return_function_calls() const { return m_keep_no_return_function_calls; }
+
     /// Which optimization pass are we on?
     int optimization_pass () const { return m_pass; }
 
@@ -406,6 +417,7 @@ private:
     bool m_opt_assign;                    ///< Do various assign optimizations?
     bool m_opt_mix;                       ///< Do mix optimizations?
     bool m_opt_middleman;                 ///< Do middleman optimizations?
+    bool m_keep_no_return_function_calls; ///< To generate debug info, keep no return function calls
     ShaderGlobals m_shaderglobals;        ///< Dummy ShaderGlobals
 
     // Keep track of some things for the whole shader group:

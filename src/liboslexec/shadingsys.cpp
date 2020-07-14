@@ -724,6 +724,8 @@ ShadingSystemImpl::ShadingSystemImpl (RendererServices *renderer,
       m_debug(0), m_llvm_debug(0),
       m_llvm_debug_layers(0), m_llvm_debug_ops(0),
       m_llvm_target_host(1),
+      m_llvm_debugging_symbols(0),
+      m_llvm_profiling_events(0),
       m_llvm_output_bitcode(0),
       m_llvm_dumpasm(0),
       m_commonspace_synonym("world"),
@@ -917,6 +919,7 @@ shading_system_setup_op_descriptors (ShadingSystemImpl::OpDescriptorMap& op_desc
     OP (format,      printf,              format,        true,      0);
     OP (fprintf,     printf,              none,          false,     SIDE);
     OP (functioncall, functioncall,       functioncall,  false,     0);
+    OP (functioncall_nr,functioncall_nr,  none,          false,     0);
     OP (ge,          compare_op,          ge,            true,      0);
     OP (getattribute, getattribute,       getattribute,  false,     0);
     OP (getchar,      generic,            getchar,       true,      0);
@@ -1149,6 +1152,18 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("llvm_debug_layers", int, m_llvm_debug_layers);
     ATTR_SET ("llvm_debug_ops", int, m_llvm_debug_ops);
     ATTR_SET ("llvm_target_host", int, m_llvm_target_host);
+
+    // Due to ABI breakage in LLVM 7.0.[0-1] for llvm::Optional with GCC,
+    // calling any llvm API's that accept an llvm::Optional parameter will break
+    // ABI causing issues.
+    // https://bugs.llvm.org/show_bug.cgi?id=39427
+    // Fixed in llvm 7.1.0+
+    // Workaround don't enable debug symbols which would use llvm::Optional API's
+#if (!OSL_GNUC_VERSION) || (OSL_LLVM_VERSION >= 71)
+    ATTR_SET ("llvm_debugging_symbols", int, m_llvm_debugging_symbols);
+#endif
+
+    ATTR_SET ("llvm_profiling_events", int, m_llvm_profiling_events);
     ATTR_SET ("llvm_output_bitcode", int, m_llvm_output_bitcode);
     ATTR_SET ("llvm_dumpasm", int, m_llvm_dumpasm);
     ATTR_SET_STRING ("llvm_prune_ir_strategy", m_llvm_prune_ir_strategy);
@@ -1292,6 +1307,8 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
     ATTR_DECODE ("llvm_debug_layers", int, m_llvm_debug_layers);
     ATTR_DECODE ("llvm_debug_ops", int, m_llvm_debug_ops);
     ATTR_DECODE ("llvm_target_host", int, m_llvm_target_host);
+    ATTR_DECODE ("llvm_debugging_symbols", int, m_llvm_debugging_symbols);
+    ATTR_DECODE ("llvm_profiling_events", int, m_llvm_profiling_events);
     ATTR_DECODE ("llvm_output_bitcode", int, m_llvm_output_bitcode);
     ATTR_DECODE ("llvm_dumpasm", int, m_llvm_dumpasm);
     ATTR_DECODE ("strict_messages", int, m_strict_messages);
@@ -1498,9 +1515,11 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
     }
     if (name == "group_init_name" && type.basetype == TypeDesc::STRING) {
 #ifdef OIIO_HAS_SPRINTF
-        *(ustring *)val = ustring::sprintf ("__direct_callable__group_%d_init", group->id());
+        *(ustring *)val = ustring::sprintf ("__direct_callable__group_%s_%d_init",
+                                            group->name(), group->id());
 #else
-        *(ustring *)val = ustring::format ("__direct_callable__group_%d_init", group->id());
+        *(ustring *)val = ustring::format ("__direct_callable__group_%s_%d_init",
+                                           group->name(), group->id());
 #endif
         return true;
     }

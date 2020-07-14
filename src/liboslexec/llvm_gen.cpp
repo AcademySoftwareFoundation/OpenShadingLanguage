@@ -3797,12 +3797,57 @@ LLVMGEN (llvm_gen_functioncall)
 
     llvm::BasicBlock* after_block = rop.ll.push_function ();
 
+    unsigned int op_num_function_starts_at = opnum+1;
+    unsigned int op_num_function_ends_at = op.jump(0);
+    if (rop.ll.debug_is_enabled()) {
+        Symbol &functionNameSymbol(*rop.opargsym (op, 0));
+        OSL_DASSERT(functionNameSymbol.is_constant());
+        OSL_DASSERT(functionNameSymbol.typespec().is_string());
+        ustring functionName = *(ustring *)functionNameSymbol.data();
+        ustring file_name = rop.inst()->op(op_num_function_starts_at).sourcefile();
+        unsigned int method_line = rop.inst()->op(op_num_function_starts_at).sourceline();
+        rop.ll.debug_push_inlined_function(functionName, file_name, method_line);
+    }
+
     // Generate the code for the body of the function
-    rop.build_llvm_code (opnum+1, op.jump(0));
+    rop.build_llvm_code (op_num_function_starts_at, op_num_function_ends_at);
     rop.ll.op_branch (after_block);
 
     // Continue on with the previous flow
+    if (rop.ll.debug_is_enabled()) {
+        rop.ll.debug_pop_inlined_function();
+    }
     rop.ll.pop_function ();
+
+    return true;
+}
+
+
+
+LLVMGEN (llvm_gen_functioncall_nr)
+{
+    OSL_ASSERT(rop.ll.debug_is_enabled() && "no return version should only exist when debug is enabled");
+    Opcode &op (rop.inst()->ops()[opnum]);
+    OSL_ASSERT (op.nargs() == 1);
+
+    Symbol &functionNameSymbol(*rop.opargsym (op, 0));
+    OSL_ASSERT(functionNameSymbol.is_constant());
+    OSL_ASSERT(functionNameSymbol.typespec().is_string());
+    ustring functionName = *(ustring *)functionNameSymbol.data();
+
+    int op_num_function_starts_at = opnum+1;
+    int op_num_function_ends_at = op.jump(0);
+    OSL_ASSERT(op.farthest_jump() == op_num_function_ends_at
+               && "As we are not doing any branching, we should ensure that the inlined function truly ends at the farthest jump");
+    const Opcode& startop(rop.inst()->op(op_num_function_starts_at));
+    rop.ll.debug_push_inlined_function(functionName,
+                            startop.sourcefile(), startop.sourceline());
+
+    // Generate the code for the body of the function
+    rop.build_llvm_code (op_num_function_starts_at, op_num_function_ends_at);
+
+    // Continue on with the previous flow
+    rop.ll.debug_pop_inlined_function();
 
     return true;
 }

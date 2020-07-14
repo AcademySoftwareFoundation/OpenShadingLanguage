@@ -18,6 +18,13 @@ namespace llvm = LLVM_NAMESPACE;
 namespace llvm {
   class BasicBlock;
   class ConstantFolder;
+  class DIBuilder;
+  class DICompileUnit;
+  class DIFile;
+  class DILocation;
+  class DIScope;
+  class DISubprogram;
+  class DISubroutineType;
   class ExecutionEngine;
   class Function;
   class FunctionType;
@@ -115,6 +122,7 @@ public:
     /// Set the current module to m.
     void module (llvm::Module *m) {
         m_llvm_module = m;
+        m_ModuleIsFinalized = false;
         m_ModuleIsPruned = false;
     }
 
@@ -127,6 +135,16 @@ public:
     llvm::Module *module_from_bitcode (const char *bitcode, size_t size,
                                        const std::string &name=std::string(),
                                        std::string *err=NULL);
+
+    bool debug_is_enabled() const;
+    void debug_setup_compilation_unit(const char * compile_unit_name);
+    void debug_push_function(const std::string & function_name,
+                             OIIO::ustring sourcefile, int sourceline);
+    void debug_pop_function();
+    void debug_push_inlined_function(OIIO::ustring function_name,
+                             OIIO::ustring sourcefile, int sourceline);
+    void debug_pop_inlined_function();
+    void debug_set_location(OIIO::ustring sourcefile, int sourceline);
 
     /// Create a new function (that will later be populated with
     /// instructions) with up to 4 args.
@@ -170,8 +188,15 @@ public:
     /// Create a new JITing ExecutionEngine and make it the current one.
     /// Return a pointer to the new engine.  If err is not NULL, put any
     /// errors there.
+    /// Optionally request a specific ISA for JIT on the host
+    ///     ["x64", "SSE4.2", "AVX", "AVX2", "AVX512"]
+    ///     (ignored if requested ISA not valid for host)
+    /// Optionally enable debugging symbols (source file & line number)
+    /// Optionally enable profiling events
     llvm::ExecutionEngine* make_jit_execengine (std::string *err = nullptr,
-                         TargetISA requestedISA = TargetISA::NONE);
+                         TargetISA requestedISA = TargetISA::NONE,
+                         bool debugging_symbols = false,
+                         bool profiling_events = false);
 
     /// Report the host's TargetISA as chosen by the last call to
     /// make_jit_execengine() or to detect_cpu_features(). Don't call
@@ -212,6 +237,10 @@ public:
             make_jit_execengine();
         return m_llvm_exec;
     }
+
+    void dump_struct_data_layout(llvm::Type *Ty);
+    void validate_struct_data_layout(llvm::Type *Ty,
+              const std::vector<unsigned int>& expected_offset_by_index);
 
     /// Replace the ExecutionEngine (pass NULL to simply delete the
     /// current one).
@@ -273,6 +302,9 @@ public:
     /// resetting the IR insertion point to the block following the
     /// corresponding function call.
     void pop_function ();
+
+    /// Are we inside a function?
+    bool inside_function() const;
 
     /// Return the basic block where we go after returning from the current
     /// function.
@@ -660,7 +692,6 @@ private:
     llvm::legacy::PassManager *m_llvm_module_passes;
     llvm::legacy::FunctionPassManager *m_llvm_func_passes;
     llvm::ExecutionEngine *m_llvm_exec;
-    llvm::JITEventListener *m_vtune_profiler;
     TargetISA m_target_isa = TargetISA::UNKNOWN;
     std::vector<llvm::BasicBlock *> m_return_block;     // stack for func call
     std::vector<llvm::BasicBlock *> m_loop_after_block; // stack for break
@@ -712,6 +743,23 @@ private:
     bool m_supports_avx2 = false;
     bool m_supports_avx = false;
 
+    // Profiling Info
+    llvm::JITEventListener* mVTuneNotifier;
+
+    // Debug Info
+    llvm::DIFile * getOrCreateDebugFileFor(const std::string &file_name);
+    llvm::DIScope * getCurrentDebugScope() const;
+    llvm::DILocation *getCurrentInliningSite() const;
+
+    llvm::DIBuilder* m_llvm_debug_builder;
+    llvm::DICompileUnit *mDebugCU;
+    std::vector<llvm::DIScope *> mLexicalBlocks;
+
+    typedef std::unordered_map<std::string, llvm::DIFile *> FileByNameType;
+    FileByNameType mDebugFileByName;
+    std::vector<llvm::DILocation *> mInliningSites;
+    llvm::DISubroutineType * mSubTypeForInlinedFunction;
+    bool m_ModuleIsFinalized;
     bool m_ModuleIsPruned;
 };
 

@@ -554,6 +554,8 @@ public:
     int llvm_debug_layers () const { return m_llvm_debug_layers; }
     int llvm_debug_ops () const { return m_llvm_debug_ops; }
     int llvm_target_host () const { return m_llvm_target_host; }
+    int llvm_debugging_symbols () const { return m_llvm_debugging_symbols; }
+    int llvm_profiling_events () const { return m_llvm_profiling_events; }
     int llvm_output_bitcode () const { return m_llvm_output_bitcode; }
     ustring llvm_prune_ir_strategy () const { return m_llvm_prune_ir_strategy; }
     bool fold_getattribute () const { return m_opt_fold_getattribute; }
@@ -746,6 +748,8 @@ private:
     int m_llvm_debug_layers;              ///< Add layer enter/exit printfs
     int m_llvm_debug_ops;                 ///< Add printfs to every op
     int m_llvm_target_host;               ///< Target specific host architecture
+    int m_llvm_debugging_symbols;         ///< Generate GDB compatible debug info during JIT
+    int m_llvm_profiling_events;          ///< Emit Intel profiling events during JIT
     int m_llvm_output_bitcode;            ///< Output bitcode for each group
     int m_llvm_dumpasm;                   ///< Output CPU asm of the JIT
     ustring m_llvm_prune_ir_strategy;     ///< LLVM IR pruning strategy

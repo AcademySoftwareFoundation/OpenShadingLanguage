@@ -50,6 +50,7 @@ static std::vector<int> entrylayer_index;
 static std::vector<const ShaderSymbol *> entrylayer_symbols;
 static bool debug1 = false;
 static bool debug2 = false;
+static bool llvm_debug = false;
 static bool verbose = false;
 static bool runstats = false;
 static bool saveptx = false;
@@ -108,6 +109,22 @@ inject_params ()
 static void
 set_shadingsys_options ()
 {
+    // If benchmarking it isn't necessary to clear the memory. however for
+    // unit tests and tracking down early exit issues we may not want the
+    // previous sample's group data masquerading as correct values for the
+    // next sample, who due to a bug, may not have correct control flow and
+    // not actually write to those values.
+    OSL_DEV_ONLY(shadingsys->attribute ("clearmemory", 1));
+
+    // Always generate llvm debugging info
+    shadingsys->attribute ("llvm_debugging_symbols", 1);
+
+    // Always emit llvm Intel profiling events
+    shadingsys->attribute ("llvm_profiling_events", 1);
+
+    OSL_DEV_ONLY(llvm_debug = true);
+    shadingsys->attribute ("llvm_debug", (llvm_debug ? 2 : 0));
+
     shadingsys->attribute ("debug", debug2 ? 2 : (debug1 ? 1 : 0));
     shadingsys->attribute ("compile_report", debug1|debug2);
     int opt = 2;  // default
@@ -432,6 +449,7 @@ getargs (int argc, const char *argv[])
                 "--optix", &use_optix, "Use OptiX if available",
                 "--debug", &debug1, "Lots of debugging info",
                 "--debug2", &debug2, "Even more debugging info",
+                "--llvm_debug", &llvm_debug, "Turn on LLVM debugging info",
                 "--runstats", &runstats, "Print run statistics",
                 "--stats", &runstats, "",  // DEPRECATED 1.7
                 "--profile", &profile, "Print profile information",

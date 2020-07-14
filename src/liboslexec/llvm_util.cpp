@@ -17,7 +17,10 @@
 #endif
 
 #include <llvm/IR/Constants.h>
+#include <llvm/IR/DebugInfo.h>
+#include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Intrinsics.h>
 #include <llvm/IR/Module.h>
@@ -27,6 +30,7 @@
 #include <llvm/Linker/Linker.h>
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/ErrorOr.h>
+#include <llvm/Support/raw_os_ostream.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/ValueSymbolTable.h>
 #include <llvm/Support/TargetRegistry.h>
@@ -273,8 +277,14 @@ LLVM_Util::LLVM_Util (const PerThreadInfo &per_thread_info,
       m_builder(NULL), m_llvm_jitmm(NULL),
       m_current_function(NULL),
       m_llvm_module_passes(NULL), m_llvm_func_passes(NULL),
-      m_llvm_exec(NULL), m_vtune_profiler(NULL),
-      m_vector_width(vector_width)
+      m_llvm_exec(NULL),
+      m_vector_width(vector_width),
+      mVTuneNotifier(nullptr),
+      m_llvm_debug_builder(nullptr),
+      mDebugCU(nullptr),
+      mSubTypeForInlinedFunction(nullptr),
+      m_ModuleIsFinalized(false),
+      m_ModuleIsPruned(false)
 {
     SetupLLVM ();
     m_thread = per_thread_info.get();
@@ -366,6 +376,7 @@ LLVM_Util::~LLVM_Util ()
     delete m_llvm_module_passes;
     delete m_llvm_func_passes;
     delete m_builder;
+    delete m_llvm_debug_builder;
     module (NULL);
     // DO NOT delete m_llvm_jitmm;  // just the dummy wrapper around the real MM
 }
@@ -407,16 +418,315 @@ LLVM_Util::new_module (const char *id)
 
 
 
-inline bool error_string (llvm::Error err, std::string *str) {
-    if (err) {
-        if (str) {
-            llvm::handleAllErrors(std::move(err),
-                      [str](llvm::ErrorInfoBase &E) { *str += E.message(); });
-        }
-        return true;
-    }
-    return false;
+bool
+LLVM_Util::debug_is_enabled() const
+{
+    return m_llvm_debug_builder != nullptr;
 }
+
+
+
+void
+LLVM_Util::debug_setup_compilation_unit(const char * compile_unit_name)
+{
+    OSL_ASSERT(debug_is_enabled());
+    OSL_ASSERT(mDebugCU == nullptr);
+
+    OSL_DEV_ONLY(std::cout << "debug_setup_compilation_unit"<< std::endl);
+
+    constexpr const char * osl_identity = "OSL_v" OSL_LIBRARY_VERSION_STRING;
+
+    mDebugCU = m_llvm_debug_builder->createCompileUnit(
+        /*llvm::dwarf::DW_LANG_C*/
+        llvm::dwarf::DW_LANG_C_plus_plus,
+        m_llvm_debug_builder->createFile(compile_unit_name, // filename
+                "." // directory
+                ),
+        osl_identity, // Identify the producer of debugging information and code. Usually this is a compiler version string.
+        true, // isOptimized
+        "<todo>", // This string lists command line options. This string is directly embedded in debug info output which may be used by a tool analyzing generated debugging information.
+        OSL_VERSION, // This indicates runtime version for languages like Objective-C
+        llvm::StringRef(), // SplitName = he name of the file that we'll split debug info out into.
+        llvm::DICompileUnit::DebugEmissionKind::LineTablesOnly, // DICompileUnit::DebugEmissionKind
+        0, // The DWOId if this is a split skeleton compile unit.
+        false, // SplitDebugInlining = Whether to emit inline debug info.
+        true // DebugInfoForProfiling (default=false) = Whether to emit extra debug info for profile collection.
+        );
+
+    OSL_DEV_ONLY(std::cout << "created debug module for " << compile_unit_name << std::endl);
+}
+
+
+
+void
+LLVM_Util::debug_push_function(const std::string& function_name,
+                               OIIO::ustring sourcefile, int sourceline)
+{
+    OSL_ASSERT(debug_is_enabled());
+#ifdef OSL_DEV
+    std::cout << "debug_push_function function_name=" << function_name
+              << " sourcefile=" << sourcefile
+              << " sourceline=" << sourceline << std::endl;
+#endif
+
+    llvm::DIFile * file = getOrCreateDebugFileFor(sourcefile.string());
+    const unsigned int method_scope_line = 0;
+
+    // Rather than use dummy function parameters, we'll just reuse
+    // the inlined subroutine type of void func(void).
+    // TODO:  Added DIType * for BatchedShaderGlobals  And Groupdata to be
+    // passed into this function so proper function type can be created.
+#if 0
+    llvm::DISubroutineType *subType;
+    {
+        llvm::SmallVector<llvm::Metadata *, 8> EltTys;
+        //llvm::DIType *DblTy = KSTheDebugInfo.getDoubleTy();
+        llvm::DIType *debug_double_type = m_llvm_debug_builder->createBasicType(
+                "double", 64, llvm::dwarf::DW_ATE_float);
+        EltTys.push_back(debug_double_type);
+        EltTys.push_back(debug_double_type);
+
+        subType = m_llvm_debug_builder->createSubroutineType(
+                m_llvm_debug_builder->getOrCreateTypeArray(EltTys));
+    }
+#endif
+
+    OSL_ASSERT(file);
+    llvm::DISubprogram *function = m_llvm_debug_builder->createFunction(
+            mDebugCU, // Scope
+            function_name.c_str(),  // Name
+            /*function_name.c_str()*/ llvm::StringRef(), // Linkage Name
+            file, // File
+            static_cast<unsigned int>(sourceline), // Line Number
+            mSubTypeForInlinedFunction, // subroutine type
+#if OSL_LLVM_VERSION < 80
+            false, // isLocalToUnit
+            true,  // isDefinition
+            method_scope_line,  // Scope Line
+            llvm::DINode::FlagPrototyped, // Flags
+            false // isOptimized
+#else
+            method_scope_line,  // Scope Line
+            llvm::DINode::FlagPrototyped,  // Flags
+            llvm::DISubprogram::toSPFlags(false /*isLocalToUnit*/, true /*isDefinition*/, false /*isOptimized*/)
+#endif
+            );
+
+    OSL_ASSERT(mLexicalBlocks.empty());
+    current_function()->setSubprogram(function);
+    mLexicalBlocks.push_back(function);
+}
+
+
+
+void
+LLVM_Util::debug_push_inlined_function(OIIO::ustring function_name,
+                                       OIIO::ustring sourcefile,
+                                       int sourceline)
+{
+#ifdef OSL_DEV
+    std::cout << "debug_push_inlined_function function_name="<< function_name
+              << " sourcefile=" << sourcefile
+              << " sourceline=" << sourceline << std::endl;
+#endif
+
+    OSL_ASSERT(debug_is_enabled());
+    OSL_ASSERT(m_builder);
+    OSL_ASSERT(m_builder->getCurrentDebugLocation().get() != NULL);
+    mInliningSites.push_back(m_builder->getCurrentDebugLocation().get());
+
+    llvm::DIFile * file = getOrCreateDebugFileFor(sourcefile.string());
+    unsigned int method_scope_line = 0;
+
+    OSL_ASSERT(getCurrentDebugScope());
+
+    llvm::DINode::DIFlags fnFlags = (llvm::DINode::DIFlags)(llvm::DINode::FlagPrototyped | llvm::DINode::FlagNoReturn);
+    llvm::DISubprogram *function = nullptr;
+    function = m_llvm_debug_builder->createFunction(
+        mDebugCU, // Scope
+        function_name.c_str(),  // Name
+        // We are inlined function so not sure supplying a linkage name
+        // makes sense
+        /*function_name.c_str()*/llvm::StringRef(), // Linkage Name
+        file, // File
+        static_cast<unsigned int>(sourceline), // Line Number
+        mSubTypeForInlinedFunction, // subroutine type
+#if OSL_LLVM_VERSION < 80
+        true, // isLocalToUnit
+        true, // isDefinition
+        method_scope_line, // Scope Line
+        fnFlags, // Flags
+        true /*false*/ //isOptimized
+#else
+        method_scope_line, // Scope Line,
+        fnFlags,
+        llvm::DISubprogram::toSPFlags(true /*isLocalToUnit*/, true /*isDefinition*/, true /*false*/ /*isOptimized*/)
+#endif
+        );
+
+    mLexicalBlocks.push_back(function);
+}
+
+
+
+void
+LLVM_Util::debug_pop_inlined_function()
+{
+    OSL_DEV_ONLY(std::cout << "debug_pop_inlined_function"<< std::endl);
+    OSL_ASSERT(debug_is_enabled());
+
+    OSL_ASSERT(!mLexicalBlocks.empty());
+
+    llvm::DIScope *scope = mLexicalBlocks.back();
+    auto *existingLbf = llvm::dyn_cast<llvm::DILexicalBlockFile>(scope);
+    if (existingLbf) {
+        // Allow nesting of exactly one DILexicalBlockFile, unwrap it to a
+        // function.
+        scope = existingLbf->getScope();
+        OSL_DEV_ONLY(std::cout << "DILexicalBlockFile popped"<< std::endl);
+    }
+
+    auto *function = llvm::dyn_cast<llvm::DISubprogram>(scope);
+    OSL_ASSERT(function);
+    mLexicalBlocks.pop_back();
+
+    m_llvm_debug_builder->finalizeSubprogram(function);
+
+    // Return debug location to where the function was inlined from.
+    // Necessary to avoid unnecessarily creating DILexicalBlockFile if the
+    // source file changed.
+    llvm::DILocation *location_inlined_at = mInliningSites.back();
+    OSL_ASSERT(location_inlined_at);
+    OSL_ASSERT(m_builder);
+    m_builder->SetCurrentDebugLocation(llvm::DebugLoc(location_inlined_at));
+    mInliningSites.pop_back();
+}
+
+
+
+void
+LLVM_Util::debug_pop_function()
+{
+    OSL_DEV_ONLY(std::cout << "debug_pop_function" << std::endl);
+    OSL_ASSERT(debug_is_enabled());
+
+    OSL_ASSERT(!mLexicalBlocks.empty());
+    llvm::DIScope *scope = mLexicalBlocks.back();
+    auto *existingLbf = llvm::dyn_cast<llvm::DILexicalBlockFile>(scope);
+    if (existingLbf) {
+        // Allow nesting of exactly one DILexicalBlockFile
+        // Unwrap it to a function
+        scope = existingLbf->getScope();
+        OSL_DEV_ONLY(std::cout << "DILexicalBlockFile popped" << std::endl);
+    }
+
+    auto *function = llvm::dyn_cast<llvm::DISubprogram>(scope);
+    OSL_ASSERT(function);
+
+    mLexicalBlocks.pop_back();
+    OSL_ASSERT(mLexicalBlocks.empty());
+
+    // Make sure our current debug location isn't pointing at a subprogram
+    // that has been finalized, point it back to the compilation unit
+    OSL_ASSERT(m_builder);
+    OSL_ASSERT(m_builder->getCurrentDebugLocation().get() != nullptr);
+    m_builder->SetCurrentDebugLocation(llvm::DebugLoc::get(static_cast<unsigned int>(1),
+                static_cast<unsigned int>(0), /* column?  we don't know it, may be worth tracking through osl->oso*/
+                getCurrentDebugScope()));
+
+    m_llvm_debug_builder->finalizeSubprogram(function);
+}
+
+
+
+void
+LLVM_Util::debug_set_location(ustring sourcefile, int sourceline)
+{
+    OSL_DEV_ONLY(std::cout << "LLVM_Util::debug_set_location:" << sourcefile << "(" << sourceline << ")" << std::endl);
+    OSL_ASSERT(debug_is_enabled());
+    OSL_ASSERT(sourceline > 0 && "GDB doesn't like 0 because its a nonsensical as a line number");
+
+    llvm::DIScope *sp = getCurrentDebugScope();
+    llvm::DILocation *inlineSite = getCurrentInliningSite();
+    OSL_ASSERT(sp != nullptr);
+
+    // If the file changed on us (due to an #include or inlined function
+    // that we missed) update the scope. As we do model inlined functions,
+    // don't expect this code path to be taken unless support for the
+    // functioncall_nr has been disabled.
+    if (sp->getFilename().compare(llvm::StringRef(sourcefile.c_str()))) {
+        llvm::DIFile * file = getOrCreateDebugFileFor(sourcefile.string());
+
+        // Don't nest DILexicalBlockFile's (don't allow DILexicalBlockFile's
+        // to be a parent to another DILexicalBlockFile's). Instead make the
+        // parent of the new DILexicalBlockFile the same as the existing
+        // DILexicalBlockFile's parent.
+        auto *existingLbf = llvm::dyn_cast<llvm::DILexicalBlockFile>(sp);
+        bool requiresNewLBF = true;
+        llvm::DIScope *parentScope;
+        if (existingLbf) {
+            parentScope = existingLbf->getScope();
+            // Only allow a single LBF, check for any logic bugs here
+            OSL_ASSERT(!llvm::dyn_cast<llvm::DILexicalBlockFile>(parentScope));
+            // If the parent scope has the same filename, no need to create
+            // a LBF we can directly use the parentScope.
+            if (!parentScope->getFilename().compare(llvm::StringRef(sourcefile.c_str()))) {
+                // The parent scope has the same file name, we can just use
+                // it directly.
+                sp = parentScope;
+                requiresNewLBF = false;
+            }
+        } else {
+            parentScope = sp;
+        }
+        if (requiresNewLBF) {
+            OSL_ASSERT(parentScope != nullptr);
+            llvm::DILexicalBlockFile *lbf = m_llvm_debug_builder->createLexicalBlockFile(parentScope, file);
+            OSL_DEV_ONLY(std::cout << "createLexicalBlockFile" << std::endl);
+            sp = lbf;
+        }
+
+        // Swap out the current scope for a scope to the correct file
+        mLexicalBlocks.pop_back();
+        mLexicalBlocks.push_back(sp);
+    }
+    OSL_ASSERT(sp != NULL);
+
+
+    OSL_ASSERT(m_builder);
+    const llvm::DebugLoc & current_debug_location = m_builder->getCurrentDebugLocation();
+    bool newDebugLocation = true;
+    if (current_debug_location) {
+        if (sourceline == static_cast<int>(current_debug_location.getLine()) &&
+           sp == current_debug_location.getScope() &&
+           inlineSite == current_debug_location.getInlinedAt () ) {
+            newDebugLocation = false;
+        }
+    }
+    if (newDebugLocation) {
+        llvm::DebugLoc debug_location =
+                llvm::DebugLoc::get(static_cast<unsigned int>(sourceline),
+                        static_cast<unsigned int>(0), /* column?  we don't know it, may be worth tracking through osl->oso*/
+                        sp,
+                        inlineSite);
+        m_builder->SetCurrentDebugLocation(debug_location);
+    }
+}
+
+
+
+namespace { // anonymous
+    inline bool error_string (llvm::Error err, std::string *str) {
+        if (err) {
+            if (str) {
+                llvm::handleAllErrors(std::move(err),
+                          [str](llvm::ErrorInfoBase &E) { *str += E.message(); });
+            }
+            return true;
+        }
+        return false;
+    }
+} // anonymous namespace
 
 
 
@@ -471,6 +781,12 @@ LLVM_Util::new_builder (llvm::BasicBlock *block)
     if (! block)
         block = new_basic_block ();
     m_builder = new IRBuilder (block);
+    if (this->debug_is_enabled()) {
+        OSL_ASSERT(getCurrentDebugScope());
+        m_builder->SetCurrentDebugLocation(llvm::DebugLoc::get(static_cast<unsigned int>(1),
+                static_cast<unsigned int>(0), /* column?  we don't know it, may be worth tracking through osl->oso*/
+                getCurrentDebugScope()));
+    }
 }
 
 
@@ -480,6 +796,7 @@ LLVM_Util::IRBuilder &
 LLVM_Util::builder () {
     if (! m_builder)
         new_builder ();
+    OSL_ASSERT(m_builder);
     return *m_builder;
 }
 
@@ -827,8 +1144,19 @@ LLVM_Util::supports_isa(TargetISA target)
 // if it's doing x86 specific things.
 llvm::ExecutionEngine *
 LLVM_Util::make_jit_execengine (std::string *err,
-                                TargetISA requestedISA)
+                                TargetISA requestedISA,
+                                bool debugging_symbols,
+                                bool profiling_events)
 {
+#if OSL_GNUC_VERSION && OSL_LLVM_VERSION < 71
+    // Due to ABI breakage in LLVM 7.0.[0-1] for llvm::Optional with GCC,
+    // calling any llvm API's that accept an llvm::Optional parameter will break
+    // ABI causing issues.
+    // https://bugs.llvm.org/show_bug.cgi?id=39427
+    // Fixed in llvm 7.1.0+
+    OSL_ASSERT(debugging_symbols == false && "To enable llvm debug symbols with GCC you must use LLVM 7.1.0 or higher");
+#endif
+
     execengine (NULL);   // delete and clear any existing engine
     if (err)
         err->clear ();
@@ -902,16 +1230,63 @@ LLVM_Util::make_jit_execengine (std::string *err,
     if (! m_llvm_exec)
         return NULL;
 
-    // These magic lines will make it so that enough symbol information
-    // is injected so that running vtune will kinda tell you which shaders
-    // you're in, and sometimes which function (only for functions that don't
-    // get inlined. There doesn't seem to be any perf hit from this, either
-    // in code quality or JIT time. It is only enabled, however, if your copy
-    // of LLVM was build with -DLLVM_USE_INTEL_JITEVENTS=ON, otherwise
-    // createIntelJITEventListener() is a stub that just returns nullptr.
-    m_vtune_profiler = llvm::JITEventListener::createIntelJITEventListener();
-    if (m_vtune_profiler)
-        m_llvm_exec->RegisterJITEventListener(m_vtune_profiler);
+    //const llvm::DataLayout & data_layout = m_llvm_exec->getDataLayout();
+    //OSL_DEV_ONLY(std::cout << "data_layout.getStringRepresentation()=" << data_layout.getStringRepresentation() << std::endl);
+
+    OSL_DEV_ONLY(llvm::TargetMachine * target_machine = m_llvm_exec->getTargetMachine());
+    //OSL_DEV_ONLY(std::cout << "target_machine.getTargetCPU()=" << target_machine->getTargetCPU().str() << std::endl);
+    OSL_DEV_ONLY(std::cout << "target_machine.getTargetFeatureString ()=" << target_machine->getTargetFeatureString ().str() << std::endl);
+    //OSL_DEV_ONLY(std::cout << "target_machine.getTargetTriple ()=" << target_machine->getTargetTriple().str() << std::endl);
+
+    // For unknown reasons the MCJIT when constructed registers the GDB listener (which is static)
+    // The following is an attempt to unregister it, and pretend it was never registered in the 1st place
+    // The underlying GDBRegistrationListener is static, so we are leaking it
+    m_llvm_exec->UnregisterJITEventListener(llvm::JITEventListener::createGDBRegistrationListener());
+
+    if (debugging_symbols) {
+        OSL_ASSERT(m_llvm_module != nullptr);
+        OSL_DEV_ONLY(std::cout << "debugging symbols"<< std::endl);
+
+        module()->addModuleFlag(llvm::Module::Error, "Debug Info Version",
+                llvm::DEBUG_METADATA_VERSION);
+
+        OSL_MAYBE_UNUSED unsigned int modulesDebugInfoVersion = 0;
+        if (auto *Val = llvm::mdconst::dyn_extract_or_null < llvm::ConstantInt
+                > (module()->getModuleFlag("Debug Info Version"))) {
+            modulesDebugInfoVersion = Val->getZExtValue();
+        }
+
+        OSL_ASSERT(m_llvm_debug_builder == nullptr && "Only handle creating the debug builder once");
+        m_llvm_debug_builder = new llvm::DIBuilder(*m_llvm_module);
+
+        llvm::SmallVector<llvm::Metadata *, 8> EltTys;
+        mSubTypeForInlinedFunction = m_llvm_debug_builder->createSubroutineType(
+                        m_llvm_debug_builder->getOrCreateTypeArray(EltTys));
+
+        //  OSL_DEV_ONLY(std::cout)
+        //  OSL_DEV_ONLY(       << "------------------>enable_debug_info<-----------------------------module flag['Debug Info Version']= ")
+        //  OSL_DEV_ONLY(       << modulesDebugInfoVersion << std::endl);
+
+        // The underlying GDBRegistrationListener is static, so we are leaking it
+        m_llvm_exec->RegisterJITEventListener(llvm::JITEventListener::createGDBRegistrationListener());
+    }
+
+    if (profiling_events) {
+        // These magic lines will make it so that enough symbol information
+        // is injected so that running vtune will kinda tell you which shaders
+        // you're in, and sometimes which function (only for functions that don't
+        // get inlined. There doesn't seem to be any perf hit from this, either
+        // in code quality or JIT time. It is only enabled, however, if your copy
+        // of LLVM was build with -DLLVM_USE_INTEL_JITEVENTS=ON, otherwise
+        // createIntelJITEventListener() is a stub that just returns nullptr.
+
+        // TODO:  Create better VTune listener that can handle inline fuctions
+        //        https://software.intel.com/en-us/node/544211
+        mVTuneNotifier = llvm::JITEventListener::createIntelJITEventListener();
+        if (mVTuneNotifier != NULL) {
+            m_llvm_exec->RegisterJITEventListener(mVTuneNotifier);
+        }
+    }
 
     // Force it to JIT as soon as we ask it for the code pointer,
     // don't take any chances that it might JIT lazily, since we
@@ -923,14 +1298,116 @@ LLVM_Util::make_jit_execengine (std::string *err,
 
 
 
+namespace /*anonymous*/ {
+// The return value of llvm::StructLayout::getAlignment()
+// changed from an int to llvm::Align, hide with accessor function
+#if OSL_LLVM_VERSION < 100
+    uint64_t get_alignment(const llvm::StructLayout * layout) {
+        return layout->getAlignment();
+    }
+#else
+    uint64_t get_alignment(const llvm::StructLayout * layout) {
+        return layout->getAlignment().value();
+    }
+#endif
+} // namespace anonymous
+
+
+
+void
+LLVM_Util::dump_struct_data_layout(llvm::Type *Ty)
+{
+    OSL_ASSERT(Ty);
+    OSL_ASSERT(Ty->isStructTy());
+
+    llvm::StructType *structTy = static_cast<llvm::StructType *>(Ty);
+    const llvm::DataLayout & data_layout = m_llvm_exec->getDataLayout();
+
+    int number_of_elements = structTy->getNumElements();
+    const llvm::StructLayout * layout = data_layout.getStructLayout (structTy);
+    std::cout << "dump_struct_data_layout: getSizeInBytes(" << layout->getSizeInBytes() << ") "
+        << " getAlignment(" << get_alignment(layout) << ")"
+        << " hasPadding(" << layout->hasPadding() << ")" << std::endl;
+    for(int index=0; index < number_of_elements; ++index) {
+        llvm::Type * et = structTy->getElementType(index);
+        std::cout << "   element[" << index << "] offset in bytes = " << layout->getElementOffset(index) <<
+                " type is ";
+        {
+            llvm::raw_os_ostream os_cout(std::cout);
+            et->print(os_cout);
+        }
+        std::cout << std::endl;
+    }
+
+}
+
+
+
+void
+LLVM_Util::validate_struct_data_layout(llvm::Type *Ty, const std::vector<unsigned int> & expected_offset_by_index)
+{
+    OSL_ASSERT(Ty);
+    OSL_ASSERT(Ty->isStructTy());
+
+    llvm::StructType *structTy = static_cast<llvm::StructType *>(Ty);
+    const llvm::DataLayout & data_layout = m_llvm_exec->getDataLayout();
+
+    int number_of_elements = structTy->getNumElements();
+
+    const llvm::StructLayout * layout = data_layout.getStructLayout (structTy);
+    OSL_DEV_ONLY(std::cout << "dump_struct_data_layout: getSizeInBytes(" << layout->getSizeInBytes() << ") ")
+    OSL_DEV_ONLY(    << " getAlignment(" << get_alignment(layout) << ")")
+    OSL_DEV_ONLY(    << " hasPadding(" << layout->hasPadding() << ")" << std::endl);
+
+    for (int index = 0; index < number_of_elements; ++index) {
+        OSL_DEV_ONLY(llvm::Type * et = structTy->getElementType(index));
+
+        auto actual_offset = layout->getElementOffset(index);
+
+        OSL_ASSERT(index < static_cast<int>(expected_offset_by_index.size()));
+        OSL_DEV_ONLY(std::cout << "   element[" << index << "] offset in bytes = " << actual_offset << " expect offset = " << expected_offset_by_index[index] <<)
+        OSL_DEV_ONLY(        " type is ");
+        {
+            llvm::raw_os_ostream os_cout(std::cout);
+            OSL_DEV_ONLY(        et->print(os_cout));
+        }
+        OSL_ASSERT(expected_offset_by_index[index] == actual_offset);
+        OSL_DEV_ONLY(std::cout << std::endl);
+    }
+    if (static_cast<int>(expected_offset_by_index.size()) != number_of_elements) {
+        std::cout << "   expected " << expected_offset_by_index.size() << " members but actual member count is = " << number_of_elements << std::endl;
+        OSL_ASSERT(static_cast<int>(expected_offset_by_index.size()) == number_of_elements);
+    }
+}
+
+
+
 void
 LLVM_Util::execengine (llvm::ExecutionEngine *exec)
 {
-    delete m_llvm_exec;
-    m_llvm_exec = exec;
+    if (nullptr != m_llvm_exec) {
+        if (nullptr != mVTuneNotifier) {
+            // We explicitly remove the VTune listener, so it can't be notified of the object's release.
+            // As we are holding onto the memory backing the object, this should be fine.
+            // It is necessary because a profiler could try and lookup info from an object that otherwise
+            // would have been unregistered.
+            m_llvm_exec->UnregisterJITEventListener(mVTuneNotifier);
+            delete mVTuneNotifier;
+            mVTuneNotifier = nullptr;
+        }
 
-    delete m_vtune_profiler;
-    m_vtune_profiler = nullptr;
+        if (debug_is_enabled()) {
+            // We explicitly remove the GDB listener, so it can't be notified of the object's release.
+            // As we are holding onto the memory backing the object, this should be fine.
+            // It is necessary because a debugger could try and lookup info from an object that otherwise
+            // would have been unregistered.
+
+            // The GDB listener is a static object, we really aren't creating one here
+            m_llvm_exec->UnregisterJITEventListener(llvm::JITEventListener::createGDBRegistrationListener());
+        }
+        delete m_llvm_exec;
+    }
+    m_llvm_exec = exec;
 }
 
 
@@ -938,9 +1415,22 @@ LLVM_Util::execengine (llvm::ExecutionEngine *exec)
 void *
 LLVM_Util::getPointerToFunction (llvm::Function *func)
 {
-    OSL_DASSERT(func && "passed NULL to getPointerToFunction");
+    OSL_DASSERT (func && "passed NULL to getPointerToFunction");
+
+    if (debug_is_enabled()) {
+        // We have to finalize debug info before jit happens
+        m_llvm_debug_builder->finalize();
+    }
+
     llvm::ExecutionEngine *exec = execengine();
-    exec->finalizeObject ();
+    OSL_ASSERT(!exec->isCompilingLazily());
+    if (!m_ModuleIsFinalized) {
+        // Avoid lock overhead when called repeatedly
+        // We don't need to finalize for each function we get
+        exec->finalizeObject ();
+        m_ModuleIsFinalized = true;
+    }
+
     void *f = exec->getPointerToFunction (func);
     OSL_ASSERT (f && "could not getPointerToFunction");
     return f;
@@ -1421,7 +1911,7 @@ LLVM_Util::current_function_arg (int a)
 llvm::BasicBlock *
 LLVM_Util::new_basic_block (const std::string &name)
 {
-    return llvm::BasicBlock::Create (context(), name, current_function());
+    return llvm::BasicBlock::Create (context(), debug() ? name : llvm::Twine::createNull(), current_function());
 }
 
 
@@ -1429,10 +1919,21 @@ LLVM_Util::new_basic_block (const std::string &name)
 llvm::BasicBlock *
 LLVM_Util::push_function (llvm::BasicBlock *after)
 {
+    OSL_DEV_ONLY(std::cout << "push_function" << std::endl);
+
     if (! after)
-        after = new_basic_block ();
+        after = new_basic_block ("after_function");
     m_return_block.push_back (after);
+
     return after;
+}
+
+
+
+bool
+LLVM_Util::inside_function() const
+{
+    return (false == m_return_block.empty());
 }
 
 
@@ -1440,6 +1941,8 @@ LLVM_Util::push_function (llvm::BasicBlock *after)
 void
 LLVM_Util::pop_function ()
 {
+    OSL_DEV_ONLY(std::cout << "pop_function" << std::endl);
+
     OSL_DASSERT (! m_return_block.empty());
     builder().SetInsertPoint (m_return_block.back());
     m_return_block.pop_back ();
@@ -2610,6 +3113,47 @@ LLVM_Util::func_name (llvm::Function *func)
     return func->getName().str();
 }
 
+
+
+llvm::DIFile *
+LLVM_Util::getOrCreateDebugFileFor(const std::string &file_name)
+{
+    auto iter = mDebugFileByName.find(file_name);
+    if (iter == mDebugFileByName.end()) {
+        //OSL_DEV_ONLY(std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>CREATING FILE<<<<<<<<<<<<<<<<<<<<<<<<< " << file_name << std::endl);
+        OSL_ASSERT(m_llvm_debug_builder != nullptr);
+        llvm::DIFile *file = m_llvm_debug_builder->createFile(
+                file_name, ".\\");
+        mDebugFileByName.insert(std::make_pair(file_name,file));
+        return file;
+    }
+    return iter->second;
+}
+
+
+
+llvm::DIScope *
+LLVM_Util::getCurrentDebugScope() const
+{
+    OSL_ASSERT(mDebugCU != nullptr);
+    if (mLexicalBlocks.empty()) {
+        return mDebugCU;
+    } else {
+        return mLexicalBlocks.back();
+    }
+}
+
+
+
+llvm::DILocation *
+LLVM_Util::getCurrentInliningSite() const
+{
+    if (mInliningSites.empty()) {
+        return nullptr;
+    } else {
+        return mInliningSites.back();
+    }
+}
 
 }; // namespace pvt
 OSL_NAMESPACE_EXIT

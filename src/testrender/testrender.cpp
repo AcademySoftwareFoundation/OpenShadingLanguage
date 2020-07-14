@@ -83,6 +83,10 @@ set_shadingsys_options ()
         shadingsys->attribute ("options", extraoptions);
     if (texoptions.size())
         shadingsys->texturesys()->attribute ("options", texoptions);
+    // Always generate llvm debugging info and profiling events
+    shadingsys->attribute ("llvm_debugging_symbols", 1);
+    shadingsys->attribute ("llvm_profiling_events", 1);
+
     shadingsys_options_set = true;
 }
 

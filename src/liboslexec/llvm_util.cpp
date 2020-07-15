@@ -966,17 +966,29 @@ LLVM_Util::do_optimize (std::string *out_err)
     OSL_ASSERT (m_llvm_module && "No module to optimize!");
 
 #if !defined(OSL_FORCE_BITCODE_PARSE)
-    LLVMErr err = m_llvm_module->materializeAll();
-    if (error_string(std::move(err), out_err))
-        return;
+    // Pruning would have already materialized all necessary functions and
+    // removed the rest from the module.
+    if (!m_ModuleIsPruned) {
+        LLVMErr err = m_llvm_module->materializeAll();
+        if (error_string(std::move(err), out_err))
+            return;
+     }
 #endif
 
+#if 1
+    // To improve compile time, choose to avoid overhead of optimizaing
+    // functions independently from the module level.
+    m_llvm_func_passes->doInitialization();
+    m_llvm_module_passes->run (*m_llvm_module);
+    m_llvm_func_passes->doFinalization();
+#else
     m_llvm_func_passes->doInitialization();
     for (auto&& I : m_llvm_module->functions())
         if (!I.isDeclaration())
             m_llvm_func_passes->run(I);
     m_llvm_func_passes->doFinalization();
     m_llvm_module_passes->run (*m_llvm_module);
+#endif
 }
 
 

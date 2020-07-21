@@ -61,7 +61,7 @@ Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
 \date{{\large Date: 31 Mar 2018 \\
- (with corrections, 12 Apr 2019)
+ (with corrections, 21 Jul 2020)
 }
 \bigskip
 \bigskip
@@ -1860,7 +1860,7 @@ reference to a named space:
 
 \noindent The first form creates the matrix that transforms points from
 \shaderspace to \commonspace.  Transforming points by this matrix
-is identical to calling {\cf transform("shader",...)}.
+is identical to calling {\cf transform("shader", "common", ...)}.
 The second form prepends the current-to-world transformation matrix
 onto the $4 \times 4$ matrix with components $m_{0,0} ... m_{3,3}$.
 Note that although we have used {\cf "shader"} and {\cf "world"}

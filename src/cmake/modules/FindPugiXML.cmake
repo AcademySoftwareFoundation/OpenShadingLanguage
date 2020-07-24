@@ -23,7 +23,7 @@ if (NOT PUGIXML_INCLUDE_DIR AND (OPENIMAGEIO_INCLUDES OR OpenImageIO_ROOT))
                NAMES pugixml.hpp
                PATHS ${OpenImageIO_ROOT}/include/OpenImageIO
                      ${OPENIMAGEIO_INCLUDES}
-               PATH_SUFFIXES OpenImageIO)
+               PATH_SUFFIXES OpenImageIO detail/pugixml OpenImageIO/detail/pugixml)
 endif ()
 if (NOT PUGIXML_LIBRARY AND (OPENIMAGEIO_INCLUDES OR OpenImageIO_ROOT) AND PUGIXML_INCLUDE_DIR)
     set (PUGIXML_LIBRARY ${OPENIMAGEIO_LIBRARIES})

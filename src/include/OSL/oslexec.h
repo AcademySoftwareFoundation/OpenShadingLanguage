@@ -667,20 +667,20 @@ public:
     /// to the optimizer, and will be determined strictly at execution time.
     void set_raytypes(ShaderGroup *group, int raytypes_on, int raytypes_off);
 
-    /// Ensure that the group has been optimized and JITed. The ctx pointer
+    /// Ensure that the group has been optimized and optionally JITed. The ctx pointer
     /// supplies a ShadingContext to use.
-    void optimize_group (ShaderGroup *group, ShadingContext *ctx);
+    void optimize_group (ShaderGroup *group, ShadingContext *ctx, bool do_jit = true);
 
-    /// Ensure that the group has been optimized and JITed. This is a
+    /// Ensure that the group has been optimized and optionally JITed. This is a
     /// convenience function that simply calls set_raytypes followed by
     /// optimize_group. The ctx supplies a ShadingContext to use.
     void optimize_group (ShaderGroup *group, int raytypes_on,
-                         int raytypes_off, ShadingContext *ctx);
+                         int raytypes_off, ShadingContext *ctx, bool do_jit = true);
 
     /// If option "greedyjit" was set, this call will trigger all
     /// shader groups that have not yet been compiled to do so with the
     /// specified number of threads (0 means use all available HW cores).
-    void optimize_all_groups (int nthreads=0);
+    void optimize_all_groups (int nthreads=0, bool do_jit = true);
 
     /// Return a pointer to the TextureSystem being used.
     TextureSystem * texturesys () const;

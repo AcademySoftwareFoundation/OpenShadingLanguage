@@ -53,6 +53,9 @@ static bool debug2 = false;
 static bool llvm_debug = false;
 static bool verbose = false;
 static bool runstats = false;
+static bool vary_Pdxdy = false;
+static bool vary_Udxdy = false;
+static bool vary_Vdxdy = false;
 static bool saveptx = false;
 static bool warmup = false;
 static bool profile = false;
@@ -452,6 +455,9 @@ getargs (int argc, const char *argv[])
                 "--llvm_debug", &llvm_debug, "Turn on LLVM debugging info",
                 "--runstats", &runstats, "Print run statistics",
                 "--stats", &runstats, "",  // DEPRECATED 1.7
+                "--vary_pdxdy", &vary_Pdxdy, "populate Dx(P) & Dy(P) with varying values (vs. uniform)",
+                "--vary_udxdy", &vary_Udxdy, "populate Dx(U) & Dy(U) with varying values (vs. uniform)",
+                "--vary_vdxdy", &vary_Vdxdy, "populate Dx(V) & Dy(V) with varying values (vs. uniform)",
                 "--profile", &profile, "Print profile information",
                 "--saveptx", &saveptx, "Save the generated PTX (OptiX mode only)",
                 "--warmup", &warmup, "Perform a warmup launch",
@@ -619,23 +625,48 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
         // centers of each pixel.
         sg.u = uscale * (float)(x+0.5f) / xres + uoffset;
         sg.v = vscale * (float)(y+0.5f) / yres + voffset;
-        sg.dudx = uscale / xres;
-        sg.dvdy = vscale / yres;
+        if (vary_Udxdy) {
+            sg.dudx = 1.0f - sg.u;
+            sg.dudy = sg.u;
+        } else {
+            sg.dudx = uscale / xres;
+        }
+        if (vary_Vdxdy) {
+            sg.dvdx = 1.0f - sg.v;
+            sg.dvdy = sg.v;
+        } else {
+            sg.dvdy = vscale / yres;
+        }
     } else {
         // Our patch is like a Reyes grid of points, with the border
         // samples being exactly on u,v == 0 or 1.
         sg.u = uscale * ((xres == 1) ? 0.5f : (float) x / (xres - 1)) + uoffset;
         sg.v = vscale * ((yres == 1) ? 0.5f : (float) y / (yres - 1)) + voffset;
-        sg.dudx = uscale / std::max (1, xres-1);
-        sg.dvdy = vscale / std::max (1, yres-1);
+        if (vary_Udxdy) {
+            sg.dudx = 1.0f - sg.u;
+            sg.dudy = sg.u;
+        } else {
+            sg.dudx = uscale / std::max (1, xres-1);
+        }
+        if (vary_Vdxdy) {
+            sg.dvdx = 1.0f - sg.v;
+            sg.dvdy = sg.v;
+        } else {
+            sg.dvdy = vscale / std::max (1, yres-1);
+        }
     }
 
     // Assume that position P is simply (u,v,1), that makes the patch lie
     // on [0,1] at z=1.
     sg.P = Vec3 (sg.u, sg.v, 1.0f);
     // Derivatives with respect to x,y
-    sg.dPdx = Vec3 (sg.dudx, sg.dudy, 0.0f);
-    sg.dPdy = Vec3 (sg.dvdx, sg.dvdy, 0.0f);
+    if (vary_Pdxdy) {
+        sg.dPdx = Vec3 (1.0f - sg.u, 1.0f - sg.v, sg.u*0.5);
+        sg.dPdy = Vec3 (1.0f - sg.v, 1.0f - sg.u, sg.v*0.5);
+    } else {
+        sg.dPdx = Vec3 (uscale / std::max (1, xres-1), 0.0f, 0.0f);
+        sg.dPdy = Vec3 (0.0f, vscale / std::max (1, yres-1), 0.0f);
+    }
     sg.dPdz = Vec3 (0.0f, 0.0f, 0.0f);  // just use 0 for volume tangent
     // Tangents of P with respect to surface u,v
     sg.dPdu = Vec3 (1.0f, 0.0f, 0.0f);

@@ -583,7 +583,7 @@ public:
     /// The group is set and won't be changed again; take advantage of
     /// this by optimizing the code knowing all our instance parameters
     /// (at least the ones that can't be overridden by the geometry).
-    void optimize_group (ShaderGroup &group, ShadingContext *ctx);
+    void optimize_group (ShaderGroup &group, ShadingContext *ctx, bool do_jit);
 
     /// After doing all optimization and code JIT, we can clean up by
     /// deleting the instances' code and arguments, and paring their
@@ -610,7 +610,7 @@ public:
 
     int raytype_bit (ustring name);
 
-    void optimize_all_groups (int nthreads=0, int mythread=0, int totalthreads=1);
+    void optimize_all_groups (int nthreads=0, int mythread=0, int totalthreads=1, bool do_jit=true);
 
     typedef std::unordered_map<ustring,OpDescriptor,ustringHash> OpDescriptorMap;
 
@@ -1404,7 +1404,7 @@ public:
 
     /// Clear the layers
     ///
-    void clear () { m_layers.clear ();  m_optimized = 0;  m_executions = 0; }
+    void clear () { m_layers.clear ();  m_optimized = 0;  m_jitted = 0; m_executions = 0; }
 
     /// Append a new shader instance on to the end of this group
     ///
@@ -1424,6 +1424,9 @@ public:
 
     int optimized () const { return m_optimized; }
     void optimized (int opt) { m_optimized = opt; }
+
+    int jitted () const { return m_jitted; }
+    void jitted (int jitted) { m_jitted = jitted; }
 
     size_t llvm_groupdata_size () const { return m_llvm_groupdata_size; }
     void llvm_groupdata_size (size_t size) { m_llvm_groupdata_size = size; }
@@ -1527,6 +1530,7 @@ private:
     // needed on every shade execution at the front of the struct, as much
     // together on one cache line as possible.
     volatile int m_optimized = 0;    ///< Is it already optimized?
+    volatile int m_jitted = 0;       ///< Is it already jitted?
     bool m_does_nothing = false;     ///< Is the shading group just func() { return; }
     size_t m_llvm_groupdata_size = 0;///< Heap size needed for its groupdata
     int m_id;                        ///< Unique ID for the group

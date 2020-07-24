@@ -477,9 +477,9 @@ ShadingSystem::raytype_bit (ustring name)
 
 
 void
-ShadingSystem::optimize_all_groups (int nthreads)
+ShadingSystem::optimize_all_groups (int nthreads, bool do_jit)
 {
-    return m_impl->optimize_all_groups (nthreads);
+    return m_impl->optimize_all_groups (nthreads, 0 /*mythread*/, 1 /*totalthreads*/, do_jit);
 }
 
 
@@ -527,10 +527,10 @@ ShadingSystem::set_raytypes (ShaderGroup *group, int raytypes_on, int raytypes_o
 
 
 void
-ShadingSystem::optimize_group (ShaderGroup *group, ShadingContext *ctx)
+ShadingSystem::optimize_group (ShaderGroup *group, ShadingContext *ctx, bool do_jit)
 {
     if (group)
-        m_impl->optimize_group (*group, ctx);
+        m_impl->optimize_group (*group, ctx, do_jit);
 }
 
 
@@ -538,11 +538,12 @@ ShadingSystem::optimize_group (ShaderGroup *group, ShadingContext *ctx)
 void
 ShadingSystem::optimize_group (ShaderGroup *group,
                                int raytypes_on, int raytypes_off,
-                               ShadingContext *ctx)
+                               ShadingContext *ctx,
+                               bool do_jit)
 {
     // convenience function for backwards compatibility
     set_raytypes (group, raytypes_on, raytypes_off);
-    optimize_group (group, ctx);
+    optimize_group (group, ctx, do_jit);
 }
 
 
@@ -1077,6 +1078,18 @@ ShadingSystemImpl::query_closure(const char **name, int *id,
 
 ShadingSystemImpl::~ShadingSystemImpl ()
 {
+    size_t ngroups = m_all_shader_groups.size();
+    for (size_t i = 0;  i < ngroups;  ++i) {
+        if (ShaderGroupRef g = m_all_shader_groups[i].lock()) {
+            if (!g->jitted() ) {
+                // As we are now lazier in jitting and need to keep the OSL IR
+                // around in case we want to create a batched JIT or vice versa
+                // we may have OSL IR to cleanup
+                group_post_jit_cleanup(*g);
+            }
+        }
+    }
+
     printstats ();
     // N.B. just let m_texsys go -- if we asked for one to be created,
     // we asked for a shared one.
@@ -1562,7 +1575,7 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
     if (! group->optimized()) {
         auto threadinfo = create_thread_info();
         auto ctx = get_context(threadinfo);
-        optimize_group (*group, ctx);
+        optimize_group (*group, ctx, false /*jit*/);
         release_context(ctx);
         destroy_thread_info (threadinfo);
     }
@@ -2922,14 +2935,15 @@ ShadingSystemImpl::group_post_jit_cleanup (ShaderGroup &group)
 
 
 void
-ShadingSystemImpl::optimize_group (ShaderGroup &group, ShadingContext *ctx)
+ShadingSystemImpl::optimize_group (ShaderGroup &group, ShadingContext *ctx, bool do_jit)
 {
-    if (group.optimized())
-        return;    // already optimized
+    if (group.optimized() && (!do_jit || group.jitted()))
+        return;    // already optimized and optionally jitted
 
     OIIO::Timer timer;
     lock_guard lock (group.m_mutex);
-    if (group.optimized()) {
+    bool need_jit = do_jit && !group.jitted();
+    if (group.optimized() && !need_jit) {
         // The group was somehow optimized by another thread between the
         // time we checked group.optimized() and now that we have the lock.
         // Nothing to do but record how long we waited for the lock.
@@ -2947,6 +2961,7 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group, ShadingContext *ctx)
         // how long we waited for the lock.
         group.does_nothing (true);
         group.m_optimized = true;
+        group.m_jitted = true;
         spin_lock stat_lock (m_stat_mutex);
         double t = timer();
         m_stat_optimization_time += t;
@@ -2963,63 +2978,80 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group, ShadingContext *ctx)
         ctx = get_context(thread_info);
         ctx_allocated = true;
     }
-    RuntimeOptimizer rop (*this, group, ctx);
-    rop.run ();
-    rop.police_failed_optimizations();
+    if (!group.optimized()) {
+        RuntimeOptimizer rop (*this, group, ctx);
+        rop.run ();
+        rop.police_failed_optimizations();
 
-    // Copy some info recorded by the RuntimeOptimizer into the group
-    group.m_unknown_textures_needed = rop.m_unknown_textures_needed;
-    for (auto&& f : rop.m_textures_needed)
-        group.m_textures_needed.push_back (f);
-    group.m_unknown_closures_needed = rop.m_unknown_closures_needed;
-    for (auto&& f : rop.m_closures_needed)
-        group.m_closures_needed.push_back (f);
-    for (auto&& f : rop.m_globals_needed)
-        group.m_globals_needed.push_back (f);
-    group.m_globals_read = rop.m_globals_read;
-    group.m_globals_write = rop.m_globals_write;
-    size_t num_userdata = rop.m_userdata_needed.size();
-    group.m_userdata_names.reserve (num_userdata);
-    group.m_userdata_types.reserve (num_userdata);
-    group.m_userdata_offsets.resize (num_userdata, 0);
-    group.m_userdata_derivs.reserve (num_userdata);
-    group.m_userdata_layers.reserve (num_userdata);
-    group.m_userdata_init_vals.reserve (num_userdata);
-    for (auto&& n : rop.m_userdata_needed) {
-        group.m_userdata_names.push_back (n.name);
-        group.m_userdata_types.push_back (n.type);
-        group.m_userdata_derivs.push_back (n.derivs);
-        group.m_userdata_layers.push_back (n.layer_num);
-        group.m_userdata_init_vals.push_back (n.data);
+        // Copy some info recorded by the RuntimeOptimizer into the group
+        group.m_unknown_textures_needed = rop.m_unknown_textures_needed;
+        for (auto&& f : rop.m_textures_needed)
+            group.m_textures_needed.push_back (f);
+        group.m_unknown_closures_needed = rop.m_unknown_closures_needed;
+        for (auto&& f : rop.m_closures_needed)
+            group.m_closures_needed.push_back (f);
+        for (auto&& f : rop.m_globals_needed)
+            group.m_globals_needed.push_back (f);
+        group.m_globals_read = rop.m_globals_read;
+        group.m_globals_write = rop.m_globals_write;
+        size_t num_userdata = rop.m_userdata_needed.size();
+        group.m_userdata_names.reserve (num_userdata);
+        group.m_userdata_types.reserve (num_userdata);
+        group.m_userdata_offsets.resize (num_userdata, 0);
+        group.m_userdata_derivs.reserve (num_userdata);
+        group.m_userdata_layers.reserve (num_userdata);
+        group.m_userdata_init_vals.reserve (num_userdata);
+        for (auto&& n : rop.m_userdata_needed) {
+            group.m_userdata_names.push_back (n.name);
+            group.m_userdata_types.push_back (n.type);
+            group.m_userdata_derivs.push_back (n.derivs);
+            group.m_userdata_layers.push_back (n.layer_num);
+            group.m_userdata_init_vals.push_back (n.data);
+        }
+        group.m_unknown_attributes_needed = rop.m_unknown_attributes_needed;
+        for (auto&& f : rop.m_attributes_needed) {
+            group.m_attributes_needed.push_back (f.name);
+            group.m_attribute_scopes.push_back (f.scope);
+        }
+        group.m_optimized = true;
+
+        spin_lock stat_lock (m_stat_mutex);
+        if (!need_jit) {
+            m_stat_opt_locking_time += locking_time;
+            m_stat_optimization_time += timer();
+        }
+        m_stat_opt_locking_time += rop.m_stat_opt_locking_time;
+        m_stat_opt_locking_time += locking_time + rop.m_stat_opt_locking_time;
+        m_stat_specialization_time += rop.m_stat_specialization_time;
     }
-    group.m_unknown_attributes_needed = rop.m_unknown_attributes_needed;
-    for (auto&& f : rop.m_attributes_needed) {
-        group.m_attributes_needed.push_back (f.name);
-        group.m_attribute_scopes.push_back (f.scope);
+
+    if (need_jit) {
+        BackendLLVM lljitter (*this, group, ctx);
+        lljitter.run ();
+
+        // NOTE: it is now possible to optimize and not JIT
+        // which would leave the cleanup to happen
+        // when the ShadingSystem is destroyed
+        group_post_jit_cleanup (group);
+
+        group.m_jitted = true;
+        spin_lock stat_lock (m_stat_mutex);
+        m_stat_opt_locking_time += locking_time;
+        m_stat_optimization_time += timer();
+        m_stat_total_llvm_time += lljitter.m_stat_total_llvm_time;
+        m_stat_llvm_setup_time += lljitter.m_stat_llvm_setup_time;
+        m_stat_llvm_irgen_time += lljitter.m_stat_llvm_irgen_time;
+        m_stat_llvm_opt_time += lljitter.m_stat_llvm_opt_time;
+        m_stat_llvm_jit_time += lljitter.m_stat_llvm_jit_time;
+        m_stat_max_llvm_local_mem = std::max (m_stat_max_llvm_local_mem,
+                                              lljitter.m_llvm_local_mem);
     }
-
-    BackendLLVM lljitter (*this, group, ctx);
-    lljitter.run ();
-
-    group_post_jit_cleanup (group);
 
     if (ctx_allocated) {
         release_context(ctx);
         destroy_thread_info(thread_info);
     }
 
-    group.m_optimized = true;
-    spin_lock stat_lock (m_stat_mutex);
-    m_stat_optimization_time += timer();
-    m_stat_opt_locking_time += locking_time + rop.m_stat_opt_locking_time;
-    m_stat_specialization_time += rop.m_stat_specialization_time;
-    m_stat_total_llvm_time += lljitter.m_stat_total_llvm_time;
-    m_stat_llvm_setup_time += lljitter.m_stat_llvm_setup_time;
-    m_stat_llvm_irgen_time += lljitter.m_stat_llvm_irgen_time;
-    m_stat_llvm_opt_time += lljitter.m_stat_llvm_opt_time;
-    m_stat_llvm_jit_time += lljitter.m_stat_llvm_jit_time;
-    m_stat_max_llvm_local_mem = std::max (m_stat_max_llvm_local_mem,
-                                          lljitter.m_llvm_local_mem);
     m_stat_groups_compiled += 1;
     m_stat_instances_compiled += group.nlayers();
     m_groups_to_compile_count -= 1;
@@ -3027,15 +3059,15 @@ ShadingSystemImpl::optimize_group (ShaderGroup &group, ShadingContext *ctx)
 
 
 
-static void optimize_all_groups_wrapper (ShadingSystemImpl *ss, int mythread, int totalthreads)
+static void optimize_all_groups_wrapper (ShadingSystemImpl *ss, int mythread, int totalthreads, bool do_jit)
 {
-    ss->optimize_all_groups (1, mythread, totalthreads);
+    ss->optimize_all_groups (1, mythread, totalthreads, do_jit);
 }
 
 
 
 void
-ShadingSystemImpl::optimize_all_groups (int nthreads, int mythread, int totalthreads)
+ShadingSystemImpl::optimize_all_groups (int nthreads, int mythread, int totalthreads, bool do_jit)
 {
     // Spawn a bunch of threads to do this in parallel -- just call this
     // routine again (with threads=1) for each thread.
@@ -3048,7 +3080,7 @@ ShadingSystemImpl::optimize_all_groups (int nthreads, int mythread, int totalthr
         OIIO::thread_group threads;
         m_threads_currently_compiling += nthreads;
         for (int t = 0;  t < nthreads;  ++t)
-            threads.add_thread (new std::thread (optimize_all_groups_wrapper, this, t, nthreads));
+            threads.add_thread (new std::thread (optimize_all_groups_wrapper, this, t, nthreads, do_jit));
         threads.join_all ();
         m_threads_currently_compiling -= nthreads;
         return;
@@ -3071,7 +3103,7 @@ ShadingSystemImpl::optimize_all_groups (int nthreads, int mythread, int totalthr
                 group = m_all_shader_groups[i].lock();
             }
             if (group && group->m_complete)
-                optimize_group (*group, ctx);
+                optimize_group (*group, ctx, do_jit);
         }
     }
     release_context(ctx);

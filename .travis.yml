@@ -23,6 +23,7 @@ addons:
       - python-numpy
       - ninja-build
       - libfreetype6-dev
+      - libpugixml-dev
    packages: &common-boost-packages
       - libboost1.58-dev
       - libboost-filesystem1.58
@@ -51,6 +52,7 @@ install:
     - if [ $TRAVIS_OS_NAME == osx ] ; then source src/build-scripts/install_homebrew_deps.bash ; fi
     - if [ "$BUILD_CMAKE" == "1" ] ; then source src/build-scripts/build_cmake.bash ; fi
     - source src/build-scripts/build_llvm.bash ;
+    - if [ $TRAVIS_OS_NAME == linux ] ; then source src/build-scripts/build_pybind11.bash ; fi
     - if [ $TRAVIS_OS_NAME == linux ] ; then CXX="ccache $CXX" source src/build-scripts/build_openexr.bash ; fi
 
       # Note: can remove the ILMBASE_HOME/OPENEXR_HOME when OIIO 2.x is floor

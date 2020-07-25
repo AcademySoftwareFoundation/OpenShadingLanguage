@@ -35,7 +35,7 @@ brew upgrade --display-times python && true
 brew link --overwrite python
 brew install --display-times flex bison
 brew install --display-times libtiff ilmbase openexr
-brew install --display-times opencolorio partio
+brew install --display-times opencolorio partio pugixml
 brew install --display-times freetype libpng && true
 brew install --display-times llvm${LLVMBREWVER}
 brew install --display-times qt

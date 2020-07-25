@@ -44,10 +44,9 @@ add_definitions ("-DPTX_PATH=\"${OSL_PTX_INSTALL_DIR}\"")
 add_executable (testrender ${testrender_srcs})
 target_include_directories (testrender
                             BEFORE PRIVATE ${CUDA_INCLUDES} ${OPTIX_INCLUDES})
-target_include_directories (testrender PRIVATE ${PUGIXML_INCLUDES})
 target_link_libraries (testrender
     PRIVATE
         oslexec oslquery
-        ${PUGIXML_LIBRARIES}
+        pugixml
         ${CUDA_LIBRARIES} ${CUDA_EXTRA_LIBS} ${OPTIX_LIBRARIES} ${OPTIX_EXTRA_LIBS})
 install ( TARGETS testrender RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )

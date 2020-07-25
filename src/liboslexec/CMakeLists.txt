@@ -182,7 +182,6 @@ target_include_directories (${local_lib}
         ${ILMBASE_INCLUDES}
     PRIVATE
         "${CMAKE_SOURCE_DIR}/src/liboslcomp"
-        ${PUGIXML_INCLUDES}
     )
 target_compile_definitions (${local_lib} PRIVATE OSL_EXPORTS)
 if (partio_FOUND)
@@ -205,7 +204,7 @@ target_link_libraries (${local_lib}
     PUBLIC
         ${OPENIMAGEIO_LIBRARIES} ${ILMBASE_LIBRARIES}
     PRIVATE
-        ${PUGIXML_LIBRARIES}
+        pugixml
         ${ZLIB_LIBRARIES}
         ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
         ${CLANG_LIBRARIES}

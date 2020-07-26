@@ -151,7 +151,7 @@ API changes, new options, new ShadingSystem features (for renderer writers):
   build option OSL_BUILD_MATRIALX to ON). This will eventually be deprecated
   entirely. #1136 (1.11.5)
 * Helper varieties of ShadingSystem::Parameter() and ReParameter() that
-  handele the common cases of a single float, int, or string. #1195 #1196
+  handle the common cases of a single float, int, or string. #1195 #1196
   (1.11.6)
 
 Continued work on experimental SIMD batched shading mode:

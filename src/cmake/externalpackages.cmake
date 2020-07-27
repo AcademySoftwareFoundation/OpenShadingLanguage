@@ -36,9 +36,12 @@ message (STATUS "*   - To exclude an optional dependency (even if found),")
 message (STATUS "*     -DUSE_Package=OFF or set environment var USE_Package=OFF ")
 message (STATUS "${ColorReset}")
 
-set (OSL_LOCAL_DEPS_PATH "${CMAKE_SOURCE_DIR}/ext/dist" CACHE STRING
+# Place where locally built (by src/build-scripts/*) dependencies go.
+# Put it first in the prefix path.
+set (OSL_LOCAL_DEPS_DIR "${CMAKE_SOURCE_DIR}/ext/dist" CACHE STRING
      "Local area for dependencies added to CMAKE_PREFIX_PATH")
-list (APPEND CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/ext/dist)
+list (INSERT CMAKE_PREFIX_PATH 0 ${OSL_LOCAL_DEPS_DIR})
+message (STATUS "CMAKE_PREFIX_PATH = ${CMAKE_PREFIX_PATH}")
 
 set (REQUIED_DEPS "" CACHE STRING
      "Additional dependencies to consider required (semicolon-separated list, or ALL)")
@@ -225,7 +228,7 @@ if (OPENIMAGEIO_FOUND)
 endif ()
 
 
-checked_find_package (PugiXML REQUIRED)
+checked_find_package (pugixml REQUIRED)
 
 
 # LLVM library setup

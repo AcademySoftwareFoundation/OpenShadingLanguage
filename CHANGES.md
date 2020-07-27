@@ -151,7 +151,7 @@ API changes, new options, new ShadingSystem features (for renderer writers):
   build option OSL_BUILD_MATRIALX to ON). This will eventually be deprecated
   entirely. #1136 (1.11.5)
 * Helper varieties of ShadingSystem::Parameter() and ReParameter() that
-  handele the common cases of a single float, int, or string. #1195 #1196
+  handle the common cases of a single float, int, or string. #1195 #1196
   (1.11.6)
 
 Continued work on experimental SIMD batched shading mode:
@@ -1434,7 +1434,7 @@ Build & test system improvements and developer goodies:
 * We now use Travis-CI to do continuous integration and testing of every
   checkin and PR for a variety of platform / compiler / option combinations.
   #592,595,600 (1.7.1)
-* Get rid of the "make doxygen" targer, which did nothing. (1.7.1)
+* Get rid of the "make doxygen" target, which did nothing. (1.7.1)
 * Build scripts automatically use ccache if available and in an obvious
   location. This can be forcefully disabled by setting USE_CCACHE=0.
   #595,597 (1.7.1)

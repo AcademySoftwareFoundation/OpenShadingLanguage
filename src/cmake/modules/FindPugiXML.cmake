@@ -23,7 +23,9 @@ find_library (PUGIXML_LIBRARY
 if (NOT PUGIXML_INCLUDE_DIR AND OPENIMAGEIO_INCLUDE_DIR)
     find_path (PUGIXML_INCLUDE_DIR
                NAMES pugixml.hpp
-               PATHS ${OPENIMAGEIO_INCLUDE_DIR}/OpenImageIO)
+               PATHS ${OPENIMAGEIO_INCLUDE_DIR}/OpenImageIO
+                     ${OPENIMAGEIO_INCLUDES}
+               PATH_SUFFIXES OpenImageIO detail/pugixml OpenImageIO/detail/pugixml)
     set (PUGIXML_LIBRARY ${OPENIMAGEIO_LIBRARIES})
 endif ()
 

@@ -155,7 +155,7 @@ osl_format (const char* format_str, ...)
 {
     va_list args;
     va_start (args, format_str);
-    std::string s = Strutil::vformat (format_str, args);
+    std::string s = Strutil::vsprintf (format_str, args);
     va_end (args);
     return ustring(s).c_str();
 }
@@ -171,7 +171,7 @@ osl_printf (ShaderGlobals *sg, const char* format_str, ...)
     std::string newfmt = std::string("llvm: ") + format_str;
     format_str = newfmt.c_str();
 #endif
-    std::string s = Strutil::vformat (format_str, args);
+    std::string s = Strutil::vsprintf (format_str, args);
     va_end (args);
     sg->context->messagef("%s", s);
 }
@@ -182,7 +182,7 @@ osl_error (ShaderGlobals *sg, const char* format_str, ...)
 {
     va_list args;
     va_start (args, format_str);
-    std::string s = Strutil::vformat (format_str, args);
+    std::string s = Strutil::vsprintf (format_str, args);
     va_end (args);
     sg->context->errorf("%s", s);
 }
@@ -194,7 +194,7 @@ osl_warning (ShaderGlobals *sg, const char* format_str, ...)
     if (sg->context->allow_warnings()) {
         va_list args;
         va_start (args, format_str);
-        std::string s = Strutil::vformat (format_str, args);
+        std::string s = Strutil::vsprintf (format_str, args);
         va_end (args);
         sg->context->warningf("%s", s);
     }
@@ -208,7 +208,7 @@ osl_fprintf (ShaderGlobals* /*sg*/, const char *filename,
 {
     va_list args;
     va_start (args, format_str);
-    std::string s = Strutil::vformat (format_str, args);
+    std::string s = Strutil::vsprintf (format_str, args);
     va_end (args);
 
     static OIIO::mutex fprintf_mutex;

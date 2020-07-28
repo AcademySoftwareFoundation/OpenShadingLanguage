@@ -178,7 +178,11 @@ osl_format (const char* format_str, ...)
 {
     va_list args;
     va_start (args, format_str);
+#if OIIO_VERSION > 20000
     std::string s = Strutil::vsprintf (format_str, args);
+#else
+    std::string s = Strutil::vformat (format_str, args);
+#endif
     va_end (args);
     return ustring(s).c_str();
 }
@@ -194,7 +198,11 @@ osl_printf (ShaderGlobals *sg, const char* format_str, ...)
     std::string newfmt = std::string("llvm: ") + format_str;
     format_str = newfmt.c_str();
 #endif
+#if OIIO_VERSION > 20000
     std::string s = Strutil::vsprintf (format_str, args);
+#else
+    std::string s = Strutil::vformat (format_str, args);
+#endif
     va_end (args);
     sg->context->message ("%s", s);
 }
@@ -205,7 +213,11 @@ osl_error (ShaderGlobals *sg, const char* format_str, ...)
 {
     va_list args;
     va_start (args, format_str);
+#if OIIO_VERSION > 20000
     std::string s = Strutil::vsprintf (format_str, args);
+#else
+    std::string s = Strutil::vformat (format_str, args);
+#endif
     va_end (args);
     sg->context->error ("%s", s);
 }
@@ -217,7 +229,11 @@ osl_warning (ShaderGlobals *sg, const char* format_str, ...)
     if (sg->context->allow_warnings()) {
         va_list args;
         va_start (args, format_str);
+#if OIIO_VERSION > 20000
         std::string s = Strutil::vsprintf (format_str, args);
+#else
+        std::string s = Strutil::vformat (format_str, args);
+#endif
         va_end (args);
         sg->context->warning ("%s", s);
     }
@@ -231,7 +247,11 @@ osl_fprintf (ShaderGlobals *sg, const char *filename,
 {
     va_list args;
     va_start (args, format_str);
+#if OIIO_VERSION > 20000
     std::string s = Strutil::vsprintf (format_str, args);
+#else
+    std::string s = Strutil::vformat (format_str, args);
+#endif
     va_end (args);
 
     static OIIO::mutex fprintf_mutex;

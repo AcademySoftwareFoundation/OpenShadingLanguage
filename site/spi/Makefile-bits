@@ -265,7 +265,7 @@ ifeq (${SP_OS}, rhel7)
             -DOPENEXR_LIBRARY_DIR=/usr/lib64/OpenEXR2
     endif
 
-    Partio_VERSION ?= 1.10.3
+    Partio_VERSION ?= 1.10.6
     partio_ROOT ?= ${REZ_PACKAGE_ROOT}/partio/${Partio_VERSION}/${SPI_COMPILER_PLATFORM}/python-${PYTHON_VERSION}/boost-${BOOSTVERSSP}
     MY_CMAKE_FLAGS += -Dpartio_ROOT="${partio_ROOT}"
 

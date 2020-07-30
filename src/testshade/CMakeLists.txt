@@ -38,15 +38,13 @@ if (USE_OPTIX)
              DESTINATION ${OSL_PTX_INSTALL_DIR})
 endif()
 
-add_definitions ("-DPTX_PATH=\"${OSL_PTX_INSTALL_DIR}\"")
-
 add_executable ( testshade ${testshade_srcs} testshademain.cpp )
-target_include_directories (testshade
-                            BEFORE PRIVATE ${CUDA_INCLUDES} ${OPTIX_INCLUDES})
+
 target_link_libraries (testshade
                        PRIVATE
-                           oslexec oslquery
-                           ${CUDA_LIBRARIES} ${CUDA_EXTRA_LIBS}  ${OPTIX_LIBRARIES} ${OPTIX_EXTRA_LIBS})
+                           oslexec oslquery)
+
+
 install (TARGETS testshade RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
 
 # The 'libtestshade' library
@@ -61,8 +59,7 @@ set_target_properties (libtestshade
 
 target_link_libraries (libtestshade
                        PRIVATE
-                           oslexec oslquery
-                           ${CUDA_LIBRARIES} ${OPTIX_LIBRARIES} ${OPTIX_EXTRA_LIBS})
+                           oslexec oslquery)
 set_target_properties (libtestshade PROPERTIES PREFIX "")
 
 install_targets ( libtestshade )
@@ -75,3 +72,5 @@ target_link_libraries (testshade_dso
                            ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} )
 install (TARGETS testshade_dso RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
 
+osl_optix_target(testshade)
+osl_optix_target(libtestshade)

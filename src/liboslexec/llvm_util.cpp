@@ -29,6 +29,7 @@
 #include <llvm/IR/DataLayout.h>
 #include <llvm/Linker/Linker.h>
 #include <llvm/Support/FileSystem.h>
+#include <llvm/Support/Host.h>
 #include <llvm/Support/ErrorOr.h>
 #include <llvm/Support/raw_os_ostream.h>
 #include <llvm/IR/LegacyPassManager.h>
@@ -61,6 +62,7 @@
 #include <llvm/Transforms/Utils/SymbolRewriter.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 #include <llvm/Analysis/TargetTransformInfo.h>
+#include <llvm/Analysis/TargetLibraryInfo.h>
 
 #ifdef OSL_USE_OPTIX
 #include <optix.h>
@@ -105,8 +107,16 @@ static OIIO::spin_mutex llvm_global_mutex;
 static bool setup_done = false;
 static std::unique_ptr<std::vector<std::shared_ptr<LLVMMemoryManager> >> jitmm_hold;
 static int jit_mem_hold_users = 0;
-}; // end anon namespace
 
+static inline llvm::VectorType* llvmVectorGet(llvm::Type *llvmType, unsigned width) {
+#if OSL_LLVM_VERSION < 110
+    return llvm::VectorType::get(llvmType, width);
+#else
+    return llvm::VectorType::get(llvmType, width, false);
+#endif
+}
+
+}; // end anon namespace
 
 
 // ScopedJitMemoryUser will keep jitmm_hold alive until the last instance
@@ -345,16 +355,16 @@ LLVM_Util::LLVM_Util (const PerThreadInfo &per_thread_info,
     // Setup up wide aliases
     // TODO:  why are there casts to the base class llvm::Type *?
     m_vector_width = OIIO::floor2(OIIO::clamp(m_vector_width, 4, 16));
-    m_llvm_type_wide_float = llvm::VectorType::get(m_llvm_type_float, m_vector_width);
-    m_llvm_type_wide_double = llvm::VectorType::get(m_llvm_type_double, m_vector_width);
-    m_llvm_type_wide_int = llvm::VectorType::get(m_llvm_type_int, m_vector_width);
-    m_llvm_type_wide_bool = llvm::VectorType::get(m_llvm_type_bool, m_vector_width);
-    m_llvm_type_wide_char = llvm::VectorType::get(m_llvm_type_char, m_vector_width);
-    m_llvm_type_wide_longlong = llvm::VectorType::get(m_llvm_type_longlong, m_vector_width);
+    m_llvm_type_wide_float = llvmVectorGet(m_llvm_type_float, m_vector_width);
+    m_llvm_type_wide_double = llvmVectorGet(m_llvm_type_double, m_vector_width);
+    m_llvm_type_wide_int = llvmVectorGet(m_llvm_type_int, m_vector_width);
+    m_llvm_type_wide_bool = llvmVectorGet(m_llvm_type_bool, m_vector_width);
+    m_llvm_type_wide_char = llvmVectorGet(m_llvm_type_char, m_vector_width);
+    m_llvm_type_wide_longlong = llvmVectorGet(m_llvm_type_longlong, m_vector_width);
     
     m_llvm_type_wide_char_ptr = llvm::PointerType::get(m_llvm_type_wide_char, 0);
-    m_llvm_type_wide_ustring_ptr = llvm::VectorType::get(m_llvm_type_char_ptr, m_vector_width);
-    m_llvm_type_wide_void_ptr = llvm::VectorType::get(m_llvm_type_void_ptr, m_vector_width);
+    m_llvm_type_wide_ustring_ptr = llvmVectorGet(m_llvm_type_char_ptr, m_vector_width);
+    m_llvm_type_wide_void_ptr = llvmVectorGet(m_llvm_type_void_ptr, m_vector_width);
     m_llvm_type_wide_int_ptr = llvm::PointerType::get(m_llvm_type_wide_int, 0);
     m_llvm_type_wide_bool_ptr = llvm::PointerType::get(m_llvm_type_wide_bool, 0);
     m_llvm_type_wide_float_ptr = llvm::PointerType::get(m_llvm_type_wide_float, 0);
@@ -1224,7 +1234,7 @@ LLVM_Util::make_jit_execengine (std::string *err,
     }
 
     m_llvm_type_native_mask = m_supports_avx512f ? m_llvm_type_wide_bool
-                : llvm::VectorType::get(m_llvm_type_int, m_vector_width);
+                : llvmVectorGet(m_llvm_type_int, m_vector_width);
 
     m_llvm_exec = engine_builder.create();
     if (! m_llvm_exec)
@@ -1769,7 +1779,7 @@ LLVM_Util::internalize_module_functions (const std::string &prefix,
 {
     for (llvm::Function& func : module()->getFunctionList()) {
         llvm::Function *sym = &func;
-        std::string symname = sym->getName();
+        std::string symname = sym->getName().str();
         if (prefix.size() && ! OIIO::Strutil::starts_with(symname, prefix))
             continue;
         bool needed = false;
@@ -2106,7 +2116,7 @@ LLVM_Util::wide_constant (llvm::Value * constant_val)
 {
     llvm::Constant *cv = llvm::dyn_cast<llvm::Constant>(constant_val);
     OSL_ASSERT(cv  != nullptr);
-    return llvm::ConstantVector::getSplat(m_vector_width, cv);
+    return llvm::ConstantDataVector::getSplat(m_vector_width, cv);
 }
 
 
@@ -2119,7 +2129,7 @@ LLVM_Util::constant (float f)
 llvm::Value *
 LLVM_Util::wide_constant (float f)
 {
-    return llvm::ConstantVector::getSplat(m_vector_width, llvm::ConstantFP::get (context(), llvm::APFloat(f)));
+    return llvm::ConstantDataVector::getSplat(m_vector_width, llvm::ConstantFP::get (context(), llvm::APFloat(f)));
 }
 
 llvm::Value *
@@ -2167,7 +2177,7 @@ LLVM_Util::constant128 (uint64_t left, uint64_t right)
 llvm::Value *
 LLVM_Util::wide_constant (int i)
 {
-    return llvm::ConstantVector::getSplat(m_vector_width, llvm::ConstantInt::get (context(), llvm::APInt(32,i)));
+    return llvm::ConstantDataVector::getSplat(m_vector_width, llvm::ConstantInt::get (context(), llvm::APInt(32,i)));
 }
 
 llvm::Value *
@@ -2181,7 +2191,7 @@ llvm::Value *
 LLVM_Util::wide_constant (size_t i)
 {
     int bits = sizeof(size_t)*8;
-    return llvm::ConstantVector::getSplat(m_vector_width, llvm::ConstantInt::get (context(), llvm::APInt(bits,i)));
+    return llvm::ConstantDataVector::getSplat(m_vector_width, llvm::ConstantInt::get (context(), llvm::APInt(bits,i)));
 }
 
 llvm::Value *
@@ -2193,7 +2203,7 @@ LLVM_Util::constant_bool (bool i)
 llvm::Value *
 LLVM_Util::wide_constant_bool (bool i)
 {
-    return llvm::ConstantVector::getSplat(m_vector_width, llvm::ConstantInt::get (context(), llvm::APInt(1,i)));
+    return llvm::ConstantDataVector::getSplat(m_vector_width, llvm::ConstantInt::get (context(), llvm::APInt(1,i)));
 }
 
 llvm::Value *
@@ -2394,11 +2404,14 @@ LLVM_Util::op_alloca (llvm::Type *llvmtype, int n, const std::string &name, int 
     llvm::AllocaInst* allocainst = builder().CreateAlloca (llvmtype, numalloc,
                                     debug() ? name : llvm::Twine::createNull());
     if (align > 0) {
-#if OSL_LLVM_VERSION >= 100
-        allocainst->setAlignment (llvm::MaybeAlign(align));
+#if OSL_LLVM_VERSION >= 110
+        using AlignmentType = llvm::Align;
+#elif OSL_LLVM_VERSION >= 100
+        using AlignmentType = llvm::MaybeAlign;
 #else
-        allocainst->setAlignment (align);
+        using AlignmentType = int;
 #endif
+        allocainst->setAlignment (AlignmentType(align));
     }
     OSL_ASSERT(previousIP.isSet());
     m_builder->restoreIP(previousIP);
@@ -2434,7 +2447,12 @@ LLVM_Util::call_function (llvm::Value *func, cspan<llvm::Value *> args)
         llvm::outs() << "\t" << *(args[i]) << "\n";
 #endif
     //llvm_gen_debug_printf (std::string("start ") + std::string(name));
+#if OSL_LLVM_VERSION >= 110
+    OSL_DASSERT(llvm::isa<llvm::Function>(func));
+    llvm::Value *r = builder().CreateCall(llvm::cast<llvm::Function>(func), llvm::ArrayRef<llvm::Value *>(args.data(), args.size()));
+#else
     llvm::Value *r = builder().CreateCall (func, llvm::ArrayRef<llvm::Value *>(args.data(), args.size()));
+#endif
     //llvm_gen_debug_printf (std::string(" end  ") + std::string(name));
     return r;
 }
@@ -2933,8 +2951,9 @@ LLVM_Util::op_fabs (llvm::Value *v)
     OSL_ASSERT (v->getType() == type_float() || v->getType() == type_wide_float());
     llvm::Type* types[] = { v->getType() };
 
-    llvm::Value *func = llvm::Intrinsic::getDeclaration(module(), llvm::Intrinsic::fabs,
+    llvm::Function *func = llvm::Intrinsic::getDeclaration(module(), llvm::Intrinsic::fabs,
                                        types);
+
     llvm::Value *fabs_call = builder().CreateCall(func, { v });
     return fabs_call;
 }

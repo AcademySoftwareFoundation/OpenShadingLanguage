@@ -354,6 +354,46 @@ Documentation:
   example for others writing renderers. #1202 (1.11.6)
 
 
+Release 1.10.13 -- 1 Aug 2020 (compared to 1.10.12)
+---------------------------------------------------
+* Small changes to build cleanly against OIIO 2.2.
+* Fixes to build against fmtlib 7.0. #1156 #1219
+* Docs fixes related to matrix constructors with coordinate systems names.
+
+Release 1.10.12 -- 1 Jul 2020 (compared to 1.10.11)
+---------------------------------------------------
+* Fix bug in regex_search and regex_match where the optimizer could
+  misunderstand which parameters were written. #1186
+* Fix warnings when building with gcc9 or gcc10.
+* Build cleanly against Qt5.15. #1204
+
+Release 1.10.11 -- 1 Jun 2020 (compared to 1.10.10)
+---------------------------------------------------
+* Fixes to support building against LLVM 9 on some distributions. #1171
+* When building against LLVM 10, enforce requirement for C++14 with
+  appropriate warning when using C++11. #1135
+* Switch to using CMAKE_CXX_STANDARD as the main way to request particular
+  C++ standard versions. (USE_CPP should continue to work, though.)
+* Fixes to MINGW compile, and make sure all stream file I/O is UTF-8 safe.
+  #1188
+
+Release 1.10.10 -- 9 May 2020 (compared to 1.10.9)
+--------------------------------------------------
+* Support for building against LLVM 10.0. #1128 #1162
+  Note that LLVM 10 can only be used if you are building OSL with C++14
+  or newer.
+* Change default of `OSL_BUILD_MATERIALX` to OFF. This will probably be
+  deprecated entirely for 1.11's (or 2.0's) final release. But in the mean
+  time, we have drifted out of sync with MX, which has their own copies of
+  this now, so we're disabling building of these shaders by default.
+
+Release 1.10.9 -- 1 Feb 2020 (compared to 1.10.8)
+--------------------------------------------------
+* Windows fix for incorrectly interpreting paths to oslc.exe as if they were
+  "escaped" strings -- for example, `"c:\path\to\new\oslc"` should not be
+  interpreted as `"c:\path<tab>o<newline>ewoslc"`. #1101
+* Speed up OSL `concat()` function. #1103
+
 Release 1.10.8 -- 1 Dec 2019 (compared to 1.10.7)
 --------------------------------------------------
 * Fix dual implementation of division so that the value is consistent with

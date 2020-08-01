@@ -107,7 +107,7 @@ branches:
 matrix:
     fast_finish: true
     include:
-      - name: "VFX Platform 2018 (gcc6, c++14), llvm 7, OIIO release, avx/f16c"
+      - name: "VFX Platform 2018 (gcc6, c++14), llvm 7, OIIO 2.1, avx/f16c"
         os: linux
         compiler: gcc
         addons:
@@ -122,7 +122,7 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: WHICHGCC=6 USE_CPP=14 LLVM_VERSION=7.0.0 OIIOBRANCH=release USE_SIMD=avx,f16c BUILD_CMAKE=1
+        env: WHICHGCC=6 USE_CPP=14 LLVM_VERSION=7.0.0 OIIOBRANCH=Release-2.1.18.0 USE_SIMD=avx,f16c BUILD_CMAKE=1
       - name: "MacOS (latest Apple clang, llvm 10, OIIO master, latest homebrew libs"
         os: osx
         compiler: clang
@@ -142,7 +142,7 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: WHICHGCC=4.8 USE_CPP=11 LLVM_VERSION=6.0.1 USE_SIMD=sse4.2 OIIOBRANCH=RB-2.0
+        env: WHICHGCC=4.8 USE_CPP=11 LLVM_VERSION=6.0.1 USE_SIMD=sse4.2 OIIOBRANCH=Release-2.0.14
       - name: "Older things: llvm 5, OIIO 1.8/oldest, boost 1.55"
         os: linux
         compiler: gcc
@@ -160,7 +160,7 @@ matrix:
               - libboost-wave1.55
         env: WHICHGCC=4.8 USE_CPP=11 LLVM_VERSION=5.0.0 USE_SIMD=sse4.2 OIIOBRANCH=Release-1.8.17
         if: branch =~ /(master|RB|travis)/ OR type = pull_request
-      - name: "gcc7, llvm7, C++11"
+      - name: "gcc7, llvm7, C++11, OIIO 2.1"
         os: linux
         compiler: gcc
         addons:
@@ -175,9 +175,9 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: WHICHGCC=7 USE_CPP=11 LLVM_VERSION=7.0.0 BUILD_CMAKE=1
+        env: WHICHGCC=7 USE_CPP=11 LLVM_VERSION=7.0.0 BUILD_CMAKE=1 OIIOBRANCH=RB-2.1
         if: branch =~ /(master|RB|travis)/ OR type = pull_request
-      - name: "Future: gcc8, C++14, LLVM 8, OIIO master, AVX/f16c"
+      - name: "Future: gcc8, C++14, LLVM 8, OIIO 2.2, AVX/f16c"
         os: linux
         compiler: gcc
         addons:
@@ -192,8 +192,8 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: WHICHGCC=8 USE_CPP=14 LLVM_VERSION=8.0.0 USE_SIMD=avx,f16c BUILD_CMAKE=1
-      - name: "DEBUG build, LLVM 7, OIIO release"
+        env: WHICHGCC=8 USE_CPP=14 LLVM_VERSION=8.0.0 USE_SIMD=avx,f16c BUILD_CMAKE=1 OIIOBRANCH=RB-2.2
+      - name: "DEBUG build, LLVM 7, OIIO 2.2"
         os: linux
         compiler: gcc
         addons:
@@ -208,7 +208,7 @@ matrix:
               - libboost-system1.55
               - libboost-thread1.55
               - libboost-wave1.55
-        env: DEBUG=1 LLVM_VERSION=7.0.0 OIIOBRANCH=release BUILD_CMAKE=1
+        env: DEBUG=1 LLVM_VERSION=7.0.0 OIIOBRANCH=RB-2.2 BUILD_CMAKE=1
       - name: "Oldest everything: LLVM 4, OIIO 1.8, no simd"
         os: linux
         compiler: gcc

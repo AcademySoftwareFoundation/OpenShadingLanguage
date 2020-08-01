@@ -1,7 +1,34 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.11 --1 Sept 2020 (compared to 1.10)
+Release 1.12 -- ?? (compared to 1.11)
+--------------------------------------------------
+Dependency and standards changes:
+
+OSL Language and oslc compiler:
+
+OSL Standard library:
+
+API changes, new options, new ShadingSystem features (for renderer writers):
+
+Continued work on experimental SIMD batched shading mode:
+
+Continued work on experimental OptiX rendering:
+
+Performance improvements:
+
+Bug fixes and other improvements (internals):
+
+Internals/developer concerns:
+
+Build & test system improvements:
+
+Documentation:
+
+
+
+
+Release 1.11 -- 1 Sept 2020 (compared to 1.10)
 --------------------------------------------------
 ASWF adoption changes:
 * GOVERNANCE.md and ASWF/Technical-Charter.md document the project

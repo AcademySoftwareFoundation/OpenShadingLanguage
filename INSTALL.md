@@ -12,11 +12,11 @@ Dependencies
 OSL requires the following dependencies or tools.
 NEW or CHANGED dependencies since the last major release are **bold**.
 
-* Build system: [CMake](https://cmake.org/) 3.12 or newer
+* Build system: [CMake](https://cmake.org/) 3.12 or newer (tested through 3.18)
 
 * A suitable C++11 compiler to build OSL itself, which may be any of:
-   - GCC 4.8.5 or newer (through gcc 10)
-   - Clang 3.4 or newer (through clang 10)
+   - GCC 4.8.5 or newer (tested through gcc 10)
+   - Clang 3.4 or newer (tested through clang 10)
    - Microsoft Visual Studio 2015 or newer
    - Intel C++ compiler icc version 13 (?) or newer
 
@@ -24,7 +24,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
   required (unless you are using LLVM >= 10, in which case at least C++14
   is needed).
 
-* **[OpenImageIO](http://openimageio.org) 2.0 or newer**
+* **[OpenImageIO](http://openimageio.org) 2.0 or newer** (tested through 2.2)
 
     OSL uses OIIO both for its texture mapping functionality as well as
     numerous utility classes.  If you are integrating OSL into an existing
@@ -50,7 +50,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
   later. If you *must* build OSL with C++11, you need to use an LLVM that
   is LLVM 9 or earlier.
 
-* [Boost](www.boost.org) 1.55 or newer (tested through boost 1.72)
+* [Boost](www.boost.org) 1.55 or newer (tested through boost 1.73)
 * [Ilmbase](http://openexr.com/downloads.html) 2.0 or newer (tested through 2.5)
 * [Flex](https://github.com/westes/flex) and
   [GNU Bison](https://www.gnu.org/software/bison/)

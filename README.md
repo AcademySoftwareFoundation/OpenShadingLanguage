@@ -250,8 +250,10 @@ Films using OSL (grouped by year of release date):
   The Interview
 * **(2015)**
   American Sniper,
-  Insurgent, Avengers Age of Ultron,
-  Ant Man, Pixels,
+  Insurgent,
+  Avengers Age of Ultron,
+  Ant Man,
+  Pixels,
   Mission Impossible: Rogue Nation,
   Hotel Transylvania 2,
   Bridge of Spies,
@@ -260,10 +262,13 @@ Films using OSL (grouped by year of release date):
   Concussion
 * **(2016)**
   Allegiant,
-  Batman vs Superman: Dawn of Justice, The Huntsman,
-  Angry Birds Movie, Alice Through the Looking Glass,
+  Batman vs Superman: Dawn of Justice,
+  The Huntsman,
+  Angry Birds Movie,
+  Alice Through the Looking Glass,
   Captain America: Civil War,
-  Finding Dory, Piper,
+  Finding Dory,
+  Piper,
   Independence Day: Resurgence,
   Ghostbusters,
   Star Trek Beyond,
@@ -341,6 +346,7 @@ Films using OSL (grouped by year of release date):
   Spider-Man: Far From Home,
   Hobbs & Shaw,
   Angry Birds 2,
+  The Art of Racing in the Rain,
   Secret Life of Pets,
   The Mandalorian,
   The Dark Crystal: Age of Resistance,
@@ -350,6 +356,11 @@ Films using OSL (grouped by year of release date):
   Game of Thrones,
   Lost in Space,
 * **(2020 / upcoming)**
+  Birds of Prey,
+  Onward,
+  Greyhound,
+  The Old Guard,
+  Mulan,
   ...
 
 

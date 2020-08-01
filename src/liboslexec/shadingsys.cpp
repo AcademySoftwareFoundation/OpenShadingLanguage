@@ -387,7 +387,7 @@ const void*
 ShadingSystem::symbol_address (const ShadingContext &ctx,
                                const ShaderSymbol *sym) const
 {
-    return sym ? ctx.symbol_data (*(const Symbol *)sym) : NULL;
+    return ctx.symbol_data (*(const Symbol *)sym);
 }
 
 

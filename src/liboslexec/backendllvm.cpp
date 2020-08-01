@@ -925,8 +925,8 @@ llvm::Value *
 BackendLLVM::userdata_initialized_ref (int userdata_index)
 {
     int fieldnum = 1; // field 1 is the userdata_initialized array
-    llvm::Value *userdata_initiazlied = groupdata_field_ref (fieldnum);
-    return ll.GEP (userdata_initiazlied, 0, userdata_index);
+    llvm::Value *userdata_initialized = groupdata_field_ref (fieldnum);
+    return ll.GEP (userdata_initialized, 0, userdata_index);
 }
 
 

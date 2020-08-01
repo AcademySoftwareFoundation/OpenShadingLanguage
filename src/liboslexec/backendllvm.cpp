@@ -238,6 +238,8 @@ BackendLLVM::llvm_global_symbol_ptr (ustring name)
     // we use the name of the global to find the index of the field within
     // the ShaderGlobals struct.
     int sg_index = ShaderGlobalNameToIndex (name);
+    if (sg_index < 0)
+        std::cerr << "shader global: " << name << " could not be found...." << std::endl;
     OSL_ASSERT (sg_index >= 0);
     return ll.void_ptr (ll.GEP (sg_ptr(), 0, sg_index));
 }

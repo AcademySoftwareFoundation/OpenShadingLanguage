@@ -10,7 +10,7 @@ OSL requires the following dependencies or tools.
 NEW or CHANGED dependencies since the last major release are **bold**.
 
 * Build system: [CMake](https://cmake.org/) 3.2.2 or newer (tested through
-  3.15)
+  3.18)
 
 * A suitable C++11 compiler to build OSL itself, which may be any of:
    - GCC 4.8.5 or newer (through gcc 8)
@@ -22,7 +22,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
   required.
 
 * **[OpenImageIO](http://openimageio.org) 1.8.5 or newer** (tested through
-    2.1)
+    2.2)
 
     OSL uses OIIO both for its texture mapping functionality as well as
     numerous utility classes.  If you are integrating OSL into an existing
@@ -48,8 +48,9 @@ NEW or CHANGED dependencies since the last major release are **bold**.
    OSL source. If not found, it will fall back on Boost Wave (but on many
    platforms, that requires that Boost has been built in C++11 mode).
 
-* [Boost](www.boost.org) 1.55 or newer (tested through 1.71).
-* [Ilmbase/OpenEXR](http://openexr.com/downloads.html) 2.0 or newer
+* [Boost](www.boost.org) 1.55 or newer (tested through 1.73).
+* [Ilmbase/OpenEXR](http://openexr.com/downloads.html) 2.0 or newer (tested
+  through 2.5).
 * [Flex](https://github.com/westes/flex) and
   [GNU Bison](https://www.gnu.org/software/bison/)
 * [PugiXML](http://pugixml.org/)

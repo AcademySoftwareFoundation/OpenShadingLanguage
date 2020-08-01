@@ -1,5 +1,8 @@
-Release 1.10.13 -- ??? 2020 (compared to 1.10.12)
+Release 1.10.13 -- 1 Aug 2020 (compared to 1.10.12)
 ---------------------------------------------------
+* Small changes to build cleanly against OIIO 2.2.
+* Fixes to build against fmtlib 7.0. #1156 #1219
+* Docs fixes related to matrix constructors with coordinate systems names.
 
 Release 1.10.12 -- 1 Jul 2020 (compared to 1.10.11)
 ---------------------------------------------------

@@ -322,7 +322,7 @@ public:
     ///   ptr attribute_scopes       Retrieves a pointer to a ustring array containing
     ///                                the scopes associated with each attribute query
     ///                                in the attributes_needed array.
-    ///   int unknown_attributes_needed  Nonzero if additonal attributes may be
+    ///   int unknown_attributes_needed  Nonzero if additional attributes may be
     ///                                  needed, whose names will not be known
     ///                                  until the shader actually runs.
     ///   int num_renderer_outputs   Number of named renderer outputs.

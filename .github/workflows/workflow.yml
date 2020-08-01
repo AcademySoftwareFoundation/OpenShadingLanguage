@@ -71,7 +71,7 @@ jobs:
           path: build/*/testsuite/*/*.*
 
   vfxplatform-2021:
-    name: "Linux VFXP-2021 gcc9/C++17 llvm10 py3.7 boost-1.70 exr-2.5 OIIO-master avx2"
+    name: "Linux VFXP-2021 gcc9/C++17 llvm10 py3.7 boost-1.70 exr-2.5 OIIO-2.2 avx2"
     runs-on: ubuntu-latest
     container:
       image: aswf/ci-osl:2021
@@ -85,6 +85,7 @@ jobs:
           PYTHON_VERSION: 3.7
           USE_SIMD: avx2,f16c
           OPENEXR_VERSION: 2.5.0
+          OPENIMAGEIO_BRANCH: RB-2.2
         run: |
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/gh-installdeps-centos.bash
@@ -96,7 +97,7 @@ jobs:
           path: build/*/testsuite/*/*.*
 
   linux-debug-gcc7-llvm8:
-    name: "Linux Debug gcc7, C++14, llvm8, OIIO master, sse4, exr2.4"
+    name: "Linux Debug gcc7, C++14, llvm8, OIIO release, sse4, exr2.4"
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
@@ -107,7 +108,7 @@ jobs:
           CMAKE_CXX_STANDARD: 14
           LLVM_VERSION: 8.0.0
           OPENEXR_VERSION: 2.4.0
-          OPENIMAGEIO_BRANCH: master
+          OPENIMAGEIO_BRANCH: release
           USE_SIMD: sse4.2
           MY_CMAKE_FLAGS: -DCMAKE_BUILD_TYPE=Debug
         run: |
@@ -121,7 +122,7 @@ jobs:
           path: build/*/testsuite/*/*.*
 
   linux-2020ish-clang9-llvm9:
-    name: "Linux clang9, C++14, llvm9, oiio master, avx, exr2.4, avx"
+    name: "Linux clang9, C++14, llvm9, oiio release, avx, exr2.4, avx"
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
@@ -133,7 +134,7 @@ jobs:
           LLVM_VERSION: 9.0.0
           USE_SIMD: avx
           OPENEXR_VERSION: 2.4.0
-          OPENIMAGEIO_BRANCH: master
+          OPENIMAGEIO_BRANCH: release
         run: |
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/gh-installdeps.bash

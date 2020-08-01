@@ -2,6 +2,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # https://github.com/imageworks/OpenShadingLanguage
 
+# GitHub Actions workflow file for CI
+# https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions
+
 name: CI
 
 on:

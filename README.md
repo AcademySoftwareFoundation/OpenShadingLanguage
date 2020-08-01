@@ -7,10 +7,9 @@ Open Shading Language
 =====================
 
 Build status:
+[![Build Status](https://github.com/imageworks/OpenShadingLanguage/workflows/CI/badge.svg)](https://github.com/imageworks/OpenShadingLanguage/actions)
 
-[![License](https://img.shields.io/badge/license-BSD%203--Clause-blue.svg?style=flat-square)](https://github.com/imageworks/OpenShadingLanguage)
-[![Build Status](https://travis-ci.org/imageworks/OpenShadingLanguage.svg?branch=master)](https://travis-ci.org/imageworks/OpenShadingLanguage)
-[![Appveyor status](https://ci.appveyor.com/api/projects/status/github/imageworks/openshadinglanguage?svg=true&branch=master)](https://ci.appveyor.com/project/lgritz/openshadinglanguage)
+[![License](https://img.shields.io/badge/license-BSD%203--Clause-blue.svg?style=flat-square)](https://github.com/imageworks/OpenShadingLanguage/LICENSE)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/3061/badge)](https://bestpractices.coreinfrastructure.org/projects/3061)
 
 

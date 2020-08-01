@@ -626,7 +626,7 @@ public:
     TypeDesc symbol_typedesc (const ShaderSymbol *sym) const;
 
     /// Given a context (that has executed a shader) and an opaque
-    /// ShserSymbol*, return the actual memory address where the value of
+    /// ShaderSymbol*, return the actual memory address where the value of
     /// the symbol resides within the heap memory of the context. This
     /// is only valid for the shader execution that had happened immediately
     /// prior for this context, but it is a very inexpensive operation.

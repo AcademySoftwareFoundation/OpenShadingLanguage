@@ -39,7 +39,7 @@ renderers used for high-end VFX and animation work. For a full list of films
 and products, see the [filmography](#where-osl-has-been-used).
 
 The OSL code is distributed under the
-["New/3-clause BSD" license](https://github.com/imageworks/OpenShadingLanguage),
+["New/3-clause BSD" license](https://github.com/imageworks/OpenShadingLanguage/LICENSE),
 and the documentation under the [Creative Commons Attribution 4.0 International
 License](https://creativecommons.org/licenses/by/4.0/).  In short, you are
 free to use OSL in your own applications, whether they are free or
@@ -431,26 +431,27 @@ sign [a Contributor License Agreement](http://opensource.imageworks.com/cla/).
 Credits
 -------
 
-The original designer and project leader of OSL is Larry Gritz. Other early
-developers of OSL are (in order of joining the project): Cliff Stein, Chris
-Kulla, Alejandro Conty, Jay Reynolds, Solomon Boulos, Adam Martinez, Brecht
-Van Lommel.
+The current project leadership is documented in the GOVERNANCE.md file.
 
-Additionally, many others have contributed features, bug fixes, and other
-changes: Steve Agland, Shane Ambler, Martijn Berger, Farchad Bidgolirad,
-Nicholas Bishop, Stefan Büttner, Matthaus G. Chajdas, Thomas Dinges, Mark
-Final, Henri Fousse, Syoyo Fujita, Tim Grant, Derek Haase, Sven-Hendrik
-Haase, John Haddon, Daniel Heckenberg, Matt Johnson, Ronan Keryell, Elvic
-Liang, Max Liani, Bastien Montagne, Alexis Oblet, Erich Ocean, Mikko
-Ohtamaa, Alex Schworer, Jonathan Scruggs, Sergey Sharybin, Stephan
-Steinbach, Esteban Tovagliari, Alexander von Knorring, Alex Wells, Roman
-Zulak. (Listed alphabetically; if we've left anybody out, please let us
-know.)
+Many people have contributed features, bug fixes, and other changes to OSL
+over the years: Steve Agland, Shane Ambler, Martijn Berger, Farchad
+Bidgolirad, Nicholas Bishop, Solomon Boulos, Stefan Bruens, Stefan Büttner,
+Matthaus G. Chajdas, Alejandro Conty, Thomas Dinges, Luke Emrose, Louis
+Feng, Mark Final, Henri Fousse, Syoyo Fujita, Tim Grant, Larry Gritz, Derek
+Haase, Sven-Hendrik Haase, John Haddon, Daniel Heckenberg, Thiago Ize, Matt
+Johnson, Ronan Keryell, Chris Kulla, Elvic Liang, Max Liani, Adam Martinez,
+John Mertic, Bastien Montagne, Steena Monteiro, Alexis Oblet, Erich Ocean,
+Mikko Ohtamaa, Jino Park, Alexei Pawlow, Jay Reynolds, Declan Russell,
+Patrick Scheibe, Alex Schworer, Jonathan Scruggs, Sergey Sharybin, Cliff
+Stein, Stephan Steinbach, Esteban Tovagliari, Brecht Van Lommel, Alexander
+von Knorring, Alex Wells, Roman Zulak. (Listed alphabetically; if we've left
+anybody out, it is inadvertent, please let us know.)
 
 We cannot possibly express sufficient gratitude to the managers at Sony
 Pictures Imageworks who allowed this project to proceed, supported it
 wholeheartedly, and permitted us to release the source, especially Rob
-Bredow, Brian Keeney, Barbara Ford, Rene Limberger, and Erik Strauss.
+Bredow, Brian Keeney, Barbara Ford, Rene Limberger, Erik Strauss, and Mike
+Ford.
 
 Huge thanks also go to the crack shading team at SPI, and the brave lookdev
 TDs and CG supes willing to use OSL on their shows.  They served as our

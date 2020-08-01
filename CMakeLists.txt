@@ -11,7 +11,7 @@ string (TOLOWER ${PROJ_NAME} PROJ_NAME_LOWER)  # short name lower case
 string (TOUPPER ${PROJ_NAME} PROJ_NAME_UPPER)  # short name upper case
 set (PROJECT_VERSION_RELEASE_TYPE "dev")   # "dev", "betaX", "RCY", ""
 set (${PROJECT_NAME}_VERSION_RELEASE_TYPE ${PROJECT_VERSION_RELEASE_TYPE})
-set (PROJECT_AUTHORS "Sony Pictures Imageworks, et al")
+set (PROJECT_AUTHORS "Contributors to the Open Shading Language project")
 
 message (STATUS "Building ${PROJECT_NAME} ${PROJECT_VERSION}")
 message (STATUS "CMake version is ${CMAKE_VERSION}")

@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.11 -- ?? 2020 (compared to 1.10)
+Release 1.11 --1 Sept 2020 (compared to 1.10)
 --------------------------------------------------
 ASWF adoption changes:
 * GOVERNANCE.md and ASWF/Technical-Charter.md document the project
@@ -19,7 +19,7 @@ Dependency and standards changes:
   for LLVM 8, 9, and 10 have been added. Note that using LLVM 10 *requires*
   building for C++14 or later, because LLVM 10's APIs no longer support
   C++11. #981 #1046 #1058 #1128 #1152 #1162 #1206
-* OpenImageIO 2.0-2.1: Support for OIIO 1.8 has been dropped; a minimum of
+* OpenImageIO 2.0-2.2: Support for OIIO 1.8 has been dropped; a minimum of
   OIIO 2.0 is needed to build OSL. (Additionally, a minimum of OIIO 2.1 is
   strongly recommended for anyone using the SIMD batch shading mode.) #1038
   (1.11.0)

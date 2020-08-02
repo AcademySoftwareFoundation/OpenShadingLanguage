@@ -134,8 +134,6 @@ OSL Standard library:
   color spaces. #1013 (1.11.0)
 * `cbrt()` cube root was added to the standard library. #1164 #1166 (1.11.6)
 
-Shaders:
-
 API changes, new options, new ShadingSystem features (for renderer writers):
 * `ShadingSystem::convert_value()` will now allow promotion of int or
   float to `float[4]`. #940 (1.11.0)
@@ -200,7 +198,7 @@ Continued work on experimental OptiX rendering:
 * Work on matrix ops. #1054 (1.11.1)
 * Allow init ops. #1059 (1.11.1)
 * Fixes to string closure params. #1061 (1.11.1)
-# Add support for OptiX 7 #1111 #1203 (1.11.6)
+* Add support for OptiX 7 #1111 #1203 (1.11.6)
 
 Performance improvements:
 * Constant fold array accesses even if they are out of bounds. #1035 (1.11.0)

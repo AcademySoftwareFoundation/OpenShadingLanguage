@@ -84,6 +84,11 @@ The OSL CLAs may be previewed here:
 [Corporate](https://github.com/imageworks/OpenShadingLanguage/ASWF/OSL-CLA-corporate.md),
 [Individual]((https://github.com/imageworks/OpenShadingLanguage/ASWF/OSL-CLA-individual.md)).
 
+Please note that these CLAs are based on the Apache 2.0 CLAs, and differ
+minimally, only as much as was required to correctly describe the EasyCLA
+process and our use of a "CLA manager" who can amend the list of allowed
+contributors without needing re-execute an amended signed CLA.
+
 ** Contribution sign off
 
 ASWF requires the use of the [Developer’s Certificate of Origin 1.1

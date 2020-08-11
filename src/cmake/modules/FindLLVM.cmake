@@ -30,9 +30,11 @@ list (APPEND LLVM_CONFIG_PATH_HINTS
         "/usr/local/opt/llvm/bin/")
 find_program (LLVM_CONFIG
               NAMES llvm-config-${LLVM_VERSION} llvm-config
+                    llvm-config-64-${LLVM_VERSION} llvm-config-64
               HINTS ${LLVM_CONFIG_PATH_HINTS} NO_DEFAULT_PATH)
 find_program (LLVM_CONFIG
               NAMES llvm-config-${LLVM_VERSION} llvm-config
+                    llvm-config-64-${LLVM_VERSION} llvm-config-64
               HINTS ${LLVM_CONFIG_PATH_HINTS})
 if (NOT LLVM_FIND_QUIETLY)
     message (STATUS "Found llvm-config '${LLVM_CONFIG}'")

@@ -66,7 +66,7 @@ All rights reserved.
 Editor: Larry Gritz \\
 \emph{lg@imageworks.com}
 }
-\date{{\large Date: 1 Aug 2020 \\
+\date{{\large Date: 11 Aug 2020 \\
 % (with corrections, 21 Jul 2020)
 }
 \bigskip
@@ -3756,8 +3756,10 @@ The type of interpolation is specified by the \emph{basis} name,
 \qkw{bezier}, \qkw{bspline}, \qkw{hermite}, \qkw{linear}, or 
 \qkw{constant}. Some basis
 types require particular numbers of knot values -- Bezier splines
-require $4n+3$ values, Hermite splines require $4n+2$ values,
-Catmull-Rom and linear splines may use any number of values $n\ge 4$.
+require $3n+1$ values, Hermite splines require $2n+2$ values, and all of
+Catmull-Rom, linear, and constant requires $3+n$, where in all cases,
+$n \ge 1$ is the number of spline segments.
+
 To maintain consistency with the other spline types, \qkw{linear} splines will
 ignore the first and last data value; interpolating piecewise-linearly
 between $y_1$ and $y_{n-2}$, and \qkw{constant} splines ignore the first

@@ -377,6 +377,8 @@ Documentation:
   deformer. #1199 (1.11.6)
 * `testrender` now contains a progressive sampler, which might be a good
   example for others writing renderers. #1202 (1.11.6)
+* Fix incorrect descripton in `spline()` regarding the number of spline
+  values required for each interpolation type. #1239 (1.11.7.1)
 
 
 Release 1.10.13 -- 1 Aug 2020 (compared to 1.10.12)

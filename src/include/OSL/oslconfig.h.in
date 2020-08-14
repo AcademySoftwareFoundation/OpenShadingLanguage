@@ -20,10 +20,12 @@
 #include <OSL/Imathx/ImathColor.h>
 #include <OSL/matrix22.h>
 
-// Temporary bug fix: having trouble with cuda complaining about {fmt} lib.
-// Work around by disabling it from oiio headers.
+// The fmt library causes trouble for Cuda. Work around by disabling it from
+// oiio headers (OIIO <= 2.1) or telling fmt not to use the troublesome
+// int128 that Cuda doesn't understand (OIIO >= 2.2).
 #ifdef __CUDA_ARCH__
 #    define OIIO_USE_FMT 0
+#    define FMT_USE_INT128 0
 #endif
 
 // All the things we need from OpenImageIO

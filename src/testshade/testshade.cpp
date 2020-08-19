@@ -54,8 +54,8 @@ static bool llvm_debug = false;
 static bool verbose = false;
 static bool runstats = false;
 static bool vary_Pdxdy = false;
-static bool vary_Udxdy = false;
-static bool vary_Vdxdy = false;
+static bool vary_udxdy = false;
+static bool vary_vdxdy = false;
 static bool saveptx = false;
 static bool warmup = false;
 static bool profile = false;
@@ -456,8 +456,8 @@ getargs (int argc, const char *argv[])
                 "--runstats", &runstats, "Print run statistics",
                 "--stats", &runstats, "",  // DEPRECATED 1.7
                 "--vary_pdxdy", &vary_Pdxdy, "populate Dx(P) & Dy(P) with varying values (vs. uniform)",
-                "--vary_udxdy", &vary_Udxdy, "populate Dx(U) & Dy(U) with varying values (vs. uniform)",
-                "--vary_vdxdy", &vary_Vdxdy, "populate Dx(V) & Dy(V) with varying values (vs. uniform)",
+                "--vary_udxdy", &vary_udxdy, "populate Dx(u) & Dy(u) with varying values (vs. uniform)",
+                "--vary_vdxdy", &vary_vdxdy, "populate Dx(v) & Dy(v) with varying values (vs. uniform)",
                 "--profile", &profile, "Print profile information",
                 "--saveptx", &saveptx, "Save the generated PTX (OptiX mode only)",
                 "--warmup", &warmup, "Perform a warmup launch",
@@ -625,13 +625,13 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
         // centers of each pixel.
         sg.u = uscale * (float)(x+0.5f) / xres + uoffset;
         sg.v = vscale * (float)(y+0.5f) / yres + voffset;
-        if (vary_Udxdy) {
+        if (vary_udxdy) {
             sg.dudx = 1.0f - sg.u;
             sg.dudy = sg.u;
         } else {
             sg.dudx = uscale / xres;
         }
-        if (vary_Vdxdy) {
+        if (vary_vdxdy) {
             sg.dvdx = 1.0f - sg.v;
             sg.dvdy = sg.v;
         } else {
@@ -642,13 +642,13 @@ setup_shaderglobals (ShaderGlobals &sg, ShadingSystem *shadingsys,
         // samples being exactly on u,v == 0 or 1.
         sg.u = uscale * ((xres == 1) ? 0.5f : (float) x / (xres - 1)) + uoffset;
         sg.v = vscale * ((yres == 1) ? 0.5f : (float) y / (yres - 1)) + voffset;
-        if (vary_Udxdy) {
+        if (vary_udxdy) {
             sg.dudx = 1.0f - sg.u;
             sg.dudy = sg.u;
         } else {
             sg.dudx = uscale / std::max (1, xres-1);
         }
-        if (vary_Vdxdy) {
+        if (vary_vdxdy) {
             sg.dvdx = 1.0f - sg.v;
             sg.dvdy = sg.v;
         } else {

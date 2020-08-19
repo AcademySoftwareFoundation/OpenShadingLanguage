@@ -178,6 +178,9 @@ API changes, new options, new ShadingSystem features (for renderer writers):
 * Helper varieties of ShadingSystem::Parameter() and ReParameter() that
   handle the common cases of a single float, int, or string. #1195 #1196
   (1.11.6)
+* `ShaingSystem::optimize_group()` now takes an optional parameter that
+  allows the caller to only do the optimize step without the JIT step.
+  #1226 (1.11.71)
 
 Continued work on experimental SIMD batched shading mode:
 * Continued work on SIMD-friendly math and noise: #1108 (1.11.4)
@@ -212,6 +215,8 @@ Performance improvements:
 * LLVM JIT+optimize time has been sped up around 10% by doing a better job
   of pruning unused functions and symbols in the generated modul. #1172
   (1.11.6)
+* `ShadingSystem::symbol_address()` no longer checks for the symbol to be
+  NULL (though it will assert on a debug build). #1237 (1.11.7.1)
 
 Bug fixes and other improvements (internals):
 * Fix bug in implementation of `splineinverse()` when computing with
@@ -303,21 +308,46 @@ Build & test system improvements:
       hidden that is not part of the public API.
     - The ENABLERTTI build option has been renamed `ENABLE_RTTI`.
     - Config based install and usage.
-* Testshade makes sure that no unreported errors accumulted in the texture
-  system or image cache. #939 (1.11.0)
-* testshade: Check that no leftover errors are in the TextureSystem or
-  ImageCache at the end of the test (that would indicate that someplace in
-  OSL we are failing to check texture errors). #939 (1.10.3/1.11.0)
+* testshade:
+    - Make sure that no unreported errors accumulted in the texture system
+      or image cache. #939 (1.11.0)
+    - Check that no leftover errors are in the TextureSystem or ImageCache
+      at the end of the test (that would indicate that someplace in OSL we
+      are failing to check texture errors). #939 (1.10.3/1.11.0)
+    - `testshade -o` : now `null` as the filename will not produce any
+      output.  This is handy to mark a renderer output but without storing
+      the results as an image. #1193 (1.11.6)
+    - `--vary_pdxdy`, `--vary_udxdy` and `--vary_vdxdy` allow a way to
+      force P, u, v to have varying derivatives (for testing purposes).
+      #1227 (1.11.7.1)
+* Supporting dependencies:
+    - Build script finding of LLVM is now more robust to certain library
+      configurations of llvm, particularly where everything is bundled in
+      just one libLLVM without a separate libLLVMMCJIT. #976 (1.10.4/1.11.0)
+    - Support for LLVM 4 has been dropped. #981 (1.11.0)
+    - Simplified finding of flex/bison, rely more on CMake's built-in
+      flex/bison find packages. #977 (1.11.0)
+    - Verified that OSL can be built with Clang 8 and LLVM 8.0.
+    - When building against recent OIIO versions whose Sysutil supports
+      stack dumps, crashes in the command line tools (including testshade)
+      will print stack traces to aid debugging. #1019 (1.11.0)
+    - Improve finding of OpenEXR/IlmBase. #1022 (1.11.0)
+    - Fix problems when building against Qt 5.13 due to deprecated calls.
+      #1043 (1.11.0)
+    - Fixes for CI when using OIIO 2.1 master that has changed its own cmake
+      minimum to 3.12. #1065 (1.11.1)
+    - Improvement for how the build system figures out which LLVM static
+      libraries are needed. #1070 (1.11.1)
+    - Improvements in finding Partio. #1125 (1.11.5)
+    - Fixes to support Qt 5.15 (currently, osltoy is the only component that
+      uses Qt). #1204 (1.11.6)
+    - Better able to find LLVM when the system installation of LLVM has its
+      llvm-config named `llvm-config-64`. #1238 (1.11.7.1)
+    - Fixes for OIIO 2.2 which has eliminated use of tinyformat in favor of
+      always relying on fmtlib. #1242 (1.11.7.1)
 * A new build-time CMake variable `OSL_LIBNAME_SUFFIX` lets you optionally
   add a custom suffix to the main libraries that are built. (Use with
   caution.) #970 (1.11.0)
-* Build script finding of LLVM is now more robust to certain library
-  configurations of llvm, particularly where everything is bundled in just
-  one libLLVM without a separate libLLVMMCJIT. #976 (1.10.4/1.11.0)
-* Support for LLVM 4 has been dropped. #981 (1.11.0)
-* Simplified finding of flex/bison, rely more on CMake's built-in flex/bison
-  find packages. #977 (1.11.0)
-* Verified that OSL can be built with Clang 8 and LLVM 8.0.
 * Add a build-time option GLIBCXX_USE_CXX11_ABI to force the "new/old string
   ABI" to something other than the default for your version of gcc. #995
   (1.10.5/1.11.0)
@@ -332,20 +362,10 @@ Build & test system improvements:
   their directory. #1004 (1.10.0)
 * Allow OSL to build with `USE_LLVM_BITCODE` enabled on Windows. #998 (1.10.0)
 * Various Windows compilation improvements. #1017 #1020
-* When building against recent OIIO versions whose Sysutil supports stack
-  dumps, crashes in the command line tools (including testshade) will
-  print stack traces to aid debugging. #1019 (1.11.0)
-* Improve finding of OpenEXR/IlmBase. #1022 (1.11.0)
 * Fix signed/unsigned comparison warnings. #1037 (1.11.0)
-* Fix problems when building against Qt 5.13 due to deprecated calls. #1043
-  (1.11.0)
 * Fixes for MinGW compiler on Windows. #1047 #1048 (1.11.0)
-* Fixes for CI when using OIIO 2.1 master that has changed its own cmake
-  minimum to 3.12. #1065 (1.11.1)
 * Scripts and tests utilizing Python have all been visited to make sure they
   are compatible with both Python 2.x and Python 3.x. #1071 (1.11.1)
-* Improvement for how the build system figures out which LLVM static
-  libraries are needed. #1070 (1.11.1)
 * Build: on OSX, better logic about the OIIO plugin must be built as a
   module or as a shared library. #1078 (1.11.3/1.10.8)
 * Removed support for Boost Wave for preprocessing osl input. We now always
@@ -355,7 +375,6 @@ Build & test system improvements:
   up during testing, mostly related to unused function paramters. #1106 (1.11.3)
 * The testsuite can run in parallel, with a number of threads set by the
   environment variable `CTEST_PARALLEL_LEVEL`. #1119 (1.11.4)
-* Improvements in finding Partio. #1125 (1.11.5)
 * oslconfig.h is now generated by a cmake configure_file step, from
   oslconfig.h.in. #1141 (1.11.5)
 * Use ASWF docker images to speed up many of the CI matrix entries, as well
@@ -363,11 +382,6 @@ Build & test system improvements:
 * Fix typo that botched the version in the .pc pkgconfig file. #1168 (1.11.6)
 * CI test against gcc9 and gcc10. #1192 (1.11.6)
 * Propagate RTTI compile options to exported cmake config. #1194 (1.11.6)
-* `testshade -o` : now `null` as the filename will not produce any output.
-  This is handy to mark a renderer output but without storing the results
-  as an image. #1193 (1.11.6)
-* Fixes to support Qt 5.15 (currently, osltoy is the only component that
-  uses Qt). #1204 (1.11.6)
 
 Documentation:
 * Make it clear that the documentation is licensed under the CC-BY-4.0

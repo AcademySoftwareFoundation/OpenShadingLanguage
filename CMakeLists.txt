@@ -9,8 +9,9 @@ project (OSL VERSION 1.11.7.1
 set (PROJ_NAME ${PROJECT_NAME})    # short name
 string (TOLOWER ${PROJ_NAME} PROJ_NAME_LOWER)  # short name lower case
 string (TOUPPER ${PROJ_NAME} PROJ_NAME_UPPER)  # short name upper case
-set (PROJECT_VERSION_RELEASE_TYPE "beta2")   # "dev", "betaX", "RCY", ""
+set (PROJECT_VERSION_RELEASE_TYPE "RC1")   # "dev", "betaX", "RCY", ""
 set (${PROJECT_NAME}_VERSION_RELEASE_TYPE ${PROJECT_VERSION_RELEASE_TYPE})
+set (${PROJECT_NAME}_SUPPORTED_RELEASE 1)  # Change to 1 after release branch
 set (PROJECT_AUTHORS "Contributors to the Open Shading Language project")
 
 message (STATUS "Building ${PROJECT_NAME} ${PROJECT_VERSION}")

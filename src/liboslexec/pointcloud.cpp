@@ -28,7 +28,7 @@ public:
     typedef std::unordered_map<ustring, std::shared_ptr<Partio::ParticleAttribute>, ustringHash> AttributeMap;
     // N.B./FIXME(C++11): shared_ptr is probably overkill, but
     // scoped_ptr is not copyable and therefore can't be used in
-    // standard containers.  When C++11 is uniquitous, unique_ptr is the
+    // standard containers.  When C++11 is ubiquitous, unique_ptr is the
     // one that should really be used.
 
     const Partio::ParticlesData* read_access() const { OSL_DASSERT(!m_write); return m_partio_cloud; }

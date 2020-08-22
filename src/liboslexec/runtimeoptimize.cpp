@@ -968,7 +968,7 @@ RuntimeOptimizer::simplify_params ()
             // constant value. (a) Partial-to-whole connections, for example
             // connecting one component of an upstream triple output to a
             // downstream float input, should propagate the constant, but we
-            // currently neglect this case. (b) If *multiple* conections
+            // currently neglect this case. (b) If *multiple* connections
             // combine to fully propagate values, for example if someone was
             // foolish enough to connect R, G, and B components of color
             // parameters *separately*, we sure don't notice that and treat
@@ -2103,7 +2103,7 @@ RuntimeOptimizer::optimize_ops (int beginop, int endop,
             OSL_ASSERT (lastblock == m_bblockids[opnum] &&
                         "this should not be a new basic block");
             --skipops;
-            continue;   // Move along to the next op, no opimization here
+            continue;   // Move along to the next op, no optimization here
         }
         // Things to do if we've just moved to a new basic block
         if (lastblock != m_bblockids[opnum]) {

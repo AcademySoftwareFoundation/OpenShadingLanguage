@@ -123,7 +123,7 @@ enum RayType {
 };
 
 
-// Closures supported by the OSL sample renderer.  This list is mosly aspirational.
+// Closures supported by the OSL sample renderer.  This list is mostly aspirational.
 enum ClosureIDs {
     EMISSION_ID = 1,
     BACKGROUND_ID,

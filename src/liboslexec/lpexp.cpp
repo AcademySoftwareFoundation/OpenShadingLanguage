@@ -164,7 +164,7 @@ lpexp::NRepeat::genAuto(NdfAutomata &automata)const
             last->addTransition(lambda, fl.first);
         last = fl.second;
     }
-    // And then n - m aditional movements. But we make them optional using
+    // And then n - m additional movements. But we make them optional using
     // lambda transitions
     if (!last && i < m_max)
         first = last = automata.newState();

@@ -149,7 +149,7 @@ macro ( CUDA_SHADEOPS_COMPILE srclist )
         DEPENDS ${shadeops_bc_list} ${exec_headers} ${PROJECT_PUBLIC_HEADERS} ${shadeops_srcs}
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" )
 
-    # Serialze the linked bitcode into a CPP file and add it to the list of liboslexec soures
+    # Serialize the linked bitcode into a CPP file and add it to the list of liboslexec soures
     add_custom_command ( OUTPUT ${shadeops_bc_cuda_cpp}
         COMMAND python "${CMAKE_CURRENT_SOURCE_DIR}/serialize-bc.py"
             ${linked_shadeops_bc} ${shadeops_bc_cuda_cpp} "osl_llvm_compiled_ops_cuda"

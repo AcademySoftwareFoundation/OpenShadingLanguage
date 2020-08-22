@@ -265,7 +265,7 @@ slice_gabor_kernel_3d (const Dual2<float> &d, float w, float a,
         phi = float(M_TWO_PI) * rng();
     }
 
-    // gabor_cell was unnecesarily calling down to sample even when outside the radius
+    // gabor_cell was unnecessarily calling down to sample even when outside the radius
     // however to match existing results, we need to bump the random number generator
     // an equivalent # of times.  Here the sample function stripped down to just
     // the rng() calls

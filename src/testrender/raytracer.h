@@ -87,7 +87,7 @@ struct Camera {
         finalize();
     }
 
-    // Compute all derived values based on camera parametrs.
+    // Compute all derived values based on camera parameters.
     void finalize () {
         float k = OIIO::fast_tan(fov * float(M_PI / 360));
         Vec3 right = dir.cross(up).normalize();

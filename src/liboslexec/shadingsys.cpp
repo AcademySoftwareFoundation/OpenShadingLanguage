@@ -1168,11 +1168,11 @@ ShadingSystemImpl::attribute (string_view name, TypeDesc type,
     ATTR_SET ("llvm_target_host", int, m_llvm_target_host);
 
     // Due to ABI breakage in LLVM 7.0.[0-1] for llvm::Optional with GCC,
-    // calling any llvm API's that accept an llvm::Optional parameter will break
+    // calling any llvm APIs that accept an llvm::Optional parameter will break
     // ABI causing issues.
     // https://bugs.llvm.org/show_bug.cgi?id=39427
     // Fixed in llvm 7.1.0+
-    // Workaround don't enable debug symbols which would use llvm::Optional API's
+    // Workaround don't enable debug symbols which would use llvm::Optional APIs
 #if (!OSL_GNUC_VERSION) || (OSL_LLVM_VERSION >= 71)
     ATTR_SET ("llvm_debugging_symbols", int, m_llvm_debugging_symbols);
 #endif
@@ -1540,7 +1540,7 @@ ShadingSystemImpl::getattribute (ShaderGroup *group, string_view name,
     if (name == "group_entry_name" && type.basetype == TypeDesc::STRING) {
         int nlayers = group->nlayers ();
         ShaderInstance *inst = (*group)[nlayers-1];
-        // This formuation mirrors OSOProcessorBase::layer_function_name()
+        // This formulation mirrors OSOProcessorBase::layer_function_name()
 #ifdef OIIO_HAS_SPRINTF
         *(ustring *)val = ustring::sprintf ("__direct_callable__%s_%s_%d", group->name(),
                                            inst->layername(), inst->id());
@@ -2257,7 +2257,7 @@ ShadingSystemImpl::ConnectShaders (ShaderGroup& group,
     }
 
     // Decode the parameter names, find their symbols in their
-    // respective layers, and also decode requrest to attach specific
+    // respective layers, and also decode request to attach specific
     // array elements or color/vector channels.
     ConnectedParam srccon = decode_connected_param(srcparam, srclayer, srcinst);
     ConnectedParam dstcon = decode_connected_param(dstparam, dstlayer, dstinst);
@@ -3117,7 +3117,7 @@ ShadingSystemImpl::merge_instances (ShaderGroup &group, bool post_opt)
 {
     // Look through the shader group for pairs of nodes/layers that
     // actually do exactly the same thing, and eliminate one of the
-    // rundantant shaders, carefully rewiring all its outgoing
+    // redundant shaders, carefully rewiring all its outgoing
     // connections to later layers to refer to the one we keep.
     //
     // It turns out that in practice, it's not uncommon to have
@@ -3413,7 +3413,7 @@ ClosureRegistry::register_closure (string_view name, int id,
         entry.params.push_back(params[i]);
         if (params[i].type == TypeDesc()) {
             entry.struct_size = params[i].offset;
-            /* CLOSURE_FINISH_PARAM stashes the real struct alignement here
+            /* CLOSURE_FINISH_PARAM stashes the real struct alignment here
              * make sure that the closure struct doesn't want more alignment than ClosureComponent
              * because we will be allocating the real struct inside it. */
             OSL_ASSERT_MSG(params[i].field_size <= int(alignof(ClosureComponent)),

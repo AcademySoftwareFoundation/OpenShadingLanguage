@@ -97,7 +97,7 @@ float3 process_closure(const OSL::ClosureColor* closure_tree)
     const OSL::ClosureColor* ptr_stack[STACK_SIZE];
     OSL::Color3 weight_stack[STACK_SIZE];
 
-    // Shading accumlator
+    // Shading accumulator
     OSL::Color3 weight = OSL::Color3(1.0f);
 
     const void* cur = closure_tree;
@@ -277,7 +277,7 @@ float3 process_closure (const OSL::ClosureColor* closure_tree)
     const OSL::ClosureColor* ptr_stack[STACK_SIZE];
     OSL::Color3 weight_stack[STACK_SIZE];
 
-    // Shading accumlator
+    // Shading accumulator
     OSL::Color3 weight = OSL::Color3 (1.0f);
 
     const void* cur = closure_tree;

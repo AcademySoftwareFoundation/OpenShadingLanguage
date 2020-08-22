@@ -134,7 +134,7 @@ public:
     int turn_into_nop (int begin, int end, string_view why=NULL);
 
 
-    /// Transmute regulare function call into a 'no return' function call
+    /// Transmute regular function call into a 'no return' function call
     /// The funcationcall_nr is useful to generate debug info for the inlined
     /// function call.  Its existence shouldn't otherwise modify resulting
     /// code generation.

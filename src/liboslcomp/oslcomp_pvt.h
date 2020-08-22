@@ -374,7 +374,7 @@ public:
         m_nowarn_lines.insert({ filename(), lineno() + 1 });
     }
 
-    // Is the line amont
+    // Is the line among the 'do not warn' list
     bool nowarn(ustring filename, int line) const
     {
         return m_nowarn_lines.find({ filename, line }) != m_nowarn_lines.end();
@@ -433,7 +433,7 @@ private:
     }
 
     /// Add all symbols used in the op range [opbegin,opend) to rsyms
-    /// and/or wsyms.  Pass NULL if you don't care abou one or the other.
+    /// and/or wsyms.  Pass NULL if you don't care about one or the other.
     /// Pass both pointers to the same vector if you want both reads and
     /// writes recorded to the same place.
     void syms_used_in_op_range(OpcodeVec::const_iterator opbegin,

@@ -178,7 +178,7 @@ public:
 
         setBackground(m_info, Qt::black, Qt::white);
 
-        // Hilight the edges against solid backgrounds
+        // Highlight the edges against solid backgrounds
         m_image->setStyleSheet("border: 2px solid black");
 
         // When mouse moves fast, it might get over the inspector.
@@ -202,7 +202,7 @@ class OSLToyRenderView : public QLabel {
 
     float static mapPixel(float pos, float res) { return (pos / res); }
 
-    // Shold probably live in PixelInfo, but its here now
+    // Should probably live in PixelInfo, but its here now
     bool getPixel(QPoint pos, PixelInfo& info)
     {
         if (!m_framebuffer.initialized())
@@ -233,7 +233,7 @@ class OSLToyRenderView : public QLabel {
     {
         if (!m_magnifier) {
             // Create the magnifier in the top-most parent
-            // so no siblings will draw ontop
+            // so no siblings will draw on top
             QWidget* parent     = parentWidget();
             QWidget* lastParent = nullptr;
             do {
@@ -361,7 +361,7 @@ Magnifier::mouseMoveEvent(QMouseEvent* event)
 
 // Qt Docs help:
 // -------------
-// Qt turorials:  http://doc.qt.io/qt-5/qtexamplesandtutorials.html
+// Qt tutorials:  http://doc.qt.io/qt-5/qtexamplesandtutorials.html
 // Qt code example for an image viewer:
 //     http://doc.qt.io/qt-5/qtwidgets-widgets-imageviewer-example.html
 // Qt code example for a code text editor with line numbers:

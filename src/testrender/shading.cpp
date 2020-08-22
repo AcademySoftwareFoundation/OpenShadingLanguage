@@ -251,7 +251,7 @@ struct Ward : public BSDF, WardParams {
             float cosTheta  = 1 / sqrtf(1 + tanTheta2);
             float sinTheta  = cosTheta * sqrtf(tanTheta2);
 
-            Vec3 h; // already normalized becaused expressed from spherical coordinates
+            Vec3 h; // already normalized because expressed from spherical coordinates
             h.x = sinTheta * cosPhi;
             h.y = sinTheta * sinPhi;
             h.z = cosTheta;

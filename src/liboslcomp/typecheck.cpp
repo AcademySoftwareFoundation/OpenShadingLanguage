@@ -864,7 +864,7 @@ public:
                     else if (cinit->initlist())
                         typecheck_fields(cinit, cinit->initlist().get(), ftype);
                     else if (m_mode & must_init_all)
-                        m_success = false;  // empty init list not allowd
+                        m_success = false;  // empty init list not allowed
                 } else
                     typecheck_array(cinit, ftype);
 
@@ -2019,7 +2019,7 @@ ASTfunction_call::typecheck(TypeSpec expected)
         }
     }
 
-    // Fix up actual arguments compound initializiers that were paired with
+    // Fix up actual arguments compound initializers that were paired with
     // user function formal arguments that are unsigned arrays. They were
     // not yet typechecked, do so now.
     if (any_args_are_compound_initializers && is_user_function()) {
@@ -2076,7 +2076,7 @@ ASTfunction_call::typecheck(TypeSpec expected)
 // the functions as having special properties:
 //   "!rw"      nonstandard behavior about which args are read vs written.
 //   "!printf"  has a printf-like argument list
-//   "!tex"     has a texture()-like token/value pair optinal argument list
+//   "!tex"     has a texture()-like token/value pair optional argument list
 //   "!deriv"   takes derivs of its arguments
 
 // clang-format off

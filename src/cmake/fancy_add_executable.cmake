@@ -4,9 +4,9 @@
 
 # Macro to add an executable build target. The executable name can be
 # specified with NAME, otherwise is inferred from the subdirectory name. The
-# source files of the binary can be specifeied with SRC, otherwise are
+# source files of the binary can be specified with SRC, otherwise are
 # inferred to be all the .cpp files within the subdirectory. Optional
-# compile DEFINITIONS, private INCLUDE_DIRS, and priviate LINK_LIBRARIES may
+# compile DEFINITIONS, private INCLUDE_DIRS, and private LINK_LIBRARIES may
 # also be specified.
 #
 # The executable may be disabled individually using any of the usual

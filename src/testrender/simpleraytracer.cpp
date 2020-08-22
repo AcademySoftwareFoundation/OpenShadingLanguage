@@ -579,7 +579,7 @@ bool
 SimpleRaytracer::get_camera_fov (ShaderGlobals* /*sg*/, bool derivs, ustring /*object*/,
                                  TypeDesc type, ustring /*name*/, void *val)
 {
-    // N.B. in a real rederer, this may be time-dependent
+    // N.B. in a real renderer, this may be time-dependent
     if (type == TypeDesc::TypeFloat) {
         ((float *)val)[0] = m_fov;
         if (derivs)
@@ -695,7 +695,7 @@ bool
 SimpleRaytracer::get_camera_screen_window (ShaderGlobals* /*sg*/, bool derivs, ustring /*object*/,
                                     TypeDesc type, ustring /*name*/, void *val)
 {
-    // N.B. in a real rederer, this may be time-dependent
+    // N.B. in a real renderer, this may be time-dependent
     if (type == TypeFloatArray4) {
         ((float *)val)[0] = m_screen_window[0];
         ((float *)val)[1] = m_screen_window[1];

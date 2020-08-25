@@ -1191,11 +1191,11 @@ LLVM_Util::make_jit_execengine (std::string *err,
     // However cpu feature set may or may not support FMA's independently
     options.AllowFPOpFusion = jit_fma() ? llvm::FPOpFusion::Fast :
                                           llvm::FPOpFusion::Standard;
-    // Unfortunately enabling UnsafeFPMath allows reciprocols, which we don't want for divides
+    // Unfortunately enabling UnsafeFPMath allows reciprocals, which we don't want for divides
     // To match results for existing unit tests we might need to disable UnsafeFPMath
-    // TODO: investigate if reciprocols can be disabled by other means.
+    // TODO: investigate if reciprocals can be disabled by other means.
     // Perhaps enable UnsafeFPMath, then modify creation of DIV instructions
-    // to remove the arcp (allow reciprocol) flag on that instructions
+    // to remove the arcp (allow reciprocal) flag on that instructions
     options.UnsafeFPMath = false;
     // Since there are OSL langauge functions isinf and isnan,
     // we cannot assume there will not be infs and NANs
@@ -1203,7 +1203,7 @@ LLVM_Util::make_jit_execengine (std::string *err,
     options.NoNaNsFPMath = false;
     // We will not be setting up any exception handling for FP math
     options.NoTrappingFPMath = true;
-    // Debatable, but peraps some tests care about the sign of +0 vs. -0
+    // Debatable, but perhaps some tests care about the sign of +0 vs. -0
     options.NoSignedZerosFPMath = false;
     // We will NOT be changing rounding mode dynamically
     options.HonorSignDependentRoundingFPMathOption = false;
@@ -1758,7 +1758,7 @@ LLVM_Util::prune_and_internalize_module (std::unordered_set<llvm::Function*> ext
     __OSL_PRUNE_ONLY(std::cout << ">>>>>>>>>>>>>>>>>>After: internalize non-external functions" << std::endl);
 
     // At this point everything should already be materialized, but we need
-    // to materialze the module itself to avoid asserts checking for the
+    // to materialize the module itself to avoid asserts checking for the
     // module's materialization when using a DEBUG version of LLVM
     LLVMErr err = m_llvm_module->materializeAll();
     if (error_string(std::move(err), out_err))
@@ -3034,7 +3034,7 @@ LLVM_Util::ptx_compile_group (llvm::Module* lib_module, const std::string& name,
         llvm::Reloc::Static, llvm::CodeModel::Small, llvm::CodeGenOpt::Aggressive);
     OSL_ASSERT (target_machine && "PTX compile error: Unable to create target machine -- is NVPTX enabled in LLVM?");
 
-    // Setup the optimzation passes
+    // Setup the optimization passes
     llvm::legacy::FunctionPassManager fn_pm (linked_module);
     fn_pm.add (llvm::createTargetTransformInfoWrapperPass (
                    target_machine->getTargetIRAnalysis()));

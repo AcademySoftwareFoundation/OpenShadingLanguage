@@ -167,7 +167,7 @@ osl_printf (ShaderGlobals *sg, const char* format_str, ...)
     va_list args;
     va_start (args, format_str);
 #if 0
-    // Make super sure we know we are excuting LLVM-generated code!
+    // Make super sure we know we are executing LLVM-generated code!
     std::string newfmt = std::string("llvm: ") + format_str;
     format_str = newfmt.c_str();
 #endif

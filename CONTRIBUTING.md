@@ -309,7 +309,7 @@ Namespaces: yes, use them!
 Prefer C++11 `std` rather than Boost or other third party libraries, where
 both can do the same task.
 
-If you see a third party libary already used as a dependency (such as OIIO,
+If you see a third party library already used as a dependency (such as OIIO,
 Boost, Ilmbase, or LLVM), feel free to any of its public features in OSL
 internals (provided those features are present in the minimum version of
 that library that we support).

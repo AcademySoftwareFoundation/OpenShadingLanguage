@@ -156,7 +156,7 @@ class NdfAutomata {
 
         /// Perform a lambda closure of a state set
         ///
-        /// In other words, complete the given set so it includes all the aditional
+        /// In other words, complete the given set so it includes all the additional
         /// states that are reachable by the lambda symbol
         void lambdaClosure(IntSet &states)const;
 

@@ -145,7 +145,7 @@ namespace sfm
     }
 
 
-    // because lengthTiny does alot of work including another
+    // because lengthTiny does a lot of work including another
     // sqrt, we really want to skip that if possible because
     // with SIMD execution, we end up doing the sqrt twice
     // and blending the results.  Although code could be

@@ -60,7 +60,7 @@ private:
     int getOffset (const std::string& str) const;
 
     // Free the previous allocation, allocate a new block of GPU memory of twice
-    // the size, copy the string contents into the new allocation, and upate the
+    // the size, copy the string contents into the new allocation, and update the
     // OptiX variables that hold the string addresses.
     void reallocTable();
 

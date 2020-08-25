@@ -12,7 +12,7 @@ In no particular order:
 BSD 3-Clause License
 SPDX-License-Identifier: BSD-3-Clause
 
-* OpenImgageIO Copyright (c) Larry Gritz, et al.
+* OpenImageIO Copyright (c) Larry Gritz, et al.
   https://github.com/OpenImageIO/oiio
 
   Many bits of code flow back and forth between OIIO and OSL, especially

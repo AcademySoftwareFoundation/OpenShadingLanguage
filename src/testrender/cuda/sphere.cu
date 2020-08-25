@@ -95,7 +95,7 @@ RT_PROGRAM void intersect (void)
             shading_normal = geometric_normal = N;
             surface_area = a;
 
-            // Calcuate the texture coordinates and derivatives
+            // Calculate the texture coordinates and derivatives
             calc_uv();
 
             rtReportIntersection(0);

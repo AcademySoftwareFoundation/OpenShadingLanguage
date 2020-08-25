@@ -154,7 +154,7 @@ OSLCompilerImpl::add_struct_fields(StructSpec* structspec, ustring basename,
                               arr ? NULL : init);
         } else {
             if (node && init && !arr) {
-                // Remember the pairing of this field and the iniial expr.
+                // Remember the pairing of this field and the initial expr.
                 ((ASTvariable_declaration*)node)
                     ->register_struct_init(fieldname, init);
             }
@@ -911,7 +911,7 @@ ASTNode::codegen_initlist(ref init, TypeSpec type, Symbol* sym)
                 ASTvariable_declaration* v = (ASTvariable_declaration*)this;
                 std::string out;
                 if (v->param_default_literals(fieldsym, init.get(), out))
-                    continue;  // Skip if we had a static initalizer
+                    continue;  // Skip if we had a static initializer
             }
             codegen_initlist(init, fieldsym->typespec(), fieldsym);
         }
@@ -1338,7 +1338,7 @@ ASTstructselect::codegen_assign(Symbol* dest, Symbol* src)
 
 
 
-// A struct select needs to decypher whether there is an array index
+// A struct select needs to decipher whether there is an array index
 // necessary in the chain of events.  The only kind of assignment that
 // makes sense is a series of struct field selections, array indexings,
 // or (last) a direct variable reference (for the top level struct).

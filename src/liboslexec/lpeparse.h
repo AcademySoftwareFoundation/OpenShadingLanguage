@@ -83,7 +83,7 @@ class Parser
         /// and report it was a custom symbol in the iscustom flag
         ustring parseRawSymbol(bool &iscustom);
         /// Given that the begining of a concatenation of regexps is ready to parse, parse it
-        /// and it can be optionally be enclosed in parentheis ()
+        /// and it can be optionally be enclosed in parentheses ()
         LPexp *parseCat();
         /// Given that a fully qualified group like <.RD'custom'> is ready to parse, parse it
         LPexp *parseGroup();
@@ -107,7 +107,7 @@ class Parser
         // automatically converted to a group, this prevents that happening
         bool             m_ingroup;
         // maps each basic label to its expected possition in the appearance order, for instance
-        // the direction label can't be in the fisrt pos of a group. This way we know where to put the
+        // the direction label can't be in the first pos of a group. This way we know where to put the
         // expression when the user writes just S, which translates to <..S>
         SymbolToInt m_label_position;
         // The set of the basic labels

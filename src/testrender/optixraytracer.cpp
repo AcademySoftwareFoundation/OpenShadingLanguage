@@ -299,7 +299,7 @@ OptixRaytracer::synch_attributes ()
             return false;
         }
 
-        // set the elemet size to char
+        // set the element size to char
         buffer->setElementSize(sizeof(char));
 
         // and number of elements to the actual size needed.

@@ -16,7 +16,7 @@
 //   (presumably because the hash can be done faster than the table
 //   lookup)
 // * Added 'seed' parameters to more easily generate 'vector' versions
-//   of the noise, where each component starts with a differen seed.
+//   of the noise, where each component starts with a different seed.
 // * Change the gradN functions to return float* into the array, rather
 //   have a float* parameter for each dimension.
 // * Simplify the function logic to have fewer assignments, faster.
@@ -282,7 +282,7 @@ OSL_HOSTDEVICE float simplexnoise2 (float x, float y, int seed,
     // for the last two arguments
     if (dnoise_dx) {
         OSL_DASSERT(dnoise_dy);
-	/*  A straight, unoptimised calculation would be like:
+	/*  A straight, unoptimized calculation would be like:
      *    *dnoise_dx = -8.0f * t20 * t0 * x0 * ( g0[0] * x0 + g0[1] * y0 ) + t40 * g0[0];
      *    *dnoise_dy = -8.0f * t20 * t0 * y0 * ( g0[0] * x0 + g0[1] * y0 ) + t40 * g0[1];
      *    *dnoise_dx += -8.0f * t21 * t1 * x1 * ( g1[0] * x1 + g1[1] * y1 ) + t41 * g1[0];
@@ -451,7 +451,7 @@ simplexnoise3 (float x, float y, float z, int seed,
     // for the last three arguments
     if (dnoise_dx) {
         OSL_DASSERT(dnoise_dy && dnoise_dz);
-	/*  A straight, unoptimised calculation would be like:
+	/*  A straight, unoptimized calculation would be like:
      *     *dnoise_dx = -8.0f * t20 * t0 * x0 * dot(g0[0], g0[1], g0[2], x0, y0, z0) + t40 * g0[0];
      *    *dnoise_dy = -8.0f * t20 * t0 * y0 * dot(g0[0], g0[1], g0[2], x0, y0, z0) + t40 * g0[1];
      *    *dnoise_dz = -8.0f * t20 * t0 * z0 * dot(g0[0], g0[1], g0[2], x0, y0, z0) + t40 * g0[2];
@@ -648,7 +648,7 @@ simplexnoise4 (float x, float y, float z, float w, int seed,
     // for the last four arguments
     if (dnoise_dx) {
         OSL_DASSERT(dnoise_dy && dnoise_dz && dnoise_dw);
-	/*  A straight, unoptimised calculation would be like:
+	/*  A straight, unoptimized calculation would be like:
      *     *dnoise_dx = -8.0f * t20 * t0 * x0 * dot(g0[0], g0[1], g0[2], g0[3], x0, y0, z0, w0) + t40 * g0[0];
      *    *dnoise_dy = -8.0f * t20 * t0 * y0 * dot(g0[0], g0[1], g0[2], g0[3], x0, y0, z0, w0) + t40 * g0[1];
      *    *dnoise_dz = -8.0f * t20 * t0 * z0 * dot(g0[0], g0[1], g0[2], g0[3], x0, y0, z0, w0) + t40 * g0[2];

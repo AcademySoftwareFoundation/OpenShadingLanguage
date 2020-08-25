@@ -98,7 +98,7 @@ struct ShaderGlobals {
     TransformationPtr object2common;
     TransformationPtr shader2common;
 
-    /// The output closure will be placed here. The rendererer should
+    /// The output closure will be placed here. The renderer should
     /// initialize this to NULL before shading execution, and this is where
     /// it can retrieve the output closure from after shader execution has
     /// completed.

@@ -30,7 +30,7 @@ typedef enum {
 /// Base class for a light path expression
 //
 /// Light path expressions are arranged as an abstract syntax tree. All the
-/// nodes in that tree satisfy this interface that basicaly makes the automate
+/// nodes in that tree satisfy this interface that basically makes the automate
 /// generation easy and clear.
 ///
 /// The node types for this tree are:

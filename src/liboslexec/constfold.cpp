@@ -1932,7 +1932,7 @@ DECLFOLDER(constfold_sincos)
 
 DECLFOLDER(constfold_normalize)
 {
-    // Try to turn R=normalze(x) into R=C
+    // Try to turn R=normalize(x) into R=C
     Opcode &op (rop.inst()->ops()[opnum]);
     Symbol &X (*rop.inst()->argsymbol(op.firstarg()+1));
     OSL_DASSERT(X.typespec().is_triple());
@@ -3050,7 +3050,7 @@ DECLFOLDER(constfold_raytype)
         rop.turn_into_assign_zero (op, "raytype => 0");
         return 1;
     }
-    return 0;  // indeterminite until execution time
+    return 0;  // indeterminate until execution time
 }
 
 

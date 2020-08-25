@@ -448,7 +448,7 @@ BackendLLVM::getOrAllocateCUDAVariable (const Symbol& sym, bool addMetadata)
         // Use the ustring hash to create a name for the symbol that's based on
         // the string contents
         //
-        // TODO: Collisions between variable names are unlikely, but stil
+        // TODO: Collisions between variable names are unlikely, but still
         //       possible. Using something like a counter to handle collisions
         //       is unattractive because it depends on the order in which
         //       strings are encountered at run time.
@@ -1075,7 +1075,7 @@ BackendLLVM::llvm_assign_impl (Symbol &Result, Symbol &Src,
             : llvm_load_value (Src, 0, arrind, srccomp, basetype);
         if (!src_val)
             return false;
-        // write source float into all compnents when dstcomp == -1, otherwise
+        // write source float into all components when dstcomp == -1, otherwise
         // the single element requested.
         if (dstcomp == -1) {
             for (int i = 0; i < num_components; ++i)

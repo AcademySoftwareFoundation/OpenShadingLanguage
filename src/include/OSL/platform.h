@@ -160,7 +160,7 @@
 
 // Generic pragma definition
 #if defined(_MSC_VER)
-    // Of couse MS does it in a quirky way
+    // Of course MS does it in a quirky way
     #define OSL_PRAGMA(UnQuotedPragma) __pragma(UnQuotedPragma)
 #else
     // All other compilers seem to support C99 _Pragma
@@ -271,7 +271,7 @@
 // calls should be inlined, and so on recursively.  Has no affect on function calls to
 // whose definition exists in different translation units or calls that are not
 // legal to inline (possibly by OSL_NOINLINE).  Intent is to ensure that entire
-// contents of a SIMD loop body is are fully inlined avoiding compiler hueristcs.
+// contents of a SIMD loop body is are fully inlined avoiding compiler heuristics.
 // However if any debugging code exists inside the code block, then the amount
 // of code inlined could explode.  So great care should be used when placing
 // code inside one of these forced inline blocks.  Note that if OSL_DEBUG is true,

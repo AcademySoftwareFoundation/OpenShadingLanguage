@@ -88,7 +88,7 @@ public:
     ///    int no_pointcloud      Skip pointcloud lookups. (0)
     ///    int exec_repeat        How many times to run each group (1).
     ///    int opt_warnings       Warn on certain failure to runtime-optimize
-    ///                              cetain shader constructs. (0)
+    ///                              certain shader constructs. (0)
     ///    int gpu_opt_error      Consider a hard error if certain shader
     ///                              constructs cannot be optimized away. (0)
     /// 2. Attributes that should be set by applications/renderers that
@@ -468,7 +468,7 @@ public:
     /// Replace a parameter value in a previously-declared shader group.
     /// This is meant to called after the ShaderGroupBegin/End, but will
     /// fail if the shader has already been irrevocably optimized/compiled,
-    /// unless the paraticular parameter is marked as lockgeom=0 (which
+    /// unless the particular parameter is marked as lockgeom=0 (which
     /// indicates that it's a parameter that may be overridden by the
     /// geometric primitive).  This call gives you a way of changing the
     /// instance value, even if it's not a geometric override.
@@ -713,7 +713,7 @@ public:
     ///   float -> triple          replicate x3
     ///   float -> float[4]        replicate x4
     ///   float -> int             truncate like a (int) type cast
-    ///   triple -> triple         copy, regarless of differing vector types
+    ///   triple -> triple         copy, regardless of differing vector types
     /// 3. Additional rules not allowed in OSL source code:
     ///   float -> float[2]        replicate x2
     ///   int -> float[2]          convert to float and replicate x2

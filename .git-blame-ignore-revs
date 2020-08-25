@@ -1,0 +1,8 @@
+# Start using clang-format on OSL code base (#1215)
+630b4c042d696c94ec9b2a1b6f5adc250bd61e05
+
+# More clang-format (#1218)
+bdb473cbdb119f3d9060d48f75f965cbd45f6d7a
+
+# More clang-format: liboslquery, oslinfo, oslc, osl.imageio, osltoy (#1220)
+bf366d7a90c46599b82071dac6dbef7c5e3ca157

@@ -25,7 +25,7 @@ class MyAov : public Aov
         MyAov(const TestPath *test, int id)
         {
             // Init for the test case array. For each test case set a bool
-            // in m_expected marking wether this AOV should get soem color
+            // in m_expected marking wether this AOV should get some color
             // from that test or not.
             for (int i = 0; test[i].path[0]; ++i) { // iterate test cases
                 m_expected.push_back(false); // false by default

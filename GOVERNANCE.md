@@ -128,7 +128,7 @@ represents the project at all ASWF TAC meetings.
 (Proposed list, subject to revision, some are placeholders while their
 organizations decide who should be the permanent representative)
 
-* **Chair and TAC repreentative**: Chris Kulla - Sony Pictures Imageworks
+* **Chair and TAC representative**: Chris Kulla - Sony Pictures Imageworks
 * **Chief Architect**: Larry Gritz, Sony Pictures Imageworks
 
 * Luke Emrose - Animal Logic

@@ -144,7 +144,7 @@ public:
     }
 
     /// Return an llvm::Value* that is either a scalar and derivs is
-    /// false, or a pointer to sym's values (if sym is an aggreate or
+    /// false, or a pointer to sym's values (if sym is an aggregate or
     /// derivs == true).  Furthermore, if deriv == true and sym doesn't
     /// have derivs, coerce it into a variable with zero derivs.
     llvm::Value *llvm_load_arg (const Symbol& sym, bool derivs);

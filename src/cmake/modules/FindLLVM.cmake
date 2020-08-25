@@ -115,7 +115,7 @@ endforeach ()
 #
 # It seems that this is not a problem when linking against the llvm and
 # libclang libraries statically. So on apple and when LLVM 10+ are involved,
-# just force that choice. Other than larger execubales, it seems harmless,
+# just force that choice. Other than larger executables, it seems harmless,
 # and in any case a better choice than this beastly bug.
 #
 # We can periodically revisit this with new version of LLVM, maybe they will

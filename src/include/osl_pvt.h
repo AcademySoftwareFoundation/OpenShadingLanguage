@@ -764,15 +764,15 @@ protected:
     char m_symtype;                    ///< Kind of symbol (param, local, etc.)
     unsigned m_has_derivs : 1;         ///< Step to derivs (0 == has no derivs)
     unsigned m_const_initializer : 1;  ///< initializer is a constant expression
-    unsigned m_connected_down : 1;     ///< Connected to a later/downtream layer
-    unsigned m_initialized : 1;        ///< If a param, has it been initialized?
-    unsigned m_lockgeom : 1;           ///< Is the param not overridden by geom?
-    unsigned m_allowconnect : 1;       ///< Is the param not overridden by geom?
-    unsigned m_renderer_output : 1;    ///< Is this sym a renderer output?
-    unsigned m_readonly : 1;           ///< read-only symbol
-    char m_valuesource;                ///< Where did the value come from?
-    bool m_free_data;                  ///< Free m_data upon destruction?
-    short m_fieldid;                   ///< Struct field of this var (or -1)
+    unsigned m_connected_down : 1;   ///< Connected to a later/downstream layer
+    unsigned m_initialized : 1;      ///< If a param, has it been initialized?
+    unsigned m_lockgeom : 1;         ///< Is the param not overridden by geom?
+    unsigned m_allowconnect : 1;     ///< Is the param not overridden by geom?
+    unsigned m_renderer_output : 1;  ///< Is this sym a renderer output?
+    unsigned m_readonly : 1;         ///< read-only symbol
+    char m_valuesource;              ///< Where did the value come from?
+    bool m_free_data;                ///< Free m_data upon destruction?
+    short m_fieldid;                 ///< Struct field of this var (or -1)
     short m_layer;                ///< Layer (within the group) this belongs to
     int m_scope;                  ///< Scope where this symbol was declared
     int m_dataoffset;             ///< Offset of the data (-1 for unknown)
@@ -792,7 +792,7 @@ typedef std::vector<Symbol*> SymbolPtrVec;
 
 
 
-/// Intermediate Represenatation opcode
+/// Intermediate Representation opcode
 ///
 class Opcode {
 public:

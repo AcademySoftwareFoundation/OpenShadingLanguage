@@ -136,7 +136,7 @@ public:
 
     bool open(string_view shadername, string_view searchpath = string_view());
     ///< For an uninitialized `OSLQuery` object, initialize it with info on
-    /// the named shader with optional searcphath.  Return true for success,
+    /// the named shader with optional searchpath.  Return true for success,
     /// false if the shader could not be found or opened properly.
 
     bool open_bytecode(string_view buffer);

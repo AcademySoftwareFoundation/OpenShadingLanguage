@@ -13,7 +13,7 @@
 #
 # The plugin name is deduced from the name of the current directory and the
 # source is automatically linked against OpenImageIO.  Additional libraries
-# (for example, libpng) may be specified after the optionl LINK_LIBRARIES
+# (for example, libpng) may be specified after the  LINK_LIBRARIES
 # keyword.
 #
 macro (add_oiio_plugin)

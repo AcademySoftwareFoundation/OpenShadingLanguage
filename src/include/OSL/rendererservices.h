@@ -129,7 +129,7 @@ public:
     /// the name of one of the coordinate systems).  A renderer is free
     /// to not implement this, in which case the default implementation
     /// is simply to make appropriate calls to get_matrix and
-    /// get_inverse_matrix.  The existance of this method is to allow
+    /// get_inverse_matrix.  The existence of this method is to allow
     /// some renderers to provide transformations that cannot be
     /// expressed by a 4x4 matrix.
     ///

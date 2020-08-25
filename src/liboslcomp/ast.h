@@ -176,7 +176,7 @@ public:
         return this;
     }
 
-    /// Detatch any 'next' nodes.
+    /// Detach any 'next' nodes.
     void detach_next() { m_next.reset(); }
 
     /// Concatenate ASTNode sequences A and B, returning a raw pointer to
@@ -320,7 +320,7 @@ protected:
     void typecheck_children(TypeSpec expected = TypeSpec());
 
     /// Helper for check_arglist: simple case of checking a single arg type
-    /// agaisnt the front of the formals list (which will be advanced).
+    /// against the front of the formals list (which will be advanced).
     bool check_simple_arg(const TypeSpec& argtype, const char*& formals,
                           bool coerce);
 
@@ -383,7 +383,7 @@ protected:
                                         bool is_constructor = false,
                                         Symbol* arrayindex  = nullptr);
 
-    // Codegen an array assignemnt: lval[index] = src
+    // Codegen an array assignment: lval[index] = src
     // If no index is provided the constant i is used.
     // Will return either src or a temporary that was codegened.
     Symbol* codegen_aassign(TypeSpec elemtype, Symbol* src, Symbol* lval,
@@ -942,7 +942,7 @@ private:
     void typecheck_builtin_specialcase();
 
     /// Make sure the printf-like format string matches the list of
-    /// arguments poitned to by arg.  If ok, return true, otherwise
+    /// arguments pointed to by arg.  If ok, return true, otherwise
     /// return false and call an appropriate error().
     bool typecheck_printf_args(const char* format, ASTNode* arg);
 

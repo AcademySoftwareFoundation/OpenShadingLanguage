@@ -62,7 +62,7 @@ template <typename S, typename T>  OSL_HOSTDEVICE Vec3  vnoise (S x, T y);
 
 // Cell noise on 1-4 dimensional domain, range [0,1].
 // cellnoise is constant within each unit cube (cell) on the domain, but
-// discontinuous at integer boundaries (and uncorrellated from cell to
+// discontinuous at integer boundaries (and uncorrelated from cell to
 // cell).
 template <typename S >             OSL_HOSTDEVICE float cellnoise (S x);
 template <typename S, typename T>  OSL_HOSTDEVICE float cellnoise (S x, T y);
@@ -71,7 +71,7 @@ template <typename S, typename T>  OSL_HOSTDEVICE Vec3  vcellnoise (S x, T y);
 
 // Hash noise on 1-4 dimensional domain, range [0,1].
 // hashnoise is like cellnoise, but without the 'floor' -- in other words,
-// it's an uncorrellated hash that is different for every floating point
+// it's an uncorrelated hash that is different for every floating point
 // value.
 template <typename S >             OSL_HOSTDEVICE float hashnoise (S x);
 template <typename S, typename T>  OSL_HOSTDEVICE float hashnoise (S x, T y);

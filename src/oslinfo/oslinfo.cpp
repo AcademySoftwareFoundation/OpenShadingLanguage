@@ -46,7 +46,7 @@ static std::string oneparam;
 
 
 
-// Print the default values for a paarameter built out of integers.
+// Print the default values for a parameter built out of integers.
 static void
 print_default_string_vals(const OSLQuery::Parameter* p, bool verbose)
 {
@@ -69,7 +69,7 @@ print_default_string_vals(const OSLQuery::Parameter* p, bool verbose)
 
 
 
-// Print the default values for a paarameter built out of floats (including
+// Print the default values for a parameter built out of floats (including
 // color, point, etc., or arrays thereof).
 static void
 print_default_int_vals(const OSLQuery::Parameter* p, bool verbose)
@@ -95,7 +95,7 @@ print_default_int_vals(const OSLQuery::Parameter* p, bool verbose)
 
 
 
-// Print the default values for a paarameter built out of strings.
+// Print the default values for a parameter built out of strings.
 static void
 print_default_float_vals(const OSLQuery::Parameter* p, bool verbose)
 {

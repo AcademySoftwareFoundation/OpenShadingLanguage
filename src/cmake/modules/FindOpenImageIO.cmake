@@ -41,9 +41,9 @@
 # NOTE: This file is deprecated.
 #
 # In OIIO 2.1+, we generate OpenImageIOConfig.cmake files that are now the
-# preferred way for downstream projecs to find an installed OIIO. There
+# preferred way for downstream projects to find an installed OIIO. There
 # should be no need to copy this FindOpenImageIO.cmake file into downstream
-# projects, *unless* they need to work with a range of OIIO vesions that
+# projects, *unless* they need to work with a range of OIIO versions that
 # may include <2.1, which would lack the generated config files.
 #
 ###########################################################################

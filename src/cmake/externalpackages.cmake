@@ -53,7 +53,7 @@ set (OPTIONAL_DEPS "" CACHE STRING
 # following extra features:
 #   * If either `USE_pkgname` or the all-uppercase `USE_PKGNAME` (or
 #     `ENABLE_pkgname` or `ENABLE_PKGNAME`) exists as either a CMake or
-#     environment variable, is nonempty by contains a non-true/nonnzero
+#     environment variable, is nonempty by contains a non-true/nonzero
 #     value, do not search for or use the package. The optional ENABLE <var>
 #     arguments allow you to override the name of the enabling variable. In
 #     other words, support for the dependency is presumed to be ON, unless
@@ -289,7 +289,7 @@ if (USE_CUDA OR USE_OPTIX)
 
     STRING (FIND ${LLVM_TARGETS} "NVPTX" nvptx_index)
     if (NOT ${nvptx_index} GREATER -1)
-        message (FATAL_ERROR "NVTPX target is not available in the provided LLVM build")
+        message (FATAL_ERROR "NVPTX target is not available in the provided LLVM build")
     endif()
 
     if (${CUDA_VERSION} VERSION_GREATER 8 AND ${LLVM_VERSION} VERSION_LESS 6)

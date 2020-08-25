@@ -117,7 +117,7 @@ struct OpDescriptor {
     ustring name;           // name of op
     OpLLVMGen llvmgen;      // llvm-generating routine
     OpFolder folder;        // constant-folding routine
-    bool simple_assign;     // wholy overwites arg0, no other writes,
+    bool simple_assign;     // wholly overwrites arg0, no other writes,
                             //     no side effects
     int flags;              // other flags
     OpDescriptor () { }
@@ -873,7 +873,7 @@ private:
 
 
 /// Describe one end of a parameter connetion: the parameter number, and
-/// optinally an array index and/or channel number within that parameter.
+/// optionally an array index and/or channel number within that parameter.
 struct ConnectedParam {
     int param;            ///< Parameter number (in the symbol table)
     int arrayindex:27;    ///< Array index (-1 for not an index)

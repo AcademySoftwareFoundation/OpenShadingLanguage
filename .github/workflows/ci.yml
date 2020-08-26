@@ -242,6 +242,12 @@ jobs:
           CMAKE_CXX_STANDARD: 14
           PYTHON_VERSION: 3.8
           LLVM_BC_GENERATOR: /usr/bin/clang++
+          LLVMBREWVER: "@9"
+            # ^^ There's a bug in the current Homebrew llvm 10.0.1 where
+            # it fails to link because of missing libxml2.tbd. It's fixed
+            # upstream in LLVM, but not yet fixed in Homebrew. Hopefully
+            # a subsequent 10.0.x or 11.x will fix it, but for now, just
+            # fall back to llvm@9.
           MY_CMAKE_FLAGS: -DLLVM_BC_GENERATOR=/usr/bin/clang++
             # ^^ Force bitcode compiles to use the system clang compiler by
             # preemptively telling it the LLVM_BC_GENERATOR, to avoid some
@@ -249,6 +255,7 @@ jobs:
         run: |
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/install_homebrew_deps.bash
+            brew uninstall llvm
             OPENIMAGEIO_CMAKE_FLAGS="-DOIIO_BUILD_TESTS=0 -DUSE_OPENGL=0"
             source src/build-scripts/build_openimageio.bash
             source src/build-scripts/ci-build-and-test.bash

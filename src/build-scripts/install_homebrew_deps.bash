@@ -56,4 +56,6 @@ fi
 export PATH=/usr/local/opt/qt5/bin:$PATH
 export PATH=/usr/local/opt/python/libexec/bin:$PATH
 export PYTHONPATH=/usr/local/lib/python${PYTHON_VERSION}/site-packages:$PYTHONPATH
-export PATH=/usr/local/opt/llvm/bin:$PATH
+export PATH=/usr/local/opt/llvm${LLVMBREWVER}/bin:$PATH
+export LLVM_DIRECTORY=/usr/local/opt/llvm${LLVMBREWVER}
+export LLVM_ROOT=/usr/local/opt/llvm${LLVMBREWVER}

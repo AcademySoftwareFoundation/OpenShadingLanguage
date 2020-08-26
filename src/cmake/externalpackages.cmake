@@ -255,6 +255,17 @@ if (LLVM_VERSION VERSION_GREATER_EQUAL 10.0.0 AND
              "icc >= 7, MSVS >= 2017. "
              "If you must use C++11, you need to build against LLVM 9 or earlier.")
 endif ()
+if (APPLE AND LLVM_VERSION VERSION_EQUAL 10.0.1 AND EXISTS "/usr/local/Cellar/llvm")
+    message (WARNING
+             "${ColorYellow}If you are using LLVM 10.0.1 installed by Homebrew, "
+             "please note that a known bug in LLVM may produce a link error where "
+             "it says it can't find libxml2.tbd. If you encounter this, please "
+             "try downgrading to LLVM 9: \n"
+             "    brew uninstall llvm \n"
+             "    brew install llvm@9 \n"
+             "    export LLVM_DIRECTORY=/usr/local/opt/llvm@9 "
+             "${ColorReset}\n")
+endif ()
 
 checked_find_package (partio)
 

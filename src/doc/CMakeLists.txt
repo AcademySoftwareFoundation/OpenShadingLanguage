@@ -11,7 +11,7 @@ set (public_docs osl-languagespec.pdf
 
 install (FILES ${public_docs} DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT documentation)
 
-install ( FILES "${PROJECT_SOURCE_DIR}/LICENSE"
+install ( FILES "${PROJECT_SOURCE_DIR}/LICENSE.md"
                 "${PROJECT_SOURCE_DIR}/INSTALL.md"
                 "${PROJECT_SOURCE_DIR}/CHANGES.md"
                 "${PROJECT_SOURCE_DIR}/README.md"

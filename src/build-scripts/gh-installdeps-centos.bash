@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 #
 
+# Copyright Contributors to the Open Shading Language project.
+# SPDX-License-Identifier: BSD-3-Clause
+# https://github.com/imageworks/OpenShadingLanguage
+
 set -ex
 
 echo "Which g++ " `which g++`
@@ -36,19 +40,19 @@ source src/build-scripts/build_pybind11.bash
 CXXFLAGS=-fPIC src/build-scripts/build_pugixml.bash
 
 # Only build OpenEXR if a specific version is requested
-if [[ "$OPENEXR_BRANCH" != "" || "$OPENEXR_VERSION" != "" ]] ; then
+if [[ "$OPENEXR_VERSION" != "" ]] ; then
     source src/build-scripts/build_openexr.bash
 fi
 
 # Only build OpenColorIO if a specific version is requested
-if [[ "$OCIO_BRANCH" != ""  || "$OCIO_VERSION" != "" ]] ; then
+if [[ "$OPENCOLORIO_VERSION" != "" ]] ; then
     # Temporary (?) fix: GH ninja having problems, fall back to make
     CMAKE_GENERATOR="Unix Makefiles" \
-    source src/build-scripts/build_ocio.bash
+    source src/build-scripts/build_opencolorio.bash
 fi
 
 # Only build OpenImageIO if a specific version is requested
-if [[ "$OPENIMAGEIO_BRANCH" != ""  || "$OPENIMAGEIO_VERSION" != "" ]] ; then
+if [[ "$OPENIMAGEIO_VERSION" != "" ]] ; then
     # There are many parts of OIIO we don't need to build
     export ENABLE_iinfo=0 ENABLE_iv=0 ENABLE_igrep=0 ENABLE_iconvert=0 ENABLE_testtex=0
     export ENABLE_cineon=0 ENABLE_DDS=0 ENABLE_DPX=0 ENABLE_FITS=0

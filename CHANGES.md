@@ -318,6 +318,8 @@ Build & test system improvements:
       llvm-config named `llvm-config-64`. #1238 (1.11.7.1)
     - Fixes for OIIO 2.2 which has eliminated use of tinyformat in favor of
       always relying on fmtlib. #1242 (1.11.7.1)
+    - Address problem with LLVM 10.0.1 on Mac when installed by Homebrew.
+      #1245 (1.11.7.2)
 * A new build-time CMake variable `OSL_LIBNAME_SUFFIX` lets you optionally
   add a custom suffix to the main libraries that are built. (Use with
   caution.) #970 (1.11.0)
@@ -355,6 +357,11 @@ Build & test system improvements:
 * Fix typo that botched the version in the .pc pkgconfig file. #1168 (1.11.6)
 * CI test against gcc9 and gcc10. #1192 (1.11.6)
 * Propagate RTTI compile options to exported cmake config. #1194 (1.11.6)
+* New file .git-blame-ignore-revs lists the hashes of commits that only
+  performed bulk reformatting, so that they don't misattribute authorship
+  or modification date. Everybody do this in your local repo:
+  `git config blame.ignoreRevsFile .git-blame-ignore-revs`
+  #1244 (1.11.7.2)
 
 Documentation:
 * Make it clear that the documentation is licensed under the CC-BY-4.0
@@ -366,6 +373,10 @@ Documentation:
   example for others writing renderers. #1202 (1.11.6)
 * Fix incorrect descripton in `spline()` regarding the number of spline
   values required for each interpolation type. #1239 (1.11.7.1)
+* Extensive fixing of typos and misspellings in docs and comments. #1243
+  (1.11.7.2)
+* Renamed "LICENSE-THIRD-PARTY.md" to "THIRD-PARTY.md" to avoid confusing
+  GitHub's reporting of the project's license. (1.11.7.2)
 
 
 Release 1.10.13 -- 1 Aug 2020 (compared to 1.10.12)

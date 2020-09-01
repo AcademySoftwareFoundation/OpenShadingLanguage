@@ -1,6 +1,10 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
+Release 1.11.8 -- 1 Oct? 2020 (compared to 1.11.7)
+---------------------------------------------------
+
+
 Release 1.11 -- 1 Sept 2020 (compared to 1.10)
 --------------------------------------------------
 ASWF adoption changes:

@@ -34,6 +34,7 @@ namespace llvm {
   class LLVMContext;
   class Module;
   class PointerType;
+  class StringRef;
   class Type;
   class Value;
   class VectorType;
@@ -188,6 +189,8 @@ public:
     /// Create a new JITing ExecutionEngine and make it the current one.
     /// Return a pointer to the new engine.  If err is not NULL, put any
     /// errors there.
+    /// Optionally enable debugging symbols (source file & line number)
+    /// Optionally enable profiling events
     /// Optionally request a specific ISA for JIT on the host
     ///     ["x64", "SSE4.2", "AVX", "AVX2", "AVX512"]
     ///     (ignored if requested ISA not valid for host)
@@ -230,6 +233,10 @@ public:
     bool detect_cpu_features(TargetISA requestedISA = TargetISA::UNKNOWN,
                              bool no_fma = false);
 
+    void dump_struct_data_layout(llvm::Type *Ty);
+    void validate_struct_data_layout(llvm::Type *Ty, const std::vector<unsigned int> & expected_offset_by_index);
+    
+    
     /// Return a pointer to the current ExecutionEngine.  Create a JITing
     /// ExecutionEngine if one isn't already set up.
     llvm::ExecutionEngine *execengine () {
@@ -237,10 +244,6 @@ public:
             make_jit_execengine();
         return m_llvm_exec;
     }
-
-    void dump_struct_data_layout(llvm::Type *Ty);
-    void validate_struct_data_layout(llvm::Type *Ty,
-              const std::vector<unsigned int>& expected_offset_by_index);
 
     /// Replace the ExecutionEngine (pass NULL to simply delete the
     /// current one).
@@ -305,6 +308,189 @@ public:
 
     /// Are we inside a function?
     bool inside_function() const;
+
+    // Overview of masking strategy
+    //
+    // For if/then based on a conditional, the result of the conditional is
+    // conditionals written to a symbol that is a wide boolean.  To handle
+    // nesting we will keep a stack of conditional masks.  When a new
+    // conditional mask is pushed, it is combined with the previous mask on
+    // the top of the stack.  It is the top of the mask stack that is used
+    // as the mask for any instructions requiring masking.  When a
+    // conditional scope is exited, we just pop the top of the conditional
+    // mask stack.
+    //
+    // Loops are handled by pushing their conditional result onto the
+    // conditional mask stack, and popping it back off at the end of the
+    // loop.
+    //
+    // Handling of early outs (exit, return, break, continue) is done by
+    // storing a mask representing the lanes which are going to be
+    // deactivated (or continue executing) to an allocated location in the
+    // stack. We actually have to store these early out masks, so that we
+    // can apply it to the conditional mask stack.  As that stack unwinds,
+    // any early out masks are applied to the top of the conditional mask
+    // stack.  As there are different types of early outs that apply to
+    // different control flow scopes and multiple types can be present at
+    // the same time for different data lanes, we must store these early
+    // out masks at separate locations on the stack.
+    //
+    // To handle 'exit', we allocate a 'shader mask' that is initially
+    // populated with a startMaskValue representing the active lanes in a
+    // shader global batch.  For example perhaps only 7 of 16 data lanes
+    // are populated, the startMaskValue would store that value and push it
+    // onto the conditional mask stack.  We require a location on the stack
+    // for this 'shader mask' in order for an 'exit' statement to modify it
+    // and cause a subset of the lanes to be deactivated.  If an exit was
+    // processed, the 'shader mask' is where it will be stored and pulled
+    // from when applying to the unwinding conditional mask stack.
+    //
+    // To handle 'return', we allocate a 'function mask' that is initially
+    // populated with a startMaskValue representing the active lanes when
+    // an inlined function was called.  This startMaskValue should just be
+    // value at the top of the conditional mask stack.  As function calls
+    // can be nested, we maintain a stack of function masks.  We require a
+    // location on the stack for each 'function mask' in order for a
+    // 'return' statement to modify it and cause a subset of the lanes to
+    // be deactivated.  If an return was processed, the 'return mask' is
+    // where it will be stored and pulled from when applying to the
+    // unwinding conditional mask stack. When a function scope is exited,
+    // the function mask is popped so any return's processed would apply to
+    // the outer function mask vs. the one just exited.
+    //
+    // To handle 'break', we use the condition symbol's location on the
+    // stack to directly disable data lanes for the loop execution.  As we
+    // already had a location to store the conditional symbol's mask, no
+    // need to allocate or store a separate one.  However code will need to
+    // reload the condition's value when a break 'could have been' called
+    // vs. relying on a conditional result already in a register.
+    //
+    // To handle 'continue', we allocate a 'continue mask' that is
+    // initially populated with a 0 representing the deactived lanes by
+    // 'continue' operations. We require a location on the stack for each
+    // 'continue mask' in order for a 'continue' statement to modify it and
+    // cause a subset of the lanes to be deactivated.  If an continue was
+    // processed, the 'continue mask' is where it will be stored and pulled
+    // from when applying to the unwinding conditional mask stack. When a
+    // loop's scope is exited, the continue mask is popped so it would't be
+    // applied to an outer loop.
+    //
+    // The logic of when and how to actually apply these masks is handled
+    // by the caller, tracking/storing the different stacks and masks is
+    // handled here.  And queries exist to see how many early outs
+    // operations have been processed, these counts can be used by the
+    // caller to determine which to generate code to apply each of them.
+
+    void push_function_mask(llvm::Value* startMaskValue);
+    void pop_function_mask();
+
+    void push_masked_loop(llvm::Value* location_of_control_mask,
+                          llvm::Value* location_of_continue_mask);
+    void pop_masked_loop();
+    bool is_innermost_loop_masked() const;
+
+    void push_shader_instance(llvm::Value* startMaskValue);
+    void pop_shader_instance();
+
+    // number of masked exits operations built inside the shader instance
+    int masked_exit_count() const;
+
+    // number of masked return operations inside the scope of the current
+    // function mask
+    int masked_return_count() const;
+
+    // number of masked break operations inside the scope of the current
+    // masked loop
+    int masked_break_count() const;
+
+    // number of masked continue operations inside the scope of the current
+    // masked loop
+    int masked_continue_count() const;
+
+    // Push a mask onto the mask stack, which actually will AND the existing
+    // top mask with the new mask and store that off. The mask must be of
+    // type <16 x i1>,<8 x i1>, or <4 x i1> depending on vector_width
+    void push_mask(llvm::Value *mask, bool negate = false, bool absolute = false);
+    void pop_mask();
+
+    void apply_exit_to_mask_stack();
+    void apply_return_to_mask_stack();
+    void apply_break_to_mask_stack();
+    void apply_continue_to_mask_stack();
+
+    llvm::Value* current_mask();
+    llvm::Value* apply_return_to(llvm::Value *existing_mask);
+
+    // Shader level mask, should incorporate the batch size and any exits
+    // processed up to this point.
+    llvm::Value* shader_mask();
+
+    void op_masked_break();
+    void op_masked_continue();
+
+    void op_masked_exit();
+    void op_masked_return();
+
+    void push_masked_return_block(llvm::BasicBlock *test_return);
+    void pop_masked_return_block();
+    bool has_masked_return_block() const;
+    llvm::BasicBlock *masked_return_block() const;
+
+    bool is_masking_required() const { return m_is_masking_required; }
+
+    struct ScopedMasking
+    {
+        ScopedMasking() { }
+
+        ScopedMasking(const ScopedMasking &other) = delete;
+
+        ScopedMasking(ScopedMasking && other)
+            : m_util(other.m_util)
+            , m_previous_masking_requirement(other.m_previous_masking_requirement)
+        {
+            other.m_util = nullptr;
+        }
+
+        void release()
+        {
+            OSL_ASSERT(nullptr != m_util);
+            m_util->set_masking_required(m_previous_masking_requirement);
+            m_util = nullptr;
+        }
+
+        ScopedMasking & operator=(ScopedMasking &&other)
+        {
+            if (nullptr != m_util) {
+                release();
+            }
+            m_util = other.m_util;
+            m_previous_masking_requirement = other.m_previous_masking_requirement;
+            other.m_util = nullptr;
+            return *this;
+        }
+
+        ~ScopedMasking() {
+            if (nullptr != m_util) {
+                release();
+            }
+        }
+
+    private:
+        friend class LLVM_Util;
+        ScopedMasking(LLVM_Util &util, bool enabled)
+            : m_util(&util)
+            , m_previous_masking_requirement(util.is_masking_required())
+        {
+            m_util->set_masking_required(enabled);
+        }
+
+        LLVM_Util *m_util = nullptr;
+        bool m_previous_masking_requirement = false;
+    };
+
+    ScopedMasking create_masking_scope(bool enabled) {
+        return ScopedMasking(*this, enabled);
+    }
 
     /// Return the basic block where we go after returning from the current
     /// function.
@@ -386,7 +572,6 @@ public:
     llvm::Type *type_struct (const std::vector<llvm::Type *> &types,
                              const std::string &name="", bool is_packed=false);
 
-
     /// Return the llvm::Type that is a pointer to the given llvm type.
     llvm::Type *type_ptr (llvm::Type *type);
 
@@ -446,6 +631,20 @@ public:
         return constant(ustring(s));
     }
 
+    llvm::Value* llvm_mask_to_native(llvm::Value* llvm_mask);
+    llvm::Value* native_to_llvm_mask(llvm::Value* native_mask);
+
+    llvm::Value* mask_as_int(llvm::Value* mask);
+    llvm::Value* mask_as_int8(llvm::Value* mask);
+    llvm::Value* mask4_as_int8(llvm::Value* mask);
+    llvm::Value* mask_as_int16(llvm::Value* mask);
+    llvm::Value* int_as_mask(llvm::Value* value);
+    llvm::Value* test_if_mask_is_non_zero(llvm::Value* mask);
+
+    llvm::Value* test_mask_lane(llvm::Value* mask, int lane_index);
+    llvm::Value* widen_value (llvm::Value* val);
+    llvm::Value* negate_mask(llvm::Value* mask);
+
     /// Return an llvm::Value for a long long that is a packed
     /// representation of a TypeDesc.
     llvm::Value *constant (const OIIO::TypeDesc &type);
@@ -497,13 +696,15 @@ public:
     llvm::Value *offset_ptr (llvm::Value *ptr, int offset,
                              llvm::Type *ptrtype=NULL);
 
+    void assume_ptr_is_aligned(llvm::Value *ptr, unsigned alignment);
+
     /// Generate an alloca instruction to allocate space for n copies of the
     /// given llvm type, and return its pointer.
     llvm::Value *op_alloca (llvm::Type *llvmtype, int n=1,
                             const std::string &name=std::string(), int align=0);
     llvm::Value *op_alloca (llvm::PointerType *llvmtype, int n=1,
                             const std::string &name=std::string(), int align=0) {
-        return op_alloca ((llvm::Type *)llvmtype, n, name, align);
+        return op_alloca ((llvm::Type *)llvmtype, n, name);
     }
 
     /// Generate an alloca instruction to allocate space for n copies of the
@@ -542,6 +743,10 @@ public:
         return call_function (name, { arg0, arg1, arg2, arg3 });
     }
 
+    /// Mark the function call to pass the pointer to the structure 
+    /// to be used as the return value.
+    void mark_structure_return_value(llvm::Value *funccall);
+    
     /// Mark the function call (which MUST be the value returned by a
     /// call_function()) as using the 'fast' calling convention.
     void mark_fast_func_call (llvm::Value *funccall);
@@ -579,8 +784,24 @@ public:
     /// Dereference a pointer:  return *ptr
     llvm::Value *op_load (llvm::Value *ptr);
 
-    /// Store to a dereferenced pointer:   *ptr = val
+    llvm::Value *op_gather(llvm::Value *ptr, llvm::Value *index);
+
+    /// Store to a dereferenced pointer
+    /// respecting the current mask & masking_enabled flag:   *ptr = val
     void op_store (llvm::Value *val, llvm::Value *ptr);
+
+    /// Store to a dereferenced pointer with no masking:   *ptr = val
+    void op_unmasked_store (llvm::Value *val, llvm::Value *ptr);
+
+    /// Dereference a pointer of a native mask
+    /// converting it to a llvm mask (vector of bits):  return native_to_llvm_mask(*ptr)
+    llvm::Value * op_load_mask (llvm::Value *native_mask_ptr);
+
+    /// Store to a dereferenced pointer of a llvm mask
+    /// converting it to the native mask type for storage:   *ptr = llvm_mask_to_native(val);
+    void op_store_mask (llvm::Value *llvm_mask, llvm::Value *native_mask_ptr);
+
+    void op_scatter(llvm::Value *wide_val, llvm::Value *ptr, llvm::Value *wide_index);
 
     // N.B. "GEP" -- GetElementPointer -- is a particular LLVM-ism that is
     // the means for retrieving elements from some kind of aggregate: the
@@ -627,6 +848,11 @@ public:
 
     /// Generate IR for (cond ? a : b).  Cond should be a bool.
     llvm::Value *op_select (llvm::Value *cond, llvm::Value *a, llvm::Value *b);
+    llvm::Value *op_zero_if(llvm::Value *cond, llvm::Value *a);
+
+    llvm::Value * op_1st_active_lane_of(llvm::Value * mask);
+    llvm::Value * op_lanes_that_match_masked(llvm::Value * scalar_value,
+        llvm::Value * wide_value, llvm::Value * mask);
 
     /// Extracts a scalar value from a vector type
     llvm::Value *op_extract(llvm::Value *a, int index);
@@ -655,11 +881,14 @@ public:
     bool ptx_compile_group (llvm::Module* lib_module, const std::string& name,
                             std::string& out);
 
-    /// Convert a whole module's bitcode to a string.
+    /// Convert all functions in module's bitcode to a string.
     std::string bitcode_string (llvm::Module *module);
 
     /// Convert one function's bitcode to a string.
     std::string bitcode_string (llvm::Function *func);
+
+    /// Convert entire module's bitcode to a string.
+    std::string module_string ();
 
     /// Delete the IR for the body of the given function to reclaim its
     /// memory (only helpful if we know we won't use it again).
@@ -693,6 +922,7 @@ private:
     llvm::legacy::FunctionPassManager *m_llvm_func_passes;
     llvm::ExecutionEngine *m_llvm_exec;
     TargetISA m_target_isa = TargetISA::UNKNOWN;
+
     std::vector<llvm::BasicBlock *> m_return_block;     // stack for func call
     std::vector<llvm::BasicBlock *> m_loop_after_block; // stack for break
     std::vector<llvm::BasicBlock *> m_loop_step_block;  // stack for continue
@@ -761,6 +991,78 @@ private:
     llvm::DISubroutineType * mSubTypeForInlinedFunction;
     bool m_ModuleIsFinalized;
     bool m_ModuleIsPruned;
+
+    // Additional tracking for masked conditionals, shaders, subroutines, and loop flow control
+    struct MaskInfo
+    {
+        llvm::Value * mask;
+        bool negate;
+        int applied_return_mask_count;
+    };
+    std::vector<MaskInfo> m_mask_stack;              // stack for masks that all stores should use when enabled
+
+    bool m_is_masking_required;
+    int m_masked_exit_count = 0;
+
+    struct MaskedLoopContext
+    {
+        llvm::Value *location_of_control_mask;
+        llvm::Value *location_of_continue_mask;
+        int break_count;
+        int continue_count;
+    };
+    std::vector<MaskedLoopContext> m_masked_loop_stack; // stack to track loop condition & break count
+
+    void set_masking_required(bool required) { m_is_masking_required = required; }
+
+    // For each pushed inlined function call, keep a slot for modified masks
+    // to be stored from code blocks that might be branched over
+    struct MaskedSubroutineContext
+    {
+        llvm::Value * location_of_mask;
+        int return_count;
+        // stack for masked returns to return to, maybe not the same the regular return block
+        // because there could have been other active data lanes in the function
+        // not traveling the masked conditional path which encounters a return
+        std::vector<llvm::BasicBlock *> return_block_stack;
+    };
+
+    std::vector<MaskedSubroutineContext> m_masked_subroutine_stack;
+    MaskedSubroutineContext & masked_function_context() {
+        OSL_ASSERT(false == m_masked_subroutine_stack.empty());
+        return m_masked_subroutine_stack.back();
+    }
+    const MaskedSubroutineContext & masked_function_context() const {
+        OSL_ASSERT(false == m_masked_subroutine_stack.empty());
+        return m_masked_subroutine_stack.back();
+    }
+    MaskedSubroutineContext & masked_shader_context() {
+        OSL_ASSERT(false == m_masked_subroutine_stack.empty());
+        return m_masked_subroutine_stack.front();
+    }
+    bool inside_of_inlined_masked_function_call() const {
+        return (m_masked_subroutine_stack.size() > size_t(1));
+    }
+
+    MaskedLoopContext & masked_loop_context() {
+        OSL_ASSERT(false == m_masked_loop_stack.empty());
+        return m_masked_loop_stack.back();
+    }
+    const MaskedLoopContext & masked_loop_context() const {
+        OSL_ASSERT(false == m_masked_loop_stack.empty());
+        return m_masked_loop_stack.back();
+    }
+    bool inside_of_masked_loop() const {
+        return (false == m_masked_loop_stack.empty());
+    }
+
+    llvm::Value * op_linearize_16x_indices (llvm::Value *wide_index);
+    llvm::Value * op_linearize_8x_indices (llvm::Value *wide_index);
+    std::array<llvm::Value *,2> op_split_16x (llvm::Value * vector_val);
+    std::array<llvm::Value *,2> op_split_8x (llvm::Value * vector_val);
+    std::array<llvm::Value *,4> op_quarter_16x (llvm::Value * vector_val);
+    llvm::Value * op_combine_8x_vectors(llvm::Value * half_vec_1, llvm::Value * half_vec_2);
+    llvm::Value * op_combine_4x_vectors(llvm::Value * half_vec_1, llvm::Value * half_vec_2);
 };
 
 

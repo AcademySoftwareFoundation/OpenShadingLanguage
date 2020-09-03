@@ -11,6 +11,7 @@
 
 #include <OSL/oslconfig.h>
 #include <OSL/llvm_util.h>
+#include <OSL/wide.h>
 
 #if OSL_LLVM_VERSION < 70
 #error "LLVM minimum version required for OSL is 7.0"
@@ -23,6 +24,9 @@
 #include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Intrinsics.h>
+#if OSL_LLVM_VERSION >= 100
+#include <llvm/IR/IntrinsicsX86.h>
+#endif
 #include <llvm/IR/Module.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/IRBuilder.h>
@@ -785,6 +789,110 @@ LLVM_Util::module_from_bitcode (const char *bitcode, size_t size,
 
 
 void
+LLVM_Util::push_function_mask(llvm::Value * startMaskValue)
+{
+    // As each nested function (that is inlined) will have different control flow,
+    // as some lanes of nested function may return early, but that would not affect
+    // the lanes of the calling function, we mush have a modified mask stack for each
+    // function
+    llvm::Value * alloca_for_function_mask = op_alloca(type_native_mask(), 1, "inlined_function_mask");
+    m_masked_subroutine_stack.push_back(MaskedSubroutineContext{alloca_for_function_mask, /* return_count = */0 });
+
+    op_store_mask(startMaskValue, alloca_for_function_mask);
+
+
+    // Give the new function its own mask so that it may be swapped out
+    // to mask out lanes that have returned early,
+    // and we can just pop that mask off when the function exits
+    push_mask(startMaskValue,  /*negate=*/ false, /*absolute = */ true);
+}
+
+int
+LLVM_Util::masked_return_count() const
+{
+    return masked_function_context().return_count;
+}
+
+int
+LLVM_Util::masked_exit_count() const
+{
+    OSL_DEV_ONLY(std::cout << "masked_exit_count = " << m_masked_exit_count << std::endl);
+
+    return m_masked_exit_count;
+}
+
+void
+LLVM_Util::pop_function_mask()
+{
+    pop_mask();
+
+    OSL_ASSERT(!m_masked_subroutine_stack.empty());
+    m_masked_subroutine_stack.pop_back();
+}
+
+void
+LLVM_Util::push_masked_loop(llvm::Value* location_of_control_mask, llvm::Value* location_of_continue_mask)
+{
+    // As each nested loop will have different control flow,
+    // as some lanes of nested function may 'break' out early, but that would not affect
+    // the lanes outside the loop, and we could have nested loops,
+    // we mush have a break count for each loop
+    m_masked_loop_stack.push_back(MaskedLoopContext{location_of_control_mask, location_of_continue_mask, 0, 0});
+}
+
+bool
+LLVM_Util::is_innermost_loop_masked() const
+{
+    if(inside_of_masked_loop()) {
+        return (masked_loop_context().location_of_control_mask != nullptr);
+    }
+    return false;
+}
+
+int
+LLVM_Util::masked_break_count() const
+{
+    if(inside_of_masked_loop()) {
+        return masked_loop_context().break_count;
+    }
+    return 0;
+}
+
+int
+LLVM_Util::masked_continue_count() const
+{
+    if(inside_of_masked_loop()) {
+        return masked_loop_context().continue_count;
+    }
+    return 0;
+}
+
+
+void
+LLVM_Util::pop_masked_loop()
+{
+    m_masked_loop_stack.pop_back();
+}
+
+
+
+void
+LLVM_Util::push_shader_instance(llvm::Value * startMaskValue)
+{
+    push_function_mask(startMaskValue);
+}
+
+
+void
+LLVM_Util::pop_shader_instance()
+{
+    m_masked_exit_count = 0;
+    pop_function_mask();
+}
+
+
+
+void
 LLVM_Util::new_builder (llvm::BasicBlock *block)
 {
     end_builder();
@@ -797,6 +905,10 @@ LLVM_Util::new_builder (llvm::BasicBlock *block)
                 static_cast<unsigned int>(0), /* column?  we don't know it, may be worth tracking through osl->oso*/
                 getCurrentDebugScope()));
     }
+
+    OSL_ASSERT(m_masked_exit_count == 0);
+    OSL_ASSERT(m_masked_subroutine_stack.empty());
+    OSL_ASSERT(m_mask_stack.empty());
 }
 
 
@@ -1959,6 +2071,32 @@ LLVM_Util::pop_function ()
 }
 
 
+void LLVM_Util::push_masked_return_block(llvm::BasicBlock *test_return)
+{
+    OSL_DEV_ONLY(std::cout << "push_masked_return_block" << std::endl);
+
+    masked_function_context().return_block_stack.push_back (test_return);
+}
+
+void LLVM_Util::pop_masked_return_block()
+{
+    OSL_DEV_ONLY(std::cout << "pop_masked_return_block" << std::endl);
+    masked_function_context().return_block_stack.pop_back();
+}
+
+bool
+LLVM_Util::has_masked_return_block() const
+{
+    return (! masked_function_context().return_block_stack.empty());
+}
+
+llvm::BasicBlock *
+LLVM_Util::masked_return_block() const
+{
+    OSL_ASSERT (! masked_function_context().return_block_stack.empty());
+    return masked_function_context().return_block_stack.back();
+}
+
 
 llvm::BasicBlock *
 LLVM_Util::return_block () const
@@ -2240,6 +2378,476 @@ LLVM_Util::wide_constant (ustring s)
 
     return builder().CreateVectorSplat(m_vector_width, constant_value);
 }
+
+
+llvm::Value * LLVM_Util::llvm_mask_to_native(llvm::Value *llvm_mask) {
+
+    OSL_ASSERT(llvm_mask->getType() == type_wide_bool());
+    if (m_supports_llvm_bit_masks_natively) {
+        return llvm_mask;
+    }
+    llvm::Value * native_mask =  builder().CreateSExt(llvm_mask, type_wide_int());
+    OSL_ASSERT(native_mask);
+    OSL_ASSERT(native_mask->getType() == type_native_mask());
+    return native_mask;
+}
+
+llvm::Value * LLVM_Util::native_to_llvm_mask(llvm::Value *native_mask) {
+    OSL_ASSERT(native_mask->getType() == type_native_mask());
+
+    if (m_supports_llvm_bit_masks_natively) {
+        return native_mask;
+    }
+    // Use ICMP SLT to zero initializer to look at sign bits only
+    llvm::Value * llvm_mask = op_lt(native_mask,wide_constant(0));
+    // vs. truncation
+    // llvm::Value * llvm_mask = builder().CreateTrunc(native_mask, type_wide_bool());
+
+    OSL_ASSERT(llvm_mask);
+    OSL_ASSERT(llvm_mask->getType() == type_wide_bool());
+    return llvm_mask;
+}
+
+llvm::Value *
+LLVM_Util::mask_as_int(llvm::Value *mask)
+{
+    OSL_ASSERT(mask->getType() == type_wide_bool());
+
+    if (m_supports_avx512f) {
+
+        llvm::Type * intMaskType = nullptr;
+        switch(m_vector_width) {
+            case 16:
+                // We can just reinterpret cast a 16 bit mask to a 16 bit integer
+                // and all types are happy
+                intMaskType = type_int16();
+                break;
+            case 8:
+                // We can just reinterpret cast a 8 bit mask to a 8 bit integer
+                // and all types are happy
+                intMaskType = type_int8();
+                break;
+            default:
+                OSL_ASSERT(0 && "unsupported native bit mask width");
+        };
+
+        llvm::Value* result = builder().CreateBitCast (mask, intMaskType);
+        return builder().CreateZExt(result, type_int());
+    } else if (m_supports_avx) {
+        switch(m_vector_width) {
+            case 16:
+            {
+                // We need to do more than a simple cast to an int. Since we
+                // know vectorized comparisons for AVX&AVX2 end up setting 8
+                // 32 bit integers to 0xFFFFFFFF or 0x00000000, We need to
+                // do more than a simple cast to an int.
+
+                // Convert <16 x i1> -> <16 x i32> -> to <2 x< 8 x i32>>
+                llvm::Value * wide_int_mask = builder().CreateSExt(mask, type_wide_int());
+                auto w8_int_masks = op_split_16x(wide_int_mask);
+
+                // Now we will use the horizontal sign extraction intrinsic
+                // to build a 32 bit mask value. However the only 256bit
+                // version works on floats, so we will cast from int32 to
+                // float beforehand
+                llvm::Type * w8_float_type = llvm::VectorType::get(llvm::Type::getFloatTy (*m_llvm_context), 8);
+                std::array<llvm::Value *,2> w8_float_masks = {{
+                        builder().CreateBitCast (w8_int_masks[0], w8_float_type),
+                        builder().CreateBitCast (w8_int_masks[1], w8_float_type)
+                }};
+
+                llvm::Function* func = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx_movmsk_ps_256);
+
+                llvm::Value *args[1] = {
+                        w8_float_masks[0]
+                };
+                std::array<llvm::Value *,2> int8_masks;
+                int8_masks[0] = builder().CreateCall (func, makeArrayRef(args));
+                args[0] = w8_float_masks[1];
+                int8_masks[1] = builder().CreateCall (func, makeArrayRef(args));
+
+                llvm::Value *upper_mask = op_shl(int8_masks[1], constant(8));
+                return op_or(upper_mask, int8_masks[0]);
+            }
+            case 8:
+            {
+                // We need to do more than a simple cast to an int. Since we
+                // know vectorized comparisons for AVX&AVX2 end up setting 8
+                // 32 bit integers to 0xFFFFFFFF or 0x00000000, We need to
+                // do more than a simple cast to an int.
+
+                // Convert <8 x i1> -> <8 x i32>
+                llvm::Value * wide_int_mask = builder().CreateSExt(mask, type_wide_int());
+
+                // Convert <8 x i32> -> <8 x f32>
+                // Now we will use the horizontal sign extraction intrinsic
+                // to build a 32 bit mask value. However the only 256bit
+                // version works on floats, so we will cast from int32 to
+                // float beforehand
+                llvm::Type * w8_float_type = llvm::VectorType::get(llvm::Type::getFloatTy (*m_llvm_context), 8);
+                llvm::Value * w8_float_mask = builder().CreateBitCast (wide_int_mask, w8_float_type);
+
+                llvm::Function* func = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx_movmsk_ps_256);
+
+                llvm::Value *args[1] = {
+                        w8_float_mask
+                };
+                llvm::Value * int8_mask;
+                int8_mask = builder().CreateCall (func, makeArrayRef(args));
+                return int8_mask;
+            }
+            default:
+            {
+                OSL_ASSERT(0 && "unsupported native bit mask width");
+                return mask;
+            }
+        };
+    } else {
+        switch(m_vector_width) {
+            case 16:
+            {
+                // We need to do more than a simple cast to an int. Since we
+                // know vectorized comparisons for SSE4.2 ends up setting 4
+                // 32 bit integers to 0xFFFFFFFF or 0x00000000, We need to
+                // do more than a simple cast to an int.
+
+                // Convert <16 x i1> -> <16 x i32> -> to <4 x< 4 x i32>>
+                llvm::Value * wide_int_mask = builder().CreateSExt(mask, type_wide_int());
+                auto w4_int_masks = op_quarter_16x(wide_int_mask);
+
+                // Now we will use the horizontal sign extraction intrinsic
+                // to build a 32 bit mask value. However the only 128bit
+                // version works on floats, so we will cast from int32 to
+                // float beforehand
+                llvm::Type * w4_float_type = llvm::VectorType::get(llvm::Type::getFloatTy (*m_llvm_context), 4);
+                std::array<llvm::Value *,4> w4_float_masks = {{
+                        builder().CreateBitCast (w4_int_masks[0], w4_float_type),
+                        builder().CreateBitCast (w4_int_masks[1], w4_float_type),
+                        builder().CreateBitCast (w4_int_masks[2], w4_float_type),
+                        builder().CreateBitCast (w4_int_masks[3], w4_float_type)
+                }};
+
+                llvm::Function* func = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_sse_movmsk_ps);
+
+                llvm::Value *args[1] = {
+                        w4_float_masks[0]
+                };
+                std::array<llvm::Value *,4> int4_masks;
+                int4_masks[0] = builder().CreateCall (func, makeArrayRef(args));
+                args[0] = w4_float_masks[1];
+                int4_masks[1] = builder().CreateCall (func, makeArrayRef(args));
+                args[0] = w4_float_masks[2];
+                int4_masks[2] = builder().CreateCall (func, makeArrayRef(args));
+                args[0] = w4_float_masks[3];
+                int4_masks[3] = builder().CreateCall (func, makeArrayRef(args));
+
+                llvm::Value *bits12_15 = op_shl(int4_masks[3], constant(12));
+                llvm::Value *bits8_11 = op_shl(int4_masks[2], constant(8));
+                llvm::Value *bits4_7 = op_shl(int4_masks[1], constant(4));
+                return op_or(bits12_15,op_or(bits8_11, op_or(bits4_7, int4_masks[0])));
+            }
+            case 8:
+            {
+                // We need to do more than a simple cast to an int. Since we
+                // know vectorized comparisons for SSE4.2 ends up setting 4
+                // 32 bit integers to 0xFFFFFFFF or 0x00000000, We need to
+                // do more than a simple cast to an int.
+
+                // Convert <8 x i1> -> <8 x i32> -> to <2 x< 4 x i32>>
+                llvm::Value * wide_int_mask = builder().CreateSExt(mask, type_wide_int());
+                auto w4_int_masks = op_split_8x(wide_int_mask);
+
+                // Now we will use the horizontal sign extraction intrinsic
+                // to build a 32 bit mask value. However the only 128bit
+                // version works on floats, so we will cast from int32 to
+                // float beforehand
+                llvm::Type * w4_float_type = llvm::VectorType::get(llvm::Type::getFloatTy (*m_llvm_context), 4);
+                std::array<llvm::Value *,2> w4_float_masks = {{
+                        builder().CreateBitCast (w4_int_masks[0], w4_float_type),
+                        builder().CreateBitCast (w4_int_masks[1], w4_float_type)
+                }};
+
+                llvm::Function* func = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_sse_movmsk_ps);
+
+                llvm::Value *args[1] = {
+                        w4_float_masks[0]
+                };
+                std::array<llvm::Value *,2> int4_masks;
+                int4_masks[0] = builder().CreateCall (func, makeArrayRef(args));
+                args[0] = w4_float_masks[1];
+                int4_masks[1] = builder().CreateCall (func, makeArrayRef(args));
+
+                llvm::Value *bits4_7 = op_shl(int4_masks[1], constant(4));
+                return op_or(bits4_7, int4_masks[0]);
+            }
+            case 4:
+            {
+                // We need to do more than a simple cast to an int. Since we
+                // know vectorized comparisons for SSE4.2 ends up setting 4
+                // 32 bit integers to 0xFFFFFFFF or 0x00000000, We need to
+                // do more than a simple cast to an int.
+
+                // Convert <4 x i1> -> <4 x i32>
+                llvm::Value * wide_int_mask = builder().CreateSExt(mask, type_wide_int());
+
+                // Now we will use the horizontal sign extraction intrinsic
+                // to build a 32 bit mask value. However the only 128bit
+                // version works on floats, so we will cast from int32 to
+                // float beforehand
+                llvm::Type * w4_float_type = llvm::VectorType::get(llvm::Type::getFloatTy (*m_llvm_context), 4);
+                llvm::Value * w4_float_mask =
+                        builder().CreateBitCast (wide_int_mask, w4_float_type);
+
+                llvm::Function* func = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_sse_movmsk_ps);
+
+                llvm::Value *args[1] = {
+                        w4_float_mask
+                };
+                llvm::Value * int4_mask = builder().CreateCall (func, makeArrayRef(args));
+
+                return int4_mask;
+            }
+            default:
+            {
+                OSL_ASSERT(0 && "unsupported native bit mask width");
+                return mask;
+            }
+        };
+    }
+}
+
+
+
+llvm::Value *
+LLVM_Util::mask_as_int16(llvm::Value *mask)
+{
+    OSL_ASSERT(mask->getType() == type_wide_bool());
+    OSL_ASSERT(m_supports_llvm_bit_masks_natively);
+
+    return builder().CreateBitCast (mask, type_int16());
+}
+
+llvm::Value *
+LLVM_Util::mask_as_int8(llvm::Value *mask)
+{
+    OSL_ASSERT(m_supports_llvm_bit_masks_natively);
+    return builder().CreateBitCast (mask, type_int8());
+}
+
+llvm::Value *
+LLVM_Util::mask4_as_int8(llvm::Value *mask)
+{
+    OSL_ASSERT(m_supports_llvm_bit_masks_natively);
+    // combine <4xi1> mask with <4xi1> zero init to get <8xi1> and cast it
+    // to i8
+    llvm::Value * zero_mask4 = llvm::ConstantVector::getSplat(4, llvm::ConstantInt::get (context(), llvm::APInt(1,0)));
+    return builder().CreateBitCast (op_combine_4x_vectors(mask,zero_mask4), type_int8());
+}
+
+
+
+llvm::Value *
+LLVM_Util::int_as_mask(llvm::Value *value)
+{
+    OSL_ASSERT(value->getType() == type_int());
+
+    llvm::Value* result;
+
+    if (m_supports_llvm_bit_masks_natively) {
+
+        llvm::Type * intMaskType = nullptr;
+        switch(m_vector_width) {
+            case 16:
+                // We can just reinterpret cast a 16 bit integer to a 16 bit mask
+                // and all types are happy
+                intMaskType = type_int16();
+                break;
+            case 8:
+                // We can just reinterpret cast a 8 bit integer to a 8 bit mask
+                // and all types are happy
+                intMaskType = type_int8();
+                break;
+            default:
+                OSL_ASSERT(0 && "unsupported native bit mask width");
+        };
+        llvm::Value* intMask = builder().CreateTrunc(value, intMaskType);
+
+        result = builder().CreateBitCast (intMask, type_wide_bool());
+    } else {
+        // Since we know vectorized comparisons for AVX&AVX2 end up setting
+        // 8 32 bit integers to 0xFFFFFFFF or 0x00000000, We need to do more
+        // than a simple cast to an int.
+
+        // Broadcast out the int32 mask to all data lanes
+        llvm::Value * wide_int_mask = widen_value(value);
+
+        // Create a filter for each lane to 0 out the other lane's bits
+        std::vector<llvm::Constant *> lane_masks(m_vector_width);
+        for (int lane_index = 0; lane_index < m_vector_width; ++lane_index) {
+           lane_masks[lane_index] = llvm::ConstantInt::get(type_int(), (1<<lane_index));
+        }
+        llvm::Value * lane_filter = llvm::ConstantVector::get(lane_masks);
+
+        // Bitwise AND the wide_mask and the lane filter
+        llvm::Value * filtered_mask = op_and(wide_int_mask, lane_filter);
+
+        result = op_ne(filtered_mask, wide_constant(0));
+    }
+
+    OSL_ASSERT(result->getType() == type_wide_bool());
+
+    return result;
+}
+
+
+
+llvm::Value *
+LLVM_Util::test_if_mask_is_non_zero(llvm::Value *mask)
+{
+    OSL_ASSERT(mask->getType() == type_wide_bool());
+
+    llvm::Type * extended_int_vector_type;
+    llvm::Type * int_reinterpret_cast_vector_type;
+    llvm::Value * zeroConstant;
+
+    switch(m_vector_width) {
+    case 4:
+        extended_int_vector_type = (llvm::Type *) llvm::VectorType::get(llvm::Type::getInt32Ty (*m_llvm_context), m_vector_width);
+        int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt128Ty (*m_llvm_context);
+        zeroConstant = constant128(0);
+        break;
+    case 8:
+        extended_int_vector_type = (llvm::Type *) llvm::VectorType::get(llvm::Type::getInt32Ty (*m_llvm_context), m_vector_width);
+        int_reinterpret_cast_vector_type = (llvm::Type *) llvm::IntegerType::get(*m_llvm_context,256);
+        zeroConstant = llvm::ConstantInt::get (context(), llvm::APInt(256,0));
+        break;
+    case 16:
+        // TODO:  Think better way to represent for AVX512
+        // also might need something other than number of vector lanes to detect AVX512
+        extended_int_vector_type = (llvm::Type *) llvm::VectorType::get(llvm::Type::getInt8Ty (*m_llvm_context), m_vector_width);
+        int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt128Ty (*m_llvm_context);
+        zeroConstant = constant128(0);
+        break;
+    default:
+        OSL_ASSERT(0 && "Unhandled vector width");
+        extended_int_vector_type = nullptr;
+        int_reinterpret_cast_vector_type = nullptr;
+        zeroConstant = nullptr;
+        break;
+    };
+
+    llvm::Value * wide_int_mask = builder().CreateSExt(mask, extended_int_vector_type);
+    llvm::Value * mask_as_int =  builder().CreateBitCast (wide_int_mask, int_reinterpret_cast_vector_type);
+    return op_ne (mask_as_int, zeroConstant);
+}
+
+
+
+llvm::Value *
+LLVM_Util::test_mask_lane(llvm::Value *mask, int lane_index)
+{
+    OSL_ASSERT(mask->getType() == type_wide_bool());
+
+    return builder().CreateExtractElement (mask, lane_index);
+}
+
+
+
+llvm::Value *
+LLVM_Util::op_1st_active_lane_of(llvm::Value * mask)
+{
+    OSL_ASSERT(mask->getType() == type_wide_bool());
+    // Assumes mask is not empty
+
+    llvm::Type * intMaskType = nullptr;
+    switch(m_vector_width) {
+        case 16:
+            // We can just reinterpret cast a 16 bit mask to a 16 bit integer
+            // and all types are happy
+            intMaskType = type_int16();
+            break;
+        case 8:
+            // We can just reinterpret cast a 8 bit mask to a 8 bit integer
+            // and all types are happy
+            intMaskType = type_int8();
+            break;
+#if 0 // WIP
+        case 4:
+        {
+            // We can just reinterpret cast a 8 bit mask to a 8 bit integer
+            // and all types are happy
+            intMaskType = type_int8();
+
+//            extended_int_vector_type = (llvm::Type *) llvm::VectorType::get(llvm::Type::getInt32Ty (*m_llvm_context), m_vector_width);
+//            llvm::Value * wide_int_mask = builder().CreateSExt(mask, extended_int_vector_type);
+//
+//            int_reinterpret_cast_vector_type = (llvm::Type *) llvm::Type::getInt128Ty (*m_llvm_context);
+//            zeroConstant = constant128(0);
+//
+//            llvm::Value * mask_as_int =  builder().CreateBitCast (wide_int_mask, int_reinterpret_cast_vector_type);
+            break;
+        }
+#endif
+        default:
+            OSL_ASSERT(0 && "unsupported native bit mask width");
+    };
+
+    // Count trailing zeros, least significant
+    llvm::Type* types[] = {
+            intMaskType
+    };
+    llvm::Function* func_cttz = llvm::Intrinsic::getDeclaration (module(),
+        llvm::Intrinsic::cttz,
+        makeArrayRef(types));
+
+    llvm::Value * int_mask = builder().CreateBitCast (mask, intMaskType);
+    llvm::Value *args[2] = {
+            int_mask,
+            constant_bool(true)
+    };
+
+    llvm::Value * firstNonZeroIndex = builder().CreateCall (func_cttz, makeArrayRef(args));
+    return firstNonZeroIndex;
+}
+
+
+
+llvm::Value *
+LLVM_Util::op_lanes_that_match_masked(llvm::Value* scalar_value,
+                                      llvm::Value* wide_value,
+                                      llvm::Value* mask)
+{
+    OSL_ASSERT(scalar_value->getType()->isVectorTy() == false);
+    OSL_ASSERT(wide_value->getType()->isVectorTy() == true);
+
+    llvm::Value * uniformWideValue = widen_value(scalar_value);
+    llvm::Value * lanes_matching = op_eq(uniformWideValue, wide_value);
+    llvm::Value * masked_lanes_matching = op_and(lanes_matching, mask);
+    return masked_lanes_matching;
+}
+
+
+
+llvm::Value *
+LLVM_Util::widen_value (llvm::Value *val)
+{
+    return builder().CreateVectorSplat(m_vector_width, val);
+}
+
+
+
+llvm::Value *
+LLVM_Util::negate_mask(llvm::Value *mask)
+{
+    OSL_ASSERT(mask->getType() == type_wide_bool());
+    return builder().CreateNot(mask);
+}
+
 
 
 llvm::Value *
@@ -2572,10 +3180,1298 @@ LLVM_Util::op_load (llvm::Value *ptr)
 
 
 
+llvm::Value *
+LLVM_Util::op_linearize_16x_indices(llvm::Value *wide_index)
+{
+    llvm::Value *strided_indices = op_mul (wide_index, llvm::ConstantVector::getSplat(16, llvm::ConstantInt::get (context(), llvm::APInt(32,16))));
+    llvm::Constant *offsets_to_lane[16] = {
+        llvm::ConstantInt::get (context(), llvm::APInt(32,0)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,1)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,2)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,3)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,4)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,5)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,6)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,7)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,8)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,9)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,10)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,11)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,12)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,13)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,14)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,15)),
+    };
+    llvm::Value *const_vec_offsets = llvm::ConstantVector::get(llvm::ArrayRef< llvm::Constant *>(&offsets_to_lane[0], 16));
+
+    return op_add (strided_indices, const_vec_offsets);
+}
+
+
+llvm::Value *
+LLVM_Util::op_linearize_8x_indices(llvm::Value *wide_index)
+{
+    llvm::Value *strided_indices = op_mul (wide_index, llvm::ConstantVector::getSplat(8, llvm::ConstantInt::get (context(), llvm::APInt(32,8))));
+    llvm::Constant *offsets_to_lane[8] = {
+        llvm::ConstantInt::get (context(), llvm::APInt(32,0)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,1)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,2)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,3)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,4)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,5)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,6)),
+        llvm::ConstantInt::get (context(), llvm::APInt(32,7))
+    };
+    llvm::Value *const_vec_offsets = llvm::ConstantVector::get(llvm::ArrayRef< llvm::Constant *>(&offsets_to_lane[0], 8));
+
+    return op_add (strided_indices, const_vec_offsets);
+}
+
+
+std::array<llvm::Value *,2>
+LLVM_Util::op_split_16x (llvm::Value * vector_val)
+{
+    const uint32_t extractLanes0_to_7[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+    const uint32_t extractLanes8_to_15[] = { 8, 9, 10, 11, 12, 13, 14, 15 };
+
+    llvm::Value * half_vec_0 = builder().CreateShuffleVector (vector_val, vector_val, llvm::makeArrayRef(extractLanes0_to_7));
+    llvm::Value * half_vec_1 = builder().CreateShuffleVector (vector_val, vector_val, llvm::makeArrayRef(extractLanes8_to_15));
+    return {{half_vec_0, half_vec_1}};
+}
+
+
+std::array<llvm::Value *,2>
+LLVM_Util::op_split_8x (llvm::Value * vector_val)
+{
+    const uint32_t extractLanes0_to_3[] = { 0, 1, 2, 3 };
+    const uint32_t extractLanes4_to_7[] = { 4, 5, 6, 7 };
+
+    llvm::Value * half_vec_0 = builder().CreateShuffleVector (vector_val, vector_val, llvm::makeArrayRef(extractLanes0_to_3));
+    llvm::Value * half_vec_1 = builder().CreateShuffleVector (vector_val, vector_val, llvm::makeArrayRef(extractLanes4_to_7));
+    return {{half_vec_0, half_vec_1}};
+}
+
+
+std::array<llvm::Value *,4>
+LLVM_Util::op_quarter_16x (llvm::Value * vector_val)
+{
+    OSL_ASSERT(m_vector_width == 16);
+
+    const uint32_t extractLanes0_to_3[] = { 0, 1, 2, 3 };
+    const uint32_t extractLanes4_to_7[] = { 4, 5, 6, 7 };
+    const uint32_t extractLanes8_to_11[] = { 8, 9, 10, 11};
+    const uint32_t extractLanes12_to_15[] = { 12, 13, 14, 15 };
+
+    llvm::Value * quarter_vec_0 = builder().CreateShuffleVector (vector_val, vector_val, llvm::makeArrayRef(extractLanes0_to_3));
+    llvm::Value * quarter_vec_1 = builder().CreateShuffleVector (vector_val, vector_val, llvm::makeArrayRef(extractLanes4_to_7));
+    llvm::Value * quarter_vec_2 = builder().CreateShuffleVector (vector_val, vector_val, llvm::makeArrayRef(extractLanes8_to_11));
+    llvm::Value * quarter_vec_3 = builder().CreateShuffleVector (vector_val, vector_val, llvm::makeArrayRef(extractLanes12_to_15));
+    return {{quarter_vec_0, quarter_vec_1, quarter_vec_2, quarter_vec_3}};
+}
+
+
+llvm::Value *
+LLVM_Util::op_combine_8x_vectors (llvm::Value * half_vec_1, llvm::Value * half_vec_2)
+{
+    static constexpr uint32_t combineIndices[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    return builder().CreateShuffleVector (half_vec_1, half_vec_2, llvm::makeArrayRef(combineIndices));
+}
+
+llvm::Value *
+LLVM_Util::op_combine_4x_vectors (llvm::Value * half_vec_1, llvm::Value * half_vec_2)
+{
+    static constexpr uint32_t combineIndices[] = { 0, 1, 2, 3, 4, 5, 6, 7};
+    return builder().CreateShuffleVector (half_vec_1, half_vec_2, llvm::makeArrayRef(combineIndices));
+}
+
+
+
+llvm::Value *
+LLVM_Util::op_gather(llvm::Value *ptr, llvm::Value *wide_index)
+{
+    OSL_ASSERT(wide_index->getType() == type_wide_int());
+
+    // To avoid loading masked off lanes, rather than add a bunch of
+    // branches to skip loading of lanes, we assume accessing index 0 is
+    // legal and in bounds and select the index and 0 based on the mask.
+    // Because OSL owns the data layout of arrays, we can make this
+    // assumption.  array[0] exists, is valid, and no indices will be
+    // negative
+    auto clamped_gather_from_uniform = [this, ptr, wide_index](llvm::Type *result_type)->llvm::Value * {
+        llvm::Value *result = llvm::UndefValue::get(result_type);
+        llvm::Value *clampedIndices = op_select(current_mask(), wide_index, wide_constant(0));
+        for(int l=0; l < m_vector_width; ++l) {
+            llvm::Value *index_for_lane = op_extract(clampedIndices, l);
+            llvm::Value *address = GEP(ptr, index_for_lane);
+            llvm::Value * val = op_load(address);
+            result = op_insert (result, val, l);
+        }
+        return result;
+    };
+
+    auto clamped_gather_from_varying = [this, ptr, wide_index](llvm::Type *result_type)->llvm::Value * {
+        llvm::Value *clampedIndices = op_select(current_mask(), wide_index, wide_constant(0));
+        llvm::Value *result = llvm::UndefValue::get(result_type);
+        for(int l=0; l < m_vector_width; ++l) {
+            llvm::Value *index_for_lane = op_extract(clampedIndices, l);
+            llvm::Value *wide_address = GEP(ptr, index_for_lane);
+            llvm::Value *wide_val = op_load(wide_address);
+            llvm::Value *val = op_extract(wide_val, l);
+            result = op_insert (result, val, l);
+        }
+        return result;
+    };
+
+    if (ptr->getType() == type_int_ptr()) {
+        if (m_supports_avx512f) {
+            llvm::Function* func_avx512_gather_pi = nullptr;
+            llvm::Value *int_mask = nullptr;
+            switch(m_vector_width) {
+                case 16:
+                    int_mask = mask_as_int16(current_mask());
+                    func_avx512_gather_pi = llvm::Intrinsic::getDeclaration (module(),
+                                        llvm::Intrinsic::x86_avx512_gather_dpi_512);
+                    break;
+                case 8:
+                    int_mask = mask_as_int8(current_mask());
+                    func_avx512_gather_pi = llvm::Intrinsic::getDeclaration (module(),
+                            llvm::Intrinsic::x86_avx512_gather3siv8_si);
+                    break;
+                default:
+                    OSL_ASSERT(0 && "unsupported native bit mask width");
+            };
+            OSL_ASSERT(int_mask);
+            OSL_ASSERT(func_avx512_gather_pi);
+
+            llvm::Value *unmasked_value = wide_constant(0);
+            llvm::Value *args[] = {
+                unmasked_value,
+                void_ptr(ptr),
+                wide_index,
+                int_mask,
+                constant(4)
+            };
+            return builder().CreateCall (func_avx512_gather_pi, makeArrayRef(args));
+        } else if (m_supports_avx2) {
+            llvm::Function* func_avx2_gather_pi = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx2_gather_d_d_256);
+            OSL_ASSERT(func_avx2_gather_pi);
+
+            llvm::Constant *avx2_unmasked_value = llvm::ConstantVector::getSplat(8,llvm::ConstantInt::get (context(), llvm::APInt(32,0)));
+
+            // Convert <8 x i1> -> <8 x i32>
+            llvm::Value * wide_int_mask = builder().CreateSExt(current_mask(), type_wide_int());
+            switch(m_vector_width) {
+                case 16:
+                {
+                    // Convert <16 x i32> -> to <2 x< 8 x i32>>
+                    auto w8_int_masks = op_split_16x(wide_int_mask);
+                    auto w8_int_indices = op_split_16x(wide_index);
+                    llvm::Value *args[] = {
+                        avx2_unmasked_value,
+                        void_ptr(ptr),
+                        w8_int_indices[0],
+                        w8_int_masks[0],
+                        constant8(4)
+                    };
+                    llvm::Value *gather1 = builder().CreateCall (func_avx2_gather_pi, makeArrayRef(args));
+                    args[2] = w8_int_indices[1];
+                    args[3] = w8_int_masks[1];
+                    llvm::Value *gather2 = builder().CreateCall (func_avx2_gather_pi, makeArrayRef(args));
+                    return op_combine_8x_vectors(gather1,gather2);
+                }
+                case 8:
+                {
+                    llvm::Value *args[] = {
+                        avx2_unmasked_value,
+                        void_ptr(ptr),
+                        wide_index,
+                        wide_int_mask,
+                        constant8(4)
+                    };
+                    llvm::Value *gather_result = builder().CreateCall (func_avx2_gather_pi, makeArrayRef(args));
+                    return gather_result;
+                }
+                default:
+                    OSL_ASSERT(0 && "unsupported width");
+            };
+        } else {
+            return clamped_gather_from_uniform(type_wide_int());
+        }
+
+    } else if (ptr->getType() == type_float_ptr()) {
+        if (m_supports_avx512f) {
+            llvm::Function* func_avx512_gather_ps = nullptr;
+            llvm::Value *int_mask = nullptr;
+            switch(m_vector_width) {
+                case 16:
+                    int_mask = mask_as_int16(current_mask());
+                    func_avx512_gather_ps = llvm::Intrinsic::getDeclaration (module(),
+                            llvm::Intrinsic::x86_avx512_gather_dps_512);
+                    break;
+                case 8:
+                    int_mask = mask_as_int8(current_mask());
+                    func_avx512_gather_ps = llvm::Intrinsic::getDeclaration (module(),
+                            llvm::Intrinsic::x86_avx512_gather3siv8_sf);
+                    break;
+                default:
+                    OSL_ASSERT(0 && "unsupported native bit mask width");
+            };
+            OSL_ASSERT(int_mask);
+            OSL_ASSERT(func_avx512_gather_ps);
+
+            llvm::Value *unmasked_value = wide_constant(0.0f);
+            llvm::Value *args[] = {
+                unmasked_value,
+                void_ptr(ptr),
+                wide_index,
+                int_mask,
+                constant(4) // not sure why the scale
+            };
+            return builder().CreateCall (func_avx512_gather_ps, makeArrayRef(args));
+        } else if (m_supports_avx2) {
+            llvm::Function* func_avx2_gather_ps = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx2_gather_d_ps_256);
+            OSL_ASSERT(func_avx2_gather_ps);
+
+            llvm::Constant *avx2_unmasked_value = llvm::ConstantVector::getSplat(8,llvm::ConstantFP::get (context(), llvm::APFloat(0.0f)));
+
+            // Convert <? x i1> -> <?x i32> -> to
+            llvm::Value * wide_int_mask = builder().CreateSExt(current_mask(), type_wide_int());
+            switch(m_vector_width) {
+                case 16:
+                {
+                    // Convert <16 x i32> -> to <2 x< 8 x i32>>
+                    auto w8_int_masks = op_split_16x(wide_int_mask);
+                    auto w8_int_indices = op_split_16x(wide_index);
+                    llvm::Value *args[] = {
+                            avx2_unmasked_value,
+                        void_ptr(ptr),
+                        w8_int_indices[0],
+                        builder().CreateBitCast (w8_int_masks[0], llvm::VectorType::get(type_float(), 8)),
+                        constant8(4)
+                    };
+                    llvm::Value *gather1 = builder().CreateCall (func_avx2_gather_ps, makeArrayRef(args));
+                    args[2] = w8_int_indices[1];
+                    args[3] = builder().CreateBitCast (w8_int_masks[1], llvm::VectorType::get(type_float(), 8));
+                    llvm::Value *gather2 = builder().CreateCall (func_avx2_gather_ps, makeArrayRef(args));
+                    return op_combine_8x_vectors(gather1,gather2);
+                }
+                case 8:
+                {
+                    llvm::Value *args[] = {
+                            avx2_unmasked_value,
+                        void_ptr(ptr),
+                        wide_index,
+                        builder().CreateBitCast (wide_int_mask, llvm::VectorType::get(type_float(), 8)),
+                        constant8(4)
+                    };
+                    llvm::Value *gather = builder().CreateCall (func_avx2_gather_ps, makeArrayRef(args));
+                    return gather;
+                }
+            }
+        } else {
+            return clamped_gather_from_uniform(type_wide_float());
+        }
+    } else if (ptr->getType() == type_ustring_ptr()) {
+        if (m_supports_avx512f) {
+            // TODO:  Are we guaranteed a 64bit pointer?
+            switch(m_vector_width) {
+                case 16:
+                {
+                    // Gather 64bit integer, as that is binary compatible with 64bit pointers of ustring
+                    llvm::Function* func_avx512_gather_dpq = llvm::Intrinsic::getDeclaration (module(),
+                            llvm::Intrinsic::x86_avx512_gather_dpq_512);
+                    OSL_ASSERT(func_avx512_gather_dpq);
+
+                    // We can only gather 8 at a time, so need to split the work over 2 gathers
+                    auto w8_bit_masks = op_split_16x(current_mask());
+                    auto w8_int_indices = op_split_16x(wide_index);
+
+                    llvm::Value *unmasked_value = builder().CreateVectorSplat(8,constant64(0));
+                    llvm::Value *args[] = {
+                        unmasked_value,
+                        void_ptr(ptr),
+                        w8_int_indices[0],
+                        mask_as_int8(w8_bit_masks[0]),
+                        constant(8)
+                    };
+                    llvm::Value *gather1 = builder().CreateCall (func_avx512_gather_dpq, makeArrayRef(args));
+                    args[2] = w8_int_indices[1];
+                    args[3] = mask_as_int8(w8_bit_masks[1]);
+                    llvm::Value *gather2 = builder().CreateCall (func_avx512_gather_dpq, makeArrayRef(args));
+
+                    return builder().CreateIntToPtr(op_combine_8x_vectors(gather1, gather2), type_wide_string());
+                }
+                case 8:
+                {
+                    // Gather 64bit integer, as that is binary compatible with 64bit pointers of ustring
+                    llvm::Function* func_avx512_gather_dpq = llvm::Intrinsic::getDeclaration (module(),
+                            llvm::Intrinsic::x86_avx512_gather3siv4_di);
+                    OSL_ASSERT(func_avx512_gather_dpq);
+
+                    // We can only gather 4 at a time, so need to split the work over 2 gathers
+                    auto w4_bit_masks = op_split_8x(current_mask());
+                    auto w4_int_indices = op_split_8x(wide_index);
+
+                    llvm::Value *unmasked_value = builder().CreateVectorSplat(4,constant64(0));
+                    llvm::Value *args[] = {
+                        unmasked_value,
+                        void_ptr(ptr),
+                        w4_int_indices[0],
+                        mask4_as_int8(w4_bit_masks[0]),
+                        constant(8)
+                    };
+                    llvm::Value *gather1 = builder().CreateCall (func_avx512_gather_dpq, makeArrayRef(args));
+                    args[2] = w4_int_indices[1];
+                    args[3] = mask4_as_int8(w4_bit_masks[1]);
+                    llvm::Value *gather2 = builder().CreateCall (func_avx512_gather_dpq, makeArrayRef(args));
+
+                    return builder().CreateIntToPtr(op_combine_4x_vectors(gather1, gather2), type_wide_string());
+                }
+                default:
+                    OSL_ASSERT(0 && "unsupported native bit mask width");
+            }
+        } else {
+            return clamped_gather_from_uniform(type_wide_string());
+        }
+    } else if (ptr->getType() == type_wide_float_ptr()) {
+        if (m_supports_avx512f) {
+            switch(m_vector_width) {
+            case 16:
+            {
+                llvm::Function* func_avx512_gather_ps = llvm::Intrinsic::getDeclaration (module(),
+                        llvm::Intrinsic::x86_avx512_gather_dps_512);
+                OSL_ASSERT(func_avx512_gather_ps);
+
+                llvm::Value *unmasked_value = wide_constant(0.0f);
+                llvm::Value *args[] = {
+                    unmasked_value,
+                    void_ptr(ptr),
+                    op_linearize_16x_indices(wide_index),
+                    mask_as_int16(current_mask()),
+                    constant(4)
+                };
+                return builder().CreateCall (func_avx512_gather_ps, makeArrayRef(args));
+            }
+            case 8:
+            {
+                llvm::Function* func_avx512_gather_ps = llvm::Intrinsic::getDeclaration (module(),
+                        llvm::Intrinsic::x86_avx512_gather3siv8_sf);
+                OSL_ASSERT(func_avx512_gather_ps);
+
+                llvm::Value *unmasked_value = wide_constant(0.0f);
+                llvm::Value *args[] = {
+                    unmasked_value,
+                    void_ptr(ptr),
+                    op_linearize_8x_indices(wide_index),
+                    mask_as_int8(current_mask()),
+                    constant(4)
+                };
+                return builder().CreateCall (func_avx512_gather_ps, makeArrayRef(args));
+            }
+            default:
+                OSL_ASSERT(0 && "unsupported native bit mask width");
+            };
+
+        } else if (m_supports_avx2) {
+            llvm::Function* func_avx2_gather_ps = llvm::Intrinsic::getDeclaration (module(),
+                    llvm::Intrinsic::x86_avx2_gather_d_ps_256);
+            OSL_ASSERT(func_avx2_gather_ps);
+
+            llvm::Constant *avx2_unmasked_value = llvm::ConstantVector::getSplat(8,llvm::ConstantFP::get (context(), llvm::APFloat(0.0f)));
+            // Convert <? x i1> -> <? x i32>
+            llvm::Value * wide_int_mask = builder().CreateSExt(current_mask(), type_wide_int());
+            switch(m_vector_width) {
+            case 16:
+            {
+                // Convert <16 x i32> -> to <2 x< 8 x i32>>
+                auto w8_int_masks = op_split_16x(wide_int_mask);
+                auto w8_int_indices = op_split_16x(op_linearize_16x_indices(wide_index));
+                llvm::Value *args[] = {
+                    avx2_unmasked_value,
+                    void_ptr(ptr),
+                    w8_int_indices[0],
+                    builder().CreateBitCast (w8_int_masks[0], llvm::VectorType::get(type_float(), 8)),
+                    constant8(4)
+                };
+                llvm::Value *gather1 = builder().CreateCall (func_avx2_gather_ps, makeArrayRef(args));
+                args[2] = w8_int_indices[1];
+                args[3] = builder().CreateBitCast (w8_int_masks[1], llvm::VectorType::get(type_float(), 8));
+                llvm::Value *gather2 = builder().CreateCall (func_avx2_gather_ps, makeArrayRef(args));
+                return op_combine_8x_vectors(gather1, gather2);
+            }
+            case 8:
+            {
+                auto int_indices = op_linearize_8x_indices(wide_index);
+                llvm::Value *args[] = {
+                    avx2_unmasked_value,
+                    void_ptr(ptr),
+                    int_indices,
+                    builder().CreateBitCast (wide_int_mask, llvm::VectorType::get(type_float(), 8)),
+                    constant8(4)
+                };
+                llvm::Value *gather_result = builder().CreateCall (func_avx2_gather_ps, makeArrayRef(args));
+                return gather_result;
+            }
+            default:
+                OSL_ASSERT(0 && "unsupported vector width for avx2 gather");
+            }
+        } else {
+            return clamped_gather_from_varying(type_wide_float());
+        }
+    } else if (ptr->getType() == type_wide_int_ptr()) {
+        if (m_supports_avx512f) {
+            switch(m_vector_width) {
+            case 16:
+            {
+                llvm::Function* func_avx512_gather_pi = llvm::Intrinsic::getDeclaration (module(),
+                        llvm::Intrinsic::x86_avx512_gather_dpi_512);
+                OSL_ASSERT(func_avx512_gather_pi);
+
+                llvm::Value *unmasked_value = wide_constant(0);
+                llvm::Value *args[] = {
+                    unmasked_value,
+                    void_ptr(ptr),
+                    op_linearize_16x_indices(wide_index),
+                    mask_as_int16(current_mask()),
+                    constant(4)
+                };
+                return builder().CreateCall (func_avx512_gather_pi, makeArrayRef(args));
+            }
+            case 8:
+            {
+                llvm::Function* func_avx512_gather_pi = llvm::Intrinsic::getDeclaration (module(),
+                        llvm::Intrinsic::x86_avx512_gather3siv8_si);
+                OSL_ASSERT(func_avx512_gather_pi);
+
+                llvm::Value *unmasked_value = wide_constant(0);
+                llvm::Value *args[] = {
+                    unmasked_value,
+                    void_ptr(ptr),
+                    op_linearize_8x_indices(wide_index),
+                    mask_as_int8(current_mask()),
+                    constant(4)
+                };
+                return builder().CreateCall (func_avx512_gather_pi, makeArrayRef(args));
+            }
+            default:
+                OSL_ASSERT(0 && "unsupported native bit mask width");
+            }
+        } else if (m_supports_avx2) {
+            switch(m_vector_width) {
+            case 16:
+            {
+                llvm::Function* func_avx2_gather_pi = llvm::Intrinsic::getDeclaration (module(),
+                        llvm::Intrinsic::x86_avx2_gather_d_d_256);
+                OSL_ASSERT(func_avx2_gather_pi);
+
+                llvm::Constant *avx2_unmasked_value = llvm::ConstantVector::getSplat(8,llvm::ConstantInt::get (context(), llvm::APInt(32,0)));
+
+                // Convert <16 x i1> -> <16 x i32> -> to <2 x< 8 x i32>>
+                llvm::Value * wide_int_mask = builder().CreateSExt(current_mask(), type_wide_int());
+                auto w8_int_masks = op_split_16x(wide_int_mask);
+                auto w8_int_indices = op_split_16x(op_linearize_16x_indices(wide_index));
+                llvm::Value *args[] = {
+                    avx2_unmasked_value,
+                    void_ptr(ptr),
+                    w8_int_indices[0],
+                    w8_int_masks[0],
+                    constant8(4)
+                };
+                llvm::Value *gather1 = builder().CreateCall (func_avx2_gather_pi, makeArrayRef(args));
+                args[2] = w8_int_indices[1];
+                args[3] = w8_int_masks[1];
+                llvm::Value *gather2 = builder().CreateCall (func_avx2_gather_pi, makeArrayRef(args));
+                return op_combine_8x_vectors(gather1, gather2);
+            }
+            case 8:
+            {
+                llvm::Function* func_avx2_gather_pi = llvm::Intrinsic::getDeclaration (module(),
+                        llvm::Intrinsic::x86_avx2_gather_d_d_256);
+                OSL_ASSERT(func_avx2_gather_pi);
+
+                llvm::Constant *avx2_unmasked_value = llvm::ConstantVector::getSplat(8,llvm::ConstantInt::get (context(), llvm::APInt(32,0)));
+
+                // Convert <16 x i1> -> <16 x i32> -> to <2 x< 8 x i32>>
+                llvm::Value * wide_int_mask = builder().CreateSExt(current_mask(), type_wide_int());
+                auto int_indices = op_linearize_8x_indices(wide_index);
+                llvm::Value *args[] = {
+                    avx2_unmasked_value,
+                    void_ptr(ptr),
+                    int_indices,
+                    wide_int_mask,
+                    constant8(4)
+                };
+                llvm::Value *gather_result = builder().CreateCall (func_avx2_gather_pi, makeArrayRef(args));
+                return gather_result;
+            }
+            default:
+                OSL_ASSERT(0 && "unsupported vector width for avx2 gather");
+            }
+        } else {
+            return clamped_gather_from_varying(type_wide_int());
+        }
+    } else if (ptr->getType() == llvm::PointerType::get(type_wide_string(),0)) {
+        if (m_supports_avx512f) {
+            // TODO:  Are we guaranteed a 64bit pointer?
+            switch(m_vector_width) {
+            case 16:
+            {
+                // Gather 64bit integer, as that is binary compatible with
+                // 64bit pointers of ustring
+                llvm::Function* func_avx512_gather_dpq = llvm::Intrinsic::getDeclaration (module(),
+                        llvm::Intrinsic::x86_avx512_gather_dpq_512);
+                OSL_ASSERT(func_avx512_gather_dpq);
+
+                // We can only gather 8 at a time, so need to split the work
+                // over 2 gathers
+                auto w8_bit_masks = op_split_16x(current_mask());
+                auto w8_int_indices = op_split_16x(op_linearize_16x_indices(wide_index));
+
+                llvm::Value *unmasked_value = builder().CreateVectorSplat(8,constant64(0));
+                llvm::Value *args[] = {
+                    unmasked_value,
+                    void_ptr(ptr),
+                    w8_int_indices[0],
+                    mask_as_int8(w8_bit_masks[0]),
+                    constant(8)
+                };
+                llvm::Value *gather1 = builder().CreateCall (func_avx512_gather_dpq, makeArrayRef(args));
+                args[2] = w8_int_indices[1];
+                args[3] = mask_as_int8(w8_bit_masks[1]);
+                llvm::Value *gather2 = builder().CreateCall (func_avx512_gather_dpq, makeArrayRef(args));
+
+                return builder().CreateIntToPtr(op_combine_8x_vectors(gather1, gather2), type_wide_string());
+            }
+            case 8:
+            {
+                // Gather 64bit integer, as that is binary compatible with 64bit pointers of ustring
+                llvm::Function* func_avx512_gather_dpq = llvm::Intrinsic::getDeclaration (module(),
+                        llvm::Intrinsic::x86_avx512_gather3siv4_di);
+                OSL_ASSERT(func_avx512_gather_dpq);
+
+                // TODO: we technically could gather all 8 if we let a
+                // 512bit operation run, but that could drop the clock
+                // frequency.  If a renderer were both executing 16wide
+                // AVX512 and 8wide AVX512, then using the 512 bit
+                // instruction wouldn't hurt as the 16wide code would
+                // already have incurred the clock drop. In future, maybe
+                // add an option to enable 512 bit operations when vector
+                // width is 8.
+
+                // We can only gather 4 at a time, so need to split the work
+                // over 2 gathers
+                auto w4_bit_masks = op_split_8x(current_mask());
+                auto w4_int_indices = op_split_8x(op_linearize_8x_indices(wide_index));
+
+                llvm::Value *unmasked_value = builder().CreateVectorSplat(4,constant64(0));
+                llvm::Value *args[] = {
+                    unmasked_value,
+                    void_ptr(ptr),
+                    w4_int_indices[0],
+                    mask4_as_int8(w4_bit_masks[0]),
+                    constant(8)
+                };
+                llvm::Value *gather1 = builder().CreateCall (func_avx512_gather_dpq, makeArrayRef(args));
+                args[2] = w4_int_indices[1];
+                args[3] = mask4_as_int8(w4_bit_masks[1]);
+                llvm::Value *gather2 = builder().CreateCall (func_avx512_gather_dpq, makeArrayRef(args));
+
+                return builder().CreateIntToPtr(op_combine_4x_vectors(gather1, gather2), type_wide_string());
+            }
+            default:
+                OSL_ASSERT(0 && "unsupported native bit mask width");
+            }
+
+        } else {
+            // AVX2 case falls through to here, choose not to specialize and use
+            // generic code gen as 4 AVX2 gathers would be required
+            return clamped_gather_from_varying(type_wide_string());
+        }
+
+    } else {
+        std::cout << "ptr->getType() = " <<
+        llvm_typenameof(ptr) <<
+        std::endl;
+
+        OSL_ASSERT(0 && "unsupported ptr type");
+    }
+    return nullptr;
+}
+
+
+
+void
+LLVM_Util::op_scatter(llvm::Value *wide_val, llvm::Value *ptr, llvm::Value *wide_index)
+{
+    OSL_ASSERT(wide_index->getType() == type_wide_int());
+
+    auto scatter_using_conditional_block_per_lane = [this, wide_val, wide_index](llvm::Value * cast_ptr)->void {
+        llvm::Value * linear_indices = nullptr;
+        switch(m_vector_width) {
+        case 16:
+            linear_indices = op_linearize_16x_indices(wide_index);
+            break;
+        case 8:
+            linear_indices = op_linearize_8x_indices(wide_index);
+            break;
+        default:
+            OSL_ASSERT(0 && "unsupported vector width for scatter");
+        };
+
+        llvm::BasicBlock* test_scatter_per_lane[MaxSupportedSimdLaneCount+1];
+        for(int l=0; l < m_vector_width; ++l) {
+            test_scatter_per_lane[l] = new_basic_block (std::string("test scatter lane=").append(std::to_string(l)));
+        }
+        test_scatter_per_lane[m_vector_width] = new_basic_block ("after scatter");
+
+        // Main performance strategy is to not perform any extractions inside the conditional section
+        llvm::Value *val_per_lane[MaxSupportedSimdLaneCount];
+        for(int l=0; l < m_vector_width; ++l) {
+            val_per_lane[l] = op_extract(wide_val, l);
+        }
+        llvm::Value *cm = current_mask();
+        llvm::Value *mask_per_lane[MaxSupportedSimdLaneCount];
+        for(int l=0; l < m_vector_width; ++l) {
+            mask_per_lane[l] = op_extract(cm, l);
+        }
+
+        llvm::Value *index_per_lane[MaxSupportedSimdLaneCount];
+        for(int l=0; l < m_vector_width; ++l) {
+            index_per_lane[l] = op_extract(linear_indices, l);
+        }
+
+        op_branch(test_scatter_per_lane[0]);
+        for(int l=0; l < m_vector_width; ++l) {
+            llvm::BasicBlock* scatter_block = new_basic_block (std::string("scatter lane=").append(std::to_string(l)));
+            op_branch(mask_per_lane[l], scatter_block, test_scatter_per_lane[l+1]);
+
+            llvm::Value *address = GEP(cast_ptr, index_per_lane[l]);
+            // uniform store, no need to mess with masking
+            op_store(val_per_lane[l], address);
+            op_branch(test_scatter_per_lane[l+1]);
+        }
+    };
+
+    if (ptr->getType() == type_wide_float_ptr()) {
+        OSL_ASSERT(wide_val->getType() == type_wide_float());
+        if (m_supports_avx512f) {
+            switch(m_vector_width) {
+            case 16:
+            {
+                llvm::Function* func_avx512_scatter_ps = llvm::Intrinsic::getDeclaration (module(),
+                        llvm::Intrinsic::x86_avx512_scatter_dps_512);
+                OSL_ASSERT(func_avx512_scatter_ps);
+
+                llvm::Value *args[] = {
+                    void_ptr(ptr),
+                    mask_as_int16(current_mask()),
+                    op_linearize_16x_indices(wide_index),
+                    wide_val,
+                    constant(4)
+                };
+                builder().CreateCall (func_avx512_scatter_ps, makeArrayRef(args));
+                return;
+            }
+            case 8:
+            {
+                llvm::Function* func_avx512_scatter_ps = llvm::Intrinsic::getDeclaration (module(),
+                        llvm::Intrinsic::x86_avx512_scattersiv8_sf);
+                OSL_ASSERT(func_avx512_scatter_ps);
+
+                llvm::Value *args[] = {
+                    void_ptr(ptr),
+                    mask_as_int8(current_mask()),
+                    op_linearize_8x_indices(wide_index),
+                    wide_val,
+                    constant(4)
+                };
+                builder().CreateCall (func_avx512_scatter_ps, makeArrayRef(args));
+                return;
+            }
+            default:
+                OSL_ASSERT(0 && "incomplete vector width for AVX512 scatter");
+            }
+        } else {
+            // AVX2, AVX, SSE4.2 fall through to here
+            llvm::Value * float_ptr =  builder().CreatePointerBitCastOrAddrSpaceCast(ptr, type_float_ptr());
+            scatter_using_conditional_block_per_lane(float_ptr);
+            return;
+        }
+    }
+    if (ptr->getType() == type_wide_int_ptr()) {
+        OSL_ASSERT(wide_val->getType() == type_wide_int());
+        if (m_supports_avx512f) {
+            switch(m_vector_width) {
+            case 16:
+            {
+                llvm::Function* func_avx512_scatter_pi = llvm::Intrinsic::getDeclaration (module(),
+                        llvm::Intrinsic::x86_avx512_scatter_dpi_512);
+                OSL_ASSERT(func_avx512_scatter_pi);
+
+                llvm::Value *args[] = {
+                    void_ptr(ptr),
+                    mask_as_int16(current_mask()),
+                    op_linearize_16x_indices(wide_index),
+                    wide_val,
+                    constant(4)
+                };
+                builder().CreateCall (func_avx512_scatter_pi, makeArrayRef(args));
+                return;
+            }
+            case 8:
+            {
+                llvm::Function* func_avx512_scatter_pi = llvm::Intrinsic::getDeclaration (module(),
+                        llvm::Intrinsic::x86_avx512_scattersiv8_si);
+                OSL_ASSERT(func_avx512_scatter_pi);
+
+                llvm::Value *args[] = {
+                    void_ptr(ptr),
+                    mask_as_int8(current_mask()),
+                    op_linearize_8x_indices(wide_index),
+                    wide_val,
+                    constant(4)
+                };
+                builder().CreateCall (func_avx512_scatter_pi, makeArrayRef(args));
+                return;
+            }
+            default:
+                OSL_ASSERT(0 && "incomplete vector width for AVX512 scatter");
+            }
+        } else {
+            // AVX2, AVX, SSE4.2 fall through to here
+            llvm::Value * int_ptr =  builder().CreatePointerBitCastOrAddrSpaceCast(ptr, type_int_ptr());
+            scatter_using_conditional_block_per_lane(int_ptr);
+            return;
+        }
+    } else if (ptr->getType() == llvm::PointerType::get(type_wide_string(),0)) {
+        OSL_ASSERT(wide_val->getType() == type_wide_string());
+        if (m_supports_avx512f) {
+
+            switch(m_vector_width) {
+            case 16:
+            {
+                llvm::Value * linear_indices = op_linearize_16x_indices(wide_index);
+
+                llvm::Function* func_avx512_scatter_dpq = llvm::Intrinsic::getDeclaration (module(),
+                        llvm::Intrinsic::x86_avx512_scatter_dpq_512);
+                OSL_ASSERT(func_avx512_scatter_dpq);
+
+                // We can only scatter 8 at a time, so need to split the
+                // work over 2 scatters
+                llvm::Type * w8_address_int = llvm::VectorType::get(type_addrint(), 8);
+
+                auto w8_bit_masks = op_split_16x(current_mask());
+                auto w8_int_indices = op_split_16x(linear_indices);
+                auto w8_string_vals = op_split_16x(wide_val);
+                std::array<llvm::Value *,2> w8_address_int_val = {{
+                        builder().CreatePtrToInt(w8_string_vals[0], w8_address_int),
+                        builder().CreatePtrToInt(w8_string_vals[1], w8_address_int)
+                }};
+
+                llvm::Value *args[] = {
+                    void_ptr(ptr),
+                    mask_as_int8(w8_bit_masks[0]),
+                    w8_int_indices[0],
+                    w8_address_int_val[0],
+                    constant(8)
+                };
+                builder().CreateCall (func_avx512_scatter_dpq, makeArrayRef(args));
+                args[1] = mask_as_int8(w8_bit_masks[1]);
+                args[2] = w8_int_indices[1];
+                args[3] = w8_address_int_val[1];
+                builder().CreateCall (func_avx512_scatter_dpq, makeArrayRef(args));
+                return;
+            }
+            case 8:
+            {
+                llvm::Value * linear_indices = op_linearize_8x_indices(wide_index);
+
+                llvm::Function* func_avx512_scatter_dpq = llvm::Intrinsic::getDeclaration (module(),
+                        llvm::Intrinsic::x86_avx512_scatter_dpq_512);
+                OSL_ASSERT(func_avx512_scatter_dpq);
+
+                llvm::Type * wide_address_int_type = llvm::VectorType::get(type_addrint(), 8);
+                llvm::Value * address_int_val = builder().CreatePtrToInt(wide_val, wide_address_int_type);
+
+                llvm::Value *args[] = {
+                    void_ptr(ptr),
+                    mask_as_int8(current_mask()),
+                    linear_indices,
+                    address_int_val,
+                    constant(8)
+                };
+                builder().CreateCall (func_avx512_scatter_dpq, makeArrayRef(args));
+                return;
+            }
+            default:
+                OSL_ASSERT(0 && "incomplete vector width for AVX512 scatter");
+            }
+        } else {
+            // AVX2, AVX, SSE4.2 fall through to here
+            llvm::Value * ustring_ptr =  builder().CreatePointerBitCastOrAddrSpaceCast(ptr, type_ustring_ptr());
+            scatter_using_conditional_block_per_lane(ustring_ptr);
+            return;
+        }
+    }
+
+    std::cout << "ptr->getType() = " <<
+    llvm_typenameof(ptr) <<
+    std::endl;
+
+    OSL_ASSERT(0 && "unsupported ptr type");
+}
+
+
+
+void
+LLVM_Util::push_mask(llvm::Value *mask, bool negate, bool absolute)
+{
+    OSL_ASSERT(mask->getType() == type_wide_bool());
+    if (m_mask_stack.empty()) {
+        m_mask_stack.push_back(MaskInfo{mask, negate, 0});
+    } else {
+
+        MaskInfo & mi = m_mask_stack.back();
+        llvm::Value *prev_mask = mi.mask;
+        bool prev_negate = mi.negate;
+
+        int applied_return_mask_count = absolute? 0 : mi.applied_return_mask_count;
+
+        if (false == prev_negate) {
+            if (false == negate)
+            {
+                llvm::Value *blended_mask;
+                if (absolute) {
+                    blended_mask = mask;
+                } else {
+                    blended_mask = builder().CreateSelect(prev_mask, mask, prev_mask);
+                }
+                m_mask_stack.push_back(MaskInfo{blended_mask, false, applied_return_mask_count});
+            } else {
+                OSL_ASSERT(false == absolute);
+                llvm::Value *blended_mask = builder().CreateSelect(mask, wide_constant_bool(false), prev_mask);
+                m_mask_stack.push_back(MaskInfo{blended_mask, false, applied_return_mask_count});
+            }
+        } else {
+            if (false == negate)
+            {
+                llvm::Value *blended_mask;
+                if (absolute) {
+                    blended_mask = mask;
+                } else {
+                    blended_mask = builder().CreateSelect(prev_mask, wide_constant_bool(false), mask);
+                }
+                m_mask_stack.push_back(MaskInfo{blended_mask, false, applied_return_mask_count});
+            } else {
+                OSL_ASSERT(false == absolute);
+                llvm::Value *blended_mask = builder().CreateSelect(prev_mask, prev_mask, mask);
+                m_mask_stack.push_back(MaskInfo{blended_mask, true, applied_return_mask_count});
+            }
+        }
+    }
+}
+
+
+
+llvm::Value *
+LLVM_Util::shader_mask()
+{
+    llvm::Value * loc_of_shader_mask = masked_shader_context().location_of_mask;
+    return op_load_mask(loc_of_shader_mask);
+}
+
+
+
+void
+LLVM_Util::apply_exit_to_mask_stack()
+{
+    OSL_ASSERT (false == m_mask_stack.empty());
+
+
+    llvm::Value * loc_of_shader_mask = masked_shader_context().location_of_mask;
+    llvm::Value * shader_mask = op_load_mask(loc_of_shader_mask);
+
+    llvm::Value * loc_of_function_mask = masked_function_context().location_of_mask;
+    llvm::Value * function_mask = op_load_mask(loc_of_function_mask);
+
+    // For any inactive lanes of the shader mask set the function_mask to
+    // 0.
+    llvm::Value * modified_function_mask = builder().CreateSelect(shader_mask, function_mask, shader_mask);
+
+    op_store_mask(modified_function_mask, loc_of_function_mask);
+
+    // Apply the modified_function_mask to the current conditional mask
+    // stack By bumping the return count, the modified_return_mask will get
+    // applied to the conditional mask stack as it unwinds.
+    masked_function_context().return_count++;
+
+    // We could just call apply_return_to_mask_stack(), but will repeat the
+    // work here to take advantage of the already loaded return mask.
+    auto & mi = m_mask_stack.back();
+
+    int masked_return_count = masked_function_context().return_count;
+    OSL_ASSERT(masked_return_count > mi.applied_return_mask_count);
+    llvm::Value * existing_mask = mi.mask;
+
+    if(mi.negate) {
+        mi.mask = builder().CreateSelect(modified_function_mask, existing_mask, wide_constant_bool(true));
+    } else {
+        mi.mask = builder().CreateSelect(modified_function_mask, existing_mask, modified_function_mask);
+    }
+    mi.applied_return_mask_count = masked_return_count;
+}
+
+
+
+void
+LLVM_Util::apply_return_to_mask_stack()
+{
+    OSL_ASSERT (false == m_mask_stack.empty());
+
+    auto & mi = m_mask_stack.back();
+    int masked_return_count = masked_function_context().return_count;
+    // TODO: might be impossible for this conditional to be false, could
+    // change to assert or remove applied_return_mask_count entirely.
+    if (masked_return_count > mi.applied_return_mask_count) {
+        llvm::Value * existing_mask = mi.mask;
+
+        llvm::Value * loc_of_return_mask = masked_function_context().location_of_mask;
+        llvm::Value * rs_mask = op_load_mask(loc_of_return_mask);
+        if(mi.negate) {
+            mi.mask = builder().CreateSelect(rs_mask, existing_mask, wide_constant_bool(true));
+        } else {
+            mi.mask = builder().CreateSelect(rs_mask, existing_mask, rs_mask);
+        }
+        mi.applied_return_mask_count = masked_return_count;
+    }
+
+}
+
+
+
+void
+LLVM_Util::apply_break_to_mask_stack()
+{
+    OSL_ASSERT (false == m_mask_stack.empty());
+
+    auto & mi = m_mask_stack.back();
+
+    llvm::Value * existing_mask = mi.mask;
+
+    // The loop control flow should already have the break applied, So we
+    // can load it, then use its value to restrict the current stack mask.
+    llvm::Value * loc_of_cond_mask = masked_loop_context().location_of_control_mask;
+    llvm::Value * cond_mask = op_load_mask(loc_of_cond_mask);
+    if(mi.negate) {
+        mi.mask = builder().CreateSelect(cond_mask, existing_mask, wide_constant_bool(true));
+    } else {
+        mi.mask = builder().CreateSelect(cond_mask, existing_mask, cond_mask);
+    }
+}
+
+
+
+void
+LLVM_Util::apply_continue_to_mask_stack()
+{
+    OSL_ASSERT (false == m_mask_stack.empty());
+
+    auto & mi = m_mask_stack.back();
+
+    llvm::Value * existing_mask = mi.mask;
+
+    // The continue mask is tracking which lanes have had continue within
+    // this loop.  So we can load it, then use its value to restrict the
+    // current stack mask.
+    // NOTE: a true value for a lane means that continue was called
+    llvm::Value * loc_of_continue_mask = masked_loop_context().location_of_continue_mask;
+    llvm::Value * continue_mask = op_load_mask(loc_of_continue_mask);
+    if(mi.negate) {
+        mi.mask = builder().CreateSelect(continue_mask, wide_constant_bool(true), existing_mask);
+    } else {
+        mi.mask = builder().CreateSelect(continue_mask, wide_constant_bool(false), existing_mask);
+    }
+}
+
+
+
+llvm::Value *
+LLVM_Util::apply_return_to(llvm::Value *existing_mask)
+{
+    // caller should have checked masked_return_count() beforehand
+    OSL_ASSERT (masked_function_context().return_count > 0);
+
+    llvm::Value * loc_of_return_mask = masked_function_context().location_of_mask;
+    llvm::Value * rs_mask = op_load_mask(loc_of_return_mask);
+    llvm::Value *result = builder().CreateSelect(rs_mask, existing_mask, rs_mask);
+    return result;
+}
+
+
+
+void
+LLVM_Util::pop_mask()
+{
+    OSL_ASSERT(false == m_mask_stack.empty());
+
+    m_mask_stack.pop_back();
+}
+
+
+
+llvm::Value *
+LLVM_Util::current_mask()
+{
+    OSL_ASSERT(!m_mask_stack.empty());
+    auto & mi = m_mask_stack.back();
+    if (mi.negate) {
+        llvm::Value *negated_mask = builder().CreateSelect(mi.mask, wide_constant_bool(false), wide_constant_bool(true));
+        return negated_mask;
+    } else {
+        return mi.mask;
+    }
+}
+
+
+
+void
+LLVM_Util::op_masked_break()
+{
+    OSL_DEV_ONLY(std::cout << "op_masked_break" << std::endl);
+
+    OSL_ASSERT(false == m_mask_stack.empty());
+
+    const MaskInfo & mi = m_mask_stack.back();
+    // Because we are inside a conditional branch we can't let our local
+    // modified mask be directly used by other scopes, instead we must store
+    // the result of to the stack for the outer scope to pick up and use.
+    auto & loop = masked_loop_context();
+    llvm::Value * loc_of_cond_mask = loop.location_of_control_mask;
+
+    llvm::Value * cond_mask = op_load_mask(loc_of_cond_mask);
+
+    llvm::Value * break_from_mask = mi.mask;
+    llvm::Value * new_cond_mask;
+
+    // For any active lanes of the mask we are returning from
+    // set the after_if_mask to 0.
+    if (mi.negate) {
+        new_cond_mask = builder().CreateSelect(break_from_mask, cond_mask, break_from_mask);
+    } else {
+        new_cond_mask = builder().CreateSelect(break_from_mask, wide_constant_bool(false), cond_mask);
+    }
+
+    op_store_mask(new_cond_mask, loc_of_cond_mask);
+
+    // Track that a break was called in the current masked loop
+    loop.break_count++;
+}
+
+
+
+void
+LLVM_Util::op_masked_continue()
+{
+    OSL_DEV_ONLY(std::cout << "op_masked_break" << std::endl);
+
+    OSL_ASSERT(false == m_mask_stack.empty());
+
+    const MaskInfo & mi = m_mask_stack.back();
+    // Because we are inside a conditional branch
+    // we can't let our local modified mask be directly used
+    // by other scopes, instead we must store the result
+    // of to the stack for the outer scope to pickup and
+    // use
+    auto & loop = masked_loop_context();
+    llvm::Value * loc_of_continue_mask = loop.location_of_continue_mask;
+
+    llvm::Value * continue_mask = op_load_mask(loc_of_continue_mask);
+
+    llvm::Value * continue_from_mask = mi.mask;
+    llvm::Value * new_abs_continue_mask;
+
+    // For any active lanes of the mask we are returning from
+    // set the after_if_mask to 0.
+    if (mi.negate) {
+        new_abs_continue_mask = builder().CreateSelect(continue_from_mask, continue_mask, this->wide_constant_bool(true));
+    } else {
+        new_abs_continue_mask = builder().CreateSelect(continue_from_mask, continue_from_mask, continue_mask);
+    }
+
+    op_store_mask(new_abs_continue_mask, loc_of_continue_mask);
+
+    // Track that a break was called in the current masked loop
+    loop.continue_count++;
+}
+
+
+
+void
+LLVM_Util::op_masked_exit()
+{
+    OSL_DEV_ONLY(std::cout << "push_mask_exit" << std::endl);
+
+    OSL_ASSERT(false == m_mask_stack.empty());
+
+    const MaskInfo & mi = m_mask_stack.back();
+    llvm::Value * exit_from_mask = mi.mask;
+
+    // Because we are inside a conditional branch we can't let our local
+    // modified mask be directly used by other scopes, instead we must store
+    // the result of to the stack for the outer scope to pick up and use.
+    {
+        llvm::Value * loc_of_shader_mask = masked_shader_context().location_of_mask;
+        llvm::Value * shader_mask = op_load_mask(loc_of_shader_mask);
+
+        llvm::Value * modifiedMask;
+        // For any active lanes of the mask we are returning from set the
+        // shader scope mask to 0.
+        if (mi.negate) {
+            modifiedMask = builder().CreateSelect(exit_from_mask, shader_mask, exit_from_mask);
+        } else {
+            modifiedMask = builder().CreateSelect(exit_from_mask, wide_constant_bool(false), shader_mask);
+        }
+
+        op_store_mask(modifiedMask, loc_of_shader_mask);
+    }
+
+    // Are we inside a function scope, then we will need to modify its
+    // active lane mask functions higher up in the stack will apply the
+    // current exit mask when functions are popped.
+    if (inside_of_inlined_masked_function_call()) {
+        llvm::Value * loc_of_function_mask = masked_function_context().location_of_mask;
+        llvm::Value * function_mask = op_load_mask(loc_of_function_mask);
+
+
+        llvm::Value * modifiedMask;
+
+        // For any active lanes of the mask we are returning from
+        // set the after_if_mask to 0.
+        if (mi.negate) {
+            modifiedMask = builder().CreateSelect(exit_from_mask, function_mask, exit_from_mask);
+        } else {
+            modifiedMask = builder().CreateSelect(exit_from_mask, wide_constant_bool(false), function_mask);
+        }
+
+        op_store_mask(modifiedMask, loc_of_function_mask);
+    }
+
+    // Bumping the masked exit count will cause the exit mask to be applied
+    // to the return mask of the calling function when the current function
+    // is popped.
+    ++m_masked_exit_count;
+
+    // Bumping the masked return count will cause the return mask(which is a
+    // subset of the shader_mask) to be applied to the mask stack when
+    // leaving if/else block.
+    masked_function_context().return_count++;
+}
+
+
+
+void
+LLVM_Util::op_masked_return()
+{
+    OSL_DEV_ONLY(std::cout << "push_mask_return" << std::endl);
+
+    OSL_ASSERT(false == m_mask_stack.empty());
+
+    const MaskInfo & mi = m_mask_stack.back();
+    // Because we are inside a conditional branch we can't let our local
+    // modified mask be directly used by other scopes, instead we must store
+    // the result of to the stack for the outer scope to pick up and use.
+    llvm::Value * loc_of_function_mask = masked_function_context().location_of_mask;
+    llvm::Value * function_mask = op_load_mask(loc_of_function_mask);
+
+
+    llvm::Value * return_from_mask = mi.mask;
+    llvm::Value * modifiedMask;
+
+    // For any active lanes of the mask we are returning from
+    // set the function scope mask to 0.
+    if (mi.negate) {
+        modifiedMask = builder().CreateSelect(return_from_mask, function_mask, return_from_mask);
+    } else {
+        modifiedMask = builder().CreateSelect(return_from_mask, wide_constant_bool(false), function_mask);
+    }
+
+    op_store_mask(modifiedMask, loc_of_function_mask);
+
+    masked_function_context().return_count++;
+}
+
+
+
 void
 LLVM_Util::op_store (llvm::Value *val, llvm::Value *ptr)
 {
+    if(m_mask_stack.empty() || val->getType()->isVectorTy() == false || (!is_masking_required())) {
+
+        //OSL_DEV_ONLY(std::cout << "unmasked op_store" << std::endl); We
+        //may not be in a non-uniform code block or the value being stored
+        //may be uniform, which case it shouldn't be a vector type
+        builder().CreateStore (val, ptr);
+    } else {
+        //OSL_DEV_ONLY(std::cout << "MASKED op_store" << std::endl);
+        // TODO: could probably make these OSL_DASSERT as  the conditional above "should" be checking all of this
+        OSL_ASSERT(val->getType()->isVectorTy());
+        OSL_ASSERT(false == m_mask_stack.empty());
+
+        MaskInfo & mi = m_mask_stack.back();
+        // TODO: add assert for ptr alignment in debug builds
+#if 0
+        if (m_supports_masked_stores) {
+            builder().CreateMaskedStore(val, ptr, 64, mi.mask);
+        } else
+#endif
+        {
+            // Transform the masted store to a load+blend+store.
+            // Technically, the behavior is different than a masked store as
+            // different thread could technically have modified the masked
+            // off data lane values inbetween the read+store. As this
+            // language sits below the threading level that could never
+            // happen and a read+.
+            // TODO: Optimization, if we know this was the final store to
+            // the ptr, we could force a masked store vs. load/blend
+            llvm::Value *previous_value = builder().CreateLoad (ptr);
+            if (false == mi.negate) {
+                llvm::Value *blended_value = builder().CreateSelect(mi.mask, val, previous_value);
+                builder().CreateStore(blended_value, ptr);
+            } else {
+                llvm::Value *blended_value = builder().CreateSelect(mi.mask, previous_value, val);
+                builder().CreateStore(blended_value, ptr);
+            }
+        }
+    }
+}
+
+
+
+void
+LLVM_Util::op_unmasked_store (llvm::Value *val, llvm::Value *ptr)
+{
     builder().CreateStore (val, ptr);
+}
+
+
+
+llvm::Value *
+LLVM_Util::op_load_mask (llvm::Value *native_mask_ptr) {
+    OSL_ASSERT(native_mask_ptr->getType() == type_ptr(type_native_mask()));
+
+    return native_to_llvm_mask(op_load(native_mask_ptr));
+}
+
+
+
+void
+LLVM_Util::op_store_mask (llvm::Value *llvm_mask, llvm::Value *native_mask_ptr)
+{
+    OSL_ASSERT(llvm_mask->getType() == type_wide_bool());
+    OSL_ASSERT(native_mask_ptr->getType() == type_ptr(type_native_mask()));
+    builder().CreateStore (llvm_mask_to_native(llvm_mask), native_mask_ptr);
 }
 
 
@@ -2958,6 +4854,43 @@ LLVM_Util::op_fabs (llvm::Value *v)
     return fabs_call;
 }
 
+llvm::Value *
+LLVM_Util::op_is_not_finite (llvm::Value *v)
+{
+    OSL_ASSERT (v->getType() == type_float() || v->getType() == type_wide_float());
+
+    if (m_supports_avx512f && v->getType() == type_wide_float()) {
+        OSL_ASSERT((m_vector_width == 8) || (m_vector_width == 16));
+        llvm::Value *func = llvm::Intrinsic::getDeclaration(module(),
+            (v->getType() == type_wide_float()) ?
+                    ((m_vector_width == 16) ? llvm::Intrinsic::x86_avx512_fpclass_ps_512 : llvm::Intrinsic::x86_avx512_fpclass_ps_256)
+                    : llvm::Intrinsic::x86_avx512_mask_fpclass_ss);
+        // Flags:
+        //        0x01 // QNaN
+        //        0x02 // Positive Zero
+        //        0x04 // Negative Zero
+        //        0x08 // Positive Infinity
+        //        0x10 // Negative Infinity
+        //        0x20 // Denormal
+        //        0x40 // Negative
+        //        0x80 // SNaN
+
+        llvm::Value *flags = constant(static_cast<int>(0x01 /*QNaN*/ |
+                                                       0x08 /*Positive Infinity*/ |
+                                                       0x10 /*Negative Infinity*/));
+        llvm::Value *args[] = {v, flags};
+        llvm::Value *maskOfNonFiniteValues = builder().CreateCall(func, args);
+        return maskOfNonFiniteValues;
+    } else {
+        llvm::Value *fabs_v = op_fabs(v);
+        llvm::Constant *infinity = llvm::ConstantFP::getInfinity(v->getType());
+        // FCMP_ONE: yields true if both operands are not a QNAN and op1 is not equal to op2.
+        // So if v == QNAN, we expect result of FCMP_ONE to always be false
+        // otherwise will return false when v == +infinity, which covers -infinity, +infinity, and QNAN
+        llvm::Value *result = builder().CreateFCmp(llvm::CmpInst::FCMP_ONE, fabs_v, infinity, "ordered equals infinity");
+        return op_not(result);
+    }
+}
 
 
 void

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Utility script to download and build OpenEXR & IlmBase
 #
@@ -12,14 +12,13 @@ set -ex
 
 # Which OpenEXR to retrieve, how to build it
 OPENEXR_REPO=${OPENEXR_REPO:=https://github.com/openexr/openexr.git}
-OPENEXR_VERSION=${OPENEXR_VERSION:=2.4.0}
-OPENEXR_BRANCH=${OPENEXR_BRANCH:=v${OPENEXR_VERSION}}
+OPENEXR_VERSION=${OPENEXR_VERSION:=v2.4.1}
 
 # Where to install the final results
 LOCAL_DEPS_DIR=${LOCAL_DEPS_DIR:=${PWD}/ext}
 OPENEXR_SOURCE_DIR=${OPENEXR_SOURCE_DIR:=${LOCAL_DEPS_DIR}/openexr}
 OPENEXR_BUILD_DIR=${OPENEXR_BUILD_DIR:=${LOCAL_DEPS_DIR}/openexr-build}
-OPENEXR_INSTALL_DIR=${OPENEXR_INSTALL_DIR:=${LOCAL_DEPS_DIR}/openexr-install}
+OPENEXR_INSTALL_DIR=${OPENEXR_INSTALL_DIR:=${LOCAL_DEPS_DIR}/dist}
 OPENEXR_BUILD_TYPE=${OPENEXR_BUILD_TYPE:=Release}
 CMAKE_GENERATOR=${CMAKE_GENERATOR:="Unix Makefiles"}
 OPENEXR_CMAKE_FLAGS=${OPENEXR_CMAKE_FLAGS:=""}
@@ -27,9 +26,9 @@ OPENEXR_CXX_FLAGS=${OPENEXR_CXX_FLAGS:=""}
 BASEDIR=$PWD
 
 pwd
-echo "Building OpenEXR ${OPENEXR_BRANCH}"
-echo "EXR build dir will be: ${OPENEXR_BUILD_DIR}"
-echo "EXR install dir will be: ${OPENEXR_INSTALL_DIR}"
+echo "Building OpenEXR ${OPENEXR_VERSION}"
+echo "OpenEXR build dir will be: ${OPENEXR_BUILD_DIR}"
+echo "OpenEXR install dir will be: ${OPENEXR_INSTALL_DIR}"
 echo "CMAKE_PREFIX_PATH is ${CMAKE_PREFIX_PATH}"
 echo "OpenEXR Build type is ${OPENEXR_BUILD_TYPE}"
 
@@ -47,15 +46,17 @@ mkdir -p ${OPENEXR_INSTALL_DIR} && true
 mkdir -p ${OPENEXR_BUILD_DIR} && true
 
 pushd ${OPENEXR_SOURCE_DIR}
-git checkout ${OPENEXR_BRANCH} --force
+git checkout ${OPENEXR_VERSION} --force
 
-if [[ ${OPENEXR_BRANCH} == "v2.2.0" ]] || [[ ${OPENEXR_BRANCH} == "v2.2.1" ]] ; then
+if [[ ${OPENEXR_VERSION} == "v2.2.0" ]] || [[ ${OPENEXR_VERSION} == "v2.2.1" ]] \
+        || [[ ${OPENEXR_VERSION} == "v2.2.2" ]] ; then
     mkdir -p ${OPENEXR_BUILD_DIR}/IlmBase && true
     mkdir -p ${OPENEXR_BUILD_DIR}/OpenEXR && true
     cd ${OPENEXR_BUILD_DIR}/IlmBase
     cmake --config ${OPENEXR_BUILD_TYPE} ${OPENEXR_GENERATOR_CMD} \
             -DCMAKE_INSTALL_PREFIX="${OPENEXR_INSTALL_DIR}" \
             -DCMAKE_CXX_FLAGS="${OPENEXR_CXX_FLAGS}" \
+            -DCMAKE_CXX_STANDARD=11 \
             ${OPENEXR_CMAKE_FLAGS} ${OPENEXR_SOURCE_DIR}/IlmBase
     time cmake --build . --target install --config ${OPENEXR_BUILD_TYPE}
     cd ${OPENEXR_BUILD_DIR}/OpenEXR
@@ -67,7 +68,7 @@ if [[ ${OPENEXR_BRANCH} == "v2.2.0" ]] || [[ ${OPENEXR_BRANCH} == "v2.2.1" ]] ; 
             -DCMAKE_CXX_FLAGS="${OPENEXR_CXX_FLAGS}" \
             ${OPENEXR_CMAKE_FLAGS} ${OPENEXR_SOURCE_DIR}/OpenEXR
     time cmake --build . --target install --config ${OPENEXR_BUILD_TYPE}
-elif [[ ${OPENEXR_BRANCH} == "v2.3.0" ]] ; then
+elif [[ ${OPENEXR_VERSION} == "v2.3.0" ]] ; then
     # Simplified setup for 2.3+
     cd ${OPENEXR_BUILD_DIR}
     cmake --config ${OPENEXR_BUILD_TYPE} -G "$CMAKE_GENERATOR" \

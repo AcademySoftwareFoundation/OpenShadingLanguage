@@ -64,17 +64,24 @@ CXX="ccache $CXX" source src/build-scripts/build_pybind11.bash
 
 CXXFLAGS=-fPIC src/build-scripts/build_pugixml.bash
 
-# Build OpenEXR
-CXX="ccache $CXX" source src/build-scripts/build_openexr.bash
+if [[ "$OPENEXR_VERSION" != "" ]] ; then
+    CXX="ccache $CXX" source src/build-scripts/build_openexr.bash
+fi
 
-# We don't need OCIO, but if we ever want it, turn this on:
-#CXX="ccache $CXX" source src/build-scripts/build_ocio.bash
+if [[ "$OPENCOLORIO_VERSION" != "" ]] ; then
+    # Temporary (?) fix: GH ninja having problems, fall back to make
+    CMAKE_GENERATOR="Unix Makefiles" \
+    source src/build-scripts/build_opencolorio.bash
+fi
 
-# There are many parts of OIIO we don't need to build
-export ENABLE_iinfo=0 ENABLE_iv=0 ENABLE_igrep=0 ENABLE_iconvert=0 ENABLE_testtex=0
-export ENABLE_cineon=0 ENABLE_DDS=0 ENABLE_DPX=0 ENABLE_FITS=0
-export ENABLE_iff=0 ENABLE_jpeg2000=0 ENABLE_PNM=0 ENABLE_PSD=0
-export ENABLE_RLA=0 ENABLE_SGI=0 ENABLE_SOCKET=0 ENABLE_SOFTIMAGE=0
-export ENABLE_TARGA=0 ENABLE_WEBP=0
-export OPENIMAGEIO_MAKEFLAGS="OIIO_BUILD_TESTS=0 USE_OPENGL=0"
-source src/build-scripts/build_openimageio.bash
+if [[ "$OPENIMAGEIO_VERSION" != "" ]] ; then
+    # There are many parts of OIIO we don't need to build
+    export ENABLE_iinfo=0 ENABLE_iv=0 ENABLE_igrep=0
+    export ENABLE_iconvert=0 ENABLE_testtex=0
+    export ENABLE_BMP=0 ENABLE_cineon=0 ENABLE_DDS=0 ENABLE_DPX=0 ENABLE_FITS=0
+    export ENABLE_ICO=0 ENABLE_iff=0 ENABLE_jpeg2000=0 ENABLE_PNM=0 ENABLE_PSD=0
+    export ENABLE_RLA=0 ENABLE_SGI=0 ENABLE_SOCKET=0 ENABLE_SOFTIMAGE=0
+    export ENABLE_TARGA=0 ENABLE_WEBP=0
+    export OPENIMAGEIO_MAKEFLAGS="OIIO_BUILD_TESTS=0 USE_OPENGL=0"
+    source src/build-scripts/build_openimageio.bash
+fi

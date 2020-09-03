@@ -128,6 +128,7 @@ list (APPEND CMAKE_MODULE_PATH
 # Helpful functions and macros for our project
 include (colors)
 include (check_is_enabled)
+include (checked_find_package)
 
 # All the C++ and compiler related options and adjustments live here
 include (compiler)

@@ -95,7 +95,6 @@ else
     $(error Unknown SP_OS=${SP_OS} platform=${platform})
 endif  # endif ${SP_OS}
 
-PYTHON_VERSION ?= 2.7
 MY_CMAKE_FLAGS += -DSP_OS=${SP_OS} -DSP_PLATFORM=${SP_PLATFORM}
 MY_CMAKE_FLAGS += -DSP_PROC=${SP_PROC} -DSP_REZ_OS=${SP_REZ_OS}
 MY_CMAKE_FLAGS += -DSPI_COMPILER_PLATFORM=${SPI_COMPILER_PLATFORM}
@@ -108,6 +107,7 @@ SPCOMP2_ROOT ?= /shots/spi/home/lib/SpComp2
 
 ## Rhel7 (current)
 ifeq (${SP_OS}, rhel7)
+    PYTHON_VERSION ?= 2.7
     USE_SIMD ?= sse4.1,aes
     CMAKE ?= cmake
     USE_NINJA ?= 1
@@ -217,46 +217,25 @@ ifeq (${SP_OS}, rhel7)
     #
     # Python
     #
-    PYTHON_INCLUDE_DIR ?= /usr/include/python${PYTHON_VERSION}
+    Python_INCLUDE_DIR ?= /usr/include/python${PYTHON_VERSION}
     PYTHON_LIBRARY_DIR ?= /usr/lib64
-    PYTHON_LIBRARY ?= ${PYTHON_LIBRARY_DIR}/libpython${PYTHON_VERSION}.so
+    Python_LIBRARY ?= ${PYTHON_LIBRARY_DIR}/libpython${PYTHON_VERSION}.so
     ifeq (${PYTHON_VERSION},3.6)
         # Special sauce for Python 3.6
-        PYTHON_INCLUDE_DIR := /usr/include/python${PYTHON_VERSION}m
-        PYTHON_LIBRARY := ${PYTHON_LIBRARY_DIR}/libpython${PYTHON_VERSION}m.so
-        MY_CMAKE_FLAGS += \
-            -DPYTHONINTERP_FOUND=1 \
-            -DPYTHON_VERSION_STRING=3.6.3 \
-            -DPYTHON_VERSION_MAJOR=3 \
-            -DPYTHON_VERSION_MINOR=6 \
-            -DPYTHON_VERSION_PATCH=3 \
-            -DPython_ADDITIONAL_VERSIONS="${PYTHON_VERSION}"
+        Python_INCLUDE_DIR := /usr/include/python${PYTHON_VERSION}m
+        Python_LIBRARY := ${PYTHON_LIBRARY_DIR}/libpython${PYTHON_VERSION}m.so
     else ifeq (${PYTHON_VERSION},3.7)
         # Special sauce for Python 3.7
-        PYTHON_INCLUDE_DIR := /usr/include/python${PYTHON_VERSION}m
-        PYTHON_LIBRARY := ${PYTHON_LIBRARY_DIR}/libpython${PYTHON_VERSION}m.so
-        MY_CMAKE_FLAGS += \
-            -DPYTHONINTERP_FOUND=1 \
-            -DPYTHON_VERSION_STRING=3.7.3 \
-            -DPYTHON_VERSION_MAJOR=3 \
-            -DPYTHON_VERSION_MINOR=7 \
-            -DPYTHON_VERSION_PATCH=3 \
-            -DPython_ADDITIONAL_VERSIONS="${PYTHON_VERSION}"
+        Python_INCLUDE_DIR := /usr/include/python${PYTHON_VERSION}m
+        Python_LIBRARY := ${PYTHON_LIBRARY_DIR}/libpython${PYTHON_VERSION}m.so
     else ifeq (${PYTHON_VERSION},2.7)
         # Special sauce for Python 2.7
-        PYTHON_INCLUDE_DIR := /usr/include/python${PYTHON_VERSION}
-        PYTHON_LIBRARY := ${PYTHON_LIBRARY_DIR}/libpython${PYTHON_VERSION}.so
-        MY_CMAKE_FLAGS += \
-            -DPYTHONINTERP_FOUND=1 \
-            -DPYTHON_VERSION_STRING=2.7.5 \
-            -DPYTHON_VERSION_MAJOR=2 \
-            -DPYTHON_VERSION_MINOR=7 \
-            -DPYTHON_VERSION_PATCH=5 \
-            -DPython_ADDITIONAL_VERSIONS="${PYTHON_VERSION}"
+        Python_INCLUDE_DIR := /usr/include/python${PYTHON_VERSION}
+        Python_LIBRARY := ${PYTHON_LIBRARY_DIR}/libpython${PYTHON_VERSION}.so
     endif
     MY_CMAKE_FLAGS += \
-        -DPYTHON_INCLUDE_DIR:STRING=${PYTHON_INCLUDE_DIR} \
-        -DPYTHON_LIBRARY:STRING=${PYTHON_LIBRARY} \
+        -DPython_INCLUDE_DIR:STRING=${Python_INCLUDE_DIR} \
+        -DPython_LIBRARY:STRING=${Python_LIBRARY} \
         -Dpybind11_ROOT:STRING=${REZ_PACKAGE_ROOT}/pybind11/2.4.3/python-${PYTHON_VERSION}
 
 

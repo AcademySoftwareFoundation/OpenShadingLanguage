@@ -133,12 +133,12 @@ include (checked_find_package)
 # All the C++ and compiler related options and adjustments live here
 include (compiler)
 
+# Utilities related to finding python and making python bindings
+include (pythonutils)
+
 include (externalpackages)
 include (flexbison)
 include (cuda_macros)
-
-# Utilities related to finding python and making python bindings
-include (pythonutils)
 
 # We want CTest for testing, so this must be added before all the calls to
 # add_subdirectory, or their add_test commands will not register.
@@ -280,7 +280,7 @@ macro (add_one_testsuite testname testsrcdir)
     set (testsuite "${CMAKE_SOURCE_DIR}/testsuite")
     set (testdir "${CMAKE_BINARY_DIR}/testsuite/${testname}")
     if (NOT _tst_COMMAND)
-        set (_tst_COMMAND python "${testsuite}/runtest.py" ${testdir})
+        set (_tst_COMMAND ${Python_EXECUTABLE} "${testsuite}/runtest.py" ${testdir})
         if (MSVC_IDE)
             list (APPEND _tst_COMMAND --devenv-config $<CONFIGURATION>
                                       --solution-path "${CMAKE_BINARY_DIR}" )

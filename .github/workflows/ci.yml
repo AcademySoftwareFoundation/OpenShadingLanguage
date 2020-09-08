@@ -138,6 +138,7 @@ jobs:
           USE_SIMD: avx
           OPENEXR_VERSION: v2.4.1
           OPENIMAGEIO_VERSION: release
+          PYTHON_VERSION: 2.7
         run: |
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/gh-installdeps.bash

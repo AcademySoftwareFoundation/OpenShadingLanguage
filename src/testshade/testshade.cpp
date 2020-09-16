@@ -60,6 +60,7 @@ static bool saveptx = false;
 static bool warmup = false;
 static bool profile = false;
 static bool O0 = false, O1 = false, O2 = false;
+static int llvm_opt = 1; // LLVM optimization level
 static bool pixelcenters = false;
 static bool debugnan = false;
 static bool debug_uninit = false;
@@ -137,6 +138,14 @@ set_shadingsys_options ()
     if (const char *opt_env = getenv ("TESTSHADE_OPT"))  // overrides opt
         opt = atoi(opt_env);
     shadingsys->attribute ("optimize", opt);
+
+    // The cost of more optimization passes usually pays for itself by
+    // reducing the number of instructions JIT ultimately has to lower to
+    // the target ISA.
+    if (const char *llvm_opt_env = getenv ("TESTSHADE_LLVM_OPT"))  // overrides llvm_opt
+        llvm_opt = atoi(llvm_opt_env);
+    shadingsys->attribute ("llvm_optimize", llvm_opt);
+
     shadingsys->attribute ("profile", int(profile));
     shadingsys->attribute ("lockgeom", 1);
     shadingsys->attribute ("debug_nan", debugnan);
@@ -493,6 +502,7 @@ getargs (int argc, const char *argv[])
                 "-O0", &O0, "Do no runtime shader optimization",
                 "-O1", &O1, "Do a little runtime shader optimization",
                 "-O2", &O2, "Do lots of runtime shader optimization",
+                "--llvm_opt %d", &llvm_opt, "LLVM JIT optimization level",
                 "--entry %L", &entrylayers, "Add layer to the list of entry points",
                 "--entryoutput %L", &entryoutputs, "Add output symbol to the list of entry points",
                 "--center", &pixelcenters, "Shade at output pixel 'centers' rather than corners",

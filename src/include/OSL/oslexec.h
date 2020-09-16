@@ -164,7 +164,7 @@ public:
     ///         opt_fold_getattribute, opt_middleman, opt_texture_handle
     ///         opt_seed_bblock_aliases
     ///    int opt_passes         Number of optimization passes per layer (10)
-    ///    int llvm_optimize      Which of several LLVM optimize strategies (0)
+    ///    int llvm_optimize      Which of several LLVM optimize strategies (1)
     ///    int llvm_debug         Set LLVM extra debug level (0)
     ///    int llvm_debug_layers  Extra printfs upon entering and leaving
     ///                              layer functions.

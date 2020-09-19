@@ -4178,6 +4178,16 @@ default), \qkw{cubic}, \qkw{linear}, or \qkw{closest}.
 \apiend
 \vspace{-16pt}
 
+\apiitem{"anisotropic", <int>}
+\vspace{12pt}
+Sets the maximum anisotropic ratio allowed. This parameter may not be
+supported by all renderers, and may have different default values (it is
+supported with a default of 32 for renderers that use OpenImageIO's texture
+system).
+\NEW % 1.10
+\apiend
+\vspace{-16pt}
+
 \apiend
 
 \apiitem{\emph{type} \textbf{texture3d} (string filename, point p, \pl) \\

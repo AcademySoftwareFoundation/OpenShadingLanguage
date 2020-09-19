@@ -2192,7 +2192,7 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
     bool sblur_set = false, tblur_set = false, rblur_set = false;
     bool swrap_set = false, twrap_set = false, rwrap_set = false;
     bool firstchannel_set = false, fill_set = false, interp_set = false;
-    bool time_set = false, subimage_set = false;
+    bool time_set = false, subimage_set = false, anisotropic_set = false;
 
     Opcode &op (rop.inst()->ops()[opnum]);
     for (int a = first_optional_arg;  a < op.nargs();  ++a) {
@@ -2306,6 +2306,7 @@ llvm_gen_texture_options (BackendLLVM &rop, int opnum,
 
         PARAM_FLOAT (fill)
         PARAM_FLOAT (time)
+        PARAM_INT (anisotropic)
         PARAM_INT (firstchannel)
         PARAM_INT (subimage)
 

@@ -456,7 +456,8 @@ TESTSUITE ( aastep allowconnect-err and-or-not-synonyms arithmetic
             struct-nested struct-nested-assign struct-nested-deep
             ternary
             testshade-expr
-            texture-alpha texture-blur texture-connected-options
+            texture-alpha texture-aniso
+            texture-blur texture-connected-options
             texture-derivs texture-errormsg
             texture-firstchannel texture-interp
             texture-missingalpha texture-missingcolor texture-simple

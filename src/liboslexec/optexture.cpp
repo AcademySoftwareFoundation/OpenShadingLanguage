@@ -156,6 +156,14 @@ osl_texture_set_time (void *opt, float x)
     ((TextureOpt *)opt)->time = x;
 }
 
+OSL_SHADEOP void
+osl_texture_set_anisotropic (void *opt, int x)
+{
+    ((TextureOpt *)opt)->anisotropic = x;
+}
+
+
+
 inline int
 tex_interp_to_code (ustring modename)
 {

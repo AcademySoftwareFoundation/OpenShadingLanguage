@@ -230,7 +230,7 @@ osl_texture (void *sg_, const char *name, void *handle,
 {
     ShaderGlobals *sg = (ShaderGlobals *)sg_;
     TextureOpt *opt = (TextureOpt *)opt_;
-    bool derivs = (dresultdx != NULL);
+    bool derivs = (dresultdx || dalphadx);
     // It's actually faster to ask for 4 channels (even if we need fewer)
     // and ensure that they're being put in aligned memory.
     OIIO::simd::float4 result_simd, dresultds_simd, dresultdt_simd;
@@ -249,12 +249,16 @@ osl_texture (void *sg_, const char *name, void *handle,
 
     // Correct our st texture space gradients into xy-space gradients
     if (derivs) {
+        OSL_DASSERT((dresultdx == nullptr) == (dresultdy == nullptr));
+        OSL_DASSERT((dalphadx == nullptr) == (dalphady == nullptr));
         OIIO::simd::float4 dresultdx_simd = dresultds_simd * dsdx + dresultdt_simd * dtdx;
         OIIO::simd::float4 dresultdy_simd = dresultds_simd * dsdy + dresultdt_simd * dtdy;
-        for (int i = 0;  i < chans;  ++i)
-            ((float *)dresultdx)[i] = dresultdx_simd[i];
-        for (int i = 0;  i < chans;  ++i)
-            ((float *)dresultdy)[i] = dresultdy_simd[i];
+        if (dresultdx) {
+            for (int i = 0;  i < chans;  ++i)
+                ((float *)dresultdx)[i] = dresultdx_simd[i];
+            for (int i = 0;  i < chans;  ++i)
+                ((float *)dresultdy)[i] = dresultdy_simd[i];
+        }
         if (dalphadx) {
             ((float *)dalphadx)[0] = dresultdx_simd[chans];
             ((float *)dalphady)[0] = dresultdy_simd[chans];

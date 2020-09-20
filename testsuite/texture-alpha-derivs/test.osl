@@ -1,0 +1,14 @@
+// Copyright Contributors to the Open Shading Language project.
+// SPDX-License-Identifier: BSD-3-Clause
+// https://github.com/imageworks/OpenShadingLanguage
+
+shader
+test (string filename = "alpharamp.exr",
+      output color Cout = 0)
+{
+    // This tests whether needing derivs of only the alpha channel
+    // works properly.
+    float a;
+    color C = texture (filename, u, v, "alpha", a, "wrap", "clamp");
+    Cout = color (a, Dx(a)/Dx(u), Dy(a)/Dy(v));
+}

@@ -43,7 +43,7 @@ macro (docdeep_generate)
     endif ()
     set (docdeep_program ${CMAKE_SOURCE_DIR}/src/build-scripts/docdeep.py)
     add_custom_command (OUTPUT ${mdfile}
-        COMMAND python ${docdeep_program} -d ${_docdeep_NAME} -s docs.css
+        COMMAND ${Python_EXECUTABLE} ${docdeep_program} -d ${_docdeep_NAME} -s docs.css
                 ${_docdeep_SOURCE} > "${CMAKE_CURRENT_BINARY_DIR}/${mdfile}"
         MAIN_DEPENDENCY ${docdeep_program}
         DEPENDS ${_docdeep_SOURCE}

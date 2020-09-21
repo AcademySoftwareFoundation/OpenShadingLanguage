@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 from __future__ import print_function, absolute_import
 
 # Copyright Contributors to the Open Shading Language project.

@@ -270,6 +270,10 @@ endif ()
 checked_find_package (partio)
 
 
+# From pythonutils.cmake
+find_python ()
+
+
 # Qt -- used for osltoy
 set (qt5_modules Core Gui Widgets)
 if (OPENGL_FOUND)

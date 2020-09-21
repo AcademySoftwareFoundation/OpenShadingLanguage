@@ -41,8 +41,7 @@ install_targets (${local_lib})
 
 
 # from pythonutils.cmake
-find_python ()
-if (USE_PYTHON)
+if (USE_PYTHON AND Python_Development_FOUND)
     checked_find_package (pybind11 2.4.2 REQUIRED)
 
     file (GLOB python_srcs py_*.cpp)

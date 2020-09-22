@@ -1023,6 +1023,10 @@ BackendLLVM::build_llvm_instance (bool groupentry)
     // Transfer all of this layer's outputs into the downstream shader's
     // inputs.
     for (int layer = this->layer()+1;  layer < group().nlayers();  ++layer) {
+        // If the connection is to a layer known to not be used, the copy
+        // can be skipped.
+        if (m_layer_remap[layer] == -1)
+            continue;
         ShaderInstance *child = group()[layer];
         for (int c = 0, Nc = child->nconnections();  c < Nc;  ++c) {
             const Connection &con (child->connection (c));

@@ -660,6 +660,14 @@ BackendLLVM::llvm_generate_debug_uninit (const Opcode &op)
             // don't generate uninit test code for it.
             continue;
         }
+        if (op.opname() == Strings::op_dowhile && i == 0) {
+            // The first argument of 'dowhile' is the condition temp, but
+            // most likely its initializer has not run yet. Unless there is
+            // no "condition" code block, in that case we should still test
+            // it for uninit.
+            if (op.jump(0) != op.jump(1))
+                continue;
+        }
 
         // Default: Check all elements of the variable being read
         llvm::Value *ncheck = ll.constant (int(t.numelements() * t.aggregate));

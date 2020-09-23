@@ -24,7 +24,7 @@ NEW or CHANGED dependencies since the last major release are **bold**.
   required (unless you are using LLVM >= 10, in which case at least C++14
   is needed).
 
-* **[OpenImageIO](http://openimageio.org) 2.0 or newer** (tested through 2.2)
+* **[OpenImageIO](http://openimageio.org) 2.1 or newer** (tested through 2.2)
 
     OSL uses OIIO both for its texture mapping functionality as well as
     numerous utility classes.  If you are integrating OSL into an existing
@@ -38,13 +38,12 @@ NEW or CHANGED dependencies since the last major release are **bold**.
 
     After building OpenImageIO, if you don't have it installed in a
     "standard" place (like /usr/include), you should set the environment
-    variable $OPENIMAGEIOHOME to point to the compiled distribution, as
-    well as for $OPENIMAGEIOHOME/lib to be in your LD_LIBRARY_PATH (or
-    DYLD_LIBRARY_PATH on OS X) and then OSL's build scripts will be able
-    to find it.
+    variable $OpenImageIO_ROOT to point to the compiled distribution, and
+    then OSL's build scripts will be able to find it. You should also have
+    $OpenImageIO_ROOT/lib to be in your LD_LIBRARY_PATH (or
+    DYLD_LIBRARY_PATH on OS X).
 
-* **[LLVM](http://www.llvm.org) 7, 8, 9, or 10**, including
-  clang libraries.
+* [LLVM](http://www.llvm.org) 7, 8, 9, or 10, including clang libraries.
 
   Note that LLVM 10 is not compatible with C++11, and requires C++14 or
   later. If you *must* build OSL with C++11, you need to use an LLVM that

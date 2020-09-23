@@ -26,7 +26,7 @@ on:
 
 jobs:
   vfxplatform-2019:
-    name: "Linux VFXP-2019: gcc6 C++11 llvm7 py2.7 boost-1.66 exr-2.3 OIIO-2.0 sse2"
+    name: "Linux VFXP-2019: gcc6 C++11 llvm7 py2.7 boost-1.66 exr-2.3 OIIO-2.1 sse2"
     runs-on: ubuntu-latest
     container:
       image: aswf/ci-osl:2019
@@ -39,7 +39,10 @@ jobs:
           CMAKE_CXX_STANDARD: 11
           PYTHON_VERSION: 2.7
           USE_PYTHON: 0
+          OPENIMAGEIO_VERSION: RB-2.1
         run: |
+            # Remove pesky wrong installed OIIO version
+            rm -rf /usr/local/include/OpenImageIO
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/gh-installdeps-centos.bash
             source src/build-scripts/ci-build-and-test.bash
@@ -207,7 +210,7 @@ jobs:
   linux-oldest:
     # Oldest versions of the dependencies that we can muster, and various
     # things disabled.
-    name: "Linux oldest everything: gcc6 C++11 llvm7 py2.7 boost-1.66 oiio-2.0 no-simd exr2.3"
+    name: "Linux oldest everything: gcc6 C++11 llvm7 py2.7 boost-1.66 oiio-2.1 no-simd exr2.3"
     runs-on: ubuntu-latest
     container:
       image: aswf/ci-osl:2019
@@ -221,7 +224,10 @@ jobs:
           PYTHON_VERSION: 2.7
           USE_SIMD: 0
           USE_PYTHON: 0
+          OPENIMAGEIO_VERSION: RB-2.1
         run: |
+            # Remove pesky wrong installed OIIO version
+            rm -rf /usr/local/include/OpenImageIO
             source src/build-scripts/ci-startup.bash
             source src/build-scripts/gh-installdeps-centos.bash
             source src/build-scripts/ci-build-and-test.bash

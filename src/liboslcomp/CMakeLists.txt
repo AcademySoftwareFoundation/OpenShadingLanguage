@@ -20,13 +20,13 @@ add_library (${local_lib} ${lib_src})
 target_include_directories(${local_lib}
     PUBLIC
         ${CMAKE_INSTALL_FULL_INCLUDEDIR}
-        ${OPENIMAGEIO_INCLUDES}
         ${ILMBASE_INCLUDES}
     )
 target_compile_definitions (${local_lib} PRIVATE OSL_EXPORTS)
 target_link_libraries (${local_lib}
     PUBLIC
-        ${OPENIMAGEIO_LIBRARIES} ${ILMBASE_LIBRARIES}
+        OpenImageIO::OpenImageIO
+        ${ILMBASE_LIBRARIES}
     PRIVATE
         ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
         ${CLANG_LIBRARIES} ${LLVM_LIBRARIES} ${LLVM_LDFLAGS}

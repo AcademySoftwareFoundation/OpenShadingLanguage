@@ -106,7 +106,7 @@ macro ( LLVM_COMPILE llvm_src srclist )
           "-I${CMAKE_CURRENT_SOURCE_DIR}"
           "-I${CMAKE_SOURCE_DIR}/src/include"
           "-I${CMAKE_BINARY_DIR}/include"
-          "-I${OPENIMAGEIO_INCLUDES}"
+          "-I${OpenImageIO_INCLUDES}"
           "-I${ILMBASE_INCLUDES}"
           "-isystem ${Boost_INCLUDE_DIRS}"
           -DOSL_COMPILING_TO_BITCODE=1
@@ -178,7 +178,6 @@ add_library (${local_lib} ${lib_src})
 target_include_directories (${local_lib}
     PUBLIC
         ${CMAKE_INSTALL_FULL_INCLUDEDIR}
-        ${OPENIMAGEIO_INCLUDES}
         ${ILMBASE_INCLUDES}
     PRIVATE
         "${CMAKE_SOURCE_DIR}/src/liboslcomp"
@@ -207,7 +206,8 @@ endif()
 
 target_link_libraries (${local_lib}
     PUBLIC
-        ${OPENIMAGEIO_LIBRARIES} ${ILMBASE_LIBRARIES}
+        OpenImageIO::OpenImageIO
+        ${ILMBASE_LIBRARIES}
     PRIVATE
         pugixml
         ${ZLIB_LIBRARIES}
@@ -240,7 +240,7 @@ if (OSL_BUILD_TESTS)
     add_test (unit_accum ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/accum_test)
 
     add_executable (dual_test dual_test.cpp)
-    target_link_libraries (dual_test PRIVATE ${OPENIMAGEIO_LIBRARIES} ${ILMBASE_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+    target_link_libraries (dual_test PRIVATE OpenImageIO::OpenImageIO ${ILMBASE_LIBRARIES} ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
     set_target_properties (dual_test PROPERTIES FOLDER "Unit Tests")
     add_test (unit_dual ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/dual_test)
 

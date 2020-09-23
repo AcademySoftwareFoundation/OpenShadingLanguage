@@ -4,6 +4,7 @@
 Release 1.12 -- ?? (compared to 1.11)
 --------------------------------------------------
 Dependency and standards changes:
+* OpenImageIO 2.1-2.3: Support for OIIO 2.0 has been dropped.
 
 OSL Language and oslc compiler:
 

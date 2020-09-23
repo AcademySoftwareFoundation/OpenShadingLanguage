@@ -157,52 +157,6 @@ OSOReaderQuery::parameter_done()
 
 
 
-#if OPENIMAGEIO_VERSION < 20109
-// A bug present in Strutil::parse_string until OIIO 2.1.8 caused incorrect
-// parsing of hints with embedded escaped quote characters. Supply a copy
-// of the fixed version here until our minimum OIIO is new enough to be
-// sure that the bug is fixed.
-static bool
-parse_string(string_view& str, string_view& val, bool eat = true,
-             OIIO::Strutil::QuoteBehavior keep_quotes
-             = OIIO::Strutil::DeleteQuotes) noexcept
-{
-    using namespace OIIO::Strutil;
-    string_view p = str;
-    skip_whitespace(p);
-    if (str.empty())
-        return false;
-    char lead_char    = p.front();
-    bool quoted       = parse_char(p, '\"') || parse_char(p, '\'');
-    const char *begin = p.begin(), *end = p.begin();
-    bool escaped = false;  // was the prior character a backslash
-    while (end != p.end()) {
-        if (isspace(*end) && !quoted)
-            break;  // not quoted and we hit whitespace: we're done
-        if (quoted && *end == lead_char && !escaped)
-            break;  // closing quote -- we're done (beware embedded quote)
-        escaped = (end[0] == '\\') && (!escaped);
-        ++end;
-    }
-    if (quoted && keep_quotes == KeepQuotes) {
-        if (*end == lead_char)
-            val = string_view(begin - 1, size_t(end - begin) + 2);
-        else
-            val = string_view(begin - 1, size_t(end - begin) + 1);
-    } else {
-        val = string_view(begin, size_t(end - begin));
-    }
-    p.remove_prefix(size_t(end - begin));
-    if (quoted && p.size() && p[0] == lead_char)
-        p.remove_prefix(1);  // eat closing quote
-    if (eat)
-        str = p;
-    return quoted || val.size();
-}
-#endif
-
-
-
 void
 OSOReaderQuery::hint(string_view hintstring)
 {
@@ -221,10 +175,7 @@ OSOReaderQuery::hint(string_view hintstring)
         p.type = TypeDesc(type);
         if (p.type.basetype == TypeDesc::STRING) {
             string_view val;
-#if OPENIMAGEIO_VERSION >= 20109
-            using Strutil::parse_string;
-#endif
-            while (parse_string(hintstring, val)) {
+            while (Strutil::parse_string(hintstring, val)) {
                 p.sdefault.emplace_back(OIIO::Strutil::unescape_chars(val));
                 if (Strutil::parse_char(hintstring, '}'))
                     break;

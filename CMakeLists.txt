@@ -147,6 +147,7 @@ include (CTest)
 
 include_directories (
     BEFORE
+    "${OSL_LOCAL_DEPS_DIR}/include"
     "${CMAKE_SOURCE_DIR}/src/include"
     "${CMAKE_BINARY_DIR}/src/include"
     "${CMAKE_BINARY_DIR}/include"

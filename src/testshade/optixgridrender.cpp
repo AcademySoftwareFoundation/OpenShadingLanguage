@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // https://github.com/imageworks/OpenShadingLanguage
 
+#include <vector>
 
 #include <OpenImageIO/filesystem.h>
 #include <OpenImageIO/sysutil.h>
@@ -14,6 +15,7 @@
 #ifdef OSL_USE_OPTIX
 #  if (OPTIX_VERSION >= 70000)
 #  include <optix_function_table_definition.h>
+#  include <optix_stack_size.h>
 #  include <optix_stubs.h>
 #  include <cuda.h>
 #  include <nvrtc.h>
@@ -440,12 +442,11 @@ OptixGridRenderer::make_optix_materials ()
     size_t sizeof_msg_log;
 
     // Make module that contains programs we'll use in this scene
-    OptixModuleCompileOptions module_compile_options;
+    OptixModuleCompileOptions module_compile_options = {};
 
     module_compile_options.maxRegisterCount  = OPTIX_COMPILE_DEFAULT_MAX_REGISTER_COUNT;
     module_compile_options.optLevel          = OPTIX_COMPILE_OPTIMIZATION_DEFAULT;
-    module_compile_options.optLevel          = OPTIX_COMPILE_OPTIMIZATION_LEVEL_0;
-    module_compile_options.debugLevel        = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
+    module_compile_options.debugLevel        = OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO;
 
     OptixPipelineCompileOptions pipeline_compile_options = {};
 
@@ -738,7 +739,7 @@ OptixGridRenderer::make_optix_materials ()
     //    printf ("Creating program group for string-library:\n%s\n", msg_log);
 
     // Set up OptiX pipeline
-    OptixProgramGroup final_groups[] = {
+    std::vector<OptixProgramGroup> final_groups = {
         strlib_group,      // string globals
         raygen_group,
         miss_group,
@@ -751,12 +752,38 @@ OptixGridRenderer::make_optix_materials ()
     OPTIX_CHECK (optixPipelineCreate (m_optix_ctx,
                                       &pipeline_compile_options,
                                       &pipeline_link_options,
-                                      &final_groups[0],
-                                      int(sizeof(final_groups)/sizeof(OptixProgramGroup)),
+                                      final_groups.data(),
+                                      int(final_groups.size()),
                                       msg_log, &sizeof_msg_log,
                                       &m_optix_pipeline));
     //if (sizeof_msg_log > 1)
     //    printf ("Creating optix pipeline:\n%s\n", msg_log);
+
+    // Set the pipeline stack size
+    OptixStackSizes stack_sizes = {};
+    for( OptixProgramGroup& program_group : final_groups )
+        OPTIX_CHECK (optixUtilAccumulateStackSizes (program_group, &stack_sizes));
+
+    uint32_t max_trace_depth = 1;
+    uint32_t max_cc_depth    = 1;
+    uint32_t max_dc_depth    = 1;
+    uint32_t direct_callable_stack_size_from_traversal;
+    uint32_t direct_callable_stack_size_from_state;
+    uint32_t continuation_stack_size;
+    OPTIX_CHECK (optixUtilComputeStackSizes (&stack_sizes,
+                                             max_trace_depth,
+                                             max_cc_depth,
+                                             max_dc_depth,
+                                             &direct_callable_stack_size_from_traversal,
+                                             &direct_callable_stack_size_from_state,
+                                             &continuation_stack_size ) );
+
+    const uint32_t max_traversal_depth = 1;
+    OPTIX_CHECK (optixPipelineSetStackSize (m_optix_pipeline,
+                                            direct_callable_stack_size_from_traversal,
+                                            direct_callable_stack_size_from_state,
+                                            continuation_stack_size,
+                                            max_traversal_depth ));
 
     // Build OptiX Shader Binding Table (SBT)
     CUdeviceptr d_raygenRecord;

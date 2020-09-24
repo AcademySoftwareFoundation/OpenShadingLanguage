@@ -281,6 +281,7 @@ OSOReader::parse_file (const std::string &filename)
     fclose (osoin);
     std::locale::global (oldlocale);  // Restore the original locale.
 
+    osoreader = nullptr; // Dont leave a dangling pointer to this
     return ok;
 }
 
@@ -314,6 +315,7 @@ OSOReader::parse_memory (const std::string &buffer)
     std::locale::global (oldlocale);  // Restore the original locale.
 #endif
 
+    osoreader = nullptr; // Dont leave a dangling pointer to this
     return ok;
 }
 

@@ -22,8 +22,12 @@ checked_find_package (FLEX REQUIRED)
 
 if ( FLEX_EXECUTABLE AND BISON_EXECUTABLE )
     macro ( FLEX_BISON flexsrc bisonsrc prefix srclist compiler_headers )
+        # mangle osoparse & osolex symbols to avoid multiple library conflicts
+        add_definitions(-D${prefix}parse=${PROJ_NAMESPACE_V}_${prefix}parse -D${prefix}lex=${PROJ_NAMESPACE_V}_${prefix}lex)
+
         if (VERBOSE)
             message (STATUS "FLEX_BISON flex=${flexsrc} bison=${bisonsrc} prefix=${prefix}")
+            message (STATUS "FLEX_SYMBOLS ${PROJ_NAMESPACE_V}_${prefix}parse ${PROJ_NAMESPACE_V}_${prefix}lex")
         endif ()
         get_filename_component ( bisonsrc_we ${bisonsrc} NAME_WE )
         set ( bisonoutputcxx "${CMAKE_CURRENT_BINARY_DIR}/${bisonsrc_we}.cpp" )

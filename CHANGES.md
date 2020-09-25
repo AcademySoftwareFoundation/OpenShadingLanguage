@@ -10,19 +10,45 @@ OSL Language and oslc compiler:
 OSL Standard library:
 
 API changes, new options, new ShadingSystem features (for renderer writers):
+* Custom experimental llvm optimization levels 10, 11, 12, and 13. These
+  are stripped down versions of 0, 1, 2, 3 (corresponding to clang's -O0,
+  -O1, -O2, -O3) but we think for shaders are just as performant but with
+  lower JIT time. These are currently experimental, but we are benchmarking
+  to determine if they should be the new defaults. #1250 (1.12.0.0)
 
 Continued work on experimental SIMD batched shading mode:
+* Added support for masked operations to LLVMUtil. #1248 #1250 (1.12.0.0)
 
 Continued work on experimental OptiX rendering:
+* Explicitly set the OptiX pipeline stack size. #1254 (1.12.0.0)
 
 Performance improvements:
 
 Bug fixes and other improvements (internals):
+* Fix derivatives of texture calls when only derivatives of the "alpha"
+  value are needed. #1251 (1.12.0.0)
+* When uninitialized value detection is used, fix possible "false positive"
+  related to the condition variable of do-while loops. #1252 (1.12.0.0)
+* Avoid some pointless copies of output variables from a used layer to a
+  downstream layer that is known to not be used. #1253 (1.12.0.0)
 
 Internals/developer concerns:
 
 Build & test system improvements:
-
+* CMake build system and scripts:
+    - We now use .git-blame-ignore-revs to record commits that consist
+      entirely of reformatting, so that 'git blame' does not misattribute
+      authorship to the trivial changes of those commits. #1244 (1.12.0.0)
+    - Miscellaneous improvements to cmake scripts. #1247 (1.12.0.0)
+    - Instead of defaulting to looking for Python 2.7, the OSL build now
+      defaults to whatever Python is found (though a specific one can still
+      be requested via the PYTHON_VERSION variable). #1249 (1.12.0.0)
+* Dependency version support:
+* Testing and Continuous integration (CI) systems:
+* Platform support:
+* The oso and osl lexers/parsers are now given internal symbol names that
+  are fully versioned, to avoid possible clash if multiple OSL releases are
+  both linked into the same application. #1255 (1.12.0.0)
 Documentation:
 
 

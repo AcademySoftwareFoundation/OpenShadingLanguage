@@ -14,17 +14,20 @@
 #include "backendllvm.h"
 #include <OSL/oslquery.h>
 
+#include <OpenImageIO/filesystem.h>
+#include <OpenImageIO/fmath.h>
+#include <OpenImageIO/optparser.h>
 #include <OpenImageIO/strutil.h>
+#include <OpenImageIO/sysutil.h>
 #include <OpenImageIO/thread.h>
 #include <OpenImageIO/timer.h>
-#include <OpenImageIO/filesystem.h>
-#include <OpenImageIO/optparser.h>
-#include <OpenImageIO/fmath.h>
 
 #include "opcolor.h"
 
 using namespace OSL;
 using namespace OSL::pvt;
+
+#include <OpenEXR/ImfChannelList.h>  // Just for OPENEXR_VERSION_STRING
 
 // avoid naming conflicts with MSVC macros
 #ifdef _MSC_VER
@@ -1772,20 +1775,56 @@ struct group_time_compare { // So looking forward to C++11 lambdas!
 
 
 
+// Return a comma-separated list of all the important SIMD/capabilities
+// that were enabled as a compile-time option when OSL was built.
+// (Keep this in sync with oiio_simd_caps in imageio.cpp).
+static std::string
+osl_simd_caps()
+{
+    // clang-format off
+    std::vector<string_view> caps;
+    if (OIIO_SIMD_SSE >= 2)      caps.emplace_back ("sse2");
+    if (OIIO_SIMD_SSE >= 3)      caps.emplace_back ("sse3");
+    if (OIIO_SIMD_SSE >= 3)      caps.emplace_back ("ssse3");
+    if (OIIO_SIMD_SSE >= 4)      caps.emplace_back ("sse41");
+    if (OIIO_SIMD_SSE >= 4)      caps.emplace_back ("sse42");
+    if (OIIO_SIMD_AVX)           caps.emplace_back ("avx");
+    if (OIIO_SIMD_AVX >= 2)      caps.emplace_back ("avx2");
+    if (OIIO_SIMD_AVX >= 512)    caps.emplace_back ("avx512f");
+    if (OIIO_AVX512DQ_ENABLED)   caps.emplace_back ("avx512dq");
+    if (OIIO_AVX512IFMA_ENABLED) caps.emplace_back ("avx512ifma");
+    if (OIIO_AVX512PF_ENABLED)   caps.emplace_back ("avx512pf");
+    if (OIIO_AVX512ER_ENABLED)   caps.emplace_back ("avx512er");
+    if (OIIO_AVX512CD_ENABLED)   caps.emplace_back ("avx512cd");
+    if (OIIO_AVX512BW_ENABLED)   caps.emplace_back ("avx512bw");
+    if (OIIO_AVX512VL_ENABLED)   caps.emplace_back ("avx512vl");
+    if (OIIO_FMA_ENABLED)        caps.emplace_back ("fma");
+    if (OIIO_F16C_ENABLED)       caps.emplace_back ("f16c");
+    // if (OIIO_POPCOUNT_ENABLED)   caps.emplace_back ("popcnt");
+    return OIIO::Strutil::join (caps, ",");
+    // clang-format on
+}
+
+
+
 std::string
 ShadingSystemImpl::getstats (int level) const
 {
+    int columns = OIIO::Sysutil::terminal_columns() - 2;
+
     if (level <= 0)
         return "";
     std::ostringstream out;
     out.imbue (std::locale::classic());  // force C locale
-    out << "OSL ShadingSystem statistics (" << (void*)this;
-    out << ") ver " << OSL_LIBRARY_VERSION_STRING
-        << ", LLVM " << OSL_LLVM_FULL_VERSION << "\n";
-    if (m_stat_shaders_requested == 0 && m_stat_shaders_loaded == 0) {
-        out << "  No shaders requested or loaded\n";
-        return out.str();
-    }
+    out << "Open Shading Language " << OSL_LIBRARY_VERSION_STRING << "\n";
+    out << "  Build deps: LLVM-" << OSL_LLVM_FULL_VERSION
+        << " OIIO-" << OIIO_VERSION_STRING << " Imath-" <<
+#ifdef OPENEXR_VERSION_STRING
+                          OPENEXR_VERSION_STRING
+#else
+                          "(unknown)"
+#endif
+         << "\n";
 
     std::string opt;
 #define BOOLOPT(name) opt += Strutil::sprintf(#name "=%d ", m_##name)
@@ -1851,7 +1890,28 @@ ShadingSystemImpl::getstats (int level) const
 #undef BOOLOPT
 #undef INTOPT
 #undef STROPT
-    out << "  Options:  " << Strutil::wordwrap(opt, 75, 12) << "\n";
+
+    // Print the HW info
+    out << "  Build HW support: ";
+    std::string buildsimd = osl_simd_caps();
+    if (!buildsimd.size())
+        buildsimd = "no SIMD";
+    out << buildsimd << "\n";
+    OIIO::Strutil::fprintf(out, "  Runtime HW: %d cores %.1fGB %s\n",
+                           OIIO::Sysutil::hardware_concurrency(),
+                           OIIO::Sysutil::physical_memory() / float(1 << 30),
+                           OIIO::get_string_attribute("hw:simd"));
+    // TODO: detect GPU info and print it here
+    out << "\n";
+
+    out << "ShadingSystem Options:\n";
+    out << "    " << Strutil::wordwrap(opt, columns, 4) << "\n";
+
+    out << "\nOSL ShadingSystem statistics (" << (void*)this << ")\n";
+    if (m_stat_shaders_requested == 0 && m_stat_shaders_loaded == 0) {
+        out << "  No shaders requested or loaded\n";
+        return out.str();
+    }
 
     out << "  Shaders:\n";
     out << "    Requested: " << m_stat_shaders_requested << "\n";

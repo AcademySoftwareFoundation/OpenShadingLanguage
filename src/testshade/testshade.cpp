@@ -440,6 +440,29 @@ stash_shader_arg (int argc, const char* argv[])
 
 
 
+void
+print_info()
+{
+    ErrorHandler errhandler;
+    SimpleRenderer* rend = nullptr;
+#ifdef OSL_USE_OPTIX
+    if (use_optix)
+        rend = new OptixGridRenderer;
+    else
+#endif
+        rend = new SimpleRenderer;
+    TextureSystem *texturesys = TextureSystem::create();
+    shadingsys = new ShadingSystem(rend, texturesys, &errhandler);
+    rend->init_shadingsys(shadingsys);
+
+    std::cout << "\n" << shadingsys->getstats (5) << "\n";
+
+    delete shadingsys;
+    delete rend;
+}
+
+
+
 static void
 getargs (int argc, const char *argv[])
 {
@@ -530,6 +553,7 @@ getargs (int argc, const char *argv[])
         std::cout << "testshade -- Test Open Shading Language\n"
                      OSL_COPYRIGHT_STRING "\n";
         ap.usage ();
+        print_info();
         exit (EXIT_SUCCESS);
     }
 }

@@ -1108,6 +1108,38 @@ ShadingSystemImpl::~ShadingSystemImpl ()
 
 
 
+// Return a comma-separated list of all the important SIMD/capabilities
+// that were enabled as a compile-time option when OSL was built.
+// (Keep this in sync with oiio_simd_caps in imageio.cpp).
+static std::string
+osl_simd_caps()
+{
+    // clang-format off
+    std::vector<string_view> caps;
+    if (OIIO_SIMD_SSE >= 2)      caps.emplace_back ("sse2");
+    if (OIIO_SIMD_SSE >= 3)      caps.emplace_back ("sse3");
+    if (OIIO_SIMD_SSE >= 3)      caps.emplace_back ("ssse3");
+    if (OIIO_SIMD_SSE >= 4)      caps.emplace_back ("sse41");
+    if (OIIO_SIMD_SSE >= 4)      caps.emplace_back ("sse42");
+    if (OIIO_SIMD_AVX)           caps.emplace_back ("avx");
+    if (OIIO_SIMD_AVX >= 2)      caps.emplace_back ("avx2");
+    if (OIIO_SIMD_AVX >= 512)    caps.emplace_back ("avx512f");
+    if (OIIO_AVX512DQ_ENABLED)   caps.emplace_back ("avx512dq");
+    if (OIIO_AVX512IFMA_ENABLED) caps.emplace_back ("avx512ifma");
+    if (OIIO_AVX512PF_ENABLED)   caps.emplace_back ("avx512pf");
+    if (OIIO_AVX512ER_ENABLED)   caps.emplace_back ("avx512er");
+    if (OIIO_AVX512CD_ENABLED)   caps.emplace_back ("avx512cd");
+    if (OIIO_AVX512BW_ENABLED)   caps.emplace_back ("avx512bw");
+    if (OIIO_AVX512VL_ENABLED)   caps.emplace_back ("avx512vl");
+    if (OIIO_FMA_ENABLED)        caps.emplace_back ("fma");
+    if (OIIO_F16C_ENABLED)       caps.emplace_back ("f16c");
+    // if (OIIO_POPCOUNT_ENABLED)   caps.emplace_back ("popcnt");
+    return OIIO::Strutil::join (caps, ",");
+    // clang-format on
+}
+
+
+
 bool
 ShadingSystemImpl::attribute (string_view name, TypeDesc type,
                               const void *val)
@@ -1434,6 +1466,36 @@ ShadingSystemImpl::getattribute (string_view name, TypeDesc type,
         // Make sure everything adds up!
         OSL_ASSERT((((char*)&colorsystem() + lptr[0]) - sizeof(ustring)*lptr[1]) ==
                    (char*)&colorsystem().colorspace());
+        return true;
+    }
+    if (name == "osl:simd" && type == TypeDesc::STRING) {
+        *(const char**)val = ustring(osl_simd_caps()).c_str();
+        return true;
+    }
+    if (name == "hw:simd" && type == TypeDesc::STRING) {
+        return OIIO::getattribute("hw:string", type, val);
+    }
+    if (name == "osl:cuda_version" && type == TypeDesc::STRING) {
+        *(const char**)val = OSL_CUDA_VERSION;
+        return true;
+    }
+    if (name == "osl:optix_version" && type == TypeDesc::STRING) {
+        *(const char**)val = OSL_OPTIX_VERSION;
+        return true;
+    }
+    if (name == "osl:dependencies" && type == TypeDesc::STRING) {
+        std::string deps = OIIO::Strutil::sprintf("LLVM-%s,OpenImageIO-%s,Imath-%s",
+                OSL_LLVM_FULL_VERSION, OIIO_VERSION_STRING,
+                OPENEXR_VERSION_STRING);
+        if (!strcmp(OSL_CUDA_VERSION, ""))
+            deps += ",Cuda-NONE";
+        else
+            deps += ",Cuda-" OSL_CUDA_VERSION;
+        if (!strcmp(OSL_OPTIX_VERSION, ""))
+            deps += ",OptiX-NONE";
+        else
+            deps += ",OptiX-" OSL_OPTIX_VERSION;
+        *(const char**)val = ustring(deps).c_str();
         return true;
     }
 
@@ -1775,38 +1837,6 @@ struct group_time_compare { // So looking forward to C++11 lambdas!
 
 
 
-// Return a comma-separated list of all the important SIMD/capabilities
-// that were enabled as a compile-time option when OSL was built.
-// (Keep this in sync with oiio_simd_caps in imageio.cpp).
-static std::string
-osl_simd_caps()
-{
-    // clang-format off
-    std::vector<string_view> caps;
-    if (OIIO_SIMD_SSE >= 2)      caps.emplace_back ("sse2");
-    if (OIIO_SIMD_SSE >= 3)      caps.emplace_back ("sse3");
-    if (OIIO_SIMD_SSE >= 3)      caps.emplace_back ("ssse3");
-    if (OIIO_SIMD_SSE >= 4)      caps.emplace_back ("sse41");
-    if (OIIO_SIMD_SSE >= 4)      caps.emplace_back ("sse42");
-    if (OIIO_SIMD_AVX)           caps.emplace_back ("avx");
-    if (OIIO_SIMD_AVX >= 2)      caps.emplace_back ("avx2");
-    if (OIIO_SIMD_AVX >= 512)    caps.emplace_back ("avx512f");
-    if (OIIO_AVX512DQ_ENABLED)   caps.emplace_back ("avx512dq");
-    if (OIIO_AVX512IFMA_ENABLED) caps.emplace_back ("avx512ifma");
-    if (OIIO_AVX512PF_ENABLED)   caps.emplace_back ("avx512pf");
-    if (OIIO_AVX512ER_ENABLED)   caps.emplace_back ("avx512er");
-    if (OIIO_AVX512CD_ENABLED)   caps.emplace_back ("avx512cd");
-    if (OIIO_AVX512BW_ENABLED)   caps.emplace_back ("avx512bw");
-    if (OIIO_AVX512VL_ENABLED)   caps.emplace_back ("avx512vl");
-    if (OIIO_FMA_ENABLED)        caps.emplace_back ("fma");
-    if (OIIO_F16C_ENABLED)       caps.emplace_back ("f16c");
-    // if (OIIO_POPCOUNT_ENABLED)   caps.emplace_back ("popcnt");
-    return OIIO::Strutil::join (caps, ",");
-    // clang-format on
-}
-
-
-
 std::string
 ShadingSystemImpl::getstats (int level) const
 {
@@ -1817,14 +1847,11 @@ ShadingSystemImpl::getstats (int level) const
     std::ostringstream out;
     out.imbue (std::locale::classic());  // force C locale
     out << "Open Shading Language " << OSL_LIBRARY_VERSION_STRING << "\n";
-    out << "  Build deps: LLVM-" << OSL_LLVM_FULL_VERSION
-        << " OIIO-" << OIIO_VERSION_STRING << " Imath-" <<
-#ifdef OPENEXR_VERSION_STRING
-                          OPENEXR_VERSION_STRING
-#else
-                          "(unknown)"
-#endif
-         << "\n";
+    ustring build_deps;
+    const_cast<ShadingSystemImpl*>(this)->getattribute("osl:dependencies", TypeDesc::STRING, &build_deps);
+    out << "  Build deps: " << Strutil::wordwrap(
+            Strutil::join(Strutil::splitsv(build_deps,","), ", "), columns, 14)
+        << "\n";
 
     std::string opt;
 #define BOOLOPT(name) opt += Strutil::sprintf(#name "=%d ", m_##name)
@@ -1892,15 +1919,18 @@ ShadingSystemImpl::getstats (int level) const
 #undef STROPT
 
     // Print the HW info
-    out << "  Build HW support: ";
-    std::string buildsimd = osl_simd_caps();
-    if (!buildsimd.size())
+    ustring buildsimd;
+    if (!const_cast<ShadingSystemImpl*>(this)->getattribute("osl:simd", TypeDesc::STRING, &buildsimd))
         buildsimd = "no SIMD";
-    out << buildsimd << "\n";
-    OIIO::Strutil::fprintf(out, "  Runtime HW: %d cores %.1fGB %s\n",
+    out << "  Build HW support: " << Strutil::wordwrap(
+            Strutil::join(Strutil::splitsv(buildsimd,","), ", "), columns, 20)
+        << "\n";
+    out << Strutil::wordwrap(
+        OIIO::Strutil::sprintf("  Runtime HW: %d cores, %.1fGB, %s",
                            OIIO::Sysutil::hardware_concurrency(),
                            OIIO::Sysutil::physical_memory() / float(1 << 30),
-                           OIIO::get_string_attribute("hw:simd"));
+                           Strutil::replace(OIIO::get_string_attribute("hw:simd"), ",", ", ", true)),
+        columns, 8) << "\n";
     // TODO: detect GPU info and print it here
     out << "\n";
 

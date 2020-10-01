@@ -1,8 +1,24 @@
 <!-- SPDX-License-Identifier: CC-BY-4.0 -->
 <!-- Copyright Contributors to the Open Shading Language Project. -->
 
-Release 1.11.8 -- 1 Oct? 2020 (compared to 1.11.7)
+Release 1.11.8 -- 1 Oct 2020 (compared to 1.11.7)
 ---------------------------------------------------
+* Fix broken derivatives of the optional "alpha" return of texture calls
+  when the normal color channels return don't have their derivatives used
+  but the alpha does. #1258
+* Building vs Python: instead of defaulting to searching for python 2.7
+  specifically and needing to set PYTHON_VERSION if you want (or have) a
+  different one, default to whichever version is found. If multiple versions
+  of Python are on the system, you can still use the PYTHON_VERSION cmake
+  variable to disambiguate which one you want. #1249
+* For the experimental OptiX support, explicitly set the OptiX pipeline
+  stack size (fixes some bugs). #1254
+* ShadingSystem statistics output (which is printed with `testshade --help`,
+  by the way) now includes information about the SIMD capabilities specified
+  at OSL build time, those available at runtime, and the versions of LLVM,
+  OIIO, and Imath used. This should help in debugging and issue reporting
+  by making it easy to know certain build time choices just by running
+  testshade. #1258
 
 
 Release 1.11 -- 1 Sept 2020 (compared to 1.10)
